@@ -5,7 +5,23 @@
 # modifier un fichier de secrets (section 27.3). Une regle de CLAUDE.md est
 # consultative, ce hook est deterministe.
 #
-# .env.example est autorise : il ne contient que des noms et des formats.
+# Ce hook est la couche de protection principale, et non le filet de secours.
+# Un hook qui sort en code 2 bloque l'appel AVANT l'evaluation des regles de
+# permission, il prime donc sur toute regle allow.
+#
+# Repartition avec les regles deny de settings.json :
+#
+#   Les regles deny utilisent un glob large sur .env.* et ne peuvent pas porter
+#   d'exception : la documentation officielle est explicite, une regle deny ne
+#   peut pas contenir d'exception d'autorisation. Elles bloquent donc aussi
+#   .env.example, ce qui est un effet de bord accepte.
+#
+#   Ce hook porte l'exception : il autorise explicitement les fichiers
+#   d'exemple, qui ne contiennent que des noms de variables et des formats.
+#
+# Consequence pratique : pour editer .env.example, il faut passer par un
+# outil que les regles deny ne couvrent pas, ou retirer temporairement le
+# motif .env.* des regles deny. Ne jamais retirer ce hook.
 
 set -u
 input=$(cat)

@@ -70,6 +70,30 @@ exigera du SQL brut via `$queryRaw`, l'API Prisma ne sachant pas exprimer un
 **Skill `story` élargi à tout travail**, pas seulement aux tickets. Voir la
 section suivante, c'est une correction issue d'un manquement observé.
 
+**LS-17 fermé**, ses trois points sont tranchés.
+
+Conventions Git écrites dans `CONTRIBUTING.md` : branches en
+`type/LS-xx-sujet`, commits Conventional avec `Refs LS-xx`, pull request
+systématique même en solo.
+
+Authentification de l'administration tranchée dans ADR-021, et elle s'écarte du
+cahier des charges sur deux points. Le contexte réel a invalidé l'hypothèse de la
+section 6.2 : Stacy est seule à gérer le site, sa soeur intervient sur la création
+et les marchés sans accès au back-office. Le compte partagé n'a plus d'objet.
+
+L'exploitante refusait le second facteur par application, jugé trop contraignant,
+et proposait de changer son mot de passe régulièrement. Cette proposition n'a pas
+été retenue : le back-office contient les données personnelles de toutes les
+clientes, et le changement périodique de mot de passe n'est plus recommandé par la
+CNIL ni l'ANSSI. La passkey a levé l'objection, étant moins contraignante qu'un
+mot de passe tout en résistant au hameçonnage. Elle possède un iPhone et un
+MacBook avec Touch ID sur le même compte iCloud, la synchronisation par trousseau
+règle la question du second appareil.
+
+Le mot de passe reste en secours, encadré par cinq mesures dont une alerte email à
+chaque connexion par mot de passe. C'est la plus utile des cinq : elle transforme
+une compromission silencieuse en incident détecté.
+
 ## Ce qui a pris plus de temps que prévu
 
 La question de la palette. Elle paraissait tranchée par la spécification UX/UI,
@@ -126,7 +150,7 @@ Phase 0, cadrage opérationnel. Deux stories terminées sur treize.
 | LS-13 | Modèle logique de données | À faire |
 | LS-14 | Diagramme de séquence de l'achat | À faire |
 | LS-15 | Filaire mobile création produit admin | À faire |
-| LS-17 | Décisions et conventions bloquantes | Partiel : stratégie de réservation validée (ADR-006), restent les conventions et le second facteur |
+| LS-17 | Décisions et conventions bloquantes | Terminé : réservation validée (ADR-006), conventions Git (CONTRIBUTING.md), authentification (ADR-021) |
 | LS-10 | Benchmark court | À faire, faible priorité |
 | LS-18 | Compte de paiement Stripe | Démarche externe à lancer |
 | LS-19 | Médiateur de la consommation | Démarche externe à lancer |
@@ -138,9 +162,8 @@ LS-11 puis LS-12 et LS-13, le modèle de données. C'est ce qui conditionne tout
 le reste, et la porte de sortie de la phase 0 exige qu'il soit validé sur les
 cinq scénarios critiques sans invention de champ manquant.
 
-LS-17 est partiellement fait. Restent les conventions de branches et de commits,
-le format des numéros de commande, facture et avoir, et le mode du second facteur
-pour l'administration.
+LS-17 est fermé. Le format des numéros de commande, facture et avoir reste à
+définir, mais il relève de LS-13 et non de LS-17.
 
 Le contrôle de la stratégie de réservation est fait, ADR-006. Le modèle de
 données peut donc être construit sans risque : la variante portera
