@@ -122,6 +122,23 @@ Par ordre de priorité en cas de divergence :
 Toute décision structurante produit un ADR. Toute nouvelle idée entre d'abord
 dans Jira et n'intègre le périmètre que par arbitrage explicite.
 
+## Agents
+
+Utiliser `ls-critical-reviewer` pour relire les zones à risque.
+
+**Ne pas invoquer les agents globaux `docker-devops`, `security-auditor` ni
+`nextjs-architect` sur ce projet.** Ils sont calibrés sur une autre stack :
+NextAuth v5, PostgreSQL 16, Redis 7, architecture multi-tenant. Ici c'est Better
+Auth 1.6, PostgreSQL 18, **aucun Redis**, mono-tenant.
+
+`docker-devops` est le plus risqué : il traite Redis comme un service requis en
+intégration continue. Or la section 5.3 du cahier des charges écarte
+explicitement Redis, faute de besoin démontré.
+
+Quand la conteneurisation arrivera, phase 1 pour le local et la CI, phase 6 pour
+le VPS, créer un agent projet dédié dans `.claude/agents/`, calibré sur la
+topologie réelle : quatre conteneurs, Nginx sur l'hôte, image taguée par SHA.
+
 ## Conduite du travail
 
 Tout travail sur ce projet suit le skill `story`, y compris une exploration ou un
