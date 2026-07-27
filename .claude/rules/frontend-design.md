@@ -55,6 +55,30 @@ Un accent manquant dans l'interface d'une boutique artisanale française abîme 
 crédibilité de la marque autant qu'une faute de frappe. Cette règle a donc un
 impact produit, pas seulement rédactionnel.
 
+### Ne pas accorder au féminin par défaut
+
+Le cahier des charges emploie systématiquement « cliente », « visiteuse »,
+« acheteuse ». **Ne pas reprendre cette convention dans les textes visibles.**
+
+Une part notable des acheteurs sera masculine : un homme qui achète un bijou en
+cadeau, particulièrement autour de Noël et de la fête des mères. Lire « vous
+serez livrée » l'exclut de la boutique. L'enjeu est commercial.
+
+Tourner les phrases **sans accord de genre**, plutôt qu'écrire « client(e) » ou
+une forme à point médian, qui alourdissent et se prononcent mal au lecteur
+d'écran.
+
+| À éviter | Formulation neutre |
+|---|---|
+| Vous serez livrée sous 48 h | Livraison sous 48 heures |
+| Chère cliente | Bonjour, ou le prénom |
+| Vous êtes connectée | Connexion réussie |
+| Aucune commande trouvée pour cette cliente | Aucune commande trouvée |
+
+S'applique aux libellés, confirmations, erreurs, états vides, emails
+transactionnels et documents. Voir LS-32 : le féminin dans les contenus
+éditoriaux, page histoire et descriptions, reste à arbitrer avec l'exploitante.
+
 ## Interdits visuels
 
 Pas de glassmorphisme, pas de carte transparente flottante, pas de dégradé
