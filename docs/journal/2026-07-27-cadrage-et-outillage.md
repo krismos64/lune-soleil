@@ -67,6 +67,9 @@ Deux conséquences techniques découvertes : Prisma ne génère pas les contrain
 exigera du SQL brut via `$queryRaw`, l'API Prisma ne sachant pas exprimer un
 `UPDATE` conditionnel avec `RETURNING`.
 
+**Skill `story` élargi à tout travail**, pas seulement aux tickets. Voir la
+section suivante, c'est une correction issue d'un manquement observé.
+
 ## Ce qui a pris plus de temps que prévu
 
 La question de la palette. Elle paraissait tranchée par la spécification UX/UI,
@@ -74,6 +77,28 @@ mais le mauvais logo avait été désigné en premier, ce qui a produit une
 recommandation à annuler ensuite. La mesure colorimétrique a réglé le débat en
 quelques secondes là où l'appréciation visuelle tournait en rond. Leçon : sur
 une question de couleur, mesurer avant d'argumenter.
+
+## Un manquement à noter
+
+Après le prototype de réservation, l'ADR et le script ont été produits mais Jira,
+la mémoire et le journal n'ont pas été mis à jour. Le journal présentait même
+encore le prototype comme « à faire » alors qu'il était réalisé et validé.
+Christophe l'a relevé.
+
+Cause : le skill `story` exigeait une clé de ticket et portait
+`disable-model-invocation`, il ne s'appliquait donc pas à un travail exploratoire.
+La discipline de traçabilité existait sur le papier mais n'était déclenchée par
+rien.
+
+Correction : le skill couvre désormais tout travail sur le projet, ticket ou non.
+Son étape 0 demande d'identifier à quel ticket existant le travail se rattache.
+Son étape 6 détaille les quatre canaux de traçabilité et exige de dire lesquels
+ont été mis à jour. Son étape 7 ajoute trois questions de contrôle avant de rendre
+la main. Le CLAUDE.md porte un rappel des quatre canaux.
+
+Leçon plus générale : une règle qui n'est déclenchée par rien ne s'applique pas.
+Soit elle vit dans un mécanisme qui se déclenche tout seul, soit elle est
+déterministe via un hook. Une bonne intention documentée ne suffit pas.
 
 ## Décisions prises avec Christophe
 
