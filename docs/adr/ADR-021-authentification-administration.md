@@ -18,34 +18,35 @@ et la section 29.3 fait de son absence de protection un critère de refus
 d'ouverture.
 
 Le cahier des charges prévoyait en section 6.2 un compte administrateur unique
-partagé par Stacy et sa soeur, protégé par une application d'authentification à
-mot de passe à usage unique, dont le secret serait enregistré sur les deux
-téléphones.
+partagé par l'exploitante et sa soeur, protégé par une application
+d'authentification à mot de passe à usage unique, dont le secret serait
+enregistré sur les deux téléphones.
 
 Deux éléments de contexte réel ont invalidé cette hypothèse.
 
-**La répartition des rôles est différente de celle supposée.** Stacy est la seule
-à gérer le site. Sa soeur intervient sur la création des bijoux et les marchés,
-sans accès au back-office. Le compte partagé n'a donc plus d'objet.
+**La répartition des rôles est différente de celle supposée.** L'exploitante est
+la seule à gérer le site. Sa soeur intervient sur la création des bijoux et les
+marchés, sans accès au back-office. Le compte partagé n'a donc plus d'objet.
 
 **L'exploitante refuse le second facteur par application**, jugé trop compliqué
-et contraignant, et propose de changer son mot de passe régulièrement à la place.
+et contraignant, et propose de changer son mot de passe régulièrement à la
+place.
 
 Cette proposition n'est pas retenue : un mot de passe seul sur un back-office
 contenant des données personnelles de clientes expose l'ensemble des données dès
-lors que ce mot de passe est réutilisé sur un autre site compromis, ce qui est le
-scénario de compromission le plus courant. Le changement régulier de mot de passe
-n'est plus une recommandation de la CNIL ni de l'ANSSI, la pratique poussant à
-des mots de passe plus faibles et prévisibles.
+lors que ce mot de passe est réutilisé sur un autre site compromis, ce qui est
+le scénario de compromission le plus courant. Le changement régulier de mot de
+passe n'est plus une recommandation de la CNIL ni de l'ANSSI, la pratique
+poussant à des mots de passe plus faibles et prévisibles.
 
 ## Décision
 
-**Un seul compte administrateur**, celui de Stacy. La soeur n'a pas d'accès au
-back-office.
+**Un seul compte administrateur**, celui de l'exploitante. La soeur n'a pas
+d'accès au back-office.
 
 **Authentification principale par passkey**, sur le standard WebAuthn, via le
-plugin `@better-auth/passkey` de Better Auth. Stacy se connecte par Touch ID sur
-son MacBook ou Face ID sur son iPhone.
+plugin `@better-auth/passkey` de Better Auth. L'exploitante se connecte par
+Touch ID sur son MacBook ou Face ID sur son iPhone.
 
 **Mot de passe conservé comme méthode de secours**, avec les mesures
 compensatoires listées plus bas.
@@ -69,19 +70,19 @@ contrainte, elle ne s'applique pas.
 
 ## Matériel de l'exploitante et synchronisation
 
-Stacy possède un iPhone et un MacBook avec Touch ID, sur le même compte iCloud.
-La passkey se synchronise par le trousseau Apple entre les deux appareils. Elle
-l'enregistre une fois et se connecte depuis l'un ou l'autre.
+L'exploitante possède un iPhone et un MacBook avec Touch ID, sur le même compte
+iCloud. La passkey se synchronise par le trousseau Apple entre les deux
+appareils. Elle l'enregistre une fois et se connecte depuis l'un ou l'autre.
 
-Plusieurs passkeys peuvent être enregistrées : l'API `addPasskey` accepte un nom,
-ce qui permet de distinguer les appareils.
+Plusieurs passkeys peuvent être enregistrées : l'API `addPasskey` accepte un
+nom, ce qui permet de distinguer les appareils.
 
 ## Chaîne de secours, du plus simple au plus lourd
 
 Le scénario de la caméra ou du capteur défaillant a été explicitement soulevé et
 doit rester couvert.
 
-| Situation | Comment Stacy se connecte |
+| Situation | Comment l'exploitante se connecte |
 |---|---|
 | Cas normal | Touch ID ou Face ID, deux secondes |
 | Face ID indisponible | code de déverrouillage de l'appareil, comportement natif iOS |
@@ -112,19 +113,19 @@ compromission silencieuse en incident détecté.
 
 ## Alternatives écartées
 
-**Application d'authentification à mot de passe à usage unique**, ce que prévoyait
-le cahier des charges. Écartée sur refus de l'exploitante, et devenue moins
-pertinente : la passkey offre une protection supérieure contre le hameçonnage
-pour un effort moindre.
+**Application d'authentification à mot de passe à usage unique**, ce que
+prévoyait le cahier des charges. Écartée sur refus de l'exploitante, et devenue
+moins pertinente : la passkey offre une protection supérieure contre le
+hameçonnage pour un effort moindre.
 
 **Mot de passe seul avec changement régulier**, ce que proposait l'exploitante.
 Écartée. Contredit un Must et un critère de refus d'ouverture, et le changement
 périodique n'est plus recommandé par les autorités compétentes.
 
-**Passkey seule, sans mot de passe.** Plus sûre, mais laisse Stacy sans recours si
-ses deux appareils deviennent inaccessibles en même temps. Envisageable plus tard,
-une fois l'usage de la passkey confirmé sur plusieurs semaines. Notée comme
-évolution possible, pas retenue au lancement.
+**Passkey seule, sans mot de passe.** Plus sûre, mais laisse l'exploitante sans
+recours si ses deux appareils deviennent inaccessibles en même temps.
+Envisageable plus tard, une fois l'usage de la passkey confirmé sur plusieurs
+semaines. Notée comme évolution possible, pas retenue au lancement.
 
 **Deux comptes administrateur distincts**, un par soeur. Sans objet puisque la
 soeur n'accède pas au back-office.
@@ -140,11 +141,12 @@ ouvert dans ADR-008.
 
 La section 6.2 du cahier des charges est amendée sur deux points : le compte
 n'est plus partagé, et le mode du second facteur change. La conséquence positive
-est que le journal d'audit devient exploitable, puisque l'actrice est identifiée.
+est que le journal d'audit devient exploitable, puisque l'actrice est
+identifiée.
 
-L'enregistrement de la passkey doit se faire **avec Stacy**, depuis ses propres
-appareils. Il ne peut pas être préparé à sa place. À prévoir dans le guide
-d'administration et lors de la première séance de recette.
+L'enregistrement de la passkey doit se faire **avec l'exploitante**, depuis ses
+propres appareils. Il ne peut pas être préparé à sa place. À prévoir dans le
+guide d'administration et lors de la première séance de recette.
 
 Les codes de récupération sont générés à la configuration, imprimés et conservés
 hors ligne par l'exploitante. Ils ne sont ni stockés en clair ni transmis par
@@ -152,14 +154,14 @@ email.
 
 ## Risques
 
-**Panne du fournisseur d'email.** Si l'email est indisponible et que Stacy a
-perdu ses appareils, le lien de réinitialisation ne lui parvient pas. Les codes de
-récupération hors ligne sont la seule réponse. Leur existence doit être vérifiée
-avant l'ouverture, pas supposée.
+**Panne du fournisseur d'email.** Si l'email est indisponible et que
+l'exploitante a perdu ses appareils, le lien de réinitialisation ne lui parvient
+pas. Les codes de récupération hors ligne sont la seule réponse. Leur existence
+doit être vérifiée avant l'ouverture, pas supposée.
 
 **Le mot de passe reste le maillon faible.** Un mot de passe long, la limitation
-de débit et l'alerte de connexion réduisent le risque sans l'éliminer. Le passage
-en passkey seule est l'évolution qui le supprime.
+de débit et l'alerte de connexion réduisent le risque sans l'éliminer. Le
+passage en passkey seule est l'évolution qui le supprime.
 
 **Accès croisé.** Un test négatif doit vérifier qu'une passkey enregistrée ne
 permet pas d'ouvrir une session sur un autre compte. À couvrir dans la phase

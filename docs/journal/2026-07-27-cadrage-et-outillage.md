@@ -59,13 +59,13 @@ vingt requêtes simultanées sur une pièce unique, une seule réservation exist
 fin d'exécution, les dix-neuf autres reçoivent zéro ligne.
 
 Treize assertions passent : concurrence à deux et à vingt, vente web désactivée
-avant un marché, libération d'une réservation expirée, conversion en vente payée.
-Tracé dans ADR-006, script rejouable dans `docs/prototypes/`.
+avant un marché, libération d'une réservation expirée, conversion en vente
+payée. Tracé dans ADR-006, script rejouable dans `docs/prototypes/`.
 
 Deux conséquences techniques découvertes : Prisma ne génère pas les contraintes
-`CHECK` depuis le schéma, il faudra une migration SQL manuelle. Et la réservation
-exigera du SQL brut via `$queryRaw`, l'API Prisma ne sachant pas exprimer un
-`UPDATE` conditionnel avec `RETURNING`.
+`CHECK` depuis le schéma, il faudra une migration SQL manuelle. Et la
+réservation exigera du SQL brut via `$queryRaw`, l'API Prisma ne sachant pas
+exprimer un `UPDATE` conditionnel avec `RETURNING`.
 
 **Skill `story` élargi à tout travail**, pas seulement aux tickets. Voir la
 section suivante, c'est une correction issue d'un manquement observé.
@@ -77,22 +77,23 @@ Conventions Git écrites dans `CONTRIBUTING.md` : branches en
 systématique même en solo.
 
 Authentification de l'administration tranchée dans ADR-021, et elle s'écarte du
-cahier des charges sur deux points. Le contexte réel a invalidé l'hypothèse de la
-section 6.2 : Stacy est seule à gérer le site, sa soeur intervient sur la création
-et les marchés sans accès au back-office. Le compte partagé n'a plus d'objet.
+cahier des charges sur deux points. Le contexte réel a invalidé l'hypothèse de
+la section 6.2 : l'exploitante est seule à gérer le site, sa soeur intervient
+sur la création et les marchés sans accès au back-office. Le compte partagé n'a
+plus d'objet.
 
-L'exploitante refusait le second facteur par application, jugé trop contraignant,
-et proposait de changer son mot de passe régulièrement. Cette proposition n'a pas
-été retenue : le back-office contient les données personnelles de toutes les
-clientes, et le changement périodique de mot de passe n'est plus recommandé par la
-CNIL ni l'ANSSI. La passkey a levé l'objection, étant moins contraignante qu'un
-mot de passe tout en résistant au hameçonnage. Elle possède un iPhone et un
-MacBook avec Touch ID sur le même compte iCloud, la synchronisation par trousseau
-règle la question du second appareil.
+L'exploitante refusait le second facteur par application, jugé trop
+contraignant, et proposait de changer son mot de passe régulièrement. Cette
+proposition n'a pas été retenue : le back-office contient les données
+personnelles de toutes les clientes, et le changement périodique de mot de passe
+n'est plus recommandé par la CNIL ni l'ANSSI. La passkey a levé l'objection,
+étant moins contraignante qu'un mot de passe tout en résistant au hameçonnage.
+L'exploitante possède un iPhone et un MacBook avec Touch ID sur le même compte
+iCloud, la synchronisation par trousseau règle la question du second appareil.
 
-Le mot de passe reste en secours, encadré par cinq mesures dont une alerte email à
-chaque connexion par mot de passe. C'est la plus utile des cinq : elle transforme
-une compromission silencieuse en incident détecté.
+Le mot de passe reste en secours, encadré par cinq mesures dont une alerte email
+à chaque connexion par mot de passe. C'est la plus utile des cinq : elle
+transforme une compromission silencieuse en incident détecté.
 
 ## Ce qui a pris plus de temps que prévu
 
@@ -112,23 +113,23 @@ suite plutôt qu'un enchaînement d'office.
 
 L'écriture dans les fichiers d'environnement est autorisée, en local comme en
 production, parce qu'il ne peut pas les éditer lui-même. La lecture des valeurs
-reste bloquée : une valeur lue entrerait dans l'historique de session et pourrait
-ressortir dans une sortie de commande. Le hook distingue désormais l'outil
-appelant, vérifié sur douze cas.
+reste bloquée : une valeur lue entrerait dans l'historique de session et
+pourrait ressortir dans une sortie de commande. Le hook distingue désormais
+l'outil appelant, vérifié sur douze cas.
 
 Les migrations de production deviennent autonomes, via
 `scripts/migrate-production.sh`. Christophe demandait initialement l'autonomie
-totale, y compris destructive. La version retenue est encadrée par deux contrôles
-déterministes, portés par un script et non par mon appréciation : sauvegarde
-vérifiée avant toute migration, et arrêt sur détection d'une instruction
-destructive, qui exige alors une confirmation explicite.
+totale, y compris destructive. La version retenue est encadrée par deux
+contrôles déterministes, portés par un script et non par mon appréciation :
+sauvegarde vérifiée avant toute migration, et arrêt sur détection d'une
+instruction destructive, qui exige alors une confirmation explicite.
 
-La justification tient à une différence de nature. Un déploiement de code raté se
-répare en redéployant l'image précédente taguée par SHA, en trois minutes, sans
-perte. Une migration destructive ne se répare pas par un retour arrière : le code
-revient, les données non, et il faut restaurer une sauvegarde donc perdre les
-commandes passées depuis. Sur une boutique en activité, ce sont des commandes
-réelles de clientes réelles.
+La justification tient à une différence de nature. Un déploiement de code raté
+se répare en redéployant l'image précédente taguée par SHA, en trois minutes,
+sans perte. Une migration destructive ne se répare pas par un retour arrière :
+le code revient, les données non, et il faut restaurer une sauvegarde donc
+perdre les commandes passées depuis. Sur une boutique en activité, ce sont des
+commandes réelles de clientes réelles.
 
 Détection vérifiée sur dix cas, six instructions destructives bloquées et quatre
 migrations additives passées sans faux positif.
@@ -136,48 +137,50 @@ migrations additives passées sans faux positif.
 ## Une régression de sécurité, détectée et corrigée
 
 Pour pouvoir éditer `.env.example`, j'ai remplacé le glob `Read(./.env.*)` et
-`Edit(./.env.*)` des règles `deny` par une liste fermée de sept noms. La revue de
-sécurité automatique des commits poussés l'a signalé comme régression de contrôle.
+`Edit(./.env.*)` des règles `deny` par une liste fermée de sept noms. La revue
+de sécurité automatique des commits poussés l'a signalé comme régression de
+contrôle.
 
 Elle avait raison. Tout fichier d'environnement hors de cette liste,
 `.env.staging`, `.env.preprod`, `.env.ovh`, `.env.backup`, n'était plus couvert.
 J'avais affaibli une protection pour résoudre un inconfort d'édition, ce qui est
 le mauvais arbitrage.
 
-La vérification dans la documentation officielle a établi trois choses. Une règle
-`deny` ne peut pas porter d'exception d'autorisation, donc « refuser `.env.*` sauf
-`.env.example` » est impossible : le blocage de `.env.example` était une limite du
-système, pas un défaut de ma configuration. Un hook `PreToolUse` qui sort en code
-2 bloque avant l'évaluation des permissions, c'est donc la couche la plus forte et
-non un filet de secours. Enfin les règles `Write(path)` ne sont jamais évaluées,
-seules `Edit(path)` le sont : les huit règles `Write()` que j'avais écrites étaient
-inertes.
+La vérification dans la documentation officielle a établi trois choses. Une
+règle `deny` ne peut pas porter d'exception d'autorisation, donc « refuser
+`.env.*` sauf `.env.example` » est impossible : le blocage de `.env.example`
+était une limite du système, pas un défaut de ma configuration. Un hook
+`PreToolUse` qui sort en code 2 bloque avant l'évaluation des permissions, c'est
+donc la couche la plus forte et non un filet de secours. Enfin les règles
+`Write(path)` ne sont jamais évaluées, seules `Edit(path)` le sont : les huit
+règles `Write()` que j'avais écrites étaient inertes.
 
-Correction : glob large restauré et élargi aux sous-répertoires, aux formats `p12`
-et `pfx` et aux clés SSH, règles inertes retirées, et le hook porte l'exception
-`.env.example` avec la répartition des rôles documentée en tête de fichier.
+Correction : glob large restauré et élargi aux sous-répertoires, aux formats
+`p12` et `pfx` et aux clés SSH, règles inertes retirées, et le hook porte
+l'exception `.env.example` avec la répartition des rôles documentée en tête de
+fichier.
 
-Leçon : ne pas affaiblir un contrôle de sécurité pour lever un inconfort. Vérifier
-d'abord si le contrôle est justifié, et déplacer l'exception vers la couche qui
-sait la porter.
+Leçon : ne pas affaiblir un contrôle de sécurité pour lever un inconfort.
+Vérifier d'abord si le contrôle est justifié, et déplacer l'exception vers la
+couche qui sait la porter.
 
 ## Un manquement à noter
 
-Après le prototype de réservation, l'ADR et le script ont été produits mais Jira,
-la mémoire et le journal n'ont pas été mis à jour. Le journal présentait même
-encore le prototype comme « à faire » alors qu'il était réalisé et validé.
+Après le prototype de réservation, l'ADR et le script ont été produits mais
+Jira, la mémoire et le journal n'ont pas été mis à jour. Le journal présentait
+même encore le prototype comme « à faire » alors qu'il était réalisé et validé.
 Christophe l'a relevé.
 
 Cause : le skill `story` exigeait une clé de ticket et portait
-`disable-model-invocation`, il ne s'appliquait donc pas à un travail exploratoire.
-La discipline de traçabilité existait sur le papier mais n'était déclenchée par
-rien.
+`disable-model-invocation`, il ne s'appliquait donc pas à un travail
+exploratoire. La discipline de traçabilité existait sur le papier mais n'était
+déclenchée par rien.
 
-Correction : le skill couvre désormais tout travail sur le projet, ticket ou non.
-Son étape 0 demande d'identifier à quel ticket existant le travail se rattache.
-Son étape 6 détaille les quatre canaux de traçabilité et exige de dire lesquels
-ont été mis à jour. Son étape 7 ajoute trois questions de contrôle avant de rendre
-la main. Le CLAUDE.md porte un rappel des quatre canaux.
+Correction : le skill couvre désormais tout travail sur le projet, ticket ou
+non. Son étape 0 demande d'identifier à quel ticket existant le travail se
+rattache. Son étape 6 détaille les quatre canaux de traçabilité et exige de dire
+lesquels ont été mis à jour. Son étape 7 ajoute trois questions de contrôle
+avant de rendre la main. Le CLAUDE.md porte un rappel des quatre canaux.
 
 Leçon plus générale : une règle qui n'est déclenchée par rien ne s'applique pas.
 Soit elle vit dans un mécanisme qui se déclenche tout seul, soit elle est
