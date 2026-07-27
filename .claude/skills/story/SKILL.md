@@ -112,6 +112,12 @@ et ce qui ne l'a pas été.
 Commit avec un message descriptif référençant le ticket. Jamais de
 `Co-Authored-By` dans ce projet.
 
+**Rédaction, sur les quatre canaux sans exception.** Français orthographiquement
+correct, tous les accents présents. Jamais « decision », « verifie » ou
+« donnees » sans accent, y compris dans un commentaire Jira : l'API accepte
+l'UTF-8. Aucun tiret cadratin ni demi-cadratin. Les identifiants techniques
+restent en ASCII.
+
 Sur Jira, si un critère n'est pas rempli, le dire et laisser le ticket ouvert
 plutôt que de le clore à tort. Un ticket partiellement fait passe en `En cours`
 avec la liste de ce qui reste.

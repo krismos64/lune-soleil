@@ -71,7 +71,8 @@ note, pas une décision.
 Ne jamais décider d'une obligation juridique dans un ADR. Le droit se vérifie aux
 sources officielles et, si nécessaire, auprès d'un professionnel.
 
-Aucun tiret cadratin. Aucun secret, aucune valeur de clé, aucune donnée
+Français orthographiquement correct, tous les accents présents. Aucun tiret
+cadratin ni demi-cadratin. Aucun secret, aucune valeur de clé, aucune donnée
 personnelle de l'exploitante ou d'une cliente : le dépôt est public.
 
 ## Un ADR n'écrase pas le cahier des charges

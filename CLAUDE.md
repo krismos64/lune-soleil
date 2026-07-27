@@ -65,6 +65,24 @@ Le test de concurrence correspondant s'écrit **avant** l'implémentation du
 paiement et reste en intégration continue. Ne jamais le contourner ni le
 désactiver.
 
+## Rédaction française
+
+YOU MUST écrire un français orthographiquement correct partout, sans exception :
+réponses, code, commentaires, documentation, ADR, journal, messages de commit,
+**commentaires et titres Jira**, pages Confluence, contenus du site.
+
+**Tous les accents et signes diacritiques sont obligatoires.** Jamais
+d'équivalent ASCII : écrire « décision », « vérifié », « données », « tranché »,
+jamais « decision », « verifie », « donnees », « tranche ». Cela vaut aussi dans
+les outils externes : l'API Jira accepte l'UTF-8, aucune raison de dégrader le
+texte. Vérifié sur LS-6, dont le titre porte ses accents sans problème.
+
+**Aucun tiret cadratin ou demi-cadratin** (— ou –), marqueur de texte généré.
+Utiliser deux-points, virgule, parenthèses ou point selon le contexte.
+
+Exception unique : les identifiants techniques restent en ASCII, noms de
+branches, de fichiers, de variables, de références produit.
+
 ## Interdits
 
 - Modifier le périmètre défini dans le cahier des charges.

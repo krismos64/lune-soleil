@@ -41,6 +41,20 @@ dur.
 Le jeton `primary-night` `#1B2A41` du cahier des charges est **écarté**. Aucun
 bleu dans ce projet, le logo n'en contient pas.
 
+## Rédaction des textes visibles
+
+Tout texte affiché aux visiteuses et à l'administratrice suit les règles de
+rédaction française du projet : orthographe correcte, **tous les accents
+présents**, aucun tiret cadratin ni demi-cadratin.
+
+Cela couvre les libellés de boutons, les messages d'erreur, les états vides, les
+textes alternatifs, les titres de section, les libellés de formulaire et les
+noms accessibles.
+
+Un accent manquant dans l'interface d'une boutique artisanale française abîme la
+crédibilité de la marque autant qu'une faute de frappe. Cette règle a donc un
+impact produit, pas seulement rédactionnel.
+
 ## Interdits visuels
 
 Pas de glassmorphisme, pas de carte transparente flottante, pas de dégradé
