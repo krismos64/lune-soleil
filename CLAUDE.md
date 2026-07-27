@@ -104,6 +104,23 @@ Par ordre de priorité en cas de divergence :
 Toute décision structurante produit un ADR. Toute nouvelle idée entre d'abord
 dans Jira et n'intègre le périmètre que par arbitrage explicite.
 
+## Conduite du travail
+
+Tout travail sur ce projet suit le skill `story`, y compris une exploration ou un
+prototype sans ticket. Il porte le contrôle avant zone critique et la clôture de
+la traçabilité.
+
+YOU MUST clore tout travail significatif sur les quatre canaux, et dire
+explicitement ce qui a été mis à jour :
+
+1. **Dépôt** : code, ADR si décision structurante, script si prototype
+2. **Journal** `docs/journal/` : fait, dérives, prochaine étape, état des tickets
+3. **Mémoire** : toute découverte non dérivable du code
+4. **Jira** : état réel de chaque critère, commit, ce qui reste
+
+Un travail non tracé sera refait ou contredit. Un journal qui présente comme « à
+faire » une tâche déjà faite est pire qu'un journal absent.
+
 ## Vérification avant de considérer une story terminée
 
 Types, lint et tests concernés au vert. Critères d'acceptation vérifiés. Rendu
