@@ -102,6 +102,34 @@ recommandation à annuler ensuite. La mesure colorimétrique a réglé le débat
 quelques secondes là où l'appréciation visuelle tournait en rond. Leçon : sur
 une question de couleur, mesurer avant d'argumenter.
 
+## Une régression de sécurité, détectée et corrigée
+
+Pour pouvoir éditer `.env.example`, j'ai remplacé le glob `Read(./.env.*)` et
+`Edit(./.env.*)` des règles `deny` par une liste fermée de sept noms. La revue de
+sécurité automatique des commits poussés l'a signalé comme régression de contrôle.
+
+Elle avait raison. Tout fichier d'environnement hors de cette liste,
+`.env.staging`, `.env.preprod`, `.env.ovh`, `.env.backup`, n'était plus couvert.
+J'avais affaibli une protection pour résoudre un inconfort d'édition, ce qui est
+le mauvais arbitrage.
+
+La vérification dans la documentation officielle a établi trois choses. Une règle
+`deny` ne peut pas porter d'exception d'autorisation, donc « refuser `.env.*` sauf
+`.env.example` » est impossible : le blocage de `.env.example` était une limite du
+système, pas un défaut de ma configuration. Un hook `PreToolUse` qui sort en code
+2 bloque avant l'évaluation des permissions, c'est donc la couche la plus forte et
+non un filet de secours. Enfin les règles `Write(path)` ne sont jamais évaluées,
+seules `Edit(path)` le sont : les huit règles `Write()` que j'avais écrites étaient
+inertes.
+
+Correction : glob large restauré et élargi aux sous-répertoires, aux formats `p12`
+et `pfx` et aux clés SSH, règles inertes retirées, et le hook porte l'exception
+`.env.example` avec la répartition des rôles documentée en tête de fichier.
+
+Leçon : ne pas affaiblir un contrôle de sécurité pour lever un inconfort. Vérifier
+d'abord si le contrôle est justifié, et déplacer l'exception vers la couche qui
+sait la porter.
+
 ## Un manquement à noter
 
 Après le prototype de réservation, l'ADR et le script ont été produits mais Jira,
