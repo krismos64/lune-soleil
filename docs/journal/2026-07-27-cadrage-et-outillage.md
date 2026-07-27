@@ -95,6 +95,22 @@ Le mot de passe reste en secours, encadré par cinq mesures dont une alerte emai
 à chaque connexion par mot de passe. C'est la plus utile des cinq : elle
 transforme une compromission silencieuse en incident détecté.
 
+**LS-11 fermé, parcours critiques documentés.** Six parcours et non cinq. Le plan
+directeur exigeait la validation du modèle sur « les cinq scénarios critiques »
+sans jamais les énumérer, et deux listes coexistaient dans le cahier des charges :
+cinq parcours orientés utilisatrice en section 9, six transactions critiques
+orientées données en section 15.5.
+
+Elles ne se recouvrent pas. Le rattachement d'une commande sans compte à un compte
+vérifié est une transaction critique absente de tous les parcours. Il appartient à
+la V1 cible, mais le modèle doit le prévoir dès maintenant sous peine de migration
+sur des commandes historiques.
+
+Trente et un cas d'erreur documentés, chacun avec l'état persisté, la vue et le
+traitement planifié. Un parcours limité au chemin heureux ne sert à rien pour
+concevoir un modèle de données : ce sont les cas d'erreur qui créent les états à
+conserver.
+
 ## Ce qui a pris plus de temps que prévu
 
 La question de la palette. Elle paraissait tranchée par la spécification UX/UI,
@@ -207,8 +223,8 @@ Phase 0, cadrage opérationnel. Deux stories terminées sur treize.
 | LS-21 | ADR palette publique | Terminé |
 | LS-16 | Jetons de design | Terminé |
 | LS-9 | Kickoff des outils | Fait en pratique, reste Confluence à remplir |
-| LS-11 | Plan du site et cinq parcours critiques | À faire, prochaine étape |
-| LS-12 | Modèle conceptuel de données | À faire, bloqué par LS-11 |
+| LS-11 | Plan du site et parcours critiques | Terminé : `docs/architecture/PARCOURS.md`, six parcours, trente et un cas d'erreur |
+| LS-12 | Modèle conceptuel de données | À faire, débloqué, prochaine étape |
 | LS-13 | Modèle logique de données | À faire |
 | LS-14 | Diagramme de séquence de l'achat | À faire |
 | LS-15 | Filaire mobile création produit admin | À faire |
@@ -217,15 +233,24 @@ Phase 0, cadrage opérationnel. Deux stories terminées sur treize.
 | LS-18 | Compte de paiement Stripe | Démarche externe à lancer |
 | LS-19 | Médiateur de la consommation | Démarche externe à lancer |
 | LS-20 | Photographies | Démarche externe à lancer |
+| LS-31 | Agent conteneurisation propre au projet | À faire, phase 1 |
 
 ## Prochaine étape
 
-LS-11 puis LS-12 et LS-13, le modèle de données. C'est ce qui conditionne tout
-le reste, et la porte de sortie de la phase 0 exige qu'il soit validé sur les
-cinq scénarios critiques sans invention de champ manquant.
+LS-12, le modèle conceptuel de données, puis LS-13, le modèle logique. C'est ce
+qui conditionne tout le reste.
 
-LS-17 est fermé. Le format des numéros de commande, facture et avoir reste à
-définir, mais il relève de LS-13 et non de LS-17.
+Les deux entrées sont désormais disponibles. `docs/architecture/PARCOURS.md`
+fournit les six parcours et la synthèse de ce qu'ils imposent au modèle. ADR-006
+fixe la stratégie de réservation, avec la colonne dénormalisée, les trois
+contraintes `CHECK` et les deux limites de Prisma découvertes au prototype.
+
+La porte de sortie de la phase 0 exige que le modèle logique soit validé sur les
+scénarios critiques sans invention de champ manquant. La liste retenue est celle
+des six parcours, arbitrée dans LS-11.
+
+Le format des numéros de commande, facture et avoir reste à définir, il relève de
+LS-13.
 
 Le contrôle de la stratégie de réservation est fait, ADR-006. Le modèle de
 données peut donc être construit sans risque : la variante portera
