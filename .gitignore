@@ -1,0 +1,107 @@
+# Dependances
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Build et cache
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+.turbo/
+.swc/
+
+# Secrets et environnement
+# Aucun secret de production ne doit entrer dans ce depot public.
+# Seul .env.example est versionne, avec les noms et les formats, jamais les valeurs.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+.secrets
+
+# Tests et couverture
+coverage/
+.nyc_output/
+playwright-report/
+playwright/.cache/
+test-results/
+blob-report/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+
+# Base de donnees locale et sauvegardes
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.sql.gz
+backups/
+pg-data/
+
+# Medias locaux et televersements
+# Les photographies de production ne sont pas versionnees, elles vivent
+# chez l'hebergeur de medias. Les originaux peuvent contenir des metadonnees.
+public/uploads/
+uploads/
+tmp/
+.tmp/
+
+# Documents comptables generes
+# Les factures et avoirs contiennent des donnees personnelles de clientes.
+invoices/
+credit-notes/
+*.pdf
+!docs/**/*.pdf
+
+# Documents internes non publiables
+# Le cahier des charges et le plan directeur contiennent l'adresse du domicile
+# de l'exploitante, son identite complete et le numero de formalite du Guichet
+# unique. Ils restent hors du depot public, decision actee.
+docs/prive/
+docs/internal/
+
+# Outils et editeurs
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.example.json
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Assistant de developpement
+# Les reglages partages de .claude sont versionnes, les reglages locaux non.
+.claude/settings.local.json
+.claude/*.local.json
+.mcp.local.json
+
+# Divers
+.vercel
+.sentryclirc
+*.tgz

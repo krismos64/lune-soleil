@@ -1,0 +1,84 @@
+/*
+ * Lune & Soleil, jetons de design
+ *
+ * Couleurs derivees du logo officiel et fixees par ADR-022.
+ * Ne pas reprendre l'annexe A du cahier des charges sur les couleurs :
+ * elle contient un jeton primary-night #1B2A41 qui a ete ecarte.
+ *
+ * Deux regles d'accessibilite contraignantes :
+ *
+ * 1. --ls-accent-gold plafonne a 2,31:1 sur creme. Interdit pour tout texte,
+ *    y compris large. Filets, icones decoratives et eclats uniquement.
+ *    Tout texte dore utilise --ls-accent-gold-deep.
+ *
+ * 2. --ls-accent-terracotta donne 4,07:1, conforme AA uniquement en texte
+ *    large ou gras. Un badge en petit texte doit passer en fond terracotta
+ *    avec texte blanc.
+ */
+
+:root {
+  /* Surfaces */
+  --ls-background: #fbf7f0; /* fond de page, creme */
+  --ls-surface: #ffffff; /* cartes, panneaux, formulaires */
+  --ls-surface-sand: #f2eadf; /* sections alternees, encadres, footer */
+  --ls-border: #d9cdba; /* bordures fines, separateurs, decoratif */
+
+  /* Texte */
+  --ls-text: #3b2f2a; /* texte courant, 12,09:1 sur creme, AAA */
+  --ls-text-muted: #7a6a5d; /* texte secondaire, 4,86:1, AA */
+  --ls-text-on-primary: #ffffff; /* texte sur aplat primaire */
+
+  /* Actions */
+  --ls-primary: #5f4519; /* boutons, bandeau, en-tetes, 8,93:1 blanc dessus, AAA */
+  --ls-primary-hover: #4a2a0b; /* survol et etat actif, 12,91:1 blanc dessus, AAA */
+  --ls-focus: #4a2a0b; /* contour de focus visible */
+
+  /* Accents */
+  --ls-accent-gold: #c4a052; /* DECOR UNIQUEMENT, 2,31:1, jamais de texte */
+  --ls-accent-gold-deep: #8a6a22; /* liens et texte accentue, 4,72:1, AA */
+  --ls-accent-terracotta: #b4643e; /* badge ponctuel, 4,07:1, texte large ou gras */
+
+  /* Etats */
+  --ls-success: #3f6b4a; /* confirmation, disponibilite */
+  --ls-warning: #a9741a; /* stock faible, avertissement */
+  --ls-error: #a33a2e; /* erreur, rupture, refus */
+
+  /* Prix, aligne sur l'action principale */
+  --ls-price: #5f4519;
+
+  /* Espacement, repris de l'annexe A du cahier des charges */
+  --ls-space-1: 4px;
+  --ls-space-2: 8px;
+  --ls-space-3: 12px;
+  --ls-space-4: 16px;
+  --ls-space-5: 24px;
+  --ls-space-6: 32px;
+  --ls-space-7: 48px;
+  --ls-space-8: 64px;
+
+  /* Rayons : 4 px pour les actions, 8 px pour les panneaux, 16 px rarement */
+  --ls-radius-sm: 4px;
+  --ls-radius-md: 8px;
+  --ls-radius-lg: 16px;
+
+  /* Ombres chaudes et tres discretes, jamais grises et neutres */
+  --ls-shadow-soft:
+    0 1px 2px rgba(59, 47, 42, 0.06), 0 8px 24px rgba(59, 47, 42, 0.05);
+
+  /* Animation, aucune n'est necessaire au parcours critique */
+  --ls-duration-fast: 120ms;
+  --ls-duration-base: 220ms;
+  --ls-easing: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Mise en page */
+  --ls-content-max: 1280px;
+  --ls-touch-target: 44px;
+}
+
+/* Respect systematique de la preference de mouvement reduit */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ls-duration-fast: 0ms;
+    --ls-duration-base: 0ms;
+  }
+}
