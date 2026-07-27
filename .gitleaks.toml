@@ -1,0 +1,36 @@
+# Configuration gitleaks pour lune-soleil
+#
+# Le depot est public. Les regles par defaut de gitleaks sont conservees et
+# completees par des regles propres a la stack du projet.
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "lune-soleil-adresse-exploitante"
+description = "Adresse du domicile de l'exploitante, ne doit jamais figurer dans le depot public"
+regex = '''(?i)(Edmond\s+Rostand|r[ée]sidence\s+du\s+Pondix)'''
+tags = ["donnees-personnelles"]
+
+[[rules]]
+id = "lune-soleil-cron-secret"
+description = "Secret partage des taches planifiees"
+regex = '''(?i)CRON_SHARED_SECRET\s*[=:]\s*['"]?[A-Za-z0-9+/=_-]{16,}'''
+tags = ["secret"]
+
+[[rules]]
+id = "lune-soleil-better-auth-secret"
+description = "Secret Better Auth"
+regex = '''(?i)BETTER_AUTH_SECRET\s*[=:]\s*['"]?[A-Za-z0-9+/=_-]{16,}'''
+tags = ["secret"]
+
+[allowlist]
+description = "Fichiers d'exemple et documentation, qui ne contiennent que des noms et des formats"
+paths = [
+  '''\.env\.example$''',
+  '''\.env\.sample$''',
+  '''\.env\.template$''',
+  '''\.gitleaks\.toml$''',
+  '''\.githooks/pre-commit$''',
+  '''\.claude/scripts/.*\.sh$''',
+]

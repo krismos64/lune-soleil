@@ -1,0 +1,83 @@
+#!/bin/bash
+# Pre-commit — bloque le commit si un secret est detecte.
+#
+# Le depot lune-soleil est PUBLIC. Un secret pousse est indexe en quelques
+# minutes et doit etre considere comme compromis, meme apres suppression.
+#
+# Activation :
+#   git config core.hooksPath .githooks
+#
+# Contournement en cas de faux positif, a n'utiliser qu'apres verification :
+#   git commit --no-verify
+
+set -u
+
+fail=0
+
+# 1. gitleaks sur les fichiers indexes
+if command -v gitleaks >/dev/null 2>&1; then
+  if ! gitleaks protect --staged --redact --no-banner 2>&1; then
+    echo "" >&2
+    echo "COMMIT BLOQUE : gitleaks a detecte un secret potentiel." >&2
+    fail=1
+  fi
+else
+  echo "Avertissement : gitleaks absent, seul le controle de repli s'applique." >&2
+  echo "Installation : brew install gitleaks" >&2
+fi
+
+# 2. Controle de repli sur des motifs connus de la stack du projet
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -n "$staged" ]; then
+  while IFS= read -r f; do
+    [ -f "$f" ] || continue
+
+    # Ignore les fichiers d'exemple et la config gitleaks elle-meme
+    case "$(basename "$f")" in
+      .env.example|.env.sample|.env.template|.gitleaks.toml|pre-commit) continue ;;
+    esac
+
+    # Cle secrete Stripe en mode reel
+    if grep -qE 'sk_live_[A-Za-z0-9]{20,}' "$f" 2>/dev/null; then
+      echo "COMMIT BLOQUE : cle Stripe live detectee dans $f" >&2
+      fail=1
+    fi
+
+    # Secret de signature de webhook Stripe
+    if grep -qE 'whsec_[A-Za-z0-9]{20,}' "$f" 2>/dev/null; then
+      echo "COMMIT BLOQUE : secret de webhook Stripe detecte dans $f" >&2
+      fail=1
+    fi
+
+    # Chaine PostgreSQL avec mot de passe non vide
+    if grep -qE 'postgres(ql)?://[^:/@[:space:]]+:[^@[:space:]]+@' "$f" 2>/dev/null; then
+      echo "COMMIT BLOQUE : chaine de connexion avec mot de passe dans $f" >&2
+      fail=1
+    fi
+
+    # Adresse du domicile de l'exploitante, ne doit jamais etre publiee ici
+    if grep -qiE 'Edmond Rostand|Pondix' "$f" 2>/dev/null; then
+      echo "COMMIT BLOQUE : adresse personnelle de l'exploitante dans $f" >&2
+      echo "  Le depot est public. Utiliser une variable de configuration." >&2
+      fail=1
+    fi
+  done <<< "$staged"
+fi
+
+# 3. Refus d'un fichier d'environnement indexe
+if echo "$staged" | grep -qE '(^|/)\.env($|\.)' 2>/dev/null; then
+  if ! echo "$staged" | grep -qE '\.env\.(example|sample|template)$'; then
+    echo "COMMIT BLOQUE : un fichier .env est indexe." >&2
+    echo "  Retirer avec : git rm --cached <fichier>" >&2
+    fail=1
+  fi
+fi
+
+if [ "$fail" -ne 0 ]; then
+  echo "" >&2
+  echo "Depot public : un secret pousse doit etre revoque, pas seulement supprime." >&2
+  exit 1
+fi
+
+exit 0
