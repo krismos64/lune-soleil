@@ -102,6 +102,37 @@ recommandation à annuler ensuite. La mesure colorimétrique a réglé le débat
 quelques secondes là où l'appréciation visuelle tournait en rond. Leçon : sur
 une question de couleur, mesurer avant d'argumenter.
 
+**Autonomie de l'assistant élargie**, en fin de session, avec deux garde-fous
+automatiques sur les migrations.
+
+Christophe accorde sa confiance et ne souhaite plus valider chaque commande. Les
+règles `allow` passent de douze à cinquante-neuf. La contrepartie qu'il demande
+est un point en fin de chaque étape significative, avec une proposition pour la
+suite plutôt qu'un enchaînement d'office.
+
+L'écriture dans les fichiers d'environnement est autorisée, en local comme en
+production, parce qu'il ne peut pas les éditer lui-même. La lecture des valeurs
+reste bloquée : une valeur lue entrerait dans l'historique de session et pourrait
+ressortir dans une sortie de commande. Le hook distingue désormais l'outil
+appelant, vérifié sur douze cas.
+
+Les migrations de production deviennent autonomes, via
+`scripts/migrate-production.sh`. Christophe demandait initialement l'autonomie
+totale, y compris destructive. La version retenue est encadrée par deux contrôles
+déterministes, portés par un script et non par mon appréciation : sauvegarde
+vérifiée avant toute migration, et arrêt sur détection d'une instruction
+destructive, qui exige alors une confirmation explicite.
+
+La justification tient à une différence de nature. Un déploiement de code raté se
+répare en redéployant l'image précédente taguée par SHA, en trois minutes, sans
+perte. Une migration destructive ne se répare pas par un retour arrière : le code
+revient, les données non, et il faut restaurer une sauvegarde donc perdre les
+commandes passées depuis. Sur une boutique en activité, ce sont des commandes
+réelles de clientes réelles.
+
+Détection vérifiée sur dix cas, six instructions destructives bloquées et quatre
+migrations additives passées sans faux positif.
+
 ## Une régression de sécurité, détectée et corrigée
 
 Pour pouvoir éditer `.env.example`, j'ai remplacé le glob `Read(./.env.*)` et
