@@ -45,6 +45,28 @@ autorise `.env.example`. Le pre-commit refuse une clé Stripe live. gitleaks
 
 **MCP Atlassian migré** de l'endpoint SSE déprécié vers `/v1/mcp/authv2`.
 
+**Stratégie de réservation de stock vérifiée par prototype**, sur PostgreSQL
+18.4, avant construction du schéma. C'était le seul vrai point d'incertitude
+technique du projet.
+
+Le prototype démontre d'abord que la méthode naïve échoue réellement : deux
+transactions concurrentes lisent toutes les deux `disponible = 1` et tentent de
+réserver, la seconde n'étant arrêtée que par la contrainte `CHECK`, ce qui
+produit une erreur de base de données au lieu d'un refus métier.
+
+L'instruction conditionnelle unique avec `RETURNING` résout le problème. Sur
+vingt requêtes simultanées sur une pièce unique, une seule réservation existe en
+fin d'exécution, les dix-neuf autres reçoivent zéro ligne.
+
+Treize assertions passent : concurrence à deux et à vingt, vente web désactivée
+avant un marché, libération d'une réservation expirée, conversion en vente payée.
+Tracé dans ADR-006, script rejouable dans `docs/prototypes/`.
+
+Deux conséquences techniques découvertes : Prisma ne génère pas les contraintes
+`CHECK` depuis le schéma, il faudra une migration SQL manuelle. Et la réservation
+exigera du SQL brut via `$queryRaw`, l'API Prisma ne sachant pas exprimer un
+`UPDATE` conditionnel avec `RETURNING`.
+
 ## Ce qui a pris plus de temps que prévu
 
 La question de la palette. Elle paraissait tranchée par la spécification UX/UI,
@@ -79,7 +101,7 @@ Phase 0, cadrage opérationnel. Deux stories terminées sur treize.
 | LS-13 | Modèle logique de données | À faire |
 | LS-14 | Diagramme de séquence de l'achat | À faire |
 | LS-15 | Filaire mobile création produit admin | À faire |
-| LS-17 | Décisions et conventions bloquantes | À faire, peut avancer en parallèle |
+| LS-17 | Décisions et conventions bloquantes | Partiel : stratégie de réservation validée (ADR-006), restent les conventions et le second facteur |
 | LS-10 | Benchmark court | À faire, faible priorité |
 | LS-18 | Compte de paiement Stripe | Démarche externe à lancer |
 | LS-19 | Médiateur de la consommation | Démarche externe à lancer |
@@ -91,12 +113,13 @@ LS-11 puis LS-12 et LS-13, le modèle de données. C'est ce qui conditionne tout
 le reste, et la porte de sortie de la phase 0 exige qu'il soit validé sur les
 cinq scénarios critiques sans invention de champ manquant.
 
-LS-17 peut avancer en parallèle : conventions de branches et de commits, format
-des numéros de commande, facture et avoir, mode du second facteur.
+LS-17 est partiellement fait. Restent les conventions de branches et de commits,
+le format des numéros de commande, facture et avoir, et le mode du second facteur
+pour l'administration.
 
-Un contrôle à faire avant de construire sur le modèle : prototyper l'`UPDATE`
-atomique de réservation sur une base locale, quinze minutes, pour vérifier que la
-stratégie de la section 15.4 tient réellement en concurrence.
+Le contrôle de la stratégie de réservation est fait, ADR-006. Le modèle de
+données peut donc être construit sans risque : la variante portera
+`quantiteReservee` et les trois contraintes `CHECK`.
 
 ## Rappel du jalon qui compte
 
