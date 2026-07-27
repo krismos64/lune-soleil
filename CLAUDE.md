@@ -51,8 +51,8 @@ YOU MUST respecter ces règles sur tout le code de ce projet.
    distinctes. Suspendre la vente web ne crée aucun mouvement de stock.
 7. **Validation** : toute entrée non fiable est validée côté serveur avec Zod.
 8. **Horodatage** : persisté en UTC, converti à l'affichage seulement.
-9. **Secrets** : jamais lus, jamais écrits, jamais journalisés. Le dépôt est
-   **public**.
+9. **Secrets** : jamais journalisés, jamais commités. Le dépôt est **public**.
+   L'écriture dans un `.env` est autorisée, la lecture de ses valeurs non.
 10. **Mobile first** : conception à partir de 320 px, puis 390, 768, 1280.
 
 ## Le jalon qui compte
@@ -67,29 +67,20 @@ désactiver.
 
 ## Rédaction française
 
-YOU MUST écrire un français orthographiquement correct partout, sans exception :
-réponses, code, commentaires, documentation, ADR, journal, messages de commit,
-**commentaires et titres Jira**, pages Confluence, contenus du site.
+YOU MUST écrire un français orthographiquement correct partout, **tous les
+accents présents**, y compris dans les commentaires et titres Jira : l'API
+accepte l'UTF-8. Jamais « decision » ni « verifie » sans accent.
 
-**Tous les accents et signes diacritiques sont obligatoires.** Jamais
-d'équivalent ASCII : écrire « décision », « vérifié », « données », « tranché »,
-jamais « decision », « verifie », « donnees », « tranche ». Cela vaut aussi dans
-les outils externes : l'API Jira accepte l'UTF-8, aucune raison de dégrader le
-texte. Vérifié sur LS-6, dont le titre porte ses accents sans problème.
+Aucun tiret cadratin ni demi-cadratin (— ou –), marqueur de texte généré.
 
-**Aucun tiret cadratin ou demi-cadratin** (— ou –), marqueur de texte généré.
-Utiliser deux-points, virgule, parenthèses ou point selon le contexte.
-
-Exception unique : les identifiants techniques restent en ASCII, noms de
-branches, de fichiers, de variables, de références produit.
+Exception : les identifiants techniques restent en ASCII, branches, fichiers,
+variables, références produit.
 
 ## Interdits
 
 - Modifier le périmètre défini dans le cahier des charges.
 - Décider d'une obligation juridique. Les textes de loi se vérifient aux sources.
-- Exécuter une migration en production.
-- Lire un fichier de secrets.
-- Déployer sans autorisation explicite.
+- Lire la valeur d'un secret dans un `.env`, une clé ou un certificat.
 - Modifier une commande ou une facture réelle.
 - Écrire un tiret cadratin dans un contenu Lune & Soleil.
 - Introduire les données du prototype (noms, prix, stocks) comme données réelles.
@@ -121,6 +112,40 @@ Par ordre de priorité en cas de divergence :
 
 Toute décision structurante produit un ADR. Toute nouvelle idée entre d'abord
 dans Jira et n'intègre le périmètre que par arbitrage explicite.
+
+## Autonomie et accès
+
+Décidé avec Christophe le 27 juillet 2026.
+
+**Travailler sans demander de validation à chaque commande.** Enchaîner les
+outils librement à l'intérieur d'une étape. En revanche, faire un point à la fin
+de chaque étape significative, et proposer la suite plutôt que de l'enchaîner
+d'office.
+
+**Secrets** : l'écriture dans un `.env` est autorisée, en local comme en
+production. Ajouter une variable, en modifier une, générer un secret avec
+`openssl`. La lecture des valeurs reste bloquée : une valeur lue entrerait dans
+l'historique de session et pourrait ressortir dans une sortie. Pour
+diagnostiquer, lister les noms de variables sans leur contenu.
+
+Les clés privées et certificats restent bloqués en lecture comme en écriture :
+une clé se génère, elle ne s'édite pas.
+
+**Accès opérationnels** : utiliser `ssh`, `docker`, `stripe`, `gh`, `psql` avec
+les accès déjà configurés, sans jamais lire les identifiants sous-jacents.
+
+**Déploiement et migrations de production** : autonomes, via
+`./scripts/migrate-production.sh`, qui porte deux garde-fous automatiques.
+
+1. Sauvegarde vérifiée avant toute migration : le dump doit exister, ne pas être
+   vide et être lisible par `pg_restore`. Sinon la migration ne part pas.
+2. Migration destructive détectée, arrêt. `DROP`, `TRUNCATE`, `DELETE FROM` et
+   les renommages exigent `--confirm-destructive`, donc un accord explicite. Les
+   migrations additives passent seules.
+
+Ne jamais contourner ce script ni appeler `prisma migrate deploy` directement en
+production. Un déploiement de code raté se répare en redéployant l'image
+précédente ; une migration destructive ne se répare pas par un retour arrière.
 
 ## Agents
 

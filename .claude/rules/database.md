@@ -114,8 +114,15 @@ destructive.
 
 Sauvegarde systématique avant toute migration de production.
 
-**Ne jamais exécuter une migration de production.** C'est un interdit absolu pour
-l'assistant.
+**Les migrations de production passent par `./scripts/migrate-production.sh`**,
+jamais par `prisma migrate deploy` appelé directement.
+
+Ce script porte deux garde-fous automatiques : une sauvegarde vérifiée avant
+toute migration, et l'arrêt sur détection d'une instruction destructive (`DROP`,
+`TRUNCATE`, `DELETE FROM`, renommage), qui exige alors `--confirm-destructive`.
+
+Une migration additive passe seule. Une migration destructive demande un accord
+explicite, parce qu'elle ne se répare pas par un retour arrière.
 
 ## SQL brut
 

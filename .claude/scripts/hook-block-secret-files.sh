@@ -1,27 +1,35 @@
 #!/bin/bash
-# PreToolUse hook (Read|Edit|Write) — bloque tout acces aux fichiers de secrets.
-#
-# Le cahier des charges Lune & Soleil interdit a l'assistant de lire ou de
-# modifier un fichier de secrets (section 27.3). Une regle de CLAUDE.md est
-# consultative, ce hook est deterministe.
+# PreToolUse hook (Read|Edit|Write) — protege les fichiers de secrets.
 #
 # Ce hook est la couche de protection principale, et non le filet de secours.
 # Un hook qui sort en code 2 bloque l'appel AVANT l'evaluation des regles de
 # permission, il prime donc sur toute regle allow.
 #
-# Repartition avec les regles deny de settings.json :
+# POLITIQUE, decidee avec Christophe le 27 juillet 2026
 #
-#   Les regles deny utilisent un glob large sur .env.* et ne peuvent pas porter
-#   d'exception : la documentation officielle est explicite, une regle deny ne
-#   peut pas contenir d'exception d'autorisation. Elles bloquent donc aussi
-#   .env.example, ce qui est un effet de bord accepte.
+#   Fichiers d'environnement (.env et variantes)
+#     Ecriture AUTORISEE. Christophe ne peut pas les editer lui-meme, une
+#     protection qui bloque l'assistant devient un obstacle et non une
+#     securite. Ajouter une variable, en modifier une, generer un secret
+#     avec openssl : tout cela ne necessite pas de lire l'existant.
 #
-#   Ce hook porte l'exception : il autorise explicitement les fichiers
-#   d'exemple, qui ne contiennent que des noms de variables et des formats.
+#     Lecture BLOQUEE. Une valeur lue entre dans le contexte de l'assistant,
+#     donc dans l'historique de session sur le disque, et peut ressortir
+#     dans une sortie de commande ou un message d'erreur. Presque aucune
+#     tache ne l'exige : pour diagnostiquer, lister les noms de variables
+#     et la longueur des valeurs suffit, sans afficher leur contenu.
 #
-# Consequence pratique : pour editer .env.example, il faut passer par un
-# outil que les regles deny ne couvrent pas, ou retirer temporairement le
-# motif .env.* des regles deny. Ne jamais retirer ce hook.
+#   Cles privees, certificats, magasins de secrets
+#     Lecture ET ecriture BLOQUEES. Une cle privee ne s'edite jamais a la
+#     main, elle se genere. Aucun benefice a l'ouvrir, risque de fuite
+#     maximal.
+#
+#   Fichiers d'exemple (.env.example et variantes)
+#     Totalement autorises, ils ne contiennent que des noms et des formats.
+#
+# Repartition avec les regles deny de settings.json : une regle deny ne peut
+# pas porter d'exception d'autorisation, elle ne sait donc pas distinguer la
+# lecture de l'ecriture sur un meme chemin. C'est ce hook qui porte la nuance.
 
 set -u
 input=$(cat)
@@ -29,43 +37,59 @@ input=$(cat)
 file=$(echo "$input" | jq -r '.tool_input.file_path // ""' 2>/dev/null)
 [ -z "$file" ] && exit 0
 
+tool=$(echo "$input" | jq -r '.tool_name // ""' 2>/dev/null)
 base=$(basename "$file")
 
-# Autorise explicitement les fichiers d'exemple
+# Fichiers d'exemple : toujours autorises
 case "$base" in
   .env.example|.env.sample|.env.template) exit 0 ;;
 esac
 
-blocked=0
-reason=""
-
-# Fichiers d'environnement
-case "$base" in
-  .env|.env.*) blocked=1; reason="fichier d'environnement" ;;
-esac
-
-# Cles, certificats et magasins de secrets
+# Cles privees, certificats, magasins de secrets : bloques dans les deux sens
 case "$base" in
   *.pem|*.key|*.p12|*.pfx|*.jks|id_rsa|id_ed25519|*.keystore)
-    blocked=1; reason="cle ou certificat" ;;
+    echo "Hook BLOCK: acces refuse a une cle ou un certificat." >&2
+    echo "Fichier : $file" >&2
+    echo "" >&2
+    echo "Lecture et ecriture bloquees. Une cle privee se genere, elle ne" >&2
+    echo "s'edite pas a la main. Utiliser ssh-keygen ou openssl, dont la" >&2
+    echo "sortie va directement dans le fichier sans passer par l'assistant." >&2
+    exit 2 ;;
 esac
 
-# Repertoires de secrets
 case "$file" in
   */secrets/*|*/.secrets/*|*/.ssh/*|*/.gnupg/*|*/.aws/credentials*)
-    blocked=1; reason="repertoire de secrets" ;;
+    echo "Hook BLOCK: acces refuse a un repertoire de secrets." >&2
+    echo "Fichier : $file" >&2
+    exit 2 ;;
 esac
 
-if [ "$blocked" -eq 1 ]; then
-  echo "Hook BLOCK: acces refuse a un fichier de secrets ($reason)." >&2
-  echo "Fichier : $file" >&2
-  echo "" >&2
-  echo "Interdit par la section 27.3 du cahier des charges Lune & Soleil." >&2
-  echo "Pour connaitre les variables attendues, lire .env.example, qui ne" >&2
-  echo "contient que des noms et des formats." >&2
-  echo "" >&2
-  echo "Si une valeur doit etre renseignee, Christophe le fait lui-meme." >&2
-  exit 2
-fi
+# Fichiers d'environnement : ecriture autorisee, lecture bloquee
+case "$base" in
+  .env|.env.*)
+    if [ "$tool" = "Read" ]; then
+      echo "Hook BLOCK: lecture refusee sur un fichier d'environnement." >&2
+      echo "Fichier : $file" >&2
+      echo "" >&2
+      echo "L'ECRITURE est autorisee sur ce fichier, seule la lecture des" >&2
+      echo "valeurs est bloquee : une valeur lue entrerait dans l'historique" >&2
+      echo "de session et pourrait ressortir dans une sortie de commande." >&2
+      echo "" >&2
+      echo "Alternatives sans lire les valeurs :" >&2
+      echo "  Lister les variables definies, sans leur contenu" >&2
+      echo "    grep -oE '^[A-Z_]+=' \"$file\"" >&2
+      echo "  Verifier qu'une variable est renseignee" >&2
+      echo "    grep -qE '^NOM_VARIABLE=.+' \"$file\" && echo presente" >&2
+      echo "  Comparer avec le fichier d'exemple" >&2
+      echo "    comm -23 <(grep -oE '^[A-Z_]+=' .env.example | sort) \\" >&2
+      echo "             <(grep -oE '^[A-Z_]+=' \"$file\" | sort)" >&2
+      echo "" >&2
+      echo "Si la lecture d'une valeur est reellement necessaire, Christophe" >&2
+      echo "peut retirer temporairement ce blocage." >&2
+      exit 2
+    fi
+    # Edit et Write passent
+    exit 0 ;;
+esac
 
 exit 0
