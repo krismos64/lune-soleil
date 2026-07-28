@@ -45,7 +45,7 @@ sur des commandes réelles.
 
 ## Vue d'ensemble
 
-Six domaines. Les flèches indiquent la dépendance, pas la chronologie.
+Sept domaines. Les flèches indiquent la dépendance, pas la chronologie.
 
 ```mermaid
 flowchart TB
@@ -66,6 +66,7 @@ flowchart TB
         EvenementFournisseur
         Expedition
         HistoriqueStatut
+        AdresseCarnet
     end
     subgraph CPT["Comptabilite"]
         Facture
@@ -74,6 +75,11 @@ flowchart TB
     subgraph LEG["Legal"]
         DemandeRetractation
         JetonAcces
+    end
+    subgraph AVI["Avis"]
+        Avis
+        ReponseAvis
+        InvitationAvis
     end
     subgraph EXP["Exploitation"]
         Utilisateur
@@ -87,6 +93,7 @@ flowchart TB
     CAT --> VTE
     VTE --> CPT
     VTE --> LEG
+    VTE --> AVI
     STK --> VTE
 ```
 
@@ -127,6 +134,7 @@ erDiagram
         entier quantitePhysique
         entier quantiteReservee
         booleen venteWebActivee
+        horodatage archiveeA "nullable, jamais supprimee"
     }
     MEDIA {
         identifiant id PK
@@ -143,7 +151,7 @@ erDiagram
 
 | # | Règle | Garantie |
 |---|---|---|
-| C1 | Un produit a au moins une variante | cardinalité `1..n`, contrôlée à la publication |
+| C1 | Un produit publié a au moins une variante non archivée | cardinalité `1..n`, contrôlée à la publication et à l'archivage d'une variante |
 | C2 | La référence de variante est unique dans toute la boutique | `UNIQUE` |
 | C3 | Le `slug` de produit et de catégorie est unique | `UNIQUE` |
 | C4 | Le prix est en centimes entiers | invariant 1, type entier |
@@ -155,6 +163,13 @@ erDiagram
 | C10 | Le média principal est celui de rang 1 | dérivé, aucun champ dédié |
 | C11 | Archiver un produit ne modifie aucune ligne de commande existante | les lignes portent une copie figée, voir décision C |
 | C12 | `venteWebActivee` ne crée aucun mouvement de stock | invariant 6, aucune écriture dans `MouvementStock` |
+| C13 | Une variante ne se supprime jamais, elle s'archive | `varianteId` reste résolvable pour les avis et les statistiques, voir décision G |
+| C14 | Une référence de variante n'est jamais réattribuée | conséquence de C13, la référence reste occupée par la variante archivée |
+| C15 | Une variante archivée n'est ni réservable ni achetable en ligne | `archiveeA IS NULL` dans le `WHERE` de l'`UPDATE` de réservation, voir ci-dessous |
+| C16 | Une variante archivée reste vendable en main propre | son stock physique existe, parcours 2 |
+| C17 | Archiver une variante ne crée aucun mouvement de stock | invariant 6, comme C12 pour `venteWebActivee` |
+| C18 | Archiver une variante portant une réservation active est refusé | même règle que S5 pour la vente externe |
+| C19 | Archiver la dernière variante vivante d'un produit archive le produit | sans quoi C1 serait satisfaite par une variante archivée |
 
 ### Pourquoi la variante et non le produit porte le stock
 
@@ -176,6 +191,43 @@ sur la variante permet l'`UPDATE` conditionnel en une instruction.
 La contrepartie est un risque de dérive entre la colonne et la somme réelle des
 réservations. Trois opérations transactionnelles la maintiennent, et un contrôle
 de cohérence périodique peut la vérifier.
+
+### Deux drapeaux d'indisponibilité, et lequel gagne
+
+`venteWebActivee` et `archiveeA` coexistent sur la variante. Ils ne disent pas la
+même chose et ne se remplacent pas.
+
+`venteWebActivee` est **opérationnel et réversible** : la pièce part sur un marché
+ce week-end, elle revient lundi. `archiveeA` est **catalogue et définitif** : le
+modèle n'est plus fabriqué.
+
+**Archivée l'emporte toujours.** Une variante archivée n'est ni réservable ni
+achetable en ligne quelle que soit la valeur de `venteWebActivee`. Ainsi
+l'archivage n'oblige pas à mettre les deux champs à jour ensemble, ce qui créerait
+la divergence habituelle des drapeaux redondants.
+
+**La condition entre dans l'instruction de réservation, pas avant.** L'`UPDATE`
+conditionnel d'ADR-006 doit porter `archiveeA IS NULL` au même titre que la
+condition de stock :
+
+```sql
+WHERE id = :variante
+  AND archivee_a IS NULL
+  AND vente_web_activee = true
+  AND quantite_physique - quantite_reservee >= :qte
+```
+
+Sans cela, un client ayant la fiche ouverte au moment de l'archivage peut encore
+réserver et payer une pièce retirée du catalogue. Une lecture préalable ne suffit
+pas : entre la lecture et l'écriture, l'archivage peut survenir.
+
+**Le stock physique d'une variante archivée existe toujours.** Trois exemplaires
+archivés restent trois pièces réelles, vendables sur un marché. Le mouvement
+`VENTE_EXTERNE` reste donc possible, règle C16. Seule la vente web est fermée.
+
+**Archiver ne crée aucun mouvement de stock**, règle C17, exactement comme
+suspendre la vente web, invariant 6. Et archiver pendant qu'un client paie est
+refusé, règle C18, sur le modèle de S5 pour la vente externe.
 
 ### Pourquoi il n'y a pas de champ « média principal »
 
@@ -451,9 +503,48 @@ Arbitré avec Christophe le 28 juillet 2026. Une table `Adresse` référencée
 laisserait une modification d'adresse altérer rétroactivement une facture émise,
 ce qui viole les invariants 3 et 4.
 
-Le carnet d'adresses de la V1 cible ajoutera une table sans migrer l'historique :
-les commandes passées gardent leur copie, les nouvelles recopient depuis le
-carnet.
+Le carnet d'adresses existe désormais, `ADRESSE_CARNET` ci-dessous, mais il ne
+change rien à cette décision : il alimente la saisie, la commande recopie.
+
+### Le carnet d'adresses, source de saisie et rien d'autre
+
+```mermaid
+erDiagram
+    UTILISATEUR ||--o{ ADRESSE_CARNET : "enregistre"
+
+    ADRESSE_CARNET {
+        identifiant id PK
+        identifiant utilisateurId FK
+        texte libelle "Domicile, Bureau"
+        texte nomComplet
+        texte ligne1
+        texte ligne2 "nullable"
+        texte codePostal
+        texte ville
+        texte pays
+        texte telephone "nullable"
+        booleen estParDefaut
+        horodatage creeA
+    }
+```
+
+| # | Règle | Garantie |
+|---|---|---|
+| A1 | Une adresse du carnet appartient à un seul compte | `utilisateurId` obligatoire, invariant 2 |
+| A2 | Un compte a au plus une adresse par défaut | `UNIQUE (utilisateurId)` filtré sur `estParDefaut` |
+| A3 | La commande recopie l'adresse, elle ne la référence jamais | invariants 3 et 4, aucune clé étrangère de `Commande` vers `AdresseCarnet` |
+| A4 | Supprimer une adresse du carnet n'affecte aucune commande passée | conséquence directe de A3 |
+| A5 | Une adresse du carnet ne distingue pas livraison et facturation | le choix se fait au moment de la commande, voir ci-dessous |
+
+**Aucune clé étrangère ne part de `Commande` vers `AdresseCarnet`.** C'est le
+point qui protège l'historique. Un client qui corrige une faute dans son
+adresse, ou qui supprime une ancienne adresse, ne modifie aucune facture émise.
+
+**Le carnet ne porte pas la distinction livraison et facturation.** Une même
+adresse sert souvent aux deux, et l'inverse est une exception. Le client choisit
+au moment de commander quelle adresse va où, et la commande fige les deux
+séparément. Porter la distinction dans le carnet obligerait à dupliquer une
+adresse identique pour deux usages.
 
 ### Pourquoi il n'y a pas d'entité Client
 
@@ -595,7 +686,7 @@ erDiagram
     JETON_ACCES {
         identifiant id PK
         texte empreinte UK
-        enum portee "DOCUMENT RETRACTATION SUIVI"
+        enum portee "DOCUMENT RETRACTATION SUIVI AVIS"
         identifiant commandeId FK
         horodatage expireA
         horodatage utiliseA "nullable"
@@ -617,9 +708,9 @@ erDiagram
 
 ### Pourquoi le jeton d'accès est une entité générique
 
-Trois usages exigent un accès sans compte : consulter une facture, déposer une
-rétractation, suivre une commande. Trois entités séparées répéteraient la même
-structure et le même risque.
+Quatre usages exigent un accès sans compte : consulter une facture, déposer une
+rétractation, suivre une commande, déposer un avis sur invitation. Quatre entités
+séparées répéteraient la même structure et le même risque.
 
 Une entité unique avec une portée permet de révoquer, d'expirer et de tracer
 uniformément. Le stockage d'une empreinte, jamais de la valeur en clair, suit le
@@ -649,7 +740,253 @@ horodatages nécessaires au calcul, il ne fige aucune règle de calcul.
 
 ---
 
-## Domaine 6, exploitation
+## Domaine 6, avis
+
+Ajouté par LS-37 le 28 juillet 2026, les avis étant passés en périmètre
+d'ouverture. Le cadre légal a été vérifié aux sources avant modélisation : il
+détermine plusieurs champs.
+
+### Diagramme
+
+```mermaid
+erDiagram
+    LIGNE_COMMANDE ||--o| AVIS : "porte au plus un"
+    AVIS ||--o| REPONSE_AVIS : "recoit"
+    UTILISATEUR |o--o{ AVIS : "auteur eventuel"
+
+    AVIS {
+        identifiant id PK
+        identifiant ligneCommandeId FK
+        identifiant utilisateurId FK "nullable"
+        entier note "1 a 5"
+        texte commentaire "nullable"
+        enum statut "DEPOSE PUBLIE REFUSE RETIRE"
+        texte motifDecision "nullable, obligatoire si REFUSE ou RETIRE"
+        horodatage experienceA "date de livraison, obligation legale"
+        horodatage deposeA
+        horodatage publieA "nullable"
+        horodatage decideA "nullable, refus ou retrait"
+        horodatage modifieA "nullable, modification du contenu"
+    }
+    REPONSE_AVIS {
+        identifiant id PK
+        identifiant avisId FK
+        texte contenu
+        identifiant auteurId FK
+        horodatage publieeA
+        horodatage modifieeA "nullable"
+    }
+    INVITATION_AVIS {
+        identifiant id PK
+        identifiant ligneCommandeId FK
+        identifiant jetonAccesId FK "jeton courant, remplace a chaque renvoi"
+        horodatage creeeA
+        horodatage dernierEnvoiA "nullable, nul si tous les envois ont echoue"
+        entier nombreEnvois
+    }
+```
+
+### Règles de gestion
+
+| # | Règle | Garantie |
+|---|---|---|
+| R1 | Un avis porte sur une ligne de commande, jamais sur un produit seul | preuve d'achat structurelle, voir décision G |
+| R2 | Une ligne de commande porte au plus un avis | `UNIQUE (ligneCommandeId)` |
+| R3 | Un avis n'est déposable qu'après livraison | `experienceA` non nul requis, voir décision H |
+| R4 | Un avis est relu avant publication | `statut` `DEPOSE` par défaut, jamais visible publiquement |
+| R5 | Un refus ou un retrait exige un motif documenté | `motifDecision` obligatoire si `REFUSE` ou `RETIRE`, article L111-7-2 |
+| R6 | Un avis refusé ou retiré est conservé, jamais supprimé | preuve du traitement, obligation d'information |
+| R7 | Deux dates distinctes sont affichées | `publieA` et `experienceA`, article D111-17 |
+| R8 | Une modification d'avis par son auteur est horodatée | `modifieA`, article L111-7-2 sur les mises à jour |
+| R9 | Toute décision de modération est horodatée | `decideA`, mesure du délai annoncé et preuve après coup |
+| R10 | Modifier un avis publié le renvoie en modération | `statut` repasse à `DEPOSE`, voir ci-dessous |
+| R11 | `publieA` conserve la première publication | une republication ne l'écrase pas, `decideA` porte la dernière décision |
+| R12 | Aucun avis n'existe sans achat réel | aucune création possible sans `ligneCommandeId` |
+| R13 | L'auteur d'un avis est identifié par son jeton ou sa session | invariant 2, jamais par un identifiant fourni |
+| R14 | Une réponse est publique et rattachée à un seul avis | `UNIQUE (avisId)` sur la réponse |
+| R15 | Archiver un produit ne masque ni ne supprime ses avis | la ligne porte la copie figée, invariant 3 |
+| R16 | Une ligne de commande porte au plus une invitation | `UNIQUE (ligneCommandeId)`, un renvoi remplace le jeton |
+| R17 | Une invitation n'est créée que sur une commande livrée | contrôle applicatif, la tâche filtre sur `Expedition.livreA` |
+| R18 | L'état d'usage d'une invitation vient du jeton | `JetonAcces.utiliseA`, jamais dupliqué sur l'invitation |
+
+### Pourquoi une entité `InvitationAvis` distincte du jeton
+
+Elle a bien failli être supprimée : `JetonAcces` porte déjà l'expiration et
+l'usage, `JournalEmail` porte déjà l'envoi.
+
+Ce qui la justifie tient à une granularité. `JetonAcces.commandeId` désigne une
+**commande**, alors qu'un avis porte sur une **ligne**. Une commande à trois
+articles donne trois invitations distinctes, une par pièce achetée. Sans cette
+entité, il faudrait ajouter un `ligneCommandeId` nullable à `JetonAcces`, ce qui
+salirait une entité générique du domaine 5 pour un seul usage.
+
+Elle reste volontairement maigre. Elle ne porte **pas** de date d'utilisation :
+ce fait vit sur `JetonAcces.utiliseA` et nulle part ailleurs, règle R18. Dupliquer
+l'information créerait deux sources pouvant diverger, exactement le défaut qui a
+fait écarter `estPrincipal` à côté de `ordre` au domaine 1.
+
+`nombreEnvois` et `dernierEnvoiA` existent parce que le renvoi est prévu : un
+jeton expiré se remplace sans créer une seconde invitation, `jetonAccesId`
+pointant alors vers le nouveau. `dernierEnvoiA` reste nul tant qu'aucun envoi n'a
+abouti, ce qui distingue une invitation créée d'une invitation reçue.
+
+### Modifier un avis publié le renvoie en modération
+
+Le parcours 7 permet à un auteur de modifier son avis. Sans relecture, la
+modération de la décision I se contourne en deux gestes : déposer un avis anodin,
+attendre sa publication, puis le remplacer par autre chose. Ce n'est pas une
+faille théorique, c'est le chemin évident.
+
+La modification renvoie donc l'avis en `DEPOSE`. Trois champs suffisent, sans
+statut supplémentaire :
+
+| Champ | Ce qu'il porte après une modification |
+|---|---|
+| `modifieA` | date de la modification par l'auteur |
+| `publieA` | **première** publication, jamais écrasée |
+| `decideA` | dernière décision de modération, republication comprise |
+
+L'avis disparaît de la fiche pendant la relecture. C'est visible, et c'est le
+comportement honnête : afficher l'ancienne version pendant qu'une nouvelle attend
+reviendrait à publier un contenu que son auteur ne veut plus.
+
+`publieA` conservant la première publication, la date affichée au visiteur reste
+celle de l'avis d'origine, ce qui est conforme à l'article D111-17. L'article
+L111-7-2 impose par ailleurs de signaler les mises à jour, d'où `modifieA`.
+
+La même question se pose pour `ReponseAvis.modifieeA`, sans le même enjeu :
+l'auteur de la réponse est l'administratrice, aucune relecture ne s'impose.
+
+### Pourquoi un seul motif et un seul horodatage de décision
+
+Un refus de publication et un retrait après publication sont deux décisions de
+modération, prises par la même personne, exigeant toutes deux un motif
+communicable à l'auteur. Deux champs `motifRefus` et `motifRetrait` encoderaient
+la même chose deux fois, avec la certitude qu'un des deux resterait vide.
+
+`motifDecision` porte les deux, comme `DemandeRetractation.motifDecision` porte
+déjà le motif de refus d'une rétractation. Le `statut` dit laquelle des deux
+décisions a été prise.
+
+`decideA` répond à une question que le modèle ne savait pas traiter : combien de
+temps un avis est-il resté en ligne, et la décision a-t-elle été prise dans le
+délai annoncé. Sans lui, `publieA` reste renseigné sur un avis retiré et la seule
+date disponible serait `modifieA`, qui désigne autre chose. Un avis refusé
+n'aurait, lui, aucune date du tout.
+
+L'article D111-17 impose d'annoncer un délai maximum de publication. `deposeA`
+permet d'alerter avant l'échéance, `decideA` permet de démontrer après coup qu'elle
+a été tenue.
+
+### Décision G, l'avis est ancré sur la ligne de commande
+
+Arbitré avec Christophe le 28 juillet 2026.
+
+Rattacher l'avis au produit obligerait à vérifier par du code que l'auteur a bien
+acheté, avec les défauts habituels d'un contrôle applicatif. Rattacher l'avis à la
+ligne de commande rend la preuve d'achat **structurelle** : un avis sans ligne
+n'existe pas.
+
+Trois conséquences favorables. Un client qui achète deux fois la même pièce peut
+déposer deux avis, un par achat, ce qu'une unicité par produit et par personne
+interdirait. Archiver ou renommer un produit n'invalide aucun avis, la ligne
+portant sa copie figée. Et un avis reste rattaché exactement à ce qui a été acheté,
+avec son prix et son libellé de l'époque.
+
+**La contrepartie, et pourquoi la parade évidente ne marche pas.** Afficher les
+avis sur une fiche produit suppose de remonter par `LigneCommande.varianteId`,
+nullable par conception, décision C.
+
+Le réflexe est de regrouper par `referenceFigee`, en invoquant l'unicité de la
+règle C2. Ça ne tient pas. C2 garantit l'unicité de `reference` dans la table
+`variante` **à un instant donné**, pas la stabilité d'une copie morte dans le
+temps.
+
+Deux scénarios le cassent. Une variante `BO-LUNE-42` disparaît du catalogue,
+libérant sa référence ; l'administratrice la réutilise trois mois plus tard pour
+une pièce différente, et les avis de l'ancienne remontent sur la fiche de la
+nouvelle. Ou bien elle corrige une faute de frappe dans une référence, et les
+avis déjà déposés, portant l'ancienne chaîne, disparaissent de la fiche.
+
+**La vraie parade : une variante ne se supprime jamais.** Elle s'archive, comme un
+produit, règle C13 du domaine 1. `varianteId` reste alors toujours résolvable et le
+regroupement se fait par lui, ce qui est précisément l'usage que la décision C lui
+réservait : la navigation et les statistiques, pas l'affichage d'une commande.
+
+Cette règle vaut aussi pour les statistiques produit de la V1 cible, qui
+buteraient sur le même écueil.
+
+### Décision H, l'avis se dépose après livraison, sur invitation
+
+Arbitré avec Christophe le 28 juillet 2026.
+
+Un avis déposable dès le paiement porterait sur une commande, pas sur un bijou.
+« Cinq étoiles, hâte de le recevoir » ne renseigne aucun visiteur et affaiblit la
+crédibilité de l'ensemble.
+
+Le site envoie donc une invitation quelques jours après la livraison, portant un
+jeton d'accès de portée dédiée. L'entité `JetonAcces` du domaine 5 accueille cette
+portée sans modification : même empreinte stockée, même expiration, même
+révocation.
+
+`experienceA` reçoit la date de livraison, ce qui satisfait l'obligation
+d'afficher la date de l'expérience de consommation, article D111-17.
+
+**Dépendance à signaler.** Cette décision rend LS-33 structurant. Sans date de
+livraison fiable, ni le délai de rétractation ni l'invitation à déposer un avis ne
+se déclenchent. Le repli documenté vaut ici aussi : à défaut de date de livraison,
+partir de la date d'expédition.
+
+### Décision I, la modération précède la publication
+
+Arbitré avec Christophe le 28 juillet 2026. Un avis déposé n'est pas visible tant
+que l'administratrice ne l'a pas publié.
+
+Le motif est le contexte : sur une boutique artisanale à faible volume, un seul
+avis injurieux visible fait plus de dégâts que trois jours d'attente.
+
+**Ce que la loi impose en contrepartie.** L'article D111-17 exige d'annoncer, dans
+une rubrique accessible, « le délai maximum de publication **et de conservation**
+d'un avis ». Deux délais, pas un.
+
+**Le délai de publication** est un paramètre commercial, encore à fixer, qui
+engage une fois annoncé. Le modèle permet de le mesurer dans les deux sens :
+`deposeA` pour alerter avant l'échéance, `decideA` pour démontrer après coup
+qu'elle a été tenue.
+
+**Le délai de conservation est indéfini**, et c'est un choix, pas un oubli. La loi
+laisse ce délai libre. Un avis publié reste donc en ligne tant qu'il n'est pas
+retiré par une décision de modération motivée. Aucune expiration automatique,
+aucun statut supplémentaire, aucune tâche planifiée.
+
+L'alternative aurait été d'annoncer une durée, disons vingt-quatre mois, ce qui
+aurait exigé un statut d'expiration, une tâche de dépublication et une distinction
+entre un avis expiré et un avis retiré, ces deux faits ne se justifiant pas de la
+même façon auprès de leur auteur. Pour une boutique dont le catalogue est fait de
+pièces uniques, faire disparaître les avis les plus anciens n'a aucun intérêt.
+
+La rubrique publiée doit donc dire que les avis sont conservés sans limite de
+durée.
+
+L'article L111-7-2 impose aussi d'informer l'auteur d'un avis non publié des
+motifs du refus, d'où `motifDecision` obligatoire et la conservation des avis refusés.
+
+### Ce que la loi n'impose pas
+
+Vérifié aux sources : **aucune obligation de contrôler les avis**. L'article
+L111-7-2 impose de dire si un contrôle existe et lequel, pas d'en faire un.
+
+Il n'impose pas non plus de délai chiffré. Les délais de publication et de
+conservation sont libres, mais une fois annoncés ils engagent.
+
+Une obligation reste à traiter hors modèle : mettre à disposition une
+fonctionnalité gratuite de signalement d'un doute sur l'authenticité d'un avis,
+article L111-7-2. Elle concerne les responsables des produits concernés, pas les
+clients.
+
+---
+
+## Domaine 7, exploitation
 
 ### Diagramme
 
@@ -736,7 +1073,7 @@ permanent si une instance meurt en cours de tâche.
 
 ---
 
-## Vérification, traversée des six parcours
+## Vérification, traversée des sept parcours
 
 Critère de la porte de sortie : chaque parcours de `PARCOURS.md` se déroule
 entièrement, cas d'erreur compris, sans invention de champ manquant.
@@ -844,14 +1181,41 @@ entièrement, cas d'erreur compris, sans invention de champ manquant.
 | commande déjà rattachée | `utilisateurId` non nul exclut | oui |
 | identifiant fourni | éligibilité calculée en session, invariant 2 | oui |
 
-**Résultat : les six parcours et leurs trente-deux cas d'erreur se déroulent sans
-champ manquant.**
+### Parcours 7, dépôt d'un avis
 
-Le trente-deuxième cas est né de cette modélisation. `PARCOURS.md` en comptait
-trente et un : l'événement de paiement tardif arrivant après une régularisation
-par réconciliation n'y figurait pas, aucune des deux listes de cas d'erreur du
-cahier des charges ne le contenant. Il est désormais documenté au parcours 1, et
-la décision D porte les quatre clés qui le neutralisent.
+| Élément | Entité | Couvert |
+|---|---|---|
+| livraison constatée | `Expedition.livreA` | oui |
+| invitation | `InvitationAvis`, `JetonAcces` portée `AVIS`, `JournalEmail` | oui |
+| ouverture du formulaire | vérification de l'empreinte du jeton | oui |
+| dépôt | `Avis` `DEPOSE`, `experienceA`, `deposeA` | oui |
+| relecture | `statut` `DEPOSE`, invisible publiquement | oui |
+| publication | `statut` `PUBLIE`, `publieA` | oui |
+| réponse | `ReponseAvis`, `UNIQUE (avisId)` | oui |
+| avis sans achat | impossible, `ligneCommandeId` obligatoire | oui |
+| second avis sur la même ligne | `UNIQUE (ligneCommandeId)` | oui |
+| jeton expiré ou utilisé | `expireA`, `utiliseA`, renvoi par `nombreEnvois` | oui |
+| invitation avant livraison | `Expedition.livreA` nul exclut de la tâche | oui |
+| avis refusé | `statut` `REFUSE`, `motifDecision` et `decideA` | oui |
+| avis modifié après publication | `modifieA`, retour en `DEPOSE`, `publieA` préservé | oui |
+| avis retiré après publication | `statut` `RETIRE`, `motifDecision` et `decideA` | oui |
+| délai de publication dépassé | `deposeA` pour alerter, `decideA` pour prouver après coup | oui |
+| produit archivé | copie figée de la ligne, aucun effet | oui |
+| variante retirée du catalogue | archivée et non supprimée, `varianteId` reste résolvable, règle C13 | oui |
+| échec d'envoi de l'invitation | `JournalEmail` `ECHOUE`, invitation valide | oui |
+
+**Résultat : les sept parcours et leurs quarante-quatre cas d'erreur se déroulent
+sans champ manquant.**
+
+Deux ajouts sont nés de la modélisation elle-même. Le trente-deuxième cas, en
+LS-12 : l'événement de paiement tardif arrivant après une régularisation par
+réconciliation, qu'aucune des deux listes du cahier des charges ne contenait. La
+décision D porte les quatre clés qui le neutralisent.
+
+Le parcours 7 et ses douze cas, en LS-37, après le passage des avis en périmètre
+d'ouverture. Trois y sont venus de la vérification légale plutôt que du besoin
+fonctionnel : la conservation d'un avis refusé avec son motif, le dépassement du
+délai de publication annoncé, et la double date exigée par l'article D111-17.
 
 ---
 
@@ -870,7 +1234,8 @@ tient que si personne ne l'oublie.
 **Unicité simple** : `produit.slug`, `categorie.slug`, `variante.reference`,
 `commande.numero`, `facture.numero`, `avoir.numero`, `facture.commandeId`,
 `evenement_fournisseur.identifiant_fournisseur`, `verrou_tache.nom`,
-`jeton_acces.empreinte`, `media.identifiant_fournisseur`, `utilisateur.email`.
+`jeton_acces.empreinte`, `media.identifiant_fournisseur`, `utilisateur.email`,
+`avis.ligneCommandeId`, `reponse_avis.avisId`, `invitation_avis.ligneCommandeId`.
 
 **Unicité partielle**, sans laquelle un invariant retomberait sur du code
 applicatif. Les quatre dernières portent l'idempotence de la décision D :
@@ -881,17 +1246,25 @@ applicatif. Les quatre dernières portent l'idempotence de la décision D :
 | `paiement (commandeId)` | `statut = REUSSI` | deux paiements réussis sur une commande |
 | `mouvement_stock (commandeId, varianteId)` | `type = VENTE_WEB` | double décrément par webhook et réconciliation |
 | `journal_email (commandeId, modele)` | `origine = SYSTEME` | email de confirmation envoyé deux fois |
+| `adresse_carnet (utilisateurId)` | `estParDefaut` | deux adresses par défaut sur un compte |
 
 **Contrôles de valeur** : `quantite_physique >= 0`, `quantite_reservee >= 0`,
 `quantite_physique - quantite_reservee >= 0`, `ligne_commande.quantite > 0`,
 tout montant en centimes `>= 0`, `montant_rembourse <= montant` sur le paiement,
-`facture.montant_avoir_centimes <= facture.montant_total_centimes`.
+`facture.montant_avoir_centimes <= facture.montant_total_centimes`,
+`avis.note BETWEEN 1 AND 5`.
 
 **Obligatoire, aucune valeur nulle** : `avoir.factureId`, `facture.commandeId`,
 `ligne_commande.commandeId`, `paiement.commandeId`, `reservation.varianteId`,
 `mouvement_stock.varianteId`, `demande_retractation.commandeId`,
 `jeton_acces.commandeId`, `variante.produitId`, `media.produitId`,
-`produit.categorieId`.
+`produit.categorieId`, `avis.ligneCommandeId`, `avis.experienceA`,
+`avis.deposeA`,
+`reponse_avis.avisId`, `adresse_carnet.utilisateurId`,
+`invitation_avis.ligneCommandeId`, `invitation_avis.jetonAccesId`.
+
+`avis.experienceA` obligatoire est la traduction structurelle de la décision H :
+un avis ne peut pas exister sans date d'expérience, donc sans livraison connue.
 
 **Expiration obligatoire**, sans laquelle une ressource se bloque indéfiniment :
 `reservation.expireA` (stock bloqué à vie), `jeton_acces.expireA` (accès
@@ -910,6 +1283,8 @@ portées par le code de la transaction, et testées.
 | S3 | La libération décrémente et supprime ensemble |
 | S5 | La vente externe contrôle l'absence de réservation active avant d'écrire |
 | F9 | La création d'un avoir met à jour `facture.montantAvoirCentimes` en même temps |
+| R9 | Le changement de statut d'un avis et `decideA` sont écrits ensemble |
+| C19 | Archiver la dernière variante vivante archive le produit dans la même transaction |
 
 ### Niveau 3, contrôlé par l'application
 
@@ -922,6 +1297,12 @@ brouillon incomplet doit pouvoir exister.
 | C7 | Média traité et texte alternatif présents | à la publication |
 | C8 | Aucun média non traité servi publiquement | à la lecture publique |
 | L2 | Motif obligatoire sur un refus de rétractation | à la transition |
+| R4 | Un avis n'est jamais visible avant publication | à la lecture publique |
+| R5 | Motif obligatoire sur un refus ou un retrait d'avis | à la transition |
+| R17 | Invitation créée uniquement sur commande livrée | à l'exécution de la tâche |
+| R10 | Une modification d'avis publié le renvoie en modération | à la modification |
+| C13 | Aucune suppression de variante, archivage seul | à la demande de suppression |
+| C18 | Archivage refusé si une réservation est active | à l'archivage |
 
 ### Immuabilité et suppression
 
@@ -930,26 +1311,38 @@ brouillon incomplet doit pouvoir exister.
 confirmation.
 
 **Suppression** : aucune suppression destructive sur les entités historiques.
-L'archivage remplace la suppression. Seules `Reservation` et `VerrouTache` sont
-réellement supprimables, ce sont des entités transitoires.
+L'archivage remplace la suppression. Seules `Reservation`, `VerrouTache` et
+`AdresseCarnet` sont réellement supprimables. Les deux premières sont
+transitoires ; la troisième l'est parce qu'aucune commande n'en dépend, règle A4.
+
+**Une variante ne se supprime jamais**, règle C13. Elle s'archive, sans quoi sa
+référence redeviendrait libre et pourrait être réattribuée à une autre pièce,
+faisant remonter d'anciens avis sur une fiche qui n'est pas la leur.
+
+**Un avis refusé ou retiré n'est jamais supprimé**, règle R6. Il passe en `REFUSE` avec son
+motif, qui doit pouvoir être communiqué à son auteur, article L111-7-2. Le retrait
+d'un avis publié suit la même logique, statut `RETIRE`.
 
 ---
 
 ## Ce qui n'est pas modélisé, et pourquoi
 
-Conformément au plan directeur, les entités de la V1 cible attendent leur phase :
-avis vérifiés, assistant conversationnel, statistiques, carnet d'adresses,
-liste d'envie.
+Conformément au plan directeur, les entités restées hors périmètre d'ouverture
+attendent leur phase : assistant conversationnel, statistiques produit, liste
+d'envie.
+
+Les avis vérifiés et le carnet d'adresses figuraient dans cette liste jusqu'au
+28 juillet 2026. Ils sont passés en périmètre d'ouverture et sont désormais
+modélisés, domaines 6 et 3.
 
 Le panier n'est pas persisté au lancement. Il vit côté client et se revalide
 côté serveur à chaque étape, conformément au parcours 1. Le persister exigerait
-une entité, une expiration et une purge pour un bénéfice limité tant qu'il n'y a
-pas de compte client.
+une entité, une expiration et une purge pour un bénéfice qui reste limité même
+avec un compte client, le panier étant une intention et non un engagement.
 
 Le message de contact non plus. Une entité `Message` figurait dans une première
-version de ce document, sans qu'aucun des six parcours ne la mobilise. Le
-principe directeur interdit d'entrer une entité sans parcours qui la justifie,
-et l'exception assumée est déjà consommée par `Commande.utilisateurId`. Le
+version de ce document, sans qu'aucun parcours ne la mobilise. Le principe
+directeur interdit d'entrer une entité sans parcours qui la justifie. Le
 formulaire de contact relève d'un ticket propre, où sa règle principale devra
 être posée : le message est persisté avant toute tentative d'envoi d'email,
 faute de quoi une panne d'email perd le message.
@@ -1002,36 +1395,24 @@ livraison échelonnée, le délai court à compter du dernier bien reçu.
 Le modèle conserve les horodatages nécessaires à ce calcul sans figer la règle,
 qui reste portée par le code et testée.
 
-## Périmètre élargi après la rédaction de ce document
+## Périmètre élargi après la première rédaction
 
 Le 28 juillet 2026, Christophe a décidé que l'espace client, les avis vérifiés et
-le carnet d'adresses entrent dans le périmètre d'ouverture, epic LS-36.
+le carnet d'adresses entrent dans le périmètre d'ouverture, epic LS-36. Ce
+document a été étendu en conséquence par LS-37, le même jour.
 
-**L'espace client est déjà couvert par ce document.** `Commande.utilisateurId` et
-le parcours 6 avaient été prévus pour cela, aucune migration sur commandes
-historiques ne sera nécessaire. Les entités de session et de passkey viennent de
-Better Auth et relèvent de LS-13.
+**L'espace client était déjà couvert.** `Commande.utilisateurId` et le parcours 6
+avaient été prévus pour cela, aucune migration sur commandes historiques n'est
+nécessaire. Les entités de session et de passkey viennent de Better Auth et
+relèvent de LS-13, conformément à ADR-021.
 
-**Deux entités manquent, et elles relèvent de LS-37**, une story dédiée qui étend
-ce document avant que LS-13 ne le traduise en schéma. Elles ne vont pas
-directement en LS-13 : concevoir une entité et la traduire dans le même ticket
-mélangerait deux niveaux d'abstraction et ferait passer des décisions
-structurantes sans revue.
+**Les avis constituent le domaine 6**, avec les décisions G, H et I, et le
+parcours 7 de `PARCOURS.md`. La vérification légale a précédé la modélisation et
+a produit trois champs qui n'auraient pas existé autrement : la date d'expérience
+distincte de la date de publication, le motif de refus obligatoire, et la
+conservation d'un avis refusé.
 
-L'**entité Avis**, écartée ici faute de parcours qui la mobilise. Sa décision
-d'ancrage est prise, arbitrée le 28 juillet 2026 : l'avis est rattaché à une
-**ligne de commande** et non au produit. La ligne est la preuve d'achat, et elle
-est structurelle plutôt que déclarative. Deux achats de la même pièce permettent
-deux avis, et l'archivage d'un produit n'invalide aucun avis puisque la ligne
-porte sa copie figée.
-
-Conséquence à traiter en LS-37 : regrouper les avis sur une fiche produit suppose
-de remonter par `LigneCommande.varianteId`, qui est nullable par conception. Le
-cas où il est nul doit être traité explicitement.
-
-La **table Adresse** du carnet, qui sert de source de saisie et **ne remplace
-jamais la copie figée dans la commande**. La décision sur l'adresse ne change pas :
-une modification du carnet n'altère aucune facture émise.
-
-LS-37 ajoutera aussi un septième parcours dans `PARCOURS.md`, le dépôt d'un avis
-avec ses cas d'erreur, au même niveau de détail que les six autres.
+**Le carnet d'adresses figure au domaine 3**, `ADRESSE_CARNET`. La décision sur
+l'adresse n'a pas changé : la commande recopie, elle ne référence jamais. Aucune
+clé étrangère ne part de `Commande` vers `AdresseCarnet`, ce qui protège toute
+facture émise d'une modification ultérieure du carnet.
