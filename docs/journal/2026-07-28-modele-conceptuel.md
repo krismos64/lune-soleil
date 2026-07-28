@@ -535,6 +535,22 @@ nommé le piège que cela aurait produit, renseigner `preuveExpeditionA` pour
 débloquer la machine à états, donc inscrire une preuve qui n'a jamais existé dans
 un champ à valeur probatoire.
 
+### Une décision d'exploitation tranchée dans la foulée
+
+Corriger L7 a ouvert un cas que personne n'avait envisagé : la pièce arrive
+**endommagée alors que le remboursement est déjà versé** et l'avoir émis, donc
+immuable. L'ajustement du montant n'est plus disponible.
+
+Christophe a tranché le jour même : **la perte est assumée**, aucune créance, rien
+n'est réclamé au client. Sur des pièces uniques à faible volume, poursuivre pour
+la différence coûterait plus que la pièce.
+
+Ce qui compte pour la suite est moins la décision que sa trace. Le modèle reste
+silencieux sur ce point, et ce silence est désormais écrit comme délibéré aux deux
+endroits concernés. Sans cela, une relecture ultérieure l'aurait pris pour un
+oubli et aurait proposé de modéliser une créance, comme elle a proposé de
+modéliser tout le reste.
+
 ### Une affirmation technique fausse, la troisième de la journée
 
 J'affirmais que Prisma ne génère pas les index partiels. Faux, la fonctionnalité
@@ -560,26 +576,29 @@ base réelle ou sur documentation officielle, aucune par un raisonnement.
 **LS-13**, le modèle logique. Toutes les entités du modèle sont traversées par au
 moins un parcours, huit parcours et cinquante-sept cas d'erreur.
 
-LS-12, LS-37, LS-38, LS-39 et LS-40 lui transmettent un modèle complet, sept
-domaines, et un récapitulatif de contraintes rangé en trois niveaux qui est la
-partie devant survivre en migration.
+LS-12, LS-37, LS-38, LS-39, LS-40 et LS-41 lui transmettent un modèle complet,
+sept domaines, et un récapitulatif de contraintes rangé en trois niveaux qui est
+la partie devant survivre en migration.
 
 Trois points appellent une vigilance particulière en migration, parce qu'ils ne
 font échouer aucun test s'ils sont oubliés : l'index partiel de l'administratrice,
-les politiques de suppression des six références vers `Utilisateur`, et les
+les politiques de suppression des **huit** références vers `Utilisateur`, et les
 contraintes `CHECK` que Prisma ne génère pas.
 
 Ce que LS-13 doit traiter :
 
 - traduire les contraintes des trois niveaux en schéma Prisma et migration SQL
-- les entités Better Auth pour l'administratrice **et les clients**, ADR-021
+- les entités Better Auth pour l'administratrice, ADR-021, **et les clients**,
+  ADR-023
 - le format des numéros : `F-2026-0001` tranché pour les factures, à décliner pour
   les commandes et les avoirs, séquence distincte par type
 - la forme de stockage des blocs figés, adresse et instantané légal, en colonnes
   ou en document structuré
-- les types, avec **Context7 obligatoire** : Prisma 7 est une majeure récente et
-  les unicités partielles ont une syntaxe spécifique
+- les types, avec **Context7 obligatoire** : Prisma 7 est une majeure récente
 - rappel d'ADR-006 : Prisma ne génère pas les `CHECK`, migration SQL manuelle
+- **revérifier le statut de `partialIndexes`**, en avant-première au 28 juillet.
+  Le SQL manuel de l'index partiel est un choix de stabilité, il se rejoue si la
+  fonctionnalité est devenue stable
 
 Deux paramètres d'exploitation restent à confirmer, sans bloquer : libération des
 réservations toutes les 5 minutes, réconciliation toutes les 15 minutes.
