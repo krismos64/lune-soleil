@@ -1007,10 +1007,31 @@ qui reste portée par le code et testée.
 Le 28 juillet 2026, Christophe a décidé que l'espace client, les avis vérifiés et
 le carnet d'adresses entrent dans le périmètre d'ouverture, epic LS-36.
 
-Ce document reste valable : `Commande.utilisateurId` et le parcours 6 avaient été
-prévus pour cela, aucune migration sur commandes historiques ne sera nécessaire.
+**L'espace client est déjà couvert par ce document.** `Commande.utilisateurId` et
+le parcours 6 avaient été prévus pour cela, aucune migration sur commandes
+historiques ne sera nécessaire. Les entités de session et de passkey viennent de
+Better Auth et relèvent de LS-13.
 
-Deux ajouts reviennent à LS-13. L'**entité Avis**, écartée ici faute de parcours
-qui la mobilise, rattachée à une commande réelle et non à un produit seul. Et la
-**table Adresse** du carnet, qui sert de source de saisie et **ne remplace jamais
-la copie figée dans la commande** : la décision sur l'adresse ne change pas.
+**Deux entités manquent, et elles relèvent de LS-37**, une story dédiée qui étend
+ce document avant que LS-13 ne le traduise en schéma. Elles ne vont pas
+directement en LS-13 : concevoir une entité et la traduire dans le même ticket
+mélangerait deux niveaux d'abstraction et ferait passer des décisions
+structurantes sans revue.
+
+L'**entité Avis**, écartée ici faute de parcours qui la mobilise. Sa décision
+d'ancrage est prise, arbitrée le 28 juillet 2026 : l'avis est rattaché à une
+**ligne de commande** et non au produit. La ligne est la preuve d'achat, et elle
+est structurelle plutôt que déclarative. Deux achats de la même pièce permettent
+deux avis, et l'archivage d'un produit n'invalide aucun avis puisque la ligne
+porte sa copie figée.
+
+Conséquence à traiter en LS-37 : regrouper les avis sur une fiche produit suppose
+de remonter par `LigneCommande.varianteId`, qui est nullable par conception. Le
+cas où il est nul doit être traité explicitement.
+
+La **table Adresse** du carnet, qui sert de source de saisie et **ne remplace
+jamais la copie figée dans la commande**. La décision sur l'adresse ne change pas :
+une modification du carnet n'altère aucune facture émise.
+
+LS-37 ajoutera aussi un septième parcours dans `PARCOURS.md`, le dépôt d'un avis
+avec ses cas d'erreur, au même niveau de détail que les six autres.
