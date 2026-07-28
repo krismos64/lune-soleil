@@ -70,9 +70,20 @@ un motif documenté obligatoire.
 Le point de départ suppose de connaître la date de réception du colis. **D'où
 vient cette date n'est pas tranché**, ticket LS-33.
 
-Tant que la question reste ouverte, faire courir le délai depuis l'**expédition**.
-Le consommateur bénéficie alors d'un délai plus long que le minimum légal, jamais
-plus court : l'erreur ne peut pas se retourner contre l'exploitante.
+Tant que la question reste ouverte, le repli est la date d'expédition **plus une
+marge de sécurité couvrant le délai d'acheminement**, jamais la date d'expédition
+seule.
+
+**Faire courir les quatorze jours depuis l'expédition est une faute.** Le délai
+légal court à compter de la réception, et l'expédition précède la réception :
+expédié le 1er, reçu le 4, un délai parti du 1er expire le 15 alors que le
+minimum légal court jusqu'au 18. Le droit du consommateur serait éteint trois
+jours trop tôt, et l'article L221-20 sanctionne l'information incorrecte sur ce
+droit par un délai porté à douze mois.
+
+Un repli sûr allonge le délai, il ne l'avance jamais. À défaut de date de
+réception, retenir la date la plus tardive plausible pour la réception, pas la
+plus précoce.
 
 ## Facturation électronique
 
