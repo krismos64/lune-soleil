@@ -76,6 +76,16 @@ Aucun tiret cadratin ni demi-cadratin (— ou –), marqueur de texte généré.
 Exception : les identifiants techniques restent en ASCII, branches, fichiers,
 variables, références produit.
 
+**Ne pas accorder au féminin par défaut.** Écrire « le client », jamais « la
+cliente ». Une part notable des acheteurs est masculine, un homme qui offre un
+bijou. La règle vaut partout : interface, documentation, commentaires, Jira et
+réponses de conversation. Tourner les phrases sans accord de genre plutôt que
+d'écrire « client(e) ».
+
+Exception : « l'administratrice » et « l'exploitante » désignent une personne
+réelle et identifiée. Les formulations neutres pour l'interface sont détaillées
+dans `.claude/rules/frontend-design.md`.
+
 ## Interdits
 
 - Modifier le périmètre défini dans le cahier des charges.

@@ -26,7 +26,7 @@ RETURNING id;
 ```
 
 Aucune ligne retournée signifie un refus métier explicite, présenté sans jargon
-technique à la cliente.
+technique au client.
 
 Règles associées :
 
@@ -53,21 +53,55 @@ réelle, web ou externe, décrémente la quantité physique.
 
 Une vente externe est **refusée** tant qu'une réservation active existe sur la
 variante. L'administratrice peut annuler explicitement la réservation après
-confirmation. Sans cette règle, une pièce vendue sur un marché pendant qu'une
-cliente paie en ligne produit une commande payée sans stock.
+confirmation. Sans cette règle, une pièce vendue sur un marché pendant qu'un
+client paie en ligne produit une commande payée sans stock.
 
 ## Contraintes minimales attendues
 
 ```
-UNIQUE  produit.slug, variante.reference, commande.numero,
-        facture.numero, avoir.numero,
-        evenement_webhook.identifiant_fournisseur, verrou_tache.nom
+UNIQUE  produit.slug, categorie.slug, variante.reference, commande.numero,
+        facture.numero, avoir.numero, facture.commande_id,
+        evenement_webhook.identifiant_fournisseur, verrou_tache.nom,
+        jeton_acces.empreinte, media.identifiant_fournisseur, utilisateur.email
 CHECK   quantite_physique >= 0
 CHECK   quantite_reservee >= 0
 CHECK   quantite_physique - quantite_reservee >= 0
 CHECK   quantite_ligne > 0
+CHECK   facture.montant_avoir_centimes <= facture.montant_total_centimes
 INDEX   statut, date, utilisateur, commande, reference, expiration
 ```
+
+## Unicités partielles, l'idempotence porte sur l'effet
+
+**L'unicité de l'identifiant d'événement Stripe ne suffit pas.** Elle protège du
+rejeu du même événement, pas du croisement entre le webhook et la réconciliation,
+qui sont deux chemins d'entrée distincts vers le même effet métier.
+
+Le scénario, démontré en LS-12 : la réconciliation régularise une commande au
+bout de soixante minutes, puis le webhook arrive enfin, retardé chez le
+prestataire. Son identifiant n'a jamais été vu, rien ne le rejette, il recrée le
+mouvement de stock. Sur une variante à plusieurs exemplaires, aucune erreur ne se
+déclenche et le stock est faux en silence.
+
+Quatre clés, chacune sur un effet de l'étape de confirmation :
+
+```
+UNIQUE paiement (commande_id)                    WHERE statut = 'REUSSI'
+UNIQUE mouvement_stock (commande_id, variante_id) WHERE type = 'VENTE_WEB'
+UNIQUE facture (commande_id)
+UNIQUE journal_email (commande_id, modele)        WHERE origine = 'SYSTEME'
+UNIQUE media (produit_id)                         WHERE ordre = 1
+```
+
+La clé du mouvement porte **la variante et pas seulement la commande**. Un panier
+à deux articles décrémente deux variantes, donc produit deux mouvements. Une
+unicité sur la seule commande rendrait tout panier multi-articles impossible à
+confirmer.
+
+La clé de l'email filtre sur `origine = SYSTEME` pour laisser passer le renvoi
+manuel après échec, prévu au parcours 1.
+
+Référence : `docs/architecture/MODELE-CONCEPTUEL.md`, décision D.
 
 Toute relation possédée porte une clé étrangère avec politique de suppression
 explicite. L'archivage remplace la suppression destructive.

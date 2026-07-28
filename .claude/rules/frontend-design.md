@@ -75,8 +75,18 @@ d'écran.
 | Vous êtes connectée | Connexion réussie |
 | Aucune commande trouvée pour cette cliente | Aucune commande trouvée |
 
-S'applique aux libellés, confirmations, erreurs, états vides, emails
-transactionnels et documents. Voir LS-32 : le féminin dans les contenus
+S'applique **partout, pas seulement aux textes visibles** : libellés,
+confirmations, erreurs, états vides, emails transactionnels, documents, mais
+aussi documentation technique, commentaires de code, tickets Jira et réponses de
+conversation. Écrire « le client », jamais « la cliente », par défaut.
+
+Christophe a dû le signaler deux fois, les 27 et 28 juillet 2026. La règle avait
+été comprise comme portant sur l'interface seule.
+
+Exception : « l'administratrice » et « l'exploitante » désignent une personne
+réelle et identifiée, l'accord y est correct.
+
+Voir LS-32 : le féminin dans les contenus
 éditoriaux, page histoire et descriptions, reste à arbitrer avec l'exploitante.
 
 ## Interdits visuels

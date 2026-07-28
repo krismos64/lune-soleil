@@ -3,7 +3,7 @@
 Séquences d'états des six parcours critiques du projet, cas d'erreur compris.
 
 Ce document ne décrit aucun écran. Il décrit ce qui est **persisté** à chaque
-étape, ce que **voit l'utilisatrice**, et ce qui se passe quand ça échoue. Il
+étape, ce que **voit la personne**, et ce qui se passe quand ça échoue. Il
 sert de contrat d'entrée au modèle conceptuel de données (LS-12) : tout état
 mentionné ici doit avoir sa place dans le modèle, sans invention de champ
 manquant.
@@ -43,7 +43,7 @@ Les six parcours couvrent ainsi les six transactions critiques de la section 15.
 
 Les statuts sont écrits en majuscules, conformément à la section 11 du cahier des
 charges. `Base` désigne ce qui est écrit et doit survivre à un redémarrage.
-`Vue` désigne ce que perçoit l'utilisatrice. `Tâche` désigne un traitement
+`Vue` désigne ce que perçoit la personne devant l'écran. `Tâche` désigne un traitement
 planifié qui interviendra plus tard.
 
 ---
@@ -85,7 +85,7 @@ Base : aucune écriture.
 Vue : récapitulatif corrigé, nouveau prix affiché, confirmation demandée avant de
 poursuivre. Le navigateur n'est jamais source de vérité.
 
-**Abandon du paiement, la cliente ferme l'onglet**
+**Abandon du paiement, le client ferme l'onglet**
 Base : commande reste `EN_ATTENTE_PAIEMENT`, réservation active.
 Vue : rien.
 Tâche : libération des réservations expirées toutes les cinq minutes, la
@@ -99,8 +99,8 @@ Vue : message de refus, possibilité de réessayer avec le panier intact.
 Tâche : même libération à expiration.
 
 **Événement de paiement jamais reçu, panne réseau ou prestataire**
-Base : commande figée en `EN_ATTENTE_PAIEMENT` alors que la cliente a payé.
-Vue : incertitude côté cliente, c'est le cas le plus délicat.
+Base : commande figée en `EN_ATTENTE_PAIEMENT` alors que le client a payé.
+Vue : incertitude côté client, c'est le cas le plus délicat.
 Tâche : réconciliation toutes les quinze minutes, interrogation du prestataire
 pour toute commande en attente depuis plus de soixante minutes. Si le paiement
 existe, la commande est régularisée comme à l'étape 7.
@@ -120,7 +120,7 @@ Base : l'événement est persisté, mais il ne produit aucun second effet métie
 Les unicités qui le garantissent portent sur l'effet et non sur l'événement : au
 plus un paiement `REUSSI` par commande, au plus un mouvement `VENTE_WEB` par
 commande, au plus une facture par commande.
-Vue : rien, la cliente a déjà sa confirmation.
+Vue : rien, le client a déjà sa confirmation.
 Sans ces trois unicités, une variante à plusieurs exemplaires verrait son stock
 décrémenté deux fois sans qu'aucune erreur ne se déclenche.
 
@@ -131,7 +131,7 @@ Vue : rien.
 **Échec d'envoi d'email, étape 9**
 Base : la commande et la facture existent, le journal d'envoi porte l'échec avec
 son motif.
-Vue : la cliente ne reçoit rien, mais sa commande est valide et ses documents
+Vue : le client ne reçoit rien, mais sa commande est valide et ses documents
 accessibles par lien signé.
 Suite : l'administratrice voit l'échec dans l'administration et peut renvoyer.
 Une panne d'email ne bloque jamais une commande.
@@ -165,14 +165,14 @@ réelle décrémente la quantité physique.
 ### Cas d'erreur
 
 **Réservation active au moment de la vente externe, étape 2**
-C'est la faille que le cahier des charges identifie explicitement. Une cliente
+C'est la faille que le cahier des charges identifie explicitement. Un client
 paie en ligne pendant que la même pièce se vend sur le marché.
 Base : aucune écriture, la vente externe est refusée.
-Vue : message explicite indiquant qu'une cliente est en cours de paiement, avec
+Vue : message explicite indiquant qu'un client est en cours de paiement, avec
 proposition d'annuler la réservation après confirmation.
 Si l'administratrice confirme l'annulation : la réservation est libérée,
 `quantiteReservee` décrémentée, et la vente externe peut alors être enregistrée.
-La cliente en ligne verra son paiement échouer à la conversion.
+Le client en ligne verra son paiement échouer à la conversion.
 
 **Stock physique déjà à zéro**
 Base : aucune écriture, la contrainte `CHECK` l'empêcherait de toute façon.
@@ -315,7 +315,7 @@ Le calcul du délai doit être vérifié aux sources officielles avant l'ouvertu
 
 **Échec d'envoi de l'accusé de réception, étape 5**
 Base : la demande reste `DEPOSEE`, l'échec est journalisé.
-Vue : la cliente a confirmé mais ne reçoit rien.
+Vue : le client a confirmé mais ne reçoit rien.
 Suite : alerte critique. L'accusé sur support durable est une obligation légale,
 son échec doit être traité en priorité, pas simplement journalisé.
 
@@ -372,7 +372,7 @@ parcours.
 Base : refus, tentative journalisée.
 Vue : refus sécurisé.
 L'éligibilité est calculée côté serveur depuis la session, jamais depuis un
-identifiant transmis par la cliente.
+identifiant transmis par le client.
 
 ---
 
@@ -405,14 +405,37 @@ document, jeton de vérification d'email.
 **Traces** : journal d'audit pour les actions administratives sensibles, journal
 des envois d'email, alertes critiques acquittables.
 
-**Champs prévus mais inutilisés au lancement** : propriétaire de commande, pour
-le rattachement en V1 cible. Champs fiscaux à zéro, tant que la franchise en base
-s'applique.
+**Champs prévus mais inutilisés au lancement** : propriétaire de commande. Le
+rattachement appartenait à la V1 cible lors de la rédaction de ce document, il
+est passé en périmètre d'ouverture le 28 juillet 2026, epic LS-36. Champs fiscaux
+à zéro, tant que la franchise en base s'applique.
 
-## Points ouverts
+## Ce qui a été tranché depuis
 
-Le calcul exact du délai de rétractation doit être vérifié aux sources
-officielles avant l'ouverture, il n'est pas tranché ici.
+**Délai de rétractation**, vérifié aux sources officielles le 28 juillet 2026.
+Quatorze jours à compter de la réception du bien par le consommateur, article
+L221-18 du Code de la consommation. Le jour de réception n'est pas compté, et
+l'échéance est reportée au premier jour ouvrable suivant si elle tombe un samedi,
+un dimanche ou un jour férié, article L221-19. En cas de livraison échelonnée, le
+délai court à compter du dernier bien reçu.
 
-Le seuil d'ancienneté déclenchant le signalement d'un retour non reçu reste à
-définir, avec les autres paramètres commerciaux.
+Le calendrier des jours fériés français est donc nécessaire côté serveur.
+
+Point de vigilance de l'article L221-20 : sans information correcte du
+consommateur sur son droit, le délai est prolongé de **douze mois**. Le parcours 5
+prévoit déjà la fonctionnalité en ligne exigée par l'article L221-21.
+
+**Signalement d'un retour non reçu : immédiat**, pour permettre de contacter le
+transporteur sans attendre. Le seuil d'ancienneté envisagé est abandonné au
+profit d'une alerte dès que le retour annoncé n'arrive pas.
+
+## Point ouvert
+
+**D'où vient la date de réception du colis**, qui fait courir le délai de
+rétractation. Le parcours 1 persiste une date de livraison « uniquement sur
+source fiable », sans définir cette source : interrogation automatique du
+transporteur, saisie par l'administratrice, ou repli sur la date d'expédition.
+
+Ticket LS-33, à trancher avec l'exploitante. Le repli le plus sûr en attendant
+est de faire courir le délai depuis l'expédition : le consommateur bénéficie
+alors d'un délai plus long que le minimum légal, jamais plus court.

@@ -149,6 +149,10 @@ Phase 0, cadrage opérationnel. Cinq stories terminées sur treize.
 | LS-19 | Médiateur de la consommation | Démarche externe à lancer |
 | LS-20 | Photographies | Démarche externe à lancer |
 | LS-31 | Agent conteneurisation propre au projet | À faire, phase 1 |
+| LS-33 | Source de la date de livraison, point de départ de la rétractation | **À trancher avec l'exploitante**, ne bloque pas LS-13 |
+| LS-34 | Recevoir les factures électroniques fournisseurs | Démarche externe, échéance 1er septembre 2026 |
+| LS-35 | E-reporting du chiffre d'affaires journalier | Échéance 1er septembre 2027, hors ouverture |
+| LS-36 | Epic espace client, avis et carnet d'adresses | Créé, en périmètre d'ouverture |
 
 ## Prochaine étape
 
@@ -168,6 +172,106 @@ modèle les rend configurables, il persiste `expireA` et non une durée.
 
 Le calcul du délai de rétractation reste à vérifier aux sources officielles avant
 l'ouverture, il n'appartient pas au modèle.
+
+## Seconde partie de session, périmètre et vérifications juridiques
+
+Christophe a posé une série de questions sur la suite. Deux ont exigé une
+vérification aux sources officielles, trois ont produit un arbitrage de
+périmètre.
+
+### Facture électronique, vérifiée
+
+Je ne savais pas répondre et je l'ai dit plutôt que d'improviser. Vérification
+faite sur les fiches 2 et 7 de la DGFiP, mises à jour juin 2026.
+
+**Les ventes aux particuliers ne relèvent pas de la facturation électronique.**
+L'obligation vise les opérations entre entreprises. Les factures clients restent
+générées par le site. Stripe n'y participe pas.
+
+Au 1er septembre 2026, une seule obligation : pouvoir **recevoir** les factures
+électroniques des fournisseurs, ce qui est une démarche administrative. Au 1er
+septembre 2027, e-reporting du chiffre d'affaires journalier, en données
+globalisées, sans aucune donnée personnelle transmise.
+
+J'avais suggéré que la franchise en base pourrait exonérer de tout. C'est faux :
+la fiche 2 dit que ces entreprises restent assujetties. Ce qui écarte
+l'obligation d'émission, c'est la nature B2C de l'activité et le calendrier
+échelonné. Tickets LS-34 et LS-35.
+
+### Rétractation, vérifiée
+
+Quatorze jours à compter de la **réception du bien**, article L221-18. Le calcul
+n'est pas un simple ajout : le jour de réception ne compte pas, et l'échéance est
+reportée au premier jour ouvrable si elle tombe un samedi, un dimanche ou un jour
+férié, article L221-19. Le calendrier des jours fériés est donc nécessaire côté
+serveur.
+
+Le risque le plus coûteux est l'article L221-20 : sans information correcte du
+consommateur, le délai passe à douze mois et quatorze jours. Détail porté sur
+LS-6 et dans la nouvelle règle `legal.md`.
+
+### Périmètre d'ouverture élargi
+
+Christophe décide que l'espace client, les avis vérifiés et le carnet d'adresses
+entrent **avant l'ouverture**. Motif : la crédibilité du site, et l'autonomie des
+clients sur leur historique, leurs factures et leur suivi si un email échoue.
+
+J'avais recommandé l'inverse, ouvrir sans et livrer juste après, en avançant que
+la charge augmente et que l'authentification élargit la surface d'attaque avant
+le durcissement. Recommandation non retenue, l'arbitrage appartient à Christophe.
+Décision appliquée, epic LS-36 créé, LS-8 réduit de 70 h à 38 h.
+
+Le modèle conceptuel tient : `Commande.utilisateurId` et le parcours 6 avaient
+été prévus pour cela. Deux ajouts reviennent à LS-13, l'entité Avis et la table
+Adresse du carnet.
+
+L'avoir commercial, un solde à dépenser sur le site, est écarté explicitement.
+Aucun ticket créé.
+
+### Une question laissée ouverte volontairement
+
+Christophe a demandé comment le délai de rétractation démarrerait
+automatiquement. La réponse honnête : ce n'était pas prévu. Le modèle porte une
+date de livraison « sur source fiable » sans définir la source.
+
+Trois options, du suivi automatique par API transporteur au repli sur la date
+d'expédition. Le choix dépend du transporteur retenu, décision commerciale qui
+appartient à l'exploitante. Christophe a demandé de ne pas trancher maintenant et
+de le lui rappeler : ticket LS-33, mémoire, et point ouvert inscrit dans les deux
+documents d'architecture.
+
+Ça ne bloque pas LS-13, le modèle stocke la date quelle que soit sa provenance.
+
+### Configuration Claude Code revue
+
+Trois modifications, validées avec Christophe.
+
+`database.md` et `payments.md` affirmaient que l'unicité de l'identifiant
+d'événement Stripe suffit à garantir l'idempotence. LS-12 a prouvé le contraire.
+Les deux règles portent désormais les quatre clés et le scénario du webhook
+tardif. Sans cette correction, le trou aurait été réintroduit au moment de coder
+le webhook, dans la phase la plus risquée du projet.
+
+Nouvelle règle `legal.md`, ciblée sur les chemins de rétractation et de
+facturation, portant les délais vérifiés avec leurs articles. Motif : les valeurs
+vivaient dans Jira et en mémoire, donc nulle part au moment de coder. C'est
+exactement le manquement d'hier, une règle que rien ne déclenche ne s'applique
+pas.
+
+### Une correction que j'ai dû faire deux fois
+
+Christophe m'avait signalé le 27 juillet de ne pas accorder au féminin. J'ai
+écrit « clientes » partout dans une réponse le 28. La règle existait dans
+`frontend-design.md` mais ne portait que sur les textes visibles, et cette règle
+ne se charge que sur les fichiers d'interface.
+
+Corrigé en la remontant dans le CLAUDE.md, chargé à chaque session, avec une
+portée explicite : interface, documentation, commentaires, Jira et réponses de
+conversation. Treize occurrences corrigées dans les documents d'architecture,
+quatre dans les règles.
+
+Leçon, la même qu'hier sous une autre forme : une règle rangée au mauvais niveau
+ne se déclenche pas quand il faudrait.
 
 ## À noter pour plus tard
 
