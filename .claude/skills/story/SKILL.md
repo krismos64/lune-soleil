@@ -104,13 +104,46 @@ et ce qui ne l'a pas été.
 
 | Canal | Quand le mettre à jour | Quoi y mettre |
 |---|---|---|
-| **Dépôt** | toujours | code, ADR si décision structurante, script si prototype |
+| **Dépôt** | toujours | code, ADR si décision structurante, script si prototype, **commité, poussé et fusionné** |
 | **Journal** | fin de session significative | ce qui est fait, ce qui a dérapé et pourquoi, prochaine étape, état des tickets |
 | **Mémoire** | découverte non dérivable du code | contrainte technique, piège, décision et son pourquoi |
 | **Jira** | toujours | commentaire avec l'état réel de chaque critère, le commit, ce qui reste |
 
 Commit avec un message descriptif référençant le ticket. Jamais de
 `Co-Authored-By` dans ce projet.
+
+### Un commit local ne livre rien
+
+**Le canal Dépôt n'est pas clos tant que le travail est sur `main` distante.**
+Une branche locale, même parfaitement commitée, n'existe pour personne d'autre.
+Le 28 juillet 2026, deux stories ont été déclarées terminées avec six commits qui
+n'avaient jamais quitté la machine.
+
+`CONTRIBUTING.md` exige une pull request systématique, même en solo, et `main` est
+protégée : historique linéaire, pas de force-push.
+
+```bash
+git push -u origin type/LS-xx-sujet
+gh pr create --base main --title "..." --body "..."
+gh pr view <n> --json mergeStateStatus,statusCheckRollup   # attendre le vert
+gh pr merge <n> --rebase --delete-branch
+```
+
+Quatre points qui se ratent facilement :
+
+- **Attendre les contrôles**, ne pas fusionner sur un `UNSTABLE` ou un
+  `IN_PROGRESS`. `CONTRIBUTING.md` l'interdit explicitement.
+- **Fusionner en `--rebase`**, jamais en merge commit, l'historique de `main`
+  devant rester linéaire.
+- **Le rebase réécrit les SHA.** Ceux cités dans un commentaire Jira posté avant
+  la fusion deviennent invalides. Poster la correspondance, ou ne citer les SHA
+  qu'après fusion.
+- La pull request porte ce que `CONTRIBUTING.md` attend, dont **la sortie réelle
+  des commandes de vérification** et non une affirmation.
+
+Si la fusion n'est pas possible (contrôle rouge, conflit, revue en attente), le
+dire et laisser le ticket en `En cours`. Ne jamais clore un ticket dont le
+travail n'est pas sur `main`.
 
 **Rédaction, sur les quatre canaux sans exception.** Français orthographiquement
 correct, tous les accents présents. Jamais « decision », « verifie » ou
@@ -128,13 +161,19 @@ qu'un journal absent.
 
 ## 7. Vérifier avant de rendre la main
 
-Trois questions à se poser, systématiquement :
+Quatre questions à se poser, systématiquement :
 
+- **Le travail est-il sur `main` distante ?** `git status -sb` et `git log
+  origin/main..HEAD` répondent en deux secondes. Une sortie non vide signifie que
+  rien n'est livré.
 - Le journal reflète-t-il l'état réel du projet ?
 - Une découverte de cette session mériterait-elle d'être en mémoire ?
 - Jira dit-il la vérité sur l'avancement ?
 
-Si la réponse est non à l'une des trois, y remédier avant de conclure.
+Si la réponse est non à l'une des quatre, y remédier avant de conclure.
+
+La première est en tête parce que c'est celle qui a été ratée : les trois autres
+peuvent être parfaites pendant que le code dort sur une branche locale.
 
 ## Ce qu'il ne faut pas faire
 
