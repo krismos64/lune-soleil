@@ -180,10 +180,19 @@ Tout travail sur ce projet suit le skill `story`, y compris une exploration ou u
 prototype sans ticket. Il porte le contrôle avant zone critique et la clôture de
 la traçabilité.
 
+Deux garde-fous automatiques appuient cette discipline, parce qu'une règle que
+rien ne déclenche ne s'applique pas. Un hook `PreToolUse` bloque la lecture des
+secrets. Un hook `Stop` avertit en fin de session s'il reste des commits absents
+de `main` distante, cas qui s'est produit le 28 juillet 2026 avec deux stories
+déclarées terminées et six commits jamais poussés.
+
 YOU MUST clore tout travail significatif sur les quatre canaux, et dire
 explicitement ce qui a été mis à jour :
 
-1. **Dépôt** : code, ADR si décision structurante, script si prototype
+1. **Dépôt** : code, ADR si décision structurante, script si prototype. Commité,
+   **poussé, passé en pull request et fusionné sur `main`**. Un commit local ne
+   livre rien. `CONTRIBUTING.md` exige une PR même en solo, fusion en rebase,
+   après contrôles au vert.
 2. **Journal** `docs/journal/` : fait, dérives, prochaine étape, état des tickets
 3. **Mémoire** : toute découverte non dérivable du code
 4. **Jira** : état réel de chaque critère, commit, ce qui reste
