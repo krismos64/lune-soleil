@@ -265,7 +265,7 @@ branche non poussée.
 
 ## Où on en est
 
-Phase 0, cadrage opérationnel. Neuf stories terminées.
+Phase 0, cadrage opérationnel. Dix stories terminées.
 
 | Ticket | Sujet | État |
 |---|---|---|
@@ -291,6 +291,9 @@ Phase 0, cadrage opérationnel. Neuf stories terminées.
 | LS-38 | Aligner le modèle sur le périmètre d'ouverture élargi | Terminé : ADR-023, rôles clients, huit défauts corrigés |
 | LS-39 | Cohérence du modèle conceptuel après LS-38 | Terminé : `revoqueA`, R20 et R21, sémantique des envois |
 | LS-40 | Parcours 8, gestion du carnet d'adresses | Terminé : dernière entité traversée, A7 à A11, V15 |
+| LS-41 | Finaliser le modèle avant la traduction logique | Terminé : L221-24, `RECUE` retiré, huit références, L12 et L13 |
+| LS-42 | Mode fail-open du script de migration | À faire, avant la première migration de production |
+| LS-43 | Deux sessions Checkout payées pour une commande | À faire, avant d'implémenter le paiement |
 
 ## LS-38, ce qu'une relecture extérieure a trouvé
 
@@ -492,11 +495,70 @@ Deux affirmations techniques ont été prises en défaut par une vérification s
 base réelle, pas par un raisonnement. C'est devenu la règle : une affirmation
 destinée à un document permanent se teste.
 
+## LS-41, la seconde erreur juridique de la journée
+
+Une relecture croisée a signalé que la règle L7 était fausse. Vérification faite
+sur Légifrance : l'article L221-24 permet de différer le remboursement « jusqu'à
+récupération des biens **ou** jusqu'à ce que le consommateur ait fourni une preuve
+de l'expédition, la date retenue étant celle du **premier** de ces faits ».
+
+Le modèle posait l'inverse, un remboursement conditionné à la seule réception.
+Colis renvoyé le 3 avec numéro de suivi, colis perdu, remboursement dû depuis le 3
+et bloqué indéfiniment. Aucun champ ne portait la preuve d'expédition, d'où un
+défaut structurel et pas seulement rédactionnel.
+
+**Le point commun avec l'erreur de LS-33** : j'avais vérifié les délais aux
+sources, jamais les conditions qui les déclenchent. Deux fautes en une journée
+dans le même domaine, sur la même méthode incomplète.
+
+### Deux défauts créés par mes propres corrections, en cascade
+
+**Le premier a cassé la réintégration du stock.** En ajoutant
+`EXPEDITION_PROUVEE`, j'ai rendu le statut `RECUE` inatteignable : preuve le 4,
+remboursement le 6, colis arrivé le 24. Il aurait fallu faire régresser une
+demande `REMBOURSEE`, ou renseigner `recueA` en contradiction avec son statut.
+
+`RECUE` sort donc de l'enum. La réception devient un fait porté par `recueA`
+seul, parce qu'elle survient avant, pendant ou longtemps après le remboursement.
+C'est la traduction directe de S8, qui disait déjà que la réintégration dépend du
+retour physique et de rien d'autre.
+
+Au passage, un cas de perte sèche devenait visible : une demande `REMBOURSEE`
+sans `recueA` signifie une pièce sortie du stock et jamais revenue. Le journal des
+mouvements montrerait une vente web, un avoir total, et rien qui explique où est
+passée la pièce. Règle L13.
+
+**Le second a fermé un chemin nominal.** Sans `RECUE`, une demande reçue **sans**
+preuve d'expédition n'avait plus aucune transition vers le remboursement. Retour
+déposé en point relais, sans numéro de suivi transmis : cas courant. La revue a
+nommé le piège que cela aurait produit, renseigner `preuveExpeditionA` pour
+débloquer la machine à états, donc inscrire une preuve qui n'a jamais existé dans
+un champ à valeur probatoire.
+
+### Une affirmation technique fausse, la troisième de la journée
+
+J'affirmais que Prisma ne génère pas les index partiels. Faux, la fonctionnalité
+`partialIndexes` existe en avant-première. Le SQL manuel reste défendable comme
+**choix de stabilité**, pas comme impossibilité, et l'ADR demande désormais de
+revérifier ce statut au moment de LS-13.
+
+Les mentions sur les `CHECK` restent vraies, Prisma ne les génère toujours pas.
+
+### Ce que trois relectures croisées ont produit
+
+LS-38 à LS-41 ont corrigé une trentaine de défauts. La proportion qui compte :
+**une quinzaine venaient de mes propres corrections**, jamais du travail initial.
+
+La parade a fonctionné à chaque fois, une seconde passe de revue portant sur les
+corrections elles-mêmes. Sans elle, chacun serait parti en migration.
+
+Trois affirmations techniques ont été prises en défaut par une vérification sur
+base réelle ou sur documentation officielle, aucune par un raisonnement.
+
 ## Prochaine étape
 
-**LS-13**, le modèle logique, enfin débloqué. Toutes les entités du modèle sont
-traversées par au moins un parcours, huit parcours et cinquante-quatre cas
-d'erreur.
+**LS-13**, le modèle logique. Toutes les entités du modèle sont traversées par au
+moins un parcours, huit parcours et cinquante-sept cas d'erreur.
 
 LS-12, LS-37, LS-38, LS-39 et LS-40 lui transmettent un modèle complet, sept
 domaines, et un récapitulatif de contraintes rangé en trois niveaux qui est la
