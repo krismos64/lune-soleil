@@ -142,14 +142,31 @@ Ces opérations exigent une transaction, sans exception :
 7. Dépôt d'un avis : création de l'avis et consommation de l'invitation, le jeton
    passant à utilisé dans la même transaction. Sans cela, un jeton rejoué crée un
    second avis sur la même ligne de commande
-8. Renvoi d'une invitation d'avis : **révocation de l'ancien jeton**, création du
-   nouveau, mise à jour de `InvitationAvis.jetonAccesId`, incrément de
-   `nombreEnvois` et positionnement de `dernierEnvoiA`, cinq écritures
+8. Renvoi d'une invitation d'avis : **révocation de l'ancien jeton** par
+   `revoqueA`, insertion du nouveau **avant** la mise à jour de
+   `InvitationAvis.jetonAccesId`, et incrément de `nombreEnvois`, quatre
+   écritures. `dernierEnvoiA` est renseigné **après**, hors transaction, l'envoi
+   d'email ne pouvant pas y appartenir
 9. Choix d'une adresse par défaut dans le carnet : retirer le drapeau de
    l'ancienne **avant** de le poser sur la nouvelle
 
 Les trois dernières viennent du périmètre ajouté par LS-37, avis et carnet
 d'adresses.
+
+`nombreEnvois` compte les **tentatives**, pas les succès : il est incrémenté
+avant l'appel au fournisseur et sert à borner le renvoi. La preuve d'envoi vit
+dans `JournalEmail`, jamais dans ces deux champs. En cas de divergence, le
+journal a raison.
+
+**Révoquer un jeton renseigne `revoqueA`, jamais `utiliseA`.** Ce dernier signifie
+que l'action a eu lieu, l'avis déposé : un jeton révoqué marqué consommé ferait
+afficher « avis déjà déposé » à un client qui n'a rien déposé. Un jeton valide
+n'est ni expiré, ni consommé, ni révoqué, les trois conditions ensemble.
+
+L'ordre du point 8 compte aussi, pour une autre raison que le point 9. Le nouveau
+jeton s'insère avant la mise à jour du pointeur, sinon la clé étrangère échoue.
+Aucun ordre ne produit ici de violation d'unicité, le nouveau jeton n'étant
+référencé par personne avant l'`UPDATE`.
 
 **La révocation de l'ancien jeton du point 8 n'est pas une précaution contre une
 panne, elle ferme le chemin nominal.** `JetonAcces` est une entité propre avec sa
