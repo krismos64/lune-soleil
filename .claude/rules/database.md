@@ -149,9 +149,21 @@ Ces opérations exigent une transaction, sans exception :
    d'email ne pouvant pas y appartenir
 9. Choix d'une adresse par défaut dans le carnet : retirer le drapeau de
    l'ancienne **avant** de le poser sur la nouvelle
+10. Suppression d'un compte : marquer `Commande.dissocieA` sur ses commandes
+    **avant** de supprimer le compte, puis laisser les politiques de clé
+    étrangère traiter les six autres références qui en portent une,
+    `ReponseAvis.auteurId` étant en `RESTRICT` assumé
 
-Les trois dernières viennent du périmètre ajouté par LS-37, avis et carnet
-d'adresses.
+Les points 7 à 9 viennent du périmètre ajouté par LS-37, avis et carnet
+d'adresses. Le point 10 vient de LS-41.
+
+**Le point 10 existe parce qu'une politique de clé étrangère ne sait pas écrire
+un champ.** `ON DELETE SET NULL` remet `Commande.utilisateurId` à nul, il ne
+renseigne pas `dissocieA`. Une commande dissociée sans ce marquage redevient
+« sans propriétaire », donc éligible au rattachement du parcours 6 : l'historique
+et les factures d'un client parti rouvriraient à quiconque contrôle ensuite la
+même adresse email. L'ordre est imposé, marquer après suppression est impossible
+puisque le lien a disparu.
 
 `nombreEnvois` compte les **tentatives**, pas les succès : il est incrémenté
 avant l'appel au fournisseur et sert à borner le renvoi. La preuve d'envoi vit

@@ -7,7 +7,7 @@
 | Décideur | Christophe Mostefaoui |
 | Complète | ADR-021, qui ne couvre que l'administration |
 | Ticket | LS-38 |
-| Vérifié via | Context7, Better Auth 1.6.23 |
+| Vérifié via | Context7, Better Auth 1.6.23. Index partiels Prisma, documentation officielle consultée le 28 juillet 2026 |
 
 ## Contexte
 
@@ -48,8 +48,29 @@ CREATE UNIQUE INDEX utilisateur_administratrice_unique
 Un `UNIQUE (role)` simple interdirait un second compte client, ce qui rendrait le
 site inutilisable. Le filtre est ce qui rend la contrainte utilisable.
 
-Prisma ne génère pas les index partiels de cette forme. La migration est écrite à
-la main en LS-13, comme les `CHECK` d'ADR-006.
+**L'index s'écrit en SQL manuel, par choix de stabilité et non par
+impossibilité.** Précision apportée par LS-41, l'ADR affirmait à tort que Prisma
+n'en était pas capable.
+
+Prisma sait générer les index partiels depuis la fonctionnalité en avant-première
+`partialIndexes`, vérifiée sur la documentation officielle :
+
+```prisma
+generator client {
+  previewFeatures = ["partialIndexes"]
+}
+
+@@unique([role], where: raw("role = 'ADMINISTRATRICE'"))
+```
+
+Elle reste en avant-première au 28 juillet 2026, donc sujette à changement de
+syntaxe entre deux versions mineures. Sur une contrainte qui porte l'unicité du
+compte d'administration, la migration SQL écrite à la main ne dépend d'aucun cycle
+de publication.
+
+La version exacte de Prisma sera fixée par LS-13, aucune dépendance n'étant encore
+installée. **Revérifier le statut de cette fonctionnalité à ce moment-là**,
+l'argument entier reposant dessus : le choix se rejoue si elle est devenue stable.
 
 ### Le rôle n'est jamais fourni par le client
 

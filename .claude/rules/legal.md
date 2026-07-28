@@ -24,7 +24,7 @@ viennent du texte, pas d'une appréciation.
 | Livraison échelonnée | réception du **dernier** bien | L221-18 |
 | Renvoi par le consommateur | 14 jours après sa décision | L221-23 |
 | Remboursement par le professionnel | 14 jours après information | L221-24 |
-| Report du remboursement | possible jusqu'à récupération du bien | L221-24 |
+| Report du remboursement | jusqu'au **premier** de deux faits, récupération du bien **ou** preuve de son expédition par le consommateur | L221-24 |
 
 ### Le calcul n'est pas un ajout de quatorze jours
 

@@ -13,7 +13,7 @@ manquant.
 | Ticket | LS-11 |
 | Source | Cahier des charges V1.0, sections 9, 11 et 15.5 |
 | Débloque | LS-12 modèle conceptuel, LS-14 diagramme de séquence |
-| Cas d'erreur | 54, dont un ajouté par LS-12, onze par LS-37 et onze par LS-40 |
+| Cas d'erreur | 57, dont un ajouté par LS-12, onze par LS-37, onze par LS-40 et trois par LS-41 |
 
 Le document reste ouvert : modéliser révèle des cas que la lecture du cahier des
 charges n'avait pas fait apparaître, et le périmètre évolue. Un cas découvert plus
@@ -288,9 +288,20 @@ avoir est créé, référençant la même facture initiale.
 Vue : deux avoirs distincts.
 
 **Pièce non retournée malgré le remboursement, étape 7**
-Base : aucun mouvement de stock.
-Vue : rien.
+Base : aucun mouvement de stock, et **alerte critique** au-delà du seuil, règle
+L13.
+Vue : rien côté client.
 La réintégration dépend du retour réel, jamais du remboursement seul.
+
+Précisé par LS-41 : ce cas était traité comme une anomalie muette, « base, aucun
+mouvement, vue, rien ». Depuis la règle L7, rembourser sans retour physique est un
+chemin **légal** et non plus une anomalie, l'article L221-24 l'imposant dès la
+preuve d'expédition. Le silence n'est donc plus acceptable, l'écart de stock doit
+devenir visible.
+
+L'ajustement éventuel reste une décision de l'administratrice, un mouvement
+`AJUSTEMENT` avec motif quand la pièce est déclarée perdue. Rien ne l'écrit
+automatiquement : un colis peut arriver trois semaines plus tard.
 
 **Génération du PDF en échec**
 Base : le document existe en base avec son numéro, le PDF manque.
@@ -314,9 +325,34 @@ consommation. Son absence prolonge le délai de rétractation de douze mois.
 | 4 | Confirmation non ambiguë | demande de rétractation `DEPOSEE` | récapitulatif |
 | 5 | Accusé de réception | demande `ACCUSEE`, journal d'envoi, horodatage conservé | email sur support durable |
 | 6 | Attente du retour | demande `RETOUR_ATTENDU` | instructions de retour |
-| 7 | Réception du colis | demande `RECUE` | confirmation |
+| 7a | Preuve d'expédition fournie | demande `EXPEDITION_PROUVEE`, `preuveExpeditionA` horodaté | accusé, remboursement annoncé |
+| 7b | Réception du colis | `recueA` horodaté, **sans changement de statut** | confirmation |
 | 8 | Remboursement | demande `REMBOURSEMENT_EN_COURS` puis `REMBOURSEE`, avoir si nécessaire | remboursement |
-| 9 | Réintégration de stock | mouvement de retour selon l'état réel de la pièce | stock à jour |
+| 9 | Réintégration de stock | mouvement de retour selon l'état réel de la pièce, déclenché par `recueA` | stock à jour |
+
+**Les étapes 7a et 7b sont deux faits indépendants, pas une séquence.** Le
+remboursement est dû au **premier des deux** qui survient, article L221-24.
+
+L'étape 7b n'a pas de statut, corrigé par LS-41 : la réception peut arriver avant
+le remboursement, pendant, ou trois semaines après, et un statut `RECUE` obligerait
+soit à faire régresser une demande déjà `REMBOURSEE`, soit à contredire ses propres
+horodatages. `recueA` porte seul la réception, règle L12, et déclenche seul
+l'étape 9.
+
+Une demande peut donc être `REMBOURSEE` avec un colis toujours en transit, ou
+jamais arrivé. Le second cas produit une alerte, règle L13 : la pièce est sortie
+du stock sans y revenir.
+
+**L'étape 7a n'est pas obligatoire.** Une demande passe de `RETOUR_ATTENDU`
+directement à `REMBOURSEMENT_EN_COURS` dès que `recueA` est renseigné, sans jamais
+voir `EXPEDITION_PROUVEE`. C'est le cas d'un retour déposé en point relais sans
+numéro de suivi transmis, qui est courant. Ne jamais renseigner
+`preuveExpeditionA` pour débloquer une transition : ce champ prouve un fait, il ne
+sert pas à faire avancer une machine à états.
+
+Le parcours conditionnait auparavant le remboursement à la seule réception, ce qui
+le bloquait indéfiniment sur un colis lent ou perdu alors qu'il était dû depuis la
+preuve d'expédition.
 
 ### Cas d'erreur
 
@@ -339,19 +375,59 @@ Vue : le client a confirmé mais ne reçoit rien.
 Suite : alerte critique. L'accusé sur support durable est une obligation légale,
 son échec doit être traité en priorité, pas simplement journalisé.
 
-**Colis jamais reçu**
+**Colis jamais reçu, aucune preuve d'expédition fournie**
 Base : la demande reste `RETOUR_ATTENDU`.
 Vue : en attente.
-Suite : signalement à l'administratrice au-delà d'un seuil d'ancienneté. Aucun
-remboursement automatique sans réception.
+Suite : signalement à l'administratrice au-delà d'un seuil d'ancienneté. Le
+remboursement peut être différé, aucun des deux faits de l'article L221-24
+n'étant survenu.
+
+**Colis jamais reçu, mais preuve d'expédition fournie**
+Base : demande `EXPEDITION_PROUVEE`, le remboursement suit son cours.
+Vue : remboursement annoncé, indépendamment de l'arrivée du colis.
+Le délai court depuis la preuve, article L221-24. Un colis perdu chez le
+transporteur ne suspend pas le remboursement : le litige se traite avec le
+transporteur, pas en retenant une somme due.
+
+**Colis toujours pas reçu après le remboursement**
+Base : demande `REMBOURSEE`, `recueA` nul, **aucun mouvement de stock**, alerte
+critique au-delà du seuil, règle L13.
+Vue : rien côté client, il a été remboursé.
+La pièce est sortie du stock à la vente et n'y est jamais revenue. Sans l'alerte,
+l'écart resterait invisible : le journal des mouvements montrerait une vente web,
+un avoir total, et rien qui explique où est passée la pièce. C'est à
+l'administratrice d'ouvrir le litige transporteur, et de décider d'un ajustement
+de stock avec motif si la pièce est définitivement perdue.
+
+**Colis reçu après le remboursement**
+Base : `recueA` horodaté, mouvement `RETOUR` créé, statut inchangé à `REMBOURSEE`.
+Vue : rien, l'opération est close côté client.
+La réception n'est pas un statut, règle L12. Elle survient quand elle survient et
+déclenche seule la réintégration.
 
 **Pièce retournée endommagée**
-Base : demande `RECUE`, montant de remboursement ajusté selon le droit
-applicable, motif documenté.
+Base : `recueA` horodaté, motif documenté. **L'ajustement du montant n'est
+possible que si le remboursement n'est pas encore versé.**
 Vue : explication du montant.
 Aucune exclusion automatique n'est codée. Les exceptions relèvent du droit
 applicable et de la caractéristique concrète du produit, jamais d'une règle
 codée en dur pour les boucles d'oreilles.
+
+Deux situations, depuis que le remboursement peut précéder la réception.
+
+**Réception avant remboursement.** `montantRembourseCentimes` est ajusté avant
+versement, comportement d'origine, rien ne change.
+
+**Réception après remboursement.** L'ajustement n'est plus disponible : la somme
+est versée et l'avoir émis est immuable, invariant 4. L'écart devient une créance
+sur le client, qui se traite hors du site. Le modèle ne le représente pas et ne
+doit pas laisser croire que `montantRembourseCentimes` reste modifiable après
+`REMBOURSEE`.
+
+Le cas suppose d'avoir remboursé sur preuve d'expédition sans voir la pièce, ce
+que la loi impose. **Point à trancher avec l'exploitante** : réclamer la
+différence ou l'assumer en perte. Le choix n'a pas de conséquence sur le schéma,
+mais il en a sur la procédure d'exploitation.
 
 **Refus de la rétractation**
 Base : état refusé avec motif documenté obligatoire.
@@ -750,6 +826,14 @@ rétractation. Le parcours 1 persiste une date de livraison « uniquement sur
 source fiable », sans définir cette source : interrogation automatique du
 transporteur, saisie par l'administratrice, ou repli sur la date d'expédition.
 
-Ticket LS-33, à trancher avec l'exploitante. Le repli le plus sûr en attendant
-est de faire courir le délai depuis l'expédition : le consommateur bénéficie
-alors d'un délai plus long que le minimum légal, jamais plus court.
+Ticket LS-33, à trancher avec l'exploitante.
+
+**Faire courir le délai depuis l'expédition seule est une faute**, corrigée par
+LS-41 ici comme dans `.claude/rules/legal.md`. Le délai légal court depuis la
+réception, et l'expédition la précède : expédié le 1er, reçu le 4, un délai parti
+du 1er expire le 15 alors que le minimum légal court jusqu'au 18. Le droit serait
+éteint trois jours trop tôt.
+
+Le repli sûr est la date d'expédition **plus une marge couvrant l'acheminement**.
+À défaut de date de réception connue, retenir la date la plus tardive plausible,
+jamais la plus précoce.
