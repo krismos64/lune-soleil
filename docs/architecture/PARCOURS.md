@@ -1,6 +1,6 @@
 # Parcours critiques
 
-Séquences d'états des sept parcours critiques du projet, cas d'erreur compris.
+Séquences d'états des huit parcours critiques du projet, cas d'erreur compris.
 
 Ce document ne décrit aucun écran. Il décrit ce qui est **persisté** à chaque
 étape, ce que **voit la personne**, et ce qui se passe quand ça échoue. Il
@@ -13,7 +13,7 @@ manquant.
 | Ticket | LS-11 |
 | Source | Cahier des charges V1.0, sections 9, 11 et 15.5 |
 | Débloque | LS-12 modèle conceptuel, LS-14 diagramme de séquence |
-| Cas d'erreur | 44, dont un ajouté par LS-12 et douze par LS-37 |
+| Cas d'erreur | 54, dont un ajouté par LS-12, onze par LS-37 et onze par LS-40 |
 
 Le document reste ouvert : modéliser révèle des cas que la lecture du cahier des
 charges n'avait pas fait apparaître, et le périmètre évolue. Un cas découvert plus
@@ -23,7 +23,7 @@ Le trente-deuxième cas, l'événement de paiement tardif au parcours 1, est ven
 LS-12. Le **parcours 7**, dépôt d'un avis, est venu de LS-37 après le passage des
 avis en périmètre d'ouverture, epic LS-36.
 
-## Pourquoi six parcours et non cinq
+## Pourquoi huit parcours et non cinq
 
 Le plan directeur exige en section 4.4 que le modèle logique soit « validé sur
 les cinq scénarios critiques sans invention de champ manquant », sans jamais
@@ -40,6 +40,11 @@ sixième. Le rattachement appartenait à la V1 cible à cette date, et le modèl
 devait le prévoir dès maintenant pour éviter une migration sur des données
 historiques. Il est entré en périmètre d'ouverture le 28 juillet 2026, epic
 LS-36, ce qui confirme le choix sans le modifier.
+
+Le huitième, la gestion du carnet d'adresses, est venu de LS-40 pour une raison
+différente des sept autres : `AdresseCarnet` était modélisée sans qu'aucun
+parcours ne la traverse, seule entité du modèle dans ce cas. Une entité qui
+n'entre dans aucun parcours n'a subi aucun contrôle.
 
 Les six premiers parcours couvrent ainsi les six transactions critiques de la
 section 15.5. Le septième, le dépôt d'un avis, est venu plus tard avec
@@ -369,11 +374,17 @@ quand un client crée un compte après avoir commandé.
 |---|---|---|---|
 | 1 | Création de compte | utilisateur avec email non vérifié | formulaire |
 | 2 | Vérification de l'email | utilisateur vérifié, jeton consommé | confirmation |
-| 3 | Recherche des commandes éligibles | lecture seule, commandes sans propriétaire dont l'email normalisé correspond | liste proposée |
+| 3 | Recherche des commandes éligibles | lecture seule, commandes jamais rattachées dont l'email normalisé correspond | liste proposée |
 | 4 | Rattachement | commandes rattachées au compte, entrée au journal d'audit | historique visible |
 
-Le rattachement n'est possible que sur des commandes **sans propriétaire** et
+Le rattachement n'est possible que sur des commandes **jamais rattachées** et
 après vérification de la **même adresse email normalisée**.
+
+« Jamais rattachée » est plus strict que « sans propriétaire ». Une commande dont
+le compte a été supprimé porte `dissocieA` et reste exclue définitivement, sans
+quoi la réattribution d'une adresse email par un fournisseur d'accès, ou un tiers
+qui la connaît, ouvrirait l'historique et les factures d'un client parti. Voir la
+règle A10 et le parcours 8.
 
 ### Cas d'erreur
 
@@ -386,6 +397,13 @@ Base : aucune écriture.
 Vue : la commande n'apparaît pas dans la liste éligible.
 Une commande déjà rattachée ne peut jamais changer de propriétaire par ce
 parcours.
+
+**Commande dont le compte propriétaire a été supprimé**
+Base : aucune écriture, `dissocieA` exclut définitivement de l'éligibilité.
+Vue : la commande n'apparaît pas, même si l'email correspond.
+Son `utilisateurId` est nul, mais elle n'est pas « jamais rattachée ». Sans cette
+distinction, une adresse email réattribuée rouvrirait l'historique complet d'un
+client parti, factures comprises.
 
 **Tentative de rattachement par identifiant fourni**
 Base : refus, tentative journalisée.
@@ -437,7 +455,7 @@ Suite : un nouveau lien peut être demandé depuis l'espace client. L'invitation
 existante est réutilisée, son `jetonAccesId` pointant vers le nouveau jeton et
 `nombreEnvois` étant incrémenté. Aucune seconde invitation n'est créée.
 
-**L'ancien jeton est révoqué dans la même transaction**, sans quoi il reste
+L'ancien jeton est révoqué dans la même transaction, sans quoi il reste
 valide jusqu'à son expiration alors que plus aucune invitation ne le référence.
 Le premier lien, resté dans une boîte email partagée, permettrait de déposer
 l'avis à la place de son destinataire.
@@ -500,9 +518,167 @@ Une panne d'email ne fait perdre aucun avis, l'invitation restant valide.
 
 ---
 
+## Parcours 8, gestion du carnet d'adresses
+
+Ajouté par LS-40 le 28 juillet 2026. `AdresseCarnet` était la seule entité du
+modèle qu'aucun parcours ne traversait, défaut relevé par la revue de LS-38.
+
+**Le carnet est un confort, jamais un préalable.** L'achat sans compte reste le
+mode par défaut, et aucune étape du parcours 1 ne dépend de l'existence d'un
+carnet. Cette propriété se vérifie à chaque évolution.
+
+### Chemin nominal, gestion depuis l'espace client
+
+| # | Étape | Base | Vue |
+|---|---|---|---|
+| 1 | Ouverture du carnet | lecture seule, filtrée sur le compte de la session | liste des adresses avec leur `libelle`, celle par défaut signalée |
+| 2 | Ajout d'une adresse | `AdresseCarnet` créée, `utilisateurId` pris dans la session, `libelle` facultatif | l'adresse apparaît dans la liste |
+| 3 | Choix de l'adresse par défaut | `estParDefaut` retiré de l'ancienne **puis** posé sur la nouvelle, même transaction, les deux lignes recoupées sur la session | le repère se déplace |
+| 4 | Modification | champs mis à jour, ligne recoupée sur la session, aucune commande touchée | l'adresse corrigée |
+| 5 | Suppression | ligne supprimée, recoupée sur la session, aucune commande touchée | l'adresse disparaît de la liste |
+
+**Les étapes 3, 4 et 5 reçoivent un identifiant d'adresse et n'en tirent aucune
+autorisation.** Toute écriture porte `AND utilisateurId = <session>` dans sa
+condition, jamais `WHERE id = :id` seul. Sans ce recoupement, un identifiant posté
+depuis un formulaire laisse modifier ou supprimer l'adresse d'autrui : c'est la
+faille d'autorisation la plus banale, et l'invariant 2 existe pour elle.
+
+L'ordre de l'étape 3 n'est pas indifférent : l'index partiel est vérifié ligne à
+ligne, poser le nouveau drapeau d'abord fait échouer la transaction. Le détail
+est dans `.claude/rules/database.md`, avec sa vérification sur PostgreSQL 18.4.
+
+La suppression est **réelle**, pas un archivage. Elle est sans risque parce
+qu'aucune commande ne référence le carnet, règle A3.
+
+### Chemin nominal, usage au tunnel de commande
+
+| # | Étape | Base | Vue |
+|---|---|---|---|
+| 1 | Arrivée au tunnel | rien | adresses du carnet proposées, celle par défaut présélectionnée **si elle existe, aucune présélection sinon** |
+| 2 | Choix ou saisie | rien, le carnet n'est pas modifié, identifiant reçu recoupé sur la session | formulaire prérempli, modifiable |
+| 3 | Validation de la commande | `Commande.adresseLivraison` et `adresseFacturation` reçoivent une **copie figée du formulaire revalidé** | récapitulatif |
+| 4 | Enregistrement facultatif | `AdresseCarnet` créée si le client le demande | l'adresse entre au carnet |
+
+**Un identifiant d'adresse reçu à l'étape 2 est recoupé sur la session avant
+toute résolution.** Sans ce contrôle, un identifiant appartenant à un autre compte
+recopierait son nom, sa rue et son téléphone dans la commande, puis dans une
+facture téléchargeable en toute légitimité. Un identifiant qui ne se résout pas
+dans le carnet du compte est traité comme une saisie libre, jamais comme une
+erreur silencieuse.
+
+**La copie de l'étape 3 vient du formulaire revalidé, jamais d'une relecture du
+carnet.** Refaire un `SELECT` sur `AdresseCarnet` au moment de figer
+réintroduirait une dépendance que la règle A3 écarte, et ferait partir le colis à
+une adresse que le client n'a pas vue sur son récapitulatif.
+
+L'étape 1 ne présélectionne rien quand aucune adresse n'est marquée par défaut,
+règle A7. Retenir la plus récente ou la première de la liste serait la
+désignation arbitraire que cette règle refuse.
+
+**Aucune clé étrangère ne part de la commande vers le carnet.** La commande
+recopie, elle ne référence jamais, règle A3. C'est ce qui protège les factures
+émises.
+
+Le client choisit à cette étape quelle adresse sert à la livraison et laquelle à
+la facturation. Le carnet ne porte pas cette distinction, règle A5 : une même
+adresse sert souvent aux deux, et dupliquer une adresse identique pour deux
+usages serait absurde.
+
+L'étape 4 est le seul chemin d'écriture du carnet depuis le tunnel. Une adresse
+saisie directement n'y entre pas d'office : un client qui envoie un cadeau chez
+quelqu'un d'autre n'a aucune raison de conserver cette adresse.
+
+### Cas d'erreur
+
+**Adresse supprimée alors qu'elle a servi à une commande**
+Base : la ligne du carnet disparaît, aucune commande n'est modifiée.
+Vue : l'historique et les factures restent intacts, avec l'adresse d'origine.
+C'est la règle A4, conséquence directe de A3. Une adresse référencée aurait
+altéré rétroactivement une facture émise, ce qui viole les invariants 3 et 4.
+
+**Deux adresses par défaut sur le même compte**
+Base : aucune écriture, l'index partiel `adresse_carnet (utilisateurId)` filtré
+sur `estParDefaut` rejette la seconde.
+Vue : refus, l'adresse par défaut reste celle d'avant.
+Le refus décrit ci-dessus ne survient que si le code oublie l'ordre de l'étape 3.
+
+Deux onglets qui basculent chacun le défaut, en respectant cet ordre, ne
+produisent aucun refus : la dernière transaction validée gagne, et le compte se
+retrouve avec une seule adresse par défaut. L'invariant tient sous concurrence,
+mais laquelle des deux l'emporte dépend de l'ordre de validation.
+
+**Suppression de l'adresse par défaut**
+Base : la ligne disparaît, le compte se retrouve **sans** adresse par défaut.
+Vue : plus aucune adresse n'est signalée, la sélection au tunnel redevient
+manuelle.
+Aucune promotion automatique d'une autre adresse : désigner arbitrairement une
+adresse par défaut ferait expédier un colis à une adresse que personne n'a
+choisie. Le carnet sans défaut est un état légitime, l'index partiel l'autorise.
+
+**Carnet vide au moment de commander**
+Base : aucune écriture.
+Vue : le formulaire d'adresse s'affiche vide, la commande se poursuit
+normalement.
+Un carnet vide ne bloque jamais un achat. C'est le cas de tout premier achat
+d'un client authentifié.
+
+**Client sans compte au tunnel de commande**
+Base : aucune écriture au carnet, la commande fige ses adresses comme toujours.
+Vue : saisie directe, aucune mention du carnet.
+L'achat sans compte est le mode par défaut, ADR-023. Le tunnel ne propose ni
+création de compte ni enregistrement d'adresse comme préalable.
+
+**Accès à l'adresse d'un autre compte**
+Base : refus, tentative journalisée.
+Vue : refus sécurisé.
+La liste est calculée côté serveur depuis la session, jamais depuis un
+identifiant transmis. Un identifiant d'adresse fourni par un formulaire
+n'autorise rien, invariant 2 et règle A1.
+
+**Adresse choisie au tunnel puis supprimée avant validation**
+Base : aucune écriture, la commande n'est pas créée.
+Vue : le formulaire redemande une adresse.
+Le cas suppose deux sessions simultanées. Il ne corrompt rien puisque la copie
+ne se fige qu'à la validation.
+
+**Adresse modifiée au carnet pendant qu'une commande est en cours**
+Base : le carnet est à jour, la commande fige ce que le formulaire portait.
+Vue : le récapitulatif montre l'adresse affichée, pas la version corrigée.
+Le client ouvre le tunnel à 14 h 00, corrige la même adresse dans un second
+onglet à 14 h 03, valide à 14 h 05. La commande retient ce qu'il a vu et validé.
+C'est le cas jumeau du précédent, et il est plus insidieux : la suppression se
+voit, la modification est silencieuse. Aller relire le carnet au moment de figer
+enverrait le colis à une adresse qui n'est jamais apparue sur le récapitulatif.
+
+**Suppression du compte propriétaire du carnet**
+Base : les adresses du carnet sont supprimées, les commandes sont **dissociées**,
+leur `utilisateurId` passant à nul et `dissocieA` étant horodaté, et jamais
+détruites. Leurs adresses figées restent intactes, règle A3.
+Vue : l'accès en libre-service à l'historique est perdu. Les commandes restent
+consultables par l'administration, au titre de la conservation comptable.
+Le carnet et la commande divergent ici, et c'est délibéré : le carnet se supprime
+en cascade, une commande facturée ne se supprime jamais. Une cascade posée sur
+`Commande` détruirait des documents comptables, en violation des invariants 3
+et 4.
+`dissocieA` exclut définitivement ces commandes du parcours 6, règle V15. Sans
+lui, elles redeviendraient « sans propriétaire », donc éligibles au rattachement
+par quiconque contrôle ensuite la même adresse email.
+
+**Rattachement de commandes à un compte au carnet vide**
+Base : aucune écriture au carnet, les adresses figées des commandes rattachées ne
+sont pas recopiées.
+Vue : historique complet, carnet vide.
+Le carnet ne se peuple jamais rétroactivement. Recopier les adresses de quatre
+commandes créerait autant de doublons, et la règle A3 interdit tout lien entre
+les deux. Proposer au client d'enregistrer une de ces adresses reste possible,
+comme geste explicite de sa part, jamais automatiquement.
+
+---
+
 ## Ce que ces parcours imposent au modèle de données
 
-Synthèse pour LS-12. Chaque élément apparaît dans au moins un parcours ci-dessus.
+Synthèse pour LS-12, complétée par LS-37 et LS-40. Chaque élément apparaît dans
+au moins un parcours ci-dessus.
 
 **États à persister** : statut de commande et statut de paiement séparés, statut
 de produit, statut de demande de rétractation, statut de message, statut d'alerte

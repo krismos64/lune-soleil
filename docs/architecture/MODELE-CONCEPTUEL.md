@@ -37,18 +37,10 @@ concurrence, une vérification applicative arrive toujours trop tard. Chaque
 invariant du projet est donc rattaché à une unicité ou à un `CHECK`.
 
 **Aucune entité n'est créée pour un usage futur hypothétique.** Le plan directeur
-écarte la modélisation anticipée de la V1 cible.
-
-Seule exception assumée, relevée par la revue de LS-38 : `AdresseCarnet` est
-modélisée sans parcours qui la traverse. `PARCOURS.md` ne décrit ni l'ajout d'une
-adresse, ni le choix de l'adresse par défaut, ni l'usage du carnet au tunnel de
-commande. Cette entité n'a donc pas subi le contrôle que les autres ont passé, et
-la transaction critique du choix par défaut décrit une opération dont le
-déroulement fonctionnel n'est écrit nulle part.
-
-**À traverser avant que LS-13 ne fige les tables**, sous la forme d'un parcours 8
-avec ses cas d'erreur. Le risque n'est pas théorique : le champ `libelle` n'a
-aucun cas d'usage écrit, et la règle A5 n'est vérifiée par aucune étape.
+écarte la modélisation anticipée de la V1 cible. Toutes les entités décrites ici
+sont traversées par au moins un parcours, sans exception depuis LS-40 : le
+parcours 8 a levé la dernière, `AdresseCarnet`, en produisant les règles A7 à A9
+et en rendant `libelle` facultatif.
 
 ---
 
@@ -372,6 +364,7 @@ erDiagram
         texte nomClient
         texte telephone "nullable"
         identifiant utilisateurId FK "nullable, achat sans compte"
+        horodatage dissocieA "nullable, compte supprime, exclut du rattachement"
         bloc adresseLivraison "copie figee"
         bloc adresseFacturation "copie figee"
         entier sousTotalCentimes
@@ -448,6 +441,7 @@ erDiagram
 | V11 | Le passage à `LIVREE` exige une source fiable | parcours 1, étape 12 |
 | V12 | Toute transition de statut est tracée avec son acteur et son origine | historisation, parcours 1 |
 | V13 | `utilisateurId` n'autorise jamais un accès, quelle que soit sa valeur | invariant 2, parcours 6, ADR-023 |
+| V15 | Une commande dissociée n'est jamais rattachable de nouveau | `dissocieA` non nul exclut, sinon un email réattribué rouvrirait un historique |
 | V14 | Une commande porte au plus un paiement `REUSSI` | `UNIQUE` partiel sur `(commandeId)` filtré sur `statut = REUSSI`, voir décision D |
 
 ### Décision A, séparer statut de commande et statut de paiement
@@ -540,7 +534,7 @@ erDiagram
     ADRESSE_CARNET {
         identifiant id PK
         identifiant utilisateurId FK
-        texte libelle "Domicile, Bureau"
+        texte libelle "nullable, affiche dans la liste, Domicile ou Bureau"
         texte nomComplet
         texte ligne1
         texte ligne2 "nullable"
@@ -561,6 +555,11 @@ erDiagram
 | A4 | Supprimer une adresse du carnet n'affecte aucune commande passée | conséquence directe de A3 |
 | A5 | Une adresse du carnet ne distingue pas livraison et facturation | le choix se fait au moment de la commande, voir ci-dessous |
 | A6 | La bascule d'adresse par défaut retire l'ancien drapeau avant de poser le nouveau | niveau 2, l'index partiel est vérifié ligne à ligne, voir `database.md` |
+| A7 | Un carnet sans adresse par défaut est un état légitime | l'index partiel l'autorise, aucune promotion automatique après suppression, parcours 8 |
+| A8 | `libelle` est facultatif, affiché dans la liste du carnet | distingue deux adresses proches à la lecture, jamais une clé ni un critère de sélection, parcours 8 |
+| A9 | Un carnet vide ne bloque jamais un achat | parcours 8, l'achat sans compte est le mode par défaut, ADR-023 |
+| A10 | Supprimer un compte supprime son carnet et **dissocie** ses commandes | cascade sur `AdresseCarnet`, jamais sur `Commande`, invariants 3 et 4. Les six références vers `Utilisateur` ont chacune leur politique, voir la section sur la suppression |
+| A11 | Toute écriture sur une adresse est recoupée sur la session | niveau 3, `AND utilisateurId = <session>`, jamais `WHERE id` seul, invariant 2 |
 
 **Aucune clé étrangère ne part de `Commande` vers `AdresseCarnet`.** C'est le
 point qui protège l'historique. Un client qui corrige une faute dans son
@@ -1226,7 +1225,7 @@ permanent si une instance meurt en cours de tâche.
 
 ---
 
-## Vérification, traversée des sept parcours
+## Vérification, traversée des huit parcours
 
 Critère de la porte de sortie : chaque parcours de `PARCOURS.md` se déroule
 entièrement, cas d'erreur compris, sans invention de champ manquant.
@@ -1328,10 +1327,11 @@ entièrement, cas d'erreur compris, sans invention de champ manquant.
 |---|---|---|
 | création de compte | `Utilisateur`, `emailVerifie` faux | oui |
 | vérification email | `emailVerifie` vrai, entité Better Auth | oui |
-| recherche éligible | `Commande.emailNormalise`, `utilisateurId` nul | oui |
+| recherche éligible | `Commande.emailNormalise`, `utilisateurId` nul **et** `dissocieA` nul | oui |
 | rattachement | `Commande.utilisateurId`, `JournalAudit` | oui |
 | email non vérifié | `emailVerifie` faux bloque | oui |
 | commande déjà rattachée | `utilisateurId` non nul exclut | oui |
+| compte propriétaire supprimé | `dissocieA` non nul exclut définitivement, règle V15 | oui |
 | identifiant fourni | éligibilité calculée en session, invariant 2 | oui |
 
 ### Parcours 7, dépôt d'un avis
@@ -1357,18 +1357,57 @@ entièrement, cas d'erreur compris, sans invention de champ manquant.
 | variante retirée du catalogue | archivée et non supprimée, `varianteId` reste résolvable, règle C13 | oui |
 | échec d'envoi de l'invitation | `JournalEmail` `ECHOUE`, invitation valide | oui |
 
-**Résultat : les sept parcours et leurs quarante-quatre cas d'erreur se déroulent
-sans champ manquant.**
+### Parcours 8, gestion du carnet d'adresses
 
-Deux ajouts sont nés de la modélisation elle-même. Le trente-deuxième cas, en
+| Élément | Entité | Couvert |
+|---|---|---|
+| ouverture du carnet | lecture filtrée sur la session, règle A1 | oui |
+| ajout d'une adresse | `AdresseCarnet`, `utilisateurId` pris dans la session | oui |
+| choix de l'adresse par défaut | `estParDefaut`, index partiel, ordre imposé par A6 | oui |
+| modification | champs de `AdresseCarnet`, aucune commande touchée | oui |
+| suppression | suppression réelle, autorisée par A4 | oui |
+| usage au tunnel | copie figée dans `Commande.adresseLivraison` et `adresseFacturation` | oui |
+| enregistrement après commande | `AdresseCarnet` créée sur demande explicite | oui |
+| adresse supprimée après commande | aucune clé étrangère depuis `Commande`, règle A3 | oui |
+| deux adresses par défaut | index partiel `adresse_carnet (utilisateurId)` filtré | oui |
+| suppression de l'adresse par défaut | carnet sans défaut, état légitime, règle A7 | oui |
+| carnet vide au tunnel | règle A9, l'achat ne dépend pas du carnet | oui |
+| client sans compte | aucun carnet, saisie directe, ADR-023 | oui |
+| accès à l'adresse d'autrui | règle A1, invariant 2, calcul depuis la session | oui |
+| adresse supprimée avant validation | la copie ne se fige qu'à la validation | oui |
+| adresse modifiée avant validation | copie du formulaire revalidé, aucune relecture du carnet | oui |
+| suppression du compte | cascade sur `AdresseCarnet`, dissociation de `Commande`, règle A10 | oui |
+| rattachement au carnet vide | aucune recopie rétroactive, règle A3 | oui |
+| écriture sur l'adresse d'autrui | recoupement sur la session, règle A11, invariant 2 | oui |
+
+**Résultat : les huit parcours et leurs cinquante-quatre cas d'erreur se
+déroulent sans champ manquant.**
+
+Le total annoncé avant LS-40 était de quarante-quatre pour quarante-trois cas
+réels, le parcours 7 en portant onze et non douze. Écart de comptage corrigé ici,
+ce n'est pas une régression.
+
+Trois ajouts sont nés de la modélisation elle-même. Le trente-deuxième cas, en
 LS-12 : l'événement de paiement tardif arrivant après une régularisation par
 réconciliation, qu'aucune des deux listes du cahier des charges ne contenait. La
 décision D porte les quatre clés qui le neutralisent.
 
-Le parcours 7 et ses douze cas, en LS-37, après le passage des avis en périmètre
+Le parcours 7 et ses onze cas, en LS-37, après le passage des avis en périmètre
 d'ouverture. Trois y sont venus de la vérification légale plutôt que du besoin
 fonctionnel : la conservation d'un avis refusé avec son motif, le dépassement du
 délai de publication annoncé, et la double date exigée par l'article D111-17.
+
+Le parcours 8 et ses dix cas, en LS-40, plus un onzième ajouté au parcours 6.
+`AdresseCarnet` était la dernière entité non traversée, et la traversée a produit
+six règles qui manquaient, A7 à A11 et V15.
+
+Deux comptaient plus que les autres. **La suppression d'un compte n'était traitée
+nulle part** : le carnet part en cascade, la commande jamais, et une politique
+oubliée en migration vaut `RESTRICT`, ce qui bloquerait toute demande
+d'effacement. **Les écritures sur une adresse ne portaient aucun recoupement de
+session** : un identifiant posté depuis un formulaire aurait laissé modifier ou
+supprimer l'adresse d'autrui, et au tunnel, recopier son nom et son adresse dans
+une facture téléchargeable.
 
 ---
 
@@ -1467,6 +1506,7 @@ brouillon incomplet doit pouvoir exister.
 | C18 | Archivage refusé si une réservation est active | à l'archivage |
 | E11 | Le rôle ne vient jamais d'une entrée non fiable | à toute écriture sur `Utilisateur` |
 | L9 | Un jeton valide n'est ni expiré, ni consommé, ni révoqué | à chaque vérification de jeton, les trois conditions |
+| A11 | Toute écriture sur une adresse est recoupée sur la session | à chaque modification, suppression ou choix par défaut |
 
 ### Immuabilité et suppression
 
@@ -1485,6 +1525,25 @@ arrivé à terme et un jeton remplacé.
 L'archivage remplace la suppression. Seules `Reservation`, `VerrouTache` et
 `AdresseCarnet` sont réellement supprimables. Les deux premières sont
 transitoires ; la troisième l'est parce qu'aucune commande n'en dépend, règle A4.
+
+**Suppression d'un compte**, précisé par LS-40. Six tables référencent
+`Utilisateur`, et chacune exige sa politique explicite. Une politique oubliée
+vaut `RESTRICT` et bloque alors toute demande d'effacement ; une cascade posée par
+réflexe détruit un document que le projet conserve.
+
+| Référence | Politique | Motif |
+|---|---|---|
+| `AdresseCarnet.utilisateurId` | cascade | le carnet appartient au compte, aucune commande n'en dépend, règle A3 |
+| `Commande.utilisateurId` | mise à nul, plus `dissocieA` | une commande facturée ne se supprime jamais, invariants 3 et 4, règle V15 |
+| `Avis.utilisateurId` | mise à nul | un avis publié reste en ligne, sa preuve d'achat tenant à la ligne de commande |
+| `ReponseAvis.auteurId` | sans objet | l'administratrice, dont le compte ne se supprime pas |
+| `JournalAudit.acteurId` | mise à nul | l'action reste tracée même si l'acteur disparaît |
+| `AlerteCritique.acquitteeParId` | mise à nul | l'acquittement reste vrai, son auteur devient anonyme |
+| `MouvementStock.acteurId` | sans objet | l'administratrice, et le champ n'est pas nullable |
+
+Les deux « sans objet » supposent que le compte d'administration ne se supprime
+pas, ce que garantit ADR-021 : il est unique et sa création passe par une
+intervention manuelle en base.
 
 **Une variante ne se supprime jamais**, règle C13. Elle s'archive, sans quoi sa
 référence redeviendrait libre et pourrait être réattribuée à une autre pièce,
