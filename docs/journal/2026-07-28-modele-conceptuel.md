@@ -1,13 +1,16 @@
 # 28 juillet 2026, modèle conceptuel de données
 
-Session consacrée à LS-12. Un livrable, `docs/architecture/MODELE-CONCEPTUEL.md`,
-et une correction de `PARCOURS.md`.
+Session consacrée au modèle de données, LS-12 puis LS-37. Un livrable,
+`docs/architecture/MODELE-CONCEPTUEL.md`, et deux enrichissements de
+`PARCOURS.md`. Trois vérifications aux sources officielles, deux arbitrages de
+périmètre, une revue de la configuration Claude Code.
 
 ## Fait
 
-**Modèle conceptuel écrit et validé sur les six parcours.** Six domaines,
-catalogue, stock, vente, comptabilité, légal, exploitation. Sept diagrammes
-Mermaid, tous rendus sans erreur par `mermaid-cli` 11.16.0 avant commit.
+**Modèle conceptuel écrit et validé sur les parcours critiques.** Six domaines à
+l'issue de LS-12, sept après LS-37 : catalogue, stock, vente, comptabilité, légal,
+avis, exploitation. Tous les diagrammes Mermaid rendus sans erreur par
+`mermaid-cli` 11.16.0 avant chaque commit.
 
 Le document sépare explicitement trois niveaux de garantie, distinction qui
 manquait dans la première version et que la revue a imposée : ce que garantit une
@@ -129,6 +132,91 @@ Les sept diagrammes ont été rendus avant commit. Un a cassé : la syntaxe Merm
 n'accepte pas `FK UK` sur un même attribut. Sans ce contrôle, le document serait
 parti avec un diagramme illisible.
 
+## LS-37, les avis et le carnet d'adresses
+
+Story lancée dans la foulée, terminée le même jour.
+
+### La vérification légale a précédé la modélisation, et elle a changé le modèle
+
+Articles L111-7-2 et D111-16 à D111-19, vérifiés sur Légifrance avant d'écrire
+une ligne. Trois découvertes ont produit des champs qui n'auraient pas existé
+autrement.
+
+**Deux dates obligatoires, pas une** : la date de publication de chaque avis et
+la date de l'expérience de consommation. D'où `experienceA`, qui reçoit la date
+de livraison. Sans la vérification, j'aurais mis une seule date et le modèle
+aurait été non conforme.
+
+**Un avis refusé doit être conservé**, son auteur devant être informé des motifs.
+Le motif doit donc exister et survivre.
+
+**Aucune obligation de contrôler les avis.** La loi impose de dire si un contrôle
+existe, pas d'en faire un. Choisir la modération crée en revanche l'obligation
+d'annoncer un délai de publication et de s'y tenir.
+
+### Trois décisions arbitrées avec Christophe
+
+L'avis est ancré sur la **ligne de commande**, ce qui rend la preuve d'achat
+structurelle plutôt que déclarative. Le dépôt se fait **après livraison, sur
+invitation**. La **modération précède la publication**.
+
+Conséquence non anticipée de la deuxième : LS-33 devient structurant. Sans date
+de livraison fiable, ni le délai de rétractation ni l'invitation à déposer un avis
+ne se déclenchent. Deux fonctionnalités dépendent désormais de cette question.
+
+Le délai de conservation est **indéfini**, choix explicite. L'alternative aurait
+imposé un statut d'expiration, une tâche de dépublication et une distinction entre
+avis expiré et avis retiré, pour aucun bénéfice sur un catalogue de pièces uniques.
+
+### Ce que la revue a trouvé, et ce que j'ai cassé en corrigeant
+
+Deux passes, huit défauts. **Quatre venaient de mes propres corrections**, ce qui
+est le chiffre marquant de cette story.
+
+Premier tour, quatre défauts. Le motif de retrait n'avait aucun champ porteur
+alors que mon tableau de vérification cochait « couvert ». Aucun horodatage de
+décision, donc impossible de savoir combien de temps un avis était resté en ligne.
+Le délai de conservation annoncé mais non traité. Et surtout, la décision G ne
+tenait pas.
+
+**L'erreur de raisonnement sur la décision G.** J'affirmais qu'on pouvait
+regrouper les avis par `referenceFigee` « puisqu'elle est unique par la règle
+C2 ». Confusion entre deux propriétés : C2 garantit l'unicité dans la table
+`variante` à un instant donné, pas la stabilité d'une copie morte dans le temps.
+Une référence libérée puis réattribuée ferait remonter les avis d'une pièce
+disparue sur la fiche d'une pièce neuve.
+
+La correction retenue évitait d'ajouter de la structure : une variante ne se
+supprime jamais, elle s'archive.
+
+**Et c'est là que j'ai cassé le jalon central.** En ajoutant `archiveeA`, j'ai
+créé un second drapeau d'indisponibilité sans dire lequel gagne. La condition de
+l'`UPDATE` de réservation d'ADR-006 ne le mentionnait pas : une pièce archivée
+restait réservable et payable. Le scénario est banal, l'administratrice archive à
+14 h 00, un client ayant la fiche ouverte depuis 14 h 02 paie à 14 h 05.
+
+Corrigé par cinq règles, C15 à C19, et la condition `archivee_a IS NULL` portée
+dans `.claude/rules/database.md` pour qu'elle ne se perde pas.
+
+Second défaut introduit : C1, « un produit a au moins une variante », devenait
+invérifiable. Un produit actif dont l'unique variante est archivée la satisfait
+tout en n'ayant plus rien de vendable.
+
+**Un trou de parcours trouvé par la revue** : modifier un avis publié ne repassait
+par aucune relecture. La modération se contournait en deux gestes, déposer un avis
+anodin puis le remplacer après publication. Ce n'était pas une faille théorique,
+c'était le chemin évident.
+
+### Leçon
+
+Corriger un défaut dans une zone critique en crée souvent un autre. C'est la
+deuxième fois de la journée : en LS-12, resserrer une unicité pour fermer une
+faille d'idempotence avait interdit les paniers multi-articles.
+
+La parade a fonctionné les deux fois : faire relire les corrections elles-mêmes,
+pas seulement le travail initial. Sans la seconde passe, les deux défauts seraient
+partis en LS-13.
+
 ## Où on en est
 
 Phase 0, cadrage opérationnel. Cinq stories terminées sur treize.
@@ -153,14 +241,11 @@ Phase 0, cadrage opérationnel. Cinq stories terminées sur treize.
 | LS-34 | Recevoir les factures électroniques fournisseurs | Démarche externe, échéance 1er septembre 2026 |
 | LS-35 | E-reporting du chiffre d'affaires journalier | Échéance 1er septembre 2027, hors ouverture |
 | LS-36 | Epic espace client, avis et carnet d'adresses | Créé, en périmètre d'ouverture |
-| LS-37 | Étendre le modèle aux avis et au carnet, septième parcours | **Prochaine étape**, bloque LS-13 |
+| LS-37 | Étendre le modèle aux avis et au carnet, septième parcours | Terminé : domaine 6, carnet d'adresses, parcours 7 |
 
 ## Prochaine étape
 
-**LS-37**, l'extension du modèle conceptuel aux avis et au carnet d'adresses,
-avec le septième parcours. Il bloque LS-13, décidé en fin de session.
-
-**Puis LS-13**, le modèle logique. Le modèle conceptuel lui transmet un
+**LS-13**, le modèle logique, désormais débloqué. Le modèle conceptuel lui transmet un
 récapitulatif de contraintes rangé en trois niveaux, qui est la partie du
 document qui doit survivre en migration.
 
