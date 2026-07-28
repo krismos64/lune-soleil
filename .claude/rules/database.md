@@ -139,6 +139,49 @@ Ces opérations exigent une transaction, sans exception :
 4. Remboursement, avoir et réintégration de stock
 5. Vente externe avec contrôle de réservation active
 6. Rattachement d'une commande sans compte à un compte vérifié
+7. Dépôt d'un avis : création de l'avis et consommation de l'invitation, le jeton
+   passant à utilisé dans la même transaction. Sans cela, un jeton rejoué crée un
+   second avis sur la même ligne de commande
+8. Renvoi d'une invitation d'avis : **révocation de l'ancien jeton**, création du
+   nouveau, mise à jour de `InvitationAvis.jetonAccesId`, incrément de
+   `nombreEnvois` et positionnement de `dernierEnvoiA`, cinq écritures
+9. Choix d'une adresse par défaut dans le carnet : retirer le drapeau de
+   l'ancienne **avant** de le poser sur la nouvelle
+
+Les trois dernières viennent du périmètre ajouté par LS-37, avis et carnet
+d'adresses.
+
+**La révocation de l'ancien jeton du point 8 n'est pas une précaution contre une
+panne, elle ferme le chemin nominal.** `JetonAcces` est une entité propre avec sa
+propre expiration : remplacer `InvitationAvis.jetonAccesId` ne touche pas
+l'ancienne ligne, qui reste valide et non consommée jusqu'à son terme. Un client
+qui demande un renvoi le 10 août parce qu'il ne retrouve plus le premier email
+laisse un jeton actif jusqu'au 24. Sur une boîte partagée ou un poste familial,
+le premier lien dépose l'avis à sa place, la vérification portant sur une
+empreinte toujours valide. Chaque renvoi réussi produit cet orphelin tant que
+l'ancien jeton n'est pas révoqué dans la même transaction.
+
+L'ordre du point 9 n'est pas un détail de style. Un index unique est vérifié
+**ligne à ligne**, pas en fin de transaction. Poser le nouveau drapeau avant de
+retirer l'ancien produit une erreur d'unicité qui avorte la transaction : le
+client ne peut plus changer son adresse par défaut.
+
+Regrouper les deux en une seule instruction ne sauve pas. La vérification portant
+sur chaque ligne écrite et non sur l'instruction, un
+`UPDATE ... SET est_par_defaut = (id = :cible)` réussit ou échoue selon l'ordre
+de parcours des lignes : il passe quand l'ancienne adresse par défaut est écrite
+avant la nouvelle, il lève une violation d'unicité dans le cas contraire.
+Vérifié sur PostgreSQL 18.4, la même instruction réussit dans un sens de bascule
+et échoue dans l'autre.
+
+Une instruction qui marche en développement et casse en production selon l'ordre
+physique des lignes est plus dangereuse qu'une instruction qui échoue toujours.
+
+Une contrainte `DEFERRABLE INITIALLY DEFERRED` lèverait la question, mais un
+index partiel se crée par `CREATE UNIQUE INDEX` et un index ne se diffère pas,
+seule une contrainte le peut. L'ordre des écritures est donc la seule parade,
+ce qui la rend non contournable. Même piège que la permutation de rangs de
+médias.
 
 ## Types
 
