@@ -63,14 +63,18 @@ generator client {
 @@unique([role], where: raw("role = 'ADMINISTRATRICE'"))
 ```
 
-Elle reste en avant-première au 28 juillet 2026, donc sujette à changement de
-syntaxe entre deux versions mineures. Sur une contrainte qui porte l'unicité du
-compte d'administration, la migration SQL écrite à la main ne dépend d'aucun cycle
-de publication.
+**Revérifié par LS-13, et le choix a changé.** La fonctionnalité fonctionne sur
+Prisma 7.9.1, testée sur PostgreSQL 18.4 : le SQL généré est exactement l'index
+attendu, et il rejette bien une seconde administratrice tout en laissant passer
+plusieurs comptes clients.
 
-La version exacte de Prisma sera fixée par LS-13, aucune dépendance n'étant encore
-installée. **Revérifier le statut de cette fonctionnalité à ce moment-là**,
-l'argument entier reposant dessus : le choix se rejoue si elle est devenue stable.
+L'index partiel est donc **déclaré dans le schéma Prisma**, plus en SQL manuel.
+La contrainte reste identique, seule sa source change. Les contraintes `CHECK`
+restent en migration manuelle, Prisma ne les générant toujours pas.
+
+La fonctionnalité demeure en avant-première : si sa syntaxe change lors d'une
+montée de version, le repli est de revenir au SQL manuel, sans conséquence sur la
+contrainte elle-même.
 
 ### Le rôle n'est jamais fourni par le client
 

@@ -501,7 +501,7 @@ L'étape 7 du parcours 1 en produit quatre, et chacun a besoin de sa propre clé
 | paiement confirmé | `paiement (commandeId)` filtré sur `statut = REUSSI` |
 | stock décrémenté | `mouvement_stock (commandeId, varianteId)` filtré sur `type = VENTE_WEB` |
 | facture émise | `facture (commandeId)`, voir décision E |
-| email envoyé | `journal_email (commandeId, modele)` filtré sur `origine = SYSTEME` |
+| email envoyé | `journal_email (commandeId, modele)` filtré sur `statut = 'ENVOYE' AND origine IN ('SYSTEME','RECONCILIATION')` |
 
 Les deux chemins convergent alors vers le même refus en base, quel que soit celui
 qui arrive en second, et sans dépendre de l'ordre des écritures dans la
@@ -514,10 +514,20 @@ mouvements. Une unicité sur la seule commande rejetterait le second et rendrait
 tout panier multi-articles impossible à confirmer. Le couple commande et variante
 garde l'idempotence recherchée, le webhook tardif retentant les mêmes couples.
 
-**La clé de l'email exclut les renvois manuels.** Le parcours 1 prévoit qu'une
-administratrice renvoie un email après un échec. Filtrer sur `origine = SYSTEME`
-laisse ce renvoi passer tout en bloquant le doublon automatique. `JournalEmail`
-porte donc une `origine`, aux mêmes valeurs que celle de `HistoriqueStatut`.
+**La clé de l'email porte trois conditions**, affinées par LS-13 après deux
+défauts trouvés en revue. `JournalEmail` porte une `origine`, aux mêmes valeurs
+que celle de `HistoriqueStatut`.
+
+| Condition | Ce qu'elle évite |
+|---|---|
+| `statut = 'ENVOYE'` | qu'une ligne `ECHOUE` occupe la clé et condamne la retentative, règle E4 |
+| `origine IN ('SYSTEME','RECONCILIATION')` | qu'un webhook tardif envoie une seconde confirmation après régularisation |
+| `ADMIN` exclu du filtre | que le renvoi manuel du parcours 1 soit bloqué, règle E6 |
+
+La première version ne filtrait que sur `origine = SYSTEME`. Une panne du
+fournisseur d'email privait alors définitivement le client de son email
+d'expédition, et la réconciliation, second chemin que cette décision existe pour
+neutraliser, passait au travers.
 
 ### Pourquoi l'adresse est recopiée dans la commande
 
@@ -642,7 +652,7 @@ erDiagram
 | F6 | Une commande porte au plus une facture | `UNIQUE` sur `facture.commandeId`, voir décision E |
 | F7 | Une facture porte un instantané légal complet | indépendance totale vis-à-vis du catalogue et du paramétrage |
 | F8 | Le PDF manquant n'invalide pas le document | parcours 4, régénération sans réattribution de numéro |
-| F9 | La somme des avoirs d'une facture ne dépasse jamais son montant | `CHECK montantAvoirCentimes <= montantTotalCentimes`, voir décision F |
+| F9 | La somme des avoirs d'une facture ne dépasse jamais son montant | **niveau 2** : le `CHECK` borne `montantAvoirCentimes`, la transaction garantit qu'il reflète la somme réelle des avoirs, voir décision F |
 | F10 | Un avoir issu d'une rétractation référence sa demande | `demandeRetractationId`, nul pour un geste commercial |
 
 ### Pourquoi l'instantané légal est stocké et non recalculé
@@ -1249,7 +1259,7 @@ projet.
 | E2 | L'identité vient de la session ou d'un jeton signé | invariant 2 |
 | E3 | Toute action administrative sensible est tracée | journal d'audit |
 | E4 | Un échec d'email ne bloque jamais une commande | parcours 1, journal séparé |
-| E5 | Un même email automatique n'est jamais envoyé deux fois pour une commande | `UNIQUE (commandeId, modele)` filtré sur `origine = SYSTEME`, décision D |
+| E5 | Un même email automatique n'est jamais envoyé deux fois pour une commande | `UNIQUE (commandeId, modele)` filtré sur `statut = 'ENVOYE' AND origine IN ('SYSTEME','RECONCILIATION')`, décision D |
 | E6 | Un renvoi manuel reste possible après un échec | `origine` distingue `ADMIN` de `SYSTEME`, parcours 1 |
 | E7 | Une alerte critique est acquittable, jamais supprimée | parcours 1 et 4 |
 | E8 | Le nom de verrou de tâche est unique | `UNIQUE`, exécution unique |
@@ -1274,13 +1284,13 @@ CREATE UNIQUE INDEX utilisateur_administratrice_unique
   WHERE role = 'ADMINISTRATRICE';
 ```
 
-La migration s'écrit à la main en LS-13, **par choix de stabilité**, ADR-023 :
-Prisma sait générer les index partiels, mais seulement par une fonctionnalité en
-avant-première dont la syntaxe peut changer. À la différence des `CHECK`
-d'ADR-006, qu'il ne génère pas du tout.
+**LS-13 a vérifié que Prisma le génère**, sur la version 7.9.1 et une base
+PostgreSQL 18.4 réelle. L'index est donc déclaré dans `schema.prisma`, pas en SQL
+manuel. À la différence des `CHECK` d'ADR-006, que Prisma ne génère pas du tout.
 
 Un index oublié ne fait rien échouer, le défaut reste invisible jusqu'à
-l'incident.
+l'incident : c'est ce qui justifie le contrôle automatisé de
+`prisma/migrations/manual/verifier-schema.sh`.
 
 **Le rôle se lit dans la session, jamais dans une requête.** C'est l'application
 directe de l'invariant 2 au cas le plus tentant : un identifiant ou un rôle qui
@@ -1529,7 +1539,7 @@ l'unicité simple `facture.commandeId` listée plus haut :
 | `media (produitId)` | `ordre = 1` | deux médias principaux sur un produit |
 | `paiement (commandeId)` | `statut = REUSSI` | deux paiements réussis sur une commande |
 | `mouvement_stock (commandeId, varianteId)` | `type = VENTE_WEB` | double décrément par webhook et réconciliation |
-| `journal_email (commandeId, modele)` | `origine = SYSTEME` | email de confirmation envoyé deux fois |
+| `journal_email (commandeId, modele)` | `statut = 'ENVOYE' AND origine IN ('SYSTEME','RECONCILIATION')` | email de confirmation envoyé deux fois |
 | `adresse_carnet (utilisateurId)` | `estParDefaut` | deux adresses par défaut sur un compte |
 | `utilisateur (role)` | `role = 'ADMINISTRATRICE'` | un second compte d'administration, sans interdire les comptes clients |
 
