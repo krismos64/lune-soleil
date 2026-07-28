@@ -35,7 +35,33 @@ Tout événement entrant est traité **au plus une fois**.
    de second mouvement de stock, pas d'email métier dupliqué.
 
 Tester systématiquement : signature invalide, rejeu du même événement, ordre
-d'arrivée inattendu, remboursement partiel, remboursement total.
+d'arrivée inattendu, remboursement partiel, remboursement total, **et l'événement
+tardif arrivant après une régularisation par la réconciliation**.
+
+### L'identifiant d'événement ne suffit pas
+
+Le point 2 protège du rejeu du **même** événement. Il ne protège pas du
+croisement de deux chemins d'entrée vers le même effet métier, et il y en a deux :
+le webhook et la réconciliation.
+
+Le scénario, démontré en LS-12. La réconciliation régularise une commande restée
+en attente depuis soixante minutes, crée le paiement, le mouvement de stock, la
+facture et les emails. Quarante secondes plus tard le webhook arrive enfin,
+retardé chez le prestataire. Son identifiant n'a jamais été vu : la contrainte
+`UNIQUE` du point 2 ne le rejette pas. Il recrée tout.
+
+Sur une pièce unique, le `CHECK` fait échouer la transaction, donc une erreur
+serveur au lieu d'un traitement propre. Sur une variante à trois exemplaires,
+rien n'échoue et le stock est faux sans qu'aucune alerte ne se déclenche.
+
+**L'idempotence doit donc être ancrée sur l'effet.** Quatre clés, détaillées dans
+`.claude/rules/database.md` : paiement réussi par commande, mouvement de vente
+web par commande et variante, facture par commande, email automatique par
+commande et modèle.
+
+Les deux chemins convergent alors vers le même refus en base, quel que soit celui
+qui arrive en second, et sans dépendre de l'ordre des écritures dans la
+transaction.
 
 ## Statuts séparés
 
@@ -75,7 +101,7 @@ représenter un remboursement. Une correction produit un **avoir** référençan
 facture initiale.
 
 Les données légales sont historisées dans le document : elles ne dépendent ni du
-profil courant de la cliente ni du catalogue actuel.
+profil courant du client ni du catalogue actuel.
 
 Mention obligatoire sur tout document : `TVA non applicable, article 293 B du
 Code général des impôts`. Aucune ligne de TVA, l'entreprise est en franchise en
@@ -89,7 +115,7 @@ Contrôle de propriété côté serveur systématique. Pour un achat sans compte
 l'accès passe par un **lien signé expirant**, non devinable. Un identifiant de
 commande dans une URL n'autorise rien par lui-même.
 
-Test négatif obligatoire : une cliente demande la commande d'une autre, refus
+Test négatif obligatoire : un client demande la commande d'un autre, refus
 sécurisé. Lien signé expiré ou modifié, refus sécurisé.
 
 ## Montants

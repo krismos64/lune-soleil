@@ -381,7 +381,7 @@ combinaison de deux axes.
 
 Les deux axes évoluent indépendamment. Une commande peut être `EXPEDIEE` avec un
 paiement `PARTIELLEMENT_REMBOURSE`. Un paiement peut être `ECHOUE` sans que la
-commande quitte `EN_ATTENTE_PAIEMENT`, la cliente pouvant réessayer.
+commande quitte `EN_ATTENTE_PAIEMENT`, le client pouvant réessayer.
 
 ### Décision B, le paiement est une entité
 
@@ -524,7 +524,7 @@ de franchise en base de TVA. Tous ces éléments peuvent changer.
 
 Recalculer une facture à l'affichage produirait, après un déménagement ou un
 franchissement du seuil de franchise, un document différent de celui qui a été
-envoyé à la cliente. L'instantané rend le document indépendant de l'état actuel
+envoyé au client. L'instantané rend le document indépendant de l'état actuel
 du système.
 
 ### Décision E, l'unicité de facture par commande est une contrainte, pas une cardinalité
@@ -635,7 +635,7 @@ Les deux dates coïncident presque sur le chemin nominal. Elles divergent dès q
 l'accusé de réception échoue : la demande reste `DEPOSEE`, et le passage en
 `RETOUR_ATTENDU` peut n'intervenir que cinq jours plus tard, après renvoi manuel.
 Un seuil calculé depuis `deposeeA` alerterait alors cinq jours trop tôt, sur une
-cliente qui n'a jamais reçu ses instructions de retour.
+client qui n'a jamais reçu ses instructions de retour.
 
 `retourAttenduA` et `recueA` s'ajoutent donc à `deposeeA` et `accuseeA`. Cette
 demande a peu d'états et une durée de vie courte : quatre horodatages suffisent,
@@ -968,14 +968,49 @@ transaction, aucun trou.
 La forme de stockage des blocs figés, adresse et instantané légal, en colonnes
 distinctes ou en document structuré.
 
-Le calcul exact du délai de rétractation, à vérifier aux sources officielles
-avant l'ouverture.
+**D'où vient la date de livraison**, qui conditionne le point de départ du délai
+de rétractation. Le modèle porte `Expedition.livreA` avec la règle « uniquement
+sur source fiable », mais la source n'est pas définie : interrogation
+automatique du transporteur, saisie par l'administratrice, ou repli sur la date
+d'expédition. Question ouverte, LS-33, à trancher avec l'exploitante. Elle ne
+bloque pas LS-13, le modèle stocke la date quelle que soit sa provenance.
 
-**Les paramètres d'exploitation**, qui sont des valeurs et non de la structure.
-Ce document en cite trois issus d'ADR-006 et de `PARCOURS.md`, à confirmer
-ensemble plutôt qu'un par un : l'expiration d'une réservation à 30 minutes, la
-libération toutes les 5 minutes, la réconciliation toutes les 15 minutes. Le
-seuil d'ancienneté déclenchant l'alerte de retour non reçu appartient au même
-ensemble et n'est pas fixé.
+**Les paramètres d'exploitation** restant à fixer : la libération des
+réservations toutes les 5 minutes et la réconciliation toutes les 15 minutes,
+issues d'ADR-006 et de `PARCOURS.md`. Le modèle rend ces valeurs configurables,
+il persiste `expireA` et non une durée.
 
-Le modèle rend ces valeurs configurables : il persiste `expireA`, pas une durée.
+## Ce qui a été tranché
+
+Arbitré avec Christophe le 28 juillet 2026, ces points ne sont plus ouverts.
+
+**Expiration d'une réservation : 30 minutes.**
+
+**Alerte sur retour annoncé non reçu : immédiate**, pour permettre de contacter
+le transporteur sans attendre. Le champ `retourAttenduA` porte la date de
+référence.
+
+**Format des numéros de facture : `F-2026-0001`.** Séquence distincte par type de
+document, déclinée sur le même modèle pour les commandes et les avoirs.
+
+**Délai de rétractation : 14 jours à compter de la réception du bien**, article
+L221-18 du Code de la consommation, vérifié aux sources officielles. Le jour de
+réception ne compte pas et l'échéance est reportée au premier jour ouvrable si
+elle tombe un samedi, un dimanche ou un jour férié, article L221-19. En cas de
+livraison échelonnée, le délai court à compter du dernier bien reçu.
+
+Le modèle conserve les horodatages nécessaires à ce calcul sans figer la règle,
+qui reste portée par le code et testée.
+
+## Périmètre élargi après la rédaction de ce document
+
+Le 28 juillet 2026, Christophe a décidé que l'espace client, les avis vérifiés et
+le carnet d'adresses entrent dans le périmètre d'ouverture, epic LS-36.
+
+Ce document reste valable : `Commande.utilisateurId` et le parcours 6 avaient été
+prévus pour cela, aucune migration sur commandes historiques ne sera nécessaire.
+
+Deux ajouts reviennent à LS-13. L'**entité Avis**, écartée ici faute de parcours
+qui la mobilise, rattachée à une commande réelle et non à un produit seul. Et la
+**table Adresse** du carnet, qui sert de source de saisie et **ne remplace jamais
+la copie figée dans la commande** : la décision sur l'adresse ne change pas.
