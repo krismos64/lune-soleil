@@ -265,7 +265,7 @@ branche non poussée.
 
 ## Où on en est
 
-Phase 0, cadrage opérationnel. Sept stories terminées.
+Phase 0, cadrage opérationnel. Neuf stories terminées.
 
 | Ticket | Sujet | État |
 |---|---|---|
@@ -274,7 +274,7 @@ Phase 0, cadrage opérationnel. Sept stories terminées.
 | LS-9 | Kickoff des outils | Fait en pratique, reste Confluence à remplir |
 | LS-11 | Plan du site et parcours critiques | Terminé, enrichi d'un trente-deuxième cas par LS-12 |
 | LS-12 | Modèle conceptuel de données | Terminé : `docs/architecture/MODELE-CONCEPTUEL.md`, six domaines, six décisions |
-| LS-13 | Modèle logique de données | À faire, débloqué, précédé du parcours 8 |
+| LS-13 | Modèle logique de données | À faire, débloqué, prochaine étape |
 | LS-14 | Diagramme de séquence de l'achat | À faire, débloqué |
 | LS-15 | Filaire mobile création produit admin | À faire |
 | LS-17 | Décisions et conventions bloquantes | Terminé |
@@ -283,12 +283,14 @@ Phase 0, cadrage opérationnel. Sept stories terminées.
 | LS-19 | Médiateur de la consommation | Démarche externe à lancer |
 | LS-20 | Photographies | Démarche externe à lancer |
 | LS-31 | Agent conteneurisation propre au projet | À faire, phase 1 |
-| LS-33 | Source de la date de livraison, point de départ de la rétractation | **À trancher avec l'exploitante**, ne bloque pas LS-13 |
+| LS-33 | Source de la date de livraison, point de départ de la rétractation | **À trancher avec l'exploitante**, ne bloque pas LS-13. Option 3 et repli corrigés, ils éteignaient le droit trop tôt |
 | LS-34 | Recevoir les factures électroniques fournisseurs | Démarche externe, échéance 1er septembre 2026 |
 | LS-35 | E-reporting du chiffre d'affaires journalier | Échéance 1er septembre 2027, hors ouverture |
 | LS-36 | Epic espace client, avis et carnet d'adresses | Créé, en périmètre d'ouverture |
 | LS-37 | Étendre le modèle aux avis et au carnet, septième parcours | Terminé : domaine 6, carnet d'adresses, parcours 7 |
 | LS-38 | Aligner le modèle sur le périmètre d'ouverture élargi | Terminé : ADR-023, rôles clients, huit défauts corrigés |
+| LS-39 | Cohérence du modèle conceptuel après LS-38 | Terminé : `revoqueA`, R20 et R21, sémantique des envois |
+| LS-40 | Parcours 8, gestion du carnet d'adresses | Terminé : dernière entité traversée, A7 à A11, V15 |
 
 ## LS-38, ce qu'une relecture extérieure a trouvé
 
@@ -400,16 +402,110 @@ opération dont le déroulement fonctionnel n'existe nulle part.
 **Un parcours 8 est à écrire avant que LS-13 ne fige les tables.** L'exception est
 déclarée explicitement dans le modèle plutôt que masquée.
 
+## LS-33, une erreur juridique qui dormait dans une règle
+
+Trouvée en relisant le ticket. `.claude/rules/legal.md` posait comme repli, tant
+que la source de la date de livraison n'est pas tranchée, de faire courir les
+quatorze jours **depuis l'expédition**, en affirmant que le consommateur
+bénéficierait d'un délai « plus long que le minimum légal, jamais plus court ».
+
+C'est l'inverse. Le délai court à compter de la réception, article L221-18, et
+l'expédition la précède. Expédié le 1er, reçu le 4 : un délai parti du 1er expire
+le 15 alors que le minimum légal court jusqu'au 18. Le droit serait éteint trois
+jours trop tôt, sur un article dont l'information incorrecte fait passer le délai
+à douze mois.
+
+L'origine de la confusion est visible dans le ticket : « fenêtre de rétractation
+allongée de deux à quatre jours ». La fenêtre totale est plus large, mais elle
+s'ouvre **et se ferme** plus tôt. C'est la fermeture qui compte.
+
+Corrigé séparément, commit `a1b2d27`, avant toute autre chose : une règle chargée
+au moment de coder ne pouvait pas attendre la fin des deux stories.
+
+Leçon : « plus favorable au client » est une intuition, pas une démonstration. Un
+délai se vérifie sur une date concrète, avec des chiffres.
+
+## LS-39, la cohérence du modèle
+
+Sept défauts, dont trois venus de mes propres corrections.
+
+**Le plus grave venait de LS-38, la story que je venais de clore.** R19 imposait
+de révoquer un jeton alors qu'aucun champ ne portait la révocation. Avec `expireA`
+et `utiliseA` seuls, la lecture naturelle de « révoquer » est de poser `utiliseA` :
+un client suivant son nouveau lien aurait vu « avis déjà déposé » sans rien avoir
+déposé.
+
+**Et le manque dépassait l'avis.** `JetonAcces` sert quatre portées. Le parcours 5
+et son tableau de couverture ne testaient que l'expiration : un lien de
+rétractation révoqué serait resté utilisable. C'est le motif exact du défaut
+`archiveeA` de la veille, un drapeau ajouté sans être porté dans toutes les
+conditions d'accès.
+
+**Une cardinalité écrite deux fois de travers.** `|o--o|` autorisait une
+invitation sans jeton ; ma correction en `|o--||` disait l'inverse dans les deux
+sens, un jeton `DOCUMENT` n'ayant aucune invitation et un jeton révoqué non plus.
+J'ai fini par vérifier la convention Mermaid contre trois relations du document
+dont la nullabilité est connue, au lieu de la supposer.
+
+**Une affirmation technique fausse dans une règle permanente.** J'avais écrit que
+regrouper la bascule d'adresse par défaut en une instruction « ne sauve rien ».
+Vérifié sur PostgreSQL 18.4 : la même instruction réussit dans un sens de bascule
+et échoue dans l'autre, selon l'ordre de parcours des lignes. Plus nuisible qu'une
+erreur simple, puisqu'elle marche en développement et casse en production.
+
+## LS-40, ce que la traversée du carnet a révélé
+
+`AdresseCarnet` était la seule entité qu'aucun parcours ne traversait. L'exercice
+a produit six règles manquantes et fermé deux failles de données personnelles.
+
+**Les écritures ne portaient aucun recoupement de session.** J'avais écrit
+« `utilisateurId` pris dans la session » à l'étape d'ajout seulement. Les trois
+opérations qui reçoivent un identifiant n'en portaient aucun. Au tunnel, un
+identifiant appartenant à autrui aurait recopié son nom et son adresse dans une
+facture téléchargeable.
+
+**La suppression de compte n'était traitée nulle part**, zéro occurrence dans tout
+`docs/`. La décision diverge selon l'entité : le carnet en cascade, la commande
+jamais. Une politique oubliée vaut `RESTRICT` et bloquerait toute demande
+d'effacement ; une cascade posée par réflexe détruirait des factures.
+
+**Et ma correction a ouvert une fuite.** La règle A10 dissociait les commandes en
+remettant `utilisateurId` à nul. Or le parcours 6 définit l'éligibilité au
+rattachement par « commandes sans propriétaire » : une adresse email réattribuée
+par un fournisseur d'accès, ou connue d'un tiers, rouvrait l'historique complet
+d'un client parti. Champ `dissocieA`, et le cas d'erreur du parcours 6 qui
+affirmait « ne peut jamais changer de propriétaire » a été corrigé, cette
+propriété étant devenue fausse en deux temps.
+
+**Un champ mort que je documentais au lieu de le trancher.** `libelle` était
+déclaré « sans rôle fonctionnel » et conservé, ce qui contredit le principe
+interdisant les champs sans usage. Deux issues seulement : lui donner son rôle ou
+le supprimer. Documenter un champ mort n'en est pas une.
+
+### Ce que ces trois stories disent du rythme
+
+Onze défauts sur les trois viennent de mes propres corrections. La parade a
+fonctionné à chaque fois, une seconde passe de revue portant sur les corrections
+elles-mêmes. Sans elle, chacun serait parti en LS-13.
+
+Deux affirmations techniques ont été prises en défaut par une vérification sur
+base réelle, pas par un raisonnement. C'est devenu la règle : une affirmation
+destinée à un document permanent se teste.
+
 ## Prochaine étape
 
-**Écrire le parcours 8**, gestion du carnet d'adresses, puis **LS-13**.
+**LS-13**, le modèle logique, enfin débloqué. Toutes les entités du modèle sont
+traversées par au moins un parcours, huit parcours et cinquante-quatre cas
+d'erreur.
 
-Le parcours 8 n'a pas de ticket. Il peut entrer dans LS-13 comme préalable, ou
-faire l'objet d'une story courte sur le modèle de LS-37. À trancher au démarrage.
+LS-12, LS-37, LS-38, LS-39 et LS-40 lui transmettent un modèle complet, sept
+domaines, et un récapitulatif de contraintes rangé en trois niveaux qui est la
+partie devant survivre en migration.
 
-LS-12, LS-37 et LS-38 transmettent à LS-13 un modèle complet, sept domaines, et un
-récapitulatif de contraintes rangé en trois niveaux qui est la partie devant
-survivre en migration.
+Trois points appellent une vigilance particulière en migration, parce qu'ils ne
+font échouer aucun test s'ils sont oubliés : l'index partiel de l'administratrice,
+les politiques de suppression des six références vers `Utilisateur`, et les
+contraintes `CHECK` que Prisma ne génère pas.
 
 Ce que LS-13 doit traiter :
 
