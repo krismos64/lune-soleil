@@ -153,12 +153,16 @@ Phase 0, cadrage opérationnel. Cinq stories terminées sur treize.
 | LS-34 | Recevoir les factures électroniques fournisseurs | Démarche externe, échéance 1er septembre 2026 |
 | LS-35 | E-reporting du chiffre d'affaires journalier | Échéance 1er septembre 2027, hors ouverture |
 | LS-36 | Epic espace client, avis et carnet d'adresses | Créé, en périmètre d'ouverture |
+| LS-37 | Étendre le modèle aux avis et au carnet, septième parcours | **Prochaine étape**, bloque LS-13 |
 
 ## Prochaine étape
 
-LS-13, le modèle logique. Le modèle conceptuel lui transmet un récapitulatif de
-contraintes rangé en trois niveaux, qui est la partie du document qui doit
-survivre en migration.
+**LS-37**, l'extension du modèle conceptuel aux avis et au carnet d'adresses,
+avec le septième parcours. Il bloque LS-13, décidé en fin de session.
+
+**Puis LS-13**, le modèle logique. Le modèle conceptuel lui transmet un
+récapitulatif de contraintes rangé en trois niveaux, qui est la partie du
+document qui doit survivre en migration.
 
 Points ouverts qui lui reviennent : le format des numéros de commande, facture et
 avoir ; la forme de stockage des blocs figés, adresse et instantané légal, en
@@ -241,6 +245,44 @@ de le lui rappeler : ticket LS-33, mémoire, et point ouvert inscrit dans les de
 documents d'architecture.
 
 Ça ne bloque pas LS-13, le modèle stocke la date quelle que soit sa provenance.
+
+### Une story intercalée plutôt qu'un ticket rouvert
+
+Christophe a demandé si LS-12 et le modèle devaient être rouverts du fait des
+trois fonctionnalités qui entrent en périmètre.
+
+Réponse tranchée : non pour LS-12, oui pour une partie du modèle. LS-12 demandait
+un modèle couvrant les scénarios critiques, et il les couvre. Rouvrir un ticket
+clos parce que le périmètre s'élargit ensuite brouille la traçabilité, on ne sait
+plus ce qui a été livré quand.
+
+Le modèle en revanche est incomplet sur deux points. L'espace client était déjà
+couvert, `Commande.utilisateurId` et le parcours 6 ayant été prévus pour ça. Mais
+le carnet d'adresses est décidé sans être dessiné, et l'entité Avis n'existe nulle
+part.
+
+J'avais d'abord renvoyé ces deux ajouts à LS-13. C'était une erreur de niveau :
+LS-13 traduit un modèle conceptuel en schéma physique, il ne le conçoit pas. Lui
+demander de dessiner deux entités jamais modélisées ferait passer des décisions
+structurantes sans le cadre de revue que LS-12 a suivi, ce qui est exactement le
+manquement du 27 juillet sous une autre forme.
+
+**LS-37 créé**, intercalé entre LS-12 et LS-13, avec les liens de blocage posés.
+Il produit l'entité Avis, la table Adresse et un septième parcours dans
+`PARCOURS.md`, avec ses cas d'erreur et la revue critique.
+
+Une décision d'ancrage tranchée à cette occasion : **l'avis est rattaché à une
+ligne de commande**, pas au produit. La ligne est la preuve d'achat, structurelle
+plutôt que déclarative. Deux achats de la même pièce permettent deux avis, et
+archiver un produit n'invalide aucun avis puisque la ligne porte sa copie figée.
+
+La contrepartie, signalée dans le ticket : regrouper les avis sur une fiche
+produit suppose de remonter par `LigneCommande.varianteId`, nullable par
+conception. Le cas nul devra être traité explicitement, sinon un avis devient
+invisible sur la fiche du produit concerné.
+
+Le commentaire posté sur LS-13 quelques minutes plus tôt a été corrigé, il
+annonçait ces entités comme siennes.
 
 ### Configuration Claude Code revue
 
