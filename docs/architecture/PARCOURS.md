@@ -13,6 +13,12 @@ manquant.
 | Ticket | LS-11 |
 | Source | Cahier des charges V1.0, sections 9, 11 et 15.5 |
 | Débloque | LS-12 modèle conceptuel, LS-14 diagramme de séquence |
+| Cas d'erreur | 32, dont un ajouté par LS-12 |
+
+Le document reste ouvert : modéliser révèle des cas que la lecture du cahier des
+charges n'avait pas fait apparaître. Un cas découvert plus tard s'ajoute ici, il
+ne vit pas ailleurs. Le trente-deuxième, l'événement de paiement tardif au
+parcours 1, est venu de LS-12.
 
 ## Pourquoi six parcours et non cinq
 
@@ -104,6 +110,19 @@ Base : la contrainte d'unicité sur l'identifiant d'événement rejette le secon
 Aucun effet métier supplémentaire : pas de seconde facture, pas de second
 mouvement de stock, pas d'email dupliqué.
 Vue : rien.
+
+**Événement tardif arrivant après la régularisation par réconciliation**
+Le cas croise les deux précédents et n'est couvert par aucun des deux. La
+réconciliation a déjà régularisé la commande, puis l'événement arrive enfin,
+retardé par une file d'attente chez le prestataire. Son identifiant n'ayant
+jamais été vu, l'unicité sur l'identifiant d'événement ne le rejette pas.
+Base : l'événement est persisté, mais il ne produit aucun second effet métier.
+Les unicités qui le garantissent portent sur l'effet et non sur l'événement : au
+plus un paiement `REUSSI` par commande, au plus un mouvement `VENTE_WEB` par
+commande, au plus une facture par commande.
+Vue : rien, la cliente a déjà sa confirmation.
+Sans ces trois unicités, une variante à plusieurs exemplaires verrait son stock
+décrémenté deux fois sans qu'aucune erreur ne se déclenche.
 
 **Signature d'événement invalide**
 Base : rejet avant tout effet métier, journalisation de la tentative.
@@ -372,6 +391,13 @@ acteur et date, journal des mouvements de stock immuable.
 **Unicité contrainte** : référence de variante, numéro de commande, numéro de
 facture, numéro d'avoir, identifiant d'événement fournisseur, nom de verrou de
 tâche planifiée, `slug` de produit.
+
+L'identifiant d'événement ne suffit pas à lui seul. Il protège du rejeu du même
+événement, pas du croisement entre le webhook et la réconciliation, qui sont deux
+chemins distincts vers le même effet. LS-12 y ajoute quatre clés portant sur
+l'effet plutôt que sur l'événement : paiement réussi par commande, mouvement de
+vente web par commande et variante, facture par commande, email automatique par
+commande et modèle.
 
 **Expiration** : réservation de stock, jeton de rétractation, lien signé de
 document, jeton de vérification d'email.
