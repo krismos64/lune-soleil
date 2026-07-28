@@ -115,7 +115,7 @@ flowchart TB
 ```mermaid
 erDiagram
     CATEGORIE ||--o{ PRODUIT : "classe"
-    PRODUIT ||--|{ VARIANTE : "se decline en"
+    PRODUIT ||--o{ VARIANTE : "se decline en"
     PRODUIT ||--o{ MEDIA : "illustre par"
 
     CATEGORIE {
@@ -160,7 +160,7 @@ erDiagram
 
 | # | Règle | Garantie |
 |---|---|---|
-| C1 | Un produit publié a au moins une variante non archivée | cardinalité `1..n`, contrôlée à la publication et à l'archivage d'une variante |
+| C1 | Un produit **publié** a au moins une variante non archivée | niveau 3, contrôle applicatif à la publication et à l'archivage d'une variante, voir ci-dessous |
 | C2 | La référence de variante est unique dans toute la boutique | `UNIQUE` |
 | C3 | Le `slug` de produit et de catégorie est unique | `UNIQUE` |
 | C4 | Le prix est en centimes entiers | invariant 1, type entier |
@@ -179,6 +179,22 @@ erDiagram
 | C17 | Archiver une variante ne crée aucun mouvement de stock | invariant 6, comme C12 pour `venteWebActivee` |
 | C18 | Archiver une variante portant une réservation active est refusé | même règle que S5 pour la vente externe |
 | C19 | Archiver la dernière variante vivante d'un produit archive le produit | sans quoi C1 serait satisfaite par une variante archivée |
+
+### Pourquoi un produit peut n'avoir aucune variante
+
+La cardinalité est `0..n`, corrigée par LS-39. Elle était `1..n`, ce qui
+contredisait le parcours 3 : son étape 1 crée un produit `BROUILLON`, et la
+variante n'arrive qu'à l'étape suivante. Un modèle imposant une variante dès la
+création rendait le brouillon impossible à représenter.
+
+**L'obligation existe, elle porte sur la publication et non sur l'existence.**
+C'est C1, un contrôle applicatif de niveau 3, doublé de C19 qui archive le
+produit quand sa dernière variante vivante est archivée. Les deux ferment
+ensemble le cas d'un produit `ACTIF` sans rien de vendable.
+
+Aucune contrainte de base ne peut porter cette règle : elle compte des lignes
+d'une autre table, ce qu'un `CHECK` ne sait pas faire. La ranger en niveau 3 dit
+la vérité, la ranger en cardinalité de diagramme la faisait paraître garantie.
 
 ### Pourquoi la variante et non le produit porte le stock
 
@@ -544,6 +560,7 @@ erDiagram
 | A3 | La commande recopie l'adresse, elle ne la référence jamais | invariants 3 et 4, aucune clé étrangère de `Commande` vers `AdresseCarnet` |
 | A4 | Supprimer une adresse du carnet n'affecte aucune commande passée | conséquence directe de A3 |
 | A5 | Une adresse du carnet ne distingue pas livraison et facturation | le choix se fait au moment de la commande, voir ci-dessous |
+| A6 | La bascule d'adresse par défaut retire l'ancien drapeau avant de poser le nouveau | niveau 2, l'index partiel est vérifié ligne à ligne, voir `database.md` |
 
 **Aucune clé étrangère ne part de `Commande` vers `AdresseCarnet`.** C'est le
 point qui protège l'historique. Un client qui corrige une faute dans son
@@ -709,6 +726,7 @@ erDiagram
         identifiant commandeId FK
         horodatage expireA
         horodatage utiliseA "nullable"
+        horodatage revoqueA "nullable, remplace par un renvoi"
     }
 ```
 
@@ -722,6 +740,9 @@ erDiagram
 | L4 | Un numéro de commande seul n'identifie jamais un contrat | invariant 2, parcours 5 |
 | L5 | Un jeton porte une empreinte, jamais sa valeur en clair | invariant 9 |
 | L6 | Un jeton expire, et sa portée est limitée à un usage | principe de moindre privilège |
+| L9 | Un jeton valide n'est ni expiré, ni consommé, ni révoqué | `expireA > maintenant AND utiliseA IS NULL AND revoqueA IS NULL`, les trois conditions |
+| L10 | Révoquer un jeton renseigne `revoqueA`, jamais `utiliseA` | consommation et révocation sont deux états distincts, voir ci-dessous |
+| L11 | `empreinte`, `portee`, `commandeId` et `expireA` sont immuables après écriture | seuls `utiliseA` et `revoqueA` évoluent, de nul vers une date |
 | L7 | Le remboursement suppose la réception du retour | parcours 5, aucun automatisme |
 | L8 | Chaque étape de la demande porte son propre horodatage | le seuil d'alerte se calcule depuis `retourAttenduA`, voir ci-dessous |
 
@@ -734,6 +755,41 @@ séparées répéteraient la même structure et le même risque.
 Une entité unique avec une portée permet de révoquer, d'expirer et de tracer
 uniformément. Le stockage d'une empreinte, jamais de la valeur en clair, suit le
 traitement d'un mot de passe : une fuite de base ne donne aucun accès.
+
+### Trois façons de cesser d'être valide, à ne pas confondre
+
+Ajouté par LS-39. La règle R19 imposait de révoquer un jeton au renvoi d'une
+invitation sans qu'aucun champ ne porte cette révocation, ce qui laissait
+l'implémentation choisir entre trois lectures dont deux sont fausses.
+
+**La règle L9 vaut pour les quatre portées, pas seulement pour l'avis.** Un lien
+de facture, de rétractation ou de suivi parti sur une adresse email erronée se
+révoque de la même façon, et le remplacement d'un lien est une opération banale.
+L'exemple ci-dessous porte sur le renvoi d'invitation parce que c'est le chemin
+qui a révélé le manque, pas parce qu'il serait le seul concerné.
+
+| État | Champ | Sens |
+|---|---|---|
+| expiré | `expireA` dépassé | le temps a passé |
+| consommé | `utiliseA` renseigné | l'action a été faite, l'avis est déposé |
+| révoqué | `revoqueA` renseigné | un jeton neuf l'a remplacé, l'action n'a pas eu lieu |
+
+**Révoquer en renseignant `utiliseA` serait une faute.** R18 fait de ce champ
+l'état d'usage de l'invitation : un jeton révoqué mais non consommé apparaîtrait
+comme un avis déposé. Le client qui suit son nouveau lien verrait « avis déjà
+déposé » au lieu du formulaire, et l'administration compterait un avis qui
+n'existe pas.
+
+**Révoquer en écrasant `expireA` fonctionnerait**, mais effacerait la date
+d'expiration réelle du jeton et rendrait l'audit impossible : plus moyen de
+distinguer un jeton arrivé à terme d'un jeton remplacé.
+
+**Révoquer en supprimant la ligne est interdit.** La section sur l'immuabilité
+n'autorise la suppression que sur `Reservation`, `VerrouTache` et
+`AdresseCarnet`.
+
+La vérification d'un jeton teste donc les trois conditions, règle L9. En omettre
+une ouvre un accès.
 
 ### Pourquoi chaque étape porte son horodatage
 
@@ -770,6 +826,8 @@ détermine plusieurs champs.
 ```mermaid
 erDiagram
     LIGNE_COMMANDE ||--o| AVIS : "porte au plus un"
+    LIGNE_COMMANDE ||--o| INVITATION_AVIS : "invite a deposer"
+    JETON_ACCES ||--o| INVITATION_AVIS : "jeton courant"
     AVIS ||--o| REPONSE_AVIS : "recoit"
     UTILISATEUR |o--o{ AVIS : "auteur eventuel"
 
@@ -800,7 +858,7 @@ erDiagram
         identifiant ligneCommandeId FK
         identifiant jetonAccesId FK "jeton courant, remplace a chaque renvoi"
         horodatage creeeA
-        horodatage dernierEnvoiA "nullable, nul si tous les envois ont echoue"
+        horodatage dernierEnvoiA "nullable, resume de confort, la preuve vit dans JournalEmail"
         entier nombreEnvois
     }
 ```
@@ -828,6 +886,8 @@ erDiagram
 | R17 | Une invitation n'est créée que sur une commande livrée | contrôle applicatif, la tâche filtre sur `Expedition.livreA` |
 | R18 | L'état d'usage d'une invitation vient du jeton | `JetonAcces.utiliseA`, jamais dupliqué sur l'invitation |
 | R19 | Un renvoi révoque l'ancien jeton dans la même transaction | niveau 2, sinon deux jetons valides pour une invitation |
+| R20 | Un jeton sert au plus une invitation | `UNIQUE (jetonAccesId)`, sinon la résolution du jeton vers sa ligne de commande serait ambiguë |
+| R21 | Le dépôt d'un avis renseigne `JetonAcces.utiliseA` dans la même transaction | niveau 2, sinon un jeton rejoué crée un second avis |
 
 ### Pourquoi une entité `InvitationAvis` distincte du jeton
 
@@ -847,8 +907,32 @@ fait écarter `estPrincipal` à côté de `ordre` au domaine 1.
 
 `nombreEnvois` et `dernierEnvoiA` existent parce que le renvoi est prévu : un
 jeton expiré se remplace sans créer une seconde invitation, `jetonAccesId`
-pointant alors vers le nouveau. `dernierEnvoiA` reste nul tant qu'aucun envoi n'a
-abouti, ce qui distingue une invitation créée d'une invitation reçue.
+pointant alors vers le nouveau.
+
+**Ce que comptent ces deux champs, tranché par LS-39.** La question n'était pas
+posée, et elle a une réponse contrainte : un envoi d'email sort de la base, il ne
+peut appartenir à aucune transaction PostgreSQL. Son résultat arrive après.
+
+`nombreEnvois` compte les **tentatives**, incrémenté dans la transaction de
+renvoi, avant tout appel au fournisseur. Il ne prouve donc pas la réception, il
+borne le renvoi : au-delà d'un seuil, l'invitation cesse d'être relancée. Compter
+les succès l'exposerait au cas où le fournisseur répond après un délai, ou pas du
+tout.
+
+`dernierEnvoiA` est renseigné **après** l'envoi, hors de la transaction, quand le
+fournisseur a accepté le message. Il reste nul tant qu'aucun envoi n'a abouti, ce
+qui distingue une invitation créée d'une invitation partie.
+
+C'est la seule écriture du renvoi qui ne peut pas être atomique avec les autres,
+et **elle n'appartient pas à R19** : cette règle porte sur la révocation du jeton
+et le remplacement du pointeur, qui restent entièrement transactionnels.
+L'exception est assumée, la règle E4 posant qu'un échec d'email ne bloque jamais,
+et `JournalEmail` portant déjà `statut`, `motifEchec` et l'horodatage réel de
+chaque tentative.
+
+`dernierEnvoiA` est donc un résumé de confort, jamais une preuve. **La preuve
+d'envoi vit dans `JournalEmail`**, source unique. En cas de divergence entre les
+deux, le journal a raison.
 
 **Le renvoi révoque l'ancien jeton**, règle R19. Déplacer le pointeur ne suffit
 pas : `JetonAcces` porte sa propre expiration, et l'ancienne ligne resterait
@@ -1231,7 +1315,7 @@ entièrement, cas d'erreur compris, sans invention de champ manquant.
 | suivi du retour | `statut` et `retourAttenduA`, puis `RECUE` et `recueA` | oui |
 | remboursement | `Paiement`, `Avoir.demandeRetractationId`, décision F | oui |
 | réintégration | `MouvementStock` type `RETOUR` | oui |
-| jeton expiré | `expireA`, `JournalAudit` | oui |
+| jeton invalide | `expireA`, `utiliseA`, `revoqueA`, règle L9, `JournalAudit` | oui |
 | délai dépassé | horodatages conservés, règle non figée | oui |
 | échec de l'accusé | `JournalEmail` `ECHOUE`, `AlerteCritique` | oui |
 | colis jamais reçu | `retourAttenduA` comme base du seuil, `AlerteCritique` | oui |
@@ -1263,7 +1347,7 @@ entièrement, cas d'erreur compris, sans invention de champ manquant.
 | réponse | `ReponseAvis`, `UNIQUE (avisId)` | oui |
 | avis sans achat | impossible, `ligneCommandeId` obligatoire | oui |
 | second avis sur la même ligne | `UNIQUE (ligneCommandeId)` | oui |
-| jeton expiré ou utilisé | `expireA`, `utiliseA`, renvoi par `nombreEnvois` | oui |
+| jeton expiré, utilisé ou révoqué | `expireA`, `utiliseA`, `revoqueA`, renvoi par `nombreEnvois` | oui |
 | invitation avant livraison | `Expedition.livreA` nul exclut de la tâche | oui |
 | avis refusé | `statut` `REFUSE`, `motifDecision` et `decideA` | oui |
 | avis modifié après publication | `modifieA`, retour en `DEPOSE`, `publieA` préservé | oui |
@@ -1290,8 +1374,6 @@ délai de publication annoncé, et la double date exigée par l'article D111-17.
 
 ## Récapitulatif des contraintes issues du modèle
 
-Ces contraintes passent en LS-13 pour traduction en migration.
-
 Ces contraintes passent en LS-13 pour traduction en migration. Elles se lisent en
 trois niveaux, du plus fort au plus faible, et le niveau compte autant que la
 contrainte : une garantie de base tient sous concurrence, une garantie de
@@ -1304,10 +1386,13 @@ tient que si personne ne l'oublie.
 `commande.numero`, `facture.numero`, `avoir.numero`, `facture.commandeId`,
 `evenement_fournisseur.identifiant_fournisseur`, `verrou_tache.nom`,
 `jeton_acces.empreinte`, `media.identifiant_fournisseur`, `utilisateur.email`,
-`avis.ligneCommandeId`, `reponse_avis.avisId`, `invitation_avis.ligneCommandeId`.
+`avis.ligneCommandeId`, `reponse_avis.avisId`, `invitation_avis.ligneCommandeId`,
+`invitation_avis.jetonAccesId`.
 
 **Unicité partielle**, sans laquelle un invariant retomberait sur du code
-applicatif. Les quatre dernières portent l'idempotence de la décision D :
+applicatif. Trois d'entre elles portent l'idempotence de la décision D, sur le
+paiement, le mouvement de stock et le journal d'email, la quatrième clé étant
+l'unicité simple `facture.commandeId` listée plus haut :
 
 | Contrainte | Filtre | Empêche |
 |---|---|---|
@@ -1360,6 +1445,8 @@ portées par le code de la transaction, et testées.
 | R9 | Le changement de statut d'un avis et `decideA` sont écrits ensemble |
 | C19 | Archiver la dernière variante vivante archive le produit dans la même transaction |
 | R19 | Le renvoi d'une invitation révoque l'ancien jeton et remplace le pointeur ensemble |
+| R21 | Le dépôt d'un avis et la consommation de son jeton d'invitation sont indissociables |
+| A6 | La bascule d'adresse par défaut retire l'ancien drapeau avant de poser le nouveau |
 
 ### Niveau 3, contrôlé par l'application
 
@@ -1368,7 +1455,7 @@ brouillon incomplet doit pouvoir exister.
 
 | # | Contrôle | Moment |
 |---|---|---|
-| C1 | Un produit a au moins une variante | à la publication |
+| C1 | Un produit publié a au moins une variante non archivée | à la publication et à l'archivage d'une variante |
 | C7 | Média traité et texte alternatif présents | à la publication |
 | C8 | Aucun média non traité servi publiquement | à la lecture publique |
 | L2 | Motif obligatoire sur un refus de rétractation | à la transition |
@@ -1379,12 +1466,20 @@ brouillon incomplet doit pouvoir exister.
 | C13 | Aucune suppression de variante, archivage seul | à la demande de suppression |
 | C18 | Archivage refusé si une réservation est active | à l'archivage |
 | E11 | Le rôle ne vient jamais d'une entrée non fiable | à toute écriture sur `Utilisateur` |
+| L9 | Un jeton valide n'est ni expiré, ni consommé, ni révoqué | à chaque vérification de jeton, les trois conditions |
 
 ### Immuabilité et suppression
 
 **Immuable après écriture** : `MouvementStock`, `Facture`, `Avoir`,
 `HistoriqueStatut`, `EvenementFournisseur`, et `LigneCommande` après
 confirmation.
+
+**Immuable en partie** : sur `JetonAcces`, `empreinte`, `portee`, `commandeId` et
+`expireA` ne changent jamais après écriture. Seuls `utiliseA` et `revoqueA`
+évoluent, et dans un seul sens, de nul vers une date. Précisé par LS-39 : sans
+cette règle, révoquer un jeton en écrasant son `expireA` resterait possible, ce
+qui détruirait la date d'expiration réelle et rendrait indistinguables un jeton
+arrivé à terme et un jeton remplacé.
 
 **Suppression** : aucune suppression destructive sur les entités historiques.
 L'archivage remplace la suppression. Seules `Reservation`, `VerrouTache` et

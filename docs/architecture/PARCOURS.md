@@ -123,12 +123,18 @@ réconciliation a déjà régularisé la commande, puis l'événement arrive enf
 retardé par une file d'attente chez le prestataire. Son identifiant n'ayant
 jamais été vu, l'unicité sur l'identifiant d'événement ne le rejette pas.
 Base : l'événement est persisté, mais il ne produit aucun second effet métier.
-Les unicités qui le garantissent portent sur l'effet et non sur l'événement : au
-plus un paiement `REUSSI` par commande, au plus un mouvement `VENTE_WEB` par
-commande, au plus une facture par commande.
+Les unicités qui le garantissent portent sur l'effet et non sur l'événement,
+quatre clés : au plus un paiement `REUSSI` par commande, au plus un mouvement
+`VENTE_WEB` par commande **et par variante**, au plus une facture par commande,
+au plus un email automatique par commande et par modèle.
 Vue : rien, le client a déjà sa confirmation.
-Sans ces trois unicités, une variante à plusieurs exemplaires verrait son stock
+Sans ces quatre unicités, une variante à plusieurs exemplaires verrait son stock
 décrémenté deux fois sans qu'aucune erreur ne se déclenche.
+
+La clé du mouvement porte sur `(commandeId, varianteId)` et non sur la commande
+seule : une commande à deux articles décrémente deux variantes, donc produit deux
+mouvements. Une unicité par commande seule interdirait tout panier
+multi-articles.
 
 **Signature d'événement invalide**
 Base : rejet avant tout effet métier, journalisation de la tentative.
@@ -309,10 +315,13 @@ consommation. Son absence prolonge le délai de rétractation de douze mois.
 
 ### Cas d'erreur
 
-**Jeton expiré ou modifié, étape 2**
+**Jeton expiré, consommé, révoqué ou modifié, étape 2**
 Base : aucune écriture, la tentative est journalisée.
 Vue : refus sécurisé, sans révéler si la commande existe.
 Un numéro de commande seul n'identifie jamais un contrat.
+Les quatre conditions se testent ensemble, règle L9. Un lien parti sur une adresse
+email erronée se révoque, et un contrôle qui n'examinerait que l'expiration le
+laisserait utilisable jusqu'à son terme.
 
 **Délai légal dépassé**
 Base : aucune demande créée.
