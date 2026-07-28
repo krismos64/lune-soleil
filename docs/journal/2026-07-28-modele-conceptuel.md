@@ -283,8 +283,8 @@ Phase 0, cadrage opérationnel. Dix stories terminées.
 | LS-19 | Médiateur de la consommation | Démarche externe à lancer |
 | LS-20 | Photographies | Démarche externe à lancer |
 | LS-31 | Agent conteneurisation propre au projet | À faire, phase 1 |
-| LS-33 | Source de la date de livraison, point de départ de la rétractation | **À trancher avec l'exploitante**, ne bloque pas LS-13. Option 3 et repli corrigés, ils éteignaient le droit trop tôt |
-| LS-34 | Recevoir les factures électroniques fournisseurs | Démarche externe, échéance 1er septembre 2026 |
+| LS-33 | Source de la date de livraison, point de départ de la rétractation | **Tranché** : Mondial Relay Start, suivi par API. Attention aux deux événements du transporteur |
+| LS-34 | Recevoir les factures électroniques fournisseurs | Démarche externe, échéance 1er septembre 2026, portée faible mais obligation maintenue |
 | LS-35 | E-reporting du chiffre d'affaires journalier | Échéance 1er septembre 2027, hors ouverture |
 | LS-36 | Epic espace client, avis et carnet d'adresses | Créé, en périmètre d'ouverture |
 | LS-37 | Étendre le modèle aux avis et au carnet, septième parcours | Terminé : domaine 6, carnet d'adresses, parcours 7 |
@@ -294,6 +294,11 @@ Phase 0, cadrage opérationnel. Dix stories terminées.
 | LS-41 | Finaliser le modèle avant la traduction logique | Terminé : L221-24, `RECUE` retiré, huit références, L12 et L13 |
 | LS-42 | Mode fail-open du script de migration | À faire, avant la première migration de production |
 | LS-43 | Deux sessions Checkout payées pour une commande | À faire, avant d'implémenter le paiement |
+| LS-44 | Conformité REACH et étiquetage, matières hors UE | À faire, arbitrage de l'exploitante, touche LS-24 |
+| LS-27 | Politique commerciale, transporteur et tarifs | **Tranché** : Mondial Relay, 4,10 €, offert à 39 €, retours au client |
+| LS-18 | Compte Stripe | En attente du compte bancaire professionnel |
+| LS-19 | Médiateur de la consommation | L'exploitante se renseigne |
+| LS-20 | Photographies | L'exploitante s'en occupe prochainement |
 
 ## LS-38, ce qu'une relecture extérieure a trouvé
 
@@ -570,6 +575,79 @@ corrections elles-mêmes. Sans elle, chacun serait parti en migration.
 
 Trois affirmations techniques ont été prises en défaut par une vérification sur
 base réelle ou sur documentation officielle, aucune par un raisonnement.
+
+## Séance avec l'exploitante, fin de journée
+
+Christophe a vu Stacy et a tranché sept sujets qui l'attendaient depuis le
+cadrage. Deux relevaient d'une décision commerciale, cinq de démarches.
+
+### Décisions commerciales
+
+| Sujet | Décision |
+|---|---|
+| Transporteur | Mondial Relay, offre Start, Point Relais et Locker, suivi par API |
+| Frais de port | 4,10 € TTC |
+| Livraison offerte | à partir de 39 € |
+| Minimum de commande | aucun |
+| Frais de retour en rétractation | à la charge du client |
+
+Tracé sur LS-27 et LS-33. Le suivi automatique par API était l'option
+recommandée : la date vient du transporteur, donc elle est opposable en cas de
+litige, là où une case cochée à la main ne prouve rien.
+
+### Le piège que le choix du transporteur introduit
+
+Mondial Relay produit **deux événements distincts** : « disponible au Point
+Relais » et « remis au destinataire ». Seul le second renseigne `Expedition.livreA`.
+
+Un colis peut rester une semaine en relais avant retrait. Prendre le premier
+événement ferait courir le délai de rétractation trop tôt et éteindrait le droit
+du client avant terme, avec le risque des douze mois de l'article L221-20.
+
+Porté dans `.claude/rules/legal.md` plutôt que dans le seul ticket : c'est le
+genre de nuance qui se perd entre l'arbitrage et le code.
+
+### Une décision légale seulement sous condition
+
+Les frais de retour à la charge du client sont autorisés, **à condition d'en
+informer le client avant sa commande**, article L221-23 vérifié aux sources. À
+défaut ils reviennent au vendeur, et la charge de la preuve pèse sur lui.
+
+La mention doit apparaître dans le tunnel de commande, pas seulement dans les
+conditions générales que personne ne lit. C'est l'emplacement qu'on oublie.
+
+### Un sujet nouveau, ouvert par une réponse anodine
+
+Stacy achète ses matières premières sur Temu. Cette information, donnée en
+passant pour justifier qu'elle ne tient pas de comptabilité détaillée, ouvre un
+sujet que le cadrage n'avait pas vu.
+
+**Assembler des composants achetés hors Union européenne fait d'elle la
+responsable du produit fini sur le marché français.** La DGCCRF impose de pouvoir
+justifier la conformité REACH en cas de contrôle, plomb, nickel et cadmium, et
+d'afficher les matériaux sur les fiches produits.
+
+Le nickel est le premier allergène de contact en Europe, et les boucles d'oreilles
+touchent une peau percée. Une vente en ligne laisse par ailleurs une trace écrite
+qu'un marché ne laisse pas.
+
+Ticket **LS-44**, avec trois voies à arbitrer : justificatifs du fournisseur,
+test en laboratoire, ou changement de source. Aucun développement, mais cela
+touche le contenu des fiches produits, LS-24.
+
+### Ce que sa réponse ne changeait pas
+
+Elle ne tient pas de comptabilité précise et souhaitait écarter LS-34. La
+franchise en base ne dispense pourtant pas de pouvoir **recevoir** une facture
+électronique au 1er septembre 2026. La portée reste faible ici, Temu n'étant pas
+soumis au dispositif français, mais un fournisseur français d'emballages le
+serait. Ticket laissé ouvert avec cette nuance.
+
+### Leçon de la séance
+
+Deux des points les plus utiles ne figuraient dans aucun ordre du jour. Ils sont
+venus d'une réponse de contexte, l'origine des matières, et d'une conséquence
+légale attachée à un choix commercial apparemment neutre.
 
 ## Prochaine étape
 
