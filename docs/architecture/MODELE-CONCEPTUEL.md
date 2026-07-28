@@ -304,7 +304,8 @@ erDiagram
         identifiant commandeId FK "nullable"
         texte canal "nullable, marche ou plateforme"
         texte motif "nullable"
-        identifiant acteurId FK
+        identifiant acteurId FK "nullable, nul si origine SYSTEME"
+        texte origine "SYSTEME ADMIN RECONCILIATION"
         horodatage creeA
     }
 ```
@@ -320,7 +321,8 @@ erDiagram
 | S5 | Une vente externe est refusée si une réservation active existe sur la variante | contrôle applicatif, parcours 2 |
 | S6 | Seule une vente réelle décrémente `quantitePhysique` | invariant 6 |
 | S7 | Une commande produit au plus un mouvement `VENTE_WEB` par variante | `UNIQUE` partiel sur `(commandeId, varianteId)` filtré sur `type = VENTE_WEB`, voir décision D |
-| S8 | La réintégration de stock dépend du retour physique, jamais du remboursement | parcours 4 et 5 |
+| S8 | La réintégration de stock dépend du retour physique, jamais du remboursement | parcours 4 et 5, et le remboursement peut précéder le retour, règle L7 |
+| S9 | Un mouvement automatique porte `origine = SYSTEME` et un `acteurId` nul | un webhook n'est pas une personne, l'attribuer à l'administratrice fausserait l'audit |
 
 ### Pourquoi la réservation est une entité et non un champ
 
@@ -352,6 +354,7 @@ erDiagram
     COMMANDE ||--o{ PAIEMENT : "tentatives"
     COMMANDE ||--o{ EXPEDITION : "expediee par"
     COMMANDE ||--o{ HISTORIQUE_STATUT : "trace"
+    UTILISATEUR |o--o{ HISTORIQUE_STATUT : "fait transiter"
     PAIEMENT ||--o{ EVENEMENT_FOURNISSEUR : "confirme par"
     VARIANTE }o..o| LIGNE_COMMANDE : "reference historique"
     UTILISATEUR |o--o{ COMMANDE : "proprietaire eventuel"
@@ -558,7 +561,7 @@ erDiagram
 | A7 | Un carnet sans adresse par défaut est un état légitime | l'index partiel l'autorise, aucune promotion automatique après suppression, parcours 8 |
 | A8 | `libelle` est facultatif, affiché dans la liste du carnet | distingue deux adresses proches à la lecture, jamais une clé ni un critère de sélection, parcours 8 |
 | A9 | Un carnet vide ne bloque jamais un achat | parcours 8, l'achat sans compte est le mode par défaut, ADR-023 |
-| A10 | Supprimer un compte supprime son carnet et **dissocie** ses commandes | cascade sur `AdresseCarnet`, jamais sur `Commande`, invariants 3 et 4. Les six références vers `Utilisateur` ont chacune leur politique, voir la section sur la suppression |
+| A10 | Supprimer un compte supprime son carnet et **dissocie** ses commandes | cascade sur `AdresseCarnet`, jamais sur `Commande`, invariants 3 et 4. Les **huit** références vers `Utilisateur` ont chacune leur politique, voir la section sur la suppression |
 | A11 | Toute écriture sur une adresse est recoupée sur la session | niveau 3, `AND utilisateurId = <session>`, jamais `WHERE id` seul, invariant 2 |
 
 **Aucune clé étrangère ne part de `Commande` vers `AdresseCarnet`.** C'est le
@@ -709,13 +712,15 @@ erDiagram
     DEMANDE_RETRACTATION {
         identifiant id PK
         identifiant commandeId FK
-        enum statut "DEPOSEE ACCUSEE RETOUR_ATTENDU RECUE REMBOURSEMENT_EN_COURS REMBOURSEE REFUSEE"
+        enum statut "DEPOSEE ACCUSEE RETOUR_ATTENDU EXPEDITION_PROUVEE REMBOURSEMENT_EN_COURS REMBOURSEE REFUSEE"
         texte motifCliente "nullable"
         texte motifDecision "nullable, obligatoire si REFUSEE"
         entier montantRembourseCentimes "nullable"
         horodatage deposeeA
         horodatage accuseeA "nullable"
         horodatage retourAttenduA "nullable, base du seuil d alerte"
+        texte preuveExpeditionRetour "nullable, numero de suivi ou reference"
+        horodatage preuveExpeditionA "nullable, declenche le remboursement, L221-24"
         horodatage recueA "nullable"
     }
     JETON_ACCES {
@@ -742,7 +747,9 @@ erDiagram
 | L9 | Un jeton valide n'est ni expiré, ni consommé, ni révoqué | `expireA > maintenant AND utiliseA IS NULL AND revoqueA IS NULL`, les trois conditions |
 | L10 | Révoquer un jeton renseigne `revoqueA`, jamais `utiliseA` | consommation et révocation sont deux états distincts, voir ci-dessous |
 | L11 | `empreinte`, `portee`, `commandeId` et `expireA` sont immuables après écriture | seuls `utiliseA` et `revoqueA` évoluent, de nul vers une date |
-| L7 | Le remboursement suppose la réception du retour | parcours 5, aucun automatisme |
+| L7 | Le remboursement est dû au **premier** de deux faits, réception du retour ou preuve de son expédition | article L221-24, voir ci-dessous |
+| L12 | La réception se constate par `recueA`, jamais par le statut | elle survient à n'importe quel moment, y compris après `REMBOURSEE`, et conditionne seule le mouvement `RETOUR`, règle S8 |
+| L13 | Une demande `REMBOURSEE` sans `recueA` au-delà du seuil produit une alerte | la pièce est sortie du stock sans être revenue, écart à traiter avec le transporteur |
 | L8 | Chaque étape de la demande porte son propre horodatage | le seuil d'alerte se calcule depuis `retourAttenduA`, voir ci-dessous |
 
 ### Pourquoi le jeton d'accès est une entité générique
@@ -799,12 +806,76 @@ de la demande.
 Les deux dates coïncident presque sur le chemin nominal. Elles divergent dès que
 l'accusé de réception échoue : la demande reste `DEPOSEE`, et le passage en
 `RETOUR_ATTENDU` peut n'intervenir que cinq jours plus tard, après renvoi manuel.
-Un seuil calculé depuis `deposeeA` alerterait alors cinq jours trop tôt, sur une
+Un seuil calculé depuis `deposeeA` alerterait alors cinq jours trop tôt, sur un
 client qui n'a jamais reçu ses instructions de retour.
 
-`retourAttenduA` et `recueA` s'ajoutent donc à `deposeeA` et `accuseeA`. Cette
-demande a peu d'états et une durée de vie courte : quatre horodatages suffisent,
-là où la commande justifie un historique de transitions séparé.
+`retourAttenduA`, `preuveExpeditionA` et `recueA` s'ajoutent donc à `deposeeA` et
+`accuseeA`. Cette demande a peu d'états et une durée de vie courte : ces
+horodatages suffisent, là où la commande justifie un historique de transitions
+séparé.
+
+### Le remboursement se déclenche au premier de deux faits
+
+Corrigé par LS-41, vérifié sur Légifrance. L'article L221-24 dispose que le
+professionnel « peut différer le remboursement jusqu'à récupération des biens
+**ou** jusqu'à ce que le consommateur ait fourni une preuve de l'expédition de
+ces biens, **la date retenue étant celle du premier de ces faits** ».
+
+Le modèle posait l'inverse, un remboursement conditionné à la seule réception.
+
+Le scénario que cela produisait est banal. Le client renvoie le colis le 3 et
+transmet son numéro de suivi le jour même. Le colis met trois semaines, ou se
+perd en chemin. Le remboursement est dû depuis le 3, et rien dans le modèle ne
+permettait de le déclencher : la demande restait bloquée en `RETOUR_ATTENDU`
+jusqu'à une réception qui n'arrivait parfois jamais.
+
+D'où `preuveExpeditionRetour` et `preuveExpeditionA`, et le statut
+`EXPEDITION_PROUVEE` qui s'intercale entre `RETOUR_ATTENDU` et
+`REMBOURSEMENT_EN_COURS`. Le remboursement part alors sans attendre l'arrivée du
+colis, et c'est le cas que la loi impose de couvrir.
+
+**`EXPEDITION_PROUVEE` n'est pas un passage obligé.** L'autre fait de l'article
+L221-24 est la réception, qui se constate par `recueA` sans changer le statut,
+règle L12. Une demande passe donc légitimement de `RETOUR_ATTENDU` à
+`REMBOURSEMENT_EN_COURS` dès que `recueA` est renseigné, même si
+`preuveExpeditionA` reste nul.
+
+Ce cas est courant : un retour déposé en point relais ou glissé dans une boîte
+aux lettres n'a souvent aucun numéro de suivi transmis. Il ne faut ni bloquer la
+demande faute de transition prévue, ni renseigner `preuveExpeditionA` pour la
+débloquer, ce champ ayant une valeur probatoire qu'une écriture de confort
+détruirait.
+
+**La preuve est déclarative et cela ne change rien à l'obligation.** Un numéro de
+suivi fourni par le client suffit à faire courir le délai, l'exploitante n'ayant
+pas à le vérifier auprès du transporteur avant de rembourser. Le litige sur un
+retour jamais expédié se traite après, il ne justifie pas de retenir le
+remboursement.
+
+Le contrôle de l'état du bien reste possible à la réception, et fonde une
+éventuelle réduction, jamais un blocage du remboursement au-delà du délai légal.
+
+### Pourquoi `RECUE` n'est plus un statut
+
+Le statut portait `RECUE` avant LS-41. Ce statut ne survit pas à la règle L7 :
+dès lors que le remboursement peut partir sur une preuve d'expédition, la
+réception cesse d'être une étape du cycle pour devenir un **fait indépendant**,
+qui peut survenir avant, pendant ou longtemps après le remboursement.
+
+Le garder produisait deux impasses. Repasser une demande `REMBOURSEE` à `RECUE`
+est une régression d'état, elle apparaîtrait non remboursée dans toute liste
+filtrée sur le statut. La laisser `REMBOURSEE` en renseignant `recueA` créait un
+état que le statut contredit.
+
+`recueA` porte donc seul la réception, règle L12, et c'est lui qui conditionne le
+mouvement `RETOUR`, jamais le statut. C'est la traduction directe de S8 : la
+réintégration de stock dépend du retour physique et de rien d'autre.
+
+**Le cas de la pièce jamais revenue devient visible**, règle L13. Une demande
+`REMBOURSEE` dont `recueA` reste nul au-delà d'un seuil signale une pièce sortie
+du stock et jamais rentrée. Sans cette alerte, l'écart resterait invisible : le
+journal des mouvements montrerait une vente web, un avoir total, et rien qui
+explique où est passée la pièce.
 
 ### Le calcul du délai de rétractation n'est pas modélisé ici
 
@@ -828,6 +899,7 @@ erDiagram
     LIGNE_COMMANDE ||--o| INVITATION_AVIS : "invite a deposer"
     JETON_ACCES ||--o| INVITATION_AVIS : "jeton courant"
     AVIS ||--o| REPONSE_AVIS : "recoit"
+    UTILISATEUR ||--o{ REPONSE_AVIS : "redige"
     UTILISATEUR |o--o{ AVIS : "auteur eventuel"
 
     AVIS {
@@ -1103,8 +1175,9 @@ clients.
 
 ```mermaid
 erDiagram
-    UTILISATEUR ||--o{ JOURNAL_AUDIT : "agit"
-    UTILISATEUR ||--o{ MOUVEMENT_STOCK : "enregistre"
+    UTILISATEUR |o--o{ JOURNAL_AUDIT : "agit"
+    UTILISATEUR |o--o{ MOUVEMENT_STOCK : "enregistre"
+    UTILISATEUR |o--o{ ALERTE_CRITIQUE : "acquitte"
 
     UTILISATEUR {
         identifiant id PK
@@ -1191,9 +1264,13 @@ CREATE UNIQUE INDEX utilisateur_administratrice_unique
   WHERE role = 'ADMINISTRATRICE';
 ```
 
-Prisma ne génère pas cet index, la migration s'écrit à la main en LS-13, comme
-les `CHECK` d'ADR-006. Un index oublié ne fait rien échouer, le défaut reste
-invisible jusqu'à l'incident.
+La migration s'écrit à la main en LS-13, **par choix de stabilité**, ADR-023 :
+Prisma sait générer les index partiels, mais seulement par une fonctionnalité en
+avant-première dont la syntaxe peut changer. À la différence des `CHECK`
+d'ADR-006, qu'il ne génère pas du tout.
+
+Un index oublié ne fait rien échouer, le défaut reste invisible jusqu'à
+l'incident.
 
 **Le rôle se lit dans la session, jamais dans une requête.** C'est l'application
 directe de l'invariant 2 au cas le plus tentant : un identifiant ou un rôle qui
@@ -1300,7 +1377,7 @@ entièrement, cas d'erreur compris, sans invention de champ manquant.
 | second remboursement | second `Avoir` sur la même facture | oui |
 | double génération de facture | `UNIQUE` sur `facture.commandeId`, décision E | oui |
 | avoirs dépassant la facture | `Facture.montantAvoirCentimes` et son `CHECK`, décision F | oui |
-| pièce non retournée | aucun `MouvementStock` | oui |
+| pièce non retournée | aucun `MouvementStock`, `AlerteCritique`, règle L13 | oui |
 | PDF en échec | `Facture.cheminPdf` nul, `AlerteCritique` | oui |
 
 ### Parcours 5, rétractation
@@ -1311,10 +1388,14 @@ entièrement, cas d'erreur compris, sans invention de champ manquant.
 | identification du contrat | `JetonAcces.empreinte`, jamais le numéro seul | oui |
 | déclaration | `DemandeRetractation`, `motifCliente` | oui |
 | accusé de réception | `statut` `ACCUSEE`, `accuseeA`, `JournalEmail` | oui |
-| suivi du retour | `statut` et `retourAttenduA`, puis `RECUE` et `recueA` | oui |
+| suivi du retour | `statut` jusqu'à `EXPEDITION_PROUVEE`, `retourAttenduA`, `preuveExpeditionA`, puis `recueA` hors statut, règle L12 | oui |
 | remboursement | `Paiement`, `Avoir.demandeRetractationId`, décision F | oui |
 | réintégration | `MouvementStock` type `RETOUR` | oui |
 | jeton invalide | `expireA`, `utiliseA`, `revoqueA`, règle L9, `JournalAudit` | oui |
+| preuve d'expédition du retour | `preuveExpeditionRetour`, `preuveExpeditionA`, statut `EXPEDITION_PROUVEE` | oui |
+| colis perdu après preuve | le remboursement suit son cours, règle L7, article L221-24 | oui |
+| colis jamais reçu après remboursement | `recueA` nul sur une demande `REMBOURSEE`, `AlerteCritique`, règle L13 | oui |
+| colis reçu après remboursement | `recueA` horodaté hors statut, mouvement `RETOUR`, règle L12 | oui |
 | délai dépassé | horodatages conservés, règle non figée | oui |
 | échec de l'accusé | `JournalEmail` `ECHOUE`, `AlerteCritique` | oui |
 | colis jamais reçu | `retourAttenduA` comme base du seuil, `AlerteCritique` | oui |
@@ -1380,8 +1461,8 @@ entièrement, cas d'erreur compris, sans invention de champ manquant.
 | rattachement au carnet vide | aucune recopie rétroactive, règle A3 | oui |
 | écriture sur l'adresse d'autrui | recoupement sur la session, règle A11, invariant 2 | oui |
 
-**Résultat : les huit parcours et leurs cinquante-quatre cas d'erreur se
-déroulent sans champ manquant.**
+**Résultat : les huit parcours et leurs cinquante-sept cas d'erreur se déroulent
+sans champ manquant.**
 
 Le total annoncé avant LS-40 était de quarante-quatre pour quarante-trois cas
 réels, le parcours 7 en portant onze et non douze. Écart de comptage corrigé ici,
@@ -1486,6 +1567,7 @@ portées par le code de la transaction, et testées.
 | R19 | Le renvoi d'une invitation révoque l'ancien jeton et remplace le pointeur ensemble |
 | R21 | Le dépôt d'un avis et la consommation de son jeton d'invitation sont indissociables |
 | A6 | La bascule d'adresse par défaut retire l'ancien drapeau avant de poser le nouveau |
+| A10 | La suppression d'un compte marque `dissocieA` avant de supprimer le compte |
 
 ### Niveau 3, contrôlé par l'application
 
@@ -1526,24 +1608,39 @@ L'archivage remplace la suppression. Seules `Reservation`, `VerrouTache` et
 `AdresseCarnet` sont réellement supprimables. Les deux premières sont
 transitoires ; la troisième l'est parce qu'aucune commande n'en dépend, règle A4.
 
-**Suppression d'un compte**, précisé par LS-40. Six tables référencent
-`Utilisateur`, et chacune exige sa politique explicite. Une politique oubliée
-vaut `RESTRICT` et bloque alors toute demande d'effacement ; une cascade posée par
-réflexe détruit un document que le projet conserve.
+**Suppression d'un compte**, précisé par LS-40, recensement corrigé par LS-41.
+**Huit** références pointent vers `Utilisateur`, et chacune exige sa politique
+explicite. Une politique oubliée vaut `RESTRICT` et bloque alors toute demande
+d'effacement ; une cascade posée par réflexe détruit un document que le projet
+conserve.
 
 | Référence | Politique | Motif |
 |---|---|---|
 | `AdresseCarnet.utilisateurId` | cascade | le carnet appartient au compte, aucune commande n'en dépend, règle A3 |
 | `Commande.utilisateurId` | mise à nul, plus `dissocieA` | une commande facturée ne se supprime jamais, invariants 3 et 4, règle V15 |
 | `Avis.utilisateurId` | mise à nul | un avis publié reste en ligne, sa preuve d'achat tenant à la ligne de commande |
-| `ReponseAvis.auteurId` | sans objet | l'administratrice, dont le compte ne se supprime pas |
+| `ReponseAvis.auteurId` | `RESTRICT` assumé | `auteurId` n'est pas nullable et une réponse publiée ne s'efface pas. Le compte d'administration devient indestructible dès sa première réponse, ce qui est voulu |
 | `JournalAudit.acteurId` | mise à nul | l'action reste tracée même si l'acteur disparaît |
 | `AlerteCritique.acquitteeParId` | mise à nul | l'acquittement reste vrai, son auteur devient anonyme |
-| `MouvementStock.acteurId` | sans objet | l'administratrice, et le champ n'est pas nullable |
+| `MouvementStock.acteurId` | mise à nul | nullable depuis LS-41, un mouvement automatique porte `origine = SYSTEME` |
+| `HistoriqueStatut.acteurId` | mise à nul | déjà nullable, la transition reste tracée par son `origine` |
 
-Les deux « sans objet » supposent que le compte d'administration ne se supprime
-pas, ce que garantit ADR-021 : il est unique et sa création passe par une
-intervention manuelle en base.
+**Le `RESTRICT` de `ReponseAvis` est écrit, pas laissé implicite.** Précision de
+LS-41 : le tableau portait « sans objet », au motif qu'ADR-021 rend le compte
+d'administration unique et créé manuellement. C'est une hypothèse d'exploitation,
+pas une garantie de schéma. Une politique non déclarée vaut `RESTRICT` de toute
+façon, et se lirait en production comme une erreur de suppression incompréhensible
+plutôt que comme une décision.
+
+Aucune suppression de compte client n'est concernée : seule l'administratrice
+rédige des réponses d'avis.
+
+**Les politiques de clé étrangère ne suffisent pas.** `ON DELETE SET NULL` remet
+`Commande.utilisateurId` à nul mais ne peut pas renseigner `dissocieA`, dont
+dépend la règle V15. La suppression d'un compte est donc une transaction, la
+dixième de `.claude/rules/database.md` : marquer les commandes, puis supprimer le
+compte, les autres références étant traitées par leur politique. Marquer après
+suppression est impossible, le lien ayant disparu.
 
 **Une variante ne se supprime jamais**, règle C13. Elle s'archive, sans quoi sa
 référence redeviendrait libre et pourrait être réattribuée à une autre pièce,
