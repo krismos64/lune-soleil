@@ -25,6 +25,30 @@ viennent du texte, pas d'une appréciation.
 | Renvoi par le consommateur | 14 jours après sa décision | L221-23 |
 | Remboursement par le professionnel | 14 jours après information | L221-24 |
 | Report du remboursement | jusqu'au **premier** de deux faits, récupération du bien **ou** preuve de son expédition par le consommateur | L221-24 |
+| Frais de retour | à la charge du client, **seulement s'il en a été informé avant la commande** | L221-5 et L221-23 |
+
+### Les frais de retour se perdent faute d'information
+
+Décision commerciale du 28 juillet 2026, LS-27 : les frais de retour sont à la
+charge du client. La loi l'autorise, à une condition qui n'est pas négociable.
+
+L'article L221-23 pose que le consommateur ne supporte ces frais que si le
+professionnel **l'en a informé**. À défaut, ils reviennent au vendeur, et la
+charge de la preuve pèse sur le vendeur : c'est à lui de démontrer qu'il a
+informé, pas au client de démontrer le contraire.
+
+L'article L221-20 aggrave l'enjeu : une information incorrecte sur le droit de
+rétractation porte le délai à **douze mois**. Une mention oubliée ne coûte donc
+pas quelques euros de port, elle ouvre un an de rétractation possible.
+
+**Trois emplacements obligatoires**, et le premier est celui qu'on oublie :
+
+1. **avant la validation de la commande**, dans le tunnel, pas seulement dans les
+   conditions générales que personne ne lit
+2. dans les conditions générales de vente
+3. dans le formulaire type de rétractation
+
+Une formule vague ne suffit pas. Le principe doit être explicite.
 
 ### Le calcul n'est pas un ajout de quatorze jours
 
@@ -65,14 +89,27 @@ caractéristique concrète du produit et non de sa catégorie. Ne jamais coder
 « les boucles d'oreilles sont exclues ». Un refus se motive au cas par cas, avec
 un motif documenté obligatoire.
 
-### Dépendance ouverte
+### D'où vient la date de réception
 
-Le point de départ suppose de connaître la date de réception du colis. **D'où
-vient cette date n'est pas tranché**, ticket LS-33.
+Le point de départ suppose de connaître la date de réception du colis. **Tranché
+le 28 juillet 2026, LS-33** : elle vient du suivi automatique Mondial Relay,
+offre Start, par API.
 
-Tant que la question reste ouverte, le repli est la date d'expédition **plus une
-marge de sécurité couvrant le délai d'acheminement**, jamais la date d'expédition
-seule.
+**Le piège tient en deux événements que le transporteur distingue** et qu'il ne
+faut jamais confondre :
+
+| Événement Mondial Relay | Sens | Effet |
+|---|---|---|
+| disponible au Point Relais | le colis est arrivé, le client ne l'a pas | **aucun** |
+| remis au destinataire | le client l'a physiquement récupéré | renseigne `livreA` |
+
+Seul le second fait courir le délai de rétractation et déclenche l'invitation à
+déposer un avis. Un colis peut rester une semaine en relais avant retrait :
+prendre le premier événement éteindrait le droit du client avant terme.
+
+Le repli, si l'API est indisponible ou si un suivi reste bloqué, est la date
+d'expédition **plus une marge de sécurité couvrant le délai d'acheminement**,
+jamais la date d'expédition seule.
 
 **Faire courir les quatorze jours depuis l'expédition est une faute.** Le délai
 légal court à compter de la réception, et l'expédition précède la réception :
