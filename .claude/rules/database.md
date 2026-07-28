@@ -111,7 +111,8 @@ Quatre clés, chacune sur un effet de l'étape de confirmation :
 UNIQUE paiement (commande_id)                    WHERE statut = 'REUSSI'
 UNIQUE mouvement_stock (commande_id, variante_id) WHERE type = 'VENTE_WEB'
 UNIQUE facture (commande_id)
-UNIQUE journal_email (commande_id, modele)        WHERE origine = 'SYSTEME'
+UNIQUE journal_email (commande_id, modele)        WHERE statut = 'ENVOYE'
+                                                    AND origine IN ('SYSTEME','RECONCILIATION')
 UNIQUE media (produit_id)                         WHERE ordre = 1
 ```
 
@@ -120,7 +121,9 @@ La clé du mouvement porte **la variante et pas seulement la commande**. Un pani
 unicité sur la seule commande rendrait tout panier multi-articles impossible à
 confirmer.
 
-La clé de l'email filtre sur `origine = SYSTEME` pour laisser passer le renvoi
+La clé de l'email porte trois conditions, corrigées par LS-13 : `statut = 'ENVOYE'`
+laisse la retentative possible après un échec, règle E4, `RECONCILIATION` ferme le
+second chemin de la décision D, et exclure `ADMIN` laisse passer le renvoi
 manuel après échec, prévu au parcours 1.
 
 Référence : `docs/architecture/MODELE-CONCEPTUEL.md`, décision D.

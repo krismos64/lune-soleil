@@ -1,0 +1,597 @@
+// Modèle logique de Lune & Soleil, LS-13.
+//
+// Traduction de docs/architecture/MODELE-CONCEPTUEL.md, sept domaines.
+// Chaque contrainte porte en commentaire la règle qu'elle garantit.
+//
+// Conventions fixées par LS-13 :
+//   - modèles et champs en camelCase, tables et colonnes en snake_case via @map
+//   - montants en centimes entiers, jamais de flottant, invariant 1
+//   - horodatages en UTC, invariant 8
+//
+// Ce que ce fichier ne porte pas, et qui vit dans la migration SQL manuelle :
+// les contraintes CHECK, que Prisma ne génère pas. Voir ADR-006 et le fichier
+// prisma/migrations/manual/001_contraintes_check.sql.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Énumérations
+// ---------------------------------------------------------------------------
+
+enum Role {
+  CLIENT
+  ADMINISTRATRICE
+}
+
+enum StatutProduit {
+  BROUILLON
+  ACTIF
+  ARCHIVE
+}
+
+enum StatutTraitementMedia {
+  EN_ATTENTE
+  TRAITE
+  ECHOUE
+}
+
+enum TypeMouvementStock {
+  VENTE_WEB
+  VENTE_EXTERNE
+  RETOUR
+  AJUSTEMENT
+  ENTREE
+}
+
+enum OrigineEcriture {
+  SYSTEME
+  ADMIN
+  RECONCILIATION
+}
+
+enum StatutCommande {
+  EN_ATTENTE_PAIEMENT
+  CONFIRMEE
+  EN_PREPARATION
+  EXPEDIEE
+  LIVREE
+  ANNULEE
+}
+
+enum StatutPaiement {
+  EN_ATTENTE
+  REUSSI
+  ECHOUE
+  REMBOURSE
+}
+
+enum StatutRetractation {
+  DEPOSEE
+  ACCUSEE
+  RETOUR_ATTENDU
+  EXPEDITION_PROUVEE
+  REMBOURSEMENT_EN_COURS
+  REMBOURSEE
+  REFUSEE
+}
+
+enum PorteeJeton {
+  DOCUMENT
+  RETRACTATION
+  SUIVI
+  AVIS
+}
+
+enum StatutAvis {
+  DEPOSE
+  PUBLIE
+  REFUSE
+  RETIRE
+}
+
+enum StatutEmail {
+  ENVOYE
+  ECHOUE
+}
+
+enum GraviteAlerte {
+  AVERTISSEMENT
+  CRITIQUE
+}
+
+// ---------------------------------------------------------------------------
+// Domaine 1, catalogue
+// ---------------------------------------------------------------------------
+
+model Categorie {
+  id       String    @id @default(uuid())
+  nom      String
+  slug     String    @unique // C3
+  creeA    DateTime  @default(now()) @map("cree_a") @db.Timestamptz(3)
+  produits Produit[]
+
+  @@map("categorie")
+}
+
+model Produit {
+  id          String        @id @default(uuid())
+  categorieId String        @map("categorie_id")
+  nom         String
+  slug        String        @unique // C3
+  description String?
+  statut      StatutProduit @default(BROUILLON)
+  archiveA    DateTime?     @map("archive_a") @db.Timestamptz(3)
+  creeA       DateTime      @default(now()) @map("cree_a") @db.Timestamptz(3)
+  modifieA    DateTime      @updatedAt @map("modifie_a") @db.Timestamptz(3)
+
+  categorie Categorie  @relation(fields: [categorieId], references: [id], onDelete: Restrict)
+  variantes Variante[]
+  medias    Media[]
+
+  // C9, un produit a au plus un média de rang 1. L'index partiel est la
+  // traduction exacte : il n'interdit rien sur les rangs 2 et suivants.
+  @@map("produit")
+}
+
+model Variante {
+  id               String    @id @default(uuid())
+  produitId        String    @map("produit_id")
+  reference        String    @unique // C2, jamais réattribuée, C14
+  libelle          String
+  prixCentimes     Int       @map("prix_centimes") // C4, invariant 1
+  quantitePhysique Int       @map("quantite_physique") // CHECK >= 0, C5
+  quantiteReservee Int       @default(0) @map("quantite_reservee") // CHECK, C5 et C6
+  venteWebActivee  Boolean   @default(true) @map("vente_web_activee") // C12
+  archiveeA        DateTime? @map("archivee_a") @db.Timestamptz(3) // C13, jamais supprimée
+  creeA            DateTime  @default(now()) @map("cree_a") @db.Timestamptz(3)
+
+  produit         Produit          @relation(fields: [produitId], references: [id], onDelete: Restrict)
+  reservations    Reservation[]
+  mouvements      MouvementStock[]
+  lignesCommande  LigneCommande[]
+
+  @@index([produitId], map: "variante_produit_idx")
+  @@map("variante")
+}
+
+model Media {
+  id                 String                @id @default(uuid())
+  produitId          String                @map("produit_id")
+  chemin             String
+  texteAlternatif    String?               @map("texte_alternatif") // C7
+  ordre              Int
+  statutTraitement   StatutTraitementMedia @default(EN_ATTENTE) @map("statut_traitement") // C8
+  identifiantFournisseur String?           @unique @map("identifiant_fournisseur")
+  creeA              DateTime              @default(now()) @map("cree_a") @db.Timestamptz(3)
+
+  produit Produit @relation(fields: [produitId], references: [id], onDelete: Cascade)
+
+  // C9, au plus un média de rang 1 par produit. Le filtre est ce qui rend la
+  // contrainte utilisable : sans lui, un produit ne pourrait avoir qu'un média.
+  @@unique([produitId], where: raw("ordre = 1"), map: "media_principal_unique")
+  @@map("media")
+}
+
+// ---------------------------------------------------------------------------
+// Domaine 2, stock
+// ---------------------------------------------------------------------------
+
+model Reservation {
+  id         String   @id @default(uuid())
+  varianteId String   @map("variante_id")
+  commandeId String?  @map("commande_id")
+  quantite   Int // CHECK > 0
+  expireA    DateTime @map("expire_a") @db.Timestamptz(3) // expiration obligatoire, stock bloqué à vie sinon
+  creeA      DateTime @default(now()) @map("cree_a") @db.Timestamptz(3)
+
+  variante Variante  @relation(fields: [varianteId], references: [id], onDelete: Restrict)
+  commande Commande? @relation(fields: [commandeId], references: [id], onDelete: SetNull)
+
+  @@index([expireA], map: "reservation_expire_idx") // tâche de libération, toutes les 5 minutes
+  // S5 et C18 lisent les réservations actives d'une variante avant d'autoriser
+  // une vente externe ou un archivage. Sans index, balayage séquentiel sur une
+  // table qui accumule les réservations expirées entre deux purges.
+  @@index([varianteId], map: "reservation_variante_idx")
+  @@index([commandeId], map: "reservation_commande_idx")
+  @@map("reservation")
+}
+
+model MouvementStock {
+  id         String             @id @default(uuid())
+  varianteId String             @map("variante_id")
+  commandeId String?            @map("commande_id")
+  type       TypeMouvementStock
+  quantite   Int // signe selon le type
+  canal      String?
+  motif      String?
+  acteurId   String?            @map("acteur_id") // S9, nul si origine SYSTEME
+  origine    OrigineEcriture // S9, un webhook n'est pas une personne
+  creeA      DateTime           @default(now()) @map("cree_a") @db.Timestamptz(3)
+
+  variante Variante     @relation(fields: [varianteId], references: [id], onDelete: Restrict)
+  commande Commande?    @relation(fields: [commandeId], references: [id], onDelete: SetNull)
+  acteur   Utilisateur? @relation(fields: [acteurId], references: [id], onDelete: SetNull)
+
+  // S7 et décision D, clé d'idempotence. La clé porte (commandeId, varianteId)
+  // et non la commande seule : un panier à deux articles produit deux mouvements.
+  @@unique([commandeId, varianteId], where: raw("type = 'VENTE_WEB'"), map: "mouvement_vente_web_unique")
+  @@index([varianteId], map: "mouvement_variante_idx") // historique d'une pièce, et contrôle RESTRICT
+  @@map("mouvement_stock")
+}
+
+// ---------------------------------------------------------------------------
+// Domaine 3, vente
+// ---------------------------------------------------------------------------
+
+model Commande {
+  id                   String         @id @default(uuid())
+  numero               String         @unique // C-2026-0001, attribué dans la transaction
+  statut               StatutCommande @default(EN_ATTENTE_PAIEMENT) // V5, axe distinct du paiement
+  emailNormalise       String         @map("email_normalise")
+  nomClient            String         @map("nom_client")
+  telephone            String?
+  utilisateurId        String?        @map("utilisateur_id") // nullable, achat sans compte
+  dissocieA            DateTime?      @map("dissocie_a") @db.Timestamptz(3) // V15, compte supprimé, exclut du rattachement
+  adresseLivraison     Json           @map("adresse_livraison") // copie figée, A3, invariants 3 et 4
+  adresseFacturation   Json           @map("adresse_facturation") // copie figée
+  sousTotalCentimes    Int            @map("sous_total_centimes")
+  fraisPortCentimes    Int            @map("frais_port_centimes")
+  totalCentimes        Int            @map("total_centimes")
+  montantTaxeCentimes  Int            @default(0) @map("montant_taxe_centimes") // franchise en base
+  cguAccepteesA        DateTime       @map("cgu_acceptees_a") @db.Timestamptz(3) // V10, preuve du consentement
+  cguVersion           String         @map("cgu_version")
+  creeA                DateTime       @default(now()) @map("cree_a") @db.Timestamptz(3)
+
+  utilisateur      Utilisateur?         @relation(fields: [utilisateurId], references: [id], onDelete: SetNull)
+  lignes           LigneCommande[]
+  paiements        Paiement[]
+  reservations     Reservation[]
+  mouvements       MouvementStock[]
+  historiques      HistoriqueStatut[]
+  expedition       Expedition?
+  facture          Facture?
+  retractation     DemandeRetractation?
+  jetons           JetonAcces[]
+  journauxEmail    JournalEmail[]
+
+  @@index([emailNormalise], map: "commande_email_idx")
+  @@map("commande")
+}
+
+model LigneCommande {
+  id             String   @id @default(uuid())
+  commandeId     String   @map("commande_id")
+  varianteId     String?  @map("variante_id") // nullable, la ligne survit à la variante
+  referenceFigee String   @map("reference_figee") // V4, copie figée, invariant 3
+  libelleFige    String   @map("libelle_fige")
+  prixFigeCentimes Int    @map("prix_fige_centimes")
+  quantite       Int // CHECK > 0
+  creeA          DateTime @default(now()) @map("cree_a") @db.Timestamptz(3)
+
+  commande   Commande        @relation(fields: [commandeId], references: [id], onDelete: Restrict)
+  variante   Variante?       @relation(fields: [varianteId], references: [id], onDelete: SetNull)
+  avis       Avis?
+  invitation InvitationAvis?
+
+  @@index([commandeId], map: "ligne_commande_commande_idx") // lecture d'une commande, chemin le plus fréquent
+  @@index([varianteId], map: "ligne_commande_variante_idx") // regroupement des avis par variante, décision G
+  @@map("ligne_commande")
+}
+
+model Paiement {
+  id                     String         @id @default(uuid())
+  commandeId             String         @map("commande_id")
+  statut                 StatutPaiement @default(EN_ATTENTE)
+  montantCentimes        Int            @map("montant_centimes")
+  montantRembourseCentimes Int          @default(0) @map("montant_rembourse_centimes") // CHECK <= montant
+  identifiantFournisseur String?        @map("identifiant_fournisseur")
+  motifEchec             String?        @map("motif_echec") // décision B, une colonne écraserait le motif
+  creeA                  DateTime       @default(now()) @map("cree_a") @db.Timestamptz(3)
+
+  commande    Commande               @relation(fields: [commandeId], references: [id], onDelete: Restrict)
+  evenements  EvenementFournisseur[]
+
+  // V14 et décision D, première clé d'idempotence : au plus un paiement réussi
+  // par commande. La contrainte protège la cohérence, pas le double encaissement
+  // chez le prestataire, qui relève de LS-43.
+  @@unique([commandeId], where: raw("statut = 'REUSSI'"), map: "paiement_reussi_unique")
+  @@index([commandeId], map: "paiement_commande_idx") // tentatives d'une commande, décision B
+  @@map("paiement")
+}
+
+model EvenementFournisseur {
+  id                     String   @id @default(uuid())
+  paiementId             String?  @map("paiement_id")
+  identifiantFournisseur String   @unique @map("identifiant_fournisseur") // rejeu du même événement
+  type                   String
+  charge                 Json
+  traiteA                DateTime? @map("traite_a") @db.Timestamptz(3)
+  creeA                  DateTime @default(now()) @map("cree_a") @db.Timestamptz(3)
+
+  paiement Paiement? @relation(fields: [paiementId], references: [id], onDelete: SetNull)
+
+  @@map("evenement_fournisseur")
+}
+
+model HistoriqueStatut {
+  id              String          @id @default(uuid())
+  commandeId      String          @map("commande_id")
+  statutPrecedent String?         @map("statut_precedent")
+  statutNouveau   String          @map("statut_nouveau")
+  acteurId        String?         @map("acteur_id")
+  origine         OrigineEcriture
+  creeA           DateTime        @default(now()) @map("cree_a") @db.Timestamptz(3)
+
+  commande Commande     @relation(fields: [commandeId], references: [id], onDelete: Restrict)
+  acteur   Utilisateur? @relation(fields: [acteurId], references: [id], onDelete: SetNull)
+
+  @@index([commandeId], map: "historique_commande_idx")
+  @@map("historique_statut")
+}
+
+model Expedition {
+  id             String    @id @default(uuid())
+  commandeId     String    @unique @map("commande_id")
+  transporteur   String // Mondial Relay, extensible à Colissimo, LS-33
+  numeroSuivi    String?   @map("numero_suivi")
+  pointRelaisId  String?   @map("point_relais_id")
+  statutTransporteur String? @map("statut_transporteur")
+  expedieA       DateTime? @map("expedie_a") @db.Timestamptz(3)
+  livreA         DateTime? @map("livre_a") @db.Timestamptz(3) // V11, uniquement « remis au destinataire »
+  synchroniseA   DateTime? @map("synchronise_a") @db.Timestamptz(3) // détecte un suivi bloqué
+  creeA          DateTime  @default(now()) @map("cree_a") @db.Timestamptz(3)
+
+  commande Commande @relation(fields: [commandeId], references: [id], onDelete: Restrict)
+
+  @@map("expedition")
+}
+
+model AdresseCarnet {
+  id            String   @id @default(uuid())
+  utilisateurId String   @map("utilisateur_id") // A1
+  libelle       String?  // A8, facultatif, affiché dans la liste
+  nomComplet    String   @map("nom_complet")
+  ligne1        String
+  ligne2        String?
+  codePostal    String   @map("code_postal")
+  ville         String
+  pays          String
+  telephone     String?
+  estParDefaut  Boolean  @default(false) @map("est_par_defaut")
+  creeA         DateTime @default(now()) @map("cree_a") @db.Timestamptz(3)
+
+  utilisateur Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade) // A10
+
+  // A2, au plus une adresse par défaut par compte. A7 autorise zéro.
+  @@unique([utilisateurId], where: raw("est_par_defaut"), map: "adresse_defaut_unique")
+  @@map("adresse_carnet")
+}
+
+// ---------------------------------------------------------------------------
+// Domaine 4, comptabilité
+// ---------------------------------------------------------------------------
+
+model Facture {
+  id                    String   @id @default(uuid())
+  commandeId            String   @unique @map("commande_id") // décision D, quatrième clé
+  numero                String   @unique // F-2026-0001, attribué dans la transaction, F4
+  montantTotalCentimes  Int      @map("montant_total_centimes")
+  montantAvoirCentimes  Int      @default(0) @map("montant_avoir_centimes") // CHECK <= total
+  instantaneLegal       Json     @map("instantane_legal") // copie figée, invariant 4
+  emiseA                DateTime @default(now()) @map("emise_a") @db.Timestamptz(3)
+
+  commande Commande @relation(fields: [commandeId], references: [id], onDelete: Restrict)
+  avoirs   Avoir[]
+
+  @@map("facture")
+}
+
+model Avoir {
+  id                     String   @id @default(uuid())
+  factureId              String   @map("facture_id")
+  demandeRetractationId  String?  @map("demande_retractation_id")
+  numero                 String   @unique // A-2026-0001, séquence distincte, F4
+  montantCentimes        Int      @map("montant_centimes")
+  motif                  String
+  emisA                  DateTime @default(now()) @map("emis_a") @db.Timestamptz(3)
+
+  facture      Facture              @relation(fields: [factureId], references: [id], onDelete: Restrict)
+  retractation DemandeRetractation? @relation(fields: [demandeRetractationId], references: [id], onDelete: SetNull)
+
+  @@index([factureId], map: "avoir_facture_idx") // somme des avoirs d'une facture, règle F9
+  @@map("avoir")
+}
+
+// ---------------------------------------------------------------------------
+// Domaine 5, légal
+// ---------------------------------------------------------------------------
+
+model DemandeRetractation {
+  id                      String             @id @default(uuid())
+  commandeId              String             @unique @map("commande_id")
+  statut                  StatutRetractation @default(DEPOSEE)
+  motifClient             String?            @map("motif_client")
+  motifDecision           String?            @map("motif_decision") // L2, obligatoire si REFUSEE
+  montantRembourseCentimes Int?              @map("montant_rembourse_centimes")
+  deposeeA                DateTime           @default(now()) @map("deposee_a") @db.Timestamptz(3) // L1, conservée telle quelle
+  accuseeA                DateTime?          @map("accusee_a") @db.Timestamptz(3)
+  retourAttenduA          DateTime?          @map("retour_attendu_a") @db.Timestamptz(3) // base du seuil d'alerte, L8
+  preuveExpeditionRetour  String?            @map("preuve_expedition_retour") // L7, article L221-24
+  preuveExpeditionA       DateTime?          @map("preuve_expedition_a") @db.Timestamptz(3) // premier des deux faits
+  recueA                  DateTime?          @map("recue_a") @db.Timestamptz(3) // L12, hors statut, déclenche le RETOUR
+
+  commande Commande @relation(fields: [commandeId], references: [id], onDelete: Restrict)
+  avoirs   Avoir[]
+
+  @@map("demande_retractation")
+}
+
+model JetonAcces {
+  id         String      @id @default(uuid())
+  commandeId String      @map("commande_id")
+  empreinte  String      @unique // L5, jamais la valeur en clair, invariant 9
+  portee     PorteeJeton // L6, moindre privilège
+  expireA    DateTime    @map("expire_a") @db.Timestamptz(3) // L11, immuable après écriture
+  utiliseA   DateTime?   @map("utilise_a") @db.Timestamptz(3) // L9 et L10, consommation
+  revoqueA   DateTime?   @map("revoque_a") @db.Timestamptz(3) // L10, révocation, distincte de la consommation
+
+  commande   Commande        @relation(fields: [commandeId], references: [id], onDelete: Restrict)
+  invitation InvitationAvis?
+
+  @@index([commandeId], map: "jeton_commande_idx")
+  @@map("jeton_acces")
+}
+
+// ---------------------------------------------------------------------------
+// Domaine 6, avis
+// ---------------------------------------------------------------------------
+
+model Avis {
+  id              String     @id @default(uuid())
+  ligneCommandeId String     @unique @map("ligne_commande_id") // R2, un avis par ligne, preuve d'achat structurelle
+  utilisateurId   String?    @map("utilisateur_id")
+  note            Int // CHECK entre 1 et 5
+  commentaire     String?
+  statut          StatutAvis @default(DEPOSE) // R4, jamais visible avant publication
+  motifDecision   String?    @map("motif_decision") // R5, obligatoire si REFUSE ou RETIRE
+  experienceA     DateTime   @map("experience_a") @db.Timestamptz(3) // obligatoire, article D111-17
+  deposeA         DateTime   @default(now()) @map("depose_a") @db.Timestamptz(3)
+  publieA         DateTime?  @map("publie_a") @db.Timestamptz(3)
+  decideA         DateTime?  @map("decide_a") @db.Timestamptz(3)
+  modifieA        DateTime?  @map("modifie_a") @db.Timestamptz(3) // R10, une modification renvoie en modération
+
+  ligneCommande LigneCommande @relation(fields: [ligneCommandeId], references: [id], onDelete: Restrict)
+  utilisateur   Utilisateur?  @relation(fields: [utilisateurId], references: [id], onDelete: SetNull)
+  reponse       ReponseAvis?
+
+  @@map("avis")
+}
+
+model ReponseAvis {
+  id         String    @id @default(uuid())
+  avisId     String    @unique @map("avis_id")
+  contenu    String
+  auteurId   String    @map("auteur_id") // RESTRICT assumé, l'administratrice
+  publieeA   DateTime  @default(now()) @map("publiee_a") @db.Timestamptz(3)
+  modifieeA  DateTime? @map("modifiee_a") @db.Timestamptz(3)
+
+  avis   Avis        @relation(fields: [avisId], references: [id], onDelete: Restrict)
+  auteur Utilisateur @relation(fields: [auteurId], references: [id], onDelete: Restrict)
+
+  @@map("reponse_avis")
+}
+
+model InvitationAvis {
+  id              String    @id @default(uuid())
+  ligneCommandeId String    @unique @map("ligne_commande_id") // R16, une invitation par ligne
+  jetonAccesId    String    @unique @map("jeton_acces_id") // R20, jeton courant, remplacé au renvoi
+  nombreEnvois    Int       @default(0) @map("nombre_envois") // tentatives, pas succès
+  dernierEnvoiA   DateTime? @map("dernier_envoi_a") @db.Timestamptz(3) // hors transaction, la preuve vit dans JournalEmail
+  creeA           DateTime  @default(now()) @map("cree_a") @db.Timestamptz(3)
+
+  ligneCommande LigneCommande @relation(fields: [ligneCommandeId], references: [id], onDelete: Restrict)
+  jetonAcces    JetonAcces    @relation(fields: [jetonAccesId], references: [id], onDelete: Restrict)
+
+  @@map("invitation_avis")
+}
+
+// ---------------------------------------------------------------------------
+// Domaine 7, exploitation
+// ---------------------------------------------------------------------------
+
+model Utilisateur {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  role         Role     @default(CLIENT) // E10, jamais nul, ADR-023
+  emailVerifie Boolean  @default(false) @map("email_verifie")
+  creeA        DateTime @default(now()) @map("cree_a") @db.Timestamptz(3)
+
+  commandes       Commande[]
+  adresses        AdresseCarnet[]
+  avis            Avis[]
+  reponsesAvis    ReponseAvis[]
+  journauxAudit   JournalAudit[]
+  mouvements      MouvementStock[]
+  historiques     HistoriqueStatut[]
+  alertes         AlerteCritique[]
+
+  // E1, un seul compte porte ADMINISTRATRICE. Un UNIQUE simple interdirait
+  // un second compte client : le filtre est ce qui rend la contrainte utilisable.
+  @@unique([role], where: raw("role = 'ADMINISTRATRICE'"), map: "utilisateur_administratrice_unique")
+  @@map("utilisateur")
+}
+
+model JournalAudit {
+  id        String   @id @default(uuid())
+  acteurId  String?  @map("acteur_id") // nullable, actions système
+  action    String
+  typeCible String   @map("type_cible")
+  idCible   String   @map("id_cible")
+  detail    Json
+  adresseIp String?  @map("adresse_ip")
+  creeA     DateTime @default(now()) @map("cree_a") @db.Timestamptz(3)
+
+  acteur Utilisateur? @relation(fields: [acteurId], references: [id], onDelete: SetNull)
+
+  @@map("journal_audit")
+}
+
+model JournalEmail {
+  id          String          @id @default(uuid())
+  commandeId  String?         @map("commande_id")
+  destinataire String
+  modele      String
+  statut      StatutEmail
+  origine     OrigineEcriture // E6, distingue le renvoi manuel de l'automatique
+  motifEchec  String?         @map("motif_echec")
+  creeA       DateTime        @default(now()) @map("cree_a") @db.Timestamptz(3)
+
+  commande Commande? @relation(fields: [commandeId], references: [id], onDelete: SetNull)
+
+  // E5 et décision D, quatrième clé d'idempotence.
+  //
+  // Le filtre porte trois conditions, chacune corrigeant un défaut trouvé en
+  // revue de LS-13 :
+  //
+  //   statut = ENVOYE     un envoi ECHOUE ne doit pas bloquer la retentative,
+  //                       règle E4, sans quoi une panne du fournisseur prive
+  //                       définitivement le client de son email
+  //   origine IN (...)    la réconciliation est le second chemin d'entrée que
+  //                       la décision D existe pour couvrir. Sans elle, un
+  //                       webhook tardif envoie une seconde confirmation
+  //   ADMIN exclu         le renvoi manuel reste possible, règle E6
+  @@unique([commandeId, modele], where: raw("statut = 'ENVOYE' AND origine IN ('SYSTEME','RECONCILIATION')"), map: "journal_email_systeme_unique")
+  @@map("journal_email")
+}
+
+model AlerteCritique {
+  id            String        @id @default(uuid())
+  type          String
+  message       String
+  gravite       GraviteAlerte
+  typeCible     String?       @map("type_cible")
+  idCible       String?       @map("id_cible")
+  acquitteeA    DateTime?     @map("acquittee_a") @db.Timestamptz(3) // E7, acquittable, jamais supprimée
+  acquitteeParId String?      @map("acquittee_par_id")
+  creeA         DateTime      @default(now()) @map("cree_a") @db.Timestamptz(3)
+
+  acquitteePar Utilisateur? @relation(fields: [acquitteeParId], references: [id], onDelete: SetNull)
+
+  @@map("alerte_critique")
+}
+
+model VerrouTache {
+  id       String   @id @default(uuid())
+  nom      String   @unique // E8, exécution unique
+  acquisA  DateTime @map("acquis_a") @db.Timestamptz(3)
+  expireA  DateTime @map("expire_a") @db.Timestamptz(3) // sans quoi une instance morte bloque la tâche
+
+  @@map("verrou_tache")
+}
