@@ -217,6 +217,52 @@ La parade a fonctionné les deux fois : faire relire les corrections elles-même
 pas seulement le travail initial. Sans la seconde passe, les deux défauts seraient
 partis en LS-13.
 
+## Le manquement de la journée, et sa correction
+
+Christophe a demandé en fin de session si la fusion sur `main` avait été faite.
+Elle ne l'avait pas été. Six commits, deux stories déclarées terminées sur les
+quatre canaux de traçabilité, et rien n'avait quitté la machine.
+
+Cause : le skill `story` s'arrêtait au commit. `CONTRIBUTING.md` exige pourtant
+une pull request systématique même en solo, avec fusion en rebase après contrôles
+au vert. Les deux documents ne se parlaient pas.
+
+C'est **la troisième fois en deux jours** que le même défaut se manifeste sous une
+forme différente. Le 27 juillet, le skill ne se déclenchait pas sur un travail
+exploratoire. Ce matin, la règle d'accord au féminin ne portait que sur les textes
+visibles et ne se chargeait que sur les fichiers d'interface. Cet après-midi, la
+convention de livraison n'était rappelée nulle part au moment de clore.
+
+Une règle rangée au mauvais endroit, ou que rien ne déclenche, ne s'applique pas.
+
+### Corrections
+
+Livraison effectuée : pull request [#1](https://github.com/krismos64/lune-soleil/pull/1),
+contrôle GitGuardian attendu, fusion en rebase pour l'historique linéaire, branche
+supprimée. Les SHA cités dans les commentaires Jira ont été réécrits par le
+rebase : la correspondance a été postée sur LS-12 et LS-37 plutôt que de laisser
+des références mortes.
+
+Le skill couvre désormais la livraison, avec la séquence de commandes et quatre
+pièges nommés. Son étape 7 passe de trois à quatre questions de contrôle, la
+première étant « le travail est-il sur `main` distante ». Les trois autres peuvent
+être parfaites pendant que le code dort en local.
+
+Un hook `Stop` avertit en fin de session s'il reste des commits absents de
+`origin/main`. Testé sur cinq cas, dont celui d'une branche poussée mais non
+fusionnée, qui est le piège suivant : une pull request ouverte puis oubliée laisse
+le travail aussi invisible qu'une branche locale.
+
+Le hook avertit sans bloquer, une session pouvant légitimement s'arrêter en cours
+de travail.
+
+### Ce qui aurait dû me mettre la puce à l'oreille
+
+Le journal du 27 juillet contient déjà la phrase « une bonne intention documentée
+ne suffit pas », écrite après un manquement de même nature. Je l'ai relue ce matin
+en écrivant la suite du journal, sans faire le rapprochement avec ma propre
+branche non poussée.
+
 ## Où on en est
 
 Phase 0, cadrage opérationnel. Cinq stories terminées sur treize.
