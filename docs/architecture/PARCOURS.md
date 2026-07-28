@@ -419,15 +419,21 @@ Deux situations, depuis que le remboursement peut précéder la réception.
 versement, comportement d'origine, rien ne change.
 
 **Réception après remboursement.** L'ajustement n'est plus disponible : la somme
-est versée et l'avoir émis est immuable, invariant 4. L'écart devient une créance
-sur le client, qui se traite hors du site. Le modèle ne le représente pas et ne
-doit pas laisser croire que `montantRembourseCentimes` reste modifiable après
-`REMBOURSEE`.
+est versée et l'avoir émis est immuable, invariant 4.
+
+**L'écart est assumé en perte**, décision de Christophe du 28 juillet 2026. Aucune
+créance n'est constituée, aucune somme n'est réclamée au client. Le dossier est
+clos au remboursement, quel que soit l'état de la pièce à son arrivée.
+
+Le modèle ne représente donc rien de plus : `montantRembourseCentimes` n'est pas
+modifiable après `REMBOURSEE`, et aucune entité de créance n'existe. La perte est
+constatée en comptabilité, hors du site.
 
 Le cas suppose d'avoir remboursé sur preuve d'expédition sans voir la pièce, ce
-que la loi impose. **Point à trancher avec l'exploitante** : réclamer la
-différence ou l'assumer en perte. Le choix n'a pas de conséquence sur le schéma,
-mais il en a sur la procédure d'exploitation.
+que la loi impose. Sur des pièces uniques à faible volume, poursuivre un client
+pour la différence coûterait plus que la pièce et abîmerait la relation. La
+dégradation constatée alimente en revanche le motif documenté, utile si le même
+client recommence.
 
 **Refus de la rétractation**
 Base : état refusé avec motif documenté obligatoire.
