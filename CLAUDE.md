@@ -88,7 +88,9 @@ dans `.claude/rules/frontend-design.md`.
 
 ## Interdits
 
-- Modifier le périmètre défini dans le cahier des charges.
+- Modifier le périmètre défini dans le cahier des charges. Un arbitrage explicite
+  de Christophe le modifie en revanche : il s'applique, et se trace dans un
+  ticket et dans la section Priorisation ci-dessus.
 - Décider d'une obligation juridique. Les textes de loi se vérifient aux sources.
 - Lire la valeur d'un secret dans un `.env`, une clé ou un certificat.
 - Modifier une commande ou une facture réelle.
@@ -102,9 +104,12 @@ Deux axes distincts, à ne pas confondre :
 - **Importance** : Must, Should, Could, Won't
 - **Jalon** : Go-Live, V1 cible, V1.x, Hors V1
 
-Une exigence Must sur Go-Live ne se repousse jamais. L'assistant IA, les avis
-vérifiés, le compte client et les statistiques appartiennent à la V1 cible et ne
-bloquent pas l'ouverture.
+Une exigence Must sur Go-Live ne se repousse jamais. L'assistant IA et les
+statistiques appartiennent à la V1 cible et ne bloquent pas l'ouverture.
+
+L'espace client, les avis vérifiés et le carnet d'adresses sont passés en
+périmètre d'ouverture le 28 juillet 2026, epic LS-36. Ils bloquent donc
+l'ouverture. Ne pas les traiter comme différables.
 
 Aucune date de livraison n'est fixée. Le pilotage se fait par portes de sortie de
 phase, pas par calendrier.

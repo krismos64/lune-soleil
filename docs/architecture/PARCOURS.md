@@ -36,9 +36,10 @@ commande sans compte à un compte vérifié est une transaction critique qui
 n'apparaît dans aucun parcours.
 
 Décision : les cinq parcours de la section 9, plus le rattachement de commande en
-sixième. Le rattachement appartient à la V1 cible, mais le modèle de données doit
-le prévoir dès maintenant, faute de quoi il faudra une migration sur des données
-historiques.
+sixième. Le rattachement appartenait à la V1 cible à cette date, et le modèle
+devait le prévoir dès maintenant pour éviter une migration sur des données
+historiques. Il est entré en périmètre d'ouverture le 28 juillet 2026, epic
+LS-36, ce qui confirme le choix sans le modifier.
 
 Les six premiers parcours couvrent ainsi les six transactions critiques de la
 section 15.5. Le septième, le dépôt d'un avis, est venu plus tard avec
@@ -346,8 +347,12 @@ Vue : motif communiqué.
 
 ## Parcours 6, rattachement d'une commande à un compte
 
-V1 cible. Le modèle de données doit néanmoins le prévoir dès maintenant, faute de
-quoi le rattachement exigera une migration sur des commandes historiques.
+Périmètre d'ouverture depuis le 28 juillet 2026, epic LS-36. Ce parcours était
+classé V1 cible à sa rédaction, l'espace client ayant depuis été avancé avant
+l'ouverture.
+
+L'achat sans compte reste le mode par défaut. Ce parcours décrit ce qui se passe
+quand un client crée un compte après avoir commandé.
 
 ### Chemin nominal
 
@@ -422,6 +427,11 @@ Vue : refus sécurisé, sans révéler si la commande existe.
 Suite : un nouveau lien peut être demandé depuis l'espace client. L'invitation
 existante est réutilisée, son `jetonAccesId` pointant vers le nouveau jeton et
 `nombreEnvois` étant incrémenté. Aucune seconde invitation n'est créée.
+
+**L'ancien jeton est révoqué dans la même transaction**, sans quoi il reste
+valide jusqu'à son expiration alors que plus aucune invitation ne le référence.
+Le premier lien, resté dans une boîte email partagée, permettrait de déposer
+l'avis à la place de son destinataire.
 
 **Invitation envoyée alors que la commande n'est pas livrée**
 Base : l'invitation n'est pas créée, la tâche ne sélectionne que les commandes
@@ -520,10 +530,14 @@ suppose qu'une variante ne soit **jamais supprimée** mais archivée, faute de q
 sa référence redeviendrait libre et pourrait être réattribuée à une autre pièce,
 faisant remonter d'anciens avis sur une fiche qui n'est pas la leur.
 
-**Champs prévus mais inutilisés au lancement** : propriétaire de commande. Le
-rattachement appartenait à la V1 cible lors de la rédaction de ce document, il
-est passé en périmètre d'ouverture le 28 juillet 2026, epic LS-36. Champs fiscaux
-à zéro, tant que la franchise en base s'applique.
+**Champs prévus mais inutilisés au lancement** : champs fiscaux à zéro, tant que
+la franchise en base s'applique.
+
+Le propriétaire de commande figurait dans cette liste. Il en sort : l'espace
+client est passé en périmètre d'ouverture le 28 juillet 2026, epic LS-36, donc
+`utilisateurId` est renseigné dès le lancement sur les commandes rattachées à un
+compte. Il reste nullable, l'achat sans compte demeurant le mode par défaut, et
+il n'autorise jamais un accès à lui seul, règle V13 et ADR-023.
 
 ## Ce qui a été tranché depuis
 

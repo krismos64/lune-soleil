@@ -37,9 +37,18 @@ concurrence, une vérification applicative arrive toujours trop tard. Chaque
 invariant du projet est donc rattaché à une unicité ou à un `CHECK`.
 
 **Aucune entité n'est créée pour un usage futur hypothétique.** Le plan directeur
-écarte la modélisation anticipée de la V1 cible. Seule exception assumée : le
-champ propriétaire de commande, sans lequel le parcours 6 exigerait une migration
-sur des commandes réelles.
+écarte la modélisation anticipée de la V1 cible.
+
+Seule exception assumée, relevée par la revue de LS-38 : `AdresseCarnet` est
+modélisée sans parcours qui la traverse. `PARCOURS.md` ne décrit ni l'ajout d'une
+adresse, ni le choix de l'adresse par défaut, ni l'usage du carnet au tunnel de
+commande. Cette entité n'a donc pas subi le contrôle que les autres ont passé, et
+la transaction critique du choix par défaut décrit une opération dont le
+déroulement fonctionnel n'est écrit nulle part.
+
+**À traverser avant que LS-13 ne fige les tables**, sous la forme d'un parcours 8
+avec ses cas d'erreur. Le risque n'est pas théorique : le champ `libelle` n'a
+aucun cas d'usage écrit, et la règle A5 n'est vérifiée par aucune étape.
 
 ---
 
@@ -346,7 +355,7 @@ erDiagram
         texte emailNormalise
         texte nomClient
         texte telephone "nullable"
-        identifiant utilisateurId FK "nullable, V1 cible"
+        identifiant utilisateurId FK "nullable, achat sans compte"
         bloc adresseLivraison "copie figee"
         bloc adresseFacturation "copie figee"
         entier sousTotalCentimes
@@ -422,7 +431,7 @@ erDiagram
 | V10 | L'acceptation des conditions est horodatée avec sa version | preuve du consentement |
 | V11 | Le passage à `LIVREE` exige une source fiable | parcours 1, étape 12 |
 | V12 | Toute transition de statut est tracée avec son acteur et son origine | historisation, parcours 1 |
-| V13 | `utilisateurId` reste nul au lancement, il n'autorise rien | invariant 2, parcours 6 |
+| V13 | `utilisateurId` n'autorise jamais un accès, quelle que soit sa valeur | invariant 2, parcours 6, ADR-023 |
 | V14 | Une commande porte au plus un paiement `REUSSI` | `UNIQUE` partiel sur `(commandeId)` filtré sur `statut = REUSSI`, voir décision D |
 
 ### Décision A, séparer statut de commande et statut de paiement
@@ -548,13 +557,23 @@ adresse identique pour deux usages.
 
 ### Pourquoi il n'y a pas d'entité Client
 
-Arbitré avec Christophe le 28 juillet 2026. L'achat sans compte est le seul mode
-au lancement. La commande porte l'email normalisé, le nom et le téléphone.
+Arbitré avec Christophe le 28 juillet 2026, prémisse corrigée par LS-38 le même
+jour.
 
-Regrouper les commandes par email **avant** vérification créerait un accès aux
-commandes d'autrui dès que deux personnes partagent une adresse, ou qu'une
-adresse est saisie par erreur. Le parcours 6 impose d'ailleurs la vérification
-préalable de l'email : le regroupement n'existe qu'après elle.
+Un client qui possède un compte est un `Utilisateur` portant le rôle `CLIENT`,
+ADR-023. Une entité `Client` distincte doublonnerait cette table sans rien
+garantir de plus.
+
+Un client sans compte n'est aucune entité : la commande porte l'email normalisé,
+le nom et le téléphone. L'achat sans compte reste le mode par défaut, et il ne
+dépend d'aucune authentification.
+
+**L'argument principal est le second.** Regrouper les commandes par email
+**avant** vérification créerait un accès aux commandes d'autrui dès que deux
+personnes partagent une adresse, ou qu'une adresse est saisie par erreur. Le
+parcours 6 impose la vérification préalable de l'email : le regroupement n'existe
+qu'après elle. Une entité `Client` bâtie sur l'email inviterait exactement à
+l'erreur inverse.
 
 ---
 
@@ -808,6 +827,7 @@ erDiagram
 | R16 | Une ligne de commande porte au plus une invitation | `UNIQUE (ligneCommandeId)`, un renvoi remplace le jeton |
 | R17 | Une invitation n'est créée que sur une commande livrée | contrôle applicatif, la tâche filtre sur `Expedition.livreA` |
 | R18 | L'état d'usage d'une invitation vient du jeton | `JetonAcces.utiliseA`, jamais dupliqué sur l'invitation |
+| R19 | Un renvoi révoque l'ancien jeton dans la même transaction | niveau 2, sinon deux jetons valides pour une invitation |
 
 ### Pourquoi une entité `InvitationAvis` distincte du jeton
 
@@ -829,6 +849,14 @@ fait écarter `estPrincipal` à côté de `ordre` au domaine 1.
 jeton expiré se remplace sans créer une seconde invitation, `jetonAccesId`
 pointant alors vers le nouveau. `dernierEnvoiA` reste nul tant qu'aucun envoi n'a
 abouti, ce qui distingue une invitation créée d'une invitation reçue.
+
+**Le renvoi révoque l'ancien jeton**, règle R19. Déplacer le pointeur ne suffit
+pas : `JetonAcces` porte sa propre expiration, et l'ancienne ligne resterait
+valide et non consommée jusqu'à son terme. Le cas n'est pas une panne mais le
+chemin nominal, chaque renvoi produisant sinon un jeton actif que plus aucune
+invitation ne référence, donc hors de portée d'une révocation passant par elle.
+Le premier lien, resté dans une boîte email partagée, permettrait de déposer
+l'avis à la place de son destinataire.
 
 ### Modifier un avis publié le renvoie en modération
 
@@ -998,7 +1026,7 @@ erDiagram
     UTILISATEUR {
         identifiant id PK
         texte email UK
-        enum role "ADMINISTRATRICE"
+        enum role "CLIENT ADMINISTRATRICE"
         booleen emailVerifie
         horodatage creeA
     }
@@ -1041,16 +1069,17 @@ erDiagram
     }
 ```
 
-Les entités d'authentification proprement dites (session, passkey, jeton de
-vérification) sont fournies par Better Auth et modélisées en LS-13, conformément
-à ADR-021. Elles ne figurent pas ici parce qu'elles ne portent aucune règle
-métier propre au projet.
+Les entités d'authentification proprement dites (session, compte, passkey, jeton
+de vérification) sont fournies par Better Auth et modélisées en LS-13,
+conformément à ADR-021 pour l'administration et à ADR-023 pour les clients. Elles
+ne figurent pas ici parce qu'elles ne portent aucune règle métier propre au
+projet.
 
 ### Règles de gestion
 
 | # | Règle | Garantie |
 |---|---|---|
-| E1 | Un seul compte administratrice au lancement | ADR-021 |
+| E1 | Un seul compte porte le rôle `ADMINISTRATRICE` | index partiel `UNIQUE (role)` filtré sur `role = 'ADMINISTRATRICE'`, ADR-021 et ADR-023 |
 | E2 | L'identité vient de la session ou d'un jeton signé | invariant 2 |
 | E3 | Toute action administrative sensible est tracée | journal d'audit |
 | E4 | Un échec d'email ne bloque jamais une commande | parcours 1, journal séparé |
@@ -1059,6 +1088,46 @@ métier propre au projet.
 | E7 | Une alerte critique est acquittable, jamais supprimée | parcours 1 et 4 |
 | E8 | Le nom de verrou de tâche est unique | `UNIQUE`, exécution unique |
 | E9 | Les horodatages sont persistés en UTC | invariant 8 |
+| E10 | `role` vaut `CLIENT` par défaut et n'est jamais nul | ADR-023, un rôle absent ou inconnu ne donne aucun droit |
+| E11 | Le rôle n'est jamais fourni par une entrée client | **niveau 3, contrôle applicatif** : `input: false` couvre Better Auth, aucune autre écriture de `role` depuis une entrée non fiable, invariant 2 |
+| E12 | Un changement de rôle est tracé au journal d'audit | règle E3, action sensible |
+
+### Un compte, deux rôles, et pourquoi l'unicité est un index partiel
+
+L'entité `Utilisateur` sert deux populations depuis l'élargissement du périmètre
+d'ouverture : l'exploitante et les clients. Le rôle les distingue, il ne crée pas
+deux tables.
+
+Le compte d'administration reste unique, ce que décide ADR-021. Un `UNIQUE (role)`
+simple traduirait mal cette règle : il interdirait un second compte client et
+rendrait le site inutilisable. Le filtre est ce qui rend la contrainte utilisable.
+
+```sql
+CREATE UNIQUE INDEX utilisateur_administratrice_unique
+  ON utilisateur (role)
+  WHERE role = 'ADMINISTRATRICE';
+```
+
+Prisma ne génère pas cet index, la migration s'écrit à la main en LS-13, comme
+les `CHECK` d'ADR-006. Un index oublié ne fait rien échouer, le défaut reste
+invisible jusqu'à l'incident.
+
+**Le rôle se lit dans la session, jamais dans une requête.** C'est l'application
+directe de l'invariant 2 au cas le plus tentant : un identifiant ou un rôle qui
+arrive par un formulaire n'autorise rien.
+
+**`input: false` ne couvre que les routes de Better Auth.** La règle E11 est de
+niveau 3, un contrôle applicatif, et pas une garantie de base. Le chemin qui
+échappe à Better Auth est banal : une Server Action de mise à jour de profil qui
+transmet à Prisma un objet issu d'un formulaire, avec un schéma Zod trop
+permissif. Un client y poste `role=ADMINISTRATRICE` et Better Auth n'est pas sur
+le chemin.
+
+L'index partiel rejetterait cette écriture, un compte d'administration existant
+déjà. Cette protection est un effet de bord, pas une conception : si l'index a
+été oublié dans la migration, l'élévation passe. **Aucune écriture de `role` ne
+part d'une entrée non fiable**, et le test négatif couvre la mise à jour de
+profil autant que l'inscription.
 
 ### Pourquoi une table de verrou
 
@@ -1247,6 +1316,7 @@ applicatif. Les quatre dernières portent l'idempotence de la décision D :
 | `mouvement_stock (commandeId, varianteId)` | `type = VENTE_WEB` | double décrément par webhook et réconciliation |
 | `journal_email (commandeId, modele)` | `origine = SYSTEME` | email de confirmation envoyé deux fois |
 | `adresse_carnet (utilisateurId)` | `estParDefaut` | deux adresses par défaut sur un compte |
+| `utilisateur (role)` | `role = 'ADMINISTRATRICE'` | un second compte d'administration, sans interdire les comptes clients |
 
 **Contrôles de valeur** : `quantite_physique >= 0`, `quantite_reservee >= 0`,
 `quantite_physique - quantite_reservee >= 0`, `ligne_commande.quantite > 0`,
@@ -1261,7 +1331,11 @@ tout montant en centimes `>= 0`, `montant_rembourse <= montant` sur le paiement,
 `produit.categorieId`, `avis.ligneCommandeId`, `avis.experienceA`,
 `avis.deposeA`,
 `reponse_avis.avisId`, `adresse_carnet.utilisateurId`,
-`invitation_avis.ligneCommandeId`, `invitation_avis.jetonAccesId`.
+`invitation_avis.ligneCommandeId`, `invitation_avis.jetonAccesId`,
+`utilisateur.role`.
+
+`utilisateur.role` obligatoire avec `CLIENT` par défaut ferme le cas du rôle nul :
+une valeur absente ne peut pas être interprétée comme un privilège.
 
 `avis.experienceA` obligatoire est la traduction structurelle de la décision H :
 un avis ne peut pas exister sans date d'expérience, donc sans livraison connue.
@@ -1285,6 +1359,7 @@ portées par le code de la transaction, et testées.
 | F9 | La création d'un avoir met à jour `facture.montantAvoirCentimes` en même temps |
 | R9 | Le changement de statut d'un avis et `decideA` sont écrits ensemble |
 | C19 | Archiver la dernière variante vivante archive le produit dans la même transaction |
+| R19 | Le renvoi d'une invitation révoque l'ancien jeton et remplace le pointeur ensemble |
 
 ### Niveau 3, contrôlé par l'application
 
@@ -1303,6 +1378,7 @@ brouillon incomplet doit pouvoir exister.
 | R10 | Une modification d'avis publié le renvoie en modération | à la modification |
 | C13 | Aucune suppression de variante, archivage seul | à la demande de suppression |
 | C18 | Archivage refusé si une réservation est active | à l'archivage |
+| E11 | Le rôle ne vient jamais d'une entrée non fiable | à toute écriture sur `Utilisateur` |
 
 ### Immuabilité et suppression
 
@@ -1401,10 +1477,17 @@ Le 28 juillet 2026, Christophe a décidé que l'espace client, les avis vérifi�
 le carnet d'adresses entrent dans le périmètre d'ouverture, epic LS-36. Ce
 document a été étendu en conséquence par LS-37, le même jour.
 
-**L'espace client était déjà couvert.** `Commande.utilisateurId` et le parcours 6
-avaient été prévus pour cela, aucune migration sur commandes historiques n'est
-nécessaire. Les entités de session et de passkey viennent de Better Auth et
-relèvent de LS-13, conformément à ADR-021.
+**L'espace client était partiellement couvert.** `Commande.utilisateurId` et le
+parcours 6 avaient été prévus, aucune migration sur commandes historiques n'est
+donc nécessaire. C'est ce qui a été gagné.
+
+Ce qui manquait, corrigé par LS-38 : l'entité `Utilisateur` n'admettait que le
+rôle `ADMINISTRATRICE`, et le mode d'authentification des clients n'était décidé
+nulle part. Il a fallu ADR-023.
+
+Les entités de session, de compte et de passkey viennent de Better Auth et
+relèvent de LS-13, conformément à ADR-021 pour l'administration et à ADR-023 pour
+les clients.
 
 **Les avis constituent le domaine 6**, avec les décisions G, H et I, et le
 parcours 7 de `PARCOURS.md`. La vérification légale a précédé la modélisation et
