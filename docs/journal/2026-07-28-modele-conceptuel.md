@@ -291,22 +291,29 @@ Phase 0, cadrage opérationnel. Cinq stories terminées sur treize.
 
 ## Prochaine étape
 
-**LS-13**, le modèle logique, désormais débloqué. Le modèle conceptuel lui transmet un
-récapitulatif de contraintes rangé en trois niveaux, qui est la partie du
-document qui doit survivre en migration.
+**LS-13**, le modèle logique, seul ticket débloqué et prêt à démarrer. LS-12 et
+LS-37 lui transmettent un modèle complet, sept domaines, et un récapitulatif de
+contraintes rangé en trois niveaux qui est la partie devant survivre en migration.
 
-Points ouverts qui lui reviennent : le format des numéros de commande, facture et
-avoir ; la forme de stockage des blocs figés, adresse et instantané légal, en
-colonnes ou en document structuré ; les types Prisma, où Context7 sera consulté,
-Prisma 7 étant une majeure récente.
+Ce que LS-13 doit traiter :
 
-Les paramètres d'exploitation restent à confirmer ensemble plutôt qu'un par un :
-expiration de réservation à 30 minutes, libération toutes les 5 minutes,
-réconciliation toutes les 15 minutes, seuil d'alerte sur un retour non reçu. Le
-modèle les rend configurables, il persiste `expireA` et non une durée.
+- traduire les contraintes des trois niveaux en schéma Prisma et migration SQL
+- les entités Better Auth pour l'administratrice **et les clients**, ADR-021
+- le format des numéros : `F-2026-0001` tranché pour les factures, à décliner pour
+  les commandes et les avoirs, séquence distincte par type
+- la forme de stockage des blocs figés, adresse et instantané légal, en colonnes
+  ou en document structuré
+- les types, avec **Context7 obligatoire** : Prisma 7 est une majeure récente et
+  les unicités partielles ont une syntaxe spécifique
+- rappel d'ADR-006 : Prisma ne génère pas les `CHECK`, migration SQL manuelle
 
-Le calcul du délai de rétractation reste à vérifier aux sources officielles avant
-l'ouverture, il n'appartient pas au modèle.
+Deux paramètres d'exploitation restent à confirmer, sans bloquer : libération des
+réservations toutes les 5 minutes, réconciliation toutes les 15 minutes.
+
+Un point ouvert qui ne bloque pas LS-13 mais qu'il faut discuter avec
+l'exploitante : **LS-33**, d'où vient la date de livraison. Elle conditionne
+désormais deux fonctionnalités visibles, le délai de rétractation et l'invitation
+à déposer un avis.
 
 ## Seconde partie de session, périmètre et vérifications juridiques
 
