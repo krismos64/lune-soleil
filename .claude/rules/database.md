@@ -20,10 +20,15 @@ sans verrou explicite ni risque d'interblocage.
 UPDATE variante
 SET quantite_reservee = quantite_reservee + :qte
 WHERE id = :variante
+  AND archivee_a IS NULL
   AND vente_web_activee = true
   AND quantite_physique - quantite_reservee >= :qte
 RETURNING id;
 ```
+
+`archivee_a IS NULL` fait partie de la condition, pas d'une lecture préalable.
+Entre une lecture et l'écriture, l'archivage peut survenir : un client ayant la
+fiche ouverte réserverait alors une pièce retirée du catalogue.
 
 Aucune ligne retournée signifie un refus métier explicite, présenté sans jargon
 technique au client.
@@ -40,6 +45,23 @@ Règles associées :
   physique et la quantité réservée, dans la même transaction.
 - Le niveau `READ COMMITTED` suffit : le verrou de ligne implicite de l'`UPDATE`
   conditionnel garantit l'exclusion mutuelle.
+
+## Une variante ne se supprime jamais
+
+Elle s'archive, `archivee_a` renseignée. Supprimer une variante libérerait sa
+référence, qui pourrait être réattribuée à une autre pièce : les avis et les
+statistiques de l'ancienne remonteraient alors sur la nouvelle.
+
+Deux drapeaux d'indisponibilité coexistent et ne se remplacent pas.
+`vente_web_activee` est opérationnel et réversible, le temps d'un marché.
+`archivee_a` est catalogue et définitif.
+
+**Archivée l'emporte toujours** : une variante archivée n'est ni réservable ni
+achetable en ligne quelle que soit la valeur de `vente_web_activee`. Elle reste
+vendable en main propre, son stock physique existant toujours.
+
+Archiver ne crée aucun mouvement de stock, et l'archivage est refusé tant qu'une
+réservation active existe, même règle que pour la vente externe.
 
 ## Stock physique et vente web
 

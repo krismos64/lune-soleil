@@ -1,6 +1,6 @@
 # Parcours critiques
 
-Séquences d'états des six parcours critiques du projet, cas d'erreur compris.
+Séquences d'états des sept parcours critiques du projet, cas d'erreur compris.
 
 Ce document ne décrit aucun écran. Il décrit ce qui est **persisté** à chaque
 étape, ce que **voit la personne**, et ce qui se passe quand ça échoue. Il
@@ -13,12 +13,15 @@ manquant.
 | Ticket | LS-11 |
 | Source | Cahier des charges V1.0, sections 9, 11 et 15.5 |
 | Débloque | LS-12 modèle conceptuel, LS-14 diagramme de séquence |
-| Cas d'erreur | 32, dont un ajouté par LS-12 |
+| Cas d'erreur | 44, dont un ajouté par LS-12 et douze par LS-37 |
 
 Le document reste ouvert : modéliser révèle des cas que la lecture du cahier des
-charges n'avait pas fait apparaître. Un cas découvert plus tard s'ajoute ici, il
-ne vit pas ailleurs. Le trente-deuxième, l'événement de paiement tardif au
-parcours 1, est venu de LS-12.
+charges n'avait pas fait apparaître, et le périmètre évolue. Un cas découvert plus
+tard s'ajoute ici, il ne vit pas ailleurs.
+
+Le trente-deuxième cas, l'événement de paiement tardif au parcours 1, est venu de
+LS-12. Le **parcours 7**, dépôt d'un avis, est venu de LS-37 après le passage des
+avis en périmètre d'ouverture, epic LS-36.
 
 ## Pourquoi six parcours et non cinq
 
@@ -37,7 +40,9 @@ sixième. Le rattachement appartient à la V1 cible, mais le modèle de données
 le prévoir dès maintenant, faute de quoi il faudra une migration sur des données
 historiques.
 
-Les six parcours couvrent ainsi les six transactions critiques de la section 15.5.
+Les six premiers parcours couvrent ainsi les six transactions critiques de la
+section 15.5. Le septième, le dépôt d'un avis, est venu plus tard avec
+l'élargissement du périmètre d'ouverture.
 
 ## Conventions de lecture
 
@@ -376,6 +381,106 @@ identifiant transmis par le client.
 
 ---
 
+## Parcours 7, dépôt d'un avis
+
+Ajouté par LS-37 le 28 juillet 2026, les avis étant passés en périmètre
+d'ouverture. Le cadre légal a été vérifié aux sources avant rédaction : articles
+L111-7-2 et D111-16 à D111-19 du Code de la consommation.
+
+### Chemin nominal
+
+| # | Étape | Base | Vue |
+|---|---|---|---|
+| 1 | Livraison constatée | `Expedition.livreA` renseignée | suivi |
+| 2 | Invitation, quelques jours après | invitation avec jeton d'accès de portée `AVIS`, journal d'envoi | email avec lien personnel |
+| 3 | Ouverture du formulaire | vérification du jeton, aucune écriture | note et commentaire, produit rappelé |
+| 4 | Dépôt | avis `DEPOSE`, `experienceA` à la date de livraison, `deposeA` horodaté, jeton consommé | accusé, délai de publication annoncé |
+| 5 | Relecture | aucune écriture | l'avis apparaît dans l'administration |
+| 6 | Publication | avis `PUBLIE`, `publieA` horodaté | visible sur la fiche produit |
+| 7 | Réponse, facultative | réponse rattachée à l'avis, horodatée | réponse publique sous l'avis |
+
+L'avis n'est **jamais** visible entre les étapes 4 et 6. Le délai annoncé à
+l'étape 4 est une obligation : l'article D111-17 impose de publier le délai
+maximum de publication et de s'y tenir.
+
+### Cas d'erreur
+
+**Avis déposé sans achat correspondant**
+Base : aucune écriture, un avis sans ligne de commande ne peut pas exister.
+Vue : le formulaire n'est pas accessible sans invitation valide.
+La preuve d'achat est structurelle, pas déclarative.
+
+**Second avis sur la même ligne de commande**
+Base : aucune écriture, contrainte d'unicité sur la ligne.
+Vue : l'avis existant est affiché, avec la possibilité de le modifier.
+Un client ayant acheté deux fois la même pièce dispose de deux lignes, donc de
+deux avis possibles.
+
+**Jeton d'invitation expiré ou déjà utilisé**
+Base : aucune écriture, tentative journalisée.
+Vue : refus sécurisé, sans révéler si la commande existe.
+Suite : un nouveau lien peut être demandé depuis l'espace client. L'invitation
+existante est réutilisée, son `jetonAccesId` pointant vers le nouveau jeton et
+`nombreEnvois` étant incrémenté. Aucune seconde invitation n'est créée.
+
+**Invitation envoyée alors que la commande n'est pas livrée**
+Base : l'invitation n'est pas créée, la tâche ne sélectionne que les commandes
+livrées.
+Vue : rien.
+Sans date de livraison fiable, aucune invitation ne part. C'est la dépendance à
+LS-33, qui vaut aussi pour le délai de rétractation.
+
+**Avis refusé en modération**
+Base : avis `REFUSE`, `motifDecision` obligatoire, `decideA` horodaté, l'avis est
+**conservé**.
+Vue : l'auteur est informé des motifs du refus, obligation de l'article
+L111-7-2.
+Un avis refusé n'est jamais supprimé : le motif doit pouvoir être justifié.
+
+**Avis modifié par son auteur après publication**
+Base : `modifieA` horodaté, `statut` repasse à `DEPOSE`, `publieA` conserve la
+première publication.
+Vue : l'avis disparaît de la fiche le temps de la relecture, son auteur en est
+informé.
+Sans ce retour en modération, la relecture se contournerait en deux gestes :
+déposer un avis anodin, attendre sa publication, puis le remplacer.
+
+**Avis publié puis retiré**
+Base : avis `RETIRE`, `motifDecision` obligatoire, `decideA` horodaté, avis
+conservé.
+Vue : l'avis disparaît de la fiche, son auteur est informé.
+`decideA` permet de savoir combien de temps l'avis est resté en ligne, ce que
+`publieA` seul ne dit pas.
+
+**Délai de publication annoncé dépassé**
+Base : l'avis reste `DEPOSE`, `decideA` nul.
+Vue : le client ne voit rien venir alors qu'un délai lui a été annoncé.
+Suite : alerte à l'administratrice au-delà du délai publié. Ne pas tenir le délai
+annoncé est un manquement à l'article D111-17, pas seulement une négligence
+commerciale.
+
+**Produit archivé après dépôt de l'avis**
+Base : aucune modification de l'avis.
+Vue : l'avis reste visible tant que la fiche produit l'est.
+La ligne de commande porte la copie figée du produit, l'avis ne dépend pas du
+catalogue actuel.
+
+**Variante retirée du catalogue**
+Base : la variante est **archivée**, jamais supprimée, l'avis subsiste et reste
+rattaché à elle.
+Vue : l'avis reste visible sur la fiche du produit.
+Une variante supprimée libérerait sa référence, qui pourrait être réattribuée à
+une autre pièce : les avis de l'ancienne remonteraient alors sur la fiche de la
+nouvelle. L'archivage l'empêche.
+
+**Échec d'envoi de l'invitation**
+Base : le journal d'envoi porte l'échec, l'invitation existe.
+Vue : le client ne reçoit rien.
+Suite : renvoi possible depuis l'administration, comme pour les autres emails.
+Une panne d'email ne fait perdre aucun avis, l'invitation restant valide.
+
+---
+
 ## Ce que ces parcours imposent au modèle de données
 
 Synthèse pour LS-12. Chaque élément apparaît dans au moins un parcours ci-dessus.
@@ -404,6 +509,16 @@ document, jeton de vérification d'email.
 
 **Traces** : journal d'audit pour les actions administratives sensibles, journal
 des envois d'email, alertes critiques acquittables.
+
+**Apporté par le parcours 7** : un avis rattaché à une ligne de commande et non à
+un produit, deux dates distinctes exigées par l'article D111-17, la conservation
+des avis refusés ou retirés avec leur motif et leur date de décision, et une
+portée de jeton supplémentaire pour l'invitation.
+
+Le regroupement des avis sur une fiche produit se fait par `varianteId`. Cela
+suppose qu'une variante ne soit **jamais supprimée** mais archivée, faute de quoi
+sa référence redeviendrait libre et pourrait être réattribuée à une autre pièce,
+faisant remonter d'anciens avis sur une fiche qui n'est pas la leur.
 
 **Champs prévus mais inutilisés au lancement** : propriétaire de commande. Le
 rattachement appartenait à la V1 cible lors de la rédaction de ce document, il
