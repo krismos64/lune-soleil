@@ -265,7 +265,7 @@ branche non poussée.
 
 ## Où on en est
 
-Phase 0, cadrage opérationnel. Cinq stories terminées sur treize.
+Phase 0, cadrage opérationnel. Sept stories terminées.
 
 | Ticket | Sujet | État |
 |---|---|---|
@@ -274,7 +274,7 @@ Phase 0, cadrage opérationnel. Cinq stories terminées sur treize.
 | LS-9 | Kickoff des outils | Fait en pratique, reste Confluence à remplir |
 | LS-11 | Plan du site et parcours critiques | Terminé, enrichi d'un trente-deuxième cas par LS-12 |
 | LS-12 | Modèle conceptuel de données | Terminé : `docs/architecture/MODELE-CONCEPTUEL.md`, six domaines, six décisions |
-| LS-13 | Modèle logique de données | À faire, débloqué, prochaine étape |
+| LS-13 | Modèle logique de données | À faire, débloqué, précédé du parcours 8 |
 | LS-14 | Diagramme de séquence de l'achat | À faire, débloqué |
 | LS-15 | Filaire mobile création produit admin | À faire |
 | LS-17 | Décisions et conventions bloquantes | Terminé |
@@ -288,12 +288,128 @@ Phase 0, cadrage opérationnel. Cinq stories terminées sur treize.
 | LS-35 | E-reporting du chiffre d'affaires journalier | Échéance 1er septembre 2027, hors ouverture |
 | LS-36 | Epic espace client, avis et carnet d'adresses | Créé, en périmètre d'ouverture |
 | LS-37 | Étendre le modèle aux avis et au carnet, septième parcours | Terminé : domaine 6, carnet d'adresses, parcours 7 |
+| LS-38 | Aligner le modèle sur le périmètre d'ouverture élargi | Terminé : ADR-023, rôles clients, huit défauts corrigés |
+
+## LS-38, ce qu'une relecture extérieure a trouvé
+
+Story ouverte en fin de journée, après qu'un rapport d'analyse extérieur a signalé
+que plusieurs documents contredisaient encore le nouveau périmètre. Vérification
+faite fichier par fichier : les cinq points du rapport étaient exacts, et trois de
+plus ont été trouvés en vérifiant.
+
+### La contradiction que LS-37 avait laissée
+
+`Utilisateur` déclarait `enum role "ADMINISTRATRICE"`, valeur unique, et E1 posait
+« un seul compte administratrice au lancement ». Le même utilisateur porte pourtant
+`AdresseCarnet` en cardinalité obligatoire, l'auteur d'un avis et le propriétaire
+de commande. Le carnet exigeait donc un utilisateur qui ne pouvait être que
+l'administratrice.
+
+Le modèle était contradictoire depuis LS-37, sans que ni la story ni ses deux
+passes de revue ne le voient. Le défaut n'était visible qu'en croisant le domaine 3
+et le domaine 7, que les revues avaient regardés séparément.
+
+### Ce que Context7 a changé, deux fois
+
+Le plugin `admin()` de Better Auth stocke les rôles en **chaîne séparée par des
+virgules**, pour permettre plusieurs rôles par compte. Une valeur
+`CLIENT,ADMINISTRATRICE` n'est pas égale à `ADMINISTRATRICE` : l'index partiel
+aurait laissé passer un second compte administrateur. Le plugin paraissait le
+choix évident, il était le mauvais.
+
+`minPasswordLength` est une option **globale** de l'instance, pas un réglage par
+utilisateur. Les douze caractères que j'avais proposés pour les clients étaient
+infaisables sans abaisser le seuil de l'administration, donc sans dégrader un Must
+porté par un critère de refus d'ouverture. Seize pour tous, l'alternative écartée
+est tracée dans l'ADR et reste renversable.
+
+### Une affirmation technique fausse, prise en flagrant délit
+
+J'avais écrit dans `database.md` que regrouper la bascule d'adresse par défaut en
+une seule instruction « ne sauve rien ». La revue a monté un PostgreSQL 18.4 pour
+le vérifier. J'ai reproduit sur la même version :
+
+```
+SENS A : bascule de 1 vers 2, instruction unique   -> UPDATE 2, COMMIT
+SENS B : bascule de 2 vers 1, MEME instruction     -> ERROR duplicate key
+```
+
+La même instruction réussit dans un sens et échoue dans l'autre, selon l'ordre de
+parcours des lignes. Mon affirmation était fausse dans une règle permanente, et
+d'une manière plus nuisible qu'une simple erreur : un développeur qui teste
+l'instruction unique la voit marcher, la garde, et elle casse en production quand
+la bascule se fait dans l'autre sens.
+
+Leçon : une affirmation technique dans une règle permanente se vérifie sur la base
+réelle, elle ne se déduit pas.
+
+### Deux failles de sécurité fermées
+
+**Le renvoi d'invitation laissait l'ancien jeton valide.** `JetonAcces` porte sa
+propre expiration, remplacer `InvitationAvis.jetonAccesId` ne touche pas
+l'ancienne ligne. Un client qui demande un renvoi le 10 août laisse un jeton actif
+jusqu'au 24 : sur une boîte email partagée, le premier lien dépose l'avis à sa
+place. Ce n'était pas un cas de panne, c'était le chemin nominal, chaque renvoi
+produisant l'orphelin. Règle R19.
+
+**La limitation de débit allait fermer un cas nominal.** ADR-021 la pose sur la
+route de connexion, calibrée pour un compte unique. Appliquée par IP aux clients,
+elle empêche un client de se connecter parce qu'un autre a échoué sur la même IP,
+courant en mobile et en entreprise. Elle se compte désormais par identifiant de
+compte. C'est la troisième fois en deux jours qu'une mesure de sécurité ferme un
+cas légitime par effet de bord.
+
+### Une garantie qui n'en était pas une
+
+J'avais rangé E11, « le rôle n'est jamais fourni par une entrée client », dans une
+colonne « Garantie », à côté de contraintes de base. Or `input: false` ne couvre
+que les routes de Better Auth. Une Server Action de mise à jour de profil qui
+transmettrait un objet de formulaire à Prisma écrirait `role` sans que Better Auth
+soit sur le chemin.
+
+L'index partiel rejetterait l'écriture, un compte d'administration existant déjà,
+mais par effet de bord et non par conception : si l'index est oublié en migration,
+l'élévation passe. E11 reclassée niveau 3, et le test négatif couvre maintenant la
+mise à jour de profil et pas seulement l'inscription.
+
+### Ce que j'ai cassé en corrigeant, encore
+
+Trois des huit défauts des deux passes venaient de mes propres corrections.
+
+En corrigeant le principe directeur, j'ai écrit « toutes les entités décrites ici
+servent un parcours du périmètre d'ouverture ». Faux : `AdresseCarnet` n'apparaît
+dans aucun parcours, zéro occurrence de « carnet » dans `PARCOURS.md`. La phrase
+d'origine était honnête, elle nommait une exception ; la mienne affirmait une
+propriété que le document ne vérifie plus.
+
+Et j'avais cru lever la contradiction sur l'entité Client alors que je l'avais
+déplacée : le rôle acceptait `CLIENT` pendant que la section expliquant pourquoi
+il n'y a pas d'entité Client gardait la prémisse « l'achat sans compte est le seul
+mode au lancement ».
+
+C'est la même leçon qu'en LS-12 et LS-37, sous une troisième forme : faire relire
+les corrections elles-mêmes, pas seulement le travail initial.
+
+### Point ouvert transmis à LS-13
+
+`AdresseCarnet` n'a subi aucune traversée de parcours, contrairement aux 24 autres
+entités. Le champ `libelle` n'a aucun cas d'usage écrit, la règle A5 n'est vérifiée
+par aucune étape, et la transaction critique du choix par défaut décrit une
+opération dont le déroulement fonctionnel n'existe nulle part.
+
+**Un parcours 8 est à écrire avant que LS-13 ne fige les tables.** L'exception est
+déclarée explicitement dans le modèle plutôt que masquée.
 
 ## Prochaine étape
 
-**LS-13**, le modèle logique, seul ticket débloqué et prêt à démarrer. LS-12 et
-LS-37 lui transmettent un modèle complet, sept domaines, et un récapitulatif de
-contraintes rangé en trois niveaux qui est la partie devant survivre en migration.
+**Écrire le parcours 8**, gestion du carnet d'adresses, puis **LS-13**.
+
+Le parcours 8 n'a pas de ticket. Il peut entrer dans LS-13 comme préalable, ou
+faire l'objet d'une story courte sur le modèle de LS-37. À trancher au démarrage.
+
+LS-12, LS-37 et LS-38 transmettent à LS-13 un modèle complet, sept domaines, et un
+récapitulatif de contraintes rangé en trois niveaux qui est la partie devant
+survivre en migration.
 
 Ce que LS-13 doit traiter :
 
