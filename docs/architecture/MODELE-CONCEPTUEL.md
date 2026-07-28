@@ -855,6 +855,16 @@ remboursement.
 Le contrôle de l'état du bien reste possible à la réception, et fonde une
 éventuelle réduction, jamais un blocage du remboursement au-delà du délai légal.
 
+**La réduction n'existe que si le remboursement n'est pas encore versé.** Une
+pièce reçue endommagée après versement laisse un écart que le projet **assume en
+perte**, décision de Christophe du 28 juillet 2026. Aucune créance n'est
+constituée, `montantRembourseCentimes` n'est pas modifiable après `REMBOURSEE`, et
+aucune entité ne représente une somme à récupérer.
+
+Le modèle reste donc silencieux sur ce point, et c'est délibéré : sur des pièces
+uniques à faible volume, poursuivre un client coûterait plus que la pièce. La
+dégradation alimente `motifDecision`, qui garde la trace du cas.
+
 ### Pourquoi `RECUE` n'est plus un statut
 
 Le statut portait `RECUE` avant LS-41. Ce statut ne survit pas à la règle L7 :
