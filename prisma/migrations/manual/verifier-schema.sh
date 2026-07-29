@@ -81,19 +81,54 @@ verifier_accepte() {
   fi
 }
 
+# Sans base, aucun contrôle n'a de sens. Chaque étape de préparation est donc
+# fatale, LS-48.
+#
+# Motif. Le script s'exécutait jusqu'au bout même avec Docker absent, et
+# affichait « 7 réussites, 41 échecs ». Les sept étaient des contrôles
+# d'acceptation : `verifier_accepte` cherche une erreur SQL dans la sortie, et
+# `docker: command not found` n'en est pas une, donc l'écriture était réputée
+# acceptée. Même mécanisme que le `grep violation` de LS-13, par un autre chemin.
+#
+# Un contrôle qui annonce OK sans avoir rien vérifié est le défaut que ce script
+# existe pour empêcher.
+abandon() {
+  echo
+  echo "ABANDON : $1"
+  echo
+  echo "Aucun contrôle n'a été exécuté. Ce script exige une base réelle :"
+  echo "sans elle, un contrôle d'acceptation passerait au vert sans rien"
+  echo "vérifier."
+  exit 2
+}
+
+command -v docker >/dev/null 2>&1 || abandon "docker introuvable dans le PATH"
+docker info >/dev/null 2>&1 || abandon "le démon Docker ne répond pas, est-il démarré ?"
+
+for f in "$DIR/schema.sql" "$DIR/001_contraintes_check.sql"; do
+  [ -r "$f" ] || abandon "fichier SQL illisible : $f"
+done
+
 echo "Démarrage de PostgreSQL 18.4"
 docker run -d --rm --name "$CT" \
   -e POSTGRES_PASSWORD=verif -e POSTGRES_DB=lunesoleil \
-  -p "$PORT:5432" postgres:18.4 >/dev/null 2>&1
+  -p "$PORT:5432" postgres:18.4 >/dev/null 2>&1 \
+  || abandon "le conteneur PostgreSQL n'a pas démarré, port $PORT déjà pris ?"
 
+pret=0
 for _ in $(seq 1 30); do
-  docker exec "$CT" pg_isready -U postgres >/dev/null 2>&1 && break
+  if docker exec "$CT" pg_isready -U postgres >/dev/null 2>&1; then pret=1; break; fi
   sleep 2
 done
+[ "$pret" -eq 1 ] || abandon "PostgreSQL n'est pas prêt après 60 secondes"
 
 echo "Application du schéma"
-docker exec -i "$CT" psql -U postgres -d lunesoleil -q < "$DIR/schema.sql" >/dev/null 2>&1
-docker exec -i "$CT" psql -U postgres -d lunesoleil -q < "$DIR/001_contraintes_check.sql" >/dev/null 2>&1
+docker exec -i "$CT" psql -U postgres -d lunesoleil -q -v ON_ERROR_STOP=1 \
+  < "$DIR/schema.sql" >/dev/null 2>&1 \
+  || abandon "l'application de schema.sql a échoué"
+docker exec -i "$CT" psql -U postgres -d lunesoleil -q -v ON_ERROR_STOP=1 \
+  < "$DIR/001_contraintes_check.sql" >/dev/null 2>&1 \
+  || abandon "l'application de 001_contraintes_check.sql a échoué"
 
 # Jeu d'essai minimal : une pièce unique, le cas qui porte le jalon du projet.
 R "INSERT INTO categorie (id,nom,slug,cree_a) VALUES ('cat','Boucles','boucles',now());

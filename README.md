@@ -81,7 +81,17 @@ l'adresse du domicile de l'exploitante.
 
 ## Développement
 
-Prérequis : Node.js 22 ou plus, Docker et Docker Compose.
+Prérequis : **Node 22 LTS, version 22.12 au minimum**, ou Node 24. Docker et
+Docker Compose.
+
+Les versions impaires sont exclues, Prisma 7 les refuse. Node 23 satisfait un
+« Node 22 ou plus » et casse à l'installation, le cas s'est produit.
+
+### État actuel, avant la phase 1
+
+Le projet n'est pas encore initialisé : ni `package.json`, ni `docker-compose.yml`.
+Les commandes ci-dessous **ne fonctionneront qu'après LS-2**, la phase 1, qui
+installe les dépendances et applique la migration.
 
 ```bash
 npm install
@@ -89,6 +99,15 @@ cp .env.example .env    # renseigner les valeurs locales
 docker compose up -d db # base PostgreSQL locale
 npx prisma migrate dev
 npm run dev
+```
+
+### Ce qui fonctionne dès maintenant
+
+Deux scripts de vérification, sans installation :
+
+```bash
+./prisma/migrations/manual/verifier-schema.sh  # schéma sur base réelle, exige Docker
+./scripts/verifier-regles.sh                   # .claude/rules/ contre le schéma
 ```
 
 ## Secrets
