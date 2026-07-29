@@ -14,7 +14,7 @@ d'utiliser une API : c'est une majeure récente.
 
 La variante porte une `quantiteReservee` dénormalisée, protégée par une
 contrainte de base. La réservation se fait en **une seule instruction atomique**,
-sans verrou explicite ni risque d'interblocage.
+sans verrou explicite.
 
 ```sql
 UPDATE variante
@@ -45,6 +45,14 @@ Règles associées :
   physique et la quantité réservée, dans la même transaction.
 - Le niveau `READ COMMITTED` suffit : le verrou de ligne implicite de l'`UPDATE`
   conditionnel garantit l'exclusion mutuelle.
+- **Un panier à plusieurs variantes les traite par identifiant croissant.** Le
+  verrou implicite est tenu jusqu'au `COMMIT` : deux paniers portant les mêmes
+  pièces dans un ordre opposé s'interbloquent. Reproduit sur PostgreSQL 18,
+  `docs/prototypes/interblocage-panier.sh`. Trier rend l'ordre de prise
+  identique pour tous, et l'un attend au lieu de bloquer.
+- Traiter malgré tout l'erreur `40P01` : un interblocage reste possible avec une
+  transaction concurrente qui touche les mêmes lignes par un autre chemin. La
+  réponse est de rejouer, jamais d'ignorer.
 
 ## Une variante ne se supprime jamais
 
@@ -135,6 +143,13 @@ La clé de l'email porte trois conditions, corrigées par LS-13 : `statut = 'ENV
 laisse la retentative possible après un échec, règle E4, `RECONCILIATION` ferme le
 second chemin de la décision D, et exclure `ADMIN` laisse passer le renvoi
 manuel après échec, prévu au parcours 1.
+
+**Cette clé protège la base, pas l'appel au fournisseur.** Si le fournisseur
+envoie l'email et que le processus tombe avant d'écrire la ligne `ENVOYE`, la
+reprise ne trouve rien qui la bloque et le client reçoit un doublon. Le
+mécanisme qui ferme ce trou, outbox transactionnelle ou clé d'idempotence
+fournisseur, est à décider en **LS-51**, avant la phase 4. Ne pas coder l'envoi
+d'email en supposant l'index suffisant.
 
 Référence : `docs/architecture/MODELE-CONCEPTUEL.md`, décision D.
 

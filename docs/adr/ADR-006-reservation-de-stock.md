@@ -53,7 +53,45 @@ CHECK (quantite_physique - quantite_reservee >= 0)
 
 Le niveau d'isolation `READ COMMITTED`, celui par défaut de PostgreSQL, suffit.
 Le verrou de ligne implicite pris par l'`UPDATE` conditionnel garantit
-l'exclusion mutuelle. Aucun verrou explicite, aucun risque d'interblocage.
+l'exclusion mutuelle, sans aucun verrou explicite.
+
+### Un panier multi-articles peut interbloquer, correction de LS-49
+
+Cet ADR affirmait « aucun verrou explicite, aucun risque d'interblocage ». La
+seconde proposition ne découle pas de la première : l'`UPDATE` prend un verrou
+de ligne implicite qu'il **tient jusqu'au `COMMIT`**. Deux paniers portant les
+mêmes variantes dans un ordre opposé se bloquent mutuellement.
+
+Reproduit sur PostgreSQL 18, avec l'instruction ci-dessus et rien d'autre. Le
+script est versé dans `docs/prototypes/interblocage-panier.sh` :
+
+```
+[T1] ERROR:  deadlock detected
+[T1] DETAIL:  Process 102 waits for ShareLock on transaction 757;
+              blocked by process 109.
+              Process 109 waits for ShareLock on transaction 756;
+              blocked by process 102.
+```
+
+**Ce que cela ne remet pas en cause.** PostgreSQL détecte le cycle et annule
+l'une des deux transactions. L'état final reste cohérent, aucune survente ne se
+produit, et la transaction survivante réserve ses deux variantes correctement.
+Les contraintes `CHECK` et le choix de l'`UPDATE` conditionnel restent valides :
+le défaut est un échec de commande sous concurrence, pas une atteinte à
+l'intégrité du stock.
+
+**Ce que cela impose.** La transaction de réservation d'un panier doit ordonner
+les variantes de façon déterministe, par identifiant croissant, avant de les
+mettre à jour. Deux paniers portant les mêmes pièces prennent alors les verrous
+dans le même ordre et l'un attend l'autre au lieu de l'interbloquer. Le
+traitement de l'erreur `40P01` reste nécessaire en dernier recours, un
+interblocage restant possible avec une autre transaction concurrente.
+
+Cette correction est portée par **LS-50**, à traiter avant la phase 3 : elle
+suppose un service de réservation qui n'existe pas encore.
+
+L'alternative écartée plus bas reste écartée pour la même raison, aggravée :
+`SELECT ... FOR UPDATE` sérialise en plus les accès à une variante unique.
 
 ## Vérification par prototype
 
