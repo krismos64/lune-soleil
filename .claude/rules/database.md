@@ -83,12 +83,12 @@ client paie en ligne produit une commande payée sans stock.
 ```
 UNIQUE  produit.slug, categorie.slug, variante.reference, commande.numero,
         facture.numero, avoir.numero, facture.commande_id,
-        evenement_webhook.identifiant_fournisseur, verrou_tache.nom,
+        evenement_fournisseur.identifiant_fournisseur, verrou_tache.nom,
         jeton_acces.empreinte, media.identifiant_fournisseur, utilisateur.email
 CHECK   quantite_physique >= 0
 CHECK   quantite_reservee >= 0
 CHECK   quantite_physique - quantite_reservee >= 0
-CHECK   quantite_ligne > 0
+CHECK   ligne_commande.quantite > 0
 CHECK   facture.montant_avoir_centimes <= facture.montant_total_centimes
 INDEX   statut, date, utilisateur, commande, reference, expiration
 ```
@@ -222,9 +222,16 @@ sur Europe/Paris à l'affichage seulement. Identifiants techniques non
 prédictibles, distincts des numéros métier lisibles. Email normalisé pour les
 rapprochements mais jamais utilisé comme clé technique.
 
-Les champs fiscaux (`taxRate`, `taxAmount`, `priceIncludesTax`) existent et
-valent zéro : l'entreprise est en franchise en base de TVA. Un franchissement
-futur du seuil devient un paramétrage, pas une migration de données historiques.
+**La fiscalité tient dans un seul champ**, `Commande.montantTaxeCentimes`, en
+centimes entiers comme tout montant. Il vaut zéro : l'entreprise est en franchise
+en base de TVA, article 293 B du CGI.
+
+Il n'existe **ni taux, ni booléen d'inclusion de taxe**, et il ne faut pas en
+ajouter. La mention obligatoire sur les documents est textuelle, portée par
+l'instantané légal de la facture, voir `payments.md`.
+
+Un franchissement futur du seuil devient un paramétrage, pas une migration de
+données historiques.
 
 ## Numérotation comptable
 
