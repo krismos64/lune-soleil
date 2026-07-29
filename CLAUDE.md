@@ -72,8 +72,14 @@ YOU MUST respecter ces règles sur tout le code de ce projet.
 4. **Facture** : jamais modifiée ni supprimée. Une correction produit un avoir.
    Le numéro est attribué dans la transaction qui crée le document.
 5. **Paiement** : seul un événement serveur signé confirme un paiement. Le retour
-   du navigateur ne prouve rien. Tout effet métier est idempotent par identifiant
-   d'événement unique en base.
+   du navigateur ne prouve rien. **L'idempotence est ancrée sur l'effet, pas sur
+   l'identifiant d'événement** : celui-ci ne protège que du rejeu du même
+   événement, et laisse passer le croisement entre le webhook et la
+   réconciliation, deux chemins distincts vers le même effet. Quatre clés
+   d'unicité en base, une par effet de la confirmation : paiement encaissé par
+   commande, mouvement de stock par commande et variante, facture par commande,
+   email par commande et modèle. Détail dans `.claude/rules/payments.md`,
+   décision D.
 6. **Stock** : la disponibilité web et la quantité physique sont deux notions
    distinctes. Suspendre la vente web ne crée aucun mouvement de stock.
 7. **Validation** : toute entrée non fiable est validée côté serveur avec Zod.

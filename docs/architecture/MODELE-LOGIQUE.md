@@ -57,7 +57,17 @@ partiels du modèle sont produits par `prisma migrate diff`.
 
 Prisma ne génère **pas** les contraintes `CHECK`. ADR-006 reste exact sur ce
 point. Elles vivent dans `prisma/migrations/manual/001_contraintes_check.sql`,
-seize contraintes à recopier dans la migration Prisma en phase 1.
+**toutes à recopier** dans la migration Prisma en phase 1.
+
+Leur nombre n'est pas écrit ici : il a déjà été faux une fois, ce document
+annonçant seize contraintes après que LS-45 en eut ajouté une dix-septième. Un
+compteur en toutes lettres se périme à chaque ajout, et sert de liste de contrôle
+pour la phase 1, donc un écart d'une unité fait manquer une contrainte en
+silence. La commande qui donne la réponse :
+
+```bash
+grep -c "ADD CONSTRAINT" prisma/migrations/manual/001_contraintes_check.sql
+```
 
 ## Les six index partiels
 
