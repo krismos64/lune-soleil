@@ -127,12 +127,52 @@ ligne.
 deux jours que ce fichier porte une règle périmée : le filtre d'email en LS-13,
 puis ces trois identifiants.
 
+## LS-47, la règle que personne ne lisait
+
+Audit de la configuration Claude Code, demandé par Christophe en fin de session.
+Il en sort un défaut qui invalide la justification de LS-46.
+
+**Les quatre fichiers de `.claude/rules/` n'étaient chargés dans aucune
+session.** `CLAUDE.md` ne les référençait nulle part. Ils n'étaient lus que si
+l'assistant devinait leur existence, ce qui suppose de savoir qu'ils existent.
+
+Or LS-46 justifiait sa priorité Must en affirmant que `database.md` est « chargé
+automatiquement au moment de coder ». J'ai écrit cette phrase, elle a été
+validée, et personne ne l'a vérifiée. Le risque décrit était réel, le mécanisme
+invoqué ne l'était pas. Même défaut que l'entrée du 28 juillet, corrigée elle
+aussi.
+
+Trois changements :
+
+- `CLAUDE.md` charge les quatre règles par la syntaxe `@`, avant les invariants :
+  ceux-ci énoncent le principe, les règles portent l'application détaillée.
+- Un hook `PostToolUse` lance `verifier-regles.sh` après toute écriture sur
+  `.claude/rules/` ou `prisma/schema.prisma`. Il avertit sans bloquer et reste
+  silencieux au vert.
+- `verifier-regles.sh` contrôle désormais sa propre couverture : un fichier de
+  règles non référencé par `CLAUDE.md` fait rougir le script.
+
+Ce dernier point est le plus important. Sans lui, la règle du jour serait
+corrigée et le prochain fichier ajouté redeviendrait invisible en silence. Même
+motif que le contrôle de complétude des enums de LS-45, à quelques heures
+d'intervalle.
+
+### Deux partis pris sur le hook
+
+**Avertir sans bloquer.** Une correction en deux temps, renommer dans le schéma
+puis dans la règle, passe forcément par un état transitoire incohérent. Un hook
+bloquant rendrait cet ordre impossible.
+
+**Silencieux au vert.** Un hook qui parle à chaque écriture devient un bruit
+qu'on apprend à ignorer, donc un hook mort.
+
 ## Où on en est
 
 | Ticket | Sujet | État |
 |---|---|---|
 | LS-45 | Alignement des enums, V14, cohérence événement | Terminé, fusionné, `52b3680` |
 | LS-46 | Identifiants inexistants dans les règles | Terminé, fusionné, `675248c` |
+| LS-47 | Chargement des règles et hook de contrôle | Terminé, fusionné, `bfb4c57` |
 | LS-14 | Diagramme de séquence de l'achat | À faire, débloqué |
 | LS-2 | Phase 1, fondations techniques | Prochaine phase |
 

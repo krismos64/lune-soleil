@@ -34,17 +34,26 @@ app/ et components/   ->  services/  ->  repositories/  ->  Prisma  ->  PostgreS
 - `integrations/` isole Stripe, email, médias, IA.
 - Aucune généralisation prématurée : ce projet n'est pas un produit réutilisable.
 
-## Règles de domaine, chargées à chaque session
+## Règles de domaine
 
-Les invariants ci-dessous énoncent le principe, ces quatre fichiers portent
-l'application détaillée : l'instruction SQL exacte, la valeur du délai, le jeton
-de couleur. Ils sont référencés ici pour être **chargés automatiquement**, sans
-quoi une session ne les lit que si elle devine leur existence.
+Les invariants ci-dessous énoncent le principe, quatre fichiers de
+`.claude/rules/` portent l'application détaillée : l'instruction SQL exacte, la
+valeur du délai, le jeton de couleur.
 
-@.claude/rules/database.md
-@.claude/rules/payments.md
-@.claude/rules/legal.md
-@.claude/rules/frontend-design.md
+Chacun porte un frontmatter `paths` et **se charge quand une session touche les
+chemins concernés**, ce qui évite d'imposer les quatre à toute session.
+
+| Fichier | Se charge sur |
+|---|---|
+| `database.md` | `prisma/**`, `src/repositories/**`, `src/services/**` |
+| `payments.md` | `src/integrations/stripe/**`, webhooks, checkout, commandes |
+| `legal.md` | services de rétractation et de facturation, pages légales |
+| `frontend-design.md` | `src/app/**`, `src/components/**`, styles |
+
+**Tant que `src/` est vide**, trois de ces quatre fichiers ne se déclenchent
+jamais : leurs chemins n'existent pas encore. Une session qui conçoit le paiement
+avant la phase 1 doit donc lire `payments.md` explicitement. Ce n'est plus
+nécessaire une fois `src/` peuplé.
 
 Une règle qui contredit un ADR ou la loi est fausse, dans cet ordre. Signaler la
 contradiction plutôt que de suivre la règle.
