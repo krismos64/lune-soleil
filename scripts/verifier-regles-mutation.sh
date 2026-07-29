@@ -76,10 +76,25 @@ cas "MODELE-LOGIQUE.md, filtre administratrice fausse"
 perl -pi -e "s/statut IN \('REUSSI', 'PARTIELLEMENT_REMBOURSE', 'REMBOURSE'\)\`, voir/statut = REUSSI\`, voir/" "$MC"
 cas "MODELE-CONCEPTUEL.md, V14 sans apostrophes"
 
+# Cas 7 et 8 : le tableau des quatre cles d'idempotence et le recapitulatif des
+# unicites partielles. Ces deux lignes ecrivent `paiement (commandeId)` sans
+# nommer l'index ni le mot UNIQUE : une quatrieme forme, qui echappait aux trois
+# ancres de la version precedente. Le controle etait vert alors que les deux
+# lignes portaient encore le predicat perime.
+#
+# Trouves par un rapport externe apres cloture de LS-49, pas par ce script :
+# une mutation ne prouve que ce qu'elle mute, elle ne devine pas les formes
+# d'ecriture que personne n'a pensees.
+perl -pi -e "s/^\| paiement confirmé \| \`paiement \(commandeId\)\` filtré sur \`statut IN \('REUSSI', 'PARTIELLEMENT_REMBOURSE', 'REMBOURSE'\)\`/| paiement confirmé | \`paiement (commandeId)\` filtré sur \`statut = REUSSI\`/" "$MC"
+cas "MODELE-CONCEPTUEL.md, tableau des quatre cles d'idempotence"
+
+perl -pi -e "s/^\| \`paiement \(commandeId\)\` \| \`statut IN \('REUSSI', 'PARTIELLEMENT_REMBOURSE', 'REMBOURSE'\)\`/| \`paiement (commandeId)\` | \`statut = REUSSI\`/" "$MC"
+cas "MODELE-CONCEPTUEL.md, recapitulatif des unicites partielles"
+
 echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then
-  echo "  6 mutations, 6 detectees"
+  echo "  8 mutations, 8 detectees"
 else
   echo "  $echecs mutation(s) non detectee(s)"
 fi

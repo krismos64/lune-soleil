@@ -163,24 +163,36 @@ while IFS= read -r ligne; do
     /^}/           { if (bloc ~ idx) { print bloc; exit } }
   ' "$SCHEMA" | grep -oE '@@map\("[a-z_0-9]+"\)' | sed 's/@@map("//;s/")//')
 
-  # Trois formes d'ancrage, chacune rencontrée dans un document réel :
-  #   paiement_reussi_unique              MODELE-LOGIQUE.md, tableau des index
-  #   UNIQUE paiement (commande_id)       database.md, bloc de contraintes
-  #   `UNIQUE` partiel sur `(commandeId)` MODELE-CONCEPTUEL.md, règle V14, qui
-  #                                       ne nomme ni l'index ni la table
+  # Ancrage. Deux formes suffisent à couvrir tous les documents du dépôt :
   #
-  # La troisième a été ajoutée après coup : les deux premières laissaient passer
-  # V14, la règle la plus structurante des trois.
+  #   paiement_reussi_unique          le nom de l'index, MODELE-LOGIQUE.md
+  #   paiement (...)                  la table suivie de ses champs, forme qui
+  #                                   couvre aussi `UNIQUE paiement (commande_id)`
+  #                                   de database.md, qui la contient
   #
-  # Elle est ancrée sur UNIQUE **et** sur les champs indexés, pas sur la colonne
-  # du prédicat. Ancrer sur `statut =` attrapait toute ligne parlant d'un statut,
-  # index compris : 18 faux positifs sur un état pourtant correct, et deux index
-  # qui se contaminaient. Une ancre trop large rend le contrôle inutilisable
-  # aussi sûrement qu'une ancre absente.
+  # Historique, parce que ce contrôle s'est trompé trois fois et que chaque
+  # erreur est instructive :
+  #
+  # 1. Ancrer sur le seul nom d'index ratait database.md, qui ne le nomme
+  #    jamais. Donc le fichier le plus dangereux, celui chargé en codant.
+  # 2. Ajouter `statut =`, la colonne du prédicat, attrapait toute ligne parlant
+  #    d'un statut : 18 faux positifs sur un état correct, deux index qui se
+  #    contaminaient.
+  # 3. Ajouter `UNIQUE partiel sur (champs)` réglait la règle V14 mais ratait
+  #    encore `paiement (commandeId)` du tableau récapitulatif, quatrième forme.
+  #
+  # La leçon est de ne pas empiler une ancre par forme rencontrée : la suivante
+  # échappera. `<table> (` est le point commun de presque toutes les écritures
+  # d'une contrainte, et couvre `UNIQUE paiement (commande_id)` par inclusion.
+  #
+  # La règle V14 reste hors de sa portée : elle écrit
+  # `UNIQUE partiel sur (commandeId)` sans nommer la table. D'où la seconde
+  # ancre, sur les champs indexés. Retirer celle-ci a fait rougir le cas 6 du
+  # script de mutation, ce qui est exactement son rôle.
   champs=$(echo "$ligne" | sed -E 's/.*@@unique\(\[([^]]*)\].*/\1/' | tr -d ' ')
   ancres="$index"
-  [ -n "$table" ] && ancres="$ancres|UNIQUE +$table\\b"
-  [ -n "$champs" ] && ancres="$ancres|UNIQUE\`? partiel sur \`?\($champs\)"
+  [ -n "$table" ]  && ancres="$ancres|$table *\\("
+  [ -n "$champs" ] && ancres="$ancres|partiel sur \`?\($champs\)"
 
   # Une ligne qui cite l'index ou la table sous forme de contrainte décrit ce
   # filtre. Le prédicat déborde souvent sur les lignes suivantes, alignées sous
@@ -218,7 +230,9 @@ while IFS= read -r ligne; do
 done < <(grep -E 'where: raw\(' "$SCHEMA")
 
 if [ "$predicats_ko" -eq 0 ]; then
-  echo "  OK    $nb_index index partiels, aucun document ne contredit son prédicat"
+  echo "  OK    $nb_index index partiels, aucune contrainte citée ne contredit son prédicat"
+  echo "        (portée : lignes citant le nom d'index, la table ou les champs ;"
+  echo "         la prose qui décrit un filtre sans le nommer reste hors contrôle)"
 else
   ko=$((ko + predicats_ko))
 fi
