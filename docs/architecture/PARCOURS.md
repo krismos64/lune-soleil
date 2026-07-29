@@ -129,7 +129,8 @@ retardé par une file d'attente chez le prestataire. Son identifiant n'ayant
 jamais été vu, l'unicité sur l'identifiant d'événement ne le rejette pas.
 Base : l'événement est persisté, mais il ne produit aucun second effet métier.
 Les unicités qui le garantissent portent sur l'effet et non sur l'événement,
-quatre clés : au plus un paiement `REUSSI` par commande, au plus un mouvement
+quatre clés : au plus un paiement **encaissé** par commande, les trois états
+`REUSSI`, `PARTIELLEMENT_REMBOURSE` et `REMBOURSE` comptant, au plus un mouvement
 `VENTE_WEB` par commande **et par variante**, au plus une facture par commande,
 au plus un email automatique par commande et par modèle.
 Vue : rien, le client a déjà sa confirmation.

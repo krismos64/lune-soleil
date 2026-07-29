@@ -462,8 +462,13 @@ Le parcours 1 prévoit explicitement le refus suivi d'un nouvel essai. Des
 colonnes de paiement portées par la commande écraseraient la tentative refusée,
 donc la trace du motif d'échec, utile au support comme au diagnostic.
 
-Une commande porte ainsi zéro à n paiements. Au plus un est en statut `REUSSI`,
-garanti par une unicité en base et non par du code, voir décision D.
+Une commande porte ainsi zéro à n paiements. Au plus un est **encaissé**,
+c'est-à-dire dans l'un des trois états `REUSSI`, `PARTIELLEMENT_REMBOURSE` ou
+`REMBOURSE`, garanti par une unicité en base et non par du code, voir décision D.
+
+Dire « au plus un `REUSSI` » serait plus court et faux : un paiement remboursé
+occupe le filtre lui aussi, sans quoi un second encaissement redeviendrait
+possible après remboursement.
 
 **Correction du 29 juillet 2026, LS-45.** Ce document écrivait `INITIE` là où le
 schéma déclare `EN_ATTENTE`, et omettait `PARTIELLEMENT_REMBOURSE` du schéma
@@ -513,7 +518,7 @@ L'étape 7 du parcours 1 en produit quatre, et chacun a besoin de sa propre clé
 
 | Effet | Clé d'unicité |
 |---|---|
-| paiement confirmé | `paiement (commandeId)` filtré sur `statut = REUSSI` |
+| paiement confirmé | `paiement (commandeId)` filtré sur `statut IN ('REUSSI', 'PARTIELLEMENT_REMBOURSE', 'REMBOURSE')` |
 | stock décrémenté | `mouvement_stock (commandeId, varianteId)` filtré sur `type = VENTE_WEB` |
 | facture émise | `facture (commandeId)`, voir décision E |
 | email envoyé | `journal_email (commandeId, modele)` filtré sur `statut = 'ENVOYE' AND origine IN ('SYSTEME','RECONCILIATION')` |
@@ -1552,7 +1557,7 @@ l'unicité simple `facture.commandeId` listée plus haut :
 | Contrainte | Filtre | Empêche |
 |---|---|---|
 | `media (produitId)` | `ordre = 1` | deux médias principaux sur un produit |
-| `paiement (commandeId)` | `statut = REUSSI` | deux paiements réussis sur une commande |
+| `paiement (commandeId)` | `statut IN ('REUSSI', 'PARTIELLEMENT_REMBOURSE', 'REMBOURSE')` | deux paiements encaissés sur une commande, y compris après remboursement |
 | `mouvement_stock (commandeId, varianteId)` | `type = VENTE_WEB` | double décrément par webhook et réconciliation |
 | `journal_email (commandeId, modele)` | `statut = 'ENVOYE' AND origine IN ('SYSTEME','RECONCILIATION')` | email de confirmation envoyé deux fois |
 | `adresse_carnet (utilisateurId)` | `estParDefaut` | deux adresses par défaut sur un compte |
