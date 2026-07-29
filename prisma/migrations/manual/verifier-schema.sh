@@ -140,8 +140,8 @@ R "INSERT INTO categorie (id,nom,slug,ordre,cree_a) VALUES ('cat','Boucles','bou
 # ADR-024, LS-53 : une réservation porte toujours sa commande. La commande est
 # donc créée avant, comme dans la transaction réelle du parcours 1.
 R "INSERT INTO commande (id,numero,statut,email_normalise,nom_client,adresse_livraison,adresse_facturation,
-     sous_total_centimes,frais_port_centimes,total_centimes,montant_taxe_centimes,cgv_acceptees_a,cgv_version,cree_a)
-   VALUES ('cmdres','C-2026-0900','EN_ATTENTE_PAIEMENT','r@x.fr','Client','{}','{}',1200,410,1610,0,now(),'v1',now());" >/dev/null
+     sous_total_centimes,mode_livraison,point_relais_id,frais_port_centimes,total_centimes,montant_taxe_centimes,cgv_acceptees_a,cgv_version,cree_a)
+   VALUES ('cmdres','C-2026-0900','EN_ATTENTE_PAIEMENT','r@x.fr','Client','{}','{}',1200,'POINT_RELAIS','MR-64000-01',410,1610,0,now(),'v1',now());" >/dev/null
 
 reset_stock() {
   R "DELETE FROM reservation;
@@ -209,6 +209,43 @@ sortie=$(R "DELETE FROM commande WHERE id='cmdres';")
 verifier_rejet "commande portant une réservation non supprimable, ADR-024" "reservation_commande_id_fkey" "$sortie"
 
 echo
+echo "Mode de livraison, ADR-025"
+
+# Les deux CHECK d'ADR-025 sont arrivés au SQL de contraintes sans qu'aucun
+# contrôle ne les exerce. Les quatre cas ci-dessous couvrent l'équivalence dans
+# les deux sens, sur les deux entités qui la portent.
+#
+# Le cas dangereux en premier : DOMICILE avec un point de retrait. L'étiquette
+# partirait vers un relais alors que le client a payé pour être livré chez lui.
+sortie=$(R "INSERT INTO commande (id,numero,statut,email_normalise,nom_client,adresse_livraison,adresse_facturation,
+     sous_total_centimes,mode_livraison,point_relais_id,frais_port_centimes,total_centimes,montant_taxe_centimes,cgv_acceptees_a,cgv_version,cree_a)
+   VALUES ('cmdko1','C-2026-0901','EN_ATTENTE_PAIEMENT','d@x.fr','Client','{}','{}',1200,'DOMICILE','MR-64000-01',499,1699,0,now(),'v1',now());")
+verifier_rejet "commande DOMICILE avec point de retrait rejetée" "chk_commande_mode_point_relais" "$sortie"
+
+# Le cas inverse : POINT_RELAIS sans identifiant produit une expédition
+# impossible à créer, le transporteur exigeant la destination.
+sortie=$(R "INSERT INTO commande (id,numero,statut,email_normalise,nom_client,adresse_livraison,adresse_facturation,
+     sous_total_centimes,mode_livraison,point_relais_id,frais_port_centimes,total_centimes,montant_taxe_centimes,cgv_acceptees_a,cgv_version,cree_a)
+   VALUES ('cmdko2','C-2026-0902','EN_ATTENTE_PAIEMENT','d@x.fr','Client','{}','{}',1200,'POINT_RELAIS',NULL,410,1610,0,now(),'v1',now());")
+verifier_rejet "commande POINT_RELAIS sans point de retrait rejetée" "chk_commande_mode_point_relais" "$sortie"
+
+sortie=$(R "INSERT INTO commande (id,numero,statut,email_normalise,nom_client,adresse_livraison,adresse_facturation,
+     sous_total_centimes,mode_livraison,point_relais_id,frais_port_centimes,total_centimes,montant_taxe_centimes,cgv_acceptees_a,cgv_version,cree_a)
+   VALUES ('cmddom','C-2026-0903','EN_ATTENTE_PAIEMENT','d@x.fr','Client','{}','{}',1200,'DOMICILE',NULL,499,1699,0,now(),'v1',now());")
+verifier_accepte "commande DOMICILE sans point de retrait acceptée" "$sortie"
+
+# Sur l'expédition, le mode exécuté peut différer de celui de la commande, un
+# échec à domicile étant rebasculé vers un relais. La cohérence interne reste
+# exigée : la bascule doit porter l'identifiant du relais de repli.
+sortie=$(R "INSERT INTO expedition (id,commande_id,transporteur,mode,point_relais_id,cree_a)
+   VALUES ('exko','cmdres','Mondial Relay','POINT_RELAIS',NULL,now());")
+verifier_rejet "expédition POINT_RELAIS sans point de retrait rejetée" "chk_expedition_mode_point_relais" "$sortie"
+
+sortie=$(R "INSERT INTO expedition (id,commande_id,transporteur,mode,point_relais_id,cree_a)
+   VALUES ('exok','cmdres','Mondial Relay','POINT_RELAIS','MR-64000-02',now());")
+verifier_accepte "expédition rebasculée vers un relais acceptée, ADR-025" "$sortie"
+
+echo
 echo "Concurrence, deux acheteurs sur la dernière pièce"
 
 reset_stock
@@ -224,8 +261,8 @@ echo
 echo "Idempotence, décision D et quatre clés"
 
 R "INSERT INTO commande (id,numero,statut,email_normalise,nom_client,adresse_livraison,adresse_facturation,
-     sous_total_centimes,frais_port_centimes,total_centimes,montant_taxe_centimes,cgv_acceptees_a,cgv_version,cree_a)
-   VALUES ('cmd','C-2026-0001','CONFIRMEE','a@x.fr','Client','{}','{}',1200,410,1610,0,now(),'v1',now());" >/dev/null
+     sous_total_centimes,mode_livraison,point_relais_id,frais_port_centimes,total_centimes,montant_taxe_centimes,cgv_acceptees_a,cgv_version,cree_a)
+   VALUES ('cmd','C-2026-0001','CONFIRMEE','a@x.fr','Client','{}','{}',1200,'POINT_RELAIS','MR-64000-01',410,1610,0,now(),'v1',now());" >/dev/null
 
 R "INSERT INTO paiement (id,commande_id,statut,montant_centimes,montant_rembourse_centimes,cree_a)
    VALUES ('pay1','cmd','REUSSI',1610,0,now());" >/dev/null
@@ -449,6 +486,8 @@ PRODUIT|statut|StatutProduit
 MEDIA|statutTraitement|StatutTraitementMedia
 MOUVEMENT_STOCK|type|TypeMouvementStock
 MOUVEMENT_STOCK|origine|OrigineEcriture
+HISTORIQUE_STATUT|origine|OrigineEcriture
+JOURNAL_EMAIL|origine|OrigineEcriture
 COMMANDE|modeLivraison|ModeLivraison
 EXPEDITION|mode|ModeLivraison
 DEMANDE_RETRACTATION|statut|StatutRetractation
