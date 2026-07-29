@@ -80,6 +80,11 @@ du premier contrôle est écrite en commentaire plutôt que masquée.
 
 Ce contrôle exige Docker et **n'a pas été exécuté** cette session.
 
+> Suite du 29 juillet 2026, session suivante. Exécuté depuis, il a trouvé un
+> défaut réel dès sa première exécution : `OrigineEcriture` est porté par trois
+> colonnes et la table n'en couvrait qu'une. Voir
+> `2026-07-29-execution-verifier-schema.md`.
+
 ### Réassurance, catalogue et fiche produit
 
 Trois sections ajoutées à `frontend-design.md`, aucune n'existait.
@@ -184,7 +189,7 @@ présents au schéma depuis LS-13. Complété au passage. `VARIANTE` marquait au
 | `verifier-regles.sh` | vert, 32 identifiants contre 29 avant |
 | `verifier-regles-mutation.sh` | 8 mutations, 8 détectées |
 | Cadratins dans le diff | aucun |
-| `verifier-schema.sh` | **non exécuté**, exige Docker |
+| `verifier-schema.sh` | **non exécuté**, exige Docker (exécuté à la session suivante, il échouait) |
 | `type-check`, `lint`, `test` | sans objet, aucun `package.json` |
 
 Le contrôle de couverture par colonne ajouté cette session n'a donc pas tourné.
