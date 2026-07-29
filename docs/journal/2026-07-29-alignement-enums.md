@@ -181,6 +181,50 @@ bloquant rendrait cet ordre impossible.
 **Silencieux au vert.** Un hook qui parle à chaque écriture devient un bruit
 qu'on apprend à ignorer, donc un hook mort.
 
+## LS-48, un second rapport externe, bien meilleur que le premier
+
+Sept points réels sur dix, aucun document inventé, et un défaut technique que je
+n'avais pas vu. Le contraste avec le premier rapport est net.
+
+**L'invariant 5 de `CLAUDE.md` contredisait la décision D.** Il affirmait que
+tout effet métier est idempotent par identifiant d'événement, thèse que LS-12
+avait explicitement écartée. Le risque n'était pas théorique : `CLAUDE.md` est
+chargé à chaque session sans condition, alors que `payments.md` ne se déclenche
+pas encore, ses chemins `src/` n'existant pas. Une session codant le webhook
+aurait lu la version écartée, pas la bonne.
+
+**`verifier-schema.sh` ne s'arrêtait pas quand Docker manquait.** Il affichait
+« 7 réussites, 41 échecs ». Les sept étaient des contrôles d'acceptation :
+`verifier_accepte` cherche une erreur SQL dans la sortie, et
+`docker: command not found` n'en est pas une, donc l'écriture était réputée
+acceptée.
+
+C'est le mécanisme exact du `grep violation` corrigé en LS-13, réapparu par un
+autre chemin. Quatre gardes ajoutées, toutes fatales, plus `ON_ERROR_STOP=1` sur
+les applications `psql`. Les quatre cas testés s'arrêtent avec **zéro réussite
+affichée**.
+
+Trois corrections plus modestes : `MODELE-LOGIQUE.md` annonçait seize `CHECK`
+pour dix-sept (le compteur est remplacé par la commande qui le calcule), le
+README acceptait « Node 22 ou plus » alors que Node 23 casse Prisma 7, et les
+descriptions de LS-33 et LS-27 dataient d'avant les arbitrages.
+
+LS-33 était le plus gênant : sa description conservait l'option fondée sur la
+date d'expédition, **juridiquement fausse**, la correction ne vivant qu'en
+commentaire. Une session future l'aurait reprise.
+
+### Deux points écartés, argumentés
+
+Le rapport voyait une ambiguïté sur `motifDecision`. En pratique la dégradation
+d'une pièce *est* le motif de la décision de remboursement, un champ pour un
+sens.
+
+Il voyait aussi une contradiction entre l'autonomie de migration et la section
+Interdits de `CLAUDE.md`. Vérifié : cette section ne mentionne ni déploiement ni
+migration, il n'y a pas de contradiction. Le rapport confondait avec l'instruction
+donnée à l'assistant externe. Son lien avec LS-42 reste juste en revanche :
+l'autonomie repose sur un script en mode fail-open.
+
 ## Où on en est
 
 | Ticket | Sujet | État |
@@ -188,6 +232,7 @@ qu'on apprend à ignorer, donc un hook mort.
 | LS-45 | Alignement des enums, V14, cohérence événement | Terminé, fusionné, `52b3680` |
 | LS-46 | Identifiants inexistants dans les règles | Terminé, fusionné, `675248c` |
 | LS-47 | Chargement des règles et hook de contrôle | Terminé, fusionné, `bfb4c57` |
+| LS-48 | Invariant 5, arrêt du script, compteurs, README | Terminé, fusionné, `dcddbec` |
 | LS-14 | Diagramme de séquence de l'achat | À faire, débloqué |
 | LS-2 | Phase 1, fondations techniques | Prochaine phase |
 
