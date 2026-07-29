@@ -114,11 +114,34 @@ repasser inaperçu, à condition que le script tourne.
 
 ## Prochaine étape
 
-**Découper LS-2**, inchangé depuis hier. La différence est que le schéma est
-maintenant vérifié sur PostgreSQL réel et non seulement relu.
+**Découper LS-2**, et c'est la première action de la session suivante. La
+différence avec hier est double : le schéma est vérifié sur PostgreSQL réel et
+non seulement relu, et **les deux questions ouvertes sont tranchées**.
 
-Les deux questions posées à Christophe restent ouvertes : granularité, onze
-stories ou regroupement, et ordre d'attaque.
+### Arbitrage de Christophe, 29 juillet au soir
+
+**Granularité : onze stories**, pas de regroupement. Ces stories sont de la
+plomberie et non de la fonctionnalité, chacune se termine sur un signal binaire,
+ça compile, le conteneur démarre, le test passe. Un bloc unique se traînerait
+sans jamais pouvoir être déclaré fini, et la charge administrative du découpage
+fin est nulle sur un projet à une personne.
+
+Deux corrections à la liste esquissée le 28 juillet, à total constant :
+
+- **fusionner « base Docker » et « migration Prisma »**, elles ne peuvent pas se
+  terminer séparément, une migration sans base ne prouve rien
+- **ajouter une story pour les trois dettes de LS-13**, aujourd'hui orphelines
+  donc jamais faites, dont la recopie des contraintes `CHECK` dans la migration
+  Prisma, dernier filet contre la survente
+
+**Ordre : intégration continue tôt**, après l'initialisation, la base et les
+outils de test, pas en fin de phase. C'est la leçon directe de cette session, un
+contrôle qui dépend de quelqu'un qui pense à le lancer finit par ne pas être
+lancé. `verifier-schema.sh` y passe en premier.
+
+Le détail des onze n'a jamais été écrit dans le dépôt, seuls les intitulés le
+sont, dans `2026-07-29-alignement-sources-verite.md`. La liste se reconstitue au
+découpage et Christophe la valide à ce moment-là.
 
 Les trois dettes de LS-13 attendent toujours la phase 1 : fixer Node 22 LTS
 partout, créer `prisma.config.ts`, recopier toutes les contraintes `CHECK` dans
