@@ -71,9 +71,9 @@ stock à un exemplaire est le jalon technique majeur.
 | 1 | Consultation du catalogue | rien | produits actifs, disponibilité dérivée |
 | 2 | Ajout au panier | ligne de panier, éphémère | panier mis à jour, compteur |
 | 3 | Revalidation serveur | rien | totaux recalculés depuis le serveur |
-| 4 | Réservation de stock | `quantiteReservee` incrémentée, ligne de réservation avec expiration à 30 min | passage au paiement |
-| 5 | Commande en attente | commande `EN_ATTENTE_PAIEMENT`, lignes historisées, acceptation CGV horodatée | récapitulatif |
-| 6 | Session de paiement | identifiant de session prestataire rattaché à la commande | redirection |
+| 4 | Commande et réservation, **une seule transaction** | commande `EN_ATTENTE_PAIEMENT`, lignes historisées, acceptation CGV horodatée, `quantiteReservee` incrémentée, réservations avec expiration à 30 min et `commandeId` renseigné | passage au paiement |
+| 5 | Session de paiement, **après le commit** | identifiant de session prestataire rattaché à la commande | redirection |
+| 6 | Attente de l'événement | rien | page d'attente ou retour du prestataire |
 | 7 | Événement signé reçu | événement persisté avec identifiant unique, paiement `REUSSI`, commande `CONFIRMEE`, réservation convertie en mouvement de stock, `quantitePhysique` décrémentée | page de confirmation |
 | 8 | Facture | facture avec numéro attribué dans la transaction, instantané légal, PDF | facture disponible |
 | 9 | Emails | journal d'envoi, deux entrées | commande payée, facture |
@@ -81,15 +81,50 @@ stock à un exemplaire est le jalon technique majeur.
 | 11 | Expédition | expédition avec transporteur, numéro de suivi, commande `EXPEDIEE` | email et lien de suivi |
 | 12 | Livraison | commande `LIVREE` uniquement sur source fiable | suivi |
 
-Les étapes 4 à 7 sont transactionnelles. L'étape 7 est idempotente par contrainte
-d'unicité sur l'identifiant d'événement.
+**L'étape 4 est une transaction unique**, décision d'ADR-024. Commande, lignes et
+réservations sont écrites ensemble : si l'`UPDATE` conditionnel de réservation ne
+trouve pas de stock, toute la transaction est annulée et aucune commande ne
+subsiste. Une réservation sans commande est impossible en base,
+`Reservation.commandeId` étant obligatoire.
+
+Le motif est un incident qui, autrement, immobilise une pièce trente minutes :
+une panne entre la réservation et la création de commande laissait une
+réservation orpheline, et le client qui réessayait recevait « cette pièce vient
+d'être vendue » alors qu'il était seul à la vouloir.
+
+**L'étape 5 sort de la transaction.** Un appel réseau au prestataire à
+l'intérieur tiendrait le verrou de ligne de la variante pendant tout
+l'aller-retour, et son échec effacerait la commande par rollback. En la plaçant
+après le commit, un échec laisse une commande `EN_ATTENTE_PAIEMENT` que la
+réconciliation traite normalement.
+
+L'étape 7 est transactionnelle également, et idempotente par contrainte d'unicité
+sur l'identifiant d'événement.
 
 ### Cas d'erreur
 
 **Stock insuffisant à la réservation, étape 4**
-Base : aucune écriture, l'`UPDATE` conditionnel ne retourne aucune ligne.
+Base : aucune écriture. L'`UPDATE` conditionnel ne retourne aucune ligne, et la
+transaction entière est annulée, y compris la commande et ses lignes déjà
+écrites.
 Vue : « cette pièce vient d'être vendue », message métier et non erreur technique.
 Le panier est conservé, la ligne concernée signalée.
+
+**Panne pendant l'étape 4**
+Base : aucune écriture, la transaction n'a jamais été validée. Ni commande, ni
+réservation, ni quantité réservée incrémentée.
+Vue : erreur technique, le client réessaie sur un stock intact.
+C'est le cas que la transaction unique d'ADR-024 supprime. Avant elle, une panne
+entre réservation et commande laissait la pièce bloquée trente minutes.
+
+**Échec de création de la session de paiement, étape 5**
+Base : la commande et ses réservations existent, la transaction ayant été validée
+avant l'appel au prestataire. Aucun identifiant de session n'est rattaché.
+Vue : message d'erreur, possibilité de réessayer le paiement.
+Tâche : la réservation expire normalement à trente minutes, et la commande est
+traitée par la réconciliation comme toute commande restée en attente.
+C'est le motif de placer cet appel après le commit : à l'intérieur, son échec
+aurait effacé la commande.
 
 **Prix ou produit modifié entre l'ajout au panier et la revalidation, étape 3**
 Base : aucune écriture.
