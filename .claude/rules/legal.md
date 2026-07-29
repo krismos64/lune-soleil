@@ -2,6 +2,8 @@
 paths:
   - "src/services/retractation/**"
   - "src/services/invoices/**"
+  - "src/services/shipping/**"
+  - "src/integrations/mondial-relay/**"
   - "src/app/(legal)/**"
   - "src/app/retractation/**"
 ---

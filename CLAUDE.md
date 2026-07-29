@@ -163,6 +163,42 @@ Par ordre de priorité en cas de divergence :
 Toute décision structurante produit un ADR. Toute nouvelle idée entre d'abord
 dans Jira et n'intègre le périmètre que par arbitrage explicite.
 
+### ADR acceptés
+
+Les lire avant de travailler sur le domaine concerné. Un ADR prime sur toute
+documentation technique, ticket ou règle qui le contredirait.
+
+| ADR | Sujet | À lire avant de toucher |
+|---|---|---|
+| ADR-006 | Réservation de stock | stock, panier, commande |
+| ADR-021 | Authentification de l'administration | connexion, rôles |
+| ADR-022 | Palette publique | interface, styles |
+| ADR-023 | Authentification client | espace client, comptes |
+| ADR-024 | Atomicité réservation et commande | tunnel, transactions |
+| ADR-025 | Modes de livraison, trois modes | livraison, transporteur, tunnel |
+
+Cette table se met à jour à chaque ADR créé. Un ADR absent d'ici reste
+opposable : la table est un raccourci, `docs/adr/` fait foi.
+
+### Lire les commentaires Jira, pas seulement la description
+
+YOU MUST lire les commentaires d'un ticket avant de vous appuyer sur sa
+description. **Un commentaire récent rectifie souvent la description**, qui
+n'est pas toujours réécrite.
+
+Le cas s'est produit plusieurs fois sur ce projet. LS-27 et LS-33 portaient des
+décisions périmées, dont une juridiquement fausse, corrigées par LS-48 en
+réécrivant la description et en laissant l'historique en commentaire. Le
+29 juillet 2026, la description de LS-27 annonce « Point Relais et Locker » et
+un tarif unique, alors qu'un commentaire du même jour porte trois modes et deux
+tarifs, ADR-025.
+
+Se fier à la description seule fait donc reconstruire une conception abandonnée,
+sans qu'aucun contrôle ne le signale.
+
+En cas de contradiction entre description et commentaire, **le plus récent
+l'emporte**, et l'écart se signale plutôt que de se résoudre en silence.
+
 ## Autonomie et accès
 
 Décidé avec Christophe le 27 juillet 2026.

@@ -18,6 +18,26 @@ Vérifier qu'aucun ticket bloquant n'est ouvert. Vérifier que la story est prê
 acteur, critères testables incluant les cas d'erreur, règles métier, dépendances.
 Si elle ne l'est pas, poser les questions avant de coder.
 
+**YOU MUST lire les commentaires, pas seulement la description.** Ils ne
+reviennent pas par défaut : demander explicitement le champ `comment`.
+
+```
+getJiraIssue  fields: ["summary","status","description","comment"]
+```
+
+**Un commentaire récent rectifie souvent la description**, qui n'est pas toujours
+réécrite ensuite. Le cas s'est produit plusieurs fois ici. Au 29 juillet 2026, la
+description de LS-27 annonce « Point Relais et Locker » et un tarif unique, quand
+un commentaire du même jour porte trois modes et deux tarifs, ADR-025. LS-33 est
+dans le même état sur les événements de suivi.
+
+Se fier à la description seule fait reconstruire une conception abandonnée, et
+aucun contrôle automatique ne le signale.
+
+En cas de contradiction, **le plus récent l'emporte**. Signaler l'écart à
+Christophe plutôt que de le résoudre en silence, et proposer de réécrire la
+description quand elle est franchement périmée, comme LS-48 l'a fait.
+
 **Sans clé de ticket**, travail exploratoire : identifier à quel ticket existant
 le travail se rattache, et le dire. Presque tout se rattache à quelque chose. Un
 prototype de réservation relève de LS-17, une contrainte de schéma de LS-13.
