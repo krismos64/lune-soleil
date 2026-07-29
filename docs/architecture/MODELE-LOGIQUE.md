@@ -78,7 +78,7 @@ niveau 1, garanti par la base.
 |---|---|---|
 | `media_principal_unique` | `ordre = 1` | C9, un seul média principal |
 | `mouvement_vente_web_unique` | `type = 'VENTE_WEB'` | S7, décision D |
-| `paiement_reussi_unique` | `statut = 'REUSSI'` | V14, décision D |
+| `paiement_reussi_unique` | `statut IN ('REUSSI', 'PARTIELLEMENT_REMBOURSE', 'REMBOURSE')` | V14, décision D, corrigé par LS-45 |
 | `journal_email_systeme_unique` | `statut = 'ENVOYE' AND origine IN ('SYSTEME','RECONCILIATION')` | E5, décision D |
 | `adresse_defaut_unique` | `est_par_defaut` | A2, une adresse par défaut |
 | `utilisateur_administratrice_unique` | `role = 'ADMINISTRATRICE'` | E1, ADR-023 |
@@ -88,6 +88,13 @@ sur `role` interdirait un second compte client, celle sur `produit_id`
 interdirait un second média, et celle sur `commande_id` interdirait un panier à
 plusieurs articles. C'est le défaut qui avait été introduit puis corrigé en
 LS-12.
+
+**Un filtre trop étroit est le défaut symétrique**, et il est plus discret. Celui
+du paiement portait `statut = 'REUSSI'` seul : un paiement passant à
+`PARTIELLEMENT_REMBOURSE` sortait du filtre, et un second `REUSSI` redevenait
+insérable sur la même commande. Corrigé par LS-45, après mesure de 3220 centimes
+encaissés sur une commande de 1610. Ajouter un état d'encaissement à l'enum
+oblige à l'ajouter au filtre.
 
 ## Les politiques de suppression
 
