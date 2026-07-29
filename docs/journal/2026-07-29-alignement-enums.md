@@ -142,5 +142,26 @@ puis ces trois identifiants.
 
 Les deux scripts de vérification restent **manuels**. Ensemble ils gardent treize
 enums, quatre clés d'idempotence, l'invariant V14 et la conformité des règles au
-schéma, et rien ne les déclenche. LS-2 doit les brancher en intégration
-continue : un contrôle qu'il faut penser à lancer ne garde rien de façon fiable.
+schéma, et rien ne les déclenche. Un contrôle qu'il faut penser à lancer ne garde
+rien de façon fiable.
+
+### Arbitrage, brancher ces deux scripts tout de suite ?
+
+Question posée, réponse de Christophe : **non, la chaîne d'intégration reste
+entière dans LS-2.**
+
+L'option étudiée était un workflow minimal lançant les deux scripts existants sur
+chaque pull request, sans toucher au reste. Faisable : ils ne dépendent que de
+Docker et de bash, et ne consomment aucun choix de la phase 1, ni version de
+Next.js, ni structure de dossiers.
+
+Ce qui l'a emporté : `CONTRIBUTING.md` décrit une chaîne de huit contrôles dont
+**six sont impossibles aujourd'hui**, faute de `package.json`, de TypeScript et
+de tests. Le même fichier prévoit déjà que « le détail de la chaîne est mis en
+place en phase 1 ». Découper l'intégration continue en deux moments produirait un
+workflow partiel à réécrire, pour gagner quelques semaines de couverture sur un
+dépôt où seul moi travaille.
+
+Conséquence assumée : jusqu'à LS-2, ces deux scripts se lancent à la main. Les
+commandes sont dans `CLAUDE.md`. À lancer après toute modification du schéma ou
+de `.claude/rules/`.
