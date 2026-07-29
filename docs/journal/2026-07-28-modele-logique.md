@@ -81,6 +81,12 @@ un défaut réel de l'historique du projet.
 journée, et elle vaut au-delà de ce script : le projet compte désormais sur ce
 fichier pour tenir le jalon en intégration continue.
 
+> **Complément du 29 juillet 2026, LS-45.** Ces 29 contrôles ne testaient la
+> valeur d'aucun enum. Deux divergences avec le modèle conceptuel vivaient dans
+> le schéma sans produire de signal, dont l'absence de `PARTIELLEMENT_REMBOURSE`
+> sur la zone paiement. La preuve par mutation valide un contrôle qui existe,
+> elle ne dit rien de ce qu'aucun contrôle ne couvre.
+
 ## Les autres défauts des deux passes
 
 **Les horodatages étaient générés sans fuseau.** `CURRENT_TIMESTAMP` sur une
