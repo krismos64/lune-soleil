@@ -271,3 +271,84 @@ La conclusion pratique n'est pas d'auditer une fois de plus. C'est que la
 recherche exhaustive doit chercher la **valeur** (`REUSSI` sur tout le dépôt) et
 non la forme supposée du prédicat, ce qui a été fait cette fois et ne renvoie
 plus rien.
+
+## Décision préalable au découpage, l'atomicité réservation-commande
+
+Christophe a demandé d'instruire ce point avant de découper la phase 1, avec un
+temps limité à trente minutes et sans nouvel audit général. Fait, LS-53,
+ADR-024, commit `4a9fd2b`.
+
+### Le problème en une phrase
+
+Le parcours 1 réservait le stock, puis créait la commande. Entre les deux, une
+panne laissait une réservation que rien ne rattachait à personne : la pièce
+restait bloquée trente minutes, et le client qui réessayait recevait « cette
+pièce vient d'être vendue » alors qu'il était seul à la vouloir.
+
+### Ce que l'instruction a établi
+
+Trois règles auraient pu dépendre de réservations sans commande. Aucune n'en
+dépend, ce qui a rendu la décision simple :
+
+| Règle | Ce qu'elle contrôle | Dépend de `commandeId` ? |
+|---|---|---|
+| S5, vente externe | une réservation active **sur la variante** | non |
+| S3, purge | `expireA` dépassé | non |
+| Parcours 1 | déclarait les étapes 4 à 7 transactionnelles | non, il exigeait l'inverse |
+
+Le schéma ne garantissait donc pas ce que le parcours affirmait déjà.
+
+### La décision
+
+Commande, lignes et réservations dans une seule transaction.
+`Reservation.commandeId` obligatoire, clé étrangère en `RESTRICT`.
+
+Le raisonnement tient en une phrase : **une réservation sans commande n'a aucun
+sens métier, donc le schéma ne doit pas pouvoir la représenter.** Rendre l'état
+absurde impossible en base vaut mieux que compter sur le code applicatif pour ne
+jamais le produire.
+
+Deux options écartées, tracées dans l'ADR : garder le nullable, et introduire une
+entité panier pour représenter un état qui dure quelques millisecondes.
+
+### Le point qui n'était pas dans la question
+
+**La session de paiement se crée après le `COMMIT`**, et cela méritait sa propre
+règle numérotée, S11. Un appel réseau à l'intérieur de la transaction tiendrait
+le verrou de ligne de la variante pendant tout l'aller-retour, ce qui aggrave
+l'interblocage de LS-50 d'un facteur mille. Et son échec effacerait la commande
+par rollback, alors qu'après le commit il laisse une commande
+`EN_ATTENTE_PAIEMENT` que la réconciliation traite normalement.
+
+C'est typiquement la contrainte qu'une session future casserait sans le savoir,
+en cherchant à « tout mettre dans la transaction pour être sûr ».
+
+### Vérifications
+
+```
+prisma validate              schéma valide, Node 22.14
+verifier-schema.sh           50 réussites, 0 échecs
+verifier-regles.sh           vert
+verifier-regles-mutation.sh  8 mutations, 8 détectées
+```
+
+Deux contrôles ajoutés, chacun prouvé par mutation. Le second est instructif :
+repasser la clé étrangère en `SET NULL` fait échouer la suppression par le
+`NOT NULL` de la colonne et non par la clé étrangère. Deux contraintes se
+recouvrent, et `verifier_rejet` les distingue, ce qui est exactement la
+correction apportée en LS-13 au contrôle qui passait pour la mauvaise raison.
+
+### Séparation d'avec LS-50
+
+Volontaire, pour une raison d'ordre. Cette décision change une colonne, donc elle
+précède la migration initiale. Le tri déterministe des variantes suppose un
+service de réservation qui n'existe pas, donc il attend la phase 3. Les mélanger
+aurait bloqué LS-2 sur du code non écrivable.
+
+Les deux se combineront le moment venu : même transaction, même ordre de verrous,
+même test de concurrence.
+
+### État après cette décision
+
+Le schéma est **définitif pour la migration initiale**. Plus rien ne bloque le
+découpage de LS-2.
