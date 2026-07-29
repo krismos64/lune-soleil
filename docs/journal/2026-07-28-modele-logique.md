@@ -116,13 +116,19 @@ F9 est de niveau 2, c'est écrit maintenant.
 
 ## Ce qui a été corrigé au-delà du code
 
-`.claude/rules/database.md` décrivait encore l'ancien filtre d'email. Ce fichier
-est chargé automatiquement au moment de coder : la session qui implémentera le
-service d'email en phase 1 y aurait lu la définition défectueuse et aurait pu
-« corriger » le schéma vers l'état cassé, en croyant s'aligner sur la règle.
+`.claude/rules/database.md` décrivait encore l'ancien filtre d'email. La session
+qui implémentera le service d'email en phase 1 y aurait lu la définition
+défectueuse et aurait pu « corriger » le schéma vers l'état cassé, en croyant
+s'aligner sur la règle.
 
 C'est le mécanisme exact des régressions passées. Une règle périmée est plus
 dangereuse qu'une règle absente.
+
+> **Correction du 29 juillet 2026, LS-47.** Cette entrée affirmait que le
+> fichier est « chargé automatiquement au moment de coder ». C'était faux :
+> `CLAUDE.md` ne référençait aucun fichier de `.claude/rules/`, ils n'étaient lus
+> que si la session devinait leur existence. Le risque décrit était réel, le
+> mécanisme invoqué ne l'était pas. LS-47 a rendu le chargement effectif.
 
 ## Où on en est
 

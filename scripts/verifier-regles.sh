@@ -85,28 +85,32 @@ fi
 
 rm -f "$connus" "$cites" "$introuvables"
 
-# Couverture du chargement, LS-47. Un fichier de règles non référencé par
-# `CLAUDE.md` n'est chargé dans aucune session : il existe, il est juste
-# invisible. C'était le cas des quatre avant LS-47.
+# Déclenchement des règles, LS-47.
 #
-# Même motif que le contrôle de complétude des enums de LS-45 : une liste écrite
-# à la main reste une opinion tant que rien ne prouve qu'elle est complète.
-CLAUDE_MD="$RACINE/CLAUDE.md"
-if [ -r "$CLAUDE_MD" ]; then
-  non_charges=0
-  for f in "$REGLES"/*.md; do
-    [ -e "$f" ] || continue
-    rel=".claude/rules/$(basename "$f")"
-    if ! grep -qxF "@$rel" "$CLAUDE_MD"; then
-      echo "  ECHEC $rel : jamais chargé, absent de CLAUDE.md"
-      non_charges=$((non_charges+1))
-    fi
-  done
-  if [ "$non_charges" -eq 0 ]; then
-    echo "  OK    toutes les règles sont chargées par CLAUDE.md"
-  else
-    ko=$((ko + non_charges))
+# Une règle se charge quand une session touche un chemin de son frontmatter
+# `paths`. Un fichier sans `paths` ne se déclenche jamais : il existe, il est
+# juste invisible.
+#
+# Ce contrôle vérifie la présence du frontmatter, pas l'existence des chemins.
+# Ils désignent en majorité `src/`, encore vide avant la phase 1 : exiger qu'ils
+# existent ferait rougir le script sur un état parfaitement normal.
+sans_paths=0
+for f in "$REGLES"/*.md; do
+  [ -e "$f" ] || continue
+  rel=".claude/rules/$(basename "$f")"
+  if ! head -1 "$f" | grep -qx -- '---'; then
+    echo "  ECHEC $rel : aucun frontmatter, la règle ne se déclenchera jamais"
+    sans_paths=$((sans_paths+1))
+  elif ! sed -n '1,/^---$/p' "$f" | grep -q '^paths:'; then
+    echo "  ECHEC $rel : frontmatter sans clé paths, la règle ne se déclenchera jamais"
+    sans_paths=$((sans_paths+1))
   fi
+done
+
+if [ "$sans_paths" -eq 0 ]; then
+  echo "  OK    toutes les règles portent un frontmatter paths"
+else
+  ko=$((ko + sans_paths))
 fi
 
 echo
