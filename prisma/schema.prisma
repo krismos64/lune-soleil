@@ -65,11 +65,28 @@ enum StatutCommande {
   ANNULEE
 }
 
+// LS-45. PARTIELLEMENT_REMBOURSE est un état à part entière, pas une commodité :
+// PARCOURS.md décrit un remboursement partiel suivi d'un second, et chacun
+// produit son propre avoir sur la même facture. Sans cet état, un paiement
+// partiellement remboursé serait indiscernable d'un paiement intact.
 enum StatutPaiement {
   EN_ATTENTE
   REUSSI
   ECHOUE
+  PARTIELLEMENT_REMBOURSE
   REMBOURSE
+}
+
+// LS-45. Le traitement d'un événement du prestataire a quatre issues, et
+// `traiteA` nullable n'en distinguait que deux. IGNORE vaut pour un événement
+// hors périmètre reçu sans erreur, ECHOUE pour un traitement qui a planté :
+// confondre les deux ferait rejouer indéfiniment le premier, ou abandonner
+// silencieusement le second.
+enum StatutTraitementEvenement {
+  RECU
+  TRAITE
+  IGNORE
+  ECHOUE
 }
 
 enum StatutRetractation {
@@ -298,10 +315,16 @@ model Paiement {
   commande    Commande               @relation(fields: [commandeId], references: [id], onDelete: Restrict)
   evenements  EvenementFournisseur[]
 
-  // V14 et décision D, première clé d'idempotence : au plus un paiement réussi
+  // V14 et décision D, première clé d'idempotence : au plus un paiement encaissé
   // par commande. La contrainte protège la cohérence, pas le double encaissement
   // chez le prestataire, qui relève de LS-43.
-  @@unique([commandeId], where: raw("statut = 'REUSSI'"), map: "paiement_reussi_unique")
+  //
+  // LS-45, le prédicat porte les trois états d'encaissement et non le seul
+  // REUSSI. Un remboursement ne rend pas la commande impayée : filtrer sur
+  // REUSSI seul laissait un paiement sortir du filtre en passant à
+  // PARTIELLEMENT_REMBOURSE, et un second REUSSI redevenait insérable. Mesuré
+  // sur PostgreSQL 18.4 : 3220 centimes encaissés sur une commande de 1610.
+  @@unique([commandeId], where: raw("statut IN ('REUSSI', 'PARTIELLEMENT_REMBOURSE', 'REMBOURSE')"), map: "paiement_reussi_unique")
   @@index([commandeId], map: "paiement_commande_idx") // tentatives d'une commande, décision B
   @@map("paiement")
 }
@@ -312,6 +335,7 @@ model EvenementFournisseur {
   identifiantFournisseur String   @unique @map("identifiant_fournisseur") // rejeu du même événement
   type                   String
   charge                 Json
+  statutTraitement       StatutTraitementEvenement @default(RECU) @map("statut_traitement") // LS-45
   traiteA                DateTime? @map("traite_a") @db.Timestamptz(3)
   creeA                  DateTime @default(now()) @map("cree_a") @db.Timestamptz(3)
 

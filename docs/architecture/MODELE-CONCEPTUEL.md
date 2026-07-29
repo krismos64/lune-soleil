@@ -305,7 +305,7 @@ erDiagram
         texte canal "nullable, marche ou plateforme"
         texte motif "nullable"
         identifiant acteurId FK "nullable, nul si origine SYSTEME"
-        texte origine "SYSTEME ADMIN RECONCILIATION"
+        enum origine "SYSTEME ADMIN RECONCILIATION"
         horodatage creeA
     }
 ```
@@ -392,7 +392,7 @@ erDiagram
     PAIEMENT {
         identifiant id PK
         identifiant commandeId FK
-        enum statut "INITIE REUSSI ECHOUE PARTIELLEMENT_REMBOURSE REMBOURSE"
+        enum statut "EN_ATTENTE REUSSI ECHOUE PARTIELLEMENT_REMBOURSE REMBOURSE"
         entier montantCentimes
         entier montantRembourseCentimes
         texte referenceSessionFournisseur
@@ -422,7 +422,7 @@ erDiagram
         texte statutPrecedent "nullable"
         texte statutNouveau
         identifiant acteurId FK "nullable"
-        texte origine "SYSTEME ADMIN RECONCILIATION"
+        enum origine "SYSTEME ADMIN RECONCILIATION"
         horodatage creeA
     }
 ```
@@ -465,6 +465,22 @@ donc la trace du motif d'échec, utile au support comme au diagnostic.
 
 Une commande porte ainsi zéro à n paiements. Au plus un est en statut `REUSSI`,
 garanti par une unicité en base et non par du code, voir décision D.
+
+**Correction du 29 juillet 2026, LS-45.** Ce document écrivait `INITIE` là où le
+schéma déclare `EN_ATTENTE`, et omettait `PARTIELLEMENT_REMBOURSE` du schéma
+alors qu'il le documentait ici. Christophe a tranché en faveur de `EN_ATTENTE`,
+plus explicite, et le schéma reçoit l'état de remboursement partiel.
+
+La divergence a vécu dans le dépôt sans que rien ne la signale, les contrôles de
+LS-13 ne testant la valeur d'aucun enum. `verifier-schema.sh` compare désormais
+les treize enums de ce document à ceux de la base, et vérifie qu'aucun type
+déclaré n'échappe à la comparaison. Ce fichier est donc une source contrôlée :
+une valeur modifiée ici sans être portée dans le schéma fait échouer le script.
+
+Le contrôle reste manuel tant que l'intégration continue n'existe pas, elle est
+prévue en phase 1. Un contrôle qu'il faut penser à lancer ne garde rien de façon
+fiable : LS-2 doit brancher ce script, sans quoi la prochaine divergence
+attendra la revue suivante.
 
 ### Décision C, la ligne de commande référence la variante sans en dépendre
 
@@ -1221,7 +1237,7 @@ erDiagram
         texte destinataire
         texte modele
         enum statut "ENVOYE ECHOUE"
-        texte origine "SYSTEME ADMIN RECONCILIATION"
+        enum origine "SYSTEME ADMIN RECONCILIATION"
         texte motifEchec "nullable"
         identifiant commandeId FK "nullable"
         horodatage creeA

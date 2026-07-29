@@ -121,3 +121,22 @@ ALTER TABLE avis
 ALTER TABLE invitation_avis
   ADD CONSTRAINT chk_invitation_envois_positif
   CHECK (nombre_envois >= 0);
+
+-- ---------------------------------------------------------------------------
+-- Événement du prestataire de paiement, LS-45
+-- ---------------------------------------------------------------------------
+
+-- `statut_traitement` et `traite_a` décrivent le même fait. Sans cette
+-- contrainte, deux colonnes libres finissent par diverger, et la divergence
+-- tombe sur le chemin d'idempotence.
+--
+-- Le cas dangereux est `TRAITE` avec `traite_a` nul : une reprise qui
+-- sélectionne `WHERE traite_a IS NULL` rejoue un événement déjà traité, donc
+-- recrée un mouvement de stock ou une facture sur un rejeu du prestataire. Le
+-- cas inverse, `RECU` avec un horodatage, fait ignorer un événement en attente.
+--
+-- L'équivalence est écrite comme telle : les trois états terminaux exigent
+-- l'horodatage, RECU l'interdit.
+ALTER TABLE evenement_fournisseur
+  ADD CONSTRAINT chk_evenement_traitement_coherent
+  CHECK ((statut_traitement IN ('TRAITE', 'IGNORE', 'ECHOUE')) = (traite_a IS NOT NULL));

@@ -179,6 +179,44 @@ sortie=$(R "INSERT INTO paiement (id,commande_id,statut,montant_centimes,montant
    VALUES ('pay3','cmd','ECHOUE',1610,0,now());")
 verifier_accepte "un paiement échoué reste possible, décision B" "$sortie"
 
+# LS-45. Le contrôle ci-dessus ne teste que l'insertion frontale d'un second
+# REUSSI. Il restait vert alors que V14 était contournable en deux temps :
+# faire sortir le paiement encaissé du filtre partiel, puis insérer.
+#
+# La séquence n'a rien d'exotique, c'est le parcours 3 de PARCOURS.md, un
+# remboursement partiel. Sur le prédicat d'origine `WHERE statut = 'REUSSI'`,
+# elle produisait 3220 centimes encaissés sur une commande de 1610.
+R "UPDATE paiement SET statut='PARTIELLEMENT_REMBOURSE', montant_rembourse_centimes=500
+   WHERE id='pay1';" >/dev/null
+sortie=$(R "INSERT INTO paiement (id,commande_id,statut,montant_centimes,montant_rembourse_centimes,cree_a)
+   VALUES ('pay4','cmd','REUSSI',1610,0,now());")
+verifier_rejet "second REUSSI après remboursement partiel rejeté, V14" "paiement_reussi_unique" "$sortie"
+
+# Symétrique : un paiement entièrement remboursé ne rouvre pas la commande non
+# plus. Rembourser n'efface pas l'encaissement, il le compense.
+R "UPDATE paiement SET statut='REMBOURSE', montant_rembourse_centimes=1610
+   WHERE id='pay1';" >/dev/null
+sortie=$(R "INSERT INTO paiement (id,commande_id,statut,montant_centimes,montant_rembourse_centimes,cree_a)
+   VALUES ('pay5','cmd','REUSSI',1610,0,now());")
+verifier_rejet "second REUSSI après remboursement total rejeté, V14" "paiement_reussi_unique" "$sortie"
+
+R "UPDATE paiement SET statut='REUSSI', montant_rembourse_centimes=0 WHERE id='pay1';" >/dev/null
+
+# Cohérence entre le statut de traitement et son horodatage, LS-45.
+R "INSERT INTO paiement (id,commande_id,statut,montant_centimes,montant_rembourse_centimes,cree_a)
+   VALUES ('payev','cmd','ECHOUE',1610,0,now());" >/dev/null
+sortie=$(R "INSERT INTO evenement_fournisseur (id,paiement_id,identifiant_fournisseur,type,charge,statut_traitement,traite_a,cree_a)
+   VALUES ('ev1','payev','evt_1','paiement','{}','TRAITE',NULL,now());")
+verifier_rejet "événement TRAITE sans horodatage rejeté" "chk_evenement_traitement_coherent" "$sortie"
+
+sortie=$(R "INSERT INTO evenement_fournisseur (id,paiement_id,identifiant_fournisseur,type,charge,statut_traitement,traite_a,cree_a)
+   VALUES ('ev2','payev','evt_2','paiement','{}','RECU',now(),now());")
+verifier_rejet "événement RECU avec horodatage rejeté" "chk_evenement_traitement_coherent" "$sortie"
+
+sortie=$(R "INSERT INTO evenement_fournisseur (id,paiement_id,identifiant_fournisseur,type,charge,statut_traitement,traite_a,cree_a)
+   VALUES ('ev3','payev','evt_3','paiement','{}','RECU',NULL,now());")
+verifier_accepte "événement reçu non traité accepté" "$sortie"
+
 R "INSERT INTO mouvement_stock (id,variante_id,commande_id,type,quantite,origine,cree_a)
    VALUES ('mv1','var','cmd','VENTE_WEB',-1,'SYSTEME',now());" >/dev/null
 sortie=$(R "INSERT INTO mouvement_stock (id,variante_id,commande_id,type,quantite,origine,cree_a)
@@ -325,6 +363,152 @@ R "INSERT INTO avis (id,ligne_commande_id,note,statut,experience_a,depose_a)
 sortie=$(R "INSERT INTO avis (id,ligne_commande_id,note,statut,experience_a,depose_a)
    VALUES ('av2','lc1',4,'DEPOSE',now(),now());")
 verifier_rejet "second avis sur la même ligne rejeté, R2" "avis_ligne_commande_id_key" "$sortie"
+
+echo
+echo "Conformité des enums au modèle conceptuel, LS-45"
+
+# Motif de ce bloc, LS-45 : les 29 contrôles précédents ne testaient la valeur
+# d'aucun enum. Deux divergences avec MODELE-CONCEPTUEL.md vivaient dans le
+# schéma sans que rien ne les signale.
+#
+#   StatutPaiement            il manquait PARTIELLEMENT_REMBOURSE, alors que
+#                             PARCOURS.md décrit la transition vers cet état
+#   StatutTraitementEvenement le type et son champ étaient absents du schéma
+#
+# Le contrôle est générique et non ciblé sur ces deux-là : cibler les défauts
+# connus laisserait passer le suivant, exactement comme ici.
+#
+# La correspondance est explicite. Le modèle conceptuel nomme ses enums par le
+# champ porteur, `statut`, et plusieurs entités ont un champ de ce nom : rien
+# dans le document ne permet de déduire le type PostgreSQL. Déduire aurait
+# produit un contrôle qui compare le mauvais enum, donc un test vert pour la
+# mauvaise raison. L'entité sert d'ancrage, elle est unique dans le document.
+ENUMS_ATTENDUS="
+COMMANDE|statut|StatutCommande
+PAIEMENT|statut|StatutPaiement
+EVENEMENT_FOURNISSEUR|statutTraitement|StatutTraitementEvenement
+PRODUIT|statut|StatutProduit
+MEDIA|statutTraitement|StatutTraitementMedia
+MOUVEMENT_STOCK|type|TypeMouvementStock
+MOUVEMENT_STOCK|origine|OrigineEcriture
+DEMANDE_RETRACTATION|statut|StatutRetractation
+JETON_ACCES|portee|PorteeJeton
+AVIS|statut|StatutAvis
+UTILISATEUR|role|Role
+JOURNAL_EMAIL|statut|StatutEmail
+ALERTE_CRITIQUE|gravite|GraviteAlerte
+"
+
+MODELE="$DIR/../../../docs/architecture/MODELE-CONCEPTUEL.md"
+
+# Sans ce garde-fou, un document déplacé ferait rougir les douze enums en
+# « introuvable dans le modèle conceptuel ». Le script échouerait bien, mais en
+# désignant douze faux coupables au lieu de la cause réelle.
+if [ ! -r "$MODELE" ]; then
+  echo "  ECHEC modèle conceptuel illisible : $MODELE"
+  ko=$((ko+1))
+  echo
+  echo "-----------------------------------------"
+  echo "  $ok réussites, $ko échecs"
+  echo "-----------------------------------------"
+  exit 1
+fi
+
+# Valeurs documentées pour une entité et un champ donnés.
+#
+# awk plutôt que grep : l'ancrage porte sur le bloc d'entité ouvert par
+# `ENTITE {`, sans quoi `enum statut` remonterait la première occurrence venue.
+valeurs_documentees() {
+  local entite="$1" champ="$2"
+  awk -v e="$entite" -v c="$champ" '
+    $1 == e && $2 == "{" { dans = 1; next }
+    dans && /^[[:space:]]*}/ { dans = 0 }
+    dans && $1 == "enum" && $2 == c {
+      if (match($0, /"[^"]*"/)) print substr($0, RSTART + 1, RLENGTH - 2)
+      exit
+    }
+  ' "$MODELE"
+}
+
+# Valeurs réellement déclarées en base. L'ordre de déclaration d'un enum
+# PostgreSQL ne porte aucun sens métier ici, les deux côtés sont donc triés
+# avant comparaison : un simple réagencement ne doit pas faire rougir.
+valeurs_en_base() {
+  R "SELECT string_agg(e.enumlabel, ' ' ORDER BY e.enumlabel)
+     FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid
+     WHERE t.typname = '$1';"
+}
+
+trier() { tr ' ' '\n' <<< "$1" | grep -v '^$' | sort | tr '\n' ' ' | sed 's/ $//'; }
+
+# La liste est parcourue depuis un tableau, pas depuis un tube.
+#
+# Deux raisons, la seconde ayant coûté une fausse réussite pendant l'écriture de
+# ce bloc. Un `while` alimenté par un tube tourne dans un sous-shell, ses
+# incréments de $ok et $ko sont perdus au retour. Surtout, `R()` appelle
+# `docker exec -i`, qui hérite du stdin de la boucle et avale le reste de la
+# liste : le contrôle s'arrêtait après le premier enum en affichant « OK », et
+# les onze suivants, dont les deux défectueux, n'étaient jamais testés.
+#
+# Un contrôle qui n'examine qu'un douzième de son périmètre en annonçant vert
+# est précisément le défaut que cette story corrige.
+#
+# `for` sur une chaîne découpée, et non `mapfile` : macOS livre bash 3.2, où
+# cette commande n'existe pas. Le script tournerait en CI et casserait sur la
+# machine de développement.
+for ligne in $(echo "$ENUMS_ATTENDUS" | grep -v '^$'); do
+  entite="${ligne%%|*}"
+  reste="${ligne#*|}"
+  champ="${reste%%|*}"
+  type="${reste#*|}"
+  documente=$(valeurs_documentees "$entite" "$champ")
+  en_base=$(valeurs_en_base "$type")
+
+  if [ -z "$documente" ]; then
+    echo "  ECHEC $type : introuvable dans le modèle conceptuel [$entite.$champ]"
+    ko=$((ko+1))
+  elif [ -z "$en_base" ]; then
+    echo "  ECHEC $type : type absent de la base, documenté en [$entite.$champ]"
+    ko=$((ko+1))
+  elif [ "$(trier "$documente")" = "$(trier "$en_base")" ]; then
+    echo "  OK    $type conforme au modèle conceptuel"
+    ok=$((ok+1))
+  else
+    manquantes=$(comm -23 <(trier "$documente" | tr ' ' '\n') <(trier "$en_base" | tr ' ' '\n') | tr '\n' ' ')
+    en_trop=$(comm -13 <(trier "$documente" | tr ' ' '\n') <(trier "$en_base" | tr ' ' '\n') | tr '\n' ' ')
+    echo "  ECHEC $type : divergence avec le modèle conceptuel"
+    [ -n "${manquantes// /}" ] && echo "        absentes de la base : $manquantes"
+    [ -n "${en_trop// /}" ] && echo "        absentes du modèle  : $en_trop"
+    ko=$((ko+1))
+  fi
+done
+
+# Complétude de la table de correspondance elle-même.
+#
+# Sans ce contrôle, la liste ci-dessus n'est qu'une opinion : un enum absent de
+# la table n'est jamais comparé, et son absence ne produit aucun signal. C'est
+# arrivé pendant l'écriture de LS-45. `OrigineEcriture` manquait, parce que le
+# modèle conceptuel l'écrivait `texte origine` et non `enum origine` : la liste
+# établie en relevant les lignes `enum` du document en comptait douze, et le
+# treizième type passait au travers. Retirer `RECONCILIATION`, valeur dont
+# dépend la règle E5, laissait le script vert.
+#
+# Un contrôle censé couvrir tous les enums doit prouver qu'il les couvre tous.
+declares=$(R "SELECT count(*) FROM pg_type t
+              JOIN pg_namespace n ON n.oid = t.typnamespace
+              WHERE t.typtype = 'e' AND n.nspname = 'public';")
+attendus=$(echo "$ENUMS_ATTENDUS" | grep -c '|')
+
+if [ "$declares" = "$attendus" ]; then
+  verifier "table de correspondance complète, $declares enums couverts" "$declares" "$attendus"
+else
+  echo "  ECHEC table de correspondance incomplète : $declares enums en base, $attendus contrôlés"
+  echo "        non contrôlés : $(R "SELECT string_agg(t.typname, ' ' ORDER BY t.typname)
+                                     FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
+                                     WHERE t.typtype = 'e' AND n.nspname = 'public'
+                                       AND t.typname NOT IN ($(echo "$ENUMS_ATTENDUS" | grep '|' | sed "s/.*|/'/;s/\$/'/" | paste -sd, -))")"
+  ko=$((ko+1))
+fi
 
 echo
 echo "-----------------------------------------"
