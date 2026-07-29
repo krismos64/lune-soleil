@@ -30,6 +30,10 @@ faille corrigée quelques heures plus tôt.
 `statut = REUSSI` sans apostrophes, forme que ma recherche ratait. Le rapport
 avait raison, ma vérification était incomplète.
 
+**Et elle l'était encore après cette correction.** Voir la section finale : un
+quatrième rapport a trouvé deux occurrences supplémentaires dans le même fichier.
+Cinq au total, sur trois fichiers.
+
 ## Le contrôle qui aurait dû l'attraper, et ses deux angles morts
 
 `verifier-regles.sh` restait vert parce qu'il vérifie l'existence des
@@ -177,11 +181,36 @@ Quinze stories sans epic rattachées. Il n'en reste aucune.
 
 ## Prochaine étape
 
-**Le découpage de LS-2**, interrompu par ce rapport. Onze stories esquissées,
-ordonnées par dépendance, de l'initialisation Next.js jusqu'au conteneur de
-tâches planifiées, en passant par la migration initiale et l'authentification.
+**Le découpage de LS-2**, interrompu deux fois par des rapports. Onze stories
+esquissées, ordonnées par dépendance, de l'initialisation Next.js jusqu'au
+conteneur de tâches planifiées, en passant par la migration initiale et
+l'authentification.
 
 Deux tickets attendent leur phase, LS-50 et LS-51, tous deux nés de cette séance.
+
+### Fin des audits complets, décision du 29 juillet 2026
+
+Quatre rapports externes en deux jours, sur un dépôt qui compte près de 10 000
+lignes de documentation et **toujours aucun `package.json`**. Le rendement
+décroît : chaque passe trouve moins, pour un coût constant.
+
+Décision : **plus d'audit complet avant la fin de la phase 1.** À partir de LS-2,
+ce sont les tests et l'intégration continue qui détectent les régressions, pas
+une relecture humaine ou externe du projet entier.
+
+Ce qui reste ouvert et signalé par le dernier rapport, sans bloquer le démarrage :
+
+- l'atomicité réservation-commande, `Reservation.commandeId` nullable alors que
+  le parcours réserve avant de créer la commande. **Ce point touche le schéma
+  initial**, donc à trancher avant la migration, en extension de LS-50
+- des écarts de nommage résiduels entre modèle conceptuel et Prisma,
+  `referenceSessionFournisseur` contre `identifiantFournisseur`, `recuA` contre
+  `creeA`, et les champs LS-33 d'`Expedition` absents du modèle
+- la décision LS-33 non propagée dans le modèle conceptuel et les parcours, qui
+  la présentent encore comme ouverte
+- l'estimation de LS-2 à 20 h, à revoir après découpage
+
+Ces points vont dans un ticket de nettoyage, pas dans une nouvelle passe d'audit.
 
 ## Ce que cette journée apprend
 
@@ -196,3 +225,49 @@ trouvés par mutation, pas par relecture, et le second n'existait que parce que
 j'avais corrigé le premier. **Un contrôle qui n'a jamais échoué sur le défaut
 qu'il prétend attraper est une opinion**, et sa première version ne l'attrape
 presque jamais du premier coup.
+
+## Rebondissement, LS-49 rouvert le même jour
+
+Un quatrième rapport, remis après la clôture, a trouvé **deux occurrences de
+plus** du prédicat périmé, aux lignes 516 et 1555 de `MODELE-CONCEPTUEL.md` : le
+tableau des quatre clés d'idempotence et le récapitulatif des unicités
+partielles. Le contrôle était vert malgré elles.
+
+Ces deux lignes écrivent `paiement (commandeId)` sans nommer l'index ni le mot
+`UNIQUE`. Quatrième forme d'écriture, hors de portée des trois ancres.
+
+**C'est la troisième erreur d'ancrage du même contrôle en une journée**, et
+précisément le piège que sa propre documentation décrivait quelques heures plus
+tôt : empiler une ancre par forme rencontrée garantit que la suivante échappe.
+J'avais écrit la leçon et je l'ai reproduite.
+
+L'ancre porte désormais sur `<table> (`, point commun de presque toutes les
+écritures d'une contrainte, qui couvre `UNIQUE paiement (commande_id)` par
+inclusion. Deux ancres bien choisies remplacent trois ancres accumulées. La forme
+des champs indexés reste nécessaire pour la règle V14, qui ne nomme pas la table :
+la retirer fait rougir le cas 6 du script de mutation, ce qui est son rôle.
+
+Huit mutations, huit détectées, huit échecs exactement.
+
+Deux formulations de prose corrigées en plus, fausses mais structurellement hors
+de portée d'un contrôle ancré sur les contraintes : « au plus un paiement
+`REUSSI` par commande » dans le modèle conceptuel et les parcours. Un paiement
+remboursé occupe le filtre lui aussi.
+
+Le message de succès du script annonce maintenant **sa portée réelle** au lieu
+d'affirmer qu'aucun document ne contredit son prédicat. Un contrôle qui
+surestime sa couverture invite à lui faire confiance là où il ne regarde pas.
+
+Commit `612a751`, PR #31.
+
+### Ce que ce rebondissement change au bilan
+
+Le compte final est de **cinq occurrences** du prédicat périmé sur trois
+fichiers, contre trois annoncées plus haut. Chaque passe en a trouvé de
+nouvelles, et chacune était vérifiée avec le meilleur outil disponible à ce
+moment-là.
+
+La conclusion pratique n'est pas d'auditer une fois de plus. C'est que la
+recherche exhaustive doit chercher la **valeur** (`REUSSI` sur tout le dépôt) et
+non la forme supposée du prédicat, ce qui a été fait cette fois et ne renvoie
+plus rien.
