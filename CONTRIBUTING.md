@@ -101,6 +101,27 @@ Ne pas fusionner tant que les contrôles automatiques ne sont pas au vert.
 
 Le détail de la chaîne est mis en place en phase 1.
 
+### Exception transitoire, avant la phase 1
+
+**Aucune de ces huit étapes ne tourne aujourd'hui.** Le dépôt n'a ni
+`package.json`, ni TypeScript, ni tests, et `.github/workflows` n'existe pas.
+Six des huit contrôles sont donc impossibles avant l'initialisation du projet.
+
+En attendant, une pull request se fusionne après vérification **manuelle**, et la
+preuve va dans la description de la PR sous forme de sortie de commande. Les deux
+contrôles disponibles sans installation :
+
+```bash
+./prisma/migrations/manual/verifier-schema.sh  # schéma sur base réelle, exige Docker
+./scripts/verifier-regles.sh                   # règles contre le schéma
+```
+
+À lancer après toute modification du schéma ou de `.claude/rules/`.
+
+Cette exception se lève avec LS-2, la phase 1, qui installe la chaîne complète.
+La règle « ne pas fusionner sur un contrôle rouge » vaut dès maintenant pour ces
+deux scripts.
+
 ## Secrets
 
 Le dépôt est **public**. Un secret poussé est indexé en quelques minutes et doit
