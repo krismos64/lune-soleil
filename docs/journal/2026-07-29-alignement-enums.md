@@ -132,30 +132,45 @@ puis ces trois identifiants.
 Audit de la configuration Claude Code, demandé par Christophe en fin de session.
 Il en sort un défaut qui invalide la justification de LS-46.
 
-**Les quatre fichiers de `.claude/rules/` n'étaient chargés dans aucune
-session.** `CLAUDE.md` ne les référençait nulle part. Ils n'étaient lus que si
-l'assistant devinait leur existence, ce qui suppose de savoir qu'ils existent.
+Mon premier diagnostic était trop catégorique, et il a fallu deux commits.
 
-Or LS-46 justifiait sa priorité Must en affirmant que `database.md` est « chargé
-automatiquement au moment de coder ». J'ai écrit cette phrase, elle a été
-validée, et personne ne l'a vérifiée. Le risque décrit était réel, le mécanisme
-invoqué ne l'était pas. Même défaut que l'entrée du 28 juillet, corrigée elle
-aussi.
+**Ce que j'ai affirmé** : les quatre fichiers de `.claude/rules/` ne sont chargés
+dans aucune session, `CLAUDE.md` ne les référence nulle part. J'ai ajouté quatre
+références `@`.
 
-Trois changements :
+**Ce que j'avais raté** : chaque règle porte un frontmatter `paths` et se charge
+quand une session touche les chemins concernés. Le mécanisme existait, je ne
+l'avais pas ouvert avant de conclure. Résultat, `database.md` se chargeait deux
+fois, par `paths` sur `prisma/**` et inconditionnellement par `@`.
 
-- `CLAUDE.md` charge les quatre règles par la syntaxe `@`, avant les invariants :
-  ceux-ci énoncent le principe, les règles portent l'application détaillée.
+Même défaut que celui reproché à LS-46, dont la description invoquait un
+chargement automatique jamais vérifié. Deux fois en deux heures, sur le même
+sujet, dans les deux sens.
+
+**Ce qui reste vrai et justifie le ticket** : `src/` contient un seul fichier.
+Trois des quatre règles ciblent exclusivement des chemins qui n'existent pas
+encore.
+
+| Fichier | Se charge aujourd'hui ? |
+|---|---|
+| `database.md` | oui, via `prisma/**` |
+| `payments.md` | non, cible `src/integrations/stripe/**` |
+| `legal.md` | non, cible `src/services/retractation/**` |
+| `frontend-design.md` | non, cible `src/app/**` |
+
+Une session qui conçoit le paiement avant la phase 1 doit donc lire
+`payments.md` explicitement. `CLAUDE.md` documente maintenant le mécanisme réel
+et cette limite.
+
+Deux autres changements :
+
 - Un hook `PostToolUse` lance `verifier-regles.sh` après toute écriture sur
   `.claude/rules/` ou `prisma/schema.prisma`. Il avertit sans bloquer et reste
   silencieux au vert.
-- `verifier-regles.sh` contrôle désormais sa propre couverture : un fichier de
-  règles non référencé par `CLAUDE.md` fait rougir le script.
-
-Ce dernier point est le plus important. Sans lui, la règle du jour serait
-corrigée et le prochain fichier ajouté redeviendrait invisible en silence. Même
-motif que le contrôle de complétude des enums de LS-45, à quelques heures
-d'intervalle.
+- `verifier-regles.sh` vérifie que chaque règle porte un frontmatter `paths`.
+  Une règle sans `paths` ne se déclenche jamais, seul cas d'invisibilité totale.
+  Il ne vérifie pas que les chemins existent : ils désignent `src/`, encore vide,
+  ce serait rougir sur un état normal.
 
 ### Deux partis pris sur le hook
 
