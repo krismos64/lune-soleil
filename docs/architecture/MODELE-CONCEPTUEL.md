@@ -291,7 +291,7 @@ erDiagram
     RESERVATION {
         identifiant id PK
         identifiant varianteId FK
-        identifiant commandeId FK "nullable"
+        identifiant commandeId FK "obligatoire, ADR-024"
         entier quantite
         horodatage creeA
         horodatage expireA
@@ -323,6 +323,8 @@ erDiagram
 | S7 | Une commande produit au plus un mouvement `VENTE_WEB` par variante | `UNIQUE` partiel sur `(commandeId, varianteId)` filtré sur `type = VENTE_WEB`, voir décision D |
 | S8 | La réintégration de stock dépend du retour physique, jamais du remboursement | parcours 4 et 5, et le remboursement peut précéder le retour, règle L7 |
 | S9 | Un mouvement automatique porte `origine = SYSTEME` et un `acteurId` nul | un webhook n'est pas une personne, l'attribuer à l'administratrice fausserait l'audit |
+| S10 | Une réservation porte toujours sa commande, les deux sont écrites dans une seule transaction | `commandeId` obligatoire et clé étrangère en `RESTRICT`, ADR-024. Une réservation orpheline bloquerait la pièce trente minutes sans que rien ne dise à qui elle appartenait |
+| S11 | La session de paiement se crée après la validation de la transaction | ADR-024. Un appel réseau à l'intérieur tiendrait le verrou de ligne, et son échec effacerait la commande par rollback |
 
 ### Pourquoi la réservation est une entité et non un champ
 
@@ -1572,7 +1574,8 @@ tout montant en centimes `>= 0`, `montant_rembourse <= montant` sur le paiement,
 **Obligatoire, aucune valeur nulle** : `avoir.factureId`, `facture.commandeId`,
 `ligne_commande.commandeId`, `paiement.commandeId`, `reservation.varianteId`,
 `mouvement_stock.varianteId`, `demande_retractation.commandeId`,
-`jeton_acces.commandeId`, `variante.produitId`, `media.produitId`,
+`jeton_acces.commandeId`, `reservation.commandeId`, `variante.produitId`,
+`media.produitId`,
 `produit.categorieId`, `avis.ligneCommandeId`, `avis.experienceA`,
 `avis.deposeA`,
 `reponse_avis.avisId`, `adresse_carnet.utilisateurId`,
@@ -1584,6 +1587,11 @@ une valeur absente ne peut pas être interprétée comme un privilège.
 
 `avis.experienceA` obligatoire est la traduction structurelle de la décision H :
 un avis ne peut pas exister sans date d'expérience, donc sans livraison connue.
+
+`reservation.commandeId` obligatoire est celle d'ADR-024 : une réservation sans
+commande n'a aucun sens métier, le schéma ne doit donc pas pouvoir la
+représenter. Sa clé étrangère est en `RESTRICT` par conséquence, `SET NULL`
+n'ayant plus de cible possible.
 
 **Expiration obligatoire**, sans laquelle une ressource se bloque indéfiniment :
 `reservation.expireA` (stock bloqué à vie), `jeton_acces.expireA` (accès
@@ -1600,6 +1608,8 @@ portées par le code de la transaction, et testées.
 | F4 | Le numéro de facture ou d'avoir est attribué dans la transaction de création |
 | S2 | La réservation et l'incrément de `quantiteReservee` sont indissociables |
 | S3 | La libération décrémente et supprime ensemble |
+| S10 | La commande, ses lignes et ses réservations sont écrites dans une seule transaction, ADR-024 |
+| S11 | La session de paiement se crée après la validation, jamais dedans, ADR-024 |
 | S5 | La vente externe contrôle l'absence de réservation active avant d'écrire |
 | F9 | La création d'un avoir met à jour `facture.montantAvoirCentimes` en même temps |
 | R9 | Le changement de statut d'un avis et `decideA` sont écrits ensemble |

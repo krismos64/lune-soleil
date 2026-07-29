@@ -35,6 +35,16 @@ technique au client.
 
 Règles associées :
 
+- **La commande, ses lignes et ses réservations s'écrivent dans une seule
+  transaction**, ADR-024. `Reservation.commandeId` est obligatoire : une
+  réservation sans commande n'existe pas en base. Un refus de l'`UPDATE`
+  conditionnel annule la transaction entière, aucune commande ne subsiste sans
+  son stock.
+- **La session de paiement se crée après le `COMMIT`, jamais dedans.** Un appel
+  réseau à l'intérieur tiendrait le verrou de ligne pendant tout
+  l'aller-retour, et son échec effacerait la commande par rollback. Après le
+  commit, un échec laisse une commande `EN_ATTENTE_PAIEMENT` que la
+  réconciliation traite normalement.
 - La ligne de réservation avec sa date d'expiration est insérée **dans la même
   transaction**.
 - La contrainte `CHECK` en base est la dernière ligne de défense si le code
@@ -160,7 +170,9 @@ explicite. L'archivage remplace la suppression destructive.
 
 Ces opérations exigent une transaction, sans exception :
 
-1. Réservation concurrente du dernier exemplaire
+1. Création d'une commande : commande, lignes figées, incréments de
+   `quantiteReservee` et lignes de réservation, tout ensemble, ADR-024. La
+   session de paiement reste **hors** de cette transaction
 2. Traitement d'un événement de paiement : idempotence, paiement, commande,
    conversion de réservation, mouvement de stock
 3. Attribution d'un numéro de facture ou d'avoir

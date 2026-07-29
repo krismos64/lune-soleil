@@ -137,6 +137,12 @@ R "INSERT INTO categorie (id,nom,slug,ordre,cree_a) VALUES ('cat','Boucles','bou
    INSERT INTO variante (id,produit_id,reference,libelle,prix_centimes,quantite_physique,quantite_reservee,vente_web_activee,cree_a)
      VALUES ('var','prod','LS-ECLIPSE-01','unique',1200,1,0,true,now());" >/dev/null
 
+# ADR-024, LS-53 : une réservation porte toujours sa commande. La commande est
+# donc créée avant, comme dans la transaction réelle du parcours 1.
+R "INSERT INTO commande (id,numero,statut,email_normalise,nom_client,adresse_livraison,adresse_facturation,
+     sous_total_centimes,frais_port_centimes,total_centimes,montant_taxe_centimes,cgv_acceptees_a,cgv_version,cree_a)
+   VALUES ('cmdres','C-2026-0900','EN_ATTENTE_PAIEMENT','r@x.fr','Client','{}','{}',1200,410,1610,0,now(),'v1',now());" >/dev/null
+
 reset_stock() {
   R "DELETE FROM reservation;
      UPDATE variante SET quantite_physique=1, quantite_reservee=0,
@@ -144,7 +150,8 @@ reset_stock() {
 }
 
 # La réservation atomique telle que .claude/rules/database.md la définit,
-# avec la condition archivee_a ajoutée par LS-37.
+# avec la condition archivee_a ajoutée par LS-37 et la commande obligatoire
+# d'ADR-024.
 reserver() {
   R "WITH reserve AS (
        UPDATE variante SET quantite_reservee = quantite_reservee + 1
@@ -154,8 +161,8 @@ reserver() {
          AND quantite_physique - quantite_reservee >= 1
        RETURNING id
      )
-     INSERT INTO reservation (id, variante_id, quantite, expire_a, cree_a)
-     SELECT gen_random_uuid()::text, id, 1, now() + interval '30 minutes', now() FROM reserve
+     INSERT INTO reservation (id, variante_id, commande_id, quantite, expire_a, cree_a)
+     SELECT gen_random_uuid()::text, id, 'cmdres', 1, now() + interval '30 minutes', now() FROM reserve
      RETURNING variante_id;"
 }
 
@@ -184,6 +191,22 @@ verifier "variante archivée, aucune réservation, C15" "" "$r4"
 reset_stock
 sortie=$(R "UPDATE variante SET quantite_reservee = 5 WHERE id='var';")
 verifier_rejet "la survente est rejetée par le CHECK, C6" "chk_variante_pas_de_survente" "$sortie"
+
+# ADR-024. Une réservation orpheline n'est pas seulement interdite par le code,
+# elle est impossible en base. Sans ce contrôle, retirer le NOT NULL du schéma
+# passerait inaperçu et rouvrirait le trou : une panne entre réservation et
+# commande bloquerait la pièce trente minutes.
+reset_stock
+sortie=$(R "INSERT INTO reservation (id, variante_id, commande_id, quantite, expire_a, cree_a)
+            VALUES ('resorph','var',NULL,1,now() + interval '30 minutes',now());")
+verifier_rejet "réservation sans commande rejetée, ADR-024" "commande_id" "$sortie"
+
+# La contrepartie du champ obligatoire : la commande ne peut pas disparaître
+# sous une réservation active. C'est ce que porte le passage en RESTRICT.
+reset_stock
+reserver >/dev/null
+sortie=$(R "DELETE FROM commande WHERE id='cmdres';")
+verifier_rejet "commande portant une réservation non supprimable, ADR-024" "reservation_commande_id_fkey" "$sortie"
 
 echo
 echo "Concurrence, deux acheteurs sur la dernière pièce"

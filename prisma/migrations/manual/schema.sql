@@ -101,7 +101,7 @@ CREATE TABLE "media" (
 CREATE TABLE "reservation" (
     "id" TEXT NOT NULL,
     "variante_id" TEXT NOT NULL,
-    "commande_id" TEXT,
+    "commande_id" TEXT NOT NULL,
     "quantite" INTEGER NOT NULL,
     "expire_a" TIMESTAMPTZ(3) NOT NULL,
     "cree_a" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -531,7 +531,9 @@ ALTER TABLE "media" ADD CONSTRAINT "media_produit_id_fkey" FOREIGN KEY ("produit
 ALTER TABLE "reservation" ADD CONSTRAINT "reservation_variante_id_fkey" FOREIGN KEY ("variante_id") REFERENCES "variante"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "reservation" ADD CONSTRAINT "reservation_commande_id_fkey" FOREIGN KEY ("commande_id") REFERENCES "commande"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+-- ADR-024, LS-53. Restrict et non SET NULL : la colonne est obligatoire depuis
+-- que la réservation et la commande s'écrivent dans une seule transaction.
+ALTER TABLE "reservation" ADD CONSTRAINT "reservation_commande_id_fkey" FOREIGN KEY ("commande_id") REFERENCES "commande"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "mouvement_stock" ADD CONSTRAINT "mouvement_stock_variante_id_fkey" FOREIGN KEY ("variante_id") REFERENCES "variante"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

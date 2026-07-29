@@ -212,13 +212,24 @@ model Media {
 model Reservation {
   id         String   @id @default(uuid())
   varianteId String   @map("variante_id")
-  commandeId String?  @map("commande_id")
+  // ADR-024, LS-53. Obligatoire : une réservation sans commande n'a aucun sens
+  // métier, le schéma ne doit donc pas pouvoir la représenter. Le nullable
+  // servait à couvrir l'intervalle entre les étapes 4 et 5 du parcours 1, que
+  // la transaction unique supprime.
+  //
+  // Sans cette contrainte, une panne entre réservation et commande bloque la
+  // pièce trente minutes sans que rien ne dise à qui elle appartenait.
+  commandeId String   @map("commande_id")
   quantite   Int // CHECK > 0
   expireA    DateTime @map("expire_a") @db.Timestamptz(3) // expiration obligatoire, stock bloqué à vie sinon
   creeA      DateTime @default(now()) @map("cree_a") @db.Timestamptz(3)
 
-  variante Variante  @relation(fields: [varianteId], references: [id], onDelete: Restrict)
-  commande Commande? @relation(fields: [commandeId], references: [id], onDelete: SetNull)
+  variante Variante @relation(fields: [varianteId], references: [id], onDelete: Restrict)
+  // Restrict et non SetNull, conséquence du champ obligatoire : SetNull servait
+  // à faire survivre une réservation à la disparition de sa commande, ce qui est
+  // désormais impossible. Interdit aussi de supprimer une commande qui porte
+  // encore des réservations actives.
+  commande Commande @relation(fields: [commandeId], references: [id], onDelete: Restrict)
 
   @@index([expireA], map: "reservation_expire_idx") // tâche de libération, toutes les 5 minutes
   // S5 et C18 lisent les réservations actives d'une variante avant d'autoriser
