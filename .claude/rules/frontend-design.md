@@ -138,6 +138,119 @@ du serveur, jamais d'un calcul dans le navigateur.
 L'état des filtres et du tri est sérialisé dans l'URL, pour que le retour
 navigateur et le partage de lien fonctionnent.
 
+## Dimensionnement du catalogue
+
+Le catalogue ouvrira avec 10 à 20 références et peut atteindre 30 à 40 sans
+changement d'architecture. **Aucune limite technique ne plafonne le nombre de
+produits**, ni en base, ni dans une requête, ni dans un composant. Le schéma n'en
+porte aucune aujourd'hui, ne pas en introduire.
+
+Cet ordre de grandeur commande la conception dans les deux sens : il interdit de
+sous-dimensionner comme de sur-concevoir.
+
+Retenu :
+
+- catégories principales visibles, sans niveau intermédiaire
+- filtres limités aux critères réellement utiles, prouvés par le catalogue réel
+- tri par nouveautés, `Produit.publieA`, et éventuellement par prix
+- photographies optimisées, formats modernes, dimensions servies adaptées
+- fonctionnement à partir de 320 px
+
+Écarté, et à ne pas réintroduire sans arbitrage :
+
+- moteur de recherche externe, Algolia, Meilisearch ou équivalent
+- mégamenu
+- système générique d'attributs, EAV, voir les colonnes textuelles de `Produit`
+- toute architecture dimensionnée pour plusieurs milliers de références
+- aperçu rapide et ajout rapide complexes depuis la liste
+
+Une recherche interne simple, filtrage sur le nom et la description, reste
+**Could, jalon V1.x**. Quarante références se parcourent à l'œil, la recherche
+n'est pas le chemin d'accès principal.
+
+## Fiche produit, ordre des blocs
+
+L'ordre est conçu pour un écran de 320 px, où tout est empilé : ce qui décide de
+l'achat est au-dessus, ce qui rassure et détaille vient ensuite. Les blocs 8 à 13
+peuvent être repliés, jamais absents.
+
+| # | Bloc | Source |
+|---|---|---|
+| 1 | Nom du bijou | `Produit.nom` |
+| 2 | Présentation courte | `Produit.descriptionCourte` |
+| 3 | Prix | `Variante.prixCentimes` |
+| 4 | Disponibilité | dérivée, voir ci-dessous |
+| 5 | Choix de la variante, si plusieurs | `Variante.libelle` |
+| 6 | Ajout au panier | |
+| 7 | Informations de livraison | composant de réassurance |
+| 8 | Description détaillée | `Produit.description` |
+| 9 | Matières et finitions | `Produit.matieres` |
+| 10 | Dimensions | `Variante.dimensions` |
+| 11 | Conseils d'entretien | `Produit.entretien` |
+| 12 | Fabrication artisanale | `Produit.fabrication` |
+| 13 | Retours et rétractation | textes légaux, jamais recopiés |
+| 14 | Avis vérifiés, s'il en existe | `Avis` publiés |
+
+Les blocs 9 à 12 sont vides tant que l'exploitante ne les a pas remplis, LS-24.
+Un bloc vide **ne s'affiche pas**, il ne montre jamais un intitulé sans contenu.
+
+### États de disponibilité
+
+Trois états seulement, dérivés côté serveur :
+
+| État | Condition |
+|---|---|
+| En stock | disponible à la vente web, quantité supérieure à 1 |
+| Dernière pièce | disponible, quantité exactement 1 |
+| Épuisé | quantité nulle, vente web désactivée ou variante archivée |
+
+**La quantité exacte n'est pas affichée publiquement**, sauf « dernière pièce »
+qui est une information d'urgence utile et vraie. Publier « 7 en stock » expose
+le niveau d'activité de la boutique sans rien apporter au client.
+
+La disponibilité vient du serveur, jamais d'un calcul dans le navigateur. Elle
+tient compte des réservations actives : une pièce réservée par un autre client
+n'est pas disponible, voir `database.md`.
+
+### Produits similaires
+
+Could, jalon V1.x. Règle simple : autres produits actifs de la même catégorie,
+hors produit courant. Aucun moteur de recommandation, aucun calcul de similarité.
+
+## Réassurance commerciale
+
+Should, jalon Go-Live. Un composant unique, réutilisé sur les fiches produit, le
+panier et le tunnel. Les mêmes faits apparaissent aussi dans la foire aux
+questions, la page Livraison, les emails et les textes juridiques.
+
+**Aucun tarif ni seuil n'est écrit en dur dans un composant.** Tout vient d'une
+configuration centralisée, la même que celle qui sert au calcul serveur des frais
+de port. C'est la seule façon de garantir qu'un changement de seuil ne laisse pas
+« offerte dès 39 € » sur la fiche produit et 45 € au panier.
+
+Un tarif affiché et un tarif facturé qui divergent constituent une information
+précontractuelle fausse, sanctionnée bien au-delà de l'écart de prix.
+
+Six éléments, sans en ajouter :
+
+| Élément | Formulation | Réserve |
+|---|---|---|
+| Fabrication | bijoux faits main en Béarn | **à confirmer par l'exploitante**, allégation d'origine |
+| Paiement | paiement sécurisé par Stripe | |
+| Livraison | Mondial Relay, Point Relais, Locker ou domicile | ADR-025 |
+| Gratuité | livraison offerte dès 39 €, tous modes | valeur issue de la configuration |
+| Rétractation | 14 jours pour changer d'avis | frais de retour à la charge du client, mention obligatoire |
+| Contact | réponse par email | |
+
+La mention des frais de retour accompagne celle de la rétractation partout où
+elle apparaît. L'annoncer sans elle expose au délai de douze mois de l'article
+L221-20, voir `legal.md`.
+
+« Faits main en Béarn » n'est pas un argument décoratif. Une allégation d'origine
+géographique fausse relève de la pratique commerciale trompeuse. Ne pas la
+publier avant confirmation explicite de l'exploitante sur le lieu réel de
+fabrication.
+
 ## Paillettes
 
 Could, jalon V1 cible. CSS déterministe, pas de bibliothèque, `aria-hidden`,

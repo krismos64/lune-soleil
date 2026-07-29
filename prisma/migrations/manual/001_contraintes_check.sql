@@ -140,3 +140,29 @@ ALTER TABLE invitation_avis
 ALTER TABLE evenement_fournisseur
   ADD CONSTRAINT chk_evenement_traitement_coherent
   CHECK ((statut_traitement IN ('TRAITE', 'IGNORE', 'ECHOUE')) = (traite_a IS NOT NULL));
+
+-- ---------------------------------------------------------------------------
+-- Mode de livraison, ADR-025
+-- ---------------------------------------------------------------------------
+
+-- Le point de retrait et le mode décrivent un même choix commercial, et deux
+-- colonnes libres finissent par diverger. Le cas dangereux est une commande
+-- `DOMICILE` portant un point de retrait : l'étiquette serait créée pour un
+-- relais alors que le client a payé 4,99 € pour être livré chez lui, et
+-- l'incohérence n'apparaîtrait qu'au moment de l'expédition.
+--
+-- Le cas inverse, `POINT_RELAIS` sans identifiant, produit une expédition
+-- impossible à créer : le transporteur exige la destination.
+--
+-- L'équivalence est écrite comme telle, les deux modes de retrait exigent
+-- l'identifiant, le domicile l'interdit.
+ALTER TABLE commande
+  ADD CONSTRAINT chk_commande_mode_point_relais
+  CHECK ((mode_livraison IN ('POINT_RELAIS', 'LOCKER')) = (point_relais_id IS NOT NULL));
+
+-- Même règle sur l'expédition, qui porte le mode réellement exécuté. Il peut
+-- différer de celui de la commande après un échec de livraison rebasculé vers
+-- un relais, mais il reste soumis à la même cohérence interne.
+ALTER TABLE expedition
+  ADD CONSTRAINT chk_expedition_mode_point_relais
+  CHECK ((mode IN ('POINT_RELAIS', 'LOCKER')) = (point_relais_id IS NOT NULL));

@@ -71,7 +71,8 @@ stock à un exemplaire est le jalon technique majeur.
 | 1 | Consultation du catalogue | rien | produits actifs, disponibilité dérivée |
 | 2 | Ajout au panier | ligne de panier, éphémère | panier mis à jour, compteur |
 | 3 | Revalidation serveur | rien | totaux recalculés depuis le serveur |
-| 4 | Commande et réservation, **une seule transaction** | commande `EN_ATTENTE_PAIEMENT`, lignes historisées, acceptation CGV horodatée, `quantiteReservee` incrémentée, réservations avec expiration à 30 min et `commandeId` renseigné | passage au paiement |
+| 3b | Choix du mode de livraison | rien | trois modes, frais de port recalculés côté serveur, point de retrait choisi si `POINT_RELAIS` ou `LOCKER` |
+| 4 | Commande et réservation, **une seule transaction** | commande `EN_ATTENTE_PAIEMENT`, lignes historisées, **mode de livraison, point de retrait et frais de port figés**, acceptation CGV horodatée, `quantiteReservee` incrémentée, réservations avec expiration à 30 min et `commandeId` renseigné | passage au paiement |
 | 5 | Session de paiement, **après le commit** | identifiant de session prestataire rattaché à la commande | redirection |
 | 6 | Attente de l'événement | rien | page d'attente ou retour du prestataire |
 | 7 | Événement signé reçu | événement persisté avec identifiant unique, paiement `REUSSI`, commande `CONFIRMEE`, réservation convertie en mouvement de stock, `quantitePhysique` décrémentée | page de confirmation |
@@ -97,6 +98,16 @@ l'intérieur tiendrait le verrou de ligne de la variante pendant tout
 l'aller-retour, et son échec effacerait la commande par rollback. En la plaçant
 après le commit, un échec laisse une commande `EN_ATTENTE_PAIEMENT` que la
 réconciliation traite normalement.
+
+**L'étape 3b précède le calcul du total**, ADR-025. Les frais de port dépendent
+du mode : 4,10 € en Point Relais ou Locker, 4,99 € à domicile, offerts dès 39 €
+pour les trois. Le montant est recalculé côté serveur à partir de la
+configuration, jamais lu depuis le navigateur, puis **figé dans la commande** à
+l'étape 4 avec le mode et le point de retrait.
+
+Le point de retrait est copié avec son libellé et son adresse, pas seulement son
+identifiant. Un point qui ferme rendrait autrement illisible une commande passée,
+même raison que les libellés figés des lignes.
 
 L'étape 7 est transactionnelle également, et idempotente par contrainte d'unicité
 sur l'identifiant d'événement.
@@ -125,6 +136,32 @@ Tâche : la réservation expire normalement à trente minutes, et la commande es
 traitée par la réconciliation comme toute commande restée en attente.
 C'est le motif de placer cet appel après le commit : à l'intérieur, son échec
 aurait effacé la commande.
+
+**API Mondial Relay indisponible à l'étape 3b, choix du point de retrait**
+Base : aucune écriture.
+Vue : la liste des points de retrait ne peut pas s'afficher. Le domicile reste
+proposé, il n'exige aucun appel au transporteur. Message explicite indiquant que
+le retrait en relais est momentanément indisponible, sans jargon technique.
+C'est la raison de ne pas rendre le tunnel entièrement dépendant du
+transporteur : avec trois modes dont un sans appel externe, une panne de l'API
+dégrade le choix au lieu de bloquer la vente.
+
+**Mode de livraison incohérent avec le point de retrait, étape 4**
+Base : la contrainte `CHECK` rejette l'écriture, la transaction entière est
+annulée. Une commande `DOMICILE` portant un point de retrait, ou un
+`POINT_RELAIS` sans point, n'atteint jamais la base.
+Vue : erreur technique, le client reprend le choix du mode.
+Ce cas ne doit pas survenir, la validation Zod le rejetant en amont. La
+contrainte est la dernière ligne de défense si le code échoue.
+
+**Échec de livraison à domicile, après l'étape 11**
+Base : `Expedition.mode` peut passer à `POINT_RELAIS` avec le point de report, et
+`Expedition.pointRelaisId` est renseigné. **La commande n'est pas réécrite** :
+`Commande.modeLivraison` reste `DOMICILE`, le client a choisi et payé ce mode,
+ce fait est acquis et figé.
+Vue : suivi indiquant le report en relais.
+C'est le motif de porter le mode sur les deux entités, ADR-025 : ce que le client
+a payé et ce que le transporteur a exécuté sont deux faits distincts.
 
 **Prix ou produit modifié entre l'ajout au panier et la revalidation, étape 3**
 Base : aucune écriture.

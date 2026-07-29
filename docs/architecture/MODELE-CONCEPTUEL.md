@@ -120,7 +120,11 @@ erDiagram
         identifiant id PK
         texte nom
         texte slug UK
-        texte description
+        texte descriptionCourte "nullable"
+        texte description "nullable, detaillee"
+        texte matieres "nullable"
+        texte entretien "nullable"
+        texte fabrication "nullable, artisanat et origine"
         enum statut "BROUILLON ACTIF ARCHIVE"
         identifiant categorieId FK
         horodatage creeA
@@ -130,7 +134,8 @@ erDiagram
         identifiant id PK
         identifiant produitId FK
         texte reference UK
-        texte libelle "nullable"
+        texte libelle
+        texte dimensions "nullable, propre a la declinaison"
         entier prixCentimes
         entier quantitePhysique
         entier quantiteReservee
@@ -373,6 +378,9 @@ erDiagram
         bloc adresseLivraison "copie figee"
         bloc adresseFacturation "copie figee"
         entier sousTotalCentimes
+        enum modeLivraison "POINT_RELAIS LOCKER DOMICILE"
+        identifiant pointRelaisId "nullable, obligatoire hors DOMICILE"
+        bloc pointRelaisAdresse "nullable, copie figee du point"
         entier fraisPortCentimes
         entier totalCentimes
         entier montantTaxeCentimes "zero, franchise en base"
@@ -413,9 +421,13 @@ erDiagram
         identifiant id PK
         identifiant commandeId FK
         texte transporteur
-        texte numeroSuivi
-        horodatage expedieA
-        horodatage livreA "nullable"
+        enum mode "POINT_RELAIS LOCKER DOMICILE"
+        identifiant pointRelaisId "nullable, obligatoire hors DOMICILE"
+        texte numeroSuivi "nullable"
+        texte statutTransporteur "nullable"
+        horodatage expedieA "nullable"
+        horodatage livreA "nullable, remise au destinataire uniquement"
+        horodatage synchroniseA "nullable, detecte un suivi bloque"
     }
     HISTORIQUE_STATUT {
         identifiant id PK
