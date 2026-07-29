@@ -265,3 +265,11 @@ dépôt où seul moi travaille.
 Conséquence assumée : jusqu'à LS-2, ces deux scripts se lancent à la main. Les
 commandes sont dans `CLAUDE.md`. À lancer après toute modification du schéma ou
 de `.claude/rules/`.
+
+---
+
+**Suite le même jour**, `2026-07-29-alignement-sources-verite.md`. Un troisième
+rapport externe a précédé le découpage de la phase 1 et produit LS-49 : le
+prédicat de paiement corrigé le matin subsistait dans trois documents, dont
+`database.md` qui se charge au moment de coder. Deux scripts s'ajoutent aux deux
+mentionnés ici, dont la preuve par mutation de `verifier-regles.sh`.
