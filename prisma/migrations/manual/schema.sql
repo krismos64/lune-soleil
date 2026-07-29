@@ -20,7 +20,10 @@ CREATE TYPE "OrigineEcriture" AS ENUM ('SYSTEME', 'ADMIN', 'RECONCILIATION');
 CREATE TYPE "StatutCommande" AS ENUM ('EN_ATTENTE_PAIEMENT', 'CONFIRMEE', 'EN_PREPARATION', 'EXPEDIEE', 'LIVREE', 'ANNULEE');
 
 -- CreateEnum
-CREATE TYPE "StatutPaiement" AS ENUM ('EN_ATTENTE', 'REUSSI', 'ECHOUE', 'REMBOURSE');
+CREATE TYPE "StatutPaiement" AS ENUM ('EN_ATTENTE', 'REUSSI', 'ECHOUE', 'PARTIELLEMENT_REMBOURSE', 'REMBOURSE');
+
+-- CreateEnum
+CREATE TYPE "StatutTraitementEvenement" AS ENUM ('RECU', 'TRAITE', 'IGNORE', 'ECHOUE');
 
 -- CreateEnum
 CREATE TYPE "StatutRetractation" AS ENUM ('DEPOSEE', 'ACCUSEE', 'RETOUR_ATTENDU', 'EXPEDITION_PROUVEE', 'REMBOURSEMENT_EN_COURS', 'REMBOURSEE', 'REFUSEE');
@@ -178,6 +181,7 @@ CREATE TABLE "evenement_fournisseur" (
     "identifiant_fournisseur" TEXT NOT NULL,
     "type" TEXT NOT NULL,
     "charge" JSONB NOT NULL,
+    "statut_traitement" "StatutTraitementEvenement" NOT NULL DEFAULT 'RECU',
     "traite_a" TIMESTAMPTZ(3),
     "cree_a" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -443,7 +447,13 @@ CREATE INDEX "ligne_commande_variante_idx" ON "ligne_commande"("variante_id");
 CREATE INDEX "paiement_commande_idx" ON "paiement"("commande_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "paiement_reussi_unique" ON "paiement"("commande_id") WHERE (statut = 'REUSSI');
+-- LS-45. Le prédicat couvre les trois états d'encaissement, pas le seul REUSSI.
+-- Un paiement remboursé reste un paiement encaissé : filtrer sur REUSSI seul
+-- laissait un paiement quitter le filtre en passant à PARTIELLEMENT_REMBOURSE,
+-- rouvrant la commande à un second REUSSI. Prouvé, 3220 centimes encaissés sur
+-- une commande de 1610.
+CREATE UNIQUE INDEX "paiement_reussi_unique" ON "paiement"("commande_id")
+  WHERE (statut IN ('REUSSI', 'PARTIELLEMENT_REMBOURSE', 'REMBOURSE'));
 
 -- CreateIndex
 CREATE UNIQUE INDEX "evenement_fournisseur_identifiant_fournisseur_key" ON "evenement_fournisseur"("identifiant_fournisseur");
