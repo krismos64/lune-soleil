@@ -17,6 +17,8 @@ npx prisma migrate dev   # migration en développement
 
 ./prisma/migrations/manual/verifier-schema.sh  # contraintes et enums, exige Docker
 ./scripts/verifier-regles.sh                   # .claude/rules/ contre le schéma
+./scripts/verifier-regles-mutation.sh          # prouve le précédent par mutation
+./docs/prototypes/interblocage-panier.sh       # interblocage sur panier, exige Docker
 ```
 
 ## Architecture

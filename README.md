@@ -103,12 +103,18 @@ npm run dev
 
 ### Ce qui fonctionne dès maintenant
 
-Deux scripts de vérification, sans installation :
+Quatre scripts de vérification, sans installation :
 
 ```bash
 ./prisma/migrations/manual/verifier-schema.sh  # schéma sur base réelle, exige Docker
 ./scripts/verifier-regles.sh                   # .claude/rules/ contre le schéma
+./scripts/verifier-regles-mutation.sh          # prouve le précédent par mutation
+./docs/prototypes/interblocage-panier.sh       # interblocage sur panier, exige Docker
 ```
+
+Le script de mutation réinjecte six fois un défaut réel et exige que
+`verifier-regles.sh` échoue à chaque fois. Un contrôle vert ne prouve rien tant
+qu'il n'a pas échoué sur le défaut qu'il prétend attraper.
 
 ## Secrets
 
