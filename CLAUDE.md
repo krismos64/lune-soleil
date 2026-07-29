@@ -14,6 +14,9 @@ npm run test             # Vitest, unitaire et intégration
 npm run test:e2e         # Playwright
 docker compose up -d db  # PostgreSQL locale
 npx prisma migrate dev   # migration en développement
+
+./prisma/migrations/manual/verifier-schema.sh  # contraintes et enums, exige Docker
+./scripts/verifier-regles.sh                   # .claude/rules/ contre le schéma
 ```
 
 ## Architecture
