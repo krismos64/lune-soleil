@@ -114,11 +114,98 @@ else
 fi
 
 echo
+
+# Prédicats des index partiels, LS-49.
+#
+# Les deux contrôles précédents vérifient qu'un identifiant existe et qu'une
+# règle se déclenche. Aucun ne regarde ce que la règle *dit* de cet identifiant.
+#
+# Le défaut trouvé le 29 juillet 2026 : LS-45 avait élargi le filtre de
+# `paiement_reussi_unique` aux trois états d'encaissement, après avoir mesuré un
+# double encaissement. `database.md` et `MODELE-LOGIQUE.md` portaient encore
+# `WHERE statut = 'REUSSI'`. Tous les identifiants existaient, le script restait
+# vert, et la règle chargée au moment de coder le paiement décrivait la faille.
+#
+# Ce contrôle compare, pour chaque index partiel du schéma, les valeurs d'enum
+# du prédicat réel à celles citées par les documents qui nomment cet index.
+# Il ne compare pas le SQL entier : les documents le reformulent légitimement,
+# en `WHERE` ou en prose. Les valeurs d'enum, elles, ne se reformulent pas.
+echo "Prédicats des index partiels, schéma contre documents"
+echo
+
+DOCS="$RACINE/docs/architecture"
+predicats_ko=0
+nb_index=0
+
+# Chaque index partiel : nom de l'index, table portante, prédicat.
+#
+# L'ancrage porte sur le nom de l'index **et** sur la table, deux formes de
+# citation également fréquentes. `MODELE-LOGIQUE.md` nomme l'index dans un
+# tableau, `database.md` écrit `UNIQUE paiement (commande_id) WHERE ...` et ne
+# nomme l'index nulle part. Ancrer sur le seul nom d'index ratait le fichier le
+# plus dangereux des deux, celui qui se charge au moment de coder.
+while IFS= read -r ligne; do
+  index=$(echo "$ligne" | grep -oE 'map: "[a-z_0-9]+"' | sed 's/map: "//;s/"//')
+  predicat=$(echo "$ligne" | sed -E 's/.*where: raw\("(.*)"\), map:.*/\1/')
+  [ -n "$index" ] || continue
+  nb_index=$((nb_index+1))
+
+  # Valeurs d'enum du prédicat réel, une majuscule et un souligné uniquement,
+  # ce qui exclut les noms de colonnes et les mots-clés SQL en minuscules.
+  attendues=$(echo "$predicat" | grep -oE "'[A-Z_]+'" | tr -d "'" | sort -u)
+  [ -n "$attendues" ] || continue
+
+  # Table portante : le @@map du modèle où figure cet index. Le bloc du modèle
+  # est délimité par la première accolade fermante en début de ligne.
+  table=$(awk -v idx="$index" '
+    /^model /      { bloc = ""; }
+                   { bloc = bloc "\n" $0; }
+    /^}/           { if (bloc ~ idx) { print bloc; exit } }
+  ' "$SCHEMA" | grep -oE '@@map\("[a-z_0-9]+"\)' | sed 's/@@map("//;s/")//')
+
+  ancres="$index"
+  [ -n "$table" ] && ancres="$index|UNIQUE +$table\\b"
+
+  # Une ligne qui cite l'index ou la table sous forme de contrainte décrit ce
+  # filtre. Le prédicat déborde souvent sur les lignes suivantes, alignées sous
+  # le `WHERE` : `database.md` écrit le filtre du paiement sur trois lignes.
+  # Comparer la seule ligne d'ancrage produirait un faux positif à chaque
+  # prédicat un peu long, ce qui est arrivé en écrivant ce contrôle.
+  #
+  # La continuation s'arrête à la prochaine contrainte, à la fin du bloc de code
+  # ou à une ligne vide.
+  for doc in "$REGLES"/*.md "$DOCS"/MODELE-LOGIQUE.md "$DOCS"/MODELE-CONCEPTUEL.md; do
+    [ -r "$doc" ] || continue
+    rel=${doc#"$RACINE"/}
+    while IFS=: read -r num _; do
+      [ -n "$num" ] || continue
+      contenu=$(awk -v d="$num" 'NR < d { next }
+        NR > d && (/^UNIQUE/ || /^\|/ || /^```/ || /^[[:space:]]*$/) { exit }
+        { print }' "$doc")
+      citees=$(echo "$contenu" | grep -oE "'[A-Z_]+'" | tr -d "'" | sort -u)
+      [ -n "$citees" ] || continue
+      manquantes=$(comm -23 <(echo "$attendues") <(echo "$citees") | tr '\n' ' ')
+      if [ -n "${manquantes// /}" ]; then
+        echo "  ECHEC $rel:$num : $index cité sans ${manquantes% }"
+        echo "        prédicat réel : $predicat"
+        predicats_ko=$((predicats_ko+1))
+      fi
+    done < <(grep -nE "$ancres" "$doc")
+  done
+done < <(grep -E 'where: raw\(' "$SCHEMA")
+
+if [ "$predicats_ko" -eq 0 ]; then
+  echo "  OK    $nb_index index partiels, aucun document ne contredit son prédicat"
+else
+  ko=$((ko + predicats_ko))
+fi
+
+echo
 echo "-----------------------------------------"
 if [ "$ko" -eq 0 ]; then
   echo "  règles conformes au schéma"
 else
-  echo "  $ko identifiant(s) introuvable(s)"
+  echo "  $ko anomalie(s) : identifiant absent, règle sans paths ou prédicat contredit"
 fi
 echo "-----------------------------------------"
 [ "$ko" -eq 0 ] || exit 1

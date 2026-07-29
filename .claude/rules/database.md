@@ -108,7 +108,9 @@ déclenche et le stock est faux en silence.
 Quatre clés, chacune sur un effet de l'étape de confirmation :
 
 ```
-UNIQUE paiement (commande_id)                    WHERE statut = 'REUSSI'
+UNIQUE paiement (commande_id)                    WHERE statut IN ('REUSSI',
+                                                    'PARTIELLEMENT_REMBOURSE',
+                                                    'REMBOURSE')
 UNIQUE mouvement_stock (commande_id, variante_id) WHERE type = 'VENTE_WEB'
 UNIQUE facture (commande_id)
 UNIQUE journal_email (commande_id, modele)        WHERE statut = 'ENVOYE'
@@ -120,6 +122,14 @@ La clé du mouvement porte **la variante et pas seulement la commande**. Un pani
 à deux articles décrémente deux variantes, donc produit deux mouvements. Une
 unicité sur la seule commande rendrait tout panier multi-articles impossible à
 confirmer.
+
+La clé du paiement porte **les trois états d'encaissement et non le seul
+`REUSSI`**, correction de LS-45. Un remboursement ne rend pas la commande
+impayée : filtrer sur `REUSSI` seul laissait le paiement sortir du filtre en
+passant à `PARTIELLEMENT_REMBOURSE`, et un second `REUSSI` redevenait insérable.
+Mesuré sur PostgreSQL 18.4, 3220 centimes encaissés sur une commande de 1610.
+Ne jamais raccourcir ce prédicat, y compris si un état est ajouté à l'enum :
+un état d'encaissement de plus doit entrer dans le filtre.
 
 La clé de l'email porte trois conditions, corrigées par LS-13 : `statut = 'ENVOYE'`
 laisse la retentative possible après un échec, règle E4, `RECONCILIATION` ferme le
