@@ -131,7 +131,7 @@ docker exec -i "$CT" psql -U postgres -d lunesoleil -q -v ON_ERROR_STOP=1 \
   || abandon "l'application de 001_contraintes_check.sql a échoué"
 
 # Jeu d'essai minimal : une pièce unique, le cas qui porte le jalon du projet.
-R "INSERT INTO categorie (id,nom,slug,cree_a) VALUES ('cat','Boucles','boucles',now());
+R "INSERT INTO categorie (id,nom,slug,ordre,cree_a) VALUES ('cat','Boucles','boucles',1,now());
    INSERT INTO produit (id,categorie_id,nom,slug,statut,cree_a,modifie_a)
      VALUES ('prod','cat','Eclipse','eclipse','ACTIF',now(),now());
    INSERT INTO variante (id,produit_id,reference,libelle,prix_centimes,quantite_physique,quantite_reservee,vente_web_activee,cree_a)
@@ -201,7 +201,7 @@ echo
 echo "Idempotence, décision D et quatre clés"
 
 R "INSERT INTO commande (id,numero,statut,email_normalise,nom_client,adresse_livraison,adresse_facturation,
-     sous_total_centimes,frais_port_centimes,total_centimes,montant_taxe_centimes,cgu_acceptees_a,cgu_version,cree_a)
+     sous_total_centimes,frais_port_centimes,total_centimes,montant_taxe_centimes,cgv_acceptees_a,cgv_version,cree_a)
    VALUES ('cmd','C-2026-0001','CONFIRMEE','a@x.fr','Client','{}','{}',1200,410,1610,0,now(),'v1',now());" >/dev/null
 
 R "INSERT INTO paiement (id,commande_id,statut,montant_centimes,montant_rembourse_centimes,cree_a)
@@ -387,8 +387,8 @@ echo "Avis, obligation légale"
 # La ligne de commande est créée dans un appel séparé : deux instructions dans
 # un même psql -c partagent une transaction implicite, et le rejet de la note
 # annulerait aussi la ligne, faussant le contrôle suivant.
-R "INSERT INTO ligne_commande (id,commande_id,reference_figee,libelle_fige,prix_fige_centimes,quantite,cree_a)
-   VALUES ('lc1','cmd','LS-ECLIPSE-01','Eclipse',1200,1,now());" >/dev/null
+R "INSERT INTO ligne_commande (id,commande_id,reference_figee,libelle_produit_fige,libelle_variante_fige,prix_fige_centimes,quantite,cree_a)
+   VALUES ('lc1','cmd','LS-ECLIPSE-01','Eclipse','doree',1200,1,now());" >/dev/null
 sortie=$(R "INSERT INTO avis (id,ligne_commande_id,note,statut,experience_a,depose_a)
    VALUES ('av1','lc1',9,'DEPOSE',now(),now());")
 verifier_rejet "note hors barème rejetée" "chk_avis_note_bornee" "$sortie"

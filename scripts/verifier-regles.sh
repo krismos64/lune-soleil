@@ -163,8 +163,24 @@ while IFS= read -r ligne; do
     /^}/           { if (bloc ~ idx) { print bloc; exit } }
   ' "$SCHEMA" | grep -oE '@@map\("[a-z_0-9]+"\)' | sed 's/@@map("//;s/")//')
 
+  # Trois formes d'ancrage, chacune rencontrée dans un document réel :
+  #   paiement_reussi_unique              MODELE-LOGIQUE.md, tableau des index
+  #   UNIQUE paiement (commande_id)       database.md, bloc de contraintes
+  #   `UNIQUE` partiel sur `(commandeId)` MODELE-CONCEPTUEL.md, règle V14, qui
+  #                                       ne nomme ni l'index ni la table
+  #
+  # La troisième a été ajoutée après coup : les deux premières laissaient passer
+  # V14, la règle la plus structurante des trois.
+  #
+  # Elle est ancrée sur UNIQUE **et** sur les champs indexés, pas sur la colonne
+  # du prédicat. Ancrer sur `statut =` attrapait toute ligne parlant d'un statut,
+  # index compris : 18 faux positifs sur un état pourtant correct, et deux index
+  # qui se contaminaient. Une ancre trop large rend le contrôle inutilisable
+  # aussi sûrement qu'une ancre absente.
+  champs=$(echo "$ligne" | sed -E 's/.*@@unique\(\[([^]]*)\].*/\1/' | tr -d ' ')
   ancres="$index"
-  [ -n "$table" ] && ancres="$index|UNIQUE +$table\\b"
+  [ -n "$table" ] && ancres="$ancres|UNIQUE +$table\\b"
+  [ -n "$champs" ] && ancres="$ancres|UNIQUE\`? partiel sur \`?\($champs\)"
 
   # Une ligne qui cite l'index ou la table sous forme de contrainte décrit ce
   # filtre. Le prédicat déborde souvent sur les lignes suivantes, alignées sous
@@ -182,7 +198,14 @@ while IFS= read -r ligne; do
       contenu=$(awk -v d="$num" 'NR < d { next }
         NR > d && (/^UNIQUE/ || /^\|/ || /^```/ || /^[[:space:]]*$/) { exit }
         { print }' "$doc")
-      citees=$(echo "$contenu" | grep -oE "'[A-Z_]+'" | tr -d "'" | sort -u)
+      # Les valeurs sont relevées avec ou sans apostrophes. La règle V14 de
+      # MODELE-CONCEPTUEL.md écrivait `statut = REUSSI` sans quotes : exiger les
+      # apostrophes laissait passer le prédicat périmé dans le document le plus
+      # structurant des trois. Le seuil de trois caractères écarte les sigles de
+      # prose sans écarter les valeurs d'enum réelles, la plus courte du schéma
+      # étant ADMIN.
+      citees=$(echo "$contenu" \
+        | grep -oE "'[A-Z_]+'|\b[A-Z][A-Z_]{2,}\b" | tr -d "'" | sort -u)
       [ -n "$citees" ] || continue
       manquantes=$(comm -23 <(echo "$attendues") <(echo "$citees") | tr '\n' ' ')
       if [ -n "${manquantes// /}" ]; then

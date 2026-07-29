@@ -128,10 +128,14 @@ enum GraviteAlerte {
 // ---------------------------------------------------------------------------
 
 model Categorie {
-  id       String    @id @default(uuid())
-  nom      String
-  slug     String    @unique // C3
-  creeA    DateTime  @default(now()) @map("cree_a") @db.Timestamptz(3)
+  id    String   @id @default(uuid())
+  nom   String
+  slug  String   @unique // C3
+  // LS-49, l'ordre d'affichage des catégories est choisi par l'exploitante et
+  // non alphabétique. Prévu au modèle conceptuel, absent du schéma jusqu'ici.
+  ordre Int
+  creeA DateTime @default(now()) @map("cree_a") @db.Timestamptz(3)
+
   produits Produit[]
 
   @@map("categorie")
@@ -144,6 +148,11 @@ model Produit {
   slug        String        @unique // C3
   description String?
   statut      StatutProduit @default(BROUILLON)
+  // LS-49, date de première publication, prévue au modèle conceptuel. Elle
+  // n'est pas dérivable de `statut` ni de `modifieA` : un produit dépublié
+  // puis republié doit garder sa date d'origine, comme `Avis.publieA`. Sert
+  // l'antériorité affichée et le tri des nouveautés.
+  publieA     DateTime?     @map("publie_a") @db.Timestamptz(3)
   archiveA    DateTime?     @map("archive_a") @db.Timestamptz(3)
   creeA       DateTime      @default(now()) @map("cree_a") @db.Timestamptz(3)
   modifieA    DateTime      @updatedAt @map("modifie_a") @db.Timestamptz(3)
@@ -262,8 +271,11 @@ model Commande {
   fraisPortCentimes    Int            @map("frais_port_centimes")
   totalCentimes        Int            @map("total_centimes")
   montantTaxeCentimes  Int            @default(0) @map("montant_taxe_centimes") // franchise en base
-  cguAccepteesA        DateTime       @map("cgu_acceptees_a") @db.Timestamptz(3) // V10, preuve du consentement
-  cguVersion           String         @map("cgu_version")
+  // LS-49, renommé de cgu vers cgv. Le contrat accepté lors d'un achat est
+  // celui de vente, pas d'utilisation. Renommage fait avant la migration
+  // initiale, où il ne coûte rien.
+  cgvAccepteesA        DateTime       @map("cgv_acceptees_a") @db.Timestamptz(3) // V10, preuve du consentement
+  cgvVersion           String         @map("cgv_version")
   creeA                DateTime       @default(now()) @map("cree_a") @db.Timestamptz(3)
 
   utilisateur      Utilisateur?         @relation(fields: [utilisateurId], references: [id], onDelete: SetNull)
@@ -287,9 +299,22 @@ model LigneCommande {
   commandeId     String   @map("commande_id")
   varianteId     String?  @map("variante_id") // nullable, la ligne survit à la variante
   referenceFigee String   @map("reference_figee") // V4, copie figée, invariant 3
-  libelleFige    String   @map("libelle_fige")
+  // LS-49, deux libellés distincts et non un seul concaténé, alignement sur le
+  // modèle conceptuel. Une facture affiche le produit et la déclinaison comme
+  // deux composantes : « Boucles Aurore » et « dorées ». Les fusionner à
+  // l'écriture rend impossible de les réafficher séparément, et l'invariant 3
+  // interdit de recomposer depuis le catalogue actuel.
+  //
+  // Les deux sont obligatoires : `Variante.libelle` l'est, sa copie figée aussi.
+  // Le modèle conceptuel les marquait nullable à tort.
+  libelleProduitFige  String @map("libelle_produit_fige")
+  libelleVarianteFige String @map("libelle_variante_fige")
   prixFigeCentimes Int    @map("prix_fige_centimes")
   quantite       Int // CHECK > 0
+  // `totalLigneCentimes` du modèle conceptuel n'est volontairement pas stocké :
+  // il vaut `prixFigeCentimes * quantite`, deux colonnes de la même ligne. Un
+  // total redondant se désynchronise sans qu'aucune contrainte ne le détecte.
+  // Le modèle conceptuel est corrigé en conséquence.
   creeA          DateTime @default(now()) @map("cree_a") @db.Timestamptz(3)
 
   commande   Commande        @relation(fields: [commandeId], references: [id], onDelete: Restrict)
@@ -409,6 +434,11 @@ model Facture {
   montantTotalCentimes  Int      @map("montant_total_centimes")
   montantAvoirCentimes  Int      @default(0) @map("montant_avoir_centimes") // CHECK <= total
   instantaneLegal       Json     @map("instantane_legal") // copie figée, invariant 4
+  // LS-49, nullable et c'est le mécanisme de détection : le modèle conceptuel
+  // fait du champ nul l'état « PDF en échec », qui déclenche une AlerteCritique.
+  // La facture existe en base avant son rendu, l'invariant 4 portant sur
+  // l'instantané et non sur le fichier.
+  cheminPdf             String?  @map("chemin_pdf")
   emiseA                DateTime @default(now()) @map("emise_a") @db.Timestamptz(3)
 
   commande Commande @relation(fields: [commandeId], references: [id], onDelete: Restrict)
@@ -424,6 +454,13 @@ model Avoir {
   numero                 String   @unique // A-2026-0001, séquence distincte, F4
   montantCentimes        Int      @map("montant_centimes")
   motif                  String
+  // LS-49, un avoir est un document légal au même titre qu'une facture,
+  // invariant 4 : jamais modifié ni supprimé. Il porte donc son propre
+  // instantané, sans quoi une correction du catalogue ou de l'adresse
+  // changerait le contenu d'un document déjà émis. Les deux champs étaient
+  // prévus au modèle conceptuel et absents du schéma.
+  instantaneLegal        Json     @map("instantane_legal")
+  cheminPdf              String?  @map("chemin_pdf") // nul, PDF en échec, comme la facture
   emisA                  DateTime @default(now()) @map("emis_a") @db.Timestamptz(3)
 
   facture      Facture              @relation(fields: [factureId], references: [id], onDelete: Restrict)
