@@ -26,6 +26,9 @@ CREATE TYPE "StatutPaiement" AS ENUM ('EN_ATTENTE', 'REUSSI', 'ECHOUE', 'PARTIEL
 CREATE TYPE "StatutTraitementEvenement" AS ENUM ('RECU', 'TRAITE', 'IGNORE', 'ECHOUE');
 
 -- CreateEnum
+CREATE TYPE "ModeLivraison" AS ENUM ('POINT_RELAIS', 'LOCKER', 'DOMICILE');
+
+-- CreateEnum
 CREATE TYPE "StatutRetractation" AS ENUM ('DEPOSEE', 'ACCUSEE', 'RETOUR_ATTENDU', 'EXPEDITION_PROUVEE', 'REMBOURSEMENT_EN_COURS', 'REMBOURSEE', 'REFUSEE');
 
 -- CreateEnum
@@ -57,7 +60,11 @@ CREATE TABLE "produit" (
     "categorie_id" TEXT NOT NULL,
     "nom" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
+    "description_courte" TEXT,
     "description" TEXT,
+    "matieres" TEXT,
+    "entretien" TEXT,
+    "fabrication" TEXT,
     "statut" "StatutProduit" NOT NULL DEFAULT 'BROUILLON',
     "publie_a" TIMESTAMPTZ(3),
     "archive_a" TIMESTAMPTZ(3),
@@ -73,6 +80,7 @@ CREATE TABLE "variante" (
     "produit_id" TEXT NOT NULL,
     "reference" TEXT NOT NULL,
     "libelle" TEXT NOT NULL,
+    "dimensions" TEXT,
     "prix_centimes" INTEGER NOT NULL,
     "quantite_physique" INTEGER NOT NULL,
     "quantite_reservee" INTEGER NOT NULL DEFAULT 0,
@@ -138,6 +146,9 @@ CREATE TABLE "commande" (
     "adresse_livraison" JSONB NOT NULL,
     "adresse_facturation" JSONB NOT NULL,
     "sous_total_centimes" INTEGER NOT NULL,
+    "mode_livraison" "ModeLivraison" NOT NULL,
+    "point_relais_id" TEXT,
+    "point_relais_adresse" JSONB,
     "frais_port_centimes" INTEGER NOT NULL,
     "total_centimes" INTEGER NOT NULL,
     "montant_taxe_centimes" INTEGER NOT NULL DEFAULT 0,
@@ -209,6 +220,7 @@ CREATE TABLE "expedition" (
     "id" TEXT NOT NULL,
     "commande_id" TEXT NOT NULL,
     "transporteur" TEXT NOT NULL,
+    "mode" "ModeLivraison" NOT NULL,
     "numero_suivi" TEXT,
     "point_relais_id" TEXT,
     "statut_transporteur" TEXT,
