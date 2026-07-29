@@ -26,6 +26,21 @@ viennent du texte, pas d'une appréciation.
 | Remboursement par le professionnel | 14 jours après information | L221-24 |
 | Report du remboursement | jusqu'au **premier** de deux faits, récupération du bien **ou** preuve de son expédition par le consommateur | L221-24 |
 | Frais de retour | à la charge du client, **seulement s'il en a été informé avant la commande** | L221-5 et L221-23 |
+| Frais de livraison initiaux | remboursés, **au tarif réellement payé** quel que soit le mode | L221-24 |
+
+### Les frais de livraison initiaux se remboursent en entier
+
+L'article L221-24 alinéa 4 permettrait de ne pas rembourser le surcoût d'un mode
+« plus coûteux que le mode de livraison standard ». Depuis ADR-025 il existe deux
+tarifs, 4,10 € en Point Relais ou Locker et 4,99 € à domicile, ce qui rendrait la
+faculté exerçable.
+
+**Elle n'est pas retenue.** Rembourser le montant réellement payé, sans
+plafonnement ni comparaison à un mode standard. L'écart est de 0,89 €, et
+l'exercer imposerait de désigner un mode standard dans les conditions générales
+et au tunnel, sous peine de retomber sur l'article L221-20.
+
+Ne pas introduire de règle de remboursement partiel des frais de port.
 
 ### Les frais de retour se perdent faute d'information
 
@@ -98,14 +113,26 @@ offre Start, par API.
 **Le piège tient en deux événements que le transporteur distingue** et qu'il ne
 faut jamais confondre :
 
-| Événement Mondial Relay | Sens | Effet |
-|---|---|---|
-| disponible au Point Relais | le colis est arrivé, le client ne l'a pas | **aucun** |
-| remis au destinataire | le client l'a physiquement récupéré | renseigne `livreA` |
+| Événement Mondial Relay | Mode | Sens | Effet |
+|---|---|---|---|
+| disponible au Point Relais | relais, locker | le colis est arrivé, le client ne l'a pas | **aucun** |
+| mise en distribution | domicile | le colis part en tournée | **aucun** |
+| avis de passage | domicile | personne n'était là, rien n'est remis | **aucun** |
+| remis au destinataire | les trois | le client l'a physiquement récupéré | renseigne `livreA` |
 
-Seul le second fait courir le délai de rétractation et déclenche l'invitation à
+Seul le dernier fait courir le délai de rétractation et déclenche l'invitation à
 déposer un avis. Un colis peut rester une semaine en relais avant retrait :
-prendre le premier événement éteindrait le droit du client avant terme.
+prendre un événement antérieur éteindrait le droit du client avant terme.
+
+**Les trois modes suivent la même règle**, ADR-025 : le déclencheur est la prise
+de possession physique par le client, jamais l'acheminement. À domicile, la mise
+en distribution et l'avis de passage sont les faux amis équivalents à
+« disponible au Point Relais ». Un avis de passage signifie précisément que le
+client **n'a pas** reçu le colis.
+
+Un échec de livraison à domicile peut produire un report vers un Point Relais.
+Le délai ne court alors qu'au retrait effectif, et `Expedition.mode` change sans
+que la commande soit réécrite.
 
 Le repli, si l'API est indisponible ou si un suivi reste bloqué, est la date
 d'expédition **plus une marge de sécurité couvrant le délai d'acheminement**,

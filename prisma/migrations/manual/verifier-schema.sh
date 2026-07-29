@@ -449,6 +449,8 @@ PRODUIT|statut|StatutProduit
 MEDIA|statutTraitement|StatutTraitementMedia
 MOUVEMENT_STOCK|type|TypeMouvementStock
 MOUVEMENT_STOCK|origine|OrigineEcriture
+COMMANDE|modeLivraison|ModeLivraison
+EXPEDITION|mode|ModeLivraison
 DEMANDE_RETRACTATION|statut|StatutRetractation
 JETON_ACCES|portee|PorteeJeton
 AVIS|statut|StatutAvis
@@ -555,7 +557,19 @@ done
 declares=$(R "SELECT count(*) FROM pg_type t
               JOIN pg_namespace n ON n.oid = t.typnamespace
               WHERE t.typtype = 'e' AND n.nspname = 'public';")
-attendus=$(echo "$ENUMS_ATTENDUS" | grep -c '|')
+# Les **types distincts** couverts, et non le nombre de lignes de la table.
+# Depuis ADR-025, `ModeLivraison` est porté par deux entités, COMMANDE et
+# EXPEDITION : il occupe deux lignes pour un seul type en base. Compter les
+# lignes ferait échouer le contrôle en annonçant une table incomplète alors
+# qu'elle est complète, et la correction évidente aurait été de retirer une des
+# deux lignes, donc de cesser de contrôler l'un des deux champs.
+attendus=$(echo "$ENUMS_ATTENDUS" | grep '|' | cut -d'|' -f3 | sort -u | grep -c .)
+
+# Limite assumée de ce contrôle, mesurée par mutation le 29 juillet 2026 :
+# il prouve que chaque **type** est couvert, pas que chaque **champ** l'est.
+# Retirer la ligne `EXPEDITION|mode|ModeLivraison` le laisse vert, le type
+# restant couvert par la ligne COMMANDE. Le contrôle de couverture des colonnes
+# ci-dessous ferme ce trou.
 
 if [ "$declares" = "$attendus" ]; then
   verifier "table de correspondance complète, $declares enums couverts" "$declares" "$attendus"
@@ -564,7 +578,40 @@ else
   echo "        non contrôlés : $(R "SELECT string_agg(t.typname, ' ' ORDER BY t.typname)
                                      FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
                                      WHERE t.typtype = 'e' AND n.nspname = 'public'
-                                       AND t.typname NOT IN ($(echo "$ENUMS_ATTENDUS" | grep '|' | sed "s/.*|/'/;s/\$/'/" | paste -sd, -))")"
+                                       AND t.typname NOT IN ($(echo "$ENUMS_ATTENDUS" | grep '|' | cut -d'|' -f3 | sort -u | sed "s/^/'/;s/\$/'/" | paste -sd, -))")"
+  ko=$((ko+1))
+fi
+
+# Couverture par colonne, et non seulement par type.
+#
+# Le contrôle précédent laisse passer un champ enum retiré de la table dès lors
+# qu'un autre champ porte le même type. Depuis ADR-025 le cas est réel :
+# `ModeLivraison` est porté par `commande.mode_livraison` et
+# `expedition.mode`, et abandonner le contrôle du second resterait invisible.
+#
+# Celui-ci part de la base : toute colonne dont le type est un enum doit
+# apparaître dans la table de correspondance. C'est le sens utile, une colonne
+# non contrôlée est une colonne dont les valeurs peuvent diverger du modèle.
+colonnes_base=$(R "SELECT string_agg(c.table_name || '.' || c.column_name, ' ' ORDER BY c.table_name, c.column_name)
+                   FROM information_schema.columns c
+                   JOIN pg_type t ON t.typname = c.udt_name
+                   JOIN pg_namespace n ON n.oid = t.typnamespace
+                   WHERE c.table_schema = 'public' AND t.typtype = 'e' AND n.nspname = 'public';")
+
+# La table de correspondance nomme les entités du modèle conceptuel, en
+# majuscules, et les champs en camelCase. La base les nomme en snake_case
+# minuscule. La conversion se fait dans ce sens, seul déterministe.
+colonnes_attendues=$(echo "$ENUMS_ATTENDUS" | grep '|' | while IFS='|' read -r e c _; do
+  echo "$(echo "$e" | tr 'A-Z' 'a-z').$(echo "$c" | sed 's/\([A-Z]\)/_\1/g' | tr 'A-Z' 'a-z')"
+done | sort | tr '\n' ' ' | sed 's/ $//')
+
+non_couvertes=$(comm -23 <(trier "$colonnes_base" | tr ' ' '\n' | sort) <(echo "$colonnes_attendues" | tr ' ' '\n' | sort) | tr '\n' ' ')
+
+if [ -z "${non_couvertes// /}" ]; then
+  echo "  OK    toutes les colonnes enum sont contrôlées"
+  ok=$((ok+1))
+else
+  echo "  ECHEC colonnes enum non contrôlées : $non_couvertes"
   ko=$((ko+1))
 fi
 

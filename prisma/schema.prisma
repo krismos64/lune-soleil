@@ -89,6 +89,17 @@ enum StatutTraitementEvenement {
   ECHOUE
 }
 
+// ADR-025. Le mode de livraison est explicite et jamais déduit de
+// `pointRelaisId` : une colonne nullable qui sert à la fois de donnée et de
+// discriminant est ambiguë, un identifiant nul signifierait aussi bien
+// « domicile » que « relais non encore choisi ». Trois modes au Go-Live, un
+// seul transporteur.
+enum ModeLivraison {
+  POINT_RELAIS
+  LOCKER
+  DOMICILE
+}
+
 enum StatutRetractation {
   DEPOSEE
   ACCUSEE
@@ -146,7 +157,24 @@ model Produit {
   categorieId String        @map("categorie_id")
   nom         String
   slug        String        @unique // C3
+  // Consolidation du 29 juillet 2026, LS-24 et LS-15. Cinq champs textuels et
+  // non un moteur d'attributs générique : le catalogue compte 10 à 40
+  // références de bijoux, aucune n'exige de structuration par attribut typé.
+  // Un EAV serait une complexité sans usage.
+  //
+  // `descriptionCourte` alimente la présentation en haut de fiche et les cartes
+  // de catalogue, `description` le bloc détaillé plus bas. Les fusionner
+  // obligerait à tronquer la longue pour produire la courte, ce qui coupe au
+  // milieu d'une phrase.
+  descriptionCourte String?   @map("description_courte")
   description String?
+  // F-CAT-07, information précontractuelle validée par l'exploitante. Les
+  // matières restent au produit : le catalogue réel ne montre pas de variante
+  // changeant de métal. Si un jour c'est le cas, la colonne se dédouble sur
+  // `Variante` sans casser l'existant.
+  matieres    String?
+  entretien   String?
+  fabrication String?       // fabrication artisanale, origine, geste
   statut      StatutProduit @default(BROUILLON)
   // LS-49, date de première publication, prévue au modèle conceptuel. Elle
   // n'est pas dérivable de `statut` ni de `modifieA` : un produit dépublié
@@ -171,6 +199,11 @@ model Variante {
   produitId        String    @map("produit_id")
   reference        String    @unique // C2, jamais réattribuée, C14
   libelle          String
+  // Consolidation du 29 juillet 2026. Les dimensions appartiennent à la
+  // variante et non au produit : un collier existe en 40 et 45 cm, et c'est
+  // précisément ce qui distingue les deux déclinaisons. Les porter au produit
+  // rendrait la fiche fausse dès la première variante de taille.
+  dimensions       String?
   prixCentimes     Int       @map("prix_centimes") // C4, invariant 1
   quantitePhysique Int       @map("quantite_physique") // CHECK >= 0, C5
   quantiteReservee Int       @default(0) @map("quantite_reservee") // CHECK, C5 et C6
@@ -279,6 +312,19 @@ model Commande {
   adresseLivraison     Json           @map("adresse_livraison") // copie figée, A3, invariants 3 et 4
   adresseFacturation   Json           @map("adresse_facturation") // copie figée
   sousTotalCentimes    Int            @map("sous_total_centimes")
+  // ADR-025, le mode choisi et payé est figé sur la commande, au même titre que
+  // l'adresse et le prix. Il est porté ici et pas seulement sur `Expedition` :
+  // une commande existe et affiche son mode entre le paiement et la préparation,
+  // avant qu'aucune expédition n'existe. Il n'est jamais recalculé depuis la
+  // configuration courante des tarifs.
+  modeLivraison        ModeLivraison  @map("mode_livraison")
+  // ADR-025, point de retrait choisi au tunnel, figé lui aussi. Obligatoire pour
+  // POINT_RELAIS et LOCKER, nul pour DOMICILE, contrainte CHECK en migration
+  // manuelle. Le libellé et l'adresse du point sont copiés, pas seulement son
+  // identifiant : un point qui ferme ne doit pas rendre illisible une commande
+  // passée, même règle que les libellés figés des lignes.
+  pointRelaisId        String?        @map("point_relais_id")
+  pointRelaisAdresse   Json?          @map("point_relais_adresse")
   fraisPortCentimes    Int            @map("frais_port_centimes")
   totalCentimes        Int            @map("total_centimes")
   montantTaxeCentimes  Int            @default(0) @map("montant_taxe_centimes") // franchise en base
@@ -400,6 +446,12 @@ model Expedition {
   id             String    @id @default(uuid())
   commandeId     String    @unique @map("commande_id")
   transporteur   String // Mondial Relay, extensible à Colissimo, LS-33
+  // ADR-025, le mode réellement exécuté par le transporteur. Il vaut normalement
+  // celui de la commande, et peut en différer : un échec de livraison à domicile
+  // peut être rebasculé vers un Point Relais. Deux faits distincts, ce que le
+  // client a choisi et payé, ce que le transporteur a exécuté. La commande n'est
+  // jamais réécrite dans ce cas.
+  mode           ModeLivraison
   numeroSuivi    String?   @map("numero_suivi")
   pointRelaisId  String?   @map("point_relais_id")
   statutTransporteur String? @map("statut_transporteur")
