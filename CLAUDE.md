@@ -34,6 +34,21 @@ app/ et components/   ->  services/  ->  repositories/  ->  Prisma  ->  PostgreS
 - `integrations/` isole Stripe, email, médias, IA.
 - Aucune généralisation prématurée : ce projet n'est pas un produit réutilisable.
 
+## Règles de domaine, chargées à chaque session
+
+Les invariants ci-dessous énoncent le principe, ces quatre fichiers portent
+l'application détaillée : l'instruction SQL exacte, la valeur du délai, le jeton
+de couleur. Ils sont référencés ici pour être **chargés automatiquement**, sans
+quoi une session ne les lit que si elle devine leur existence.
+
+@.claude/rules/database.md
+@.claude/rules/payments.md
+@.claude/rules/legal.md
+@.claude/rules/frontend-design.md
+
+Une règle qui contredit un ADR ou la loi est fausse, dans cet ordre. Signaler la
+contradiction plutôt que de suivre la règle.
+
 ## Invariants non négociables
 
 YOU MUST respecter ces règles sur tout le code de ce projet.

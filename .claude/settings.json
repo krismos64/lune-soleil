@@ -91,6 +91,17 @@
         ]
       }
     ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/scripts/hook-verifier-regles.sh"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
