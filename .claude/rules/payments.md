@@ -5,6 +5,7 @@ paths:
   - "src/services/checkout/**"
   - "src/services/orders/**"
   - "src/services/invoices/**"
+  - "src/services/shipping/**"
 ---
 
 # Paiement, commandes et documents comptables
