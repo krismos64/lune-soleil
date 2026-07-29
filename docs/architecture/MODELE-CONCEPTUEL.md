@@ -374,8 +374,8 @@ erDiagram
         entier fraisPortCentimes
         entier totalCentimes
         entier montantTaxeCentimes "zero, franchise en base"
-        horodatage cguAccepteesA
-        texte cguVersion
+        horodatage cgvAccepteesA
+        texte cgvVersion
         horodatage creeA
     }
     LIGNE_COMMANDE {
@@ -384,10 +384,9 @@ erDiagram
         identifiant varianteId FK "nullable, reference indicative"
         texte referenceFigee
         texte libelleProduitFige
-        texte libelleVarianteFige "nullable"
-        entier prixUnitaireCentimes
+        texte libelleVarianteFige
+        entier prixFigeCentimes
         entier quantite
-        entier totalLigneCentimes
     }
     PAIEMENT {
         identifiant id PK
@@ -445,7 +444,7 @@ erDiagram
 | V12 | Toute transition de statut est tracée avec son acteur et son origine | historisation, parcours 1 |
 | V13 | `utilisateurId` n'autorise jamais un accès, quelle que soit sa valeur | invariant 2, parcours 6, ADR-023 |
 | V15 | Une commande dissociée n'est jamais rattachable de nouveau | `dissocieA` non nul exclut, sinon un email réattribué rouvrirait un historique |
-| V14 | Une commande porte au plus un paiement `REUSSI` | `UNIQUE` partiel sur `(commandeId)` filtré sur `statut = REUSSI`, voir décision D |
+| V14 | Une commande porte au plus un paiement encaissé | `UNIQUE` partiel sur `(commandeId)` filtré sur `statut IN ('REUSSI', 'PARTIELLEMENT_REMBOURSE', 'REMBOURSE')`, voir décision D. Les trois états et non le seul `'REUSSI'` : un remboursement ne rend pas la commande impayée, correction de LS-45 |
 
 ### Décision A, séparer statut de commande et statut de paiement
 
@@ -1351,7 +1350,7 @@ entièrement, cas d'erreur compris, sans invention de champ manquant.
 | 2 panier | aucune, éphémère côté client | oui |
 | 3 revalidation | lecture `Variante` | oui |
 | 4 réservation | `Reservation`, `Variante.quantiteReservee` | oui |
-| 5 commande | `Commande`, `LigneCommande`, `cguAccepteesA` | oui |
+| 5 commande | `Commande`, `LigneCommande`, `cgvAccepteesA` | oui |
 | 6 session paiement | `Paiement.referenceSessionFournisseur` | oui |
 | 7 événement signé | `EvenementFournisseur`, `Paiement`, `Commande`, `MouvementStock` | oui |
 | 8 facture | `Facture` avec instantané | oui |

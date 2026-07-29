@@ -19,14 +19,15 @@ cd "$RACINE" || exit 1
 
 DB=".claude/rules/database.md"
 ML="docs/architecture/MODELE-LOGIQUE.md"
+MC="docs/architecture/MODELE-CONCEPTUEL.md"
 
-for f in "$DB" "$ML" ./scripts/verifier-regles.sh; do
+for f in "$DB" "$ML" "$MC" ./scripts/verifier-regles.sh; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
 done
 
 TMP="$(mktemp -d)"
-cp "$DB" "$TMP/db.orig"; cp "$ML" "$TMP/ml.orig"
-restaurer() { cp "$TMP/db.orig" "$DB"; cp "$TMP/ml.orig" "$ML"; }
+cp "$DB" "$TMP/db.orig"; cp "$ML" "$TMP/ml.orig"; cp "$MC" "$TMP/mc.orig"
+restaurer() { cp "$TMP/db.orig" "$DB"; cp "$TMP/ml.orig" "$ML"; cp "$TMP/mc.orig" "$MC"; }
 nettoyer() { restaurer; rm -rf "$TMP"; }
 trap nettoyer EXIT
 
@@ -69,10 +70,16 @@ cas "database.md, RECONCILIATION retiree du filtre email"
 perl -pi -e "s/\`role = 'ADMINISTRATRICE'\`/\`role = 'CLIENT'\`/" "$ML"
 cas "MODELE-LOGIQUE.md, filtre administratrice fausse"
 
+# Cas 6 : la meme valeur sans apostrophes, forme de la regle V14 du modele
+# conceptuel. Exiger les apostrophes laissait passer le predicat perime dans le
+# document le plus structurant. Trouve apres coup, d'ou ce cas.
+perl -pi -e "s/statut IN \('REUSSI', 'PARTIELLEMENT_REMBOURSE', 'REMBOURSE'\)\`, voir/statut = REUSSI\`, voir/" "$MC"
+cas "MODELE-CONCEPTUEL.md, V14 sans apostrophes"
+
 echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then
-  echo "  5 mutations, 5 detectees"
+  echo "  6 mutations, 6 detectees"
 else
   echo "  $echecs mutation(s) non detectee(s)"
 fi

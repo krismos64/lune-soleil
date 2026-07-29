@@ -45,6 +45,7 @@ CREATE TABLE "categorie" (
     "id" TEXT NOT NULL,
     "nom" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
+    "ordre" INTEGER NOT NULL,
     "cree_a" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "categorie_pkey" PRIMARY KEY ("id")
@@ -58,6 +59,7 @@ CREATE TABLE "produit" (
     "slug" TEXT NOT NULL,
     "description" TEXT,
     "statut" "StatutProduit" NOT NULL DEFAULT 'BROUILLON',
+    "publie_a" TIMESTAMPTZ(3),
     "archive_a" TIMESTAMPTZ(3),
     "cree_a" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "modifie_a" TIMESTAMPTZ(3) NOT NULL,
@@ -139,8 +141,8 @@ CREATE TABLE "commande" (
     "frais_port_centimes" INTEGER NOT NULL,
     "total_centimes" INTEGER NOT NULL,
     "montant_taxe_centimes" INTEGER NOT NULL DEFAULT 0,
-    "cgu_acceptees_a" TIMESTAMPTZ(3) NOT NULL,
-    "cgu_version" TEXT NOT NULL,
+    "cgv_acceptees_a" TIMESTAMPTZ(3) NOT NULL,
+    "cgv_version" TEXT NOT NULL,
     "cree_a" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "commande_pkey" PRIMARY KEY ("id")
@@ -152,7 +154,8 @@ CREATE TABLE "ligne_commande" (
     "commande_id" TEXT NOT NULL,
     "variante_id" TEXT,
     "reference_figee" TEXT NOT NULL,
-    "libelle_fige" TEXT NOT NULL,
+    "libelle_produit_fige" TEXT NOT NULL,
+    "libelle_variante_fige" TEXT NOT NULL,
     "prix_fige_centimes" INTEGER NOT NULL,
     "quantite" INTEGER NOT NULL,
     "cree_a" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -243,6 +246,7 @@ CREATE TABLE "facture" (
     "montant_total_centimes" INTEGER NOT NULL,
     "montant_avoir_centimes" INTEGER NOT NULL DEFAULT 0,
     "instantane_legal" JSONB NOT NULL,
+    "chemin_pdf" TEXT,
     "emise_a" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "facture_pkey" PRIMARY KEY ("id")
@@ -256,6 +260,8 @@ CREATE TABLE "avoir" (
     "numero" TEXT NOT NULL,
     "montant_centimes" INTEGER NOT NULL,
     "motif" TEXT NOT NULL,
+    "instantane_legal" JSONB NOT NULL,
+    "chemin_pdf" TEXT,
     "emis_a" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "avoir_pkey" PRIMARY KEY ("id")
