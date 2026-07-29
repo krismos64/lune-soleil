@@ -95,26 +95,52 @@ cassé sur la machine de développement.
 correspondant, y compris les trois défauts trouvés par la revue. Contre-épreuve :
 un enum réordonné ne rougit pas.
 
+## LS-46, une règle fausse en cachait deux autres
+
+Enchaîné dans la foulée. `.claude/rules/database.md` annonçait trois champs
+fiscaux, `taxRate`, `taxAmount` et `priceIncludesTax`, dont aucun n'existe. Le
+schéma porte `montantTaxeCentimes`, en centimes entiers.
+
+Le ticket exigeait d'auditer tout `.claude/rules/` et pas seulement la ligne
+signalée. L'audit a sorti **deux défauts de plus**, dans le même fichier :
+
+| Cité par la règle | Réalité |
+|---|---|
+| `evenement_webhook` | table renommée `evenement_fournisseur` |
+| `quantite_ligne` | colonne réelle `ligne_commande.quantite` |
+
+Les trois champs fiscaux cumulaient trois écarts : noms faux, en anglais alors
+que le schéma est en français, et ils appellent un taux décimal et un booléen là
+où l'invariant 1 impose des centimes entiers.
+
+La recommandation du rapport externe, ajouter taux et inclusion de taxe à quatre
+entités, est écartée : elle modéliserait une TVA que l'entreprise ne collecte
+pas. Le rapport pointait la bonne zone dans le mauvais sens, la règle annonçait
+des champs surnuméraires plutôt que d'en réclamer.
+
+`scripts/verifier-regles.sh` confronte désormais les identifiants cités par les
+règles au vocabulaire du schéma. Purement textuel, ni Docker ni base. 28
+identifiants vérifiés, trois mutations le font rougir en nommant fichier et
+ligne.
+
+**Une correction manuelle ne se répète pas, un contrôle si.** Troisième fois en
+deux jours que ce fichier porte une règle périmée : le filtre d'email en LS-13,
+puis ces trois identifiants.
+
 ## Où on en est
 
 | Ticket | Sujet | État |
 |---|---|---|
 | LS-45 | Alignement des enums, V14, cohérence événement | Terminé, fusionné, `52b3680` |
-| LS-46 | Règle périmée sur les champs fiscaux | À faire, Must Go-Live |
+| LS-46 | Identifiants inexistants dans les règles | Terminé, fusionné, `675248c` |
 | LS-14 | Diagramme de séquence de l'achat | À faire, débloqué |
 | LS-2 | Phase 1, fondations techniques | Prochaine phase |
 
-LS-46 vient de la même relecture, par un autre chemin que celui qu'elle
-indiquait. `.claude/rules/database.md:225` annonce trois champs fiscaux,
-`taxRate`, `taxAmount` et `priceIncludesTax`, dont aucun n'existe. Le schéma
-porte `montantTaxeCentimes`. Fichier chargé automatiquement au moment de coder,
-donc même mécanisme de régression que le filtre d'email corrigé la veille.
-
 ## Prochaine étape
 
-**LS-46**, court, ou **LS-14**, ou la **phase 1**.
+**LS-14**, le diagramme de séquence de l'achat, ou la **phase 1**.
 
-Le script de vérification reste manuel. Il garde maintenant treize enums, quatre
-clés d'idempotence et l'invariant V14, et rien ne le déclenche. LS-2 doit le
-brancher en intégration continue : un contrôle qu'il faut penser à lancer ne
-garde rien de façon fiable.
+Les deux scripts de vérification restent **manuels**. Ensemble ils gardent treize
+enums, quatre clés d'idempotence, l'invariant V14 et la conformité des règles au
+schéma, et rien ne les déclenche. LS-2 doit les brancher en intégration
+continue : un contrôle qu'il faut penser à lancer ne garde rien de façon fiable.
