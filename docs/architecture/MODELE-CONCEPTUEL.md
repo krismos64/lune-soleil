@@ -306,6 +306,7 @@ erDiagram
         identifiant varianteId FK
         enum type "VENTE_WEB VENTE_EXTERNE RETOUR AJUSTEMENT ENTREE"
         entier quantite "signe selon le type"
+        entier prixUnitaireFigeCentimes "nullable, obligatoire sur VENTE_EXTERNE"
         identifiant commandeId FK "nullable"
         texte canal "nullable, marche ou plateforme"
         texte motif "nullable"
@@ -330,6 +331,93 @@ erDiagram
 | S9 | Un mouvement automatique porte `origine = SYSTEME` et un `acteurId` nul | un webhook n'est pas une personne, l'attribuer à l'administratrice fausserait l'audit |
 | S10 | Une réservation porte toujours sa commande, les deux sont écrites dans une seule transaction | `commandeId` obligatoire et clé étrangère en `RESTRICT`, ADR-024. Une réservation orpheline bloquerait la pièce trente minutes sans que rien ne dise à qui elle appartenait |
 | S11 | La session de paiement se crée après la validation de la transaction | ADR-024. Un appel réseau à l'intérieur tiendrait le verrou de ligne, et son échec effacerait la commande par rollback |
+| S12 | Une vente externe porte le prix réellement pratiqué, figé au moment de la vente | `CHECK (type <> 'VENTE_EXTERNE' OR prixUnitaireFigeCentimes IS NOT NULL)`, LS-63. Sans lui le chiffre d'affaires des marchés n'existe pas |
+| S13 | Aucune statistique ne reconstitue une vente passée depuis le prix actuel du catalogue | invariant 3 appliqué au stock, comme V4 l'applique à la commande. `Variante.prixCentimes` n'entre dans aucun calcul historique |
+| S14 | Une vente externe erronée se corrige par un mouvement inverse, jamais par une modification | règle S4, un mouvement est immuable. Le compensateur porte le même prix figé et un `motif`, comme un avoir corrige une facture |
+
+### Le montant d'une vente externe, et pourquoi il manquait
+
+Ajouté par LS-63 le 29 juillet 2026, après vérification aux sources du dépôt.
+
+Le mouvement de stock enregistrait la variante, la quantité, le canal et la date,
+sans aucun montant. Le journal savait donc **qu'une** pièce était partie sur un
+marché, jamais **pour combien**.
+
+Trois conséquences, chacune vérifiée dans les documents existants.
+
+Le chiffre d'affaires des marchés n'était pas calculable. Le seul montant
+atteignable était `Variante.prixCentimes`, le prix **actuel** du catalogue :
+l'utiliser pour reconstituer une vente de juin viole l'invariant 3, exactement
+pour la raison qui fait exister `LigneCommande.prixFigeCentimes` côté web. Un
+prix révisé à la hausse en septembre gonflerait rétroactivement le chiffre
+d'affaires de l'été.
+
+Une remise de marché n'était représentable d'aucune façon. Le prix consenti sur
+un stand, sur un lot ou en fin de journée, ne figure jamais au catalogue.
+
+Et LS-35, l'e-reporting obligatoire au 1er septembre 2027, repose sur cette
+donnée. Sa description affirmait que le modèle permet l'agrégation journalière
+« les mouvements de stock distinguent vente web et vente externe », ce qui est
+vrai du nombre de pièces et faux du montant, seule donnée que l'administration
+demande. Le ticket signalait lui-même deux lignes plus bas que les ventes de
+marché entrent dans le chiffre d'affaires à transmettre.
+
+### Pourquoi un prix unitaire et non un montant total
+
+Arbitré avec Christophe le 29 juillet 2026, trois options pesées.
+
+Le total encaissé se déduit de `quantite * prixUnitaireFigeCentimes`, deux
+colonnes de la **même ligne**. Stocker les deux répéterait le défaut que ce
+document écarte déjà deux fois : `LigneCommande.totalLigneCentimes` a été retiré
+pour ce motif, et `Media.estPrincipal` pour le même. Un total redondant se
+désynchronise sans qu'aucune contrainte ne le détecte, et aucun `CHECK` strict
+n'est écrivable ici, une remise sur lot rendant légitime un total inférieur au
+produit des deux colonnes.
+
+Le montant total seul aurait couvert le lot négocié sans division exacte, au prix
+du prix unitaire, donc de toute statistique par pièce. Sur un catalogue de pièces
+uniques, où la quantité vaut un dans le cas dominant, les deux formes coïncident
+et le prix unitaire porte en plus l'information de valeur de la pièce.
+
+**La contrepartie est assumée** : un lot de trois pièces cédé à 50 € se saisit en
+prix unitaire, donc arrondi au centime, et 5000 divisé par 3 ne tombe pas juste.
+La saisie porte alors trois mouvements distincts, un par pièce, ce que le
+catalogue de pièces uniques rend naturel.
+
+### Le champ est nullable au type et obligatoire par contrainte
+
+`ENTREE` et `AJUSTEMENT` n'encaissent rien. Leur imposer un montant obligerait à
+écrire un zéro qui mentirait : un réassort à zéro euro et une pièce offerte
+seraient indiscernables.
+
+**La contrainte est une implication et non une équivalence**, et l'écart avec les
+deux `CHECK` d'ADR-025 est délibéré.
+
+```sql
+CHECK (type <> 'VENTE_EXTERNE' OR prix_unitaire_fige_centimes IS NOT NULL)
+```
+
+Écrire `(type = 'VENTE_EXTERNE') = (prix IS NOT NULL)`, sur le modèle du mode de
+livraison, interdirait tout montant sur un autre type. Or la règle S14 corrige une
+vente externe erronée par un mouvement compensateur, qui doit porter le même prix
+pour que les sommes retombent juste. L'équivalence rendrait la correction
+impossible à écrire.
+
+La différence tient au fait modélisé. Un point de retrait sur une commande
+`DOMICILE` est une incohérence, un prix sur un `RETOUR` est une information
+légitime.
+
+### La date qui fait foi est celle du mouvement
+
+`creeA` porte la date de la vente externe, sans champ distinct de date
+d'encaissement. La saisie se fait sur le stand ou le soir même, et un second
+champ que rien n'oblige à renseigner correctement diverge du premier.
+
+**La limite est réelle et se traite en exploitation** : une saisie faite deux
+jours après le marché range le chiffre d'affaires sur le mauvais jour, ce qui
+compte pour l'e-reporting journalier de LS-35. La consigne est donc de saisir le
+jour même. Si l'usage montre que ça ne tient pas, un champ `venduA` s'ajoutera
+sans casser l'existant, `creeA` gardant alors la trace de la saisie.
 
 ### Pourquoi la réservation est une entité et non un champ
 
@@ -1398,6 +1486,8 @@ entièrement, cas d'erreur compris, sans invention de champ manquant.
 | suspension vente web | `Variante.venteWebActivee`, `JournalAudit` | oui |
 | contrôle réservation active | `Reservation` interrogeable par variante | oui |
 | vente externe | `MouvementStock` type `VENTE_EXTERNE`, `canal` | oui |
+| montant encaissé sur le marché | `MouvementStock.prixUnitaireFigeCentimes`, `CHECK` S12 | oui, depuis LS-63 |
+| correction d'une vente externe erronée | mouvement compensateur avec `motif`, règle S14 | oui, depuis LS-63 |
 | retour d'invendu | `venteWebActivee` à vrai, aucun mouvement | oui |
 | annulation forcée de réservation | suppression `Reservation`, `JournalAudit` | oui |
 | stock déjà à zéro | `CHECK` sur `quantitePhysique` | oui |
@@ -1582,6 +1672,20 @@ l'unicité simple `facture.commandeId` listée plus haut :
 tout montant en centimes `>= 0`, `montant_rembourse <= montant` sur le paiement,
 `facture.montant_avoir_centimes <= facture.montant_total_centimes`,
 `avis.note BETWEEN 1 AND 5`.
+
+**Présence conditionnelle**, un champ nullable au type mais obligatoire dans un
+cas précis. Ces contraintes sont des implications ou des équivalences selon que
+la valeur reste légitime hors du cas visé :
+
+| Contrainte | Forme | Empêche |
+|---|---|---|
+| `commande`, mode et point de retrait | équivalence | une commande `DOMICILE` portant un relais, et l'inverse, ADR-025 |
+| `expedition`, mode et point de retrait | équivalence | même incohérence sur le mode réellement exécuté |
+| `evenement_fournisseur`, statut et `traiteA` | équivalence | un événement `TRAITE` sans horodatage, donc rejoué par une reprise |
+| `mouvement_stock`, `VENTE_EXTERNE` et prix | **implication** | une vente de marché sans montant, S12, LS-63 |
+
+La dernière est une implication délibérée. Une équivalence interdirait le prix
+sur les autres types, donc sur le mouvement compensateur de la règle S14.
 
 **Obligatoire, aucune valeur nulle** : `avoir.factureId`, `facture.commandeId`,
 `ligne_commande.commandeId`, `paiement.commandeId`, `reservation.varianteId`,

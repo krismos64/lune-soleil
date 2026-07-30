@@ -246,6 +246,73 @@ sortie=$(R "INSERT INTO expedition (id,commande_id,transporteur,mode,point_relai
 verifier_accepte "expédition rebasculée vers un relais acceptée, ADR-025" "$sortie"
 
 echo
+echo "Montant d'une vente externe, LS-63"
+
+# Le défaut que ces contrôles existent pour empêcher : une vente de marché
+# enregistrée sans montant. Le chiffre d'affaires des marchés devient alors
+# incalculable, et il ne se reconstitue pas après coup, le prix du catalogue
+# ayant pu changer et une remise de stand n'y figurant jamais.
+sortie=$(R "INSERT INTO mouvement_stock (id,variante_id,type,quantite,canal,prix_unitaire_fige_centimes,origine,cree_a)
+   VALUES ('mvko1','var','VENTE_EXTERNE',-1,'marche de Bayonne',NULL,'ADMIN',now());")
+verifier_rejet "vente externe sans montant rejetée, S12" "chk_mouvement_vente_externe_prix" "$sortie"
+
+sortie=$(R "INSERT INTO mouvement_stock (id,variante_id,type,quantite,canal,prix_unitaire_fige_centimes,origine,cree_a)
+   VALUES ('mvok1','var','VENTE_EXTERNE',-1,'marche de Bayonne',1100,'ADMIN',now());")
+verifier_accepte "vente externe avec montant acceptée, S12" "$sortie"
+
+# Le prix pratiqué diffère du catalogue, c'est le cas d'usage central : une remise
+# consentie sur un stand. Si ce contrôle échouait, le modèle imposerait le prix du
+# catalogue et le champ figé ne servirait à rien.
+remise=$(R "SELECT prix_unitaire_fige_centimes FROM mouvement_stock WHERE id='mvok1';")
+catalogue=$(R "SELECT prix_centimes FROM variante WHERE id='var';")
+verifier "le prix figé est indépendant du catalogue ($catalogue)" "1100" "$remise"
+
+# Un prix négatif fausserait toute somme sans qu'aucun contrôle ne le voie. Le
+# signe de l'opération est porté par la quantité, jamais par le prix.
+sortie=$(R "INSERT INTO mouvement_stock (id,variante_id,type,quantite,canal,prix_unitaire_fige_centimes,origine,cree_a)
+   VALUES ('mvko2','var','VENTE_EXTERNE',-1,'marche',-500,'ADMIN',now());")
+verifier_rejet "prix de vente externe négatif rejeté" "chk_mouvement_prix_positif" "$sortie"
+
+# Une pièce offerte sur un stand est un cas réel, son mouvement existe et son
+# prix vaut zéro. Borner à « strictement positif » l'aurait rendu inenregistrable.
+sortie=$(R "INSERT INTO mouvement_stock (id,variante_id,type,quantite,canal,prix_unitaire_fige_centimes,origine,cree_a)
+   VALUES ('mvok2','var','VENTE_EXTERNE',-1,'offert',0,'ADMIN',now());")
+verifier_accepte "pièce offerte à prix nul acceptée" "$sortie"
+
+# L'autre sens de l'implication, et c'est le contrôle qui distingue cette
+# contrainte des deux équivalences d'ADR-025.
+#
+# Une ENTREE de réassort n'encaisse rien : lui imposer un montant obligerait à
+# écrire un zéro qui mentirait, un réassort gratuit et un achat de matière
+# devenant indiscernables.
+sortie=$(R "INSERT INTO mouvement_stock (id,variante_id,type,quantite,motif,prix_unitaire_fige_centimes,origine,cree_a)
+   VALUES ('mvok3','var','ENTREE',3,'reassort',NULL,'ADMIN',now());")
+verifier_accepte "entrée de stock sans montant acceptée" "$sortie"
+
+# Le mouvement compensateur de la règle S14, qui corrige une vente externe
+# saisie à tort. Il porte le même prix figé pour que les sommes retombent justes.
+#
+# Ce contrôle est la raison pour laquelle la contrainte est une implication et non
+# une équivalence : écrite en équivalence sur le modèle d'ADR-025, elle rejetterait
+# cette écriture et rendrait toute correction impossible.
+sortie=$(R "INSERT INTO mouvement_stock (id,variante_id,type,quantite,motif,prix_unitaire_fige_centimes,origine,cree_a)
+   VALUES ('mvok4','var','AJUSTEMENT',1,'correction de saisie du marche de Bayonne',1100,'ADMIN',now());")
+verifier_accepte "mouvement compensateur avec prix accepté, S14" "$sortie"
+
+# Le chiffre d'affaires des marchés, calculé comme STATISTIQUES.md le définit :
+# somme de quantite * prix figé, en centimes entiers, sans lire le catalogue.
+#
+# Le jeu en place porte une vente à 1100, une pièce offerte à 0, et une
+# correction de +1 à 1100 qui annule la première. Attendu : 0 centime, ce qui
+# vérifie que le compensateur neutralise bien la vente qu'il corrige.
+ca=$(R "SELECT COALESCE(SUM(-quantite * prix_unitaire_fige_centimes), 0)
+        FROM mouvement_stock
+        WHERE prix_unitaire_fige_centimes IS NOT NULL;")
+verifier "chiffre d'affaires marché, vente annulée par sa correction" "0" "$ca"
+
+R "DELETE FROM mouvement_stock WHERE id IN ('mvok1','mvok2','mvok3','mvok4');" >/dev/null
+
+echo
 echo "Concurrence, deux acheteurs sur la dernière pièce"
 
 reset_stock

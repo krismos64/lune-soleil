@@ -246,8 +246,13 @@ pièces sont vendues en ligne et sur des marchés physiques.
 |---|---|---|---|
 | 1 | Avant le marché, suspension de la vente web | `venteWebActivee` à faux, entrée au journal d'audit | produit visible, non achetable |
 | 2 | Vente en main propre sur le marché | contrôle qu'aucune réservation n'est active | formulaire de vente externe |
-| 3 | Enregistrement | mouvement de stock de type vente externe avec canal, `quantitePhysique` décrémentée | stock à jour |
+| 3 | Enregistrement | mouvement de stock de type vente externe avec canal **et prix réellement pratiqué**, `quantitePhysique` décrémentée | stock à jour |
 | 4 | Pièce invendue, retour | `venteWebActivee` à vrai, aucun mouvement de stock | produit à nouveau achetable |
+
+Le prix saisi à l'étape 3 est celui **réellement encaissé**, pas celui du
+catalogue. Il est proposé par défaut à la valeur du catalogue et reste modifiable :
+une remise consentie sur un stand est un cas courant. Sans ce montant, le chiffre
+d'affaires des marchés n'existe pas, LS-63 et règle S12.
 
 Suspendre la vente web ne crée **aucun** mouvement de stock. Seule une vente
 réelle décrémente la quantité physique.
@@ -267,6 +272,20 @@ Le client en ligne verra son paiement échouer à la conversion.
 **Stock physique déjà à zéro**
 Base : aucune écriture, la contrainte `CHECK` l'empêcherait de toute façon.
 Vue : refus, stock déjà épuisé.
+
+**Vente externe saisie sans montant, étape 3**
+Base : aucune écriture, `chk_mouvement_vente_externe_prix` la rejette. Le montant
+n'est pas facultatif, et il ne se reconstitue pas après coup.
+Vue : le champ de prix est obligatoire au formulaire, prérempli au prix du
+catalogue et modifiable.
+
+**Vente externe saisie à tort, montant ou pièce erronés**
+Base : le mouvement d'origine n'est **jamais** modifié ni supprimé, règle S4. Un
+mouvement compensateur de quantité opposée est écrit, portant le même prix figé et
+un `motif` obligatoire, ce qui remet la quantité physique à sa valeur juste.
+Vue : action de correction explicite, jamais une édition du mouvement.
+Suite : les statistiques somment les deux mouvements et retombent justes. La
+correction est imputée à la période où elle est saisie, voir `STATISTIQUES.md`.
 
 **Produit en rupture consulté en ligne**
 Base : rien.

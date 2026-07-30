@@ -125,6 +125,9 @@ CREATE TABLE "mouvement_stock" (
     "type" "TypeMouvementStock" NOT NULL,
     "quantite" INTEGER NOT NULL,
     "canal" TEXT,
+    -- LS-63. Prix réellement pratiqué au moment de la vente, figé. Obligatoire
+    -- sur VENTE_EXTERNE par contrainte CHECK, voir 001_contraintes_check.sql.
+    "prix_unitaire_fige_centimes" INTEGER,
     "motif" TEXT,
     "acteur_id" TEXT,
     "origine" "OrigineEcriture" NOT NULL,
@@ -445,6 +448,11 @@ CREATE INDEX "reservation_commande_idx" ON "reservation"("commande_id");
 
 -- CreateIndex
 CREATE INDEX "mouvement_variante_idx" ON "mouvement_stock"("variante_id");
+
+-- CreateIndex
+-- LS-63. Les statistiques et le futur e-reporting de LS-35 bornent une période
+-- puis regroupent par type. Sans cet index, chaque calcul balaie tout le journal.
+CREATE INDEX "mouvement_periode_idx" ON "mouvement_stock"("cree_a", "type");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "mouvement_vente_web_unique" ON "mouvement_stock"("commande_id", "variante_id") WHERE (type = 'VENTE_WEB');

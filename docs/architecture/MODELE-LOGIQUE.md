@@ -127,11 +127,38 @@ ADR-023 pour les clients. Le champ `role` de `Utilisateur` se déclare en
 C1 compte les lignes d'une autre table, L9 vérifie trois conditions à chaque
 lecture de jeton, A11 recoupe une écriture sur la session.
 
+## Le montant des ventes externes, LS-63
+
+`MouvementStock` a reçu `prixUnitaireFigeCentimes` le 29 juillet 2026. Le journal
+des mouvements enregistrait la variante, la quantité, le canal et la date, sans
+aucun montant : le chiffre d'affaires des marchés n'était pas calculable, et il ne
+se reconstitue pas depuis `Variante.prixCentimes` sans violer l'invariant 3.
+
+Deux contraintes l'encadrent, et la première n'a pas la forme habituelle.
+
+| Contrainte | Forme | Portée |
+|---|---|---|
+| `chk_mouvement_vente_externe_prix` | implication | montant obligatoire sur `VENTE_EXTERNE`, autorisé ailleurs |
+| `chk_mouvement_prix_positif` | borne | jamais négatif, zéro autorisé pour une pièce offerte |
+
+**L'implication est délibérée**, là où les `CHECK` d'ADR-025 sur le mode de
+livraison sont des équivalences. Un prix reste légitime sur un `AJUSTEMENT` :
+c'est le mouvement compensateur qui corrige une vente externe erronée, un
+mouvement de stock étant immuable, règle S14.
+
+Mesuré par mutation : réécrite en équivalence, la contrainte rejette le
+compensateur et le chiffre d'affaires reste à 1100 centimes au lieu de 0, donc une
+vente annulée continue de compter.
+
+Un index `mouvement_periode_idx` sur `(creeA, type)` accompagne le champ, toute
+statistique bornant une période avant de regrouper par type.
+
 ## Vérification
 
-`prisma/migrations/manual/verifier-schema.sh` rejoue vingt-neuf contrôles sur
+`prisma/migrations/manual/verifier-schema.sh` rejoue soixante-huit contrôles sur
 une base PostgreSQL 18.4 jetable. Il couvre ce que le prototype d'ADR-006
-vérifiait sur deux tables, et l'étend aux contraintes nées de LS-37 à LS-41.
+vérifiait sur deux tables, et l'étend aux contraintes nées de LS-37 à LS-41, puis
+au montant des ventes externes de LS-63.
 
 ```
 Réservation de stock, ADR-006
@@ -193,6 +220,16 @@ de l'historique du projet.
 |---|---|
 | clé email revenue à `origine = 'SYSTEME'` seul | 2 échecs, dont la retentative après échec |
 | clé mouvement sur `commande_id` seul, régression LS-12 | 1 échec, panier multi-articles |
+| `chk_mouvement_vente_externe_prix` retirée, LS-63 | 1 échec, vente externe sans montant acceptée |
+| la même réécrite en équivalence, LS-63 | 2 échecs, compensateur rejeté et chiffre d'affaires faux |
+| `chk_mouvement_prix_positif` retirée, LS-63 | 2 échecs, prix négatif accepté, chiffre d'affaires à -500 |
+| colonne `prix_unitaire_fige_centimes` retirée du schéma, LS-63 | aucun contrôle exécuté, le script refuse de partir |
+
+La dernière mutation est la plus instructive. Retirer la colonne casse la création
+du schéma, et le garde-fou de LS-48 refuse alors d'exécuter le moindre contrôle
+plutôt que d'afficher des réussites qui ne vérifient rien. Une mutation dont
+l'effet attendu serait « le contrôle rougit » produit ici « aucun contrôle ne
+tourne », ce qui est le bon comportement et non un échec de la mutation.
 
 Avant la correction des assertions, ces deux mutations passaient au vert. C'est
 la seule preuve qui compte : un test qui ne rougit sur aucune mutation ne garde

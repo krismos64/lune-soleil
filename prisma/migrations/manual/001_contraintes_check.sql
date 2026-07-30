@@ -74,6 +74,40 @@ ALTER TABLE paiement
      AND montant_rembourse_centimes <= montant_centimes);
 
 -- ---------------------------------------------------------------------------
+-- Montant d'une vente externe, LS-63
+-- ---------------------------------------------------------------------------
+
+-- Une vente externe porte toujours le prix réellement pratiqué.
+--
+-- Sans cette contrainte, le montant est facultatif, donc oublié : le formulaire
+-- de vente de marché s'écrirait sans lui et le chiffre d'affaires des marchés
+-- serait définitivement perdu pour les ventes déjà saisies. Un montant absent
+-- ne se reconstitue pas après coup, le prix du catalogue ayant pu changer et une
+-- remise de marché n'y figurant de toute façon jamais.
+--
+-- ATTENTION à la forme, une implication et non une équivalence. Écrire
+-- `(type = 'VENTE_EXTERNE') = (prix IS NOT NULL)` interdirait de porter un
+-- montant sur tout autre type, donc sur le mouvement compensateur qui corrige
+-- une vente externe saisie à tort, décision LS-63 : un mouvement de stock étant
+-- immuable, règle S4, une erreur se corrige par un mouvement inverse qui porte
+-- le même prix. L'équivalence rendrait la correction impossible à écrire.
+--
+-- Les deux CHECK d'ADR-025 sur le mode de livraison sont, eux, de vraies
+-- équivalences : un point de retrait sur une commande DOMICILE est une erreur,
+-- alors qu'un prix sur un RETOUR est une information légitime.
+ALTER TABLE mouvement_stock
+  ADD CONSTRAINT chk_mouvement_vente_externe_prix
+  CHECK (type <> 'VENTE_EXTERNE' OR prix_unitaire_fige_centimes IS NOT NULL);
+
+-- Un prix négatif fausserait toute somme sans qu'aucun contrôle ne le voie.
+-- Le signe de l'opération est porté par `quantite`, jamais par le prix : une
+-- vente est une quantité négative à prix positif. Zéro reste autorisé, une pièce
+-- offerte sur un stand est un cas réel et son mouvement de stock existe.
+ALTER TABLE mouvement_stock
+  ADD CONSTRAINT chk_mouvement_prix_positif
+  CHECK (prix_unitaire_fige_centimes IS NULL OR prix_unitaire_fige_centimes >= 0);
+
+-- ---------------------------------------------------------------------------
 -- Comptabilité, invariant 4
 -- ---------------------------------------------------------------------------
 
