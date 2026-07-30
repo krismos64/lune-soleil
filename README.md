@@ -87,18 +87,41 @@ Docker Compose.
 Les versions impaires sont exclues, Prisma 7 les refuse. Node 23 satisfait un
 « Node 22 ou plus » et casse à l'installation, le cas s'est produit.
 
-### État actuel, avant la phase 1
-
-Le projet n'est pas encore initialisé : ni `package.json`, ni `docker-compose.yml`.
-Les commandes ci-dessous **ne fonctionneront qu'après LS-2**, la phase 1, qui
-installe les dépendances et applique la migration.
+La version est fixée dans `.nvmrc` et dans `engines` du `package.json`, avec un
+intervalle qui exclut explicitement les versions impaires. `engine-strict=true`
+dans `.npmrc` rend cette contrainte **bloquante** : sans lui, `engines` n'émet
+qu'un avertissement et l'installation se poursuit, pour casser plus tard sur
+Prisma, loin de sa cause.
 
 ```bash
-npm install
+nvm use            # lit .nvmrc
+npm ci             # installation reproductible depuis le verrou
+npm run dev        # sert la page d'attente sur le port 3000
+```
+
+Contrôles disponibles dès maintenant :
+
+```bash
+npm run type-check # tsc --noEmit, mode strict
+npm run lint       # ESLint 9
+npm run build      # construction de production
+npm run format     # Prettier, code seulement, pas la documentation
+```
+
+`npm audit` doit rester à **zéro vulnérabilité**. Trois overrides y contribuent,
+documentés dans `package.json` avec la condition de leur retrait.
+
+### Ce qui n'existe pas encore
+
+La base de données locale, la migration Prisma, les tests et l'intégration
+continue arrivent avec les stories suivantes de la phase 1, LS-66 à LS-69. Les
+commandes ci-dessous **ne fonctionneront qu'à ce moment** :
+
+```bash
 cp .env.example .env    # renseigner les valeurs locales
 docker compose up -d db # base PostgreSQL locale
 npx prisma migrate dev
-npm run dev
+npm run test
 ```
 
 ### Ce qui fonctionne dès maintenant
