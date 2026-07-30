@@ -48,10 +48,23 @@ restaurer() {
 }
 
 # Vérifie que le contrôle signale bien le motif attendu après mutation.
+#
+# PIÈGE, rencontré à la première exécution : `"$CONTROLE" | grep -qi` sous
+# `set -o pipefail` renvoyait TOUJOURS faux, et les sept mutations étaient
+# annoncées non détectées alors que le contrôle fonctionnait parfaitement.
+#
+# Cause : `grep -q` ferme le tuyau dès la première correspondance, le script
+# amont reçoit SIGPIPE, et `pipefail` fait échouer toute la chaîne. Le contrôle
+# avait bien signalé le défaut, le test le niait.
+#
+# La sortie est donc capturée d'abord, puis examinée. Sans cette correction, ce
+# script aurait « prouvé » l'inverse de la vérité, ce qui est pire qu'aucune
+# preuve.
 mutation() {
-  local nom="$1" motif="$2"
+  local nom="$1" motif="$2" sortie
   total=$((total+1))
-  if "$CONTROLE" 2>&1 | grep -qi "$motif"; then
+  sortie=$("$CONTROLE" 2>&1 || true)
+  if echo "$sortie" | grep -qi "$motif"; then
     echo "  OK    $nom"
     detectees=$((detectees+1))
   else
@@ -68,7 +81,8 @@ echo
 if ! "$CONTROLE" --strict >/dev/null 2>&1; then
   echo "ABANDON : le contrôle est déjà rouge avant mutation."
   echo "Corriger les anomalies réelles d'abord, sinon ce script ne prouve rien."
-  "$CONTROLE" 2>&1 | head -12
+  etat=$("$CONTROLE" 2>&1 || true)
+  echo "$etat" | head -12
   exit 2
 fi
 echo "  état initial vert, les mutations peuvent commencer"
