@@ -5,21 +5,21 @@ métropolitaine, euro. Vente en ligne cohabitant avec des marchés locaux et Vin
 
 ## Commandes
 
-```bash
-npm run dev              # serveur de développement
-npm run build            # build de production
-npm run lint             # ESLint
-npm run type-check       # tsc --noEmit
-npm run test             # Vitest, unitaire et intégration
-npm run test:e2e         # Playwright
-docker compose up -d db  # PostgreSQL locale
-npx prisma migrate dev   # migration en développement
+`nvm use` d'abord. `engine-strict=true` rend `engines` bloquant, Prisma 7 refusant
+les versions impaires de Node.
 
-./prisma/migrations/manual/verifier-schema.sh  # contraintes et enums, exige Docker
+```bash
+npm ci && npm run type-check && npm run lint && npm run build
+
+./prisma/migrations/manual/verifier-schema.sh  # schéma sur base réelle, exige Docker
 ./scripts/verifier-regles.sh                   # .claude/rules/ contre le schéma
 ./scripts/verifier-regles-mutation.sh          # prouve le précédent par mutation
-./docs/prototypes/interblocage-panier.sh       # interblocage sur panier, exige Docker
 ```
+
+Liste complète dans `README.md`. `npm audit` doit rester à **zéro**, trois
+overrides y contribuent, documentés dans `package.json`. **Pas encore
+disponibles** : base locale et `prisma migrate dev` en LS-66, `npm run test` et
+`test:e2e` en LS-68.
 
 ## Architecture
 
@@ -30,264 +30,153 @@ adaptateurs d'entrée, jamais la couche métier.
 app/ et components/   ->  services/  ->  repositories/  ->  Prisma  ->  PostgreSQL
 ```
 
-- Composants serveur par défaut. Composant client uniquement pour une interaction réelle.
-- `services/` porte les cas d'usage et l'orchestration métier.
-- `repositories/` porte l'accès aux données par domaine.
-- `integrations/` isole Stripe, email, médias, IA.
-- Aucune généralisation prématurée : ce projet n'est pas un produit réutilisable.
+Composants serveur par défaut, client uniquement pour une interaction réelle.
+`services/` porte les cas d'usage, `repositories/` l'accès aux données par
+domaine, `integrations/` isole Stripe, email, médias et IA. Chaque dossier de
+`src/` porte un fichier de garde qui énonce ce qui a le droit d'y entrer.
 
-## Règles de domaine
-
-Les invariants ci-dessous énoncent le principe, quatre fichiers de
-`.claude/rules/` portent l'application détaillée : l'instruction SQL exacte, la
-valeur du délai, le jeton de couleur.
-
-Chacun porte un frontmatter `paths` et **se charge quand une session touche les
-chemins concernés**, ce qui évite d'imposer les quatre à toute session.
-
-| Fichier | Se charge sur |
-|---|---|
-| `database.md` | `prisma/**`, `src/repositories/**`, `src/services/**` |
-| `payments.md` | `src/integrations/stripe/**`, webhooks, checkout, commandes |
-| `legal.md` | services de rétractation et de facturation, pages légales |
-| `frontend-design.md` | `src/app/**`, `src/components/**`, styles |
-
-**Tant que `src/` est vide**, trois de ces quatre fichiers ne se déclenchent
-jamais : leurs chemins n'existent pas encore. Une session qui conçoit le paiement
-avant la phase 1 doit donc lire `payments.md` explicitement. Ce n'est plus
-nécessaire une fois `src/` peuplé.
-
-Une règle qui contredit un ADR ou la loi est fausse, dans cet ordre. Signaler la
-contradiction plutôt que de suivre la règle.
+Aucune généralisation prématurée : ce projet n'est pas un produit réutilisable.
 
 ## Invariants non négociables
 
-YOU MUST respecter ces règles sur tout le code de ce projet.
+YOU MUST respecter ces règles sur tout le code de ce projet. Elles énoncent le
+principe ; `.claude/rules/` porte l'application détaillée et se charge selon les
+chemins touchés, table dans `docs/REFERENCES.md`. Une règle qui contredit un ADR
+ou la loi est fausse, dans cet ordre : signaler la contradiction.
 
-1. **Montants** : l'euro est stocké en centimes entiers. Aucun nombre à virgule
-   flottante dans un calcul monétaire, jamais.
-2. **Autorisation** : un identifiant fourni par une URL, un formulaire ou un
+1. **Montants** : euro en centimes entiers. Aucun flottant dans un calcul
+   monétaire, jamais.
+2. **Autorisation** : un identifiant venant d'une URL, d'un formulaire ou d'un
    modèle de langage n'autorise jamais l'accès. L'identité vient de la session ou
    d'un jeton signé, recoupée côté serveur.
-3. **Historisation** : une ligne de commande et une facture émise sont immuables.
-   Une commande ne dépend jamais du prix ou du nom actuel du catalogue.
-4. **Facture** : jamais modifiée ni supprimée. Une correction produit un avoir.
-   Le numéro est attribué dans la transaction qui crée le document.
-5. **Paiement** : seul un événement serveur signé confirme un paiement. Le retour
+3. **Historisation** : ligne de commande et facture émise sont immuables. Une
+   commande ne dépend jamais du prix ou du nom actuel du catalogue.
+4. **Facture** : jamais modifiée ni supprimée, une correction produit un avoir. Le
+   numéro est attribué dans la transaction qui crée le document.
+5. **Paiement** : seul un événement serveur signé confirme un paiement, le retour
    du navigateur ne prouve rien. **L'idempotence est ancrée sur l'effet, pas sur
-   l'identifiant d'événement** : celui-ci ne protège que du rejeu du même
-   événement, et laisse passer le croisement entre le webhook et la
-   réconciliation, deux chemins distincts vers le même effet. Quatre clés
-   d'unicité en base, une par effet de la confirmation : paiement encaissé par
-   commande, mouvement de stock par commande et variante, facture par commande,
-   email par commande et modèle. Détail dans `.claude/rules/payments.md`,
-   décision D.
-6. **Stock** : la disponibilité web et la quantité physique sont deux notions
+   l'identifiant d'événement**, qui laisse passer le croisement entre webhook et
+   réconciliation. Quatre clés d'unicité, une par effet, voir `payments.md`.
+6. **Stock** : disponibilité web et quantité physique sont deux notions
    distinctes. Suspendre la vente web ne crée aucun mouvement de stock.
 7. **Validation** : toute entrée non fiable est validée côté serveur avec Zod.
 8. **Horodatage** : persisté en UTC, converti à l'affichage seulement.
-9. **Secrets** : jamais journalisés, jamais commités. Le dépôt est **public**.
-   L'écriture dans un `.env` est autorisée, la lecture de ses valeurs non.
+9. **Secrets** : jamais journalisés, jamais commités, le dépôt est **public**.
 10. **Mobile first** : conception à partir de 320 px, puis 390, 768, 1280.
 
 ## Le jalon qui compte
 
 Un achat de bout en bout sur une variante en stock à **un exemplaire** :
-réservation atomique, événement idempotent, commande cohérente, mouvement de
-stock unique, facture exacte.
-
-Le test de concurrence correspondant s'écrit **avant** l'implémentation du
-paiement et reste en intégration continue. Ne jamais le contourner ni le
-désactiver.
+réservation atomique, événement idempotent, commande cohérente, mouvement de stock
+unique, facture exacte. Son test de concurrence s'écrit **avant** le paiement,
+reste en intégration continue, et ne se contourne jamais.
 
 ## Rédaction française
 
-YOU MUST écrire un français orthographiquement correct partout, **tous les
-accents présents**, y compris dans les commentaires et titres Jira : l'API
-accepte l'UTF-8. Jamais « decision » ni « verifie » sans accent.
+Ces trois règles valent **partout** : code, commentaires, Jira, documentation,
+interface et réponses de conversation.
 
-Aucun tiret cadratin ni demi-cadratin (— ou –), marqueur de texte généré.
-
-Exception : les identifiants techniques restent en ASCII, branches, fichiers,
-variables, références produit.
-
-**Ne pas accorder au féminin par défaut.** Écrire « le client », jamais « la
-cliente ». Une part notable des acheteurs est masculine, un homme qui offre un
-bijou. La règle vaut partout : interface, documentation, commentaires, Jira et
-réponses de conversation. Tourner les phrases sans accord de genre plutôt que
-d'écrire « client(e) ».
-
-Exception : « l'administratrice » et « l'exploitante » désignent une personne
-réelle et identifiée. Les formulations neutres pour l'interface sont détaillées
-dans `.claude/rules/frontend-design.md`.
+1. **Tous les accents présents.** L'API Jira accepte l'UTF-8, jamais « decision »
+   ni « verifie ». Exception : les identifiants techniques restent en ASCII.
+2. **Aucun tiret cadratin ni demi-cadratin** (— ou –), marqueur de texte généré.
+3. **Ne pas accorder au féminin par défaut.** Écrire « le client », jamais « la
+   cliente » : une part notable des acheteurs est masculine, un homme qui offre un
+   bijou. Tourner les phrases sans accord de genre plutôt que d'écrire
+   « client(e) ». Exception, « l'administratrice » et « l'exploitante » désignent
+   une personne réelle. Formulations neutres dans `frontend-design.md`.
 
 ## Interdits
 
-- Modifier le périmètre défini dans le cahier des charges. Un arbitrage explicite
-  de Christophe le modifie en revanche : il s'applique, et se trace dans un
-  ticket et dans la section Priorisation ci-dessus.
-- Décider d'une obligation juridique. Les textes de loi se vérifient aux sources.
-- Lire la valeur d'un secret dans un `.env`, une clé ou un certificat.
-- Modifier une commande ou une facture réelle.
-- Écrire un tiret cadratin dans un contenu Lune & Soleil.
-- Introduire les données du prototype (noms, prix, stocks) comme données réelles.
+- Modifier le périmètre du cahier des charges. Un arbitrage explicite de
+  Christophe le modifie en revanche, et se trace dans un ticket
+- Décider d'une obligation juridique. Les textes de loi se vérifient aux sources
+- Lire la valeur d'un secret dans un `.env`, une clé ou un certificat
+- Modifier une commande ou une facture réelle
+- Écrire un tiret cadratin dans un contenu Lune & Soleil
+- Introduire les données du prototype (noms, prix, stocks) comme données réelles
 
 ## Priorisation
 
-Deux axes distincts, à ne pas confondre :
+Deux axes à ne pas confondre. **Importance** : Must, Should, Could, Won't.
+**Jalon** : Go-Live, V1 cible, V1.x, Hors V1. Un Must sur Go-Live ne se repousse
+jamais. Aucune date de livraison n'est fixée, le pilotage se fait par portes de
+sortie de phase.
 
-- **Importance** : Must, Should, Could, Won't
-- **Jalon** : Go-Live, V1 cible, V1.x, Hors V1
+Deux nuances qui se perdent facilement :
 
-Une exigence Must sur Go-Live ne se repousse jamais. L'assistant IA et les
-statistiques appartiennent à la V1 cible et ne bloquent pas l'ouverture.
-
-L'espace client, les avis vérifiés et le carnet d'adresses sont passés en
-périmètre d'ouverture le 28 juillet 2026, epic LS-36. Ils bloquent donc
-l'ouverture. Ne pas les traiter comme différables.
-
-Aucune date de livraison n'est fixée. Le pilotage se fait par portes de sortie de
-phase, pas par calendrier.
+- l'assistant IA et l'**interface** de statistiques sont en V1 cible, mais la
+  **collecte** des montants est au Go-Live : une donnée non capturée est perdue
+- l'espace client, les avis vérifiés et le carnet d'adresses sont dans le
+  périmètre d'ouverture depuis le 28 juillet 2026, epic LS-36. Ne pas les traiter
+  comme différables
 
 ## Sources de vérité
 
-Par ordre de priorité en cas de divergence :
-
-1. Loi et réglementation
-2. ADR accepté, dans `docs/adr/`
-3. Cahier des charges V1.0 (hors dépôt, il contient des données personnelles)
-4. Documentation technique du dépôt
-5. Confluence, espace Lune-Soleil
-6. Jira, projet LS
+Par ordre de priorité en cas de divergence : **loi**, **ADR accepté**
+(`docs/adr/`), cahier des charges V1.0 (hors dépôt, données personnelles),
+documentation technique du dépôt, Confluence, Jira.
 
 Toute décision structurante produit un ADR. Toute nouvelle idée entre d'abord
 dans Jira et n'intègre le périmètre que par arbitrage explicite.
 
-### Documentation technique, les quatre documents à connaître
+**`docs/REFERENCES.md`** porte les tables d'aiguillage : documents
+d'architecture, ADR acceptés et leur domaine, fichiers de `.claude/rules/` et
+leurs chemins de déclenchement. Le lire au début d'une session qui conçoit.
 
-Le point 4 ci-dessus désigne ces fichiers. Les lire avant de concevoir sur le
-domaine concerné, plutôt que de reconstituer une règle depuis le schéma.
+**Une règle numérotée se cite par son identifiant**, S12 ou V14, jamais
+paraphrasée seule : c'est ce qui permet aux contrôles textuels de la retrouver.
 
-| Fichier | Ce qu'il porte | À lire avant |
-|---|---|---|
-| `docs/architecture/PARCOURS.md` | huit parcours et leurs cas d'erreur, contrat d'entrée du modèle | toute fonctionnalité |
-| `docs/architecture/MODELE-CONCEPTUEL.md` | entités, règles de gestion numérotées (C, S, V, F, L, R, E, A), décisions A à I | schéma, service, migration |
-| `docs/architecture/MODELE-LOGIQUE.md` | traduction physique, index partiels, politiques de suppression, dettes de phase 1 | Prisma, migration |
-| `docs/architecture/STATISTIQUES.md` | indicateurs, périodes en `Europe/Paris`, règles de calcul | statistiques, e-reporting, tout agrégat de montant |
+`docs/journal/` porte l'avancement réel, une page par session. **Lire la plus
+récente en début de session** donne l'état du projet plus vite que Jira.
 
-**Une règle numérotée se cite par son identifiant**, S12 ou V14, jamais paraphrasée
-seule : c'est ce qui permet aux contrôles textuels de la retrouver.
-
-`docs/journal/` porte l'avancement réel, une page par session. Lire la plus
-récente donne l'état du projet plus vite que Jira.
-
-### ADR acceptés
-
-Les lire avant de travailler sur le domaine concerné. Un ADR prime sur toute
-documentation technique, ticket ou règle qui le contredirait.
-
-| ADR | Sujet | À lire avant de toucher |
-|---|---|---|
-| ADR-006 | Réservation de stock | stock, panier, commande |
-| ADR-021 | Authentification de l'administration | connexion, rôles |
-| ADR-022 | Palette publique | interface, styles |
-| ADR-023 | Authentification client | espace client, comptes |
-| ADR-024 | Atomicité réservation et commande | tunnel, transactions |
-| ADR-025 | Modes de livraison, trois modes | livraison, transporteur, tunnel |
-| ADR-026 | Sections de fiche produit ordonnées | fiche produit, catalogue, administration des produits |
-
-Cette table se met à jour à chaque ADR créé. Un ADR absent d'ici reste
-opposable : la table est un raccourci, `docs/adr/` fait foi.
-
-### Lire les commentaires Jira, pas seulement la description
-
-YOU MUST lire les commentaires d'un ticket avant de vous appuyer sur sa
-description. **Un commentaire récent rectifie souvent la description**, qui
-n'est pas toujours réécrite.
-
-Le cas s'est produit plusieurs fois sur ce projet. LS-27 et LS-33 portaient des
-décisions périmées, dont une juridiquement fausse, corrigées par LS-48 en
-réécrivant la description et en laissant l'historique en commentaire. Le
-29 juillet 2026, la description de LS-27 annonce « Point Relais et Locker » et
-un tarif unique, alors qu'un commentaire du même jour porte trois modes et deux
-tarifs, ADR-025.
-
-Se fier à la description seule fait donc reconstruire une conception abandonnée,
-sans qu'aucun contrôle ne le signale.
-
-En cas de contradiction entre description et commentaire, **le plus récent
-l'emporte**, et l'écart se signale plutôt que de se résoudre en silence.
+YOU MUST lire les **commentaires** d'un ticket Jira avant de vous appuyer sur sa
+description, en demandant explicitement le champ `comment` qui ne revient pas par
+défaut : un commentaire récent la rectifie souvent. **Le plus récent l'emporte**, et
+l'écart se signale plutôt que de se résoudre en silence.
 
 ## Autonomie et accès
 
-Décidé avec Christophe le 27 juillet 2026.
+**Travailler sans demander de validation à chaque commande**, en enchaînant les
+outils librement à l'intérieur d'une étape. Faire un point à la fin de chaque
+étape significative, et proposer la suite plutôt que de l'enchaîner d'office.
 
-**Travailler sans demander de validation à chaque commande.** Enchaîner les
-outils librement à l'intérieur d'une étape. En revanche, faire un point à la fin
-de chaque étape significative, et proposer la suite plutôt que de l'enchaîner
-d'office.
+**Secrets** : l'**écriture** dans un `.env` est autorisée, y compris générer un
+secret avec `openssl`. La **lecture des valeurs** est bloquée, une valeur lue
+entrerait dans l'historique de session ; pour diagnostiquer, lister les noms de
+variables. Clés privées et certificats bloqués dans les deux sens, une clé se
+génère et ne s'édite pas.
 
-**Secrets** : l'écriture dans un `.env` est autorisée, en local comme en
-production. Ajouter une variable, en modifier une, générer un secret avec
-`openssl`. La lecture des valeurs reste bloquée : une valeur lue entrerait dans
-l'historique de session et pourrait ressortir dans une sortie. Pour
-diagnostiquer, lister les noms de variables sans leur contenu.
+**Accès opérationnels** : `ssh`, `docker`, `stripe`, `gh`, `psql` avec les accès
+configurés, sans jamais lire les identifiants sous-jacents.
 
-Les clés privées et certificats restent bloqués en lecture comme en écriture :
-une clé se génère, elle ne s'édite pas.
-
-**Accès opérationnels** : utiliser `ssh`, `docker`, `stripe`, `gh`, `psql` avec
-les accès déjà configurés, sans jamais lire les identifiants sous-jacents.
-
-**Déploiement et migrations de production** : autonomes, via
-`./scripts/migrate-production.sh`, qui porte deux garde-fous automatiques.
-
-1. Sauvegarde vérifiée avant toute migration : le dump doit exister, ne pas être
-   vide et être lisible par `pg_restore`. Sinon la migration ne part pas.
-2. Migration destructive détectée, arrêt. `DROP`, `TRUNCATE`, `DELETE FROM` et
-   les renommages exigent `--confirm-destructive`, donc un accord explicite. Les
-   migrations additives passent seules.
-
-Ne jamais contourner ce script ni appeler `prisma migrate deploy` directement en
-production. Un déploiement de code raté se répare en redéployant l'image
-précédente ; une migration destructive ne se répare pas par un retour arrière.
+**Migrations de production** : autonomes, mais **toujours** via
+`./scripts/migrate-production.sh`, jamais `prisma migrate deploy` en direct, ses
+garde-fous étant détaillés dans `.claude/rules/database.md`.
 
 ## Agents
 
-Utiliser `ls-critical-reviewer` pour relire les zones à risque.
+Utiliser `ls-critical-reviewer` pour relire les zones à risque. Un agent projet
+dédié à la conteneurisation reste à créer, LS-31.
 
 **Ne pas invoquer les agents globaux `docker-devops`, `security-auditor` ni
-`nextjs-architect` sur ce projet.** Ils sont calibrés sur une autre stack :
-NextAuth v5, PostgreSQL 16, Redis 7, architecture multi-tenant. Ici c'est Better
-Auth 1.6, PostgreSQL 18, **aucun Redis**, mono-tenant.
-
-`docker-devops` est le plus risqué : il traite Redis comme un service requis en
-intégration continue. Or la section 5.3 du cahier des charges écarte
-explicitement Redis, faute de besoin démontré.
-
-Quand la conteneurisation arrivera, phase 1 pour le local et la CI, phase 6 pour
-le VPS, créer un agent projet dédié dans `.claude/agents/`, calibré sur la
-topologie réelle : quatre conteneurs, Nginx sur l'hôte, image taguée par SHA.
+`nextjs-architect` sur ce projet** : calibrés sur NextAuth v5, PostgreSQL 16,
+Redis 7 et du multi-tenant, alors qu'ici c'est Better Auth 1.6, PostgreSQL 18,
+**aucun Redis**, mono-tenant. `docker-devops` traite Redis comme requis, que le
+cahier des charges écarte.
 
 ## Conduite du travail
 
-Tout travail sur ce projet suit le skill `story`, y compris une exploration ou un
-prototype sans ticket. Il porte le contrôle avant zone critique et la clôture de
-la traçabilité.
+Tout travail suit le skill `story`, y compris une exploration sans ticket : il
+porte le contrôle avant zone critique et la clôture de la traçabilité. Deux hooks
+l'appuient, `PreToolUse` bloque la lecture des secrets, `Stop` avertit s'il reste
+des commits absents de `main` distante.
 
-Deux garde-fous automatiques appuient cette discipline, parce qu'une règle que
-rien ne déclenche ne s'applique pas. Un hook `PreToolUse` bloque la lecture des
-secrets. Un hook `Stop` avertit en fin de session s'il reste des commits absents
-de `main` distante, cas qui s'est produit le 28 juillet 2026 avec deux stories
-déclarées terminées et six commits jamais poussés.
-
-YOU MUST clore tout travail significatif sur les quatre canaux, et dire
+YOU MUST clore tout travail significatif sur les **quatre canaux**, et dire
 explicitement ce qui a été mis à jour :
 
-1. **Dépôt** : code, ADR si décision structurante, script si prototype. Commité,
-   **poussé, passé en pull request et fusionné sur `main`**. Un commit local ne
-   livre rien. `CONTRIBUTING.md` exige une PR même en solo, fusion en rebase,
-   après contrôles au vert.
+1. **Dépôt** : commité, **poussé, passé en pull request et fusionné sur `main`**.
+   Un commit local ne livre rien. `CONTRIBUTING.md` exige une PR même en solo,
+   même pour de la documentation, fusion en rebase après contrôles au vert
 2. **Journal** `docs/journal/` : fait, dérives, prochaine étape, état des tickets
 3. **Mémoire** : toute découverte non dérivable du code
 4. **Jira** : état réel de chaque critère, commit, ce qui reste
@@ -295,18 +184,17 @@ explicitement ce qui a été mis à jour :
 Un travail non tracé sera refait ou contredit. Un journal qui présente comme « à
 faire » une tâche déjà faite est pire qu'un journal absent.
 
-## Vérification avant de considérer une story terminée
+## Vérification avant de conclure
 
-Types, lint et tests concernés au vert. Critères d'acceptation vérifiés. Rendu
-contrôlé à 320 px si la story touche l'interface. Pour une story critique, s'y
+Types, lint et tests concernés au vert, critères d'acceptation vérifiés, rendu
+contrôlé à 320 px si la story touche l'interface. Pour une zone critique s'y
 ajoutent un test négatif de sécurité, un test de concurrence ou d'idempotence, et
 la simulation d'une panne de fournisseur.
 
-Montrer la preuve (sortie de test, commande et résultat), ne pas affirmer que ça
-marche.
+**Montrer la preuve**, sortie de commande et résultat, ne jamais affirmer que ça
+marche. Un contrôle qui n'a jamais échoué sur le défaut qu'il prétend attraper
+n'est pas un contrôle : le prouver par mutation.
 
-## Documentation à jour des bibliothèques
-
-Consulter Context7 avant d'utiliser une API de Next.js 16, React 19, Prisma 7,
-Better Auth 1.6 ou Stripe. Ces versions sont récentes et ma connaissance
-peut être périmée. Signaler quand Context7 a été utilisé.
+**Consulter Context7** avant d'utiliser une API de Next.js 16, React 19, Prisma 7,
+Better Auth 1.6 ou Stripe, ces versions étant plus récentes que ma connaissance.
+Signaler quand Context7 a été utilisé.
