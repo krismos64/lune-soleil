@@ -160,7 +160,9 @@ Retenu :
 
 - moteur de recherche externe, Algolia, Meilisearch ou équivalent
 - mégamenu
-- système générique d'attributs, EAV, voir les colonnes textuelles de `Produit`
+- système générique d'attributs **typés**, EAV. Les sections de fiche produit
+  d'ADR-026 n'en sont pas : du texte titré et ordonné ne porte ni type, ni unité,
+  ni règle de validation par attribut
 - toute architecture dimensionnée pour plusieurs milliers de références
 - aperçu rapide et ajout rapide complexes depuis la liste
 
@@ -183,16 +185,41 @@ peuvent être repliés, jamais absents.
 | 5 | Choix de la variante, si plusieurs | `Variante.libelle` |
 | 6 | Ajout au panier | |
 | 7 | Informations de livraison | composant de réassurance |
-| 8 | Description détaillée | `Produit.description` |
-| 9 | Matières et finitions | `Produit.matieres` |
-| 10 | Dimensions | `Variante.dimensions` |
-| 11 | Conseils d'entretien | `Produit.entretien` |
-| 12 | Fabrication artisanale | `Produit.fabrication` |
-| 13 | Retours et rétractation | textes légaux, jamais recopiés |
-| 14 | Avis vérifiés, s'il en existe | `Avis` publiés |
+| 8 | Dimensions | `Variante.dimensions` |
+| 9 | Sections éditoriales, dans leur ordre | `SectionProduit` visibles et non vides |
+| 10 | Retours et rétractation | textes légaux, jamais recopiés |
+| 11 | Avis vérifiés, s'il en existe | `Avis` publiés |
 
-Les blocs 9 à 12 sont vides tant que l'exploitante ne les a pas remplis, LS-24.
-Un bloc vide **ne s'affiche pas**, il ne montre jamais un intitulé sans contenu.
+### Le bloc 9 est piloté par l'administratrice, ADR-026
+
+Les quatre colonnes `Produit.description`, `matieres`, `entretien` et
+`fabrication` **n'existent plus**. Leur contenu est devenu des lignes de
+`SectionProduit`, ordonnées, renommables et supprimables.
+
+Quatre sections sont proposées à la création d'un produit : Description
+détaillée, **Matières et composants**, Fabrication, Conseils d'entretien.
+L'administratrice les renomme, les réordonne, les masque ou les supprime, et en
+crée d'autres. Le rendu suit donc `SectionProduit.ordre`, jamais un ordre écrit
+en dur dans un composant.
+
+Trois règles de rendu :
+
+- une section **non visible** ne s'affiche pas, C22
+- une section **sans contenu** ne s'affiche pas, titre compris, C23
+- `SectionProduit.contenu` est du **texte simple**. `dangerouslySetInnerHTML` et
+  tout rendu HTML équivalent y sont **interdits**. Les sauts de ligne deviennent
+  des paragraphes, rien d'autre
+
+**Les dimensions ne sont pas une section.** Elles restent
+`Variante.dimensions`, leur source de vérité, parce qu'elles varient d'une
+déclinaison à l'autre, un collier en 40 et 45 cm. Aucune section « Dimensions »
+n'est proposée par défaut, ce qui éviterait une double saisie contradictoire. Une
+section personnalisée peut porter un guide des tailles, jamais la dimension
+structurée de la variante.
+
+Les blocs de réassurance, retours et avis restent **hors** de cet éditeur : leurs
+tarifs et textes viennent de la configuration et des textes légaux, jamais d'une
+saisie libre.
 
 ### États de disponibilité
 

@@ -42,25 +42,42 @@ sur le stand ou le soir même. La limite de cette approximation et la raison de 
 pas ajouter un second champ de date sont traitées dans `MODELE-CONCEPTUEL.md`,
 domaine 2.
 
-### Le point non tranché du fait générateur
+### Le fait générateur, tranché le 30 juillet 2026
 
-`Paiement` ne porte aujourd'hui **aucun horodatage de confirmation**. Il porte
-`creeA`, qui date la création de la tentative, pas son encaissement.
+**La date de rattachement d'une vente en ligne est `Paiement.confirmeA`.** Le
+point était ouvert, il est fermé par arbitrage de Christophe, LS-76.
 
-Sur le chemin nominal l'écart est de quelques minutes. Sur le chemin de
-réconciliation il dépasse l'heure, et il peut franchir un minuit, donc changer le
-jour d'imputation d'une vente. Pour l'e-reporting **journalier** de LS-35, ce
+`creeA` ne convient pas : il date la création de la tentative, pas son
+encaissement. Sur le chemin nominal l'écart est de quelques minutes. Sur le
+chemin de réconciliation il dépasse l'heure et peut franchir un minuit, donc
+changer le jour d'imputation. Pour l'e-reporting **journalier** de LS-35, ce
 n'est pas un détail de confort.
 
-Deux réponses possibles, à trancher avant d'implémenter le calcul, pas avant la
-collecte de LS-63 :
+L'alternative examinée, dériver la date depuis `HistoriqueStatut`, est
+**écartée** : elle éviterait un champ mais ferait dépendre une donnée comptable
+d'un journal de transitions.
 
-- ajouter `Paiement.confirmeA`, renseigné dans la transaction de confirmation
-- dériver la date depuis `HistoriqueStatut`, la transition vers `CONFIRMEE`
+Six règles d'usage :
 
-La première est plus directe, la seconde évite un champ mais fait dépendre une
-donnée comptable d'un journal de transitions. Le point est ouvert et signalé
-comme tel, il ne bloque pas la capture du montant des ventes externes.
+1. `confirmeA` est **nullable**. Une tentative `EN_ATTENTE` ou `ECHOUE` n'en
+   porte pas, et `chk_paiement_confirmation_coherente` garantit cette cohérence
+   dans les deux sens
+2. Il est renseigné **dans la transaction** qui fait passer le paiement en état
+   d'encaissement, jamais avant
+3. Le webhook et la **réconciliation** écrivent le même champ. C'est ce second
+   chemin qui produit les écarts de plus d'une heure
+4. **Une seule valeur par paiement.** Un second passage ne réécrit pas
+   `confirmeA` : une date comptable ne bouge pas après coup. L'idempotence
+   s'ancre sur l'effet, décision D
+5. La conversion en `Europe/Paris` a lieu **à l'agrégation seulement**, le champ
+   restant en UTC. Une commande créée le 31 janvier à 23 h 55 et confirmée le
+   1er février appartient à février
+6. **Aucune reconstruction** depuis `creeA` ni depuis l'historique des statuts
+
+Les trois états d'encaissement conservent leur date : un remboursement compense
+l'encaissement, il ne l'efface pas. Retirer `confirmeA` d'un paiement remboursé
+est refusé par la base, ce qui empêche une vente de disparaître des statistiques
+du mois où elle a eu lieu.
 
 ## Périodes
 

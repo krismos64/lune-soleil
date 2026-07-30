@@ -176,6 +176,10 @@ erDiagram
 | C17 | Archiver une variante ne crée aucun mouvement de stock | invariant 6, comme C12 pour `venteWebActivee` |
 | C18 | Archiver une variante portant une réservation active est refusé | même règle que S5 pour la vente externe |
 | C19 | Archiver la dernière variante vivante d'un produit archive le produit | sans quoi C1 serait satisfaite par une variante archivée |
+| C20 | Une section de fiche produit porte une clé technique stable, unique par produit, indépendante de son titre modifiable | ADR-026, un renommage ne doit pas faire perdre le lien avec l'origine de la section |
+| C21 | Quatre sections sont proposées **à la création** d'un produit, `description`, `matieres`, `fabrication`, `entretien`. Aucune n'est protégée, et aucune modification ultérieure ne recrée une section supprimée | ADR-026, une initialisation rejouée à chaque enregistrement ferait revenir une section délibérément supprimée |
+| C22 | L'ordre d'affichage est unique par produit, garanti par une contrainte **différable** vérifiée au `COMMIT`. Masquer conserve le contenu, supprimer l'efface sans conservation | ADR-026, une contrainte non différable rejetterait l'échange de deux positions dès la première instruction |
+| C23 | Le contenu d'une section est du texte simple, jamais rendu en HTML. Une section sans contenu ne s'affiche pas, titre compris | ADR-026, surface d'attaque réduite et cohérence visuelle |
 
 ### Pourquoi un produit peut n'avoir aucune variante
 
@@ -1734,6 +1738,20 @@ portées par le code de la transaction, et testées.
 | R21 | Le dépôt d'un avis et la consommation de son jeton d'invitation sont indissociables |
 | A6 | La bascule d'adresse par défaut retire l'ancien drapeau avant de poser le nouveau |
 | A10 | La suppression d'un compte marque `dissocieA` avant de supprimer le compte |
+| C22 | Le réordonnancement des sections d'un produit s'exécute dans une transaction, en `UPDATE` |
+
+C22 diffère d'A6 sur un point qui compte. A6 impose un **ordre d'écriture**,
+parce qu'un index partiel unique ne peut pas être différé, seule une contrainte
+le pouvant. C22 porte une vraie contrainte, donc différable : l'ordre des deux
+mises à jour est libre, la vérification ayant lieu au `COMMIT`.
+
+La transaction reste néanmoins nécessaire, non pour repousser la vérification
+mais pour qu'une interruption entre les deux instructions ne laisse pas deux
+sections au même rang.
+
+Conséquence à ne pas oublier, ADR-026 : une contrainte différable ne peut pas
+arbitrer un `ON CONFLICT`. Aucun upsert ne prend `(produit_id, ordre)` comme clé
+de conflit.
 
 ### Niveau 3, contrôlé par l'application
 
