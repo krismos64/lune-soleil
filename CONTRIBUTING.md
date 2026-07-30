@@ -101,26 +101,36 @@ Ne pas fusionner tant que les contrôles automatiques ne sont pas au vert.
 
 Le détail de la chaîne est mis en place en phase 1.
 
-### Exception transitoire, avant la phase 1
+### Exception transitoire, pendant la phase 1
 
-**Aucune de ces huit étapes ne tourne aujourd'hui.** Le dépôt n'a ni
-`package.json`, ni TypeScript, ni tests, et `.github/workflows` n'existe pas.
-Six des huit contrôles sont donc impossibles avant l'initialisation du projet.
+**Aucune de ces huit étapes ne tourne automatiquement**, `.github/workflows`
+n'existant pas encore : il arrive avec LS-69. Une pull request se fusionne donc
+après vérification **manuelle**, et la preuve va dans sa description sous forme
+de sortie de commande.
 
-En attendant, une pull request se fusionne après vérification **manuelle**, et la
-preuve va dans la description de la PR sous forme de sortie de commande. Les deux
-contrôles disponibles sans installation :
+Ce qui se lance à la main depuis LS-65 :
 
 ```bash
-./prisma/migrations/manual/verifier-schema.sh  # schéma sur base réelle, exige Docker
-./scripts/verifier-regles.sh                   # règles contre le schéma
+npm ci && npm run type-check && npm run lint && npm run build
 ```
 
-À lancer après toute modification du schéma ou de `.claude/rules/`.
+Les tests arrivent avec LS-68, `npm run test` n'existe pas avant.
 
-Cette exception se lève avec LS-2, la phase 1, qui installe la chaîne complète.
-La règle « ne pas fusionner sur un contrôle rouge » vaut dès maintenant pour ces
-deux scripts.
+Les scripts de vérification, sans installation, listés dans `README.md` :
+
+```bash
+./prisma/migrations/manual/verifier-schema.sh    # schéma sur base réelle, exige Docker
+./scripts/verifier-regles.sh                     # règles contre le schéma
+./scripts/verifier-config-claude.sh              # cohérence de la config Claude Code
+./scripts/verifier-migration-mutation.sh         # garde-fous de migration, sans base
+```
+
+Les deux premiers se lancent après toute modification du schéma ou de
+`.claude/rules/`, le dernier après toute modification de
+`scripts/migrate-production.sh`.
+
+Cette exception se lève avec LS-69, qui installe la chaîne complète. La règle
+« ne pas fusionner sur un contrôle rouge » vaut dès maintenant pour ces scripts.
 
 ## Secrets
 

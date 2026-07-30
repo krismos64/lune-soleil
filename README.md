@@ -127,14 +127,16 @@ npm run test
 
 ### Ce qui fonctionne dès maintenant
 
-Cinq scripts de vérification, sans installation :
+Sept scripts de vérification, sans installation :
 
 ```bash
-./prisma/migrations/manual/verifier-schema.sh  # schéma sur base réelle, exige Docker
-./scripts/verifier-regles.sh                   # .claude/rules/ contre le schéma
-./scripts/verifier-regles-mutation.sh          # prouve le précédent par mutation
-./scripts/verifier-config-claude.sh            # cohérence de la config Claude Code
-./docs/prototypes/interblocage-panier.sh       # interblocage sur panier, exige Docker
+./prisma/migrations/manual/verifier-schema.sh    # schéma sur base réelle, exige Docker
+./scripts/verifier-regles.sh                     # .claude/rules/ contre le schéma
+./scripts/verifier-regles-mutation.sh            # prouve le précédent par mutation
+./scripts/verifier-config-claude.sh              # cohérence de la config Claude Code
+./scripts/verifier-config-claude-mutation.sh     # prouve le précédent par mutation
+./scripts/verifier-migration-mutation.sh         # garde-fous de migration, sans base
+./docs/prototypes/interblocage-panier.sh         # interblocage sur panier, exige Docker
 ```
 
 Le script de mutation réinjecte huit fois un défaut réel et exige que
@@ -147,7 +149,14 @@ absent de la table d'aiguillage de `docs/REFERENCES.md`, un `CLAUDE.md` au-delà
 journal manquant alors que du code a été commité. Un hook `Stop` le lance en fin de
 session, et `--strict` le rend bloquant pour l'intégration continue de LS-69.
 
-Il a été prouvé par six mutations, une par contrôle, toutes détectées.
+Il a été prouvé par sept mutations, une par contrôle, toutes détectées.
+
+`verifier-migration-mutation.sh` prouve les garde-fous de
+`scripts/migrate-production.sh` sur dix cas, sans base réelle : `psql`, `pg_dump`
+et `npx` sont remplacés par des doublures. Cinq familles d'instructions
+destructives doivent bloquer, une migration additive doit passer, et une
+détection qui ne peut pas conclure doit bloquer plutôt que supposer. Lancé contre
+la version d'avant LS-42, il échoue sur sept de ces dix cas.
 
 ## Secrets
 
