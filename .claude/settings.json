@@ -120,6 +120,10 @@
           {
             "type": "command",
             "command": "$CLAUDE_PROJECT_DIR/.claude/scripts/hook-warn-unpushed.sh"
+          },
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/scripts/verifier-config-claude.sh"
           }
         ]
       }
