@@ -1,0 +1,33 @@
+/*
+ * Conception à partir de 320 px. Aucune largeur fixe, aucun débordement
+ * horizontal possible.
+ */
+
+.main {
+  max-width: var(--ls-content-max);
+  margin: 0 auto;
+  padding: var(--ls-space-7) var(--ls-space-4);
+  text-align: center;
+}
+
+.titre {
+  margin: 0 0 var(--ls-space-4);
+  color: var(--ls-primary);
+  /* Fluide : lisible à 320 px, sans plafonner sur grand écran. */
+  font-size: clamp(1.75rem, 8vw, 3rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  /* Un titre de deux mots ne se coupe pas au milieu. */
+  text-wrap: balance;
+}
+
+.accroche {
+  margin: 0 0 var(--ls-space-5);
+  font-size: clamp(1rem, 4vw, 1.25rem);
+}
+
+.mention {
+  margin: 0;
+  color: var(--ls-text-muted);
+  font-size: 0.9375rem;
+}

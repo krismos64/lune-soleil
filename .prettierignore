@@ -1,0 +1,21 @@
+# Prettier ne formate que le code applicatif.
+#
+# La prose du projet est volontairement exclue. Le formateur realigne les tables
+# markdown et recoupe les paragraphes, ce qui produit un diff de plusieurs
+# milliers de lignes sans rapport avec le travail en cours : le cas s'est produit
+# sur LS-65, vingt-six fichiers de documentation modifies par un `npm run format`.
+#
+# La redaction suit les regles du projet, pas celles d'un formateur.
+*.md
+docs/
+.claude/
+
+# Genere ou verrouille
+.next/
+node_modules/
+package-lock.json
+next-env.d.ts
+prisma/migrations/
+coverage/
+playwright-report/
+test-results/
