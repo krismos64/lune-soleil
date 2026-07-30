@@ -116,18 +116,26 @@ npm ci && npm run type-check && npm run lint && npm run build
 
 Les tests arrivent avec LS-68, `npm run test` n'existe pas avant.
 
-Les scripts de vérification, sans installation, listés dans `README.md` :
+La base locale existe depuis LS-66, `npm run db:preparer` la construit sur un
+clone neuf. Détail dans `README.md`.
+
+Les scripts de vérification, listés dans `README.md` :
 
 ```bash
-./prisma/migrations/manual/verifier-schema.sh    # schéma sur base réelle, exige Docker
+npm run db:verifier                              # modèle sur la base migrée, exige Docker
+./prisma/sql-manuel/verifier-schema.sh           # le même sur un conteneur jetable
 ./scripts/verifier-regles.sh                     # règles contre le schéma
 ./scripts/verifier-config-claude.sh              # cohérence de la config Claude Code
 ./scripts/verifier-migration-mutation.sh         # garde-fous de migration, sans base
 ```
 
-Les deux premiers se lancent après toute modification du schéma ou de
+Les trois premiers se lancent après toute modification du schéma ou de
 `.claude/rules/`, le dernier après toute modification de
 `scripts/migrate-production.sh`.
+
+**Une modification de `prisma/schema.prisma` s'accompagne de sa migration**, créée
+par `npx prisma migrate dev --name sujet` et commitée avec le schéma. Un schéma
+modifié sans migration laisse `npm run db:preparer` échouer sur un clone neuf.
 
 Cette exception se lève avec LS-69, qui installe la chaîne complète. La règle
 « ne pas fusionner sur un contrôle rouge » vaut dès maintenant pour ces scripts.

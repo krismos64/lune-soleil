@@ -5,22 +5,86 @@
 # tables isolées, et couvre en plus les contraintes nées de LS-37 à LS-41 :
 # variante archivée, unicité de l'administratrice, idempotence à quatre clés.
 #
-# Usage : ./prisma/migrations/manual/verifier-schema.sh
+# Usage : ./prisma/sql-manuel/verifier-schema.sh [--base-migree]
 # Prérequis : Docker lancé, et le SQL de migration présent dans le dossier.
 #
-# Le conteneur est créé puis supprimé à la fin.
+# DEUX MODES, ajoutés par LS-66.
+#
+# Sans argument, mode « conception » : un conteneur jetable est créé, le SQL de
+# ce dossier y est appliqué, le conteneur est supprimé à la fin. C'est le mode
+# historique de LS-13, qui vérifie que le SQL de RÉFÉRENCE dit ce qu'on croit.
+#
+# Avec --base-migree, mode « réalité » : les contrôles s'exécutent sur la base
+# locale de docker-compose.yml, celle qu'a produite `prisma migrate dev`. Aucun
+# fichier de ce dossier n'y est appliqué, la base est prise telle quelle.
+#
+# Les deux modes sont nécessaires et ne se remplacent pas. Le premier valide
+# l'intention, le second valide ce que Prisma a réellement créé. Une divergence
+# entre schema.prisma et schema.sql n'est visible QUE par le second : le premier
+# passerait au vert sur un SQL de référence juste et une migration fausse.
+#
+# En mode --base-migree le jeu d'essai est inséré dans la base de travail puis
+# retiré à la fin. Le script refuse de s'exécuter si la base n'est pas vide, une
+# base de développement pouvant contenir des données que ces contrôles
+# détruiraient.
 
 set -u
 CT=ls13-verif
 PORT=55414
 DIR="$(cd "$(dirname "$0")" && pwd)"
+RACINE="$(cd "$DIR/../.." && pwd)"
 ok=0
 ko=0
 
-nettoyer() { docker rm -f "$CT" >/dev/null 2>&1 || true; }
+# Mode d'exécution, voir l'entête.
+MODE=jetable
+if [ "${1:-}" = "--base-migree" ]; then
+  MODE=migree
+elif [ -n "${1:-}" ]; then
+  echo "Argument inconnu : $1"
+  echo "Usage : $0 [--base-migree]"
+  exit 2
+fi
+
+# Conteneur et rôle visés, selon le mode.
+if [ "$MODE" = "migree" ]; then
+  CIBLE_CT=lune-soleil-db
+  CIBLE_USER=lunesoleil
+else
+  CIBLE_CT="$CT"
+  CIBLE_USER=postgres
+fi
+
+nettoyer() {
+  # Ne jamais supprimer la base de développement. Le conteneur jetable est le
+  # seul que ce script ait le droit de détruire.
+  if [ "$MODE" = "jetable" ]; then
+    docker rm -f "$CT" >/dev/null 2>&1 || true
+  else
+    vider_base_migree
+  fi
+}
 trap nettoyer EXIT
 
-R() { docker exec -i "$CT" psql -U postgres -d lunesoleil -tAq -c "$1" 2>&1; }
+R() { docker exec -i "$CIBLE_CT" psql -U "$CIBLE_USER" -d lunesoleil -tAq -c "$1" 2>&1; }
+
+# Retire le jeu d'essai de la base de développement, en mode --base-migree.
+#
+# TRUNCATE de toutes les tables applicatives plutôt qu'un DELETE ciblé : les
+# contrôles insèrent au fil de l'eau, et une liste écrite à la main se
+# désynchroniserait du script à la première contrainte ajoutée. La table
+# d'historique de Prisma est exclue, l'effacer ferait croire à une base non
+# migrée.
+vider_base_migree() {
+  local tables
+  tables=$(docker exec -i "$CIBLE_CT" psql -U "$CIBLE_USER" -d lunesoleil -tAq -c \
+    "SELECT string_agg(format('%I', tablename), ', ')
+       FROM pg_tables
+      WHERE schemaname = 'public' AND tablename <> '_prisma_migrations';" 2>/dev/null)
+  [ -n "$tables" ] && docker exec -i "$CIBLE_CT" psql -U "$CIBLE_USER" -d lunesoleil -q -c \
+    "TRUNCATE $tables RESTART IDENTITY CASCADE;" >/dev/null 2>&1
+  return 0
+}
 
 verifier() {
   local nom="$1" attendu="$2" obtenu="$3"
@@ -105,33 +169,101 @@ abandon() {
 command -v docker >/dev/null 2>&1 || abandon "docker introuvable dans le PATH"
 docker info >/dev/null 2>&1 || abandon "le démon Docker ne répond pas, est-il démarré ?"
 
-for f in "$DIR/schema.sql" "$DIR/001_contraintes_check.sql" "$DIR/002_contraintes_unicite.sql"; do
-  [ -r "$f" ] || abandon "fichier SQL illisible : $f"
-done
+if [ "$MODE" = "migree" ]; then
+  # ---------------------------------------------------------------------------
+  # Mode réalité : la base de docker-compose.yml, telle que la migration l'a
+  # laissée. Rien n'est appliqué ici, c'est tout l'intérêt du mode.
+  # ---------------------------------------------------------------------------
+  echo "Mode --base-migree : contrôles sur la base issue de prisma migrate"
 
-echo "Démarrage de PostgreSQL 18.4"
-docker run -d --rm --name "$CT" \
-  -e POSTGRES_PASSWORD=verif -e POSTGRES_DB=lunesoleil \
-  -p "$PORT:5432" postgres:18.4 >/dev/null 2>&1 \
-  || abandon "le conteneur PostgreSQL n'a pas démarré, port $PORT déjà pris ?"
+  docker inspect "$CIBLE_CT" >/dev/null 2>&1 \
+    || abandon "conteneur $CIBLE_CT absent, lancer d'abord : docker compose up -d db"
+  [ "$(docker inspect --format '{{.State.Running}}' "$CIBLE_CT" 2>/dev/null)" = "true" ] \
+    || abandon "conteneur $CIBLE_CT arrêté, lancer : docker compose up -d db"
+  docker exec "$CIBLE_CT" pg_isready -U "$CIBLE_USER" -d lunesoleil >/dev/null 2>&1 \
+    || abandon "la base $CIBLE_CT ne répond pas"
 
-pret=0
-for _ in $(seq 1 30); do
-  if docker exec "$CT" pg_isready -U postgres >/dev/null 2>&1; then pret=1; break; fi
-  sleep 2
-done
-[ "$pret" -eq 1 ] || abandon "PostgreSQL n'est pas prêt après 60 secondes"
+  # La base doit être migrée, sinon les contrôles porteraient sur des tables
+  # absentes et `verifier_rejet` prendrait un « relation does not exist » pour
+  # un rejet légitime. Le compte vient de la table d'historique de Prisma.
+  migrations=$(docker exec -i "$CIBLE_CT" psql -U "$CIBLE_USER" -d lunesoleil -tAq -c \
+    "SELECT count(*) FROM _prisma_migrations WHERE finished_at IS NOT NULL;" 2>/dev/null)
+  case "$migrations" in
+    ''|*[!0-9]*) abandon "table _prisma_migrations illisible, la base n'est pas gérée par Prisma Migrate" ;;
+  esac
+  [ "$migrations" -ge 1 ] || abandon "aucune migration appliquée, lancer : npx prisma migrate dev"
 
-echo "Application du schéma"
-docker exec -i "$CT" psql -U postgres -d lunesoleil -q -v ON_ERROR_STOP=1 \
-  < "$DIR/schema.sql" >/dev/null 2>&1 \
-  || abandon "l'application de schema.sql a échoué"
-docker exec -i "$CT" psql -U postgres -d lunesoleil -q -v ON_ERROR_STOP=1 \
-  < "$DIR/001_contraintes_check.sql" >/dev/null 2>&1 \
-  || abandon "l'application de 001_contraintes_check.sql a échoué"
-docker exec -i "$CT" psql -U postgres -d lunesoleil -q -v ON_ERROR_STOP=1 \
-  < "$DIR/002_contraintes_unicite.sql" >/dev/null 2>&1 \
-  || abandon "l'application de 002_contraintes_unicite.sql a échoué"
+  # Les CHECK ne viennent pas de Prisma. Sans eux la moitié des contrôles
+  # échouerait pour une raison qui n'est pas un défaut du schéma.
+  checks=$(docker exec -i "$CIBLE_CT" psql -U "$CIBLE_USER" -d lunesoleil -tAq -c \
+    "SELECT count(*) FROM pg_constraint
+      WHERE contype = 'c' AND connamespace = 'public'::regnamespace
+        AND conname LIKE 'chk_%';" 2>/dev/null)
+  case "$checks" in
+    ''|*[!0-9]*) abandon "impossible de compter les contraintes CHECK" ;;
+  esac
+  [ "$checks" -ge 1 ] || abandon "aucune contrainte CHECK en base, appliquer le SQL de $DIR (npm run db:preparer)"
+
+  # Base non vide : refus. Ces contrôles insèrent puis tronquent, ils
+  # détruiraient un jeu de données de développement.
+  lignes=$(docker exec -i "$CIBLE_CT" psql -U "$CIBLE_USER" -d lunesoleil -tAq -c \
+    "SELECT coalesce(sum(n_live_tup), 0) FROM pg_stat_user_tables
+      WHERE relname <> '_prisma_migrations';" 2>/dev/null)
+  case "$lignes" in
+    ''|*[!0-9]*) lignes=0 ;;
+  esac
+  if [ "$lignes" -gt 0 ]; then
+    abandon "la base contient $lignes lignes. Ces contrôles la videraient.
+        Repartir d'une base neuve : npm run db:reinitialiser"
+  fi
+
+  # Un reste d'exécution interrompue fausserait le premier contrôle d'unicité.
+  vider_base_migree
+
+else
+  # ---------------------------------------------------------------------------
+  # Mode conception : conteneur jetable, SQL de référence de ce dossier.
+  # ---------------------------------------------------------------------------
+  for f in "$DIR/schema.sql" "$DIR/001_contraintes_check.sql" "$DIR/002_contraintes_unicite.sql"; do
+    [ -r "$f" ] || abandon "fichier SQL illisible : $f"
+  done
+
+  echo "Démarrage de PostgreSQL 18.4"
+  # Mot de passe engendré à chaque exécution plutôt qu'écrit en dur.
+  #
+  # Ce conteneur est jetable, lié à la boucle locale et détruit à la sortie : la
+  # valeur ne protège rien. Elle est engendrée quand même parce qu'un littéral
+  # ressemblant à un mot de passe dans un dépôt public déclenche l'analyse de
+  # secrets à chaque modification du fichier. LS-66 en a fait l'expérience, le
+  # simple déplacement de ce script a fait remonter une alerte sur une ligne
+  # inchangée depuis LS-13.
+  #
+  # Un faux positif permanent est nuisible : il apprend à ignorer l'alerte, et
+  # c'est le vrai secret suivant qui passe.
+  MDP_JETABLE="$(openssl rand -hex 16)"
+  docker run -d --rm --name "$CT" \
+    -e POSTGRES_PASSWORD="$MDP_JETABLE" -e POSTGRES_DB=lunesoleil \
+    -p "$PORT:5432" postgres:18.4 >/dev/null 2>&1 \
+    || abandon "le conteneur PostgreSQL n'a pas démarré, port $PORT déjà pris ?"
+
+  pret=0
+  for _ in $(seq 1 30); do
+    if docker exec "$CT" pg_isready -U postgres >/dev/null 2>&1; then pret=1; break; fi
+    sleep 2
+  done
+  [ "$pret" -eq 1 ] || abandon "PostgreSQL n'est pas prêt après 60 secondes"
+
+  echo "Application du schéma"
+  docker exec -i "$CT" psql -U postgres -d lunesoleil -q -v ON_ERROR_STOP=1 \
+    < "$DIR/schema.sql" >/dev/null 2>&1 \
+    || abandon "l'application de schema.sql a échoué"
+  docker exec -i "$CT" psql -U postgres -d lunesoleil -q -v ON_ERROR_STOP=1 \
+    < "$DIR/001_contraintes_check.sql" >/dev/null 2>&1 \
+    || abandon "l'application de 001_contraintes_check.sql a échoué"
+  docker exec -i "$CT" psql -U postgres -d lunesoleil -q -v ON_ERROR_STOP=1 \
+    < "$DIR/002_contraintes_unicite.sql" >/dev/null 2>&1 \
+    || abandon "l'application de 002_contraintes_unicite.sql a échoué"
+fi
 
 # Jeu d'essai minimal : une pièce unique, le cas qui porte le jalon du projet.
 R "INSERT INTO categorie (id,nom,slug,ordre,cree_a) VALUES ('cat','Boucles','boucles',1,now());
@@ -573,7 +705,12 @@ JOURNAL_EMAIL|statut|StatutEmail
 ALERTE_CRITIQUE|gravite|GraviteAlerte
 "
 
-MODELE="$DIR/../../../docs/architecture/MODELE-CONCEPTUEL.md"
+# Ancré sur la racine du dépôt et non sur une suite de « .. » comptés depuis ce
+# fichier. LS-66 a déplacé ce dossier de prisma/sql-manuel vers
+# prisma/sql-manuel : le chemin relatif portait un niveau de trop et le contrôle
+# de conformité des enums est tombé en échec. Il a fait son travail, mais un
+# chemin qui dépend de la profondeur du script casse à chaque déplacement.
+MODELE="$RACINE/docs/architecture/MODELE-CONCEPTUEL.md"
 
 # Sans ce garde-fou, un document déplacé ferait rougir les douze enums en
 # « introuvable dans le modèle conceptuel ». Le script échouerait bien, mais en

@@ -14,9 +14,9 @@ Aucun ADR n'est remplacé. Il **modifie** les éléments suivants :
 | Élément | Ce qui change |
 |---|---|
 | `prisma/schema.prisma` | quatre colonnes de `Produit` remplacées par l'entité `SectionProduit` |
-| `prisma/migrations/manual/schema.sql` | traduction physique, index et contraintes |
-| `prisma/migrations/manual/002_contraintes_unicite.sql` | **nouveau fichier**, l'unicité différable de l'ordre |
-| `prisma/migrations/manual/verifier-schema.sh` | application du nouveau fichier, contrôles de la table |
+| `prisma/sql-manuel/schema.sql` | traduction physique, index et contraintes |
+| `prisma/sql-manuel/002_contraintes_unicite.sql` | **nouveau fichier**, l'unicité différable de l'ordre |
+| `prisma/sql-manuel/verifier-schema.sh` | application du nouveau fichier, contrôles de la table |
 | `docs/architecture/MODELE-CONCEPTUEL.md` | règles C20 à C23 |
 | `docs/architecture/MODELE-LOGIQUE.md` | index, politique de suppression |
 | `.claude/rules/frontend-design.md` | table « Fiche produit, ordre des blocs », lignes 8 à 12 |
@@ -237,7 +237,7 @@ projet, et un compteur en toutes lettres se périme à chaque ajout. La commande
 qui donne la réponse :
 
 ```bash
-grep -c "ADD CONSTRAINT" prisma/migrations/manual/001_contraintes_check.sql
+grep -c "ADD CONSTRAINT" prisma/sql-manuel/001_contraintes_check.sql
 ```
 
 **Aucun `@@unique` Prisma n'est conservé sur `[produitId, ordre]`.** En garder un
@@ -265,7 +265,7 @@ que les contraintes `CHECK`. Elle sera alors appliquée normalement en
 développement, en intégration continue et en production, par le mécanisme de
 migration ordinaire.
 
-Après LS-67, les fichiers de `prisma/migrations/manual/` restent une **source de
+Après LS-67, les fichiers de `prisma/sql-manuel/` restent une **source de
 conception et de contrôle**, lue par `verifier-schema.sh` pour vérifier que la
 base correspond à l'intention. Ils ne constituent pas un second mécanisme
 permanent de déploiement, et rien ne doit dépendre de leur application manuelle en

@@ -22,7 +22,7 @@
 set -u
 RACINE="$(cd "$(dirname "$0")/.." && pwd)"
 SCHEMA="$RACINE/prisma/schema.prisma"
-CHECKS="$RACINE/prisma/migrations/manual/001_contraintes_check.sql"
+CHECKS="$RACINE/prisma/sql-manuel/001_contraintes_check.sql"
 REGLES="$RACINE/.claude/rules"
 ko=0
 

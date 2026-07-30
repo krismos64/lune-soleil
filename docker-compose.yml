@@ -1,0 +1,94 @@
+# Base de donnees locale de developpement, LS-66.
+#
+# Ce fichier ne decrit QUE le developpement local. La production ne s'en sert
+# pas : elle recoit son schema par ./scripts/migrate-production.sh, et sa base
+# vit chez l'hebergeur. Ne rien ajouter ici en pensant a la production.
+#
+# AUCUN SECRET DANS CE FICHIER. Le depot est public. Les valeurs viennent de
+# .env, dont .env.example porte les noms et les formats. Les variables sont
+# donc ecrites sans valeur par defaut : `docker compose up` echoue franchement
+# si .env manque, plutot que de demarrer une base avec un mot de passe connu de
+# tout lecteur du depot.
+
+services:
+  db:
+    image: postgres:18.4
+    container_name: lune-soleil-db
+    restart: unless-stopped
+
+    environment:
+      # La syntaxe ${VAR:?} exige la variable et sort en erreur sinon. Sans le
+      # `:?`, Compose substituerait une chaine vide et PostgreSQL demarrerait
+      # avec une configuration incoherente.
+      #
+      # Le message d'erreur est volontairement omis apres le `:?`. La forme
+      # complete ${VAR:?texte} fait lire « POSTGRES_PASSWORD: <quelque chose> »
+      # a l'analyse de secrets, qui prend le message pour une valeur et bloque
+      # la pull request. Mesure sur ce depot le 30 juillet 2026, LS-66.
+      # Compose affiche alors « required variable POSTGRES_PASSWORD is missing
+      # a value », suffisamment explicite.
+      POSTGRES_USER: ${POSTGRES_USER:?}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: ${POSTGRES_DB:?}
+
+      # Encodage et collation figes a la creation du volume.
+      #
+      # Sans cette ligne l'image utilise la locale du systeme hote, qui differe
+      # entre un poste macOS et une image d'integration continue. Deux bases
+      # censees etre identiques trient alors les chaines differemment, ce qui
+      # change l'ordre d'un catalogue et peut faire diverger un index.
+      #
+      # Cette variable n'agit qu'a l'initialisation du volume. La modifier plus
+      # tard n'a aucun effet, il faut supprimer le volume.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C.UTF-8"
+
+    ports:
+      # Lie explicitement a la boucle locale, et non a 0.0.0.0.
+      #
+      # Docker publie par defaut sur toutes les interfaces et ecrit sa regle
+      # directement dans la table de routage, en amont du pare-feu de macOS.
+      # Sans le prefixe 127.0.0.1, cette base est joignable par toute machine du
+      # reseau local, cafe ou espace de travail partage compris.
+      #
+      # Le port hote est decale a 55432 pour ne pas entrer en conflit avec un
+      # PostgreSQL deja installe sur le poste.
+      - "127.0.0.1:${POSTGRES_PORT:-55432}:5432"
+
+    volumes:
+      # Point de montage /var/lib/postgresql et NON /var/lib/postgresql/data.
+      #
+      # Rupture introduite par l'image postgres:18. Jusqu'en 17 le volume se
+      # montait sur .../data ; depuis la 18 les donnees vivent dans un
+      # sous-dossier nomme d'apres la version majeure, pour rendre possible un
+      # `pg_upgrade --link` sans traverser une frontiere de montage.
+      #
+      # Monter sur .../data avec l'image 18.4 fait sortir l'entrypoint en erreur
+      # et le conteneur redemarre en boucle, avec le message « there appears to
+      # be PostgreSQL data in /var/lib/postgresql/data (unused mount/volume) ».
+      # Mesure sur ce depot le 30 juillet 2026, docker-library/postgres#1259.
+      #
+      # Volume nomme et non montage de dossier hote : les permissions d'un
+      # dossier partage entre macOS et le conteneur cassent l'initialisation de
+      # PostgreSQL, qui exige un repertoire de donnees en 0700.
+      - lune-soleil-pgdata:/var/lib/postgresql
+
+    healthcheck:
+      # `pg_isready` seul repond « accepting connections » pendant la phase
+      # d'initialisation, avant que la base applicative n'existe. Un
+      # `migrate dev` lance a cet instant echoue sur une base introuvable.
+      # La requete confirme que POSTGRES_DB est ouverte aux connexions.
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB} -q && psql -U $${POSTGRES_USER} -d $${POSTGRES_DB} -c 'SELECT 1' >/dev/null 2>&1",
+        ]
+      interval: 5s
+      timeout: 5s
+      # 30 tentatives a 5 secondes couvrent le premier demarrage, qui initialise
+      # le volume et prend nettement plus longtemps que les suivants.
+      retries: 30
+      start_period: 10s
+
+volumes:
+  lune-soleil-pgdata:
+    name: lune-soleil-pgdata
