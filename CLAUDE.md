@@ -163,6 +163,24 @@ Par ordre de priorité en cas de divergence :
 Toute décision structurante produit un ADR. Toute nouvelle idée entre d'abord
 dans Jira et n'intègre le périmètre que par arbitrage explicite.
 
+### Documentation technique, les quatre documents à connaître
+
+Le point 4 ci-dessus désigne ces fichiers. Les lire avant de concevoir sur le
+domaine concerné, plutôt que de reconstituer une règle depuis le schéma.
+
+| Fichier | Ce qu'il porte | À lire avant |
+|---|---|---|
+| `docs/architecture/PARCOURS.md` | huit parcours et leurs cas d'erreur, contrat d'entrée du modèle | toute fonctionnalité |
+| `docs/architecture/MODELE-CONCEPTUEL.md` | entités, règles de gestion numérotées (C, S, V, F, L, R, E, A), décisions A à I | schéma, service, migration |
+| `docs/architecture/MODELE-LOGIQUE.md` | traduction physique, index partiels, politiques de suppression, dettes de phase 1 | Prisma, migration |
+| `docs/architecture/STATISTIQUES.md` | indicateurs, périodes en `Europe/Paris`, règles de calcul | statistiques, e-reporting, tout agrégat de montant |
+
+**Une règle numérotée se cite par son identifiant**, S12 ou V14, jamais paraphrasée
+seule : c'est ce qui permet aux contrôles textuels de la retrouver.
+
+`docs/journal/` porte l'avancement réel, une page par session. Lire la plus
+récente donne l'état du projet plus vite que Jira.
+
 ### ADR acceptés
 
 Les lire avant de travailler sur le domaine concerné. Un ADR prime sur toute
