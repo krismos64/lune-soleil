@@ -332,7 +332,8 @@ explicite, parce qu'elle ne se répare pas par un retour arrière.
 
 **La détection lit le SQL des fichiers de migration non appliqués**, pas la sortie
 de `prisma migrate status` qui ne contient que des noms de fichiers. La liste des
-migrations déjà appliquées vient de `_prisma_migrations`.
+migrations déjà appliquées vient de la table d'historique interne de Prisma, celle
+que `migrate deploy` tient à jour et qui ne figure pas dans `schema.prisma`.
 
 **Un garde-fou qui ne peut pas conclure bloque.** Base injoignable, migration sans
 `migration.sql` : le script s'arrête au lieu de supposer que tout va bien. LS-42 a
