@@ -323,12 +323,24 @@ Sauvegarde systématique avant toute migration de production.
 **Les migrations de production passent par `./scripts/migrate-production.sh`**,
 jamais par `prisma migrate deploy` appelé directement.
 
-Ce script porte deux garde-fous automatiques : une sauvegarde vérifiée avant
-toute migration, et l'arrêt sur détection d'une instruction destructive (`DROP`,
-`TRUNCATE`, `DELETE FROM`, renommage), qui exige alors `--confirm-destructive`.
+Ce script porte deux garde-fous automatiques : l'arrêt sur détection d'une
+instruction destructive (`DROP`, `TRUNCATE`, `DELETE FROM`, renommage), qui exige
+alors `--confirm-destructive`, et une sauvegarde vérifiée avant toute migration.
 
 Une migration additive passe seule. Une migration destructive demande un accord
 explicite, parce qu'elle ne se répare pas par un retour arrière.
+
+**La détection lit le SQL des fichiers de migration non appliqués**, pas la sortie
+de `prisma migrate status` qui ne contient que des noms de fichiers. La liste des
+migrations déjà appliquées vient de `_prisma_migrations`.
+
+**Un garde-fou qui ne peut pas conclure bloque.** Base injoignable, migration sans
+`migration.sql` : le script s'arrête au lieu de supposer que tout va bien. LS-42 a
+corrigé l'inverse, une détection en mode fail-open qui annonçait « migration
+additive » y compris devant un `DROP TABLE`.
+
+`./scripts/verifier-migration-mutation.sh` le prouve sur dix cas, sans base réelle.
+Lancé contre la version d'avant LS-42, il échoue sur sept d'entre eux.
 
 ## SQL brut
 

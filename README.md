@@ -10,15 +10,16 @@ situation de marché.
 
 ## État
 
-Projet en cours de développement, phase de cadrage. La boutique n'est pas
-ouverte commercialement.
+Projet en cours de développement, phase 1, socle technique. La phase 0 de
+cadrage est close, ses derniers livrables se poursuivant en parallèle. La
+boutique n'est pas ouverte commercialement.
 
 ## Stack
 
 | Domaine | Choix |
 |---|---|
 | Framework | Next.js 16, React 19, TypeScript strict |
-| Interface | Tailwind CSS, primitives shadcn/ui et Radix |
+| Interface | CSS natif, variables de `tokens.css` issues d'ADR-022, primitives Radix |
 | Base de données | PostgreSQL 18 |
 | ORM | Prisma 7, migrations versionnées |
 | Authentification | Better Auth 1.6 |
@@ -136,7 +137,7 @@ Cinq scripts de vérification, sans installation :
 ./docs/prototypes/interblocage-panier.sh       # interblocage sur panier, exige Docker
 ```
 
-Le script de mutation réinjecte six fois un défaut réel et exige que
+Le script de mutation réinjecte huit fois un défaut réel et exige que
 `verifier-regles.sh` échoue à chaque fois. Un contrôle vert ne prouve rien tant
 qu'il n'a pas échoué sur le défaut qu'il prétend attraper.
 
