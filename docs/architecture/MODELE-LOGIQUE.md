@@ -59,15 +59,53 @@ Prisma ne génère **pas** les contraintes `CHECK`. ADR-006 reste exact sur ce
 point. Elles vivent dans `prisma/migrations/manual/001_contraintes_check.sql`,
 **toutes à recopier** dans la migration Prisma en phase 1.
 
+Depuis LS-76 s'y ajoute un second fichier, `002_contraintes_unicite.sql`, qui
+porte les contraintes `UNIQUE` que Prisma ne sait pas exprimer non plus. Il est
+séparé du premier parce que celui-ci porte des `CHECK` : y ranger une `UNIQUE`
+serait une catégorisation trompeuse. `verifier-schema.sh` applique les deux, dans
+l'ordre.
+
 Leur nombre n'est pas écrit ici : il a déjà été faux une fois, ce document
 annonçant seize contraintes après que LS-45 en eut ajouté une dix-septième. Un
 compteur en toutes lettres se périme à chaque ajout, et sert de liste de contrôle
 pour la phase 1, donc un écart d'une unité fait manquer une contrainte en
-silence. La commande qui donne la réponse :
+silence. Les commandes qui donnent la réponse :
 
 ```bash
 grep -c "ADD CONSTRAINT" prisma/migrations/manual/001_contraintes_check.sql
+grep -c "ADD CONSTRAINT" prisma/migrations/manual/002_contraintes_unicite.sql
 ```
+
+### La contrainte différable de LS-76, et son état transitoire
+
+`section_produit_ordre_unique` est déclarée
+`UNIQUE (produit_id, ordre) DEFERRABLE INITIALLY DEFERRED`, ADR-026.
+
+Une contrainte `UNIQUE` ordinaire est vérifiée à chaque instruction : l'échange
+de deux positions la violerait sur la première des deux mises à jour, avant que
+la seconde ne rétablisse la cohérence. Mesuré sur PostgreSQL 18.4. Le différé
+déplace la vérification au `COMMIT` sans supprimer la protection, un doublon
+restant refusé.
+
+**Ne pas ajouter de `@@unique([produitId, ordre])` dans `schema.prisma`** : la
+version non différable rejetterait l'échange et annulerait le bénéfice.
+
+Deux conséquences pour l'implémentation :
+
+- une contrainte différable **ne peut pas arbitrer un `ON CONFLICT`**, PostgreSQL
+  le refuse. Le réordonnancement s'écrit en `UPDATE` dans une transaction, aucun
+  upsert ne prend `(produit_id, ordre)` comme clé de conflit
+- même piège que la permutation de rangs de médias, mais résolu autrement : un
+  index partiel unique ne peut pas être différé, seule une contrainte le peut.
+  C'est pourquoi A6 impose un ordre d'écriture là où C22 ne l'impose pas
+
+**État transitoire, à ne pas figer.** Tant que ces contraintes ne vivent que dans
+`prisma/migrations/manual/`, `prisma migrate deploy` ne les applique pas. LS-67
+doit les porter dans une migration Prisma SQL versionnée, après quoi elles sont
+déployées par le mécanisme ordinaire en développement, en intégration continue et
+en production. Les fichiers de ce dossier restent ensuite une source de
+**conception et de contrôle**, jamais un second mécanisme permanent de
+déploiement.
 
 ## Les six index partiels
 
@@ -98,16 +136,36 @@ oblige à l'ajouter au filtre.
 
 ## Les politiques de suppression
 
-Trente et une clés étrangères, trois politiques.
+Trois politiques. Les occurrences ci-dessous sont **mesurées en base** le
+30 juillet 2026, après LS-76, et non comptées à la main :
+
+```sql
+SELECT confdeltype, count(*) FROM pg_constraint WHERE contype='f'
+GROUP BY confdeltype;
+```
 
 | Politique | Occurrences | Motif |
 |---|---|---|
-| `RESTRICT` | 17 | rien d'historique ne se supprime par effet de bord |
-| `SET NULL` | 12 | le lien disparaît, la ligne survit |
-| `CASCADE` | 2 | l'enfant n'a aucun sens sans son parent |
+| `RESTRICT` | 18 | rien d'historique ne se supprime par effet de bord |
+| `SET NULL` | 11 | le lien disparaît, la ligne survit |
+| `CASCADE` | 3 | l'enfant n'a aucun sens sans son parent |
 
-Les deux cascades portent sur `Media` vers `Produit` et sur `AdresseCarnet` vers
-`Utilisateur`. La seconde est la traduction de la règle A10.
+Trente-deux clés étrangères au total.
+
+Les chiffres annoncés ici avant LS-76 étaient faux sur deux des trois lignes,
+17 et 12 au lieu de 18 et 11, pour un total de 31 au lieu de 32. Personne ne
+l'avait vu parce qu'aucun contrôle ne confrontait ces nombres à la base : c'est le
+même défaut que le compte de contraintes `CHECK`, corrigé par la commande
+ci-dessus. **Recompter plutôt que relire.**
+
+Les trois cascades portent sur `Media` vers `Produit`, `SectionProduit` vers
+`Produit`, et `AdresseCarnet` vers `Utilisateur`. La dernière est la traduction de
+la règle A10.
+
+`SectionProduit` est en `CASCADE` et non en `RESTRICT`, contrairement à
+`Variante` : une section n'est référencée par aucune commande ni facture, elle ne
+porte donc aucun historique à protéger. Supprimer un produit emporte ses sections
+sans rien perdre d'opposable, ADR-026.
 
 **`Commande.utilisateurId` est en `SET NULL` et cela ne suffit pas.** Une
 politique de clé étrangère ne sait pas écrire un champ : `dissocieA` doit être

@@ -105,7 +105,7 @@ abandon() {
 command -v docker >/dev/null 2>&1 || abandon "docker introuvable dans le PATH"
 docker info >/dev/null 2>&1 || abandon "le démon Docker ne répond pas, est-il démarré ?"
 
-for f in "$DIR/schema.sql" "$DIR/001_contraintes_check.sql"; do
+for f in "$DIR/schema.sql" "$DIR/001_contraintes_check.sql" "$DIR/002_contraintes_unicite.sql"; do
   [ -r "$f" ] || abandon "fichier SQL illisible : $f"
 done
 
@@ -129,6 +129,9 @@ docker exec -i "$CT" psql -U postgres -d lunesoleil -q -v ON_ERROR_STOP=1 \
 docker exec -i "$CT" psql -U postgres -d lunesoleil -q -v ON_ERROR_STOP=1 \
   < "$DIR/001_contraintes_check.sql" >/dev/null 2>&1 \
   || abandon "l'application de 001_contraintes_check.sql a échoué"
+docker exec -i "$CT" psql -U postgres -d lunesoleil -q -v ON_ERROR_STOP=1 \
+  < "$DIR/002_contraintes_unicite.sql" >/dev/null 2>&1 \
+  || abandon "l'application de 002_contraintes_unicite.sql a échoué"
 
 # Jeu d'essai minimal : une pièce unique, le cas qui porte le jalon du projet.
 R "INSERT INTO categorie (id,nom,slug,ordre,cree_a) VALUES ('cat','Boucles','boucles',1,now());
@@ -331,10 +334,15 @@ R "INSERT INTO commande (id,numero,statut,email_normalise,nom_client,adresse_liv
      sous_total_centimes,mode_livraison,point_relais_id,frais_port_centimes,total_centimes,montant_taxe_centimes,cgv_acceptees_a,cgv_version,cree_a)
    VALUES ('cmd','C-2026-0001','CONFIRMEE','a@x.fr','Client','{}','{}',1200,'POINT_RELAIS','MR-64000-01',410,1610,0,now(),'v1',now());" >/dev/null
 
-R "INSERT INTO paiement (id,commande_id,statut,montant_centimes,montant_rembourse_centimes,cree_a)
-   VALUES ('pay1','cmd','REUSSI',1610,0,now());" >/dev/null
-sortie=$(R "INSERT INTO paiement (id,commande_id,statut,montant_centimes,montant_rembourse_centimes,cree_a)
-   VALUES ('pay2','cmd','REUSSI',1610,0,now());")
+# LS-76 : un paiement dans un état d'encaissement porte sa date de confirmation,
+# `chk_paiement_confirmation_coherente` l'exige. Sans elle dans ces jeux d'essai,
+# le rejet viendrait de cette contrainte et non de l'index d'idempotence, et les
+# contrôles V14 passeraient pour la mauvaise raison. C'est exactement ce que
+# `verifier_rejet` est conçu pour attraper, et il l'a attrapé.
+R "INSERT INTO paiement (id,commande_id,statut,montant_centimes,montant_rembourse_centimes,confirme_a,cree_a)
+   VALUES ('pay1','cmd','REUSSI',1610,0,now(),now());" >/dev/null
+sortie=$(R "INSERT INTO paiement (id,commande_id,statut,montant_centimes,montant_rembourse_centimes,confirme_a,cree_a)
+   VALUES ('pay2','cmd','REUSSI',1610,0,now(),now());")
 verifier_rejet "second paiement réussi rejeté, V14" "paiement_reussi_unique" "$sortie"
 
 sortie=$(R "INSERT INTO paiement (id,commande_id,statut,montant_centimes,montant_rembourse_centimes,cree_a)
@@ -350,16 +358,16 @@ verifier_accepte "un paiement échoué reste possible, décision B" "$sortie"
 # elle produisait 3220 centimes encaissés sur une commande de 1610.
 R "UPDATE paiement SET statut='PARTIELLEMENT_REMBOURSE', montant_rembourse_centimes=500
    WHERE id='pay1';" >/dev/null
-sortie=$(R "INSERT INTO paiement (id,commande_id,statut,montant_centimes,montant_rembourse_centimes,cree_a)
-   VALUES ('pay4','cmd','REUSSI',1610,0,now());")
+sortie=$(R "INSERT INTO paiement (id,commande_id,statut,montant_centimes,montant_rembourse_centimes,confirme_a,cree_a)
+   VALUES ('pay4','cmd','REUSSI',1610,0,now(),now());")
 verifier_rejet "second REUSSI après remboursement partiel rejeté, V14" "paiement_reussi_unique" "$sortie"
 
 # Symétrique : un paiement entièrement remboursé ne rouvre pas la commande non
 # plus. Rembourser n'efface pas l'encaissement, il le compense.
 R "UPDATE paiement SET statut='REMBOURSE', montant_rembourse_centimes=1610
    WHERE id='pay1';" >/dev/null
-sortie=$(R "INSERT INTO paiement (id,commande_id,statut,montant_centimes,montant_rembourse_centimes,cree_a)
-   VALUES ('pay5','cmd','REUSSI',1610,0,now());")
+sortie=$(R "INSERT INTO paiement (id,commande_id,statut,montant_centimes,montant_rembourse_centimes,confirme_a,cree_a)
+   VALUES ('pay5','cmd','REUSSI',1610,0,now(),now());")
 verifier_rejet "second REUSSI après remboursement total rejeté, V14" "paiement_reussi_unique" "$sortie"
 
 R "UPDATE paiement SET statut='REUSSI', montant_rembourse_centimes=0 WHERE id='pay1';" >/dev/null
@@ -720,6 +728,166 @@ else
   echo "  ECHEC colonnes enum non contrôlées : $non_couvertes"
   ko=$((ko+1))
 fi
+
+echo
+echo "== Sections de fiche produit, ADR-026, LS-76 =="
+
+# Jeu d'essai : deux sections sur le produit existant.
+R "INSERT INTO section_produit (id,produit_id,cle,titre,contenu,ordre,visible,cree_a,modifie_a)
+   VALUES ('s1','prod','description','Description détaillée','Texte un',1,true,now(),now()),
+          ('s2','prod','matieres','Matières et composants','Texte deux',2,true,now(),now());" >/dev/null
+
+sortie=$(R "INSERT INTO section_produit (id,produit_id,cle,titre,contenu,ordre,visible,cree_a,modifie_a)
+            VALUES ('s3','prod','description','Doublon','x',3,true,now(),now());")
+verifier_rejet "deux sections de même clé sur un produit rejetées, C20" \
+  "section_produit_cle_unique" "$sortie"
+
+# TEST 1 exigé par LS-76 : l'échange de deux positions réussit DANS UNE
+# TRANSACTION, grâce au caractère différable de la contrainte.
+#
+# Sans DEFERRABLE, la première des deux mises à jour violerait la contrainte
+# avant que la seconde ne rétablisse la cohérence. Ce contrôle est donc aussi
+# celui qui prouve que la contrainte est bien différable : le rendre non
+# différable le fait rougir.
+sortie=$(R "BEGIN;
+            UPDATE section_produit SET ordre = 2 WHERE id = 's1';
+            UPDATE section_produit SET ordre = 1 WHERE id = 's2';
+            COMMIT;")
+verifier_accepte "échange de deux positions accepté en transaction, C22" "$sortie"
+
+# L'échange a-t-il réellement eu lieu ? Un COMMIT silencieusement transformé en
+# ROLLBACK laisserait le contrôle précédent au vert sans que rien ne bouge.
+verifier "l'échange de positions est effectif" "s1=2 s2=1" \
+  "$(R "SELECT 's1=' || (SELECT ordre FROM section_produit WHERE id='s1') ||
+               ' s2=' || (SELECT ordre FROM section_produit WHERE id='s2');")"
+
+# TEST 2 exigé par LS-76 : la protection tient toujours. C'est LE contrôle qui
+# distingue « contrainte différable » de « contrainte absente » : le test 1
+# passerait à l'identique sans aucune contrainte.
+sortie=$(R "BEGIN;
+            UPDATE section_produit SET ordre = 1 WHERE id = 's1';
+            COMMIT;")
+verifier_rejet "doublon d'ordre refusé au COMMIT, C22" \
+  "section_produit_ordre_unique" "$sortie"
+
+# Et en insertion, pas seulement en mise à jour.
+sortie=$(R "BEGIN;
+            INSERT INTO section_produit (id,produit_id,cle,titre,contenu,ordre,visible,cree_a,modifie_a)
+            VALUES ('s4','prod','fabrication','Fabrication','x',1,true,now(),now());
+            COMMIT;")
+verifier_rejet "insertion d'un ordre déjà pris refusée au COMMIT, C22" \
+  "section_produit_ordre_unique" "$sortie"
+
+# La contrainte est-elle bien déclarée différable en base ? Un contrôle
+# structurel, indépendant du comportement observé ci-dessus.
+verifier "la contrainte d'ordre est différable et différée par défaut, C22" "true|true" \
+  "$(R "SELECT condeferrable || '|' || condeferred FROM pg_constraint
+        WHERE conname = 'section_produit_ordre_unique';")"
+
+# Deux produits distincts peuvent porter le même rang : l'unicité est par
+# produit. Une contrainte sur la seule colonne ordre rendrait le catalogue
+# impossible dès le deuxième produit.
+R "INSERT INTO produit (id,categorie_id,nom,slug,statut,cree_a,modifie_a)
+   VALUES ('prod2','cat','Aube','aube','ACTIF',now(),now());" >/dev/null
+sortie=$(R "INSERT INTO section_produit (id,produit_id,cle,titre,contenu,ordre,visible,cree_a,modifie_a)
+            VALUES ('s5','prod2','description','Description détaillée','y',1,true,now(),now());")
+verifier_accepte "deux produits peuvent porter le même rang de section, C22" "$sortie"
+
+sortie=$(R "INSERT INTO section_produit (id,produit_id,cle,titre,contenu,ordre,visible,cree_a,modifie_a)
+            VALUES ('s6','prod','entretien','Conseils','x',0,true,now(),now());")
+verifier_rejet "un ordre nul est rejeté, C22" "chk_section_ordre_positif" "$sortie"
+
+sortie=$(R "INSERT INTO section_produit (id,produit_id,cle,titre,contenu,ordre,visible,cree_a,modifie_a)
+            VALUES ('s7','prod','entretien','   ','x',9,true,now(),now());")
+verifier_rejet "un titre vide est rejeté, C23" "chk_section_titre_non_vide" "$sortie"
+
+sortie=$(R "INSERT INTO section_produit (id,produit_id,cle,titre,contenu,ordre,visible,cree_a,modifie_a)
+            VALUES ('s8','prod','','Titre','x',10,true,now(),now());")
+verifier_rejet "une clé vide est rejetée, C20" "chk_section_cle_non_vide" "$sortie"
+
+# Un contenu vide est légitime : c'est l'état d'une section proposée mais pas
+# encore remplie. La règle d'affichage, et non la base, décide de ne pas la
+# montrer.
+sortie=$(R "INSERT INTO section_produit (id,produit_id,cle,titre,contenu,ordre,visible,cree_a,modifie_a)
+            VALUES ('s9','prod','entretien','Conseils d''entretien','',11,true,now(),now());")
+verifier_accepte "un contenu vide est accepté, section non remplie, C23" "$sortie"
+
+# ADR-026 : les quatre colonnes éditoriales ne doivent plus exister. Sans ce
+# contrôle, une réintroduction par copie d'un ancien schéma passerait inaperçue
+# et recréerait les deux systèmes concurrents que l'ADR écarte.
+verifier "les quatre colonnes éditoriales ont disparu de produit, ADR-026" "0" \
+  "$(R "SELECT count(*) FROM information_schema.columns
+        WHERE table_name = 'produit'
+          AND column_name IN ('description','matieres','entretien','fabrication');")"
+
+verifier "descriptionCourte est conservée sur produit, ADR-026" "1" \
+  "$(R "SELECT count(*) FROM information_schema.columns
+        WHERE table_name = 'produit' AND column_name = 'description_courte';")"
+
+verifier "dimensions reste sur variante, source de vérité, ADR-026" "1" \
+  "$(R "SELECT count(*) FROM information_schema.columns
+        WHERE table_name = 'variante' AND column_name = 'dimensions';")"
+
+echo
+echo "== Confirmation du paiement, LS-76 =="
+
+verifier "paiement.confirme_a existe en timestamptz nullable" "timestamp with time zone|YES" \
+  "$(R "SELECT data_type || '|' || is_nullable FROM information_schema.columns
+        WHERE table_name = 'paiement' AND column_name = 'confirme_a';")"
+
+R "INSERT INTO commande (id,numero,statut,email_normalise,nom_client,adresse_livraison,adresse_facturation,
+     sous_total_centimes,mode_livraison,point_relais_id,frais_port_centimes,total_centimes,montant_taxe_centimes,cgv_acceptees_a,cgv_version,cree_a)
+   VALUES ('cmdconf','C-2026-0950','EN_ATTENTE_PAIEMENT','conf@x.fr','Client','{}','{}',1200,'POINT_RELAIS','MR-64000-01',410,1610,0,now(),'v1',now());" >/dev/null
+
+# Une tentative en attente n'a pas de date de confirmation.
+sortie=$(R "INSERT INTO paiement (id,commande_id,statut,montant_centimes,cree_a)
+            VALUES ('payc1','cmdconf','EN_ATTENTE',1610,now());")
+verifier_accepte "paiement EN_ATTENTE sans date de confirmation accepté" "$sortie"
+
+# Garde-fou contre un faux vert, défaut rencontré en écrivant cette section.
+#
+# Les identifiants `pay1` et `pay2` sont déjà pris par la section d'idempotence
+# ci-dessus. Un `UPDATE ... WHERE id = 'pay1'` écrit ici par distraction visait
+# une ligne REUSSI portant déjà sa date : l'écriture était légitime, donc
+# acceptée, et trois contrôles de rejet passaient au vert en ayant testé le
+# contraire de ce qu'ils annonçaient.
+#
+# Un UPDATE qui ne touche aucune ligne ne lève pas d'erreur non plus. La cible
+# des contrôles suivants doit donc exister, et dans l'état attendu.
+verifier "la cible des contrôles de confirmation existe et est EN_ATTENTE" "EN_ATTENTE|false" \
+  "$(R "SELECT statut || '|' || (confirme_a IS NOT NULL) FROM paiement WHERE id = 'payc1';")"
+
+sortie=$(R "UPDATE paiement SET confirme_a = now() WHERE id = 'payc1';")
+verifier_rejet "date de confirmation sur un paiement EN_ATTENTE rejetée" \
+  "chk_paiement_confirmation_coherente" "$sortie"
+
+sortie=$(R "UPDATE paiement SET statut = 'REUSSI' WHERE id = 'payc1';")
+verifier_rejet "passage à REUSSI sans date de confirmation rejeté" \
+  "chk_paiement_confirmation_coherente" "$sortie"
+
+sortie=$(R "UPDATE paiement SET statut = 'REUSSI', confirme_a = now() WHERE id = 'payc1';")
+verifier_accepte "passage à REUSSI avec date de confirmation accepté" "$sortie"
+
+# Les trois états d'encaissement, leçon de LS-45. Un remboursement ne rend pas la
+# commande impayée : la date de confirmation doit survivre au passage en
+# REMBOURSE, sinon la vente disparaîtrait des statistiques du mois où elle a eu
+# lieu.
+sortie=$(R "UPDATE paiement SET statut = 'PARTIELLEMENT_REMBOURSE' WHERE id = 'payc1';")
+verifier_accepte "PARTIELLEMENT_REMBOURSE conserve sa date de confirmation, LS-45" "$sortie"
+
+sortie=$(R "UPDATE paiement SET statut = 'REMBOURSE' WHERE id = 'payc1';")
+verifier_accepte "REMBOURSE conserve sa date de confirmation, LS-45" "$sortie"
+
+sortie=$(R "UPDATE paiement SET confirme_a = NULL WHERE id = 'payc1';")
+verifier_rejet "retirer la date d'un paiement remboursé rejeté, LS-45" \
+  "chk_paiement_confirmation_coherente" "$sortie"
+
+# ECHOUE n'est pas un état d'encaissement, il ne porte donc pas de date.
+R "INSERT INTO paiement (id,commande_id,statut,montant_centimes,cree_a)
+   VALUES ('payc2','cmdconf','ECHOUE',1610,now());" >/dev/null
+sortie=$(R "UPDATE paiement SET confirme_a = now() WHERE id = 'payc2';")
+verifier_rejet "date de confirmation sur un paiement ECHOUE rejetée" \
+  "chk_paiement_confirmation_coherente" "$sortie"
 
 echo
 echo "-----------------------------------------"

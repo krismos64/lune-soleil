@@ -194,6 +194,7 @@ documentation technique, ticket ou règle qui le contredirait.
 | ADR-023 | Authentification client | espace client, comptes |
 | ADR-024 | Atomicité réservation et commande | tunnel, transactions |
 | ADR-025 | Modes de livraison, trois modes | livraison, transporteur, tunnel |
+| ADR-026 | Sections de fiche produit ordonnées | fiche produit, catalogue, administration des produits |
 
 Cette table se met à jour à chaque ADR créé. Un ADR absent d'ici reste
 opposable : la table est un raccourci, `docs/adr/` fait foi.

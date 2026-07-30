@@ -53,12 +53,26 @@ cites="$(mktemp)"
 } | grep -ohE '\b[a-z][a-zA-Z0-9]*[A-Z][a-zA-Z0-9]*\b|\b[a-z_]+_[a-z_]+\b' \
   | sort -u > "$cites"
 
+# Identifiants qui ressemblent à du code du schéma sans en être : API de
+# bibliothèque, mots-clés de langage. Le motif camelCase les attrape par
+# construction, et aucun assouplissement ne les distinguerait sans affaiblir le
+# contrôle sur les vrais champs.
+#
+# La liste reste courte et explicite à dessein : chaque ajout doit être un choix,
+# pas un contournement. Un nom de champ du schéma ne doit JAMAIS y entrer, ce
+# serait rendre le contrôle aveugle là où il sert.
+#
+# `dangerouslySetInnerHTML` vient d'ADR-026 : `frontend-design.md` l'interdit sur
+# le contenu des sections de fiche produit. C'est une API React, pas une colonne.
+hors_schema="dangerouslySetInnerHTML"
+
 # Un identifiant qualifié `table.colonne` est accepté si ses deux moitiés le
 # sont. Sans cette étape, `ligne_commande.quantite` serait signalé alors qu'il
 # est plus précis que la forme nue.
 introuvables="$(mktemp)"
 while read -r id; do
   grep -qxF "$id" "$connus" && continue
+  echo "$hors_schema" | tr ' ' '\n' | grep -qxF "$id" && continue
   if echo "$id" | grep -q '\.'; then
     g="${id%%.*}"; d="${id##*.}"
     grep -qxF "$g" "$connus" && grep -qxF "$d" "$connus" && continue

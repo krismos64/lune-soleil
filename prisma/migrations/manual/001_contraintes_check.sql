@@ -200,3 +200,58 @@ ALTER TABLE commande
 ALTER TABLE expedition
   ADD CONSTRAINT chk_expedition_mode_point_relais
   CHECK ((mode IN ('POINT_RELAIS', 'LOCKER')) = (point_relais_id IS NOT NULL));
+
+-- ---------------------------------------------------------------------------
+-- Confirmation du paiement, LS-76
+-- ---------------------------------------------------------------------------
+
+-- `confirme_a` date la confirmation effective de l'encaissement, et sert de date
+-- de rattachement des ventes en ligne dans les statistiques. Sa presence doit
+-- correspondre exactement a l'etat du paiement, sans quoi une vente encaissee
+-- serait absente d'un agregat, ou une tentative echouee y entrerait.
+--
+-- LES TROIS ETATS D'ENCAISSEMENT, jamais le seul REUSSI. C'est la lecon de
+-- LS-45, deja apprise sur l'index partiel `paiement_reussi_unique` : un
+-- remboursement ne rend pas la commande impayee. Un paiement passant a
+-- PARTIELLEMENT_REMBOURSE ou REMBOURSE reste une vente encaissee, il conserve
+-- donc sa date de confirmation. Filtrer sur REUSSI seul rendrait la contrainte
+-- fausse des le premier remboursement, qui violerait la contrainte en gardant
+-- une date pourtant legitime.
+--
+-- Si un etat d'encaissement est ajoute a l'enum StatutPaiement, il doit entrer
+-- dans ce predicat, comme dans celui de l'index partiel.
+--
+-- EQUIVALENCE et non implication, contrairement a
+-- `chk_mouvement_vente_externe_prix`. Ici les deux sens sont voulus : un etat
+-- d'encaissement exige la date, et un etat non encaisse l'interdit. Une
+-- tentative EN_ATTENTE ou ECHOUE portant une date de confirmation serait une
+-- vente fantome dans les statistiques.
+ALTER TABLE paiement
+  ADD CONSTRAINT chk_paiement_confirmation_coherente
+  CHECK ((statut IN ('REUSSI', 'PARTIELLEMENT_REMBOURSE', 'REMBOURSE')) = (confirme_a IS NOT NULL));
+
+-- ---------------------------------------------------------------------------
+-- Sections de fiche produit, ADR-026, LS-76
+-- ---------------------------------------------------------------------------
+
+-- C22, l'ordre est un rang d'affichage, il commence a 1. Un rang nul ou negatif
+-- n'a pas de sens et trahirait un calcul de reordonnancement fautif, du type
+-- decrement sous zero.
+ALTER TABLE section_produit
+  ADD CONSTRAINT chk_section_ordre_positif
+  CHECK (ordre >= 1);
+
+-- C20, la cle technique n'est jamais vide. Une chaine vide passerait l'unicite
+-- une premiere fois puis bloquerait toute autre section sans cle, avec un
+-- message incomprehensible pour l'administratrice.
+ALTER TABLE section_produit
+  ADD CONSTRAINT chk_section_cle_non_vide
+  CHECK (length(trim(cle)) > 0);
+
+-- C23, un titre vide produirait une section sans intitule sur la fiche
+-- publique. Le contenu, lui, PEUT etre vide : c'est l'etat normal d'une section
+-- proposee mais pas encore remplie, et la regle d'affichage veut qu'une section
+-- sans contenu ne s'affiche pas du tout, titre compris.
+ALTER TABLE section_produit
+  ADD CONSTRAINT chk_section_titre_non_vide
+  CHECK (length(trim(titre)) > 0);

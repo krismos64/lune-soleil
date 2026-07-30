@@ -157,24 +157,19 @@ model Produit {
   categorieId String        @map("categorie_id")
   nom         String
   slug        String        @unique // C3
-  // Consolidation du 29 juillet 2026, LS-24 et LS-15. Cinq champs textuels et
-  // non un moteur d'attributs générique : le catalogue compte 10 à 40
-  // références de bijoux, aucune n'exige de structuration par attribut typé.
-  // Un EAV serait une complexité sans usage.
+  // ADR-026, LS-76. `descriptionCourte` reste le seul champ éditorial fixe du
+  // produit. Elle alimente les cartes de catalogue en plus du haut de fiche :
+  // en faire une section la rendrait supprimable, ce qui viderait le catalogue.
   //
-  // `descriptionCourte` alimente la présentation en haut de fiche et les cartes
-  // de catalogue, `description` le bloc détaillé plus bas. Les fusionner
-  // obligerait à tronquer la longue pour produire la courte, ce qui coupe au
-  // milieu d'une phrase.
+  // Les quatre autres champs, `description`, `matieres`, `entretien` et
+  // `fabrication`, sont devenus des `SectionProduit`. Le prototype validé les
+  // traite comme des sections par défaut, renommables et supprimables, et non
+  // comme des champs distincts. Les garder ici aurait créé deux systèmes
+  // concurrents pour la même donnée, sans moyen de représenter un renommage.
+  //
+  // Ce n'est pas un moteur d'attributs typés : la justification écartant l'EAV
+  // reste valable, du texte titré et ordonné n'en est pas un.
   descriptionCourte String?   @map("description_courte")
-  description String?
-  // F-CAT-07, information précontractuelle validée par l'exploitante. Les
-  // matières restent au produit : le catalogue réel ne montre pas de variante
-  // changeant de métal. Si un jour c'est le cas, la colonne se dédouble sur
-  // `Variante` sans casser l'existant.
-  matieres    String?
-  entretien   String?
-  fabrication String?       // fabrication artisanale, origine, geste
   statut      StatutProduit @default(BROUILLON)
   // LS-49, date de première publication, prévue au modèle conceptuel. Elle
   // n'est pas dérivable de `statut` ni de `modifieA` : un produit dépublié
@@ -188,10 +183,71 @@ model Produit {
   categorie Categorie  @relation(fields: [categorieId], references: [id], onDelete: Restrict)
   variantes Variante[]
   medias    Media[]
+  sections  SectionProduit[]
 
   // C9, un produit a au plus un média de rang 1. L'index partiel est la
   // traduction exacte : il n'interdit rien sur les rangs 2 et suivants.
   @@map("produit")
+}
+
+// ADR-026, LS-76. Contenu éditorial de la fiche produit, ordonné et pilotable
+// par l'administratrice.
+//
+// Quatre sections sont proposées À LA CRÉATION d'un produit, C21 : `description`,
+// `matieres`, `fabrication`, `entretien`. Aucune n'est protégée, toutes peuvent
+// être renommées, réordonnées, masquées ou supprimées.
+//
+// Une section supprimée NE RÉAPPARAÎT JAMAIS. Une initialisation du type
+// « garantir que les quatre sections existent », exécutée à chaque
+// enregistrement du produit, ferait revenir vide une section délibérément
+// supprimée, et l'administratrice la supprimerait en boucle. La création des
+// sections par défaut appartient au seul cas d'usage de création.
+model SectionProduit {
+  id        String @id @default(uuid())
+  produitId String @map("produit_id")
+  // C20. Identifiant technique STABLE, indépendant de `titre` qui est
+  // modifiable. Renommer « Matières et composants » en « Composants » change
+  // `titre` et laisse `cle` à `matieres`. Sans cette séparation, un renommage
+  // ferait perdre le lien avec l'origine de la section.
+  //
+  // Jamais affichée, donc reste en ASCII comme tout identifiant technique.
+  cle       String
+  titre     String
+  // C23. Texte simple. Ce champ n'est JAMAIS rendu en HTML :
+  // `dangerouslySetInnerHTML` et tout équivalent y sont interdits. React échappe
+  // le texte par défaut, le risque naît donc du rendu et non du stockage. Trois
+  // raisons : surface d'attaque réduite, validation simple, cohérence visuelle.
+  contenu   String
+  ordre     Int
+  // C22. Masquer conserve le contenu et le retire de la fiche publique,
+  // réversible. Supprimer efface la ligne, contenu compris, sans conservation.
+  visible   Boolean  @default(true)
+  creeA     DateTime @default(now()) @map("cree_a") @db.Timestamptz(3)
+  modifieA  DateTime @updatedAt @map("modifie_a") @db.Timestamptz(3)
+
+  produit Produit @relation(fields: [produitId], references: [id], onDelete: Cascade)
+
+  @@unique([produitId, cle], map: "section_produit_cle_unique")
+
+  // C22, l'unicité de `ordre` n'est PAS déclarée ici, volontairement.
+  //
+  // Elle doit être DEFERRABLE INITIALLY DEFERRED, ce que le langage de schéma de
+  // Prisma 7 ne sait pas exprimer, vérifié via Context7 sur 7.6.0. Elle vit donc
+  // dans `prisma/migrations/manual/002_contraintes_unicite.sql`.
+  //
+  // Ne pas « compléter » le schéma en ajoutant ici un @@unique sur
+  // [produitId, ordre] : une contrainte non différable est vérifiée à chaque
+  // instruction, elle rejetterait donc l'échange de deux positions dès la
+  // première mise à jour. Mesuré sur PostgreSQL 18.4.
+  //
+  // Conséquence : aucun upsert ne prend (produit_id, ordre) comme clé de
+  // conflit, PostgreSQL refusant une contrainte différable comme arbitre de
+  // ON CONFLICT. Le réordonnancement s'écrit en UPDATE dans une transaction.
+  //
+  // Aucun index sur `produitId` : mesuré redondant, les deux contraintes
+  // d'unicité le portent en préfixe gauche et le planificateur retient le même
+  // plan sans lui.
+  @@map("section_produit")
 }
 
 model Variante {
@@ -411,6 +467,28 @@ model Paiement {
   identifiantFournisseur String?        @map("identifiant_fournisseur")
   motifEchec             String?        @map("motif_echec") // décision B, une colonne écraserait le motif
   creeA                  DateTime       @default(now()) @map("cree_a") @db.Timestamptz(3)
+  // LS-76. Horodatage de la confirmation EFFECTIVE de l'encaissement, distinct
+  // de `creeA` qui date la création de la tentative. `STATISTIQUES.md` laissait
+  // le choix ouvert entre ce champ et une dérivation depuis `HistoriqueStatut` ;
+  // Christophe a tranché pour le champ, une donnée comptable ne devant pas
+  // dépendre d'un journal de transitions.
+  //
+  // Nullable : un paiement EN_ATTENTE ou ECHOUE n'a pas de date de confirmation,
+  // et le schéma ne doit pas pouvoir prétendre le contraire. La cohérence entre
+  // l'état et la présence de la date est portée par
+  // `chk_paiement_confirmation_coherente`.
+  //
+  // Renseigné UNE SEULE FOIS, dans la transaction qui fait passer le paiement en
+  // état d'encaissement. Les deux chemins de confirmation, webhook et
+  // réconciliation, écrivent le même champ : un second passage ne le réécrit
+  // pas, sinon la date comptable bougerait après coup. Décision D, invariant 5.
+  //
+  // C'est la date de rattachement des ventes en ligne dans les statistiques,
+  // convertie en Europe/Paris à l'agrégation seulement. Le chemin de
+  // réconciliation est celui par lequel l'écart avec `creeA` dépasse l'heure et
+  // peut franchir un minuit, donc changer le mois d'imputation. Ne jamais
+  // reconstruire cette date depuis `creeA` ni depuis l'historique des statuts.
+  confirmeA              DateTime?      @map("confirme_a") @db.Timestamptz(3)
 
   commande    Commande               @relation(fields: [commandeId], references: [id], onDelete: Restrict)
   evenements  EvenementFournisseur[]

@@ -61,10 +61,8 @@ CREATE TABLE "produit" (
     "nom" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "description_courte" TEXT,
-    "description" TEXT,
-    "matieres" TEXT,
-    "entretien" TEXT,
-    "fabrication" TEXT,
+    -- ADR-026, LS-76 : les colonnes "description", "matieres", "entretien" et
+    -- "fabrication" sont devenues des lignes de "section_produit".
     "statut" "StatutProduit" NOT NULL DEFAULT 'BROUILLON',
     "publie_a" TIMESTAMPTZ(3),
     "archive_a" TIMESTAMPTZ(3),
@@ -89,6 +87,24 @@ CREATE TABLE "variante" (
     "cree_a" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "variante_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+-- ADR-026, LS-76. Contenu editorial ordonne de la fiche produit.
+-- L'unicite de (produit_id, ordre) est DIFFERABLE, elle vit donc dans
+-- 002_contraintes_unicite.sql et non ici : Prisma ne sait pas l'exprimer.
+CREATE TABLE "section_produit" (
+    "id" TEXT NOT NULL,
+    "produit_id" TEXT NOT NULL,
+    "cle" TEXT NOT NULL,
+    "titre" TEXT NOT NULL,
+    "contenu" TEXT NOT NULL,
+    "ordre" INTEGER NOT NULL,
+    "visible" BOOLEAN NOT NULL DEFAULT true,
+    "cree_a" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "modifie_a" TIMESTAMPTZ(3) NOT NULL,
+
+    CONSTRAINT "section_produit_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -187,6 +203,9 @@ CREATE TABLE "paiement" (
     "identifiant_fournisseur" TEXT,
     "motif_echec" TEXT,
     "cree_a" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    -- LS-76. Confirmation effective de l'encaissement, distincte de "cree_a" qui
+    -- date la tentative. Date de rattachement des ventes en ligne.
+    "confirme_a" TIMESTAMPTZ(3),
 
     CONSTRAINT "paiement_pkey" PRIMARY KEY ("id")
 );
@@ -432,6 +451,16 @@ CREATE UNIQUE INDEX "variante_reference_key" ON "variante"("reference");
 CREATE INDEX "variante_produit_idx" ON "variante"("produit_id");
 
 -- CreateIndex
+-- ADR-026, C20. L'unicite de (produit_id, cle) est ordinaire : renommer une
+-- section ne touche pas sa cle, aucun echange de valeurs n'a donc lieu ici.
+-- L'unicite de (produit_id, ordre) est DEFERRABLE et vit dans
+-- 002_contraintes_unicite.sql.
+--
+-- Aucun index sur "produit_id" seul : mesure redondante, les deux unicites le
+-- portent en prefixe gauche.
+CREATE UNIQUE INDEX "section_produit_cle_unique" ON "section_produit"("produit_id", "cle");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "media_identifiant_fournisseur_key" ON "media"("identifiant_fournisseur");
 
 -- CreateIndex
@@ -546,6 +575,11 @@ ALTER TABLE "variante" ADD CONSTRAINT "variante_produit_id_fkey" FOREIGN KEY ("p
 
 -- AddForeignKey
 ALTER TABLE "media" ADD CONSTRAINT "media_produit_id_fkey" FOREIGN KEY ("produit_id") REFERENCES "produit"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+-- ADR-026 : CASCADE, une section n'a aucun sens sans son produit et n'est
+-- referencee par aucune commande, contrairement a une variante.
+ALTER TABLE "section_produit" ADD CONSTRAINT "section_produit_produit_id_fkey" FOREIGN KEY ("produit_id") REFERENCES "produit"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "reservation" ADD CONSTRAINT "reservation_variante_id_fkey" FOREIGN KEY ("variante_id") REFERENCES "variante"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

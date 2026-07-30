@@ -1,0 +1,69 @@
+-- Contraintes UNIQUE que Prisma ne sait pas exprimer, LS-76, ADR-026.
+--
+-- Ce fichier existe separement de 001_contraintes_check.sql parce que celui-ci
+-- porte des contraintes CHECK : y ranger une UNIQUE serait une categorisation
+-- trompeuse. Il s'applique APRES lui.
+--
+-- ETAT TRANSITOIRE, a ne pas figer. Tant que ces contraintes ne vivent qu'ici,
+-- `prisma migrate deploy` ne les applique pas. LS-67 doit les porter dans une
+-- migration Prisma SQL versionnee, au meme titre que les CHECK, apres quoi
+-- elles sont deployees par le mecanisme ordinaire en developpement, en
+-- integration continue et en production.
+--
+-- Apres LS-67, les fichiers de ce dossier restent une source de CONCEPTION ET
+-- DE CONTROLE, lue par verifier-schema.sh pour verifier que la base correspond
+-- a l'intention. Ils ne constituent pas un second mecanisme permanent de
+-- deploiement, et rien ne doit dependre de leur application manuelle en
+-- production.
+
+-- ---------------------------------------------------------------------------
+-- C22, ordre d'affichage unique par produit, DIFFERABLE
+-- ---------------------------------------------------------------------------
+
+-- Pourquoi differable, et pourquoi une transaction seule ne suffit pas.
+--
+-- Une contrainte UNIQUE ordinaire est verifiee A CHAQUE INSTRUCTION, pas au
+-- COMMIT. L'echange de deux positions viole donc la contrainte sur la premiere
+-- des deux mises a jour, avant que la seconde ne retablisse la coherence. La
+-- transaction garantit l'atomicite, elle ne repousse pas la verification.
+--
+-- Mesure sur PostgreSQL 18.4, le 30 juillet 2026 :
+--
+--   ROUGE, contrainte NON differable, echange dans une transaction
+--     ERROR:  duplicate key value violates unique constraint
+--     DETAIL:  Key (produit_id, ordre)=(p1, 2) already exists.
+--     etat inchange, l'echange n'a pas eu lieu
+--
+--   VERT, contrainte DIFFERABLE
+--     echange reussi, a=2 b=1
+--
+--   VERT, la protection tient toujours
+--     un doublon reste refuse au COMMIT, en UPDATE comme en INSERT
+--
+-- Le differe deplace le moment de la verification, il ne la supprime pas.
+--
+-- DEUX CONSEQUENCES A CONNAITRE AVANT D'ECRIRE DU CODE :
+--
+-- 1. Aucun `@@unique([produitId, ordre])` dans schema.prisma. Il creerait une
+--    seconde contrainte NON differable sur les memes colonnes, qui rejetterait
+--    l'echange et annulerait tout le benefice.
+--
+-- 2. Une contrainte differable NE PEUT PAS arbitrer un ON CONFLICT. PostgreSQL
+--    le refuse explicitement, dans les deux formes d'ecriture :
+--
+--      ON CONFLICT (produit_id, ordre) DO NOTHING
+--      ON CONFLICT ON CONSTRAINT section_produit_ordre_unique DO NOTHING
+--
+--      ERROR:  ON CONFLICT does not support deferrable unique constraints
+--              /exclusion constraints as arbiters
+--
+--    Le reordonnancement s'ecrit donc en UPDATE dans une transaction, jamais en
+--    upsert. Aucun upsert ne prend (produit_id, ordre) comme cle de conflit, ni
+--    en SQL ni via l'API `upsert` de Prisma. Un upsert sur (produit_id, cle)
+--    reste possible, cette contrainte n'etant pas differable.
+--
+--    L'echec est tardif : le code compile, la requete est syntaxiquement
+--    correcte, et l'erreur ne survient qu'a l'execution contre une vraie base.
+ALTER TABLE section_produit
+  ADD CONSTRAINT section_produit_ordre_unique
+  UNIQUE (produit_id, ordre) DEFERRABLE INITIALLY DEFERRED;
