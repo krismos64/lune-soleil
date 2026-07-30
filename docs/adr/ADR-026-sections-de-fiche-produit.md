@@ -5,7 +5,7 @@
 | Statut | **Accepté** |
 | Date | 30 juillet 2026 |
 | Décideur | Christophe Mostefaoui |
-| Ticket | LS-24, LS-15, story de correction de schéma à créer |
+| Ticket | LS-24, LS-15, **LS-76** qui l'applique |
 
 ## Ce que cet ADR modifie
 
@@ -231,8 +231,14 @@ mesurés.
 
 **Prisma 7 ne sait pas exprimer `DEFERRABLE`.** Ni `@@unique` ni `@@index`
 n'exposent ce paramètre, vérifié via Context7 sur Prisma 7.6.0. La contrainte
-s'écrit donc en SQL, comme les vingt-et-une contraintes `CHECK` que Prisma ne
-génère pas non plus.
+s'écrit donc en SQL, comme les contraintes `CHECK` que Prisma ne génère pas non
+plus. Leur nombre n'est pas écrit ici : il a déjà été faux deux fois sur ce
+projet, et un compteur en toutes lettres se périme à chaque ajout. La commande
+qui donne la réponse :
+
+```bash
+grep -c "ADD CONSTRAINT" prisma/migrations/manual/001_contraintes_check.sql
+```
 
 **Aucun `@@unique` Prisma n'est conservé sur `[produitId, ordre]`.** En garder un
 créerait une seconde contrainte non différable sur les mêmes colonnes, qui
@@ -392,7 +398,7 @@ entre les deux instructions.
 
 **La contrainte vit aujourd'hui dans un fichier SQL manuel**, état transitoire :
 `prisma migrate deploy` ne l'applique pas encore. LS-67 la porte dans une
-migration Prisma SQL versionnée, comme les vingt-et-une contraintes `CHECK`, après
+migration Prisma SQL versionnée, comme les contraintes `CHECK`, après
 quoi elle est déployée par le mécanisme ordinaire. Son compte se mesure, il ne se
 recopie pas.
 
