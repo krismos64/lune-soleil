@@ -73,7 +73,14 @@ sources officielles et, si nécessaire, auprès d'un professionnel.
 
 Français orthographiquement correct, tous les accents présents. Aucun tiret
 cadratin ni demi-cadratin. Aucun secret, aucune valeur de clé, aucune donnée
-personnelle de l'exploitante ou d'une cliente : le dépôt est public.
+personnelle de l'exploitante ou d'un client : le dépôt est public.
+
+**Ne pas écrire d'état transitoire au présent.** Une phrase du type « tant que tel
+dossier est vide » ou « la table compte tant de contraintes » se périme sans que
+rien ne le signale. Écrire la règle, et pour un compte, la commande qui le
+produit. <!-- [exemple-perimable] -->
+
+`./scripts/verifier-config-claude.sh` signale ces formulations.
 
 ## Un ADR n'écrase pas le cahier des charges
 
@@ -81,11 +88,39 @@ Quand une décision contredit le cahier des charges, l'ADR **l'amende** et le di
 explicitement, en citant la section concernée. Le document d'origine n'est pas
 réécrit. C'est le mécanisme prévu par sa section 1.2.
 
-## Après rédaction
+## Après rédaction, quatre gestes
 
-Committer le fichier. Mettre à jour le ticket Jira associé avec le chemin du
-fichier et le hash du commit. Si la décision débloque une story, le signaler.
+YOU MUST faire les quatre, un ADR accepté qu'aucune table ne référence sera
+contredit par une future session qui ne l'a pas lu.
+
+1. **Ajouter la ligne dans la table de `docs/REFERENCES.md`**, section « ADR
+   acceptés » : identifiant, sujet, et **à lire avant de toucher à quoi**. Cette
+   troisième colonne est celle qui sert : c'est elle qui fait qu'une session
+   travaillant sur le stock sait qu'elle doit lire ADR-006.
+2. **Committer**, passer en pull request, fusionner. Un ADR sur une branche locale
+   n'est pas opposable.
+3. **Mettre à jour le ticket Jira** avec le chemin du fichier et le hash du
+   commit. Si la décision débloque ou bloque une story, le dire explicitement dans
+   les deux tickets.
+4. **Vérifier ce que l'ADR périme.** Une décision structurante contredit presque
+   toujours quelque chose : une description de ticket, une règle de
+   `.claude/rules/`, un passage d'un document d'architecture. Chercher les
+   occurrences et les corriger dans la même story, ou créer le ticket qui le fera.
+
+Le point 4 n'est pas théorique. ADR-025 a été accepté le 29 juillet en laissant
+LS-27 annoncer un tarif unique et `.env.example` ne porter qu'une variable de
+tarif : l'écart n'a été corrigé que le 30, après avoir été signalé de l'extérieur.
+ADR-026 a rendu fausse la table des blocs de fiche produit de
+`frontend-design.md`, corrigée dans la même story.
 
 Si la décision remplace un ADR existant, marquer l'ancien comme remplacé plutôt
-que de le supprimer : l'historique des décisions fait partie de la valeur du
-dépôt.
+que de le supprimer, et **retirer sa ligne de la table** ou la marquer comme telle :
+l'historique des décisions fait partie de la valeur du dépôt, mais la table
+d'aiguillage ne doit pointer que vers des décisions en vigueur.
+
+## Le contrôle qui rattrape l'oubli
+
+`./scripts/verifier-config-claude.sh` compare les ADR de `docs/adr/` à la table de
+`docs/REFERENCES.md` et signale tout écart. Un hook `Stop` le lance en fin de
+session. Ce n'est pas une raison de sauter le point 1 : le hook avertit, il ne
+corrige pas.

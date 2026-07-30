@@ -132,6 +132,42 @@ et ce qui ne l'a pas été.
 Commit avec un message descriptif référençant le ticket. Jamais de
 `Co-Authored-By` dans ce projet.
 
+### Ce que le travail propage, à parcourir avant de clore
+
+Une modification ne s'arrête presque jamais au fichier modifié. Cette table dit
+quoi mettre à jour selon ce qui a été touché. La parcourir ligne à ligne, et dire
+pour chaque ligne concernée ce qui a été fait.
+
+| Si la story a touché | Alors mettre à jour |
+|---|---|
+| `prisma/schema.prisma` | `schema.sql`, les fichiers de contraintes, `verifier-schema.sh`, `MODELE-LOGIQUE.md`, `MODELE-CONCEPTUEL.md` si une règle numérotée change |
+| une règle de gestion numérotée | `MODELE-CONCEPTUEL.md`, la règle de `.claude/rules/` correspondante, et `verifier-schema.sh` qui doit l'exercer |
+| un ADR accepté | la table de `docs/REFERENCES.md`, et **ce que l'ADR périme** : descriptions de tickets, règles, documents d'architecture |
+| `src/app/` ou `src/components/` | `frontend-design.md` si l'ordre des blocs ou une source de donnée change |
+| une variable de configuration | `.env.example`, et le ticket qui porte la décision commerciale correspondante |
+| une commande npm ou un script | `README.md`, et la section Commandes de `CLAUDE.md` si elle la cite |
+| un piège rencontré deux fois | une fiche mémoire, plus un contrôle automatique si le piège est mécaniquement détectable |
+| la config Claude Code, skills, agents, hooks | `docs/REFERENCES.md` si l'aiguillage change, `CLAUDE.md` s'il dépasse 200 lignes |
+
+**Le dernier point compte autant que les autres.** `CLAUDE.md` a atteint 312
+lignes avant qu'on s'en aperçoive, et quatre de ses affirmations étaient devenues
+fausses.
+
+### Le contrôle qui rattrape les oublis mécaniques
+
+```bash
+./scripts/verifier-config-claude.sh
+```
+
+Il vérifie ce qui est mesurable : ADR absent de la table d'aiguillage, `CLAUDE.md`
+au-delà de 200 lignes, renvoi vers un fichier inexistant, fiche mémoire hors
+index, lien mémoire mort, journal manquant alors que du code a été commité, et
+formulations qui se périment.
+
+Un hook `Stop` le lance en fin de session. **Il avertit, il ne corrige pas**, et
+il ne dit rien de ce qui relève du jugement : la pertinence d'une fiche mémoire ou
+la justesse d'un ADR se relisent.
+
 ### Un commit local ne livre rien
 
 **Le canal Dépôt n'est pas clos tant que le travail est sur `main` distante.**

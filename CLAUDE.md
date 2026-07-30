@@ -13,13 +13,12 @@ npm ci && npm run type-check && npm run lint && npm run build
 
 ./prisma/migrations/manual/verifier-schema.sh  # schéma sur base réelle, exige Docker
 ./scripts/verifier-regles.sh                   # .claude/rules/ contre le schéma
-./scripts/verifier-regles-mutation.sh          # prouve le précédent par mutation
+./scripts/verifier-config-claude.sh            # cohérence config, ADR, mémoire, journal
 ```
 
-Liste complète dans `README.md`. `npm audit` doit rester à **zéro**, trois
-overrides y contribuent, documentés dans `package.json`. **Pas encore
-disponibles** : base locale et `prisma migrate dev` en LS-66, `npm run test` et
-`test:e2e` en LS-68.
+Liste complète dans `README.md`, dont les scripts de mutation qui prouvent les deux
+derniers. `npm audit` doit rester à **zéro**. **Pas encore disponibles** : base
+locale et `prisma migrate dev` en LS-66, `npm run test` en LS-68.
 
 ## Architecture
 

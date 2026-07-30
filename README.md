@@ -126,18 +126,27 @@ npm run test
 
 ### Ce qui fonctionne dès maintenant
 
-Quatre scripts de vérification, sans installation :
+Cinq scripts de vérification, sans installation :
 
 ```bash
 ./prisma/migrations/manual/verifier-schema.sh  # schéma sur base réelle, exige Docker
 ./scripts/verifier-regles.sh                   # .claude/rules/ contre le schéma
 ./scripts/verifier-regles-mutation.sh          # prouve le précédent par mutation
+./scripts/verifier-config-claude.sh            # cohérence de la config Claude Code
 ./docs/prototypes/interblocage-panier.sh       # interblocage sur panier, exige Docker
 ```
 
 Le script de mutation réinjecte six fois un défaut réel et exige que
 `verifier-regles.sh` échoue à chaque fois. Un contrôle vert ne prouve rien tant
 qu'il n'a pas échoué sur le défaut qu'il prétend attraper.
+
+`verifier-config-claude.sh` contrôle ce qui dérive sans casser aucun test : un ADR
+absent de la table d'aiguillage de `docs/REFERENCES.md`, un `CLAUDE.md` au-delà de
+200 lignes, un renvoi vers un fichier inexistant, une fiche mémoire hors index, un
+journal manquant alors que du code a été commité. Un hook `Stop` le lance en fin de
+session, et `--strict` le rend bloquant pour l'intégration continue de LS-69.
+
+Il a été prouvé par six mutations, une par contrôle, toutes détectées.
 
 ## Secrets
 
