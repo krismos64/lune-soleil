@@ -1,0 +1,43 @@
+/*
+ * Styles globaux. Les couleurs et espacements viennent tous de
+ * src/styles/tokens.css, fixé par ADR-022. Aucune valeur hexadécimale ici.
+ *
+ * Pas de thème sombre : la palette de la boutique est claire et chaleureuse, et
+ * un thème sombre inventé ici contredirait ADR-022.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* Jamais de taille en px sur la racine : casse le zoom du navigateur. */
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ls-background);
+  color: var(--ls-text);
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+  line-height: 1.6;
+}
+
+/* Focus visible, jamais supprimé sans remplacement. */
+:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+img,
+picture,
+svg {
+  max-width: 100%;
+  height: auto;
+}

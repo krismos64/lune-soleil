@@ -1,0 +1,56 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+
+    /*
+     * Mode strict et au-dela. Les options qui suivent ne sont pas activees par
+     * `strict` et comptent particulierement sur ce projet.
+     *
+     * `noUncheckedIndexedAccess` : un acces par index rend `T | undefined`.
+     * Sur un panier ou une ligne de commande, `lignes[0].prixCentimes` sans
+     * verification est une erreur de calcul monetaire silencieuse.
+     *
+     * `exactOptionalPropertyTypes` : interdit d'affecter `undefined` a une
+     * propriete optionnelle. Distingue « absent » de « explicitement vide »,
+     * ce qui compte sur les champs nullables du schema.
+     *
+     * `noFallthroughCasesInSwitch` : filet sur les machines a etats, statut de
+     * commande et de paiement.
+     */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
+    "**/*.mts"
+  ],
+  "exclude": ["node_modules"]
+}
