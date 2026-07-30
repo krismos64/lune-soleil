@@ -149,10 +149,9 @@ génère et ne s'édite pas.
 configurés, sans jamais lire les identifiants sous-jacents.
 
 **Migrations de production** : autonomes, mais **toujours** via
-`./scripts/migrate-production.sh`, jamais `prisma migrate deploy` en direct, ses
-garde-fous étant détaillés dans `.claude/rules/database.md`. Cette autonomie
-tient à ces garde-fous : si l'un d'eux ne peut pas conclure, le script bloque et
-la migration attend un arbitrage humain.
+`./scripts/migrate-production.sh`, jamais `prisma migrate deploy` en direct.
+L'autonomie tient à ses garde-fous, détaillés dans `.claude/rules/database.md` :
+un garde-fou qui ne peut pas conclure bloque la migration.
 
 ## Agents
 
