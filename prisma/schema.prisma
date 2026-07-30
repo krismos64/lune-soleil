@@ -280,6 +280,20 @@ model MouvementStock {
   type       TypeMouvementStock
   quantite   Int // signe selon le type
   canal      String?
+  // LS-63. Le prix réellement pratiqué au moment de la vente, figé. Sans lui, le
+  // chiffre d'affaires des marchés n'est pas calculable : le reconstruire depuis
+  // `Variante.prixCentimes` violerait l'invariant 3, le prix du catalogue
+  // pouvant avoir changé, et une remise de marché n'y figurant jamais.
+  //
+  // Le prix unitaire et non un total encaissé, même motif que
+  // `LigneCommande.totalLigneCentimes` écarté : le total vaut
+  // `quantite * prixUnitaireFigeCentimes`, deux colonnes de la même ligne, et un
+  // total redondant se désynchronise sans qu'aucune contrainte ne le détecte.
+  //
+  // Nullable au type, obligatoire par CHECK sur VENTE_EXTERNE seulement. Une
+  // ENTREE de réassort ou un AJUSTEMENT d'inventaire n'encaissent rien, leur
+  // imposer un montant obligerait à écrire un zéro qui mentirait.
+  prixUnitaireFigeCentimes Int?  @map("prix_unitaire_fige_centimes")
   motif      String?
   acteurId   String?            @map("acteur_id") // S9, nul si origine SYSTEME
   origine    OrigineEcriture // S9, un webhook n'est pas une personne
@@ -293,6 +307,10 @@ model MouvementStock {
   // et non la commande seule : un panier à deux articles produit deux mouvements.
   @@unique([commandeId, varianteId], where: raw("type = 'VENTE_WEB'"), map: "mouvement_vente_web_unique")
   @@index([varianteId], map: "mouvement_variante_idx") // historique d'une pièce, et contrôle RESTRICT
+  // LS-63. Toute statistique de vente externe et le futur e-reporting de LS-35
+  // bornent une période puis regroupent par type. Sans cet index, chaque calcul
+  // balaie l'intégralité du journal des mouvements, qui ne fait que croître.
+  @@index([creeA, type], map: "mouvement_periode_idx")
   @@map("mouvement_stock")
 }
 

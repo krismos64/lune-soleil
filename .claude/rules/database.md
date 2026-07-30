@@ -96,6 +96,36 @@ variante. L'administratrice peut annuler explicitement la réservation après
 confirmation. Sans cette règle, une pièce vendue sur un marché pendant qu'un
 client paie en ligne produit une commande payée sans stock.
 
+## Une vente externe porte toujours son montant
+
+`mouvement_stock.prix_unitaire_fige_centimes` est **obligatoire sur
+`VENTE_EXTERNE`**, garanti par `chk_mouvement_vente_externe_prix`. C'est le prix
+réellement encaissé sur le marché, remise comprise, figé au moment de la vente.
+
+```sql
+CHECK (type <> 'VENTE_EXTERNE' OR prix_unitaire_fige_centimes IS NOT NULL)
+```
+
+**Ne jamais reconstruire ce montant depuis `variante.prix_centimes`.** C'est le
+prix actuel du catalogue : l'utiliser pour une vente passée viole l'invariant 3,
+au même titre que recalculer une facture depuis le catalogue. Une révision de prix
+gonflerait rétroactivement le chiffre d'affaires d'un mois clos, et une remise de
+stand n'apparaît jamais au catalogue.
+
+Le total encaissé vaut `quantite * prix_unitaire_fige_centimes`, il n'est **pas**
+stocké : deux colonnes de la même ligne. Même motif que le total de ligne écarté
+de `ligne_commande`, un montant redondant se désynchronise sans qu'aucune
+contrainte ne le détecte.
+
+**La contrainte est une implication, pas une équivalence**, contrairement aux deux
+`CHECK` de mode de livraison d'ADR-025. Un prix reste légitime sur un `RETOUR` ou
+un `AJUSTEMENT` : c'est ce qui rend possible le mouvement compensateur qui corrige
+une vente externe erronée, un mouvement de stock étant immuable. Ne pas
+« resserrer » cette contrainte en équivalence, cela casserait la correction.
+
+Détail et arbitrage dans `docs/architecture/MODELE-CONCEPTUEL.md`, domaine 2, et
+règles de calcul dans `docs/architecture/STATISTIQUES.md`.
+
 ## Contraintes minimales attendues
 
 ```
@@ -108,6 +138,7 @@ CHECK   quantite_reservee >= 0
 CHECK   quantite_physique - quantite_reservee >= 0
 CHECK   ligne_commande.quantite > 0
 CHECK   facture.montant_avoir_centimes <= facture.montant_total_centimes
+CHECK   type <> 'VENTE_EXTERNE' OR prix_unitaire_fige_centimes IS NOT NULL
 INDEX   statut, date, utilisateur, commande, reference, expiration
 ```
 
