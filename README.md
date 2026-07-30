@@ -112,25 +112,66 @@ npm run format     # Prettier, code seulement, pas la documentation
 `npm audit` doit rester à **zéro vulnérabilité**. Trois overrides y contribuent,
 documentés dans `package.json` avec la condition de leur retrait.
 
-### Ce qui n'existe pas encore
+### Base de données locale
 
-La base de données locale, la migration Prisma, les tests et l'intégration
-continue arrivent avec les stories suivantes de la phase 1, LS-66 à LS-69. Les
-commandes ci-dessous **ne fonctionneront qu'à ce moment** :
+PostgreSQL 18 dans Docker, LS-66. Trois commandes suffisent sur un clone neuf :
 
 ```bash
-cp .env.example .env    # renseigner les valeurs locales
-docker compose up -d db # base PostgreSQL locale
-npx prisma migrate dev
+cp .env.example .env               # puis renseigner les valeurs, voir plus bas
+npm run db:preparer                # conteneur, migrations, contraintes, client
+npm run db:verifier                # les contrôles du modèle sur cette base
+```
+
+`.env` porte deux jeux de variables qui doivent **concorder** : `DATABASE_URL`
+que lit Prisma, et les `POSTGRES_*` que lit `docker-compose.yml`. Un mot de passe
+différent d'un côté produit une erreur d'authentification à la migration, loin de
+sa cause. Générer le mot de passe local avec `openssl rand -base64 24`.
+
+| Commande | Effet |
+| --- | --- |
+| `npm run db:demarrer` | démarre le conteneur seul |
+| `npm run db:arreter` | arrête le conteneur, conserve les données |
+| `npm run db:preparer` | démarre, applique les migrations puis le SQL non généré |
+| `npm run db:reinitialiser` | **détruit le volume** et reconstruit tout |
+| `npm run db:verifier` | les contrôles sur la base issue de la migration |
+| `npm run db:verifier:conception` | les mêmes sur un conteneur jetable, SQL de référence |
+| `npm run db:console` | ouvre `psql` sur la base locale |
+| `npm run db:studio` | interface graphique Prisma Studio |
+
+**Créer une migration reste un geste manuel**, après modification de
+`prisma/schema.prisma` :
+
+```bash
+npx prisma migrate dev --name description_du_changement
+```
+
+`db:preparer` ne le fait pas et ne peut pas le faire : `migrate dev` est
+interactif et sort en erreur dans un script. Le script emploie `migrate deploy`,
+qui applique les migrations existantes sans jamais en engendrer.
+
+Les deux modes de `db:verifier` ne se remplacent pas. Le mode conception valide
+le SQL de référence de `prisma/sql-manuel/`, le mode par défaut valide ce que
+Prisma a réellement créé. Une divergence entre `schema.prisma` et `schema.sql`
+n'est visible que par le second.
+
+`prisma/sql-manuel/` porte les contraintes `CHECK` et l'unicité différable que
+Prisma ne sait pas générer. **La production ne les reçoit pas** tant que LS-67
+ne les a pas portées dans une migration versionnée.
+
+### Ce qui n'existe pas encore
+
+Les tests et l'intégration continue arrivent avec LS-68 et LS-69 :
+
+```bash
 npm run test
 ```
 
-### Ce qui fonctionne dès maintenant
+### Scripts de vérification
 
-Sept scripts de vérification, sans installation :
+Sept scripts, dont trois de mutation qui prouvent les autres :
 
 ```bash
-./prisma/migrations/manual/verifier-schema.sh    # schéma sur base réelle, exige Docker
+./prisma/sql-manuel/verifier-schema.sh           # schéma sur base réelle, exige Docker
 ./scripts/verifier-regles.sh                     # .claude/rules/ contre le schéma
 ./scripts/verifier-regles-mutation.sh            # prouve le précédent par mutation
 ./scripts/verifier-config-claude.sh              # cohérence de la config Claude Code

@@ -1416,7 +1416,7 @@ manuel. À la différence des `CHECK` d'ADR-006, que Prisma ne génère pas du t
 
 Un index oublié ne fait rien échouer, le défaut reste invisible jusqu'à
 l'incident : c'est ce qui justifie le contrôle automatisé de
-`prisma/migrations/manual/verifier-schema.sh`.
+`prisma/sql-manuel/verifier-schema.sh`.
 
 **Le rôle se lit dans la session, jamais dans une requête.** C'est l'application
 directe de l'invariant 2 au cas le plus tentant : un identifiant ou un rôle qui

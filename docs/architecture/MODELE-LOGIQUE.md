@@ -5,7 +5,7 @@
 | Ticket | LS-13 |
 | Entrée | `MODELE-CONCEPTUEL.md`, huit parcours, cinquante-sept cas d'erreur |
 | Vérifié sur | PostgreSQL 18.4, Prisma 7.9.1, Node 22.14.0 |
-| Livrables | `prisma/schema.prisma`, `prisma/migrations/manual/` |
+| Livrables | `prisma/schema.prisma`, `prisma/sql-manuel/` |
 
 Traduction du modèle conceptuel en schéma physique. Vingt-cinq tables, sept
 domaines, trente et une clés étrangères.
@@ -56,7 +56,7 @@ qu'affirmaient ADR-023 et le modèle conceptuel avant cette story. Les six index
 partiels du modèle sont produits par `prisma migrate diff`.
 
 Prisma ne génère **pas** les contraintes `CHECK`. ADR-006 reste exact sur ce
-point. Elles vivent dans `prisma/migrations/manual/001_contraintes_check.sql`,
+point. Elles vivent dans `prisma/sql-manuel/001_contraintes_check.sql`,
 **toutes à recopier** dans la migration Prisma en phase 1.
 
 Depuis LS-76 s'y ajoute un second fichier, `002_contraintes_unicite.sql`, qui
@@ -72,8 +72,8 @@ pour la phase 1, donc un écart d'une unité fait manquer une contrainte en
 silence. Les commandes qui donnent la réponse :
 
 ```bash
-grep -c "ADD CONSTRAINT" prisma/migrations/manual/001_contraintes_check.sql
-grep -c "ADD CONSTRAINT" prisma/migrations/manual/002_contraintes_unicite.sql
+grep -c "ADD CONSTRAINT" prisma/sql-manuel/001_contraintes_check.sql
+grep -c "ADD CONSTRAINT" prisma/sql-manuel/002_contraintes_unicite.sql
 ```
 
 ### La contrainte différable de LS-76, et son état transitoire
@@ -100,7 +100,7 @@ Deux conséquences pour l'implémentation :
   C'est pourquoi A6 impose un ordre d'écriture là où C22 ne l'impose pas
 
 **État transitoire, à ne pas figer.** Tant que ces contraintes ne vivent que dans
-`prisma/migrations/manual/`, `prisma migrate deploy` ne les applique pas. LS-67
+`prisma/sql-manuel/`, `prisma migrate deploy` ne les applique pas. LS-67
 doit les porter dans une migration Prisma SQL versionnée, après quoi elles sont
 déployées par le mécanisme ordinaire en développement, en intégration continue et
 en production. Les fichiers de ce dossier restent ensuite une source de
@@ -213,7 +213,7 @@ statistique bornant une période avant de regrouper par type.
 
 ## Vérification
 
-`prisma/migrations/manual/verifier-schema.sh` rejoue soixante-huit contrôles sur
+`prisma/sql-manuel/verifier-schema.sh` rejoue soixante-huit contrôles sur
 une base PostgreSQL 18.4 jetable. Il couvre ce que le prototype d'ADR-006
 vérifiait sur deux tables, et l'étend aux contraintes nées de LS-37 à LS-41, puis
 au montant des ventes externes de LS-63.

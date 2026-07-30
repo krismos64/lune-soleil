@@ -10,15 +10,15 @@ les versions impaires de Node.
 
 ```bash
 npm ci && npm run type-check && npm run lint && npm run build
-
-./prisma/migrations/manual/verifier-schema.sh  # schéma sur base réelle, exige Docker
-./scripts/verifier-regles.sh                   # .claude/rules/ contre le schéma
-./scripts/verifier-config-claude.sh            # cohérence config, ADR, mémoire, journal
+npm run db:preparer    # base locale : conteneur, migrations, SQL non généré
+npm run db:verifier    # les contrôles du modèle sur cette base, exige Docker
+./scripts/verifier-regles.sh         # .claude/rules/ contre le schéma
+./scripts/verifier-config-claude.sh  # cohérence config, ADR, mémoire, journal
 ```
 
-Liste complète dans `README.md`, dont les scripts de mutation qui prouvent les deux
-derniers. `npm audit` doit rester à **zéro**. **Pas encore disponibles** : base
-locale et `prisma migrate dev` en LS-66, `npm run test` en LS-68.
+Liste complète dans `README.md`. `npm audit` reste à **zéro**, `npm run test`
+arrive en LS-68. Une migration se **crée** à la main, `npx prisma migrate dev
+--name sujet`, cette commande étant interactive et refusant un script.
 
 ## Architecture
 
