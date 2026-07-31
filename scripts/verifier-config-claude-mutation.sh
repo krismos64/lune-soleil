@@ -21,7 +21,10 @@ cd "$(cd "$(dirname "$0")/.." && pwd)" || exit 1
 CONTROLE=./scripts/verifier-config-claude.sh
 MEM="${CLAUDE_MEMORY_DIR:-$HOME/.claude/projects/-Users-chris-Documents-sites-lune-soleil/memory}"
 TMP=$(mktemp -d)
-trap 'rm -rf "$TMP"' EXIT
+# La fiche de mutation 8 est créée dans le répertoire de mémoire, hors de $TMP :
+# le `trap` doit l'emporter aussi, sans quoi une sortie en erreur la laisserait
+# derrière elle et la session suivante la lirait comme une vraie fiche.
+trap 'rm -rf "$TMP"; rm -f "$MEM/lune-soleil-fiche-de-mutation-temporaire.md"' EXIT
 
 total=0
 detectees=0
@@ -121,6 +124,31 @@ if [ -f "$MEM/MEMORY.md" ]; then
 
   printf '\nVoir [[fiche-inexistante-de-mutation]].\n' >> "$MEM/MEMORY.md"
   mutation "lien mémoire mort" "lien mémoire"
+
+  # 8. Le CONTENU d'une fiche, et non sa seule présence dans l'index.
+  #
+  # Ajouté le 31 juillet 2026, sur un défaut réel : la fiche de protection de
+  # branche a décrit `enforce_admins` à `false` plusieurs heures après son
+  # passage à `true`, et rien ne l'a signalé. Les sept mutations précédentes
+  # restaient vertes, aucune ne regardait ce que les fiches racontent.
+  #
+  # La fiche mutée est créée pour l'occasion puis supprimée : muter une vraie
+  # fiche ferait dépendre la preuve de son contenu du jour.
+  fiche_test="$MEM/lune-soleil-fiche-de-mutation-temporaire.md"
+  cat > "$fiche_test" <<'FICHE'
+---
+name: lune-soleil-fiche-de-mutation-temporaire
+description: Fiche creee par le script de mutation, supprimee aussitot
+metadata:
+  type: project
+---
+
+Le reglage reste volontairement à `false`, ce qui se périmera au premier
+changement sans que rien ne le signale.
+FICHE
+  printf -- '- [Fiche de mutation](lune-soleil-fiche-de-mutation-temporaire.md) : temporaire\n' >> "$MEM/MEMORY.md"
+  mutation "état transitoire dans une fiche mémoire" "état transitoire"
+  rm -f "$fiche_test"
 else
   echo "  IGNORE  contrôles de mémoire, MEMORY.md introuvable à $MEM"
 fi
