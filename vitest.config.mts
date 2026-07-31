@@ -21,13 +21,23 @@
  */
 import { defineConfig } from "vitest/config";
 
+/**
+ * L'alias `@/` est declare PAR PROJET et non une seule fois a la racine.
+ *
+ * Un projet Vitest n'herite pas du `resolve` de la configuration englobante :
+ * il porte sa propre resolution de modules. Declare seulement au sommet, le
+ * `resolve` sert la configuration racine, et tout import `@/...` depuis un
+ * fichier de test echoue en « Cannot find package '@/services/...' ». Mesure
+ * sur ce depot en LS-50, le premier test a importer le code applicatif.
+ */
+const resolutionAlias = { tsconfigPaths: true } as const;
+
 export default defineConfig({
-  resolve: {
-    tsconfigPaths: true,
-  },
+  resolve: resolutionAlias,
   test: {
     projects: [
       {
+        resolve: resolutionAlias,
         test: {
           name: "unitaire",
           environment: "node",
@@ -35,6 +45,7 @@ export default defineConfig({
         },
       },
       {
+        resolve: resolutionAlias,
         test: {
           name: "integration",
           environment: "node",
