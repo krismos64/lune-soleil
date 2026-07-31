@@ -87,11 +87,60 @@ dans le même ordre et l'un attend l'autre au lieu de l'interbloquer. Le
 traitement de l'erreur `40P01` reste nécessaire en dernier recours, un
 interblocage restant possible avec une autre transaction concurrente.
 
-Cette correction est portée par **LS-50**, à traiter avant la phase 3 : elle
-suppose un service de réservation qui n'existe pas encore.
-
 L'alternative écartée plus bas reste écartée pour la même raison, aggravée :
 `SELECT ... FOR UPDATE` sérialise en plus les accès à une variante unique.
+
+### La solution retenue, LS-50
+
+Corrigé le 31 juillet 2026. Trois mécanismes, portés par `services/reservation.ts`
+et non par le SQL : ils règlent l'**ordre**, la **répétition** et la **sortie** des
+instructions, pas leur contenu.
+
+**Le tri déterministe**, `ordonnerLignes`. Les lignes du panier sont triées par
+identifiant de variante croissant avant toute mise à jour. Comparaison binaire et
+non `localeCompare`, dont l'ordre dépend de la locale d'exécution : deux processus
+applicatifs qui trieraient différemment reformeraient exactement le cycle que ce
+tri supprime.
+
+**Le rejeu borné**, trois tentatives. Le tri élimine les cycles entre deux
+réservations de panier, pas ceux qu'une transaction concurrente crée par un autre
+chemin, vente externe ou libération de réservations expirées. Au-delà de trois
+tentatives, l'échec est structurel et remonte en `InterblocagePersistantError`,
+distincte d'un refus métier : le stock était peut-être disponible, c'est la
+contention qui a empêché de conclure.
+
+**La sortie par exception.** Un refus métier lève une erreur interne au lieu de
+rendre une valeur, et `reserverPanier` la traduit ensuite en résultat. Ce détour
+n'est pas décoratif : `$transaction` **valide** dès que la fonction rend une
+valeur et n'annule que si elle **lève**. La première version sortait par un
+`return` en croyant l'inverse, et laissait committer les lignes déjà réservées.
+
+**Le même événement porte trois formes** selon le chemin d'accès. Le pilote `pg`
+rend le `SQLSTATE` brut, `40P01`. L'API typée de Prisma traduit en `P2034`. Une
+requête **brute** échoue en `P2010`, générique, le `40P01` n'apparaissant que dans
+`meta.driverAdapterError.cause.code`. **La réservation passe par
+`$queryRawUnsafe`, donc reçoit la troisième forme** : ne traiter que les deux
+premières rendait le rejeu inatteignable par son seul chemin réel. `P2010` seul ne
+vaut pas interblocage, il couvre toute erreur de requête brute.
+
+**Ce que le tri ne fait pas.** Il ne sérialise rien et n'évite aucune attente :
+deux paniers portant la même pièce se disputent toujours la même ligne. Il
+garantit que cette attente se résout au lieu de tourner en cycle.
+
+**Preuve par mutation**, sur deux niveaux.
+`tests/integration/reservation-panier.sequential.test.ts` couvre le motif SQL : le
+tri retiré, le test décisif rougit sur `expected [ 'INTERBLOCAGE', 'SERVI' ] to not
+include 'INTERBLOCAGE'`. L'assertion porte sur la **nature de l'issue** et non sur
+l'état final du stock, lequel reste rigoureusement correct sous interblocage,
+PostgreSQL annulant une des deux transactions. Compter les réservations ne
+distinguerait donc pas le code corrigé du code fautif.
+
+`tests/integration/reservation-service.sequential.test.ts` couvre le **service
+lui-même**, appelé sur base réelle. Il existe parce que son absence a laissé passer
+les deux défauts ci-dessus : reproduire la mécanique du service en SQL ne prouve
+rien sur le code exécuté. La reproduction faisait un `ROLLBACK` explicite et lisait
+`erreur.code` directement, exactement les deux points sur lesquels le service était
+faux.
 
 ## Vérification par prototype
 

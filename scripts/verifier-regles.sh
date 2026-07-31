@@ -64,7 +64,22 @@ cites="$(mktemp)"
 #
 # `dangerouslySetInnerHTML` vient d'ADR-026 : `frontend-design.md` l'interdit sur
 # le contenu des sections de fiche produit. C'est une API React, pas une colonne.
-hors_schema="dangerouslySetInnerHTML"
+#
+# Les quatre suivants viennent de LS-50 et inaugurent une CATEGORIE NOUVELLE : du
+# code applicatif et des API de bibliothèque cités par une règle. Jusque-là les
+# règles ne citaient que du schéma, `src/` étant vide.
+#
+# - `ordonnerLignes` : fonction de `src/services/reservation.ts`
+# - `localeCompare` : API JavaScript, citée pour être écartée, son ordre dépendant
+#   de la locale d'exécution
+# - `queryRawUnsafe` : API Prisma, chemin par lequel passe la réservation
+# - `driverAdapterError` : champ de l'objet d'erreur de Prisma, où se trouve le
+#   `SQLSTATE` d'origine sur une requête brute
+#
+# La liste grandira à mesure que `src/` se remplit. Le jour où elle devient
+# longue, le bon geste est de confronter ces identifiants au CODE plutôt que de
+# les exempter, pas d'allonger l'exemption indéfiniment.
+hors_schema="dangerouslySetInnerHTML ordonnerLignes localeCompare queryRawUnsafe driverAdapterError"
 
 # Un identifiant qualifié `table.colonne` est accepté si ses deux moitiés le
 # sont. Sans cette étape, `ligne_commande.quantite` serait signalé alors qu'il
