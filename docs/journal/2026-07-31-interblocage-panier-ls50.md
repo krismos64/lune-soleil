@@ -3,6 +3,7 @@
 | Champ | Valeur |
 |---|---|
 | Ticket | LS-50 |
+| Commits | `075e941` le code, `7ea1242` la documentation, PR 61 |
 | Contrôles | 37 Vitest (17 avant, 20 ajoutés), types, lint, format, règles, config stricte, audit à zéro |
 | Mutations | 6 injectées, 6 détectées |
 | Défauts trouvés après coup | 2, par relecture critique, tous deux dans le service |
