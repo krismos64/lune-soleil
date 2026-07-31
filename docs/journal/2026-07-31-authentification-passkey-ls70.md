@@ -3,9 +3,10 @@
 | Champ | Valeur |
 |---|---|
 | Ticket | LS-70 |
-| Commits | `afbcbbf` le code, PR à ouvrir |
-| Contrôles | 54 Vitest (37 avant, 17 ajoutés), 24 Playwright (12 avant, 12 ajoutés), types, lint, format, règles, config stricte, 92 contrôles de schéma, audit à zéro |
-| Mutations | 9 injectées, **8 détectées d'emblée, 1 non détectée** |
+| Commits | `afbcbbf` le code, `772448d` le journal, `1b9c1df` les corrections de revue |
+| Contrôles | 58 Vitest (37 avant, 21 ajoutés), 24 Playwright (12 avant, 12 ajoutés), types, lint, format, règles, config stricte, 93 contrôles de schéma, audit à zéro |
+| Mutations | 11 injectées à la main, **9 détectées d'emblée, 2 non détectées**. Le script rejouable passe de 7 à 12 cas, tous détectés |
+| Défauts trouvés après coup | **3**, par relecture critique, dont un de sécurité réel |
 | Nouveaux fichiers | 4 modèles Prisma, 1 migration, 7 modules `src/`, 2 fichiers de test |
 
 Sixième page du 31 juillet. Better Auth entre dans le projet, et avec lui la
@@ -159,6 +160,67 @@ RESULTAT: DEMARRE
 ```
 
 **Un avertissement que rien ne lit n'est pas un garde-fou.**
+
+## Le défaut que je n'ai pas vu, trouvé par la relecture
+
+Le plus grave des trois, et il tenait dans un repli qui semblait défensif :
+
+```ts
+const urlBase = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
+```
+
+Better Auth décide de l'attribut `Secure` du cookie de session par cette
+chaîne : `baseURL ? baseURL.startsWith("https://") : isProduction`. Il possède
+donc un repli qui pose `Secure` tout seul quand aucune URL n'est connue.
+**Fournir une valeur par défaut rend `baseURL` toujours définie**, la branche
+`isProduction` devient inatteignable, et la décision se prend sur
+`startsWith("https://")` d'une URL en `http://localhost`, donc faux.
+
+Mesuré en `NODE_ENV=production` :
+
+```
+BETTER_AUTH_URL oubliée  -> SECURE=NON  PREFIXE=NON
+BETTER_AUTH_URL en https -> SECURE=OUI  PREFIXE=OUI
+```
+
+Le cookie de session de l'exploitante serait parti **en clair** sur toute
+requête HTTP vers le domaine, sept jours de validité, interceptable sur un
+réseau partagé.
+
+Ce qui rend ce défaut vicieux est son mode d'échec. Celui d'une URL *fausse*
+est bruyant et ferme la porte, `Invalid origin`. Celui-ci est silencieux et
+l'ouvre. Pire, les passkeys cesseraient de fonctionner, `rpID` valant
+`localhost`, ce qui ferait soupçonner WebAuthn pendant que le mot de passe de
+secours continue d'émettre des cookies non protégés.
+
+**Le repli défensif détruisait la protection qu'il croyait fournir.**
+
+Aucun de mes dix-sept tests ne regardait les attributs du cookie : ils ne
+lisaient que sa valeur, pour la rejouer. Un cookie sans `Secure` s'authentifie
+exactement comme un cookie protégé.
+
+## Deux garde-fous qui ne gardaient plus rien
+
+**Le SQL de référence ignorait les quatre tables.** Le mode conception construit
+sa base depuis `schema.sql` : il validait donc un schéma périmé en annonçant
+zéro échec. Mesure avant correction, 26 tables dans le fichier contre 30 en
+base. Le fichier avait déjà raté LS-67. Tables portées, plus un **contrôle de
+cardinalité** qui refuse désormais l'écart.
+
+**Trois mutations de LS-68 ne mutaient plus rien.** Elles visaient
+`tests/aide/reservation-sql.ts` quand LS-50 avait déplacé `SQL_RESERVER` dans le
+repository. Les substitutions ne trouvaient plus leur motif, ne modifiaient
+aucun caractère, et le script concluait « NON détecté, le test est aveugle » sur
+des tests parfaitement voyants, vérifié en mutant la vraie cible.
+
+**Le sens de l'échec était inversé**, ce qui est pire qu'une absence de
+contrôle : il accusait les tests à la place du script, et la correction évidente
+aurait été de réécrire des tests qui n'avaient rien. `mute` arrête maintenant
+tout quand une substitution ne modifie aucun caractère, prouvé en remettant la
+cible obsolète.
+
+Le script rejouable passe de sept à douze cas, **12 détectées sur 12**, et porte
+désormais les cinq mutations d'autorisation dont celle qui était restée verte.
 
 ## Deux choix de conception plus stricts que la bibliothèque
 
