@@ -1,10 +1,22 @@
 # Chaine d'integration continue, LS-69.
 #
 # Execute les huit controles de CONTRIBUTING.md sur chaque pull request vers
-# main. Avant cette story, aucun ne tournait automatiquement : ils dependaient de
-# quelqu'un qui pense a les lancer, et l'oubli s'est produit au moins trois fois,
-# dont un defaut de schema passe le 29 juillet 2026 alors que verifier-schema.sh
-# existait depuis deux jours.
+# main, et sur main apres fusion. Avant cette story, aucun ne tournait
+# automatiquement : ils dependaient de quelqu'un qui pense a les lancer, et
+# l'oubli s'est produit au moins trois fois, dont un defaut de schema passe le
+# 29 juillet 2026 alors que verifier-schema.sh existait depuis deux jours.
+#
+# CE FICHIER A ETE PROUVE ROUGE, et pas seulement vert. La pull request 59,
+# jetable et depuis fermee, portait chk_variante_pas_de_survente retiree du SQL
+# de reference : l'etape 6 a echoue sur « 91 reussites, 1 echecs » et la chaine
+# s'est arretee la. Un workflow jamais vu rouge n'est pas un workflow prouve.
+#
+# LA PROTECTION DE main NE S'APPLIQUE PAS AU PROPRIETAIRE DU DEPOT. Le controle
+# « Les huit controles de CONTRIBUTING » est requis et la pull request
+# obligatoire, mais enforce_admins vaut false par arbitrage du 31 juillet, pour
+# garder une sortie de secours. Un push direct depuis ce compte affiche les refus
+# PUIS REUSSIT QUAND MEME. Ne jamais tester ce reglage par un push reel sur main,
+# le cas s'est produit et a laisse le commit b550194 hors de toute pull request.
 #
 # UN SEUL JOB, ET NON HUIT EN PARALLELE. Les controles partagent l'installation
 # des dependances, la generation du client Prisma et la base PostgreSQL. Les

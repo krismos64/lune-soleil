@@ -17,10 +17,11 @@ npm run db:verifier    # les contrôles du modèle sur cette base, exige Docker
 ./scripts/verifier-config-claude.sh  # cohérence config, ADR, mémoire, journal
 ```
 
-Liste complète dans `README.md`. `npm audit` reste à **zéro**. Une migration se
-**crée** à la main, `npx prisma migrate dev --name sujet`, interactive donc
-impossible à scripter. Les tests d'intégration créent leur base éphémère : ne
-jamais les pointer sur celle de développement.
+Liste complète dans `README.md`, et `.github/workflows/controles.yml` rejoue tout
+cela sur chaque PR. `npm audit` reste à **zéro**. Une migration se **crée** à la
+main, `npx prisma migrate dev --name sujet`, interactive donc impossible à
+scripter. Les tests d'intégration créent leur base éphémère : ne jamais les
+pointer sur celle de développement.
 
 ## Architecture
 
@@ -80,11 +81,11 @@ interface et réponses de conversation.
 1. **Tous les accents présents.** L'API Jira accepte l'UTF-8, jamais « decision »
    ni « verifie ». Exception : les identifiants techniques restent en ASCII.
 2. **Aucun tiret cadratin ni demi-cadratin** (— ou –), marqueur de texte généré.
-3. **Ne pas accorder au féminin par défaut.** Écrire « le client », jamais « la
+3. **Ne pas accorder au féminin par défaut.** « Le client », jamais « la
    cliente » : une part notable des acheteurs est masculine, un homme qui offre un
-   bijou. Tourner les phrases sans accord de genre plutôt que d'écrire
-   « client(e) ». Exception, « l'administratrice » et « l'exploitante » désignent
-   une personne réelle. Formulations neutres dans `frontend-design.md`.
+   bijou. Tourner sans accord de genre plutôt qu'écrire « client(e) ». Exception,
+   « l'administratrice » et « l'exploitante » désignent une personne réelle.
+   Formulations neutres dans `frontend-design.md`.
 
 ## Interdits
 
@@ -93,7 +94,6 @@ interface et réponses de conversation.
 - Décider d'une obligation juridique. Les textes de loi se vérifient aux sources
 - Lire la valeur d'un secret dans un `.env`, une clé ou un certificat
 - Modifier une commande ou une facture réelle
-- Écrire un tiret cadratin dans un contenu Lune & Soleil
 - Introduire les données du prototype (noms, prix, stocks) comme données réelles
 
 ## Priorisation
@@ -158,10 +158,9 @@ Utiliser `ls-critical-reviewer` pour relire les zones à risque. Un agent projet
 dédié à la conteneurisation reste à créer, LS-31.
 
 **Ne pas invoquer les agents globaux `docker-devops`, `security-auditor` ni
-`nextjs-architect` sur ce projet** : calibrés sur NextAuth v5, PostgreSQL 16,
-Redis 7 et du multi-tenant, quand ici c'est Better Auth 1.6, PostgreSQL 18, aucun
-Redis, mono-tenant. `docker-devops` traite Redis comme requis, que le cahier des
-charges écarte.
+`nextjs-architect` ici** : calibrés sur NextAuth v5, PostgreSQL 16, Redis 7 et du
+multi-tenant, quand ce projet est en Better Auth 1.6, PostgreSQL 18, sans Redis
+et mono-tenant, que `docker-devops` traite pourtant comme requis.
 
 ## Conduite du travail
 
@@ -173,9 +172,10 @@ des commits absents de `main` distante.
 YOU MUST clore tout travail significatif sur les **quatre canaux**, et dire
 explicitement ce qui a été mis à jour :
 
-1. **Dépôt** : commité, **poussé, passé en pull request et fusionné sur `main`**.
-   Un commit local ne livre rien. `CONTRIBUTING.md` exige une PR même en solo,
-   même pour de la documentation, fusion en rebase après contrôles au vert
+1. **Dépôt** : commité, **poussé, passé en PR et fusionné sur `main`** en rebase,
+   même en solo, même pour de la documentation. `main` exige la PR et le contrôle
+   vert, sauf pour le propriétaire : un push direct affiche les refus **puis
+   réussit**, ne jamais tester ce réglage par un push réel
 2. **Journal** `docs/journal/` : fait, dérives, prochaine étape, état des tickets
 3. **Mémoire** : toute découverte non dérivable du code
 4. **Jira** : état réel de chaque critère, commit, ce qui reste
