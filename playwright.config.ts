@@ -76,5 +76,24 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     // Une construction Next.js complete depasse largement le delai par defaut.
     timeout: 180_000,
+    env: {
+      /*
+       * BETTER_AUTH_URL DOIT DESIGNER LE SERVEUR REELLEMENT SERVI, LS-70.
+       *
+       * Better Auth derive ses origines de confiance de `baseURL` et rejette
+       * toute requete venue d'ailleurs, protection CSRF. Sans cette ligne, la
+       * valeur de `.env` designe le port 3000 quand Playwright sert sur 3100 :
+       * chaque tentative de connexion est refusee en « Invalid origin » AVANT
+       * la verification des identifiants.
+       *
+       * Le test de connexion en echec passait alors au vert POUR LA MAUVAISE
+       * RAISON, un refus d'origine et non un refus d'identifiants. Un test qui
+       * verdit sans exercer le chemin qu'il pretend couvrir ne prouve rien.
+       *
+       * Le secret n'est pas repris ici : il vient de `.env`, dont ce processus
+       * herite, et sa presence est exigee au demarrage par `src/lib/auth.ts`.
+       */
+      BETTER_AUTH_URL: URL_BASE,
+    },
   },
 });

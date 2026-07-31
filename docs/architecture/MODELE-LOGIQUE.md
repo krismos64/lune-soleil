@@ -179,16 +179,45 @@ de `.claude/rules/database.md`. Sans elle, une commande dissociée redevient
 « sans propriétaire » et donc éligible au rattachement du parcours 6, ce qui
 rouvrirait l'historique d'un client parti.
 
-## Ce qui reste hors du schéma
+## Les entités d'authentification, LS-70
 
-**Les entités Better Auth**, session, compte et passkey. Elles sont générées par
-la bibliothèque en phase 1, conformément à ADR-021 pour l'administration et
-ADR-023 pour les clients. Le champ `role` de `Utilisateur` se déclare en
-`additionalFields` avec `input: false`, règle E11.
+Elles sont **dans le schéma** depuis LS-70, et écrites à la main comme le reste :
+`Session`, `Compte`, `Verification` et `Passkey`, plus trois colonnes ajoutées à
+`Utilisateur`, `nom`, `image` et `misAJourA`.
+
+Ce document annonçait qu'elles seraient « générées par la bibliothèque ». Le
+générateur de Better Auth a été écarté : il écrase les commentaires du fichier,
+ignore la convention snake_case de LS-13 et ne connaît pas `@db.Timestamptz(3)`,
+donc produirait des horodatages sans fuseau, contre l'invariant 8.
+
+| Table | Politique de suppression | Pourquoi |
+|---|---|---|
+| `session` | `CASCADE` | un jeton de connexion n'a aucune valeur sans son compte |
+| `compte` | `CASCADE` | idem, `password` y porte une **empreinte**, jamais le mot de passe |
+| `passkey` | `CASCADE` | une credential orpheline resterait un moyen d'accès sans répondant |
+| `verification` | aucune clé étrangère | `identifier` porte une adresse qui n'a pas encore de compte |
+
+Ce `CASCADE` contraste volontairement avec `Commande.utilisateurId`, en
+`SET NULL` : une commande survit à la suppression du compte, un moyen d'accès non.
+
+**Les noms de champs restent en camelCase anglais**, là où le reste du schéma est
+en français. Ce sont les clés du protocole de Better Auth, pas des champs métier :
+les renommer imposerait une entrée `fields:` par colonne, donc autant d'occasions
+de désynchroniser. Seuls les noms de tables suivent la convention du projet.
+
+**`passkey.credential_id` porte un `UNIQUE`** que le schéma de référence du plugin
+ne pose pas, il n'y met qu'un index ordinaire. Une credential WebAuthn est unique
+par construction, rien en base ne l'imposait : deux comptes pouvaient porter la
+même, et la recherche par credential à la connexion aurait eu deux comptes à
+départager. C'est le risque d'accès croisé qu'ADR-021 demande de couvrir.
+
+## Ce qui reste hors du schéma
 
 **Les contrôles applicatifs de niveau 3**, qu'aucune contrainte ne peut porter :
 C1 compte les lignes d'une autre table, L9 vérifie trois conditions à chaque
-lecture de jeton, A11 recoupe une écriture sur la session.
+lecture de jeton, A11 recoupe une écriture sur la session. Le champ `role` de
+`Utilisateur` se déclare en `additionalFields` avec `input: false`, règle E11,
+qui **ne couvre que les routes de Better Auth** : toute autre écriture y échappe.
 
 ## Le montant des ventes externes, LS-63
 
