@@ -59,10 +59,23 @@ Règles associées :
   verrou implicite est tenu jusqu'au `COMMIT` : deux paniers portant les mêmes
   pièces dans un ordre opposé s'interbloquent. Reproduit sur PostgreSQL 18,
   `docs/prototypes/interblocage-panier.sh`. Trier rend l'ordre de prise
-  identique pour tous, et l'un attend au lieu de bloquer.
-- Traiter malgré tout l'erreur `40P01` : un interblocage reste possible avec une
-  transaction concurrente qui touche les mêmes lignes par un autre chemin. La
-  réponse est de rejouer, jamais d'ignorer.
+  identique pour tous, et l'un attend au lieu de bloquer. Porté par
+  `ordonnerLignes` dans `src/services/reservation.ts`, LS-50, avec une
+  comparaison binaire et non `localeCompare`, dont l'ordre dépend de la locale.
+- Traiter malgré tout l'interblocage : il reste possible avec une transaction
+  concurrente qui touche les mêmes lignes par un autre chemin. La réponse est de
+  rejouer, jamais d'ignorer, et le rejeu est **borné**, trois tentatives.
+  **Trois formes désignent le même événement** : `40P01` rendu par le pilote
+  `pg`, `P2034` par l'API typée de Prisma, et `P2010` par une requête **brute**,
+  qui enfouit le `40P01` dans `meta.driverAdapterError.cause.code`. La
+  réservation passant par `$queryRawUnsafe`, **c'est la troisième forme qu'elle
+  reçoit** : ne tester que les deux premières rend le rejeu inatteignable.
+  Ne pas traiter `P2010` seul comme un interblocage, il couvre toute erreur de
+  requête brute : c'est le `40P01` imbriqué qui décide.
+- **Un refus métier sort de la transaction par une exception, jamais par un
+  `return`.** `$transaction` valide dès que la fonction rend une valeur et
+  n'annule que si elle lève. Un `return` laisse committer les lignes déjà
+  réservées, gelant une pièce disponible pour une commande refusée.
 
 ## Une variante ne se supprime jamais
 
