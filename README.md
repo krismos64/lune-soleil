@@ -155,8 +155,11 @@ Prisma a réellement créé. Une divergence entre `schema.prisma` et `schema.sql
 n'est visible que par le second.
 
 `prisma/sql-manuel/` porte les contraintes `CHECK` et l'unicité différable que
-Prisma ne sait pas générer. **La production ne les reçoit pas** tant que LS-67
-ne les a pas portées dans une migration versionnée.
+Prisma ne sait pas générer. Depuis LS-67 une migration versionnée les applique,
+production comprise ; ces fichiers servent de source de conception et de contrôle.
+**Ne pas les appliquer à la main** sur une base : la rendre conforme après coup
+masquerait une migration incomplète. `db:preparer` compare le compte obtenu à ces
+fichiers et échoue en cas d'écart.
 
 ### Ce qui n'existe pas encore
 

@@ -56,14 +56,15 @@ qu'affirmaient ADR-023 et le modèle conceptuel avant cette story. Les six index
 partiels du modèle sont produits par `prisma migrate diff`.
 
 Prisma ne génère **pas** les contraintes `CHECK`. ADR-006 reste exact sur ce
-point. Elles vivent dans `prisma/sql-manuel/001_contraintes_check.sql`,
-**toutes à recopier** dans la migration Prisma en phase 1.
+point. Leur source de conception est
+`prisma/sql-manuel/001_contraintes_check.sql`, et depuis LS-67 elles sont posées
+par une migration versionnée, donc déployées comme le reste du schéma.
 
-Depuis LS-76 s'y ajoute un second fichier, `002_contraintes_unicite.sql`, qui
-porte les contraintes `UNIQUE` que Prisma ne sait pas exprimer non plus. Il est
-séparé du premier parce que celui-ci porte des `CHECK` : y ranger une `UNIQUE`
-serait une catégorisation trompeuse. `verifier-schema.sh` applique les deux, dans
-l'ordre.
+Un second fichier, `002_contraintes_unicite.sql`, porte les contraintes `UNIQUE`
+que Prisma ne sait pas exprimer non plus, LS-76. Il est séparé du premier parce
+que celui-ci porte des `CHECK` : y ranger une `UNIQUE` serait une catégorisation
+trompeuse. `verifier-schema.sh` lit les deux pour confronter la base à
+l'intention.
 
 Leur nombre n'est pas écrit ici : il a déjà été faux une fois, ce document
 annonçant seize contraintes après que LS-45 en eut ajouté une dix-septième. Un
@@ -76,7 +77,7 @@ grep -c "ADD CONSTRAINT" prisma/sql-manuel/001_contraintes_check.sql
 grep -c "ADD CONSTRAINT" prisma/sql-manuel/002_contraintes_unicite.sql
 ```
 
-### La contrainte différable de LS-76, et son état transitoire
+### La contrainte différable de LS-76
 
 `section_produit_ordre_unique` est déclarée
 `UNIQUE (produit_id, ordre) DEFERRABLE INITIALLY DEFERRED`, ADR-026.
@@ -99,13 +100,17 @@ Deux conséquences pour l'implémentation :
   index partiel unique ne peut pas être différé, seule une contrainte le peut.
   C'est pourquoi A6 impose un ordre d'écriture là où C22 ne l'impose pas
 
-**État transitoire, à ne pas figer.** Tant que ces contraintes ne vivent que dans
-`prisma/sql-manuel/`, `prisma migrate deploy` ne les applique pas. LS-67
-doit les porter dans une migration Prisma SQL versionnée, après quoi elles sont
-déployées par le mécanisme ordinaire en développement, en intégration continue et
-en production. Les fichiers de ce dossier restent ensuite une source de
-**conception et de contrôle**, jamais un second mécanisme permanent de
-déploiement.
+**Déploiement, réglé par LS-67.** Ces contraintes sont posées par la migration
+`20260731050325_contraintes_check_et_unicite_differable`, donc appliquées par
+`prisma migrate deploy` en développement, en intégration continue et en
+production. Vérifié sur une base issue des seules migrations : 25 `CHECK` sur 25
+et `condeferrable = t`, là où la même mesure donnait zéro avant la story.
+
+Les fichiers de `prisma/sql-manuel/` restent une source de **conception et de
+contrôle**, lue par `verifier-schema.sh`. **Ne pas les réappliquer à la main** :
+une base locale rendue conforme après coup masquerait une migration incomplète,
+et le défaut n'apparaîtrait qu'en production. `preparer-base-locale.sh` compare
+désormais le compte en base à ces fichiers et échoue en cas d'écart.
 
 ## Les six index partiels
 
