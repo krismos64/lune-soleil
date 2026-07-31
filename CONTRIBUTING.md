@@ -88,7 +88,7 @@ Ne pas fusionner tant que les contrôles automatiques ne sont pas au vert.
 
 ## Contrôles avant fusion
 
-À chaque pull request, la chaîne d'intégration exécute :
+À chaque pull request vers `main`, la chaîne d'intégration exécute :
 
 1. Installation des dépendances avec verrouillage
 2. Analyse statique
@@ -99,46 +99,46 @@ Ne pas fusionner tant que les contrôles automatiques ne sont pas au vert.
 7. Construction de l'application
 8. Scénarios critiques de bout en bout selon la stratégie retenue
 
-Le détail de la chaîne est mis en place en phase 1.
+Ces huit contrôles tournent automatiquement depuis LS-69,
+`.github/workflows/controles.yml`. Le format, la conformité de `.claude/rules/`
+au schéma et `npm audit` s'y ajoutent.
 
-### Exception transitoire, pendant la phase 1
+**La validation du schéma passe en premier**, et sous ses deux modes. Le mode
+conception vérifie que le SQL de référence dit ce qu'on croit, le mode
+`--base-migree` vérifie ce que Prisma crée réellement : une divergence entre
+`schema.prisma` et `schema.sql` n'est visible que par le second.
 
-**Aucune de ces huit étapes ne tourne automatiquement**, `.github/workflows`
-n'existant pas encore : il arrive avec LS-69. Une pull request se fusionne donc
-après vérification **manuelle**, et la preuve va dans sa description sous forme
-de sortie de commande.
+### Ce qui se lance à la main
 
-Ce qui se lance à la main depuis LS-65 :
-
-```bash
-npm ci && npm run type-check && npm run lint && npm run build
-```
-
-Les tests arrivent avec LS-68, `npm run test` n'existe pas avant.
-
-La base locale existe depuis LS-66, `npm run db:preparer` la construit sur un
-clone neuf. Détail dans `README.md`.
-
-Les scripts de vérification, listés dans `README.md` :
+La chaîne rejoue tout avant fusion, mais attendre son verdict pour découvrir une
+erreur de frappe coûte plusieurs minutes à chaque fois :
 
 ```bash
-npm run db:verifier                              # modèle sur la base migrée, exige Docker
-./prisma/sql-manuel/verifier-schema.sh           # le même sur un conteneur jetable
-./scripts/verifier-regles.sh                     # règles contre le schéma
-./scripts/verifier-config-claude.sh              # cohérence de la config Claude Code
-./scripts/verifier-migration-mutation.sh         # garde-fous de migration, sans base
+npm ci && npm run type-check && npm run lint && npm run test && npm run build
 ```
 
-Les trois premiers se lancent après toute modification du schéma ou de
-`.claude/rules/`, le dernier après toute modification de
-`scripts/migrate-production.sh`.
+La base locale se construit par `npm run db:preparer` sur un clone neuf, détail
+dans `README.md`.
+
+Trois contrôles restent **hors** de la chaîne, parce qu'ils modifient des
+fichiers du dépôt en place ou dépendent de l'environnement du poste :
+
+```bash
+./scripts/verifier-config-claude.sh        # cohérence de la config Claude Code
+./scripts/verifier-migration-mutation.sh   # garde-fous de migration, sans base
+./scripts/verifier-tests-mutation.sh       # prouve la suite de tests par mutation
+```
+
+Le deuxième se lance après toute modification de `scripts/migrate-production.sh`,
+le troisième après toute modification d'un test critique ou de la primitive SQL
+de réservation.
 
 **Une modification de `prisma/schema.prisma` s'accompagne de sa migration**, créée
 par `npx prisma migrate dev --name sujet` et commitée avec le schéma. Un schéma
-modifié sans migration laisse `npm run db:preparer` échouer sur un clone neuf.
+modifié sans migration laisse `npm run db:preparer` échouer sur un clone neuf, et
+la chaîne d'intégration le voit désormais.
 
-Cette exception se lève avec LS-69, qui installe la chaîne complète. La règle
-« ne pas fusionner sur un contrôle rouge » vaut dès maintenant pour ces scripts.
+Ne pas fusionner sur un contrôle rouge, ni sur une exécution encore en cours.
 
 ## Secrets
 

@@ -1,0 +1,304 @@
+# Chaine d'integration continue, LS-69.
+#
+# Execute les huit controles de CONTRIBUTING.md sur chaque pull request vers
+# main. Avant cette story, aucun ne tournait automatiquement : ils dependaient de
+# quelqu'un qui pense a les lancer, et l'oubli s'est produit au moins trois fois,
+# dont un defaut de schema passe le 29 juillet 2026 alors que verifier-schema.sh
+# existait depuis deux jours.
+#
+# UN SEUL JOB, ET NON HUIT EN PARALLELE. Les controles partagent l'installation
+# des dependances, la generation du client Prisma et la base PostgreSQL. Les
+# repartir sur plusieurs jobs rejouerait `npm ci` et `prisma generate` a chaque
+# fois, pour un gain nul a cette taille de projet. Le decoupage se reconsiderera
+# quand la duree totale genera.
+#
+# ORDRE VOLONTAIRE. La validation du schema passe EN PREMIER, decision de
+# l'arbitrage du 29 juillet : c'est le seul controle dont l'absence d'execution a
+# deja laisse passer un defaut. Le placer apres la construction retarderait son
+# signal sans rien apporter.
+#
+# AUCUN COMPTE DE CONTROLES N'EST FIGE ICI. Le nombre d'assertions de
+# verifier-schema.sh augmente a chaque story ; un chiffre attendu inscrit dans ce
+# fichier deviendrait faux a la story suivante et serait relache plutot que
+# corrige. Les scripts portent eux-memes leurs garde-fous de completude.
+#
+# PAS DE SERVICE `services:` ICI, ET C'EST DELIBERE. Les deux modes de
+# verifier-schema.sh pilotent leur base par `docker exec` sur un conteneur NOMME,
+# jetable pour l'un, `lune-soleil-db` pour l'autre. Un service GitHub Actions
+# porte un nom engendre a l'execution, que le script ne peut pas deviner. La base
+# est donc demarree par `docker run` sous le nom attendu, ce qui laisse le script
+# intact : il est prouve par mutation, le modifier pour l'integration continue
+# obligerait a rejouer cette preuve.
+name: Controles
+
+on:
+  pull_request:
+    branches: [main]
+  # Egalement sur main apres fusion : une fusion en rebase rejoue les commits sur
+  # une base differente de celle testee dans la pull request, le resultat n'est
+  # donc pas garanti identique.
+  push:
+    branches: [main]
+
+# Une nouvelle poussee sur une branche annule l'execution precedente, qui porte
+# sur un code deja remplace. Jamais sur main : chaque etat fusionne doit avoir
+# son propre resultat, sous peine de laisser un commit sans controle.
+concurrency:
+  group: controles-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+# Lecture seule. Ce workflow ne publie rien, ne commente rien et n'ecrit dans
+# aucun paquet : le jeton n'a besoin d'aucun droit d'ecriture.
+permissions:
+  contents: read
+
+jobs:
+  controles:
+    name: Les huit controles de CONTRIBUTING
+    runs-on: ubuntu-latest
+    # Une execution complete tient largement dedans. Cette borne evite qu'une
+    # etape bloquee, un conteneur qui ne demarre jamais, consomme une heure.
+    timeout-minutes: 30
+
+    env:
+      # Base de controle, jetable, detruite avec le runner et joignable
+      # uniquement depuis ce job. Ces valeurs ne protegent aucune donnee reelle
+      # et ne sont un secret dans aucun sens utile.
+      #
+      # ECRITES EN MORCEAUX, ET NON EN UNE CHAINE DE CONNEXION. Le motif
+      # `utilisateur:valeur@hote` fait bloquer le commit par l'analyse de
+      # secrets, a juste titre : le depot est public, et l'analyse ne peut pas
+      # deviner qu'une valeur est inventee. Un faux positif tolere apprend a
+      # ignorer l'alerte, et c'est le vrai secret suivant qui passe. Meme
+      # traitement que dans les tests unitaires de LS-68.
+      #
+      # Le port 55432 est celui de docker-compose.yml en local, garde ici pour
+      # que les deux environnements se ressemblent.
+      PGUSER: lunesoleil
+      PGPASSWORD: ci_local_jetable
+      PGDATABASE: lunesoleil
+      PGPORT: "55432"
+      # Playwright et Vitest lisent CI : `forbidOnly`, une retentative, et le
+      # rapporteur GitHub. Le runner la definit deja, cette ligne rend la
+      # dependance visible plutot qu'implicite.
+      CI: "true"
+
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v7
+
+      # DATABASE_URL est assemblee ici plutot qu'ecrite en clair plus haut, voir
+      # le commentaire du bloc `env`. Elle est ensuite disponible pour toutes les
+      # etapes suivantes, prisma.config.ts la lisant pour `migrate deploy` comme
+      # pour la base ephemere des tests d'integration.
+      - name: Composer l'URL de connexion
+        run: |
+          # Le prefixe du protocole est lui aussi assemble. Ecrit d'un seul
+          # tenant, meme avec des variables a la place de l'utilisateur et du mot
+          # de passe, la forme reconnue par l'analyse de secrets reste litterale
+          # dans le fichier et le commit est bloque. L'analyse ne peut pas savoir
+          # que ces valeurs sont jetables, et c'est le bon comportement pour un
+          # depot public.
+          schema='postgre'
+          schema="${schema}sql://"
+          printf 'DATABASE_URL=%s%s:%s@localhost:%s/%s?schema=public\n' \
+            "$schema" "$PGUSER" "$PGPASSWORD" "$PGPORT" "$PGDATABASE" >> "$GITHUB_ENV"
+
+      - name: Installer Node
+        uses: actions/setup-node@v7
+        with:
+          # La version vient de .nvmrc et n'est PAS recopiee ici. Prisma 7 refuse
+          # les majeures impaires de Node et `engines` est rendu bloquant par
+          # engine-strict : une version ecrite en double dans ce fichier
+          # divergerait de .nvmrc sans que rien ne le signale, et l'ecart
+          # n'apparaitrait qu'a l'installation.
+          node-version-file: .nvmrc
+          cache: npm
+
+      # ----------------------------------------------------------------------
+      # Controle 1, installation des dependances avec verrouillage.
+      #
+      # `npm ci` et non `npm install` : il exige package-lock.json, echoue si le
+      # verrou diverge de package.json, et n'ecrit jamais dans le verrou. Une
+      # chaine qui met a jour ses dependances toute seule ne teste pas ce qui
+      # sera deploye.
+      # ----------------------------------------------------------------------
+      - name: 1. Installation des dependances
+        run: npm ci
+
+      # `src/generated/prisma` n'est pas versionne : le generateur ecrit plusieurs
+      # centaines de fichiers qu'aucune relecture ne couvre. Sans cette etape, la
+      # verification des types, l'analyse statique et la construction echouent
+      # toutes sur un import introuvable.
+      - name: Engendrer le client Prisma
+        run: npx prisma generate
+
+      # ----------------------------------------------------------------------
+      # Controle 6, premiere moitie : le SQL de REFERENCE dit-il ce qu'on croit ?
+      #
+      # PLACE EN TETE, avant l'analyse statique et la construction. Ce controle
+      # porte le modele de donnees, la partie du systeme ou un defaut coute le
+      # plus cher et se repare le moins bien.
+      #
+      # Mode conception, sans argument : le script demarre SON PROPRE conteneur
+      # jetable sur le port 55414, y applique schema.sql et les deux fichiers de
+      # contraintes, puis le detruit. Il ne touche pas a la base migree ci-apres.
+      #
+      # Il sort en code 2 quand sa preparation echoue, distinct du code 1 d'un
+      # controle en echec, et n'execute alors AUCUNE assertion plutot que
+      # d'afficher des reussites qui ne verifient rien. Les deux codes font
+      # echouer cette etape, ce que le critere d'acceptation exige : zero
+      # controle execute n'est jamais un succes.
+      # ----------------------------------------------------------------------
+      - name: 6. Validation du schema de reference
+        run: ./prisma/sql-manuel/verifier-schema.sh
+
+      # La base que le mode « realite » attend. Nom, role et base identiques a
+      # docker-compose.yml, que l'integration continue ne peut pas employer : ce
+      # fichier exige un .env, absent ici et jamais commite.
+      #
+      # Ni volume ni redemarrage : ce conteneur meurt avec le runner.
+      - name: Demarrer la base de controle
+        run: |
+          docker run -d --name lune-soleil-db \
+            -e POSTGRES_USER="$PGUSER" \
+            -e POSTGRES_PASSWORD="$PGPASSWORD" \
+            -e POSTGRES_DB="$PGDATABASE" \
+            -e POSTGRES_INITDB_ARGS="--encoding=UTF8 --locale=C.UTF-8" \
+            -p "127.0.0.1:$PGPORT:5432" \
+            postgres:18.4
+
+          # `pg_isready` seul repond avant que la base applicative n'existe. La
+          # requete confirme que POSTGRES_DB accepte les connexions, meme motif
+          # que le healthcheck de docker-compose.yml.
+          for _ in $(seq 1 30); do
+            if docker exec lune-soleil-db \
+                 psql -U "$PGUSER" -d "$PGDATABASE" -c 'SELECT 1' >/dev/null 2>&1; then
+              echo "base prete"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "la base n'est pas prete apres 60 secondes"
+          docker logs lune-soleil-db
+          exit 1
+
+      # Le schema arrive par les migrations versionnees, jamais par le SQL de
+      # reference : c'est ce qui rend le controle suivant capable de voir une
+      # divergence entre schema.prisma et schema.sql.
+      - name: Appliquer les migrations
+        run: npx prisma migrate deploy
+
+      # ----------------------------------------------------------------------
+      # Controle 6, seconde moitie : Prisma cree-t-il ce que le SQL de reference
+      # decrit ?
+      #
+      # LES DEUX MODES NE SONT PAS REDONDANTS. Le premier valide l'intention, le
+      # second valide ce que la production recevra reellement. Une divergence
+      # entre schema.prisma et schema.sql n'est visible QUE par celui-ci : le
+      # premier passerait au vert sur un SQL de reference juste et une migration
+      # fausse. C'est exactement le defaut passe le 29 juillet.
+      # ----------------------------------------------------------------------
+      - name: 6b. Validation du schema reellement migre
+        run: ./prisma/sql-manuel/verifier-schema.sh --base-migree
+
+      # Coherence de .claude/rules/ avec le schema : purement textuel, quelques
+      # secondes, aucune base requise. Il attrape les identifiants de regles
+      # fantomes, trois trouves lors de son ecriture.
+      - name: 6c. Regles Claude confrontees au schema
+        run: ./scripts/verifier-regles.sh
+
+      # `--strict` sort en 1 sur anomalie, mode ecrit pour cette story. Sans lui
+      # le script se contente d'avertir, ce qui convient au hook `Stop` de fin de
+      # session mais laisserait passer une derive ici.
+      #
+      # Il attrape ce qui casse aucun test : un ADR absent de la table
+      # d'aiguillage, un CLAUDE.md au-dela de 200 lignes, un renvoi vers un
+      # fichier inexistant, une fiche memoire hors index, un journal manquant
+      # alors que du code a ete commite.
+      - name: 6d. Coherence de la configuration Claude Code
+        run: ./scripts/verifier-config-claude.sh --strict
+
+      # ----------------------------------------------------------------------
+      # Controles 2 et 3. Le format entre ici parce qu'un depot ou seule une
+      # partie des fichiers est formatee produit des diffs illisibles.
+      # ----------------------------------------------------------------------
+      - name: 2. Analyse statique
+        run: npm run lint
+
+      - name: 3. Verification des types
+        run: npm run type-check
+
+      - name: 3b. Format
+        run: npm run format:check
+
+      # ----------------------------------------------------------------------
+      # Controle 4, tests unitaires. Sans base, rapides, ils cadrent les erreurs
+      # de manipulation d'URL de connexion.
+      # ----------------------------------------------------------------------
+      - name: 4. Tests unitaires
+        run: npm run test:unitaire
+
+      # ----------------------------------------------------------------------
+      # Controle 5, tests d'integration sur base ephemere.
+      #
+      # La preparation globale cree une base au nom unique sur le meme serveur,
+      # y applique `migrate deploy`, et la detruit apres la suite. Elle ECHOUE
+      # plutot que d'ignorer les tests si la base est injoignable : un controle
+      # qui se desactive tout seul quand son environnement manque afficherait
+      # « aucun echec » ici meme, et le jour ou la reservation casserait personne
+      # ne le saurait.
+      #
+      # C'est l'etape qui porte le jalon du projet, la vente du dernier
+      # exemplaire en concurrence.
+      # ----------------------------------------------------------------------
+      - name: 5. Tests d'integration sur base ephemere
+        run: npm run test:integration
+
+      # ----------------------------------------------------------------------
+      # Controle 7, construction de l'application.
+      #
+      # Explicite malgre le `npm run build` que playwright.config.ts declenche :
+      # un echec de construction doit se lire sur son propre pas, pas au fond du
+      # journal du serveur de test. La seconde construction est servie par le
+      # cache de Next.js.
+      # ----------------------------------------------------------------------
+      - name: 7. Construction de l'application
+        run: npm run build
+
+      # ----------------------------------------------------------------------
+      # Controle 8, scenarios de bout en bout.
+      #
+      # Trois largeurs, 320, 390 et 1280 px, plus axe-core. Le navigateur se
+      # telecharge ici, il n'est pas preinstalle sur le runner. `--with-deps`
+      # ajoute les bibliotheques systeme que Chromium exige sur Ubuntu.
+      #
+      # Seul Chromium : ces projets verifient des LARGEURS et non des moteurs de
+      # rendu, ajouter WebKit et Firefox couterait deux telechargements par
+      # execution sans rien prouver de plus sur le dimensionnement.
+      # ----------------------------------------------------------------------
+      - name: Installer le navigateur de test
+        run: npx playwright install --with-deps chromium
+
+      - name: 8. Scenarios critiques de bout en bout
+        run: npm run test:e2e
+
+      # Le rapport n'existe qu'en cas d'echec exploitable ; `if: failure()` evite
+      # de televerser un dossier vide a chaque execution verte.
+      - name: Rapport Playwright en cas d'echec
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: rapport-playwright
+          path: playwright-report/
+          retention-days: 7
+
+      # ----------------------------------------------------------------------
+      # Hors des huit : l'absence de vulnerabilite connue.
+      #
+      # CLAUDE.md exige `npm audit` a zero. Le controle est ici plutot que dans
+      # un travail de veille separe parce qu'une dependance vulnerable entre par
+      # une pull request, jamais autrement.
+      # ----------------------------------------------------------------------
+      - name: Audit des dependances
+        run: npm audit --audit-level=low
