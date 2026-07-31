@@ -104,16 +104,15 @@ session n'écrivant un compte en toutes lettres.
 concurrence sur le stock à un exemplaire doit entrer en intégration continue,
 c'est le jalon qui compte.
 
-Le générateur reste `prisma-client-js`. La bascule vers `prisma-client` coûte
-trois lignes aujourd'hui, aucun fichier n'important encore `@prisma/client`, et
-coûtera un remaniement complet une fois le code de données écrit. À arbitrer
-avant LS-68.
+La bascule du générateur, signalée ici comme à arbitrer, a été faite dans la
+foulée : LS-78, page suivante.
 
 ## État des tickets
 
 | Ticket | État |
 |---|---|
 | LS-67 | **Terminé**, six critères vérifiés, PR #53 fusionnée sur `main` |
+| LS-78 | **Terminé**, créée puis livrée le même jour, PR #55 |
 | LS-68 | À faire, **prochaine action** |
 | LS-69, LS-70 | À faire |
 | LS-9, LS-10 | En cours, hors chaîne de phase 1 |
