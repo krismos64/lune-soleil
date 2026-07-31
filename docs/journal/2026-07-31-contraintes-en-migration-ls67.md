@@ -2,9 +2,10 @@
 
 | Champ | Valeur |
 |---|---|
-| Ticket | LS-67, story 3 sur 11 de LS-2 |
+| Ticket | LS-67, story 3 sur 11 de LS-2, **terminé** |
+| Commits | `56eb9e4` la story, PR #53 **fusionnée en rebase**, branche supprimée |
 | Contrôles | 92 réussites 0 échec dans les deux modes, types, lint, build, règles, config, audit à zéro |
-| Mutations | 5 mutations, 5 détectées |
+| Mutations | 6 mutations, 6 détectées |
 
 Les 26 contraintes que Prisma ne sait pas générer, 25 `CHECK` et l'unicité
 différable, vivaient dans des fichiers appliqués à la main. Elles sont désormais
@@ -50,7 +51,14 @@ féminin y ont été corrigés au passage, « deux clientes simultanées » deve
 | `chk_variante_pas_de_survente` retirée | 24 CHECK, 1 échec : « la survente est rejetée par le CHECK, C6 » |
 | `DEFERRABLE INITIALLY DEFERRED` retiré | `false/false`, 4 échecs dont l'échange de positions |
 | `chk_avis_note_bornee` retirée | `db:preparer` échoue, code 1, « 24 sur 25 » |
-| Restauration | retour au vert dans les trois cas |
+| Prédicat faussé **à compte constant** | `db:preparer` vert, `verifier-schema.sh` 2 échecs |
+| Restauration | retour au vert dans chaque cas |
+
+La dernière est la plus instructive. Le garde-fou de comptage passe au vert
+pendant que le contrôle de comportement rougit sur « chiffre d'affaires marché :
+attendu [0], obtenu [1100] », les 1100 centimes de LS-63 à l'identique. Les deux
+contrôles ne se recouvrent pas : le comptage prouve la complétude, le comportement
+prouve la justesse. Supprimer l'un parce que l'autre existe ouvrirait un trou.
 
 Chaque mutation portait une assertion vérifiant que sa cible existait, sans quoi
 un `sed` sans effet aurait produit un vert rassurant et faux.
@@ -105,7 +113,7 @@ avant LS-68.
 
 | Ticket | État |
 |---|---|
-| LS-67 | Terminé sous réserve de la fusion, six critères vérifiés |
+| LS-67 | **Terminé**, six critères vérifiés, PR #53 fusionnée sur `main` |
 | LS-68 | À faire, **prochaine action** |
 | LS-69, LS-70 | À faire |
 | LS-9, LS-10 | En cours, hors chaîne de phase 1 |
