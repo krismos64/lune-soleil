@@ -174,8 +174,8 @@ explicitement ce qui a été mis à jour :
 
 1. **Dépôt** : commité, **poussé, passé en PR et fusionné sur `main`** en rebase,
    même en solo, même pour de la documentation. `main` exige la PR et le contrôle
-   vert, sauf pour le propriétaire : un push direct affiche les refus **puis
-   réussit**, ne jamais tester ce réglage par un push réel
+   vert **sans exception**, `enforce_admins` étant actif : un push direct est
+   refusé, y compris pour le propriétaire
 2. **Journal** `docs/journal/` : fait, dérives, prochaine étape, état des tickets
 3. **Mémoire** : toute découverte non dérivable du code
 4. **Jira** : état réel de chaque critère, commit, ce qui reste

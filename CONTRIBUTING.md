@@ -74,7 +74,14 @@ contrôles automatiques avant fusion, elles laissent une trace lisible de ce qui
 été livré et pourquoi, et elles servent la finalité démonstrateur du projet.
 
 La branche `main` est protégée : pas de force-push, pas de suppression, historique
-linéaire.
+linéaire, pull request obligatoire et contrôle vert exigé.
+
+**Cette protection n'a aucune exception depuis le 31 juillet 2026.**
+`enforce_admins` est actif : un push direct sur `main` est refusé, y compris pour
+le propriétaire du dépôt. Si la chaîne devient durablement rouge pour une cause
+externe et qu'un correctif ne peut plus entrer, désactiver le réglage
+explicitement, corriger, puis le réactiver. Un contournement laisse une trace,
+c'est ce qui le distingue d'une erreur.
 
 Contenu attendu d'une pull request :
 
