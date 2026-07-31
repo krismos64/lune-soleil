@@ -3,9 +3,10 @@
 | Champ | Valeur |
 |---|---|
 | Ticket | LS-69 |
-| Commits | `1c47137` |
-| Contrôles | à compléter après l'exécution |
-| Mutations | à compléter |
+| Commits | `6c19810`, journal `b550194` |
+| Contrôles | 92 schéma en conception, 92 en migré, 17 Vitest, 9 Playwright, audit à zéro |
+| Mutations | 1 mutation sur la chaîne elle-même, détectée |
+| Durée en CI | 2 min 3 s |
 
 Quatrième page du 31 juillet. Les huit contrôles de `CONTRIBUTING.md` entrent en
 intégration continue, `.github/workflows/controles.yml`.
@@ -86,15 +87,77 @@ Les trois scripts de mutation modifient des fichiers du dépôt en place, ce qu'
 exécution partagée ne tolère pas. Le prototype d'interblocage documente un défaut
 ouvert, LS-50 : le brancher rendrait la chaîne rouge en permanence.
 
+## La chaîne prouvée par mutation
+
+Première exécution verte sur la pull request 58, en 2 minutes 3 secondes.
+
+```
+6. Validation du schema de reference        92 réussites, 0 échecs
+6b. Validation du schema reellement migre   92 réussites, 0 échecs
+6c. Regles Claude confrontees au schema     règles conformes au schéma
+6d. Coherence de la configuration           configuration Claude Code cohérente
+8. Scenarios critiques de bout en bout      9 passed (12.1s)
+Audit des dependances                       found 0 vulnerabilities
+```
+
+Un vert de première exécution ne prouve rien. La pull request 59, jetable, a
+porté `chk_variante_pas_de_survente` retirée du SQL de référence :
+
+```
+ECHEC la survente est rejetée par le CHECK, C6 : la base a accepté l'écriture
+  91 réussites, 1 échecs
+```
+
+La chaîne s'est arrêtée à cette étape, les suivantes n'ont pas été exécutées.
+Pull request fermée sans fusion, branche supprimée.
+
+## L'incident, une protection qui ne protégeait pas
+
+`main` interdisait le force-push et imposait l'historique linéaire, mais **aucun
+contrôle de statut n'était requis et la pull request n'était pas obligatoire**.
+Une pull request rouge restait fusionnable, ce qui vidait de sens le critère
+« un contrôle rouge empêche la fusion ».
+
+Le réglage a été ajouté : contrôle requis, branche à jour exigée, pull request
+obligatoire sans revue approbatrice.
+
+**Le test de ce réglage a produit l'incident.** Le push direct sur `main` affiche
+les deux refus attendus, puis réussit quand même :
+
+```
+remote: - Changes must be made through a pull request.
+remote: - Required status check "Les huit controles de CONTRIBUTING" is expected.
+To https://github.com/krismos64/lune-soleil.git
+   3420357..b550194  main -> main
+```
+
+`enforce_admins` vaut `false` : la règle ne s'applique pas au propriétaire du
+dépôt. Le commit `b550194` a donc emporté cette page sur `main` sans passer par
+une pull request, avec un message de commit qui ne décrit pas son contenu.
+
+Arbitrage du 31 juillet : le commit reste, son contenu était légitime et seul son
+chemin était mauvais, et `enforce_admins` reste à `false` pour garder une sortie
+de secours en cas de correction urgente.
+
+**Le critère « un contrôle rouge empêche la fusion » est donc rempli pour toute
+contribution, et contournable par le propriétaire du dépôt.** C'est une limite
+assumée, pas un oubli. Elle mérite d'être relue le jour où quelqu'un d'autre
+contribue.
+
+Deux enseignements. Un message de refus affiché par le serveur ne prouve pas que
+l'opération a échoué : seul le code de sortie et l'état final le disent. Et un
+garde-fou ne se croit pas sur sa configuration, il se teste.
+
 ## Prochaine étape
 
-À compléter.
+**LS-70**, la chaîne d'intégration continue étant désormais en place pour
+contrôler le reste des stories de LS-2, dont l'ordre est libre.
 
 ## État des tickets
 
 | Ticket | État |
 |---|---|
-| LS-69 | En cours |
+| LS-69 | **Terminé**, sept critères vérifiés, le huitième assorti d'une limite |
 | LS-65 à LS-68, LS-78 | **Terminés**, pages précédentes |
 | LS-70 à LS-75 | À faire |
 | LS-50 | À faire, l'interblocage reste un script |
