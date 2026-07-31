@@ -381,8 +381,87 @@ CREATE TABLE "utilisateur" (
     "role" "Role" NOT NULL DEFAULT 'CLIENT',
     "email_verifie" BOOLEAN NOT NULL DEFAULT false,
     "cree_a" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    -- LS-70. Les trois colonnes attendues par Better Auth. `nom` est nullable
+    -- alors que la bibliotheque declare `name` requis : sa route d'inscription
+    -- en exige toujours un, aucune ligne qu'elle ecrit ne le laisse vide.
+    "nom" TEXT,
+    "image" TEXT,
+    "mis_a_jour_a" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "utilisateur_pkey" PRIMARY KEY ("id")
+);
+
+-- ---------------------------------------------------------------------------
+-- Domaine 7 bis, authentification, LS-70
+--
+-- Quatre tables attendues par Better Auth 1.6, ADR-021 et ADR-023. Leurs NOMS
+-- DE CHAMPS restent en camelCase anglais, ce sont les cles de son protocole et
+-- non des champs metier ; seuls les noms de tables suivent la convention.
+-- ---------------------------------------------------------------------------
+
+-- CreateTable
+CREATE TABLE "session" (
+    "id" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
+    "expires_at" TIMESTAMPTZ(3) NOT NULL,
+    "ip_address" TEXT,
+    "user_agent" TEXT,
+    "user_id" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(3) NOT NULL,
+
+    CONSTRAINT "session_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+-- `password` porte une EMPREINTE, jamais le mot de passe, invariant 9.
+CREATE TABLE "compte" (
+    "id" TEXT NOT NULL,
+    "account_id" TEXT NOT NULL,
+    "provider_id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "password" TEXT,
+    "access_token" TEXT,
+    "refresh_token" TEXT,
+    "id_token" TEXT,
+    "access_token_expires_at" TIMESTAMPTZ(3),
+    "refresh_token_expires_at" TIMESTAMPTZ(3),
+    "scope" TEXT,
+    "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(3) NOT NULL,
+
+    CONSTRAINT "compte_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+-- Aucune cle etrangere vers utilisateur : `identifier` porte une adresse email
+-- qui n'a pas encore de compte, cas de la verification a l'inscription.
+CREATE TABLE "verification" (
+    "id" TEXT NOT NULL,
+    "identifier" TEXT NOT NULL,
+    "value" TEXT NOT NULL,
+    "expires_at" TIMESTAMPTZ(3) NOT NULL,
+    "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(3) NOT NULL,
+
+    CONSTRAINT "verification_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "passkey" (
+    "id" TEXT NOT NULL,
+    "name" TEXT,
+    "public_key" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "credential_id" TEXT NOT NULL,
+    "counter" INTEGER NOT NULL,
+    "device_type" TEXT NOT NULL,
+    "backed_up" BOOLEAN NOT NULL,
+    "transports" TEXT,
+    "aaguid" TEXT,
+    "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "passkey_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -561,6 +640,20 @@ CREATE UNIQUE INDEX "utilisateur_email_key" ON "utilisateur"("email");
 -- CreateIndex
 CREATE UNIQUE INDEX "utilisateur_administratrice_unique" ON "utilisateur"("role") WHERE (role = 'ADMINISTRATRICE');
 
+-- CreateIndex, authentification, LS-70
+CREATE UNIQUE INDEX "session_token_key" ON "session"("token");
+CREATE INDEX "session_user_id_idx" ON "session"("user_id");
+CREATE INDEX "compte_user_id_idx" ON "compte"("user_id");
+CREATE INDEX "verification_identifier_idx" ON "verification"("identifier");
+CREATE INDEX "passkey_user_id_idx" ON "passkey"("user_id");
+
+-- UNIQUE et non un simple index, plus strict que le schema de reference du
+-- plugin passkey. Une credential WebAuthn est unique par construction, rien en
+-- base ne l'imposait : deux comptes pouvaient porter la meme, et la recherche
+-- par credential a la connexion aurait eu deux comptes a departager. C'est le
+-- risque d'acces croise qu'ADR-021 demande de couvrir.
+CREATE UNIQUE INDEX "passkey_credential_id_unique" ON "passkey"("credential_id");
+
 -- CreateIndex
 CREATE UNIQUE INDEX "journal_email_systeme_unique" ON "journal_email"("commande_id", "modele") WHERE (statut = 'ENVOYE' AND origine IN ('SYSTEME','RECONCILIATION'));
 
@@ -666,4 +759,18 @@ ALTER TABLE "journal_email" ADD CONSTRAINT "journal_email_commande_id_fkey" FORE
 
 -- AddForeignKey
 ALTER TABLE "alerte_critique" ADD CONSTRAINT "alerte_critique_acquittee_par_id_fkey" FOREIGN KEY ("acquittee_par_id") REFERENCES "utilisateur"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey, authentification, LS-70
+--
+-- CASCADE sur les trois : session, compte et passkey sont des moyens d'acces,
+-- ils n'ont aucune valeur sans leur compte. A la difference de
+-- commande.utilisateur_id, en SET NULL, une commande devant survivre a la
+-- suppression du compte avec `dissocie_a` marque AVANT.
+ALTER TABLE "session" ADD CONSTRAINT "session_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "utilisateur"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "compte" ADD CONSTRAINT "compte_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "utilisateur"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "passkey" ADD CONSTRAINT "passkey_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "utilisateur"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 

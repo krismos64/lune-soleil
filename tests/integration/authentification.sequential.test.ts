@@ -402,3 +402,133 @@ describe("l'autorisation derive de la session, regle E2", () => {
     expect(identite.email).toBe("admin.reelle@exemple.fr");
   });
 });
+
+/**
+ * ATTRIBUTS DU COOKIE DE SESSION.
+ *
+ * CE BLOC EXISTE PARCE QU'UN DEFAUT REEL EST PASSE. `urlBase` valait
+ * `process.env.BETTER_AUTH_URL ?? "http://localhost:3000"`, repli qui semblait
+ * inoffensif. Better Auth decide de l'attribut `Secure` par la chaine
+ * `baseURL ? baseURL.startsWith("https://") : isProduction` : fournir une
+ * valeur par defaut rend `baseURL` toujours definie, rend la branche
+ * `isProduction` inatteignable, et fait retomber la decision sur une URL en
+ * `http://localhost`. En production avec la variable oubliee, le cookie de
+ * l'exploitante partait donc SANS `Secure`, en clair, sept jours de validite.
+ *
+ * Aucun des dix-sept tests d'alors ne regardait les attributs du cookie : ils
+ * ne lisaient que sa valeur, pour la rejouer. Un cookie sans `Secure`
+ * s'authentifie exactement comme un cookie protege.
+ *
+ * L'INSTANCE EST CREEE ICI, avec sa propre URL, plutot que d'utiliser `auth` :
+ * la valeur est figee a l'evaluation du module, la changer apres coup n'aurait
+ * aucun effet.
+ */
+describe("attributs du cookie de session", () => {
+  async function cookieDeConnexionAvec(urlSite: string): Promise<string> {
+    // L'URL passe par le PARAMETRE de `creerAuth` et non par l'environnement :
+    // `urlBase` est figee a l'evaluation du module, la reassigner apres
+    // l'import ne changerait rien et le test verdirait sur l'instance par
+    // defaut, en `http`, donc sans jamais exercer le cas `https`.
+    const { creerAuth } = await import("@/lib/auth");
+    const { envoyeurJournalise } = await import("@/integrations/email");
+    const instance = creerAuth(envoyeurJournalise, urlSite);
+    const email = `cookie-${Date.now()}@exemple.fr`;
+
+    await instance.api.signUpEmail({
+      body: { email, password: MOT_DE_PASSE_VALIDE, name: "Sonde" },
+      asResponse: true,
+    });
+    const reponse = await instance.api.signInEmail({
+      body: { email, password: MOT_DE_PASSE_VALIDE },
+      asResponse: true,
+    });
+
+    return reponse.headers.get("set-cookie") ?? "";
+  }
+
+  it("porte Secure et le prefixe __Secure- sur un site en https", async () => {
+    const cookie = await cookieDeConnexionAvec("https://boutique.exemple.fr");
+
+    // LES DEUX ASSERTIONS COMPTENT. `Secure` interdit l'envoi en clair, et le
+    // prefixe `__Secure-` interdit au navigateur d'accepter ce cookie depuis
+    // une origine non chiffree, ce qui ferme la reecriture par un reseau
+    // hostile. Better Auth pose les deux ensemble ou aucun des deux.
+    expect(cookie).toMatch(/;\s*Secure/i);
+    expect(cookie).toContain("__Secure-");
+  });
+
+  it("porte HttpOnly et SameSite quelle que soit l'URL", async () => {
+    const cookie = await cookieDeConnexionAvec("https://boutique.exemple.fr");
+
+    // HttpOnly : un script de page ne lit pas le jeton de session, ce qui
+    // limite le vol par injection de script.
+    expect(cookie).toMatch(/;\s*HttpOnly/i);
+    expect(cookie).toMatch(/;\s*SameSite=Lax/i);
+  });
+
+  it("le cookie n'est pas rejouable apres deconnexion", async () => {
+    await creerCompte("deconnexion@exemple.fr");
+    const connexion = await auth.api.signInEmail({
+      body: { email: "deconnexion@exemple.fr", password: MOT_DE_PASSE_VALIDE },
+      asResponse: true,
+    });
+    const enTetes = new Headers({
+      cookie: connexion.headers.get("set-cookie")!,
+    });
+
+    expect(await lireIdentite(enTetes)).not.toBeNull();
+
+    await auth.api.signOut({ headers: enTetes });
+
+    // La session est supprimee EN BASE, le cookie ne vaut donc plus rien meme
+    // si un attaquant l'avait copie. Un jeton seulement expire cote navigateur
+    // resterait utilisable par qui l'a intercepte.
+    expect(await lireIdentite(enTetes)).toBeNull();
+  });
+});
+
+/**
+ * REVOCATION IMMEDIATE DU ROLE.
+ *
+ * Propriete FRAGILE, signalee par la revue critique de LS-70 : elle tient au
+ * fait que `session.cookieCache` n'est PAS active. Better Auth 1.6 sait servir
+ * l'objet `user` depuis le cookie sans relire la base, ce qui reduit la
+ * latence ; un retrait de role deviendrait alors inoperant jusqu'a l'expiration
+ * du cache, l'exploitante revoquee gardant ses droits.
+ *
+ * Ce test echouerait si quelqu'un activait ce cache, ce qui est exactement le
+ * signal attendu : le gain de latence doit etre un arbitrage conscient, pas un
+ * effet de bord.
+ */
+describe("un changement de role prend effet sans reconnexion", () => {
+  it("accorde puis retire les droits sur le meme cookie", async () => {
+    await creerCompte("bascule@exemple.fr");
+    const connexion = await auth.api.signInEmail({
+      body: { email: "bascule@exemple.fr", password: MOT_DE_PASSE_VALIDE },
+      asResponse: true,
+    });
+    const enTetes = new Headers({
+      cookie: connexion.headers.get("set-cookie")!,
+    });
+
+    await expect(exigerAdministratrice(enTetes)).rejects.toBeInstanceOf(
+      AutorisationRefuseeError,
+    );
+
+    await client.query(
+      "UPDATE utilisateur SET role = 'ADMINISTRATRICE' WHERE email = $1",
+      ["bascule@exemple.fr"],
+    );
+    expect((await exigerAdministratrice(enTetes)).role).toBe("ADMINISTRATRICE");
+
+    // LE SENS QUI COMPTE VRAIMENT : le retrait. Une session qui garderait ses
+    // droits apres revocation est le defaut grave, l'inverse n'est qu'une gene.
+    await client.query(
+      "UPDATE utilisateur SET role = 'CLIENT' WHERE email = $1",
+      ["bascule@exemple.fr"],
+    );
+    await expect(exigerAdministratrice(enTetes)).rejects.toBeInstanceOf(
+      AutorisationRefuseeError,
+    );
+  });
+});
