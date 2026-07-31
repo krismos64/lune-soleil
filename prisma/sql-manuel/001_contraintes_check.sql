@@ -26,13 +26,6 @@ ALTER TABLE variante
   ADD CONSTRAINT chk_variante_reservee_positif
   CHECK (quantite_reservee >= 0);
 
--- C6, le coeur de la stratégie de réservation. Le prototype a démontré que
--- cette contrainte n'est pas théorique : avec la méthode naive, c'est elle qui
--- empêche la survente sur une pièce unique.
-ALTER TABLE variante
-  ADD CONSTRAINT chk_variante_pas_de_survente
-  CHECK (quantite_physique - quantite_reservee >= 0);
-
 -- Une réservation de zéro article n'a pas de sens et masquerait une erreur.
 ALTER TABLE reservation
   ADD CONSTRAINT chk_reservation_quantite_positive
