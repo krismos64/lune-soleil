@@ -17,6 +17,11 @@ const eslintConfig = defineConfig([
     "coverage/**",
     "playwright-report/**",
     "test-results/**",
+    // Client Prisma fabrique, LS-68. Du code engendre n'a pas a etre audite :
+    // aucune remarque n'y serait corrigeable, `prisma generate` ecrasant toute
+    // modification. Sans cette ligne, ESLint analyse plus de quatre cents
+    // fichiers a chaque execution, en integration continue comprise.
+    "src/generated/**",
   ]),
 ]);
 
