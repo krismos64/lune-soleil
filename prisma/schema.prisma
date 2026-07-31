@@ -16,8 +16,21 @@
 // Leur source de conception reste prisma/sql-manuel/, que verifier-schema.sh
 // confronte à la base réelle. Ces fichiers ne s'appliquent plus à la main.
 
+// `prisma-client` et non `prisma-client-js` : l'ancien générateur sera supprimé
+// dans une prochaine version de Prisma, guide de migration v7 vérifié via
+// Context7. La bascule est faite ici parce qu'aucun fichier n'importait encore
+// le client : trois lignes aujourd'hui, chaque import de chaque fichier une fois
+// le code de données écrit.
+//
+// `output` est OBLIGATOIRE en Prisma 7, le client n'étant plus déposé dans
+// node_modules. Le dossier est du code fabriqué, ignoré par git et reconstruit
+// par `prisma generate`.
+//
+// L'import devient explicite : `@/generated/prisma/client`, et non plus
+// `@prisma/client`.
 generator client {
-  provider        = "prisma-client-js"
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
   previewFeatures = ["partialIndexes"]
 }
 

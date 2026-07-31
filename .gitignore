@@ -101,6 +101,13 @@ docs/internal/
 .claude/*.local.json
 .mcp.local.json
 
+# Client Prisma fabrique
+# Prisma 7 ne depose plus le client dans node_modules, `output` est obligatoire.
+# Ce dossier est du code genere, reconstruit par `prisma generate` : le versionner
+# noierait le diff utile de chaque PR touchant au schema sous des milliers de
+# lignes fabriquees.
+/src/generated/prisma
+
 # Divers
 .vercel
 .sentryclirc
