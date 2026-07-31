@@ -23,7 +23,47 @@ import {
 } from "@/lib/mot-de-passe";
 import { prisma } from "@/lib/prisma";
 
-const urlBase = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
+/**
+ * L'URL publique du site, et un repli qui NE VAUT QU'EN DEVELOPPEMENT.
+ *
+ * POURQUOI PAS UN SIMPLE `?? "http://localhost:3000"`, qui semblait pourtant
+ * inoffensif : il retirait `Secure` du cookie de session en production.
+ *
+ * Better Auth decide de cet attribut par la chaine suivante, dans
+ * `cookies/index.mjs` : `baseURL ? baseURL.startsWith("https://")
+ * : isProduction`. Il a donc un repli qui pose `Secure` tout seul quand aucune
+ * URL n'est connue. Fournir une valeur par defaut rend `baseURL` TOUJOURS
+ * definie, la branche `isProduction` devient inatteignable, et la decision se
+ * prend sur `startsWith("https://")` d'une URL en `http://localhost`, donc
+ * faux. Le repli defensif detruisait la protection qu'il croyait fournir.
+ *
+ * Mesure en `NODE_ENV=production`, sur une instance reelle :
+ *   BETTER_AUTH_URL oubliee     -> Secure=NON  prefixe __Secure-=NON
+ *   BETTER_AUTH_URL en https    -> Secure=OUI  prefixe __Secure-=OUI
+ *
+ * Le cookie de l'exploitante serait parti en clair sur toute requete HTTP vers
+ * le domaine, sept jours de validite, interceptable sur un reseau partage.
+ *
+ * CE MODE D'ECHEC EST SILENCIEUX, a la difference de celui d'une URL FAUSSE qui
+ * casse bruyamment toute connexion en « Invalid origin ». Pire, les passkeys
+ * cesseraient de fonctionner, `rpID` valant `localhost`, ce qui ferait
+ * soupconner WebAuthn pendant que le mot de passe de secours continue
+ * d'emettre des cookies non proteges.
+ *
+ * Le repli est donc conditionne a l'environnement : confort en developpement,
+ * exception en production. Defaut trouve par la revue critique de LS-70.
+ */
+const urlBaseConfiguree = process.env.BETTER_AUTH_URL;
+
+if (!urlBaseConfiguree && process.env.NODE_ENV === "production") {
+  throw new Error(
+    "BETTER_AUTH_URL absente en production. Sans elle, Better Auth suppose http://localhost:3000 :\n" +
+      "le cookie de session perd l'attribut Secure et part en clair, et le rpID de la passkey devient localhost.\n" +
+      "La renseigner dans .env, voir .env.example.",
+  );
+}
+
+const urlBase = urlBaseConfiguree ?? "http://localhost:3000";
 
 /**
  * Le secret de signature des sessions.
@@ -62,12 +102,29 @@ if (!secretSignature) {
  * Deduit de BETTER_AUTH_URL plutot que fixe : localhost en developpement, le
  * domaine reel en production, sans variable supplementaire a tenir en phase.
  */
-const domaineRelyingParty = new URL(urlBase).hostname;
+function domaineRelyingPartyDe(url: string): string {
+  return new URL(url).hostname;
+}
 
-export function creerAuth(envoyeurEmail: EnvoyeurEmail = envoyeurJournalise) {
+/**
+ * `urlSite` est un PARAMETRE et non la constante lue plus haut.
+ *
+ * La constante est figee a l'evaluation du module : une reassignation de
+ * `process.env.BETTER_AUTH_URL` apres l'import n'a aucun effet. Le test qui
+ * verifie l'attribut `Secure` du cookie a besoin d'une instance en `https`
+ * alors que les autres tournent en `http`, ce que seul un parametre permet.
+ *
+ * Le defaut reste la valeur de l'environnement : le code applicatif appelle
+ * `creerAuth()` sans argument et ne connait donc qu'une seule URL, celle du
+ * site.
+ */
+export function creerAuth(
+  envoyeurEmail: EnvoyeurEmail = envoyeurJournalise,
+  urlSite: string = urlBase,
+) {
   return betterAuth({
     database: prismaAdapter(prisma, { provider: "postgresql" }),
-    baseURL: urlBase,
+    baseURL: urlSite,
     secret: secretSignature,
 
     user: {
@@ -166,9 +223,12 @@ export function creerAuth(envoyeurEmail: EnvoyeurEmail = envoyeurJournalise) {
      */
     plugins: [
       passkey({
-        rpID: domaineRelyingParty,
+        rpID: domaineRelyingPartyDe(urlSite),
         rpName: "Lune & Soleil",
-        origin: urlBase,
+        // `origin` EXPLICITE, a ne pas retirer. Sans lui, le plugin retombe
+        // sur l'en-tete `Origin` de la requete, donc sur une valeur fournie
+        // par le client, comme `expectedOrigin` de la verification WebAuthn.
+        origin: urlSite,
       }),
     ],
   });

@@ -1027,6 +1027,44 @@ verifier_rejet "date de confirmation sur un paiement ECHOUE rejetée" \
   "chk_paiement_confirmation_coherente" "$sortie"
 
 echo
+echo "Complétude du SQL de référence, LS-70"
+
+# Le SQL de conception connaît-il toutes les tables de la base ?
+#
+# POURQUOI CE CONTRÔLE EXISTE. Le mode « conception » construit sa base à
+# partir de schema.sql. Si ce fichier ignore une table, aucun contrôle ne la
+# vise, et le script annonce « 0 échec » en validant un schéma qui n'est plus
+# celui du projet. Ce n'est pas hypothétique : LS-70 a ajouté quatre tables
+# d'authentification et le fichier ne les portait pas, la relecture critique
+# ayant mesuré 26 tables ici contre 30 en base. Le fichier avait déjà raté
+# LS-67 de la même façon.
+#
+# Un compte est ce qui transforme une liste écrite à la main en garantie.
+# Même leçon que la complétude de la table des enums, plus haut : une liste
+# reste une opinion tant que rien ne prouve qu'elle est exhaustive.
+#
+# LE CONTRÔLE VAUT DANS LES DEUX MODES, et il mesure deux choses différentes.
+# En mode conception, il compare le fichier à la base qu'il a lui-même
+# engendrée, donc vérifie surtout que le compte attendu suit. En mode
+# --base-migree, il compare le fichier à ce que `prisma migrate deploy` a
+# réellement créé : c'est là qu'un oubli de synchronisation apparaît.
+tables_base=$(R "SELECT count(*) FROM information_schema.tables
+                 WHERE table_schema = 'public'
+                   AND table_type = 'BASE TABLE'
+                   AND table_name NOT LIKE '\_prisma%';")
+tables_reference=$(grep -c '^CREATE TABLE ' "$DIR/schema.sql")
+
+if [ "$tables_base" = "$tables_reference" ]; then
+  verifier "SQL de référence complet, $tables_base tables" \
+    "$tables_base" "$tables_reference"
+else
+  echo "  ECHEC SQL de référence incomplet : $tables_base tables en base, $tables_reference dans schema.sql"
+  echo "        Porter les tables manquantes dans prisma/sql-manuel/schema.sql."
+  echo "        Sans elles, le mode conception valide un schéma périmé et n'échoue jamais."
+  ko=$((ko+1))
+fi
+
+echo
 echo "-----------------------------------------"
 echo "  $ok réussites, $ko échecs"
 echo "-----------------------------------------"
