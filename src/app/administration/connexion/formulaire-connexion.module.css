@@ -1,0 +1,118 @@
+/*
+ * Formulaire de connexion de l'administration, LS-70.
+ *
+ * MOBILE FIRST, conçu a 320 px : aucune largeur fixe, aucune valeur en pixels
+ * sur un conteneur. Les boutons occupent toute la largeur disponible et le
+ * texte se replie, ce qui evite le debordement horizontal a 320 px.
+ *
+ * Aucune valeur hexadecimale en dur : tout vient des jetons d'ADR-022.
+ */
+
+.conteneur {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-4);
+  width: 100%;
+  /* Borne haute sur grand ecran, exprimee en ch pour suivre la typographie */
+  max-width: 42ch;
+}
+
+.formulaire {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-4);
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-2);
+}
+
+.champ label {
+  color: var(--ls-text);
+  font-weight: 600;
+}
+
+.champ input {
+  /* `width: 100%` avec `box-sizing: border-box` : sans lui, le remplissage
+     s'ajoute a la largeur et le champ deborde a 320 px. */
+  box-sizing: border-box;
+  width: 100%;
+  /* 44 px de hauteur tactile, meme regle que pour les boutons */
+  min-height: 44px;
+  padding: var(--ls-space-3);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  /* 16px minimum : en deca, iOS zoome automatiquement a la mise au point et
+     casse la mise en page. */
+  font-size: 1rem;
+}
+
+.actionPrincipale,
+.actionSecondaire {
+  /* 44 par 44 px, zone tactile confortable */
+  min-height: 44px;
+  padding: var(--ls-space-3) var(--ls-space-4);
+  border-radius: var(--ls-radius-sm);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.actionPrincipale {
+  border: none;
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  font-weight: 600;
+}
+
+.actionPrincipale:hover:not(:disabled) {
+  background: var(--ls-primary-hover);
+}
+
+.actionSecondaire {
+  border: 1px solid var(--ls-border);
+  background: transparent;
+  /* Doré profond et non `--ls-accent-gold`, plafonne a 2,31:1 et interdit
+     pour tout texte. */
+  color: var(--ls-accent-gold-deep);
+}
+
+.actionPrincipale:disabled,
+.actionSecondaire:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Contour de mise au point d'environ 3 px, jamais supprime */
+.actionPrincipale:focus-visible,
+.actionSecondaire:focus-visible,
+.champ input:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+.aide,
+.aideChamp {
+  margin: 0;
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+}
+
+.aide {
+  text-align: center;
+}
+
+/*
+ * L'erreur porte une couleur ET un texte explicite. La couleur seule ne
+ * transmet jamais l'information, WCAG 2.2.
+ */
+.erreur {
+  margin: 0;
+  padding: var(--ls-space-3);
+  border-left: 3px solid var(--ls-error);
+  background: var(--ls-surface-sand);
+  color: var(--ls-error);
+}

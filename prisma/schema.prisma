@@ -751,19 +751,142 @@ model Utilisateur {
   emailVerifie Boolean  @default(false) @map("email_verifie")
   creeA        DateTime @default(now()) @map("cree_a") @db.Timestamptz(3)
 
-  commandes       Commande[]
-  adresses        AdresseCarnet[]
-  avis            Avis[]
-  reponsesAvis    ReponseAvis[]
-  journauxAudit   JournalAudit[]
-  mouvements      MouvementStock[]
-  historiques     HistoriqueStatut[]
-  alertes         AlerteCritique[]
+  // LS-70. Les trois champs ci-dessous existent pour Better Auth, qui les
+  // attend sur son modèle `user`. Ils sont mappés par `fields:` dans
+  // src/lib/auth.ts, l'ORM ne devinant pas la correspondance.
+  //
+  // `nom` est NULLABLE côté base alors que Better Auth déclare `name` requis
+  // dans son schéma cœur : la route d'inscription en exige toujours un, donc
+  // aucune ligne écrite par Better Auth ne le laisse vide. Le rendre
+  // obligatoire ici imposerait une valeur aux comptes créés par un autre
+  // chemin, sans que rien n'ait de nom à y mettre.
+  // `@default(now())` en plus de `@updatedAt` : sans lui, la colonne serait
+  // NOT NULL sans valeur par défaut, et son ajout échouerait sur une table
+  // déjà peuplée. Le schéma et la migration doivent porter la même forme,
+  // sans quoi `migrate diff` signale une dérive à chaque exécution.
+  nom       String?
+  image     String?
+  misAJourA DateTime @default(now()) @updatedAt @map("mis_a_jour_a") @db.Timestamptz(3)
+
+  commandes     Commande[]
+  adresses      AdresseCarnet[]
+  avis          Avis[]
+  reponsesAvis  ReponseAvis[]
+  journauxAudit JournalAudit[]
+  mouvements    MouvementStock[]
+  historiques   HistoriqueStatut[]
+  alertes       AlerteCritique[]
+  sessions      Session[]
+  comptes       Compte[]
+  passkeys      Passkey[]
 
   // E1, un seul compte porte ADMINISTRATRICE. Un UNIQUE simple interdirait
   // un second compte client : le filtre est ce qui rend la contrainte utilisable.
   @@unique([role], where: raw("role = 'ADMINISTRATRICE'"), map: "utilisateur_administratrice_unique")
   @@map("utilisateur")
+}
+
+// ---------------------------------------------------------------------------
+// Domaine 7 bis, authentification, LS-70
+//
+// Quatre entités attendues par Better Auth 1.6, ADR-021 et ADR-023. Le modèle
+// logique les annonçait « générées par la bibliothèque » : elles sont écrites
+// ici plutôt que par `npx @better-auth/cli generate`, pour trois raisons.
+//
+// Le générateur écrase les commentaires du fichier et ignore les conventions de
+// LS-13, tables et colonnes en snake_case. Il ne connaît pas non plus
+// `@db.Timestamptz(3)`, invariant 8, et produirait du `timestamp` sans fuseau.
+// Le schéma restant la source de vérité du projet, il est tenu à la main comme
+// le reste, et `verifier-schema.sh` le confronte à la base réelle.
+//
+// Les NOMS DE CHAMPS restent ceux de Better Auth, en camelCase anglais, là où
+// le reste du schéma est en français : ce sont les clés de son protocole, pas
+// des champs métier. Les renommer imposerait une entrée `fields:` par colonne,
+// donc autant d'occasions de désynchroniser. Seuls les noms de TABLES suivent
+// la convention du projet.
+// ---------------------------------------------------------------------------
+
+model Session {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  // Cascade : une session est un jeton de connexion, elle n'a aucune valeur
+  // sans son compte. À la différence de Commande.utilisateurId, en SET NULL,
+  // une commande devant survivre à la suppression du compte.
+  utilisateur Utilisateur @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Compte {
+  id                    String    @id @default(uuid())
+  accountId             String    @map("account_id")
+  providerId            String    @map("provider_id")
+  userId                String    @map("user_id")
+  // Empreinte du mot de passe de secours, ADR-021. Jamais le mot de passe.
+  password              String?
+  accessToken           String?   @map("access_token")
+  refreshToken          String?   @map("refresh_token")
+  idToken               String?   @map("id_token")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at") @db.Timestamptz(3)
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at") @db.Timestamptz(3)
+  scope                 String?
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  utilisateur Utilisateur @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("compte")
+}
+
+model Verification {
+  id         String   @id @default(uuid())
+  identifier String
+  value      String
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  // Aucune relation vers Utilisateur : `identifier` porte une adresse email
+  // qui n'a pas encore de compte, cas de la vérification à l'inscription.
+  @@index([identifier])
+  @@map("verification")
+}
+
+model Passkey {
+  id           String   @id @default(uuid())
+  // Nom d'appareil, ADR-021 : « MacBook » ou « iPhone ». Facultatif, Better
+  // Auth retombant sur l'email ou l'identifiant du compte.
+  name         String?
+  publicKey    String   @map("public_key")
+  userId       String   @map("user_id")
+  credentialID String   @map("credential_id")
+  counter      Int
+  deviceType   String   @map("device_type")
+  backedUp     Boolean  @map("backed_up")
+  transports   String?
+  aaguid       String?
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  utilisateur Utilisateur @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  // UNIQUE et non un simple index, plus strict que le schéma de référence du
+  // plugin. Une credential WebAuthn est unique par construction, rien en base
+  // ne l'imposait : deux lignes portant la même `credentialID` sur deux comptes
+  // distincts entraient sans erreur, et la recherche par credential lors de la
+  // connexion aurait alors deux comptes à départager. C'est le risque d'accès
+  // croisé qu'ADR-021 demande de couvrir par un test négatif.
+  @@unique([credentialID], map: "passkey_credential_id_unique")
+  @@map("passkey")
 }
 
 model JournalAudit {

@@ -33,6 +33,25 @@ connaître avant d'écrire un service qui la recouvrirait ou la contredirait :
 |---|---|---|
 | `src/services/reservation.ts` | réservation d'un panier : tri déterministe des variantes, rejeu borné sur interblocage, refus par exception | garde locale sur la quantité, **à remplacer par le socle Zod de LS-71** |
 | `src/repositories/stock.ts` | l'`UPDATE` conditionnel d'ADR-006, en `$queryRawUnsafe`, réexporté par `tests/aide/reservation-sql.ts` | aucune |
+| `src/lib/auth.ts` | instance Better Auth : mapping vers `Utilisateur`, `role` en `input: false`, seize caractères, plugin passkey | vérification d'email **désactivée**, ADR-008 non tranché |
+| `src/lib/auth-client.ts` | client navigateur, passkey comprise | aucune |
+| `src/lib/mot-de-passe.ts` | les deux longueurs, **sans aucun import** pour rester servable au navigateur | aucune |
+| `src/services/autorisation.ts` | `lireIdentite`, `exigerSession`, `exigerAdministratrice` | aucune |
+| `src/services/utilisateur.ts` | mise à jour de profil, schéma Zod `.strict()`, règle E11 | aucune |
+| `src/integrations/email/index.ts` | interface `EnvoyeurEmail`, implémentation qui journalise sans envoyer | **aucun email ne part**, ADR-008 |
+
+**Toute route d'administration appelle `exigerAdministratrice` dans son
+composant serveur, avant tout rendu.** Il n'y a délibérément pas de middleware :
+celui de Next.js s'exécute sur la périphérie et ne peut pas relire la session en
+base, il ne verrait que la présence d'un cookie, ni sa validité ni le rôle.
+
+Trois propriétés de ce code se perdent facilement. `input: false` ne couvre que
+les routes de Better Auth, toute autre écriture sur `Utilisateur` y échappe,
+règle E11. Le défaut de `normaliserRole` est **fermé**, une valeur inconnue vaut
+`CLIENT`, et son sens n'est visible par aucun parcours nominal : une mutation
+l'a prouvé en restant verte sur quinze tests. Enfin `lib/mot-de-passe.ts`
+existe pour que le formulaire de connexion n'importe pas `lib/auth.ts`, qui
+tirerait Prisma et le secret dans le paquet du navigateur.
 
 Deux propriétés de ce code se perdent facilement, portées par ADR-006 et
 `database.md` : un refus métier **sort de la transaction par une exception**, un
