@@ -5,20 +5,22 @@ métropolitaine, euro. Vente en ligne cohabitant avec des marchés locaux et Vin
 
 ## Commandes
 
-`nvm use` d'abord. `engine-strict=true` rend `engines` bloquant, Prisma 7 refusant
-les versions impaires de Node.
+`nvm use` d'abord, `engine-strict=true` rendant `engines` bloquant : Prisma 7
+refuse les versions impaires de Node.
 
 ```bash
 npm ci && npm run type-check && npm run lint && npm run build
+npm run test && npm run test:e2e  # Vitest sur base éphémère, puis Playwright
 npm run db:preparer    # base locale : conteneur, migrations, SQL non généré
 npm run db:verifier    # les contrôles du modèle sur cette base, exige Docker
 ./scripts/verifier-regles.sh         # .claude/rules/ contre le schéma
 ./scripts/verifier-config-claude.sh  # cohérence config, ADR, mémoire, journal
 ```
 
-Liste complète dans `README.md`. `npm audit` reste à **zéro**, `npm run test`
-arrive en LS-68. Une migration se **crée** à la main, `npx prisma migrate dev
---name sujet`, cette commande étant interactive et refusant un script.
+Liste complète dans `README.md`. `npm audit` reste à **zéro**. Une migration se
+**crée** à la main, `npx prisma migrate dev --name sujet`, interactive donc
+impossible à scripter. Les tests d'intégration créent leur base éphémère : ne
+jamais les pointer sur celle de développement.
 
 ## Architecture
 
@@ -99,15 +101,12 @@ interface et réponses de conversation.
 Deux axes à ne pas confondre. **Importance** : Must, Should, Could, Won't.
 **Jalon** : Go-Live, V1 cible, V1.x, Hors V1. Un Must sur Go-Live ne se repousse
 jamais. Aucune date de livraison n'est fixée, le pilotage se fait par portes de
-sortie de phase.
-
-Deux nuances qui se perdent facilement :
+sortie de phase. Deux nuances qui se perdent facilement :
 
 - l'assistant IA et l'**interface** de statistiques sont en V1 cible, mais la
   **collecte** des montants est au Go-Live : une donnée non capturée est perdue
 - l'espace client, les avis vérifiés et le carnet d'adresses sont dans le
-  périmètre d'ouverture depuis le 28 juillet 2026, epic LS-36. Ne pas les traiter
-  comme différables
+  périmètre d'ouverture depuis le 28 juillet 2026, epic LS-36, jamais différables
 
 ## Sources de vérité
 
@@ -160,9 +159,9 @@ dédié à la conteneurisation reste à créer, LS-31.
 
 **Ne pas invoquer les agents globaux `docker-devops`, `security-auditor` ni
 `nextjs-architect` sur ce projet** : calibrés sur NextAuth v5, PostgreSQL 16,
-Redis 7 et du multi-tenant, alors qu'ici c'est Better Auth 1.6, PostgreSQL 18,
-**aucun Redis**, mono-tenant. `docker-devops` traite Redis comme requis, que le
-cahier des charges écarte.
+Redis 7 et du multi-tenant, quand ici c'est Better Auth 1.6, PostgreSQL 18, aucun
+Redis, mono-tenant. `docker-devops` traite Redis comme requis, que le cahier des
+charges écarte.
 
 ## Conduite du travail
 
@@ -193,7 +192,8 @@ la simulation d'une panne de fournisseur.
 
 **Montrer la preuve**, sortie de commande et résultat, ne jamais affirmer que ça
 marche. Un contrôle qui n'a jamais échoué sur le défaut qu'il prétend attraper
-n'est pas un contrôle : le prouver par mutation.
+n'est pas un contrôle : le prouver par mutation, et pour la suite de tests
+`./scripts/verifier-tests-mutation.sh` la rejoue.
 
 **Consulter Context7** avant d'utiliser une API de Next.js 16, React 19, Prisma 7,
 Better Auth 1.6 ou Stripe, ces versions étant plus récentes que ma connaissance.

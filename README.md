@@ -161,17 +161,35 @@ production comprise ; ces fichiers servent de source de conception et de contrô
 masquerait une migration incomplète. `db:preparer` compare le compte obtenu à ces
 fichiers et échoue en cas d'écart.
 
-### Ce qui n'existe pas encore
-
-Les tests et l'intégration continue arrivent avec LS-68 et LS-69 :
+### Tests, LS-68
 
 ```bash
-npm run test
+npm run test              # Vitest, unitaire et intégration
+npm run test:unitaire     # sans base, lançable sans Docker
+npm run test:integration  # base éphémère, exige Docker
+npm run test:e2e          # Playwright, trois largeurs
 ```
+
+| Commande | Ce qu'elle exerce |
+|---|---|
+| `test:unitaire` | manipulation d'URL de base éphémère, sans base |
+| `test:integration` | la primitive SQL de réservation, sur le schéma réel |
+| `test:e2e` | rendu, débordement à 320 px, accessibilité axe-core |
+
+Les tests d'intégration créent une base **éphémère** au nom unique, y appliquent
+`prisma migrate deploy`, puis la détruisent. La base de développement n'est
+jamais touchée, et aucune exécution ne dépend de la précédente.
+
+Le schéma vient des migrations et non de `db push` : les contraintes `CHECK`
+n'ont aucun équivalent déclaratif, une base poussée accepterait la survente que
+ces tests doivent voir refusée.
+
+Sans Docker, `test:integration` **échoue** en nommant la cause, il ne s'ignore
+pas. `test:unitaire` reste vert, ce qui le rend utilisable sur une machine nue.
 
 ### Scripts de vérification
 
-Sept scripts, dont trois de mutation qui prouvent les autres :
+Huit scripts, dont quatre de mutation qui prouvent les autres :
 
 ```bash
 ./prisma/sql-manuel/verifier-schema.sh           # schéma sur base réelle, exige Docker
@@ -180,6 +198,7 @@ Sept scripts, dont trois de mutation qui prouvent les autres :
 ./scripts/verifier-config-claude.sh              # cohérence de la config Claude Code
 ./scripts/verifier-config-claude-mutation.sh     # prouve le précédent par mutation
 ./scripts/verifier-migration-mutation.sh         # garde-fous de migration, sans base
+./scripts/verifier-tests-mutation.sh             # prouve la suite de tests, exige Docker
 ./docs/prototypes/interblocage-panier.sh         # interblocage sur panier, exige Docker
 ```
 
@@ -201,6 +220,20 @@ et `npx` sont remplacés par des doublures. Cinq familles d'instructions
 destructives doivent bloquer, une migration additive doit passer, et une
 détection qui ne peut pas conclure doit bloquer plutôt que supposer. Lancé contre
 la version d'avant LS-42, il échoue sur sept de ces dix cas.
+
+`verifier-tests-mutation.sh` casse sept fois le comportement testé et exige que
+la suite rougisse à chaque fois : cinq mutations de la primitive SQL de
+réservation, deux de l'interface. Il vérifie d'abord que la suite est verte, sans
+quoi aucune mutation ne prouverait rien.
+
+**Il exige que ce soit le test attendu qui échoue, pas n'importe lequel.** Une
+première version se contentait d'un échec quelconque : en neutralisant les
+assertions des trois tests de concurrence, elle annonçait toujours « 7 mutations,
+7 détectées », la mutation étant vue par deux tests indirects pendant que les
+tests censés porter la garantie étaient devenus aveugles.
+
+Ce script a trouvé un défaut réel pendant l'écriture de LS-68, décrit dans
+`docs/journal/2026-07-31-tests-vitest-playwright-ls68.md`.
 
 ## Secrets
 
