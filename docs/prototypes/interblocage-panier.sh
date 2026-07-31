@@ -31,7 +31,11 @@ command -v docker >/dev/null 2>&1 || { echo "ECHEC Docker absent"; exit 2; }
 docker info >/dev/null 2>&1 || { echo "ECHEC Docker ne repond pas"; exit 2; }
 
 nettoyer
-docker run -d --name "$CT" -e POSTGRES_PASSWORD=x -e POSTGRES_DB=lstest \
+# Mot de passe engendre a chaque execution, meme raison que dans
+# reservation-test.sh : conteneur jetable, et une chaine litterale serait
+# signalee comme secret par l'analyse du depot, LS-67.
+MDP="$(openssl rand -hex 16)"
+docker run -d --name "$CT" -e POSTGRES_PASSWORD="$MDP" -e POSTGRES_DB=lstest \
   -p "$PORT:5432" postgres:18 >/dev/null 2>&1 \
   || { echo "ECHEC demarrage du conteneur"; exit 2; }
 

@@ -8,9 +8,13 @@
 //   - montants en centimes entiers, jamais de flottant, invariant 1
 //   - horodatages en UTC, invariant 8
 //
-// Ce que ce fichier ne porte pas, et qui vit dans la migration SQL manuelle :
-// les contraintes CHECK, que Prisma ne génère pas. Voir ADR-006 et le fichier
-// prisma/migrations/manual/001_contraintes_check.sql.
+// Ce que ce fichier ne porte pas, Prisma ne sachant pas l'exprimer : les
+// contraintes CHECK, ADR-006, et l'unicité différable de l'ordre des sections,
+// ADR-026. Depuis LS-67 elles vivent dans une migration versionnée, donc
+// déployées par `prisma migrate deploy` comme le reste du schéma.
+//
+// Leur source de conception reste prisma/sql-manuel/, que verifier-schema.sh
+// confronte à la base réelle. Ces fichiers ne s'appliquent plus à la main.
 
 generator client {
   provider        = "prisma-client-js"
@@ -232,8 +236,9 @@ model SectionProduit {
   // C22, l'unicité de `ordre` n'est PAS déclarée ici, volontairement.
   //
   // Elle doit être DEFERRABLE INITIALLY DEFERRED, ce que le langage de schéma de
-  // Prisma 7 ne sait pas exprimer, vérifié via Context7 sur 7.6.0. Elle vit donc
-  // dans `prisma/migrations/manual/002_contraintes_unicite.sql`.
+  // Prisma 7 ne sait pas exprimer, vérifié via Context7 sur 7.6.0. Elle est donc
+  // posée par la migration versionnée de LS-67, sa source de conception restant
+  // `prisma/sql-manuel/002_contraintes_unicite.sql`.
   //
   // Ne pas « compléter » le schéma en ajoutant ici un @@unique sur
   // [produitId, ordre] : une contrainte non différable est vérifiée à chaque

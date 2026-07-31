@@ -265,6 +265,12 @@ que les contraintes `CHECK`. Elle sera alors appliquée normalement en
 développement, en intégration continue et en production, par le mécanisme de
 migration ordinaire.
 
+> **Suite donnée, 31 juillet 2026.** LS-67 a porté cette contrainte dans la
+> migration `20260731050325_contraintes_check_et_unicite_differable`. Vérifié sur
+> une base issue des seules migrations : `condeferrable` et `condeferred` valent
+> tous deux `true`. Le retrait de `DEFERRABLE INITIALLY DEFERRED` de la migration
+> fait rougir quatre contrôles, dont l'échange de deux positions.
+
 Après LS-67, les fichiers de `prisma/sql-manuel/` restent une **source de
 conception et de contrôle**, lue par `verifier-schema.sh` pour vérifier que la
 base correspond à l'intention. Ils ne constituent pas un second mécanisme

@@ -50,7 +50,12 @@ verifier() {
 
 echo "Demarrage de PostgreSQL 18..."
 nettoyer
-docker run -d --name "$CT" -e POSTGRES_PASSWORD=proto -e POSTGRES_DB=lsproto \
+# Mot de passe engendre a chaque execution. Ce conteneur est jetable et detruit
+# en fin de script, la valeur ne sert qu'a lui : une chaine litterale ici serait
+# signalee comme secret par l'analyse du depot, qui ne peut pas deviner qu'elle
+# est sans portee, LS-67.
+MDP="$(openssl rand -hex 16)"
+docker run -d --name "$CT" -e POSTGRES_PASSWORD="$MDP" -e POSTGRES_DB=lsproto \
   -p 5433:5432 postgres:18-alpine >/dev/null
 
 for i in $(seq 1 60); do
@@ -62,7 +67,7 @@ docker exec -i "$CT" psql -U postgres -d lsproto -q < "$DIR/reservation-schema.s
 echo "Base prete, version $(R 'SHOW server_version;')"
 echo
 
-echo "Test 1 : deux clientes simultanees sur une piece unique"
+echo "Test 1 : deux acheteurs simultanes sur une piece unique"
 reset_stock
 reserver >/dev/null & reserver >/dev/null &
 wait 2>/dev/null
@@ -71,11 +76,11 @@ verifier "quantite reservee a 1" "1" "$(R 'SELECT quantite_reservee FROM variant
 verifier "stock jamais negatif"  "1" "$(R 'SELECT CASE WHEN quantite_physique-quantite_reservee >= 0 THEN 1 ELSE 0 END FROM variante;')"
 
 echo
-echo "Test 2 : vingt clientes simultanees sur une piece unique"
+echo "Test 2 : vingt acheteurs simultanes sur une piece unique"
 reset_stock
 for i in $(seq 1 20); do reserver >/dev/null & done
 wait 2>/dev/null
-verifier "une seule gagnante sur vingt" "1" "$(R 'SELECT count(*) FROM reservation;')"
+verifier "un seul servi sur vingt"      "1" "$(R 'SELECT count(*) FROM reservation;')"
 verifier "quantite reservee a 1"        "1" "$(R 'SELECT quantite_reservee FROM variante;')"
 
 echo
@@ -98,7 +103,7 @@ R "WITH expirees AS (DELETE FROM reservation WHERE expire_a < now() RETURNING va
    FROM (SELECT variante_id, sum(quantite) AS q FROM expirees GROUP BY variante_id) e
    WHERE v.id = e.variante_id;" >/dev/null
 verifier "disponible apres purge"  "1" "$(R 'SELECT quantite_physique-quantite_reservee FROM variante;')"
-verifier "nouvelle cliente servie" "1" "$(reserver | wc -l | tr -d ' ')"
+verifier "nouvel acheteur servi" "1" "$(reserver | wc -l | tr -d ' ')"
 
 echo
 echo "Test 5 : conversion d'une reservation en vente payee"
