@@ -100,7 +100,7 @@ npm ci             # installation reproductible depuis le verrou
 npm run dev        # sert la page d'attente sur le port 3000
 ```
 
-Contrôles disponibles dès maintenant :
+Contrôles, tous rejoués par la chaîne d'intégration avant fusion :
 
 ```bash
 npm run type-check # tsc --noEmit, mode strict
@@ -210,7 +210,27 @@ qu'il n'a pas échoué sur le défaut qu'il prétend attraper.
 absent de la table d'aiguillage de `docs/REFERENCES.md`, un `CLAUDE.md` au-delà de
 200 lignes, un renvoi vers un fichier inexistant, une fiche mémoire hors index, un
 journal manquant alors que du code a été commité. Un hook `Stop` le lance en fin de
-session, et `--strict` le rend bloquant pour l'intégration continue de LS-69.
+session, et `--strict` le rend bloquant dans la chaîne d'intégration.
+
+### Intégration continue
+
+`.github/workflows/controles.yml`, LS-69. Il s'exécute sur chaque pull request
+vers `main` et sur `main` après fusion, et rejoue les huit contrôles de
+`CONTRIBUTING.md` plus le format, les règles, la cohérence de configuration et
+`npm audit`.
+
+La validation du schéma passe **en premier**, sous ses deux modes : c'est le seul
+contrôle dont l'absence d'exécution a déjà laissé passer un défaut, le 29 juillet
+2026.
+
+Quatre scripts restent hors de la chaîne. Les trois de mutation modifient des
+fichiers du dépôt en place, ce qu'une exécution partagée ne tolère pas, et le
+prototype d'interblocage documente un défaut ouvert, LS-50 : le brancher rendrait
+la chaîne rouge en permanence.
+
+La chaîne démarre son propre conteneur `lune-soleil-db` par `docker run`, sans
+passer par `docker-compose.yml` qui exige un `.env` absent en intégration
+continue. Le nom est celui qu'attend le mode `--base-migree`.
 
 Il a été prouvé par sept mutations, une par contrôle, toutes détectées.
 
