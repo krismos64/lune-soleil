@@ -182,7 +182,27 @@ motifs='tant que .{0,20}(src/|le dossier|la table|le fichier|la CI|le workflow|D
 motifs="$motifs|pour l.instant|n.existe pas encore|n.existe toujours pas|pas encore créé"
 motifs="$motifs|aujourd.hui (il y a|le projet|le dépôt|le schéma|le catalogue)"
 motifs="$motifs|(vingt|seize|dix-sept|dix-huit|dix-neuf|vingt-et-une) (contraintes|CHECK|tables|réussites)"
+# Réglages dont l'état change et qu'une fiche décrit souvent au présent. Ajouté
+# le 31 juillet 2026 : la fiche sur la protection de branche décrivait
+# `enforce_admins` à `false` et le push direct comme réussissant, plusieurs
+# heures après le passage à `true`. Rien ne l'avait signalé.
+motifs="$motifs|(reste|est|vaut) (volontairement )?à (\`)?(false|true)"
 permanents=(CLAUDE.md docs/REFERENCES.md .claude/rules/*.md .claude/skills/*/SKILL.md)
+
+# LES FICHES MÉMOIRE ENTRENT DANS CE CONTRÔLE, ajout du 31 juillet 2026.
+#
+# Elles sont chargées à chaque session au même titre que CLAUDE.md, et rien ne
+# vérifiait leur contenu : le contrôle ne regardait que leur présence dans
+# l'index et la validité de leurs liens. Une fiche décrivant un état disparu est
+# pire qu'une fiche absente, elle est rappelée avec autorité.
+#
+# `MEMORY.md` est exclu, c'est un index de titres où le motif produirait du bruit
+# sans rien apprendre.
+if [ -d "$MEM" ]; then
+  while IFS= read -r fiche; do
+    permanents+=("$fiche")
+  done < <(find "$MEM" -name '*.md' ! -name 'MEMORY.md' 2>/dev/null)
+fi
 
 # Une ligne qui CITE un état transitoire pour l'interdire n'en est pas un. Le
 # skill adr donne « tant que src/ est vide » en exemple de ce qu'il ne faut pas
@@ -192,6 +212,15 @@ permanents=(CLAUDE.md docs/REFERENCES.md .claude/rules/*.md .claude/skills/*/SKI
 #
 # Ce marqueur ne s'utilise que pour de la prose qui parle de la règle. L'employer
 # pour faire taire un vrai état transitoire viderait le contrôle de son sens.
+#
+# L'EXCLUSION PAR GUILLEMETS ÉTAIT ANNONCÉE ET NON IMPLÉMENTÉE, corrigé le
+# 31 juillet 2026 : seul le marqueur était testé. Écart trouvé en étendant le
+# contrôle aux fiches mémoire, dont trois citent « tant que src/ est vide » pour
+# l'interdire et étaient signalées à tort.
+#
+# La citation doit encadrer le motif lui-même, pas seulement apparaître sur la
+# ligne : une ligne qui cite autre chose et porte par ailleurs un vrai état
+# transitoire doit rester signalée.
 
 for f in "${permanents[@]}"; do
   [ -f "$f" ] || continue
@@ -200,6 +229,11 @@ for f in "${permanents[@]}"; do
     case "$texte" in
       *'[exemple-perimable]'*) continue ;;
     esac
+    # Retirer ce qui est entre guillemets français, puis re-tester : si le motif
+    # ne subsiste pas hors citation, la ligne parle de la formulation au lieu de
+    # l'employer.
+    hors_citation=$(echo "$texte" | sed 's/«[^»]*»//g')
+    echo "$hors_citation" | grep -qiE "$motifs" || continue
     anomalies+=("état transitoire possible, $f:$ligne : $(echo "$texte" | sed 's/^ *//' | cut -c1-70)")
   done < <(grep -niE "$motifs" "$f" 2>/dev/null || true)
 done
