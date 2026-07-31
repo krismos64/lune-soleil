@@ -1,55 +1,38 @@
 /**
  * La primitive de reservation de stock, en SQL, LS-68.
  *
- * CE FICHIER EST LA CIBLE DE LA MUTATION exigee par le critere d'acceptation de
- * LS-68. Retirer la condition `quantite_physique - quantite_reservee >= $3` de
- * `SQL_RESERVER` doit faire rougir tests/integration/reservation.test.ts.
+ * POINT D'ENTREE UNIQUE DES TESTS vers les instructions de reservation, et cible
+ * de la mutation exigee par LS-68 : retirer la condition
+ * `quantite_physique - quantite_reservee >= $3` de `SQL_RESERVER` doit faire
+ * rougir les tests d'integration de reservation.
  *
- * La requete est ici et non recopiee dans chaque test pour cette raison precise :
+ * Les requetes ne sont pas recopiees dans chaque test pour cette raison precise :
  * une requete dupliquee dans cinq tests se mute en cinq endroits, et une mutation
  * partielle laisse croire que le test resiste alors qu'il n'a pas ete exerce.
  *
- * Source de verite de cette requete : `.claude/rules/database.md` et ADR-006.
+ * DEPUIS LS-50, `SQL_RESERVER` vit dans `src/repositories/stock.ts` et n'est que
+ * reexportee ici : le meme raisonnement vaut entre ce fichier et le code
+ * applicatif. Les deux autres requetes attendent leur service, phase 2.
+ *
+ * Source de verite de ces requetes : `.claude/rules/database.md` et ADR-006.
  * Toute divergence entre les deux est un defaut, pas une adaptation de test.
  */
 
 /**
- * Reservation atomique : verification de disponibilite et ecriture en UNE seule
- * instruction, sans verrou explicite ni lecture prealable.
+ * Reservation atomique, REEXPORTEE depuis le repository applicatif, LS-50.
  *
- * LES QUATRE CONDITIONS DU `WHERE` SONT SOLIDAIRES.
+ * ELLE Y ETAIT RECOPIEE JUSQU'A LS-50, quand le code applicatif n'existait pas
+ * encore. Maintenir deux copies identiques d'une requete dont la correction
+ * depend du SQL exact revient a parier que personne n'en modifiera qu'une : le
+ * test continuerait de passer sur SA copie pendant que la production emploierait
+ * l'autre. C'est le defaut que l'en-tete de ce fichier denonce, applique a
+ * lui-meme.
  *
- * - `id = $1` designe la variante.
- * - `archivee_a IS NULL` : l'archivage peut survenir entre une lecture et
- *   l'ecriture. Un client ayant la fiche ouverte reserverait une piece retiree
- *   du catalogue. Cette condition appartient au `WHERE`, jamais a une lecture
- *   qui la precede.
- * - `vente_web_activee = true` : le cas du marche, la piece est physiquement
- *   presente mais retiree de la vente en ligne le temps du stand.
- * - `quantite_physique - quantite_reservee >= $3` : le coeur de la strategie.
- *   C'est cette ligne que la preuve par mutation retire.
- *
- * Le parametre $2 porte la commande : `Reservation.commandeId` est OBLIGATOIRE
- * depuis ADR-024, une reservation sans commande n'existe pas en base.
- *
- * Aucune ligne rendue signifie un refus metier explicite, a presenter au client
- * sans jargon technique.
+ * La reexportation garde la mutation efficace : retirer la condition de
+ * disponibilite dans le repository fait toujours rougir les tests, et elle la
+ * rend meme plus fidele, la cible etant desormais le code reellement execute.
  */
-export const SQL_RESERVER = `
-  WITH reserve AS (
-    UPDATE variante
-    SET quantite_reservee = quantite_reservee + $3
-    WHERE id = $1
-      AND archivee_a IS NULL
-      AND vente_web_activee = true
-      AND quantite_physique - quantite_reservee >= $3
-    RETURNING id
-  )
-  INSERT INTO reservation (id, variante_id, commande_id, quantite, expire_a, cree_a)
-  SELECT gen_random_uuid(), id, $2, $3, now() + ($4 || ' minutes')::interval, now()
-  FROM reserve
-  RETURNING id
-`;
+export { SQL_RESERVER } from "@/repositories/stock";
 
 /**
  * Liberation des reservations expirees, la tache planifiee des cinq minutes.
