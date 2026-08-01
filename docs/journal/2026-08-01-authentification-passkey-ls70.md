@@ -242,6 +242,32 @@ celui de la production servie en `http`, seul cas où la déduction donne faux.
 Deux tests ajoutés, dont le contre-test qui interdit de poser `Secure`
 inconditionnellement et de casser le développement local.
 
+### Puis la CI a échoué une seconde fois, et là elle avait raison
+
+La construction passait, les tests de bout en bout non :
+
+```
+[WebServer] ⨯ Error: BETTER_AUTH_SECRET absente.
+Expected pattern: /\/administration\/connexion$/
+Received string:  "http://127.0.0.1:3100/administration"
+```
+
+Mon garde-fou fonctionnait **exactement comme voulu**. Le contrôle 8 démarre
+`next start` : il **sert** une vraie application, hors phase de construction, et
+sans secret le serveur refuse de démarrer l'authentification. La redirection
+d'administration ne se faisait donc pas, ce que le test a vu.
+
+La CI porte maintenant les deux variables. **Ce n'est pas un secret de
+complaisance**, et la distinction se lit dans sa durée de vie : engendré par
+`openssl` à chaque exécution, jamais écrit dans le dépôt public, détruit avec le
+runner. Il ne contente pas un contrôle, il configure un serveur réellement servi
+le temps de la suite.
+
+La séquence complète mérite d'être retenue : le premier échec disait que mon
+garde-fou était mal placé, le second qu'il était bien placé et que
+l'environnement lui manquait. **Le même symptôme, un contrôle rouge, portait deux
+diagnostics opposés.**
+
 ## Deux garde-fous qui ne gardaient plus rien
 
 **Le SQL de référence ignorait les quatre tables.** Le mode conception construit
