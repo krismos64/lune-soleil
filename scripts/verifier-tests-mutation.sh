@@ -253,13 +253,19 @@ mute "$PROFIL" 's/  \.strict\(\);/  ;/'
 cas ".strict() retire du schema de mise a jour de profil" integration \
   "rejette un role force dans une mise a jour de profil"
 
-# Cas 10 : LE COOKIE DE SESSION SANS `Secure`. Figer `baseURL` en http retire
-# l'attribut du cookie, qui part alors en clair. Defaut REEL trouve par la revue
-# critique de LS-70 : le repli `?? "http://localhost:3000"` rendait la branche
-# `isProduction` de Better Auth inatteignable.
-mute "$AUTH" 's/    baseURL: urlSite,/    baseURL: "http:\/\/localhost:3000",/'
-cas "baseURL figee en http, le cookie perd Secure" integration \
-  "porte Secure et le prefixe __Secure- sur un site en https"
+# Cas 10 : LE COOKIE DE SESSION SANS `Secure`, defaut REEL trouve par la revue
+# critique de LS-70. Le repli `?? "http://localhost:3000"` rendait la branche
+# `isProduction` de Better Auth inatteignable, et une production servie sans
+# BETTER_AUTH_URL emettait un cookie en clair, sept jours de validite.
+#
+# LA MUTATION RETIRE `useSecureCookies`, qui est ce qui protege desormais, et
+# NON `baseURL`. Une premiere version mutait `baseURL` : elle restait verte,
+# le test d'alors passant une URL en `https`, cas ou Better Auth deduit
+# correctement tout seul. Le test qui compte est celui de la production servie
+# en `http`, seul cas ou la deduction donne faux.
+mute "$AUTH" 's/      useSecureCookies: productionSimulee \|\| urlSite\.startsWith\("https:\/\/"\),\n//'
+cas "useSecureCookies retire, le cookie perd Secure en production" integration \
+  "porte Secure en production meme si l'URL est en http"
 
 echo
 echo "Interface, tests de bout en bout"
