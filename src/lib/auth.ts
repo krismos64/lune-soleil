@@ -50,18 +50,21 @@ import { prisma } from "@/lib/prisma";
  * soupconner WebAuthn pendant que le mot de passe de secours continue
  * d'emettre des cookies non proteges.
  *
- * Le repli est donc conditionne a l'environnement : confort en developpement,
- * exception en production. Defaut trouve par la revue critique de LS-70.
+ * LA CORRECTION NE PASSE PAS PAR UNE EXCEPTION, premiere tentative revenue de
+ * l'integration continue. `next build` evalue ce module avec
+ * `NODE_ENV=production` pour collecter les donnees de page : lever ici faisait
+ * echouer la CONSTRUCTION, qui n'emet aucun cookie et n'a aucun besoin de
+ * l'URL publique. Construire n'est pas servir, et un garde-fou qui confond les
+ * deux bloque une etape sans risque tout en laissant le vrai risque intact.
+ *
+ * La protection est donc posee la ou elle agit : `useSecureCookies` explicite
+ * plus bas. Elle ne depend plus de la FORME de l'URL, donc plus du fait que la
+ * variable ait ete renseignee. Une URL absente en production degrade encore le
+ * `rpID` de la passkey et les origines de confiance, ce qui casse bruyamment
+ * et se voit ; elle ne peut plus degrader le cookie en silence.
  */
 const urlBaseConfiguree = process.env.BETTER_AUTH_URL;
-
-if (!urlBaseConfiguree && process.env.NODE_ENV === "production") {
-  throw new Error(
-    "BETTER_AUTH_URL absente en production. Sans elle, Better Auth suppose http://localhost:3000 :\n" +
-      "le cookie de session perd l'attribut Secure et part en clair, et le rpID de la passkey devient localhost.\n" +
-      "La renseigner dans .env, voir .env.example.",
-  );
-}
+const enProduction = process.env.NODE_ENV === "production";
 
 const urlBase = urlBaseConfiguree ?? "http://localhost:3000";
 
@@ -81,12 +84,25 @@ const urlBase = urlBaseConfiguree ?? "http://localhost:3000";
  * L'exception est levee A L'EVALUATION DU MODULE : le service ne demarre pas du
  * tout, plutot que d'echouer a la premiere connexion, loin de sa cause.
  *
+ * SAUF PENDANT LA CONSTRUCTION. `next build` evalue ce module pour collecter
+ * les donnees de page, sans jamais signer le moindre cookie : exiger le secret
+ * la ferait echouer une etape qui ne court aucun risque, et obligerait
+ * l'integration continue a porter une valeur factice dont la seule fonction
+ * serait de contenter un controle. Un secret de complaisance en CI est
+ * exactement ce qui apprend a ne plus lire l'alerte.
+ *
+ * Next.js renseigne `NEXT_PHASE` a `phase-production-build` pendant cette
+ * etape, et a rien du tout quand le serveur tourne : c'est le seul signal qui
+ * distingue construire de servir.
+ *
  * La VALEUR n'est jamais journalisee ni comparee a autre chose que le vide,
  * invariant 9. Seule son absence est constatee.
  */
+const enConstruction = process.env.NEXT_PHASE === "phase-production-build";
+
 const secretSignature = process.env.BETTER_AUTH_SECRET;
 
-if (!secretSignature) {
+if (!secretSignature && !enConstruction) {
   throw new Error(
     "BETTER_AUTH_SECRET absente. Sans elle, Better Auth signe les sessions avec un secret par defaut public.\n" +
       "La renseigner dans .env, voir .env.example : openssl rand -base64 32",
@@ -121,11 +137,33 @@ function domaineRelyingPartyDe(url: string): string {
 export function creerAuth(
   envoyeurEmail: EnvoyeurEmail = envoyeurJournalise,
   urlSite: string = urlBase,
+  // Meme motif que `urlSite` : `enProduction` est fige a l'evaluation du
+  // module, et le test qui couvre le cas reel du defaut, production servie en
+  // `http`, a besoin de le poser sans reevaluer tout le module.
+  productionSimulee: boolean = enProduction,
 ) {
   return betterAuth({
     database: prismaAdapter(prisma, { provider: "postgresql" }),
     baseURL: urlSite,
     secret: secretSignature,
+
+    advanced: {
+      /**
+       * `Secure` SUR LE COOKIE DE SESSION, decide par l'ENVIRONNEMENT et non
+       * par la forme de l'URL.
+       *
+       * Sans cette ligne, Better Auth le deduit de
+       * `baseURL.startsWith("https://")`, et une URL absente ou mal renseignee
+       * en production emettait un cookie en clair, sept jours de validite.
+       * Defaut mesure en LS-70 : `Secure=NON` avec `NODE_ENV=production` et
+       * `BETTER_AUTH_URL` oubliee.
+       *
+       * L'explicite l'emporte ici sur la deduction : le seul cas ou un cookie
+       * de session doit voyager sans `Secure` est le developpement en clair
+       * sur `localhost`, que `NODE_ENV` distingue exactement.
+       */
+      useSecureCookies: productionSimulee || urlSite.startsWith("https://"),
+    },
 
     user: {
       // Le modele Prisma s'appelle `Utilisateur`, pas `User`. Better Auth

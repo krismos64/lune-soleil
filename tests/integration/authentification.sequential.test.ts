@@ -424,14 +424,17 @@ describe("l'autorisation derive de la session, regle E2", () => {
  * aucun effet.
  */
 describe("attributs du cookie de session", () => {
-  async function cookieDeConnexionAvec(urlSite: string): Promise<string> {
-    // L'URL passe par le PARAMETRE de `creerAuth` et non par l'environnement :
-    // `urlBase` est figee a l'evaluation du module, la reassigner apres
-    // l'import ne changerait rien et le test verdirait sur l'instance par
-    // defaut, en `http`, donc sans jamais exercer le cas `https`.
+  async function cookieDeConnexionAvec(
+    urlSite: string,
+    productionSimulee = false,
+  ): Promise<string> {
+    // L'URL et l'environnement passent par les PARAMETRES de `creerAuth` et non
+    // par `process.env` : les deux constantes sont figees a l'evaluation du
+    // module, les reassigner apres l'import ne changerait rien et le test
+    // verdirait sur l'instance par defaut sans exercer le cas vise.
     const { creerAuth } = await import("@/lib/auth");
     const { envoyeurJournalise } = await import("@/integrations/email");
-    const instance = creerAuth(envoyeurJournalise, urlSite);
+    const instance = creerAuth(envoyeurJournalise, urlSite, productionSimulee);
     const email = `cookie-${Date.now()}@exemple.fr`;
 
     await instance.api.signUpEmail({
@@ -455,6 +458,32 @@ describe("attributs du cookie de session", () => {
     // hostile. Better Auth pose les deux ensemble ou aucun des deux.
     expect(cookie).toMatch(/;\s*Secure/i);
     expect(cookie).toContain("__Secure-");
+  });
+
+  /**
+   * LE TEST QUI COUVRE LE CAS REEL DU DEFAUT, et le seul.
+   *
+   * Le test precedent passe une URL en `https`, cas ou Better Auth deduit
+   * correctement `Secure` tout seul : il reste vert meme sans `useSecureCookies`,
+   * verifie par mutation. Le defaut mesure en LS-70 etait une production servie
+   * derriere une URL en `http`, BETTER_AUTH_URL oubliee, ou la deduction donne
+   * FAUX et le cookie part en clair.
+   *
+   * C'est donc ici que la protection se prouve.
+   */
+  it("porte Secure en production meme si l'URL est en http", async () => {
+    const cookie = await cookieDeConnexionAvec("http://localhost:3000", true);
+
+    expect(cookie).toMatch(/;\s*Secure/i);
+  });
+
+  it("ne pose pas Secure en developpement sur http", async () => {
+    // Le contre-test : sans lui, poser `Secure` inconditionnellement passerait
+    // le test ci-dessus tout en cassant le developpement local en clair, ou le
+    // navigateur refuserait le cookie.
+    const cookie = await cookieDeConnexionAvec("http://localhost:3000", false);
+
+    expect(cookie).not.toMatch(/;\s*Secure/i);
   });
 
   it("porte HttpOnly et SameSite quelle que soit l'URL", async () => {
