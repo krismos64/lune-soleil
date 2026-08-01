@@ -4,9 +4,9 @@
 |---|---|
 | Ticket | LS-70 |
 | Commits | `afbcbbf` le code, `772448d` le journal, `1b9c1df` les corrections de revue |
-| Contrôles | 58 Vitest (37 avant, 21 ajoutés), 24 Playwright (12 avant, 12 ajoutés), types, lint, format, règles, config stricte, 93 contrôles de schéma, audit à zéro |
-| Mutations | 11 injectées à la main, **9 détectées d'emblée, 2 non détectées**. Le script rejouable passe de 7 à 12 cas, tous détectés |
-| Défauts trouvés après coup | **3**, par relecture critique, dont un de sécurité réel |
+| Contrôles | 60 Vitest (37 avant, 23 ajoutés), 24 Playwright (12 avant, 12 ajoutés), types, lint, format, règles, config stricte, 93 contrôles de schéma, audit à zéro |
+| Mutations | 13 injectées à la main, **9 détectées d'emblée, 4 non détectées**. Le script rejouable passe de 7 à 12 cas, tous détectés |
+| Défauts trouvés après coup | **3** par relecture critique, dont un de sécurité réel, **plus 1 par l'intégration continue** |
 | Nouveaux fichiers | 4 modèles Prisma, 1 migration, 7 modules `src/`, 2 fichiers de test |
 
 Sixième page du 31 juillet. Better Auth entre dans le projet, et avec lui la
@@ -198,6 +198,45 @@ secours continue d'émettre des cookies non protégés.
 Aucun de mes dix-sept tests ne regardait les attributs du cookie : ils ne
 lisaient que sa valeur, pour la rejouer. Un cookie sans `Secure` s'authentifie
 exactement comme un cookie protégé.
+
+### Ma première correction bloquait la construction, pas l'attaque
+
+Réflexe évident : lever quand `BETTER_AUTH_URL` manque en production. La CI l'a
+renvoyée en échec.
+
+```
+Error: Failed to collect page data for /administration/connexion
+  [cause]: Error: BETTER_AUTH_URL absente en production.
+```
+
+`next build` évalue les modules avec `NODE_ENV=production` pour collecter les
+données de page. La **construction** échouait donc, alors qu'elle n'émet aucun
+cookie et n'a aucun besoin de l'URL publique.
+
+**Construire n'est pas servir.** Un garde-fou qui confond les deux bloque une
+étape sans risque tout en laissant le vrai risque intact : l'exception ne
+protégeait rien, elle déplaçait le moment de l'échec.
+
+La protection est maintenant posée là où elle agit, `useSecureCookies` explicite,
+décidé par l'environnement et non par la forme de l'URL :
+
+```
+production sans URL  -> Secure=OUI   (valait NON)
+https                -> Secure=OUI
+développement, http  -> Secure=NON   (le navigateur refuserait Secure)
+```
+
+Le garde-fou sur `BETTER_AUTH_SECRET` reste, mais s'écarte pendant la seule
+construction, que Next.js signale par `NEXT_PHASE`. L'alternative aurait été de
+porter un secret factice en intégration continue, et **un secret de complaisance
+est exactement ce qui apprend à ne plus lire l'alerte**.
+
+Dernier détail, celui qui aurait pu passer : ma mutation du cookie visait
+`baseURL` et **restait verte**, le test d'alors passant une URL en `https`, cas
+où Better Auth déduit `Secure` correctement tout seul. Le test qui compte est
+celui de la production servie en `http`, seul cas où la déduction donne faux.
+Deux tests ajoutés, dont le contre-test qui interdit de poser `Secure`
+inconditionnellement et de casser le développement local.
 
 ## Deux garde-fous qui ne gardaient plus rien
 
