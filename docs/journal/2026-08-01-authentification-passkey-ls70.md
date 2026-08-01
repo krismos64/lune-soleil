@@ -1,4 +1,8 @@
-# 31 juillet 2026, l'authentification, et deux tests verts pour la mauvaise raison
+# 31 juillet et 1er août 2026, l'authentification, et des tests verts pour la mauvaise raison
+
+La session a franchi minuit : le travail commence le 31 juillet, les corrections
+issues de la relecture et de l'intégration continue sont datées du 1er août. La
+page porte la date de fin, celle de ses derniers commits.
 
 | Champ | Valeur |
 |---|---|
