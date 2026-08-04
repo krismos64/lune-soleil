@@ -33,12 +33,12 @@ connaître avant d'écrire un service qui la recouvrirait ou la contredirait :
 |---|---|---|
 | `src/services/reservation.ts` | réservation d'un panier : tri déterministe des variantes, rejeu borné sur interblocage, refus par exception | garde locale sur la quantité, **à remplacer par le socle Zod de LS-71** |
 | `src/repositories/stock.ts` | l'`UPDATE` conditionnel d'ADR-006, en `$queryRawUnsafe`, réexporté par `tests/aide/reservation-sql.ts` | aucune |
-| `src/lib/auth.ts` | instance Better Auth : mapping vers `Utilisateur`, `role` en `input: false`, seize caractères, plugin passkey | vérification d'email **désactivée**, ADR-008 non tranché |
+| `src/lib/auth.ts` | instance Better Auth : mapping vers `Utilisateur`, `role` en `input: false`, seize caractères, plugin passkey | vérification d'email **désactivée** tant qu'ADR-008 n'est pas implémenté ; session à sept jours, ADR-027 la ramène à un jour |
 | `src/lib/auth-client.ts` | client navigateur, passkey comprise | aucune |
 | `src/lib/mot-de-passe.ts` | les deux longueurs, **sans aucun import** pour rester servable au navigateur | aucune |
 | `src/services/autorisation.ts` | `lireIdentite`, `exigerSession`, `exigerAdministratrice` | aucune |
 | `src/services/utilisateur.ts` | mise à jour de profil, schéma Zod `.strict()`, règle E11 | aucune |
-| `src/integrations/email/index.ts` | interface `EnvoyeurEmail`, implémentation qui journalise sans envoyer | **aucun email ne part**, ADR-008 |
+| `src/integrations/email/index.ts` | interface `EnvoyeurEmail`, implémentation qui journalise sans envoyer | **aucun email ne part** : ADR-008 retient le SMTP OVH et nodemailer, implémentation à écrire |
 
 **Toute route d'administration appelle `exigerAdministratrice` dans son
 composant serveur, avant tout rendu.** Il n'y a délibérément pas de middleware :
@@ -71,12 +71,14 @@ documentation technique, ticket ou règle qui le contredirait.
 | ADR | Sujet | À lire avant de toucher |
 |---|---|---|
 | ADR-006 | Réservation de stock | stock, panier, commande |
+| ADR-008 | Envoi des emails par le SMTP du domaine | emails, factures, vérification d'adresse |
 | ADR-021 | Authentification de l'administration | connexion, rôles |
 | ADR-022 | Palette publique | interface, styles |
 | ADR-023 | Authentification client | espace client, comptes |
 | ADR-024 | Atomicité réservation et commande | tunnel, transactions |
 | ADR-025 | Modes de livraison, trois modes | livraison, transporteur, tunnel |
 | ADR-026 | Sections de fiche produit ordonnées | fiche produit, catalogue, administration des produits |
+| ADR-027 | Limitation de débit, journal des connexions, réauthentification | connexion, sessions, actions sensibles |
 
 Cette table se met à jour à chaque ADR créé. Un ADR absent d'ici reste
 opposable : la table est un raccourci, `docs/adr/` fait foi.
