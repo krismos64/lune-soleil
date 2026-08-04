@@ -113,18 +113,51 @@ fi
 # n'est pas une dépendance et ne doit pas crier.
 # --------------------------------------------------------------------------
 
-sans_lien="$(jq -r --arg projet "$PROJET" '
+epics="$(jq -c '[.issues[].fields.parent.key] | map(select(. != null)) | unique' "$reponse")"
+
+sans_lien="$(jq -r --arg projet "$PROJET" --argjson epics "$epics" '
+  # La description arrive en ADF, un arbre JSON, et non en texte. Ramasser
+  # récursivement tous les champs "text" de l\''arbre. Un jq qui concaténerait
+  # l\''objet directement échoue, et le script sortait alors en 0 sans rien
+  # vérifier : le défaut est apparu au premier appel réel, les données de test
+  # portant des descriptions en texte simple.
+  def texte_adf:
+    if type == "object" then
+      (if has("text") then .text else "" end) + ((.content // []) | map(texte_adf) | join(" "))
+    elif type == "array" then map(texte_adf) | join(" ")
+    elif type == "string" then .
+    else "" end;
   .issues[]
   | . as $t
-  | ($t.fields.description // "") as $d
+  | (($t.fields.description // "") | texte_adf) as $d
   | ($d + " " + ($t.fields.summary // "")) as $texte
-  | select($texte | test("(?i)(dépend de|depend de|bloquante pour|bloque |bloquée par|bloquee par|dépendances?\\s*:)"))
+  # Ancrage à la PHRASE et non à la description entière. Citer « la chaîne LS-65
+  # à LS-69 » ailleurs dans le texte n\''est pas déclarer une dépendance envers
+  # chacun. Sans ce resserrement le contrôle signalait 24 tickets, dont une
+  # majorité de références de contexte.
+  | [$texte | splits("[.;\n]")]
+    | map(select(test("(?i)(dépend de|depend de|bloquante pour|bloque |bloquée par|bloquee par|dépendances?\\s*:)")))
+    | join(" ") as $phrases
+  | select($phrases != "")
   | ($t.fields.issuelinks // [] | map(.outwardIssue.key // .inwardIssue.key)) as $lies
-  | ($texte | [scan($projet + "-[0-9]+")] | unique | map(select(. != $t.key))) as $cites
+  # L\''epic parent et les autres epics sont exclus : « Story 7 sur 11 du
+  # découpage de LS-2 » énonce une appartenance, pas une contrainte d\''ordre.
+  # Sans cette exclusion le contrôle criait sur 33 tickets, dont la moitié à
+  # tort, et un contrôle qui crie partout finit ignoré.
+  | ($phrases | [scan($projet + "-[0-9]+")] | unique
+      | map(select(. != $t.key and (IN($epics[]) | not)))) as $cites
   | ($cites - $lies) as $manquants
   | select($manquants | length > 0)
   | "\($t.key)|\($manquants | join(" "))"
 ' "$reponse")"
+jq_code=$?
+
+if [ "$jq_code" -ne 0 ]; then
+  echo "ECHEC l'analyse des dépendances a échoué, code jq $jq_code"
+  echo "Le format de réponse de l'API a probablement changé. Ne pas ignorer :"
+  echo "sans cette garde, l'échec sortait en 0 et le contrôle paraissait vert."
+  exit 1
+fi
 
 if [ -n "$sans_lien" ]; then
   while IFS='|' read -r cle manquants; do
