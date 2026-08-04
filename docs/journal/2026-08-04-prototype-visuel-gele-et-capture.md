@@ -114,6 +114,40 @@ côté administration, quand la fiche publique laisse prudemment le point à
 confirmer. Le risque est de recopier la première en peuplant le vrai catalogue.
 Signalé sur LS-24.
 
+## La question de Christophe a révélé une convention érodée
+
+En fin de session, Christophe a demandé si les tickets étaient bien rattachés à
+des epics et reliés entre eux. La mesure a donné pire que sa question ne le
+suggérait.
+
+| Tranche | Epic parent | Lien de dépendance |
+|---|---|---|
+| LS-9 à LS-41 | 31/31 | 20/31 |
+| LS-42 à LS-64 | 23/23 | 2/23 |
+| LS-65 à LS-87 | 12/23 | **0/23** |
+
+La convention `blocks` existait bien, appliquée systématiquement jusqu'à LS-41.
+Elle s'est **arrêtée sans qu'aucune décision ne soit prise**, et personne ne l'a
+vu : chaque ticket créé sans lien ressemblait à un cas isolé.
+
+Résultat, **38 tickets déclaraient une dépendance en texte que l'outil
+ignorait**, dont la chaîne LS-65 à LS-69 que la mémoire du projet cite pourtant
+comme imposée. Les quatre tickets créés plus tôt dans cette session avaient le
+même défaut.
+
+Corrigé : onze rattachements, **zéro orphelin restant**, et vingt-cinq liens
+`Blocks` sur les dépendances réellement bloquantes. La couverture passe de 22 à
+51 tickets sur 77.
+
+Deux choix explicites. Les liens `relates to` entre tickets qui se citent sont
+**écartés** : 80 à 100 liens dont beaucoup de bruit, un graphe dense se lit moins
+bien qu'un graphe juste. Et **LS-84 à LS-86 restent sans lien à dessein**, leur
+bloqueur naturel étant l'implémentation de l'interface, qui n'existe pas encore
+comme ticket. Un lien artificiel affirmerait une contrainte d'ordre fausse.
+
+Le sens des liens a été vérifié après le premier plutôt que supposé : le bloqueur
+va en `outwardIssue`, le bloqué en `inwardIssue`.
+
 ## Prochaine étape
 
 **Inchangée : LS-71**, socle de validation Zod. Cette session n'a pas déplacé la
