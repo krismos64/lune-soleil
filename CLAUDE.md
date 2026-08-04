@@ -34,10 +34,10 @@ app/ et components/   ->  services/  ->  repositories/  ->  Prisma  ->  PostgreS
 
 Composants serveur par défaut, client uniquement pour une interaction réelle.
 `services/` porte les cas d'usage, `repositories/` l'accès aux données par
-domaine, `integrations/` isole Stripe, email, médias et IA. Cinq dossiers de
-`src/` portent un `README.md` de garde ; `app/` n'en a pas, alors que les entrées
-non fiables y arrivent. Aucune généralisation prématurée, ce projet n'est pas un
-produit réutilisable.
+domaine, `integrations/` isole Stripe, email, médias et IA. Chaque dossier de
+`src/` porte un `README.md` de garde énonçant ce qui a le droit d'y entrer, hors
+`generated/` et `styles/` ; un contrôle le vérifie. Aucune généralisation
+prématurée, ce projet n'est pas un produit réutilisable.
 
 ## Invariants non négociables
 

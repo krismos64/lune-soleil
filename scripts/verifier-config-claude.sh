@@ -282,6 +282,80 @@ if [ -f CLAUDE.md ] && [ -f .claude/settings.json ] && command -v node >/dev/nul
 fi
 
 # ---------------------------------------------------------------------------
+# 9. Les comptes annoncés par README.md correspondent au réel
+# ---------------------------------------------------------------------------
+#
+# Le README a annoncé « trois overrides » pendant que package.json en déclarait
+# cinq, deux ayant été ajoutés le matin même. Même motif que le contrôle 8 : un
+# compte écrit à la main dérive dès que la chose comptée change.
+#
+# Ne sont contrôlés que les comptes dont la source est mécanique. « Huit
+# contrôles de CONTRIBUTING » n'en est pas : ce sont des étapes nommées dans un
+# document, pas des objets dénombrables sans ambiguïté.
+#
+# Le texte est APLATI, l'enveloppe à 80 colonnes coupant régulièrement entre le
+# chiffre et le nom. Voir le contrôle 8, dont la première version ratait « Deux
+# hooks » pour cette raison exacte.
+
+chiffre_en_lettres() {
+  case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
+    un|une) echo 1 ;; deux) echo 2 ;; trois) echo 3 ;; quatre) echo 4 ;;
+    cinq) echo 5 ;; six) echo 6 ;; sept) echo 7 ;; huit) echo 8 ;;
+    neuf) echo 9 ;; dix) echo 10 ;; *) echo "" ;;
+  esac
+}
+
+# Cherche « <chiffre en lettres> <nom> » dans un texte aplati et rend le nombre.
+compte_annonce() {
+  local texte="$1" nom="$2" mot
+  mot=$(echo "$texte" | grep -oiE "\b(un|une|deux|trois|quatre|cinq|six|sept|huit|neuf|dix) $nom\b" | head -1 | awk '{print $1}')
+  [ -n "$mot" ] && chiffre_en_lettres "$mot"
+}
+
+if [ -f README.md ] && command -v node >/dev/null 2>&1; then
+  readme_aplati=$(tr '\n' ' ' < README.md | tr -s ' ')
+
+  # Overrides : la source est package.json.
+  reel=$(node -e '
+    try { console.log(Object.keys(require("./package.json").overrides || {}).length); }
+    catch (e) { console.log(""); }
+  ' 2>/dev/null)
+  annonce=$(compte_annonce "$readme_aplati" "overrides")
+  if [ -n "$reel" ] && [ -n "$annonce" ] && [ "$reel" != "$annonce" ]; then
+    anomalies+=("README.md annonce $annonce overrides, package.json en déclare $reel")
+  fi
+
+  # Largeurs Playwright : la source est la liste des projets de sa configuration.
+  if [ -f playwright.config.ts ]; then
+    reel=$(grep -cE '^\s*name:\s*"' playwright.config.ts 2>/dev/null || echo 0)
+    annonce=$(compte_annonce "$readme_aplati" "largeurs")
+    if [ "$reel" -gt 0 ] && [ -n "$annonce" ] && [ "$reel" != "$annonce" ]; then
+      anomalies+=("README.md annonce $annonce largeurs Playwright, playwright.config.ts en déclare $reel")
+    fi
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# 10. Chaque dossier de src/ porte son README de garde
+# ---------------------------------------------------------------------------
+#
+# CLAUDE.md a affirmé que « chaque dossier de src/ » portait un fichier de
+# garde, alors que trois n'en avaient pas, dont app/ où arrivent les entrées non
+# fiables. L'affirmation générale masquait le trou au lieu de le montrer.
+#
+# generated/ est exclu, son contenu est produit par Prisma. styles/ aussi, il ne
+# porte que des jetons CSS et aucune règle d'entrée.
+
+if [ -d src ]; then
+  for d in src/*/; do
+    nom=$(basename "$d")
+    case "$nom" in generated|styles) continue ;; esac
+    [ -f "$d/README.md" ] \
+      || anomalies+=("src/$nom/ n'a pas de README.md de garde : ce qui a le droit d'y entrer n'est écrit nulle part")
+  done
+fi
+
+# ---------------------------------------------------------------------------
 # Rapport
 # ---------------------------------------------------------------------------
 #
