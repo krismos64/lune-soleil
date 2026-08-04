@@ -6,7 +6,7 @@ dépassant les 200 lignes recommandées pour un fichier chargé à chaque sessio
 
 `CLAUDE.md` garde l'ordre de priorité des sources et renvoie ici pour le détail.
 
-## Documentation technique, les quatre documents à connaître
+## Documentation technique, les cinq documents à connaître
 
 Les lire avant de concevoir sur le domaine concerné, plutôt que de reconstituer
 une règle depuis le schéma.
@@ -17,6 +17,7 @@ une règle depuis le schéma.
 | `docs/architecture/MODELE-CONCEPTUEL.md` | entités, règles de gestion numérotées (C, S, V, F, L, R, E, A), décisions A à I | schéma, service, migration |
 | `docs/architecture/MODELE-LOGIQUE.md` | traduction physique, index partiels, politiques de suppression, dettes de phase 1 | Prisma, migration |
 | `docs/architecture/STATISTIQUES.md` | indicateurs, périodes en `Europe/Paris`, règles de calcul | statistiques, e-reporting, tout agrégat de montant |
+| `docs/architecture/PROTOTYPE.md` | intention visuelle du prototype gelé, six états non nominaux, table parcours vers écran, cinq écarts connus | toute interface, publique ou administration |
 
 **Une règle numérotée se cite par son identifiant**, S12 ou V14, jamais
 paraphrasée seule : c'est ce qui permet aux contrôles textuels de la retrouver.
@@ -98,6 +99,11 @@ exacte, la valeur du délai, le jeton de couleur. Chacun porte un frontmatter
 
 Une session qui conçoit le paiement sans toucher à `src/integrations/stripe/`
 doit donc lire `payments.md` explicitement.
+
+`frontend-design.md` renvoie vers `docs/architecture/PROTOTYPE.md`, qui n'est
+**pas** une source de vérité : il décrit une intention visuelle et perd contre un
+ADR, une règle ou la loi. Il documente lui-même les cinq points sur lesquels le
+prototype diverge du projet.
 
 ## Lire les commentaires Jira, pas seulement la description
 

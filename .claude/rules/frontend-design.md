@@ -11,6 +11,12 @@ paths:
 Direction : artisanal, féminin, élégant, chaleureux, naturel, légèrement premium.
 La photographie et la matière portent l'identité, pas les ornements.
 
+**Référence visuelle : `docs/architecture/PROTOTYPE.md`.** Il capture l'intention
+et l'enchaînement des écrans d'un prototype gelé le 5 août 2026, dont les six
+états non nominaux et la table parcours vers écran. Il ne prime sur rien : en cas
+de divergence avec un ADR ou une règle d'ici, c'est le prototype qui a tort, et
+ce document liste déjà les cinq écarts connus.
+
 ## Palette, fixée par ADR-022
 
 Utiliser les jetons de `src/styles/tokens.css`, jamais une valeur hexadécimale en
@@ -34,9 +40,16 @@ dur.
 1. `--ls-accent-gold` (`#C4A052`) donne **2,31:1** sur crème. **Interdit pour
    tout texte**, y compris large. Filets, icônes décoratives, éclats uniquement.
    Tout texte doré utilise `--ls-accent-gold-deep` (4,72:1).
-2. `--ls-accent-terracotta` (`#B4643E`) donne **4,07:1**. Conforme AA en texte
+2. `--ls-accent-terracotta` (`#B4643E`) donne **4,07:1** sur crème, et **4,35:1**
+   sur blanc. Sous le seuil AA de 4,5:1 dans les deux cas. Conforme AA en texte
    large ou gras seulement. Un badge en petit texte passe en fond terracotta avec
    texte blanc.
+
+**« Texte large » commence à 18,66 px en gras**, ou 24 px en graisse normale.
+Un libellé d'accroche en 11 ou 12 px gras n'est **pas** du texte large : c'est
+l'erreur la plus facile à commettre avec ce jeton, et le prototype la commet 35
+fois. Pour ce cas, employer `--ls-accent-gold-deep` (4,72:1) ou assombrir jusqu'à
+un rapport mesuré supérieur à 4,5:1.
 
 Le jeton `primary-night` `#1B2A41` du cahier des charges est **écarté**. Aucun
 bleu dans ce projet, le logo n'en contient pas.
