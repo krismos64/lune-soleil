@@ -184,9 +184,9 @@ quatre messages : il faudrait une cinquantaine de commandes dans la même heure
 pour approcher le plafond. J'avais cité cette limite comme un risque sans l'avoir
 vérifiée.
 
-Deux réserves tracées : la documentation écrit « around 200 », donc un ordre de
-grandeur ; et l'offre qui porte réellement `contact@lune-soleil.fr` n'est pas
-confirmée, vérification qui demande des accès que le développement n'a pas. Un
+**L'offre est le MX Plan**, confirmé par Christophe dans la journée : le chiffre
+s'applique bien au compte du projet. Une seule réserve subsiste, la documentation
+écrit « around 200 », donc un ordre de grandeur et non un seuil contractuel. Un
 troisième chiffre, 300 par heure et par IP, vient d'un forum et n'est pas retenu.
 
 **OVHcloud recommande lui-même un service tiers pour l'envoi en volume**,
@@ -221,10 +221,26 @@ Après installation : audit à zéro, lint, types, `prisma generate`, build, 60
 tests. Le principe déjà écrit dans `package.json` s'applique aux deux, **viser la
 version corrigée sans toucher aux versions majeures**.
 
-Un point relevé sans être corrigé : le journal de la CI **affiche
-`BETTER_AUTH_SECRET` en clair**. Sans conséquence, ce secret étant engendré par
-`openssl` à chaque exécution et détruit avec le runner, mais il devrait être
-masqué par `::add-mask::`.
+## Une valeur en clair dans le journal de la CI
+
+Le journal de l'intégration continue **affichait `BETTER_AUTH_SECRET` en clair**,
+dans le bloc `env:` de chaque étape suivante, sur un dépôt public.
+
+La cause tient à une règle de GitHub qui se comprend mal : **il ne masque que les
+valeurs qu'il connaît déjà**, celles déclarées dans son magasin. Une valeur
+engendrée pendant l'exécution lui est inconnue, donc elle traverse les journaux
+telle quelle. Le commit `6779616` de LS-70, qui a introduit ce secret jetable,
+n'avait pas ce réflexe.
+
+Aucune conséquence réelle : la valeur naît d'`openssl` à chaque exécution et meurt
+avec le runner. Le motif est ailleurs, **une valeur en clair tolérée dans un
+journal apprend à ne plus regarder les suivantes**, exactement comme le secret de
+complaisance qu'ADR-021 et le commentaire de ce fichier écartent.
+
+Corrigé par `::add-mask::`, avec un détail qui aurait pu passer : la valeur est
+capturée dans une variable **avant** d'être masquée puis écrite. Appeler
+`openssl` deux fois produirait deux valeurs distinctes, et celle qui serait
+masquée ne serait pas celle qui sert.
 
 ## Prochaine étape
 

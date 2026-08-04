@@ -147,20 +147,18 @@ détection lent.
 
 **Le volume d'envoi est plafonné, à environ 200 messages par heure et par
 compte.** Chiffre relevé le 4 août 2026 dans la documentation OVHcloud, page
-« Web Hosting, email sending best practices », pour la solution MX Plan incluse
-avec l'hébergement.
+« Web Hosting, email sending best practices », pour la solution **MX Plan**, qui
+est celle souscrite pour ce projet.
 
 Ce plafond est très au-dessus du besoin. Une commande déclenche trois à quatre
 messages, il faudrait donc une cinquantaine de commandes dans la même heure pour
 l'approcher. Une boutique artisanale n'y arrivera pas.
 
-**Deux réserves sur ce chiffre**, qui interdisent de le traiter comme acquis :
+**L'offre est confirmée : c'est bien le MX Plan**, indiqué par Christophe le
+4 août 2026. Le chiffre s'applique donc au compte du projet.
 
-1. il vaut pour le MX Plan, et **l'offre qui porte réellement
-   `contact@lune-soleil.fr` n'a pas été confirmée**. Vérification à faire dans
-   l'espace client OVH, elle demande des accès que le développement n'a pas ;
-2. la documentation écrit « around 200 », donc un ordre de grandeur et non un
-   seuil contractuel.
+**Une réserve subsiste** : la documentation écrit « around 200 », donc un ordre
+de grandeur et non un seuil contractuel.
 
 Un troisième chiffre circule, 300 par heure et par adresse IP. Il vient d'un
 forum et n'est **pas retenu** : seule la documentation fait foi.
