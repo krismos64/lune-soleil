@@ -34,10 +34,10 @@ app/ et components/   ->  services/  ->  repositories/  ->  Prisma  ->  PostgreS
 
 Composants serveur par défaut, client uniquement pour une interaction réelle.
 `services/` porte les cas d'usage, `repositories/` l'accès aux données par
-domaine, `integrations/` isole Stripe, email, médias et IA. Chaque dossier de
-`src/` porte un fichier de garde qui énonce ce qui a le droit d'y entrer.
-
-Aucune généralisation prématurée : ce projet n'est pas un produit réutilisable.
+domaine, `integrations/` isole Stripe, email, médias et IA. Cinq dossiers de
+`src/` portent un `README.md` de garde ; `app/` n'en a pas, alors que les entrées
+non fiables y arrivent. Aucune généralisation prématurée, ce projet n'est pas un
+produit réutilisable.
 
 ## Invariants non négociables
 
@@ -165,9 +165,9 @@ et mono-tenant, que `docker-devops` traite pourtant comme requis.
 ## Conduite du travail
 
 Tout travail suit le skill `story`, y compris une exploration sans ticket : il
-porte le contrôle avant zone critique et la clôture de la traçabilité. Deux hooks
-l'appuient, `PreToolUse` bloque la lecture des secrets, `Stop` avertit s'il reste
-des commits absents de `main` distante.
+porte le contrôle avant zone critique et la clôture de la traçabilité. Trois
+hooks l'appuient : `PreToolUse` bloque la lecture des secrets, `PostToolUse`
+rejoue `verifier-regles.sh`, `Stop` avertit s'il reste des commits non poussés.
 
 YOU MUST clore tout travail significatif sur les **quatre canaux**, et dire
 explicitement ce qui a été mis à jour :
