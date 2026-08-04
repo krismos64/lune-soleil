@@ -242,6 +242,65 @@ capturée dans une variable **avant** d'être masquée puis écrite. Appeler
 `openssl` deux fois produirait deux valeurs distinctes, et celle qui serait
 masquée ne serait pas celle qui sert.
 
+## Relecture de la configuration, deux chiffres faux
+
+Christophe a demandé si `CLAUDE.md`, les agents et les skills étaient à jour. Les
+affirmations vérifiables ont été recomptées plutôt que relues.
+
+**L'agent `ls-critical-reviewer` et les deux skills sont justes.** Les versions
+citées correspondent, les zones critiques de `story` couvrent déjà « autorisation »
+et « données personnelles », donc le journal des connexions de LS-80 y entre sans
+modification.
+
+**Deux affirmations de `CLAUDE.md` étaient fausses**, toutes deux du même genre.
+
+« Chaque dossier de `src/` porte un fichier de garde » : faux pour trois dossiers
+sur huit. `generated/` est produit par Prisma et n'en a pas besoin, mais **`app/`
+est le dossier où arrivent les entrées non fiables** et n'a pas de garde. Le fait
+est maintenant écrit, plutôt que masqué par une affirmation générale qui le
+recouvrait.
+
+« Deux hooks l'appuient » quand `settings.json` en déclare **trois** : le
+`PostToolUse` qui rejoue `verifier-regles.sh` après chaque édition n'était
+mentionné nulle part.
+
+C'est le même motif que le README annonçant trois overrides pour cinq, trouvé une
+heure plus tôt. **Un compte écrit à la main reste une opinion tant qu'un contrôle
+ne le confronte pas à la source.** Contrôle 8 ajouté, qui recompte les clés
+d'événement de `settings.json`.
+
+### La première version du contrôle est restée verte
+
+Muté en « Deux hooks », le contrôle n'a rien vu. Le texte est enveloppé à 80
+colonnes et le retour à la ligne tombait **entre le chiffre et le mot** :
+
+```
+porte le contrôle avant zone critique et la clôture de la traçabilité. Deux
+hooks l'appuient : `PreToolUse` bloque la lecture des secrets, ...
+```
+
+`grep -qiE "\bdeux hooks"` cherche les deux mots sur une même ligne. Le texte est
+désormais aplati avant recherche, et la mutation rougit dans les deux sens,
+annonce trop basse comme hook réellement retiré de `settings.json`.
+
+**Troisième variante du même motif en une journée**, après la mutation satisfaite
+par une seconde mention. Tous les documents de ce projet étant enveloppés à 80
+colonnes, toute expression de plusieurs mots peut être coupée, et un contrôle
+ligne à ligne y échoue **en silence**.
+
+## Le masquage du secret, vérifié par lecture
+
+Le correctif `add-mask` ne se prouve pas par un contrôle vert, `add-mask`
+n'échouant jamais bruyamment. Journal de l'exécution 30899239112 :
+
+```
+Installer Node                    BETTER_AUTH_SECRET: ***
+1. Installation des dependances   BETTER_AUTH_SECRET: ***
+Engendrer le client Prisma        BETTER_AUTH_SECRET: ***
+```
+
+La valeur s'affichait en clair à ces mêmes endroits avant le correctif.
+
 ## Prochaine étape
 
 **LS-71**, socle de validation Zod, désignée par le journal de LS-70. Elle doit
