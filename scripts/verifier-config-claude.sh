@@ -239,6 +239,49 @@ for f in "${permanents[@]}"; do
 done
 
 # ---------------------------------------------------------------------------
+# 8. Le compte de hooks annoncé par CLAUDE.md correspond au réel
+# ---------------------------------------------------------------------------
+#
+# CLAUDE.md a annoncé « deux hooks » pendant que settings.json en déclarait
+# trois : le PostToolUse qui rejoue verifier-regles.sh n'était mentionné nulle
+# part, ajouté sans que la phrase soit reprise. Personne ne l'a vu, aucun
+# contrôle ne recomptait.
+#
+# Même motif que le README annonçant trois overrides pour cinq. Un compte écrit
+# à la main est une opinion tant qu'un contrôle ne le confronte pas à la source.
+#
+# Le script lit les clés d'événement de settings.json, pas le nombre de
+# commandes : deux hooks sur un même événement restent un seul type déclaré,
+# et c'est bien de types que parle la phrase de CLAUDE.md.
+
+if [ -f CLAUDE.md ] && [ -f .claude/settings.json ] && command -v node >/dev/null 2>&1; then
+  reel=$(node -e '
+    try {
+      const s = require("./.claude/settings.json");
+      console.log(Object.keys(s.hooks || {}).length);
+    } catch (e) { console.log(""); }
+  ' 2>/dev/null)
+
+  # « Trois hooks l'appuient », le chiffre est en toutes lettres.
+  #
+  # Le texte est APLATI avant la recherche : le retour à la ligne tombe souvent
+  # entre le chiffre et le mot « hooks », et un motif ligne à ligne rate alors
+  # la phrase. Une première version de ce contrôle est restée verte sur « Deux
+  # hooks » coupé en fin de ligne.
+  aplati=$(tr '\n' ' ' < CLAUDE.md | tr -s ' ')
+
+  annonce=""
+  echo "$aplati" | grep -qiE "\bun hook l('|’)appuie" && annonce=1
+  echo "$aplati" | grep -qiE "\bdeux hooks" && annonce=2
+  echo "$aplati" | grep -qiE "\btrois hooks" && annonce=3
+  echo "$aplati" | grep -qiE "\bquatre hooks" && annonce=4
+
+  if [ -n "$reel" ] && [ -n "$annonce" ] && [ "$reel" != "$annonce" ]; then
+    anomalies+=("CLAUDE.md annonce $annonce hooks, .claude/settings.json en déclare $reel")
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # Rapport
 # ---------------------------------------------------------------------------
 #
