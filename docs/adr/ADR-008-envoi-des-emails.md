@@ -145,11 +145,40 @@ accepté, nommé plus haut. Atténué par la facture téléchargeable, non suppr
 Une réclamation client reste le signal principal, ce qui est un mécanisme de
 détection lent.
 
-**Le volume d'envoi des offres mutualisées est plafonné.** La limite exacte de
-l'offre OVH souscrite n'a pas été vérifiée à la source et ne doit pas être
-supposée. À contrôler avant l'ouverture, en même temps que les enregistrements
-DNS : une journée de marché suivie de plusieurs commandes déclenche confirmation,
-facture et expédition pour chacune.
+**Le volume d'envoi est plafonné, à environ 200 messages par heure et par
+compte.** Chiffre relevé le 4 août 2026 dans la documentation OVHcloud, page
+« Web Hosting, email sending best practices », pour la solution MX Plan incluse
+avec l'hébergement.
+
+Ce plafond est très au-dessus du besoin. Une commande déclenche trois à quatre
+messages, il faudrait donc une cinquantaine de commandes dans la même heure pour
+l'approcher. Une boutique artisanale n'y arrivera pas.
+
+**Deux réserves sur ce chiffre**, qui interdisent de le traiter comme acquis :
+
+1. il vaut pour le MX Plan, et **l'offre qui porte réellement
+   `contact@lune-soleil.fr` n'a pas été confirmée**. Vérification à faire dans
+   l'espace client OVH, elle demande des accès que le développement n'a pas ;
+2. la documentation écrit « around 200 », donc un ordre de grandeur et non un
+   seuil contractuel.
+
+Un troisième chiffre circule, 300 par heure et par adresse IP. Il vient d'un
+forum et n'est **pas retenu** : seule la documentation fait foi.
+
+**OVHcloud recommande lui-même un service tiers au-delà d'un certain volume**, sur
+la même page :
+
+> Standard mailbox solutions are not designed for bulk sending [...] use a
+> dedicated third-party transactional email service.
+
+La phrase d'origine vise nommément les newsletters et le transactionnel en
+volume ; l'élision remplace une incise que la règle de rédaction du projet
+interdit de recopier.
+
+Cette recommandation vise l'envoi en masse, newsletters et transactionnel en
+volume. Elle ne contredit pas la présente décision au volume attendu. **Elle
+s'appliquera le jour où une newsletter partira**, cas qu'aucun ADR n'a tranché à
+ce jour.
 
 **Le mot de passe SMTP est un secret d'exploitation.** Il vit en variable
 d'environnement, jamais dans le dépôt qui est public, et n'est jamais journalisé.

@@ -109,13 +109,50 @@ intrus, ce qui vide la mesure de son sens.
 
 Trois conséquences suivent, et aucune n'est optionnelle :
 
-1. **La durée de conservation reste à fixer**, aux sources. Une durée n'est pas
-   une décision d'architecture, c'est une obligation à vérifier, et ce projet
-   interdit de décider d'une obligation juridique. La CNIL publie des
-   recommandations sur les journaux de connexion.
+1. **La durée de conservation est de six mois**, vérifiée à la source le 4 août
+   2026, voir la section suivante.
 2. **La purge existe en même temps que la table.** Une durée écrite dans un
    document et appliquée par personne est fictive.
 3. **Le registre des traitements mentionne ce journal.**
+
+### Six mois, et d'où vient ce chiffre
+
+Source : **délibération n° 2021-122 du 14 octobre 2021** de la CNIL, portant
+adoption d'une recommandation relative à la journalisation, publiée au Journal
+officiel. Son point 8 :
+
+> La Commission recommande de conserver ces données pendant une durée comprise
+> entre six mois et un an. Elle estime en effet que cette durée est suffisante,
+> dans la plupart des cas, pour assurer un équilibre entre, d'une part, la
+> nécessité de disposer de données de journalisation permettant d'identifier les
+> atteintes au système de traitement et, d'autre part, la nécessité de ne pas
+> conserver un volume de données trop important pouvant faire l'objet d'attaques
+> ou de détournements de finalité.
+
+**Six mois, le bas de la fourchette**, pour trois raisons.
+
+Le point 9 de la même délibération décrit une sécurisation « essentiellement
+active », reposant sur une exploitation en temps réel ou à court terme, avec
+génération et traitement d'alertes. Ce projet n'a personne pour exploiter un an
+de journal : il servira à répondre après coup à une question ponctuelle, ce qui
+se joue sur quelques semaines.
+
+Le volume conservé est lui-même un risque, argument que la CNIL avance dans le
+point cité. Le journal concentre adresses IP et habitudes de connexion.
+
+Six mois est dans la fourchette recommandée, donc défendable sans analyse au cas
+par cas.
+
+**Ce que la recommandation n'est pas :** une obligation chiffrée que la loi
+imposerait. C'est une recommandation, et six mois est un choix motivé à
+l'intérieur de ce qu'elle propose.
+
+**Le point 22 ne s'applique pas ici**, il vise le cas où les données du
+traitement principal se conservent moins de six mois, quand commandes et
+factures se gardent des années. Sa logique conforte en revanche une règle déjà
+posée plus haut : la CNIL y recommande de ne pas conserver dans les journaux les
+données personnelles issues du traitement principal, et son point 6 d'éviter d'y
+dupliquer les données concernées.
 
 ## Décision 3, session et réauthentification
 

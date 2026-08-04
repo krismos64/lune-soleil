@@ -5,9 +5,10 @@
 | Ticket | Aucun au départ, session de décision. Cinq créés : LS-79 à LS-83 |
 | Documents produits | **ADR-008** et **ADR-027** |
 | Documents modifiés | `docs/REFERENCES.md`, quatre lignes |
-| Contrôles | `verifier-config-claude.sh --strict` vert, `verifier-regles.sh` vert, aucun cadratin, accents complets |
+| Contrôles | `verifier-config-claude.sh --strict` vert, `verifier-regles.sh` vert, aucun cadratin, accents complets. Après correction des dépendances : audit à zéro, lint, types, build, 60 tests |
 | Mutation | 1 injectée sur le contrôle de cohérence, **détectée après correction de son ciblage** |
-| Jira | 5 stories créées, 3 tickets existants commentés |
+| Sources vérifiées | délibération CNIL n° 2021-122, documentation OVHcloud, deux avis GitHub |
+| Jira | 5 stories créées, 5 tickets existants commentés |
 
 Aucune ligne de code écrite. Cette session a fermé quatre décisions laissées
 ouvertes par LS-70, qui auraient été reprises au jugé ou oubliées.
@@ -149,6 +150,81 @@ Un contrôle de cardinalité est exigé, et son ancrage se prouve par mutation :
 trop étroit il rate le fichier critique, trop large il crie partout. Les deux
 extrêmes ont été rencontrés, et la présente session vient d'en produire un
 troisième exemple sur `verifier-config-claude.sh`.
+
+## Les deux chiffres, vérifiés aux sources après coup
+
+Les ADR ont d'abord été écrits avec deux trous assumés, refermés dans la même
+session.
+
+### Six mois pour le journal, délibération n° 2021-122
+
+Source : **délibération n° 2021-122 du 14 octobre 2021** de la CNIL, publiée au
+Journal officiel. Le point 8 recommande une durée **comprise entre six mois et un
+an**. Six mois retenu, le bas de la fourchette : le point 9 décrit une
+sécurisation « essentiellement active » avec alertes traitées en temps réel, que
+ce projet n'aura personne pour exercer, et le volume conservé est lui-même un
+risque que la CNIL nomme.
+
+Deux points du texte confortent des choix déjà pris. Le point 6 recommande
+d'éviter de dupliquer dans les journaux les données du traitement principal, et
+le point 22 de ne pas y conserver de données personnelles issues de celui-ci :
+c'est ce que fait ADR-027 en interdisant d'enregistrer le mot de passe essayé.
+
+Le point 7 ajoute une exigence non couverte, une conservation **ségrégée du
+système principal**. Notée dans LS-80, elle relève d'une infrastructure que ce
+projet mono-tenant n'a pas.
+
+### Environ 200 messages par heure chez OVH
+
+Chiffre relevé dans la documentation OVHcloud, page « Web Hosting, email sending
+best practices », pour le MX Plan inclus avec l'hébergement.
+
+**Le risque que j'avais énoncé était surestimé.** Une commande déclenche trois à
+quatre messages : il faudrait une cinquantaine de commandes dans la même heure
+pour approcher le plafond. J'avais cité cette limite comme un risque sans l'avoir
+vérifiée.
+
+Deux réserves tracées : la documentation écrit « around 200 », donc un ordre de
+grandeur ; et l'offre qui porte réellement `contact@lune-soleil.fr` n'est pas
+confirmée, vérification qui demande des accès que le développement n'a pas. Un
+troisième chiffre, 300 par heure et par IP, vient d'un forum et n'est pas retenu.
+
+**OVHcloud recommande lui-même un service tiers pour l'envoi en volume**,
+newsletters et transactionnel en masse. Cela ne contredit pas ADR-008 au volume
+attendu, mais s'appliquera le jour où une newsletter partira, cas qu'aucun ADR
+n'a tranché.
+
+## Deux avis de sécurité, et l'override qui casse ou non selon le contexte
+
+La CI est passée au rouge sur `npm audit`, indépendamment de cette branche :
+`brace-expansion` 5.0.8 et `fast-uri` 3.1.4, deux avis « high » parus le jour
+même. La règle du projet exige zéro.
+
+**Le cas de `brace-expansion` méritait une vérification et non un réflexe.** Le
+commentaire de `package.json` porte une leçon antérieure : overrider
+`brace-expansion` seul avait cassé ESLint avec `expand is not a function`. Ce
+précédent aurait pu faire écarter l'override.
+
+Il ne s'applique pas ici, et la distinction tient en une phrase : **ce cas-là
+montait de 3.x à 5.x**, changement d'API, quand celui-ci va de **5.0.8 à 5.0.9**,
+même branche, `minimatch` étant déjà en 10.x et appelant l'API 5.x. Vérifié par
+le lint plutôt que supposé.
+
+L'avis précise que la mitigation de 5.0.8 est justement celle qui est contournée,
+donc 5.0.9 n'est pas facultative.
+
+Pour `fast-uri`, la chaîne est
+`prisma > @prisma/dev > @prisma/streams-local > ajv`. Corrigé en 3.1.5 sur la
+branche 3.x ; la 4.1.2 aurait imposé un changement majeur qu'`ajv` n'attend pas.
+
+Après installation : audit à zéro, lint, types, `prisma generate`, build, 60
+tests. Le principe déjà écrit dans `package.json` s'applique aux deux, **viser la
+version corrigée sans toucher aux versions majeures**.
+
+Un point relevé sans être corrigé : le journal de la CI **affiche
+`BETTER_AUTH_SECRET` en clair**. Sans conséquence, ce secret étant engendré par
+`openssl` à chaque exécution et détruit avec le runner, mais il devrait être
+masqué par `::add-mask::`.
 
 ## Prochaine étape
 
