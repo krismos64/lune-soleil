@@ -109,8 +109,15 @@ npm run build      # construction de production
 npm run format     # Prettier, code seulement, pas la documentation
 ```
 
-`npm audit` doit rester à **zéro vulnérabilité**. Trois overrides y contribuent,
+`npm audit` doit rester à **zéro vulnérabilité**. Cinq overrides y contribuent,
 documentés dans `package.json` avec la condition de leur retrait.
+
+Un override vise la version corrigée **sans franchir de version majeure chez le
+paquet qui la consomme**. Monter `brace-expansion` de 3.x à 5.x a déjà cassé
+ESLint, dont le `minimatch` d'alors appelait l'ancienne API ; passer de 5.0.8 à
+5.0.9 ne pose aucun problème puisque `minimatch` est désormais en 10.x. Après
+tout override, relancer les commandes que la dépendance sert, un audit vert ne
+prouvant pas que la chaîne fonctionne.
 
 ### Base de données locale
 
@@ -186,6 +193,33 @@ ces tests doivent voir refusée.
 
 Sans Docker, `test:integration` **échoue** en nommant la cause, il ne s'ignore
 pas. `test:unitaire` reste vert, ce qui le rend utilisable sur une machine nue.
+
+### Authentification, LS-70
+
+Better Auth 1.6. Un seul compte d'administration, passkey en moyen principal et
+mot de passe de seize caractères en secours, ADR-021. Les comptes client relèvent
+d'ADR-023.
+
+Deux variables sont exigées, décrites dans `.env.example` :
+
+| Variable | Ce qu'elle fait, et ce qui arrive sans elle |
+|---|---|
+| `BETTER_AUTH_SECRET` | signe les cookies de session. **Absente, Better Auth ne lève pas** : il retombe sur un secret par défaut publiquement lisible, avec un simple avertissement. `src/lib/auth.ts` lève au démarrage pour fermer ce chemin |
+| `BETTER_AUTH_URL` | doit désigner l'URL **réellement servie**, port compris. Une valeur fausse fait échouer toute connexion en « Invalid origin », avant même la vérification des identifiants |
+
+**Toute route d'administration appelle `exigerAdministratrice` dans son composant
+serveur**, avant tout rendu. Il n'y a délibérément pas de middleware : celui de
+Next.js s'exécute sur la périphérie et ne peut pas relire la session en base, il
+ne verrait que la présence d'un cookie, ni sa validité ni le rôle.
+
+Trois mesures d'ADR-021 restent à porter, décidées par ADR-027 et ticketées :
+limitation de débit LS-79, journal des connexions LS-80, session courte et
+réauthentification LS-81. La durée de session vaut sept jours aujourd'hui, LS-81
+la ramène à un jour.
+
+**Aucun email ne part encore.** ADR-008 retient le SMTP OVH, l'implémentation est
+LS-82 ; d'ici là `src/integrations/email/` journalise sans envoyer, et la
+vérification d'adresse reste désactivée.
 
 ### Scripts de vérification
 
