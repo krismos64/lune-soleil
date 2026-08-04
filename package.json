@@ -62,13 +62,17 @@
   },
   "comments": {
     "overrides": [
-      "Trois avis de securite sur des dependances transitives, corriges en amont mais non encore repercutes par les paquets parents. `npm audit fix --force` proposait de retrograder ESLint en v4 et Next.js en 14, ce qui casse tout : ces overrides ciblent la version corrigee sans toucher aux versions majeures.",
+      "Cinq avis de securite sur des dependances transitives, corriges en amont mais non encore repercutes par les paquets parents. `npm audit fix --force` proposait de retrograder ESLint en v4 et Next.js en 14, ce qui casse tout : ces overrides ciblent la version corrigee sans toucher aux versions majeures.",
       "minimatch : la branche 3.x recoit brace-expansion 5 dont l'API a change, ce qui casse ESLint avec `expand is not a function`. Overrider brace-expansion seul reproduit ce defaut. C'est minimatch qu'il faut monter en 10.x, qui appelle la nouvelle API correctement.",
+      "brace-expansion : GHSA-rgw5-rvv9-x895 du 4 aout 2026 contourne la mitigation de 5.0.8, corrige en 5.0.9. L'override est ici possible sans casse parce que minimatch est deja en 10.x et appelle l'API 5.x : on reste dans la meme branche majeure, contrairement au cas ci-dessus qui montait de 3.x a 5.x.",
+      "fast-uri : GHSA-7p8r-x3mc-p8w7, confusion d'hote par antislash. Vient de prisma > @prisma/dev > @prisma/streams-local > ajv. Corrige en 3.1.5 sur la branche 3.x ; la 4.x est un changement majeur qu'ajv n'attend pas.",
       "sharp : Next.js installe 0.34.5, vulnerable via libvips (CVE-2026-33327, 33328, 35590, 35591). sharp traite les photographies televersees par l'administratrice, ce chemin n'est pas seulement de l'outillage.",
       "A retirer des que les paquets parents publient des versions a jour. `npm audit` doit rester a zero."
     ]
   },
   "overrides": {
+    "brace-expansion": "^5.0.9",
+    "fast-uri": "^3.1.5",
     "minimatch": "^10.2.6",
     "postcss": "^8.5.25",
     "sharp": "^0.35.3"
