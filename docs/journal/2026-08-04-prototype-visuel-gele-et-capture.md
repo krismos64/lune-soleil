@@ -1,13 +1,13 @@
-# 4 août 2026, le prototype visuel est gelé et capturé, cinq écarts mesurés
+# 4 août 2026, le prototype visuel est gelé, et le backlog Jira réparé
 
 | Champ | Valeur |
 |---|---|
 | Ticket | Aucun au départ, exploration rattachée à LS-15 et LS-16. Quatre créés : LS-84 à LS-87 |
-| Documents produits | **`docs/architecture/PROTOTYPE.md`** |
-| Documents modifiés | `docs/REFERENCES.md`, `.claude/rules/frontend-design.md` |
-| Contrôles | `verifier-config-claude.sh` vert, `verifier-regles.sh` vert, aucun cadratin, accents complets |
-| Jira | 4 stories créées, 3 tickets commentés dont une affirmation fausse rectifiée |
-| Mémoire | 1 fiche réécrite, 1 fiche créée |
+| Documents produits | **`docs/architecture/PROTOTYPE.md`**, **`scripts/verifier-jira.sh`** |
+| Documents modifiés | `docs/REFERENCES.md`, `.claude/rules/frontend-design.md`, `.claude/skills/story/SKILL.md`, `.claude/settings.json`, `README.md`, `CLAUDE.md`, `.env.example` |
+| Contrôles | `verifier-config-claude.sh` vert, `verifier-regles.sh` vert, `verifier-jira.sh` créé et exercé, aucun cadratin |
+| Jira | 4 stories créées, 5 commentées, **11 rattachements**. Liens mesurés en fin de session : 56 paires uniques, 51 tickets sur 77 en portent au moins un, **0 sans epic** |
+| Mémoire | 2 fiches créées, 2 réécrites |
 
 Deuxième session de la journée. Aucune ligne de code applicatif : Christophe a
 livré la passe de finition du prototype visuel, et le but était de la capturer
@@ -135,9 +135,13 @@ ignorait**, dont la chaîne LS-65 à LS-69 que la mémoire du projet cite pourta
 comme imposée. Les quatre tickets créés plus tôt dans cette session avaient le
 même défaut.
 
-Corrigé : onze rattachements, **zéro orphelin restant**, et vingt-cinq liens
-`Blocks` sur les dépendances réellement bloquantes. La couverture passe de 22 à
-51 tickets sur 77.
+Corrigé : onze rattachements, **zéro orphelin restant**, et des liens `Blocks`
+sur les dépendances réellement bloquantes, en deux passes, la seconde guidée par
+le contrôle décrit plus bas.
+
+Mesuré en fin de session plutôt que recopié, le compte de mémoire ayant déjà été
+faux ici : **56 paires de liens uniques**, portées par **51 tickets sur 77**,
+contre 22 au départ.
 
 Deux choix explicites. Les liens `relates to` entre tickets qui se citent sont
 **écartés** : 80 à 100 liens dont beaucoup de bruit, un graphe dense se lit moins
@@ -147,6 +151,53 @@ comme ticket. Un lien artificiel affirmerait une contrainte d'ordre fausse.
 
 Le sens des liens a été vérifié après le premier plutôt que supposé : le bloqueur
 va en `outwardIssue`, le bloqué en `inwardIssue`.
+
+## Outiller la convention plutôt que de compter sur la mémoire
+
+Christophe a demandé ensuite si je m'en souviendrais, ou s'il fallait mettre à
+jour un skill, un agent ou `CLAUDE.md`.
+
+**La mémoire seule n'aurait pas suffi.** La convention avait déjà été écrite,
+comprise et appliquée pendant trente-trois tickets avant de disparaître. Le trou
+précis : le skill `story` détaillait comment **lire** un ticket et le
+**commenter**, jamais comment en **créer** un, et aucun contrôle ne touchait Jira.
+
+Trois ajouts. Une section « Créer un ticket » dans le skill, avec les deux
+obligations et trois nuances qui évitent le zèle inverse. Le script
+`scripts/verifier-jira.sh`. Un hook `Stop` qui le lance en fin de session.
+
+Le contrôle reste **hors intégration continue** : la CI n'a pas ces identifiants,
+et lui en donner ajouterait un secret sur un dépôt public pour un contrôle qui ne
+casse aucun build.
+
+### Le script ne marchait pas, et ses tests disaient le contraire
+
+J'avais « prouvé » quatre comportements sur un serveur factice. Au premier appel
+réel, trois défauts sont apparus, aucun visible en test.
+
+**L'API rend la description en ADF**, un arbre JSON, jamais en texte. Mes données
+de test portaient des chaînes simples. Le `jq` échouait à la concaténation.
+
+**Cet échec sortait en 0.** Le script paraissait vert sans rien avoir vérifié,
+exactement le défaut fermé invisible que ce projet a déjà rencontré et que je
+prétendais éviter. Une garde sur le code de retour de `jq` le fait maintenant
+échouer bruyamment.
+
+**L'ancrage était trop large, deux fois.** Les epics cités par appartenance,
+« Story 7 sur 11 du découpage de LS-2 », comptaient comme dépendances. Et la
+recherche portait sur la description entière, donc « la chaîne LS-65 à LS-69 »
+citée en contexte déclenchait sur chaque maillon.
+
+Resserré aux epics exclus puis à la phrase qui porte la formulation : **33
+avertissements, puis 24, puis 3**. Les trois restants sont des dépendances
+transitives déjà couvertes par la chaîne, laissées à dessein.
+
+La leçon dépasse ce script : **des données de test qui ne ressemblent pas au réel
+ne prouvent rien**. Quatre comportements verts sur un jeu factice, et le script
+ne fonctionnait pas.
+
+Neuf liens supplémentaires ont été créés au passage, sur des dépendances réelles
+que le contrôle a révélées et que la première passe manuelle avait manquées.
 
 ## Prochaine étape
 
