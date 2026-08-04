@@ -223,7 +223,7 @@ vérification d'adresse reste désactivée.
 
 ### Scripts de vérification
 
-Huit scripts, dont quatre de mutation qui prouvent les autres :
+Neuf scripts, dont quatre de mutation qui prouvent les autres :
 
 ```bash
 ./prisma/sql-manuel/verifier-schema.sh           # schéma sur base réelle, exige Docker
@@ -233,6 +233,7 @@ Huit scripts, dont quatre de mutation qui prouvent les autres :
 ./scripts/verifier-config-claude-mutation.sh     # prouve le précédent par mutation
 ./scripts/verifier-migration-mutation.sh         # garde-fous de migration, sans base
 ./scripts/verifier-tests-mutation.sh             # prouve la suite de tests, exige Docker
+./scripts/verifier-jira.sh                       # epics et dépendances du backlog, local
 ./docs/prototypes/interblocage-panier.sh         # interblocage sur panier, exige Docker
 ```
 
@@ -245,6 +246,12 @@ absent de la table d'aiguillage de `docs/REFERENCES.md`, un `CLAUDE.md` au-delà
 200 lignes, un renvoi vers un fichier inexistant, une fiche mémoire hors index, un
 journal manquant alors que du code a été commité. Un hook `Stop` le lance en fin de
 session, et `--strict` le rend bloquant dans la chaîne d'intégration.
+
+`verifier-jira.sh` surveille le backlog : un ticket sans epic parent, une
+dépendance annoncée dans une description sans lien Jira. Il reste **hors
+intégration continue**, la CI n'ayant pas ces identifiants et le dépôt étant
+public. Sans les trois variables `JIRA_*` de `.env.example`, il le dit et sort en
+0 plutôt que de prétendre avoir vérifié.
 
 Il **recompte** aussi ce qui est annoncé à la main : hooks déclarés dans
 `settings.json`, overrides de `package.json`, largeurs de `playwright.config.ts`,

@@ -167,7 +167,7 @@ et mono-tenant, que `docker-devops` traite pourtant comme requis.
 Tout travail suit le skill `story`, y compris une exploration sans ticket : il
 porte le contrôle avant zone critique et la clôture de la traçabilité. Trois
 hooks l'appuient : `PreToolUse` bloque la lecture des secrets, `PostToolUse`
-rejoue `verifier-regles.sh`, `Stop` avertit s'il reste des commits non poussés.
+rejoue `verifier-regles.sh`, `Stop` contrôle commits, configuration et Jira.
 
 YOU MUST clore tout travail significatif sur les **quatre canaux**, et dire
 explicitement ce qui a été mis à jour :

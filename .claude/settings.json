@@ -124,6 +124,10 @@
           {
             "type": "command",
             "command": "$CLAUDE_PROJECT_DIR/scripts/verifier-config-claude.sh"
+          },
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/scripts/verifier-jira.sh"
           }
         ]
       }

@@ -46,6 +46,56 @@ Si vraiment rien ne correspond, le signaler à Christophe et proposer de créer 
 ticket. Le cahier des charges est explicite : toute nouvelle idée entre d'abord
 dans Jira et n'intègre le périmètre que par arbitrage explicite.
 
+### Créer un ticket, deux obligations
+
+Un ticket créé sans ces deux points est invisible pour le pilotage : il
+n'apparaît dans aucune vue de phase, et l'ordre des stories se reconstitue de
+mémoire.
+
+**1. Un epic parent, toujours.** Le rattachement se fait à la création, pas plus
+tard. Choisir la phase où le travail s'exécute réellement, pas celle qui
+mentionne le sujet : une correction d'accessibilité appartient à la phase qui
+écrit les composants, pas à la phase de durcissement qui cite le mot.
+
+```
+createJiraIssue  ... puis  editJiraIssue  fields: {"parent": {"key": "LS-3"}}
+```
+
+**2. Un lien `Blocks` dès qu'une description écrit une dépendance.** Les
+formulations qui l'imposent : « dépend de », « bloquante pour », « bloque »,
+« avant LS-xx ». Une phrase dans une description n'existe pour aucun outil.
+
+```
+createIssueLink  type: "Blocks"  outwardIssue: <le bloqueur>  inwardIssue: <le bloqué>
+```
+
+Les paramètres sont des **chaînes simples**, `"Blocks"` et `"LS-66"`. Passer des
+objets échoue avec un message trompeur parlant de ticket introuvable.
+
+**Une citation n'est pas une dépendance.** « Voir LS-12 pour le contexte » ne
+demande aucun lien. Ne lier que ce qui empêche réellement de démarrer.
+
+**Un bloqueur non encore ticketé ne se force pas.** Si la story qui devrait
+bloquer n'existe pas, laisser sans lien et l'écrire dans un commentaire. Un lien
+vers un ticket non pertinent affirme une contrainte d'ordre fausse, ce qui est
+pire qu'une absence de lien.
+
+### Le contrôle qui maintient la convention
+
+```bash
+./scripts/verifier-jira.sh            # avertit
+./scripts/verifier-jira.sh --strict   # échoue aussi sur les dépendances
+```
+
+Il liste les tickets sans epic et les dépendances annoncées sans lien. Sans les
+trois variables `JIRA_*` dans `.env`, il le dit et sort en 0 plutôt que de
+prétendre avoir vérifié.
+
+Ce contrôle existe parce que la convention **s'est déjà érodée une fois** :
+appliquée jusqu'à LS-41, puis abandonnée sans décision, jusqu'à 38 tickets
+portant une dépendance que Jira ignorait. Une règle écrite et non vérifiée ne
+tient pas.
+
 ## 1. Déterminer si le travail touche une zone critique
 
 Zones critiques : stock ou réservation, paiement ou événement de webhook, facture
