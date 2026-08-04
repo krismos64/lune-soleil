@@ -1,0 +1,85 @@
+# Rappel périodique de dérive documentaire.
+#
+# POURQUOI UN WORKFLOW SEPARE
+#
+# `controles.yml` garde les pull requests : il doit rester rapide et son rouge
+# doit signifier « ne pas fusionner ». Une dérive documentaire ne bloque aucune
+# fusion, elle demande une relecture. Mélanger les deux rendrait le rouge
+# ambigu, et c'est un rouge ambigu que l'on apprend à ignorer.
+#
+# CE QU'IL ATTRAPE, ET CE QU'IL N'ATTRAPE PAS
+#
+# Il rejoue `verifier-config-claude.sh --strict`, qui compte ce qui est
+# mécaniquement dénombrable : ADR absent de la table, renvoi cassé, fiche
+# mémoire hors index, comptes annoncés contre leur source, README de garde
+# manquant.
+#
+# Il ne juge ni la justesse d'un ADR, ni la pertinence d'une phrase, ni le fait
+# qu'une section soit devenue inutile. Ces choses se relisent.
+#
+# IL NE CORRIGE RIEN, decision du 4 aout 2026. Une correction automatique
+# produirait un commit que personne n'a relu et masquerait l'oubli au lieu de le
+# signaler : le 4 aout, « deux hooks » etait faux parce qu'un PostToolUse avait
+# ete ajoute sans etre documente. Corriger le chiffre en silence aurait fait
+# perdre cette information, qui etait la vraie.
+
+name: Dérive de la documentation
+
+on:
+  schedule:
+    # Tous les lundis à 7 h UTC, soit 9 h à Paris en été. Le lundi matin plutôt
+    # que le vendredi soir : un signalement se lit quand on commence à
+    # travailler, pas quand on s'arrête.
+    - cron: "0 7 * * 1"
+  # Déclenchable à la main depuis l'onglet Actions, pour vérifier après une
+  # grosse session de documentation sans attendre le lundi.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  derive:
+    name: Comptes et renvois de la documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Le script sort en 1 dès la première anomalie en mode strict. La sortie
+      # est capturée pour alimenter le corps de l'issue : un échec muet dans
+      # l'onglet Actions ne serait vu par personne, ce workflow ne tournant pas
+      # sur une pull request que l'on regarde.
+      - name: Contrôler la cohérence de la configuration
+        id: controle
+        run: |
+          if bash ./scripts/verifier-config-claude.sh --strict > rapport.txt 2>&1; then
+            echo "derive=non" >> "$GITHUB_OUTPUT"
+          else
+            echo "derive=oui" >> "$GITHUB_OUTPUT"
+          fi
+          cat rapport.txt
+
+      # Une issue plutôt qu'un simple rouge : elle survit à la rétention des
+      # journaux, porte la liste exacte, et se ferme quand c'est traité.
+      #
+      # `gh issue list` avant création, sinon un rappel hebdomadaire non traité
+      # produirait une issue par semaine sur le même sujet.
+      - name: Ouvrir une issue si la documentation a dérivé
+        if: steps.controle.outputs.derive == 'oui'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          existante=$(gh issue list --label derive-documentation --state open \
+            --json number --jq '.[0].number' 2>/dev/null || true)
+
+          corps=$(printf 'Le contrôle périodique a relevé des écarts entre la documentation et le dépôt.\n\n```\n%s\n```\n\nCes points ne bloquent aucune fusion. Ils signalent une documentation qui ne décrit plus le dépôt, ce qui fait travailler la prochaine session sur une carte fausse.\n\nRien ici ne se corrige automatiquement, décision tracée dans `scripts/verifier-config-claude.sh` : un chiffre faux est souvent le symptôme d une modification non documentée, et le corriger en silence ferait perdre l information utile.\n' "$(cat rapport.txt)")
+
+          if [ -n "$existante" ]; then
+            gh issue comment "$existante" --body "$corps"
+          else
+            gh issue create \
+              --title "Dérive de la documentation, contrôle du $(date -u +%d/%m/%Y)" \
+              --label derive-documentation \
+              --body "$corps"
+          fi

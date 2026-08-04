@@ -246,6 +246,16 @@ absent de la table d'aiguillage de `docs/REFERENCES.md`, un `CLAUDE.md` au-delà
 journal manquant alors que du code a été commité. Un hook `Stop` le lance en fin de
 session, et `--strict` le rend bloquant dans la chaîne d'intégration.
 
+Il **recompte** aussi ce qui est annoncé à la main : hooks déclarés dans
+`settings.json`, overrides de `package.json`, largeurs de `playwright.config.ts`,
+`README.md` de garde des dossiers de `src/`. Ces contrôles existent parce que
+chacun de ces comptes a été faux au moins une fois, sans que rien ne le voie.
+
+**Il ne corrige rien, et c'est délibéré.** Un chiffre faux est souvent le symptôme
+d'une modification non documentée : le corriger en silence ferait perdre
+l'information utile. Le 4 août 2026, « deux hooks » était faux parce qu'un
+`PostToolUse` avait été ajouté sans être écrit nulle part.
+
 ### Intégration continue
 
 `.github/workflows/controles.yml`, LS-69. Il s'exécute sur chaque pull request
@@ -265,6 +275,13 @@ la chaîne rouge en permanence.
 La chaîne démarre son propre conteneur `lune-soleil-db` par `docker run`, sans
 passer par `docker-compose.yml` qui exige un `.env` absent en intégration
 continue. Le nom est celui qu'attend le mode `--base-migree`.
+
+Un second workflow, `derive-documentation.yml`, rejoue `verifier-config-claude.sh`
+**chaque lundi matin** et ouvre une issue étiquetée `derive-documentation` si la
+documentation ne décrit plus le dépôt. Il est séparé délibérément : une dérive
+documentaire ne bloque aucune fusion, et un rouge qui signifie parfois « ne pas
+fusionner » et parfois « à relire » est un rouge que l'on apprend à ignorer. Il se
+déclenche aussi à la main depuis l'onglet Actions.
 
 Il a été prouvé par sept mutations, une par contrôle, toutes détectées.
 
