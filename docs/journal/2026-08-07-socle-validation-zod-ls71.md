@@ -129,7 +129,7 @@ demandé : il reste la proposition ouverte de LS-52.
 
 | Ticket | État |
 |---|---|
-| LS-71 | tous les critères satisfaits, clôture après fusion |
+| LS-71 | **Terminé**, fusionné en PR #71, commits `20251d8`, `248c24b`, `bce78c4` et `1e57a15` |
 | LS-2 | passée En cours, 9 stories filles restantes sur 17 |
 | LS-50 | sa dette est soldée, le ticket reste Terminé |
 | LS-72 | prochaine action possible, l'ordre des stories restantes est libre |
