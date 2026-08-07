@@ -18,6 +18,7 @@ une règle depuis le schéma.
 | `docs/architecture/MODELE-LOGIQUE.md` | traduction physique, index partiels, politiques de suppression, dettes de phase 1 | Prisma, migration |
 | `docs/architecture/STATISTIQUES.md` | indicateurs, périodes en `Europe/Paris`, règles de calcul | statistiques, e-reporting, tout agrégat de montant |
 | `docs/architecture/PROTOTYPE.md` | intention visuelle du prototype gelé, six états non nominaux, table parcours vers écran, cinq écarts connus | toute interface, publique ou administration |
+| `docs/architecture/VALIDATION.md` | socle Zod, où valider et pourquoi à deux endroits, convention d'erreur des adaptateurs, trois pièges de Zod 4 | toute Server Action, gestionnaire de route ou service qui reçoit une entrée |
 
 **Une règle numérotée se cite par son identifiant**, S12 ou V14, jamais
 paraphrasée seule : c'est ce qui permet aux contrôles textuels de la retrouver.
@@ -32,7 +33,9 @@ connaître avant d'écrire un service qui la recouvrirait ou la contredirait :
 
 | Module | Ce qu'il porte | Dette attachée |
 |---|---|---|
-| `src/services/reservation.ts` | réservation d'un panier : tri déterministe des variantes, rejeu borné sur interblocage, refus par exception | garde locale sur la quantité, **à remplacer par le socle Zod de LS-71** |
+| `src/services/reservation.ts` | réservation d'un panier : tri déterministe des variantes, rejeu borné sur interblocage, refus par exception, validation par `schemaPanier` | aucune, la garde locale a été remplacée par le socle en LS-71 |
+| `src/lib/validation.ts` | socle Zod partagé, `valider`, `EntreeInvalideError`, six schémas de domaine, voir `VALIDATION.md` | aucune |
+| `src/app/panier/actions.ts` | Server Action de réservation : valide puis délègue, traduit refus, contention et panne en résultats | reçoit `commandeId` sans le produire, ADR-024 imposant que la commande naisse dans la transaction de réservation |
 | `src/repositories/stock.ts` | l'`UPDATE` conditionnel d'ADR-006, en `$queryRawUnsafe`, réexporté par `tests/aide/reservation-sql.ts` | aucune |
 | `src/lib/auth.ts` | instance Better Auth : mapping vers `Utilisateur`, `role` en `input: false`, seize caractères, plugin passkey | vérification d'email **désactivée** tant qu'ADR-008 n'est pas implémenté ; session à sept jours, ADR-027 la ramène à un jour |
 | `src/lib/auth-client.ts` | client navigateur, passkey comprise | aucune |

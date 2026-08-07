@@ -44,8 +44,9 @@ LAYOUT="src/app/layout.tsx"
 AUTH="src/lib/auth.ts"
 AUTORISATION="src/services/autorisation.ts"
 PROFIL="src/services/utilisateur.ts"
+VALIDATION="src/lib/validation.ts"
 
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$AUTORISATION" "$PROFIL")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -115,14 +116,23 @@ mutations=0
 # LS-42 sur le script de migration, un mode fail-open qui concluait au vert.
 # ---------------------------------------------------------------------------
 echo "Etat de reference, avant toute mutation"
-if ! npm run test:integration >"$TMP/reference.txt" 2>&1; then
-  echo "  ECHEC la suite n'est pas verte AVANT mutation."
-  echo "        Aucune mutation ne peut rien prouver dans cet etat."
-  echo
-  tail -20 "$TMP/reference.txt" | sed 's/^/        /'
-  exit 1
-fi
-echo "  OK    suite verte, les mutations peuvent commencer"
+
+# LES DEUX PROJETS SONT VERIFIES, pas seulement l'integration. Depuis LS-71 des
+# cas mutent contre `test:unitaire` : n'etablir que la verdeur de l'integration
+# laisserait ces cas conclure sur une suite unitaire deja rouge, et un « RATE,
+# le test est aveugle » ne distinguerait pas un test defaillant d'un test
+# absent. C'est le mode fail-open que ce controle prealable existe pour eviter.
+for suite in test:integration test:unitaire; do
+  if ! npm run "$suite" >"$TMP/reference.txt" 2>&1; then
+    echo "  ECHEC la suite $suite n'est pas verte AVANT mutation."
+    echo "        Aucune mutation ne peut rien prouver dans cet etat."
+    echo
+    tail -20 "$TMP/reference.txt" | sed 's/^/        /'
+    exit 1
+  fi
+  echo "  OK    $suite verte"
+done
+echo "  OK    les mutations peuvent commencer"
 echo
 
 # ---------------------------------------------------------------------------
@@ -171,6 +181,7 @@ cas() {
 
 integration() { npm run test:integration; }
 e2e() { npm run test:e2e; }
+unitaire() { npm run test:unitaire; }
 
 echo "Primitive SQL de reservation, tests d'integration"
 echo
@@ -282,6 +293,48 @@ cas "debordement horizontal introduit dans la page" e2e \
 mute "$LAYOUT" 's/<html lang="fr">/<html>/'
 cas "attribut lang retire du document" e2e \
   "aucune violation d'accessibilite serieuse"
+
+echo
+echo "Socle de validation, tests unitaires et d'integration"
+echo
+
+# ---------------------------------------------------------------------------
+# LS-71. Ces quatre cas visent le socle Zod, et chacun mute une BORNE, jamais un
+# message : un libelle reecrit ne change aucun comportement, et une mutation
+# sans effet observable accuserait les tests a tort.
+# ---------------------------------------------------------------------------
+
+# Cas 13 : LE CAS CENTRAL DE L'INVARIANT 1. `z.number()` accepte les decimaux
+# la ou `z.int()` les refuse. Sans ce refus, `19.99` traverserait le socle,
+# c'est-a-dire un prix en euros pris pour des centimes.
+mute "$VALIDATION" 's/export const schemaMontantCentimes = z\n  \.int\("Un montant en centimes entiers est attendu\."\)/export const schemaMontantCentimes = z\n  .number("Un montant en centimes entiers est attendu.")/'
+cas "montant decimal accepte, z.int devient z.number" unitaire \
+  "refuse un montant decimal"
+
+# Cas 14 : la borne des quantites glisse de 1 a 0. C'est la dette de LS-50 :
+# une ligne de panier a zero article partirait jusqu'a PostgreSQL.
+mute "$VALIDATION" 's/  \.min\(1, "Une quantite doit etre strictement positive\."\)/  .min(0, "Une quantite doit etre strictement positive.")/'
+cas "quantite nulle acceptee, borne passee de 1 a 0" unitaire \
+  "refuse une quantite invalide"
+
+# ---------------------------------------------------------------------------
+# Cas 15 : INVARIANT 9, ET LE SEUL VECTEUR DE FUITE REEL.
+#
+# DEUX MUTATIONS ONT ETE ECARTEES AVANT CELLE-CI, toutes deux restees vertes, et
+# elles avaient raison de l'etre. Elles ajoutaient `probleme.input` au message,
+# en supposant que Zod y met la valeur refusee. Mesure sur Zod 4 dans ce depot :
+# les `issues` serialisees ne portent PAS `input`, la mutation n'ajoutait donc
+# que « (recu : undefined) » et ne faisait rien fuiter.
+#
+# Le vrai vecteur est `unrecognized_keys`, dont le message porte les NOMS des
+# cles rejetees. Ces noms viennent de l'entree et sont choisis par l'appelant.
+# Reprendre le message de Zod tel quel les ecrit dans le journal.
+#
+# La mutation retire donc la branche qui remplace ce message.
+# ---------------------------------------------------------------------------
+mute "$VALIDATION" 's/      if \(probleme\.code === "unrecognized_keys"\) \{\n.*\n.*\n        return `\$\{chemin\} : \$\{probleme\.keys\.length\} champ\(s\) non reconnu\(s\)\.`;\n      \}\n\n//'
+cas "noms des cles inconnues recopies dans le message" unitaire \
+  "ne recopie pas le nom d'une cle inconnue"
 
 echo
 echo "-----------------------------------------"
