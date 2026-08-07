@@ -27,6 +27,8 @@ import { Client, Pool } from "pg";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { inject } from "vitest";
 
+import { EntreeInvalideError } from "@/lib/validation";
+
 import { creerCommande, creerVarianteEnStock } from "../aide/donnees-test";
 import { VARIABLE_URL_TEST } from "../aide/base-ephemere";
 import { SQL_RESERVER } from "../aide/reservation-sql";
@@ -220,9 +222,15 @@ describe("service de reservation, sur base reelle", () => {
   });
 
   /**
-   * La garde locale, en attendant le socle Zod de LS-71. Une quantite invalide
-   * doit etre refusee AVANT d'atteindre PostgreSQL, qui la rendrait en erreur
-   * brute donc en page d'erreur serveur.
+   * Le socle Zod de LS-71, qui a remplace la garde locale de LS-50. Une
+   * quantite invalide doit etre refusee AVANT d'atteindre PostgreSQL, qui la
+   * rendrait en erreur brute donc en page d'erreur serveur.
+   *
+   * LES TROIS VALEURS SONT CELLES DE LA GARDE D'ORIGINE. Seul le type d'erreur
+   * change, `TypeError` devenant `EntreeInvalideError` : le commentaire de
+   * LS-71 autorisait explicitement cette substitution, la couverture restant
+   * identique. L'assertion sur `quantite_reservee` est ce qui prouve que rien
+   * n'a atteint la base.
    */
   it.each([0, -1, 1.5])(
     "refuse une quantite invalide, %s",
@@ -237,9 +245,57 @@ describe("service de reservation, sur base reelle", () => {
           [{ varianteId: variante.varianteId, quantite }],
           commandeId,
         ),
-      ).rejects.toBeInstanceOf(TypeError);
+      ).rejects.toBeInstanceOf(EntreeInvalideError);
 
       expect((await lireEtat(variante.varianteId)).reservee).toBe(0);
     },
   );
+
+  /**
+   * Ce que le socle ajoute a la garde qu'il remplace, et qu'aucun test ne
+   * couvrait : la FORME de l'identifiant, et le panier vide.
+   *
+   * Un `varianteId` arbitraire partait auparavant jusqu'a l'`UPDATE`, ou il ne
+   * correspondait a aucune ligne : la reservation etait refusee, mais par un
+   * `REFUSE` metier qui disait « piece indisponible » pour une piece qui
+   * n'existe pas. Le refus est desormais qualifie a l'entree.
+   */
+  it("refuse un identifiant de variante mal forme", async () => {
+    const commandeId = await creerCommande(client);
+
+    await expect(
+      reserverPanier([{ varianteId: "pas-un-uuid", quantite: 1 }], commandeId),
+    ).rejects.toBeInstanceOf(EntreeInvalideError);
+  });
+
+  /**
+   * Un panier vide rendait `SERVI` sans rien reserver, donc une commande sans
+   * stock associe. La transaction s'ouvrait et se validait a vide.
+   */
+  it("refuse un panier vide", async () => {
+    const commandeId = await creerCommande(client);
+
+    await expect(reserverPanier([], commandeId)).rejects.toBeInstanceOf(
+      EntreeInvalideError,
+    );
+  });
+
+  /**
+   * INVARIANT 9 SUR UN CHEMIN REEL. Le message qui remonte du service ne doit
+   * pas reproduire l'entree refusee : il finit dans un journal ou une reponse
+   * HTTP, et le contenu d'un panier reste une donnee du client.
+   */
+  it("ne recopie pas l'entree refusee dans le message d'erreur", async () => {
+    const commandeId = await creerCommande(client);
+    const sensible = "jeton-de-session-vole-42";
+
+    await expect(
+      reserverPanier([{ varianteId: sensible, quantite: 1 }], commandeId),
+    ).rejects.toSatisfy(
+      (erreur: unknown) =>
+        erreur instanceof EntreeInvalideError &&
+        !erreur.message.includes(sensible) &&
+        !erreur.details.includes(sensible),
+    );
+  });
 });

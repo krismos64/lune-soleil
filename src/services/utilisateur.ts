@@ -21,6 +21,21 @@
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
+import { EntreeInvalideError, valider } from "@/lib/validation";
+
+/**
+ * REEXPORT ET NON REDEFINITION, LS-71.
+ *
+ * Ce module declarait sa propre classe `EntreeInvalideError` en LS-70, avant
+ * que le socle n'existe. Deux classes homonymes dans deux modules sont un piege
+ * silencieux : `instanceof` est FAUX entre elles, donc un appelant qui capture
+ * celle du socle laisserait passer celle d'ici sans qu'aucun type ne proteste.
+ *
+ * Le reexport preserve les imports existants, dont ceux de
+ * `tests/integration/authentification.sequential.test.ts`, tout en garantissant
+ * qu'il n'existe qu'une seule classe a l'execution.
+ */
+export { EntreeInvalideError };
 
 /**
  * Ce qu'un client peut modifier sur son propre profil.
@@ -44,14 +59,6 @@ export const schemaMiseAJourProfil = z
 
 export type MiseAJourProfil = z.infer<typeof schemaMiseAJourProfil>;
 
-/** Entree rejetee par la validation, distincte d'une panne technique. */
-export class EntreeInvalideError extends Error {
-  constructor(readonly details: string) {
-    super(`Entree invalide : ${details}`);
-    this.name = "EntreeInvalideError";
-  }
-}
-
 /**
  * Met a jour le profil de l'appelant.
  *
@@ -68,22 +75,18 @@ export async function mettreAJourProfil(
   utilisateurId: string,
   entree: unknown,
 ): Promise<void> {
-  const resultat = schemaMiseAJourProfil.safeParse(entree);
-
-  if (!resultat.success) {
-    throw new EntreeInvalideError(
-      resultat.error.issues.map((probleme) => probleme.message).join(", "),
-    );
-  }
+  // `valider` du socle, LS-71 : meme classe d'erreur partout, et un message qui
+  // nomme le champ fautif sans reproduire la valeur refusee, invariant 9.
+  const donnees = valider(schemaMiseAJourProfil, entree);
 
   // Champ par champ, et la cle est ABSENTE quand rien n'est fourni plutot que
   // posee a `undefined` : `exactOptionalPropertyTypes` rejette la seconde
   // forme, et elle exprimerait « ne pas toucher » par la meme valeur qui
-  // signifie « effacer » ailleurs. Pas de `...resultat.data`, jamais.
+  // signifie « effacer » ailleurs. Pas de `...donnees`, jamais.
   const champs: { nom?: string } = {};
 
-  if (resultat.data.nom !== undefined) {
-    champs.nom = resultat.data.nom;
+  if (donnees.nom !== undefined) {
+    champs.nom = donnees.nom;
   }
 
   await prisma.utilisateur.update({

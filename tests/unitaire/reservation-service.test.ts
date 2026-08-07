@@ -62,6 +62,24 @@ function erreurAvecCode(code: string): Error & { code: string } {
   return Object.assign(new Error(`erreur simulee ${code}`), { code });
 }
 
+/**
+ * IDENTIFIANTS AU FORMAT UUID, exige par le socle de validation de LS-71.
+ *
+ * Ces tests employaient des etiquettes lisibles, « variante-a », refusees depuis
+ * que `reserverPanier` valide la FORME de ses entrees. Les remplacer par des
+ * UUID n'affaiblit rien : ces tests portent sur l'ORDRE des appels et sur le
+ * REJEU, pas sur les identifiants eux-memes.
+ *
+ * LEUR ORDRE LEXICOGRAPHIQUE EST DELIBERE, `1111` < `2222` < `3333` sur le
+ * premier bloc, ce qui garde l'assertion de tri lisible : A avant B avant C.
+ * Les nommer par leur rang plutot que par leur valeur preserve l'intention du
+ * test d'origine.
+ */
+const VARIANTE_A = "11111111-1111-4111-8111-111111111111";
+const VARIANTE_B = "22222222-2222-4222-8222-222222222222";
+const VARIANTE_C = "33333333-3333-4333-8333-333333333333";
+const COMMANDE = "99999999-9999-4999-8999-999999999999";
+
 describe("ordonnerLignes", () => {
   it("trie par identifiant de variante croissant", () => {
     const trie = ordonnerLignes([
@@ -110,11 +128,11 @@ describe("reserverPanier, ordre des reservations", () => {
 
     const issue = await reserverPanier(
       [
-        { varianteId: "variante-c", quantite: 1 },
-        { varianteId: "variante-a", quantite: 1 },
-        { varianteId: "variante-b", quantite: 1 },
+        { varianteId: VARIANTE_C, quantite: 1 },
+        { varianteId: VARIANTE_A, quantite: 1 },
+        { varianteId: VARIANTE_B, quantite: 1 },
       ],
-      "commande-1",
+      COMMANDE,
       { client },
     );
 
@@ -123,7 +141,7 @@ describe("reserverPanier, ordre des reservations", () => {
       reserverVariante.mock.calls.map(
         ([, parametres]) => parametres.varianteId,
       ),
-    ).toEqual(["variante-a", "variante-b", "variante-c"]);
+    ).toEqual([VARIANTE_A, VARIANTE_B, VARIANTE_C]);
   });
 
   it("s'arrete a la premiere ligne indisponible et la nomme", async () => {
@@ -138,17 +156,17 @@ describe("reserverPanier, ordre des reservations", () => {
 
     const issue = await reserverPanier(
       [
-        { varianteId: "variante-a", quantite: 1 },
-        { varianteId: "variante-b", quantite: 1 },
-        { varianteId: "variante-c", quantite: 1 },
+        { varianteId: VARIANTE_A, quantite: 1 },
+        { varianteId: VARIANTE_B, quantite: 1 },
+        { varianteId: VARIANTE_C, quantite: 1 },
       ],
-      "commande-1",
+      COMMANDE,
       { client },
     );
 
     expect(issue).toEqual({
       statut: "REFUSE",
-      varianteRefusee: "variante-b",
+      varianteRefusee: VARIANTE_B,
     });
     expect(reserverVariante).toHaveBeenCalledTimes(2);
   });
@@ -195,8 +213,8 @@ describe("reserverPanier, rejeu sur interblocage", () => {
       });
 
       const issue = await reserverPanier(
-        [{ varianteId: "variante-a", quantite: 1 }],
-        "commande-1",
+        [{ varianteId: VARIANTE_A, quantite: 1 }],
+        COMMANDE,
         { client },
       );
 
@@ -222,8 +240,8 @@ describe("reserverPanier, rejeu sur interblocage", () => {
     });
 
     const issue = await reserverPanier(
-      [{ varianteId: "variante-a", quantite: 1 }],
-      "commande-1",
+      [{ varianteId: VARIANTE_A, quantite: 1 }],
+      COMMANDE,
       { client },
     );
 
@@ -250,13 +268,9 @@ describe("reserverPanier, rejeu sur interblocage", () => {
     const { client, appels } = clientDouble({ erreursAJeter: [autreEchec] });
 
     await expect(
-      reserverPanier(
-        [{ varianteId: "variante-a", quantite: 1 }],
-        "commande-1",
-        {
-          client,
-        },
-      ),
+      reserverPanier([{ varianteId: VARIANTE_A, quantite: 1 }], COMMANDE, {
+        client,
+      }),
     ).rejects.toBe(autreEchec);
 
     expect(appels.transactions).toBe(1);
@@ -274,13 +288,9 @@ describe("reserverPanier, rejeu sur interblocage", () => {
     });
 
     await expect(
-      reserverPanier(
-        [{ varianteId: "variante-a", quantite: 1 }],
-        "commande-1",
-        {
-          client,
-        },
-      ),
+      reserverPanier([{ varianteId: VARIANTE_A, quantite: 1 }], COMMANDE, {
+        client,
+      }),
     ).rejects.toBeInstanceOf(InterblocagePersistantError);
 
     // La borne est le sujet : un rejeu non borne tiendrait une connexion pour
@@ -297,13 +307,9 @@ describe("reserverPanier, rejeu sur interblocage", () => {
     const { client, appels } = clientDouble({ erreursAJeter: [violation] });
 
     await expect(
-      reserverPanier(
-        [{ varianteId: "variante-a", quantite: 1 }],
-        "commande-1",
-        {
-          client,
-        },
-      ),
+      reserverPanier([{ varianteId: VARIANTE_A, quantite: 1 }], COMMANDE, {
+        client,
+      }),
     ).rejects.toBe(violation);
 
     expect(appels.transactions).toBe(1);
