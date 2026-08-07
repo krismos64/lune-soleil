@@ -26,6 +26,7 @@
  * central du projet ou chaque bijou est fait main.
  */
 import { prisma } from "@/lib/prisma";
+import { schemaPanier, valider } from "@/lib/validation";
 import { reserverVariante } from "@/repositories/stock";
 
 /** Duree de vie d'une reservation, alignee sur la tache de liberation. */
@@ -190,20 +191,24 @@ export async function reserverPanier(
 ): Promise<IssueReservationPanier> {
   const base = options.client ?? prisma;
 
-  // GARDE LOCALE, EN ATTENDANT LE SOCLE ZOD DE LS-71. Sans elle, une quantite a
-  // zero, negative ou decimale part jusqu'a PostgreSQL et revient en erreur
-  // brute, `23514` ou `22P02`, donc en page d'erreur serveur au lieu d'un refus
-  // lisible. Aucune corruption possible, les CHECK tiennent : c'est la qualite
-  // du refus qui est en jeu, pas l'invariant du stock.
-  for (const ligne of lignes) {
-    if (!Number.isInteger(ligne.quantite) || ligne.quantite < 1) {
-      throw new TypeError(
-        `Quantite invalide pour la variante ${ligne.varianteId} : ${ligne.quantite}. Un entier strictement positif est attendu.`,
-      );
-    }
-  }
+  // VALIDATION AU POINT D'ENTREE DU CAS D'USAGE, socle de LS-71. Elle remplace
+  // la garde locale ecrite en LS-50, qui refusait deja zero, negatif et
+  // decimal ; `schemaPanier` y ajoute la forme de l'identifiant et le refus
+  // d'un panier vide.
+  //
+  // ELLE RESTE ICI MEME QUAND UN ADAPTATEUR VALIDE DEJA, et ce n'est pas une
+  // redondance : un service s'appelle aussi depuis un autre service, chemin par
+  // lequel aucun adaptateur ne passe. Le README de garde de `services/` porte
+  // « la validation Zod des entrees non fiables ».
+  //
+  // Sans elle, une quantite a zero, negative ou decimale part jusqu'a
+  // PostgreSQL et revient en erreur brute, `23514` ou `22P02`, donc en page
+  // d'erreur serveur au lieu d'un refus lisible. Aucune corruption n'etait
+  // possible, les CHECK tiennent : c'est la qualite du refus qui est en jeu,
+  // pas l'invariant du stock.
+  const validees = valider(schemaPanier, lignes);
 
-  const ordonnees = ordonnerLignes(lignes);
+  const ordonnees = ordonnerLignes(validees);
 
   let derniereErreur: unknown;
 
