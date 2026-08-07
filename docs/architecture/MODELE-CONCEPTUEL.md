@@ -109,6 +109,7 @@ erDiagram
     CATEGORIE ||--o{ PRODUIT : "classe"
     PRODUIT ||--o{ VARIANTE : "se decline en"
     PRODUIT ||--o{ MEDIA : "illustre par"
+    PRODUIT ||--o{ SECTION_PRODUIT : "decrit par"
 
     CATEGORIE {
         identifiant id PK
@@ -120,15 +121,24 @@ erDiagram
         identifiant id PK
         texte nom
         texte slug UK
-        texte descriptionCourte "nullable"
-        texte description "nullable, detaillee"
-        texte matieres "nullable"
-        texte entretien "nullable"
-        texte fabrication "nullable, artisanat et origine"
+        texte descriptionCourte "nullable, alimente aussi les cartes de catalogue"
         enum statut "BROUILLON ACTIF ARCHIVE"
         identifiant categorieId FK
         horodatage creeA
         horodatage publieA "nullable"
+        horodatage archiveA "nullable"
+        horodatage modifieA
+    }
+    SECTION_PRODUIT {
+        identifiant id PK
+        identifiant produitId FK
+        texte cle "stable, unique par produit, independante du titre"
+        texte titre "modifiable"
+        texte contenu "texte simple, jamais rendu en HTML"
+        entier ordre "unique par produit, contrainte differable"
+        booleen visible
+        horodatage creeA
+        horodatage modifieA
     }
     VARIANTE {
         identifiant id PK
@@ -145,8 +155,9 @@ erDiagram
     MEDIA {
         identifiant id PK
         identifiant produitId FK
-        texte identifiantFournisseur UK
-        texte texteAlternatif
+        texte chemin "chemin de stockage du fichier"
+        texte identifiantFournisseur UK "nullable, reference chez l hebergeur de medias"
+        texte texteAlternatif "nullable, C7"
         entier ordre
         enum statutTraitement "EN_ATTENTE TRAITE ECHOUE"
         horodatage creeA
@@ -496,17 +507,19 @@ erDiagram
         enum statut "EN_ATTENTE REUSSI ECHOUE PARTIELLEMENT_REMBOURSE REMBOURSE"
         entier montantCentimes
         entier montantRembourseCentimes
-        texte referenceSessionFournisseur
+        texte identifiantFournisseur "nullable, session ou intention du prestataire"
         texte motifEchec "nullable"
-        horodatage creeA
+        horodatage creeA "creation de la tentative"
+        horodatage confirmeA "nullable, encaissement effectif, LS-76"
     }
     EVENEMENT_FOURNISSEUR {
         identifiant id PK
         texte identifiantFournisseur UK
         texte type
         identifiant paiementId FK "nullable"
+        bloc charge "corps brut de l evenement recu"
         enum statutTraitement "RECU TRAITE IGNORE ECHOUE"
-        horodatage recuA
+        horodatage creeA "reception de l evenement"
         horodatage traiteA "nullable"
     }
     EXPEDITION {
@@ -520,6 +533,7 @@ erDiagram
         horodatage expedieA "nullable"
         horodatage livreA "nullable, remise au destinataire uniquement"
         horodatage synchroniseA "nullable, detecte un suivi bloque"
+        horodatage creeA
     }
     HISTORIQUE_STATUT {
         identifiant id PK
@@ -747,7 +761,6 @@ erDiagram
         texte numero UK
         identifiant commandeId FK "unique, decision E"
         entier montantTotalCentimes
-        entier montantTaxeCentimes "zero, franchise en base"
         entier montantAvoirCentimes "total emis, denormalise"
         bloc instantaneLegal "emetteur, client, lignes, mentions"
         texte cheminPdf "nullable"
@@ -780,6 +793,24 @@ erDiagram
 | F8 | Le PDF manquant n'invalide pas le document | parcours 4, régénération sans réattribution de numéro |
 | F9 | La somme des avoirs d'une facture ne dépasse jamais son montant | **niveau 2** : le `CHECK` borne `montantAvoirCentimes`, la transaction garantit qu'il reflète la somme réelle des avoirs, voir décision F |
 | F10 | Un avoir issu d'une rétractation référence sa demande | `demandeRetractationId`, nul pour un geste commercial |
+
+### Pourquoi la facture ne porte aucun montant de taxe
+
+Arbitré par LS-52. Une version antérieure de ce modèle prévoyait
+`Facture.montantTaxeCentimes`, absent du schéma Prisma. L'écart est fermé par le
+renoncement, et non par un ajout au schéma.
+
+Le motif est déjà écrit dans `.claude/rules/database.md` : la fiscalité tient dans
+un seul champ, `Commande.montantTaxeCentimes`, qui vaut zéro en franchise en base
+de TVA, article 293 B du CGI. Le dupliquer sur la facture ajouterait une colonne
+nulle sur chaque document, sans porter aucune information que la commande ne porte
+déjà.
+
+La mention légale obligatoire est **textuelle** et vit dans `instantaneLegal`, ce
+qui la rend indépendante d'un franchissement futur du seuil : une facture émise en
+franchise garde sa mention, quel que soit le régime au moment de la relecture. Un
+montant recopié, lui, aurait dû être figé avec la même rigueur pour la même valeur
+zéro.
 
 ### Pourquoi l'instantané légal est stocké et non recalculé
 
@@ -849,7 +880,7 @@ erDiagram
         identifiant id PK
         identifiant commandeId FK
         enum statut "DEPOSEE ACCUSEE RETOUR_ATTENDU EXPEDITION_PROUVEE REMBOURSEMENT_EN_COURS REMBOURSEE REFUSEE"
-        texte motifCliente "nullable"
+        texte motifClient "nullable"
         texte motifDecision "nullable, obligatoire si REFUSEE"
         entier montantRembourseCentimes "nullable"
         horodatage deposeeA
@@ -1074,7 +1105,7 @@ erDiagram
         identifiant id PK
         identifiant ligneCommandeId FK
         identifiant jetonAccesId FK "jeton courant, remplace a chaque renvoi"
-        horodatage creeeA
+        horodatage creeA
         horodatage dernierEnvoiA "nullable, resume de confort, la preuve vit dans JournalEmail"
         entier nombreEnvois
     }
@@ -1263,8 +1294,12 @@ d'afficher la date de l'expérience de consommation, article D111-17.
 
 **Dépendance à signaler.** Cette décision rend LS-33 structurant. Sans date de
 livraison fiable, ni le délai de rétractation ni l'invitation à déposer un avis ne
-se déclenchent. Le repli documenté vaut ici aussi : à défaut de date de livraison,
-partir de la date d'expédition.
+se déclenchent. LS-33 est **tranché depuis le 28 juillet 2026** : la date vient du
+suivi automatique Mondial Relay, offre Start, par API, et seul l'événement « remis
+au destinataire » la renseigne. Le repli documenté vaut ici aussi : à défaut de
+date de livraison, partir de la date d'expédition **plus une marge couvrant
+l'acheminement**, jamais de la date d'expédition seule. Un repli allonge le délai,
+il ne l'avance jamais. Détail dans `.claude/rules/legal.md`.
 
 ### Décision I, la modération précède la publication
 
@@ -1462,7 +1497,7 @@ entièrement, cas d'erreur compris, sans invention de champ manquant.
 | 3 revalidation | lecture `Variante` | oui |
 | 4 réservation | `Reservation`, `Variante.quantiteReservee` | oui |
 | 5 commande | `Commande`, `LigneCommande`, `cgvAccepteesA` | oui |
-| 6 session paiement | `Paiement.referenceSessionFournisseur` | oui |
+| 6 session paiement | `Paiement.identifiantFournisseur` | oui |
 | 7 événement signé | `EvenementFournisseur`, `Paiement`, `Commande`, `MouvementStock` | oui |
 | 8 facture | `Facture` avec instantané | oui |
 | 9 emails | `JournalEmail`, deux entrées | oui |
@@ -1534,7 +1569,7 @@ entièrement, cas d'erreur compris, sans invention de champ manquant.
 |---|---|---|
 | accès permanent | `JetonAcces` portée `RETRACTATION` | oui |
 | identification du contrat | `JetonAcces.empreinte`, jamais le numéro seul | oui |
-| déclaration | `DemandeRetractation`, `motifCliente` | oui |
+| déclaration | `DemandeRetractation`, `motifClient` | oui |
 | accusé de réception | `statut` `ACCUSEE`, `accuseeA`, `JournalEmail` | oui |
 | suivi du retour | `statut` jusqu'à `EXPEDITION_PROUVEE`, `retourAttenduA`, `preuveExpeditionA`, puis `recueA` hors statut, règle L12 | oui |
 | remboursement | `Paiement`, `Avoir.demandeRetractationId`, décision F | oui |
@@ -1872,13 +1907,6 @@ transaction, aucun trou.
 La forme de stockage des blocs figés, adresse et instantané légal, en colonnes
 distinctes ou en document structuré.
 
-**D'où vient la date de livraison**, qui conditionne le point de départ du délai
-de rétractation. Le modèle porte `Expedition.livreA` avec la règle « uniquement
-sur source fiable », mais la source n'est pas définie : interrogation
-automatique du transporteur, saisie par l'administratrice, ou repli sur la date
-d'expédition. Question ouverte, LS-33, à trancher avec l'exploitante. Elle ne
-bloque pas LS-13, le modèle stocke la date quelle que soit sa provenance.
-
 **Les paramètres d'exploitation** restant à fixer : la libération des
 réservations toutes les 5 minutes et la réconciliation toutes les 15 minutes,
 issues d'ADR-006 et de `PARCOURS.md`. Le modèle rend ces valeurs configurables,
@@ -1905,6 +1933,20 @@ livraison échelonnée, le délai court à compter du dernier bien reçu.
 
 Le modèle conserve les horodatages nécessaires à ce calcul sans figer la règle,
 qui reste portée par le code et testée.
+
+**D'où vient la date de livraison, LS-33 tranché le 28 juillet 2026.** Le modèle
+porte `Expedition.livreA` avec la règle « uniquement sur source fiable », et cette
+source est désormais définie : le suivi automatique Mondial Relay, offre Start,
+interrogé par API. Ni saisie manuelle par l'administratrice, ni repli sur la date
+d'expédition seule.
+
+Seul l'événement « remis au destinataire » renseigne `livreA`, pour les trois
+modes de livraison d'ADR-025. Les événements « disponible au Point Relais », « mise
+en distribution » et « avis de passage » n'ont aucun effet : ils décrivent
+l'acheminement et non la prise de possession. Un colis peut rester une semaine en
+relais avant retrait, et retenir un événement antérieur éteindrait le droit de
+rétractation avant terme. La table des événements et de leurs effets vit dans
+`.claude/rules/legal.md`, qui fait autorité.
 
 ## Périmètre élargi après la première rédaction
 
@@ -1934,3 +1976,41 @@ conservation d'un avis refusé.
 l'adresse n'a pas changé : la commande recopie, elle ne référence jamais. Aucune
 clé étrangère ne part de `Commande` vers `AdresseCarnet`, ce qui protège toute
 facture émise d'une modification ultérieure du carnet.
+
+## Alignement des noms sur le schéma Prisma, LS-52
+
+Ce document sert de source champ par champ, et une divergence de nom avec
+`prisma/schema.prisma` fait perdre du temps au développement sans qu'aucun
+contrôle ne la signale. Les écarts relevés le 29 juillet 2026 sont fermés ici, le
+7 août 2026, **chacun par un alignement du modèle sur le schéma** : le schéma est
+appliqué en base et vérifié par `verifier-schema.sh`, il fait donc foi sur les
+noms.
+
+| Modèle avant | Retenu | Motif |
+|---|---|---|
+| `Paiement.referenceSessionFournisseur` | `identifiantFournisseur` | le champ porte aussi bien une session qu'une intention de paiement, le nom du schéma est le plus juste |
+| `EvenementFournisseur.recuA` | `creeA` | même fait, la réception de l'événement, un seul nom |
+| `DemandeRetractation.motifCliente` | `motifClient` | règle de rédaction du projet, aucun accord au féminin par défaut |
+| `InvitationAvis.creeeA` | `creeA` | faute d'orthographe, le participe s'accorde au masculin sur un horodatage |
+| `Facture.montantTaxeCentimes` | retiré | renoncement argumenté, voir le domaine 4 |
+
+Quatre champs présents en base manquaient au modèle et y sont ajoutés :
+`Media.chemin`, `EvenementFournisseur.charge`, `Expedition.creeA` et
+`Paiement.confirmeA`, ce dernier introduit par LS-76.
+
+Les trois champs d'`Expedition` que LS-52 signalait absents, `pointRelaisId`,
+`statutTransporteur` et `synchroniseA`, **y figuraient déjà** au moment du
+traitement : ADR-025 les avait versés entre-temps. Le constat était périmé.
+
+**Un écart plus grave que ceux listés a été trouvé au passage**, par comparaison
+mécanique des noms de champs et non par relecture. Le diagramme du domaine 1
+portait encore les quatre colonnes éditoriales `description`, `matieres`,
+`entretien` et `fabrication`, que LS-76 a remplacées par l'entité
+`SectionProduit`, ADR-026. L'entité elle-même manquait au diagramme, alors que les
+règles C20 à C23 la décrivent quelques lignes plus bas : le document se
+contredisait. Le diagramme porte désormais `SECTION_PRODUIT` et sa relation au
+produit.
+
+La leçon vaut au-delà de ce document : une divergence de nom entre ce modèle et le
+schéma se voit en quelques secondes par comparaison des deux listes de champs,
+quand une relecture la laisse passer.

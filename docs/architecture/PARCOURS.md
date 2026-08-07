@@ -638,8 +638,9 @@ l'avis à la place de son destinataire.
 Base : l'invitation n'est pas créée, la tâche ne sélectionne que les commandes
 livrées.
 Vue : rien.
-Sans date de livraison fiable, aucune invitation ne part. C'est la dépendance à
-LS-33, qui vaut aussi pour le délai de rétractation.
+Sans date de livraison fiable, aucune invitation ne part. La source de cette date
+est tranchée par LS-33, suivi Mondial Relay par API sur le seul événement « remis
+au destinataire », et vaut aussi pour le délai de rétractation.
 
 **Avis refusé en modération**
 Base : avis `REFUSE`, `motifDecision` obligatoire, `decideA` horodaté, l'avis est
@@ -917,14 +918,18 @@ prévoit déjà la fonctionnalité en ligne exigée par l'article L221-21.
 transporteur sans attendre. Le seuil d'ancienneté envisagé est abandonné au
 profit d'une alerte dès que le retour annoncé n'arrive pas.
 
-## Point ouvert
+## D'où vient la date de réception du colis
 
-**D'où vient la date de réception du colis**, qui fait courir le délai de
-rétractation. Le parcours 1 persiste une date de livraison « uniquement sur
-source fiable », sans définir cette source : interrogation automatique du
-transporteur, saisie par l'administratrice, ou repli sur la date d'expédition.
+Elle fait courir le délai de rétractation. Le parcours 1 persiste une date de
+livraison « uniquement sur source fiable », et cette source est définie depuis le
+**28 juillet 2026, LS-33** : le suivi automatique Mondial Relay, offre Start, par
+API. Ni saisie manuelle par l'administratrice, ni repli sur la date d'expédition
+seule.
 
-Ticket LS-33, à trancher avec l'exploitante.
+Seul l'événement « remis au destinataire » renseigne la date, pour les trois modes
+d'ADR-025. « Disponible au Point Relais », « mise en distribution » et « avis de
+passage » décrivent l'acheminement et restent sans effet. La table complète vit
+dans `.claude/rules/legal.md`.
 
 **Faire courir le délai depuis l'expédition seule est une faute**, corrigée par
 LS-41 ici comme dans `.claude/rules/legal.md`. Le délai légal court depuis la
