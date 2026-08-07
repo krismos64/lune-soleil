@@ -143,11 +143,27 @@ restent verts. Ajouter un script aurait élargi le périmètre du ticket.
 C'est une proposition à trancher, pas une dette silencieuse : la comparaison tient
 en quelques lignes de shell et attraperait mécaniquement le prochain écart.
 
+## Fusion
+
+PR #69 fusionnée en rebase, branche supprimée, `main` en historique linéaire.
+Quatre commits, dont deux seulement relèvent de LS-52.
+
+| Sur `main` | Sujet | Périmètre |
+|---|---|---|
+| `648967a` | LS-33 propagée, modèle aligné sur le schéma | LS-52 |
+| `e7c3678` | journal de session | LS-52 |
+| `143365f` | override js-yaml 4.3.1 | déblocage CI |
+| `700069e` | recompte des overrides, journal complété | déblocage CI |
+
+Les contrôles ont été rejoués **sur `main` après fusion** et non seulement sur la
+branche : un rebase produit un arbre que personne n'a testé tant qu'il n'a pas
+tourné. Audit à zéro, règles conformes, configuration cohérente, 60 tests passés.
+
 ## État des tickets
 
 | Ticket | État |
 |---|---|
-| LS-52 | Terminé |
+| LS-52 | Terminé, fusionné |
 | LS-1 | description corrigée, epic toujours en cours |
 | LS-2 | réestimée à 34 h, epic toujours en cours |
 | LS-49 | amendement en tête, reste Terminé |
