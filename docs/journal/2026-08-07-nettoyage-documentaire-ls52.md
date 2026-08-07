@@ -105,11 +105,33 @@ db:verifier (base migree)         93 reussites, 0 echecs
 verifier-config-claude.sh --strict  configuration coherente
 type-check, lint, format:check    vert
 npm run test                      6 fichiers, 60 tests
+npm audit --audit-level=low       0 vulnerabilite, apres l'override js-yaml
+npm run build                     vert
 ```
 
 Les huit mutations de `verifier-regles-mutation.sh` visent trois lignes de
 `MODELE-CONCEPTUEL.md` dont j'ai déplacé le contenu. Elles restent détectées, ce
 qui prouve que le contrôle mord toujours après mes modifications.
+
+## Un avis de sécurité en cours de route, hors LS-52
+
+La PR est sortie **rouge** sur l'audit des dépendances, alors que tout passait en
+local une heure plus tôt. L'avis **GHSA-5p4m-2wfm-xmqj**, CVE-2026-59870, est paru
+entre-temps : consommation quadratique de processeur sur la résolution `!!omap` de
+`js-yaml`, plage vulnérable 4.0.0 à 4.3.0.
+
+Corrigé par override en `^4.3.1`, sur arbitrage de Christophe, dans un commit
+séparé de LS-52. La chaîne est `eslint > @eslint/eslintrc > js-yaml`, donc de
+l'outillage de développement et non un chemin de données.
+
+**Le critère de la fiche mémoire a joué exactement comme prévu.**
+`@eslint/eslintrc` attend `^4.3.0` : la 4.3.1 reste dans sa plage, aucune majeure
+franchie. La 5.x en franchirait une et rejouerait le défaut de `minimatch` qui
+avait cassé ESLint le 30 juillet.
+
+Vérifié au-delà de l'audit, comme cette même fiche l'exige : `npm ls` confirme
+`js-yaml@4.3.1 overridden`, et lint, type-check, format:check, les 60 tests et le
+build passent.
 
 ## Ce qui n'a pas été fait, et pourquoi
 

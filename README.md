@@ -109,7 +109,7 @@ npm run build      # construction de production
 npm run format     # Prettier, code seulement, pas la documentation
 ```
 
-`npm audit` doit rester à **zéro vulnérabilité**. Cinq overrides y contribuent,
+`npm audit` doit rester à **zéro vulnérabilité**. Six overrides y contribuent,
 documentés dans `package.json` avec la condition de leur retrait.
 
 Un override vise la version corrigée **sans franchir de version majeure chez le
