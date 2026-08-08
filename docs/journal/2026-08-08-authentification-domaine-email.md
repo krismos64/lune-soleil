@@ -84,6 +84,35 @@ fois, six renseignées. `.env` ignoré par `.gitignore` ligne 24, non suivi par 
 Aucun autre ticket ne mentionne SPF, DKIM, DMARC ou DNS, vérifié par recherche
 sur le projet.
 
+## La CI a rougi sur une PR qui ne touchait que de la documentation
+
+La PR du journal a échoué sur `npm audit` : **GHSA-2v37-7h3g-55p8**, une boucle
+infinie de `nanoid` quand un générateur personnalisé reçoit une taille nulle.
+Paru entre le dernier contrôle vert et cette PR, exactement comme `js-yaml` le
+7 août. Une PR verte en local rougit en CI sans qu'une ligne du dépôt ait changé.
+
+`nanoid@3.3.16` arrive par `next` puis `postcss`, lui-même déjà sous override.
+La correction est un patch sur la même majeure, `postcss` attendant `^3.3.11` :
+aucune majeure franchie chez le consommateur, le critère retenu le 30 juillet
+après la casse d'ESLint par `brace-expansion`. **Septième override**, `README.md`
+recompté, le contrôle de dérive ayant repéré l'écart.
+
+**Deux pièges rencontrés en corrigeant**, tous deux étrangers à l'avis lui-même.
+
+`npm install` a échoué sur `Cannot read properties of null (reading 'edgesOut')`,
+une erreur interne opaque. La cause n'était ni l'override ni le cache : le shell
+tournait sur **Node 23.9.0**, version impaire que `engines` refuse. C'est la
+première ligne du `CLAUDE.md`, `nvm use` d'abord, et chaque appel repart d'un
+shell neuf : la bascule doit être enchaînée dans la même commande, jamais posée
+une fois pour toutes.
+
+Supprimer `package-lock.json` pour forcer la résolution a fait bouger **79
+paquets** pour un seul override nécessaire, toutes les transitives étant
+réévaluées vers leurs dernières versions compatibles. Un diff hors sujet et non
+relu sur une PR de journal. Repris depuis le lock de `main` avec
+`npm install --package-lock-only` : **un seul paquet change**, quatre lignes de
+diff.
+
 ## Prochaine étape
 
 **LS-73**, journalisation structurée et contrôle de santé. C'est la
