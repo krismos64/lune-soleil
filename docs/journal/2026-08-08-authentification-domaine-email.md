@@ -124,7 +124,24 @@ LS-82 a été écartée comme prochaine story malgré son pouvoir de déblocage 
 appartient à la phase 4, et LS-54 qu'elle débloque est elle-même bloquée par
 LS-2, non terminée. Le déblocage ne sert à rien tant que la phase 1 est ouverte.
 
+## Traçabilité
+
+**PR #73**, fusionnée sur `main` en rebase, trois commits :
+
+| SHA | Objet |
+|---|---|
+| `33db82f` | le journal de la session |
+| `675dd14` | l'override `nanoid`, septième, et `README.md` recompté |
+| `45fb629` | le déblocage tracé dans ce journal |
+
+Commentaires Jira posés sur **LS-82** et **LS-29**. Deux fiches mémoire écrites,
+citées ci-dessous.
+
 ## Découverte
 
 [[lune-soleil-authentification-domaine-email]], qui porte les valeurs publiées,
 le piège du doublon SPF et la consigne sur `p=none`.
+
+[[lune-soleil-npm-node-impair-et-lock]], qui porte les deux pièges du déblocage :
+`edgesOut` accuse une dépendance quand la cause est une version de Node impaire,
+et supprimer le lock déborde largement l'override qu'on voulait poser.
