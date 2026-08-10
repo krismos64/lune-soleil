@@ -24,14 +24,33 @@ TMP=$(mktemp -d)
 # La fiche de mutation 8 est créée dans le répertoire de mémoire, hors de $TMP :
 # le `trap` doit l'emporter aussi, sans quoi une sortie en erreur la laisserait
 # derrière elle et la session suivante la lirait comme une vraie fiche.
-trap 'rm -rf "$TMP"; rm -f "$MEM/lune-soleil-fiche-de-mutation-temporaire.md"' EXIT
+#
+# LE TRAP RESTAURE AUSSI LES FICHIERS DU DÉPÔT, ajout du 10 août 2026. Il ne
+# nettoyait que le temporaire : un `Ctrl-C` au mauvais moment laissait CLAUDE.md
+# ou, depuis le cas 13, `.claude/settings.json` dans son état muté. Un
+# settings.json portant un hook fantôme est précisément le défaut que ce script
+# prétend détecter, il serait fâcheux qu'il l'introduise.
+#
+# `git checkout` est sûr ici parce que la garde plus bas impose déjà un dépôt
+# propre sur ces cibles : il n'y a jamais de travail non commité à écraser.
+nettoyer() {
+  rm -rf "$TMP"
+  rm -f "$MEM/lune-soleil-fiche-de-mutation-temporaire.md"
+  git checkout -- CLAUDE.md docs/REFERENCES.md README.md .claude/settings.json 2>/dev/null || true
+}
+trap nettoyer EXIT
 
 total=0
 detectees=0
 
 # Refus de travailler sur un dépôt sale : la restauration se fait par copie de
 # sauvegarde, elle écraserait une modification en cours.
-for f in CLAUDE.md docs/REFERENCES.md; do
+# LA LISTE SUIT LES CIBLES RÉELLEMENT MUTÉES, et doit être étendue en même temps
+# qu'un nouveau cas. README.md et .claude/settings.json sont entrés le 10 août
+# 2026 avec les cas 12 et 13 : sans eux dans cette garde, une exécution sur un
+# dépôt sale aurait restauré une version d'avant les modifications en cours.
+for f in CLAUDE.md docs/REFERENCES.md README.md .claude/settings.json; do
+  [ -f "$f" ] || continue
   if ! git diff --quiet -- "$f" 2>/dev/null; then
     echo "ABANDON : $f porte des modifications non commitées."
     echo "Ce script modifie puis restaure ce fichier, il refuse d'écraser un travail en cours."
@@ -166,6 +185,64 @@ fi
 # disparu du dépôt.
 printf '\nUtiliser `ls-agent-de-mutation` pour cette relecture.\n' >> CLAUDE.md
 mutation "agent cité par CLAUDE.md sans fichier dans .claude/agents/" "absent de .claude/agents"
+
+# 10. Un skill cité par CLAUDE.md n'a pas de dossier.
+#
+# Ajouté le 10 août 2026, même trou que le cas 9 sur les agents : le contrôle
+# des renvois ne voit que les chemins complets, et CLAUDE.md cite ses skills par
+# leur nom nu, « le skill `story` », qui est la forme d'invocation réelle.
+printf '\nTout travail suit le skill `skill-de-mutation`.\n' >> CLAUDE.md
+mutation "skill cité par CLAUDE.md sans dossier dans .claude/skills/" "absent de .claude/skills"
+
+# 11. Un renvoi documentaire mort dans docs/REFERENCES.md.
+#
+# Le contrôle des renvois couvrait CLAUDE.md et s'arrêtait là, alors que
+# REFERENCES.md est la table d'aiguillage que CLAUDE.md désigne pour trouver les
+# ADR, les règles et leurs chemins. Un renvoi mort y envoie lire du vide.
+printf '\nVoir `docs/architecture/FICHIER-DE-MUTATION.md` pour le détail.\n' >> docs/REFERENCES.md
+mutation "renvoi mort dans docs/REFERENCES.md" "qui n'existe pas"
+
+# 12. Le compte de mutations de la SUITE DE TESTS annoncé par le README dérive.
+#
+# Troisième compte du README à être recompté, après les overrides et les
+# mutations de configuration. Celui-ci ne l'était par rien : il a été corrigé à
+# la main pendant LS-79, sans garde-fou pour la fois suivante.
+#
+# La mutation change le CHIFFRE ANNONCÉ plutôt que le nombre de cas du script :
+# `restaurer` ne remet pas `verifier-tests-mutation.sh`, et le modifier
+# laisserait une suite de tests amputée si le script s'interrompait ici.
+cp README.md "$TMP/README.md"
+perl -0pi -e 's/casse \*\*vingt-et-une fois\*\*/casse **trois fois**/' README.md
+mutation "compte de mutations de la suite de tests faussé dans README.md" "mutations de la suite de tests"
+cp "$TMP/README.md" README.md
+
+# 13. Un hook déclaré pointe vers un script absent.
+#
+# LE MODE D'ÉCHEC EST SILENCIEUX, confirmé par la documentation officielle : un
+# hook dont la commande ne peut pas être lancée produit une erreur NON
+# BLOQUANTE et l'action continue. Un `hook-block-secret-files.sh` renommé
+# laisserait donc passer la lecture des `.env` sans que rien ne s'arrête.
+#
+# La mutation ajoute une DÉCLARATION vers un script inexistant plutôt que de
+# renommer un vrai script de hook : renommer la protection des secrets, même
+# une seconde, est exactement ce qu'il ne faut pas faire dans un script qui
+# peut être interrompu.
+if [ -f .claude/settings.json ] && command -v node >/dev/null 2>&1; then
+  cp .claude/settings.json "$TMP/settings.json"
+  node -e '
+    const fs = require("fs");
+    const s = JSON.parse(fs.readFileSync(".claude/settings.json", "utf8"));
+    s.hooks = s.hooks || {};
+    s.hooks.PreToolUse = s.hooks.PreToolUse || [];
+    s.hooks.PreToolUse.push({
+      matcher: "Read",
+      hooks: [{ type: "command", command: "$CLAUDE_PROJECT_DIR/.claude/scripts/hook-de-mutation-absent.sh" }]
+    });
+    fs.writeFileSync(".claude/settings.json", JSON.stringify(s, null, 2) + "\n");
+  '
+  mutation "hook déclaré vers un script inexistant" "qui n'existe pas : la protection est muette"
+  cp "$TMP/settings.json" .claude/settings.json
+fi
 
 # Le retour au vert fait partie de la preuve : une restauration incomplète
 # laisserait le dépôt modifié sans que personne ne le voie.
