@@ -75,3 +75,31 @@ elle vérifie les autres.
 
 Le journal du rapport DMARC agrégé du 10 août, écrit avant cette session, est
 inclus dans le même commit de documentation.
+
+## Vérification de fin de session, et un écart trouvé
+
+Passe de contrôle demandée par Christophe avant de quitter la session, sur le
+README, `CLAUDE.md`, la mémoire, le journal et la configuration Claude Code.
+
+**Ce qui est conforme**, mesuré et non supposé : `verifier-config-claude.sh` et
+`verifier-regles.sh` verts, `CLAUDE.md` à 200 lignes pile, `npm audit` à zéro,
+mémoire à 99 fiches pour 99 entrées d'index sans orphelin ni lien mort, tous les
+ADR présents dans la table de `docs/REFERENCES.md`, versions documentées
+conformes aux versions installées, cinq scripts de hook exécutables. Le hook de
+blocage des secrets a été exercé dans les deux sens plutôt que constaté présent :
+il refuse `.env` en code 2 et laisse passer `README.md` en code 0.
+
+**L'écart, ticketé en LS-88** : aucune règle de `.claude/rules/` ne se déclenche
+sur `src/lib/`, où vivent `auth.ts`, `validation.ts`, `journal.ts` et
+`prisma.ts`. Une session qui édite la configuration d'authentification ne charge
+donc aucune règle de domaine. Même chose pour `src/integrations/email/`, quand
+`stripe/` et `mondial-relay/` sont couverts. C'est le motif d'ancrage déjà
+rencontré, et `verifier-regles.sh` ne peut pas le voir : il vérifie que les
+règles citent des identifiants réels, jamais que les chemins critiques sont
+couverts. Rien n'a été modifié, l'arbitrage entre étendre un `paths` et créer une
+règle dédiée appartient à Christophe.
+
+**Un faux positif écarté** : `verifier-jira.sh` signale que LS-68 cite LS-50 sans
+lien. Lecture faite, LS-68 exclut ce travail de son périmètre, « il devient un
+test de non-régression quand LS-50 est traitée, pas avant ». Ce n'est pas une
+dépendance, et le script prévient lui-même que sa détection est heuristique.
