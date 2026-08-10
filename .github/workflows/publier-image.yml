@@ -1,0 +1,109 @@
+# Publication de l'image sur GHCR, LS-74.
+#
+# POURQUOI UN WORKFLOW SEPARE DE `controles.yml`.
+#
+# Publier exige `packages: write`. Poser ce droit sur le workflow de controles
+# le donnerait a chaque execution declenchee par une pull request, y compris
+# celles qui portent du code non encore relu. Ici le droit d'ecriture ne vit que
+# sur `main`, apres fusion, donc apres la revue et les huit controles.
+#
+# `controles.yml` construit deja l'image a chaque pull request, pas 7b : une
+# image qui ne se construit pas fait rougir la PR et n'arrive jamais jusqu'ici.
+# Ce workflow ne decouvre donc pas un echec de construction, il publie ce qui a
+# deja ete verifie.
+#
+# CE QU'IL NE FAIT PAS : deployer. Le VPS appartient a la phase 6. Cette story
+# prouve que l'application est deployable, elle ne la deploie pas.
+
+name: Publier l'image
+
+on:
+  push:
+    branches: [main]
+
+  # Declenchement manuel, pour republier une image sans nouveau commit.
+  workflow_dispatch:
+
+# Une publication a la fois. Deux fusions rapprochees pousseraient deux images
+# en parallele, sans consequence sur les tags par SHA, qui sont distincts, mais
+# `cancel-in-progress` est volontairement absent : une publication interrompue
+# a mi-chemin laisserait un tag partiel sur le registre.
+concurrency:
+  group: publier-image
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publier:
+    name: Construire et publier sur GHCR
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v7
+
+      # Buildx est necessaire pour le cache de construction entre executions.
+      - name: Preparer Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: S'authentifier sur GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ----------------------------------------------------------------------
+      # LE TAG EST L'IDENTIFIANT DE COMMIT, ET C'EST LUI LA REFERENCE DE RETOUR
+      # ARRIERE.
+      #
+      # `latest` est publie aussi, mais UNIQUEMENT comme commodite pour tirer la
+      # derniere image. Ne jamais s'en servir pour revenir en arriere : il
+      # designe toujours la derniere version, donc « revenir a latest » revient
+      # a rester ou l'on est.
+      #
+      # Le SHA passe par `env:` et non par interpolation directe dans `run:`.
+      # Ici la valeur vient de GitHub et non d'un contributeur, mais la regle
+      # vaut sans exception : une interpolation dans un `run:` est une injection
+      # en puissance.
+      #
+      # Ce workflow ne s'execute que sur `push: main`, donc `github.sha` est
+      # bien le commit de `main` et non un commit de fusion de pull request.
+      # ----------------------------------------------------------------------
+      - name: Construire et publier
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+            ghcr.io/${{ github.repository }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Les memes controles qu'en pull request, rejoues sur l'image REELLEMENT
+      # publiee. Une verification faite sur une image construite localement ne
+      # dit rien de celle qui est partie sur le registre.
+      - name: Controles de securite de l'image publiee
+        env:
+          IMAGE: ghcr.io/${{ github.repository }}:${{ github.sha }}
+        run: |
+          docker pull "$IMAGE"
+          ./scripts/verifier-image-docker.sh "$IMAGE"
+
+      - name: Rappeler la reference de retour arriere
+        env:
+          IMAGE: ghcr.io/${{ github.repository }}:${{ github.sha }}
+        run: |
+          echo "### Image publiee" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '`'"$IMAGE"'`' >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "C'est cette reference, et non \`latest\`, qui sert au retour arriere." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Un retour a une image precedente ne repare pas une migration destructive :" >> "$GITHUB_STEP_SUMMARY"
+          echo "le code revient, les donnees non." >> "$GITHUB_STEP_SUMMARY"
