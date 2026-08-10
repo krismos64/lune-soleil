@@ -11,12 +11,22 @@
 # de reference : l'etape 6 a echoue sur « 91 reussites, 1 echecs » et la chaine
 # s'est arretee la. Un workflow jamais vu rouge n'est pas un workflow prouve.
 #
-# LA PROTECTION DE main NE S'APPLIQUE PAS AU PROPRIETAIRE DU DEPOT. Le controle
-# « Les huit controles de CONTRIBUTING » est requis et la pull request
-# obligatoire, mais enforce_admins vaut false par arbitrage du 31 juillet, pour
-# garder une sortie de secours. Un push direct depuis ce compte affiche les refus
-# PUIS REUSSIT QUAND MEME. Ne jamais tester ce reglage par un push reel sur main,
-# le cas s'est produit et a laisse le commit b550194 hors de toute pull request.
+# LA PROTECTION DE main S'APPLIQUE A TOUT LE MONDE, PROPRIETAIRE COMPRIS. Le
+# controle « Les huit controles de CONTRIBUTING » est requis, la pull request
+# obligatoire, et `enforce_admins` vaut true. Un push direct sur main est refuse,
+# sans exception et sans sortie de secours.
+#
+# CE COMMENTAIRE A AFFIRME L'INVERSE jusqu'au 10 aout 2026 : il decrivait
+# `enforce_admins` a false et un push direct qui « reussit quand meme ». Le
+# reglage a change le 31 juillet en LS-69 sans que ce texte suive, et il invitait
+# donc a tenter un contournement qui echoue. Mesure avant correction :
+#
+#   gh api repos/krismos64/lune-soleil/branches/main/protection \
+#     --jq .enforce_admins.enabled   # true
+#
+# Ne pas verifier ce reglage par un push reel sur main. Le cas s'est produit a
+# l'epoque ou il valait false et a laisse le commit b550194 hors de toute pull
+# request. L'appel API ci-dessus repond sans rien ecrire.
 #
 # UN SEUL JOB, ET NON HUIT EN PARALLELE. Les controles partagent l'installation
 # des dependances, la generation du client Prisma et la base PostgreSQL. Les
