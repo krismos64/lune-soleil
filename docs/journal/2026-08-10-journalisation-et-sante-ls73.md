@@ -127,3 +127,24 @@ construction, elle vérifie les autres.
 
 Hors chaîne, LS-79 à LS-81 portent les mesures d'ADR-027, et LS-31 l'agent
 projet.
+
+## Nettoyage des liens Jira, en fin de session
+
+`verifier-jira.sh` signalait trois dépendances textuelles sans lien. Après
+vérification, **aucune n'était un trou réel**, les dépendances existaient par
+transitivité. Deux liens directs ont quand même été posés, LS-69 vers LS-65 et
+LS-66, LS-74 vers LS-65 : la chaîne LS-65 à LS-69 est imposée, l'écrire
+explicitement coûte peu.
+
+**Le troisième signalement ne doit pas être corrigé.** LS-68 cite LS-50 pour dire
+que le prototype d'interblocage deviendra un test de non-régression « quand LS-50
+est traitée » : c'est une note de contexte, pas une dépendance. Poser le lien
+affirmerait un ordre qui n'a jamais existé, les deux stories étant terminées.
+Tracé en commentaire sur LS-68 pour qu'une prochaine session ne le pose pas de
+bonne foi. `verifier-jira.sh --strict` reste donc à 1, sans que rien ne soit
+cassé : il n'est pas dans la chaîne d'intégration continue.
+
+**Un piège découvert en le faisant** : `createIssueLink` pose le lien `Blocks` à
+l'envers de sa propre documentation. Le premier lien créé disait « LS-69 bloque
+LS-65 », soit l'initialisation du projet attendant la chaîne d'intégration
+continue. Supprimé et reposé. Voir [[lune-soleil-sens-des-liens-jira]].
