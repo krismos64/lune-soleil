@@ -154,8 +154,8 @@ un garde-fou qui ne peut pas conclure bloque la migration.
 
 ## Agents
 
-Utiliser `ls-critical-reviewer` pour relire les zones à risque. Un agent projet
-dédié à la conteneurisation reste à créer, LS-31.
+Deux agents projet : `ls-critical-reviewer` relit les zones à risque,
+`ls-conteneurisation` couvre image, Compose, déploiement et retour arrière.
 
 **Ne pas invoquer les agents globaux `docker-devops`, `security-auditor` ni
 `nextjs-architect` ici** : calibrés sur NextAuth v5, PostgreSQL 16, Redis 7 et du

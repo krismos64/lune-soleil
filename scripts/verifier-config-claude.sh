@@ -356,6 +356,28 @@ if [ -d src ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 11. Chaque agent projet cité par CLAUDE.md existe dans .claude/agents/
+# ---------------------------------------------------------------------------
+#
+# Le contrôle 3 ne voit que les renvois PORTANT UN CHEMIN, `.claude/agents/x.md`.
+# La section Agents cite ses agents par leur nom nu, `ls-critical-reviewer`, qui
+# est la forme d'invocation réelle : aucun chemin, donc aucune vérification.
+# Renommer ou supprimer un fichier d'agent laissait CLAUDE.md pointer dans le
+# vide sans que rien ne le signale. Trou trouvé par mutation en LS-31.
+#
+# L'ancrage est le préfixe `ls-`, seul motif mécaniquement décidable : les autres
+# noms nus de CLAUDE.md sont des commandes système, `ssh` ou `gh`, et des
+# fichiers de règles. Un contrôle plus large crierait sur eux.
+
+if [ -f CLAUDE.md ]; then
+  while read -r agent; do
+    [ -n "$agent" ] || continue
+    [ -f ".claude/agents/$agent.md" ] \
+      || anomalies+=("CLAUDE.md cite l'agent '$agent', absent de .claude/agents/")
+  done < <(grep -ohE '`ls-[a-z0-9-]+`' CLAUDE.md 2>/dev/null | tr -d '`' | sort -u)
+fi
+
+# ---------------------------------------------------------------------------
 # Rapport
 # ---------------------------------------------------------------------------
 #
