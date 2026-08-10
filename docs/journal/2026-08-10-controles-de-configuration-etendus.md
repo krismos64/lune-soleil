@@ -86,14 +86,39 @@ couvre la structure, epic parent et liens de dépendance. Juger qu'une
 description est périmée demande de la comparer au code, et la convention du
 projet est déjà qu'un commentaire récent rectifie la description.
 
+## Les modifications du README avaient été perdues
+
+**Repris et commité le 11 août au matin.** Au moment de reprendre, les trois
+fichiers annoncés modifiés n'étaient plus que deux : `README.md` était revenu à
+sa version commitée, ses trois passages ajoutés perdus.
+
+La cause tient au script de mutation, qui édite `README.md` puis le restaure par
+`git checkout`. Sa garde en tête refuse justement de tourner si le fichier porte
+des modifications non commitées, mais elle ne protège que ses propres appels :
+une modification jamais indexée n'existe nulle part pour git, et rien ne la
+ramène. Les passages ont été réécrits à partir du diff, encore lisible dans la
+session.
+
+**Ce qu'il faut en retenir** : laisser un travail non commité en fin de session
+n'est pas neutre quand un hook `Stop` lance des scripts qui écrivent dans le
+dépôt. Commiter sur une branche coûte moins cher que de réécrire.
+
+Deux fausses pistes ont été suivies avant d'arriver là, toutes deux dues à une
+mesure trop courte et non au code : le contrôle strict lu à travers `tail -40`,
+qui masquait le bloc d'anomalies derrière la dernière ligne, et un `grep -cE
+'^\s*mutation "'` sur le script de l'image Docker, qui rendait 8 quand le motif
+documenté, incluant `mutation_code`, rend bien 9.
+
 ## État
 
-Trois fichiers modifiés, **non commités** : `README.md`,
+Trois fichiers, commit `3c6eac3` sur la branche
+`controles-configuration-etendus` : `README.md`,
 `scripts/verifier-config-claude.sh`,
 `scripts/verifier-config-claude-mutation.sh`.
 
-Contrôles au vert : `verifier-config-claude.sh --strict`, `verifier-regles.sh`,
-et la preuve par mutation à treize sur treize.
+Contrôles au vert : `verifier-config-claude.sh --strict` sort en 0,
+`verifier-regles.sh` conforme, et la preuve par mutation à **treize sur treize**,
+arbre restauré et de nouveau vert après passage.
 
 **Rien n'a été fait sur LS-88**, l'écart d'ancrage des règles sur `src/lib/`
 trouvé plus tôt dans la soirée. Ces contrôles-ci ne le couvrent pas : LS-88
