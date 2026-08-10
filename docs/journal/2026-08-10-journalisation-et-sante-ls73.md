@@ -95,12 +95,20 @@ recopier.
 
 ## Traçabilité
 
-**PR #75**, deux commits :
+**PR #75**, fusionnée sur `main` en rebase, trois commits :
 
 | SHA | Objet |
 |---|---|
-| `71db314` | les trois modules, les tests, la fuite d'email fermée |
-| `e0089b6` | la convention, le contrôle de fumée, les quatre mutations, Sentry retiré |
+| `ae04e27` | les trois modules, les tests, la fuite d'email fermée |
+| `5006f9f` | la convention, le contrôle de fumée, les quatre mutations, Sentry retiré |
+| `2940c89` | le journal de cette session |
+
+**La CI a rougi au premier tour**, sur le contrôle 6d de cohérence de la
+configuration : « du code a été commité le 2026-08-10, aucune page de journal à
+cette date ». Le garde-fou a fait son travail, le journal ayant été écrit après
+le premier envoi. Rien à corriger dans le contrôle.
+
+Commentaire Jira posé sur LS-73, deux fiches mémoire écrites.
 
 ## Prochaine étape
 
