@@ -66,7 +66,13 @@ if [ -d docs/adr ] && [ -f docs/REFERENCES.md ]; then
       *ropos*)  continue ;;
     esac
 
-    grep -q "$id" docs/REFERENCES.md \
+    # Ancré sur la LIGNE DE TABLE, `| ADR-027 | ...`, et non sur l'identifiant
+    # n'importe où dans le fichier. Trouvé par mutation en LS-31 : ADR-027 est
+    # aussi cité en passant dans la table des fichiers sensibles, à propos de la
+    # durée de session. Cette seconde mention satisfaisait la recherche, donc sa
+    # ligne d'aiguillage pouvait disparaître sans que rien ne le signale. Même
+    # motif que la mutation satisfaite ailleurs déjà rencontrée ici.
+    grep -qE "^\| *$id *\|" docs/REFERENCES.md \
       || anomalies+=("$id accepté mais absent de la table de docs/REFERENCES.md")
   done
 
