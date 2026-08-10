@@ -3,14 +3,16 @@
  *
  * ADR-021 decide l'administration : passkey principale, mot de passe de secours
  * a seize caracteres. ADR-023 decide les clients : email et mot de passe, une
- * seule instance pour les deux populations, role `CLIENT` par defaut.
+ * seule instance pour les deux populations, role `CLIENT` par defaut. ADR-027
+ * decide la limitation de debit, LS-79.
  *
  * Verifie via Context7 sur Better Auth 1.6.
  *
- * TROIS CHOIX QUI SE PERDENT FACILEMENT, chacun documente a sa ligne :
+ * QUATRE CHOIX QUI SE PERDENT FACILEMENT, chacun documente a sa ligne :
  *   - `role` en `additionalFields` avec `input: false`, regle E11
  *   - le plugin `admin()` de Better Auth n'est PAS utilise, ADR-023
  *   - `minPasswordLength` est global, il vaut seize pour tous, ADR-023
+ *   - `rateLimit.enabled` est force a `true`, sinon desactive hors production
  */
 import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
@@ -205,6 +207,44 @@ export function creerAuth(
     session: { modelName: "Session" },
     account: { modelName: "Compte" },
     verification: { modelName: "Verification" },
+
+    /**
+     * LIMITATION DE DEBIT, LS-79, ADR-027.
+     *
+     * `enabled: true` EST LE POINT DECISIF. Better Auth desactive ce
+     * mecanisme hors production par defaut : un reglage faux ne se verrait
+     * alors qu'en production, motif du garde-fou jamais exerce deja rencontre
+     * trois fois sur ce projet (voir `docs/adr/ADR-027...md`). Le forcer rend
+     * la protection exercable par un test, critere d'acceptation 3.
+     *
+     * `storage: "database"` EST L'AUTRE POINT NON NEGOCIABLE. Le defaut en
+     * memoire disparait a chaque redemarrage et se contredit entre deux
+     * processus : un compteur qu'un redemarrage remet a zero ne limite rien.
+     * Le projet n'a pas Redis, PostgreSQL est deja la. Modele `RateLimit`,
+     * migration ecrite a la main comme les autres tables de ce fichier.
+     *
+     * QUATRE ROUTES DEMANDEES PAR LE TICKET, TROIS CONFIGUREES ICI. Le
+     * formulaire de contact n'est pas une route Better Auth et n'existe pas
+     * encore dans le depot : sa regle s'ecrira avec la route elle-meme,
+     * arbitrage de Christophe le 10 aout 2026.
+     *
+     * `/request-password-reset` ET NON `/reset-password` : c'est la premiere
+     * qui envoie l'email, verifie via Context7 sur le code source de la route.
+     * `/reset-password` ne fait que consommer le jeton deja recu, sans email,
+     * la limiter ne protegerait ni le quota SMTP ni rien d'autre.
+     *
+     * Le reglage par defaut, dix requetes par dix secondes, reste au-dessus
+     * pour tout le reste de l'API : seules ces trois routes sont durcies.
+     */
+    rateLimit: {
+      enabled: true,
+      storage: "database",
+      customRules: {
+        "/sign-in/email": { window: 60, max: 5 },
+        "/request-password-reset": { window: 60, max: 3 },
+        "/sign-up/email": { window: 60, max: 3 },
+      },
+    },
 
     emailAndPassword: {
       // Actif meme si la passkey est le chemin principal de l'administration :
