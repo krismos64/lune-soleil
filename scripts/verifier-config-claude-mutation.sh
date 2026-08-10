@@ -153,6 +153,20 @@ else
   echo "  IGNORE  contrôles de mémoire, MEMORY.md introuvable à $MEM"
 fi
 
+# 9. Un agent projet cité par CLAUDE.md n'a pas de fichier.
+#
+# Ajouté en LS-31. Le contrôle des renvois ne voit que les chemins écrits en
+# entier, `.claude/agents/x.md`, alors que la section Agents cite ses agents par
+# leur nom nu, qui est la forme d'invocation réelle. Renommer un fichier d'agent
+# laissait donc CLAUDE.md pointer dans le vide en silence.
+#
+# La mutation ajoute une citation plutôt que de déplacer un vrai fichier
+# d'agent : `restaurer` remet CLAUDE.md et deux autres fichiers, pas
+# `.claude/agents/`. Une interruption au mauvais moment laisserait un agent
+# disparu du dépôt.
+printf '\nUtiliser `ls-agent-de-mutation` pour cette relecture.\n' >> CLAUDE.md
+mutation "agent cité par CLAUDE.md sans fichier dans .claude/agents/" "absent de .claude/agents"
+
 # Le retour au vert fait partie de la preuve : une restauration incomplète
 # laisserait le dépôt modifié sans que personne ne le voie.
 echo
