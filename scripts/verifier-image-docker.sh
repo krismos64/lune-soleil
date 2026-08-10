@@ -102,17 +102,30 @@ mkdir -p "$TMP/extrait"
 tar -xf "$TMP/image.tar" -C "$TMP/extrait" \
   || abandonner "l'archive de l'image est illisible"
 
+# `tar -tf` ET NON `tar -tzf`. La compression des couches n'est pas garantie :
+# sur macOS ce depot les voit gzippees, sur le runner Ubuntu elles ne le sont
+# pas. `-tzf` echoue alors sur chaque couche, la boucle en compte zero, et le
+# garde-fou ci-dessous arrete tout. C'est exactement ce qui est arrive a la
+# premiere execution en integration continue : le controle a refuse de conclure
+# plutot que d'afficher un vert. `-tf` detecte la compression tout seul.
+#
+# Le nom des couches est aussi cherche a l'ancien emplacement `layer.tar`, pour
+# survivre a un changement de format de `docker save`.
 couches_lues=0
 couches_fautives=0
-for blob in "$TMP"/extrait/blobs/sha256/*; do
+while IFS= read -r blob; do
   [ -f "$blob" ] || continue
-  tar -tzf "$blob" >/dev/null 2>&1 || continue
+  listing=$(tar -tf "$blob" 2>/dev/null || true)
+  [ -n "$listing" ] || continue
   couches_lues=$((couches_lues + 1))
-  if tar -tzf "$blob" 2>/dev/null | grep -qE '(^|/)\.env'; then
-    echo "        fichier d'environnement dans la couche $(basename "$blob" | cut -c1-12)"
+  # `|| true` obligatoire : `grep` rend 1 sans correspondance, ce qui sous
+  # `pipefail` ferait passer la couche pour illisible.
+  fautifs=$(printf '%s\n' "$listing" | grep -E '(^|/)\.env' || true)
+  if [ -n "$fautifs" ]; then
+    echo "        fichier d'environnement dans la couche $(basename "$(dirname "$blob")")/$(basename "$blob" | cut -c1-12)"
     couches_fautives=$((couches_fautives + 1))
   fi
-done
+done < <(find "$TMP/extrait" -type f \( -path '*/blobs/*' -o -name 'layer.tar' \))
 
 if [ "$couches_lues" -eq 0 ]; then
   abandonner "aucune couche n'a pu etre lue. Le controle des secrets n'a rien verifie."
