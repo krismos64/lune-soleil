@@ -302,7 +302,9 @@ documentaire ne bloque aucune fusion, et un rouge qui signifie parfois « ne pas
 fusionner » et parfois « à relire » est un rouge que l'on apprend à ignorer. Il se
 déclenche aussi à la main depuis l'onglet Actions.
 
-Il a été prouvé par sept mutations, une par contrôle, toutes détectées.
+Il a été prouvé par neuf mutations, toutes détectées. Le compte se mesure,
+`grep -cE '^\s*mutation "' scripts/verifier-config-claude-mutation.sh`, il grandit
+avec les contrôles.
 
 `verifier-migration-mutation.sh` prouve les garde-fous de
 `scripts/migrate-production.sh` sur dix cas, sans base réelle : `psql`, `pg_dump`

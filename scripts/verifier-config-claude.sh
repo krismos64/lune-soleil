@@ -331,6 +331,27 @@ if [ -f README.md ] && command -v node >/dev/null 2>&1; then
     anomalies+=("README.md annonce $annonce overrides, package.json en déclare $reel")
   fi
 
+  # Mutations de la configuration : la source est le nombre d'appels du script.
+  #
+  # Ajouté en LS-31, sur un compte trouvé faux pour la deuxième fois. Le README
+  # annonçait « sept mutations » quand le script en portait neuf, et le contrôle
+  # 8 comme le 9 restaient verts : ils ne recomptaient pas celui-ci. Le même
+  # compte avait déjà dérivé le 10 août, corrigé à la main, donc sans rien qui
+  # empêche la troisième fois.
+  #
+  # LE CHIFFRE S'ÉCRIT SANS GRAS dans le README. `compte_annonce` cherche
+  # « neuf mutations » avec un espace simple, et `**neuf mutations**` colle les
+  # astérisques au chiffre, ce qui fait échouer la limite de mot. La première
+  # version de ce contrôle est restée verte devant un compte faux pour cette
+  # seule raison. Vaut pour tous les comptes lus par ce contrôle.
+  if [ -f scripts/verifier-config-claude-mutation.sh ]; then
+    reel=$(grep -cE '^\s*mutation "' scripts/verifier-config-claude-mutation.sh 2>/dev/null || echo 0)
+    annonce=$(compte_annonce "$readme_aplati" "mutations, toutes détectées")
+    if [ "$reel" -gt 0 ] && [ -n "$annonce" ] && [ "$reel" != "$annonce" ]; then
+      anomalies+=("README.md annonce $annonce mutations de configuration, le script en porte $reel")
+    fi
+  fi
+
   # Largeurs Playwright : la source est la liste des projets de sa configuration.
   if [ -f playwright.config.ts ]; then
     reel=$(grep -cE '^\s*name:\s*"' playwright.config.ts 2>/dev/null || echo 0)
