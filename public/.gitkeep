@@ -1,0 +1,8 @@
+Ce fichier existe pour que `public/` soit versionne alors qu'il est vide.
+
+Git ne suit pas les dossiers vides. Sans lui, le `COPY /app/public` du
+Dockerfile echoue sur un clone neuf et sur le runner d'integration continue,
+avec « /app/public: not found », alors que la construction reussit sur un poste
+ou le dossier existe. Defaut mesure en LS-74, invisible en local.
+
+Il disparaitra quand `public/` portera de vrais fichiers.

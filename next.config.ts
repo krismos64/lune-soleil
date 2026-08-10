@@ -15,6 +15,22 @@ import type { NextConfig } from "next";
  */
 
 const nextConfig: NextConfig = {
+  /*
+   * Sortie autonome, LS-74.
+   *
+   * `next build` produit alors `.next/standalone`, un dossier qui porte son
+   * propre `server.js` et les seules dépendances réellement tracées. L'image
+   * finale n'embarque donc pas les 906 Mo de `node_modules` du poste, et
+   * l'exécution passe par `node server.js` et non `next start`, qui exigerait
+   * la CLI complète de Next.
+   *
+   * DEUX DOSSIERS NE SONT PAS TRACÉS et se copient à la main dans l'image :
+   * `public/` et `.next/static`. Les oublier ne fait échouer ni la construction
+   * ni le contrôle de santé, l'application sert alors ses pages sans styles ni
+   * images. Voir le Dockerfile, qui porte les deux `COPY` correspondants.
+   */
+  output: "standalone",
+
   turbopack: {
     root: __dirname,
   },

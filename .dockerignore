@@ -1,0 +1,116 @@
+# Contexte de construction de l'image, LS-74.
+#
+# CE FICHIER EST UNE MESURE DE SECURITE AVANT D'ETRE UNE OPTIMISATION.
+# Le depot est public, invariant 9 : un `.env` entre dans une couche d'image et
+# y reste meme si une couche ulterieure le supprime, et l'image part sur GHCR.
+# Le Dockerfile ne fait aucun `COPY . .` sans que ce fichier ne le filtre.
+#
+# IL NE DOUBLONNE PAS `.gitignore`, il ne s'en deduit pas non plus : Docker
+# n'a jamais lu `.gitignore`, un fichier ignore par git est copie dans l'image
+# si rien ne l'exclut ici. C'est exactement le cas de `.env`, present sur le
+# poste et absent du depot.
+#
+# La verification ne se fait pas en relisant ce fichier mais en inspectant les
+# couches de l'image construite, voir `scripts/verifier-image-docker.sh`.
+
+# ---------------------------------------------------------------------------
+# Secrets et environnement. La priorite.
+# ---------------------------------------------------------------------------
+#
+# `.env*` couvre les variantes que personne n'anticipe, `.env.production.local`
+# ou `.env.recette`. `.env.example` ne porte que des noms de variables, mais il
+# n'a rien a faire dans une image non plus.
+#
+# CES DEUX LIGNES SONT LA SEULE PROTECTION REELLE, et pas seulement une
+# ceinture de securite en plus des `COPY` nommes du Dockerfile. `next build`
+# RECOPIE le `.env` du contexte dans `.next/standalone/.env`, mesure ici le
+# 10 aout 2026 : l'etape finale copie ce dossier en entier, donc le secret
+# entrerait par ce chemin meme sans le moindre `COPY . .`. Retirer ces lignes
+# en jugeant les copies nommees suffisantes publierait le `.env` sur GHCR.
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+.secrets
+
+# ---------------------------------------------------------------------------
+# Ce que la construction refabrique, ou qui ne la concerne pas.
+# ---------------------------------------------------------------------------
+#
+# `node_modules` pese 906 Mo sur le poste et serait de toute facon reinstalle
+# par `npm ci` dans l'image : le copier enverrait 906 Mo au demon a chaque
+# construction, avec le risque supplementaire d'embarquer des binaires compiles
+# pour macOS dans une image Linux.
+node_modules/
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+.turbo/
+.swc/
+
+# Le client Prisma est engendre dans l'image par `prisma generate`. Copier
+# celui du poste embarquerait un moteur compile pour la mauvaise plateforme.
+src/generated/
+
+# ---------------------------------------------------------------------------
+# Tests, rapports et outillage de developpement.
+# ---------------------------------------------------------------------------
+coverage/
+.nyc_output/
+playwright-report/
+playwright/.cache/
+test-results/
+blob-report/
+tests/
+e2e/
+*.log
+
+# ---------------------------------------------------------------------------
+# Historique, documentation et configuration d'editeur.
+# ---------------------------------------------------------------------------
+#
+# `.git` fait 9,8 Mo et porte tout l'historique du depot. Aucune etape de
+# construction ne le lit : le tag par identifiant de commit est passe en
+# argument par le workflow, il ne se devine pas depuis l'image.
+.git/
+.github/
+.claude/
+docs/
+*.md
+!README.md
+
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+._*
+
+# ---------------------------------------------------------------------------
+# Donnees locales et sauvegardes.
+# ---------------------------------------------------------------------------
+pg-data/
+backups/
+uploads/
+public/uploads/
+tmp/
+.tmp/
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.sql.gz
+invoices/
+credit-notes/
+
+# Compose decrit la base LOCALE de developpement, la production ne s'en sert
+# pas. Il n'a rien a faire dans l'image de l'application.
+docker-compose.yml
+Dockerfile
+.dockerignore
