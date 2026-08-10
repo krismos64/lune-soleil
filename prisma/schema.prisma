@@ -889,6 +889,23 @@ model Passkey {
   @@map("passkey")
 }
 
+// Compteurs de limitation de debit, LS-79, ADR-027.
+//
+// Schema impose par Better Auth : trois champs, `key`, `count`, `lastRequest`.
+// `storage: "database"` est le point non negociable de l'ADR, le defaut en
+// memoire disparaissant a chaque redemarrage et se contredisant entre deux
+// processus. `key` encode a la fois la route et l'adresse IP, propre au
+// mecanisme integre.
+model RateLimit {
+  id          String @id @default(uuid())
+  key         String
+  count       Int
+  lastRequest BigInt @map("last_request")
+
+  @@unique([key])
+  @@map("rate_limit")
+}
+
 model JournalAudit {
   id        String   @id @default(uuid())
   acteurId  String?  @map("acteur_id") // nullable, actions système

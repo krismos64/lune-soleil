@@ -529,6 +529,229 @@ describe("attributs du cookie de session", () => {
  * signal attendu : le gain de latence doit etre un arbitrage conscient, pas un
  * effet de bord.
  */
+/**
+ * LIMITATION DE DEBIT, LS-79, ADR-027.
+ *
+ * `auth.api.*` N'EST PAS RATE-LIMITE, decouverte de cette session verifiee via
+ * Context7 : « Rate limits in Better Auth only apply to client-initiated
+ * requests. Server-side requests made using auth.api are not affected by rate
+ * limiting. » Les six premiers tests ecrits pour ce ticket appelaient
+ * `auth.api.signInEmail`, tous verts a tort jusqu'a l'assertion sur le 429,
+ * qui n'arrivait jamais. CES TESTS FRAPPENT DONC `auth.handler` DIRECTEMENT,
+ * avec de vraies `Request`, exactement le chemin que `toNextJsHandler`
+ * emprunte depuis `src/app/api/auth/[...all]/route.ts`.
+ *
+ * CHAQUE SOUS-TEST PORTE SA PROPRE IP, via `x-forwarded-for` : la cle de
+ * Better Auth combine route et IP, jamais l'email. Sans cette isolation, les
+ * sous-tests de ce bloc partageraient un seul compteur par route et
+ * s'epuiseraient les uns les autres, independamment de l'ordre d'execution.
+ * C'est la meme IP simulee que retombe `getIp` sans en-tete, `127.0.0.1` en
+ * environnement de test : lui laisser un en-tete explicite par sous-test
+ * rend chacun independant sans devoir vider `rate_limit` entre eux.
+ */
+describe("limitation de debit, LS-79, ADR-027", () => {
+  async function compterCompteursDebit(): Promise<number> {
+    const { rows } = await client.query<{ nombre: string }>(
+      "SELECT count(*) AS nombre FROM rate_limit",
+    );
+    return Number(rows[0]!.nombre);
+  }
+
+  function requeteAuth(
+    chemin: string,
+    corps: Record<string, unknown>,
+    ip: string,
+  ): Request {
+    return new Request(`http://localhost:3000/api/auth${chemin}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-forwarded-for": ip,
+      },
+      body: JSON.stringify(corps),
+    });
+  }
+
+  /**
+   * VALEUR VOLONTAIREMENT FAUSSE, jamais un vrai mot de passe. Une constante
+   * partagee plutot que des litteraux distincts par appel : GitGuardian a
+   * signale les precedents comme secrets generiques, chacun ressemblant assez
+   * a un identifiant pour declencher le detecteur. Le nom de la constante
+   * porte l'intention.
+   */
+  const ESSAI_SANS_IMPORTANCE =
+    "valeur-de-test-sans-rapport-avec-un-mot-de-passe-reel";
+
+  it(
+    "refuse la requete de trop sur la connexion, cinq admises",
+    { timeout: 15000 },
+    async () => {
+      await creerCompte("cible.connexion@exemple.fr");
+
+      const codes: number[] = [];
+      // Six tentatives, un mot de passe volontairement faux : le rate limit
+      // s'applique AVANT la verification du mot de passe, sur la route seule.
+      for (let i = 0; i < 6; i += 1) {
+        const reponse = await auth.handler(
+          requeteAuth(
+            "/sign-in/email",
+            {
+              email: "cible.connexion@exemple.fr",
+              password: ESSAI_SANS_IMPORTANCE,
+            },
+            "203.0.113.10",
+          ),
+        );
+        codes.push(reponse.status);
+      }
+
+      // CRITERE 4 : un usage legitime, plusieurs essais successifs, passe
+      // avant le ralentissement. La regle configuree est cinq par minute :
+      // les cinq premiers ne sont PAS 429, quel que soit leur resultat propre
+      // face au mot de passe faux.
+      expect(codes.slice(0, 5).every((c) => c !== 429)).toBe(true);
+      // CRITERE 2 : la sixieme est reellement refusee, par le code de reponse
+      // et non par la presence de la configuration.
+      expect(codes[5]).toBe(429);
+    },
+  );
+
+  it(
+    "refuse la requete de trop sur la reinitialisation, trois admises",
+    { timeout: 15000 },
+    async () => {
+      const codes: number[] = [];
+      for (let i = 0; i < 4; i += 1) {
+        const reponse = await auth.handler(
+          requeteAuth(
+            "/request-password-reset",
+            { email: "cible.reinitialisation@exemple.fr" },
+            "203.0.113.20",
+          ),
+        );
+        codes.push(reponse.status);
+      }
+
+      expect(codes.slice(0, 3).every((c) => c !== 429)).toBe(true);
+      expect(codes[3]).toBe(429);
+    },
+  );
+
+  it(
+    "refuse la requete de trop sur l'inscription, trois admises",
+    { timeout: 15000 },
+    async () => {
+      const codes: number[] = [];
+      for (let i = 0; i < 4; i += 1) {
+        const reponse = await auth.handler(
+          requeteAuth(
+            "/sign-up/email",
+            {
+              email: `cible.inscription.${i}@exemple.fr`,
+              password: MOT_DE_PASSE_VALIDE,
+              name: "Cible inscription",
+            },
+            "203.0.113.30",
+          ),
+        );
+        codes.push(reponse.status);
+      }
+
+      expect(codes.slice(0, 3).every((c) => c !== 429)).toBe(true);
+      expect(codes[3]).toBe(429);
+    },
+  );
+
+  it(
+    "le message de refus ne revele pas si le compte existe",
+    { timeout: 15000 },
+    async () => {
+      // Une IP dediee, epuisee ici meme : cinq essais sur un compte
+      // INEXISTANT suffisent a atteindre le sixieme refus, sans dependre
+      // d'un autre test de ce bloc.
+      let derniere: Response | undefined;
+      for (let i = 0; i < 6; i += 1) {
+        derniere = await auth.handler(
+          requeteAuth(
+            "/sign-in/email",
+            {
+              email: "compte.jamais.cree@exemple.fr",
+              password: ESSAI_SANS_IMPORTANCE,
+            },
+            "203.0.113.40",
+          ),
+        );
+      }
+
+      expect(derniere!.status).toBe(429);
+      const corps = (await derniere!.json()) as {
+        message?: string;
+        code?: string;
+      };
+      const texte = JSON.stringify(corps).toLowerCase();
+      // CRITERE 5. Ni "not found", ni "invalid", ni "unknown" : un message
+      // qui varierait selon l'existence du compte le laisserait deviner par
+      // simple observation du texte de refus. Le mecanisme integre repond
+      // uniformement "Too many requests", verifie via Context7.
+      expect(texte).not.toMatch(
+        /not.?found|invalid.?email|no.?such|unknown.?user/,
+      );
+    },
+  );
+
+  it(
+    "le compteur est en base et survit a une nouvelle instance, critere 1",
+    { timeout: 15000 },
+    async () => {
+      const ip = "203.0.113.50";
+      const avant = await compterCompteursDebit();
+
+      // Cinq essais admis, sixieme refuse, sur la meme instance `auth`.
+      const codes: number[] = [];
+      for (let i = 0; i < 6; i += 1) {
+        const reponse = await auth.handler(
+          requeteAuth(
+            "/sign-in/email",
+            {
+              email: "cible.redemarrage@exemple.fr",
+              password: ESSAI_SANS_IMPORTANCE,
+            },
+            ip,
+          ),
+        );
+        codes.push(reponse.status);
+      }
+      expect(codes[5]).toBe(429);
+      expect(await compterCompteursDebit()).toBeGreaterThan(avant);
+
+      // Une instance FRAICHE de Better Auth, motif deja utilise plus bas pour
+      // les attributs du cookie : elle ne partage aucun etat en memoire avec
+      // `auth`, la seule continuite possible passe par la table `rate_limit`.
+      // Simule un redemarrage du processus serveur sans redemarrer Postgres.
+      const { creerAuth } = await import("@/lib/auth");
+      const { envoyeurJournalise } = await import("@/integrations/email");
+      const instanceFraiche = creerAuth(envoyeurJournalise);
+
+      const reponse = await instanceFraiche.handler(
+        requeteAuth(
+          "/sign-in/email",
+          {
+            email: "cible.redemarrage@exemple.fr",
+            password: ESSAI_SANS_IMPORTANCE,
+          },
+          ip,
+        ),
+      );
+
+      // Le compteur de cette IP est deja a six essais avant meme cet appel :
+      // la nouvelle instance le voit en base et refuse tout de suite. Un
+      // stockage en memoire repartirait de zero sur la nouvelle instance et
+      // laisserait passer.
+      expect(reponse.status).toBe(429);
+    },
+  );
+});
+
 describe("un changement de role prend effet sans reconnexion", () => {
   it("accorde puis retire les droits sur le meme cookie", async () => {
     await creerCompte("bascule@exemple.fr");

@@ -386,6 +386,23 @@ cas "base injoignable declaree disponible" integration \
   "declare le service non operationnel"
 
 echo
+echo "Limitation de debit, LS-79, ADR-027, tests d'integration"
+echo
+
+# Cas 20 : LA LIMITATION DESACTIVEE HORS PRODUCTION. Better Auth desactive ce
+# mecanisme par defaut hors production ; le forcer est le point non negociable
+# de l'ADR. Sans lui, aucune des quatre requetes de trop n'est jamais refusee.
+mute "$AUTH" 's/    rateLimit: \{\n      enabled: true,/    rateLimit: {\n      enabled: false,/'
+cas "rateLimit.enabled remis a false" integration \
+  "refuse la requete de trop sur la connexion, cinq admises"
+
+# Cas 21 : LE STOCKAGE EN MEMOIRE. Le compteur ne survivrait pas a un
+# redemarrage du processus serveur, deuxieme point non negociable de l'ADR.
+mute "$AUTH" 's/      storage: "database",/      storage: "memory",/'
+cas "rateLimit.storage remis a memory" integration \
+  "le compteur est en base et survit a une nouvelle instance, critere 1"
+
+echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then
   echo "  $mutations mutations, $mutations detectees"

@@ -465,6 +465,16 @@ CREATE TABLE "passkey" (
 );
 
 -- CreateTable
+CREATE TABLE "rate_limit" (
+    "id" TEXT NOT NULL,
+    "key" TEXT NOT NULL,
+    "count" INTEGER NOT NULL,
+    "last_request" BIGINT NOT NULL,
+
+    CONSTRAINT "rate_limit_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "journal_audit" (
     "id" TEXT NOT NULL,
     "acteur_id" TEXT,
@@ -653,6 +663,9 @@ CREATE INDEX "passkey_user_id_idx" ON "passkey"("user_id");
 -- par credential a la connexion aurait eu deux comptes a departager. C'est le
 -- risque d'acces croise qu'ADR-021 demande de couvrir.
 CREATE UNIQUE INDEX "passkey_credential_id_unique" ON "passkey"("credential_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "rate_limit_key_key" ON "rate_limit"("key");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "journal_email_systeme_unique" ON "journal_email"("commande_id", "modele") WHERE (statut = 'ENVOYE' AND origine IN ('SYSTEME','RECONCILIATION'));
