@@ -16,6 +16,7 @@
  * regle E4 pose qu'un echec d'email ne bloque jamais une commande, mais cette
  * decision appartient a `services/`. Ici l'echec est signale, pas absorbe.
  */
+import { journaliser } from "@/lib/journal";
 
 /** Ce que le projet sait envoyer. Un modele, pas un contenu libre. */
 export type ModeleEmail =
@@ -61,15 +62,24 @@ export class FournisseurEmailIndisponibleError extends Error {
  * l'authentification inutilisable. L'absence d'envoi reel est en revanche une
  * dette, tracee dans LS-70 et a solder par l'epic email.
  *
- * Le destinataire est journalise en clair : c'est une donnee personnelle, mais
- * le journal applicatif de developpement en contient deja par nature, et la
- * regle interdit les SECRETS, pas les adresses. En production, ce journal ne
- * doit pas subsister : l'implementation reelle le remplace.
+ * LE DESTINATAIRE N'EST PLUS JOURNALISE EN CLAIR depuis LS-73. La version
+ * initiale l'ecrivait, en jugeant qu'une adresse n'est pas un secret. LS-73 a
+ * tranche l'inverse : une adresse email est une donnee personnelle, et le
+ * critere 3 de la story l'exclut du journal au meme titre qu'un secret. Le
+ * masquage de `lib/journal.ts` s'en charge desormais, la cle `destinataire`
+ * portant `adresse` dans son nom... ce qui ne suffirait pas si elle s'appelait
+ * autrement : la cle est donc nommee explicitement `adresseDestinataire`.
+ *
+ * CE QUI RESTE SUFFIT AU DIAGNOSTIC : savoir quel modele a ete demande et
+ * qu'une adresse etait presente. Retrouver A QUI un message etait destine
+ * releve de `JournalEmail`, journal metier persiste en base, qui a sa propre
+ * duree de conservation.
  */
 export const envoyeurJournalise: EnvoyeurEmail = {
   async envoyer(message) {
-    console.info(
-      `[email non envoye, ADR-008 non tranche] modele=${message.modele} destinataire=${message.destinataire}`,
-    );
+    journaliser("info", "email non envoye, ADR-008 non implemente", {
+      modele: message.modele,
+      adresseDestinataire: message.destinataire,
+    });
   },
 };
