@@ -26,7 +26,7 @@ boutique n'est pas ouverte commercialement.
 | Validation | Zod, côté serveur systématiquement |
 | Paiement | Stripe Checkout, webhooks signés et idempotents |
 | Tests | Vitest, React Testing Library, Playwright, axe-core |
-| Supervision | Sentry |
+| Supervision | journal JSON en sortie standard, sans service tiers |
 | Mesure d'audience | Umami auto-hébergé |
 | Hébergement | VPS OVHcloud, Docker Compose, Nginx |
 | Intégration continue | GitHub Actions, image taguée par SHA, GHCR |
@@ -223,7 +223,7 @@ vérification d'adresse reste désactivée.
 
 ### Scripts de vérification
 
-Neuf scripts, dont quatre de mutation qui prouvent les autres :
+Dix scripts, dont quatre de mutation qui prouvent les autres :
 
 ```bash
 ./prisma/sql-manuel/verifier-schema.sh           # schéma sur base réelle, exige Docker
@@ -234,8 +234,14 @@ Neuf scripts, dont quatre de mutation qui prouvent les autres :
 ./scripts/verifier-migration-mutation.sh         # garde-fous de migration, sans base
 ./scripts/verifier-tests-mutation.sh             # prouve la suite de tests, exige Docker
 ./scripts/verifier-jira.sh                       # epics et dépendances du backlog, local
+./scripts/controle-fumee.sh                      # santé du service déployé, LS-73
 ./docs/prototypes/interblocage-panier.sh         # interblocage sur panier, exige Docker
 ```
+
+`controle-fumee.sh` interroge `/api/sante` et décide si un déploiement est
+retenu : code 0 si le service répond avec sa base, 1 sinon. Il vise la **route**
+et non PostgreSQL directement, une base joignable depuis le poste de déploiement
+ne prouvant pas que l'application la joint.
 
 Le script de mutation réinjecte huit fois un défaut réel et exige que
 `verifier-regles.sh` échoue à chaque fois. Un contrôle vert ne prouve rien tant
@@ -299,10 +305,15 @@ destructives doivent bloquer, une migration additive doit passer, et une
 détection qui ne peut pas conclure doit bloquer plutôt que supposer. Lancé contre
 la version d'avant LS-42, il échoue sur sept de ces dix cas.
 
-`verifier-tests-mutation.sh` casse sept fois le comportement testé et exige que
-la suite rougisse à chaque fois : cinq mutations de la primitive SQL de
-réservation, deux de l'interface. Il vérifie d'abord que la suite est verte, sans
-quoi aucune mutation ne prouverait rien.
+`verifier-tests-mutation.sh` casse **dix-neuf fois** le comportement testé et
+exige que la suite rougisse à chaque fois : cinq mutations de la primitive SQL de
+réservation, cinq de l'authentification et de l'autorisation, deux de
+l'interface, trois du socle de validation, quatre de la journalisation et de la
+santé depuis LS-73. Il vérifie d'abord que les deux projets de test sont verts,
+sans quoi aucune mutation ne prouverait rien.
+
+Ne jamais recopier ce nombre de mémoire, il a déjà été faux : le mesurer par
+`grep -c '^cas ' scripts/verifier-tests-mutation.sh`.
 
 **Il exige que ce soit le test attendu qui échoue, pas n'importe lequel.** Une
 première version se contentait d'un échec quelconque : en neutralisant les

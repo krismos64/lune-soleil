@@ -19,6 +19,7 @@ une règle depuis le schéma.
 | `docs/architecture/STATISTIQUES.md` | indicateurs, périodes en `Europe/Paris`, règles de calcul | statistiques, e-reporting, tout agrégat de montant |
 | `docs/architecture/PROTOTYPE.md` | intention visuelle du prototype gelé, six états non nominaux, table parcours vers écran, cinq écarts connus | toute interface, publique ou administration |
 | `docs/architecture/VALIDATION.md` | socle Zod, où valider et pourquoi à deux endroits, convention d'erreur des adaptateurs, trois pièges de Zod 4 | toute Server Action, gestionnaire de route ou service qui reçoit une entrée |
+| `docs/architecture/JOURNALISATION.md` | trois journaux distincts, masquage par nom de clé, erreurs réduites au nom de classe, contrôle de santé et ses quatre décisions | toute ligne de journal, la route de santé, le déploiement |
 
 **Une règle numérotée se cite par son identifiant**, S12 ou V14, jamais
 paraphrasée seule : c'est ce qui permet aux contrôles textuels de la retrouver.
@@ -43,6 +44,9 @@ connaître avant d'écrire un service qui la recouvrirait ou la contredirait :
 | `src/services/autorisation.ts` | `lireIdentite`, `exigerSession`, `exigerAdministratrice` | aucune |
 | `src/services/utilisateur.ts` | mise à jour de profil, schéma Zod `.strict()`, règle E11 | aucune |
 | `src/integrations/email/index.ts` | interface `EnvoyeurEmail`, implémentation qui journalise sans envoyer | **aucun email ne part** : ADR-008 retient le SMTP OVH et nodemailer, implémentation à écrire |
+| `src/lib/journal.ts` | journalisation JSON, masquage par nom de clé, erreurs réduites au nom de classe, `LOG_LEVEL`, voir `JOURNALISATION.md` | aucune |
+| `src/services/sante.ts` | sonde `SELECT 1` avec délai de garde de deux secondes, ne lève jamais | aucune |
+| `src/app/api/sante/route.ts` | route publique 200 ou 503, sans cache, en-tête `X-Correlation-Id` | aucune |
 
 **Toute route d'administration appelle `exigerAdministratrice` dans son
 composant serveur, avant tout rendu.** Il n'y a délibérément pas de middleware :

@@ -45,8 +45,10 @@ AUTH="src/lib/auth.ts"
 AUTORISATION="src/services/autorisation.ts"
 PROFIL="src/services/utilisateur.ts"
 VALIDATION="src/lib/validation.ts"
+JOURNAL="src/lib/journal.ts"
+SANTE="src/services/sante.ts"
 
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -335,6 +337,53 @@ cas "quantite nulle acceptee, borne passee de 1 a 0" unitaire \
 mute "$VALIDATION" 's/      if \(probleme\.code === "unrecognized_keys"\) \{\n.*\n.*\n        return `\$\{chemin\} : \$\{probleme\.keys\.length\} champ\(s\) non reconnu\(s\)\.`;\n      \}\n\n//'
 cas "noms des cles inconnues recopies dans le message" unitaire \
   "ne recopie pas le nom d'une cle inconnue"
+
+# ---------------------------------------------------------------------------
+# Cas 16 a 19, LS-73 : la journalisation et le controle de sante.
+#
+# CE QUE CES QUATRE CAS PROTEGENT. Le critere 3 de LS-73 est une exigence
+# d'ABSENCE : rien de sensible ne sort. Une exigence d'absence est exactement ce
+# qu'une suite verte ne prouve jamais toute seule, puisqu'un module qui
+# n'ecrirait rien du tout la satisferait aussi. Chaque cas ouvre donc un vecteur
+# de fuite reel et verifie que le test attendu le voit.
+# ---------------------------------------------------------------------------
+
+# Cas 16 : LE MASQUAGE NEUTRALISE. C'est la garantie centrale de la story : sans
+# elle, une adresse email ou un secret passe en contexte est ecrit en clair dans
+# un journal, sur un depot public.
+mute "$JOURNAL" 's/return resultat;/return contexte;/'
+cas "masquage neutralise, le contexte sort tel quel" unitaire \
+  "masque la valeur de"
+
+# Cas 17 : LA COMPARAISON REDEVIENT EXACTE. Defaut plus insidieux que le
+# precedent : `email` seul resterait masque, et la suite garderait l'air de
+# proteger. Les noms REELS sont composes, `emailClient`, `adresseLivraison` : ce
+# sont eux qui fuiraient.
+mute "$JOURNAL" 's/normalisee\.includes\(interdite\)/normalisee === interdite/'
+cas "comparaison de cle exacte au lieu d'inclusion" unitaire \
+  "masque la valeur de"
+
+# Cas 18 : LE MESSAGE D'ERREUR REMIS DANS LE JOURNAL. Le vecteur que la story
+# designe comme le plus probable. PostgreSQL recopie la valeur en conflit dans
+# le message d'une violation d'unicite : « Key (email)=(...) already exists ».
+#
+# LA SUBSTITUTION N'EMPLOIE PAS D'INTERPOLATION JAVASCRIPT, et ce detail a fait
+# echouer la premiere ecriture de ce cas. Perl interprete `${erreur.name}` dans
+# sa chaine de remplacement comme une de SES variables, vide ici : le code mute
+# devenait `return ": ";`, qui vide le nom au lieu d'ajouter le message. La
+# mutation testait donc autre chose que ce qu'elle annoncait, et le test
+# attendu restait vert a juste titre. Une concatenation ordinaire ne contient
+# aucune sequence que Perl reclame.
+mute "$JOURNAL" 's/    return erreur\.name;/    return erreur.name + ": " + erreur.message;/'
+cas "message d'erreur recopie dans le journal" unitaire \
+  "n'ecrit pas le message d'une erreur"
+
+# Cas 19 : LA BASE MORTE PASSE POUR SAINE. Le critere 2. Une sante qui repond
+# toujours « operationnel » satisfait le test nominal sans difficulte, et un
+# orchestrateur ne redemarrerait jamais un conteneur dont la base est tombee.
+mute "$SANTE" 's/return \{ operationnel: false, base: "indisponible" \};/return { operationnel: true, base: "disponible" };/'
+cas "base injoignable declaree disponible" integration \
+  "declare le service non operationnel"
 
 echo
 echo "-----------------------------------------"

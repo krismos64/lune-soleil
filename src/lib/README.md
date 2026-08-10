@@ -10,6 +10,10 @@ Infrastructure technique transverse, sans logique metier.
 - le socle de validation, `validation.ts` : schemas Zod partages, `valider` et
   `EntreeInvalideError`. La convention est dans
   `docs/architecture/VALIDATION.md`, a lire avant d'ecrire un adaptateur
+- la journalisation technique, `journal.ts` : `journaliser`,
+  `journaliserErreur` et le masquage des donnees sensibles. La convention est
+  dans `docs/architecture/JOURNALISATION.md`, a lire avant d'ajouter une ligne
+  de journal
 
 ## Ce qui n'entre pas
 
@@ -38,4 +42,14 @@ connexions concurrent, que la base finirait par refuser.
 
 ```ts
 import { prisma } from "@/lib/prisma";
+```
+
+**Ne jamais appeler `console.*` dans le code applicatif.** Un `console.log`
+disperse n'est pas correle a une requete, et surtout il echappe au masquage :
+c'est par la qu'une adresse email finit en clair dans un journal, sur un depot
+public. Le seul `console.error` du projet est le repli de developpement de
+`journal.ts`, volontaire et documente.
+
+```ts
+import { journaliser, journaliserErreur } from "@/lib/journal";
 ```
