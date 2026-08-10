@@ -335,6 +335,31 @@ jobs:
       - name: 8. Scenarios critiques de bout en bout
         run: npm run test:e2e
 
+      # ----------------------------------------------------------------------
+      # Prolongement du controle 7 : l'image se construit-elle, et est-elle
+      # sure ? LS-74.
+      #
+      # ICI ET NON DANS LE WORKFLOW DE PUBLICATION. Une image qui ne se
+      # construit pas doit faire rougir la pull request, pas etre decouverte
+      # apres la fusion, quand `main` est deja cassee. Ce pas ne publie rien :
+      # le jeton de ce workflow reste en `contents: read`.
+      #
+      # LE DEFAUT QUE CE PAS RATTRAPE EST REEL. `public/` etait vide et git ne
+      # suit pas les dossiers vides : la construction reussissait sur le poste
+      # de developpement et echouait sur un clone neuf. Sans ce pas, personne ne
+      # l'aurait vu avant la phase 6.
+      # ----------------------------------------------------------------------
+      - name: 7b. Construction de l'image Docker
+        run: docker build -t lune-soleil:verification .
+
+      # Le controle des couches est ce qui protege l'invariant 9 : un `.env`
+      # entre dans une couche y reste meme supprime ensuite, et l'image part sur
+      # un registre public. Sa preuve par mutation vit dans
+      # `scripts/verifier-image-docker-mutation.sh`, hors CI, elle construit des
+      # images volontairement fautives.
+      - name: 7c. Controles de securite de l'image
+        run: ./scripts/verifier-image-docker.sh lune-soleil:verification
+
       # Le rapport n'existe qu'en cas d'echec exploitable ; `if: failure()` evite
       # de televerser un dossier vide a chaque execution verte.
       - name: Rapport Playwright en cas d'echec

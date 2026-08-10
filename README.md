@@ -223,7 +223,7 @@ vérification d'adresse reste désactivée.
 
 ### Scripts de vérification
 
-Dix scripts, dont quatre de mutation qui prouvent les autres :
+Douze scripts, dont cinq de mutation qui prouvent les autres :
 
 ```bash
 ./prisma/sql-manuel/verifier-schema.sh           # schéma sur base réelle, exige Docker
@@ -233,10 +233,26 @@ Dix scripts, dont quatre de mutation qui prouvent les autres :
 ./scripts/verifier-config-claude-mutation.sh     # prouve le précédent par mutation
 ./scripts/verifier-migration-mutation.sh         # garde-fous de migration, sans base
 ./scripts/verifier-tests-mutation.sh             # prouve la suite de tests, exige Docker
+./scripts/verifier-image-docker.sh               # sécurité de l'image, exige Docker
+./scripts/verifier-image-docker-mutation.sh      # prouve le précédent par mutation
 ./scripts/verifier-jira.sh                       # epics et dépendances du backlog, local
 ./scripts/controle-fumee.sh                      # santé du service déployé, LS-73
 ./docs/prototypes/interblocage-panier.sh         # interblocage sur panier, exige Docker
 ```
+
+`verifier-image-docker.sh` **ouvre les couches** de l'image plutôt que de relire
+le `Dockerfile`. La différence est mesurée : un `.env` copié puis supprimé par
+une couche ultérieure disparaît du système de fichiers et reste extractible de
+l'image. Comme le dépôt est public et l'image part sur GHCR, c'est le seul
+contrôle qui protège réellement l'invariant 9. Prouvé par neuf mutations, le
+compte se mesure :
+
+```bash
+grep -cE '^mutation(_code)? "' scripts/verifier-image-docker-mutation.sh
+```
+
+Le motif exige le guillemet ouvrant : sans lui il compte aussi les deux
+définitions de fonctions et annonce onze cas pour neuf.
 
 `controle-fumee.sh` interroge `/api/sante` et décide si un déploiement est
 retenu : code 0 si le service répond avec sa base, 1 sinon. Il vise la **route**
@@ -331,6 +347,33 @@ tests censés porter la garantie étaient devenus aveugles.
 
 Ce script a trouvé un défaut réel pendant l'écriture de LS-68, décrit dans
 `docs/journal/2026-07-31-tests-vitest-playwright-ls68.md`.
+
+## Image de l'application
+
+`Dockerfile` produit l'image déployée, en trois étapes. Elle porte 27 paquets
+contre plusieurs centaines en développement, s'exécute sous l'utilisateur `node`
+et déclare un contrôle de santé qui interroge `/api/sante`, donc la base et pas
+seulement un port ouvert.
+
+```bash
+docker build -t lune-soleil:verification .
+./scripts/verifier-image-docker.sh
+```
+
+Trois choses à savoir avant d'y toucher :
+
+- **`.dockerignore` est la protection des secrets**, pas les `COPY` nommés du
+  Dockerfile. `next build` recopie le `.env` du contexte dans
+  `.next/standalone/.env`, que l'étape finale copie en entier : sans les deux
+  lignes d'exclusion, le secret part sur le registre
+- **`public/` et `.next/static` ne sont pas dans la sortie autonome** et se
+  copient à la main. Les oublier ne casse ni la construction, ni le démarrage,
+  ni la santé : le site sert seulement ses pages sans styles
+- **le tag de retour arrière est l'identifiant de commit**, jamais `latest`
+
+`.github/workflows/publier-image.yml` publie sur GHCR, uniquement sur `main`
+après fusion. Le workflow de contrôles construit l'image à chaque pull request
+sans jamais publier, il reste en `contents: read`.
 
 ## Secrets
 
