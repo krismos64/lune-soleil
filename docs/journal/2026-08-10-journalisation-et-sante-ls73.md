@@ -113,12 +113,17 @@ Commentaire Jira posé sur LS-73, deux fiches mémoire écrites.
 ## Prochaine étape
 
 **LS-74**, image Docker multi-étapes. Elle était bloquée par LS-73, qui lui
-fournit le contrôle de santé, et c'est la dernière brique de la porte de sortie
-de la phase 1 avec LS-75.
+fournit le contrôle de santé.
 
 Deux points à connaître avant de l'attaquer, écrits dans sa description :
 l'agent global `docker-devops` ne doit pas être invoqué, il traite Redis comme
 requis quand le projet l'écarte ; et **LS-31** crée l'agent projet calibré sur la
 topologie réelle, à traiter avant ou avec elle.
 
-Restent ensuite LS-75, puis LS-79 à LS-81 hors chaîne.
+**Trois stories restent dans LS-2**, mesurées dans Jira et non de mémoire :
+**LS-72** (conteneur de tâches planifiées et table de verrous), **LS-74** et
+**LS-75** (porte de sortie, clone neuf lançable). LS-75 se traite en dernier par
+construction, elle vérifie les autres.
+
+Hors chaîne, LS-79 à LS-81 portent les mesures d'ADR-027, et LS-31 l'agent
+projet.

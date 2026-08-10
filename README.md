@@ -280,10 +280,16 @@ La validation du schéma passe **en premier**, sous ses deux modes : c'est le se
 contrôle dont l'absence d'exécution a déjà laissé passer un défaut, le 29 juillet
 2026.
 
-Quatre scripts restent hors de la chaîne. Les trois de mutation modifient des
-fichiers du dépôt en place, ce qu'une exécution partagée ne tolère pas, et le
-prototype d'interblocage documente un défaut ouvert, LS-50 : le brancher rendrait
-la chaîne rouge en permanence.
+**Trois scripts seulement tournent en intégration continue**, les sept autres se
+lancent à la main. Ne pas recopier ces nombres, les mesurer :
+`grep -ohE '\./[a-z/-]+\.sh' .github/workflows/*.yml | sort -u`.
+
+Quatre raisons de rester hors chaîne, une par famille. Les **quatre** scripts de
+mutation modifient des fichiers du dépôt en place, ce qu'une exécution partagée
+ne tolère pas. Le prototype d'interblocage documente un défaut ouvert, LS-50 : le
+brancher rendrait la chaîne rouge en permanence. `verifier-jira.sh` exige des
+identifiants que la CI n'a pas, le dépôt étant public. `controle-fumee.sh` et
+`preparer-base-locale.sh` visent un service qui tourne, pas un dépôt.
 
 La chaîne démarre son propre conteneur `lune-soleil-db` par `docker run`, sans
 passer par `docker-compose.yml` qui exige un `.env` absent en intégration
