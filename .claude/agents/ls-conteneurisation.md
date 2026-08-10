@@ -93,7 +93,8 @@ toutes les interfaces et écrit sa règle en amont du pare-feu de macOS : sans
 préfixe, la base de développement est joignable par tout le réseau local.
 
 **En intégration continue, la base est un conteneur nommé et non un service
-Compose.** `verifier-schema.sh` cible `lune-soleil-db` en dur.
+Compose.** `prisma/sql-manuel/verifier-schema.sh`, hors de `scripts/` contre
+toute attente, cible `lune-soleil-db` en dur.
 
 **Node doit être en version paire.** Prisma 7 refuse les versions impaires, et
 `engine-strict=true` rend `engines` bloquant. Le `Dockerfile` doit fixer la même
@@ -111,16 +112,25 @@ deux fois ici.
 
 Construction multi-étapes, dépendances puis construction puis exécution.
 
-**Sortie autonome.** `output: "standalone"` dans `next.config.ts`, l'image
-finale ne recevant que `.next/standalone` et `.next/static`, et l'exécution
-passant par `node server.js` plutôt que `next start`. Attention, **le serveur
-autonome ne copie ni `public/` ni `.next/static`** : les deux se copient
-explicitement, sinon le site sert des pages sans styles ni images, ce qui ne fait
-échouer aucun contrôle de santé.
+**Sortie autonome, À ACTIVER et non acquise.** `output: "standalone"` **n'est pas
+dans `next.config.ts`** à ce jour : le fichier ne porte que `turbopack.root`,
+`outputFileTracingRoot` et `poweredByHeader`. La confusion est facile, son
+commentaire d'en-tête parle déjà de sortie autonome et de construction Docker
+pour justifier le traçage. Écrire un `COPY .next/standalone` sans avoir ajouté
+l'option fait échouer la construction sur un chemin introuvable. Vérifier avant
+d'écrire, `grep -n output next.config.ts`.
 
-`HOSTNAME=0.0.0.0` est nécessaire pour que le serveur accepte les connexions
-venant du réseau Docker. Sans lui il n'écoute que la boucle locale du conteneur
-et le proxy reçoit un refus de connexion.
+Une fois l'option posée, l'image finale ne reçoit que `.next/standalone` et
+`.next/static`, et l'exécution passe par `node server.js` plutôt que
+`next start`. Attention, **le serveur autonome ne copie ni `public/` ni
+`.next/static`** : les deux se copient explicitement, sinon le site sert des
+pages sans styles ni images, ce qui ne fait échouer aucun contrôle de santé.
+
+`HOSTNAME=0.0.0.0` se pose explicitement pour ne pas dépendre du défaut de
+Next, qui écoute déjà toutes les interfaces, `process.env.HOSTNAME || '0.0.0.0'`
+dans le gabarit engendré en 16.2.12. C'est un renforcement, jamais une
+nécessité : devant un refus de connexion réel derrière Nginx, ne pas s'arrêter à
+cette variable, chercher du côté du port, de `PORT` ou du réseau Docker.
 
 **Utilisateur non privilégié**, jamais `root` à l'exécution. Le dossier `.next`
 doit lui appartenir, le cache de prérendu s'y écrivant à l'exécution.
@@ -152,7 +162,13 @@ Ordre d'un déploiement :
 3. démarrage de la nouvelle image
 4. contrôle de fumée
 5. si le contrôle échoue, retour à l'image précédente par son identifiant de
-   commit
+   commit. **Cette étape ne vaut que parce que l'étape 2 est additive**, et
+   `migrate-production.sh` le garantit en refusant seul une migration
+   destructive. Si elle a été forcée par `--confirm-destructive`, l'ancienne
+   image tournerait contre un schéma amputé et échouerait sur une colonne
+   disparue, éventuellement sans que le contrôle de fumée le voie, `/api/sante`
+   ne touchant pas toutes les tables. Dans ce cas le retour arrière n'est pas
+   une option et la suite se traite à la main
 
 ### Le point de vigilance qui gouverne tout le reste
 
