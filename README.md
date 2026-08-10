@@ -269,6 +269,19 @@ absent de la table d'aiguillage de `docs/REFERENCES.md`, un `CLAUDE.md` au-delà
 journal manquant alors que du code a été commité. Un hook `Stop` le lance en fin de
 session, et `--strict` le rend bloquant dans la chaîne d'intégration.
 
+Il vérifie aussi que **chaque hook déclaré pointe vers un script exécutable**.
+Ce contrôle protège la protection elle-même : la documentation de Claude Code
+pose qu'un hook dont la commande ne peut pas être lancée produit une erreur **non
+bloquante**, et que l'action continue. Un `hook-block-secret-files.sh` renommé,
+déplacé ou privé de son bit exécutable laisserait donc passer la lecture des
+`.env` sans que rien ne s'arrête, et il n'existe aucun lint officiel de
+`settings.json` pour le dire à notre place.
+
+Les agents et les skills cités par `CLAUDE.md` sont vérifiés par leur **nom nu**,
+`ls-critical-reviewer` ou `story`, qui est la forme d'invocation réelle : le
+contrôle des renvois ne voit que les chemins écrits en entier, et renommer un
+dossier laissait la consigne pointer dans le vide.
+
 `verifier-jira.sh` surveille le backlog : un ticket sans epic parent, une
 dépendance annoncée dans une description sans lien Jira. Il reste **hors
 intégration continue**, la CI n'ayant pas ces identifiants et le dépôt étant
@@ -277,8 +290,16 @@ public. Sans les trois variables `JIRA_*` de `.env.example`, il le dit et sort e
 
 Il **recompte** aussi ce qui est annoncé à la main : hooks déclarés dans
 `settings.json`, overrides de `package.json`, largeurs de `playwright.config.ts`,
-`README.md` de garde des dossiers de `src/`. Ces contrôles existent parce que
-chacun de ces comptes a été faux au moins une fois, sans que rien ne le voie.
+cas des deux scripts de mutation, `README.md` de garde des dossiers de `src/`.
+Ces contrôles existent parce que chacun de ces comptes a été faux au moins une
+fois, sans que rien ne le voie.
+
+**La table des nombres en lettres monte à trente**, et ce n'est pas du confort.
+Elle s'arrêtait à « dix » : au-delà, la conversion rendait une chaîne vide et la
+comparaison était **sautée**, donc verte sans avoir rien vérifié. Le seuil était
+déjà franchi, `verifier-tests-mutation.sh` portant vingt-et-un cas. Un contrôle
+qui se tait quand il ne comprend pas est pire qu'un contrôle absent : il occupe
+la place et personne ne le remplace.
 
 **Il ne corrige rien, et c'est délibéré.** Un chiffre faux est souvent le symptôme
 d'une modification non documentée : le corriger en silence ferait perdre
@@ -318,7 +339,7 @@ documentaire ne bloque aucune fusion, et un rouge qui signifie parfois « ne pas
 fusionner » et parfois « à relire » est un rouge que l'on apprend à ignorer. Il se
 déclenche aussi à la main depuis l'onglet Actions.
 
-Il a été prouvé par neuf mutations, toutes détectées. Le compte se mesure,
+Il a été prouvé par treize mutations, toutes détectées. Le compte se mesure,
 `grep -cE '^\s*mutation "' scripts/verifier-config-claude-mutation.sh`, il grandit
 avec les contrôles.
 

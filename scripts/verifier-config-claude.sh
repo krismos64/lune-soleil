@@ -303,18 +303,52 @@ fi
 # chiffre et le nom. Voir le contrôle 8, dont la première version ratait « Deux
 # hooks » pour cette raison exacte.
 
+# LA TABLE MONTE À TRENTE, ET CE N'EST PAS DU CONFORT.
+#
+# Elle s'arrêtait à « dix » jusqu'au 10 août 2026. Au-delà, `chiffre_en_lettres`
+# rendait une chaîne vide, `compte_annonce` aussi, et la comparaison était
+# SAUTÉE : le contrôle passait au vert sans avoir rien vérifié.
+#
+# C'est un mode fail-open, le même que LS-42 a corrigé sur le script de
+# migration, et il était déjà atteint : `verifier-tests-mutation.sh` porte
+# vingt-et-un cas, un compte que le README écrit en toutes lettres. Les mutations
+# de configuration sont à neuf, donc à une story du même silence.
+#
+# Un contrôle qui se tait quand il ne comprend pas est pire qu'un contrôle
+# absent : il occupe la place et personne ne le remplace.
 chiffre_en_lettres() {
   case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
     un|une) echo 1 ;; deux) echo 2 ;; trois) echo 3 ;; quatre) echo 4 ;;
     cinq) echo 5 ;; six) echo 6 ;; sept) echo 7 ;; huit) echo 8 ;;
-    neuf) echo 9 ;; dix) echo 10 ;; *) echo "" ;;
+    neuf) echo 9 ;; dix) echo 10 ;; onze) echo 11 ;; douze) echo 12 ;;
+    treize) echo 13 ;; quatorze) echo 14 ;; quinze) echo 15 ;;
+    seize) echo 16 ;; dix-sept) echo 17 ;; dix-huit) echo 18 ;;
+    dix-neuf) echo 19 ;; vingt) echo 20 ;;
+    vingt-et-un|vingt-et-une) echo 21 ;; vingt-deux) echo 22 ;;
+    vingt-trois) echo 23 ;; vingt-quatre) echo 24 ;; vingt-cinq) echo 25 ;;
+    vingt-six) echo 26 ;; vingt-sept) echo 27 ;; vingt-huit) echo 28 ;;
+    vingt-neuf) echo 29 ;; trente) echo 30 ;;
+    *) echo "" ;;
   esac
 }
 
+# L'ALTERNANCE EST ORDONNÉE DU PLUS LONG AU PLUS COURT, et cet ordre est
+# porteur. `grep -oE` retient la première alternative qui correspond : avec
+# « dix » avant « dix-sept », « dix-sept mutations » rendait « dix », soit 10 au
+# lieu de 17. Le contrôle aurait alors signalé un écart imaginaire, ce qui use
+# la confiance aussi sûrement qu'un silence.
+NOMBRES_EN_LETTRES='vingt-et-une|vingt-et-un|vingt-quatre|vingt-trois|vingt-cinq|vingt-deux|vingt-sept|vingt-huit|vingt-neuf|vingt-six|dix-sept|dix-huit|dix-neuf|quatorze|quinze|seize|treize|douze|trente|vingt|onze|dix|neuf|huit|sept|cinq|deux|trois|quatre|six|une|un'
+
 # Cherche « <chiffre en lettres> <nom> » dans un texte aplati et rend le nombre.
+#
+# Le gras Markdown est retiré AVANT la recherche : le README écrit volontiers
+# `**vingt-et-une** fois`, et les astérisques collées au chiffre font échouer la
+# limite de mot `\b`. Ce défaut a déjà rendu un contrôle vert devant un compte
+# faux, il est noté plus bas sur le compte des mutations de configuration.
 compte_annonce() {
   local texte="$1" nom="$2" mot
-  mot=$(echo "$texte" | grep -oiE "\b(un|une|deux|trois|quatre|cinq|six|sept|huit|neuf|dix) $nom\b" | head -1 | awk '{print $1}')
+  texte=$(echo "$texte" | tr -d '*')
+  mot=$(echo "$texte" | grep -oiE "\b($NOMBRES_EN_LETTRES) $nom\b" | head -1 | awk '{print $1}')
   [ -n "$mot" ] && chiffre_en_lettres "$mot"
 }
 
@@ -360,6 +394,135 @@ if [ -f README.md ] && command -v node >/dev/null 2>&1; then
       anomalies+=("README.md annonce $annonce largeurs Playwright, playwright.config.ts en déclare $reel")
     fi
   fi
+
+  # Mutations de la SUITE DE TESTS, à ne pas confondre avec celles de la
+  # configuration recomptées juste au-dessus. Deux scripts distincts, deux
+  # comptes distincts, et seul le second était vérifié.
+  #
+  # Ajouté le 10 août 2026. Le README annonçait « dix-neuf fois » quand LS-79 a
+  # porté le script à vingt-et-un cas ; le chiffre a été corrigé à la main
+  # pendant la story, donc sans rien qui empêche la prochaine dérive. C'est la
+  # troisième fois qu'un compte du README se périme, après les overrides et les
+  # mutations de configuration.
+  #
+  # L'ANCRAGE PORTE LE NOM DU SCRIPT, et pas seulement le mot « fois ».
+  #
+  # Première version ancrée sur « <nombre> fois » seul : elle a rendu 8 au lieu
+  # de 21, en captant « le script de mutation réinjecte huit fois un défaut »,
+  # phrase qui parle d'un TROISIÈME script, celui des règles. Le README emploie
+  # « fois » à trois endroits pour trois scripts différents.
+  #
+  # C'est le défaut d'ancrage trop large déjà rencontré ici : le contrôle criait
+  # sur un compte parfaitement juste. La recherche part donc du nom du script,
+  # qui est sans ambiguïté, et lit le nombre qui suit dans la même phrase.
+  if [ -f scripts/verifier-tests-mutation.sh ]; then
+    reel=$(grep -cE '^cas ' scripts/verifier-tests-mutation.sh 2>/dev/null || echo 0)
+    phrase=$(echo "$readme_aplati" | grep -oE 'verifier-tests-mutation\.sh[^.]{0,60}fois' | head -1)
+    annonce=$(compte_annonce "$phrase" "fois")
+    if [ "$reel" -gt 0 ] && [ -n "$annonce" ] && [ "$reel" != "$annonce" ]; then
+      anomalies+=("README.md annonce $annonce mutations de la suite de tests, verifier-tests-mutation.sh en porte $reel")
+    fi
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# 12. Chaque hook déclaré pointe vers un script exécutable
+# ---------------------------------------------------------------------------
+#
+# LE MODE D'ÉCHEC EST SILENCIEUX, et la documentation officielle le confirme :
+# un hook dont la commande ne peut pas être lancée produit une erreur NON
+# BLOQUANTE, « hook error », et l'action continue. Le garde-fou disparaît sans
+# que rien ne s'arrête.
+#
+# Appliqué ici, cela veut dire qu'un `hook-block-secret-files.sh` renommé,
+# déplacé, ou dont le bit exécutable est perdu par un `git checkout` maladroit,
+# laisserait passer la lecture des `.env` en silence. C'est la protection la
+# plus sensible du dépôt, invariant 9, et rien ne la vérifiait.
+#
+# Il n'existe aucun lint officiel de `settings.json` : `/hooks` liste la
+# configuration, il ne valide pas que les scripts existent. Ce contrôle comble
+# donc un trou que l'outillage amont ne couvre pas.
+
+if [ -f .claude/settings.json ] && command -v node >/dev/null 2>&1; then
+  while IFS= read -r ligne; do
+    [ -n "$ligne" ] || continue
+    evenement=${ligne%%$'\t'*}
+    commande=${ligne#*$'\t'}
+    [ -n "$commande" ] || continue
+
+    if [ ! -e "$commande" ]; then
+      anomalies+=("hook $evenement déclare '$commande', qui n'existe pas : la protection est muette, l'action continue")
+    elif [ ! -x "$commande" ]; then
+      anomalies+=("hook $evenement déclare '$commande', présent mais NON EXÉCUTABLE : erreur non bloquante, l'action continue")
+    fi
+  done < <(node -e '
+    try {
+      const s = require("./.claude/settings.json");
+      const out = [];
+      for (const [ev, groupes] of Object.entries(s.hooks || {}))
+        for (const g of (groupes || []))
+          for (const h of (g.hooks || [])) {
+            const c = (h.command || "").replace("$CLAUDE_PROJECT_DIR/", "").split(" ")[0];
+            if (c) out.push(ev + "\t" + c);
+          }
+      console.log(out.join("\n"));
+    } catch (e) { }
+  ' 2>/dev/null)
+fi
+
+# ---------------------------------------------------------------------------
+# 13. Chaque skill cité par CLAUDE.md existe dans .claude/skills/
+# ---------------------------------------------------------------------------
+#
+# Même trou que le contrôle 11 sur les agents, et pour la même raison : le
+# contrôle 3 ne voit que les renvois portant un CHEMIN. CLAUDE.md cite ses
+# skills par leur nom nu, « le skill `story` », qui est la forme d'invocation
+# réelle. Renommer le dossier laisserait la consigne « tout travail suit le
+# skill story » pointer dans le vide.
+#
+# L'ancrage exige le mot « skill » devant le nom : les autres noms entre accents
+# graves de CLAUDE.md sont des commandes, des fichiers et des variables, et un
+# motif plus large crierait sur eux.
+
+if [ -f CLAUDE.md ]; then
+  aplati_claude=$(tr '\n' ' ' < CLAUDE.md | tr -s ' ')
+  while read -r skill; do
+    [ -n "$skill" ] || continue
+    [ -f ".claude/skills/$skill/SKILL.md" ] \
+      || anomalies+=("CLAUDE.md cite le skill '$skill', absent de .claude/skills/$skill/SKILL.md")
+  done < <(echo "$aplati_claude" | grep -oiE 'skills? `[a-z0-9-]+`' | grep -oE '`[a-z0-9-]+`' | tr -d '`' | sort -u)
+fi
+
+# ---------------------------------------------------------------------------
+# 14. Les renvois de docs/REFERENCES.md pointent vers des fichiers existants
+# ---------------------------------------------------------------------------
+#
+# Le contrôle 3 couvre CLAUDE.md et s'arrête là. Or REFERENCES.md est LA table
+# d'aiguillage du projet, celle que CLAUDE.md désigne pour trouver les ADR, les
+# règles et leurs chemins de déclenchement. Un renvoi mort y envoie une session
+# lire un fichier absent, exactement le défaut que le contrôle 3 prévient sur
+# l'autre fichier.
+#
+# Le sens ADR est déjà couvert par le contrôle 1, dans les deux directions. Ce
+# contrôle-ci porte sur les autres cibles : règles, skills, agents, documents
+# d'architecture et scripts.
+#
+# `src/` EST VOLONTAIREMENT EXCLU, et c'est la différence avec le contrôle 3.
+# REFERENCES.md porte la table des chemins de DÉCLENCHEMENT des règles, qui
+# désignent légitimement des dossiers pas encore créés : `payments.md` se
+# déclenchera sur `src/integrations/stripe/**` quand la phase 3 l'écrira. Un
+# contrôle qui exigerait leur existence crierait à chaque session sur une
+# anticipation parfaitement saine, et un contrôle bruyant finit ignoré.
+#
+# Ce qui doit exister, ce sont les cibles documentaires : un renvoi vers un ADR,
+# une règle, un skill ou un script absent envoie la session lire du vide.
+
+if [ -f docs/REFERENCES.md ]; then
+  while read -r chemin; do
+    [ -n "$chemin" ] || continue
+    [ -e "$chemin" ] \
+      || anomalies+=("docs/REFERENCES.md renvoie vers '$chemin', qui n'existe pas")
+  done < <(grep -ohE '`(docs|scripts|prisma|\.claude)/[A-Za-z0-9_./-]+`' docs/REFERENCES.md 2>/dev/null | tr -d '`' | sort -u)
 fi
 
 # ---------------------------------------------------------------------------
