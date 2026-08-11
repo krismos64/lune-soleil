@@ -1,0 +1,14 @@
+-- Horodatage de reauthentification sur la session, LS-81, ADR-027.
+--
+-- MIGRATION ECRITE A LA MAIN, `prisma migrate dev` etant interactif, meme
+-- motif que les migrations Better Auth de LS-70 et de limitation de debit.
+--
+-- PUREMENT ADDITIVE : une colonne nullable, aucune suppression, aucune
+-- reecriture de ligne existante.
+--
+-- POURQUOI NULLABLE ET SANS VALEUR PAR DEFAUT. Le defaut ferme veut qu'une
+-- session dont l'identite n'a jamais ete prouvee recemment n'ouvre aucune
+-- action sensible. Poser `DEFAULT now()` declarerait au contraire toutes les
+-- sessions deja ouvertes comme fraiches, y compris celle d'un appareil vole
+-- avant la migration : ce serait ouvrir le trou que cette story ferme.
+ALTER TABLE "session" ADD COLUMN "reauthentifiee_le" TIMESTAMPTZ(3);

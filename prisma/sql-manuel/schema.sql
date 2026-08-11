@@ -409,6 +409,10 @@ CREATE TABLE "session" (
     "user_id" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ(3) NOT NULL,
+    -- Derniere preuve d'identite sur cette session, LS-81, ADR-027. Nullable
+    -- sans defaut : une session qui n'a rien prouve n'ouvre aucune action
+    -- sensible, y compris celles deja ouvertes avant la migration.
+    "reauthentifiee_le" TIMESTAMPTZ(3),
 
     CONSTRAINT "session_pkey" PRIMARY KEY ("id")
 );

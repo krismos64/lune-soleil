@@ -42,6 +42,7 @@ STOCK="src/repositories/stock.ts"
 PAGE="src/app/page.tsx"
 LAYOUT="src/app/layout.tsx"
 AUTH="src/lib/auth.ts"
+REAUTH="src/services/reauthentification.ts"
 AUTORISATION="src/services/autorisation.ts"
 PROFIL="src/services/utilisateur.ts"
 VALIDATION="src/lib/validation.ts"
@@ -401,6 +402,20 @@ cas "rateLimit.enabled remis a false" integration \
 mute "$AUTH" 's/      storage: "database",/      storage: "memory",/'
 cas "rateLimit.storage remis a memory" integration \
   "le compteur est en base et survit a une nouvelle instance, critere 1"
+
+# Cas 22 : LE DEFAUT FERME DE LA PREUVE D'IDENTITE, LS-81. Une session qui n'a
+# jamais prouve d'identite deviendrait fraiche : toutes les sessions ouvertes,
+# dont celle d'un appareil vole, ouvriraient les actions sensibles. Ce sens
+# n'est visible par AUCUN parcours nominal, seule une valeur absente le revele.
+mute "$REAUTH" 's/  if \(reauthentifieeLe === null\) \{\n    return false;/  if (reauthentifieeLe === null) {\n    return true;/'
+cas "preuve absente consideree comme fraiche" integration \
+  "ne considere jamais fraiche une preuve absente"
+
+# Cas 23 : LA DUREE DE SESSION REVENUE A SEPT JOURS, LS-81. Un appareil vole
+# garderait une semaine d'acces aux donnees personnelles de tous les clients.
+mute "$AUTH" 's/export const DUREE_SESSION_SECONDES = 60 \* 60 \* 24;/export const DUREE_SESSION_SECONDES = 60 * 60 * 24 * 7;/'
+cas "duree de session revenue a sept jours" integration \
+  "configure une session d'un jour"
 
 echo
 echo "-----------------------------------------"

@@ -38,10 +38,11 @@ connaître avant d'écrire un service qui la recouvrirait ou la contredirait :
 | `src/lib/validation.ts` | socle Zod partagé, `valider`, `EntreeInvalideError`, six schémas de domaine, voir `VALIDATION.md` | aucune |
 | `src/app/panier/actions.ts` | Server Action de réservation : valide puis délègue, traduit refus, contention et panne en résultats | reçoit `commandeId` sans le produire, ADR-024 imposant que la commande naisse dans la transaction de réservation |
 | `src/repositories/stock.ts` | l'`UPDATE` conditionnel d'ADR-006, en `$queryRawUnsafe`, réexporté par `tests/aide/reservation-sql.ts` | aucune |
-| `src/lib/auth.ts` | instance Better Auth : mapping vers `Utilisateur`, `role` en `input: false`, seize caractères, plugin passkey | vérification d'email **désactivée** tant qu'ADR-008 n'est pas implémenté ; session à sept jours, ADR-027 la ramène à un jour |
+| `src/lib/auth.ts` | instance Better Auth : mapping vers `Utilisateur`, `role` en `input: false`, seize caractères, plugin passkey, session d'un jour prolongée à l'usage, LS-81 | vérification d'email **désactivée** tant qu'ADR-008 n'est pas implémenté |
 | `src/lib/auth-client.ts` | client navigateur, passkey comprise | aucune |
 | `src/lib/mot-de-passe.ts` | les deux longueurs, **sans aucun import** pour rester servable au navigateur | aucune |
 | `src/services/autorisation.ts` | `lireIdentite`, `exigerSession`, `exigerAdministratrice` | aucune |
+| `src/services/reauthentification.ts` | `exigerReauthentificationRecente`, quatre familles d'actions sensibles, fenêtre de quinze minutes, LS-81 | **aucune action n'est encore gardée**, les quatre familles sont en attente dans `.claude/familles-sans-action.txt`, LS-89 |
 | `src/services/utilisateur.ts` | mise à jour de profil, schéma Zod `.strict()`, règle E11 | aucune |
 | `src/integrations/email/index.ts` | interface `EnvoyeurEmail`, implémentation qui journalise sans envoyer | **aucun email ne part** : ADR-008 retient le SMTP OVH et nodemailer, implémentation à écrire |
 | `src/lib/journal.ts` | journalisation JSON, masquage par nom de clé, erreurs réduites au nom de classe, `LOG_LEVEL`, voir `JOURNALISATION.md` | aucune |
@@ -103,7 +104,7 @@ exacte, la valeur du délai, le jeton de couleur. Chacun porte un frontmatter
 | `payments.md` | `src/integrations/stripe/**`, webhooks, checkout, commandes |
 | `legal.md` | services de rétractation et de facturation, pages légales |
 | `frontend-design.md` | `src/app/**`, `src/components/**`, styles |
-| `securite.md` | `src/lib/**`, `src/integrations/email/**` |
+| `securite.md` | `src/lib/**`, `src/integrations/email/**`, `src/services/autorisation.ts`, `src/services/reauthentification.ts` |
 
 Une session qui conçoit le paiement sans toucher à `src/integrations/stripe/`
 doit donc lire `payments.md` explicitement.
