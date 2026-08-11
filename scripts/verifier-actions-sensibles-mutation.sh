@@ -105,14 +105,34 @@ export async function rembourserGardePourMutation(): Promise<void> {
 TS
 attendre_echec "ligne d'attente périmée alors que la famille est couverte"
 
-# --- Cas 6 : l'ancrage du contrôle lui-même -------------------------------
+# --- Cas 6 : deux fonctions, une seule gardée -----------------------------
+# LE CAS QUI A MANQUÉ À LA PREMIÈRE VERSION, trouvé par la relecture critique.
+# Chercher l'appel dans tout le fichier laissait la seconde fonction emprunter
+# la preuve de la première : le contrôle sortait « OK » sur un fichier portant
+# une action non gardée. Scénario banal, une fonction ajoutée par mimétisme
+# quelques semaines plus tard.
+cat > "$TEMOIN" <<'TS'
+/** @sensible REMBOURSEMENT */
+export async function rembourserGarde(): Promise<void> {
+  await exigerReauthentificationRecente(new Headers(), "REMBOURSEMENT");
+}
+
+/** @sensible REMBOURSEMENT */
+export async function rembourserPartiellement(): Promise<void> {
+  // Ajoutee par mimetisme, marquee mais jamais gardee.
+}
+TS
+sed -i '' 's/^REMBOURSEMENT/# REMBOURSEMENT/' "$ATTENTE"
+attendre_echec "deux fonctions dans un fichier, une seule gardée"
+
+# --- Cas 7 : l'ancrage du contrôle lui-même -------------------------------
 # LE CAS QUI PROTÈGE LE CONTRÔLE DE SA PROPRE OBSOLESCENCE. Renommer le type
 # ferait relever zéro famille : le contrôle continuerait de sortir « OK » en ne
 # vérifiant plus rien, motif du garde-fou jamais exercé.
 perl -0pi -e 's/export type FamilleActionSensible =/export type FamilleActionSensibleRenommee =/' "$SERVICE"
 attendre_echec "type renommé, l'ancrage ne relève plus aucune famille"
 
-# --- Cas 7 : une famille ajoutée au type sans rien derrière ---------------
+# --- Cas 8 : une famille ajoutée au type sans rien derrière ---------------
 # Le trou que ce contrôle ferme en priorité : une cinquième famille déclarée,
 # aucune action, aucune ligne d'attente.
 perl -0pi -e 's/  \| "PARAMETRES_BOUTIQUE";/  | "PARAMETRES_BOUTIQUE"\n  | "SUPPRESSION_COMPTE";/' "$SERVICE"

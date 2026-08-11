@@ -162,6 +162,13 @@ par défaut, une session qui n'a rien prouvé n'ouvrant aucune action sensible.
 L'appeler sans vérification préalable revient à se déclarer réauthentifié
 soi-même, et aucun contrôle automatique ne détecte cela.
 
+**Les deux gardes vont ensemble, et rien ne le vérifie.**
+`exigerReauthentificationRecente` répond à « l'identité est-elle récente »,
+`exigerAdministratrice` à « qui agit ». Une action d'administration qui n'appelle
+que la première laisse un client authentifié franchir la garde de fraîcheur avec
+son propre mot de passe. Le contrôle ne mesure pas ce couple : c'est la relecture
+qui en répond, et LS-89 doit trancher s'il faut l'automatiser.
+
 **La durée de session est d'un jour, `updateAge` d'une heure.** Ce second nombre
 n'est pas un détail de confort : Better Auth étrangle la prolongation, qui ne se
 déclenche qu'à partir de `expiresAt - expiresIn + updateAge`. Un `updateAge` égal

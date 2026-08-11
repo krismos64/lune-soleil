@@ -18,8 +18,8 @@ déjà ouvertes au moment de la migration.
 `exigerReauthentificationRecente`, `enregistrerPreuveIdentite`, fenêtre de quinze
 minutes.
 
-**`scripts/verifier-actions-sensibles.sh`** et sa preuve à sept mutations, toutes
-détectées.
+**`scripts/verifier-actions-sensibles.sh`** et sa preuve à **huit** mutations,
+toutes détectées.
 
 ## Ce que Context7 a changé dans la conception
 
@@ -57,7 +57,53 @@ explicitement, qui a révélé le trou. Le motif est déjà en mémoire sous
 la rend indétectable.
 
 Le contrôle écarte désormais les lignes de commentaire et exige la parenthèse
-ouvrante. Sept cas sur sept.
+ouvrante.
+
+## Le défaut de sécurité que j'ai commité, et comment il est passé
+
+**`preuveEncoreValable(null)` rendait `true` dans le commit `c1f2057`.** Le
+défaut ferme était inversé : une session n'ayant jamais prouvé d'identité, donc
+**toutes** celles existant au moment de la migration, franchissait la garde.
+Trouvé par l'agent de relecture critique, corrigé avant la pull request.
+
+**Comment il est passé, et c'est le point à retenir.** La mutation 1 de mes
+vérifications manuelles avait inversé ce booléen. Je l'ai restaurée sur le
+disque, mais un `git add -A` a ensuite indexé une version encore mutée, et tous
+les `git checkout` suivants ont restauré depuis cet index corrompu. Les tests
+tournaient sur un disque correct pendant que l'index, donc le commit, portait le
+défaut.
+
+Le test `ne considere jamais fraiche une preuve absente` était juste et l'aurait
+attrapé : il n'a jamais été exécuté contre le code réellement commité.
+
+**Le piège se referme sur lui-même** : `verifier-tests-mutation.sh` restaure par
+`git checkout`, donc il a écrasé ma première correction, non indexée, et l'a
+remplacée par la version fautive de l'index. Corriger puis indexer dans le même
+geste est la seule sortie. Voir
+[[lune-soleil-index-git-corrompu-par-une-mutation]].
+
+## Le second défaut, trouvé par la même relecture
+
+Le contrôle cherchait l'appel de la garde **dans tout le fichier**. Un fichier
+portant une action gardée et une action non gardée passait au vert, la seconde
+empruntant la preuve de la première. C'est le défaut exact que ce script existe
+pour attraper, et mon cas de mutation 1 ne l'exerçait pas : son témoin ne
+contenait qu'une seule fonction.
+
+L'appel est désormais cherché dans le corps de la fonction marquée, et un
+huitième cas de mutation le prouve, deux fonctions dont une seule gardée.
+
+## Ce qui reste à la charge de la relecture humaine
+
+Deux limites, documentées dans `securite.md` plutôt que fermées :
+
+- `enregistrerPreuveIdentite` n'est pas vérifiable automatiquement, elle
+  enregistre un fait que son appelant doit avoir établi
+- **les deux gardes vont ensemble sans que rien ne le mesure** :
+  `exigerReauthentificationRecente` répond à « l'identité est-elle récente »,
+  `exigerAdministratrice` à « qui agit ». Une action qui n'appelle que la
+  première laisse un client franchir la garde de fraîcheur avec son propre mot
+  de passe. LS-89 doit trancher s'il faut l'automatiser
 
 ## Le périmètre, arbitré
 
@@ -86,7 +132,7 @@ npm run db:verifier                         93 réussites, 0 échec, 31 tables
 ./scripts/verifier-config-claude.sh         vert
 ./scripts/verifier-config-claude-mutation.sh 13 / 13 détectées
 ./scripts/verifier-actions-sensibles.sh     vert
-./scripts/verifier-actions-sensibles-mutation.sh  7 / 7 détectées
+./scripts/verifier-actions-sensibles-mutation.sh  8 / 8 détectées
 ./scripts/verifier-tests-mutation.sh        23 / 23 détectées
 ```
 
