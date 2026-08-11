@@ -49,6 +49,8 @@ VALIDATION="src/lib/validation.ts"
 JOURNAL="src/lib/journal.ts"
 SANTE="src/services/sante.ts"
 HOOK_JOURNAL="src/lib/issue-connexion.ts"
+HOOK_JOURNAL_HOOK="src/lib/hook-journal-connexion.ts"
+ROUTE_AUTH="src/app/api/auth/[...all]/route.ts"
 JOURNAL_CONNEXION="src/services/journal-connexion.ts"
 
 # TOUT FICHIER MUTE DOIT FIGURER ICI, sans quoi il n'est ni sauvegarde ni
@@ -62,7 +64,7 @@ JOURNAL_CONNEXION="src/services/journal-connexion.ts"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$JOURNAL_CONNEXION")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -489,6 +491,36 @@ cas "duree de conservation portee a douze mois" integration \
 mute "$JOURNAL_CONNEXION" 's/  \} catch \(erreur\) \{/  } catch (erreur) {\n    throw erreur;/'
 cas "echec d'ecriture du journal rendu bloquant" integration \
   "une connexion aboutit meme si le journal ne peut pas s'ecrire"
+
+# Cas 28 : LE CHEMIN DE LA PASSKEY REMIS SUR LE NOM QUI N'EXISTE PAS.
+#
+# C'est le defaut REEL trouve en relecture de LS-80 : `/sign-in/passkey` semble
+# evident et n'existe pas, le plugin exposant `/passkey/verify-authentication`.
+# Le hook sortait alors sans rien ecrire sur TOUTES les connexions par passkey,
+# moyen principal de l'administration, ADR-021, et l'enum `PASSKEY` n'etait
+# ecrite par aucun chemin reel. Rien ne rougissait, la suite n'exercant que le
+# mot de passe.
+mute "$HOOK_JOURNAL_HOOK" 's|\["/passkey/verify-authentication", "PASSKEY"\]|["/sign-in/passkey", "PASSKEY"]|'
+cas "chemin de passkey remis sur une route inexistante" integration \
+  "une tentative par passkey est journalisee avec le moyen PASSKEY"
+
+# Cas 29 : LES REFUS DE CADENCE NE SONT PLUS JOURNALISES, second defaut de la
+# relecture. Better Auth rend le 429 avant tout hook : sans l'enveloppe de
+# l'adaptateur de route, une attaque de trois cents tentatives en cinq minutes
+# ne laisse que vingt-cinq lignes, et la relecture y voit une saisie maladroite
+# au lieu d'un balayage.
+mute "$ROUTE_AUTH" 's/    if \(reponse.status === CODE_TROP_DE_REQUETES\) \{/    if (false) {/'
+cas "refus de cadence non journalise" integration \
+  "un refus de cadence produit une ligne REFUSEE_LIMITATION"
+
+# Cas 30 : L'ADRESSE TENTEE N'EST PLUS BORNEE. Le champ vient du meme corps de
+# requete que l'agent utilisateur, qui est tronque : sans cette borne, une
+# adresse de 200 011 caracteres entre telle quelle, et un mot de passe colle
+# dans le champ email est persiste en clair, contournant le critere 2 par
+# l'autre champ.
+mute "$JOURNAL_CONNEXION" 's/        emailTente: normaliserEmailTente\(tentative.emailTente\),/        emailTente: tentative.emailTente,/'
+cas "adresse tentee ecrite sans borne ni filtre" integration \
+  "une saisie qui n'est pas une adresse n'est jamais ecrite telle quelle"
 
 echo
 echo "-----------------------------------------"

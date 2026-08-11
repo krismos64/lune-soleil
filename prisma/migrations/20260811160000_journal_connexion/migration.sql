@@ -16,7 +16,10 @@
 -- le champ correspondant de la requete.
 
 -- CreateEnum
-CREATE TYPE "IssueConnexion" AS ENUM ('REUSSITE', 'ECHEC');
+-- REFUSEE_LIMITATION est distincte d'ECHEC : Better Auth rend le 429 avant tout
+-- dispatch, donc ces tentatives echappaient entierement au hook. Un echec dit
+-- « identifiants faux », un refus dit « cadence anormale ».
+CREATE TYPE "IssueConnexion" AS ENUM ('REUSSITE', 'ECHEC', 'REFUSEE_LIMITATION');
 
 -- CreateEnum
 CREATE TYPE "MoyenConnexion" AS ENUM ('PASSKEY', 'MOT_DE_PASSE');

@@ -79,6 +79,96 @@ export type TentativeConnexion = {
 const LONGUEUR_MAXIMALE_AGENT = 250;
 
 /**
+ * Longueur au-dela de laquelle l'adresse tentee est tronquee.
+ *
+ * MEME RAISONNEMENT QUE POUR L'AGENT, et son absence etait une incoherence :
+ * les deux valeurs viennent du meme corps de requete, aucune n'est bornee par
+ * Better Auth avant d'arriver ici. Mesure en relecture de LS-80, une adresse de
+ * 200 011 caracteres ecrite telle quelle. Avec cinq tentatives par minute et
+ * par adresse IP, la table qui concentre les donnees personnelles est aussi
+ * celle qui grossit sans borne.
+ *
+ * 254 EST LA LONGUEUR MAXIMALE D'UNE ADRESSE, RFC 5321 section 4.5.3.1.3 :
+ * aucune adresse legitime n'est tronquee.
+ */
+const LONGUEUR_MAXIMALE_EMAIL = 254;
+
+/**
+ * Ce qui remplace une saisie qui n'est manifestement pas une adresse.
+ *
+ * POURQUOI NE PAS ECRIRE LA VALEUR TELLE QUELLE. L'entete de ce module explique
+ * que beaucoup de gens saisissent le mot de passe d'un autre site ; ils le
+ * collent aussi dans le mauvais champ. Better Auth refuse alors la requete en
+ * 400, mais le hook journalise quand meme, et la chaine finirait en clair dans
+ * la table. Le critere 2 vise le champ `password`, ce chemin le contournait par
+ * l'autre champ.
+ *
+ * CE QUE LA RELECTURE PERD : rien d'utile. La question posee a ce journal est
+ * « une tentative a-t-elle eu lieu, depuis quelle adresse IP, avec quelle
+ * issue », et toutes trois restent ecrites.
+ */
+export const ADRESSE_INVALIDE = "(adresse invalide)";
+
+/**
+ * Ce qui remplace l'adresse quand la tentative n'a jamais ete analysee.
+ *
+ * Cas d'un refus par limitation de debit : Better Auth rend le 429 avant de
+ * lire le corps de la requete, l'adresse tentee n'existe donc nulle part. La
+ * distinguer d'`ADRESSE_INVALIDE` importe a la relecture, qui doit pouvoir
+ * separer « quelqu'un a saisi n'importe quoi » de « la cadence a ete coupee
+ * avant qu'on regarde ».
+ */
+export const ADRESSE_NON_LUE = "(non lue, refus de cadence)";
+
+/**
+ * Ce qui remplace l'adresse quand la requete n'en portait aucune.
+ *
+ * Distinct des deux precedents : le champ etait absent du corps, plutot que
+ * mal rempli ou jamais lu.
+ */
+export const ADRESSE_ABSENTE = "(inconnu)";
+
+/**
+ * Les valeurs que ce module ecrit lui-meme, a laisser passer telles quelles.
+ *
+ * Aucune ne porte d'arobase : sans cet ensemble, `normaliserEmailTente` les
+ * prendrait toutes pour des saisies invalides et les ecraserait, effacant la
+ * distinction qu'elles portent.
+ */
+const MARQUEURS: ReadonlySet<string> = new Set([
+  ADRESSE_INVALIDE,
+  ADRESSE_NON_LUE,
+  ADRESSE_ABSENTE,
+]);
+
+/**
+ * Normalise l'adresse tentee avant ecriture.
+ *
+ * LE TEST DE VALIDITE EST VOLONTAIREMENT GROSSIER, la seule presence d'un `@`.
+ * Valider finement ici serait un contresens : une adresse malformee est une
+ * information vraie sur la tentative, et c'est justement ce qu'un balayage
+ * produit. Seul le cas « ce n'est manifestement pas une adresse » est ecarte,
+ * parce que c'est celui ou un mot de passe peut se trouver.
+ */
+export function normaliserEmailTente(brut: string): string {
+  // LES MARQUEURS DU MODULE TRAVERSENT SANS ETRE REECRITS. Aucun ne porte
+  // d'arobase, donc la regle ci-dessous les remplacerait tous par
+  // `ADRESSE_INVALIDE`, ce qui effacerait la distinction qu'ils existent pour
+  // porter : « la saisie n'etait pas une adresse » et « la requete a ete
+  // refusee avant qu'on la lise » ne disent pas la meme chose a la relecture.
+  // Le test du refus de cadence a attrape exactement ce cas.
+  if (MARQUEURS.has(brut)) {
+    return brut;
+  }
+
+  if (!brut.includes("@")) {
+    return ADRESSE_INVALIDE;
+  }
+
+  return brut.slice(0, LONGUEUR_MAXIMALE_EMAIL);
+}
+
+/**
  * Ecrit une ligne de journal. NE LEVE JAMAIS, regle E15.
  *
  * C'EST LA PROPRIETE CENTRALE DE CETTE FONCTION, critere d'acceptation 5, et
@@ -105,7 +195,10 @@ export async function enregistrerTentativeConnexion(
   try {
     await prisma.journalConnexion.create({
       data: {
-        emailTente: tentative.emailTente,
+        // Normalise ICI et non chez l'appelant : le service est le dernier
+        // point avant la base, et une future tache qui ecrirait une ligne par
+        // un autre chemin beneficierait de la meme borne.
+        emailTente: normaliserEmailTente(tentative.emailTente),
         utilisateurId: tentative.utilisateurId,
         moyen: tentative.moyen,
         issue: tentative.issue,
@@ -202,13 +295,38 @@ export async function lireTentativesRecentes(
  * dependant du fuseau de la machine : le meme code donnerait un autre resultat
  * sur un serveur en UTC, ce que l'invariant 8 interdit.
  *
- * Le calcul par mois plutot qu'en jours gere les longueurs inegales : six mois
- * avant le 31 aout donne le 28 fevrier, et non une date inexistante. Un
- * `180 * 86400 * 1000` deriverait au fil des annees bissextiles.
+ * LE QUANTIEME EST BORNE A LA MAIN, et sans cela le calcul DEBORDE. `setUTCMonth`
+ * ne ramene pas une date impossible au dernier jour du mois, il la reporte sur
+ * le mois suivant. Mesure : le 31 aout moins six mois rend le 3 MARS, et le
+ * 31 mars rend le 1er OCTOBRE. Quatorze quantiemes par an sont concernes.
+ *
+ * Le sens de l'erreur etait le mauvais. La limite partait VERS L'AVANT, donc la
+ * purge supprimait des lignes de MOINS de six mois, jusqu'a trois jours de trop.
+ * Cela contredisait la position prise douze lignes plus bas, « a la frontiere,
+ * garder une ligne de trop vaut mieux qu'en supprimer une qui pouvait servir »,
+ * qui avait justement motive la comparaison stricte. Trouve en relecture de
+ * LS-80 ; le test d'alors ancrait le 11 aout, quantieme qui n'expose jamais le
+ * debordement.
+ *
+ * Le calcul par mois reste preferable a un `180 * 86400 * 1000`, qui deriverait
+ * au fil des annees bissextiles.
  */
 export function limiteDeConservation(maintenant: Date = new Date()): Date {
   const limite = new Date(maintenant);
+  const quantieme = limite.getUTCDate();
+
+  // Se placer au 1er AVANT de reculer : un 31 dans un mois de trente jours
+  // deborderait pendant le decalage lui-meme.
+  limite.setUTCDate(1);
   limite.setUTCMonth(limite.getUTCMonth() - CONSERVATION_JOURNAL_MOIS);
+
+  // Le jour zero du mois suivant EST le dernier jour du mois courant.
+  const dernierJourDuMois = new Date(
+    Date.UTC(limite.getUTCFullYear(), limite.getUTCMonth() + 1, 0),
+  ).getUTCDate();
+
+  limite.setUTCDate(Math.min(quantieme, dernierJourDuMois));
+
   return limite;
 }
 

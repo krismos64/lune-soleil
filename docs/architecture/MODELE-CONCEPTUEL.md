@@ -1404,7 +1404,7 @@ erDiagram
         identifiant utilisateurId FK "nullable"
         texte emailTente
         enum moyen "PASSKEY MOT_DE_PASSE"
-        enum issue "REUSSITE ECHEC"
+        enum issue "REUSSITE ECHEC REFUSEE_LIMITATION"
         texte adresseIp "nullable"
         texte agentUtilisateur "nullable"
         horodatage creeA

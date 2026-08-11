@@ -161,6 +161,22 @@ enum GraviteAlerte {
 enum IssueConnexion {
   REUSSITE
   ECHEC
+
+  /// Tentative refusee par la limitation de debit, LS-79, avant toute
+  /// verification d'identifiant.
+  ///
+  /// TROISIEME VALEUR AJOUTEE EN RELECTURE DE LS-80, et elle ferme un trou de
+  /// la regle E13. Better Auth applique la limitation dans `onRequest` et rend
+  /// la reponse 429 AVANT tout dispatch : le hook `after` qui alimente ce
+  /// journal n'etait jamais atteint. Une attaque de trois cents tentatives en
+  /// cinq minutes n'en laissait que vingt-cinq, une par fenetre, et la
+  /// relecture y voyait une saisie maladroite au lieu d'un balayage.
+  ///
+  /// DISTINCTE D'`ECHEC`, et la nuance porte l'information : un echec dit
+  /// « les identifiants sont faux », un refus dit « la cadence est anormale ».
+  /// Les confondre ferait disparaitre le seul signal qui distingue une personne
+  /// qui se trompe d'un programme qui essaie.
+  REFUSEE_LIMITATION
 }
 
 /// Moyen employe pour une tentative de connexion, LS-80.

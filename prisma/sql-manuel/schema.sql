@@ -43,10 +43,14 @@ CREATE TYPE "StatutEmail" AS ENUM ('ENVOYE', 'ECHOUE');
 -- CreateEnum
 CREATE TYPE "GraviteAlerte" AS ENUM ('AVERTISSEMENT', 'CRITIQUE');
 
--- LS-80, ADR-027 decision 2. Deux valeurs et non un booleen `reussie` : sur un
--- ecran de liste, `ECHEC` se lit sans avoir a se rappeler de quoi `false` est
--- la negation.
-CREATE TYPE "IssueConnexion" AS ENUM ('REUSSITE', 'ECHEC');
+-- LS-80, ADR-027 decision 2. Un enum et non un booleen `reussie` : sur un ecran
+-- de liste, `ECHEC` se lit sans avoir a se rappeler de quoi `false` est la
+-- negation, et un booleen n'aurait pas de place pour le troisieme cas.
+--
+-- REFUSEE_LIMITATION, ajoutee en relecture : Better Auth rend le 429 dans
+-- `onRequest`, donc avant tout hook. Ces tentatives echappaient entierement au
+-- journal, et ce sont celles qui caracterisent une attaque automatisee.
+CREATE TYPE "IssueConnexion" AS ENUM ('REUSSITE', 'ECHEC', 'REFUSEE_LIMITATION');
 
 -- ADR-021 pose la passkey en principal et le mot de passe en secours. Sans ce
 -- champ, le journal ne dirait pas si le secours a servi, alors que son usage
