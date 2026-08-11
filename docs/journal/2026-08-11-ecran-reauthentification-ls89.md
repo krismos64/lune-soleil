@@ -128,6 +128,30 @@ Le rapport reste favorable : chaque relecture coûte quelques minutes et a trouv
 en moyenne trois défauts, dont certains auraient été découverts en production ou
 jamais.
 
+## Un défaut trouvé en vérifiant l'état de fin de session
+
+Christophe a demandé si tout était à jour avant de quitter. La vérification a
+trouvé ce qu'aucun contrôle ne voyait : **`hook-block-secret-commands.sh`
+n'était déclaré nulle part**.
+
+Le script existait sur `main`, prouvé sur vingt-quatre cas, documenté dans
+`REFERENCES.md` et `CLAUDE.md`. Sa déclaration dans `settings.json` avait
+disparu entre son écriture et le commit : `949ea39` porte le script et son
+contrôle, jamais le fichier de configuration. Cause probable, le `git checkout`
+d'un script de mutation, qui restaure les fichiers suivis.
+
+**Un hook non déclaré est pire qu'un hook absent.** Le dépôt affichait un
+garde-fou complet qui ne s'exécutait pas, et rien ne le trahissait :
+`docker compose config` serait repassé sans être bloqué.
+
+Le contrôle ne le voyait pas parce qu'il ne vérifiait qu'un sens, « déclaré donc
+présent ». Le contrôle 12 bis ajoute l'inverse, et la configuration passe de
+treize à quatorze mutations.
+
+**Le même accident s'est reproduit dans la foulée** : ma correction du compte
+dans `README.md` a été restaurée par le script de mutation avant que je ne la
+commite. Deux fois dans la même soirée, sur des fichiers différents.
+
 ## Prochaine étape
 
 Six stories restent ouvertes sur LS-2 :
