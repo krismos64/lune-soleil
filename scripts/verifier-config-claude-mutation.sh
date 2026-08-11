@@ -236,6 +236,26 @@ else
 fi
 cp "$TMP/README.md" README.md
 
+# 12 bis. Un script de hook present n'est declare nulle part.
+#
+# LE DEFAUT REEL DU 11 AOUT 2026 : `hook-block-secret-commands.sh` etait ecrit,
+# prouve sur vingt-quatre cas, commite et pousse, mais sa declaration avait
+# disparu de settings.json. Le script existait, son controle passait au vert, et
+# il ne s'executait jamais. Un hook non declare est PIRE qu'un hook absent : tout
+# indique qu'il protege.
+#
+# La mutation retire la declaration sans toucher au script.
+cp .claude/settings.json "$TMP/settings.json"
+node -e '
+  const fs = require("fs");
+  const p = ".claude/settings.json";
+  const d = JSON.parse(fs.readFileSync(p, "utf8"));
+  d.hooks.PreToolUse = (d.hooks.PreToolUse || []).filter((m) => m.matcher !== "Bash");
+  fs.writeFileSync(p, JSON.stringify(d, null, 2) + "\n");
+'
+mutation "script de hook present mais non declare" "n'est déclaré dans aucun hook"
+cp "$TMP/settings.json" .claude/settings.json
+
 # 13. Un hook déclaré pointe vers un script absent.
 #
 # LE MODE D'ÉCHEC EST SILENCIEUX, confirmé par la documentation officielle : un
