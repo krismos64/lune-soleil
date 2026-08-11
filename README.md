@@ -212,10 +212,11 @@ serveur**, avant tout rendu. Il n'y a délibérément pas de middleware : celui 
 Next.js s'exécute sur la périphérie et ne peut pas relire la session en base, il
 ne verrait que la présence d'un cookie, ni sa validité ni le rôle.
 
-Trois mesures d'ADR-021 restent à porter, décidées par ADR-027 et ticketées :
-limitation de débit LS-79, journal des connexions LS-80, session courte et
-réauthentification LS-81. La durée de session vaut sept jours aujourd'hui, LS-81
-la ramène à un jour.
+Des trois mesures d'ADR-021 décidées par ADR-027, la limitation de débit est
+posée par LS-79 et la session d'un jour par LS-81. **Le journal des connexions
+reste à porter, LS-80.** La réauthentification des actions sensibles a son
+mécanisme et son contrôle, LS-81 ; le branchement des quatre familles attend que
+les actions existent, LS-89.
 
 **Aucun email ne part encore.** ADR-008 retient le SMTP OVH, l'implémentation est
 LS-82 ; d'ici là `src/integrations/email/` journalise sans envoyer, et la
@@ -361,11 +362,12 @@ destructives doivent bloquer, une migration additive doit passer, et une
 détection qui ne peut pas conclure doit bloquer plutôt que supposer. Lancé contre
 la version d'avant LS-42, il échoue sur sept de ces dix cas.
 
-`verifier-tests-mutation.sh` casse **vingt-et-une fois** le comportement testé
+`verifier-tests-mutation.sh` casse **vingt-trois fois** le comportement testé
 et exige que la suite rougisse à chaque fois : cinq mutations de la primitive
 SQL de réservation, cinq de l'authentification et de l'autorisation, deux de
 l'interface, trois du socle de validation, quatre de la journalisation et de la
-santé depuis LS-73, deux de la limitation de débit depuis LS-79. Il vérifie
+santé depuis LS-73, deux de la limitation de débit depuis LS-79, deux de la
+session et de la preuve d'identité depuis LS-81. Il vérifie
 d'abord que les deux projets de test sont verts, sans quoi aucune mutation ne
 prouverait rien.
 
