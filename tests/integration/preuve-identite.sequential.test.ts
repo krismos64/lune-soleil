@@ -303,10 +303,31 @@ describe("garde de role, le defaut grave de la relecture", () => {
       "utf8",
     );
 
-    // Une par fonction : proteger la page seule laisserait le chemin ouvert,
-    // une Server Action etant invocable directement.
-    const appels = source.match(/await exigerAdministratrice\(/g) ?? [];
-    expect(appels).toHaveLength(2);
+    /**
+     * LE COMPTAGE EST BORNE PAR FONCTION, et non sur le fichier entier.
+     *
+     * Un total de deux serait satisfait par deux appels dans la MEME fonction,
+     * l'autre restant sans garde : c'est exactement le faux negatif que
+     * `verifier-actions-sensibles.sh` a deja corrige une fois, en bornant le
+     * corps de chaque fonction plutot que de chercher dans tout le fichier.
+     *
+     * Le decoupage se fait sur `export async function`, forme imposee a un
+     * fichier `"use server"` : il n'exporte que des fonctions asynchrones.
+     */
+    const blocs = source
+      .split(/export async function /)
+      // Le premier morceau est l'entete du fichier, avant toute fonction.
+      .slice(1);
+
+    expect(blocs).toHaveLength(2);
+
+    for (const bloc of blocs) {
+      const nom = bloc.slice(0, bloc.indexOf("("));
+      expect(
+        bloc.includes("await exigerAdministratrice("),
+        `${nom} n'appelle pas exigerAdministratrice`,
+      ).toBe(true);
+    }
   });
 });
 
@@ -408,9 +429,24 @@ describe("l'adaptateur d'entree, critere 7", () => {
 
     // `grep -rl` liste les FICHIERS et non les lignes : un fichier qui appelle
     // deux fois compte une fois, ce qui est le bon grain pour cette propriete.
+    /**
+     * DEUX MOTIFS, ET LE SECOND COUVRE LA SEULE EVASION COMMETTABLE SANS LE
+     * VOULOIR.
+     *
+     * Chercher le seul nom de fonction laisse passer un `prisma.session.update`
+     * ecrit directement sur `reauthentifieeLe` : quelqu'un qui ignore
+     * l'existence de `enregistrerPreuveIdentite` produit alors exactement le
+     * trou que la regle interdit, sans jamais toucher au nom recherche. Le
+     * fichier de garde de `app/` interdit deja l'acces direct a Prisma, ce
+     * motif double la discipline par un controle.
+     *
+     * Les evasions par renommage d'import ou par variable intermediaire
+     * restent invisibles ici. Elles supposent une intention de contournement,
+     * que ce test ne pretend pas couvrir : c'est la relecture qui en repond.
+     */
     const { stdout } = await executer("grep", [
-      "-rl",
-      "enregistrerPreuveIdentite(",
+      "-rlE",
+      "enregistrerPreuveIdentite\\(|reauthentifieeLe",
       "src/",
       "--include=*.ts",
       "--include=*.tsx",
@@ -419,8 +455,13 @@ describe("l'adaptateur d'entree, critere 7", () => {
     const appelants = stdout
       .split("\n")
       .filter((ligne) => ligne.length > 0)
+      // `src/generated/` est du code ENGENDRE par Prisma : il porte le nom de
+      // la colonne dans ses types, ce qui n'est pas une ecriture. Meme
+      // exclusion que `verifier-regles.sh`.
+      .filter((chemin) => !chemin.startsWith("src/generated/"))
       // Le module qui la DEFINIT n'est pas un appelant : sa declaration porte
-      // la meme chaine suivie d'une parenthese. On l'ecarte nommement.
+      // la meme chaine suivie d'une parenthese, et il ecrit legitimement la
+      // colonne. On l'ecarte nommement.
       .filter((chemin) => chemin !== "src/services/reauthentification.ts")
       .sort();
 
