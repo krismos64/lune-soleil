@@ -635,6 +635,19 @@ mute "$ACTION_REAUTH" 's/    typeof motDePasse !== "string" \|\|\n    motDePasse
 cas "borne d'entree retiree de l'adaptateur" integration \
   "une entree qui n'est pas une chaine est refusee sans rien ecrire"
 
+# Cas 40 : LA GARDE DE ROLE RETIREE D'UNE DES DEUX SERVER ACTIONS.
+#
+# Defaut REEL trouve en relecture, puis une seconde fois dans sa propre
+# correction : la premiere substitution avait echoue en silence, et seule
+# `etablirPreuveParPasskey` portait la garde. Un client inscrit sur la boutique
+# fabriquait alors une preuve d'identite avec SON mot de passe, `verifyPassword`
+# verifiant contre `session.user.id`.
+#
+# PROTEGER LA PAGE NE SUFFIT PAS : une Server Action est invocable directement.
+mute "$ACTION_REAUTH" 's/    await exigerAdministratrice\(enTetes\);\n  \} catch \(erreur\) \{\n    if \(erreur instanceof AutorisationRefuseeError\) \{\n      return \{ statut: "SESSION_ABSENTE" \};\n    \}\n    throw erreur;\n  \}\n\n  try \{\n    return traduire\(await prouverIdentiteParMotDePasse/    \/\/ garde retiree\n  } catch (erreur) {\n    if (erreur instanceof AutorisationRefuseeError) {\n      return { statut: "SESSION_ABSENTE" };\n    }\n    throw erreur;\n  }\n\n  try {\n    return traduire(await prouverIdentiteParMotDePasse/'
+cas "garde de role retiree d'une Server Action" integration \
+  "les deux Server Actions appellent exigerAdministratrice"
+
 echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then

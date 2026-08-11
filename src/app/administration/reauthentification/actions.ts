@@ -10,11 +10,22 @@
  * IL NE PEUT PAS ENREGISTRER UNE PREUVE TOUT SEUL, et c'est verifiable : il
  * n'importe pas `enregistrerPreuveIdentite`. Le seul chemin qu'il ouvre passe
  * par une fonction qui verifie d'abord.
+ *
+ * IL EXIGE LE ROLE `ADMINISTRATRICE`, ET PAS SEULEMENT LA PAGE. Une Server
+ * Action est invocable DIRECTEMENT, sans passer par le rendu de l'ecran :
+ * proteger la page seule laisserait ce chemin ouvert. Defaut trouve en
+ * relecture, ou ni la page ni ces deux fonctions ne filtraient le role, et ou
+ * un client inscrit sur la boutique pouvait se fabriquer une preuve d'identite
+ * avec son propre mot de passe.
  */
 
 import { headers } from "next/headers";
 
 import { journaliser } from "@/lib/journal";
+import {
+  AutorisationRefuseeError,
+  exigerAdministratrice,
+} from "@/services/autorisation";
 import {
   prouverIdentiteParMotDePasse,
   prouverIdentiteParPasskey,
@@ -31,6 +42,12 @@ import {
 export type ResultatReauthentification =
   | { statut: "ETABLIE" }
   | { statut: "REFUSEE" }
+  /**
+   * Aucune session d'administration : soit rien du tout, soit une session sans
+   * le role. Les deux cas rendent la MEME valeur, comme
+   * `AutorisationRefuseeError` confond les deux : distinguer renseignerait sur
+   * l'existence du compte d'administration.
+   */
   | { statut: "SESSION_ABSENTE" }
   | { statut: "INVALIDE" }
   | { statut: "INDISPONIBLE" };
@@ -76,10 +93,23 @@ export async function etablirPreuveParMotDePasse(
     return { statut: "INVALIDE" };
   }
 
+  const enTetes = await headers();
+
   try {
-    return traduire(
-      await prouverIdentiteParMotDePasse(await headers(), motDePasse),
-    );
+    // LE ROLE SE VERIFIE AVANT LE MOT DE PASSE, et pas seulement dans la page :
+    // une Server Action est invocable directement, proteger le rendu seul
+    // laisserait ce chemin ouvert. Un appelant sans le role n'a de surcroit
+    // aucune raison d'atteindre le hachage, seul travail couteux de ce chemin.
+    await exigerAdministratrice(enTetes);
+  } catch (erreur) {
+    if (erreur instanceof AutorisationRefuseeError) {
+      return { statut: "SESSION_ABSENTE" };
+    }
+    throw erreur;
+  }
+
+  try {
+    return traduire(await prouverIdentiteParMotDePasse(enTetes, motDePasse));
   } catch (erreur) {
     // Une panne reelle, base injoignable par exemple. `prouverIdentite...`
     // ne leve que dans ce cas, un mot de passe faux rendant `REFUSEE`.
@@ -99,8 +129,19 @@ export async function etablirPreuveParMotDePasse(
  * une session ouverte de longue date est refuse.
  */
 export async function etablirPreuveParPasskey(): Promise<ResultatReauthentification> {
+  const enTetes = await headers();
+
   try {
-    return traduire(await prouverIdentiteParPasskey(await headers()));
+    await exigerAdministratrice(enTetes);
+  } catch (erreur) {
+    if (erreur instanceof AutorisationRefuseeError) {
+      return { statut: "SESSION_ABSENTE" };
+    }
+    throw erreur;
+  }
+
+  try {
+    return traduire(await prouverIdentiteParPasskey(enTetes));
   } catch (erreur) {
     journaliser("error", "Reauthentification indisponible", {
       moyen: "PASSKEY",
