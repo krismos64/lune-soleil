@@ -10,7 +10,7 @@
  *
  * CE QUE CHAQUE TEST DOIT DISTINGUER. Sur plusieurs scenarios, l'etat de la
  * base est identique que la protection existe ou non : une connexion reussit
- * aussi bien avec un journal qu'sans. Chaque test verifie donc la LIGNE ECRITE,
+ * aussi bien avec un journal que sans. Chaque test verifie donc la LIGNE ECRITE,
  * son issue et son moyen, jamais seulement que la connexion a abouti.
  */
 import { Client } from "pg";
@@ -82,7 +82,10 @@ async function creerCompte(email: string, role?: "ADMINISTRATRICE") {
     // `role` porte `input: false`, regle E11 : il ne peut pas etre pose depuis
     // la requete d'inscription. La bascule se fait donc en base, comme le fera
     // l'amorce reelle de l'unique compte d'administration.
-    await client.query("UPDATE utilisateur SET role = 'ADMINISTRATRICE' WHERE email = $1", [email]);
+    await client.query(
+      "UPDATE utilisateur SET role = 'ADMINISTRATRICE' WHERE email = $1",
+      [email],
+    );
   }
 
   // L'inscription ouvre une session et ecrit une ligne de journal si le chemin

@@ -62,9 +62,7 @@ export function lireResultat(contexte: {
   // `exactOptionalPropertyTypes` etant actif, un simple `?` interdirait
   // d'ecrire `{ user: undefined }`, forme que Better Auth produit pourtant.
   newSession?:
-    | { user?: { id?: unknown; email?: unknown } | undefined }
-    | null
-    | undefined;
+    { user?: { id?: unknown; email?: unknown } | undefined } | null | undefined;
 }): ResultatTentative {
   if (contexte.returned instanceof APIError) {
     return { issue: "ECHEC", utilisateurId: null, emailConfirme: null };
