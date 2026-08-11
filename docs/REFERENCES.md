@@ -91,7 +91,7 @@ documentation technique, ticket ou règle qui le contredirait.
 Cette table se met à jour à chaque ADR créé. Un ADR absent d'ici reste
 opposable : la table est un raccourci, `docs/adr/` fait foi.
 
-## Les quatre fichiers de règles, et quand ils se chargent
+## Les cinq fichiers de règles, et quand ils se chargent
 
 `.claude/rules/` porte l'application détaillée des invariants : l'instruction SQL
 exacte, la valeur du délai, le jeton de couleur. Chacun porte un frontmatter
@@ -103,6 +103,7 @@ exacte, la valeur du délai, le jeton de couleur. Chacun porte un frontmatter
 | `payments.md` | `src/integrations/stripe/**`, webhooks, checkout, commandes |
 | `legal.md` | services de rétractation et de facturation, pages légales |
 | `frontend-design.md` | `src/app/**`, `src/components/**`, styles |
+| `securite.md` | `src/lib/**`, `src/integrations/email/**` |
 
 Une session qui conçoit le paiement sans toucher à `src/integrations/stripe/`
 doit donc lire `payments.md` explicitement.

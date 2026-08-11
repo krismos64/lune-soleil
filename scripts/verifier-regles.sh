@@ -31,7 +31,26 @@ for f in "$SCHEMA" "$CHECKS"; do
 done
 
 # Vocabulaire connu : champs Prisma, colonnes mappées, modèles, enums et leurs
-# valeurs, noms d'index et de contraintes, tables.
+# valeurs, noms d'index et de contraintes, tables, PLUS les identifiants
+# réellement écrits dans le code du dépôt.
+#
+# POURQUOI LE CODE ET PLUS SEULEMENT LE SCHEMA, LS-88. Le contrôle est né quand
+# `src/` était vide : une règle ne pouvait alors citer que du schéma, et tout le
+# reste était suspect. La liste d'exemptions `hors_schema` ci-dessous portait les
+# rares exceptions, et son commentaire annonçait déjà la bascule : « le jour où
+# elle devient longue, le bon geste est de confronter ces identifiants au CODE
+# plutôt que de les exempter ».
+#
+# `securite.md` a fait arriver ce jour d'un coup : neuf identifiants refusés,
+# tous réels, `useSecureCookies` et `rateLimit` d'`auth.ts`, `journaliserErreur`
+# de `journal.ts`. Les exempter un par un aurait transformé la liste en
+# décharge, et surtout aurait exempté À VIE des noms qui doivent au contraire
+# rougir le jour où le code cesse de les porter.
+#
+# Le contrôle garde donc exactement le même sens, sur une source élargie : un
+# identifiant cité par une règle doit exister QUELQUE PART dans ce dépôt. Une
+# règle qui nomme un champ ou une fonction que plus rien ne porte reste
+# détectée, c'était le défaut de LS-46.
 connus="$(mktemp)"
 {
   grep -oE '^\s{2}[a-zA-Z][a-zA-Z0-9_]*' "$SCHEMA" | tr -d ' '
@@ -41,6 +60,16 @@ connus="$(mktemp)"
   grep -oE '^\s{2}[A-Z_]+$' "$SCHEMA" | tr -d ' '
   grep -oE 'map: "[a-z_0-9]+"' "$SCHEMA" | sed 's/map: "//;s/"//'
   grep -oE 'ADD CONSTRAINT [a-z_0-9]+' "$CHECKS" | awk '{print $3}'
+
+  # Identifiants du code applicatif et des tests. `src/generated/` est exclu :
+  # le client Prisma engendré porte des milliers de noms, dont d'anciens champs,
+  # et l'inclure rendrait le contrôle aveugle à une règle périmée.
+  if [ -d "$RACINE/src" ]; then
+    grep -rhoE '\b[a-zA-Z_][a-zA-Z0-9_]*\b' \
+      --include='*.ts' --include='*.tsx' \
+      --exclude-dir=generated \
+      "$RACINE/src" "$RACINE/tests" 2>/dev/null
+  fi
 } | sort -u > "$connus"
 
 # Identifiants cités par les règles : ce qui est entre accents graves, plus le
@@ -53,33 +82,27 @@ cites="$(mktemp)"
 } | grep -ohE '\b[a-z][a-zA-Z0-9]*[A-Z][a-zA-Z0-9]*\b|\b[a-z_]+_[a-z_]+\b' \
   | sort -u > "$cites"
 
-# Identifiants qui ressemblent à du code du schéma sans en être : API de
-# bibliothèque, mots-clés de langage. Le motif camelCase les attrape par
-# construction, et aucun assouplissement ne les distinguerait sans affaiblir le
-# contrôle sur les vrais champs.
+# Identifiants qu'aucune source du dépôt ne porte, et qui sont pourtant
+# légitimes : API de bibliothèque citées par une règle POUR ETRE ECARTEES.
 #
-# La liste reste courte et explicite à dessein : chaque ajout doit être un choix,
-# pas un contournement. Un nom de champ du schéma ne doit JAMAIS y entrer, ce
-# serait rendre le contrôle aveugle là où il sert.
+# La bascule vers le code, faite en LS-88 juste au-dessus, a vidé cette liste de
+# presque tout son contenu : `ordonnerLignes`, `queryRawUnsafe` et
+# `driverAdapterError` sont écrits dans `src/`, ils passent désormais par la
+# confrontation au code et n'ont plus besoin d'exemption.
 #
-# `dangerouslySetInnerHTML` vient d'ADR-026 : `frontend-design.md` l'interdit sur
-# le contenu des sections de fiche produit. C'est une API React, pas une colonne.
+# NE RESTENT QUE LES IDENTIFIANTS QUE LE CODE NE DOIT JUSTEMENT PAS PORTER :
 #
-# Les quatre suivants viennent de LS-50 et inaugurent une CATEGORIE NOUVELLE : du
-# code applicatif et des API de bibliothèque cités par une règle. Jusque-là les
-# règles ne citaient que du schéma, `src/` étant vide.
+# - `dangerouslySetInnerHTML` : ADR-026, `frontend-design.md` l'interdit sur le
+#   contenu des sections de fiche produit
+# - `localeCompare` : API JavaScript citée par `database.md` pour être écartée,
+#   son ordre dépendant de la locale d'exécution
 #
-# - `ordonnerLignes` : fonction de `src/services/reservation.ts`
-# - `localeCompare` : API JavaScript, citée pour être écartée, son ordre dépendant
-#   de la locale d'exécution
-# - `queryRawUnsafe` : API Prisma, chemin par lequel passe la réservation
-# - `driverAdapterError` : champ de l'objet d'erreur de Prisma, où se trouve le
-#   `SQLSTATE` d'origine sur une requête brute
-#
-# La liste grandira à mesure que `src/` se remplit. Le jour où elle devient
-# longue, le bon geste est de confronter ces identifiants au CODE plutôt que de
-# les exempter, pas d'allonger l'exemption indéfiniment.
-hors_schema="dangerouslySetInnerHTML ordonnerLignes localeCompare queryRawUnsafe driverAdapterError"
+# C'est le seul motif qui justifie encore une entrée ici : une règle qui dit
+# « n'utilisez jamais X » ne peut pas prouver X par le code, puisque son respect
+# se mesure précisément à son absence. Un identifiant que le code DEVRAIT porter
+# n'a rien à y faire, l'ajouter rendrait le contrôle aveugle le jour où le code
+# cesse de le porter.
+hors_schema="dangerouslySetInnerHTML localeCompare"
 
 # Un identifiant qualifié `table.colonne` est accepté si ses deux moitiés le
 # sont. Sans cette étape, `ligne_commande.quantite` serait signalé alors qu'il
@@ -95,7 +118,7 @@ while read -r id; do
   echo "$id" >> "$introuvables"
 done < "$cites"
 
-echo "Identifiants cités par .claude/rules/, confrontés au schéma"
+echo "Identifiants cités par .claude/rules/, confrontés au schéma et au code"
 echo
 
 nb_cites=$(wc -l < "$cites" | tr -d ' ')
@@ -103,10 +126,10 @@ nb_ko=$(wc -l < "$introuvables" 2>/dev/null | tr -d ' ')
 nb_ko=${nb_ko:-0}
 
 if [ "$nb_ko" -eq 0 ]; then
-  echo "  OK    $nb_cites identifiants, tous présents dans le schéma"
+  echo "  OK    $nb_cites identifiants, tous présents dans le schéma ou le code"
 else
   while read -r id; do
-    echo "  ECHEC $id : cité par une règle, absent du schéma"
+    echo "  ECHEC $id : cité par une règle, absent du schéma et du code"
     grep -rn --include='*.md' -F "$id" "$REGLES" | head -2 | sed 's/^/        /'
   done < "$introuvables"
   ko=$nb_ko
@@ -264,6 +287,91 @@ if [ "$predicats_ko" -eq 0 ]; then
   echo "         la prose qui décrit un filtre sans le nommer reste hors contrôle)"
 else
   ko=$((ko + predicats_ko))
+fi
+
+echo
+
+# Couverture des dossiers de `src/` par au moins une règle, LS-88.
+#
+# LE DEFAUT QUE CE CONTROLE ATTRAPE. Les deux contrôles précédents vérifient
+# qu'une règle dit vrai et qu'elle porte un `paths`. Aucun ne regarde si les
+# chemins CRITIQUES du dépôt sont couverts par quoi que ce soit. Le 10 août
+# 2026, `src/lib/` ne déclenchait aucune règle : éditer `auth.ts`, qui porte le
+# secret de signature, l'attribut `Secure` du cookie et la limitation de débit,
+# se faisait sans qu'une seule ligne de règle soit chargée.
+#
+# C'est le motif « ancrage des contrôles » déjà rencontré trois fois ici : la
+# règle existe, elle est juste, et son déclencheur rate le fichier critique.
+#
+# LA LISTE DES DOSSIERS N'EST PAS ECRITE A LA MAIN, et c'est le point de
+# conception. Une liste figée serait une opinion : elle resterait verte le jour
+# où quelqu'un crée `src/paiement/` sans règle, exactement le trou qu'on vient de
+# fermer. Les dossiers sont donc relevés sur le disque, ce qui fait que la
+# création d'un dossier non couvert fait rougir le contrôle sans que personne
+# n'ait à y penser.
+#
+# DEUX EXCLUSIONS, chacune motivée :
+#   - `generated/` : code engendré par Prisma, jamais édité à la main
+#   - `styles/` : feuilles CSS, couvertes par `frontend-design.md` via son
+#     motif `*.css` que la comparaison de préfixes ci-dessous ne voit pas
+echo "Couverture des dossiers de src/ par les règles"
+echo
+
+couverture_ko=0
+nb_dossiers=0
+
+if [ -d "$RACINE/src" ]; then
+  # Tous les `paths` déclarés, dépouillés de leurs guillemets et de leur glob.
+  # Seul le préfixe de dossier compte : `src/lib/**/*.ts` couvre `src/lib`.
+  chemins_regles="$(mktemp)"
+  for f in "$REGLES"/*.md; do
+    [ -e "$f" ] || continue
+    sed -n '1,/^---$/p' "$f" \
+      | grep -oE '"[^"]+"' | tr -d '"' \
+      | sed -E 's#/\*.*$##; s#/$##'
+  done | sort -u > "$chemins_regles"
+
+  while IFS= read -r dossier; do
+    rel=${dossier#"$RACINE"/}
+    case "$rel" in
+      src/generated|src/generated/*|src/styles) continue ;;
+    esac
+    nb_dossiers=$((nb_dossiers+1))
+
+    # Un dossier est couvert si un `paths` le désigne lui-même ou l'un de ses
+    # PARENTS : `src/lib/**` couvre `src/lib/interne` sans le nommer.
+    #
+    # Un `paths` qui désigne un DESCENDANT ne couvre en revanche le dossier que
+    # s'il est vide de fichiers TypeScript. `src/integrations` ne porte
+    # aujourd'hui que le sous-dossier `email/`, couvert : le dossier parent n'a
+    # rien à faire déclencher. Le jour où quelqu'un y pose un
+    # `integrations/medias.ts` à la racine, ce fichier n'entrerait dans le
+    # `paths` d'aucune règle, et c'est précisément le trou de LS-88. La
+    # tolérance s'arrête donc là où un fichier réel apparaît.
+    propres=$(find "$dossier" -maxdepth 1 \( -name '*.ts' -o -name '*.tsx' \) | wc -l | tr -d ' ')
+
+    if ! awk -v d="$rel" -v vide="$propres" '
+      {
+        # Le dossier lui-même, ou un de ses parents, porte un paths.
+        if (index(d "/", $0 "/") == 1) { trouve = 1 }
+        # Un descendant porte un paths : ne vaut que si le dossier est vide.
+        if (vide == 0 && index($0 "/", d "/") == 1) { trouve = 1 }
+      }
+      END { exit trouve ? 0 : 1 }' "$chemins_regles"; then
+      echo "  ECHEC $rel : aucune règle de .claude/rules/ ne se déclenche ici"
+      echo "        une session qui édite ces fichiers ne charge aucune règle de domaine"
+      couverture_ko=$((couverture_ko+1))
+    fi
+  done < <(find "$RACINE/src" -type d -not -path '*/node_modules/*' | sort)
+
+  rm -f "$chemins_regles"
+fi
+
+if [ "$couverture_ko" -eq 0 ]; then
+  echo "  OK    $nb_dossiers dossiers de src/, tous couverts par au moins une règle"
+  echo "        (hors src/generated, engendré, et src/styles, couvert par un motif *.css)"
+else
+  ko=$((ko + couverture_ko))
 fi
 
 echo

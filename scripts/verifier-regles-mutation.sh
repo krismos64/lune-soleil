@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
-# Preuve par mutation du controle de predicats de verifier-regles.sh, LS-49.
+# Preuve par mutation de verifier-regles.sh, LS-49 puis LS-88.
 #
 # Motif. Un controle vert ne prouve rien tant qu'il n'a pas echoue sur le defaut
-# reel. Ce script reinjecte cinq fois le defaut corrige par LS-45 et par LS-13,
-# et exige que verifier-regles.sh echoue a chaque fois.
+# reel. Ce script reinjecte les defauts corriges par LS-45, LS-13 et LS-88, et
+# exige que verifier-regles.sh echoue a chaque fois.
+#
+# DEUX SUJETS, ne pas les confondre :
+#   - cas 1 a 8, ce qu'une regle DIT : un predicat d'index partiel perime
+#   - cas 9 a 12, ou une regle SE DECLENCHE : un dossier de src/ que le paths
+#     d'aucune regle ne couvre, defaut trouve le 10 aout 2026 sur src/lib
 #
 # Il a servi a trouver un angle mort pendant l'ecriture du controle : ancrer sur
 # le seul nom d'index ratait database.md, qui ne le nomme jamais et qui est
@@ -20,19 +25,34 @@ cd "$RACINE" || exit 1
 DB=".claude/rules/database.md"
 ML="docs/architecture/MODELE-LOGIQUE.md"
 MC="docs/architecture/MODELE-CONCEPTUEL.md"
+SEC=".claude/rules/securite.md"
 
-for f in "$DB" "$ML" "$MC" ./scripts/verifier-regles.sh; do
+# Dossier temoin cree puis supprime par le cas de couverture, LS-88. Il ne doit
+# exister a aucun autre moment : le nom est choisi pour qu'une trace oubliee se
+# remarque immediatement.
+DOSSIER_TEMOIN="src/dossier-temoin-mutation"
+FICHIER_TEMOIN="src/integrations/temoin-mutation.ts"
+
+for f in "$DB" "$ML" "$MC" "$SEC" ./scripts/verifier-regles.sh; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
 done
 
 TMP="$(mktemp -d)"
 cp "$DB" "$TMP/db.orig"; cp "$ML" "$TMP/ml.orig"; cp "$MC" "$TMP/mc.orig"
-restaurer() { cp "$TMP/db.orig" "$DB"; cp "$TMP/ml.orig" "$ML"; cp "$TMP/mc.orig" "$MC"; }
+cp "$SEC" "$TMP/sec.orig"
+restaurer() {
+  cp "$TMP/db.orig" "$DB"; cp "$TMP/ml.orig" "$ML"; cp "$TMP/mc.orig" "$MC"
+  cp "$TMP/sec.orig" "$SEC"
+  rm -rf "${RACINE:?}/$DOSSIER_TEMOIN"
+  rm -f "${RACINE:?}/$FICHIER_TEMOIN"
+}
 nettoyer() { restaurer; rm -rf "$TMP"; }
 trap nettoyer EXIT
 
 echecs=0
+total=0
 cas() {
+  total=$((total+1))
   local nom="$1"
   ./scripts/verifier-regles.sh >"$TMP/sortie.txt" 2>&1
   local code=$?
@@ -46,7 +66,7 @@ cas() {
   restaurer
 }
 
-echo "Preuve par mutation, controle des predicats d'index partiels"
+echo "Preuve par mutation de verifier-regles.sh, predicats puis couverture"
 echo
 
 # Cas 1 : le defaut exact de LS-45, dans la regle chargee au moment de coder.
@@ -91,12 +111,47 @@ cas "MODELE-CONCEPTUEL.md, tableau des quatre cles d'idempotence"
 perl -pi -e "s/^\| \`paiement \(commandeId\)\` \| \`statut IN \('REUSSI', 'PARTIELLEMENT_REMBOURSE', 'REMBOURSE'\)\`/| \`paiement (commandeId)\` | \`statut = REUSSI\`/" "$MC"
 cas "MODELE-CONCEPTUEL.md, recapitulatif des unicites partielles"
 
+# ---------------------------------------------------------------------------
+# Cas 9 a 12 : la couverture des dossiers de src/, LS-88.
+#
+# Le controle precedent verifie ce qu'une regle DIT. Ceux-ci verifient qu'une
+# regle se declenche la ou il faut. Le defaut reel : le 10 aout 2026, editer
+# src/lib/auth.ts ne chargeait aucune regle, alors que ce fichier porte le
+# secret de signature et l'attribut Secure du cookie.
+# ---------------------------------------------------------------------------
+
+# Cas 9 : le defaut exact de LS-88, src/lib sans regle. C'est le critere
+# d'acceptation 5 du ticket, « retirer un paths le fait rougir ».
+perl -pi -e 's|^  - "src/lib/\*\*/\*\.ts"$|  - "src/lib-inexistant/**/*.ts"|' "$SEC"
+cas "securite.md, paths de src/lib retire"
+
+# Cas 10 : le second ecart du ticket, src/integrations/email sans regle.
+perl -pi -e 's|^  - "src/integrations/email/\*\*/\*\.ts"$|  - "src/integrations/email-inexistant/**/*.ts"|' "$SEC"
+cas "securite.md, paths de src/integrations/email retire"
+
+# Cas 11 : un dossier NEUF, non couvert. C'est le cas que le ticket vise en
+# ecrivant « sans lui, le meme ecart se reformera a la prochaine creation de
+# dossier ». Il mute l'ARBORESCENCE et non un fichier : sans lui, une liste de
+# dossiers ecrite a la main resterait verte ici.
+mkdir -p "$DOSSIER_TEMOIN"
+cas "un dossier neuf de src/ sans regle"
+
+# Cas 12 : un fichier pose A LA RACINE d'un dossier qui n'etait couvert que par
+# ses descendants. src/integrations ne porte que le sous-dossier email/, couvert :
+# le parent passait donc pour couvert alors qu'un fichier pose a sa racine
+# n'entrerait dans le paths d'aucune regle.
+echo "export const temoin = 1;" > "$FICHIER_TEMOIN"
+cas "un fichier a la racine d'un dossier couvert par ses seuls descendants"
+rm -f "$FICHIER_TEMOIN"
+
 echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then
-  echo "  8 mutations, 8 detectees"
+  # Le compte est CALCULE et non ecrit en dur : trois comptes de ce depot ont
+  # deja derive apres l'ajout d'un cas que personne n'a reporte.
+  echo "  $total mutations, $total detectees"
 else
-  echo "  $echecs mutation(s) non detectee(s)"
+  echo "  $echecs mutation(s) non detectee(s) sur $total"
 fi
 echo "-----------------------------------------"
 [ "$echecs" -eq 0 ]

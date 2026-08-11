@@ -227,7 +227,7 @@ Douze scripts, dont cinq de mutation qui prouvent les autres :
 
 ```bash
 ./prisma/sql-manuel/verifier-schema.sh           # schéma sur base réelle, exige Docker
-./scripts/verifier-regles.sh                     # .claude/rules/ contre le schéma
+./scripts/verifier-regles.sh                     # .claude/rules/ : schéma, code, couverture
 ./scripts/verifier-regles-mutation.sh            # prouve le précédent par mutation
 ./scripts/verifier-config-claude.sh              # cohérence de la config Claude Code
 ./scripts/verifier-config-claude-mutation.sh     # prouve le précédent par mutation
@@ -259,9 +259,18 @@ retenu : code 0 si le service répond avec sa base, 1 sinon. Il vise la **route*
 et non PostgreSQL directement, une base joignable depuis le poste de déploiement
 ne prouvant pas que l'application la joint.
 
-Le script de mutation réinjecte huit fois un défaut réel et exige que
+Le script de mutation réinjecte douze fois un défaut réel et exige que
 `verifier-regles.sh` échoue à chaque fois. Un contrôle vert ne prouve rien tant
 qu'il n'a pas échoué sur le défaut qu'il prétend attraper.
+
+Les huit premiers cas portent sur ce qu'une règle **dit**, un prédicat d'index
+partiel périmé. Les quatre derniers portent sur l'endroit où elle **se
+déclenche** : depuis LS-88, `verifier-regles.sh` échoue si un dossier de `src/`
+n'est couvert par le `paths` d'aucune règle. Le défaut était réel, éditer
+`src/lib/auth.ts` ne chargeait aucune règle alors que ce fichier porte le secret
+de signature et la limitation de débit. La liste des dossiers est relevée sur le
+disque et non écrite à la main : créer un dossier sans règle fait rougir le
+contrôle sans que personne ait à y penser.
 
 `verifier-config-claude.sh` contrôle ce qui dérive sans casser aucun test : un ADR
 absent de la table d'aiguillage de `docs/REFERENCES.md`, un `CLAUDE.md` au-delà de

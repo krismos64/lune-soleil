@@ -13,7 +13,7 @@ npm ci && npm run type-check && npm run lint && npm run build
 npm run test && npm run test:e2e  # Vitest sur base éphémère, puis Playwright
 npm run db:preparer    # base locale : conteneur, migrations, SQL non généré
 npm run db:verifier    # les contrôles du modèle sur cette base, exige Docker
-./scripts/verifier-regles.sh         # .claude/rules/ contre le schéma
+./scripts/verifier-regles.sh         # .claude/rules/ : schéma, code, couverture
 ./scripts/verifier-config-claude.sh  # cohérence config, ADR, mémoire, journal
 ```
 
