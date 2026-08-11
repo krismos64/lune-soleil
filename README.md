@@ -385,15 +385,15 @@ destructives doivent bloquer, une migration additive doit passer, et une
 détection qui ne peut pas conclure doit bloquer plutôt que supposer. Lancé contre
 la version d'avant LS-42, il échoue sur sept de ces dix cas.
 
-`verifier-tests-mutation.sh` casse **trente-six fois** le comportement testé
+`verifier-tests-mutation.sh` casse **trente-neuf fois** le comportement testé
 et exige que la suite rougisse à chaque fois : cinq mutations de la primitive
 SQL de réservation, cinq de l'authentification et de l'autorisation, deux de
 l'interface, trois du socle de validation, quatre de la journalisation et de la
 santé depuis LS-73, deux de la limitation de débit depuis LS-79, deux de la
 session et de la preuve d'identité depuis LS-81, huit du journal des connexions
-depuis LS-80, cinq du verrou de tâche planifiée depuis LS-72. Il vérifie
-d'abord que les deux projets de test sont verts, sans quoi aucune mutation ne
-prouverait rien.
+depuis LS-80, cinq du verrou de tâche planifiée depuis LS-72, trois de la preuve
+d'identité depuis LS-89. Il vérifie d'abord que les deux projets de test sont
+verts, sans quoi aucune mutation ne prouverait rien.
 
 **Tout fichier muté figure dans `MUTABLES`, et un garde-fou le vérifie.** Un
 fichier absent de cette liste n'est ni sauvegardé ni restauré : la mutation
