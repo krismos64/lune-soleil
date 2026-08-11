@@ -43,6 +43,16 @@ CREATE TYPE "StatutEmail" AS ENUM ('ENVOYE', 'ECHOUE');
 -- CreateEnum
 CREATE TYPE "GraviteAlerte" AS ENUM ('AVERTISSEMENT', 'CRITIQUE');
 
+-- LS-80, ADR-027 decision 2. Deux valeurs et non un booleen `reussie` : sur un
+-- ecran de liste, `ECHEC` se lit sans avoir a se rappeler de quoi `false` est
+-- la negation.
+CREATE TYPE "IssueConnexion" AS ENUM ('REUSSITE', 'ECHEC');
+
+-- ADR-021 pose la passkey en principal et le mot de passe en secours. Sans ce
+-- champ, le journal ne dirait pas si le secours a servi, alors que son usage
+-- repete est le signal qui doit alerter.
+CREATE TYPE "MoyenConnexion" AS ENUM ('PASSKEY', 'MOT_DE_PASSE');
+
 -- CreateTable
 CREATE TABLE "categorie" (
     "id" TEXT NOT NULL,
@@ -522,6 +532,30 @@ CREATE TABLE "alerte_critique" (
 );
 
 -- CreateTable
+-- Journal des connexions, LS-80, ADR-027 decision 2.
+--
+-- DISTINCT DE `journal_audit`, qui exige `type_cible`, `id_cible` et un
+-- `detail` non nul et dont l'acteur designe un compte existant. Une tentative
+-- echouee sur une adresse inconnue n'a ni cible ni acteur.
+--
+-- AUCUNE COLONNE NE PEUT RECEVOIR UN MOT DE PASSE, et c'est voulu : les
+-- erreurs de saisie sont a un caractere du vrai mot de passe.
+CREATE TABLE "journal_connexion" (
+    "id" TEXT NOT NULL,
+    "utilisateur_id" TEXT,
+    "email_tente" TEXT NOT NULL,
+    "moyen" "MoyenConnexion" NOT NULL,
+    "issue" "IssueConnexion" NOT NULL,
+    -- Nullable, et une valeur nulle est NORMALE : Better Auth 1.6.21 refuse une
+    -- chaine X-Forwarded-For a plusieurs sauts sans proxy de confiance declare.
+    "adresse_ip" TEXT,
+    "agent_utilisateur" TEXT,
+    "cree_a" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "journal_connexion_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "verrou_tache" (
     "id" TEXT NOT NULL,
     "nom" TEXT NOT NULL,
@@ -677,6 +711,12 @@ CREATE UNIQUE INDEX "journal_email_systeme_unique" ON "journal_email"("commande_
 -- CreateIndex
 CREATE UNIQUE INDEX "verrou_tache_nom_key" ON "verrou_tache"("nom");
 
+-- CreateIndex, LS-80. Le premier sert la purge par anteriorite, regle E14, le
+-- second l'ecran d'administration qui liste par compte du plus recent au plus
+-- ancien.
+CREATE INDEX "journal_connexion_cree_a_idx" ON "journal_connexion"("cree_a");
+CREATE INDEX "journal_connexion_utilisateur_id_cree_a_idx" ON "journal_connexion"("utilisateur_id", "cree_a");
+
 -- AddForeignKey
 ALTER TABLE "produit" ADD CONSTRAINT "produit_categorie_id_fkey" FOREIGN KEY ("categorie_id") REFERENCES "categorie"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
@@ -770,6 +810,12 @@ ALTER TABLE "invitation_avis" ADD CONSTRAINT "invitation_avis_jeton_acces_id_fke
 
 -- AddForeignKey
 ALTER TABLE "journal_audit" ADD CONSTRAINT "journal_audit_acteur_id_fkey" FOREIGN KEY ("acteur_id") REFERENCES "utilisateur"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+-- SET NULL et non CASCADE, LS-80 : si supprimer un compte effacait son
+-- historique de connexions, un intrus effacerait ses traces en supprimant le
+-- compte qu'il vient de compromettre.
+ALTER TABLE "journal_connexion" ADD CONSTRAINT "journal_connexion_utilisateur_id_fkey" FOREIGN KEY ("utilisateur_id") REFERENCES "utilisateur"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "journal_email" ADD CONSTRAINT "journal_email_commande_id_fkey" FOREIGN KEY ("commande_id") REFERENCES "commande"("id") ON DELETE SET NULL ON UPDATE CASCADE;

@@ -1359,6 +1359,7 @@ erDiagram
     UTILISATEUR |o--o{ JOURNAL_AUDIT : "agit"
     UTILISATEUR |o--o{ MOUVEMENT_STOCK : "enregistre"
     UTILISATEUR |o--o{ ALERTE_CRITIQUE : "acquitte"
+    UTILISATEUR |o--o{ JOURNAL_CONNEXION : "tente de se connecter"
 
     UTILISATEUR {
         identifiant id PK
@@ -1398,6 +1399,16 @@ erDiagram
         identifiant acquitteeParId FK "nullable"
         horodatage creeA
     }
+    JOURNAL_CONNEXION {
+        identifiant id PK
+        identifiant utilisateurId FK "nullable"
+        texte emailTente
+        enum moyen "PASSKEY MOT_DE_PASSE"
+        enum issue "REUSSITE ECHEC"
+        texte adresseIp "nullable"
+        texte agentUtilisateur "nullable"
+        horodatage creeA
+    }
     VERROU_TACHE {
         identifiant id PK
         texte nom UK
@@ -1405,6 +1416,18 @@ erDiagram
         horodatage expireA
     }
 ```
+
+`JOURNAL_CONNEXION` est distinct de `JOURNAL_AUDIT`, ADR-027 décision 2. Le
+second trace ce qu'une administratrice **fait** une fois entrée, et son
+`acteurId` désigne un compte existant ; le premier trace les **tentatives
+d'entrer**, dont celles qui échouent sur une adresse sans compte. C'est ce cas,
+`utilisateurId` nul, qui révèle un balayage d'adresses, et il n'a aucune place
+dans une table où la cible est obligatoire.
+
+`emailTente` porte l'adresse **saisie**, qui n'est pas toujours celle d'un
+compte. Le mot de passe essayé n'y figure jamais, même faux : la table
+deviendrait une liste de mots de passe presque justes en face d'adresses
+connues.
 
 Les entités d'authentification proprement dites (session, compte, passkey, jeton
 de vérification) sont fournies par Better Auth et modélisées en LS-13,
@@ -1428,6 +1451,9 @@ projet.
 | E10 | `role` vaut `CLIENT` par défaut et n'est jamais nul | ADR-023, un rôle absent ou inconnu ne donne aucun droit |
 | E11 | Le rôle n'est jamais fourni par une entrée client | **niveau 3, contrôle applicatif** : `input: false` couvre Better Auth, aucune autre écriture de `role` depuis une entrée non fiable, invariant 2 |
 | E12 | Un changement de rôle est tracé au journal d'audit | règle E3, action sensible |
+| E13 | Toute tentative de connexion est journalisée, réussie ou échouée, sur un compte d'administration comme sur un compte client | `JournalConnexion`, ADR-027 décision 2. Ne garder que les réussites ne montrerait que la fin de l'histoire, quand dix échecs suivis d'une réussite sont le motif d'une attaque aboutie |
+| E14 | Une ligne du journal de connexions est purgée au-delà de six mois | délibération CNIL n° 2021-122 du 14 octobre 2021, point 8, bas de la fourchette recommandée. La purge est une fonctionnalité vérifiée, une durée que personne n'applique étant fictive |
+| E15 | L'écriture du journal de connexions ne fait jamais échouer une connexion | même principe que la règle E4 pour l'email : une trace qui ne peut pas s'écrire dégrade le diagnostic, elle ne doit pas fermer la porte à l'exploitante |
 
 ### Un compte, deux rôles, et pourquoi l'unicité est un index partiel
 

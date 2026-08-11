@@ -48,8 +48,21 @@ PROFIL="src/services/utilisateur.ts"
 VALIDATION="src/lib/validation.ts"
 JOURNAL="src/lib/journal.ts"
 SANTE="src/services/sante.ts"
+HOOK_JOURNAL="src/lib/issue-connexion.ts"
+JOURNAL_CONNEXION="src/services/journal-connexion.ts"
 
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE")
+# TOUT FICHIER MUTE DOIT FIGURER ICI, sans quoi il n'est ni sauvegarde ni
+# restaure et la mutation RESTE SUR LE DISQUE apres l'execution.
+#
+# Ce n'est pas theorique : `$REAUTH` a ete mute par le cas 22 depuis LS-81 sans
+# etre dans cette liste. Chaque execution du script laissait donc
+# `preuveEncoreValable(null)` rendre `true`, c'est-a-dire le defaut de securite
+# que LS-81 avait justement corrige avant sa fusion, reintroduit en silence sur
+# le disque. Trouve pendant LS-80, parce que la suite complete rougissait apres
+# un script annoncant « 27 mutations, 27 detectees ».
+#
+# Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$JOURNAL_CONNEXION")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -92,6 +105,22 @@ restaurer() {
 mute() {
   local fichier="$1" expression="$2"
   local avant
+
+  # UN FICHIER MUTE HORS DE `MUTABLES` NE SERAIT JAMAIS RESTAURE : la mutation
+  # survivrait a l'execution, et un defaut de securite volontairement injecte
+  # resterait dans l'arbre de travail. Le cas s'est produit avec `$REAUTH`.
+  local connu=0
+  local candidat
+  for candidat in "${MUTABLES[@]}"; do
+    [ "$candidat" = "$fichier" ] && connu=1
+  done
+  if [ "$connu" -eq 0 ]; then
+    echo "  ECHEC $fichier est mute mais absent de MUTABLES."
+    echo "        Il ne serait ni sauvegarde ni restaure : la mutation resterait"
+    echo "        sur le disque apres l'execution. L'ajouter a MUTABLES."
+    exit 1
+  fi
+
   avant=$(cksum <"$fichier")
 
   perl -0pi -e "$expression" "$fichier"
@@ -416,6 +445,50 @@ cas "preuve absente consideree comme fraiche" integration \
 mute "$AUTH" 's/export const DUREE_SESSION_SECONDES = 60 \* 60 \* 24;/export const DUREE_SESSION_SECONDES = 60 * 60 * 24 * 7;/'
 cas "duree de session revenue a sept jours" integration \
   "configure une session d'un jour"
+
+echo
+echo "Journal des connexions, LS-80, ADR-027, tests d'integration"
+echo
+
+# Cas 24 : L'ECHEC N'EST PLUS JOURNALISE, critere 9 de LS-80. C'est la mutation
+# que le ticket exige nommement, « retirer l'ecriture d'une des deux issues ».
+#
+# Elle est SILENCIEUSE en exploitation : les connexions reussies continuent de
+# s'inscrire, l'ecran se remplit, rien n'a l'air casse. Seul manquerait ce que
+# le journal existe pour montrer, dix echecs suivis d'une reussite. Un journal
+# ampute de ses echecs ne raconte que la fin de l'histoire.
+mute "$HOOK_JOURNAL" 's/    return \{ issue: "ECHEC", utilisateurId: null, emailConfirme: null \};\n  \}\n\n  const utilisateur/    return { issue: "REUSSITE", utilisateurId: null, emailConfirme: null };\n  }\n\n  const utilisateur/'
+cas "un echec de connexion enregistre comme reussite" integration \
+  "une connexion echouee d'administration produit une ligne ECHEC"
+
+# Cas 25 : LA PURGE NE SUPPRIME PLUS RIEN, seconde mutation exigee par le
+# critere 9. Le `lt` devient `gt` : la fonction rend un nombre, ne leve pas, et
+# supprime les lignes RECENTES en gardant les anciennes. Une purge inversee est
+# pire qu'une purge absente, elle detruit ce qu'on voulait garder tout en
+# conservant au-dela de la duree annoncee au registre des traitements.
+mute "$JOURNAL_CONNEXION" 's/where: \{ creeA: \{ lt: limiteDeConservation\(maintenant\) \} \},/where: { creeA: { gt: limiteDeConservation(maintenant) } },/'
+cas "purge inversee, les vieilles lignes survivent" integration \
+  "supprime les lignes au-dela de six mois et conserve les autres"
+
+# Cas 26 : LA DUREE DE CONSERVATION PASSEE A DOUZE MOIS. Douze reste dans la
+# fourchette de la deliberation CNIL n 2021-122, donc rien ne casse et aucune
+# erreur n'apparait : la boutique conserverait simplement deux fois plus
+# longtemps que ce que son registre des traitements annonce.
+#
+# CE CAS EXISTE PARCE QUE LE TEST DE PURGE NE SUFFIT PAS : il antidate a partir
+# de la limite calculee, donc il suit la constante quelle qu'elle soit et reste
+# vert sur cette mutation. C'est le test qui ancre la valeur qui doit rougir.
+mute "$JOURNAL_CONNEXION" 's/export const CONSERVATION_JOURNAL_MOIS = 6;/export const CONSERVATION_JOURNAL_MOIS = 12;/'
+cas "duree de conservation portee a douze mois" integration \
+  "la duree de conservation retenue est de six mois"
+
+# Cas 27 : L'ECRITURE DU JOURNAL REDEVIENT BLOQUANTE, regle E15 et critere 5.
+# Le `catch` disparait : une base en souffrance ferme alors la porte a
+# l'exploitante au pire moment, celui ou elle a besoin d'entrer. Le defaut est
+# invisible tant que la base va bien, donc invisible en developpement.
+mute "$JOURNAL_CONNEXION" 's/  \} catch \(erreur\) \{/  } catch (erreur) {\n    throw erreur;/'
+cas "echec d'ecriture du journal rendu bloquant" integration \
+  "une connexion aboutit meme si le journal ne peut pas s'ecrire"
 
 echo
 echo "-----------------------------------------"

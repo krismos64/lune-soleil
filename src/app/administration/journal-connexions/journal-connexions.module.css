@@ -1,0 +1,139 @@
+/*
+ * Journal des connexions, LS-80. Toutes les couleurs viennent des jetons
+ * d'ADR-022, aucune valeur hexadecimale ici.
+ *
+ * MOBILE FIRST, invariant 10 : la mise en forme de base est celle de 320 px,
+ * une carte par tentative. Les largeurs superieures ajoutent des colonnes, elles
+ * ne corrigent jamais un debordement.
+ *
+ * POURQUOI DES CARTES ET NON UN TABLEAU. Sept informations par ligne ne tiennent
+ * pas dans 320 px : un tableau y imposerait un defilement horizontal, qui masque
+ * precisement la colonne d'issue, la seule qu'on vient lire. La liste de
+ * definitions garde le couple libelle-valeur lisible a toute largeur, et reste
+ * correcte pour un lecteur d'ecran.
+ */
+
+.journal-connexions {
+  padding: var(--ls-space-4);
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+.introduction {
+  color: var(--ls-text-muted);
+  max-width: 65ch;
+}
+
+.vide {
+  background: var(--ls-surface);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  padding: var(--ls-space-5);
+  color: var(--ls-text-muted);
+}
+
+.liste {
+  list-style: none;
+  margin: var(--ls-space-5) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--ls-space-3);
+}
+
+.tentative {
+  background: var(--ls-surface);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  padding: var(--ls-space-4);
+}
+
+.entete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ls-space-2);
+  justify-content: space-between;
+  margin-bottom: var(--ls-space-3);
+}
+
+/*
+ * Badge d'issue. FOND COLORE ET TEXTE BLANC, jamais du texte colore sur creme.
+ *
+ * `--ls-error` et `--ls-success` en petit texte sur fond clair ne sont pas
+ * garantis a 4,5:1, et ce badge est du petit texte gras, donc pas du « texte
+ * large » au sens WCAG, qui commence a 18,66 px en gras. Le fond plein place le
+ * contraste entre la couleur et le blanc, ou il est mesure.
+ */
+.issue {
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: var(--ls-space-1) var(--ls-space-3);
+  border-radius: var(--ls-radius-sm);
+  color: var(--ls-text-on-primary);
+}
+
+.issue--reussite {
+  background: var(--ls-success);
+}
+
+.issue--echec {
+  background: var(--ls-error);
+}
+
+.date {
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+  /* Chiffres alignes d'une ligne a l'autre, la colonne se balaie du regard. */
+  font-variant-numeric: tabular-nums;
+}
+
+.details {
+  margin: 0;
+  display: grid;
+  gap: var(--ls-space-3);
+}
+
+.champ dt {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ls-text-muted);
+}
+
+.champ dd {
+  margin: 0;
+  /*
+   * Une adresse email ou un agent utilisateur n'a pas d'espace ou couper : sans
+   * cette regle, la carte deborde a 320 px.
+   */
+  overflow-wrap: anywhere;
+}
+
+.absent {
+  color: var(--ls-text-muted);
+  font-style: italic;
+}
+
+/*
+ * A partir de 480 px, les champs courts se rangent en deux colonnes. Le
+ * navigateur, long, garde toute la largeur.
+ */
+@media (min-width: 480px) {
+  .details {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .champ--large {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 768px) {
+  .journal-connexions {
+    padding: var(--ls-space-6);
+  }
+
+  .details {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}

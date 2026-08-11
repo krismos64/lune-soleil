@@ -19,6 +19,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 
 import { envoyeurJournalise, type EnvoyeurEmail } from "@/integrations/email";
+import { hookJournalConnexion } from "@/lib/hook-journal-connexion";
 import {
   LONGUEUR_MAXIMALE_MOT_DE_PASSE,
   LONGUEUR_MINIMALE_MOT_DE_PASSE,
@@ -290,6 +291,23 @@ export function creerAuth(
         "/request-password-reset": { window: 60, max: 3 },
         "/sign-up/email": { window: 60, max: 3 },
       },
+    },
+
+    /**
+     * JOURNAL DES CONNEXIONS, LS-80, ADR-027 decision 2, regle E13.
+     *
+     * Branche en `after` : le hook lit l'issue de la tentative dans la reponse
+     * deja produite, reussite comme echec, et n'en modifie rien. Un hook
+     * `before` ne saurait pas encore si la connexion aboutit.
+     *
+     * IL NE PEUT PAS FAIRE ECHOUER UNE CONNEXION, regle E15 : il ne rend
+     * aucune valeur, donc la reponse part inchangee, et l'ecriture qu'il
+     * declenche avale ses propres erreurs. La logique vit dans
+     * `hook-journal-connexion.ts`, ou elle reste testable sans monter une
+     * instance complete.
+     */
+    hooks: {
+      after: hookJournalConnexion,
     },
 
     emailAndPassword: {
