@@ -95,7 +95,10 @@ export function preuveEncoreValable(
     return false;
   }
 
-  return maintenant.getTime() - reauthentifieeLe.getTime() < FENETRE_REAUTHENTIFICATION_MS;
+  return (
+    maintenant.getTime() - reauthentifieeLe.getTime() <
+    FENETRE_REAUTHENTIFICATION_MS
+  );
 }
 
 /**
