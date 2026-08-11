@@ -210,10 +210,19 @@ Les deux chemins livrés vérifient chacun quelque chose avant d'écrire :
   faux. L'enregistrement est donc inatteignable sans preuve, et rien ne s'exécute
   entre les deux instructions
 - **passkey** : la négociation WebAuthn se termine chez Better Auth, qui crée une
-  session **neuve**. Le serveur ne peut pas la rejouer, il constate sa fraîcheur :
-  fenêtre de dix secondes, et un âge négatif est refusé aussi. Sans cette
-  condition, un appel depuis n'importe quelle session ouverte suffirait à se
-  déclarer réauthentifié
+  session **neuve**. Le serveur ne peut ni la rejouer ni vérifier l'assertion une
+  seconde fois ; il constate qu'une session vient d'être ouverte, fenêtre d'une
+  minute, âge négatif refusé. **Cette condition n'atteste pas le moyen** : une
+  connexion par mot de passe produit une session tout aussi neuve. Ce qu'elle
+  ferme est l'appel depuis une session ouverte de longue date, et les deux
+  chemins accordant la même chose, il n'y a rien à gagner à emprunter celui-ci
+
+**Les deux gardes vont ensemble sur cet écran, et LS-89 a tranché** la question
+que cette règle laissait ouverte : la page **et** les deux Server Actions
+appellent `exigerAdministratrice`. Protéger la page seule laisserait le chemin
+ouvert, une Server Action étant invocable directement. Sans cela, un client
+inscrit sur la boutique fabriquait une preuve d'identité avec son propre mot de
+passe, `verifyPassword` vérifiant contre `session.user.id`.
 
 **Le chemin de la passkey est `/passkey/verify-authentication`**, jamais
 `/sign-in/passkey` qui n'existe pas, voir la section du journal des connexions.

@@ -109,26 +109,37 @@ export async function prouverIdentiteParMotDePasse(
 }
 
 /**
- * Note la preuve apres une authentification par passkey deja verifiee.
+ * Note la preuve apres l'ouverture d'une session neuve, passkey comprise.
  *
  * POURQUOI CETTE FONCTION EXISTE SEPAREMENT. La negociation WebAuthn se fait
  * dans le navigateur et se termine chez Better Auth, qui cree une SESSION
- * NEUVE : le serveur ne peut pas la rejouer. Ce que le projet peut faire, c'est
- * constater qu'une session neuve vient d'etre creee par ce chemin et y noter la
- * preuve.
+ * NEUVE : le serveur ne peut pas la rejouer ni verifier l'assertion une seconde
+ * fois. Ce qu'il peut constater, c'est qu'une session vient d'etre ouverte.
  *
- * ELLE EXIGE UNE SESSION FRAICHE, et c'est ce qui la rend sure. Une session
- * creee il y a plus de quelques secondes n'est pas le resultat de la
- * negociation qui vient d'avoir lieu : la fenetre est etroite, dix secondes,
- * assez pour l'aller-retour reseau, trop court pour qu'une session ancienne
- * s'y glisse.
+ * CE QUE LA CONDITION PROUVE EXACTEMENT, ET CE QU'ELLE NE PROUVE PAS. Elle
+ * atteste que la session a ete creee A L'INSTANT, quel qu'en soit le MOYEN :
+ * une connexion par mot de passe produit une session tout aussi neuve. Le
+ * commentaire precedent affirmait qu'elle constatait la negociation WebAuthn,
+ * ce qui est faux, et un lecteur s'y serait fie pour autoriser ce chemin sur un
+ * compte sans mot de passe. Corrige en relecture.
  *
- * SANS CETTE CONDITION, un appel a ce point d'entree depuis n'importe quelle
- * session ouverte suffirait a se declarer reauthentifie : c'est exactement le
- * trou que le ticket LS-89 signale comme indetectable par un controle
- * automatique, et il se ferme ici par une condition verifiable.
+ * CE QU'ELLE FERME MALGRE TOUT, et c'est ce qui compte : un appel depuis une
+ * session ouverte de longue date. Sans elle, n'importe quelle session
+ * d'administration suffirait a se declarer reauthentifie sans rien prouver du
+ * tout, ce qui est le trou que le ticket signale.
+ *
+ * LES DEUX CHEMINS ACCORDENT LA MEME CHOSE, ce qui borne l'enjeu : quelqu'un
+ * qui peut ouvrir une session neuve peut deja prouver son identite par le
+ * chemin du mot de passe. Il n'y a donc rien a gagner a emprunter celui-ci.
+ *
+ * SOIXANTE SECONDES ET NON DIX, second correctif de la relecture. Better Auth
+ * cree la session AVANT que le navigateur ne rende la main : sur un Mac qui se
+ * reveille ou un lecteur USB a code PIN, la negociation WebAuthn depasse
+ * couramment dix secondes, et l'exploitante recevait alors « Verifiez votre
+ * saisie » alors que sa passkey avait parfaitement fonctionne. Une minute reste
+ * tres en deca des quinze minutes de validite de la preuve.
  */
-export const FENETRE_SESSION_NEUVE_MS = 10_000;
+export const FENETRE_SESSION_NEUVE_MS = 60_000;
 
 export async function prouverIdentiteParPasskey(
   enTetes: Headers,

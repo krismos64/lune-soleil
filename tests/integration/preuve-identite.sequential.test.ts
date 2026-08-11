@@ -23,6 +23,8 @@ let prouverIdentiteParMotDePasse: typeof import("@/services/preuve-identite").pr
 let prouverIdentiteParPasskey: typeof import("@/services/preuve-identite").prouverIdentiteParPasskey;
 let FENETRE_SESSION_NEUVE_MS: typeof import("@/services/preuve-identite").FENETRE_SESSION_NEUVE_MS;
 let exigerReauthentificationRecente: typeof import("@/services/reauthentification").exigerReauthentificationRecente;
+let exigerAdministratrice: typeof import("@/services/autorisation").exigerAdministratrice;
+let AutorisationRefuseeError: typeof import("@/services/autorisation").AutorisationRefuseeError;
 let ReauthentificationRequiseError: typeof import("@/services/reauthentification").ReauthentificationRequiseError;
 
 const EMAIL = "exploitante@exemple.fr";
@@ -47,6 +49,8 @@ beforeAll(async () => {
   } = await import("@/services/preuve-identite"));
   ({ exigerReauthentificationRecente, ReauthentificationRequiseError } =
     await import("@/services/reauthentification"));
+  ({ exigerAdministratrice, AutorisationRefuseeError } =
+    await import("@/services/autorisation"));
 });
 
 afterAll(async () => {
@@ -238,6 +242,74 @@ describe("preuve par passkey, la session doit etre neuve", () => {
   });
 });
 
+describe("garde de role, le defaut grave de la relecture", () => {
+  /**
+   * LE DEFAUT : la page et les deux Server Actions ne filtraient que la
+   * PRESENCE d'une session, jamais le ROLE.
+   *
+   * Un client inscrit sur la boutique, role `CLIENT` par defaut, ouvrait
+   * l'ecran, saisissait SON mot de passe et repartait avec une preuve
+   * d'identite fraiche : `verifyPassword` verifie contre `session.user.id`,
+   * donc il reussissait. La preuve avait ensuite l'air legitime en base.
+   *
+   * POURQUOI CE TEST PORTE SUR `exigerAdministratrice` ET NON SUR L'ACTION.
+   * `headers()` de Next.js leve hors d'un contexte de requete : appeler la
+   * Server Action directement rend `INDISPONIBLE` avant meme d'atteindre la
+   * garde. Le test verifie donc que la garde REFUSE bien un compte CLIENT, et
+   * la relecture repond de sa PRESENCE dans les deux actions, verifiable par
+   * lecture. Les tests de bout en bout couvrent le reste.
+   */
+  it("exigerAdministratrice refuse un compte CLIENT", async () => {
+    const enTetes = await ouvrirSession();
+
+    const { rows } = await client.query(
+      "SELECT role FROM utilisateur WHERE email = $1",
+      [EMAIL],
+    );
+    expect(rows[0].role).toBe("CLIENT");
+
+    await expect(exigerAdministratrice(enTetes)).rejects.toBeInstanceOf(
+      AutorisationRefuseeError,
+    );
+  });
+
+  it("exigerAdministratrice accepte le compte d'administration", async () => {
+    const enTetes = await ouvrirSession();
+
+    // `role` porte `input: false`, regle E11 : la bascule se fait en base,
+    // comme le fera l'amorce reelle du compte d'administration.
+    await client.query(
+      "UPDATE utilisateur SET role = 'ADMINISTRATRICE' WHERE email = $1",
+      [EMAIL],
+    );
+
+    await expect(exigerAdministratrice(enTetes)).resolves.toMatchObject({
+      role: "ADMINISTRATRICE",
+    });
+  });
+
+  /**
+   * LES DEUX ACTIONS APPELLENT LA GARDE, verifie sur le source.
+   *
+   * Meme motif que le test du critere 7 : la propriete porte sur le CODE, et
+   * une lecture du fichier l'exprime sans dependre d'un contexte de requete
+   * que Vitest ne peut pas fournir.
+   */
+  it("les deux Server Actions appellent exigerAdministratrice", async () => {
+    const { readFile } = await import("node:fs/promises");
+
+    const source = await readFile(
+      "src/app/administration/reauthentification/actions.ts",
+      "utf8",
+    );
+
+    // Une par fonction : proteger la page seule laisserait le chemin ouvert,
+    // une Server Action etant invocable directement.
+    const appels = source.match(/await exigerAdministratrice\(/g) ?? [];
+    expect(appels).toHaveLength(2);
+  });
+});
+
 describe("aucun mot de passe ne fuit, invariant 9", () => {
   /**
    * MEME BALAYAGE QUE POUR LE JOURNAL DES CONNEXIONS, et pour la meme raison :
@@ -315,21 +387,43 @@ describe("l'adaptateur d'entree, critere 7", () => {
   });
 
   /**
-   * LE TEST NEGATIF DU CRITERE 7, formule sur le code plutot que sur le
-   * comportement, parce que c'est la seule facon de l'exprimer : le module
-   * d'entree ne doit pas pouvoir ecrire une preuve par lui-meme.
+   * LE TEST NEGATIF DU CRITERE 7, reecrit apres relecture.
+   *
+   * LA PREMIERE VERSION LISTAIT LES EXPORTS de l'adaptateur et exigeait
+   * exactement deux noms. Elle prouvait seulement l'absence d'un TROISIEME
+   * EXPORT, jamais l'absence d'appel : importer `enregistrerPreuveIdentite` et
+   * l'appeler A L'INTERIEUR d'une fonction existante la laissait verte, ce qui
+   * est precisement le geste qui rouvrirait le trou. Un fichier `"use server"`
+   * ne peut de toute facon exporter que des fonctions asynchrones, donc elle
+   * verifiait en partie une contrainte que Next.js impose deja.
+   *
+   * CELLE-CI EXPRIME LA PROPRIETE REELLE, celle qu'enonce la regle de
+   * securite : un SEUL module appelle `enregistrerPreuveIdentite`. Elle balaie
+   * tout `src/` et attrape donc l'ajout d'un second appelant, ou qu'il soit.
    */
-  it("l'adaptateur n'expose aucun chemin vers une preuve non verifiee", async () => {
-    const adaptateur =
-      await import("@/app/administration/reauthentification/actions");
+  it("un seul module de src/ appelle enregistrerPreuveIdentite", async () => {
+    const { execFile } = await import("node:child_process");
+    const { promisify } = await import("node:util");
+    const executer = promisify(execFile);
 
-    // Les seules fonctions exportees sont les deux points d'entree, et
-    // `enregistrerPreuveIdentite` n'en fait pas partie.
-    const exportees = Object.keys(adaptateur).sort();
-
-    expect(exportees).toEqual([
-      "etablirPreuveParMotDePasse",
-      "etablirPreuveParPasskey",
+    // `grep -rl` liste les FICHIERS et non les lignes : un fichier qui appelle
+    // deux fois compte une fois, ce qui est le bon grain pour cette propriete.
+    const { stdout } = await executer("grep", [
+      "-rl",
+      "enregistrerPreuveIdentite(",
+      "src/",
+      "--include=*.ts",
+      "--include=*.tsx",
     ]);
+
+    const appelants = stdout
+      .split("\n")
+      .filter((ligne) => ligne.length > 0)
+      // Le module qui la DEFINIT n'est pas un appelant : sa declaration porte
+      // la meme chaine suivie d'une parenthese. On l'ecarte nommement.
+      .filter((chemin) => chemin !== "src/services/reauthentification.ts")
+      .sort();
+
+    expect(appelants).toEqual(["src/services/preuve-identite.ts"]);
   });
 });
