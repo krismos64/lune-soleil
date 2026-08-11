@@ -70,6 +70,8 @@ while IFS= read -r occurrence; do
   [ -n "$occurrence" ] || continue
 
   fichier="${occurrence%%:*}"
+  reste="${occurrence#*:}"
+  ligne="${reste%%:*}"
   famille=$(printf '%s' "$occurrence" | grep -oE '@sensible[[:space:]]+[A-Z_]+' | awk '{print $2}')
   verifiees=$((verifiees + 1))
 
@@ -89,22 +91,39 @@ while IFS= read -r occurrence; do
     continue
   fi
 
-  # Le point décisif : la garde est-elle APPELÉE dans ce fichier.
+  # Le point décisif : la garde est-elle appelée DANS LA FONCTION MARQUÉE.
   #
-  # LE MOTIF EXIGE LA PARENTHÈSE OUVRANTE, et ce détail est le fruit d'un vrai
-  # faux négatif rencontré en écrivant la preuve par mutation. Un simple
-  # `grep exigerReauthentificationRecente` était satisfait par un commentaire
-  # disant « aucun appel à exigerReauthentificationRecente ici » : le contrôle
-  # trouvait le nom dans la phrase qui affirme son absence, et déclarait
-  # l'action gardée. Même motif que le hook de secrets qui bloquait sa propre
-  # explication.
+  # DEUX FAUX NÉGATIFS CORRIGÉS ICI, tous deux trouvés en exerçant le contrôle
+  # plutôt qu'en le relisant.
   #
-  # Les lignes de commentaire sont écartées d'abord, pour qu'une mention en
-  # prose ne puisse jamais valoir preuve d'appel.
-  if ! grep -v '^\s*\(//\|\*\|/\*\)' "$fichier" \
+  # Le premier : un simple `grep exigerReauthentificationRecente` était
+  # satisfait par un commentaire disant « aucun appel à
+  # exigerReauthentificationRecente ici ». Le contrôle trouvait le nom dans la
+  # phrase qui affirme son absence. D'où l'exclusion des commentaires et
+  # l'exigence de la parenthèse ouvrante.
+  #
+  # Le second, plus grave : chercher dans TOUT LE FICHIER laissait passer un
+  # fichier portant une action gardée et une action non gardée. La seconde
+  # empruntait la preuve de la première. C'est le défaut exact que ce script
+  # existe pour attraper, et le scénario est banal : une fonction ajoutée par
+  # mimétisme trois semaines plus tard, marquée mais non gardée.
+  #
+  # L'extraction part de la ligne de la marque et s'arrête à la première ligne
+  # qui recommence en colonne zéro après le début du corps, ce qui borne la
+  # fonction sans avoir à analyser la syntaxe.
+  corps=$(awk -v debut="$ligne" '
+    NR < debut { next }
+    NR == debut { dans = 1; next }
+    dans && /^[^[:space:]}]/ && vu { exit }
+    dans { vu = 1; print }
+  ' "$fichier")
+
+  if ! printf '%s\n' "$corps" \
+       | grep -v '^\s*\(//\|\*\|/\*\)' \
        | grep -qE 'exigerReauthentificationRecente[[:space:]]*\('; then
-    echo "ECHEC $fichier : action @sensible $famille sans appel à exigerReauthentificationRecente"
+    echo "ECHEC $fichier:$ligne : action @sensible $famille sans appel à exigerReauthentificationRecente"
     echo "      une action sensible non gardée s'exécute sur simple session ouverte"
+    echo "      (l'appel est cherché dans le corps de CETTE fonction, pas ailleurs dans le fichier)"
     ko=$((ko + 1))
     continue
   fi

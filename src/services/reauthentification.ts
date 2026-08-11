@@ -92,7 +92,7 @@ export function preuveEncoreValable(
   maintenant: Date = new Date(),
 ): boolean {
   if (reauthentifieeLe === null) {
-    return true;
+    return false;
   }
 
   return maintenant.getTime() - reauthentifieeLe.getTime() < FENETRE_REAUTHENTIFICATION_MS;
