@@ -168,6 +168,28 @@ production comprise ; ces fichiers servent de source de conception et de contrô
 masquerait une migration incomplète. `db:preparer` compare le compte obtenu à ces
 fichiers et échoue en cas d'écart.
 
+### Tâches planifiées, LS-72
+
+Le conteneur `cron` n'est **pas** lancé par défaut en développement : une tâche
+qui se déclenche toutes les cinq minutes brouille les journaux pour aucun
+bénéfice, les tests d'intégration exerçant le verrou bien mieux.
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.cron.yml up -d cron
+```
+
+Déclencher une tâche à la main, sans attendre l'échéance :
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.cron.yml \
+  run --rm --entrypoint /usr/local/bin/declencher.sh cron liberation-reservations
+```
+
+`CRON_SHARED_SECRET` doit être renseignée dans `.env`, sinon les routes internes
+**refusent tout le monde**, y compris le cron. C'est un défaut fermé assumé : une
+tâche qui ne tourne pas se remarque, une route interne ouverte à tous ne se
+remarque pas.
+
 ### Tests, LS-68
 
 ```bash
@@ -362,14 +384,15 @@ destructives doivent bloquer, une migration additive doit passer, et une
 détection qui ne peut pas conclure doit bloquer plutôt que supposer. Lancé contre
 la version d'avant LS-42, il échoue sur sept de ces dix cas.
 
-`verifier-tests-mutation.sh` casse **trente-et-une fois** le comportement testé
+`verifier-tests-mutation.sh` casse **trente-six fois** le comportement testé
 et exige que la suite rougisse à chaque fois : cinq mutations de la primitive
 SQL de réservation, cinq de l'authentification et de l'autorisation, deux de
 l'interface, trois du socle de validation, quatre de la journalisation et de la
 santé depuis LS-73, deux de la limitation de débit depuis LS-79, deux de la
 session et de la preuve d'identité depuis LS-81, huit du journal des connexions
-depuis LS-80. Il vérifie d'abord que les deux projets de test sont verts, sans
-quoi aucune mutation ne prouverait rien.
+depuis LS-80, cinq du verrou de tâche planifiée depuis LS-72. Il vérifie
+d'abord que les deux projets de test sont verts, sans quoi aucune mutation ne
+prouverait rien.
 
 **Tout fichier muté figure dans `MUTABLES`, et un garde-fou le vérifie.** Un
 fichier absent de cette liste n'est ni sauvegardé ni restauré : la mutation

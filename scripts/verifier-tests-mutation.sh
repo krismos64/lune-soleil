@@ -52,6 +52,9 @@ HOOK_JOURNAL="src/lib/issue-connexion.ts"
 HOOK_JOURNAL_HOOK="src/lib/hook-journal-connexion.ts"
 ROUTE_AUTH="src/app/api/auth/[...all]/route.ts"
 JOURNAL_CONNEXION="src/services/journal-connexion.ts"
+VERROU="src/repositories/verrou.ts"
+TACHE_PLANIFIEE="src/services/tache-planifiee.ts"
+ROUTE_TACHE="src/app/api/interne/taches/[nom]/route.ts"
 
 # TOUT FICHIER MUTE DOIT FIGURER ICI, sans quoi il n'est ni sauvegarde ni
 # restaure et la mutation RESTE SUR LE DISQUE apres l'execution.
@@ -64,7 +67,7 @@ JOURNAL_CONNEXION="src/services/journal-connexion.ts"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -533,6 +536,72 @@ cas "adresse tentee ecrite sans borne ni filtre" integration \
 mute "$JOURNAL_CONNEXION" 's/  if \(!RESSEMBLE_A_UNE_ADRESSE.test\(brut\)\) \{/  if (!brut.includes("@")) {/'
 cas "filtre d'adresse revenu a la seule arobase" integration \
   "un mot de passe contenant une arobase est ecarte lui aussi"
+
+echo
+echo "Verrou de tache planifiee, LS-72, tests d'integration"
+echo
+
+# Cas 32 : LA CONDITION D'EXPIRATION RETIREE DU `ON CONFLICT DO UPDATE`.
+#
+# C'est LA mutation qui compte sur cette story. Sans ce `WHERE`, toute prise de
+# verrou ecrase celui du detenteur en place : la reprise d'un verrou expire
+# continue de marcher, donc ce test-la reste vert, mais le verrou ne protege
+# plus rien. Deux instances liberent alors les reservations expirees en meme
+# temps, et `quantiteReservee` est decrementee deux fois : du stock disparait
+# sans qu'aucune vente ne l'explique.
+mute "$VERROU" 's/    WHERE verrou_tache\.expire_a < now\(\)\n//'
+cas "condition d'expiration retiree de la prise de verrou" integration \
+  "vingt executions simultanees, une seule obtient le verrou"
+
+# Cas 33 : LE RELACHEMENT NE VERIFIE PLUS QUI DETIENT LE VERROU. Une instance
+# en retard, dont le verrou a expire et a ete repris, supprimerait alors le
+# verrou de sa remplacante : celle-ci continuerait a travailler en croyant
+# l'avoir, pendant qu'une troisieme instance le prendrait.
+#
+# LA CONDITION EST NEUTRALISEE PAR UNE COMPARAISON TOUJOURS VRAIE QUI CONSOMME
+# TOUJOURS `$2`, et deux formulations plus simples ont ete essayees et rejetees,
+# chacune pour une raison mesuree pendant LS-72 :
+#
+#   - retirer `AND id = $2` laisse DEUX parametres pour un seul emplacement,
+#     que PostgreSQL refuse en « wrong number of parameters ». Le relachement
+#     leve, l'erreur est avalee par le `catch` du `finally`, et le verrou de la
+#     remplacante survit PAR ACCIDENT : le test visant ce defaut passe au vert
+#     sous mutation, pour une raison etrangere a ce qu'il verifie
+#   - `($2 IS NULL OR true)` echoue en « could not determine data type of
+#     parameter $2 », PostgreSQL ne pouvant pas typer un parametre qui
+#     n'apparait dans aucune comparaison typante
+#
+# `$2::text IS NOT NULL` type le parametre, le consomme, et vaut toujours vrai.
+mute "$VERROU" 's/  WHERE nom = \$1 AND id = \$2/  WHERE nom = \$1 AND \$2::text IS NOT NULL/'
+cas "relachement sans verification du detenteur" integration \
+  "le relachement ne touche pas le verrou d'une autre instance"
+
+# Cas 34 : LE RELACHEMENT DEVIENT CONDITIONNEL AU SUCCES. Le corps du `finally`
+# ne relache plus que si aucune erreur n'est survenue : une tache qui leve
+# garde alors son verrou jusqu'a expiration, et une exception recurrente bloque
+# la tache pour toujours, chaque cycle reprenant le verrou pour re-echouer.
+#
+# La mutation reste du TypeScript valide, sans quoi elle testerait le
+# compilateur et non les tests.
+mute "$TACHE_PLANIFIEE" 's/      const relachees = await relacherVerrou\(prisma, nom, jeton\);/      const relachees = echoue ? 0 : await relacherVerrou(prisma, nom, jeton);/'
+mute "$TACHE_PLANIFIEE" 's/  const jeton = crypto.randomUUID\(\);/  const jeton = crypto.randomUUID();\n  let echoue = false;/'
+mute "$TACHE_PLANIFIEE" 's/    journaliserErreur\("Tache planifiee en echec", erreur, \{ tache: nom \}\);/    echoue = true;\n    journaliserErreur("Tache planifiee en echec", erreur, { tache: nom });/'
+cas "relachement rendu conditionnel au succes" integration \
+  "une tache qui leve relache quand meme son verrou"
+
+# Cas 35 : LA GARDE DE SECRET RETIREE DE LA ROUTE. La fonction gardee reste
+# correcte et ses tests unitaires restent verts : c'est l'APPEL qui disparait,
+# et deux routes internes deviennent publiques. Motif de LS-70.
+mute "$ROUTE_TACHE" 's/  if \(!secretCronValide\(requete.headers\)\) \{/  if (false) {/'
+cas "garde de secret retiree de la route interne" integration \
+  "refuse un appel sans secret, et n'execute rien"
+
+# Cas 36 : LE NOM DE TACHE N'EST PLUS VALIDE CONTRE LA LISTE CONNUE. Un
+# appelant muni du secret creerait un verrou portant le nom de son choix, que
+# rien ne relacherait jamais.
+mute "$ROUTE_TACHE" 's/  if \(!NOMS_TACHES.includes\(nom as NomTache\)\) \{/  if (false) {/'
+cas "nom de tache accepte sans validation" integration \
+  "refuse un nom de tache absent de la table connue"
 
 echo
 echo "-----------------------------------------"

@@ -1,0 +1,15 @@
+# Taches planifiees, LS-72.
+#
+# Les frequences viennent de MODELE-CONCEPTUEL.md : cinq minutes pour la
+# liberation des reservations expirees, un quart d'heure pour la
+# reconciliation des paiements.
+#
+# LA FREQUENCE N'EST PAS LA DUREE DU VERROU. Le verrou dure dix et quinze
+# minutes, soit deux cycles au plus : une instance morte fait donc sauter au
+# maximum deux executions, jamais toutes les suivantes.
+#
+# La sortie de chaque appel part sur la sortie standard du conteneur, donc dans
+# `docker logs`. Aucune redirection vers un fichier : un fichier dans un
+# conteneur se perd au redemarrage et ne se lit pas.
+*/5 * * * * /usr/local/bin/declencher.sh liberation-reservations
+*/15 * * * * /usr/local/bin/declencher.sh reconciliation-paiements

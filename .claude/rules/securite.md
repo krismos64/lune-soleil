@@ -6,6 +6,7 @@ paths:
   - "src/services/reauthentification.ts"
   - "src/services/journal-connexion.ts"
   - "src/app/api/auth/**/*.ts"
+  - "src/app/api/interne/**/*.ts"
 ---
 
 # Socle technique, authentification et secrets
@@ -210,6 +211,36 @@ n'est pas un détail de confort : Better Auth étrangle la prolongation, qui ne 
 déclenche qu'à partir de `expiresAt - expiresIn + updateAge`. Un `updateAge` égal
 à `expiresIn` ne prolongerait qu'à l'instant de l'expiration, déconnectant
 l'exploitante en pleine tâche.
+
+## Routes internes et secret partagé, LS-72
+
+Les routes de tâches planifiées ne sont derrière aucune session : le conteneur
+cron n'a pas de compte. Le seul chose qui distingue un appel légitime d'un appel
+arbitraire est `CRON_SHARED_SECRET`, vérifié côté serveur. **Un appel qui se
+présente comme le cron n'est pas le cron**, invariant 2.
+
+**La comparaison est à temps constant**, `timingSafeEqual`. Un `===` s'arrête au
+premier caractère différent : le temps de réponse dépend du nombre de caractères
+corrects en tête, et un attaquant qui le mesure reconstitue le secret caractère
+par caractère.
+
+**Défaut fermé : secret non configuré vaut refus de tous**, y compris du cron.
+Une tâche qui ne tourne pas se remarque ; une route interne ouverte à tous ne se
+remarque pas. Ne jamais inverser en « pas de secret donc on laisse passer », qui
+marche parfaitement en développement et publie deux routes le jour du
+déploiement.
+
+**Le refus rend 404 et non 401**, sans en-tête `WWW-Authenticate` : une route
+interne ne confirme pas son existence à qui ne prouve rien. Tâche connue et tâche
+inconnue rendent la même réponse, sans quoi le code publierait la liste des
+tâches internes.
+
+**Le nom de tâche vient de l'URL, donc il n'autorise rien** : il n'est accepté
+qu'après validation contre la table `TACHES`. Sans ce filtre, un appelant muni du
+secret créerait un verrou portant le nom de son choix, que rien ne relâcherait.
+
+**Le préfixe `/api/interne/` ne protège rien**, il se lit. C'est le secret qui
+protège.
 
 ## Ce qui ne se change pas sans ADR
 
