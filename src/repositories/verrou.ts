@@ -20,7 +20,26 @@
  */
 import { Prisma } from "@/generated/prisma/client";
 
-/** Client principal ou client transactionnel remis par `$transaction`. */
+/**
+ * Client principal ou client transactionnel remis par `$transaction`.
+ *
+ * APPELER CES FONCTIONS DEPUIS UNE TRANSACTION CHANGE LA FORME DU REFUS, et le
+ * type ci-dessus l'autorise sans le dire. Mesure sur PostgreSQL 18, verrou
+ * expire en place, trois prises concurrentes :
+ *
+ *   READ COMMITTED   -> [ 1 servi, 0, 0 ]        refus = zero ligne
+ *   REPEATABLE READ  -> [ 40001, 40001, 1 ]      refus = erreur de serialisation
+ *   SERIALIZABLE     -> [ 40001, 1, 40001 ]      idem
+ *
+ * Le mode d'echec reste SUR : jamais deux detenteurs, quel que soit le niveau.
+ * Mais au-dela de `READ COMMITTED`, `prendreVerrou` leve au lieu de rendre
+ * `false`, et `executerSousVerrou` traduirait cela en `ECHOUEE`, donc un 500 au
+ * cron a chaque echeance au lieu d'un 200 `IGNOREE`.
+ *
+ * Aucun appelant n'ouvre de transaction aujourd'hui. La phase 3, qui ecrira la
+ * liberation des reservations, devra prendre le verrou AVANT d'ouvrir sa
+ * transaction plutot que dedans.
+ */
 export type ClientBase = Prisma.TransactionClient;
 
 /**
