@@ -211,9 +211,29 @@ mutation "renvoi mort dans docs/REFERENCES.md" "qui n'existe pas"
 # La mutation change le CHIFFRE ANNONCÉ plutôt que le nombre de cas du script :
 # `restaurer` ne remet pas `verifier-tests-mutation.sh`, et le modifier
 # laisserait une suite de tests amputée si le script s'interrompait ici.
+# LA SUBSTITUTION NE FIGE PAS LE CHIFFRE ACTUEL, et c'est ce qui manquait.
+# Elle visait `vingt-et-une fois`, valeur du jour où elle a été écrite : le
+# compte est passé à vingt-trois, vingt-sept, puis trente-six, et la
+# substitution ne trouvait plus rien. Elle ne mutait donc RIEN, et le script
+# concluait « non détecté » sur un contrôle parfaitement voyant, accusant le
+# contrôle à la place de lui-même. Motif déjà rencontré trois fois sur ce dépôt.
+#
+# `\S+ fois` capte n'importe quel chiffre en lettres, et `mute_ou_echoue`
+# vérifie que le fichier a bien changé.
 cp README.md "$TMP/README.md"
-perl -0pi -e 's/casse \*\*vingt-et-une fois\*\*/casse **trois fois**/' README.md
-mutation "compte de mutations de la suite de tests faussé dans README.md" "mutations de la suite de tests"
+avant_readme=$(cksum <README.md)
+perl -0pi -e 's/casse \*\*\S+ fois\*\*/casse **trois fois**/' README.md
+if [ "$(cksum <README.md)" = "$avant_readme" ]; then
+  echo "  ECHEC la mutation du compte de README.md n'a rien modifié."
+  echo "        La formulation « casse **N fois** » a changé : corriger ce"
+  echo "        script, pas le contrôle."
+  cp "$TMP/README.md" README.md
+  # Comptée comme non détectée : le script doit sortir en échec, sans quoi il
+  # annoncerait « toutes détectées » en n'ayant rien mesuré.
+  total=$((total + 1))
+else
+  mutation "compte de mutations de la suite de tests faussé dans README.md" "mutations de la suite de tests"
+fi
 cp "$TMP/README.md" README.md
 
 # 13. Un hook déclaré pointe vers un script absent.

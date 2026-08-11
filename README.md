@@ -256,6 +256,7 @@ Quatorze scripts, dont six de mutation qui prouvent les autres :
 ./scripts/verifier-config-claude-mutation.sh     # prouve le précédent par mutation
 ./scripts/verifier-migration-mutation.sh         # garde-fous de migration, sans base
 ./scripts/verifier-tests-mutation.sh             # prouve la suite de tests, exige Docker
+./scripts/verifier-hook-secrets.sh               # prouve le hook anti-fuite de secrets
 ./scripts/verifier-image-docker.sh               # sécurité de l'image, exige Docker
 ./scripts/verifier-image-docker-mutation.sh      # prouve le précédent par mutation
 ./scripts/verifier-actions-sensibles.sh          # réauthentification des actions sensibles

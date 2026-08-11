@@ -22,13 +22,35 @@
 # chemin se decouvre. Le garde-fou reel reste la regle de conduite : pour
 # diagnostiquer, lister les NOMS de variables sans leur contenu.
 #
+# IL EST UNE COUCHE PARMI D'AUTRES, jamais la seule : les regles `deny` et
+# `hook-block-secret-files.sh` couvrent les acces par nom de fichier.
+#
 # Politique identique a celle des fichiers, decidee le 27 juillet 2026 :
 # l'ecriture dans un `.env` est autorisee, la lecture des valeurs est bloquee.
 
 set -u
 input=$(cat)
 
-commande=$(echo "$input" | jq -r '.tool_input.command // ""' 2>/dev/null)
+# ---------------------------------------------------------------------------
+# DEFAUT FERME SUR L'OUTILLAGE, et c'est le premier correctif d'une revue de
+# securite automatique passee sur ce fichier.
+#
+# La premiere version sortait en 0 quand `jq` etait absent ou quand l'entree
+# etait malformee : un hook de securite qui echoue OUVERT ne protege rien, et
+# son absence de protection serait invisible. Un `jq` manquant est un incident
+# d'environnement, pas une autorisation.
+# ---------------------------------------------------------------------------
+if ! command -v jq >/dev/null 2>&1; then
+  echo "Hook BLOCK: jq est absent, ce hook ne peut pas analyser la commande." >&2
+  echo "Il refuse plutot que de laisser passer sans avoir verifie." >&2
+  exit 2
+fi
+
+commande=$(jq -r '.tool_input.command // empty' <<<"$input" 2>/dev/null)
+
+# Une entree sans commande n'est pas une commande a bloquer : c'est un appel
+# d'un autre type, ou une charge utile inattendue. Sortir en 0 est correct ici,
+# a la difference du cas `jq` absent : il n'y a rien a analyser.
 [ -z "$commande" ] && exit 0
 
 refuser() {
@@ -46,26 +68,53 @@ refuser() {
   exit 2
 }
 
-# `docker compose config` sans `--services`, `--volumes`, `--profiles`,
-# `--images` ni `--quiet` imprime le fichier resolu, donc les valeurs du
+# ---------------------------------------------------------------------------
+# `docker compose config` imprime le fichier resolu, donc les valeurs du
 # `.env`. Les sous-commandes de listage, elles, n'impriment aucune valeur.
-if echo "$commande" | grep -qE '(docker[[:space:]]+compose|docker-compose)([[:space:]]+-[^[:space:]]+|[[:space:]]+-f[[:space:]]+[^[:space:]]+)*[[:space:]]+config'; then
-  if ! echo "$commande" | grep -qE '\-\-(services|volumes|profiles|images|quiet|hash)'; then
+#
+# LA DETECTION PORTE SUR LES DEUX MOTS ET NON SUR LEUR ENCHAINEMENT EXACT.
+# La premiere version exigeait un motif decrivant les options intermediaires,
+# et `docker compose --file X config` passait au travers : `--file` n'y
+# figurait pas, seul `-f` etait prevu. Une allowlist d'options est perdue
+# d'avance, il y en a trop. Chercher `compose` puis `config` dans la meme
+# commande accepte quelques faux positifs, ce qui est le bon sens de l'erreur.
+# ---------------------------------------------------------------------------
+if grep -qE '(docker[[:space:]]+compose|docker-compose)' <<<"$commande" \
+  && grep -qE '(^|[[:space:]])config([[:space:]]|$)' <<<"$commande"; then
+  if ! grep -qE '\-\-(services|volumes|profiles|images|quiet|hash)' <<<"$commande"; then
     refuser "docker compose config resout et imprime les variables du .env"
   fi
 fi
 
 # `printenv`, `env` et `export -p` sans argument deversent tout
 # l'environnement, secrets du processus compris.
-if echo "$commande" | grep -qE '(^|[;&|][[:space:]]*)(printenv|export[[:space:]]+-p)([[:space:]]*$|[[:space:]]*[;&|])'; then
+if grep -qE '(^|[;&|`(][[:space:]]*)(printenv|export[[:space:]]+-p)([[:space:]]*$|[[:space:]]*[;&|)])' <<<"$commande"; then
   refuser "printenv ou export -p imprime tout l'environnement"
 fi
 
 # `env` seul, sans commande a executer derriere. `env VAR=x commande` et
 # `env -u VAR commande` restent autorises : ils POSENT un environnement, ils
-# ne l'impriment pas, et la suite de tests s'en sert.
-if echo "$commande" | grep -qE '(^|[;&|][[:space:]]*)env([[:space:]]*$|[[:space:]]*\|)'; then
+# ne l'impriment pas, et `env -u DATABASE_URL npm run test:unitaire` est la
+# commande qui prouve que la suite unitaire tourne sans base.
+if grep -qE '(^|[;&|`(][[:space:]]*)env([[:space:]]*$|[[:space:]]*[|;&)])' <<<"$commande"; then
   refuser "env sans argument imprime tout l'environnement"
+fi
+
+# ---------------------------------------------------------------------------
+# Lecture directe d'un fichier d'environnement par une commande d'affichage.
+#
+# Les regles `deny` de settings.json couvrent deja ce cas, et ce hook le
+# double volontairement : une regle `deny` porte sur un chemin, elle ne voit
+# pas `cat ../autre-projet/.env` ni une redirection. Deux couches valent mieux
+# qu'une sur un depot public.
+#
+# `.env.example`, `.env.sample` et `.env.template` sont exclus : ils ne
+# portent que des noms et des formats, et la story a besoin de les lire.
+# ---------------------------------------------------------------------------
+if grep -qE '(^|[;&|`(][[:space:]]*)(cat|less|more|head|tail|bat|xxd|od|strings|source|\.)[[:space:]]+[^;&|]*\.env([[:space:]]|$|[;&|])' <<<"$commande"; then
+  if ! grep -qE '\.env\.(example|sample|template)' <<<"$commande"; then
+    refuser "lecture directe d'un fichier d'environnement"
+  fi
 fi
 
 exit 0
