@@ -55,6 +55,8 @@ JOURNAL_CONNEXION="src/services/journal-connexion.ts"
 VERROU="src/repositories/verrou.ts"
 TACHE_PLANIFIEE="src/services/tache-planifiee.ts"
 ROUTE_TACHE="src/app/api/interne/taches/[nom]/route.ts"
+PREUVE="src/services/preuve-identite.ts"
+ACTION_REAUTH="src/app/administration/reauthentification/actions.ts"
 
 # TOUT FICHIER MUTE DOIT FIGURER ICI, sans quoi il n'est ni sauvegarde ni
 # restaure et la mutation RESTE SUR LE DISQUE apres l'execution.
@@ -67,7 +69,7 @@ ROUTE_TACHE="src/app/api/interne/taches/[nom]/route.ts"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -602,6 +604,36 @@ cas "garde de secret retiree de la route interne" integration \
 mute "$ROUTE_TACHE" 's/  if \(!NOMS_TACHES.includes\(nom as NomTache\)\) \{/  if (false) {/'
 cas "nom de tache accepte sans validation" integration \
   "refuse un nom de tache absent de la table connue"
+
+echo
+echo "Preuve d'identite, LS-89, ADR-027, tests d'integration"
+echo
+
+# Cas 37 : LA PREUVE S'ECRIT SANS QUE LE MOT DE PASSE SOIT VERIFIE.
+#
+# C'est LE defaut que le ticket LS-89 signale comme indetectable par un
+# controle automatique : `enregistrerPreuveIdentite` ne verifie rien, et un
+# appelant qui l'invoque sans avoir valide se declare reauthentifie tout seul.
+# La mutation retire le `throw` du chemin de refus : la fonction continue alors
+# jusqu'a l'enregistrement, et un mot de passe faux ouvre la garde.
+mute "$PREUVE" 's/      return \{ etat: "REFUSEE" \};\n    \}\n\n    throw erreur;/      \/\/ mutation\n    }\n\n    throw erreur;/'
+cas "mot de passe faux n'empeche plus l'ecriture de la preuve" integration \
+  "un mot de passe faux n'ecrit aucune preuve"
+
+# Cas 38 : LA CONDITION DE SESSION NEUVE RETIREE DU CHEMIN PASSKEY. Un appel a
+# ce point d'entree depuis n'importe quelle session ouverte suffirait alors a
+# se declarer reauthentifie sans avoir rien prouve : la negociation WebAuthn se
+# terminant chez Better Auth, la fraicheur de la session est le seul signal
+# verifiable cote serveur.
+mute "$PREUVE" 's/  if \(age > FENETRE_SESSION_NEUVE_MS \|\| age < 0\) \{/  if (false) {/'
+cas "condition de session neuve retiree du chemin passkey" integration \
+  "une session ancienne est refusee, aucune preuve n'est ecrite"
+
+# Cas 39 : LA BORNE SUR L'ENTREE RETIREE DE L'ADAPTATEUR. Une valeur qui n'est
+# pas une chaine, ou une chaine demesuree, partirait alors au hachage.
+mute "$ACTION_REAUTH" 's/    typeof motDePasse !== "string" \|\|\n    motDePasse.length === 0 \|\|\n    motDePasse.length > LONGUEUR_MAXIMALE/    false/'
+cas "borne d'entree retiree de l'adaptateur" integration \
+  "une entree qui n'est pas une chaine est refusee sans rien ecrire"
 
 echo
 echo "-----------------------------------------"

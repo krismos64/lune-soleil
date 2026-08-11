@@ -199,6 +199,25 @@ par défaut, une session qui n'a rien prouvé n'ouvrant aucune action sensible.
 L'appeler sans vérification préalable revient à se déclarer réauthentifié
 soi-même, et aucun contrôle automatique ne détecte cela.
 
+**Depuis LS-89, un seul module l'appelle** : `services/preuve-identite.ts`. C'est
+ce qui rend la relecture humaine tenable, il n'y a qu'un endroit à relire. Ne pas
+l'appeler ailleurs ; une nouvelle façon de prouver son identité s'ajoute dans ce
+module, à côté des deux existantes.
+
+Les deux chemins livrés vérifient chacun quelque chose avant d'écrire :
+
+- **mot de passe** : `auth.api.verifyPassword`, qui lève sur un mot de passe
+  faux. L'enregistrement est donc inatteignable sans preuve, et rien ne s'exécute
+  entre les deux instructions
+- **passkey** : la négociation WebAuthn se termine chez Better Auth, qui crée une
+  session **neuve**. Le serveur ne peut pas la rejouer, il constate sa fraîcheur :
+  fenêtre de dix secondes, et un âge négatif est refusé aussi. Sans cette
+  condition, un appel depuis n'importe quelle session ouverte suffirait à se
+  déclarer réauthentifié
+
+**Le chemin de la passkey est `/passkey/verify-authentication`**, jamais
+`/sign-in/passkey` qui n'existe pas, voir la section du journal des connexions.
+
 **Les deux gardes vont ensemble, et rien ne le vérifie.**
 `exigerReauthentificationRecente` répond à « l'identité est-elle récente »,
 `exigerAdministratrice` à « qui agit ». Une action d'administration qui n'appelle
