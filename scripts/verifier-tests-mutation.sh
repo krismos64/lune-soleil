@@ -522,6 +522,18 @@ mute "$JOURNAL_CONNEXION" 's/        emailTente: normaliserEmailTente\(tentative
 cas "adresse tentee ecrite sans borne ni filtre" integration \
   "une saisie qui n'est pas une adresse n'est jamais ecrite telle quelle"
 
+# Cas 31 : LE FILTRE D'ADRESSE REVENU A LA SEULE PRESENCE D'UNE AROBASE.
+#
+# C'est la version qui a passe la premiere relecture et qui laissait fuiter :
+# `@` est l'un des caracteres speciaux les plus choisis quand une politique de
+# mot de passe en exige un, donc `P@ssw0rd!2026` traversait intact et
+# finissait en clair en base, sur un depot public. Le test du critere 2 etait
+# vert parce que sa constante n'avait pas d'arobase, donc tombait du bon cote
+# du filtre : il validait un filtre qu'il ne traversait pas.
+mute "$JOURNAL_CONNEXION" 's/  if \(!RESSEMBLE_A_UNE_ADRESSE.test\(brut\)\) \{/  if (!brut.includes("@")) {/'
+cas "filtre d'adresse revenu a la seule arobase" integration \
+  "un mot de passe contenant une arobase est ecarte lui aussi"
+
 echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then

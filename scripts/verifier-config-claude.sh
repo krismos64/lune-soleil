@@ -328,16 +328,30 @@ chiffre_en_lettres() {
     vingt-trois) echo 23 ;; vingt-quatre) echo 24 ;; vingt-cinq) echo 25 ;;
     vingt-six) echo 26 ;; vingt-sept) echo 27 ;; vingt-huit) echo 28 ;;
     vingt-neuf) echo 29 ;; trente) echo 30 ;;
+    trente-et-une) echo 31 ;; trente-et-un) echo 31 ;;
+    trente-deux) echo 32 ;; trente-trois) echo 33 ;;
+    trente-quatre) echo 34 ;; trente-cinq) echo 35 ;;
+    trente-six) echo 36 ;; trente-sept) echo 37 ;;
+    trente-huit) echo 38 ;; trente-neuf) echo 39 ;;
+    quarante) echo 40 ;;
     *) echo "" ;;
   esac
 }
 
+# LA TABLE MONTE À QUARANTE, étendue en LS-80. Elle s'arrêtait à trente, et le
+# seuil a été franchi le jour même où le script de mutation est passé à
+# trente-et-un cas : `trente-et-une` n'était pas reconnu, l'alternance retenait
+# `une` seul, et le contrôle annonçait « README.md annonce 1 mutations ». Le
+# message était juste dans son intention et faux dans son chiffre, ce qui est le
+# genre d'écart qui fait suspecter le document plutôt que l'outil. Même motif que
+# l'extension de dix à trente, décrite plus bas.
+#
 # L'ALTERNANCE EST ORDONNÉE DU PLUS LONG AU PLUS COURT, et cet ordre est
 # porteur. `grep -oE` retient la première alternative qui correspond : avec
 # « dix » avant « dix-sept », « dix-sept mutations » rendait « dix », soit 10 au
 # lieu de 17. Le contrôle aurait alors signalé un écart imaginaire, ce qui use
 # la confiance aussi sûrement qu'un silence.
-NOMBRES_EN_LETTRES='vingt-et-une|vingt-et-un|vingt-quatre|vingt-trois|vingt-cinq|vingt-deux|vingt-sept|vingt-huit|vingt-neuf|vingt-six|dix-sept|dix-huit|dix-neuf|quatorze|quinze|seize|treize|douze|trente|vingt|onze|dix|neuf|huit|sept|cinq|deux|trois|quatre|six|une|un'
+NOMBRES_EN_LETTRES='trente-et-une|trente-et-un|trente-quatre|trente-trois|trente-cinq|trente-deux|trente-sept|trente-huit|trente-neuf|trente-six|vingt-et-une|vingt-et-un|vingt-quatre|vingt-trois|vingt-cinq|vingt-deux|vingt-sept|vingt-huit|vingt-neuf|vingt-six|quarante|dix-sept|dix-huit|dix-neuf|quatorze|quinze|seize|treize|douze|trente|vingt|onze|dix|neuf|huit|sept|cinq|deux|trois|quatre|six|une|un'
 
 # Cherche « <chiffre en lettres> <nom> » dans un texte aplati et rend le nombre.
 #
