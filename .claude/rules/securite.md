@@ -2,6 +2,8 @@
 paths:
   - "src/lib/**/*.ts"
   - "src/integrations/email/**/*.ts"
+  - "src/services/autorisation.ts"
+  - "src/services/reauthentification.ts"
 ---
 
 # Socle technique, authentification et secrets
@@ -135,6 +137,36 @@ import { prisma } from "@/lib/prisma";
 `vi.resetModules()` ne vide pas ce cache, porté par `globalThis` : un test qui
 compte sur un module neuf obtient l'ancienne instance et peut passer pour la
 mauvaise raison.
+
+## Réauthentification avant action sensible
+
+Une session ouverte prouve qu'on s'est connecté un jour, pas que la personne
+devant l'écran est l'exploitante maintenant. Quatre familles d'actions, ADR-027
+décision 3, exigent une preuve d'identité récente : `IDENTIFIANTS`,
+`DONNEES_CLIENTS`, `REMBOURSEMENT`, `PARAMETRES_BOUTIQUE`.
+
+**Toute action de ces familles porte la marque `@sensible FAMILLE` et appelle
+`exigerReauthentificationRecente`.** `scripts/verifier-actions-sensibles.sh` le
+vérifie dans les deux sens et échoue sinon. Ne pas contourner la marque : c'est
+elle qui rend la liste mesurable plutôt qu'opinion.
+
+**Ne pas employer `freshAge` de Better Auth pour cela.** Son middleware compare
+`session.createdAt` et jamais `updatedAt`, vérifié via Context7 : seule une
+reconnexion complète y remet le compteur à zéro. Une exploitante connectée depuis
+vingt-cinq heures serait bloquée sans qu'aucun geste ne la débloque. Le projet
+porte son propre horodatage, `Session.reauthentifieeLe`, nullable et sans valeur
+par défaut, une session qui n'a rien prouvé n'ouvrant aucune action sensible.
+
+**`enregistrerPreuveIdentite` ne vérifie rien**, elle enregistre un fait déjà
+établi. Son appelant doit avoir validé la passkey ou le mot de passe juste avant.
+L'appeler sans vérification préalable revient à se déclarer réauthentifié
+soi-même, et aucun contrôle automatique ne détecte cela.
+
+**La durée de session est d'un jour, `updateAge` d'une heure.** Ce second nombre
+n'est pas un détail de confort : Better Auth étrangle la prolongation, qui ne se
+déclenche qu'à partir de `expiresAt - expiresIn + updateAge`. Un `updateAge` égal
+à `expiresIn` ne prolongerait qu'à l'instant de l'expiration, déconnectant
+l'exploitante en pleine tâche.
 
 ## Ce qui ne se change pas sans ADR
 

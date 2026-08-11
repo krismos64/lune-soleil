@@ -1,0 +1,18 @@
+# Familles d'actions sensibles declarees dans `FamilleActionSensible` dont
+# aucune action n'existe encore dans le depot. LS-81, ADR-027 decision 3.
+#
+# CE FICHIER EST UNE DETTE, PAS UNE EXEMPTION. Chaque ligne dit « cette famille
+# n'est protegee par rien aujourd'hui parce que rien n'existe a proteger ».
+# Le jour ou la premiere action d'une famille s'ecrit, sa ligne part d'ici : le
+# controle echoue alors si l'action n'appelle pas la garde.
+#
+# Le controle refuse aussi une ligne perimee, c'est-a-dire une famille listee
+# ici alors qu'une action la couvre : sans ce second sens, ce fichier
+# deviendrait une decharge qui exempte a vie.
+#
+# Forme : NOM_DE_FAMILLE  puis la raison et le ticket qui la retirera.
+
+IDENTIFIANTS        aucun ecran de changement de mot de passe ni de passkey, LS-89
+DONNEES_CLIENTS     aucun export ni consultation en masse, LS-89
+REMBOURSEMENT       Stripe n'est pas branche avant la phase 4, LS-89 puis phase 4
+PARAMETRES_BOUTIQUE aucun ecran de parametres, LS-89

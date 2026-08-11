@@ -816,6 +816,20 @@ model Session {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
+  /// Derniere preuve d'identite fournie sur cette session, LS-81, ADR-027.
+  ///
+  /// POURQUOI UN CHAMP DU PROJET plutot que le `freshAge` de Better Auth : ce
+  /// dernier compare `createdAt`, jamais `updatedAt`. Seule une reconnexion
+  /// complete y remet le compteur a zero, donc une exploitante connectee
+  /// depuis vingt-cinq heures serait bloquee sans aucun geste pour se
+  /// debloquer. Ce champ porte au contraire un fait dont la date se rafraichit
+  /// : « l'identite a ete prouvee a cet instant ».
+  ///
+  /// NULLABLE, ET C'EST LE DEFAUT FERME. Une session dont ce champ est nul
+  /// n'est jamais fraiche, elle n'a donc acces a aucune action sensible. Les
+  /// sessions deja ouvertes au moment de la migration arrivent dans cet etat.
+  reauthentifieeLe DateTime? @map("reauthentifiee_le") @db.Timestamptz(3)
+
   // Cascade : une session est un jeton de connexion, elle n'a aucune valeur
   // sans son compte. À la différence de Commande.utilisateurId, en SET NULL,
   // une commande devant survivre à la suppression du compte.

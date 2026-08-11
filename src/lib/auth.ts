@@ -65,6 +65,22 @@ import { prisma } from "@/lib/prisma";
  * `rpID` de la passkey et les origines de confiance, ce qui casse bruyamment
  * et se voit ; elle ne peut plus degrader le cookie en silence.
  */
+/**
+ * Duree de validite d'une session, LS-81, ADR-027 decision 3.
+ *
+ * EXPORTEE POUR QUE LES TESTS S'Y ANCRENT plutot que de recopier 86400. Un
+ * nombre recopie dans un test continue de passer le jour ou la configuration
+ * change, et le test cesse alors de verifier la valeur configuree.
+ */
+export const DUREE_SESSION_SECONDES = 60 * 60 * 24;
+
+/**
+ * Intervalle au-dela duquel l'usage prolonge la session. Voir le commentaire
+ * de `updateAge` plus bas, qui explique pourquoi il doit rester nettement
+ * inferieur a `DUREE_SESSION_SECONDES`.
+ */
+export const DUREE_PROLONGATION_SESSION_SECONDES = 60 * 60;
+
 const urlBaseConfiguree = process.env.BETTER_AUTH_URL;
 const enProduction = process.env.NODE_ENV === "production";
 
@@ -204,7 +220,37 @@ export function creerAuth(
       },
     },
 
-    session: { modelName: "Session" },
+    session: {
+      modelName: "Session",
+
+      /**
+       * DUREE DE SESSION : UN JOUR, LS-81, ADR-027 decision 3. Elle valait
+       * sept jours, le defaut de Better Auth.
+       *
+       * Sept jours donnaient a un appareil vole une semaine d'acces aux
+       * donnees personnelles de tous les clients. Descendre a quelques heures
+       * a ete ecarte : plusieurs saisies quotidiennes du mot de passe de seize
+       * caracteres sur un appareil sans passkey poussent a le raccourcir ou a
+       * l'ecrire, et une mesure de securite qu'on subit finit contournee.
+       */
+      expiresIn: DUREE_SESSION_SECONDES,
+
+      /**
+       * `updateAge` COURT, ET C'EST LE POINT QUI SE RATE.
+       *
+       * Better Auth n'etend pas l'expiration a chaque requete, il l'etrangle.
+       * La prolongation ne se declenche que lorsque
+       * `expiresAt - expiresIn + updateAge <= maintenant`, verifie via Context7
+       * sur le code de la route `/get-session`.
+       *
+       * Laisser le defaut d'un jour avec un `expiresIn` d'un jour rendrait donc
+       * la prolongation possible seulement a l'instant meme de l'expiration :
+       * l'exploitante serait deconnectee en pleine tache, ce que le critere 2
+       * interdit. Une heure laisse vingt-trois heures de marge, au prix d'une
+       * ecriture par heure de travail au plus.
+       */
+      updateAge: DUREE_PROLONGATION_SESSION_SECONDES,
+    },
     account: { modelName: "Compte" },
     verification: { modelName: "Verification" },
 

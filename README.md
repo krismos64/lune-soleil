@@ -223,7 +223,7 @@ vérification d'adresse reste désactivée.
 
 ### Scripts de vérification
 
-Douze scripts, dont cinq de mutation qui prouvent les autres :
+Quatorze scripts, dont six de mutation qui prouvent les autres :
 
 ```bash
 ./prisma/sql-manuel/verifier-schema.sh           # schéma sur base réelle, exige Docker
@@ -235,6 +235,8 @@ Douze scripts, dont cinq de mutation qui prouvent les autres :
 ./scripts/verifier-tests-mutation.sh             # prouve la suite de tests, exige Docker
 ./scripts/verifier-image-docker.sh               # sécurité de l'image, exige Docker
 ./scripts/verifier-image-docker-mutation.sh      # prouve le précédent par mutation
+./scripts/verifier-actions-sensibles.sh          # réauthentification des actions sensibles
+./scripts/verifier-actions-sensibles-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-jira.sh                       # epics et dépendances du backlog, local
 ./scripts/controle-fumee.sh                      # santé du service déployé, LS-73
 ./docs/prototypes/interblocage-panier.sh         # interblocage sur panier, exige Docker
