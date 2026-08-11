@@ -4,6 +4,8 @@ paths:
   - "src/integrations/email/**/*.ts"
   - "src/services/autorisation.ts"
   - "src/services/reauthentification.ts"
+  - "src/services/journal-connexion.ts"
+  - "src/app/api/auth/**/*.ts"
 ---
 
 # Socle technique, authentification et secrets
@@ -102,10 +104,44 @@ Le contexte n'accepte ni `unknown` ni objet imbriqué, volontairement : une form
 libre laisserait passer `{ client: utilisateur }` d'un geste, et l'objet entier
 partirait sérialisé avec son adresse.
 
-**Ce module n'est pas un journal métier.** `JournalAudit`, `JournalEmail` et le
-journal de connexions d'ADR-027 sont persistés, conservés six mois et opposables.
-Celui-ci vit en sortie standard et se perd au redémarrage du conteneur : y écrire
-une trace métier la ferait disparaître.
+**Ce module n'est pas un journal métier.** `JournalAudit`, `JournalEmail` et
+`JournalConnexion` sont persistés, conservés six mois et opposables. Celui-ci vit
+en sortie standard et se perd au redémarrage du conteneur : y écrire une trace
+métier la ferait disparaître.
+
+## Journal des connexions, LS-80
+
+`services/journal-connexion.ts` écrit une ligne par tentative, réussie comme
+échouée, sur les comptes d'administration comme clients, règle E13. Cinq points
+se perdent facilement, et chacun a été franchi une fois.
+
+**Aucun mot de passe n'entre dans cette table, par aucun champ.** Le hook ne lit
+jamais `ctx.body.password`, que Better Auth expose pourtant en clair. Le champ
+`emailTente` est l'autre porte : une saisie sans arobase y est remplacée par un
+marqueur, parce qu'un mot de passe collé dans le mauvais champ y arrivait sinon
+en clair. Invariant 9, critère 2 de LS-80.
+
+**L'écriture ne fait jamais échouer une connexion**, règle E15.
+`enregistrerTentativeConnexion` avale ses erreurs et les envoie au journal
+technique. Ne pas « améliorer » cela en propageant l'exception : une base en
+souffrance fermerait la porte à l'exploitante au pire moment.
+
+**Le chemin de la passkey est `/passkey/verify-authentication`**, jamais
+`/sign-in/passkey`, qui n'existe pas. Le nom évident est faux, et l'erreur est
+silencieuse : le hook sort sans rien écrire, sur le moyen de connexion principal
+de l'administration.
+
+**Une tentative refusée par la limitation de débit n'atteint aucun hook.** Better
+Auth rend le 429 dans `onRequest` et `better-call` sort alors sans appeler
+l'endpoint, les hooks `after`, ni `onResponse`. Ces lignes sont écrites depuis
+l'adaptateur de route `api/auth/[...all]`, seul endroit en aval qui les voit, avec
+l'issue `REFUSEE_LIMITATION`. Le volume refusé est le signal d'une attaque, pas du
+bruit.
+
+**Six mois de conservation, délibération CNIL n° 2021-122 du 14 octobre 2021
+point 8**, règle E14. La purge existe avec la table. `limiteDeConservation` borne
+le quantième à la main : `setUTCMonth` seul déborde, le 31 août moins six mois
+donnant le 3 mars, ce qui supprimait des lignes trop tôt.
 
 ## Email, l'échec ne s'absorbe pas ici
 

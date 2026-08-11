@@ -38,8 +38,15 @@ let moyenDepuisUrl: typeof import("@/lib/hook-journal-connexion").moyenDepuisUrl
  * base. Un mot de passe banal comme « motdepasse » ne prouverait rien : il
  * pourrait apparaitre par coincidence, ou etre absent sans qu'on sache si
  * c'est parce qu'il n'est pas ecrit ou parce qu'il ressemble a autre chose.
+ *
+ * ELLE PORTE UNE AROBASE, ET CE DETAIL EST LE TEST. La version precedente,
+ * `zorglub-cassiopee-1789-xyz`, etait verte parce qu'elle tombait du bon cote
+ * du filtre : `normaliserEmailTente` ne rejetait alors que les chaines SANS
+ * arobase, et un mot de passe qui en contient une, cas frequent puisque les
+ * politiques poussent au caractere special, passait en clair. Le test validait
+ * un filtre qu'il ne traversait pas. Trouve en relecture de LS-80.
  */
-const MOT_DE_PASSE_RECONNAISSABLE = "zorglub-cassiopee-1789-xyz";
+const MOT_DE_PASSE_RECONNAISSABLE = "zorglub@cassiopee-1789";
 const EMAIL_ADMIN = "administratrice@exemple.fr";
 const EMAIL_CLIENT = "client@exemple.fr";
 
@@ -558,6 +565,56 @@ describe("bornes sur l'adresse tentee, invariant 9", () => {
    * la chaine. Sur un depot public avec une base sauvegardee, la table
    * deviendrait une liste de chaines dont certaines sont des mots de passe.
    */
+  /**
+   * LES MOTS DE PASSE QUI RESSEMBLENT A UNE ADRESSE, cas trouve en relecture.
+   *
+   * Le premier filtre ne testait que la presence d'une arobase, et `@` est
+   * l'un des caracteres speciaux les plus choisis quand une politique en
+   * exige un. Ces trois chaines traversaient donc intactes et finissaient en
+   * clair en base, sur un depot public.
+   */
+  it("un mot de passe contenant une arobase est ecarte lui aussi", async () => {
+    const motsDePasse = ["P@ssw0rd!2026", "Tr0ub4dor&3@x", "Motdepasse@2026"];
+
+    for (const [index, motDePasse] of motsDePasse.entries()) {
+      await enregistrerTentativeConnexion({
+        emailTente: motDePasse,
+        utilisateurId: null,
+        moyen: "MOT_DE_PASSE",
+        issue: "ECHEC",
+        adresseIp: null,
+        agentUtilisateur: `essai-${index}`,
+      });
+    }
+
+    const lignes = await lignesJournal();
+    expect(lignes).toHaveLength(motsDePasse.length);
+
+    for (const ligne of lignes) {
+      expect(ligne.email_tente).toBe("(adresse invalide)");
+    }
+  });
+
+  /**
+   * LE REVERS DU DURCISSEMENT : une vraie adresse doit continuer de passer,
+   * sans quoi le journal ne dirait plus rien d'un balayage.
+   */
+  it("une adresse ordinaire traverse le filtre intacte", async () => {
+    await enregistrerTentativeConnexion({
+      emailTente: "prenom.nom+etiquette@sous.domaine.example.fr",
+      utilisateurId: null,
+      moyen: "MOT_DE_PASSE",
+      issue: "ECHEC",
+      adresseIp: null,
+      agentUtilisateur: null,
+    });
+
+    const lignes = await lignesJournal();
+    expect(lignes[0].email_tente).toBe(
+      "prenom.nom+etiquette@sous.domaine.example.fr",
+    );
+  });
+
   it("une saisie qui n'est pas une adresse n'est jamais ecrite telle quelle", async () => {
     await enregistrerTentativeConnexion({
       emailTente: MOT_DE_PASSE_RECONNAISSABLE,

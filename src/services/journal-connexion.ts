@@ -150,6 +150,28 @@ const MARQUEURS: ReadonlySet<string> = new Set([
  * produit. Seul le cas « ce n'est manifestement pas une adresse » est ecarte,
  * parce que c'est celui ou un mot de passe peut se trouver.
  */
+/**
+ * Ce a quoi une adresse plausible ressemble, grossierement.
+ *
+ * TROIS CONDITIONS : une partie locale non vide, une arobase unique, un point
+ * apres elle, aucune espace nulle part.
+ *
+ * POURQUOI PAS LA SEULE PRESENCE D'UNE AROBASE, qui etait la premiere version.
+ * Les politiques de mot de passe poussent au caractere special, et `@` est
+ * l'un des plus choisis : `P@ssw0rd!2026` et `Tr0ub4dor&3@x` traversaient le
+ * filtre et finissaient en clair en base. Mesure en relecture de LS-80, sur la
+ * vraie route. Le point exige apres l'arobase les ecarte tous les deux.
+ *
+ * CE QUE CE DURCISSEMENT COUTE : une adresse malformee mais credible,
+ * `bob@exemple` sans domaine de premier niveau, devient elle aussi un
+ * marqueur. C'est accepte, l'adresse IP et l'issue restant ecrites : la
+ * relecture garde de quoi reconnaitre un balayage.
+ *
+ * CE N'EST PAS UNE VALIDATION D'ADRESSE et ne doit pas le devenir. Le but
+ * n'est pas de juger la saisie, c'est d'eviter qu'un secret y passe.
+ */
+const RESSEMBLE_A_UNE_ADRESSE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export function normaliserEmailTente(brut: string): string {
   // LES MARQUEURS DU MODULE TRAVERSENT SANS ETRE REECRITS. Aucun ne porte
   // d'arobase, donc la regle ci-dessous les remplacerait tous par
@@ -161,7 +183,10 @@ export function normaliserEmailTente(brut: string): string {
     return brut;
   }
 
-  if (!brut.includes("@")) {
+  // LA TRONCATURE VIENT APRES LE TEST, ET L'ORDRE COMPTE : une chaine
+  // demesuree tronquee a 254 pourrait se mettre a ressembler a une adresse
+  // alors que l'originale n'en etait pas une.
+  if (!RESSEMBLE_A_UNE_ADRESSE.test(brut)) {
     return ADRESSE_INVALIDE;
   }
 

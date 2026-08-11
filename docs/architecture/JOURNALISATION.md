@@ -15,13 +15,21 @@ portent le même mot.
 |---|---|---|---|
 | **technique** | sortie standard | perdu au redémarrage, aucune valeur probante | `lib/journal.ts` |
 | **métier** | base, tables `JournalAudit` et `JournalEmail` | conservé, opposable | les services |
-| **connexions** | base, ADR-027 | conservé six mois, exigence CNIL | LS-80, à écrire |
+| **connexions** | base, table `JournalConnexion`, ADR-027 | conservé six mois, recommandation CNIL | `services/journal-connexion.ts`, LS-80 |
 
 Une trace métier écrite dans le journal technique disparaît au premier
 redémarrage du conteneur. Une trace technique écrite en base fait grossir la
 base sans rien apporter.
 
-Ce document ne traite que du premier.
+Ce document ne traite que du premier. Le journal des connexions a ses propres
+règles dans `.claude/rules/securite.md` : ce qu'il n'écrit jamais, pourquoi son
+écriture ne lève pas, et les deux chemins d'entrée qui l'alimentent.
+
+**Les deux se croisent sur un point.** Quand l'écriture du journal des connexions
+échoue, l'échec part dans le journal technique, en `error`. C'est voulu : un
+`catch` vide rendrait une panne d'écriture indétectable, ce qui reviendrait à
+n'avoir aucun journal tout en croyant en avoir un. Le contexte transmis ne porte
+que l'issue et le moyen, jamais l'adresse.
 
 ## Ce qui ne doit jamais sortir
 

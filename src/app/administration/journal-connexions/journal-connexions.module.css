@@ -80,6 +80,27 @@
   background: var(--ls-error);
 }
 
+/*
+ * Refus par limitation de debit. AVERTISSEMENT ET NON ERREUR : la porte a tenu,
+ * le refus n'est pas un echec d'identifiants. Lui donner le rouge de l'erreur
+ * noierait les vrais echecs sous le volume d'une attaque, alors que c'est
+ * justement leur distinction qui rend le journal lisible.
+ *
+ * `--ls-accent-gold-deep` ET NON `--ls-warning`, ET LA RAISON EST MESUREE.
+ * `--ls-warning` vaut #A9741A, soit 4,04:1 sur blanc : SOUS le seuil AA de
+ * 4,5:1. Ce badge fait 0,875 rem en gras, donc 14 px : ce n'est pas du « texte
+ * large », qui commence a 18,66 px en gras. Le jeton d'avertissement etait le
+ * choix semantique evident et il aurait franchi la regle de contraste, comme
+ * le prototype le fait trente-cinq fois.
+ *
+ * `--ls-accent-gold-deep` vaut #8A6A22, mesure a 5,04:1 sur blanc, et porte le
+ * meme ton ambre. Les trois badges suivent ainsi la meme regle : le contraste
+ * se place entre la couleur et le blanc, jamais sur creme.
+ */
+.issue--refus {
+  background: var(--ls-accent-gold-deep);
+}
+
 .date {
   color: var(--ls-text-muted);
   font-size: 0.875rem;

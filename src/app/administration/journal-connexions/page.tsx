@@ -23,8 +23,9 @@ import {
 import styles from "./journal-connexions.module.css";
 import {
   CONSERVATION_JOURNAL_MOIS,
+  type IssueConnexion,
   lireTentativesRecentes,
-  type LigneJournalConnexion,
+  type MoyenConnexion,
 } from "@/services/journal-connexion";
 
 export const metadata = {
@@ -57,9 +58,49 @@ function formaterHorodatage(date: Date): string {
   }).format(date);
 }
 
-function libelleMoyen(moyen: LigneJournalConnexion["moyen"]): string {
-  return moyen === "PASSKEY" ? "Passkey" : "Mot de passe";
-}
+/**
+ * Libelle et style de chaque issue, TABLES EXHAUSTIVES ET NON DES TERNAIRES.
+ *
+ * POURQUOI CE N'EST PAS UN DETAIL DE STYLE. La premiere version employait
+ * `issue === "REUSSITE" ? ... : ...` : quand l'enum a gagne
+ * `REFUSEE_LIMITATION`, la troisieme valeur est retombee en silence dans la
+ * branche « sinon », affichant « Echec » en rouge sur un refus de cadence.
+ * TypeScript ne voit rien, chaque ternaire ayant une branche par defaut.
+ *
+ * L'effet etait de detruire a l'affichage l'information que la valeur d'enum
+ * venait d'ajouter au prix d'une migration : l'exploitante relisait
+ * indifferemment « quelqu'un se trompe de mot de passe » et « un programme
+ * martele la porte ».
+ *
+ * C'est le meme motif que le piege d'index partiel deja rencontre sur ce
+ * projet, transpose de la base vers l'ecran : ajouter une valeur a un enum
+ * ouvre en silence un filtre ecrit pour les valeurs precedentes.
+ *
+ * `Record<IssueConnexion, ...>` FAIT ECHOUER LA COMPILATION a la prochaine
+ * valeur ajoutee, ce qu'aucun ternaire ne fera jamais.
+ */
+const LIBELLES_ISSUE: Record<IssueConnexion, string> = {
+  REUSSITE: "Réussite",
+  ECHEC: "Échec",
+  REFUSEE_LIMITATION: "Refus de cadence",
+};
+
+/**
+ * `--ls-warning` ET NON `--ls-error` POUR LE REFUS DE CADENCE. Un refus n'est
+ * pas un echec d'identifiants : la porte a tenu, et c'est la repetition qui
+ * doit alerter. Lui donner le rouge de l'erreur noierait les vrais echecs.
+ */
+const STYLES_ISSUE: Record<IssueConnexion, string> = {
+  REUSSITE: "issue--reussite",
+  ECHEC: "issue--echec",
+  REFUSEE_LIMITATION: "issue--refus",
+};
+
+/** Meme motif que ci-dessus : une table, pas un ternaire a deux branches. */
+const LIBELLES_MOYEN: Record<MoyenConnexion, string> = {
+  PASSKEY: "Passkey",
+  MOT_DE_PASSE: "Mot de passe",
+};
 
 export default async function PageJournalConnexions() {
   try {
@@ -92,13 +133,9 @@ export default async function PageJournalConnexions() {
             <li key={tentative.id} className={styles.tentative}>
               <div className={styles.entete}>
                 <span
-                  className={
-                    tentative.issue === "REUSSITE"
-                      ? `${styles.issue} ${styles["issue--reussite"]}`
-                      : `${styles.issue} ${styles["issue--echec"]}`
-                  }
+                  className={`${styles.issue} ${styles[STYLES_ISSUE[tentative.issue]]}`}
                 >
-                  {tentative.issue === "REUSSITE" ? "Réussite" : "Échec"}
+                  {LIBELLES_ISSUE[tentative.issue]}
                 </span>
                 <time
                   className={styles.date}
@@ -115,7 +152,7 @@ export default async function PageJournalConnexions() {
                 </div>
                 <div className={styles.champ}>
                   <dt>Moyen</dt>
-                  <dd>{libelleMoyen(tentative.moyen)}</dd>
+                  <dd>{LIBELLES_MOYEN[tentative.moyen]}</dd>
                 </div>
                 <div className={styles.champ}>
                   <dt>Compte</dt>
