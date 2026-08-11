@@ -77,6 +77,52 @@ Règles associées :
   n'annule que si elle lève. Un `return` laisse committer les lignes déjà
   réservées, gelant une pièce disponible pour une commande refusée.
 
+## Verrou de tâche planifiée, LS-72
+
+Deux tâches tourneront : la libération des réservations expirées toutes les cinq
+minutes, la réconciliation des paiements tous les quarts d'heure. Sans verrou,
+deux instances les exécuteraient simultanément, et **pour la libération cela
+décrémenterait `quantiteReservee` deux fois** : du stock disparaîtrait sans
+qu'aucune vente ne l'explique.
+
+**La prise de verrou tient en une seule instruction**, même principe que
+l'`UPDATE` conditionnel de réservation :
+
+```sql
+INSERT INTO verrou_tache (id, nom, acquis_a, expire_a)
+VALUES ($1, $2, now(), now() + make_interval(secs => $3::double precision))
+ON CONFLICT (nom) DO UPDATE
+  SET id = EXCLUDED.id, acquis_a = EXCLUDED.acquis_a, expire_a = EXCLUDED.expire_a
+  WHERE verrou_tache.expire_a < now()
+RETURNING id
+```
+
+Le `WHERE` du `DO UPDATE` est le cœur : il n'écrase un verrou existant **que
+s'il a expiré**. Le retirer laisse la reprise d'un verrou expiré fonctionner,
+donc les tests naïfs restent verts, pendant que le verrou ne protège plus rien.
+
+**`now()` est l'horloge de PostgreSQL, jamais celle de Node.** Deux conteneurs
+dont les horloges dérivent compareraient des instants incomparables, et la
+fenêtre de reprise s'ouvrirait trop tôt sur l'un d'eux.
+
+**Le relâchement porte sur le jeton du détenteur**, `WHERE nom = $1 AND id = $2`.
+Sans cette condition, une instance en retard dont le verrou a expiré supprimerait
+le verrou de sa remplaçante, qui continuerait à travailler en croyant l'avoir :
+deux exécutions simultanées, exactement ce que la table empêche.
+
+**Le relâchement vit dans un `finally`.** Une tâche qui lève garderait sinon son
+verrou jusqu'à l'expiration, et une exception récurrente bloquerait la tâche pour
+toujours, chaque cycle reprenant le verrou pour ré-échouer.
+
+**La durée du verrou n'est pas la période de la tâche.** Elle borne le temps
+pendant lequel une instance morte bloque la suivante : nettement supérieure à la
+durée d'exécution normale, et inférieure à plusieurs périodes. Dix minutes pour
+une tâche qui tourne toutes les cinq minutes et s'exécute en quelques secondes.
+
+**Ne pas exécuter la tâche si la prise de verrou échoue** (base injoignable) :
+sauter un cycle est sans conséquence, exécuter sans verrou rouvre la double
+exécution.
+
 ## Une variante ne se supprime jamais
 
 Elle s'archive, `archivee_a` renseignée. Supprimer une variante libérerait sa

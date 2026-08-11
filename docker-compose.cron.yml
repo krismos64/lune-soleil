@@ -1,0 +1,36 @@
+# Conteneur des taches planifiees, LS-72.
+#
+# FICHIER SEPARE DE `docker-compose.yml`, qui porte une consigne explicite : il
+# ne decrit QUE la base de developpement, et rien ne doit y etre ajoute en
+# pensant a la production. Ce fichier-ci se combine au besoin :
+#
+#   docker compose -f docker-compose.yml -f docker-compose.cron.yml up -d
+#
+# EN DEVELOPPEMENT IL N'EST PAS LANCE PAR DEFAUT. Une tache qui se declenche
+# toutes les cinq minutes pendant qu'on travaille brouille les journaux et
+# consomme des connexions, pour aucun benefice : les tests d'integration
+# exercent le verrou bien mieux qu'un declenchement periodique.
+#
+# AUCUN SECRET DANS CE FICHIER, le depot est public. Les valeurs viennent de
+# `.env`, et la syntaxe ${VAR:?} exige la variable plutot que de substituer une
+# chaine vide, meme motif que le fichier principal.
+
+services:
+  cron:
+    build:
+      context: ./docker/cron
+    container_name: lune-soleil-cron
+    restart: unless-stopped
+
+    environment:
+      # L'URL INTERNE, jamais l'URL publique : le trafic reste dans le reseau
+      # Docker et la route n'a pas besoin d'etre joignable depuis l'exterieur.
+      # `host.docker.internal` vise l'application servie sur l'hote en
+      # developpement ; en production elle designera le service applicatif.
+      APP_INTERNAL_URL: ${APP_INTERNAL_URL:-http://host.docker.internal:3000}
+      CRON_SHARED_SECRET: ${CRON_SHARED_SECRET:?}
+
+    # Necessaire pour que `host.docker.internal` resolve sous Linux, ou il
+    # n'existe pas par defaut, a la difference de macOS.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
