@@ -440,6 +440,51 @@ if [ -f README.md ] && command -v node >/dev/null 2>&1; then
 fi
 
 # ---------------------------------------------------------------------------
+# 12 bis. Chaque script de hook présent est DÉCLARÉ
+# ---------------------------------------------------------------------------
+#
+# LE CONTRÔLE 12 VÉRIFIE UN SEUL SENS, « déclaré donc présent », et cette
+# asymétrie a laissé passer un défaut réel le 11 août 2026.
+#
+# `hook-block-secret-commands.sh` a été écrit, prouvé sur vingt-quatre cas par
+# `verifier-hook-secrets.sh`, commité et poussé sur `main`. Sa DÉCLARATION dans
+# `settings.json` a en revanche disparu entre son écriture et le commit,
+# vraisemblablement restaurée par le `git checkout` d'un script de mutation, qui
+# remet les fichiers suivis. Le script existait donc, son contrôle passait au
+# vert, et il ne s'exécutait jamais.
+#
+# UN HOOK NON DÉCLARÉ EST PIRE QU'UN HOOK ABSENT : le dépôt porte le script, son
+# contrôle, sa documentation et sa fiche mémoire, tout indique qu'il protège, et
+# il ne protège rien. Aucun symptôme ne le trahit.
+#
+# Le nom du fichier suffit à décider : `.claude/scripts/hook-*.sh` est un hook
+# par convention, il n'a aucune autre raison d'exister.
+
+if [ -d .claude/scripts ] && command -v node >/dev/null 2>&1; then
+  declares=$(node -e '
+    try {
+      const s = require("./.claude/settings.json");
+      const out = [];
+      for (const groupes of Object.values(s.hooks || {}))
+        for (const g of (groupes || []))
+          for (const h of (g.hooks || [])) {
+            const c = (h.command || "").replace("$CLAUDE_PROJECT_DIR/", "").split(" ")[0];
+            if (c) out.push(c);
+          }
+      console.log(out.join(" "));
+    } catch (e) { }
+  ' 2>/dev/null)
+
+  for script in .claude/scripts/hook-*.sh; do
+    [ -e "$script" ] || continue
+    case " $declares " in
+      *" $script "*) ;;
+      *) anomalies+=("$script existe mais n'est déclaré dans aucun hook de settings.json : il ne s'exécute jamais") ;;
+    esac
+  done
+fi
+
+# ---------------------------------------------------------------------------
 # 12. Chaque hook déclaré pointe vers un script exécutable
 # ---------------------------------------------------------------------------
 #
