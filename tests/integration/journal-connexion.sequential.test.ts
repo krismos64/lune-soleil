@@ -25,6 +25,11 @@ let purgerJournalConnexion: typeof import("@/services/journal-connexion").purger
 let limiteDeConservation: typeof import("@/services/journal-connexion").limiteDeConservation;
 let enregistrerTentativeConnexion: typeof import("@/services/journal-connexion").enregistrerTentativeConnexion;
 let CONSERVATION_JOURNAL_MOIS: typeof import("@/services/journal-connexion").CONSERVATION_JOURNAL_MOIS;
+// IMPORTE DYNAMIQUEMENT COMME LES AUTRES : un import statique en tete de
+// fichier evalue `@/lib/prisma` avant que `beforeAll` n'ait pose
+// `DATABASE_URL`, et fige une instance pointant la mauvaise base. Quatorze
+// tests sont tombes d'un coup sur ce seul import.
+let moyenDepuisUrl: typeof import("@/lib/hook-journal-connexion").moyenDepuisUrl;
 
 /**
  * MOT DE PASSE RECONNAISSABLE, et c'est tout l'objet du critere 2.
@@ -49,6 +54,7 @@ beforeAll(async () => {
   await client.connect();
 
   ({ auth } = await import("@/lib/auth"));
+  ({ moyenDepuisUrl } = await import("@/lib/hook-journal-connexion"));
   ({
     purgerJournalConnexion,
     limiteDeConservation,
@@ -112,6 +118,32 @@ async function tenterConnexion(email: string, motDePasse: string) {
       },
       body: JSON.stringify({ email, password: motDePasse }),
     }),
+  );
+}
+
+/**
+ * Tente une authentification par passkey, sur le VRAI chemin du plugin.
+ *
+ * L'assertion WebAuthn envoyee est volontairement invalide : negocier une vraie
+ * credential exige un authentificateur materiel ou virtuel, hors de portee de
+ * Vitest. Ce n'est pas une limite ici, c'est meme le cas utile : une tentative
+ * REFUSEE par passkey doit laisser une trace, et c'est ce que le journal
+ * existe pour montrer.
+ */
+async function tenterConnexionPasskey() {
+  return auth.handler(
+    new Request(
+      "http://localhost:3000/api/auth/passkey/verify-authentication",
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-forwarded-for": "203.0.113.9",
+          "user-agent": "Navigateur-Passkey/1.0",
+        },
+        body: JSON.stringify({ response: { id: "assertion-invalide" } }),
+      },
+    ),
   );
 }
 
@@ -301,6 +333,39 @@ describe("purge, criteres 3 et 4", () => {
     expect(limite.toISOString()).toBe("2026-02-11T12:00:00.000Z");
   });
 
+  /**
+   * LE DEBORDEMENT DE MOIS, trouve en relecture de LS-80.
+   *
+   * `setUTCMonth` ne borne pas le quantieme : le 31 aout moins six mois rendait
+   * le 3 MARS, pas le 28 fevrier. La limite partait donc VERS L'AVANT et la
+   * purge supprimait des lignes de MOINS de six mois, jusqu'a trois jours de
+   * trop, ce qui contredit le choix du `lt` strict fait douze lignes plus haut.
+   *
+   * Le test qui ancre la duree emploie le 11 aout, quantieme qui n'expose
+   * jamais le defaut : quatorze quantiemes par an le revelent, aucun autre.
+   */
+  it("le quantieme est borne, un 31 ne deborde pas sur le mois suivant", () => {
+    const cas: ReadonlyArray<readonly [string, string]> = [
+      // Six mois avant le 31 aout : fevrier n'a pas de 31, on prend son dernier
+      // jour et non le 3 mars.
+      ["2026-08-31T12:00:00.000Z", "2026-02-28T12:00:00.000Z"],
+      // Annee bissextile, le dernier jour de fevrier est le 29.
+      ["2024-08-31T12:00:00.000Z", "2024-02-29T12:00:00.000Z"],
+      // Six mois avant le 31 mars : septembre n'a que trente jours.
+      ["2026-03-31T12:00:00.000Z", "2025-09-30T12:00:00.000Z"],
+      // Un quantieme qui existe dans les deux mois passe inchange.
+      ["2026-08-11T12:00:00.000Z", "2026-02-11T12:00:00.000Z"],
+      // Passage d'annee.
+      ["2026-01-15T08:30:00.000Z", "2025-07-15T08:30:00.000Z"],
+    ];
+
+    for (const [depart, attendu] of cas) {
+      expect(limiteDeConservation(new Date(depart)).toISOString()).toBe(
+        attendu,
+      );
+    }
+  });
+
   it("une ligne exactement a la limite est conservee", async () => {
     const maintenant = new Date();
 
@@ -366,6 +431,146 @@ describe("l'ecriture ne bloque jamais une connexion, critere 5", () => {
         "ALTER TABLE journal_connexion_indisponible RENAME TO journal_connexion",
       );
     }
+  });
+});
+
+describe("connexion par passkey, moyen principal de l'administration", () => {
+  /**
+   * LE DEFAUT TROUVE EN RELECTURE. La table des chemins visait
+   * `/sign-in/passkey`, qui N'EXISTE PAS : le plugin expose ses routes sous
+   * `/passkey/`. Le hook sortait donc sans rien ecrire sur TOUTES les
+   * connexions par passkey, c'est-a-dire le moyen que l'ADR-021 pose en
+   * principal pour l'administration, et la valeur d'enum `PASSKEY` n'etait
+   * ecrite par aucun chemin reel du systeme.
+   *
+   * Aucun test ne le voyait : la suite n'exercait que le mot de passe.
+   */
+  it("une tentative par passkey est journalisee avec le moyen PASSKEY", async () => {
+    const reponse = await tenterConnexionPasskey();
+
+    // La reponse est un refus, l'assertion etant invalide. C'est le journal
+    // qui est teste ici, pas la negociation WebAuthn.
+    expect(reponse.status).not.toBe(200);
+
+    const lignes = await lignesJournal();
+    expect(lignes).toHaveLength(1);
+    expect(lignes[0].moyen).toBe("PASSKEY");
+    expect(lignes[0].issue).toBe("ECHEC");
+    expect(lignes[0].agent_utilisateur).toBe("Navigateur-Passkey/1.0");
+  });
+
+  it("le chemin surveille est celui que le plugin expose reellement", () => {
+    // ANCRE LE NOM DE LA ROUTE. Si une version de Better Auth la renomme, ce
+    // test rougit ici plutot que le journal ne devienne muet en silence.
+    expect(
+      moyenDepuisUrl("http://x/api/auth/passkey/verify-authentication"),
+    ).toBe("PASSKEY");
+    // Le chemin qui semblait evident, et qui n'existe pas.
+    expect(moyenDepuisUrl("http://x/api/auth/sign-in/passkey")).toBeUndefined();
+  });
+});
+
+describe("tentative refusee par la limitation de debit, regle E13", () => {
+  /**
+   * LE SECOND DEFAUT DE LA RELECTURE. Better Auth applique la limitation dans
+   * `onRequest` et rend le 429 immediatement : `better-call` sort alors sans
+   * appeler l'endpoint NI les hooks. Ces tentatives echappaient entierement au
+   * journal.
+   *
+   * CE QUE CELA COUTAIT : avec cinq tentatives par minute autorisees, une
+   * attaque de trois cents tentatives en cinq minutes ne laissait que
+   * vingt-cinq lignes. La relecture y voyait une saisie maladroite au lieu
+   * d'un balayage.
+   *
+   * Ce test passe par le VRAI adaptateur de route de Next.js, seul endroit qui
+   * voit ces reponses.
+   */
+  it("un refus de cadence produit une ligne REFUSEE_LIMITATION", async () => {
+    const { POST } = await import("@/app/api/auth/[...all]/route");
+
+    const requete = () =>
+      new Request("http://localhost:3000/api/auth/sign-in/email", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-forwarded-for": "198.51.100.4",
+          "user-agent": "Attaquant/1.0",
+        },
+        body: JSON.stringify({
+          email: "cible@exemple.fr",
+          password: "essai-au-hasard-1234",
+        }),
+      });
+
+    const statuts: number[] = [];
+    // La regle est de cinq par minute sur cette route : la sixieme est refusee.
+    for (let i = 0; i < 7; i += 1) {
+      statuts.push((await POST(requete())).status);
+    }
+
+    expect(statuts).toContain(429);
+
+    const lignes = await lignesJournal();
+    const refus = lignes.filter((l) => l.issue === "REFUSEE_LIMITATION");
+
+    // AUTANT DE LIGNES QUE DE REFUS, c'est tout l'objet : le volume refuse est
+    // le signal, pas du bruit.
+    expect(refus).toHaveLength(statuts.filter((s) => s === 429).length);
+    expect(refus[0].moyen).toBe("MOT_DE_PASSE");
+    expect(refus[0].adresse_ip).toBe("198.51.100.4");
+    // L'adresse tentee n'a jamais ete lue, Better Auth refusant avant analyse.
+    expect(refus[0].email_tente).toBe("(non lue, refus de cadence)");
+    expect(refus[0].utilisateur_id).toBeNull();
+  });
+});
+
+describe("bornes sur l'adresse tentee, invariant 9", () => {
+  /**
+   * MEME RAISONNEMENT QUE POUR L'AGENT UTILISATEUR, et son absence etait une
+   * incoherence relevee en relecture : les deux valeurs viennent du meme corps
+   * de requete et aucune n'est bornee par Better Auth. Mesure alors : une
+   * adresse de 200 011 caracteres ecrite telle quelle.
+   */
+  it("une adresse demesuree est tronquee", async () => {
+    const adresseEnorme = `${"a".repeat(5000)}@exemple.fr`;
+
+    await enregistrerTentativeConnexion({
+      emailTente: adresseEnorme,
+      utilisateurId: null,
+      moyen: "MOT_DE_PASSE",
+      issue: "ECHEC",
+      adresseIp: null,
+      agentUtilisateur: null,
+    });
+
+    const lignes = await lignesJournal();
+    // 254, longueur maximale d'une adresse, RFC 5321 : aucune adresse legitime
+    // n'est tronquee.
+    expect(lignes[0].email_tente).toHaveLength(254);
+  });
+
+  /**
+   * LE CHEMIN PAR LEQUEL UN MOT DE PASSE POUVAIT ENTRER MALGRE LE CRITERE 2.
+   *
+   * Le critere vise le champ `password`, et le code le tient. Mais un mot de
+   * passe colle dans le champ email est persiste par l'autre champ : Better
+   * Auth refuse l'adresse invalide en 400, et le hook journalisait quand meme
+   * la chaine. Sur un depot public avec une base sauvegardee, la table
+   * deviendrait une liste de chaines dont certaines sont des mots de passe.
+   */
+  it("une saisie qui n'est pas une adresse n'est jamais ecrite telle quelle", async () => {
+    await enregistrerTentativeConnexion({
+      emailTente: MOT_DE_PASSE_RECONNAISSABLE,
+      utilisateurId: null,
+      moyen: "MOT_DE_PASSE",
+      issue: "ECHEC",
+      adresseIp: null,
+      agentUtilisateur: null,
+    });
+
+    const lignes = await lignesJournal();
+    expect(lignes[0].email_tente).toBe("(adresse invalide)");
+    expect(lignes[0].email_tente).not.toContain(MOT_DE_PASSE_RECONNAISSABLE);
   });
 });
 
