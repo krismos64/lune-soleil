@@ -112,11 +112,17 @@ script : trois comptes de ce dépôt ont déjà dérivé après l'ajout d'un cas
 personne n'a reporté.
 
 Types et lint verts, 113 tests unitaires verts. **Les tests d'intégration exigent
-Docker, non lancé sur ce poste** : la CI les rejoue sur la PR.
+Docker, non lancé sur ce poste** : la CI les a rejoués sur la PR #84, les huit
+contrôles de `CONTRIBUTING.md` verts avant fusion.
 
 ## Prochaine étape
 
-**Libre parmi LS-72, LS-80 et LS-81**, les trois stories qui restent dans l'epic
-LS-2 avec LS-75. Cette dernière se traite en dernier, elle vérifie les autres.
+**Libre parmi LS-72, LS-80 et LS-81.** L'epic LS-2 compte dix-huit stories
+filles, **quatorze terminées et quatre restantes**, compté le 11 août et non
+recopié. LS-75 est la quatrième : elle se traite en dernier, elle vérifie les
+autres.
 
 LS-88 étant hors chaîne de phase 1, elle ne débloque rien et n'en bloquait rien.
+
+Fusionnée sur `main` en rebase, PR #84, commits `3952fb9` pour la story et
+`e152d9d` pour cette page.
