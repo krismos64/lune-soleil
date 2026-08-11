@@ -151,6 +151,28 @@ enum GraviteAlerte {
   CRITIQUE
 }
 
+/// Issue d'une tentative de connexion, LS-80, ADR-027 decision 2.
+///
+/// DEUX VALEURS ET NON UN BOOLEEN `reussie`. Un booleen se lit mal sur un
+/// ecran de liste, ou `ECHEC` saute aux yeux la ou `false` demande de se
+/// rappeler de quoi il est la negation. Il fermerait aussi la porte a un
+/// troisieme cas que la limitation de debit rend deja concevable, une
+/// tentative refusee avant meme d'etre evaluee.
+enum IssueConnexion {
+  REUSSITE
+  ECHEC
+}
+
+/// Moyen employe pour une tentative de connexion, LS-80.
+///
+/// ADR-021 pose la passkey en principal et le mot de passe en secours : sans
+/// ce champ, le journal ne dirait pas si le secours a servi, alors que son
+/// usage repete est precisement le signal qui doit alerter.
+enum MoyenConnexion {
+  PASSKEY
+  MOT_DE_PASSE
+}
+
 // ---------------------------------------------------------------------------
 // Domaine 1, catalogue
 // ---------------------------------------------------------------------------
@@ -170,10 +192,10 @@ model Categorie {
 }
 
 model Produit {
-  id          String        @id @default(uuid())
-  categorieId String        @map("categorie_id")
-  nom         String
-  slug        String        @unique // C3
+  id                String        @id @default(uuid())
+  categorieId       String        @map("categorie_id")
+  nom               String
+  slug              String        @unique // C3
   // ADR-026, LS-76. `descriptionCourte` reste le seul champ éditorial fixe du
   // produit. Elle alimente les cartes de catalogue en plus du haut de fiche :
   // en faire une section la rendrait supprimable, ce qui viderait le catalogue.
@@ -186,18 +208,18 @@ model Produit {
   //
   // Ce n'est pas un moteur d'attributs typés : la justification écartant l'EAV
   // reste valable, du texte titré et ordonné n'en est pas un.
-  descriptionCourte String?   @map("description_courte")
-  statut      StatutProduit @default(BROUILLON)
+  descriptionCourte String?       @map("description_courte")
+  statut            StatutProduit @default(BROUILLON)
   // LS-49, date de première publication, prévue au modèle conceptuel. Elle
   // n'est pas dérivable de `statut` ni de `modifieA` : un produit dépublié
   // puis republié doit garder sa date d'origine, comme `Avis.publieA`. Sert
   // l'antériorité affichée et le tri des nouveautés.
-  publieA     DateTime?     @map("publie_a") @db.Timestamptz(3)
-  archiveA    DateTime?     @map("archive_a") @db.Timestamptz(3)
-  creeA       DateTime      @default(now()) @map("cree_a") @db.Timestamptz(3)
-  modifieA    DateTime      @updatedAt @map("modifie_a") @db.Timestamptz(3)
+  publieA           DateTime?     @map("publie_a") @db.Timestamptz(3)
+  archiveA          DateTime?     @map("archive_a") @db.Timestamptz(3)
+  creeA             DateTime      @default(now()) @map("cree_a") @db.Timestamptz(3)
+  modifieA          DateTime      @updatedAt @map("modifie_a") @db.Timestamptz(3)
 
-  categorie Categorie  @relation(fields: [categorieId], references: [id], onDelete: Restrict)
+  categorie Categorie        @relation(fields: [categorieId], references: [id], onDelete: Restrict)
   variantes Variante[]
   medias    Media[]
   sections  SectionProduit[]
@@ -220,8 +242,8 @@ model Produit {
 // supprimée, et l'administratrice la supprimerait en boucle. La création des
 // sections par défaut appartient au seul cas d'usage de création.
 model SectionProduit {
-  id        String @id @default(uuid())
-  produitId String @map("produit_id")
+  id        String   @id @default(uuid())
+  produitId String   @map("produit_id")
   // C20. Identifiant technique STABLE, indépendant de `titre` qui est
   // modifiable. Renommer « Matières et composants » en « Composants » change
   // `titre` et laisse `cle` à `matieres`. Sans cette séparation, un renommage
@@ -245,7 +267,6 @@ model SectionProduit {
   produit Produit @relation(fields: [produitId], references: [id], onDelete: Cascade)
 
   @@unique([produitId, cle], map: "section_produit_cle_unique")
-
   // C22, l'unicité de `ordre` n'est PAS déclarée ici, volontairement.
   //
   // Elle doit être DEFERRABLE INITIALLY DEFERRED, ce que le langage de schéma de
@@ -285,24 +306,24 @@ model Variante {
   archiveeA        DateTime? @map("archivee_a") @db.Timestamptz(3) // C13, jamais supprimée
   creeA            DateTime  @default(now()) @map("cree_a") @db.Timestamptz(3)
 
-  produit         Produit          @relation(fields: [produitId], references: [id], onDelete: Restrict)
-  reservations    Reservation[]
-  mouvements      MouvementStock[]
-  lignesCommande  LigneCommande[]
+  produit        Produit          @relation(fields: [produitId], references: [id], onDelete: Restrict)
+  reservations   Reservation[]
+  mouvements     MouvementStock[]
+  lignesCommande LigneCommande[]
 
   @@index([produitId], map: "variante_produit_idx")
   @@map("variante")
 }
 
 model Media {
-  id                 String                @id @default(uuid())
-  produitId          String                @map("produit_id")
-  chemin             String
-  texteAlternatif    String?               @map("texte_alternatif") // C7
-  ordre              Int
-  statutTraitement   StatutTraitementMedia @default(EN_ATTENTE) @map("statut_traitement") // C8
-  identifiantFournisseur String?           @unique @map("identifiant_fournisseur")
-  creeA              DateTime              @default(now()) @map("cree_a") @db.Timestamptz(3)
+  id                     String                @id @default(uuid())
+  produitId              String                @map("produit_id")
+  chemin                 String
+  texteAlternatif        String?               @map("texte_alternatif") // C7
+  ordre                  Int
+  statutTraitement       StatutTraitementMedia @default(EN_ATTENTE) @map("statut_traitement") // C8
+  identifiantFournisseur String?               @unique @map("identifiant_fournisseur")
+  creeA                  DateTime              @default(now()) @map("cree_a") @db.Timestamptz(3)
 
   produit Produit @relation(fields: [produitId], references: [id], onDelete: Cascade)
 
@@ -348,12 +369,12 @@ model Reservation {
 }
 
 model MouvementStock {
-  id         String             @id @default(uuid())
-  varianteId String             @map("variante_id")
-  commandeId String?            @map("commande_id")
-  type       TypeMouvementStock
-  quantite   Int // signe selon le type
-  canal      String?
+  id                       String             @id @default(uuid())
+  varianteId               String             @map("variante_id")
+  commandeId               String?            @map("commande_id")
+  type                     TypeMouvementStock
+  quantite                 Int // signe selon le type
+  canal                    String?
   // LS-63. Le prix réellement pratiqué au moment de la vente, figé. Sans lui, le
   // chiffre d'affaires des marchés n'est pas calculable : le reconstruire depuis
   // `Variante.prixCentimes` violerait l'invariant 3, le prix du catalogue
@@ -367,11 +388,11 @@ model MouvementStock {
   // Nullable au type, obligatoire par CHECK sur VENTE_EXTERNE seulement. Une
   // ENTREE de réassort ou un AJUSTEMENT d'inventaire n'encaissent rien, leur
   // imposer un montant obligerait à écrire un zéro qui mentirait.
-  prixUnitaireFigeCentimes Int?  @map("prix_unitaire_fige_centimes")
-  motif      String?
-  acteurId   String?            @map("acteur_id") // S9, nul si origine SYSTEME
-  origine    OrigineEcriture // S9, un webhook n'est pas une personne
-  creeA      DateTime           @default(now()) @map("cree_a") @db.Timestamptz(3)
+  prixUnitaireFigeCentimes Int?               @map("prix_unitaire_fige_centimes")
+  motif                    String?
+  acteurId                 String?            @map("acteur_id") // S9, nul si origine SYSTEME
+  origine                  OrigineEcriture // S9, un webhook n'est pas une personne
+  creeA                    DateTime           @default(now()) @map("cree_a") @db.Timestamptz(3)
 
   variante Variante     @relation(fields: [varianteId], references: [id], onDelete: Restrict)
   commande Commande?    @relation(fields: [commandeId], references: [id], onDelete: SetNull)
@@ -393,61 +414,61 @@ model MouvementStock {
 // ---------------------------------------------------------------------------
 
 model Commande {
-  id                   String         @id @default(uuid())
-  numero               String         @unique // C-2026-0001, attribué dans la transaction
-  statut               StatutCommande @default(EN_ATTENTE_PAIEMENT) // V5, axe distinct du paiement
-  emailNormalise       String         @map("email_normalise")
-  nomClient            String         @map("nom_client")
-  telephone            String?
-  utilisateurId        String?        @map("utilisateur_id") // nullable, achat sans compte
-  dissocieA            DateTime?      @map("dissocie_a") @db.Timestamptz(3) // V15, compte supprimé, exclut du rattachement
-  adresseLivraison     Json           @map("adresse_livraison") // copie figée, A3, invariants 3 et 4
-  adresseFacturation   Json           @map("adresse_facturation") // copie figée
-  sousTotalCentimes    Int            @map("sous_total_centimes")
+  id                  String         @id @default(uuid())
+  numero              String         @unique // C-2026-0001, attribué dans la transaction
+  statut              StatutCommande @default(EN_ATTENTE_PAIEMENT) // V5, axe distinct du paiement
+  emailNormalise      String         @map("email_normalise")
+  nomClient           String         @map("nom_client")
+  telephone           String?
+  utilisateurId       String?        @map("utilisateur_id") // nullable, achat sans compte
+  dissocieA           DateTime?      @map("dissocie_a") @db.Timestamptz(3) // V15, compte supprimé, exclut du rattachement
+  adresseLivraison    Json           @map("adresse_livraison") // copie figée, A3, invariants 3 et 4
+  adresseFacturation  Json           @map("adresse_facturation") // copie figée
+  sousTotalCentimes   Int            @map("sous_total_centimes")
   // ADR-025, le mode choisi et payé est figé sur la commande, au même titre que
   // l'adresse et le prix. Il est porté ici et pas seulement sur `Expedition` :
   // une commande existe et affiche son mode entre le paiement et la préparation,
   // avant qu'aucune expédition n'existe. Il n'est jamais recalculé depuis la
   // configuration courante des tarifs.
-  modeLivraison        ModeLivraison  @map("mode_livraison")
+  modeLivraison       ModeLivraison  @map("mode_livraison")
   // ADR-025, point de retrait choisi au tunnel, figé lui aussi. Obligatoire pour
   // POINT_RELAIS et LOCKER, nul pour DOMICILE, contrainte CHECK en migration
   // manuelle. Le libellé et l'adresse du point sont copiés, pas seulement son
   // identifiant : un point qui ferme ne doit pas rendre illisible une commande
   // passée, même règle que les libellés figés des lignes.
-  pointRelaisId        String?        @map("point_relais_id")
-  pointRelaisAdresse   Json?          @map("point_relais_adresse")
-  fraisPortCentimes    Int            @map("frais_port_centimes")
-  totalCentimes        Int            @map("total_centimes")
-  montantTaxeCentimes  Int            @default(0) @map("montant_taxe_centimes") // franchise en base
+  pointRelaisId       String?        @map("point_relais_id")
+  pointRelaisAdresse  Json?          @map("point_relais_adresse")
+  fraisPortCentimes   Int            @map("frais_port_centimes")
+  totalCentimes       Int            @map("total_centimes")
+  montantTaxeCentimes Int            @default(0) @map("montant_taxe_centimes") // franchise en base
   // LS-49, renommé de cgu vers cgv. Le contrat accepté lors d'un achat est
   // celui de vente, pas d'utilisation. Renommage fait avant la migration
   // initiale, où il ne coûte rien.
-  cgvAccepteesA        DateTime       @map("cgv_acceptees_a") @db.Timestamptz(3) // V10, preuve du consentement
-  cgvVersion           String         @map("cgv_version")
-  creeA                DateTime       @default(now()) @map("cree_a") @db.Timestamptz(3)
+  cgvAccepteesA       DateTime       @map("cgv_acceptees_a") @db.Timestamptz(3) // V10, preuve du consentement
+  cgvVersion          String         @map("cgv_version")
+  creeA               DateTime       @default(now()) @map("cree_a") @db.Timestamptz(3)
 
-  utilisateur      Utilisateur?         @relation(fields: [utilisateurId], references: [id], onDelete: SetNull)
-  lignes           LigneCommande[]
-  paiements        Paiement[]
-  reservations     Reservation[]
-  mouvements       MouvementStock[]
-  historiques      HistoriqueStatut[]
-  expedition       Expedition?
-  facture          Facture?
-  retractation     DemandeRetractation?
-  jetons           JetonAcces[]
-  journauxEmail    JournalEmail[]
+  utilisateur   Utilisateur?         @relation(fields: [utilisateurId], references: [id], onDelete: SetNull)
+  lignes        LigneCommande[]
+  paiements     Paiement[]
+  reservations  Reservation[]
+  mouvements    MouvementStock[]
+  historiques   HistoriqueStatut[]
+  expedition    Expedition?
+  facture       Facture?
+  retractation  DemandeRetractation?
+  jetons        JetonAcces[]
+  journauxEmail JournalEmail[]
 
   @@index([emailNormalise], map: "commande_email_idx")
   @@map("commande")
 }
 
 model LigneCommande {
-  id             String   @id @default(uuid())
-  commandeId     String   @map("commande_id")
-  varianteId     String?  @map("variante_id") // nullable, la ligne survit à la variante
-  referenceFigee String   @map("reference_figee") // V4, copie figée, invariant 3
+  id                  String   @id @default(uuid())
+  commandeId          String   @map("commande_id")
+  varianteId          String?  @map("variante_id") // nullable, la ligne survit à la variante
+  referenceFigee      String   @map("reference_figee") // V4, copie figée, invariant 3
   // LS-49, deux libellés distincts et non un seul concaténé, alignement sur le
   // modèle conceptuel. Une facture affiche le produit et la déclinaison comme
   // deux composantes : « Boucles Aurore » et « dorées ». Les fusionner à
@@ -456,15 +477,15 @@ model LigneCommande {
   //
   // Les deux sont obligatoires : `Variante.libelle` l'est, sa copie figée aussi.
   // Le modèle conceptuel les marquait nullable à tort.
-  libelleProduitFige  String @map("libelle_produit_fige")
-  libelleVarianteFige String @map("libelle_variante_fige")
-  prixFigeCentimes Int    @map("prix_fige_centimes")
-  quantite       Int // CHECK > 0
+  libelleProduitFige  String   @map("libelle_produit_fige")
+  libelleVarianteFige String   @map("libelle_variante_fige")
+  prixFigeCentimes    Int      @map("prix_fige_centimes")
+  quantite            Int // CHECK > 0
   // `totalLigneCentimes` du modèle conceptuel n'est volontairement pas stocké :
   // il vaut `prixFigeCentimes * quantite`, deux colonnes de la même ligne. Un
   // total redondant se désynchronise sans qu'aucune contrainte ne le détecte.
   // Le modèle conceptuel est corrigé en conséquence.
-  creeA          DateTime @default(now()) @map("cree_a") @db.Timestamptz(3)
+  creeA               DateTime @default(now()) @map("cree_a") @db.Timestamptz(3)
 
   commande   Commande        @relation(fields: [commandeId], references: [id], onDelete: Restrict)
   variante   Variante?       @relation(fields: [varianteId], references: [id], onDelete: SetNull)
@@ -477,14 +498,14 @@ model LigneCommande {
 }
 
 model Paiement {
-  id                     String         @id @default(uuid())
-  commandeId             String         @map("commande_id")
-  statut                 StatutPaiement @default(EN_ATTENTE)
-  montantCentimes        Int            @map("montant_centimes")
-  montantRembourseCentimes Int          @default(0) @map("montant_rembourse_centimes") // CHECK <= montant
-  identifiantFournisseur String?        @map("identifiant_fournisseur")
-  motifEchec             String?        @map("motif_echec") // décision B, une colonne écraserait le motif
-  creeA                  DateTime       @default(now()) @map("cree_a") @db.Timestamptz(3)
+  id                       String         @id @default(uuid())
+  commandeId               String         @map("commande_id")
+  statut                   StatutPaiement @default(EN_ATTENTE)
+  montantCentimes          Int            @map("montant_centimes")
+  montantRembourseCentimes Int            @default(0) @map("montant_rembourse_centimes") // CHECK <= montant
+  identifiantFournisseur   String?        @map("identifiant_fournisseur")
+  motifEchec               String?        @map("motif_echec") // décision B, une colonne écraserait le motif
+  creeA                    DateTime       @default(now()) @map("cree_a") @db.Timestamptz(3)
   // LS-76. Horodatage de la confirmation EFFECTIVE de l'encaissement, distinct
   // de `creeA` qui date la création de la tentative. `STATISTIQUES.md` laissait
   // le choix ouvert entre ce champ et une dérivation depuis `HistoriqueStatut` ;
@@ -506,10 +527,10 @@ model Paiement {
   // réconciliation est celui par lequel l'écart avec `creeA` dépasse l'heure et
   // peut franchir un minuit, donc changer le mois d'imputation. Ne jamais
   // reconstruire cette date depuis `creeA` ni depuis l'historique des statuts.
-  confirmeA              DateTime?      @map("confirme_a") @db.Timestamptz(3)
+  confirmeA                DateTime?      @map("confirme_a") @db.Timestamptz(3)
 
-  commande    Commande               @relation(fields: [commandeId], references: [id], onDelete: Restrict)
-  evenements  EvenementFournisseur[]
+  commande   Commande               @relation(fields: [commandeId], references: [id], onDelete: Restrict)
+  evenements EvenementFournisseur[]
 
   // V14 et décision D, première clé d'idempotence : au plus un paiement encaissé
   // par commande. La contrainte protège la cohérence, pas le double encaissement
@@ -526,14 +547,14 @@ model Paiement {
 }
 
 model EvenementFournisseur {
-  id                     String   @id @default(uuid())
-  paiementId             String?  @map("paiement_id")
-  identifiantFournisseur String   @unique @map("identifiant_fournisseur") // rejeu du même événement
+  id                     String                    @id @default(uuid())
+  paiementId             String?                   @map("paiement_id")
+  identifiantFournisseur String                    @unique @map("identifiant_fournisseur") // rejeu du même événement
   type                   String
   charge                 Json
   statutTraitement       StatutTraitementEvenement @default(RECU) @map("statut_traitement") // LS-45
-  traiteA                DateTime? @map("traite_a") @db.Timestamptz(3)
-  creeA                  DateTime @default(now()) @map("cree_a") @db.Timestamptz(3)
+  traiteA                DateTime?                 @map("traite_a") @db.Timestamptz(3)
+  creeA                  DateTime                  @default(now()) @map("cree_a") @db.Timestamptz(3)
 
   paiement Paiement? @relation(fields: [paiementId], references: [id], onDelete: SetNull)
 
@@ -557,22 +578,22 @@ model HistoriqueStatut {
 }
 
 model Expedition {
-  id             String    @id @default(uuid())
-  commandeId     String    @unique @map("commande_id")
-  transporteur   String // Mondial Relay, extensible à Colissimo, LS-33
+  id                 String        @id @default(uuid())
+  commandeId         String        @unique @map("commande_id")
+  transporteur       String // Mondial Relay, extensible à Colissimo, LS-33
   // ADR-025, le mode réellement exécuté par le transporteur. Il vaut normalement
   // celui de la commande, et peut en différer : un échec de livraison à domicile
   // peut être rebasculé vers un Point Relais. Deux faits distincts, ce que le
   // client a choisi et payé, ce que le transporteur a exécuté. La commande n'est
   // jamais réécrite dans ce cas.
-  mode           ModeLivraison
-  numeroSuivi    String?   @map("numero_suivi")
-  pointRelaisId  String?   @map("point_relais_id")
-  statutTransporteur String? @map("statut_transporteur")
-  expedieA       DateTime? @map("expedie_a") @db.Timestamptz(3)
-  livreA         DateTime? @map("livre_a") @db.Timestamptz(3) // V11, uniquement « remis au destinataire »
-  synchroniseA   DateTime? @map("synchronise_a") @db.Timestamptz(3) // détecte un suivi bloqué
-  creeA          DateTime  @default(now()) @map("cree_a") @db.Timestamptz(3)
+  mode               ModeLivraison
+  numeroSuivi        String?       @map("numero_suivi")
+  pointRelaisId      String?       @map("point_relais_id")
+  statutTransporteur String?       @map("statut_transporteur")
+  expedieA           DateTime?     @map("expedie_a") @db.Timestamptz(3)
+  livreA             DateTime?     @map("livre_a") @db.Timestamptz(3) // V11, uniquement « remis au destinataire »
+  synchroniseA       DateTime?     @map("synchronise_a") @db.Timestamptz(3) // détecte un suivi bloqué
+  creeA              DateTime      @default(now()) @map("cree_a") @db.Timestamptz(3)
 
   commande Commande @relation(fields: [commandeId], references: [id], onDelete: Restrict)
 
@@ -582,7 +603,7 @@ model Expedition {
 model AdresseCarnet {
   id            String   @id @default(uuid())
   utilisateurId String   @map("utilisateur_id") // A1
-  libelle       String?  // A8, facultatif, affiché dans la liste
+  libelle       String? // A8, facultatif, affiché dans la liste
   nomComplet    String   @map("nom_complet")
   ligne1        String
   ligne2        String?
@@ -605,18 +626,18 @@ model AdresseCarnet {
 // ---------------------------------------------------------------------------
 
 model Facture {
-  id                    String   @id @default(uuid())
-  commandeId            String   @unique @map("commande_id") // décision D, quatrième clé
-  numero                String   @unique // F-2026-0001, attribué dans la transaction, F4
-  montantTotalCentimes  Int      @map("montant_total_centimes")
-  montantAvoirCentimes  Int      @default(0) @map("montant_avoir_centimes") // CHECK <= total
-  instantaneLegal       Json     @map("instantane_legal") // copie figée, invariant 4
+  id                   String   @id @default(uuid())
+  commandeId           String   @unique @map("commande_id") // décision D, quatrième clé
+  numero               String   @unique // F-2026-0001, attribué dans la transaction, F4
+  montantTotalCentimes Int      @map("montant_total_centimes")
+  montantAvoirCentimes Int      @default(0) @map("montant_avoir_centimes") // CHECK <= total
+  instantaneLegal      Json     @map("instantane_legal") // copie figée, invariant 4
   // LS-49, nullable et c'est le mécanisme de détection : le modèle conceptuel
   // fait du champ nul l'état « PDF en échec », qui déclenche une AlerteCritique.
   // La facture existe en base avant son rendu, l'invariant 4 portant sur
   // l'instantané et non sur le fichier.
-  cheminPdf             String?  @map("chemin_pdf")
-  emiseA                DateTime @default(now()) @map("emise_a") @db.Timestamptz(3)
+  cheminPdf            String?  @map("chemin_pdf")
+  emiseA               DateTime @default(now()) @map("emise_a") @db.Timestamptz(3)
 
   commande Commande @relation(fields: [commandeId], references: [id], onDelete: Restrict)
   avoirs   Avoir[]
@@ -625,20 +646,20 @@ model Facture {
 }
 
 model Avoir {
-  id                     String   @id @default(uuid())
-  factureId              String   @map("facture_id")
-  demandeRetractationId  String?  @map("demande_retractation_id")
-  numero                 String   @unique // A-2026-0001, séquence distincte, F4
-  montantCentimes        Int      @map("montant_centimes")
-  motif                  String
+  id                    String   @id @default(uuid())
+  factureId             String   @map("facture_id")
+  demandeRetractationId String?  @map("demande_retractation_id")
+  numero                String   @unique // A-2026-0001, séquence distincte, F4
+  montantCentimes       Int      @map("montant_centimes")
+  motif                 String
   // LS-49, un avoir est un document légal au même titre qu'une facture,
   // invariant 4 : jamais modifié ni supprimé. Il porte donc son propre
   // instantané, sans quoi une correction du catalogue ou de l'adresse
   // changerait le contenu d'un document déjà émis. Les deux champs étaient
   // prévus au modèle conceptuel et absents du schéma.
-  instantaneLegal        Json     @map("instantane_legal")
-  cheminPdf              String?  @map("chemin_pdf") // nul, PDF en échec, comme la facture
-  emisA                  DateTime @default(now()) @map("emis_a") @db.Timestamptz(3)
+  instantaneLegal       Json     @map("instantane_legal")
+  cheminPdf             String?  @map("chemin_pdf") // nul, PDF en échec, comme la facture
+  emisA                 DateTime @default(now()) @map("emis_a") @db.Timestamptz(3)
 
   facture      Facture              @relation(fields: [factureId], references: [id], onDelete: Restrict)
   retractation DemandeRetractation? @relation(fields: [demandeRetractationId], references: [id], onDelete: SetNull)
@@ -652,18 +673,18 @@ model Avoir {
 // ---------------------------------------------------------------------------
 
 model DemandeRetractation {
-  id                      String             @id @default(uuid())
-  commandeId              String             @unique @map("commande_id")
-  statut                  StatutRetractation @default(DEPOSEE)
-  motifClient             String?            @map("motif_client")
-  motifDecision           String?            @map("motif_decision") // L2, obligatoire si REFUSEE
-  montantRembourseCentimes Int?              @map("montant_rembourse_centimes")
-  deposeeA                DateTime           @default(now()) @map("deposee_a") @db.Timestamptz(3) // L1, conservée telle quelle
-  accuseeA                DateTime?          @map("accusee_a") @db.Timestamptz(3)
-  retourAttenduA          DateTime?          @map("retour_attendu_a") @db.Timestamptz(3) // base du seuil d'alerte, L8
-  preuveExpeditionRetour  String?            @map("preuve_expedition_retour") // L7, article L221-24
-  preuveExpeditionA       DateTime?          @map("preuve_expedition_a") @db.Timestamptz(3) // premier des deux faits
-  recueA                  DateTime?          @map("recue_a") @db.Timestamptz(3) // L12, hors statut, déclenche le RETOUR
+  id                       String             @id @default(uuid())
+  commandeId               String             @unique @map("commande_id")
+  statut                   StatutRetractation @default(DEPOSEE)
+  motifClient              String?            @map("motif_client")
+  motifDecision            String?            @map("motif_decision") // L2, obligatoire si REFUSEE
+  montantRembourseCentimes Int?               @map("montant_rembourse_centimes")
+  deposeeA                 DateTime           @default(now()) @map("deposee_a") @db.Timestamptz(3) // L1, conservée telle quelle
+  accuseeA                 DateTime?          @map("accusee_a") @db.Timestamptz(3)
+  retourAttenduA           DateTime?          @map("retour_attendu_a") @db.Timestamptz(3) // base du seuil d'alerte, L8
+  preuveExpeditionRetour   String?            @map("preuve_expedition_retour") // L7, article L221-24
+  preuveExpeditionA        DateTime?          @map("preuve_expedition_a") @db.Timestamptz(3) // premier des deux faits
+  recueA                   DateTime?          @map("recue_a") @db.Timestamptz(3) // L12, hors statut, déclenche le RETOUR
 
   commande Commande @relation(fields: [commandeId], references: [id], onDelete: Restrict)
   avoirs   Avoir[]
@@ -713,12 +734,12 @@ model Avis {
 }
 
 model ReponseAvis {
-  id         String    @id @default(uuid())
-  avisId     String    @unique @map("avis_id")
-  contenu    String
-  auteurId   String    @map("auteur_id") // RESTRICT assumé, l'administratrice
-  publieeA   DateTime  @default(now()) @map("publiee_a") @db.Timestamptz(3)
-  modifieeA  DateTime? @map("modifiee_a") @db.Timestamptz(3)
+  id        String    @id @default(uuid())
+  avisId    String    @unique @map("avis_id")
+  contenu   String
+  auteurId  String    @map("auteur_id") // RESTRICT assumé, l'administratrice
+  publieeA  DateTime  @default(now()) @map("publiee_a") @db.Timestamptz(3)
+  modifieeA DateTime? @map("modifiee_a") @db.Timestamptz(3)
 
   avis   Avis        @relation(fields: [avisId], references: [id], onDelete: Restrict)
   auteur Utilisateur @relation(fields: [auteurId], references: [id], onDelete: Restrict)
@@ -768,17 +789,18 @@ model Utilisateur {
   image     String?
   misAJourA DateTime @default(now()) @updatedAt @map("mis_a_jour_a") @db.Timestamptz(3)
 
-  commandes     Commande[]
-  adresses      AdresseCarnet[]
-  avis          Avis[]
-  reponsesAvis  ReponseAvis[]
-  journauxAudit JournalAudit[]
-  mouvements    MouvementStock[]
-  historiques   HistoriqueStatut[]
-  alertes       AlerteCritique[]
-  sessions      Session[]
-  comptes       Compte[]
-  passkeys      Passkey[]
+  commandes         Commande[]
+  adresses          AdresseCarnet[]
+  avis              Avis[]
+  reponsesAvis      ReponseAvis[]
+  journauxAudit     JournalAudit[]
+  journauxConnexion JournalConnexion[]
+  mouvements        MouvementStock[]
+  historiques       HistoriqueStatut[]
+  alertes           AlerteCritique[]
+  sessions          Session[]
+  comptes           Compte[]
+  passkeys          Passkey[]
 
   // E1, un seul compte porte ADMINISTRATRICE. Un UNIQUE simple interdirait
   // un second compte client : le filtre est ce qui rend la contrainte utilisable.
@@ -892,7 +914,6 @@ model Passkey {
 
   utilisateur Utilisateur @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
   // UNIQUE et non un simple index, plus strict que le schéma de référence du
   // plugin. Une credential WebAuthn est unique par construction, rien en base
   // ne l'imposait : deux lignes portant la même `credentialID` sur deux comptes
@@ -900,6 +921,7 @@ model Passkey {
   // connexion aurait alors deux comptes à départager. C'est le risque d'accès
   // croisé qu'ADR-021 demande de couvrir par un test négatif.
   @@unique([credentialID], map: "passkey_credential_id_unique")
+  @@index([userId])
   @@map("passkey")
 }
 
@@ -936,14 +958,14 @@ model JournalAudit {
 }
 
 model JournalEmail {
-  id          String          @id @default(uuid())
-  commandeId  String?         @map("commande_id")
+  id           String          @id @default(uuid())
+  commandeId   String?         @map("commande_id")
   destinataire String
-  modele      String
-  statut      StatutEmail
-  origine     OrigineEcriture // E6, distingue le renvoi manuel de l'automatique
-  motifEchec  String?         @map("motif_echec")
-  creeA       DateTime        @default(now()) @map("cree_a") @db.Timestamptz(3)
+  modele       String
+  statut       StatutEmail
+  origine      OrigineEcriture // E6, distingue le renvoi manuel de l'automatique
+  motifEchec   String?         @map("motif_echec")
+  creeA        DateTime        @default(now()) @map("cree_a") @db.Timestamptz(3)
 
   commande Commande? @relation(fields: [commandeId], references: [id], onDelete: SetNull)
 
@@ -964,26 +986,96 @@ model JournalEmail {
 }
 
 model AlerteCritique {
-  id            String        @id @default(uuid())
-  type          String
-  message       String
-  gravite       GraviteAlerte
-  typeCible     String?       @map("type_cible")
-  idCible       String?       @map("id_cible")
-  acquitteeA    DateTime?     @map("acquittee_a") @db.Timestamptz(3) // E7, acquittable, jamais supprimée
-  acquitteeParId String?      @map("acquittee_par_id")
-  creeA         DateTime      @default(now()) @map("cree_a") @db.Timestamptz(3)
+  id             String        @id @default(uuid())
+  type           String
+  message        String
+  gravite        GraviteAlerte
+  typeCible      String?       @map("type_cible")
+  idCible        String?       @map("id_cible")
+  acquitteeA     DateTime?     @map("acquittee_a") @db.Timestamptz(3) // E7, acquittable, jamais supprimée
+  acquitteeParId String?       @map("acquittee_par_id")
+  creeA          DateTime      @default(now()) @map("cree_a") @db.Timestamptz(3)
 
   acquitteePar Utilisateur? @relation(fields: [acquitteeParId], references: [id], onDelete: SetNull)
 
   @@map("alerte_critique")
 }
 
+/// Journal des connexions, LS-80, ADR-027 decision 2.
+///
+/// POURQUOI UNE TABLE DEDIEE ET NON `JournalAudit`. Celui-ci exige `action`,
+/// `typeCible`, `idCible` et un `detail` obligatoire, et son `acteurId`
+/// designe un compte EXISTANT. Une tentative echouee sur une adresse inconnue
+/// n'a ni cible, ni acteur : la loger la-bas obligerait a inventer une cible,
+/// ou a ne pas journaliser le cas le plus revelateur, le balayage d'adresses.
+///
+/// CE QUI N'EST JAMAIS ECRIT ICI : le mot de passe essaye, meme faux, meme
+/// tronque. Les erreurs de saisie sont a un caractere du vrai mot de passe, et
+/// beaucoup de gens saisissent celui d'un autre site. Cette table deviendrait
+/// une liste de mots de passe presque justes, en face d'adresses connues, sur
+/// un depot public. Le hook qui l'alimente ne lit jamais `ctx.body.password`.
+///
+/// PORTEE : administration ET clients, reussites ET echecs. Dix echecs suivis
+/// d'une reussite est le motif d'une attaque qui a fini par aboutir ; ne
+/// garder que les reussites ne montre que la fin de l'histoire.
+///
+/// CONSERVATION SIX MOIS, deliberation CNIL n 2021-122 du 14 octobre 2021,
+/// point 8, bas de la fourchette recommandee. La purge l'applique, regle E14 :
+/// une duree ecrite dans un document et appliquee par personne est fictive.
+model JournalConnexion {
+  id String @id @default(uuid())
+
+  /// NULLABLE, et c'est le cas interessant. Un echec sur une adresse qui
+  /// n'existe pas ne designe aucun compte. Rendre ce champ obligatoire
+  /// forcerait a taire le balayage d'adresses, exactement ce que le journal
+  /// doit montrer.
+  utilisateurId String? @map("utilisateur_id")
+
+  /// L'adresse SAISIE, qui n'est pas toujours celle d'un compte.
+  ///
+  /// Stockee en clair, et ce n'est pas une entorse a l'invariant 9 : une
+  /// adresse email n'est pas un secret, la table `utilisateur` la porte deja.
+  /// Sans elle, une ligne d'echec sur compte inconnu ne dirait rien du tout.
+  emailTente String @map("email_tente")
+
+  moyen MoyenConnexion
+  issue IssueConnexion
+
+  /// NULLABLE, et une valeur nulle est un cas NORMAL, pas une anomalie.
+  ///
+  /// Depuis Better Auth 1.6.21, `getIPFromHeader` refuse une chaine
+  /// `X-Forwarded-For` a plusieurs sauts tant qu'aucun proxy de confiance
+  /// n'est declare, et rend `null` : c'est la parade au client qui usurpe le
+  /// saut de gauche. Derriere le Nginx du VPS, l'adresse restera donc nulle
+  /// tant que `trustedProxies` n'est pas configure, ce qui releve du
+  /// deploiement. Contraindre NOT NULL ferait echouer l'ecriture du journal
+  /// sur chaque connexion de production.
+  adresseIp String? @map("adresse_ip")
+
+  /// Chaine fournie par le client, donc NON FIABLE : elle n'autorise rien et
+  /// ne sert qu'a distinguer deux appareils dans une relecture humaine.
+  agentUtilisateur String? @map("agent_utilisateur")
+
+  creeA DateTime @default(now()) @map("cree_a") @db.Timestamptz(3)
+
+  /// SET NULL et non CASCADE, meme motif que `JournalAudit`. Si supprimer un
+  /// compte effacait son historique de connexions, un intrus effacerait ses
+  /// traces en supprimant le compte qu'il vient de compromettre.
+  utilisateur Utilisateur? @relation(fields: [utilisateurId], references: [id], onDelete: SetNull)
+
+  /// Sert la purge, qui balaie par anteriorite, regle E14.
+  @@index([creeA])
+  /// Sert l'ecran d'administration, qui liste par compte du plus recent au
+  /// plus ancien.
+  @@index([utilisateurId, creeA])
+  @@map("journal_connexion")
+}
+
 model VerrouTache {
-  id       String   @id @default(uuid())
-  nom      String   @unique // E8, exécution unique
-  acquisA  DateTime @map("acquis_a") @db.Timestamptz(3)
-  expireA  DateTime @map("expire_a") @db.Timestamptz(3) // sans quoi une instance morte bloque la tâche
+  id      String   @id @default(uuid())
+  nom     String   @unique // E8, exécution unique
+  acquisA DateTime @map("acquis_a") @db.Timestamptz(3)
+  expireA DateTime @map("expire_a") @db.Timestamptz(3) // sans quoi une instance morte bloque la tâche
 
   @@map("verrou_tache")
 }
