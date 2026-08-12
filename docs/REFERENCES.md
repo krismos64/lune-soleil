@@ -20,6 +20,7 @@ une règle depuis le schéma.
 | `docs/architecture/PROTOTYPE.md` | intention visuelle du prototype gelé, six états non nominaux, table parcours vers écran, cinq écarts connus | toute interface, publique ou administration |
 | `docs/architecture/VALIDATION.md` | socle Zod, où valider et pourquoi à deux endroits, convention d'erreur des adaptateurs, trois pièges de Zod 4 | toute Server Action, gestionnaire de route ou service qui reçoit une entrée |
 | `docs/architecture/JOURNALISATION.md` | trois journaux distincts, masquage par nom de clé, erreurs réduites au nom de classe, contrôle de santé et ses quatre décisions | toute ligne de journal, la route de santé, le déploiement |
+| `docs/architecture/REGISTRE-DES-TRAITEMENTS.md` | neuf traitements RGPD, durées de conservation tracées à leur source, ce que le registre n'est pas | toute table portant une donnée personnelle, toute durée de conservation |
 
 **Une règle numérotée se cite par son identifiant**, S12 ou V14, jamais
 paraphrasée seule : c'est ce qui permet aux contrôles textuels de la retrouver.
