@@ -58,6 +58,7 @@ ROUTE_TACHE="src/app/api/interne/taches/[nom]/route.ts"
 PREUVE="src/services/preuve-identite.ts"
 ACTION_REAUTH="src/app/administration/reauthentification/actions.ts"
 PURGE_JOURNAUX="src/services/purge-journaux.ts"
+PROXIES="src/lib/proxies-de-confiance.ts"
 
 # TOUT FICHIER MUTE DOIT FIGURER ICI, sans quoi il n'est ni sauvegarde ni
 # restaure et la mutation RESTE SUR LE DISQUE apres l'execution.
@@ -70,7 +71,7 @@ PURGE_JOURNAUX="src/services/purge-journaux.ts"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -702,6 +703,32 @@ cas "un echec de purge interrompt les purges suivantes" integration \
 mute "$PURGE_JOURNAUX" 's/  \{ table: "RateLimit", executer: purgerRateLimit \},\n//'
 cas "table retiree de la liste des purges" integration \
   "purge les trois tables en une passe"
+
+echo
+echo "Resolution de l'adresse client, LS-91"
+echo
+
+# Cas 46 : la liste vide devient un tableau vide au lieu de `undefined`.
+#
+# Les deux se comportent pareil AUJOURD'HUI, Better Auth testant
+# `trustedProxies.length > 0`. Le cas existe parce que la distinction porte une
+# intention, « non configure » plutot que « configure a rien », et parce que
+# `exactOptionalPropertyTypes` la rend visible au type. Une bibliotheque qui
+# traiterait un jour `[]` comme « aucun saut fiable » ferait rendre `null` a
+# `getIp` sans qu'aucun autre test ne bouge.
+mute "$PROXIES" 's/return entrees\.length > 0 \? entrees : undefined;/return entrees;/'
+cas "liste de proxies vide rendue en tableau plutot qu'undefined" unitaire \
+  "rend undefined quand la variable est absente ou vide"
+
+# Cas 47 : les espaces ne sont plus retires autour des entrees.
+#
+# `BETTER_AUTH_TRUSTED_PROXIES=" 192.0.2.10 , 10.0.0.0/24 "` produirait alors
+# des entrees avec espaces, que `parseCIDR` refuse. Better Auth les IGNORE en
+# silence avec un simple `logger.warn` : la liste se vide, la branche « un seul
+# saut » reprend la main, et rien ne rougit. Defaut parfaitement muet.
+mute "$PROXIES" 's/\.map\(\(entree\) => entree\.trim\(\)\)\n    \.filter\(Boolean\)/.filter(Boolean)/'
+cas "espaces non retires autour des proxies declares" unitaire \
+  "la valeur lue est effectivement celle que Better Auth appliquerait"
 
 echo
 echo "-----------------------------------------"

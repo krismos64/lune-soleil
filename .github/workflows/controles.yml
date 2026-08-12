@@ -288,6 +288,18 @@ jobs:
       - name: 6e. Registre des traitements confronte au schema
         run: ./scripts/verifier-registre-traitements.sh
 
+      # Resolution de l'adresse client derriere le proxy, LS-91. Textuel, aucune
+      # base ni conteneur requis.
+      #
+      # CE QU'IL GARDE tient en une directive Nginx, et le defaut qu'il attrape
+      # est SILENCIEUX : remplacer $remote_addr par la forme repandue
+      # $proxy_add_x_forwarded_for laisse le site fonctionner normalement,
+      # pendant que la colonne adresse_ip du journal des connexions se vide au
+      # gre des visiteurs qui envoient un en-tete non analysable. Aucun type,
+      # aucun test applicatif et aucun rendu ne bougent.
+      - name: 6f. Resolution de l'adresse client derriere le proxy
+        run: ./scripts/verifier-nginx.sh
+
       # ----------------------------------------------------------------------
       # Controles 2 et 3. Le format entre ici parce qu'un depot ou seule une
       # partie des fichiers est formatee produit des diffs illisibles.
