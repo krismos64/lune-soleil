@@ -217,13 +217,29 @@ porte déjà. Sans elle, une ligne d'échec sur compte inconnu ne dirait rien.
 | Catégories de données | identifiant de l'acteur, adresse IP, adresse email du destinataire, modèle d'email et statut d'envoi, clé de limitation de débit contenant une adresse IP |
 | Tables | `JournalAudit`, `JournalEmail`, `AlerteCritique`, `RateLimit`, `MouvementStock` |
 | Base légale | intérêt légitime, article 6.1.f, sécurité et preuve du bon fonctionnement |
-| Conservation | six mois pour `JournalAudit` et `RateLimit`, par alignement sur la délibération CNIL n° 2021-122. `JournalEmail` suit la commande qu'il sert, voir T2. Voir la dette en fin de document, aucune purge n'est encore branchée |
+| Conservation | **six mois** pour `JournalAudit`, par alignement sur la délibération CNIL n° 2021-122. **Vingt-quatre heures** pour `RateLimit`, arbitrage de LS-94 exposé ci-dessous. `JournalEmail` suit la commande qu'il sert, voir T2. Les trois purges sont branchées sur une tâche planifiée quotidienne depuis le 12 août 2026, LS-94 |
 | Destinataires | l'exploitante seule |
 | Transfert hors UE | aucun |
 
 **`RateLimit` porte une adresse IP dans sa clé**, ADR-027 décision 1 signalant
 que le mécanisme intégré de Better Auth compte par IP et non par compte. La clé
 n'est pas un identifiant opaque : elle encode la route et l'adresse.
+
+**Pourquoi vingt-quatre heures et non six mois pour `RateLimit`**, arbitrage
+rendu par LS-94 le 12 août 2026. L'alignement sur la délibération n° 2021-122 ne
+tenait pas à l'examen : cette délibération vise la **journalisation**, une trace
+conservée pour être relue après un incident. `RateLimit` n'est pas une trace,
+c'est un **compteur de travail** dont Better Auth se sert pour décider d'accepter
+la requête suivante, et dont les fenêtres valent soixante secondes. Passé la
+fenêtre, la ligne n'a plus aucune utilité et la bibliothèque la réinitialise
+d'elle-même.
+
+Conserver six mois une donnée personnelle dont l'usage dure une minute
+contredisait la minimisation, article 5.1.c. Vingt-quatre heures gardent une
+marge d'exploitation, constater le lendemain qu'une adresse a été plafonnée
+pendant la nuit, tout en divisant par cent quatre-vingts la durée pendant
+laquelle une adresse IP reste attachée à cette table. L'information de fond, elle,
+survit dans `JournalConnexion`, conservé six mois.
 
 ## Tables sans donnée personnelle
 
@@ -252,6 +268,7 @@ Description générale au sens de l'article 30 paragraphe 1 point g.
 | Limitation de débit sur connexion, réinitialisation et inscription | ADR-027 décision 1, `RateLimit` |
 | Session d'administration limitée à un jour, réauthentification sur les actions sensibles | ADR-027 décision 3 |
 | Journal des connexions avec purge à six mois | ADR-027 décision 2, règle E14 |
+| Purge quotidienne des journaux techniques, sous verrou | LS-94, `src/services/purge-journaux.ts` |
 | Chiffrement des échanges en HTTPS | déploiement, Nginx sur le VPS |
 | Secrets jamais journalisés ni commités | invariant 9, hooks `PreToolUse` |
 | Masquage des données personnelles dans les journaux applicatifs | `docs/architecture/JOURNALISATION.md` |
@@ -259,23 +276,25 @@ Description générale au sens de l'article 30 paragraphe 1 point g.
 
 ## Ce qui reste dû
 
-Trois points sont identifiés et **non traités par cette story**, chacun tracé
-plutôt que résolu en silence. Les trois portent un ticket depuis le 12 août
-2026 : un point noté ici sans ticket finit par n'être suivi nulle part.
+Deux points sont identifiés et **non traités**, chacun tracé plutôt que résolu en
+silence. Les deux portent un ticket depuis le 12 août 2026 : un point noté ici
+sans ticket finit par n'être suivi nulle part.
 
 1. **La durée de conservation des avis, T7**, est posée à trois ans sans texte
    qui l'impose. Ni le code de la consommation ni le référentiel CNIL n° 2021-131
    ne fixent de durée pour un avis publié. Un ADR doit trancher, comme ADR-027 l'a
    fait pour les six mois du journal des connexions. **LS-93.**
-2. **Aucune purge n'est branchée pour `JournalAudit` ni `RateLimit`**, dont la
-   durée est pourtant annoncée en T9. Une durée écrite dans un document et
-   appliquée par personne est fictive, ADR-027 le pose déjà pour le journal des
-   connexions. La purge de `JournalConnexion` existe mais **n'est appelée par
-   personne** à ce jour. **LS-94.**
-3. **La suppression d'un compte client n'est pas implémentée**, ni la procédure de
+2. **La suppression d'un compte client n'est pas implémentée**, ni la procédure de
    réponse à une demande d'accès ou d'effacement, articles 15 et 17. Le schéma la
    prépare, `Commande.dissocieA` et les politiques `SET NULL`, mais aucun code ne
    l'exécute. **LS-95.**
+
+**Le troisième point est levé.** Les purges de `JournalConnexion`, `JournalAudit`
+et `RateLimit` sont branchées sur une tâche planifiée quotidienne depuis le
+12 août 2026, LS-94, sous le verrou de LS-72 : aucune durée annoncée par ce
+registre n'est plus appliquée par personne. Le contrôle
+`scripts/verifier-registre-traitements.sh` le vérifie, et un test négatif prouve
+qu'une ligne encore dans sa fenêtre de conservation n'est pas supprimée.
 
 ## Sources
 

@@ -20,6 +20,7 @@
  */
 import { engendrerCorrelationId, journaliser } from "@/lib/journal";
 import { secretCronValide } from "@/lib/secret-cron";
+import { purgerJournaux } from "@/services/purge-journaux";
 import {
   executerSousVerrou,
   NOMS_TACHES,
@@ -82,7 +83,14 @@ export async function POST(
 
   const resultat = await executerSousVerrou(tache, async () => {
     /**
-     * VOLONTAIREMENT VIDE, et ce vide est le livrable de la story.
+     * UNE SEULE TACHE PORTE UN TRAVAIL, LS-94, les deux autres restent vides.
+     *
+     * `purge-journaux` applique les durees de conservation annoncees au
+     * registre des traitements, regle E14. Elle est branchee ici plutot que
+     * dans un fichier de route distinct pour la meme raison qui a fait choisir
+     * une route parametree : la verification du secret et la prise de verrou
+     * sont communes, et les dupliquer ferait qu'un durcissement futur ne
+     * s'appliquerait qu'a l'un des deux fichiers.
      *
      * `liberation-reservations` recevra la liberation des reservations
      * expirees, phase 3, LS-17 : decrementer `quantiteReservee` et supprimer
@@ -96,6 +104,46 @@ export async function POST(
      * elles LEVENT en cas d'echec, et `executerSousVerrou` se charge du
      * journal et du relachement.
      */
+    if (tache === "purge-journaux") {
+      /**
+       * `purgerJournaux` NE LEVE PAS, a la difference du contrat des deux
+       * autres taches, et cet ecart est le critere 4 de LS-94.
+       *
+       * Une purge qui leve ferait sortir la boucle et laisserait les tables
+       * suivantes intactes : un incident sur `JournalConnexion` empecherait
+       * la purge de `RateLimit`, qui grossirait alors indefiniment. L'echec
+       * est donc porte table par table dans le resultat, et journalise a
+       * l'interieur du service.
+       *
+       * LA TACHE EST DECLAREE EN ECHEC SI UNE SEULE PURGE A ECHOUE, en levant
+       * ici apres coup : les autres tables ont ete traitees, mais
+       * l'exploitation doit voir un echec plutot qu'un 200 rassurant. Sans
+       * cela, une purge cassee depuis des mois rendrait la meme reponse
+       * qu'une purge sans travail.
+       */
+      const resultats = await purgerJournaux();
+      const echouees = resultats.filter((r) => r.echec).map((r) => r.table);
+
+      journaliser(
+        "info",
+        "Purge des journaux terminee",
+        {
+          tache,
+          supprimees: resultats.reduce((somme, r) => somme + r.supprimees, 0),
+          tablesEnEchec: echouees.length,
+        },
+        correlation,
+      );
+
+      if (echouees.length > 0) {
+        throw new Error(
+          `Purge en echec sur ${echouees.length} table(s) : ${echouees.join(", ")}`,
+        );
+      }
+
+      return;
+    }
+
     journaliser(
       "debug",
       "Tache declenchee, aucun travail a executer",
