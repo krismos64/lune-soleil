@@ -24,7 +24,9 @@ import {
   LONGUEUR_MAXIMALE_MOT_DE_PASSE,
   LONGUEUR_MINIMALE_MOT_DE_PASSE,
 } from "@/lib/mot-de-passe";
+
 import { prisma } from "@/lib/prisma";
+import { lireProxiesDeConfiance } from "@/lib/proxies-de-confiance";
 
 /**
  * L'URL publique du site, et un repli qui NE VAUT QU'EN DEVELOPPEMENT.
@@ -160,6 +162,10 @@ export function creerAuth(
   // module, et le test qui couvre le cas reel du defaut, production servie en
   // `http`, a besoin de le poser sans reevaluer tout le module.
   productionSimulee: boolean = enProduction,
+  // Meme motif encore, LS-91 : le test qui verifie qu'une chaine usurpee n'est
+  // pas retenue doit pouvoir declarer un proxy de confiance sans toucher a
+  // l'environnement du processus.
+  proxiesDeConfiance: string[] | undefined = lireProxiesDeConfiance(),
 ) {
   return betterAuth({
     database: prismaAdapter(prisma, { provider: "postgresql" }),
@@ -182,6 +188,27 @@ export function creerAuth(
        * sur `localhost`, que `NODE_ENV` distingue exactement.
        */
       useSecureCookies: productionSimulee || urlSite.startsWith("https://"),
+
+      /**
+       * RESOLUTION DE L'ADRESSE CLIENT, LS-91. Voir
+       * `lib/proxies-de-confiance.ts` pour le mecanisme complet, les cinq
+       * comportements mesures de `getIp`, et pourquoi la valeur juste en
+       * production est VIDE.
+       *
+       * En resume : Nginx ecrase `X-Forwarded-For` avec `$remote_addr`, la
+       * chaine ne porte donc qu'un seul saut et Better Auth la resout sans
+       * proxy de confiance. La liste ne se renseigne que si un intermediaire
+       * s'ajoute devant Nginx.
+       *
+       * LA CLE EST OMISE et non posee a `undefined` quand aucun proxy n'est
+       * declare : `exactOptionalPropertyTypes` est actif dans ce projet, et
+       * `{ trustedProxies: undefined }` n'y est pas le meme type que `{}`. La
+       * distinction est utile ici, elle dit « non configure » plutot que
+       * « configure a rien ».
+       */
+      ipAddress: proxiesDeConfiance
+        ? { trustedProxies: proxiesDeConfiance }
+        : {},
     },
 
     user: {
