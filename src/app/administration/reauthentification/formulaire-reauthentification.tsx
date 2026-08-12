@@ -62,6 +62,25 @@ export function FormulaireReauthentification({ email }: { email: string }) {
         );
         return;
 
+      case "TROP_DE_TENTATIVES":
+        /**
+         * UN MESSAGE A PART, LS-92, ET NON LE MESSAGE DE SAISIE.
+         *
+         * Ce cas serait tombe dans le `default` ci-dessous, qui dit « vérifiez
+         * votre saisie » : l'exploitante qui tape le BON mot de passe le
+         * ressaisirait en boucle sans jamais comprendre, chaque tentative
+         * repoussant d'ailleurs la fin de la fenetre.
+         *
+         * LE DELAI EST DIT, LE PLAFOND NON. « Patientez une minute » aide
+         * l'exploitante ; « il vous restait deux tentatives » aiderait surtout
+         * quelqu'un qui cherche a s'approcher du seuil sans le franchir.
+         */
+        setEtat("erreur");
+        setMessageErreur(
+          `Trop de tentatives. Patientez ${resultat.reessayerDansSecondes} secondes avant de réessayer.`,
+        );
+        return;
+
       default:
         /**
          * UN SEUL MESSAGE pour `REFUSEE` et `INVALIDE`. Distinguer « mot de

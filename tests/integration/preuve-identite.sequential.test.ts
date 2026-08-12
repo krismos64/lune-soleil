@@ -468,3 +468,231 @@ describe("l'adaptateur d'entree, critere 7", () => {
     expect(appelants).toEqual(["src/services/preuve-identite.ts"]);
   });
 });
+
+/**
+ * Limitation de debit et trace des tentatives, LS-92.
+ *
+ * CE QUE CES TESTS DOIVENT PROUVER, et l'ordre d'importance n'est pas celui
+ * qu'on croit. Le ticket est explicite : « le vrai motif n'est pas l'absence de
+ * plafond mais l'absence de trace ». Trois choses bornent deja le devinage,
+ * session d'administration exigee, mot de passe de seize caracteres, et
+ * l'attaquant devrait d'abord franchir `/sign-in/email` que Better Auth limite.
+ * Ce qui manquait vraiment, c'est qu'une serie de tentatives par cette voie ne
+ * laissait AUCUNE trace opposable.
+ *
+ * ILS EXERCENT LE VRAI POINT D'ENTREE, `prouverIdentiteParMotDePasse`, et non
+ * une reproduction de sa mecanique : critere 1 du ticket, et lecon de LS-50 ou
+ * reproduire la mecanique en SQL avait laisse passer deux defauts.
+ *
+ * ILS N'APPELLENT PAS `auth.handler`. C'est justement le point : ce chemin ne
+ * passe par aucun routeur, donc par aucune limitation de la bibliotheque. Un
+ * test qui passerait par `auth.handler` mesurerait la limitation de Better
+ * Auth et serait vert sans rien prouver de ce code, exactement le piege des six
+ * tests de LS-79.
+ */
+describe("limitation de debit sur la verification de mot de passe, LS-92", () => {
+  /** Les lignes du journal des connexions, dans l'ordre d'ecriture. */
+  async function lignesJournal(): Promise<
+    { issue: string; moyen: string; email_tente: string }[]
+  > {
+    const { rows } = await client.query(
+      "SELECT issue, moyen, email_tente FROM journal_connexion ORDER BY cree_a, id",
+    );
+    return rows;
+  }
+
+  it("refuse au-dela du seuil, en exerçant le vrai point d'entree", async () => {
+    const enTetes = await ouvrirSession();
+    const { ACTIONS_PROTEGEES } = await import("@/services/limitation-action");
+    const { max } = ACTIONS_PROTEGEES["reauthentification-mot-de-passe"];
+
+    // Les `max` premieres tentatives echouent sur le mot de passe, pas sur la
+    // cadence : le plafond n'est pas encore franchi.
+    for (let i = 0; i < max; i++) {
+      const resultat = await prouverIdentiteParMotDePasse(
+        enTetes,
+        MAUVAIS_MOT_DE_PASSE,
+      );
+      expect(resultat).toEqual({ etat: "REFUSEE" });
+    }
+
+    // La suivante est refusee AVANT toute verification de mot de passe.
+    const apres = await prouverIdentiteParMotDePasse(
+      enTetes,
+      MAUVAIS_MOT_DE_PASSE,
+    );
+
+    expect(apres.etat).toBe("TROP_DE_TENTATIVES");
+  });
+
+  it("refuse meme le BON mot de passe une fois le seuil franchi", async () => {
+    /**
+     * LE TEST QUI SEPARE UN VRAI PLAFOND D'UN COMPTEUR DECORATIF.
+     *
+     * Si la limitation ne s'appliquait qu'aux echecs, un attaquant qui trouve
+     * le mot de passe a la centieme tentative passerait quand meme. Le plafond
+     * doit couper le chemin AVANT `verifyPassword`, quel que soit le secret
+     * fourni.
+     */
+    const enTetes = await ouvrirSession();
+    const { ACTIONS_PROTEGEES } = await import("@/services/limitation-action");
+    const { max } = ACTIONS_PROTEGEES["reauthentification-mot-de-passe"];
+
+    for (let i = 0; i < max; i++) {
+      await prouverIdentiteParMotDePasse(enTetes, MAUVAIS_MOT_DE_PASSE);
+    }
+
+    const resultat = await prouverIdentiteParMotDePasse(enTetes, MOT_DE_PASSE);
+
+    expect(resultat.etat).toBe("TROP_DE_TENTATIVES");
+    // ET AUCUNE PREUVE N'EST ECRITE : le refus est complet, pas cosmetique.
+    expect(await preuveEnBase()).toBeNull();
+  });
+
+  it("journalise chaque tentative, echec, reussite et refus de cadence", async () => {
+    /**
+     * LE CRITERE 2, ET LE VRAI MOTIF DE LA STORY. Avant LS-92, aucune de ces
+     * lignes n'existait : `verifyPassword` ne croise aucun des chemins que le
+     * hook de LS-80 surveille.
+     */
+    const enTetes = await ouvrirSession();
+    const { ACTIONS_PROTEGEES } = await import("@/services/limitation-action");
+    const { max } = ACTIONS_PROTEGEES["reauthentification-mot-de-passe"];
+
+    // La connexion de `ouvrirSession` a deja laisse sa propre ligne, ecrite par
+    // le hook de LS-80. On part donc du compte courant.
+    const avant = (await lignesJournal()).length;
+
+    await prouverIdentiteParMotDePasse(enTetes, MAUVAIS_MOT_DE_PASSE);
+    await prouverIdentiteParMotDePasse(enTetes, MOT_DE_PASSE);
+
+    const apresDeux = (await lignesJournal()).slice(avant);
+
+    expect(apresDeux.map((l) => l.issue)).toEqual(["ECHEC", "REUSSITE"]);
+    // LE MOYEN RESTE `MOT_DE_PASSE`, sans valeur d'enum supplementaire : c'est
+    // bien un mot de passe qui a ete verifie, le chemin d'entree est une autre
+    // question et n'a pas a polluer ce champ.
+    expect(apresDeux.every((l) => l.moyen === "MOT_DE_PASSE")).toBe(true);
+    // L'ADRESSE VIENT DE LA SESSION, jamais d'une saisie : l'appelant est deja
+    // authentifie.
+    expect(apresDeux.every((l) => l.email_tente === EMAIL)).toBe(true);
+
+    /**
+     * Puis le refus de cadence, qui doit lui aussi laisser sa trace : le VOLUME
+     * refuse est le signal d'une attaque.
+     *
+     * `max + 1` ET NON `max`, ET LA NUANCE A FAIT ECHOUER LA PREMIERE VERSION
+     * DE CE TEST. La reussite ci-dessus a EFFACE le compteur : les `max`
+     * tentatives suivantes portent donc les comptes 1 a `max`, dont aucun ne
+     * franchit le seuil, qui refuse a `compte > max`. Il en faut une de plus
+     * pour observer le refus.
+     *
+     * Le code etait juste, c'est le test qui comptait mal. Rien ne le
+     * signalait : le compteur reparti a zero est precisement le comportement
+     * qu'un autre test de cette suite exige.
+     */
+    for (let i = 0; i <= max; i++) {
+      await prouverIdentiteParMotDePasse(enTetes, MAUVAIS_MOT_DE_PASSE);
+    }
+
+    const toutes = await lignesJournal();
+    expect(toutes.filter((l) => l.issue === "REFUSEE_LIMITATION").length).toBe(
+      1,
+    );
+  });
+
+  it("une reussite remet le compteur a zero", async () => {
+    /**
+     * Sans cela, une exploitante qui se trompe quatre fois puis reussit
+     * resterait a quatre tentatives consommees pour le reste de la minute : sa
+     * cinquieme saisie legitime serait refusee alors qu'elle vient de prouver
+     * son identite.
+     *
+     * CELA N'AFFAIBLIT RIEN : le seul moyen d'obtenir cette remise a zero est
+     * de fournir le bon mot de passe, c'est-a-dire ce que l'attaquant cherche.
+     */
+    const enTetes = await ouvrirSession();
+    const { ACTIONS_PROTEGEES } = await import("@/services/limitation-action");
+    const { max } = ACTIONS_PROTEGEES["reauthentification-mot-de-passe"];
+
+    for (let i = 0; i < max - 1; i++) {
+      await prouverIdentiteParMotDePasse(enTetes, MAUVAIS_MOT_DE_PASSE);
+    }
+
+    expect(await prouverIdentiteParMotDePasse(enTetes, MOT_DE_PASSE)).toEqual({
+      etat: "ETABLIE",
+    });
+
+    // Le compteur est reparti a zero : `max` nouvelles tentatives passent sans
+    // etre refusees pour cadence.
+    for (let i = 0; i < max; i++) {
+      const resultat = await prouverIdentiteParMotDePasse(
+        enTetes,
+        MAUVAIS_MOT_DE_PASSE,
+      );
+      expect(resultat).toEqual({ etat: "REFUSEE" });
+    }
+  });
+
+  it("compte par session et non globalement", async () => {
+    /**
+     * DEUX SESSIONS NE PARTAGENT PAS LEUR COMPTEUR. Un compteur global ferait
+     * qu'une exploitante bloquerait l'autre, et sur ce projet mono-compte, que
+     * l'exploitante se bloquerait elle-meme depuis un second appareil.
+     *
+     * La cle porte donc l'identifiant de session, et le prefixe `action:` la
+     * garde disjointe des cles de Better Auth, `<ip>|<chemin>`.
+     */
+    const premiere = await ouvrirSession();
+    const { ACTIONS_PROTEGEES } = await import("@/services/limitation-action");
+    const { max } = ACTIONS_PROTEGEES["reauthentification-mot-de-passe"];
+
+    for (let i = 0; i <= max; i++) {
+      await prouverIdentiteParMotDePasse(premiere, MAUVAIS_MOT_DE_PASSE);
+    }
+
+    expect(
+      (await prouverIdentiteParMotDePasse(premiere, MOT_DE_PASSE)).etat,
+    ).toBe("TROP_DE_TENTATIVES");
+
+    // Une seconde connexion, donc une seconde session, sur le MEME compte.
+    const reponse = await auth.handler(
+      new Request("http://localhost:3000/api/auth/sign-in/email", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: EMAIL, password: MOT_DE_PASSE }),
+      }),
+    );
+    const seconde = new Headers();
+    seconde.set(
+      "cookie",
+      reponse.headers.get("set-cookie")?.split(";")[0] ?? "",
+    );
+
+    expect(await prouverIdentiteParMotDePasse(seconde, MOT_DE_PASSE)).toEqual({
+      etat: "ETABLIE",
+    });
+  });
+
+  it("n'ecrit pas sous une cle qui heurterait celles de Better Auth", async () => {
+    /**
+     * LA CLE EST PREFIXEE `action:`, et ce test le mesure plutot que de le
+     * supposer. Better Auth ecrit `<ip>|<chemin>` : sans prefixe distinct, une
+     * Server Action et une route de la bibliotheque partageraient un compteur,
+     * chacune consommant le quota de l'autre.
+     */
+    const enTetes = await ouvrirSession();
+
+    await prouverIdentiteParMotDePasse(enTetes, MAUVAIS_MOT_DE_PASSE);
+
+    const { rows } = await client.query("SELECT key FROM rate_limit");
+    const cles = rows.map((l: { key: string }) => l.key);
+
+    expect(cles.some((c: string) => c.startsWith("action:"))).toBe(true);
+    expect(
+      cles.some((c: string) =>
+        c.startsWith("action:reauthentification-mot-de-passe|"),
+      ),
+    ).toBe(true);
+  });
+});
