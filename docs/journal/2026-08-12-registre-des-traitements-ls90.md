@@ -105,10 +105,10 @@ document plutôt que résolus en silence :
 
 | Canal | État |
 |---|---|
-| Dépôt | branche `feat/LS-90-registre-des-traitements`, PR à ouvrir |
+| Dépôt | fusionné sur `main` en rebase, PR #94, commits `ecc5bba`, `1c7b06b`, `3067662` |
 | Journal | cette page |
-| Mémoire | fiche sur le classement d'une table et le contrôle qui le refuse |
-| Jira | LS-90 à passer en Terminé, commentaire critère par critère |
+| Mémoire | [[lune-soleil-classement-hors-perimetre]], plus la fiche d'état du projet |
+| Jira | LS-90 en Terminé, commentaire critère par critère posté |
 
 ## Prochaine étape
 
