@@ -333,7 +333,22 @@ chiffre_en_lettres() {
     trente-quatre) echo 34 ;; trente-cinq) echo 35 ;;
     trente-six) echo 36 ;; trente-sept) echo 37 ;;
     trente-huit) echo 38 ;; trente-neuf) echo 39 ;;
+    # LA TABLE S'ARRETAIT A QUARANTE, et le controle a echoue le jour ou le
+    # compte reel est passe a quarante-cinq, LS-94. Le symptome etait
+    # trompeur : il annoncait « README.md annonce 5 mutations », parce que
+    # l'alternance ne connaissant pas « quarante-cinq », la recherche
+    # « <nombre> fois » captait un « cinq » situe ailleurs dans la phrase.
+    #
+    # UN CONTROLE DONT LA TABLE EST TROP COURTE NE SE TAIT PAS, IL MENT. Il
+    # aurait ete tentant de lire « 5 au lieu de 45 » comme une faute du README.
+    # Etendre jusqu'a quarante-neuf laisse de la marge ; au-dela, il faudra
+    # etendre a nouveau, et le symptome sera le meme.
     quarante) echo 40 ;;
+    quarante-et-une) echo 41 ;; quarante-et-un) echo 41 ;;
+    quarante-deux) echo 42 ;; quarante-trois) echo 43 ;;
+    quarante-quatre) echo 44 ;; quarante-cinq) echo 45 ;;
+    quarante-six) echo 46 ;; quarante-sept) echo 47 ;;
+    quarante-huit) echo 48 ;; quarante-neuf) echo 49 ;;
     *) echo "" ;;
   esac
 }
@@ -351,7 +366,7 @@ chiffre_en_lettres() {
 # « dix » avant « dix-sept », « dix-sept mutations » rendait « dix », soit 10 au
 # lieu de 17. Le contrôle aurait alors signalé un écart imaginaire, ce qui use
 # la confiance aussi sûrement qu'un silence.
-NOMBRES_EN_LETTRES='trente-et-une|trente-et-un|trente-quatre|trente-trois|trente-cinq|trente-deux|trente-sept|trente-huit|trente-neuf|trente-six|vingt-et-une|vingt-et-un|vingt-quatre|vingt-trois|vingt-cinq|vingt-deux|vingt-sept|vingt-huit|vingt-neuf|vingt-six|quarante|dix-sept|dix-huit|dix-neuf|quatorze|quinze|seize|treize|douze|trente|vingt|onze|dix|neuf|huit|sept|cinq|deux|trois|quatre|six|une|un'
+NOMBRES_EN_LETTRES='trente-et-une|trente-et-un|trente-quatre|trente-trois|trente-cinq|trente-deux|trente-sept|trente-huit|trente-neuf|trente-six|vingt-et-une|vingt-et-un|vingt-quatre|vingt-trois|vingt-cinq|vingt-deux|vingt-sept|vingt-huit|vingt-neuf|vingt-six|quarante-et-une|quarante-et-un|quarante-quatre|quarante-trois|quarante-cinq|quarante-deux|quarante-sept|quarante-huit|quarante-neuf|quarante-six|quarante|dix-sept|dix-huit|dix-neuf|quatorze|quinze|seize|treize|douze|trente|vingt|onze|dix|neuf|huit|sept|cinq|deux|trois|quatre|six|une|un'
 
 # Cherche « <chiffre en lettres> <nom> » dans un texte aplati et rend le nombre.
 #
