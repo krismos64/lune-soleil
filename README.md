@@ -190,6 +190,18 @@ docker compose -f docker-compose.yml -f docker-compose.cron.yml \
 tâche qui ne tourne pas se remarque, une route interne ouverte à tous ne se
 remarque pas.
 
+Trois tâches sont déclarées. `liberation-reservations` et
+`reconciliation-paiements` restent **vides**, elles se remplissent en phase 3 et
+4. `purge-journaux` est la seule qui travaille aujourd'hui, LS-94 : une fois par
+jour à 03h17, elle applique les durées de conservation annoncées par
+`docs/architecture/REGISTRE-DES-TRAITEMENTS.md` sur `JournalConnexion`,
+`JournalAudit` et `RateLimit`.
+
+**Une purge en échec n'empêche pas les autres.** Chaque table est isolée : un
+incident sur l'une laisserait sinon les suivantes grossir indéfiniment, ce qui
+est un incident silencieux. La tâche est déclarée en échec si l'une des trois a
+échoué, pour que l'exploitation le voie plutôt qu'un 200 rassurant.
+
 ### Tests, LS-68
 
 ```bash
@@ -387,15 +399,22 @@ destructives doivent bloquer, une migration additive doit passer, et une
 détection qui ne peut pas conclure doit bloquer plutôt que supposer. Lancé contre
 la version d'avant LS-42, il échoue sur sept de ces dix cas.
 
-`verifier-tests-mutation.sh` casse **quarante fois** le comportement testé
+`verifier-tests-mutation.sh` casse **quarante-cinq fois** le comportement testé
 et exige que la suite rougisse à chaque fois : cinq mutations de la primitive
 SQL de réservation, cinq de l'authentification et de l'autorisation, deux de
 l'interface, trois du socle de validation, quatre de la journalisation et de la
 santé depuis LS-73, deux de la limitation de débit depuis LS-79, deux de la
 session et de la preuve d'identité depuis LS-81, huit du journal des connexions
 depuis LS-80, cinq du verrou de tâche planifiée depuis LS-72, quatre de la preuve
-d'identité depuis LS-89. Il vérifie d'abord que les deux projets de test sont
-verts, sans quoi aucune mutation ne prouverait rien.
+d'identité depuis LS-89, et cinq de la purge des journaux depuis LS-94. Il
+vérifie d'abord que les deux projets de test sont verts, sans quoi aucune
+mutation ne prouverait rien.
+
+**Il exige que le test rougissant soit celui qui porte la garantie**, jamais
+n'importe lequel. C'est ce qui a fait apparaître un défaut dans un test de
+LS-94 : la mutation de la frontière `lt` vers `lte` restait verte parce que le
+test calculait la limite de conservation à la main plutôt que de la demander à
+`limiteDeConservation`, et plaçait donc sa ligne trois jours du mauvais côté.
 
 **Tout fichier muté figure dans `MUTABLES`, et un garde-fou le vérifie.** Un
 fichier absent de cette liste n'est ni sauvegardé ni restauré : la mutation
