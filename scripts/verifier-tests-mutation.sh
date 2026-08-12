@@ -57,6 +57,7 @@ TACHE_PLANIFIEE="src/services/tache-planifiee.ts"
 ROUTE_TACHE="src/app/api/interne/taches/[nom]/route.ts"
 PREUVE="src/services/preuve-identite.ts"
 ACTION_REAUTH="src/app/administration/reauthentification/actions.ts"
+PURGE_JOURNAUX="src/services/purge-journaux.ts"
 
 # TOUT FICHIER MUTE DOIT FIGURER ICI, sans quoi il n'est ni sauvegarde ni
 # restaure et la mutation RESTE SUR LE DISQUE apres l'execution.
@@ -69,7 +70,7 @@ ACTION_REAUTH="src/app/administration/reauthentification/actions.ts"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -647,6 +648,60 @@ cas "borne d'entree retiree de l'adaptateur" integration \
 mute "$ACTION_REAUTH" 's/    await exigerAdministratrice\(enTetes\);\n  \} catch \(erreur\) \{\n    if \(erreur instanceof AutorisationRefuseeError\) \{\n      return \{ statut: "SESSION_ABSENTE" \};\n    \}\n    throw erreur;\n  \}\n\n  try \{\n    return traduire\(await prouverIdentiteParMotDePasse/    \/\/ garde retiree\n  } catch (erreur) {\n    if (erreur instanceof AutorisationRefuseeError) {\n      return { statut: "SESSION_ABSENTE" };\n    }\n    throw erreur;\n  }\n\n  try {\n    return traduire(await prouverIdentiteParMotDePasse/'
 cas "garde de role retiree d'une Server Action" integration \
   "les deux Server Actions appellent exigerAdministratrice"
+
+echo
+echo "Purge des journaux, LS-94"
+echo
+
+# Cas 41 : LA MUTATION QUI COMPTE POUR UNE PURGE. Sans clause `where`, le
+# `deleteMany` vide la table entiere. C'est la pire version possible de la
+# fonction, et c'est aussi celle qu'un test naif laisse passer : « la ligne
+# ancienne a disparu » reste vrai quand TOUTES les lignes ont disparu.
+#
+# Le test attendu est celui qui verifie la SURVIE de la ligne recente, critere
+# 6 du ticket : « une purge trop large est pire qu'une purge absente ».
+mute "$PURGE_JOURNAUX" 's/where: \{ creeA: \{ lt: limiteDeConservation\(maintenant\) \} \},\n  \}\);\n\n  return count;\n\}\n\n\/\*\*\n \* Supprime les lignes de `RateLimit`/where: {},\n  });\n\n  return count;\n}\n\n\/**\n * Supprime les lignes de `RateLimit`/'
+cas "clause de conservation retiree, la purge vide la table" integration \
+  "supprime une ligne trop ancienne ET conserve une ligne dans la fenetre"
+
+# Cas 42 : la frontiere, `lt` devient `lte`. Une ligne posee exactement a la
+# limite est alors supprimee, contre la position tenue depuis LS-80.
+#
+# CE CAS A TROUVE UN DEFAUT DANS SON PROPRE TEST. La premiere version du test
+# calculait la limite a la main, par `setUTCMonth(mois - 6)`, ce qui parait
+# equivalent et ne l'est pas : sur le 31 aout le calcul naif rend le 3 mars
+# quand `limiteDeConservation` rend le 28 fevrier. La ligne se trouvait trois
+# jours APRES la limite, ou elle survit dans les deux cas, et la mutation
+# restait verte. Une frontiere ne se teste qu'avec la valeur exacte rendue par
+# le code qui la calcule.
+mute "$PURGE_JOURNAUX" 's/where: \{ creeA: \{ lt: limiteDeConservation\(maintenant\) \} \}/where: { creeA: { lte: limiteDeConservation(maintenant) } }/'
+cas "comparaison de frontiere rendue non stricte" integration \
+  "conserve une ligne posee exactement a la limite"
+
+# Cas 43 : l'unite de `RateLimit.lastRequest`. La colonne porte des
+# MILLISECONDES, `Date.now()` cote Better Auth. Comparer a une valeur en
+# secondes donne une limite mille fois trop petite, donc anterieure a 1970 :
+# plus aucune ligne n'est jamais supprimee et la table grossit indefiniment,
+# sans qu'aucune erreur n'apparaisse. Defaut parfaitement silencieux.
+mute "$PURGE_JOURNAUX" 's/maintenant\.getTime\(\) - CONSERVATION_RATE_LIMIT_HEURES \* 60 \* 60 \* 1000/Math.floor(maintenant.getTime() \/ 1000) - CONSERVATION_RATE_LIMIT_HEURES * 60 * 60/'
+cas "purge de RateLimit comparee en secondes et non en millisecondes" integration \
+  "compare des millisecondes et non des secondes"
+
+# Cas 44 : l'echec d'une purge interrompt les suivantes, critere 4. Un incident
+# sur `JournalConnexion` empecherait alors la purge de `RateLimit`, qui
+# grossirait sans que rien ne le dise. Le `throw` transforme un incident sur
+# une table en incident sur trois.
+mute "$PURGE_JOURNAUX" 's/      journaliserErreur\("Purge de journal en echec", erreur, \{ table \}\);\n\n      resultats\.push\(\{ table, supprimees: 0, echec: true \}\);/      journaliserErreur("Purge de journal en echec", erreur, { table });\n\n      throw erreur;/'
+cas "un echec de purge interrompt les purges suivantes" integration \
+  "une purge en echec n'empeche pas les suivantes"
+
+# Cas 45 : une table disparait de la liste des purges. C'est l'oubli le plus
+# probable dans la vraie vie, celui d'une table ajoutee au schema sans etre
+# ajoutee ici : la duree annoncee au registre des traitements reste alors
+# fictive pour cette table, exactement l'etat que LS-94 corrige.
+mute "$PURGE_JOURNAUX" 's/  \{ table: "RateLimit", executer: purgerRateLimit \},\n//'
+cas "table retiree de la liste des purges" integration \
+  "purge les trois tables en une passe"
 
 echo
 echo "-----------------------------------------"

@@ -11,5 +11,18 @@
 # La sortie de chaque appel part sur la sortie standard du conteneur, donc dans
 # `docker logs`. Aucune redirection vers un fichier : un fichier dans un
 # conteneur se perd au redemarrage et ne se lit pas.
+# LA PURGE DES JOURNAUX EST QUOTIDIENNE, LS-94, et non toutes les cinq
+# minutes comme ses voisines. Elle applique des durees de conservation qui se
+# comptent en mois et en heures : la relancer plus souvent supprimerait les
+# memes zero ligne, en prenant un verrou et en ecrivant une ligne de journal a
+# chaque fois. Une fois par jour suffit a ce qu'aucune donnee ne depasse sa
+# duree annoncee de plus d'un jour.
+#
+# A 03h17 ET NON A MINUIT PILE. Un `0 0 * * *` fait converger la purge avec
+# tout ce que la planete lance a minuit, sauvegardes comprises, et une purge
+# qui verrouille des lignes pendant une sauvegarde n'aide personne. L'heure
+# creuse et le quantieme decale evitent aussi que deux taches futures se
+# donnent rendez-vous a la meme minute.
 */5 * * * * /usr/local/bin/declencher.sh liberation-reservations
 */15 * * * * /usr/local/bin/declencher.sh reconciliation-paiements
+17 3 * * * /usr/local/bin/declencher.sh purge-journaux

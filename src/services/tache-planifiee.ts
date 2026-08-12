@@ -49,6 +49,22 @@ import { prendreVerrou, relacherVerrou } from "@/repositories/verrou";
 export const TACHES = {
   "liberation-reservations": { dureeVerrouSecondes: 600 },
   "reconciliation-paiements": { dureeVerrouSecondes: 900 },
+  /**
+   * Purge des journaux, LS-94. Une fois par jour, verrou d'une heure.
+   *
+   * LA DUREE DE VERROU EST PLUS LONGUE QUE CELLE DES DEUX AUTRES parce que
+   * cette tache supprime des lignes plutot que d'en lire quelques-unes : un
+   * `deleteMany` sur une table de plusieurs centaines de milliers de lignes
+   * prend un temps que rien ne borne a l'avance. Une heure garde deux ordres
+   * de grandeur au-dessus de la duree attendue, quelques secondes.
+   *
+   * SUR UNE TACHE QUOTIDIENNE, la regle « rester inferieure a plusieurs
+   * periodes » se lit autrement que sur une tache de cinq minutes : une heure
+   * ne represente qu'un vingt-quatrieme de la periode, donc une instance morte
+   * ne fait sauter AUCUN cycle, contrairement aux deux autres taches qui en
+   * perdent deux au pire.
+   */
+  "purge-journaux": { dureeVerrouSecondes: 3600 },
 } as const;
 
 export type NomTache = keyof typeof TACHES;
