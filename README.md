@@ -275,6 +275,8 @@ Dix-sept scripts, dont sept de mutation qui prouvent les autres :
 ./scripts/verifier-actions-sensibles-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-registre-traitements.sh       # registre RGPD confronté au schéma
 ./scripts/verifier-registre-traitements-mutation.sh # prouve le précédent par mutation
+./scripts/verifier-nginx.sh                      # résolution de l'adresse client, LS-91
+./scripts/verifier-nginx-mutation.sh             # prouve le précédent par mutation
 ./scripts/verifier-jira.sh                       # epics et dépendances du backlog, local
 ./scripts/controle-fumee.sh                      # santé du service déployé, LS-73
 ./docs/prototypes/interblocage-panier.sh         # interblocage sur panier, exige Docker
@@ -293,6 +295,18 @@ grep -cE '^mutation(_code)? "' scripts/verifier-image-docker-mutation.sh
 
 Le motif exige le guillemet ouvrant : sans lui il compte aussi les deux
 définitions de fonctions et annonce onze cas pour neuf.
+
+`verifier-nginx.sh` garde **une seule directive**, celle qui décide de l'adresse
+IP écrite au journal des connexions : `proxy_set_header X-Forwarded-For
+$remote_addr`. La forme répandue, `$proxy_add_x_forwarded_for`, concatène
+l'en-tête envoyé par le client, et il suffit alors d'un jeton non analysable
+pour que Better Auth renonce à toute adresse. Un visiteur choisirait ainsi de ne
+pas être journalisé, ce qui est pire que le défaut d'origine.
+
+Le contrôle **retire les commentaires avant de chercher**, parce que le fichier
+de configuration cite la forme interdite pour expliquer pourquoi elle l'est : un
+`grep` brut serait soit toujours rouge, soit satisfait par la phrase qui nie
+l'usage. Six mutations le prouvent, dont le rétablissement de la concaténation.
 
 `controle-fumee.sh` interroge `/api/sante` et décide si un déploiement est
 retenu : code 0 si le service répond avec sa base, 1 sinon. Il vise la **route**
@@ -399,14 +413,14 @@ destructives doivent bloquer, une migration additive doit passer, et une
 détection qui ne peut pas conclure doit bloquer plutôt que supposer. Lancé contre
 la version d'avant LS-42, il échoue sur sept de ces dix cas.
 
-`verifier-tests-mutation.sh` casse **quarante-cinq fois** le comportement testé
+`verifier-tests-mutation.sh` casse **quarante-sept fois** le comportement testé
 et exige que la suite rougisse à chaque fois : cinq mutations de la primitive
 SQL de réservation, cinq de l'authentification et de l'autorisation, deux de
 l'interface, trois du socle de validation, quatre de la journalisation et de la
 santé depuis LS-73, deux de la limitation de débit depuis LS-79, deux de la
 session et de la preuve d'identité depuis LS-81, huit du journal des connexions
 depuis LS-80, cinq du verrou de tâche planifiée depuis LS-72, quatre de la preuve
-d'identité depuis LS-89, et cinq de la purge des journaux depuis LS-94. Il
+d'identité depuis LS-89, cinq de la purge des journaux depuis LS-94, et deux de la résolution de l'adresse client depuis LS-91. Il
 vérifie d'abord que les deux projets de test sont verts, sans quoi aucune
 mutation ne prouverait rien.
 
