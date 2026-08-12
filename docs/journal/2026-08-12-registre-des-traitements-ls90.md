@@ -110,18 +110,24 @@ document plutôt que résolus en silence. **Les trois ont reçu un ticket le
 
 | Canal | État |
 |---|---|
-| Dépôt | fusionné sur `main` en rebase, PR #94, commits `ecc5bba`, `1c7b06b`, `3067662` |
+| Dépôt | fusionné sur `main` en rebase, PR #94 (story), #95 et #96 (traçabilité et tickets) |
 | Journal | cette page |
-| Mémoire | [[lune-soleil-classement-hors-perimetre]], plus la fiche d'état du projet |
-| Jira | LS-90 en Terminé, commentaire critère par critère posté |
+| Mémoire | `lune-soleil-classement-hors-perimetre`, plus la fiche d'état, corrigée après création des tickets |
+| Jira | LS-90 en Terminé avec commentaire critère par critère, LS-93 à LS-95 créées avec epic et liens |
 
 ## Prochaine étape
 
-**Cinq stories ouvertes sur LS-2.** LS-75 reste en dernier, elle vérifie les
-autres. LS-91, proxies de confiance, débloquerait l'adresse IP du journal des
-connexions, aujourd'hui nulle en production derrière Nginx : c'est ce qui rend
-le journal réellement exploitable, et le registre vient d'en faire un traitement
-recensé.
+**Six stories ouvertes sur LS-2**, compté dans Jira et non de mémoire : LS-75,
+LS-81, LS-89, LS-91, LS-92 et LS-94. LS-75 reste en dernier, elle vérifie les
+autres.
+
+Trois candidats pour la suite, par ordre de valeur :
+
+1. **LS-91**, proxies de confiance, qui débloquerait l'adresse IP du journal des
+   connexions, aujourd'hui nulle en production derrière Nginx. Le registre vient
+   d'en faire un traitement recensé, T8, dont la substance dépend de cette adresse
+2. **LS-94**, qui rend effectives les durées que le registre annonce désormais
+3. **LS-95**, qui ferait naître la première vraie action sensible du dépôt
 
 Les critères 2, 3 et 6 de LS-89 et 3, 4, 6, 7 de LS-81 restent en dette, faute
 d'actions sensibles à garder dans le dépôt.
