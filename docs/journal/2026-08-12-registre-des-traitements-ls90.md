@@ -89,17 +89,22 @@ git, les 12 cas passent.
 ## Ce qui reste dû, tracé dans le registre
 
 Trois points identifiés, **non traités par cette story**, écrits dans le
-document plutôt que résolus en silence :
+document plutôt que résolus en silence. **Les trois ont reçu un ticket le
+12 août**, à la demande de Christophe, et le registre les cite :
 
-1. **La durée de conservation des avis est posée à trois ans sans texte qui
-   l'impose.** Ni le code de la consommation ni le référentiel CNIL n° 2021-131
-   ne fixent de durée pour un avis publié. Un ADR doit trancher.
-2. **Aucune purge n'est branchée pour `JournalAudit` ni `RateLimit`**, dont la
-   durée est pourtant annoncée. La purge de `JournalConnexion` existe mais reste
-   appelée par personne, dette ouverte depuis LS-72.
-3. **La suppression d'un compte client n'est pas implémentée**, ni la réponse à
-   une demande d'accès ou d'effacement, articles 15 et 17. Le schéma la prépare,
-   aucun code ne l'exécute.
+1. **LS-93**, la durée de conservation des avis est posée à trois ans sans texte
+   qui l'impose. Ni le code de la consommation ni le référentiel CNIL n° 2021-131
+   ne fixent de durée pour un avis publié. Un ADR doit trancher. Epic LS-36.
+2. **LS-94**, aucune purge n'est branchée pour `JournalAudit` ni `RateLimit`,
+   dont la durée est pourtant annoncée. La purge de `JournalConnexion` existe mais
+   reste appelée par personne, dette ouverte depuis LS-72. Epic LS-2, bloquée par
+   LS-72 et LS-90. Elle pose aussi la question de la durée de `RateLimit`, dont
+   les six mois sont un alignement discutable.
+3. **LS-95**, la suppression d'un compte client n'est pas implémentée, ni la
+   réponse à une demande d'accès ou d'effacement, articles 15 et 17. Le schéma la
+   prépare, aucun code ne l'exécute. Epic LS-36. **Elle ferait naître la première
+   vraie action sensible du dépôt**, ce qui débloquerait une partie des critères
+   en dette de LS-81 et LS-89.
 
 ## Traçabilité
 

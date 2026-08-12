@@ -260,21 +260,22 @@ Description générale au sens de l'article 30 paragraphe 1 point g.
 ## Ce qui reste dû
 
 Trois points sont identifiés et **non traités par cette story**, chacun tracé
-plutôt que résolu en silence.
+plutôt que résolu en silence. Les trois portent un ticket depuis le 12 août
+2026 : un point noté ici sans ticket finit par n'être suivi nulle part.
 
 1. **La durée de conservation des avis, T7**, est posée à trois ans sans texte
    qui l'impose. Ni le code de la consommation ni le référentiel CNIL n° 2021-131
    ne fixent de durée pour un avis publié. Un ADR doit trancher, comme ADR-027 l'a
-   fait pour les six mois du journal des connexions.
+   fait pour les six mois du journal des connexions. **LS-93.**
 2. **Aucune purge n'est branchée pour `JournalAudit` ni `RateLimit`**, dont la
    durée est pourtant annoncée en T9. Une durée écrite dans un document et
    appliquée par personne est fictive, ADR-027 le pose déjà pour le journal des
    connexions. La purge de `JournalConnexion` existe mais **n'est appelée par
-   personne** à ce jour.
+   personne** à ce jour. **LS-94.**
 3. **La suppression d'un compte client n'est pas implémentée**, ni la procédure de
    réponse à une demande d'accès ou d'effacement, articles 15 et 17. Le schéma la
    prépare, `Commande.dissocieA` et les politiques `SET NULL`, mais aucun code ne
-   l'exécute.
+   l'exécute. **LS-95.**
 
 ## Sources
 
