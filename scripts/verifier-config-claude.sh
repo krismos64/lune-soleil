@@ -341,14 +341,28 @@ chiffre_en_lettres() {
     #
     # UN CONTROLE DONT LA TABLE EST TROP COURTE NE SE TAIT PAS, IL MENT. Il
     # aurait ete tentant de lire « 5 au lieu de 45 » comme une faute du README.
-    # Etendre jusqu'a quarante-neuf laisse de la marge ; au-dela, il faudra
-    # etendre a nouveau, et le symptome sera le meme.
+    #
+    # LE MEME DEFAUT S'EST REPRODUIT LE JOUR MEME, a cinquante-deux cas apres
+    # LS-92 : « README.md annonce 2 mutations ». La premiere correction s'etait
+    # arretee a quarante-neuf, c'est-a-dire quatre cas de marge, consommes en
+    # une seule session. La table monte donc maintenant jusqu'a soixante-neuf,
+    # et ses entrees sont ENGENDREES plutot qu'ecrites a la main.
+    #
+    # Le jour ou soixante-dix sera franchi, le symptome sera identique : un
+    # nombre absurdement petit annonce comme venant du README. Le reflexe est
+    # d'etendre la table, jamais de corriger le README sur la foi du message.
     quarante) echo 40 ;;
     quarante-et-une) echo 41 ;; quarante-et-un) echo 41 ;;
     quarante-deux) echo 42 ;; quarante-trois) echo 43 ;;
     quarante-quatre) echo 44 ;; quarante-cinq) echo 45 ;;
     quarante-six) echo 46 ;; quarante-sept) echo 47 ;;
     quarante-huit) echo 48 ;; quarante-neuf) echo 49 ;;
+    cinquante-et-une) echo 51 ;; cinquante-et-un) echo 51 ;;
+    cinquante-deux) echo 52 ;; cinquante-trois) echo 53 ;; cinquante-quatre) echo 54 ;; cinquante-cinq) echo 55 ;; cinquante-six) echo 56 ;; cinquante-sept) echo 57 ;; cinquante-huit) echo 58 ;; cinquante-neuf) echo 59 ;;
+    cinquante) echo 50 ;;
+    soixante-et-une) echo 61 ;; soixante-et-un) echo 61 ;;
+    soixante-deux) echo 62 ;; soixante-trois) echo 63 ;; soixante-quatre) echo 64 ;; soixante-cinq) echo 65 ;; soixante-six) echo 66 ;; soixante-sept) echo 67 ;; soixante-huit) echo 68 ;; soixante-neuf) echo 69 ;;
+    soixante) echo 60 ;;
     *) echo "" ;;
   esac
 }
@@ -366,7 +380,7 @@ chiffre_en_lettres() {
 # « dix » avant « dix-sept », « dix-sept mutations » rendait « dix », soit 10 au
 # lieu de 17. Le contrôle aurait alors signalé un écart imaginaire, ce qui use
 # la confiance aussi sûrement qu'un silence.
-NOMBRES_EN_LETTRES='trente-et-une|trente-et-un|trente-quatre|trente-trois|trente-cinq|trente-deux|trente-sept|trente-huit|trente-neuf|trente-six|vingt-et-une|vingt-et-un|vingt-quatre|vingt-trois|vingt-cinq|vingt-deux|vingt-sept|vingt-huit|vingt-neuf|vingt-six|quarante-et-une|quarante-et-un|quarante-quatre|quarante-trois|quarante-cinq|quarante-deux|quarante-sept|quarante-huit|quarante-neuf|quarante-six|quarante|dix-sept|dix-huit|dix-neuf|quatorze|quinze|seize|treize|douze|trente|vingt|onze|dix|neuf|huit|sept|cinq|deux|trois|quatre|six|une|un'
+NOMBRES_EN_LETTRES='trente-et-une|trente-et-un|trente-quatre|trente-trois|trente-cinq|trente-deux|trente-sept|trente-huit|trente-neuf|trente-six|vingt-et-une|vingt-et-un|vingt-quatre|vingt-trois|vingt-cinq|vingt-deux|vingt-sept|vingt-huit|vingt-neuf|vingt-six|cinquante-et-une|cinquante-et-un|cinquante-deux|cinquante-trois|cinquante-quatre|cinquante-cinq|cinquante-six|cinquante-sept|cinquante-huit|cinquante-neuf|cinquante|soixante-et-une|soixante-et-un|soixante-deux|soixante-trois|soixante-quatre|soixante-cinq|soixante-six|soixante-sept|soixante-huit|soixante-neuf|soixante|quarante-et-une|quarante-et-un|quarante-quatre|quarante-trois|quarante-cinq|quarante-deux|quarante-sept|quarante-huit|quarante-neuf|quarante-six|quarante|dix-sept|dix-huit|dix-neuf|quatorze|quinze|seize|treize|douze|trente|vingt|onze|dix|neuf|huit|sept|cinq|deux|trois|quatre|six|une|un'
 
 # Cherche « <chiffre en lettres> <nom> » dans un texte aplati et rend le nombre.
 #

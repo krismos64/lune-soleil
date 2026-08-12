@@ -59,6 +59,8 @@ PREUVE="src/services/preuve-identite.ts"
 ACTION_REAUTH="src/app/administration/reauthentification/actions.ts"
 PURGE_JOURNAUX="src/services/purge-journaux.ts"
 PROXIES="src/lib/proxies-de-confiance.ts"
+LIMITATION_REPO="src/repositories/limitation.ts"
+LIMITATION="src/services/limitation-action.ts"
 
 # TOUT FICHIER MUTE DOIT FIGURER ICI, sans quoi il n'est ni sauvegarde ni
 # restaure et la mutation RESTE SUR LE DISQUE apres l'execution.
@@ -71,7 +73,7 @@ PROXIES="src/lib/proxies-de-confiance.ts"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -729,6 +731,49 @@ cas "liste de proxies vide rendue en tableau plutot qu'undefined" unitaire \
 mute "$PROXIES" 's/\.map\(\(entree\) => entree\.trim\(\)\)\n    \.filter\(Boolean\)/.filter(Boolean)/'
 cas "espaces non retires autour des proxies declares" unitaire \
   "la valeur lue est effectivement celle que Better Auth appliquerait"
+echo "Limitation de debit des Server Actions, LS-92"
+echo
+
+# Cas 48 : la limitation disparait du chemin de verification. C'est l'etat
+# d'avant LS-92 : `auth.api.verifyPassword` n'etant soumis a aucun plafond, une
+# Server Action appelee en boucle testait des mots de passe sans compteur.
+mute "$PREUVE" 's/  if \(limitation\.etat === "REFUSEE"\) \{/  if (false as boolean) {/'
+cas "plafond retire du chemin de verification de mot de passe" integration \
+  "refuse au-dela du seuil, en exer"
+
+# Cas 49 : l'echec n'entre plus au journal des connexions.
+#
+# LE VRAI MOTIF DE LA STORY, et le defaut le plus silencieux : le plafond
+# continuerait de fonctionner, seule la TRACE disparaitrait. Une attaque par
+# cette voie redeviendrait invisible, y compris apres coup.
+mute "$PREUVE" 's/      await journaliserTentativeAction\(\{ \.\.\.traceCommune, issue: "ECHEC" \}\);\n//'
+cas "echec de mot de passe non journalise" integration \
+  "journalise chaque tentative, echec, reussite et refus de cadence"
+
+# Cas 50 : le refus de cadence n'est plus journalise. Le VOLUME refuse est
+# precisement ce qui distingue un balayage d'une saisie maladroite, lecon deja
+# tiree en relecture de LS-80.
+mute "$PREUVE" 's/    await journaliserTentativeAction\(\{\n      \.\.\.traceCommune,\n      issue: "REFUSEE_LIMITATION",\n    \}\);\n//'
+cas "refus de cadence non journalise sur Server Action" integration \
+  "journalise chaque tentative, echec, reussite et refus de cadence"
+
+# Cas 51 : le compteur perd son increment et repart a un a chaque tentative.
+#
+# Le plafond ne serait alors JAMAIS atteint, quel que soit le nombre de
+# tentatives, et la table `rate_limit` continuerait de se remplir normalement :
+# rien dans l'etat de la base ne trahirait le defaut.
+mute "$LIMITATION_REPO" 's/            ELSE rate_limit\.count \+ 1/            ELSE 1/'
+cas "compteur remis a un a chaque tentative" integration \
+  "refuse au-dela du seuil, en exer"
+
+# Cas 52 : la cle perd son prefixe et heurte l'espace de Better Auth.
+#
+# `<action>|<session>` sans prefixe entre en collision avec `<ip>|<chemin>` :
+# les deux mecanismes consommeraient le quota l'un de l'autre, et le plafond
+# observe deviendrait imprevisible.
+mute "$LIMITATION" 's/return `action:\$\{action\}\|\$\{sessionId\}`;/return `${action}|${sessionId}`;/'
+cas "cle de compteur sans prefixe, collision avec Better Auth" integration \
+  "n'ecrit pas sous une cle qui heurterait celles de Better Auth"
 
 echo
 echo "-----------------------------------------"
