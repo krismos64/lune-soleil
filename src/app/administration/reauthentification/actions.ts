@@ -50,7 +50,9 @@ export type ResultatReauthentification =
    */
   | { statut: "SESSION_ABSENTE" }
   | { statut: "INVALIDE" }
-  | { statut: "INDISPONIBLE" };
+  | { statut: "INDISPONIBLE" }
+  /** Cadence anormale, LS-92. Voir `traduire` pour ce que le delai dit. */
+  | { statut: "TROP_DE_TENTATIVES"; reessayerDansSecondes: number };
 
 /**
  * Longueur maximale acceptee pour le champ de mot de passe.
@@ -70,6 +72,17 @@ function traduire(resultat: ResultatPreuve): ResultatReauthentification {
       return { statut: "REFUSEE" };
     case "SESSION_ABSENTE":
       return { statut: "SESSION_ABSENTE" };
+    case "TROP_DE_TENTATIVES":
+      /**
+       * LE DELAI EST TRANSMIS A L'INTERFACE, LS-92, et il ne renseigne pas sur
+       * le plafond : il dit quand reessayer, jamais combien de tentatives
+       * restaient. La distinction compte, un compteur affiche permettrait de
+       * s'approcher du seuil sans le franchir.
+       */
+      return {
+        statut: "TROP_DE_TENTATIVES",
+        reessayerDansSecondes: resultat.reessayerDansSecondes,
+      };
   }
 }
 

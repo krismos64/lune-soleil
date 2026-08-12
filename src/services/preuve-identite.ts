@@ -17,10 +17,15 @@
  * de securite, elles vivent donc dans `services/`, conformement au fichier de
  * garde du dossier.
  */
-import { APIError } from "better-auth/api";
+import { APIError, getIp } from "better-auth/api";
 
 import { auth } from "@/lib/auth";
 import { journaliser } from "@/lib/journal";
+import {
+  journaliserTentativeAction,
+  reinitialiserLimitation,
+  verifierLimitation,
+} from "@/services/limitation-action";
 import {
   enregistrerPreuveIdentite,
   FENETRE_REAUTHENTIFICATION_MS,
@@ -41,7 +46,17 @@ export type ResultatPreuve =
   /** Mot de passe faux. Le message ne dit jamais lequel des deux a echoue. */
   | { etat: "REFUSEE" }
   /** Aucune session valide : il faut se reconnecter, pas se reauthentifier. */
-  | { etat: "SESSION_ABSENTE" };
+  | { etat: "SESSION_ABSENTE" }
+  /**
+   * Cadence anormale, LS-92. DISTINCTE DE `REFUSEE`, et la nuance porte
+   * l'information, exactement comme `REFUSEE_LIMITATION` se distingue d'`ECHEC`
+   * dans le journal des connexions : un refus dit « le mot de passe est faux »,
+   * celui-ci dit « trop de tentatives, quel que soit le mot de passe ».
+   *
+   * Les confondre ferait afficher « verifiez votre saisie » a une exploitante
+   * qui tape juste, et elle recommencerait indefiniment sans comprendre.
+   */
+  | { etat: "TROP_DE_TENTATIVES"; reessayerDansSecondes: number };
 
 /**
  * Verifie le mot de passe de la session courante, puis note la preuve.
@@ -74,6 +89,45 @@ export async function prouverIdentiteParMotDePasse(
     return { etat: "SESSION_ABSENTE" };
   }
 
+  /**
+   * TRACE ET PLAFOND, LS-92, ET DANS CET ORDRE.
+   *
+   * `auth.api.verifyPassword` N'EST SOUMIS A AUCUNE LIMITATION : seule
+   * `auth.handler`, avec une vraie `Request`, applique le `rateLimit` de
+   * Better Auth. Une Server Action appelee en boucle testait donc des mots de
+   * passe sans plafond, et surtout **sans laisser la moindre trace** : ce
+   * chemin ne croise aucun des chemins que le hook de LS-80 surveille.
+   *
+   * LE PLAFOND SE VERIFIE AVANT LE HACHAGE. Le placer apres laisserait le
+   * travail couteux s'executer a chaque tentative, ce qui suffit a saturer le
+   * processus sans jamais franchir le plafond.
+   */
+  const traceCommune = {
+    email: session.user.email,
+    utilisateurId: session.user.id,
+    adresseIp: getIp(enTetes, auth.options),
+    agentUtilisateur: enTetes.get("user-agent"),
+  };
+
+  const limitation = await verifierLimitation(
+    "reauthentification-mot-de-passe",
+    session.session.id,
+  );
+
+  if (limitation.etat === "REFUSEE") {
+    // LE REFUS EST JOURNALISE, et c'est lui qui porte le signal d'attaque : le
+    // VOLUME refuse dit ce qu'une poignee d'echecs ne dit pas.
+    await journaliserTentativeAction({
+      ...traceCommune,
+      issue: "REFUSEE_LIMITATION",
+    });
+
+    return {
+      etat: "TROP_DE_TENTATIVES",
+      reessayerDansSecondes: limitation.reessayerDansSecondes,
+    };
+  }
+
   try {
     await auth.api.verifyPassword({
       body: { password: motDePasse },
@@ -93,6 +147,13 @@ export async function prouverIdentiteParMotDePasse(
       journaliser("warn", "Preuve d'identite refusee", {
         moyen: "MOT_DE_PASSE",
       });
+
+      // L'ECHEC ENTRE AU JOURNAL DES CONNEXIONS, LS-92. C'est le motif de la
+      // story : sans cette ligne, une serie de mots de passe faux par cette
+      // voie ne laisse aucune trace opposable, la ou la meme serie sur
+      // `/sign-in/email` en laisse une par tentative depuis LS-80.
+      await journaliserTentativeAction({ ...traceCommune, issue: "ECHEC" });
+
       return { etat: "REFUSEE" };
     }
 
@@ -104,6 +165,18 @@ export async function prouverIdentiteParMotDePasse(
   await enregistrerPreuveIdentite(session.session.id);
 
   journaliser("info", "Preuve d'identite etablie", { moyen: "MOT_DE_PASSE" });
+
+  // LA REUSSITE EST JOURNALISEE AUSSI, critere 2. Un journal qui ne garderait
+  // que les echecs ne montrerait pas l'aboutissement d'une attaque : « dix
+  // echecs suivis d'une reussite » est le motif qui compte, regle E13.
+  await journaliserTentativeAction({ ...traceCommune, issue: "REUSSITE" });
+
+  // Le compteur repart a zero, la seule facon de l'obtenir etant de fournir le
+  // bon mot de passe. Voir `reinitialiserLimitation`.
+  await reinitialiserLimitation(
+    "reauthentification-mot-de-passe",
+    session.session.id,
+  );
 
   return { etat: "ETABLIE" };
 }
