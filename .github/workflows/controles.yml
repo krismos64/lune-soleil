@@ -281,6 +281,13 @@ jobs:
       - name: 6d. Coherence de la configuration Claude Code
         run: ./scripts/verifier-config-claude.sh --strict
 
+      # Coherence du registre des traitements avec le schema, LS-90. Textuel lui
+      # aussi, aucune base requise. Il attrape la table qui entre au schema sans
+      # entrer au registre, defaut qui ne fait rougir ni type ni test, et refuse
+      # qu'une table portant un champ personnel soit rangee hors traitement.
+      - name: 6e. Registre des traitements confronte au schema
+        run: ./scripts/verifier-registre-traitements.sh
+
       # ----------------------------------------------------------------------
       # Controles 2 et 3. Le format entre ici parce qu'un depot ou seule une
       # partie des fichiers est formatee produit des diffs illisibles.
