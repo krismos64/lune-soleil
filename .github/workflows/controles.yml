@@ -288,6 +288,22 @@ jobs:
       - name: 6e. Registre des traitements confronte au schema
         run: ./scripts/verifier-registre-traitements.sh
 
+      # Coherence des actions sensibles avec ADR-027, LS-81 puis LS-99. Textuel,
+      # aucune base requise.
+      #
+      # CE SCRIPT EXISTAIT DEPUIS LS-81 SANS TOURNER NULLE PART : ni ici, ni
+      # dans un hook, ni cite par CONTRIBUTING. Trouve le 13 aout 2026 en
+      # verifiant la traçabilite de LS-99, qui venait de lui ajouter un sixieme
+      # sens. Un controle que rien ne declenche ne protege rien, et c'est le
+      # meme motif que le garde-fou jamais exerce deja rencontre ici.
+      #
+      # CE QU'IL GARDE : une action marquee @sensible sans sa garde, une famille
+      # declaree que plus rien ne couvre, une ligne d'attente perimee, et depuis
+      # LS-99 une Server Action d'administration sans exigerAdministratrice.
+      # Aucun type, aucun test et aucun rendu ne bougent sur ces defauts.
+      - name: 6g. Actions sensibles confrontees a ADR-027
+        run: ./scripts/verifier-actions-sensibles.sh
+
       # Resolution de l'adresse client derriere le proxy, LS-91. Textuel, aucune
       # base ni conteneur requis.
       #

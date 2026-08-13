@@ -106,6 +106,21 @@ aucun bouton sous 44 px. Parcours complet exercé, création, permutation et
 création de produit vérifiées en base. Contrastes mesurés, erreur 6,56:1,
 succès 6,15:1, atténué 4,86:1 sur crème.
 
+## Un contrôle qui ne tournait nulle part
+
+Trouvé en fin de session, en vérifiant la traçabilité plutôt qu'en écrivant du
+code. `verifier-actions-sensibles.sh` existe depuis LS-81 et **n'était déclenché
+par rien** : ni la chaîne d'intégration, ni un hook, ni une mention de
+`CONTRIBUTING.md`. Il ne tournait que lancé à la main.
+
+Le sens 6 ajouté par cette story aurait donc dormi, comme les cinq autres. C'est
+le motif du garde-fou jamais exercé, déjà rencontré ici sous une autre forme :
+un contrôle juste qui ne protège rien parce que rien ne l'appelle.
+
+Ajouté à la chaîne en étape 6g, et documenté dans `CONTRIBUTING.md`. La règle
+`securite.md` décrit désormais le sens 6, qu'elle ignorait : elle citait le sens
+4 et s'arrêtait là.
+
 ## État des tickets
 
 - **LS-99**, en cours jusqu'à la fusion de la PR 110
