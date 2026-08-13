@@ -430,8 +430,15 @@ if [ -f README.md ] && command -v node >/dev/null 2>&1; then
   fi
 
   # Largeurs Playwright : la source est la liste des projets de sa configuration.
+  #
+  # UN PROJET N'EST PAS FORCÉMENT UNE LARGEUR, précision ajoutée en LS-81 quand
+  # le projet `preparation` est apparu : il ouvre une session cliente avant la
+  # suite et ne rend aucune page. Compter tous les projets faisait alors
+  # réclamer « quatre largeurs » au README, c'est-à-dire demander d'y écrire une
+  # contrevérité pour satisfaire le contrôle. Seuls comptent les projets portant
+  # un `viewport`, qui est ce que « largeur » désigne.
   if [ -f playwright.config.ts ]; then
-    reel=$(grep -cE '^\s*name:\s*"' playwright.config.ts 2>/dev/null || echo 0)
+    reel=$(grep -cE '^\s*viewport:\s*\{' playwright.config.ts 2>/dev/null || echo 0)
     annonce=$(compte_annonce "$readme_aplati" "largeurs")
     if [ "$reel" -gt 0 ] && [ -n "$annonce" ] && [ "$reel" != "$annonce" ]; then
       anomalies+=("README.md annonce $annonce largeurs Playwright, playwright.config.ts en déclare $reel")
