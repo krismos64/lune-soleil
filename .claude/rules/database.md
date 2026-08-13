@@ -192,6 +192,9 @@ UNIQUE  produit.slug, categorie.slug, variante.reference, commande.numero,
         facture.numero, avoir.numero, facture.commande_id,
         evenement_fournisseur.identifiant_fournisseur, verrou_tache.nom,
         jeton_acces.empreinte, media.identifiant_fournisseur, utilisateur.email
+UNIQUE  categorie.ordre                          DEFERRABLE INITIALLY DEFERRED, C24
+CHECK   categorie.ordre >= 1
+CHECK   length(trim(categorie.nom)) > 0
 CHECK   quantite_physique >= 0
 CHECK   quantite_reservee >= 0
 CHECK   quantite_physique - quantite_reservee >= 0

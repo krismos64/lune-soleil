@@ -255,3 +255,20 @@ ALTER TABLE section_produit
 ALTER TABLE section_produit
   ADD CONSTRAINT chk_section_titre_non_vide
   CHECK (length(trim(titre)) > 0);
+
+-- ---------------------------------------------------------------------------
+-- Categories du catalogue, LS-99
+-- ---------------------------------------------------------------------------
+
+-- C24, l'ordre commence a 1. Un ordre nul ou negatif trierait avant tout le
+-- reste sans que l'ecran l'ait propose, et fausserait le calcul du rang suivant
+-- des la premiere creation.
+ALTER TABLE categorie
+  ADD CONSTRAINT chk_categorie_ordre_positif
+  CHECK (ordre >= 1);
+
+-- C25, le nom s'affiche dans le menu du catalogue et sur les cartes produit :
+-- une chaine vide y produirait un lien invisible mais cliquable.
+ALTER TABLE categorie
+  ADD CONSTRAINT chk_categorie_nom_non_vide
+  CHECK (length(trim(nom)) > 0);

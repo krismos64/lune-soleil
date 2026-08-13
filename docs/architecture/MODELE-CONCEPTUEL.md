@@ -191,6 +191,9 @@ erDiagram
 | C21 | Quatre sections sont proposées **à la création** d'un produit, `description`, `matieres`, `fabrication`, `entretien`. Aucune n'est protégée, et aucune modification ultérieure ne recrée une section supprimée | ADR-026, une initialisation rejouée à chaque enregistrement ferait revenir une section délibérément supprimée |
 | C22 | L'ordre d'affichage est unique par produit, garanti par une contrainte **différable** vérifiée au `COMMIT`. Masquer conserve le contenu, supprimer l'efface sans conservation | ADR-026, une contrainte non différable rejetterait l'échange de deux positions dès la première instruction |
 | C23 | Le contenu d'une section est du texte simple, jamais rendu en HTML. Une section sans contenu ne s'affiche pas, titre compris | ADR-026, surface d'attaque réduite et cohérence visuelle |
+| C24 | L'ordre d'affichage des catégories est choisi par l'exploitante, unique dans toute la boutique et commence à 1 | LS-49 pour le choix, LS-99 pour la garantie : contrainte `UNIQUE` **différable** vérifiée au `COMMIT`, plus un `CHECK` de positivité. Sans unicité, deux catégories de même rang s'affichent dans un ordre décidé par le plan d'exécution |
+| C25 | Le nom d'une catégorie n'est jamais vide | `CHECK`, LS-99. Le nom s'affiche dans le menu du catalogue : une chaîne vide y produirait un lien invisible mais cliquable |
+| C26 | Une catégorie portant au moins un produit ne se supprime pas | `Produit.categorieId` en `RESTRICT`, LS-13. La base refuse, le service compte avant pour que l'écran l'explique plutôt que de rendre une erreur de clé étrangère |
 
 ### Pourquoi un produit peut n'avoir aucune variante
 

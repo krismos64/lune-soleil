@@ -67,3 +67,25 @@
 ALTER TABLE section_produit
   ADD CONSTRAINT section_produit_ordre_unique
   UNIQUE (produit_id, ordre) DEFERRABLE INITIALLY DEFERRED;
+
+-- ---------------------------------------------------------------------------
+-- C24, ordre d'affichage unique des categories, DIFFERABLE, LS-99
+-- ---------------------------------------------------------------------------
+
+-- MEME MECANIQUE QUE C22 ci-dessus, et pour la meme raison : le reordonnancement
+-- echange deux positions, ce qu'une contrainte verifiee a chaque instruction
+-- rejetterait sur la premiere des deux mises a jour. La demonstration mesuree
+-- sur PostgreSQL 18.4 n'est pas recopiee, elle vaut mot pour mot.
+--
+-- Les deux consequences de C22 valent a l'identique : aucun `@@unique([ordre])`
+-- dans schema.prisma, qui creerait une contrainte concurrente NON differable, et
+-- aucun ON CONFLICT ne peut arbitrer sur `ordre`.
+--
+-- CE QUI DIFFERE DE C22 : l'unicite porte sur la SEULE colonne `ordre`, sans
+-- discriminant. Les categories forment une liste plate, sans niveau
+-- intermediaire, retenu par « Dimensionnement du catalogue » de
+-- frontend-design.md. La ou deux produits peuvent porter le meme rang de
+-- section, deux categories ne peuvent pas porter le meme rang d'affichage.
+ALTER TABLE categorie
+  ADD CONSTRAINT categorie_ordre_unique
+  UNIQUE (ordre) DEFERRABLE INITIALLY DEFERRED;
