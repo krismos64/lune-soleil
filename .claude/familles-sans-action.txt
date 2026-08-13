@@ -12,10 +12,23 @@
 #
 # Forme : NOM_DE_FAMILLE  puis la raison et le ticket qui la retirera.
 
-IDENTIFIANTS        aucun ecran de changement de mot de passe ni de passkey, LS-95
-DONNEES_CLIENTS     aucun acces au fichier client, voir la nuance ci-dessous, LS-95
+DONNEES_CLIENTS     aucun acces au fichier client, voir la nuance ci-dessous, LS-36
 REMBOURSEMENT       Stripe n'est pas branche avant la phase 4, phase 4
 PARAMETRES_BOUTIQUE aucun ecran de parametres, hors phase 1
+
+# IDENTIFIANTS EST SORTIE DE CETTE LISTE LE 13 AOUT 2026, LS-95.
+#
+# `supprimerMonCompte` dans `src/app/compte/actions.ts` est la PREMIERE ACTION
+# SENSIBLE REELLE du depot. Elle est rattachee a `IDENTIFIANTS` plutot qu'a une
+# cinquieme famille : supprimer un compte emporte l'ensemble des moyens
+# d'authentification, `Compte` et `Passkey` en CASCADE, ce que la definition de
+# la famille decrit deja, « ce qu'un intrus fait en premier ». Le type est
+# volontairement court, critere 6 de LS-81, et une famille pour une seule action
+# se paierait en saisies quotidiennes sans rien proteger de plus.
+#
+# Le controle a REFUSE cette ligne des que l'action a existe, sens 3 : une
+# famille declaree en attente alors qu'une action la couvre echoue. C'est ce
+# sens qui empeche ce fichier de devenir une decharge qui exempte a vie.
 
 # ---------------------------------------------------------------------------
 # LA LIGNE DONNEES_CLIENTS A ETE CORRIGEE LE 13 AOUT 2026, elle etait FAUSSE.
