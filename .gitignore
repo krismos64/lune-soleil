@@ -112,3 +112,6 @@ docs/internal/
 .vercel
 .sentryclirc
 *.tgz
+
+# Etat de session ouvert par le projet Playwright « preparation », LS-81.
+tests/e2e/.session-cliente.json

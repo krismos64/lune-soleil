@@ -95,9 +95,25 @@
   font-size: 1rem;
 }
 
+/*
+ * `--ls-text` ET NON `--ls-text-muted`, ET CE N'EST PAS UN CHOIX ESTHETIQUE.
+ *
+ * Le jeton `--ls-text-muted` est documente a 4,86:1, mesure SUR CREME
+ * (`--ls-background`). Ce paragraphe vit dans `.sectionDanger`, dont le fond est
+ * `--ls-surface-sand`, plus sombre : le rapport y tombe a 4,35:1, sous le seuil
+ * AA de 4,5:1 pour du petit texte. Mesure par axe-core, LS-81 critere 7.
+ *
+ * Le defaut est celui de la regle incomplete deja rencontree ici : un jeton dont
+ * le contraste est vrai pour UN fond est employe sur un autre, et le commentaire
+ * qui l'accompagne ne dit pas lequel. Il ne se voit sur aucun parcours nominal.
+ *
+ * Le texte concerne dit « Cette action est definitive », sous le champ de
+ * confirmation d'une suppression irreversible : c'est le dernier avertissement
+ * avant l'effacement, l'endroit ou une lisibilite reduite se paie le plus cher.
+ */
 .aide {
   margin: 0;
-  color: var(--ls-text-muted);
+  color: var(--ls-text);
   font-size: 0.875rem;
 }
 
