@@ -282,6 +282,108 @@ fi
 
 echo "Couples de gardes vérifiés sous administration/ : $couples_verifies"
 
+# ---------------------------------------------------------------------------
+# Sens 6 : toute Server Action sous administration/ exige le rôle. LS-99.
+#
+# CE QUE LE SENS 4 NE COUVRE PAS, et le trou est réel. Il n'examine que les
+# fichiers touchant à la RÉAUTHENTIFICATION : un fichier d'administration qui ne
+# l'appelle pas sort de sa boucle par le `continue`, garde ou pas. Une Server
+# Action d'administration sans `exigerAdministratrice` était donc invisible.
+#
+# POURQUOI CELA COMPTE. Une Server Action est un point d'entrée HTTP, invocable
+# directement sans jamais charger la page qui la porte. Protéger la seule page
+# laisse ce chemin ouvert : c'est le défaut trouvé en relecture de LS-89, où un
+# client inscrit sur la boutique atteignait une action réservée.
+#
+# L'ANCRAGE EST `"use server"` ET NON LE NOM DU FICHIER. Un ancrage sur
+# `actions.ts` raterait toute Server Action logée ailleurs, et le jour où
+# quelqu'un nomme son fichier autrement le contrôle se tairait.
+#
+# CE QUE CE CONTRÔLE NE PROUVE PAS, et il faut le dire : il constate que l'appel
+# figure dans le fichier, pas qu'il s'exécute avant l'effet. Une garde placée
+# après l'écriture le satisferait mot pour mot. Les tests e2e de LS-99 couvrent
+# ce second aspect pour les écrans livrés.
+actions_serveur_verifiees=0
+
+if [ -d "$ADMINISTRATION" ]; then
+  while IFS= read -r fichier; do
+    [ -n "$fichier" ] || continue
+
+    code=$(grep -v '^\s*\(//\|\*\|/\*\)' "$fichier")
+
+    # Seuls les fichiers de Server Actions sont concernés : une page qui ne
+    # déclare rien passe par le sens 4 pour ce qui la regarde.
+    if ! printf '%s\n' "$code" | grep -qE '^[[:space:]]*"use server"'; then
+      continue
+    fi
+
+    # LA VÉRIFICATION PORTE SUR CHAQUE FONCTION EXPORTÉE, PAS SUR LE FICHIER.
+    #
+    # LA PREMIÈRE VERSION CHERCHAIT DANS TOUT LE FICHIER, et elle ne prouvait
+    # rien : la mutation qui retire la garde de `creerCategorieAction` la
+    # laissait VERTE, les quatre autres actions du même fichier satisfaisant le
+    # motif à sa place. C'est le défaut « mutation satisfaite ailleurs », déjà
+    # rencontré ici, et c'est aussi celui que le sens 1 avait corrigé pour la
+    # même raison.
+    #
+    # L'extraction du corps reprend la mécanique éprouvée du sens 1, y compris
+    # le `vu` qui n'ouvre le corps qu'à l'accolade : une signature étalée par
+    # Prettier sur trois lignes ne doit pas tronquer l'extraction.
+    while IFS= read -r declaration; do
+      [ -n "$declaration" ] || continue
+
+      ligne_fn="${declaration%%:*}"
+      nom_fn=$(printf '%s' "$declaration" | grep -oE 'function[[:space:]]+[A-Za-z0-9_]+' | awk '{print $2}')
+      [ -n "$nom_fn" ] || continue
+
+      actions_serveur_verifiees=$((actions_serveur_verifiees + 1))
+
+      corps_fn=$(awk -v debut="$ligne_fn" '
+        NR < debut { next }
+        NR == debut { dans = 1; next }
+        dans && /^[^[:space:]}]/ && vu { exit }
+        dans && /\{/ { vu = 1 }
+        dans { print }
+      ' "$fichier")
+
+      # LA PARENTHÈSE EST EXIGÉE, `exigerAdministratrice(`. Chercher le seul nom
+      # trouverait un import, ou un commentaire qui NIE l'appel : motif déjà
+      # rencontré sur ce dépôt.
+      #
+      # L'APPEL PEUT ÊTRE INDIRECT, par une fonction locale du fichier qui porte
+      # la garde. Le motif accepte donc aussi `exigerRole(`, forme employée par
+      # les actions du catalogue : sans cela le contrôle refuserait une
+      # factorisation légitime et pousserait à recopier la garde cinq fois.
+      if ! printf '%s\n' "$corps_fn" \
+           | grep -v '^\s*\(//\|\*\|/\*\)' \
+           | grep -qE '(exigerAdministratrice|exigerRole)[[:space:]]*\('; then
+        relatif="${fichier#"$RACINE"/}"
+        echo "ECHEC $relatif:$ligne_fn : $nom_fn est une Server Action sans garde de rôle"
+        echo "      une Server Action est invocable directement, sans passer par le"
+        echo "      rendu de l'écran. Protéger la page seule laisse ce chemin ouvert."
+        echo "      (la garde est cherchée dans le corps de CETTE fonction)"
+        ko=$((ko + 1))
+      fi
+    done <<INTERNE
+$(grep -nE '^export async function [A-Za-z0-9_]+' "$fichier" || true)
+INTERNE
+  done <<EOF
+$(find "$ADMINISTRATION" \( -name "*.ts" -o -name "*.tsx" \) 2>/dev/null | sort || true)
+EOF
+fi
+
+echo "Fichiers de Server Actions vérifiés sous administration/ : $actions_serveur_verifiees"
+
+# L'ANCRAGE SE PROUVE, même raison qu'au sens 4 : zéro fichier examiné signifie
+# que le contrôle ne regarde plus rien, et un contrôle muet qui rend « OK » est
+# pire que son absence.
+if [ -d "$ADMINISTRATION" ] && [ "$actions_serveur_verifiees" -eq 0 ]; then
+  echo "ECHEC aucune Server Action trouvée sous administration/"
+  echo "      l'ancrage du sens 6 est cassé : le marqueur \"use server\" a changé"
+  echo "      de forme, ou les Server Actions ont quitté administration/"
+  ko=$((ko + 1))
+fi
+
 # L'ANCRAGE SE PROUVE : zéro fichier vérifié signifie que le contrôle ne
 # regarde plus rien, parce que le dossier a été renommé ou les noms de gardes
 # ont changé. Un contrôle qui n'examine aucun cas doit le dire, sinon il rend
