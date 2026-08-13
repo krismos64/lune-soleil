@@ -9,6 +9,7 @@ disponibilité en ligne**.
 | Adresse | `https://lune-soleil-prototype.krismos.chatgpt.site/` |
 | Hors dépôt | oui, application React servie séparément, aucun code repris |
 | Version décrite | passe de finition du **5 août 2026**, explorée le même jour |
+| Revérifiée | le **13 août 2026**, inchangée : même paquet servi, cinq écarts reproduits |
 | Rattachement | LS-15, livrable de conception, et LS-16 pour les jetons |
 | État | **gelé**. Il ne se maintient plus en parallèle du code |
 
@@ -75,6 +76,44 @@ Les huit parcours de `PARCOURS.md` et l'écran qui les porte. Un parcours sans
 | 7, dépôt d'un avis | `/espace-client`, section Achats vérifiés |
 | 8, carnet d'adresses | `/espace-client`, rubrique Mes adresses |
 
+## Inventaire complet des écrans, au-delà des parcours
+
+La table ci-dessus relie les parcours à leur écran. Elle ne dit rien des écrans
+que **le prototype porte sans qu'un parcours les mobilise**, et c'est par là que
+deux fonctions entières avaient échappé au suivi jusqu'au 13 août 2026.
+
+**L'administration compte onze rubriques**, navigables par état interne et non
+par URL, ce qui explique qu'aucune adresse ne les révèle :
+
+| Rubrique | Couverte par |
+|---|---|
+| Tableau de bord | aucune story dédiée, agrège les autres rubriques |
+| Statistiques | LS-64, interface en V1 cible, collecte au Go-Live |
+| Commandes | phase 3, epic LS-4 |
+| Catalogue | phase 2, epic LS-3, éditeur à sections en LS-87 |
+| Stocks et marchés | phase 2, et LS-63 pour le montant encaissé |
+| Expéditions | phase 4, epic LS-5 |
+| Factures et avoirs | phase 4, epic LS-5 |
+| Clients | phase 4bis, epic LS-36 |
+| Avis | LS-61, modération sans réécriture |
+| Messages | **LS-97**, créée le 13 août 2026 |
+| Paramètres | **LS-98**, créée le 13 août 2026 |
+
+**L'espace client compte cinq onglets** : Vue d'ensemble, Mes commandes, Mes
+adresses, Mes avis, Profil et données. Il porte aussi son **propre écran de
+connexion** sur `/espace-client`, distinct de celui de l'administration.
+
+Trois écrans méritent d'être signalés parce qu'ils devancent la documentation
+plutôt qu'ils ne s'en écartent :
+
+- **Clients** énonce la dissociation de LS-95 : « la suppression dissocie le
+  compte des commandes, sans effacer les factures ni les pièces comptables »
+- **Stocks et marchés** affiche une colonne « Montant encaissé » sur les ventes
+  externes, ce que LS-63 exige au Go-Live
+- **Expéditions** distingue « Disponible au Point Relais » de « Remise au
+  destinataire », le fait déclencheur du délai de rétractation
+
+
 ## Les six états non nominaux, et leur intention
 
 C'est le seul contenu que la documentation du dépôt ne portait pas encore. Chaque
@@ -122,7 +161,7 @@ recopiés tels quels au moment d'écrire l'interface.
 
 | Écart | Ce qui prime | Suite |
 |---|---|---|
-| La classe d'accroche emploie le terracotta `#B4643E` en petit texte gras, 4,07:1 sur crème et 4,35:1 sur blanc, sous le seuil AA de 4,5:1 | ADR-022 et `frontend-design.md`, qui l'autorisent en texte large ou gras seulement | LS-84 |
+| La classe d'accroche emploie le terracotta `#B4643E` en petit texte gras, 4,07:1 sur crème et 4,35:1 sur blanc, sous le seuil AA de 4,5:1. La revérification du 13 août ajoute sept libellés numérotés en 11,2 px **graisse normale**, hors de l'exemption quelle qu'en soit la lecture | ADR-022 et `frontend-design.md`, qui l'autorisent en texte large ou gras seulement | LS-84 |
 | Aucune région live : ajout au panier, changement d'étape et refus de vente ne sont annoncés à aucun lecteur d'écran | WCAG 2.2 AA sur les parcours critiques | LS-85 |
 | Trois boutons de vignettes de la fiche produit sans nom accessible | `frontend-design.md`, nom accessible sur tout bouton icône | LS-85 |
 | Le récapitulatif du tunnel n'affiche pas l'adresse de livraison saisie | information précontractuelle, article L221-5 | LS-86 |
