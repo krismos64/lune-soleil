@@ -27,9 +27,9 @@ for (const ecran of ECRANS) {
 
     // Le titre de l'ecran protege n'apparait nulle part : une redirection qui
     // laisserait le contenu rendu avant de naviguer serait une fuite.
-    await expect(
-      page.getByRole("heading", { name: ecran.titre }),
-    ).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: ecran.titre })).toHaveCount(
+      0,
+    );
   });
 
   test(`la redirection depuis ${ecran.chemin} ne deborde pas horizontalement`, async ({
@@ -122,9 +122,9 @@ test("aucun formulaire de catalogue n'est rendu sans session", async ({
     await page.goto(ecran.chemin);
     await expect(page).toHaveURL(/\/administration\/connexion$/);
 
-    await expect(
-      page.getByLabel("Nom de la nouvelle catégorie"),
-    ).toHaveCount(0);
+    await expect(page.getByLabel("Nom de la nouvelle catégorie")).toHaveCount(
+      0,
+    );
     await expect(page.getByLabel("Nom du produit")).toHaveCount(0);
     await expect(
       page.getByRole("button", { name: "Créer le brouillon" }),

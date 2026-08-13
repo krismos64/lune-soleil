@@ -90,7 +90,10 @@ export function GestionCategories({
    * l'interface sur une base injoignable, ce que les etats obligatoires de
    * `frontend-design.md` interdisent.
    */
-  function lancer(action: () => Promise<ResultatAction>, messageSucces: string) {
+  function lancer(
+    action: () => Promise<ResultatAction>,
+    messageSucces: string,
+  ) {
     setErreur(null);
     setSucces(null);
 
@@ -210,8 +213,8 @@ export function GestionCategories({
       {categories.length === 0 ? (
         /* ETAT VIDE OBLIGATOIRE, jamais une liste vide sans explication. */
         <p className={styles.vide}>
-          Aucune catégorie pour le moment. Créez la première ci-dessus, elle sera
-          nécessaire pour ranger un produit.
+          Aucune catégorie pour le moment. Créez la première ci-dessus, elle
+          sera nécessaire pour ranger un produit.
         </p>
       ) : (
         <ol className={styles.liste}>
@@ -243,8 +246,8 @@ export function GestionCategories({
                     s'etonnerait qu'elle ne suive pas.
                   */}
                   <p className={styles.aide}>
-                    L&apos;adresse de la page, /{categorie.slug}, ne change pas :
-                    les liens déjà partagés restent valides.
+                    L&apos;adresse de la page, /{categorie.slug}, ne change pas
+                    : les liens déjà partagés restent valides.
                   </p>
                   <div className={styles.actions}>
                     <button

@@ -67,8 +67,9 @@ export function FormulaireProduit({
   if (categories.length === 0) {
     return (
       <p className={styles.vide}>
-        Aucune catégorie n&apos;existe encore. Créez-en une avant d&apos;ajouter un
-        produit : <a href="/administration/categories">gérer les catégories</a>.
+        Aucune catégorie n&apos;existe encore. Créez-en une avant d&apos;ajouter
+        un produit :{" "}
+        <a href="/administration/categories">gérer les catégories</a>.
       </p>
     );
   }
@@ -112,8 +113,8 @@ export function FormulaireProduit({
           aria-describedby="aide-nom"
         />
         <p className={styles.aide} id="aide-nom">
-          Il servira à construire l&apos;adresse de la fiche, et ne changera plus
-          ensuite.
+          Il servira à construire l&apos;adresse de la fiche, et ne changera
+          plus ensuite.
         </p>
       </div>
 
