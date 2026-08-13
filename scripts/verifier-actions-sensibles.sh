@@ -293,6 +293,59 @@ if [ -d "$ADMINISTRATION" ] && [ "$couples_verifies" -eq 0 ]; then
   ko=$((ko + 1))
 fi
 
+# ---------------------------------------------------------------------------
+# Sens 5 : la liste reste courte. LS-81 critère 6, LS-89 critère 4.
+#
+# « AUCUNE ACTION FRÉQUENTE N'EXIGE DE RÉAUTHENTIFICATION », dit le critère, et
+# c'est une exigence d'ergonomie qui protège la sécurité. Chaque action gardée
+# se paie en saisies du mot de passe de seize caractères ; une protection qu'on
+# subit finit contournée, et le mot de passe finit raccourci ou écrit.
+#
+# CE CONTRÔLE MESURE LA PROPORTION plutôt qu'un nombre absolu : il compte les
+# fonctions marquées `@sensible` et les compare aux fonctions exportées de
+# `services/` et des Server Actions, la population où une action peut naître. Un
+# plafond en valeur absolue vieillirait mal, le nombre d'écrans devant croître
+# de plusieurs phases.
+#
+# LE DÉNOMINATEUR COUVRE LA MÊME POPULATION QUE LE NUMÉRATEUR, et cette
+# précision a coûté une régression : une première version comptait les FICHIERS
+# portant `"use server"`, alors que les marques vivent dans `services/`. Le
+# fichier témoin du cas 9 de la preuve par mutation, qui exige un SUCCÈS sur une
+# action correctement gardée, faisait alors échouer le contrôle : sa marque
+# entrait au numérateur, son fichier jamais au dénominateur. Un contrôle dont le
+# numérateur et le dénominateur ne comptent pas la même chose finit par accuser
+# du code juste.
+#
+# LE SEUIL EST LARGE, LA MOITIÉ, et c'est volontaire. Ce contrôle n'arbitre pas
+# à la place de quelqu'un : il attrape la dérive franche, le jour où marquer
+# `@sensible` devient un réflexe de prudence appliqué partout. Un dépassement
+# n'est pas la preuve d'une faute, c'est la demande d'un arbitrage explicite,
+# exactement ce que dit le type : « une cinquième famille demande un arbitrage,
+# pas une ligne de plus ».
+# ---------------------------------------------------------------------------
+fonctions_exportees=$(
+  grep -rhE '^export (async )?function ' "$SOURCE/services" "$SOURCE/app" \
+    --include="*.ts" --include="*.tsx" 2>/dev/null \
+    | wc -l | tr -d ' '
+)
+
+echo "Fonctions exportées de services/ et app/ : $fonctions_exportees, dont marquées sensibles : $verifiees"
+
+# L'ANCRAGE SE PROUVE ICI AUSSI : zéro fonction relevée signifie que le motif ne
+# correspond plus, et le rapport ne voudrait rien dire.
+if [ "$fonctions_exportees" -eq 0 ]; then
+  echo "ECHEC aucune fonction exportée relevée dans services/ ni app/"
+  echo "      l'ancrage du sens 5 est cassé, le rapport ne mesure plus rien"
+  ko=$((ko + 1))
+elif [ $((verifiees * 2)) -gt "$fonctions_exportees" ]; then
+  echo "ECHEC plus de la moitié des fonctions exigent une réauthentification"
+  echo "      $verifiees sur $fonctions_exportees. Le critère 6 de LS-81 demande une liste"
+  echo "      volontairement courte : chaque action gardée se paie en saisies du mot de"
+  echo "      passe, et une protection subie finit contournée. Arbitrer explicitement"
+  echo "      plutôt que d'ajouter une marque de plus."
+  ko=$((ko + 1))
+fi
+
 if [ "$ko" -gt 0 ]; then
   echo "ECHEC $ko problème(s)"
   exit 1
