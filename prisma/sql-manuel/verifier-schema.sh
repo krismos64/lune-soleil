@@ -869,6 +869,88 @@ else
 fi
 
 echo
+echo "== Categories du catalogue, LS-99 =="
+
+# Jeu d'essai : deux categories supplementaires. Noms neutres, sans rapport avec
+# le prototype, dont les donnees n'entrent nulle part comme donnees reelles.
+R "INSERT INTO categorie (id,nom,slug,ordre,cree_a)
+   VALUES ('cat2','Categorie deux','categorie-deux',2,now()),
+          ('cat3','Categorie trois','categorie-trois',3,now());" >/dev/null
+
+# TEST 1, C24 : l'echange de deux positions reussit DANS UNE TRANSACTION, grace
+# au caractere differable. Meme mecanique que C22, et ce controle rougit si la
+# contrainte est recreee non differable.
+sortie=$(R "BEGIN;
+            UPDATE categorie SET ordre = 3 WHERE id = 'cat2';
+            UPDATE categorie SET ordre = 2 WHERE id = 'cat3';
+            COMMIT;")
+verifier_accepte "echange de deux rangs de categorie accepte en transaction, C24" "$sortie"
+
+# L'echange a-t-il eu lieu ? Un COMMIT devenu ROLLBACK laisserait le controle
+# precedent au vert sans que rien ne bouge. Meme piege que pour C22.
+verifier "l'echange de rangs de categorie est effectif" "cat2=3 cat3=2" \
+  "$(R "SELECT 'cat2=' || (SELECT ordre FROM categorie WHERE id='cat2') ||
+               ' cat3=' || (SELECT ordre FROM categorie WHERE id='cat3');")"
+
+# TEST 2, C24 : la protection tient toujours. C'est LE controle qui distingue
+# « contrainte differable » de « contrainte absente », le test 1 passant a
+# l'identique sans aucune contrainte.
+sortie=$(R "BEGIN;
+            UPDATE categorie SET ordre = 1 WHERE id = 'cat2';
+            COMMIT;")
+verifier_rejet "doublon de rang de categorie refuse au COMMIT, C24" \
+  "categorie_ordre_unique" "$sortie"
+
+# Et en insertion, pas seulement en mise a jour.
+sortie=$(R "BEGIN;
+            INSERT INTO categorie (id,nom,slug,ordre,cree_a)
+            VALUES ('cat4','Categorie quatre','categorie-quatre',1,now());
+            COMMIT;")
+verifier_rejet "insertion d'un rang de categorie deja pris refusee, C24" \
+  "categorie_ordre_unique" "$sortie"
+
+# Controle structurel, independant du comportement observe ci-dessus.
+verifier "la contrainte de rang de categorie est differable et differee, C24" "true|true" \
+  "$(R "SELECT condeferrable || '|' || condeferred FROM pg_constraint
+        WHERE conname = 'categorie_ordre_unique';")"
+
+# C24, l'ordre commence a 1. Un rang nul trierait avant tout le reste.
+sortie=$(R "INSERT INTO categorie (id,nom,slug,ordre,cree_a)
+            VALUES ('cat5','Categorie cinq','categorie-cinq',0,now());")
+verifier_rejet "un rang de categorie nul est rejete, C24" "chk_categorie_ordre_positif" "$sortie"
+
+sortie=$(R "INSERT INTO categorie (id,nom,slug,ordre,cree_a)
+            VALUES ('cat6','Categorie six','categorie-six',-1,now());")
+verifier_rejet "un rang de categorie negatif est rejete, C24" "chk_categorie_ordre_positif" "$sortie"
+
+# C25, un nom vide produirait un lien invisible mais cliquable dans le menu.
+# Le trim compte : trois espaces ne sont pas un nom.
+sortie=$(R "INSERT INTO categorie (id,nom,slug,ordre,cree_a)
+            VALUES ('cat7','   ','categorie-sept',7,now());")
+verifier_rejet "un nom de categorie vide est rejete, C25" "chk_categorie_nom_non_vide" "$sortie"
+
+# C3, le slug reste unique. Deja garanti avant LS-99, verifie ici parce que
+# l'ecran de creation s'appuie dessus pour refuser un doublon.
+sortie=$(R "INSERT INTO categorie (id,nom,slug,ordre,cree_a)
+            VALUES ('cat8','Autre nom','categorie-deux',8,now());")
+verifier_rejet "un slug de categorie en doublon est rejete, C3" "categorie_slug_key" "$sortie"
+
+# C26, une categorie portant un produit ne se supprime pas. La categorie 'cat'
+# porte le produit 'prod' du jeu d'essai initial.
+sortie=$(R "DELETE FROM categorie WHERE id = 'cat';")
+verifier_rejet "suppression d'une categorie portant un produit refusee, C26" \
+  "produit_categorie_id_fkey" "$sortie"
+
+# Et la categorie vide, elle, se supprime : sans ce controle, un RESTRICT pose
+# sur la mauvaise colonne, ou une suppression bloquee pour une autre raison,
+# passerait pour C26 respectee.
+sortie=$(R "DELETE FROM categorie WHERE id = 'cat3';")
+verifier_accepte "suppression d'une categorie vide acceptee, C26" "$sortie"
+
+# Remise en etat pour les controles suivants, qui comptent sur 'cat' seule.
+R "DELETE FROM categorie WHERE id IN ('cat2','cat4');" >/dev/null
+
+echo
 echo "== Sections de fiche produit, ADR-026, LS-76 =="
 
 # Jeu d'essai : deux sections sur le produit existant.

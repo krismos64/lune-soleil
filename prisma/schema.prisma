@@ -199,6 +199,17 @@ model Categorie {
   slug  String   @unique // C3
   // LS-49, l'ordre d'affichage des catégories est choisi par l'exploitante et
   // non alphabétique. Prévu au modèle conceptuel, absent du schéma jusqu'ici.
+  //
+  // C24, LS-99. Son unicité est garantie par une contrainte UNIQUE DEFERRABLE
+  // INITIALLY DEFERRED, posée par la migration `ordre_categorie_unique`. Comme
+  // pour C22 sur `SectionProduit.ordre`, NE PAS ajouter `@@unique([ordre])`
+  // ici : Prisma le créerait NON différable, et cette seconde contrainte
+  // rejetterait l'échange de deux positions dès la première mise à jour, ce que
+  // la contrainte différable existe précisément pour permettre.
+  //
+  // Conséquence pour le code : le réordonnancement s'écrit en UPDATE dans une
+  // transaction, jamais en upsert, aucun ON CONFLICT ne pouvant arbitrer sur
+  // une contrainte différable.
   ordre Int
   creeA DateTime @default(now()) @map("cree_a") @db.Timestamptz(3)
 
