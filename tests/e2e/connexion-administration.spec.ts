@@ -95,6 +95,10 @@ test("l'ecran de connexion ne porte aucune violation d'accessibilite serieuse", 
 test("un identifiant faux produit un message d'erreur annonce", async ({
   page,
 }) => {
+  // La reprise apres un 429 attend une fenetre de limitation entiere, ce qui
+  // depasse les trente secondes par defaut de Playwright.
+  test.setTimeout(120_000);
+
   await page.goto("/administration/connexion");
   await page
     .getByRole("button", { name: "Utiliser le mot de passe de secours" })
@@ -113,17 +117,49 @@ test("un identifiant faux produit un message d'erreur annonce", async ({
    * d'origine rend 403. Sans elle, la configuration pourrait rederiver et le
    * test resterait vert.
    */
-  const reponseConnexion = page.waitForResponse(
-    (reponse) =>
-      reponse.url().includes("/api/auth/sign-in/email") &&
-      reponse.request().method() === "POST",
-  );
+  /**
+   * UN 429 SE RATTRAPE, ET NE SE CONFOND PAS AVEC LE 401 ATTENDU.
+   *
+   * `/sign-in/email` est plafonne a cinq tentatives par minute et par adresse
+   * IP, LS-92, et Better Auth tient en plus un compteur global par IP. Les
+   * trois projets de largeur tentent chacun cette connexion : deux executions
+   * rapprochees de la suite franchissent donc le plafond, et ce test echouait
+   * alors sur « Expected 401, Received 429 ».
+   *
+   * MESURE FAITE LE 13 AOUT 2026, sur la suite SANS les fichiers de LS-81 :
+   * l'instabilite preexiste, elle n'a pas ete introduite par eux. Elle est
+   * simplement devenue visible quand le tempo de la suite a change.
+   *
+   * L'attente est explicite et le 401 reste exige : accepter le 429 comme
+   * resultat valable retirerait l'assertion qui distingue un refus
+   * d'identifiants d'un refus d'origine, ce que le commentaire ci-dessus
+   * explique etre la raison d'etre de ce test.
+   */
+  const soumettre = async () => {
+    const reponse = page.waitForResponse(
+      (reponse) =>
+        reponse.url().includes("/api/auth/sign-in/email") &&
+        reponse.request().method() === "POST",
+    );
 
-  await page.getByLabel("Adresse email").fill("inconnu@exemple.fr");
-  await page.getByLabel("Mot de passe").fill("un-mot-de-passe1");
-  await page.getByRole("button", { name: "Se connecter", exact: true }).click();
+    await page.getByLabel("Adresse email").fill("inconnu@exemple.fr");
+    await page.getByLabel("Mot de passe").fill("un-mot-de-passe1");
+    await page
+      .getByRole("button", { name: "Se connecter", exact: true })
+      .click();
 
-  expect((await reponseConnexion).status()).toBe(401);
+    return (await reponse).status();
+  };
+
+  let statut = await soumettre();
+
+  if (statut === 429) {
+    // La fenetre de limitation dure soixante secondes.
+    await page.waitForTimeout(62_000);
+    statut = await soumettre();
+  }
+
+  expect(statut).toBe(401);
 
   // `role="alert"` et non une couleur : l'erreur doit parvenir au lecteur
   // d'ecran. Chercher l'element par son ROLE, pas par sa classe, c'est ce qui

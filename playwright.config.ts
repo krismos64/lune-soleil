@@ -36,8 +36,26 @@ export default defineConfig({
   },
 
   projects: [
+    /*
+     * PREPARATION : une seule inscription pour toute la suite, LS-81 et LS-89.
+     *
+     * Les tests de l'ecran de suppression exigent une session cliente, et aucun
+     * ecran de connexion client n'existe encore, LS-54. Les faire s'inscrire
+     * eux-memes consommait le plafond de `/sign-up/email`, trois par minute et
+     * par IP, multiplie par les trois largeurs : un test VOISIN,
+     * `connexion-administration`, recevait alors 429 la ou il attend 401.
+     *
+     * `testMatch` isole ce fichier des trois projets de largeur, sans quoi il
+     * s'executerait quatre fois et le probleme resterait entier.
+     */
+    {
+      name: "preparation",
+      testMatch: /session-cliente\.setup\.ts$/,
+    },
     {
       name: "mobile-320",
+      testIgnore: /session-cliente\.setup\.ts$/,
+      dependencies: ["preparation"],
       use: {
         ...devices["Desktop Chrome"],
         // 320 px, la largeur de reference du projet. Aucun appareil predefini
@@ -47,6 +65,8 @@ export default defineConfig({
     },
     {
       name: "mobile-390",
+      testIgnore: /session-cliente\.setup\.ts$/,
+      dependencies: ["preparation"],
       use: {
         ...devices["Desktop Chrome"],
         // 390 px avec le moteur de Chrome, et NON le profil « iPhone 14 » de
@@ -63,6 +83,8 @@ export default defineConfig({
     },
     {
       name: "bureau-1280",
+      testIgnore: /session-cliente\.setup\.ts$/,
+      dependencies: ["preparation"],
       use: {
         ...devices["Desktop Chrome"],
         viewport: { width: 1280, height: 800 },
