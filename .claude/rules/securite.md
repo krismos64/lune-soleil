@@ -227,6 +227,29 @@ passe, `verifyPassword` vérifiant contre `session.user.id`.
 **Le chemin de la passkey est `/passkey/verify-authentication`**, jamais
 `/sign-in/passkey` qui n'existe pas, voir la section du journal des connexions.
 
+### Le contrôle ne voit pas une marque manquante
+
+`verifier-actions-sensibles.sh` confronte les marques `@sensible` aux gardes dans
+les deux sens : il prouve leur **cohérence**. Il ne peut pas dire qu'un écran
+aurait dû être marqué. Un écran sensible que personne n'a marqué est invisible
+des deux côtés : le contrôle reste vert, et `.claude/familles-sans-action.txt`
+continue d'affirmer qu'il n'existe rien à protéger.
+
+Le cas s'est produit entre LS-80 et le 13 août 2026. La ligne `DONNEES_CLIENTS`
+disait « aucun export ni consultation en masse » alors que l'écran du journal des
+connexions affichait déjà cinquante lignes d'adresses email, d'adresses IP et
+d'agents utilisateur de clients. Personne n'avait relu ce fichier après LS-80.
+
+**Relire `.claude/familles-sans-action.txt` à chaque story qui ajoute un écran
+d'administration ou une Server Action**, et se demander si la ligne est encore
+vraie. Aucun script ne pose cette question à la place de quelqu'un.
+
+Cet écran reste **non classé**, arbitrage de Christophe du 13 août 2026 : la
+finalité de T8 est la sécurité et non le fichier client, que vise ADR-021, et
+« en masse » y serait étiré sur cinquante lignes sans recherche ni export.
+Élargir la définition d'une famille pour fermer une dette déplacerait la règle
+au lieu de la satisfaire. La première action sensible réelle naîtra de LS-95.
+
 **Les deux gardes vont ensemble, et rien ne le vérifie.**
 `exigerReauthentificationRecente` répond à « l'identité est-elle récente »,
 `exigerAdministratrice` à « qui agit ». Une action d'administration qui n'appelle
