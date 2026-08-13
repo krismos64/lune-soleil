@@ -1,0 +1,239 @@
+/*
+ * Categories du catalogue, LS-99. Toutes les couleurs viennent des jetons
+ * d'ADR-022, aucune valeur hexadecimale ici.
+ *
+ * MOBILE FIRST, invariant 10 : la mise en forme de base est celle de 320 px,
+ * une carte par categorie et des actions qui passent a la ligne. Les largeurs
+ * superieures elargissent, elles ne corrigent jamais un debordement.
+ *
+ * POURQUOI DES CARTES ET NON UN TABLEAU. Nom, adresse, compte de produits et
+ * quatre actions ne tiennent pas dans 320 px : un tableau y imposerait un
+ * defilement horizontal. `frontend-design.md` demande explicitement cartes et
+ * listes quand un tableau devient illisible sur mobile.
+ */
+
+.page {
+  padding: var(--ls-space-4);
+  max-width: 60rem;
+  margin: 0 auto;
+}
+
+.titre {
+  margin: 0 0 var(--ls-space-3);
+}
+
+.introduction {
+  color: var(--ls-text-muted);
+  max-width: 65ch;
+  margin: 0 0 var(--ls-space-5);
+}
+
+.gestion {
+  display: grid;
+  gap: var(--ls-space-4);
+}
+
+.formulaire-creation {
+  background: var(--ls-surface);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  padding: var(--ls-space-4);
+}
+
+.label {
+  display: block;
+  margin-bottom: var(--ls-space-2);
+  font-weight: 600;
+}
+
+/*
+ * A 320 px le champ et le bouton s'empilent : cote a cote, le champ tomberait
+ * sous les dix caracteres visibles. `wrap` suffit, aucune requete de media.
+ */
+.ligne-creation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ls-space-3);
+}
+
+.champ {
+  flex: 1 1 12rem;
+  min-width: 0;
+  padding: var(--ls-space-3);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  font: inherit;
+  min-height: var(--ls-touch-target);
+}
+
+.champ:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+.aide {
+  color: var(--ls-text-muted);
+  font-size: 0.9rem;
+  margin: var(--ls-space-2) 0 0;
+}
+
+.vide {
+  background: var(--ls-surface);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  padding: var(--ls-space-5);
+  color: var(--ls-text-muted);
+  margin: 0;
+}
+
+.liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--ls-space-3);
+}
+
+.categorie {
+  background: var(--ls-surface);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  padding: var(--ls-space-4);
+}
+
+.entete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ls-space-2);
+}
+
+.nom {
+  font-weight: 600;
+  /* Un nom long ne doit pas pousser la carte hors de l'ecran a 320 px. */
+  overflow-wrap: anywhere;
+}
+
+.compte {
+  color: var(--ls-text-muted);
+  font-size: 0.9rem;
+}
+
+.slug {
+  color: var(--ls-text-muted);
+  font-size: 0.9rem;
+  margin: var(--ls-space-1) 0 var(--ls-space-3);
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ls-space-2);
+}
+
+/*
+ * Les trois boutons partagent la meme hauteur tactile, 44 px, exigence de
+ * `frontend-design.md`. A 320 px ils passent a la ligne plutot que de retrecir.
+ */
+.bouton,
+.bouton-principal,
+.bouton-danger {
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-2) var(--ls-space-4);
+  border-radius: var(--ls-radius-sm);
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid var(--ls-border);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  transition: background var(--ls-duration-fast) var(--ls-easing);
+}
+
+.bouton-principal {
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  border-color: var(--ls-primary);
+}
+
+.bouton-principal:hover:not(:disabled) {
+  background: var(--ls-primary-hover);
+}
+
+.bouton:hover:not(:disabled) {
+  background: var(--ls-surface-sand);
+}
+
+/*
+ * TEXTE ROUGE SUR BLANC ET NON UN FOND ROUGE : ce bouton n'est pas l'action
+ * principale de l'ecran. `--ls-error` donne un rapport conforme sur surface
+ * blanche pour du texte courant.
+ */
+.bouton-danger {
+  color: var(--ls-error);
+  border-color: var(--ls-error);
+}
+
+.bouton-danger:hover:not(:disabled) {
+  background: var(--ls-surface-sand);
+}
+
+.bouton:focus-visible,
+.bouton-principal:focus-visible,
+.bouton-danger:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+/*
+ * L'ETAT DESACTIVE NE PASSE PAS PAR LA SEULE COULEUR : le bouton est aussi
+ * inerte au clavier, et la raison du refus est annoncee par `aria-describedby`
+ * plutot que par le seul `title`, invisible au toucher.
+ *
+ * OPACITE A 0,7 ET NON 0,5. Mesure sur ce rendu, `--ls-error` a 50 % donne
+ * 2,36:1 sur blanc, et le bouton neutre 2,88:1. WCAG 2.2 exempte les composants
+ * desactives du critere 1.4.3, ce n'est donc PAS une non-conformite : c'est un
+ * choix de lisibilite. A 0,7 le rapport passe a 3,6:1 environ, assez pour lire
+ * l'intitule, assez en retrait pour que l'etat reste visible d'un coup d'oeil.
+ * Ne pas remonter jusqu'a 1, l'etat cesserait alors de se voir.
+ */
+.bouton:disabled,
+.bouton-principal:disabled,
+.bouton-danger:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.formulaire-renommage {
+  display: grid;
+  gap: var(--ls-space-2);
+}
+
+.erreur,
+.succes {
+  margin: 0;
+  padding: var(--ls-space-3) var(--ls-space-4);
+  border-radius: var(--ls-radius-sm);
+  border: 1px solid;
+}
+
+.erreur {
+  color: var(--ls-error);
+  border-color: var(--ls-error);
+  background: var(--ls-surface);
+}
+
+.succes {
+  color: var(--ls-success);
+  border-color: var(--ls-success);
+  background: var(--ls-surface);
+}
+
+@media (min-width: 768px) {
+  .page {
+    padding: var(--ls-space-6);
+  }
+}
