@@ -1,4 +1,4 @@
-# 13 août 2026, la porte de sortie de la phase 1 et cinq stories
+# 13 août 2026, la porte de sortie de la phase 1 et cinq stories de LS-2
 
 Session longue en autonomie complète, demandée par Christophe : enchaîner les six
 stories ouvertes de LS-2 sans interruption, en clôturant la traçabilité sur les
@@ -237,7 +237,11 @@ la porte ci-dessus.
 | LS-91 | PR #99 fusionnée | Terminé, LS-96 créée pour le critère de production |
 | LS-92 | PR #100 fusionnée | Terminé |
 | LS-81 et LS-89 | PR #101 fusionnée | **En cours**, dette réexaminée et tracée |
-| LS-75 | PR en cours | à clore |
+| LS-75 | PR #102 fusionnée | Terminé, description de LS-2 mise à jour et estimation retirée |
+
+**Une sixième story a suivi dans la même journée**, LS-95, droits des personnes :
+PR #103 fusionnée, ticket en Terminé. Son journal est
+`2026-08-13-droits-des-personnes-ls95.md`.
 
 ## Chiffres
 
@@ -246,14 +250,17 @@ nouveaux scripts de contrôle, `verifier-nginx.sh` et sa preuve par mutation, si
 cas sur six. Seize scripts `verifier-*`, dont huit de mutation, plus trois scripts
 d'exploitation.
 
-**24 stories sur LS-2, 20 terminées.** Restent LS-75 en clôture, LS-96 qui relève
-de la phase 6, et LS-81 et LS-89 dont la dette est assumée et tracée.
+**24 stories sur LS-2, 21 terminées** après la clôture de LS-75. Restent LS-96,
+qui relève de la phase 6, et LS-81 et LS-89 dont la dette était assumée et tracée
+au moment d'écrire ces lignes.
 
 ## Prochaine étape
 
-**LS-95**, suppression de compte et réponse aux demandes d'accès et d'effacement,
-articles 15 et 17. Elle fera naître la première action sensible réelle du dépôt,
-ce qui débloquera les sept critères de LS-81 et LS-89.
+**LS-95 a été faite dans la foulée**, le même jour : suppression de compte et
+réponse aux demandes d'accès et d'effacement. Elle a fait naître la première
+action sensible réelle du dépôt et levé la dernière dette du registre. Voir
+`2026-08-13-droits-des-personnes-ls95.md`.
 
-C'est aussi la dernière des trois dettes du registre des traitements, les deux
-autres étant levées : LS-94 aujourd'hui, LS-93 restant sur la durée des avis.
+Ce qui reste après elle : **reprendre LS-81 et LS-89**, dont les sept critères
+sont désormais débloqués, puis **LS-93**, la durée de conservation des avis, qui
+demande un ADR.
