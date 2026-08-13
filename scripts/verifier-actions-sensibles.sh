@@ -204,6 +204,95 @@ done
 
 echo "Actions @sensible vérifiées : $verifiees"
 
+# ---------------------------------------------------------------------------
+# Sens 4 : sous `administration/`, la garde de rôle accompagne celle de
+# fraîcheur. LS-89 tranche ici la question que LS-81 lui avait laissée.
+#
+# LE DÉFAUT VISÉ EST RÉEL, IL S'EST PRODUIT. L'écran de réauthentification de
+# LS-89 ne filtrait d'abord que la PRÉSENCE d'une session, jamais le rôle. Un
+# client inscrit sur la boutique, rôle `CLIENT` par défaut, ouvrait l'écran,
+# saisissait SON mot de passe et repartait avec une preuve fraîche :
+# `verifyPassword` vérifie contre `session.user.id`, donc il réussissait.
+#
+# Les deux gardes répondent à deux questions distinctes, et l'une ne dit rien de
+# l'autre : `exigerReauthentificationRecente` répond à « cette identité est-elle
+# récente », `exigerAdministratrice` à « qui agit ». Une action d'administration
+# qui n'appelle que la première laisse un client authentifié franchir la garde
+# de fraîcheur avec son propre mot de passe.
+#
+# POURQUOI LA PORTÉE S'ARRÊTE À `administration/`, et c'est le point qui a
+# demandé le plus d'attention. Exiger le couple PARTOUT serait faux et le
+# contrôle deviendrait nuisible : `supprimerMonCompte` est une action sensible
+# de l'ESPACE CLIENT, famille `IDENTIFIANTS`, et elle doit précisément NE PAS
+# exiger le rôle administratrice. Une personne supprime son propre compte,
+# article 17. Un contrôle qui la refuserait pousserait à lui ajouter une garde
+# de rôle qui interdirait le droit à l'effacement à tous les clients, c'est-à-
+# dire à créer un vrai défaut pour satisfaire une règle mal cadrée.
+#
+# La règle exacte est donc : sous `src/app/administration/`, tout fichier qui
+# appelle une garde de fraîcheur ou qui écrit une preuve appelle aussi
+# `exigerAdministratrice`. Ailleurs, le couple ne s'impose pas.
+# ---------------------------------------------------------------------------
+ADMINISTRATION="$SOURCE/app/administration"
+couples_verifies=0
+
+# L'ABSENCE DU DOSSIER EST UN ÉCHEC, ET NON UN CAS SANS OBJET. Ce garde-fou a
+# été ajouté après avoir exercé le contrôle : la première version conditionnait
+# tout le sens 4 à `[ -d "$ADMINISTRATION" ]`, si bien qu'un dossier renommé
+# rendait la condition fausse, sautait la boucle, et le script concluait « OK »
+# sans avoir rien examiné. La mutation qui renomme le dossier passait au vert.
+#
+# C'est le motif du garde-fou jamais exercé, déjà rencontré ici : un contrôle
+# qui traite sa propre cible manquante comme « rien à faire » se désarme
+# silencieusement le jour où l'arborescence bouge.
+if [ ! -d "$ADMINISTRATION" ]; then
+  echo "ECHEC dossier d'administration introuvable : $ADMINISTRATION"
+  echo "      le sens 4 ne vérifie plus rien. Si le dossier a été renommé,"
+  echo "      corriger ce chemin plutôt que de laisser le contrôle muet."
+  ko=$((ko + 1))
+else
+  while IFS= read -r fichier; do
+    [ -n "$fichier" ] || continue
+
+    # Le fichier touche-t-il à la réauthentification, appel de la garde ou
+    # écriture d'une preuve. Les commentaires sont exclus : sans cela, la phrase
+    # qui EXPLIQUE la règle la satisferait, défaut déjà rencontré ici.
+    code=$(grep -v '^\s*\(//\|\*\|/\*\)' "$fichier")
+
+    if ! printf '%s\n' "$code" \
+         | grep -qE '(exigerReauthentificationRecente|enregistrerPreuveIdentite|prouverIdentiteMotDePasse|prouverIdentiteParMotDePasse|prouverIdentiteParPasskey)[[:space:]]*\('; then
+      continue
+    fi
+
+    couples_verifies=$((couples_verifies + 1))
+
+    if ! printf '%s\n' "$code" \
+         | grep -qE 'exigerAdministratrice[[:space:]]*\('; then
+      relatif="${fichier#"$RACINE"/}"
+      echo "ECHEC $relatif : touche à la réauthentification sans appeler exigerAdministratrice"
+      echo "      sous administration/, les deux gardes vont ensemble : la fraîcheur"
+      echo "      de l'identité ne dit rien du rôle. Un client authentifié franchirait"
+      echo "      cette garde avec son propre mot de passe (défaut réel de LS-89)."
+      ko=$((ko + 1))
+    fi
+  done <<EOF
+$(find "$ADMINISTRATION" \( -name "*.ts" -o -name "*.tsx" \) 2>/dev/null | sort || true)
+EOF
+fi
+
+echo "Couples de gardes vérifiés sous administration/ : $couples_verifies"
+
+# L'ANCRAGE SE PROUVE : zéro fichier vérifié signifie que le contrôle ne
+# regarde plus rien, parce que le dossier a été renommé ou les noms de gardes
+# ont changé. Un contrôle qui n'examine aucun cas doit le dire, sinon il rend
+# « OK » en ne vérifiant rien, ce qui est pire que son absence.
+if [ -d "$ADMINISTRATION" ] && [ "$couples_verifies" -eq 0 ]; then
+  echo "ECHEC aucun fichier d'administration ne touche à la réauthentification"
+  echo "      l'ancrage du sens 4 est cassé : les gardes ont été renommées, ou"
+  echo "      l'écran de réauthentification a quitté administration/"
+  ko=$((ko + 1))
+fi
+
 if [ "$ko" -gt 0 ]; then
   echo "ECHEC $ko problème(s)"
   exit 1
