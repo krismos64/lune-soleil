@@ -161,10 +161,10 @@ Le délai d'un mois laisse largement le temps d'un traitement manuel.
 
 | Canal | État |
 |---|---|
-| Dépôt | PR à ouvrir, deux commits |
+| Dépôt | **PR #103 fusionnée** sur `main` en rebase, deux commits, dernier `d1614c1` |
 | Journal | cette page |
-| Mémoire | fiche d'état, plus les fiches de cette story |
-| Jira | LS-95 à clore, LS-81 et LS-89 à reprendre |
+| Mémoire | fiche d'état réécrite, plus `suppression-est-une-dissociation` et `marque-sensible-et-prettier` |
+| Jira | **LS-95 en Terminé**, commentaire critère par critère. LS-81 et LS-89 restent **En cours**, leurs critères désormais débloqués |
 
 ## Chiffres
 
