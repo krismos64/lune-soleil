@@ -140,7 +140,7 @@ inconvénients : la donnée personnelle reste conservée, donc rien n'est minimi
 et l'information disparaît de la fiche produit, donc l'acheteur y perd. Elle
 n'aurait servi qu'à afficher une durée dans la rubrique.
 
-## Ce que cela implique
+## Conséquences
 
 **Aucun code à écrire.** C'est la conséquence la plus notable de cette décision, et
 elle est volontaire : la story d'implémentation que LS-93 annonçait « hors
@@ -157,6 +157,32 @@ correspondante disparaît de la section « Ce qui reste dû ».
 **La décision I du modèle conceptuel est confirmée**, non modifiée. Elle gagne une
 référence vers cet ADR, qui la rend opposable au lieu de la laisser dans un
 document d'architecture.
+
+## Risques
+
+**Un avis devient inexact avec le temps** sans que rien ne le signale. Un article
+dont la fabrication a changé garde les avis portant sur l'ancienne version.
+Atténué par l'obligation d'afficher la **date de l'expérience de consommation**,
+article D111-10 1° b), qui est déjà tenue : `experienceA` est obligatoire. Le
+lecteur date lui-même la pertinence de ce qu'il lit.
+
+**Une demande d'effacement peut arriver longtemps après.** Sans échéance, un avis
+de sept ans reste en ligne, et son auteur peut avoir oublié l'avoir déposé.
+Atténué par le droit d'effacement, exerçable à tout moment, et par la procédure
+écrite de `docs/PROCEDURE-DROITS-DES-PERSONNES.md`, délai d'un mois. Le risque
+résiduel est celui d'une personne qui ne pense pas à demander : il est assumé,
+l'avis étant public et daté, donc visible d'elle.
+
+**La rubrique peut ne jamais être écrite**, ce qui transformerait une décision
+licite en manquement à D111-10. C'est le risque le plus concret de cet ADR, parce
+qu'il porte sur une action future et non sur le présent. Atténué en inscrivant la
+formulation exacte dans cet ADR plutôt qu'en la laissant à écrire, et en la
+rappelant dans le registre des traitements, T7.
+
+**Un volume inattendu changerait la donne.** Le raisonnement s'appuie sur des avis
+en dizaines. Un afflux, ou une extension du catalogue à des pièces produites en
+série, rouvrirait la question de la proportionnalité. Cet ADR serait alors à
+réviser, et non simplement contourné.
 
 ## Ce que cet ADR ne tranche pas
 

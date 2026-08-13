@@ -329,7 +329,7 @@ est un incident silencieux. La tâche est déclarée en échec si l'une des troi
 npm run test              # Vitest, unitaire et intégration
 npm run test:unitaire     # sans base, lançable sans Docker
 npm run test:integration  # base éphémère, exige Docker
-npm run test:e2e          # Playwright, trois largeurs
+npm run test:e2e          # Playwright, trois largeurs, session ouverte une fois
 ```
 
 | Commande | Ce qu'elle exerce |
@@ -379,7 +379,7 @@ vérification d'adresse reste désactivée.
 
 ### Scripts de vérification
 
-Dix-sept scripts, dont sept de mutation qui prouvent les autres :
+Dix-sept scripts, dont huit de mutation qui prouvent les autres :
 
 ```bash
 ./prisma/sql-manuel/verifier-schema.sh           # schéma sur base réelle, exige Docker
