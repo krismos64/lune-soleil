@@ -53,6 +53,26 @@ attendre_echec() {
   restaurer
 }
 
+# Exige que le contrôle ACCEPTE un code correct.
+#
+# UN FAUX POSITIF EST AUSSI GRAVE QU'UN FAUX NÉGATIF, et il est plus insidieux :
+# un contrôle qui refuse une action correctement gardée pousse à retirer la
+# marque `@sensible` plutôt qu'à comprendre. La protection disparaît alors par
+# la porte que le contrôle a lui-même ouverte.
+attendre_succes() {
+  local libelle="$1"
+  total=$((total + 1))
+
+  if "$CONTROLE" >/dev/null 2>&1; then
+    echo "detecte      $libelle"
+    detectes=$((detectes + 1))
+  else
+    echo "NON DETECTE  $libelle"
+  fi
+
+  restaurer
+}
+
 echo "=== Preuve par mutation du contrôle des actions sensibles ==="
 echo
 
@@ -137,6 +157,31 @@ attendre_echec "type renommé, l'ancrage ne relève plus aucune famille"
 # aucune action, aucune ligne d'attente.
 perl -0pi -e 's/  \| "PARAMETRES_BOUTIQUE";/  | "PARAMETRES_BOUTIQUE"\n  | "SUPPRESSION_COMPTE";/' "$SERVICE"
 attendre_echec "famille ajoutée au type sans action ni déclaration d'attente"
+
+# --- Cas 9 : une signature étalée par Prettier, action GARDÉE ------------
+# CE CAS EXIGE UN SUCCÈS, pas un échec, et il verrouille une régression réelle
+# trouvée en LS-95, la première action sensible du dépôt.
+#
+# L'extraction du corps s'arrêtait à la première ligne en colonne zéro après la
+# marque. Sur une signature que Prettier étale sur trois lignes, forme normale
+# dès que le type de retour est long, elle s'arrêtait donc AVANT la première
+# instruction : le contrôle refusait une action parfaitement gardée.
+#
+# Le piège tenait à ce que la seule façon de le contenter était d'écrire la
+# signature d'un seul tenant, que `npm run format` re-découpait aussitôt. Le
+# contrôle et le formateur se contredisaient.
+cat > "$TEMOIN" <<'TS'
+/** @sensible REMBOURSEMENT */
+export async function rembourserAvecSignatureEtalee(
+  enTetes: Headers,
+  montantCentimes: number,
+): Promise<{ etat: "REMBOURSE" }> {
+  await exigerReauthentificationRecente(enTetes, "REMBOURSEMENT");
+  return { etat: "REMBOURSE" };
+}
+TS
+sed -i '' 's/^REMBOURSEMENT/# REMBOURSEMENT/' "$ATTENTE"
+attendre_succes "signature étalée par Prettier, action gardée acceptée"
 
 echo
 echo "=== $detectes / $total cas détectés ==="

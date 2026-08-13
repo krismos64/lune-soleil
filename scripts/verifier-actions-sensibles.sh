@@ -109,13 +109,37 @@ while IFS= read -r occurrence; do
   # mimétisme trois semaines plus tard, marquée mais non gardée.
   #
   # L'extraction part de la ligne de la marque et s'arrête à la première ligne
-  # qui recommence en colonne zéro après le début du corps, ce qui borne la
+  # qui recommence en colonne zéro APRÈS le début du corps, ce qui borne la
   # fonction sans avoir à analyser la syntaxe.
+  #
+  # LE CORPS NE COMMENCE QU'À L'ACCOLADE OUVRANTE, et cette précision a coûté
+  # trois essais en LS-95, la première action sensible réelle du dépôt.
+  #
+  # La version précédente considérait le corps commencé dès la première ligne
+  # non vide après la marque. Sur une signature que Prettier étale sur trois
+  # lignes, forme normale dès que le type de retour est un peu long :
+  #
+  #     export async function supprimerMonCompte(      <- « corps commencé »
+  #       enTetes: Headers,
+  #     ): Promise<ResultatSuppressionGardee> {        <- colonne zéro, ARRÊT
+  #
+  # l'extraction s'arrêtait AVANT la première instruction. Le contrôle refusait
+  # donc une action parfaitement gardée, et le refus était indiscernable d'un
+  # vrai défaut : « action @sensible sans appel à exigerReauthentificationRecente ».
+  #
+  # Pire, la seule façon de le contenter était d'écrire une signature d'un seul
+  # tenant, que `npm run format` re-découpait aussitôt. Le contrôle et le
+  # formateur se contredisaient, et la victime aurait été le contrôle : on
+  # finit par retirer la marque plutôt que par comprendre.
+  #
+  # `vu` ne passe donc à vrai qu'après une ligne portant `{`, l'ouverture du
+  # corps. Une signature sur une ou dix lignes est traitée pareil.
   corps=$(awk -v debut="$ligne" '
     NR < debut { next }
     NR == debut { dans = 1; next }
     dans && /^[^[:space:]}]/ && vu { exit }
-    dans { vu = 1; print }
+    dans && /\{/ { vu = 1 }
+    dans { print }
   ' "$fichier")
 
   if ! printf '%s\n' "$corps" \

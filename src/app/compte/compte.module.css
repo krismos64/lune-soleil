@@ -1,0 +1,151 @@
+/*
+ * Espace client, droits des personnes. LS-95.
+ *
+ * MOBILE FIRST, conçu a 320 px : aucune largeur fixe, aucune valeur en pixels
+ * sur un conteneur. Zones tactiles a 44 px, champs a 16 px de fonte pour eviter
+ * le zoom automatique d'iOS a la mise au point.
+ *
+ * Aucune valeur hexadecimale en dur : tout vient des jetons d'ADR-022, et les
+ * conventions reprennent celles de l'ecran de reauthentification.
+ */
+
+.page {
+  padding: var(--ls-space-4);
+  max-width: 60ch;
+  margin: 0 auto;
+}
+
+.titre {
+  margin-top: 0;
+}
+
+.section {
+  margin-bottom: var(--ls-space-6);
+}
+
+/*
+ * LA SECTION DE SUPPRESSION SE DISTINGUE VISUELLEMENT, mais jamais PAR LA
+ * COULEUR SEULE : elle porte un titre explicite et deux paragraphes qui disent
+ * ce qui part et ce qui reste. Le liseré n'est qu'un renfort, WCAG 2.2.
+ */
+.sectionDanger {
+  margin-bottom: var(--ls-space-6);
+  padding: var(--ls-space-4);
+  border-left: 3px solid var(--ls-error);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface-sand);
+}
+
+.sectionDanger h2 {
+  margin-top: 0;
+}
+
+.texte {
+  margin: 0 0 var(--ls-space-3);
+  line-height: 1.6;
+}
+
+.liste {
+  margin: 0;
+}
+
+.ligne {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-1);
+}
+
+.ligne dt {
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+}
+
+.ligne dd {
+  margin: 0;
+  /* Une adresse email n'a pas de point de coupure naturel : sans cette regle
+     elle deborde du conteneur a 320 px. */
+  overflow-wrap: anywhere;
+}
+
+.formulaire {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-4);
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-2);
+}
+
+.champ label {
+  font-weight: 600;
+}
+
+.champ input {
+  min-height: 44px;
+  padding: var(--ls-space-3);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  /* 16 px exactement : en deçà, iOS zoome a la mise au point et casse la mise
+     en page a 320 px. */
+  font-size: 1rem;
+}
+
+.aide {
+  margin: 0;
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+}
+
+/*
+ * L'ACTION DESTRUCTRICE N'EST PAS L'ACTION PRINCIPALE de la page, et sa couleur
+ * le dit : fond `--ls-error` avec texte sur primaire, dont le contraste est
+ * verifie, plutot que le bronze des actions ordinaires. Elle reste desactivee
+ * tant que le mot de confirmation n'est pas saisi.
+ */
+.actionDanger {
+  min-height: 44px;
+  padding: var(--ls-space-3) var(--ls-space-4);
+  border: none;
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-error);
+  color: var(--ls-text-on-primary);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.actionDanger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.actionDanger:focus-visible,
+.champ input:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+/*
+ * L'erreur porte une couleur ET un texte explicite. La couleur seule ne
+ * transmet jamais l'information, WCAG 2.2.
+ */
+.erreur {
+  margin: 0;
+  padding: var(--ls-space-3);
+  border-left: 3px solid var(--ls-error);
+  background: var(--ls-surface);
+  color: var(--ls-error);
+}
+
+.succes {
+  margin: 0;
+  padding: var(--ls-space-3);
+  border-left: 3px solid var(--ls-success);
+  background: var(--ls-surface);
+  line-height: 1.6;
+}
