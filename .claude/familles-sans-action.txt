@@ -12,7 +12,60 @@
 #
 # Forme : NOM_DE_FAMILLE  puis la raison et le ticket qui la retirera.
 
-IDENTIFIANTS        aucun ecran de changement de mot de passe ni de passkey, LS-89
-DONNEES_CLIENTS     aucun export ni consultation en masse, LS-89
-REMBOURSEMENT       Stripe n'est pas branche avant la phase 4, LS-89 puis phase 4
-PARAMETRES_BOUTIQUE aucun ecran de parametres, LS-89
+IDENTIFIANTS        aucun ecran de changement de mot de passe ni de passkey, LS-95
+DONNEES_CLIENTS     aucun acces au fichier client, voir la nuance ci-dessous, LS-95
+REMBOURSEMENT       Stripe n'est pas branche avant la phase 4, phase 4
+PARAMETRES_BOUTIQUE aucun ecran de parametres, hors phase 1
+
+# ---------------------------------------------------------------------------
+# LA LIGNE DONNEES_CLIENTS A ETE CORRIGEE LE 13 AOUT 2026, elle etait FAUSSE.
+#
+# Elle disait « aucun export ni consultation en masse ». C'etait vrai quand
+# LS-81 l'a ecrite, et cela a cesse d'etre vrai quand LS-80 a livre
+# `src/app/administration/journal-connexions/page.tsx` : cet ecran affiche
+# cinquante lignes portant adresse email, adresse IP et agent utilisateur de
+# toute personne ayant tente de se connecter, CLIENTS COMPRIS. Le registre des
+# traitements les recense en T8 comme donnees personnelles.
+#
+# Personne n'a relu ce fichier apres LS-80. C'est le motif deja rencontre trois
+# fois sur ce projet : un etat ecrit au present dans un fichier que rien
+# n'oblige a relire.
+#
+# POURQUOI CET ECRAN N'EST PAS CLASSE POUR AUTANT, arbitrage de Christophe du
+# 13 aout 2026. Deux raisons, et aucune n'est un detail :
+#
+#   1. LA FINALITE DIFFERE. T8 est un traitement de securite, article 6.1.f,
+#      distinct des traitements commerciaux T1 a T7. « Consulter les donnees
+#      clients » au sens d'ADR-021 designe le fichier client : nom, adresse
+#      postale, telephone, historique d'achat, factures. Le journal des
+#      connexions n'en porte aucun.
+#   2. « EN MASSE » Y SERAIT ETIRE. Cinquante lignes, sans recherche, sans
+#      filtre, sans export : le volume est structurellement borne.
+#
+# Classer cet ecran aurait debloque sept criteres en dette de LS-81 et LS-89,
+# et C'EST PRECISEMENT CE QUI DEVAIT RENDRE MEFIANT : elargir la definition
+# d'une famille pour fermer une dette revient a deplacer la regle plutot qu'a
+# la satisfaire. Le prochain lecteur d'ADR-027 ne comprendrait pas pourquoi un
+# journal de securite est range en « donnees clients ».
+#
+# LE RISQUE RESTE OUVERT ET IL EST NOMME : sur un ordinateur laisse ouvert,
+# c'est aujourd'hui le SEUL effet atteignable, et il donne a lire les traces
+# qui documenteraient l'intrusion elle-meme. Il est borne par le fait que
+# l'appelant doit deja etre ADMINISTRATRICE, compte unique.
+#
+# ---------------------------------------------------------------------------
+# CE QUE `verifier-actions-sensibles.sh` NE PEUT PAS VOIR, et qu'aucun controle
+# ne remplacera.
+#
+# Il confronte les marques `@sensible` au code dans les deux sens : une action
+# marquee sans garde echoue, une famille listee ici alors qu'une action la
+# couvre echoue aussi. Il prouve donc la COHERENCE entre marques et gardes.
+#
+# Il ne peut PAS dire qu'une marque manque. Un ecran sensible que personne n'a
+# marque est invisible dans les deux sens : le controle reste vert, et cette
+# liste continue d'affirmer qu'il n'existe rien a proteger. C'est exactement ce
+# qui s'est produit ici entre LS-80 et le 13 aout 2026.
+#
+# LA PARADE EST HUMAINE : relire ce fichier a chaque story qui ajoute un ecran
+# d'administration ou une Server Action, et se demander si la ligne est encore
+# vraie. Aucun script ne pose cette question a la place de quelqu'un.
