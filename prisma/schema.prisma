@@ -736,7 +736,7 @@ model Avis {
   commentaire     String?
   statut          StatutAvis @default(DEPOSE) // R4, jamais visible avant publication
   motifDecision   String?    @map("motif_decision") // R5, obligatoire si REFUSE ou RETIRE
-  experienceA     DateTime   @map("experience_a") @db.Timestamptz(3) // obligatoire, article D111-17
+  experienceA     DateTime   @map("experience_a") @db.Timestamptz(3) // obligatoire, article D111-10 (ex-D111-17)
   deposeA         DateTime   @default(now()) @map("depose_a") @db.Timestamptz(3)
   publieA         DateTime?  @map("publie_a") @db.Timestamptz(3)
   decideA         DateTime?  @map("decide_a") @db.Timestamptz(3)

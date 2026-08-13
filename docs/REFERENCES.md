@@ -102,6 +102,7 @@ documentation technique, ticket ou règle qui le contredirait.
 | ADR-025 | Modes de livraison, trois modes | livraison, transporteur, tunnel |
 | ADR-026 | Sections de fiche produit ordonnées | fiche produit, catalogue, administration des produits |
 | ADR-027 | Limitation de débit, journal des connexions, réauthentification | connexion, sessions, actions sensibles |
+| ADR-028 | Conservation des avis, sans limite de durée | avis, modération, registre des traitements |
 
 Cette table se met à jour à chaque ADR créé. Un ADR absent d'ici reste
 opposable : la table est un raccourci, `docs/adr/` fait foi.
