@@ -276,25 +276,37 @@ Description générale au sens de l'article 30 paragraphe 1 point g.
 
 ## Ce qui reste dû
 
-Deux points sont identifiés et **non traités**, chacun tracé plutôt que résolu en
-silence. Les deux portent un ticket depuis le 12 août 2026 : un point noté ici
-sans ticket finit par n'être suivi nulle part.
+**Un seul point reste**, tracé plutôt que résolu en silence, et il porte un
+ticket : un point noté ici sans ticket finit par n'être suivi nulle part.
 
 1. **La durée de conservation des avis, T7**, est posée à trois ans sans texte
    qui l'impose. Ni le code de la consommation ni le référentiel CNIL n° 2021-131
    ne fixent de durée pour un avis publié. Un ADR doit trancher, comme ADR-027 l'a
    fait pour les six mois du journal des connexions. **LS-93.**
-2. **La suppression d'un compte client n'est pas implémentée**, ni la procédure de
-   réponse à une demande d'accès ou d'effacement, articles 15 et 17. Le schéma la
-   prépare, `Commande.dissocieA` et les politiques `SET NULL`, mais aucun code ne
-   l'exécute. **LS-95.**
 
-**Le troisième point est levé.** Les purges de `JournalConnexion`, `JournalAudit`
-et `RateLimit` sont branchées sur une tâche planifiée quotidienne depuis le
-12 août 2026, LS-94, sous le verrou de LS-72 : aucune durée annoncée par ce
-registre n'est plus appliquée par personne. Le contrôle
-`scripts/verifier-registre-traitements.sh` le vérifie, et un test négatif prouve
-qu'une ligne encore dans sa fenêtre de conservation n'est pas supprimée.
+**Les deux autres points sont levés.**
+
+Les purges de `JournalConnexion`, `JournalAudit` et `RateLimit` sont branchées sur
+une tâche planifiée quotidienne depuis le 12 août 2026, LS-94, sous le verrou de
+LS-72 : aucune durée annoncée par ce registre n'est plus appliquée par personne.
+Le contrôle `scripts/verifier-registre-traitements.sh` le vérifie, et un test
+négatif prouve qu'une ligne encore dans sa fenêtre de conservation n'est pas
+supprimée.
+
+**Les droits des personnes sont exerçables depuis le 13 août 2026, LS-95.** Un
+client supprime son compte lui-même depuis `/compte`, avec confirmation explicite
+et preuve d'identité récente, la suppression étant une action sensible de la
+famille `IDENTIFIANTS`. La procédure de réponse aux demandes d'accès, de
+rectification et d'effacement vit dans `docs/PROCEDURE-DROITS-DES-PERSONNES.md`,
+délai d'un mois compris.
+
+Ce que la suppression produit est une **dissociation**, pas un effacement total :
+le droit à l'effacement ne prime pas sur l'obligation comptable, article 17
+paragraphe 3 point b, et l'article L123-22 impose dix ans sur les factures. Les
+commandes survivent, `utilisateurId` à nul et `dissocieA` horodaté, ce qui les
+exclut définitivement du rattachement, règle V15. Le journal des connexions
+survit lui aussi, en `SET NULL` : un intrus ne doit pas effacer ses traces en
+supprimant le compte qu'il vient de compromettre.
 
 ## Sources
 

@@ -261,6 +261,34 @@ production comprise ; ces fichiers servent de source de conception et de contrô
 masquerait une migration incomplète. `db:preparer` compare le compte obtenu à ces
 fichiers et échoue en cas d'écart.
 
+### Droits des personnes, LS-95
+
+Un client supprime son compte lui-même depuis `/compte`, avec confirmation
+explicite et **preuve d'identité récente** : la suppression est la première
+action sensible réelle du dépôt, famille `IDENTIFIANTS`, ADR-027 décision 3.
+
+**Ce que la suppression produit est une dissociation, pas un effacement total.**
+Le droit à l'effacement ne prime pas sur l'obligation comptable, article 17
+paragraphe 3 point b du RGPD, et l'article L123-22 du code de commerce impose dix
+ans sur les factures.
+
+| Donnée | Sort |
+|---|---|
+| compte, sessions, moyens de connexion, passkeys, carnet d'adresses | **supprimés** |
+| commandes et factures | **conservées**, `utilisateurId` à nul et `dissocieA` horodaté |
+| avis publiés, journaux | **conservés**, auteur anonymisé |
+
+L'ordre est imposé : `dissocieA` se marque **avant** la suppression, `ON DELETE
+SET NULL` ne sachant pas écrire un champ. Sans ce marquage, la commande
+redeviendrait rattachable à quiconque contrôle ensuite la même adresse email,
+règle V15.
+
+**Le journal des connexions survit volontairement**, en `SET NULL` : un intrus ne
+doit pas effacer ses traces en supprimant le compte qu'il vient de compromettre.
+
+La procédure de réponse aux demandes d'accès, de rectification et d'effacement,
+délai d'un mois compris, vit dans `docs/PROCEDURE-DROITS-DES-PERSONNES.md`.
+
 ### Tâches planifiées, LS-72
 
 Le conteneur `cron` n'est **pas** lancé par défaut en développement : une tâche
@@ -506,14 +534,14 @@ destructives doivent bloquer, une migration additive doit passer, et une
 détection qui ne peut pas conclure doit bloquer plutôt que supposer. Lancé contre
 la version d'avant LS-42, il échoue sur sept de ces dix cas.
 
-`verifier-tests-mutation.sh` casse **cinquante-deux fois** le comportement testé
+`verifier-tests-mutation.sh` casse **cinquante-six fois** le comportement testé
 et exige que la suite rougisse à chaque fois : cinq mutations de la primitive
 SQL de réservation, cinq de l'authentification et de l'autorisation, deux de
 l'interface, trois du socle de validation, quatre de la journalisation et de la
 santé depuis LS-73, deux de la limitation de débit depuis LS-79, deux de la
 session et de la preuve d'identité depuis LS-81, huit du journal des connexions
 depuis LS-80, cinq du verrou de tâche planifiée depuis LS-72, quatre de la preuve
-d'identité depuis LS-89, cinq de la purge des journaux depuis LS-94, deux de la résolution de l'adresse client depuis LS-91, et cinq de la limitation des Server Actions depuis LS-92. Il
+d'identité depuis LS-89, cinq de la purge des journaux depuis LS-94, deux de la résolution de l'adresse client depuis LS-91, cinq de la limitation des Server Actions depuis LS-92, et quatre des droits des personnes depuis LS-95. Il
 vérifie d'abord que les deux projets de test sont verts, sans quoi aucune
 mutation ne prouverait rien.
 

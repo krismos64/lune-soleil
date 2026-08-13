@@ -21,6 +21,7 @@ une règle depuis le schéma.
 | `docs/architecture/VALIDATION.md` | socle Zod, où valider et pourquoi à deux endroits, convention d'erreur des adaptateurs, trois pièges de Zod 4 | toute Server Action, gestionnaire de route ou service qui reçoit une entrée |
 | `docs/architecture/JOURNALISATION.md` | trois journaux distincts, masquage par nom de clé, erreurs réduites au nom de classe, contrôle de santé et ses quatre décisions | toute ligne de journal, la route de santé, le déploiement |
 | `docs/architecture/REGISTRE-DES-TRAITEMENTS.md` | neuf traitements RGPD, durées de conservation tracées à leur source, ce que le registre n'est pas | toute table portant une donnée personnelle, toute durée de conservation |
+| `docs/PROCEDURE-DROITS-DES-PERSONNES.md` | répondre à une demande d'accès, de rectification ou d'effacement, délai d'un mois, ce qui part et ce qui reste | toute demande d'une personne sur ses données |
 
 **Une règle numérotée se cite par son identifiant**, S12 ou V14, jamais
 paraphrasée seule : c'est ce qui permet aux contrôles textuels de la retrouver.
@@ -52,6 +53,11 @@ connaître avant d'écrire un service qui la recouvrirait ou la contredirait :
 | `src/lib/secret-cron.ts` | secret partagé des routes internes, comparaison à temps constant, **sans aucun import du projet** | aucune |
 | `src/services/preuve-identite.ts` | **seul point d'entrée qui écrit une preuve**, vérification par mot de passe ou fraîcheur de session pour la passkey, LS-89 | aucune |
 | `src/services/utilisateur.ts` | mise à jour de profil, schéma Zod `.strict()`, règle E11 | aucune |
+| `src/services/suppression-compte.ts` | suppression de compte et export RGPD, **première action sensible du dépôt**, dissociation plutôt qu'effacement, règle V15 | aucune |
+| `src/repositories/limitation.ts` | compteur de débit applicatif sur `RateLimit`, clé préfixée `action:`, LS-92 | aucune |
+| `src/services/limitation-action.ts` | seuils par action et journalisation des tentatives, LS-92 | aucune |
+| `src/services/purge-journaux.ts` | purges des trois journaux, un échec n'empêche pas les autres, LS-94 | aucune |
+| `src/lib/proxies-de-confiance.ts` | lecture de `BETTER_AUTH_TRUSTED_PROXIES`, **sans aucun import du projet**, LS-91 | aucune |
 | `src/integrations/email/index.ts` | interface `EnvoyeurEmail`, implémentation qui journalise sans envoyer | **aucun email ne part** : ADR-008 retient le SMTP OVH et nodemailer, implémentation à écrire |
 | `src/lib/journal.ts` | journalisation JSON, masquage par nom de clé, erreurs réduites au nom de classe, `LOG_LEVEL`, voir `JOURNALISATION.md` | aucune |
 | `src/services/sante.ts` | sonde `SELECT 1` avec délai de garde de deux secondes, ne lève jamais | aucune |

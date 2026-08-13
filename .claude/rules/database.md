@@ -281,11 +281,21 @@ Ces opérations exigent une transaction, sans exception :
    l'ancienne **avant** de le poser sur la nouvelle
 10. Suppression d'un compte : marquer `Commande.dissocieA` sur ses commandes
     **avant** de supprimer le compte, puis laisser les politiques de clé
-    étrangère traiter les six autres références qui en portent une,
-    `ReponseAvis.auteurId` étant en `RESTRICT` assumé
+    étrangère traiter les **onze** autres références qui en portent une,
+    `ReponseAvis.auteurId` étant en `RESTRICT` assumé. Livré par LS-95,
+    `services/suppression-compte.ts`
 
 Les points 7 à 9 viennent du périmètre ajouté par LS-37, avis et carnet
 d'adresses. Le point 10 vient de LS-41.
+
+**Le compte du point 10 disait « six » jusqu'au 13 août 2026.** Il était juste
+quand LS-41 l'a écrit, et les tables ajoutées depuis ne l'ont pas fait suivre :
+il y en a **douze au total**, mesurées sur la base et non recomptées de mémoire.
+Un test de LS-95 interroge `information_schema` et vérifie la cardinalité, ce qui
+rend ce compte mesuré plutôt qu'affirmé ; l'ajout d'une référence sans politique
+explicite y rougit. Une telle référence vaut `RESTRICT` par défaut, donc
+**bloque toute suppression de compte**, et une table vide ne le révèle par aucun
+test fonctionnel : seule la lecture du schéma l'attrape.
 
 **Le point 10 existe parce qu'une politique de clé étrangère ne sait pas écrire
 un champ.** `ON DELETE SET NULL` remet `Commande.utilisateurId` à nul, il ne
