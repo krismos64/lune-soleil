@@ -65,6 +65,23 @@ effaçant la relecture écrite quelques minutes plus tôt. Elle a été réécri
 le fichier d'actions est entré dans la fonction `restaurer` du script de
 mutation : un fichier muté hors de cette liste laisse le défaut sur le disque.
 
+**Un test de concurrence antérieur a rougi en intégration continue**, deux
+exécutions au lieu d'une sur le verrou de tâche planifiée. L'échec était juste,
+et le verrou n'y était pour rien : les vingt appels partent ensemble mais le
+service passe par le pool de `prisma`, dix connexions par défaut. La seconde
+vague demandait donc le verrou après que la première exécution l'avait relâché,
+le travail ne durant que cinquante millisecondes. Deux exécutions successives et
+non simultanées, ce qui est le comportement correct.
+
+Le test mesurait une course, pas la propriété qu'il annonce. Vert en local,
+y compris répété cinq fois et sous charge. LS-99 l'a déclenché sans toucher au
+verrou, en ajoutant 43 tests sur la même base éphémère.
+
+Corrigé en supprimant la fenêtre plutôt qu'en l'élargissant : le détenteur tient
+le verrou jusqu'à ce que les dix-neuf refus soient comptés. Le test passe de 30
+secondes à 1, et la mutation a été rejouée pour prouver qu'il attrape toujours
+son défaut. Voir [[lune-soleil-test-concurrence-fenetre-de-course]].
+
 **Le contrôle visuel a demandé un vrai compte.** Le cookie de session est signé
 en HMAC avec `BETTER_AUTH_SECRET`, dont la lecture est interdite ici. Le chemin
 légitime a servi : inscription par l'API, puis promotion en base. L'index partiel
