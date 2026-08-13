@@ -134,6 +134,36 @@ pages d'information sur les avis, epic LS-36. Elle doit annoncer **deux** délai
 la conservation, fixée par ADR-028, et la publication, qui reste un paramètre
 commercial à fixer.
 
+## Vérification de clôture, et trois écarts trouvés
+
+Christophe a demandé en fin de session si tout était à jour, canal par canal.
+La vérification a trouvé trois écarts réels, tous corrigés, aucun bloquant.
+
+**Le README annonçait sept scripts de mutation**, il y en a huit depuis LS-90 et
+`verifier-registre-traitements-mutation.sh`. Son total de dix-sept est en
+revanche juste : il compte `verifier-schema.sh`, qui vit dans `prisma/sql-manuel/`
+et non dans `scripts/`. J'ai d'abord cru à un script fantôme et corrigé le total
+à tort, avant de vérifier.
+
+**ADR-028 ne suivait pas la structure du skill `adr`** : « Ce que cela implique »
+au lieu de « Conséquences », et aucune section « Risques ». Le skill porte
+`disable-model-invocation: true`, il ne s'est donc pas proposé, et je ne l'avais
+pas cherché avant de rédiger. Les deux sections sont rétablies. Les risques
+étaient réels à écrire : un avis qui vieillit sans que rien ne le signale, une
+demande d'effacement tardive, la rubrique D111-10 qui pourrait n'être jamais
+écrite, et un volume inattendu qui rouvrirait la proportionnalité.
+
+**`legal.md` portait « à vérifier aux sources avant l'implémentation »** sur les
+avis. La vérification venait d'être faite : la règle porte désormais le contenu
+de D111-10, l'avertissement sur la renumérotation de 2024, et la distinction
+entre le délai de conservation, tranché, et celui de publication, qui ne l'est
+pas.
+
+Ce que la vérification a confirmé comme sain : dépôt propre et poussé, agents et
+hooks cohérents dans les deux sens, `CLAUDE.md` à 200 lignes pile sans
+affirmation périssable, 129 fiches mémoire pour 129 lignes d'index, et
+`verifier-config-claude.sh --strict` vert.
+
 ## Prochaine étape
 
 Le registre des traitements n'a plus de dette. Sur LS-2, seule LS-96 reste
