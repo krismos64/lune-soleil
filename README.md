@@ -151,8 +151,11 @@ Contrôles, tous rejoués par la chaîne d'intégration avant fusion :
 npm run type-check # tsc --noEmit, mode strict
 npm run lint       # ESLint 9
 npm run build      # construction de production
-npm run format     # Prettier, code seulement, pas la documentation
+npm run format:check # Prettier en vérification, ce que rejoue la chaîne
 ```
+
+`format:check` échoue sans rien réécrire, c'est la forme employée par la chaîne
+d'intégration. `npm run format` corrige sur place, à lancer avant de commiter.
 
 `npm audit` doit rester à **zéro vulnérabilité**. Sept overrides y contribuent,
 documentés dans `package.json` avec la condition de leur retrait.
