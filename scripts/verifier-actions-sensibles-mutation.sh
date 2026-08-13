@@ -20,6 +20,7 @@ CONTROLE="./scripts/verifier-actions-sensibles.sh"
 SERVICE="src/services/reauthentification.ts"
 ATTENTE=".claude/familles-sans-action.txt"
 TEMOIN="src/services/action-de-test-mutation.ts"
+ACTIONS="src/app/administration/categories/actions.ts"
 
 detectes=0
 total=0
@@ -28,7 +29,11 @@ total=0
 # piège de sortie : une interruption au milieu laisserait sinon le dépôt muté,
 # et une modification jamais indexée n'est récupérable nulle part.
 restaurer() {
-  git checkout "$SERVICE" "$ATTENTE" 2>/dev/null
+  # `$ACTIONS` EST DANS LA LISTE, et son oubli serait un défaut connu de ce
+  # dépôt : un fichier muté hors de la restauration laisse le défaut en place
+  # après la fin du script, et une modification jamais indexée n'est
+  # récupérable nulle part.
+  git checkout "$SERVICE" "$ATTENTE" "$ACTIONS" 2>/dev/null
   rm -f "$TEMOIN"
 }
 trap restaurer EXIT
@@ -182,6 +187,21 @@ export async function rembourserAvecSignatureEtalee(
 TS
 sed -i '' 's/^REMBOURSEMENT/# REMBOURSEMENT/' "$ATTENTE"
 attendre_succes "signature étalée par Prettier, action gardée acceptée"
+
+# --- Cas 10 : une Server Action d'administration sans garde de rôle ------
+# LE SENS 6, AJOUTÉ EN LS-99, et ce cas est la raison pour laquelle il vérifie
+# fonction par fonction plutôt que fichier par fichier.
+#
+# La première version du sens 6 cherchait la garde N'IMPORTE OÙ dans le fichier.
+# Cette mutation la laissait VERTE : les quatre autres actions du même fichier
+# satisfaisaient le motif à la place de celle qu'on venait de dénuder. C'est le
+# défaut « mutation satisfaite ailleurs », déjà rencontré sur ce dépôt, et le
+# même que le sens 1 avait dû corriger pour la même raison.
+#
+# Une Server Action est un point d'entrée HTTP : elle s'invoque sans jamais
+# charger la page qui la porte, donc la garde de la page ne la couvre pas.
+perl -0pi -e 's/  if \(!\(await exigerRole\(\)\)\) \{\n    return \{ statut: "SESSION_ABSENTE" \};\n  \}\n\n  try \{\n    await creerCategorie/  try {\n    await creerCategorie/' "$ACTIONS"
+attendre_echec "Server Action d'administration sans garde de rôle"
 
 echo
 echo "=== $detectes / $total cas détectés ==="

@@ -16,6 +16,27 @@ DONNEES_CLIENTS     aucun acces au fichier client, voir la nuance ci-dessous, LS
 REMBOURSEMENT       Stripe n'est pas branche avant la phase 4, phase 4
 PARAMETRES_BOUTIQUE aucun ecran de parametres, hors phase 1
 
+# LA LIGNE PARAMETRES_BOUTIQUE A ETE RELUE LE 13 AOUT 2026, LS-99, et elle reste
+# vraie. La story ajoute deux ecrans d'administration, les categories du
+# catalogue et la creation de produit, avec cinq Server Actions.
+#
+# AUCUNE N'EST CLASSEE, et la question a ete posee explicitement plutot que
+# laissee implicite. La famille vise « les parametres de la boutique, dont les
+# coordonnees bancaires » : une configuration d'exploitation, avec un effet
+# financier ou contractuel. Une categorie de catalogue est du contenu editorial,
+# reversible, sans effet sur l'argent ni sur les commandes passees.
+#
+# CE QUI RENDRAIT LA LIGNE FAUSSE, et qu'il faudra relire le moment venu :
+# LS-98, parametres commerciaux, porte le seuil de franco de port et les frais
+# de livraison. Ceux-la sont bien des parametres de boutique au sens de la
+# famille, et la ligne devra partir a ce moment.
+#
+# LE RAISONNEMENT INVERSE A ETE ECARTE. Classer les categories aurait donne
+# l'apparence d'une protection supplementaire sans rien proteger de plus :
+# l'appelant doit deja etre ADMINISTRATRICE, compte unique, et une categorie
+# renommee a tort se renomme a nouveau. Etirer une famille pour se rassurer est
+# le meme defaut que l'etirer pour fermer une dette, en sens oppose.
+
 # IDENTIFIANTS EST SORTIE DE CETTE LISTE LE 13 AOUT 2026, LS-95.
 #
 # `supprimerMonCompte` dans `src/app/compte/actions.ts` est la PREMIERE ACTION
