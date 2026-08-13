@@ -48,9 +48,14 @@ export async function creerVarianteEnStock(
   const varianteId = randomUUID();
   const suffixe = varianteId.slice(0, 8);
 
+  // LE RANG SE CALCULE, IL N'EST PAS FIGE A 1. C24 rend `categorie.ordre` unique
+  // depuis LS-99 : deux appels dans un meme test heurteraient la contrainte, et
+  // l'echec porterait sur la fixture au lieu du comportement teste. La valeur
+  // elle-meme n'interesse aucun test de stock, seule son unicite compte.
   await client.query(
     `INSERT INTO categorie (id, nom, slug, ordre, cree_a)
-     VALUES ($1, 'TEST Categorie', $2, 1, now())`,
+     VALUES ($1, 'TEST Categorie', $2,
+             (SELECT coalesce(max(ordre), 0) + 1 FROM categorie), now())`,
     [categorieId, `test-categorie-${suffixe}`],
   );
 
