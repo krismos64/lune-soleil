@@ -44,9 +44,9 @@ export default async function PageNouveauProduit() {
     <main className={styles.page}>
       <h1 className={styles.titre}>Nouveau produit</h1>
       <p className={styles.introduction}>
-        Le produit est créé en brouillon : il n&apos;apparaît pas dans la boutique
-        tant qu&apos;il n&apos;a ni photo ni variante. Le contenu de la fiche et le prix
-        s&apos;ajoutent ensuite.
+        Le produit est créé en brouillon : il n&apos;apparaît pas dans la
+        boutique tant qu&apos;il n&apos;a ni photo ni variante. Le contenu de la
+        fiche et le prix s&apos;ajoutent ensuite.
       </p>
 
       <FormulaireProduit

@@ -252,7 +252,9 @@ describe("suppression de categorie, C26 et RESTRICT", () => {
     // ou supprime les produits en cascade, serait le defaut que C26 existe pour
     // interdire.
     expect(await ordreActuel()).toEqual(["A"]);
-    const { rows } = await client.query("SELECT count(*)::int AS n FROM produit");
+    const { rows } = await client.query(
+      "SELECT count(*)::int AS n FROM produit",
+    );
     expect(rows[0].n).toBe(2);
   });
 
@@ -324,13 +326,18 @@ describe("creation de produit", () => {
       }),
     ).rejects.toThrow(catalogue.CategorieIntrouvableError);
 
-    const { rows } = await client.query("SELECT count(*)::int AS n FROM produit");
+    const { rows } = await client.query(
+      "SELECT count(*)::int AS n FROM produit",
+    );
     expect(rows[0].n).toBe(0);
   });
 
   it("refuse un slug de produit deja pris, C3", async () => {
     const a = await catalogue.creerCategorie({ nom: "A" });
-    await catalogue.creerProduit({ nom: "Collier de l'aube", categorieId: a.id });
+    await catalogue.creerProduit({
+      nom: "Collier de l'aube",
+      categorieId: a.id,
+    });
 
     await expect(
       catalogue.creerProduit({ nom: "COLLIER DE L'AUBE", categorieId: a.id }),

@@ -68,7 +68,9 @@ export class OrdreIncompletError extends Error {
     readonly attendues: number,
     readonly recues: number,
   ) {
-    super(`Ordre incomplet : ${recues} categories transmises sur ${attendues}.`);
+    super(
+      `Ordre incomplet : ${recues} categories transmises sur ${attendues}.`,
+    );
     this.name = "OrdreIncompletError";
   }
 }
@@ -88,9 +90,7 @@ export type Categorie = {
   ordre: number;
 };
 
-export async function listerCategories(): Promise<
-  depot.CategorieAvecCompte[]
-> {
+export async function listerCategories(): Promise<depot.CategorieAvecCompte[]> {
   return depot.listerCategories(prisma);
 }
 
@@ -211,9 +211,7 @@ export async function supprimerCategorie(id: string): Promise<void> {
     if (estErreurPrisma(erreur, "P2003")) {
       // La course decrite plus haut : un produit est apparu entre-temps. Le
       // compte est relu pour que le message reste exact.
-      throw new CategorieNonVideError(
-        await depot.compterProduits(prisma, id),
-      );
+      throw new CategorieNonVideError(await depot.compterProduits(prisma, id));
     }
     if (estErreurPrisma(erreur, "P2025")) {
       throw new CategorieIntrouvableError();
