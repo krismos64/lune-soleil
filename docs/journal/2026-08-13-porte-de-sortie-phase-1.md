@@ -1,4 +1,4 @@
-# 13 août 2026, LS-94, LS-91 et LS-92, ce que les journaux gardent et ce qu'ils voient
+# 13 août 2026, la porte de sortie de la phase 1 et cinq stories
 
 Session longue en autonomie complète, demandée par Christophe : enchaîner les six
 stories ouvertes de LS-2 sans interruption, en clôturant la traçabilité sur les
@@ -153,28 +153,107 @@ relisant le fichier avant commit.
 C'est la règle déjà en mémoire depuis le 11 août, vérifiée une fois de plus :
 **commiter avant de lancer une mutation**, et surtout pour un fichier neuf.
 
+## LS-81 et LS-89, la dette réexaminée plutôt que reconduite
+
+Sept critères attendent qu'une action sensible existe. Plutôt que de reconduire la
+dette, j'ai cherché si le dépôt en portait déjà une sans le savoir.
+
+**Une piste sérieuse, écartée après relecture critique.** L'écran du journal des
+connexions, livré par LS-80, affiche cinquante lignes d'adresses email, d'adresses
+IP et d'agents utilisateur de clients. La famille `DONNEES_CLIENTS` vise
+« exporter ou consulter en masse les données clients ».
+
+L'agent de relecture m'a contredit sur un point juste : **je tirais
+l'interprétation vers le cas commode**. La finalité de T8 est la sécurité, pas le
+fichier client qu'ADR-021 désigne, et « en masse » y serait étiré sur cinquante
+lignes sans recherche ni export. Arbitrage de Christophe : **pas de classement**.
+Élargir la définition d'une famille pour fermer sept critères déplacerait la règle
+au lieu de la satisfaire.
+
+**Mais il a trouvé mieux que mon raisonnement.** La ligne de dette était
+simplement **fausse** : elle affirmait « aucun export ni consultation en masse »
+depuis LS-81, et LS-80 l'a démentie sans que personne relise le fichier. Corrigée.
+
+**Et une limite du contrôle, désormais écrite.** `verifier-actions-sensibles.sh`
+prouve la cohérence entre marques et gardes, dans les deux sens. Il ne peut pas
+dire qu'une marque **manque** : un écran sensible non marqué est invisible des
+deux côtés, le contrôle reste vert et la liste continue d'affirmer qu'il n'y a
+rien à protéger. Aucun script ne pose cette question à la place de quelqu'un.
+
+## LS-75, la porte de sortie, et ce qu'un clone neuf révèle
+
+Procédure du README exécutée de bout en bout depuis un clone dans un répertoire
+vierge, avec destruction et restauration du volume Docker pour partir vraiment de
+zéro. **Quatre écarts trouvés.**
+
+**Le hook de secrets n'était pas dans le README.** Il vit dans `CONTRIBUTING.md`,
+que personne ne lit pour démarrer. Mesuré : une fausse clé `sk_live_` commitée
+**sans la moindre résistance** avant les deux commandes, refusée après. Sur un
+dépôt public, un contributeur qui suit la procédure travaille sans protection et
+ne le sait pas.
+
+**Les variables réellement obligatoires n'étaient nulle part.** Quatre suffisent.
+La ligne du secret surprend et elle est mesurée : `next build` **passe** sans
+`BETTER_AUTH_SECRET`, seul `next start` lève. Un build vert ne prouve pas que le
+service démarrera.
+
+**Le garde-fou de `db:verifier` compte des lignes estimées**, `pg_stat_user_tables`
+et non `count(*)`. Sur une base restaurée depuis une copie de volume, il a refusé
+une base **vide** en annonçant sept lignes. `ANALYZE` remet le compte à zéro. Le
+garde-fou reste juste dans son intention, l'estimation le rend seulement trop
+prudent, jamais trop permissif.
+
+**Un mot de passe divergent produit un 500 opaque.** `POSTGRES_PASSWORD` n'agit
+qu'à l'initialisation du volume : trois tests e2e ont échoué sur un 500 sans corps
+là où un identifiant faux rend 401, et la cause n'apparaissait que dans le journal
+serveur, `P1000 AuthenticationFailed`. C'était un artefact de ma manipulation, pas
+un défaut du dépôt : les 33 tests passent sur une base cohérente. L'enseignement
+vaut quand même pour un contributeur, il est au README.
+
+### Les quatre termes de la porte de sortie
+
+| Terme | Preuve |
+|---|---|
+| Clone neuf lançable | 32 tables, 25 `CHECK` sur 25, application servie, `/api/sante` opérationnelle |
+| Tests au vert en CI | 262 Vitest et 33 Playwright sur le clone, chaîne verte sur `main` |
+| Second facteur | passkey ADR-021, réauthentification ADR-027, `/administration` en 307 |
+| Application déployable | image construite depuis le clone, 7 contrôles au vert, aucun `.env` dans 10 couches |
+
+**Déployable ne veut pas dire déployée**, le VPS reste en phase 6.
+
+### L'estimation de LS-2 est retirée, pas corrigée
+
+Elle valait 20 h puis 34 h. Aucune charge réelle n'a jamais été mesurée, le
+périmètre a bougé sept fois par tickets tracés, de 11 à **24 stories**, et
+`CLAUDE.md` pose le pilotage par portes de sortie. Un second chiffre théorique
+n'aurait rien piloté. Ce qui la remplace : l'état des stories compté dans Jira, et
+la porte ci-dessus.
+
 ## Traçabilité
 
 | Story | Dépôt | Jira |
 |---|---|---|
-| LS-94 | PR #98 fusionnée, trois commits | Terminé, commentaire critère par critère |
-| LS-91 | PR #99 fusionnée, deux commits | Terminé, LS-96 créée pour le critère de production |
-| LS-92 | en cours de fusion | à clore |
+| LS-94 | PR #98 fusionnée | Terminé |
+| LS-91 | PR #99 fusionnée | Terminé, LS-96 créée pour le critère de production |
+| LS-92 | PR #100 fusionnée | Terminé |
+| LS-81 et LS-89 | PR #101 fusionnée | **En cours**, dette réexaminée et tracée |
+| LS-75 | PR en cours | à clore |
 
 ## Chiffres
 
 De 240 à **262 tests**. De 40 à **52 cas de mutation**, tous détectés. Deux
 nouveaux scripts de contrôle, `verifier-nginx.sh` et sa preuve par mutation, six
-cas sur six. Seize scripts `verifier-*`, dont huit de mutation, plus trois scripts d'exploitation.
+cas sur six. Seize scripts `verifier-*`, dont huit de mutation, plus trois scripts
+d'exploitation.
+
+**24 stories sur LS-2, 20 terminées.** Restent LS-75 en clôture, LS-96 qui relève
+de la phase 6, et LS-81 et LS-89 dont la dette est assumée et tracée.
 
 ## Prochaine étape
 
-**Trois stories restent ouvertes sur LS-2** : LS-75, LS-81 et LS-89. Les deux
-dernières sont bloquées sur la même chose depuis le 11 août, l'absence d'action
-sensible réelle dans le dépôt : leurs critères 3, 4, 6, 7 et 2, 3, 6 attendent
-qu'une action à garder existe.
+**LS-95**, suppression de compte et réponse aux demandes d'accès et d'effacement,
+articles 15 et 17. Elle fera naître la première action sensible réelle du dépôt,
+ce qui débloquera les sept critères de LS-81 et LS-89.
 
-LS-95, suppression de compte, ferait naître cette première action. Elle n'est pas
-dans le périmètre de cette session mais reste le débloqueur naturel.
-
-LS-75 vient en dernier, elle vérifie les autres.
+C'est aussi la dernière des trois dettes du registre des traitements, les deux
+autres étant levées : LS-94 aujourd'hui, LS-93 restant sur la durée des avis.
