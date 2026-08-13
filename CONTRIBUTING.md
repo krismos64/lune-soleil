@@ -107,8 +107,15 @@ Ne pas fusionner tant que les contrôles automatiques ne sont pas au vert.
 8. Scénarios critiques de bout en bout selon la stratégie retenue
 
 Ces huit contrôles tournent automatiquement depuis LS-69,
-`.github/workflows/controles.yml`. Le format, la conformité de `.claude/rules/`
-au schéma et `npm audit` s'y ajoutent.
+`.github/workflows/controles.yml`. S'y ajoutent le format, `npm audit`, et les
+contrôles textuels qui n'exigent ni base ni conteneur : conformité de
+`.claude/rules/` au schéma, cohérence de la configuration Claude Code, registre
+des traitements, résolution de l'adresse client, et **cohérence des actions
+sensibles avec ADR-027**.
+
+Ce dernier a été ajouté à la chaîne le 13 août 2026. Il existait depuis LS-81
+sans que rien ne le déclenche, ni la chaîne, ni un hook : un contrôle que rien
+ne lance ne protège rien.
 
 **La validation du schéma passe en premier**, et sous ses deux modes. Le mode
 conception vérifie que le SQL de référence dit ce qu'on croit, le mode

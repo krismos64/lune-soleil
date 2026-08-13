@@ -257,6 +257,24 @@ d'administration qui n'appelle que la première laisse un client authentifié
 franchir la garde de fraîcheur avec son propre mot de passe : le défaut s'est
 produit sur l'écran de réauthentification lui-même.
 
+**Toute Server Action sous `administration/` exige `exigerAdministratrice`, et
+le sens 6 le vérifie depuis LS-99.** Distinct du sens 4, qui n'examine que les
+fichiers touchant à la réauthentification : une Server Action d'administration
+qui ne l'appelle pas sortait de sa boucle, donc une garde de rôle manquante y
+était invisible des deux côtés.
+
+Une Server Action est un **point d'entrée HTTP**, invocable sans jamais charger
+la page qui la porte : protéger la page seule ne la couvre pas. L'ancrage est le
+marqueur `"use server"` et non le nom du fichier, qu'un renommage suffirait à
+contourner, et l'appel indirect par une fonction locale gardée est accepté pour
+ne pas pousser à recopier la garde cinq fois.
+
+**Ce sens vérifie le corps de chaque fonction, jamais le fichier entier.** Sa
+première version cherchait la garde n'importe où et ne prouvait rien : retirer
+celle d'une seule action la laissait verte, ses voisines satisfaisant le motif à
+sa place. Même défaut que le sens 1 avait dû corriger, et seule la mutation l'a
+montré. Cas 10 de `verifier-actions-sensibles-mutation.sh`.
+
 **La portée s'arrête à `administration/`, et ce n'est pas une approximation.**
 Exiger le couple partout serait faux : `supprimerMonCompte` est une action
 sensible de l'**espace client**, famille `IDENTIFIANTS`, et elle doit
