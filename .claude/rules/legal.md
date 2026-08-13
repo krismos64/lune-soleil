@@ -171,11 +171,29 @@ l'activité et le calendrier échelonné.
 
 ## Avis de consommateurs
 
-Afficher des avis impose des obligations d'information précises : date de
-publication, date de l'expérience, existence ou non d'une procédure de
-vérification, traitement des avis non publiés.
+Afficher des avis impose des obligations d'information précises, **article
+D111-10** du code de la consommation, vérifié à la source le 13 août 2026 :
 
-**À vérifier aux sources officielles avant l'implémentation**, au même titre que
-les délais ci-dessus. Les avis entrent en périmètre d'ouverture, epic LS-36.
+- **près de chaque avis**, 1° : l'existence ou non d'une procédure de contrôle,
+  la date de publication **et** celle de l'expérience de consommation, les
+  critères de classement dont le classement chronologique
+- **dans une rubrique spécifique facilement accessible**, 2° : l'existence ou non
+  d'une contrepartie, et **le délai maximum de publication et de conservation**
+  d'un avis
+
+**L'article est D111-10 et non D111-17.** Le décret n° 2024-753 du 7 juillet 2024
+a renuméroté D111-16 à D111-19 en D111-9 à D111-12, sans changer leur contenu. Le
+dépôt citait l'ancien numéro à onze endroits jusqu'à LS-93. Un numéro d'article se
+périme seul : sur Légifrance, la mention « en vigueur du ... **au** ... » signale
+une version qui n'est plus celle en vigueur.
+
+**Les deux délais de la rubrique sont distincts, et un seul est tranché.** La
+conservation est **sans limite de durée**, ADR-028 : un avis publié reste en ligne
+tant qu'une décision de modération motivée ne le retire pas. Cette absence de
+limite **doit être publiée** au même titre qu'une durée chiffrée, une rubrique
+muette étant le manquement que l'article vise. Le délai de publication reste un
+paramètre commercial à fixer.
+
+Les avis entrent en périmètre d'ouverture, epic LS-36.
 
 Aucun faux avis, jamais, y compris en préproduction visible.
