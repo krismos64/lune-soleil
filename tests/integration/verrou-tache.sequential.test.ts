@@ -61,20 +61,59 @@ describe("concurrence, le critere qui compte", () => {
   /**
    * VINGT APPELS SIMULTANES, UN SEUL SERVI.
    *
-   * Le travail est volontairement LENT, cinquante millisecondes : sans cela,
-   * la premiere execution se termine et relache le verrou avant que les
-   * suivantes ne le demandent, et le test passerait au vert sans avoir mis
-   * deux appelants en concurrence une seule fois.
+   * LE TRAVAIL NE SE TERMINE QUE QUAND TOUS LES APPELANTS ONT REPONDU, et ce
+   * n'est pas une precaution decorative : c'est ce qui rend le test
+   * deterministe.
+   *
+   * La version precedente dormait cinquante millisecondes. Elle a echoue en
+   * integration continue le 13 aout 2026, deux executions au lieu d'une, et
+   * l'echec etait JUSTE : les vingt appels partent ensemble mais le service
+   * passe par le pool de `prisma`, dix connexions par defaut. Sur une machine
+   * chargee, la seconde vague demande donc le verrou APRES que la premiere
+   * execution l'a relache dans son `finally`. Deux executions successives, pas
+   * simultanees, et le verrou avait parfaitement fait son travail.
+   *
+   * Allonger le delai n'aurait fait que deplacer le seuil, et le test serait
+   * redevenu instable sur une machine plus lente. Ici le verrou est tenu
+   * jusqu'a ce que les dix-neuf refus soient comptes : la fenetre ou un
+   * retardataire pourrait l'obtenir legitimement n'existe plus.
    */
   it("vingt executions simultanees, une seule obtient le verrou", async () => {
     const compteur = { executions: 0 };
+    const APPELANTS = 20;
+
+    let liberer: () => void;
+    const refusComptes = new Promise<void>((resoudre) => {
+      liberer = resoudre;
+    });
+
+    /**
+     * LE DETENTEUR NE COMPTE PAS DANS SA PROPRE ATTENTE, sans quoi il
+     * s'interbloque : il attendrait une reponse qu'il ne peut donner qu'apres
+     * avoir fini d'attendre. Premiere version de cette correction, trente
+     * secondes de temps mort avant expiration.
+     *
+     * Le seuil est donc APPELANTS - 1, les refus seuls.
+     */
+    let refuses = 0;
+    const compterRefus = (resultat: { etat: string }) => {
+      if (resultat.etat !== "EXECUTEE") {
+        refuses += 1;
+        if (refuses === APPELANTS - 1) {
+          liberer();
+        }
+      }
+      return resultat;
+    };
 
     const resultats = await Promise.all(
-      Array.from({ length: 20 }, () =>
+      Array.from({ length: APPELANTS }, () =>
         executerSousVerrou(TACHE, async () => {
           compteur.executions += 1;
-          await new Promise((resoudre) => setTimeout(resoudre, 50));
-        }),
+          // Le detenteur tient le verrou tant que les dix-neuf autres n'ont pas
+          // ete refuses : aucun retardataire ne peut l'obtenir legitimement.
+          await refusComptes;
+        }).then(compterRefus),
       ),
     );
 
