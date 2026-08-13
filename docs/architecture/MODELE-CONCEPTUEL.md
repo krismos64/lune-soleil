@@ -1121,7 +1121,7 @@ erDiagram
 | R4 | Un avis est relu avant publication | `statut` `DEPOSE` par défaut, jamais visible publiquement |
 | R5 | Un refus ou un retrait exige un motif documenté | `motifDecision` obligatoire si `REFUSE` ou `RETIRE`, article L111-7-2 |
 | R6 | Un avis refusé ou retiré est conservé, jamais supprimé | preuve du traitement, obligation d'information |
-| R7 | Deux dates distinctes sont affichées | `publieA` et `experienceA`, article D111-17 |
+| R7 | Deux dates distinctes sont affichées | `publieA` et `experienceA`, article D111-10 |
 | R8 | Une modification d'avis par son auteur est horodatée | `modifieA`, article L111-7-2 sur les mises à jour |
 | R9 | Toute décision de modération est horodatée | `decideA`, mesure du délai annoncé et preuve après coup |
 | R10 | Modifier un avis publié le renvoie en modération | `statut` repasse à `DEPOSE`, voir ci-dessous |
@@ -1211,7 +1211,7 @@ comportement honnête : afficher l'ancienne version pendant qu'une nouvelle atte
 reviendrait à publier un contenu que son auteur ne veut plus.
 
 `publieA` conservant la première publication, la date affichée au visiteur reste
-celle de l'avis d'origine, ce qui est conforme à l'article D111-17. L'article
+celle de l'avis d'origine, ce qui est conforme à l'article D111-10. L'article
 L111-7-2 impose par ailleurs de signaler les mises à jour, d'où `modifieA`.
 
 La même question se pose pour `ReponseAvis.modifieeA`, sans le même enjeu :
@@ -1234,7 +1234,7 @@ délai annoncé. Sans lui, `publieA` reste renseigné sur un avis retiré et la 
 date disponible serait `modifieA`, qui désigne autre chose. Un avis refusé
 n'aurait, lui, aucune date du tout.
 
-L'article D111-17 impose d'annoncer un délai maximum de publication. `deposeA`
+L'article D111-10 impose d'annoncer un délai maximum de publication. `deposeA`
 permet d'alerter avant l'échéance, `decideA` permet de démontrer après coup qu'elle
 a été tenue.
 
@@ -1290,7 +1290,7 @@ portée sans modification : même empreinte stockée, même expiration, même
 révocation.
 
 `experienceA` reçoit la date de livraison, ce qui satisfait l'obligation
-d'afficher la date de l'expérience de consommation, article D111-17.
+d'afficher la date de l'expérience de consommation, article D111-10.
 
 **Dépendance à signaler.** Cette décision rend LS-33 structurant. Sans date de
 livraison fiable, ni le délai de rétractation ni l'invitation à déposer un avis ne
@@ -1309,7 +1309,7 @@ que l'administratrice ne l'a pas publié.
 Le motif est le contexte : sur une boutique artisanale à faible volume, un seul
 avis injurieux visible fait plus de dégâts que trois jours d'attente.
 
-**Ce que la loi impose en contrepartie.** L'article D111-17 exige d'annoncer, dans
+**Ce que la loi impose en contrepartie.** L'article D111-10 exige d'annoncer, dans
 une rubrique accessible, « le délai maximum de publication **et de conservation**
 d'un avis ». Deux délais, pas un.
 
@@ -1322,6 +1322,13 @@ qu'elle a été tenue.
 laisse ce délai libre. Un avis publié reste donc en ligne tant qu'il n'est pas
 retiré par une décision de modération motivée. Aucune expiration automatique,
 aucun statut supplémentaire, aucune tâche planifiée.
+
+**Cette décision est portée par ADR-028 depuis le 13 août 2026**, ce qui la rend
+opposable au lieu de la laisser dans un document d'architecture. Elle a failli se
+perdre : le registre des traitements avait annoncé trois ans le 12 août, par
+rapprochement fautif avec le référentiel CNIL n° 2021-131, dont cette durée vise
+les prospects et non un avis publié. La contradiction a vécu un jour sans être
+vue, et c'est LS-93 qui l'a trouvée en cherchant autre chose.
 
 L'alternative aurait été d'annoncer une durée, disons vingt-quatre mois, ce qui
 aurait exigé un statut d'expiration, une tâche de dépublication et une distinction
@@ -1685,7 +1692,7 @@ décision D porte les quatre clés qui le neutralisent.
 Le parcours 7 et ses onze cas, en LS-37, après le passage des avis en périmètre
 d'ouverture. Trois y sont venus de la vérification légale plutôt que du besoin
 fonctionnel : la conservation d'un avis refusé avec son motif, le dépassement du
-délai de publication annoncé, et la double date exigée par l'article D111-17.
+délai de publication annoncé, et la double date exigée par l'article D111-10.
 
 Le parcours 8 et ses dix cas, en LS-40, plus un onzième ajouté au parcours 6.
 `AdresseCarnet` était la dernière entité non traversée, et la traversée a produit

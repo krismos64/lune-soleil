@@ -591,7 +591,7 @@ identifiant transmis par le client.
 
 Ajouté par LS-37 le 28 juillet 2026, les avis étant passés en périmètre
 d'ouverture. Le cadre légal a été vérifié aux sources avant rédaction : articles
-L111-7-2 et D111-16 à D111-19 du Code de la consommation.
+L111-7-2 et D111-9 à D111-12 du Code de la consommation.
 
 ### Chemin nominal
 
@@ -606,7 +606,7 @@ L111-7-2 et D111-16 à D111-19 du Code de la consommation.
 | 7 | Réponse, facultative | réponse rattachée à l'avis, horodatée | réponse publique sous l'avis |
 
 L'avis n'est **jamais** visible entre les étapes 4 et 6. Le délai annoncé à
-l'étape 4 est une obligation : l'article D111-17 impose de publier le délai
+l'étape 4 est une obligation : l'article D111-10 impose de publier le délai
 maximum de publication et de s'y tenir.
 
 ### Cas d'erreur
@@ -668,7 +668,7 @@ Vue : l'avis disparaît de la fiche, son auteur est informé.
 Base : l'avis reste `DEPOSE`, `decideA` nul.
 Vue : le client ne voit rien venir alors qu'un délai lui a été annoncé.
 Suite : alerte à l'administratrice au-delà du délai publié. Ne pas tenir le délai
-annoncé est un manquement à l'article D111-17, pas seulement une négligence
+annoncé est un manquement à l'article D111-10, pas seulement une négligence
 commerciale.
 
 **Produit archivé après dépôt de l'avis**
@@ -881,7 +881,7 @@ document, jeton de vérification d'email.
 des envois d'email, alertes critiques acquittables.
 
 **Apporté par le parcours 7** : un avis rattaché à une ligne de commande et non à
-un produit, deux dates distinctes exigées par l'article D111-17, la conservation
+un produit, deux dates distinctes exigées par l'article D111-10, la conservation
 des avis refusés ou retirés avec leur motif et leur date de décision, et une
 portée de jeton supplémentaire pour l'invitation.
 

@@ -173,13 +173,29 @@ empreinte, règle L5 et invariant 9.
 | Catégories de données | note, commentaire, date d'expérience, lien vers la ligne de commande, réponse de l'exploitante |
 | Tables | `Avis`, `ReponseAvis`, `InvitationAvis` |
 | Base légale | intérêt légitime, article 6.1.f, informer les acheteurs ; obligation d'information de l'article L111-7-2 du code de la consommation quant aux modalités de contrôle |
-| Conservation | **trois ans** après publication, durée retenue par ADR non encore rédigé, voir la dette en fin de document |
+| Conservation | **sans limite de durée** tant que l'avis reste publié, ADR-028. Aucun texte n'impose de durée ; l'article D111-10 impose en revanche de l'**annoncer** dans une rubrique accessible |
 | Destinataires | public, pour l'avis publié et sa réponse. L'identité complète de l'auteur n'est jamais affichée |
 | Transfert hors UE | aucun |
 
 Un avis est ancré sur la **ligne de commande**, ce qui rend la preuve d'achat
 structurelle, règle R2. L'invitation à déposer un avis porte un jeton d'accès à
 usage unique.
+
+**L'absence de limite est une décision motivée, ADR-028, et non une durée
+oubliée.** La donnée reste nécessaire à sa finalité tant que l'avis est publié,
+critère de l'article 5.1.e : sur un catalogue de pièces uniques, un avis est
+souvent le seul témoignage existant sur un article. Le contrepoids est le droit
+d'effacement, exerçable à tout moment sans attendre d'échéance, et le retrait sur
+décision de modération motivée, règle R5.
+
+**Cette absence de limite doit être publiée**, article D111-10 2° b), au même
+titre qu'une durée chiffrée le serait. Une rubrique muette sur la conservation
+serait le manquement que cet article vise. La formulation à reprendre est dans
+ADR-028.
+
+La suppression du compte ne supprime pas les avis : `Avis.utilisateurId` est en
+`SetNull`, l'avis survit **dissocié** de son auteur, comme la commande l'est,
+voir T1 et la procédure des droits des personnes.
 
 ### T8, journal des connexions
 
@@ -276,15 +292,24 @@ Description générale au sens de l'article 30 paragraphe 1 point g.
 
 ## Ce qui reste dû
 
-**Un seul point reste**, tracé plutôt que résolu en silence, et il porte un
-ticket : un point noté ici sans ticket finit par n'être suivi nulle part.
+**Plus rien depuis le 13 août 2026, LS-93.** Les trois points ouverts par LS-90
+sont levés. Cette section est conservée, et non supprimée : elle porte l'histoire
+de ce qui a été dû, et le prochain point à traiter viendra s'y inscrire.
 
-1. **La durée de conservation des avis, T7**, est posée à trois ans sans texte
-   qui l'impose. Ni le code de la consommation ni le référentiel CNIL n° 2021-131
-   ne fixent de durée pour un avis publié. Un ADR doit trancher, comme ADR-027 l'a
-   fait pour les six mois du journal des connexions. **LS-93.**
+**La durée de conservation des avis, T7, est tranchée par ADR-028.** Elle ne
+l'était pas comme LS-93 le supposait. Le ticket décrivait les trois ans comme un
+chiffre sans source à motiver ; c'était en réalité une **contradiction** avec la
+décision I du modèle conceptuel, rendue le 28 juillet 2026, qui posait déjà une
+conservation indéfinie et motivée. Le registre l'avait contredite le 12 août sans
+que personne ne le remarque.
 
-**Les deux autres points sont levés.**
+Le chiffre venait d'un rapprochement fautif avec le référentiel CNIL n° 2021-131,
+dont les trois ans visent les **prospects non clients** et l'après-relation
+commerciale, jamais un avis publié. C'est le même motif que le repli fautif sur
+`RateLimit` corrigé par LS-94 : un référentiel invoqué pour une finalité qui n'est
+pas la sienne.
+
+**Les deux autres points étaient déjà levés.**
 
 Les purges de `JournalConnexion`, `JournalAudit` et `RateLimit` sont branchées sur
 une tâche planifiée quotidienne depuis le 12 août 2026, LS-94, sous le verrou de
