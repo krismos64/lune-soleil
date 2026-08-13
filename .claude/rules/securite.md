@@ -250,12 +250,27 @@ finalité de T8 est la sécurité et non le fichier client, que vise ADR-021, et
 Élargir la définition d'une famille pour fermer une dette déplacerait la règle
 au lieu de la satisfaire. La première action sensible réelle naîtra de LS-95.
 
-**Les deux gardes vont ensemble, et rien ne le vérifie.**
-`exigerReauthentificationRecente` répond à « l'identité est-elle récente »,
-`exigerAdministratrice` à « qui agit ». Une action d'administration qui n'appelle
-que la première laisse un client authentifié franchir la garde de fraîcheur avec
-son propre mot de passe. Le contrôle ne mesure pas ce couple : c'est la relecture
-qui en répond, et LS-89 doit trancher s'il faut l'automatiser.
+**Les deux gardes vont ensemble sous `administration/`, et le sens 4 du contrôle
+le vérifie depuis LS-89.** `exigerReauthentificationRecente` répond à « l'identité
+est-elle récente », `exigerAdministratrice` à « qui agit ». Une action
+d'administration qui n'appelle que la première laisse un client authentifié
+franchir la garde de fraîcheur avec son propre mot de passe : le défaut s'est
+produit sur l'écran de réauthentification lui-même.
+
+**La portée s'arrête à `administration/`, et ce n'est pas une approximation.**
+Exiger le couple partout serait faux : `supprimerMonCompte` est une action
+sensible de l'**espace client**, famille `IDENTIFIANTS`, et elle doit
+précisément ne pas exiger le rôle administratrice. Une personne supprime son
+propre compte, article 17. Un contrôle plus large aurait poussé à lui ajouter une
+garde de rôle interdisant l'effacement à tous les clients, c'est-à-dire à créer
+un vrai défaut pour satisfaire une règle mal cadrée.
+
+**Le contrôle textuel ne remplace pas un test, et réciproquement.** Il prouve que
+l'appel figure dans le corps de la fonction marquée, propriété du fichier ; il ne
+dit rien de l'exécution. Une garde placée **après** l'effet le satisfait mot pour
+mot en laissant le compte partir. Mesuré le 13 août 2026 : la garde retirée de
+`supprimerMonCompte`, les neuf tests de suppression restaient verts. Les cas 57
+et 58 de `verifier-tests-mutation.sh` ferment les deux formes.
 
 **La durée de session est d'un jour, `updateAge` d'une heure.** Ce second nombre
 n'est pas un détail de confort : Better Auth étrangle la prolongation, qui ne se

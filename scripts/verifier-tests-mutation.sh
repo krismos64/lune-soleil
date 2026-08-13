@@ -826,6 +826,39 @@ mute "$SUPPRESSION" 's/    compte: \{\n      email: utilisateur\.email,/    comp
 cas "export chargeant les comptes et recopiant l'objet, empreinte comprise" integration \
   "ne fait sortir aucun secret"
 
+# Cas 57 : la garde de reauthentification retiree de l'action sensible.
+#
+# LE CAS QUI MANQUAIT, et son absence a ete mesuree le 13 aout 2026 : avec cette
+# mutation en place, les neuf tests de `suppression-compte` restaient VERTS.
+# La seule action sensible du depot pouvait perdre sa protection sans qu'aucun
+# test ne rougisse, alors meme que `verifier-actions-sensibles.sh` etait vert.
+#
+# LES DEUX CONTROLES NE SE REMPLACENT PAS, et c'est le point a retenir. Le
+# controle textuel prouve que l'appel FIGURE dans le corps de la fonction,
+# propriete du fichier. Il ne dit rien de ce qui se passe A L'EXECUTION. Seul un
+# test qui appelle vraiment `supprimerMonCompte` sans preuve fraiche le dit.
+mute "$SUPPRESSION" 's/  await exigerReauthentificationRecente\(enTetes, "IDENTIFIANTS"\);/  \/\/ garde retiree/'
+cas "action sensible privee de sa garde de reauthentification" integration \
+  "refuse la suppression sans preuve d'identite recente"
+
+# Cas 58 : la garde s'execute APRES la suppression, et non avant.
+#
+# LE DEFAUT QUE LE CONTROLE TEXTUEL NE PEUT PAS VOIR, et c'est sa raison d'etre
+# distincte du cas 57. L'appel est toujours la, dans le corps de la fonction
+# marquee : `verifier-actions-sensibles.sh` reste donc VERT mot pour mot. Mais
+# le compte est deja parti quand la garde leve.
+#
+# Le scenario est banal : quelqu'un deplace la garde en pensant « verifier au
+# plus pres de l'effet ». L'exception levee est la meme, le message d'erreur
+# affiche est le meme, et seul l'etat de la base distingue les deux mondes.
+#
+# C'EST POURQUOI CHAQUE TEST DU FICHIER REGARDE LA BASE et pas seulement
+# l'exception : un test qui se contenterait de `rejects.toBeInstanceOf` resterait
+# vert ici, sur un compte pourtant supprime.
+mute "$SUPPRESSION" 's/  await exigerReauthentificationRecente\(enTetes, "IDENTIFIANTS"\);\n\n  return supprimerCompte\(identite\.utilisateurId\);/  const resultatAvantGarde = await supprimerCompte(identite.utilisateurId);\n  await exigerReauthentificationRecente(enTetes, "IDENTIFIANTS");\n\n  return resultatAvantGarde;/'
+cas "garde de reauthentification executee apres la suppression" integration \
+  "refuse la suppression sans preuve d'identite recente"
+
 echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then
