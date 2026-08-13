@@ -14,6 +14,28 @@ Projet en cours de développement, phase 1, socle technique. La phase 0 de
 cadrage est close, ses derniers livrables se poursuivant en parallèle. La
 boutique n'est pas ouverte commercialement.
 
+### Porte de sortie de la phase 1, constatée le 13 août 2026
+
+Les quatre termes exigés par LS-2, vérifiés **sur un clone neuf** dans un
+répertoire vierge et non sur la machine de développement, LS-75 :
+
+| Terme | Preuve |
+|---|---|
+| Clone neuf lançable avec procédure écrite | `npm ci` puis `db:preparer` : 32 tables, 25 contraintes `CHECK` sur 25 attendues, application servie, `/api/sante` opérationnelle |
+| Tests au vert en intégration continue | 262 tests Vitest et 33 Playwright sur le clone, chaîne verte sur `main` |
+| Administration protégée par second facteur | passkey d'ADR-021, réauthentification d'ADR-027 sur les actions sensibles, `/administration` répond 307 vers la connexion |
+| Application déployable | image construite depuis le clone, 7 contrôles de sécurité au vert, aucun `.env` dans les 10 couches ouvertes |
+
+**Déployable ne veut pas dire déployée.** Le VPS, Nginx et la mise en production
+appartiennent à la phase 6 ; la phase 1 prouve que l'image se construit et que le
+service démarre.
+
+Trois écarts de procédure ont été trouvés par cet exercice et corrigés dans ce
+document : l'activation du hook de secrets, absente de la procédure de démarrage,
+les variables réellement obligatoires du `.env`, et le comptage estimé du
+garde-fou de `db:verifier`. Une procédure ne se vérifie que sur une machine qui
+n'a rien.
+
 ## Stack
 
 | Domaine | Choix |
@@ -100,6 +122,29 @@ npm ci             # installation reproductible depuis le verrou
 npm run dev        # sert la page d'attente sur le port 3000
 ```
 
+### Activer le garde-fou des secrets, sur tout clone neuf
+
+**Ces deux commandes ne sont pas facultatives et rien ne les déclenche.** Un
+clone neuf a `core.hooksPath` vide : le hook `pre-commit` existe dans le dépôt,
+il ne s'exécute pas. Le dépôt étant **public**, un secret commité est indexé en
+quelques minutes et doit être considéré comme compromis même après suppression.
+
+```bash
+git config core.hooksPath .githooks   # sans cela, aucun hook ne tourne
+brew install gitleaks                 # ou l'équivalent sur la plateforme
+```
+
+Mesuré sur un clone neuf le 13 août 2026, LS-75 : une fausse clé Stripe `sk_live_`
+a été **commitée sans la moindre résistance** avant ces commandes, et **refusée**
+après. Un contributeur qui suit la procédure sans les exécuter travaille sans
+protection et ne le sait pas.
+
+Vérifier que c'est actif, la commande doit répondre `.githooks` :
+
+```bash
+git config core.hooksPath
+```
+
 Contrôles, tous rejoués par la chaîne d'intégration avant fusion :
 
 ```bash
@@ -134,6 +179,39 @@ que lit Prisma, et les `POSTGRES_*` que lit `docker-compose.yml`. Un mot de pass
 différent d'un côté produit une erreur d'authentification à la migration, loin de
 sa cause. Générer le mot de passe local avec `openssl rand -base64 24`.
 
+**Le volume survit au mot de passe.** `POSTGRES_PASSWORD` n'agit qu'à
+l'initialisation du volume : le changer dans `.env` ne change pas le mot de passe
+d'une base déjà créée, et les deux divergent alors en silence. Le symptôme est
+trompeur, mesuré le 13 août 2026 sur un volume repris d'un autre `.env` :
+
+```
+POST /api/auth/sign-in/email   ->  500, corps vide
+```
+
+Un **500 sans corps** sur une connexion, là où un identifiant faux rend 401. La
+cause n'apparaît que dans le journal du serveur, `P1000 AuthenticationFailed`. La
+réponse est `npm run db:reinitialiser`, qui détruit le volume et le recrée avec le
+mot de passe courant.
+
+**Quatre variables suffisent à démarrer**, les autres attendent la phase qui les
+emploie. Mesuré sur un clone neuf, LS-75 :
+
+| Variable | Sans elle |
+|---|---|
+| `POSTGRES_PASSWORD` | Compose refuse de démarrer, `required variable is missing` |
+| `DATABASE_URL` | Prisma ne se connecte pas, elle doit porter le même mot de passe |
+| `BETTER_AUTH_SECRET` | `npm run start` lève au démarrage, `npm run build` **passe** |
+| `CRON_SHARED_SECRET` | les routes internes refusent tout le monde, défaut fermé |
+
+La ligne du secret surprend et elle est mesurée : `next build` évalue les modules
+en `NODE_ENV=production` pour collecter les données de page, sans jamais signer de
+cookie. Un build vert ne prouve donc **pas** que le service démarrera. Voir le
+commentaire de `src/lib/auth.ts`, qui explique pourquoi le garde-fou est posé là
+où il agit plutôt qu'à la construction.
+
+Les autres, Stripe, SMTP, médias, IA, restent vides tant que la phase qui les
+emploie n'a pas commencé : le code ne les lit pas encore.
+
 | Commande | Effet |
 | --- | --- |
 | `npm run db:demarrer` | démarre le conteneur seul |
@@ -144,6 +222,21 @@ sa cause. Générer le mot de passe local avec `openssl rand -base64 24`.
 | `npm run db:verifier:conception` | les mêmes sur un conteneur jetable, SQL de référence |
 | `npm run db:console` | ouvre `psql` sur la base locale |
 | `npm run db:studio` | interface graphique Prisma Studio |
+
+**`db:verifier` refuse de tourner sur une base qui contient des données**, parce
+que ses contrôles insèrent puis tronquent : ils détruiraient un jeu de
+développement. Le message indique `npm run db:reinitialiser`.
+
+Ce compte vient de `pg_stat_user_tables`, donc d'une **estimation** tenue par
+l'autovacuum, jamais d'un `count(*)`. Sur une base restaurée depuis une copie de
+volume, les statistiques sont périmées et le script peut refuser une base
+pourtant vide, en annonçant un nombre de lignes qui n'existent plus. Mesuré le
+13 août 2026, LS-75 : « la base contient 7 lignes » alors que toutes les tables
+métier étaient vides. Un `ANALYZE;` remet le compte à zéro et le contrôle repart.
+
+Le garde-fou reste juste dans son intention, et cette estimation le rend
+seulement trop prudent, jamais trop permissif : il ne laissera pas passer une
+base réellement peuplée.
 
 **Créer une migration reste un geste manuel**, après modification de
 `prisma/schema.prisma` :
