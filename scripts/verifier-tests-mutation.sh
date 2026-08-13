@@ -61,6 +61,7 @@ PURGE_JOURNAUX="src/services/purge-journaux.ts"
 PROXIES="src/lib/proxies-de-confiance.ts"
 LIMITATION_REPO="src/repositories/limitation.ts"
 LIMITATION="src/services/limitation-action.ts"
+SUPPRESSION="src/services/suppression-compte.ts"
 
 # TOUT FICHIER MUTE DOIT FIGURER ICI, sans quoi il n'est ni sauvegarde ni
 # restaure et la mutation RESTE SUR LE DISQUE apres l'execution.
@@ -73,7 +74,7 @@ LIMITATION="src/services/limitation-action.ts"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -774,6 +775,56 @@ cas "compteur remis a un a chaque tentative" integration \
 mute "$LIMITATION" 's/return `action:\$\{action\}\|\$\{sessionId\}`;/return `${action}|${sessionId}`;/'
 cas "cle de compteur sans prefixe, collision avec Better Auth" integration \
   "n'ecrit pas sous une cle qui heurterait celles de Better Auth"
+
+echo
+echo "Droits des personnes, LS-95"
+echo
+
+# Cas 53 : le marquage `dissocieA` disparait.
+#
+# LE DEFAUT LE PLUS GRAVE DE CETTE STORY, et il est SILENCIEUX : la suppression
+# « fonctionne », le compte part, les commandes survivent. Seul `dissocieA`
+# reste nul, ce qui rend la commande RATTACHABLE a quiconque controle ensuite la
+# meme adresse email, regle V15. L'historique et les factures d'un client parti
+# rouvriraient a un inconnu.
+mute "$SUPPRESSION" 's/      const \{ count \} = await tx\.commande\.updateMany\(\{\n        where: \{ utilisateurId, dissocieA: null \},\n        data: \{ dissocieA: maintenant \},\n      \}\);/      const count = 0;/'
+cas "marquage dissocieA retire de la suppression" integration \
+  "dissocie la commande et ne la supprime pas"
+
+# Cas 54 : le filtre sur l'utilisateur disparait du `updateMany`.
+#
+# TOUTES les commandes de la boutique seraient dissociees, donc rendues non
+# rattachables a vie, par la suppression d'un seul compte.
+mute "$SUPPRESSION" 's/where: \{ utilisateurId, dissocieA: null \}/where: { dissocieA: null }/'
+cas "suppression dissociant les commandes de tout le monde" integration \
+  "ne touche pas aux commandes d'un AUTRE compte"
+
+# Cas 55 : le filtre `dissocieA: null` disparait, l'horodatage est ecrase.
+#
+# La date doit dire QUAND le compte a ete supprime. Un rejeu la remplacerait par
+# une date posterieure, ce qui fausserait toute reconstitution.
+mute "$SUPPRESSION" 's/where: \{ utilisateurId, dissocieA: null \}/where: { utilisateurId }/'
+cas "horodatage de dissociation ecrase au rejeu" integration \
+  "n'horodate pas deux fois une commande deja dissociee"
+
+# Cas 56 : l'export charge les comptes ET recopie l'objet tel quel.
+#
+# L'EMPREINTE DU MOT DE PASSE SORTIRAIT dans une reponse a demande d'acces,
+# invariant 9. Le defaut est banal : quelqu'un ajoute `comptes: true` au `select`
+# pour enrichir l'export, et un `...utilisateur` qui parait economiser six lignes.
+#
+# LES DEUX MOITIES SONT NECESSAIRES, et la premiere version de ce cas ne portait
+# que la seconde : elle restait VERTE, a juste titre. Sans `comptes: true` dans
+# le `select`, l'objet ne contient aucune empreinte, donc `...utilisateur` ne
+# peut rien faire fuiter. La mutation n'exprimait aucun defaut realisable et
+# accusait le test.
+#
+# C'est le motif deja rencontre ici : une mutation qui ne mute pas le chemin de
+# sortie designe un coupable innocent.
+mute "$SUPPRESSION" 's/      _count: \{ select: \{ comptes: true, passkeys: true \} \},/      comptes: true,\n      _count: { select: { comptes: true, passkeys: true } },/'
+mute "$SUPPRESSION" 's/    compte: \{\n      email: utilisateur\.email,/    compte: {\n      ...utilisateur,\n      email: utilisateur.email,/'
+cas "export chargeant les comptes et recopiant l'objet, empreinte comprise" integration \
+  "ne fait sortir aucun secret"
 
 echo
 echo "-----------------------------------------"
