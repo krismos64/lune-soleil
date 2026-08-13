@@ -184,6 +184,46 @@ else
   total=$((total + 1)); restaurer
 fi
 
+# --- Cas 13 : une durée de conservation s'annonce provisoire ---------------
+# LE DÉFAUT HISTORIQUE, REJOUÉ À L'IDENTIQUE. Le 12 août 2026, T7 portait
+# exactement cette formule : « trois ans après publication, durée retenue par
+# ADR non encore rédigé ». Elle contredisait la décision I du modèle conceptuel,
+# rendue le 28 juillet, qui posait déjà une conservation indéfinie et motivée.
+#
+# La contradiction a vécu un jour sans que rien ne la signale, et elle n'a été
+# trouvée qu'en cherchant autre chose. Une valeur qui se déclare provisoire dans
+# un document de référence n'est relue par personne : c'est l'état transitoire
+# écrit au présent, motif rencontré plusieurs fois ici.
+if muter "$REGISTRE" perl -0pi -e 's/^\| Conservation \| \*\*sans limite de durée\*\*[^\n]*/| Conservation | **trois ans** après publication, durée retenue par ADR non encore rédigé |/m' "$REGISTRE"; then
+  attendre_echec "cas 13, durée de conservation annoncée comme provisoire"
+else
+  total=$((total + 1)); restaurer
+fi
+
+# --- Cas 14 : un traitement perd sa durée de conservation ------------------
+# La ligne disparaît, le tableau reste bien formé, et le registre annonce alors
+# une durée pour huit traitements sur neuf. Rien ne le signale à la lecture :
+# il faut compter pour le voir.
+if muter "$REGISTRE" perl -0pi -e 's/^\| Conservation \| \*\*six mois\*\*[^\n]*\n//m' "$REGISTRE"; then
+  attendre_echec "cas 14, un traitement sans ligne Conservation"
+else
+  total=$((total + 1)); restaurer
+fi
+
+# --- Cas 15 : l'ancrage du sens 4 est cassé --------------------------------
+# Quatrième ancrage. Les titres de traitement renommés, le contrôle relève zéro
+# traitement et doit refuser de conclure plutôt que de comparer zéro à neuf.
+#
+# LA PREMIÈRE VERSION DE CE CAS NE MUTAIT RIEN, et le contrôle passait au vert :
+# elle remplaçait « ### T1 » par « ### Traitement 1 », qui commence toujours par
+# « ### T ». Le motif compte donc pareil. C'est la mutation sans effet
+# observable, et elle accusait le contrôle à tort.
+if muter "$REGISTRE" perl -0pi -e 's/^### T(\d)/### Fiche $1/mg' "$REGISTRE"; then
+  attendre_echec "cas 15, titres de traitement renommés, ancrage du sens 4"
+else
+  total=$((total + 1)); restaurer
+fi
+
 echo
 echo "=== $detectes / $total mutations détectées ==="
 

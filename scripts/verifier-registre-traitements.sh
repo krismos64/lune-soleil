@@ -203,6 +203,69 @@ done
 [ "$mal_ranges" -eq 0 ] && echo "  aucun classement contredit par le schéma"
 
 # ---------------------------------------------------------------------------
+# Sens 4 : chaque traitement porte une durée, et aucune ne s'annonce provisoire.
+# Ajouté par LS-93, le 13 août 2026.
+#
+# CE CONTRÔLE NE JUGE PAS DU DROIT, et c'est la limite que le préambule de ce
+# script pose : la justesse d'une durée est une question juridique, tranchée par
+# un ADR et non par un `grep`. Il vérifie deux propriétés purement mécaniques,
+# celles qui manquaient.
+#
+# PREMIÈRE : un traitement sans ligne « Conservation » ne se voit pas. Le tableau
+# reste bien formé, la ligne manque simplement, et le registre annonce alors une
+# durée pour huit traitements sur neuf sans que rien ne le dise. La cardinalité
+# le rend visible.
+#
+# SECONDE, ET C'EST ELLE QUI A MANQUÉ : une durée qui s'annonce elle-même comme
+# provisoire. Le 12 août 2026, T7 portait « trois ans après publication, durée
+# retenue par ADR non encore rédigé ». Cette formule contredisait la décision I
+# du modèle conceptuel, rendue le 28 juillet, qui posait déjà une conservation
+# indéfinie et motivée. La contradiction a vécu jusqu'au 13 août, trouvée par
+# hasard en cherchant autre chose.
+#
+# Une valeur qui se déclare provisoire dans un document de référence est un état
+# transitoire écrit au présent, motif rencontré plusieurs fois sur ce projet :
+# personne ne relit le document pour vérifier si le provisoire a été levé. Le
+# contrôle refuse donc la formule plutôt que la durée.
+# ---------------------------------------------------------------------------
+echo
+echo "--- Sens 4 : chaque traitement porte une durée, non provisoire ---"
+
+nombre_traitements=$(grep -c '^### T' "$REGISTRE" || true)
+nombre_durees=$(grep -c '^| Conservation |' "$REGISTRE" || true)
+
+echo "  traitements : $nombre_traitements, lignes Conservation : $nombre_durees"
+
+if [ "$nombre_traitements" -eq 0 ]; then
+  echo "ECHEC aucun traitement relevé dans le registre"
+  echo "      l'ancrage du sens 4 est cassé : le format des titres « ### Tn » a changé"
+  ko=$((ko + 1))
+elif [ "$nombre_durees" -ne "$nombre_traitements" ]; then
+  echo "ECHEC $nombre_traitements traitement(s) pour $nombre_durees ligne(s) Conservation"
+  echo "      un traitement sans durée de conservation ne se voit pas à la lecture :"
+  echo "      le tableau reste bien formé, la ligne manque simplement"
+  ko=$((ko + 1))
+fi
+
+# Les formules qui trahissent une durée non arbitrée. Cherchées sur la seule
+# ligne « Conservation », et non dans tout le document : les sections de prose
+# ont le droit de RACONTER qu'une durée fut provisoire, comme celle qui explique
+# la correction de T7 juste en dessous du tableau.
+provisoires=$(grep '^| Conservation |' "$REGISTRE" \
+  | grep -icE 'non encore rédigé|à trancher|à définir|provisoire|en attente|TODO' || true)
+
+if [ "$provisoires" -gt 0 ]; then
+  echo "ECHEC $provisoires durée(s) de conservation annoncée(s) comme provisoire(s)"
+  echo "      une valeur qui se déclare provisoire dans un document de référence"
+  echo "      n'est relue par personne. C'est ainsi que T7 a contredit le modèle"
+  echo "      conceptuel pendant un jour. Trancher par un ADR, puis écrire la"
+  echo "      décision au présent en citant l'ADR."
+  ko=$((ko + 1))
+fi
+
+[ "$ko" -eq 0 ] && echo "  chaque traitement porte une durée arbitrée"
+
+# ---------------------------------------------------------------------------
 # Le journal des connexions et l'adresse IP, critère 3 de LS-90.
 #
 # Cette exigence est nommément dans le ticket : le registre doit dire que
