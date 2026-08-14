@@ -133,3 +133,38 @@ export async function creerProduit(
   // un jour en passant par ce parametre.
   return client.produit.create({ data: donnees });
 }
+
+/** Un produit et ses informations generales, pour l'ecran d'edition. */
+export async function lireProduit(client: ClientBase, id: string) {
+  return client.produit.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      nom: true,
+      slug: true,
+      categorieId: true,
+      descriptionCourte: true,
+      statut: true,
+    },
+  });
+}
+
+/**
+ * Ecrit les informations generales d'un produit, LS-100.
+ *
+ * NI `slug`, NI `statut`, NI `categorieId` dans la signature, et c'est
+ * deliberement redit ici : le slug porte l'adresse publique, le statut a ses
+ * propres conditions de transition, LS-103. C'est le genre de completude qu'une
+ * relecture ajoute de bonne foi.
+ *
+ * AUCUNE SECTION N'EST TOUCHEE, ADR-026 decision 5. Une initialisation des
+ * quatre sections placee ici ferait revenir vide celle que l'administratrice
+ * vient de supprimer, a chaque enregistrement.
+ */
+export async function ecrireInformationsProduit(
+  client: ClientBase,
+  id: string,
+  donnees: { nom: string; descriptionCourte: string | null },
+) {
+  return client.produit.update({ where: { id }, data: donnees });
+}

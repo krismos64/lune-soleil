@@ -16,15 +16,19 @@
  * unicite, `P2003` cle etrangere, `P2025` enregistrement introuvable.
  */
 import { Prisma } from "@/generated/prisma/client";
+import type { StatutProduit } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import { valider } from "@/lib/validation";
 import * as depot from "@/repositories/catalogue";
+import * as depotSections from "@/repositories/sections-produit";
 import {
   schemaCreationCategorie,
   schemaCreationProduit,
+  schemaInformationsProduit,
   schemaRenommageCategorie,
   schemaReordonnancementCategories,
 } from "@/services/catalogue-validation";
+import { lignesDesSectionsParDefaut } from "@/services/sections-produit";
 
 /** Le slug derive du nom est deja porte par une autre ligne, C3. */
 export class SlugDejaPrisError extends Error {
@@ -228,7 +232,8 @@ export type Produit = {
 };
 
 /**
- * Cree un produit en BROUILLON, rattache a une categorie.
+ * Cree un produit en BROUILLON, rattache a une categorie, AVEC ses quatre
+ * sections par defaut. ADR-026 decision 3, LS-100.
  *
  * LE STATUT N'EST NI PARAMETRE NI ECRIT : la valeur par defaut du schema
  * s'applique. Un produit cree `ACTIF` serait publie sans variante ni media, ce
@@ -237,18 +242,106 @@ export type Produit = {
  * L'EXISTENCE DE LA CATEGORIE VIENT DE LA CLE ETRANGERE, pas d'une lecture
  * prealable. Entre une verification et l'ecriture, la categorie peut disparaitre
  * : la contrainte est le seul point ou la question a une reponse certaine.
+ *
+ * C'EST LE SEUL ENDROIT DU DEPOT QUI ECRIT LES SECTIONS PAR DEFAUT, ADR-026
+ * decision 5. Aucune autre operation ne les recree : ni l'enregistrement des
+ * informations du produit, ni un changement de categorie, ni une republication.
+ * Une initialisation defensive rejouee ailleurs ferait revenir vide une section
+ * que l'administratrice a delibermment supprimee, elle la supprimerait a
+ * nouveau, et le cycle se repeterait sans qu'elle comprenne pourquoi.
+ *
+ * LA TRANSACTION EST CE QUI REND LE COUPLE INDISSOCIABLE. Si les sections
+ * echouaient apres l'ecriture du produit, la boutique porterait un produit sans
+ * aucune section, etat qu'aucun ecran ne saurait distinguer d'une suppression
+ * volontaire des quatre : ADR-026 interdisant de les recreer, elles seraient
+ * perdues pour de bon.
  */
 export async function creerProduit(entree: unknown): Promise<Produit> {
   const { nom, slug, categorieId } = valider(schemaCreationProduit, entree);
 
   try {
-    return await depot.creerProduit(prisma, { nom, slug, categorieId });
+    return await prisma.$transaction(async (tx) => {
+      const produit = await depot.creerProduit(tx, { nom, slug, categorieId });
+      await depotSections.creerSections(
+        tx,
+        lignesDesSectionsParDefaut(produit.id),
+      );
+      return produit;
+    });
   } catch (erreur) {
     if (estErreurPrisma(erreur, "P2003")) {
       throw new CategorieIntrouvableError();
     }
     if (estErreurPrisma(erreur, "P2002")) {
       throw new SlugDejaPrisError(slug);
+    }
+    throw erreur;
+  }
+}
+
+/** Le produit designe n'existe pas, ou n'existe plus. */
+export class ProduitIntrouvableError extends Error {
+  constructor() {
+    super("Produit introuvable.");
+    this.name = "ProduitIntrouvableError";
+  }
+}
+
+export type ProduitDetaille = {
+  id: string;
+  nom: string;
+  slug: string;
+  categorieId: string;
+  descriptionCourte: string | null;
+  /*
+   * `StatutProduit` ET NON `string`. Typer en chaine laisserait l'ecran traiter
+   * l'etat par un ternaire a deux branches, ou par un texte en dur : le jour ou
+   * une valeur s'ajoute a l'enum, rien ne rougirait. Le piege est deja survenu
+   * deux fois ici, sur un index partiel puis sur un ternaire du JSX.
+   */
+  statut: StatutProduit;
+};
+
+/** Un produit et ses informations generales, pour l'ecran d'edition. */
+export async function lireProduit(id: string): Promise<ProduitDetaille | null> {
+  return depot.lireProduit(prisma, id);
+}
+
+/**
+ * Enregistre les informations generales d'un produit. LS-100.
+ *
+ * CETTE OPERATION NE TOUCHE AUCUNE SECTION, et c'est le point de vigilance
+ * central d'ADR-026 decision 5. Le geste ordinaire de l'administratrice,
+ * corriger un texte de presentation et enregistrer, ne doit RIEN recreer :
+ * ajouter ici une initialisation des quatre sections ferait revenir vide celle
+ * qu'elle vient de supprimer.
+ *
+ * LE SLUG N'EST PAS RECALCULE, meme raison que pour le renommage d'une
+ * categorie : il porte l'adresse publique de la fiche, et la changer casserait
+ * tous les liens entrants sans redirection. Le schema d'entree ne porte pas ce
+ * champ.
+ *
+ * LE STATUT NON PLUS. Publier et archiver sont des transitions avec leurs
+ * propres conditions, media principal et texte alternatif obligatoires : elles
+ * sont le sujet de LS-103. Les laisser passer par un formulaire d'informations
+ * generales contournerait ces controles.
+ */
+export async function enregistrerInformationsProduit(
+  entree: unknown,
+): Promise<void> {
+  const { id, nom, descriptionCourte } = valider(
+    schemaInformationsProduit,
+    entree,
+  );
+
+  try {
+    await depot.ecrireInformationsProduit(prisma, id, {
+      nom,
+      descriptionCourte,
+    });
+  } catch (erreur) {
+    if (estErreurPrisma(erreur, "P2025")) {
+      throw new ProduitIntrouvableError();
     }
     throw erreur;
   }

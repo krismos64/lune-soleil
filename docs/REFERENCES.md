@@ -53,6 +53,10 @@ connaître avant d'écrire un service qui la recouvrirait ou la contredirait :
 | `src/lib/secret-cron.ts` | secret partagé des routes internes, comparaison à temps constant, **sans aucun import du projet** | aucune |
 | `src/services/preuve-identite.ts` | **seul point d'entrée qui écrit une preuve**, vérification par mot de passe ou fraîcheur de session pour la passkey, LS-89 | aucune |
 | `src/services/utilisateur.ts` | mise à jour de profil, schéma Zod `.strict()`, règle E11 | aucune |
+| `src/services/catalogue.ts` | catégories et produits, C3, C24, C26. **`creerProduit` écrit le produit ET ses quatre sections dans une seule transaction**, LS-100, et c'est le seul endroit du dépôt qui les écrit | aucune |
+| `src/services/sections-produit.ts` | sections éditoriales : C20, C22, C23, les **quatre** sections par défaut d'ADR-026, appartenance vérifiée au produit, LS-100 | aucune |
+| `src/repositories/sections-produit.ts` | accès aux sections, `ecrireRang` en SQL brut sous contrainte différable | aucune |
+| `src/app/administration/produits/[id]/` | éditeur de fiche produit : page gardée, six Server Actions, composant client | ni variante, ni média, ni publication : LS-101, LS-102 et LS-103 |
 | `src/services/suppression-compte.ts` | suppression de compte et export RGPD, **première action sensible du dépôt**, dissociation plutôt qu'effacement, règle V15 | aucune |
 | `src/repositories/limitation.ts` | compteur de débit applicatif sur `RateLimit`, clé préfixée `action:`, LS-92 | aucune |
 | `src/services/limitation-action.ts` | seuils par action et journalisation des tentatives, LS-92 | aucune |

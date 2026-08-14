@@ -17,6 +17,21 @@ import { expect, test } from "@playwright/test";
 const ECRANS = [
   { chemin: "/administration/categories", titre: "Catégories du catalogue" },
   { chemin: "/administration/produits/nouveau", titre: "Nouveau produit" },
+  /*
+   * L'EDITEUR DE FICHE PRODUIT, LS-100. L'identifiant est un UUID qui
+   * n'existe pas, et c'est deliberé : la garde de role doit rediriger AVANT
+   * toute lecture en base.
+   *
+   * Un ecran qui lirait le produit d'abord rendrait un 404 sur cet
+   * identifiant, et une redirection sur un identifiant reel : la difference
+   * entre les deux reponses dirait a un visiteur non autorise quels
+   * identifiants existent. Le titre attendu est donc celui de la CONNEXION,
+   * puisque aucune fiche ne doit etre atteinte.
+   */
+  {
+    chemin: "/administration/produits/3f2504e0-4f89-41d3-9a0c-0305e82c3301",
+    titre: "Sections de la fiche",
+  },
 ];
 
 for (const ecran of ECRANS) {
@@ -104,6 +119,9 @@ test("un POST direct sur les ecrans du catalogue ne produit aucun effet", async 
     // la garde doit retenir.
     expect(corps).not.toContain("Catégories du catalogue");
     expect(corps).not.toContain("Créer le brouillon");
+    // LS-100, l'editeur de fiche produit et ses gestes destructeurs.
+    expect(corps).not.toContain("Sections de la fiche");
+    expect(corps).not.toContain("Supprimer définitivement");
   }
 });
 
@@ -128,6 +146,13 @@ test("aucun formulaire de catalogue n'est rendu sans session", async ({
     await expect(page.getByLabel("Nom du produit")).toHaveCount(0);
     await expect(
       page.getByRole("button", { name: "Créer le brouillon" }),
+    ).toHaveCount(0);
+
+    // LS-100. Le champ de contenu d'une section porte du texte redige par
+    // l'exploitante : le rendre avant de rediriger le livrerait dans le HTML.
+    await expect(page.getByLabel("Texte affiché")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Ajouter la section" }),
     ).toHaveCount(0);
   }
 });

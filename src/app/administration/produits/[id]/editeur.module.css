@@ -1,0 +1,259 @@
+/*
+ * Editeur de fiche produit, LS-100. Jetons d'ADR-022 uniquement.
+ *
+ * MOBILE FIRST, ET C'EST ICI QUE CA COMPTE. La ligne d'actions d'une section
+ * porte cinq boutons : a 320 px ils ne tiennent pas cote a cote, et une rangee
+ * non enveloppee deborderait horizontalement toute la page. `flex-wrap` les
+ * empile, et chacun garde sa cible tactile de taille pleine.
+ */
+
+.page {
+  padding: var(--ls-space-4);
+  max-width: 48rem;
+  margin: 0 auto;
+}
+
+.fil {
+  margin: 0 0 var(--ls-space-3);
+}
+
+.fil a {
+  color: var(--ls-accent-gold-deep);
+}
+
+.titre {
+  margin: 0 0 var(--ls-space-2);
+  /*
+   * `overflow-wrap` PLUTOT QU'UNE TRONCATURE : un nom de bijou long doit rester
+   * lisible en entier dans l'administration. Sans lui, un mot unique de 40
+   * caracteres deborderait a 320 px.
+   */
+  overflow-wrap: anywhere;
+}
+
+.etat {
+  color: var(--ls-text-muted);
+  margin: 0 0 var(--ls-space-5);
+}
+
+.editeur {
+  display: grid;
+  gap: var(--ls-space-6);
+}
+
+.sousTitre {
+  margin: 0 0 var(--ls-space-2);
+}
+
+.carte {
+  background: var(--ls-surface);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  padding: var(--ls-space-4);
+  display: grid;
+  gap: var(--ls-space-4);
+}
+
+.liste {
+  list-style: none;
+  padding: 0;
+  margin: var(--ls-space-4) 0;
+  display: grid;
+  gap: var(--ls-space-4);
+}
+
+.champ {
+  display: grid;
+  gap: var(--ls-space-2);
+}
+
+.label {
+  font-weight: 600;
+}
+
+.saisie,
+.zoneTexte {
+  /*
+   * `min-width: 0` EST CE QUI EMPECHE LE DEBORDEMENT. Un champ de formulaire
+   * porte une largeur intrinseque par defaut, `size` valant 20 caracteres : dans
+   * une grille, elle l'emporte sur la largeur du conteneur et pousse la page
+   * au-dela de 320 px.
+   */
+  width: 100%;
+  min-width: 0;
+  padding: var(--ls-space-3);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  font: inherit;
+  min-height: var(--ls-touch-target);
+}
+
+.zoneTexte {
+  resize: vertical;
+}
+
+.saisie:focus-visible,
+.zoneTexte:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+.aide {
+  color: var(--ls-text-muted);
+  font-size: 0.9rem;
+  margin: 0;
+  max-width: 65ch;
+}
+
+.marqueur {
+  margin: 0;
+  padding: var(--ls-space-2) var(--ls-space-3);
+  border-radius: var(--ls-radius-sm);
+  border: 1px solid var(--ls-border);
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+  font-size: 0.9rem;
+}
+
+.vide {
+  background: var(--ls-surface);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  padding: var(--ls-space-5);
+  color: var(--ls-text-muted);
+  margin: var(--ls-space-4) 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ls-space-2);
+}
+
+.bouton,
+.boutonSecondaire,
+.boutonDanger {
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-3) var(--ls-space-4);
+  border-radius: var(--ls-radius-sm);
+  border: 1px solid;
+  font: inherit;
+  cursor: pointer;
+  transition: background var(--ls-duration-fast) var(--ls-easing);
+}
+
+.bouton {
+  border-color: var(--ls-primary);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+}
+
+.bouton:hover:not(:disabled) {
+  background: var(--ls-primary-hover);
+}
+
+.boutonSecondaire {
+  border-color: var(--ls-border);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+}
+
+.boutonSecondaire:hover:not(:disabled) {
+  background: var(--ls-surface-sand);
+}
+
+/*
+ * LE BOUTON DESTRUCTEUR SE DISTINGUE PAR SA BORDURE ET SON TEXTE, pas par un
+ * aplat rouge. Un fond plein attirerait l'oeil vers le geste irreversible dans
+ * une ligne ou « Enregistrer » est l'action attendue.
+ */
+.boutonDanger {
+  border-color: var(--ls-error);
+  background: var(--ls-surface);
+  color: var(--ls-error);
+}
+
+.boutonDanger:hover:not(:disabled) {
+  background: var(--ls-surface-sand);
+}
+
+.bouton:focus-visible,
+.boutonSecondaire:focus-visible,
+.boutonDanger:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+.bouton:disabled,
+.boutonSecondaire:disabled,
+.boutonDanger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.confirmation {
+  border: 1px solid var(--ls-error);
+  border-radius: var(--ls-radius-sm);
+  padding: var(--ls-space-3);
+  display: grid;
+  gap: var(--ls-space-3);
+}
+
+.confirmationTitre {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.confirmationTexte {
+  margin: 0;
+  max-width: 65ch;
+  /*
+   * MEME PROTECTION QUE LE TITRE DE LA PAGE, et pour une raison plus forte : ce
+   * paragraphe reinjecte le TITRE DE SECTION, saisi librement jusqu'a 80
+   * caracteres. Un titre sans espace, une reference collee par exemple, mesure
+   * environ 650 px la ou 228 px sont disponibles a 320 px, et pousse toute la
+   * page en debordement horizontal.
+   */
+  overflow-wrap: anywhere;
+}
+
+/*
+ * LES DEUX REGIONS D'ANNONCE SONT MONTEES EN PERMANENCE pour que le lecteur
+ * d'ecran les surveille, LS-85. Vides, elles ne doivent occuper AUCUNE place :
+ * `:empty` retire bordure et marge, sans `display: none` qui les sortirait de
+ * l'arbre d'accessibilite et annulerait l'annonce.
+ */
+.erreur,
+.succes {
+  margin: 0;
+  padding: var(--ls-space-3) var(--ls-space-4);
+  border-radius: var(--ls-radius-sm);
+  border: 1px solid;
+  background: var(--ls-surface);
+  /* Ces messages citent le titre de la section, meme risque de debordement. */
+  overflow-wrap: anywhere;
+}
+
+.erreur:empty,
+.succes:empty {
+  padding: 0;
+  border: 0;
+}
+
+.erreur {
+  color: var(--ls-error);
+  border-color: var(--ls-error);
+}
+
+.succes {
+  color: var(--ls-success);
+  border-color: var(--ls-success);
+}
+
+@media (min-width: 768px) {
+  .page {
+    padding: var(--ls-space-6);
+  }
+}

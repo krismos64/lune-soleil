@@ -165,11 +165,17 @@ recopiés tels quels au moment d'écrire l'interface.
 | Aucune région live : ajout au panier, changement d'étape et refus de vente ne sont annoncés à aucun lecteur d'écran | WCAG 2.2 AA sur les parcours critiques | LS-85 |
 | Trois boutons de vignettes de la fiche produit sans nom accessible | `frontend-design.md`, nom accessible sur tout bouton icône | LS-85 |
 | Le récapitulatif du tunnel n'affiche pas l'adresse de livraison saisie | information précontractuelle, article L221-5 | LS-86 |
-| L'éditeur propose cinq sections dont « Dimensions » | ADR-026 en prévoit quatre, la dimension appartient à `Variante.dimensions` | LS-87 |
+| L'éditeur propose cinq sections dont « Dimensions » | ADR-026 en prévoit quatre, la dimension appartient à `Variante.dimensions` | LS-87, **résolu le 14 août 2026 avec LS-100** |
 
 Le dernier point était **déjà connu** : la description de LS-76 le signalait comme
 « tâche et non décision, hors de cette story ». Il n'appelle aucun arbitrage, la
 décision est prise depuis le 30 juillet 2026.
+
+Il est **résolu** depuis le 14 août 2026, LS-100 ayant écrit l'éditeur :
+`SECTIONS_PAR_DEFAUT` porte quatre entrées, aucune nommée « Dimensions », et deux
+tests d'intégration le vérifient, l'un sur le compte et l'autre sur l'absence de
+cette clé précise. L'écran redit à la saisie que les dimensions appartiennent à
+la variante, pour que l'usage prévu soit lisible au bon moment.
 
 ## Deux jetons d'ADR-022 que le prototype n'emploie pas
 
