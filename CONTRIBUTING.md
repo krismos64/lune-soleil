@@ -143,9 +143,31 @@ fichiers du dépôt en place ou dépendent de l'environnement du poste :
 ./scripts/verifier-tests-mutation.sh       # prouve la suite de tests par mutation
 ```
 
-Le deuxième se lance après toute modification de `scripts/migrate-production.sh`,
-le troisième après toute modification d'un test critique ou de la primitive SQL
-de réservation.
+Le deuxième se lance après toute modification de `scripts/migrate-production.sh`.
+
+**Le troisième ne se lance en entier qu'aux portes de sortie de phase**,
+arbitrage du 14 août 2026. Il casse le code une fois par cas et rejoue la suite à
+chaque fois : à soixante-seize cas, dont chacun d'intégration relance une base
+éphémère, l'exécution complète dépasse trente-cinq minutes. La lancer à chaque
+story revenait à reconfirmer des dizaines de cas déjà verts dont aucun fichier
+n'avait bougé.
+
+**Pendant une story, seuls les cas neufs se vérifient**, à la main, ce qui prend
+une à deux minutes :
+
+```bash
+cp src/chemin/fichier.ts /tmp/f.bak
+perl -0pi -e '<la substitution du cas>'  src/chemin/fichier.ts
+npx vitest run tests/<fichier concerné> --project <unitaire|integration>
+cp /tmp/f.bak src/chemin/fichier.ts
+```
+
+Deux choses à vérifier, et le script complet les impose lui aussi : que la
+substitution **mord**, sans quoi le cas teste le dépôt sain, et que c'est **le
+test attendu** qui rougit et non un voisin.
+
+**Ne jamais lancer ce script en arrière-plan pendant qu'on modifie encore le
+code** : sa restauration écrase le travail en cours.
 
 **Une modification de `prisma/schema.prisma` s'accompagne de sa migration**, créée
 par `npx prisma migrate dev --name sujet` et commitée avec le schéma. Un schéma

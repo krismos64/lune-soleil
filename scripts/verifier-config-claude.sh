@@ -362,6 +362,44 @@ chiffre_en_lettres() {
     cinquante) echo 50 ;;
     soixante-et-une) echo 61 ;; soixante-et-un) echo 61 ;;
     soixante-deux) echo 62 ;; soixante-trois) echo 63 ;; soixante-quatre) echo 64 ;; soixante-cinq) echo 65 ;; soixante-six) echo 66 ;; soixante-sept) echo 67 ;; soixante-huit) echo 68 ;; soixante-neuf) echo 69 ;;
+    # TABLE ETENDUE JUSQU'A 99 LE 14 AOUT 2026, TROISIEME OCCURRENCE du meme
+    # defaut : elle s'arretait a soixante-neuf, et le compte reel est passe a
+    # soixante-seize. Le symptome etait le meme que les deux fois precedentes,
+    # « README.md annonce 16 mutations », l'alternance captant le « seize » de
+    # « soixante-seize ».
+    #
+    # Etendue d'un coup plutot que d'un cran, pour cesser de repousser
+    # l'echeance : au rythme actuel, une story ajoute cinq a sept cas.
+    soixante-dix) echo 70 ;;
+    soixante-et-onze) echo 71 ;;
+    soixante-douze) echo 72 ;;
+    soixante-treize) echo 73 ;;
+    soixante-quatorze) echo 74 ;;
+    soixante-quinze) echo 75 ;;
+    soixante-seize) echo 76 ;;
+    soixante-dix-sept) echo 77 ;;
+    soixante-dix-huit) echo 78 ;;
+    soixante-dix-neuf) echo 79 ;;
+    quatre-vingts|quatre-vingt) echo 80 ;;
+    quatre-vingt-un) echo 81 ;;
+    quatre-vingt-deux) echo 82 ;;
+    quatre-vingt-trois) echo 83 ;;
+    quatre-vingt-quatre) echo 84 ;;
+    quatre-vingt-cinq) echo 85 ;;
+    quatre-vingt-six) echo 86 ;;
+    quatre-vingt-sept) echo 87 ;;
+    quatre-vingt-huit) echo 88 ;;
+    quatre-vingt-neuf) echo 89 ;;
+    quatre-vingt-dix) echo 90 ;;
+    quatre-vingt-onze) echo 91 ;;
+    quatre-vingt-douze) echo 92 ;;
+    quatre-vingt-treize) echo 93 ;;
+    quatre-vingt-quatorze) echo 94 ;;
+    quatre-vingt-quinze) echo 95 ;;
+    quatre-vingt-seize) echo 96 ;;
+    quatre-vingt-dix-sept) echo 97 ;;
+    quatre-vingt-dix-huit) echo 98 ;;
+    quatre-vingt-dix-neuf) echo 99 ;;
     soixante) echo 60 ;;
     *) echo "" ;;
   esac
@@ -380,7 +418,7 @@ chiffre_en_lettres() {
 # « dix » avant « dix-sept », « dix-sept mutations » rendait « dix », soit 10 au
 # lieu de 17. Le contrôle aurait alors signalé un écart imaginaire, ce qui use
 # la confiance aussi sûrement qu'un silence.
-NOMBRES_EN_LETTRES='trente-et-une|trente-et-un|trente-quatre|trente-trois|trente-cinq|trente-deux|trente-sept|trente-huit|trente-neuf|trente-six|vingt-et-une|vingt-et-un|vingt-quatre|vingt-trois|vingt-cinq|vingt-deux|vingt-sept|vingt-huit|vingt-neuf|vingt-six|cinquante-et-une|cinquante-et-un|cinquante-deux|cinquante-trois|cinquante-quatre|cinquante-cinq|cinquante-six|cinquante-sept|cinquante-huit|cinquante-neuf|cinquante|soixante-et-une|soixante-et-un|soixante-deux|soixante-trois|soixante-quatre|soixante-cinq|soixante-six|soixante-sept|soixante-huit|soixante-neuf|soixante|quarante-et-une|quarante-et-un|quarante-quatre|quarante-trois|quarante-cinq|quarante-deux|quarante-sept|quarante-huit|quarante-neuf|quarante-six|quarante|dix-sept|dix-huit|dix-neuf|quatorze|quinze|seize|treize|douze|trente|vingt|onze|dix|neuf|huit|sept|cinq|deux|trois|quatre|six|une|un'
+NOMBRES_EN_LETTRES='trente-et-une|trente-et-un|trente-quatre|trente-trois|trente-cinq|trente-deux|trente-sept|trente-huit|trente-neuf|trente-six|vingt-et-une|vingt-et-un|vingt-quatre|vingt-trois|vingt-cinq|vingt-deux|vingt-sept|vingt-huit|vingt-neuf|vingt-six|quatre-vingt-dix-sept|quatre-vingt-dix-huit|quatre-vingt-dix-neuf|quatre-vingt-onze|quatre-vingt-douze|quatre-vingt-treize|quatre-vingt-quatorze|quatre-vingt-quinze|quatre-vingt-seize|quatre-vingt-dix|quatre-vingt-un|quatre-vingt-deux|quatre-vingt-trois|quatre-vingt-quatre|quatre-vingt-cinq|quatre-vingt-six|quatre-vingt-sept|quatre-vingt-huit|quatre-vingt-neuf|quatre-vingts|quatre-vingt|soixante-et-onze|soixante-dix-sept|soixante-dix-huit|soixante-dix-neuf|soixante-douze|soixante-treize|soixante-quatorze|soixante-quinze|soixante-seize|soixante-dix|cinquante-et-une|cinquante-et-un|cinquante-deux|cinquante-trois|cinquante-quatre|cinquante-cinq|cinquante-six|cinquante-sept|cinquante-huit|cinquante-neuf|cinquante|soixante-et-une|soixante-et-un|soixante-deux|soixante-trois|soixante-quatre|soixante-cinq|soixante-six|soixante-sept|soixante-huit|soixante-neuf|soixante|quarante-et-une|quarante-et-un|quarante-quatre|quarante-trois|quarante-cinq|quarante-deux|quarante-sept|quarante-huit|quarante-neuf|quarante-six|quarante|dix-sept|dix-huit|dix-neuf|quatorze|quinze|seize|treize|douze|trente|vingt|onze|dix|neuf|huit|sept|cinq|deux|trois|quatre|six|une|un'
 
 # Cherche « <chiffre en lettres> <nom> » dans un texte aplati et rend le nombre.
 #

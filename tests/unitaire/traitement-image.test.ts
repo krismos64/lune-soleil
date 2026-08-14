@@ -368,6 +368,34 @@ describe("refus des fichiers qui ne sont pas des photographies", () => {
     await expect(traiterPhotographie(svg)).rejects.toThrow(FormatRefuseError);
   });
 
+  /**
+   * LE SECOND FILET, ET LE CAS QUI LE JUSTIFIE.
+   *
+   * Le refus par signature n'inspecte que les 1024 PREMIERS OCTETS, pour ne pas
+   * balayer un fichier de 25 Mo a chaque televersement. Un SVG precede d'un
+   * commentaire XML long pousse donc sa balise hors de cette fenetre et
+   * traverse le premier controle. Mesure le 14 aout 2026 : sharp le lit malgre
+   * tout, `format: "svg"`.
+   *
+   * C'EST LE SEUL CAS QUI DISTINGUE LES DEUX FILETS. Sans ce test, retirer le
+   * controle sur `metadonnees.format` laisserait toute la suite verte, et le
+   * projet aurait du code non eprouve sur un chemin de securite.
+   */
+  it("refuse un SVG dont la balise est hors de la fenetre de signature", async () => {
+    const bourrage = `<!--${"x".repeat(1200)}-->`;
+    const svg = Buffer.from(
+      `${bourrage}\n<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>`,
+    );
+
+    // La signature ne le voit PAS, sans quoi ce test ne prouverait rien du
+    // second filet.
+    expect(svg.subarray(0, 1024).toString("latin1").includes("<svg")).toBe(
+      false,
+    );
+
+    await expect(traiterPhotographie(svg)).rejects.toThrow(FormatRefuseError);
+  });
+
   it("refuse un PDF", async () => {
     const pdf = Buffer.from("%PDF-1.7\n%\xE2\xE3\xCF\xD3\n", "latin1");
 

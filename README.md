@@ -540,7 +540,7 @@ destructives doivent bloquer, une migration additive doit passer, et une
 détection qui ne peut pas conclure doit bloquer plutôt que supposer. Lancé contre
 la version d'avant LS-42, il échoue sur sept de ces dix cas.
 
-`verifier-tests-mutation.sh` casse **soixante-neuf fois** le comportement testé
+`verifier-tests-mutation.sh` casse **soixante-seize fois** le comportement testé
 et exige que la suite rougisse à chaque fois : cinq mutations de la primitive
 SQL de réservation, cinq de l'authentification et de l'autorisation, deux de
 l'interface, trois du socle de validation, quatre de la journalisation et de la

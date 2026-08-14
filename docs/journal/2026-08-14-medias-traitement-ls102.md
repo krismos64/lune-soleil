@@ -120,18 +120,75 @@ photographies, plutôt qu'un `paths` élargi sans contenu.
 formulation « Cloudinary ou objet S3 » du cahier des charges qu'ADR-007 amende.
 Elles cèdent la place à `MEDIA_RACINE`.
 
+## Reprise, les tests d'intégration du service
+
+Session reprise à la demande de Christophe sur ce point précis. **23 tests
+d'intégration** écrits, sur base réelle et disque réel.
+
+Ils testent ce qu'aucun autre test ne pouvait voir : le service orchestre trois
+effets qui doivent rester d'accord entre eux, la base, le disque et la valeur
+rendue. Les tests unitaires couvraient chaque moitié séparément ; leur cohérence
+ne l'était pas. Un statut `TRAITE` sur un média sans fichiers, un média publié
+dont la base dit `ECHOUE`, une ligne supprimée dont les fichiers restent : aucun
+de ces cas n'était détectable avant.
+
+**Le service passe sans correction.** C'est suspect pour du code jamais exécuté,
+donc vérifié plutôt que cru, par trois mutations :
+
+| Mutation | Tests qui rougissent |
+|---|---|
+| statut `TRAITE` malgré un échec de traitement | 2 |
+| réordonnancement sans la parade, parcours naïf | 4 |
+| publication avant traitement | 6 |
+
+La deuxième confirme automatiquement le piège de l'index partiel, mesuré à la
+main plus tôt dans la journée.
+
+### Une mutation « non détectée » qui avait raison
+
+Le premier passage a rendu **75 mutations, 1 non détectée** : le cas qui retire
+le refus de format par signature. Le diagnostic a montré que la mutation était
+juste et mon cas mal écrit, exactement le motif déjà rencontré en LS-101.
+
+L'asymétrie mesurée, qui n'a rien d'évident :
+
+```
+sharp LIT le SVG        format "svg", 10 x 10
+sharp LEVE sur le PDF   Error
+```
+
+Retirer le refus par signature laisse donc le SVG **quand même refusé**, par le
+second filet qui teste le format analysé. Seul le PDF distingue les deux versions
+du code, et c'est lui qu'il fallait nommer comme test attendu.
+
+### Le second filet n'était couvert par aucun test
+
+La question suivante s'imposait : si le premier filet suffit, le second sert-il
+à quelque chose ? Mesuré en le retirant seul, **toute la suite reste verte**.
+C'était donc du code non éprouvé sur un chemin de sécurité.
+
+Il a pourtant une valeur réelle, et le cas a été construit : le refus par
+signature n'inspecte que les **1024 premiers octets**, pour ne pas balayer un
+fichier de 25 Mo à chaque téléversement. Un SVG précédé d'un commentaire XML long
+pousse sa balise hors de cette fenêtre et traverse le premier contrôle ; sharp le
+lit malgré tout.
+
+Le test ajouté est le seul qui distingue les deux filets, et sa mutation le
+prouve. Sans cette enquête, le second filet serait resté du code que personne
+n'exerce, jusqu'au jour où quelqu'un l'aurait retiré en le croyant redondant.
+
 ## Ce qui reste à faire sur LS-102
 
-Le ticket reste **En cours**, et sept critères sur onze ne sont pas remplis.
+Le ticket reste **En cours**.
 
-1. tests d'intégration sur base réelle du service, aujourd'hui inexistants
-2. Server Actions, avec leur garde de rôle
-3. écran de téléversement, progression, vignettes, texte alternatif
-4. réordonnancement éprouvé sur base, la parade n'étant vérifiée que par la
-   mesure manuelle et non par un test
-5. cas de mutation dans `verifier-tests-mutation.sh`, dont `keepExif()`
-6. branchement de la purge de quarantaine sur la tâche planifiée, LS-72
-7. revue par `ls-frontend-revue`
+1. Server Actions, avec leur garde de rôle
+2. écran de téléversement, progression, vignettes, texte alternatif
+3. branchement de la purge de quarantaine sur la tâche planifiée, LS-72
+4. revue par `ls-frontend-revue`
+
+Faits depuis la première rédaction de ce journal : les tests d'intégration, le
+réordonnancement éprouvé par un test plutôt que par une mesure manuelle, et les
+sept cas de mutation dont les deux sur l'EXIF.
 
 ## État des tickets
 
@@ -139,6 +196,6 @@ LS-102 **En cours**, socle technique livré. Aucun autre ticket touché.
 
 ## Prochaine étape
 
-Reprendre LS-102 par ses tests d'intégration, avant l'écran : le service
-orchestre trois effets, base, disque et traitement, et c'est là que les défauts
-se logeront.
+Les Server Actions et l'écran de téléversement. La couche métier est désormais
+éprouvée de bout en bout, base et disque compris : ce qui reste est de
+l'interface, et `ls-frontend-revue` la relira.
