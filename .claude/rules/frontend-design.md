@@ -166,7 +166,11 @@ Retenu :
 - catégories principales visibles, sans niveau intermédiaire
 - filtres limités aux critères réellement utiles, prouvés par le catalogue réel
 - tri par nouveautés, `Produit.publieA`, et éventuellement par prix
-- photographies optimisées, formats modernes, dimensions servies adaptées
+- photographies optimisées : AVIF, WebP et repli JPEG, servis en 320, 640 et
+  1280 px, plus 1920 px en AVIF et WebP pour les écrans à haute densité. Les
+  largeurs et les formats sont fixés par ADR-007, ne pas en ajouter ici sans
+  l'amender : l'original étant supprimé après traitement, une largeur ajoutée
+  après coup oblige à redemander les photographies
 - fonctionnement à partir de 320 px
 
 Écarté, et à ne pas réintroduire sans arbitrage :

@@ -10,9 +10,10 @@ situation de marché.
 
 ## État
 
-Projet en cours de développement, phase 1, socle technique. La phase 0 de
-cadrage est close, ses derniers livrables se poursuivant en parallèle. La
-boutique n'est pas ouverte commercialement.
+Projet en cours de développement, **phase 2, catalogue, médias et stock
+multicanal**, epic LS-3. La phase 0 de cadrage est close, et la porte de sortie
+de la phase 1 est constatée, voir ci-dessous. La boutique n'est pas ouverte
+commercialement.
 
 ### Porte de sortie de la phase 1, constatée le 13 août 2026
 

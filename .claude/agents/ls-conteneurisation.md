@@ -32,6 +32,14 @@ conteneuriser, la question est tranchée.
 
 Réseau Docker privé, volumes nommés pour les données persistantes.
 
+**Deux volumes portent des données, pas un.** `lune-soleil-pgdata` pour
+PostgreSQL, et `lune-soleil-medias` pour les photographies, ADR-007. Ce second
+volume est monté sur `/var/lib/lune-soleil/medias` dans le conteneur applicatif
+et porte deux sous-dossiers, `quarantaine/` et `public/`. **Nginx ne publie que
+`public/`** : un alias posé sur la racine du volume servirait la quarantaine et
+annulerait la décision, les fichiers y étant non traités et portant encore la
+position GPS du domicile de l'exploitante.
+
 ### Ce que ce projet n'a pas
 
 **Aucun Redis.** Pas « pas encore », pas « à ajouter quand le trafic montera » :
@@ -156,7 +164,9 @@ connue. Publication sur GHCR.
 
 Ordre d'un déploiement :
 
-1. sauvegarde de la base, **vérifiée** et non seulement lancée
+1. sauvegarde de la base **et du volume des médias**, **vérifiée** et non
+   seulement lancée. Une sauvegarde qui ne prend que PostgreSQL restaure un
+   catalogue dont chaque fiche pointe vers un fichier absent, ADR-007
 2. migrations par `./scripts/migrate-production.sh`, jamais `prisma migrate
    deploy` en direct
 3. démarrage de la nouvelle image
