@@ -56,6 +56,9 @@ connaître avant d'écrire un service qui la recouvrirait ou la contredirait :
 | `src/services/catalogue.ts` | catégories et produits, C3, C24, C26. **`creerProduit` écrit le produit ET ses quatre sections dans une seule transaction**, LS-100, et c'est le seul endroit du dépôt qui les écrit | aucune |
 | `src/services/sections-produit.ts` | sections éditoriales : C20, C22, C23, les **quatre** sections par défaut d'ADR-026, appartenance vérifiée au produit, LS-100 | aucune |
 | `src/repositories/sections-produit.ts` | accès aux sections, `ecrireRang` en SQL brut sous contrainte différable | aucune |
+| `src/integrations/medias/traitement.ts` | traitement des photographies : onze déclinaisons, EXIF retiré **par défaut donc invisible**, orientation, aplatissement blanc du JPEG, refus SVG et PDF sur signature, LS-102 | aucune |
+| `src/integrations/medias/stockage.ts` | volume à deux dossiers, la publication est un **déplacement** de `quarantaine/` vers `public/`, original supprimé | aucune |
+| `src/services/media.ts` | orchestration des trois effets, base, disque et traitement. **Le réordonnancement écrit le rang 1 en dernier**, l'index partiel n'étant pas différable | la purge de quarantaine n'est appelée par aucune tâche, LS-72 |
 | `src/services/variante.ts` | variantes : C2, C13, C14, refus d'unicité nommant le produit porteur, archivage qui ne touche ni le stock ni les commandes, LS-101 | aucune |
 | `src/services/variante-validation.ts` | conversion euros vers centimes **par découpage de chaîne**, invariant 1, et normalisation de la référence en majuscules | aucune |
 | `src/repositories/variante.ts` | accès aux variantes. **Aucune fonction de suppression**, C13 | aucune |

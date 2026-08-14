@@ -68,6 +68,9 @@ DEPOT_SECTIONS="src/repositories/sections-produit.ts"
 VARIANTE="src/services/variante.ts"
 VARIANTE_VALIDATION="src/services/variante-validation.ts"
 DEPOT_VARIANTE="src/repositories/variante.ts"
+MEDIA="src/services/media.ts"
+TRAITEMENT="src/integrations/medias/traitement.ts"
+STOCKAGE="src/integrations/medias/stockage.ts"
 
 # TOUT FICHIER MUTE DOIT FIGURER ICI, sans quoi il n'est ni sauvegarde ni
 # restaure et la mutation RESTE SUR LE DISQUE apres l'execution.
@@ -80,7 +83,7 @@ DEPOT_VARIANTE="src/repositories/variante.ts"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -1036,6 +1039,119 @@ cas "archivage sans verifier les reservations actives" integration \
 mute "$DEPOT_VARIANTE" 's/       AND expire_a > now\(\)//'
 cas "garde comptant aussi les reservations expirees" integration \
   "archive malgre une reservation expiree"
+
+# ---------------------------------------------------------------------------
+# Cas 70 : la suppression de l'EXIF est desactivee. LS-102, ADR-007.
+#
+# LA MUTATION QUE L'ADR DESIGNE NOMMEMENT, et le defaut le plus grave que ce
+# projet puisse produire : la position GPS du domicile de l'exploitante servie
+# publiquement.
+#
+# CE CAS EXISTE PARCE QUE LA PROTECTION EST INVISIBLE. sharp retire l'EXIF PAR
+# DEFAUT : aucune ligne de code ne l'affirme, donc aucune relecture ne peut
+# constater qu'elle est en place. Un `keepExif()` ajoute de bonne foi, pour
+# conserver un profil colorimetrique ou une orientation, rouvrirait la fuite en
+# silence, et tous les tests fonctionnels resteraient verts.
+mute "$TRAITEMENT" 's/      const contenu = await pipeline\[format\]\(\{/      const contenu = await pipeline.keepExif()[format]({/'
+cas "suppression de l'EXIF desactivee sur le traitement" unitaire \
+  "ne laisse aucun EXIF sur aucune declinaison"
+
+# ---------------------------------------------------------------------------
+# Cas 71 : l'EXIF survit dans les fichiers ECRITS SUR LE DISQUE.
+#
+# LE MEME DEFAUT, VU D'UN AUTRE ETAGE, et les deux cas ne font pas double
+# emploi. Le cas 70 verifie les octets rendus EN MEMOIRE par le traitement ;
+# celui-ci verifie les octets REELLEMENT ECRITS sous `public/`, apres la
+# publication. Une etape de copie qui reintroduirait des metadonnees ne serait
+# vue que par le second.
+mute "$TRAITEMENT" 's/      const contenu = await pipeline\[format\]\(\{/      const contenu = await pipeline.keepExif()[format]({/'
+cas "EXIF survivant dans les fichiers publies" integration \
+  "n'ecrit aucun EXIF dans les fichiers publies"
+
+# ---------------------------------------------------------------------------
+# Cas 72 : un traitement en echec passe quand meme a TRAITE.
+#
+# `PARCOURS.md` : « Aucune image n'est jamais servie publiquement sans
+# traitement. C'est un blocage, pas un avertissement. » Un media marque TRAITE
+# alors que son traitement a echoue serait publiable par LS-103, et la fiche
+# produit pointerait vers des fichiers qui n'existent pas.
+mute "$MEDIA" 's/    await depot\.ecrireStatut\(prisma, media\.id, StatutTraitementMedia\.ECHOUE\);/    await depot.ecrireStatut(prisma, media.id, StatutTraitementMedia.TRAITE);/'
+cas "media en echec marque TRAITE" integration \
+  "laisse ECHOUE en base et ne publie aucun fichier"
+
+# ---------------------------------------------------------------------------
+# Cas 73 : le reordonnancement des medias perd son ordre d'ecriture. C9.
+#
+# LE PIEGE MESURE LE 14 AOUT 2026, et il DIFFERE de celui des sections.
+# `media_principal_unique` est un INDEX partiel filtre sur `ordre = 1`, pas une
+# contrainte : il n'est donc pas differable, et il est verifie LIGNE A LIGNE.
+#
+#   VERT   liberer le rang 1 puis le prendre
+#   ROUGE  prendre le rang 1 avant de l'avoir libere
+#          duplicate key value violates unique constraint
+#
+# LA TRANSACTION NE SAUVE PAS. La mutation remplace le tri par un parcours naif
+# de la liste, ce qui est exactement ce qu'une relecture ecrirait en trouvant le
+# tri inutilement complique.
+mute "$MEDIA" 's/    const ordonnees = \[\n      \.\.\.ecritures\.filter\(\(e\) => e\.id === ancienPremier && e\.ordre !== 1\),\n      \.\.\.ecritures\.filter\(\(e\) => e\.id !== ancienPremier && e\.ordre !== 1\),\n      \.\.\.ecritures\.filter\(\(e\) => e\.ordre === 1\),\n    \];/    const ordonnees = ecritures;/'
+cas "reordonnancement de medias sans ordre d'ecriture" integration \
+  "echange le media principal avec le second"
+
+# ---------------------------------------------------------------------------
+# Cas 74 : SVG et PDF ne sont plus refuses avant decodage.
+#
+# CE QUE CELA ROUVRE : libvips analyse un document au lieu d'une photographie,
+# sur ses deux formats d'entree les plus complexes. L'override de `package.json`
+# corrige quatre CVE de cette bibliotheque, ce qui dit assez que sa surface
+# d'attaque n'est pas theorique.
+#
+# Le refus porte sur la SIGNATURE du fichier, jamais sur l'extension ni sur le
+# type annonce par le navigateur, que l'appelant peut mentir.
+mute "$TRAITEMENT" 's/  const refuse = formatRefuseParSignature\(octets\);\n  if \(refuse\) \{\n    throw new FormatRefuseError\(refuse\);\n  \}/  \/\/ refus retire/'
+#
+# LE TEST ATTENDU EST CELUI DU PDF, ET NON CELUI DU SVG. L'asymetrie a ete
+# mesuree en ecrivant ce cas, et elle n'est pas evidente :
+#
+#   sharp LIT le SVG        format "svg", 10 x 10  -> le second filet, qui teste
+#                                                     `metadonnees.format`, le
+#                                                     rattrape meme sans le refus
+#                                                     par signature
+#   sharp LEVE sur le PDF   -> sans le refus par signature, il devient un
+#                              FichierNonImageError et non un FormatRefuseError
+#
+# Le test du SVG reste donc VERT sous cette mutation, a juste titre : la
+# protection tient toujours, par un autre chemin. Seul le PDF distingue les deux
+# versions du code. Nommer le SVG ici ferait echouer le controle en accusant un
+# test qui fait exactement son travail.
+cas "SVG et PDF acceptes au traitement" unitaire \
+  "refuse un PDF"
+
+# ---------------------------------------------------------------------------
+# Cas 76 : le SECOND filet de refus est retire, celui qui lit le format analyse.
+#
+# POURQUOI DEUX FILETS ET DEUX CAS. Le refus par signature n'inspecte que les
+# 1024 premiers octets, pour ne pas balayer un fichier de 25 Mo a chaque
+# televersement. Un SVG precede d'un commentaire XML long pousse sa balise hors
+# de cette fenetre et le traverse : mesure le 14 aout 2026, sharp le lit malgre
+# tout.
+#
+# LE PREMIER FILET SEUL SUFFISAIT A GARDER LA SUITE VERTE avant ce cas, ce qui
+# faisait du second du code non eprouve sur un chemin de securite. Le test ajoute
+# est le seul qui les distingue.
+mute "$TRAITEMENT" 's/  if \(metadonnees\.format && FORMATS_REFUSES\.has\(metadonnees\.format\)\) \{\n    throw new FormatRefuseError\(metadonnees\.format\);\n  \}/  \/\/ second filet retire/'
+cas "second filet de refus de format retire" unitaire \
+  "refuse un SVG dont la balise est hors de la fenetre de signature"
+
+# ---------------------------------------------------------------------------
+# Cas 75 : la garde de traversee de chemin est retiree du stockage.
+#
+# UN IDENTIFIANT PORTANT `..` FERAIT ECRIRE HORS DU VOLUME. Les identifiants
+# sont engendres par le module, donc le cas ne devrait pas se produire : la
+# garde existe parce qu'une valeur venue de la base ou d'un parametre finit
+# toujours par atteindre ce chemin.
+mute "$STOCKAGE" 's/  if \(!\/\^\[A-Za-z0-9\]\[A-Za-z0-9\._-\]\*\$\/\.test\(valeur\) \|\| valeur\.includes\("\.\."\)\) \{/  if (false) {/'
+cas "garde de traversee de chemin retiree" unitaire \
+  "refuse un identifiant qui remonte hors du volume"
 
 echo
 echo "-----------------------------------------"
