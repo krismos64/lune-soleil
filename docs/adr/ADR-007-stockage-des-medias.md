@@ -54,8 +54,10 @@ Le déplacement de `quarantaine/` vers `public/` est le seul geste qui rend un
 média accessible, et il n'a lieu qu'après un traitement réussi. **L'original brut
 est supprimé** une fois les déclinaisons engendrées.
 
-Chaque photographie produit **neuf déclinaisons** : trois largeurs servies (320,
-640 et 1280 px) en AVIF, WebP et JPEG, ce dernier servant de repli.
+Chaque photographie produit **onze déclinaisons** : les largeurs 320, 640 et
+1280 px en AVIF, WebP et JPEG, ce dernier servant de repli, plus la largeur
+**1920 px en AVIF et WebP seulement**, destinée aux écrans à haute densité et au
+zoom sur la fiche produit.
 
 ## Justification par la mesure
 
@@ -72,14 +74,61 @@ smartphone), JPEG source de 4,28 Mo. Script de mesure décrit plus bas.
 Deux chiffres commandent la décision. **AVIF pèse huit fois moins que le JPEG**,
 42 Ko contre 327 Ko pour les trois largeurs, ce qui compte sur un catalogue de
 bijoux consulté au téléphone. Et il coûte **446 ms d'encodage**, quatre fois le
-JPEG, dépensés une seule fois au téléversement et jamais à la lecture. Le coût
-disque total est de **626 Ko par photographie**, les neuf fichiers réunis : mille
-photographies occupent environ 610 Mo, ce qu'un VPS absorbe sans dimensionnement
-particulier.
+JPEG, dépensés une seule fois au téléversement et jamais à la lecture.
 
 Le repli JPEG est conservé alors qu'AVIF et WebP couvrent les navigateurs visés,
 parce qu'il ne coûte que 103 ms et garantit qu'aucun contexte de lecture ne reste
 sans image.
+
+### Pourquoi une quatrième largeur
+
+Une fiche produit affiche l'image sur 600 à 700 px CSS. Sur un écran à densité
+double, courant sur les téléphones et les portables récents, cela demande environ
+1400 px physiques : **1280 px est déjà en deçà**, et l'image se ramollit
+précisément sur ce qui décide de l'achat, la gravure, la maille d'une chaîne, le
+grain d'une pierre.
+
+| Largeur | AVIF | WebP |
+|---|---|---|
+| 1280 px | 49 Ko | 334 Ko |
+| **1920 px** | **72 Ko** | 697 Ko |
+| 2560 px | 105 Ko | 1059 Ko |
+
+La largeur 1920 px coûte **23 Ko de plus en AVIF**, ce qui est négligeable devant
+le gain de netteté. Elle n'est pas engendrée en JPEG, dont le poids croît vite
+alors que ce format ne sert que de filet de sécurité : un navigateur qui ignore
+AVIF et WebP ignore aussi les écrans à haute densité.
+
+La largeur 2560 px est écartée, son gain n'étant plus perceptible sur une image
+affichée à cette taille.
+
+### Coût total retenu
+
+Le coût disque est d'environ **900 Ko par photographie**, les onze fichiers
+réunis. Mille photographies occupent moins d'un gigaoctet, ce qu'un VPS absorbe
+sans dimensionnement particulier.
+
+Le traitement d'une photographie lourde a été éprouvé : une source de 17,6 Mo en
+24 Mpx, plus exigeante que ce qu'un téléphone produit, passe en 1,9 s sur la
+machine de mesure. Le pic de mémoire observé est de 164 Mo pour une photographie,
+et de 433 Mo pour quatre traitées en parallèle, sharp employant quatre fils par
+défaut.
+
+### Qualité mesurée
+
+Comparaison de la déclinaison servie à la source ramenée à la même taille, en
+PSNR, sur la photographie de 24 Mpx :
+
+| Format | 1280 px | PSNR |
+|---|---|---|
+| AVIF | 49 Ko | 33,0 dB |
+| WebP | 334 Ko | 35,1 dB |
+| JPEG | 306 Ko | 32,0 dB |
+
+Au-delà de 32 dB, l'écart avec la source n'est pas perceptible à l'œil sur une
+photographie. **AVIF obtient un meilleur score que le JPEG en pesant six fois
+moins.** Les réglages de qualité retenus sont donc 50 en AVIF, 78 en WebP et 80
+en JPEG.
 
 **La suppression des métadonnées est le comportement par défaut de sharp**, ce
 qui est le point le plus important de cette mesure :
@@ -101,6 +150,12 @@ qui a déjà écarté Sentry : le transfert de données à un tiers, et non le p
 Téléverser la photographie brute chez un prestataire pour qu'il en retire la
 position GPS revient à lui confier exactement la donnée qu'on cherche à
 supprimer. Le traitement local ne fait sortir aucun octet du serveur.
+
+Ce que l'option apportait réellement est reconnu : la génération à la volée
+d'une largeur qui n'existe pas encore, et un réseau de diffusion mondial. La
+première est perdue et coûte le choix anticipé des largeurs, voir les
+conséquences. La seconde ne vaut rien ici, la clientèle visée étant en France
+métropolitaine et le serveur aussi.
 
 **Stockage objet compatible S3.** Le service tiers pose la même question que
 Cloudinary lorsqu'il est hébergé, et un stockage objet auto-hébergé ajouterait un
@@ -153,6 +208,14 @@ appartient à la configuration, pas aux données.
 pas dans LS-102. Son unicité ne gêne pas, PostgreSQL admettant plusieurs valeurs
 nulles sous une contrainte `UNIQUE`.
 
+**Les largeurs se décident maintenant, pas plus tard.** L'original étant
+supprimé, ajouter une largeur après coup n'est pas un simple retraitement : il
+faudrait redemander les photographies à l'exploitante. C'est la contrepartie
+directe du choix de supprimer l'original, et la raison pour laquelle la largeur
+1920 px entre dès maintenant plutôt qu'au premier écran jugé flou. Un service
+tiers engendrant à la volée n'aurait pas eu cette contrainte, voir les
+alternatives écartées.
+
 **Le traitement consomme le CPU du VPS**, 446 ms d'AVIF par photographie et par
 largeur cumulée. Sur un téléversement multiple, l'encodage se fait hors du cycle
 de la requête et `statutTraitement` porte l'état, ce que C8 prévoit déjà.
@@ -179,14 +242,14 @@ objet répliqué, la perte du volume perd les médias. C'est le prix accepté de
 l'absence de tiers, et c'est ce qui rend la sauvegarde du volume non optionnelle
 plutôt que confortable.
 
-**L'espace disque n'est pas surveillé aujourd'hui.** 626 Ko par photographie
+**L'espace disque n'est pas surveillé aujourd'hui.** 900 Ko par photographie
 reste modeste, mais un disque plein ferait échouer les traitements. La
 surveillance relève de la phase 6, avec le déploiement.
 
 ## Reproduire les mesures
 
 Les chiffres ci-dessus se rejouent avec un script court : engendrer une image de
-4032 x 3024 px portant un EXIF GPS, l'encoder aux trois largeurs dans les trois
+4032 x 3024 px portant un EXIF GPS, l'encoder aux largeurs retenues dans les trois
 formats en relevant taille et durée, puis comparer les métadonnées du fichier
 produit avec et sans `keepExif()`. Les valeurs varient avec la machine et le
 contenu de l'image ; ce qui doit se retrouver est le rapport entre formats, AVIF
