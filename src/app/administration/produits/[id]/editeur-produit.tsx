@@ -18,7 +18,7 @@
  * avertit avant en proposant le masquage comme solution de rechange.
  */
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 import {
   ajouterSectionAction,
@@ -100,6 +100,34 @@ export function EditeurProduit({
     setSucces((precedent) => (precedent === null ? precedent : null));
   }
   const [aSupprimer, setASupprimer] = useState<string | null>(null);
+
+  /*
+   * LE FOCUS ENTRE DANS LE PANNEAU A SON OUVERTURE, et revient au bouton qui l'a
+   * ouvert a sa fermeture. Meme mecanique que pour l'archivage d'une variante,
+   * LS-101, et meme motif : un `alertdialog` que le focus n'atteint jamais n'est
+   * pas annonce par la plupart des lecteurs d'ecran, et sa sortie par Echap ne
+   * sert a rien.
+   */
+  const panneau = useRef<HTMLDivElement | null>(null);
+  const declencheur = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (aSupprimer !== null) {
+      panneau.current?.focus();
+    } else {
+      declencheur.current?.focus();
+      declencheur.current = null;
+    }
+  }, [aSupprimer]);
+
+  /** Ouvre la confirmation en retenant le bouton d'ou elle vient. */
+  function demanderSuppression(
+    id: string,
+    bouton: HTMLButtonElement | null,
+  ): void {
+    declencheur.current = bouton;
+    setASupprimer(id);
+  }
 
   /**
    * Joue une action et pose son message. LE SUCCES N'EST POSE QU'APRES LE
@@ -435,7 +463,9 @@ export function EditeurProduit({
                 <button
                   type="button"
                   className={styles.boutonDanger}
-                  onClick={() => setASupprimer(section.id)}
+                  onClick={(evenement) =>
+                    demanderSuppression(section.id, evenement.currentTarget)
+                  }
                   disabled={enCours}
                   aria-label={`Supprimer la section ${section.titre}`}
                 >
@@ -460,6 +490,10 @@ export function EditeurProduit({
                 <div
                   className={styles.confirmation}
                   role="alertdialog"
+                  ref={panneau}
+                  // `-1` ET NON `0` : recevoir le focus par programme sans
+                  // entrer dans l'ordre de tabulation.
+                  tabIndex={-1}
                   aria-labelledby={`confirmation-titre-${section.id}`}
                   aria-describedby={`confirmation-texte-${section.id}`}
                   onKeyDown={(evenement) => {

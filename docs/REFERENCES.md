@@ -56,7 +56,10 @@ connaître avant d'écrire un service qui la recouvrirait ou la contredirait :
 | `src/services/catalogue.ts` | catégories et produits, C3, C24, C26. **`creerProduit` écrit le produit ET ses quatre sections dans une seule transaction**, LS-100, et c'est le seul endroit du dépôt qui les écrit | aucune |
 | `src/services/sections-produit.ts` | sections éditoriales : C20, C22, C23, les **quatre** sections par défaut d'ADR-026, appartenance vérifiée au produit, LS-100 | aucune |
 | `src/repositories/sections-produit.ts` | accès aux sections, `ecrireRang` en SQL brut sous contrainte différable | aucune |
-| `src/app/administration/produits/[id]/` | éditeur de fiche produit : page gardée, six Server Actions, composant client | ni variante, ni média, ni publication : LS-101, LS-102 et LS-103 |
+| `src/services/variante.ts` | variantes : C2, C13, C14, refus d'unicité nommant le produit porteur, archivage qui ne touche ni le stock ni les commandes, LS-101 | aucune |
+| `src/services/variante-validation.ts` | conversion euros vers centimes **par découpage de chaîne**, invariant 1, et normalisation de la référence en majuscules | aucune |
+| `src/repositories/variante.ts` | accès aux variantes. **Aucune fonction de suppression**, C13 | aucune |
+| `src/app/administration/produits/[id]/` | éditeur de fiche produit et déclinaisons : page gardée, neuf Server Actions, deux composants clients | ni média, ni publication : LS-102 et LS-103 |
 | `src/services/suppression-compte.ts` | suppression de compte et export RGPD, **première action sensible du dépôt**, dissociation plutôt qu'effacement, règle V15 | aucune |
 | `src/repositories/limitation.ts` | compteur de débit applicatif sur `RateLimit`, clé préfixée `action:`, LS-92 | aucune |
 | `src/services/limitation-action.ts` | seuils par action et journalisation des tentatives, LS-92 | aucune |
@@ -108,6 +111,7 @@ documentation technique, ticket ou règle qui le contredirait.
 | ADR-026 | Sections de fiche produit ordonnées | fiche produit, catalogue, administration des produits |
 | ADR-027 | Limitation de débit, journal des connexions, réauthentification | connexion, sessions, actions sensibles |
 | ADR-028 | Conservation des avis, sans limite de durée | avis, modération, registre des traitements |
+| ADR-029 | Référence de variante modifiable, avertissement à l'écran | variante, référence, avis, statistiques par référence |
 
 Cette table se met à jour à chaque ADR créé. Un ADR absent d'ici reste
 opposable : la table est un raccourci, `docs/adr/` fait foi.

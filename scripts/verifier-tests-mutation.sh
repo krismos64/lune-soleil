@@ -65,6 +65,9 @@ SUPPRESSION="src/services/suppression-compte.ts"
 SECTIONS="src/services/sections-produit.ts"
 CATALOGUE="src/services/catalogue.ts"
 DEPOT_SECTIONS="src/repositories/sections-produit.ts"
+VARIANTE="src/services/variante.ts"
+VARIANTE_VALIDATION="src/services/variante-validation.ts"
+DEPOT_VARIANTE="src/repositories/variante.ts"
 
 # TOUT FICHIER MUTE DOIT FIGURER ICI, sans quoi il n'est ni sauvegarde ni
 # restaure et la mutation RESTE SUR LE DISQUE apres l'execution.
@@ -77,7 +80,7 @@ DEPOT_SECTIONS="src/repositories/sections-produit.ts"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -920,6 +923,119 @@ cas "rang de section calcule sur le nombre et non le maximum" integration \
 mute "$SECTIONS" 's/      if \(!connues\.has\(id\)\) \{\n        throw new SectionIntrouvableError\(\);\n      \}/      \/\/ verification retiree/'
 cas "appartenance d'une section a son produit non verifiee" integration \
   "refuse une section appartenant a un autre produit"
+
+# ---------------------------------------------------------------------------
+# Cas 63 : le filtre du prix accepte trois decimales. LS-101.
+#
+# CE CAS A REMPLACE UN CAS FAUX, ET LE MOTIF MERITE D'ETRE LU. La premiere
+# version remplacait le decoupage de chaine par `Math.round(x * 100)` et exigeait
+# que les tests rougissent. Ils sont restes VERTS, et l'enquete a montre que la
+# mutation avait tort, pas les tests : sur des montants a DEUX decimales au plus,
+# `Math.round(x * 100)` rend le bon resultat, verifie exhaustivement de 0 a 2000
+# euros. L'erreur du flottant y reste sous le demi-centime.
+#
+# LA PROTECTION N'EST DONC PAS LA METHODE DE CONVERSION, C'EST LE FILTRE qui
+# borne l'entree a deux decimales. C'est lui que ce cas mute, et le defaut est
+# reel : elargir le filtre pour accepter une remise au millieme, geste plausible,
+# fait entrer des montants que la multiplication arrondirait faux, et que le
+# decoupage continue de rendre exacts.
+#
+# Le test qui rougit est celui du refus au-dela de deux decimales, `1,005` en
+# etant l'exemple canonique.
+#
+# L'EXPRESSION S'ECRIT `d\{1,2\}` ET NON `\\d\{1,2\}`. En Perl, `\\d` designe un
+# backslash litteral suivi d'un `d`, forme que le fichier ne contient pas : la
+# substitution ne mordait pas, et `mute` echouait franchement plutot que de
+# laisser croire a un test aveugle. Le garde-fou qui exige une modification
+# effective a fait exactement son travail.
+mute "$VARIANTE_VALIDATION" 's/d\{1,2\}/d{1,3}/'
+cas "filtre du prix elargi a trois decimales" unitaire \
+  "rend null au-dela de deux decimales"
+
+# ---------------------------------------------------------------------------
+# Cas 64 : la partie decimale est completee a GAUCHE et non a droite.
+#
+# UNE SEULE LETTRE SEPARE `padEnd` DE `padStart`, et le prix est divise par dix
+# sur toute saisie a une decimale : « 5,5 » devient 55 centimes au lieu de 550.
+#
+# AUCUN TEST A DEUX DECIMALES NE LE VOIT, ce qui rend le defaut invisible a une
+# suite qui n'exercerait que des prix « bien formes ».
+mute "$VARIANTE_VALIDATION" 's/\.padEnd\(2, "0"\)/.padStart(2, "0")/'
+cas "partie decimale completee a gauche, prix divise par dix" unitaire \
+  "complete a droite une decimale unique"
+
+# ---------------------------------------------------------------------------
+# Cas 65 : l'archivage remet la quantite physique a zero.
+#
+# LE GESTE QUI SEMBLE PROPRE ET QUI FAIT DISPARAITRE DU STOCK. Retirer une piece
+# de la vente en ligne n'a jamais retire la piece du tiroir : l'invariant 6
+# separe la disponibilite web de la quantite physique, et l'arbitrage du 14 aout
+# 2026 a confirme que le stock reste vendable en main propre.
+#
+# Aucune contrainte ne s'y oppose, `chk_variante_physique_positif` acceptant
+# zero. Seul un test qui relit la colonne apres archivage le voit.
+mute "$VARIANTE" 's/    await depot\.archiverVariante\(prisma, id, new Date\(\)\);/    await depot.archiverVariante(prisma, id, new Date());\n    await prisma.variante.update({ where: { id }, data: { quantitePhysique: 0 } });/'
+cas "archivage remettant le stock physique a zero" integration \
+  "laisse le stock physique intact et ne cree aucun mouvement"
+
+# ---------------------------------------------------------------------------
+# Cas 66 : la reference n'est plus normalisee en majuscules.
+#
+# `bo-essai-01` ET `BO-ESSAI-01` DEVIENNENT DEUX REFERENCES DISTINCTES pour
+# l'unicite en base, alors qu'aucun humain ne les distingue sur une etiquette.
+# La seconde saisie passe, et deux pieces portent la meme reference imprimee.
+#
+# Le defaut ne casse rien immediatement : il produit un doublon qui ne se voit
+# qu'a l'inventaire, ou quand un avis remonte sur la mauvaise piece.
+mute "$VARIANTE_VALIDATION" 's/  \.transform\(\(valeur\) => valeur\.toUpperCase\(\)\)/  .transform((valeur) => valeur)/'
+cas "reference non normalisee en majuscules" integration \
+  "refuse la meme reference saisie en minuscules"
+
+# ---------------------------------------------------------------------------
+# Cas 67 : modifier une variante archivee redevient possible.
+#
+# LE REFUS PROTEGE CONTRE UNE FAUSSE IMPRESSION : editer le prix d'une piece
+# sortie du catalogue n'a aucun effet visible, et laisse croire a une remise en
+# vente. La mutation retire la garde, et rien d'autre ne l'arrete : aucune
+# contrainte de base ne connait la notion de variante archivee.
+mute "$VARIANTE" 's/  if \(existante\.archiveeA !== null\) \{\n    throw new VarianteDejaArchiveeError\(\);\n  \}\n\n  try \{\n    return await depot\.ecrireVariante/  \/\/ garde retiree\n\n  try {\n    return await depot.ecrireVariante/'
+cas "modification d'une variante archivee" integration \
+  "refuse de modifier une variante archivee"
+
+# ---------------------------------------------------------------------------
+# Cas 68 : l'archivage ne verifie plus les reservations actives. LS-101.
+#
+# LA REGLE VIENT DE `database.md` : « l'archivage est refuse tant qu'une
+# reservation active existe, meme regle que pour la vente externe ». Elle avait
+# ete OUBLIEE dans la premiere version du service, et c'est `ls-frontend-revue`
+# qui l'a signalee en relisant l'ecran.
+#
+# LE SCENARIO QUE LA GARDE FERME : un client paie, sa reservation tient la
+# piece, l'exploitante archive. La commande se confirme sur une piece sortie du
+# catalogue, et la conversion de la reservation en vente porte sur une variante
+# que plus rien ne vend.
+#
+# AUCUNE CONTRAINTE DE BASE NE L'EXPRIME, `archivee_a` et `reservation` vivant
+# dans deux tables : ce test est la seule ligne de defense.
+mute "$VARIANTE" 's/  const reservations = await depot\.compterReservationsActives\(prisma, id\);\n  if \(reservations > 0\) \{\n    throw new ReservationActiveError\(reservations\);\n  \}/  \/\/ garde retiree/'
+cas "archivage sans verifier les reservations actives" integration \
+  "refuse d'archiver tant qu'une reservation active existe"
+
+# ---------------------------------------------------------------------------
+# Cas 69 : la garde compte TOUTES les reservations, expirees comprises.
+#
+# LE DEFAUT SYMETRIQUE DU PRECEDENT, et celui qu'une garde ecrite trop vite
+# produit : retirer `expire_a > now()` rend la variante inarchivable pendant les
+# cinq minutes qui separent l'expiration du passage de la tache de liberation,
+# pour une reservation que plus rien ne protege.
+#
+# UN CONTROLE QUI N'AURAIT QUE LE CAS 68 SERAIT SATISFAIT PAR CETTE VERSION
+# FAUSSE : elle refuse bien l'archivage sur une reservation active. Seul un test
+# qui archive MALGRE une reservation expiree separe la garde juste de la garde
+# trop large.
+mute "$DEPOT_VARIANTE" 's/       AND expire_a > now\(\)//'
+cas "garde comptant aussi les reservations expirees" integration \
+  "archive malgre une reservation expiree"
 
 echo
 echo "-----------------------------------------"
