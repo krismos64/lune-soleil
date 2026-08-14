@@ -1271,6 +1271,11 @@ une pièce différente, et les avis de l'ancienne remontent sur la fiche de la
 nouvelle. Ou bien elle corrige une faute de frappe dans une référence, et les
 avis déjà déposés, portant l'ancienne chaîne, disparaissent de la fiche.
 
+**Le second scénario n'est plus hypothétique depuis ADR-029**, 14 août 2026 : la
+référence est **librement modifiable** après création, et l'écran d'édition
+avertit quand la variante a déjà vendu. Le regroupement par `referenceFigee` est
+donc écarté non plus au titre d'un risque, mais d'un geste prévu et documenté.
+
 **La vraie parade : une variante ne se supprime jamais.** Elle s'archive, comme un
 produit, règle C13 du domaine 1. `varianteId` reste alors toujours résolvable et le
 regroupement se fait par lui, ce qui est précisément l'usage que la décision C lui

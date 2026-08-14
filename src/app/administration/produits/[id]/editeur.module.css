@@ -257,3 +257,72 @@
     padding: var(--ls-space-6);
   }
 }
+
+/*
+ * Variantes, LS-101.
+ *
+ * LES FAITS D'UNE VARIANTE SONT UNE LISTE DE DEFINITIONS ET NON UN TABLEAU.
+ * A 320 px, un tableau a cinq colonnes chiffrees devrait defiler
+ * horizontalement dans son conteneur, ce qui obligerait a faire glisser pour
+ * lire un prix. La liste s'empile naturellement, et passe a deux colonnes des
+ * que la largeur le permet.
+ */
+
+.enTeteVariante {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ls-space-2);
+}
+
+.referenceVariante {
+  margin: 0;
+  font-size: 1rem;
+  /* Une reference de trente caracteres sans espace ne doit pas pousser la page. */
+  overflow-wrap: anywhere;
+}
+
+.faits {
+  margin: 0;
+  display: grid;
+  gap: var(--ls-space-3);
+}
+
+.fait {
+  display: grid;
+  gap: var(--ls-space-1);
+}
+
+.faitLabel {
+  color: var(--ls-text-muted);
+  font-size: 0.9rem;
+}
+
+.faitValeur {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * L'AVERTISSEMENT D'ADR-029 NE PORTE PAS LES COULEURS D'UNE ERREUR. Il annonce
+ * une consequence d'un geste legitime, et non un refus : le rouge de `.erreur`
+ * ferait croire que l'enregistrement va echouer.
+ */
+.avertissement {
+  margin: 0;
+  padding: var(--ls-space-3);
+  border: 1px solid var(--ls-warning);
+  border-left-width: 4px;
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+  font-size: 0.9rem;
+  max-width: 65ch;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 768px) {
+  .faits {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

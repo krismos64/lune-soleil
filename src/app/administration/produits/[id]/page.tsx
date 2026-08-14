@@ -19,7 +19,9 @@ import {
 } from "@/services/autorisation";
 import { lireProduit } from "@/services/catalogue";
 import { listerSections } from "@/services/sections-produit";
+import { compterLignesDeCommande, listerVariantes } from "@/services/variante";
 import { EditeurProduit } from "./editeur-produit";
+import { VariantesProduit } from "./variantes-produit";
 import styles from "./editeur.module.css";
 
 export const metadata = {
@@ -78,12 +80,41 @@ export default async function PageEditeurProduit({
   }
 
   const sections = await listerSections(produit.id);
+  const variantes = await listerVariantes(produit.id);
+
+  /*
+   * LE COMPTE DE COMMANDES PAR VARIANTE SERT L'AVERTISSEMENT D'ADR-029.
+   *
+   * Une requete par variante est acceptable ici et le restera : une fiche porte
+   * une a cinq declinaisons, `frontend-design.md` dimensionnant le catalogue a
+   * 10 a 40 references. Ce n'est pas le motif N+1 qu'il faudrait eviter sur une
+   * liste de catalogue, et regrouper ces comptes en une seule requete ajouterait
+   * un agregat pour economiser quatre lectures indexees.
+   */
+  const comptes = await Promise.all(
+    variantes.map(async (variante) => ({
+      id: variante.id,
+      nombreCommandes: await compterLignesDeCommande(variante.id),
+    })),
+  );
+  const nombreCommandesPar = new Map(
+    comptes.map((compte) => [compte.id, compte.nombreCommandes]),
+  );
 
   return (
     <main className={styles.page}>
       <p className={styles.fil}>
         <a href="/administration/categories">Catalogue</a>
       </p>
+      {/*
+       * L'ORDRE DES BLOCS EST DELIBERE, arbitrage du 14 aout 2026 : informations
+       * generales, puis declinaisons, puis sections editoriales.
+       *
+       * A 320 px tout est empile, et corriger un nom ne doit demander aucun
+       * defilement. C'est aussi l'ordre du parcours 3, qui cree le produit avant
+       * ses variantes. Ne pas remonter les declinaisons en tete au motif
+       * qu'elles portent le prix et le stock.
+       */}
       <h1 className={styles.titre}>{produit.nom}</h1>
       <p className={styles.etat}>{ETAT_AFFICHE[produit.statut]}</p>
 
@@ -97,6 +128,20 @@ export default async function PageEditeurProduit({
           contenu: section.contenu,
           ordre: section.ordre,
           visible: section.visible,
+        }))}
+      />
+      <VariantesProduit
+        produitId={produit.id}
+        variantes={variantes.map((variante) => ({
+          id: variante.id,
+          reference: variante.reference,
+          libelle: variante.libelle,
+          dimensions: variante.dimensions,
+          prixCentimes: variante.prixCentimes,
+          quantitePhysique: variante.quantitePhysique,
+          quantiteReservee: variante.quantiteReservee,
+          archivee: variante.archiveeA !== null,
+          nombreCommandes: nombreCommandesPar.get(variante.id) ?? 0,
         }))}
       />
     </main>

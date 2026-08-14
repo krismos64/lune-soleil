@@ -30,7 +30,7 @@ const ECRANS = [
    */
   {
     chemin: "/administration/produits/3f2504e0-4f89-41d3-9a0c-0305e82c3301",
-    titre: "Sections de la fiche",
+    titre: "Informations générales",
   },
 ];
 
@@ -122,6 +122,9 @@ test("un POST direct sur les ecrans du catalogue ne produit aucun effet", async 
     // LS-100, l'editeur de fiche produit et ses gestes destructeurs.
     expect(corps).not.toContain("Sections de la fiche");
     expect(corps).not.toContain("Supprimer définitivement");
+    // LS-101, les declinaisons, leurs prix et leur stock.
+    expect(corps).not.toContain("Déclinaisons et prix");
+    expect(corps).not.toContain("Ajouter la déclinaison");
   }
 });
 
@@ -153,6 +156,14 @@ test("aucun formulaire de catalogue n'est rendu sans session", async ({
     await expect(page.getByLabel("Texte affiché")).toHaveCount(0);
     await expect(
       page.getByRole("button", { name: "Ajouter la section" }),
+    ).toHaveCount(0);
+
+    // LS-101. Le stock et le prix sont des donnees d'exploitation : les rendre
+    // avant de rediriger les livrerait dans le HTML a qui n'a pas de session.
+    await expect(page.getByLabel("Prix en euros")).toHaveCount(0);
+    await expect(page.getByLabel("Stock physique")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Ajouter la déclinaison" }),
     ).toHaveCount(0);
   }
 });
