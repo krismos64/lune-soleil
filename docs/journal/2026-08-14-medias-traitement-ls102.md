@@ -192,7 +192,10 @@ sept cas de mutation dont les deux sur l'EXIF.
 
 ## État des tickets
 
-LS-102 **En cours**, socle technique livré. Aucun autre ticket touché.
+LS-102 **En cours**. Socle technique et **tests d'intégration** livrés : la
+couche métier est éprouvée de bout en bout, base et disque compris. Restent les
+Server Actions, l'écran, le branchement de la purge sur LS-72 et la revue
+d'interface. Aucun autre ticket touché.
 
 ## Prochaine étape
 

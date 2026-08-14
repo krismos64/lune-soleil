@@ -383,7 +383,7 @@ vérification d'adresse reste désactivée.
 
 ### Scripts de vérification
 
-Dix-neuf scripts, dont neuf de mutation qui prouvent les autres :
+Vingt-et-un scripts, dont neuf de mutation qui prouvent les autres :
 
 ```bash
 ./prisma/sql-manuel/verifier-schema.sh           # schéma sur base réelle, exige Docker
