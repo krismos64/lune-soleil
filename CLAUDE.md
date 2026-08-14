@@ -154,20 +154,20 @@ un garde-fou qui ne peut pas conclure bloque la migration.
 
 ## Agents
 
-Deux agents projet : `ls-critical-reviewer` relit les zones à risque,
-`ls-conteneurisation` couvre image, Compose, déploiement et retour arrière.
-
-**Ne pas invoquer les agents globaux `docker-devops`, `security-auditor` ni
-`nextjs-architect` ici** : calibrés sur NextAuth v5, PostgreSQL 16, Redis 7 et du
-multi-tenant, quand ce projet est en Better Auth 1.6, PostgreSQL 18, sans Redis
-et mono-tenant, que `docker-devops` traite pourtant comme requis.
+Trois agents projet : `ls-critical-reviewer` relit les zones à risque,
+`ls-conteneurisation` couvre image, Compose, déploiement et retour arrière,
+`ls-frontend-revue` relit une interface avant clôture. **Ne pas invoquer les
+agents globaux `docker-devops`, `security-auditor` ni `nextjs-architect` ici**,
+calibrés sur une autre stack : NextAuth v5, PostgreSQL 16, Redis 7 et du
+multi-tenant, quand ce projet est en Better Auth 1.6, PostgreSQL 18, sans Redis.
 
 ## Conduite du travail
 
 Tout travail suit le skill `story`, y compris une exploration sans ticket : il
-porte le contrôle avant zone critique et la clôture de la traçabilité. Trois
-hooks l'appuient : `PreToolUse` bloque la lecture des secrets, `PostToolUse`
-rejoue `verifier-regles.sh`, `Stop` contrôle commits, configuration et Jira.
+porte le contrôle avant zone critique et la clôture de la traçabilité. Cinq
+hooks l'appuient, table dans `docs/REFERENCES.md` : ils injectent l'état au
+démarrage, bloquent la lecture des secrets, rejouent `verifier-regles.sh`, et
+contrôlent la traçabilité avant compaction comme en fin de session.
 
 YOU MUST clore tout travail significatif sur les **quatre canaux**, et dire
 explicitement ce qui a été mis à jour :
@@ -188,7 +188,7 @@ faire » une tâche déjà faite est pire qu'un journal absent.
 Types, lint et tests concernés au vert, critères d'acceptation vérifiés, rendu
 contrôlé à 320 px si la story touche l'interface. Pour une zone critique s'y
 ajoutent un test négatif de sécurité, un test de concurrence ou d'idempotence, et
-la simulation d'une panne de fournisseur.
+la simulation d'une panne de fournisseur, et `ls-frontend-revue` sur l'interface.
 
 **Montrer la preuve**, sortie de commande et résultat, ne jamais affirmer que ça
 marche. Un contrôle qui n'a jamais échoué sur le défaut qu'il prétend attraper

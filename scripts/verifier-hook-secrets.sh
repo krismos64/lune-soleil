@@ -65,6 +65,17 @@ jouer 2 'less .env'
 jouer 2 'source .env'
 jouer 2 'echo bonjour; cat .env'
 
+# Lecteurs autres que les commandes d'affichage evidentes. Ajoutes le 14 aout
+# 2026 : `cat .env` etait refuse quand `sed -n 1p .env` passait, trou reste
+# theorique tant que `sed` demandait une autorisation, devenu atteignable en
+# versionnant `Bash(sed:*)` et consorts dans settings.json.
+jouer 2 'sed -n 1p .env'
+jouer 2 'awk "{print}" .env'
+jouer 2 'perl -ne "print" .env'
+jouer 2 'nl .env'
+jouer 2 'grep SECRET .env'
+jouer 2 'cut -d= -f2 .env'
+
 echo "  $ok refus corrects"
 
 echo
@@ -85,6 +96,8 @@ jouer 0 'env NODE_ENV=test npm test'
 # Lister les NOMS de variables sans leur contenu, geste recommande par la
 # regle de conduite du projet.
 jouer 0 "sed 's/=.*//' .env"
+jouer 0 'cut -d= -f1 .env'
+jouer 0 'sed -n 1p .env.example'
 
 # Les fichiers d'exemple ne portent que des noms et des formats.
 jouer 0 'cat .env.example'

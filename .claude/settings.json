@@ -30,6 +30,45 @@
       "Edit(./secrets/**)"
     ],
     "allow": [
+      "Bash(./scripts/:*)",
+      "Bash(./prisma/sql-manuel/verifier-schema.sh:*)",
+      "Bash(bash -n:*)",
+      "Bash(sed:*)",
+      "Bash(awk:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(sort:*)",
+      "Bash(uniq:*)",
+      "Bash(comm:*)",
+      "Bash(diff:*)",
+      "Bash(wc:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(chmod:*)",
+      "Bash(python3:*)",
+      "Bash(node:*)",
+      "Bash(git fetch:*)",
+      "Bash(git remote:*)",
+      "Bash(git rev-list:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git show:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git status:*)",
+      "Bash(npm audit:*)",
+      "Bash(npm view:*)",
+      "Bash(npx prisma:*)",
+      "Bash(echo:*)",
+      "Bash(docker info:*)",
+      "Bash(docker stop:*)",
+      "Bash(docker --version)",
+      "Bash(printf:*)",
+      "Bash(bash -x:*)",
       "Bash(npm run:*)",
       "Bash(npm test:*)",
       "Bash(npm ci:*)",
@@ -85,6 +124,17 @@
       "Bash(psql:*)",
       "Bash(pg_dump:*)",
       "Bash(pg_restore:*)",
+      "mcp__claude_ai_Atlassian__getJiraIssue",
+      "mcp__claude_ai_Atlassian__searchJiraIssuesUsingJql",
+      "mcp__claude_ai_Atlassian__addCommentToJiraIssue",
+      "mcp__claude_ai_Atlassian__createJiraIssue",
+      "mcp__claude_ai_Atlassian__editJiraIssue",
+      "mcp__claude_ai_Atlassian__createIssueLink",
+      "mcp__claude_ai_Atlassian__getTransitionsForJiraIssue",
+      "mcp__claude_ai_Atlassian__transitionJiraIssue",
+      "mcp__claude_ai_Atlassian__getAccessibleAtlassianResources",
+      "mcp__plugin_context7_context7__query-docs",
+      "mcp__plugin_context7_context7__resolve-library-id",
       "Edit(./.env)",
       "Edit(./.env.*)",
       "Edit(./**/.env)",
@@ -92,6 +142,27 @@
     ]
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/scripts/hook-session-start.sh"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/scripts/hook-precompact.sh"
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Read|Edit|Write",
