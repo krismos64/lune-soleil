@@ -94,6 +94,7 @@ documentation technique, ticket ou règle qui le contredirait.
 | ADR | Sujet | À lire avant de toucher |
 |---|---|---|
 | ADR-006 | Réservation de stock | stock, panier, commande |
+| ADR-007 | Stockage des médias sur volume local, traitement par sharp | médias, photographies, téléversement, sauvegarde, Nginx |
 | ADR-008 | Envoi des emails par le SMTP du domaine | emails, factures, vérification d'adresse |
 | ADR-021 | Authentification de l'administration | connexion, rôles |
 | ADR-022 | Palette publique | interface, styles |

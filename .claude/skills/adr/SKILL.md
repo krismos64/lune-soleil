@@ -20,11 +20,11 @@ Les décisions déjà identifiées comme ouvertes dans le cahier des charges :
 
 | Numéro | Sujet | À trancher avant |
 |---|---|---|
-| ADR-007 | Stockage des médias, Cloudinary ou objet S3 | l'epic médias |
-| ADR-008 | Fournisseur d'email transactionnel | l'epic emails |
 | ADR-010 | Technique de génération des PDF | l'epic facturation |
 
-Si le sujet correspond à l'une d'elles, reprendre son numéro d'origine.
+Si le sujet correspond à l'une d'elles, reprendre son numéro d'origine. Une
+décision tranchée sort de ce tableau et entre dans la table des ADR acceptés de
+`docs/REFERENCES.md`, qui fait foi sur ce qui est en vigueur.
 
 ## Structure obligatoire
 
