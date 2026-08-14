@@ -202,8 +202,9 @@ describe("schema de creation d'une variante", () => {
         valider(schemaCreationVariante, { ...valide, quantitePhysique }),
       ).toThrow(EntreeInvalideError);
     }
-    expect(valider(schemaCreationVariante, { ...valide, quantitePhysique: 0 }))
-      .toMatchObject({ quantitePhysique: 0 });
+    expect(
+      valider(schemaCreationVariante, { ...valide, quantitePhysique: 0 }),
+    ).toMatchObject({ quantitePhysique: 0 });
   });
 
   /**
