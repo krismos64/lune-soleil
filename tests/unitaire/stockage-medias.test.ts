@@ -234,7 +234,9 @@ describe("suppression des declinaisons publiees", () => {
 
   /** Supprimer deux fois ne leve pas : la tache de nettoyage peut rejouer. */
   it("ne leve pas sur un chemin deja supprime", async () => {
-    await expect(stockage.supprimerPublies("jamais-ecrit")).resolves.toBeUndefined();
+    await expect(
+      stockage.supprimerPublies("jamais-ecrit"),
+    ).resolves.toBeUndefined();
   });
 });
 
