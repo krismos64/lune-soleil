@@ -355,6 +355,37 @@ seule une contrainte le peut. L'ordre des écritures est donc la seule parade,
 ce qui la rend non contournable. Même piège que la permutation de rangs de
 médias.
 
+### La permutation de rangs de médias, mesurée, C9
+
+`media_principal_unique` est un **index partiel** filtré sur `ordre = 1`, pas une
+contrainte : il n'est donc pas différable, contrairement à C22 sur les sections
+de fiche produit. Vérifié le 14 août 2026 en interrogeant le catalogue système de
+PostgreSQL, la table `media` ne porte aucune contrainte d'unicité, seulement cet
+index.
+
+Conséquence mesurée sur PostgreSQL 18.4, le **même échange réussit dans un sens
+et échoue dans l'autre** :
+
+```
+m1 au rang 1, m2 au rang 2
+
+VERT   UPDATE m1 -> 2  puis  UPDATE m2 -> 1      le rang 1 est libéré d'abord
+ROUGE  UPDATE m1 -> 1  puis  UPDATE m2 -> 2
+       ERROR: duplicate key value violates unique constraint
+              "media_principal_unique"
+```
+
+**La transaction ne sauve pas**, l'index étant vérifié ligne à ligne et non au
+`COMMIT`. C'est plus dangereux qu'un échec systématique : un réordonnancement
+écrit sans y penser marche selon l'ordre de parcours des lignes, donc peut
+passer en développement et casser en production.
+
+**La parade est d'écrire le rang 1 en dernier.** Le service de médias trie donc
+ses écritures pour que la ligne qui quitte le rang 1 soit mise à jour avant celle
+qui le prend. Ne pas « simplifier » cette boucle en un parcours naïf de la liste,
+et ne jamais employer d'`ON CONFLICT` : aucun `ON CONFLICT` ne peut arbitrer sur
+un index partiel de ce type.
+
 ## Types
 
 Euro en **centimes entiers**, jamais de flottant. Horodatage en UTC, converti

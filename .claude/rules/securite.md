@@ -2,6 +2,7 @@
 paths:
   - "src/lib/**/*.ts"
   - "src/integrations/email/**/*.ts"
+  - "src/integrations/medias/**/*.ts"
   - "src/services/autorisation.ts"
   - "src/services/reauthentification.ts"
   - "src/services/journal-connexion.ts"
@@ -325,6 +326,52 @@ secret créerait un verrou portant le nom de son choix, que rien ne relâcherait
 
 **Le préfixe `/api/interne/` ne protège rien**, il se lit. C'est le secret qui
 protège.
+
+## Traitement des photographies, LS-102 et ADR-007
+
+**La suppression des métadonnées EXIF est une exigence de sécurité, pas une
+optimisation.** Une photographie prise au smartphone porte la position GPS du
+lieu de prise de vue, c'est-à-dire le domicile de l'exploitante. `PARCOURS.md` :
+« Aucune image n'est jamais servie publiquement sans traitement. C'est un
+blocage, pas un avertissement. »
+
+**Cette protection ne se voit dans aucune ligne de code**, et c'est le risque
+principal nommé par ADR-007. sharp retire l'EXIF **par défaut**, mesuré :
+
+```
+sortie par défaut  ->  aucun EXIF
+avec keepExif()    ->  les octets d'origine sont conservés
+```
+
+**Ne jamais appeler `keepExif()` sur le chemin de traitement**, y compris pour
+conserver un profil colorimétrique ou une orientation. La rotation se fait avant
+l'encodage, par `rotate()`, précisément parce que la consigne d'orientation
+disparaît avec le reste des métadonnées.
+
+Une photographie retouchée n'est pas exemptée : les applications de retouche
+**conservent** souvent l'EXIF d'origine et en ajoutent (logiciel, auteur).
+Aucun raccourci du type « si pas de GPS, publier l'original ».
+
+**Les coordonnées GPS sont encodées en rationnels binaires**, donc introuvables
+par une recherche textuelle dans le fichier. Un test qui chercherait une latitude
+en clair ne prouverait rien : la preuve porte sur l'absence du bloc EXIF entier.
+
+**SVG et PDF sont refusés sur la signature du fichier, avant tout décodage.**
+libvips sait les lire, ce qui suffirait à les faire passer ; ce ne sont pas des
+photographies, et ce sont les deux formats d'entrée les plus complexes qu'il
+expose. L'override de `package.json` corrige quatre CVE de libvips : ne pas lui
+donner un document à analyser. Le refus ne porte ni sur l'extension ni sur le
+type MIME annoncé, que l'appelant peut mentir.
+
+**Un média non traité n'est pas à un endroit servable.** Le volume porte deux
+dossiers, `quarantaine/` et `public/`, et le déplacement de l'un à l'autre est le
+seul geste qui publie. C8 est ainsi une propriété physique : ADR-007 a écarté le
+filtre applicatif parce que ce projet a déjà oublié trois fois un champ d'état
+dans une condition d'accès.
+
+**Tout segment de chemin est validé par une liste d'autorisés.** Un identifiant
+ou un nom de déclinaison qui porterait `..` ou un séparateur ferait écrire hors
+du volume. Énumérer les formes de traversée revient toujours à en oublier une.
 
 ## Ce qui ne se change pas sans ADR
 
