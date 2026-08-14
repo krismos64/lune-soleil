@@ -158,3 +158,39 @@ LS-27 et LS-33.
 
 Aucun exemple daté n'est recopié ici : il se périmerait au commentaire suivant,
 ce qui est arrivé à celui que `CLAUDE.md` portait sur LS-27.
+
+## Les cinq hooks, et ce que chacun garde
+
+`.claude/settings.json` les déclare, `.claude/scripts/` les porte. Un hook
+présent mais non déclaré ne s'exécute jamais, et un script absent produit une
+erreur non bloquante que rien ne signale : la cohérence des deux sens est
+vérifiée par `./scripts/verifier-config-claude.sh`.
+
+| Événement | Script | Ce qu'il garde |
+|---|---|---|
+| `SessionStart` | `hook-session-start.sh` | injecte branche, état du dépôt et prochaine étape du dernier journal. Matcher `startup\|clear` seulement, pour ne pas réinjecter après chaque compaction |
+| `PreToolUse` | `hook-block-secret-files.sh`, `hook-block-secret-commands.sh` | bloque la lecture d'une valeur de secret, fichier comme commande |
+| `PostToolUse` | `hook-verifier-regles.sh` | rejoue `verifier-regles.sh` après une écriture |
+| `PreCompact` | `hook-precompact.sh` | avertit avant que le contexte disparaisse. **Ne peut pas injecter de contexte**, seuls `SessionStart`, `UserPromptSubmit` et `UserPromptExpansion` le peuvent |
+| `Stop` | `hook-warn-unpushed.sh`, `verifier-config-claude.sh`, `verifier-jira.sh` | contrôle le canal Dépôt, la configuration et Jira en fin de session |
+
+Les hooks de `SessionStart` écrivent leur contexte sur **stdout**, en JSON portant
+`hookSpecificOutput.hookEventName` et `additionalContext`. Les autres écrivent
+leurs diagnostics sur **stderr** : une écriture parasite sur stdout casserait
+l'analyse du JSON, et le contexte serait perdu sans message d'erreur.
+
+## Les trois agents projet, et quand les appeler
+
+`.claude/agents/` les porte. Ils ne se déclenchent pas seuls : c'est la session
+qui décide de les invoquer, ce qui rend cette table utile.
+
+| Agent | À appeler | Ne relit pas |
+|---|---|---|
+| `ls-critical-reviewer` | après une story touchant stock, réservation, paiement, webhook, facture ou autorisation | l'interface, la conteneurisation |
+| `ls-conteneurisation` | Dockerfile, Compose, déploiement, image GHCR, retour arrière, sauvegarde | le code applicatif |
+| `ls-frontend-revue` | après un écran d'administration ou une page publique, avant clôture | la logique métier, domaine du premier |
+
+**Ne pas invoquer les agents globaux** `docker-devops`, `security-auditor` ni
+`nextjs-architect` : ils sont calibrés sur NextAuth v5, PostgreSQL 16, Redis 7 et
+du multi-tenant, quand ce projet est en Better Auth 1.6, PostgreSQL 18, sans
+Redis et mono-tenant, que `docker-devops` traite pourtant comme requis.

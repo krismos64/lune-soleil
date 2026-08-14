@@ -111,9 +111,21 @@ fi
 # `.env.example`, `.env.sample` et `.env.template` sont exclus : ils ne
 # portent que des noms et des formats, et la story a besoin de les lire.
 # ---------------------------------------------------------------------------
-if grep -qE '(^|[;&|`(][[:space:]]*)(cat|less|more|head|tail|bat|xxd|od|strings|source|\.)[[:space:]]+[^;&|]*\.env([[:space:]]|$|[;&|])' <<<"$commande"; then
+if grep -qE '(^|[;&|`(][[:space:]]*)(cat|less|more|head|tail|bat|xxd|od|strings|source|nl|sed|awk|perl|python3?|ruby|rg|grep|cut|tr|sort|uniq|tee|xargs|\.)[[:space:]]+[^;&|]*\.env([[:space:]]|$|[;&|])' <<<"$commande"; then
   if ! grep -qE '\.env\.(example|sample|template)' <<<"$commande"; then
-    refuser "lecture directe d'un fichier d'environnement"
+    # Exception, le diagnostic que ce hook recommande lui-même : une commande
+    # qui REMPLACE la valeur pour n'afficher que les noms ne fuite rien.
+    # Elle doit rester possible, sans quoi le message de refus conseillerait
+    # une commande que le hook refuse à son tour.
+    #
+    # Le motif exige la substitution du signe égal jusqu'à la fin de ligne,
+    # `s/=.*//` sous ses formes usuelles. `sed -n 1p .env` ne la porte pas et
+    # reste donc bloqué, ce qui est le cas qui a révélé ce trou : `cat .env`
+    # était refusé quand `sed -n 1p .env` passait, mesuré le 14 août 2026 en
+    # élargissant les permissions à `Bash(sed:*)`.
+    if ! grep -qE 's[/|#]=\.\*[/|#]|cut[[:space:]]+-d.?=.?[[:space:]]+-f[[:space:]]*1' <<<"$commande"; then
+      refuser "lecture directe d'un fichier d'environnement"
+    fi
   fi
 fi
 
