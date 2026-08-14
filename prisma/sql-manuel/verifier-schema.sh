@@ -254,15 +254,36 @@ else
   [ "$pret" -eq 1 ] || abandon "PostgreSQL n'est pas prêt après 60 secondes"
 
   echo "Application du schéma"
-  docker exec -i "$CT" psql -U postgres -d lunesoleil -q -v ON_ERROR_STOP=1 \
-    < "$DIR/schema.sql" >/dev/null 2>&1 \
-    || abandon "l'application de schema.sql a échoué"
-  docker exec -i "$CT" psql -U postgres -d lunesoleil -q -v ON_ERROR_STOP=1 \
-    < "$DIR/001_contraintes_check.sql" >/dev/null 2>&1 \
-    || abandon "l'application de 001_contraintes_check.sql a échoué"
-  docker exec -i "$CT" psql -U postgres -d lunesoleil -q -v ON_ERROR_STOP=1 \
-    < "$DIR/002_contraintes_unicite.sql" >/dev/null 2>&1 \
-    || abandon "l'application de 002_contraintes_unicite.sql a échoué"
+
+  # LA SORTIE D'ERREUR DE POSTGRESQL EST CONSERVEE ET REAFFICHEE EN CAS D'ECHEC.
+  #
+  # Elle partait vers /dev/null avec `2>&1`, ce qui rendait le message
+  # « ABANDON : l'application de schema.sql a échoué » sans aucune cause. Le
+  # 14 août 2026, une panne transitoire de la CI a produit exactement ce message,
+  # et le diagnostic s'est fait à l'aveugle : impossible de distinguer un
+  # PostgreSQL pas encore prêt d'une vraie erreur de syntaxe.
+  #
+  # La sortie normale reste silencieuse, `-q` et la redirection : ce sont
+  # plusieurs centaines de lignes de `CREATE TABLE` dont personne n'a besoin.
+  appliquer() {
+    local fichier="$1" journal
+    journal=$(mktemp)
+
+    if ! docker exec -i "$CT" psql -U postgres -d lunesoleil -q -v ON_ERROR_STOP=1 \
+      < "$DIR/$fichier" >/dev/null 2>"$journal"; then
+      echo
+      echo "Sortie de PostgreSQL :"
+      sed 's/^/  /' "$journal"
+      rm -f "$journal"
+      abandon "l'application de $fichier a échoué"
+    fi
+
+    rm -f "$journal"
+  }
+
+  appliquer "schema.sql"
+  appliquer "001_contraintes_check.sql"
+  appliquer "002_contraintes_unicite.sql"
 fi
 
 # Jeu d'essai minimal : une pièce unique, le cas qui porte le jalon du projet.
