@@ -316,6 +316,22 @@ jobs:
       - name: 6f. Resolution de l'adresse client derriere le proxy
         run: ./scripts/verifier-nginx.sh
 
+      # Rendu du contenu des sections de fiche produit, LS-100, regle C23.
+      # Textuel, aucune base ni conteneur requis.
+      #
+      # CE QU'IL GARDE : `SectionProduit.contenu` est du texte libre saisi dans
+      # l'administration et affiche sur une page publique. Une seule ligne de
+      # dangerouslySetInnerHTML, ou de ses deux equivalents innerHTML = et
+      # insertAdjacentHTML, en fait une injection de script. Le defaut est
+      # SILENCIEUX : les types passent, les tests passent, et la page s'affiche
+      # meme mieux puisque les sauts de ligne deviennent du balisage.
+      #
+      # Son second sens verifie que frontend-design.md enonce toujours la regle :
+      # un controle qui applique une interdiction qu'aucun document ne porte
+      # laisse la session suivante l'ignorer de bonne foi.
+      - name: 6h. Contenu de section rendu en texte simple
+        run: ./scripts/verifier-rendu-texte-simple.sh
+
       # ----------------------------------------------------------------------
       # Controles 2 et 3. Le format entre ici parce qu'un depot ou seule une
       # partie des fichiers est formatee produit des diffs illisibles.

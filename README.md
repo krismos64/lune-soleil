@@ -383,7 +383,7 @@ vérification d'adresse reste désactivée.
 
 ### Scripts de vérification
 
-Dix-sept scripts, dont huit de mutation qui prouvent les autres :
+Dix-neuf scripts, dont neuf de mutation qui prouvent les autres :
 
 ```bash
 ./prisma/sql-manuel/verifier-schema.sh           # schéma sur base réelle, exige Docker
@@ -398,6 +398,8 @@ Dix-sept scripts, dont huit de mutation qui prouvent les autres :
 ./scripts/verifier-image-docker-mutation.sh      # prouve le précédent par mutation
 ./scripts/verifier-actions-sensibles.sh          # réauthentification des actions sensibles
 ./scripts/verifier-actions-sensibles-mutation.sh # prouve le précédent par mutation
+./scripts/verifier-rendu-texte-simple.sh         # rendu HTML interdit sur le contenu de section
+./scripts/verifier-rendu-texte-simple-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-registre-traitements.sh       # registre RGPD confronté au schéma
 ./scripts/verifier-registre-traitements-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-nginx.sh                      # résolution de l'adresse client, LS-91
@@ -538,7 +540,7 @@ destructives doivent bloquer, une migration additive doit passer, et une
 détection qui ne peut pas conclure doit bloquer plutôt que supposer. Lancé contre
 la version d'avant LS-42, il échoue sur sept de ces dix cas.
 
-`verifier-tests-mutation.sh` casse **cinquante-huit fois** le comportement testé
+`verifier-tests-mutation.sh` casse **soixante-deux fois** le comportement testé
 et exige que la suite rougisse à chaque fois : cinq mutations de la primitive
 SQL de réservation, cinq de l'authentification et de l'autorisation, deux de
 l'interface, trois du socle de validation, quatre de la journalisation et de la

@@ -62,6 +62,9 @@ PROXIES="src/lib/proxies-de-confiance.ts"
 LIMITATION_REPO="src/repositories/limitation.ts"
 LIMITATION="src/services/limitation-action.ts"
 SUPPRESSION="src/services/suppression-compte.ts"
+SECTIONS="src/services/sections-produit.ts"
+CATALOGUE="src/services/catalogue.ts"
+DEPOT_SECTIONS="src/repositories/sections-produit.ts"
 
 # TOUT FICHIER MUTE DOIT FIGURER ICI, sans quoi il n'est ni sauvegarde ni
 # restaure et la mutation RESTE SUR LE DISQUE apres l'execution.
@@ -74,7 +77,7 @@ SUPPRESSION="src/services/suppression-compte.ts"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -858,6 +861,65 @@ cas "action sensible privee de sa garde de reauthentification" integration \
 mute "$SUPPRESSION" 's/  await exigerReauthentificationRecente\(enTetes, "IDENTIFIANTS"\);\n\n  return supprimerCompte\(identite\.utilisateurId\);/  const resultatAvantGarde = await supprimerCompte(identite.utilisateurId);\n  await exigerReauthentificationRecente(enTetes, "IDENTIFIANTS");\n\n  return resultatAvantGarde;/'
 cas "garde de reauthentification executee apres la suppression" integration \
   "refuse la suppression sans preuve d'identite recente"
+
+# ---------------------------------------------------------------------------
+# Cas 59 : le reordonnancement des sections sort de sa transaction. LS-100.
+#
+# LE DEFAUT QUE LA STORY DEMANDE D'ATTRAPER. `section_produit_ordre_unique` est
+# DEFERRABLE INITIALLY DEFERRED : la coherence n'est vraie qu'au COMMIT, ce qui
+# est exactement ce qui rend l'echange de deux rangs possible. Hors transaction,
+# chaque `UPDATE` est son propre COMMIT et le premier viole l'unicite.
+#
+# La mutation remplace le client transactionnel par le client principal, ce qui
+# est la forme que prendrait le defaut en vrai : quelqu'un simplifie la fonction
+# en retirant un `$transaction` qui « ne sert a rien », les tests unitaires ne
+# voient rien, et la fiche produit devient impossible a reordonner en production.
+mute "$SECTIONS" 's/  await prisma\.\$transaction\(async \(tx\) => \{\n    const existantes = await depot\.listerSections\(tx, produitId\);/  await (async (tx: typeof prisma) => {\n    const existantes = await depot.listerSections(tx, produitId);/'
+cas "reordonnancement des sections hors transaction" integration \
+  "echange deux sections voisines"
+
+# ---------------------------------------------------------------------------
+# Cas 60 : les sections par defaut sont recreees a chaque enregistrement.
+#
+# LE DEFAUT NOMME PAR ADR-026 DECISION 5, et le plus probable de tous : une
+# initialisation ecrite de bonne foi, du type « garantir que les quatre sections
+# existent », posee la ou elle semble utile. Elle fait revenir vide une section
+# que l'administratrice a delibermment supprimee.
+#
+# AUCUN PARCOURS NOMINAL NE LE REVELE. Sur une fiche dont les quatre sections
+# sont intactes, la mutation ne change rien du tout : `createMany` avec
+# `skipDuplicates` n'ecrit aucune ligne, et tous les autres tests restent verts.
+# Seul un test qui SUPPRIME une section puis reenregistre le produit la voit.
+mute "$CATALOGUE" 's/  try \{\n    await depot\.ecrireInformationsProduit\(prisma, id, \{/  try {\n    await depotSections.creerSections(\n      prisma,\n      lignesDesSectionsParDefaut(id),\n    );\n    await depot.ecrireInformationsProduit(prisma, id, {/'
+cas "sections par defaut recreees a l'enregistrement" integration \
+  "ne recree pas une section supprimee lors d'un enregistrement ulterieur"
+
+# ---------------------------------------------------------------------------
+# Cas 61 : le rang d'une nouvelle section est calcule sur le NOMBRE.
+#
+# Defaut deja rencontre sur ce projet pour les categories, LS-99. Les deux
+# calculs coincident tant qu'aucune section n'a ete supprimee : ils divergent des
+# qu'un trou existe dans la suite des rangs, et le rang demande est alors deja
+# pris. `chk_section_ordre_positif` ne le voit pas, c'est l'unicite qui leve, au
+# COMMIT, avec un message que rien ne relie au formulaire.
+mute "$DEPOT_SECTIONS" 's/  return resultat\._max\.ordre \?\? 0;/  return client.sectionProduit.count({ where: { produitId } });/'
+cas "rang de section calcule sur le nombre et non le maximum" integration \
+  "ajoute au rang suivant, calcule sur le maximum"
+
+# ---------------------------------------------------------------------------
+# Cas 62 : l'appartenance d'une section a son produit n'est plus verifiee.
+#
+# INVARIANT 2 APPLIQUE A UN IDENTIFIANT DE RESSOURCE : il DESIGNE, il n'autorise
+# pas. Sans ce controle, une liste de reordonnancement de la BONNE LONGUEUR
+# portant l'identifiant d'une section d'un autre produit la deplacerait chez le
+# voisin, et le controle d'exhaustivite ne verrait rien : il compte, il ne
+# verifie pas l'appartenance.
+#
+# Le compte seul reste vert, c'est le defaut « compter ne verifie pas le
+# contenu » deja rencontre ici.
+mute "$SECTIONS" 's/      if \(!connues\.has\(id\)\) \{\n        throw new SectionIntrouvableError\(\);\n      \}/      \/\/ verification retiree/'
+cas "appartenance d'une section a son produit non verifiee" integration \
+  "refuse une section appartenant a un autre produit"
 
 echo
 echo "-----------------------------------------"

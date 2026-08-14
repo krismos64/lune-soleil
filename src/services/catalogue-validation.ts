@@ -158,3 +158,42 @@ export const schemaCreationProduit = z
     slug: engendrerSlug(nom),
     categorieId,
   }));
+
+/**
+ * Presentation courte d'un produit, `Produit.descriptionCourte`.
+ *
+ * ELLE N'EST PAS UNE SECTION, et ne le devient jamais, ADR-026 decision 1 :
+ * elle alimente les cartes de catalogue en plus du haut de fiche. En faire une
+ * section la rendrait supprimable, ce qui viderait le catalogue.
+ *
+ * NULLABLE EN BASE, donc la chaine vide est ramenee a `null` : deux
+ * representations du meme vide, l'une en base et l'autre dans le formulaire,
+ * feraient diverger les lectures selon le chemin d'ecriture emprunte.
+ */
+const LONGUEUR_MAX_PRESENTATION = 300;
+
+const schemaPresentationCourte = z
+  .string("Une présentation textuelle est attendue.")
+  .trim()
+  .max(
+    LONGUEUR_MAX_PRESENTATION,
+    `La présentation depasse ${LONGUEUR_MAX_PRESENTATION} caracteres.`,
+  )
+  .transform((valeur) => (valeur.length === 0 ? null : valeur));
+
+/**
+ * Informations generales d'un produit, LS-100.
+ *
+ * NI `slug`, NI `statut`, NI `categorieId`, et `strictObject` fait de leur envoi
+ * une erreur plutot qu'un champ ignore en silence.
+ *
+ * Le slug porte l'adresse publique de la fiche : le recalculer casserait tous
+ * les liens entrants sans redirection. Le statut a ses propres conditions de
+ * transition, media principal et texte alternatif obligatoires, sujet de
+ * LS-103 : le laisser passer par ce formulaire les contournerait.
+ */
+export const schemaInformationsProduit = z.strictObject({
+  id: schemaIdentifiant,
+  nom: schemaNom,
+  descriptionCourte: schemaPresentationCourte,
+});
