@@ -409,10 +409,7 @@ export function MediasProduit({
                 )}
 
                 <div className={styles.champ}>
-                  <label
-                    className={styles.label}
-                    htmlFor={`texte-${media.id}`}
-                  >
+                  <label className={styles.label} htmlFor={`texte-${media.id}`}>
                     Description de la photo
                   </label>
                   <input

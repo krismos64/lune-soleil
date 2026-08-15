@@ -660,7 +660,9 @@ describe("purge branchee sur la tache planifiee", () => {
     const { StockageMedias } = await import("@/integrations/medias/stockage");
     const magasin = new StockageMedias(racineMedias);
     await magasin.preparer();
-    const identifiant = await magasin.deposerEnQuarantaine(await photographie());
+    const identifiant = await magasin.deposerEnQuarantaine(
+      await photographie(),
+    );
 
     /*
      * LE FICHIER EST VIEILLI DE DEUX HEURES, et ce detail porte une propriete.
@@ -676,7 +678,11 @@ describe("purge branchee sur la tache planifiee", () => {
      * d'une heure qui est exerce.
      */
     const ancien = new Date(Date.now() - 2 * 60 * 60 * 1000);
-    await utimes(join(racineMedias, "quarantaine", identifiant), ancien, ancien);
+    await utimes(
+      join(racineMedias, "quarantaine", identifiant),
+      ancien,
+      ancien,
+    );
   }
 
   /**
