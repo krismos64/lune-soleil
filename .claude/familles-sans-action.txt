@@ -59,6 +59,24 @@ PARAMETRES_BOUTIQUE aucun ecran de parametres, hors phase 1
 # serait le meme defaut qu'en LS-99, en sens oppose. Le geste est protege par
 # une confirmation a l'ecran, qui vise l'erreur de manipulation.
 
+# LES TROIS LIGNES ONT ETE RELUES LE 15 AOUT 2026, LS-103, et elles restent
+# vraies. La story ajoute deux Server Actions : publier un produit, l'archiver.
+#
+# AUCUNE N'EST CLASSEE. Publier ou archiver une fiche est du CONTENU de
+# catalogue, reversible dans les deux sens, sans effet sur l'argent ni sur les
+# commandes passees. C'est meme la propriete que C11 garantit et qu'un test
+# prouve : archiver ne modifie AUCUNE ligne de commande existante.
+#
+# PARAMETRES_BOUTIQUE reste donc juste, meme raisonnement qu'en LS-99 pour les
+# categories : la famille vise une configuration d'exploitation a effet
+# financier ou contractuel, pas la visibilite d'une fiche.
+#
+# LE POINT QUI MERITAIT D'ETRE POSE : archiver retire une piece de la vente en
+# ligne, ce qui a un effet commercial reel. Ce n'est pas un critere de
+# classement pour autant. L'effet est REVERSIBLE, republier est prevu et garde
+# meme la date de premiere publication ; et la piece reste vendable en main
+# propre, invariant 6, donc rien n'est detruit.
+
 # IDENTIFIANTS EST SORTIE DE CETTE LISTE LE 13 AOUT 2026, LS-95.
 #
 # `supprimerMonCompte` dans `src/app/compte/actions.ts` est la PREMIERE ACTION
