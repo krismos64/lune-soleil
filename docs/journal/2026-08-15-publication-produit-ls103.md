@@ -128,6 +128,25 @@ l'éditeur, le fil d'Ariane en balise native plutôt qu'un `Link`, et deux
 ponctuations différentes pour le même état d'attente entre les quatre blocs. Son
 troisième point a été traité ici et retiré du ticket.
 
+## Ce que la revue de fin de session a ajouté
+
+**LS-111 créée**, epic LS-3 : une session d'administration dans la suite de bout
+en bout. Deux stories consécutives ont livré des écrans dont le critère de rendu
+aux quatre largeurs n'a pas pu être exécuté, faute de session : la suite ne
+couvre que le refus. Le signaler deux fois sans ticket revenait à laisser une
+dette hors outil, ce que le projet a déjà payé.
+
+**La fiche mémoire d'état du projet était périmée.** Elle annonçait LS-100 comme
+prochaine story alors que LS-100 à LS-103 sont terminées, et portait les chiffres
+du 13 août, 319 tests contre 459, 59 mutations contre 83. C'est exactement le
+défaut que `CLAUDE.md` nomme : un document qui présente comme à faire une tâche
+déjà faite est pire qu'un document absent. Réécrite.
+
+**L'index mémoire dépassait sa limite** de 24,4 Ko depuis plusieurs sessions,
+avec 27,9 Ko : une partie n'était donc pas chargée au démarrage. Les entrées les
+plus longues sont resserrées, les 154 fiches sont conservées, et l'index est
+retombé à 21,9 Ko.
+
 ## Prochaine étape
 
 LS-104, catalogue public, grille, filtres par catégorie et tri. Elle consomme
