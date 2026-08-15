@@ -31,6 +31,51 @@ const nextConfig: NextConfig = {
    */
   output: "standalone",
 
+  /*
+   * Plafond du corps des Server Actions, LS-102. ADR-007.
+   *
+   * LE DEFAUT DE NEXT.JS EST 1 Mo, ce qui refuserait toute photographie de
+   * telephone : ADR-007 a mesure environ 5 Mo pour une photographie courante et
+   * a éprouvé un cas à 17,6 Mo. Le refus viendrait du framework AVANT que la
+   * Server Action ne s'exécute, avec une erreur générique, et le message de
+   * `FichierTropVolumineuxError` ne serait jamais atteint.
+   *
+   * 26 Mo ET NON 25, ET L'ÉCART EST LE POINT. `TAILLE_MAX_OCTETS` borne le
+   * FICHIER à 25 Mo ; ce plafond borne le CORPS DE LA REQUÊTE, qui transporte
+   * le fichier dans un `FormData` multipart avec ses frontières et ses en-têtes
+   * de partie. Le corps est donc toujours strictement plus gros que le fichier.
+   *
+   * Mesuré le 15 août 2026 sur Node 22.23.2, fichier de 25 Mo exactement :
+   *
+   *   fichier            26 214 400 octets
+   *   corps transporté   26 214 575 octets
+   *   surcoût                    175 octets
+   *
+   * Égaler les deux valeurs ouvrait donc une fenêtre d'environ deux cents
+   * octets sous la borne, où un fichier ACCEPTÉ par le service était REFUSÉ par
+   * le transport. Le refus venant du framework avant l'exécution de l'action,
+   * `FichierTropVolumineuxError` n'était jamais atteint et l'écran restait sur
+   * sa progression : le pire des deux comportements, sur la zone exacte que le
+   * message « 25 Mo au maximum » invite à approcher.
+   *
+   * LA MARGE D'UN MÉGAOCTET N'AUTORISE AUCUN FICHIER PLUS GROS : elle laisse
+   * seulement le refus se produire dans le service, qui sait le nommer. Ne pas
+   * la retirer en croyant aligner deux chiffres qui ne mesurent pas la même
+   * chose.
+   *
+   * CE PLAFOND VAUT POUR TOUTES LES SERVER ACTIONS, arbitrage de Christophe du
+   * 15 août 2026, la seconde voie étant un Route Handler dédié. Une action de
+   * texte accepte donc elle aussi un corps de cette taille. Ce qui borne l'abus
+   * n'est pas cette valeur : c'est la limitation de débit d'ADR-027, la garde de
+   * rôle portée par chaque action, et `client_max_body_size` de Nginx en
+   * production.
+   */
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "26mb",
+    },
+  },
+
   turbopack: {
     root: __dirname,
   },
