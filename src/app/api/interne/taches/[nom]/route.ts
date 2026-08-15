@@ -14,12 +14,13 @@
  * arrive par l'URL, donc **non fiable**, et n'est accepte que s'il figure dans
  * la table `TACHES`.
  *
- * CE QU'ELLE NE FAIT PAS : aucune logique metier. Les deux taches sont vides,
- * arbitrage du 30 juillet 2026, et se remplissent en phase 3 et 4. Le squelette
- * accueille, il n'execute pas.
+ * CE QU'ELLE NE DECIDE PAS : aucune logique metier n'est ecrite ici, chaque
+ * tache delegue a son service. Les taches de stock et de paiement restent
+ * vides, arbitrage du 30 juillet 2026, et se remplissent en phase 3 et 4.
  */
 import { engendrerCorrelationId, journaliser } from "@/lib/journal";
 import { secretCronValide } from "@/lib/secret-cron";
+import { purgerQuarantaine } from "@/services/media";
 import { purgerJournaux } from "@/services/purge-journaux";
 import {
   executerSousVerrou,
@@ -83,7 +84,8 @@ export async function POST(
 
   const resultat = await executerSousVerrou(tache, async () => {
     /**
-     * UNE SEULE TACHE PORTE UN TRAVAIL, LS-94, les deux autres restent vides.
+     * DEUX TACHES PORTENT UN TRAVAIL SUR QUATRE, `purge-journaux` en LS-94 et
+     * `purge-quarantaine-medias` en LS-102. Les deux autres restent vides.
      *
      * `purge-journaux` applique les durees de conservation annoncees au
      * registre des traitements, regle E14. Elle est branchee ici plutot que
@@ -140,6 +142,34 @@ export async function POST(
           `Purge en echec sur ${echouees.length} table(s) : ${echouees.join(", ")}`,
         );
       }
+
+      return;
+    }
+
+    /**
+     * `purge-quarantaine-medias` ramasse les originaux dont le televersement a
+     * ete interrompu, LS-102, premier cas d'erreur du parcours 3.
+     *
+     * ELLE LEVE EN CAS D'ECHEC, contrat commun a toutes les taches SAUF
+     * `purge-journaux` : il n'y a ici qu'un seul dossier a parcourir, donc
+     * aucune raison de porter l'echec element par element. `executerSousVerrou`
+     * se charge du journal et du relachement.
+     *
+     * L'AGE MINIMAL EST CELUI DU SERVICE, une heure, et il ne se reduit pas
+     * sans y penser : un fichier depose il y a deux minutes peut etre en cours
+     * de traitement, et le supprimer ferait echouer un televersement en cours.
+     * La marge est de trois ordres de grandeur sur les 1,9 s mesurees a
+     * ADR-007 pour la photographie la plus lourde eprouvee.
+     */
+    if (tache === "purge-quarantaine-medias") {
+      const supprimes = await purgerQuarantaine();
+
+      journaliser(
+        "info",
+        "Purge de la quarantaine des medias terminee",
+        { tache, supprimes },
+        correlation,
+      );
 
       return;
     }

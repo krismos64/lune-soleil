@@ -1127,7 +1127,7 @@ cas "SVG et PDF acceptes au traitement" unitaire \
   "refuse un PDF"
 
 # ---------------------------------------------------------------------------
-# Cas 76 : le SECOND filet de refus est retire, celui qui lit le format analyse.
+# Cas 75 : le SECOND filet de refus est retire, celui qui lit le format analyse.
 #
 # POURQUOI DEUX FILETS ET DEUX CAS. Le refus par signature n'inspecte que les
 # 1024 premiers octets, pour ne pas balayer un fichier de 25 Mo a chaque
@@ -1143,7 +1143,7 @@ cas "second filet de refus de format retire" unitaire \
   "refuse un SVG dont la balise est hors de la fenetre de signature"
 
 # ---------------------------------------------------------------------------
-# Cas 75 : la garde de traversee de chemin est retiree du stockage.
+# Cas 76 : la garde de traversee de chemin est retiree du stockage.
 #
 # UN IDENTIFIANT PORTANT `..` FERAIT ECRIRE HORS DU VOLUME. Les identifiants
 # sont engendres par le module, donc le cas ne devrait pas se produire : la
@@ -1152,6 +1152,26 @@ cas "second filet de refus de format retire" unitaire \
 mute "$STOCKAGE" 's/  if \(!\/\^\[A-Za-z0-9\]\[A-Za-z0-9\._-\]\*\$\/\.test\(valeur\) \|\| valeur\.includes\("\.\."\)\) \{/  if (false) {/'
 cas "garde de traversee de chemin retiree" unitaire \
   "refuse un identifiant qui remonte hors du volume"
+
+# ---------------------------------------------------------------------------
+# Cas 77 : la tache planifiee n'appelle plus la purge de quarantaine. LS-102.
+#
+# CE QUE CE CAS FERME, ET QU'AUCUN GREP NE FERME. `purgerQuarantaine` etait
+# testee isolement depuis le 14 aout, et le depot ne l'appelait NULLE PART :
+# les tests seraient restes identiques si la fonction n'avait jamais ete
+# branchee. C'est le point 3 du reste a faire de LS-102.
+#
+# Trouver `purgerQuarantaine(` dans le fichier de la route ne prouve rien de
+# l'execution : un appel place dans une branche jamais atteinte, ou apres un
+# `return`, satisfait le motif en laissant le trou entier. Meme lecon que les
+# cas 57 et 58 sur la marque `@sensible`.
+#
+# LA MUTATION NEUTRALISE L'APPEL SANS TOUCHER AU RESTE : la route repond
+# toujours 200 et « EXECUTEE », et seul le test qui regarde LE DISQUE le voit.
+# Un orphelin vieilli de deux heures survit alors a la tache.
+mute "$ROUTE_TACHE" 's/      const supprimes = await purgerQuarantaine\(\);/      const supprimes = 0;/'
+cas "tache de purge de quarantaine debranchee" integration \
+  "la tache supprime reellement un orphelin de quarantaine"
 
 echo
 echo "-----------------------------------------"

@@ -65,6 +65,27 @@ export const TACHES = {
    * perdent deux au pire.
    */
   "purge-journaux": { dureeVerrouSecondes: 3600 },
+  /**
+   * Purge de la quarantaine des medias, LS-102. ADR-007.
+   *
+   * CE QU'ELLE RAMASSE : les fichiers deposes en quarantaine dont le
+   * televersement a ete interrompu avant le traitement. C'est le premier cas
+   * d'erreur du parcours 3, et sans elle ces originaux resteraient sur le
+   * volume indefiniment. Ils portent les metadonnees EXIF, position GPS du
+   * domicile comprise : les laisser s'accumuler garde sur le disque
+   * exactement la donnee que cette story existe pour retirer.
+   *
+   * ELLE NE TOUCHE JAMAIS AUX FICHIERS PUBLIES, qui vivent dans l'autre
+   * dossier : `quarantaine/` et `public/` sont deux racines distinctes,
+   * ADR-007, et c'est ce qui rend cette purge sans danger.
+   *
+   * DUREE DE VERROU D'UNE HEURE, comme `purge-journaux` et pour le meme motif :
+   * elle supprime des fichiers plutot que d'en lire quelques-uns, et rien ne
+   * borne a l'avance le temps que prend un parcours de dossier. Sur une tache
+   * quotidienne, une heure ne represente qu'un vingt-quatrieme de la periode,
+   * donc une instance morte ne fait sauter AUCUN cycle.
+   */
+  "purge-quarantaine-medias": { dureeVerrouSecondes: 3600 },
 } as const;
 
 export type NomTache = keyof typeof TACHES;
