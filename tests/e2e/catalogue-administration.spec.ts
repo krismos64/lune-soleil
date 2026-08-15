@@ -128,6 +128,9 @@ test("un POST direct sur les ecrans du catalogue ne produit aucun effet", async 
     // LS-102, les photos et leur televersement.
     expect(corps).not.toContain("Photos de la fiche");
     expect(corps).not.toContain("Ajouter une photo");
+    // LS-103, la publication et l'archivage.
+    expect(corps).not.toContain("Publier la fiche");
+    expect(corps).not.toContain("Archiver la fiche");
   }
 });
 
@@ -179,6 +182,19 @@ test("aucun formulaire de catalogue n'est rendu sans session", async ({
     await expect(page.getByLabel("Description de la photo")).toHaveCount(0);
     await expect(
       page.getByRole("button", { name: "Supprimer la photo" }),
+    ).toHaveCount(0);
+
+    /*
+     * LS-103. LES DEUX BOUTONS DE TRANSITION D'ETAT sont les plus sensibles de
+     * l'ecran apres le champ de fichier : publier rend une fiche visible dans
+     * la boutique, archiver l'en retire. Les rendre sans session les offrirait
+     * a qui charge l'URL.
+     */
+    await expect(
+      page.getByRole("button", { name: "Publier la fiche" }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Archiver la fiche" }),
     ).toHaveCount(0);
   }
 });

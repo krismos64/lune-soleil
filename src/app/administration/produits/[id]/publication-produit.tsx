@@ -135,14 +135,33 @@ export function PublicationProduit({
    */
   const panneau = useRef<HTMLDivElement | null>(null);
   const declencheur = useRef<HTMLButtonElement | null>(null);
+  const carte = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (aArchiver) {
       panneau.current?.focus();
-    } else {
-      declencheur.current?.focus();
-      declencheur.current = null;
+      return;
     }
+
+    /*
+     * LE BOUTON DECLENCHEUR PEUT AVOIR DISPARU, revue LS-103, et c'est le CAS
+     * NOMINAL et non un cas limite. Un archivage reussi revalide l'arbre
+     * serveur : `statut` passe a `ARCHIVE`, et la condition qui rend le bouton
+     * « Archiver la fiche » le retire du DOM. `focus()` sur un noeud detache ne
+     * fait rien, et le focus retombe silencieusement sur `<body>`, au tout
+     * debut du document.
+     *
+     * `isConnected` DISTINGUE LES DEUX CAS. Le bouton survit a une annulation
+     * ou a un echec, ou le focus doit y revenir ; il disparait apres un
+     * archivage reussi, ou le repli est la carte, qui porte l'etat neuf et le
+     * message de succes.
+     */
+    if (declencheur.current?.isConnected) {
+      declencheur.current.focus();
+    } else {
+      carte.current?.focus();
+    }
+    declencheur.current = null;
   }, [aArchiver]);
 
   const etat = ETAT_AFFICHE[statut];
@@ -168,14 +187,35 @@ export function PublicationProduit({
 
       if (resultat.statut === "NON_PUBLIABLE") {
         setRefuses(resultat.motifs);
+        /*
+         * LE MESSAGE PORTE LES MOTIFS, revue LS-103, et ne renvoie pas a une
+         * liste muette. La liste vit AU-DESSUS de cette region dans l'ordre du
+         * DOM, donc « ci-dessous » designait le mauvais sens, et surtout elle
+         * change hors de toute region live : un lecteur d'ecran entendait
+         * « corrigez les points » puis plus rien.
+         *
+         * Les motifs sont donc repris ici, dans le `role="alert"` qui est
+         * annonce. La redondance visuelle avec la liste est assumee : l'un sert
+         * l'oeil, l'autre l'oreille.
+         */
         setErreur(
-          "La fiche n'est pas complète : corrigez les points ci-dessous avant de publier.",
+          `La fiche n'est pas complète. ${resultat.motifs
+            .map((motif) => MOTIF_AFFICHE[motif])
+            .join(" ")}`,
         );
         return;
       }
 
       const message = messageDe(resultat);
       if (message) {
+        /*
+         * LES MOTIFS D'UN REFUS ANTERIEUR SONT EFFACES, revue LS-103. Sans
+         * cela, une tentative refusee pour une AUTRE raison, base injoignable
+         * ou etat change, laissait a l'ecran la liste du refus precedent :
+         * l'exploitante lisait « service indisponible » au-dessus d'une liste
+         * de manques peut-etre deja corriges.
+         */
+        setRefuses(null);
         setErreur(message);
         return;
       }
@@ -192,9 +232,17 @@ export function PublicationProduit({
         Publication
       </h2>
 
-      <div className={styles.carte}>
+      <div className={styles.carte} ref={carte} tabIndex={-1}>
         <div className={styles.enTeteVariante}>
-          <h3 className={styles.referenceVariante}>{etat.titre}</h3>
+          {/*
+           * UN `span` ET NON UN `h3`, revue LS-103. « Publiée » est un ETAT, pas
+           * le titre d'une sous-section : en `h3`, un lecteur d'ecran qui
+           * parcourt les titres entend « Publication » puis « Publiée » et
+           * annonce une sous-section qui n'existe pas. La carte de variante
+           * emploie bien un `h3`, mais son titre y est une reference, qui
+           * identifie l'element.
+           */}
+          <span className={styles.referenceVariante}>{etat.titre}</span>
         </div>
         <p className={styles.aide}>{etat.explication}</p>
 
@@ -209,13 +257,27 @@ export function PublicationProduit({
            */
           <div className={styles.avertissement}>
             <p>Il manque encore :</p>
-            <ul>
+            <ul className={styles.manques}>
               {manquants.map((motif) => (
                 <li key={motif}>{MOTIF_AFFICHE[motif]}</li>
               ))}
             </ul>
           </div>
         )}
+
+        {/*
+         * LA REGION D'ATTENTE EST MONTEE EN PERMANENCE, VIDE, LS-85 : un
+         * `role="status"` insere apres coup n'est pas toujours annonce.
+         *
+         * ELLE MANQUAIT, revue LS-103, alors que les quatre blocs voisins de cet
+         * ecran l'ont tous. Publier fait un aller-retour serveur avec
+         * transaction puis deux revalidations : sur une connexion mobile,
+         * l'ecran restait muet plusieurs secondes, et seule l'opacite des
+         * boutons desactives disait qu'il se passait quelque chose.
+         */}
+        <p className={styles.aide} role="status" aria-live="polite">
+          {enCours ? "Enregistrement en cours…" : ""}
+        </p>
 
         <p className={styles.erreur} role="alert">
           {erreur ?? ""}
@@ -278,12 +340,12 @@ export function PublicationProduit({
               }
             }}
           >
-            <p
+            <h3
               className={styles.confirmationTitre}
               id="confirmation-archivage-titre"
             >
               Archiver cette fiche ?
-            </p>
+            </h3>
             {/*
              * LA CONFIRMATION DIT CE QUI NE CHANGE PAS, et pas seulement ce qui
              * change. « Retirer du catalogue » se lit facilement comme
