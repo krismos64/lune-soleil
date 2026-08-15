@@ -22,6 +22,7 @@
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { valider } from "@/lib/validation";
+import * as depotCatalogue from "@/repositories/catalogue";
 import * as depot from "@/repositories/variante";
 import {
   schemaArchivageVariante,
@@ -252,8 +253,55 @@ export async function archiverVariante(entree: unknown): Promise<void> {
     throw new ReservationActiveError(reservations);
   }
 
+  /*
+   * C19, ARCHIVER LA DERNIERE VARIANTE VIVANTE ARCHIVE LE PRODUIT.
+   *
+   * POURQUOI CETTE REGLE EXISTE. C1 exige qu'un produit publie ait au moins une
+   * variante non archivee, et c'est un controle APPLICATIF : aucune contrainte
+   * de base ne peut le porter, il compte des lignes d'une autre table. C1 seule
+   * ne garde donc que le chemin de la PUBLICATION. Sans C19, archiver une a une
+   * les variantes d'un produit deja publie laisse ce produit `ACTIF` avec rien
+   * de vendable : le catalogue affiche une fiche sans prix ni stock, et le
+   * bouton d'achat porte sur une variante qui n'existe plus.
+   *
+   * `MODELE-CONCEPTUEL.md` le dit ainsi : C1 et C19 « ferment ensemble » ce cas.
+   * Le trou etait ouvert depuis LS-101, qui a livre l'archivage de variante sans
+   * son pendant. Arbitrage de Christophe du 15 aout 2026 pour le traiter ici.
+   *
+   * LA TRANSACTION EST NON NEGOCIABLE. Les deux ecritures decrivent un seul
+   * fait metier : sans elle, une panne entre les deux laisse exactement l'etat
+   * que la regle interdit, et rien ne le rattrape ensuite.
+   *
+   * SEUL UN PRODUIT `ACTIF` EST ARCHIVE. Un brouillon dont on archive la
+   * derniere variante reste un brouillon : il n'est pas dans le catalogue, donc
+   * il n'y a rien a en retirer, et le passer en `ARCHIVE` forcerait l'exploitante
+   * a le desarchiver pour reprendre un travail en cours.
+   */
   try {
-    await depot.archiverVariante(prisma, id, new Date());
+    await prisma.$transaction(async (tx) => {
+      await depot.archiverVariante(tx, id, new Date());
+
+      const restantes = await depotCatalogue.compterVariantesVivantes(
+        tx,
+        existante.produitId,
+      );
+      if (restantes > 0) {
+        return;
+      }
+
+      const produit = await depotCatalogue.lireEtatPublication(
+        tx,
+        existante.produitId,
+      );
+      if (produit?.statut !== "ACTIF") {
+        return;
+      }
+
+      await depotCatalogue.ecrireStatutProduit(tx, existante.produitId, {
+        statut: "ARCHIVE",
+        archiveA: new Date(),
+      });
+    });
   } catch (erreur) {
     if (estErreurPrisma(erreur, "P2025")) {
       throw new VarianteIntrouvableError();

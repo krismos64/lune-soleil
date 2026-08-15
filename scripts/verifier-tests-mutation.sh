@@ -1173,6 +1173,75 @@ mute "$ROUTE_TACHE" 's/      const supprimes = await purgerQuarantaine\(\);/    
 cas "tache de purge de quarantaine debranchee" integration \
   "la tache supprime reellement un orphelin de quarantaine"
 
+# ---------------------------------------------------------------------------
+# Cas 78 : C1, la variante cesse d'etre exigee a la publication. LS-103.
+#
+# C1, C7 ET C8 SONT DES CONTROLES APPLICATIFS DE NIVEAU 3, et c'est ce qui rend
+# ces cas necessaires. Aucune contrainte de base ne peut les porter : elles
+# comptent des lignes d'AUTRES tables, variantes et medias. Le service est donc
+# la seule ligne de defense, et une condition retiree ne fait rougir aucun
+# controle de schema.
+#
+# CHAQUE MUTATION RETIRE UNE SEULE CONDITION, jamais le bloc entier : retirer
+# les quatre d'un coup ferait rougir tous les tests et ne dirait pas lequel
+# porte quoi.
+mute "$CATALOGUE" 's/  if \(conditions\.variantesVivantes === 0\) \{\n    motifs\.push\("AUCUNE_VARIANTE"\);\n  \}/  \/\/ C1 retiree/'
+cas "condition C1 retiree, produit sans variante publiable" integration \
+  "refuse un produit sans variante, et le nomme"
+
+# ---------------------------------------------------------------------------
+# Cas 79 : C7, le texte alternatif cesse d'etre exige.
+#
+# EXIGENCE WCAG 2.2 AA, pas un confort : une photo sans description est
+# inaccessible a qui ne la voit pas, et la fiche produit est un parcours
+# critique.
+mute "$CATALOGUE" 's/  if \(conditions\.mediasSansTexte > 0\) \{\n    motifs\.push\("TEXTE_ALTERNATIF_MANQUANT"\);\n  \}/  \/\/ C7 retiree/'
+cas "condition C7 retiree, photo sans description publiable" integration \
+  "refuse un produit dont une photo n'a pas de texte alternatif, C7"
+
+# ---------------------------------------------------------------------------
+# Cas 80 : C8, une photo en echec ne bloque plus la publication.
+#
+# LE PLUS GRAVE DES TROIS. `PARCOURS.md` : « aucune image n'est jamais servie
+# publiquement sans traitement, c'est un blocage et pas un avertissement ». Une
+# photo non traitee porte encore ses metadonnees EXIF, donc la position GPS du
+# domicile de l'exploitante.
+mute "$CATALOGUE" 's/  if \(conditions\.mediasNonTraites > 0\) \{\n    motifs\.push\("MEDIA_NON_TRAITE"\);\n  \}/  \/\/ C8 retiree/'
+cas "condition C8 retiree, photo en echec publiable" integration \
+  "refuse un produit dont une photo est en echec de traitement"
+
+# ---------------------------------------------------------------------------
+# Cas 81 : l'archivage « met a jour » les lignes de commande. C11, invariant 3.
+#
+# LA MUTATION QU'UNE RELECTURE ECRIRAIT DE BONNE FOI, en voulant garder le
+# catalogue et l'historique coherents. C'est exactement l'inverse qu'il faut :
+# une ligne de commande porte une COPIE FIGEE, et c'est ce qui rend une facture
+# opposable. La toucher reecrirait l'histoire.
+mute "$CATALOGUE" 's/  await depot\.ecrireStatutProduit\(prisma, produitId, \{\n    statut: "ARCHIVE",/  await prisma.ligneCommande.updateMany({\n    where: { variante: { produitId } },\n    data: { libelleProduitFige: "Produit archive" },\n  });\n  await depot.ecrireStatutProduit(prisma, produitId, {\n    statut: "ARCHIVE",/'
+cas "archivage qui reecrit les lignes de commande" integration \
+  "archiver un produit ne modifie aucune ligne de commande"
+
+# ---------------------------------------------------------------------------
+# Cas 82 et 83 : C19 rate dans ses DEUX sens. LS-103.
+#
+# POURQUOI DEUX CAS ET NON UN. Une regle d'archivage en cascade se trompe de
+# deux facons opposees, et un seul test ne distingue pas les deux :
+#
+#   trop tot   le produit est archive des la PREMIERE variante archivee, ce qui
+#              retire du catalogue une piece encore vendable dans une autre
+#              declinaison
+#   jamais     le produit reste `ACTIF` sans rien de vendable, le trou que C19
+#              existe pour fermer
+#
+# Le second est le defaut qui existait reellement avant LS-103.
+mute "$VARIANTE" 's/      if \(restantes > 0\) \{\n        return;\n      \}/      if (restantes < 0) {\n        return;\n      }/'
+cas "C19 archive des la premiere variante archivee" integration \
+  "laisse le produit actif s'il reste une variante vivante"
+
+mute "$VARIANTE" 's/      if \(restantes > 0\) \{\n        return;\n      \}/      if (restantes >= 0) {\n        return;\n      }/'
+cas "C19 n'archive jamais le produit" integration \
+  "archive le produit quand sa derniere variante vivante part"
+
 echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then

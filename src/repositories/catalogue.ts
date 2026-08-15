@@ -10,6 +10,7 @@
  * coherence n'est vraie qu'au COMMIT. Le reste passe par l'API typee.
  */
 import { Prisma } from "@/generated/prisma/client";
+import type { StatutProduit } from "@/generated/prisma/enums";
 
 /**
  * Client utilisable par ces fonctions : le client principal ou le client
@@ -167,4 +168,112 @@ export async function ecrireInformationsProduit(
   donnees: { nom: string; descriptionCourte: string | null },
 ) {
   return client.produit.update({ where: { id }, data: donnees });
+}
+
+/**
+ * Etat de publication d'un produit, LS-103.
+ *
+ * `publieA` EST RENDU AVEC LE STATUT parce que la publication doit savoir s'il
+ * existe deja : un produit archive puis republie GARDE sa date d'origine, le
+ * schema le dit explicitement. La lire au moment d'ecrire evite une seconde
+ * requete et rend la condition visible dans le service.
+ */
+export async function lireEtatPublication(client: ClientBase, id: string) {
+  return client.produit.findUnique({
+    where: { id },
+    select: { id: true, statut: true, publieA: true, archiveA: true },
+  });
+}
+
+/**
+ * Ce qui manque a un produit pour etre publiable. C1, C7 et C8.
+ *
+ * UNE SEULE REQUETE POUR LES QUATRE CONDITIONS, et surtout des COMPTES plutot
+ * que des listes : l'ecran nomme ce qui manque, il n'a pas besoin de savoir
+ * QUEL media n'a pas de texte alternatif. Ramener les lignes entieres ferait
+ * transiter des chemins de fichiers pour afficher un nombre.
+ *
+ * LES MEDIAS EN ECHEC SONT COMPTES A PART DE CEUX SANS TEXTE, C8 et C7 etant
+ * deux regles distinctes : un media en echec ne se corrige qu'en le supprimant
+ * et en le reteleversant, un texte alternatif manquant se saisit sur place. Les
+ * fondre en un seul compte donnerait un message qui ne dit pas quoi faire.
+ */
+export async function compterConditionsPublication(
+  client: ClientBase,
+  produitId: string,
+): Promise<{
+  variantesVivantes: number;
+  mediasTraites: number;
+  mediasNonTraites: number;
+  mediasSansTexte: number;
+  aMediaPrincipal: boolean;
+}> {
+  const [
+    variantesVivantes,
+    mediasTraites,
+    mediasNonTraites,
+    mediasSansTexte,
+    principal,
+  ] = await Promise.all([
+    client.variante.count({ where: { produitId, archiveeA: null } }),
+    client.media.count({ where: { produitId, statutTraitement: "TRAITE" } }),
+    client.media.count({
+      where: { produitId, statutTraitement: { not: "TRAITE" } },
+    }),
+    // LE TEXTE VIDE COMPTE COMME MANQUANT au meme titre que `null` : le
+    // schema Zod de LS-102 transforme deja une saisie vide en `null`, mais
+    // une ligne ecrite autrement ne passe pas par lui.
+    client.media.count({
+      where: {
+        produitId,
+        OR: [{ texteAlternatif: null }, { texteAlternatif: "" }],
+      },
+    }),
+    client.media.findFirst({
+      where: { produitId, ordre: 1 },
+      select: { id: true },
+    }),
+  ]);
+
+  return {
+    variantesVivantes,
+    mediasTraites,
+    mediasNonTraites,
+    mediasSansTexte,
+    aMediaPrincipal: principal !== null,
+  };
+}
+
+/**
+ * Ecrit le statut d'un produit et les horodatages qui l'accompagnent.
+ *
+ * `publieA` N'EST PASSE QUE S'IL DOIT CHANGER. Le schema est explicite : un
+ * produit depublie puis republie GARDE sa date d'origine, comme `Avis.publieA`,
+ * parce qu'elle porte l'anteriorite affichee et le tri des nouveautes. La
+ * reecrire ferait remonter en tete des nouveautes un produit ancien.
+ */
+export async function ecrireStatutProduit(
+  client: ClientBase,
+  id: string,
+  donnees: {
+    statut: StatutProduit;
+    publieA?: Date;
+    archiveA?: Date | null;
+  },
+) {
+  return client.produit.update({ where: { id }, data: donnees });
+}
+
+/**
+ * Nombre de variantes non archivees d'un produit, C19.
+ *
+ * DISTINCT DE `compterConditionsPublication`, qui compte cinq choses en une
+ * requete pour l'ecran. Celle-ci sert la transaction d'archivage de variante,
+ * ou compter le reste serait du travail inutile.
+ */
+export async function compterVariantesVivantes(
+  client: ClientBase,
+  produitId: string,
+): Promise<number> {
+  return client.variante.count({ where: { produitId, archiveeA: null } });
 }
