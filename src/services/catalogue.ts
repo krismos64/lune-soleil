@@ -346,3 +346,156 @@ export async function enregistrerInformationsProduit(
     throw erreur;
   }
 }
+
+/**
+ * Ce qui manque a un produit pour etre publiable, C1, C7 et C8.
+ *
+ * UNE LISTE ET NON UN BOOLEEN. Le parcours 3 exige que l'ecran indique LE CHAMP
+ * MANQUANT : rendre « publication refusee » obligerait l'exploitante a deviner
+ * laquelle des quatre conditions a echoue, sur un ecran qui porte trois blocs.
+ *
+ * L'ORDRE DES MOTIFS SUIT L'ORDRE DU PARCOURS 3, variante puis photos puis
+ * descriptions : c'est l'ordre dans lequel le travail se fait, donc celui dans
+ * lequel il faut le reprendre.
+ */
+export type MotifNonPubliable =
+  /** C1, aucune variante non archivee : ni prix ni stock, donc rien a vendre. */
+  | "AUCUNE_VARIANTE"
+  /** C7 et C9, aucune photo de rang 1 : la boutique n'a rien a montrer. */
+  | "AUCUN_MEDIA_PRINCIPAL"
+  /** C8, au moins une photo dont le traitement a echoue ou n'est pas fini. */
+  | "MEDIA_NON_TRAITE"
+  /** C7, au moins une photo sans texte alternatif, exigence WCAG 2.2 AA. */
+  | "TEXTE_ALTERNATIF_MANQUANT";
+
+/** Le produit ne remplit pas les conditions de publication. */
+export class ProduitNonPubliableError extends Error {
+  constructor(readonly motifs: MotifNonPubliable[]) {
+    super(`Publication refusee : ${motifs.join(", ")}.`);
+    this.name = "ProduitNonPubliableError";
+  }
+}
+
+/** La transition demandee n'a pas de sens depuis l'etat courant. */
+export class TransitionProduitInvalideError extends Error {
+  constructor(
+    readonly statutActuel: StatutProduit,
+    readonly statutVise: StatutProduit,
+  ) {
+    super(`Transition refusee : ${statutActuel} vers ${statutVise}.`);
+    this.name = "TransitionProduitInvalideError";
+  }
+}
+
+/**
+ * Enumere ce qui manque, sans rien ecrire.
+ *
+ * SERT L'ECRAN AUTANT QUE LA PUBLICATION : l'ecran l'appelle pour afficher la
+ * liste AVANT que l'exploitante ne tente de publier, ce qui lui evite un refus
+ * qu'elle aurait pu voir venir. La publication la rappelle pour decider, sans
+ * faire confiance a ce que l'ecran a affiche : l'etat a pu changer entre les
+ * deux, et un client n'autorise rien, invariant 2.
+ */
+export async function motifsNonPubliable(
+  client: depot.ClientBase,
+  produitId: string,
+): Promise<MotifNonPubliable[]> {
+  const conditions = await depot.compterConditionsPublication(
+    client,
+    produitId,
+  );
+  const motifs: MotifNonPubliable[] = [];
+
+  if (conditions.variantesVivantes === 0) {
+    motifs.push("AUCUNE_VARIANTE");
+  }
+  if (!conditions.aMediaPrincipal || conditions.mediasTraites === 0) {
+    motifs.push("AUCUN_MEDIA_PRINCIPAL");
+  }
+  if (conditions.mediasNonTraites > 0) {
+    motifs.push("MEDIA_NON_TRAITE");
+  }
+  if (conditions.mediasSansTexte > 0) {
+    motifs.push("TEXTE_ALTERNATIF_MANQUANT");
+  }
+
+  return motifs;
+}
+
+/**
+ * Publie un produit, parcours 3 etape 7.
+ *
+ * LES CONDITIONS SONT RELUES DANS LA TRANSACTION, jamais reprises de l'ecran.
+ * C1, C7 et C8 sont des controles APPLICATIFS de niveau 3 : aucune contrainte
+ * de base ne peut les porter, elles comptent des lignes d'autres tables. Le
+ * service est donc le seul endroit qui les tient, et un appel direct a la
+ * Server Action doit y buter comme un clic.
+ *
+ * `publieA` N'EST ECRIT QU'A LA PREMIERE PUBLICATION. Le schema l'exige : un
+ * produit depublie puis republie GARDE sa date d'origine, qui porte
+ * l'anteriorite et le tri des nouveautes. La reecrire ferait remonter en tete
+ * du catalogue un produit ancien qu'on vient de reactiver.
+ *
+ * PUBLIER UN PRODUIT DEJA `ACTIF` EST REFUSE plutot qu'ignore. Le silence
+ * laisserait croire a un effet ; le refus dit que rien n'etait a faire.
+ */
+export async function publierProduit(produitId: string): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    const produit = await depot.lireEtatPublication(tx, produitId);
+    if (!produit) {
+      // UN `throw` ET NON UN `return`, dans `$transaction` seule une exception
+      // annule : un refus par retour validerait les ecritures deja faites.
+      throw new ProduitIntrouvableError();
+    }
+
+    if (produit.statut === "ACTIF") {
+      throw new TransitionProduitInvalideError("ACTIF", "ACTIF");
+    }
+
+    const motifs = await motifsNonPubliable(tx, produitId);
+    if (motifs.length > 0) {
+      throw new ProduitNonPubliableError(motifs);
+    }
+
+    await depot.ecrireStatutProduit(tx, produitId, {
+      statut: "ACTIF",
+      // Premiere publication seulement, voir ci-dessus.
+      ...(produit.publieA === null ? { publieA: new Date() } : {}),
+      // REPUBLIER EFFACE LA DATE D'ARCHIVAGE, sans quoi un produit `ACTIF`
+      // porterait un `archiveA` renseigne : deux affirmations contradictoires
+      // dans la meme ligne, dont la prochaine requete choisirait l'une ou
+      // l'autre selon ce qu'elle filtre.
+      archiveA: null,
+    });
+  });
+}
+
+/**
+ * Archive un produit, il sort du catalogue.
+ *
+ * AUCUNE LIGNE DE COMMANDE N'EST TOUCHEE, C11 et invariant 3. Les lignes
+ * portent une copie figee du nom et du prix : c'est ce qui rend une facture
+ * opposable, et c'est le critere 5 de cette story, prouve par un test qui relit
+ * une commande apres archivage.
+ *
+ * AUCUN MOUVEMENT DE STOCK NON PLUS. Retirer un produit du catalogue web ne
+ * fait disparaitre aucune piece : elle reste vendable en main propre, C16 pour
+ * les variantes, invariant 6. Ne pas « remettre le stock a zero » ici.
+ */
+export async function archiverProduit(produitId: string): Promise<void> {
+  const produit = await depot.lireEtatPublication(prisma, produitId);
+  if (!produit) {
+    throw new ProduitIntrouvableError();
+  }
+
+  if (produit.statut === "ARCHIVE") {
+    throw new TransitionProduitInvalideError("ARCHIVE", "ARCHIVE");
+  }
+
+  await depot.ecrireStatutProduit(prisma, produitId, {
+    statut: "ARCHIVE",
+    archiveA: new Date(),
+    // `publieA` N'EST PAS EFFACE : il porte la date de PREMIERE publication,
+    // un fait historique que l'archivage ne dement pas.
+  });
+}

@@ -9,8 +9,9 @@
  * peripherie et ne peut pas relire la session en base, il ne verrait que la
  * presence d'un cookie, ni sa validite ni le role.
  */
-import type { StatutProduit } from "@/generated/prisma/enums";
 import { headers } from "next/headers";
+
+import { prisma } from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
 
 import {
@@ -18,12 +19,13 @@ import {
   exigerAdministratrice,
 } from "@/services/autorisation";
 import { declinaisonsAttendues } from "@/integrations/medias/traitement";
-import { lireProduit } from "@/services/catalogue";
+import { lireProduit, motifsNonPubliable } from "@/services/catalogue";
 import { listerMedias } from "@/services/media";
 import { listerSections } from "@/services/sections-produit";
 import { compterLignesDeCommande, listerVariantes } from "@/services/variante";
 import { EditeurProduit } from "./editeur-produit";
 import { MediasProduit } from "./medias-produit";
+import { PublicationProduit } from "./publication-produit";
 import { VariantesProduit } from "./variantes-produit";
 import styles from "./editeur.module.css";
 
@@ -78,28 +80,6 @@ if (!declinaisonsAttendues().includes(NOM_VIGNETTE)) {
   );
 }
 
-/**
- * Ce que l'ecran dit de l'etat du produit, UNE ENTREE PAR VALEUR DE L'ENUM.
- *
- * POURQUOI UN OBJET INDEXE PAR `StatutProduit` ET NON UN TEXTE EN DUR. La
- * premiere version ecrivait « Brouillon : cette fiche n'est pas visible dans la
- * boutique », phrase vraie a la creation et FAUSSE des que LS-103 publiera le
- * produit. Rien n'aurait rougi : `tsc` ne voit pas un texte qui ne consomme pas
- * la valeur, et aucun test ne lit ce paragraphe.
- *
- * SOUS CETTE FORME, AJOUTER UNE VALEUR A `StatutProduit` CASSE LA COMPILATION.
- * C'est le piege connu de l'enum ajoute, deja rencontre deux fois ici sur un
- * index partiel puis sur un ternaire du JSX : le `Record` le rend visible au
- * lieu de le laisser passer.
- */
-const ETAT_AFFICHE: Record<StatutProduit, string> = {
-  BROUILLON:
-    "Brouillon : cette fiche n'apparaît pas dans la boutique. Sa publication demande une photo et une variante.",
-  ACTIF: "Publiée : cette fiche est visible dans la boutique.",
-  ARCHIVE:
-    "Archivée : cette fiche est retirée de la boutique. Les commandes déjà passées ne changent pas.",
-};
-
 export default async function PageEditeurProduit({
   params,
 }: {
@@ -129,6 +109,14 @@ export default async function PageEditeurProduit({
   const sections = await listerSections(produit.id);
   const variantes = await listerVariantes(produit.id);
   const medias = await listerMedias(produit.id);
+
+  /*
+   * CE QUI MANQUE EST CALCULE AU RENDU, pour que l'ecran le montre AVANT toute
+   * tentative de publication. Le service le relit dans sa transaction au moment
+   * d'ecrire : cet affichage est un confort, jamais une autorisation,
+   * invariant 2.
+   */
+  const motifs = await motifsNonPubliable(prisma, produit.id);
 
   /*
    * LE COMPTE DE COMMANDES PAR VARIANTE SERT L'AVERTISSEMENT D'ADR-029.
@@ -164,7 +152,19 @@ export default async function PageEditeurProduit({
        * qu'elles portent le prix et le stock.
        */}
       <h1 className={styles.titre}>{produit.nom}</h1>
-      <p className={styles.etat}>{ETAT_AFFICHE[produit.statut]}</p>
+      {/*
+       * LE BLOC DE PUBLICATION EST EN TETE, apres le titre, LS-103.
+       *
+       * Il porte l'etat de la fiche et ce qui manque pour la publier : c'est la
+       * premiere chose a lire en ouvrant l'ecran, parce qu'elle dit si le
+       * travail est fini. Le placer en bas obligerait a defiler tout le
+       * formulaire pour savoir ou on en est, a 320 px surtout.
+       */}
+      <PublicationProduit
+        produitId={produit.id}
+        statut={produit.statut}
+        motifs={motifs}
+      />
 
       <EditeurProduit
         produitId={produit.id}
