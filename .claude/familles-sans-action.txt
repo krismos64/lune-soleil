@@ -37,6 +37,28 @@ PARAMETRES_BOUTIQUE aucun ecran de parametres, hors phase 1
 # renommee a tort se renomme a nouveau. Etirer une famille pour se rassurer est
 # le meme defaut que l'etirer pour fermer une dette, en sens oppose.
 
+# LES TROIS LIGNES ONT ETE RELUES LE 15 AOUT 2026, LS-102, et elles restent
+# vraies. La story ajoute quatre Server Actions de medias : televersement,
+# texte alternatif, reordonnancement, suppression.
+#
+# AUCUNE N'EST CLASSEE, et la question a ete posee plutot que laissee implicite.
+#
+#   DONNEES_CLIENTS     une photographie de bijou est du contenu de catalogue.
+#                       Elle porte bien une donnee personnelle, la position GPS
+#                       du domicile de L'EXPLOITANTE, mais la parade retenue est
+#                       le TRAITEMENT qui la retire, ADR-007, et non une garde de
+#                       fraicheur d'identite. Aucune donnee de client n'y figure.
+#   PARAMETRES_BOUTIQUE meme raisonnement qu'en LS-99 pour les categories : du
+#                       contenu editorial, sans effet sur l'argent ni sur les
+#                       commandes passees.
+#
+# LA SUPPRESSION D'UN MEDIA EST POURTANT IRREVERSIBLE, l'original ayant ete
+# detruit apres traitement : la photographie doit etre reprise au telephone.
+# CE N'EST PAS UN CRITERE DE CLASSEMENT. Aucune des quatre familles n'est
+# definie par l'irreversibilite, et etirer l'une d'elles pour couvrir ce cas
+# serait le meme defaut qu'en LS-99, en sens oppose. Le geste est protege par
+# une confirmation a l'ecran, qui vise l'erreur de manipulation.
+
 # IDENTIFIANTS EST SORTIE DE CETTE LISTE LE 13 AOUT 2026, LS-95.
 #
 # `supprimerMonCompte` dans `src/app/compte/actions.ts` est la PREMIERE ACTION

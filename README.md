@@ -540,16 +540,22 @@ destructives doivent bloquer, une migration additive doit passer, et une
 détection qui ne peut pas conclure doit bloquer plutôt que supposer. Lancé contre
 la version d'avant LS-42, il échoue sur sept de ces dix cas.
 
-`verifier-tests-mutation.sh` casse **soixante-seize fois** le comportement testé
-et exige que la suite rougisse à chaque fois : cinq mutations de la primitive
-SQL de réservation, cinq de l'authentification et de l'autorisation, deux de
-l'interface, trois du socle de validation, quatre de la journalisation et de la
-santé depuis LS-73, deux de la limitation de débit depuis LS-79, deux de la
-session et de la preuve d'identité depuis LS-81, huit du journal des connexions
-depuis LS-80, cinq du verrou de tâche planifiée depuis LS-72, quatre de la preuve
-d'identité depuis LS-89, cinq de la purge des journaux depuis LS-94, deux de la résolution de l'adresse client depuis LS-91, cinq de la limitation des Server Actions depuis LS-92, et quatre des droits des personnes depuis LS-95. Il
-vérifie d'abord que les deux projets de test sont verts, sans quoi aucune
-mutation ne prouverait rien.
+`verifier-tests-mutation.sh` casse **soixante-dix-sept fois** le comportement
+testé et exige que la suite rougisse à chaque fois. Les cibles, par domaine :
+réservation et stock, authentification et autorisation, socle de validation et
+journalisation, journal des connexions, verrou de tâche planifiée, preuve
+d'identité et réauthentification, purge des journaux, limitation de débit,
+droits des personnes, catalogue avec ses sections et ses variantes, et depuis
+LS-102 le traitement des photographies avec son stockage. Il vérifie d'abord que
+les deux projets de test sont verts, sans quoi aucune mutation ne prouverait
+rien.
+
+**Le détail par domaine n'est plus énuméré en nombres**, et c'est délibéré :
+cette phrase portait quatorze compteurs dont la somme faisait cinquante-six pour
+un total annoncé de soixante-seize, quatre stories n'y ayant jamais été portées.
+Un compte recopié à la main se périme à chaque ajout sans que rien ne le
+signale. Le seul nombre à tenir à jour est le total, et
+`verifier-config-claude.sh` le confronte au script.
 
 **Il exige que le test rougissant soit celui qui porte la garantie**, jamais
 n'importe lequel. C'est ce qui a fait apparaître un défaut dans un test de
