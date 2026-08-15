@@ -115,15 +115,20 @@ function traduireErreur(
 }
 
 /**
- * Chemins revalides apres une transition d'etat.
+ * Chemin revalide apres une transition d'etat.
  *
- * DEUX CHEMINS ET NON UN. Publier ou archiver change ce que voit la LISTE du
- * catalogue autant que la fiche : ne revalider que la fiche laisserait la liste
- * afficher « Brouillon » sur un produit publie, jusqu'au prochain rendu.
+ * LA FICHE SEULE, ET C'EST VERIFIE PLUTOT QUE SUPPOSE. Une premiere version
+ * revalidait aussi `/administration/categories`, au motif qu'une « liste du
+ * catalogue » devait suivre le changement de statut. CETTE LISTE N'EXISTE PAS :
+ * l'administration porte la creation d'un produit et son edition, et l'ecran
+ * des categories ne cite les produits que dans un texte d'aide.
+ *
+ * Revalider un chemin qui n'affiche pas la donnee ne casse rien, mais installe
+ * une affirmation fausse dans le code : le prochain lecteur en deduirait qu'une
+ * liste existe quelque part. LS-110 porte la question du jour ou elle existera.
  */
 function revalider(produitId: string): void {
   revalidatePath(`/administration/produits/${produitId}`);
-  revalidatePath("/administration/categories");
 }
 
 /**

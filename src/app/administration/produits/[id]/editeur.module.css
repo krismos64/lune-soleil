@@ -31,11 +31,6 @@
   overflow-wrap: anywhere;
 }
 
-.etat {
-  color: var(--ls-text-muted);
-  margin: 0 0 var(--ls-space-5);
-}
-
 .editeur {
   display: grid;
   gap: var(--ls-space-6);
@@ -308,6 +303,26 @@
  * une consequence d'un geste legitime, et non un refus : le rouge de `.erreur`
  * ferait croire que l'enregistrement va echouer.
  */
+/*
+ * LISTE DE CE QUI MANQUE A LA PUBLICATION, LS-103.
+ *
+ * LE `padding-inline-start` PAR DEFAUT D'UN `ul` VAUT 40 px, et il est ici
+ * ruineux : dans un bloc a bordure epaisse, a 320 px, il ne reste qu'environ
+ * 185 px pour le texte. Les quatre motifs cumules occupent alors treize lignes,
+ * et le bloc « en tete pour se lire sans defiler » demande deux ecrans.
+ *
+ * LES PUCES SONT RETIREES plutot que decalees : chaque motif est une phrase
+ * complete qui dit quoi faire, la puce n'ajoute rien et se colle a la bordure
+ * gauche selon le navigateur.
+ */
+.manques {
+  margin: var(--ls-space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--ls-space-2);
+}
+
 .avertissement {
   margin: 0;
   padding: var(--ls-space-3);
