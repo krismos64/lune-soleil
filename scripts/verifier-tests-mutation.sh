@@ -977,7 +977,13 @@ cas "partie decimale completee a gauche, prix divise par dix" unitaire \
 #
 # Aucune contrainte ne s'y oppose, `chk_variante_physique_positif` acceptant
 # zero. Seul un test qui relit la colonne apres archivage le voit.
-mute "$VARIANTE" 's/    await depot\.archiverVariante\(prisma, id, new Date\(\)\);/    await depot.archiverVariante(prisma, id, new Date());\n    await prisma.variante.update({ where: { id }, data: { quantitePhysique: 0 } });/'
+#
+# LA CIBLE A ETE DEPLACEE PAR LS-103, et le garde-fou du script l'a signale au
+# lieu d'accuser les tests. C19 a mis cet archivage DANS une transaction, donc
+# l'appel recoit `tx` et non `prisma` : l'expression d'origine ne mordait plus,
+# et la mutation « ne modifiait aucun caractere ». C'est le motif deja rencontre
+# apres LS-50, et c'est pourquoi ce garde-fou existe.
+mute "$VARIANTE" 's/      await depot\.archiverVariante\(tx, id, new Date\(\)\);/      await depot.archiverVariante(tx, id, new Date());\n      await tx.variante.update({ where: { id }, data: { quantitePhysique: 0 } });/'
 cas "archivage remettant le stock physique a zero" integration \
   "laisse le stock physique intact et ne cree aucun mouvement"
 

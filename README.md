@@ -540,13 +540,14 @@ destructives doivent bloquer, une migration additive doit passer, et une
 détection qui ne peut pas conclure doit bloquer plutôt que supposer. Lancé contre
 la version d'avant LS-42, il échoue sur sept de ces dix cas.
 
-`verifier-tests-mutation.sh` casse **soixante-dix-sept fois** le comportement
+`verifier-tests-mutation.sh` casse **quatre-vingt-trois fois** le comportement
 testé et exige que la suite rougisse à chaque fois. Les cibles, par domaine :
 réservation et stock, authentification et autorisation, socle de validation et
 journalisation, journal des connexions, verrou de tâche planifiée, preuve
 d'identité et réauthentification, purge des journaux, limitation de débit,
-droits des personnes, catalogue avec ses sections et ses variantes, et depuis
-LS-102 le traitement des photographies avec son stockage. Il vérifie d'abord que
+droits des personnes, catalogue avec ses sections et ses variantes, le
+traitement des photographies avec son stockage, et depuis LS-103 les conditions
+de publication d'un produit. Il vérifie d'abord que
 les deux projets de test sont verts, sans quoi aucune mutation ne prouverait
 rien.
 
