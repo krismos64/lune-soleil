@@ -17,10 +17,13 @@ import {
   AutorisationRefuseeError,
   exigerAdministratrice,
 } from "@/services/autorisation";
+import { declinaisonsAttendues } from "@/integrations/medias/traitement";
 import { lireProduit } from "@/services/catalogue";
+import { listerMedias } from "@/services/media";
 import { listerSections } from "@/services/sections-produit";
 import { compterLignesDeCommande, listerVariantes } from "@/services/variante";
 import { EditeurProduit } from "./editeur-produit";
+import { MediasProduit } from "./medias-produit";
 import { VariantesProduit } from "./variantes-produit";
 import styles from "./editeur.module.css";
 
@@ -30,6 +33,50 @@ export const metadata = {
 };
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Prefixe sous lequel les medias sont servis, ADR-007.
+ *
+ * IL VIENT DE LA CONFIGURATION ET NON DES DONNEES. `Media.chemin` porte un
+ * chemin relatif au dossier `public/` du volume, jamais une URL : le prefixe
+ * appartient a la configuration de Nginx, et le figer en base casserait au
+ * premier changement de point de montage.
+ *
+ * EN DEVELOPPEMENT, AUCUN NGINX NE SERT CE CHEMIN. Les vignettes ne s'affichent
+ * donc pas hors production, ce qui est attendu et sans consequence : la liste,
+ * les statuts et l'ordre restent utilisables. Ce qui protege la vie privee est
+ * le traitement, pas l'affichage.
+ */
+const PREFIXE_MEDIAS = process.env.MEDIA_PREFIXE_PUBLIC ?? "/medias";
+
+/**
+ * Declinaison servie a la vignette d'administration.
+ *
+ * 640 px ET NON 320 : l'ecran affiche la vignette sur environ 190 px CSS, soit
+ * pres de 400 px physiques sur un telephone a densite double, ou la declinaison
+ * 320 px paraitrait floue.
+ *
+ * LE JPEG ET NON L'AVIF, alors que l'AVIF pese six fois moins. Un `<img src>`
+ * simple ne negocie aucun format : le navigateur prend ce qu'on lui donne, et
+ * servir l'AVIF afficherait une image cassee a qui ne le supporte pas. C'est
+ * l'ecran ou l'exploitante verifie ses photos, il doit s'afficher partout. Le
+ * `<picture>` a trois sources appartient au catalogue public, LS-104, ou le
+ * poids compte vraiment.
+ *
+ * LE NOM EST VERIFIE CONTRE `declinaisonsAttendues()` PLUTOT QU'ECRIT EN DUR.
+ * Une premiere version portait `640.jpg` quand le traitement ecrit `640.jpeg` :
+ * rien n'aurait rougi, ni `tsc` ni aucun test, et toutes les vignettes de
+ * l'administration auraient ete cassees en production sans que la construction
+ * le signale. Sous cette forme, renommer ou retirer une declinaison fait
+ * echouer le rendu de la page immediatement.
+ */
+const NOM_VIGNETTE = "640.jpeg";
+
+if (!declinaisonsAttendues().includes(NOM_VIGNETTE)) {
+  throw new Error(
+    `La declinaison ${NOM_VIGNETTE} n'est plus produite par le traitement.`,
+  );
+}
 
 /**
  * Ce que l'ecran dit de l'etat du produit, UNE ENTREE PAR VALEUR DE L'ENUM.
@@ -81,6 +128,7 @@ export default async function PageEditeurProduit({
 
   const sections = await listerSections(produit.id);
   const variantes = await listerVariantes(produit.id);
+  const medias = await listerMedias(produit.id);
 
   /*
    * LE COMPTE DE COMMANDES PAR VARIANTE SERT L'AVERTISSEMENT D'ADR-029.
@@ -142,6 +190,34 @@ export default async function PageEditeurProduit({
           quantiteReservee: variante.quantiteReservee,
           archivee: variante.archiveeA !== null,
           nombreCommandes: nombreCommandesPar.get(variante.id) ?? 0,
+        }))}
+      />
+      <MediasProduit
+        produitId={produit.id}
+        medias={medias.map((media) => ({
+          id: media.id,
+          chemin: media.chemin,
+          texteAlternatif: media.texteAlternatif,
+          ordre: media.ordre,
+          statutTraitement: media.statutTraitement,
+          /*
+           * LE JPEG ET NON L'AVIF, alors que l'AVIF pese six fois moins.
+           *
+           * Un `<img src>` simple ne negocie aucun format : le navigateur prend
+           * ce qu'on lui donne. Servir l'AVIF ici afficherait une image cassee
+           * a qui ne le supporte pas, et cet ecran est celui ou l'exploitante
+           * verifie ses photos. Le `<picture>` a trois sources appartient au
+           * catalogue public, LS-104, ou le poids compte vraiment.
+           *
+           * LE CHEMIN N'EST CONSTRUIT QUE POUR UN MEDIA TRAITE. Un media en
+           * attente ou en echec n'a aucun fichier sous `public/`, C8 : lui
+           * fabriquer une URL produirait une image cassee la ou le composant
+           * doit afficher un etat.
+           */
+          vignette:
+            media.statutTraitement === "TRAITE"
+              ? `${PREFIXE_MEDIAS}/${media.chemin}/${NOM_VIGNETTE}`
+              : null,
         }))}
       />
     </main>

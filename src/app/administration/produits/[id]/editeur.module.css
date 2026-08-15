@@ -326,3 +326,68 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/*
+ * Photos, LS-102.
+ *
+ * LA VIGNETTE EST BORNEE EN HAUTEUR ET NON EN LARGEUR. Les photos de bijoux
+ * arrivent en portrait comme en paysage : une largeur fixe ferait varier la
+ * hauteur des cartes du simple au double, et l'ordre des photos deviendrait
+ * penible a lire. La hauteur bornee garde des cartes comparables.
+ *
+ * `object-fit: contain` ET NON `cover`. Un recadrage automatique couperait le
+ * bijou sur une photo en portrait, et l'exploitante jugerait le cadrage de sa
+ * photo sur une image qui n'est pas celle qui sera publiee.
+ *
+ * LE FOND EST NEUTRE ET VISIBLE : les bijoux sont souvent photographies sur
+ * fond clair, et une image detouree en AVIF est transparente. Sans fond, ses
+ * contours se perdraient dans la carte.
+ */
+/*
+ * LA REGION D'ANNONCE DU TRAITEMENT EST MONTEE VIDE, LS-85 et revue LS-102 :
+ * un `role="status"` insere apres coup n'est pas toujours annonce. Vide, elle
+ * ne doit pas consommer l'espacement de la grille de la carte, d'ou `display:
+ * none`, qui la retire du flux sans la retirer du DOM. Le lecteur d'ecran
+ * continue de la surveiller.
+ */
+.aide:empty {
+  display: none;
+}
+
+/*
+ * MARQUEUR D'UNE DESCRIPTION MANQUANTE, C7. Il annonce un refus a venir a la
+ * publication, LS-103, et non un echec present : il porte donc les couleurs de
+ * l'avertissement et NON celles de l'erreur, meme raisonnement que
+ * `.avertissement` pour ADR-029.
+ *
+ * L'INFORMATION N'EST PAS PORTEE PAR LA COULEUR SEULE, WCAG 2.2 AA : le texte
+ * « Description à écrire » la porte entierement, la couleur ne fait que la
+ * rendre reperable dans une liste de dix photos.
+ */
+.marqueurManquant {
+  margin: 0;
+  padding: var(--ls-space-2) var(--ls-space-3);
+  border-radius: var(--ls-radius-sm);
+  border: 1px solid var(--ls-warning);
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+  font-size: 0.9rem;
+}
+
+.vignette {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  /*
+   * LA HAUTEUR EST FIXE ET NON `auto`, revue LS-102. Le composant ne connait
+   * pas le ratio du fichier servi : le traitement ne contraint que la largeur,
+   * donc declarer `width`/`height` sur la balise serait faux. Une hauteur fixe
+   * en CSS reserve la place AVANT le chargement et supprime le decalage de mise
+   * en page, sans rien affirmer sur les proportions de l'image.
+   */
+  height: 12rem;
+  object-fit: contain;
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface-sand);
+}
