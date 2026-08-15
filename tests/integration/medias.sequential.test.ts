@@ -23,7 +23,7 @@
  * AUCUNE DONNEE DU PROTOTYPE : ni Eclipse, ni Alba.
  */
 import { existsSync } from "node:fs";
-import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { mkdtemp, readdir, rm, utimes } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -593,5 +593,161 @@ describe("purge de la quarantaine", () => {
     await medias.televerserPhotographie(produitId, await photographie());
 
     expect(await medias.purgerQuarantaine(0)).toBe(0);
+  });
+});
+
+/**
+ * Le BRANCHEMENT de la purge sur la tache planifiee, LS-102 et LS-72.
+ *
+ * CE QUE CES TESTS PROUVENT ET QUE LES PRECEDENTS NE PROUVENT PAS. Les tests
+ * ci-dessus exercent `purgerQuarantaine` prise isolement : ils diraient la meme
+ * chose si AUCUNE tache ne l'appelait jamais, et c'etait exactement l'etat du
+ * depot avant cette session. Le trou etait nomme dans le ticket, point 3 du
+ * reste a faire.
+ *
+ * NI `verifier-actions-sensibles.sh` NI AUCUN GREP NE REMPLACE CECI. Trouver
+ * `purgerQuarantaine(` dans le fichier de la route prouve que le texte y
+ * figure, pas qu'il s'execute : un appel place dans une branche jamais atteinte,
+ * ou apres un `return`, satisferait le motif en laissant le trou entier. C'est
+ * le piege deja rencontre sur la marque `@sensible`.
+ *
+ * L'ASSERTION PORTE DONC SUR LE DISQUE, jamais sur le code de reponse. Un 200
+ * accompagne d'un fichier toujours present serait le defaut precis que ce test
+ * existe pour attraper.
+ */
+describe("purge branchee sur la tache planifiee", () => {
+  const SECRET = "secret-de-test-uniquement-jamais-en-production";
+  const TACHE = "purge-quarantaine-medias";
+
+  let POST: (
+    requete: Request,
+    contexte: { params: Promise<{ nom: string }> },
+  ) => Promise<Response>;
+
+  beforeAll(async () => {
+    process.env.CRON_SHARED_SECRET = SECRET;
+    ({ POST } = await import("@/app/api/interne/taches/[nom]/route"));
+  });
+
+  afterEach(async () => {
+    await client.query("TRUNCATE verrou_tache");
+  });
+
+  function appeler(nom: string, secret?: string) {
+    const enTetes = new Headers();
+    if (secret !== undefined) {
+      enTetes.set("x-cron-secret", secret);
+    }
+
+    return POST(
+      new Request(`http://localhost:3000/api/interne/taches/${nom}`, {
+        method: "POST",
+        headers: enTetes,
+      }),
+      { params: Promise.resolve({ nom }) },
+    );
+  }
+
+  /**
+   * Depose un orphelin en quarantaine, comme le ferait un televersement
+   * interrompu AVANT le traitement, premier cas d'erreur du parcours 3.
+   *
+   * LE DEPOT PASSE PAR LE VRAI STOCKAGE et non par un `writeFile` a la main :
+   * ecrire le fichier soi-meme figerait dans le test la convention de nommage
+   * de la quarantaine, et le test resterait vert si le service en changeait.
+   */
+  async function orphelinEnQuarantaine(): Promise<void> {
+    const { StockageMedias } = await import("@/integrations/medias/stockage");
+    const magasin = new StockageMedias(racineMedias);
+    await magasin.preparer();
+    const identifiant = await magasin.deposerEnQuarantaine(await photographie());
+
+    /*
+     * LE FICHIER EST VIEILLI DE DEUX HEURES, et ce detail porte une propriete.
+     *
+     * La tache purge a partir d'UNE HEURE, valeur par defaut du service : un
+     * orphelin fraichement depose doit donc SURVIVRE, parce qu'un televersement
+     * peut etre en cours de traitement. Sans ce vieillissement, ce test rougit,
+     * ce qui a ete constate avant de l'ecrire.
+     *
+     * VIEILLIR PLUTOT QUE BAISSER LE SEUIL : la route n'expose aucun parametre
+     * d'age, et lui en ajouter un pour les besoins du test ferait tester une
+     * configuration que la production n'emploie jamais. Ici c'est le vrai seuil
+     * d'une heure qui est exerce.
+     */
+    const ancien = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    await utimes(join(racineMedias, "quarantaine", identifiant), ancien, ancien);
+  }
+
+  /**
+   * UN ORPHELIN RECENT SURVIT A LA TACHE. Le pendant du test precedent, et il
+   * compte autant : une purge sans seuil d'age supprimerait le fichier d'un
+   * televersement en cours de traitement, faisant echouer une operation
+   * legitime a chaque passage du cron.
+   */
+  it("la tache epargne un orphelin trop recent", async () => {
+    const { StockageMedias } = await import("@/integrations/medias/stockage");
+    const magasin = new StockageMedias(racineMedias);
+    await magasin.preparer();
+    await magasin.deposerEnQuarantaine(await photographie());
+
+    const reponse = await appeler(TACHE, SECRET);
+
+    expect(reponse.status).toBe(200);
+    expect(await fichiersEnQuarantaine()).toHaveLength(1);
+  });
+
+  it("la tache supprime reellement un orphelin de quarantaine", async () => {
+    await orphelinEnQuarantaine();
+    expect(await fichiersEnQuarantaine()).toHaveLength(1);
+
+    const reponse = await appeler(TACHE, SECRET);
+
+    expect(reponse.status).toBe(200);
+    await expect(reponse.json()).resolves.toEqual({
+      tache: TACHE,
+      etat: "EXECUTEE",
+    });
+
+    // LE DISQUE EST L'ASSERTION QUI COMPTE. Une route qui repondrait
+    // « EXECUTEE » sans avoir appele la purge passerait les deux lignes
+    // precedentes et echouerait ici.
+    expect(await fichiersEnQuarantaine()).toHaveLength(0);
+  });
+
+  /**
+   * LA PURGE N'EMPORTE PAS LES FICHIERS PUBLIES, verifie A TRAVERS LA ROUTE.
+   *
+   * Le test equivalent existe plus haut sur la fonction seule. Le rejouer ici
+   * couvre un defaut que l'autre ne voit pas : une route qui appellerait la
+   * purge sur la MAUVAISE racine, celle du dossier publie, detruirait les onze
+   * declinaisons de chaque fiche a chaque passage du cron.
+   */
+  it("la tache laisse intacts les fichiers publies", async () => {
+    const produitId = await produitDeTest();
+    const media = await medias.televerserPhotographie(
+      produitId,
+      await photographie(),
+    );
+
+    const reponse = await appeler(TACHE, SECRET);
+    expect(reponse.status).toBe(200);
+
+    expect(await fichiersPublies(media.chemin)).toHaveLength(11);
+  });
+
+  /**
+   * TEST NEGATIF DE SECURITE. Sans le secret, aucun fichier ne bouge.
+   *
+   * La route rend deja 404 sans secret, teste en LS-72. Ce qui est verifie ici
+   * est l'EFFET : le refus intervient avant la purge, et non apres.
+   */
+  it("un appel sans secret ne supprime rien", async () => {
+    await orphelinEnQuarantaine();
+
+    const reponse = await appeler(TACHE);
+
+    expect(reponse.status).toBe(404);
+    expect(await fichiersEnQuarantaine()).toHaveLength(1);
   });
 });

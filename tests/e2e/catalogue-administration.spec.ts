@@ -125,6 +125,9 @@ test("un POST direct sur les ecrans du catalogue ne produit aucun effet", async 
     // LS-101, les declinaisons, leurs prix et leur stock.
     expect(corps).not.toContain("Déclinaisons et prix");
     expect(corps).not.toContain("Ajouter la déclinaison");
+    // LS-102, les photos et leur televersement.
+    expect(corps).not.toContain("Photos de la fiche");
+    expect(corps).not.toContain("Ajouter une photo");
   }
 });
 
@@ -164,6 +167,18 @@ test("aucun formulaire de catalogue n'est rendu sans session", async ({
     await expect(page.getByLabel("Stock physique")).toHaveCount(0);
     await expect(
       page.getByRole("button", { name: "Ajouter la déclinaison" }),
+    ).toHaveCount(0);
+
+    /*
+     * LS-102. LE CHAMP DE FICHIER EST LE PLUS SENSIBLE DE CET ECRAN : rendu
+     * sans session, il offrirait a n'importe qui un point de depot de fichiers
+     * vers le volume des medias. Le bouton de suppression est verifie avec lui,
+     * un media supprime emportant ses onze declinaisons du disque.
+     */
+    await expect(page.getByLabel("Ajouter une photo")).toHaveCount(0);
+    await expect(page.getByLabel("Description de la photo")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Supprimer la photo" }),
     ).toHaveCount(0);
   }
 });
