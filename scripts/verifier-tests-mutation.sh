@@ -71,6 +71,7 @@ DEPOT_VARIANTE="src/repositories/variante.ts"
 MEDIA="src/services/media.ts"
 TRAITEMENT="src/integrations/medias/traitement.ts"
 STOCKAGE="src/integrations/medias/stockage.ts"
+PAGE_EDITEUR="src/app/administration/produits/[id]/page.tsx"
 
 # TOUT FICHIER MUTE DOIT FIGURER ICI, sans quoi il n'est ni sauvegarde ni
 # restaure et la mutation RESTE SUR LE DISQUE apres l'execution.
@@ -83,7 +84,7 @@ STOCKAGE="src/integrations/medias/stockage.ts"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -1247,6 +1248,60 @@ cas "C19 archive des la premiere variante archivee" integration \
 mute "$VARIANTE" 's/      if \(restantes > 0\) \{\n        return;\n      \}/      if (restantes >= 0) {\n        return;\n      }/'
 cas "C19 n'archive jamais le produit" integration \
   "archive le produit quand sa derniere variante vivante part"
+
+echo
+echo "Ecrans d'administration rendus avec session, tests de bout en bout"
+echo
+
+# ---------------------------------------------------------------------------
+# Cas 84 a 86 : LS-111. Ces trois cas prouvent que les tests de rendu AVEC
+# session voient reellement quelque chose.
+#
+# POURQUOI ILS ETAIENT IMPOSSIBLES AVANT. La suite ne rendait aucun ecran
+# d'administration, faute de session : muter la mise en page de l'editeur
+# laissait les 128 tests d'alors entierement verts, parce qu'aucun n'allait plus
+# loin que la redirection vers la connexion. Les criteres de rendu de LS-102 et
+# LS-103 ont ete reportes deux fois pour cette raison.
+#
+# LE PREMIER CAS EST CELUI QUI COMPTE. Un debordement horizontal a 320 px etait
+# jusqu'ici CALCULE par une revue, jamais mesure, et c'est exactement le defaut
+# que LS-103 avait trouve a la lecture, un `<ul>` dont le padding par defaut
+# mangeait 40 px. La mutation le reintroduit en tete de l'editeur.
+mute "$PAGE_EDITEUR" 's/      <PublicationProduit/      <div style={{ width: "800px" }} \/>\n      <PublicationProduit/'
+cas "debordement horizontal introduit dans l'editeur de fiche" e2e \
+  "ne deborde pas horizontalement"
+
+# Cas 85 : l'ORDRE des blocs. La publication passe SOUS les informations
+# generales, ce que le rendu accepte sans broncher et qu'aucun type ne signale.
+# L'arbitrage de LS-103 la veut en tete, l'etat de la fiche etant la premiere
+# chose a lire en ouvrant l'ecran.
+#
+# LE BLOC EST DEPLACE ET NON SUPPRIME, et la nuance a ete mesuree. Le retirer
+# rendait `motifs` inutilise, la construction Next.js echouait avant la suite, et
+# la mutation aurait ete comptee « detectee » pour une raison etrangere au test
+# d'ordre. Une mutation qui casse la compilation ne prouve rien des tests.
+mute "$PAGE_EDITEUR" 's/      <PublicationProduit\n        produitId=\{produit\.id\}\n        statut=\{produit\.statut\}\n        motifs=\{motifs\}\n      \/>\n\n      <EditeurProduit/      <EditeurProduit/'
+mute "$PAGE_EDITEUR" 's/      <VariantesProduit/      <PublicationProduit\n        produitId={produit.id}\n        statut={produit.statut}\n        motifs={motifs}\n      \/>\n      <VariantesProduit/'
+cas "bloc de publication descendu sous les informations generales" e2e \
+  "les cinq blocs de l'editeur sont rendus dans l'ordre decide"
+
+# Cas 86 : LA GARDE DE ROLE. `exigerAdministratrice` devient `exigerSession` :
+# toute personne CONNECTEE atteint alors l'editeur, y compris un client
+# ordinaire. C'est l'invariant 2, et le defaut est silencieux, la page
+# s'affichant normalement pour qui possede une session.
+#
+# CE CAS SE DISTINGUE DU CAS 11 DEJA PRESENT, qui retire la verification DANS
+# `exigerAdministratrice`. Celui-ci laisse la fonction intacte et change son
+# APPEL : une page qui appelle la mauvaise garde passe tous les tests du service,
+# et c'est le test de refus sans session qui doit l'attraper.
+#
+# DEUX SUBSTITUTIONS ET NON UNE : `exigerSession` doit aussi etre IMPORTE, sans
+# quoi la construction Next.js echoue et la mutation serait comptee « detectee »
+# sur une erreur de compilation, sans avoir rien prouve des tests.
+mute "$PAGE_EDITEUR" 's/  exigerAdministratrice,\n\} from "@\/services\/autorisation";/  exigerAdministratrice,\n  exigerSession,\n} from "@\/services\/autorisation";/'
+mute "$PAGE_EDITEUR" 's/    await exigerAdministratrice\(enTetes\);/    await exigerSession(enTetes);/'
+cas "editeur garde par exigerSession au lieu du role" e2e \
+  "refuse un visiteur sans session"
 
 echo
 echo "-----------------------------------------"
