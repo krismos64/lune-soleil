@@ -28,14 +28,16 @@ ALTER TABLE "mouvement_stock"
 -- controle applicatif les laisserait passer entre son SELECT et son INSERT.
 -- C'est la meme strategie que l'UPDATE conditionnel de la reservation, ADR-006.
 --
--- LE PREDICAT `compense_id IS NOT NULL` EST INDISPENSABLE. PostgreSQL traite
--- les NULL comme distincts, donc un index sans predicat ne rejetterait rien de
--- plus ; il indexerait en revanche l'integralite du journal pour ne servir
--- qu'aux rares lignes de compensation, et le journal ne fait que croitre.
+-- LE PREDICAT NE CHANGE RIEN AU REJET, et le dire autrement serait faux :
+-- PostgreSQL traite les NULL comme distincts, donc un index sans `WHERE`
+-- rejetterait exactement les memes lignes. Mesure le 18 aout 2026.
 --
--- SEPTIEME INDEX PARTIEL DU PROJET. Le piege associe est connu et rencontre
--- deux fois : un predicat qui change ouvre en silence, sans qu'aucune erreur ne
--- le signale. Ne pas modifier celui-ci sans mesurer ce qu'il laisse passer.
+-- SA VERTU EST D'EVITER D'INDEXER POUR RIEN un journal qui ne fait que croitre,
+-- et dont l'immense majorite des lignes ne compense rien.
+--
+-- SEPTIEME INDEX PARTIEL DU PROJET. Le piege associe reste vrai : un predicat
+-- qui change ouvre en silence. Ne pas modifier celui-ci sans mesurer ce qu'il
+-- laisse passer, et sans verifier ce qu'il garantit reellement.
 CREATE UNIQUE INDEX "mouvement_compense_unique"
   ON "mouvement_stock"("compense_id")
   WHERE (compense_id IS NOT NULL);

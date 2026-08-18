@@ -55,7 +55,7 @@ afterAll(async () => {
 
 afterEach(async () => {
   await client.query(
-    "TRUNCATE produit, categorie, mouvement_stock, reservation, commande, utilisateur CASCADE",
+    "TRUNCATE produit, categorie, mouvement_stock, reservation, commande, utilisateur, journal_audit CASCADE",
   );
 });
 
@@ -72,8 +72,8 @@ beforeEach(async () => {
 async function creerActrice(): Promise<string> {
   const id = randomUUID();
   await client.query(
-    `INSERT INTO utilisateur (id, email, email_verifie, role, cree_a, modifie_a)
-     VALUES ($1, $2, true, 'ADMINISTRATRICE', now(), now())`,
+    `INSERT INTO utilisateur (id, email, email_verifie, role, cree_a)
+     VALUES ($1, $2, true, 'ADMINISTRATRICE', now())`,
     [id, `admin-${id.slice(0, 8)}@example.invalid`],
   );
   return id;
@@ -146,6 +146,45 @@ describe("suspendre la vente web ne touche pas au stock, invariant 6", () => {
     expect(q.venteWeb).toBe(false);
   });
 
+  /*
+   * LA TRACE VA AU JOURNAL D'AUDIT, PAS AU JOURNAL DES MOUVEMENTS, et les deux
+   * tests se lisent ensemble : le precedent prouve qu'aucune quantite ne bouge,
+   * celui-ci que l'action est tout de meme tracee. Sans le second, « aucun
+   * mouvement » pourrait se satisfaire d'une bascule qui ne laisse rien du tout,
+   * ce que le parcours 2 refuse a son etape 1.
+   */
+  it("ecrit une entree au journal d'audit, jamais un mouvement de stock", async () => {
+    const { varianteId } = await creerVarianteEnStock(client, {
+      quantitePhysique: 5,
+    });
+
+    await stock.suspendreVenteWeb({ varianteId, acteurId });
+
+    const audit = await client.query(
+      `SELECT action, type_cible, id_cible, acteur_id, detail
+         FROM journal_audit WHERE id_cible = $1`,
+      [varianteId],
+    );
+    expect(audit.rows).toHaveLength(1);
+    expect(audit.rows[0]).toMatchObject({
+      action: "SUSPENSION_VENTE_WEB",
+      type_cible: "Variante",
+      acteur_id: acteurId,
+      detail: { venteWebActivee: false },
+    });
+
+    // Et la reactivation se distingue de la suspension dans le journal.
+    await stock.reactiverVenteWeb({ varianteId, acteurId });
+    const apres = await client.query(
+      `SELECT action FROM journal_audit WHERE id_cible = $1 ORDER BY cree_a`,
+      [varianteId],
+    );
+    expect(apres.rows.map((l: { action: string }) => l.action)).toEqual([
+      "SUSPENSION_VENTE_WEB",
+      "REACTIVATION_VENTE_WEB",
+    ]);
+  });
+
   it("ne cree aucun mouvement non plus a la reactivation", async () => {
     const { varianteId } = await creerVarianteEnStock(client, {
       quantitePhysique: 5,
@@ -171,7 +210,7 @@ describe("la vente externe, parcours 2", () => {
     await stock.enregistrerVenteExterne({
       varianteId,
       quantite: 1,
-      prixUnitaireFigeCentimes: 4200,
+      prixUnitaireEuros: "42,00",
       canal: "Marché de Pau",
       acteurId,
     });
@@ -215,7 +254,7 @@ describe("la vente externe, parcours 2", () => {
     const resultat = await stock.enregistrerVenteExterne({
       varianteId,
       quantite: 1,
-      prixUnitaireFigeCentimes: 4200,
+      prixUnitaireEuros: "42,00",
       canal: "Marché de Pau",
       acteurId,
     });
@@ -235,7 +274,7 @@ describe("la vente externe, parcours 2", () => {
     const resultat = await stock.enregistrerVenteExterne({
       varianteId,
       quantite: 1,
-      prixUnitaireFigeCentimes: 4200,
+      prixUnitaireEuros: "42,00",
       canal: "Marché de Pau",
       acteurId,
     });
@@ -259,7 +298,7 @@ describe("la vente externe, parcours 2", () => {
     const resultat = await stock.enregistrerVenteExterne({
       varianteId,
       quantite: 1,
-      prixUnitaireFigeCentimes: 3900,
+      prixUnitaireEuros: "39,00",
       canal: "Marché de Pau",
       acteurId,
     });
@@ -284,7 +323,7 @@ describe("une correction ajoute, elle ne modifie jamais, regle S4", () => {
     const vente = await stock.enregistrerVenteExterne({
       varianteId,
       quantite: 1,
-      prixUnitaireFigeCentimes: 4200,
+      prixUnitaireEuros: "42,00",
       canal: "Marché de Pau",
       acteurId,
     });
@@ -322,7 +361,7 @@ describe("une correction ajoute, elle ne modifie jamais, regle S4", () => {
     const vente = await stock.enregistrerVenteExterne({
       varianteId,
       quantite: 1,
-      prixUnitaireFigeCentimes: 4200,
+      prixUnitaireEuros: "42,00",
       canal: "Marché de Pau",
       acteurId,
     });

@@ -129,6 +129,14 @@ export async function creerMouvement(
     prixUnitaireFigeCentimes?: number | null;
     motif?: string | null;
     acteurId: string;
+    /**
+     * Le mouvement que celui-ci compense, S15 et ADR-030.
+     *
+     * L'unicite partielle `mouvement_compense_unique` en fait une garantie :
+     * une seconde compensation du meme mouvement leve `P2002`, que le service
+     * traduit en refus metier. La garde vit dans la base, pas ici.
+     */
+    compenseId?: string | null;
   },
 ): Promise<string> {
   const ligne = await client.mouvementStock.create({
@@ -140,6 +148,7 @@ export async function creerMouvement(
       prixUnitaireFigeCentimes: parametres.prixUnitaireFigeCentimes ?? null,
       motif: parametres.motif ?? null,
       acteurId: parametres.acteurId,
+      compenseId: parametres.compenseId ?? null,
       origine: "ADMIN",
     },
     select: { id: true },
@@ -277,4 +286,41 @@ export async function listerEtatStock(
     ...ligne,
     quantiteDisponible: Number(ligne.quantiteDisponible),
   }));
+}
+
+/**
+ * Ecrit une entree au journal d'audit, LS-106.
+ *
+ * PREMIERE ECRITURE D'AUDIT DU PROJET. Le modele `JournalAudit` existe depuis
+ * LS-13, aucune story ne l'avait encore alimente : le parcours 2 l'exige a
+ * l'etape 1, « suspension de la vente web, entree au journal d'audit ».
+ *
+ * POURQUOI L'AUDIT ET NON UN MOUVEMENT DE STOCK. Suspendre la vente web ne fait
+ * sortir aucun bijou de l'atelier, invariant 6 : ecrire un mouvement creerait un
+ * fantome qui fausserait l'inventaire. La trace appartient donc au journal des
+ * ACTIONS, pas a celui des quantites.
+ *
+ * `detail` EST DU JSON LIBRE, et il porte ici l'etat obtenu. Sans lui, deux
+ * entrees « bascule de vente web » consecutives seraient indiscernables, et le
+ * journal ne dirait pas si la piece est partie au marche ou en est revenue.
+ */
+export async function ecrireAudit(
+  client: ClientBase,
+  parametres: {
+    acteurId: string;
+    action: string;
+    typeCible: string;
+    idCible: string;
+    detail: Prisma.InputJsonValue;
+  },
+): Promise<void> {
+  await client.journalAudit.create({
+    data: {
+      acteurId: parametres.acteurId,
+      action: parametres.action,
+      typeCible: parametres.typeCible,
+      idCible: parametres.idCible,
+      detail: parametres.detail,
+    },
+  });
 }
