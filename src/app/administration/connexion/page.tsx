@@ -11,6 +11,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import styles from "./connexion.module.css";
 import { FormulaireConnexion } from "./formulaire-connexion";
 import { lireIdentite } from "@/services/autorisation";
 
@@ -30,9 +31,9 @@ export default async function PageConnexionAdministration() {
   }
 
   return (
-    <main className="page-connexion">
+    <main className={styles.page}>
       <h1>Administration</h1>
-      <p className="page-connexion__introduction">
+      <p className={styles.introduction}>
         Connexion réservée à l&apos;exploitante de la boutique.
       </p>
       <FormulaireConnexion />
