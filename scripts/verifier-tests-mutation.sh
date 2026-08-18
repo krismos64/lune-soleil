@@ -1424,6 +1424,23 @@ cas "seuil de derniere piece deplace" integration \
 mute "$CARTE_PRODUIT" 's/640\.jpeg`\}/640.jpg`}/'
 cas "extension de vignette .jpg au lieu de .jpeg" e2e \
   "chaque URL servie correspond a une declinaison produite"
+
+# ---------------------------------------------------------------------------
+# Cas 95 : LA VENTE WEB DESACTIVEE FAIT DISPARAITRE au lieu d'afficher
+# « Epuise ». LS-104, releve par la revue.
+#
+# LA TABLE DES ETATS de `frontend-design.md` donne « vente web desactivee » comme
+# condition de l'etat `Epuise`, au meme titre que la quantite nulle, jamais comme
+# cause de disparition. La premiere version du depot ajoutait la condition au
+# JOIN : une piece partie sur un marche sortait du catalogue, perdait son adresse
+# publique et son referencement, et revenait plus tard sous une URL que plus
+# personne n'avait en favori.
+#
+# C'est aussi l'invariant 6 : suspendre la vente web et retirer du catalogue sont
+# deux gestes distincts.
+mute "$DEPOT_CATALOGUE" 's/    JOIN variante v ON v.produit_id = p.id\n      AND v.archivee_a IS NULL/    JOIN variante v ON v.produit_id = p.id\n      AND v.archivee_a IS NULL\n      AND v.vente_web_activee = true/'
+cas "vente web desactivee fait disparaitre du catalogue" integration \
+  "annonce EPUISE pour un produit dont la vente web est desactivee"
 echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then

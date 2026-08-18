@@ -168,16 +168,59 @@ describe("ce qui sort du catalogue public", () => {
   });
 
   /*
-   * LA VENTE WEB DESACTIVEE RETIRE DU CATALOGUE, invariant 6 : disponibilite web
-   * et quantite physique sont deux notions distinctes. Une piece partie sur un
-   * marche reste en stock physique sans etre vendable en ligne.
+   * LA VENTE WEB DESACTIVEE DONNE « EPUISE », ELLE NE FAIT PAS DISPARAITRE.
+   *
+   * LA PREMIERE VERSION DE CE TEST ENTERINAIT L'INVERSE, et la revue de LS-104 a
+   * releve l'ecart : la table des etats de `frontend-design.md` donne « vente web
+   * desactivee » comme condition de l'etat `Epuise`, au meme titre que la
+   * quantite nulle, jamais comme cause de disparition.
+   *
+   * L'ENJEU N'EST PAS COSMETIQUE. Une piece partie sur un marche sortait du
+   * catalogue, perdait son adresse publique et son referencement, et revenait
+   * plus tard sous une URL que plus personne n'avait en favori. C'est aussi ce
+   * que dit l'invariant 6 : suspendre la vente web et retirer du catalogue sont
+   * deux gestes distincts.
    */
-  it("ne rend pas un produit dont la vente web est desactivee", async () => {
-    await creerProduit("Reserve au marche", { venteWebActivee: false });
+  it("annonce EPUISE pour un produit dont la vente web est desactivee", async () => {
+    await creerProduit("Reserve au marche", {
+      venteWebActivee: false,
+      // Le stock PHYSIQUE reste plein : c'est bien la vente web qui decide.
+      quantitePhysique: 5,
+    });
 
     const { produits } = await catalogue.lireCataloguePublic();
 
-    expect(produits).toEqual([]);
+    expect(produits).toHaveLength(1);
+    expect(produits[0]).toMatchObject({
+      nom: "Reserve au marche",
+      disponibilite: "EPUISE",
+    });
+  });
+
+  /*
+   * DEUX VARIANTES, UNE SEULE EN VENTE WEB : le produit reste vendable par
+   * celle-la. Ce cas separe « la vente web contribue zero » de « le produit
+   * disparait », que la premiere version confondait.
+   */
+  it("compte la seule variante en vente web quand l'autre en est retiree", async () => {
+    const produitId = await creerProduit("Deux declinaisons", {
+      quantitePhysique: 2,
+      venteWebActivee: false,
+    });
+
+    await client.query(
+      `INSERT INTO variante (
+         id, produit_id, reference, libelle, prix_centimes,
+         quantite_physique, quantite_reservee, vente_web_activee, cree_a
+       )
+       VALUES ($1, $2, 'REF-WEB', 'En ligne', 5900, 1, 0, true, now())`,
+      [randomUUID(), produitId],
+    );
+
+    const { produits } = await catalogue.lireCataloguePublic();
+
+    // Une seule piece disponible, celle qui est en vente web.
+    expect(produits[0]?.disponibilite).toBe("DERNIERE_PIECE");
   });
 
   it("rend le media principal, ordre 1, quand il existe", async () => {
@@ -383,11 +426,15 @@ describe("filtrage par categorie et tri", () => {
       categorieId: bagues,
     });
 
-    await client.query("UPDATE produit SET statut = 'ARCHIVE' WHERE id = $1", [
-      retiree,
-    ]);
+    /*
+     * LES DEUX PRODUITS SORTENT PAR L'ARCHIVAGE, seul geste qui retire du
+     * catalogue depuis la correction de la vente web. Couper la vente web les y
+     * laisserait, affiches « Epuise », ce qui est le comportement voulu mais ne
+     * produit pas l'etat vide qu'on cherche ici.
+     */
     await client.query(
-      "UPDATE variante SET vente_web_activee = false WHERE produit_id = (SELECT id FROM produit WHERE nom = 'Une bague vendable')",
+      "UPDATE produit SET statut = 'ARCHIVE' WHERE id = $1 OR nom = 'Une bague vendable'",
+      [retiree],
     );
 
     const { produits, categorieRetenue } =
