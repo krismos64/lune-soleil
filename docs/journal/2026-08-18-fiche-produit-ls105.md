@@ -116,13 +116,22 @@ numériques, avec une quantité improbable.
 **495** tests unitaires et d'intégration, dont 17 neufs sur la fiche. **231** de
 bout en bout, contre 200 avant cette story, dont 33 sur la fiche seule.
 
-Quatre mutations exercées et détectées : le filtre de statut fait rougir les trois
-tests de garde et eux seuls ; le filtre de contenu vide fait rougir les deux tests
-C23 ; `trim()` remplacé par `!== ""` fait rougir le seul test des espaces ; le
-prix déplacé après le bouton fait rougir le test d'ordre en montrant exactement le
-déplacement ; `loading.tsx` recréé fait rougir les deux tests de 404 avec
-« Expected: 404, Received: 200 » ; la règle de pleine largeur retirée donne
-« Expected: <= 2, Received: 572 ».
+**Six** mutations exercées et détectées, chacune sur le défaut que le test prétend
+attraper :
+
+| Mutation | Ce qui rougit |
+|---|---|
+| `statut: "ACTIF"` retiré | les 3 tests de garde, et eux seuls |
+| filtre de contenu vide retiré | les 2 tests C23 |
+| `trim()` remplacé par `!== ""` | le seul test des espaces |
+| prix déplacé après le bouton | le test d'ordre, en montrant le déplacement |
+| `loading.tsx` recréé | les 2 tests de 404, « Expected: 404, Received: 200 » |
+| règle de pleine largeur retirée | « Expected: <= 2, Received: 572 » |
+
+Le décompte annonçait « quatre » dans un premier jet quand la liste en portait
+six. C'est le motif de [[lune-soleil-compte-recopie-nest-pas-mesure]] : un nombre
+écrit à côté d'une liste se périme dès que la liste bouge, la table le rend
+vérifiable d'un coup d'œil.
 
 ## Deux erreurs de conduite
 
