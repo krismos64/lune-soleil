@@ -72,6 +72,21 @@
   .editorial {
     grid-column: 1 / -1;
   }
+
+  /*
+   * SANS PHOTOGRAPHIE, L'ACHAT PREND TOUTE LA LARGEUR. Une fiche sans photo
+   * reste servie, la galerie n'etant simplement pas rendue : la grille gardait
+   * alors ses deux colonnes de 548 px, l'achat occupait la premiere et la
+   * seconde restait vide, mesure a 1280 px.
+   *
+   * `:first-child` PLUTOT QU'UNE CLASSE CONDITIONNELLE. Le bloc d'achat n'est
+   * premier que lorsque la galerie l'a laisse le devenir : la regle suit donc
+   * la structure reelle, sans qu'un drapeau ait a etre passe depuis la page ni
+   * maintenu en accord avec elle.
+   */
+  .achat:first-child {
+    grid-column: 1 / -1;
+  }
 }
 
 /* --- Galerie ------------------------------------------------------------- */
