@@ -78,9 +78,20 @@ jobs:
   controles:
     name: Les huit controles de CONTRIBUTING
     runs-on: ubuntu-latest
-    # Une execution complete tient largement dedans. Cette borne evite qu'une
-    # etape bloquee, un conteneur qui ne demarre jamais, consomme une heure.
-    timeout-minutes: 30
+    # Cette borne evite qu'une etape bloquee, un conteneur qui ne demarre
+    # jamais, consomme une heure. Elle ne borne PAS une execution normale.
+    #
+    # PORTEE DE 30 A 45 MINUTES EN LS-106, apres une annulation reelle. Le
+    # commentaire disait « tient largement dedans » et ce n'etait plus vrai : la
+    # suite de bout en bout est passee de 200 a 250 tests entre LS-104 et
+    # LS-106, sur trois largeurs, et le job a ete coupe a 30 minutes PENDANT
+    # l'installation du navigateur, toutes les etapes precedentes vertes.
+    #
+    # LA BORNE SUIT LA SUITE, elle ne la contraint pas. Une annulation par delai
+    # ne dit rien du code : elle ressemble a un echec sans en etre un, et coute
+    # une execution complete pour rien. Si la suite continue de croitre, relever
+    # a nouveau plutot que de reduire la couverture.
+    timeout-minutes: 45
 
     env:
       # Base de controle, jetable, detruite avec le runner et joignable
