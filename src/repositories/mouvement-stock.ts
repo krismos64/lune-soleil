@@ -219,6 +219,15 @@ export type EtatStockVariante = {
   libelle: string;
   produitId: string;
   produitNom: string;
+  /**
+   * Prix du CATALOGUE, qui prerempli le formulaire de vente externe.
+   *
+   * IL N'EST PAS LE PRIX DE LA VENTE. Le parcours 2 exige que le champ reste
+   * modifiable, une remise de stand etant courante, et S13 interdit de
+   * reconstruire une vente passee depuis ce prix : c'est une valeur de depart
+   * pour la saisie, jamais une source pour un calcul historique.
+   */
+  prixCatalogueCentimes: number;
   quantitePhysique: number;
   quantiteReservee: number;
   quantiteDisponible: number;
@@ -253,6 +262,7 @@ export async function listerEtatStock(
       libelle: string;
       produitId: string;
       produitNom: string;
+      prixCatalogueCentimes: number;
       quantitePhysique: number;
       quantiteReservee: number;
       quantiteDisponible: bigint | number;
@@ -266,6 +276,7 @@ export async function listerEtatStock(
       v.libelle,
       p.id                 AS "produitId",
       p.nom                AS "produitNom",
+      v.prix_centimes      AS "prixCatalogueCentimes",
       v.quantite_physique  AS "quantitePhysique",
       v.quantite_reservee  AS "quantiteReservee",
       greatest(v.quantite_physique - v.quantite_reservee, 0) AS "quantiteDisponible",
