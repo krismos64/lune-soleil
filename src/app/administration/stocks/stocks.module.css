@@ -1,0 +1,322 @@
+/*
+ * Stocks et marchés, LS-106.
+ *
+ * CONCU A PARTIR DE 320 px, puis elargi. Les media queries montent, elles ne
+ * descendent jamais : ce qui est ecrit hors requete est ce que voit le plus
+ * petit ecran.
+ *
+ * DES CARTES ET NON UN TABLEAU, et c'est un choix assume. Cinq colonnes de
+ * chiffres a 320 px seraient illisibles ou deborderaient ; `frontend-design.md`
+ * demande explicitement cartes et listes quand un tableau ne tient plus sur
+ * mobile. Une seule structure sert toutes les largeurs, sans deux arbres de DOM
+ * concurrents qu'il faudrait garder d'accord.
+ *
+ * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons de `tokens.css`.
+ */
+
+.page {
+  padding: var(--ls-space-4);
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+.titre {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-primary);
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  font-weight: 600;
+}
+
+.introduction,
+.introductionSection {
+  margin: 0 0 var(--ls-space-4);
+  color: var(--ls-text-muted);
+}
+
+.contenu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-5);
+}
+
+.titreSection {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-primary);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+/* --- Retour d'action ------------------------------------------------------ */
+
+.retourSucces,
+.retourRefus {
+  margin: 0;
+  padding: var(--ls-space-3);
+  border-radius: var(--ls-radius-sm);
+}
+
+.retourSucces {
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+}
+
+/*
+ * UN REFUS N'EST PAS UNE PANNE, et sa couleur ne doit pas crier. « Un paiement
+ * est en cours » est une situation prevue du parcours 2 : le fond sable et le
+ * texte courant donnent 10,83:1, lisible sans alarmer.
+ */
+.retourRefus {
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+  border-left: 4px solid var(--ls-accent-terracotta-deep);
+}
+
+/* --- Cartes de stock ------------------------------------------------------ */
+
+.listeStocks,
+.listeJournal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.carteStock,
+.ligneJournal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-2);
+  padding: var(--ls-space-3);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+  /* `min-width: 0` : sans lui un nom long forcerait la carte a deborder. */
+  min-width: 0;
+}
+
+.enteteCarte,
+.enteteLigne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--ls-space-2);
+}
+
+.nomProduit,
+.typeMouvement {
+  color: var(--ls-text);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.libelleVariante {
+  color: var(--ls-text);
+  overflow-wrap: anywhere;
+}
+
+.reference {
+  color: var(--ls-text-muted);
+  font-size: 0.85rem;
+  /* Une référence est un identifiant : elle ne se coupe pas au milieu. */
+  white-space: nowrap;
+}
+
+/*
+ * LES TROIS QUANTITES SUR UNE LIGNE, ET ELLES Y TIENNENT A 320 px. Chacune
+ * porte son etiquette : un chiffre nu obligerait a se souvenir de l'ordre des
+ * colonnes, et confondre physique et disponible fait vendre une piece reservee.
+ */
+.quantites {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ls-space-3);
+  margin: 0;
+}
+
+.quantite {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 5rem;
+}
+
+.quantite dt {
+  color: var(--ls-text-muted);
+  font-size: 0.8rem;
+}
+
+.quantite dd {
+  margin: 0;
+  color: var(--ls-text);
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * L'ALERTE PORTE DU TEXTE, jamais la seule couleur. `--ls-text` sur sable donne
+ * 10,83:1, et le bord terracotta profond ajoute un repere visuel sans porter
+ * l'information a lui seul.
+ */
+.alerteStock {
+  margin: 0;
+  padding: var(--ls-space-2) var(--ls-space-3);
+  border-left: 4px solid var(--ls-accent-terracotta-deep);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+  font-size: 0.9rem;
+}
+
+.etatVenteWeb {
+  margin: 0;
+  color: var(--ls-text-muted);
+  font-size: 0.85rem;
+}
+
+.etatVide {
+  margin: 0;
+  padding: var(--ls-space-4);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+}
+
+/* --- Commandes ------------------------------------------------------------ */
+
+/*
+ * LES BOUTONS S'EMPILENT A 320 px ET S'ALIGNENT ENSUITE. Cote a cote sur un
+ * petit ecran, chacun tomberait sous les 44 px de zone tactile une fois les
+ * ecarts retires.
+ */
+.commandes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ls-space-2);
+}
+
+.bouton,
+.boutonSecondaire {
+  flex: 1 1 auto;
+  padding: var(--ls-space-2) var(--ls-space-3);
+  border-radius: var(--ls-radius-sm);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  /* Zone tactile de 44 px, `frontend-design.md`. */
+  min-height: 44px;
+}
+
+.bouton {
+  border: none;
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+}
+
+.bouton:hover:not(:disabled) {
+  background: var(--ls-primary-hover);
+}
+
+.boutonSecondaire {
+  border: 1px solid var(--ls-border);
+  background: var(--ls-surface);
+  color: var(--ls-primary);
+}
+
+/*
+ * DESACTIVE, LE BOUTON RESTE LISIBLE. `opacity` seule tomberait sous le seuil
+ * de contraste ; le fond sable et le texte courant gardent 10,83:1.
+ */
+.bouton:disabled,
+.boutonSecondaire:disabled {
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+  border-color: var(--ls-border);
+  cursor: not-allowed;
+}
+
+/* --- Formulaires ---------------------------------------------------------- */
+
+.formulaire {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-3);
+  margin-top: var(--ls-space-3);
+  padding: var(--ls-space-3);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface-sand);
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-1);
+}
+
+.champ label {
+  color: var(--ls-text);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.champ input {
+  /* `box-sizing` : sans lui le remplissage s'ajoute et le champ deborde. */
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--ls-space-2);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  /* 16 px minimum : en dessous, iOS zoome a la mise au point du champ. */
+  font-size: 1rem;
+  min-height: 44px;
+}
+
+.aideChamp {
+  color: var(--ls-text-muted);
+  font-size: 0.85rem;
+}
+
+.ajustement,
+.correction {
+  margin: 0;
+}
+
+.ajustement summary,
+.correction summary {
+  padding: var(--ls-space-2) 0;
+  color: var(--ls-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+/* --- Journal -------------------------------------------------------------- */
+
+.detailMouvement,
+.motifMouvement {
+  margin: 0;
+  color: var(--ls-text);
+  overflow-wrap: anywhere;
+}
+
+.motifMouvement {
+  color: var(--ls-text-muted);
+  font-size: 0.9rem;
+}
+
+.quantiteMouvement {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.enteteLigne time {
+  margin-left: auto;
+  color: var(--ls-text-muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
