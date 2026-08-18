@@ -458,3 +458,115 @@ export async function lireCategorieParSlug(
     select: { id: true, nom: true, slug: true },
   });
 }
+
+/** Une variante telle que la fiche publique doit l'afficher, LS-105. */
+export type VariantePubliee = {
+  id: string;
+  libelle: string;
+  dimensions: string | null;
+  prixCentimes: number;
+  quantiteDisponible: number;
+};
+
+/** Une fiche produit publique, prete a afficher, LS-105. */
+export type FicheProduit = {
+  id: string;
+  nom: string;
+  slug: string;
+  descriptionCourte: string | null;
+  categorieNom: string;
+  categorieSlug: string;
+  variantes: VariantePubliee[];
+};
+
+/**
+ * Une fiche produit publique par son slug, LS-105.
+ *
+ * `statut = 'ACTIF'` EST DANS LA REQUETE, ET C'EST LA GARDE DE LA STORY. Un
+ * produit en BROUILLON porte du travail en cours et des prix non arretes : il
+ * doit rendre 404 et non sa fiche, y compris pour qui devine son slug. La
+ * condition vit ici plutot que dans le service pour la meme raison qu'en
+ * `listerProduitsPublies` : au plus pres de la base, aucun chemin ne la
+ * contourne.
+ *
+ * UN PRODUIT ARCHIVE NE SORT PAS NON PLUS, son statut n'etant pas `ACTIF`.
+ *
+ * LA DISPONIBILITE EST CALCULEE PAR VARIANTE, non cumulee comme au catalogue.
+ * La fiche doit dire l'etat de la declinaison CHOISIE : cumuler donnerait « en
+ * stock » sur une fiche dont la variante affichee est epuisee.
+ *
+ * LA FORMULE EST CELLE DU CATALOGUE, `quantite_physique - quantite_reservee`
+ * sous condition de vente web. Une piece reservee par un autre client, paiement
+ * en cours, n'est pas disponible ; une variante hors vente web contribue zero
+ * et s'affiche donc « Epuise » sans disparaitre, invariant 6.
+ *
+ * LES VARIANTES ARCHIVEES SONT EXCLUES, C13 : elles ne sont jamais supprimees
+ * mais ne se vendent plus, et les proposer au choix promettrait une declinaison
+ * retiree du catalogue.
+ *
+ * L'ORDRE EST `cree_a` PUIS `libelle`, stable et independant du plan
+ * d'execution. Sans tri explicite, PostgreSQL rend les lignes dans l'ordre qui
+ * l'arrange, et le sens du selecteur de variante changerait avec le volume.
+ */
+export async function lireFicheParSlug(
+  client: ClientBase,
+  slug: string,
+): Promise<FicheProduit | null> {
+  const produit = await client.produit.findFirst({
+    where: { slug, statut: "ACTIF" },
+    select: {
+      id: true,
+      nom: true,
+      slug: true,
+      descriptionCourte: true,
+      categorie: { select: { nom: true, slug: true } },
+    },
+  });
+
+  if (produit === null) {
+    return null;
+  }
+
+  const lignes = await client.$queryRaw<
+    {
+      id: string;
+      libelle: string;
+      dimensions: string | null;
+      prixCentimes: number;
+      quantiteDisponible: bigint | number;
+    }[]
+  >`
+    SELECT
+      v.id,
+      v.libelle,
+      v.dimensions,
+      v.prix_centimes AS "prixCentimes",
+      CASE WHEN v.vente_web_activee
+           THEN greatest(v.quantite_physique - v.quantite_reservee, 0)
+           ELSE 0
+      END             AS "quantiteDisponible"
+    FROM variante v
+    WHERE v.produit_id = ${produit.id}
+      AND v.archivee_a IS NULL
+    ORDER BY v.cree_a ASC, v.libelle ASC
+  `;
+
+  return {
+    id: produit.id,
+    nom: produit.nom,
+    slug: produit.slug,
+    descriptionCourte: produit.descriptionCourte,
+    categorieNom: produit.categorie.nom,
+    categorieSlug: produit.categorie.slug,
+    /*
+     * `greatest` RENDS DU `bigint`, que le pilote transmet en `BigInt`
+     * JavaScript. Le laisser passer ferait echouer la serialisation vers le
+     * composant client du selecteur de variante, « Do not know how to serialize
+     * a BigInt », defaut deja rencontre en LS-104.
+     */
+    variantes: lignes.map((ligne) => ({
+      ...ligne,
+      quantiteDisponible: Number(ligne.quantiteDisponible),
+    })),
+  };
+}

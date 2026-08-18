@@ -148,3 +148,27 @@ export async function compterMedias(
 ): Promise<number> {
   return client.media.count({ where: { produitId } });
 }
+
+/**
+ * Medias TRAITES d'un produit, pour la galerie de la fiche publique, LS-105.
+ *
+ * SEPAREE DE `listerMedias`, qui sert l'administration et rend tout. Le filtre
+ * sur `TRAITE` est la raison d'etre de cette fonction : un media en attente ou
+ * en echec n'a AUCUN fichier sous `public/`, donc ses balises `source`
+ * pointeraient vers des URL qui repondent 404. La galerie afficherait un cadre
+ * casse sur une page publique.
+ *
+ * LE FILTRE EST DANS LA REQUETE et non chez l'appelant, pour la meme raison
+ * qu'ailleurs : un oubli cote composant exposerait le cadre casse, et aucun
+ * chemin ne contourne une condition posee ici.
+ */
+export async function listerMediasPublies(
+  client: ClientBase,
+  produitId: string,
+): Promise<Media[]> {
+  return client.media.findMany({
+    where: { produitId, statutTraitement: "TRAITE" },
+    orderBy: { ordre: "asc" },
+    select: CHAMPS,
+  });
+}
