@@ -419,11 +419,25 @@ model MouvementStock {
   motif                    String?
   acteurId                 String?            @map("acteur_id") // S9, nul si origine SYSTEME
   origine                  OrigineEcriture // S9, un webhook n'est pas une personne
+  // S15, ADR-030. Le mouvement que celui-ci compense, nul sur un mouvement
+  // ordinaire. Il porte le lien qui n'existait que dans le texte libre du
+  // `motif`, illisible pour toute requête et pour toute contrainte.
+  //
+  // L'unicité partielle ci-dessous en fait une garantie : un mouvement ne se
+  // compense qu'une fois. Sans elle, un double clic ferait remonter le stock de
+  // deux pièces là où une seule était partie, et le journal porterait deux
+  // corrections en apparence légitimes.
+  compenseId               String?            @map("compense_id")
   creeA                    DateTime           @default(now()) @map("cree_a") @db.Timestamptz(3)
 
   variante Variante     @relation(fields: [varianteId], references: [id], onDelete: Restrict)
   commande Commande?    @relation(fields: [commandeId], references: [id], onDelete: SetNull)
   acteur   Utilisateur? @relation(fields: [acteurId], references: [id], onDelete: SetNull)
+  // Relation auto-référente, S4 : le compensé est `Restrict`, un mouvement
+  // corrigé ne peut pas disparaître en laissant sa correction orpheline. De
+  // toute façon aucun mouvement n'est jamais supprimé.
+  compense    MouvementStock?  @relation("CompensationMouvement", fields: [compenseId], references: [id], onDelete: Restrict)
+  compensePar MouvementStock[] @relation("CompensationMouvement")
 
   // S7 et décision D, clé d'idempotence. La clé porte (commandeId, varianteId)
   // et non la commande seule : un panier à deux articles produit deux mouvements.
@@ -433,6 +447,17 @@ model MouvementStock {
   // bornent une période puis regroupent par type. Sans cet index, chaque calcul
   // balaie l'intégralité du journal des mouvements, qui ne fait que croître.
   @@index([creeA, type], map: "mouvement_periode_idx")
+  // S15, ADR-030. Un mouvement ne se compense qu'une fois, et c'est la BASE qui
+  // le garantit : deux corrections simultanées ne peuvent pas passer toutes les
+  // deux, là où un contrôle applicatif les laisserait passer entre son `SELECT`
+  // et son `INSERT`.
+  //
+  // LE PRÉDICAT `compense_id IS NOT NULL` EST INDISPENSABLE. Sans lui,
+  // PostgreSQL traite les `NULL` comme distincts, donc l'index n'échouerait pas,
+  // mais il indexerait l'intégralité du journal pour ne servir qu'aux rares
+  // lignes de compensation. C'est le septième index partiel du projet, et le
+  // piège associé est connu : un prédicat qui change ouvre en silence.
+  @@unique([compenseId], where: raw("compense_id IS NOT NULL"), map: "mouvement_compense_unique")
   @@map("mouvement_stock")
 }
 

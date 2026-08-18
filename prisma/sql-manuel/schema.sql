@@ -161,6 +161,10 @@ CREATE TABLE "mouvement_stock" (
     "motif" TEXT,
     "acteur_id" TEXT,
     "origine" "OrigineEcriture" NOT NULL,
+    -- LS-106, S15 et ADR-030. Le mouvement que celui-ci compense, nul sur un
+    -- mouvement ordinaire. L'unicité partielle plus bas en fait une garantie :
+    -- un mouvement ne se compense qu'une fois.
+    "compense_id" TEXT,
     "cree_a" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "mouvement_stock_pkey" PRIMARY KEY ("id")
@@ -618,6 +622,13 @@ CREATE INDEX "mouvement_periode_idx" ON "mouvement_stock"("cree_a", "type");
 CREATE UNIQUE INDEX "mouvement_vente_web_unique" ON "mouvement_stock"("commande_id", "variante_id") WHERE (type = 'VENTE_WEB');
 
 -- CreateIndex
+-- LS-106, S15 et ADR-030. Un mouvement ne se compense qu'une fois, et c'est la
+-- BASE qui le garantit : deux corrections simultanées ne peuvent pas passer
+-- toutes les deux. Le prédicat est indispensable, sans lui l'index couvrirait
+-- l'intégralité du journal pour ne servir qu'aux rares lignes de compensation.
+CREATE UNIQUE INDEX "mouvement_compense_unique" ON "mouvement_stock"("compense_id") WHERE (compense_id IS NOT NULL);
+
+-- CreateIndex
 CREATE UNIQUE INDEX "commande_numero_key" ON "commande"("numero");
 
 -- CreateIndex
@@ -751,6 +762,12 @@ ALTER TABLE "mouvement_stock" ADD CONSTRAINT "mouvement_stock_commande_id_fkey" 
 
 -- AddForeignKey
 ALTER TABLE "mouvement_stock" ADD CONSTRAINT "mouvement_stock_acteur_id_fkey" FOREIGN KEY ("acteur_id") REFERENCES "utilisateur"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+-- RESTRICT et non CASCADE : un mouvement corrigé ne peut pas disparaître en
+-- laissant sa correction orpheline. Théorique, S4 interdisant toute
+-- suppression, mais une clé permissive affaiblirait la règle pour rien.
+ALTER TABLE "mouvement_stock" ADD CONSTRAINT "mouvement_stock_compense_id_fkey" FOREIGN KEY ("compense_id") REFERENCES "mouvement_stock"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "commande" ADD CONSTRAINT "commande_utilisateur_id_fkey" FOREIGN KEY ("utilisateur_id") REFERENCES "utilisateur"("id") ON DELETE SET NULL ON UPDATE CASCADE;

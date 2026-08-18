@@ -554,6 +554,31 @@ sortie=$(R "INSERT INTO mouvement_stock (id,variante_id,commande_id,type,quantit
    VALUES ('mv3','var2','cmd','VENTE_WEB',-1,'SYSTEME',now());")
 verifier_accepte "panier multi-articles, second mouvement accepté" "$sortie"
 
+# S15 et ADR-030, LS-106 : un mouvement ne se compense qu'une fois.
+#
+# LES TROIS CONTRÔLES VONT ENSEMBLE. Le premier prouve que la compensation est
+# possible, le deuxième qu'elle ne se répète pas, le troisième que le PRÉDICAT
+# de l'index partiel fait son office. Sans ce dernier, un index posé sans
+# `WHERE compense_id IS NOT NULL` passerait les deux premiers et n'autoriserait
+# pourtant qu'une seule ligne non compensatrice dans tout le journal.
+R "INSERT INTO mouvement_stock (id,variante_id,type,quantite,prix_unitaire_fige_centimes,origine,cree_a)
+   VALUES ('mvx1','var','VENTE_EXTERNE',-1,4200,'ADMIN',now());" >/dev/null
+sortie=$(R "INSERT INTO mouvement_stock (id,variante_id,type,quantite,compense_id,motif,origine,cree_a)
+   VALUES ('mvx2','var','RETOUR',1,'mvx1','saisie erronée','ADMIN',now());")
+verifier_accepte "compensation d'une vente externe acceptée, S14" "$sortie"
+
+sortie=$(R "INSERT INTO mouvement_stock (id,variante_id,type,quantite,compense_id,motif,origine,cree_a)
+   VALUES ('mvx3','var','RETOUR',1,'mvx1','seconde tentative','ADMIN',now());")
+verifier_rejet "double compensation rejetée, S15" "mouvement_compense_unique" "$sortie"
+
+# Le prédicat : deux mouvements SANS compensation restent possibles. C'est ce
+# que l'index couvrirait à tort s'il était posé sans son `WHERE`.
+R "INSERT INTO mouvement_stock (id,variante_id,type,quantite,origine,cree_a)
+   VALUES ('mvx4','var','ENTREE',1,'ADMIN',now());" >/dev/null
+sortie=$(R "INSERT INTO mouvement_stock (id,variante_id,type,quantite,origine,cree_a)
+   VALUES ('mvx5','var','ENTREE',1,'ADMIN',now());")
+verifier_accepte "deux mouvements sans compensation acceptés, prédicat de l'index" "$sortie"
+
 # Quatrième clé de la décision D, corrigée après la revue de LS-13. Les trois
 # contrôles qui suivent couvrent chacun un défaut que la première version du
 # filtre laissait passer.
