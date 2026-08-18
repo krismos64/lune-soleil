@@ -150,13 +150,32 @@ export function SelecteurVariante({
        * jamais masque, seulement rendu non achetable. Retirer le bouton
        * laisserait un trou sans expliquer pourquoi.
        */}
+      {/*
+       * LE BOUTON EST DESACTIVE TANT QUE LA VENTE EN LIGNE N'OUVRE PAS, et son
+       * libelle le dit. Arbitrage de Christophe du 18 aout 2026.
+       *
+       * UN BOUTON ACTIF QUI NE FAIT RIEN EST UN FAUX SUCCES, ce que
+       * `frontend-design.md` interdit et que la premiere version produisait :
+       * la mecanique de reservation appartenant a la phase 3, le clic restait
+       * sans effet et sans explication.
+       *
+       * LES DEUX LIBELLES SE DISTINGUENT, et la nuance est tout l'interet de
+       * la formulation. « Épuisé » dit que CETTE declinaison n'est plus
+       * disponible ; « Vente en ligne bientôt disponible » dit que la boutique
+       * n'ouvre pas encore, alors que la piece est en stock. Les confondre
+       * ferait croire a une rupture sur un catalogue entier.
+       *
+       * A RETIRER EN MEME TEMPS QUE LS-4 pose la reservation : le bouton
+       * reprend alors « Ajouter au panier » et son etat actif, `epuisee`
+       * redevenant sa seule condition de desactivation.
+       */}
       <button
         type="button"
         className={styles.ajouter}
-        disabled={epuisee}
-        aria-disabled={epuisee}
+        disabled
+        aria-disabled="true"
       >
-        {epuisee ? "Épuisé" : "Ajouter au panier"}
+        {epuisee ? "Épuisé" : "Vente en ligne bientôt disponible"}
       </button>
 
       {/*
