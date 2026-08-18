@@ -182,3 +182,46 @@ test("un identifiant faux produit un message d'erreur annonce", async ({
   // Et l'echec laisse sur place, sans session.
   await expect(page).toHaveURL(/\/administration\/connexion$/);
 });
+
+/**
+ * LE CONTENU EST CENTRE SUR GRAND ECRAN, defaut trouve en apercu visuel.
+ *
+ * LA MESURE DE DEBORDEMENT NE VOIT PAS CE DEFAUT, et c'est pourquoi ce test
+ * existe : la borne `max-width: 42ch` portait sur le seul `.conteneur` du
+ * formulaire, sans `margin: 0 auto` ni borne sur la page. Rien ne debordait,
+ * les trois projets restaient verts, et l'ecran collait au bord gauche a
+ * 1280 px pendant que le titre s'etendait seul sur toute la largeur.
+ *
+ * A 320 ET 390 px LA BORNE N'EST JAMAIS ATTEINTE : le contenu occupe toute la
+ * largeur, les marges gauche et droite valent le seul remplissage, et le test
+ * passerait sans rien prouver. Il est donc restreint a `bureau-1280`, la seule
+ * largeur ou le centrage est observable.
+ *
+ * LA TOLERANCE EST DE 1 px, pour l'arrondi sous-pixel d'une largeur impaire.
+ */
+test("le contenu de la connexion est centre sur grand ecran", async ({
+  page,
+}, infos) => {
+  test.skip(
+    infos.project.name !== "bureau-1280",
+    "Le centrage ne s'observe qu'au-dela de la borne de 42ch.",
+  );
+
+  await page.goto("/administration/connexion");
+
+  const marges = await page
+    .getByRole("main")
+    .evaluate((element: HTMLElement) => {
+      const rectangle = element.getBoundingClientRect();
+      return {
+        gauche: rectangle.left,
+        droite: document.documentElement.clientWidth - rectangle.right,
+      };
+    });
+
+  // Les deux marges sont egales, ET non nulles : les comparer seulement
+  // laisserait passer un `main` occupant toute la largeur, ou elles valent
+  // zero de chaque cote.
+  expect(marges.gauche).toBeGreaterThan(0);
+  expect(Math.abs(marges.gauche - marges.droite)).toBeLessThanOrEqual(1);
+});

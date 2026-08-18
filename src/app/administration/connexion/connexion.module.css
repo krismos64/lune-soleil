@@ -1,0 +1,25 @@
+/*
+ * Ecran de connexion de l'administration, LS-70.
+ *
+ * MOBILE FIRST, concu a 320 px : aucune largeur fixe, aucune valeur en pixels
+ * sur un conteneur.
+ *
+ * LA BORNE DE LARGEUR EST ICI, ET NON SUR LE FORMULAIRE. Elle portait sur le
+ * seul `.conteneur` du composant client, donc le titre et l'introduction
+ * s'etendaient sur toute la largeur pendant que le formulaire restait borne,
+ * et l'ensemble collait au bord gauche des 1280 px faute de `margin: 0 auto`.
+ * Invisible a 320 px, ou la borne n'est jamais atteinte. C'est la convention de
+ * `reauthentification.module.css`, ecran jumeau qui demande la meme chose.
+ *
+ * Aucune valeur hexadecimale en dur : tout vient des jetons d'ADR-022.
+ */
+
+.page {
+  padding: var(--ls-space-4);
+  max-width: 42ch;
+  margin: 0 auto;
+}
+
+.introduction {
+  color: var(--ls-text-muted);
+}
