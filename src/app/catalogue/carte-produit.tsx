@@ -66,6 +66,17 @@ export function CarteProduit({ produit }: { produit: ProduitCatalogue }) {
 
   return (
     <li className={styles.carte}>
+      {/*
+       * LA ROUTE `/produit/[slug]` N'EXISTE PAS ENCORE, elle appartient a
+       * LS-105 que cette story bloque. Ces liens rendent donc une 404 jusqu'a sa
+       * livraison, et c'est assume : le lien est ecrit ici parce que le slug est
+       * la donnee que le catalogue porte, et l'ecrire plus tard obligerait a
+       * reprendre la carte entiere.
+       *
+       * LE SLUG ET NON L'IDENTIFIANT dans l'adresse publique : il se lit, se
+       * partage, et ne dit rien du volume du catalogue, quand un UUID expose la
+       * cle primaire dans une URL indexee.
+       */}
       <Link href={`/produit/${produit.slug}`} className={styles.lienCarte}>
         <div className={styles.cadreImage}>
           {produit.mediaChemin ? (
