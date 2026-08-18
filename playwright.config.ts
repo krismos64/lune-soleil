@@ -1,10 +1,10 @@
 /**
  * Configuration Playwright, LS-68.
  *
- * PORTEE ACTUELLE VOLONTAIREMENT ETROITE. Le site se limite a une page
- * d'attente, le catalogue et le tunnel appartiennent a la phase 2. Ces tests
- * verifient donc que l'application se construit, se sert et reste accessible,
- * pas un parcours d'achat qui n'existe pas encore.
+ * PORTEE ACTUELLE. Le site porte la page d'attente, l'administration du
+ * catalogue et, depuis LS-104, le CATALOGUE PUBLIC. La fiche produit appartient
+ * a LS-105 et le tunnel d'achat a la phase 3 : ces tests ne couvrent donc aucun
+ * parcours d'achat, qui n'existe pas encore.
  *
  * `webServer` construit puis demarre l'application avant la suite et l'arrete
  * apres. Un `next dev` serait plus rapide a demarrer mais testerait un rendu
