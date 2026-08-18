@@ -287,7 +287,10 @@ describe("filtrage par categorie et tri", () => {
       await catalogue.lireCataloguePublic("bagues");
 
     expect(produits.map((p) => p.nom)).toEqual(["Une bague"]);
-    expect(categorieRetenue).toBe("bagues");
+    expect(categorieRetenue?.slug).toBe("bagues");
+    // LE NOM REMONTE AVEC, et c'est ce qui permet a l'ecran de NOMMER la
+    // categorie filtree, y compris quand elle est vide.
+    expect(categorieRetenue?.nom).toBe("Bagues");
   });
 
   /*
@@ -393,6 +396,9 @@ describe("filtrage par categorie et tri", () => {
     expect(produits).toEqual([]);
     // LE FILTRE RESTE RETENU malgre l'absence de resultat : l'ecran doit pouvoir
     // dire « aucun resultat dans Bagues » et proposer de l'effacer.
-    expect(categorieRetenue).toBe("bagues");
+    expect(categorieRetenue?.slug).toBe("bagues");
+    // LE NOM REMONTE AVEC, et c'est ce qui permet a l'ecran de NOMMER la
+    // categorie filtree, y compris quand elle est vide.
+    expect(categorieRetenue?.nom).toBe("Bagues");
   });
 });

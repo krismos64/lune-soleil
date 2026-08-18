@@ -72,6 +72,19 @@ export const CATALOGUE_TEST = {
     slug: "e2e-ls104-en-stock",
     prixCentimes: 4900,
   },
+  /**
+   * Photo de la piece en stock, LS-104.
+   *
+   * UNE SEULE PIECE EN PORTE UNE : le catalogue doit exercer ses deux branches,
+   * la carte avec `<picture>` et la carte sans photo. Le chemin se termine par
+   * une barre, comme celui que le traitement ecrit, la carte y concatenant
+   * `320.avif` et les autres declinaisons.
+   */
+  mediaEnStock: {
+    id: "d1b2c3d4-1111-4ddd-8888-111111111111",
+    chemin: "produits/e2e-ls104/",
+    texteAlternatif: "Vue de face de la pièce",
+  },
   /** Exactement une piece, badge « Dernière pièce », le cas ordinaire ici. */
   dernierePiece: {
     id: "b1b2c3d4-2222-4bbb-8888-222222222222",

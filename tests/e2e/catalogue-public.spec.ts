@@ -17,11 +17,16 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
+import { declinaisonsAttendues } from "@/integrations/medias/traitement";
+
 import { CATALOGUE_TEST, PRODUIT_TEST } from "./chemin-session";
 import {
   TOLERANCE_DEBORDEMENT_PX,
   debordementHorizontal,
 } from "./mesure-rendu";
+
+/** Les declinaisons que le traitement ecrit reellement, ADR-007. */
+const DECLINAISONS_PRODUITES = declinaisonsAttendues();
 
 test("le catalogue s'affiche sans session et rend les pieces publiees", async ({
   page,
@@ -242,9 +247,27 @@ test("une categorie vide affiche un texte et une action, jamais une grille vide"
     page.getByRole("heading", { name: CATALOGUE_TEST.enStock.nom }),
   ).toHaveCount(0);
 
+  /*
+   * LA CATEGORIE EST NOMMEE, et c'est une correction de la revue. La premiere
+   * version disait « aucune piece dans cette categorie » sans jamais dire
+   * LAQUELLE : le nom etait cherche dans la liste des categories PROPOSEES au
+   * filtre, qui exclut par construction celle qu'on filtre quand elle est vide.
+   * Le visiteur lisait un message sur une categorie anonyme.
+   */
   await expect(
-    page.getByText(/Aucune pièce dans cette catégorie/i),
+    page.getByText(
+      new RegExp(
+        `Aucune pièce dans ${CATALOGUE_TEST.categorieVide.nom} pour le moment`,
+        "i",
+      ),
+    ),
   ).toBeVisible();
+
+  // LE COMPTE LA NOMME AUSSI, meme a zero produit : le ternaire ne traitait le
+  // cas nomme que pour les catalogues non vides.
+  await expect(page.getByRole("status")).toContainText(
+    CATALOGUE_TEST.categorieVide.nom,
+  );
 
   // L'ACTION DE SORTIE EXISTE ET FONCTIONNE : sans elle, le visiteur devrait
   // comprendre l'URL pour revenir au catalogue.
@@ -260,7 +283,12 @@ test("une categorie vide affiche un texte et une action, jamais une grille vide"
 test("l'etat vide ne deborde pas et reste accessible", async ({ page }) => {
   await page.goto(`/catalogue?categorie=${CATALOGUE_TEST.categorieVide.slug}`);
   await expect(
-    page.getByText(/Aucune pièce dans cette catégorie/i),
+    page.getByText(
+      new RegExp(
+        `Aucune pièce dans ${CATALOGUE_TEST.categorieVide.nom} pour le moment`,
+        "i",
+      ),
+    ),
   ).toBeVisible();
 
   expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
@@ -272,4 +300,112 @@ test("l'etat vide ne deborde pas et reste accessible", async ({ page }) => {
     .analyze();
 
   expect(resultat.violations).toEqual([]);
+});
+
+/*
+ * LA CARTE AVEC PHOTO, ET SES TROIS SOURCES. LS-104, releve en revue.
+ *
+ * CE BLOC EXISTE PARCE QUE LE `<picture>` N'ETAIT EXECUTE PAR AUCUN TEST. La
+ * preparation ne posait aucune ligne `media`, donc les trois cartes empruntaient
+ * toutes la branche « image absente » : un `srcSet` mal forme, une largeur
+ * absente ou un format renomme n'auraient fait rougir personne.
+ *
+ * C'est le motif exact du defaut deja rencontre sur ce projet, une URL de
+ * vignette portant `640.jpg` quand le traitement ecrit `640.jpeg` : une chaine
+ * construite a l'execution et confrontee a rien.
+ */
+test.describe("la carte avec photo", () => {
+  test("rend un picture a trois sources et un repli JPEG", async ({ page }) => {
+    await page.goto("/catalogue");
+
+    const carte = page.locator("li", {
+      has: page.getByRole("heading", { name: CATALOGUE_TEST.enStock.nom }),
+    });
+
+    // LE REPLI EST UN VRAI `<img>`, seul element qu'un navigateur sans AVIF ni
+    // WebP sait afficher. Une `<source>` seule rendrait une image cassee.
+    const image = carte.locator("img");
+    await expect(image).toHaveAttribute(
+      "alt",
+      CATALOGUE_TEST.mediaEnStock.texteAlternatif,
+    );
+
+    const src = await image.getAttribute("src");
+    expect(src).toContain(CATALOGUE_TEST.mediaEnStock.chemin);
+    // `.jpeg` ET NON `.jpg`, extension REELLEMENT produite par le traitement.
+    expect(src).toMatch(/640\.jpeg$/);
+
+    // Les deux formats modernes sont proposes avant le repli, dans cet ordre.
+    await expect(carte.locator('source[type="image/avif"]')).toHaveCount(1);
+    await expect(carte.locator('source[type="image/webp"]')).toHaveCount(1);
+  });
+
+  /*
+   * LES URL SONT CONFRONTEES AUX DECLINAISONS REELLEMENT PRODUITES, et non
+   * relues a l'oeil. `declinaisonsAttendues()` est la source de verite du
+   * traitement : si une largeur y disparait ou change de format, ce test rougit
+   * au lieu de laisser des URL mortes en production.
+   */
+  test("chaque URL servie correspond a une declinaison produite", async ({
+    page,
+  }) => {
+    await page.goto("/catalogue");
+
+    const carte = page.locator("li", {
+      has: page.getByRole("heading", { name: CATALOGUE_TEST.enStock.nom }),
+    });
+
+    const srcSets = await carte
+      .locator("source")
+      .evaluateAll((sources) =>
+        sources.map((source) => source.getAttribute("srcset") ?? ""),
+      );
+    const src = (await carte.locator("img").getAttribute("src")) ?? "";
+
+    const urls = [
+      ...srcSets.flatMap((jeu) =>
+        jeu.split(",").map((entree) => entree.trim().split(/\s+/)[0] ?? ""),
+      ),
+      src,
+    ].filter(Boolean);
+
+    expect(urls.length).toBeGreaterThan(0);
+
+    for (const url of urls) {
+      const declinaison = url.split("/").pop() ?? "";
+      expect(
+        DECLINAISONS_PRODUITES,
+        `l'URL ${url} ne correspond a aucune declinaison produite`,
+      ).toContain(declinaison);
+    }
+  });
+
+  test("la carte avec photo ne deborde pas horizontalement", async ({
+    page,
+  }) => {
+    await page.goto("/catalogue");
+    await expect(
+      page.getByRole("heading", { name: CATALOGUE_TEST.enStock.nom }),
+    ).toBeVisible();
+
+    expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+      TOLERANCE_DEBORDEMENT_PX,
+    );
+  });
+
+  /*
+   * LES DEUX BRANCHES COEXISTENT : une piece porte une photo, deux n'en portent
+   * pas. Une carte sans photo reste affichee, avec un emplacement vide, plutot
+   * que de disparaitre du catalogue.
+   */
+  test("une piece sans photo reste affichee", async ({ page }) => {
+    await page.goto("/catalogue");
+
+    const sansPhoto = page.locator("li", {
+      has: page.getByRole("heading", { name: CATALOGUE_TEST.epuise.nom }),
+    });
+
+    await expect(sansPhoto).toBeVisible();
+    await expect(sansPhoto.locator("img")).toHaveCount(0);
+  });
 });

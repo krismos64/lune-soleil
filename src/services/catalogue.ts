@@ -548,7 +548,15 @@ export type ProduitCatalogue = {
 export type Catalogue = {
   produits: ProduitCatalogue[];
   categories: { id: string; nom: string; slug: string }[];
-  categorieRetenue: string | null;
+  /*
+   * LA CATEGORIE RETENUE EST RENDUE ENTIERE, et non son seul slug. L'ecran doit
+   * pouvoir la NOMMER, et il ne peut pas la retrouver dans `categories` : cette
+   * liste ne porte que les categories AYANT du contenu publie, donc jamais celle
+   * qu'on filtre quand elle vient d'etre vidée. Rendre le slug seul obligeait
+   * l'ecran a dire « aucune piece dans cette categorie » sans jamais dire
+   * laquelle, defaut releve en revue.
+   */
+  categorieRetenue: { id: string; nom: string; slug: string } | null;
 };
 
 /**
@@ -615,6 +623,6 @@ export async function lireCataloguePublic(
       mediaTexteAlternatif: ligne.mediaTexteAlternatif,
     })),
     categories,
-    categorieRetenue: categorieRetenue?.slug ?? null,
+    categorieRetenue,
   };
 }
