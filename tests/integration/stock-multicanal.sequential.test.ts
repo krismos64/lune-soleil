@@ -397,6 +397,52 @@ describe("une correction ajoute, elle ne modifie jamais, regle S4", () => {
     expect((await lireQuantites(varianteId)).physique).toBe(3);
   });
 
+  /*
+   * LE REFUS DE DOUBLE COMPENSATION N'INCREMENTE PAS LE STOCK AU PASSAGE.
+   *
+   * `corrigerMouvement` incremente le physique AVANT d'ecrire le compensateur :
+   * c'est ce dernier qui heurte l'index et leve `P2002`. Si le rollback ne
+   * jouait pas, l'increment resterait et le stock monterait d'une piece a
+   * chaque tentative refusee, sans qu'aucun mouvement ne l'explique.
+   *
+   * CE TEST EST DISTINCT DU SUIVANT, qui verifie le refus. Celui-ci verifie que
+   * le refus ne laisse RIEN derriere lui, ce que le compte de mouvements seul
+   * ne dit pas : une quantite peut bouger sans qu'aucune ligne ne s'ecrive.
+   */
+  it("un refus de double compensation n'incremente pas le stock", async () => {
+    const { varianteId } = await creerVarianteEnStock(client, {
+      quantitePhysique: 3,
+    });
+
+    const vente = await stock.enregistrerVenteExterne({
+      varianteId,
+      quantite: 1,
+      prixUnitaireEuros: "42,00",
+      canal: "Marché de Pau",
+      acteurId,
+    });
+
+    await stock.corrigerMouvement({
+      mouvementId: vente.mouvementId!,
+      motif: "Première correction",
+      acteurId,
+    });
+    const apresPremiere = (await lireQuantites(varianteId)).physique;
+
+    // Trois tentatives refusees : le stock ne doit pas bouger d'un iota.
+    for (const rang of [1, 2, 3]) {
+      const refus = await stock.corrigerMouvement({
+        mouvementId: vente.mouvementId!,
+        motif: `Tentative ${rang}`,
+        acteurId,
+      });
+      expect(refus.refus).toBe("DEJA_COMPENSE");
+    }
+
+    expect((await lireQuantites(varianteId)).physique).toBe(apresPremiere);
+    expect(await compterMouvements(varianteId)).toBe(2);
+  });
+
   it("refuse de compenser deux fois le meme mouvement", async () => {
     const { varianteId } = await creerVarianteEnStock(client, {
       quantitePhysique: 3,
@@ -427,6 +473,51 @@ describe("une correction ajoute, elle ne modifie jamais, regle S4", () => {
     expect((await lireQuantites(varianteId)).physique).toBe(3);
     expect(await compterMouvements(varianteId)).toBe(2);
   });
+});
+
+/*
+ * SEULE UNE VENTE EXTERNE SE CORRIGE ICI, ET LA GARDE VIT DANS LE SERVICE.
+ *
+ * Defaut trouve par la revue critique : la restriction au type
+ * `VENTE_EXTERNE` n'existait que dans le COMPOSANT, qui n'affiche le bouton
+ * que sur ces lignes. Le service acceptait n'importe quel `mouvementId`, et
+ * une Server Action s'invoque directement sans passer par l'ecran.
+ *
+ * CE QUE CELA PRODUISAIT SUR UNE VENTE WEB : un `RETOUR` qui incremente le
+ * stock physique, sans toucher la commande, la facture ni le paiement. Une
+ * piece vendue en ligne et expediee serait remise en vente, et rien dans le
+ * journal ne dirait que la commande existe toujours.
+ *
+ * CE N'EST PAS UNE FAILLE D'AUTORISATION, l'administratrice etant
+ * authentifiee : c'est une garde METIER absente de la couche qui decide. Un
+ * retour de marchandise web se traite par le parcours 4, phase 4, avec son
+ * remboursement et son avoir.
+ */
+it("refuse de compenser une vente web, seul le marche se corrige ici", async () => {
+  const { varianteId } = await creerVarianteEnStock(client, {
+    quantitePhysique: 1,
+  });
+  const commandeId = await creerCommande(client);
+
+  // Un mouvement de vente WEB, tel que le webhook de paiement l'ecrirait.
+  const venteWeb = await client.query(
+    `INSERT INTO mouvement_stock (id, variante_id, commande_id, type, quantite, origine, cree_a)
+       VALUES (gen_random_uuid(), $1, $2, 'VENTE_WEB', -1, 'SYSTEME', now())
+       RETURNING id`,
+    [varianteId, commandeId],
+  );
+
+  const resultat = await stock.corrigerMouvement({
+    mouvementId: venteWeb.rows[0].id,
+    motif: "Tentative de correction d'une vente en ligne",
+    acteurId,
+  });
+
+  expect(resultat.refus).toBe("NON_COMPENSABLE");
+  // Le stock n'a pas bouge : la piece vendue en ligne reste vendue.
+  expect((await lireQuantites(varianteId)).physique).toBe(1);
+  // Et aucun mouvement compensateur n'a ete ecrit.
+  expect(await compterMouvements(varianteId)).toBe(1);
 });
 
 describe("l'ajustement d'inventaire", () => {

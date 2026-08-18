@@ -298,6 +298,31 @@ export async function corrigerMouvement(
       }
 
       /*
+       * SEULE UNE VENTE EXTERNE SE CORRIGE ICI, ET LA GARDE VIT DANS LE
+       * SERVICE. Defaut trouve par la revue critique : la restriction
+       * n'existait que dans le COMPOSANT, qui n'affiche le bouton que sur ces
+       * lignes. Une Server Action s'invoque directement sans passer par
+       * l'ecran, exactement le motif de LS-89.
+       *
+       * CE QUE CELA PRODUISAIT SUR UNE VENTE WEB : un `RETOUR` qui incremente
+       * le stock physique sans toucher la commande, la facture ni le paiement.
+       * Une piece vendue en ligne et expediee serait remise en vente, et rien
+       * dans le journal ne dirait que la commande existe toujours.
+       *
+       * UN RETOUR DE MARCHANDISE WEB SE TRAITE PAR LE PARCOURS 4, phase 4, avec
+       * son remboursement et son avoir : S8 lie la reintegration de stock au
+       * retour PHYSIQUE, jamais a une correction de saisie.
+       *
+       * `AJUSTEMENT` ET `ENTREE` SONT EXCLUS AUSSI. Un inventaire errone se
+       * corrige par un nouvel inventaire, qui constate la realite : le
+       * compenser par un mouvement inverse reintroduirait le chiffre faux dans
+       * la somme du journal.
+       */
+      if (origine.type !== "VENTE_EXTERNE") {
+        return { refus: "NON_COMPENSABLE" as const };
+      }
+
+      /*
        * LE SIGNE DE LA COMPENSATION EST L'INVERSE DE L'ORIGINE, quel que soit
        * le type : une sortie se compense par une entree, et reciproquement.
        * Deduire le signe du TYPE obligerait a maintenir une table des sens,

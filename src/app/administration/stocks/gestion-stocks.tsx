@@ -47,6 +47,19 @@ const MESSAGES: Record<ResultatAction["statut"], string> = {
   INDISPONIBLE: "Opération indisponible. Réessayez dans un instant.",
 };
 
+/*
+ * LE LIBELLE D'ATTENTE FERME LE DOUBLE CLIC, arbitrage du 18 aout 2026.
+ *
+ * Mesure : deux ventes externes identiques passaient toutes les deux, le stock
+ * descendant de 5 a 3. Aucune garde en base ne les distingue, et c'est voulu :
+ * vendre deux pieces d'affilee sur un stand est legitime, une cle d'idempotence
+ * compliquerait le modele pour un cas que l'ecran couvre.
+ *
+ * `disabled` SEUL NE SUFFIT PAS. Un bouton grise sans libelle changeant passe
+ * inapercu : le texte dit que l'envoi est en cours, et le formulaire se ferme
+ * au succes. Une seconde vente reelle demande donc deux gestes deliberes.
+ */
+
 /** Formate un prix en centimes, invariant 1 : la division est un affichage. */
 function formaterPrix(centimes: number): string {
   return new Intl.NumberFormat("fr-FR", {
@@ -313,7 +326,7 @@ export function GestionStocks({
                       className={styles.boutonSecondaire}
                       disabled={enCours}
                     >
-                      Enregistrer l&apos;ajustement
+                      {enCours ? "Enregistrement…" : "Enregistrer l'ajustement"}
                     </button>
                   </form>
                 </details>
@@ -441,7 +454,9 @@ export function GestionStocks({
                         className={styles.boutonSecondaire}
                         disabled={enCours}
                       >
-                        Enregistrer la correction
+                        {enCours
+                          ? "Enregistrement…"
+                          : "Enregistrer la correction"}
                       </button>
                     </form>
                   </details>
@@ -552,7 +567,7 @@ function FormulaireVenteExterne({
       </div>
 
       <button type="submit" className={styles.bouton} disabled={enCours}>
-        Enregistrer la vente
+        {enCours ? "Enregistrement…" : "Enregistrer la vente"}
       </button>
     </form>
   );
