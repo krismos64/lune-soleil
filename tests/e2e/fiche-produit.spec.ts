@@ -26,6 +26,16 @@ import {
 const CHEMIN_FICHE = `/produit/${CATALOGUE_TEST.enStock.slug}`;
 
 /**
+ * Les trois libelles que peut porter le bouton du bloc 6.
+ *
+ * « Vente en ligne bientôt disponible » est TRANSITOIRE : le bouton reste
+ * desactive tant que LS-4 n'a pas pose la reservation, un bouton actif sans
+ * effet etant un faux succes. Il reprendra « Ajouter au panier » ensuite.
+ */
+const MOTIF_ACHAT =
+  /Ajouter au panier|Vente en ligne bientôt disponible|Épuisé/;
+
+/**
  * L'ORDRE IMPOSE, MESURE SUR LA POSITION VERTICALE REELLE.
  *
  * POURQUOI PAS L'ORDRE DU DOM. A partir de 768 px la grille place la galerie a
@@ -60,10 +70,14 @@ test("les blocs d'achat se suivent dans l'ordre impose", async ({ page }) => {
     "5-declinaison",
     page.getByRole("group", { name: "Déclinaison" }),
   );
-  await relever(
-    "6-panier",
-    page.getByRole("button", { name: "Ajouter au panier" }),
-  );
+  /*
+   * LE BOUTON EST VISE PAR UN MOTIF, ET NON PAR UN LIBELLE FIGE. Il en porte
+   * trois selon l'etat : « Épuisé » sur une declinaison indisponible, « Vente
+   * en ligne bientôt disponible » tant que LS-4 n'a pas pose la reservation, et
+   * « Ajouter au panier » ensuite. Figer l'un des trois ferait rougir ce test
+   * d'ordre le jour ou le libelle change, sans qu'aucun ordre n'ait bouge.
+   */
+  await relever("6-panier", page.getByRole("button", { name: MOTIF_ACHAT }));
   await relever("7-livraison", page.getByText(/Livraison par Mondial Relay/));
   await relever(
     "8-dimensions",
@@ -105,9 +119,7 @@ test("les blocs editoriaux suivent l'achat, sections puis textes legaux", async 
     return boite!.y;
   };
 
-  const panier = await y(
-    page.getByRole("button", { name: "Ajouter au panier" }),
-  );
+  const panier = await y(page.getByRole("button", { name: MOTIF_ACHAT }));
   const section1 = await y(
     page.getByRole("heading", {
       name: FICHE_TEST.sections.visiblePremiere.titre,
