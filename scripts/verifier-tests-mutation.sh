@@ -359,6 +359,27 @@ mute "$PAGE" 's/<h1 className=\{styles\.titre\}>/<h1 className={styles.titre} st
 cas "debordement vers la gauche introduit dans la page" e2e \
   "la page ne deborde pas horizontalement"
 
+# ---------------------------------------------------------------------------
+# Cas 11 ter : debordement PAR LE TEXTE, LS-112.
+#
+# CE CAS EXISTE PARCE QUE LA REVUE A TROUVE UNE REGRESSION. Passer de
+# `documentElement.scrollWidth` a `getBoundingClientRect` mesure la boite de
+# l'ELEMENT, jamais celle de son CONTENU : un texte en `white-space: nowrap`
+# plus long que son bloc laisse la boite a 320 px pendant que le texte sort a
+# 365. La premiere version de LS-112 passait au VERT sur cette mutation, quand
+# la mesure d'AVANT LS-111 la voyait. Corriger un defaut en rouvrant un autre.
+#
+# `frontend-design.md` cite nommement `white-space: nowrap` sur texte variable
+# parmi les motifs a chercher a 320 px : la mesure censee les attraper leur etait
+# aveugle.
+#
+# DETECTE A 320 PX SEULEMENT, et c'est correct : a 390 px l'accroche tient sur
+# une ligne, donc elle ne deborde pas. Une mutation detectee aux trois largeurs
+# signalerait ici une mesure trop grossiere.
+mute "$PAGE" 's/<p className=\{styles\.accroche\}>/<p className={styles.accroche} style={{ whiteSpace: "nowrap" }}>/'
+cas "debordement par le texte, white-space nowrap" e2e \
+  "la page ne deborde pas horizontalement"
+
 # Cas 12 : violation d'accessibilite. Un document sans langue declaree est lu
 # avec la prononciation par defaut du lecteur d'ecran.
 mute "$LAYOUT" 's/<html lang="fr">/<html>/'

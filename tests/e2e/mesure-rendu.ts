@@ -26,28 +26,75 @@
  * depassement. Le document ne « sait » pas qu'il deborde, la personne qui
  * regarde l'ecran, si.
  *
- * `getBoundingClientRect` echappe a cela : il rend la position REELLE apres mise
- * en page, transformations comprises.
+ * TROIS DEPASSEMENTS SONT MESURES, et il a fallu les trois.
  *
- * LES DEUX BORDS SONT MESURES, et non le seul bord droit comme en LS-111. Un
- * element dont le bord gauche est negatif, marge negative ou
- * `position: absolute; left: -Npx`, deborde et produit la meme barre de
- * defilement. Le nom des tests dit « ne deborde pas horizontalement » : la
- * mesure doit tenir cette promesse, pas la moitie.
+ * 1. LE BORD DROIT, `right` au-dela de la largeur visible. C'est le seul que
+ *    LS-111 retenait.
  *
- * LES ELEMENTS MASQUES SONT EXCLUS. Un panneau replie ou un menu ferme est
- * souvent pousse hors de l'ecran a dessein, et le compter ferait rougir un rendu
- * correct.
+ * 2. LE BORD GAUCHE, par l'abscisse negative. Un element tire vers la gauche,
+ *    marge negative ou `left: -Npx`, produit la MEME barre de defilement. Le nom
+ *    des tests dit « ne deborde pas horizontalement » : la mesure doit tenir
+ *    cette promesse entiere, pas sa moitie droite.
  *
- * CE QU'ELLE NE VOIT PAS, faute d'y descendre : un shadow DOM et une `<iframe>`.
- * Sans consequence tant que les ecrans restent en CSS natif, a reprendre si un
- * composant a racine fantome arrive.
+ * 3. LE CONTENU QUI DEBORDE DE SA BOITE, `scrollWidth` de l'element lui-meme.
+ *    C'est une REGRESSION que la revue de LS-112 a trouvee : passer de
+ *    `documentElement.scrollWidth` a `getBoundingClientRect` mesure la boite de
+ *    l'ELEMENT, jamais celle de son CONTENU. Un texte en `white-space: nowrap`
+ *    plus long que son bloc laisse la boite a 320 px pendant que le texte sort a
+ *    365. Mesure faite sur la page d'attente : la mutation passait au VERT,
+ *    quand l'ancienne mesure la voyait.
+ *
+ * Ce troisieme cas n'a rien de theorique ici : `frontend-design.md` cite
+ * nommement `white-space: nowrap` sur texte variable et le nom de produit long
+ * parmi les motifs a chercher a 320 px. La mesure censee les attraper leur etait
+ * aveugle.
+ *
+ * LES ELEMENTS INVISIBLES SONT EXCLUS, et le filtre va plus loin que
+ * `display: none`. Trois motifs courants produisent un element hors de l'ecran
+ * sans qu'aucun defilement n'apparaisse, et les compter ferait rougir un rendu
+ * correct :
+ *
+ *   - un enfant sous un ancetre en `overflow: hidden`, qui masque le depassement
+ *   - un conteneur a DEFILEMENT assume, `overflow-x: auto`, ou le depassement
+ *     interne est le comportement voulu et non un defaut de mise en page
+ *   - la technique `sr-only` par `left: -9999px`, reservee aux lecteurs d'ecran
+ *
+ * Aucun n'existe dans `src/` aujourd'hui, verifie : zero `overflow` hors
+ * `overflow-wrap`. La phase 3 en amenera avec ses tableaux de commandes, et le
+ * filtre est ecrit maintenant plutot qu'apres le premier faux positif.
+ *
+ * CE QU'ELLE NE VOIT TOUJOURS PAS, faute d'y descendre : un shadow DOM et une
+ * `<iframe>`. Sans consequence tant que les ecrans restent en CSS natif, a
+ * reprendre si un composant a racine fantome arrive.
  */
 export async function debordementHorizontal(
   page: import("@playwright/test").Page,
 ): Promise<number> {
   return page.evaluate(() => {
     const largeurVisible = document.documentElement.clientWidth;
+
+    /**
+     * Un ancetre coupe-t-il ce qui deborde, ou le fait-il defiler ?
+     *
+     * Dans les deux cas le depassement de cet element ne produit aucune barre de
+     * defilement sur la PAGE : il est soit invisible, soit contenu dans une zone
+     * qui defile pour elle-meme. La racine est exclue de la remontee, son propre
+     * `overflow` etant justement ce que la mesure interroge.
+     */
+    const contenuParUnAncetre = (element: Element): boolean => {
+      let parent = element.parentElement;
+
+      while (parent && parent !== document.documentElement) {
+        const style = window.getComputedStyle(parent);
+        if (style.overflowX !== "visible" || style.overflow !== "visible") {
+          return true;
+        }
+        parent = parent.parentElement;
+      }
+
+      return false;
+    };
+
     let depassement = 0;
 
     for (const element of document.querySelectorAll("*")) {
@@ -55,20 +102,45 @@ export async function debordementHorizontal(
       if (
         style.display === "none" ||
         style.visibility === "hidden" ||
-        element.getClientRects().length === 0
+        element.getClientRects().length === 0 ||
+        contenuParUnAncetre(element)
       ) {
         continue;
       }
 
       const boite = element.getBoundingClientRect();
 
-      // A DROITE, ce qui depasse la zone visible. A GAUCHE, ce qui sort par
-      // l'abscisse negative. Les deux produisent la meme barre de defilement, et
-      // le maximum des deux dit de combien la page est trop large.
+      /*
+       * LE MASQUAGE PAR REJET HORS DE L'ECRAN, technique `sr-only` classique :
+       * `position: absolute; left: -9999px` reserve un contenu aux lecteurs
+       * d'ecran sans le montrer. L'element est hors flux et ne produit AUCUNE
+       * barre de defilement, mais son `-boite.left` vaudrait 9999, mesure faite.
+       *
+       * LE CRITERE EST LE HORS-FLUX, pas la valeur : seul un element
+       * `absolute` ou `fixed` peut sortir ainsi sans entrainer la page. Un
+       * element en flux tire a gauche par une marge negative deborde
+       * REELLEMENT, et reste compte.
+       */
+      const horsFlux =
+        style.position === "absolute" || style.position === "fixed";
+      if (horsFlux && boite.right <= 0) {
+        continue;
+      }
+
+      // LE DEPASSEMENT INTERNE N'EST COMPTE QUE SI L'ELEMENT NE DEFILE PAS
+      // lui-meme : `overflow-x: auto` sur un tableau large est une decision de
+      // mise en page, pas un defaut, et la zone defile sans entrainer la page.
+      const defileLuiMeme =
+        style.overflowX !== "visible" || style.overflow !== "visible";
+      const interne = defileLuiMeme
+        ? 0
+        : element.scrollWidth - element.clientWidth;
+
       depassement = Math.max(
         depassement,
         boite.right - largeurVisible,
         -boite.left,
+        interne,
       );
     }
 
@@ -79,14 +151,24 @@ export async function debordementHorizontal(
 /**
  * Tolerance en pixels sous laquelle un depassement n'est pas un defaut.
  *
- * UNE TOLERANCE ASSUMEE ET NON UN ARRONDI CACHE. La version de LS-111 arrondissait
- * la mesure avant de la comparer a zero, ce qui laissait passer 0,4 px sans que
- * rien ne le dise. Le seuil est ici nomme et cite par les tests.
+ * UNE TOLERANCE ASSUMEE ET NON UN ARRONDI CACHE. La version de LS-111
+ * arrondissait la mesure avant de la comparer a zero, ce qui laissait passer
+ * 0,4 px sans que rien ne le dise. Le seuil est ici nomme et cite par chaque
+ * assertion.
  *
- * UN PIXEL, parce que la mise en page produit des fractions inevitables : une
- * bordure de 0,5 px, une largeur en pourcentage qui ne tombe pas juste, un
- * arrondi de sous-pixel du moteur de rendu. Aucun de ces cas ne fait defiler
- * lateralement. Un debordement REEL, lui, se compte en dizaines de pixels : le
- * defaut trouve en LS-111 en faisait 496, celui de LS-103 en faisait 40.
+ * UN DEMI-PIXEL, ET NON UN PIXEL ENTIER. La premiere version de LS-112 retenait
+ * 1 px, et la revue a montre que la justification ne soutenait pas le chiffre :
+ * ce qu'il s'agit d'absorber, ce sont les fractions inevitables de la mise en
+ * page, une bordure de 0,5 px, une largeur en pourcentage qui ne tombe pas
+ * juste, un arrondi de sous-pixel du moteur de rendu. Toutes tiennent SOUS le
+ * demi-pixel.
+ *
+ * Un seuil a 1 px laissait donc passer un depassement reel d'un pixel entier
+ * sans rien absorber de plus. Trop haut pour etre un vrai zero, trop bas pour
+ * couvrir ce qu'il pretendait couvrir.
+ *
+ * LE CHIFFRE N'A DE TOUTE FACON PAS BESOIN D'ETRE GENEREUX : un debordement reel
+ * se compte en dizaines de pixels. Celui de LS-111 en faisait 496, celui de
+ * LS-103 en faisait 40, celui du texte non coupable 45.
  */
-export const TOLERANCE_DEBORDEMENT_PX = 1;
+export const TOLERANCE_DEBORDEMENT_PX = 0.5;
