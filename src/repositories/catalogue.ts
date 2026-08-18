@@ -312,15 +312,27 @@ export type ProduitCatalogue = {
  * client n'est pas disponible : afficher la seule quantite physique promettrait
  * un bijou deja engage dans une commande en cours de paiement.
  *
- * TROIS CONDITIONS FONT QU'UNE VARIANTE COMPTE, et elles sont celles de la vente
- * web, pas celles du stock : non archivee, vente web activee, et c'est tout. Une
- * variante epuisee reste comptee, sans quoi le produit disparaitrait du
- * catalogue au lieu de s'afficher « Epuise ».
+ * UNE SEULE CONDITION RETIRE UNE VARIANTE DU COMPTE : l'archivage. Ni le stock
+ * nul ni la vente web desactivee ne la retirent, et la nuance a ete tranchee par
+ * la revue de LS-104.
  *
- * UN PRODUIT SANS AUCUNE VARIANTE VENDABLE NE SORT PAS. `INNER JOIN` et non
- * `LEFT` : C1 garantit qu'un produit publie porte au moins une variante vivante,
- * mais rien ne garantit qu'elle soit en vente web. Le montrer sans prix ni
- * bouton d'achat n'apporterait rien.
+ * LA VENTE WEB DESACTIVEE DONNE « EPUISE », ELLE NE FAIT PAS DISPARAITRE. La
+ * table des etats de `frontend-design.md` la donne comme condition de l'etat
+ * `Epuise`, au meme titre que la quantite nulle. Une premiere version ajoutait
+ * `AND v.vente_web_activee = true` au JOIN : une piece partie sur un marche
+ * sortait alors du catalogue, perdant son adresse publique et son referencement,
+ * pour revenir plus tard sous une URL que plus personne n'avait en favori.
+ *
+ * C'est aussi ce que dit l'invariant 6 : suspendre la vente web et retirer du
+ * catalogue sont deux gestes distincts.
+ *
+ * LA DISPONIBILITE, ELLE, COMPTE LA VENTE WEB. `CASE` plutot que le retrait :
+ * une variante hors vente web contribue zero au stock disponible, donc le
+ * produit s'affiche « Epuise » s'il n'a rien d'autre a vendre.
+ *
+ * UN PRODUIT SANS AUCUNE VARIANTE VIVANTE NE SORT PAS. `INNER JOIN` et non
+ * `LEFT` : C19 archive un produit dont la derniere variante part, donc ce cas ne
+ * devrait pas exister, et le rendre sans prix n'apporterait rien.
  *
  * LE MEDIA PRINCIPAL EST `ordre = 1`, ce que l'index partiel
  * `media_principal_unique` rend unique par produit. `LEFT JOIN` cette fois : une
@@ -366,15 +378,18 @@ export async function listerProduitsPublies(
       c.nom                    AS "categorieNom",
       p.publie_a               AS "publieA",
       min(v.prix_centimes)     AS "prixMinimumCentimes",
-      sum(greatest(v.quantite_physique - v.quantite_reservee, 0))
-                               AS "quantiteDisponible",
+      sum(
+        CASE WHEN v.vente_web_activee
+             THEN greatest(v.quantite_physique - v.quantite_reservee, 0)
+             ELSE 0
+        END
+      )                        AS "quantiteDisponible",
       m.chemin                 AS "mediaChemin",
       m.texte_alternatif       AS "mediaTexteAlternatif"
     FROM produit p
     JOIN categorie c ON c.id = p.categorie_id
     JOIN variante v ON v.produit_id = p.id
       AND v.archivee_a IS NULL
-      AND v.vente_web_activee = true
     LEFT JOIN media m ON m.produit_id = p.id AND m.ordre = 1
     WHERE p.statut = 'ACTIF'
     ${conditionCategorie}
@@ -411,7 +426,10 @@ export async function listerCategoriesPubliees(
       produits: {
         some: {
           statut: "ACTIF",
-          variantes: { some: { archiveeA: null, venteWebActivee: true } },
+          // MEME REGLE QUE LE CATALOGUE : seul l'archivage retire une variante.
+          // Une categorie dont les pieces sont hors vente web reste proposee,
+          // ses produits s'y affichant « Epuise ».
+          variantes: { some: { archiveeA: null } },
         },
       },
     },
