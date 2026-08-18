@@ -158,7 +158,7 @@ npm run format:check # Prettier en vérification, ce que rejoue la chaîne
 `format:check` échoue sans rien réécrire, c'est la forme employée par la chaîne
 d'intégration. `npm run format` corrige sur place, à lancer avant de commiter.
 
-`npm audit` doit rester à **zéro vulnérabilité**. Sept overrides y contribuent,
+`npm audit` doit rester à **zéro vulnérabilité**. Huit overrides y contribuent,
 documentés dans `package.json` avec la condition de leur retrait.
 
 Un override vise la version corrigée **sans franchir de version majeure chez le
@@ -167,6 +167,12 @@ ESLint, dont le `minimatch` d'alors appelait l'ancienne API ; passer de 5.0.8 à
 5.0.9 ne pose aucun problème puisque `minimatch` est désormais en 10.x. Après
 tout override, relancer les commandes que la dépendance sert, un audit vert ne
 prouvant pas que la chaîne fonctionne.
+
+**Une exception existe depuis le 18 août 2026**, `deepmerge-ts` en 8.x quand
+`@prisma/config` épingle 7.1.5 : aucune correction n'existait dans la branche
+7.x, et le remède proposé par npm rétrogradait Prisma en 6.12. La règle devient
+alors sa propre exigence de preuve, `prisma validate`, `generate` et
+`migrate status` ont été exécutés plutôt que supposés.
 
 ### Base de données locale
 
@@ -540,7 +546,7 @@ destructives doivent bloquer, une migration additive doit passer, et une
 détection qui ne peut pas conclure doit bloquer plutôt que supposer. Lancé contre
 la version d'avant LS-42, il échoue sur sept de ces dix cas.
 
-`verifier-tests-mutation.sh` casse **quatre-vingt-six fois** le comportement
+`verifier-tests-mutation.sh` casse **quatre-vingt-huit fois** le comportement
 testé et exige que la suite rougisse à chaque fois. Les cibles, par domaine :
 réservation et stock, authentification et autorisation, socle de validation et
 journalisation, journal des connexions, verrou de tâche planifiée, preuve

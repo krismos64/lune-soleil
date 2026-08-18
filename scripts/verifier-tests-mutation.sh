@@ -72,6 +72,7 @@ MEDIA="src/services/media.ts"
 TRAITEMENT="src/integrations/medias/traitement.ts"
 STOCKAGE="src/integrations/medias/stockage.ts"
 PAGE_EDITEUR="src/app/administration/produits/[id]/page.tsx"
+PUBLICATION="src/app/administration/produits/[id]/publication-produit.tsx"
 
 # TOUT FICHIER MUTE DOIT FIGURER ICI, sans quoi il n'est ni sauvegarde ni
 # restaure et la mutation RESTE SUR LE DISQUE apres l'execution.
@@ -84,7 +85,7 @@ PAGE_EDITEUR="src/app/administration/produits/[id]/page.tsx"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -1285,15 +1286,16 @@ mute "$PAGE_EDITEUR" 's/      <VariantesProduit/      <PublicationProduit\n     
 cas "bloc de publication descendu sous les informations generales" e2e \
   "les cinq blocs de l'editeur sont rendus dans l'ordre decide"
 
-# Cas 86 : LA GARDE DE ROLE. `exigerAdministratrice` devient `exigerSession` :
-# toute personne CONNECTEE atteint alors l'editeur, y compris un client
-# ordinaire. C'est l'invariant 2, et le defaut est silencieux, la page
-# s'affichant normalement pour qui possede une session.
+# Cas 86 : LA GARDE DE ROLE, vue par le refus ANONYME.
 #
 # CE CAS SE DISTINGUE DU CAS 11 DEJA PRESENT, qui retire la verification DANS
 # `exigerAdministratrice`. Celui-ci laisse la fonction intacte et change son
-# APPEL : une page qui appelle la mauvaise garde passe tous les tests du service,
-# et c'est le test de refus sans session qui doit l'attraper.
+# APPEL : une page qui appelle la mauvaise garde passe tous les tests du service.
+#
+# IL EST EXERCE PAR UN TEST ANTERIEUR A LS-111, `catalogue-administration`, et
+# non par les tests que ce ticket ajoute : c'est assume. Le cas 88 plus bas
+# couvre le versant que SEULE la session permet, un client connecte sans le
+# role. Les deux sont necessaires, et le second est celui qui manquait.
 #
 # DEUX SUBSTITUTIONS ET NON UNE : `exigerSession` doit aussi etre IMPORTE, sans
 # quoi la construction Next.js echoue et la mutation serait comptee « detectee »
@@ -1302,6 +1304,40 @@ mute "$PAGE_EDITEUR" 's/  exigerAdministratrice,\n\} from "@\/services\/autorisa
 mute "$PAGE_EDITEUR" 's/    await exigerAdministratrice\(enTetes\);/    await exigerSession(enTetes);/'
 cas "editeur garde par exigerSession au lieu du role" e2e \
   "refuse un visiteur sans session"
+
+
+# ---------------------------------------------------------------------------
+# Cas 87 : LES MOTIFS DE NON-PUBLICATION, vides. LS-111.
+#
+# CE CAS EXISTE PARCE QUE LA REVUE A TROUVE LE TEST AVEUGLE. Sa premiere version
+# comptait `page.getByRole("listitem")` sur toute la page, or l'editeur rend
+# QUATRE listes : les manques, mais aussi une entree par variante, par photo et
+# par section. La fixture posant une declinaison, le compte valait au moins 1
+# meme quand le bloc de publication ne rendait plus rien.
+#
+# Mesure faite : en vidant `manquants`, le test restait VERT aux trois largeurs
+# alors que son commentaire affirmait qu'il verrait ce cas. L'assertion est
+# desormais ancree dans la region « Publication ».
+mute "$PUBLICATION" 's/  const manquants = refuses \?\? motifs;/  const manquants: typeof motifs = [];/'
+cas "motifs de non-publication vides" e2e \
+  "les motifs de non-publication sont lisibles sans debordement"
+
+# ---------------------------------------------------------------------------
+# Cas 88 : UN CLIENT CONNECTE ATTEINT L'EDITEUR. LS-111, invariant 2.
+#
+# CE CAS EST CELUI QUE SEULE LA SESSION PERMET, et il se distingue du cas 86.
+# Une page qui appelle `exigerSession` au lieu d'`exigerAdministratrice`
+# redirige toujours le visiteur ANONYME : tous les tests de refus anterieurs
+# restent verts. Seul un compte connecte SANS le role separe les deux gardes, et
+# aucun test ne le faisait avant ce ticket.
+#
+# Le defaut est silencieux et se corrige d'un mot : la page s'affiche
+# normalement pour qui possede une session, et livre le catalogue en preparation
+# a n'importe quel compte de la boutique.
+mute "$PAGE_EDITEUR" 's/  exigerAdministratrice,\n\} from "@\/services\/autorisation";/  exigerAdministratrice,\n  exigerSession,\n} from "@\/services\/autorisation";/'
+mute "$PAGE_EDITEUR" 's/    await exigerAdministratrice\(enTetes\);/    await exigerSession(enTetes);/'
+cas "editeur atteint par un client connecte sans le role" e2e \
+  "refuse un client connecte"
 
 echo
 echo "-----------------------------------------"
