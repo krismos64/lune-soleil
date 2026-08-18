@@ -20,6 +20,7 @@ import type { StatutProduit } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import { valider } from "@/lib/validation";
 import * as depot from "@/repositories/catalogue";
+import * as depotMedias from "@/repositories/media";
 import * as depotSections from "@/repositories/sections-produit";
 import {
   schemaCreationCategorie,
@@ -624,5 +625,105 @@ export async function lireCataloguePublic(
     })),
     categories,
     categorieRetenue,
+  };
+}
+
+/** Une variante telle que la fiche publique l'expose, LS-105. */
+export type VarianteFiche = {
+  id: string;
+  libelle: string;
+  dimensions: string | null;
+  prixCentimes: number;
+  disponibilite: EtatDisponibilite;
+};
+
+/** Une photographie de la galerie, LS-105. */
+export type PhotoFiche = {
+  id: string;
+  chemin: string;
+  texteAlternatif: string | null;
+};
+
+/** Une section editoriale affichable, LS-105. */
+export type SectionFiche = {
+  id: string;
+  titre: string;
+  contenu: string;
+};
+
+/** Ce que la fiche produit publique rend, LS-105. */
+export type FicheProduit = {
+  id: string;
+  nom: string;
+  slug: string;
+  descriptionCourte: string | null;
+  categorieNom: string;
+  categorieSlug: string;
+  variantes: VarianteFiche[];
+  photos: PhotoFiche[];
+  sections: SectionFiche[];
+};
+
+/**
+ * La fiche produit publique, LS-105.
+ *
+ * REND `null` PLUTOT QUE DE LEVER, et l'ecran en fait un 404. Un slug inconnu
+ * et un produit en brouillon donnent la MEME reponse : distinguer les deux
+ * dirait a un visiteur quels slugs existent en brouillon, donc quels produits
+ * sont en preparation.
+ *
+ * LES SECTIONS SONT FILTREES ICI, pas dans le composant. Deux conditions, C22
+ * et C23 : une section non visible ne s'affiche pas, une section sans contenu
+ * ne s'affiche pas non plus, titre compris. Le filtre vit dans le service parce
+ * que c'est une regle metier, et qu'un composant qui l'oublierait laisserait un
+ * titre seul suivi d'un blanc.
+ *
+ * `trim()` ET NON `!== ""`. Une section dont le contenu ne porte que des
+ * espaces ou des retours a la ligne est vide au sens de la regle : la garder
+ * afficherait son titre au-dessus d'un trou, exactement ce que C23 evite.
+ *
+ * L'ORDRE DES SECTIONS EST CELUI DE L'ADMINISTRATRICE, ADR-026, deja rendu par
+ * `listerSections`. Ne jamais le retrier ici.
+ */
+export async function lireFichePublique(
+  slug: string,
+): Promise<FicheProduit | null> {
+  const fiche = await depot.lireFicheParSlug(prisma, slug);
+
+  if (fiche === null) {
+    return null;
+  }
+
+  const [photos, sections] = await Promise.all([
+    depotMedias.listerMediasPublies(prisma, fiche.id),
+    depotSections.listerSections(prisma, fiche.id),
+  ]);
+
+  return {
+    id: fiche.id,
+    nom: fiche.nom,
+    slug: fiche.slug,
+    descriptionCourte: fiche.descriptionCourte,
+    categorieNom: fiche.categorieNom,
+    categorieSlug: fiche.categorieSlug,
+    variantes: fiche.variantes.map((variante) => ({
+      id: variante.id,
+      libelle: variante.libelle,
+      dimensions: variante.dimensions,
+      prixCentimes: variante.prixCentimes,
+      disponibilite: etatDisponibilite(variante.quantiteDisponible),
+    })),
+    photos: photos.map((photo) => ({
+      id: photo.id,
+      chemin: photo.chemin,
+      texteAlternatif: photo.texteAlternatif,
+    })),
+    sections: sections
+      .filter((section) => section.visible && section.contenu.trim() !== "")
+      .map((section) => ({
+        id: section.id,
+        titre: section.titre,
+        contenu: section.contenu,
+      })),
   };
 }
