@@ -63,7 +63,11 @@ import "dotenv/config";
 import { expect, test as preparation } from "@playwright/test";
 import { Client } from "pg";
 
-import { FICHIER_SESSION_ADMINISTRATION, PRODUIT_TEST } from "./chemin-session";
+import {
+  CATALOGUE_TEST,
+  FICHIER_SESSION_ADMINISTRATION,
+  PRODUIT_TEST,
+} from "./chemin-session";
 
 const MOT_DE_PASSE = "phrase-de-passe-de-test1";
 
@@ -256,6 +260,7 @@ async function preparerBase(client: Client): Promise<void> {
   );
 
   await poserProduitDeControle(client);
+  await poserCataloguePublie(client);
 }
 
 /**
@@ -302,4 +307,79 @@ async function poserProduitDeControle(client: Client): Promise<void> {
      ON CONFLICT (id) DO NOTHING`,
     [PRODUIT_TEST.varianteId, PRODUIT_TEST.produitId, "TEST-LS111"],
   );
+}
+
+/**
+ * Pose les trois produits PUBLIES que le catalogue public doit afficher, LS-104.
+ *
+ * DISTINCTS DU PRODUIT DE CONTROLE, qui reste en `BROUILLON` : celui-la sert de
+ * test negatif, il ne doit jamais apparaitre au catalogue.
+ *
+ * TROIS ETATS DE DISPONIBILITE, deux categories. Les dates de publication sont
+ * FIGEES et espacees, sans quoi le tri par nouveautes serait indistinguable
+ * d'un tri par ordre d'insertion : trois `now()` a la milliseconde pres rendent
+ * l'ordre dependant de la vitesse d'execution.
+ */
+async function poserCataloguePublie(client: Client): Promise<void> {
+  for (const categorie of [
+    CATALOGUE_TEST.categorieA,
+    CATALOGUE_TEST.categorieB,
+    // Volontairement laissee sans produit : elle porte l'etat vide.
+    CATALOGUE_TEST.categorieVide,
+  ]) {
+    await client.query(
+      `INSERT INTO categorie (id, nom, slug, ordre, cree_a)
+       VALUES ($1, $2, $3,
+               (SELECT coalesce(max(ordre), 0) + 1 FROM categorie), now())
+       ON CONFLICT (id) DO NOTHING`,
+      [categorie.id, categorie.nom, categorie.slug],
+    );
+  }
+
+  const pieces = [
+    {
+      ...CATALOGUE_TEST.enStock,
+      categorieId: CATALOGUE_TEST.categorieA.id,
+      quantite: 4,
+      publieA: "2026-08-01T10:00:00Z",
+    },
+    {
+      ...CATALOGUE_TEST.dernierePiece,
+      categorieId: CATALOGUE_TEST.categorieA.id,
+      quantite: 1,
+      // La plus recente : elle doit sortir en tete du tri par nouveautes.
+      publieA: "2026-08-10T10:00:00Z",
+    },
+    {
+      ...CATALOGUE_TEST.epuise,
+      categorieId: CATALOGUE_TEST.categorieB.id,
+      quantite: 0,
+      publieA: "2026-07-01T10:00:00Z",
+    },
+  ];
+
+  for (const piece of pieces) {
+    await client.query(
+      `INSERT INTO produit (id, categorie_id, nom, slug, statut, publie_a, cree_a, modifie_a)
+       VALUES ($1, $2, $3, $4, 'ACTIF', $5, now(), now())
+       ON CONFLICT (id) DO NOTHING`,
+      [piece.id, piece.categorieId, piece.nom, piece.slug, piece.publieA],
+    );
+
+    await client.query(
+      `INSERT INTO variante (
+         id, produit_id, reference, libelle, prix_centimes,
+         quantite_physique, quantite_reservee, vente_web_activee, cree_a
+       )
+       VALUES ($1, $2, $3, 'Déclinaison', $4, $5, 0, true, now())
+       ON CONFLICT (id) DO NOTHING`,
+      [
+        piece.varianteId,
+        piece.id,
+        `TEST-${piece.slug.slice(-8).toUpperCase()}`,
+        piece.prixCentimes,
+        piece.quantite,
+      ],
+    );
+  }
 }

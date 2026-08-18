@@ -277,3 +277,166 @@ export async function compterVariantesVivantes(
 ): Promise<number> {
   return client.variante.count({ where: { produitId, archiveeA: null } });
 }
+
+/** Une ligne du catalogue public, telle que la grille l'affiche. */
+export type ProduitCatalogue = {
+  id: string;
+  nom: string;
+  slug: string;
+  categorieId: string;
+  categorieNom: string;
+  publieA: Date | null;
+  prixMinimumCentimes: number;
+  quantiteDisponible: number;
+  mediaChemin: string | null;
+  mediaTexteAlternatif: string | null;
+};
+
+/**
+ * Produits du catalogue public, LS-104.
+ *
+ * SEUL `ACTIF` SORT D'ICI, et le filtre vit dans la REQUETE plutot que dans le
+ * service : un oubli cote appelant exposerait des brouillons, c'est-a-dire du
+ * travail en cours et des prix non arretes. La condition est au plus pres de la
+ * base, ou aucun chemin ne la contourne.
+ *
+ * UNE SEULE REQUETE, ET DU SQL BRUT. Le catalogue affiche par produit le prix le
+ * plus bas de ses variantes vendables et leur disponibilite cumulee : deux
+ * agregats que l'API typee de Prisma ne sait pas produire en une passe sans
+ * ramener toutes les variantes puis les replier en memoire. Sur 40 references le
+ * cout serait invisible, mais la logique de disponibilite se retrouverait alors
+ * dans un composant, ce que l'architecture interdit.
+ *
+ * LA DISPONIBILITE EST `quantite_physique - quantite_reservee`, la meme formule
+ * que la reservation atomique de `stock.ts`. Une piece reservee par un autre
+ * client n'est pas disponible : afficher la seule quantite physique promettrait
+ * un bijou deja engage dans une commande en cours de paiement.
+ *
+ * TROIS CONDITIONS FONT QU'UNE VARIANTE COMPTE, et elles sont celles de la vente
+ * web, pas celles du stock : non archivee, vente web activee, et c'est tout. Une
+ * variante epuisee reste comptee, sans quoi le produit disparaitrait du
+ * catalogue au lieu de s'afficher « Epuise ».
+ *
+ * UN PRODUIT SANS AUCUNE VARIANTE VENDABLE NE SORT PAS. `INNER JOIN` et non
+ * `LEFT` : C1 garantit qu'un produit publie porte au moins une variante vivante,
+ * mais rien ne garantit qu'elle soit en vente web. Le montrer sans prix ni
+ * bouton d'achat n'apporterait rien.
+ *
+ * LE MEDIA PRINCIPAL EST `ordre = 1`, ce que l'index partiel
+ * `media_principal_unique` rend unique par produit. `LEFT JOIN` cette fois : une
+ * fiche sans photo reste affichable, avec un emplacement vide, plutot que de
+ * disparaitre du catalogue sans que personne ne comprenne pourquoi.
+ *
+ * AUCUNE LIMITE, ni `LIMIT` ni pagination. Le dimensionnement du catalogue,
+ * 10 a 40 references, l'exclut explicitement, et `frontend-design.md` interdit
+ * d'introduire un plafond que le schema ne porte pas.
+ */
+export async function listerProduitsPublies(
+  client: ClientBase,
+  filtre: { categorieId?: string } = {},
+): Promise<ProduitCatalogue[]> {
+  /*
+   * LE FILTRE DE CATEGORIE EST PARAMETRE, JAMAIS CONCATENE. Il vient d'une URL
+   * publique, donc d'une entree non fiable, invariant 7 : `Prisma.sql` produit
+   * ici une requete parametree, et `$queryRaw` la transmet telle quelle.
+   */
+  const conditionCategorie = filtre.categorieId
+    ? Prisma.sql`AND p.categorie_id = ${filtre.categorieId}`
+    : Prisma.empty;
+
+  const lignes = await client.$queryRaw<
+    {
+      id: string;
+      nom: string;
+      slug: string;
+      categorieId: string;
+      categorieNom: string;
+      publieA: Date | null;
+      prixMinimumCentimes: bigint | number;
+      quantiteDisponible: bigint | number;
+      mediaChemin: string | null;
+      mediaTexteAlternatif: string | null;
+    }[]
+  >`
+    SELECT
+      p.id,
+      p.nom,
+      p.slug,
+      p.categorie_id           AS "categorieId",
+      c.nom                    AS "categorieNom",
+      p.publie_a               AS "publieA",
+      min(v.prix_centimes)     AS "prixMinimumCentimes",
+      sum(greatest(v.quantite_physique - v.quantite_reservee, 0))
+                               AS "quantiteDisponible",
+      m.chemin                 AS "mediaChemin",
+      m.texte_alternatif       AS "mediaTexteAlternatif"
+    FROM produit p
+    JOIN categorie c ON c.id = p.categorie_id
+    JOIN variante v ON v.produit_id = p.id
+      AND v.archivee_a IS NULL
+      AND v.vente_web_activee = true
+    LEFT JOIN media m ON m.produit_id = p.id AND m.ordre = 1
+    WHERE p.statut = 'ACTIF'
+    ${conditionCategorie}
+    GROUP BY p.id, p.nom, p.slug, p.categorie_id, c.nom, p.publie_a,
+             m.chemin, m.texte_alternatif
+    ORDER BY p.publie_a DESC NULLS LAST, p.nom ASC
+  `;
+
+  /*
+   * `min` ET `sum` DE POSTGRESQL RENDENT DU `bigint`, que le pilote transmet en
+   * `BigInt` JavaScript. Le laisser passer ferait echouer la serialisation vers
+   * le composant client, « Do not know how to serialize a BigInt », et les
+   * comparaisons avec des nombres ordinaires plus loin.
+   */
+  return lignes.map((ligne) => ({
+    ...ligne,
+    prixMinimumCentimes: Number(ligne.prixMinimumCentimes),
+    quantiteDisponible: Number(ligne.quantiteDisponible),
+  }));
+}
+
+/**
+ * Categories qui portent au moins un produit `ACTIF`, LS-104.
+ *
+ * FILTREES SUR LE CONTENU PUBLIE, contrairement a `listerCategories` qui sert
+ * l'administration et compte tout. Proposer un filtre qui ne rend aucun resultat
+ * fabrique l'etat vide au lieu de l'eviter.
+ */
+export async function listerCategoriesPubliees(
+  client: ClientBase,
+): Promise<{ id: string; nom: string; slug: string }[]> {
+  return client.categorie.findMany({
+    where: {
+      produits: {
+        some: {
+          statut: "ACTIF",
+          variantes: { some: { archiveeA: null, venteWebActivee: true } },
+        },
+      },
+    },
+    select: { id: true, nom: true, slug: true },
+    orderBy: { ordre: "asc" },
+  });
+}
+
+/**
+ * Une categorie par son slug, LS-104.
+ *
+ * SEPAREE DE `listerCategoriesPubliees`, et la distinction porte du sens. Cette
+ * derniere alimente la barre de filtres et ne rend que ce qui a du contenu ;
+ * celle-ci resout la categorie DEMANDEE, qu'elle soit vide ou non.
+ *
+ * Une categorie dont tout le contenu vient d'etre archive doit rester
+ * identifiable, sans quoi l'ecran affiche le catalogue entier au lieu de dire
+ * qu'il n'y a rien dans celle qu'on a demandee.
+ */
+export async function lireCategorieParSlug(
+  client: ClientBase,
+  slug: string,
+): Promise<{ id: string; nom: string; slug: string } | null> {
+  return client.categorie.findUnique({
+    where: { slug },
+    select: { id: true, nom: true, slug: true },
+  });
+}

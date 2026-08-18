@@ -41,3 +41,62 @@ export const PRODUIT_TEST = {
   slug: "e2e-ls111-produit-de-controle",
   nom: "TEST Produit de contrôle LS-111",
 } as const;
+
+/**
+ * Produits PUBLIES du catalogue public, LS-104.
+ *
+ * DISTINCTS DE `PRODUIT_TEST`, qui reste en `BROUILLON` et sert precisement de
+ * test negatif : il ne doit jamais apparaitre dans le catalogue.
+ *
+ * TROIS PIECES POUR TROIS ETATS DE DISPONIBILITE, dans deux categories : c'est
+ * le minimum pour exercer la grille, les filtres et les trois badges sans
+ * fabriquer un catalogue de demonstration. Les noms sont neutres et inventes,
+ * aucune donnee du prototype n'entre ici, interdit du projet.
+ */
+export const CATALOGUE_TEST = {
+  categorieA: {
+    id: "a1b2c3d4-1111-4aaa-8888-111111111111",
+    nom: "TEST Catégorie A",
+    slug: "e2e-ls104-categorie-a",
+  },
+  categorieB: {
+    id: "a1b2c3d4-2222-4aaa-8888-222222222222",
+    nom: "TEST Catégorie B",
+    slug: "e2e-ls104-categorie-b",
+  },
+  /** Plusieurs pieces, badge « En stock ». */
+  enStock: {
+    id: "b1b2c3d4-1111-4bbb-8888-111111111111",
+    varianteId: "c1b2c3d4-1111-4ccc-8888-111111111111",
+    nom: "TEST Pièce en stock",
+    slug: "e2e-ls104-en-stock",
+    prixCentimes: 4900,
+  },
+  /** Exactement une piece, badge « Dernière pièce », le cas ordinaire ici. */
+  dernierePiece: {
+    id: "b1b2c3d4-2222-4bbb-8888-222222222222",
+    varianteId: "c1b2c3d4-2222-4ccc-8888-222222222222",
+    nom: "TEST Pièce unique",
+    slug: "e2e-ls104-derniere-piece",
+    prixCentimes: 12900,
+  },
+  /**
+   * Categorie qui EXISTE mais ne porte aucun produit, LS-104.
+   *
+   * Elle produit l'etat vide REEL, celui d'une categorie dont tout a ete vendu
+   * ou archive, a distinguer d'un slug inconnu qui rend le catalogue entier.
+   */
+  categorieVide: {
+    id: "a1b2c3d4-3333-4aaa-8888-333333333333",
+    nom: "TEST Catégorie vide",
+    slug: "e2e-ls104-categorie-vide",
+  },
+  /** Stock nul, badge « Épuisé ». Reste au catalogue, sans disparaitre. */
+  epuise: {
+    id: "b1b2c3d4-3333-4bbb-8888-333333333333",
+    varianteId: "c1b2c3d4-3333-4ccc-8888-333333333333",
+    nom: "TEST Pièce épuisée",
+    slug: "e2e-ls104-epuise",
+    prixCentimes: 7500,
+  },
+} as const;

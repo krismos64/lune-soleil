@@ -33,7 +33,8 @@ dur.
 | `--ls-primary-hover` | `#4A2A0B` | survol |
 | `--ls-accent-gold` | `#C4A052` | décor seulement |
 | `--ls-accent-gold-deep` | `#8A6A22` | liens, texte accentué |
-| `--ls-accent-terracotta` | `#B4643E` | badge ponctuel |
+| `--ls-accent-terracotta` | `#B4643E` | décor, texte large ou gras |
+| `--ls-accent-terracotta-deep` | `#9C4F2B` | fond de badge en petit texte |
 
 ### Deux règles de contraste, mesurées
 
@@ -42,8 +43,17 @@ dur.
    Tout texte doré utilise `--ls-accent-gold-deep` (4,72:1).
 2. `--ls-accent-terracotta` (`#B4643E`) donne **4,07:1** sur crème, et **4,35:1**
    sur blanc. Sous le seuil AA de 4,5:1 dans les deux cas. Conforme AA en texte
-   large ou gras seulement. Un badge en petit texte passe en fond terracotta avec
-   texte blanc.
+   large ou gras seulement.
+3. `--ls-accent-terracotta-deep` (`#9C4F2B`) donne **5,89:1** avec du texte
+   blanc. C'est le jeton de tout **badge en petit texte**, « Dernière pièce » en
+   tête.
+
+   **La version précédente de cette règle prescrivait ici « fond terracotta avec
+   texte blanc », et cette prescription était fausse** : elle constatait 4,35:1
+   deux lignes plus haut sans en tirer la conséquence. Le défaut a été mesuré par
+   `axe-core` en LS-104, sur un badge écrit en suivant la règle à la lettre. Une
+   règle qui énonce un chiffre et prescrit son contraire se franchit de bonne
+   foi.
 
 **« Texte large » commence à 18,66 px en gras**, ou 24 px en graisse normale.
 Un libellé d'accroche en 11 ou 12 px gras n'est **pas** du texte large : c'est
