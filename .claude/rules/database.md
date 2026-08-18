@@ -182,6 +182,50 @@ un `AJUSTEMENT` : c'est ce qui rend possible le mouvement compensateur qui corri
 une vente externe erronée, un mouvement de stock étant immuable. Ne pas
 « resserrer » cette contrainte en équivalence, cela casserait la correction.
 
+## Un mouvement ne se compense qu'une fois, S15 et ADR-030
+
+Une vente externe erronée se corrige par un mouvement **inverse**, jamais par une
+modification : S4 rend le journal immuable. La règle S14 le dit depuis LS-63,
+sans rien dire de la **répétition** de cette correction.
+
+`mouvement_stock.compense_id` porte le lien vers le mouvement corrigé, et un
+index unique partiel le rend unique :
+
+```sql
+CREATE UNIQUE INDEX mouvement_compense_unique ON mouvement_stock (compense_id) WHERE compense_id IS NOT NULL;
+```
+
+Sans lui, un double clic ou deux onglets ouverts font remonter le stock de deux
+pièces là où une seule était partie, et le journal porte deux corrections en
+apparence légitimes. **La garantie vient de la base** : deux corrections
+simultanées ne peuvent pas passer toutes les deux, là où un contrôle applicatif
+les laisserait passer entre son `SELECT` et son `INSERT`.
+
+**Le prédicat n'est pas une garantie fonctionnelle ici**, et l'affirmer serait
+faux : PostgreSQL traite les `NULL` comme distincts, donc un index sans `WHERE`
+rejetterait exactement les mêmes lignes. Mesuré le 18 août 2026, une mutation le
+retirant n'a fait rougir aucun contrôle. Sa vertu est d'éviter d'indexer pour
+rien un journal qui ne fait que croître. Savoir ce qu'un prédicat garantit
+**avant** d'écrire un contrôle qui prétend le vérifier.
+
+Le compensateur est de type `RETOUR`, porte le même prix figé que l'original et
+un `motif` obligatoire. **Un compensateur ne se compense pas** : la chaîne
+s'arrête à un maillon, le service le refuse.
+
+## Un inventaire constate, il ne contrôle pas les réservations
+
+L'ajustement d'inventaire ne porte **aucun** contrôle applicatif de réservation,
+contrairement à la vente externe, et l'asymétrie est voulue : un inventaire
+constate la réalité physique, refuser de l'enregistrer parce qu'un client paie
+obligerait à mentir sur le stock réel.
+
+`chk_variante_pas_de_survente` rattrape le seul cas dangereux, un physique
+passant sous les réservations. **Son refus doit être traduit en valeur**, jamais
+laissé remonter en exception : l'exploitante lirait « opération indisponible » au
+lieu de comprendre qu'un paiement est en cours sur une pièce qu'elle ne retrouve
+pas. La détection porte sur le **nom de la contrainte**, `P2010` couvrant toute
+erreur de requête brute.
+
 Détail et arbitrage dans `docs/architecture/MODELE-CONCEPTUEL.md`, domaine 2, et
 règles de calcul dans `docs/architecture/STATISTIQUES.md`.
 

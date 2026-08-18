@@ -110,6 +110,25 @@ cas "MODELE-CONCEPTUEL.md, tableau des quatre cles d'idempotence"
 
 perl -pi -e "s/^\| \`paiement \(commandeId\)\` \| \`statut IN \('REUSSI', 'PARTIELLEMENT_REMBOURSE', 'REMBOURSE'\)\`/| \`paiement (commandeId)\` | \`statut = REUSSI\`/" "$MC"
 cas "MODELE-CONCEPTUEL.md, recapitulatif des unicites partielles"
+# Cas 8bis : DEUX INDEX PARTIELS SUR LA MEME TABLE, LS-106.
+#
+# `mouvement_stock` est la premiere table du projet a en porter deux,
+# `mouvement_vente_web_unique` et `mouvement_compense_unique`. L'ancre sur la
+# table les confondait : documenter la compensation faisait reclamer `VENTE_WEB`
+# a un bloc dont le predicat n'a rien a voir, et le controle criait sur du texte
+# juste. Le controle ignore desormais un bloc qui nomme un AUTRE index sans
+# nommer celui en cours.
+#
+# CE CAS PROUVE QUE CET AFFINAGE N'A PAS RENDU L'AUTRE BLOC INVISIBLE. Il mute
+# le predicat de la VENTE WEB, sur cette meme table a deux index.
+#
+# POURQUOI PAS MUTER LA COMPENSATION. Remplacer son predicat par
+# `type = 'VENTE_WEB'` produit un texte que ce controle ne PEUT PAS distinguer :
+# il verifie que les valeurs ATTENDUES sont citees, et `VENTE_WEB` est justement
+# celle qu'il attend pour l'autre index. Une mutation indetectable par
+# construction n'accuse pas le controle, elle accuse son auteur.
+perl -pi -e "s/\(commande_id, variante_id\) WHERE type = 'VENTE_WEB'/(commande_id, variante_id) WHERE type = 'RETOUR'/" "$DB"
+cas "database.md, filtre de la vente web fausse sur une table a deux index"
 
 # ---------------------------------------------------------------------------
 # Cas 9 a 12 : la couverture des dossiers de src/, LS-88.

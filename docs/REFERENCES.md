@@ -115,6 +115,7 @@ documentation technique, ticket ou règle qui le contredirait.
 | ADR-027 | Limitation de débit, journal des connexions, réauthentification | connexion, sessions, actions sensibles |
 | ADR-028 | Conservation des avis, sans limite de durée | avis, modération, registre des traitements |
 | ADR-029 | Référence de variante modifiable, avertissement à l'écran | variante, référence, avis, statistiques par référence |
+| ADR-030 | Un mouvement de stock ne se compense qu'une fois | stock, mouvement, compensation, correction, inventaire |
 
 Cette table se met à jour à chaque ADR créé. Un ADR absent d'ici reste
 opposable : la table est un raccourci, `docs/adr/` fait foi.
