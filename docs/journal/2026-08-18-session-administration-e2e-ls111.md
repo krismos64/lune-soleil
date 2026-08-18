@@ -95,6 +95,60 @@ délibérément placé la publication **en tête**, sa justification écrite dan
 
 Le test rougissait sur du code correct. Deux écrans, deux ordres.
 
+## Ce que la revue d'interface a rapporté
+
+Deux défauts réels, tous deux vérifiés par mutation avant correction.
+
+**Le test des motifs de non-publication ne mesurait pas les motifs.** Il comptait
+`page.getByRole("listitem")` sur toute la page, or l'éditeur rend **quatre**
+listes : les manques, mais aussi une entrée par variante, par photo et par
+section. La fixture posant une déclinaison, le compte valait au moins 1 même
+quand le bloc de publication ne rendait plus rien. Mesuré en vidant `manquants` :
+le test restait vert aux trois largeurs, alors que son commentaire affirmait
+l'inverse. L'assertion est ancrée dans la région « Publication ».
+
+C'est le même défaut que celui de la mesure de débordement, sous une autre forme.
+Une assertion trop large ne mesure pas ce qu'elle nomme, et son commentaire
+devient un mensonge que personne ne relit.
+
+**Aucun test ne refusait un client connecté.** Les fichiers antérieurs
+vérifiaient le visiteur **anonyme**. Une page qui appellerait `exigerSession` au
+lieu d'`exigerAdministratrice` redirige toujours l'anonyme, donc tous ces tests
+restent verts, et livre l'écran entier à n'importe quel compte de la boutique.
+C'est l'invariant 2, et le seul chemin réaliste vers ces écrans : une personne
+inscrite dans la boutique qui tape l'URL d'administration.
+
+La session cliente existait déjà, aucune inscription supplémentaire n'a été
+nécessaire. Le trou est fermé, cas de mutation 88.
+
+**146 tests de bout en bout**, contre 131 avant la revue.
+
+## Un avis de sécurité pendant la CI
+
+`deepmerge-ts`, GHSA-ggr8-5vv4-36mx, paru entre le dernier contrôle vert et le
+passage de la CI. Deuxième fois que le cas se produit sur ce projet.
+
+C'est le **premier override qui franchit une majeure** chez son consommateur,
+exactement la situation que `package.json` décrit comme le piège :
+`@prisma/config` épingle `7.1.5` et la correction n'existe qu'en `8.0.0`. Aucune
+version corrigée dans la branche 7.x, donc aucun choix, et le remède proposé par
+npm rétrogradait Prisma en 6.12.
+
+La règle devient alors sa propre exigence de preuve : `prisma validate`,
+`generate` et `migrate status` ont été exécutés, et `prisma.config.ts` se charge,
+qui est le chemin consommant `@prisma/config`.
+
+## Deux tickets créés
+
+- **LS-112**, epic LS-3 : onze assertions de débordement, dans six fichiers
+  antérieurs, reposent sur la mesure prouvée aveugle. Elles ont servi de critère
+  d'acceptation à LS-68, LS-81 et LS-89. Certaines rougiront une fois
+  rebranchées, ce qui est le résultat utile
+- **LS-113**, epic LS-3 : les états non nominaux, que la session rend enfin
+  atteignables. Vide, pending, erreur serveur, panneau d'archivage, plus deux
+  écrans protégés non couverts. La fixture de cette story rend d'ailleurs deux
+  états vides structurellement inaccessibles, à corriger là
+
 ## État des tickets
 
 LS-111 **En cours** au moment d'écrire, PR #122 ouverte, en attente des contrôles
