@@ -120,8 +120,13 @@ Prisma, loin de sa cause.
 ```bash
 nvm use            # lit .nvmrc
 npm ci             # installation reproductible depuis le verrou
-npm run dev        # sert le site sur le port 3000, dont /catalogue
+npm run dev        # sert le site sur le port 3000
 ```
+
+Le site sert `/catalogue` et `/produit/<slug>` côté public, `/administration`
+côté exploitante, dont `/administration/stocks` pour les marchés. La liste fait
+foi dans `src/app/`, elle n'est pas recopiée ici : une énumération dans un README
+se périme à la story suivante.
 
 ### Activer le garde-fou des secrets, sur tout clone neuf
 
