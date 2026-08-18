@@ -25,7 +25,6 @@ import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { valider } from "@/lib/validation";
 import * as depot from "@/repositories/mouvement-stock";
-import * as depotVariante from "@/repositories/variante";
 import {
   schemaAjustementInventaire,
   schemaBasculeVenteWeb,
@@ -194,15 +193,35 @@ export async function enregistrerVenteExterne(
        * reservation active est le cas que le cahier des charges nomme
        * explicitement, et l'ecran doit proposer de la controler plutot que
        * d'afficher un echec sec.
+       *
+       * LE DIAGNOSTIC LIT `quantiteReservee`, PAS LES LIGNES NON EXPIREES, et
+       * la nuance a ete trouvee par la revue critique. `quantiteReservee` ne
+       * redescend qu'a la LIBERATION, tache planifiee de LS-72 qui n'existe pas
+       * encore : entre l'expiration d'une reservation et le prochain cycle, la
+       * piece reste comptee comme reservee et l'UPDATE la refuse.
+       *
+       * Compter les seules lignes `expire_a > now()` rendait alors ZERO, et le
+       * service concluait « stock insuffisant » : l'exploitante lisait un
+       * probleme de stock sur une piece qu'elle avait physiquement en main, et
+       * chercherait du cote du reassort un blocage qui se resout au cycle
+       * suivant.
+       *
+       * LA QUESTION EST « QU'EST-CE QUI BLOQUE », pas « qu'est-ce qui est
+       * valide » : c'est la meme grandeur que celle de l'UPDATE conditionnel,
+       * donc le diagnostic ne peut plus diverger de la decision.
        */
-      const reservations = await depotVariante.compterReservationsActives(
-        tx,
-        donnees.varianteId,
-      );
+      const variante = await tx.variante.findUnique({
+        where: { id: donnees.varianteId },
+        select: { quantitePhysique: true, quantiteReservee: true },
+      });
+
+      if (variante === null) {
+        return { refus: "VARIANTE_INTROUVABLE" as const };
+      }
 
       return {
         refus:
-          reservations > 0
+          variante.quantiteReservee > 0
             ? ("RESERVATION_ACTIVE" as const)
             : ("STOCK_INSUFFISANT" as const),
       };
