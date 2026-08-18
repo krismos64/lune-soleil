@@ -69,6 +69,7 @@
       "sharp : Next.js installe 0.34.5, vulnerable via libvips (CVE-2026-33327, 33328, 35590, 35591). sharp traite les photographies televersees par l'administratrice, ce chemin n'est pas seulement de l'outillage.",
       "js-yaml : GHSA-5p4m-2wfm-xmqj, CVE-2026-59870, consommation quadratique de processeur sur la resolution !!omap. Plage vulnerable 4.0.0 a 4.3.0, corrige en 4.3.1. Vient d'eslint > @eslint/eslintrc, qui attend ^4.3.0 : la 4.3.1 reste dans sa plage, aucune majeure franchie. La 5.x en franchirait une et rejouerait le defaut de minimatch decrit plus haut.",
       "nanoid : GHSA-2v37-7h3g-55p8, boucle infinie quand un generateur personnalise recoit une taille nulle. Plage vulnerable inferieure a 3.3.17, corrige en 3.3.17. Vient de next > postcss, lui-meme deja sous override, qui attend ^3.3.11 : la 3.3.17 reste dans sa plage, aucune majeure franchie. Avis paru le 8 aout 2026, entre le dernier controle vert et la PR du journal.",
+      "deepmerge-ts : GHSA-ggr8-5vv4-36mx, epuisement de la pile en fusionnant un graphe d'objets recursif. Plage vulnerable inferieure a 8.0.0, corrige en 8.0.0. Vient de prisma > @prisma/config, qui EPINGLE 7.1.5 exactement. C'est le PREMIER override du projet qui franchit une majeure chez son consommateur, la situation que les commentaires ci-dessus decrivent comme le piege : aucune correction n'existe dans la branche 7.x. La chaine a donc ete verifiee et non supposee, `prisma validate`, `prisma generate` et `prisma migrate status` passent, et `prisma.config.ts` se charge, qui est precisement le chemin consommant @prisma/config. Le remede propose par npm, retrograder prisma en 6.12, est exclu : le projet est en Prisma 7. Avis paru le 18 aout 2026, entre le dernier controle vert et la CI de LS-111.",
       "A retirer des que les paquets parents publient des versions a jour. `npm audit` doit rester a zero."
     ]
   },
@@ -79,6 +80,7 @@
     "minimatch": "^10.2.6",
     "nanoid": "^3.3.17",
     "postcss": "^8.5.25",
-    "sharp": "^0.35.3"
+    "sharp": "^0.35.3",
+    "deepmerge-ts": "^8.0.1"
   }
 }
