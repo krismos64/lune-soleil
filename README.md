@@ -120,7 +120,7 @@ Prisma, loin de sa cause.
 ```bash
 nvm use            # lit .nvmrc
 npm ci             # installation reproductible depuis le verrou
-npm run dev        # sert la page d'attente sur le port 3000
+npm run dev        # sert le site sur le port 3000, dont /catalogue
 ```
 
 ### Activer le garde-fou des secrets, sur tout clone neuf
