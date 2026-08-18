@@ -37,7 +37,8 @@ export default defineConfig({
 
   projects: [
     /*
-     * PREPARATION : une seule inscription pour toute la suite, LS-81 et LS-89.
+     * PREPARATION : une seule inscription par session, pour toute la suite.
+     * LS-81, LS-89, LS-111.
      *
      * Les tests de l'ecran de suppression exigent une session cliente, et aucun
      * ecran de connexion client n'existe encore, LS-54. Les faire s'inscrire
@@ -45,16 +46,26 @@ export default defineConfig({
      * par IP, multiplie par les trois largeurs : un test VOISIN,
      * `connexion-administration`, recevait alors 429 la ou il attend 401.
      *
-     * `testMatch` isole ce fichier des trois projets de largeur, sans quoi il
-     * s'executerait quatre fois et le probleme resterait entier.
+     * DEUX SESSIONS DISTINCTES ET NON UNE. LS-111 ajoute une session
+     * d'ADMINISTRATION, qui ne peut pas se confondre avec la precedente : les
+     * fichiers qui verifient qu'un visiteur ordinaire est refuse sur un ecran
+     * protege ont besoin d'une session SANS le role. Promouvoir la session
+     * cliente les ferait passer pour la mauvaise raison.
+     *
+     * DEUX INSCRIPTIONS SUR LES TROIS de la minute sont donc consommees ici, et
+     * c'est la marge qui interdit d'en ajouter une troisieme sans repenser
+     * l'ensemble.
+     *
+     * `testMatch` isole ces fichiers des trois projets de largeur, sans quoi ils
+     * s'executeraient quatre fois et le probleme resterait entier.
      */
     {
       name: "preparation",
-      testMatch: /session-cliente\.setup\.ts$/,
+      testMatch: /session-(cliente|administration)\.setup\.ts$/,
     },
     {
       name: "mobile-320",
-      testIgnore: /session-cliente\.setup\.ts$/,
+      testIgnore: /session-(cliente|administration)\.setup\.ts$/,
       dependencies: ["preparation"],
       use: {
         ...devices["Desktop Chrome"],
@@ -65,7 +76,7 @@ export default defineConfig({
     },
     {
       name: "mobile-390",
-      testIgnore: /session-cliente\.setup\.ts$/,
+      testIgnore: /session-(cliente|administration)\.setup\.ts$/,
       dependencies: ["preparation"],
       use: {
         ...devices["Desktop Chrome"],
@@ -83,7 +94,7 @@ export default defineConfig({
     },
     {
       name: "bureau-1280",
-      testIgnore: /session-cliente\.setup\.ts$/,
+      testIgnore: /session-(cliente|administration)\.setup\.ts$/,
       dependencies: ["preparation"],
       use: {
         ...devices["Desktop Chrome"],

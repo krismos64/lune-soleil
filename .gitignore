@@ -113,5 +113,8 @@ docs/internal/
 .sentryclirc
 *.tgz
 
-# Etat de session ouvert par le projet Playwright « preparation », LS-81.
+# Etats de session ouverts par le projet Playwright « preparation », LS-81 et
+# LS-111. Ils portent un cookie de session valide, invariant 9 : le depot est
+# public, et ils se recreent a chaque execution.
 tests/e2e/.session-cliente.json
+tests/e2e/.session-administration.json
