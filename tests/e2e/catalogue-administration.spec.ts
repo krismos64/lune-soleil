@@ -13,6 +13,10 @@
  */
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import {
+  TOLERANCE_DEBORDEMENT_PX,
+  debordementHorizontal,
+} from "./mesure-rendu";
 
 const ECRANS = [
   { chemin: "/administration/categories", titre: "Catégories du catalogue" },
@@ -53,12 +57,9 @@ for (const ecran of ECRANS) {
     await page.goto(ecran.chemin);
     await expect(page).toHaveURL(/\/administration\/connexion$/);
 
-    const debordement = await page.evaluate(() => {
-      const racine = document.documentElement;
-      return racine.scrollWidth - racine.clientWidth;
-    });
-
-    expect(debordement).toBeLessThanOrEqual(0);
+    expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+      TOLERANCE_DEBORDEMENT_PX,
+    );
   });
 
   test(`la redirection depuis ${ecran.chemin} ne porte aucune violation d'accessibilite`, async ({

@@ -346,7 +346,7 @@ npm run test:e2e          # Playwright, trois largeurs, deux sessions partagées
 |---|---|
 | `test:unitaire` | manipulation d'URL de base éphémère, sans base |
 | `test:integration` | la primitive SQL de réservation, sur le schéma réel |
-| `test:e2e` | rendu, débordement à 320 px, accessibilité axe-core, écrans d'administration ouverts par une vraie session |
+| `test:e2e` | rendu, débordement mesuré aux deux bords, accessibilité axe-core, écrans d'administration ouverts par une vraie session |
 
 Les tests d'intégration créent une base **éphémère** au nom unique, y appliquent
 `prisma migrate deploy`, puis la détruisent. La base de développement n'est
@@ -546,7 +546,7 @@ destructives doivent bloquer, une migration additive doit passer, et une
 détection qui ne peut pas conclure doit bloquer plutôt que supposer. Lancé contre
 la version d'avant LS-42, il échoue sur sept de ces dix cas.
 
-`verifier-tests-mutation.sh` casse **quatre-vingt-huit fois** le comportement
+`verifier-tests-mutation.sh` casse **quatre-vingt-neuf fois** le comportement
 testé et exige que la suite rougisse à chaque fois. Les cibles, par domaine :
 réservation et stock, authentification et autorisation, socle de validation et
 journalisation, journal des connexions, verrou de tâche planifiée, preuve

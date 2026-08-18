@@ -18,6 +18,10 @@
  */
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import {
+  TOLERANCE_DEBORDEMENT_PX,
+  debordementHorizontal,
+} from "./mesure-rendu";
 
 test("l'administration renvoie vers la connexion sans session", async ({
   page,
@@ -68,12 +72,9 @@ test("le formulaire de connexion ne deborde pas horizontalement", async ({
     .click();
   await expect(page.getByLabel("Adresse email")).toBeVisible();
 
-  const debordement = await page.evaluate(() => {
-    const racine = document.documentElement;
-    return racine.scrollWidth - racine.clientWidth;
-  });
-
-  expect(debordement).toBeLessThanOrEqual(0);
+  expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+    TOLERANCE_DEBORDEMENT_PX,
+  );
 });
 
 test("l'ecran de connexion ne porte aucune violation d'accessibilite serieuse", async ({
