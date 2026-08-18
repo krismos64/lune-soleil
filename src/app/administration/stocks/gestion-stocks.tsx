@@ -42,6 +42,8 @@ const MESSAGES: Record<ResultatAction["statut"], string> = {
   DEJA_COMPENSE: "Ce mouvement a déjà été corrigé.",
   NON_COMPENSABLE: "Une correction ne se corrige pas à son tour.",
   SANS_ECART: "Comptage conforme, aucun écart à enregistrer.",
+  SOUS_RESERVATION:
+    "Ce comptage passerait sous des pièces déjà engagées dans un paiement. Vérifiez les réservations en cours.",
   INDISPONIBLE: "Opération indisponible. Réessayez dans un instant.",
 };
 
