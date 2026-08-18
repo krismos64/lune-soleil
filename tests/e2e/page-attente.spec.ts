@@ -12,6 +12,10 @@
  */
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import {
+  TOLERANCE_DEBORDEMENT_PX,
+  debordementHorizontal,
+} from "./mesure-rendu";
 
 test("la page d'attente se sert et affiche son contenu", async ({ page }) => {
   const reponse = await page.goto("/");
@@ -32,12 +36,9 @@ test("la page ne deborde pas horizontalement", async ({ page }) => {
   // depasser celle de la fenetre, sans quoi le visiteur defile lateralement
   // pour lire. Le defaut est systematique a 320 px, largeur de reference du
   // projet, et invisible sur un ecran de bureau.
-  const debordement = await page.evaluate(() => {
-    const racine = document.documentElement;
-    return racine.scrollWidth - racine.clientWidth;
-  });
-
-  expect(debordement).toBeLessThanOrEqual(0);
+  expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+    TOLERANCE_DEBORDEMENT_PX,
+  );
 });
 
 test("la page ne porte aucune violation d'accessibilite serieuse", async ({

@@ -14,6 +14,10 @@
  */
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import {
+  TOLERANCE_DEBORDEMENT_PX,
+  debordementHorizontal,
+} from "./mesure-rendu";
 
 test("le journal des connexions refuse un visiteur sans session", async ({
   page,
@@ -35,12 +39,9 @@ test("la page de refus ne deborde pas horizontalement", async ({ page }) => {
   await page.goto("/administration/journal-connexions");
   await expect(page).toHaveURL(/\/administration\/connexion$/);
 
-  const debordement = await page.evaluate(() => {
-    const racine = document.documentElement;
-    return racine.scrollWidth - racine.clientWidth;
-  });
-
-  expect(debordement).toBeLessThanOrEqual(0);
+  expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+    TOLERANCE_DEBORDEMENT_PX,
+  );
 });
 
 test("la redirection depuis le journal ne porte aucune violation d'accessibilite", async ({

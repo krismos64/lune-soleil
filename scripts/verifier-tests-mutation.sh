@@ -337,10 +337,26 @@ echo
 echo "Interface, tests de bout en bout"
 echo
 
-# Cas 11 : debordement horizontal. Invisible a 1280 px, visible a 320 et 390 px,
-# ce qui justifie les trois largeurs de playwright.config.ts.
+# Cas 11 : debordement horizontal a DROITE. Invisible a 1280 px, visible a 320 et
+# 390 px, ce qui justifie les trois largeurs de playwright.config.ts.
 mute "$PAGE" 's/<h1 className=\{styles\.titre\}>/<h1 className={styles.titre} style={{ width: "800px" }}>/'
 cas "debordement horizontal introduit dans la page" e2e \
+  "la page ne deborde pas horizontalement"
+
+# ---------------------------------------------------------------------------
+# Cas 11 bis : debordement a GAUCHE, LS-112.
+#
+# CE CAS COUVRE LE VERSANT QUE PERSONNE NE MESURAIT. La mesure d'avant LS-112
+# comparait scrollWidth a clientWidth, aveugle aux deux bords ; celle de LS-111
+# ne retenait que `getBoundingClientRect().right`, donc aveugle a celui-ci. Un
+# element tire vers les abscisses negatives, marge negative ou `left: -Npx`,
+# produit pourtant la MEME barre de defilement et le meme geste lateral pour
+# lire.
+#
+# IL EST DETECTE AUX TROIS LARGEURS, contrairement au cas 11 : un depassement a
+# gauche ne depend pas de la largeur de la fenetre, il sort par zero.
+mute "$PAGE" 's/<h1 className=\{styles\.titre\}>/<h1 className={styles.titre} style={{ position: "relative", left: "-200px" }}>/'
+cas "debordement vers la gauche introduit dans la page" e2e \
   "la page ne deborde pas horizontalement"
 
 # Cas 12 : violation d'accessibilite. Un document sans langue declaree est lu

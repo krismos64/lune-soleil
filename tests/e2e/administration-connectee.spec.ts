@@ -25,13 +25,17 @@
  * mesure. 768 px reste donc un controle a l'oeil, comme avant.
  */
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 import {
   FICHIER_SESSION,
   FICHIER_SESSION_ADMINISTRATION,
   PRODUIT_TEST,
 } from "./chemin-session";
+import {
+  TOLERANCE_DEBORDEMENT_PX,
+  debordementHorizontal,
+} from "./mesure-rendu";
 
 /**
  * LA SESSION VIENT DU PROJET `preparation`, ouverte UNE fois pour toute la
@@ -62,61 +66,6 @@ const ECRANS = [
     titre: "Informations générales",
   },
 ] as const;
-
-/**
- * Mesure le debordement horizontal, en pixels au-dela du bord droit.
- *
- * MESURE ET NON CALCULE, c'est tout l'objet du ticket. Une revue qui additionne
- * des paddings et des largeurs de police raisonne sur le CSS ecrit ; celle-ci
- * lit ce que le moteur de rendu a REELLEMENT dispose, marges de defilement et
- * mots insecables compris. Le defaut de LS-103, un `<ul>` qui mangeait 40 px a
- * 320 px, venait exactement de la ou le calcul ne regardait pas.
- *
- * ELLE PARCOURT LES ELEMENTS, ET NON `documentElement.scrollWidth`. La premiere
- * version comparait `scrollWidth` a `clientWidth` sur la racine, comme le font
- * les quatre fichiers de test anterieurs, et une mutation a prouve qu'elle ETAIT
- * AVEUGLE : un `<div>` de 800 px insere dans l'editeur s'etendait jusqu'a 816 px
- * sur un viewport de 320, et `scrollWidth` rendait quand meme 320. Les 131 tests
- * restaient verts.
- *
- * LA RAISON tient au modele de defilement : un element en flux normal plus large
- * que son parent deborde visuellement, mais tant qu'aucun ancetre n'etablit de
- * contexte de defilement horizontal, la racine ne comptabilise pas ce
- * depassement dans son `scrollWidth`. Le document ne « sait » pas qu'il deborde,
- * la personne qui regarde l'ecran, si.
- *
- * `getBoundingClientRect` echappe a cela : il rend la position REELLE apres mise
- * en page, transformations comprises. Le maximum des bords droits, moins la
- * largeur visible, donne le depassement effectif.
- *
- * LES ELEMENTS MASQUES SONT EXCLUS. Un panneau replie ou un menu ferme est
- * souvent pousse hors de l'ecran a dessein, et le compter ferait rougir un rendu
- * correct.
- */
-async function debordementHorizontal(page: Page): Promise<number> {
-  return page.evaluate(() => {
-    const largeurVisible = document.documentElement.clientWidth;
-    let bordMaximal = largeurVisible;
-
-    for (const element of document.querySelectorAll("*")) {
-      const style = window.getComputedStyle(element);
-      if (
-        style.display === "none" ||
-        style.visibility === "hidden" ||
-        element.getClientRects().length === 0
-      ) {
-        continue;
-      }
-
-      bordMaximal = Math.max(
-        bordMaximal,
-        element.getBoundingClientRect().right,
-      );
-    }
-
-    return Math.round(bordMaximal - largeurVisible);
-  });
-}
 
 for (const ecran of ECRANS) {
   test(`${ecran.chemin} est rendu pour une administratrice`, async ({
@@ -155,7 +104,9 @@ for (const ecran of ECRANS) {
       page.getByRole("heading", { name: ecran.titre, exact: true }),
     ).toBeVisible();
 
-    expect(await debordementHorizontal(page)).toBeLessThanOrEqual(0);
+    expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+      TOLERANCE_DEBORDEMENT_PX,
+    );
   });
 
   test(`${ecran.chemin} ne porte aucune violation d'accessibilite`, async ({
@@ -285,7 +236,9 @@ test("les motifs de non-publication sont lisibles sans debordement", async ({
   const motifs = regionPublication.getByRole("listitem");
   expect(await motifs.count()).toBeGreaterThan(0);
 
-  expect(await debordementHorizontal(page)).toBeLessThanOrEqual(0);
+  expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+    TOLERANCE_DEBORDEMENT_PX,
+  );
 });
 
 /**

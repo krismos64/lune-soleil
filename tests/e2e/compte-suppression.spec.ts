@@ -15,6 +15,10 @@
  */
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import {
+  TOLERANCE_DEBORDEMENT_PX,
+  debordementHorizontal,
+} from "./mesure-rendu";
 
 test("l'espace client refuse un visiteur sans session", async ({ page }) => {
   await page.goto("/compte");
@@ -34,12 +38,9 @@ test("la page de refus ne deborde pas horizontalement", async ({ page }) => {
   await page.goto("/compte");
   await expect(page).toHaveURL(/\/administration\/connexion$/);
 
-  const debordement = await page.evaluate(() => {
-    const racine = document.documentElement;
-    return racine.scrollWidth - racine.clientWidth;
-  });
-
-  expect(debordement).toBeLessThanOrEqual(0);
+  expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+    TOLERANCE_DEBORDEMENT_PX,
+  );
 });
 
 test("la redirection depuis l'espace client ne porte aucune violation d'accessibilite", async ({

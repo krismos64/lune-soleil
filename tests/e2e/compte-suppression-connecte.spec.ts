@@ -24,6 +24,10 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 import { FICHIER_SESSION } from "./chemin-session";
+import {
+  TOLERANCE_DEBORDEMENT_PX,
+  debordementHorizontal,
+} from "./mesure-rendu";
 
 /**
  * LA SESSION VIENT DU PROJET `preparation`, ouverte UNE fois pour toute la
@@ -46,12 +50,9 @@ test("l'ecran de suppression ne deborde pas horizontalement", async ({
     page.getByRole("heading", { name: "Mon compte", exact: true }),
   ).toBeVisible();
 
-  const debordement = await page.evaluate(() => {
-    const racine = document.documentElement;
-    return racine.scrollWidth - racine.clientWidth;
-  });
-
-  expect(debordement).toBeLessThanOrEqual(0);
+  expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+    TOLERANCE_DEBORDEMENT_PX,
+  );
 });
 
 test("l'etat d'erreur d'une preuve refusee reste lisible et ne deborde pas", async ({
@@ -83,12 +84,9 @@ test("l'etat d'erreur d'une preuve refusee reste lisible et ne deborde pas", asy
     page.getByRole("heading", { name: "Mon compte", exact: true }),
   ).toBeVisible();
 
-  const debordement = await page.evaluate(() => {
-    const racine = document.documentElement;
-    return racine.scrollWidth - racine.clientWidth;
-  });
-
-  expect(debordement).toBeLessThanOrEqual(0);
+  expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+    TOLERANCE_DEBORDEMENT_PX,
+  );
 });
 
 test("le bouton reste inatteignable tant que le mot n'est pas recopie", async ({
