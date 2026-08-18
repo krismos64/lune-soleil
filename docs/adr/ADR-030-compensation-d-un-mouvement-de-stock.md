@@ -46,14 +46,21 @@ CREATE UNIQUE INDEX mouvement_compense_unique
   WHERE compense_id IS NOT NULL;
 ```
 
-Le prédicat `WHERE compense_id IS NOT NULL` est indispensable : sans lui, un
-index unique ordinaire n'autoriserait qu'**un seul** mouvement non compensateur
-dans toute la table, PostgreSQL traitant les `NULL` comme distincts mais
-l'immense majorité des lignes portant cette valeur.
+**Le prédicat n'est pas une garantie fonctionnelle ici, et l'affirmer serait
+faux.** PostgreSQL traite les `NULL` comme distincts dans un index unique : sans
+`WHERE`, l'index rejetterait exactement les mêmes lignes et laisserait passer
+autant de mouvements ordinaires. Mesuré le 18 août 2026, une mutation retirant le
+prédicat n'a fait rougir aucun contrôle.
 
-C'est le même motif que `mouvement_vente_web_unique` et que les six autres index
-partiels du projet. Le piège associé est connu et documenté : **un index partiel
-dont le prédicat change ouvre en silence**, rencontré deux fois ici.
+Sa vertu est ailleurs : **il évite d'indexer pour rien** un journal qui ne fait
+que croître, et dont l'immense majorité des lignes ne compense rien. Sur un
+volume de quelques centaines de mouvements l'économie est théorique ; elle cesse
+de l'être quand le journal atteint des dizaines de milliers de lignes.
+
+C'est le septième index partiel du projet, et le piège associé reste vrai :
+**un index partiel dont le prédicat change ouvre en silence**, rencontré deux
+fois ici. La nuance apportée par cette mesure est qu'il faut savoir ce que le
+prédicat garantit **avant** d'écrire un contrôle qui prétend le vérifier.
 
 ### Trois options ont été posées
 

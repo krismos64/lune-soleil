@@ -452,11 +452,10 @@ model MouvementStock {
   // deux, là où un contrôle applicatif les laisserait passer entre son `SELECT`
   // et son `INSERT`.
   //
-  // LE PRÉDICAT `compense_id IS NOT NULL` EST INDISPENSABLE. Sans lui,
-  // PostgreSQL traite les `NULL` comme distincts, donc l'index n'échouerait pas,
-  // mais il indexerait l'intégralité du journal pour ne servir qu'aux rares
-  // lignes de compensation. C'est le septième index partiel du projet, et le
-  // piège associé est connu : un prédicat qui change ouvre en silence.
+  // LE PRÉDICAT NE CHANGE RIEN AU REJET : PostgreSQL traite les `NULL` comme
+  // distincts, un index sans `WHERE` rejetterait les mêmes lignes. Mesuré.
+  // Sa vertu est d'éviter d'indexer pour rien un journal qui ne fait que
+  // croître. Septième index partiel du projet, même piège que les six autres.
   @@unique([compenseId], where: raw("compense_id IS NOT NULL"), map: "mouvement_compense_unique")
   @@map("mouvement_stock")
 }
