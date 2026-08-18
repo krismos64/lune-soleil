@@ -73,6 +73,9 @@ TRAITEMENT="src/integrations/medias/traitement.ts"
 STOCKAGE="src/integrations/medias/stockage.ts"
 PAGE_EDITEUR="src/app/administration/produits/[id]/page.tsx"
 PUBLICATION="src/app/administration/produits/[id]/publication-produit.tsx"
+DEPOT_CATALOGUE="src/repositories/catalogue.ts"
+SERVICE_CATALOGUE="src/services/catalogue.ts"
+CARTE_PRODUIT="src/app/catalogue/carte-produit.tsx"
 
 # TOUT FICHIER MUTE DOIT FIGURER ICI, sans quoi il n'est ni sauvegarde ni
 # restaure et la mutation RESTE SUR LE DISQUE apres l'execution.
@@ -85,7 +88,7 @@ PUBLICATION="src/app/administration/produits/[id]/publication-produit.tsx"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -1376,6 +1379,51 @@ mute "$PAGE_EDITEUR" 's/    await exigerAdministratrice\(enTetes\);/    await ex
 cas "editeur atteint par un client connecte sans le role" e2e \
   "refuse un client connecte"
 
+
+echo
+echo "Catalogue public, tests d'integration et de bout en bout"
+echo
+
+# ---------------------------------------------------------------------------
+# Cas 91 a 94 : LS-104, le premier ecran PUBLIC du projet.
+#
+# Cas 91 : LE FILTRE DE STATUT RETIRE. Sans lui, brouillons et produits archives
+# sortent au catalogue : du travail en cours et des prix non arretes exposes
+# publiquement. Le defaut est SILENCIEUX, la page s'affiche normalement et
+# montre simplement plus de pieces.
+mute "$DEPOT_CATALOGUE" "s/    WHERE p.statut = 'ACTIF'/    WHERE p.statut IS NOT NULL/"
+cas "filtre de statut retire du catalogue public" integration \
+  "ne rend jamais un produit BROUILLON ni ARCHIVE"
+
+# Cas 92 : LA RESERVATION IGNOREE dans le calcul de disponibilite. Le catalogue
+# annonce alors « en stock » une piece deja engagee dans un paiement en cours,
+# et deux clients se voient promettre le meme bijou.
+mute "$DEPOT_CATALOGUE" 's/sum\(greatest\(v.quantite_physique - v.quantite_reservee, 0\)\)/sum(greatest(v.quantite_physique, 0))/'
+cas "reservations ignorees dans la disponibilite" integration \
+  "deduit les reservations actives"
+
+# Cas 93 : LE SEUIL DE « DERNIERE PIECE » DEPLACE. Une piece unique s'annonce
+# alors « en stock » : l'information d'urgence disparait, et c'est le cas
+# ORDINAIRE de cette boutique, chaque bijou etant fait main.
+mute "$SERVICE_CATALOGUE" 's/  return quantiteDisponible === 1 \? "DERNIERE_PIECE" : "EN_STOCK";/  return quantiteDisponible === 0 ? "DERNIERE_PIECE" : "EN_STOCK";/'
+cas "seuil de derniere piece deplace" integration \
+  "annonce DERNIERE_PIECE a exactement une"
+
+# ---------------------------------------------------------------------------
+# Cas 94 : L'EXTENSION DE LA VIGNETTE, `.jpg` POUR `.jpeg`.
+#
+# CE CAS REJOUE UN DEFAUT REEL DU PROJET. En LS-102 une URL de vignette portait
+# `640.jpg` quand le traitement ecrit `640.jpeg` : ni les types, ni les tests, ni
+# la construction ne bougeaient, et toutes les vignettes auraient ete cassees en
+# production.
+#
+# LE TEST QUI L'ATTRAPE CONFRONTE LES URL A `declinaisonsAttendues()`, la source
+# de verite du traitement, plutot que de les relire. Il n'existait pas avant la
+# revue de LS-104 : la preparation ne posait aucun media, donc le `<picture>`
+# n'etait execute par AUCUN des 188 tests.
+mute "$CARTE_PRODUIT" 's/640\.jpeg`\}/640.jpg`}/'
+cas "extension de vignette .jpg au lieu de .jpeg" e2e \
+  "chaque URL servie correspond a une declinaison produite"
 echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then

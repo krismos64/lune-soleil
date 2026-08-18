@@ -54,9 +54,15 @@ export default async function PageCatalogue({
   const { produits, categories, categorieRetenue } =
     await lireCataloguePublic(slugCategorie);
 
-  const nomCategorieRetenue = categories.find(
-    (categorie) => categorie.slug === categorieRetenue,
-  )?.nom;
+  /*
+   * LE NOM VIENT DU SERVICE, ET NON D'UNE RECHERCHE DANS `categories`. La
+   * premiere version le cherchait la, et il valait `undefined` exactement quand
+   * il etait le plus utile : `categories` ne porte que les categories AYANT du
+   * publie, donc jamais celle qu'on filtre quand elle vient d'etre videe.
+   * L'ecran disait alors « aucune piece dans cette categorie » sans dire
+   * laquelle.
+   */
+  const nomCategorieRetenue = categorieRetenue?.nom;
 
   return (
     <main className={styles.page}>
@@ -91,7 +97,9 @@ export default async function PageCatalogue({
                   href={`/catalogue?categorie=${categorie.slug}`}
                   className={styles.filtre}
                   aria-current={
-                    categorieRetenue === categorie.slug ? "page" : undefined
+                    categorieRetenue?.slug === categorie.slug
+                      ? "page"
+                      : undefined
                   }
                 >
                   {categorie.nom}
@@ -109,7 +117,9 @@ export default async function PageCatalogue({
        */}
       <p className={styles.compte} role="status" aria-live="polite">
         {produits.length === 0
-          ? "Aucune pièce à afficher."
+          ? nomCategorieRetenue
+            ? `Aucune pièce dans ${nomCategorieRetenue}.`
+            : "Aucune pièce à afficher."
           : `${produits.length} ${produits.length === 1 ? "pièce" : "pièces"}${
               nomCategorieRetenue ? ` dans ${nomCategorieRetenue}` : ""
             }.`}
@@ -130,7 +140,8 @@ export default async function PageCatalogue({
           {categorieRetenue ? (
             <>
               <p className={styles.texteVide}>
-                Aucune pièce dans cette catégorie pour le moment.
+                Aucune pièce dans {nomCategorieRetenue ?? "cette catégorie"}{" "}
+                pour le moment.
               </p>
               <Link href="/catalogue" className={styles.actionVide}>
                 Voir tout le catalogue

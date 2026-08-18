@@ -382,4 +382,35 @@ async function poserCataloguePublie(client: Client): Promise<void> {
       ],
     );
   }
+
+  /*
+   * UNE PHOTO SUR UNE SEULE PIECE, ET C'EST DELIBERE. Le catalogue doit exercer
+   * SES DEUX BRANCHES : la carte avec `<picture>` et ses trois sources, et la
+   * carte sans photo qui reste affichable.
+   *
+   * SANS CETTE LIGNE LE `<picture>` N'EST EXECUTE PAR AUCUN TEST, defaut releve
+   * en revue : les trois pieces empruntaient toutes la branche « image absente »,
+   * et un `srcSet` mal forme n'aurait fait rougir personne. C'est le motif exact
+   * du defaut « 640.jpg pour 640.jpeg » deja rencontre sur ce projet, ou une
+   * chaine construite a l'execution n'etait confrontee a rien.
+   *
+   * LE STATUT EST `TRAITE` : un media en echec ou en attente ne represente pas
+   * le cas nominal, et C8 interdit de publier un produit dont une photo a
+   * echoue.
+   *
+   * LE CHEMIN SE TERMINE PAR UNE BARRE, comme celui que le traitement ecrit :
+   * la carte y concatene `320.avif`, `640.jpeg` et le reste. Un chemin sans
+   * barre finale produirait des URL collees, ce que ce test attrape.
+   */
+  await client.query(
+    `INSERT INTO media (id, produit_id, chemin, texte_alternatif, ordre, statut_traitement, cree_a)
+     VALUES ($1, $2, $3, $4, 1, 'TRAITE', now())
+     ON CONFLICT (id) DO NOTHING`,
+    [
+      CATALOGUE_TEST.mediaEnStock.id,
+      CATALOGUE_TEST.enStock.id,
+      CATALOGUE_TEST.mediaEnStock.chemin,
+      CATALOGUE_TEST.mediaEnStock.texteAlternatif,
+    ],
+  );
 }
