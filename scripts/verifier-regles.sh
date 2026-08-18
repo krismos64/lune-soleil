@@ -268,6 +268,28 @@ while IFS= read -r ligne; do
       # structurant des trois. Le seuil de trois caractères écarte les sigles de
       # prose sans écarter les valeurs d'enum réelles, la plus courte du schéma
       # étant ADMIN.
+      # UN BLOC QUI NOMME UN AUTRE INDEX SANS NOMMER CELUI-CI NE LE DECRIT PAS.
+      # `mouvement_stock` porte deux index partiels depuis LS-106,
+      # `mouvement_vente_web_unique` et `mouvement_compense_unique`, et c'est la
+      # premiere table du projet dans ce cas : l'ancre sur la table les
+      # confondait, faisant reclamer `VENTE_WEB` a la documentation de la
+      # compensation, dont le predicat n'a rien a voir.
+      #
+      # LES DEUX CONDITIONS SONT NECESSAIRES, et la premiere version n'en avait
+      # qu'une. Ignorer tout bloc citant un autre index rendait le controle
+      # AVEUGLE des qu'un predicat perime citait le mauvais index : le cas 8bis
+      # du script de mutation l'a montre, en remplacant le filtre de la
+      # compensation par celui de la vente web. Un bloc qui nomme l'index en
+      # cours le decrit, quoi qu'il cite d'autre.
+      if ! echo "$contenu" | grep -q "$index"; then
+        autre_index=""
+        while IFS= read -r candidat; do
+          [ "$candidat" = "$index" ] && continue
+          echo "$contenu" | grep -q "$candidat" && autre_index="$candidat"
+        done < <(grep -oE 'map: "[a-z_]+_unique"' "$SCHEMA" | sed -E 's/map: "(.*)"/\1/' | sort -u)
+        [ -n "$autre_index" ] && continue
+      fi
+
       citees=$(echo "$contenu" \
         | grep -oE "'[A-Z_]+'|\b[A-Z][A-Z_]{2,}\b" | tr -d "'" | sort -u)
       [ -n "$citees" ] || continue

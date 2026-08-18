@@ -352,6 +352,7 @@ erDiagram
 | S12 | Une vente externe porte le prix réellement pratiqué, figé au moment de la vente | `CHECK (type <> 'VENTE_EXTERNE' OR prixUnitaireFigeCentimes IS NOT NULL)`, LS-63. Sans lui le chiffre d'affaires des marchés n'existe pas |
 | S13 | Aucune statistique ne reconstitue une vente passée depuis le prix actuel du catalogue | invariant 3 appliqué au stock, comme V4 l'applique à la commande. `Variante.prixCentimes` n'entre dans aucun calcul historique |
 | S14 | Une vente externe erronée se corrige par un mouvement inverse, jamais par une modification | règle S4, un mouvement est immuable. Le compensateur porte le même prix figé et un `motif`, comme un avoir corrige une facture |
+| S15 | Un mouvement de stock ne se compense qu'une fois | `compenseId` et `UNIQUE` partiel `mouvement_compense_unique`, ADR-030. S14 imposait la correction par mouvement inverse sans rien dire de sa répétition : un double clic faisait remonter le stock de deux pièces là où une seule était partie, et le journal portait deux corrections en apparence légitimes |
 
 ### Le montant d'une vente externe, et pourquoi il manquait
 
