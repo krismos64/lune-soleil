@@ -294,3 +294,41 @@ test("la fiche ne porte aucune violation d'accessibilite", async ({ page }) => {
 
   expect(resultat.violations).toEqual([]);
 });
+
+/**
+ * SANS PHOTOGRAPHIE, L'ACHAT PREND TOUTE LA LARGEUR.
+ *
+ * LE DEFAUT QUE CE TEST ATTRAPE : la grille de deux colonnes gardait sa colonne
+ * gauche vide quand la galerie n'etait pas rendue, l'achat restant confine a
+ * droite sur une demi-largeur. Mesure a 1280 px, invisible aux deux autres
+ * projets ou la grille n'a qu'une colonne.
+ *
+ * AUCUNE MESURE DE DEBORDEMENT NE LE VOIT : rien ne depassait, et la fiche
+ * restait parfaitement servie. C'est une mise en page fautive, pas une erreur.
+ *
+ * `dernierePiece` NE PORTE AUCUN MEDIA dans la preparation, contrairement a
+ * `enStock` : c'est ce qui en fait le cas utile ici, sans rien ajouter.
+ */
+test("une fiche sans photographie occupe toute la largeur", async ({
+  page,
+}, infos) => {
+  test.skip(
+    infos.project.name !== "bureau-1280",
+    "La grille n'a qu'une colonne en dessous de 768 px.",
+  );
+
+  await page.goto(`/produit/${CATALOGUE_TEST.dernierePiece.slug}`);
+
+  // La galerie n'est pas rendue : c'est la condition meme du cas teste.
+  await expect(page.locator("picture")).toHaveCount(0);
+
+  const mesures = await page.evaluate(() => {
+    const titre = document.querySelector("h1")!;
+    const achat = titre.parentElement!.getBoundingClientRect();
+    const corps = titre.parentElement!.parentElement!.getBoundingClientRect();
+    return { achat: achat.width, corps: corps.width };
+  });
+
+  // A 2 px pres, pour l'arrondi sous-pixel d'une largeur impaire.
+  expect(Math.abs(mesures.achat - mesures.corps)).toBeLessThanOrEqual(2);
+});
