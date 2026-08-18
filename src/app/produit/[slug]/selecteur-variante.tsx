@@ -188,8 +188,13 @@ export function SelecteurVariante({
        * qui constitue une information precontractuelle fausse.
        *
        * LE COMPOSANT DE REASSURANCE EST `Should`, jalon Go-Live, et n'existe pas
-       * encore. En attendant, un renvoi vers la page Livraison plutot qu'un
-       * chiffre invente.
+       * encore. En attendant, la seule mention des MODES de livraison, qui sont
+       * fixes par ADR-025 et ne dependent d'aucun tarif.
+       *
+       * AUCUN RENVOI VERS UNE PAGE LIVRAISON : elle n'existe pas plus que la
+       * page de retractation, et un lien vers une route absente rendrait 404 sur
+       * la page ou le client decide d'acheter. Le composant de reassurance
+       * portera les deux le moment venu.
        */}
       <p className={styles.livraison}>
         Livraison par Mondial Relay, en Point Relais, Locker ou à domicile.
