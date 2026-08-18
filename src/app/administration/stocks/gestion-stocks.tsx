@@ -211,10 +211,21 @@ export function GestionStocks({
                     </button>
                   )}
 
+                  {/*
+                   * SANS DISPONIBLE, LE BOUTON EST DESACTIVE ET DIT POURQUOI.
+                   * Le laisser actif menerait a un refus certain, et
+                   * `frontend-design.md` interdit le faux succes optimiste.
+                   *
+                   * LE LIBELLE DISTINGUE LES DEUX CAUSES d'indisponibilite,
+                   * parce qu'elles n'appellent pas le meme geste : un stock nul
+                   * se resout par un reassort, une reservation active par un
+                   * controle du paiement en cours. Les confondre laisserait
+                   * chercher du cote du stock une piece qui est juste engagee.
+                   */}
                   <button
                     type="button"
                     className={styles.boutonSecondaire}
-                    disabled={enCours}
+                    disabled={enCours || ligne.quantiteDisponible === 0}
                     aria-expanded={venteOuverte === ligne.varianteId}
                     onClick={() =>
                       setVenteOuverte(
@@ -224,7 +235,11 @@ export function GestionStocks({
                       )
                     }
                   >
-                    Vendre sur un marché
+                    {ligne.quantiteDisponible > 0
+                      ? "Vendre sur un marché"
+                      : ligne.quantiteReservee > 0
+                        ? "Paiement en cours sur cette pièce"
+                        : "Aucune pièce à vendre"}
                   </button>
                 </div>
 
