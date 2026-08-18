@@ -279,3 +279,30 @@
     padding: var(--ls-space-6);
   }
 }
+
+/* --- Armature de chargement --------------------------------------------- */
+
+/*
+ * DEUX BARRES GRISES A LA PLACE DU TEXTE, le temps que la grille arrive. Elles
+ * reprennent la hauteur de ligne du nom et du prix pour que rien ne saute quand
+ * les vraies cartes les remplacent.
+ *
+ * AUCUNE ANIMATION DE PULSATION. Elle attire l'oeil sur une attente qui dure une
+ * fraction de seconde, et `prefers-reduced-motion` obligerait a la desactiver
+ * pour une partie des visiteurs : autant ne pas l'ecrire.
+ */
+.ardoiseTexte,
+.ardoiseTexteCourt {
+  height: 1rem;
+  margin: 0 0 var(--ls-space-3);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface-sand);
+}
+
+.ardoiseTexte {
+  width: 80%;
+}
+
+.ardoiseTexteCourt {
+  width: 40%;
+}
