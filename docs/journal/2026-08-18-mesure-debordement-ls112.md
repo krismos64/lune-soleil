@@ -51,6 +51,57 @@ Détail qui distingue les deux cas : le débordement à droite n'est visible qu'
 et 390 px, invisible à 1280 où la fenêtre est plus large que l'élément. Celui à
 gauche est détecté **aux trois largeurs**, puisqu'il sort par zéro.
 
+## La revue a trouvé une régression, et c'est la leçon de la session
+
+Corriger un défaut en rouvrant un autre. Ma mesure passait de
+`documentElement.scrollWidth` à `getBoundingClientRect`, ce qui mesure la boîte
+de l'**élément** et jamais celle de son **contenu**. Un texte en
+`white-space: nowrap` plus long que son bloc laisse la boîte à 320 px pendant que
+le texte sort à 365.
+
+Mesuré sur la page d'attente : la mutation passait au **vert**, alors que la
+mesure d'avant LS-111, celle que je remplaçais pour cause d'aveuglement, la
+voyait. `frontend-design.md` cite pourtant ce motif nommément parmi ceux à
+chercher à 320 px.
+
+Ce qui rend le cas intéressant : les 146 tests étaient verts, la mutation du bord
+gauche était détectée, et le module semblait acquis. Un test qui attrape ce qu'on
+a pensé à lui donner ne dit rien de ce qu'on n'a pas pensé à lui donner.
+
+Le dépassement interne de chaque élément est désormais compté, sauf si l'élément
+défile lui-même : `overflow-x: auto` sur un tableau large est une décision de
+mise en page.
+
+## Trois faux positifs traités avant qu'ils n'existent
+
+La revue signalait trois motifs qui feraient rougir un rendu correct. Aucun
+n'existe dans `src/` aujourd'hui, vérifié : zéro `overflow` hors
+`overflow-wrap`. La phase 3 en amènera avec ses tableaux de commandes.
+
+Vérifié sur une page de contrôle, mesure à l'appui :
+
+| Cas | Mesure |
+|---|---|
+| conteneur à défilement légitime | 0 |
+| `overflow: hidden` masquant l'enfant | 0 |
+| `sr-only` par `left: -9999px` | 0 |
+| débordement réel à gauche, en flux | 200 |
+| débordement réel par marge négative | 150 |
+| débordement réel par le texte | 74 |
+
+Le `sr-only` se distingue par le **hors-flux** et non par la valeur. Un élément
+`absolute` ou `fixed` entièrement à gauche de zéro ne produit aucune barre de
+défilement ; un élément en flux tiré par une marge négative déborde réellement et
+reste compté. Filtrer sur la valeur aurait fermé les deux d'un coup.
+
+## La tolérance était mal calibrée
+
+La revue a montré que ma justification ne soutenait pas mon chiffre. J'écrivais
+que le pixel absorbe « une bordure de 0,5 px, une largeur en pourcentage qui ne
+tombe pas juste » : toutes ces fractions tiennent **sous** le demi-pixel. Un
+seuil à 1 px laissait donc passer un débordement réel d'un pixel entier sans rien
+absorber de plus. Resserré à 0,5 px.
+
 ## Un chiffre faux dans ma propre description
 
 Le ticket annonçait **onze** assertions, il y en avait **sept**. L'écart vient
