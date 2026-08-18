@@ -171,6 +171,19 @@ LS-27 et LS-33.
 Aucun exemple daté n'est recopié ici : il se périmerait au commentaire suivant,
 ce qui est arrivé à celui que `CLAUDE.md` portait sur LS-27.
 
+## Les deux skills du projet
+
+`.claude/skills/` les porte, un dossier par skill avec son `SKILL.md`.
+
+| Skill | Invocation | Ce qu'il porte |
+|---|---|---|
+| `story` | automatique dès qu'un travail touche le code, le schéma, un prototype ou un document | le cycle complet : cadre du ticket, quinze questions avant zone critique, test d'abord sur le stock, clôture sur les quatre canaux |
+| `adr` | **manuelle seulement**, `disable-model-invocation: true` | la rédaction d'une décision d'architecture versionnée, sa numérotation et son ajout à la table ci-dessus |
+
+`adr` ne s'invoque pas tout seul, et c'est voulu : décider qu'une décision est
+structurante appartient à Christophe, pas au modèle. Une story qui rencontre un
+choix non tranché le signale et propose l'ADR, elle ne l'écrit pas d'office.
+
 ## Les cinq hooks, et ce que chacun garde
 
 `.claude/settings.json` les déclare, `.claude/scripts/` les porte. Un hook
