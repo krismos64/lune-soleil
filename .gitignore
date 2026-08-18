@@ -61,6 +61,11 @@ pg-data/
 # chez l'hebergeur de medias. Les originaux peuvent contenir des metadonnees.
 public/uploads/
 uploads/
+# Les declinaisons servies, ADR-007 : elles vivent sur le volume Docker
+# `lune-soleil-medias` et jamais dans le depot, qui est public. Une execution
+# locale du traitement les ecrit ici, et sans cette ligne elles seraient
+# commitees. Ajoutee en LS-105, la section ne couvrait que les originaux.
+public/medias/
 tmp/
 .tmp/
 

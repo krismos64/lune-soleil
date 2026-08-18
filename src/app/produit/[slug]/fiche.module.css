@@ -1,0 +1,389 @@
+/*
+ * Fiche produit publique, LS-105.
+ *
+ * CONCUE A PARTIR DE 320 px, puis elargie. Les media queries montent, elles ne
+ * descendent jamais : ce qui est ecrit hors requete est ce que voit le plus
+ * petit ecran.
+ *
+ * L'ORDRE VISUEL SUIT L'ORDRE DU DOM, et c'est voulu. `frontend-design.md`
+ * impose onze blocs dans un ordre pense pour 320 px ou tout est empile ; a
+ * partir de 768 px la galerie passe a gauche et les blocs d'achat a droite,
+ * sans jamais reordonner le DOM. Un `order` CSS qui divergerait de l'ordre du
+ * DOM ferait diverger l'ordre de lecture au clavier de l'ordre visuel.
+ *
+ * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons de `tokens.css`. Les deux
+ * contraintes de contraste d'ADR-022 s'appliquent : `--ls-accent-gold` ne porte
+ * jamais de texte, et le terracotta clair ne sert jamais de fond a du petit
+ * texte.
+ */
+
+.page {
+  padding: var(--ls-space-4);
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+/* --- Fil d'Ariane -------------------------------------------------------- */
+
+.filAriane {
+  margin: 0 0 var(--ls-space-4);
+  font-size: 0.9rem;
+}
+
+.filArianeListe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ls-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ls-text-muted);
+}
+
+.filArianeLien {
+  color: var(--ls-accent-gold-deep);
+}
+
+/* --- Mise en page -------------------------------------------------------- */
+
+/*
+ * A 320 px TOUT EST EMPILE, une seule colonne. C'est l'ordre imposé des blocs
+ * qui commande, et il est concu pour cet ecran : ce qui decide de l'achat en
+ * haut, ce qui rassure et detaille ensuite.
+ */
+.corps {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--ls-space-5);
+}
+
+/*
+ * A PARTIR DE 768 px, GALERIE A GAUCHE ET ACHAT A DROITE. Les deux colonnes
+ * sont dans l'ordre du DOM, la galerie venant en premier : aucun `order` n'est
+ * employe, l'ordre de lecture au clavier restant celui qu'on voit.
+ */
+@media (min-width: 768px) {
+  .corps {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  /* Les blocs editoriaux reprennent toute la largeur sous les deux colonnes. */
+  .editorial {
+    grid-column: 1 / -1;
+  }
+}
+
+/* --- Galerie ------------------------------------------------------------- */
+
+.galerie {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-3);
+  /* `min-width: 0` : sans lui une image large forcerait la colonne a deborder. */
+  min-width: 0;
+}
+
+.imagePrincipale {
+  width: 100%;
+  height: auto;
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface-sand);
+  object-fit: cover;
+  aspect-ratio: 1 / 1;
+}
+
+/*
+ * LES VIGNETTES DEFILENT HORIZONTALEMENT plutot que de retrecir. A 320 px,
+ * quatre vignettes cote a cote feraient 60 px chacune, sous la zone tactile de
+ * 44 px une fois les ecarts retires.
+ */
+.vignettes {
+  display: flex;
+  gap: var(--ls-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.vignette {
+  flex: 0 0 auto;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: var(--ls-radius-sm);
+  background: none;
+  cursor: pointer;
+  /* Zone tactile a 44 px minimum, `frontend-design.md`. */
+  min-width: 64px;
+  min-height: 64px;
+}
+
+.vignetteActive {
+  border-color: var(--ls-primary);
+}
+
+.imageVignette {
+  display: block;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface-sand);
+  object-fit: cover;
+}
+
+/* --- Bloc d'achat -------------------------------------------------------- */
+
+.achat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-3);
+  min-width: 0;
+}
+
+.titre {
+  margin: 0;
+  color: var(--ls-primary);
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  /*
+   * UN NOM LONG SE COUPE PLUTOT QUE DE DEBORDER. Sans cela, un nom d'un seul
+   * mot tres long pousse la colonne au-dela des 320 px : c'est le cas que la
+   * revue de LS-104 signalait comme non couvert.
+   */
+  overflow-wrap: anywhere;
+}
+
+.presentation {
+  margin: 0;
+  color: var(--ls-text-muted);
+}
+
+.prix {
+  margin: 0;
+  color: var(--ls-primary);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+/* --- Badges de disponibilite --------------------------------------------- */
+
+/*
+ * LES TROIS BADGES REPRENNENT LES VALEURS DU CATALOGUE, deja mesurees en
+ * LS-104 et corrigees par LS-84. Ne pas les redecider ici : le terracotta
+ * clair donne 4,35:1 avec du blanc, sous le seuil AA, et `--ls-text-muted` sur
+ * sable tombe au meme chiffre malgre ce que son jeton annonce.
+ */
+.badge {
+  display: inline-block;
+  align-self: flex-start;
+  margin: 0;
+  padding: var(--ls-space-1) var(--ls-space-3);
+  border-radius: var(--ls-radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.badgeEnStock {
+  background: var(--ls-success);
+  color: var(--ls-text-on-primary);
+}
+
+/* 5,89:1 avec du blanc, quand le terracotta clair n'atteint que 4,35:1. */
+.badgeDernierePiece {
+  background: var(--ls-accent-terracotta-deep);
+  color: var(--ls-text-on-primary);
+}
+
+/* `--ls-text` et non `--ls-text-muted` : 10,83:1 sur sable contre 4,35:1. */
+.badgeEpuise {
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+}
+
+/* --- Choix de la declinaison --------------------------------------------- */
+
+.declinaisons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-2);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.legendeDeclinaisons {
+  padding: 0 0 var(--ls-space-2);
+  color: var(--ls-text);
+  font-weight: 600;
+}
+
+.declinaison {
+  display: flex;
+  align-items: center;
+  gap: var(--ls-space-2);
+  padding: var(--ls-space-2) var(--ls-space-3);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-sm);
+  cursor: pointer;
+  /* Zone tactile de 44 px, la ligne entiere etant cliquable via le `label`. */
+  min-height: 44px;
+}
+
+.radioDeclinaison {
+  /* Le focus reste visible : jamais supprime sans remplacement. */
+  width: 20px;
+  height: 20px;
+  accent-color: var(--ls-primary);
+}
+
+.libelleDeclinaison {
+  color: var(--ls-text);
+  overflow-wrap: anywhere;
+}
+
+/*
+ * L'ETAT EPUISE EST DIT PAR DU TEXTE, jamais par la seule couleur. C'est la
+ * regle d'accessibilite du projet, et c'est aussi ce qui le rend lisible en
+ * impression ou en contraste eleve.
+ */
+.declinaisonEpuisee {
+  margin-left: auto;
+  color: var(--ls-text);
+  font-size: 0.85rem;
+}
+
+/* --- Ajout au panier ----------------------------------------------------- */
+
+.ajouter {
+  padding: var(--ls-space-3) var(--ls-space-4);
+  border: none;
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.ajouter:hover:not(:disabled) {
+  background: var(--ls-primary-hover);
+}
+
+/*
+ * EPUISE, LE BOUTON RESTE VISIBLE ET LISIBLE. `opacity` seule tomberait sous le
+ * seuil de contraste : le fond neutre et le texte courant gardent 10,83:1, et
+ * le curseur dit l'indisponibilite sans reposer sur la pale.
+ */
+.ajouter:disabled {
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+  cursor: not-allowed;
+}
+
+.livraison {
+  margin: 0;
+  color: var(--ls-text-muted);
+  font-size: 0.9rem;
+}
+
+/* --- Blocs editoriaux, 8 a 11 -------------------------------------------- */
+
+.editorial {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-5);
+  min-width: 0;
+}
+
+.blocDimensions,
+.section {
+  min-width: 0;
+}
+
+.titreSection {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-primary);
+  font-size: 1.15rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * `white-space: pre-line` REND LES SAUTS DE LIGNE SANS RENDRE DU HTML. C23
+ * impose du texte simple : les retours a la ligne saisis par l'administratrice
+ * deviennent des retours visibles, et rien d'autre n'est interprete.
+ *
+ * C'est ce qui permet de ne PAS decouper le contenu en paragraphes cote React
+ * tout en respectant la mise en forme voulue, sans jamais approcher
+ * `dangerouslySetInnerHTML`.
+ */
+.texteSection {
+  margin: 0;
+  color: var(--ls-text);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * Le bloc 10, retours et retractation, RENVOIE vers les textes legaux : ils ne
+ * sont jamais recopies ici, un texte legal duplique se perime en silence.
+ */
+.legal {
+  padding: var(--ls-space-4);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface-sand);
+}
+
+/*
+ * `--ls-primary` ET NON `--ls-accent-gold-deep`, ET LE PIEGE EST CELUI DE
+ * LS-104 SUR UN AUTRE JETON.
+ *
+ * `tokens.css` documente `--ls-accent-gold-deep` a 4,72:1, et ce chiffre est
+ * vrai SUR LE FOND CREME de la page : le fil d'Ariane l'emploie sans probleme.
+ * Sur le SABLE de ce bloc il tombe a 4,23:1, sous le seuil AA de 4,5:1, mesure
+ * par axe-core aux trois largeurs.
+ *
+ * Un rapport annonce dans un jeton ne vaut que pour UN fond. `--ls-primary`
+ * donne 7,49:1 sur sable, mesure, avec de la marge.
+ */
+.lienLegal {
+  color: var(--ls-primary);
+}
+
+/* --- Armature de chargement ---------------------------------------------- */
+
+/*
+ * DES BLOCS AUX PROPORTIONS DU CONTENU REEL, pour eviter le saut de mise en
+ * page a l'arrivee des donnees. Purement decoratifs, `aria-hidden` cote page.
+ */
+.compteChargement {
+  margin: 0 0 var(--ls-space-4);
+  color: var(--ls-text-muted);
+}
+
+.ardoiseTitre,
+.ardoiseTexte,
+.ardoiseTexteCourt {
+  margin: 0;
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface-sand);
+}
+
+.ardoiseTitre {
+  height: 2rem;
+  width: 70%;
+}
+
+.ardoiseTexte {
+  height: 1rem;
+  width: 100%;
+}
+
+.ardoiseTexteCourt {
+  height: 1rem;
+  width: 40%;
+}
