@@ -65,6 +65,7 @@ import { Client } from "pg";
 
 import {
   CATALOGUE_TEST,
+  FICHE_TEST,
   FICHIER_SESSION_ADMINISTRATION,
   PRODUIT_TEST,
 } from "./chemin-session";
@@ -261,6 +262,7 @@ async function preparerBase(client: Client): Promise<void> {
 
   await poserProduitDeControle(client);
   await poserCataloguePublie(client);
+  await poserFicheProduit(client);
 }
 
 /**
@@ -413,4 +415,104 @@ async function poserCataloguePublie(client: Client): Promise<void> {
       CATALOGUE_TEST.mediaEnStock.texteAlternatif,
     ],
   );
+}
+
+/**
+ * Enrichit la piece en stock pour la FICHE produit, LS-105.
+ *
+ * IDEMPOTENT, comme les autres preparations : `UPDATE` cible par identifiant, et
+ * `ON CONFLICT (id) DO NOTHING` sur les insertions a identifiant fige.
+ *
+ * LES SECTIONS NE PEUVENT PAS EMPLOYER `ON CONFLICT (produit_id, ordre)`. Cette
+ * contrainte est DEFERRABLE, C20, et PostgreSQL refuse une contrainte
+ * differable comme arbitre : « ON CONFLICT does not support deferrable unique
+ * constraints ». Le piege est documente dans `002_contraintes_unicite.sql`, et
+ * il se rencontre a l'execution seulement. L'idempotence passe donc par une
+ * suppression prealable des sections de ce produit.
+ */
+async function poserFicheProduit(client: Client): Promise<void> {
+  await client.query(
+    `UPDATE produit SET description_courte = $2 WHERE id = $1`,
+    [CATALOGUE_TEST.enStock.id, FICHE_TEST.descriptionCourte],
+  );
+
+  // La variante deja posee recoit un libelle et des dimensions parlants.
+  await client.query(
+    `UPDATE variante SET libelle = $2, dimensions = $3 WHERE id = $1`,
+    [
+      CATALOGUE_TEST.enStock.varianteId,
+      FICHE_TEST.varianteEnStock.libelle,
+      FICHE_TEST.varianteEnStock.dimensions,
+    ],
+  );
+
+  /*
+   * LA SECONDE DECLINAISON EST EPUISEE ET PLUS CHERE, deliberement : c'est ce
+   * qui permet de prouver que le choix change le prix ET la disponibilite. Deux
+   * variantes identiques ne prouveraient rien.
+   */
+  await client.query(
+    `INSERT INTO variante (
+       id, produit_id, reference, libelle, dimensions, prix_centimes,
+       quantite_physique, quantite_reservee, vente_web_activee, cree_a
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, 0, 0, true, now())
+     ON CONFLICT (id) DO NOTHING`,
+    [
+      FICHE_TEST.varianteEpuisee.id,
+      CATALOGUE_TEST.enStock.id,
+      FICHE_TEST.varianteEpuisee.reference,
+      FICHE_TEST.varianteEpuisee.libelle,
+      FICHE_TEST.varianteEpuisee.dimensions,
+      FICHE_TEST.varianteEpuisee.prixCentimes,
+    ],
+  );
+
+  /*
+   * UNE SECONDE PHOTOGRAPHIE, `ordre = 2`. La galerie n'affiche ses vignettes
+   * qu'a partir de deux : avec une seule, le test des noms accessibles de LS-85
+   * se passait en `skip` sur les trois largeurs et ne prouvait rien.
+   *
+   * `ordre = 2` ET NON 1 : l'index partiel `media_principal_unique` reserve le
+   * rang 1 a un seul media par produit, deja pris par `mediaEnStock`.
+   */
+  await client.query(
+    `INSERT INTO media (id, produit_id, chemin, texte_alternatif, ordre, statut_traitement, cree_a)
+     VALUES ($1, $2, $3, $4, 2, 'TRAITE', now())
+     ON CONFLICT (id) DO NOTHING`,
+    [
+      FICHE_TEST.mediaSecond.id,
+      CATALOGUE_TEST.enStock.id,
+      FICHE_TEST.mediaSecond.chemin,
+      FICHE_TEST.mediaSecond.texteAlternatif,
+    ],
+  );
+
+  await client.query(`DELETE FROM section_produit WHERE produit_id = $1`, [
+    CATALOGUE_TEST.enStock.id,
+  ]);
+
+  const sections = [
+    { ...FICHE_TEST.sections.visiblePremiere, ordre: 1, visible: true },
+    { ...FICHE_TEST.sections.visibleSeconde, ordre: 2, visible: true },
+    { ...FICHE_TEST.sections.masquee, ordre: 3, visible: false },
+    { ...FICHE_TEST.sections.vide, ordre: 4, visible: true },
+  ];
+
+  for (const section of sections) {
+    await client.query(
+      `INSERT INTO section_produit (
+         id, produit_id, cle, titre, contenu, ordre, visible, cree_a, modifie_a
+       )
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, now(), now())`,
+      [
+        CATALOGUE_TEST.enStock.id,
+        `ls105-${section.ordre}`,
+        section.titre,
+        section.contenu,
+        section.ordre,
+        section.visible,
+      ],
+    );
+  }
 }

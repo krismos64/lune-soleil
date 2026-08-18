@@ -36,6 +36,29 @@ import { SelecteurVariante } from "./selecteur-variante";
  */
 export const dynamic = "force-dynamic";
 
+/*
+ * AUCUN `loading.tsx` SUR CETTE ROUTE, ET C'EST UN ARBITRAGE, PAS UN OUBLI.
+ *
+ * `frontend-design.md` exige un etat de chargement, et LS-104 en a pose un sur
+ * le catalogue. Ici il est INCOMPATIBLE avec le 404 : `loading.tsx` enveloppe
+ * la page entiere dans une frontiere Suspense, le streaming de la reponse
+ * commence donc AVANT que `notFound()` soit atteint, et Next.js laisse alors le
+ * statut a 200 en se contentant d'ajouter un `noindex`. Verifie par Context7 sur
+ * la documentation de Next.js 16, et mesure : 404 sans le fichier, 200 avec.
+ *
+ * LE SEO TRANCHE. Un brouillon et un slug inconnu doivent rendre un VRAI 404 :
+ * repondre 200 les rendrait indexables, et le `noindex` ne protege que des
+ * moteurs qui le respectent. Le SEO est prioritaire sur ce projet, et un statut
+ * faux est un defaut de correction quand l'ecran fige n'est qu'un defaut de
+ * confort.
+ *
+ * CE QUI LE RETABLIRAIT SANS LE CONFLIT : deplacer le contenu lourd sous un
+ * `<Suspense>` DANS cette page, en gardant le controle d'existence au-dessus.
+ * La lecture etant aujourd'hui unique et rapide, l'ajouter compliquerait la
+ * page pour un gain nul. A reconsiderer si la fiche gagne des donnees lentes,
+ * les avis de LS-61 par exemple.
+ */
+
 /**
  * Metadonnees construites depuis la fiche, SEO etant prioritaire sur ce projet.
  *

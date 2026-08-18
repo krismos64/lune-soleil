@@ -113,3 +113,69 @@ export const CATALOGUE_TEST = {
     prixCentimes: 7500,
   },
 } as const;
+
+/**
+ * Ce que la FICHE produit ajoute au catalogue, LS-105.
+ *
+ * POSE SUR `CATALOGUE_TEST.enStock`, deja publie et deja photographie : le
+ * catalogue exerce sa carte, la fiche exerce son detail. Deux jeux separes
+ * feraient diverger les deux ecrans sur des donnees differentes.
+ *
+ * UNE SECONDE VARIANTE, EPUISEE ET PLUS CHERE. C'est le minimum pour exercer le
+ * bloc 5, le choix de declinaison, et pour prouver que prix, disponibilite et
+ * dimensions suivent le CHOIX et non le produit. Une seule variante masquerait
+ * entierement ce comportement, qui est le critere 5 de la story.
+ *
+ * QUATRE SECTIONS DONT DEUX QUI NE DOIVENT PAS S'AFFICHER, C22 et C23 : une
+ * masquee et une dont le contenu n'est qu'espaces. Sans elles, le rendu du
+ * bloc 9 serait teste sur le seul cas nominal.
+ */
+export const FICHE_TEST = {
+  descriptionCourte: "Anneau martelé à la main, finition satinée.",
+  /**
+   * SECONDE PHOTOGRAPHIE, SANS LAQUELLE LE TEST DES VIGNETTES NE PROUVE RIEN.
+   *
+   * La galerie n'affiche ses vignettes qu'a partir de DEUX photographies : avec
+   * une seule, le test des noms accessibles de LS-85 se passait en `skip` sur
+   * les trois largeurs, donc la correction n'etait verifiee nulle part. Un test
+   * toujours ignore vaut un test absent.
+   */
+  mediaSecond: {
+    id: "d1b2c3d4-2222-4ddd-8888-222222222222",
+    chemin: "produits/e2e-ls105-second/",
+    texteAlternatif: "Vue de profil de la pièce",
+  },
+  /** La variante deja posee par `poserCataloguePublie`, renommee et dimensionnee. */
+  varianteEnStock: {
+    libelle: "TEST Taille 52",
+    dimensions: "Diamètre 16,5 mm",
+  },
+  /** Seconde declinaison : plus chere, epuisee, dimensions differentes. */
+  varianteEpuisee: {
+    id: "c1b2c3d4-4444-4ccc-8888-444444444444",
+    reference: "TEST-LS105-T54",
+    libelle: "TEST Taille 54",
+    dimensions: "Diamètre 17,2 mm",
+    prixCentimes: 5400,
+  },
+  sections: {
+    visiblePremiere: {
+      titre: "TEST Matières",
+      contenu: "Argent 925 recyclé.\nPierre de lune naturelle.",
+    },
+    visibleSeconde: {
+      titre: "TEST Fabrication",
+      contenu: "Façonné à la main en atelier.",
+    },
+    /** C22 : masquee, son titre ne doit apparaitre nulle part. */
+    masquee: {
+      titre: "TEST Section masquée",
+      contenu: "Ce texte ne doit jamais être servi.",
+    },
+    /** C23 : contenu fait d'espaces, vide au sens de la regle. */
+    vide: {
+      titre: "TEST Section vide",
+      contenu: "   \n  ",
+    },
+  },
+} as const;
