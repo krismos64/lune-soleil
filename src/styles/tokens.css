@@ -12,8 +12,14 @@
  *    Tout texte dore utilise --ls-accent-gold-deep.
  *
  * 2. --ls-accent-terracotta donne 4,07:1, conforme AA uniquement en texte
- *    large ou gras. Un badge en petit texte doit passer en fond terracotta
- *    avec texte blanc.
+ *    large ou gras, c'est-a-dire 18,66 px en gras ou 24 px en graisse normale.
+ *
+ * 3. --ls-accent-terracotta-deep existe parce que la prescription precedente
+ *    etait FAUSSE, mesuree par axe-core en LS-104. Elle disait de passer un
+ *    badge en petit texte « en fond terracotta avec texte blanc » : cette
+ *    combinaison donne 4,35:1, soit SOUS le seuil AA de 4,5:1. La regle
+ *    constatait pourtant le chiffre deux lignes plus haut, sans en tirer la
+ *    consequence. Tout badge en petit texte emploie desormais le jeton fonce.
  */
 
 :root {
@@ -36,7 +42,8 @@
   /* Accents */
   --ls-accent-gold: #c4a052; /* DECOR UNIQUEMENT, 2,31:1, jamais de texte */
   --ls-accent-gold-deep: #8a6a22; /* liens et texte accentue, 4,72:1, AA */
-  --ls-accent-terracotta: #b4643e; /* badge ponctuel, 4,07:1, texte large ou gras */
+  --ls-accent-terracotta: #b4643e; /* decor et texte large, 4,07:1 sur creme */
+  --ls-accent-terracotta-deep: #9c4f2b; /* fond de badge, blanc dessus 5,89:1, AA */
 
   /* Etats */
   --ls-success: #3f6b4a; /* confirmation, disponibilite */

@@ -1,0 +1,281 @@
+/*
+ * Catalogue public, LS-104.
+ *
+ * CONCU A PARTIR DE 320 px, puis elargi. Les media queries montent, elles ne
+ * descendent jamais : ce qui est ecrit hors requete est ce que voit le plus
+ * petit ecran, et c'est la contrainte qui commande la conception.
+ *
+ * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons de `tokens.css`. Deux
+ * contraintes d'accessibilite en decoulent et sont respectees ici :
+ * `--ls-accent-gold` ne porte jamais de texte, et `--ls-accent-terracotta`
+ * passe en FOND avec du texte blanc plutot qu'en couleur de texte, LS-84.
+ */
+
+.page {
+  padding: var(--ls-space-4);
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+.titre {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-primary);
+  font-size: clamp(1.75rem, 6vw, 2.5rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.accroche {
+  margin: 0 0 var(--ls-space-5);
+  color: var(--ls-text-muted);
+}
+
+/* --- Filtres ------------------------------------------------------------ */
+
+.filtres {
+  margin: 0 0 var(--ls-space-4);
+}
+
+/*
+ * LES FILTRES DEFILENT HORIZONTALEMENT A 320 px, et c'est un choix assume.
+ * Avec six categories, les empiler mangerait un ecran entier avant la premiere
+ * photo ; les envelopper produirait une hauteur imprevisible. `overflow-x` cree
+ * ici une zone de defilement DELIBEREE, distincte d'un debordement de page.
+ */
+.listeFiltres {
+  display: flex;
+  gap: var(--ls-space-2);
+  margin: 0;
+  padding: 0 0 var(--ls-space-2);
+  list-style: none;
+  overflow-x: auto;
+  /* Le defilement s'arrete sur un filtre entier, jamais coupe au milieu. */
+  scroll-snap-type: x proximity;
+}
+
+.filtre {
+  display: block;
+  /* 44 px de haut au total avec le padding : la cible tactile minimale. */
+  padding: var(--ls-space-3) var(--ls-space-4);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  text-decoration: none;
+  /* Un nom de categorie ne se coupe pas en deux lignes dans sa pastille. */
+  white-space: nowrap;
+  scroll-snap-align: start;
+}
+
+.filtre:hover {
+  border-color: var(--ls-primary);
+}
+
+/*
+ * LE FILTRE ACTIF SE RECONNAIT PAR L'APLAT ET NON PAR LA SEULE COULEUR DE
+ * TEXTE. Un ecart de teinte seul ne suffit pas a qui distingue mal les
+ * couleurs : le contraste de fond, lui, se voit toujours.
+ */
+.filtre[aria-current="page"] {
+  background: var(--ls-primary);
+  border-color: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+}
+
+.filtre:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+.compte {
+  margin: 0 0 var(--ls-space-4);
+  color: var(--ls-text-muted);
+  font-size: 0.9rem;
+}
+
+/* --- Grille ------------------------------------------------------------- */
+
+/*
+ * UNE COLONNE A 320 px. `auto-fill` avec `minmax` elargit ensuite tout seul,
+ * sans point de rupture ecrit : la grille passe a deux colonnes vers 660 px et
+ * a trois vers 990 px, selon la place reelle.
+ *
+ * `minmax(0, 1fr)` ET NON `1fr` : la valeur par defaut d'une piste de grille est
+ * `auto`, qui refuse de descendre sous la taille de son contenu. Un nom de
+ * bijou long ferait alors deborder la colonne, defaut invisible tant qu'on ne
+ * teste pas a 320 px avec un nom reel.
+ */
+.grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  gap: var(--ls-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.carte {
+  background: var(--ls-surface);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  overflow: hidden;
+}
+
+/*
+ * TOUTE LA CARTE EST CLIQUABLE, un seul lien qui enveloppe image et texte.
+ * Deux liens vers la meme fiche, l'un sur l'image l'autre sur le nom, feraient
+ * entendre la destination deux fois a qui navigue au clavier.
+ */
+.lienCarte {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.lienCarte:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: -2px;
+}
+
+/*
+ * LE CADRE EST CARRE ET FIXE LA HAUTEUR AVANT LE CHARGEMENT. Sans `aspect-ratio`
+ * la grille sauterait a mesure que les photos arrivent, et une photo panoramique
+ * donnerait une carte deux fois plus basse que sa voisine.
+ */
+.cadreImage {
+  aspect-ratio: 1 / 1;
+  background: var(--ls-surface-sand);
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  /* `cover` recadre plutot que de deformer : un bijou etire est pire qu'un
+     bijou legerement rogne. */
+  object-fit: cover;
+  display: block;
+}
+
+.imageAbsente {
+  width: 100%;
+  height: 100%;
+  background: var(--ls-surface-sand);
+}
+
+.corpsCarte {
+  padding: var(--ls-space-4);
+}
+
+.nomProduit {
+  margin: 0 0 var(--ls-space-1);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ls-text);
+  /* Un nom long se coupe plutot que de deborder de la carte a 320 px. */
+  overflow-wrap: anywhere;
+}
+
+.categorie {
+  margin: 0 0 var(--ls-space-3);
+  font-size: 0.85rem;
+  color: var(--ls-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.prix {
+  margin: 0 0 var(--ls-space-3);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--ls-price);
+}
+
+/* --- Badges de disponibilite -------------------------------------------- */
+
+.badgeEnStock,
+.badgeDernierePiece,
+.badgeEpuise {
+  display: inline-block;
+  margin: 0;
+  padding: var(--ls-space-1) var(--ls-space-3);
+  border-radius: var(--ls-radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.badgeEnStock {
+  background: var(--ls-success);
+  color: var(--ls-text-on-primary);
+}
+
+/*
+ * LE TERRACOTTA FONCE, ET LA NUANCE EST TOUT LE SUJET DE LS-84.
+ *
+ * Ce badge fait 0,85rem, soit 13,6 px : tres en dessous du seuil de 18,66 px du
+ * texte large, donc soumis au seuil AA de 4,5:1.
+ *
+ * LA PREMIERE VERSION SUIVAIT LA REGLE ET ETAIT POURTANT FAUSSE.
+ * `frontend-design.md` prescrivait « fond terracotta avec texte blanc », ce qui
+ * donne 4,35:1, mesure par axe-core : sous le seuil. La regle constatait
+ * elle-meme ce chiffre deux lignes plus haut sans en tirer la consequence.
+ *
+ * `--ls-accent-terracotta-deep` donne 5,89:1 avec du blanc, avec de la marge.
+ */
+.badgeDernierePiece {
+  background: var(--ls-accent-terracotta-deep);
+  color: var(--ls-text-on-primary);
+}
+
+/*
+ * `--ls-text` ET NON `--ls-text-muted`, ET LE PIEGE VAUT D'ETRE DIT.
+ *
+ * `tokens.css` documente `--ls-text-muted` comme « 4,86:1, AA », et ce chiffre
+ * est vrai SUR LE FOND CREME de la page. Sur le sable de ce badge il tombe a
+ * 4,35:1, sous le seuil AA : un jeton de texte porte un rapport valable pour UN
+ * fond, pas pour tous. Mesure par axe-core en LS-104.
+ *
+ * `--ls-text` donne 10,83:1 sur sable. Le badge reste visuellement discret par
+ * son fond neutre, sans reposer sur un texte pale pour le dire.
+ */
+.badgeEpuise {
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+}
+
+/* --- Etat vide ---------------------------------------------------------- */
+
+.etatVide {
+  padding: var(--ls-space-7) var(--ls-space-4);
+  text-align: center;
+  background: var(--ls-surface-sand);
+  border-radius: var(--ls-radius-md);
+}
+
+.texteVide {
+  margin: 0 0 var(--ls-space-4);
+  color: var(--ls-text);
+}
+
+.actionVide {
+  display: inline-block;
+  padding: var(--ls-space-3) var(--ls-space-5);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.actionVide:hover {
+  background: var(--ls-primary-hover);
+}
+
+.actionVide:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+@media (min-width: 768px) {
+  .page {
+    padding: var(--ls-space-6);
+  }
+}

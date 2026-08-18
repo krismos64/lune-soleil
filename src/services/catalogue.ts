@@ -499,3 +499,122 @@ export async function archiverProduit(produitId: string): Promise<void> {
     // un fait historique que l'archivage ne dement pas.
   });
 }
+
+/**
+ * Les trois etats publics de disponibilite, `frontend-design.md`.
+ *
+ * TROIS ET PAS QUATRE, et surtout aucune quantite. « 7 en stock » exposerait le
+ * niveau d'activite de la boutique sans rien apporter au client. « Derniere
+ * piece » fait exception parce que c'est une information d'urgence VRAIE, et
+ * c'est le cas ordinaire ici, chaque bijou etant fait main.
+ */
+export type EtatDisponibilite = "EN_STOCK" | "DERNIERE_PIECE" | "EPUISE";
+
+/**
+ * Derive l'etat public d'une quantite disponible.
+ *
+ * COTE SERVEUR, JAMAIS DANS LE NAVIGATEUR. La regle l'impose, et la raison est
+ * qu'un calcul cote client obligerait a transmettre la quantite exacte pour la
+ * masquer ensuite : elle serait lisible dans le HTML.
+ *
+ * LA QUANTITE RECUE EST DEJA NETTE DES RESERVATIONS, voir
+ * `listerProduitsPublies`. Une piece reservee par un autre client, paiement en
+ * cours, n'est pas disponible.
+ */
+export function etatDisponibilite(
+  quantiteDisponible: number,
+): EtatDisponibilite {
+  if (quantiteDisponible <= 0) {
+    return "EPUISE";
+  }
+
+  return quantiteDisponible === 1 ? "DERNIERE_PIECE" : "EN_STOCK";
+}
+
+/** Une carte du catalogue public, prete a afficher. */
+export type ProduitCatalogue = {
+  id: string;
+  nom: string;
+  slug: string;
+  categorieId: string;
+  categorieNom: string;
+  prixCentimes: number;
+  disponibilite: EtatDisponibilite;
+  mediaChemin: string | null;
+  mediaTexteAlternatif: string | null;
+};
+
+/** Ce que le catalogue public rend, produits et filtres disponibles. */
+export type Catalogue = {
+  produits: ProduitCatalogue[];
+  categories: { id: string; nom: string; slug: string }[];
+  categorieRetenue: string | null;
+};
+
+/**
+ * Le catalogue public, LS-104.
+ *
+ * LA CATEGORIE DEMANDEE EST UN SLUG ET NON UN IDENTIFIANT. L'URL est publique et
+ * partageable : `?categorie=colliers` se lit, se retient et survit a une
+ * reinitialisation de la base, quand un UUID ne dit rien et se perime.
+ *
+ * UN SLUG INCONNU NE LEVE PAS, il rend le catalogue entier sans filtre. Une URL
+ * partagee apres qu'une categorie a ete renommee doit montrer la boutique, pas
+ * une erreur : le visiteur n'a rien fait de mal. C'est aussi ce qui evite de
+ * transformer une entree d'URL en 404 exploitable pour deviner les categories
+ * existantes.
+ *
+ * LES CATEGORIES PROPOSEES SONT CELLES QUI PORTENT DU PUBLIE, et elles sont lues
+ * meme quand un filtre s'applique : la barre de filtres doit rester complete
+ * pour permettre d'en changer, sans quoi on ne pourrait plus revenir en arriere
+ * qu'en effacant l'URL a la main.
+ *
+ * LA CATEGORIE DEMANDEE EST CHERCHEE PLUS LARGE QUE LA BARRE DE FILTRES, et un
+ * test l'a impose. Une categorie dont tout le contenu vient d'etre archive ou
+ * retire de la vente web sort de la liste des categories proposees : la chercher
+ * parmi elles seulement la rendait « inconnue », donc ignoree, et l'ecran
+ * affichait le catalogue ENTIER sans jamais dire pourquoi le filtre demande
+ * n'avait pas ete applique.
+ *
+ * Elle est donc resolue sur les categories EXISTANTES. Une categorie reelle mais
+ * vide reste retenue, ce qui permet a l'ecran d'annoncer « aucun resultat dans
+ * Bagues » et de proposer d'effacer le filtre, l'etat vide exige par
+ * `PROTOTYPE.md`. Seul un slug qui ne correspond a RIEN retombe sur le catalogue
+ * complet.
+ */
+export async function lireCataloguePublic(
+  slugCategorie?: string,
+): Promise<Catalogue> {
+  const categories = await depot.listerCategoriesPubliees(prisma);
+
+  const categorieRetenue = slugCategorie
+    ? await depot.lireCategorieParSlug(prisma, slugCategorie)
+    : null;
+
+  /*
+   * LA CLE EST OMISE ET NON PASSEE A `undefined`. Le projet active
+   * `exactOptionalPropertyTypes` : `{ categorieId: undefined }` n'y satisfait pas
+   * `{ categorieId?: string }`, et la distinction est utile ici, « aucun filtre »
+   * et « filtre sur rien » n'ayant pas le meme sens pour la requete.
+   */
+  const lignes = await depot.listerProduitsPublies(
+    prisma,
+    categorieRetenue ? { categorieId: categorieRetenue.id } : {},
+  );
+
+  return {
+    produits: lignes.map((ligne) => ({
+      id: ligne.id,
+      nom: ligne.nom,
+      slug: ligne.slug,
+      categorieId: ligne.categorieId,
+      categorieNom: ligne.categorieNom,
+      prixCentimes: ligne.prixMinimumCentimes,
+      disponibilite: etatDisponibilite(ligne.quantiteDisponible),
+      mediaChemin: ligne.mediaChemin,
+      mediaTexteAlternatif: ligne.mediaTexteAlternatif,
+    })),
+    categories,
+    categorieRetenue: categorieRetenue?.slug ?? null,
+  };
+}

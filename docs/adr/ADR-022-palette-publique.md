@@ -85,7 +85,8 @@ proximité plus grande avec le brun réellement mesuré dans le texte du logo
 | `--ls-primary-hover` | `#4A2A0B` | Survol, état actif | 12,91:1 blanc dessus (AAA) |
 | `--ls-accent-gold` | `#C4A052` | Filets, icônes décoratives | 2,31:1, décor uniquement |
 | `--ls-accent-gold-deep` | `#8A6A22` | Liens, texte accentué | 4,72:1 (AA) |
-| `--ls-accent-terracotta` | `#B4643E` | Badge ponctuel | 4,07:1, texte large ou gras |
+| `--ls-accent-terracotta` | `#B4643E` | Décor, texte large | 4,07:1, texte large ou gras |
+| `--ls-accent-terracotta-deep` | `#9C4F2B` | Fond de badge | 5,89:1 avec texte blanc, AA |
 | `--ls-success` | `#3F6B4A` | Disponibilité | AA |
 | `--ls-warning` | `#A9741A` | Stock faible | AA |
 | `--ls-error` | `#A33A2E` | Erreur, rupture | AA |
@@ -101,9 +102,22 @@ l'assistant de développement.
 1. `#C4A052` plafonne à 2,31:1 sur crème. Interdit pour tout texte, y compris
    large. Réservé aux filets, icônes décoratives et éclats. Tout texte doré
    utilise `#8A6A22`.
-2. `#B4643E` donne 4,07:1, conforme AA uniquement en texte large ou gras. Le
-   badge « Dernière pièce » doit soit être en fond terracotta avec texte blanc,
-   soit être suffisamment grand et gras.
+2. `#B4643E` donne 4,07:1, conforme AA uniquement en texte large ou gras.
+
+### Amendement du 18 août 2026, LS-104
+
+**La décision 2 ci-dessus était fautive dans son application.** Elle prescrivait
+un badge « en fond terracotta avec texte blanc » : cette combinaison donne
+**4,35:1**, sous le seuil AA de 4,5:1. Le défaut a été mesuré par `axe-core` sur
+le badge « Dernière pièce » du catalogue, écrit en suivant la prescription à la
+lettre.
+
+La palette gagne donc un jeton, `--ls-accent-terracotta-deep` `#9C4F2B`, qui
+donne **5,89:1** avec du texte blanc. C'est désormais le fond de tout badge en
+petit texte. `#B4643E` reste en place pour le décor et le texte large ou gras.
+
+Le reste de l'ADR est inchangé : aucune autre couleur n'est touchée, et le choix
+d'un accent terracotta demeure.
 
 ### Sur le prototype exploratoire
 
