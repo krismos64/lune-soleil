@@ -43,7 +43,9 @@ export type RefusStock =
   | "VARIANTE_INTROUVABLE"
   | "MOUVEMENT_INTROUVABLE"
   | "DEJA_COMPENSE"
-  | "NON_COMPENSABLE";
+  | "NON_COMPENSABLE"
+  /** Le comptage passerait sous les pieces deja reservees, CHECK de la base. */
+  | "SOUS_RESERVATION";
 
 /** L'etat de stock de toutes les variantes vivantes, critere 1. */
 export async function lireEtatStock(): Promise<EtatStockVariante[]> {
@@ -342,6 +344,33 @@ export async function ajusterInventaire(
   const { acteurId, ...reste } = entree as { acteurId: string };
   const donnees = valider(schemaAjustementInventaire, reste);
 
+  try {
+    return await ajusterDansTransaction(donnees, acteurId);
+  } catch (erreur) {
+    /*
+     * LA VIOLATION DE `chk_variante_pas_de_survente` EST UN REFUS METIER, pas
+     * une panne. Elle survient quand le comptage passerait sous les pieces
+     * deja reservees : sans cette traduction, l'exploitante lirait
+     * « Operation indisponible » au lieu de comprendre qu'un paiement est en
+     * cours sur une piece qu'elle ne retrouve pas.
+     *
+     * `P2010` COUVRE TOUTE ERREUR DE REQUETE BRUTE, il ne suffit donc pas : le
+     * nom de la contrainte, enfoui dans le message, est ce qui decide. Meme
+     * precaution que pour l'interblocage, ou `P2010` seul serait trop large.
+     */
+    const message = erreur instanceof Error ? erreur.message : "";
+    if (message.includes("chk_variante_pas_de_survente")) {
+      return { refus: "SOUS_RESERVATION" };
+    }
+    throw erreur;
+  }
+}
+
+/** Le corps transactionnel de l'ajustement, isole pour la traduction du refus. */
+async function ajusterDansTransaction(
+  donnees: { varianteId: string; quantiteConstatee: number; motif: string },
+  acteurId: string,
+): Promise<{ refus?: RefusStock; sansEcart?: boolean; mouvementId?: string }> {
   return prisma.$transaction(async (tx) => {
     const variante = await tx.variante.findFirst({
       where: { id: donnees.varianteId, archiveeA: null },

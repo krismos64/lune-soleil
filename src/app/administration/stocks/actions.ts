@@ -29,6 +29,7 @@ import {
   exigerAdministratrice,
 } from "@/services/autorisation";
 import type { IdentiteAppelant } from "@/services/autorisation";
+import type { RefusStock } from "@/services/stock-multicanal";
 import {
   ajusterInventaire,
   corrigerMouvement,
@@ -62,6 +63,8 @@ export type ResultatAction =
   | { statut: "NON_COMPENSABLE" }
   /** Comptage conforme, aucun mouvement ecrit : ce n'est pas un echec. */
   | { statut: "SANS_ECART" }
+  /** Le comptage passerait sous des pieces deja engagees dans un paiement. */
+  | { statut: "SOUS_RESERVATION" }
   /** Panne technique, deja journalisee. */
   | { statut: "INDISPONIBLE" };
 
@@ -99,15 +102,7 @@ async function exigerRole(): Promise<IdentiteAppelant | null> {
  * traduire ici ferait echouer la compilation, plutot que de rendre un
  * `INDISPONIBLE` qui accuserait la base pour un cas parfaitement prevu.
  */
-function traduireRefus(
-  refus:
-    | "RESERVATION_ACTIVE"
-    | "STOCK_INSUFFISANT"
-    | "VARIANTE_INTROUVABLE"
-    | "MOUVEMENT_INTROUVABLE"
-    | "DEJA_COMPENSE"
-    | "NON_COMPENSABLE",
-): ResultatAction {
+function traduireRefus(refus: RefusStock): ResultatAction {
   switch (refus) {
     case "RESERVATION_ACTIVE":
       return { statut: "RESERVATION_ACTIVE" };
@@ -120,6 +115,8 @@ function traduireRefus(
       return { statut: "DEJA_COMPENSE" };
     case "NON_COMPENSABLE":
       return { statut: "NON_COMPENSABLE" };
+    case "SOUS_RESERVATION":
+      return { statut: "SOUS_RESERVATION" };
   }
 }
 

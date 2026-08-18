@@ -409,6 +409,38 @@ describe("l'ajustement d'inventaire", () => {
   });
 
   /*
+   * L'AJUSTEMENT NE PEUT PAS PASSER SOUS LES RESERVATIONS, et le CHECK de la
+   * base le refuse : `chk_variante_pas_de_survente`. Ce test existe pour que le
+   * refus soit une VALEUR et non une exception technique, sans quoi
+   * l'exploitante lirait « Opération indisponible » au lieu de comprendre
+   * qu'une piece est engagee dans un paiement.
+   *
+   * PAS DE CONTROLE APPLICATIF EN AMONT, et l'asymetrie avec la vente externe
+   * est voulue : un inventaire CONSTATE la realite physique, refuser de
+   * l'enregistrer parce qu'un client paie obligerait a mentir sur le stock. La
+   * base tranche le seul cas dangereux.
+   */
+  it("refuse un ajustement qui passerait sous les reservations", async () => {
+    const { varianteId } = await creerVarianteEnStock(client, {
+      quantitePhysique: 2,
+    });
+    const commandeId = await creerCommande(client);
+    await poserReservation(varianteId, commandeId, 1);
+
+    const resultat = await stock.ajusterInventaire({
+      varianteId,
+      quantiteConstatee: 0,
+      motif: "Comptage à zéro malgré une réservation",
+      acteurId,
+    });
+
+    expect(resultat.refus).toBe("SOUS_RESERVATION");
+    // Aucune ecriture : ni mouvement, ni quantite modifiee.
+    expect(await compterMouvements(varianteId)).toBe(0);
+    expect((await lireQuantites(varianteId)).physique).toBe(2);
+  });
+
+  /*
    * UN AJUSTEMENT SANS ECART N'ECRIT RIEN. Compter et retrouver le meme nombre
    * est le cas le PLUS FREQUENT d'un inventaire : ecrire un mouvement a zero
    * noierait les vrais ecarts dans du bruit, et le journal doit rester lisible.
