@@ -266,6 +266,50 @@ describe("la vente externe, parcours 2", () => {
     expect(q.reservee).toBe(1);
   });
 
+  /*
+   * UNE RESERVATION EXPIREE BLOQUE ENCORE, ET LE DIAGNOSTIC DOIT LE DIRE.
+   *
+   * `quantiteReservee` ne redescend qu'a la LIBERATION, tache planifiee de
+   * LS-72 qui n'existe pas encore : entre l'expiration et le prochain cycle,
+   * la piece reste comptee comme reservee. Le refus est donc juste, mais un
+   * diagnostic qui filtre sur `expire_a > now()` rend zero reservation active
+   * et conclut a tort « stock insuffisant ».
+   *
+   * L'EXPLOITANTE LIRAIT « STOCK INSUFFISANT » SUR UNE PIECE QU'ELLE A EN MAIN.
+   * Elle chercherait du cote du reassort un blocage qui se resout tout seul au
+   * cycle suivant, ou par un controle de la reservation.
+   *
+   * Trouve par la revue critique de LS-106.
+   */
+  it("dit qu'une reservation bloque, meme expiree, et non un stock insuffisant", async () => {
+    const { varianteId } = await creerVarianteEnStock(client, {
+      quantitePhysique: 1,
+    });
+    const commandeId = await creerCommande(client);
+
+    // Une reservation EXPIREE : la quantite reste comptee, la ligne est perimee.
+    await client.query(
+      `UPDATE variante SET quantite_reservee = 1 WHERE id = $1`,
+      [varianteId],
+    );
+    await client.query(
+      `INSERT INTO reservation (id, variante_id, commande_id, quantite, expire_a, cree_a)
+       VALUES (gen_random_uuid(), $1, $2, 1, now() - interval '1 hour', now() - interval '2 hours')`,
+      [varianteId, commandeId],
+    );
+
+    const resultat = await stock.enregistrerVenteExterne({
+      varianteId,
+      quantite: 1,
+      prixUnitaireEuros: "42,00",
+      canal: "Marché de Pau",
+      acteurId,
+    });
+
+    expect(resultat.refus).toBe("RESERVATION_ACTIVE");
+    expect(await compterMouvements(varianteId)).toBe(0);
+  });
+
   it("refuse quand le stock physique est deja a zero", async () => {
     const { varianteId } = await creerVarianteEnStock(client, {
       quantitePhysique: 0,

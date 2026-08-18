@@ -22,6 +22,11 @@ const eslintConfig = defineConfig([
     // modification. Sans cette ligne, ESLint analyse plus de quatre cents
     // fichiers a chaque execution, en integration continue comprise.
     "src/generated/**",
+    // Scratchpad local, LS-106. `tmp/` est ignore par git depuis LS-105 : les
+    // scripts jetables d'une session y vivent, et ESLint les analysait, faisant
+    // apparaitre des avertissements sur du code qui ne sera jamais commite. Un
+    // lint qui crie sur du jetable finit par etre lu sans etre regarde.
+    "tmp/**",
   ]),
 ]);
 
