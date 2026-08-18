@@ -188,14 +188,22 @@ export default async function PageFicheProduit({
            * separement : `frontend-design.md` et `legal.md` l'imposent, faute de
            * quoi le delai de retractation passe a douze mois, article L221-20.
            */}
+          {/*
+           * AUCUN LIEN VERS LA PAGE DE RETRACTATION TANT QU'ELLE N'EXISTE PAS.
+           * Elle appartient a LS-28, contenus juridiques, encore a faire, dont
+           * un critere exige que les liens « pointent vers ces pages reelles,
+           * aucun href vide ni diese ». Un lien pose d'avance meme vers une
+           * 404 sur la page ou le client decide d'acheter.
+           *
+           * LE TEXTE, LUI, RESTE : l'information sur le delai et sur les frais
+           * de retour est obligatoire des maintenant, et son absence coute plus
+           * cher que l'absence de lien. LS-28 ajoutera le renvoi.
+           */}
           <section className={styles.legal}>
             <h2 className={styles.titreSection}>Retours et rétractation</h2>
             <p className={styles.texteSection}>
               14 jours pour changer d&apos;avis à compter de la réception, frais
-              de retour à la charge du client.{" "}
-              <Link href="/retractation" className={styles.lienLegal}>
-                Conditions de rétractation
-              </Link>
+              de retour à la charge du client.
             </p>
           </section>
 
