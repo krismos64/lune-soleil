@@ -38,7 +38,10 @@ connaître avant d'écrire un service qui la recouvrirait ou la contredirait :
 |---|---|---|
 | `src/services/reservation.ts` | réservation d'un panier : tri déterministe des variantes, rejeu borné sur interblocage, refus par exception, validation par `schemaPanier` | aucune, la garde locale a été remplacée par le socle en LS-71 |
 | `src/lib/validation.ts` | socle Zod partagé, `valider`, `EntreeInvalideError`, six schémas de domaine, voir `VALIDATION.md` | aucune |
-| `src/app/panier/actions.ts` | Server Action de réservation : valide puis délègue, traduit refus, contention et panne en résultats | reçoit `commandeId` sans le produire, ADR-024 imposant que la commande naisse dans la transaction de réservation |
+| `src/app/(boutique)/panier/actions.ts` | Server Action de réservation : valide puis délègue, traduit refus, contention et panne en résultats | reçoit `commandeId` sans le produire, ADR-024 imposant que la commande naisse dans la transaction de réservation |
+| `src/app/(boutique)/panier/actions-panier.ts` | Server Actions du panier, LS-114 : ajout, changement de quantité, retrait, écriture du cookie | ne touche aucun stock, la réservation reste à l'étape 4 du parcours 1 |
+| `src/lib/panier-cookie.ts` | signature HMAC du cookie de panier, LS-114 | le cookie ne porte **jamais** de prix, et la signature établit l'intégrité, jamais une autorisation |
+| `src/services/panier.ts` | revalidation du panier contre la base, étape 3 du parcours 1 | tout montant vient d'ici, jamais du cookie ni du navigateur |
 | `src/repositories/stock.ts` | l'`UPDATE` conditionnel d'ADR-006, en `$queryRawUnsafe`, réexporté par `tests/aide/reservation-sql.ts` | aucune |
 | `src/lib/auth.ts` | instance Better Auth : mapping vers `Utilisateur`, `role` en `input: false`, seize caractères, plugin passkey, session d'un jour prolongée à l'usage, LS-81 | vérification d'email **désactivée** tant qu'ADR-008 n'est pas implémenté |
 | `src/lib/auth-client.ts` | client navigateur, passkey comprise | aucune |

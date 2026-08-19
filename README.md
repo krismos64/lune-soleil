@@ -10,10 +10,21 @@ situation de marché.
 
 ## État
 
-Projet en cours de développement, **phase 2, catalogue, médias et stock
-multicanal**, epic LS-3. La phase 0 de cadrage est close, et la porte de sortie
-de la phase 1 est constatée, voir ci-dessous. La boutique n'est pas ouverte
-commercialement.
+Projet en cours de développement. La phase 0 de cadrage est close, et la porte
+de sortie de la phase 1 est constatée, voir ci-dessous. La boutique n'est pas
+ouverte commercialement.
+
+**Deux phases avancent en parallèle**, et ce n'est pas un dérapage : la phase 3
+a commencé le 19 août 2026 avec LS-114, le panier, sans attendre la clôture de
+la phase 2 dont sept stories restent ouvertes.
+
+| Phase | Epic | État au 19 août 2026 |
+|---|---|---|
+| 2, catalogue, médias et stock multicanal | LS-3 | en cours, sept stories ouvertes |
+| 3, panier, réservation, paiement et commandes | LS-4 | commencée, LS-114 livrée, neuf stories ouvertes |
+
+Ce que la phase 3 attend est écrit dans son découpage : la chaîne LS-114 à
+LS-121 est **imposée**, chaque story dépendant de la précédente.
 
 ### Porte de sortie de la phase 1, constatée le 13 août 2026
 
