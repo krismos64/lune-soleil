@@ -63,28 +63,32 @@ export default async function PageAccueil() {
         </div>
 
         {/*
-         * LE VISUEL EST DECORATIF, `alt` VIDE ET `aria-hidden`. Le titre et
-         * l'accroche portent deja tout le sens : le decrire ferait repeter la
-         * meme information a qui ecoute.
+         * LE VISUEL PORTE UN CONTENU, DONC UN `alt` DECRIT. Il montre des
+         * bijoux : le rendre `aria-hidden` priverait de l'ambiance du hero qui
+         * que ce soit ne voyant pas l'image. Le texte alternatif decrit la
+         * scene et la matiere, jamais un produit du catalogue, ces pieces n'en
+         * etant pas.
          *
-         * `next/image` ICI, CONTRAIREMENT AUX PHOTOS DE PRODUITS. Ce fichier vit dans
-         * `public/` et passe donc par l'optimiseur de Next.js. Les medias d'ADR-007
-         * sont servis par Nginx depuis un volume, hors de sa portee, et emploient
-         * `<img>` avec leurs declinaisons pre-generees.
+         * `next/image` ICI, CONTRAIREMENT AUX PHOTOS DE PRODUITS. Ce fichier
+         * vit dans `public/` et passe donc par l'optimiseur de Next.js. Les
+         * medias d'ADR-007 sont servis par Nginx depuis un volume, hors de sa
+         * portee, et emploient `<img>` avec leurs declinaisons pre-generees.
          *
-         * IMAGE PROVISOIRE. Les photographies reelles sont LS-23, bloquee par la
-         * chaine de traitement des medias. Le fichier vit dans `public/` et non
-         * dans le volume des medias d'ADR-007 : c'est un element d'habillage du
-         * site, pas une photo de produit administrable.
+         * VISUEL D'HABILLAGE A REMPLACER AVANT L'OUVERTURE, LS-23. Il montre
+         * des bijoux qui ne sont PAS au catalogue : les laisser a l'ouverture
+         * ferait passer des pieces inexistantes pour des creations de la
+         * boutique, ce que LS-22 interdit et ce qui serait une allegation
+         * commerciale trompeuse. Arbitrage de Christophe du 19 aout 2026 :
+         * on le garde le temps du developpement, on le remplace avant la mise
+         * en ligne.
          */}
         <div className={styles.heroVisuel}>
           <Image
             src="/habillage/accueil-hero.jpg"
-            alt=""
-            aria-hidden="true"
+            alt="Un pendentif lune et soleil en laiton doré et des boucles d'oreilles à perles claires, posés sur un tissu de lin écru"
             className={styles.image}
-            width={1280}
-            height={960}
+            width={1586}
+            height={992}
             priority
             sizes="(min-width: 768px) 50vw, 100vw"
           />

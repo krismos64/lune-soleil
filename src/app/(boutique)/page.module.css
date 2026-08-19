@@ -128,7 +128,12 @@
   display: block;
   width: 100%;
   height: auto;
-  aspect-ratio: 4 / 3;
+  /*
+   * 16/10, LE RATIO REEL DU FICHIER. Imposer 4/3 rognerait en haut et en bas
+   * avec `object-fit: cover`, et couperait le pendentif qui est le sujet.
+   * A revoir si LS-23 livre une photographie d'un autre format.
+   */
+  aspect-ratio: 16 / 10;
   object-fit: cover;
 }
 
