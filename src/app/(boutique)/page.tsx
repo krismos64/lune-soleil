@@ -18,12 +18,12 @@ import styles from "./page.module.css";
 export const metadata = {
   title: "Lune & Soleil, bijoux artisanaux faits main",
   description:
-    "Des bijoux faits main, crÃ©Ã©s Ã  l'unitÃ© et en petite sÃ©rie. Livraison en France mÃ©tropolitaine, Corse comprise.",
+    "Des bijoux faits main, créés à l'unité et en petite série. Livraison en France métropolitaine, Corse comprise.",
 };
 
 export const dynamic = "force-dynamic";
 
-/** Nombre de crÃ©ations mises en avant sur l'accueil. */
+/** Nombre de créations mises en avant sur l'accueil. */
 const NOMBRE_MIS_EN_AVANT = 4;
 
 export default async function PageAccueil() {
@@ -46,15 +46,15 @@ export default async function PageAccueil() {
         <div className={styles.heroTexte}>
           <p className={styles.surtitre}>Bijoux faits main</p>
           <h1 className={styles.titre}>
-            La lumiÃ¨re d&apos;un bijou, le geste d&apos;une main.
+            La lumière d&apos;un bijou, le geste d&apos;une main.
           </h1>
           <p className={styles.accroche}>
-            Des piÃ¨ces dÃ©licates en petite sÃ©rie, pensÃ©es pour accompagner
-            le quotidien sans jamais se ressembler tout Ã  fait.
+            Des pièces délicates en petite série, pensées pour accompagner le
+            quotidien sans jamais se ressembler tout à fait.
           </p>
           <div className={styles.actions}>
             <Link href="/catalogue" className={styles.actionPrincipale}>
-              DÃ©couvrir les crÃ©ations
+              Découvrir les créations
             </Link>
             <Link href="/notre-univers" className={styles.actionSecondaire}>
               Entrer dans l&apos;atelier
@@ -113,11 +113,11 @@ export default async function PageAccueil() {
           <li className={styles.elementReassurance}>
             <span className={styles.titreReassurance}>Fait main</span>
             <span className={styles.detailReassurance}>
-              Petites sÃ©ries prÃ©parÃ©es avec soin
+              Petites séries préparées avec soin
             </span>
           </li>
           <li className={styles.elementReassurance}>
-            <span className={styles.titreReassurance}>Paiement sÃ©curisÃ©</span>
+            <span className={styles.titreReassurance}>Paiement sécurisé</span>
             <span className={styles.detailReassurance}>
               Par carte, via Stripe
             </span>
@@ -125,7 +125,7 @@ export default async function PageAccueil() {
           <li className={styles.elementReassurance}>
             <span className={styles.titreReassurance}>14 jours</span>
             <span className={styles.detailReassurance}>
-              Pour changer d&apos;avis, frais de retour Ã  votre charge
+              Pour changer d&apos;avis, frais de retour à votre charge
             </span>
           </li>
         </ul>
@@ -148,8 +148,8 @@ export default async function PageAccueil() {
         <section className={styles.section}>
           <div className={styles.enteteSection}>
             <div>
-              <p className={styles.surtitreSection}>NouveautÃ©s</p>
-              <h2 className={styles.titreSection}>Les derniÃ¨res crÃ©ations</h2>
+              <p className={styles.surtitreSection}>Nouveautés</p>
+              <h2 className={styles.titreSection}>Les dernières créations</h2>
             </div>
             <Link href="/catalogue" className={styles.lienSection}>
               Voir toute la collection
@@ -213,14 +213,14 @@ export default async function PageAccueil() {
         <div className={styles.editorialTexte}>
           <p className={styles.surtitreEditorial}>L&apos;atelier</p>
           <h2 className={styles.titreEditorial}>
-            CrÃ©er peu, crÃ©er avec intention.
+            Créer peu, créer avec intention.
           </h2>
           <p className={styles.texteEditorial}>
-            Chaque bijou commence par une association de formes et de matiÃ¨res,
-            travaillÃ©e Ã  la main et produite en petite quantitÃ©.
+            Chaque bijou commence par une association de formes et de matières,
+            travaillée à la main et produite en petite quantité.
           </p>
           <Link href="/notre-univers" className={styles.actionEditorial}>
-            DÃ©couvrir notre univers
+            Découvrir notre univers
           </Link>
         </div>
       </section>
