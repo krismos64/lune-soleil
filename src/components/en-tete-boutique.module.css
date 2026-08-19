@@ -1,0 +1,109 @@
+/*
+ * En-tete de la boutique, LS-122. Conception a partir de 320 px.
+ *
+ * AUCUNE VALEUR HEXADECIMALE ICI, uniquement les jetons d'ADR-022.
+ */
+
+.entete {
+  background: var(--ls-surface);
+  border-bottom: 1px solid var(--ls-border);
+}
+
+/*
+ * Lien d'evitement : hors de l'ecran tant qu'il n'a pas le focus, jamais
+ * `display: none` qui le retirerait du parcours clavier.
+ */
+.evitement {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 10;
+  padding: var(--ls-space-3) var(--ls-space-4);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  text-decoration: none;
+}
+
+.evitement:focus {
+  left: 0;
+}
+
+.barre {
+  max-width: var(--ls-content-max);
+  margin: 0 auto;
+  padding: var(--ls-space-3) var(--ls-space-4);
+  display: flex;
+  /*
+   * `wrap` PLUTOT QU'UN MENU DEROULANT : a 320 px la navigation passe sous la
+   * marque, sans script ni etat a gerer. Un menu hamburger imposerait un
+   * composant client pour trois liens.
+   */
+  flex-wrap: wrap;
+  gap: var(--ls-space-3) var(--ls-space-5);
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.marque {
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nom {
+  color: var(--ls-primary);
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/*
+ * `--ls-text-muted` sur `--ls-surface` blanc : 5,19:1, conforme AA.
+ * Ne pas reprendre cette paire sur un fond sable, ou elle tombe a 4,35:1.
+ */
+.baseline {
+  color: var(--ls-text-muted);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.navigation {
+  /* La navigation prend toute la largeur restante et passe dessous si besoin. */
+  flex: 1 1 auto;
+}
+
+.liste {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ls-space-2) var(--ls-space-5);
+  justify-content: flex-end;
+}
+
+/*
+ * `min-height` A LA CIBLE TACTILE, jamais une hauteur fixe : le texte doit
+ * pouvoir grandir avec les preferences du systeme sans etre coupe.
+ */
+.lien {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  color: var(--ls-text);
+  text-decoration: none;
+  font-size: 0.9375rem;
+}
+
+.lien:hover {
+  color: var(--ls-primary);
+  text-decoration: underline;
+}
+
+.lien:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}

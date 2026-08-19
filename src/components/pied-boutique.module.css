@@ -1,0 +1,99 @@
+/*
+ * Pied de page de la boutique, LS-122. Conception a partir de 320 px.
+ */
+
+.pied {
+  margin-top: var(--ls-space-8);
+  background: var(--ls-surface-sand);
+  border-top: 1px solid var(--ls-border);
+}
+
+.contenu {
+  max-width: var(--ls-content-max);
+  margin: 0 auto;
+  padding: var(--ls-space-7) var(--ls-space-4) var(--ls-space-5);
+  display: grid;
+  /*
+   * `auto-fit` ET `minmax` PLUTOT QU'UNE MEDIA QUERY : une colonne a 320 px,
+   * deux puis quatre quand la place existe, sans point de rupture a maintenir.
+   */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: var(--ls-space-6) var(--ls-space-5);
+}
+
+.nom {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-primary);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+/*
+ * `--ls-text` ET NON `--ls-text-muted` : le fond est sable `#f2eadf`, ou le gris
+ * secondaire tombe a 4,35:1, sous le seuil AA. Sur creme il donnerait 4,86:1.
+ * C'est la paire couleur et fond qui compte, jamais la couleur seule, LS-84.
+ */
+.description {
+  margin: 0;
+  color: var(--ls-text);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  max-width: 34ch;
+}
+
+.titreColonne {
+  margin: 0 0 var(--ls-space-3);
+  color: var(--ls-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.liste {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.lien {
+  display: inline-flex;
+  align-items: center;
+  /*
+   * Cible tactile de 44 px : deux liens de pied de page voisins ne doivent pas
+   * se toucher sur un ecran tactile.
+   */
+  min-height: var(--ls-touch-target);
+  color: var(--ls-text);
+  text-decoration: none;
+  font-size: 0.875rem;
+}
+
+.lien:hover {
+  color: var(--ls-primary);
+  text-decoration: underline;
+}
+
+.lien:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+.bas {
+  max-width: var(--ls-content-max);
+  margin: 0 auto;
+  padding: var(--ls-space-4);
+  border-top: 1px solid var(--ls-border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ls-space-2) var(--ls-space-5);
+  justify-content: space-between;
+}
+
+.mention {
+  margin: 0;
+  color: var(--ls-text);
+  font-size: 0.8125rem;
+}
