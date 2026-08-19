@@ -12,7 +12,10 @@
  * de faire ses courses.
  */
 import Link from "next/link";
+import { cookies } from "next/headers";
 
+import { NOM_COOKIE_PANIER, decoderPanier } from "@/lib/panier-cookie";
+import { compterArticles } from "@/services/panier";
 import styles from "./en-tete-boutique.module.css";
 
 /**
@@ -30,7 +33,21 @@ const ENTREES = [
   { href: "/aide", libelle: "Livraison et aide" },
 ] as const;
 
-export function EnTeteBoutique() {
+export async function EnTeteBoutique() {
+  /*
+   * LE COMPTEUR SOMME LE COOKIE, SANS REQUETE EN BASE. L'en-tete est rendu sur
+   * CHAQUE page du site : y ajouter une lecture ferait payer une requete a
+   * toute la navigation pour un chiffre indicatif.
+   *
+   * IL PEUT DONC DIFFERER du panier revalide, qui ramene les quantites au
+   * disponible. L'ecart est assume : le compteur dit ce que le visiteur a mis,
+   * la page du panier dit ce qu'il peut reellement acheter.
+   */
+  const magasin = await cookies();
+  const articles = compterArticles(
+    decoderPanier(magasin.get(NOM_COOKIE_PANIER)?.value),
+  );
+
   return (
     <header className={styles.entete}>
       {/*
@@ -65,6 +82,32 @@ export function EnTeteBoutique() {
             ))}
           </ul>
         </nav>
+
+        {/*
+         * LE COMPTEUR N'APPARAIT QUE S'IL Y A QUELQUE CHOSE. Un « 0 » permanent
+         * occupe la place sans rien apprendre, et le prototype ne l'affiche pas
+         * non plus sur un panier vide.
+         *
+         * LE NOMBRE EST DANS LE NOM ACCESSIBLE et non seulement a l'ecran :
+         * « Panier » seul ne dirait pas a qui ecoute combien de pieces il
+         * contient.
+         */}
+        <Link
+          href="/panier"
+          className={styles.panier}
+          aria-label={
+            articles > 0
+              ? `Votre panier, ${articles} ${articles > 1 ? "pièces" : "pièce"}`
+              : "Votre panier, vide"
+          }
+        >
+          <span aria-hidden="true">Panier</span>
+          {articles > 0 && (
+            <span className={styles.compteur} aria-hidden="true">
+              {articles}
+            </span>
+          )}
+        </Link>
       </div>
     </header>
   );

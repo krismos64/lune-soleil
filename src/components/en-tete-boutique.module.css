@@ -107,3 +107,47 @@
   outline: 2px solid var(--ls-focus);
   outline-offset: 2px;
 }
+
+/*
+ * Lien du panier et son compteur, LS-114.
+ */
+.panier {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ls-space-2);
+  min-height: var(--ls-touch-target);
+  color: var(--ls-text);
+  text-decoration: none;
+  font-size: 0.9375rem;
+}
+
+.panier:hover {
+  color: var(--ls-primary);
+  text-decoration: underline;
+}
+
+.panier:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+/*
+ * Pastille du compteur. Texte blanc sur `--ls-primary` : 8,93:1, conforme AAA.
+ *
+ * `min-width` ET NON `width` : un compteur a deux chiffres ne doit pas etre
+ * comprime en ovale, ni deborder de sa pastille.
+ */
+.compteur {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 11px;
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}

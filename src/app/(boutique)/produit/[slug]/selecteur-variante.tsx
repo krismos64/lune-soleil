@@ -22,9 +22,10 @@
  * invariant du projet : « 7 en stock » exposerait le niveau d'activite de la
  * boutique. Ce composant ne peut donc pas le divulguer, meme par erreur.
  */
-import { useState } from "react";
+import { useState, useTransition } from "react";
 
 import type { EtatDisponibilite, VarianteFiche } from "@/services/catalogue";
+import { ajouterAuPanier } from "@/app/(boutique)/panier/actions-panier";
 import styles from "./fiche.module.css";
 
 /**
@@ -69,6 +70,8 @@ export function SelecteurVariante({
    * la liste change, et pointerait sur une autre declinaison que celle choisie.
    */
   const [idChoisi, setIdChoisi] = useState(variantes[0]?.id);
+  const [enCours, demarrer] = useTransition();
+  const [message, setMessage] = useState("");
 
   const choisie = variantes.find((v) => v.id === idChoisi) ?? variantes[0];
 
@@ -151,32 +154,44 @@ export function SelecteurVariante({
        * laisserait un trou sans expliquer pourquoi.
        */}
       {/*
-       * LE BOUTON EST DESACTIVE TANT QUE LA VENTE EN LIGNE N'OUVRE PAS, et son
-       * libelle le dit. Arbitrage de Christophe du 18 aout 2026.
+       * LE BOUTON EST ACTIF DEPUIS LS-114. Il portait « Vente en ligne bientot
+       * disponible » et `disabled` depuis LS-105, en attendant que le panier
+       * existe : un bouton actif sans effet est un faux succes, interdit par
+       * `frontend-design.md`. Le commentaire d'alors annoncait ce retrait.
        *
-       * UN BOUTON ACTIF QUI NE FAIT RIEN EST UN FAUX SUCCES, ce que
-       * `frontend-design.md` interdit et que la premiere version produisait :
-       * la mecanique de reservation appartenant a la phase 3, le clic restait
-       * sans effet et sans explication.
+       * `epuisee` REDEVIENT SA SEULE CONDITION DE DESACTIVATION.
        *
-       * LES DEUX LIBELLES SE DISTINGUENT, et la nuance est tout l'interet de
-       * la formulation. « Épuisé » dit que CETTE declinaison n'est plus
-       * disponible ; « Vente en ligne bientôt disponible » dit que la boutique
-       * n'ouvre pas encore, alors que la piece est en stock. Les confondre
-       * ferait croire a une rupture sur un catalogue entier.
-       *
-       * A RETIRER EN MEME TEMPS QUE LS-4 pose la reservation : le bouton
-       * reprend alors « Ajouter au panier » et son etat actif, `epuisee`
-       * redevenant sa seule condition de desactivation.
+       * AJOUTER AU PANIER N'IMMOBILISE AUCUN STOCK. La disponibilite affichee
+       * ici peut donc etre dementie plus tard : la reservation a lieu a l'etape
+       * 4 du parcours 1, et c'est elle qui tranche. Le panier revalide a chaque
+       * affichage, et signale la ligne devenue incommandable.
        */}
       <button
         type="button"
         className={styles.ajouter}
-        disabled
-        aria-disabled="true"
+        disabled={epuisee || enCours}
+        aria-disabled={epuisee || enCours}
+        onClick={() => {
+          demarrer(async () => {
+            const issue = await ajouterAuPanier(choisie.id, 1);
+
+            /*
+             * L'ANNONCE EST LA MEME POUR L'OEIL ET POUR L'OREILLE, region live
+             * de LS-85 : sans elle, l'ajout ne produit aucun retour audible et
+             * le visiteur ne sait pas si son clic a porte.
+             */
+            setMessage(
+              issue.statut === "OK" ? "Ajouté au panier." : issue.message,
+            );
+          });
+        }}
       >
-        {epuisee ? "Épuisé" : "Vente en ligne bientôt disponible"}
+        {epuisee ? "Épuisé" : "Ajouter au panier"}
       </button>
+
+      <p role="status" aria-live="polite" className={styles.annonceAjout}>
+        {message}
+      </p>
 
       {/*
        * Bloc 7, informations de livraison.
