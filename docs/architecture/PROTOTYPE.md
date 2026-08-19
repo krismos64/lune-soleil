@@ -209,14 +209,20 @@ tests d'intégration le vérifient, l'un sur le compte et l'autre sur l'absence 
 cette clé précise. L'écran redit à la saisie que les dimensions appartiennent à
 la variante, pour que l'usage prévu soit lisible au bon moment.
 
-**Le gris est le seul écart neuf**, et il déborde de LS-84. Cette story vise le
-terracotta et son seuil de texte large ou gras : un contrôle écrit sur cette
-seule couleur laisserait passer le gris, qui est du texte courant et n'a donc
-aucune exemption possible. Mesure du 19 août 2026 sur la page d'accueil, 26
-textes sous le seuil AA, dont ce gris sur les descriptions de catégories, les
-libellés numérotés et les liens du pied de page. À traiter dans LS-122, qui
-écrit ces composants, ou en élargissant LS-84. L'arbitrage appartient à
-Christophe.
+**Le gris est le seul écart neuf.** Mesure du 19 août 2026 sur la page
+d'accueil, 26 textes sous le seuil AA, dont ce gris sur les descriptions de
+catégories, les libellés numérotés et les liens du pied de page.
+
+Comme tous les écarts de cette table, il porte sur le **prototype** et non sur
+le code : `--ls-accent-terracotta` n'est employé nulle part dans `src/`, LS-104
+ayant écrit les composants sans reprendre le motif. Rien ne dit que ce gris y
+entrera davantage.
+
+Ce qu'il change est la **forme du contrôle** attendu par LS-84 : un contrôle
+ancré sur le seul nom du jeton terracotta resterait vert devant une autre
+couleur insuffisante. Le mesurer sur les paires premier plan et fond réellement
+employées le rendrait générique. Arbitrage à poser par Christophe, dans LS-84 ou
+dans LS-122.
 
 ## Deux jetons d'ADR-022 que le prototype n'emploie pas
 
