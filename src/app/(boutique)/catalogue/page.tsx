@@ -65,7 +65,7 @@ export default async function PageCatalogue({
   const nomCategorieRetenue = categorieRetenue?.nom;
 
   return (
-    <main className={styles.page}>
+    <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Le catalogue</h1>
       <p className={styles.accroche}>
         Chaque bijou est fait main et créé à l&apos;unité.

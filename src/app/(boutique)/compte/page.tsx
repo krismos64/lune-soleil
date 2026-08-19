@@ -54,7 +54,7 @@ export default async function PageCompte() {
   }
 
   return (
-    <main className={styles.page}>
+    <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Mon compte</h1>
 
       <section className={styles.section} aria-labelledby="titre-informations">
