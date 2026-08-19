@@ -104,8 +104,14 @@ export function PiedBoutique() {
       </div>
 
       <div className={styles.bas}>
+        {/*
+         * L'ANNEE EST CALCULEE AU RENDU. Le layout est rendu a la demande sur
+         * chaque page publique, `force-dynamic` : elle ne se fige donc pas au
+         * build. A verifier de nouveau si une page publique passe un jour en
+         * statique, l'annee y resterait celle de la construction.
+         */}
         <p className={styles.mention}>
-          &copy; {new Date().getFullYear()} Lune &amp; Soleil
+          {`© ${new Date().getFullYear()} Lune & Soleil`}
         </p>
         <p className={styles.mention}>France métropolitaine, Corse comprise</p>
       </div>

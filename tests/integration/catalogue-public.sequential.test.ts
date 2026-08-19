@@ -449,3 +449,92 @@ describe("filtrage par categorie et tri", () => {
     expect(categorieRetenue?.nom).toBe("Bagues");
   });
 });
+
+/**
+ * Ce que l'accueil ajoute au catalogue, LS-122.
+ *
+ * L'ACCUEIL APPELLE LE MEME SERVICE que le catalogue : le filtrage des
+ * BROUILLON et des ARCHIVE lui est donc acquis, teste plus haut. Ce bloc ne
+ * reteste pas cela, il exerce ce qui est PROPRE a l'accueil : la coupe aux
+ * quatre plus recents.
+ *
+ * LA COUPE VIT DANS LA PAGE ET NON DANS LE SERVICE. Ces tests verifient donc
+ * l'invariant dont la page depend, « le service rend deja trie par date de
+ * publication decroissante », plutot que de reproduire le `slice` : si ce tri
+ * changeait un jour, la page prendrait quatre produits arbitraires sans que
+ * rien ne rougisse.
+ */
+describe("ce dont l'accueil depend, LS-122", () => {
+  it("rend les produits du plus recemment publie au plus ancien", async () => {
+    const categorieId = await creerCategorie("Colliers accueil");
+
+    await creerProduit("Publie il y a trois jours", {
+      categorieId,
+      publieA: new Date("2026-08-16T10:00:00Z"),
+    });
+    await creerProduit("Publie hier", {
+      categorieId,
+      publieA: new Date("2026-08-18T10:00:00Z"),
+    });
+    await creerProduit("Publie il y a une semaine", {
+      categorieId,
+      publieA: new Date("2026-08-12T10:00:00Z"),
+    });
+
+    const { produits } = await catalogue.lireCataloguePublic();
+
+    expect(produits.map((p) => p.nom)).toEqual([
+      "Publie hier",
+      "Publie il y a trois jours",
+      "Publie il y a une semaine",
+    ]);
+  });
+
+  it("place un produit sans date de publication apres les autres", async () => {
+    const categorieId = await creerCategorie("Bracelets accueil");
+
+    await creerProduit("Sans date", { categorieId, publieA: null });
+    await creerProduit("Avec date ancienne", {
+      categorieId,
+      publieA: new Date("2020-01-01T10:00:00Z"),
+    });
+
+    const { produits } = await catalogue.lireCataloguePublic();
+
+    /*
+     * `NULLS LAST` DANS LA REQUETE : un produit publie sans que `publie_a` soit
+     * renseigne ne doit pas prendre la tete des nouveautes de l'accueil. Sans
+     * cette clause PostgreSQL classe les NULL en premier sur un tri descendant.
+     */
+    expect(produits.map((p) => p.nom)).toEqual([
+      "Avec date ancienne",
+      "Sans date",
+    ]);
+  });
+
+  it("rend plus de quatre produits, la coupe appartenant a l'accueil", async () => {
+    const categorieId = await creerCategorie("Boucles accueil");
+
+    for (let index = 0; index < 6; index += 1) {
+      await creerProduit(`Piece ${index}`, {
+        categorieId,
+        publieA: new Date(Date.UTC(2026, 7, index + 1)),
+      });
+    }
+
+    const { produits } = await catalogue.lireCataloguePublic();
+
+    /*
+     * LE SERVICE NE PLAFONNE RIEN, `frontend-design.md` l'interdit. L'accueil
+     * coupe a quatre a l'affichage, le catalogue les montre tous : un `LIMIT`
+     * pose ici casserait le catalogue en silence.
+     */
+    expect(produits).toHaveLength(6);
+    expect(produits.slice(0, 4).map((p) => p.nom)).toEqual([
+      "Piece 5",
+      "Piece 4",
+      "Piece 3",
+      "Piece 2",
+    ]);
+  });
+});
