@@ -249,3 +249,34 @@ describe("cas limites", () => {
     ).toBe(5);
   });
 });
+
+describe("ce que l'ecran rend d'une ligne incommandable, LS-114", () => {
+  it("ramene la quantite a zero, ce qui retire le selecteur", async () => {
+    const varianteId = await creerVariante("Epuisee", {
+      quantitePhysique: 1,
+      quantiteReservee: 1,
+    });
+
+    const resultat = await panier.revalider([{ varianteId, quantite: 1 }]);
+
+    /*
+     * `quantite: 0` COMMANDE LE RENDU DE L'ECRAN. Le selecteur de quantite ne
+     * propose que 1 a 20 : sur une ligne a zero, React retombait sur la
+     * premiere option et AFFICHAIT « 1 » sous le message « Cette piece est
+     * epuisee ». Un visiteur pouvait croire qu'un exemplaire lui etait reserve.
+     *
+     * L'ecran affiche desormais « Aucun exemplaire » quand cette valeur est
+     * nulle. Ce test verrouille la DONNEE dont depend ce choix.
+     *
+     * LE RENDU LUI-MEME N'EST PAS COUVERT PAR UN TEST DE BOUT EN BOUT, et c'est
+     * assume : le cas ne s'atteint pas par le parcours normal, le bouton
+     * d'ajout etant desactive sur une piece epuisee. Injecter un cookie signe
+     * dans Playwright n'a pas abouti, le serveur `next start` le rejetant alors
+     * que le meme cookie est accepte en developpement, cause non trouvee. Le
+     * comportement a ete verifie a la main sur le rendu reel.
+     */
+    expect(resultat.lignes[0]?.quantite).toBe(0);
+    expect(resultat.lignes[0]?.motif).toBe("EPUISE");
+    expect(resultat.totalArticlesCentimes).toBe(0);
+  });
+});

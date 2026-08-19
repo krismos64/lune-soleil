@@ -276,3 +276,18 @@
   outline: 2px solid var(--ls-focus);
   outline-offset: 2px;
 }
+
+/*
+ * Remplace le selecteur sur une ligne a quantite nulle, LS-114.
+ *
+ * `--ls-text` et non `--ls-text-muted` : ce texte porte une information, pas
+ * une note secondaire, et il doit rester lisible autant que le reste.
+ */
+.quantiteNulle {
+  margin: 0;
+  min-height: var(--ls-touch-target);
+  display: inline-flex;
+  align-items: center;
+  color: var(--ls-text);
+  font-size: 0.9375rem;
+}
