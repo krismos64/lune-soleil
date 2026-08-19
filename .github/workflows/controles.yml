@@ -401,7 +401,22 @@ jobs:
       # rendu, ajouter WebKit et Firefox couterait deux telechargements par
       # execution sans rien prouver de plus sur le dimensionnement.
       # ----------------------------------------------------------------------
+      # BORNE PROPRE A CETTE ETAPE, LS-124. Elle prend 34 a 146 secondes quand
+      # elle fonctionne, mesure sur cinq executions. Le 19 aout 2026 elle a
+      # bloque deux fois de suite sur le telechargement de Chromium, 17 puis 25
+      # minutes, vraisemblablement une indisponibilite du CDN de Playwright.
+      #
+      # Sans cette borne, l'etape consomme les 45 minutes du job avant que
+      # celui-ci n'expire : la chaine echoue alors sur du code sain, et le
+      # journal ne nomme pas la cause. Cinq minutes laissent le double du pire
+      # cas nominal et font echouer vite, en designant l'etape fautive.
+      #
+      # ELLE NE CORRIGE PAS L'INDISPONIBILITE, elle la rend lisible. Le cache
+      # des binaires est ecarte : la documentation de Playwright le deconseille,
+      # le temps de restauration valant celui du telechargement, et les
+      # dependances de `--with-deps` n'etant pas cachables.
       - name: Installer le navigateur de test
+        timeout-minutes: 5
         run: npx playwright install --with-deps chromium
 
       - name: 8. Scenarios critiques de bout en bout
