@@ -42,13 +42,25 @@ Mesure sur la page d'accueil : 26 textes sous le seuil AA. Le terracotta
 `#B4643E` à 4,07:1 est connu et porté par LS-84.
 
 Le gris `#7A6A5D` à 4,35:1 ne l'est pas. Il apparaît sur les descriptions de
-catégories, les libellés numérotés et les liens du pied de page. LS-84 vise le
-terracotta et son exemption de texte large ou gras : ce gris est du texte
-courant, aucune exemption ne s'y applique, et un contrôle écrit sur la seule
-couleur terracotta le raterait.
+catégories, les libellés numérotés et les liens du pied de page.
 
-**Arbitrage en attente de Christophe** : traiter dans LS-122, qui écrit ces
-composants, ou élargir LS-84.
+**Nuance ajoutée après relecture des commentaires de LS-84**, que je n'avais pas
+lus au moment de la mesure. Un point d'avancement du matin même établit que le
+terracotta n'est employé nulle part dans `src/` : LS-104 a écrit les composants
+sans reprendre le motif du prototype, et il ne reste que le contrôle automatique
+à écrire.
+
+Le gris est donc un défaut **du prototype**, pas du code, et rien ne dit qu'il
+entrera dans `src/`. Ce qu'il change est la **forme du contrôle** attendu par
+LS-84 : ancré sur le seul nom du jeton terracotta, il resterait vert devant une
+autre couleur insuffisante.
+
+**Arbitrage en attente de Christophe** : contrôle générique dans LS-84, ou
+traitement dans LS-122.
+
+Le motif mérite d'être noté : j'ai posé un constat sur LS-84 avant d'avoir lu
+ses commentaires, alors que `CLAUDE.md` l'exige explicitement. Le constat
+n'était pas faux, sa portée l'était.
 
 ## Deux mesures qui ont failli être fausses
 
