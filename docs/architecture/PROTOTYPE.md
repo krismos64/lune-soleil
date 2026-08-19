@@ -9,7 +9,8 @@ disponibilité en ligne**.
 | Adresse | `https://lune-soleil-prototype.krismos.chatgpt.site/` |
 | Hors dépôt | oui, application React servie séparément, aucun code repris |
 | Version décrite | passe de finition du **5 août 2026**, explorée le même jour |
-| Revérifiée | le **13 août 2026**, inchangée : même paquet servi, cinq écarts reproduits |
+| Revérifiée | le **13 août 2026**, cinq écarts reproduits, puis le **19 août 2026** |
+| Inventaire | complété le 19 août 2026 : **quatre pages publiques manquaient**, voir plus bas |
 | Rattachement | LS-15, livrable de conception, et LS-16 pour les jetons |
 | État | **gelé**. Il ne se maintient plus en parallèle du code |
 
@@ -45,7 +46,11 @@ textes des deux bundles, tous les accents présents, aucun accord au féminin pa
 défaut. « Administratrice » est employé, ce qui est l'exception légitime.
 
 **Aucun débordement horizontal à 320 px**, mesuré sur les dix-sept écrans,
-administration comprise.
+administration comprise. La page d'accueil a été remesurée le 19 août 2026 par
+`getBoundingClientRect` sur chaque élément, et non par `scrollWidth` qui reste
+aveugle à ce défaut : aucun débordement. Le compte de dix-sept écrans est
+antérieur aux quatre pages publiques recensées plus bas, il est donc à reprendre
+lors de la prochaine passe.
 
 **Trois formulations rejoignent des invariants délicats**, et méritent d'être
 reprises telles quelles :
@@ -114,6 +119,32 @@ plutôt qu'ils ne s'en écartent :
   destinataire », le fait déclencheur du délai de rétractation
 
 
+### Quatre pages publiques, absentes de ce document jusqu'au 19 août 2026
+
+Les deux inventaires ci-dessus couvrent l'administration et l'espace client. Ils
+ont laissé de côté **quatre pages publiques** que le prototype porte, et dont
+l'absence a fait croire pendant deux semaines que l'accueil n'était pas conçu.
+
+| Page | Ce qu'elle porte | Story qui l'écrit |
+|---|---|---|
+| `/` | hero, réassurance, dernières créations, entrée par catégorie, bloc éditorial | **LS-122** |
+| `/notre-univers` | histoire, `#matieres`, `#entretien` | **LS-123**, contenus en LS-25 |
+| `/aide` | livraison, `#faq`, `#contact` | **LS-123**, contenus en LS-26 et LS-27 |
+| `/informations-legales` | `#mentions`, `#cgv`, `#confidentialite`, `#retractation`, `#accessibilite` | **LS-123**, contenus en LS-28 |
+
+Le titre servi est « Prototype **complet** », et le pied de page relie ces
+quatre pages depuis n'importe quel écran. Elles n'étaient donc pas cachées.
+
+**Ce que je ne peux pas trancher** : si ces pages existaient déjà lors des
+passes du 5 et du 13 août et ont été manquées, ou si le prototype a évolué
+après son gel. Aucun historique du site ne permet de le dire. La ligne
+« inchangée » de la passe du 13 août est retirée pour cette raison.
+
+**Le regroupement diverge de LS-25**, qui annonce trois pages pour histoire,
+matériaux et entretien quand le prototype les réunit sous `/notre-univers` avec
+des ancres. L'écart est tracé dans LS-123 et ne rend pas LS-25 fausse : son
+critère porte sur un lien qui aboutit à une page réelle.
+
 ## Les six états non nominaux, et leur intention
 
 C'est le seul contenu que la documentation du dépôt ne portait pas encore. Chaque
@@ -154,7 +185,7 @@ confirmation de l'exploitante avant toute publication d'origine.
 prénom réel sur l'écran de connexion de l'administration. Sans objet dans le
 produit, qui utilisera Better Auth et une passkey, ADR-021.
 
-## Cinq écarts relevés, et ce qu'ils deviennent
+## Six écarts relevés, et ce qu'ils deviennent
 
 Aucun ne remet en cause la direction visuelle. Ils sont tracés pour ne pas être
 recopiés tels quels au moment d'écrire l'interface.
@@ -166,16 +197,26 @@ recopiés tels quels au moment d'écrire l'interface.
 | Trois boutons de vignettes de la fiche produit sans nom accessible | `frontend-design.md`, nom accessible sur tout bouton icône | LS-85 |
 | Le récapitulatif du tunnel n'affiche pas l'adresse de livraison saisie | information précontractuelle, article L221-5 | LS-86 |
 | L'éditeur propose cinq sections dont « Dimensions » | ADR-026 en prévoit quatre, la dimension appartient à `Variante.dimensions` | LS-87, **résolu le 14 août 2026 avec LS-100** |
+| Le gris `#7A6A5D` à 4,35:1 sur les descriptions de catégories, les libellés numérotés et les liens du pied de page, **relevé le 19 août 2026** | WCAG 2.2 AA, seuil de 4,5:1 pour du texte courant | LS-122, ou LS-84 élargie |
 
-Le dernier point était **déjà connu** : la description de LS-76 le signalait comme
-« tâche et non décision, hors de cette story ». Il n'appelle aucun arbitrage, la
-décision est prise depuis le 30 juillet 2026.
+**L'écart sur les sections de l'éditeur** était déjà connu : la description de
+LS-76 le signalait comme « tâche et non décision, hors de cette story ». Il
+n'appelle aucun arbitrage, la décision est prise depuis le 30 juillet 2026.
 
 Il est **résolu** depuis le 14 août 2026, LS-100 ayant écrit l'éditeur :
 `SECTIONS_PAR_DEFAUT` porte quatre entrées, aucune nommée « Dimensions », et deux
 tests d'intégration le vérifient, l'un sur le compte et l'autre sur l'absence de
 cette clé précise. L'écran redit à la saisie que les dimensions appartiennent à
 la variante, pour que l'usage prévu soit lisible au bon moment.
+
+**Le gris est le seul écart neuf**, et il déborde de LS-84. Cette story vise le
+terracotta et son seuil de texte large ou gras : un contrôle écrit sur cette
+seule couleur laisserait passer le gris, qui est du texte courant et n'a donc
+aucune exemption possible. Mesure du 19 août 2026 sur la page d'accueil, 26
+textes sous le seuil AA, dont ce gris sur les descriptions de catégories, les
+libellés numérotés et les liens du pied de page. À traiter dans LS-122, qui
+écrit ces composants, ou en élargissant LS-84. L'arbitrage appartient à
+Christophe.
 
 ## Deux jetons d'ADR-022 que le prototype n'emploie pas
 
