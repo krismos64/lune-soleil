@@ -1,33 +1,387 @@
 /*
- * Conception à partir de 320 px. Aucune largeur fixe, aucun débordement
- * horizontal possible.
+ * Page d'accueil, LS-122. Conception a partir de 320 px.
+ *
+ * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons d'ADR-022. Aucune largeur
+ * fixe : chaque bloc se replie avant de deborder.
  */
 
-.main {
-  max-width: var(--ls-content-max);
-  margin: 0 auto;
+/* ---------- Hero ---------- */
+
+.hero {
+  display: grid;
+  /* Une colonne a 320 px, deux quand la place existe. */
+  grid-template-columns: 1fr;
+  align-items: center;
+  background: var(--ls-background);
+}
+
+@media (min-width: 768px) {
+  .hero {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.heroTexte {
   padding: var(--ls-space-7) var(--ls-space-4);
-  text-align: center;
+  max-width: var(--ls-content-max);
+  justify-self: end;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .heroTexte {
+    padding: var(--ls-space-8) var(--ls-space-6);
+  }
+}
+
+/*
+ * `--ls-accent-gold-deep` sur creme : 4,72:1, conforme AA pour du petit texte.
+ * Le terracotta clair donnerait 4,07:1 et serait sous le seuil, LS-84.
+ */
+.surtitre {
+  margin: 0 0 var(--ls-space-3);
+  color: var(--ls-accent-gold-deep);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .titre {
   margin: 0 0 var(--ls-space-4);
-  color: var(--ls-primary);
-  /* Fluide : lisible à 320 px, sans plafonner sur grand écran. */
-  font-size: clamp(1.75rem, 8vw, 3rem);
+  color: var(--ls-text);
+  /* Fluide : lisible a 320 px, sans plafonner sur grand ecran. */
+  font-size: clamp(2rem, 7vw, 3.5rem);
   font-weight: 600;
-  letter-spacing: 0.02em;
-  /* Un titre de deux mots ne se coupe pas au milieu. */
+  line-height: 1.1;
+  letter-spacing: -0.01em;
   text-wrap: balance;
 }
 
 .accroche {
   margin: 0 0 var(--ls-space-5);
-  font-size: clamp(1rem, 4vw, 1.25rem);
+  color: var(--ls-text);
+  font-size: clamp(1rem, 2.5vw, 1.125rem);
+  line-height: 1.6;
+  max-width: 46ch;
 }
 
-.mention {
-  margin: 0;
-  color: var(--ls-text-muted);
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ls-space-3) var(--ls-space-5);
+  align-items: center;
+}
+
+.actionPrincipale,
+.actionSecondaire {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Cible tactile de 44 px, jamais une hauteur fixe. */
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-3) var(--ls-space-5);
+  text-decoration: none;
   font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.actionPrincipale {
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  border-radius: var(--ls-radius-sm);
+  transition: background var(--ls-duration-fast) var(--ls-easing);
+}
+
+.actionPrincipale:hover {
+  background: var(--ls-primary-hover);
+}
+
+.actionSecondaire {
+  padding-inline: 0;
+  color: var(--ls-text);
+  border-bottom: 1px solid var(--ls-border);
+}
+
+.actionSecondaire:hover {
+  color: var(--ls-primary);
+  border-bottom-color: var(--ls-primary);
+}
+
+.actionPrincipale:focus-visible,
+.actionSecondaire:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+.heroVisuel {
+  /* L'ordre visuel suit l'ordre du document : le texte d'abord a 320 px. */
+  width: 100%;
+}
+
+/*
+ * `aspect-ratio` ET `object-fit` PLUTOT QU'UNE HAUTEUR FIXE : le cadre garde
+ * ses proportions a toutes les largeurs, et l'image ne se deforme jamais.
+ * Les dimensions sur la balise reservent la place et evitent le decalage.
+ */
+.image {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+/* ---------- Reassurance ---------- */
+
+.reassurance {
+  background: var(--ls-surface);
+  border-block: 1px solid var(--ls-border);
+}
+
+.listeReassurance {
+  max-width: var(--ls-content-max);
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+}
+
+.elementReassurance {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-1);
+  padding: var(--ls-space-5) var(--ls-space-4);
+  border-top: 1px solid var(--ls-border);
+}
+
+/* Les separateurs verticaux n'apparaissent qu'une fois les colonnes cote a cote. */
+@media (min-width: 768px) {
+  .elementReassurance {
+    border-top: 0;
+    border-left: 1px solid var(--ls-border);
+  }
+
+  .elementReassurance:first-child {
+    border-left: 0;
+  }
+}
+
+.titreReassurance {
+  color: var(--ls-text);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/*
+ * `--ls-text-muted` sur `--ls-surface` blanc : 5,19:1, conforme AA.
+ * Cette paire serait a 4,35:1 sur le fond sable, ou elle est donc proscrite.
+ */
+.detailReassurance {
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* ---------- Sections communes ---------- */
+
+.section {
+  max-width: var(--ls-content-max);
+  margin: 0 auto;
+  padding: var(--ls-space-7) var(--ls-space-4);
+}
+
+.enteteSection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ls-space-3) var(--ls-space-5);
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: var(--ls-space-5);
+}
+
+.surtitreSection {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-accent-gold-deep);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.titreSection {
+  margin: 0;
+  color: var(--ls-text);
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
+  font-weight: 600;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.lienSection {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  color: var(--ls-text);
+  text-decoration: none;
+  font-size: 0.9375rem;
+  border-bottom: 1px solid var(--ls-border);
+}
+
+.lienSection:hover {
+  color: var(--ls-primary);
+  border-bottom-color: var(--ls-primary);
+}
+
+.lienSection:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+/*
+ * LA GRILLE REPREND LES MEMES REGLES QUE LE CATALOGUE. Les cartes viennent de
+ * `CarteProduit`, qui porte ses propres classes du module du catalogue : seule
+ * la disposition est definie ici.
+ */
+.grille {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: var(--ls-space-5) var(--ls-space-4);
+}
+
+/* ---------- Categories ---------- */
+
+/*
+ * FOND SABLE : `--ls-text-muted` y tombe a 4,35:1 et n'est donc employe nulle
+ * part dans cette section. Tout le texte y est en `--ls-text`, 10,4:1.
+ */
+.sectionCategories {
+  background: var(--ls-surface-sand);
+}
+
+.introCategories {
+  max-width: var(--ls-content-max);
+  margin: 0 auto;
+  padding: var(--ls-space-7) var(--ls-space-4) var(--ls-space-4);
+}
+
+.listeCategories {
+  max-width: var(--ls-content-max);
+  margin: 0 auto;
+  padding: 0 var(--ls-space-4) var(--ls-space-7);
+  list-style: none;
+}
+
+.lienCategorie {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ls-space-4);
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-4) 0;
+  border-top: 1px solid var(--ls-border);
+  color: var(--ls-text);
+  text-decoration: none;
+}
+
+.lienCategorie:hover .nomCategorie {
+  color: var(--ls-primary);
+  text-decoration: underline;
+}
+
+.lienCategorie:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+/*
+ * Le rang est decoratif et `aria-hidden` cote balise. Il reste en
+ * `--ls-text` : un gris plus clair tomberait sous le seuil sur ce fond.
+ */
+.rangCategorie {
+  color: var(--ls-text);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.nomCategorie {
+  font-size: clamp(1.125rem, 3vw, 1.5rem);
+  font-weight: 500;
+}
+
+/* ---------- Bloc editorial ---------- */
+
+/*
+ * FOND PRIMAIRE, TEXTE BLANC : 8,93:1 d'apres `tokens.css`, conforme AAA.
+ * C'est la seule zone sombre de la page.
+ */
+.editorial {
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+}
+
+.editorialTexte {
+  max-width: var(--ls-content-max);
+  margin: 0 auto;
+  padding: var(--ls-space-7) var(--ls-space-4);
+}
+
+/*
+ * SUR FOND PRIMAIRE, LE SURTITRE N'EST PAS DORE. `--ls-accent-gold` mesure
+ * 3,61:1 sur ce fond, sous le seuil AA de 4,5:1 : je l'avais suppose conforme,
+ * le calcul dit l'inverse. `--ls-surface-sand` donne 7,49:1 et garde une nuance
+ * chaude, distincte du blanc pur du titre.
+ */
+.surtitreEditorial {
+  margin: 0 0 var(--ls-space-3);
+  color: var(--ls-surface-sand);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.titreEditorial {
+  margin: 0 0 var(--ls-space-4);
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
+  font-weight: 600;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.texteEditorial {
+  margin: 0 0 var(--ls-space-5);
+  font-size: 1rem;
+  line-height: 1.7;
+  max-width: 56ch;
+}
+
+.actionEditorial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-3) var(--ls-space-5);
+  border: 1px solid var(--ls-text-on-primary);
+  border-radius: var(--ls-radius-sm);
+  color: var(--ls-text-on-primary);
+  text-decoration: none;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  transition:
+    background var(--ls-duration-fast) var(--ls-easing),
+    color var(--ls-duration-fast) var(--ls-easing);
+}
+
+.actionEditorial:hover {
+  background: var(--ls-text-on-primary);
+  color: var(--ls-primary);
+}
+
+.actionEditorial:focus-visible {
+  outline: 2px solid var(--ls-text-on-primary);
+  outline-offset: 2px;
 }
