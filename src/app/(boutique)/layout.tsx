@@ -11,9 +11,20 @@
  * passage entre la boutique et l'administration, ce que la documentation de
  * Next.js signale explicitement.
  *
- * `id="contenu"` PORTE LA CIBLE DU LIEN D'EVITEMENT. Il vit ici et non dans
- * chaque page : le poser page par page garantirait qu'une page l'oublie, et le
- * lien retomberait alors en haut sans rien signaler.
+ * LA CIBLE DU LIEN D'EVITEMENT VIT DANS LE `main` DE CHAQUE PAGE, et non dans
+ * un conteneur pose ici.
+ *
+ * La premiere version enveloppait `children` dans un `<div id="contenu">`. Deux
+ * defauts, tous deux mesures sur le rendu :
+ *
+ *   - `focus()` sur ce div ne prenait pas, le focus retombait sur `body`. Le
+ *     lien faisait defiler la page sans deplacer le focus clavier : la
+ *     tabulation suivante repartait du haut, exactement ce que le lien evite
+ *   - le div enveloppait le `<main>` que chaque page porte deja, ajoutant un
+ *     niveau qui ne servait rien
+ *
+ * Une cible non focalisable est le piege classique du lien d'evitement : il
+ * parait fonctionner, la page bouge, et il ne remplit pas son role.
  */
 import { EnTeteBoutique } from "@/components/en-tete-boutique";
 import { PiedBoutique } from "@/components/pied-boutique";
@@ -24,7 +35,7 @@ export default function LayoutBoutique({
   return (
     <>
       <EnTeteBoutique />
-      <div id="contenu">{children}</div>
+      {children}
       <PiedBoutique />
     </>
   );

@@ -40,8 +40,18 @@ export default async function PageAccueil() {
   const { produits, categories } = await lireCataloguePublic();
   const misEnAvant = produits.slice(0, NOMBRE_MIS_EN_AVANT);
 
+  /*
+   * `id` ET `tabIndex={-1}` SUR LE `main` PORTENT LA CIBLE DU LIEN D'EVITEMENT.
+   *
+   * `tabIndex={-1}` rend l'element focalisable AU PROGRAMME sans l'ajouter au
+   * parcours de tabulation. Sans lui, `focus()` echoue en silence et le focus
+   * retombe sur `body` : la page defile, mais la tabulation suivante repart du
+   * haut, exactement ce que le lien d'evitement doit eviter. Defaut mesure sur
+   * le rendu, pas suppose. Les trois autres pages publiques portent le meme
+   * attribut sur leur propre `main`.
+   */
   return (
-    <main>
+    <main id="contenu" tabIndex={-1}>
       <section className={styles.hero}>
         <div className={styles.heroTexte}>
           <p className={styles.surtitre}>Bijoux faits main</p>

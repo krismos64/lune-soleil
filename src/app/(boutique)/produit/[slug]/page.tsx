@@ -104,7 +104,7 @@ export default async function PageFicheProduit({
   }
 
   return (
-    <main className={styles.page}>
+    <main id="contenu" tabIndex={-1} className={styles.page}>
       {/*
        * FIL D'ARIANE, retour vers la categorie. Il n'est pas dans la table des
        * onze blocs, qui commence au nom du bijou : il precede donc le bloc 1

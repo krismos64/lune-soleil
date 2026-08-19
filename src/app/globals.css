@@ -35,6 +35,24 @@ body {
   outline-offset: 2px;
 }
 
+/*
+ * LA CIBLE DU LIEN D'EVITEMENT NE DESSINE PAS DE CONTOUR, LS-122.
+ *
+ * `main` porte `tabIndex="-1"` pour recevoir le focus au programme : sans lui
+ * le focus retombe sur `body` et la tabulation repart du haut de la page.
+ * Chrome fait toutefois correspondre `:focus-visible` apres une activation au
+ * clavier, ce qui encadrerait la page entiere d'un trait de 3 px.
+ *
+ * Ce n'est PAS une suppression de focus visible au sens de WCAG 2.4.7 : le
+ * critere porte sur les elements du parcours de tabulation, et `tabIndex="-1"`
+ * en exclut precisement celui-ci. Les liens, boutons et champs gardent leur
+ * contour, la regle ci-dessus etant inchangee.
+ */
+main[tabindex="-1"]:focus,
+main[tabindex="-1"]:focus-visible {
+  outline: none;
+}
+
 img,
 picture,
 svg {
