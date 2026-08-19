@@ -161,7 +161,9 @@ test("choisir une declinaison change prix, disponibilite et dimensions sans rech
 
   // Etat initial : la premiere declinaison, en stock.
   await expect(page.getByText("49,00 €")).toBeVisible();
-  await expect(page.getByRole("status")).toHaveText("En stock");
+  await expect(page.getByRole("status", { name: "Disponibilité" })).toHaveText(
+    "En stock",
+  );
   await expect(
     page.getByText(FICHE_TEST.varianteEnStock.dimensions),
   ).toBeVisible();
@@ -177,7 +179,9 @@ test("choisir une declinaison change prix, disponibilite et dimensions sans rech
    * le bouton d'ajout, qui prend ce libelle en etant desactive. Un selecteur
    * textuel echoue alors en mode strict, sans rien dire du comportement.
    */
-  await expect(page.getByRole("status")).toHaveText("Épuisé");
+  await expect(page.getByRole("status", { name: "Disponibilité" })).toHaveText(
+    "Épuisé",
+  );
   await expect(
     page.getByText(FICHE_TEST.varianteEpuisee.dimensions),
   ).toBeVisible();

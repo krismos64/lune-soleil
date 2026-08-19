@@ -96,10 +96,16 @@ export function SelecteurVariante({
        * remplace ce texte sans que rien d'autre ne bouge, et sans annonce le
        * changement passerait inapercu de qui n'a pas l'ecran sous les yeux.
        */}
+      {/*
+       * `aria-label` DISTINGUE CETTE REGION LIVE DE CELLE DE L'AJOUT AU PANIER,
+       * posee par LS-114 plus bas. Deux regions `status` sans nom sur la meme
+       * page s'annoncent identiquement, et rien ne dit laquelle a parle.
+       */}
       <p
         className={`${styles.badge} ${CLASSE_DISPONIBILITE[choisie.disponibilite]}`}
         role="status"
         aria-live="polite"
+        aria-label="Disponibilité"
       >
         {LIBELLE_DISPONIBILITE[choisie.disponibilite]}
       </p>
@@ -189,7 +195,12 @@ export function SelecteurVariante({
         {epuisee ? "Épuisé" : "Ajouter au panier"}
       </button>
 
-      <p role="status" aria-live="polite" className={styles.annonceAjout}>
+      <p
+        role="status"
+        aria-live="polite"
+        aria-label="Ajout au panier"
+        className={styles.annonceAjout}
+      >
         {message}
       </p>
 
