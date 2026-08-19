@@ -416,7 +416,7 @@ jobs:
       # le temps de restauration valant celui du telechargement, et les
       # dependances de `--with-deps` n'etant pas cachables.
       - name: Installer le navigateur de test
-        timeout-minutes: 1
+        timeout-minutes: 5
         run: npx playwright install --with-deps chromium
 
       - name: 8. Scenarios critiques de bout en bout
