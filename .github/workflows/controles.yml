@@ -415,6 +415,18 @@ jobs:
       # des binaires est ecarte : la documentation de Playwright le deconseille,
       # le temps de restauration valant celui du telechargement, et les
       # dependances de `--with-deps` n'etant pas cachables.
+      #
+      # LE CAS S'ETAIT DEJA PRODUIT EN LS-106, voir le commentaire de
+      # `timeout-minutes` du job : une annulation a 30 minutes, PENDANT cette
+      # meme etape, toutes les precedentes vertes. La reponse d'alors fut de
+      # porter la borne du job de 30 a 45 minutes, ce qui a retarde le symptome
+      # sans le nommer. Deux occurrences du meme defaut appellent une borne
+      # locale, pas un plafond global plus haut.
+      #
+      # BORNE PROUVEE, LS-124 critere 5 : abaissee temporairement a une minute
+      # sur la pull request 135, l'etape a echoue en 73 secondes avec une
+      # conclusion `failure`, et les etapes suivantes ont ete ignorees. Une
+      # borne jamais franchie ne prouve pas qu'elle protege.
       - name: Installer le navigateur de test
         timeout-minutes: 5
         run: npx playwright install --with-deps chromium
