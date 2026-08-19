@@ -83,6 +83,37 @@ describe("aller-retour nominal", () => {
   });
 });
 
+describe("doublons de variante", () => {
+  it("fusionne deux lignes portant la meme variante", () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+
+    /*
+     * LE DEFAUT ETAIT REEL ET MESURE. La revalidation ramene chaque ligne au
+     * stock disponible INDEPENDAMMENT : deux lignes de deux exemplaires sur un
+     * stock de deux passaient toutes les deux, et le panier annoncait quatre
+     * articles pour un stock de deux, avec un total double.
+     *
+     * Les actions du panier ne produisent jamais ce cookie, elles cumulent sur
+     * la ligne existante. Le cas vient d'un cookie ecrit a la main.
+     */
+    const forge = encoderPanier([
+      { varianteId: id, quantite: 2 },
+      { varianteId: id, quantite: 2 },
+    ]);
+
+    expect(decoderPanier(forge)).toEqual([{ varianteId: id, quantite: 4 }]);
+  });
+
+  it("laisse intactes deux variantes distinctes", () => {
+    const lignes = [
+      { varianteId: "11111111-1111-4111-8111-111111111111", quantite: 1 },
+      { varianteId: "22222222-2222-4222-8222-222222222222", quantite: 2 },
+    ];
+
+    expect(decoderPanier(encoderPanier(lignes))).toEqual(lignes);
+  });
+});
+
 describe("rejet d'un cookie falsifie, critere 4", () => {
   /** Encode une charge SANS la signer, comme le ferait qui forge un cookie. */
   function chargeNonSignee(lignes: unknown): string {
