@@ -191,7 +191,29 @@ export function decoderPanier(valeur: string | undefined): LignePanierCookie[] {
       return [];
     }
 
-    lignes.push({ varianteId: ligne.varianteId, quantite: ligne.quantite });
+    /*
+     * LES DOUBLONS SONT FUSIONNES, ET CE N'EST PAS COSMETIQUE.
+     *
+     * La revalidation ramene chaque ligne au stock disponible INDEPENDAMMENT.
+     * Deux lignes de la meme variante, deux exemplaires demandes chacune sur un
+     * stock de deux, passaient donc toutes les deux : le panier annoncait
+     * QUATRE articles pour un stock de deux, et un total double. Mesure faite
+     * avant correction, le defaut etait reel.
+     *
+     * La reservation aurait refuse a l'etape 4, mais le visiteur aurait vu un
+     * total faux jusqu'au paiement. Les actions du panier ne produisent jamais
+     * ce cookie, elles cumulent sur la ligne existante : le cas vient d'un
+     * cookie ecrit a la main, ou d'une version future du format.
+     */
+    const existante = lignes.find(
+      (candidate) => candidate.varianteId === ligne.varianteId,
+    );
+
+    if (existante === undefined) {
+      lignes.push({ varianteId: ligne.varianteId, quantite: ligne.quantite });
+    } else {
+      existante.quantite += ligne.quantite;
+    }
   }
 
   return lignes;
