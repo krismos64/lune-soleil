@@ -39,11 +39,37 @@ const quantite = valider(schemaQuantite, entree); // ou lève EntreeInvalideErro
 | `schemaHorodatageUtc` | ISO 8601 avec `Z` ou décalage explicite | une date sans fuseau, un horodatage numérique |
 | `schemaAdressePostale` | adresse de France métropolitaine | clé inconnue, code postal en 97 ou 98, pays autre que `FR` |
 | `schemaLignePanier`, `schemaPanier` | composés des précédents | panier vide |
+| `schemaNomClient` | nom du destinataire, obligatoire aux trois modes | un champ réduit à des caractères invisibles |
+| `schemaEmailClient` | adresse email, `z.email()` | une expression régulière maison refuserait des adresses valides |
+| `schemaTelephone` | numéro français, séparateurs tolérés puis retirés | facultatif, la chaîne vide passe |
+| `schemaModeLivraison` | les trois modes d'ADR-025, **écrits en dur** | toute valeur ajoutée à l'enum Prisma sans tarif |
+| `schemaPointRetrait` | point copié en entier, libellé et adresse | un point réduit à son identifiant |
+| `schemaChoixLivraison` | mode et point liés par une **équivalence** | un `DOMICILE` porteur d'un point autant qu'un `POINT_RELAIS` sans point |
+| `schemaCoordonnees` | nom, email, téléphone facultatif | composé des trois précédents |
 
 Zéro est accepté sur un montant et refusé sur une quantité, et c'est la seule
 différence entre les deux schémas : zéro centime est un montant légitime, en
 franchise en base de TVA ou sur un avoir soldé, zéro article n'est pas une
 quantité.
+
+**`schemaModeLivraison` est écrit en dur et non dérivé de l'enum Prisma**, et
+c'est délibéré : ajouter une valeur à l'enum ouvrirait sinon **en silence** la
+saisie à un mode dont aucun tarif n'existe. Le projet a déjà rencontré ce piège
+deux fois, sur un index partiel puis sur un affichage.
+
+**`schemaChoixLivraison` porte une équivalence, pas une implication.** La
+contrainte `chk_commande_mode_point_relais` s'écrit
+`(mode IN ('POINT_RELAIS','LOCKER')) = (point_relais_id IS NOT NULL)` : ne
+vérifier qu'un sens laisserait passer la moitié des cas jusqu'à la base, où le
+`CHECK` rejetterait l'écriture avec un message incompréhensible pour le
+visiteur.
+
+**`trim()` ne suffit pas à refuser un champ vide.** Il retire les espaces ASCII
+mais pas `U+200B` ni `U+FEFF` : un nom réduit à un caractère invisible
+franchissait la saisie et produisait une étiquette de colis sans destinataire
+lisible. Le refus porte donc sur la présence d'une lettre ou d'un chiffre,
+plutôt que sur une liste d'espaces à exclure, qu'on finit toujours par laisser
+incomplète.
 
 ## Cinq règles qui ne se déduisent d'aucun type
 
