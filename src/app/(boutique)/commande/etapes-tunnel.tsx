@@ -29,6 +29,7 @@ import {
   enregistrerAdresse,
   enregistrerCoordonnees,
   enregistrerLivraison,
+  passerCommandeAction,
 } from "./actions-tunnel";
 import styles from "./commande.module.css";
 
@@ -174,6 +175,40 @@ export function EtapesTunnel({
 
       setErreur("");
       router.push(`/commande?etape=${resultat.etapeSuivante}`);
+    });
+  }
+
+  /**
+   * Etape 4, passation de la commande.
+   *
+   * LE REFUS NOMME LA PIECE, critere 3 de LS-117. Le message reste metier,
+   * « cette piece vient d'etre vendue », et le panier est conserve : le client
+   * peut retirer la ligne et poursuivre avec le reste.
+   */
+  function commander(): void {
+    demarrer(async () => {
+      const resultat = await passerCommandeAction();
+
+      if (resultat.statut === "REFUSE") {
+        const ligne = recapitulatif?.lignes.find(
+          (candidate) => candidate.varianteId === resultat.varianteRefusee,
+        );
+
+        setErreur(
+          ligne === undefined
+            ? "Une pièce de votre panier vient d'être vendue. Vérifiez votre panier avant de recommencer."
+            : `${ligne.produitNom}, ${ligne.libelle} vient d'être vendue. Retirez cette pièce de votre panier pour continuer.`,
+        );
+        return;
+      }
+
+      if (resultat.statut === "INVALIDE") {
+        setErreur(messageLisible(resultat.message));
+        return;
+      }
+
+      setErreur("");
+      router.push(`/commande/confirmation?numero=${resultat.numero}`);
     });
   }
 
@@ -392,7 +427,11 @@ export function EtapesTunnel({
       )}
 
       {etape === "recapitulatif" && recapitulatif !== null && (
-        <Recapitulatif recapitulatif={recapitulatif} />
+        <Recapitulatif
+          recapitulatif={recapitulatif}
+          enCours={enCours}
+          onCommander={commander}
+        />
       )}
     </>
   );
@@ -530,7 +569,15 @@ function ChoixLivraison({
  * d'ergonomie du 25 aout 2026, parce qu'elle evite les erreurs de saisie et les
  * colis non distribues. Ne pas transformer cette decision en obligation legale.
  */
-function Recapitulatif({ recapitulatif }: { recapitulatif: Recapitulatif }) {
+function Recapitulatif({
+  recapitulatif,
+  enCours,
+  onCommander,
+}: {
+  recapitulatif: Recapitulatif;
+  enCours: boolean;
+  onCommander: () => void;
+}) {
   const { adresseRappelee } = recapitulatif;
 
   return (
@@ -646,15 +693,25 @@ function Recapitulatif({ recapitulatif }: { recapitulatif: Recapitulatif }) {
        * ou une formule analogue denuee de toute ambiguite. « Payer » ou
        * « Valider » seuls ne satisfont pas cette exigence. Etabli par LS-86.
        *
-       * IL EST DESACTIVE : le paiement appartient a LS-118, la commande a
-       * LS-117. L'afficher actif promettrait une action qui n'existe pas.
+       * IL ECRIT LA COMMANDE, LS-117, et ne paie pas encore : la session de
+       * paiement appartient a LS-118 et se cree APRES le commit, ADR-024.
+       *
+       * DESACTIVE PENDANT L'ENVOI, sans quoi un double clic lance deux
+       * transactions : la seconde echouerait sur une piece unique, mais
+       * creerait une commande de plus sur un stock a plusieurs exemplaires.
        */}
-      <button type="button" disabled className={styles.payer}>
-        Commander avec obligation de paiement
+      <button
+        type="button"
+        disabled={enCours}
+        onClick={onCommander}
+        className={styles.payer}
+      >
+        {enCours ? "Enregistrement…" : "Commander avec obligation de paiement"}
       </button>
 
       <p className={styles.aide}>
-        Le paiement sera disponible à la prochaine étape du développement.
+        Le paiement en ligne sera disponible à la prochaine étape du
+        développement.
       </p>
     </div>
   );
