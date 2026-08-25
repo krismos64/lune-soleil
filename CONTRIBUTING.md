@@ -110,8 +110,15 @@ Ces huit contrôles tournent automatiquement depuis LS-69,
 `.github/workflows/controles.yml`. S'y ajoutent le format, `npm audit`, et les
 contrôles textuels qui n'exigent ni base ni conteneur : conformité de
 `.claude/rules/` au schéma, cohérence de la configuration Claude Code, registre
-des traitements, résolution de l'adresse client, et **cohérence des actions
-sensibles avec ADR-027**.
+des traitements, résolution de l'adresse client, **cohérence des actions
+sensibles avec ADR-027**, et **aucun test ignoré ni focalisé**.
+
+Le dernier est arrivé avec LS-116, et il ferme un trou qui rendait tous les
+autres contournables : un `it.skip` posé sur le test phare passait la chaîne
+avec un code de sortie 0, la sortie annonçant « 6 passed | 1 skipped ». Il
+tourne **avant** les suites, un test désactivé les faisant passer au vert sans
+rien exercer. Le skip **conditionnel**, `test.skip(condition, raison)` à
+l'intérieur d'un test, reste légitime et n'est pas visé.
 
 Ce dernier a été ajouté à la chaîne le 13 août 2026. Il existait depuis LS-81
 sans que rien ne le déclenche, ni la chaîne, ni un hook : un contrôle que rien
