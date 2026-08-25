@@ -420,6 +420,7 @@ Vingt-et-un scripts, dont neuf de mutation qui prouvent les autres :
 ./scripts/verifier-migration-mutation.sh         # garde-fous de migration, sans base
 ./scripts/verifier-tests-mutation.sh             # prouve la suite de tests, exige Docker
 ./scripts/verifier-tests-non-ignores.sh          # aucun test ignoré ni focalisé, sans base
+./scripts/verifier-propagation-docs.sh           # socle Zod et VALIDATION.md accordés
 ./scripts/verifier-hook-secrets.sh               # prouve le hook anti-fuite de secrets
 ./scripts/verifier-image-docker.sh               # sécurité de l'image, exige Docker
 ./scripts/verifier-image-docker-mutation.sh      # prouve le précédent par mutation
