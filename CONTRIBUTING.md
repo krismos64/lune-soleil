@@ -111,9 +111,15 @@ Ces huit contrôles tournent automatiquement depuis LS-69,
 contrôles textuels qui n'exigent ni base ni conteneur : conformité de
 `.claude/rules/` au schéma, cohérence de la configuration Claude Code, registre
 des traitements, résolution de l'adresse client, **cohérence des actions
-sensibles avec ADR-027**, et **aucun test ignoré ni focalisé**.
+sensibles avec ADR-027**, **aucun test ignoré ni focalisé**, et **accord du
+socle Zod avec son document de référence**.
 
-Le dernier est arrivé avec LS-116, et il ferme un trou qui rendait tous les
+Le dernier est arrivé le 25 août 2026, après qu'une revue de fin de session eut
+trouvé `VALIDATION.md` arrêté à sept schémas quand le socle en portait
+quatorze. Il vérifie la **présence**, jamais la justesse : ce qu'un document dit
+d'un schéma se relit.
+
+L'avant-dernier est arrivé avec LS-116, et il ferme un trou qui rendait tous les
 autres contournables : un `it.skip` posé sur le test phare passait la chaîne
 avec un code de sortie 0, la sortie annonçant « 6 passed | 1 skipped ». Il
 tourne **avant** les suites, un test désactivé les faisant passer au vert sans

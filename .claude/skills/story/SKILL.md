@@ -198,25 +198,57 @@ pour chaque ligne concernée ce qui a été fait.
 | une commande npm ou un script | `README.md`, et la section Commandes de `CLAUDE.md` si elle la cite |
 | un piège rencontré deux fois | une fiche mémoire, plus un contrôle automatique si le piège est mécaniquement détectable |
 | la config Claude Code, skills, agents, hooks | `docs/REFERENCES.md` si l'aiguillage change, `CLAUDE.md` s'il dépasse 200 lignes |
+| **un schéma ajouté à `src/lib/validation.ts`** | la table de `VALIDATION.md`, et la règle qu'il porte si elle ne se déduit d'aucun type |
+| **un cookie portant autre chose qu'un identifiant technique** | la section « données personnelles hors base » de `REGISTRE-DES-TRAITEMENTS.md`, avec sa durée et pourquoi elle diffère |
+| **une étape d'un parcours, ou une obligation légale sur cette étape** | `PARCOURS.md` pour l'étape, `.claude/rules/legal.md` pour l'obligation et sa source |
+| **une story livrée ou close** | la fiche mémoire « où en est le projet », le tableau d'état du `README.md`, et les **comptes**, relevés dans Jira et jamais de mémoire |
+| **un ticket bloqué par un compte ou un accès externe** | dire ce qui est livrable sans lui et ce qui attend, dans le ticket **et** dans le code qui simule l'absence |
 
-**Le dernier point compte autant que les autres.** `CLAUDE.md` a atteint 312
+**L'avant-dernier point compte autant que les autres.** `CLAUDE.md` a atteint 312
 lignes avant qu'on s'en aperçoive, et quatre de ses affirmations étaient devenues
 fausses.
 
-### Le contrôle qui rattrape les oublis mécaniques
+**Les cinq lignes en gras viennent du 25 août 2026**, où trois documents et deux
+comptes étaient en retard sur ce que la journée avait livré. Aucun contrôle ne
+pouvait les voir, et deux raisons distinctes l'expliquent.
+
+`VALIDATION.md` et `PARCOURS.md` relevaient d'un **oubli de propagation** : rien
+ne relie un schéma Zod neuf à la table qui les recense.
+
+Le registre des traitements relève d'un **angle mort structurel** :
+`verifier-registre-traitements.sh` confronte le registre au schéma Prisma, or un
+cookie n'est pas une table. Le contrôle reste vert à juste titre, et la section
+concernée porte désormais cet avertissement.
+
+**Un compte écrit à la main se périme sans bruit.** Le `README.md` annonçait
+« neuf stories ouvertes » six jours après que le chiffre soit devenu faux, et la
+fiche mémoire d'entrée disait encore « reprendre par LS-114 », story livrée.
+Relever les comptes dans Jira au moment d'écrire, jamais de mémoire.
+
+### Les contrôles qui rattrapent les oublis mécaniques
 
 ```bash
-./scripts/verifier-config-claude.sh
+./scripts/verifier-config-claude.sh        # avertit, un hook Stop le lance
+./scripts/verifier-propagation-docs.sh     # socle Zod contre VALIDATION.md
+./scripts/verifier-tests-non-ignores.sh    # aucun test désactivé
 ```
 
-Il vérifie ce qui est mesurable : ADR absent de la table d'aiguillage, `CLAUDE.md`
-au-delà de 200 lignes, renvoi vers un fichier inexistant, fiche mémoire hors
-index, lien mémoire mort, journal manquant alors que du code a été commité, et
-formulations qui se périment.
+Le premier vérifie ce qui est mesurable : ADR absent de la table d'aiguillage,
+`CLAUDE.md` au-delà de 200 lignes, renvoi vers un fichier inexistant, fiche
+mémoire hors index, lien mémoire mort, journal manquant alors que du code a été
+commité, et formulations qui se périment.
 
-Un hook `Stop` le lance en fin de session. **Il avertit, il ne corrige pas**, et
-il ne dit rien de ce qui relève du jugement : la pertinence d'une fiche mémoire ou
-la justesse d'un ADR se relisent.
+**Il lit l'historique git, donc le lancer AVANT de commiter ne prouve rien** sur
+la règle du journal daté : aucun commit du jour n'existe encore, elle passe à
+vide. Le rejouer après le commit et avant le push.
+
+**Il avertit, il ne corrige pas**, et il ne dit rien de ce qui relève du
+jugement : la pertinence d'une fiche mémoire ou la justesse d'un ADR se relisent.
+
+**Aucun des trois ne voit ce qui n'est ni un fichier ni une table.** Un cookie
+portant des données personnelles échappe au contrôle du registre, un compte écrit
+à la main dans un README se périme sans bruit. Ces deux-là se relisent, et la
+table de propagation ci-dessus porte leur ligne.
 
 ### Un commit local ne livre rien
 

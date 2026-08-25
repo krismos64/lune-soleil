@@ -383,6 +383,16 @@ jobs:
         run: ./scripts/verifier-tests-non-ignores.sh
 
       # ----------------------------------------------------------------------
+      # Controle 3ter, ce que le code ajoute se retrouve dans son document.
+      #
+      # Le 25 aout 2026, VALIDATION.md s'arretait a schemaPanier alors que le
+      # socle etait passe de sept a quatorze schemas : le document de reference
+      # ignorait la moitie de ce qu'il pretend recenser.
+      # ----------------------------------------------------------------------
+      - name: 3ter. Socle Zod et son document accordes
+        run: ./scripts/verifier-propagation-docs.sh
+
+      # ----------------------------------------------------------------------
       # Controle 4, tests unitaires. Sans base, rapides, ils cadrent les erreurs
       # de manipulation d'URL de connexion.
       # ----------------------------------------------------------------------
