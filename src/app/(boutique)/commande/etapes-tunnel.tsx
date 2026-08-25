@@ -137,6 +137,7 @@ export function EtapesTunnel({
        */}
       <p
         role="alert"
+        aria-label="Erreurs de saisie"
         className={erreur === "" ? styles.erreurVide : styles.erreur}
       >
         {erreur}
