@@ -208,7 +208,14 @@ export function EtapesTunnel({
       }
 
       setErreur("");
-      router.push(`/commande/confirmation?numero=${resultat.numero}`);
+      /*
+       * `encodeURIComponent` bien que le format d'ADR-031 soit alphanumerique :
+       * une chaine construite a l'execution ne se relit pas au moment ou le
+       * format change. Fiche « chaine construite a l'execution ».
+       */
+      router.push(
+        `/commande/confirmation?numero=${encodeURIComponent(resultat.numero)}`,
+      );
     });
   }
 

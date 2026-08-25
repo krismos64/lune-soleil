@@ -370,3 +370,71 @@ test("le tunnel ne porte aucune violation d'accessibilite serieuse", async ({
 
   expect(resume).toEqual([]);
 });
+
+/*
+ * LA PAGE DE CONFIRMATION, LS-117.
+ *
+ * ELLE S'ATTEINT DIRECTEMENT PAR SON URL, sans derouler le tunnel : elle ne lit
+ * rien en base et n'affiche que ce que le parametre porte. Passer par un achat
+ * complet exigerait une base ecrite depuis un test de rendu, ce que le projet
+ * evite.
+ *
+ * SANS CES DEUX TESTS ELLE N'ETAIT GARDEE PAR RIEN, et deux defauts
+ * d'accessibilite y sont passes : l'ancre du lien d'evitement absente et le
+ * focus jamais deplace. Releve par `ls-frontend-revue` le 25 aout 2026, motif
+ * « un defaut absent n'est pas un defaut empeche ».
+ */
+const URL_CONFIRMATION = "/commande/confirmation?numero=C-2026-0001";
+
+test("la confirmation de commande ne deborde pas horizontalement", async ({
+  page,
+}) => {
+  await page.goto(URL_CONFIRMATION);
+
+  await expect(
+    page.getByRole("heading", { name: "Votre commande est enregistrée" }),
+  ).toBeVisible();
+
+  expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+    TOLERANCE_DEBORDEMENT_PX,
+  );
+});
+
+test("la confirmation porte la cible du lien d'evitement et recoit le focus", async ({
+  page,
+}) => {
+  await page.goto(URL_CONFIRMATION);
+
+  await expect(
+    page.getByRole("heading", { name: "Votre commande est enregistrée" }),
+  ).toBeVisible();
+
+  /*
+   * LE FOCUS EST SUR LE CONTENU, pas sur `body`. Un `body` focalise signifie que
+   * la personne au lecteur d'ecran ne sait pas que la page a change : c'est
+   * exactement ce que produisait la page avant correction, sans qu'aucune erreur
+   * ne soit levee ni qu'`axe-core` ne le voie.
+   */
+  await expect(page.locator("main#contenu")).toBeFocused();
+});
+
+test("la confirmation ne porte aucune violation d'accessibilite serieuse", async ({
+  page,
+}) => {
+  await page.goto(URL_CONFIRMATION);
+
+  await expect(
+    page.getByRole("heading", { name: "Votre commande est enregistrée" }),
+  ).toBeVisible();
+  await expect(page).toHaveTitle(/Commande enregistrée/);
+
+  const resultat = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+    .analyze();
+
+  const resume = resultat.violations.map(
+    (violation) => `${violation.id} (${violation.impact}) : ${violation.help}`,
+  );
+
+  expect(resume).toEqual([]);
+});

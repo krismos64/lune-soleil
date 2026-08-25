@@ -265,7 +265,12 @@ automatique**, qui échoue si une table du schéma n'apparaît ni ici ni dans un
 traitement.
 
 `Categorie`, `Produit`, `SectionProduit`, `Variante`, `Media`, `Reservation`,
-`VerrouTache`.
+`VerrouTache`, `CompteurNumero`.
+
+**`CompteurNumero`**, ajoutée par LS-117, porte trois colonnes : un type de
+document, une année et un rang. Aucune ne se rattache à une personne, et le
+numéro qu'elle engendre ne devient une donnée à caractère personnel qu'une fois
+**porté par la commande**, où il est couvert par T2.
 
 **`MouvementStock` a d'abord été rangé ici, à tort**, au motif que le mouvement
 décrit une pièce de stock et non une personne. Le contrôle automatique a refusé

@@ -38,7 +38,7 @@ connaître avant d'écrire un service qui la recouvrirait ou la contredirait :
 |---|---|---|
 | `src/services/reservation.ts` | réservation d'un panier : tri déterministe des variantes, rejeu borné sur interblocage, refus par exception, validation par `schemaPanier` | aucune, la garde locale a été remplacée par le socle en LS-71 |
 | `src/lib/validation.ts` | socle Zod partagé, `valider`, `EntreeInvalideError`, six schémas de domaine, voir `VALIDATION.md` | aucune |
-| `src/app/(boutique)/panier/actions.ts` | Server Action de réservation : valide puis délègue, traduit refus, contention et panne en résultats | reçoit `commandeId` sans le produire, ADR-024 imposant que la commande naisse dans la transaction de réservation |
+| `src/services/commande.ts` | passation de commande, LS-117 : la transaction unique d'ADR-024, numéro, figement, réservation | supprime `panier/actions.ts`, dont le `commandeId` reçu d'un argument permettait de réserver le stock d'autrui ; le rejeu d'interblocage vit ici, seul chemin de production |
 | `src/app/(boutique)/panier/actions-panier.ts` | Server Actions du panier, LS-114 : ajout, changement de quantité, retrait, écriture du cookie | ne touche aucun stock, la réservation reste à l'étape 4 du parcours 1 |
 | `src/lib/panier-cookie.ts` | signature HMAC du cookie de panier, LS-114 | le cookie ne porte **jamais** de prix, et la signature établit l'intégrité, jamais une autorisation |
 | `src/services/panier.ts` | revalidation du panier contre la base, étape 3 du parcours 1 | tout montant vient d'ici, jamais du cookie ni du navigateur |
@@ -124,6 +124,7 @@ documentation technique, ticket ou règle qui le contredirait.
 | ADR-028 | Conservation des avis, sans limite de durée | avis, modération, registre des traitements |
 | ADR-029 | Référence de variante modifiable, avertissement à l'écran | variante, référence, avis, statistiques par référence |
 | ADR-030 | Un mouvement de stock ne se compense qu'une fois | stock, mouvement, compensation, correction, inventaire |
+| ADR-031 | Le numéro de commande vient d'une table compteur, sans trou | numéro, numérotation, commande, facture, avoir, séquence |
 
 Cette table se met à jour à chaque ADR créé. Un ADR absent d'ici reste
 opposable : la table est un raccourci, `docs/adr/` fait foi.

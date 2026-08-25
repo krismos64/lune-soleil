@@ -123,8 +123,12 @@ try {
 }
 ```
 
-`src/app/panier/actions.ts` porte le motif complet, y compris la distinction
-entre refus métier, contention et panne.
+`src/app/(boutique)/commande/actions-tunnel.ts` porte le motif complet dans
+`passerCommandeAction`, y compris la distinction entre refus métier, contention
+et panne. Il remplace `src/app/panier/actions.ts`, supprimé par LS-117 : cette
+action n'avait plus d'appelant depuis que la commande porte la réservation, et
+`use server` la laissait exposée comme point d'entrée acceptant un identifiant
+de commande arbitraire.
 
 ### 5. Un objet validé ne se répand pas
 
