@@ -228,10 +228,17 @@ Relever les comptes dans Jira au moment d'écrire, jamais de mémoire.
 ### Les contrôles qui rattrapent les oublis mécaniques
 
 ```bash
-./scripts/verifier-config-claude.sh        # avertit, un hook Stop le lance
-./scripts/verifier-propagation-docs.sh     # socle Zod contre VALIDATION.md
-./scripts/verifier-tests-non-ignores.sh    # aucun test désactivé
+./scripts/verifier-config-claude.sh          # avertit, un hook Stop le lance
+./scripts/verifier-propagation-docs.sh       # socle Zod contre VALIDATION.md
+./scripts/verifier-tests-non-ignores.sh      # aucun test désactivé
+./scripts/verifier-registre-traitements.sh   # toute table du schéma est rangée
+./scripts/verifier-regles.sh                 # .claude/rules/ contre schéma et code
 ```
+
+**Les deux derniers échouent sur une story qui touche le schéma**, et c'est leur
+utilité : le 25 août 2026, LS-117 a ajouté `CompteurNumero` sans la ranger au
+registre, et cité deux noms de colonnes abrégés qui n'existaient pas. Les deux
+oublis ont été attrapés à la relecture, pas à l'écriture.
 
 Le premier vérifie ce qui est mesurable : ADR absent de la table d'aiguillage,
 `CLAUDE.md` au-delà de 200 lignes, renvoi vers un fichier inexistant, fiche
