@@ -21,7 +21,7 @@ la phase 2.
 | Phase | Epic | État au 25 août 2026 |
 |---|---|---|
 | 2, catalogue, médias et stock multicanal | LS-3 | en cours, six stories ouvertes |
-| 3, panier, réservation, paiement et commandes | LS-4 | en cours, LS-114 à LS-117 livrées, sept stories ouvertes |
+| 3, panier, réservation, paiement et commandes | LS-4 | en cours, LS-114 à LS-117 et LS-43 livrées, six stories ouvertes |
 
 **Le jalon qui compte est tenu depuis le 25 août 2026.** LS-116 prouve la
 réservation du dernier exemplaire par le service, sur une variante à un

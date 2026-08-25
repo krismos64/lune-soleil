@@ -82,7 +82,10 @@ validée côté serveur et historisée avec acteur, date, ancien et nouveau stat
 ## Expiration et réconciliation
 
 L'expiration de la session de paiement et celle de la réservation de stock sont
-alignées. Cible initiale : 30 minutes.
+alignées. **30 minutes**, ADR-032 : c'est la borne basse qu'autorise `expires_at`
+chez Stripe, et elle vaut la durée de réservation d'ADR-006. Une session qui
+survivrait à sa réservation permettrait de payer une pièce que la tâche de
+libération vient de rendre au catalogue.
 
 Deux tâches planifiées obligatoires :
 
@@ -94,6 +97,39 @@ Deux tâches planifiées obligatoires :
 
 Un verrou applicatif en base empêche deux exécutions simultanées de la même
 tâche.
+
+## Deux sessions payées pour une même commande
+
+**Le scénario, et il est prévu par le parcours 1.** Une session est créée, le
+client la laisse ouverte, revient plus tard, une seconde session est créée. Il
+paie la seconde, retrouve l'onglet de la première et paie aussi. Deux événements
+arrivent avec deux identifiants distincts : **rien dans l'idempotence par
+identifiant ne les rapproche**, et l'unicité d'effet refuse la seconde écriture
+sans rien rembourser. Le prestataire a encaissé deux fois.
+
+ADR-032 tranche les trois volets.
+
+**Prévention.** Avant de créer une session, **expirer celle que la commande porte
+encore**, `POST /v1/checkout/sessions/:id/expire`. L'appel n'agit que sur une
+session `open` : son échec parce qu'elle est déjà payée ou expirée n'est pas une
+panne, c'est l'information que la prévention n'avait rien à faire.
+
+**La clé d'idempotence ne peut pas être le seul `commandeId`.** Les clés Stripe
+sont purgées après au moins 24 heures, et une clé réutilisée avec des paramètres
+différents rend une **erreur** : dériver du seul identifiant de commande casserait
+le nouvel essai légitime après un refus de paiement. La clé porte la commande
+**et** la tentative.
+
+**Détection.** Un refus par `paiement_reussi_unique`, dont le prédicat porte les
+trois états d'encaissement `REUSSI`, `PARTIELLEMENT_REMBOURSE` et `REMBOURSE`, ne
+se journalise pas silencieusement. Il produit une `AlerteCritique` de gravité `CRITIQUE`, portant
+`typeCible = "Paiement"`, l'identifiant du paiement en trop et son montant.
+L'événement reste persisté, il ne doit pas être rejoué indéfiniment.
+
+**Traitement : remboursement MANUEL**, par l'exploitante depuis le tableau de
+bord du prestataire. **Ne pas appeler de remboursement automatique**, y compris
+si cela paraît plus serviable : le chemin qui décide « ce paiement est en trop »
+est celui qui, s'il se trompe, rend l'argent d'une commande valide.
 
 ## Documents comptables
 
