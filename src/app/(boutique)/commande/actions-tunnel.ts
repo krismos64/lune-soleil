@@ -38,13 +38,20 @@ export type ResultatTunnel =
   | { statut: "OK"; etapeSuivante: string }
   | { statut: "INVALIDE"; message: string };
 
-/** Saisie vide, point de depart d'un tunnel neuf. */
+/**
+ * Saisie vide, point de depart d'un tunnel neuf.
+ *
+ * `mode: null` ET NON `"DOMICILE"`. La premiere version posait le domicile par
+ * defaut, ce qui confondait « non choisi » avec un choix legitime : le
+ * recapitulatif affichait alors un mode et ses frais de port que personne
+ * n'avait retenus. Releve par `ls-critical-reviewer` le 25 aout 2026.
+ */
 const SAISIE_VIDE: SaisieTunnel = {
   nomClient: "",
   email: "",
   telephone: null,
   adresse: { ligne1: "", codePostal: "", ville: "", pays: "FR" },
-  mode: "DOMICILE",
+  mode: null,
   pointRetrait: null,
 };
 

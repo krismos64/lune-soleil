@@ -64,8 +64,25 @@ function etapeAtteignable(saisie: SaisieTunnel): Etape {
     return "coordonnees";
   }
 
-  if (saisie.adresse.ligne1 === "" || saisie.adresse.codePostal === "") {
+  if (
+    saisie.adresse.ligne1 === "" ||
+    saisie.adresse.codePostal === "" ||
+    saisie.adresse.ville === ""
+  ) {
     return "adresse";
+  }
+
+  /*
+   * L'ETAPE 3 EST EXIGEE, et elle ne l'etait pas. Sans cette condition, le
+   * recapitulatif s'affichait avec le mode `DOMICILE` de la saisie vide, ses
+   * frais de port et le bouton legal, alors que personne ne l'avait choisi :
+   * 4,99 EUR au lieu de 4,10 EUR sur un panier sous la franchise, et une
+   * commande `DOMICILE` non voulue en LS-117. Le `CHECK` ne peut pas l'attraper,
+   * un domicile sans point de retrait etant valide. Releve par
+   * `ls-critical-reviewer` le 25 aout 2026.
+   */
+  if (saisie.mode === null) {
+    return "livraison";
   }
 
   return "recapitulatif";
@@ -104,10 +121,18 @@ export default async function PageCommande({
   const etapeRendue =
     ETAPES.indexOf(etape) > ETAPES.indexOf(plafond) ? plafond : etape;
 
-  const recapitulatif = await construireRecapitulatif({
-    lignesCookie,
-    saisie,
-  });
+  /*
+   * LE RECAPITULATIF N'EST CONSTRUIT QUE SUR UN MODE CHOISI. Le type de
+   * `construireRecapitulatif` l'exige, ce qui rend le contournement impossible
+   * par oubli plutot que par discipline.
+   */
+  const recapitulatif =
+    saisie.mode === null
+      ? null
+      : await construireRecapitulatif({
+          lignesCookie,
+          saisie: { ...saisie, mode: saisie.mode },
+        });
 
   /*
    * UN PANIER DONT PLUS RIEN N'EST COMMANDABLE RENVOIE AU PANIER. Sans cette
@@ -116,7 +141,7 @@ export default async function PageCommande({
    * 4,99 EUR pour rien. Le panier, lui, sait expliquer ligne par ligne ce qui a
    * change, ce que ce recapitulatif ne fait pas.
    */
-  if (recapitulatif.totalArticlesCentimes === 0) {
+  if (recapitulatif !== null && recapitulatif.totalArticlesCentimes === 0) {
     redirect("/panier");
   }
 

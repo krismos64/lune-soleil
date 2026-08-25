@@ -181,6 +181,29 @@ describe("schemaCoordonnees", () => {
   });
 
   /*
+   * UN CHAMP REDUIT A DES CARACTERES INVISIBLES EST REFUSE.
+   *
+   * `trim()` retire les espaces ASCII et quelques Unicode, mais pas U+200B ni
+   * U+FEFF : un nomClient valant "\u200B" franchissait l'etape 1 et la garde de
+   * progression, pour produire en LS-117 une etiquette de colis sans
+   * destinataire lisible. Mesure le 25 aout 2026, releve par
+   * `ls-critical-reviewer`.
+   */
+  it.each([
+    ["espace sans chasse", "\u200B"],
+    ["indicateur d'ordre des octets", "\uFEFF"],
+    ["liant de mot", "\u2060"],
+  ])("refuse un nom reduit a %s", (_libelle, valeur) => {
+    expect(() =>
+      valider(schemaCoordonnees, {
+        nomClient: valeur,
+        email: "camille@exemple.test",
+        telephone: "",
+      }),
+    ).toThrow(EntreeInvalideError);
+  });
+
+  /*
    * L'ERREUR NE PORTE JAMAIS LA VALEUR REFUSEE, invariant 9. Une saisie
    * invalide peut etre un mot de passe colle dans le mauvais champ.
    */
