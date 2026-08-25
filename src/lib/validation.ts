@@ -240,3 +240,116 @@ export const schemaLignePanier = z.strictObject({
 export const schemaPanier = z
   .array(schemaLignePanier)
   .min(1, "Un panier doit porter au moins une ligne.");
+
+/**
+ * Nom du destinataire.
+ *
+ * OBLIGATOIRE POUR LES TROIS MODES, arbitrage du 25 aout 2026 : en Point Relais
+ * c'est l'identite presentee au retrait, a domicile c'est ce qui figure sur
+ * l'etiquette. Un colis sans nom n'est pas distribuable.
+ */
+export const schemaNomClient = champAdresse(120);
+
+/**
+ * Adresse email du client.
+ *
+ * `z.email()` ET NON UNE EXPRESSION REGULIERE MAISON. Ecrire soi-meme la regle
+ * revient toujours a refuser une adresse valide, les formes legales etant plus
+ * larges que l'intuition. La verification reelle de l'adresse appartient a
+ * l'envoi, pas a la saisie.
+ */
+export const schemaEmailClient = z
+  .email("Une adresse email valide est attendue.")
+  .max(254, "Cette adresse email est trop longue.");
+
+/**
+ * Telephone francais, facultatif.
+ *
+ * FACULTATIF PAR DECISION DU 25 AOUT 2026, et `Commande.telephone` est nullable
+ * en base, ce qui le confirme. Mondial Relay s'en sert pour la notification SMS
+ * de mise a disposition : son absence degrade le service sans empecher la
+ * livraison.
+ *
+ * LES ESPACES ET SEPARATEURS SONT TOLERES A LA SAISIE puis retires. Refuser
+ * « 06 12 34 56 78 » serait refuser la facon dont un numero s'ecrit en France.
+ */
+export const schemaTelephone = z
+  .string()
+  .trim()
+  .transform((valeur) => valeur.replace(/[\s.-]/g, ""))
+  .refine(
+    (valeur) => valeur === "" || /^(?:\+33|0)[1-9]\d{8}$/.test(valeur),
+    "Un numero de telephone francais est attendu.",
+  );
+
+/**
+ * Mode de livraison, les trois d'ADR-025.
+ *
+ * ECRIT EN DUR PLUTOT QUE DERIVE DE L'ENUM PRISMA, deliberement : ajouter une
+ * valeur a l'enum ouvrirait sinon EN SILENCE la saisie a un mode dont le tarif
+ * n'existe pas. Le meme piege que les index partiels, deja rencontre deux fois
+ * sur ce projet.
+ */
+export const schemaModeLivraison = z.enum(
+  ["POINT_RELAIS", "LOCKER", "DOMICILE"],
+  "Un mode de livraison connu est attendu.",
+);
+
+/**
+ * Point de retrait, copie complete.
+ *
+ * `PARCOURS.md` etape 3b impose de copier le libelle et l'adresse, pas
+ * seulement l'identifiant : un point qui ferme rendrait autrement illisible une
+ * commande passee.
+ */
+export const schemaPointRetrait = z.strictObject({
+  identifiant: champAdresse(64),
+  nom: champAdresse(120),
+  ligne1: champAdresse(120),
+  codePostal: schemaCodePostalMetropole,
+  ville: champAdresse(80),
+});
+
+/**
+ * Choix du mode de livraison, avec son point de retrait s'il en faut un.
+ *
+ * LE `superRefine` PORTE LA CONTRAINTE `chk_commande_mode_point_relais`, qui
+ * est une equivalence et non une implication : un DOMICILE porteur d'un point
+ * est refuse AUTANT qu'un POINT_RELAIS sans point. Ne verifier qu'un sens
+ * laisserait passer la moitie des cas, et le CHECK rejetterait alors l'ecriture
+ * de LS-117 avec un message que le visiteur ne comprendrait pas.
+ *
+ * LA VALIDATION EST LE CONTROLE PRINCIPAL, la contrainte la derniere ligne de
+ * defense. C'est explicitement ce que demande LS-115.
+ */
+export const schemaChoixLivraison = z
+  .strictObject({
+    mode: schemaModeLivraison,
+    pointRetrait: schemaPointRetrait.nullable(),
+  })
+  .superRefine((valeur, contexte) => {
+    const exige = valeur.mode === "POINT_RELAIS" || valeur.mode === "LOCKER";
+
+    if (exige && valeur.pointRetrait === null) {
+      contexte.addIssue({
+        code: "custom",
+        path: ["pointRetrait"],
+        message: "Ce mode de livraison demande de choisir un point de retrait.",
+      });
+    }
+
+    if (!exige && valeur.pointRetrait !== null) {
+      contexte.addIssue({
+        code: "custom",
+        path: ["pointRetrait"],
+        message: "La livraison a domicile n'admet pas de point de retrait.",
+      });
+    }
+  });
+
+/** Coordonnees du client, etape 1 du tunnel. */
+export const schemaCoordonnees = z.strictObject({
+  nomClient: schemaNomClient,
+  email: schemaEmailClient,
+  telephone: schemaTelephone,
+});

@@ -1,0 +1,331 @@
+/*
+ * Tunnel de commande, LS-115. Conception a partir de 320 px.
+ *
+ * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons d'ADR-022.
+ *
+ * LE CONTRASTE DEPEND DU FOND, et le projet s'est deja fait prendre une fois :
+ * `--ls-text-muted` donne 4,86:1 sur creme mais seulement 4,35:1 sur sable,
+ * sous le seuil AA. Les blocs a fond sable emploient donc `--ls-text`.
+ */
+
+.page {
+  max-width: var(--ls-content-max);
+  margin: 0 auto;
+  padding: var(--ls-space-6) var(--ls-space-4) var(--ls-space-7);
+}
+
+/* Zone desservie, L221-14 alinea 3 : due a l'entree du tunnel. */
+.zoneDesservie {
+  margin: 0 0 var(--ls-space-5);
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+}
+
+/*
+ * Fil des etapes. En colonne a 320 px : quatre libelles cote a cote y
+ * deborderaient, et les tronquer priverait de repere la personne qui en a le
+ * plus besoin.
+ */
+.fil {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-2);
+  margin: 0 0 var(--ls-space-5);
+  padding: 0;
+  list-style: none;
+}
+
+.filEtape,
+.filActuel {
+  display: flex;
+  align-items: center;
+  gap: var(--ls-space-3);
+  font-size: 0.9375rem;
+}
+
+.filEtape {
+  color: var(--ls-text-muted);
+}
+
+.filActuel {
+  color: var(--ls-text);
+  font-weight: 600;
+}
+
+.filRang {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  min-height: 28px;
+  border: 1px solid var(--ls-border);
+  border-radius: 50%;
+  font-size: 0.8125rem;
+}
+
+.filActuel .filRang {
+  border-color: var(--ls-primary);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+}
+
+.filLibelle {
+  flex: 1;
+}
+
+/* La cible du focus ne dessine pas de contour, voir globals.css. */
+.titre {
+  margin: 0 0 var(--ls-space-5);
+  color: var(--ls-text);
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+.sousTitre {
+  margin: 0 0 var(--ls-space-3);
+  color: var(--ls-text);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+/*
+ * La region live des erreurs reste dans le DOM meme vide : un `role="alert"`
+ * insere au moment de l'erreur n'est pas toujours annonce, la region devant
+ * exister avant que son contenu change.
+ */
+.erreurVide {
+  margin: 0;
+}
+
+.erreur {
+  margin: 0 0 var(--ls-space-4);
+  padding: var(--ls-space-3) var(--ls-space-4);
+  border-left: 4px solid var(--ls-error);
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+  font-size: 0.9375rem;
+}
+
+/* Fond sable : `--ls-text` et non `--ls-text-muted`, qui y passerait sous AA. */
+.avertissement {
+  margin: 0 0 var(--ls-space-4);
+  padding: var(--ls-space-3) var(--ls-space-4);
+  border-left: 4px solid var(--ls-warning);
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+  font-size: 0.9375rem;
+}
+
+.formulaire {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-4);
+  margin: 0 0 var(--ls-space-6);
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-2);
+}
+
+.libelle {
+  color: var(--ls-text);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.facultatif {
+  color: var(--ls-text-muted);
+  font-weight: 400;
+}
+
+.aide {
+  color: var(--ls-text-muted);
+  font-size: 0.8125rem;
+}
+
+/*
+ * `--ls-border` sert de bordure decorative et tombe sous AA pour un controle de
+ * saisie, defaut ouvert en LS-108. `--ls-text-muted` a 4,86:1 tient le seuil.
+ */
+.saisie {
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-2) var(--ls-space-3);
+  border: 1px solid var(--ls-text-muted);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  font-size: 1rem;
+}
+
+.modes {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* 44 px de cible tactile, `frontend-design.md`. */
+.mode {
+  display: flex;
+  align-items: center;
+  gap: var(--ls-space-3);
+  min-height: var(--ls-touch-target);
+  color: var(--ls-text);
+  font-size: 0.9375rem;
+}
+
+.radio {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--ls-primary);
+}
+
+.suivant,
+.payer {
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-3) var(--ls-space-5);
+  border: 0;
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--ls-duration-fast) var(--ls-easing);
+}
+
+.suivant:hover,
+.payer:hover {
+  background: var(--ls-primary-hover);
+}
+
+/*
+ * L'etat desactive se distingue par l'opacite ET par le curseur : la couleur
+ * seule ne suffit pas, `frontend-design.md` interdisant de porter une
+ * information par la couleur seule.
+ */
+.suivant:disabled,
+.payer:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.payer {
+  width: 100%;
+  margin: var(--ls-space-5) 0 var(--ls-space-3);
+}
+
+.recapitulatif {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-5);
+}
+
+.bloc {
+  padding: var(--ls-space-4);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+}
+
+.lignes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * `wrap` et non une grille figee : un nom de piece long et un prix a trois
+ * chiffres deborderaient a 320 px sur trois colonnes fixes.
+ */
+.ligne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--ls-space-2) var(--ls-space-3);
+  padding: var(--ls-space-3) 0;
+  border-bottom: 1px solid var(--ls-border);
+}
+
+.ligne:last-child {
+  border-bottom: 0;
+}
+
+.ligneNom {
+  flex: 1 1 60%;
+  color: var(--ls-text);
+  font-size: 0.9375rem;
+}
+
+.ligneQuantite {
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+}
+
+.lignePrix {
+  margin-left: auto;
+  color: var(--ls-price);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.donnee {
+  margin: 0 0 var(--ls-space-1);
+  color: var(--ls-text);
+  font-size: 0.9375rem;
+}
+
+.totalLigne,
+.totalFinal {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--ls-space-3);
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-text);
+  font-size: 0.9375rem;
+}
+
+.totalFinal {
+  margin-top: var(--ls-space-3);
+  padding-top: var(--ls-space-3);
+  border-top: 1px solid var(--ls-border);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.totalLigne span:last-child,
+.totalFinal span:last-child {
+  font-variant-numeric: tabular-nums;
+}
+
+.retourPanier {
+  display: inline-block;
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-3) 0;
+  color: var(--ls-accent-gold-deep);
+  font-size: 0.9375rem;
+  text-decoration: underline;
+}
+
+.suivant:focus-visible,
+.payer:focus-visible,
+.saisie:focus-visible,
+.radio:focus-visible,
+.retourPanier:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+/* Le fil passe en ligne quand la largeur le permet. */
+@media (min-width: 768px) {
+  .fil {
+    flex-direction: row;
+    gap: var(--ls-space-4);
+  }
+
+  .formulaire {
+    max-width: 32rem;
+  }
+}
