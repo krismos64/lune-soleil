@@ -78,6 +78,92 @@ afterEach(async () => {
   );
 });
 
+describe("concurrence sur la derniere piece", () => {
+  /*
+   * LE JALON QUI COMPTE, porte sur le chemin de PRODUCTION.
+   *
+   * `jalon-piece-unique.sequential.test.ts` prouve la meme propriete sur
+   * `reserverPanier`, qui etait le chemin applicatif au moment de LS-116. Depuis
+   * LS-117, `passerCommande` est le seul point d'entree reel : un jalon qui ne
+   * s'exerce que sur l'ancien service prouverait une propriete d'un code que
+   * personne n'appelle. Motif « fonction testee jamais appelee », deja rencontre
+   * sur ce projet.
+   *
+   * DEUX ACHETEURS, UN EXEMPLAIRE. Un seul repart avec, l'autre lit un refus
+   * nommant la piece, et le stock ne devient jamais negatif.
+   */
+  it("un seul acheteur obtient la piece, l'autre est refuse", async () => {
+    const { varianteId } = await creerVarianteEnStock(client, {
+      quantitePhysique: 1,
+    });
+
+    const commander = () =>
+      passerCommande({
+        lignesCookie: [{ varianteId, quantite: 1 }],
+        saisie: SAISIE_DOMICILE,
+        configuration: CONFIGURATION,
+      });
+
+    const issues = await Promise.allSettled([commander(), commander()]);
+
+    const servis = issues.filter((issue) => issue.status === "fulfilled");
+    const refuses = issues.filter(
+      (issue) =>
+        issue.status === "rejected" &&
+        issue.reason instanceof CommandeRefuseeError,
+    );
+
+    expect(servis).toHaveLength(1);
+    expect(refuses).toHaveLength(1);
+
+    /*
+     * L'IDENTITE ET NON LE COMPTE, piege du 25 aout 2026 : compter les
+     * reservations vaut 1 par construction des qu'une seule subsiste. Il faut
+     * verifier que la reservation porte la commande GAGNANTE, sans quoi la piece
+     * partirait sur la commande perdante et resterait immobilisee trente minutes
+     * pour un achat que personne ne paiera.
+     */
+    const gagnante = servis[0] as PromiseFulfilledResult<{
+      commandeId: string;
+    }>;
+
+    const { rows: reservations } = await client.query(
+      "SELECT commande_id FROM reservation",
+    );
+    expect(reservations).toHaveLength(1);
+    expect(reservations[0].commande_id).toBe(gagnante.value.commandeId);
+
+    // UNE SEULE COMMANDE SUBSISTE : le refus a annule la sienne entierement.
+    const { rows: commandes } = await client.query("SELECT id FROM commande");
+    expect(commandes).toHaveLength(1);
+    expect(commandes[0].id).toBe(gagnante.value.commandeId);
+
+    // LE STOCK N'EST JAMAIS NEGATIF, et la survente n'a pas eu lieu.
+    const { rows: variantes } = await client.query(
+      "SELECT quantite_physique, quantite_reservee FROM variante WHERE id = $1",
+      [varianteId],
+    );
+    expect(variantes[0].quantite_reservee).toBe(1);
+    expect(variantes[0].quantite_physique).toBe(1);
+  });
+});
+
+/**
+ * L'annee telle que PostgreSQL la voit, LS-117.
+ *
+ * ELLE NE VIENT PAS DE `new Date()`, et la nuance est le defaut corrige par la
+ * revue critique : le service derive l'annee de `now()` cote base, regle de
+ * `database.md`. Comparer a l'horloge de Node ferait echouer ce test au passage
+ * d'annee sur une machine decalee, pour une raison sans rapport avec le code.
+ */
+async function anneePostgres(): Promise<number> {
+  const { rows } = await client.query(
+    "SELECT EXTRACT(YEAR FROM now())::int AS annee",
+  );
+
+  return rows[0].annee;
+}
+
 /** Lit une commande par son identifiant, ou `null`. */
 async function lireCommande(commandeId: string) {
   const { rows } = await client.query(
@@ -182,7 +268,7 @@ describe("numerotation, ADR-031", () => {
     });
 
     const commande = await lireCommande(issue.commandeId);
-    const annee = new Date().getUTCFullYear();
+    const annee = await anneePostgres();
 
     expect(commande.numero).toBe(`C-${annee}-0001`);
   });
@@ -201,7 +287,7 @@ describe("numerotation, ADR-031", () => {
       numeros.push(commande.numero);
     }
 
-    const annee = new Date().getUTCFullYear();
+    const annee = await anneePostgres();
     expect(numeros).toEqual([
       `C-${annee}-0001`,
       `C-${annee}-0002`,
@@ -235,7 +321,7 @@ describe("numerotation, ADR-031", () => {
     });
 
     const commande = await lireCommande(issue.commandeId);
-    const annee = new Date().getUTCFullYear();
+    const annee = await anneePostgres();
 
     // 0001 et non 0002 : le refus n'a consomme aucun numero.
     expect(commande.numero).toBe(`C-${annee}-0001`);
@@ -310,6 +396,63 @@ describe("figement, invariant 3", () => {
     const commande = await lireCommande(issue.commandeId);
     expect(commande.frais_port_centimes).toBe(0);
     expect(commande.total_centimes).toBe(4900);
+  });
+
+  /*
+   * LE VERROU FERME LA FENETRE ENTRE LECTURE ET RESERVATION, correction du
+   * 25 aout 2026 relevee par `ls-critical-reviewer`.
+   *
+   * SANS `FOR UPDATE`, une revision de prix validee entre le `SELECT` et
+   * l'`UPDATE` de reservation fait figer l'ANCIEN prix sur une commande ecrite
+   * APRES la revision : `READ COMMITTED` donne a chaque instruction la version
+   * validee a son propre instant.
+   *
+   * LE TEST FORCE L'ENTRELACEMENT plutot que d'esperer le rencontrer. Une
+   * transaction concurrente detient la ligne et modifie le prix ; la commande
+   * l'attend sur le verrou, et doit donc lire le prix NOUVEAU. Sans verrou elle
+   * lirait l'ancien sans attendre, ce que la mutation demontre.
+   */
+  it("fige le prix a jour quand une revision est validee pendant la commande", async () => {
+    const { varianteId } = await creerVarianteEnStock(client);
+
+    const concurrent = new Client({
+      connectionString: inject(VARIABLE_URL_TEST),
+    });
+    await concurrent.connect();
+
+    try {
+      await concurrent.query("BEGIN");
+      await concurrent.query(
+        "UPDATE variante SET prix_centimes = 5900 WHERE id = $1",
+        [varianteId],
+      );
+
+      // La commande demarre pendant que la revision est EN COURS, non validee.
+      const enCours = passerCommande({
+        lignesCookie: [{ varianteId, quantite: 1 }],
+        saisie: SAISIE_DOMICILE,
+        configuration: CONFIGURATION,
+      });
+
+      // Laisser la commande atteindre le verrou et s'y bloquer.
+      await new Promise((suite) => setTimeout(suite, 250));
+      await concurrent.query("COMMIT");
+
+      const issue = await enCours;
+      const { rows } = await client.query(
+        "SELECT prix_fige_centimes FROM ligne_commande WHERE commande_id = $1",
+        [issue.commandeId],
+      );
+
+      // LE PRIX NOUVEAU, 5900 : la commande a attendu la revision et lu apres
+      // elle. Sans verrou, elle aurait fige 4900, un prix deja revoke.
+      expect(rows[0].prix_fige_centimes).toBe(5900);
+
+      const commande = await lireCommande(issue.commandeId);
+      expect(commande.sous_total_centimes).toBe(5900);
+    } finally {
+      await concurrent.end();
+    }
   });
 
   /*

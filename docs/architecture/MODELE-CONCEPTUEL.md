@@ -195,6 +195,7 @@ erDiagram
 | C25 | Le nom d'une catégorie n'est jamais vide | `CHECK`, LS-99. Le nom s'affiche dans le menu du catalogue : une chaîne vide y produirait un lien invisible mais cliquable |
 | C26 | Une catégorie portant au moins un produit ne se supprime pas | `Produit.categorieId` en `RESTRICT`, LS-13. La base refuse, le service compte avant pour que l'écran l'explique plutôt que de rendre une erreur de clé étrangère |
 | C27 | Le numéro d'un document séquentiel vient d'un compteur incrémenté dans la transaction qui crée le document, et ne décroît jamais | ADR-031, LS-117. `CHECK dernier >= 1` plus le verrou de ligne de l'`UPDATE` : une transaction annulée rend son numéro, là où une `SEQUENCE` non transactionnelle laisserait un trou à chaque refus de stock |
+| C28 | Le total d'une commande est la somme de son sous-total, de ses frais de port et de sa taxe | `CHECK`, LS-117. La redondance est voulue, une commande devant porter le montant qu'elle engage : sans contrainte, un chemin qui écrit le total sans faire suivre les composantes n'apparaîtrait qu'à la facture, immuable par l'invariant 4 |
 
 ### Pourquoi un produit peut n'avoir aucune variante
 

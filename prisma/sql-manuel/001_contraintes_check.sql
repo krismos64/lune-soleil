@@ -284,3 +284,12 @@ ALTER TABLE categorie
 ALTER TABLE compteur_numero
   ADD CONSTRAINT chk_compteur_numero_positif
   CHECK (dernier >= 1);
+
+-- C28, le total d'une commande est la somme de ses composantes. La redondance
+-- est voulue, une commande devant porter le montant exact qu'elle engage, mais
+-- elle vivait sans garde-fou : un chemin futur qui ecrirait le total sans faire
+-- suivre les composantes passerait inapercu jusqu'a la facture, document que
+-- l'invariant 4 rend immuable.
+ALTER TABLE commande
+  ADD CONSTRAINT chk_commande_total_coherent
+  CHECK (total_centimes = sous_total_centimes + frais_port_centimes + montant_taxe_centimes);

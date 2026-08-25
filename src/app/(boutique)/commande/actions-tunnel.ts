@@ -35,6 +35,7 @@ import {
 } from "@/lib/tunnel-cookie";
 import { NOM_COOKIE_PANIER, decoderPanier } from "@/lib/panier-cookie";
 import { CommandeRefuseeError, passerCommande } from "@/services/commande";
+import { InterblocagePersistantError } from "@/services/reservation";
 
 /** Ce que l'interface recoit, jamais une exception. */
 export type ResultatTunnel =
@@ -207,6 +208,8 @@ export type ResultatCommande =
   | { statut: "OK"; commandeId: string; numero: string }
   /** Une piece n'est plus disponible : `varianteRefusee` designe la ligne. */
   | { statut: "REFUSE"; varianteRefusee: string }
+  /** Contention, pas un refus : le stock etait peut-etre la. */
+  | { statut: "REESSAYER"; message: string }
   | { statut: "INVALIDE"; message: string };
 
 /**
@@ -268,6 +271,20 @@ export async function passerCommandeAction(): Promise<ResultatCommande> {
   } catch (erreur) {
     if (erreur instanceof CommandeRefuseeError) {
       return { statut: "REFUSE", varianteRefusee: erreur.varianteRefusee };
+    }
+
+    /*
+     * LA CONTENTION N'EST PAS UN REFUS, et les confondre serait un mensonge au
+     * client : le stock etait peut-etre disponible, c'est l'interblocage qui a
+     * empeche de conclure. Un refus demande de retirer la piece du panier, une
+     * contention demande seulement de reessayer.
+     */
+    if (erreur instanceof InterblocagePersistantError) {
+      return {
+        statut: "REESSAYER",
+        message:
+          "Votre commande n'a pas pu aboutir, plusieurs achats simultanés. Merci de réessayer.",
+      };
     }
 
     /*

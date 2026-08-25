@@ -202,7 +202,7 @@ export function EtapesTunnel({
         return;
       }
 
-      if (resultat.statut === "INVALIDE") {
+      if (resultat.statut === "REESSAYER" || resultat.statut === "INVALIDE") {
         setErreur(messageLisible(resultat.message));
         return;
       }
