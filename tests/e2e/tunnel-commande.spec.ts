@@ -123,7 +123,7 @@ test("une saisie invalide est annoncee et ne fait pas avancer", async ({
    */
   await expect(
     page.getByRole("alert", { name: "Erreurs de saisie" }),
-  ).toContainText("telephone");
+  ).toContainText("Téléphone");
 
   /* Et l'etape n'a pas change : un echec ne fait jamais avancer. */
   await expect(
@@ -155,7 +155,7 @@ test("le transporteur indisponible laisse commander a domicile", async ({
   await page.getByRole("button", { name: "Continuer" }).click();
 
   await expect(
-    page.getByRole("heading", { name: "Vérifier et payer" }),
+    page.getByRole("heading", { name: "Vérifier votre commande" }),
   ).toBeVisible();
 });
 
@@ -168,7 +168,7 @@ test("le recapitulatif porte le montant et la mention imposee", async ({
   await page.getByRole("button", { name: "Continuer" }).click();
 
   await expect(
-    page.getByRole("heading", { name: "Vérifier et payer" }),
+    page.getByRole("heading", { name: "Vérifier votre commande" }),
   ).toBeVisible();
 
   /* L221-14 alinea 1 : les caracteristiques essentielles et le prix. */
@@ -189,6 +189,51 @@ test("le recapitulatif porte le montant et la mention imposee", async ({
    */
   await expect(page.getByText("12 rue des Ateliers")).toBeVisible();
   await expect(page.getByText("35000 Rennes")).toBeVisible();
+});
+
+test("le recapitulatif n'est pas atteignable sur une saisie vide", async ({
+  page,
+}) => {
+  /*
+   * DEFAUT CORRIGE LE 25 AOUT 2026, releve par `ls-frontend-revue`. Avant la
+   * garde de progression, cette URL rendait un recapitulatif d'apparence
+   * complete, avec un total juste et le bouton legal, mais sans nom, sans email
+   * et sans adresse : une commande sans destinataire, atteignable par un simple
+   * lien partage.
+   */
+  await page.goto("/commande?etape=recapitulatif");
+
+  await expect(
+    page.getByRole("heading", { name: "Vos coordonnées" }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("button", { name: "Commander avec obligation de paiement" }),
+  ).toHaveCount(0);
+});
+
+test("une etape franchie se rouvre depuis le fil", async ({ page }) => {
+  /*
+   * Sans ce lien, corriger une faute d'adresse depuis le recapitulatif imposait
+   * de repasser par le panier ou d'editer l'URL a la main.
+   */
+  await page.goto("/commande");
+  await remplirCoordonnees(page);
+
+  await expect(
+    page.getByRole("heading", { name: "Votre adresse de livraison" }),
+  ).toBeVisible();
+
+  await page
+    .getByRole("link", { name: "Vos coordonnées Revenir à cette étape." })
+    .click();
+
+  await expect(
+    page.getByRole("heading", { name: "Vos coordonnées" }),
+  ).toBeVisible();
+
+  /* Et la saisie est retrouvee, pas perdue. */
+  await expect(page.getByLabel("Nom et prénom")).toHaveValue("Camille Dupont");
 });
 
 test("le tunnel ne deborde pas horizontalement", async ({ page }) => {

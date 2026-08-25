@@ -190,12 +190,23 @@ const schemaCodePostalMetropole = z
   .string()
   .regex(
     /^(?!97|98)\d{5}$/,
-    "Un code postal de France metropolitaine est attendu.",
+    "Un code postal de France métropolitaine est attendu.",
   );
 
 /** Champ d'adresse non vide apres retrait des espaces de bordure. */
 const champAdresse = (maximum: number) =>
-  z.string().trim().min(1, "Ce champ est obligatoire.").max(maximum);
+  z
+    .string()
+    .trim()
+    .min(1, "Ce champ est obligatoire.")
+    /*
+     * LE MESSAGE DU PLAFOND EST OBLIGATOIRE, sans quoi Zod rend le sien, en
+     * ANGLAIS : « Too big: expected string to have <=120 characters ». Tant que
+     * ces schemas ne servaient qu'au serveur, le defaut restait invisible ;
+     * LS-115 les fait entrer dans une page publique. Releve par
+     * `ls-frontend-revue` le 25 aout 2026.
+     */
+    .max(maximum, `Ce champ ne peut pas dépasser ${maximum} caractères.`);
 
 /**
  * Adresse postale, France metropolitaine.
@@ -279,7 +290,7 @@ export const schemaTelephone = z
   .transform((valeur) => valeur.replace(/[\s.-]/g, ""))
   .refine(
     (valeur) => valeur === "" || /^(?:\+33|0)[1-9]\d{8}$/.test(valeur),
-    "Un numero de telephone francais est attendu.",
+    "Un numéro de téléphone français est attendu.",
   );
 
 /**
@@ -342,7 +353,7 @@ export const schemaChoixLivraison = z
       contexte.addIssue({
         code: "custom",
         path: ["pointRetrait"],
-        message: "La livraison a domicile n'admet pas de point de retrait.",
+        message: "La livraison à domicile n'admet pas de point de retrait.",
       });
     }
   });

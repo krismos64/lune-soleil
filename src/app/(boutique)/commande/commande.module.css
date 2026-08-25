@@ -329,3 +329,48 @@
     max-width: 32rem;
   }
 }
+
+/*
+ * Le motif d'une ligne modifiee. Fond blanc du bloc : `--ls-text-muted` y donne
+ * 5,19:1, au-dessus du seuil AA.
+ */
+.ligneMotif {
+  flex: 1 1 100%;
+  color: var(--ls-text-muted);
+  font-size: 0.8125rem;
+}
+
+/* Le libellé d'une étape franchie devient un lien de retour. */
+.filLien {
+  flex: 1;
+  color: var(--ls-accent-gold-deep);
+  text-decoration: underline;
+}
+
+.filLien:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+/*
+ * Visible des lecteurs d'écran seulement. `display: none` les en priverait
+ * aussi, et le nom du lien redirait alors le seul titre de l'étape sans dire
+ * qu'il y ramène.
+ */
+.invisible {
+  /*
+   * `display: inline` EST NECESSAIRE, et pas seulement cosmetique. Sans lui le
+   * span masque est traite comme un bloc, et le nom accessible du lien devient
+   * « Vos coordonnées\n, revenir à cette étape » : un lecteur d'écran y marque
+   * une pause avant la virgule. Mesure le 25 août 2026, c'est aussi ce qui
+   * faisait échouer le test par nom exact.
+   */
+  display: inline;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

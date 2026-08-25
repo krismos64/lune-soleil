@@ -20,6 +20,7 @@ import { NOM_COOKIE_PANIER, decoderPanier } from "@/lib/panier-cookie";
 import { chercherPointsRetrait } from "@/integrations/mondial-relay";
 import { fournisseurPointsRetrait } from "@/integrations/mondial-relay/fournisseur";
 import { construireRecapitulatif } from "@/services/tunnel";
+import type { SaisieTunnel } from "@/lib/tunnel-cookie";
 import { lireSaisie } from "./actions-tunnel";
 import { EtapesTunnel } from "./etapes-tunnel";
 import styles from "./commande.module.css";
@@ -45,6 +46,31 @@ function etapeDemandee(valeur: string | undefined): Etape {
   return ETAPES.includes(valeur as Etape) ? (valeur as Etape) : "coordonnees";
 }
 
+/**
+ * Derniere etape reellement atteignable, selon ce qui est saisi.
+ *
+ * SANS CETTE GARDE, `?etape=recapitulatif` s'affiche sur une saisie vide : un
+ * recapitulatif d'apparence complete, avec un total juste et le bouton legal,
+ * mais sans nom, sans email et sans adresse. Mesure le 25 aout 2026, releve par
+ * `ls-frontend-revue`. L'URL etant partageable, le cas s'atteint par un simple
+ * lien, ce qui est le revers de la serialisation de l'etat dans l'URL.
+ *
+ * ELLE NE VALIDE PAS LA SAISIE, elle constate sa presence. La validation reste
+ * celle de Zod, a l'ecriture : verifier ici la forme d'une adresse dupliquerait
+ * une regle qui vit deja dans `validation.ts`.
+ */
+function etapeAtteignable(saisie: SaisieTunnel): Etape {
+  if (saisie.nomClient === "" || saisie.email === "") {
+    return "coordonnees";
+  }
+
+  if (saisie.adresse.ligne1 === "" || saisie.adresse.codePostal === "") {
+    return "adresse";
+  }
+
+  return "recapitulatif";
+}
+
 export default async function PageCommande({
   searchParams,
 }: {
@@ -68,10 +94,31 @@ export default async function PageCommande({
 
   const saisie = await lireSaisie();
 
+  /*
+   * L'ETAPE DEMANDEE EST RAMENEE A CE QUI EST ATTEIGNABLE. Un rang superieur
+   * renvoie a la premiere etape incomplete plutot que d'afficher des champs
+   * vides. Le rang inferieur reste libre : revenir en arriere pour corriger une
+   * saisie est legitime.
+   */
+  const plafond = etapeAtteignable(saisie);
+  const etapeRendue =
+    ETAPES.indexOf(etape) > ETAPES.indexOf(plafond) ? plafond : etape;
+
   const recapitulatif = await construireRecapitulatif({
     lignesCookie,
     saisie,
   });
+
+  /*
+   * UN PANIER DONT PLUS RIEN N'EST COMMANDABLE RENVOIE AU PANIER. Sans cette
+   * garde, toutes les pieces epuisees pendant le tunnel donnaient un
+   * recapitulatif a zero article et un total egal aux SEULS frais de port :
+   * 4,99 EUR pour rien. Le panier, lui, sait expliquer ligne par ligne ce qui a
+   * change, ce que ce recapitulatif ne fait pas.
+   */
+  if (recapitulatif.totalArticlesCentimes === 0) {
+    redirect("/panier");
+  }
 
   /*
    * LA RECHERCHE DE POINTS N'A LIEU QU'A L'ETAPE DU MODE, et seulement si une
@@ -82,7 +129,7 @@ export default async function PageCommande({
    * proposable, et la vente continue. C'est le critere 6 de la story.
    */
   const pointsRetrait =
-    etape === "livraison" && saisie.adresse.codePostal !== ""
+    etapeRendue === "livraison" && saisie.adresse.codePostal !== ""
       ? await chercherPointsRetrait({
           codePostal: saisie.adresse.codePostal,
           mode: "POINT_RELAIS",
@@ -103,7 +150,7 @@ export default async function PageCommande({
       </p>
 
       <EtapesTunnel
-        etape={etape}
+        etape={etapeRendue}
         saisie={saisie}
         recapitulatif={recapitulatif}
         pointsRetrait={pointsRetrait}

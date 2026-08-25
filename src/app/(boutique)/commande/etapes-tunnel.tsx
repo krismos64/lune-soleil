@@ -17,10 +17,12 @@
  * element detache ».
  */
 import { useEffect, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import type { SaisieTunnel } from "@/lib/tunnel-cookie";
 import type { Recapitulatif } from "@/services/tunnel";
+import type { MotifIndisponible } from "@/services/panier";
 import type { ResultatPointsRetrait } from "@/integrations/mondial-relay";
 import {
   enregistrerAdresse,
@@ -31,12 +33,20 @@ import styles from "./commande.module.css";
 
 type Etape = "coordonnees" | "adresse" | "livraison" | "recapitulatif";
 
+/** Les quatre etapes dans l'ordre, pour situer celle qui est franchie. */
+const ORDRE: readonly Etape[] = [
+  "coordonnees",
+  "adresse",
+  "livraison",
+  "recapitulatif",
+];
+
 /** Titre de chaque etape, aussi utilise pour l'annonce au lecteur d'ecran. */
 const TITRES: Record<Etape, string> = {
   coordonnees: "Vos coordonnées",
   adresse: "Votre adresse de livraison",
   livraison: "Votre mode de livraison",
-  recapitulatif: "Vérifier et payer",
+  recapitulatif: "Vérifier votre commande",
 };
 
 /** Libelle de chaque mode, avec ce qu'il implique pour le visiteur. */
@@ -45,6 +55,61 @@ const LIBELLES_MODE: Record<SaisieTunnel["mode"], string> = {
   LOCKER: "Locker",
   DOMICILE: "À domicile",
 };
+
+/**
+ * Ce que chaque motif dit au visiteur, identique a la page du panier.
+ *
+ * LES TEXTES DISTINGUENT CE QUI REVIENDRA DE CE QUI NE REVIENDRA PAS.
+ * « Épuisée » laisse esperer un reapprovisionnement, « retirée de la vente »
+ * non.
+ */
+const TEXTE_MOTIF: Record<MotifIndisponible, string> = {
+  VARIANTE_INTROUVABLE: "Cette pièce n'est plus disponible.",
+  PLUS_VENDABLE: "Cette pièce a été retirée de la vente.",
+  EPUISE: "Cette pièce est épuisée.",
+  QUANTITE_REDUITE: "La quantité a été ajustée au stock restant.",
+};
+
+/**
+ * Libelle visible de chaque champ, pour les messages d'erreur.
+ *
+ * `formaterProblemes` prefixe le message par le NOM TECHNIQUE du champ, ce qui
+ * convient a un journal serveur mais pas a un client : il lisait
+ * « telephone : ... » quand l'etiquette a l'ecran dit « Téléphone ». Le socle
+ * reste inchange, sa forme etant juste pour son usage d'origine ; la traduction
+ * appartient a l'ecran qui affiche. Releve par `ls-frontend-revue`.
+ */
+const LIBELLES_CHAMP: Record<string, string> = {
+  nomClient: "Nom et prénom",
+  email: "Adresse email",
+  telephone: "Téléphone",
+  ligne1: "Adresse",
+  ligne2: "Complément",
+  codePostal: "Code postal",
+  ville: "Ville",
+  pays: "Pays",
+  mode: "Mode de livraison",
+  pointRetrait: "Point de retrait",
+};
+
+/** Remplace le nom technique de chaque champ par son libelle visible. */
+function messageLisible(brut: string): string {
+  return brut
+    .split(", ")
+    .map((partie) => {
+      const separateur = partie.indexOf(" : ");
+
+      if (separateur === -1) {
+        return partie;
+      }
+
+      const champ = partie.slice(0, separateur);
+      const reste = partie.slice(separateur + 3);
+
+      return `${LIBELLES_CHAMP[champ] ?? champ} : ${reste}`;
+    })
+    .join(", ");
+}
 
 function prixAffiche(centimes: number): string {
   return new Intl.NumberFormat("fr-FR", {
@@ -102,7 +167,7 @@ export function EtapesTunnel({
        * `ls-frontend-revue`.
        */
       if (resultat.statut === "INVALIDE") {
-        setErreur(resultat.message);
+        setErreur(messageLisible(resultat.message));
         return;
       }
 
@@ -113,17 +178,54 @@ export function EtapesTunnel({
 
   return (
     <>
+      {/*
+       * LE FIL EST NAVIGABLE VERS L'ARRIERE, et il ne l'etait pas.
+       *
+       * Sans cela, corriger une faute d'adresse depuis le recapitulatif
+       * imposait de repasser par le panier ou d'editer l'URL a la main, sur
+       * l'ecran dont la raison d'etre est justement de permettre la correction
+       * avant paiement. Releve par `ls-frontend-revue`.
+       *
+       * VERS L'AVANT, RIEN N'EST CLIQUABLE : une etape non atteinte reste un
+       * simple libelle. La page ramene de toute facon a la premiere etape
+       * incomplete, mais offrir le lien promettrait un raccourci qui n'existe
+       * pas.
+       */}
       <ol className={styles.fil} aria-label="Progression de la commande">
-        {(Object.keys(TITRES) as Etape[]).map((cle, rang) => (
-          <li
-            key={cle}
-            className={cle === etape ? styles.filActuel : styles.filEtape}
-            aria-current={cle === etape ? "step" : undefined}
-          >
-            <span className={styles.filRang}>{rang + 1}</span>
-            <span className={styles.filLibelle}>{TITRES[cle]}</span>
-          </li>
-        ))}
+        {(Object.keys(TITRES) as Etape[]).map((cle, rang) => {
+          const franchie = ORDRE.indexOf(cle) < ORDRE.indexOf(etape);
+
+          return (
+            <li
+              key={cle}
+              className={cle === etape ? styles.filActuel : styles.filEtape}
+              aria-current={cle === etape ? "step" : undefined}
+            >
+              <span className={styles.filRang}>{rang + 1}</span>
+              {franchie ? (
+                <Link
+                  href={`/commande?etape=${cle}`}
+                  className={styles.filLien}
+                >
+                  {TITRES[cle]}
+                  {/*
+                   * LE COMPLEMENT EST UNE PHRASE AUTONOME, sans virgule
+                   * d'attaque. Colle au titre par une virgule, le nom
+                   * accessible devenait « Vos coordonnées , revenir à cette
+                   * étape » : une espace avant la virgule, faute de
+                   * typographie francaise que la concatenation JSX introduit
+                   * toute seule. Mesure a l'`ariaSnapshot` le 25 aout 2026.
+                   */}
+                  <span className={styles.invisible}>
+                    {"Revenir à cette étape."}
+                  </span>
+                </Link>
+              ) : (
+                <span className={styles.filLibelle}>{TITRES[cle]}</span>
+              )}
+            </li>
+          );
+        })}
       </ol>
 
       <h1 ref={titreRef} tabIndex={-1} className={styles.titre}>
@@ -161,6 +263,7 @@ export function EtapesTunnel({
             <input
               name="nomClient"
               defaultValue={saisie.nomClient}
+              maxLength={120}
               autoComplete="name"
               required
               className={styles.saisie}
@@ -227,6 +330,7 @@ export function EtapesTunnel({
             <input
               name="ligne1"
               defaultValue={saisie.adresse.ligne1}
+              maxLength={120}
               autoComplete="address-line1"
               required
               className={styles.saisie}
@@ -240,6 +344,7 @@ export function EtapesTunnel({
             <input
               name="ligne2"
               defaultValue={saisie.adresse.ligne2 ?? ""}
+              maxLength={120}
               autoComplete="address-line2"
               className={styles.saisie}
             />
@@ -250,6 +355,7 @@ export function EtapesTunnel({
             <input
               name="codePostal"
               defaultValue={saisie.adresse.codePostal}
+              maxLength={5}
               autoComplete="postal-code"
               inputMode="numeric"
               required
@@ -262,6 +368,7 @@ export function EtapesTunnel({
             <input
               name="ville"
               defaultValue={saisie.adresse.ville}
+              maxLength={80}
               autoComplete="address-level2"
               required
               className={styles.saisie}
@@ -436,6 +543,19 @@ function Recapitulatif({ recapitulatif }: { recapitulatif: Recapitulatif }) {
               <span className={styles.lignePrix}>
                 {prixAffiche(ligne.totalLigneCentimes)}
               </span>
+              {/*
+               * LE MOTIF EST RENDU ICI AUSSI, et pas seulement au panier.
+               * `LignePanierRevalidee.motif` existe depuis LS-114 et la page du
+               * panier l'affiche ; le tunnel consommait le meme type en
+               * l'ignorant. Un client voyait sa quantite passer de 1 a 0 sans
+               * une ligne d'explication. Quatrieme occurrence du motif « champ
+               * d'etat ajoute sans etre porte partout ».
+               */}
+              {ligne.motif !== null && (
+                <span className={styles.ligneMotif}>
+                  {TEXTE_MOTIF[ligne.motif]}
+                </span>
+              )}
             </li>
           ))}
         </ul>
