@@ -1,8 +1,7 @@
 # 25 août 2026, le jalon qui compte
 
 Troisième session de la journée, après LS-86 et LS-115. Elle livre **LS-116**,
-le
-test phare du projet.
+le test phare du projet.
 
 ## Le trou était précis, et le fichier existant le disait
 
@@ -12,8 +11,7 @@ test. Son en-tête l'annonçait, « ce que ce fichier ne teste pas : le service
 applicatif de réservation... il n'existe pas encore ».
 
 Il existe depuis LS-71. La réserve est levée par un fichier neuf, dix tests,
-tous
-par `reserverPanier`.
+tous par `reserverPanier`.
 
 ## Le critère 7 n'était pas tenu, et personne ne l'avait vu
 
@@ -43,10 +41,9 @@ minutes pour une commande jamais payée.
 
 **Le test de rollback ne s'exerçait qu'un tiers du temps.** Il créait la
 disponible et l'épuisée sans contrôler l'ordre de leurs UUID, or
-`ordonnerLignes`
-trie par identifiant croissant : quand l'épuisée passe la première, le refus
-tombe avant qu'aucune réservation ne soit écrite. Mesuré sur 40 couples, l'ordre
-voulu sort 15 fois.
+`ordonnerLignes` trie par identifiant croissant : quand l'épuisée passe la
+première, le refus tombe avant qu'aucune réservation ne soit écrite. Mesuré sur
+40 couples, l'ordre voulu sort 15 fois.
 
 **Un commentaire promettait une garantie absente.** Le test à trois exemplaires
 affirmait fermer la sérialisation excessive. Un `pg_advisory_xact_lock` global
@@ -61,12 +58,10 @@ aussi**. Mesuré sur 30 essais à stock 1 puis 60 à stock 5 : zéro interblocag
 Les deux `UPDATE` du service s'enchaînent sans rien entre eux, la première ligne
 refuse le second panier avant qu'il n'atteigne la seconde, les verrous ne se
 croisent jamais. Le test de LS-50 qui rougit sans le tri emploie une
-reproduction
-locale avec `pauseMs: 300`, qui **fabrique** la fenêtre.
+reproduction locale avec `pauseMs: 300`, qui **fabrique** la fenêtre.
 
 Aucun test n'exerce donc ce tri dans le service réel. C'est écrit dans le
-fichier
-plutôt que laissé croire.
+fichier plutôt que laissé croire.
 
 ## Une exactitude que j'ignorais
 
@@ -101,6 +96,22 @@ verrait une page d'erreur là où le stock était disponible pour l'un des deux.
 | LS-115 | Terminé |
 | LS-116 | **Terminé**, fusionné sur `main` |
 | LS-117 | Débloquée, transaction unique |
+
+## L'arbitrage de clôture
+
+Deux critères sur neuf restaient partiels à la fin de l'implémentation, et les
+deux dépendent structurellement de LS-117 : la commande orpheline, non prouvable
+tant que la création de commande vit hors de la transaction, et le tri
+anti-interblocage, qu'aucun test n'exerce dans le service réel.
+
+**Christophe a tranché la clôture**, plutôt que de garder le ticket ouvert pour
+du travail qui appartient à une autre story. Un ticket qui annonce du travail
+restant alors que le jalon est tenu serait trompeur.
+
+Les deux reprises sont déposées en commentaire sur LS-117, avec les deux dettes
+de LS-115, l'expiration de la charge signée et l'appel à `effacerSaisie`. Elles
+sont aussi écrites dans le fichier de test, à l'endroit exact où elles
+s'appliquent : un journal ne se relit pas au moment de coder.
 
 ## Prochaine étape
 
