@@ -109,6 +109,24 @@ Le point de retrait est copié avec son libellé et son adresse, pas seulement s
 identifiant. Un point qui ferme rendrait autrement illisible une commande passée,
 même raison que les libellés figés des lignes.
 
+**Trois obligations d'information encadrent cette étape**, établies aux sources
+par LS-86 le 25 août 2026 et détaillées dans `.claude/rules/legal.md`. L'article
+qui les porte est **L221-14 et non L221-5**, contrairement à ce que la
+description de LS-86 supposait.
+
+| Obligation | Où elle s'applique |
+|---|---|
+| rappeler caractéristiques essentielles et prix, L221-14 al. 1 | récapitulatif, étape 3b |
+| mention « commande avec obligation de paiement » **sur le bouton**, al. 2 | validation, entre 3b et 4 |
+| restrictions de livraison au plus tard **au début** du processus, al. 3 | entrée du tunnel, avant l'étape 3b |
+
+**L'adresse rappelée au récapitulatif n'est imposée par aucun texte**, ni
+L221-14, ni L221-5, ni L111-1. Elle est affichée par décision d'ergonomie du
+25 août 2026 : celle du client à domicile, celle du **point de retrait** plus le
+nom du destinataire en relais, l'adresse personnelle n'ayant aucun usage quand le
+colis part au commerce partenaire. Ne pas transformer cette décision en
+obligation légale.
+
 L'étape 7 est transactionnelle également, et idempotente par contrainte d'unicité
 sur l'identifiant d'événement.
 

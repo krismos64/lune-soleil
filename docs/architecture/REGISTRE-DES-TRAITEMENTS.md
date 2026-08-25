@@ -274,6 +274,36 @@ personne physique identifiée. Elle est rattachée à T9, avec les autres traces
 d'action d'administration. C'est le premier défaut que ce contrôle a attrapé, et
 il visait une justification écrite de bonne foi.
 
+## Données personnelles hors base, les cookies signés
+
+**Le contrôle automatique ne voit pas cette section, et c'est structurel** : il
+confronte le registre au schéma Prisma, or un cookie n'est pas une table. Elle se
+relit donc à la main, à chaque story qui ajoute un cookie portant autre chose
+qu'un identifiant technique.
+
+| Cookie | Ce qu'il porte | Durée | Story |
+|---|---|---|---|
+| `ls_panier` | identifiants de variante et quantités, **aucune donnée personnelle** | 30 jours | LS-114 |
+| `ls_tunnel` | **nom, adresse postale, téléphone**, mode de livraison, point de retrait | 2 heures | LS-115 |
+
+`ls_tunnel` relève de **T2, gestion des commandes**, dont il est l'antichambre :
+la saisie y vit tant que la commande n'est pas écrite, ADR-024 réservant
+l'écriture à la transaction unique.
+
+**Sa durée est courte pour cette raison précise.** Le panier vit trente jours
+parce qu'il ne porte que des identifiants de variante ; deux heures suffisent à
+remplir quatre étapes, et la minimisation interdit de conserver un nom et une
+adresse au-delà de l'usage qui les justifie.
+
+**Deux limites connues, à lever en LS-117.** La charge signée ne porte aucune
+expiration : le `maxAge` est appliqué par le navigateur seul, donc un cookie
+capté reste accepté indéfiniment côté serveur. Et `effacerSaisie` existe sans
+être appelée nulle part, faute d'un moment où la commande soit écrite.
+
+Les deux cookies sont `httpOnly`, `sameSite: "lax"`, `secure` hors
+développement, et signés par HMAC dérivé de `BETTER_AUTH_SECRET` avec une
+étiquette distincte par usage.
+
 ## Mesures de sécurité
 
 Description générale au sens de l'article 30 paragraphe 1 point g.
