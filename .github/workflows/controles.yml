@@ -371,6 +371,18 @@ jobs:
         run: npm run format:check
 
       # ----------------------------------------------------------------------
+      # Controle 3bis, aucun test desactive. Place AVANT les suites : un test
+      # ignore les ferait passer au vert sans rien exercer, et echouer ici coute
+      # deux secondes au lieu de laisser croire a une suite complete.
+      #
+      # Mesure le 25 aout 2026 : un `it.skip` pose sur le test phare passait la
+      # CI avec un code de sortie 0, la sortie annoncant « 6 passed | 1 skipped ».
+      # Le jalon technique majeur du projet se neutralisait en sept caracteres.
+      # ----------------------------------------------------------------------
+      - name: 3bis. Aucun test ignore ni focalise
+        run: ./scripts/verifier-tests-non-ignores.sh
+
+      # ----------------------------------------------------------------------
       # Controle 4, tests unitaires. Sans base, rapides, ils cadrent les erreurs
       # de manipulation d'URL de connexion.
       # ----------------------------------------------------------------------
