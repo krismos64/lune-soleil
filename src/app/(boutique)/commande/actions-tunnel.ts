@@ -7,8 +7,9 @@
  * fiable, la valide avec Zod, ecrit le cookie signe, delegue le reste. Aucun
  * montant n'y est calcule : `services/tunnel.ts` porte le cas d'usage.
  *
- * AUCUNE ECRITURE EN BASE. Rien n'est commande ni reserve a ce stade, ADR-024
- * reservant la transaction unique a LS-117.
+ * UNE SEULE ECRITURE EN BASE, `passerCommandeAction`, ajoutee par LS-117. Les
+ * etapes 1 a 3b n'ecrivent toujours rien : elles remplissent le cookie signe, et
+ * ADR-024 reserve toute ecriture a la transaction unique de l'etape 4.
  *
  * AUCUNE GARDE D'AUTORISATION, ET C'EST CORRECT. Le tunnel est ouvert aux
  * visiteurs sans compte, LS-56, et ne touche aucune ressource appartenant a
@@ -32,6 +33,8 @@ import {
   encoderSaisieTunnel,
   type SaisieTunnel,
 } from "@/lib/tunnel-cookie";
+import { NOM_COOKIE_PANIER, decoderPanier } from "@/lib/panier-cookie";
+import { CommandeRefuseeError, passerCommande } from "@/services/commande";
 
 /** Ce que l'interface recoit, jamais une exception. */
 export type ResultatTunnel =
@@ -197,6 +200,83 @@ export async function enregistrerLivraison(
   revalidatePath("/commande");
 
   return { statut: "OK", etapeSuivante: "recapitulatif" };
+}
+
+/** Ce que l'ecran recoit apres une tentative de commande. */
+export type ResultatCommande =
+  | { statut: "OK"; commandeId: string; numero: string }
+  /** Une piece n'est plus disponible : `varianteRefusee` designe la ligne. */
+  | { statut: "REFUSE"; varianteRefusee: string }
+  | { statut: "INVALIDE"; message: string };
+
+/**
+ * Etape 4, passation de la commande. LS-117.
+ *
+ * ADAPTATEUR ET NON COUCHE METIER : il lit les deux cookies signes, delegue a
+ * `services/commande.ts`, efface la saisie, et traduit le refus en resultat.
+ * Aucun montant ni identifiant ne vient du corps de la requete.
+ *
+ * AUCUN ARGUMENT, ET C'EST UNE GARANTIE. Tout ce dont la commande a besoin est
+ * dans les cookies signes : un parametre serait une entree non fiable de plus a
+ * valider, et la tentation d'y passer un total. Invariants 1 et 2.
+ */
+export async function passerCommandeAction(): Promise<ResultatCommande> {
+  const magasin = await cookies();
+  const lignesCookie = decoderPanier(magasin.get(NOM_COOKIE_PANIER)?.value);
+  const saisie = await lireSaisie();
+
+  /*
+   * LES DEUX MEMES GARDES QUE LA PAGE, revalidees ici. L'ecran n'affiche le
+   * bouton qu'a l'etape recapitulatif, mais une Server Action est un point
+   * d'entree HTTP appelable directement : une garde qui ne vit que dans le
+   * composant ne garde rien, motif rencontre en LS-113.
+   */
+  if (lignesCookie.length === 0) {
+    return { statut: "INVALIDE", message: "Votre panier est vide." };
+  }
+
+  if (saisie.mode === null) {
+    return {
+      statut: "INVALIDE",
+      message: "Choisissez un mode de livraison avant de commander.",
+    };
+  }
+
+  try {
+    const issue = await passerCommande({
+      lignesCookie,
+      saisie: { ...saisie, mode: saisie.mode },
+    });
+
+    /*
+     * LES DEUX COOKIES SONT EFFACES APRES LE COMMIT, jamais avant. Avant, un
+     * refus de stock laisserait le client sans panier ni saisie a recommencer.
+     *
+     * LA SAISIE PORTE UN NOM, UNE ADRESSE ET UN TELEPHONE : la minimisation du
+     * RGPD interdit de les conserver au-dela de l'usage qui les justifie, et
+     * cet usage vient de s'achever, la commande portant desormais sa propre
+     * copie figee. C'est la dette de LS-115 que cette story leve.
+     */
+    await effacerSaisie();
+    magasin.delete(NOM_COOKIE_PANIER);
+
+    return {
+      statut: "OK",
+      commandeId: issue.commandeId,
+      numero: issue.numero,
+    };
+  } catch (erreur) {
+    if (erreur instanceof CommandeRefuseeError) {
+      return { statut: "REFUSE", varianteRefusee: erreur.varianteRefusee };
+    }
+
+    /*
+     * TOUTE AUTRE ERREUR REMONTE. Une panne de base ou un interblocage
+     * persistant ne sont pas des refus metier : les traduire en message
+     * tranquille ferait croire la piece vendue alors que le stock est intact.
+     */
+    throw erreur;
+  }
 }
 
 /**
