@@ -151,6 +151,99 @@ Un repli sûr allonge le délai, il ne l'avance jamais. À défaut de date de
 réception, retenir la date la plus tardive plausible pour la réception, pas la
 plus précoce.
 
+## Récapitulatif avant paiement et passation de commande
+
+Vérifié aux sources le 25 août 2026, LS-86. **L'article qui gouverne cet écran
+est L221-14, et non L221-5** comme le supposaient la description de LS-86 et la
+table des écarts de `PROTOTYPE.md`.
+
+L221-5 porte l'information précontractuelle générale, due avant que le
+consommateur soit lié. L221-14 porte ce qui se rappelle **au moment de la
+commande par voie électronique**, et son alinéa 1 énumère limitativement quatre
+informations.
+
+| Information à rappeler avant la commande | Source |
+|---|---|
+| caractéristiques essentielles des biens | L221-14 al. 1, par renvoi à L221-5 |
+| leur prix | L221-14 al. 1 |
+| la durée du contrat | L221-14 al. 1 |
+| durée minimale des obligations, s'il y a lieu | L221-14 al. 1 |
+
+Les deux dernières lignes ne concernent pas ce site : la vente d'un bijou est un
+contrat à exécution instantanée, sans durée ni engagement de durée. Elles
+restent dans la table parce qu'un abonnement ou une précommande les rendrait
+applicables.
+
+### L'adresse de livraison n'est imposée par aucun texte
+
+**Aucun des articles lus ne l'exige au récapitulatif** : ni L221-14, ni L221-5,
+ni L111-1. Ne jamais écrire l'inverse dans un document, un ticket ou un
+commentaire de code.
+
+Le site l'affiche quand même, pour les trois modes, **par décision d'ergonomie
+et non par obligation**, arbitrage de Christophe du 25 août 2026 : une adresse
+rappelée avant paiement évite les erreurs de saisie et les colis non distribués.
+
+Un affichage volontaire ne se justifie pas par une obligation inventée. La
+distinction compte : une obligation légale ne se retire jamais sans nouvelle
+vérification, une décision d'ergonomie se rediscute librement.
+
+**Ce qui est rappelé dépend du mode**, ADR-025 :
+
+| Mode | Adresse affichée au récapitulatif |
+|---|---|
+| `DOMICILE` | l'adresse de livraison saisie par le client |
+| `POINT_RELAIS`, `LOCKER` | **le nom et l'adresse du point de retrait**, plus le nom du destinataire |
+
+En Point Relais, l'adresse personnelle du client n'a aucun usage : le colis part
+au commerce partenaire. En afficher une qui ne servira pas induit en erreur. Le
+nom du destinataire est rappelé parce que c'est l'identité que le client devra
+présenter au retrait.
+
+### Le bouton porte une mention imposée
+
+L221-14 alinéa 2 : la fonction utilisée pour valider la commande comporte la
+mention claire et lisible **« commande avec obligation de paiement »**, ou une
+formule analogue dénuée de toute ambiguïté indiquant que passer commande oblige
+à payer.
+
+C'est une obligation portant sur le **libellé du bouton lui-même**, pas sur un
+texte voisin. « Payer », « Valider » ou « Confirmer ma commande » seuls ne
+satisfont pas cette exigence : aucun ne dit l'obligation de paiement.
+
+### Les restrictions de livraison s'annoncent au début du tunnel
+
+L221-14 alinéa 3 : les moyens de paiement acceptés et les éventuelles
+restrictions de livraison s'indiquent **au plus tard au début du processus de
+commande**, pas au récapitulatif.
+
+La zone desservie d'ADR-025, France métropolitaine Corse comprise, est une
+restriction de livraison au sens de cet alinéa. Elle est due à l'entrée du
+tunnel, et l'y placer seulement à l'étape du mode serait tardif.
+
+### La sanction vise nommément cet article
+
+L242-10 rend tout manquement aux obligations d'information de L221-5, L221-6,
+L221-8 et L221-11 à L221-14 passible d'une amende administrative jusqu'à
+**15 000 € pour une personne physique et 75 000 € pour une personne morale**.
+
+Ces montants sont ceux de la version **en vigueur depuis le 28 mai 2022**,
+ordonnance n° 2021-1734 du 22 décembre 2021. Légifrance sert encore une version
+antérieure affichant 3 000 € et 15 000 € : vérifier la mention « en vigueur du
+... au ... » avant de reprendre un montant, le même piège que la renumérotation
+de D111-17 plus bas.
+
+### La confirmation sur support durable est une obligation distincte
+
+L221-13 : le professionnel fournit la confirmation du contrat comprenant
+**toutes les informations de L221-5** sur un support durable, dans un délai
+raisonnable et au plus tard à la livraison. Le formulaire type de rétractation y
+est joint.
+
+Cette obligation vise l'email de confirmation et la facture, pas l'écran de
+récapitulatif. Ne pas confondre les deux : satisfaire L221-14 à l'écran ne
+dispense pas de L221-13 après la commande, et l'inverse est vrai aussi.
+
 ## Facturation électronique
 
 **Les factures aux clients particuliers ne relèvent pas de la facturation
