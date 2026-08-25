@@ -89,6 +89,31 @@ Montants vérifiés au rendu réel : 49,00 + 4,10 = 53,10 € en Point Relais, 4
 + 4,99 = 53,99 € à domicile, « Offerte » au-dessus de 39 €. Rendu mesuré à 320,
 390 et 1280 px, zéro débordement, zéro violation axe-core.
 
+## Deux tours de CI perdus sur une configuration à moitié corrigée
+
+Le journal ci-dessus a été écrit avant la fin de la session, et il manquait
+ceci.
+
+**Neuf tests de bout en bout ont échoué en intégration continue**, zéro en
+local, sur les trois tests qui atteignent le récapitulatif. Cause : les trois
+variables `SHIPPING_*` n'étaient pas déclarées dans le bloc `env:` du workflow.
+J'avais trouvé ce défaut en local le matin même, corrigé `.env`, et oublié la
+CI.
+
+`.env.example` était pourtant correct depuis LS-27, ce qui rendait l'oubli
+d'autant plus facile à ne pas voir : le fichier de documentation disait vrai.
+
+**Deux choses ont masqué la cause.** `reuseExistingServer: !process.env.CI` fait
+que mes essais locaux réutilisaient le `next dev` que j'avais lancé à la main,
+avec mon environnement. Et j'ai d'abord diagnostiqué une course de rendu, en
+ajoutant un `toBeEnabled()` avant le clic : la correction reste utile, un clic
+qui dépend de la vitesse de rendu finit par échouer quelque part, mais elle ne
+traitait pas la cause.
+
+**Le nom de la variable était dans les journaux d'échec depuis le premier
+tour.** Chercher les identifiants en majuscules dans une sortie de CI aurait
+donné la réponse immédiatement.
+
 ## Une dette tracée, hors périmètre
 
 La charge signée du cookie **ne porte pas d'expiration**. Le `maxAge` est
