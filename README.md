@@ -16,14 +16,18 @@ ouverte commercialement.
 
 **Deux phases avancent en parallèle**, et ce n'est pas un dérapage : la phase 3
 a commencé le 19 août 2026 avec LS-114, le panier, sans attendre la clôture de
-la phase 2 dont sept stories restent ouvertes.
+la phase 2.
 
-| Phase | Epic | État au 19 août 2026 |
+| Phase | Epic | État au 25 août 2026 |
 |---|---|---|
 | 2, catalogue, médias et stock multicanal | LS-3 | en cours, sept stories ouvertes |
-| 3, panier, réservation, paiement et commandes | LS-4 | commencée, LS-114 livrée, neuf stories ouvertes |
+| 3, panier, réservation, paiement et commandes | LS-4 | en cours, LS-114 à LS-116 livrées, sept stories ouvertes |
 
-Ce que la phase 3 attend est écrit dans son découpage : la chaîne LS-114 à
+**Le jalon qui compte est tenu depuis le 25 août 2026.** LS-116 prouve la
+réservation du dernier exemplaire par le service, sur une variante à un
+exemplaire et deux acheteurs simultanés. Le paiement reste à écrire, LS-118.
+
+Ce que la phase 3 attend est écrit dans son découpage : la chaîne LS-117 à
 LS-121 est **imposée**, chaque story dépendant de la précédente.
 
 ### Porte de sortie de la phase 1, constatée le 13 août 2026
