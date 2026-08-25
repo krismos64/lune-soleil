@@ -27,6 +27,18 @@ async function remplirCoordonnees(page: import("@playwright/test").Page) {
   await page.getByRole("button", { name: "Continuer" }).click();
 }
 
+/**
+ * Choisit le domicile a l'etape 3 et passe a la suivante.
+ *
+ * COCHER EST OBLIGATOIRE : depuis la correction du 25 aout 2026, aucun mode
+ * n'est preselectionne et le bouton reste inactif tant que rien n'est retenu.
+ * Un test qui cliquait sans cocher attendait donc un bouton desactive.
+ */
+async function choisirDomicile(page: import("@playwright/test").Page) {
+  await page.getByRole("radio", { name: "À domicile" }).check();
+  await page.getByRole("button", { name: "Continuer" }).click();
+}
+
 /** Remplit l'etape de l'adresse et passe a la suivante. */
 async function remplirAdresse(page: import("@playwright/test").Page) {
   await page.getByLabel("Adresse", { exact: true }).fill("12 rue des Ateliers");
@@ -152,7 +164,7 @@ test("le transporteur indisponible laisse commander a domicile", async ({
     0,
   );
 
-  await page.getByRole("button", { name: "Continuer" }).click();
+  await choisirDomicile(page);
 
   await expect(
     page.getByRole("heading", { name: "Vérifier votre commande" }),
@@ -165,7 +177,7 @@ test("le recapitulatif porte le montant et la mention imposee", async ({
   await page.goto("/commande");
   await remplirCoordonnees(page);
   await remplirAdresse(page);
-  await page.getByRole("button", { name: "Continuer" }).click();
+  await choisirDomicile(page);
 
   await expect(
     page.getByRole("heading", { name: "Vérifier votre commande" }),
@@ -212,6 +224,63 @@ test("le recapitulatif n'est pas atteignable sur une saisie vide", async ({
   ).toHaveCount(0);
 });
 
+test("le recapitulatif exige un mode de livraison choisi", async ({ page }) => {
+  /*
+   * DEFAUT CORRIGE LE 25 AOUT 2026, releve par `ls-critical-reviewer`. La garde
+   * de progression ne testait que les etapes 1 et 2 : en sautant l'etape 3, le
+   * recapitulatif affichait « À domicile » avec ses frais de port et le bouton
+   * legal, alors que personne n'avait choisi ce mode. Sur un panier sous la
+   * franchise cela facturait 4,99 EUR au lieu de 4,10 EUR, et LS-117 aurait
+   * ecrit une commande DOMICILE non voulue que le CHECK ne peut pas attraper.
+   */
+  await page.goto("/commande");
+  await remplirCoordonnees(page);
+  await remplirAdresse(page);
+
+  /*
+   * L'ETAPE 3 EST ATTEINTE MAIS AUCUN MODE N'EST COCHE. On attend d'y etre
+   * avant de sauter au recapitulatif : sans cela le `goto` peut partir pendant
+   * que la Server Action de l'adresse ecrit encore son cookie, et la page
+   * repondrait alors sur une saisie incomplete.
+   */
+  await expect(
+    page.getByRole("heading", { name: "Votre mode de livraison" }),
+  ).toBeVisible();
+
+  await page.goto("/commande?etape=recapitulatif");
+
+  /* La garde ramene a l'etape 3, le mode n'ayant jamais ete retenu. */
+  await expect(
+    page.getByRole("heading", { name: "Votre mode de livraison" }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("button", { name: "Commander avec obligation de paiement" }),
+  ).toHaveCount(0);
+});
+
+test("aucun mode n'est preselectionne a l'etape de livraison", async ({
+  page,
+}) => {
+  await page.goto("/commande");
+  await remplirCoordonnees(page);
+  await remplirAdresse(page);
+
+  /*
+   * AUCUN MODE PAR DEFAUT : le bouton reste inactif tant que rien n'est coche.
+   * Preselectionner ferait choisir a la place du visiteur, ce qui est
+   * exactement le defaut que le mode nullable ferme.
+   */
+  await expect(
+    page.getByRole("radio", { name: "À domicile" }),
+  ).not.toBeChecked();
+  await expect(page.getByRole("button", { name: "Continuer" })).toBeDisabled();
+
+  await page.getByRole("radio", { name: "À domicile" }).check();
+
+  await expect(page.getByRole("button", { name: "Continuer" })).toBeEnabled();
+});
+
 test("une etape franchie se rouvre depuis le fil", async ({ page }) => {
   /*
    * Sans ce lien, corriger une faute d'adresse depuis le recapitulatif imposait
@@ -250,7 +319,7 @@ test("le tunnel ne deborde pas horizontalement", async ({ page }) => {
     TOLERANCE_DEBORDEMENT_PX,
   );
 
-  await page.getByRole("button", { name: "Continuer" }).click();
+  await choisirDomicile(page);
 
   expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
     TOLERANCE_DEBORDEMENT_PX,
@@ -263,7 +332,23 @@ test("le tunnel ne porte aucune violation d'accessibilite serieuse", async ({
   await page.goto("/commande");
   await remplirCoordonnees(page);
   await remplirAdresse(page);
-  await page.getByRole("button", { name: "Continuer" }).click();
+  await choisirDomicile(page);
+
+  /*
+   * ATTENDRE LE TITRE DE L'ETAPE AVANT D'ANALYSER, et ce n'est pas une
+   * complaisance envers le test.
+   *
+   * Mesure le 25 aout 2026 : pendant une navigation client de Next.js, le
+   * `<title>` du document est momentanement VIDE avant d'etre repose. Analyser
+   * dans cette fenetre faisait remonter `document-title` trois fois sur cinq,
+   * et le test s'arretait en realite a l'etape `livraison`, pas au
+   * recapitulatif. Attendre le titre place l'analyse la ou un visiteur se
+   * trouve reellement, une fois la page etablie.
+   */
+  await expect(
+    page.getByRole("heading", { name: "Vérifier votre commande" }),
+  ).toBeVisible();
+  await expect(page).toHaveTitle(/Votre commande/);
 
   const resultat = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])

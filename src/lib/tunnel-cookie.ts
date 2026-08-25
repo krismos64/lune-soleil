@@ -60,7 +60,21 @@ export type SaisieTunnel = {
   /** Facultatif, arbitrage du 25 aout 2026 : `Commande.telephone` est nullable. */
   telephone: string | null;
   adresse: AdresseTunnel;
-  mode: ModeLivraison;
+  /**
+   * `null` tant que l'etape 3 n'a pas eu lieu.
+   *
+   * L'ABSENCE DE CHOIX EST UN ETAT REPRESENTABLE, et ce n'est pas un detail de
+   * style. La premiere version posait `DOMICILE` par defaut : le recapitulatif
+   * affichait alors un mode que personne n'avait retenu, avec ses frais de
+   * port, et LS-117 aurait ecrit une commande `DOMICILE` non choisie que le
+   * `CHECK` ne peut pas attraper, un domicile sans point de retrait etant
+   * parfaitement valide. Releve par `ls-critical-reviewer` le 25 aout 2026.
+   *
+   * C'est aussi la parade au motif « champ d'etat ajoute sans etre porte
+   * partout », rencontre quatre fois sur ce projet : confondre « non choisi »
+   * avec une valeur legitime rend le trou invisible a tous les controles.
+   */
+  mode: ModeLivraison | null;
   /** Copie complete du point, jamais son seul identifiant. */
   pointRetrait: PointRetrait | null;
 };
@@ -253,7 +267,7 @@ export function decoderSaisieTunnel(
     typeof candidat.email !== "string" ||
     !(candidat.telephone === null || typeof candidat.telephone === "string") ||
     !adresseComplete(candidat.adresse) ||
-    !modeConnu(candidat.mode)
+    !(candidat.mode === null || modeConnu(candidat.mode))
   ) {
     return null;
   }
@@ -275,9 +289,16 @@ export function decoderSaisieTunnel(
    * la refuser des la lecture evite qu'une saisie incoherente traverse trois
    * ecrans avant d'echouer sur une contrainte de base.
    */
-  const attendu = exigePointRetrait(candidat.mode);
-
-  if (attendu !== (pointRetrait !== null)) {
+  /*
+   * L'EQUIVALENCE NE VAUT QUE SUR UN MODE CHOISI. Sans mode, il n'y a rien a
+   * mettre en correspondance : la seule regle est qu'aucun point de retrait ne
+   * peut avoir ete choisi avant le mode qui l'exige.
+   */
+  if (candidat.mode === null) {
+    if (pointRetrait !== null) {
+      return null;
+    }
+  } else if (exigePointRetrait(candidat.mode) !== (pointRetrait !== null)) {
     return null;
   }
 

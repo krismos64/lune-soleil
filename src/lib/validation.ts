@@ -206,7 +206,23 @@ const champAdresse = (maximum: number) =>
      * LS-115 les fait entrer dans une page publique. Releve par
      * `ls-frontend-revue` le 25 aout 2026.
      */
-    .max(maximum, `Ce champ ne peut pas dépasser ${maximum} caractères.`);
+    .max(maximum, `Ce champ ne peut pas dépasser ${maximum} caractères.`)
+    /*
+     * `trim()` NE SUFFIT PAS : il retire les espaces ASCII et quelques Unicode,
+     * mais pas U+200B (espace sans chasse) ni U+FEFF. Mesure le 25 aout 2026,
+     * un nomClient valant "\u200B" franchissait l'etape 1 et la garde de
+     * progression, pour produire en LS-117 une etiquette de colis sans
+     * destinataire lisible, que le transporteur refuse. Releve par
+     * `ls-critical-reviewer`.
+     *
+     * LE TEST PORTE SUR LA PRESENCE D'UNE LETTRE OU D'UN CHIFFRE, plutot que
+     * sur une liste d'espaces a exclure : enumerer les caracteres invisibles
+     * revient toujours a en oublier un.
+     */
+    .refine(
+      (valeur) => /[\p{L}\p{N}]/u.test(valeur),
+      "Ce champ doit comporter au moins une lettre ou un chiffre.",
+    );
 
 /**
  * Adresse postale, France metropolitaine.

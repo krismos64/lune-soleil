@@ -18,6 +18,7 @@
  */
 import { calculerFraisPort, lireConfigurationLivraison } from "@/lib/livraison";
 import type { SaisieTunnel } from "@/lib/tunnel-cookie";
+import type { ModeLivraison } from "@/generated/prisma/enums";
 import { revalider } from "@/services/panier";
 import type { LignePanierRevalidee } from "@/services/panier";
 import type { LignePanierCookie } from "@/lib/panier-cookie";
@@ -48,7 +49,8 @@ export type Recapitulatif = {
   email: string;
   telephone: string | null;
   adresseRappelee: AdresseRappelee;
-  mode: SaisieTunnel["mode"];
+  /** Jamais `null` ici : un recapitulatif suppose un mode choisi. */
+  mode: ModeLivraison;
   totalArticlesCentimes: number;
   fraisPortCentimes: number;
   totalCentimes: number;
@@ -79,7 +81,13 @@ export async function construireRecapitulatif({
   configuration = lireConfigurationLivraison(),
 }: {
   lignesCookie: LignePanierCookie[];
-  saisie: SaisieTunnel;
+  /*
+   * LE MODE EST EXIGE PAR LE TYPE, et c'est ce qui rend impossible de
+   * construire un recapitulatif sur un mode non choisi. La verification vit
+   * dans la garde de progression de la page ; le type garantit qu'aucun
+   * appelant ne la contourne par oubli.
+   */
+  saisie: SaisieTunnel & { mode: ModeLivraison };
   totalPresenteCentimes?: number;
   configuration?: ReturnType<typeof lireConfigurationLivraison>;
 }): Promise<Recapitulatif> {

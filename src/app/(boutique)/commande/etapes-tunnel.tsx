@@ -21,6 +21,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import type { SaisieTunnel } from "@/lib/tunnel-cookie";
+import type { ModeLivraison } from "@/generated/prisma/enums";
 import type { Recapitulatif } from "@/services/tunnel";
 import type { MotifIndisponible } from "@/services/panier";
 import type { ResultatPointsRetrait } from "@/integrations/mondial-relay";
@@ -50,7 +51,7 @@ const TITRES: Record<Etape, string> = {
 };
 
 /** Libelle de chaque mode, avec ce qu'il implique pour le visiteur. */
-const LIBELLES_MODE: Record<SaisieTunnel["mode"], string> = {
+const LIBELLES_MODE: Record<ModeLivraison, string> = {
   POINT_RELAIS: "Point Relais",
   LOCKER: "Locker",
   DOMICILE: "À domicile",
@@ -126,7 +127,7 @@ export function EtapesTunnel({
 }: {
   etape: Etape;
   saisie: SaisieTunnel;
-  recapitulatif: Recapitulatif;
+  recapitulatif: Recapitulatif | null;
   pointsRetrait: ResultatPointsRetrait | null;
 }) {
   const router = useRouter();
@@ -390,7 +391,7 @@ export function EtapesTunnel({
         />
       )}
 
-      {etape === "recapitulatif" && (
+      {etape === "recapitulatif" && recapitulatif !== null && (
         <Recapitulatif recapitulatif={recapitulatif} />
       )}
     </>
@@ -414,11 +415,11 @@ function ChoixLivraison({
   pointsRetrait: ResultatPointsRetrait | null;
   enCours: boolean;
   onValider: (choix: {
-    mode: SaisieTunnel["mode"];
+    mode: ModeLivraison;
     pointRetrait: SaisieTunnel["pointRetrait"];
   }) => void;
 }) {
-  const [mode, setMode] = useState<SaisieTunnel["mode"]>(saisie.mode);
+  const [mode, setMode] = useState<ModeLivraison | null>(saisie.mode);
   const [pointChoisi, setPointChoisi] = useState(saisie.pointRetrait);
 
   const indisponible = pointsRetrait !== null && !pointsRetrait.disponible;
@@ -433,6 +434,17 @@ function ChoixLivraison({
       className={styles.formulaire}
       onSubmit={(evenement) => {
         evenement.preventDefault();
+
+        /*
+         * AUCUN MODE PAR DEFAUT N'EST ENVOYE. Tant que rien n'est coche, la
+         * soumission ne fait rien : poser `DOMICILE` en repli ferait choisir a
+         * la place du visiteur, ce qui est precisement le defaut que le mode
+         * nullable ferme.
+         */
+        if (mode === null) {
+          return;
+        }
+
         onValider({
           mode,
           /*
@@ -497,7 +509,11 @@ function ChoixLivraison({
         </fieldset>
       )}
 
-      <button type="submit" disabled={enCours} className={styles.suivant}>
+      <button
+        type="submit"
+        disabled={enCours || mode === null}
+        className={styles.suivant}
+      >
         {enCours ? "Enregistrement…" : "Continuer"}
       </button>
     </form>
