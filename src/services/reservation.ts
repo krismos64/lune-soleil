@@ -41,7 +41,7 @@ export const DUREE_RESERVATION_MINUTES = 30;
  * qui se resout des que l'autre valide ; au-dela, l'echec est structurel et
  * doit remonter pour etre vu.
  */
-const TENTATIVES_MAXIMUM = 3;
+export const TENTATIVES_MAXIMUM = 3;
 
 /** Une ligne de panier : quelle variante, en quelle quantite. */
 export type LignePanier = {
@@ -135,6 +135,11 @@ export function ordonnerLignes(
 /**
  * Vrai si l'erreur est un interblocage detecte par PostgreSQL.
  *
+ * EXPORTEE POUR `services/commande.ts`, LS-117, qui porte le rejeu du chemin de
+ * production. La recopier la-bas creerait deux definitions d'un meme fait dont
+ * l'une pourrait manquer une des trois formes, ce qui est precisement le defaut
+ * mesure en LS-71.
+ *
  * TROIS FORMES POUR LE MEME EVENEMENT, selon le chemin d'acces. Mesure sur ce
  * depot, PostgreSQL 18 et Prisma 7.9, contre une transaction adverse reelle :
  *
@@ -153,7 +158,7 @@ export function ordonnerLignes(
  *
  * L'inspection descend donc dans la cause au lieu de se fier au code de surface.
  */
-function estInterblocage(erreur: unknown): boolean {
+export function estInterblocage(erreur: unknown): boolean {
   const cible = erreur as {
     code?: string;
     meta?: { driverAdapterError?: { cause?: { code?: string } } };

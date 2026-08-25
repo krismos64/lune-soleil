@@ -209,6 +209,18 @@ describe("le dernier exemplaire, deux acheteurs simultanes", () => {
      * sera jamais payee, pendant que le webhook du gagnant ne trouverait rien
      * a convertir.
      */
+    /*
+     * EXACTEMENT UNE SERVIE, verifie avant d'en deduire la gagnante. Sans cette
+     * assertion, `issueB` n'etait jamais lue et un double SERVI passait : la
+     * deduction ci-dessous aurait alors nomme `commandeA` sans que rien ne
+     * signale que les deux acheteurs avaient obtenu la piece. Le stock, lui, est
+     * rattrape par le CHECK, mais l'issue rendue au client ne l'etait pas.
+     */
+    const servies = [issueA, issueB].filter(
+      (issue) => issue.statut === "SERVI",
+    );
+    expect(servies).toHaveLength(1);
+
     const gagnante = issueA.statut === "SERVI" ? commandeA : commandeB;
 
     expect(etat.commandes).toEqual([gagnante]);

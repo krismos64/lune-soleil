@@ -32,17 +32,29 @@ export type TypeDocument = "COMMANDE" | "FACTURE" | "AVOIR";
 export async function reserverNumero(
   client: ClientBase,
   type: TypeDocument,
-  annee: number,
-): Promise<number> {
-  const lignes = await client.$queryRaw<{ dernier: number }[]>`
+): Promise<{ annee: number; rang: number }> {
+  /*
+   * L'ANNEE VIENT DE POSTGRESQL, jamais de Node, regle de `database.md` :
+   * « `now()` est l'horloge de PostgreSQL, jamais celle de Node. Deux
+   * conteneurs dont les horloges derivent compareraient des instants
+   * incomparables. »
+   *
+   * LE CAS CONCRET EST LE PASSAGE D'ANNEE. Deux conteneurs decales de quelques
+   * centaines de millisecondes le 31 decembre a 23:59:59 ecriraient l'un
+   * `C-2027-0001`, l'autre `C-2026-0043` : deux lignes de compteur coexistent
+   * et une commande de janvier porte un numero de l'annee revolue, ce qui casse
+   * la lecture sequentielle par annee qu'ADR-031 pose comme raison d'etre.
+   * Releve par `ls-critical-reviewer` le 25 aout 2026.
+   */
+  const lignes = await client.$queryRaw<{ annee: number; dernier: number }[]>`
     INSERT INTO compteur_numero (type, annee, dernier)
-    VALUES (${type}, ${annee}, 1)
+    VALUES (${type}, EXTRACT(YEAR FROM now())::int, 1)
     ON CONFLICT (type, annee)
       DO UPDATE SET dernier = compteur_numero.dernier + 1
-    RETURNING dernier
+    RETURNING annee, dernier
   `;
 
-  const rang = lignes[0]?.dernier;
+  const ligne = lignes[0];
 
   /*
    * L'INSTRUCTION REND TOUJOURS UNE LIGNE, l'`INSERT ... ON CONFLICT DO UPDATE`
@@ -50,13 +62,11 @@ export async function reserverNumero(
    * pas un cas metier : le refus explicite vaut mieux qu'un `!` qui ferait
    * surgir l'erreur plus loin, sur un numero `undefined` ecrit en base.
    */
-  if (rang === undefined) {
-    throw new Error(
-      `Aucun numero rendu par le compteur ${type} de l'annee ${annee}.`,
-    );
+  if (ligne === undefined) {
+    throw new Error(`Aucun numero rendu par le compteur ${type}.`);
   }
 
-  return rang;
+  return { annee: ligne.annee, rang: ligne.dernier };
 }
 
 /**
@@ -76,15 +86,36 @@ export type DonneesFigees = {
 };
 
 /**
- * Lit les donnees a figer pour un ensemble de variantes.
+ * Lit les donnees a figer pour un ensemble de variantes, EN LES VERROUILLANT.
  *
  * AUCUN FILTRE DE VENDABILITE ICI. C'est l'`UPDATE` conditionnel de la
  * reservation qui decide si la piece est disponible, ADR-006 : dupliquer la
  * regle ici en ferait deux, dont l'une pourrait diverger.
+ *
+ * `FOR UPDATE OF v` EST INDISPENSABLE, et son absence etait un defaut releve
+ * par `ls-critical-reviewer` le 25 aout 2026. En `READ COMMITTED`, une lecture
+ * nue voit la version validee a l'instant du `SELECT` ; l'`UPDATE` de
+ * reservation, lui, voit la version la plus recente. Une revision de prix
+ * validee entre les deux instants faisait figer l'ANCIEN prix sur une commande
+ * ecrite APRES la revision : 4900 sur la commande quand le catalogue affichait
+ * deja 5900.
+ *
+ * Le verrou ferme cette fenetre : la ligne ne peut plus changer entre la
+ * lecture et la reservation.
+ *
+ * `OF v` RESTREINT LE VERROU A `variante`, sans quoi `produit` serait verrouille
+ * aussi : deux commandes portant deux variantes d'un MEME produit se
+ * serialiseraient sans raison, et une modification de fiche produit attendrait
+ * la fin d'une commande.
+ *
+ * L'ORDRE DE PRISE RESTE CELUI DU SERVICE, qui passe les identifiants deja
+ * tries : `ORDER BY` ici ne garantirait rien, PostgreSQL verrouillant dans
+ * l'ordre de son plan d'execution. C'est pourquoi cette fonction ne trie pas
+ * elle-meme, elle exige un appelant qui l'a fait.
  */
 export async function lireDonneesAFiger(
   client: ClientBase,
-  varianteIds: readonly string[],
+  varianteIdsTries: readonly string[],
 ): Promise<DonneesFigees[]> {
   return client.$queryRaw<DonneesFigees[]>`
     SELECT v.id            AS "varianteId",
@@ -94,7 +125,8 @@ export async function lireDonneesAFiger(
            v.prix_centimes AS "prixCentimes"
       FROM variante v
       JOIN produit p ON p.id = v.produit_id
-     WHERE v.id IN (${Prisma.join([...varianteIds])})
+     WHERE v.id IN (${Prisma.join([...varianteIdsTries])})
+       FOR UPDATE OF v
   `;
 }
 
