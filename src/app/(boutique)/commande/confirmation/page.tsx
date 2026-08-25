@@ -17,6 +17,7 @@
 import Link from "next/link";
 
 import styles from "../commande.module.css";
+import { FocusTitre } from "./focus-titre";
 
 export const metadata = {
   title: "Commande enregistrée, Lune & Soleil",
@@ -35,7 +36,20 @@ export default async function ConfirmationPage({
   const numero = Array.isArray(brut) ? brut[0] : brut;
 
   return (
-    <main className={styles.page}>
+    /*
+     * `id="contenu"` ET `tabIndex={-1}`, comme les sept autres pages de la
+     * boutique. L'en-tete partage rend « Aller au contenu » sur CETTE page
+     * aussi, le lien venant du layout du groupe : sans l'ancre, il pointe dans
+     * le vide, la page ne defile pas et le focus ne bouge pas.
+     *
+     * `tabIndex={-1}` est indispensable en plus de l'ancre : sans lui, la page
+     * defilerait mais le focus retomberait sur `body` sans qu'aucune erreur ne
+     * soit levee, et `axe-core` ne le verrait pas. Fiche « cible du lien
+     * d'evitement ».
+     */
+    <main id="contenu" tabIndex={-1} className={styles.page}>
+      <FocusTitre cible="contenu" />
+
       <h1 className={styles.titre}>Votre commande est enregistrée</h1>
 
       {numero !== undefined && numero !== "" && (

@@ -33,6 +33,17 @@ Le numéro est attribué **dans la transaction** qui crée le document, jamais
 réservé à l'avance, règle F4. La lettre identifie le type au premier regard, ce
 qui compte quand un client dicte son numéro au téléphone.
 
+**Le mécanisme est une table compteur**, `CompteurNumero`, ADR-031 et LS-117 :
+une ligne par type et par année, incrémentée par `INSERT ... ON CONFLICT DO
+UPDATE ... RETURNING`. Le verrou de ligne fait que la transaction annulée rend
+son numéro, donc aucun trou. Une `SEQUENCE` PostgreSQL, non transactionnelle, en
+créerait un à chaque refus de stock, cas fréquent sur un catalogue de pièces
+uniques. L'année vient de `now()`, jamais de l'horloge Node, règle C27.
+
+La remise à zéro annuelle est implicite, une nouvelle année créant sa ligne au
+premier document : aucun amorçage manuel du 1er janvier, dont l'oubli bloquerait
+toute vente.
+
 **Montants.** Entiers en centimes, invariant 1. Aucun type flottant n'apparaît
 dans le schéma.
 
