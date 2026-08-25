@@ -654,6 +654,17 @@ qui arrive en second, et sans dépendre de l'ordre des écritures dans la
 transaction. C'est la traduction du principe directeur : sous concurrence, une
 vérification applicative arrive toujours trop tard.
 
+**Ces quatre clés protègent les données, pas l'argent**, et cette limite est
+traitée par **ADR-032**, LS-43. Si deux sessions de paiement sont réellement
+payées, le prestataire a encaissé deux fois : `paiement_reussi_unique` refuse la
+seconde écriture et ne rembourse personne.
+
+La réponse tient en trois volets. **Prévention**, expirer la session ouverte
+avant d'en créer une nouvelle, avec `expires_at` à 30 minutes, la durée de la
+réservation. **Détection**, le refus d'unicité produit une `AlerteCritique` de
+gravité `CRITIQUE` et non un rejet silencieux. **Traitement**, remboursement
+manuel par l'exploitante, jamais automatique.
+
 **La clé du mouvement de stock porte la variante, pas seulement la commande.**
 Un panier à deux articles décrémente deux variantes distinctes, donc produit deux
 mouvements. Une unicité sur la seule commande rejetterait le second et rendrait

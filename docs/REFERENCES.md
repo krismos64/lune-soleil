@@ -125,6 +125,7 @@ documentation technique, ticket ou règle qui le contredirait.
 | ADR-029 | Référence de variante modifiable, avertissement à l'écran | variante, référence, avis, statistiques par référence |
 | ADR-030 | Un mouvement de stock ne se compense qu'une fois | stock, mouvement, compensation, correction, inventaire |
 | ADR-031 | Le numéro de commande vient d'une table compteur, sans trou | numéro, numérotation, commande, facture, avoir, séquence |
+| ADR-032 | Un double encaissement est alerté et remboursé à la main | double paiement, deux sessions, remboursement, expiration de session, idempotence Stripe |
 
 Cette table se met à jour à chaque ADR créé. Un ADR absent d'ici reste
 opposable : la table est un raccourci, `docs/adr/` fait foi.

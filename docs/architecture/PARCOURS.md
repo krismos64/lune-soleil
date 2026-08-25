@@ -193,6 +193,22 @@ Tâche : libération des réservations expirées toutes les cinq minutes, la
 réservation disparaît à 30 minutes et `quantiteReservee` est décrémentée. La
 commande est ensuite régularisée par la réconciliation.
 
+**Deux sessions de paiement payées pour une même commande**
+Base : le second événement est persisté, son effet métier est refusé par
+`paiement_reussi_unique`. Aucune seconde facture, aucun second mouvement de
+stock. Une `AlerteCritique` de gravité `CRITIQUE` est créée, portant
+l'identifiant du paiement en trop et son montant.
+Vue : le client voit sa commande confirmée une fois, l'état est correct de son
+point de vue. Rien ne lui annonce le doublon tant que l'exploitante n'a pas agi.
+Traitement : **remboursement manuel** par l'exploitante depuis le tableau de bord
+du prestataire, ADR-032. Aucun remboursement automatique, le chemin qui décide
+qu'un paiement est en trop étant celui qui rendrait l'argent d'une commande
+valide s'il se trompait.
+Prévention : la session ouverte précédente est expirée avant d'en créer une
+nouvelle, et `expires_at` vaut 30 minutes, la durée de la réservation. Ce cas
+d'erreur ne devrait donc presque jamais survenir, et c'est bien pour cela que sa
+survenue mérite une alerte en gravité maximale.
+
 **Paiement refusé par le prestataire**
 Base : paiement `ECHOUE`, commande reste `EN_ATTENTE_PAIEMENT`, réservation
 maintenue jusqu'à expiration.

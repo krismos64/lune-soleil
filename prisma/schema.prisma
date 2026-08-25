@@ -585,7 +585,9 @@ model Paiement {
 
   // V14 et décision D, première clé d'idempotence : au plus un paiement encaissé
   // par commande. La contrainte protège la cohérence, pas le double encaissement
-  // chez le prestataire, qui relève de LS-43.
+  // chez le prestataire : ADR-032 le traite hors du schéma, par l'expiration de
+  // la session précédente, une AlerteCritique sur le refus, et un remboursement
+  // MANUEL. Ne pas ajouter d'appel de remboursement automatique sur ce refus.
   //
   // LS-45, le prédicat porte les trois états d'encaissement et non le seul
   // REUSSI. Un remboursement ne rend pas la commande impayée : filtrer sur
