@@ -194,6 +194,7 @@ erDiagram
 | C24 | L'ordre d'affichage des catégories est choisi par l'exploitante, unique dans toute la boutique et commence à 1 | LS-49 pour le choix, LS-99 pour la garantie : contrainte `UNIQUE` **différable** vérifiée au `COMMIT`, plus un `CHECK` de positivité. Sans unicité, deux catégories de même rang s'affichent dans un ordre décidé par le plan d'exécution |
 | C25 | Le nom d'une catégorie n'est jamais vide | `CHECK`, LS-99. Le nom s'affiche dans le menu du catalogue : une chaîne vide y produirait un lien invisible mais cliquable |
 | C26 | Une catégorie portant au moins un produit ne se supprime pas | `Produit.categorieId` en `RESTRICT`, LS-13. La base refuse, le service compte avant pour que l'écran l'explique plutôt que de rendre une erreur de clé étrangère |
+| C27 | Le numéro d'un document séquentiel vient d'un compteur incrémenté dans la transaction qui crée le document, et ne décroît jamais | ADR-031, LS-117. `CHECK dernier >= 1` plus le verrou de ligne de l'`UPDATE` : une transaction annulée rend son numéro, là où une `SEQUENCE` non transactionnelle laisserait un trou à chaque refus de stock |
 
 ### Pourquoi un produit peut n'avoir aucune variante
 

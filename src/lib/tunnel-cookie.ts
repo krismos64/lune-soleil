@@ -34,6 +34,11 @@ export const NOM_COOKIE_TUNNEL = "ls_tunnel";
  *
  * Deux heures laissent largement le temps de remplir quatre etapes, y compris
  * en cherchant un point de retrait ou en changeant d'avis.
+ *
+ * ELLE EST APPLIQUEE AUX DEUX BOUTS depuis LS-117 : par le `maxAge` du cookie,
+ * que le navigateur respecte, ET par `decoderSaisieTunnel` qui compare l'`emisA`
+ * de la charge signee. Le premier seul ne promettait rien, une charge relue
+ * ailleurs n'ayant aucune date opposable.
  */
 export const DUREE_TUNNEL_SECONDES = 2 * 60 * 60;
 
@@ -169,9 +174,27 @@ function normaliser(saisie: SaisieTunnel): SaisieTunnel {
  * FORME : `<charge en base64url>.<signature en base64url>`. Le point n'appartient
  * a aucun des deux alphabets, il separe sans ambiguite.
  */
-export function encoderSaisieTunnel(saisie: SaisieTunnel): string {
+export function encoderSaisieTunnel(
+  saisie: SaisieTunnel,
+  emisA: number = Date.now(),
+): string {
+  /*
+   * `emisA` EST DANS LA CHARGE SIGNEE, et c'est le coeur de la correction de
+   * LS-117. Le `maxAge` du cookie est applique par le NAVIGATEUR seul : un
+   * cookie recopie ailleurs, dans une capture de trafic ou un journal, reste
+   * accepte indefiniment par le serveur qui n'a aucun moyen de dater ce qu'il
+   * relit. La justification RGPD ecrite plus haut promettait deux heures ;
+   * sans horodatage signe, elle ne valait que pour un navigateur cooperatif.
+   *
+   * Il n'entre PAS dans `SaisieTunnel`. L'emission appartient a l'enveloppe,
+   * pas a ce que le client a saisi : la melanger obligerait chaque appelant a
+   * porter une donnee de transport, et un appelant pourrait alors la choisir.
+   *
+   * Le parametre existe pour que les tests datent une charge sans manipuler
+   * l'horloge du processus.
+   */
   const charge = Buffer.from(
-    JSON.stringify(normaliser(saisie)),
+    JSON.stringify({ ...normaliser(saisie), emisA }),
     "utf8",
   ).toString("base64url");
 
@@ -230,6 +253,7 @@ function adresseComplete(valeur: unknown): valeur is AdresseTunnel {
  */
 export function decoderSaisieTunnel(
   valeur: string | undefined,
+  maintenant: number = Date.now(),
 ): SaisieTunnel | null {
   if (valeur === undefined || valeur === "") {
     return null;
@@ -261,6 +285,33 @@ export function decoderSaisieTunnel(
   }
 
   const candidat = brut as Record<string, unknown>;
+
+  /*
+   * EXPIRATION VERIFIEE COTE SERVEUR, LS-117. Le `maxAge` du cookie ne lie que
+   * le navigateur : une charge signee relue ailleurs serait sinon valable pour
+   * toujours, la signature ne portant aucune date.
+   *
+   * L'ABSENCE D'`emisA` EST UN REFUS, jamais une tolerance. Un cookie ecrit
+   * avant cette correction n'en porte pas : le traiter comme neuf rouvrirait
+   * exactement le trou qu'on ferme, et un attaquant n'aurait qu'a retirer le
+   * champ. Le client reprend sa saisie, deux heures de tunnel au plus.
+   *
+   * UNE EMISSION DANS LE FUTUR EST REFUSEE AUSSI. Sans cette borne, une charge
+   * datee de l'an 3000 ne se perimerait jamais. Elle ne peut venir que d'une
+   * horloge serveur reculee entre deux ecritures, cas rare mais dont la
+   * consequence, un cookie eternel, est precisement ce qui est corrige ici.
+   */
+  const emisA = candidat.emisA;
+
+  if (typeof emisA !== "number" || !Number.isFinite(emisA)) {
+    return null;
+  }
+
+  const ageMillisecondes = maintenant - emisA;
+
+  if (ageMillisecondes < 0 || ageMillisecondes > DUREE_TUNNEL_SECONDES * 1000) {
+    return null;
+  }
 
   if (
     typeof candidat.nomClient !== "string" ||

@@ -43,7 +43,7 @@ connaître avant d'écrire un service qui la recouvrirait ou la contredirait :
 | `src/lib/panier-cookie.ts` | signature HMAC du cookie de panier, LS-114 | le cookie ne porte **jamais** de prix, et la signature établit l'intégrité, jamais une autorisation |
 | `src/services/panier.ts` | revalidation du panier contre la base, étape 3 du parcours 1 | tout montant vient d'ici, jamais du cookie ni du navigateur |
 | `src/lib/livraison.ts` | tarifs et calcul serveur des frais de port, LS-115 | **source unique** des tarifs et du seuil : un montant écrit en dur dans un composant serait une information précontractuelle fausse |
-| `src/lib/tunnel-cookie.ts` | saisie du tunnel en cookie signé, LS-115 | étiquette `tunnel-v1` distincte de `panier-v1`, **aucun montant** dans la charge signée, et la charge **ne porte pas d'expiration**, dette pour LS-117 |
+| `src/lib/tunnel-cookie.ts` | saisie du tunnel en cookie signé, LS-115 | étiquette `tunnel-v1` distincte de `panier-v1`, **aucun montant** dans la charge signée, et un `emisA` signé que le serveur vérifie au décodage, LS-117 : le `maxAge` seul ne lie que le navigateur |
 | `src/services/tunnel.ts` | assemblage du récapitulatif, étape 3b du parcours 1 | exige un mode de livraison **choisi** par son type, `null` signifiant « non choisi » |
 | `src/integrations/mondial-relay/` | points de retrait derrière une interface, LS-115 | une indisponibilité du transporteur **dégrade le choix, elle ne ferme jamais la vente** : le domicile n'exige aucun appel externe, cas d'erreur du parcours 1. LS-27 interdit toute réponse d'API inventée |
 | `src/app/(boutique)/commande/` | les quatre étapes du tunnel, LS-115 | le bouton porte la mention imposée par L221-14 alinéa 2, la zone desservie s'annonce à l'**entrée**, alinéa 3 |

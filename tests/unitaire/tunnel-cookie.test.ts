@@ -172,8 +172,15 @@ describe("integrite du cookie", () => {
    * tout, ce qui ne prouverait plus rien de l'etiquette.
    */
   it("accepte la meme charge signee avec la cle derivee du tunnel", () => {
+    /*
+     * `emisA` EST OBLIGATOIRE DANS LA CHARGE depuis LS-117, l'expiration etant
+     * verifiee cote serveur. Une charge forgee a la main doit le porter, sans
+     * quoi cette contre-epreuve echouerait pour la mauvaise raison : elle
+     * prouverait un refus d'horodatage la ou elle doit prouver l'acceptation
+     * d'une cle.
+     */
     const charge = Buffer.from(
-      JSON.stringify(SAISIE_DOMICILE),
+      JSON.stringify({ ...SAISIE_DOMICILE, emisA: Date.now() }),
       "utf8",
     ).toString("base64url");
 
@@ -323,5 +330,93 @@ describe("duree de vie", () => {
     const uneHeure = 60 * 60;
 
     expect(DUREE_TUNNEL_SECONDES).toBeGreaterThanOrEqual(uneHeure);
+  });
+});
+
+/*
+ * L'EXPIRATION EST VERIFIEE COTE SERVEUR, LS-117.
+ *
+ * CE QUE LE BLOC PRECEDENT NE PROUVAIT PAS. Il compare `DUREE_TUNNEL_SECONDES`
+ * a d'autres nombres, ce qui teste une constante et jamais son application :
+ * avant cette story, la duree n'etait appliquee que par le `maxAge` du cookie,
+ * donc par le navigateur seul. Une charge signee recopiee ailleurs restait
+ * valable indefiniment, et ces deux tests restaient verts.
+ *
+ * Les dates sont injectees plutot que simulees sur l'horloge globale : le
+ * decodeur prend `maintenant` en parametre, ce qui rend le test lisible et
+ * insensible a la duree de son execution.
+ */
+describe("expiration verifiee au decodage", () => {
+  it("accepte une charge emise a l'instant", () => {
+    const emission = Date.parse("2026-08-25T10:00:00.000Z");
+    const valeur = encoderSaisieTunnel(SAISIE_DOMICILE, emission);
+
+    expect(decoderSaisieTunnel(valeur, emission)).toEqual(SAISIE_DOMICILE);
+  });
+
+  it("accepte une charge juste avant l'expiration", () => {
+    const emission = Date.parse("2026-08-25T10:00:00.000Z");
+    const valeur = encoderSaisieTunnel(SAISIE_DOMICILE, emission);
+    const presqueExpiree = emission + DUREE_TUNNEL_SECONDES * 1000 - 1;
+
+    expect(decoderSaisieTunnel(valeur, presqueExpiree)).toEqual(
+      SAISIE_DOMICILE,
+    );
+  });
+
+  it("refuse une charge passee la duree du tunnel", () => {
+    const emission = Date.parse("2026-08-25T10:00:00.000Z");
+    const valeur = encoderSaisieTunnel(SAISIE_DOMICILE, emission);
+    const expiree = emission + DUREE_TUNNEL_SECONDES * 1000 + 1;
+
+    expect(decoderSaisieTunnel(valeur, expiree)).toBeNull();
+  });
+
+  /*
+   * LE CAS QUI MOTIVE LA CORRECTION. Une charge signee capturee et rejouee le
+   * lendemain porte une signature parfaitement valide : seule la date signee
+   * permet de la refuser.
+   */
+  it("refuse une charge valide rejouee le lendemain", () => {
+    const emission = Date.parse("2026-08-25T10:00:00.000Z");
+    const valeur = encoderSaisieTunnel(SAISIE_DOMICILE, emission);
+    const lendemain = Date.parse("2026-08-26T10:00:00.000Z");
+
+    expect(decoderSaisieTunnel(valeur, lendemain)).toBeNull();
+  });
+
+  /*
+   * UN COOKIE SANS `emisA` EST REFUSE, jamais tolere. C'est la forme ecrite
+   * avant LS-117 : l'accepter par compatibilite rouvrirait le trou, et il
+   * suffirait a un attaquant de retirer le champ pour obtenir un cookie
+   * eternel. Le cout est nul, le client reprend une saisie de quatre etapes.
+   */
+  it("refuse une charge sans horodatage, forme anterieure a LS-117", () => {
+    const charge = Buffer.from(
+      JSON.stringify(SAISIE_DOMICILE),
+      "utf8",
+    ).toString("base64url");
+
+    const cleTunnel = createHmac("sha256", SECRET_TEST)
+      .update("tunnel-v1")
+      .digest();
+    const signature = createHmac("sha256", cleTunnel)
+      .update(charge)
+      .digest("base64url");
+
+    expect(decoderSaisieTunnel(`${charge}.${signature}`)).toBeNull();
+  });
+
+  /*
+   * UNE EMISSION DANS LE FUTUR EST REFUSEE. Sans cette borne, une charge datee
+   * de l'an 3000 ne se perimerait jamais : l'age calcule resterait negatif,
+   * donc toujours inferieur a la duree autorisee.
+   */
+  it("refuse une charge emise dans le futur", () => {
+    const emission = Date.parse("2026-08-25T10:00:00.000Z");
+    const valeur = encoderSaisieTunnel(SAISIE_DOMICILE, emission);
+    const avantEmission = emission - 1000;
+
+    expect(decoderSaisieTunnel(valeur, avantEmission)).toBeNull();
   });
 });

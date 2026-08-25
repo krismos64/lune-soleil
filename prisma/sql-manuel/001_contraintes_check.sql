@@ -272,3 +272,15 @@ ALTER TABLE categorie
 ALTER TABLE categorie
   ADD CONSTRAINT chk_categorie_nom_non_vide
   CHECK (length(trim(nom)) > 0);
+
+-- ---------------------------------------------------------------------------
+-- Numerotation des documents, LS-117 et ADR-031
+-- ---------------------------------------------------------------------------
+
+-- C27, un compteur ne decroit jamais, meme regle que `nombre_envois` du journal
+-- d'emails. Le premier document de l'annee ecrit 1, jamais 0 : une ligne a zero
+-- signifierait qu'un numero a ete rendu, ce que la transaction fait en annulant
+-- la ligne entiere et non en la decrementant.
+ALTER TABLE compteur_numero
+  ADD CONSTRAINT chk_compteur_numero_positif
+  CHECK (dernier >= 1);
