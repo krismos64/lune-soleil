@@ -573,6 +573,20 @@ CREATE TABLE "verrou_tache" (
     CONSTRAINT "verrou_tache_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable, LS-117 et ADR-031
+--
+-- La numerotation des documents sequentiels, une ligne par type et par annee.
+-- Le verrou de ligne de l'`UPDATE` est le mecanisme : la transaction annulee
+-- rend le numero avec elle, la ou une `SEQUENCE` non transactionnelle laisserait
+-- un trou a chaque refus de stock.
+CREATE TABLE "compteur_numero" (
+    "type" TEXT NOT NULL,
+    "annee" INTEGER NOT NULL,
+    "dernier" INTEGER NOT NULL,
+
+    CONSTRAINT "compteur_numero_pkey" PRIMARY KEY ("type","annee")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "categorie_slug_key" ON "categorie"("slug");
 

@@ -430,9 +430,9 @@ model MouvementStock {
   compenseId               String?            @map("compense_id")
   creeA                    DateTime           @default(now()) @map("cree_a") @db.Timestamptz(3)
 
-  variante Variante     @relation(fields: [varianteId], references: [id], onDelete: Restrict)
-  commande Commande?    @relation(fields: [commandeId], references: [id], onDelete: SetNull)
-  acteur   Utilisateur? @relation(fields: [acteurId], references: [id], onDelete: SetNull)
+  variante    Variante         @relation(fields: [varianteId], references: [id], onDelete: Restrict)
+  commande    Commande?        @relation(fields: [commandeId], references: [id], onDelete: SetNull)
+  acteur      Utilisateur?     @relation(fields: [acteurId], references: [id], onDelete: SetNull)
   // Relation auto-référente, S4 : le compensé est `Restrict`, un mouvement
   // corrigé ne peut pas disparaître en laissant sa correction orpheline. De
   // toute façon aucun mouvement n'est jamais supprimé.
@@ -442,11 +442,6 @@ model MouvementStock {
   // S7 et décision D, clé d'idempotence. La clé porte (commandeId, varianteId)
   // et non la commande seule : un panier à deux articles produit deux mouvements.
   @@unique([commandeId, varianteId], where: raw("type = 'VENTE_WEB'"), map: "mouvement_vente_web_unique")
-  @@index([varianteId], map: "mouvement_variante_idx") // historique d'une pièce, et contrôle RESTRICT
-  // LS-63. Toute statistique de vente externe et le futur e-reporting de LS-35
-  // bornent une période puis regroupent par type. Sans cet index, chaque calcul
-  // balaie l'intégralité du journal des mouvements, qui ne fait que croître.
-  @@index([creeA, type], map: "mouvement_periode_idx")
   // S15, ADR-030. Un mouvement ne se compense qu'une fois, et c'est la BASE qui
   // le garantit : deux corrections simultanées ne peuvent pas passer toutes les
   // deux, là où un contrôle applicatif les laisserait passer entre son `SELECT`
@@ -457,6 +452,11 @@ model MouvementStock {
   // Sa vertu est d'éviter d'indexer pour rien un journal qui ne fait que
   // croître. Septième index partiel du projet, même piège que les six autres.
   @@unique([compenseId], where: raw("compense_id IS NOT NULL"), map: "mouvement_compense_unique")
+  @@index([varianteId], map: "mouvement_variante_idx") // historique d'une pièce, et contrôle RESTRICT
+  // LS-63. Toute statistique de vente externe et le futur e-reporting de LS-35
+  // bornent une période puis regroupent par type. Sans cet index, chaque calcul
+  // balaie l'intégralité du journal des mouvements, qui ne fait que croître.
+  @@index([creeA, type], map: "mouvement_periode_idx")
   @@map("mouvement_stock")
 }
 
@@ -1129,4 +1129,28 @@ model VerrouTache {
   expireA DateTime @map("expire_a") @db.Timestamptz(3) // sans quoi une instance morte bloque la tâche
 
   @@map("verrou_tache")
+}
+
+// ADR-031, LS-117. Le numéro des documents séquentiels, une ligne par type et
+// par année, remise à zéro annuelle implicite : une nouvelle année crée sa
+// propre ligne au premier document.
+//
+// LE VERROU DE LIGNE EST LE MÉCANISME, pas un effet de bord. L'incrément se
+// fait par `UPDATE ... RETURNING` dans la transaction du document : elle rend
+// le numéro avec elle si elle est annulée, donc aucun trou. Une `SEQUENCE`
+// PostgreSQL, non transactionnelle, en créerait un à chaque refus de stock.
+//
+// L'ORDRE DE PRISE COMPTE : le numéro se prend AVANT les variantes, jamais
+// entre deux réservations, sans quoi deux transactions s'interbloquent sur
+// compteur et variante pris en sens inverse. Voir ADR-031.
+//
+// Prévue pour les trois séquences, `type` porte COMMANDE, FACTURE ou AVOIR.
+// Les deux dernières l'emploieront en phase 4 sans nouvelle migration.
+model CompteurNumero {
+  type    String
+  annee   Int
+  dernier Int // CHECK > 0, un compteur ne décroît jamais
+
+  @@id([type, annee])
+  @@map("compteur_numero")
 }

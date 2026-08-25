@@ -295,10 +295,16 @@ parce qu'il ne porte que des identifiants de variante ; deux heures suffisent à
 remplir quatre étapes, et la minimisation interdit de conserver un nom et une
 adresse au-delà de l'usage qui les justifie.
 
-**Deux limites connues, à lever en LS-117.** La charge signée ne porte aucune
-expiration : le `maxAge` est appliqué par le navigateur seul, donc un cookie
-capté reste accepté indéfiniment côté serveur. Et `effacerSaisie` existe sans
-être appelée nulle part, faute d'un moment où la commande soit écrite.
+**Les deux limites de LS-115 sont levées par LS-117.** La charge signée porte
+désormais un `emisA` que `decoderSaisieTunnel` compare à `DUREE_TUNNEL_SECONDES`,
+le `maxAge` seul n'engageant que le navigateur : un cookie capté et rejoué au-delà
+de deux heures est refusé côté serveur, quelle que soit la validité de sa
+signature. Une charge sans horodatage, forme antérieure à cette story, est refusée
+plutôt que tolérée, sans quoi il suffirait d'en retirer le champ.
+
+Et `effacerSaisie` est appelée une fois la commande écrite : le nom, l'adresse et
+le téléphone ne survivent pas à l'usage qui les justifie, la commande portant
+désormais sa propre copie figée de l'adresse.
 
 Les deux cookies sont `httpOnly`, `sameSite: "lax"`, `secure` hors
 développement, et signés par HMAC dérivé de `BETTER_AUTH_SECRET` avec une
