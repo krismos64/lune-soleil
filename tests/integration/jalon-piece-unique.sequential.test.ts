@@ -399,6 +399,67 @@ describe("aucun stock negatif, quelle que soit la contention", () => {
   });
 });
 
+describe("les quatre conditions du WHERE, par le service", () => {
+  /*
+   * DEUX CONDITIONS MANQUAIENT A CE FICHIER, releve par `ls-critical-reviewer`.
+   *
+   * `reservation.sequential.test.ts` les couvre depuis LS-68, mais en SQL
+   * reecrit dans le test : c'est exactement la reserve que ce fichier existe
+   * pour lever. Les exercer par le service coute deux tests courts.
+   */
+  it("refuse une variante dont la vente web est desactivee", async () => {
+    const { varianteId } = await creerVarianteEnStock(client, {
+      quantitePhysique: 1,
+      venteWebActivee: false,
+    });
+    const commandeId = await creerCommande(client);
+
+    const issue = await reserverPanier(
+      [{ varianteId, quantite: 1 }],
+      commandeId,
+    );
+
+    expect(issue).toEqual({ statut: "REFUSE", varianteRefusee: varianteId });
+
+    /*
+     * SUSPENDRE LA VENTE WEB NE CREE AUCUN MOUVEMENT DE STOCK, invariant 6. La
+     * piece reste physiquement la, elle cesse simplement d'etre vendable en
+     * ligne : c'est le cas de l'exploitante qui part sur un marche.
+     */
+    const etat = await lireEtat(varianteId);
+
+    expect(etat.quantitePhysique).toBe(1);
+    expect(etat.quantiteReservee).toBe(0);
+  });
+
+  /*
+   * ARCHIVEE L'EMPORTE TOUJOURS, y compris sur `vente_web_activee = true`,
+   * regle de `database.md`. La condition est dans le `WHERE` et non dans une
+   * lecture prealable : entre une lecture et l'ecriture, l'archivage peut
+   * survenir, et un client ayant la fiche ouverte reserverait une piece retiree
+   * du catalogue.
+   */
+  it("refuse une variante archivee, meme vente web activee", async () => {
+    const { varianteId } = await creerVarianteEnStock(client, {
+      quantitePhysique: 1,
+      venteWebActivee: true,
+      archivee: true,
+    });
+    const commandeId = await creerCommande(client);
+
+    const issue = await reserverPanier(
+      [{ varianteId, quantite: 1 }],
+      commandeId,
+    );
+
+    expect(issue).toEqual({ statut: "REFUSE", varianteRefusee: varianteId });
+
+    const etat = await lireEtat(varianteId);
+
+    expect(etat.quantiteReservee).toBe(0);
+  });
+});
+
 describe("un panier a plusieurs pieces, sous contention", () => {
   /*
    * DEUX PANIERS EN ORDRE OPPOSE ABOUTISSENT, sans interblocage ni survente.
