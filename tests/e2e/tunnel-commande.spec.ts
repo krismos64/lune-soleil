@@ -36,6 +36,16 @@ async function remplirCoordonnees(page: import("@playwright/test").Page) {
  */
 async function choisirDomicile(page: import("@playwright/test").Page) {
   await page.getByRole("radio", { name: "À domicile" }).check();
+
+  /*
+   * ATTENDRE QUE LE BOUTON SOIT ACTIF AVANT DE CLIQUER. Il porte
+   * `disabled={enCours || mode === null}` : entre le `check()` et le rendu
+   * React qui leve `disabled`, il existe une fenetre ou le clic part sur un
+   * bouton inerte. Elle est invisible en local et se voit en integration
+   * continue, plus lente : neuf echecs sur trois tests le 25 aout 2026, zero
+   * en local.
+   */
+  await expect(page.getByRole("button", { name: "Continuer" })).toBeEnabled();
   await page.getByRole("button", { name: "Continuer" }).click();
 }
 
