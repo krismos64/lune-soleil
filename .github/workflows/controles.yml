@@ -115,6 +115,20 @@ jobs:
       # rapporteur GitHub. Le runner la definit deja, cette ligne rend la
       # dependance visible plutot qu'implicite.
       CI: "true"
+      # Tarifs de livraison, ADR-025, ajoutes par LS-115.
+      #
+      # ILS NE SONT PAS FACULTATIFS EN CI. `lireConfigurationLivraison` leve
+      # quand un tarif manque, deliberement : un repli a zero afficherait
+      # « livraison offerte » partout. Sans ces trois lignes, la page du tunnel
+      # rend une erreur serveur et neuf tests de bout en bout echouent, ce qui
+      # est arrive le 25 aout 2026 : le defaut avait ete trouve en local et
+      # corrige dans `.env`, sans etre porte ici.
+      #
+      # Valeurs publiques du 30 juillet 2026, aucun secret : elles figurent dans
+      # les conditions generales et sur la page Livraison.
+      SHIPPING_RELAY_RATE_CENTS: "410"
+      SHIPPING_HOME_RATE_CENTS: "499"
+      SHIPPING_FREE_THRESHOLD_CENTS: "3900"
 
     steps:
       - name: Recuperer le depot
