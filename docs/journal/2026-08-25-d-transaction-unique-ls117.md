@@ -136,6 +136,10 @@ quatorze restent verts.
 
 ## Prochaine étape
 
+**Une session s'est intercalée depuis** : LS-43, journal `2026-08-25-e`, qui
+tranche ADR-032 et que LS-118 exigeait avant tout code. Ce qui suit reste exact,
+et la lecture à jour est celle du journal `e`.
+
 **LS-118**, session de paiement Stripe créée après le commit, et page d'attente.
 Deux points l'attendent :
 
