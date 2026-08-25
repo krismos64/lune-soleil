@@ -245,6 +245,10 @@ CHECK   quantite_physique - quantite_reservee >= 0
 CHECK   ligne_commande.quantite > 0
 CHECK   facture.montant_avoir_centimes <= facture.montant_total_centimes
 CHECK   type <> 'VENTE_EXTERNE' OR prix_unitaire_fige_centimes IS NOT NULL
+CHECK   commande.total_centimes = sous_total_centimes
+                               + frais_port_centimes + montant_taxe_centimes, C28
+CHECK   compteur_numero.dernier >= 1, C27
+PK      compteur_numero (type, annee)                            ADR-031
 INDEX   statut, date, utilisateur, commande, reference, expiration
 ```
 
@@ -448,12 +452,36 @@ l'instantané légal de la facture, voir `payments.md`.
 Un franchissement futur du seuil devient un paramétrage, pas une migration de
 données historiques.
 
-## Numérotation comptable
+## Numérotation des documents
 
-Deux séquences distinctes, factures et avoirs. Numéro attribué **au moment de la
-création, dans la transaction**, jamais réservé à l'avance. Aucun numéro réutilisé,
-aucun trou créé par une opération normale. Une facture n'est créée qu'après
-confirmation du paiement.
+**Trois** séquences distinctes, commandes, factures et avoirs, remises à zéro
+chaque année. Numéro attribué **au moment de la création, dans la transaction**,
+jamais réservé à l'avance, règle F4. Aucun numéro réutilisé, aucun trou créé par
+une opération normale. Une facture n'est créée qu'après confirmation du paiement.
+
+**Le mécanisme est la table `CompteurNumero`**, ADR-031 et règle C27 : une ligne
+par type et par année, incrémentée par `INSERT ... ON CONFLICT DO UPDATE ...
+RETURNING`. Le verrou de ligne fait que la transaction annulée rend son numéro.
+
+**Ne pas remplacer par une `SEQUENCE` PostgreSQL.** Elle n'est pas
+transactionnelle : un `nextval` consommé par une transaction annulée est perdu,
+et sur ce catalogue de pièces uniques le refus de stock est un cas **fréquent**,
+donc chaque refus créerait un trou.
+
+**L'année vient de `now()`, jamais de l'horloge Node**, même règle que le verrou
+de tâche. Deux conteneurs décalés au passage d'année écriraient l'un
+`C-2027-0001`, l'autre `C-2026-0043`.
+
+**L'ordre de prise des verrous n'est pas libre** : le compteur se prend **avant**
+les variantes, jamais entre deux réservations. L'inverser dans un seul chemin
+crée un cycle, une transaction tenant la variante et attendant le compteur
+pendant qu'une autre fait l'inverse.
+
+Conséquence mesurée le 25 août 2026 : le compteur **sérialise** les commandes
+concurrentes dès leur première instruction. C'est lui, et non le tri de
+`ordonnerLignes`, qui ferme la fenêtre d'interblocage entre deux commandes. Le
+tri reste nécessaire pour les cycles avec un chemin **tiers**, vente externe ou
+libération de réservations.
 
 ## Migrations
 
