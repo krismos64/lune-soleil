@@ -58,20 +58,53 @@ afterEach(async () => {
   );
 });
 
+/**
+ * Cree une variante disponible et une epuisee, DANS CET ORDRE d'identifiant.
+ *
+ * SANS CETTE GARANTIE LE TEST DE ROLLBACK NE TESTE RIEN. `ordonnerLignes` trie
+ * par identifiant croissant : quand l'epuisee passe la premiere, le refus tombe
+ * AVANT qu'aucune reservation ne soit ecrite, et le rollback n'a rien a
+ * defaire. Mesure le 25 aout 2026 sur 40 couples, l'ordre voulu ne sort que 15
+ * fois, soit 37 pour cent des executions.
+ *
+ * Confirme par mutation : avec la garde de disponibilite retiree, les six
+ * autres tests rougissent et celui-la restait vert.
+ *
+ * Le meme outil existe dans `reservation-service.sequential.test.ts`, avec le
+ * meme commentaire. Le recopier plutot que de l'extraire garde chaque fichier
+ * de test lisible seul, ce que le projet prefere pour les tests.
+ */
+async function creerCoupleOrdonne() {
+  for (let essai = 0; essai < 20; essai += 1) {
+    const disponible = await creerVarianteEnStock(client, {
+      quantitePhysique: 1,
+    });
+    const epuisee = await creerVarianteEnStock(client, { quantitePhysique: 0 });
+
+    if (disponible.varianteId < epuisee.varianteId) {
+      return { disponible: disponible.varianteId, epuisee: epuisee.varianteId };
+    }
+
+    await client.query("TRUNCATE variante, produit, categorie CASCADE");
+  }
+
+  throw new Error("Impossible d'engendrer un couple d'identifiants ordonne");
+}
+
 /** Etat du stock et des ecritures, lu en base et non deduit des reponses. */
 async function lireEtat(varianteId: string) {
   const { rows } = await client.query<{
     quantite_physique: number;
     quantite_reservee: number;
     reservations: string;
-    commandes_reservees: string;
+    commandes: string[] | null;
   }>(
     `SELECT v.quantite_physique,
             v.quantite_reservee,
             (SELECT count(*) FROM reservation r WHERE r.variante_id = v.id)
               AS reservations,
-            (SELECT count(DISTINCT r.commande_id) FROM reservation r
-              WHERE r.variante_id = v.id) AS commandes_reservees
+            (SELECT array_agg(r.commande_id) FROM reservation r
+              WHERE r.variante_id = v.id) AS commandes
        FROM variante v WHERE v.id = $1`,
     [varianteId],
   );
@@ -86,7 +119,18 @@ async function lireEtat(varianteId: string) {
     quantitePhysique: ligne.quantite_physique,
     quantiteReservee: ligne.quantite_reservee,
     reservations: Number(ligne.reservations),
-    commandesReservees: Number(ligne.commandes_reservees),
+    /*
+     * LES IDENTIFIANTS ET NON LEUR NOMBRE.
+     *
+     * La premiere version comptait les `commande_id` distincts, ce qui valait
+     * 1 PAR CONSTRUCTION des lors qu'une seule reservation subsiste : le test
+     * mesurait la cardinalite et jamais la propriete. Mesure le 25 aout 2026,
+     * une mutation ecrivant un `commande_id` arbitraire laissait les sept tests
+     * verts, alors qu'elle attache la piece a la commande PERDANTE : le
+     * webhook du gagnant ne trouverait rien a convertir, et la piece resterait
+     * immobilisee trente minutes pour une commande jamais payee.
+     */
+    commandes: ligne.commandes ?? [],
   };
 }
 
@@ -144,7 +188,7 @@ describe("le dernier exemplaire, deux acheteurs simultanes", () => {
     const commandeA = await creerCommande(client);
     const commandeB = await creerCommande(client);
 
-    await Promise.all([
+    const [issueA, issueB] = await Promise.all([
       reserverPanier([{ varianteId, quantite: 1 }], commandeA),
       reserverPanier([{ varianteId, quantite: 1 }], commandeB),
     ]);
@@ -156,17 +200,31 @@ describe("le dernier exemplaire, deux acheteurs simultanes", () => {
     expect(etat.quantitePhysique).toBe(1);
 
     /*
-     * AUCUNE RESERVATION ORPHELINE : la ligne restante appartient a UNE seule
-     * commande. Deux commandes reservees signifieraient que la transaction
-     * annulee a laisse sa trace, ce qu'ADR-024 interdit.
+     * LA RESERVATION APPARTIENT A LA COMMANDE SERVIE, et c'est une identite
+     * qu'on verifie, pas un nombre.
+     *
+     * Compter les commandes distinctes rendait 1 quoi qu'il arrive : une seule
+     * reservation subsiste, donc un seul `commande_id`, meme si c'est le
+     * mauvais. La piece serait alors attachee a la commande PERDANTE, qui ne
+     * sera jamais payee, pendant que le webhook du gagnant ne trouverait rien
+     * a convertir.
      */
-    expect(etat.commandesReservees).toBe(1);
+    const gagnante = issueA.statut === "SERVI" ? commandeA : commandeB;
+
+    expect(etat.commandes).toEqual([gagnante]);
   });
 
   /*
    * LA MEME EXIGENCE A VINGT ACHETEURS. Deux tentatives laissent une chance
    * qu'un ordonnancement chanceux masque un defaut ; vingt la reduisent
    * fortement, et le cout reste d'une seconde.
+   *
+   * DIX TRANSACTIONS SONT EN VOL, PAS VINGT, et il vaut mieux le savoir que
+   * monter le nombre en croyant renforcer la preuve. Le pool de `pg` plafonne a
+   * dix connexions par defaut, `PrismaPg` ne passant pas de `max` : les dix
+   * autres attendent une connexion libre. Mesure du 25 aout 2026, jusqu'a sept
+   * transactions simultanement en attente de verrou sur la meme ligne, ce qui
+   * est une contention largement suffisante.
    */
   it("sert exactement un acheteur sur vingt simultanes", async () => {
     const { varianteId } = await creerVarianteEnStock(client, {
@@ -196,11 +254,16 @@ describe("le dernier exemplaire, deux acheteurs simultanes", () => {
   /*
    * TROIS EXEMPLAIRES SERVENT TROIS ACHETEURS, ni deux ni quatre.
    *
-   * Ce test n'est pas une variante decorative du precedent : il ferme le defaut
-   * SYMETRIQUE de la survente. Un verrou trop large, ou une serialisation
-   * ecrite a la main, servirait un seul acheteur sur trois exemplaires
-   * disponibles. La boutique perdrait des ventes sans qu'aucune alerte ne se
-   * declenche, et aucun test de survente ne le verrait.
+   * CE QU'IL PROUVE : le compte servi suit le stock, et non un plafond fixe. Un
+   * defaut qui servirait un seul acheteur sur trois exemplaires ferait perdre
+   * des ventes sans qu'aucune alerte ne se declenche.
+   *
+   * CE QU'IL NE PROUVE PAS, et la premiere version de ce commentaire l'affirmait
+   * a tort : il ne ferme pas la serialisation excessive. Mesure le 25 aout 2026,
+   * un `pg_advisory_xact_lock` global pose avant la boucle laisse les sept tests
+   * verts. La raison est structurelle : les dix acheteurs se disputent LA MEME
+   * variante, ou une serialisation globale est indiscernable de la contention
+   * legitime sur la ligne. C'est le test suivant qui ferme ce defaut.
    */
   it("sert exactement trois acheteurs quand trois exemplaires existent", async () => {
     const { varianteId } = await creerVarianteEnStock(client, {
@@ -223,6 +286,75 @@ describe("le dernier exemplaire, deux acheteurs simultanes", () => {
 
     expect(etat.quantiteReservee).toBe(3);
     expect(etat.reservations).toBe(3);
+  });
+});
+
+describe("deux ventes independantes ne s'attendent pas", () => {
+  /*
+   * LE CAS QUI FERME LA SERIALISATION EXCESSIVE, celui que le test a trois
+   * exemplaires ne ferme pas.
+   *
+   * Deux acheteurs, deux variantes DIFFERENTES a un exemplaire chacune : les
+   * deux doivent etre servis. Sur des variantes independantes, aucun verrou
+   * legitime n'est en jeu, donc toute attente observee vient d'une
+   * serialisation ajoutee a la main.
+   *
+   * Un verrou global passerait ce test sur le seul compte de servis, mais il
+   * ferait apparaitre une attente de verrou la ou il n'y en a aucune : c'est
+   * `pg_stat_activity` qui le mesure, et non le resultat des issues.
+   */
+  it("sert les deux acheteurs sur deux variantes distinctes", async () => {
+    const premiere = await creerVarianteEnStock(client, {
+      quantitePhysique: 1,
+    });
+    const seconde = await creerVarianteEnStock(client, { quantitePhysique: 1 });
+    const commandeA = await creerCommande(client);
+    const commandeB = await creerCommande(client);
+
+    let attentesVerrou = 0;
+    const sonde = setInterval(() => {
+      void client
+        .query<{ n: number }>(
+          `SELECT count(*)::int AS n FROM pg_stat_activity
+            WHERE datname = current_database()
+              AND wait_event_type = 'Lock'`,
+        )
+        .then(({ rows }) => {
+          attentesVerrou = Math.max(attentesVerrou, rows[0]?.n ?? 0);
+        })
+        .catch(() => {
+          /* la sonde ne doit jamais faire echouer le test qu'elle observe */
+        });
+    }, 2);
+
+    const [issueA, issueB] = await Promise.all([
+      reserverPanier(
+        [{ varianteId: premiere.varianteId, quantite: 1 }],
+        commandeA,
+      ),
+      reserverPanier(
+        [{ varianteId: seconde.varianteId, quantite: 1 }],
+        commandeB,
+      ),
+    ]);
+
+    clearInterval(sonde);
+
+    expect(issueA.statut).toBe("SERVI");
+    expect(issueB.statut).toBe("SERVI");
+
+    const etatPremiere = await lireEtat(premiere.varianteId);
+    const etatSeconde = await lireEtat(seconde.varianteId);
+
+    expect(etatPremiere.commandes).toEqual([commandeA]);
+    expect(etatSeconde.commandes).toEqual([commandeB]);
+
+    /*
+     * AUCUNE ATTENTE DE VERROU. Deux pieces distinctes n'ont aucune raison de
+     * se bloquer : une attente ici signale un verrou pris plus large que la
+     * ligne, qui ferait defiler toutes les ventes de la boutique une par une.
+     */
+    expect(attentesVerrou).toBe(0);
   });
 });
 
@@ -328,16 +460,19 @@ describe("un panier a plusieurs pieces, sous contention", () => {
     expect(etatSeconde.quantiteReservee).toBe(1);
 
     /*
-     * LES DEUX PIECES APPARTIENNENT A LA MEME COMMANDE. Un panier se sert
+     * LES DEUX PIECES APPARTIENNENT A LA COMMANDE SERVIE. Un panier se sert
      * entierement ou pas du tout, ADR-024 : une piece de chaque commande
      * signifierait deux paniers a moitie servis, donc deux clients qui paient
      * pour un article qu'ils n'ont pas commande seul.
+     *
+     * L'IDENTITE EST VERIFIEE, pas le nombre : compter les commandes distinctes
+     * rendait 1 y compris quand les deux pieces partaient sur la commande
+     * refusee.
      */
-    const { rows } = await client.query<{ commande_id: string }>(
-      "SELECT DISTINCT commande_id FROM reservation",
-    );
+    const gagnante = issueA.statut === "SERVI" ? commandeA : commandeB;
 
-    expect(rows).toHaveLength(1);
+    expect(etatPremiere.commandes).toEqual([gagnante]);
+    expect(etatSeconde.commandes).toEqual([gagnante]);
   });
 
   /*
@@ -346,26 +481,20 @@ describe("un panier a plusieurs pieces, sous contention", () => {
    * elle serait immobilisee trente minutes pour rien.
    */
   it("annule tout le panier quand une seule piece est indisponible", async () => {
-    const disponible = await creerVarianteEnStock(client, {
-      quantitePhysique: 1,
-    });
-    const epuisee = await creerVarianteEnStock(client, { quantitePhysique: 0 });
+    const { disponible, epuisee } = await creerCoupleOrdonne();
     const commandeId = await creerCommande(client);
 
     const issue = await reserverPanier(
       [
-        { varianteId: disponible.varianteId, quantite: 1 },
-        { varianteId: epuisee.varianteId, quantite: 1 },
+        { varianteId: disponible, quantite: 1 },
+        { varianteId: epuisee, quantite: 1 },
       ],
       commandeId,
     );
 
-    expect(issue).toEqual({
-      statut: "REFUSE",
-      varianteRefusee: epuisee.varianteId,
-    });
+    expect(issue).toEqual({ statut: "REFUSE", varianteRefusee: epuisee });
 
-    const etat = await lireEtat(disponible.varianteId);
+    const etat = await lireEtat(disponible);
 
     expect(etat.quantiteReservee).toBe(0);
     expect(etat.reservations).toBe(0);
