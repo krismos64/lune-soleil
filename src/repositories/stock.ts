@@ -89,3 +89,48 @@ export async function reserverVariante(
 
   return lignes.length === 1;
 }
+
+/**
+ * Prolonge les reservations actives d'une commande, ET DIT COMBIEN.
+ *
+ * ARBITRAGE DU 26 AOUT 2026, complement d'ADR-032 : une session de paiement ne
+ * survit jamais a sa reservation, or une session dure au minimum 30 minutes.
+ * A chaque creation de session, la reservation est donc realignee sur son
+ * `expires_at`. L'instant vient du SERVICE, le meme que celui envoye au
+ * prestataire : les deux expirations sont identiques par construction, pas
+ * seulement voisines.
+ *
+ * ELLE EST LA GARDE, ET PAS SEULEMENT UNE ECRITURE. Le nombre de lignes touchees
+ * est rendu pour que l'appelant le compare au nombre de lignes de la commande.
+ * Deux defauts que cela ferme, releves par `ls-critical-reviewer` le 26 aout
+ * 2026 :
+ *
+ * - UNE LECTURE PREALABLE EXISTENTIELLE NE SUFFIT PAS. « Au moins une
+ *   reservation active » repond vrai sur un panier a deux pieces dont une seule
+ *   est encore reservee : le client paierait les deux, dont une repartie au
+ *   catalogue et peut-etre revendue. L'invariant est universel, pas existentiel.
+ * - LIRE PUIS ECRIRE ROUVRE LA FENETRE. Entre une verification et cette
+ *   instruction s'intercalait l'appel reseau d'expiration, jusqu'a vingt
+ *   secondes : la tache de liberation pouvait passer entre les deux, et
+ *   l'ecriture ne touchait plus rien sans que personne ne le remarque. Une seule
+ *   instruction dont on lit le compte supprime la fenetre.
+ *
+ * `now()` EST L'HORLOGE DE POSTGRESQL, jamais celle de Node, regle de
+ * `database.md` : la tache de liberation comparera ce meme `expire_a` a ce meme
+ * `now()`. Une comparaison cote Node laisserait une derive d'horloge prolonger
+ * une reservation que la liberation vient de rendre au catalogue.
+ *
+ * SEULES LES RESERVATIONS ACTIVES SONT PROLONGEES. Une reservation expiree a pu
+ * etre liberee, sa piece revendue : la faire renaitre reserverait un stock que
+ * la variante ne porte plus.
+ */
+export async function prolongerReservationsActives(
+  client: ClientBase,
+  parametres: { commandeId: string; expireA: Date },
+): Promise<number> {
+  return client.$executeRaw`
+    UPDATE reservation
+    SET expire_a = ${parametres.expireA}
+    WHERE commande_id = ${parametres.commandeId} AND expire_a > now()
+  `;
+}

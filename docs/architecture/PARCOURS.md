@@ -73,7 +73,7 @@ stock à un exemplaire est le jalon technique majeur.
 | 3 | Revalidation serveur | rien | totaux recalculés depuis le serveur |
 | 3b | Choix du mode de livraison | rien | trois modes, frais de port recalculés côté serveur, point de retrait choisi si `POINT_RELAIS` ou `LOCKER` |
 | 4 | Commande et réservation, **une seule transaction** | commande `EN_ATTENTE_PAIEMENT`, lignes historisées, **mode de livraison, point de retrait et frais de port figés**, acceptation CGV horodatée, `quantiteReservee` incrémentée, réservations avec expiration à 30 min et `commandeId` renseigné | passage au paiement |
-| 5 | Session de paiement, **après le commit** | identifiant de session prestataire rattaché à la commande | redirection |
+| 5 | Session de paiement, **après le commit** | tentative de paiement `EN_ATTENTE` portant l'identifiant de session, réservations prolongées à l'expiration de la session | redirection |
 | 6 | Attente de l'événement | rien | page d'attente ou retour du prestataire |
 | 7 | Événement signé reçu | événement persisté avec identifiant unique, paiement `REUSSI`, commande `CONFIRMEE`, réservation convertie en mouvement de stock, `quantitePhysique` décrémentée | page de confirmation |
 | 8 | Facture | facture avec numéro attribué dans la transaction, instantané légal, PDF | facture disponible |
@@ -149,11 +149,21 @@ entre réservation et commande laissait la pièce bloquée trente minutes.
 **Échec de création de la session de paiement, étape 5**
 Base : la commande et ses réservations existent, la transaction ayant été validée
 avant l'appel au prestataire. Aucun identifiant de session n'est rattaché.
-Vue : message d'erreur, possibilité de réessayer le paiement.
+Vue : la page de confirmation annonce l'indisponibilité et porte le bouton de
+réessai, sans jargon ni détail du prestataire.
 Tâche : la réservation expire normalement à trente minutes, et la commande est
 traitée par la réconciliation comme toute commande restée en attente.
 C'est le motif de placer cet appel après le commit : à l'intérieur, son échec
 aurait effacé la commande.
+
+**Réservation expirée au moment de payer, étape 5**
+Base : aucune écriture, et **aucun appel au prestataire**. La tâche de libération
+a pu rendre la pièce au catalogue : créer une session permettrait de payer une
+pièce revendue.
+Vue : la réservation a expiré, aucun paiement n'a été prélevé, repasser commande
+depuis le catalogue.
+C'est le complément d'ADR-032 du 26 août 2026, qui prolonge à l'inverse les
+réservations **actives** jusqu'à l'expiration de chaque session créée.
 
 **API Mondial Relay indisponible à l'étape 3b, choix du point de retrait**
 Base : aucune écriture.

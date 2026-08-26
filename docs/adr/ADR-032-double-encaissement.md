@@ -56,6 +56,57 @@ Une clé dérivée du seul `commandeId` rendrait une **erreur** au second essai
 légitime, les paramètres différant, ou rejouerait la réponse de la première
 session, désormais expirée. La clé porte donc la commande **et** la tentative.
 
+### 2 bis. La réservation suit la session, complément du 26 août 2026
+
+**Ajouté par LS-118**, qui a rencontré le cas que la décision 1 ne couvrait pas.
+Au réessai de paiement, une nouvelle session dure **au minimum 30 minutes**,
+borne basse du prestataire, alors que la réservation posée à la commande peut
+n'en avoir plus que cinq. L'alignement que la décision 1 pose comme motif se
+rompait donc exactement sur le chemin du nouvel essai, prévu par le parcours 1.
+
+**Les réservations actives de la commande sont prolongées jusqu'à l'`expires_at`
+de chaque session créée.** Le service calcule un seul instant, l'envoie au
+prestataire et le pose sur les réservations : l'alignement est une identité, pas
+une coïncidence de durées.
+
+**Une réservation déjà expirée est un refus métier**, sans aucun appel au
+prestataire : la tâche de libération a pu rendre la pièce au catalogue, et créer
+une session permettrait de payer une pièce revendue. Le client repasse commande.
+
+**Ce que la prolongation ne fait pas.** Elle ne fait pas renaître une réservation
+expirée, le `WHERE expire_a > now()` restant la ligne de défense si les deux
+instructions croisent la tâche de libération. Elle n'immobilise une pièce que
+tant que la commande reste `EN_ATTENTE_PAIEMENT` : la réconciliation de LS-120
+ferme ce cycle.
+
+**La garde est universelle**, correction du 26 août 2026 relevée par
+`ls-critical-reviewer` : le nombre de réservations prolongées est comparé au
+nombre de lignes de la commande. Une garde existentielle laissait payer un panier
+à deux pièces dont une seule était encore réservée.
+
+### 1 bis. La prévention tient par un rattrapage, pas par un verrou
+
+**Relevé le 26 août 2026 sur l'implémentation de LS-118.** La décision 1 suppose
+qu'on sache, avant de créer une session, si la commande en porte déjà une. Deux
+démarrages simultanés lisent tous deux « aucune session précédente » : ni l'un ni
+l'autre n'a encore rattaché la sienne au moment de lire, et deux sessions payables
+coexistent malgré la prévention.
+
+**Un verrou de ligne ne referme pas ce trou**, et il a été essayé puis retiré :
+il serait relâché avant l'appel réseau, donc avant que la session existe, la
+décision d'ADR-024 interdisant de tenir une transaction pendant un aller-retour.
+Aucune mutation ne le faisait rougir, ce qui l'a désigné comme une protection
+affirmée et non exercée.
+
+**La garantie vient d'un rattrapage après création** : une fois sa session
+rattachée, un démarrage relit les tentatives de la commande et expire toutes les
+sessions qui ne sont pas la sienne. Le dernier à rattacher expire les
+précédentes, et l'invariant tient quel que soit l'entrelacement.
+
+**La tentative est écrite avant l'appel**, `identifiantFournisseur` nul, puis
+complétée. C'est ce qui rend toute session traçable, donc expirable : écrite
+après, une écriture perdue laissait une session orpheline que rien ne fermait.
+
 ### 3. Détection, un second encaissement est une alerte critique
 
 Le refus par `paiement_reussi_unique` ne se journalise pas silencieusement. Il
@@ -110,6 +161,7 @@ charges interdit qu'un incident d'argent se journalise silencieusement.
 |---|---|
 | création de session, LS-118 | expirer la session ouverte précédente d'abord |
 | `expires_at` | 30 minutes, aligné sur la réservation d'ADR-006 |
+| réservation, LS-118 | prolongée au même instant à chaque session créée, expirée vaut refus |
 | clé d'idempotence | dérivée de la commande **et** de la tentative |
 | webhook, LS-119 | un refus d'unicité produit une `AlerteCritique` CRITIQUE |
 | remboursement | manuel, tableau de bord Stripe, aucun code au Go-Live |

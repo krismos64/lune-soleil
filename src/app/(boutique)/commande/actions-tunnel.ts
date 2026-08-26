@@ -34,8 +34,15 @@ import {
   type SaisieTunnel,
 } from "@/lib/tunnel-cookie";
 import { NOM_COOKIE_PANIER, decoderPanier } from "@/lib/panier-cookie";
-import { CommandeRefuseeError, passerCommande } from "@/services/commande";
+import {
+  DUREE_COMMANDE_SECONDES,
+  NOM_COOKIE_COMMANDE,
+  encoderCommandeEnCours,
+} from "@/lib/commande-cookie";
+import { CommandeRefuseeError } from "@/services/commande";
+import { passerCommandeEtDemarrerPaiement } from "@/services/paiement";
 import { InterblocagePersistantError } from "@/services/reservation";
+import { fournisseurStripe } from "@/integrations/stripe";
 
 /** Ce que l'interface recoit, jamais une exception. */
 export type ResultatTunnel =
@@ -205,7 +212,13 @@ export async function enregistrerLivraison(
 
 /** Ce que l'ecran recoit apres une tentative de commande. */
 export type ResultatCommande =
-  | { statut: "OK"; commandeId: string; numero: string }
+  /**
+   * La commande est ecrite. `urlPaiement` porte la redirection vers le
+   * prestataire, ou `null` si la creation de session a echoue : la commande
+   * reste alors `EN_ATTENTE_PAIEMENT`, cas d'erreur du parcours 1, et l'ecran
+   * de confirmation propose le reessai.
+   */
+  | { statut: "OK"; numero: string; urlPaiement: string | null }
   /** Une piece n'est plus disponible : `varianteRefusee` designe la ligne. */
   | { statut: "REFUSE"; varianteRefusee: string }
   /** Contention, pas un refus : le stock etait peut-etre la. */
@@ -246,9 +259,15 @@ export async function passerCommandeAction(): Promise<ResultatCommande> {
   }
 
   try {
-    const issue = await passerCommande({
+    /*
+     * COMMANDE PUIS SESSION, LS-117 puis LS-118, dans le service compose qui
+     * porte la frontiere d'ADR-024 : la session se cree APRES le commit. Un
+     * echec du paiement ne remonte pas en exception, la commande existe.
+     */
+    const { commande, paiement } = await passerCommandeEtDemarrerPaiement({
       lignesCookie,
       saisie: { ...saisie, mode: saisie.mode },
+      fournisseur: fournisseurStripe,
     });
 
     /*
@@ -263,10 +282,28 @@ export async function passerCommandeAction(): Promise<ResultatCommande> {
     await effacerSaisie();
     magasin.delete(NOM_COOKIE_PANIER);
 
+    /*
+     * LE COOKIE DE COMMANDE PREND LEUR PLACE, LS-118 : c'est le jeton signe qui
+     * permettra a la page de confirmation d'afficher l'etat reel et au reessai
+     * de designer la commande, invariant 2. Il ne porte que l'identifiant
+     * technique, jamais un montant ni une donnee personnelle.
+     */
+    magasin.set(
+      NOM_COOKIE_COMMANDE,
+      encoderCommandeEnCours({ commandeId: commande.commandeId }),
+      {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: DUREE_COMMANDE_SECONDES,
+      },
+    );
+
     return {
       statut: "OK",
-      commandeId: issue.commandeId,
-      numero: issue.numero,
+      numero: commande.numero,
+      urlPaiement: paiement.statut === "REDIRECTION" ? paiement.url : null,
     };
   } catch (erreur) {
     if (erreur instanceof CommandeRefuseeError) {

@@ -107,7 +107,7 @@ export async function passerCommande({
   saisie: SaisieTunnel & { mode: ModeLivraison };
   configuration?: ReturnType<typeof lireConfigurationLivraison>;
   client?: typeof prisma;
-  apresReservation?: () => void;
+  apresReservation?: () => void | Promise<void>;
 }): Promise<IssueCommande> {
   // VALIDATION AU POINT D'ENTREE DU CAS D'USAGE, socle de LS-71. Une quantite
   // nulle, negative ou decimale part sinon jusqu'a PostgreSQL et revient en
@@ -299,7 +299,7 @@ export async function passerCommande({
         }
       }
 
-      apresReservation?.();
+      await apresReservation?.();
 
       return {
         commandeId,

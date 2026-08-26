@@ -6,7 +6,7 @@
  * transaction unique d'ADR-024.
  */
 import { Prisma } from "@/generated/prisma/client";
-import type { ModeLivraison } from "@/generated/prisma/enums";
+import type { ModeLivraison, StatutCommande } from "@/generated/prisma/enums";
 import type { ClientBase } from "@/repositories/stock";
 
 /** Un document numerote par annee, ADR-031. Trois types prevus, un employe. */
@@ -219,4 +219,54 @@ export async function ecrireLignes(
   lignes: readonly LigneAEcrire[],
 ): Promise<void> {
   await client.ligneCommande.createMany({ data: [...lignes] });
+}
+
+/** Ce que le demarrage d'un paiement lit d'une commande, LS-118. */
+export type CommandeAPayer = {
+  id: string;
+  numero: string;
+  statut: StatutCommande;
+  emailNormalise: string;
+  totalCentimes: number;
+  fraisPortCentimes: number;
+  lignes: readonly {
+    libelleProduitFige: string;
+    libelleVarianteFige: string;
+    prixFigeCentimes: number;
+    quantite: number;
+  }[];
+};
+
+/**
+ * Lit une commande et ses lignes figees pour creer sa session de paiement.
+ *
+ * LES LIBELLES SONT LES COPIES FIGEES, invariant 3 : la page de paiement
+ * affiche ce que la commande a fige, jamais le catalogue courant, qui a pu
+ * changer entre la commande et le paiement.
+ */
+export async function lireCommandeAPayer(
+  client: ClientBase,
+  commandeId: string,
+): Promise<CommandeAPayer | null> {
+  const commande = await client.commande.findUnique({
+    where: { id: commandeId },
+    select: {
+      id: true,
+      numero: true,
+      statut: true,
+      emailNormalise: true,
+      totalCentimes: true,
+      fraisPortCentimes: true,
+      lignes: {
+        select: {
+          libelleProduitFige: true,
+          libelleVarianteFige: true,
+          prixFigeCentimes: true,
+          quantite: true,
+        },
+      },
+    },
+  });
+
+  return commande;
 }

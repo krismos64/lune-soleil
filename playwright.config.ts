@@ -61,11 +61,11 @@ export default defineConfig({
      */
     {
       name: "preparation",
-      testMatch: /session-(cliente|administration)\.setup\.ts$/,
+      testMatch: /(session-(cliente|administration)|commande)\.setup\.ts$/,
     },
     {
       name: "mobile-320",
-      testIgnore: /session-(cliente|administration)\.setup\.ts$/,
+      testIgnore: /(session-(cliente|administration)|commande)\.setup\.ts$/,
       dependencies: ["preparation"],
       use: {
         ...devices["Desktop Chrome"],
@@ -76,7 +76,7 @@ export default defineConfig({
     },
     {
       name: "mobile-390",
-      testIgnore: /session-(cliente|administration)\.setup\.ts$/,
+      testIgnore: /(session-(cliente|administration)|commande)\.setup\.ts$/,
       dependencies: ["preparation"],
       use: {
         ...devices["Desktop Chrome"],
@@ -94,7 +94,7 @@ export default defineConfig({
     },
     {
       name: "bureau-1280",
-      testIgnore: /session-(cliente|administration)\.setup\.ts$/,
+      testIgnore: /(session-(cliente|administration)|commande)\.setup\.ts$/,
       dependencies: ["preparation"],
       use: {
         ...devices["Desktop Chrome"],
@@ -127,6 +127,16 @@ export default defineConfig({
        * herite, et sa presence est exigee au demarrage par `src/lib/auth.ts`.
        */
       BETTER_AUTH_URL: URL_BASE,
+      /*
+       * LE PRESTATAIRE DE PAIEMENT EST ABSENT PENDANT TOUTE LA SUITE, LS-118,
+       * et la cle est VIDEE explicitement plutot qu'heritee de `.env` : le jour
+       * ou une cle de test y sera posee, LS-18, la suite partirait sinon
+       * appeler l'API reelle, non deterministe et hors de son perimetre. Meme
+       * situation assumee que le transporteur : le compte n'existe pas, la
+       * creation de session echoue proprement, et c'est exactement le cas
+       * d'erreur du parcours 1 que la page de confirmation doit couvrir.
+       */
+      STRIPE_SECRET_KEY: "",
     },
   },
 });
