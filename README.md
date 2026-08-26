@@ -581,7 +581,7 @@ destructives doivent bloquer, une migration additive doit passer, et une
 détection qui ne peut pas conclure doit bloquer plutôt que supposer. Lancé contre
 la version d'avant LS-42, il échoue sur sept de ces dix cas.
 
-`verifier-tests-mutation.sh` casse **quatre-vingt-quinze fois** le comportement
+`verifier-tests-mutation.sh` casse **cent fois** le comportement
 testé et exige que la suite rougisse à chaque fois. Les cibles, par domaine :
 réservation et stock, authentification et autorisation, socle de validation et
 journalisation, journal des connexions, verrou de tâche planifiée, preuve
@@ -590,9 +590,14 @@ droits des personnes, catalogue avec ses sections et ses variantes, le
 traitement des photographies avec son stockage, les conditions de publication
 d'un produit depuis LS-103, le rendu des écrans
 d'administration ouverts par une vraie session depuis LS-111, et depuis LS-104
-le catalogue public avec ses états de disponibilité et ses vignettes. Il vérifie d'abord que
+le catalogue public avec ses états de disponibilité et ses vignettes, et depuis
+LS-118 la création de la session de paiement, sa garde de réservation et
+l'expiration des sessions concurrentes. Il vérifie d'abord que
 les deux projets de test sont verts, sans quoi aucune mutation ne prouverait
 rien.
+
+**Il dure une trentaine de minutes et ne se lance pas à chaque story** : les
+portes de sortie de phase, et les cas neufs joués un par un le reste du temps.
 
 **Le détail par domaine n'est plus énuméré en nombres**, et c'est délibéré :
 cette phrase portait quatorze compteurs dont la somme faisait cinquante-six pour
