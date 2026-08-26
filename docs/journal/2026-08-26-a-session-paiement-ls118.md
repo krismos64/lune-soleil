@@ -164,8 +164,8 @@ dans un fichier et affichent le code de sortie.
 
 | Ticket | État |
 |---|---|
-| LS-118 | **En cours**, les neuf critères vérifiés, revue critique en cours |
-| LS-125 | reste ouverte, la page est désormais dynamique, ce qui la rend applicable |
+| LS-118 | **Terminé**, fusionné sur `main`, `99336e6` et `76b5192` |
+| LS-125 | reste ouverte, la page est désormais dynamique, ce qui la rend applicable. Son critère 3 est à retrancher, la page rendant un 200 explicatif et non un 404 |
 | LS-18 | bloqueur inchangé, la vérification contre l'API réelle l'attend |
 
 ## Prochaine étape
