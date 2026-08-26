@@ -22,6 +22,37 @@ export const FICHIER_SESSION_ADMINISTRATION =
   "tests/e2e/.session-administration.json";
 
 /**
+ * Cookie signe de la commande en attente de paiement, LS-118.
+ *
+ * ECRIT PAR `commande.setup.ts` : le cookie est signe HMAC avec le secret
+ * d'application, un fichier de test de largeur ne peut pas le fabriquer sans
+ * importer du code serveur. Ignore par git, comme les etats de session : il
+ * designe une commande de test, mais la forme signee n'a rien a faire dans un
+ * depot public.
+ */
+export const FICHIER_COMMANDE = "tests/e2e/.commande-test.json";
+
+/**
+ * La commande EN_ATTENTE_PAIEMENT que la page de confirmation affiche, LS-118.
+ *
+ * AMORCEE EN BASE ET NON PASSEE PAR LE TUNNEL, deliberement : cliquer
+ * « Commander » a chaque execution consommerait le stock du catalogue de test
+ * et laisserait des reservations de trente minutes derriere chaque largeur,
+ * jusqu'a faire basculer le badge « En stock » d'un test voisin. La variante
+ * est DEDIEE et son produit reste en `BROUILLON` : rien n'apparait au
+ * catalogue, rien ne se partage.
+ */
+export const COMMANDE_TEST = {
+  categorieId: "e1a2b3c4-1118-4aaa-8888-000000000001",
+  produitId: "e1a2b3c4-1118-4bbb-8888-000000000002",
+  varianteId: "e1a2b3c4-1118-4ccc-8888-000000000003",
+  commandeId: "e1a2b3c4-1118-4ddd-8888-000000000004",
+  ligneId: "e1a2b3c4-1118-4eee-8888-000000000005",
+  reservationId: "e1a2b3c4-1118-4fff-8888-000000000006",
+  numero: "C-TEST-0118",
+} as const;
+
+/**
  * Identifiants du produit de test rendu dans l'editeur, LS-111.
  *
  * FIGES ET NON ENGENDRES A CHAQUE EXECUTION. Le fichier de test doit construire

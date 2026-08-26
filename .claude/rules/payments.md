@@ -120,6 +120,44 @@ différents rend une **erreur** : dériver du seul identifiant de commande casse
 le nouvel essai légitime après un refus de paiement. La clé porte la commande
 **et** la tentative.
 
+**La réservation est prolongée jusqu'à l'`expires_at` de chaque session créée**,
+complément d'ADR-032 arbitré le 26 août 2026, et c'est la même identité d'instant
+qui vaut aux deux bouts : le service calcule un seul `expireA`, l'envoie au
+prestataire et le pose sur les réservations actives. Sans cela l'alignement se
+rompait au **réessai**, une nouvelle session durant obligatoirement 30 minutes
+quand la réservation posée à la commande pouvait n'en avoir plus que cinq.
+
+**Une réservation déjà expirée est un refus métier, sans aucun appel au
+prestataire** : la tâche de libération a pu rendre la pièce au catalogue, et
+créer une session permettrait de payer une pièce revendue. Seules les
+réservations **actives** se prolongent, jamais une expirée que l'on ferait
+renaître sur un stock qui ne la porte plus.
+
+**La garde est universelle, jamais existentielle** : chaque ligne de commande
+doit porter sa réservation active, et la comparaison porte sur le **nombre de
+lignes prolongées**. « Au moins une réservation active » répond vrai sur un
+panier à deux pièces dont une seule est encore réservée, et le client paierait
+les deux. C'est la prolongation elle-même qui sert de garde, son compte de lignes
+étant lu : une lecture préalable rouvrirait la fenêtre que l'appel réseau
+d'expiration, jusqu'à vingt secondes, laisse grande ouverte.
+
+**Une session ne se crée jamais sans que sa tentative soit déjà en base.** La
+ligne `Paiement` est réservée **avant** l'appel, `identifiantFournisseur` nul, et
+complétée après. Écrite après l'appel, une écriture perdue laissait une session
+orpheline : payable trente minutes, inconnue de la base, donc jamais expirée par
+la prévention au réessai.
+
+**Après avoir rattaché sa session, un démarrage expire toute autre session encore
+ouverte de la commande.** C'est ce rattrapage, et non un verrou, qui tient
+l'invariant sous concurrence : un verrou pris avant l'appel serait relâché avant
+que la session existe, donc deux démarrages simultanés liraient tous deux
+« aucune session précédente ». Le dernier à rattacher expire les précédentes.
+
+**Une panne réseau sur l'expiration de la session précédente arrête tout.**
+`DEJA_FERMEE` n'est pas une panne et laisse continuer ; une indisponibilité, si :
+créer une session sans savoir si la précédente est encore payable rouvre
+exactement le double encaissement que cette prévention ferme.
+
 **Détection.** Un refus par `paiement_reussi_unique`, dont le prédicat porte les
 trois états d'encaissement `REUSSI`, `PARTIELLEMENT_REMBOURSE` et `REMBOURSE`, ne
 se journalise pas silencieusement. Il produit une `AlerteCritique` de gravité `CRITIQUE`, portant

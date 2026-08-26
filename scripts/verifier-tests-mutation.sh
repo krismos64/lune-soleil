@@ -39,7 +39,12 @@ cd "$RACINE" || exit 1
 
 SQL="tests/aide/reservation-sql.ts"
 STOCK="src/repositories/stock.ts"
-PAGE="src/app/page.tsx"
+# LA PAGE D'ACCUEIL A DEMENAGE EN LS-122, groupe de routes `(boutique)`. Le
+# chemin d'origine n'existait plus, et le garde-fou de lisibilite arretait le
+# script AVANT la premiere mutation : il rendait 1 sans en avoir joue une seule.
+# Le controle etait donc inoperant depuis LS-122, ce que personne n'a vu parce
+# que son echec ressemble a celui d'une mutation ratee. Corrige le 26 aout 2026.
+PAGE="src/app/(boutique)/page.tsx"
 LAYOUT="src/app/layout.tsx"
 AUTH="src/lib/auth.ts"
 REAUTH="src/services/reauthentification.ts"
@@ -75,7 +80,9 @@ PAGE_EDITEUR="src/app/administration/produits/[id]/page.tsx"
 PUBLICATION="src/app/administration/produits/[id]/publication-produit.tsx"
 DEPOT_CATALOGUE="src/repositories/catalogue.ts"
 SERVICE_CATALOGUE="src/services/catalogue.ts"
-CARTE_PRODUIT="src/app/catalogue/carte-produit.tsx"
+# Deplacee elle aussi par LS-122, meme motif que `$PAGE` ci-dessus.
+CARTE_PRODUIT="src/app/(boutique)/catalogue/carte-produit.tsx"
+PAIEMENT="src/services/paiement.ts"
 
 # TOUT FICHIER MUTE DOIT FIGURER ICI, sans quoi il n'est ni sauvegarde ni
 # restaure et la mutation RESTE SUR LE DISQUE apres l'execution.
@@ -88,7 +95,7 @@ CARTE_PRODUIT="src/app/catalogue/carte-produit.tsx"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -1441,6 +1448,61 @@ cas "extension de vignette .jpg au lieu de .jpeg" e2e \
 mute "$DEPOT_CATALOGUE" 's/    JOIN variante v ON v.produit_id = p.id\n      AND v.archivee_a IS NULL/    JOIN variante v ON v.produit_id = p.id\n      AND v.archivee_a IS NULL\n      AND v.vente_web_activee = true/'
 cas "vente web desactivee fait disparaitre du catalogue" integration \
   "annonce EPUISE pour un produit dont la vente web est desactivee"
+
+# ---------------------------------------------------------------------------
+# Cas 96 : LA CREATION DE SESSION DEPLACEE DANS LA TRANSACTION. LS-118,
+# critere 9, la mutation exigee par le ticket.
+#
+# ADR-024 place la session de paiement APRES le commit : un appel reseau dans
+# la transaction tiendrait le verrou de la variante pendant l'aller-retour, et
+# son echec effacerait la commande par rollback. La mutation reintroduit
+# exactement ce defaut : l'appel au prestataire passe dans `apresReservation`,
+# donc DANS la transaction de `passerCommande`. Sur la panne simulee du
+# critere 4, la commande disparait, et le test qui exige sa survie rougit.
+# ---------------------------------------------------------------------------
+mute "$PAIEMENT" 's/  const commande = await passerCommande\(\{\n    lignesCookie,\n    saisie,\n    \.\.\.\(configuration === undefined \? \{\} : \{ configuration \}\),\n    client,\n  \}\);/  const commande = await passerCommande({\n    lignesCookie,\n    saisie,\n    ...(configuration === undefined ? {} : { configuration }),\n    client,\n    apresReservation: async () => {\n      await fournisseur.creerSession({\n        commandeId: "dans-la-transaction",\n        numeroCommande: "-",\n        emailClient: "-",\n        lignes: [],\n        expireA: new Date(),\n        cleIdempotence: "-",\n        urlRetour: "-",\n        urlAbandon: "-",\n      });\n    },\n  });/'
+cas "creation de session deplacee dans la transaction" integration \
+  "laisse la commande EN_ATTENTE_PAIEMENT avec ses reservations sur une panne du prestataire"
+
+# ---------------------------------------------------------------------------
+# Cas 97 a 100 : LES QUATRE DEFAUTS RELEVES PAR `ls-critical-reviewer` le
+# 26 aout 2026 sur LS-118. Chacun laissait deux sessions payables coexister, ou
+# faisait payer une piece repartie au catalogue.
+#
+# Cas 97 : LA GARDE DE RESERVATION REDEVIENT EXISTENTIELLE. « Au moins une
+# reservation active » repond vrai sur un panier a deux pieces dont une seule
+# est encore reservee : le client paierait les deux, dont une que la tache de
+# liberation a rendue au catalogue et qui a pu etre revendue. L'invariant est
+# universel, chaque ligne de commande doit porter sa reservation.
+mute "$PAIEMENT" 's/if \(prolongees < commande\.lignes\.length\) \{/if (prolongees < 1) {/'
+cas "garde de reservation existentielle au lieu d'universelle" integration \
+  "refuse un panier dont UNE SEULE piece est encore reservee"
+
+# Cas 98 : LE RATTRAPAGE DES SESSIONS CONCURRENTES NEUTRALISE. C'est lui, et non
+# un verrou, qui porte l'invariant d'ADR-032 sous concurrence : un verrou pris
+# avant l'appel reseau serait relache avant que la session existe, et deux
+# demarrages simultanes liraient tous deux « aucune session precedente ».
+#
+# LE TEST N'EST VOYANT QUE PARCE QUE LE DOUBLE A UNE LATENCE. Sans elle, les
+# deux appels ne s'entrelacent jamais et la mutation reste invisible : mesure le
+# 26 aout 2026, fiche « fenetre de course dans un test de concurrence ».
+mute "$PAIEMENT" 's/      return autres\.filter\(\(ancienne\) => ancienne !== sessionPrecedente\);/      return [];/'
+cas "rattrapage des sessions concurrentes neutralise" integration \
+  "serialise deux demarrages concurrents : une seule session creee"
+
+# Cas 99 : LA TENTATIVE N'EST PLUS RESERVEE AVANT L'APPEL RESEAU. Ecrite apres,
+# une ecriture perdue laissait la session ORPHELINE : payable trente minutes,
+# inconnue de la base, donc jamais expiree par la prevention au reessai.
+mute "$PAIEMENT" 's/    await reserverTentativePaiement\(transaction, \{\n      id: tentativeId,\n      commandeId: identifiant,\n      montantCentimes: commande\.totalCentimes,\n    \}\);\n\n    return \{ commande, expireA, tentativeId, sessionPrecedente \};/    return { commande, expireA, tentativeId, sessionPrecedente };/'
+cas "tentative non reservee avant l'appel au prestataire" integration \
+  "cree la session et rattache son identifiant a la commande"
+
+# Cas 100 : LA TENTATIVE RESERVEE N'EST PLUS RETIREE SUR ECHEC DE CREATION. Le
+# cas d'erreur du parcours 1 exige qu'AUCUN identifiant ne soit rattache, et une
+# tentative qui n'a jamais atteint le prestataire fausserait le compte des essais.
+mute "$PAIEMENT" 's/    await supprimerTentativeSansSession\(client, tentativeId\);\n\n    return \{ statut: "PANNE" \};\n  \}\n\n  \/\*\n   \* RATTACHEMENT/    return { statut: "PANNE" };\n  }\n\n  \/*\n   * RATTACHEMENT/'
+cas "tentative non retiree apres un echec de creation" integration \
+  "retire la tentative reservee quand la creation echoue"
 echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then

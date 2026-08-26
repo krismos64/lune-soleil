@@ -123,3 +123,7 @@ docs/internal/
 # public, et ils se recreent a chaque execution.
 tests/e2e/.session-cliente.json
 tests/e2e/.session-administration.json
+
+# Cookie signe de la commande de test, LS-118. Meme raison : une valeur signee
+# avec le secret local n'a rien a faire dans un depot public.
+tests/e2e/.commande-test.json

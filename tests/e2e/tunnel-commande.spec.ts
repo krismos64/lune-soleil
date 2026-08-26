@@ -426,7 +426,7 @@ test("la confirmation ne porte aucune violation d'accessibilite serieuse", async
   await expect(
     page.getByRole("heading", { name: "Votre commande est enregistrée" }),
   ).toBeVisible();
-  await expect(page).toHaveTitle(/Commande enregistrée/);
+  await expect(page).toHaveTitle(/Votre commande/);
 
   const resultat = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])

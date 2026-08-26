@@ -208,13 +208,28 @@ export function EtapesTunnel({
       }
 
       setErreur("");
+
+      /*
+       * LA REDIRECTION VERS LE PRESTATAIRE VIENT DU SERVEUR, LS-118 : l'URL de
+       * session est rendue par l'action, jamais construite ici. `assign` et non
+       * `router.push`, la destination etant hors du site.
+       *
+       * SANS URL, LA CREATION DE SESSION A ECHOUE : cas d'erreur du parcours 1,
+       * la commande existe et reste payable. La confirmation explique et porte
+       * le bouton de reessai, `retour=indisponible` ne choisissant que les mots.
+       */
+      if (resultat.urlPaiement !== null) {
+        window.location.assign(resultat.urlPaiement);
+        return;
+      }
+
       /*
        * `encodeURIComponent` bien que le format d'ADR-031 soit alphanumerique :
        * une chaine construite a l'execution ne se relit pas au moment ou le
        * format change. Fiche « chaine construite a l'execution ».
        */
       router.push(
-        `/commande/confirmation?numero=${encodeURIComponent(resultat.numero)}`,
+        `/commande/confirmation?retour=indisponible&numero=${encodeURIComponent(resultat.numero)}`,
       );
     });
   }
@@ -700,8 +715,10 @@ function Recapitulatif({
        * ou une formule analogue denuee de toute ambiguite. « Payer » ou
        * « Valider » seuls ne satisfont pas cette exigence. Etabli par LS-86.
        *
-       * IL ECRIT LA COMMANDE, LS-117, et ne paie pas encore : la session de
-       * paiement appartient a LS-118 et se cree APRES le commit, ADR-024.
+       * IL ECRIT LA COMMANDE PUIS PART AU PAIEMENT, LS-117 puis LS-118 : la
+       * session se cree APRES le commit, ADR-024, et la redirection vers le
+       * prestataire suit. Un echec de creation laisse la commande payable
+       * depuis la page de confirmation.
        *
        * DESACTIVE PENDANT L'ENVOI, sans quoi un double clic lance deux
        * transactions : la seconde echouerait sur une piece unique, mais
@@ -717,8 +734,8 @@ function Recapitulatif({
       </button>
 
       <p className={styles.aide}>
-        Le paiement en ligne sera disponible à la prochaine étape du
-        développement.
+        Paiement sécurisé par Stripe. La page de paiement s&apos;ouvre après
+        validation.
       </p>
     </div>
   );

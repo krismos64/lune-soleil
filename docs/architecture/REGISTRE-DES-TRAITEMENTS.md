@@ -290,6 +290,7 @@ qu'un identifiant technique.
 |---|---|---|---|
 | `ls_panier` | identifiants de variante et quantités, **aucune donnée personnelle** | 30 jours | LS-114 |
 | `ls_tunnel` | **nom, adresse postale, téléphone**, mode de livraison, point de retrait | 2 heures | LS-115 |
+| `ls_commande` | identifiant technique de la commande en cours de paiement, **aucune donnée personnelle** | 1 heure | LS-118 |
 
 `ls_tunnel` relève de **T2, gestion des commandes**, dont il est l'antichambre :
 la saisie y vit tant que la commande n'est pas écrite, ADR-024 réservant
@@ -311,7 +312,19 @@ Et `effacerSaisie` est appelée une fois la commande écrite : le nom, l'adresse
 le téléphone ne survivent pas à l'usage qui les justifie, la commande portant
 désormais sa propre copie figée de l'adresse.
 
-Les deux cookies sont `httpOnly`, `sameSite: "lax"`, `secure` hors
+`ls_commande` prend leur place une fois la commande écrite, LS-118. Il ne porte
+qu'un identifiant technique, aucune donnée personnelle : c'est la commande en
+base qui porte le reste, et le cookie ne fait que prouver que ce navigateur est
+celui qui l'a passée, invariant 2. Il figure ici pour que la table reste
+complète, pas parce qu'il relève d'un traitement supplémentaire.
+
+**Son heure couvre la fenêtre de paiement, pas la consultation durable.** La
+session de paiement dure trente minutes, ADR-032, et le réessai après un refus
+doit rester possible au-delà ; la réconciliation de LS-120 régularise à l'heure.
+Consulter une commande plus tard passera par un jeton signé en base, LS-57, avec
+sa propre durée.
+
+Les trois cookies sont `httpOnly`, `sameSite: "lax"`, `secure` hors
 développement, et signés par HMAC dérivé de `BETTER_AUTH_SECRET` avec une
 étiquette distincte par usage.
 

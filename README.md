@@ -18,20 +18,26 @@ ouverte commercialement.
 a commencé le 19 août 2026 avec LS-114, le panier, sans attendre la clôture de
 la phase 2.
 
-| Phase | Epic | État au 25 août 2026 |
+| Phase | Epic | État au 26 août 2026 |
 |---|---|---|
 | 2, catalogue, médias et stock multicanal | LS-3 | en cours, sept stories ouvertes |
-| 3, panier, réservation, paiement et commandes | LS-4 | en cours, LS-114 à LS-117 et LS-43 livrées, six stories ouvertes |
+| 3, panier, réservation, paiement et commandes | LS-4 | en cours, LS-114 à LS-118 et LS-43 livrées, six stories ouvertes dont LS-118 en cours de revue |
 
 **Le jalon qui compte est tenu depuis le 25 août 2026.** LS-116 prouve la
 réservation du dernier exemplaire par le service, sur une variante à un
 exemplaire et deux acheteurs simultanés, et LS-117 porte la même preuve sur le
-chemin de production, `passerCommande`. Le paiement reste à écrire, LS-118.
+chemin de production, `passerCommande`.
 
-**Une commande s'écrit désormais de bout en bout**, LS-117 : commande, lignes
-figées, montants, acceptation des CGV et réservations dans une seule
-transaction, avec un numéro attribué sans trou, ADR-031. Rien n'est encore payé,
-la commande reste en `EN_ATTENTE_PAIEMENT`.
+**Une commande s'écrit de bout en bout**, LS-117 : commande, lignes figées,
+montants, acceptation des CGV et réservations dans une seule transaction, avec un
+numéro attribué sans trou, ADR-031.
+
+**Elle part au paiement depuis LS-118**, session créée après le commit, ADR-024 :
+session précédente expirée d'abord, `expires_at` à 30 minutes aligné sur la
+réservation, clé d'idempotence portant la commande et la tentative, ADR-032. La
+confirmation du paiement elle-même attend le webhook signé de LS-119, et la
+vérification contre l'API réelle attend le compte Stripe, LS-18 : sans clé, le
+paiement s'annonce indisponible et la commande reste payable au réessai.
 
 Ce que la phase 3 attend est écrit dans son découpage : la chaîne **LS-118 à
 LS-121** est imposée, chaque story dépendant de la précédente. LS-117 en est
