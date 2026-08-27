@@ -483,6 +483,7 @@ Vingt-et-un scripts, dont neuf de mutation qui prouvent les autres :
 ./scripts/verifier-jira.sh                       # epics et dépendances du backlog, local
 ./scripts/controle-fumee.sh                      # santé du service déployé, LS-73
 ./docs/prototypes/interblocage-panier.sh         # interblocage sur panier, exige Docker
+./docs/prototypes/interblocage-liberation-confirmation.sh # ordre des verrous, LS-120
 ```
 
 `verifier-image-docker.sh` **ouvre les couches** de l'image plutôt que de relire
