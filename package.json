@@ -26,7 +26,8 @@
     "db:verifier": "./prisma/sql-manuel/verifier-schema.sh --base-migree",
     "db:verifier:conception": "./prisma/sql-manuel/verifier-schema.sh",
     "db:console": "docker compose exec db psql -U lunesoleil -d lunesoleil",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "email:reel": "node --env-file=.env node_modules/vitest/vitest.mjs run --config vitest.envoi-reel.mts"
   },
   "dependencies": {
     "@better-auth/passkey": "^1.6.25",
@@ -34,6 +35,7 @@
     "@prisma/client": "^7.9.1",
     "better-auth": "^1.6.25",
     "next": "16.2.12",
+    "nodemailer": "^9.0.5",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "stripe": "^22.5.0",
@@ -46,6 +48,7 @@
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^22",
+    "@types/nodemailer": "^8.0.1",
     "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",

@@ -753,6 +753,8 @@ JETON_ACCES|portee|PorteeJeton
 AVIS|statut|StatutAvis
 UTILISATEUR|role|Role
 JOURNAL_EMAIL|statut|StatutEmail
+ENVOI_EN_ATTENTE|statut|StatutEnvoi
+ENVOI_EN_ATTENTE|origine|OrigineEcriture
 ALERTE_CRITIQUE|gravite|GraviteAlerte
 JOURNAL_CONNEXION|moyen|MoyenConnexion
 JOURNAL_CONNEXION|issue|IssueConnexion

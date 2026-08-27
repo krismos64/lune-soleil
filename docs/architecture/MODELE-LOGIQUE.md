@@ -123,7 +123,7 @@ une base locale rendue conforme après coup masquerait une migration incomplète
 et le défaut n'apparaîtrait qu'en production. `preparer-base-locale.sh` compare
 désormais le compte en base à ces fichiers et échoue en cas d'écart.
 
-## Les six index partiels
+## Les sept index partiels
 
 Chacun traduit une règle que le récapitulatif du modèle conceptuel range au
 niveau 1, garanti par la base.
@@ -134,8 +134,16 @@ niveau 1, garanti par la base.
 | `mouvement_vente_web_unique` | `type = 'VENTE_WEB'` | S7, décision D |
 | `paiement_reussi_unique` | `statut IN ('REUSSI', 'PARTIELLEMENT_REMBOURSE', 'REMBOURSE')` | V14, décision D, corrigé par LS-45 |
 | `journal_email_systeme_unique` | `statut = 'ENVOYE' AND origine IN ('SYSTEME','RECONCILIATION')` | E5, décision D |
+| `envoi_en_attente_actif_unique` | `statut IN ('EN_ATTENTE','ENVOI_EN_COURS')` | E5, ADR-033, première ligne de défense |
 | `adresse_defaut_unique` | `est_par_defaut` | A2, une adresse par défaut |
 | `utilisateur_administratrice_unique` | `role = 'ADMINISTRATRICE'` | E1, ADR-023 |
+
+**Les deux index de la règle E5 ne font pas double emploi.** Celui de
+`journal_email` empêche deux traces d'envoi réussi ; celui d'`envoi_en_attente`
+empêche deux **intentions** actives, donc deux appels au serveur. Le second agit
+avant que le message ne parte, le premier constate après coup : garder le seul
+`journal_email` laisserait deux messages arriver chez le client, et seule la
+seconde écriture de trace serait refusée, trop tard.
 
 **Le filtre est ce qui rend chaque contrainte utilisable.** Sans lui, l'unicité
 sur `role` interdirait un second compte client, celle sur `produit_id`

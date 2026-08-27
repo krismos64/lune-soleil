@@ -349,9 +349,14 @@ export function creerAuth(
        * DESACTIVE VOLONTAIREMENT, et c'est une dette, pas un choix definitif.
        *
        * ADR-023 exige la verification d'adresse avant tout rattachement de
-       * commande. L'activer aujourd'hui rendrait l'inscription impossible :
-       * aucun email ne part tant qu'ADR-008 n'a pas tranche le fournisseur, le
-       * client resterait bloque sur un compte non verifie.
+       * commande.
+       *
+       * LE BLOCAGE TECHNIQUE EST LEVE DEPUIS LS-82 : les emails partent
+       * reellement. Ce qui manque desormais n'est plus l'envoi mais le PARCOURS
+       * autour, ecran d'attente de verification, renvoi du lien, message quand
+       * l'email n'arrive pas. Activer le drapeau sans ces ecrans laisserait un
+       * client bloque sur un compte non verifie sans aucun moyen d'agir, ce qui
+       * serait pire que la dette actuelle. C'est LS-54 qui le porte.
        *
        * Ce que cela n'ouvre PAS : le rattachement d'une commande a un compte,
        * parcours 6, qui exigera la verification quoi qu'il arrive. La dette

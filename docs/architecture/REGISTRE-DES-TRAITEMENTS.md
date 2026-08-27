@@ -231,9 +231,9 @@ porte déjà. Sans elle, une ligne d'échec sur compte inconnu ne dirait rien.
 | Finalité | tracer les actions d'administration, l'envoi des emails, les alertes critiques, et limiter les tentatives en rafale |
 | Personnes concernées | clients destinataires d'emails, exploitante agissant dans l'administration |
 | Catégories de données | identifiant de l'acteur, adresse IP, adresse email du destinataire, modèle d'email et statut d'envoi, clé de limitation de débit contenant une adresse IP |
-| Tables | `JournalAudit`, `JournalEmail`, `AlerteCritique`, `RateLimit`, `MouvementStock` |
+| Tables | `JournalAudit`, `JournalEmail`, `AlerteCritique`, `RateLimit`, `MouvementStock`, `EnvoiEnAttente` |
 | Base légale | intérêt légitime, article 6.1.f, sécurité et preuve du bon fonctionnement |
-| Conservation | **six mois** pour `JournalAudit`, par alignement sur la délibération CNIL n° 2021-122. **Vingt-quatre heures** pour `RateLimit`, arbitrage de LS-94 exposé ci-dessous. `JournalEmail` suit la commande qu'il sert, voir T2. Les trois purges sont branchées sur une tâche planifiée quotidienne depuis le 12 août 2026, LS-94 |
+| Conservation | **six mois** pour `JournalAudit`, par alignement sur la délibération CNIL n° 2021-122. **Vingt-quatre heures** pour `RateLimit`, arbitrage de LS-94 exposé ci-dessous. `JournalEmail` suit la commande qu'il sert, voir T2. `EnvoiEnAttente` est une **file de travail** et non une trace, voir ci-dessous. Les trois purges sont branchées sur une tâche planifiée quotidienne depuis le 12 août 2026, LS-94 |
 | Destinataires | l'exploitante seule |
 | Transfert hors UE | aucun |
 
@@ -256,6 +256,25 @@ marge d'exploitation, constater le lendemain qu'une adresse a été plafonnée
 pendant la nuit, tout en divisant par cent quatre-vingts la durée pendant
 laquelle une adresse IP reste attachée à cette table. L'information de fond, elle,
 survit dans `JournalConnexion`, conservé six mois.
+
+**`EnvoiEnAttente` est une file de travail, pas une trace**, ADR-033 et LS-82.
+Elle porte l'adresse du destinataire et les variables du message, donc des
+données personnelles, mais son usage s'arrête à l'envoi : passée la minute qui
+suit le dépôt, la ligne n'a plus d'utilité opérationnelle.
+
+Le raisonnement est celui appliqué à `RateLimit` ci-dessus, et il donne ici une
+réponse différente. Une ligne terminée, `ENVOYE` ou `ECHOUE`, ne sert plus à
+rien : l'information de fond survit dans `JournalEmail`, qui est la trace
+opposable. Une ligne **bloquée** en `ENVOI_EN_COURS` doit en revanche survivre
+jusqu'à ce que quelqu'un la traite, c'est tout l'objet de l'alerte.
+
+**La purge de cette table n'est pas encore branchée**, et c'est une dette
+assumée plutôt qu'un oubli : elle demande de distinguer les lignes terminées des
+lignes bloquées, ce que la tâche quotidienne de LS-94 ne sait pas faire
+aujourd'hui. Portée par **LS-154**.
+
+**Le contenu du message n'est jamais stocké**, seulement le modèle et ses
+variables, précaution 3 d'ADR-008.
 
 ## Tables sans donnée personnelle
 

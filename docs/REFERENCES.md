@@ -68,7 +68,7 @@ connaître avant d'écrire un service qui la recouvrirait ou la contredirait :
 | `src/lib/hook-journal-connexion.ts` | hook `after` de Better Auth, table des chemins de connexion, journalisation des refus de cadence, LS-80 | `trustedProxies` non configuré, l'adresse IP restera nulle derrière Nginx |
 | `src/lib/issue-connexion.ts` | `lireResultat`, défaut fermé sur l'issue d'une tentative, **sans aucun import du projet** | aucune |
 | `src/repositories/verrou.ts` | prise de verrou atomique en une instruction, `ON CONFLICT DO UPDATE` conditionnel à l'expiration, relâchement conditionnel au détenteur, LS-72 | aucune |
-| `src/services/tache-planifiee.ts` | `executerSousVerrou`, table des tâches et durées de verrou, relâchement garanti en `finally` | **les quatre tâches travaillent** depuis LS-120, les deux du paiement étant les dernières remplies |
+| `src/services/tache-planifiee.ts` | `executerSousVerrou`, table des tâches et durées de verrou, relâchement garanti en `finally` | **les cinq tâches travaillent**, `envoi-emails` ajoutée par LS-82. Elle tourne toutes les minutes, la plus fréquente, parce qu'elle porte un délai **vu par le client** ; son verrou de cinq minutes est plus long que les autres, l'appel réseau n'étant borné par rien côté serveur distant |
 | `src/lib/secret-cron.ts` | secret partagé des routes internes, comparaison à temps constant, **sans aucun import du projet** | aucune |
 | `src/services/preuve-identite.ts` | **seul point d'entrée qui écrit une preuve**, vérification par mot de passe ou fraîcheur de session pour la passkey, LS-89 | aucune |
 | `src/services/utilisateur.ts` | mise à jour de profil, schéma Zod `.strict()`, règle E11 | aucune |
@@ -87,7 +87,11 @@ connaître avant d'écrire un service qui la recouvrirait ou la contredirait :
 | `src/services/limitation-action.ts` | seuils par action et journalisation des tentatives, LS-92 | aucune |
 | `src/services/purge-journaux.ts` | purges des trois journaux, un échec n'empêche pas les autres, LS-94 | aucune |
 | `src/lib/proxies-de-confiance.ts` | lecture de `BETTER_AUTH_TRUSTED_PROXIES`, **sans aucun import du projet**, LS-91 | aucune |
-| `src/integrations/email/index.ts` | interface `EnvoyeurEmail`, implémentation qui journalise sans envoyer | **aucun email ne part** : ADR-008 retient le SMTP OVH et nodemailer, implémentation à écrire |
+| `src/integrations/email/index.ts` | interface `EnvoyeurEmail`, et l'implémentation d'attente qui journalise sans envoyer | `envoyeurJournalise` survit pour les tests et les environnements sans SMTP ; le chemin de production passe par `smtp.ts` |
+| `src/integrations/email/smtp.ts` | envoi réel par nodemailer, LS-82 : lecture de configuration, classement des erreurs, filtrage du motif | **`EAUTH` et `ENOAUTH` n'ouvrent aucune retentative**, un mot de passe faux le restant au troisième essai tout en entamant le quota de 200 messages par heure du MX Plan. Aucune réponse brute du serveur n'entre en base ni au journal, un refus SMTP transportant parfois l'identifiant de connexion |
+| `src/integrations/email/modeles.ts` | rendu des trois messages d'authentification, texte brut | **les six textes F-MAIL-01 à F-MAIL-06 restent dus par LS-29**, ils demandent la validation de l'exploitante et n'entrent pas ici sans elle |
+| `src/services/envoi-email.ts` | outbox et envoi direct, LS-82 et ADR-033 : `deposerEnvoi`, `expedierEnvoisEnAttente`, `envoyerDirect` | **le partage entre les deux chemins est la décision d'ADR-033** : ce qui découle d'une transaction métier passe par l'outbox, ce qu'une personne attend à l'écran part directement. Un doublon d'intention est **absorbé et non propagé**, lever annulerait la transaction métier entière, donc la confirmation de commande, pour un email en double |
+| `src/repositories/envoi-email.ts` | prise de lot en `FOR UPDATE SKIP LOCKED`, marquage, lignes bloquées | **la lecture et le marquage sont une seule instruction**, et le commit de ce marquage précède l'appel SMTP : marquer après reproduirait le trou qu'ADR-033 ferme. `ENVOI_EN_COURS` n'est jamais repris, `ECHOUE` l'est |
 | `src/lib/journal.ts` | journalisation JSON, masquage par nom de clé, erreurs réduites au nom de classe, `LOG_LEVEL`, voir `JOURNALISATION.md` | aucune |
 | `src/services/sante.ts` | sonde `SELECT 1` avec délai de garde de deux secondes, ne lève jamais | aucune |
 | `src/app/api/sante/route.ts` | route publique 200 ou 503, sans cache, en-tête `X-Correlation-Id` | aucune |
@@ -137,6 +141,7 @@ documentation technique, ticket ou règle qui le contredirait.
 | ADR-030 | Un mouvement de stock ne se compense qu'une fois | stock, mouvement, compensation, correction, inventaire |
 | ADR-031 | Le numéro de commande vient d'une table compteur, sans trou | numéro, numérotation, commande, facture, avoir, séquence |
 | ADR-032 | Un double encaissement est alerté et remboursé à la main | double paiement, deux sessions, remboursement, expiration de session, idempotence Stripe |
+| ADR-033 | Outbox transactionnelle pour l'envoi des emails | email, envoi, outbox, idempotence d'envoi, doublon d'email, nodemailer, SMTP |
 
 Cette table se met à jour à chaque ADR créé. Un ADR absent d'ici reste
 opposable : la table est un raccourci, `docs/adr/` fait foi.

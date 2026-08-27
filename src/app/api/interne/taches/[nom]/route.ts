@@ -20,7 +20,9 @@
  */
 import { engendrerCorrelationId, journaliser } from "@/lib/journal";
 import { secretCronValide } from "@/lib/secret-cron";
+import { creerEnvoyeurSmtp } from "@/integrations/email/smtp";
 import { fournisseurStripe } from "@/integrations/stripe";
+import { expedierEnvoisEnAttente } from "@/services/envoi-email";
 import { libererReservationsExpirees } from "@/services/liberation-reservations";
 import { purgerQuarantaine } from "@/services/media";
 import { reconcilierPaiements } from "@/services/reconciliation-paiements";
@@ -215,6 +217,38 @@ export async function POST(
       journaliser(
         "info",
         "Reconciliation des paiements terminee",
+        { tache, ...bilan },
+        correlation,
+      );
+
+      return;
+    }
+
+    /*
+     * `envoi-emails`, LS-82 et ADR-033 : elle vide l'outbox.
+     *
+     * L'ENVOYEUR REEL EST INJECTE ICI, comme le prestataire de paiement juste
+     * au-dessus, et pour le meme motif : le service ne connait que le contrat
+     * `EnvoyeurEmail`, ce qui permet d'eprouver la panne du fournisseur avec un
+     * double plutot qu'avec un vrai serveur.
+     *
+     * LA CONSTRUCTION EST DANS LA TACHE ET NON AU CHARGEMENT DU MODULE. Lire la
+     * configuration a l'import ferait echouer le demarrage de l'application
+     * entiere si une variable SMTP manquait, alors que seule cette tache en
+     * depend. Ici l'erreur reste bornee a un cycle, et `executerSousVerrou` la
+     * journalise.
+     *
+     * ELLE NE LEVE PAS SUR UN MESSAGE EN ECHEC, seulement sur une panne qui
+     * empeche le cycle entier : un destinataire injoignable ne doit pas faire
+     * declarer la tache en echec, sans quoi l'exploitation verrait un 500
+     * permanent pour une adresse morte.
+     */
+    if (tache === "envoi-emails") {
+      const bilan = await expedierEnvoisEnAttente(creerEnvoyeurSmtp());
+
+      journaliser(
+        "info",
+        "Expedition des emails en attente terminee",
         { tache, ...bilan },
         correlation,
       );

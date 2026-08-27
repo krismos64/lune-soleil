@@ -22,7 +22,7 @@ la phase 2.
 |---|---|---|
 | 2, catalogue, médias et stock multicanal | LS-3 | en cours, treize stories ouvertes |
 | 3, panier, réservation, paiement et commandes | LS-4 | LS-114 à LS-121 et LS-43 livrées, **porte de sortie franchie**, deux stories ouvertes |
-| 4, factures, avoirs, emails, expédition et contact | LS-5 | découpée le 27 août 2026, treize stories ouvertes |
+| 4, factures, avoirs, emails, expédition et contact | LS-5 | découpée le 27 août 2026, **commencée** : LS-51 et LS-82 livrent l'envoi réel des emails, douze stories ouvertes |
 | 5, rétractation, conformité et protection des données | LS-6 | découpée le 27 août 2026, cinq stories ouvertes |
 | 6, durcissement, exploitation et ouverture | LS-7 | découpée le 27 août 2026, onze stories ouvertes |
 
@@ -75,9 +75,9 @@ réservation, clé d'idempotence portant la commande et la tentative, ADR-032.
 vérifiée avant tout effet, la commande passe `CONFIRMEE`, la réservation devient
 un mouvement de stock. Son **idempotence est ancrée sur l'effet et non sur
 l'identifiant d'événement**, qui ne ferme que le rejeu du même événement, jamais
-le croisement entre le webhook et la réconciliation. Deux des quatre clés
-d'unicité sont exercées par un test ; la facture et l'email n'étant écrits nulle
-part avant la phase 4, les deux autres attendent LS-126 et LS-82.
+le croisement entre le webhook et la réconciliation. **Trois des quatre clés
+d'unicité sont désormais exercées par un test**, celle de l'email l'étant depuis
+LS-82 ; la facture n'étant écrite nulle part, la dernière attend LS-126.
 
 **Et rien ne reste en suspens depuis LS-120** : la libération rend au catalogue
 les réservations échues toutes les cinq minutes, la réconciliation régularise
@@ -325,6 +325,7 @@ emploie n'a pas commencé : le code ne les lit pas encore.
 | `npm run db:verifier:conception` | les mêmes sur un conteneur jetable, SQL de référence |
 | `npm run db:console` | ouvre `psql` sur la base locale |
 | `npm run db:studio` | interface graphique Prisma Studio |
+| `EMAIL_TEST_DESTINATAIRE=... npm run email:reel` | envoie un **vrai** message, LS-82 critère 1 |
 
 **`db:verifier` refuse de tourner sur une base qui contient des données**, parce
 que ses contrôles insèrent puis tronquent : ils détruiraient un jeu de
@@ -485,13 +486,33 @@ reste à porter, LS-80.** La réauthentification des actions sensibles a son
 mécanisme et son contrôle, LS-81 ; le branchement des quatre familles attend que
 les actions existent, LS-89.
 
-**Aucun email ne part encore.** ADR-008 retient le SMTP OVH, l'implémentation est
-LS-82 ; d'ici là `src/integrations/email/` journalise sans envoyer, et la
-vérification d'adresse reste désactivée.
+**Les emails partent depuis LS-82**, par le SMTP OVH, ADR-008. Deux chemins
+selon qui attend le message, ADR-033 : ce qui découle d'une transaction métier
+passe par une **outbox** dont une tâche vide la file toutes les minutes, ce
+qu'une personne attend à l'écran part directement.
+
+**La vérification d'adresse reste désactivée**, et son motif a changé : le
+blocage n'est plus l'envoi mais le parcours autour, écran d'attente et renvoi du
+lien, porté par LS-54.
+
+**Les six textes F-MAIL-01 à F-MAIL-06 restent dus par LS-29.** Seuls les trois
+messages d'authentification ont un rendu ; les textes de la marque demandent la
+validation de l'exploitante.
+
+**L'arrivée d'un message ne se vérifie qu'à la main**, et `npm run email:reel`
+sert à cela. Il vit sous sa propre configuration Vitest, que rien n'importe :
+`npm run test` ne peut donc pas l'exécuter, sans quoi chaque passage de la suite
+enverrait un vrai message et entamerait le quota de 200 par heure d'OVH.
+
+Il constate que le serveur a **accepté** le message, jamais qu'il est arrivé,
+distinction posée par ADR-008. Le classement en indésirable et le refus tardif
+restent invisibles en SMTP : il faut ouvrir la boîte.
 
 ### Scripts de vérification
 
-Vingt-et-un scripts, dont neuf de mutation qui prouvent les autres :
+Vingt-six scripts, dont neuf de mutation qui prouvent les autres.
+`preparer-base-locale.sh` n'y figure pas, il s'appelle par `npm run db:preparer`
+et `db:reinitialiser`, cités plus haut.
 
 ```bash
 ./prisma/sql-manuel/verifier-schema.sh           # schéma sur base réelle, exige Docker
@@ -517,6 +538,7 @@ Vingt-et-un scripts, dont neuf de mutation qui prouvent les autres :
 ./scripts/verifier-nginx-mutation.sh             # prouve le précédent par mutation
 ./scripts/verifier-jira.sh                       # epics et dépendances du backlog, local
 ./scripts/controle-fumee.sh                      # santé du service déployé, LS-73
+./docs/prototypes/reservation-test.sh            # concurrence sur la pièce unique, exige Docker
 ./docs/prototypes/interblocage-panier.sh         # interblocage sur panier, exige Docker
 ./docs/prototypes/interblocage-liberation-confirmation.sh # ordre des verrous, LS-120
 ```

@@ -1417,6 +1417,19 @@ erDiagram
         identifiant commandeId FK "nullable"
         horodatage creeA
     }
+    ENVOI_EN_ATTENTE {
+        identifiant id PK
+        identifiant commandeId FK "nullable"
+        texte destinataire
+        texte modele
+        bloc variables
+        enum statut "EN_ATTENTE ENVOI_EN_COURS ENVOYE ECHOUE"
+        enum origine "SYSTEME ADMIN RECONCILIATION"
+        entier tentatives
+        horodatage priseA "nullable"
+        texte motifEchec "nullable"
+        horodatage creeA
+    }
     ALERTE_CRITIQUE {
         identifiant id PK
         texte type

@@ -297,10 +297,29 @@ manuel après échec, prévu au parcours 1.
 
 **Cette clé protège la base, pas l'appel au fournisseur.** Si le fournisseur
 envoie l'email et que le processus tombe avant d'écrire la ligne `ENVOYE`, la
-reprise ne trouve rien qui la bloque et le client reçoit un doublon. Le
-mécanisme qui ferme ce trou, outbox transactionnelle ou clé d'idempotence
-fournisseur, est à décider en **LS-51**, avant la phase 4. Ne pas coder l'envoi
-d'email en supposant l'index suffisant.
+reprise ne trouve rien qui la bloque et le client reçoit un doublon.
+
+**Ce trou est fermé par une outbox transactionnelle**, ADR-033, décidé en LS-51
+et livré par LS-82. `envoi_en_attente` porte l'intention d'envoi, écrite dans la
+transaction qui produit l'effet métier : les deux existent, ou aucune des deux.
+La clé de `journal_email` reste la **seconde** ligne de défense, la première
+étant `envoi_en_attente_actif_unique`.
+
+```
+UNIQUE envoi_en_attente (commande_id, modele)  WHERE statut IN ('EN_ATTENTE',
+                                                                'ENVOI_EN_COURS')
+```
+
+**Le marquage `ENVOI_EN_COURS` est commité AVANT l'appel SMTP**, et cet ordre est
+le mécanisme entier. Marquer après reproduirait le même trou quelques lignes plus
+loin. Une ligne restée dans cet état est **ambiguë** : personne ne sait si le
+message est parti. Elle n'est **jamais** rejouée automatiquement, elle sort par
+une alerte au-delà du délai de garde et par le renvoi manuel de la règle E6.
+
+Deux chemins coexistent, selon qui attend le message. Ce qui découle d'une
+transaction métier passe par l'outbox ; la vérification d'adresse et la
+réinitialisation de mot de passe partent en appel direct, quelqu'un les attend à
+l'écran et aucune commande ne les porte.
 
 Référence : `docs/architecture/MODELE-CONCEPTUEL.md`, décision D.
 
