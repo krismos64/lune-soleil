@@ -131,6 +131,15 @@ function fournisseurDouble(
 
       return options.issueExpiration ?? "EXPIREE";
     },
+    /*
+     * `lireSession` N'EST PAS EXERCEE PAR CE FICHIER, elle appartient a la
+     * reconciliation de LS-120 : le double la porte pour satisfaire le contrat,
+     * et leve si un test l'appelait par megarde, ce qui vaut mieux qu'un etat
+     * arbitraire silencieusement accepte.
+     */
+    async lireSession() {
+      throw new Error("lireSession n'a pas sa place dans ces tests");
+    },
   };
 
   return { double, demandes, expirations };

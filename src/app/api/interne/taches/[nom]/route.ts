@@ -15,12 +15,15 @@
  * la table `TACHES`.
  *
  * CE QU'ELLE NE DECIDE PAS : aucune logique metier n'est ecrite ici, chaque
- * tache delegue a son service. Les taches de stock et de paiement restent
- * vides, arbitrage du 30 juillet 2026, et se remplissent en phase 3 et 4.
+ * tache delegue a son service. LES QUATRE TACHES SONT DESORMAIS REMPLIES,
+ * les deux dernieres par LS-120.
  */
 import { engendrerCorrelationId, journaliser } from "@/lib/journal";
 import { secretCronValide } from "@/lib/secret-cron";
+import { fournisseurStripe } from "@/integrations/stripe";
+import { libererReservationsExpirees } from "@/services/liberation-reservations";
 import { purgerQuarantaine } from "@/services/media";
+import { reconcilierPaiements } from "@/services/reconciliation-paiements";
 import { purgerJournaux } from "@/services/purge-journaux";
 import {
   executerSousVerrou,
@@ -84,8 +87,8 @@ export async function POST(
 
   const resultat = await executerSousVerrou(tache, async () => {
     /**
-     * DEUX TACHES PORTENT UN TRAVAIL SUR QUATRE, `purge-journaux` en LS-94 et
-     * `purge-quarantaine-medias` en LS-102. Les deux autres restent vides.
+     * LES QUATRE TACHES PORTENT UN TRAVAIL depuis LS-120, `purge-journaux` en
+     * LS-94, `purge-quarantaine-medias` en LS-102, et les deux du paiement.
      *
      * `purge-journaux` applique les durees de conservation annoncees au
      * registre des traitements, regle E14. Elle est branchee ici plutot que
@@ -94,17 +97,12 @@ export async function POST(
      * sont communes, et les dupliquer ferait qu'un durcissement futur ne
      * s'appliquerait qu'a l'un des deux fichiers.
      *
-     * `liberation-reservations` recevra la liberation des reservations
-     * expirees, phase 3, LS-17 : decrementer `quantiteReservee` et supprimer
-     * la ligne, dans une transaction unique.
+     * `liberation-reservations` et `reconciliation-paiements` sont remplies
+     * depuis LS-120, plus bas dans cette fonction.
      *
-     * `reconciliation-paiements` recevra la reconciliation, phase 4, avec
-     * l'idempotence ancree sur l'effet et non sur l'identifiant d'evenement,
-     * invariant 5.
-     *
-     * Le contrat que ces deux taches devront respecter est deja pose ici :
-     * elles LEVENT en cas d'echec, et `executerSousVerrou` se charge du
-     * journal et du relachement.
+     * Le contrat que toutes ces taches respectent est le meme : elles LEVENT en
+     * cas d'echec, et `executerSousVerrou` se charge du journal et du
+     * relachement.
      */
     if (tache === "purge-journaux") {
       /**
@@ -168,6 +166,56 @@ export async function POST(
         "info",
         "Purge de la quarantaine des medias terminee",
         { tache, supprimes },
+        correlation,
+      );
+
+      return;
+    }
+
+    /*
+     * `liberation-reservations`, LS-120 : elle rend au catalogue les
+     * reservations echues. Sans elle, `quantiteReservee` ne redescendait
+     * JAMAIS et une piece abandonnee au paiement restait invendable pour
+     * toujours, ce que LS-106 avait mesure sans pouvoir le lever.
+     *
+     * ELLE LEVE EN CAS D'ECHEC, contrat commun a toutes les taches sauf
+     * `purge-journaux` : il n'y a ici qu'une seule instruction, donc aucune
+     * raison de porter l'echec element par element.
+     */
+    if (tache === "liberation-reservations") {
+      const liberees = await libererReservationsExpirees();
+
+      journaliser(
+        "info",
+        "Liberation des reservations expirees terminee",
+        { tache, liberees },
+        correlation,
+      );
+
+      return;
+    }
+
+    /*
+     * `reconciliation-paiements`, LS-120 : elle rattrape les evenements jamais
+     * recus. C'est le SECOND CHEMIN vers les effets de confirmation, decision D,
+     * et l'idempotence par effet de LS-119 est ce qui empeche les deux chemins
+     * de produire des doublons.
+     *
+     * LE PRESTATAIRE REEL EST INJECTE ICI, et c'est le seul endroit du chemin de
+     * production qui le nomme : le service ne connait que le contrat, ce qui
+     * permet d'eprouver la panne avec un double. Sans compte Stripe, LS-18, la
+     * lecture d'etat leve en indisponibilite et chaque commande est sautee,
+     * jamais annulee a l'aveugle.
+     */
+    if (tache === "reconciliation-paiements") {
+      const bilan = await reconcilierPaiements({
+        fournisseur: fournisseurStripe,
+      });
+
+      journaliser(
+        "info",
+        "Reconciliation des paiements terminee",
+        { tache, ...bilan },
         correlation,
       );
 
