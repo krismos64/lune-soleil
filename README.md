@@ -21,7 +21,7 @@ la phase 2.
 | Phase | Epic | État au 27 août 2026 |
 |---|---|---|
 | 2, catalogue, médias et stock multicanal | LS-3 | en cours, sept stories ouvertes |
-| 3, panier, réservation, paiement et commandes | LS-4 | en cours, LS-114 à LS-120 et LS-43 livrées, trois stories ouvertes |
+| 3, panier, réservation, paiement et commandes | LS-4 | LS-114 à LS-121 et LS-43 livrées, **porte de sortie franchie**, deux stories ouvertes |
 
 **Le jalon qui compte est tenu depuis le 25 août 2026.** LS-116 prouve la
 réservation du dernier exemplaire par le service, sur une variante à un
@@ -49,6 +49,17 @@ les réservations échues toutes les cinq minutes, la réconciliation régularis
 tous les quarts d'heure les commandes dont l'événement n'est jamais arrivé, en
 passant par le même service que le webhook. Le croisement des deux chemins est
 testé dans les deux ordres d'arrivée.
+
+**L'exploitante voit tout cela depuis LS-121**, qui ferme la phase 3 : la liste
+des commandes, leur détail avec les lignes figées, et les transitions de statut
+qu'elle décide, chacune historisée avec son acteur. `LIVREE` n'est atteignable
+par aucun clic, la date de livraison faisant courir le délai de rétractation :
+c'est LS-33 qui décidera comment le site l'apprend.
+
+**La porte de sortie de la phase 3 est prouvée par un test**, et non constatée :
+`tests/integration/parcours-complet.sequential.test.ts` traverse panier,
+commande, réservation, paiement, événement signé, confirmation et administration
+sur une pièce unique, puis rejoue le chemin d'abandon.
 
 La vérification contre l'API réelle attend le compte Stripe, LS-18 : sans clé, le
 paiement s'annonce indisponible et la commande reste payable au réessai.
@@ -461,6 +472,7 @@ Vingt-et-un scripts, dont neuf de mutation qui prouvent les autres :
 ./scripts/verifier-image-docker.sh               # sécurité de l'image, exige Docker
 ./scripts/verifier-image-docker-mutation.sh      # prouve le précédent par mutation
 ./scripts/verifier-actions-sensibles.sh          # réauthentification des actions sensibles
+./scripts/verifier-gardes-administration.sh      # garde de rôle, par fonction
 ./scripts/verifier-actions-sensibles-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-rendu-texte-simple.sh         # rendu HTML interdit sur le contenu de section
 ./scripts/verifier-rendu-texte-simple-mutation.sh # prouve le précédent par mutation
