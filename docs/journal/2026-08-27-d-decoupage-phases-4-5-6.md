@@ -2,7 +2,8 @@
 
 Session de cadrage sans code, demandée par Christophe après la clôture de la
 phase 3 : vérifier que les tickets couvrent le produit final, et créer ce qui
-manque. **Quinze stories créées**, LS-128 à LS-142.
+manque. **Dix-sept stories créées** : LS-128 à LS-142 pour les trois phases,
+plus LS-143 et LS-144 pour deux points laissés en suspens par LS-121.
 
 ## Ce que la vérification a trouvé
 
@@ -89,14 +90,50 @@ Le tableau d'état annonçait « sept stories ouvertes » en phase 2. Jira en co
 et non de mémoire, ce que la table de propagation du skill exige précisément pour
 cette raison.
 
+## Deux tickets de plus, demandés en fin de session
+
+Les deux points relevés par la revue frontend de LS-121 et laissés sans ticket
+sont entrés à leur tour, sur demande de Christophe.
+
+**LS-143**, le `default` de `formaterOrigine`. Le code a été relu avant d'écrire
+le ticket, et le défaut est réel : une quatrième valeur de `OrigineEcriture`
+s'afficherait « Système » sans qu'aucun test ni aucun type ne bronche. C'est la
+**troisième forme** du même piège ici, après le prédicat d'index partiel et
+l'affichage d'enum. La story demande une exhaustivité vérifiée à la compilation,
+et le recensement des autres `switch` portant le même angle mort.
+
+Le repli de `traduireStatut`, juste à côté, est **délibéré et commenté** : les
+colonnes d'historique sont typées `string`, un statut disparu doit s'afficher.
+La story dit explicitement de le conserver.
+
+**LS-144**, la découvrabilité des filtres à 320 px. La relecture du CSS a
+**corrigé l'énoncé du défaut** : le débordement est déjà traité correctement,
+`overflow-x` sur le conteneur et non sur la page, zones tactiles à 44 px. Le
+sujet réel est que sept filtres ne tiennent pas sur une ligne et que rien ne
+signale ceux qui dépassent. Le ticket dit de ne pas défaire le choix existant, et
+prévoit une porte de sortie : si le constat à 320 px montre que le défaut n'en est
+pas un, la story se ferme sur ce constat.
+
+## Un écart trouvé en écrivant LS-141
+
+`README.md` et `.claude/agents/ls-conteneurisation.md` annoncent tous deux
+**« Umami auto-hébergé »** en mesure d'audience. **Aucun ADR ne le décide**, et
+aucun document d'architecture ne le mentionne.
+
+C'est une pré-décision de stack jamais formalisée. Signalée en commentaire sur
+LS-141 plutôt que résolue en silence : l'ADR de cette story ne part donc pas
+d'une page blanche, il confirme ou infirme Umami en énonçant les raisons. Les
+deux mentions ne sont pas retirées, elles témoignent d'une intention réelle et se
+mettront à jour avec l'ADR.
+
 ## Preuves
 
 ```
-./scripts/verifier-jira.sh    zéro orphelin sur les 15 stories créées
+./scripts/verifier-jira.sh    zéro orphelin sur les 17 stories créées
                               1 signalement résiduel, LS-68, story terminée
 liens vérifiés                14/14 dans le bon sens, relus un par un
-stories rattachées            24/24 sur LS-5, LS-6 et LS-7
-assignation                   15/15 à Christophe
+stories rattachées            24/24 sur LS-5, LS-6 et LS-7, plus 2 sur LS-3
+assignation                   17/17 à Christophe
 ```
 
 Aucun test à jouer, cette session ne touche pas au code.
@@ -110,6 +147,8 @@ Aucun test à jouer, cette session ne touche pas au code.
 | LS-7 | découpée, six stories créées |
 | LS-33 | requalifiée, décision confirmée, reste la démarche commerciale |
 | LS-128 à LS-142 | créées, assignées, liées |
+| LS-143, LS-144 | créées, rattachées à LS-3, sans lien Blocks, corrections indépendantes |
+| LS-141 | commentaire d'écart sur Umami annoncé sans ADR |
 
 ## Prochaine étape
 

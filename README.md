@@ -20,7 +20,7 @@ la phase 2.
 
 | Phase | Epic | État au 27 août 2026 |
 |---|---|---|
-| 2, catalogue, médias et stock multicanal | LS-3 | en cours, huit stories ouvertes |
+| 2, catalogue, médias et stock multicanal | LS-3 | en cours, dix stories ouvertes |
 | 3, panier, réservation, paiement et commandes | LS-4 | LS-114 à LS-121 et LS-43 livrées, **porte de sortie franchie**, deux stories ouvertes |
 | 4, factures, avoirs, emails, expédition et contact | LS-5 | découpée le 27 août 2026, treize stories ouvertes |
 | 5, rétractation, conformité et protection des données | LS-6 | découpée le 27 août 2026, quatre stories ouvertes |
@@ -29,7 +29,8 @@ la phase 2.
 Les phases 4, 5 et 6 n'avaient jamais été découpées : LS-6 ne portait aucune
 story et LS-7 en portait deux pour douze sujets annoncés. Quinze stories ont été
 créées le 27 août 2026, LS-128 à LS-142, ce qui rend le chemin jusqu'au Go-Live
-visible d'un bout à l'autre.
+visible d'un bout à l'autre. Deux points relevés par la revue frontend de LS-121
+sont entrés au même moment, LS-143 et LS-144.
 
 **Le jalon qui compte est tenu depuis le 25 août 2026.** LS-116 prouve la
 réservation du dernier exemplaire par le service, sur une variante à un
