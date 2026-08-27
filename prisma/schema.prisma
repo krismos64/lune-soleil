@@ -146,6 +146,24 @@ enum StatutEmail {
   ECHOUE
 }
 
+/// Etat d'une ligne d'outbox, ADR-033. LS-82.
+///
+/// `ENVOI_EN_COURS` EST UN ETAT AMBIGU, ET C'EST VOULU. Il est posé et commité
+/// AVANT l'appel SMTP : une ligne qui y reste signifie que personne ne sait si
+/// le message est parti, le processus étant tombé pendant l'appel. Elle n'est
+/// donc jamais rejouée automatiquement, sans quoi on rouvrirait le doublon que
+/// cette table existe pour fermer. Au-delà du délai de garde, elle est signalée
+/// et l'administratrice tranche par le renvoi manuel, règle E6.
+///
+/// `ECHOUE` EST DIFFERENT : l'appel a rendu une erreur, donc le message n'est
+/// pas parti, et la retentative est sûre.
+enum StatutEnvoi {
+  EN_ATTENTE
+  ENVOI_EN_COURS
+  ENVOYE
+  ECHOUE
+}
+
 enum GraviteAlerte {
   AVERTISSEMENT
   CRITIQUE
@@ -510,6 +528,7 @@ model Commande {
   retractation  DemandeRetractation?
   jetons        JetonAcces[]
   journauxEmail JournalEmail[]
+  envoisEnAttente EnvoiEnAttente[]
 
   @@index([emailNormalise], map: "commande_email_idx")
   @@map("commande")
@@ -1036,6 +1055,55 @@ model JournalEmail {
   //   ADMIN exclu         le renvoi manuel reste possible, règle E6
   @@unique([commandeId, modele], where: raw("statut = 'ENVOYE' AND origine IN ('SYSTEME','RECONCILIATION')"), map: "journal_email_systeme_unique")
   @@map("journal_email")
+}
+
+// ADR-033, LS-51 et LS-82. L'outbox transactionnelle des emails.
+//
+// POURQUOI CETTE TABLE EXISTE. `journal_email_systeme_unique` protège la base,
+// pas l'appel au serveur SMTP : si le message part et que le processus tombe
+// avant d'écrire la ligne `ENVOYE`, la reprise ne trouve rien qui la bloque et
+// le client reçoit une seconde confirmation. L'intention d'envoi s'écrit donc
+// dans la transaction qui produit l'effet métier, et une tâche planifiée la
+// consomme ensuite. Les deux existent, ou aucune des deux.
+//
+// LE CONTENU DU MESSAGE N'EST PAS STOCKÉ, seulement de quoi le reconstruire :
+// le modèle et ses variables. Précaution 3 d'ADR-008, et `variables` ne porte
+// jamais de secret, invariant 9.
+//
+// ELLE NE REMPLACE PAS `JournalEmail`, qui reste le journal de ce qui est
+// parti. Celle-ci porte ce qui doit partir, et ses lignes terminées sont
+// purgées ; l'autre se conserve.
+model EnvoiEnAttente {
+  id           String       @id @default(uuid())
+  commandeId   String?      @map("commande_id")
+  destinataire String
+  modele       String
+  variables    Json
+  statut       StatutEnvoi  @default(EN_ATTENTE)
+  origine      OrigineEcriture
+  // Nombre d'appels SMTP déjà tentés, borne la retentative sur erreur réseau.
+  tentatives   Int          @default(0)
+  // Horodatage du passage en ENVOI_EN_COURS, sans lequel une ligne bloquée
+  // serait indistinguable d'une ligne prise à l'instant : c'est lui qui rend
+  // le délai de garde mesurable.
+  priseA       DateTime?    @map("prise_a") @db.Timestamptz(3)
+  motifEchec   String?      @map("motif_echec")
+  creeA        DateTime     @default(now()) @map("cree_a") @db.Timestamptz(3)
+
+  commande Commande? @relation(fields: [commandeId], references: [id], onDelete: SetNull)
+
+  // PREMIÈRE LIGNE DE DÉFENSE D'ADR-033, la clé de `journal_email` restant la
+  // seconde. Sans elle, deux transactions métier concurrentes écriraient deux
+  // intentions pour la même commande et le même modèle : la tâche enverrait
+  // deux messages, et seule la SECONDE écriture de trace serait refusée, donc
+  // trop tard, le client ayant déjà reçu les deux.
+  //
+  // Le filtre exclut les lignes terminées, et c'est ce qui autorise le renvoi
+  // manuel de la règle E6 : une ligne ENVOYE n'occupe plus la clé.
+  @@unique([commandeId, modele], where: raw("statut IN ('EN_ATTENTE','ENVOI_EN_COURS')"), map: "envoi_en_attente_actif_unique")
+  // La tâche lit les lignes à traiter par ce chemin, à chaque cycle.
+  @@index([statut, creeA], map: "envoi_en_attente_statut_cree_a")
+  @@map("envoi_en_attente")
 }
 
 model AlerteCritique {

@@ -90,6 +90,9 @@ INTEGRATION_STRIPE="src/integrations/stripe/index.ts"
 LIBERATION="src/services/liberation-reservations.ts"
 RECONCILIATION="src/services/reconciliation-paiements.ts"
 ADMIN_COMMANDES="src/services/administration-commandes.ts"
+ENVOI_EMAIL="src/services/envoi-email.ts"
+DEPOT_ENVOI="src/repositories/envoi-email.ts"
+SMTP="src/integrations/email/smtp.ts"
 
 # TOUT FICHIER MUTE DOIT FIGURER ICI, sans quoi il n'est ni sauvegarde ni
 # restaure et la mutation RESTE SUR LE DISQUE apres l'execution.
@@ -102,7 +105,7 @@ ADMIN_COMMANDES="src/services/administration-commandes.ts"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -1730,6 +1733,81 @@ cas "LIVREE rendue atteignable d'un clic" integration \
 mute "$ADMIN_COMMANDES" 's/    if \(!permises\.includes\(nouveauStatut\)\) \{/    if (false) {/'
 cas "table des transitions ignoree" integration \
   "refuse une transition non permise sans rien ecrire"
+
+# ---------------------------------------------------------------------------
+# Cas 123 a 128, LS-51 et LS-82 : l'outbox d'emails, ADR-033.
+#
+# CE QUE CES SIX CAS PROTEGENT. La garantie centrale est une ABSENCE : aucun
+# second email ne part quand le processus tombe entre l'appel au serveur et
+# l'ecriture de la trace. Une suite verte ne prouve jamais une absence toute
+# seule, un code qui n'enverrait rien du tout la satisferait aussi. Chaque cas
+# rouvre donc la fenetre reelle et verifie que le test attendu la voit.
+# ---------------------------------------------------------------------------
+
+# Cas 123 : LA MUTATION EXIGEE PAR LE CRITERE 8, premiere moitie. Reprendre les
+# lignes `ENVOI_EN_COURS` est exactement le defaut qu'ADR-033 ferme : personne
+# ne sait si le message est parti, et le rejouer envoie un doublon au client.
+mute "$DEPOT_ENVOI" "s/WHERE statut IN \('EN_ATTENTE', 'ECHOUE'\)/WHERE statut IN ('EN_ATTENTE', 'ECHOUE', 'ENVOI_EN_COURS')/"
+cas "lignes bloquees reprises en aveugle" integration \
+  "ne rejoue jamais une ligne restee ENVOI_EN_COURS"
+
+# Cas 124 : LE MARQUAGE PASSE APRES L'APPEL. Defaut plus insidieux que le
+# precedent, et le plus proche du code que quelqu'un ecrirait de bonne foi :
+# la ligne n'est plus prise avant l'envoi, donc une execution concurrente la
+# retrouve intacte. C'est la fenetre entiere qui se rouvre, deplacee de
+# quelques lignes.
+#
+# LE TEST ATTENDU EST CELUI DE LA CONCURRENCE, ET NON LE SEQUENTIEL. Mesure le
+# 27 aout 2026 : cette mutation laissait « ne renvoie rien au cycle suivant » au
+# VERT, parce que le premier cycle se termine avant le second et ecrit `ENVOYE`,
+# donc la ligne sort du filtre par son STATUT FINAL et jamais par la marque. Le
+# test enchainait deux cycles sans jamais exercer ce que la marque protege.
+#
+# La garantie porte sur deux executions qui se CHEVAUCHENT, la seconde demarrant
+# pendant que la premiere est suspendue dans son appel SMTP. Le test de
+# concurrence a ete ecrit pour cette mutation, et c'est elle qui l'a exige.
+mute "$DEPOT_ENVOI" "s/    SET statut = 'ENVOI_EN_COURS',/    SET statut = 'EN_ATTENTE',/"
+cas "marquage avant appel neutralise" integration \
+  "n'envoie pas deux fois quand deux executions se chevauchent"
+
+# Cas 125 : LA MUTATION EXIGEE PAR LE CRITERE 8, seconde moitie. Retenter sur
+# une erreur d'authentification epuise le quota de 200 messages par heure du MX
+# Plan sur un mot de passe qui ne s'arrangera pas, et fait tomber les envois
+# legitimes avec lui.
+mute "$SMTP" 's/  return typeof code === "string" \? !CODES_DEFINITIFS\.has\(code\) : true;/  return true;/'
+cas "retentative sur erreur d'authentification" unitaire \
+  "refuse de retenter sur une erreur d'authentification"
+
+# Cas 126 : LA TRACE N'EST PLUS ECRITE. Critere 2. Sans elle l'exploitation perd
+# le seul moyen de savoir ce qui est parti, et la quatrieme cle d'idempotence
+# n'a plus rien a proteger : la table qu'elle garde reste vide.
+mute "$ENVOI_EMAIL" 's/        await ecrireTrace\(transaction, envoi, StatutEmail\.ENVOYE, null\);/        void ecrireTrace;/'
+cas "trace d'envoi reussi supprimee" integration \
+  "envoie le message, marque la ligne ENVOYE et ecrit sa trace"
+
+# Cas 127 : L'ORIGINE REELLE REMPLACEE PAR UNE CONSTANTE. Le defaut ne casse
+# rien au nominal et reste invisible : la trace dit `SYSTEME` pour un email
+# parti par la reconciliation. La decision D existe pour distinguer ces deux
+# chemins, et l'index partiel les lit dans cette colonne.
+mute "$ENVOI_EMAIL" 's/      origine: ligne\.origine,/      origine: "SYSTEME",/'
+cas "origine reelle remplacee par une constante" integration \
+  "conserve l'origine reelle dans la trace, SYSTEME ou RECONCILIATION"
+
+# Cas 128 : L'ECHEC DE TRACE REDEVIENT BLOQUANT. Critere 3, et le sens du
+# defaut compte : une base momentanement indisponible ferait alors echouer une
+# reinitialisation de mot de passe, c'est-a-dire fermer la porte a quelqu'un
+# pour un probleme de journalisation. Regle E4.
+mute "$ENVOI_EMAIL" 's/    journaliserErreur\("Trace d'"'"'envoi direct impossible", erreur, \{\n      modele: message\.modele,\n    \}\);/    throw erreur;/'
+cas "echec de trace redevenu bloquant" integration \
+  "ne leve pas quand la trace ne peut pas s'ecrire"
+
+# Cas 129 : LE PLAFOND DE TENTATIVES N'EST PLUS APPLIQUE sur une erreur
+# definitive. La ligne redevient reprenable a chaque cycle, et l'authentification
+# est retentee indefiniment : c'est le critere 4 par l'autre bout, le classement
+# restant juste pendant que son EFFET disparait.
+mute "$ENVOI_EMAIL" 's/        definitive \? \{ epuiserTentatives: TENTATIVES_MAX \} : \{\},/        {},/'
+cas "plafond de tentatives non applique sur erreur definitive" integration \
+  "ne retente pas apres une erreur d'authentification"
 echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then

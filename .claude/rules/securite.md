@@ -157,9 +157,24 @@ appartient à `services/`, qui attrape `FournisseurEmailIndisponibleError`.
 **Une trace d'envoi dit « accepté par le serveur », jamais « reçu ».** Ne pas
 écrire l'inverse dans un statut ni dans une interface.
 
-**L'idempotence d'envoi n'est pas acquise**, dette ouverte de LS-51 : un index
-protège la base contre un doublon de ligne, il n'empêche pas un second appel au
-fournisseur. Ne pas supposer qu'un renvoi est inoffensif.
+**L'idempotence d'envoi passe par l'outbox**, ADR-033, décidé en LS-51 et livré
+par LS-82 : un index protège la base contre un doublon de ligne, il n'empêche pas
+un second appel au fournisseur. `envoi_en_attente` ferme cette fenêtre en
+marquant la ligne avant l'appel.
+
+**Ne jamais appeler l'envoyeur directement depuis un service métier.** Ce qui
+découle d'une transaction passe par `deposerEnvoi`, dans cette transaction ; ce
+qu'une personne attend à l'écran passe par `envoyerDirect`. Un appel direct
+depuis un chemin transactionnel rouvre le doublon qu'ADR-033 ferme.
+
+**Le classement des erreurs décide de la retentative, pas l'appelant.**
+`EAUTH` et `ENOAUTH` sont définitives : retenter sur un mot de passe faux épuise
+le quota de 200 messages par heure de l'offre MX Plan et fait tomber les envois
+légitimes avec lui.
+
+**Aucune réponse brute du serveur n'entre en base ni au journal.** Un refus SMTP
+transporte parfois l'identifiant de connexion dans son texte : seul le code est
+conservé, invariant 9.
 
 ## Prisma, une seule instance
 

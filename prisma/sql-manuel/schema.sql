@@ -40,6 +40,14 @@ CREATE TYPE "StatutAvis" AS ENUM ('DEPOSE', 'PUBLIE', 'REFUSE', 'RETIRE');
 -- CreateEnum
 CREATE TYPE "StatutEmail" AS ENUM ('ENVOYE', 'ECHOUE');
 
+-- ADR-033, LS-82. Etat d'une ligne d'outbox.
+--
+-- ENVOI_EN_COURS est pose et commite AVANT l'appel SMTP : une ligne qui y reste
+-- signifie que personne ne sait si le message est parti. Elle n'est jamais
+-- rejouee automatiquement, sans quoi le doublon que cette table ferme se
+-- rouvrirait ailleurs.
+CREATE TYPE "StatutEnvoi" AS ENUM ('EN_ATTENTE', 'ENVOI_EN_COURS', 'ENVOYE', 'ECHOUE');
+
 -- CreateEnum
 CREATE TYPE "GraviteAlerte" AS ENUM ('AVERTISSEMENT', 'CRITIQUE');
 
@@ -525,6 +533,31 @@ CREATE TABLE "journal_email" (
 );
 
 -- CreateTable
+-- ADR-033, LS-51 et LS-82. Outbox transactionnelle des emails.
+--
+-- L'intention d'envoi s'ecrit dans la transaction qui produit l'effet metier,
+-- une tache planifiee la consomme. `journal_email_systeme_unique` protege la
+-- base, pas l'appel SMTP : sans cette table, un processus qui tombe entre
+-- l'envoi et l'ecriture de la trace fait recevoir deux confirmations au client.
+--
+-- Le contenu du message n'est pas stocke, seulement de quoi le reconstruire.
+CREATE TABLE "envoi_en_attente" (
+    "id" TEXT NOT NULL,
+    "commande_id" TEXT,
+    "destinataire" TEXT NOT NULL,
+    "modele" TEXT NOT NULL,
+    "variables" JSONB NOT NULL,
+    "statut" "StatutEnvoi" NOT NULL DEFAULT 'EN_ATTENTE',
+    "origine" "OrigineEcriture" NOT NULL,
+    "tentatives" INTEGER NOT NULL DEFAULT 0,
+    "prise_a" TIMESTAMPTZ(3),
+    "motif_echec" TEXT,
+    "cree_a" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "envoi_en_attente_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "alerte_critique" (
     "id" TEXT NOT NULL,
     "type" TEXT NOT NULL,
@@ -738,6 +771,19 @@ CREATE UNIQUE INDEX "rate_limit_key_key" ON "rate_limit"("key");
 CREATE UNIQUE INDEX "journal_email_systeme_unique" ON "journal_email"("commande_id", "modele") WHERE (statut = 'ENVOYE' AND origine IN ('SYSTEME','RECONCILIATION'));
 
 -- CreateIndex
+-- ADR-033, premiere ligne de defense, celle de journal_email restant la
+-- seconde. Sans elle, deux transactions metier concurrentes ecriraient deux
+-- intentions pour la meme commande : la tache enverrait DEUX messages, et seule
+-- la seconde ecriture de trace serait refusee, trop tard.
+--
+-- Le filtre exclut les lignes terminees, ce qui laisse le renvoi manuel de la
+-- regle E6 possible : une ligne ENVOYE n'occupe plus la cle.
+CREATE UNIQUE INDEX "envoi_en_attente_actif_unique" ON "envoi_en_attente"("commande_id", "modele") WHERE (statut IN ('EN_ATTENTE','ENVOI_EN_COURS'));
+
+-- CreateIndex
+CREATE INDEX "envoi_en_attente_statut_cree_a" ON "envoi_en_attente"("statut", "cree_a");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "verrou_tache_nom_key" ON "verrou_tache"("nom");
 
 -- CreateIndex, LS-80. Le premier sert la purge par anteriorite, regle E14, le
@@ -854,6 +900,7 @@ ALTER TABLE "journal_connexion" ADD CONSTRAINT "journal_connexion_utilisateur_id
 
 -- AddForeignKey
 ALTER TABLE "journal_email" ADD CONSTRAINT "journal_email_commande_id_fkey" FOREIGN KEY ("commande_id") REFERENCES "commande"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "envoi_en_attente" ADD CONSTRAINT "envoi_en_attente_commande_id_fkey" FOREIGN KEY ("commande_id") REFERENCES "commande"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "alerte_critique" ADD CONSTRAINT "alerte_critique_acquittee_par_id_fkey" FOREIGN KEY ("acquittee_par_id") REFERENCES "utilisateur"("id") ON DELETE SET NULL ON UPDATE CASCADE;

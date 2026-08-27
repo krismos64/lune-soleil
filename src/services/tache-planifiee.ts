@@ -86,6 +86,27 @@ export const TACHES = {
    * donc une instance morte ne fait sauter AUCUN cycle.
    */
   "purge-quarantaine-medias": { dureeVerrouSecondes: 3600 },
+  /**
+   * Expedition des emails en attente, LS-82. ADR-033.
+   *
+   * ELLE TOURNE TOUTES LES MINUTES, la plus frequente des cinq, parce qu'elle
+   * porte un delai VU PAR LE CLIENT : c'est ce qui separe le paiement de la
+   * confirmation dans sa boite. Les autres taches reparent un etat interne que
+   * personne ne regarde en direct.
+   *
+   * VERROU DE CINQ MINUTES SUR UNE TACHE D'UNE MINUTE, soit cinq cycles perdus
+   * au pire si une instance meurt. C'est plus que les deux cycles admis pour la
+   * liberation des reservations, et le motif est que cette tache fait des
+   * appels RESEAU : vingt messages a quelques secondes chacun tiennent une
+   * duree que rien ne borne cote serveur distant. Un verrou plus court
+   * expirerait pendant qu'elle travaille, et une seconde instance reprendrait
+   * les memes lignes.
+   *
+   * `envoi_en_attente_actif_unique` ET `FOR UPDATE SKIP LOCKED` rendraient ce
+   * cas sur de toute facon : le verrou evite le travail inutile, il n'est pas
+   * la garantie d'unicite.
+   */
+  "envoi-emails": { dureeVerrouSecondes: 300 },
 } as const;
 
 export type NomTache = keyof typeof TACHES;

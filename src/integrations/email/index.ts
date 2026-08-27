@@ -1,16 +1,16 @@
 /**
  * Envoi d'email transactionnel, point d'extension. LS-70.
  *
- * POURQUOI UNE INTERFACE ET PAS UN FOURNISSEUR. ADR-008 laisse le choix du
- * prestataire ouvert, et LS-70 a besoin d'envoyer trois messages : la
- * verification d'adresse a l'inscription, ADR-023, la reinitialisation de mot
- * de passe et l'alerte de connexion par mot de passe, ADR-021. Attendre
- * l'arbitrage bloquerait l'authentification ; choisir un fournisseur ici
- * elargirait le perimetre de la story a une decision qui a son propre ADR.
+ * POURQUOI UNE INTERFACE ET PAS UN FOURNISSEUR. Elle a ete ecrite en LS-70,
+ * quand ADR-008 n'avait pas tranche, pour ne pas bloquer l'authentification sur
+ * une decision qui avait son propre ADR.
  *
- * Le reste du code ne connait donc que `EnvoyeurEmail`. Le jour ou ADR-008 est
- * tranche, une implementation remplace `envoyeurJournalise` et rien d'autre ne
- * bouge.
+ * ELLE A GARDE SA VALEUR APRES LA DECISION. ADR-008 retient le SMTP OVH et
+ * LS-82 a livre `smtp.ts`, mais le reste du code ne connait toujours que
+ * `EnvoyeurEmail` : c'est ce qui rend la bascule vers un fournisseur
+ * transactionnel reversible a faible cout, reserve nommee par ADR-008, et ce
+ * qui permet d'eprouver la panne du fournisseur avec un double plutot qu'avec
+ * un vrai serveur.
  *
  * CE QUE CE MODULE NE FAIT PAS. Il ne decide pas ce qu'un echec provoque : la
  * regle E4 pose qu'un echec d'email ne bloque jamais une commande, mais cette
@@ -55,12 +55,16 @@ export class FournisseurEmailIndisponibleError extends Error {
 }
 
 /**
- * Implementation d'attente : journalise l'intention, n'envoie rien.
+ * Implementation de repli : journalise l'intention, n'envoie rien.
+ *
+ * ELLE N'EST PLUS LA DETTE QU'ELLE ETAIT. LS-82 a livre `creerEnvoyeurSmtp`,
+ * qui est le chemin de production ; celle-ci sert desormais aux tests et aux
+ * environnements sans configuration SMTP, ou construire un transport echouerait
+ * a l'evaluation du module.
  *
  * ELLE NE LEVE PAS. Une exception ici ferait echouer l'inscription et la
- * connexion tant qu'ADR-008 n'est pas tranche, ce qui rendrait
- * l'authentification inutilisable. L'absence d'envoi reel est en revanche une
- * dette, tracee dans LS-70 et a solder par l'epic email.
+ * connexion, ce qui rendrait l'authentification inutilisable pour une panne
+ * d'email. Regle E4.
  *
  * LE DESTINATAIRE N'EST PLUS JOURNALISE EN CLAIR depuis LS-73. La version
  * initiale l'ecrivait, en jugeant qu'une adresse n'est pas un secret. LS-73 a
@@ -77,7 +81,7 @@ export class FournisseurEmailIndisponibleError extends Error {
  */
 export const envoyeurJournalise: EnvoyeurEmail = {
   async envoyer(message) {
-    journaliser("info", "email non envoye, ADR-008 non implemente", {
+    journaliser("info", "email non envoye, envoyeur de repli en place", {
       modele: message.modele,
       adresseDestinataire: message.destinataire,
     });
