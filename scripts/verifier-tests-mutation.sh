@@ -87,6 +87,8 @@ WEBHOOK="src/services/webhook-paiement.ts"
 CONFIRMATION="src/repositories/confirmation.ts"
 ROUTE_WEBHOOK="src/app/api/webhooks/paiement/route.ts"
 INTEGRATION_STRIPE="src/integrations/stripe/index.ts"
+LIBERATION="src/services/liberation-reservations.ts"
+RECONCILIATION="src/services/reconciliation-paiements.ts"
 
 # TOUT FICHIER MUTE DOIT FIGURER ICI, sans quoi il n'est ni sauvegarde ni
 # restaure et la mutation RESTE SUR LE DISQUE apres l'execution.
@@ -99,7 +101,7 @@ INTEGRATION_STRIPE="src/integrations/stripe/index.ts"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -1635,6 +1637,72 @@ cas "montant encaisse non confronte au total de la commande" integration \
 mute "$PAIEMENT" 's/      await transaction\.\$executeRaw`\n        SELECT id FROM commande WHERE id = \$\{identifiant\} FOR UPDATE\n      `;\n\n//'
 cas "verrou de serialisation du rattachement retire" integration \
   "serialise deux demarrages concurrents : une seule session creee"
+
+# ---------------------------------------------------------------------------
+# Cas 112 a 116 : LS-120, les deux taches planifiees du paiement.
+#
+# Cas 112 : LA LIBERATION NE SUPPRIME PLUS LA LIGNE, donc perd son idempotence.
+# Elle rendrait `quantiteReservee` a CHAQUE cycle sur la meme reservation, du
+# stock apparaissant sans qu'aucun achat ne l'explique, jusqu'a heurter
+# `chk_variante_reservee_positif`.
+mute "$LIBERATION" 's/      DELETE FROM reservation\n      WHERE id IN \(SELECT id FROM cibles\)/      SELECT id, variante_id, quantite FROM reservation\n      WHERE id IN (SELECT id FROM cibles)/'
+cas "liberation sans suppression, idempotence perdue" integration \
+  "est idempotente : deux executions ne decrementent pas deux fois"
+
+# Cas 113 : LA LIBERATION NE COMPARE PLUS A L'EXPIRATION. Elle rendrait au
+# catalogue des reservations ENCORE VIVES : le client, devant sa page de
+# paiement, verrait sa piece revendue sous lui.
+mute "$LIBERATION" 's/      WHERE expire_a <= now\(\)/      WHERE true/'
+cas "liberation sans comparaison d'expiration" integration \
+  "ne touche pas une reservation encore active"
+
+# Cas 114 : UNE SESSION ENCORE OUVERTE EST ANNULEE comme une expiree. La
+# commande d'un client parti dejeuner devant sa page de paiement disparaitrait,
+# et sa piece repartirait au catalogue alors qu'il est en train de la payer.
+mute "$RECONCILIATION" 's/    if \(etat\.etat === "OUVERTE"\) \{/    if (false) {/'
+cas "session ouverte annulee au lieu d'etre laissee vivre" integration \
+  "laisse vivre une commande dont la session est encore ouverte"
+
+# Cas 115 : UNE PANNE DU PRESTATAIRE ANNULE AU LIEU DE SAUTER. Ne pas savoir
+# n'autorise aucune decision : des commandes PAYEES seraient annulees et des
+# pieces vendues rendues au catalogue, sur une simple coupure reseau.
+mute "$RECONCILIATION" 's/      return \{ regularisee: false, annulee: false \};\n    \}\n\n    if \(etat\.etat === "OUVERTE"\)/      await annulerCommande(client, commande.id);\n\n      return { regularisee: false, annulee: true };\n    }\n\n    if (etat.etat === "OUVERTE")/'
+cas "panne du prestataire traitee en annulation" integration \
+  "saute la commande et n'annule rien quand le prestataire est en panne"
+
+# Cas 116 : LE SEUIL DE 60 MINUTES DISPARAIT. La reconciliation croiserait des
+# webhooks encore en vol a chaque cycle, pour un travail que l'idempotence rend
+# sans effet, au prix d'un appel externe par commande et par cycle.
+mute "$RECONCILIATION" 's/      creeA: \{\n        lt: new Date\(\n          Date\.now\(\) - AGE_MINIMAL_RECONCILIATION_MINUTES \* 60 \* 1000,\n        \),\n      \},/      creeA: { lt: new Date(Date.now() + 60_000) },/'
+cas "seuil d'age de la reconciliation supprime" integration \
+  "ignore une commande en attente depuis moins d'une heure"
+
+# Cas 117 : LE VERROU N'ECARTE PLUS LA SECONDE EXECUTION. C'est la double
+# decrementation que `tache-planifiee.ts` existe pour empecher, mesuree ici sur
+# le travail REEL de liberation et non sur le seul mecanisme de verrou.
+mute "$TACHE_PLANIFIEE" 's/  if \(!obtenu\) \{/  if (false) {/'
+cas "verrou n'ecarte plus la seconde execution" integration \
+  "deux executions simultanees ne rendent la piece qu'une fois"
+
+# ---------------------------------------------------------------------------
+# Cas 118 et 119 : LES DEFAUTS RELEVES PAR `ls-critical-reviewer` sur LS-120.
+#
+# Cas 118 : UNE LIGNE INCOHERENTE GELE TOUTE LA LIBERATION. Sans l'ecart de la
+# ligne fautive, `chk_variante_reservee_positif` annule la passe ENTIERE : plus
+# aucune reservation expiree n'est liberee sur tout le catalogue, a chaque cycle
+# de cinq minutes, jusqu'a intervention humaine. C'est le defaut meme que cette
+# story repare, reintroduit sur un perimetre plus large.
+mute "$LIBERATION" 's/\n        AND variante\.quantite_reservee >= par_variante\.quantite//'
+cas "ligne incoherente non ecartee, la passe entiere echoue" integration \
+  "libere les variantes saines malgre une variante incoherente"
+
+# Cas 119 : L'ECHEC D'UNE COMMANDE SORT DE LA BOUCLE DE RECONCILIATION. Les
+# commandes SUIVANTES ne sont jamais examinees, et le cycle d'apres rebute sur
+# la meme : des commandes payees restent en attente indefiniment a cause d'une
+# seule. Meme motif que `purge-journaux`, LS-94.
+mute "$RECONCILIATION" 's/      echouees\.push\(commande\.id\);/      echouees.push(commande.id);\n      throw cause;/'
+cas "echec d'une commande arretant la reconciliation" integration \
+  "traite les commandes suivantes puis leve, une seule ayant echoue"
 echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then

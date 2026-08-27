@@ -36,6 +36,7 @@ import {
   type EvenementPaiement,
   type VerificateurSignature,
 } from "@/integrations/stripe/evenements";
+import { estInterblocage, TENTATIVES_MAXIMUM } from "@/services/reservation";
 import {
   consommerReservationEtSortirStock,
   ecrireMouvementVenteWeb,
@@ -137,7 +138,67 @@ export async function traiterEvenementPaiement({
     throw cause;
   }
 
-  try {
+  /*
+   * REJEU BORNE SUR INTERBLOCAGE, meme mecanique que la reservation de LS-71 et
+   * meme borne, `database.md`. Ajoute le 27 aout 2026 sur recommandation de
+   * `ls-critical-reviewer`.
+   *
+   * POURQUOI IL FAUT UN FILET ICI. Cette transaction touche `variante` puis
+   * `reservation`, et tout chemin qui prendrait ces deux verrous dans l'ordre
+   * inverse l'interbloquerait. L'ordre de la tache de liberation est aligne,
+   * LS-120, mais un chemin tiers futur ne le sera pas forcement : sans rejeu,
+   * l'evenement serait perdu au premier croisement, et une commande PAYEE
+   * resterait sans confirmation.
+   *
+   * LE REJEU EST SUR, l'operation etant idempotente par effet : une tentative
+   * annulee n'a rien laisse, et une tentative qui aurait deja ecrit serait
+   * arretee par les cles d'unicite.
+   */
+  let derniereErreur: unknown;
+
+  for (let tentative = 1; tentative <= TENTATIVES_MAXIMUM; tentative += 1) {
+    try {
+      return await traiterSousTransaction(client, evenement, origine);
+    } catch (cause) {
+      if (!estInterblocage(cause)) {
+        journaliserErreur(
+          "traitement d'evenement de paiement en echec",
+          cause,
+          {
+            evenement: evenement.identifiant,
+          },
+        );
+
+        throw cause;
+      }
+
+      // La transaction est deja annulee par PostgreSQL : la tentative suivante
+      // repart d'un etat propre.
+      derniereErreur = cause;
+    }
+  }
+
+  journaliserErreur(
+    "traitement d'evenement de paiement, interblocage persistant",
+    derniereErreur,
+    { evenement: evenement.identifiant },
+  );
+
+  throw derniereErreur;
+}
+
+/**
+ * Le corps transactionnel du traitement, une tentative.
+ *
+ * SEPARE POUR QUE LE REJEU LE RELANCE ENTIER : rejouer une partie seulement
+ * laisserait l'evenement persiste sans ses effets.
+ */
+async function traiterSousTransaction(
+  client: typeof prisma,
+  evenement: EvenementPaiement,
+  origine: OrigineEcriture,
+): Promise<IssueEvenementPaiement> {
+  {
     return await client.$transaction(async (transaction) => {
       /*
        * L'IDENTIFIANT D'EVENEMENT EST PERSISTE DANS CETTE TRANSACTION, critere 2,
@@ -187,18 +248,6 @@ export async function traiterEvenementPaiement({
 
       return issue.resultat;
     });
-  } catch (cause) {
-    /*
-     * L'ECHEC N'EST PAS ABSORBE : la transaction est annulee, l'evenement n'a
-     * laisse aucune trace, et le prestataire le rejouera. C'est le comportement
-     * voulu pour une panne transitoire, une indisponibilite de la base par
-     * exemple. Repondre 200 sur un echec ferait perdre l'evenement pour de bon.
-     */
-    journaliserErreur("traitement d'evenement de paiement en echec", cause, {
-      evenement: evenement.identifiant,
-    });
-
-    throw cause;
   }
 }
 

@@ -43,9 +43,36 @@ export async function libererReservationsExpirees(
   client: typeof prisma = prisma,
 ): Promise<number> {
   const lignes = await client.$queryRaw<{ liberee: string }[]>`
-    WITH echues AS (
-      DELETE FROM reservation
+    WITH cibles AS (
+      SELECT id, variante_id, quantite
+      FROM reservation
       WHERE expire_a <= now()
+    ),
+    -- LES VARIANTES SE VERROUILLENT AVANT QUE LES RESERVATIONS NE PARTENT, ET
+    -- CET ORDRE EST LA CORRECTION D'UN INTERBLOCAGE MESURE le 27 aout 2026,
+    -- trois fois sur trois, releve par ls-critical-reviewer.
+    --
+    -- La confirmation de LS-119 prend variante PUIS reservation. En
+    -- supprimant d'abord, cette tache prenait l'ordre INVERSE : les deux
+    -- transactions s'attendaient mutuellement, PostgreSQL en tuait une, et
+    -- c'etait systematiquement la CONFIRMATION. Consequence : le paiement
+    -- n'etait pas enregistre, le stock pas sorti, et la piece PAYEE repartait
+    -- au catalogue, immediatement revendable. Sur une piece unique, c'est la
+    -- double vente que le jalon interdit.
+    --
+    -- L'ORDRE PAR IDENTIFIANT rend deux passes concurrentes de cette meme tache
+    -- sures entre elles, meme motif que le tri deterministe d'ADR-006.
+    verrous AS (
+      SELECT v.id
+      FROM variante v
+      WHERE v.id IN (SELECT variante_id FROM cibles)
+      ORDER BY v.id
+      FOR UPDATE
+    ),
+    echues AS (
+      DELETE FROM reservation
+      WHERE id IN (SELECT id FROM cibles)
+        AND (SELECT count(*) FROM verrous) >= 0
       RETURNING id, variante_id, quantite
     ),
     par_variante AS (
@@ -55,18 +82,21 @@ export async function libererReservationsExpirees(
     ),
     rendu AS (
       -- AUCUN PLANCHER GREATEST ICI, a la difference de la sortie de stock de
-      -- LS-119, et c'est delibere. Descendre sous zero signifierait qu'on rend
-      -- plus de reservations que la variante n'en porte, donc une incoherence
-      -- deja installee : chk_variante_reservee_positif fait alors ECHOUER la
-      -- tache, ce qui se voit au journal et en exploitation. Un plancher
-      -- silencieux la masquerait, et le stock deviendrait faux sans alerte.
+      -- LS-119 : descendre sous zero signifierait une incoherence deja
+      -- installee, qu'un plancher masquerait. La ligne fautive est ECARTEE par
+      -- le WHERE plutot que de faire echouer toute la passe, correction du
+      -- 27 aout 2026 : une seule variante incoherente gelait sinon la
+      -- liberation du catalogue ENTIER, a chaque cycle, mesure.
       UPDATE variante
       SET quantite_reservee = variante.quantite_reservee - par_variante.quantite
       FROM par_variante
       WHERE variante.id = par_variante.variante_id
+        AND variante.quantite_reservee >= par_variante.quantite
       RETURNING variante.id
     )
-    SELECT id AS liberee FROM echues
+    SELECT e.id AS liberee
+    FROM echues e
+    WHERE e.variante_id IN (SELECT id FROM rendu)
   `;
 
   const liberees = lignes.length;
