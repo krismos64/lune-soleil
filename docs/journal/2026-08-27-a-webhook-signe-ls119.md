@@ -86,19 +86,80 @@ Au passage, le journal écrit sur `process.stderr` et non sur `console.error` :
 intercepter la console ne voyait rien passer, et l'assertion était vide en
 croyant prouver quelque chose.
 
-## Un test de LS-118 instable, corrigé
+## La revue critique a trouvé trois défauts, tous réels
+
+`ls-critical-reviewer` a relu la zone avant clôture. Les trois défauts étaient
+fondés, et le premier rendait une fonctionnalité entière inopérante.
+
+**Tout remboursement était refusé en production, en silence.** `creerSession` ne
+posait les metadonnées que sur la Checkout Session, et **Stripe ne les recopie ni
+sur le PaymentIntent ni sur la Charge**. L'événement `charge.refunded` arrivait
+donc avec `metadata: {}`, la commande n'était pas retrouvée, et le remboursement
+disparaissait sans trace, l'événement n'étant pas rejoué après un 200. Toute la
+logique de remboursement était pourtant testée, mais par un double qui fabriquait
+l'événement du **domaine** : elle n'était jamais atteinte par le chemin réel.
+Correction : `payment_intent_data.metadata`.
+
+Le test qui le prouve ne fabrique pas la charge. Une première version l'écrivait
+à la main, et la mutation restait invisible : les metadonnées sont désormais
+prises là où la production les met, en interceptant ce que `creerSession`
+transmet au prestataire.
+
+**Une charge inexploitable était rapportée comme signature invalide.** Les deux
+classes d'erreur existaient déjà pour ne pas être confondues, et le service les
+traitait dans le même `catch`. « Signature invalide » fait chercher une attaque :
+l'exploitation révoque le secret et casse le webhook légitime, pendant que la
+vraie cause est une évolution d'API. C'est aussi ce qui masquait le premier
+défaut. Une issue distincte, `CHARGE_INEXPLOITABLE`, les sépare.
+
+**Le montant encaissé était cru sur parole.** `session.amount_total` était écrit
+tel quel, sans jamais être confronté au `totalCentimes` figé de la commande. Un
+écart passait en silence et ne se serait vu qu'au rapprochement bancaire, après
+émission d'une facture sur un paiement ne couvrant pas le total. La confirmation
+n'est pas bloquée pour autant, même arbitrage que le stock épuisé, et une
+`AlerteCritique` porte les deux montants.
+
+## Un second défaut d'ADR-032, trouvé en corrigeant un test
+
+Le rattrapage après création, que LS-118 avait retenu à la place d'un verrou, ne
+suffisait **pas** à lui seul. Sans verrou, les deux transactions de rattachement
+s'exécutent en parallèle et, en `READ COMMITTED`, aucune ne voit la ligne que
+l'autre n'a pas encore validée : les deux relisent « aucune autre session », rien
+n'est expiré, et **deux sessions payables coexistent**, exactement le trou
+qu'ADR-032 ferme.
+
+Un `SELECT ... FOR UPDATE` sur la commande sérialise les deux rattachements. Il
+est légitime là où celui d'avant l'appel ne l'était pas : il ne couvre aucun
+appel réseau, la session existant déjà et les expirations partant après le
+commit. Les deux protections sont nécessaires, chacune prouvée par sa mutation.
+
+## Le test de concurrence n'était voyant que par accident
 
 Le garde-fou d'état de référence de `verifier-tests-mutation.sh` a refusé de
 démarrer : la suite d'intégration n'était pas verte avant mutation. Le test de
-concurrence de LS-118 échouait **deux fois sur trois** en exécution isolée, tout
-en passant dans la suite complète.
+concurrence de LS-118 a demandé **trois** corrections successives, chacune
+révélant la précédente comme insuffisante.
 
-Défaut du test et non du code. Il exigeait que la session expirée soit nommément
-`cs_test_1_…`, alors que le rattrapage d'ADR-032 est porté par le **dernier à
-rattacher** : selon l'entrelacement, c'est la première ou la seconde session qui
+**Premier défaut, l'assertion nommait le vainqueur.** Elle exigeait que la
+session expirée soit `cs_test_1_…`, alors que le rattrapage est porté par le
+dernier à rattacher : selon l'entrelacement, c'est la première ou la seconde qui
 est fermée. L'assertion porte désormais l'invariant, exactement une expiration
-sur l'une des deux sessions, et reste voyante sous la mutation du cas 98,
-vérifié.
+sur l'une des deux.
+
+**Deuxième défaut, celui du code**, décrit plus haut : le verrou manquait.
+
+**Troisième défaut, la voyance dépendait de l'ordre d'exécution.** Sans le
+verrou, le test rougissait lancé **seul** et passait quand tout le fichier
+tournait. La cause est le pool de connexions Prisma, déjà chaud après les tests
+précédents : les deux transactions obtenaient alors leur connexion sans attente
+et se sérialisaient d'elles-mêmes, refermant la fenêtre par accident.
+
+Un test dont la voyance dépend de l'ordre du fichier n'est pas un test.
+L'entrelacement est donc **forcé** par une barrière : les deux appels sont
+retenus à leur **sortie** puis libérés ensemble, ce qui fait partir les deux
+rattachements réellement en parallèle. Une forme intermédiaire a été écartée en
+route, attendre que le premier **entre** dans son appel, qui refermait la fenêtre
+au lieu de l'ouvrir en laissant sa transaction de préparation se terminer.
 
 ## Preuves
 
@@ -107,16 +168,16 @@ type-check       au vert
 lint             au vert
 format:check     au vert
 build            au vert, /api/webhooks/paiement en dynamique
-test             43 fichiers, 705 tests
+test             43 fichiers, 708 tests
 verifier-regles.sh                 règles conformes au schéma
 verifier-propagation-docs.sh       socle Zod et son document accordés
 verifier-registre-traitements.sh   33 tables rangées
 verifier-tests-non-ignores.sh      toute la suite s'exécute
 ```
 
-**Sept mutations, sept détectées par le test attendu**, jouées par le script du
-projet, cas 101 à 107. Le script complet dure une trentaine de minutes et reste
-réservé aux portes de sortie de phase.
+**Onze mutations, onze détectées par le test attendu**, jouées par le script du
+projet, cas 101 à 111. Le script complet dure une trentaine de minutes et reste
+réservé aux portes de sortie de phase, les cas neufs ayant été joués isolément.
 
 | Mutation | Test qui rougit |
 |---|---|
@@ -127,6 +188,10 @@ réservé aux portes de sortie de phase.
 | plancher à zéro retiré de la sortie de stock | confirmation et alerte sur stock épuisé |
 | corps du webhook re-sérialisé | confirmation sur un événement réellement signé |
 | absence de secret non journalisée | aucun effet quand le secret est absent |
+| metadonnées non propagées au PaymentIntent | remboursement reçu sur la forme réelle d'une charge |
+| charge inexploitable confondue avec signature | type d'événement non traité |
+| montant encaissé non confronté au total | alerte quand le montant diffère du total |
+| verrou de sérialisation du rattachement retiré | deux démarrages concurrents, une seule session |
 
 ## Ce que la story ne fait pas
 
@@ -151,7 +216,8 @@ de route emploie une signature authentique engendrée par le SDK.
 
 | Ticket | État |
 |---|---|
-| LS-119 | à clore selon la revue en cours, commits `6e8c56c` et `824d701` |
+| LS-119 | **terminée**, revue critique passée, trois défauts corrigés |
+| LS-118 | rouverte puis refermée : un second défaut d'ADR-032 corrigé, le verrou de sérialisation |
 | LS-18 | bloqueur inchangé |
 
 ## Prochaine étape

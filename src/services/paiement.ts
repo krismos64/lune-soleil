@@ -303,6 +303,27 @@ export async function demarrerPaiement({
 
   try {
     aExpirer = await client.$transaction(async (transaction) => {
+      /*
+       * LE VERROU DE LIGNE SUR LA COMMANDE SERIALISE LES RATTACHEMENTS, et il
+       * est indispensable ICI alors qu'il etait inutile avant l'appel reseau.
+       *
+       * MESURE LE 27 AOUT 2026, SIX ECHECS SUR SIX : sans lui, les deux
+       * transactions de rattachement s'executent en parallele et, en
+       * `READ COMMITTED`, aucune ne voit la ligne que l'autre n'a pas encore
+       * validee. Les deux relisent « aucune autre session », `expirations` reste
+       * VIDE, et deux sessions payables coexistent, exactement le trou
+       * qu'ADR-032 ferme. Le defaut se cachait derriere un test qui nommait la
+       * session attendue et passait dans la suite complete.
+       *
+       * POURQUOI IL EST LEGITIME, quand celui d'avant l'appel ne l'etait pas :
+       * il ne couvre AUCUN appel reseau, ADR-024. La session existe deja, les
+       * expirations partent APRES le commit, et la section critique se reduit a
+       * deux instructions locales.
+       */
+      await transaction.$executeRaw`
+        SELECT id FROM commande WHERE id = ${identifiant} FOR UPDATE
+      `;
+
       await rattacherSessionPaiement(transaction, {
         tentativeId,
         identifiantFournisseur: session.identifiant,

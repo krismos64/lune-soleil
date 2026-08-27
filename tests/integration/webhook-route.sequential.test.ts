@@ -109,6 +109,84 @@ function signer(corps: string): string {
   });
 }
 
+/**
+ * Ce que `creerSession` transmet REELLEMENT dans `payment_intent_data.metadata`.
+ *
+ * POURQUOI PASSER PAR LE SDK PLUTOT QUE DE LIRE LE CODE. C'est ce bloc, et lui
+ * seul, que Stripe recopie sur le PaymentIntent puis sur la Charge. Le lire ici
+ * revient a demander au code de production « qu'est-ce que tu poses sur la
+ * charge », au lieu de le supposer : retirer `payment_intent_data` rend un objet
+ * vide, la commande n'est plus retrouvee, et le test du remboursement rougit.
+ *
+ * L'APPEL RESEAU EST INTERCEPTE, aucun compte n'etant ouvert, LS-18 : seul
+ * compte ce qui PART, pas ce qui reviendrait.
+ */
+async function metadataTransmiseAuPaymentIntent(
+  commandeId: string,
+): Promise<Record<string, string>> {
+  const { fournisseurStripe } = await import("@/integrations/stripe");
+
+  /*
+   * L'INTERCEPTION PORTE SUR LE PROTOTYPE DU SDK et non sur `globalThis.fetch` :
+   * le client HTTP par defaut de stripe-node ne passe pas par `fetch`, une
+   * premiere version interceptait donc dans le vide et l'appel partait pour de
+   * bon, echouant sur la cle. Le prototype est le seul point que le code de
+   * production traverse forcement, sans avoir a le modifier pour le test.
+   */
+  let transmis: Record<string, unknown> = {};
+
+  const prototype = Object.getPrototypeOf(
+    (fournisseurStripeInterne() as { checkout: { sessions: unknown } }).checkout
+      .sessions,
+  ) as { create: (...arguments_: unknown[]) => Promise<unknown> };
+
+  const creerInitial = prototype.create;
+
+  prototype.create = async (...arguments_: unknown[]) => {
+    transmis = (arguments_[0] ?? {}) as Record<string, unknown>;
+
+    return {
+      id: "cs_test_intercepte",
+      url: "https://paiement.example.invalid/intercepte",
+    };
+  };
+
+  const cleInitiale = process.env.STRIPE_SECRET_KEY;
+  process.env.STRIPE_SECRET_KEY = `sk_test_${"x".repeat(8)}`;
+
+  try {
+    await fournisseurStripe.creerSession({
+      commandeId,
+      numeroCommande: "C-2026-TEST",
+      emailClient: "test@example.invalid",
+      lignes: [{ libelle: "TEST", quantite: 1, prixUnitaireCentimes: 4900 }],
+      expireA: new Date(Date.now() + 1_800_000),
+      cleIdempotence: `test-${commandeId}`,
+      urlRetour: "https://exemple.invalid/retour",
+      urlAbandon: "https://exemple.invalid/abandon",
+    });
+  } finally {
+    prototype.create = creerInitial;
+
+    if (cleInitiale === undefined) {
+      delete process.env.STRIPE_SECRET_KEY;
+    } else {
+      process.env.STRIPE_SECRET_KEY = cleInitiale;
+    }
+  }
+
+  const donnees = transmis as {
+    payment_intent_data?: { metadata?: Record<string, string> };
+  };
+
+  return donnees.payment_intent_data?.metadata ?? {};
+}
+
+/** Une instance du SDK, seulement pour atteindre le prototype a intercepter. */
+function fournisseurStripeInterne(): Stripe {
+  return new Stripe(`sk_test_${"y".repeat(8)}`);
+}
+
 async function commanderUnePiece(): Promise<string> {
   const { varianteId } = await creerVarianteEnStock(client);
 
@@ -203,6 +281,84 @@ describe("route du webhook de paiement", () => {
     expect(rows).toEqual([]);
   });
 
+  /*
+   * LE REMBOURSEMENT PAR LE CHEMIN REEL, ET CE TEST EXISTE PARCE QU'IL MANQUAIT.
+   *
+   * `ls-critical-reviewer` a releve le 27 aout 2026 que TOUT remboursement etait
+   * refuse en production : `creerSession` ne posait les metadonnees que sur la
+   * Checkout Session, et Stripe ne les recopie NI sur le PaymentIntent, NI sur
+   * la Charge. L'evenement `charge.refunded` portait donc `metadata: {}`, la
+   * commande n'etait pas retrouvee, et le remboursement disparaissait en
+   * silence, l'evenement n'etant pas rejoue apres un 200.
+   *
+   * La logique de remboursement etait pourtant testee, mais par un double qui
+   * fabriquait l'evenement du DOMAINE : elle n'etait jamais atteinte par le
+   * chemin reel. C'est le motif « tester le service, pas sa reproduction », ici
+   * sur l'autre bout du contrat. Ce test part de la charge telle que le
+   * prestataire l'envoie, donc il traverse la traduction.
+   */
+  it("enregistre un remboursement recu sur la forme reelle d'une charge", async () => {
+    const commandeId = await commanderUnePiece();
+
+    // La commande est d'abord payee, par le chemin reel lui aussi.
+    const paiement = chargeSessionPayee(commandeId);
+    await POST(requete(paiement, { signature: signer(paiement) }));
+
+    /*
+     * LES METADONNEES DE LA CHARGE NE SONT PAS ECRITES A LA MAIN, ET C'EST TOUT
+     * L'INTERET DE CE TEST. Les ecrire ici prouverait le test et non le code :
+     * mesure le 27 aout 2026, la mutation retirant `payment_intent_data` restait
+     * INVISIBLE sur une charge fabriquee.
+     *
+     * Elles sont donc prises la ou la production les met : ce que
+     * `creerSession` transmet au prestataire dans `payment_intent_data.metadata`,
+     * capture par un client double. Stripe recopie ce bloc sur le PaymentIntent
+     * puis sur la Charge ; sans lui, la charge arrive avec `metadata: {}` et
+     * tout remboursement est refuse en silence.
+     */
+    const metadataCharge = await metadataTransmiseAuPaymentIntent(commandeId);
+
+    const corps = JSON.stringify(
+      {
+        id: `evt_remboursement_${commandeId.slice(0, 8)}`,
+        object: "event",
+        type: "charge.refunded",
+        data: {
+          object: {
+            id: `ch_test_${commandeId.slice(0, 8)}`,
+            object: "charge",
+            amount: 4900,
+            amount_refunded: 1000,
+            payment_intent: `pi_test_${commandeId.slice(0, 8)}`,
+            metadata: metadataCharge,
+          },
+        },
+      },
+      null,
+      2,
+    );
+
+    const reponse = await POST(requete(corps, { signature: signer(corps) }));
+
+    expect(reponse.status).toBe(200);
+    await expect(reponse.json()).resolves.toEqual({ issue: "TRAITE" });
+
+    const { rows } = await client.query<{
+      statut: string;
+      montant_rembourse_centimes: number;
+    }>(
+      `SELECT statut, montant_rembourse_centimes FROM paiement
+       WHERE commande_id = $1 AND statut <> 'ECHOUE'`,
+      [commandeId],
+    );
+
+    expect(rows[0]?.statut).toBe("PARTIELLEMENT_REMBOURSE");
+    expect(rows[0]?.montant_rembourse_centimes).toBe(1000);
+
+    // LE STATUT LOGISTIQUE N'EST PAS TOUCHE, les deux axes restant distincts.
+    expect(await lireStatutCommande(commandeId)).toBe("CONFIRMEE");
+  });
+
   it("refuse en 400 une requete sans en-tete de signature", async () => {
     const commandeId = await commanderUnePiece();
 
@@ -291,10 +447,15 @@ describe("route du webhook de paiement", () => {
      * UN TYPE NON TRAITE EST REFUSE EXPLICITEMENT et non ignore en silence : un
      * type inconnu qui passerait pour un paiement reussi confirmerait une
      * commande sur un evenement quelconque. Le 200 evite le rejeu inutile.
+     *
+     * L'ISSUE EST `CHARGE_INEXPLOITABLE` ET NON `SIGNATURE_INVALIDE`, correction
+     * du 27 aout 2026 : la signature est VALIDE, l'evenement vient bien du
+     * prestataire. Les confondre ferait chercher une attaque devant une simple
+     * evolution d'API, et revoquer le secret casserait le webhook legitime.
      */
     expect(reponse.status).toBe(200);
     await expect(reponse.json()).resolves.toEqual({
-      issue: "SIGNATURE_INVALIDE",
+      issue: "CHARGE_INEXPLOITABLE",
     });
 
     expect(await lireStatutCommande(commandeId)).toBe("EN_ATTENTE_PAIEMENT");

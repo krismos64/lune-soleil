@@ -99,6 +99,24 @@ export const fournisseurStripe: FournisseurPaiement = {
             commandeId: demande.commandeId,
             numeroCommande: demande.numeroCommande,
           },
+          /*
+           * LES METADONNEES SONT POSEES UNE SECONDE FOIS SUR LE PAYMENT INTENT,
+           * ET CE N'EST PAS UNE REDONDANCE. Stripe ne recopie PAS les
+           * metadonnees de la session vers le PaymentIntent ni vers la Charge :
+           * l'evenement `charge.refunded` porterait donc `metadata: {}`, et
+           * TOUT remboursement serait refuse faute de commande rattachee, en
+           * silence, l'evenement n'etant pas rejoue apres un 200.
+           *
+           * Defaut releve par `ls-critical-reviewer` le 27 aout 2026 : la
+           * logique de remboursement, prouvee avec un double qui fabrique
+           * l'evenement du domaine, n'etait jamais atteinte par le chemin reel.
+           */
+          payment_intent_data: {
+            metadata: {
+              commandeId: demande.commandeId,
+              numeroCommande: demande.numeroCommande,
+            },
+          },
           customer_email: demande.emailClient,
           locale: "fr",
           /*
