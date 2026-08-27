@@ -130,6 +130,13 @@ export async function ecrireMouvementVenteWeb(
  * LES DEUX STATUTS SONT ECRITS, l'ancien et le nouveau : « passee a CONFIRMEE »
  * sans dire d'ou ne permet pas de reconstituer un parcours, et une transition
  * illegitime devient indetectable apres coup.
+ *
+ * `acteurId` EST NUL PAR DEFAUT, ET C'EST LE CAS DES CHEMINS AUTOMATIQUES,
+ * regle S9 : un webhook n'est pas une personne, et lui attribuer l'identifiant
+ * de l'exploitante ferait porter a une administratrice une transition qu'elle
+ * n'a pas decidee. Seule une transition DECIDEE par une personne le renseigne,
+ * LS-121, et l'identite vient alors de la session, jamais d'un parametre
+ * d'interface, invariant 2.
  */
 export async function historiserTransition(
   client: ClientBase,
@@ -138,6 +145,7 @@ export async function historiserTransition(
     statutPrecedent: string;
     statutNouveau: string;
     origine: OrigineEcriture;
+    acteurId?: string | null;
   },
 ): Promise<void> {
   await client.historiqueStatut.create({
@@ -145,7 +153,7 @@ export async function historiserTransition(
       commandeId: parametres.commandeId,
       statutPrecedent: parametres.statutPrecedent,
       statutNouveau: parametres.statutNouveau,
-      acteurId: null,
+      acteurId: parametres.acteurId ?? null,
       origine: parametres.origine,
     },
   });

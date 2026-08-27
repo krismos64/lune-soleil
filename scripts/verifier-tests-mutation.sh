@@ -89,6 +89,7 @@ ROUTE_WEBHOOK="src/app/api/webhooks/paiement/route.ts"
 INTEGRATION_STRIPE="src/integrations/stripe/index.ts"
 LIBERATION="src/services/liberation-reservations.ts"
 RECONCILIATION="src/services/reconciliation-paiements.ts"
+ADMIN_COMMANDES="src/services/administration-commandes.ts"
 
 # TOUT FICHIER MUTE DOIT FIGURER ICI, sans quoi il n'est ni sauvegarde ni
 # restaure et la mutation RESTE SUR LE DISQUE apres l'execution.
@@ -101,7 +102,7 @@ RECONCILIATION="src/services/reconciliation-paiements.ts"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -1703,6 +1704,32 @@ cas "ligne incoherente non ecartee, la passe entiere echoue" integration \
 mute "$RECONCILIATION" 's/      echouees\.push\(commande\.id\);/      echouees.push(commande.id);\n      throw cause;/'
 cas "echec d'une commande arretant la reconciliation" integration \
   "traite les commandes suivantes puis leve, une seule ayant echoue"
+
+# ---------------------------------------------------------------------------
+# Cas 120 a 122 : LS-121, administration des commandes.
+#
+# Cas 120 : L'HISTORISATION DISPARAIT. Une transition sans trace rend impossible
+# de savoir, six mois plus tard, qui a annule une commande et quand. C'est la
+# garantie que `HistoriqueStatut` existe pour porter, et elle ne se voit sur
+# aucun ecran tant qu'on ne la cherche pas.
+mute "$ADMIN_COMMANDES" 's/    await historiserTransition\(transaction, \{\n      commandeId: identifiant,\n      statutPrecedent: commande\.statut,\n      statutNouveau: nouveauStatut,\n      origine: "ADMIN",\n      acteurId,\n    \}\);\n\n//'
+cas "historisation de transition supprimee" integration \
+  "fait avancer la commande et historise avec l'acteur"
+
+# Cas 121 : `LIVREE` DEVIENT ATTEIGNABLE D'UN CLIC. Le statut ne se suppose
+# jamais sans source fiable, `payments.md` : la date de livraison fait courir le
+# delai de retractation, et l'inventer le ferait partir d'une date fausse.
+# Comment le site l'apprend est la decision de LS-33, non prise.
+mute "$ADMIN_COMMANDES" 's/  EXPEDIEE: \[\],/  EXPEDIEE: ["LIVREE"],/'
+cas "LIVREE rendue atteignable d'un clic" integration \
+  "n'atteint JAMAIS LIVREE, quel que soit l'etat de depart"
+
+# Cas 122 : LA TABLE DES TRANSITIONS N'EST PLUS CONSULTEE. N'importe quelle
+# transition serait acceptee, y compris un retour en arriere sur un colis deja
+# parti, ou une confirmation manuelle d'une commande jamais payee.
+mute "$ADMIN_COMMANDES" 's/    if \(!permises\.includes\(nouveauStatut\)\) \{/    if (false) {/'
+cas "table des transitions ignoree" integration \
+  "refuse une transition non permise sans rien ecrire"
 echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then

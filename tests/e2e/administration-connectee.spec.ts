@@ -28,6 +28,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 import {
+  COMMANDE_TEST,
   FICHIER_SESSION,
   FICHIER_SESSION_ADMINISTRATION,
   PRODUIT_TEST,
@@ -64,6 +65,25 @@ const ECRANS = [
   {
     chemin: `/administration/produits/${PRODUIT_TEST.produitId}`,
     titre: "Informations générales",
+  },
+  /*
+   * LES COMMANDES, LS-121. C'est l'ecran le plus dense de l'administration :
+   * numero, badge de statut, nom, montant, date et etat d'encaissement sur une
+   * meme carte. A 320 px, c'est celui qui deborde en premier si la mise en
+   * page cede, d'ou sa presence ici plutot qu'un controle a l'oeil.
+   */
+  {
+    chemin: "/administration/commandes",
+    titre: "Commandes",
+  },
+  /*
+   * LE DETAIL, sur la commande amorcee par LS-118. Elle porte des lignes
+   * figees, une adresse, un paiement et un historique : quatre sections dont
+   * les libelles longs sont le vrai risque de debordement.
+   */
+  {
+    chemin: `/administration/commandes/${COMMANDE_TEST.commandeId}`,
+    titre: COMMANDE_TEST.numero,
   },
 ] as const;
 
@@ -301,3 +321,39 @@ test.describe("un client connecte sans le role", () => {
     await expect(page.getByText(PRODUIT_TEST.nom)).toHaveCount(0);
   });
 });
+
+/**
+ * LA BASCULE 768 px, LS-121. Elle n'est mesuree par aucun projet Playwright :
+ * `CLAUDE.md` enonce quatre largeurs, la configuration en couvre trois depuis
+ * LS-68, et 768 px restait « un controle a l'oeil ».
+ *
+ * CE TEST NE CORRIGE PAS CET ECART EN GENERAL, il le comble sur les deux ecrans
+ * de commandes SEULEMENT, et pour une raison precise : `commandes.module.css`
+ * porte son unique point de bascule a exactement 768 px, ou `.article` et
+ * `.entreeHistorique` passent de colonne a ligne. Une mise en page qui cede le
+ * fait a son point de bascule, jamais au milieu d'une plage.
+ *
+ * IL REDIMENSIONNE PLUTOT QUE D'AJOUTER UN PROJET : un quatrieme projet
+ * allongerait d'un tiers une suite dont le cout est deja mesure, pour deux
+ * ecrans.
+ */
+const ECRANS_BASCULE = [
+  "/administration/commandes",
+  `/administration/commandes/${COMMANDE_TEST.commandeId}`,
+] as const;
+
+for (const chemin of ECRANS_BASCULE) {
+  test(`${chemin} ne deborde pas au point de bascule de 768 px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.goto(chemin);
+
+    // L'URL n'a pas bouge : sans cela, une redirection vers la connexion ferait
+    // mesurer un ecran qui ne deborde jamais.
+    await expect(page).toHaveURL(new RegExp(`${chemin}$`));
+
+    const debordement = await debordementHorizontal(page);
+    expect(debordement).toBeLessThanOrEqual(TOLERANCE_DEBORDEMENT_PX);
+  });
+}
