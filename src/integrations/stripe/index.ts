@@ -23,6 +23,12 @@ import Stripe from "stripe";
 
 import { journaliser } from "@/lib/journal";
 import {
+  ChargeEvenementInvalideError,
+  SignatureInvalideError,
+  type EvenementPaiement,
+  type VerificateurSignature,
+} from "@/integrations/stripe/evenements";
+import {
   PrestatairePaiementIndisponibleError,
   type DemandeSessionPaiement,
   type FournisseurPaiement,
@@ -160,3 +166,144 @@ export const fournisseurStripe: FournisseurPaiement = {
     }
   },
 };
+
+/**
+ * Secret de signature des evenements, lu A CHAQUE APPEL et jamais a l'import,
+ * meme motif que la cle secrete : `next build` evalue les modules sans lui.
+ *
+ * SON ABSENCE FERME LA ROUTE PLUTOT QUE DE L'OUVRIR, defaut FERME : sans secret
+ * aucune signature ne peut etre verifiee, donc aucun evenement ne doit produire
+ * d'effet. Traiter l'absence comme « pas de verification a faire » livrerait la
+ * confirmation de commande a qui sait construire un POST. Le journal nomme la
+ * variable absente, son NOM seulement, invariant 9.
+ */
+function secretWebhook(): string {
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (secret === undefined || secret === "") {
+    journaliser(
+      "error",
+      "STRIPE_WEBHOOK_SECRET absente, aucun evenement ne peut etre verifie",
+    );
+
+    throw new SignatureInvalideError(
+      new Error("secret de signature non configure"),
+    );
+  }
+
+  return secret;
+}
+
+/**
+ * Verificateur reel des evenements du prestataire.
+ *
+ * VERIFIE VIA CONTEXT7 LE 27 AOUT 2026 (stripe-node) : `constructEventAsync` et
+ * non `constructEvent`. La forme synchrone leve `CryptoProviderOnlySupportsAsync`
+ * des que le fournisseur de chiffrement est celui de Web Crypto, ce que
+ * l'execution Next.js peut employer. La forme asynchrone fonctionne dans les
+ * deux cas, elle est donc la seule sure.
+ *
+ * LE CORPS DOIT ETRE LE CORPS BRUT, jamais un objet deja decode : la signature
+ * porte sur les octets exacts recus, et un aller-retour par `JSON.parse` puis
+ * `JSON.stringify` changerait l'espacement, donc invaliderait toute signature.
+ */
+export const verificateurStripe: VerificateurSignature = {
+  async verifier(
+    corpsBrut: string,
+    signature: string,
+  ): Promise<EvenementPaiement> {
+    const secret = secretWebhook();
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "cle_absente", {
+      timeout: DELAI_MAXIMUM_MS,
+    });
+
+    let evenement: Stripe.Event;
+
+    try {
+      evenement = await stripe.webhooks.constructEventAsync(
+        corpsBrut,
+        signature,
+        secret,
+      );
+    } catch (cause) {
+      /*
+       * TOUTE ERREUR DE VERIFICATION EST UN REFUS, y compris l'horodatage hors
+       * tolerance : un evenement capture puis rejoue des heures plus tard par un
+       * tiers est refuse au meme titre qu'un corps falsifie.
+       */
+      throw new SignatureInvalideError(cause);
+    }
+
+    return traduireEvenement(evenement);
+  },
+};
+
+/**
+ * Traduit un evenement du prestataire vers la forme du domaine.
+ *
+ * DEUX TYPES SEULEMENT SONT TRADUITS, et tout le reste est refuse explicitement
+ * plutot qu'ignore en silence : un type inconnu qui passerait pour un paiement
+ * reussi confirmerait une commande sur un evenement quelconque.
+ */
+function traduireEvenement(evenement: Stripe.Event): EvenementPaiement {
+  if (evenement.type === "checkout.session.completed") {
+    const session = evenement.data.object;
+
+    /*
+     * `payment_status` EST VERIFIE ET NON SUPPOSE. Une session peut se terminer
+     * sans paiement immediat, `unpaid` sur un mode differé : la traiter comme un
+     * encaissement confirmerait une commande jamais payee.
+     */
+    if (session.payment_status !== "paid") {
+      throw new ChargeEvenementInvalideError(
+        `session terminee sans paiement, etat ${session.payment_status}`,
+      );
+    }
+
+    const commandeId = session.metadata?.commandeId;
+
+    if (commandeId === undefined || commandeId === "") {
+      throw new ChargeEvenementInvalideError("session sans commande rattachee");
+    }
+
+    return {
+      identifiant: evenement.id,
+      type: "PAIEMENT_REUSSI",
+      commandeId,
+      identifiantSession: session.id,
+      /*
+       * `amount_total` EST DEJA EN CENTIMES, plus petite unite de l'euro : la
+       * conversion est une identite, aucun flottant, invariant 1.
+       */
+      montantCentimes: session.amount_total ?? 0,
+      montantRembourseCentimes: 0,
+      charge: evenement.data.object,
+    };
+  }
+
+  if (evenement.type === "charge.refunded") {
+    const charge = evenement.data.object;
+    const commandeId = charge.metadata?.commandeId;
+
+    if (commandeId === undefined || commandeId === "") {
+      throw new ChargeEvenementInvalideError("charge sans commande rattachee");
+    }
+
+    return {
+      identifiant: evenement.id,
+      type: "PAIEMENT_REMBOURSE",
+      commandeId,
+      identifiantSession: charge.payment_intent?.toString() ?? charge.id,
+      montantCentimes: charge.amount,
+      /*
+       * `amount_refunded` EST UN CUMUL, jamais un increment : il porte le total
+       * rembourse a ce jour sur la charge. L'additionner au montant deja
+       * enregistre compterait deux fois le premier remboursement.
+       */
+      montantRembourseCentimes: charge.amount_refunded,
+      charge: evenement.data.object,
+    };
+  }
+
+  throw new ChargeEvenementInvalideError(`type non traite, ${evenement.type}`);
+}

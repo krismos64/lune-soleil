@@ -83,6 +83,10 @@ SERVICE_CATALOGUE="src/services/catalogue.ts"
 # Deplacee elle aussi par LS-122, meme motif que `$PAGE` ci-dessus.
 CARTE_PRODUIT="src/app/(boutique)/catalogue/carte-produit.tsx"
 PAIEMENT="src/services/paiement.ts"
+WEBHOOK="src/services/webhook-paiement.ts"
+CONFIRMATION="src/repositories/confirmation.ts"
+ROUTE_WEBHOOK="src/app/api/webhooks/paiement/route.ts"
+INTEGRATION_STRIPE="src/integrations/stripe/index.ts"
 
 # TOUT FICHIER MUTE DOIT FIGURER ICI, sans quoi il n'est ni sauvegarde ni
 # restaure et la mutation RESTE SUR LE DISQUE apres l'execution.
@@ -95,7 +99,7 @@ PAIEMENT="src/services/paiement.ts"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -1503,6 +1507,83 @@ cas "tentative non reservee avant l'appel au prestataire" integration \
 mute "$PAIEMENT" 's/    await supprimerTentativeSansSession\(client, tentativeId\);\n\n    return \{ statut: "PANNE" \};\n  \}\n\n  \/\*\n   \* RATTACHEMENT/    return { statut: "PANNE" };\n  }\n\n  \/*\n   * RATTACHEMENT/'
 cas "tentative non retiree apres un echec de creation" integration \
   "retire la tentative reservee quand la creation echoue"
+
+# ---------------------------------------------------------------------------
+# Cas 101 a 107 : LS-119, l'evenement signe confirme le paiement. Etape 7 du
+# parcours 1, la plus critique de la phase.
+#
+# Cas 101 : LA VERIFICATION DE SIGNATURE DISPARAIT, remplacee par un decodage du
+# corps. C'est le critere 1, et le defaut est total : n'importe qui sachant
+# construire un POST confirmerait une commande et sortirait le stock.
+#
+# LE TEST N'EST VOYANT QUE PARCE QUE TOUS LES CORPS SONT DU JSON EXPLOITABLE.
+# Avec des corps illisibles, cette mutation ferait rougir TOUTE la suite sur des
+# erreurs de decodage, sans rien prouver de la signature : mesure le 27 aout
+# 2026, fiche « mutation trop brutale ».
+mute "$WEBHOOK" 's/    evenement = await verificateur\.verifier\(corpsBrut, signature\);/    evenement = JSON.parse(corpsBrut) as EvenementPaiement;/'
+cas "verification de signature remplacee par un decodage" integration \
+  "ne produit AUCUN effet quand la signature est invalide"
+
+# Cas 102 : LA GARDE DU MOUVEMENT DE STOCK NEUTRALISEE. C'est la deuxieme cle
+# d'effet, `mouvement_vente_web_unique`, et le coeur du croisement de LS-12 : un
+# evenement tardif recreerait le mouvement, et sur une variante a plusieurs
+# exemplaires le stock serait faux SANS AUCUNE ERREUR.
+#
+# LE TEST QUI ROUGIT N'EST PAS CELUI DE L'EVENEMENT TARDIF, et la nuance a ete
+# mesuree : quand la regularisation a tout ecrit, c'est la cle du PAIEMENT qui
+# arrete l'evenement, et le service sort avant d'atteindre la boucle. Seul un
+# etat ou le mouvement existe SANS paiement encaisse exerce cette cle.
+mute "$WEBHOOK" 's/    if \(dejaSortie !== null\) \{/    if (false) {/'
+cas "garde du mouvement de vente web neutralisee" integration \
+  "ne sort pas le stock deux fois quand le mouvement existe deja sans paiement encaisse"
+
+# Cas 103 : LE PREDICAT D'ENCAISSEMENT RACCOURCI AU SEUL `REUSSI`, piege de
+# LS-45. Un remboursement ne rend pas la commande impayee : filtrer sur `REUSSI`
+# seul laisse le paiement sortir du filtre en passant a `PARTIELLEMENT_REMBOURSE`,
+# et un second encaissement redevient possible. Mesure sur PostgreSQL 18.4,
+# 3220 centimes encaisses sur une commande de 1610.
+mute "$WEBHOOK" 's/const ETATS_ENCAISSEMENT: StatutPaiement\[\] = \[\n  "REUSSI",\n  "PARTIELLEMENT_REMBOURSE",\n  "REMBOURSE",\n\];/const ETATS_ENCAISSEMENT: StatutPaiement[] = ["REUSSI"];/'
+cas "predicat d'encaissement raccourci au seul REUSSI" integration \
+  "passe le paiement en REMBOURSE quand le remboursement est total"
+
+# Cas 104 : LA DETECTION DU DOUBLE ENCAISSEMENT NE DISTINGUE PLUS LA SESSION.
+# Un refus d'unicite peut signifier « le meme paiement est deja encaisse », cas
+# benin du chemin croise, ou « une AUTRE session a ete payee », double
+# encaissement reel d'ADR-032. Les confondre fait taire l'alerte, et le client
+# reste debite deux fois sans que personne ne le sache.
+mute "$WEBHOOK" 's/    if \(\n      encaisseExistant\.identifiantFournisseur === evenement\.identifiantSession\n    \) \{/    if (true) {/'
+cas "double encaissement confondu avec un rejeu benin" integration \
+  "alerte et n'encaisse pas deux fois quand une SECONDE session est payee"
+
+# Cas 105 : LE PLANCHER A ZERO DEVIENT UNE DECREMENTATION NUE. Le stock passe
+# sous zero, `chk_variante_physique_positif` fait LEVER la transaction, donc
+# l'evenement est perdu et rejoue indefiniment sur un etat qui ne se resoudra
+# jamais seul. L'arbitrage du 27 aout 2026 exige de confirmer et d'alerter.
+mute "$CONFIRMATION" 's/        quantite_physique = GREATEST\(\n          0,\n          quantite_physique - \$\{parametres\.quantite\}::int\n        \),/        quantite_physique = quantite_physique - ${parametres.quantite}::int,/'
+cas "plancher a zero retire de la sortie de stock" integration \
+  "confirme la commande et alerte quand la reservation a ete liberee et le stock epuise"
+
+# Cas 106 : LE CORPS PASSE PAR UN ALLER-RETOUR JSON. La signature porte sur les
+# OCTETS EXACTS : decoder puis re-serialiser change l'espacement et fait refuser
+# toute signature legitime, donc AUCUNE commande ne serait jamais confirmee en
+# production.
+#
+# LE TEST N'EST VOYANT QUE PARCE QUE SA CHARGE EST INDENTEE, comme celles du
+# prestataire. Sur une charge compacte, l'aller-retour redonne la meme chaine a
+# l'octet pres et la mutation reste invisible : mesure le 27 aout 2026.
+mute "$ROUTE_WEBHOOK" 's/  const corpsBrut = await requete\.text\(\);/  const corpsBrut = JSON.stringify(JSON.parse(await requete.text()));/'
+cas "corps du webhook re-serialise avant verification" integration \
+  "confirme la commande sur un evenement REELLEMENT signe"
+
+# Cas 107 : LE SECRET ABSENT N'EST PLUS JOURNALISE. Le refus lui-meme est tenu
+# par le SDK, qui rejette un secret vide : ce que cette ligne seule apporte est
+# de NOMMER la variable manquante. Sans elle, une variable oubliee au
+# deploiement est indistinguable d'une charge falsifiee, et l'exploitation
+# cherche une attaque devant une erreur de configuration. Meme motif que la cle
+# absente de LS-118.
+mute "$INTEGRATION_STRIPE" 's/    journaliser\(\n      "error",\n      "STRIPE_WEBHOOK_SECRET absente, aucun evenement ne peut etre verifie",\n    \);\n\n//'
+cas "absence de secret de webhook non journalisee" integration \
+  "ne produit aucun effet quand le secret de signature est absent"
 echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then

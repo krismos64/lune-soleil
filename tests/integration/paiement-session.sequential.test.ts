@@ -557,16 +557,28 @@ describe("demarrerPaiement, les quatre defauts de la revue critique", () => {
 
     /*
      * DEUX SESSIONS SONT CREEES, ET C'EST CORRECT : deux clics produisent deux
-     * paiements possibles. Ce que le verrou garantit est que la SECONDE a
-     * EXPIRE la premiere, donc qu'une seule reste payable. C'est la propriete
-     * d'ADR-032, et compter les sessions ne la mesurerait pas.
+     * paiements possibles. Ce que le rattrapage garantit est qu'une seule reste
+     * PAYABLE, l'autre ayant ete expiree. C'est la propriete d'ADR-032, et
+     * compter les sessions ne la mesurerait pas.
      *
-     * L'ASSERTION PORTE L'IDENTITE DE LA SESSION EXPIREE, pas un compte : sans
-     * verrou, `expirations` est VIDE, les deux appels n'ayant vu aucune session
-     * precedente. Avec verrou, la premiere creee est nommement expiree.
+     * L'ASSERTION NE NOMME PAS LAQUELLE DES DEUX EST EXPIREE, et cette
+     * correction du 27 aout 2026 vient d'une instabilite reelle : le test
+     * echouait deux fois sur trois en execution isolee. Exiger `cs_test_1_…`
+     * supposait un ordre d'arrivee que rien ne garantit, le rattrapage etant
+     * porte par le DERNIER a rattacher sa session. Selon l'entrelacement, c'est
+     * donc la premiere OU la seconde qui est fermee.
+     *
+     * CE QUI SE VERIFIE EST L'INVARIANT LUI-MEME : exactement une expiration,
+     * portant l'une des deux sessions creees. Sans rattrapage, `expirations`
+     * est VIDE, les deux appels n'ayant vu aucune session precedente, et c'est
+     * ce que la mutation du cas 98 provoque.
      */
     expect(demandes).toHaveLength(2);
-    expect(expirations).toEqual([`cs_test_1_${commandeId.slice(0, 8)}`]);
+    expect(expirations).toHaveLength(1);
+    expect([
+      `cs_test_1_${commandeId.slice(0, 8)}`,
+      `cs_test_2_${commandeId.slice(0, 8)}`,
+    ]).toContain(expirations[0]);
   });
 
   it("laisse la tentative tracee quand la creation reussit, jamais une session orpheline", async () => {
