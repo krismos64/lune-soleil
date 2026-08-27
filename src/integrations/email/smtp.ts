@@ -189,6 +189,23 @@ export function creerEnvoyeurSmtp(
           to: message.destinataire,
           subject: rendu.objet,
           text: rendu.texte,
+          /*
+           * ENCODAGE DECLARE EXPLICITEMENT, et ce n'est pas redondant avec le
+           * defaut de nodemailer, qui gere deja l'UTF-8.
+           *
+           * Les textes du projet portent tous leurs accents, regle de redaction
+           * française : un message dont le `charset` serait mal annonce
+           * arriverait en « Rï¿½initialisation », ce qu'aucun test ne verrait
+           * puisque la chaine sortie du rendu, elle, est correcte. Le defaut ne
+           * se constaterait que dans une boite reelle.
+           *
+           * `quoted-printable` plutot que `base64` sur du texte majoritairement
+           * ASCII : il laisse le message LISIBLE dans sa forme brute, ce que
+           * les filtres anti-indesirables inspectent. Un texte court encode en
+           * base64 est un motif de suspicion, la forme etant celle qu'emploie
+           * qui cherche a masquer son contenu.
+           */
+          textEncoding: "quoted-printable",
         });
 
         // L'ADRESSE N'EST PAS JOURNALISEE, LS-73 : c'est une donnee
