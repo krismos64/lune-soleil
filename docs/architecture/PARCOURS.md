@@ -127,8 +127,25 @@ nom du destinataire en relais, l'adresse personnelle n'ayant aucun usage quand l
 colis part au commerce partenaire. Ne pas transformer cette décision en
 obligation légale.
 
-L'étape 7 est transactionnelle également, et idempotente par contrainte d'unicité
-sur l'identifiant d'événement.
+L'étape 7 est transactionnelle également : l'identifiant d'événement et tous les
+effets métier partagent une seule transaction. Persister l'événement à part
+laisserait, sur panne entre les deux écritures, soit un événement marqué traité
+sans aucun effet, soit des effets dont plus rien ne porte la cause.
+
+**Son idempotence est ancrée sur l'effet et non sur l'identifiant d'événement**,
+implémenté par LS-119. L'unicité de l'identifiant ferme le rejeu du même
+événement, jamais le croisement entre le webhook et la réconciliation : un
+événement tardif porte un identifiant jamais vu, donc rien ne le rejette. Ce sont
+les quatre clés par effet de `.claude/rules/database.md` qui l'arrêtent.
+
+Deux points que l'implémentation a établis, et qui ne se déduisent pas du
+principe. **Une violation d'unicité avorte la transaction PostgreSQL entière**,
+code `25P02` : rattraper le refus puis poursuivre ne fonctionne pas, la lecture
+précède donc l'écriture et la contrainte reste la seconde ligne de défense. Et
+**le stock ne descend jamais sous zéro**, `chk_variante_physique_positif` étant
+non contournable : un paiement arrivant sur une pièce déjà repartie au catalogue
+confirme la commande et lève une `AlerteCritique`, arbitrage du 27 août 2026,
+plutôt que de faire échouer la transaction et rejouer indéfiniment.
 
 ### Cas d'erreur
 
@@ -259,8 +276,28 @@ mouvements. Une unicité par commande seule interdirait tout panier
 multi-articles.
 
 **Signature d'événement invalide**
-Base : rejet avant tout effet métier, journalisation de la tentative.
+Base : rejet avant tout effet métier, journalisation de la tentative. L'événement
+n'est **pas persisté**, et cette précision compte : le tracer donnerait le moyen
+de faire refuser plus tard le vrai événement portant le même identifiant, par la
+contrainte d'unicité.
 Vue : rien.
+Réponse au prestataire : 200 et non 400. Il rejoue tout ce qui ne reçoit pas de
+2xx, or un événement mal signé ne deviendra jamais valide : le rejouer remplirait
+ses files et noierait les échecs qui comptent. Le refus est tracé côté serveur.
+
+**Paiement confirmé alors que la pièce est repartie au catalogue, étape 7**
+Le client a payé, mais sa réservation avait expiré et la tâche de libération a
+rendu la pièce, qui a pu être revendue sur un marché.
+Base : la commande passe **`CONFIRMEE`** et le paiement est enregistré, l'argent
+étant encaissé. Le mouvement de vente est écrit, la vente ayant eu lieu, et
+`quantitePhysique` s'arrête à zéro, `chk_variante_physique_positif` étant non
+contournable. Une `AlerteCritique` de gravité `CRITIQUE` porte l'écart et
+désigne la variante.
+Vue : le client reçoit sa confirmation ordinaire, sa commande étant valide.
+Traitement : l'exploitante rembourse ou réapprovisionne à la main, arbitrage du
+27 août 2026. Refuser la confirmation laisserait de l'argent encaissé sans
+commande, et faire échouer la transaction ferait rejouer l'événement
+indéfiniment sur un état qui ne se résoudra jamais seul.
 
 **Échec d'envoi d'email, étape 9**
 Base : la commande et la facture existent, le journal d'envoi porte l'échec avec
