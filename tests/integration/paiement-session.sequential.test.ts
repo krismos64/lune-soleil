@@ -535,10 +535,9 @@ describe("demarrerPaiement, les quatre defauts de la revue critique", () => {
     const commandeId = await commanderUnePiece();
 
     /*
-     * DEUX ONGLETS, exactement le scenario de la revue : sans verrou de ligne
-     * sur la commande, les deux lisent « aucune session precedente » avant que
-     * l'un n'ait ecrit la sienne, et deux sessions payables coexistent, aucune
-     * n'ayant expire l'autre.
+     * DEUX ONGLETS, exactement le scenario de la revue : les deux lisent
+     * « aucune session precedente » avant que l'un n'ait rattache la sienne, et
+     * deux sessions payables coexistent, aucune n'ayant expire l'autre.
      *
      * LA LATENCE OUVRE LA FENETRE, et sans elle ce test ne prouve rien : un
      * double instantane ne laisse jamais les deux appels s'entrelacer.
@@ -546,6 +545,44 @@ describe("demarrerPaiement, les quatre defauts de la revue critique", () => {
     const { double, demandes, expirations } = fournisseurDouble({
       latenceMs: 60,
     });
+
+    /*
+     * LES DEUX SESSIONS SORTENT DE L'APPEL EN MEME TEMPS, ET C'EST LA FENETRE.
+     *
+     * Mesure le 27 aout 2026, deux formes ecartees avant celle-ci. Un
+     * `Promise.all` nu rendait le test voyant seulement en execution ISOLEE : le
+     * pool de connexions Prisma deja chaud faisait obtenir leur connexion aux
+     * deux transactions sans attente, et elles se serialisaient d'elles-memes.
+     * Attendre que le premier ENTRE dans son appel fermait la fenetre pour de
+     * bon, sa transaction de preparation ayant alors le temps de se terminer.
+     *
+     * Ce qui doit se chevaucher est le RATTACHEMENT, pas la preparation : les
+     * deux appels sont donc retenus a leur SORTIE, puis liberes ensemble. Les
+     * deux transactions de rattachement partent alors reellement en parallele,
+     * a froid comme a chaud, et c'est exactement le cas ou l'absence de verrou
+     * laisse chacune ignorer la ligne que l'autre n'a pas encore validee.
+     */
+    let liberer: () => void = () => {};
+    const barriere = new Promise<void>((resoudre) => {
+      liberer = resoudre;
+    });
+
+    let arrives = 0;
+    const creerInitial = double.creerSession.bind(double);
+
+    double.creerSession = async (demande) => {
+      const session = await creerInitial(demande);
+
+      arrives += 1;
+
+      if (arrives === 2) {
+        liberer();
+      } else {
+        await barriere;
+      }
+
+      return session;
+    };
 
     const [premier, second] = await Promise.all([
       demarrerPaiement({ commandeId, fournisseur: double }),

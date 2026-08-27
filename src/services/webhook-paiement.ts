@@ -55,7 +55,18 @@ export type IssueEvenementPaiement =
   /** Un second encaissement a ete detecte, ADR-032. Alerte levee. */
   | { statut: "DOUBLE_ENCAISSEMENT" }
   /** Signature refusee : aucun effet, aucune trace en base. */
-  | { statut: "SIGNATURE_INVALIDE" };
+  | { statut: "SIGNATURE_INVALIDE" }
+  /**
+   * Signature VALIDE, mais charge inexploitable : type non traite, session sans
+   * commande rattachee, paiement non abouti.
+   *
+   * DISTINCTE DE `SIGNATURE_INVALIDE`, et la distinction se paie cher quand on
+   * la neglige. « Signature invalide » fait chercher une attaque : l'exploitation
+   * revoque le secret et casse le webhook legitime, pendant que la vraie cause
+   * est une evolution d'API ou un type d'evenement nouveau. Defaut releve par
+   * `ls-critical-reviewer` le 27 aout 2026.
+   */
+  | { statut: "CHARGE_INEXPLOITABLE" };
 
 /**
  * Codes Prisma verifies via Context7 sur la documentation Prisma 7 : `P2002`
@@ -100,18 +111,27 @@ export async function traiterEvenementPaiement({
   try {
     evenement = await verificateur.verifier(corpsBrut, signature);
   } catch (cause) {
-    if (
-      cause instanceof SignatureInvalideError ||
-      cause instanceof ChargeEvenementInvalideError
-    ) {
+    if (cause instanceof SignatureInvalideError) {
       /*
        * LA CAUSE VA AU JOURNAL TECHNIQUE, JAMAIS A LA REPONSE, invariant 9 : le
        * message du prestataire cite le corps recu et l'en-tete de signature, et
        * le depot est public.
        */
-      journaliserErreur("evenement de paiement refuse", cause, {});
+      journaliserErreur("evenement de paiement refuse, signature", cause, {});
 
       return { statut: "SIGNATURE_INVALIDE" };
+    }
+
+    if (cause instanceof ChargeEvenementInvalideError) {
+      /*
+       * `warn` ET NON `error` : l'evenement vient bien du prestataire, sa
+       * signature etant valide. Un type non traite est le cas ordinaire, Stripe
+       * envoyant tout ce que l'abonnement declare. Le NOM DE CLASSE seulement,
+       * le message citant la charge.
+       */
+      journaliserErreur("evenement de paiement inexploitable", cause, {});
+
+      return { statut: "CHARGE_INEXPLOITABLE" };
     }
 
     throw cause;
@@ -206,6 +226,7 @@ async function confirmerPaiement(
     select: {
       id: true,
       statut: true,
+      totalCentimes: true,
       lignes: {
         select: { varianteId: true, quantite: true },
       },
@@ -263,6 +284,36 @@ async function confirmerPaiement(
       statut: "DOUBLE_ENCAISSEMENT",
       paiementId: encaissement.paiementId,
     };
+  }
+
+  /*
+   * LE MONTANT ENCAISSE SE CONFRONTE AU TOTAL FIGE DE LA COMMANDE, defaut releve
+   * par `ls-critical-reviewer` le 27 aout 2026. Sans cette garde, un montant
+   * different est ecrit tel quel et la comptabilite est fausse EN SILENCE : la
+   * divergence ne se verrait qu'au rapprochement bancaire, et la facture de la
+   * phase 4 serait emise sur un paiement qui ne couvre pas le total.
+   *
+   * CE N'EST PAS UNE FAILLE D'AUTHENTIFICATION, l'evenement etant signe : c'est
+   * un ecart de coherence, dont les causes reelles sont une session creee par un
+   * autre chemin, un essai depuis le tableau de bord ou un defaut de
+   * construction des lignes.
+   *
+   * LA CONFIRMATION N'EST PAS BLOQUEE, meme arbitrage que le stock epuise :
+   * l'argent est encaisse, refuser laisserait de l'argent sans commande.
+   */
+  if (
+    encaissement.issue === "ENCAISSE" &&
+    evenement.montantCentimes !== commande.totalCentimes
+  ) {
+    await leverAlerteCritique(transaction, {
+      type: "MONTANT_DIVERGENT",
+      message:
+        `Commande ${commande.id} encaissee pour ` +
+        `${evenement.montantCentimes} centimes alors que son total fige vaut ` +
+        `${commande.totalCentimes}. Verifier avant facturation.`,
+      typeCible: "Paiement",
+      idCible: encaissement.paiementId,
+    });
   }
 
   if (encaissement.issue === "DEJA_ENCAISSE") {

@@ -665,6 +665,71 @@ describe("traiterEvenementPaiement, idempotence", () => {
   });
 });
 
+describe("traiterEvenementPaiement, montant encaisse", () => {
+  /*
+   * LE MONTANT DE L'EVENEMENT DOIT ETRE CONFRONTE AU TOTAL DE LA COMMANDE.
+   * Sans cette garde, un montant different de celui attendu est ecrit tel quel
+   * et la comptabilite est fausse EN SILENCE : la commande porte 4900, le
+   * paiement en porte 2000, et rien ne le signale. Les causes possibles sont
+   * reelles, une session creee sur un total perime ou une charge portant un
+   * autre paiement.
+   *
+   * LA CONFIRMATION N'EST PAS BLOQUEE POUR AUTANT, meme raison que le stock
+   * epuise : l'argent est encaisse, refuser laisserait de l'argent sans
+   * commande. L'ecart est alerte, et l'exploitante tranche.
+   */
+  it("confirme mais alerte quand le montant encaisse differe du total de la commande", async () => {
+    const { commandeId } = await commanderUnePiece();
+
+    const evenement = evenementReussi(commandeId, {
+      identifiant: "evt_montant_incoherent",
+      montantCentimes: 2000,
+    });
+
+    const issue = await traiterEvenementPaiement({
+      corpsBrut: corpsDe(evenement),
+      signature: "signature-de-test",
+      verificateur: verificateurDouble(evenement),
+    });
+
+    expect(issue).toEqual({ statut: "TRAITE" });
+    expect(await lireStatutCommande(commandeId)).toBe("CONFIRMEE");
+
+    const { rows: alertes } = await client.query<{
+      type: string;
+      gravite: string;
+      type_cible: string | null;
+      message: string;
+    }>("SELECT type, gravite, type_cible, message FROM alerte_critique");
+
+    expect(alertes).toHaveLength(1);
+    expect(alertes[0]?.gravite).toBe("CRITIQUE");
+    expect(alertes[0]?.type_cible).toBe("Paiement");
+    // LES DEUX MONTANTS SONT NOMMES : sans eux l'exploitante devrait aller
+    // chercher l'ecart chez le prestataire pour comprendre l'alerte.
+    expect(alertes[0]?.message).toContain("2000");
+    expect(alertes[0]?.message).toContain(String(TOTAL_ATTENDU_CENTIMES));
+  });
+
+  it("n'alerte pas quand le montant encaisse vaut le total de la commande", async () => {
+    const { commandeId } = await commanderUnePiece();
+
+    await traiterEvenementPaiement({
+      corpsBrut: corpsDe(evenementReussi(commandeId)),
+      signature: "signature-de-test",
+      verificateur: verificateurDouble(evenementReussi(commandeId)),
+    });
+
+    /*
+     * LE CAS NOMINAL NE DOIT PRODUIRE AUCUNE ALERTE, sans quoi l'ecran
+     * d'alertes se remplirait a chaque vente et l'exploitante apprendrait a les
+     * ignorer, ce qui noierait celles qui comptent.
+     */
+    const { rows } = await client.query("SELECT id FROM alerte_critique");
+    expect(rows).toEqual([]);
+  });
+});
+
 describe("traiterEvenementPaiement, remboursements", () => {
   it("passe le paiement en PARTIELLEMENT_REMBOURSE sans toucher au statut logistique", async () => {
     const { commandeId } = await commanderUnePiece();

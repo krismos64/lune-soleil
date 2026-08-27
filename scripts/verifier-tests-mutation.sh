@@ -1584,6 +1584,57 @@ cas "corps du webhook re-serialise avant verification" integration \
 mute "$INTEGRATION_STRIPE" 's/    journaliser\(\n      "error",\n      "STRIPE_WEBHOOK_SECRET absente, aucun evenement ne peut etre verifie",\n    \);\n\n//'
 cas "absence de secret de webhook non journalisee" integration \
   "ne produit aucun effet quand le secret de signature est absent"
+
+# ---------------------------------------------------------------------------
+# Cas 108 a 110 : LES TROIS DEFAUTS RELEVES PAR `ls-critical-reviewer` le
+# 27 aout 2026 sur LS-119.
+#
+# Cas 108 : LES METADONNEES NE SONT PLUS PROPAGEES AU PAYMENT INTENT. Stripe ne
+# recopie PAS les metadonnees de la Checkout Session vers le PaymentIntent ni
+# vers la Charge : sans `payment_intent_data.metadata`, l'evenement
+# `charge.refunded` porte `metadata: {}`, la commande n'est pas retrouvee et TOUT
+# remboursement est refuse EN SILENCE, l'evenement n'etant pas rejoue apres 200.
+#
+# LE TEST N'EST VOYANT QUE PARCE QU'IL NE FABRIQUE PAS LA CHARGE : il prend les
+# metadonnees la ou la production les met, en interceptant ce que `creerSession`
+# transmet. Sur une charge ecrite a la main, la mutation restait invisible,
+# mesure le 27 aout 2026.
+mute "$INTEGRATION_STRIPE" 's/          payment_intent_data: \{\n            metadata: \{\n              commandeId: demande\.commandeId,\n              numeroCommande: demande\.numeroCommande,\n            \},\n          \},\n//'
+cas "metadonnees non propagees au PaymentIntent" integration \
+  "enregistre un remboursement recu sur la forme reelle d'une charge"
+
+# Cas 109 : UNE CHARGE INEXPLOITABLE EST RECONFONDUE AVEC UNE SIGNATURE INVALIDE.
+# Les deux classes d'erreur existent pour ne pas etre confondues : « signature
+# invalide » fait chercher une attaque, et l'exploitation revoque le secret,
+# cassant le webhook legitime pendant que la vraie cause est une evolution d'API.
+mute "$WEBHOOK" 's/      return \{ statut: "CHARGE_INEXPLOITABLE" \};/      return { statut: "SIGNATURE_INVALIDE" };/'
+cas "charge inexploitable confondue avec une signature invalide" integration \
+  "ignore un type d'evenement non traite, sans effet et sans rejeu"
+
+# Cas 110 : LE MONTANT ENCAISSE N'EST PLUS CONFRONTE AU TOTAL FIGE. Un montant
+# different est alors ecrit tel quel : la comptabilite est fausse EN SILENCE, et
+# la divergence ne se verrait qu'au rapprochement bancaire, apres emission d'une
+# facture sur un paiement qui ne couvre pas le total.
+mute "$WEBHOOK" 's/    encaissement\.issue === "ENCAISSE" &&\n    evenement\.montantCentimes !== commande\.totalCentimes/    false/'
+cas "montant encaisse non confronte au total de la commande" integration \
+  "confirme mais alerte quand le montant encaisse differe du total de la commande"
+
+# ---------------------------------------------------------------------------
+# Cas 111 : LE VERROU DE SERIALISATION DU RATTACHEMENT, LS-118 corrige le
+# 27 aout 2026 pendant LS-119.
+#
+# Le rattrapage apres creation ne suffit PAS a lui seul. Sans verrou, les deux
+# transactions de rattachement s'executent en parallele et, en `READ COMMITTED`,
+# aucune ne voit la ligne que l'autre n'a pas encore validee : les deux relisent
+# « aucune autre session », rien n'est expire, et DEUX SESSIONS PAYABLES
+# coexistent, exactement le trou qu'ADR-032 ferme. Six echecs sur six en mesure.
+#
+# CE VERROU EST LEGITIME LA OU CELUI D'AVANT L'APPEL NE L'ETAIT PAS : il ne
+# couvre aucun appel reseau, ADR-024, la session existant deja et les expirations
+# partant apres le commit.
+mute "$PAIEMENT" 's/      await transaction\.\$executeRaw`\n        SELECT id FROM commande WHERE id = \$\{identifiant\} FOR UPDATE\n      `;\n\n//'
+cas "verrou de serialisation du rattachement retire" integration \
+  "serialise deux demarrages concurrents : une seule session creee"
 echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then
