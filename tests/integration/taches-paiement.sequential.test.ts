@@ -34,6 +34,7 @@ let passerCommande: typeof import("@/services/commande").passerCommande;
 let libererReservationsExpirees: typeof import("@/services/liberation-reservations").libererReservationsExpirees;
 let reconcilierPaiements: typeof import("@/services/reconciliation-paiements").reconcilierPaiements;
 let traiterEvenementPaiement: typeof import("@/services/webhook-paiement").traiterEvenementPaiement;
+let executerSousVerrou: typeof import("@/services/tache-planifiee").executerSousVerrou;
 let PrestatairePaiementIndisponibleError: typeof import("@/integrations/stripe/fournisseur").PrestatairePaiementIndisponibleError;
 
 const SAISIE_DOMICILE = {
@@ -193,6 +194,7 @@ beforeAll(async () => {
   ({ reconcilierPaiements } =
     await import("@/services/reconciliation-paiements"));
   ({ traiterEvenementPaiement } = await import("@/services/webhook-paiement"));
+  ({ executerSousVerrou } = await import("@/services/tache-planifiee"));
   ({ PrestatairePaiementIndisponibleError } =
     await import("@/integrations/stripe/fournisseur"));
 });
@@ -319,6 +321,71 @@ describe("libererReservationsExpirees", () => {
       physique: 1,
       reservee: 0,
     });
+  });
+});
+
+describe("liberation sous verrou, la double decrementation", () => {
+  /*
+   * CE QUE LE VERROU EVITE, ET C'EST LE DOMMAGE PRECIS. `verrou-tache` prouve
+   * deja que le MECANISME serialise vingt appels, LS-72. Ce test-ci prouve la
+   * chose qui compte pour le stock : le travail REEL de liberation, passe par
+   * `executerSousVerrou`, ne rend jamais deux fois la meme reservation.
+   *
+   * Sans verrou, deux instances de l'application liberent la meme reservation
+   * echue en parallele et `quantiteReservee` est decremente DEUX FOIS : du
+   * stock apparait sans qu'aucun achat ne l'explique, jusqu'a heurter
+   * `chk_variante_pas_de_survente` bien plus tard, sur une autre commande.
+   */
+  it("deux executions simultanees ne rendent la piece qu'une fois", async () => {
+    const { varianteId } = await commanderUnePiece({
+      reservationExpiree: true,
+    });
+
+    /*
+     * LE CHEVAUCHEMENT EST FORCE, IL N'EST PAS ESPERE. Sans cela le travail est
+     * si rapide que la premiere execution relache son verrou AVANT que la
+     * seconde ne le demande : les deux obtiennent alors le verrou legitimement,
+     * chacune a son tour, et le test echoue en croyant le verrou casse.
+     * La fenetre a eprouver est celle ou les deux travaillent EN MEME TEMPS.
+     *
+     * Le detenteur tient donc son verrou jusqu'a ce que l'autre ait recu sa
+     * reponse, meme motif que le test des vingt appelants de LS-72.
+     */
+    let secondeATermine: () => void = () => {};
+    const secondeFinie = new Promise<void>((resoudre) => {
+      secondeATermine = resoudre;
+    });
+
+    const [premiere, seconde] = await Promise.all([
+      executerSousVerrou("liberation-reservations", async () => {
+        await libererReservationsExpirees();
+        await secondeFinie;
+      }),
+      (async () => {
+        const resultat = await executerSousVerrou(
+          "liberation-reservations",
+          async () => {
+            await libererReservationsExpirees();
+          },
+        );
+
+        secondeATermine();
+
+        return resultat;
+      })(),
+    ]);
+
+    // Une seule a travaille, l'autre a ete refusee sans erreur.
+    const etats = [premiere.etat, seconde.etat].sort();
+    expect(etats).toEqual(["EXECUTEE", "IGNOREE"]);
+
+    /*
+     * LA PIECE EST RENDUE UNE FOIS. C'est l'assertion qui compte : elle
+     * porterait `reservee: -1` sur une double restitution, valeur que
+     * `chk_variante_reservee_positif` refuse, donc la transaction echouerait,
+     * ce qui se verrait aussi.
+     */
+    expect(await lireStock(varianteId)).toEqual({ physique: 1, reservee: 0 });
   });
 });
 
@@ -504,6 +571,228 @@ describe("reconcilierPaiements", () => {
     expect(await lireStock(varianteId)).toEqual({ physique: 1, reservee: 1 });
     await libererReservationsExpirees();
     expect(await lireStock(varianteId)).toEqual({ physique: 1, reservee: 0 });
+  });
+});
+
+describe("reconciliation, une commande en echec n'arrete pas les autres", () => {
+  /*
+   * MESURE PAR `ls-critical-reviewer` le 27 aout 2026. La premiere version
+   * laissait l'exception remonter depuis la boucle : quarante commandes en
+   * attente dont la troisieme echoue, et les trente-sept suivantes n'etaient
+   * JAMAIS examinees. Le cycle d'apres rebutait sur la meme, indefiniment.
+   *
+   * C'est le motif que `purgerJournaux` documente depuis LS-94 : porter l'echec
+   * element par element, puis lever APRES la boucle pour que l'exploitation
+   * voie un echec plutot qu'un 200 rassurant.
+   */
+  it("traite les commandes suivantes puis leve, une seule ayant echoue", async () => {
+    const sessionFautive = "cs_test_fautive";
+    const sessionSaine = "cs_test_saine";
+
+    const fautive = await commanderUnePiece({
+      commandeAgeeDeMinutes: 90,
+      identifiantSession: sessionFautive,
+    });
+    const saine = await commanderUnePiece({
+      commandeAgeeDeMinutes: 90,
+      identifiantSession: sessionSaine,
+    });
+
+    /*
+     * L'ECHEC EST PROVOQUE PAR UNE ERREUR DE PROGRAMMATION et non par une
+     * indisponibilite : celle-ci est deja traitee a part, et serait sautee sans
+     * lever. Ici l'exception doit bien traverser le traitement d'UNE commande.
+     */
+    const double: FournisseurPaiement = {
+      async creerSession() {
+        throw new Error("hors sujet");
+      },
+      async expirerSession() {
+        return "DEJA_FERMEE";
+      },
+      async lireSession(identifiant) {
+        if (identifiant === sessionFautive) {
+          throw new TypeError("defaut simule dans le traitement");
+        }
+
+        return { etat: "EXPIREE" };
+      },
+    };
+
+    /*
+     * LA TACHE LEVE, et c'est voulu : `executerSousVerrou` la rendra `ECHOUEE`
+     * et la route repondra 500. Un succes silencieux masquerait le probleme.
+     */
+    await expect(reconcilierPaiements({ fournisseur: double })).rejects.toThrow(
+      /1 commande/,
+    );
+
+    /*
+     * LA COMMANDE SAINE A ETE TRAITEE MALGRE L'ECHEC DE L'AUTRE. C'est
+     * l'assertion qui compte : sans le traitement par commande, elle serait
+     * restee `EN_ATTENTE_PAIEMENT` indefiniment.
+     */
+    expect(await lireStatutCommande(saine.commandeId)).toBe("ANNULEE");
+
+    // La fautive n'a pas ete touchee, son etat reste a diagnostiquer.
+    expect(await lireStatutCommande(fautive.commandeId)).toBe(
+      "EN_ATTENTE_PAIEMENT",
+    );
+  });
+});
+
+describe("croisement de la liberation et de la confirmation", () => {
+  /*
+   * CE QUE CE TEST COUVRE, ET CE QU'IL NE COUVRE PAS. Il verifie que les deux
+   * taches lancees ensemble laissent un etat coherent, ce qui vaut pour tous
+   * les entrelacements que le minutage produit naturellement.
+   *
+   * IL NE PROUVE PAS L'ORDRE DES VERROUS, et c'est mesure le 27 aout 2026 :
+   * retirer le `FOR UPDATE` de la liberation le laisse VERT, trois fois sur
+   * trois. La fenetre d'interblocage tient a un intervalle entre les DEUX
+   * ecritures de la confirmation, que le service ne permet pas d'ouvrir depuis
+   * un test sans ajouter un point d'accroche au code de production.
+   *
+   * LA PREUVE DE L'ORDRE VIT DONC AILLEURS :
+   * `docs/prototypes/interblocage-liberation-confirmation.sh`, qui joue les
+   * deux ordres et montre le contraste, `deadlock detected` sur la
+   * confirmation et piece payee NON destockee d'un cote, vente correcte de
+   * l'autre. Meme convention que `interblocage-panier.sh` pour LS-49.
+   */
+  it("une confirmation et une liberation simultanees laissent un etat coherent", async () => {
+    const { commandeId, varianteId } = await commanderUnePiece();
+
+    /*
+     * LA RESERVATION EST ECHUE, et c'est ce qui met les deux taches sur la MEME
+     * ligne : la liberation la vise, la confirmation la consomme. Sans cela les
+     * deux ne se croiseraient jamais.
+     */
+    await client.query(
+      "UPDATE reservation SET expire_a = now() - interval '1 second' WHERE commande_id = $1",
+      [commandeId],
+    );
+
+    const evenement: EvenementPaiement = {
+      identifiant: `evt_${randomUUID()}`,
+      type: "PAIEMENT_REUSSI",
+      commandeId,
+      identifiantSession: `cs_${commandeId.slice(0, 8)}`,
+      montantCentimes: TOTAL_ATTENDU_CENTIMES,
+      montantRembourseCentimes: 0,
+      charge: {},
+    };
+
+    /*
+     * LA FENETRE EST OUVERTE DELIBEREMENT, elle ne s'ouvre pas seule. Les deux
+     * instructions sont si rapides qu'elles ne se chevauchent jamais si on les
+     * lance simplement en parallele : le test resterait vert meme avec l'ordre
+     * de verrous fautif, mesure le 27 aout 2026.
+     *
+     * Le verificateur du webhook sert de point de rendez-vous : il est APPELE
+     * AVANT la transaction de confirmation, donc y attendre place la liberation
+     * juste devant elle. C'est la libération qui prend alors ses verrous en
+     * premier, exactement l'entrelacement ou l'ordre inverse s'interbloque.
+     */
+    let liberationLancee: () => void = () => {};
+    const liberationDemarree = new Promise<void>((resoudre) => {
+      liberationLancee = resoudre;
+    });
+
+    const [confirmation, liberation] = await Promise.allSettled([
+      traiterEvenementPaiement({
+        corpsBrut: JSON.stringify(evenement),
+        signature: "signature-de-test",
+        verificateur: {
+          async verifier() {
+            await liberationDemarree;
+
+            return evenement;
+          },
+        },
+      }),
+      (async () => {
+        const resultat = libererReservationsExpirees();
+
+        liberationLancee();
+
+        return resultat;
+      })(),
+    ]);
+
+    /*
+     * AUCUNE DES DEUX NE MEURT. C'est l'assertion decisive : sous l'ancien
+     * ordre de verrous, la confirmation partait en `P2010` portant un `40P01`,
+     * et `Promise.allSettled` la rendait `rejected`.
+     */
+    expect(confirmation.status).toBe("fulfilled");
+    expect(liberation.status).toBe("fulfilled");
+
+    /*
+     * LE STOCK EST COHERENT DANS LES DEUX ORDRES D'ARRIVEE, et les deux issues
+     * sont legitimes : soit la confirmation passe d'abord et la piece est
+     * vendue, soit la liberation passe d'abord et la piece est rendue au
+     * catalogue avant que le paiement n'arrive, cas que LS-119 traite en
+     * confirmant et en alertant. Ce qui ne doit JAMAIS arriver est une piece
+     * payee ET rendue au catalogue, ou un stock negatif.
+     */
+    const stock = await lireStock(varianteId);
+    expect(stock.physique).toBeGreaterThanOrEqual(0);
+    expect(stock.reservee).toBe(0);
+
+    // La reservation a disparu par l'un ou l'autre chemin, jamais rendue deux fois.
+    expect(await compterReservations(commandeId)).toBe(0);
+
+    /*
+     * SI LA CONFIRMATION A GAGNE, la commande est confirmee et la piece sortie.
+     * Le paiement est encaisse dans les DEUX cas : l'argent a ete pris, et
+     * LS-119 confirme meme sur un stock epuise, en alertant.
+     */
+    const { rows: encaisses } = await client.query(
+      "SELECT id FROM paiement WHERE commande_id = $1 AND statut = 'REUSSI'",
+      [commandeId],
+    );
+    expect(encaisses).toHaveLength(1);
+    expect(await lireStatutCommande(commandeId)).toBe("CONFIRMEE");
+  });
+});
+
+describe("liberation, une ligne incoherente n'arrete pas les autres", () => {
+  /*
+   * MESURE PAR `ls-critical-reviewer` le 27 aout 2026 : une seule variante dont
+   * `quantiteReservee` est incoherent faisait echouer la passe ENTIERE par
+   * `chk_variante_reservee_positif`, donc plus AUCUNE reservation expiree
+   * n'etait liberee sur tout le catalogue, a chaque cycle de cinq minutes,
+   * jusqu'a intervention humaine.
+   *
+   * C'est le defaut meme que cette story repare, reintroduit par un autre chemin
+   * et sur un perimetre plus large. La ligne fautive est desormais ECARTEE, et
+   * les saines sont traitees.
+   */
+  it("libere les variantes saines malgre une variante incoherente", async () => {
+    const saine = await commanderUnePiece({ reservationExpiree: true });
+    const corrompue = await commanderUnePiece({ reservationExpiree: true });
+
+    // Incoherence installee a la main : la reservation existe, mais la variante
+    // ne la porte plus. Le decrement ferait passer `quantiteReservee` a -1.
+    await client.query(
+      "UPDATE variante SET quantite_reservee = 0 WHERE id = $1",
+      [corrompue.varianteId],
+    );
+
+    const liberees = await libererReservationsExpirees();
+
+    /*
+     * LA SAINE EST LIBEREE, ce qui est le point : elle redevient vendable. La
+     * ligne fautive n'est pas comptee, sa reservation reste en base, et c'est
+     * volontaire : la supprimer sans rendre le stock effacerait la trace de
+     * l'incoherence.
+     */
+    expect(liberees).toBe(1);
+    expect(await lireStock(saine.varianteId)).toEqual({
+      physique: 1,
+      reservee: 0,
+    });
+    expect(await compterReservations(saine.commandeId)).toBe(0);
   });
 });
 

@@ -91,8 +91,70 @@ export async function reconcilierPaiements({
 
   let regularisees = 0;
   let annulees = 0;
+  const echouees: string[] = [];
 
   for (const commande of enAttente) {
+    try {
+      const bilan = await traiterUneCommande(client, fournisseur, commande);
+
+      regularisees += bilan.regularisee ? 1 : 0;
+      annulees += bilan.annulee ? 1 : 0;
+    } catch (cause) {
+      /*
+       * L'ECHEC EST PORTE COMMANDE PAR COMMANDE, jamais en sortant de la
+       * boucle, meme motif que `purgerJournaux` de LS-94. Ajoute le 27 aout
+       * 2026 sur recommandation de `ls-critical-reviewer`.
+       *
+       * Sortir a la premiere erreur laisserait les commandes SUIVANTES jamais
+       * examinees, et le cycle d'apres rebuterait sur la meme : quarante
+       * commandes payees resteraient en attente indefiniment a cause d'une
+       * seule. Le journal nomme la commande fautive, pas la cause complete,
+       * invariant 9.
+       */
+      journaliserErreur("Reconciliation d'une commande en echec", cause, {
+        commandeId: commande.id,
+      });
+
+      echouees.push(commande.id);
+    }
+  }
+
+  journaliser("info", "Reconciliation des paiements terminee", {
+    examinees: enAttente.length,
+    regularisees,
+    annulees,
+    enEchec: echouees.length,
+  });
+
+  /*
+   * LA TACHE EST DECLAREE EN ECHEC SI UNE SEULE COMMANDE A ECHOUE, en levant
+   * apres la boucle : les autres ont ete traitees, mais l'exploitation doit voir
+   * un echec plutot qu'un 200 rassurant. Meme forme que `purge-journaux`.
+   */
+  if (echouees.length > 0) {
+    throw new Error(
+      `Reconciliation en echec sur ${echouees.length} commande(s)`,
+    );
+  }
+
+  return { examinees: enAttente.length, regularisees, annulees };
+}
+
+/** Ce qu'une commande a produit, pour que la boucle tienne ses comptes. */
+type IssueUneCommande = { regularisee: boolean; annulee: boolean };
+
+/**
+ * Reconcilie UNE commande. Elle leve, et la boucle appelante porte l'echec.
+ */
+async function traiterUneCommande(
+  client: typeof prisma,
+  fournisseur: FournisseurPaiement,
+  commande: {
+    id: string;
+    paiements: { identifiantFournisseur: string | null }[];
+  },
+): Promise<IssueUneCommande> {
+  {
     const session = commande.paiements[0]?.identifiantFournisseur ?? null;
 
     /*
@@ -102,8 +164,8 @@ export async function reconcilierPaiements({
      */
     if (session === null) {
       await annulerCommande(client, commande.id);
-      annulees += 1;
-      continue;
+
+      return { regularisee: false, annulee: true };
     }
 
     let etat;
@@ -123,7 +185,7 @@ export async function reconcilierPaiements({
         commandeId: commande.id,
       });
 
-      continue;
+      return { regularisee: false, annulee: false };
     }
 
     if (etat.etat === "OUVERTE") {
@@ -131,13 +193,13 @@ export async function reconcilierPaiements({
        * ENCORE PAYABLE : elle appartient au client. L'annuler lui retirerait sa
        * commande sous les yeux, et rendrait au catalogue une piece qu'il paie.
        */
-      continue;
+      return { regularisee: false, annulee: false };
     }
 
     if (etat.etat === "EXPIREE") {
       await annulerCommande(client, commande.id);
-      annulees += 1;
-      continue;
+
+      return { regularisee: false, annulee: true };
     }
 
     /*
@@ -175,18 +237,8 @@ export async function reconcilierPaiements({
       client,
     });
 
-    if (issue.statut === "TRAITE") {
-      regularisees += 1;
-    }
+    return { regularisee: issue.statut === "TRAITE", annulee: false };
   }
-
-  journaliser("info", "Reconciliation des paiements terminee", {
-    examinees: enAttente.length,
-    regularisees,
-    annulees,
-  });
-
-  return { examinees: enAttente.length, regularisees, annulees };
 }
 
 /**

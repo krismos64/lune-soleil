@@ -219,9 +219,24 @@ export const fournisseurStripe: FournisseurPaiement = {
       };
     }
 
-    return session.status === "open"
-      ? { etat: "OUVERTE" }
-      : { etat: "EXPIREE" };
+    /*
+     * `EXPIREE` NE VAUT QUE POUR UNE SESSION REELLEMENT EXPIREE, et non pour
+     * tout ce qui n'est pas paye. Correction du 27 aout 2026, relevee par
+     * `ls-critical-reviewer` : classer `complete` sans paiement en `EXPIREE`
+     * ferait ANNULER une commande dont le reglement est en cours de traitement,
+     * ce qu'un moyen differe rendrait courant.
+     *
+     * Le cas n'est pas atteignable aujourd'hui, ce projet n'employant que le
+     * paiement immediat, et c'est precisement pourquoi il se ferme maintenant :
+     * ajouter un virement SEPA le rendrait actif du jour au lendemain, et le
+     * symptome serait l'annulation de commandes en cours de reglement.
+     *
+     * NE PAS SAVOIR N'AUTORISE AUCUNE DECISION, meme principe que la panne du
+     * prestataire : tout ce qui n'est ni paye ni expire se laisse vivre.
+     */
+    return session.status === "expired"
+      ? { etat: "EXPIREE" }
+      : { etat: "OUVERTE" };
   },
 };
 
