@@ -36,6 +36,23 @@ const ECRANS = [
     chemin: "/administration/produits/3f2504e0-4f89-41d3-9a0c-0305e82c3301",
     titre: "Informations générales",
   },
+  /*
+   * LES COMMANDES, LS-121. La liste porte des noms de clients, des montants et
+   * des adresses : c'est l'ecran le plus charge en donnees personnelles de
+   * l'administration, et sa garde doit rediriger avant tout rendu.
+   */
+  { chemin: "/administration/commandes", titre: "Commandes" },
+  /*
+   * LE DETAIL, sur un identifiant qui n'existe pas, meme motif que l'editeur de
+   * fiche produit : la garde doit rediriger AVANT toute lecture en base. Un
+   * ecran qui lirait la commande d'abord rendrait un 404 ici et une redirection
+   * sur un identifiant reel, et la difference dirait a un visiteur non autorise
+   * quelles commandes existent.
+   */
+  {
+    chemin: "/administration/commandes/3f2504e0-4f89-41d3-9a0c-0305e82c3302",
+    titre: "Suivi",
+  },
 ];
 
 for (const ecran of ECRANS) {
@@ -128,6 +145,15 @@ test("un POST direct sur les ecrans du catalogue ne produit aucun effet", async 
     expect(corps).not.toContain("Ajouter la déclinaison");
     // LS-102, les photos et leur televersement.
     expect(corps).not.toContain("Photos de la fiche");
+    /*
+     * LS-121, les commandes. Les marqueurs choisis sont ceux qui n'existent
+     * QUE sur ces ecrans : un titre de section et un verbe de transition. Un
+     * POST qui rendrait l'un ou l'autre livrerait des donnees personnelles et
+     * ouvrirait un geste que la garde doit retenir.
+     */
+    expect(corps).not.toContain("Mettre en préparation");
+    expect(corps).not.toContain("Marquer comme expédiée");
+    expect(corps).not.toContain("En attente de paiement");
     expect(corps).not.toContain("Ajouter une photo");
     // LS-103, la publication et l'archivage.
     expect(corps).not.toContain("Publier la fiche");

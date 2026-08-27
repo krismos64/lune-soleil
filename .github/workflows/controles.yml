@@ -329,6 +329,26 @@ jobs:
       - name: 6g. Actions sensibles confrontees a ADR-027
         run: ./scripts/verifier-actions-sensibles.sh
 
+      # Garde de role sur TOUTE Server Action d'administration, LS-121. Textuel.
+      #
+      # POURQUOI IL NE FAIT PAS DOUBLON avec 6g, qui cite pourtant
+      # exigerAdministratrice. Celui-ci ne regarde que les fichiers touchant a
+      # la REAUTHENTIFICATION : il passe explicitement sur tous les autres. Une
+      # action d'administration ordinaire, sans garde de fraicheur, lui echappe
+      # entierement. Verifie le 27 aout 2026 sur `changerStatut` de LS-121.
+      #
+      # POURQUOI UN CONTROLE TEXTUEL, alors que le projet prefere les tests. La
+      # garde appelle headers() de Next.js, qui exige un contexte de requete :
+      # hors du serveur elle leve avant toute verification. Et le test e2e
+      # d'appel direct ne l'atteint pas non plus, un POST sans en-tete
+      # Next-Action etant traite en navigation. Mesure : la mutation qui retire
+      # la garde laissait les 54 tests de catalogue-administration verts.
+      #
+      # CE QU'IL VERIFIE PAR FONCTION ET NON PAR FICHIER : une action non gardee
+      # voisine de trois actions gardees serait sinon invisible.
+      - name: 6h. Gardes de role des Server Actions d'administration
+        run: ./scripts/verifier-gardes-administration.sh
+
       # Resolution de l'adresse client derriere le proxy, LS-91. Textuel, aucune
       # base ni conteneur requis.
       #
