@@ -22,7 +22,7 @@ la phase 2.
 |---|---|---|
 | 2, catalogue, médias et stock multicanal | LS-3 | en cours, treize stories ouvertes |
 | 3, panier, réservation, paiement et commandes | LS-4 | LS-114 à LS-121 et LS-43 livrées, **porte de sortie franchie**, deux stories ouvertes |
-| 4, factures, avoirs, emails, expédition et contact | LS-5 | découpée le 27 août 2026, **commencée** : LS-51 close, LS-82 livrée et ouverte sur son seul critère de réception, treize stories ouvertes |
+| 4, factures, avoirs, emails, expédition et contact | LS-5 | découpée le 27 août 2026, **commencée** : LS-51 close, LS-82 livrée et ouverte sur son critère de réception, quatorze stories ouvertes |
 | 5, rétractation, conformité et protection des données | LS-6 | découpée le 27 août 2026, cinq stories ouvertes |
 | 6, durcissement, exploitation et ouverture | LS-7 | découpée le 27 août 2026, onze stories ouvertes |
 
@@ -99,9 +99,11 @@ sur une pièce unique, puis rejoue le chemin d'abandon.
 La vérification contre l'API réelle attend le compte Stripe, LS-18 : sans clé, le
 paiement s'annonce indisponible et la commande reste payable au réessai.
 
-Ce que la phase 3 attend est écrit dans son découpage : la chaîne **LS-118 à
-LS-121** est imposée, chaque story dépendant de la précédente. LS-117 en est
-sortie le 25 août 2026, et LS-43 qui la bloquait est tranchée, ADR-032.
+**La chaîne LS-118 à LS-121 est entièrement livrée** le 27 août 2026, et avec
+elle la porte de sortie de la phase 3. Chaque story dépendait de la précédente :
+session de paiement, événement signé, tâches planifiées, administration des
+commandes. Restent LS-86 et LS-125, deux stories d'interface qui ne bloquent
+rien.
 
 ### Porte de sortie de la phase 1, constatée le 13 août 2026
 
@@ -110,7 +112,7 @@ répertoire vierge et non sur la machine de développement, LS-75 :
 
 | Terme | Preuve |
 |---|---|
-| Clone neuf lançable avec procédure écrite | `npm ci` puis `db:preparer` : 32 tables, 25 contraintes `CHECK` sur 25 attendues, application servie, `/api/sante` opérationnelle |
+| Clone neuf lançable avec procédure écrite | `npm ci` puis `db:preparer` : 34 tables, 29 contraintes `CHECK` sur 29 attendues, 8 index partiels, application servie, `/api/sante` opérationnelle |
 | Tests au vert en intégration continue | 262 tests Vitest et 33 Playwright sur le clone, chaîne verte sur `main` |
 | Administration protégée par second facteur | passkey d'ADR-021, réauthentification d'ADR-027 sur les actions sensibles, `/administration` répond 307 vers la connexion |
 | Application déployable | image construite depuis le clone, 7 contrôles de sécurité au vert, aucun `.env` dans les 10 couches ouvertes |
@@ -312,8 +314,10 @@ cookie. Un build vert ne prouve donc **pas** que le service démarrera. Voir le
 commentaire de `src/lib/auth.ts`, qui explique pourquoi le garde-fou est posé là
 où il agit plutôt qu'à la construction.
 
-Les autres, Stripe, SMTP, médias, IA, restent vides tant que la phase qui les
-emploie n'a pas commencé : le code ne les lit pas encore.
+**Les six variables SMTP sont lues depuis LS-82**, `smtp.ts` refusant de
+construire son transport si l'une manque, en nommant les absentes et jamais leur
+valeur. Stripe, médias et IA restent vides tant que la phase qui les emploie n'a
+pas commencé : le code ne les lit pas encore.
 
 | Commande | Effet |
 | --- | --- |
@@ -621,9 +625,10 @@ fois, sans que rien ne le voie.
 **La table des nombres en lettres monte à trente**, et ce n'est pas du confort.
 Elle s'arrêtait à « dix » : au-delà, la conversion rendait une chaîne vide et la
 comparaison était **sautée**, donc verte sans avoir rien vérifié. Le seuil était
-déjà franchi, `verifier-tests-mutation.sh` portant vingt-et-un cas. Un contrôle
-qui se tait quand il ne comprend pas est pire qu'un contrôle absent : il occupe
-la place et personne ne le remplace.
+déjà franchi à l'époque, `verifier-tests-mutation.sh` portant alors vingt-et-un
+cas ; il en porte **cent vingt-neuf** au 27 août 2026. Un contrôle qui se tait
+quand il ne comprend pas est pire qu'un contrôle absent : il occupe la place et
+personne ne le remplace.
 
 **Il ne corrige rien, et c'est délibéré.** Un chiffre faux est souvent le symptôme
 d'une modification non documentée : le corriger en silence ferait perdre
