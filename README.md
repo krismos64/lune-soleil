@@ -20,11 +20,11 @@ la phase 2.
 
 | Phase | Epic | État au 27 août 2026 |
 |---|---|---|
-| 2, catalogue, médias et stock multicanal | LS-3 | en cours, onze stories ouvertes |
+| 2, catalogue, médias et stock multicanal | LS-3 | en cours, treize stories ouvertes |
 | 3, panier, réservation, paiement et commandes | LS-4 | LS-114 à LS-121 et LS-43 livrées, **porte de sortie franchie**, deux stories ouvertes |
 | 4, factures, avoirs, emails, expédition et contact | LS-5 | découpée le 27 août 2026, treize stories ouvertes |
-| 5, rétractation, conformité et protection des données | LS-6 | découpée le 27 août 2026, quatre stories ouvertes |
-| 6, durcissement, exploitation et ouverture | LS-7 | découpée le 27 août 2026, huit stories ouvertes |
+| 5, rétractation, conformité et protection des données | LS-6 | découpée le 27 août 2026, cinq stories ouvertes |
+| 6, durcissement, exploitation et ouverture | LS-7 | découpée le 27 août 2026, neuf stories ouvertes |
 
 Les phases 4, 5 et 6 n'avaient jamais été découpées : LS-6 ne portait aucune
 story et LS-7 en portait deux pour douze sujets annoncés. Quinze stories ont été
@@ -43,6 +43,14 @@ LS-20.
 La cible **F-ADM-07**, créer un produit en moins de trois minutes au smartphone,
 que portait LS-15, n'a jamais été mesurée : elle est reprise par LS-145 pour ne
 pas disparaître avec son ticket d'origine.
+
+**Une vérification de couverture** a suivi le découpage, le 27 août 2026 :
+confronter les routes livrées, `PROTOTYPE.md` et le périmètre aux tickets
+existants. Cinq trous en sont sortis, LS-146 à LS-150, dont trois visibles au
+Go-Live : aucune page 404 habillée alors que `notFound()` est appelé sur quatre
+routes, aucun favicon ni image de partage, et **l'assistant IA de la V1 cible
+qui n'avait aucun ticket**. La recherche interne et la pagination, elles, restent
+écartées par décision et non par oubli.
 
 **Le jalon qui compte est tenu depuis le 25 août 2026.** LS-116 prouve la
 réservation du dernier exemplaire par le service, sur une variante à un
