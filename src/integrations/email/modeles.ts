@@ -63,28 +63,28 @@ const RENDUS: Record<ModeleEmail, (message: MessageEmail) => MessageRendu> = {
     texte: [
       "Bonjour,",
       "",
-      "Pour terminer la creation de votre compte, confirmez votre adresse en",
+      "Pour terminer la création de votre compte, confirmez votre adresse en",
       "ouvrant ce lien :",
       "",
       exiger(message, "lien"),
       "",
-      "Si vous n'etes pas a l'origine de cette demande, ignorez ce message.",
+      "Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.",
       "",
       SIGNATURE,
     ].join("\n"),
   }),
 
   "reinitialisation-mot-de-passe": (message) => ({
-    objet: "Reinitialisation de votre mot de passe",
+    objet: "Réinitialisation de votre mot de passe",
     texte: [
       "Bonjour,",
       "",
-      "Une reinitialisation de mot de passe a ete demandee pour votre compte.",
+      "Une réinitialisation de mot de passe a été demandée pour votre compte.",
       "Ouvrez ce lien pour choisir un nouveau mot de passe :",
       "",
       exiger(message, "lien"),
       "",
-      "Si vous n'etes pas a l'origine de cette demande, ignorez ce message :",
+      "Si vous n'êtes pas à l'origine de cette demande, ignorez ce message :",
       "votre mot de passe actuel reste valable.",
       "",
       SIGNATURE,
@@ -99,15 +99,15 @@ const RENDUS: Record<ModeleEmail, (message: MessageEmail) => MessageRendu> = {
    * c'est une alerte de securite, pas un message de marque.
    */
   "alerte-connexion-administration": (message) => ({
-    objet: "Connexion a l'administration par mot de passe",
+    objet: "Connexion à l'administration par mot de passe",
     texte: [
       "Bonjour,",
       "",
-      "Une connexion a l'administration vient d'avoir lieu par mot de passe,",
+      "Une connexion à l'administration vient d'avoir lieu par mot de passe,",
       `le ${exiger(message, "horodatage")}.`,
       "",
-      "Si cette connexion n'est pas la votre, changez votre mot de passe sans",
-      "attendre et verifiez vos cles d'acces.",
+      "Si cette connexion n'est pas la vôtre, changez votre mot de passe sans",
+      "attendre et vérifiez vos clés d'accès.",
       "",
       SIGNATURE,
     ].join("\n"),

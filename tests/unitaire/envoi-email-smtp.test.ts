@@ -176,6 +176,63 @@ describe("rendreModele", () => {
     ).toThrow(/lien/);
   });
 
+  /**
+   * LES ACCENTS SONT UNE EXIGENCE DE REDACTION ET UN ENJEU DE DELIVRABILITE.
+   *
+   * Regle du projet : tous les accents presents dans tout texte visible, et un
+   * email transactionnel en est. Le defaut a ete constate le 27 aout 2026 dans
+   * une vraie boite, « Connexion a l'administration », apres que le message
+   * soit parti : aucun test ne le voyait, celui du cadratin ne regardant que
+   * les tirets.
+   *
+   * S'Y AJOUTE UN MOTIF TECHNIQUE : un texte français sans accents est un
+   * signal connu des filtres anti-indesirables, qui le lisent comme du texte
+   * degrade. Le message de test avait ete classe en indesirable chez Yahoo.
+   *
+   * LE CONTROLE PORTE SUR DES MOTS ATTENDUS ET NON SUR « au moins un accent ».
+   * Compter les accents laisserait passer un texte qui en porte un et en oublie
+   * six ; nommer les formes fautives attrape la faute la ou elle se produit.
+   */
+  it("ecrit tous les accents des textes visibles", () => {
+    const rendus = [
+      rendreModele({
+        destinataire: "test@example.invalid",
+        modele: "verification-adresse",
+        variables: { lien: "https://exemple.invalid/verifier" },
+      }),
+      rendreModele({
+        destinataire: "test@example.invalid",
+        modele: "reinitialisation-mot-de-passe",
+        variables: { lien: "https://exemple.invalid/reinitialiser" },
+      }),
+      rendreModele({
+        destinataire: "test@example.invalid",
+        modele: "alerte-connexion-administration",
+        variables: { horodatage: "27 aout 2026 a 14h30" },
+      }),
+    ];
+
+    // Formes fautives reellement rencontrees, objet et corps confondus.
+    const FAUTES = [
+      "creation",
+      "Reinitialisation",
+      "reinitialisation de mot de passe a ete demandee",
+      "n'etes pas a l'origine",
+      "Connexion a l'administration",
+      "connexion a l'administration",
+      "la votre",
+      "verifiez vos cles d'acces",
+    ];
+
+    for (const rendu of rendus) {
+      const complet = `${rendu.objet}\n${rendu.texte}`;
+
+      for (const faute of FAUTES) {
+        expect(complet).not.toContain(faute);
+      }
+    }
+  });
+
   it("n'ecrit aucun tiret cadratin", () => {
     // Regle de redaction du projet, applicable a l'interface visible par les
     // clients : ces textes en font partie.
