@@ -178,23 +178,73 @@ pire que la dette actuelle. C'est LS-54.
 bloquées avant que quiconque ne les regarde, ce qui reviendrait à taire
 l'incident au lieu de le résoudre.
 
-## Deux comptes périmés corrigés au passage
+## La réception, constatée : un sur deux, et un défaut trouvé par là
+
+| Fournisseur | Résultat |
+|---|---|
+| Gmail | **boîte de réception** |
+| Yahoo | **dossier indésirable** |
+
+**Le critère 1 a fait exactement ce pour quoi il existe.** Aucun test ne pouvait
+donner ce résultat, et il a révélé un défaut réel que la CI avait laissé passer.
+
+### Les trois textes partaient sans leurs accents
+
+« Connexion **a** l'administration », « la **votre** », « **verifiez** vos
+**cles** d'**acces** ». La règle du projet exige tous les accents dans tout texte
+visible, et un email transactionnel en est un.
+
+**Aucun test ne le voyait**, celui du cadratin ne regardant que les tirets. Le
+défaut a franchi la CI, la revue, et ne s'est vu qu'à la lecture du message reçu.
+
+Un motif technique s'y ajoute, et il compte ici : **un texte français sans
+accents est un signal connu des filtres anti-indésirables**, qui le lisent comme
+du texte dégradé. Ce défaut explique peut-être une partie du classement Yahoo.
+
+Corrigé, avec `textEncoding` en `quoted-printable` déclaré explicitement.
+Nodemailer gère déjà l'UTF-8, vérifié via Context7, mais un `charset` mal annoncé
+produirait « Rï¿½initialisation » sans qu'aucun test ne le voie, la chaîne sortie
+du rendu étant correcte. Le test neuf **nomme les formes fautives rencontrées**
+plutôt que de compter les accents, ce qui laisserait passer un texte en portant
+un et en oubliant six. Prouvé par mutation.
+
+### Ce qui n'a pas été diagnostiqué, et qui est assumé comme tel
+
+Le DNS a été revérifié par `dig` et il est **correct** : SPF unique, DKIM servant
+une vraie clé RSA 2048 sur les deux sélecteurs, DMARC en `p=none`, MX cohérents.
+La cause du classement est donc ailleurs.
+
+Arbitrage de Christophe : considérer que c'est **normal au démarrage d'un
+domaine**, Yahoo étant sévère avec un expéditeur sans historique.
+
+**Cette hypothèse n'est pas vérifiée**, et le journal ne la présente pas comme
+une conclusion. L'en-tête `Authentication-Results` du message reçu n'a pas été
+relevé, alors qu'un défaut d'authentification produirait le même symptôme
+observable. **LS-155** porte ce diagnostic plutôt que de le laisser en
+supposition : une facture classée en indésirable est un défaut qui se voit tard.
+
+Deux messages corrigés ont été renvoyés vers les mêmes boîtes ; leur classement
+reste à constater.
+
+## Trois comptes périmés corrigés au passage
 
 Antérieurs à cette story, relevés et non recopiés. Le README annonçait
 « vingt-et-un scripts » pour vingt-six, et `reservation-test.sh` manquait à la
 liste alors qu'il porte le prototype du test phare du projet.
 `MODELE-LOGIQUE.md` comptait « six index partiels » pour sept.
 
+L'audit de fin de session en a trouvé **deux autres**, plus anciens : le README
+annonçait « 32 tables, 25 contraintes CHECK » pour 34 et 29, et présentait la
+chaîne LS-118 à LS-121 comme attendue alors qu'elle est livrée. Une affirmation
+disait encore que le code ne lit pas les variables SMTP.
+
 ## Prochaine étape
 
-**Constater la réception des deux emails**, ce qui ferme LS-82. Objet
-« Connexion à l'administration par mot de passe », expéditeur
-`contact@lune-soleil.fr`. Trois choses à regarder : boîte de réception ou
-indésirable, avertissement d'expéditeur, accents corrects.
+**LS-155**, le diagnostic de délivrabilité, si Christophe veut trancher la
+question avant d'ouvrir : relever `Authentication-Results` et constater le
+classement des messages corrigés. C'est aussi ce qui conditionne le durcissement
+de DMARC vers `quarantine`, que le commentaire du 8 août sur LS-29 interdit
+d'anticiper.
 
-Si les messages arrivent, **DMARC peut passer de `p=none` à `quarantine`**, ce
-que le commentaire du 8 août sur LS-29 interdisait de faire avant ce test.
-
-Ensuite, **LS-126** ouvre la chaîne des documents comptables et referme la
-troisième clé d'idempotence, la dernière non exercée. C'est la suite naturelle de
-la phase 4.
+Sinon **LS-126**, qui ouvre la chaîne des documents comptables et referme la
+dernière clé d'idempotence non exercée. C'est la suite naturelle de la phase 4.

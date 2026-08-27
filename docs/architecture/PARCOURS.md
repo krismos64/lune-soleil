@@ -270,6 +270,13 @@ Vue : rien, le client a déjà sa confirmation.
 Sans ces quatre unicités, une variante à plusieurs exemplaires verrait son stock
 décrémenté deux fois sans qu'aucune erreur ne se déclenche.
 
+**Pour l'email, la clé n'est que la seconde ligne de défense**, ADR-033. Elle
+protège la base, pas l'appel au serveur : un processus qui tombe entre l'envoi et
+l'écriture de la trace laisse la reprise libre, et le client reçoit un second
+message. L'**outbox** ferme cette fenêtre en écrivant l'intention dans la
+transaction métier et en marquant la ligne avant l'appel. Les trois autres effets
+n'en ont pas besoin, ils sont entièrement en base.
+
 La clé du mouvement porte sur `(commandeId, varianteId)` et non sur la commande
 seule : une commande à deux articles décrémente deux variantes, donc produit deux
 mouvements. Une unicité par commande seule interdirait tout panier
