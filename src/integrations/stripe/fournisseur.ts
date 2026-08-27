@@ -72,7 +72,39 @@ export type IssueExpirationSession = "EXPIREE" | "DEJA_FERMEE";
 export interface FournisseurPaiement {
   creerSession(demande: DemandeSessionPaiement): Promise<SessionPaiementCreee>;
   expirerSession(identifiant: string): Promise<IssueExpirationSession>;
+  /**
+   * Etat REEL d'une session chez le prestataire, LS-120.
+   *
+   * C'EST LA SEULE SOURCE DE VERITE DE LA RECONCILIATION. Une commande restee
+   * en attente depuis plus d'une heure peut avoir ete payee sans que
+   * l'evenement soit jamais arrive : la base ne le sait pas, seul le
+   * prestataire le sait. L'annuler sans demander reviendrait a annuler une
+   * commande payee, et a rendre au catalogue une piece deja vendue.
+   */
+  lireSession(identifiant: string): Promise<EtatSessionPaiement>;
 }
+
+/**
+ * Ce que le prestataire repond sur une session, reduit a ce qui decide.
+ *
+ * TROIS ETATS ET NON UN BOOLEEN `payee`. « Ouverte » et « expiree sans
+ * paiement » appellent des suites differentes : la premiere se laisse vivre, la
+ * seconde autorise l'annulation. Les confondre annulerait des commandes encore
+ * payables, un client parti dejeuner devant sa page de paiement.
+ */
+export type EtatSessionPaiement =
+  /** Payee. Le montant est celui encaisse, en centimes, invariant 1. */
+  | {
+      etat: "PAYEE";
+      identifiantSession: string;
+      montantCentimes: number;
+      /** Charge brute, pour l'audit. Jamais interpretee. */
+      charge: unknown;
+    }
+  /** Encore payable : ne rien faire, le client peut revenir. */
+  | { etat: "OUVERTE" }
+  /** Fermee sans paiement : la commande peut etre annulee. */
+  | { etat: "EXPIREE" };
 
 /**
  * Le prestataire ne repond pas, ou repond une erreur qui n'est pas un refus.

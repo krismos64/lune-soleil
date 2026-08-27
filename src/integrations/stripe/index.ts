@@ -31,6 +31,7 @@ import {
 import {
   PrestatairePaiementIndisponibleError,
   type DemandeSessionPaiement,
+  type EtatSessionPaiement,
   type FournisseurPaiement,
   type IssueExpirationSession,
   type SessionPaiementCreee,
@@ -182,6 +183,45 @@ export const fournisseurStripe: FournisseurPaiement = {
 
       throw new PrestatairePaiementIndisponibleError(cause);
     }
+  },
+
+  async lireSession(identifiant: string): Promise<EtatSessionPaiement> {
+    const stripe = clientStripe();
+
+    let session: Stripe.Checkout.Session;
+
+    try {
+      session = await stripe.checkout.sessions.retrieve(identifiant);
+    } catch (cause) {
+      /*
+       * TOUTE ERREUR EST UNE INDISPONIBILITE ICI, y compris un identifiant
+       * inconnu, et la nuance compte : a la difference de l'expiration, ou un
+       * refus est l'information utile, ne pas savoir si une session est payee
+       * n'autorise AUCUNE decision. La reconciliation saute la commande et
+       * reessaiera au cycle suivant plutot que d'annuler a l'aveugle.
+       */
+      throw new PrestatairePaiementIndisponibleError(cause);
+    }
+
+    /*
+     * `payment_status` ET NON `status`, ET C'EST LE POINT. Une session peut
+     * porter `status: "complete"` avec `payment_status: "unpaid"` sur un mode
+     * differe : lire le statut de session ferait passer pour payee une commande
+     * qui ne l'est pas. C'est le paiement qui decide, jamais l'avancement du
+     * tunnel.
+     */
+    if (session.payment_status === "paid") {
+      return {
+        etat: "PAYEE",
+        identifiantSession: session.id,
+        montantCentimes: session.amount_total ?? 0,
+        charge: session,
+      };
+    }
+
+    return session.status === "open"
+      ? { etat: "OUVERTE" }
+      : { etat: "EXPIREE" };
   },
 };
 
