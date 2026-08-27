@@ -24,7 +24,7 @@ la phase 2.
 | 3, panier, réservation, paiement et commandes | LS-4 | LS-114 à LS-121 et LS-43 livrées, **porte de sortie franchie**, deux stories ouvertes |
 | 4, factures, avoirs, emails, expédition et contact | LS-5 | découpée le 27 août 2026, treize stories ouvertes |
 | 5, rétractation, conformité et protection des données | LS-6 | découpée le 27 août 2026, cinq stories ouvertes |
-| 6, durcissement, exploitation et ouverture | LS-7 | découpée le 27 août 2026, neuf stories ouvertes |
+| 6, durcissement, exploitation et ouverture | LS-7 | découpée le 27 août 2026, douze stories ouvertes |
 
 Les phases 4, 5 et 6 n'avaient jamais été découpées : LS-6 ne portait aucune
 story et LS-7 en portait deux pour douze sujets annoncés. Quinze stories ont été
@@ -43,6 +43,12 @@ LS-20.
 La cible **F-ADM-07**, créer un produit en moins de trois minutes au smartphone,
 que portait LS-15, n'a jamais été mesurée : elle est reprise par LS-145 pour ne
 pas disparaître avec son ticket d'origine.
+
+**Le déploiement est couvert de bout en bout** depuis le 27 août 2026, la chaîne
+LS-151 à LS-153 s'ajoutant à LS-138. Le socle existait déjà en grande partie,
+image publiée sur GHCR et configuration Nginx versionnée, mais trois maillons
+manquaient : la préparation du VPS, la **base de production**, qu'aucun fichier
+ne décrivait, et la première mise en ligne avec son point de non-retour.
 
 **Une vérification de couverture** a suivi le découpage, le 27 août 2026 :
 confronter les routes livrées, `PROTOTYPE.md` et le périmètre aux tickets
