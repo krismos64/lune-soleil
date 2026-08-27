@@ -22,7 +22,7 @@ la phase 2.
 |---|---|---|
 | 2, catalogue, médias et stock multicanal | LS-3 | en cours, treize stories ouvertes |
 | 3, panier, réservation, paiement et commandes | LS-4 | LS-114 à LS-121 et LS-43 livrées, **porte de sortie franchie**, deux stories ouvertes |
-| 4, factures, avoirs, emails, expédition et contact | LS-5 | découpée le 27 août 2026, **commencée** : LS-51 et LS-82 livrent l'envoi réel des emails, douze stories ouvertes |
+| 4, factures, avoirs, emails, expédition et contact | LS-5 | découpée le 27 août 2026, **commencée** : LS-51 close, LS-82 livrée et ouverte sur son seul critère de réception, treize stories ouvertes |
 | 5, rétractation, conformité et protection des données | LS-6 | découpée le 27 août 2026, cinq stories ouvertes |
 | 6, durcissement, exploitation et ouverture | LS-7 | découpée le 27 août 2026, onze stories ouvertes |
 
