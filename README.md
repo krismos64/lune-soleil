@@ -20,7 +20,7 @@ la phase 2.
 
 | Phase | Epic | État au 27 août 2026 |
 |---|---|---|
-| 2, catalogue, médias et stock multicanal | LS-3 | en cours, dix stories ouvertes |
+| 2, catalogue, médias et stock multicanal | LS-3 | en cours, onze stories ouvertes |
 | 3, panier, réservation, paiement et commandes | LS-4 | LS-114 à LS-121 et LS-43 livrées, **porte de sortie franchie**, deux stories ouvertes |
 | 4, factures, avoirs, emails, expédition et contact | LS-5 | découpée le 27 août 2026, treize stories ouvertes |
 | 5, rétractation, conformité et protection des données | LS-6 | découpée le 27 août 2026, quatre stories ouvertes |
@@ -31,6 +31,18 @@ story et LS-7 en portait deux pour douze sujets annoncés. Quinze stories ont é
 créées le 27 août 2026, LS-128 à LS-142, ce qui rend le chemin jusqu'au Go-Live
 visible d'un bout à l'autre. Deux points relevés par la revue frontend de LS-121
 sont entrés au même moment, LS-143 et LS-144.
+
+**La phase 0 est presque close.** Trois livrables de cadrage ont été fermés le
+27 août 2026 parce que le code les avait dépassés : le benchmark, LS-10, dont les
+conclusions sont passées dans `frontend-design.md` et ADR-026 ; le diagramme de
+séquence, LS-14, que `PARCOURS.md` et le test de bout en bout couvrent deux fois ;
+le filaire de création produit, LS-15, dont l'écran existe depuis LS-100. Restent
+quatre tickets qui dépendent de démarches et non du code, LS-9, LS-18, LS-19 et
+LS-20.
+
+La cible **F-ADM-07**, créer un produit en moins de trois minutes au smartphone,
+que portait LS-15, n'a jamais été mesurée : elle est reprise par LS-145 pour ne
+pas disparaître avec son ticket d'origine.
 
 **Le jalon qui compte est tenu depuis le 25 août 2026.** LS-116 prouve la
 réservation du dernier exemplaire par le service, sur une variante à un
