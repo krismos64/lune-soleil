@@ -21,7 +21,7 @@ la phase 2.
 | Phase | Epic | État au 27 août 2026 |
 |---|---|---|
 | 2, catalogue, médias et stock multicanal | LS-3 | en cours, sept stories ouvertes |
-| 3, panier, réservation, paiement et commandes | LS-4 | en cours, LS-114 à LS-119 et LS-43 livrées, quatre stories ouvertes |
+| 3, panier, réservation, paiement et commandes | LS-4 | en cours, LS-114 à LS-120 et LS-43 livrées, trois stories ouvertes |
 
 **Le jalon qui compte est tenu depuis le 25 août 2026.** LS-116 prouve la
 réservation du dernier exemplaire par le service, sur une variante à un
@@ -43,6 +43,12 @@ l'identifiant d'événement**, qui ne ferme que le rejeu du même événement, j
 le croisement entre le webhook et la réconciliation. Deux des quatre clés
 d'unicité sont exercées par un test ; la facture et l'email n'étant écrits nulle
 part avant la phase 4, les deux autres attendent LS-126 et LS-82.
+
+**Et rien ne reste en suspens depuis LS-120** : la libération rend au catalogue
+les réservations échues toutes les cinq minutes, la réconciliation régularise
+tous les quarts d'heure les commandes dont l'événement n'est jamais arrivé, en
+passant par le même service que le webhook. Le croisement des deux chemins est
+testé dans les deux ordres d'arrivée.
 
 La vérification contre l'API réelle attend le compte Stripe, LS-18 : sans clé, le
 paiement s'annonce indisponible et la commande reste payable au réessai.
@@ -362,12 +368,21 @@ docker compose -f docker-compose.yml -f docker-compose.cron.yml \
 tâche qui ne tourne pas se remarque, une route interne ouverte à tous ne se
 remarque pas.
 
-Trois tâches sont déclarées. `liberation-reservations` et
-`reconciliation-paiements` restent **vides**, elles se remplissent en phase 3 et
-4. `purge-journaux` est la seule qui travaille aujourd'hui, LS-94 : une fois par
-jour à 03h17, elle applique les durées de conservation annoncées par
-`docs/architecture/REGISTRE-DES-TRAITEMENTS.md` sur `JournalConnexion`,
-`JournalAudit` et `RateLimit`.
+Quatre tâches sont déclarées, et **toutes travaillent** depuis LS-120.
+
+`liberation-reservations`, toutes les cinq minutes : elle rend au catalogue les
+réservations échues, ce sans quoi `quantiteReservee` ne redescendait jamais et
+une pièce abandonnée au paiement restait invendable indéfiniment.
+
+`reconciliation-paiements`, tous les quarts d'heure : elle régularise les
+commandes en attente depuis plus d'une heure, en interrogeant le prestataire.
+Un événement peut ne jamais arriver, et sans elle le client aurait payé sans
+commande confirmée.
+
+`purge-journaux`, une fois par jour à 03h17, LS-94 : elle applique les durées de
+conservation annoncées par `docs/architecture/REGISTRE-DES-TRAITEMENTS.md` sur
+`JournalConnexion`, `JournalAudit` et `RateLimit`. `purge-quarantaine-medias`
+ramasse les originaux dont le téléversement a été interrompu, LS-102.
 
 **Une purge en échec n'empêche pas les autres.** Chaque table est isolée : un
 incident sur l'une laisserait sinon les suivantes grossir indéfiniment, ce qui
