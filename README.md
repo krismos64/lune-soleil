@@ -252,11 +252,24 @@ toutes les deux. Le symptôme est un `400` sur chaque événement et une command
 qui reste en `EN_ATTENTE_PAIEMENT` sans autre explication. Mesuré le 31 août
 2026.
 
-**Vérifier sur quel compte la CLI est authentifiée** avant de la lancer,
-`stripe config --list` : une session enregistrée pour un autre projet écoute les
-événements de cet autre projet, en silence. Le cas s'est produit le 31 août 2026,
-une session SmartPlanning portant en prime une clé de production. Passer
-`--api-key` avec la clé du `.env` évite d'y toucher.
+**Un profil `lune-soleil` isole ce projet**, la CLI enregistrant par défaut un
+seul compte pour toute la machine. Sans lui, une session ouverte pour un autre
+projet écoute les événements de cet autre projet, en silence : le cas s'est
+produit le 31 août 2026, le profil `default` pointant sur SmartPlanning et
+portant en prime une clé de production.
+
+```bash
+stripe listen --project-name lune-soleil --forward-to localhost:3000/api/webhooks/paiement
+stripe get /v1/account --project-name lune-soleil    # doit rendre acct_1UAS2J…
+```
+
+Le profil vit dans `~/.config/stripe/config.toml`, hors du dépôt. Le recréer sur
+une machine neuve consiste à y ajouter une section `[lune-soleil]` portant
+`test_mode_api_key`, valeur recopiée du `.env`.
+
+**Ne jamais passer une clé en argument**, ni littéralement ni par
+`--api-key "$(...)"` : le shell substitue avant de lancer le processus, et la
+valeur devient lisible par tout `ps` de la machine. C'est le défaut 4 de LS-156.
 
 Carte de test, sans argent réel : `4242 4242 4242 4242`, date future quelconque,
 CVC quelconque.
