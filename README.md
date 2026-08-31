@@ -40,6 +40,13 @@ le filaire de création produit, LS-15, dont l'écran existe depuis LS-100. Rest
 quatre tickets qui dépendent de démarches et non du code, LS-9, LS-18, LS-19 et
 LS-20.
 
+**Le compte Stripe est ouvert depuis le 31 août 2026**, LS-18 close. Le compte
+bancaire professionnel qui bloquait la démarche depuis le 29 juillet existe, ce
+qui débloque aussi le compte Mondial Relay, LS-27, dont l'ouverture reste à
+faire. Restent hors code : la médiation de la consommation, LS-19, qu'aucun
+commentaire ne trace comme engagée alors qu'elle conditionne les mentions
+légales, et les photographies, LS-20.
+
 La cible **F-ADM-07**, créer un produit en moins de trois minutes au smartphone,
 que portait LS-15, n'a jamais été mesurée : elle est reprise par LS-145 pour ne
 pas disparaître avec son ticket d'origine.
@@ -177,6 +184,15 @@ mouvement de stock unique et document de facturation exact.
 Le test de concurrence correspondant est écrit avant l'implémentation du
 paiement et conservé en intégration continue.
 
+**Franchi hors des tests le 31 août 2026**, au navigateur, avec les clés Stripe
+réelles du compte de l'exploitante en mode test, sur une variante à un
+exemplaire : réservation atomique portant un `commandeId`, événement
+`checkout.session.completed` accepté en `200` après validation de signature,
+commande `CONFIRMEE` à 2349 centimes, **un seul** mouvement `VENTE_WEB` de -1,
+facture `F-2026-0001` dont l'instantané légal porte l'identité de l'émetteur et
+la mention de l'article 293 B. Aucune `AlerteCritique`. Le rendu PDF manque
+encore, LS-129, `chemin_pdf` restant vide.
+
 ## Documentation
 
 | Contenu | Emplacement |
@@ -217,6 +233,42 @@ Le site sert `/catalogue` et `/produit/<slug>` côté public, `/administration`
 côté exploitante, dont `/administration/stocks` pour les marchés. La liste fait
 foi dans `src/app/`, elle n'est pas recopiée ici : une énumération dans un README
 se périme à la story suivante.
+
+### Recevoir les événements de paiement en local
+
+Le retour du navigateur ne confirme rien, invariant 5 : seul un événement signé
+reçu sur `/api/webhooks/paiement` fait passer une commande en `CONFIRMEE`. Stripe
+ne pouvant pas joindre un poste de développement, la CLI ouvre le tunnel.
+
+```bash
+stripe listen --forward-to localhost:3000/api/webhooks/paiement
+```
+
+**Le secret affiché par cette commande doit être recopié dans
+`STRIPE_WEBHOOK_SECRET`, et il change à chaque relance.** Un secret qui ne
+correspond pas est indétectable à l'œil : les deux valeurs commencent par
+`whsec_` et ont la même longueur, si bien qu'un contrôle de format les accepte
+toutes les deux. Le symptôme est un `400` sur chaque événement et une commande
+qui reste en `EN_ATTENTE_PAIEMENT` sans autre explication. Mesuré le 31 août
+2026.
+
+**Vérifier sur quel compte la CLI est authentifiée** avant de la lancer,
+`stripe config --list` : une session enregistrée pour un autre projet écoute les
+événements de cet autre projet, en silence. Le cas s'est produit le 31 août 2026,
+une session SmartPlanning portant en prime une clé de production. Passer
+`--api-key` avec la clé du `.env` évite d'y toucher.
+
+Carte de test, sans argent réel : `4242 4242 4242 4242`, date future quelconque,
+CVC quelconque.
+
+### Téléverser une photographie en local
+
+`MEDIA_RACINE` doit désigner un chemin **hors du dépôt**, par exemple
+`~/.lune-soleil/medias`. Sans elle, le téléversement échoue et un produit ne peut
+pas être publié, la publication exigeant un média traité portant un texte
+alternatif. Ne jamais la faire pointer sur `public/` : en sortie standalone ce
+dossier est recopié dans l'image à la construction, un média téléversé
+disparaîtrait au déploiement suivant.
 
 ### Activer le garde-fou des secrets, sur tout clone neuf
 
