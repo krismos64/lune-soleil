@@ -159,15 +159,15 @@ Trois agents projet : `ls-critical-reviewer` relit les zones à risque,
 `ls-frontend-revue` relit une interface avant clôture. **Ne pas invoquer les
 agents globaux `docker-devops`, `security-auditor` ni `nextjs-architect` ici**,
 calibrés sur une autre stack : NextAuth v5, PostgreSQL 16, Redis 7 et du
-multi-tenant, quand ce projet est en Better Auth 1.6, PostgreSQL 18, sans Redis.
+multi-tenant, quand ce projet est en Better Auth 1.6 et PostgreSQL 18, sans Redis.
 
 ## Conduite du travail
 
-Tout travail suit le skill `story`, y compris une exploration sans ticket : il
-porte le contrôle avant zone critique et la clôture de la traçabilité. Cinq
-hooks l'appuient, table dans `docs/REFERENCES.md` : ils injectent l'état au
-démarrage, bloquent la lecture des secrets, rejouent `verifier-regles.sh`, et
-contrôlent la traçabilité avant compaction comme en fin de session.
+Tout travail suit le skill `story`, exploration sans ticket comprise : il porte
+le contrôle avant zone critique et la clôture de la traçabilité ; le skill `adr`
+écrit une décision structurante. Des hooks les appuient sur cinq événements,
+table dans `docs/REFERENCES.md` : état injecté au démarrage, secrets bloqués à la
+lecture, `verifier-regles.sh` rejoué, traçabilité contrôlée en fin de session.
 
 YOU MUST clore tout travail significatif sur les **quatre canaux**, et dire
 explicitement ce qui a été mis à jour :

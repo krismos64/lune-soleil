@@ -227,8 +227,15 @@ mutation, sept cas neufs                    7 mutations, 7 detectees
 
 | Ticket | État |
 |---|---|
-| LS-126 | sept critères sur sept remplis, revue critique passée, deux défauts corrigés |
+| LS-126 | **Terminé**, fusionné par la PR #166, clôture documentaire par la #167 |
 | LS-128, LS-129, LS-132 | débloquées, elles attendaient l'existence d'une facture |
+| LS-82 | toujours **En cours**, son critère 1 attend le classement des messages renvoyés |
+| LS-155 | inchangée, elle attend que Christophe relève `Authentication-Results` |
+
+**Avancement mesuré dans Jira après la fusion** : 73 terminés sur 155, et treize
+stories ouvertes en phase 4. Les deux comptes du `README.md` étaient devenus
+faux et sont corrigés, celui de la phase 4 et « la facture n'étant écrite nulle
+part, la dernière clé attend LS-126 ».
 
 ## Ce qui n'a pas été fait, et pourquoi
 
