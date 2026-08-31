@@ -103,8 +103,11 @@ c'est LS-33 qui décidera comment le site l'apprend.
 commande, réservation, paiement, événement signé, confirmation et administration
 sur une pièce unique, puis rejoue le chemin d'abandon.
 
-La vérification contre l'API réelle attend le compte Stripe, LS-18 : sans clé, le
-paiement s'annonce indisponible et la commande reste payable au réessai.
+**La vérification contre l'API réelle a suivi le 31 août 2026**, LS-18 close : le
+même parcours a été déroulé au navigateur avec les clés du compte de
+l'exploitante, en mode test. Le comportement sans clé reste celui décrit
+ci-dessus, le paiement s'annonçant indisponible et la commande restant payable au
+réessai.
 
 **La chaîne LS-118 à LS-121 est entièrement livrée** le 27 août 2026, et avec
 elle la porte de sortie de la phase 3. Chaque story dépendait de la précédente :

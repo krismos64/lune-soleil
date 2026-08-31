@@ -94,16 +94,61 @@ continue** à domicile, le compte Mondial Relay n'existant pas : c'est le critè
 article périmé d'une session antérieure, l'a affiché en « Pièce indisponible » à
 0,00 €, exclu du total, avec un message d'avertissement.
 
+## Un secret exposé par la ligne de commande, et le profil qui le corrige
+
+Pour écouter les événements sur le bon compte, `stripe listen --api-key sk_test_…`
+a été lancé avec la clé en argument. **La valeur devient alors lisible par tout
+`ps` de la machine**, et elle est ressortie dans la sortie d'un `pgrep -fl` en fin
+de séance.
+
+Le hook `hook-block-secret-commands.sh` avait pourtant fait son travail deux fois
+dans la journée, en bloquant `sed` puis `awk` sur le `.env`. Il ne couvre pas ce
+chemin de côté : une valeur **déjà extraite**, passée en argument. Le garde-fou
+n'a pas échoué, son périmètre s'arrête avant. Et `--api-key "$(cat …)"` n'y change
+rien, le shell substituant avant de lancer le processus.
+
+Christophe a tranché de ne pas révoquer cette clé de test.
+
+La correction durable est un **profil Stripe dédié**, `[lune-soleil]` dans
+`~/.config/stripe/config.toml`, sélectionné par `--project-name`. Il était
+nécessaire pour une autre raison : la CLI n'enregistre qu'un compte pour toute la
+machine, et le profil `default` de ce poste pointait sur **SmartPlanning**, avec
+une clé de production active. Un `stripe listen` nu écoutait donc les événements
+d'un autre projet, en silence.
+
+`Bash(stripe:*)` était déjà autorisé dans `settings.json` : aucune permission
+n'était à ajouter, ce qui manquait était le bon compte. Le connecteur MCP Stripe
+a été écarté, il s'authentifierait sur le compte de Christophe et non sur celui
+de l'exploitante, et couvre moins que la CLI.
+
+**LS-156 porte ces manques**, priorité High, label `securite` : le contrôle
+d'environnement pour les trois premiers défauts, et l'élargissement du hook pour
+le quatrième, avec preuve par mutation sur chacun.
+
 ## Ce qui reste ouvert
 
 `chemin_pdf` est vide, LS-129 n'étant pas écrite : la facture existe en données,
 pas en document téléchargeable.
 
-Le **nom public** du compte Stripe n'est pas renseigné, si bien que la page de
-paiement affiche « MENENDEZ Stacy » au client plutôt que « Lune & Soleil ». Le
-descripteur de relevé bancaire est à vérifier dans le même écran : un libellé
-méconnaissable sur un relevé provoque des contestations de paiement, dont le coût
-dépasse celui de la commande.
+La page de paiement affichait « MENENDEZ Stacy » pendant l'essai. **Rectifié en
+fin de séance**, capture du tableau de bord à l'appui : Stripe maintient **deux
+jeux d'informations publiques distincts, mode test et mode réel, qui ne se
+synchronisent pas**. Côté réel tout est renseigné, nom commercial `Lune-Soleil`,
+adresse et téléphone d'assistance, `contact@lune-soleil.fr`, libellé de relevé
+`LUNE-SOLEIL.FR`. Côté test le bloc est vide, d'où le repli sur le nom légal.
+
+J'avais conclu deux fois que le champ était vide, en lisant l'API avec une clé de
+test : une telle lecture ne dit rien de ce que verra un client. Le tableau de
+bord fait foi, et son bandeau supérieur indique quel mode est affiché.
+
+Reste vide côté production le **site web de l'entreprise**, que Stripe réclame
+pour l'activation complète. Son écriture par l'API est refusée en mode test,
+`Only live keys can access this method`, et exigerait une clé `sk_live_` donnant
+accès aux paiements réels et aux virements : écartée, le geste revient à
+l'exploitante.
+
+Le nom retenu s'écrit **`Lune-Soleil`** avec un trait d'union dans la
+configuration, arbitrage du 31 août 2026.
 
 Les données de cette séance sont **fictives** et devront disparaître avant le
 vrai catalogue : produit « Créoles dorées Ariane », commande `C-2026-0001`,
