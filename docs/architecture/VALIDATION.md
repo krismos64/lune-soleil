@@ -46,6 +46,10 @@ const quantite = valider(schemaQuantite, entree); // ou lève EntreeInvalideErro
 | `schemaPointRetrait` | point copié en entier, libellé et adresse | un point réduit à son identifiant |
 | `schemaChoixLivraison` | mode et point liés par une **équivalence** | un `DOMICILE` porteur d'un point autant qu'un `POINT_RELAIS` sans point |
 | `schemaCoordonnees` | nom, email, téléphone facultatif | composé des trois précédents |
+| `schemaAdresseFigee` | adresse **recopiée par une commande**, avec le `nom` du destinataire | relire une adresse figée avec `schemaAdressePostale`, qui refuse ce `nom` |
+| `schemaEmetteurFacture` | identité légale lue dans l'environnement, SIRET à quatorze chiffres | une valeur absente, un SIRET espacé ou tronqué |
+| `schemaLigneInstantane` | une ligne du document, deux libellés séparés | un total de ligne stocké, il se déduit |
+| `schemaInstantaneLegal` | contenu intégral et **versionné** de la facture, LS-126 | un document sans ligne, sans mention, ou de version inconnue |
 
 Zéro est accepté sur un montant et refusé sur une quantité, et c'est la seule
 différence entre les deux schémas : zéro centime est un montant légitime, en
@@ -56,6 +60,19 @@ quantité.
 c'est délibéré : ajouter une valeur à l'enum ouvrirait sinon **en silence** la
 saisie à un mode dont aucun tarif n'existe. Le projet a déjà rencontré ce piège
 deux fois, sur un index partiel puis sur un affichage.
+
+**`schemaInstantaneLegal` vaut à l'écriture ET à la lecture, LS-126.** La
+colonne `facture.instantane_legal` est un `Json` : elle accepte n'importe quelle
+forme, et une clé oubliée ne se verrait qu'à la relecture du document, des années
+après la vente. Le champ `version` est ce qui rend cette relecture possible : le
+jour où la structure change, les factures déjà émises gardent la leur et restent
+lisibles, l'invariant 4 interdisant de les réécrire.
+
+**`schemaAdresseFigee` existe parce qu'une adresse figée n'est pas une saisie.**
+Elle porte le `nom` du destinataire, absent du formulaire où le nom est un champ
+voisin. Relire une adresse figée avec `schemaAdressePostale` échoue,
+`z.strictObject` refusant la clé inconnue : le défaut s'est vu par un test
+d'intégration de LS-126, pas à la relecture d'un document ancien.
 
 **`schemaChoixLivraison` porte une équivalence, pas une implication.** La
 contrainte `chk_commande_mode_point_relais` s'écrit

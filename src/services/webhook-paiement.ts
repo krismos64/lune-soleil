@@ -37,6 +37,8 @@ import {
   type VerificateurSignature,
 } from "@/integrations/stripe/evenements";
 import { estInterblocage, TENTATIVES_MAXIMUM } from "@/services/reservation";
+import { emettreFacture, EmetteurNonConfigureError } from "@/services/facture";
+import type { CommandeAFacturer } from "@/services/facture";
 import {
   consommerReservationEtSortirStock,
   ecrireMouvementVenteWeb,
@@ -276,8 +278,27 @@ async function confirmerPaiement(
       id: true,
       statut: true,
       totalCentimes: true,
+      /*
+       * LES CHAMPS DE FACTURATION SONT CHARGES ICI, LS-126. Ils sont deja figes
+       * par la commande, invariant 3 : l'instantane legal les recopie sans
+       * jamais relire le catalogue.
+       */
+      numero: true,
+      nomClient: true,
+      emailNormalise: true,
+      adresseFacturation: true,
+      sousTotalCentimes: true,
+      fraisPortCentimes: true,
+      creeA: true,
       lignes: {
-        select: { varianteId: true, quantite: true },
+        select: {
+          varianteId: true,
+          quantite: true,
+          referenceFigee: true,
+          libelleProduitFige: true,
+          libelleVarianteFige: true,
+          prixFigeCentimes: true,
+        },
       },
     },
   });
@@ -481,11 +502,70 @@ async function confirmerPaiement(
     });
   }
 
+  /*
+   * TROISIEME CLE D'EFFET, `facture (commande_id)`, LS-126. Le document nait
+   * DANS CETTE TRANSACTION, aux cotes du paiement et du mouvement de stock : une
+   * facture emise par un chemin separe pourrait exister sans commande confirmee,
+   * ou manquer alors que l'argent est encaisse.
+   *
+   * EMIS EN DERNIER, APRES LES AUTRES EFFETS, et l'ordre porte le verrou. La
+   * reservation du numero verrouille une ligne de `compteur_numero` tenue
+   * jusqu'au `COMMIT` : la prendre en dernier la garde le moins longtemps
+   * possible, ce qui compte sur une ressource que TOUTES les ventes se
+   * disputent. C'est aussi ce qui evite d'inverser l'ordre pose par
+   * `repositories/commande.ts`, les variantes etant deja verrouillees ici.
+   */
+  await emettreFactureOuAlerter(transaction, commande);
+
   return {
     resultat: { statut: "TRAITE" },
     statut: "TRAITE",
     paiementId: encaissement.paiementId,
   };
+}
+
+/**
+ * Emet la facture, ou leve une alerte si l'emetteur n'est pas configure.
+ *
+ * MEME ARBITRAGE QUE LE STOCK EPUISE : CONFIRMER ET ALERTER. L'argent est
+ * encaisse ; faire echouer la transaction laisserait de l'argent sans commande
+ * confirmee, et le prestataire rejouerait indefiniment un evenement qui ne peut
+ * pas aboutir tant que personne n'a renseigne la configuration.
+ *
+ * NE PAS EMETTRE VAUT MIEUX QU'EMETTRE FAUX, et c'est le coeur de la decision.
+ * Une facture sans raison sociale ni SIRET est un document NON CONFORME et
+ * IMMUABLE : seul un avoir pourrait le corriger, invariant 4. L'absence, elle,
+ * se rattrape par une emission differee une fois la configuration posee.
+ *
+ * SEULE LA CONFIGURATION MANQUANTE EST RATTRAPEE ICI. Toute autre erreur
+ * remonte et fait echouer la transaction : une contrainte violee ou une panne de
+ * base sont des defauts a rejouer, pas des etats a acter.
+ */
+async function emettreFactureOuAlerter(
+  transaction: Prisma.TransactionClient,
+  commande: CommandeAFacturer,
+): Promise<void> {
+  try {
+    await emettreFacture(transaction, commande);
+  } catch (erreur) {
+    if (!(erreur instanceof EmetteurNonConfigureError)) {
+      throw erreur;
+    }
+
+    journaliserErreur("Facture non emise, emetteur non configure", erreur, {
+      commande: commande.id,
+    });
+
+    await leverAlerteCritique(transaction, {
+      type: "FACTURE_NON_EMISE",
+      message:
+        `Commande ${commande.numero} confirmee sans facture : identite legale ` +
+        "de l'emetteur absente ou invalide. Renseigner les variables FACTURE_* " +
+        "puis emettre le document, obligation legale.",
+      typeCible: "Commande",
+      idCible: commande.id,
+    });
+  }
 }
 
 /**

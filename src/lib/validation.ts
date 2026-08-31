@@ -380,3 +380,143 @@ export const schemaCoordonnees = z.strictObject({
   email: schemaEmailClient,
   telephone: schemaTelephone,
 });
+
+/**
+ * Mention obligatoire de franchise en base de TVA, article 293 B du CGI.
+ *
+ * ELLE EST TEXTUELLE ET NON DEDUITE D'UN MONTANT, arbitrage de LS-52 recopie
+ * dans `MODELE-CONCEPTUEL.md` : une facture emise en franchise garde sa mention
+ * quel que soit le regime au moment de la relecture, dix ans plus tard. Un
+ * booleen `franchise` obligerait a savoir, a la relecture, quelle phrase il
+ * fallait afficher cette annee-la.
+ *
+ * LES ACCENTS SONT PRESENTS, regle de redaction du projet : cette chaine finit
+ * sur un document lu par le client, pas dans un identifiant technique.
+ */
+export const MENTION_FRANCHISE_TVA =
+  "TVA non applicable, article 293 B du Code général des impôts";
+
+/** Version courante de la structure d'instantane legal. */
+export const VERSION_INSTANTANE_LEGAL = 1;
+
+/**
+ * Identite legale de l'emetteur, figee au moment de l'emission.
+ *
+ * ELLE VIENT DE LA CONFIGURATION ET NON D'UNE TABLE, arbitrage de Christophe du
+ * 31 aout 2026 : ces quatre valeurs changent au rythme d'un demenagement, pas
+ * d'une vente. Une table de parametrage aurait demande une migration, un ecran
+ * d'administration et un ADR, pour une donnee qui ne bouge presque jamais.
+ *
+ * LE SIRET N'EST PAS VALIDE PAR SA CLE DE LUHN ICI. Ce schema verifie une
+ * FORME, quatorze chiffres, et refuse une valeur d'exemple laissee en place. La
+ * validite reelle de l'immatriculation ne se prouve qu'aupres de l'INSEE, ce
+ * qui n'est ni le role d'un schema ni celui de ce projet.
+ */
+export const schemaEmetteurFacture = z.strictObject({
+  raisonSociale: champAdresse(120),
+  siret: z
+    .string()
+    .regex(/^\d{14}$/, "Le SIRET compte quatorze chiffres, sans espace."),
+  adresse: champAdresse(200),
+  emailContact: schemaEmailClient,
+});
+
+export type EmetteurFacture = z.infer<typeof schemaEmetteurFacture>;
+
+/**
+ * Adresse FIGEE telle qu'une commande la porte, distincte de la saisie.
+ *
+ * `schemaAdressePostale` DIT DEJA QU'IL NE DECRIT PAS CETTE FORME : il valide
+ * une saisie de tunnel, quand celle-ci decrit ce que la commande a recopie au
+ * moment de l'achat, invariant 3.
+ *
+ * LA DIFFERENCE EST LE `nom` DU DESTINATAIRE, et elle est structurelle. Une
+ * adresse de livraison figee doit dire A QUI le colis part : le nom vient du
+ * client au moment de l'achat, et un changement d'etat civil ne doit pas
+ * reecrire une facture emise. Le champ n'existe pas dans la saisie, ou le nom
+ * est un champ voisin de l'adresse et non l'un des siens.
+ *
+ * RELIRE AVEC LE SCHEMA DE SAISIE ECHOUERAIT, `z.strictObject` refusant la cle
+ * inconnue, et c'est ainsi que le defaut s'est vu : par le test, pas a la
+ * relecture d'un document vieux de dix ans.
+ */
+export const schemaAdresseFigee = z.strictObject({
+  nom: champAdresse(120),
+  ligne1: champAdresse(120),
+  ligne2: champAdresse(120).optional(),
+  codePostal: schemaCodePostalMetropole,
+  ville: champAdresse(80),
+  pays: z.literal("FR", "Seule la France metropolitaine est desservie."),
+});
+
+export type AdresseFigee = z.infer<typeof schemaAdresseFigee>;
+
+/**
+ * Une ligne telle que le document la porte, deja figee par la commande.
+ *
+ * LES DEUX LIBELLES RESTENT SEPARES, comme sur `LigneCommande` : « Boucles
+ * Aurore » et « dorees » sont deux composantes qu'une facture affiche
+ * distinctement, et les concatener ici les rendrait indissociables pour
+ * toujours, invariant 3.
+ *
+ * AUCUN TOTAL DE LIGNE N'EST STOCKE, meme motif que `LigneCommande` : il vaut
+ * `prixUnitaireCentimes * quantite`, et un total redondant se desynchronise
+ * sans qu'aucune contrainte ne le detecte.
+ */
+export const schemaLigneInstantane = z.strictObject({
+  referenceFigee: z.string().min(1),
+  libelleProduit: z.string().min(1),
+  libelleVariante: z.string().min(1),
+  prixUnitaireCentimes: schemaMontantCentimes,
+  quantite: schemaQuantite,
+});
+
+/**
+ * Instantane legal d'une facture, contenu integral du document, regle F7.
+ *
+ * POURQUOI UN SCHEMA SUR UN CHAMP `Json`. La colonne accepte n'importe quelle
+ * forme, et un document legal doit rester lisible dix ans. Sans contrat, rien
+ * ne garantit qu'une facture emise dans six mois porte les memes cles, et une
+ * relecture n'aurait aucun moyen de savoir ce qu'elle relit. Le schema vaut
+ * donc a l'ECRITURE et a la LECTURE.
+ *
+ * `version` EST LE MECANISME QUI REND LA SUITE POSSIBLE. Le jour ou la
+ * structure change, les anciennes factures gardent la leur et restent
+ * relisibles : c'est une numerotation de format, pas un compteur de revisions
+ * du document, qui lui reste immuable, invariant 4.
+ *
+ * LE TOTAL EST PORTE ICI EN PLUS DE LA COLONNE `montantTotalCentimes`, et ce
+ * n'est pas la redondance que le projet refuse ailleurs : la colonne sert aux
+ * requetes et au `CHECK` qui borne les avoirs, l'instantane sert a reimprimer
+ * le document a l'identique. Ils sont ecrits dans la meme transaction depuis la
+ * meme valeur, et le service le verifie avant d'ecrire.
+ */
+export const schemaInstantaneLegal = z.strictObject({
+  version: z.literal(VERSION_INSTANTANE_LEGAL),
+  emetteur: schemaEmetteurFacture,
+  client: z.strictObject({
+    nom: z.string().min(1),
+    email: z.string().min(1),
+    adresseFacturation: schemaAdresseFigee,
+  }),
+  commande: z.strictObject({
+    numero: z.string().min(1),
+    /*
+     * UNE CHAINE ISO ET NON `schemaHorodatageUtc`, dont le `.transform()` rend
+     * un `Date`. L'instantane est un document JSON relu tel quel : le type doit
+     * etre IDENTIQUE a l'ecriture et a la lecture, sans quoi le schema qui
+     * valide l'ecriture refuserait sa propre sortie relue.
+     */
+    passeeA: z.iso.datetime({
+      offset: true,
+      message: "Un horodatage ISO 8601 avec fuseau explicite est attendu.",
+    }),
+  }),
+  lignes: z.array(schemaLigneInstantane).nonempty(),
+  sousTotalCentimes: schemaMontantCentimes,
+  fraisPortCentimes: schemaMontantCentimes,
+  totalCentimes: schemaMontantCentimes,
+  mentions: z.array(z.string().min(1)).nonempty(),
+});
+
+export type InstantaneLegal = z.infer<typeof schemaInstantaneLegal>;
