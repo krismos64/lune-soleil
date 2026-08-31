@@ -240,6 +240,17 @@ beforeAll(async () => {
   // d'ou les imports differes : le renseigner apres coup n'aurait aucun effet.
   process.env.DATABASE_URL = url;
 
+  /*
+   * L'EMETTEUR EST CONFIGURE, LS-126 : depuis l'emission de la facture, une
+   * confirmation complete ecrit un document comptable, et l'absence de ces
+   * quatre variables leverait une alerte `FACTURE_NON_EMISE` qui fausserait les
+   * comptes d'alertes de ce fichier. Valeurs inventees, prefixe `TEST`.
+   */
+  process.env.FACTURE_RAISON_SOCIALE = "TEST Lune et Soleil";
+  process.env.FACTURE_SIRET = "12345678901234";
+  process.env.FACTURE_ADRESSE = "1 rue de Test, 75001 TESTVILLE";
+  process.env.FACTURE_EMAIL_CONTACT = "test-emetteur@example.invalid";
+
   client = new Client({ connectionString: url });
   await client.connect();
 
@@ -256,8 +267,9 @@ afterAll(async () => {
 afterEach(async () => {
   await client.query(
     `TRUNCATE alerte_critique, historique_statut, mouvement_stock,
-     evenement_fournisseur, paiement, reservation, ligne_commande, commande,
-     variante, produit, categorie, compteur_numero CASCADE`,
+     evenement_fournisseur, paiement, avoir, facture, reservation,
+     ligne_commande, commande, variante, produit, categorie, compteur_numero
+     CASCADE`,
   );
 });
 

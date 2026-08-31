@@ -93,6 +93,8 @@ ADMIN_COMMANDES="src/services/administration-commandes.ts"
 ENVOI_EMAIL="src/services/envoi-email.ts"
 DEPOT_ENVOI="src/repositories/envoi-email.ts"
 SMTP="src/integrations/email/smtp.ts"
+FACTURE="src/services/facture.ts"
+DEPOT_FACTURE="src/repositories/facture.ts"
 
 # TOUT FICHIER MUTE DOIT FIGURER ICI, sans quoi il n'est ni sauvegarde ni
 # restaure et la mutation RESTE SUR LE DISQUE apres l'execution.
@@ -105,7 +107,7 @@ SMTP="src/integrations/email/smtp.ts"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -1808,6 +1810,53 @@ cas "echec de trace redevenu bloquant" integration \
 mute "$ENVOI_EMAIL" 's/        definitive \? \{ epuiserTentatives: TENTATIVES_MAX \} : \{\},/        {},/'
 cas "plafond de tentatives non applique sur erreur definitive" integration \
   "ne retente pas apres une erreur d'authentification"
+
+# Cas 130 : LA MUTATION EXIGEE PAR LE CRITERE 7 DE LS-126. La garde qui rend la
+# facture existante disparait, donc l'emission repart a chaque passage. La cle
+# `facture (commande_id)` refuse bien la seconde ecriture, mais en faisant
+# AVORTER la transaction entiere, code 25P02 : le rejeu ne perd pas seulement sa
+# facture, il perd le paiement et le mouvement de stock deja ecrits.
+#
+# LE TEST ATTENDU EST CELUI QUI ATTEINT L'ECRITURE, et le critere 7 le nomme
+# explicitement. Les deux autres tests d'idempotence sortent plus tot, arretes
+# par la cle du PAIEMENT : ils resteraient verts sur cette mutation, exactement
+# le piege mesure en LS-119.
+mute "$FACTURE" 's/  const existante = await lireFactureDeCommande\(client, commande\.id\);\n\n  if \(existante !== null\) \{\n    return existante;\n  \}/  const existante = null;\n  void lireFactureDeCommande;\n  if (existante !== null) {\n    return existante;\n  }/'
+cas "garde de facture existante supprimee" integration \
+  "ne cree aucune seconde facture quand la facture existe deja sans paiement encaisse"
+
+# Cas 131 : LE NUMERO EST RESERVE AVANT LA GARDE. La facture reste unique, donc
+# tous les tests d'unicite restent VERTS : seul le compteur avance a chaque
+# rejeu. C'est un trou dans la sequence, qu'un controle fiscal lit comme une
+# facture disparue, et rien dans l'etat final ne le montre sauf en interrogeant
+# le compteur. Regle F4 et critere 2.
+mute "$FACTURE" 's/  const existante = await lireFactureDeCommande\(client, commande\.id\);/  await reserverNumero(client, "FACTURE");\n  const existante = await lireFactureDeCommande(client, commande.id);/'
+cas "numero reserve avant la garde d'existence" integration \
+  "ne cree aucune seconde facture quand l'evenement arrive apres une regularisation"
+
+# Cas 132 : LES DONNEES VIENNENT DU CATALOGUE ET NON DE LA COMMANDE. Le libelle
+# fige est remplace par un texte constant, ce qui simule le reflexe de relire la
+# fiche produit au moment d'imprimer. L'invariant 3 tombe : une facture emise
+# changerait au gre des corrections de catalogue, des annees apres la vente.
+mute "$FACTURE" 's/      libelleProduit: ligne\.libelleProduitFige,/      libelleProduit: "PRODUIT RENOMME",/'
+cas "libelle du document repris hors de la commande" integration \
+  "fige les donnees legales, une modification du catalogue ne le change pas"
+
+# Cas 133 : LA MENTION DE FRANCHISE DISPARAIT. Aucune contrainte de base ne la
+# porte, aucun type ne la reclame : le tableau reste valide et le document part
+# sans sa mention obligatoire, article 293 B du CGI. Le defaut ne se verrait
+# qu'a un controle, des mois plus tard. Critere 6.
+mute "$FACTURE" 's/    mentions: \[MENTION_FRANCHISE_TVA\],/    mentions: ["Facture"],/'
+cas "mention de franchise en base retiree" integration \
+  "porte la mention de franchise en base de TVA"
+
+# Cas 134 : L'EMETTEUR NON CONFIGURE FAIT ECHOUER LA TRANSACTION au lieu d'etre
+# acte comme un etat. L'argent est encaisse et la commande ne se confirme plus :
+# le prestataire rejoue indefiniment un evenement qui ne peut pas aboutir tant
+# que personne n'a renseigne les variables. Meme arbitrage que le stock epuise.
+mute "$WEBHOOK" 's/    if \(!\(erreur instanceof EmetteurNonConfigureError\)\) \{\n      throw erreur;\n    \}/    throw erreur;\n    if (false) {}/'
+cas "emetteur non configure redevenu bloquant" integration \
+  "confirme la commande et alerte sans emettre quand l'emetteur manque"
 echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then
