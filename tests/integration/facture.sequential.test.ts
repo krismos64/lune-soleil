@@ -452,6 +452,153 @@ describe("emission de la facture, idempotence", () => {
   });
 });
 
+describe("emission de la facture, commande non confirmable", () => {
+  /**
+   * UN PAIEMENT SUR UNE COMMANDE ANNULEE NE PRODUIT AUCUNE FACTURE.
+   *
+   * LE SCENARIO EST REEL ET DATE. La commande est passee a 10h00 et le webhook
+   * n'arrive pas. A 11h05 la reconciliation lit la session chez le prestataire,
+   * la trouve expiree, et annule la commande. A 11h20 le webhook `PAIEMENT_REUSSI`
+   * arrive enfin, retarde chez le prestataire.
+   *
+   * ARBITRAGE DE CHRISTOPHE DU 31 AOUT 2026 : ne pas facturer, alerter. Une
+   * facture est un document opposable, et en emettre une pour une vente annulee
+   * consommerait un rang de la sequence fiscale pour un document que seul un
+   * avoir pourrait corriger, invariant 4.
+   *
+   * LA COMMANDE N'EST PAS RAMENEE A `CONFIRMEE` non plus : `ANNULEE` est un etat
+   * TERMINAL, `administration-commandes.ts` ne lui laissant aucune transition
+   * sortante. L'argent encaisse se rembourse a la main, meme geste qu'ADR-032.
+   */
+  it("n'emet aucune facture quand la commande est ANNULEE", async () => {
+    const { commandeId } = await commanderUnePiece({ quantitePhysique: 3 });
+
+    // La reconciliation a ferme la commande sur session expiree.
+    await client.query("UPDATE commande SET statut = 'ANNULEE' WHERE id = $1", [
+      commandeId,
+    ]);
+
+    // Le webhook retarde arrive enfin, et il est parfaitement valide.
+    expect(await confirmer(commandeId, { identifiant: "evt_retarde" })).toEqual(
+      {
+        statut: "TRAITE",
+      },
+    );
+
+    // AUCUN DOCUMENT COMPTABLE pour une vente qui n'a pas eu lieu.
+    expect(await lireFactures(commandeId)).toHaveLength(0);
+
+    // AUCUN RANG CONSOMME : la sequence ne porte pas de trou pour autant.
+    const { rows: compteurs } = await client.query(
+      "SELECT dernier FROM compteur_numero WHERE type = 'FACTURE'",
+    );
+    expect(compteurs).toHaveLength(0);
+
+    // LA COMMANDE RESTE ANNULEE, `ANNULEE` etant terminal.
+    const { rows: commandes } = await client.query<{ statut: string }>(
+      "SELECT statut FROM commande WHERE id = $1",
+      [commandeId],
+    );
+    expect(commandes[0]?.statut).toBe("ANNULEE");
+
+    // L'ALERTE EST LE SEUL MOYEN DE SAVOIR QU'IL Y A DE L'ARGENT A RENDRE.
+    // Sans elle, le paiement resterait encaisse sans que personne ne le sache.
+    const { rows: alertes } = await client.query<{
+      type: string;
+      gravite: string;
+    }>("SELECT type, gravite FROM alerte_critique WHERE id_cible = $1", [
+      commandeId,
+    ]);
+    expect(alertes).toEqual([
+      { type: "PAIEMENT_SUR_COMMANDE_ANNULEE", gravite: "CRITIQUE" },
+    ]);
+  });
+
+  /**
+   * UN INSTANTANE NON CONSTRUCTIBLE NE FAIT PAS PERDRE LE PAIEMENT.
+   *
+   * DEFAUT TROUVE PAR LA REVUE CRITIQUE LE 31 AOUT 2026, et mesure : une
+   * `ZodError` levee par `construireInstantane` remontait, annulait la
+   * transaction entiere, et l'evenement n'etait meme pas persiste. Le
+   * prestataire rejouait alors pendant trois jours en echouant a l'identique.
+   *
+   * L'ETAT FINAL ETAIT LE PIRE POSSIBLE : argent encaisse chez le prestataire,
+   * commande `EN_ATTENTE_PAIEMENT`, aucun paiement, aucun mouvement de stock, et
+   * AUCUNE ALERTE. Un paiement perdu sans trace.
+   *
+   * LE CAS N'EST PAS ATTEIGNABLE PAR LE TUNNEL AUJOURD'HUI, `passerCommande`
+   * ecrivant toujours une adresse conforme. Il le devient des qu'un autre chemin
+   * ecrit une adresse, ce que fera le carnet d'adresses de LS-59, et la colonne
+   * est un `Json` sans contrainte en base.
+   */
+  it("confirme et alerte quand l'instantane legal ne peut pas etre construit", async () => {
+    const { commandeId, varianteId } = await commanderUnePiece();
+
+    // UNE ADRESSE FIGEE MALFORMEE, telle qu'un autre chemin d'ecriture pourrait
+    // en produire : le `nom` du destinataire manque, et `schemaAdresseFigee` le
+    // refuse. La colonne etant un `Json`, la base l'accepte sans broncher.
+    await client.query(
+      `UPDATE commande
+       SET adresse_facturation = '{"ligne1":"1 rue de Test","codePostal":"75001","ville":"TESTVILLE","pays":"FR"}'::jsonb
+       WHERE id = $1`,
+      [commandeId],
+    );
+
+    expect(
+      await confirmer(commandeId, { identifiant: "evt_instantane" }),
+    ).toEqual({ statut: "TRAITE" });
+
+    // AUCUNE FACTURE, faute de pouvoir en construire une qui soit conforme.
+    expect(await lireFactures(commandeId)).toHaveLength(0);
+
+    // MAIS TOUT LE RESTE A BIEN EU LIEU. C'est ce qui separe cette correction du
+    // defaut : le paiement est enregistre, le stock est sorti, la commande est
+    // confirmee. L'argent encaisse produit une vente, pas un trou.
+    const { rows: commandes } = await client.query<{ statut: string }>(
+      "SELECT statut FROM commande WHERE id = $1",
+      [commandeId],
+    );
+    expect(commandes[0]?.statut).toBe("CONFIRMEE");
+
+    const { rows: paiements } = await client.query<{ statut: string }>(
+      "SELECT statut FROM paiement WHERE commande_id = $1",
+      [commandeId],
+    );
+    expect(paiements).toEqual([{ statut: "REUSSI" }]);
+
+    const { rows: mouvements } = await client.query<{ quantite: number }>(
+      "SELECT quantite FROM mouvement_stock WHERE commande_id = $1",
+      [commandeId],
+    );
+    expect(mouvements).toEqual([{ quantite: -1 }]);
+
+    // L'EVENEMENT EST PERSISTE, donc le prestataire ne le rejouera pas
+    // indefiniment. C'est le point qui manquait le plus : sans lui, trois jours
+    // de rejeu sur un defaut qui ne se resoudra jamais seul.
+    const { rows: evenements } = await client.query<{
+      statut_traitement: string;
+    }>(
+      "SELECT statut_traitement FROM evenement_fournisseur WHERE identifiant_fournisseur = $1",
+      ["evt_instantane"],
+    );
+    expect(evenements).toHaveLength(1);
+
+    // L'ALERTE NOMME LE CHAMP FAUTIF, jamais sa valeur, invariant 9.
+    const { rows: alertes } = await client.query<{
+      type: string;
+      message: string;
+    }>("SELECT type, message FROM alerte_critique WHERE id_cible = $1", [
+      commandeId,
+    ]);
+    expect(alertes).toHaveLength(1);
+    expect(alertes[0]?.type).toBe("FACTURE_INSTANTANE_INVALIDE");
+    expect(alertes[0]?.message).toContain("adresseFacturation");
+    expect(alertes[0]?.message).not.toContain("1 rue de Test");
+
+    void varianteId;
+  });
+});
+
 describe("emission de la facture, concurrence", () => {
   /**
    * DEUX CONFIRMATIONS SIMULTANEES NE S'INTERBLOQUENT PAS.
