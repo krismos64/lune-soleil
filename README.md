@@ -514,7 +514,7 @@ restent invisibles en SMTP : il faut ouvrir la boîte.
 
 ### Scripts de vérification
 
-Vingt-six scripts, dont neuf de mutation qui prouvent les autres.
+Vingt-sept scripts, dont neuf de mutation qui prouvent les autres.
 `preparer-base-locale.sh` n'y figure pas, il s'appelle par `npm run db:preparer`
 et `db:reinitialiser`, cités plus haut.
 
@@ -540,6 +540,7 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-registre-traitements-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-nginx.sh                      # résolution de l'adresse client, LS-91
 ./scripts/verifier-nginx-mutation.sh             # prouve le précédent par mutation
+./scripts/verifier-emetteur-facture.sh            # identité légale des factures, sans afficher les valeurs
 ./scripts/verifier-jira.sh                       # epics et dépendances du backlog, local
 ./scripts/controle-fumee.sh                      # santé du service déployé, LS-73
 ./docs/prototypes/reservation-test.sh            # concurrence sur la pièce unique, exige Docker
