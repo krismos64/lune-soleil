@@ -627,7 +627,8 @@ fois, sans que rien ne le voie.
 Elle s'arrêtait à « dix » : au-delà, la conversion rendait une chaîne vide et la
 comparaison était **sautée**, donc verte sans avoir rien vérifié. Le seuil était
 déjà franchi à l'époque, `verifier-tests-mutation.sh` portant alors vingt-et-un
-cas ; il en porte **cent vingt-neuf** au 27 août 2026. Un contrôle qui se tait
+cas ; il en porte **cent trente-six** au 31 août 2026, compte relevé par
+`grep -cE '^cas "' scripts/verifier-tests-mutation.sh` et jamais de mémoire. Un contrôle qui se tait
 quand il ne comprend pas est pire qu'un contrôle absent : il occupe la place et
 personne ne le remplace.
 

@@ -210,7 +210,13 @@ ce qui est arrivé à celui que `CLAUDE.md` portait sur LS-27.
 structurante appartient à Christophe, pas au modèle. Une story qui rencontre un
 choix non tranché le signale et propose l'ADR, elle ne l'écrit pas d'office.
 
-## Les cinq hooks, et ce que chacun garde
+## Les cinq événements de hook, et ce que chacun garde
+
+**Cinq événements, huit commandes déclarées**, et les deux comptes se
+confondent facilement : `PreToolUse` en porte deux et `Stop` trois, dont deux
+contrôles réutilisés du dossier `scripts/`. Compter les scripts de
+`.claude/scripts/` en donne six, et aucun de ces trois chiffres n'est faux.
+Nommer lequel est compté évite de « corriger » celui qui ne l'est pas.
 
 `.claude/settings.json` les déclare, `.claude/scripts/` les porte. Un hook
 présent mais non déclaré ne s'exécute jamais, et un script absent produit une
