@@ -1857,6 +1857,24 @@ cas "mention de franchise en base retiree" integration \
 mute "$WEBHOOK" 's/    if \(!\(erreur instanceof EmetteurNonConfigureError\)\) \{\n      throw erreur;\n    \}/    throw erreur;\n    if (false) {}/'
 cas "emetteur non configure redevenu bloquant" integration \
   "confirme la commande et alerte sans emettre quand l'emetteur manque"
+# Cas 135 : LA GARDE SUR COMMANDE ANNULEE DISPARAIT. Le webhook retarde arrive
+# apres que la reconciliation a ferme la commande sur session expiree, et une
+# facture nait pour une vente qui n'a pas lieu. C'est un document opposable et
+# IMMUABLE, qui consomme un rang de la sequence fiscale : seul un avoir pourrait
+# le corriger. Defaut trouve par la revue critique le 31 aout 2026.
+mute "$WEBHOOK" 's/  if \(statutAvant === "ANNULEE"\) \{/  if (false) {/'
+cas "garde sur commande annulee supprimee" integration \
+  "n'emet aucune facture quand la commande est ANNULEE"
+
+# Cas 136 : L'INSTANTANE NON CONSTRUCTIBLE REDEVIENT BLOQUANT. Le pire etat
+# possible, mesure par la revue critique : la ZodError annule la transaction
+# entiere, `evenement_fournisseur` n'est meme pas ecrit, et le prestataire
+# rejoue trois jours en echouant a l'identique. L'argent reste encaisse face a
+# une commande EN_ATTENTE_PAIEMENT, sans paiement, sans mouvement, sans alerte.
+mute "$WEBHOOK" 's/    if \(!\(erreur instanceof ZodError\)\) \{\n      throw erreur;\n    \}/    throw erreur;/'
+cas "instantane invalide redevenu bloquant" integration \
+  "confirme et alerte quand l'instantane legal ne peut pas etre construit"
+
 echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then

@@ -27,7 +27,12 @@
  * MANUEL, ADR-032.
  */
 import { Prisma } from "@/generated/prisma/client";
-import type { OrigineEcriture, StatutPaiement } from "@/generated/prisma/enums";
+import type {
+  OrigineEcriture,
+  StatutCommande,
+  StatutPaiement,
+} from "@/generated/prisma/enums";
+import { ZodError } from "zod";
 import { prisma } from "@/lib/prisma";
 import { journaliser, journaliserErreur } from "@/lib/journal";
 import {
@@ -515,7 +520,7 @@ async function confirmerPaiement(
    * disputent. C'est aussi ce qui evite d'inverser l'ordre pose par
    * `repositories/commande.ts`, les variantes etant deja verrouillees ici.
    */
-  await emettreFactureOuAlerter(transaction, commande);
+  await emettreFactureOuAlerter(transaction, commande, commande.statut);
 
   return {
     resultat: { statut: "TRAITE" },
@@ -544,24 +549,109 @@ async function confirmerPaiement(
 async function emettreFactureOuAlerter(
   transaction: Prisma.TransactionClient,
   commande: CommandeAFacturer,
+  statutAvant: StatutCommande,
 ): Promise<void> {
-  try {
-    await emettreFacture(transaction, commande);
-  } catch (erreur) {
-    if (!(erreur instanceof EmetteurNonConfigureError)) {
-      throw erreur;
-    }
-
-    journaliserErreur("Facture non emise, emetteur non configure", erreur, {
+  /*
+   * UNE COMMANDE ANNULEE NE SE FACTURE PAS, arbitrage de Christophe du 31 aout
+   * 2026. Le cas est celui du webhook retarde : la reconciliation a ferme la
+   * commande sur session expiree, et le paiement arrive apres.
+   *
+   * `ANNULEE` EST TERMINAL, `administration-commandes.ts` ne lui laissant aucune
+   * transition sortante : la commande n'est donc pas ramenee a `CONFIRMEE`, et
+   * facturer produirait un document opposable pour une vente qui n'a pas lieu,
+   * consommant un rang de la sequence fiscale pour un document que seul un avoir
+   * pourrait corriger, invariant 4.
+   *
+   * LE STATUT LU EST CELUI D'AVANT LA CONFIRMATION, passe en parametre : la
+   * transaction vient peut-etre de le faire passer a `CONFIRMEE`, et relire la
+   * commande ici rendrait la garde aveugle a ce qu'elle doit voir.
+   *
+   * L'ALERTE EST LE SEUL MOYEN DE SAVOIR QU'IL Y A DE L'ARGENT A RENDRE. Aucun
+   * remboursement automatique, meme interdiction qu'ADR-032 : le chemin qui
+   * decide « cet argent est en trop » est celui qui, s'il se trompe, rend
+   * l'argent d'une commande valide.
+   */
+  if (statutAvant === "ANNULEE") {
+    journaliser("warn", "Paiement recu sur une commande annulee", {
       commande: commande.id,
     });
 
     await leverAlerteCritique(transaction, {
-      type: "FACTURE_NON_EMISE",
+      type: "PAIEMENT_SUR_COMMANDE_ANNULEE",
       message:
-        `Commande ${commande.numero} confirmee sans facture : identite legale ` +
-        "de l'emetteur absente ou invalide. Renseigner les variables FACTURE_* " +
-        "puis emettre le document, obligation legale.",
+        `Commande ${commande.numero} annulee mais payee : aucune facture ` +
+        "emise, la vente n'a pas lieu. Rembourser MANUELLEMENT depuis le " +
+        "tableau de bord du prestataire.",
+      typeCible: "Commande",
+      idCible: commande.id,
+    });
+
+    return;
+  }
+
+  try {
+    await emettreFacture(transaction, commande);
+  } catch (erreur) {
+    if (erreur instanceof EmetteurNonConfigureError) {
+      journaliserErreur("Facture non emise, emetteur non configure", erreur, {
+        commande: commande.id,
+      });
+
+      await leverAlerteCritique(transaction, {
+        type: "FACTURE_NON_EMISE",
+        message:
+          `Commande ${commande.numero} confirmee sans facture : identite legale ` +
+          "de l'emetteur absente ou invalide. Renseigner les variables FACTURE_* " +
+          "puis emettre le document, obligation legale.",
+        typeCible: "Commande",
+        idCible: commande.id,
+      });
+
+      return;
+    }
+
+    /*
+     * UN INSTANTANE NON CONSTRUCTIBLE EST UN ETAT, PAS UNE PANNE, defaut trouve
+     * par la revue critique le 31 aout 2026 et mesure.
+     *
+     * SANS CE RATTRAPAGE, LE PAIEMENT ETAIT PERDU SANS TRACE. La `ZodError`
+     * annulait la transaction entiere, donc `evenement_fournisseur` n'etait
+     * meme pas ecrit : le prestataire rejouait pendant trois jours en echouant
+     * a l'identique, l'argent restant encaisse face a une commande
+     * `EN_ATTENTE_PAIEMENT`, sans paiement, sans mouvement de stock et sans
+     * aucune alerte.
+     *
+     * REJOUER N'Y CHANGERAIT RIEN : une adresse figee malformee le restera au
+     * prochain passage, c'est une donnee a corriger et non un alea. Le cas se
+     * traite donc comme le stock epuise, confirmer et alerter.
+     *
+     * TOUTE AUTRE ERREUR REMONTE ET FAIT ECHOUER LA TRANSACTION, et la
+     * distinction porte le sujet : une contrainte violee ou une panne de base
+     * sont des defauts a REJOUER, que le prestataire rejouera avec succes.
+     */
+    if (!(erreur instanceof ZodError)) {
+      throw erreur;
+    }
+
+    journaliserErreur("Facture non emise, instantane invalide", erreur, {
+      commande: commande.id,
+    });
+
+    /*
+     * LE MESSAGE NOMME LES CHEMINS FAUTIFS, JAMAIS LES VALEURS, invariant 9.
+     * Une adresse est une donnee personnelle, et ce message finit dans une
+     * table lue par l'administration puis dans un journal.
+     */
+    const champs = [
+      ...new Set(erreur.issues.map((probleme) => probleme.path.join("."))),
+    ].join(", ");
+
+    await leverAlerteCritique(transaction, {
+      type: "FACTURE_INSTANTANE_INVALIDE",
+      message:
+        `Commande ${commande.numero} confirmee sans facture : le document ` +
+        `legal n'a pas pu etre construit, champs en cause ${champs}. ` +
+        "Corriger la donnee puis emettre le document, obligation legale.",
       typeCible: "Commande",
       idCible: commande.id,
     });
