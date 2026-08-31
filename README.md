@@ -22,7 +22,7 @@ la phase 2.
 |---|---|---|
 | 2, catalogue, médias et stock multicanal | LS-3 | en cours, treize stories ouvertes |
 | 3, panier, réservation, paiement et commandes | LS-4 | LS-114 à LS-121 et LS-43 livrées, **porte de sortie franchie**, deux stories ouvertes |
-| 4, factures, avoirs, emails, expédition et contact | LS-5 | découpée le 27 août 2026, **commencée** : LS-51 close, LS-82 livrée et ouverte sur son critère de réception, quatorze stories ouvertes |
+| 4, factures, avoirs, emails, expédition et contact | LS-5 | découpée le 27 août 2026, **commencée** : LS-51 et LS-126 closes, LS-82 livrée et ouverte sur son critère de réception, treize stories ouvertes |
 | 5, rétractation, conformité et protection des données | LS-6 | découpée le 27 août 2026, cinq stories ouvertes |
 | 6, durcissement, exploitation et ouverture | LS-7 | découpée le 27 août 2026, onze stories ouvertes |
 
@@ -75,9 +75,9 @@ réservation, clé d'idempotence portant la commande et la tentative, ADR-032.
 vérifiée avant tout effet, la commande passe `CONFIRMEE`, la réservation devient
 un mouvement de stock. Son **idempotence est ancrée sur l'effet et non sur
 l'identifiant d'événement**, qui ne ferme que le rejeu du même événement, jamais
-le croisement entre le webhook et la réconciliation. **Trois des quatre clés
-d'unicité sont désormais exercées par un test**, celle de l'email l'étant depuis
-LS-82 ; la facture n'étant écrite nulle part, la dernière attend LS-126.
+le croisement entre le webhook et la réconciliation. **Les quatre clés
+d'unicité sont désormais exercées par un test**, celle de l'email depuis LS-82 et
+celle de la facture depuis LS-126.
 
 **Et rien ne reste en suspens depuis LS-120** : la libération rend au catalogue
 les réservations échues toutes les cinq minutes, la réconciliation régularise

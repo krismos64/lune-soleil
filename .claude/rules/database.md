@@ -496,6 +496,18 @@ les variantes, jamais entre deux réservations. L'inverser dans un seul chemin
 crée un cycle, une transaction tenant la variante et attendant le compteur
 pendant qu'une autre fait l'inverse.
 
+**Cette règle porte sur UNE ligne de compteur, pas sur la table**, précision
+apportée par LS-126. La clé primaire étant `(type, annee)`, `COMMANDE` et
+`FACTURE` sont deux lignes distinctes : `passerCommande` prend `COMMANDE` puis
+les variantes, l'émission de facture prend les variantes déjà verrouillées puis
+`FACTURE`, et aucune ressource n'est commune aux deux ordres. Mesuré sur
+PostgreSQL 18.4, deux confirmations concurrentes se sérialisent sans
+interblocage, et un test le constate plutôt que de le supposer.
+
+Le cycle exigerait qu'un chemin prenne `FACTURE` **puis** une variante, ce
+qu'aucun ne fait : rien n'écrit sur `variante` après l'émission. Ne pas
+« corriger » l'ordre de l'émission au nom de la phrase ci-dessus, il est sain.
+
 Conséquence mesurée le 25 août 2026 : le compteur **sérialise** les commandes
 concurrentes dès leur première instruction. C'est lui, et non le tri de
 `ordonnerLignes`, qui ferme la fenêtre d'interblocage entre deux commandes. Le
