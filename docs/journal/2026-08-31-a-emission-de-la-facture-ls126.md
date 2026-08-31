@@ -124,25 +124,110 @@ Le cas 131 est le plus discret : le numéro réservé avant la garde laisse tout
 les assertions d'unicité vertes, seul le compteur avance. Sans une assertion
 portant explicitement sur `compteur_numero`, il serait passé.
 
+## La revue critique a trouvé deux vrais défauts
+
+`ls-critical-reviewer` a mesuré sur un PostgreSQL 18.4 jetable, et son apport
+dépasse ce que j'attendais. **Mon inquiétude de départ était un faux positif** :
+l'ordre des verrous est sain, `COMMANDE` et `FACTURE` étant deux lignes
+distinctes du compteur. Mon propre test de concurrence l'avait déjà constaté, et
+la revue l'a confirmé indépendamment en provoquant le cycle qui n'existe pas.
+
+Les deux défauts qu'elle a trouvés sont ailleurs, et le premier était grave.
+
+### Un paiement perdu sans aucune trace
+
+Une `ZodError` levée par la construction de l'instantané remontait et annulait la
+transaction entière. Conséquence mesurée : `evenement_fournisseur` n'était **même
+pas écrit**, donc le prestataire rejouait pendant trois jours en échouant à
+l'identique.
+
+L'état final était le pire possible. Argent encaissé chez Stripe, commande
+`EN_ATTENTE_PAIEMENT`, aucun paiement, aucun mouvement de stock, et **aucune
+alerte**. Rien nulle part ne disait qu'une vente avait eu lieu.
+
+Le cas n'est pas atteignable par le tunnel aujourd'hui, `passerCommande` écrivant
+toujours une adresse conforme. Il le devient dès qu'un autre chemin écrit une
+adresse, ce que fera le carnet d'adresses de LS-59, et la colonne est un `Json`
+sans contrainte en base.
+
+**Rejouer n'y changerait rien**, et c'est ce qui classe le cas : une adresse
+figée malformée le restera au passage suivant. C'est une donnée à corriger, pas
+un aléa. Traité comme le stock épuisé, confirmer et alerter. Toute autre erreur
+remonte toujours, une contrainte violée ou une panne de base étant des défauts à
+rejouer, que le prestataire rejouera avec succès.
+
+### Une facture émise sur une commande annulée
+
+L'appel à l'émission était inconditionnel, alors que la mise à jour du statut est
+gardée par `if (commande.statut === "EN_ATTENTE_PAIEMENT")`.
+
+Scénario mesuré, et il est daté : commande passée à 10h00 sans webhook, la
+réconciliation lit la session à 11h05, la trouve expirée et annule ; le webhook
+retardé arrive à 11h20. Résultat, `F-2026-0001` émise pour une commande
+`ANNULEE`.
+
+Le stock sortait déjà dans ce cas depuis LS-119, ce n'est pas neuf. Ce qui est
+neuf, c'est qu'un **document légal opposable** est produit, et qu'un document ne
+se rattrape pas comme un mouvement de stock : seul un avoir le corrige.
+
+**Arbitrage de Christophe** : ne pas facturer, alerter. `ANNULEE` est terminal,
+`administration-commandes.ts` ne lui laissant aucune transition sortante, donc la
+commande n'est pas ramenée à `CONFIRMEE`. L'alerte
+`PAIEMENT_SUR_COMMANDE_ANNULEE` est le seul moyen de savoir qu'il y a de l'argent
+à rendre, et le remboursement reste manuel, même interdiction qu'ADR-032.
+
+### Ce que les deux corrections ont en commun
+
+Les messages d'alerte **nomment les champs fautifs, jamais les valeurs**,
+invariant 9 : une adresse est une donnée personnelle, et ces messages finissent
+dans une table lue par l'administration puis dans un journal.
+
+Chaque correction est prouvée par mutation, et chaque mutation ne fait rougir
+**que son propre test**, un sur douze. Une mutation qui ferait tout rougir ne
+prouverait rien, piège déjà relevé sur ce projet.
+
+## La configuration de l'émetteur est faite
+
+Christophe a renseigné les quatre variables le 31 août 2026, vérifiées par
+`./scripts/verifier-emetteur-facture.sh` : quatre champs conformes, SIRET à
+quatorze chiffres.
+
+Ce script rend un **verdict par champ et n'imprime jamais une valeur**. Le dépôt
+est public et l'adresse d'une entreprise peut être un domicile : une valeur
+affichée entrerait dans une sortie de terminal, un journal d'intégration continue
+ou un historique de session.
+
+Il redéclare le schéma, Node ne résolvant pas l'alias `@/` sans outillage, et
+`tsx` n'étant pas une dépendance du projet : l'installer à la volée rendrait le
+contrôle dépendant du réseau. **Une règle recopiée diverge**, donc un test
+confronte les deux déclarations champ par champ, en lisant les champs attendus
+sur le schéma du service et non sur une troisième copie. Retirer un champ du
+script le fait rougir, vérifié.
+
+Un fait relevé au passage sans être un défaut : ni la raison sociale ni l'adresse
+ne porte d'accent. C'est plausible pour une adresse, et c'est signalé à
+Christophe plutôt que corrigé, la valeur ne m'étant pas lisible.
+
 ## Preuves
 
 ```
 npm run type-check                          aucune sortie
 npm run lint                                aucune sortie
 npx prettier --check .                      All matched files use Prettier code style!
-npm run test                                780 tests, 49 fichiers, 0 échec
+npm run test                                791 tests, 50 fichiers, 0 échec
 ./scripts/verifier-regles.sh                règles conformes au schéma
 ./scripts/verifier-propagation-docs.sh      18 schémas exportés, tous documentés
 ./scripts/verifier-registre-traitements.sh  34 tables rangées
 ./scripts/verifier-tests-non-ignores.sh     toute la suite s'exécute
-mutation, cinq cas neufs                    5 mutations, 5 detectees
+mutation, sept cas neufs                    7 mutations, 7 detectees
+./scripts/verifier-emetteur-facture.sh      emetteur conforme, quatre champs
 ```
 
 ## État des tickets
 
 | Ticket | État |
 |---|---|
-| LS-126 | sept critères sur sept remplis, en attente de la revue critique et de la PR |
+| LS-126 | sept critères sur sept remplis, revue critique passée, deux défauts corrigés |
 | LS-128, LS-129, LS-132 | débloquées, elles attendaient l'existence d'une facture |
 
 ## Ce qui n'a pas été fait, et pourquoi
