@@ -452,6 +452,54 @@ describe("emission de la facture, idempotence", () => {
   });
 });
 
+describe("emission de la facture, concurrence", () => {
+  /**
+   * DEUX CONFIRMATIONS SIMULTANEES NE S'INTERBLOQUENT PAS.
+   *
+   * POURQUOI CE TEST EXISTE. `repositories/commande.ts` pose un ordre de prise
+   * des verrous, « compteur puis variantes triees », et avertit qu'un chemin qui
+   * l'inverse cree un cycle. L'emission de la facture prend le compteur EN
+   * DERNIER, les variantes etant deja verrouillees par la confirmation : c'est
+   * l'inverse de l'ordre nomme, et le raisonnement seul ne suffit pas a affirmer
+   * que c'est sans danger.
+   *
+   * CE QUI REND LE CYCLE IMPOSSIBLE tient a la cle primaire du compteur,
+   * `(type, annee)` : `passerCommande` verrouille la ligne `COMMANDE`, l'emission
+   * verrouille la ligne `FACTURE`. Deux lignes distinctes, donc aucune attente
+   * croisee sur la meme ressource. Le test le CONSTATE plutot que de le supposer.
+   *
+   * DEUX COMMANDES DISTINCTES ET NON DEUX REJEUX : un rejeu sortirait sur la
+   * garde d'existence sans jamais atteindre le compteur, et ne prouverait rien
+   * de la concurrence.
+   */
+  it("confirme deux commandes en parallele sans interblocage ni numero double", async () => {
+    const premiere = await commanderUnePiece();
+    const seconde = await commanderUnePiece();
+
+    // LES DEUX PARTENT ENSEMBLE, sans attendre l'une l'autre. Un interblocage se
+    // manifesterait ici par un rejet 40P01, que rien ne rattrape sur ce chemin.
+    const [resultatA, resultatB] = await Promise.all([
+      confirmer(premiere.commandeId, { identifiant: "evt_parallele_a" }),
+      confirmer(seconde.commandeId, { identifiant: "evt_parallele_b" }),
+    ]);
+
+    expect(resultatA).toEqual({ statut: "TRAITE" });
+    expect(resultatB).toEqual({ statut: "TRAITE" });
+
+    const factureA = await lireFactureUnique(premiere.commandeId);
+    const factureB = await lireFactureUnique(seconde.commandeId);
+    const annee = new Date().getUTCFullYear();
+
+    // DEUX NUMEROS DISTINCTS ET CONSECUTIFS, dans un ordre que le test ne nomme
+    // PAS : designer le gagnant d'une course rend le test intermittent. Ce qui
+    // compte est qu'aucun rang ne soit attribue deux fois, ni saute.
+    expect([factureA.numero, factureB.numero].sort()).toEqual([
+      `F-${annee}-0001`,
+      `F-${annee}-0002`,
+    ]);
+  });
+});
+
 describe("emission de la facture, emetteur non configure", () => {
   /**
    * L'ABSENCE DE CONFIGURATION EST UN ETAT, PAS UN PLANTAGE.
