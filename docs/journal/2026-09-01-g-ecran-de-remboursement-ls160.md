@@ -119,10 +119,37 @@ reste dédiée à la page de confirmation. **La mesure a été prouvée plutôt 
 supposée** : le champ élargi volontairement à 900 px fait rougir les trois
 largeurs de cet écran, et elles seules.
 
-## La CI a cassé sur un défaut que le local ne pouvait pas voir
+## Trois CI rouges, et mes deux premiers diagnostics visaient à côté
 
-Neuf tests rouges sur l'écran de remboursement, la commande facturée n'existant
-pas en base. La cause n'a rien à voir avec le code de la story.
+**La vraie cause : l'instantané légal de la facture amorcée était partiel**,
+`version` et `mentions` seuls. `lireFacturePourAvoir` **revalide** cette colonne
+à la relecture par `schemaInstantaneLegal.parse`, un `strictObject` qui exige
+émetteur, client, commande, lignes et les trois totaux.
+
+La lecture lève, donc la page rend une erreur : **l'URL reste bonne et le titre
+manque**. Le symptôme est indiscernable d'une commande absente, et c'est ce qui
+m'a fait chercher du côté du rendu, du cache de build, puis de l'ordre des
+amorces.
+
+**Invisible en local** parce que la facture y avait été créée par une exécution
+réelle, avec son instantané complet : `ON CONFLICT (id) DO NOTHING` laissait
+cette bonne ligne en place et n'écrivait jamais la version partielle.
+
+**Prouvé dans les deux sens** : instantané partiel remis à la main, 9 tests
+rouges, exactement ceux de la CI ; instantané complet, 106 verts.
+
+**Ce que je corrige dans ma méthode.** J'ai conclu deux fois sur une cause
+plausible sans reproduction complète, et j'ai poussé deux corrections qui n'ont
+rien changé au symptôme. L'amorce vérifie désormais son propre résultat, numéro,
+statut, paiement et facture, et échoue **au plus près de la cause** en nommant ce
+qui manque. Prouvé par mutation : l'insertion de la facture neutralisée, la
+préparation rougit là où elle sortait verte.
+
+## Un défaut latent fermé au passage, qui n'était pas la cause
+
+Cherché en croyant tenir la cause des CI rouges. Il est réel, il aurait fini par
+frapper, et il ne cassait rien ce jour-là : les deux corrections qu'il a values
+n'ont rien changé au symptôme.
 
 **Les préparations Playwright tournent en parallèle**, deux workers en CI contre
 un seul en local. Quatre amorces insèrent une catégorie en dérivant
@@ -144,15 +171,15 @@ transactions concurrentes sur une table vide dérivent toutes deux `ordre = 1`,
 l'une commite, l'autre lève. Le cas séquentiel passe, lui, ce qui rend le défaut
 trompeur.
 
-**Ma première correction n'a traité qu'une occurrence sur quatre**, et la CI a
-rougi une seconde fois pour la même cause à un cran de distance : la première
-amorce du **même fichier** dérivait encore. La violation emporte l'amorce
-entière, donc les deux commandes du fichier, ce qui faisait manquer une commande
-dont la catégorie était pourtant déjà fixée.
+**Ma première correction n'a traité qu'une occurrence sur quatre**, ce qui reste
+une faute de méthode même si aucune des deux n'était la cause du rouge : la
+première amorce du **même fichier** dérivait encore. C'est le motif « élargir la
+source plutôt qu'exempter » pris à l'envers, traiter son cas au lieu de la
+classe.
 
-C'est le motif « élargir la source plutôt qu'exempter » pris à l'envers : j'ai
-traité mon cas au lieu de la classe. Les quatre ordres sont désormais réservés et
-distincts, 9104 à 9106, 9111, 9118 et 9160.
+Les quatre ordres sont désormais réservés et distincts, 9104 à 9106, 9111, 9118
+et 9160. Ces deux commits restent justes : ils ferment un défaut qui aurait
+frappé au premier ordonnancement défavorable, sur une base réellement vierge.
 
 ## Ce que la revue frontend a corrigé
 
