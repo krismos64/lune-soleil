@@ -26,7 +26,11 @@ import { test as preparation } from "@playwright/test";
 import { Client } from "pg";
 
 import { encoderCommandeEnCours } from "@/lib/commande-cookie";
-import { COMMANDE_TEST, FICHIER_COMMANDE } from "./chemin-session";
+import {
+  COMMANDE_FACTUREE_TEST,
+  COMMANDE_TEST,
+  FICHIER_COMMANDE,
+} from "./chemin-session";
 
 preparation("commande en attente de paiement amorcee", async () => {
   const client = new Client({ connectionString: process.env.DATABASE_URL });
@@ -142,3 +146,153 @@ preparation("commande en attente de paiement amorcee", async () => {
     }),
   );
 });
+
+/**
+ * Amorce la commande CONFIRMEE et FACTUREE de l'ecran de remboursement, LS-160.
+ *
+ * SANS ELLE, LE FORMULAIRE N'EST MESURE A AUCUNE LARGEUR. `COMMANDE_TEST` est
+ * `EN_ATTENTE_PAIEMENT`, donc l'ecran y rend la branche « aucune facture
+ * emise », un simple paragraphe : les deux champs, l'avertissement et le bouton
+ * ne seraient jamais rendus, et un debordement a 320 px passerait inapercu.
+ *
+ * C'est le motif deja rencontre en LS-121, ou un contraste a 4,04:1 a echappe
+ * a `axe-core` parce que le chemin n'etait jamais rendu, faute de commande
+ * remboursee en donnees de test.
+ *
+ * AUCUN AVOIR N'EST AMORCE, deliberement : l'ecran doit etre mesure dans son
+ * etat le PLUS CHARGE, formulaire complet et restant entier. Un avoir amorce le
+ * reduirait, voire le ferait disparaitre si le restant tombait a zero.
+ *
+ * ELLE NE PORTE AUCUNE RESERVATION : la commande est confirmee, sa reservation
+ * a ete convertie en mouvement de stock. En amorcer une laisserait croire a une
+ * piece bloquee, et fausserait la tache de liberation d'un test voisin.
+ */
+preparation(
+  "commande facturee amorcee pour l'ecran de remboursement",
+  async () => {
+    const client = new Client({ connectionString: process.env.DATABASE_URL });
+    await client.connect();
+
+    try {
+      await client.query(
+        /*
+         * `ordre` EST DERIVE DU MAXIMUM, jamais code en dur : C24 pose une
+         * unicite sur cette colonne, et une valeur fixe entrerait en collision
+         * avec une categorie amorcee ailleurs. Meme forme que l'amorce voisine.
+         *
+         * PAS DE `modifie_a` : la colonne n'existe pas sur `categorie`, elle a
+         * ete recopiee par mimetisme depuis `produit`.
+         */
+        `INSERT INTO categorie (id, nom, slug, ordre, cree_a)
+       VALUES ($1, 'TEST Catégorie LS160', 'test-categorie-ls160',
+               (SELECT coalesce(max(ordre), 0) + 1 FROM categorie), now())
+       ON CONFLICT (id) DO NOTHING`,
+        [COMMANDE_FACTUREE_TEST.categorieId],
+      );
+
+      await client.query(
+        `INSERT INTO produit (id, categorie_id, nom, slug, statut, cree_a, modifie_a)
+       VALUES ($1, $2, 'TEST Pièce facturée', 'test-piece-facturee-ls160',
+               'BROUILLON', now(), now())
+       ON CONFLICT (id) DO NOTHING`,
+        [COMMANDE_FACTUREE_TEST.produitId, COMMANDE_FACTUREE_TEST.categorieId],
+      );
+
+      await client.query(
+        `INSERT INTO variante (
+         id, produit_id, reference, libelle, prix_centimes,
+         quantite_physique, quantite_reservee, vente_web_activee, cree_a
+       )
+       VALUES ($1, $2, 'TEST-LS160', 'TEST Déclinaison', 5400, 1, 0, true, now())
+       ON CONFLICT (id) DO NOTHING`,
+        [COMMANDE_FACTUREE_TEST.varianteId, COMMANDE_FACTUREE_TEST.produitId],
+      );
+
+      await client.query(
+        `INSERT INTO commande (
+         id, numero, statut, email_normalise, nom_client,
+         adresse_livraison, adresse_facturation,
+         sous_total_centimes, mode_livraison, frais_port_centimes,
+         total_centimes, montant_taxe_centimes,
+         cgv_acceptees_a, cgv_version, cree_a
+       )
+       VALUES (
+         $1, $2, 'CONFIRMEE', 'e2e-ls160@exemple.test', 'TEST Dominique',
+         $3::jsonb, $3::jsonb,
+         5400, 'DOMICILE', 0,
+         5400, 0,
+         now(), 'test', now()
+       )
+       ON CONFLICT (id) DO NOTHING`,
+        [
+          COMMANDE_FACTUREE_TEST.commandeId,
+          COMMANDE_FACTUREE_TEST.numero,
+          JSON.stringify({
+            nom: "TEST Dominique",
+            ligne1: "2 rue de Test",
+            codePostal: "35000",
+            ville: "TESTVILLE",
+            pays: "FR",
+          }),
+        ],
+      );
+
+      await client.query(
+        `INSERT INTO ligne_commande (
+         id, commande_id, variante_id, reference_figee,
+         libelle_produit_fige, libelle_variante_fige,
+         prix_fige_centimes, quantite
+       )
+       VALUES ($1, $2, $3, 'TEST-LS160', 'TEST Pièce facturée',
+               'TEST Déclinaison', 5400, 1)
+       ON CONFLICT (id) DO NOTHING`,
+        [
+          COMMANDE_FACTUREE_TEST.ligneId,
+          COMMANDE_FACTUREE_TEST.commandeId,
+          COMMANDE_FACTUREE_TEST.varianteId,
+        ],
+      );
+
+      /*
+       * `identifiant_fournisseur` EST OBLIGATOIRE POUR QUE LE PAIEMENT SOIT LU :
+       * `lirePaiementEncaisse` filtre dessus. Un paiement REUSSI sans lui rendrait
+       * `AUCUN_PAIEMENT`, et l'ecran mesurerait encore la mauvaise branche.
+       */
+      await client.query(
+        `INSERT INTO paiement (
+         id, commande_id, statut, montant_centimes,
+         montant_rembourse_centimes, identifiant_fournisseur, confirme_a, cree_a
+       )
+       VALUES ($1, $2, 'REUSSI', 5400, 0, 'cs_test_ls160', now(), now())
+       ON CONFLICT (id) DO NOTHING`,
+        [COMMANDE_FACTUREE_TEST.paiementId, COMMANDE_FACTUREE_TEST.commandeId],
+      );
+
+      /*
+       * LE NUMERO EST `F-TEST-0160` ET NON `F-2026-xxxx`, deliberement hors de la
+       * sequence reelle : amorcer un numero de la sequence sans toucher au
+       * compteur ferait entrer en collision la premiere facture emise par un
+       * autre test, ADR-031.
+       */
+      await client.query(
+        `INSERT INTO facture (
+         id, commande_id, numero, montant_total_centimes,
+         montant_avoir_centimes, instantane_legal, emise_a
+       )
+       VALUES ($1, $2, $3, 5400, 0, $4::jsonb, now())
+       ON CONFLICT (id) DO NOTHING`,
+        [
+          COMMANDE_FACTUREE_TEST.factureId,
+          COMMANDE_FACTUREE_TEST.commandeId,
+          COMMANDE_FACTUREE_TEST.numeroFacture,
+          JSON.stringify({
+            version: 1,
+            mentions: ["TVA non applicable, article 293 B du CGI"],
+          }),
+        ],
+      );
+    } finally {
+      await client.end();
+    }
+  },
+);
