@@ -18,13 +18,17 @@ ouverte commercialement.
 a commencé le 19 août 2026 avec LS-114, le panier, sans attendre la clôture de
 la phase 2.
 
-| Phase | Epic | État au 27 août 2026 |
+| Phase | Epic | État au 1er septembre 2026 |
 |---|---|---|
 | 2, catalogue, médias et stock multicanal | LS-3 | en cours, treize stories ouvertes |
 | 3, panier, réservation, paiement et commandes | LS-4 | LS-114 à LS-121 et LS-43 livrées, **porte de sortie franchie**, deux stories ouvertes |
-| 4, factures, avoirs, emails, expédition et contact | LS-5 | découpée le 27 août 2026, **commencée** : LS-51 et LS-126 closes, LS-82 livrée et ouverte sur son critère de réception, treize stories ouvertes |
+| 4, factures, avoirs, emails, expédition et contact | LS-5 | **commencée** : LS-51, LS-126 et LS-129 closes, LS-82 livrée et ouverte sur son critère de réception, douze stories ouvertes |
 | 5, rétractation, conformité et protection des données | LS-6 | découpée le 27 août 2026, cinq stories ouvertes |
-| 6, durcissement, exploitation et ouverture | LS-7 | découpée le 27 août 2026, onze stories ouvertes |
+| 6, durcissement, exploitation et ouverture | LS-7 | découpée le 27 août 2026, douze stories ouvertes |
+
+Comptes **relevés dans Jira** le 1er septembre 2026, jamais recopiés de mémoire :
+un chiffre écrit à la main se périme sans bruit, et le tableau annonçait encore
+l'état du 27 août.
 
 Les phases 4, 5 et 6 n'avaient jamais été découpées : LS-6 ne portait aucune
 story et LS-7 en portait deux pour douze sujets annoncés. Quinze stories ont été
@@ -148,6 +152,7 @@ n'a rien.
 | Authentification | Better Auth 1.6 |
 | Validation | Zod, côté serveur systématiquement |
 | Paiement | Stripe Checkout, webhooks signés et idempotents |
+| Documents comptables | `@react-pdf/renderer`, police embarquée, volume local, ADR-034 |
 | Tests | Vitest, React Testing Library, Playwright, axe-core |
 | Supervision | journal JSON en sortie standard, sans service tiers |
 | Mesure d'audience | Umami auto-hébergé |
@@ -193,8 +198,12 @@ exemplaire : réservation atomique portant un `commandeId`, événement
 `checkout.session.completed` accepté en `200` après validation de signature,
 commande `CONFIRMEE` à 2349 centimes, **un seul** mouvement `VENTE_WEB` de -1,
 facture `F-2026-0001` dont l'instantané légal porte l'identité de l'émetteur et
-la mention de l'article 293 B. Aucune `AlerteCritique`. Le rendu PDF manque
-encore, LS-129, `chemin_pdf` restant vide.
+la mention de l'article 293 B. Aucune `AlerteCritique`.
+
+**Le document PDF suit depuis LS-129**, livrée le 1er septembre 2026 : une
+facture émise produit son fichier après le commit du webhook, et un échec de
+rendu laisse `chemin_pdf` nul en levant une alerte plutôt qu'en annulant le
+paiement. Le **téléchargement** par le client reste à écrire, LS-131 et LS-132.
 
 ## Documentation
 
