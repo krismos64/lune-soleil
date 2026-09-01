@@ -95,6 +95,8 @@ DEPOT_ENVOI="src/repositories/envoi-email.ts"
 SMTP="src/integrations/email/smtp.ts"
 FACTURE="src/services/facture.ts"
 DEPOT_FACTURE="src/repositories/facture.ts"
+ACCES_DOCUMENT="src/services/acces-document.ts"
+JETON_ACCES="src/lib/jeton-acces.ts"
 
 # TOUT FICHIER MUTE DOIT FIGURER ICI, sans quoi il n'est ni sauvegarde ni
 # restaure et la mutation RESTE SUR LE DISQUE apres l'execution.
@@ -107,7 +109,7 @@ DEPOT_FACTURE="src/repositories/facture.ts"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -1874,6 +1876,68 @@ cas "garde sur commande annulee supprimee" integration \
 mute "$WEBHOOK" 's/    if \(!\(erreur instanceof ZodError\)\) \{\n      throw erreur;\n    \}/    throw erreur;/'
 cas "instantane invalide redevenu bloquant" integration \
   "confirme et alerte quand l'instantane legal ne peut pas etre construit"
+
+
+echo
+echo "Acces aux documents par lien signe, LS-132"
+echo
+
+# LES QUATRE CONDITIONS DE LA REGLE L9, UNE MUTATION CHACUNE, critere 7 de
+# LS-132. L'exigence est explicite : retirer chacune doit faire rougir LE test
+# correspondant, et non un test generique. Un controle qui n'examinerait que
+# l'expiration laisserait utilisable jusqu'a son terme un lien parti sur une
+# adresse email erronee, piege deja fiche sous « verifier les conditions, pas
+# que les delais ».
+
+# Cas 137 : CONDITION « MODIFIE » RETIREE. La signature n'est plus verifiee,
+# donc toute valeur bien formee devient une lecture de base : l'enumeration
+# redevient possible a cout constant, et un jeton forge vaut un jeton emis.
+mute "$ACCES_DOCUMENT" 's/  if \(!signatureJetonValide\(valeurJeton\)\) \{/  if (false) {/'
+cas "condition modifie retiree" integration \
+  "refuse un jeton dont la valeur a ete modifiee"
+
+# Cas 138 : CONDITION « EXPIRE » RETIREE. Un lien vieux de deux ans ouvre encore
+# la facture, alors que la duree de vie est la seule borne temporelle de cet
+# acces sans compte.
+mute "$ACCES_DOCUMENT" 's/  if \(jeton\.expireA\.getTime\(\) <= maintenant\.getTime\(\)\) \{/  if (false) {/'
+cas "condition expire retiree" integration \
+  "refuse un jeton expire"
+
+# Cas 139 : CONDITION « CONSOMME » RETIREE. La portee DOCUMENT ne consomme pas
+# d'elle-meme, mais la regle L9 vaut pour les quatre portees : un jeton marque
+# consomme par un autre chemin doit rester refuse ici.
+mute "$ACCES_DOCUMENT" 's/  if \(jeton\.utiliseA !== null\) \{/  if (false) {/'
+cas "condition consomme retiree" integration \
+  "refuse un jeton consomme"
+
+# Cas 140 : CONDITION « REVOQUE » RETIREE. C'est la condition dont l'absence est
+# la plus discrete : le jeton n'est ni expire ni consomme, tout parait normal, et
+# le lien parti sur la mauvaise adresse reste ouvert jusqu'a son terme. C'est
+# exactement le defaut que la regle L10 existe pour fermer.
+mute "$ACCES_DOCUMENT" 's/  if \(jeton\.revoqueA !== null\) \{/  if (false) {/'
+cas "condition revoque retiree" integration \
+  "refuse un jeton revoque, meme non expire et non consomme"
+
+# Cas 141 : CONTROLE DE PORTEE RETIRE, regle L6. La table sert quatre usages :
+# sans ce controle un jeton de suivi de commande ouvre la facture, et l'entite
+# generique devient une faille au lieu d'une simplification.
+mute "$ACCES_DOCUMENT" 's/  if \(jeton\.portee !== "DOCUMENT"\) \{/  if (false) {/'
+cas "controle de portee retire" integration \
+  "refuse un jeton d'une autre portee"
+
+# Cas 142 : L'EMPREINTE DEVIENT LA VALEUR. Regle L5 : stocker de quoi ouvrir
+# l'acces revient a garder un secret en clair sous un autre nom, et une fuite de
+# la table donnerait alors tous les acces.
+mute "$JETON_ACCES" 's/return createHash\("sha256"\)\.update\(valeur\)\.digest\("hex"\);/return valeur;/'
+cas "empreinte devenue la valeur en clair" unitaire \
+  "rend une valeur et son empreinte, l'empreinte n'etant pas la valeur"
+
+# Cas 143 : L'ETIQUETTE DE SIGNATURE PARTAGEE AVEC LE PANIER. La cle maitre
+# etant commune aux cookies signes, une etiquette identique ferait valoir ici la
+# signature d'un cookie public : un panier deviendrait un acces aux factures.
+mute "$JETON_ACCES" 's/\.update\("document-v1"\)/.update("panier-v1")/'
+cas "etiquette de signature partagee" unitaire \
+  "refuse une signature produite avec l'etiquette d'un autre usage"
 
 echo
 echo "-----------------------------------------"

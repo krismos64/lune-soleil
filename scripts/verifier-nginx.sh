@@ -98,6 +98,27 @@ if [ -f .env.example ]; then
   fi
 fi
 
+# ---------------------------------------------------------------------------
+# 4. Aucun document comptable servi statiquement, LS-132 critere 6
+# ---------------------------------------------------------------------------
+#
+# UNE FACTURE NE DOIT JAMAIS ETRE ATTEIGNABLE PAR UNE URL DIRECTE. Son acces
+# passe par un jeton signe verifie cote serveur, invariant 2 : un `alias` ou un
+# `root` vers le volume des documents court-circuiterait entierement ce
+# controle, et le defaut serait invisible depuis le code applicatif.
+#
+# LE CONTROLE PORTE SUR LA DIRECTIVE ET NON SUR LE CHEMIN. Chercher le mot
+# « documents » laisserait passer un `alias /var/lib/lune-soleil/` pose une
+# ligne plus haut, qui expose le meme contenu par un chemin parent. Toute
+# directive de service de fichiers dans cette configuration est donc signalee :
+# l'application sert ses propres statiques, Nginx ne fait que relayer.
+#
+# `rendu-document.ts` porte l'autre moitie de cette garantie, la racine des
+# documents etant distincte de celle des medias, eux servis publiquement.
+if grep -nE '^\s*(alias|root)\s' "$CONF" >/dev/null 2>&1; then
+  anomalies+=("une directive alias ou root sert des fichiers depuis Nginx : une facture deviendrait atteignable sans jeton, LS-132 critere 6")
+fi
+
 echo "CONFIGURATION NGINX, LS-91"
 echo
 
@@ -105,6 +126,7 @@ if [ ${#anomalies[@]} -eq 0 ]; then
   echo "  X-Forwarded-For ecrase par \$remote_addr"
   echo "  route interne non exposee"
   echo "  BETTER_AUTH_TRUSTED_PROXIES declaree et vide"
+  echo "  aucun document comptable servi statiquement"
   echo
   echo "OK la resolution de l'adresse client est coherente"
   exit 0

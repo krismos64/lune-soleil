@@ -233,6 +233,34 @@ commande dans une URL n'autorise rien par lui-même.
 Test négatif obligatoire : un client demande la commande d'un autre, refus
 sécurisé. Lien signé expiré ou modifié, refus sécurisé.
 
+**Livré par LS-132**, `src/lib/jeton-acces.ts`, `src/services/acces-document.ts`
+et la route `(boutique)/facture/[jeton]`. Cinq points s'y perdent facilement.
+
+**Quatre conditions, pas trois.** La règle L9 en énonce trois, qui sont l'état en
+base : expiré, consommé, révoqué. La quatrième est la **signature**, qui ne se
+lit pas en base et se vérifie avant toute requête. Un contrôle limité à
+l'expiration laisse utilisable jusqu'à son terme un lien parti sur une adresse
+erronée, ce que la révocation existe pour fermer.
+
+**L'ordre des contrôles porte une garantie.** La signature d'abord, en mémoire :
+une valeur forgée ne doit pas coûter une requête, sans quoi l'énumération reste
+possible à coût constant.
+
+**Le refus est indiscernable, et le type le garantit.** `autoriserAccesDocument`
+rend `REFUSE` sans motif, et la route rend **404 pour tous les cas**, jamais 403 :
+un 403 signifierait « ce document existe mais vous n'y avez pas droit », donc
+révélerait une commande. Le motif est journalisé côté serveur, jamais rendu.
+
+**La portée `DOCUMENT` ne se consomme pas.** `utiliseA` marque une action faite,
+une rétractation déposée ou un avis écrit. Une facture se consulte plusieurs
+fois : consommer à la première lecture casserait le second clic du client. La
+borne est `expireA`, trente jours, et la révocation reste disponible.
+
+**Le jeton naît dans la transaction d'émission**, `services/facture.ts`. Un
+chemin séparé laisserait exister des factures sans moyen d'accès, découvertes une
+par une par des clients qui réclament. Le rejeu d'un événement sort avant, sur la
+facture existante, et n'engendre donc pas de second jeton.
+
 ## Montants
 
 Centimes entiers en base. La conversion vers le format attendu par Stripe est
