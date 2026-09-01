@@ -311,6 +311,48 @@ preparation(
           }),
         ],
       );
+
+      /*
+       * L'AMORCE VERIFIE SON PROPRE RESULTAT, et cette ligne existe parce que son
+       * absence a coute trois executions de CI.
+       *
+       * `ON CONFLICT ... DO NOTHING` REND UNE AMORCE SILENCIEUSEMENT INEFFICACE.
+       * Si un INSERT ne cree pas ce qu'on croit, la preparation sort en SUCCES et
+       * ce sont les tests d'ecran qui echouent trois minutes plus tard, sur un
+       * titre introuvable : le diagnostic part alors sur le rendu, jamais sur
+       * l'amorce, et il y reste.
+       *
+       * ELLE ECHOUE ICI, AU PLUS PRES DE LA CAUSE, et nomme ce qui manque.
+       */
+      const { rows } = await client.query<{
+        numero: string;
+        statut: string;
+        paiements: string;
+        factures: string;
+      }>(
+        `SELECT c.numero, c.statut,
+                (SELECT count(*) FROM paiement p WHERE p.commande_id = c.id) AS paiements,
+                (SELECT count(*) FROM facture f WHERE f.commande_id = c.id) AS factures
+         FROM commande c WHERE c.id = $1`,
+        [COMMANDE_FACTUREE_TEST.commandeId],
+      );
+
+      const amorcee = rows[0];
+
+      if (
+        amorcee === undefined ||
+        amorcee.numero !== COMMANDE_FACTUREE_TEST.numero ||
+        amorcee.statut !== "CONFIRMEE" ||
+        Number(amorcee.paiements) !== 1 ||
+        Number(amorcee.factures) !== 1
+      ) {
+        throw new Error(
+          "Amorce de la commande facturee incomplete : " +
+            JSON.stringify(amorcee ?? { commande: "absente" }) +
+            `. Attendu numero ${COMMANDE_FACTUREE_TEST.numero}, statut ` +
+            "CONFIRMEE, un paiement et une facture.",
+        );
+      }
     } finally {
       await client.end();
     }
