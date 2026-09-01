@@ -305,8 +305,58 @@ preparation(
           COMMANDE_FACTUREE_TEST.factureId,
           COMMANDE_FACTUREE_TEST.commandeId,
           COMMANDE_FACTUREE_TEST.numeroFacture,
+          /*
+           * L'INSTANTANE EST COMPLET, ET C'ETAIT LA VRAIE CAUSE DE TROIS CI
+           * ROUGES. Une premiere version n'ecrivait que `version` et
+           * `mentions`.
+           *
+           * `lireFacturePourAvoir` REVALIDE CETTE COLONNE a la relecture,
+           * `schemaInstantaneLegal.parse`, et le schema est un `strictObject` :
+           * emetteur, client, commande, lignes et les trois totaux sont
+           * exiges. Un instantane partiel fait LEVER la lecture, donc la page
+           * de detail rend une erreur : l'URL reste bonne, le titre manque, et
+           * le symptome est indiscernable d'une commande absente.
+           *
+           * LE DEFAUT ETAIT INVISIBLE EN LOCAL parce que la facture y avait ete
+           * creee par une execution reelle, avec son instantane complet :
+           * `ON CONFLICT (id) DO NOTHING` laissait alors la bonne ligne en place
+           * et n'ecrivait jamais la version partielle.
+           */
           JSON.stringify({
             version: 1,
+            emetteur: {
+              raisonSociale: "TEST Lune et Soleil",
+              siret: "12345678901234",
+              adresse: "1 rue de Test, 35000 TESTVILLE",
+              emailContact: "test-emetteur@example.invalid",
+            },
+            client: {
+              nom: "TEST Dominique",
+              email: "e2e-ls160@exemple.test",
+              adresseFacturation: {
+                nom: "TEST Dominique",
+                ligne1: "2 rue de Test",
+                codePostal: "35000",
+                ville: "TESTVILLE",
+                pays: "FR",
+              },
+            },
+            commande: {
+              numero: COMMANDE_FACTUREE_TEST.numero,
+              passeeA: "2026-09-01T10:00:00.000Z",
+            },
+            lignes: [
+              {
+                referenceFigee: "TEST-LS160",
+                libelleProduit: "TEST Pièce facturée",
+                libelleVariante: "TEST Déclinaison",
+                prixUnitaireCentimes: 5400,
+                quantite: 1,
+              },
+            ],
+            sousTotalCentimes: 5400,
+            fraisPortCentimes: 0,
+            totalCentimes: 5400,
             mentions: ["TVA non applicable, article 293 B du CGI"],
           }),
         ],
