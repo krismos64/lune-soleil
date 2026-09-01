@@ -176,16 +176,32 @@ preparation(
     try {
       await client.query(
         /*
-         * `ordre` EST DERIVE DU MAXIMUM, jamais code en dur : C24 pose une
-         * unicite sur cette colonne, et une valeur fixe entrerait en collision
-         * avec une categorie amorcee ailleurs. Meme forme que l'amorce voisine.
+         * `ordre` EST FIXE ET RESERVE, PAS DERIVE DU MAXIMUM, et l'inverse a
+         * casse la CI le 1er septembre 2026.
          *
-         * PAS DE `modifie_a` : la colonne n'existe pas sur `categorie`, elle a
-         * ete recopiee par mimetisme depuis `produit`.
+         * LES PREPARATIONS TOURNENT EN PARALLELE. Quatre amorces inserent une
+         * categorie, et toutes calculaient `max(ordre) + 1` : sur une base
+         * VIERGE, deux d'entre elles lisent le meme maximum et derivent le meme
+         * rang. C24 pose une unicite sur cette colonne, DEFERRABLE, donc la
+         * violation ne se manifeste qu'au COMMIT.
+         *
+         * `ON CONFLICT (id) DO NOTHING` NE RATTRAPE RIEN ICI : le conflit porte
+         * sur `ordre`, jamais sur `id`.
+         *
+         * LE DEFAUT ETAIT INVISIBLE EN LOCAL, ou les categories des executions
+         * precedentes subsistent : l'amorce sortait sur le conflit d'`id` avant
+         * meme d'evaluer le rang. Seule une base vierge le revele, ce qui est
+         * exactement l'etat de la CI.
+         *
+         * 9160 EST HORS DE PORTEE DU MAXIMUM DERIVE, donc il ne collisionne avec
+         * aucune amorce qui, elle, continue de deriver. Une valeur reservee vaut
+         * mieux qu'un calcul concurrent quand la ligne est FIGEE et connue.
+         *
+         * PAS DE `modifie_a` : la colonne n'existe pas sur `categorie`, elle
+         * avait ete recopiee par mimetisme depuis `produit`.
          */
         `INSERT INTO categorie (id, nom, slug, ordre, cree_a)
-       VALUES ($1, 'TEST Catégorie LS160', 'test-categorie-ls160',
-               (SELECT coalesce(max(ordre), 0) + 1 FROM categorie), now())
+       VALUES ($1, 'TEST Catégorie LS160', 'test-categorie-ls160', 9160, now())
        ON CONFLICT (id) DO NOTHING`,
         [COMMANDE_FACTUREE_TEST.categorieId],
       );
