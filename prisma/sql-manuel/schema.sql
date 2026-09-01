@@ -328,6 +328,22 @@ CREATE TABLE "avoir" (
 );
 
 -- CreateTable
+--
+-- LS-128. L'intention de remboursement, ecrite AVANT l'appel au prestataire.
+-- L'unicite (facture_id, cle_idempotence) serialise deux demandes identiques
+-- concurrentes : sans elle, les deux partaient et l'argent sortait deux fois.
+CREATE TABLE "intention_remboursement" (
+    "id" TEXT NOT NULL,
+    "facture_id" TEXT NOT NULL,
+    "cle_idempotence" TEXT NOT NULL,
+    "montant_centimes" INTEGER NOT NULL,
+    "aboutie_a" TIMESTAMPTZ(3),
+    "cree_a" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "intention_remboursement_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "demande_retractation" (
     "id" TEXT NOT NULL,
     "commande_id" TEXT NOT NULL,
@@ -723,6 +739,11 @@ CREATE UNIQUE INDEX "avoir_numero_key" ON "avoir"("numero");
 -- CreateIndex
 CREATE INDEX "avoir_facture_idx" ON "avoir"("facture_id");
 
+-- LS-128. LA CLE PORTE LES DEUX COLONNES : la meme cle sur deux factures
+-- differentes est legitime, la meme cle sur la meme facture ne l'est pas.
+CREATE UNIQUE INDEX "intention_remboursement_unique" ON "intention_remboursement"("facture_id", "cle_idempotence");
+CREATE INDEX "intention_remboursement_facture_idx" ON "intention_remboursement"("facture_id");
+
 -- CreateIndex
 CREATE UNIQUE INDEX "demande_retractation_commande_id_key" ON "demande_retractation"("commande_id");
 
@@ -861,6 +882,7 @@ ALTER TABLE "facture" ADD CONSTRAINT "facture_commande_id_fkey" FOREIGN KEY ("co
 
 -- AddForeignKey
 ALTER TABLE "avoir" ADD CONSTRAINT "avoir_facture_id_fkey" FOREIGN KEY ("facture_id") REFERENCES "facture"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "intention_remboursement" ADD CONSTRAINT "intention_remboursement_facture_id_fkey" FOREIGN KEY ("facture_id") REFERENCES "facture"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "avoir" ADD CONSTRAINT "avoir_demande_retractation_id_fkey" FOREIGN KEY ("demande_retractation_id") REFERENCES "demande_retractation"("id") ON DELETE SET NULL ON UPDATE CASCADE;

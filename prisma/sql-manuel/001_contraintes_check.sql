@@ -293,3 +293,9 @@ ALTER TABLE compteur_numero
 ALTER TABLE commande
   ADD CONSTRAINT chk_commande_total_coherent
   CHECK (total_centimes = sous_total_centimes + frais_port_centimes + montant_taxe_centimes);
+
+-- LS-128. Un montant de remboursement est strictement positif. Une intention a
+-- zero ou negative n'a aucun sens metier et rendrait de l'argent a l'envers.
+ALTER TABLE intention_remboursement
+  ADD CONSTRAINT chk_intention_montant_positif
+  CHECK (montant_centimes > 0);
