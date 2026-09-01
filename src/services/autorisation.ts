@@ -115,6 +115,35 @@ export async function exigerSession(
 }
 
 /**
+ * Exige le role d'administration et rend l'identite, ou `null` sur refus.
+ *
+ * LA TRADUCTION DU REFUS POUR LES ADAPTATEURS, LS-158 : une Server Action rend
+ * une valeur d'interface, elle ne laisse pas fuir une exception. Sept fichiers
+ * d'actions portaient chacun leur copie de cette traduction, avec trois
+ * contrats de retour differents pour le meme controle : la reponse vit ici et
+ * nulle part ailleurs.
+ *
+ * Session absente et role insuffisant rendent la MEME valeur, comme
+ * `AutorisationRefuseeError` les confond : les separer renseignerait sur
+ * l'existence du compte d'administration.
+ *
+ * Les en-tetes se passent en parametre, `await headers()` chez l'appelant : ce
+ * module ne lit ni cookie ni `Request`, fichier de garde de `services/`.
+ */
+export async function exigerRole(
+  enTetes: Headers,
+): Promise<IdentiteAppelant | null> {
+  try {
+    return await exigerAdministratrice(enTetes);
+  } catch (erreur) {
+    if (erreur instanceof AutorisationRefuseeError) {
+      return null;
+    }
+    throw erreur;
+  }
+}
+
+/**
  * Exige une session dont le role est `ADMINISTRATRICE`, ou leve.
  *
  * LA VERIFICATION PORTE SUR LA SESSION, jamais sur un parametre. Aucune

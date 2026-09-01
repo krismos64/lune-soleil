@@ -32,19 +32,22 @@ SEC=".claude/rules/securite.md"
 # remarque immediatement.
 DOSSIER_TEMOIN="src/dossier-temoin-mutation"
 FICHIER_TEMOIN="src/integrations/temoin-mutation.ts"
+FICHIER_TEMOIN_SERVICE="src/services/temoin-mutation.ts"
+SOCLE=".claude/services-socle-prisma.txt"
 
-for f in "$DB" "$ML" "$MC" "$SEC" ./scripts/verifier-regles.sh; do
+for f in "$DB" "$ML" "$MC" "$SEC" "$SOCLE" ./scripts/verifier-regles.sh; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
 done
 
 TMP="$(mktemp -d)"
 cp "$DB" "$TMP/db.orig"; cp "$ML" "$TMP/ml.orig"; cp "$MC" "$TMP/mc.orig"
-cp "$SEC" "$TMP/sec.orig"
+cp "$SEC" "$TMP/sec.orig"; cp "$SOCLE" "$TMP/socle.orig"
 restaurer() {
   cp "$TMP/db.orig" "$DB"; cp "$TMP/ml.orig" "$ML"; cp "$TMP/mc.orig" "$MC"
-  cp "$TMP/sec.orig" "$SEC"
+  cp "$TMP/sec.orig" "$SEC"; cp "$TMP/socle.orig" "$SOCLE"
   rm -rf "${RACINE:?}/$DOSSIER_TEMOIN"
   rm -f "${RACINE:?}/$FICHIER_TEMOIN"
+  rm -f "${RACINE:?}/$FICHIER_TEMOIN_SERVICE"
 }
 nettoyer() { restaurer; rm -rf "$TMP"; }
 trap nettoyer EXIT
@@ -162,6 +165,29 @@ cas "un dossier neuf de src/ sans regle"
 echo "export const temoin = 1;" > "$FICHIER_TEMOIN"
 cas "un fichier a la racine d'un dossier couvert par ses seuls descendants"
 rm -f "$FICHIER_TEMOIN"
+
+# ---------------------------------------------------------------------------
+# Cas 13 et 14 : la frontiere Prisma des services, LS-158.
+#
+# Le defaut reel : six services appelaient un modele directement quand le
+# fichier de garde envoyait toute requete dans repositories/, et rien ne le
+# voyait. L'arbitrage retient trois derogations de socle, et le controle tient
+# les deux sens, comme celui des actions sensibles.
+# ---------------------------------------------------------------------------
+
+# Cas 13 : un service hors liste appelle un modele. Le temoin est un fichier
+# NEUF, cree puis supprime : muter un vrai service laisserait un defaut de
+# frontiere sur le disque si le script s'interrompait ici.
+echo "export const temoin = () => prisma.utilisateur.findMany();" > "$FICHIER_TEMOIN_SERVICE"
+cas "un service hors socle appelle un modele Prisma directement"
+rm -f "$FICHIER_TEMOIN_SERVICE"
+
+# Cas 14 : une derogation perimee, citant un service qui n'appelle plus aucun
+# modele. Une liste qui ne se confronte qu'au sens 1 grossirait sans jamais
+# maigrir, et chaque ligne morte affaiblirait la frontiere qu'elle pretend
+# encadrer. sante.ts est choisi parce qu'il n'appelle que $queryRaw, hors motif.
+printf 'src/services/sante.ts\tderogation de mutation\n' >> "$SOCLE"
+cas "une derogation de socle perimee, service sans appel de modele"
 
 echo
 echo "-----------------------------------------"

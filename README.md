@@ -656,14 +656,16 @@ retenu : code 0 si le service répond avec sa base, 1 sinon. Il vise la **route*
 et non PostgreSQL directement, une base joignable depuis le poste de déploiement
 ne prouvant pas que l'application la joint.
 
-Le script de mutation réinjecte douze fois un défaut réel et exige que
+Le script de mutation réinjecte quinze fois un défaut réel et exige que
 `verifier-regles.sh` échoue à chaque fois. Un contrôle vert ne prouve rien tant
 qu'il n'a pas échoué sur le défaut qu'il prétend attraper.
 
-Les huit premiers cas portent sur ce qu'une règle **dit**, un prédicat d'index
-partiel périmé. Les quatre derniers portent sur l'endroit où elle **se
-déclenche** : depuis LS-88, `verifier-regles.sh` échoue si un dossier de `src/`
-n'est couvert par le `paths` d'aucune règle. Le défaut était réel, éditer
+Les neuf premiers cas portent sur ce qu'une règle **dit**, un prédicat d'index
+partiel périmé. Quatre portent sur l'endroit où elle **se déclenche** : depuis
+LS-88, `verifier-regles.sh` échoue si un dossier de `src/` n'est couvert par le
+`paths` d'aucune règle. Les deux derniers portent la **frontière Prisma des
+services**, LS-158 : un appel de modèle hors des dérogations de socle échoue,
+et une dérogation périmée échoue aussi, dans l'autre sens. Le défaut était réel, éditer
 `src/lib/auth.ts` ne chargeait aucune règle alors que ce fichier porte le secret
 de signature et la limitation de débit. La liste des dossiers est relevée sur le
 disque et non écrite à la main : créer un dossier sans règle fait rougir le

@@ -21,6 +21,7 @@
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
+import { ecrireProfil } from "@/repositories/utilisateur";
 import { EntreeInvalideError, valider } from "@/lib/validation";
 
 /**
@@ -89,8 +90,5 @@ export async function mettreAJourProfil(
     champs.nom = donnees.nom;
   }
 
-  await prisma.utilisateur.update({
-    where: { id: utilisateurId },
-    data: champs,
-  });
+  await ecrireProfil(prisma, utilisateurId, champs);
 }

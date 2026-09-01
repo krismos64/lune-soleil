@@ -17,6 +17,7 @@ import { journaliserErreur } from "@/lib/journal";
 import { leverAlerteCritique } from "@/repositories/confirmation";
 import {
   lireFactureARendre,
+  lireFactureDeCommande,
   poserCheminPdfFacture,
 } from "@/repositories/facture";
 import { rendreEtStocker } from "@/integrations/pdf/rendu-document";
@@ -180,10 +181,7 @@ export async function rendreFactureDeCommande(
   let facture: { id: string } | null;
 
   try {
-    facture = await prisma.facture.findUnique({
-      where: { commandeId },
-      select: { id: true },
-    });
+    facture = await lireFactureDeCommande(prisma, commandeId);
   } catch (erreur) {
     journaliserErreur("Facture introuvable pour le rendu du PDF", erreur, {
       commande: commandeId,

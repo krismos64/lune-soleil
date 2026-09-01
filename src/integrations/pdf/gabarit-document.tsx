@@ -13,6 +13,7 @@
  * qu'il encapsule une bibliotheque externe, `services/` decidant quoi rendre et
  * quand.
  */
+import { formaterMontant } from "@/lib/montant";
 import {
   Document,
   Font,
@@ -163,20 +164,6 @@ const styles = StyleSheet.create({
   },
 });
 
-/**
- * Formate un montant en centimes vers l'euro affiche.
- *
- * LE CALCUL RESTE ENTIER, invariant 1 : la division par cent n'a lieu qu'ICI,
- * pour l'affichage, et aucun total n'est recalcule dans ce fichier. Les trois
- * montants viennent de l'instantane, qui les porte deja additionnes.
- */
-function euros(centimes: number): string {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-  }).format(centimes / 100);
-}
-
 /** Date au format francais, l'instantane portant une chaine ISO en UTC. */
 function dateAffichee(iso: string): string {
   return new Intl.DateTimeFormat("fr-FR", {
@@ -285,10 +272,10 @@ export function GabaritDocument({
             </View>
             <Text style={styles.colQuantite}>{ligne.quantite}</Text>
             <Text style={styles.colPrix}>
-              {euros(ligne.prixUnitaireCentimes)}
+              {formaterMontant(ligne.prixUnitaireCentimes)}
             </Text>
             <Text style={styles.colTotal}>
-              {euros(ligne.prixUnitaireCentimes * ligne.quantite)}
+              {formaterMontant(ligne.prixUnitaireCentimes * ligne.quantite)}
             </Text>
           </View>
         ))}
@@ -297,19 +284,19 @@ export function GabaritDocument({
           <View style={styles.ligneTotal}>
             <Text style={styles.libelleTotal}>Sous-total</Text>
             <Text style={styles.valeurTotal}>
-              {euros(instantane.sousTotalCentimes)}
+              {formaterMontant(instantane.sousTotalCentimes)}
             </Text>
           </View>
           <View style={styles.ligneTotal}>
             <Text style={styles.libelleTotal}>Frais de livraison</Text>
             <Text style={styles.valeurTotal}>
-              {euros(instantane.fraisPortCentimes)}
+              {formaterMontant(instantane.fraisPortCentimes)}
             </Text>
           </View>
           <View style={styles.ligneTotalFort}>
             <Text style={styles.libelleTotal}>Total</Text>
             <Text style={styles.valeurTotal}>
-              {euros(instantane.totalCentimes)}
+              {formaterMontant(instantane.totalCentimes)}
             </Text>
           </View>
         </View>

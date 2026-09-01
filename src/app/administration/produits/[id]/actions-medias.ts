@@ -30,10 +30,7 @@ import { headers } from "next/headers";
 
 import { journaliser } from "@/lib/journal";
 import { EntreeInvalideError } from "@/lib/validation";
-import {
-  AutorisationRefuseeError,
-  exigerAdministratrice,
-} from "@/services/autorisation";
+import { exigerRole } from "@/services/autorisation";
 import { TAILLE_MAX_OCTETS } from "@/services/media-validation";
 import {
   FichierNonImageError,
@@ -79,26 +76,6 @@ export type ResultatMedia =
   /** L'ordre transmis ne couvre pas exactement les medias du produit. */
   | { statut: "ORDRE_INCOMPLET" }
   | { statut: "INDISPONIBLE" };
-
-/**
- * Exige le role et traduit le refus, sans distinguer ses deux causes.
- *
- * Session absente et role insuffisant rendent la MEME valeur : les separer
- * renseignerait sur l'existence du compte d'administration.
- */
-async function exigerRole(): Promise<boolean> {
-  const enTetes = await headers();
-
-  try {
-    await exigerAdministratrice(enTetes);
-    return true;
-  } catch (erreur) {
-    if (erreur instanceof AutorisationRefuseeError) {
-      return false;
-    }
-    throw erreur;
-  }
-}
 
 /**
  * Traduit les refus previsibles du service en valeurs d'interface.
@@ -168,7 +145,7 @@ export async function televerserPhotographieAction(
   produitId: unknown,
   donnees: FormData,
 ): Promise<ResultatMedia> {
-  if (!(await exigerRole())) {
+  if (!(await exigerRole(await headers()))) {
     return { statut: "SESSION_ABSENTE" };
   }
 
@@ -214,7 +191,7 @@ export async function ecrireTexteAlternatifAction(
   id: unknown,
   texteAlternatif: unknown,
 ): Promise<ResultatMedia> {
-  if (!(await exigerRole())) {
+  if (!(await exigerRole(await headers()))) {
     return { statut: "SESSION_ABSENTE" };
   }
 
@@ -241,7 +218,7 @@ export async function supprimerMediaAction(
   produitId: unknown,
   id: unknown,
 ): Promise<ResultatMedia> {
-  if (!(await exigerRole())) {
+  if (!(await exigerRole(await headers()))) {
     return { statut: "SESSION_ABSENTE" };
   }
 
@@ -267,7 +244,7 @@ export async function reordonnerMediasAction(
   produitId: unknown,
   ids: unknown,
 ): Promise<ResultatMedia> {
-  if (!(await exigerRole())) {
+  if (!(await exigerRole(await headers()))) {
     return { statut: "SESSION_ABSENTE" };
   }
 

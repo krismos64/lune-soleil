@@ -1,0 +1,18 @@
+# Services de socle autorisés à appeler Prisma directement, arbitrage LS-158.
+#
+# La frontière des couches envoie toute requête dans repositories/. Trois
+# services de socle y dérogent : leurs tables relèvent de l'infrastructure,
+# journaux, limitation de débit et session, pas du domaine, et un repository
+# par purge ajouterait une indirection sans rien protéger.
+#
+# CETTE LISTE EST UNE DÉROGATION ARBITRÉE, PAS UNE EXEMPTION DE CONFORT.
+# verifier-regles.sh la confronte au code dans les deux sens : un service qui
+# appelle un modèle sans figurer ici fait échouer le contrôle, et une ligne
+# dont le service n'appelle plus rien directement est périmée et doit partir.
+# Ajouter une ligne est un choix d'architecture qui se trace dans un ticket,
+# jamais un moyen de faire taire le contrôle.
+#
+# Format : chemin du fichier, tabulation, motif de la dérogation.
+src/services/journal-connexion.ts	journal technique de sécurité, écriture qui ne lève jamais, purge E14
+src/services/purge-journaux.ts	purges de rétention sur JournalAudit et RateLimit
+src/services/reauthentification.ts	preuve d'identité sur la table de session Better Auth

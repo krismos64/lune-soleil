@@ -16,6 +16,7 @@
  * que la page a change. Le piege est connu du projet, fiche « focus sur un
  * element detache ».
  */
+import { formaterMontant } from "@/lib/montant";
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -111,13 +112,6 @@ function messageLisible(brut: string): string {
       return `${LIBELLES_CHAMP[champ] ?? champ} : ${reste}`;
     })
     .join(", ");
-}
-
-function prixAffiche(centimes: number): string {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-  }).format(centimes / 100);
 }
 
 export function EtapesTunnel({
@@ -634,7 +628,7 @@ function Recapitulatif({
               </span>
               <span className={styles.ligneQuantite}>×{ligne.quantite}</span>
               <span className={styles.lignePrix}>
-                {prixAffiche(ligne.totalLigneCentimes)}
+                {formaterMontant(ligne.totalLigneCentimes)}
               </span>
               {/*
                * LE MOTIF EST RENDU ICI AUSSI, et pas seulement au panier.
@@ -699,7 +693,7 @@ function Recapitulatif({
 
         <p className={styles.totalLigne}>
           <span>Sous-total</span>
-          <span>{prixAffiche(recapitulatif.totalArticlesCentimes)}</span>
+          <span>{formaterMontant(recapitulatif.totalArticlesCentimes)}</span>
         </p>
 
         <p className={styles.totalLigne}>
@@ -707,13 +701,13 @@ function Recapitulatif({
           <span>
             {recapitulatif.livraisonOfferte
               ? "Offerte"
-              : prixAffiche(recapitulatif.fraisPortCentimes)}
+              : formaterMontant(recapitulatif.fraisPortCentimes)}
           </span>
         </p>
 
         <p className={styles.totalFinal}>
           <span>Total</span>
-          <span>{prixAffiche(recapitulatif.totalCentimes)}</span>
+          <span>{formaterMontant(recapitulatif.totalCentimes)}</span>
         </p>
       </section>
 
