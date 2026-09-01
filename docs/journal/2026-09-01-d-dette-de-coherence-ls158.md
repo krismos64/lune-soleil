@@ -101,6 +101,18 @@ structurant, le skill `adr` en fera un. La neuvième copie du formateur, celle
 du gabarit PDF, partage désormais la fonction commune : sa sortie est identique
 octet pour octet, les tests du PDF qui extraient le texte le prouvent.
 
+## Le compte de la phase 6 a bougé trois fois dans la journée
+
+Douze le matin, treize à la création de LS-158, quatorze avec LS-159, puis
+treize à la clôture de LS-158 : chaque mouvement a demandé sa PR pour une
+unité, la ligne du tableau du `README.md` étant un instantané qui se périme à
+chaque création ou clôture de story. La règle « relever dans Jira au moment
+d'écrire » est tenue, mais sa granularité se paie. Suggestion déposée pour
+arbitrage de Christophe : soit le tableau ne porte plus que l'état qualitatif
+des phases (en cours, close, découpée) et renvoie à Jira pour les nombres,
+soit le compte par phase reste et son coût est assumé. Aucun changement sans
+arbitrage, la ligne reste comptée d'ici là.
+
 ## Prochaine étape
 
 Inchangée depuis la session C : **LS-34 hors code en urgence**, l'échéance de
