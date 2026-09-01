@@ -178,7 +178,7 @@ export type ResultatRegeneration =
  *
  * `factureId` VIENT DU FORMULAIRE, ET C'EST SANS DANGER ICI : le role est exige
  * avant toute lecture, et l'administratrice a acces a toutes les factures. Ce
- * n'est PAS le cas de l'acces client, LS-131 et LS-132, ou un identifiant d'URL
+ * n'est PAS le cas de l'acces client, LS-57 et LS-132, ou un identifiant d'URL
  * n'autorise rien par lui-meme, invariant 2.
  */
 export async function regenererDocument(

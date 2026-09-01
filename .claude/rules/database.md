@@ -79,8 +79,10 @@ Règles associées :
 
 ## Verrou de tâche planifiée, LS-72
 
-Deux tâches tourneront : la libération des réservations expirées toutes les cinq
-minutes, la réconciliation des paiements tous les quarts d'heure. Sans verrou,
+Cinq tâches tournent, la table vit dans `src/services/tache-planifiee.ts` : la
+libération des réservations expirées toutes les cinq minutes, la réconciliation
+des paiements tous les quarts d'heure, l'envoi des emails, les deux purges. Sans
+verrou,
 deux instances les exécuteraient simultanément, et **pour la libération cela
 décrémenterait `quantiteReservee` deux fois** : du stock disparaîtrait sans
 qu'aucune vente ne l'explique.

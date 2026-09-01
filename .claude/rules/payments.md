@@ -3,10 +3,18 @@ paths:
   - "src/integrations/stripe/**"
   - "src/integrations/pdf/**"
   - "src/app/api/webhooks/**"
-  - "src/services/checkout/**"
-  - "src/services/orders/**"
-  - "src/services/invoices/**"
-  - "src/services/shipping/**"
+  - "src/services/paiement.ts"
+  - "src/services/webhook-paiement.ts"
+  - "src/services/reconciliation-paiements.ts"
+  - "src/services/commande.ts"
+  - "src/services/facture.ts"
+  - "src/services/document-comptable.ts"
+  - "src/services/tunnel.ts"
+  - "src/repositories/paiement.ts"
+  - "src/repositories/confirmation.ts"
+  - "src/repositories/commande.ts"
+  - "src/repositories/facture.ts"
+  - "src/app/(boutique)/commande/**"
 ---
 
 # Paiement, commandes et documents comptables

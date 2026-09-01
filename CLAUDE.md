@@ -9,7 +9,8 @@ métropolitaine, euro. Vente en ligne cohabitant avec des marchés locaux et Vin
 refuse les versions impaires de Node.
 
 ```bash
-npm ci && npm run type-check && npm run lint && npm run build
+npm ci && npx prisma generate        # le client Prisma n'est pas versionné
+npm run type-check && npm run lint && npm run build
 npm run test && npm run test:e2e  # Vitest sur base éphémère, puis Playwright
 npm run db:preparer    # base locale : conteneur, migrations, SQL non généré
 npm run db:verifier    # les contrôles du modèle sur cette base, exige Docker
@@ -17,11 +18,10 @@ npm run db:verifier    # les contrôles du modèle sur cette base, exige Docker
 ./scripts/verifier-config-claude.sh  # cohérence config, ADR, mémoire, journal
 ```
 
-Liste complète dans `README.md`, et `.github/workflows/controles.yml` rejoue tout
-cela sur chaque PR. `npm audit` reste à **zéro**. Une migration se **crée** à la
-main, `npx prisma migrate dev --name sujet`, interactive donc impossible à
-scripter. Les tests d'intégration créent leur base éphémère : ne jamais les
-pointer sur celle de développement.
+Liste complète dans `README.md`, la CI rejoue tout sur chaque PR. `npm audit`
+reste à **zéro**. Une migration se **crée** à la main, `npx prisma migrate dev
+--name sujet`, interactive donc non scriptable. Les tests d'intégration créent
+leur base éphémère, ne jamais les pointer sur celle de développement.
 
 ## Architecture
 
@@ -127,22 +127,19 @@ paraphrasée seule : c'est ce qui permet aux contrôles textuels de la retrouver
 `docs/journal/` porte l'avancement réel, une page par session. **Lire la plus
 récente en début de session** donne l'état du projet plus vite que Jira.
 
-YOU MUST lire les **commentaires** d'un ticket Jira avant de vous appuyer sur sa
-description, en demandant explicitement le champ `comment` qui ne revient pas par
-défaut : un commentaire récent la rectifie souvent. **Le plus récent l'emporte**, et
-l'écart se signale plutôt que de se résoudre en silence.
+YOU MUST lire les **commentaires** d'un ticket Jira avant sa description, champ
+`comment` demandé explicitement, il ne revient pas par défaut. **Le plus récent
+l'emporte**, et l'écart se signale plutôt que de se résoudre en silence.
 
 ## Autonomie et accès
 
-**Travailler sans demander de validation à chaque commande**, en enchaînant les
-outils librement à l'intérieur d'une étape. Faire un point à la fin de chaque
-étape significative, et proposer la suite plutôt que de l'enchaîner d'office.
+**Travailler sans demander de validation à chaque commande.** Faire un point à
+chaque étape significative, et proposer la suite plutôt que de l'enchaîner.
 
 **Secrets** : l'**écriture** dans un `.env` est autorisée, y compris générer un
 secret avec `openssl`. La **lecture des valeurs** est bloquée, une valeur lue
-entrerait dans l'historique de session ; pour diagnostiquer, lister les noms de
-variables. Clés privées et certificats bloqués dans les deux sens, une clé se
-génère et ne s'édite pas.
+entrerait dans l'historique de session ; pour diagnostiquer, lister les noms.
+Clés privées et certificats bloqués dans les deux sens.
 
 **Accès opérationnels** : `ssh`, `docker`, `stripe`, `gh`, `psql` avec les accès
 configurés, sans jamais lire les identifiants sous-jacents.
@@ -154,12 +151,11 @@ un garde-fou qui ne peut pas conclure bloque la migration.
 
 ## Agents
 
-Trois agents projet : `ls-critical-reviewer` relit les zones à risque,
-`ls-conteneurisation` couvre image, Compose, déploiement et retour arrière,
-`ls-frontend-revue` relit une interface avant clôture. **Ne pas invoquer les
-agents globaux `docker-devops`, `security-auditor` ni `nextjs-architect` ici**,
-calibrés sur une autre stack : NextAuth v5, PostgreSQL 16, Redis 7 et du
-multi-tenant, quand ce projet est en Better Auth 1.6 et PostgreSQL 18, sans Redis.
+Trois agents projet, table dans `docs/REFERENCES.md` : `ls-critical-reviewer`,
+zones à risque ; `ls-conteneurisation`, image et déploiement ;
+`ls-frontend-revue`, interface avant clôture. **Ne pas invoquer les agents
+globaux `docker-devops`, `security-auditor` ni `nextjs-architect`**, calibrés
+sur une autre stack.
 
 ## Conduite du travail
 
@@ -180,8 +176,8 @@ explicitement ce qui a été mis à jour :
 3. **Mémoire** : toute découverte non dérivable du code
 4. **Jira** : état réel de chaque critère, commit, ce qui reste
 
-Un travail non tracé sera refait ou contredit. Un journal qui présente comme « à
-faire » une tâche déjà faite est pire qu'un journal absent.
+Un travail non tracé sera refait ou contredit, un journal périmé est pire
+qu'absent.
 
 ## Vérification avant de conclure
 
@@ -190,10 +186,9 @@ contrôlé à 320 px si la story touche l'interface. Pour une zone critique s'y
 ajoutent un test négatif de sécurité, un test de concurrence ou d'idempotence, et
 la simulation d'une panne de fournisseur, et `ls-frontend-revue` sur l'interface.
 
-**Montrer la preuve**, sortie de commande et résultat, ne jamais affirmer que ça
-marche. Un contrôle qui n'a jamais échoué sur le défaut qu'il prétend attraper
-n'est pas un contrôle : le prouver par mutation, et pour la suite de tests
-`./scripts/verifier-tests-mutation.sh` la rejoue.
+**Montrer la preuve**, sortie de commande et résultat. Un contrôle qui n'a
+jamais échoué sur le défaut qu'il prétend attraper n'est pas un contrôle : le
+prouver par mutation, `./scripts/verifier-tests-mutation.sh` rejouant la suite.
 
 **Consulter Context7** avant d'utiliser une API de Next.js 16, React 19, Prisma 7,
 Better Auth 1.6 ou Stripe, ces versions étant plus récentes que ma connaissance.

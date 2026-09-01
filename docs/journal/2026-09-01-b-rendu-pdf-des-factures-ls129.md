@@ -126,9 +126,10 @@ npm run build                          aucun avertissement, polices copiées
 `src/integrations/pdf/**` : le contrôle de couverture avait raison de refuser un
 dossier orphelin.
 
-**Le téléchargement du document n'existe pas encore.** LS-131 porte le contrôle
+**Le téléchargement du document n'existe pas encore.** LS-57 porte le contrôle
 de propriété pour un client connecté, LS-132 le lien signé expirant pour un
-achat sans compte. L'administration affiche l'état du document et permet de
+achat sans compte. Cette page écrivait LS-131, qui porte en réalité le suivi
+Mondial Relay : corrigé par LS-157. L'administration affiche l'état du document et permet de
 relancer sa génération, ce que le critère 4 demandait, mais personne ne peut
 encore le lire.
 
@@ -137,8 +138,9 @@ pour cela.
 
 ## Prochaine étape
 
-**LS-131**, l'accès aux factures depuis l'espace client, qui rend enfin le
-document atteignable. **LS-128** ensuite pour l'avoir.
+**LS-132**, le lien signé expirant qui rend enfin le document atteignable pour
+un achat sans compte ; l'accès depuis l'espace client relève de LS-57, bloquée
+par LS-54. **LS-128** ensuite pour l'avoir.
 
 Restent ouverts hors code, inchangés depuis ce matin : **LS-34**, la plateforme
 de facturation électronique, dont l'échéance de réception tombait **aujourd'hui**

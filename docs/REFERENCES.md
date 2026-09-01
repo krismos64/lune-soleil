@@ -62,13 +62,13 @@ connaître avant d'écrire un service qui la recouvrirait ou la contredirait :
 | `src/integrations/mondial-relay/` | points de retrait derrière une interface, LS-115 | une indisponibilité du transporteur **dégrade le choix, elle ne ferme jamais la vente** : le domicile n'exige aucun appel externe, cas d'erreur du parcours 1. LS-27 interdit toute réponse d'API inventée |
 | `src/app/(boutique)/commande/` | les quatre étapes du tunnel, LS-115 | le bouton porte la mention imposée par L221-14 alinéa 2, la zone desservie s'annonce à l'**entrée**, alinéa 3 |
 | `src/repositories/stock.ts` | l'`UPDATE` conditionnel d'ADR-006, en `$queryRawUnsafe`, réexporté par `tests/aide/reservation-sql.ts` | aucune |
-| `src/lib/auth.ts` | instance Better Auth : mapping vers `Utilisateur`, `role` en `input: false`, seize caractères, plugin passkey, session d'un jour prolongée à l'usage, LS-81 | vérification d'email **désactivée** tant qu'ADR-008 n'est pas implémenté |
+| `src/lib/auth.ts` | instance Better Auth : mapping vers `Utilisateur`, `role` en `input: false`, seize caractères, plugin passkey, session d'un jour prolongée à l'usage, LS-81 | vérification d'email **désactivée** : l'envoi existe depuis LS-82, le blocage restant est le parcours autour, écran d'attente et renvoi du lien, LS-54 |
 | `src/lib/auth-client.ts` | client navigateur, passkey comprise | aucune |
 | `src/lib/mot-de-passe.ts` | les deux longueurs, **sans aucun import** pour rester servable au navigateur | aucune |
 | `src/services/autorisation.ts` | `lireIdentite`, `exigerSession`, `exigerAdministratrice` | aucune |
-| `src/services/reauthentification.ts` | `exigerReauthentificationRecente`, quatre familles d'actions sensibles, fenêtre de quinze minutes, LS-81 | **aucune action n'est encore gardée**, les quatre familles sont en attente dans `.claude/familles-sans-action.txt`, LS-89 |
-| `src/services/journal-connexion.ts` | journal des connexions : écriture qui ne lève jamais, purge à six mois, lecture pour l'écran, LS-80 | **la purge n'est appelée par personne**, la tâche planifiée est LS-72 |
-| `src/lib/hook-journal-connexion.ts` | hook `after` de Better Auth, table des chemins de connexion, journalisation des refus de cadence, LS-80 | `trustedProxies` non configuré, l'adresse IP restera nulle derrière Nginx |
+| `src/services/reauthentification.ts` | `exigerReauthentificationRecente`, quatre familles d'actions sensibles, fenêtre de quinze minutes, LS-81 | la première action gardée est la suppression de compte, LS-95, famille `IDENTIFIANTS` ; les familles encore sans action vivent dans `.claude/familles-sans-action.txt` |
+| `src/services/journal-connexion.ts` | journal des connexions : écriture qui ne lève jamais, purge à six mois, lecture pour l'écran, LS-80 | aucune, la purge est appelée chaque nuit par `purge-journaux` depuis LS-94 |
+| `src/lib/hook-journal-connexion.ts` | hook `after` de Better Auth, table des chemins de connexion, journalisation des refus de cadence, LS-80 | `BETTER_AUTH_TRUSTED_PROXIES` est lue par `proxies-de-confiance.ts` depuis LS-91 ; la constatation en production reste LS-96 |
 | `src/lib/issue-connexion.ts` | `lireResultat`, défaut fermé sur l'issue d'une tentative, **sans aucun import du projet** | aucune |
 | `src/repositories/verrou.ts` | prise de verrou atomique en une instruction, `ON CONFLICT DO UPDATE` conditionnel à l'expiration, relâchement conditionnel au détenteur, LS-72 | aucune |
 | `src/services/tache-planifiee.ts` | `executerSousVerrou`, table des tâches et durées de verrou, relâchement garanti en `finally` | **les cinq tâches travaillent**, `envoi-emails` ajoutée par LS-82. Elle tourne toutes les minutes, la plus fréquente, parce qu'elle porte un délai **vu par le client** ; son verrou de cinq minutes est plus long que les autres, l'appel réseau n'étant borné par rien côté serveur distant |
@@ -80,7 +80,7 @@ connaître avant d'écrire un service qui la recouvrirait ou la contredirait :
 | `src/repositories/sections-produit.ts` | accès aux sections, `ecrireRang` en SQL brut sous contrainte différable | aucune |
 | `src/integrations/medias/traitement.ts` | traitement des photographies : onze déclinaisons, EXIF retiré **par défaut donc invisible**, orientation, aplatissement blanc du JPEG, refus SVG et PDF sur signature, LS-102 | aucune |
 | `src/integrations/medias/stockage.ts` | volume à deux dossiers, la publication est un **déplacement** de `quarantaine/` vers `public/`, original supprimé | aucune |
-| `src/services/media.ts` | orchestration des trois effets, base, disque et traitement. **Le réordonnancement écrit le rang 1 en dernier**, l'index partiel n'étant pas différable | la purge de quarantaine n'est appelée par aucune tâche, LS-72 |
+| `src/services/media.ts` | orchestration des trois effets, base, disque et traitement. **Le réordonnancement écrit le rang 1 en dernier**, l'index partiel n'étant pas différable | aucune, la tâche `purge-quarantaine-medias` appelle la purge de quarantaine, LS-102 |
 | `src/services/variante.ts` | variantes : C2, C13, C14, refus d'unicité nommant le produit porteur, archivage qui ne touche ni le stock ni les commandes, LS-101 | aucune |
 | `src/services/variante-validation.ts` | conversion euros vers centimes **par découpage de chaîne**, invariant 1, et normalisation de la référence en majuscules | aucune |
 | `src/repositories/variante.ts` | accès aux variantes. **Aucune fonction de suppression**, C13 | aucune |
@@ -159,13 +159,16 @@ exacte, la valeur du délai, le jeton de couleur. Chacun porte un frontmatter
 | Fichier | Se charge sur |
 |---|---|
 | `database.md` | `prisma/**`, `src/repositories/**`, `src/services/**` |
-| `payments.md` | `src/integrations/stripe/**`, webhooks, checkout, commandes |
-| `legal.md` | services de rétractation et de facturation, pages légales |
+| `payments.md` | `src/integrations/stripe/**` et `pdf/**`, webhooks, les services et repositories de paiement, commande, facture et tunnel |
+| `legal.md` | facturation et rendu PDF, tunnel de commande, Mondial Relay, tarifs de livraison |
 | `frontend-design.md` | `src/app/**`, `src/components/**`, styles |
 | `securite.md` | `src/lib/**`, `src/integrations/email/**`, `src/services/autorisation.ts`, `src/services/reauthentification.ts` |
 
-Une session qui conçoit le paiement sans toucher à `src/integrations/stripe/`
-doit donc lire `payments.md` explicitement.
+Une session qui conçoit sur un domaine sans toucher aux chemins de sa règle doit
+la lire explicitement. Chaque motif `paths` doit matcher au moins un fichier
+suivi du dépôt, contrôle de `verifier-config-claude.sh` : les motifs de ces
+fichiers ont déjà pointé quatre dossiers anglais jamais créés, et `payments.md`
+ne se chargeait pas sur le service du webhook, LS-157.
 
 `frontend-design.md` renvoie vers `docs/architecture/PROTOTYPE.md`, qui n'est
 **pas** une source de vérité : il décrit une intention visuelle et perd contre un

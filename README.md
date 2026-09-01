@@ -203,7 +203,7 @@ la mention de l'article 293 B. Aucune `AlerteCritique`.
 **Le document PDF suit depuis LS-129**, livrée le 1er septembre 2026 : une
 facture émise produit son fichier après le commit du webhook, et un échec de
 rendu laisse `chemin_pdf` nul en levant une alerte plutôt qu'en annulant le
-paiement. Le **téléchargement** par le client reste à écrire, LS-131 et LS-132.
+paiement. Le **téléchargement** par le client reste à écrire, LS-57 et LS-132.
 
 ## Documentation
 
@@ -672,7 +672,8 @@ contrôle sans que personne ait à y penser.
 `verifier-config-claude.sh` contrôle ce qui dérive sans casser aucun test : un ADR
 absent de la table d'aiguillage de `docs/REFERENCES.md`, un `CLAUDE.md` au-delà de
 200 lignes, un renvoi vers un fichier inexistant, une fiche mémoire hors index, un
-journal manquant alors que du code a été commité. Un hook `Stop` le lance en fin de
+journal manquant alors que du code a été commité, un motif `paths` de règle qui ne
+matche aucun fichier suivi. Un hook `Stop` le lance en fin de
 session, et `--strict` le rend bloquant dans la chaîne d'intégration.
 
 Il vérifie aussi que **chaque hook déclaré pointe vers un script exécutable**.
@@ -747,7 +748,7 @@ documentaire ne bloque aucune fusion, et un rouge qui signifie parfois « ne pas
 fusionner » et parfois « à relire » est un rouge que l'on apprend à ignorer. Il se
 déclenche aussi à la main depuis l'onglet Actions.
 
-Il a été prouvé par quatorze mutations, toutes détectées. Le compte se mesure,
+Il a été prouvé par quinze mutations, toutes détectées. Le compte se mesure,
 `grep -cE '^\s*mutation "' scripts/verifier-config-claude-mutation.sh`, il grandit
 avec les contrôles.
 

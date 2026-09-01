@@ -27,7 +27,7 @@ import { GabaritDocument, type EnTeteDocument } from "./gabarit-document";
  *
  * DISTINCTE DE `MEDIA_RACINE`, et ce n'est pas un detail d'organisation. Les
  * medias sont servis publiquement par Nginx ; un document comptable ne doit
- * JAMAIS l'etre, son acces passant par un controle de propriete, LS-131 et
+ * JAMAIS l'etre, son acces passant par un controle de propriete, LS-57 et
  * LS-132. Les ranger sous la meme racine exposerait les factures a une URL
  * devinable le jour ou la configuration du serveur changerait.
  */

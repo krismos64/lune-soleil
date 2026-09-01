@@ -141,7 +141,8 @@ La chaîne rejoue tout avant fusion, mais attendre son verdict pour découvrir u
 erreur de frappe coûte plusieurs minutes à chaque fois :
 
 ```bash
-npm ci && npm run type-check && npm run lint && npm run test && npm run build
+npm ci && npx prisma generate   # le client Prisma n'est pas versionné
+npm run type-check && npm run lint && npm run test && npm run build
 ```
 
 La base locale se construit par `npm run db:preparer` sur un clone neuf, détail

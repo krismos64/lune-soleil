@@ -2,7 +2,6 @@
 paths:
   - "src/app/**/*.{ts,tsx}"
   - "src/components/**/*.{ts,tsx}"
-  - "src/features/**/*.{ts,tsx}"
   - "src/styles/**/*.css"
 ---
 

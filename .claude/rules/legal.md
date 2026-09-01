@@ -1,11 +1,11 @@
 ---
 paths:
-  - "src/services/retractation/**"
-  - "src/services/invoices/**"
-  - "src/services/shipping/**"
+  - "src/services/facture.ts"
+  - "src/services/document-comptable.ts"
+  - "src/integrations/pdf/**"
   - "src/integrations/mondial-relay/**"
-  - "src/app/(legal)/**"
-  - "src/app/retractation/**"
+  - "src/lib/livraison.ts"
+  - "src/app/(boutique)/commande/**"
 ---
 
 # Délais légaux et obligations d'information

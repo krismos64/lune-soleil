@@ -241,6 +241,7 @@ registre, et cité deux noms de colonnes abrégés qui n'existaient pas. Les deu
 oublis ont été attrapés à la relecture, pas à l'écriture.
 
 Le premier vérifie ce qui est mesurable : ADR absent de la table d'aiguillage,
+motif `paths` de règle ne matchant aucun fichier suivi,
 `CLAUDE.md` au-delà de 200 lignes, renvoi vers un fichier inexistant, fiche
 mémoire hors index, lien mémoire mort, journal manquant alors que du code a été
 commité, et formulations qui se périment.
