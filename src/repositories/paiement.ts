@@ -6,6 +6,7 @@
  * transaction, ADR-024 : ces ecritures sont des instructions isolees, et c'est
  * voulu.
  */
+import type { StatutPaiement } from "@/generated/prisma/enums";
 import type { ClientBase } from "@/repositories/stock";
 
 /**
@@ -128,5 +129,90 @@ export async function supprimerTentativeSansSession(
 ): Promise<void> {
   await client.paiement.deleteMany({
     where: { id: tentativeId, identifiantFournisseur: null },
+  });
+}
+
+/** Ce qu'un paiement encaisse expose pour un remboursement, LS-128. */
+export type PaiementEncaisse = {
+  id: string;
+  identifiantSession: string;
+  montantCentimes: number;
+  montantRembourseCentimes: number;
+  statut: StatutPaiement;
+};
+
+/**
+ * Le paiement encaisse d'une commande, ou `null`, LS-128.
+ *
+ * LE FILTRE PORTE LES TROIS ETATS D'ENCAISSEMENT, jamais le seul `REUSSI`,
+ * MEME PREDICAT que `paiement_reussi_unique` et `paiementEncaisseExiste`. Un
+ * paiement deja partiellement rembourse reste encaisse et reste remboursable
+ * pour le restant : filtrer sur `REUSSI` seul rendrait le second remboursement
+ * partiel introuvable, et l'exploitante lirait « aucun paiement » sur une
+ * commande payee.
+ *
+ * ELLE IGNORE LES TENTATIVES SANS SESSION : sans identifiant de session, il n'y
+ * a aucune charge a rembourser chez le prestataire.
+ */
+export async function lirePaiementEncaisse(
+  client: ClientBase,
+  commandeId: string,
+): Promise<PaiementEncaisse | null> {
+  const paiement = await client.paiement.findFirst({
+    where: {
+      commandeId,
+      statut: { in: ["REUSSI", "PARTIELLEMENT_REMBOURSE", "REMBOURSE"] },
+      identifiantFournisseur: { not: null },
+    },
+    select: {
+      id: true,
+      identifiantFournisseur: true,
+      montantCentimes: true,
+      montantRembourseCentimes: true,
+      statut: true,
+    },
+  });
+
+  if (paiement === null || paiement.identifiantFournisseur === null) {
+    return null;
+  }
+
+  return {
+    id: paiement.id,
+    identifiantSession: paiement.identifiantFournisseur,
+    montantCentimes: paiement.montantCentimes,
+    montantRembourseCentimes: paiement.montantRembourseCentimes,
+    statut: paiement.statut,
+  };
+}
+
+/**
+ * Enregistre un remboursement sur le paiement, LS-128.
+ *
+ * `montantRembourseCentimes` EST UN CUMUL, jamais un increment, meme convention
+ * que le prestataire et que le webhook de LS-119 : la colonne porte le total
+ * rendu a ce jour. L'appelant calcule ce cumul, ce qui rend les deux chemins
+ * d'ecriture, webhook et remboursement demande, coherents entre eux.
+ *
+ * LE STATUT EST DECIDE PAR L'APPELANT et non deduit ici : le seuil est
+ * l'egalite au montant encaisse, regle qui appartient au service. Un repository
+ * qui recalculerait ce statut le ferait diverger de celui du webhook le jour ou
+ * la regle changerait d'un cote seulement.
+ */
+export async function marquerRembourse(
+  client: ClientBase,
+  parametres: {
+    paiementId: string;
+    montantRembourseCentimes: number;
+    statut: StatutPaiement;
+  },
+): Promise<void> {
+  await client.paiement.update({
+    where: { id: parametres.paiementId },
+    data: {
+      statut: parametres.statut,
+      montantRembourseCentimes: parametres.montantRembourseCentimes,
+    },
+    select: { id: true },
   });
 }

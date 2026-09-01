@@ -84,6 +84,14 @@ function fournisseurDouble(): FournisseurPaiement {
     async expirerSession() {
       return "DEJA_FERMEE";
     },
+    /*
+     * `rembourser` N'EST PAS EXERCEE PAR CE FICHIER, LS-128. Elle LEVE plutot
+     * que de rendre un succes muet : un appel inattendu doit se voir, la ou un
+     * double complaisant ferait passer un remboursement fantome pour normal.
+     */
+    async rembourser(): Promise<never> {
+      throw new Error("rembourser n'a pas sa place dans ces tests");
+    },
     async lireSession(identifiant) {
       return {
         etat: "PAYEE",
