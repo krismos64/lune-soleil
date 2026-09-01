@@ -285,6 +285,7 @@ describe("critere 1, un remboursement effectif produit un avoir numerote", () =>
       commandeId,
       montantCentimes: TOTAL_CENTIMES,
       motif: "Retractation du client",
+      referenceDemande: `ref-test-1-${randomUUID()}`,
       fournisseur,
     });
 
@@ -325,6 +326,7 @@ describe("critere 1, un remboursement effectif produit un avoir numerote", () =>
       commandeId,
       montantCentimes: 2000,
       motif: "Geste commercial",
+      referenceDemande: `ref-test-2-${randomUUID()}`,
       fournisseur: fournisseurQuiRembourse(),
     });
 
@@ -366,6 +368,7 @@ describe("critere 2, la facture n'est ni modifiee ni supprimee", () => {
       commandeId,
       montantCentimes: 1500,
       motif: "Article abime",
+      referenceDemande: `ref-test-3-${randomUUID()}`,
       fournisseur: fournisseurQuiRembourse(),
     });
 
@@ -388,6 +391,7 @@ describe("critere 2, la facture n'est ni modifiee ni supprimee", () => {
       commandeId,
       montantCentimes: TOTAL_CENTIMES,
       motif: "Retractation",
+      referenceDemande: `ref-test-4-${randomUUID()}`,
       fournisseur: fournisseurQuiRembourse(),
     });
 
@@ -426,6 +430,7 @@ describe("critere 3, un refus du prestataire ne cree aucun avoir", () => {
       commandeId,
       montantCentimes: 1000,
       motif: "Tentative refusee",
+      referenceDemande: `ref-test-5-${randomUUID()}`,
       fournisseur,
     });
 
@@ -465,6 +470,7 @@ describe("critere 4, deux remboursements partiels produisent deux avoirs", () =>
       commandeId,
       montantCentimes: 2000,
       motif: "Premier remboursement partiel",
+      referenceDemande: `ref-test-6-${randomUUID()}`,
       fournisseur,
     });
 
@@ -480,6 +486,7 @@ describe("critere 4, deux remboursements partiels produisent deux avoirs", () =>
       commandeId,
       montantCentimes: TOTAL_CENTIMES - 2000,
       motif: "Solde rembourse",
+      referenceDemande: `ref-test-7-${randomUUID()}`,
       fournisseur,
     });
 
@@ -523,6 +530,7 @@ describe("critere 4, deux remboursements partiels produisent deux avoirs", () =>
       commandeId,
       montantCentimes: 2000,
       motif: "Premier",
+      referenceDemande: `ref-test-8-${randomUUID()}`,
       fournisseur,
     });
 
@@ -530,6 +538,7 @@ describe("critere 4, deux remboursements partiels produisent deux avoirs", () =>
       commandeId,
       montantCentimes: 2000,
       motif: "Second, meme montant",
+      referenceDemande: `ref-test-9-${randomUUID()}`,
       fournisseur,
     });
 
@@ -554,6 +563,7 @@ describe("critere 5, le montant ne depasse jamais le total", () => {
       commandeId,
       montantCentimes: TOTAL_CENTIMES + 1,
       motif: "Trop eleve",
+      referenceDemande: `ref-test-10-${randomUUID()}`,
       fournisseur: fournisseurQuiRembourse(),
     });
 
@@ -576,6 +586,7 @@ describe("critere 5, le montant ne depasse jamais le total", () => {
       commandeId,
       montantCentimes: 4000,
       motif: "Partiel",
+      referenceDemande: `ref-test-11-${randomUUID()}`,
       fournisseur,
     });
 
@@ -583,6 +594,7 @@ describe("critere 5, le montant ne depasse jamais le total", () => {
       commandeId,
       montantCentimes: 1000,
       motif: "Depasse le restant",
+      referenceDemande: `ref-test-12-${randomUUID()}`,
       fournisseur,
     });
 
@@ -626,6 +638,8 @@ describe("critere 7, panne du prestataire", () => {
   it("laisse la commande coherente, sans avoir, et le reessai aboutit", async () => {
     const { commandeId, factureId } = await commanderEtConfirmer();
 
+    /* LA MEME DEMANDE avant et apres la panne : l'exploitante retente son geste. */
+    const MEME_DEMANDE = `panier-puis-reessai-${randomUUID()}`;
     const avantPaiement = await lirePaiement(commandeId);
 
     const enPanne = fournisseurDouble(async () => {
@@ -636,6 +650,7 @@ describe("critere 7, panne du prestataire", () => {
       commandeId,
       montantCentimes: 1000,
       motif: "Pendant la panne",
+      referenceDemande: MEME_DEMANDE,
       fournisseur: enPanne,
     });
 
@@ -656,6 +671,7 @@ describe("critere 7, panne du prestataire", () => {
       commandeId,
       montantCentimes: 1000,
       motif: "Apres retablissement",
+      referenceDemande: MEME_DEMANDE,
       fournisseur: retabli,
     });
 
@@ -672,6 +688,8 @@ describe("critere 7, panne du prestataire", () => {
   it("rejoue la meme cle d'idempotence apres une panne", async () => {
     const { commandeId } = await commanderEtConfirmer();
 
+    /* LA MEME DEMANDE, retentee apres la panne : la cle doit etre identique. */
+    const MEME_DEMANDE = `reessai-${randomUUID()}`;
     const clesVues: string[] = [];
 
     const enPanne = fournisseurDouble(async (demande) => {
@@ -683,6 +701,7 @@ describe("critere 7, panne du prestataire", () => {
       commandeId,
       montantCentimes: 1000,
       motif: "Tentative",
+      referenceDemande: MEME_DEMANDE,
       fournisseur: enPanne,
     });
 
@@ -699,6 +718,7 @@ describe("critere 7, panne du prestataire", () => {
       commandeId,
       montantCentimes: 1000,
       motif: "Tentative",
+      referenceDemande: MEME_DEMANDE,
       fournisseur: retabli,
     });
 
@@ -723,6 +743,7 @@ describe("etats sans remboursement possible", () => {
       commandeId: issue.commandeId,
       montantCentimes: 1000,
       motif: "Commande non payee",
+      referenceDemande: `ref-test-17-${randomUUID()}`,
       fournisseur,
     });
 
@@ -751,6 +772,7 @@ describe("etats sans remboursement possible", () => {
       commandeId,
       montantCentimes: 1000,
       motif: "Ecart de montant",
+      referenceDemande: `ref-test-18-${randomUUID()}`,
       fournisseur: partiel,
     });
 
@@ -769,5 +791,111 @@ describe("etats sans remboursement possible", () => {
     expect((await lirePaiement(commandeId)).montant_rembourse_centimes).toBe(
       750,
     );
+  });
+});
+
+describe("concurrence, deux demandes identiques simultanees", () => {
+  /**
+   * LE TEST QUI MANQUAIT, et le defaut qu'il attrape coute de l'argent reel.
+   *
+   * Trouve par la revue critique le 1er septembre 2026 : la cle d'idempotence
+   * est derivee de `montantAvoirCentimes`, LU HORS TRANSACTION. Deux demandes
+   * identiques concurrentes lisent donc le meme cumul et derivent la MEME cle.
+   *
+   * L'IDEMPOTENCE DE STRIPE N'EST PAS UN VERROU : deux requetes portant la meme
+   * cle qui arrivent en parallele ne rendent pas la meme reponse, la seconde
+   * recoit `idempotency_key_in_use`. Classee en refus, elle poussait a relancer,
+   * et la relance partait avec un cumul different donc une cle differente : un
+   * SECOND remboursement REEL. Mesure, 4000 centimes rendus pour 2000 voulus.
+   *
+   * CE QUE LE TEST EXIGE : le prestataire n'est appele QU'UNE FOIS.
+   */
+  it("n'appelle le prestataire qu'une fois et n'emet qu'un seul avoir", async () => {
+    const { commandeId, factureId } = await commanderEtConfirmer();
+
+    /*
+     * LA MEME REFERENCE POUR LES DEUX APPELS : c'est ce qu'est un double clic.
+     * L'ecran engendre la reference une fois, au chargement du formulaire, et
+     * chaque envoi la reexpedie a l'identique.
+     */
+    const MEME_DEMANDE = `double-clic-${randomUUID()}`;
+    const fournisseur = fournisseurQuiRembourse();
+
+    const [a, b] = await Promise.all([
+      rembourserCommande({
+        commandeId,
+        montantCentimes: 2000,
+        motif: "Double clic, premiere",
+        referenceDemande: MEME_DEMANDE,
+        fournisseur,
+      }),
+      rembourserCommande({
+        commandeId,
+        montantCentimes: 2000,
+        motif: "Double clic, seconde",
+        referenceDemande: MEME_DEMANDE,
+        fournisseur,
+      }),
+    ]);
+
+    /*
+     * LE PRESTATAIRE N'EST APPELE QU'UNE FOIS. C'est l'assertion qui compte :
+     * elle porte sur l'argent sorti, pas sur ce que les fonctions ont rendu.
+     */
+    expect(fournisseur.appels).toHaveLength(1);
+
+    /* UN SEUL AVOIR, et le cumul vaut un seul remboursement. */
+    expect(await lireAvoirs(factureId)).toHaveLength(1);
+    expect((await lireFacture(factureId)).montant_avoir_centimes).toBe(2000);
+    expect((await lirePaiement(commandeId)).montant_rembourse_centimes).toBe(
+      2000,
+    );
+
+    /*
+     * LES DEUX ISSUES SE COMPLETENT : l'une rembourse, l'autre apprend que la
+     * demande existe deja. L'ORDRE N'EST PAS NOMME, la course n'ayant pas de
+     * gagnant previsible : nommer le gagnant rendrait le test instable.
+     */
+    const statuts = [a.statut, b.statut].sort();
+
+    expect(statuts).toEqual(["DEJA_DEMANDE", "REMBOURSE"]);
+  });
+
+  /**
+   * DEUX MONTANTS DIFFERENTS CONCURRENTS restent legitimes : ce sont deux
+   * intentions distinctes, chacune reserve la sienne. La borne F9 les rattrape
+   * si leur somme depasse, le `CHECK` etant la derniere ligne de defense.
+   */
+  it("laisse passer deux montants differents, la somme restant sous le total", async () => {
+    const { commandeId, factureId } = await commanderEtConfirmer();
+
+    const fournisseur = fournisseurQuiRembourse();
+
+    await Promise.all([
+      rembourserCommande({
+        commandeId,
+        montantCentimes: 1000,
+        motif: "Premier",
+        referenceDemande: `ref-test-21-${randomUUID()}`,
+        fournisseur,
+      }),
+      rembourserCommande({
+        commandeId,
+        montantCentimes: 1500,
+        motif: "Second",
+        referenceDemande: `ref-test-22-${randomUUID()}`,
+        fournisseur,
+      }),
+    ]);
+
+    expect(fournisseur.appels).toHaveLength(2);
+
+    const avoirs = await lireAvoirs(factureId);
+
+    expect(avoirs).toHaveLength(2);
+    expect(
+      avoirs.reduce((somme, avoir) => somme + avoir.montant_centimes, 0),
+    ).toBe(2500);
+    expect((await lireFacture(factureId)).montant_avoir_centimes).toBe(2500);
   });
 });

@@ -214,3 +214,117 @@ export async function listerAvoirsDeFacture(
     select: { id: true, numero: true, montantCentimes: true },
   });
 }
+
+/**
+ * Reserve une intention de remboursement, LS-128, AVANT tout appel au
+ * prestataire.
+ *
+ * ELLE REND `false` SI L'INTENTION EXISTE DEJA, et c'est tout le mecanisme.
+ * L'unicite `(facture_id, cle_idempotence)` fait que deux demandes identiques
+ * concurrentes ne peuvent pas reserver toutes les deux : la seconde apprend
+ * qu'un appel est deja parti pour cette intention, et n'appelle jamais le
+ * prestataire.
+ *
+ * SANS ELLE, LES DEUX PARTAIENT. La cle etant derivee d'un cumul LU hors
+ * transaction, deux executions concurrentes lisaient la meme valeur et
+ * derivaient la meme cle. L'idempotence de Stripe n'est pas un verrou : deux
+ * requetes portant la meme cle qui arrivent EN PARALLELE ne rendent pas la meme
+ * reponse, la seconde recoit `idempotency_key_in_use`. Classee en refus, elle
+ * poussait a relancer, et la relance partait avec un cumul different donc une
+ * cle differente : un second remboursement REEL. Mesure par la revue critique
+ * le 1er septembre 2026, 4000 centimes rendus pour 2000 voulus.
+ *
+ * ELLE OUVRE SA PROPRE TRANSACTION, COURTE, et le commit precede l'appel
+ * reseau. Tenir la transaction pendant l'appel garderait un verrou de ligne sur
+ * toute la duree de l'aller-retour, ce que `database.md` interdit.
+ *
+ * `P2002` EST UN CAS METIER ICI, PAS UNE PANNE : il signifie « quelqu'un a deja
+ * lance exactement ce remboursement ». Il est rattrape et traduit en valeur,
+ * jamais propage.
+ */
+export async function reserverIntentionRemboursement(
+  client: ClientBase,
+  parametres: {
+    factureId: string;
+    cleIdempotence: string;
+    montantCentimes: number;
+  },
+): Promise<{ reservee: boolean; intentionId: string | null }> {
+  try {
+    const intention = await client.intentionRemboursement.create({
+      data: {
+        factureId: parametres.factureId,
+        cleIdempotence: parametres.cleIdempotence,
+        montantCentimes: parametres.montantCentimes,
+      },
+      select: { id: true },
+    });
+
+    return { reservee: true, intentionId: intention.id };
+  } catch (erreur) {
+    /*
+     * LE CODE EST TESTE SUR LA FORME PRISMA, `P2002`. Le nom de la contrainte
+     * n'est pas confronte : une seule unicite existe sur cette table, et
+     * exiger le nom rendrait le rattrapage muet si la contrainte etait
+     * renommee, ce qui rouvrirait le double remboursement en silence.
+     */
+    if (
+      typeof erreur === "object" &&
+      erreur !== null &&
+      "code" in erreur &&
+      (erreur as { code: unknown }).code === "P2002"
+    ) {
+      return { reservee: false, intentionId: null };
+    }
+
+    throw erreur;
+  }
+}
+
+/**
+ * Marque une intention aboutie, le prestataire ayant rendu l'argent.
+ *
+ * ELLE N'EST PAS DANS LA MEME TRANSACTION QUE L'APPEL, qui n'en a pas. Une
+ * intention qui reste sans `aboutieA` est un appel dont personne ne sait s'il
+ * est parti : cet etat sort par une alerte et jamais par un rejeu muet, meme
+ * regle que `ENVOI_EN_COURS` de l'outbox.
+ */
+export async function marquerIntentionAboutie(
+  client: ClientBase,
+  intentionId: string,
+  maintenant: Date = new Date(),
+): Promise<void> {
+  await client.intentionRemboursement.update({
+    where: { id: intentionId },
+    data: { aboutieA: maintenant },
+    select: { id: true },
+  });
+}
+
+/**
+ * Libere une intention dont l'appel n'a PAS abouti, LS-128.
+ *
+ * ELLE N'EXISTE QUE POUR LE REFUS ET L'INDISPONIBILITE, deux cas ou le
+ * prestataire a repondu sans rien rendre, ou n'a pas repondu du tout. Sans
+ * elle, l'intention resterait reservee et toute nouvelle tentative sortirait en
+ * « deja demande » : une panne reseau rendrait le remboursement DEFINITIVEMENT
+ * impossible, ce qu'un test de reessai a montre.
+ *
+ * ELLE EXIGE `aboutieA: null`, ET C'EST LA GARDE QUI COMPTE. Une intention
+ * aboutie ne se libere JAMAIS : l'argent est parti, et rouvrir la cle
+ * autoriserait un second appel identique, c'est-a-dire le double remboursement
+ * que cette table existe pour fermer. `deleteMany` rend alors zero ligne
+ * touchee plutot que de lever, et l'appelant n'a rien a rattraper.
+ *
+ * LA SUPPRESSION EST LEGITIME ICI, contrairement aux documents comptables : une
+ * intention non aboutie ne prouve rien et n'est opposable a personne. Ce qui
+ * doit survivre est l'argent sorti, porte par l'avoir et par `aboutieA`.
+ */
+export async function libererIntentionNonAboutie(
+  client: ClientBase,
+  intentionId: string,
+): Promise<void> {
+  await client.intentionRemboursement.deleteMany({
+    where: { id: intentionId, aboutieA: null },
+  });
+}
