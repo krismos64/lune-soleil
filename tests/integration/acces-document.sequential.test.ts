@@ -34,6 +34,9 @@ let client: Client;
 let passerCommande: typeof import("@/services/commande").passerCommande;
 let traiterEvenementPaiement: typeof import("@/services/webhook-paiement").traiterEvenementPaiement;
 let autoriserAccesDocument: typeof import("@/services/acces-document").autoriserAccesDocument;
+let reemettreJetonDocument: typeof import("@/services/acces-document").reemettreJetonDocument;
+let emettreFacture: typeof import("@/services/facture").emettreFacture;
+let prisma: typeof import("@/lib/prisma").prisma;
 let engendrerJeton: typeof import("@/lib/jeton-acces").engendrerJeton;
 let empreinteJeton: typeof import("@/lib/jeton-acces").empreinteJeton;
 
@@ -181,6 +184,7 @@ beforeAll(async () => {
 
   process.env.DATABASE_URL = url;
   process.env.BETTER_AUTH_SECRET = SECRET_TEST;
+  process.env.NEXT_PUBLIC_SITE_URL = "https://test.example.invalid";
 
   process.env.FACTURE_RAISON_SOCIALE = EMETTEUR_TEST.raisonSociale;
   process.env.FACTURE_SIRET = EMETTEUR_TEST.siret;
@@ -192,7 +196,10 @@ beforeAll(async () => {
 
   ({ passerCommande } = await import("@/services/commande"));
   ({ traiterEvenementPaiement } = await import("@/services/webhook-paiement"));
-  ({ autoriserAccesDocument } = await import("@/services/acces-document"));
+  ({ autoriserAccesDocument, reemettreJetonDocument } =
+    await import("@/services/acces-document"));
+  ({ emettreFacture } = await import("@/services/facture"));
+  ({ prisma } = await import("@/lib/prisma"));
   ({ engendrerJeton, empreinteJeton } = await import("@/lib/jeton-acces"));
 });
 
@@ -586,5 +593,213 @@ describe("etats du document", () => {
     expect(rows.map((ligne) => ligne.empreinte)).toContain(
       empreinteJeton(valeur),
     );
+  });
+});
+
+describe("le jeton emis par la production ouvre reellement l'acces", () => {
+  /**
+   * LE TEST QUI RELIE LES DEUX MOITIES, defaut 3 de la revue critique du
+   * 1er septembre 2026. Les autres tests d'acces posent leur propre jeton : si
+   * `emettreFacture` ecrivait la mauvaise portee ou une expiration passee, ils
+   * resteraient verts. Celui-ci part de la valeur rendue par le service.
+   */
+  it("autorise avec la valeur rendue par emettreFacture", async () => {
+    const { varianteId } = await creerVarianteEnStock(client);
+
+    const issue = await passerCommande({
+      lignesCookie: [{ varianteId, quantite: 1 }],
+      saisie: SAISIE_DOMICILE,
+      configuration: CONFIGURATION,
+    });
+
+    /*
+     * L'EMISSION EST APPELEE DANS SA TRANSACTION, comme le webhook le fait.
+     * L'appeler hors transaction marcherait ici, mais s'ecarterait du chemin
+     * reel et masquerait un ordre de verrou faux.
+     */
+    const emise = await prisma.$transaction(async (transaction) => {
+      const commande = await transaction.commande.findUniqueOrThrow({
+        where: { id: issue.commandeId },
+        select: {
+          id: true,
+          numero: true,
+          nomClient: true,
+          emailNormalise: true,
+          adresseFacturation: true,
+          sousTotalCentimes: true,
+          fraisPortCentimes: true,
+          totalCentimes: true,
+          creeA: true,
+          lignes: {
+            select: {
+              referenceFigee: true,
+              libelleProduitFige: true,
+              libelleVarianteFige: true,
+              prixFigeCentimes: true,
+              quantite: true,
+            },
+          },
+        },
+      });
+
+      return emettreFacture(transaction, commande);
+    });
+
+    expect(emise.jetonAcces).toBeDefined();
+
+    if (emise.jetonAcces === undefined) {
+      throw new Error("l'emission n'a rendu aucune valeur de jeton");
+    }
+
+    await poserCheminPdf(emise.id);
+
+    const acces = await autoriserAccesDocument(emise.jetonAcces);
+
+    expect(acces.statut).toBe("AUTORISE");
+
+    if (acces.statut !== "AUTORISE") {
+      throw new Error("le jeton emis par la production n'ouvre pas l'acces");
+    }
+
+    expect(acces.factureId).toBe(emise.id);
+  });
+});
+
+describe("reemission d'un jeton de document, regle L10", () => {
+  /**
+   * LE CAS QUI N'AVAIT AUCUNE ISSUE, defauts 1 et 2 de la revue critique. La
+   * valeur n'existe qu'a sa creation : un rejeu d'evenement, un email en echec
+   * ou un lien parti sur la mauvaise adresse laissaient la commande sans acces
+   * pour toujours.
+   */
+  it("emet un jeton neuf qui ouvre l'acces", async () => {
+    const { commandeId, factureId } = await commanderEtConfirmer();
+    await poserCheminPdf(factureId);
+
+    const reemis = await prisma.$transaction(async (transaction) =>
+      reemettreJetonDocument(transaction, commandeId),
+    );
+
+    const acces = await autoriserAccesDocument(reemis.valeur);
+
+    expect(acces.statut).toBe("AUTORISE");
+
+    if (acces.statut !== "AUTORISE") {
+      throw new Error("le jeton reemis n'ouvre pas l'acces");
+    }
+
+    expect(acces.factureId).toBe(factureId);
+    expect(reemis.lien).toContain(reemis.valeur);
+  });
+
+  /**
+   * LE COEUR DE LA REEMISSION. Sans revocation, l'ancien lien reste valide
+   * jusqu'a son terme : sur une boite partagee, le premier destinataire garde
+   * l'acces a la facture. C'est le defaut que le point 8 des transactions
+   * critiques decrit pour l'invitation d'avis.
+   */
+  it("revoque l'ancien jeton, qui cesse d'ouvrir l'acces", async () => {
+    const { commandeId, factureId } = await commanderEtConfirmer();
+    await poserCheminPdf(factureId);
+
+    const ancien = await poserJeton(commandeId);
+
+    expect((await autoriserAccesDocument(ancien)).statut).toBe("AUTORISE");
+
+    const reemis = await prisma.$transaction(async (transaction) =>
+      reemettreJetonDocument(transaction, commandeId),
+    );
+
+    /* L'ANCIEN NE VAUT PLUS, le neuf vaut. */
+    expect((await autoriserAccesDocument(ancien)).statut).toBe("REFUSE");
+    expect((await autoriserAccesDocument(reemis.valeur)).statut).toBe(
+      "AUTORISE",
+    );
+  });
+
+  /**
+   * REGLE L10 : la revocation renseigne `revoqueA` et JAMAIS `utiliseA`. Les
+   * confondre ferait passer un lien remplace pour un lien deja consomme.
+   */
+  it("revoque par revoqueA, sans toucher utiliseA ni expireA", async () => {
+    const { commandeId, factureId } = await commanderEtConfirmer();
+    await poserCheminPdf(factureId);
+
+    const { rows: avant } = await client.query<{
+      id: string;
+      expire_a: Date;
+    }>(
+      "SELECT id, expire_a FROM jeton_acces WHERE commande_id = $1 AND revoque_a IS NULL",
+      [commandeId],
+    );
+
+    await prisma.$transaction(async (transaction) =>
+      reemettreJetonDocument(transaction, commandeId),
+    );
+
+    for (const initial of avant) {
+      const { rows } = await client.query<{
+        utilise_a: Date | null;
+        revoque_a: Date | null;
+        expire_a: Date;
+      }>(
+        "SELECT utilise_a, revoque_a, expire_a FROM jeton_acces WHERE id = $1",
+        [initial.id],
+      );
+
+      const apres = rows[0];
+
+      if (apres === undefined) {
+        throw new Error(
+          "le jeton revoque a disparu, la suppression est interdite",
+        );
+      }
+
+      expect(apres.revoque_a).not.toBeNull();
+      expect(apres.utilise_a).toBeNull();
+      /* `expireA` est immuable, regle L11 : la revocation ne l'ecrase pas. */
+      expect(apres.expire_a.getTime()).toBe(initial.expire_a.getTime());
+    }
+  });
+
+  /**
+   * LA REEMISSION NE TOUCHE QUE LA COMMANDE VISEE. Revoquer trop large
+   * fermerait l'acces de clients qui n'ont rien demande.
+   */
+  it("ne revoque pas les jetons d'une autre commande", async () => {
+    const premiere = await commanderEtConfirmer();
+    await poserCheminPdf(premiere.factureId);
+
+    const seconde = await commanderEtConfirmer();
+    await poserCheminPdf(seconde.factureId);
+
+    const jetonSeconde = await poserJeton(seconde.commandeId);
+
+    await prisma.$transaction(async (transaction) =>
+      reemettreJetonDocument(transaction, premiere.commandeId),
+    );
+
+    expect((await autoriserAccesDocument(jetonSeconde)).statut).toBe(
+      "AUTORISE",
+    );
+  });
+
+  /**
+   * LE COMPTE DE REVOCATIONS EST RENDU, ce qui distingue une reemission qui
+   * remplace un lien actif d'une reemission qui comble un trou.
+   */
+  it("rend le nombre de jetons revoques", async () => {
+    const { commandeId, factureId } = await commanderEtConfirmer();
+    await poserCheminPdf(factureId);
+
+    /* Un jeton vient de l'emission, deux sont ajoutes ici. */
+    await poserJeton(commandeId);
+    await poserJeton(commandeId);
+
+    const reemis = await prisma.$transaction(async (transaction) =>
+      reemettreJetonDocument(transaction, commandeId),
+    );
+
+    expect(reemis.revoques).toBe(3);
   });
 });
