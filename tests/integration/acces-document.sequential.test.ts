@@ -324,18 +324,59 @@ describe("acces autorise, cas nominal", () => {
 });
 
 describe("les quatre conditions, chacune separement, regle L9", () => {
-  /** CONDITION 1 sur 4 : MODIFIE. Elle se teste sans toucher la base. */
+  /**
+   * CONDITION 1 sur 4 : MODIFIE, et ce test a demande deux versions.
+   *
+   * LA PREMIERE NE PROUVAIT RIEN, mesure par mutation le 1er septembre 2026 :
+   * elle alterait la valeur puis la presentait telle quelle. Or l'empreinte
+   * porte sur la valeur COMPLETE : la modifier change l'empreinte, donc le
+   * jeton devient INTROUVABLE en base et le refus vient de la, jamais de la
+   * signature. Neutraliser `signatureJetonValide` laissait le test VERT.
+   *
+   * LA VERSION JUSTE POSE EN BASE L'EMPREINTE DE LA VALEUR MODIFIEE. La ligne
+   * existe donc, la portee est bonne, l'expiration est bonne, rien n'est
+   * consomme ni revoque : la signature est le SEUL motif de refus possible.
+   * C'est ce qui rend le test sensible a la garde qu'il pretend verifier.
+   */
   it("refuse un jeton dont la valeur a ete modifiee", async () => {
     const { commandeId, factureId } = await commanderEtConfirmer();
     await poserCheminPdf(factureId);
 
-    const valeur = await poserJeton(commandeId);
+    const valeur = engendrerJeton().valeur;
     const separateur = valeur.lastIndexOf(".");
     const alea = valeur.slice(0, separateur);
     const signature = valeur.slice(separateur + 1);
     const modifie = `${alea.slice(0, -1)}${alea.at(-1) === "A" ? "B" : "A"}.${signature}`;
 
+    /*
+     * L'EMPREINTE INSCRITE EST CELLE DU JETON MODIFIE : la lecture par
+     * empreinte le TROUVE, et seule la signature peut encore le refuser.
+     */
+    await client.query(
+      `INSERT INTO jeton_acces (id, commande_id, empreinte, portee, expire_a)
+       VALUES ($1, $2, $3, 'DOCUMENT'::"PorteeJeton", $4)`,
+      [
+        randomUUID(),
+        commandeId,
+        empreinteJeton(modifie),
+        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      ],
+    );
+
+    /* LE TEMOIN : la meme valeur correctement signee est ACCEPTEE. */
+    await client.query(
+      `INSERT INTO jeton_acces (id, commande_id, empreinte, portee, expire_a)
+       VALUES ($1, $2, $3, 'DOCUMENT'::"PorteeJeton", $4)`,
+      [
+        randomUUID(),
+        commandeId,
+        empreinteJeton(valeur),
+        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      ],
+    );
+
     expect((await autoriserAccesDocument(modifie)).statut).toBe("REFUSE");
+    expect((await autoriserAccesDocument(valeur)).statut).toBe("AUTORISE");
   });
 
   /** CONDITION 2 sur 4 : EXPIRE. */
