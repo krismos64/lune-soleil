@@ -182,3 +182,34 @@ export async function poserCheminPdfFacture(
     select: { cheminPdf: true },
   });
 }
+
+/** Ce qu'il faut pour servir un document deja rendu, LS-132. */
+export type FactureAServir = {
+  id: string;
+  numero: string;
+  /** Nul tant qu'aucun rendu n'a abouti, regle F8 : il n'y a alors rien a servir. */
+  cheminPdf: string | null;
+};
+
+/**
+ * Retrouve la facture d'une commande pour la servir, LS-132.
+ *
+ * DISTINCTE DE `lireFactureDeCommande`, qui rend le montant pour decider d'une
+ * emission, et de `lireFactureARendre`, qui part d'un identifiant de facture et
+ * rend l'instantane complet pour le gabarit. Servir un fichier ne demande ni le
+ * montant ni l'instantane : les charger exposerait l'identite du client a un
+ * chemin qui n'en a pas besoin.
+ *
+ * ELLE PART DE LA COMMANDE parce que c'est le jeton qui designe la commande,
+ * regle L11. Le controle de propriete est ainsi structurel : aucun identifiant
+ * de facture ne circule, donc aucun ne peut etre substitue, invariant 2.
+ */
+export async function lireFactureAServir(
+  client: ClientBase,
+  commandeId: string,
+): Promise<FactureAServir | null> {
+  return client.facture.findUnique({
+    where: { commandeId },
+    select: { id: true, numero: true, cheminPdf: true },
+  });
+}

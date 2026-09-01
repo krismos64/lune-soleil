@@ -18,6 +18,8 @@
  * qu'une facture ne se recree pas.
  */
 import { reserverNumero } from "@/repositories/commande";
+import { engendrerJeton, expirationDocument } from "@/lib/jeton-acces";
+import { ecrireJeton } from "@/repositories/jeton-acces";
 import { ecrireFacture, lireFactureDeCommande } from "@/repositories/facture";
 import type { FactureEmise } from "@/repositories/facture";
 import type { ClientBase } from "@/repositories/stock";
@@ -81,6 +83,21 @@ export function lireEmetteur(): EmetteurFacture {
   return resultat.data;
 }
 
+/**
+ * Ce que l'emission rend : la facture, et la valeur du jeton quand il vient
+ * d'etre cree.
+ *
+ * `jetonAcces` EST ABSENT SUR UN REJEU, et cette asymetrie est voulue. La
+ * valeur n'existe qu'a l'instant de sa creation, l'empreinte seule etant
+ * conservee : un rejeu ne peut donc pas la reproduire, et pretendre le
+ * contraire supposerait de stocker le jeton en clair, ce que la regle L5
+ * interdit.
+ */
+export type FactureEmiseAvecAcces = FactureEmise & {
+  /** Valeur en clair, a transmettre puis oublier. Absente sur un rejeu. */
+  jetonAcces?: string;
+};
+
 /** Ce que la commande apporte au document, deja fige par elle. */
 export type CommandeAFacturer = {
   id: string;
@@ -126,7 +143,7 @@ export type CommandeAFacturer = {
 export async function emettreFacture(
   client: ClientBase,
   commande: CommandeAFacturer,
-): Promise<FactureEmise> {
+): Promise<FactureEmiseAvecAcces> {
   const existante = await lireFactureDeCommande(client, commande.id);
 
   if (existante !== null) {
@@ -142,12 +159,39 @@ export async function emettreFacture(
   const { annee, rang } = await reserverNumero(client, "FACTURE");
   const numero = `F-${annee}-${String(rang).padStart(4, "0")}`;
 
-  return ecrireFacture(client, {
+  const facture = await ecrireFacture(client, {
     commandeId: commande.id,
     numero,
     montantTotalCentimes: commande.totalCentimes,
     instantaneLegal,
   });
+
+  /*
+   * LE JETON D'ACCES NAIT AVEC LA FACTURE, LS-132, DANS CETTE TRANSACTION. Un
+   * achat sans compte produit un document que le client doit pouvoir lire :
+   * sans session, l'autorisation ne peut venir que d'un jeton signe,
+   * invariant 2. L'ecrire par un chemin separe laisserait exister des factures
+   * sans moyen d'acces, decouvertes une par une par des clients qui reclament.
+   *
+   * SEULE L'EMPREINTE EST ECRITE, regle L5. La valeur ressort vers l'appelant,
+   * qui la transmet par email, LS-82, et ne la conserve nulle part : une fuite
+   * de la table ne donne aucun acces.
+   *
+   * LE CHEMIN DE SORTIE ANTICIPE PLUS HAUT LE COUVRE AUSSI. Un rejeu trouve la
+   * facture existante et ressort avant d'arriver ici, donc n'engendre pas un
+   * second jeton : `facture (commande_id)` etant unique, un jeton par rejeu
+   * s'accumulerait sans que rien ne le borne.
+   */
+  const jeton = engendrerJeton();
+
+  await ecrireJeton(client, {
+    commandeId: commande.id,
+    empreinte: jeton.empreinte,
+    portee: "DOCUMENT",
+    expireA: expirationDocument(),
+  });
+
+  return { ...facture, jetonAcces: jeton.valeur };
 }
 
 /**

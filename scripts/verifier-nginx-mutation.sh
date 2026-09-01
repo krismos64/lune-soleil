@@ -129,6 +129,14 @@ cas "BETTER_AUTH_TRUSTED_PROXIES retiree de .env.example" "$ENVEX" \
 cas "BETTER_AUTH_TRUSTED_PROXIES renseignee avec une plage large" "$ENVEX" \
   's/\nBETTER_AUTH_TRUSTED_PROXIES=\n/\nBETTER_AUTH_TRUSTED_PROXIES=172.16.0.0\/12\n/'
 
+# Cas 7 : UN EMPLACEMENT STATIQUE EXPOSE LES DOCUMENTS COMPTABLES, LS-132
+# critere 6. C'est le contournement le plus direct du jeton signe : la facture
+# devient lisible par son URL, sans expiration, sans revocation et sans
+# controle de propriete, et rien dans le code applicatif ne le montre. Le
+# defaut vit entierement dans la configuration du serveur.
+cas "alias Nginx vers le volume des documents" "$CONF" \
+  's/    location \/ \{/    location \/documents\/ \{\n        alias \/var\/lib\/lune-soleil\/documents\/;\n    \}\n\n    location \/ \{/'
+
 echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then
