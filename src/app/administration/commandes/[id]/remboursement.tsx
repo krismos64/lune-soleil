@@ -64,6 +64,23 @@ export function Remboursement({
   );
   const [motif, setMotif] = useState("");
 
+  /*
+   * LA REFERENCE EST BRULEE DES QU'ELLE A SERVI, et le bouton se ferme avec
+   * elle. C'est le defaut releve par `ls-frontend-revue` le 1er septembre 2026.
+   *
+   * SANS CELA, LE FORMULAIRE RESTE OUVERT SUR UNE REFERENCE CONSOMMEE. Une
+   * exploitante qui rembourse 20 € puis decide d'en rendre 10 de plus change le
+   * montant, clique, et reçoit « cette demande est deja partie » : son second
+   * geste, pourtant different, n'atteint jamais le prestataire, et le montant
+   * modifie est ignore en silence. La reference est figee par le rendu serveur,
+   * elle ne se renouvelle qu'au rafraichissement.
+   *
+   * ELLE SE FERME AUSSI SUR `DEJA_DEMANDE` : dans les deux cas la reference a
+   * servi, et l'ecran affiche de toute facon un etat perime, `revalidatePath`
+   * ne remontant pas jusqu'a un composant client deja monte.
+   */
+  const [demandeConsommee, setDemandeConsommee] = useState(false);
+
   function envoyer(evenement: React.FormEvent<HTMLFormElement>) {
     evenement.preventDefault();
 
@@ -84,14 +101,17 @@ export function Remboursement({
        */
       switch (resultat.statut) {
         case "SUCCES":
+          setDemandeConsommee(true);
           setMessage({
             texte:
               `Remboursement effectué, ${formaterMontant(resultat.montantCentimes)}. ` +
-              `Avoir ${resultat.numeroAvoir} émis. Rafraîchir la page.`,
+              `Avoir ${resultat.numeroAvoir} émis. Rafraîchir la page pour ` +
+              "voir le restant à jour, ou pour rembourser à nouveau.",
             erreur: false,
           });
           break;
         case "DEJA_DEMANDE":
+          setDemandeConsommee(true);
           setMessage({
             texte:
               "Cette demande est déjà partie, aucun second remboursement " +
@@ -175,19 +195,6 @@ export function Remboursement({
 
   return (
     <div>
-      {avoirs.length === 0 ? (
-        <p className={styles.vide}>Aucun avoir émis sur cette commande.</p>
-      ) : (
-        <ul className={styles.listeAvoirs}>
-          {avoirs.map((avoir) => (
-            <li key={avoir.id} className={styles.avoir}>
-              <span>Avoir {avoir.numero}</span>
-              <span>{formaterMontant(avoir.montantCentimes)}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-
       {factureAbsente ? (
         /*
          * SANS FACTURE, AUCUN FORMULAIRE. Un avoir reference une facture :
@@ -227,7 +234,7 @@ export function Remboursement({
               inputMode="decimal"
               value={montant}
               onChange={(evenement) => setMontant(evenement.target.value)}
-              disabled={enCours}
+              disabled={enCours || demandeConsommee}
               required
               aria-describedby="message-remboursement"
             />
@@ -241,9 +248,21 @@ export function Remboursement({
               type="text"
               value={motif}
               onChange={(evenement) => setMotif(evenement.target.value)}
-              disabled={enCours}
+              disabled={enCours || demandeConsommee}
               required
-              maxLength={200}
+              /*
+               * PAS DE `maxLength`, ET C'EST DELIBERE. Il bloque la frappe SANS
+               * AUCUN RETOUR : le champ cesse simplement d'accepter les
+               * caracteres. Sur un motif qui finit sur un document comptable
+               * opposable, la coupure se lit sur l'avoir remis au client,
+               * en pleine phrase.
+               *
+               * LE SERVEUR REFUSE ET LE DIT, message a l'appui, ce qui est le
+               * seul retour que l'exploitante puisse corriger. Le controle
+               * cote serveur reste la borne qui fait autorite, invariant 7 :
+               * `maxLength` n'en est de toute facon pas une, une Server Action
+               * etant invocable sans passer par ce champ.
+               */
               /*
                * LE MOTIF ENTRE DANS L'INSTANTANE LEGAL DE L'AVOIR, document
                * opposable : le dire evite un motif interne du type « client
@@ -256,10 +275,51 @@ export function Remboursement({
             </p>
           </div>
 
-          <button type="submit" className={styles.bouton} disabled={enCours}>
+          <button
+            type="submit"
+            className={styles.bouton}
+            disabled={enCours || demandeConsommee}
+            /*
+             * LE BOUTON PORTE LE RATTACHEMENT, comme sur les deux ecrans
+             * voisins, et pas seulement les champs. C'est ici qu'on revient
+             * apres un refus, et deux issues n'ont AUCUN rapport avec un
+             * champ : le refus du prestataire et son indisponibilite. Une
+             * annonce polie passe une fois, et rien ne ramenerait au message.
+             */
+            aria-describedby="message-remboursement"
+          >
             {enCours ? "Remboursement en cours…" : "Rembourser"}
           </button>
         </form>
+      )}
+
+      {/*
+       * LES AVOIRS VIENNENT APRES LE GESTE, ET NON AVANT, correction du
+       * 1er septembre 2026 relevee par `ls-frontend-revue`.
+       *
+       * PLACEE EN TETE, LA LISTE REPOUSSAIT SOUS LA LIGNE DE FLOTTAISON ce qui
+       * decide du geste : le restant remboursable et l'avertissement
+       * d'irreversibilite. `frontend-design.md` demande l'inverse, et a 320 px
+       * plusieurs avoirs suffisaient a occuper l'ecran entier.
+       *
+       * SON ETAT VIDE A DISPARU, et pas seulement par economie de place. Sans
+       * facture, il ne peut STRUCTURELLEMENT exister aucun avoir : afficher
+       * « aucun avoir émis » presentait comme un etat vide ordinaire ce qui est
+       * un etat impossible, et laissait lire « rien n'a encore ete fait, on peut
+       * y aller » juste avant d'apprendre qu'aucun geste n'est possible.
+       */}
+      {avoirs.length > 0 && (
+        <>
+          <h3 className={styles.titreHistorique}>Avoirs émis</h3>
+          <ul className={styles.listeAvoirs}>
+            {avoirs.map((avoir) => (
+              <li key={avoir.id} className={styles.avoir}>
+                <span>Avoir {avoir.numero}</span>
+                <span>{formaterMontant(avoir.montantCentimes)}</span>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
 
       {/*
@@ -274,7 +334,20 @@ export function Remboursement({
         id="message-remboursement"
         className={`${styles.message} ${message?.erreur === true ? styles.messageErreur : ""}`}
         role="status"
-        aria-label="Résultat du remboursement"
+        /*
+         * PAS D'`aria-label` ICI, ET C'EST DELIBERE. Il ANNULERAIT la
+         * description : le calcul du nom accessible consulte `aria-label` avant
+         * le contenu textuel, donc un champ pointant ici par
+         * `aria-describedby` s'annoncerait « Montant en euros, Résultat du
+         * remboursement » sans jamais lire « Montant trop élevé, il reste
+         * 20,00 € remboursables ».
+         *
+         * L'ECRAN VOISIN EN PORTE UN, et sa justification ne tient pas :
+         * `aria-label` ne change rien a l'annonce d'une mise a jour de
+         * `role="status"`, seul le CONTENU etant vocalise. Relevé par
+         * `ls-frontend-revue` le 1er septembre 2026, et le meme defaut vit dans
+         * `document-facture.tsx`, hors perimetre de cette story.
+         */
       >
         {enCours ? "Remboursement en cours…" : (message?.texte ?? "")}
       </p>

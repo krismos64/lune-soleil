@@ -203,16 +203,49 @@ export async function marquerRembourse(
   client: ClientBase,
   parametres: {
     paiementId: string;
-    montantRembourseCentimes: number;
-    statut: StatutPaiement;
+    /** Ce qui vient d'etre rendu, JAMAIS le cumul. Voir ci-dessous. */
+    montantRenduCentimes: number;
+    montantEncaisseCentimes: number;
   },
-): Promise<void> {
-  await client.paiement.update({
+): Promise<{ cumulCentimes: number; statut: StatutPaiement }> {
+  /*
+   * LE CUMUL S'INCREMENTE, IL NE S'ECRIT PAS EN VALEUR ABSOLUE.
+   *
+   * DEFAUT MESURE LE 1er SEPTEMBRE 2026, LS-160 : deux remboursements partiels
+   * concurrents de 1000 et 2000 laissaient le paiement a 2000 au lieu de 3000.
+   * Le service lisait le cumul AU DEBUT, hors transaction, puis ecrivait
+   * `cumulLu + montantRendu` : les deux lisaient zero, et la seconde ecriture
+   * ECRASAIT la premiere. Le paiement affichait alors MOINS que ce qui etait
+   * reellement sorti, et rien ne le signalait.
+   *
+   * `increment` FAIT CALCULER LA BASE, sur la valeur au moment de l'ecriture et
+   * non sur une lecture qui peut avoir vieilli. C'est deja ce que `ecrireAvoir`
+   * fait pour `facture.montantAvoirCentimes`, et l'ecart entre les deux etait
+   * precisement le defaut.
+   */
+  const paiement = await client.paiement.update({
     where: { id: parametres.paiementId },
     data: {
-      statut: parametres.statut,
-      montantRembourseCentimes: parametres.montantRembourseCentimes,
+      montantRembourseCentimes: { increment: parametres.montantRenduCentimes },
     },
+    select: { montantRembourseCentimes: true },
+  });
+
+  /*
+   * LE STATUT SE DECIDE SUR LE CUMUL RENDU PAR L'INCREMENT, jamais sur une
+   * valeur calculee avant. Le seuil est l'egalite au montant ENCAISSE, meme
+   * regle que le webhook de LS-119.
+   */
+  const statut: StatutPaiement =
+    paiement.montantRembourseCentimes >= parametres.montantEncaisseCentimes
+      ? "REMBOURSE"
+      : "PARTIELLEMENT_REMBOURSE";
+
+  await client.paiement.update({
+    where: { id: parametres.paiementId },
+    data: { statut },
     select: { id: true },
   });
+
+  return { cumulCentimes: paiement.montantRembourseCentimes, statut };
 }
