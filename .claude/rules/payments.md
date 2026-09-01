@@ -1,6 +1,7 @@
 ---
 paths:
   - "src/integrations/stripe/**"
+  - "src/integrations/pdf/**"
   - "src/app/api/webhooks/**"
   - "src/services/checkout/**"
   - "src/services/orders/**"
@@ -183,6 +184,37 @@ Code général des impôts`. Aucune ligne de TVA, l'entreprise est en franchise 
 base.
 
 Une facture existante est renvoyée, jamais recréée.
+
+### Le rendu PDF, ADR-034
+
+`Facture.cheminPdf` et `Avoir.cheminPdf` sont **nullables, et c'est le mécanisme
+de détection** : le champ nul est l'état « PDF en échec », qui lève une
+`AlerteCritique`. Le document existe donc en base **avec son numéro avant que le
+fichier existe**, et l'invariant 4 porte sur l'instantané, pas sur le fichier.
+
+**Le rendu s'exécute APRÈS le commit, jamais dans la transaction.** C'est une
+écriture disque : l'y placer tiendrait la transaction du webhook pendant une
+entrée-sortie, et un disque plein l'avorterait, perdant le paiement et le
+mouvement de stock pour un fichier manquant. Un échec laisse `cheminPdf` nul,
+lève l'alerte et n'annule rien.
+
+**Une régénération ne réattribue jamais de numéro.** Elle ne modifie que
+`cheminPdf`, le seul `update` autorisé sur une facture.
+
+**Le gabarit ne lit que l'instantané légal.** Il ne reçoit aucun identifiant qui
+lui permettrait de remonter au catalogue : une facture émise ne change pas parce
+qu'un prix a bougé depuis.
+
+**Une police Unicode est enregistrée explicitement**, jamais celle par défaut.
+`@react-pdf/renderer` **ne lève pas** sur un caractère qu'il ne sait pas rendre,
+il le **remplace en silence** : « Straẞe Łódź Tōkyō » sortait « Straže Aódz
+TMkyM ». Le nom et l'adresse du client sont des saisies libres, et un nom
+déformé sur un document légal ne se signale par rien. Le fichier de police est
+versionné dans le dépôt, jamais chargé par URL.
+
+**Un test de rendu extrait le texte du PDF produit** et le compare à la source.
+Vérifier qu'aucune exception n'est levée ne prouve rien, la substitution étant
+silencieuse.
 
 ## Accès aux documents
 

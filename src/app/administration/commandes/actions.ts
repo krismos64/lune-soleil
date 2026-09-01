@@ -29,6 +29,7 @@ import {
 } from "@/services/autorisation";
 import type { IdentiteAppelant } from "@/services/autorisation";
 import { changerStatutCommande } from "@/services/administration-commandes";
+import { rendreFacture } from "@/services/document-comptable";
 
 /**
  * Ce que l'interface recoit, jamais une exception.
@@ -155,4 +156,67 @@ export async function changerStatut(
 
     return { statut: "INDISPONIBLE" };
   }
+}
+
+/** Ce que la regeneration d'un document rend a l'interface. */
+export type ResultatRegeneration =
+  | { statut: "SUCCES" }
+  /** Le document existait deja, aucun rendu n'a ete refait. */
+  | { statut: "DEJA_PRESENT" }
+  | { statut: "INTROUVABLE" }
+  | { statut: "SESSION_ABSENTE" }
+  | { statut: "INVALIDE" }
+  /** Le rendu a echoue : `cheminPdf` reste nul et une alerte a ete levee. */
+  | { statut: "ECHEC" };
+
+/**
+ * Relance le rendu du PDF d'une facture, LS-129 critere 4.
+ *
+ * ELLE NE REATTRIBUE AUCUN NUMERO, critere 5, et rien ici ne le pourrait : le
+ * service ne connait qu'un identifiant de facture et n'a aucun acces au
+ * compteur, ADR-031. La seule colonne ecrite est `cheminPdf`.
+ *
+ * `factureId` VIENT DU FORMULAIRE, ET C'EST SANS DANGER ICI : le role est exige
+ * avant toute lecture, et l'administratrice a acces a toutes les factures. Ce
+ * n'est PAS le cas de l'acces client, LS-131 et LS-132, ou un identifiant d'URL
+ * n'autorise rien par lui-meme, invariant 2.
+ */
+export async function regenererDocument(
+  formulaire: FormData,
+): Promise<ResultatRegeneration> {
+  const identite = await exigerRole();
+
+  if (identite === null) {
+    return { statut: "SESSION_ABSENTE" };
+  }
+
+  const factureId = formulaire.get("factureId");
+  const commandeId = formulaire.get("commandeId");
+
+  if (typeof factureId !== "string" || typeof commandeId !== "string") {
+    return { statut: "INVALIDE" };
+  }
+
+  const issue = await rendreFacture(factureId);
+
+  if (issue.statut === "RENDU") {
+    revalidatePath(`${CHEMIN_COMMANDES}/${commandeId}`);
+
+    return { statut: "SUCCES" };
+  }
+
+  if (issue.statut === "DEJA_RENDU") {
+    return { statut: "DEJA_PRESENT" };
+  }
+
+  if (issue.statut === "INTROUVABLE") {
+    return { statut: "INTROUVABLE" };
+  }
+
+  /*
+   * L'ECHEC EST UNE VALEUR, PAS UNE EXCEPTION. `rendreFacture` ne leve jamais :
+   * il a deja journalise la cause et leve l'`AlerteCritique`. L'ecran annonce
+   * que la generation a echoue, sans exposer la cause technique, invariant 9.
+   */
+  return { statut: "ECHEC" };
 }

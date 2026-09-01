@@ -42,6 +42,7 @@ import {
   type VerificateurSignature,
 } from "@/integrations/stripe/evenements";
 import { estInterblocage, TENTATIVES_MAXIMUM } from "@/services/reservation";
+import { rendreFactureDeCommande } from "@/services/document-comptable";
 import { emettreFacture, EmetteurNonConfigureError } from "@/services/facture";
 import type { CommandeAFacturer } from "@/services/facture";
 import {
@@ -165,7 +166,51 @@ export async function traiterEvenementPaiement({
 
   for (let tentative = 1; tentative <= TENTATIVES_MAXIMUM; tentative += 1) {
     try {
-      return await traiterSousTransaction(client, evenement, origine);
+      const issue = await traiterSousTransaction(client, evenement, origine);
+
+      /*
+       * LE PDF EST RENDU ICI, APRES LE COMMIT, LS-129 et ADR-034.
+       *
+       * PAS DANS LA TRANSACTION, et l'emplacement EST la decision. Le rendu
+       * ecrit sur disque : l'y placer tiendrait la transaction pendant une
+       * entree-sortie, et un disque plein l'AVORTERAIT, perdant le paiement et
+       * le mouvement de stock pour un fichier manquant.
+       *
+       * SEULEMENT SUR `TRAITE` : les autres issues n'ont emis aucune facture,
+       * et `DEJA_TRAITE` designe un rejeu dont le document existe deja.
+       *
+       * ELLE NE LEVE JAMAIS, un echec produisant une `AlerteCritique` et
+       * laissant `cheminPdf` nul, regle F8. L'issue du paiement n'en depend pas :
+       * la vente a eu lieu, le document se rattrape par regeneration.
+       */
+      if (issue.statut === "TRAITE") {
+        /*
+         * LE FILET EST ICI ET PAS SEULEMENT DANS LE SERVICE, sur recommandation
+         * de `ls-critical-reviewer` le 1er septembre 2026. `rendreFacture`
+         * s'engage a ne jamais lever, et le respecte : ce `catch` ne rattrape
+         * donc rien aujourd'hui.
+         *
+         * IL REND LA GARANTIE STRUCTURELLE PLUTOT QUE DOCUMENTAIRE. Sans lui,
+         * un futur chemin qui leverait ferait rendre 500 a cette route ; le
+         * prestataire rejouerait, l'unicite d'evenement sortirait en
+         * `DEJA_TRAITE`, la garde ci-dessus serait fausse et LE RENDU NE SERAIT
+         * JAMAIS RETENTE. Un paiement encaisse et une facture sans document que
+         * rien ne signale : trop cher pour dependre d'un commentaire.
+         */
+        try {
+          await rendreFactureDeCommande(evenement.commandeId);
+        } catch (cause) {
+          journaliserErreur(
+            "Rendu du PDF non tente apres confirmation",
+            cause,
+            {
+              commande: evenement.commandeId,
+            },
+          );
+        }
+      }
+
+      return issue;
     } catch (cause) {
       if (!estInterblocage(cause)) {
         journaliserErreur(
