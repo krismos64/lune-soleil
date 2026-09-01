@@ -62,7 +62,11 @@ export default async function PagePanier() {
        * decouvrir apres avoir parcouru tout le panier.
        */}
       {panier.aChange && (
-        <p role="status" className={styles.avertissement}>
+        <p
+          role="status"
+          aria-label="Changement dans votre panier"
+          className={styles.avertissement}
+        >
           Certaines pièces ont changé depuis votre dernière visite. Le
           récapitulatif ci-dessous est à jour.
         </p>

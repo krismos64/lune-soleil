@@ -16,7 +16,7 @@
  * `CATALOGUE_TEST`, prefixees `TEST`.
  */
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test } from "@playwright/test";
+import { type Page, expect, test } from "@playwright/test";
 
 import { CATALOGUE_TEST } from "./chemin-session";
 import {
@@ -25,6 +25,23 @@ import {
 } from "./mesure-rendu";
 
 const CHEMIN_FICHE = `/produit/${CATALOGUE_TEST.enStock.slug}`;
+
+/*
+ * L'ANNONCE SE CHERCHE PAR SON ROLE, JAMAIS PAR SON TEXTE, critere 4 de LS-85.
+ *
+ * Un `getByText("Ajouté au panier.")` trouve la bonne chaine pour la mauvaise
+ * raison : il reste vert quand on retire `role="status"` de la region, cas
+ * verifie par mutation le 1er septembre 2026, 24 tests sur 24 au vert alors que
+ * l'annonce etait devenue muette. Le message restait affiche a l'ecran, et plus
+ * rien ne le disait a qui ne le voit pas.
+ *
+ * `aria-label` DISTINGUE LES DEUX REGIONS `status` DE LA FICHE PRODUIT. Celle
+ * de la disponibilite porte « Disponibilité », celle-ci « Ajout au panier » :
+ * viser `getByRole("status")` sans nom attraperait indifferemment l'une ou
+ * l'autre, et le test passerait sur la mauvaise.
+ */
+const annonceAjout = (page: Page) =>
+  page.getByRole("status", { name: "Ajout au panier" });
 
 /*
  * CHAQUE TEST PART D'UN PANIER VIDE. Les tests d'un meme fichier partagent leur
@@ -64,7 +81,7 @@ test("ajouter depuis la fiche remplit le panier et le compteur", async ({
    * qu'un delai fixe : un `waitForTimeout` passerait sur une machine rapide et
    * echouerait ailleurs.
    */
-  await expect(page.getByText("Ajouté au panier.")).toBeAttached();
+  await expect(annonceAjout(page)).toHaveText("Ajouté au panier.");
 
   // Le compteur porte le nombre dans son nom accessible, pas seulement a l'ecran.
   await expect(
@@ -88,7 +105,7 @@ test("ajouter depuis la fiche remplit le panier et le compteur", async ({
 test("changer la quantite met le total a jour", async ({ page }) => {
   await page.goto(CHEMIN_FICHE);
   await page.getByRole("button", { name: "Ajouter au panier" }).click();
-  await expect(page.getByText("Ajouté au panier.")).toBeAttached();
+  await expect(annonceAjout(page)).toHaveText("Ajouté au panier.");
 
   await page.goto("/panier");
 
@@ -115,7 +132,7 @@ test("changer la quantite met le total a jour", async ({ page }) => {
 test("retirer une ligne vide le panier", async ({ page }) => {
   await page.goto(CHEMIN_FICHE);
   await page.getByRole("button", { name: "Ajouter au panier" }).click();
-  await expect(page.getByText("Ajouté au panier.")).toBeAttached();
+  await expect(annonceAjout(page)).toHaveText("Ajouté au panier.");
 
   await page.goto("/panier");
   await page.getByRole("button", { name: /Retirer .* du panier/ }).click();
@@ -165,10 +182,44 @@ test("un cookie falsifie donne un panier vide et jamais une erreur", async ({
   ).toBeVisible();
 });
 
+/*
+ * CE QUE CE TEST PROUVE ET QU'`axe-core` NE PROUVE PAS, critere 5 de LS-85.
+ *
+ * Une region live ANONYME n'est pas une violation d'accessibilite : `axe-core`
+ * la laisse passer, et un lecteur d'ecran annonce le changement sans dire de
+ * quoi il parle. La capture de l'arbre reel le 1er septembre 2026 a montre un
+ * `- status` nu sur cette page, quand la fiche produit nommait deja les siennes.
+ *
+ * L'assertion est ecrite d'apres cette capture, `locator.ariaSnapshot()`, et
+ * porte sur ce que le navigateur calcule vraiment.
+ */
+test("le panier s'annonce a un lecteur d'ecran", async ({ page }) => {
+  await page.goto(CHEMIN_FICHE);
+  await page.getByRole("button", { name: "Ajouter au panier" }).click();
+  await expect(annonceAjout(page)).toHaveText("Ajouté au panier.");
+
+  await page.goto("/panier");
+
+  /*
+   * LE NOM DE LA REGION EST L'OBJET DU TEST. Le selecteur de quantite et le
+   * bouton de retrait portent le nom de la piece, sans quoi ils seraient
+   * indiscernables dans une liste de plusieurs lignes.
+   */
+  await expect(page.locator("main")).toMatchAriaSnapshot(`
+    - heading "Votre panier" [level=1]
+    - status "Modification du panier"
+    - list:
+      - listitem:
+        - combobox /Quantité pour/
+        - button /Retirer .* du panier/
+    - link "Passer la commande"
+  `);
+});
+
 test("le panier ne deborde pas horizontalement", async ({ page }) => {
   await page.goto(CHEMIN_FICHE);
   await page.getByRole("button", { name: "Ajouter au panier" }).click();
-  await expect(page.getByText("Ajouté au panier.")).toBeAttached();
+  await expect(annonceAjout(page)).toHaveText("Ajouté au panier.");
 
   await page.goto("/panier");
 
@@ -182,7 +233,7 @@ test("le panier ne porte aucune violation d'accessibilite serieuse", async ({
 }) => {
   await page.goto(CHEMIN_FICHE);
   await page.getByRole("button", { name: "Ajouter au panier" }).click();
-  await expect(page.getByText("Ajouté au panier.")).toBeAttached();
+  await expect(annonceAjout(page)).toHaveText("Ajouté au panier.");
 
   await page.goto("/panier");
 

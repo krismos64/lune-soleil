@@ -519,7 +519,11 @@ function ChoixLivraison({
       }}
     >
       {indisponible && (
-        <p role="status" className={styles.avertissement}>
+        <p
+          role="status"
+          aria-label="Disponibilité des points de retrait"
+          className={styles.avertissement}
+        >
           {pointsRetrait.message}
         </p>
       )}
@@ -610,7 +614,11 @@ function Recapitulatif({
        * declencher appartenait a ce tunnel.
        */}
       {recapitulatif.aChange && (
-        <p role="alert" className={styles.avertissement}>
+        <p
+          role="alert"
+          aria-label="Changement dans votre panier"
+          className={styles.avertissement}
+        >
           Certaines pièces ont changé depuis votre dernière visite. Vérifiez le
           récapitulatif ci-dessous avant de payer.
         </p>
