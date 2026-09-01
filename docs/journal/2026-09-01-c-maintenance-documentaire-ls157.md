@@ -99,5 +99,6 @@ client relève de LS-57, bloquée par LS-54.
 ## État des tickets
 
 LS-157 créée, livrée et close par cette session. LS-84, LS-85, LS-82, LS-86 et
-LS-9 restent en cours, inchangées. Les comptes du `README.md` restent ceux
-relevés ce matin, la phase 1 gagnant LS-157 close.
+LS-9 restent en cours, inchangées. **LS-158**, la dette de cohérence du code, a
+été créée ensuite sur arbitrage, rattachée à LS-7 : la phase 6 passe à treize
+stories ouvertes, compte relevé dans Jira et porté au tableau du `README.md`.
