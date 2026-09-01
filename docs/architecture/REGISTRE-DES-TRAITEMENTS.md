@@ -132,7 +132,7 @@ passée, et c'est voulu. La suppression du compte emporte le carnet, en cascade.
 | Finalité | émettre les factures et avoirs, et satisfaire aux obligations comptables et fiscales |
 | Personnes concernées | clients ayant passé commande |
 | Catégories de données | instantané légal figé, portant nom, adresses, contenu et montants |
-| Tables | `Facture`, `Avoir`, `Paiement`, `EvenementFournisseur` |
+| Tables | `Facture`, `Avoir`, `Paiement`, `EvenementFournisseur`, `IntentionRemboursement` |
 | Base légale | obligation légale, article 6.1.c, article L123-22 du code de commerce |
 | Conservation | **dix ans**, article L123-22 du code de commerce |
 | Destinataires | l'exploitante, l'expert-comptable le cas échéant, l'administration fiscale sur demande |
@@ -147,6 +147,25 @@ Les données du prestataire de paiement transitent par `EvenementFournisseur`, q
 stocke la charge utile de l'événement signé. Elle peut porter le nom du payeur et
 les quatre derniers chiffres de la carte. **Aucun numéro de carte complet n'est
 jamais stocké**, le paiement étant délégué au prestataire.
+
+**`IntentionRemboursement`, ajoutée par LS-128, est rattachée ici plutôt qu'aux
+tables sans donnée personnelle.** Ses six colonnes ne portent aucun nom, aucune
+adresse ni aucun identifiant de personne : un identifiant technique, une
+référence de facture, une clé d'idempotence, un montant et deux horodatages.
+
+Le classement se joue pourtant sur autre chose que le contenu des colonnes. La
+ligne dit **qu'un remboursement a été demandé sur la facture d'une personne
+identifiable**, avec son montant et sa date : c'est une information se rapportant
+à cette personne au sens de l'article 4 point 1, que la jointure sur `factureId`
+suffit à rattacher. La ranger en « sans donnée personnelle » aurait répété le
+défaut de `MouvementStock`, classé à tort sur sa finalité plutôt que sur ce que
+la ligne révèle.
+
+Elle suit donc la conservation de dix ans de T5, ce qui est cohérent : une
+intention aboutie documente une sortie d'argent que la comptabilité doit pouvoir
+justifier. Une intention **non** aboutie ne prouve rien et se supprime, seul cas
+de suppression de ce traitement, l'invariant 4 ne portant que sur les documents
+émis.
 
 ### T6, droit de rétractation et litiges
 
