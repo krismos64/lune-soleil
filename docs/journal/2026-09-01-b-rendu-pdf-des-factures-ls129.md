@@ -147,3 +147,43 @@ sans aucun commentaire depuis le 27 juillet ; **LS-27**, le compte Mondial Relay
 
 **LS-85** reste ouverte sur son seul critère 5, l'écoute humaine au lecteur
 d'écran, traitée en session A.
+
+## Audit de fin de session
+
+Passe de vérification demandée avant de quitter la session, sur Jira, `CLAUDE.md`,
+le `README.md`, les agents, skills et hooks, `docs/`, le journal et la mémoire.
+
+**Quatre affirmations périmées corrigées**, toutes des comptes ou des états que
+seul un relevé dans Jira pouvait démentir.
+
+Le tableau des phases du `README.md` annonçait l'état du 27 août : la phase 4
+passe de treize à **douze** stories ouvertes, LS-129 étant close, et la phase 6
+de onze à **douze**, LS-156 ayant été créée le 31 août. Les deux écarts ont été
+mesurés par requête, jamais recomptés de mémoire.
+
+La fiche mémoire d'entrée annonçait « 73 terminés sur 155 », relevé le 31 août.
+Le compte réel est **75 sur 156, soit 48 %**. Elle présentait aussi Stripe comme
+« à souscrire » alors que le compte encaisse depuis le 31 août, et LS-18 comme
+ouverte alors qu'elle est close.
+
+Deux fiches portaient un **état transitoire** plutôt qu'une règle, motif déjà
+consigné : « tant que LS-18 attend » est devenu faux sans que la règle qu'elles
+énoncent le devienne. Reformulées au présent intemporel.
+
+**Trois ajouts de propagation.** La table d'aiguillage de `docs/REFERENCES.md` ne
+citait aucun des trois modules de LS-129 : elle recense les fichiers dont le
+comportement porte un piège non évident, et ces trois-là en portent un chacun.
+Le `README.md` ne mentionnait pas le rendu PDF dans sa table de stack, et
+affirmait encore « le rendu PDF manque encore, LS-129 ».
+
+**Ce qui était déjà juste**, vérifié et non supposé : `CLAUDE.md` tient à
+200 lignes, exactement au seuil, et ses deux affirmations datées restent vraies.
+Les trois agents et les deux skills ne citent aucun chemin mort. Les huit hooks
+déclarés existent tous et sont exécutables, aucun script n'est orphelin. Les
+17 ADR du disque sont les 17 de la table. L'index mémoire compte 215 lignes pour
+215 fiches, sans un seul lien mort.
+
+**Un manque écarté après vérification** : `DOCUMENTS_RACINE` est absente de
+`docker-compose.yml`, comme `MEDIA_RACINE`. Ce fichier ne déclare que la base et
+porte l'avertissement « ne rien ajouter ici en pensant à la production » : la
+variable entrera avec la composition de production, LS-152.
