@@ -38,9 +38,13 @@ preparation("commande en attente de paiement amorcee", async () => {
 
   try {
     await client.query(
+      /*
+       * `ordre` FIXE ET RESERVE, 9118, meme motif que l'amorce LS-160 plus bas :
+       * deux preparations concurrentes qui derivent `max(ordre) + 1` sur une
+       * base VIERGE lisent le meme maximum et violent C24 au COMMIT.
+       */
       `INSERT INTO categorie (id, nom, slug, ordre, cree_a)
-       VALUES ($1, 'TEST Catégorie commande', 'e2e-ls118-categorie',
-               (SELECT coalesce(max(ordre), 0) + 1 FROM categorie), now())
+       VALUES ($1, 'TEST Catégorie commande', 'e2e-ls118-categorie', 9118, now())
        ON CONFLICT (id) DO NOTHING`,
       [COMMANDE_TEST.categorieId],
     );
