@@ -24,7 +24,7 @@ la phase 2.
 | 3, panier, réservation, paiement et commandes | LS-4 | LS-114 à LS-121 et LS-43 livrées, **porte de sortie franchie**, deux stories ouvertes |
 | 4, factures, avoirs, emails, expédition et contact | LS-5 | **commencée** : LS-51, LS-126 et LS-129 closes, LS-82 livrée et ouverte sur son critère de réception, douze stories ouvertes |
 | 5, rétractation, conformité et protection des données | LS-6 | découpée le 27 août 2026, cinq stories ouvertes |
-| 6, durcissement, exploitation et ouverture | LS-7 | découpée le 27 août 2026, quatorze stories ouvertes |
+| 6, durcissement, exploitation et ouverture | LS-7 | découpée le 27 août 2026, treize stories ouvertes |
 
 Comptes **relevés dans Jira** le 1er septembre 2026, jamais recopiés de mémoire :
 un chiffre écrit à la main se périme sans bruit, et le tableau annonçait encore
