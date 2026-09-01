@@ -142,6 +142,7 @@ documentation technique, ticket ou règle qui le contredirait.
 | ADR-031 | Le numéro de commande vient d'une table compteur, sans trou | numéro, numérotation, commande, facture, avoir, séquence |
 | ADR-032 | Un double encaissement est alerté et remboursé à la main | double paiement, deux sessions, remboursement, expiration de session, idempotence Stripe |
 | ADR-033 | Outbox transactionnelle pour l'envoi des emails | email, envoi, outbox, idempotence d'envoi, doublon d'email, nodemailer, SMTP |
+| ADR-034 | Rendu des documents comptables par `@react-pdf/renderer` | PDF, facture, avoir, rendu, gabarit, police, Unicode, `cheminPdf` |
 
 Cette table se met à jour à chaque ADR créé. Un ADR absent d'ici reste
 opposable : la table est un raccourci, `docs/adr/` fait foi.

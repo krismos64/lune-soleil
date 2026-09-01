@@ -22,6 +22,9 @@
  * SUFFIXE `.sequential` : base PostgreSQL partagee entre fichiers.
  */
 import { randomUUID } from "node:crypto";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { Client } from "pg";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -35,6 +38,7 @@ import type {
 } from "@/integrations/stripe/evenements";
 
 let client: Client;
+let racineDocuments: string;
 let passerCommande: typeof import("@/services/commande").passerCommande;
 let traiterEvenementPaiement: typeof import("@/services/webhook-paiement").traiterEvenementPaiement;
 let SignatureInvalideError: typeof import("@/integrations/stripe/evenements").SignatureInvalideError;
@@ -251,6 +255,19 @@ beforeAll(async () => {
   process.env.FACTURE_ADRESSE = "1 rue de Test, 75001 TESTVILLE";
   process.env.FACTURE_EMAIL_CONTACT = "test-emetteur@example.invalid";
 
+  /*
+   * LE STOCKAGE DES DOCUMENTS EXISTE, LS-129, et pour la MEME raison que les
+   * quatre variables ci-dessus : depuis le rendu du PDF, une confirmation
+   * complete ecrit un fichier apres le commit, et une racine inexistante
+   * leverait une alerte `PDF_FACTURE_EN_ECHEC` qui fausserait les comptes
+   * d'alertes de ce fichier.
+   *
+   * Le dossier est temporaire et supprime en fin de fichier : ces tests portent
+   * sur le paiement, le contenu du PDF etant verifie ailleurs.
+   */
+  racineDocuments = await mkdtemp(join(tmpdir(), "ls-documents-webhook-"));
+  process.env.DOCUMENTS_RACINE = racineDocuments;
+
   client = new Client({ connectionString: url });
   await client.connect();
 
@@ -262,6 +279,8 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await client.end();
+  await rm(racineDocuments, { recursive: true, force: true });
+  delete process.env.DOCUMENTS_RACINE;
 });
 
 afterEach(async () => {

@@ -27,6 +27,7 @@ import {
   LIBELLES_STATUT,
   traduireStatut,
 } from "../affichage";
+import { DocumentFacture } from "./document-facture";
 import { TransitionsCommande } from "./transitions";
 import styles from "../commandes.module.css";
 
@@ -224,6 +225,18 @@ export default async function PageDetailCommande({
             ))}
           </ul>
         )}
+      </section>
+
+      {/*
+       * LE DOCUMENT COMPTABLE VIENT APRES LE PAIEMENT, et l'ordre porte du
+       * sens : la facture nait de la confirmation du paiement, LS-126. Le lire
+       * dans cet ordre suit la chronologie reelle de la commande.
+       */}
+      <section className={styles.section} aria-labelledby="titre-document">
+        <h2 id="titre-document" className={styles.titreSection}>
+          Document comptable
+        </h2>
+        <DocumentFacture commandeId={commande.id} facture={commande.facture} />
       </section>
 
       <section className={styles.section} aria-labelledby="titre-suivi">

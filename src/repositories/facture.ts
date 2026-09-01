@@ -5,14 +5,20 @@
  * lui passe le client transactionnel, et c'est lui qui juge si le document doit
  * etre emis.
  *
- * IL N'Y A NI MODIFICATION NI SUPPRESSION DANS CE FICHIER, ET C'EST VOLONTAIRE.
+ * IL N'Y A AUCUNE SUPPRESSION DANS CE FICHIER, ET UNE SEULE MODIFICATION.
  * L'invariant 4 est absolu : une facture n'est jamais modifiee ni supprimee,
- * une correction produit un avoir. La seule ecriture exposee ici est la
- * creation. Le jour ou `montantAvoirCentimes` devra bouger, ce sera par la
- * transaction qui cree l'avoir, LS-128, et sous le `CHECK` qui le borne.
+ * une correction produit un avoir.
+ *
+ * L'UNIQUE `update` PORTE SUR `cheminPdf`, LS-129, et il ne contredit pas cet
+ * invariant : ce champ ne fait PAS partie de l'instantane legal, il dit ou se
+ * trouve le fichier. Le document reste immuable, sa representation sur disque
+ * est renseignee apres coup, regle F8. Aucune autre colonne n'est modifiable
+ * ici, le `select` de l'ecriture le montrant. Le jour ou
+ * `montantAvoirCentimes` devra bouger, ce sera par la transaction qui cree
+ * l'avoir, LS-128, et sous le `CHECK` qui le borne.
  */
 import type { Prisma } from "@/generated/prisma/client";
-import type { InstantaneLegal } from "@/lib/validation";
+import { schemaInstantaneLegal, type InstantaneLegal } from "@/lib/validation";
 import type { ClientBase } from "@/repositories/stock";
 
 /** Ce qu'une facture expose une fois lue, sans son instantane. */
@@ -86,5 +92,93 @@ export async function ecrireFacture(
         parametres.instantaneLegal as unknown as Prisma.InputJsonValue,
     },
     select: { id: true, numero: true, montantTotalCentimes: true },
+  });
+}
+
+/** Ce qu'il faut pour rendre le document, et rien de plus. */
+export type FactureARendre = {
+  id: string;
+  numero: string;
+  emiseA: Date;
+  instantaneLegal: InstantaneLegal;
+  /** Nul tant qu'aucun rendu n'a abouti, regle F8 : l'etat « PDF en echec ». */
+  cheminPdf: string | null;
+};
+
+/**
+ * Relit une facture pour son rendu, LS-129.
+ *
+ * ELLE REND L'INSTANTANE ET NON LA COMMANDE, invariant 3. Le gabarit ne doit
+ * avoir aucun moyen de relire le catalogue : lui passer un `commandeId` suffirait
+ * a ce qu'un jour quelqu'un remonte au produit courant, et la facture emise
+ * changerait avec lui.
+ *
+ * `cheminPdf` EST RENDU AVEC LE RESTE, dans la MEME lecture. Le lire a part
+ * demanderait deux requetes dont la seconde pourrait voir un etat plus recent
+ * que la premiere : le service deciderait alors de rendre sur un etat, et
+ * ecrirait sur un autre.
+ *
+ * IL NE VAUT PAS GARANTIE D'EXCLUSION pour autant. Entre cette lecture et
+ * l'ecriture du fichier, un autre chemin peut rendre le meme document : c'est
+ * l'ecriture atomique du stockage qui rend ce croisement inoffensif, les deux
+ * rendus produisant le meme contenu au meme endroit.
+ */
+export async function lireFactureARendre(
+  client: ClientBase,
+  factureId: string,
+): Promise<FactureARendre | null> {
+  const facture = await client.facture.findUnique({
+    where: { id: factureId },
+    select: {
+      id: true,
+      numero: true,
+      emiseA: true,
+      instantaneLegal: true,
+      cheminPdf: true,
+    },
+  });
+
+  if (facture === null) {
+    return null;
+  }
+
+  return {
+    id: facture.id,
+    numero: facture.numero,
+    emiseA: facture.emiseA,
+    cheminPdf: facture.cheminPdf,
+    /*
+     * LE CONTENU EST REVALIDE A LA RELECTURE, et ce n'est pas de la defiance
+     * envers l'ecriture. La colonne est un `Json` libre : une migration future,
+     * une reprise de donnees ou une version d'instantane plus ancienne y
+     * mettraient une forme que le gabarit ne sait pas rendre. Echouer ICI laisse
+     * `cheminPdf` nul et leve une alerte, ce qui est le comportement voulu ;
+     * echouer dans le gabarit produirait la meme chose par accident, sans dire
+     * pourquoi.
+     */
+    instantaneLegal: schemaInstantaneLegal.parse(facture.instantaneLegal),
+  };
+}
+
+/**
+ * Pose le chemin du PDF rendu, LS-129.
+ *
+ * SEULE ECRITURE DE MODIFICATION DE CE FICHIER, et elle ne contredit pas
+ * l'invariant 4 : `cheminPdf` ne fait PAS partie de l'instantane legal. Le
+ * document reste immuable, seule sa representation sur disque est renseignee.
+ *
+ * LE NUMERO N'EST JAMAIS TOUCHE, critere 5 de LS-129. Une regeneration repasse
+ * ici et ne modifie que ce champ : la clause `select` ne porte que `cheminPdf`,
+ * et il n'existe aucun chemin de code capable de reattribuer un rang.
+ */
+export async function poserCheminPdfFacture(
+  client: ClientBase,
+  factureId: string,
+  cheminRelatif: string,
+): Promise<void> {
+  await client.facture.update({
+    where: { id: factureId },
+    data: { cheminPdf: cheminRelatif },
+    select: { cheminPdf: true },
   });
 }

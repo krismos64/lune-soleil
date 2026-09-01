@@ -159,6 +159,20 @@ export type DetailCommande = {
   }[];
   /** Les transitions que l'exploitante peut declencher depuis cet etat. */
   transitionsPossibles: readonly StatutCommande[];
+  /**
+   * La facture, quand la commande en porte une, LS-129.
+   *
+   * `cheminPdf` NUL EST UN ETAT AFFICHABLE ET NON UNE ABSENCE, regle F8 : la
+   * facture existe, son document est en echec de rendu. L'ecran doit distinguer
+   * les deux, « aucune facture » et « facture sans PDF » n'appelant pas le meme
+   * geste.
+   */
+  facture: {
+    id: string;
+    numero: string;
+    cheminPdf: string | null;
+    emiseA: Date;
+  } | null;
 };
 
 /**
@@ -217,6 +231,14 @@ export async function lireDetailCommande(
           statutNouveau: true,
           origine: true,
           creeA: true,
+        },
+      },
+      facture: {
+        select: {
+          id: true,
+          numero: true,
+          cheminPdf: true,
+          emiseA: true,
         },
       },
     },

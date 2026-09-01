@@ -81,6 +81,26 @@ const nextConfig: NextConfig = {
   },
   outputFileTracingRoot: path.join(__dirname),
 
+  /*
+   * LES POLICES DU RENDU PDF ENTRENT DANS LA SORTIE STANDALONE, LS-129.
+   *
+   * DECLAREES PLUTOT QUE LAISSEES A L'ANALYSE STATIQUE. Le tracage les a bien
+   * copiees a la mesure du 1er septembre 2026, mais il deduit les fichiers d'un
+   * `path.join` construit a l'execution, ce qui n'est garanti par aucun
+   * contrat : une refactorisation du chemin les ferait disparaitre de l'image.
+   *
+   * LE DEFAUT NE SE VERRAIT QU'AU DEPLOIEMENT, et il serait grave : sans sa
+   * police, `@react-pdf/renderer` ne leve pas, il SUBSTITUE en silence, et les
+   * factures de production porteraient des noms de clients deformes. Meme
+   * famille de piege que « outil absent de l'image ».
+   *
+   * `/*` ET NON LA SEULE ROUTE DU WEBHOOK : la regeneration depuis
+   * l'administration rend le meme document par un autre chemin.
+   */
+  outputFileTracingIncludes: {
+    "/*": ["./src/integrations/pdf/polices/**/*"],
+  },
+
   // En-têtes de sécurité minimaux. La politique de sécurité de contenu complète
   // arrive avec les pages réelles, elle dépend de Stripe et de l'hébergeur de
   // médias, LS-73.
