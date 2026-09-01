@@ -139,13 +139,20 @@ d'évaluer le rang. Reproduit en SQL, deux `INSERT` au même ordre passent tous
 les deux et c'est le `COMMIT` qui lève. Un `ROLLBACK` de vérification masque
 donc le défaut, la contrainte étant différée.
 
-L'ordre de la catégorie amorcée est désormais **fixe et réservé**, 9160, hors de
-portée du maximum dérivé.
+**Prouvé par deux connexions simultanées**, et non seulement raisonné : deux
+transactions concurrentes sur une table vide dérivent toutes deux `ordre = 1`,
+l'une commite, l'autre lève. Le cas séquentiel passe, lui, ce qui rend le défaut
+trompeur.
 
-**Trois amorces dérivent encore**, dans `session-administration.setup.ts` et dans
-la première de `commande.setup.ts`. Elles passent aujourd'hui, rien ne les
-protège d'un ordonnancement différent : fiché plutôt qu'élargi au périmètre de
-cette story.
+**Ma première correction n'a traité qu'une occurrence sur quatre**, et la CI a
+rougi une seconde fois pour la même cause à un cran de distance : la première
+amorce du **même fichier** dérivait encore. La violation emporte l'amorce
+entière, donc les deux commandes du fichier, ce qui faisait manquer une commande
+dont la catégorie était pourtant déjà fixée.
+
+C'est le motif « élargir la source plutôt qu'exempter » pris à l'envers : j'ai
+traité mon cas au lieu de la classe. Les quatre ordres sont désormais réservés et
+distincts, 9104 à 9106, 9111, 9118 et 9160.
 
 ## Ce que la revue frontend a corrigé
 
