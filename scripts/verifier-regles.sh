@@ -413,6 +413,15 @@ fi
 # `prisma.$transaction` et `prisma.$queryRaw` ne sont PAS visés : ouvrir une
 # transaction et passer le client aux repositories est l'architecture voulue,
 # ADR-024. Le motif cible les seuls appels de modèle, `prisma.<modele>.<verbe>`.
+#
+# LIMITE ÉCRITE PLUTÔT QUE SUPPOSÉE, relevée par la revue critique de LS-158 :
+# le motif ne voit que le client nommé `prisma`. Les appels via `tx.` d'une
+# transaction ou `client.` d'un paramètre lui échappent, onze existaient au
+# jour de l'écriture, tous légitimes. Distinguer un client transactionnel
+# d'ADR-024 d'un contournement demanderait une analyse de flux qu'un grep ne
+# fait pas : ce garde-fou vise le singleton importé par commodité, la revue
+# humaine garde le reste. Même façon de faire que
+# verifier-gardes-administration.sh, qui documente sa propre limite en tête.
 
 echo "Frontière Prisma des services, appels de modèle hors socle"
 echo

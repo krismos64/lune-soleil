@@ -81,6 +81,18 @@ npm run test:e2e                       386 tests verts, 4 skips conditionnels, t
 ./scripts/verifier-actions-sensibles.sh       OK, 1 action sensible cohérente
 ```
 
+## La revue critique n'a rien trouvé, et a laissé deux observations
+
+`ls-critical-reviewer` a recompté les gardes fichier par fichier, 27 sur 27,
+vérifié la sortie du formateur sur quatorze valeurs bornes comprises, l'espace
+insécable étroit préservé, et confirmé que le type de `ecrireProfil` ferme
+l'écriture de `role` sous `exactOptionalPropertyTypes`. Deux observations non
+bloquantes : la limite du motif de frontière, qui ne voit que le client nommé
+`prisma`, est désormais écrite dans l'en-tête du contrôle ; et une lacune
+**préexistante** du contrôle des gardes, qui ne balaie que les fichiers nommés
+`actions.ts` quand neuf Server Actions vivent dans trois `actions-*.ts`, part
+en ticket, LS-159.
+
 ## Ce qui reste
 
 L'arbitrage de la frontière est tracé dans le ticket, le README de garde des
