@@ -611,7 +611,7 @@ et `db:reinitialiser`, cités plus haut.
 ./prisma/sql-manuel/verifier-schema.sh           # schéma sur base réelle, exige Docker
 ./scripts/verifier-regles.sh                     # .claude/rules/ : schéma, code, couverture
 ./scripts/verifier-regles-mutation.sh            # prouve le précédent par mutation
-./scripts/verifier-config-claude.sh              # cohérence de la config Claude Code
+./scripts/verifier-config-claude.sh --strict     # cohérence de la config Claude Code
 ./scripts/verifier-config-claude-mutation.sh     # prouve le précédent par mutation
 ./scripts/verifier-migration-mutation.sh         # garde-fous de migration, sans base
 ./scripts/verifier-tests-mutation.sh             # prouve la suite de tests, exige Docker
@@ -636,6 +636,22 @@ et `db:reinitialiser`, cités plus haut.
 ./docs/prototypes/interblocage-panier.sh         # interblocage sur panier, exige Docker
 ./docs/prototypes/interblocage-liberation-confirmation.sh # ordre des verrous, LS-120
 ```
+
+**`verifier-config-claude.sh` sort toujours en 0 sans `--strict`**, y compris
+quand il relève des anomalies : il les écrit sur la sortie d'erreur et rend 0.
+Ce n'est pas un défaut, c'est ce qui permet de le brancher sur le hook `Stop`
+sans bloquer une session légitimement interrompue en cours de travail, un ADR
+écrit dont la table n'est pas encore à jour par exemple.
+
+Conséquence à connaître : **le lire sur sa sortie, jamais sur son code de retour
+seul**, et employer `--strict` pour trancher. Le piège s'est refermé le
+1er septembre 2026 sur un `script | tail; echo $?`, qui rend le code de `tail`
+et non celui du script.
+
+**Ce script de mutation restaure `README.md` en sortant.** Il refuse de tourner
+si le fichier porte des modifications non commitées, garde-fou à respecter :
+commiter avant de le lancer, sans quoi la restauration emporte le travail en
+cours.
 
 `verifier-image-docker.sh` **ouvre les couches** de l'image plutôt que de relire
 le `Dockerfile`. La différence est mesurée : un `.env` copié puis supprimé par
