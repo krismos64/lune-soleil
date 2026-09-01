@@ -136,10 +136,20 @@ attendre_echec "famille déclarée, ni couverte ni en attente"
 # --- Cas 5 : ligne d'attente périmée --------------------------------------
 # Une famille couverte par une action ET listée en attente : la ligne doit
 # partir, sinon le fichier d'attente devient une décharge qui exempte à vie.
+#
+# LA CIBLE EST PASSEE DE `REMBOURSEMENT` A `PARAMETRES_BOUTIQUE` LE 1er
+# SEPTEMBRE 2026, LS-160, meme motif que le cas 4 : ce cas s'appuyait sur la
+# ligne `REMBOURSEMENT` du fichier d'attente pour creer l'etat « couverte ET
+# listee ». Cette ligne est partie quand `demanderRemboursement` a couvert la
+# famille, et le cas ne creait donc plus l'etat qu'il vise.
+#
+# LA CIBLE DOIT RESTER UNE FAMILLE ENCORE EN ATTENTE, sans quoi ce cas se
+# redesarmera a la prochaine story qui en couvre une. C'est le meme piege deux
+# fois dans le meme fichier.
 cat > "$TEMOIN" <<'TS'
-/** @sensible REMBOURSEMENT */
-export async function rembourserGardePourMutation(): Promise<void> {
-  await exigerReauthentificationRecente(new Headers(), "REMBOURSEMENT");
+/** @sensible PARAMETRES_BOUTIQUE */
+export async function parametresGardePourMutation(): Promise<void> {
+  await exigerReauthentificationRecente(new Headers(), "PARAMETRES_BOUTIQUE");
 }
 TS
 attendre_echec "ligne d'attente périmée alors que la famille est couverte"
@@ -214,7 +224,30 @@ attendre_succes "signature étalée par Prettier, action gardée acceptée"
 #
 # Une Server Action est un point d'entrée HTTP : elle s'invoque sans jamais
 # charger la page qui la porte, donc la garde de la page ne la couvre pas.
-perl -0pi -e 's/  if \(!\(await exigerRole\(\)\)\) \{\n    return \{ statut: "SESSION_ABSENTE" \};\n  \}\n\n  try \{\n    await creerCategorie/  try {\n    await creerCategorie/' "$ACTIONS"
+# LA SUBSTITUTION ETAIT MORTE, constate le 1er septembre 2026 en LS-160.
+#
+# Elle cherchait `exigerRole()` sans argument quand le code porte
+# `exigerRole(await headers())` : elle ne modifiait AUCUN caractere, le controle
+# restait vert a juste titre, et ce cas rapportait « NON DETECTE » en accusant
+# un controle sain. Mesure aussi sur `main`, il ne vient pas de cette story.
+#
+# C'est le motif « controle de mutation mort » : une cible qui cesse de
+# correspondre desarme le cas en silence, et le rapport devient un chiffre
+# qu'on cesse de lire. La garde-fou `cksum` ci-dessous le rend impossible :
+# une substitution qui ne change rien est desormais un ECHEC franc, jamais un
+# « non detecte » ambigu.
+avant_cas10=$(cksum <"$ACTIONS")
+perl -0pi -e 's/  if \(!\(await exigerRole\(await headers\(\)\)\)\) \{\n    return \{ statut: "SESSION_ABSENTE" \};\n  \}\n\n  try \{\n    await creerCategorie/  try {\n    await creerCategorie/' "$ACTIONS"
+
+if [ "$(cksum <"$ACTIONS")" = "$avant_cas10" ]; then
+  echo "ECHEC cas 10 : la mutation n'a modifié aucun caractère"
+  echo "      La garde a changé de forme dans $ACTIONS."
+  echo "      Corriger CE script, jamais le contrôle : un cas qui ne mute rien"
+  echo "      rapporte « non détecté » en accusant un contrôle sain."
+  restaurer
+  exit 1
+fi
+
 attendre_echec "Server Action d'administration sans garde de rôle"
 
 echo

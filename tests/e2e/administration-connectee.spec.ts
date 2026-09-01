@@ -28,6 +28,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 import {
+  COMMANDE_FACTUREE_TEST,
   COMMANDE_TEST,
   FICHIER_SESSION,
   FICHIER_SESSION_ADMINISTRATION,
@@ -84,6 +85,20 @@ const ECRANS = [
   {
     chemin: `/administration/commandes/${COMMANDE_TEST.commandeId}`,
     titre: COMMANDE_TEST.numero,
+  },
+  /*
+   * LE DETAIL D'UNE COMMANDE FACTUREE, LS-160, distinct du precedent pour une
+   * raison de fond : sur une commande `EN_ATTENTE_PAIEMENT`, l'ecran de
+   * remboursement rend un simple paragraphe. Le FORMULAIRE, ses deux champs,
+   * son avertissement et son bouton ne seraient mesures a aucune largeur.
+   *
+   * C'est la que le debordement a 320 px se joue : un champ de saisie prend
+   * toute la largeur disponible, et sa bordure plus son rembourrage s'y
+   * ajoutent si `box-sizing` n'est pas herite.
+   */
+  {
+    chemin: `/administration/commandes/${COMMANDE_FACTUREE_TEST.commandeId}`,
+    titre: COMMANDE_FACTUREE_TEST.numero,
   },
 ] as const;
 
@@ -340,6 +355,7 @@ test.describe("un client connecte sans le role", () => {
 const ECRANS_BASCULE = [
   "/administration/commandes",
   `/administration/commandes/${COMMANDE_TEST.commandeId}`,
+  `/administration/commandes/${COMMANDE_FACTUREE_TEST.commandeId}`,
 ] as const;
 
 for (const chemin of ECRANS_BASCULE) {

@@ -53,6 +53,35 @@ export const COMMANDE_TEST = {
 } as const;
 
 /**
+ * La commande CONFIRMEE et FACTUREE que l'ecran de remboursement affiche, LS-160.
+ *
+ * DISTINCTE DE `COMMANDE_TEST`, ET C'EST TOUT SON INTERET. Celle-ci est
+ * volontairement `EN_ATTENTE_PAIEMENT` pour la page de confirmation : sur elle,
+ * l'ecran de remboursement rend la branche « aucune facture emise », un
+ * paragraphe. Le FORMULAIRE, ses deux champs et son avertissement ne seraient
+ * mesures a aucune largeur.
+ *
+ * LE MOTIF EST DEJA DOCUMENTE SUR CE DEPOT. La revue frontend de LS-121 avait
+ * trouve un contraste a 4,04:1 qu'`axe-core` ne voyait pas, le chemin n'etant
+ * jamais rendu faute de commande remboursee en donnees de test. Mesurer un
+ * ecran qui ne rend jamais la branche interessante ne prouve rien.
+ *
+ * ELLE PORTE SA PROPRE VARIANTE, meme raison que la precedente : rien de
+ * partage, aucun stock du catalogue de test consomme.
+ */
+export const COMMANDE_FACTUREE_TEST = {
+  categorieId: "e1a2b3c4-1160-4aaa-8888-000000000001",
+  produitId: "e1a2b3c4-1160-4bbb-8888-000000000002",
+  varianteId: "e1a2b3c4-1160-4ccc-8888-000000000003",
+  commandeId: "e1a2b3c4-1160-4ddd-8888-000000000004",
+  ligneId: "e1a2b3c4-1160-4eee-8888-000000000005",
+  paiementId: "e1a2b3c4-1160-4fff-8888-000000000006",
+  factureId: "e1a2b3c4-1160-4a11-8888-000000000007",
+  numero: "C-TEST-0160",
+  numeroFacture: "F-TEST-0160",
+} as const;
+
+/**
  * Identifiants du produit de test rendu dans l'editeur, LS-111.
  *
  * FIGES ET NON ENGENDRES A CHAQUE EXECUTION. Le fichier de test doit construire
