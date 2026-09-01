@@ -701,6 +701,79 @@ if [ -f CLAUDE.md ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 15. Chaque motif `paths` des règles matche au moins un fichier suivi
+# ---------------------------------------------------------------------------
+#
+# LE CONTRÔLE 14 EXCLUT src/ VOLONTAIREMENT, au motif qu'un chemin de
+# déclenchement peut anticiper un dossier à venir. Cette tolérance a vieilli en
+# défaut : le 1er septembre 2026, `payments.md` portait encore quatre motifs
+# anglais, `src/services/checkout/**` et trois autres, écrits avant que la
+# phase 3 ne matérialise une arborescence française à plat. La règle ne se
+# chargeait donc pas sur `src/services/webhook-paiement.ts`, le cœur de
+# l'invariant 5, et `legal.md` ne se chargeait presque jamais. LS-157.
+#
+# Le contrôle de couverture de verifier-regles.sh ne pouvait pas le voir : il
+# vérifie que chaque dossier est couvert par AU MOINS UNE règle, et database.md
+# couvrait src/services/**. Couvert par une règle n'est pas couvert par la bonne.
+#
+# Un motif qui ne matche aucun fichier SUIVI est soit mort, soit une
+# anticipation. L'anticipation reste possible mais devient EXPLICITE : le
+# commentaire YAML `# anticipation` en fin de ligne l'exempte, avec la même
+# réserve que le marqueur [exemple-perimable] du contrôle 6 : l'employer pour
+# faire taire un motif réellement mort viderait le contrôle de son sens.
+
+glob_vers_regex() {
+  local g="$1"
+  g="${g//./\\.}"
+  g="${g//(/\\(}"
+  g="${g//)/\\)}"
+  g="${g//\*\*\//§§}"
+  g="${g//\*\*/¤¤}"
+  g="${g//\*/[^/]*}"
+  g="${g//§§/(.*\/)?}"
+  g="${g//¤¤/.*}"
+  printf '^%s$' "$g"
+}
+
+if [ -d .claude/rules ] && git rev-parse --git-dir >/dev/null 2>&1; then
+  fichiers_suivis=$(git ls-files)
+
+  for regle in .claude/rules/*.md; do
+    [ -f "$regle" ] || continue
+    while IFS= read -r brut; do
+      case "$brut" in *'# anticipation'*) continue ;; esac
+      motif=$(echo "$brut" | sed -n 's/^ *- *"\(.*\)".*$/\1/p')
+      [ -n "$motif" ] || continue
+
+      # Le frontmatter emploie la forme `{ts,tsx}`, que grep -E ne connaît
+      # pas : chaque variante est énumérée puis testée séparément.
+      variantes=("$motif")
+      if [[ "$motif" == *"{"*"}"* ]]; then
+        avant="${motif%%\{*}"
+        reste="${motif#*\{}"
+        dedans="${reste%%\}*}"
+        apres="${reste#*\}}"
+        variantes=()
+        IFS=',' read -ra alternatives <<< "$dedans"
+        for alt in "${alternatives[@]}"; do
+          variantes+=("$avant$alt$apres")
+        done
+      fi
+
+      trouve=0
+      for v in "${variantes[@]}"; do
+        if echo "$fichiers_suivis" | grep -qE "$(glob_vers_regex "$v")"; then
+          trouve=1
+          break
+        fi
+      done
+      [ "$trouve" -eq 1 ] \
+        || anomalies+=("$regle : le motif paths '$motif' ne matche aucun fichier suivi, la règle ne se charge pas là où elle croit protéger")
+    done < <(sed -n '/^paths:/,/^---$/p' "$regle" | grep -E '^\s*-' || true)
+  done
+fi
+
+# ---------------------------------------------------------------------------
 # Rapport
 # ---------------------------------------------------------------------------
 #

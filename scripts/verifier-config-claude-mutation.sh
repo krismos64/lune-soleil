@@ -36,7 +36,8 @@ TMP=$(mktemp -d)
 nettoyer() {
   rm -rf "$TMP"
   rm -f "$MEM/lune-soleil-fiche-de-mutation-temporaire.md"
-  git checkout -- CLAUDE.md docs/REFERENCES.md README.md .claude/settings.json 2>/dev/null || true
+  git checkout -- CLAUDE.md docs/REFERENCES.md README.md .claude/settings.json \
+    .claude/rules/payments.md 2>/dev/null || true
 }
 trap nettoyer EXIT
 
@@ -49,7 +50,8 @@ detectees=0
 # qu'un nouveau cas. README.md et .claude/settings.json sont entrés le 10 août
 # 2026 avec les cas 12 et 13 : sans eux dans cette garde, une exécution sur un
 # dépôt sale aurait restauré une version d'avant les modifications en cours.
-for f in CLAUDE.md docs/REFERENCES.md README.md .claude/settings.json; do
+for f in CLAUDE.md docs/REFERENCES.md README.md .claude/settings.json \
+  .claude/rules/payments.md; do
   [ -f "$f" ] || continue
   if ! git diff --quiet -- "$f" 2>/dev/null; then
     echo "ABANDON : $f porte des modifications non commitées."
@@ -283,6 +285,26 @@ if [ -f .claude/settings.json ] && command -v node >/dev/null 2>&1; then
   mutation "hook déclaré vers un script inexistant" "qui n'existe pas : la protection est muette"
   cp "$TMP/settings.json" .claude/settings.json
 fi
+
+# 14. Un motif `paths` de règle ne matche aucun fichier suivi.
+#
+# LE DÉFAUT RÉEL DU 1ER SEPTEMBRE 2026, LS-157 : payments.md portait quatre
+# motifs anglais écrits avant que la phase 3 ne matérialise une arborescence
+# française à plat, src/services/checkout/** et trois autres. La règle ne se
+# chargeait donc pas sur src/services/webhook-paiement.ts, le cœur de
+# l'invariant 5, et legal.md ne se chargeait presque jamais. Le contrôle de
+# couverture de verifier-regles.sh restait vert à bon droit : chaque dossier
+# était couvert par UNE règle, pas par la bonne.
+#
+# La mutation insère un motif mort dans le frontmatter plutôt que de retirer un
+# motif vivant : la restauration par copie remet le fichier exact, et une
+# interruption au pire moment laisse un motif de trop, jamais une protection en
+# moins.
+cp .claude/rules/payments.md "$TMP/payments.md"
+perl -pi -e 's{^(paths:)$}{$1\n  - "src/services/dossier-de-mutation/**"}' \
+  .claude/rules/payments.md
+mutation "motif paths mort dans une règle" "ne matche aucun fichier suivi"
+cp "$TMP/payments.md" .claude/rules/payments.md
 
 # Le retour au vert fait partie de la preuve : une restauration incomplète
 # laisserait le dépôt modifié sans que personne ne le voie.

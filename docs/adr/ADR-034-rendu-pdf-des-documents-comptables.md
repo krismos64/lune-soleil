@@ -175,6 +175,6 @@ ordonnanceur et un délai avant que la facture existe, pour une opération mesur
 
 ## Ce que cet ADR ne décide pas
 
-L'accès au fichier relève de LS-131 et LS-132 : contrôle de propriété pour un
+L'accès au fichier relève de LS-57 et LS-132 : contrôle de propriété pour un
 client connecté, lien signé expirant pour un achat sans compte. Aucune URL
 devinable dans les deux cas.
