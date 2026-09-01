@@ -13,7 +13,6 @@
 # Forme : NOM_DE_FAMILLE  puis la raison et le ticket qui la retirera.
 
 DONNEES_CLIENTS     aucun acces au fichier client, voir la nuance ci-dessous, LS-36
-REMBOURSEMENT       Stripe n'est pas branche avant la phase 4, phase 4
 PARAMETRES_BOUTIQUE aucun ecran de parametres, hors phase 1
 
 # LA LIGNE PARAMETRES_BOUTIQUE A ETE RELUE LE 13 AOUT 2026, LS-99, et elle reste
@@ -76,6 +75,24 @@ PARAMETRES_BOUTIQUE aucun ecran de parametres, hors phase 1
 # classement pour autant. L'effet est REVERSIBLE, republier est prevu et garde
 # meme la date de premiere publication ; et la piece reste vendable en main
 # propre, invariant 6, donc rien n'est detruit.
+
+# REMBOURSEMENT EST SORTIE DE CETTE LISTE LE 1er SEPTEMBRE 2026, LS-160.
+#
+# Sa ligne disait « Stripe n'est pas branche avant la phase 4 ». Elle etait
+# vraie a l'ecriture, et elle a cesse de l'etre en deux temps : le compte Stripe
+# a ete ouvert le 31 aout 2026, puis LS-128 a livre `rembourserCommande`. Elle
+# est restee fausse tant qu'aucune action n'existait, l'ecart etant invisible
+# dans les deux sens, exactement le motif que ce fichier documente plus bas.
+#
+# `demanderRemboursement` dans `src/services/avoir.ts` est la DEUXIEME action
+# sensible reelle du depot. Elle porte les deux gardes : `exigerAdministratrice`
+# pour le role, `exigerReauthentificationRecente` pour la fraicheur, dans cet
+# ordre. Le controle a refuse la ligne des qu'elle a existe, sens 3.
+#
+# LA MARQUE EST SUR LE SERVICE, PAS SUR LA SERVER ACTION. `rembourser` dans
+# `src/app/administration/commandes/actions.ts` delegue et porte sa propre garde
+# de role, redondance deliberee : elle ferme le point d'entree HTTP, la marque
+# du service fermant l'appel direct par un futur appelant.
 
 # IDENTIFIANTS EST SORTIE DE CETTE LISTE LE 13 AOUT 2026, LS-95.
 #

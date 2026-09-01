@@ -31,7 +31,15 @@ MEDIAS="src/app/administration/produits/[id]/actions-medias.ts"
 VARIANTES="src/app/administration/produits/[id]/actions-variantes.ts"
 PUBLICATION="src/app/administration/produits/[id]/actions-publication.ts"
 
-MUTABLES=("$MEDIAS" "$VARIANTES" "$PUBLICATION")
+# LA QUATRIEME CIBLE EST DANS `actions.ts`, DEJA VU PAR L'ANCIEN RELEVE, et son
+# ajout par LS-160 vise autre chose que le trou de LS-159 : la FORME de la
+# garde. Les trois cibles ci-dessus emploient toutes `if (!(await exigerRole`,
+# si bien que les trois mutations exercent une seule et meme forme. Une garde
+# ecrite `const identite = await exigerRole(...)`, forme de `changerStatut` et
+# de `rembourser`, n'etait exercee par aucun cas.
+COMMANDES="src/app/administration/commandes/actions.ts"
+
+MUTABLES=("$MEDIAS" "$VARIANTES" "$PUBLICATION" "$COMMANDES")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || {
@@ -132,6 +140,68 @@ cas "garde retirée dans actions-variantes.ts" "$VARIANTES" "creerVarianteAction
 # Cas 3 : `actions-publication.ts`, troisième. Les trois sont exercés plutôt
 # qu'un seul : un motif de relevé peut redevenir étroit sur un nom précis.
 cas "garde retirée dans actions-publication.ts" "$PUBLICATION" "publierProduitAction"
+
+# ---------------------------------------------------------------------------
+# `cas_affectation` neutralise une garde de la SECONDE FORME, LS-160.
+#
+# POURQUOI UNE SECONDE FONCTION ET NON UN MOTIF ELARGI. Les deux formes ne se
+# neutralisent pas de la meme facon :
+#
+#     if (!(await exigerRole(await headers()))) {     ->  if (false) {
+#     const identite = await exigerRole(await headers());  ->  l'appel disparait
+#
+# Un motif unique couvrant les deux serait plus fragile que deux motifs
+# explicites, et surtout il echouerait EN SILENCE sur l'une des deux : la
+# garde-fou `cksum` ne verrait qu'un fichier inchange sans dire laquelle.
+#
+# LA SUBSTITUTION REMPLACE L'APPEL PAR UNE VALEUR NON NULLE, ce qui laisse le
+# code compilable et retire la seule verification de role. Neutraliser le `if`
+# a la place laisserait l'appel present, donc le controle textuel VERT : la
+# mutation ne prouverait rien. C'est le motif « mutation sans effet observable ».
+# ---------------------------------------------------------------------------
+cas_affectation() {
+  local nom="$1" fichier="$2" fonction="$3"
+  mutations=$((mutations + 1))
+
+  local avant
+  avant=$(cksum <"$fichier")
+
+  perl -0pi -e "s/(export async function ${fonction}\\([\\s\\S]{0,400}?)const identite = await exigerRole\\(await headers\\(\\)\\);/\$1const identite = { utilisateurId: \"mutation\" };/" "$fichier"
+
+  if [ "$(cksum <"$fichier")" = "$avant" ]; then
+    echo "  ECHEC $nom -> la mutation n'a modifié aucun caractère"
+    echo "        La garde a changé de forme : corriger ce script, pas le contrôle."
+    echecs=$((echecs + 1))
+    restaurer
+    return
+  fi
+
+  local sortie
+  sortie=$($CONTROLE 2>&1)
+  local code=$?
+
+  if [ "$code" -eq 0 ]; then
+    echo "  RATE  $nom -> NON détecté, le contrôle est aveugle sur cette forme"
+    echecs=$((echecs + 1))
+    restaurer
+    return
+  fi
+
+  if printf '%s' "$sortie" | grep -qF "l'action \`$fonction\`"; then
+    echo "  OK    $nom -> détecté, l'action est nommée"
+  else
+    echo "  RATE  $nom -> échec constaté, mais l'action n'est PAS nommée"
+    echo "          attendu : l'action \`$fonction\`"
+    printf '%s\n' "$sortie" | grep -E "ECHEC" | head -2 | sed 's/^/            /'
+    echecs=$((echecs + 1))
+  fi
+
+  restaurer
+}
+
+# Cas 4 : `rembourser`, LS-160. La seule Server Action qui fasse SORTIR DE
+# L'ARGENT : une garde perdue ici est le defaut le plus cher du depot.
+cas_affectation "garde retirée sur rembourser" "$COMMANDES" "rembourser"
 
 echo
 echo "-----------------------------------------"

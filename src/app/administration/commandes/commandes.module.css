@@ -440,3 +440,80 @@
     transition: none;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Remboursement et avoirs, LS-160                                     */
+/* ------------------------------------------------------------------ */
+
+.listeAvoirs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-2);
+  margin: 0 0 var(--ls-space-4);
+  padding: 0;
+  list-style: none;
+}
+
+.avoir {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ls-space-2);
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.formulaireRemboursement {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-4);
+}
+
+/*
+ * `--ls-error` ET NON `--ls-warning`, meme mesure que `.messageErreur` plus
+ * haut : `--ls-warning` donne 4,04:1 sur le BLANC de `.section`, sous le seuil
+ * AA de 4,5:1 en petit texte, alors qu'il tient sur le creme de la page. Fiche
+ * « le contraste depend du fond ».
+ */
+.avertissement {
+  margin: 0;
+  padding: var(--ls-space-3);
+  border-left: 3px solid var(--ls-error);
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-1);
+}
+
+.champ label {
+  font-weight: 600;
+}
+
+/*
+ * `width: 100%` AVEC `box-sizing` HERITE : sans lui le champ deborde de son
+ * conteneur a 320 px, la bordure et le rembourrage s'ajoutant a la largeur.
+ */
+.champ input {
+  width: 100%;
+  min-height: var(--ls-touch-target);
+  padding: 0 var(--ls-space-3);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  font-size: 1rem;
+}
+
+.champ input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.aide {
+  margin: 0;
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+}

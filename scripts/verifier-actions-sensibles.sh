@@ -134,12 +134,66 @@ while IFS= read -r occurrence; do
   #
   # `vu` ne passe donc à vrai qu'après une ligne portant `{`, l'ouverture du
   # corps. Une signature sur une ou dix lignes est traitée pareil.
+  # LE CORPS EST BORNE PAR COMPTAGE D'ACCOLADES, ET NON PAR LA COLONNE ZERO.
+  #
+  # TROISIEME FAUX POSITIF DE CETTE EXTRACTION, mesure le 1er septembre 2026 en
+  # LS-160, et le pire sens d'erreur : accuser une fonction correctement gardee.
+  #
+  # La version precedente s'arretait a la premiere ligne commencant par autre
+  # chose qu'une espace ou `}`. Elle avait deja ete corrigee une fois pour `}`,
+  # la ligne qui referme un objet de parametres. Elle ratait le JUMEAU exact :
+  #
+  #     export async function demanderRemboursement(
+  #       enTetes: Headers,
+  #       parametres: {
+  #         ...
+  #       },
+  #       correlation?: Correlation,
+  #     ): Promise<IssueDemandeRemboursement> {   <- commence par `)`, ARRET
+  #
+  # `)` n'est ni une espace ni `}`, donc l'extraction sortait AVANT la premiere
+  # instruction, et le controle refusait une fonction portant ses deux gardes.
+  #
+  # Enumerer les caracteres de reprise est une impasse : `)`, `}`, `]`, `>` et
+  # ce qui viendra. Le comptage d'accolades ne depend d'AUCUNE convention de
+  # mise en forme, et c'est deja la mecanique de `verifier-gardes-administration.sh`.
   corps=$(awk -v debut="$ligne" '
     NR < debut { next }
-    NR == debut { dans = 1; next }
-    dans && /^[^[:space:]}]/ && vu { exit }
-    dans && /\{/ { vu = 1 }
-    dans { print }
+    # LE COMPTAGE DEMARRE A LA DECLARATION, jamais a la marque : entre les deux
+    # il reste la fin du commentaire.
+    !demarre && /^export (async )?function / { demarre = 1 }
+    !demarre { next }
+    {
+      print
+      # LE CORPS NE COMMENCE QU A LA PARENTHESE FERMANTE DE LA SIGNATURE, et
+      # cette precision est le coeur de la correction de LS-160.
+      #
+      # Compter les accolades depuis la declaration ne suffit pas : un objet de
+      # parametres en ouvre une puis la referme,
+      #
+      #     parametres: {        <- profondeur 1
+      #       ...
+      #     },                   <- profondeur 0, extraction sortie AVANT le corps
+      #     correlation?: Correlation,
+      #   ): Promise<...> {      <- LA vraie accolade du corps, jamais atteinte
+      #
+      # et la profondeur retombe a zero avant meme que le corps existe. Le
+      # controle refusait alors une fonction portant ses deux gardes, faux
+      # positif indiscernable dun vrai defaut.
+      #
+      # `signature_finie` ne passe a vrai quapres la ligne portant `)` en tete
+      # de ligne ou une signature dun seul tenant. Tout ce qui precede est
+      # ignore par le comptage.
+      if (!signature_finie) {
+        if (/^[[:space:]]*\)/ || /\)[^)]*\{[[:space:]]*$/) { signature_finie = 1 }
+        else { next }
+      }
+      n = gsub(/\{/, "{")
+      m = gsub(/\}/, "}")
+      profondeur += n - m
+      if (profondeur <= 0 && corps_commence) { exit }
+      if (n > 0) { corps_commence = 1 }
+    }
   ' "$fichier")
 
   if ! printf '%s\n' "$corps" \
@@ -338,12 +392,19 @@ if [ -d "$ADMINISTRATION" ]; then
 
       actions_serveur_verifiees=$((actions_serveur_verifiees + 1))
 
+      # MEME COMPTAGE D'ACCOLADES QU'AU SENS 1, et pour la meme raison : un
+      # type de retour etale par Prettier ramene `)` en colonne zero.
       corps_fn=$(awk -v debut="$ligne_fn" '
         NR < debut { next }
-        NR == debut { dans = 1; next }
-        dans && /^[^[:space:]}]/ && vu { exit }
-        dans && /\{/ { vu = 1 }
-        dans { print }
+        NR == debut { dans = 1; print; next }
+        dans {
+          print
+          n = gsub(/\{/, "{")
+          m = gsub(/\}/, "}")
+          profondeur += n - m
+          if (profondeur <= 0 && corps_commence) { exit }
+          if (n > 0) { corps_commence = 1 }
+        }
       ' "$fichier")
 
       # LA PARENTHÈSE EST EXIGÉE, `exigerAdministratrice(`. Chercher le seul nom

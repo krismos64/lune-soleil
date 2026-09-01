@@ -10,6 +10,8 @@
  */
 import { formaterMontant } from "@/lib/montant";
 import Link from "next/link";
+import { randomUUID } from "node:crypto";
+
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
@@ -17,7 +19,10 @@ import {
   AutorisationRefuseeError,
   exigerAdministratrice,
 } from "@/services/autorisation";
-import { lireDetailCommande } from "@/services/administration-commandes";
+import {
+  lireDetailCommande,
+  lireRemboursementPossible,
+} from "@/services/administration-commandes";
 import { EntreeInvalideError } from "@/lib/validation";
 import {
   formaterDate,
@@ -28,6 +33,7 @@ import {
   traduireStatut,
 } from "../affichage";
 import { DocumentFacture } from "./document-facture";
+import { Remboursement } from "./remboursement";
 import { TransitionsCommande } from "./transitions";
 import styles from "../commandes.module.css";
 
@@ -104,6 +110,27 @@ export default async function PageDetailCommande({
   if (commande === null) {
     notFound();
   }
+
+  const remboursement = await lireRemboursementPossible(commande.id);
+
+  /*
+   * LA REFERENCE DE DEMANDE EST ENGENDREE ICI, UNE FOIS PAR RENDU DE PAGE, et
+   * c'est ce qui ferme le double clic. Le formulaire la renvoie a l'identique a
+   * chaque envoi : deux clics produisent la MEME cle d'idempotence, donc le
+   * second sort en « deja demande » sans jamais appeler le prestataire.
+   *
+   * ELLE NE PEUT PAS NAITRE DANS LE COMPOSANT CLIENT : un identifiant engendre
+   * au navigateur changerait a chaque remontage, et deux envois porteraient
+   * alors deux references, donc deux intentions, donc DEUX remboursements
+   * reels. C'est exactement le defaut mesure le 1er septembre 2026 sous sa
+   * forme derivee du cumul.
+   *
+   * `dynamic = "force-dynamic"` CI-DESSUS EST CE QUI REND CETTE LIGNE SURE :
+   * sans lui, une page mise en cache servirait la meme reference a deux
+   * demandes legitimes successives, et la seconde serait avalee en « deja
+   * demande » alors qu'elle doit partir.
+   */
+  const referenceDemande = randomUUID();
 
   const adresse = lignesAdresse(commande.adresseLivraison);
   const pointRelais = lignesAdresse(commande.pointRelaisAdresse);
@@ -237,6 +264,23 @@ export default async function PageDetailCommande({
           Document comptable
         </h2>
         <DocumentFacture commandeId={commande.id} facture={commande.facture} />
+      </section>
+
+      {/*
+       * LE REMBOURSEMENT VIENT APRES LE DOCUMENT, et l'ordre suit la
+       * chronologie reelle : un avoir corrige une facture qui existe deja.
+       */}
+      <section className={styles.section} aria-labelledby="titre-remboursement">
+        <h2 id="titre-remboursement" className={styles.titreSection}>
+          Remboursement
+        </h2>
+        <Remboursement
+          commandeId={commande.id}
+          referenceDemande={referenceDemande}
+          restantCentimes={remboursement?.restantCentimes ?? 0}
+          avoirs={remboursement?.avoirs ?? []}
+          factureAbsente={remboursement === null}
+        />
       </section>
 
       <section className={styles.section} aria-labelledby="titre-suivi">

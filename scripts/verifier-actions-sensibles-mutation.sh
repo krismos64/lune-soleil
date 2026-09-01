@@ -116,7 +116,21 @@ attendre_echec "marque @sensible sans famille"
 # --- Cas 4 : une famille perd sa couverture sans passer en attente --------
 # Le sens 3 du contrôle. Sans lui, supprimer la dernière action d'une famille
 # laisserait le contrôle vert : zéro action à vérifier, zéro échec.
-sed -i '' 's/^REMBOURSEMENT/# REMBOURSEMENT/' "$ATTENTE"
+#
+# LA CIBLE EST PASSEE DE `REMBOURSEMENT` A `PARAMETRES_BOUTIQUE` LE 1er
+# SEPTEMBRE 2026, LS-160, et le motif mérite d'être tracé : ce cas commentait la
+# ligne `REMBOURSEMENT` du fichier d'attente pour créer l'état « déclarée, ni
+# couverte ni en attente ». Depuis que `demanderRemboursement` COUVRE cette
+# famille, commenter la ligne ne produit plus cet état, il produit l'état
+# NORMAL : le contrôle reste vert à juste titre, et le cas rapportait « NON
+# DETECTE » en accusant un contrôle sain.
+#
+# C'est le motif « cible de mutation déplacée » : la mutation n'a pas cessé
+# d'être détectée, elle a cessé d'exister. Ne pas conclure à un trou du contrôle
+# sans avoir vérifié que la mutation crée encore le défaut qu'elle prétend
+# créer. La cible doit rester une famille SANS action, sans quoi ce cas se
+# redésarmera silencieusement à la prochaine story qui en couvre une.
+sed -i '' 's/^PARAMETRES_BOUTIQUE/# PARAMETRES_BOUTIQUE/' "$ATTENTE"
 attendre_echec "famille déclarée, ni couverte ni en attente"
 
 # --- Cas 5 : ligne d'attente périmée --------------------------------------

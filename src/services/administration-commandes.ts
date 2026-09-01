@@ -22,6 +22,11 @@ import type { StatutCommande, StatutPaiement } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import { schemaIdentifiant, valider } from "@/lib/validation";
 import { historiserTransition } from "@/repositories/confirmation";
+import {
+  listerAvoirsDeFacture,
+  lireFacturePourAvoir,
+  type AvoirEmis,
+} from "@/repositories/avoir";
 
 /**
  * Les transitions que l'EXPLOITANTE peut decider, par statut de depart.
@@ -251,6 +256,51 @@ export async function lireDetailCommande(
   return {
     ...commande,
     transitionsPossibles: TRANSITIONS_ADMINISTRATRICE[commande.statut],
+  };
+}
+
+/**
+ * Ce que l'ecran de remboursement doit savoir, LS-160.
+ *
+ * LE RESTANT EST CALCULE COTE SERVEUR, jamais dans le navigateur : c'est un
+ * montant, donc il suit la frontiere metier de `frontend-design.md`. Le composant
+ * l'affiche et ne le recalcule pas.
+ *
+ * IL VAUT `montantTotalCentimes - montantAvoirCentimes`, la MEME expression que
+ * la borne du service, et ce n'est pas une duplication gratuite : afficher un
+ * restant qui differe de celui que le service applique ferait saisir un montant
+ * refuse sans que la cause soit lisible.
+ */
+export type RemboursementPossible = {
+  factureId: string;
+  restantCentimes: number;
+  avoirs: AvoirEmis[];
+};
+
+/**
+ * Relit de quoi rendre l'ecran de remboursement d'une commande.
+ *
+ * ELLE REND `null` QUAND AUCUNE FACTURE N'EXISTE, etat distinct d'un restant
+ * nul : « pas de document a corriger » et « tout est deja rembourse » appellent
+ * deux gestes differents, emettre la facture ou ne rien faire.
+ */
+export async function lireRemboursementPossible(
+  commandeId: string,
+  client: typeof prisma = prisma,
+): Promise<RemboursementPossible | null> {
+  const identifiant = valider(schemaIdentifiant, commandeId);
+
+  const facture = await lireFacturePourAvoir(client, identifiant);
+
+  if (facture === null) {
+    return null;
+  }
+
+  return {
+    factureId: facture.id,
+    restantCentimes:
+      facture.montantTotalCentimes - facture.montantAvoirCentimes,
+    avoirs: await listerAvoirsDeFacture(client, facture.id),
   };
 }
 
