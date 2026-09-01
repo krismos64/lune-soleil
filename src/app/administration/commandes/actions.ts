@@ -26,6 +26,9 @@ import type { StatutCommande } from "@/generated/prisma/enums";
 import { exigerRole } from "@/services/autorisation";
 import { changerStatutCommande } from "@/services/administration-commandes";
 import { rendreFacture } from "@/services/document-comptable";
+import { demanderRemboursement } from "@/services/avoir";
+import { centimesDepuisEuros } from "@/services/variante-validation";
+import { fournisseurStripe } from "@/integrations/stripe";
 
 /**
  * Ce que l'interface recoit, jamais une exception.
@@ -192,4 +195,171 @@ export async function regenererDocument(
    * que la generation a echoue, sans exposer la cause technique, invariant 9.
    */
   return { statut: "ECHEC" };
+}
+
+/** Ce que la demande de remboursement rend a l'interface. */
+export type ResultatRemboursement =
+  | { statut: "SUCCES"; numeroAvoir: string; montantCentimes: number }
+  /** Aucune session d'administration, ou session sans le role. */
+  | { statut: "SESSION_ABSENTE" }
+  /** Session valide, mais l'identite n'a pas ete prouvee depuis quinze minutes. */
+  | { statut: "REAUTHENTIFICATION_REQUISE" }
+  /** Entree refusee : identifiant difforme, montant illisible, motif vide. */
+  | { statut: "INVALIDE"; message: string }
+  | { statut: "AUCUN_PAIEMENT" }
+  | { statut: "FACTURE_ABSENTE" }
+  | { statut: "MONTANT_TROP_ELEVE"; restantCentimes: number }
+  /** Refus definitif du prestataire : relancer a l'identique ne servira a rien. */
+  | { statut: "REFUSE_PRESTATAIRE" }
+  /** Le prestataire ne repond pas. Rien n'a change, reessayer a du sens. */
+  | { statut: "PRESTATAIRE_INDISPONIBLE" }
+  /** Cette demande est deja partie : le double clic sort ici. */
+  | { statut: "DEJA_DEMANDE" }
+  /** Panne technique, deja journalisee. */
+  | { statut: "INDISPONIBLE" };
+
+/**
+ * Longueur maximale du motif d'avoir.
+ *
+ * IL FINIT DANS L'INSTANTANE LEGAL de l'avoir, document opposable : une chaine
+ * demesuree y entrerait telle quelle et deborderait le rendu PDF. La borne est
+ * appliquee ici, sur l'entree non fiable, invariant 7.
+ */
+const LONGUEUR_MAXIMALE_MOTIF = 200;
+
+/**
+ * Rembourse tout ou partie d'une commande, sur geste de l'exploitante. LS-160.
+ *
+ * LA GARDE DE ROLE EST ICI *ET* DANS LE SERVICE, et ce n'est pas une
+ * redondance inutile. Elle repond a deux questions differentes selon l'endroit :
+ * ici elle ferme le point d'entree HTTP, une Server Action etant invocable
+ * directement sans passer par le rendu de l'ecran ; dans le service elle
+ * accompagne la garde de fraicheur, qu'un futur appelant ne doit pas pouvoir
+ * contourner en appelant le service sans passer par cette action.
+ *
+ * LA GARDE DE FRAICHEUR RESTE DANS LE SERVICE, elle, avec la marque qui la
+ * declare : le controle la cherche dans le corps de la fonction marquee, jamais
+ * dans son appelant.
+ *
+ * LA REFERENCE DE DEMANDE VIENT DU FORMULAIRE, engendree UNE FOIS au rendu
+ * serveur de la page. C'est elle qui ferme le double clic : deux envois
+ * successifs portent la meme reference, donc la meme cle d'idempotence, donc le
+ * second sort en `DEJA_DEMANDE` sans jamais appeler le prestataire.
+ *
+ * ELLE N'AUTORISE RIEN, invariant 2. Une reference forgee ne donne acces a
+ * aucune commande : elle ne fait qu'identifier un geste, et le role est exige
+ * avant toute lecture. Au pire une reference inventee ouvre une intention
+ * neuve, ce que le montant borne par le restant remboursable encadre deja.
+ */
+export async function rembourser(
+  formulaire: FormData,
+): Promise<ResultatRemboursement> {
+  /*
+   * LA GARDE EST LA PREMIERE INSTRUCTION, avant toute lecture de l'entree, meme
+   * motif que `changerStatut` : la verifier apres laisserait un appelant sans
+   * role sonder l'existence d'une commande par la difference entre deux refus.
+   */
+  const identite = await exigerRole(await headers());
+
+  if (identite === null) {
+    return { statut: "SESSION_ABSENTE" };
+  }
+
+  const commandeId = formulaire.get("commandeId");
+  const montantSaisi = formulaire.get("montant");
+  const motif = formulaire.get("motif");
+  const referenceDemande = formulaire.get("referenceDemande");
+
+  if (
+    typeof commandeId !== "string" ||
+    typeof montantSaisi !== "string" ||
+    typeof motif !== "string" ||
+    typeof referenceDemande !== "string" ||
+    referenceDemande === ""
+  ) {
+    return { statut: "INVALIDE", message: "Demande non valide." };
+  }
+
+  /*
+   * LA SAISIE EST EN EUROS, LE SERVICE ATTEND DES CENTIMES, invariant 1. La
+   * conversion passe par `centimesDepuisEuros`, qui decoupe la chaine et refuse
+   * tout ce qui n'est pas un decimal a deux chiffres au plus : ni notation
+   * scientifique, ni negatif, ni arrondi silencieux d'un troisieme chiffre.
+   */
+  const montantCentimes = centimesDepuisEuros(montantSaisi);
+
+  if (montantCentimes === null) {
+    return {
+      statut: "INVALIDE",
+      message: "Montant illisible. Deux décimales au plus, sans signe.",
+    };
+  }
+
+  if (montantCentimes === 0) {
+    /*
+     * ZERO EST UN MONTANT VALIDE POUR `schemaMontantCentimes`, un avoir partiel
+     * pouvant solder a zero, mais il n'est pas une DEMANDE valide : rembourser
+     * zero euro ferait partir un appel au prestataire et naitre un avoir sans
+     * qu'aucun argent ne bouge.
+     */
+    return {
+      statut: "INVALIDE",
+      message: "Un remboursement de zéro euro n'a pas d'objet.",
+    };
+  }
+
+  const motifNettoye = motif.trim();
+
+  if (motifNettoye === "" || motifNettoye.length > LONGUEUR_MAXIMALE_MOTIF) {
+    return {
+      statut: "INVALIDE",
+      message: `Le motif est obligatoire, ${LONGUEUR_MAXIMALE_MOTIF} caractères au plus.`,
+    };
+  }
+
+  try {
+    const issue = await demanderRemboursement(await headers(), {
+      commandeId,
+      montantCentimes,
+      motif: motifNettoye,
+      fournisseur: fournisseurStripe,
+      referenceDemande,
+    });
+
+    if (issue.statut === "REMBOURSE") {
+      revalidatePath(`${CHEMIN_COMMANDES}/${commandeId}`);
+
+      return {
+        statut: "SUCCES",
+        numeroAvoir: issue.numeroAvoir,
+        montantCentimes: issue.montantCentimes,
+      };
+    }
+
+    if (issue.statut === "REFUSE_PRESTATAIRE") {
+      /*
+       * LE CODE DU PRESTATAIRE NE SORT PAS A L'ECRAN. Il est deja journalise
+       * par le service : l'afficher exposerait un detail d'integration sans
+       * aider l'exploitante, qui ne peut de toute facon rien en faire.
+       */
+      return { statut: "REFUSE_PRESTATAIRE" };
+    }
+
+    return issue;
+  } catch (erreur) {
+    /*
+     * `PrestatairePaiementIndisponibleError` NE REMONTE PAS JUSQU'ICI, et le
+     * rattraper serait une branche morte. Le service l'intercepte deja, y
+     * compris le cas « aucune cle Stripe configuree » : `clientStripe()` est
+     * appele DANS `fournisseur.rembourser`, donc dans le `try` du service, qui
+     * rend `PRESTATAIRE_INDISPONIBLE` et libere l'intention.
+     *
+     * CE QUI SORT ICI EST UNE VRAIE PANNE, base injoignable en tete. Elle est
+     * journalisee et l'ecran dit « indisponible », sans exposer la cause,
+     * invariant 9.
+     */
+    journaliserErreur("Remboursement impossible", erreur, {});
+
+    return { statut: "INDISPONIBLE" };
+  }
 }

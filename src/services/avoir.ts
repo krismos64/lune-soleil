@@ -43,6 +43,14 @@ import {
 } from "@/repositories/paiement";
 import { VERSION_INSTANTANE_LEGAL } from "@/lib/validation";
 import type { InstantaneLegal } from "@/lib/validation";
+import {
+  AutorisationRefuseeError,
+  exigerAdministratrice,
+} from "@/services/autorisation";
+import {
+  exigerReauthentificationRecente,
+  ReauthentificationRequiseError,
+} from "@/services/reauthentification";
 
 /**
  * Ce qu'une demande de remboursement produit.
@@ -464,4 +472,89 @@ function construireInstantaneAvoir(parametres: {
       `Motif : ${motif}`,
     ],
   };
+}
+
+/**
+ * Ce que la demande gardee rend, en plus des issues du remboursement lui-meme.
+ *
+ * LES DEUX REFUS DE GARDE SONT DISTINGUES, et la distinction est utile ici
+ * contrairement a l'acces aux documents de LS-132. L'appelante est
+ * l'exploitante, dans son administration : « votre session a expire » et
+ * « confirmez votre identite » appellent deux gestes differents, et les
+ * confondre la ferait se reconnecter quand il suffit de saisir son mot de
+ * passe.
+ *
+ * AUCUN DES DEUX NE RENSEIGNE UN INTRUS. Atteindre cette fonction suppose deja
+ * une session ouverte : la distinction ne se lit qu'apres la garde de role,
+ * jamais avant.
+ */
+export type IssueDemandeRemboursement =
+  | IssueRemboursementCommande
+  /** Aucune session d'administration, ou session sans le role. */
+  | { statut: "SESSION_ABSENTE" }
+  /** Session valide, mais la preuve d'identite manque ou a plus de quinze minutes. */
+  | { statut: "REAUTHENTIFICATION_REQUISE" };
+
+/**
+ * Rembourse sur decision de l'exploitante, gardes comprises. LS-160.
+ *
+ * ELLE EXISTE POUR PORTER LES DEUX GARDES DANS LE SERVICE, et non dans le seul
+ * adaptateur. La marque de famille se pose sur la fonction qui DECIDE : la
+ * poser sur une Server Action qui delegue laisserait `rembourserCommande`
+ * atteignable sans garde par un futur appelant, et le controle cherche la garde
+ * dans le corps de la fonction marquee, jamais dans son appelant.
+ *
+ * L'ADAPTATEUR EXIGE LE ROLE LUI AUSSI, et c'est deliberement redondant : une
+ * Server Action est un point d'entree HTTP invocable directement. Les deux
+ * gardes ferment deux chemins distincts vers le meme effet.
+ *
+ * LES DEUX GARDES REPONDENT A DEUX QUESTIONS DISTINCTES, motif de LS-89 :
+ * `exigerAdministratrice` dit QUI agit, `exigerReauthentificationRecente` dit
+ * si cette identite est RECENTE. Un client inscrit sur la boutique franchirait
+ * la seconde avec son propre mot de passe si la premiere manquait.
+ *
+ * L'ORDRE DES GARDES N'EST PAS INDIFFERENT : le role d'abord. L'inverse ferait
+ * proposer une reauthentification a quelqu'un qui n'a de toute facon aucun
+ * droit sur cet ecran, ce qui lui apprendrait que l'ecran existe.
+ *
+ * @sensible REMBOURSEMENT
+ */
+export async function demanderRemboursement(
+  enTetes: Headers,
+  parametres: {
+    commandeId: string;
+    montantCentimes: number;
+    motif: string;
+    fournisseur: FournisseurPaiement;
+    referenceDemande: string;
+  },
+  correlation?: Correlation,
+): Promise<IssueDemandeRemboursement> {
+  try {
+    await exigerAdministratrice(enTetes);
+  } catch (erreur) {
+    if (erreur instanceof AutorisationRefuseeError) {
+      return { statut: "SESSION_ABSENTE" };
+    }
+    throw erreur;
+  }
+
+  try {
+    await exigerReauthentificationRecente(enTetes, "REMBOURSEMENT");
+  } catch (erreur) {
+    if (erreur instanceof ReauthentificationRequiseError) {
+      return { statut: "REAUTHENTIFICATION_REQUISE" };
+    }
+    /*
+     * `AutorisationRefuseeError` PEUT AUSSI SORTIR D'ICI, la session ayant pu
+     * etre revoquee entre les deux gardes. Elle se traduit comme plus haut :
+     * une session disparue est une session absente, pas une panne.
+     */
+    if (erreur instanceof AutorisationRefuseeError) {
+      return { statut: "SESSION_ABSENTE" };
+    }
+    throw erreur;
+  }
+
+  return rembourserCommande(parametres, correlation);
 }
