@@ -112,6 +112,45 @@ d'intégration l'a montré, restauré en `c6d8dff`.
 situés après, n'ont jamais été joués. Corrigé, puis rejoué en ciblé sur les huit
 cas nécessaires.
 
+## Cinq exécutions de CI, quatre échecs, quatre causes distinctes
+
+Le journal ci-dessus a été écrit avant la première exécution. Ce qui a suivi
+mérite d'être tracé, aucune cause ne se répétant :
+
+| | Cause | Origine |
+|---|---|---|
+| 1 | `intention_remboursement` absente de `prisma/sql-manuel/schema.sql`, 35 tables en base contre 34 | mon code |
+| 2 | la même table absente du registre RGPD, rangée depuis dans T5 | mon code |
+| 3 | avis `GHSA-3f6p-5ww8-9rcr` sur `mysql2` | **externe**, `main` était rouge aussi |
+| 4 | le `README.md` annonçait huit overrides, il y en avait neuf | ma correction du point 3 |
+
+**Le point 3 méritait de ne pas être suivi à la lettre.** `npm audit fix --force`
+proposait `prisma@6.19.3`, un retour de la 7 vers la 6 annoncé comme *breaking
+change* : il aurait cassé le client généré, l'adaptateur et les conventions de
+migration. L'override monte `mysql2` en 3.24.2 sans toucher Prisma, resté en
+7.9.1. Même piège que `deepmerge-ts`, déjà documenté dans le `README.md`.
+
+**Le point 4 est une erreur de séquence, et elle m'appartient.** J'avais rejoué
+les onze contrôles textuels **avant** d'ajouter l'override, donc sur un état que
+je modifiais ensuite. Les rejouer après aurait évité un aller-retour entier.
+
+**Le SQL de référence et le registre des traitements ne se dérivent pas du
+schéma.** Toute table neuve doit y être portée à la main, et aucun des deux
+n'était dans ma liste de vérifications avant de pousser. C'est le troisième et le
+quatrième fichier à synchroniser, aux côtés de `schema.prisma` et de la migration.
+
+## Un moniteur qui a conclu à tort
+
+La surveillance de la CI a annoncé « tous les contrôles terminés » alors que le
+contrôle gâtant n'était pas encore **inscrit** dans la liste : la condition
+« tous les contrôles connus sont non-pending » est trivialement vraie sur une
+liste d'un seul élément. Corrigée pour exiger que le contrôle nommé soit présent
+ET non-pending.
+
+C'est la variante exacte du piège déjà fiché ce matin, le feu vert étant le
+compte des contrôles terminés et jamais l'arrivée d'une notification. Cette
+fois le défaut venait de ma propre boucle.
+
 ## Vérifications
 
 ```
