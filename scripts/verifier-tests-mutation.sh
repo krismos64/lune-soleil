@@ -95,6 +95,10 @@ DEPOT_ENVOI="src/repositories/envoi-email.ts"
 SMTP="src/integrations/email/smtp.ts"
 FACTURE="src/services/facture.ts"
 DEPOT_FACTURE="src/repositories/facture.ts"
+# Ne par LS-158, qui a sorti les lectures de profil des services. Le cas 56
+# mutait encore `suppression-compte.ts`, ou la lecture ne vit plus : le script
+# s'arretait la, AVANT les cas suivants. Corrige le 1er septembre 2026.
+DEPOT_UTILISATEUR="src/repositories/utilisateur.ts"
 ACCES_DOCUMENT="src/services/acces-document.ts"
 JETON_ACCES="src/lib/jeton-acces.ts"
 
@@ -109,7 +113,7 @@ JETON_ACCES="src/lib/jeton-acces.ts"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -893,7 +897,11 @@ cas "horodatage de dissociation ecrase au rejeu" integration \
 #
 # C'est le motif deja rencontre ici : une mutation qui ne mute pas le chemin de
 # sortie designe un coupable innocent.
-mute "$SUPPRESSION" 's/      _count: \{ select: \{ comptes: true, passkeys: true \} \},/      comptes: true,\n      _count: { select: { comptes: true, passkeys: true } },/'
+# LA PREMIERE MOITIE A SUIVI LA LECTURE DANS LE REPOSITORY, LS-158 : le
+# `select` de l'export vit dans `repositories/utilisateur.ts` depuis que la
+# frontiere Prisma a ete posee. Muter l'ancien emplacement ne modifiait plus
+# rien, et le garde-fou de `mute` arretait tout le script a ce cas.
+mute "$DEPOT_UTILISATEUR" 's/      _count: \{ select: \{ comptes: true, passkeys: true \} \},/      comptes: true,\n      _count: { select: { comptes: true, passkeys: true } },/'
 mute "$SUPPRESSION" 's/    compte: \{\n      email: utilisateur\.email,/    compte: {\n      ...utilisateur,\n      email: utilisateur.email,/'
 cas "export chargeant les comptes et recopiant l'objet, empreinte comprise" integration \
   "ne fait sortir aucun secret"

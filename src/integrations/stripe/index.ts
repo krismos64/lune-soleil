@@ -32,7 +32,9 @@ import {
   PrestatairePaiementIndisponibleError,
   type DemandeSessionPaiement,
   type EtatSessionPaiement,
+  type DemandeRemboursement,
   type FournisseurPaiement,
+  type IssueRemboursement,
   type IssueExpirationSession,
   type SessionPaiementCreee,
 } from "@/integrations/stripe/fournisseur";
@@ -179,6 +181,86 @@ export const fournisseurStripe: FournisseurPaiement = {
        */
       if (cause instanceof Stripe.errors.StripeInvalidRequestError) {
         return "DEJA_FERMEE";
+      }
+
+      throw new PrestatairePaiementIndisponibleError(cause);
+    }
+  },
+
+  async rembourser(demande: DemandeRemboursement): Promise<IssueRemboursement> {
+    const stripe = clientStripe();
+
+    /*
+     * LA SESSION EST RELUE POUR RETROUVER LA CHARGE. Stripe rembourse une
+     * `payment_intent`, pas une session de paiement : l'appelant ne connait que
+     * la seconde, qui est ce que la commande a retenu.
+     *
+     * TOUTE ERREUR DE LECTURE EST UNE INDISPONIBILITE, meme motif que
+     * `lireSession` : ne pas savoir ce qu'on rembourse n'autorise aucune
+     * decision, et surtout pas celle de rendre de l'argent.
+     */
+    let session: Stripe.Checkout.Session;
+
+    try {
+      session = await stripe.checkout.sessions.retrieve(
+        demande.identifiantSession,
+      );
+    } catch (cause) {
+      throw new PrestatairePaiementIndisponibleError(cause);
+    }
+
+    const intention = session.payment_intent?.toString();
+
+    if (intention === undefined || intention === "") {
+      /*
+       * UNE SESSION SANS INTENTION DE PAIEMENT N'A RIEN ENCAISSE, donc rien a
+       * rendre. C'est un refus definitif et non une panne : reessayer ne
+       * changerait rien.
+       */
+      return { issue: "REFUSE", code: "session_sans_paiement" };
+    }
+
+    try {
+      const remboursement = await stripe.refunds.create(
+        {
+          payment_intent: intention,
+          /*
+           * LE MONTANT EST UN INCREMENT. Stripe attend ce qu'il doit rendre
+           * MAINTENANT, pas le cumul : passer le cumul rembourserait une
+           * seconde fois le premier montant.
+           */
+          amount: demande.montantCentimes,
+        },
+        {
+          /*
+           * LA CLE VIENT DE L'APPELANT, ADR-032. C'est le seul appel sortant du
+           * projet dont un doublon coute de l'argent : une relance reseau sur
+           * la meme cle rend le meme remboursement au lieu d'en creer un second.
+           */
+          idempotencyKey: demande.cleIdempotence,
+          maxNetworkRetries: RELANCES_RESEAU,
+        },
+      );
+
+      return {
+        issue: "REMBOURSE",
+        identifiantRemboursement: remboursement.id,
+        /*
+         * LE MONTANT REND CE QUE LE PRESTATAIRE A REELLEMENT RENDU, jamais
+         * celui demande : un ecart doit apparaitre dans l'avoir plutot que
+         * d'etre suppose.
+         */
+        montantCentimes: remboursement.amount,
+      };
+    } catch (cause) {
+      /*
+       * UN REFUS N'EST PAS UNE PANNE, meme distinction que `expirerSession`.
+       * Charge deja entierement remboursee, montant superieur au restant,
+       * litige en cours : le prestataire repond, definitivement, et aucun avoir
+       * ne doit naitre. Rejouer ne changerait rien.
+       */
+      if (cause instanceof Stripe.errors.StripeInvalidRequestError) {
+        return { issue: "REFUSE", code: cause.code ?? "requete_refusee" };
       }
 
       throw new PrestatairePaiementIndisponibleError(cause);
