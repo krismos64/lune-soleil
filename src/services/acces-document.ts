@@ -22,9 +22,20 @@
 import { prisma } from "@/lib/prisma";
 import { journaliser } from "@/lib/journal";
 import type { Correlation } from "@/lib/journal";
-import { empreinteJeton, signatureJetonValide } from "@/lib/jeton-acces";
-import { lireJetonParEmpreinte } from "@/repositories/jeton-acces";
+import {
+  empreinteJeton,
+  engendrerJeton,
+  expirationDocument,
+  lienDocument,
+  signatureJetonValide,
+} from "@/lib/jeton-acces";
+import {
+  ecrireJeton,
+  lireJetonParEmpreinte,
+  revoquerJetonsActifs,
+} from "@/repositories/jeton-acces";
 import { lireFactureAServir } from "@/repositories/facture";
+import type { ClientBase } from "@/repositories/stock";
 
 /**
  * Ce qu'une demande d'acces produit.
@@ -87,7 +98,10 @@ export async function autoriserAccesDocument(
     return refuser("SIGNATURE_INVALIDE", correlation);
   }
 
-  const jeton = await lireJetonParEmpreinte(prisma, empreinteJeton(valeurJeton));
+  const jeton = await lireJetonParEmpreinte(
+    prisma,
+    empreinteJeton(valeurJeton),
+  );
 
   if (jeton === null) {
     return refuser("INTROUVABLE", correlation);
@@ -144,4 +158,61 @@ export async function autoriserAccesDocument(
     numero: facture.numero,
     cheminPdf: facture.cheminPdf,
   };
+}
+
+/**
+ * Emet un jeton de document neuf pour une commande, en revoquant les actifs.
+ *
+ * POURQUOI CE CHEMIN EXISTE, defaut trouve par la revue critique le
+ * 1er septembre 2026. La valeur en clair n'existe qu'a l'instant de sa
+ * creation, la base ne gardant que l'empreinte, regle L5. Trois situations la
+ * rendent introuvable et n'avaient autrement AUCUNE issue : un rejeu
+ * d'evenement, qui ressort sur la facture existante sans reengendrer de jeton ;
+ * un envoi d'email en echec ; un lien parti sur une adresse erronee. Sans
+ * reemission, ces commandes n'ont plus jamais de facture accessible.
+ *
+ * LA REVOCATION PRECEDE L'ECRITURE, ET ELLE EST LE COEUR DE LA FONCTION.
+ * `JetonAcces` est une entite propre avec sa propre expiration : emettre un
+ * jeton neuf n'invalide pas l'ancien, qui reste valide jusqu'a son terme. Sur
+ * une boite partagee, le premier lien continue d'ouvrir la facture. C'est
+ * exactement le defaut que le point 8 des transactions critiques decrit pour
+ * l'invitation d'avis, et la parade est la meme.
+ *
+ * LES DEUX ECRITURES VONT DANS UNE TRANSACTION, ouverte par l'appelant. Une
+ * revocation sans emission laisserait la commande sans acces ; une emission
+ * sans revocation laisserait l'orphelin. C'est l'ensemble qui est correct, pas
+ * chaque moitie.
+ *
+ * ELLE NE TRANSMET RIEN. La valeur ressort vers l'appelant, a qui il revient de
+ * l'envoyer, LS-82. La journaliser ou la stocker annulerait la regle L5.
+ */
+export async function reemettreJetonDocument(
+  client: ClientBase,
+  commandeId: string,
+  correlation?: Correlation,
+): Promise<{ valeur: string; lien: string; revoques: number }> {
+  const revoques = await revoquerJetonsActifs(client, commandeId, "DOCUMENT");
+
+  const jeton = engendrerJeton();
+
+  await ecrireJeton(client, {
+    commandeId,
+    empreinte: jeton.empreinte,
+    portee: "DOCUMENT",
+    expireA: expirationDocument(),
+  });
+
+  /*
+   * LE NOMBRE DE REVOCATIONS EST JOURNALISE, jamais la valeur ni l'empreinte.
+   * Il dit si une reemission a remplace un lien actif ou comble un trou, ce qui
+   * suffit au diagnostic.
+   */
+  journaliser(
+    "info",
+    "Jeton de document reemis",
+    { commande: commandeId, revoques },
+    correlation,
+  );
+
+  return { valeur: jeton.valeur, lien: lienDocument(jeton.valeur), revoques };
 }
