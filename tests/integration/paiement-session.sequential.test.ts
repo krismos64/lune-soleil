@@ -137,6 +137,14 @@ function fournisseurDouble(
      * et leve si un test l'appelait par megarde, ce qui vaut mieux qu'un etat
      * arbitraire silencieusement accepte.
      */
+    /*
+     * `rembourser` N'EST PAS EXERCEE PAR CE FICHIER, LS-128. Elle LEVE plutot
+     * que de rendre un succes muet : un appel inattendu doit se voir, la ou un
+     * double complaisant ferait passer un remboursement fantome pour normal.
+     */
+    async rembourser(): Promise<never> {
+      throw new Error("rembourser n'a pas sa place dans ces tests");
+    },
     async lireSession() {
       throw new Error("lireSession n'a pas sa place dans ces tests");
     },

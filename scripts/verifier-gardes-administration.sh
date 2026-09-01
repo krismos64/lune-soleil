@@ -42,13 +42,41 @@ MOTIFS_GARDE="exigerAdministratrice|exigerRole"
 ko=0
 verifiees=0
 
-fichiers=$(find src/app/administration -name "actions.ts" | sort)
+# L'ANCRAGE EST LE MARQUEUR `"use server"`, JAMAIS LE NOM DU FICHIER, LS-159.
+#
+# La première version relevait `-name "actions.ts"`. Trois fichiers de Server
+# Actions s'appellent autrement, `actions-variantes.ts`, `actions-medias.ts` et
+# `actions-publication.ts` : NEUF actions exportées vivaient hors de la boucle,
+# et le contrôle annonçait « 20 actions, toutes gardées » sans les avoir vues.
+# Une dixième ajoutée sans garde y serait passée au vert.
+#
+# Le trou était dans le filet, pas dans le code : les neuf étaient gardées,
+# vérifié à la main pendant LS-158. C'est le motif « cible de test inexistante »
+# dans sa variante la plus discrète, la liste INCOMPLÈTE plutôt que vide, contre
+# laquelle le garde-fou ci-dessous ne protégeait pas.
+#
+# Le marqueur est ce qui fait d'un fichier un point d'entrée HTTP, et c'est
+# l'ancrage retenu par le sens 6 de `verifier-actions-sensibles.sh` : un
+# renommage ne le contourne pas, un fichier neuf est vu dès sa première ligne.
+fichiers=$(grep -rl '"use server"' src/app/administration | sort)
 
 if [ -z "$fichiers" ]; then
   echo "ECHEC aucun fichier d'actions d'administration trouvé."
   echo "      Le contrôle serait vert sans rien vérifier : chemin périmé ?"
   exit 1
 fi
+
+# LE COMPTE ATTENDU EST ÉCRIT, ET C'EST CE QUI REND LA COMPLÉTUDE MESURABLE.
+#
+# Un contrôle qui relève ce qu'il trouve ne peut pas dire qu'il a trop peu
+# trouvé : c'est exactement ainsi que neuf actions ont disparu de sa boucle
+# pendant des semaines. Le plancher échoue si le dépôt en porte MOINS, ce qui
+# attrape un motif redevenu trop étroit ou un dossier déplacé.
+#
+# Il ne borne pas par le haut : ajouter une action gardée est le cas normal et
+# ne doit rien casser. Relever ce nombre quand il augmente, jamais le baisser
+# sans avoir compris quelles actions ont disparu.
+ACTIONS_ATTENDUES_MINIMUM=29
 
 for fichier in $fichiers; do
   # Les noms des fonctions exportées, seules invocables depuis l'extérieur.
@@ -104,13 +132,25 @@ for fichier in $fichiers; do
   done
 done
 
+# LE PLANCHER SE VÉRIFIE APRÈS LA BOUCLE, LS-159. Un contrôle qui a examiné
+# moins d'actions que le dépôt n'en porte est un contrôle dont la cible s'est
+# dérobée : il resterait vert en ne prouvant rien, ce qui est pire qu'un échec.
+if [ "$verifiees" -lt "$ACTIONS_ATTENDUES_MINIMUM" ]; then
+  echo
+  echo "ECHEC $verifiees action(s) examinée(s), au moins $ACTIONS_ATTENDUES_MINIMUM attendue(s)."
+  echo "      Des Server Actions échappent à ce contrôle : motif de relevé trop"
+  echo "      étroit, fichier déplacé, ou marqueur \`use server\` absent."
+  echo "      NE PAS baisser le plancher sans avoir trouvé où elles sont passées."
+  ko=$((ko + 1))
+fi
+
 echo
 echo "-----------------------------------------"
 
 if [ "$ko" -eq 0 ]; then
   echo "  $verifiees action(s) d'administration, toutes gardées"
 else
-  echo "  $verifiees action(s) vérifiées, $ko sans garde de rôle"
+  echo "  $verifiees action(s) vérifiées, $ko anomalie(s)"
 fi
 
 echo "-----------------------------------------"

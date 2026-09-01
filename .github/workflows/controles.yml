@@ -349,6 +349,21 @@ jobs:
       - name: 6h. Gardes de role des Server Actions d'administration
         run: ./scripts/verifier-gardes-administration.sh
 
+      # Preuve par mutation du controle precedent, LS-159. Textuel, secondes.
+      #
+      # POURQUOI IL EXISTE. Le controle 6h annoncait « 20 actions, toutes
+      # gardees » alors que le depot en portait 29 : son releve cherchait
+      # `-name "actions.ts"` et ne voyait pas les trois fichiers `actions-*.ts`,
+      # soit NEUF actions hors de sa boucle. Les neuf etaient gardees, le trou
+      # etait dans le filet, et rien ne l'aurait signale : un controle vert sur
+      # une cible absente ressemble a un controle vert sur du code sain.
+      #
+      # CE QU'IL PROUVE : une garde retiree dans CHACUN des trois fichiers
+      # autrefois invisibles fait echouer 6h en NOMMANT l'action. Sans lui,
+      # l'elargissement du motif resterait une intention.
+      - name: 6i. Preuve par mutation des gardes d'administration
+        run: ./scripts/verifier-gardes-administration-mutation.sh
+
       # Resolution de l'adresse client derriere le proxy, LS-91. Textuel, aucune
       # base ni conteneur requis.
       #

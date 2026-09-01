@@ -47,7 +47,7 @@ export const SQL_LIBERER_EXPIREES = `
     RETURNING variante_id, quantite
   )
   UPDATE variante v
-  SET quantite_reservee = v.quantite_reservee - e.q
+  SET quantite_reservee = v.quantite_reservee
   FROM (
     SELECT variante_id, sum(quantite) AS q FROM expirees GROUP BY variante_id
   ) e

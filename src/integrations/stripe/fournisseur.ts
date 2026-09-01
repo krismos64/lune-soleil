@@ -82,7 +82,59 @@ export interface FournisseurPaiement {
    * commande payee, et a rendre au catalogue une piece deja vendue.
    */
   lireSession(identifiant: string): Promise<EtatSessionPaiement>;
+  /**
+   * Demande un remboursement, LS-128, etape 4 du parcours 4.
+   *
+   * LE MONTANT EST UN INCREMENT, pas un cumul, contrairement a celui que le
+   * prestataire REND sur une charge. Deux remboursements partiels de 1000 se
+   * demandent en deux appels de 1000, et la charge portera 2000 rembourses.
+   * Confondre les deux sens rembourserait deux fois le premier montant.
+   *
+   * LA CLE D'IDEMPOTENCE EST OBLIGATOIRE et vient de l'appelant, ADR-032 : une
+   * relance reseau ne doit jamais rembourser deux fois. C'est le seul appel
+   * sortant du projet dont un doublon COUTE DE L'ARGENT.
+   */
+  rembourser(demande: DemandeRemboursement): Promise<IssueRemboursement>;
 }
+
+/** Ce qu'il faut pour demander un remboursement au prestataire. */
+export type DemandeRemboursement = {
+  /** Session de paiement d'origine, qui porte la charge a rembourser. */
+  identifiantSession: string;
+  /** Montant a rendre, en centimes, INCREMENT et non cumul, invariant 1. */
+  montantCentimes: number;
+  /**
+   * Cle d'idempotence, stable pour une meme intention de remboursement.
+   *
+   * ELLE NE DOIT PAS ETRE ENGENDREE A L'APPEL : une valeur neuve a chaque
+   * tentative rendrait la relance non idempotente, c'est-a-dire exactement ce
+   * que la cle existe pour empecher.
+   */
+  cleIdempotence: string;
+};
+
+/**
+ * Ce que le prestataire repond a une demande de remboursement.
+ *
+ * LE REFUS N'EST PAS UNE PANNE, meme distinction que `IssueExpirationSession`.
+ * Un refus est une reponse du prestataire, definitive, qui ne se rejoue pas :
+ * charge deja entierement remboursee, montant superieur au restant, litige en
+ * cours. Une indisponibilite LEVE, elle, et se retente.
+ *
+ * LE MONTANT REMBOURSE EST RENDU PAR LE PRESTATAIRE et non repris de la
+ * demande : lui seul sait ce qu'il a effectivement rendu, et l'ecart doit
+ * apparaitre plutot que d'etre suppose.
+ */
+export type IssueRemboursement =
+  | {
+      issue: "REMBOURSE";
+      /** Identifiant du remboursement chez le prestataire, pour l'audit. */
+      identifiantRemboursement: string;
+      /** Ce qui a REELLEMENT ete rendu, en centimes. */
+      montantCentimes: number;
+    }
+  /** Refus definitif du prestataire, avec son code. Aucun avoir ne doit naitre. */
+  | { issue: "REFUSE"; code: string };
 
 /**
  * Ce que le prestataire repond sur une session, reduit a ce qui decide.

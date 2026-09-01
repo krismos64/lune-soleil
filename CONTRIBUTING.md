@@ -111,8 +111,9 @@ Ces huit contrôles tournent automatiquement depuis LS-69,
 contrôles textuels qui n'exigent ni base ni conteneur : conformité de
 `.claude/rules/` au schéma, cohérence de la configuration Claude Code, registre
 des traitements, résolution de l'adresse client, **cohérence des actions
-sensibles avec ADR-027**, **aucun test ignoré ni focalisé**, et **accord du
-socle Zod avec son document de référence**.
+sensibles avec ADR-027**, **aucun test ignoré ni focalisé**, **accord du
+socle Zod avec son document de référence**, et **gardes de rôle des Server
+Actions d'administration, doublées de leur preuve par mutation**.
 
 Le dernier est arrivé le 25 août 2026, après qu'une revue de fin de session eut
 trouvé `VALIDATION.md` arrêté à sept schémas quand le socle en portait
