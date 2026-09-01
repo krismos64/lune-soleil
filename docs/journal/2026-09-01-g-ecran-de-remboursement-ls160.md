@@ -119,6 +119,34 @@ reste dédiée à la page de confirmation. **La mesure a été prouvée plutôt 
 supposée** : le champ élargi volontairement à 900 px fait rougir les trois
 largeurs de cet écran, et elles seules.
 
+## La CI a cassé sur un défaut que le local ne pouvait pas voir
+
+Neuf tests rouges sur l'écran de remboursement, la commande facturée n'existant
+pas en base. La cause n'a rien à voir avec le code de la story.
+
+**Les préparations Playwright tournent en parallèle**, deux workers en CI contre
+un seul en local. Quatre amorces insèrent une catégorie en dérivant
+`max(ordre) + 1` : sur une base **vierge**, deux d'entre elles lisent le même
+maximum et dérivent le même rang. C24 pose une unicité `DEFERRABLE` sur cette
+colonne, donc la violation ne se manifeste qu'au `COMMIT` et emporte toute
+l'amorce.
+
+`ON CONFLICT (id) DO NOTHING` ne rattrape rien, le conflit portant sur `ordre`.
+
+**Le défaut est invisible en local**, où les catégories des exécutions
+précédentes subsistent : l'amorce sort sur le conflit d'`id` avant même
+d'évaluer le rang. Reproduit en SQL, deux `INSERT` au même ordre passent tous
+les deux et c'est le `COMMIT` qui lève. Un `ROLLBACK` de vérification masque
+donc le défaut, la contrainte étant différée.
+
+L'ordre de la catégorie amorcée est désormais **fixe et réservé**, 9160, hors de
+portée du maximum dérivé.
+
+**Trois amorces dérivent encore**, dans `session-administration.setup.ts` et dans
+la première de `commande.setup.ts`. Elles passent aujourd'hui, rien ne les
+protège d'un ordonnancement différent : fiché plutôt qu'élargi au périmètre de
+cette story.
+
 ## Ce que la revue frontend a corrigé
 
 - **la référence brûlée après un succès** refusait en silence un second
