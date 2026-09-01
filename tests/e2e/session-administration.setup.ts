@@ -281,9 +281,15 @@ async function preparerBase(client: Client): Promise<void> {
  */
 async function poserProduitDeControle(client: Client): Promise<void> {
   await client.query(
+    /*
+     * `ordre` FIXE ET RESERVE, 9111. Les preparations tournent EN PARALLELE,
+     * deux workers en CI : deriver `max(ordre) + 1` fait lire le meme maximum a
+     * deux fichiers sur une base vierge, et C24 leve au COMMIT, la contrainte
+     * etant DEFERRABLE. `ON CONFLICT (id)` ne rattrape pas, le conflit portant
+     * sur `ordre`. Mesure le 1er septembre 2026, LS-160.
+     */
     `INSERT INTO categorie (id, nom, slug, ordre, cree_a)
-     VALUES ($1, 'TEST Catégorie LS-111', $2,
-             (SELECT coalesce(max(ordre), 0) + 1 FROM categorie), now())
+     VALUES ($1, 'TEST Catégorie LS-111', $2, 9111, now())
      ON CONFLICT (id) DO NOTHING`,
     [PRODUIT_TEST.categorieId, `${PRODUIT_TEST.slug}-categorie`],
   );
@@ -323,18 +329,22 @@ async function poserProduitDeControle(client: Client): Promise<void> {
  * l'ordre dependant de la vitesse d'execution.
  */
 async function poserCataloguePublie(client: Client): Promise<void> {
-  for (const categorie of [
+  for (const [rang, categorie] of [
     CATALOGUE_TEST.categorieA,
     CATALOGUE_TEST.categorieB,
     // Volontairement laissee sans produit : elle porte l'etat vide.
     CATALOGUE_TEST.categorieVide,
-  ]) {
+  ].entries()) {
     await client.query(
+      /*
+       * `ordre` FIXE ET RESERVE, 9104 plus le rang dans la liste. Il preserve
+       * l'ordre relatif des trois categories, ce dont le test d'affichage
+       * depend, sans deriver d'un maximum partage avec les autres amorces.
+       */
       `INSERT INTO categorie (id, nom, slug, ordre, cree_a)
-       VALUES ($1, $2, $3,
-               (SELECT coalesce(max(ordre), 0) + 1 FROM categorie), now())
+       VALUES ($1, $2, $3, $4, now())
        ON CONFLICT (id) DO NOTHING`,
-      [categorie.id, categorie.nom, categorie.slug],
+      [categorie.id, categorie.nom, categorie.slug, 9104 + rang],
     );
   }
 

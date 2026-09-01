@@ -296,7 +296,17 @@ export async function rembourser(
    */
   const reference = schemaIdentifiant.safeParse(referenceDemande);
 
-  if (!reference.success) {
+  /*
+   * `commandeId` EST VALIDE DE LA MEME FACON, et pour une raison distincte : il
+   * atteint `revalidatePath` en interpolation de chemin. Le chemin est sain
+   * aujourd'hui, cette ligne n'etant atteinte qu'apres un remboursement REUSSI,
+   * donc sur une commande dont le paiement a ete lu en base. La validation vaut
+   * pour la cohérence avec le reste de ce fichier et pour que la question ne se
+   * repose pas au prochain changement d'ordre des instructions.
+   */
+  const commande = schemaIdentifiant.safeParse(commandeId);
+
+  if (!reference.success || !commande.success) {
     return { statut: "INVALIDE", message: "Demande non valide." };
   }
 
@@ -339,7 +349,7 @@ export async function rembourser(
 
   try {
     const issue = await demanderRemboursement(await headers(), {
-      commandeId,
+      commandeId: commande.data,
       montantCentimes,
       motif: motifNettoye,
       fournisseur: fournisseurStripe,
@@ -347,7 +357,7 @@ export async function rembourser(
     });
 
     if (issue.statut === "REMBOURSE") {
-      revalidatePath(`${CHEMIN_COMMANDES}/${commandeId}`);
+      revalidatePath(`${CHEMIN_COMMANDES}/${commande.data}`);
 
       return {
         statut: "SUCCES",

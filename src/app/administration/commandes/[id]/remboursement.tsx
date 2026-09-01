@@ -23,6 +23,7 @@
  * reference existe : il ferme le double clic d'une meme page, jamais deux
  * onglets ouverts ni un envoi rejoue apres coupure reseau.
  */
+import Link from "next/link";
 import { useState, useTransition } from "react";
 
 import { formaterMontant, centimesVersSaisie } from "@/lib/montant";
@@ -274,6 +275,31 @@ export function Remboursement({
               Il figure sur l&apos;avoir, document comptable remis au client.
             </p>
           </div>
+
+          {/*
+           * LE LIEN EST PERMANENT ET NON DANS LE MESSAGE, relevé par
+           * `ls-frontend-revue` : le refus disait « ouvrir l'écran de
+           * réauthentification » sans donner le chemin, et l'exploitante devait
+           * le retrouver par le menu.
+           *
+           * IL EST VISIBLE AVANT LE REFUS, ET C'EST LE POINT. La fenêtre de
+           * fraîcheur est de quinze minutes, donc le refus est l'issue la plus
+           * probable en pratique : prouver son identité AVANT de saisir évite de
+           * perdre le montant et le motif, que ce composant garde en état local
+           * et qu'une navigation efface.
+           *
+           * PAS DE LIEN DANS LE MESSAGE lui-même : la région live rend du texte,
+           * et y insérer un élément interactif le rendrait annonçable sans être
+           * atteignable au clavier dans l'ordre attendu.
+           */}
+          <p className={styles.aide}>
+            Un remboursement exige une identité prouvée depuis moins de quinze
+            minutes.{" "}
+            <Link href="/administration/reauthentification">
+              Confirmer son identité
+            </Link>{" "}
+            avant de saisir, la navigation effaçant le montant et le motif.
+          </p>
 
           <button
             type="submit"
