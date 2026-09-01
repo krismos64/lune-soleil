@@ -517,17 +517,17 @@ model Commande {
   cgvVersion          String         @map("cgv_version")
   creeA               DateTime       @default(now()) @map("cree_a") @db.Timestamptz(3)
 
-  utilisateur   Utilisateur?         @relation(fields: [utilisateurId], references: [id], onDelete: SetNull)
-  lignes        LigneCommande[]
-  paiements     Paiement[]
-  reservations  Reservation[]
-  mouvements    MouvementStock[]
-  historiques   HistoriqueStatut[]
-  expedition    Expedition?
-  facture       Facture?
-  retractation  DemandeRetractation?
-  jetons        JetonAcces[]
-  journauxEmail JournalEmail[]
+  utilisateur     Utilisateur?         @relation(fields: [utilisateurId], references: [id], onDelete: SetNull)
+  lignes          LigneCommande[]
+  paiements       Paiement[]
+  reservations    Reservation[]
+  mouvements      MouvementStock[]
+  historiques     HistoriqueStatut[]
+  expedition      Expedition?
+  facture         Facture?
+  retractation    DemandeRetractation?
+  jetons          JetonAcces[]
+  journauxEmail   JournalEmail[]
   envoisEnAttente EnvoiEnAttente[]
 
   @@index([emailNormalise], map: "commande_email_idx")
@@ -711,10 +711,48 @@ model Facture {
   cheminPdf            String?  @map("chemin_pdf")
   emiseA               DateTime @default(now()) @map("emise_a") @db.Timestamptz(3)
 
-  commande Commande @relation(fields: [commandeId], references: [id], onDelete: Restrict)
-  avoirs   Avoir[]
+  commande   Commande                 @relation(fields: [commandeId], references: [id], onDelete: Restrict)
+  avoirs     Avoir[]
+  intentions IntentionRemboursement[]
 
   @@map("facture")
+}
+
+// LS-128. L'intention de remboursement, ecrite AVANT l'appel au prestataire.
+//
+// POURQUOI CETTE TABLE EXISTE, defaut trouve par la revue critique le
+// 1er septembre 2026. Sans elle, deux remboursements concurrents identiques
+// lisent le meme `montantAvoirCentimes`, derivent la MEME cle d'idempotence et
+// partent ensemble : Stripe rend `idempotency_key_in_use` sur le second, que le
+// code classait en refus. L'exploitante relance, le cumul a bouge, la cle
+// change, et un SECOND remboursement reel part. Mesure : 4000 centimes rendus
+// pour 2000 voulus.
+//
+// L'UNICITE EST LE MECANISME, pas la table. Deux intentions identiques
+// concurrentes : la seconde prend une violation d'unicite AVANT tout appel
+// reseau, et sort en refus lisible sans qu'un centime ne bouge.
+//
+// ELLE NE TIENT AUCUN VERROU PENDANT L'APPEL RESEAU, ce que `database.md`
+// interdit : l'ecriture de l'intention est une transaction courte qui commite,
+// puis l'appel part. C'est le motif « verrou apres l'appel, legitime ».
+model IntentionRemboursement {
+  id              String    @id @default(uuid())
+  factureId       String    @map("facture_id")
+  cleIdempotence  String    @map("cle_idempotence")
+  montantCentimes Int       @map("montant_centimes")
+  // Renseigne quand le prestataire a rendu l'argent. Nul tant que l'appel n'a
+  // pas abouti : une intention sans issue est un appel dont personne ne sait
+  // s'il est parti, etat qui sort par une alerte et jamais par un rejeu muet.
+  aboutieA        DateTime? @map("aboutie_a") @db.Timestamptz(3)
+  creeA           DateTime  @default(now()) @map("cree_a") @db.Timestamptz(3)
+
+  facture Facture @relation(fields: [factureId], references: [id], onDelete: Restrict)
+
+  // LA CLE D'UNICITE PORTE LES DEUX COLONNES : la meme cle sur deux factures
+  // differentes est legitime, la meme cle sur la meme facture ne l'est pas.
+  @@unique([factureId, cleIdempotence], map: "intention_remboursement_unique")
+  @@index([factureId], map: "intention_remboursement_facture_idx")
+  @@map("intention_remboursement")
 }
 
 model Avoir {
@@ -1074,21 +1112,21 @@ model JournalEmail {
 // parti. Celle-ci porte ce qui doit partir, et ses lignes terminées sont
 // purgées ; l'autre se conserve.
 model EnvoiEnAttente {
-  id           String       @id @default(uuid())
-  commandeId   String?      @map("commande_id")
+  id           String          @id @default(uuid())
+  commandeId   String?         @map("commande_id")
   destinataire String
   modele       String
   variables    Json
-  statut       StatutEnvoi  @default(EN_ATTENTE)
+  statut       StatutEnvoi     @default(EN_ATTENTE)
   origine      OrigineEcriture
   // Nombre d'appels SMTP déjà tentés, borne la retentative sur erreur réseau.
-  tentatives   Int          @default(0)
+  tentatives   Int             @default(0)
   // Horodatage du passage en ENVOI_EN_COURS, sans lequel une ligne bloquée
   // serait indistinguable d'une ligne prise à l'instant : c'est lui qui rend
   // le délai de garde mesurable.
-  priseA       DateTime?    @map("prise_a") @db.Timestamptz(3)
-  motifEchec   String?      @map("motif_echec")
-  creeA        DateTime     @default(now()) @map("cree_a") @db.Timestamptz(3)
+  priseA       DateTime?       @map("prise_a") @db.Timestamptz(3)
+  motifEchec   String?         @map("motif_echec")
+  creeA        DateTime        @default(now()) @map("cree_a") @db.Timestamptz(3)
 
   commande Commande? @relation(fields: [commandeId], references: [id], onDelete: SetNull)
 

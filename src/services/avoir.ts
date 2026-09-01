@@ -29,7 +29,13 @@ import {
   type FournisseurPaiement,
 } from "@/integrations/stripe/fournisseur";
 import { reserverNumero } from "@/repositories/commande";
-import { ecrireAvoir, lireFacturePourAvoir } from "@/repositories/avoir";
+import {
+  ecrireAvoir,
+  libererIntentionNonAboutie,
+  lireFacturePourAvoir,
+  marquerIntentionAboutie,
+  reserverIntentionRemboursement,
+} from "@/repositories/avoir";
 import { leverAlerteCritique } from "@/repositories/confirmation";
 import {
   lirePaiementEncaisse,
@@ -64,7 +70,15 @@ export type IssueRemboursementCommande =
   /** Refus definitif du prestataire. Aucun avoir, aucun changement d'etat. */
   | { statut: "REFUSE_PRESTATAIRE"; code: string }
   /** Le prestataire ne repond pas. Rien n'a change, reessayer a du sens. */
-  | { statut: "PRESTATAIRE_INDISPONIBLE" };
+  | { statut: "PRESTATAIRE_INDISPONIBLE" }
+  /**
+   * Exactement ce remboursement est deja parti, ou part en ce moment meme.
+   *
+   * DISTINCT D'UN REFUS : rien n'est refuse, un appel identique existe deja.
+   * Rendre « refuse » pousserait a relancer, et la relance partirait avec un
+   * cumul different donc une cle differente : un SECOND remboursement reel.
+   */
+  | { statut: "DEJA_DEMANDE" };
 
 /**
  * Rembourse tout ou partie d'une commande et emet l'avoir correspondant.
@@ -87,10 +101,27 @@ export async function rembourserCommande(
     montantCentimes: number;
     motif: string;
     fournisseur: FournisseurPaiement;
+    /**
+     * Identite de la DEMANDE, fournie par l'appelant, LS-128.
+     *
+     * ELLE DESIGNE UN GESTE, pas un montant. L'ecran d'administration engendre
+     * cette reference une fois au chargement du formulaire : deux clics sur le
+     * meme bouton la reenvoient a l'identique, donc le second n'appelle jamais
+     * le prestataire. Un remboursement legitime demande plus tard porte une
+     * reference neuve et part normalement.
+     *
+     * ELLE REMPLACE LA DERIVATION SUR LE CUMUL, qui etait fausse et l'a ete
+     * prouve : `montantAvoirCentimes` bouge des que le premier avoir est ecrit,
+     * donc un second appel lit un cumul different, derive une AUTRE cle,
+     * reserve une AUTRE intention et rembourse une seconde fois. Mesure le
+     * 1er septembre 2026, deux avoirs de 2000 sur la commande 8bec5a3e.
+     */
+    referenceDemande: string;
   },
   correlation?: Correlation,
 ): Promise<IssueRemboursementCommande> {
-  const { commandeId, montantCentimes, motif, fournisseur } = parametres;
+  const { commandeId, montantCentimes, motif, fournisseur, referenceDemande } =
+    parametres;
 
   const paiement = await lirePaiementEncaisse(prisma, commandeId);
 
@@ -110,10 +141,15 @@ export async function rembourserCommande(
   }
 
   /*
-   * LA BORNE EST APPLICATIVE ET SE DOUBLE D'UN `CHECK`, regle F9. Celle-ci
-   * permet de RENDRE un refus lisible a l'exploitante ; le `CHECK` en base
-   * rattrape la concurrence, deux remboursements simultanes pouvant franchir
-   * cette garde ensemble.
+   * LA BORNE EST APPLICATIVE ET SE DOUBLE D'UN `CHECK`, regle F9. Celle-ci rend
+   * un refus LISIBLE a l'exploitante, la ou le `CHECK` leverait une exception.
+   *
+   * CE QUE LE `CHECK` NE RATTRAPE PAS, et une premiere version de ce
+   * commentaire l'affirmait a tort : il protege l'ECRITURE COMPTABLE, jamais la
+   * SORTIE D'ARGENT. Sur deux remboursements concurrents il se declenche APRES
+   * que l'argent est parti, faisant avorter la transaction d'avoir sur un
+   * remboursement deja effectue. C'est la reservation d'intention plus bas qui
+   * ferme ce cas, en refusant le second appel AVANT qu'il ne parte.
    */
   const restantCentimes =
     facture.montantTotalCentimes - facture.montantAvoirCentimes;
@@ -122,7 +158,53 @@ export async function rembourserCommande(
     return { statut: "MONTANT_TROP_ELEVE", restantCentimes };
   }
 
-  const cleIdempotence = `remboursement:${commandeId}:${facture.montantAvoirCentimes}:${montantCentimes}`;
+  /*
+   * LA CLE PORTE L'IDENTITE DE LA DEMANDE, JAMAIS UN ETAT MOUVANT.
+   *
+   * Une premiere version la derivait de `montantAvoirCentimes`. Mesure : quand
+   * le premier appel a le temps d'ecrire son avoir, le second lit un cumul
+   * different, derive une autre cle, reserve une autre intention et rembourse
+   * une SECONDE FOIS. L'unicite ne voyait rien, les deux lignes differant
+   * reellement.
+   *
+   * LE MONTANT ENTRE DANS LA CLE avec la reference : une meme demande dont
+   * l'exploitante corrige le montant avant de valider est une intention
+   * differente, et doit pouvoir partir.
+   */
+  const cleIdempotence = `remboursement:${referenceDemande}:${montantCentimes}`;
+
+  /*
+   * L'INTENTION EST RESERVEE AVANT TOUT APPEL RESEAU, defaut trouve par la
+   * revue critique le 1er septembre 2026.
+   *
+   * SANS ELLE, DEUX DEMANDES IDENTIQUES CONCURRENTES PARTAIENT TOUTES LES DEUX.
+   * La cle est derivee d'un cumul lu hors transaction : deux executions
+   * simultanees lisent la meme valeur et derivent la MEME cle. Or l'idempotence
+   * de Stripe n'est pas un verrou, deux requetes portant la meme cle qui
+   * arrivent EN PARALLELE ne rendent pas la meme reponse : la seconde recoit
+   * `idempotency_key_in_use`, que le code classait en refus definitif.
+   * L'exploitante relancait, le cumul avait bouge, la cle changeait, et un
+   * SECOND remboursement REEL partait. Mesure : 4000 centimes rendus pour 2000.
+   *
+   * L'ECRITURE COMMITE AVANT L'APPEL, elle ne tient aucun verrou pendant
+   * l'aller-retour reseau, ce que `database.md` interdit.
+   */
+  const intention = await reserverIntentionRemboursement(prisma, {
+    factureId: facture.id,
+    cleIdempotence,
+    montantCentimes,
+  });
+
+  if (!intention.reservee || intention.intentionId === null) {
+    journaliser(
+      "warn",
+      "Remboursement deja demande, aucun second appel",
+      { commande: commandeId, montantCentimes },
+      correlation,
+    );
+
+    return { statut: "DEJA_DEMANDE" };
+  }
 
   let issue: Awaited<ReturnType<FournisseurPaiement["rembourser"]>>;
 
@@ -145,6 +227,20 @@ export async function rembourserCommande(
        * porte la meme valeur : si le premier appel etait en fait parti, le
        * prestataire rendra le meme remboursement au lieu d'un second.
        */
+      /*
+       * L'INTENTION EST LIBEREE, sans quoi le reessai sortirait en « deja
+       * demande » et une panne reseau rendrait ce remboursement DEFINITIVEMENT
+       * impossible. Mesure par un test de reessai le 1er septembre 2026.
+       *
+       * LE CAS AMBIGU RESTE OUVERT ET IL EST ASSUME : si l'appel etait en fait
+       * parti avant la coupure, liberer la cle autorise un second appel. Il
+       * portera la MEME cle, le cumul n'ayant pas bouge, donc l'idempotence de
+       * Stripe rendra le premier remboursement au lieu d'en creer un second.
+       * C'est precisement le cas que l'idempotence sait traiter, l'appel n'etant
+       * plus concurrent mais successif.
+       */
+      await libererIntentionNonAboutie(prisma, intention.intentionId);
+
       journaliserErreur(
         "Remboursement impossible, prestataire indisponible",
         erreur,
@@ -164,6 +260,13 @@ export async function rembourserCommande(
      * tentative est journalisee, critere 3 du ticket. Ecrire un avoir ici
      * produirait un document comptable pour un argent jamais parti.
      */
+    /*
+     * L'INTENTION EST LIBEREE : le prestataire a repondu sans rien rendre,
+     * l'argent n'est pas parti. Garder la reservation empecherait toute
+     * nouvelle demande du meme montant apres correction de la cause.
+     */
+    await libererIntentionNonAboutie(prisma, intention.intentionId);
+
     journaliser(
       "warn",
       "Remboursement refuse par le prestataire",
@@ -180,6 +283,15 @@ export async function rembourserCommande(
    * que d'etre suppose : c'est l'argent reellement sorti qui fait foi.
    */
   const montantRendu = issue.montantCentimes;
+
+  /*
+   * L'INTENTION EST MARQUEE ABOUTIE DES QUE L'ARGENT EST PARTI, avant meme
+   * l'ecriture de l'avoir. Une intention sans `aboutieA` est un appel dont
+   * personne ne sait s'il est parti ; une intention aboutie sans avoir est un
+   * document a etablir, ce que l'alerte `AVOIR_NON_EMIS` signale. Les deux
+   * etats sont distincts et se traitent differemment.
+   */
+  await marquerIntentionAboutie(prisma, intention.intentionId);
 
   return emettreAvoirApresRemboursement({
     commandeId,
