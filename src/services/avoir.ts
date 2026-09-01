@@ -149,21 +149,29 @@ export async function rembourserCommande(
   }
 
   /*
-   * LA BORNE EST APPLICATIVE ET SE DOUBLE D'UN `CHECK`, regle F9. Celle-ci rend
-   * un refus LISIBLE a l'exploitante, la ou le `CHECK` leverait une exception.
+   * CETTE BORNE-CI NE DECIDE PLUS, ELLE REPOND VITE. La borne qui FAIT AUTORITE
+   * vit dans `reserverIntentionRemboursement`, sous verrou de la ligne de
+   * facture : celle-ci evite seulement d'ouvrir une transaction pour un montant
+   * manifestement hors bornes.
    *
-   * CE QUE LE `CHECK` NE RATTRAPE PAS, et une premiere version de ce
-   * commentaire l'affirmait a tort : il protege l'ECRITURE COMPTABLE, jamais la
-   * SORTIE D'ARGENT. Sur deux remboursements concurrents il se declenche APRES
-   * que l'argent est parti, faisant avorter la transaction d'avoir sur un
-   * remboursement deja effectue. C'est la reservation d'intention plus bas qui
-   * ferme ce cas, en refusant le second appel AVANT qu'il ne parte.
+   * ELLE NE SUFFISAIT PAS, ET UNE PREMIERE VERSION AFFIRMAIT LE CONTRAIRE. Elle
+   * lit `montantAvoirCentimes` HORS TRANSACTION : deux demandes concurrentes
+   * lisent le meme cumul, se jugent toutes deux legitimes, et les deux appels
+   * partent. L'unicite de l'intention ne rattrapait rien, ne serialisant que
+   * deux demandes de MEME cle, quand deux onglets en produisent deux
+   * differentes. Mesure le 1er septembre 2026, 9800 centimes rendus pour 4900.
+   *
+   * CE QUE LE `CHECK` NE RATTRAPE PAS : il protege l'ECRITURE COMPTABLE, jamais
+   * la SORTIE D'ARGENT, se declenchant APRES le depart des fonds.
    */
-  const restantCentimes =
+  const restantApparentCentimes =
     facture.montantTotalCentimes - facture.montantAvoirCentimes;
 
-  if (montantCentimes > restantCentimes) {
-    return { statut: "MONTANT_TROP_ELEVE", restantCentimes };
+  if (montantCentimes > restantApparentCentimes) {
+    return {
+      statut: "MONTANT_TROP_ELEVE",
+      restantCentimes: restantApparentCentimes,
+    };
   }
 
   /*
@@ -204,6 +212,33 @@ export async function rembourserCommande(
   });
 
   if (!intention.reservee || intention.intentionId === null) {
+    /*
+     * DEUX REFUS DISTINCTS SOUS LE MEME `reservee: false`, et les confondre
+     * tromperait l'exploitante. `restantCentimes` renseigne signifie que la
+     * borne sous verrou a refuse : une autre demande a pris la place, en
+     * concurrence. Sans lui, c'est l'unicite qui a parle : exactement cette
+     * demande est deja partie.
+     *
+     * LE PREMIER POUSSE A CORRIGER LE MONTANT, le second a ne rien faire.
+     */
+    if (intention.restantCentimes !== undefined) {
+      journaliser(
+        "warn",
+        "Remboursement refuse, le restant ne le couvre pas",
+        {
+          commande: commandeId,
+          montantCentimes,
+          restantCentimes: intention.restantCentimes,
+        },
+        correlation,
+      );
+
+      return {
+        statut: "MONTANT_TROP_ELEVE",
+        restantCentimes: intention.restantCentimes,
+      };
+    }
+
     journaliser(
       "warn",
       "Remboursement deja demande, aucun second appel",
@@ -307,7 +342,6 @@ export async function rembourserCommande(
     paiementId: paiement.id,
     montantEncaisseCentimes: paiement.montantCentimes,
     montantRenduCentimes: montantRendu,
-    cumulAvantCentimes: facture.montantAvoirCentimes,
     motif,
     identifiantRemboursement: issue.identifiantRemboursement,
     correlation,
@@ -337,7 +371,6 @@ async function emettreAvoirApresRemboursement(parametres: {
   paiementId: string;
   montantEncaisseCentimes: number;
   montantRenduCentimes: number;
-  cumulAvantCentimes: number;
   motif: string;
   identifiantRemboursement: string;
   correlation?: Correlation | undefined;
@@ -348,7 +381,6 @@ async function emettreAvoirApresRemboursement(parametres: {
     paiementId,
     montantEncaisseCentimes,
     montantRenduCentimes,
-    cumulAvantCentimes,
     motif,
     identifiantRemboursement,
     correlation,
@@ -373,19 +405,19 @@ async function emettreAvoirApresRemboursement(parametres: {
       });
 
       /*
-       * LE CUMUL SERT A DECIDER DU STATUT, et il se calcule sur ce qui vient
-       * d'etre ecrit : cumul precedent plus montant rendu. Le seuil est
-       * l'egalite au montant ENCAISSE, meme regle que le webhook de LS-119.
+       * LE CUMUL EST CALCULE PAR LA BASE, PLUS ICI. Le repository incremente et
+       * decide du statut sur la valeur ainsi obtenue.
+       *
+       * UNE PREMIERE VERSION PASSAIT `cumulAvantCentimes + montantRenduCentimes`,
+       * lu au tout debut du service, hors transaction. Deux remboursements
+       * partiels concurrents de 1000 et 2000 lisaient tous deux zero, et la
+       * seconde ecriture ECRASAIT la premiere : le paiement restait a 2000 pour
+       * 3000 reellement sortis. Mesure le 1er septembre 2026.
        */
-      const cumulApres = cumulAvantCentimes + montantRenduCentimes;
-
       await marquerRembourse(transaction, {
         paiementId,
-        montantRembourseCentimes: cumulApres,
-        statut:
-          cumulApres >= montantEncaisseCentimes
-            ? "REMBOURSE"
-            : "PARTIELLEMENT_REMBOURSE",
+        montantRenduCentimes,
+        montantEncaisseCentimes,
       });
 
       journaliser(

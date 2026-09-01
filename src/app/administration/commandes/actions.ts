@@ -21,7 +21,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
 import { journaliserErreur } from "@/lib/journal";
-import { EntreeInvalideError } from "@/lib/validation";
+import { EntreeInvalideError, schemaIdentifiant } from "@/lib/validation";
 import type { StatutCommande } from "@/generated/prisma/enums";
 import { exigerRole } from "@/services/autorisation";
 import { changerStatutCommande } from "@/services/administration-commandes";
@@ -274,9 +274,29 @@ export async function rembourser(
     typeof commandeId !== "string" ||
     typeof montantSaisi !== "string" ||
     typeof motif !== "string" ||
-    typeof referenceDemande !== "string" ||
-    referenceDemande === ""
+    typeof referenceDemande !== "string"
   ) {
+    return { statut: "INVALIDE", message: "Demande non valide." };
+  }
+
+  /*
+   * LA REFERENCE EST VALIDEE COMME UN IDENTIFIANT, pas seulement « non vide ».
+   *
+   * ELLE PART TELLE QUELLE AU PRESTATAIRE, concatenee dans la cle
+   * d'idempotence, en-tete `Idempotency-Key` que Stripe borne a 255 caracteres.
+   * Une reference de 100 000 caracteres traversait toute la chaine : mesure par
+   * la revue critique le 1er septembre 2026. Le pire cas n'est pas le rejet mais
+   * la TRONCATURE, deux demandes distinctes partageant alors le meme prefixe et
+   * l'idempotence cessant de distinguer ce qu'elle existe pour distinguer.
+   *
+   * `schemaIdentifiant` BORNE LA LONGUEUR ET L'ALPHABET EN UNE LIGNE, et c'est
+   * exactement la forme que la page engendre, `randomUUID()`. Une Server Action
+   * est un point d'entree HTTP invocable directement : rien n'oblige a passer
+   * par l'ecran, donc rien ne garantit la forme sans cette validation.
+   */
+  const reference = schemaIdentifiant.safeParse(referenceDemande);
+
+  if (!reference.success) {
     return { statut: "INVALIDE", message: "Demande non valide." };
   }
 
@@ -323,7 +343,7 @@ export async function rembourser(
       montantCentimes,
       motif: motifNettoye,
       fournisseur: fournisseurStripe,
-      referenceDemande,
+      referenceDemande: reference.data,
     });
 
     if (issue.statut === "REMBOURSE") {

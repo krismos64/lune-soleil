@@ -491,6 +491,110 @@ describe("demanderRemboursement, reference de demande", () => {
   });
 
   /**
+   * DEUX DEMANDES CONCURRENTES PORTANT DEUX REFERENCES DISTINCTES, et c'est le
+   * cas qui faisait REELLEMENT sortir le double de l'argent.
+   *
+   * LE SCENARIO N'A RIEN D'EXOTIQUE : l'exploitante ouvre la fiche dans DEUX
+   * ONGLETS. Chaque rendu de page engendre sa propre reference, donc les deux
+   * envois portent deux cles d'idempotence differentes. L'unicite
+   * `(facture_id, cle_idempotence)` ne voit alors rien, les deux lignes
+   * differant reellement, et les deux appels partent au prestataire.
+   *
+   * MESURE PAR `ls-critical-reviewer` LE 1er SEPTEMBRE 2026 : 9800 centimes
+   * rendus pour 4900 encaisses. L'etat final paraissait pourtant sain, un seul
+   * avoir et un cumul exact, le second appel etant rejete par le `CHECK` APRES
+   * le depart de l'argent. Rien en base ne portait trace du surplus.
+   *
+   * LA BORNE SEULE NE SUFFISAIT PAS : elle lisait `montantAvoirCentimes` hors
+   * transaction, donc les deux demandes lisaient le meme cumul a zero et se
+   * jugeaient toutes deux legitimes. C'est la reservation d'intention qui porte
+   * desormais la borne, sous verrou de la ligne de facture.
+   *
+   * L'ASSERTION PORTE SUR LA SOMME REELLEMENT DEMANDEE AU PRESTATAIRE, et pas
+   * seulement sur le nombre d'appels : deux appels de 2450 seraient acceptables,
+   * un seul appel de 9800 ne le serait pas.
+   */
+  it("ne laisse pas deux references concurrentes depasser le restant", async () => {
+    const { commandeId, factureId } = await commanderEtConfirmer();
+    const enTetes = await sessionAdministratricePreuveFraiche();
+    const fournisseur = fournisseurQuiRembourse();
+
+    const commun = {
+      commandeId,
+      montantCentimes: TOTAL_CENTIMES,
+      motif: "Deux onglets ouverts",
+      fournisseur,
+    };
+
+    const issues = await Promise.all([
+      demanderRemboursement(enTetes, {
+        ...commun,
+        referenceDemande: randomUUID(),
+      }),
+      demanderRemboursement(enTetes, {
+        ...commun,
+        referenceDemande: randomUUID(),
+      }),
+    ]);
+
+    const statuts = issues.map((issue) => issue.statut).sort();
+
+    expect(statuts).toEqual(["MONTANT_TROP_ELEVE", "REMBOURSE"]);
+
+    // LA SOMME DEMANDEE AU PRESTATAIRE NE DEPASSE PAS L'ENCAISSE. C'est
+    // l'assertion centrale : elle mesure l'argent sorti, jamais l'etat final,
+    // qui paraissait sain alors meme que le double etait parti.
+    const sommeAppelee = fournisseur.appels.reduce(
+      (total, appel) => total + appel.montantCentimes,
+      0,
+    );
+
+    expect(sommeAppelee).toBeLessThanOrEqual(TOTAL_CENTIMES);
+    expect(fournisseur.appels).toHaveLength(1);
+    expect(await compterAvoirs(factureId)).toBe(1);
+    expect(await cumulRembourse(commandeId)).toBe(TOTAL_CENTIMES);
+  });
+
+  /**
+   * DEUX PARTIELS CONCURRENTS QUI TIENNENT ENSEMBLE dans le restant.
+   *
+   * SANS CE CAS, LA CORRECTION DU PRECEDENT SERAIT SATISFAITE PAR UN VERROU QUI
+   * REFUSE TOUT SECOND REMBOURSEMENT CONCURRENT. Deux gestes commerciaux
+   * distincts sur une meme commande sont legitimes, et la borne doit refuser le
+   * depassement, jamais la simultaneite.
+   */
+  it("laisse passer deux partiels concurrents qui tiennent dans le restant", async () => {
+    const { commandeId, factureId } = await commanderEtConfirmer();
+    const enTetes = await sessionAdministratricePreuveFraiche();
+    const fournisseur = fournisseurQuiRembourse();
+
+    const issues = await Promise.all([
+      demanderRemboursement(enTetes, {
+        commandeId,
+        montantCentimes: 1000,
+        motif: "Premier partiel",
+        fournisseur,
+        referenceDemande: randomUUID(),
+      }),
+      demanderRemboursement(enTetes, {
+        commandeId,
+        montantCentimes: 2000,
+        motif: "Second partiel",
+        fournisseur,
+        referenceDemande: randomUUID(),
+      }),
+    ]);
+
+    expect(issues.map((issue) => issue.statut)).toEqual([
+      "REMBOURSE",
+      "REMBOURSE",
+    ]);
+    expect(fournisseur.appels).toHaveLength(2);
+    expect(await compterAvoirs(factureId)).toBe(2);
+    expect(await cumulRembourse(commandeId)).toBe(3000);
+  });
+
+  /**
    * DEUX DEMANDES CONCURRENTES PORTANT LA MEME REFERENCE.
    *
    * DISTINCT DU DOUBLE CLIC SUCCESSIF : ici les deux partent ensemble, aucune

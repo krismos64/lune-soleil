@@ -19,6 +19,18 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { schemaInstantaneLegal, type InstantaneLegal } from "@/lib/validation";
 import type { ClientBase } from "@/repositories/stock";
+import type { prisma } from "@/lib/prisma";
+
+/**
+ * Le client racine, celui qui sait OUVRIR une transaction.
+ *
+ * DISTINCT DE `ClientBase`, qui est un client DEJA dans une transaction et ne
+ * porte donc pas `$transaction`. La reservation d'intention en a besoin : elle
+ * ouvre sa propre transaction courte, qui commite AVANT l'appel reseau. Lui
+ * passer un client de transaction serait une erreur de conception, la
+ * transaction englobante restant alors ouverte pendant l'aller-retour.
+ */
+type ClientRacine = typeof prisma;
 
 /** Ce qu'un avoir expose une fois ecrit, sans son instantane. */
 export type AvoirEmis = {
@@ -243,24 +255,113 @@ export async function listerAvoirsDeFacture(
  * jamais propage.
  */
 export async function reserverIntentionRemboursement(
-  client: ClientBase,
+  client: ClientRacine,
   parametres: {
     factureId: string;
     cleIdempotence: string;
     montantCentimes: number;
   },
-): Promise<{ reservee: boolean; intentionId: string | null }> {
+): Promise<{
+  reservee: boolean;
+  intentionId: string | null;
+  restantCentimes?: number;
+}> {
   try {
-    const intention = await client.intentionRemboursement.create({
-      data: {
-        factureId: parametres.factureId,
-        cleIdempotence: parametres.cleIdempotence,
-        montantCentimes: parametres.montantCentimes,
-      },
-      select: { id: true },
-    });
+    /*
+     * LA BORNE DU RESTANT EST ICI, SOUS VERROU, ET PLUS DANS LE SERVICE.
+     *
+     * DEFAUT MESURE LE 1er SEPTEMBRE 2026, LS-160, par la revue critique :
+     * 9800 centimes rendus pour 4900 encaisses. Le service bornait sur une
+     * lecture de `montantAvoirCentimes` faite HORS TRANSACTION, et l'unicite
+     * `(facture_id, cle_idempotence)` ne serialise que deux demandes portant la
+     * MEME cle. Deux onglets ouverts en produisent deux DIFFERENTES, chaque
+     * rendu de page engendrant sa propre reference : les deux lisaient le meme
+     * cumul a zero, se jugeaient legitimes, et les deux appels partaient.
+     *
+     * L'ETAT FINAL PARAISSAIT SAIN, ce qui rendait le defaut muet : un seul
+     * avoir, un cumul exact, le second appel etant rejete par
+     * `chk_facture_avoir_borne` APRES le depart de l'argent. Rien en base ne
+     * portait trace du surplus.
+     *
+     * LE VERROU PORTE SUR LA LIGNE DE FACTURE, `FOR UPDATE`, et il serialise
+     * les demandes quelle que soit leur cle. La transaction est COURTE et
+     * commite AVANT l'appel reseau, ce que `database.md` exige : aucun verrou
+     * n'est tenu pendant l'aller-retour.
+     *
+     * LES INTENTIONS EN COURS ENTRENT DANS LE CALCUL, et c'est indispensable :
+     * une intention reservee est un appel qui part ou vient de partir, dont
+     * l'avoir n'est pas encore ecrit. Ne compter que `montantAvoirCentimes`
+     * rouvrirait exactement la fenetre que ce verrou ferme. Une intention
+     * liberee est SUPPRIMEE, donc elle cesse d'un coup de reserver sa part.
+     */
+    return await client.$transaction(async (transaction) => {
+      /*
+       * AUCUN CAST `::uuid` SUR `id`. La colonne est de type `text`, Prisma
+       * engendrant les identifiants applicativement : le cast produisait
+       * `operator does not exist: text = uuid`, 42883.
+       *
+       * L'EXPLICATION VIT ICI ET NON DANS LE SQL : un commentaire `--` a
+       * l'interieur du gabarit porterait des backticks, qui refermeraient la
+       * chaine et casseraient la compilation.
+       */
+      const [facture] = await transaction.$queryRaw<
+        { montant_total_centimes: number; montant_avoir_centimes: number }[]
+      >`
+        SELECT montant_total_centimes, montant_avoir_centimes
+        FROM facture
+        WHERE id = ${parametres.factureId}
+        FOR UPDATE
+      `;
 
-    return { reservee: true, intentionId: intention.id };
+      if (facture === undefined) {
+        return { reservee: false, intentionId: null, restantCentimes: 0 };
+      }
+
+      /*
+       * SEULES LES INTENTIONS NON ABOUTIES RESERVENT, `aboutieA: null`, et
+       * cette condition est le coeur du calcul.
+       *
+       * UNE INTENTION ABOUTIE EST DEJA DANS `montantAvoirCentimes` : son avoir
+       * a ete ecrit, le cumul de la facture l'a incremente. La compter une
+       * seconde fois soustrairait deux fois le meme argent, et le second
+       * remboursement legitime d'une commande serait refuse a tort. Mesure le
+       * 1er septembre 2026, deux tests nominaux passes en `MONTANT_TROP_ELEVE`.
+       *
+       * UNE INTENTION NON ABOUTIE N'EST NULLE PART AILLEURS : c'est un appel
+       * parti ou sur le point de partir, dont l'avoir n'existe pas encore.
+       * Elle seule doit reserver sa part, et elle cesse de le faire des qu'elle
+       * est liberee, `libererIntentionNonAboutie` la supprimant.
+       *
+       * LA FENETRE ENTRE `marquerIntentionAboutie` ET L'ECRITURE DE L'AVOIR est
+       * assumee : le montant y est compte par aucun des deux termes. Elle est
+       * bornee a une transaction locale, sans appel reseau, et son seul effet
+       * serait d'autoriser une demande concurrente que le `CHECK` rattraperait.
+       */
+      const enCours = await transaction.intentionRemboursement.aggregate({
+        where: { factureId: parametres.factureId, aboutieA: null },
+        _sum: { montantCentimes: true },
+      });
+
+      const restantCentimes =
+        facture.montant_total_centimes -
+        facture.montant_avoir_centimes -
+        (enCours._sum.montantCentimes ?? 0);
+
+      if (parametres.montantCentimes > restantCentimes) {
+        return { reservee: false, intentionId: null, restantCentimes };
+      }
+
+      const intention = await transaction.intentionRemboursement.create({
+        data: {
+          factureId: parametres.factureId,
+          cleIdempotence: parametres.cleIdempotence,
+          montantCentimes: parametres.montantCentimes,
+        },
+        select: { id: true },
+      });
+
+      return { reservee: true, intentionId: intention.id };
+    });
   } catch (erreur) {
     /*
      * LE CODE EST TESTE SUR LA FORME PRISMA, `P2002`. Le nom de la contrainte
