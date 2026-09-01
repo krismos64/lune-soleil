@@ -23,11 +23,7 @@ import { headers } from "next/headers";
 import { journaliserErreur } from "@/lib/journal";
 import { EntreeInvalideError } from "@/lib/validation";
 import type { StatutCommande } from "@/generated/prisma/enums";
-import {
-  AutorisationRefuseeError,
-  exigerAdministratrice,
-} from "@/services/autorisation";
-import type { IdentiteAppelant } from "@/services/autorisation";
+import { exigerRole } from "@/services/autorisation";
 import { changerStatutCommande } from "@/services/administration-commandes";
 import { rendreFacture } from "@/services/document-comptable";
 
@@ -78,29 +74,6 @@ function estStatutConnu(valeur: unknown): valeur is StatutCommande {
 }
 
 /**
- * Exige le role et rend l'IDENTITE, pas seulement un booleen.
- *
- * L'acteur est necessaire a l'historisation : le rendre ici evite qu'une action
- * le relise, ou pire, l'accepte en parametre.
- *
- * Session absente et role insuffisant rendent la MEME valeur, comme
- * `AutorisationRefuseeError` les confond : les separer renseignerait sur
- * l'existence du compte d'administration.
- */
-async function exigerRole(): Promise<IdentiteAppelant | null> {
-  const enTetes = await headers();
-
-  try {
-    return await exigerAdministratrice(enTetes);
-  } catch (erreur) {
-    if (erreur instanceof AutorisationRefuseeError) {
-      return null;
-    }
-    throw erreur;
-  }
-}
-
-/**
  * Fait avancer une commande, sur decision de l'exploitante.
  *
  * LA GARDE EST LA PREMIERE INSTRUCTION, avant toute lecture de l'entree : la
@@ -111,7 +84,7 @@ async function exigerRole(): Promise<IdentiteAppelant | null> {
 export async function changerStatut(
   formulaire: FormData,
 ): Promise<ResultatTransition> {
-  const identite = await exigerRole();
+  const identite = await exigerRole(await headers());
 
   if (identite === null) {
     return { statut: "SESSION_ABSENTE" };
@@ -184,7 +157,7 @@ export type ResultatRegeneration =
 export async function regenererDocument(
   formulaire: FormData,
 ): Promise<ResultatRegeneration> {
-  const identite = await exigerRole();
+  const identite = await exigerRole(await headers());
 
   if (identite === null) {
     return { statut: "SESSION_ABSENTE" };

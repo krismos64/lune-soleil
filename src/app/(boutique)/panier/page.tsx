@@ -11,6 +11,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 
+import { formaterMontant } from "@/lib/montant";
 import { NOM_COOKIE_PANIER, decoderPanier } from "@/lib/panier-cookie";
 import { revalider } from "@/services/panier";
 import { LignesPanier } from "./lignes-panier";
@@ -22,14 +23,6 @@ export const metadata = {
 };
 
 export const dynamic = "force-dynamic";
-
-/** Le prix en euros, a partir des centimes entiers de l'invariant 1. */
-function prixAffiche(centimes: number): string {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-  }).format(centimes / 100);
-}
 
 export default async function PagePanier() {
   const magasin = await cookies();
@@ -77,7 +70,7 @@ export default async function PagePanier() {
       <div className={styles.total}>
         <p className={styles.libelleTotal}>Total des pièces</p>
         <p className={styles.montantTotal}>
-          {prixAffiche(panier.totalArticlesCentimes)}
+          {formaterMontant(panier.totalArticlesCentimes)}
         </p>
       </div>
 

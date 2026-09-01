@@ -15,7 +15,11 @@ les règles de gestion et décide des transactions.
 
 ## Ce qui n'entre pas
 
-- l'accès direct à Prisma, il passe par `repositories/`
+- l'accès direct à Prisma, il passe par `repositories/`. Trois services de
+  socle y dérogent, journaux, purges et preuve d'identité, liste arbitrée dans
+  `.claude/services-socle-prisma.txt` que `verifier-regles.sh` confronte au
+  code dans les deux sens, LS-158. Ouvrir une transaction et passer le client
+  aux repositories reste l'architecture voulue, ADR-024, pas une dérogation
 - la lecture d'un objet `Request`, d'un cookie ou d'un `FormData`, qui restent
   dans l'adaptateur d'entrée
 - le rendu, y compris la mise en forme d'un montant pour l'affichage

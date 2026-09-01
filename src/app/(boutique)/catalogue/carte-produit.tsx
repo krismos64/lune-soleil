@@ -10,6 +10,7 @@
  * transmettre la quantite exacte pour la masquer ensuite : elle serait lisible
  * dans le HTML de la page.
  */
+import { formaterMontant } from "@/lib/montant";
 import Link from "next/link";
 
 import type { EtatDisponibilite, ProduitCatalogue } from "@/services/catalogue";
@@ -52,14 +53,6 @@ const CLASSE_DISPONIBILITE: Record<EtatDisponibilite, string> = {
  * pas hors production, ce qui est attendu.
  */
 const PREFIXE_MEDIAS = process.env.MEDIA_PREFIXE_PUBLIC ?? "/medias";
-
-/** Le prix en euros, a partir des centimes entiers de l'invariant 1. */
-function prixAffiche(centimes: number): string {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-  }).format(centimes / 100);
-}
 
 export function CarteProduit({ produit }: { produit: ProduitCatalogue }) {
   const disponibilite = LIBELLE_DISPONIBILITE[produit.disponibilite];
@@ -128,7 +121,7 @@ export function CarteProduit({ produit }: { produit: ProduitCatalogue }) {
         <div className={styles.corpsCarte}>
           <h2 className={styles.nomProduit}>{produit.nom}</h2>
           <p className={styles.categorie}>{produit.categorieNom}</p>
-          <p className={styles.prix}>{prixAffiche(produit.prixCentimes)}</p>
+          <p className={styles.prix}>{formaterMontant(produit.prixCentimes)}</p>
           <p className={CLASSE_DISPONIBILITE[produit.disponibilite]}>
             {disponibilite}
           </p>

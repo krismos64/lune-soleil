@@ -16,6 +16,7 @@
  *    l'annonce avant l'enregistrement, sans l'empecher.
  */
 
+import { centimesVersSaisie, formaterMontant } from "@/lib/montant";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import {
@@ -38,32 +39,6 @@ export type VarianteAffichee = {
   /** Nombre de lignes de commande citant la variante, ADR-029. */
   nombreCommandes: number;
 };
-
-/**
- * Formate des centimes en euros pour l'affichage. AUCUN CALCUL MONETAIRE ICI.
- *
- * La division par 100 est un FORMATAGE, pas un calcul : elle ne sert qu'a
- * produire une chaine lisible, et son resultat ne retourne jamais en base. Tout
- * montant qui doit etre additionne, compare ou reecrit reste en centimes
- * entiers, invariant 1.
- */
-function eurosAffiches(centimes: number): string {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-  }).format(centimes / 100);
-}
-
-/**
- * Rend une saisie en euros a partir des centimes stockes, pour le formulaire.
- *
- * SEPAREE DE `eurosAffiches`, qui produit « 19,99 € » avec son symbole : une
- * chaine portant le symbole monetaire serait refusee par la validation au
- * reenregistrement. Deux usages, deux fonctions.
- */
-function saisieDepuisCentimes(centimes: number): string {
-  return (centimes / 100).toFixed(2).replace(".", ",");
-}
 
 function messageDe(resultat: ResultatVariante): string | null {
   switch (resultat.statut) {
@@ -195,7 +170,7 @@ export function VariantesProduit({
         reference: variante.reference,
         libelle: variante.libelle,
         dimensions: variante.dimensions ?? "",
-        prixEuros: saisieDepuisCentimes(variante.prixCentimes),
+        prixEuros: centimesVersSaisie(variante.prixCentimes),
         quantitePhysique: String(variante.quantitePhysique),
       },
     }));
@@ -326,7 +301,7 @@ export function VariantesProduit({
                     <div className={styles.fait}>
                       <dt className={styles.faitLabel}>Prix</dt>
                       <dd className={styles.faitValeur}>
-                        {eurosAffiches(variante.prixCentimes)}
+                        {formaterMontant(variante.prixCentimes)}
                       </dd>
                     </div>
                     <div className={styles.fait}>

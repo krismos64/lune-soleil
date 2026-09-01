@@ -36,19 +36,6 @@ export const LIBELLES_LIVRAISON: Record<string, string> = {
 };
 
 /**
- * Montant en euros, a partir de centimes entiers.
- *
- * LA CONVERSION EST UN AFFICHAGE ET RIEN D'AUTRE, invariant 1 : la division ne
- * quitte jamais cette fonction, et aucun calcul ne repart de sa sortie.
- */
-export function formaterMontant(centimes: number): string {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-  }).format(centimes / 100);
-}
-
-/**
  * Date lisible, convertie a l'affichage seulement, invariant 8.
  *
  * `Europe/Paris` EST EXPLICITE et non deduit du serveur : un conteneur en UTC

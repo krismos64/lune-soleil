@@ -18,7 +18,8 @@ import {
   exigerAdministratrice,
 } from "@/services/autorisation";
 import { listerCommandes } from "@/services/administration-commandes";
-import { formaterDate, formaterMontant, LIBELLES_STATUT } from "./affichage";
+import { formaterMontant } from "@/lib/montant";
+import { formaterDate, LIBELLES_STATUT } from "./affichage";
 import styles from "./commandes.module.css";
 
 export const metadata = {

@@ -8,6 +8,7 @@
  * la MEME garde : proteger la page seule laisserait ouvert l'appel direct,
  * defaut de LS-89.
  */
+import { formaterMontant } from "@/lib/montant";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
@@ -20,7 +21,6 @@ import { lireDetailCommande } from "@/services/administration-commandes";
 import { EntreeInvalideError } from "@/lib/validation";
 import {
   formaterDate,
-  formaterMontant,
   formaterOrigine,
   LIBELLES_LIVRAISON,
   LIBELLES_PAIEMENT,

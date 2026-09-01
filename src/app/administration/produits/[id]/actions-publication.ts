@@ -34,10 +34,7 @@ import {
   publierProduit,
   type MotifNonPubliable,
 } from "@/services/catalogue";
-import {
-  AutorisationRefuseeError,
-  exigerAdministratrice,
-} from "@/services/autorisation";
+import { exigerRole } from "@/services/autorisation";
 
 /**
  * Ce que l'interface recoit, jamais une exception.
@@ -61,26 +58,6 @@ export type ResultatPublication =
   /** Le produit est deja dans l'etat demande, il n'y avait rien a faire. */
   | { statut: "TRANSITION_INVALIDE" }
   | { statut: "INDISPONIBLE" };
-
-/**
- * Exige le role et traduit le refus, sans distinguer ses deux causes.
- *
- * Session absente et role insuffisant rendent la MEME valeur : les separer
- * renseignerait sur l'existence du compte d'administration.
- */
-async function exigerRole(): Promise<boolean> {
-  const enTetes = await headers();
-
-  try {
-    await exigerAdministratrice(enTetes);
-    return true;
-  } catch (erreur) {
-    if (erreur instanceof AutorisationRefuseeError) {
-      return false;
-    }
-    throw erreur;
-  }
-}
 
 /**
  * Traduit les refus previsibles du service en valeurs d'interface.
@@ -141,7 +118,7 @@ function revalider(produitId: string): void {
 export async function publierProduitAction(
   produitId: unknown,
 ): Promise<ResultatPublication> {
-  if (!(await exigerRole())) {
+  if (!(await exigerRole(await headers()))) {
     return { statut: "SESSION_ABSENTE" };
   }
 
@@ -168,7 +145,7 @@ export async function publierProduitAction(
 export async function archiverProduitAction(
   produitId: unknown,
 ): Promise<ResultatPublication> {
-  if (!(await exigerRole())) {
+  if (!(await exigerRole(await headers()))) {
     return { statut: "SESSION_ABSENTE" };
   }
 

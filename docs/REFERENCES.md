@@ -65,7 +65,9 @@ connaître avant d'écrire un service qui la recouvrirait ou la contredirait :
 | `src/lib/auth.ts` | instance Better Auth : mapping vers `Utilisateur`, `role` en `input: false`, seize caractères, plugin passkey, session d'un jour prolongée à l'usage, LS-81 | vérification d'email **désactivée** : l'envoi existe depuis LS-82, le blocage restant est le parcours autour, écran d'attente et renvoi du lien, LS-54 |
 | `src/lib/auth-client.ts` | client navigateur, passkey comprise | aucune |
 | `src/lib/mot-de-passe.ts` | les deux longueurs, **sans aucun import** pour rester servable au navigateur | aucune |
-| `src/services/autorisation.ts` | `lireIdentite`, `exigerSession`, `exigerAdministratrice` | aucune |
+| `src/services/autorisation.ts` | `lireIdentite`, `exigerSession`, `exigerAdministratrice`, et `exigerRole` qui traduit le refus en `null` pour les Server Actions, LS-158 | aucune, les sept copies locales des écrans sont remplacées |
+| `src/lib/montant.ts` | `formaterMontant` et `centimesVersSaisie`, **seul endroit du dépôt où des centimes deviennent des euros**, LS-158 | aucune, neuf copies remplacées ; la division est un affichage, invariant 1 |
+| `src/repositories/utilisateur.ts` | profil et lectures de l'export RGPD, LS-158 | **aucune fonction n'écrit `role`**, règle E11, et le type de `mettreAJourProfil` énumère ses champs |
 | `src/services/reauthentification.ts` | `exigerReauthentificationRecente`, quatre familles d'actions sensibles, fenêtre de quinze minutes, LS-81 | la première action gardée est la suppression de compte, LS-95, famille `IDENTIFIANTS` ; les familles encore sans action vivent dans `.claude/familles-sans-action.txt` |
 | `src/services/journal-connexion.ts` | journal des connexions : écriture qui ne lève jamais, purge à six mois, lecture pour l'écran, LS-80 | aucune, la purge est appelée chaque nuit par `purge-journaux` depuis LS-94 |
 | `src/lib/hook-journal-connexion.ts` | hook `after` de Better Auth, table des chemins de connexion, journalisation des refus de cadence, LS-80 | `BETTER_AUTH_TRUSTED_PROXIES` est lue par `proxies-de-confiance.ts` depuis LS-91 ; la constatation en production reste LS-96 |

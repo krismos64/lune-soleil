@@ -396,6 +396,72 @@ else
   ko=$((ko + couverture_ko))
 fi
 
+# ---------------------------------------------------------------------------
+# Frontière Prisma des services, LS-158
+# ---------------------------------------------------------------------------
+#
+# Le fichier de garde de src/services/ envoie toute requête dans repositories/.
+# Six services appelaient pourtant un modèle directement, et rien ne le voyait :
+# une frontière écrite sans contrôle dérive, motif constant de ce dépôt.
+#
+# L'arbitrage de LS-158 : trois services de socle dérogent, liste dans
+# .claude/services-socle-prisma.txt, et le contrôle tient LES DEUX SENS. Un
+# service hors liste qui appelle un modèle échoue ; une ligne de la liste dont
+# le service n'appelle plus rien est périmée et échoue aussi, une dérogation ne
+# se gardant pas en réserve. Même motif que familles-sans-action.
+#
+# `prisma.$transaction` et `prisma.$queryRaw` ne sont PAS visés : ouvrir une
+# transaction et passer le client aux repositories est l'architecture voulue,
+# ADR-024. Le motif cible les seuls appels de modèle, `prisma.<modele>.<verbe>`.
+
+echo "Frontière Prisma des services, appels de modèle hors socle"
+echo
+
+SOCLE=".claude/services-socle-prisma.txt"
+MOTIF_DIRECT='prisma\.[a-zA-Z]+\.(findUnique|findFirst|findMany|create|createMany|update|updateMany|upsert|delete|deleteMany|count|aggregate|groupBy)'
+frontiere_ko=0
+nb_services=0
+
+liste_socle="$(mktemp)"
+if [ -f "$RACINE/$SOCLE" ]; then
+  grep -vE '^[[:space:]]*(#|$)' "$RACINE/$SOCLE" | awk '{print $1}' > "$liste_socle"
+else
+  : > "$liste_socle"
+fi
+
+for f in "$RACINE"/src/services/*.ts; do
+  [ -e "$f" ] || continue
+  rel=${f#"$RACINE"/}
+  nb_services=$((nb_services+1))
+
+  if grep -qE "$MOTIF_DIRECT" "$f" && ! grep -qx "$rel" "$liste_socle"; then
+    echo "  ECHEC $rel appelle un modèle Prisma directement sans figurer dans $SOCLE"
+    echo "        la requête appartient à repositories/, ou la dérogation s'arbitre et s'écrit"
+    frontiere_ko=$((frontiere_ko+1))
+  fi
+done
+
+while IFS= read -r rel; do
+  [ -n "$rel" ] || continue
+  if [ ! -f "$RACINE/$rel" ]; then
+    echo "  ECHEC $SOCLE cite $rel, qui n'existe pas"
+    frontiere_ko=$((frontiere_ko+1))
+  elif ! grep -qE "$MOTIF_DIRECT" "$RACINE/$rel"; then
+    echo "  ECHEC $SOCLE exempte $rel, qui n'appelle plus aucun modèle directement"
+    echo "        une dérogation périmée se retire, elle ne se garde pas en réserve"
+    frontiere_ko=$((frontiere_ko+1))
+  fi
+done < "$liste_socle"
+
+nb_socle=$(grep -c . "$liste_socle" || true)
+rm -f "$liste_socle"
+
+if [ "$frontiere_ko" -eq 0 ]; then
+  echo "  OK    $nb_services services, aucun appel de modèle hors des $nb_socle dérogations de socle"
+else
+  ko=$((ko + frontiere_ko))
+fi
+
 echo
 echo "-----------------------------------------"
 if [ "$ko" -eq 0 ]; then

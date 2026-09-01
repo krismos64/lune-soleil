@@ -22,6 +22,7 @@
  * invariant du projet : « 7 en stock » exposerait le niveau d'activite de la
  * boutique. Ce composant ne peut donc pas le divulguer, meme par erreur.
  */
+import { formaterMontant } from "@/lib/montant";
 import { useState, useTransition } from "react";
 
 import type { EtatDisponibilite, VarianteFiche } from "@/services/catalogue";
@@ -46,14 +47,6 @@ const CLASSE_DISPONIBILITE: Record<EtatDisponibilite, string> = {
   DERNIERE_PIECE: styles.badgeDernierePiece!,
   EPUISE: styles.badgeEpuise!,
 };
-
-/** Formate un prix en centimes, invariant 1 : aucun flottant en calcul. */
-function formaterPrix(centimes: number): string {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-  }).format(centimes / 100);
-}
 
 export function SelecteurVariante({
   variantes,
@@ -89,7 +82,7 @@ export function SelecteurVariante({
   return (
     <>
       {/* Bloc 3, prix. */}
-      <p className={styles.prix}>{formaterPrix(choisie.prixCentimes)}</p>
+      <p className={styles.prix}>{formaterMontant(choisie.prixCentimes)}</p>
 
       {/*
        * Bloc 4, disponibilite. REGION LIVE, LS-85 : changer de declinaison

@@ -44,6 +44,10 @@
 import { Prisma } from "@/generated/prisma/client";
 import { journaliser } from "@/lib/journal";
 import { prisma } from "@/lib/prisma";
+import {
+  lireCompteExport,
+  lireDonneesExport,
+} from "@/repositories/utilisateur";
 import { exigerSession } from "@/services/autorisation";
 import { exigerReauthentificationRecente } from "@/services/reauthentification";
 
@@ -229,38 +233,18 @@ export async function exporterDonneesPersonnelles(
   utilisateurId: string,
   maintenant: Date = new Date(),
 ): Promise<ExportDonneesPersonnelles | null> {
-  const utilisateur = await prisma.utilisateur.findUnique({
-    where: { id: utilisateurId },
-    select: {
-      email: true,
-      nom: true,
-      emailVerifie: true,
-      creeA: true,
-      // LES VALEURS NE SORTENT PAS, seul leur nombre : `_count` compte sans
-      // jamais charger l'empreinte ni la cle publique.
-      _count: { select: { comptes: true, passkeys: true } },
-    },
-  });
+  // LES VALEURS DES MOYENS DE CONNEXION NE SORTENT PAS, seul leur nombre :
+  // le repository porte le `select` et son commentaire, LS-158.
+  const utilisateur = await lireCompteExport(prisma, utilisateurId);
 
   if (!utilisateur) {
     return null;
   }
 
-  const [adresses, commandes, avis, connexions] = await Promise.all([
-    prisma.adresseCarnet.findMany({ where: { utilisateurId } }),
-    prisma.commande.findMany({
-      where: { utilisateurId },
-      // L'INSTANTANE LEGAL DE LA COMMANDE EST INCLUS : c'est bien une donnee
-      // personnelle de la personne, adresses figees comprises, et elle a le
-      // droit d'en recevoir copie meme si le document ne s'efface pas.
-      include: { lignes: true },
-    }),
-    prisma.avis.findMany({ where: { utilisateurId } }),
-    prisma.journalConnexion.findMany({
-      where: { utilisateurId },
-      orderBy: { creeA: "desc" },
-    }),
-  ]);
+  const { adresses, commandes, avis, connexions } = await lireDonneesExport(
+    prisma,
+    utilisateurId,
+  );
 
   return {
     genereLe: maintenant.toISOString(),

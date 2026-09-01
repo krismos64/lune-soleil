@@ -24,11 +24,7 @@ import { headers } from "next/headers";
 
 import { journaliser } from "@/lib/journal";
 import { EntreeInvalideError } from "@/lib/validation";
-import {
-  AutorisationRefuseeError,
-  exigerAdministratrice,
-} from "@/services/autorisation";
-import type { IdentiteAppelant } from "@/services/autorisation";
+import { exigerRole } from "@/services/autorisation";
 import type { RefusStock } from "@/services/stock-multicanal";
 import {
   ajusterInventaire,
@@ -70,30 +66,6 @@ export type ResultatAction =
 
 /** Chemin de l'ecran, revalide apres chaque ecriture. */
 const CHEMIN_STOCKS = "/administration/stocks";
-
-/**
- * Exige le role et rend l'IDENTITE, pas seulement un booleen.
- *
- * C'est ce qui distingue cette garde de celle des categories : le stock a
- * besoin de l'acteur pour tracer qui a vendu quoi, S9. Le rendre ici evite
- * qu'une action le relise, ou pire, l'accepte en parametre.
- *
- * Session absente et role insuffisant rendent la MEME valeur, comme
- * `AutorisationRefuseeError` les confond : les separer renseignerait sur
- * l'existence du compte d'administration.
- */
-async function exigerRole(): Promise<IdentiteAppelant | null> {
-  const enTetes = await headers();
-
-  try {
-    return await exigerAdministratrice(enTetes);
-  } catch (erreur) {
-    if (erreur instanceof AutorisationRefuseeError) {
-      return null;
-    }
-    throw erreur;
-  }
-}
 
 /**
  * Traduit un refus du service en valeur d'interface.
@@ -151,7 +123,7 @@ function traduireErreur(erreur: unknown, operation: string): ResultatAction {
 export async function suspendreVenteWebAction(
   varianteId: string,
 ): Promise<ResultatAction> {
-  const identite = await exigerRole();
+  const identite = await exigerRole(await headers());
   if (identite === null) {
     return { statut: "SESSION_ABSENTE" };
   }
@@ -175,7 +147,7 @@ export async function suspendreVenteWebAction(
 export async function reactiverVenteWebAction(
   varianteId: string,
 ): Promise<ResultatAction> {
-  const identite = await exigerRole();
+  const identite = await exigerRole(await headers());
   if (identite === null) {
     return { statut: "SESSION_ABSENTE" };
   }
@@ -208,7 +180,7 @@ export async function enregistrerVenteExterneAction(entree: {
   prixUnitaireEuros: string;
   canal: string;
 }): Promise<ResultatAction> {
-  const identite = await exigerRole();
+  const identite = await exigerRole(await headers());
   if (identite === null) {
     return { statut: "SESSION_ABSENTE" };
   }
@@ -240,7 +212,7 @@ export async function ajusterInventaireAction(entree: {
   quantiteConstatee: number;
   motif: string;
 }): Promise<ResultatAction> {
-  const identite = await exigerRole();
+  const identite = await exigerRole(await headers());
   if (identite === null) {
     return { statut: "SESSION_ABSENTE" };
   }
@@ -273,7 +245,7 @@ export async function corrigerMouvementAction(entree: {
   mouvementId: string;
   motif: string;
 }): Promise<ResultatAction> {
-  const identite = await exigerRole();
+  const identite = await exigerRole(await headers());
   if (identite === null) {
     return { statut: "SESSION_ABSENTE" };
   }

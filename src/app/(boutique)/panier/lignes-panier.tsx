@@ -14,6 +14,7 @@
  * `useTransition` PLUTOT QU'UN ETAT DE CHARGEMENT MAISON : il expose l'attente
  * de la Server Action sans dupliquer l'etat, et laisse React ordonner le rendu.
  */
+import { formaterMontant } from "@/lib/montant";
 import { useState, useTransition } from "react";
 
 import type {
@@ -38,13 +39,6 @@ const TEXTE_MOTIF: Record<MotifIndisponible, string> = {
 };
 
 const PREFIXE_MEDIAS = process.env.NEXT_PUBLIC_MEDIA_PREFIXE ?? "/medias";
-
-function prixAffiche(centimes: number): string {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-  }).format(centimes / 100);
-}
 
 export function LignesPanier({ lignes }: { lignes: LignePanierRevalidee[] }) {
   const [enCours, demarrer] = useTransition();
@@ -109,7 +103,7 @@ export function LignesPanier({ lignes }: { lignes: LignePanierRevalidee[] }) {
                  * « 49,00 €l'unité », defaut vu a la mesure du rendu et non a
                  * la relecture du source, ou l'espace est pourtant present.
                  */}
-                {prixAffiche(ligne.prixUnitaireCentimes)}
+                {formaterMontant(ligne.prixUnitaireCentimes)}
                 {" l'unité"}
               </p>
             </div>
@@ -181,7 +175,7 @@ export function LignesPanier({ lignes }: { lignes: LignePanierRevalidee[] }) {
               )}
 
               <p className={styles.totalLigne}>
-                {prixAffiche(ligne.totalLigneCentimes)}
+                {formaterMontant(ligne.totalLigneCentimes)}
               </p>
 
               <button

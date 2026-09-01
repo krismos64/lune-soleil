@@ -17,6 +17,7 @@
  * tableau ne tient plus, et le rendu bascule par une media query, sans deux
  * arbres de DOM concurrents.
  */
+import { centimesVersSaisie, formaterMontant } from "@/lib/montant";
 import { useState, useTransition } from "react";
 
 import type { EtatStockVariante, Mouvement } from "@/services/stock-multicanal";
@@ -59,25 +60,6 @@ const MESSAGES: Record<ResultatAction["statut"], string> = {
  * inapercu : le texte dit que l'envoi est en cours, et le formulaire se ferme
  * au succes. Une seconde vente reelle demande donc deux gestes deliberes.
  */
-
-/** Formate un prix en centimes, invariant 1 : la division est un affichage. */
-function formaterPrix(centimes: number): string {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-  }).format(centimes / 100);
-}
-
-/**
- * Centimes vers euros, pour la VALEUR d'un champ de saisie.
- *
- * DISTINCTE DE `formaterPrix`, qui produit « 42,50 € » avec son symbole et son
- * espace insecable : coller ce texte dans un champ ferait echouer la validation
- * du service, qui n'accepte que des chiffres et un separateur.
- */
-function eurosDepuisCentimes(centimes: number): string {
-  return (centimes / 100).toFixed(2).replace(".", ",");
-}
 
 /** Libelle public de chaque type de mouvement. */
 const LIBELLE_TYPE: Record<Mouvement["type"], string> = {
@@ -408,7 +390,7 @@ export function GestionStocks({
                   </span>
                   {mouvement.canal !== null && `, ${mouvement.canal}`}
                   {mouvement.prixUnitaireFigeCentimes !== null &&
-                    `, ${formaterPrix(mouvement.prixUnitaireFigeCentimes)} la pièce`}
+                    `, ${formaterMontant(mouvement.prixUnitaireFigeCentimes)} la pièce`}
                 </p>
 
                 {mouvement.motif !== null && (
@@ -558,11 +540,11 @@ function FormulaireVenteExterne({
            * le champ reste librement modifiable, le parcours 2 exigeant qu'une
            * remise de stand puisse etre saisie.
            */
-          defaultValue={eurosDepuisCentimes(ligne.prixCatalogueCentimes)}
+          defaultValue={centimesVersSaisie(ligne.prixCatalogueCentimes)}
         />
         <span className={styles.aideChamp}>
           Le prix réellement encaissé, remise comprise. Prix du catalogue :{" "}
-          {formaterPrix(ligne.prixCatalogueCentimes)}.
+          {formaterMontant(ligne.prixCatalogueCentimes)}.
         </span>
       </div>
 
