@@ -330,7 +330,7 @@ npm run format:check # Prettier en vérification, ce que rejoue la chaîne
 `format:check` échoue sans rien réécrire, c'est la forme employée par la chaîne
 d'intégration. `npm run format` corrige sur place, à lancer avant de commiter.
 
-`npm audit` doit rester à **zéro vulnérabilité**. Huit overrides y contribuent,
+`npm audit` doit rester à **zéro vulnérabilité**. Neuf overrides y contribuent,
 documentés dans `package.json` avec la condition de leur retrait.
 
 Un override vise la version corrigée **sans franchir de version majeure chez le
@@ -345,6 +345,18 @@ prouvant pas que la chaîne fonctionne.
 7.x, et le remède proposé par npm rétrogradait Prisma en 6.12. La règle devient
 alors sa propre exigence de preuve, `prisma validate`, `generate` et
 `migrate status` ont été exécutés plutôt que supposés.
+
+**Le même motif s'est répété le 1er septembre 2026**, `mysql2` sous
+GHSA-3f6p-5ww8-9rcr. Le remède proposé par npm était `prisma@6.19.3`, soit un
+retour de la 7 vers la 6 annoncé comme *breaking change* : il aurait cassé le
+client généré, l'adaptateur `@prisma/adapter-pg` et les conventions de
+migration. L'override monte `mysql2` en 3.24.2 sans toucher à Prisma, resté en
+7.9.1.
+
+`mysql2` arrive par `prisma` **et** `better-auth`, et ce projet tourne sur
+PostgreSQL : le paquet n'est jamais chargé à l'exécution, ce qui borne le risque
+réel sans lever l'obligation de zéro. Preuve exécutée plutôt que supposée,
+`npm audit` à zéro, `prisma generate`, 388 tests unitaires et 482 d'intégration.
 
 ### Base de données locale
 
