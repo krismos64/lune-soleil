@@ -59,8 +59,19 @@ export function LignesPanier({ lignes }: { lignes: LignePanierRevalidee[] }) {
        *
        * `aria-live="polite"` ET NON `assertive` : l'annonce attend une pause
        * dans la lecture plutot que de couper la phrase en cours.
+       *
+       * `aria-label` NOMME LA REGION, sans quoi l'arbre d'accessibilite porte un
+       * `status` nu : le lecteur d'ecran annonce le changement sans dire de quoi
+       * il parle, et deux regions anonymes sur une meme page s'annoncent
+       * identiquement. Releve le 1er septembre 2026 en capturant l'arbre reel,
+       * critere 5 de LS-85, la fiche produit portant deja ce nommage.
        */}
-      <p role="status" aria-live="polite" className={styles.annonce}>
+      <p
+        role="status"
+        aria-live="polite"
+        aria-label="Modification du panier"
+        className={styles.annonce}
+      >
         {annonce}
       </p>
 

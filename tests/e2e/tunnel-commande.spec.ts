@@ -62,7 +62,9 @@ test.beforeEach(async ({ context, page }) => {
 
   await page.goto(CHEMIN_FICHE);
   await page.getByRole("button", { name: "Ajouter au panier" }).click();
-  await expect(page.getByText("Ajouté au panier.")).toBeAttached();
+  await expect(
+    page.getByRole("status", { name: "Ajout au panier" }),
+  ).toHaveText("Ajouté au panier.");
 });
 
 test("un panier vide ne peut pas entrer dans le tunnel", async ({
@@ -369,6 +371,77 @@ test("le tunnel ne porte aucune violation d'accessibilite serieuse", async ({
   );
 
   expect(resume).toEqual([]);
+});
+
+/*
+ * CE QUE CE TEST PROUVE ET QU'`axe-core` NE PROUVE PAS, critere 5 de LS-85.
+ *
+ * `axe-core` verifie l'absence de violations ; il ne dit rien de ce qu'une
+ * personne ENTEND. Une region live anonyme, un titre qui ne suit pas l'etape,
+ * un bouton dont le nom ne decrit pas l'effet : rien de tout cela n'est une
+ * violation, et tout cela rend le parcours inutilisable sans l'ecran.
+ *
+ * L'assertion porte sur l'arbre d'accessibilite tel que le navigateur le
+ * calcule, c'est-a-dire la source meme que lit un lecteur d'ecran. Elle a ete
+ * ecrite d'apres une CAPTURE du parcours reel, `locator.ariaSnapshot()`, et non
+ * d'apres ce qu'on esperait y trouver : la capture du 1er septembre 2026 a
+ * revele deux regions `status` sans nom, sur le panier et sur ce tunnel, que
+ * quatre mois de tests verts n'avaient pas vues.
+ *
+ * ELLE NE REMPLACE PAS UNE ECOUTE HUMAINE au lecteur d'ecran, qui reste a faire
+ * et qu'aucun outil ne simule. Elle attrape ce qui se degrade en silence entre
+ * deux ecoutes.
+ */
+test("le parcours annonce chaque etape a un lecteur d'ecran", async ({
+  page,
+}) => {
+  await page.goto("/commande");
+
+  /*
+   * ATTENDRE LE FOCUS PLUTOT QUE LA VISIBILITE. Une capture prise pendant la
+   * transition montre le titre de l'etape PRECEDENTE avec le fil de la
+   * suivante, et l'assertion echouerait sur un artefact de mesure. Constate le
+   * 1er septembre 2026 en capturant l'arbre sans cette attente.
+   */
+  await remplirCoordonnees(page);
+  await expect(
+    page.getByRole("heading", { name: "Votre adresse de livraison" }),
+  ).toBeFocused();
+
+  await remplirAdresse(page);
+  await expect(
+    page.getByRole("heading", { name: "Votre mode de livraison" }),
+  ).toBeFocused();
+
+  /*
+   * L'ETAPE DE LIVRAISON, transporteur en panne. Les etapes franchies sont
+   * devenues des liens NOMMES, ce qui permet d'y revenir sans voir l'ecran, et
+   * l'indisponibilite est annoncee par une region live qui porte son nom.
+   */
+  await expect(page.locator("main")).toMatchAriaSnapshot(`
+    - list "Progression de la commande":
+      - listitem:
+        - text: "1"
+        - link "Vos coordonnées Revenir à cette étape."
+      - listitem:
+        - text: "2"
+        - link "Votre adresse de livraison Revenir à cette étape."
+      - listitem: 3 Votre mode de livraison
+      - listitem: 4 Vérifier votre commande
+    - heading "Votre mode de livraison" [level=1]
+    - alert "Erreurs de saisie"
+    - status "Disponibilité des points de retrait": /momentanément indisponible/
+    - group "Mode de livraison":
+      - text: Mode de livraison
+      - radio "À domicile"
+      - text: À domicile
+    - button "Continuer" [disabled]
+  `);
+
+  await choisirDomicile(page);
+  await expect(
+    page.getByRole("heading", { name: "Vérifier votre commande" }),
+  ).toBeFocused();
 });
 
 /*
