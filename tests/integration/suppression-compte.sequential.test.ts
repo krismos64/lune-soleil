@@ -29,7 +29,9 @@ let client: Client;
 let supprimerCompte: typeof import("@/services/suppression-compte").supprimerCompte;
 let exporterDonneesPersonnelles: typeof import("@/services/suppression-compte").exporterDonneesPersonnelles;
 let autoriserAccesDocument: typeof import("@/services/acces-document").autoriserAccesDocument;
-let reemettreJetonDocument: typeof import("@/services/acces-document").reemettreJetonDocument;
+let engendrerJeton: typeof import("@/lib/jeton-acces").engendrerJeton;
+let expirationDocument: typeof import("@/lib/jeton-acces").expirationDocument;
+let ecrireJeton: typeof import("@/repositories/jeton-acces").ecrireJeton;
 
 const EMAIL = "cliente@exemple.fr";
 
@@ -43,8 +45,19 @@ beforeAll(async () => {
   ({ supprimerCompte, exporterDonneesPersonnelles } =
     await import("@/services/suppression-compte"));
 
-  ({ autoriserAccesDocument, reemettreJetonDocument } =
-    await import("@/services/acces-document"));
+  ({ autoriserAccesDocument } = await import("@/services/acces-document"));
+
+  /*
+   * LE JETON EST ECRIT DIRECTEMENT, SANS PASSER PAR `reemettreJetonDocument`.
+   *
+   * Celle-ci compose en plus un LIEN, ce qui exige `NEXT_PUBLIC_SITE_URL` :
+   * renseignee dans un `.env` local, absente en integration continue. Le test
+   * passait donc sur ma machine et echouait en CI, sur une variable etrangere a
+   * ce qu'il mesure. La garde de `lienDocument` a raison de lever, c'est le
+   * test qui demandait plus que necessaire.
+   */
+  ({ engendrerJeton, expirationDocument } = await import("@/lib/jeton-acces"));
+  ({ ecrireJeton } = await import("@/repositories/jeton-acces"));
 });
 
 afterAll(async () => {
@@ -402,10 +415,15 @@ describe("les liens de facture ne survivent pas a la suppression, LS-57", () => 
       [commandeId],
     );
 
-    const { valeur } = await reemettreJetonDocument(
-      (await import("@/lib/prisma")).prisma,
+    const { prisma } = await import("@/lib/prisma");
+    const jeton = engendrerJeton();
+    await ecrireJeton(prisma, {
       commandeId,
-    );
+      empreinte: jeton.empreinte,
+      portee: "DOCUMENT",
+      expireA: expirationDocument(),
+    });
+    const valeur = jeton.valeur;
 
     // AVANT : le lien sert le document. Sans cette assertion, le test passerait
     // sur un jeton qui n'a jamais fonctionne.
@@ -454,7 +472,14 @@ describe("les liens de facture ne survivent pas a la suppression, LS-57", () => 
     await supprimerCompte(utilisateurId);
 
     const { prisma } = await import("@/lib/prisma");
-    const { valeur } = await reemettreJetonDocument(prisma, commandeId);
+    const jeton = engendrerJeton();
+    await ecrireJeton(prisma, {
+      commandeId,
+      empreinte: jeton.empreinte,
+      portee: "DOCUMENT",
+      expireA: expirationDocument(),
+    });
+    const valeur = jeton.valeur;
 
     // LE JETON EST VALIDE, ni expire ni consomme ni revoque : seul le filtre
     // sur la commande dissociee peut refuser.
