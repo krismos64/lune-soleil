@@ -469,6 +469,30 @@ production comprise ; ces fichiers servent de source de conception et de contrô
 masquerait une migration incomplète. `db:preparer` compare le compte obtenu à ces
 fichiers et échoue en cas d'écart.
 
+### Authentification client, LS-54
+
+Trois écrans publics, distincts de ceux de l'administration : `/compte/inscription`,
+`/compte/connexion` et `/compte/verification`. L'en-tête de la boutique y mène,
+« Se connecter » ou « Mon compte » selon la session.
+
+**La séparation d'avec `/administration/connexion` est le défaut que cette story
+corrige.** Un client dont la session expirait y était renvoyé depuis deux
+endroits, observation du 13 août 2026 : l'écran refusait correctement, mais
+annonçait un espace d'administration à qui voulait consulter son compte.
+
+**La vérification d'adresse n'est pas bloquante**, arbitrage du 2 septembre
+2026 : `requireEmailVerification` reste à `false`, un compte non vérifié se
+connecte et commande normalement. Elle conditionne le **rattachement** des
+commandes passées sans compte, parcours 6, jamais l'accès au compte lui-même.
+`tests/integration/inscription-client.sequential.test.ts` fige cet arbitrage :
+activer le drapeau fait rougir le test du critère 3.
+
+**Deux défauts d'envoi ont été trouvés en écrivant ces écrans**, tous deux
+totaux et invisibles à la lecture : `auth.ts` nommait `url` une variable que les
+modèles attendent sous `lien`, et `sendOnSignUp` n'était pas configuré, donc le
+rappel `sendVerificationEmail` n'était jamais appelé. Aucun email
+d'authentification ne partait depuis LS-70.
+
 ### Droits des personnes, LS-95
 
 Un client supprime son compte lui-même depuis `/compte`, avec confirmation

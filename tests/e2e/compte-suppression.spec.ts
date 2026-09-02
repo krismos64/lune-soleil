@@ -23,9 +23,16 @@ import {
 test("l'espace client refuse un visiteur sans session", async ({ page }) => {
   await page.goto("/compte");
 
-  // L'URL FINALE EST CELLE DE LA CONNEXION. Verifier seulement l'absence de
-  // donnee a l'ecran ne distinguerait pas un refus d'une page vide.
-  await expect(page).toHaveURL(/\/administration\/connexion$/);
+  /*
+   * L'URL FINALE EST CELLE DE LA CONNEXION CLIENT. Verifier seulement l'absence
+   * de donnee a l'ecran ne distinguerait pas un refus d'une page vide.
+   *
+   * ELLE POINTAIT VERS `/administration/connexion` JUSQU'A LS-54, et cette
+   * assertion figeait donc le defaut du 13 aout 2026 au lieu de le signaler :
+   * un client dont la session expirait atterrissait sur l'ecran de
+   * l'administration. Le test etait vert, le parcours incoherent.
+   */
+  await expect(page).toHaveURL(/\/compte\/connexion$/);
 
   // Et le titre de l'espace client n'apparait nulle part : une redirection qui
   // laisserait le contenu rendu avant de naviguer serait une fuite.
@@ -36,7 +43,7 @@ test("l'espace client refuse un visiteur sans session", async ({ page }) => {
 
 test("la page de refus ne deborde pas horizontalement", async ({ page }) => {
   await page.goto("/compte");
-  await expect(page).toHaveURL(/\/administration\/connexion$/);
+  await expect(page).toHaveURL(/\/compte\/connexion$/);
 
   expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
     TOLERANCE_DEBORDEMENT_PX,
@@ -47,7 +54,7 @@ test("la redirection depuis l'espace client ne porte aucune violation d'accessib
   page,
 }) => {
   await page.goto("/compte");
-  await expect(page).toHaveURL(/\/administration\/connexion$/);
+  await expect(page).toHaveURL(/\/compte\/connexion$/);
 
   const resultat = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])

@@ -48,9 +48,24 @@ export default async function PageCompte() {
   const identite = await exigerSession(await headers());
 
   if (!identite) {
-    // Redirection et non page d'erreur : sans session, la reponse utile est le
-    // formulaire de connexion.
-    redirect("/administration/connexion");
+    /*
+     * Redirection et non page d'erreur : sans session, la reponse utile est le
+     * formulaire de connexion.
+     *
+     * VERS LA CONNEXION CLIENT DEPUIS LS-54. Cette ligne pointait vers
+     * `/administration/connexion`, observation deposee le 13 aout 2026 pendant
+     * LS-81 et LS-89. Ce n'etait pas une faille, l'ecran refusant correctement
+     * quiconque n'est pas administratrice depuis LS-89, mais un parcours
+     * incoherent : la page annoncait un espace d'administration a quelqu'un qui
+     * voulait consulter son compte. Aucune page de connexion client n'existait
+     * alors, et en inventer une aurait modifie le perimetre sans arbitrage.
+     *
+     * LE SECOND CHEMIN EST DANS `formulaire-suppression.tsx`, corrige avec
+     * celui-ci. Les reprendre separement laisserait le motif du drapeau ajoute
+     * sans etre porte dans toutes les conditions d'acces, deja rencontre trois
+     * fois sur ce projet.
+     */
+    redirect("/compte/connexion");
   }
 
   return (

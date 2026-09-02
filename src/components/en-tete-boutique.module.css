@@ -111,6 +111,34 @@
 /*
  * Lien du panier et son compteur, LS-114.
  */
+/*
+ * Lien vers le compte, LS-54. Memes regles que le panier voisin : zone tactile
+ * a 44 px, texte courant sur creme a 12,09:1.
+ *
+ * `white-space: nowrap` PARCE QUE LE LIBELLE VARIE. « Se connecter » se couperait
+ * en deux lignes a 320 px la ou « Panier » tient : la barre sauterait selon
+ * qu'on est connecte ou non.
+ */
+.compte {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  color: var(--ls-text);
+  text-decoration: none;
+  font-size: 0.9375rem;
+  white-space: nowrap;
+}
+
+.compte:hover {
+  color: var(--ls-primary);
+  text-decoration: underline;
+}
+
+.compte:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
 .panier {
   display: inline-flex;
   align-items: center;
