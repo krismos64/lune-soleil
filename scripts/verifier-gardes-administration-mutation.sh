@@ -46,7 +46,13 @@ COMMANDES="src/app/administration/commandes/actions.ts"
 # que pour la garde.
 EXPEDITIONS="src/app/administration/expeditions/actions.ts"
 
-MUTABLES=("$MEDIAS" "$VARIANTES" "$PUBLICATION" "$COMMANDES" "$EXPEDITIONS")
+# LA SIXIEME CIBLE EST LA RUBRIQUE MESSAGES, LS-97. Elle vise le meme angle que
+# la cinquieme, un dossier cree apres l'ecriture de ce script, et un second cas
+# vaut mieux qu'un seul : deux dossiers neufs vus par le releve prouvent que
+# l'ancrage sur `use server` tient, la ou un cas unique pourrait etre un hasard.
+MESSAGES="src/app/administration/messages/actions.ts"
+
+MUTABLES=("$MEDIAS" "$VARIANTES" "$PUBLICATION" "$COMMANDES" "$EXPEDITIONS" "$MESSAGES")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || {
@@ -216,6 +222,11 @@ cas_affectation "garde retirée sur rembourser" "$COMMANDES" "rembourser"
 # test inexistante » dans sa variante liste INCOMPLETE, celle qui a laisse neuf
 # actions hors de la boucle jusqu'a LS-159.
 cas_affectation "garde retirée sur expedier" "$EXPEDITIONS" "expedier"
+
+# Cas 6 : `changerStatut` des messages, LS-97. Cet ecran affiche le nom,
+# l'adresse et le texte libre de toute personne ayant ecrit a la boutique :
+# c'est la lecture qui exige le role, pas l'ecriture publique qui l'alimente.
+cas_affectation "garde retirée sur changerStatut des messages" "$MESSAGES" "changerStatut"
 
 echo
 echo "-----------------------------------------"

@@ -46,6 +46,7 @@ const quantite = valider(schemaQuantite, entree); // ou lève EntreeInvalideErro
 | `schemaPointRetrait` | point copié en entier, libellé et adresse | un point réduit à son identifiant |
 | `schemaChoixLivraison` | mode et point liés par une **équivalence** | un `DOMICILE` porteur d'un point autant qu'un `POINT_RELAIS` sans point |
 | `schemaSaisieExpedition` | transporteur, mode **exécuté**, numéro de suivi facultatif, point lié par la même **équivalence** | un mode de retrait sans point, un domicile qui en porte un, un numéro de suivi au-delà de 64 caractères |
+| `schemaSaisieMessage` | message de contact **public**, corps borné à 4000 caractères | un corps réduit à des caractères invisibles, un sujet vide, une adresse non valide |
 | `schemaCoordonnees` | nom, email, téléphone facultatif | composé des trois précédents |
 | `schemaAdresseFigee` | adresse **recopiée par une commande**, avec le `nom` du destinataire | relire une adresse figée avec `schemaAdressePostale`, qui refuse ce `nom` |
 | `schemaEmetteurFacture` | identité légale lue dans l'environnement, SIRET à quatorze chiffres | une valeur absente, un SIRET espacé ou tronqué |

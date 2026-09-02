@@ -54,10 +54,28 @@ export function ClassementMessage({
   } | null>(null);
 
   /*
-   * LE FOCUS DOIT ATTERRIR QUELQUE PART, motif de LS-130. Les boutons changent
-   * apres un succes, celui qui portait le focus disparaissant de la table :
-   * sans point de chute, le focus retombe sur `body` et la tabulation repart du
-   * haut du document.
+   * LE BLOC SE FERME APRES UN SUCCES, meme convention que l'ecran d'expedition
+   * de LS-130, et pour une raison mesuree ici plutot que recopiee.
+   *
+   * `statutActuel` EST UNE PROP FIGEE PAR LE RENDU SERVEUR. `revalidatePath`
+   * invalide le cache serveur, mais ce composant client deja monte ne se
+   * remonte pas : sans ce drapeau, les boutons resteraient ceux de l'ANCIEN
+   * statut. L'exploitante verrait encore « Marquer comme lu » sur un message
+   * qu'elle vient de lire, et un second clic reecrirait le meme statut en
+   * rendant `SUCCES`, sans qu'aucun retour ne dise que rien n'a change.
+   *
+   * LA PREMIERE VERSION AFFIRMAIT L'INVERSE EN COMMENTAIRE, « les boutons
+   * changent apres un succes », ce que le code ne faisait pas. Releve par
+   * `ls-frontend-revue` le 2 septembre 2026 : un commentaire qui decrit une
+   * intention non tenue est pire qu'une absence de commentaire, il fait passer
+   * la relecture suivante a cote.
+   */
+  const [classe, setClasse] = useState(false);
+
+  /*
+   * LE FOCUS DOIT ATTERRIR QUELQUE PART, motif de LS-130. Les boutons devenant
+   * desactives, celui qui portait le focus le perd : sans point de chute, le
+   * focus retombe sur `body` et la tabulation repart du haut du document.
    */
   const conteneur = useRef<HTMLDivElement>(null);
 
@@ -73,6 +91,7 @@ export function ClassementMessage({
 
       switch (resultat.statut) {
         case "SUCCES":
+          setClasse(true);
           conteneur.current?.focus();
           setMessage({
             texte: "Message classé. Rafraîchir la page pour la mettre à jour.",
@@ -109,7 +128,7 @@ export function ClassementMessage({
             key={geste.cible}
             type="button"
             className={styles.bouton}
-            disabled={enCours}
+            disabled={enCours || classe}
             aria-describedby={idMessage}
             onClick={() => {
               soumettre(geste.cible);

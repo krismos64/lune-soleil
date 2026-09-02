@@ -146,6 +146,37 @@ export const SECONDE_COMMANDE_A_EXPEDIER_TEST = {
 } as const;
 
 /**
+ * Les DEUX messages de contact que la rubrique Messages affiche, LS-97.
+ *
+ * DEUX ET NON UN, et c'est la lecon directe de LS-130. La page rend un bloc de
+ * classement PAR message, donc plusieurs `id` et regions live voisins : avec un
+ * seul message, une assertion sur un libelle passe QUEL QUE SOIT l'etat des
+ * identifiants. Mesure faite le 2 septembre 2026 sur l'ecran d'expedition, les
+ * identifiants remplaces par des constantes fixes laissaient les tests verts.
+ *
+ * LEURS STATUTS DIFFERENT, `NOUVEAU` et `LU` : les deux cartes proposent donc
+ * des gestes DIFFERENTS, `GESTES` etant indexee sur le statut. C'est ce qui
+ * croise reellement leurs identifiants, plutot que de rendre deux fois le meme
+ * bloc.
+ */
+export const MESSAGES_TEST = {
+  nouveau: {
+    id: "e1a2b3c4-1197-4aaa-8888-000000000001",
+    nom: "TEST Sacha Martin",
+    email: "e2e-ls97-nouveau@exemple.test",
+    sujet: "Question sur un collier",
+    corps: "Bonjour, ce collier existe-t-il en 45 cm ? Merci beaucoup.",
+  },
+  lu: {
+    id: "e1a2b3c4-1197-4bbb-8888-000000000002",
+    nom: "TEST Alix Bernard",
+    email: "e2e-ls97-lu@exemple.test",
+    sujet: "Delai de livraison",
+    corps: "Bonjour, sous quel delai partent les commandes ? Merci.",
+  },
+} as const;
+
+/**
  * Identifiants du produit de test rendu dans l'editeur, LS-111.
  *
  * FIGES ET NON ENGENDRES A CHAQUE EXECUTION. Le fichier de test doit construire

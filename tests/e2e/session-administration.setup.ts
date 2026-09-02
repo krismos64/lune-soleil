@@ -67,6 +67,7 @@ import {
   CATALOGUE_TEST,
   FICHE_TEST,
   FICHIER_SESSION_ADMINISTRATION,
+  MESSAGES_TEST,
   PRODUIT_TEST,
 } from "./chemin-session";
 
@@ -263,6 +264,7 @@ async function preparerBase(client: Client): Promise<void> {
   await poserProduitDeControle(client);
   await poserCataloguePublie(client);
   await poserFicheProduit(client);
+  await poserMessagesContact(client);
 }
 
 /**
@@ -523,6 +525,76 @@ async function poserFicheProduit(client: Client): Promise<void> {
         section.ordre,
         section.visible,
       ],
+    );
+  }
+}
+
+/**
+ * Les DEUX messages de contact de la rubrique Messages, LS-97.
+ *
+ * DEUX ET NON UN, lecon directe de LS-130. La page rend un bloc de classement
+ * PAR message : avec un seul, une assertion sur un libelle passerait quel que
+ * soit l'etat des identifiants, et le croisement entre cartes ne serait jamais
+ * exerce.
+ *
+ * LEURS STATUTS DIFFERENT, `NOUVEAU` et `LU`, donc les deux cartes proposent des
+ * gestes differents : c'est ce qui met les deux blocs dans des etats distincts
+ * plutot que de rendre deux fois le meme.
+ *
+ * `lu_a` EST OBLIGATOIRE SUR LE SECOND, C30 etant une EQUIVALENCE : un message
+ * `LU` sans date de lecture n'atteint jamais la base, et l'amorce entiere
+ * echouerait sur une contrainte plutot que sur un test.
+ */
+async function poserMessagesContact(client: Client): Promise<void> {
+  await client.query(
+    `INSERT INTO message (id, nom, email, sujet, corps, statut, cree_a)
+     VALUES ($1, $2, $3, $4, $5, 'NOUVEAU', now())
+     ON CONFLICT (id) DO NOTHING`,
+    [
+      MESSAGES_TEST.nouveau.id,
+      MESSAGES_TEST.nouveau.nom,
+      MESSAGES_TEST.nouveau.email,
+      MESSAGES_TEST.nouveau.sujet,
+      MESSAGES_TEST.nouveau.corps,
+    ],
+  );
+
+  await client.query(
+    `INSERT INTO message (id, nom, email, sujet, corps, statut, lu_a, cree_a)
+     VALUES ($1, $2, $3, $4, $5, 'LU', now(), now() - interval '1 day')
+     ON CONFLICT (id) DO NOTHING`,
+    [
+      MESSAGES_TEST.lu.id,
+      MESSAGES_TEST.lu.nom,
+      MESSAGES_TEST.lu.email,
+      MESSAGES_TEST.lu.sujet,
+      MESSAGES_TEST.lu.corps,
+    ],
+  );
+
+  /*
+   * L'AMORCE VERIFIE SON PROPRE RESULTAT, regle etablie par LS-160.
+   *
+   * ELLE VERIFIE LES DEUX STATUTS et pas seulement le compte : une execution
+   * precedente qui aurait classe le premier message en `LU` laisserait deux
+   * cartes identiques, et le test des gestes distincts passerait sans rien
+   * prouver. `ON CONFLICT (id) DO NOTHING` ne le remettrait jamais en
+   * `NOUVEAU`.
+   */
+  const { rows } = await client.query<{ statut: string; nombre: string }>(
+    `SELECT statut, count(*)::text AS nombre FROM message
+     WHERE id = ANY($1::text[]) GROUP BY statut ORDER BY statut`,
+    [[MESSAGES_TEST.nouveau.id, MESSAGES_TEST.lu.id]],
+  );
+
+  const parStatut = new Map(rows.map((ligne) => [ligne.statut, ligne.nombre]));
+
+  if (parStatut.get("NOUVEAU") !== "1" || parStatut.get("LU") !== "1") {
+    throw new Error(
+      "Amorce des messages de contact incomplete : " +
+        JSON.stringify(Object.fromEntries(parStatut)) +
+        ". Attendu un message NOUVEAU et un message LU, sans quoi les deux " +
+        "cartes proposeraient les memes gestes et le test ne prouverait rien.",
     );
   }
 }
