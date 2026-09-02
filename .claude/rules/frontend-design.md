@@ -166,6 +166,31 @@ Le back-office adopte cartes et listes quand un tableau devient illisible sur
 mobile. Cible : créer un produit complet en moins de trois minutes sur
 smartphone, photographies comprises.
 
+### C33, tout écran d'administration est atteignable sans saisir d'URL
+
+Une **barre permanente** porte les rubriques, posée par
+`src/app/administration/layout.tsx`, arbitrage du 2 septembre 2026. Elle ne
+s'affiche que pour une session au rôle `ADMINISTRATRICE` : la cacher n'est pas
+une protection, les pages restant gardées une par une, mais l'afficher
+divulguerait la structure de l'administration.
+
+**Un écran ajouté entre dans la barre, ou son absence s'écrit.**
+`scripts/verifier-navigation-administration.sh` confronte les rubriques aux
+routes du dépôt **dans les deux sens** : une rubrique sans route est un lien
+mort, une route ni navigable ni exclue est un écran inatteignable. Les écrans
+de détail, à segment dynamique, sont exclus par leur forme.
+
+**Le défaut est resté invisible huit stories durant**, chacune ajoutant un
+écran sans le relier. Les tests de bout en bout appellent `page.goto()` avec
+l'URL en dur : ils ne passent jamais par une navigation réelle, donc l'absence
+totale de menu ne faisait rougir aucune assertion.
+`tests/e2e/navigation-administration.spec.ts` navigue **au clic** pour cette
+raison.
+
+L'écran courant est annoncé par `aria-current="page"`, et **le style s'ancre sur
+cet attribut** plutôt que sur une classe : deux sources distinctes finiraient
+par désigner des rubriques différentes, sans que rien ne rende l'écart visible.
+
 ## Accessibilité, WCAG 2.2 AA sur les parcours critiques
 
 Focus visible d'environ 3 px, jamais supprimé sans remplacement. Navigation
