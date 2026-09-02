@@ -4,10 +4,14 @@ Christophe a choisi l'espace client avant la mise en ligne, et ces deux stories
 en posent le socle : s'inscrire, se connecter, confirmer son adresse, et
 reprendre la main sur un mot de passe oublié.
 
-Le fil de la session tient en une phrase : **trois défauts réels, tous les trois
-totaux, tous les trois invisibles à la lecture**. Aucun n'a été trouvé en
-relisant le code, les trois l'ont été en écrivant un test qui traverse
-réellement la chaîne.
+Le fil de la session tient en une phrase : **onze défauts réels, aucun trouvé en
+relisant le code**.
+
+Trois l'ont été en écrivant un test qui traverse réellement la chaîne, et ils
+étaient totaux : aucun email d'authentification ne partait, et les sessions
+survivaient à la réinitialisation. Les huit autres l'ont été par la revue
+frontend, dont trois écrans ou chemins simplement absents que mes 579 tests
+verts ne pouvaient pas voir.
 
 ## Le seul arbitrage demandé, posé avant le départ
 
@@ -141,6 +145,71 @@ l'ont épuisé et la préparation e2e a échoué sur « Too many requests ». Le
 diagnostic a pris trente secondes parce que le fichier concerné porte déjà le
 récit du défaut.
 
+## La revue frontend a trouvé huit défauts, dont trois graves
+
+Aucun n'était visible dans mes mesures : 579 tests verts, axe-core sans
+violation, aucun débordement. **Ce que ces contrôles ne voient pas est
+exactement ce qu'elle a vu.**
+
+### Trois écrans ou chemins manquants
+
+**`/compte/verification` était inatteignable.** Sa seule référence dans tout
+`src/` était la redirection suivant l'inscription : une fois quitté par « Aller
+à mon compte », on ne pouvait plus y revenir sans saisir l'URL. Or le scénario
+même de cet écran est « le message n'arrive pas », donc le retour.
+
+C'est C33 transposé côté boutique, et **mes propres tests ne pouvaient pas le
+voir** : ils atteignaient la page par `page.goto()`. J'avais écrit dans ce
+fichier que la navigation au clic était la leçon de LS-162, et je l'avais
+appliquée aux écrans publics sans l'appliquer à celui-là.
+
+**`?verifie=1` était posé sans être lu.** `PageCompte()` ne recevait pas
+`searchParams`. Qui cliquait le lien depuis sa boîte atterrissait sur « Mon
+compte » sans aucun accusé de réception. Un succès muet se lit comme un échec et
+fait recliquer un lien désormais consommé.
+
+**Aucune déconnexion n'existait.** `signOut` était exporté depuis LS-70 sans
+appelant : un client sur un appareil partagé ne pouvait fermer sa session
+qu'en supprimant son compte. C'est le motif de la fonction exportée sans
+appelant, déjà en fiche, et il portait cette fois un état non nominal entier.
+
+### Quatre défauts d'accessibilité dynamique
+
+Ceux-là sont instructifs : **axe-core valide la forme du rôle, jamais le
+comportement**. Il voyait `role="status"` bien formé et ne pouvait rien dire de
+plus.
+
+- **les régions live étaient insérées en même temps que leur texte**, donc
+  jamais annoncées : le nœud doit préexister pour que la mutation soit observée
+- **le focus retombait sur `body`** à chaque confirmation, trois écrans. Après
+  avoir changé son mot de passe, il fallait retraverser tout l'en-tête au
+  clavier pour atteindre le lien « Se connecter »
+- **le renvoi de lien n'était jouable qu'une fois**, état terminal, sur l'écran
+  dont le sujet est précisément de redemander
+- **l'opacité 0,7 des boutons désactivés** n'est mesurée par aucun contrôle :
+  `verifier-contraste.sh` compare des jetons, il ne calcule pas l'opacité
+
+### Un commentaire qui figeait une hypothèse fausse
+
+Le lien de compte annonçait « texte courant sur crème à 12,09:1 » alors que
+l'en-tête pose un fond blanc, où la paire vaut 12,92:1. Les deux passent AA,
+donc rien ne cassait. Mais C31 dit que c'est **par recopie d'un rapport écrit
+sous une autre hypothèse** que le défaut est entré deux fois sur ce projet.
+
+J'ai d'ailleurs commis le même écart dans ma propre correction, en annonçant
+7,74:1 là où la mesure donne 7,49:1. Corrigé.
+
+### Le neuvième point, signalé et ticketé plutôt que corrigé
+
+Le message de suppression demande « confirmez votre identité » sans qu'aucun
+écran client ne le permette : le seul écran de réauthentification exige le rôle
+`ADMINISTRATRICE`. Un client ne peut donc pas supprimer son compte, droit que le
+RGPD lui garantit.
+
+Le défaut est **antérieur**, il vient de LS-95. Le corriger ici aurait ajouté
+une surface d'authentification que ni le ticket ni ADR-023 ne prévoient.
+**LS-164** le porte, rattachée à LS-36 et bloquée par LS-54.
+
 ## Vérifications
 
 ```
@@ -150,7 +219,7 @@ npm run format:check                                  All matched files use Pret
 npm run build                                         31 routes, les cinq ecrans de compte
 
 npm run test                                          937 passed, 60 fichiers
-npx playwright test                                   579 passed, 4 skipped, trois largeurs
+npx playwright test                                   585 passed, 4 skipped, trois largeurs
 
 ./scripts/verifier-contraste.sh                       96 paires, OK
 ./scripts/verifier-loading-et-404.sh                  25 segments, OK
@@ -160,7 +229,7 @@ npx playwright test                                   579 passed, 4 skipped, tro
 axe-core sur les cinq ecrans, trois largeurs          aucune violation
 ```
 
-**Six mutations, six détectées par le test attendu :**
+**Huit mutations, huit détectées par le test attendu :**
 
 | Mutation | Test qui rougit |
 |---|---|
@@ -170,6 +239,8 @@ axe-core sur les cinq ecrans, trois largeurs          aucune violation
 | `input: false` retiré | critère 5, élévation de privilège refusée |
 | `revokeSessionsOnPasswordReset` à `false` | critère 3 de LS-55, la session tombe |
 | envoyeur muet | critère 2, six sur sept |
+| lien de vérification retiré | le compte mène à la vérification |
+| `BoutonDeconnexion` retiré | le compte propose de fermer la session |
 
 La dernière mérite d'être lue : elle prouve que le test du critère 2 ne se
 contente pas de comparer deux réponses identiques. Sans sa seconde assertion,
@@ -178,7 +249,8 @@ cassant la fonctionnalité.
 
 ## Ce qui reste
 
-**Aucune dette ouverte par ces deux stories.**
+**Aucune dette ouverte par ces deux stories**, et une dette **antérieure**
+ticketée en LS-164, la réauthentification client.
 
 Un point signalé plutôt que décidé seul : `PROTOTYPE.md` place l'espace client
 sur `/espace-client` avec un formulaire de connexion intégré à la page. Le dépôt
