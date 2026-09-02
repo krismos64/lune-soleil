@@ -419,3 +419,128 @@ describe("normalisation de l'adresse", () => {
     expect(await lireProprietaire(invitee)).toBe(compte);
   });
 });
+
+describe("course entre rattachement et suppression de compte", () => {
+  /*
+   * LA FAILLE QUE CE BLOC FERME, trouvee par `ls-critical-reviewer` et
+   * reproduite sur PostgreSQL avant correction.
+   *
+   * LES DEUX TRANSACTIONS SONT INDIVIDUELLEMENT CORRECTES, et c'est ce qui rend
+   * le defaut difficile a voir :
+   *
+   *   1. la suppression marque `dissocieA` sur les commandes du compte. Une
+   *      commande INVITEE, `utilisateurId` encore nul, n'est pas vue par ce
+   *      marquage, et c'est normal : elle n'appartient a personne
+   *   2. le rattachement commite entre-temps : elle porte desormais
+   *      `utilisateurId`, sans avoir ete marquee
+   *   3. la suppression fait son `DELETE`. `ON DELETE SET NULL` remet
+   *      `utilisateurId` a nul, et **`dissocieA` reste nul**
+   *
+   * La commande a donc APPARTENU au compte supprime, et ne porte aucune trace
+   * de cette appartenance : quiconque controle ensuite la meme adresse la
+   * recupere, avec sa facture et ses adresses figees.
+   *
+   * CE QUE L'ASSERTION DOIT MESURER, ET LE PIEGE OU LA PREMIERE VERSION EST
+   * TOMBEE. Verifier « orpheline ET non dissociee » ne distingue RIEN : une
+   * commande invitee que personne n'a jamais rattachee presente exactement cet
+   * etat, et c'est le cas nominal du parcours 6. Mesure a l'appui, sans aucune
+   * concurrence, une suppression de compte laisse ses commandes invitees dans
+   * cet etat, legitimement.
+   *
+   * La propriete a prouver est donc conditionnelle : SI le rattachement a
+   * REUSSI, ALORS la commande ne doit pas etre orpheline et non dissociee. Le
+   * verrou obtient cela en faisant ECHOUER le rattachement, la cle etrangere
+   * refusant d'ecrire vers un compte disparu.
+   */
+  it("un rattachement qui reussit ne laisse jamais la commande reattribuable", async () => {
+    const compte = await creerCompte(EMAIL, true);
+    const invitee = await creerCommande("C-2026-0001", EMAIL);
+
+    const { supprimerCompte } = await import("@/services/suppression-compte");
+
+    // LES DEUX PARTENT ENSEMBLE, l'entrelacement etant decide par PostgreSQL.
+    const [resultatRattachement] = await Promise.all([
+      rattacherMesCommandes(compte, EMAIL, "CONNEXION").catch(() => null),
+      supprimerCompte(compte).catch(() => null),
+    ]);
+
+    const { rows } = await client.query(
+      `SELECT utilisateur_id, dissocie_a FROM commande WHERE id = $1`,
+      [invitee],
+    );
+
+    const aRattache =
+      resultatRattachement !== null &&
+      resultatRattachement.etat === "RATTACHEES" &&
+      resultatRattachement.nombre > 0;
+
+    if (aRattache) {
+      /*
+       * LE RATTACHEMENT A REUSSI, donc la commande a appartenu au compte. Elle
+       * doit porter `dissocieA`, sans quoi elle est reattribuable.
+       */
+      expect(
+        rows[0].utilisateur_id === null && rows[0].dissocie_a === null,
+        "commande rattachee puis rendue reattribuable par la suppression",
+      ).toBe(false);
+    } else {
+      /*
+       * LE RATTACHEMENT A ECHOUE OU N'A RIEN TROUVE, ce qui est l'issue que le
+       * verrou produit : il attend la suppression, puis la cle etrangere refuse
+       * d'ecrire vers un compte disparu. La commande n'a jamais appartenu a
+       * personne, elle reste legitimement invitee.
+       */
+      expect(rows[0].utilisateur_id).toBeNull();
+    }
+  });
+
+  it("aucune des deux issues n'est une commande a demi rattachee, dix essais", async () => {
+    /*
+     * UNE SEULE EXECUTION NE PROUVE RIEN sur une course : l'ordonnancement peut
+     * la faire tomber du bon cote par chance.
+     *
+     * L'ETAT INTERDIT EST « `utilisateurId` POSE vers un compte disparu »,
+     * qu'aucune cle etrangere ne permettrait, ET « rattachee puis orpheline
+     * sans marque ». Le second est le trou reel ; le premier est impossible en
+     * base et sert de garde-fou contre un test qui ne verifierait rien.
+     */
+    const { supprimerCompte } = await import("@/services/suppression-compte");
+
+    for (let essai = 0; essai < 10; essai += 1) {
+      const adresse = `essai-${essai}@exemple.fr`;
+      const compte = await creerCompte(adresse, true);
+      const invitee = await creerCommande(`C-2026-01${essai}0`, adresse);
+
+      const [resultat] = await Promise.all([
+        rattacherMesCommandes(compte, adresse, "CONNEXION").catch(() => null),
+        supprimerCompte(compte).catch(() => null),
+      ]);
+
+      const { rows } = await client.query(
+        `SELECT utilisateur_id, dissocie_a FROM commande WHERE id = $1`,
+        [invitee],
+      );
+
+      const aRattache =
+        resultat !== null &&
+        resultat.etat === "RATTACHEES" &&
+        resultat.nombre > 0;
+
+      if (aRattache) {
+        expect(
+          rows[0].utilisateur_id === null && rows[0].dissocie_a === null,
+          `essai ${essai} : commande rattachee puis rendue reattribuable`,
+        ).toBe(false);
+      }
+
+      // AUCUN POINTEUR VERS UN COMPTE DISPARU, quelle que soit l'issue.
+      if (rows[0].utilisateur_id !== null) {
+        const { rows: comptes } = await client.query(
+          `SELECT id FROM utilisateur WHERE id = $1`,
+          [rows[0].utilisateur_id],
+        );
+        expect(comptes, `essai ${essai} : pointeur orphelin`).toHaveLength(1);
+      }
+    }
+  });
+});

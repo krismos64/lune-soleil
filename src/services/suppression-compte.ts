@@ -88,10 +88,31 @@ export async function supprimerCompte(
 ): Promise<ResultatSuppression> {
   try {
     return await prisma.$transaction(async (tx) => {
-      const existe = await tx.utilisateur.findUnique({
-        where: { id: utilisateurId },
-        select: { id: true },
-      });
+      /*
+       * `FOR UPDATE` ET NON UN `findUnique` NU, LS-56. Une lecture ordinaire ne
+       * prend AUCUN verrou : elle constate l'existence du compte sans empecher
+       * une transaction concurrente de le modifier.
+       *
+       * CE QUE CELA LAISSAIT PASSER. Le rattachement des commandes invitees,
+       * livre par LS-56, ecrit `Commande.utilisateurId`. S'il commite entre le
+       * marquage `dissocieA` ci-dessous et le `DELETE`, la commande qu'il
+       * vient de rattacher n'a PAS ete marquee, et le `ON DELETE SET NULL`
+       * remet son `utilisateurId` a nul en laissant `dissocieA` nul : elle
+       * redevient « jamais rattachee », donc rattachable par quiconque
+       * controle ensuite la meme adresse. Reproduit 10 fois sur 10 par
+       * `ls-critical-reviewer`, a 0, 1, 2, 5 et 10 ms de decalage.
+       *
+       * LES DEUX CHEMINS VERROUILLENT `utilisateur` EN PREMIER, ordre impose :
+       * l'inverser produirait un interblocage a la place du trou.
+       *
+       * `$queryRaw` PARCE QUE PRISMA NE SAIT PAS EXPRIMER `FOR UPDATE`, meme
+       * motif que le verrou de facture d'`avoir.ts`.
+       */
+      const verrouillees = await tx.$queryRaw<{ id: string }[]>`
+        SELECT id FROM utilisateur WHERE id = ${utilisateurId} FOR UPDATE
+      `;
+
+      const existe = verrouillees.length > 0;
 
       if (!existe) {
         // AUCUNE EXCEPTION : un compte deja supprime n'est pas un incident.

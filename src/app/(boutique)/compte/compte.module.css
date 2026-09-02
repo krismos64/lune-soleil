@@ -301,6 +301,17 @@
 .bouton:disabled {
   background: var(--ls-text-muted);
   border-color: var(--ls-text-muted);
+  /*
+   * `color` EST REDECLAREE ALORS QU'ELLE EST DEJA HERITEE DE `.bouton`, et ce
+   * n'est pas une redondance : `verifier-contraste.sh` n'apparie une couleur et
+   * un fond que s'ils vivent dans le MEME bloc. Sans cette ligne, le controle
+   * rend « OK » sans avoir jamais regarde cette paire, tout en etant invoque
+   * comme motif du choix ci-dessus. Un garde-fou qu'on invoque sans qu'il
+   * s'exerce est pire qu'une absence de garde-fou.
+   *
+   * La paire mesure 5,19:1, conforme AA.
+   */
+  color: var(--ls-text-on-primary);
   cursor: not-allowed;
 }
 

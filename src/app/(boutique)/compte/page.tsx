@@ -174,22 +174,25 @@ export default async function PageCompte({
       </section>
 
       {/*
-       * LE BLOC DE RATTACHEMENT N'APPARAIT QUE S'IL Y A QUELQUE CHOSE A
-       * RATTACHER, LS-56. Une section permanente « aucune commande a
-       * rattacher » n'apprendrait rien et occuperait le haut de l'ecran de
-       * tous les autres clients.
+       * LA SECTION ENTIERE EST RENDUE PAR LE COMPOSANT, sa decision de
+       * s'afficher comprise. La page lui passe le nombre, elle ne tranche pas.
+       *
+       * POURQUOI PAS `{nombreEligibles > 0 && ...}` ICI, qui etait la premiere
+       * version et paraissait plus simple. Ce nombre est calcule au rendu
+       * SERVEUR : apres un rattachement reussi, `revalidatePath` le fait
+       * retomber a zero, et la condition demontait la section AU MOMENT MEME ou
+       * son compte rendu devenait utile. Trois choses partaient ensemble, le
+       * message de succes, le focus clavier qui retombait sur `body`, et la
+       * region live retiree du DOM avant d'avoir rien annonce.
+       *
+       * Mesure : le test e2e voyait « element(s) not found » APRES avoir
+       * resolu le noeud, signature exacte d'un demontage pendant l'assertion.
+       *
+       * Le composant connait, lui, la difference entre « rien a rattacher, ne
+       * rien afficher » et « je viens de rattacher, montrer le resultat ».
+       * Defaut trouve par la revue frontend.
        */}
-      {nombreEligibles > 0 && (
-        <section
-          className={styles.section}
-          aria-labelledby="titre-rattachement"
-        >
-          <h2 id="titre-rattachement">Commandes passées sans compte</h2>
-          <div className={styles.rattachement}>
-            <BlocRattachement nombreEligibles={nombreEligibles} />
-          </div>
-        </section>
-      )}
+      <BlocRattachement nombreEligibles={nombreEligibles} />
 
       {/*
        * LA DECONNEXION MANQUAIT ENTIEREMENT. `signOut` etait exporte depuis

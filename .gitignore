@@ -118,11 +118,17 @@ docs/internal/
 .sentryclirc
 *.tgz
 
-# Etats de session ouverts par le projet Playwright « preparation », LS-81 et
-# LS-111. Ils portent un cookie de session valide, invariant 9 : le depot est
-# public, et ils se recreent a chaque execution.
-tests/e2e/.session-cliente.json
-tests/e2e/.session-administration.json
+# Etats de session ouverts par les tests Playwright, LS-81 et LS-111. Ils
+# portent un cookie de session valide, invariant 9 : le depot est public, et ils
+# se recreent a chaque execution.
+#
+# UN MOTIF ET NON TROIS LIGNES NOMINATIVES, corrige le 2 septembre 2026. La
+# liste ecrite a la main ne couvrait pas `.session-verifiee.json`, produit par
+# le travail e2e de LS-56 : un cookie de session valide se trouvait donc hors
+# du filtre, qu'un `git add -A` aurait pousse sur un depot public. Une liste
+# ecrite a la main est une opinion tant qu'elle n'est pas generique, motif deja
+# rencontre sur ce projet.
+tests/e2e/.session-*.json
 
 # Cookie signe de la commande de test, LS-118. Meme raison : une valeur signee
 # avec le secret local n'a rien a faire dans un depot public.
