@@ -252,7 +252,7 @@ porte déjà. Sans elle, une ligne d'échec sur compte inconnu ne dirait rien.
 | Catégories de données | identifiant de l'acteur, adresse IP, adresse email du destinataire, modèle d'email et statut d'envoi, clé de limitation de débit contenant une adresse IP |
 | Tables | `JournalAudit`, `JournalEmail`, `AlerteCritique`, `RateLimit`, `MouvementStock`, `EnvoiEnAttente` |
 | Base légale | intérêt légitime, article 6.1.f, sécurité et preuve du bon fonctionnement |
-| Conservation | **six mois** pour `JournalAudit`, par alignement sur la délibération CNIL n° 2021-122. **Vingt-quatre heures** pour `RateLimit`, arbitrage de LS-94 exposé ci-dessous. `JournalEmail` suit la commande qu'il sert, voir T2. `EnvoiEnAttente` est une **file de travail** et non une trace, voir ci-dessous. Les trois purges sont branchées sur une tâche planifiée quotidienne depuis le 12 août 2026, LS-94 |
+| Conservation | **six mois** pour `JournalAudit`, par alignement sur la délibération CNIL n° 2021-122. **Vingt-quatre heures** pour `RateLimit`, arbitrage de LS-94 exposé ci-dessous. `JournalEmail` suit la commande qu'il sert, voir T2. **Trente jours** pour les lignes TERMINÉES d'`EnvoiEnAttente`, jamais pour les lignes bloquées, arbitrage de LS-154 exposé ci-dessous. Les purges sont branchées sur une tâche planifiée quotidienne depuis le 12 août 2026, LS-94, portée à **cinq tables** par LS-154 |
 | Destinataires | l'exploitante seule |
 | Transfert hors UE | aucun |
 
@@ -287,10 +287,31 @@ rien : l'information de fond survit dans `JournalEmail`, qui est la trace
 opposable. Une ligne **bloquée** en `ENVOI_EN_COURS` doit en revanche survivre
 jusqu'à ce que quelqu'un la traite, c'est tout l'objet de l'alerte.
 
-**La purge de cette table n'est pas encore branchée**, et c'est une dette
-assumée plutôt qu'un oubli : elle demande de distinguer les lignes terminées des
-lignes bloquées, ce que la tâche quotidienne de LS-94 ne sait pas faire
-aujourd'hui. Portée par **LS-154**.
+**La purge est branchée depuis LS-154**, le 2 septembre 2026, sur la tâche
+quotidienne existante et sans en créer une sixième.
+
+**Trente jours pour les lignes terminées**, `ENVOYE` et `ECHOUE`. La durée n'est
+alignée sur aucun texte, et c'est assumé : aucun ne vise cette table. Le
+raisonnement est celui de `RateLimit` ci-dessus, appliqué à un usage plus long.
+L'information de fond survit dans `JournalEmail`, mais la ligne d'outbox porte
+les **variables** du message, que le journal ne conserve pas : une réclamation
+« je n'ai jamais reçu ma confirmation » arrive quelques jours plus tard, et
+trente jours couvrent ce délai sans garder une adresse un an.
+
+**Une ligne `ENVOI_EN_COURS` n'est JAMAIS purgée, quel que soit son âge**, et
+c'est la règle qui a fait de cette purge une story à part plutôt qu'un
+`deleteMany` de plus. Elle est ambiguë : personne ne sait si le message est
+parti, ADR-033 refuse de trancher automatiquement, et une alerte appelle
+l'exploitante à décider. La purger effacerait précisément ce qu'il faut traiter,
+en silence.
+
+**Une ligne `EN_ATTENTE` non plus** : elle n'est pas encore partie, et la purger
+priverait un client de sa confirmation.
+
+Le filtre est écrit en **liste positive** et non en négation. `not: { in: [...] }`
+aurait le même effet aujourd'hui et le perdrait au premier statut ajouté à
+l'enum, qui serait alors purgé par défaut : la liste positive garde le défaut
+fermé, même motif que les prédicats d'index partiel.
 
 **Le contenu du message n'est jamais stocké**, seulement le modèle et ses
 variables, précaution 3 d'ADR-008.
@@ -304,7 +325,7 @@ variables, précaution 3 d'ADR-008.
 | Catégories de données | nom, adresse email, sujet et corps du message, tels que la personne les a saisis |
 | Tables | `Message` |
 | Base légale | intérêt légitime, article 6.1.f, répondre à une sollicitation que la personne a elle-même initiée |
-| Conservation | **trois ans** à compter du message, référentiel CNIL n° 2021-131, même ancrage que T2 pour les données de prospect. La purge est branchée sur la tâche quotidienne de LS-94 |
+| Conservation | **trois ans** à compter du message, référentiel CNIL n° 2021-131, même ancrage que T2 pour les données de prospect. La purge est branchée sur la tâche quotidienne depuis LS-154, le 2 septembre 2026 |
 | Destinataires | l'exploitante seule |
 | Transfert hors UE | aucun |
 
