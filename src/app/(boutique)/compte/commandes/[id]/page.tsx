@@ -106,8 +106,8 @@ export default async function PageDetailCommande({
          * invariant 3 : libelles et prix sont ceux du jour de la commande.
          */}
         <ul className={styles.articles}>
-          {commande.lignes.map((ligne, rang) => (
-            <li key={rang} className={styles.article}>
+          {commande.lignes.map((ligne) => (
+            <li key={ligne.id} className={styles.article}>
               <span>{ligne.libelleProduitFige}</span>{" "}
               <span className={styles.variante}>
                 {ligne.libelleVarianteFige}
