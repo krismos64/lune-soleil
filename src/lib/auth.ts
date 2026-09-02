@@ -21,6 +21,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { envoyeurJournalise, type EnvoyeurEmail } from "@/integrations/email";
 import { hookJournalConnexion } from "@/lib/hook-journal-connexion";
 import { rattacherSansJamaisEchouer } from "@/lib/hook-rattachement";
+import { hookRevocationSessions } from "@/lib/hook-revocation-sessions";
 import {
   LONGUEUR_MAXIMALE_MOT_DE_PASSE,
   LONGUEUR_MINIMALE_MOT_DE_PASSE,
@@ -225,6 +226,41 @@ export function creerAuth(
         createdAt: "creeA",
         updatedAt: "misAJourA",
       },
+      /**
+       * CHANGEMENT D'ADRESSE EMAIL, LS-60 critere 2, verifie via Context7 sur
+       * Better Auth 1.6.23.
+       *
+       * DESACTIVE PAR DEFAUT dans la bibliotheque, et son activation est une
+       * decision : elle rend `emailVerifie` atteignable par un TROISIEME
+       * chemin, donc declenche le rattachement des commandes invitees de LS-56.
+       * C'est le comportement voulu, arbitrage du 2 septembre 2026, les trois
+       * conditions cumulatives restant les memes. La dependance etait tracee
+       * dans `REFERENCES.md` avant d'etre exercee ici.
+       *
+       * L'ANCIENNE ADRESSE RESTE CELLE DU COMPTE tant que la nouvelle n'est pas
+       * confirmee : Better Auth n'ecrit `email` qu'apres le clic sur le lien
+       * envoye a la NOUVELLE. Sans cette regle, une saisie erronee ou
+       * malveillante enfermerait le client hors de son compte.
+       *
+       * `sendChangeEmailConfirmation` AJOUTE UNE APPROBATION SUR L'ANCIENNE, et
+       * ce n'est pas une precaution decorative : c'est le seul canal qui
+       * atteigne le proprietaire legitime si quelqu'un tente de detourner son
+       * compte depuis une session laissee ouverte. Rien ne se produit sans ce
+       * second clic.
+       */
+      changeEmail: {
+        enabled: true,
+
+        sendChangeEmailConfirmation: async ({ user, newEmail, url }) => {
+          await envoyeurEmail.envoyer({
+            // A L'ANCIENNE ADRESSE, celle qui est encore celle du compte.
+            destinataire: user.email,
+            modele: "changement-adresse-avertissement",
+            variables: { lien: url, nouvelleAdresse: newEmail },
+          });
+        },
+      },
+
       additionalFields: {
         /**
          * REGLE E11, et l'unique protection portee par cette configuration.
@@ -359,6 +395,27 @@ export function creerAuth(
         "/sign-in/email": { window: 60, max: 5 },
         "/request-password-reset": { window: 60, max: 3 },
         "/sign-up/email": { window: 60, max: 3 },
+
+        /*
+         * LES DEUX ROUTES DU PROFIL, LS-60, et la premiere porte un MOT DE
+         * PASSE.
+         *
+         * `/change-password` accepte `currentPassword` : sans plafond propre,
+         * elle retombe sur le defaut de Better Auth, dix requetes par dix
+         * secondes, soit soixante essais par minute sur une session ouverte.
+         * C'est le defaut de LS-92 sous une autre forme, ou `verifyPassword`
+         * permettait de tester des mots de passe sans plafond NI trace.
+         *
+         * CETTE ROUTE EST BIEN SOUMISE A LA LIMITATION, elle : le changement
+         * passe par le CLIENT Better Auth depuis LS-60, donc par
+         * `auth.handler`. Seul `auth.api.*` y echappe.
+         *
+         * `/change-email` DECLENCHE UN ENVOI D'EMAIL, donc consomme le quota
+         * SMTP de l'offre MX Plan, deux cents messages par heure : le meme
+         * plafond que `/request-password-reset` s'applique.
+         */
+        "/change-password": { window: 60, max: 5 },
+        "/change-email": { window: 60, max: 3 },
       },
     },
 
@@ -376,6 +433,22 @@ export function creerAuth(
      * instance complete.
      */
     hooks: {
+      /**
+       * `revokeOtherSessions` EST IMPOSE ICI, LS-60, et c'est une correction de
+       * la revue critique.
+       *
+       * Ce champ fait partie du CORPS de `/change-password` : le serveur se
+       * contente de le lire. Tant que le changement passait par une Server
+       * Action, le service posait `true` hors de portee du client ; depuis que
+       * l'ecran appelle `authClient.changePassword`, c'est un champ que
+       * l'appelant choisit.
+       *
+       * Un intrus detenant session ET mot de passe pouvait donc changer le mot
+       * de passe en CONSERVANT la session du proprietaire ouverte, ce qui
+       * retarde la detection. Voir `hook-revocation-sessions.ts`.
+       */
+      before: hookRevocationSessions,
+
       after: hookJournalConnexion,
     },
 
@@ -477,8 +550,10 @@ export function creerAuth(
        * drapeau ouvrirait une session depuis un lien recu par email, donc
        * depuis un canal qu'un acces a la boite compromet.
        *
-       * La duree de vie du jeton reste le defaut de Better Auth, une heure. La
-       * laisser implicite serait un nombre invisible : elle est ecrite ici.
+       * LA DUREE DE VIE DU JETON EST POSEE PLUS BAS, `expiresIn`, et elle ne
+       * l'etait PAS quand cette phrase a ete ecrite : le commentaire affirmait
+       * « elle est ecrite ici » sur un nombre absent. Releve par la revue
+       * critique de LS-60, corrige avec la mesure qui l'accompagne.
        */
       sendOnSignUp: true,
 
@@ -503,10 +578,110 @@ export function creerAuth(
         await rattacherSansJamaisEchouer(user.id, user.email, "VERIFICATION");
       },
 
-      sendVerificationEmail: async ({ user, url }) => {
+      /**
+       * LA DUREE DE VIE DU JETON EST ECRITE, ET C'EST UNE CORRECTION.
+       *
+       * Le commentaire de `autoSignInAfterVerification` affirmait « la duree
+       * reste le defaut de Better Auth, une heure. La laisser implicite serait
+       * un nombre invisible : elle est ecrite ici » alors qu'elle ne l'etait
+       * PAS. Releve par la revue critique.
+       *
+       * QUINZE MINUTES ET NON UNE HEURE, LS-60. Le lien de changement d'adresse
+       * OUVRE UNE SESSION quand il est clique sans cookie, mesure :
+       *
+       *   sessions avant le clic : 2
+       *   sessions apres         : 3, et le cookie du clic est utilisable
+       *   rejeu du meme lien     : 4, le jeton n'est pas consomme
+       *
+       * Le jeton est un JWT auto-porteur, valide sur sa seule signature : la
+       * table `verification` reste vide, donc rien ne le consomme. Quiconque
+       * lit l'email une fois, boite partagee ou poste familial, obtient une
+       * session rejouable pendant toute la duree de validite.
+       *
+       * CELA CONTREDIT LA DECISION VOISINE sur `autoSignInAfterVerification`,
+       * qui refuse d'ouvrir une session depuis un canal que l'acces a la boite
+       * compromet : le drapeau est bien a `false`, et une autre branche ouvre
+       * la session quand meme.
+       *
+       * QUINZE MINUTES NE FERMENT PAS LE CHEMIN, elles bornent la fenetre. Le
+       * fermer demanderait de sortir du mecanisme de Better Auth, ce qui
+       * dépasse le perimetre de LS-60 : la dette est ticketee.
+       */
+      expiresIn: 15 * 60,
+
+      /**
+       * CE RAPPEL SERT DEUX CHEMINS, ET LEURS TEXTES DIFFERENT, LS-60.
+       *
+       * `changeEmail` REUTILISE `sendVerificationEmail`, verifie via Context7 :
+       * il n'a pas de rappel a lui. Sans distinction, un client qui change
+       * d'adresse recevait « Pour terminer la creation de votre compte »,
+       * message faux et inquietant sur un compte existant depuis des mois.
+       *
+       * LE DESTINATAIRE DISTINGUE LES DEUX CAS. A l'inscription, `user.email`
+       * EST l'adresse a verifier. Au changement, `user` porte encore l'ANCIENNE
+       * adresse, la nouvelle n'etant ecrite qu'apres le clic : le lien part donc
+       * vers l'adresse portee par le jeton, que Better Auth resout. Comparer les
+       * deux est ce qui permet de choisir le texte.
+       *
+       * LE CAS AMBIGU EST TRAITE EN FAVEUR DE L'INSCRIPTION : si les deux
+       * adresses coincident, c'est une verification ordinaire, celle d'un compte
+       * dont l'adresse n'a pas change.
+       */
+      sendVerificationEmail: async ({ user, url, token }) => {
+        /*
+         * CE RAPPEL SERT DEUX CHEMINS, ET LEURS TEXTES DIFFERENT, LS-60.
+         *
+         * `changeEmail` REUTILISE `sendVerificationEmail`, verifie via
+         * Context7 : il n'a pas de rappel a lui. Sans distinction, un client
+         * qui change d'adresse recevait « Pour terminer la creation de votre
+         * compte », message faux et inquietant sur un compte ouvert depuis des
+         * mois.
+         *
+         * DEUX SIGNAUX ONT ETE ESSAYES ET MESURES FAUX AVANT CELUI-CI :
+         *
+         *   `requete.url`   le rappel est appele HORS du contexte de route,
+         *                   `requete` vaut `undefined` dans les deux cas
+         *   `user.email`    il porte DEJA la nouvelle adresse au changement,
+         *                   donc il ne distingue rien
+         *
+         * LE JETON EST LE SEUL DISCRIMINANT FIABLE, mesure le 2 septembre :
+         *
+         *   inscription  {"email":"...","iat":...,"exp":...}
+         *   changement   {"email":"...","updateTo":"...",
+         *                 "requestType":"change-email-verification",...}
+         *
+         * LA CHARGE EST LUE SANS VERIFIER LA SIGNATURE, et c'est sans danger :
+         * ce jeton vient d'etre EMIS par Better Auth quelques lignes plus haut,
+         * il n'a traverse aucun reseau. La lecture ne sert qu'a choisir un
+         * texte, jamais a autoriser quoi que ce soit, invariant 2.
+         *
+         * LE REPLI EST LE MESSAGE D'INSCRIPTION : une charge illisible ou un
+         * format change par une montee de version degrade le texte, jamais
+         * l'envoi. Un client recevrait un message legerement inadapte plutot
+         * que rien du tout.
+         */
+        let changementDAdresse = false;
+
+        try {
+          const charge = token.split(".")[1];
+
+          if (charge !== undefined) {
+            const decodee = JSON.parse(
+              Buffer.from(charge, "base64url").toString("utf-8"),
+            ) as { requestType?: unknown };
+
+            changementDAdresse =
+              decodee.requestType === "change-email-verification";
+          }
+        } catch {
+          // Repli sur le message d'inscription, voir ci-dessus.
+        }
+
         await envoyeurEmail.envoyer({
           destinataire: user.email,
-          modele: "verification-adresse",
+          modele: changementDAdresse
+            ? "changement-adresse-verification"
+            : "verification-adresse",
           variables: { lien: url },
         });
       },

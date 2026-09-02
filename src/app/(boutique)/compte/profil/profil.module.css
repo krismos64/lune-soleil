@@ -1,0 +1,159 @@
+/*
+ * Profil du client, LS-60.
+ *
+ * MOBILE FIRST, concu a 320 px : aucune largeur fixe, zones tactiles a 44 px,
+ * champs a 16 px de fonte pour eviter le zoom automatique d'iOS a la mise au
+ * point.
+ */
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-6);
+}
+
+/*
+ * CHAQUE FORMULAIRE EST UN BLOC DISTINCT, visuellement separe : trois
+ * formulaires qui se suivent sans separation laissent croire qu'un seul bouton
+ * les valide tous.
+ */
+.formulaire {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-3);
+  padding: var(--ls-space-4);
+  border: 1px solid var(--ls-surface-sand);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface);
+}
+
+.formulaire h2 {
+  margin: 0;
+}
+
+.texte {
+  margin: 0;
+  line-height: 1.6;
+  /* `ligne1` et une adresse email peuvent etre longues sans espace. */
+  overflow-wrap: anywhere;
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-1);
+}
+
+.champ label {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+/*
+ * `font-size: 1rem` MINIMUM : iOS zoome automatiquement sur un champ de moins
+ * de 16 px a la mise au point, ce qui casse la mise en page sans se retablir.
+ */
+.champ input {
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-2) var(--ls-space-3);
+  border: 1px solid var(--ls-text-muted);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+.champ input:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 1px;
+}
+
+/*
+ * `--ls-text-muted` sur `--ls-surface` : 5,19:1, CALCULE. `.formulaire` pose
+ * `--ls-surface`, donc le fond est blanc et non creme : la meme couleur y vaut
+ * 4,86:1, et 4,35:1 sur sable, une des trois paires refusees par C31.
+ */
+.aide {
+  margin: 0;
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+}
+
+.bouton {
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-3) var(--ls-space-4);
+  border: 1px solid var(--ls-primary);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  font-size: 1rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background var(--ls-duration-fast) var(--ls-easing);
+}
+
+.bouton:hover:not(:disabled) {
+  background: var(--ls-primary-hover);
+}
+
+.bouton:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+/*
+ * AUCUNE OPACITE SUR L'ETAT DESACTIVE : `verifier-contraste.sh` ne la calcule
+ * pas, donc une valeur a 0,7 ferait descendre le rapport reel sans qu'aucun
+ * controle ne le voie. `color` est redeclaree ICI pour que le controle voie la
+ * paire, qu'il n'apparie que dans le MEME bloc. Elle mesure 5,19:1.
+ */
+.bouton:disabled {
+  background: var(--ls-text-muted);
+  border-color: var(--ls-text-muted);
+  color: var(--ls-text-on-primary);
+  cursor: not-allowed;
+}
+
+/*
+ * REGION LIVE QUI PREEXISTE A SON TEXTE : un noeud insere en meme temps que son
+ * contenu n'est jamais annonce. `:empty` retire la boite sans retirer le nœud.
+ */
+.annonce {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.annonce:empty {
+  margin: 0;
+}
+
+/*
+ * L'ERREUR NE SE DIT PAS PAR LA COULEUR SEULE : le texte enonce le probleme et
+ * l'action a faire. Le liseré n'est qu'un renfort.
+ *
+ * `--ls-error` sur `--ls-surface` : 6,56:1, calcule.
+ */
+.annonce[data-etat="erreur"] {
+  padding: var(--ls-space-3);
+  border-left: 3px solid var(--ls-error);
+  background: var(--ls-surface);
+  color: var(--ls-error);
+}
+
+/*
+ * `--ls-primary` sur `--ls-surface` : 8,93:1, calcule. `.formulaire` pose
+ * `--ls-surface`, donc le fond est blanc.
+ *
+ * LE SOULIGNEMENT EST CONSERVE : un lien qui ne se distingue que par sa couleur
+ * est invisible a qui ne percoit pas cette difference.
+ */
+.lien {
+  color: var(--ls-primary);
+  text-decoration: underline;
+}
+
+.lien:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}
