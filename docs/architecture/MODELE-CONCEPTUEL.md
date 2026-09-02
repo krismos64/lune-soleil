@@ -1726,6 +1726,13 @@ entièrement, cas d'erreur compris, sans invention de champ manquant.
 **Résultat : les huit parcours et leurs cinquante-sept cas d'erreur se déroulent
 sans champ manquant.**
 
+**Cette traversée date de LS-12 et porte sur les huit parcours d'alors**, ce qui
+est laissé tel quel : la réécrire au présent affirmerait une vérification qui
+n'a pas eu lieu. Le **neuvième parcours**, le message de contact, est entré le
+2 septembre 2026 avec LS-97, et son entité a été modélisée dans la même story
+plutôt que validée par cette traversée. Voir la section des entités écartées,
+qui porte la décision et ses trois règles.
+
 Le total annoncé avant LS-40 était de quarante-quatre pour quarante-trois cas
 réels, le parcours 7 en portant onze et non douze. Écart de comptage corrigé ici,
 ce n'est pas une régression.
