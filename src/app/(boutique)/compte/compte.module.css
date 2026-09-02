@@ -367,10 +367,17 @@
 }
 
 /*
- * `--ls-primary` SUR `--ls-surface` : 7,49:1. Le doré profond serait a 4,72:1,
- * conforme mais moins lisible sur un lien qui porte l'action principale de la
- * carte. Aucun jeton refusé par C31 n'entre ici, le fond etant blanc et non
- * sable.
+ * `--ls-primary` SUR `--ls-surface` : 8,93:1, mesure et non recopie.
+ *
+ * J'AVAIS ANNONCE 7,49:1 ICI, ET C'ETAIT LE RAPPORT SUR SABLE. C'est le defaut
+ * exact de C31, « ce qui se mesure est une paire, jamais une couleur » : le
+ * chiffre venait d'un commentaire ecrit pour `.lien`, qui vit sur
+ * `--ls-surface-sand`. Les deux paires passent AA, donc rien ne cassait, mais
+ * un chiffre faux dissuade de verifier, et c'est par recopie que le vrai defaut
+ * est entre deux fois sur ce projet.
+ *
+ * Le dore profond serait a 4,72:1, conforme mais moins lisible sur un lien qui
+ * porte l'action principale de la carte.
  */
 .lienCommande {
   display: inline-block;
@@ -406,9 +413,14 @@
 }
 
 /*
- * `--ls-text-muted` SUR `--ls-surface` : 4,86:1, conforme. La meme couleur
- * tomberait a 4,35:1 sur `--ls-surface-sand`, une des trois paires refusees du
- * projet, C31. Ce bloc vit sur du blanc, jamais sur du sable.
+ * `--ls-text-muted` SUR `--ls-surface` : 5,19:1, mesure.
+ *
+ * LE JETON ANNONCE 4,86:1 DANS `tokens.css`, ET CE CHIFFRE EST CELUI DE LA
+ * CREME, `--ls-background`. Sur blanc la paire est meilleure. Recopier
+ * l'annotation du jeton sans recalculer est precisement ce que C31 interdit.
+ *
+ * La meme couleur tombe a 4,35:1 sur `--ls-surface-sand`, une des trois paires
+ * refusees du projet. Ce bloc vit sur du blanc, jamais sur du sable.
  */
 .variante {
   color: var(--ls-text-muted);
