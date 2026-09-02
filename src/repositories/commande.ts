@@ -270,3 +270,80 @@ export async function lireCommandeAPayer(
 
   return commande;
 }
+
+/**
+ * Une commande passee sans compte, eligible au rattachement du parcours 6.
+ *
+ * ELLE NE PORTE AUCUNE ADRESSE NI AUCUN MONTANT DETAILLE. Cette liste s'affiche
+ * AVANT que la personne n'ait prouve quoi que ce soit sur ces commandes : elle
+ * dit « des commandes existent sur votre adresse verifiee », et rien de plus.
+ * Y ajouter l'adresse de livraison ferait de l'ecran une fuite pour qui
+ * controle une boite email sans etre le client d'origine.
+ */
+export type CommandeRattachable = {
+  id: string;
+  numero: string;
+  creeA: Date;
+  totalCentimes: number;
+};
+
+/**
+ * Les commandes qu'un email verifie peut revendiquer, parcours 6 etape 3.
+ *
+ * LES TROIS CONDITIONS SONT ICI, ET AUCUNE N'EST DERIVABLE DES AUTRES :
+ *
+ *   emailNormalise   la commande a ete passee avec cette adresse
+ *   utilisateurId    nul, elle n'appartient a personne
+ *   dissocieA        nul, elle n'a JAMAIS appartenu a personne
+ *
+ * LA TROISIEME EST CELLE QUI SE PERD. `ON DELETE SET NULL` remet
+ * `utilisateurId` a nul quand un compte est supprime : sans le filtre sur
+ * `dissocieA`, une commande dissociee redeviendrait « sans proprietaire », donc
+ * eligible. L'historique et les factures d'un client parti rouvriraient a
+ * quiconque controle ensuite la meme adresse, regle V15. « Jamais rattachee »
+ * est strictement plus fort que « sans proprietaire ».
+ *
+ * LA VERIFICATION DE L'ADRESSE N'EST PAS ICI, elle appartient au service : ce
+ * fichier ne decide rien, garde de `repositories/`. La condition est bien
+ * cumulative, elle est simplement portee une couche au-dessus.
+ */
+export async function listerCommandesRattachables(
+  client: ClientBase,
+  emailNormalise: string,
+): Promise<CommandeRattachable[]> {
+  return client.commande.findMany({
+    where: { emailNormalise, utilisateurId: null, dissocieA: null },
+    select: { id: true, numero: true, creeA: true, totalCentimes: true },
+    orderBy: { creeA: "desc" },
+  });
+}
+
+/**
+ * Rattache a un compte les commandes eligibles, parcours 6 etape 4.
+ *
+ * LE `where` REPETE LES TROIS CONDITIONS, il ne se contente pas des
+ * identifiants lus a l'etape 3. Ce n'est pas une precaution decorative : entre
+ * la lecture et l'ecriture, un webhook ou une suppression de compte peut avoir
+ * change l'etat d'une commande. Filtrer sur les seuls `id` rattacherait alors
+ * une commande devenue ineligible, et le `count` rendu mentirait.
+ *
+ * IL NE PREND AUCUNE LISTE D'IDENTIFIANTS, invariant 2. La selection est
+ * recalculee cote serveur a partir de l'email verifie de la SESSION : accepter
+ * des identifiants venus du navigateur serait exactement le chemin que le
+ * parcours 6 nomme « tentative de rattachement par identifiant fourni ».
+ *
+ * `updateMany` EST IDEMPOTENT ICI par construction : une seconde execution ne
+ * trouve plus aucune ligne, `utilisateurId` n'etant plus nul, et rend zero.
+ */
+export async function rattacherCommandes(
+  client: ClientBase,
+  emailNormalise: string,
+  utilisateurId: string,
+): Promise<number> {
+  const { count } = await client.commande.updateMany({
+    where: { emailNormalise, utilisateurId: null, dissocieA: null },
+    data: { utilisateurId },
+  });
+
+  return count;
+}

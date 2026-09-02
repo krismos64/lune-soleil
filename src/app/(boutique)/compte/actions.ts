@@ -17,8 +17,11 @@
  */
 
 import { headers } from "next/headers";
+import { revalidatePath } from "next/cache";
 
 import { journaliser } from "@/lib/journal";
+import { exigerSession } from "@/services/autorisation";
+import { rattacherMesCommandes } from "@/services/rattachement-commandes";
 import { ReauthentificationRequiseError } from "@/services/reauthentification";
 import { supprimerMonCompte } from "@/services/suppression-compte";
 
@@ -82,6 +85,69 @@ export async function supprimerCompteAction(): Promise<ResultatSuppressionCompte
     }
 
     journaliser("error", "Suppression de compte indisponible", {
+      erreur: erreur instanceof Error ? erreur.name : typeof erreur,
+    });
+    return { statut: "INDISPONIBLE" };
+  }
+}
+
+/**
+ * Ce que le rattachement rend a l'interface. LS-56, parcours 6 etape 4.
+ *
+ * `ADRESSE_NON_VERIFIEE` EST UN ETAT A PART ENTIERE, pas une erreur : l'ecran
+ * doit proposer de confirmer l'adresse, pas afficher un echec.
+ */
+export type ResultatRattachementCommandes =
+  | { statut: "RATTACHEES"; nombre: number }
+  | { statut: "ADRESSE_NON_VERIFIEE" }
+  | { statut: "SESSION_ABSENTE" }
+  | { statut: "INDISPONIBLE" };
+
+/**
+ * Rattache au compte connecte ses commandes passees sans compte.
+ *
+ * AUCUN PARAMETRE, invariant 2, et c'est la propriete centrale de cette action.
+ * Le parcours 6 nomme explicitement la « tentative de rattachement par
+ * identifiant fourni » : accepter ici une liste d'identifiants de commandes, ou
+ * meme une adresse email, ouvrirait ce chemin. L'identifiant du compte ET son
+ * adresse viennent tous deux de la SESSION, recoupes cote serveur.
+ *
+ * ELLE NE FAIT QUE DECLENCHER. Les trois conditions cumulatives vivent dans le
+ * service et dans le `where` du repository, jamais ici : cet adaptateur ne
+ * decide rien, garde de `app/`.
+ */
+export async function rattacherCommandesAction(): Promise<ResultatRattachementCommandes> {
+  const enTetes = await headers();
+
+  try {
+    const identite = await exigerSession(enTetes);
+
+    if (!identite) {
+      return { statut: "SESSION_ABSENTE" };
+    }
+
+    const resultat = await rattacherMesCommandes(
+      identite.utilisateurId,
+      identite.email,
+      "DEMANDE",
+    );
+
+    if (resultat.etat === "ADRESSE_NON_VERIFIEE") {
+      return { statut: "ADRESSE_NON_VERIFIEE" };
+    }
+
+    /*
+     * `revalidatePath` PARCE QUE LA PAGE EST `force-dynamic` MAIS LE CLIENT
+     * GARDE SON RENDU. Sans lui, la liste des commandes rattachees resterait
+     * celle d'avant l'action jusqu'a une navigation complete, et le client
+     * conclurait que rien ne s'est passe.
+     */
+    revalidatePath("/compte");
+    revalidatePath("/compte/commandes");
+
+    return { statut: "RATTACHEES", nombre: resultat.nombre };
+  } catch (erreur) {
+    journaliser("error", "Rattachement des commandes indisponible", {
       erreur: erreur instanceof Error ? erreur.name : typeof erreur,
     });
     return { statut: "INDISPONIBLE" };

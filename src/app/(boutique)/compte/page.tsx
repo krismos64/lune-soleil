@@ -28,8 +28,10 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { lireEtatVerification } from "@/repositories/utilisateur";
 import { exigerSession } from "@/services/autorisation";
+import { consulterCommandesRattachables } from "@/services/rattachement-commandes";
 import { FENETRE_REAUTHENTIFICATION_MS } from "@/services/reauthentification";
 
+import { BlocRattachement } from "./bloc-rattachement";
 import { BoutonDeconnexion } from "./bouton-deconnexion";
 import { FormulaireSuppressionCompte } from "./formulaire-suppression";
 import styles from "./compte.module.css";
@@ -104,6 +106,28 @@ export default async function PageCompte({
   const parametres = await searchParams;
   const arriveDeVerification = parametres.verifie === "1";
 
+  /*
+   * LES COMMANDES RATTACHABLES, LS-56, parcours 6 etape 3.
+   *
+   * LECTURE SEULE, aucun rattachement automatique a l'affichage d'une page. Le
+   * parcours 6 pose une liste PROPOSEE puis un geste explicite : rattacher au
+   * simple rendu ferait qu'un `GET` modifie des donnees, ce qu'un prechargement
+   * de lien suffirait a declencher.
+   *
+   * LE SERVICE REND `ADRESSE_NON_VERIFIEE` PLUTOT QU'UNE LISTE VIDE quand
+   * l'adresse ne l'est pas, et la distinction se voit a l'ecran : le bloc de
+   * rattachement ne s'affiche pas du tout, c'est le rappel de verification
+   * au-dessus qui porte le message. Afficher « aucune commande » a quelqu'un
+   * qui en a laisserait croire qu'elles sont perdues.
+   */
+  const rattachables = await consulterCommandesRattachables(
+    identite.utilisateurId,
+    identite.email,
+  );
+
+  const nombreEligibles =
+    rattachables.etat === "ELIGIBLES" ? rattachables.commandes.length : 0;
+
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Mon compte</h1>
@@ -148,6 +172,24 @@ export default async function PageCompte({
           </div>
         )}
       </section>
+
+      {/*
+       * LE BLOC DE RATTACHEMENT N'APPARAIT QUE S'IL Y A QUELQUE CHOSE A
+       * RATTACHER, LS-56. Une section permanente « aucune commande a
+       * rattacher » n'apprendrait rien et occuperait le haut de l'ecran de
+       * tous les autres clients.
+       */}
+      {nombreEligibles > 0 && (
+        <section
+          className={styles.section}
+          aria-labelledby="titre-rattachement"
+        >
+          <h2 id="titre-rattachement">Commandes passées sans compte</h2>
+          <div className={styles.rattachement}>
+            <BlocRattachement nombreEligibles={nombreEligibles} />
+          </div>
+        </section>
+      )}
 
       {/*
        * LA DECONNEXION MANQUAIT ENTIEREMENT. `signOut` etait exporte depuis

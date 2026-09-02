@@ -20,6 +20,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 
 import { envoyeurJournalise, type EnvoyeurEmail } from "@/integrations/email";
 import { hookJournalConnexion } from "@/lib/hook-journal-connexion";
+import { rattacherSansJamaisEchouer } from "@/lib/hook-rattachement";
 import {
   LONGUEUR_MAXIMALE_MOT_DE_PASSE,
   LONGUEUR_MINIMALE_MOT_DE_PASSE,
@@ -283,6 +284,47 @@ export function creerAuth(
     verification: { modelName: "Verification" },
 
     /**
+     * RATTACHEMENT DES COMMANDES INVITEES A LA CONNEXION, LS-56, parcours 6.
+     *
+     * POURQUOI A LA CREATION DE SESSION ET PAS SEULEMENT A LA VERIFICATION.
+     * `afterEmailVerification` plus bas couvre le cas immediat, celui du client
+     * qui revient de sa boite. Il ne couvre PAS la commande passee APRES la
+     * verification : rien n'oblige un client verifie a etre connecte quand il
+     * commande, et ces commandes resteraient orphelines pour toujours. Le rejeu
+     * a chaque ouverture de session ferme ce trou.
+     *
+     * `after` ET NON `before` : le rattachement n'a aucun droit de veto sur une
+     * connexion, et un hook `before` qui echoue empeche la session de naitre.
+     * Verifie via Context7 sur Better Auth 1.6.23, `databaseHooks.session.
+     * create.after` recoit la session creee sans pouvoir l'annuler.
+     *
+     * L'EMAIL EST RELU EN BASE et non pris sur la session : l'objet passe ici
+     * porte `userId`, pas l'adresse. Cette lecture est aussi ce qui garantit
+     * que l'adresse comparee est celle du compte MAINTENANT, et non une valeur
+     * mise en cache avant un changement d'adresse.
+     */
+    databaseHooks: {
+      session: {
+        create: {
+          after: async (session) => {
+            const utilisateur = await prisma.utilisateur.findUnique({
+              where: { id: session.userId },
+              select: { email: true },
+            });
+
+            if (utilisateur) {
+              await rattacherSansJamaisEchouer(
+                session.userId,
+                utilisateur.email,
+                "CONNEXION",
+              );
+            }
+          },
+        },
+      },
+    },
+
+    /**
      * LIMITATION DE DEBIT, LS-79, ADR-027.
      *
      * `enabled: true` EST LE POINT DECISIF. Better Auth desactive ce
@@ -439,6 +481,27 @@ export function creerAuth(
        * laisser implicite serait un nombre invisible : elle est ecrite ici.
        */
       sendOnSignUp: true,
+
+      /**
+       * RATTACHEMENT IMMEDIAT APRES LA VERIFICATION, LS-56, parcours 6 etape 4.
+       *
+       * C'est le declencheur qui rend le parcours LISIBLE : le client clique le
+       * lien recu, revient sur `/compte`, et ses commandes y sont deja. Sans
+       * lui, il faudrait attendre sa prochaine connexion pour que le hook de
+       * session s'en charge, et l'ecran de vérification promet le contraire.
+       *
+       * LA VERIFICATION EST DEJA ACQUISE quand ce rappel s'execute, verifie via
+       * Context7 sur Better Auth 1.6.23 : `afterEmailVerification` s'appelle
+       * APRES la mise a jour de `emailVerifie`. Le service relit malgre tout
+       * l'etat en base plutot que de s'en remettre a ce contrat : c'est lui qui
+       * porte la condition, et elle ne doit dependre d'aucun appelant.
+       *
+       * IL N'EST PAS LE SEUL CHEMIN, et ne doit pas le devenir : voir le hook
+       * de session plus haut, qui rattrape les commandes passees ensuite.
+       */
+      afterEmailVerification: async (user) => {
+        await rattacherSansJamaisEchouer(user.id, user.email, "VERIFICATION");
+      },
 
       sendVerificationEmail: async ({ user, url }) => {
         await envoyeurEmail.envoyer({
