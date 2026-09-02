@@ -70,6 +70,30 @@ export function ListeAdresses({ adresses }: { adresses: AdresseAffichee[] }) {
     });
   };
 
+  /*
+   * LA REGION LIVE EST RENDUE DANS LES DEUX BRANCHES, et c'est une condition de
+   * correction. La premiere version sortait tot sur l'etat vide, sans elle :
+   * apres la suppression de la DERNIERE adresse, `revalidatePath` faisait
+   * basculer la liste sur cette branche et la region etait retiree du DOM au
+   * moment meme ou son message devenait utile, focus compris.
+   *
+   * C'est le defaut que `bloc-rattachement.tsx` a corrige ce matin, revenu ici
+   * sous une autre forme. Releve par la revue frontend.
+   */
+  const compteRenduLive = (
+    <p
+      ref={compteRendu}
+      tabIndex={-1}
+      role="status"
+      aria-live="polite"
+      aria-label="Gestion du carnet d'adresses"
+      className={styles.annonce}
+      data-etat={enErreur ? "erreur" : undefined}
+    >
+      {message === "" && enCours ? "Enregistrement…" : message}
+    </p>
+  );
+
   if (adresses.length === 0) {
     /*
      * L'ETAT VIDE DIT CE QU'IL FAUT FAIRE, jamais seulement « rien ». Un carnet
@@ -77,10 +101,13 @@ export function ListeAdresses({ adresses }: { adresses: AdresseAffichee[] }) {
      * mode par defaut : le texte ne doit rien reclamer.
      */
     return (
-      <p className={styles.texte}>
-        Votre carnet est vide. Enregistrez une adresse pour la retrouver lors de
-        vos prochaines commandes.
-      </p>
+      <>
+        <p className={styles.texte}>
+          Votre carnet est vide. Enregistrez une adresse pour la retrouver lors
+          de vos prochaines commandes.
+        </p>
+        {compteRenduLive}
+      </>
     );
   }
 
@@ -110,8 +137,13 @@ export function ListeAdresses({ adresses }: { adresses: AdresseAffichee[] }) {
                 `${adresse.codePostal} ${adresse.ville}`,
               ]
                 .filter((ligne): ligne is string => Boolean(ligne?.trim()))
+                /*
+                 * LA CLE VIENT DU RANG, pas du contenu : deux lignes
+                 * identiques, cas reel quand `ligne2` repete `ligne1`,
+                 * produiraient deux cles egales. Releve par la revue frontend.
+                 */
                 .map((ligne, rang, toutes) => (
-                  <span key={ligne}>
+                  <span key={`${adresse.id}-${rang}`}>
                     {ligne}
                     {rang < toutes.length - 1 ? <br /> : null}
                   </span>
@@ -119,9 +151,20 @@ export function ListeAdresses({ adresses }: { adresses: AdresseAffichee[] }) {
             </address>
 
             {enEdition === adresse.id ? (
+              /*
+               * LE MESSAGE DU FORMULAIRE ATTERRIT DANS **CETTE** REGION LIVE,
+               * qui survit a la fermeture de l'edition. Celle du formulaire
+               * disparait avec lui : y poser le succes revenait a l'ecrire dans
+               * un nœud demonte au meme rendu.
+               */
               <FormulaireAdresse
                 adresse={adresse}
-                onTermine={() => setEnEdition(null)}
+                onTermine={(succes) => {
+                  setEnEdition(null);
+                  setEnErreur(false);
+                  setMessage(succes);
+                  compteRendu.current?.focus();
+                }}
               />
             ) : (
               <div className={styles.gestes}>
@@ -171,6 +214,7 @@ export function ListeAdresses({ adresses }: { adresses: AdresseAffichee[] }) {
                       type="button"
                       className={styles.actionDanger}
                       disabled={enCours}
+                      aria-label={`Confirmer la suppression de ${adresse.libelle ?? adresse.ligne1}`}
                       onClick={() => {
                         setASupprimer(null);
                         agir(
@@ -184,6 +228,7 @@ export function ListeAdresses({ adresses }: { adresses: AdresseAffichee[] }) {
                     <button
                       type="button"
                       className={styles.actionSecondaire}
+                      aria-label={`Annuler la suppression de ${adresse.libelle ?? adresse.ligne1}`}
                       onClick={() => setASupprimer(null)}
                     >
                       Annuler
@@ -205,17 +250,7 @@ export function ListeAdresses({ adresses }: { adresses: AdresseAffichee[] }) {
         ))}
       </ul>
 
-      <p
-        ref={compteRendu}
-        tabIndex={-1}
-        role="status"
-        aria-live="polite"
-        aria-label="Gestion du carnet d'adresses"
-        className={styles.annonce}
-        data-etat={enErreur ? "erreur" : undefined}
-      >
-        {message === "" && enCours ? "Enregistrement…" : message}
-      </p>
+      {compteRenduLive}
     </>
   );
 }

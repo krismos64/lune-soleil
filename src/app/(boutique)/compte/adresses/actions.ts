@@ -75,6 +75,52 @@ function extraire(donnees: FormData): Record<string, unknown> {
   };
 }
 
+/**
+ * Les noms de champs tels que le client les lit a l'ecran.
+ *
+ * LE SOCLE COMPOSE SES MESSAGES POUR LE DIAGNOSTIC, pas pour l'interface :
+ * `formaterProblemes` prefixe le CHEMIN Zod, donc `codePostal` et `nomComplet`
+ * en camelCase, et `EntreeInvalideError` y ajoute « Entree invalide » sans
+ * accent. Le tout atterrissait tel quel sous les yeux du client, releve par la
+ * revue frontend.
+ *
+ * LA TRADUCTION VIT ICI ET NON DANS LE SOCLE, qui sert aussi des chemins sans
+ * interface, webhook et taches planifiees, ou le nom technique est precisement
+ * ce qu'on veut lire dans un journal.
+ */
+const NOMS_VISIBLES: Record<string, string> = {
+  libelle: "Le libellé",
+  nomComplet: "Le nom du destinataire",
+  ligne1: "L'adresse",
+  ligne2: "Le complément d'adresse",
+  codePostal: "Le code postal",
+  ville: "La ville",
+  pays: "Le pays",
+  telephone: "Le téléphone",
+};
+
+/**
+ * Traduit `codePostal : Un code postal ... est attendu.` en une phrase lisible.
+ *
+ * LE REPLI GARDE LE MESSAGE plutot que de le remplacer par un texte generique :
+ * un champ ajoute au schema sans entree ici afficherait son nom technique, ce
+ * qui est laid mais reste informatif. Le faire disparaitre au profit de
+ * « saisie invalide » priverait le client de toute indication.
+ */
+function messageLisible(details: string): string {
+  const separateur = details.indexOf(" : ");
+
+  if (separateur === -1) {
+    return details;
+  }
+
+  const champ = details.slice(0, separateur);
+  const raison = details.slice(separateur + 3);
+  const nom = NOMS_VISIBLES[champ];
+
+  return nom === undefined ? details : `${nom} : ${raison}`;
+}
+
 /** Traduit les issues communes du service, sans dupliquer la logique. */
 function traduire(etat: "FAIT" | "INTROUVABLE"): ResultatAdresse {
   return etat === "FAIT" ? { statut: "FAIT" } : { statut: "INTROUVABLE" };
@@ -111,7 +157,10 @@ async function agir(
      * nomme le champ fautif sans reproduire la valeur refusee, invariant 9.
      */
     if (erreur instanceof EntreeInvalideError) {
-      return { statut: "SAISIE_INVALIDE", message: erreur.message };
+      return {
+        statut: "SAISIE_INVALIDE",
+        message: messageLisible(erreur.details),
+      };
     }
 
     journaliser("error", "Operation de carnet indisponible", {

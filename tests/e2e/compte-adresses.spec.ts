@@ -44,10 +44,35 @@ async function avecBase(
   }
 }
 
+/*
+ * SERIE, ET C'EST UNE CONDITION DE CORRECTION : les trois largeurs partagent le
+ * compte ET la base, et chaque test remet le carnet a zero. En parallele, le
+ * nettoyage de l'une emporterait les adresses qu'une autre vient de creer.
+ */
+test.describe.configure({ mode: "serial" });
+
 test.use({ storageState: FICHIER_SESSION_VERIFIEE });
 
 /** Le libelle propre a cette largeur, voir l'entete. */
 let marque: string;
+
+/**
+ * Le formulaire d'AJOUT, distinct de celui d'edition.
+ *
+ * LES DEUX COEXISTENT des qu'une carte passe en edition, et leurs champs
+ * portent des `id` prefixes pour cette raison. Un `page.getByLabel` nu serait
+ * ambigu, et Playwright refuserait le selecteur en mode strict.
+ *
+ * `getByRole("form")` NE MARCHE PAS : un `<form>` n'expose ce role QUE s'il
+ * porte un nom accessible, `aria-label` ou `aria-labelledby`. Mesure a la
+ * sonde, `getByRole("form")` rend 0 sur cette page. Le formulaire est donc
+ * designe par la section qui le contient.
+ */
+function formulaireAjout(page: import("@playwright/test").Page) {
+  return page.locator("form").filter({
+    has: page.getByRole("button", { name: "Ajouter cette adresse" }),
+  });
+}
 
 test.beforeEach(async ({}, infos) => {
   marque = `TEST-59-${infos.project.name}`;
@@ -59,16 +84,64 @@ test.beforeEach(async ({}, infos) => {
   };
 
   /*
-   * LE CARNET DE CETTE LARGEUR EST REMIS A ZERO, jamais conserve. Une adresse
-   * laissee par l'execution precedente ferait echouer le test du carnet vide,
-   * et une adresse par defaut survivante fausserait la bascule.
+   * LE CARNET DE CETTE LARGEUR EST RECREE, jamais conserve ni simplement vide.
+   *
+   * LA PREMIERE VERSION SE CONTENTAIT DE SUPPRIMER, et les tests de debordement
+   * comme d'`axe-core` mesuraient donc un ECRAN VIDE : ni carte, ni les trois
+   * boutons de gestes, ni la ligne de confirmation, ni une adresse longue. Le
+   * critere 6 demande un rendu verifie a 320 px, et rien de ce qui peut
+   * deborder n'etait rendu. Motif du controle qui n'a jamais echoue sur le
+   * defaut qu'il pretend attraper, releve par la revue frontend.
+   *
+   * DEUX ADRESSES, ET LA PREMIERE EST DURE : un libelle de 44 caracteres SANS
+   * espace, une ligne1 longue, une `ligne2`. Le schema autorise 60 et 120
+   * caracteres, et une valeur courte ne peut faire deborder aucun ecran.
+   *
+   * AUCUNE N'EST PAR DEFAUT au depart : c'est l'etat qui permet au test de
+   * bascule d'exercer la pose, et A7 en fait un etat legitime.
    */
   await avecBase(async (client) => {
+    /*
+     * SEULES LES ADRESSES DE CETTE LARGEUR PARTENT, jamais tout le carnet.
+     *
+     * DEUX MESURES ONT CONDUIT ICI. Un nettoyage par libelle exact laissait
+     * quatorze cartes s'accumuler, chaque execution ajoutant les siennes : les
+     * selecteurs devenaient ambigus et le test de debordement mesurait un ecran
+     * qu'aucun client ne verra. Un nettoyage TOTAL, lui, faisait se marcher
+     * dessus les trois largeurs, qui tournent EN PARALLELE sur le meme compte :
+     * l'une vidait le carnet pendant qu'une autre venait d'y lire des
+     * identifiants, et le service repondait « cette adresse n'existe plus ».
+     *
+     * `describe.serial` N'Y SUFFIT PAS : il ordonne les tests d'un MEME projet,
+     * jamais les projets entre eux. Le prefixe de largeur est ce qui les isole.
+     */
     await client.query(
       `DELETE FROM adresse_carnet
-       WHERE libelle = $1
+       WHERE libelle LIKE $1
          AND utilisateur_id = (SELECT id FROM utilisateur WHERE email = $2)`,
-      [marque, email],
+      [`${marque}%`, email],
+    );
+
+    await client.query(
+      `INSERT INTO adresse_carnet (id, utilisateur_id, libelle, nom_complet,
+                                   ligne1, ligne2, code_postal, ville, pays,
+                                   est_par_defaut)
+       SELECT gen_random_uuid()::text, u.id, $1,
+              'Marie-Christine de la Tour du Pin',
+              '127 avenue des Pyrenees-Atlantiques',
+              'Residence les Glycines, batiment C, appartement 42',
+              '64000', 'Pau', 'FR', false
+       FROM utilisateur u WHERE u.email = $2`,
+      [`${marque}-ResidenceLesGlycinesBatimentCAppartement42`, email],
+    );
+
+    await client.query(
+      `INSERT INTO adresse_carnet (id, utilisateur_id, libelle, nom_complet,
+                                   ligne1, code_postal, ville, pays, est_par_defaut)
+       SELECT gen_random_uuid()::text, u.id, $1, 'Client de test',
+              '2 place Royale', '64000', 'Pau', 'FR', false
+       FROM utilisateur u WHERE u.email = $2`,
+      [`${marque}-Bureau`, email],
     );
   });
 });
@@ -95,11 +168,17 @@ test("ajouter une adresse la fait apparaitre dans le carnet", async ({
 }) => {
   await page.goto("/compte/adresses");
 
-  await page.getByLabel("Libellé (facultatif)").fill(marque);
-  await page.getByLabel("Nom du destinataire").fill("Client de test");
-  await page.getByLabel("Adresse", { exact: true }).fill("1 rue du Test");
-  await page.getByLabel("Code postal").fill("64000");
-  await page.getByLabel("Ville").fill("Pau");
+  await formulaireAjout(page)
+    .getByLabel("Libellé (facultatif)")
+    .fill(`${marque}-Ajout`);
+  await formulaireAjout(page)
+    .getByLabel("Nom du destinataire")
+    .fill("Client de test");
+  await formulaireAjout(page)
+    .getByLabel("Adresse", { exact: true })
+    .fill("1 rue du Test");
+  await formulaireAjout(page).getByLabel("Code postal").fill("64000");
+  await formulaireAjout(page).getByLabel("Ville").fill("Pau");
 
   await page.getByRole("button", { name: "Ajouter cette adresse" }).click();
 
@@ -111,7 +190,7 @@ test("ajouter une adresse la fait apparaitre dans le carnet", async ({
     page.getByRole("status", { name: "Enregistrement de l'adresse" }),
   ).toHaveText(/ajoutée/);
 
-  await expect(page.getByText(marque)).toBeVisible();
+  await expect(page.getByText(`${marque}-Ajout`)).toBeVisible();
 });
 
 test("une saisie invalide est refusee sans quitter l'ecran", async ({
@@ -128,11 +207,17 @@ test("une saisie invalide est refusee sans quitter l'ecran", async ({
    */
   await page.goto("/compte/adresses");
 
-  await page.getByLabel("Libellé (facultatif)").fill(marque);
-  await page.getByLabel("Nom du destinataire").fill("Client de test");
-  await page.getByLabel("Adresse", { exact: true }).fill("1 rue du Test");
-  await page.getByLabel("Code postal").fill("97400");
-  await page.getByLabel("Ville").fill("Saint-Denis");
+  await formulaireAjout(page)
+    .getByLabel("Libellé (facultatif)")
+    .fill(`${marque}-Ajout`);
+  await formulaireAjout(page)
+    .getByLabel("Nom du destinataire")
+    .fill("Client de test");
+  await formulaireAjout(page)
+    .getByLabel("Adresse", { exact: true })
+    .fill("1 rue du Test");
+  await formulaireAjout(page).getByLabel("Code postal").fill("97400");
+  await formulaireAjout(page).getByLabel("Ville").fill("Saint-Denis");
 
   await page.getByRole("button", { name: "Ajouter cette adresse" }).click();
 
@@ -144,6 +229,105 @@ test("une saisie invalide est refusee sans quitter l'ecran", async ({
   // LE FOCUS SE DEPLACE SUR LE COMPTE RENDU : sans cela, un utilisateur au
   // clavier ne saurait pas que sa saisie a ete refusee.
   await expect(annonce).toBeFocused();
+});
+
+test("definir une adresse par defaut la marque a l'ecran", async ({ page }) => {
+  /*
+   * ETAPE 3 DU PARCOURS 8, non couverte par la premiere version de ce fichier.
+   * Les tests d'integration exercent l'ordre des ecritures ; celui-ci verifie
+   * que le repere se DEPLACE a l'ecran, ce qu'aucun d'eux ne dit.
+   */
+  await page.goto("/compte/adresses");
+
+  const carteBureau = page.getByRole("listitem").filter({
+    hasText: `${marque}-Bureau`,
+  });
+
+  await carteBureau
+    .getByRole("button", { name: /Définir .* comme adresse par défaut/ })
+    .click();
+
+  await expect(
+    page.getByRole("status", { name: "Gestion du carnet d'adresses" }),
+  ).toHaveText(/par défaut modifiée/);
+
+  await expect(carteBureau.getByText("Adresse par défaut")).toBeVisible();
+});
+
+test("modifier une adresse annonce le succes sans perdre le focus", async ({
+  page,
+}) => {
+  /*
+   * ETAPE 4, ET LE DEFAUT QU'ELLE A REVELE. La premiere version posait le
+   * message dans le formulaire d'edition PUIS le demontait : le texte n'etait
+   * jamais rendu et le focus retombait sur `body`. C'est le motif « focus sur
+   * element detache », deja en fiche depuis LS-101.
+   *
+   * Le message atterrit desormais dans la region live de la LISTE, qui survit a
+   * la fermeture de l'edition.
+   */
+  await page.goto("/compte/adresses");
+
+  const carteBureau = page.getByRole("listitem").filter({
+    hasText: `${marque}-Bureau`,
+  });
+
+  await carteBureau.getByRole("button", { name: /Modifier/ }).click();
+
+  const champVille = carteBureau.getByLabel("Ville");
+  await expect(champVille).toBeVisible();
+  await champVille.fill("Bayonne");
+
+  await carteBureau
+    .getByRole("button", { name: "Enregistrer les modifications" })
+    .click();
+
+  const annonce = page.getByRole("status", {
+    name: "Gestion du carnet d'adresses",
+  });
+  await expect(annonce).toHaveText(/modifiée/);
+  await expect(annonce).toBeFocused();
+
+  /*
+   * L'ASSERTION VISE LA CARTE DE CETTE LARGEUR, jamais la page entiere : les
+   * trois largeurs partagent le compte et modifient chacune la leur, donc
+   * « Bayonne » apparait trois fois et Playwright refuse le selecteur en mode
+   * strict. Le carnet, lui, est bien a jour.
+   */
+  await expect(carteBureau.getByText("64000 Bayonne")).toBeVisible();
+});
+
+test("la suppression demande une confirmation avant d'agir", async ({
+  page,
+}) => {
+  /*
+   * ETAPE 5. LA CONFIRMATION DEMANDE UN GESTE DIFFERENT, jamais un second clic
+   * au meme endroit : le test verifie que le premier clic n'a RIEN supprime,
+   * sans quoi un double clic accidentel emporterait l'adresse.
+   */
+  await page.goto("/compte/adresses");
+
+  const carteBureau = page.getByRole("listitem").filter({
+    hasText: `${marque}-Bureau`,
+  });
+
+  await carteBureau.getByRole("button", { name: /^Supprimer / }).click();
+
+  // RIEN N'EST SUPPRIME AU PREMIER CLIC.
+  await expect(carteBureau).toBeVisible();
+  await expect(
+    carteBureau.getByText("Supprimer définitivement ?"),
+  ).toBeVisible();
+
+  await carteBureau
+    .getByRole("button", { name: /Confirmer la suppression/ })
+    .click();
+
+  await expect(
+    page.getByRole("status", { name: "Gestion du carnet d'adresses" }),
+  ).toHaveText(/supprimée/);
+
+  await expect(page.getByText(`${marque}-Bureau`)).toHaveCount(0);
 });
 
 test("le carnet ne deborde pas horizontalement", async ({ page }) => {

@@ -30,6 +30,7 @@ import {
   mettreAJourAdresse,
   poserDefautSurAdresse,
   retirerDefautDuCarnet,
+  verrouillerCarnet,
   supprimerAdresse,
   type AdresseDuCarnet,
   type ChampsAdresse,
@@ -195,6 +196,20 @@ export async function choisirAdresseParDefaut(
 ): Promise<ResultatCarnet> {
   try {
     await prisma.$transaction(async (transaction) => {
+      /*
+       * LE VERROU VIENT AVANT TOUT, et il ferme un defaut mesure 12 fois sur 12
+       * par la revue critique : deux bascules concurrentes vers deux adresses
+       * differentes en faisaient echouer une, sur `adresse_defaut_unique`.
+       *
+       * L'ordre des ecritures ci-dessous ferme le conflit INTRA-transaction ; il
+       * ne dit rien de deux transactions qui se croisent. En `READ COMMITTED`,
+       * la seconde re-evalue son predicat apres l'attente et ne trouve plus rien
+       * a retirer, puis pose son drapeau : l'index arbitre a coups d'exception.
+       *
+       * Voir `verrouillerCarnet` pour la mesure complete.
+       */
+      await verrouillerCarnet(transaction, utilisateurId);
+
       // PREMIER : le drapeau part de l'ancienne. Voir l'entete.
       await retirerDefautDuCarnet(transaction, utilisateurId);
 
@@ -223,10 +238,17 @@ export async function choisirAdresseParDefaut(
     }
 
     /*
-     * `P2002` EST LA VIOLATION D'UNICITE, donc l'index partiel qui a parle. Il
-     * ne devrait jamais survenir, l'ordre ci-dessus le fermant, et c'est
-     * precisement pour cela qu'il est journalise plutot qu'avale : sa presence
-     * signalerait que l'ordre a ete inverse par une modification future.
+     * `P2002` EST LA VIOLATION D'UNICITE, donc l'index partiel qui a parle.
+     *
+     * LE COMMENTAIRE PRECEDENT AFFIRMAIT QU'IL « ne devrait jamais survenir,
+     * l'ordre ci-dessus le fermant », ET LA MESURE L'A DEMENTI : l'ordre ferme
+     * le conflit intra-transaction, jamais celui entre deux transactions.
+     * Douze courses sur douze le declenchaient.
+     *
+     * Le verrou pose plus haut le ferme reellement. Cette branche redevient
+     * donc ce que le commentaire pretendait : un signal qu'une modification
+     * future a retire le verrou ou inverse l'ordre. Un filet qui se declenche
+     * sur un evenement normal n'est pas un filet, c'est du bruit.
      */
     if (
       erreur instanceof Prisma.PrismaClientKnownRequestError &&
