@@ -128,8 +128,19 @@
   outline-offset: 2px;
 }
 
+/*
+ * L'ETAT DESACTIVE NE REPOSE PAS SUR L'OPACITE.
+ *
+ * `verifier-contraste.sh` mesure des paires de jetons, il ne calcule PAS
+ * l'opacite : une valeur a 0,7 fait descendre le rapport reel sans qu'aucun
+ * controle ne le voie. Sur un aplat bronze a texte blanc, 8,93:1 tombe sous le
+ * seuil AA une fois attenue.
+ *
+ * Le fond assombri et le curseur disent l'etat, et l'attribut `disabled` le
+ * porte pour les technologies d'assistance.
+ */
 .actionPrincipale:disabled {
-  opacity: 0.7;
+  background: var(--ls-text-muted);
   cursor: not-allowed;
 }
 
@@ -155,8 +166,10 @@
   outline-offset: 2px;
 }
 
+/* Meme motif que ci-dessus : le fond dit l'etat, la couleur du texte ne bouge
+   pas. `--ls-primary` sur sable vaut 7,74:1, conforme. */
 .actionSecondaire:disabled {
-  opacity: 0.7;
+  background: var(--ls-surface-sand);
   cursor: not-allowed;
 }
 
@@ -183,6 +196,21 @@
   background: var(--ls-surface-sand);
   color: var(--ls-text);
   line-height: 1.5;
+}
+
+/*
+ * UNE REGION LIVE VIDE NE DOIT PAS SE VOIR, mais elle doit RESTER DANS LE DOM.
+ *
+ * Le noeud doit preexister a son contenu pour qu'un lecteur d'ecran annonce la
+ * mutation ; l'afficher vide laisserait un encadre vert permanent sous le
+ * bouton. `:empty` retire la boite sans retirer le noeud.
+ *
+ * `display: none` SERAIT ICI SANS DANGER, a la difference du lien d'evitement :
+ * l'element est vide, il n'y a rien a annoncer tant qu'il l'est, et il
+ * redevient affiche des que le texte arrive.
+ */
+.confirmation:empty {
+  display: none;
 }
 
 .aide {

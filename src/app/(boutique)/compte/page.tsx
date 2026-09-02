@@ -23,9 +23,14 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import Link from "next/link";
+
+import { prisma } from "@/lib/prisma";
+import { lireEtatVerification } from "@/repositories/utilisateur";
 import { exigerSession } from "@/services/autorisation";
 import { FENETRE_REAUTHENTIFICATION_MS } from "@/services/reauthentification";
 
+import { BoutonDeconnexion } from "./bouton-deconnexion";
 import { FormulaireSuppressionCompte } from "./formulaire-suppression";
 import styles from "./compte.module.css";
 
@@ -44,7 +49,11 @@ export const dynamic = "force-dynamic";
 
 const MINUTES_DE_FRAICHEUR = Math.round(FENETRE_REAUTHENTIFICATION_MS / 60_000);
 
-export default async function PageCompte() {
+export default async function PageCompte({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const identite = await exigerSession(await headers());
 
   if (!identite) {
@@ -68,9 +77,42 @@ export default async function PageCompte() {
     redirect("/compte/connexion");
   }
 
+  /*
+   * L'ETAT DE VERIFICATION EST RELU EN BASE, jamais tire de la session.
+   * `IdentiteAppelant` ne le porte pas volontairement, voir
+   * `services/autorisation.ts` : un champ d'affichage n'a pas a voisiner avec
+   * ce qui fonde une autorisation.
+   */
+  const adresseVerifiee = await lireEtatVerification(
+    prisma,
+    identite.utilisateurId,
+  );
+
+  /*
+   * L'ACCUSE DE RECEPTION DU LIEN DE VERIFICATION, LS-54.
+   *
+   * Better Auth ramene ici avec `?verifie=1` apres avoir consomme le jeton. Le
+   * parametre etait POSE SANS ETRE LU dans la premiere version : qui cliquait
+   * le lien depuis sa boite atterrissait sur « Mon compte » sans le moindre
+   * signe que la confirmation avait abouti. Un succes muet se lit comme un
+   * echec, et fait recliquer un lien desormais consomme.
+   *
+   * IL N'AUTORISE RIEN ET NE PROUVE RIEN : c'est `adresseVerifiee`, lu en base,
+   * qui dit l'etat reel. Ce parametre ne fait qu'expliquer d'ou l'on vient, et
+   * le message n'est affiche que si la base CONFIRME la verification.
+   */
+  const parametres = await searchParams;
+  const arriveDeVerification = parametres.verifie === "1";
+
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Mon compte</h1>
+
+      {arriveDeVerification && adresseVerifiee && (
+        <p className={styles.succes} role="status">
+          Votre adresse email est confirmée.
+        </p>
+      )}
 
       <section className={styles.section} aria-labelledby="titre-informations">
         <h2 id="titre-informations">Informations du compte</h2>
@@ -80,6 +122,45 @@ export default async function PageCompte() {
             <dd>{identite.email}</dd>
           </div>
         </dl>
+
+        {/*
+         * LE RAPPEL DE VERIFICATION VIT ICI, et c'est ce qui rend
+         * `/compte/verification` de nouveau atteignable.
+         *
+         * Sans lui, cet ecran n'etait designe que par la redirection qui suit
+         * l'inscription : une fois quitte, on ne pouvait plus jamais y revenir
+         * sans saisir l'URL. C'est le motif de C33 transpose cote boutique, et
+         * le test e2e ne le voyait pas puisqu'il y arrivait par `goto`.
+         *
+         * IL N'EST PAS ALARMANT. La verification ne bloque rien, arbitrage du
+         * 2 septembre : le texte annonce ce qu'elle apporte, il ne reclame pas.
+         */}
+        {!adresseVerifiee && (
+          <div className={styles.rappel}>
+            <p className={styles.texte}>
+              Votre adresse email n&apos;est pas encore confirmée. La confirmer
+              permet de rattacher à ce compte les commandes passées sans être
+              connecté.
+            </p>
+            <Link href="/compte/verification" className={styles.lien}>
+              Confirmer mon adresse
+            </Link>
+          </div>
+        )}
+      </section>
+
+      {/*
+       * LA DECONNEXION MANQUAIT ENTIEREMENT. `signOut` etait exporte depuis
+       * LS-70 sans aucun appelant : un client sur un appareil partage n'avait
+       * aucun moyen de fermer sa session, sinon supprimer son compte. C'est un
+       * etat non nominal absent, pas un defaut de rendu.
+       */}
+      <section className={styles.section} aria-labelledby="titre-session">
+        <h2 id="titre-session">Session</h2>
+        <p className={styles.texte}>
+          Fermez votre session si vous utilisez un appareil partagé.
+        </p>
+        <BoutonDeconnexion />
       </section>
 
       <section className={styles.section} aria-labelledby="titre-donnees">

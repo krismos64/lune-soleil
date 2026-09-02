@@ -67,25 +67,44 @@ export function BoutonRenvoiVerification({
     setEtat("envoye");
   };
 
-  if (etat === "envoye") {
-    return (
-      // `role="status"` et non `alert` : c'est une confirmation attendue, pas
-      // une alerte. Le lecteur d'ecran l'annonce sans interrompre.
-      <p className={styles.confirmation} role="status">
-        Un nouveau message vient de partir. Il peut mettre quelques minutes à
-        arriver.
-      </p>
-    );
-  }
-
   return (
-    <button
-      type="button"
-      className={styles.actionSecondaire}
-      onClick={renvoyer}
-      disabled={etat === "en-cours"}
-    >
-      {etat === "en-cours" ? "Envoi en cours…" : "Recevoir un nouveau lien"}
-    </button>
+    <div>
+      {/*
+       * LE BOUTON RESTE MONTE APRES L'ENVOI, il n'est pas remplace.
+       *
+       * Deux defauts en un dans la premiere version : le bouton disparaissait,
+       * donc le focus clavier retombait sur `body` et la tabulation suivante
+       * repartait du haut de la page ; et l'etat « envoye » etait TERMINAL,
+       * alors que le scenario meme de cet ecran est « le message n'arrive
+       * pas ». Redemander exigeait de recharger la page.
+       */}
+      <button
+        type="button"
+        className={styles.actionSecondaire}
+        onClick={renvoyer}
+        disabled={etat === "en-cours"}
+      >
+        {etat === "en-cours"
+          ? "Envoi en cours…"
+          : etat === "envoye"
+            ? "Recevoir un autre lien"
+            : "Recevoir un nouveau lien"}
+      </button>
+
+      {/*
+       * LA REGION LIVE EST TOUJOURS DANS LE DOM, seul son contenu change.
+       *
+       * Une region inseree EN MEME TEMPS que son texte n'est pas annoncee par
+       * plusieurs combinaisons de lecteurs d'ecran : le noeud doit preexister
+       * pour que la mutation soit observee. axe-core ne mesure pas ce
+       * comportement dynamique, il valide seulement que le role est bien forme,
+       * ce qui explique qu'il ne signalait rien.
+       */}
+      <p className={styles.confirmation} role="status" aria-live="polite">
+        {etat === "envoye"
+          ? "Un nouveau message vient de partir. Il peut mettre quelques minutes à arriver."
+          : ""}
+      </p>
+    </div>
   );
 }

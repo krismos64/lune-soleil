@@ -11,7 +11,7 @@
  * champ cache visible dans un rendu, aucune trace en cas d'erreur : un jeton de
  * reinitialisation vaut un mot de passe tant qu'il n'est pas consomme.
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { authClient } from "@/lib/auth-client";
 import { LONGUEUR_MINIMALE_MOT_DE_PASSE } from "@/lib/mot-de-passe";
@@ -26,6 +26,22 @@ export function FormulaireNouveauMotDePasse({
   const [etat, setEtat] = useState<EtatSoumission>("repos");
   const [messageErreur, setMessageErreur] = useState<string | null>(null);
   const [motDePasse, setMotDePasse] = useState("");
+  const confirmation = useRef<HTMLParagraphElement>(null);
+
+  /*
+   * LE FOCUS SUIT LE REMPLACEMENT. Le bouton qui le portait vient de
+   * disparaitre : sans cela il retombe sur `body`, et apres avoir change son
+   * mot de passe il faudrait retraverser tout l'en-tete au clavier pour
+   * atteindre le lien « Se connecter », qui est pourtant la suite logique.
+   *
+   * L'EFFET, JAMAIS LE GESTIONNAIRE DE CLIC : a cet instant l'element n'existe
+   * pas encore, React n'ayant pas re-rendu.
+   */
+  useEffect(() => {
+    if (etat === "change") {
+      confirmation.current?.focus();
+    }
+  }, [etat]);
 
   const changer = async (evenement: React.FormEvent<HTMLFormElement>) => {
     evenement.preventDefault();
@@ -64,7 +80,17 @@ export function FormulaireNouveauMotDePasse({
   if (etat === "change") {
     return (
       <div>
-        <p className={styles.confirmation} role="status">
+        {/*
+         * `tabIndex={-1}` rend la confirmation focalisable par script SANS
+         * l'ajouter a l'ordre de tabulation, meme motif que la cible du lien
+         * d'evitement.
+         */}
+        <p
+          ref={confirmation}
+          tabIndex={-1}
+          className={styles.confirmation}
+          role="status"
+        >
           Votre mot de passe est changé.
         </p>
 

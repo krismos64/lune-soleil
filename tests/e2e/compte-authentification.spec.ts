@@ -251,6 +251,47 @@ test.describe("un compte non verifie accede a son espace", () => {
     ).toBeVisible();
   });
 
+  /*
+   * L'ECRAN DE VERIFICATION EST ATTEIGNABLE DEPUIS `/compte`, revue frontend du
+   * 2 septembre 2026.
+   *
+   * Il ne l'etait PAS a la premiere version : sa seule reference dans tout
+   * `src/` etait la redirection qui suit l'inscription. Une fois quitte par
+   * « Aller a mon compte », on ne pouvait plus jamais y revenir sans saisir
+   * l'URL, alors que le scenario meme de cet ecran est « le message n'arrive
+   * pas », donc le retour.
+   *
+   * LE TEST NAVIGUE AU CLIC pour cette raison : les six autres tests de ce
+   * fichier atteignaient la page par `goto`, et aucun ne pouvait voir qu'aucun
+   * chemin n'y menait. C'est la lecon de LS-162, rejouee cote boutique.
+   */
+  test("le compte mene a l'ecran de verification", async ({ page }) => {
+    await page.goto("/compte");
+
+    await page.getByRole("link", { name: "Confirmer mon adresse" }).click();
+
+    await expect(page).toHaveURL(/\/compte\/verification$/);
+    await expect(
+      page.getByRole("heading", { name: "Votre compte est créé", level: 1 }),
+    ).toBeVisible();
+  });
+
+  test("le compte propose de fermer la session", async ({ page }) => {
+    await page.goto("/compte");
+
+    /*
+     * `signOut` etait exporte depuis LS-70 SANS AUCUN APPELANT : un client sur
+     * un appareil partage n'avait aucun moyen de fermer sa session, sinon
+     * supprimer son compte.
+     *
+     * LE BOUTON N'EST PAS CLIQUE : il detruirait la session partagee par toute
+     * la suite, et le projet `preparation` ne la rouvre qu'une fois.
+     */
+    await expect(
+      page.getByRole("button", { name: "Se déconnecter" }),
+    ).toBeVisible();
+  });
+
   test("l'ecran de verification ne deborde pas horizontalement", async ({
     page,
   }) => {
