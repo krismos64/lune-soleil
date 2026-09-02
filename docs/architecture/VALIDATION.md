@@ -49,6 +49,7 @@ const quantite = valider(schemaQuantite, entree); // ou lève EntreeInvalideErro
 | `schemaSaisieMessage` | message de contact **public**, corps borné à 4000 caractères | un corps réduit à des caractères invisibles, un sujet vide, une adresse non valide |
 | `schemaCoordonnees` | nom, email, téléphone facultatif | composé des trois précédents |
 | `schemaAdresseFigee` | adresse **recopiée par une commande**, avec le `nom` du destinataire | relire une adresse figée avec `schemaAdressePostale`, qui refuse ce `nom` |
+| `schemaAdresseCarnet` | adresse du **carnet client**, LS-59 : étend `schemaAdressePostale` avec `libelle`, `nomComplet` et `telephone` | y ajouter `estParDefaut`, qui contournerait l'ordre imposé de la bascule, ou `utilisateurId`, qui vient de la session |
 | `schemaEmetteurFacture` | identité légale lue dans l'environnement, SIRET à quatorze chiffres | une valeur absente, un SIRET espacé ou tronqué |
 | `schemaLigneInstantane` | une ligne du document, deux libellés séparés | un total de ligne stocké, il se déduit |
 | `schemaInstantaneLegal` | contenu intégral et **versionné** de la facture, LS-126 | un document sans ligne, sans mention, ou de version inconnue |
@@ -72,6 +73,18 @@ lisibles, l'invariant 4 interdisant de les réécrire.
 
 **`schemaAdresseFigee` existe parce qu'une adresse figée n'est pas une saisie.**
 Elle porte le `nom` du destinataire, absent du formulaire où le nom est un champ
+**`schemaAdresseCarnet` n'accepte ni `estParDefaut` ni `utilisateurId`**, et
+c'est une règle et non une omission. Le premier contournerait l'ordre imposé du
+point 9 des transactions critiques, deux adresses par défaut violant l'index
+partiel `adresse_defaut_unique` ; le second viendrait d'un formulaire là où
+l'invariant 2 exige la session. `z.strictObject` fait échouer bruyamment une
+tentative de les poser, plutôt que de les ignorer en silence.
+
+Son `telephone` porte `.optional()` **sur la clé**, contrairement au tunnel :
+`schemaTelephone` accepte déjà la chaîne vide, ce qui suffit là où le champ
+existe toujours, mais un formulaire de carnet peut ne pas envoyer la clé du
+tout. Le schéma commun n'est pas relâché pour autant.
+
 voisin. Relire une adresse figée avec `schemaAdressePostale` échoue,
 `z.strictObject` refusant la clé inconnue : le défaut s'est vu par un test
 d'intégration de LS-126, pas à la relecture d'un document ancien.
