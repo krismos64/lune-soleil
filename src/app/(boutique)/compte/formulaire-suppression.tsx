@@ -27,7 +27,16 @@ import styles from "./compte.module.css";
  */
 const MOT_DE_CONFIRMATION = "SUPPRIMER";
 
-type Etat = "repos" | "en-cours" | "erreur" | "supprime";
+/**
+ * `reauthentification` EST UN ETAT A PART ENTIERE, LS-164, et non un cas
+ * d'`erreur`.
+ *
+ * La distinction est fonctionnelle : une erreur se relit et se corrige sur
+ * place, ce refus-ci se leve AILLEURS, par une preuve d'identite. Les confondre
+ * afficherait un lien de confirmation sous « la suppression est momentanement
+ * indisponible », ou il n'aurait aucun sens.
+ */
+type Etat = "repos" | "en-cours" | "erreur" | "reauthentification" | "supprime";
 
 export function FormulaireSuppressionCompte({
   minutesDeFraicheur,
@@ -66,8 +75,14 @@ export function FormulaireSuppressionCompte({
          * valide, mais la preuve d'identite manque ou date de plus de
          * `minutesDeFraicheur`. Le message le dit clairement : sans cela, la
          * personne croirait a une panne et recommencerait.
+         *
+         * IL MENE DESORMAIS QUELQUE PART, LS-164 critere 2. Jusqu'ici ce texte
+         * demandait une action impossible : aucun ecran de reauthentification
+         * client n'existait, et le seul disponible exigeait le role
+         * `ADMINISTRATRICE`. Le message etait donc une impasse, et il privait
+         * le client du droit a l'effacement, RGPD article 17.
          */
-        setEtat("erreur");
+        setEtat("reauthentification");
         setMessageErreur(
           `Pour votre sécurité, confirmez votre identité avant de supprimer votre compte. Votre confirmation reste valable ${minutesDeFraicheur} minutes.`,
         );
@@ -148,6 +163,32 @@ export function FormulaireSuppressionCompte({
         <p className={styles.erreur} role="alert">
           {messageErreur}
         </p>
+      )}
+
+      {/*
+       * LE CHEMIN POUR LEVER LE REFUS, LS-164 critere 2.
+       *
+       * UN LIEN ET NON UN BOUTON : c'est une navigation vers un autre ecran,
+       * pas une action sur celui-ci. Un `<button>` qui navigue prive du clic
+       * milieu, du menu contextuel et de l'annonce « lien » au lecteur d'ecran.
+       *
+       * HORS DU BLOC `role="alert"`, et c'est delibere. Un lien place DANS une
+       * region live est annonce avec le message mais reste difficile a
+       * atteindre : plusieurs lecteurs d'ecran lisent le contenu d'une alerte
+       * sans y deplacer le curseur virtuel. Le sortir le rend navigable a la
+       * tabulation, juste apres le message.
+       *
+       * `?retour=compte` RAMENE ICI apres la confirmation, par une CLE et
+       * jamais par un chemin : la page de reauthentification n'accepte aucune
+       * URL fournie, ce qui ferme la redirection ouverte.
+       */}
+      {etat === "reauthentification" && (
+        <a
+          className={styles.lien}
+          href="/compte/reauthentification?retour=compte"
+        >
+          Confirmer mon identité
+        </a>
       )}
     </form>
   );

@@ -26,9 +26,14 @@
  */
 import { expect, test as preparation } from "@playwright/test";
 
-import { FICHIER_SESSION } from "./chemin-session";
+import { FICHIER_SESSION, MOT_DE_PASSE_CLIENT } from "./chemin-session";
 
-const MOT_DE_PASSE = "phrase-de-passe-de-test1";
+/**
+ * LA VALEUR VIENT DU MODULE PARTAGE DEPUIS LS-164 : les tests de
+ * reauthentification doivent ressaisir ce mot de passe, et deux litteraux
+ * distincts divergeraient sans que rien ne le signale.
+ */
+const MOT_DE_PASSE = MOT_DE_PASSE_CLIENT;
 
 preparation("ouvrir une session cliente partagee", async ({ page }) => {
   const email = `e2e-suppression-${Date.now()}-${Math.random()
