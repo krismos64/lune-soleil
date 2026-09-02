@@ -1,0 +1,200 @@
+/*
+ * Pages d'erreur publiques, LS-146. Conception a partir de 320 px.
+ *
+ * UN SEUL MODULE POUR LES TROIS PAGES, `not-found`, `error` et `global-error`.
+ * Elles partagent la meme mise en page : un bloc centre, un titre, une
+ * explication, une ou deux sorties. Les separer produirait trois copies d'un
+ * meme fichier, et le defaut de contraste de ce projet entre precisement par
+ * RECOPIE d'un ecran voisin, C31.
+ *
+ * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons d'ADR-022.
+ *
+ * TOUTES LES PAIRES SONT COLOCALISEES, `color` et `background` dans le meme
+ * selecteur. C'est ce qui les rend mesurables par `verifier-contraste.sh`, qui
+ * ne peut pas remonter un fond herite du JSX. Sur une page d'erreur, l'ecran
+ * peut etre le tout premier que voit un visiteur : la mesure vaut mieux que
+ * l'hypothese.
+ */
+
+.page {
+  /*
+   * `min-height` et non `height` : a 320 px un texte long doit pouvoir pousser
+   * le bloc plus bas plutot que d'etre coupe. `100dvh` suit la barre d'adresse
+   * mobile, la ou `100vh` laisse un vide sous le pli.
+   */
+  min-height: 60dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ls-space-4);
+  padding: var(--ls-space-7) var(--ls-space-4);
+  max-width: var(--ls-content-max);
+  margin: 0 auto;
+  text-align: center;
+}
+
+/*
+ * `--ls-accent-gold-deep` sur creme : 4,72:1, conforme AA. Le terracotta clair
+ * donnerait 4,07:1 et serait sous le seuil, LS-84. Le fond est declare pour que
+ * la paire soit mesurable, et non laisse a l'heritage.
+ */
+.surtitre {
+  margin: 0;
+  background: var(--ls-background);
+  color: var(--ls-accent-gold-deep);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.titre {
+  margin: 0;
+  background: var(--ls-background);
+  color: var(--ls-primary);
+  /* `clamp` plutot qu'une media query : la taille suit la largeur en continu. */
+  font-size: clamp(1.75rem, 6vw, 2.5rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.texte {
+  margin: 0;
+  /* 56ch : au-dela, l'oeil perd la ligne suivante en revenant a la marge. */
+  max-width: 56ch;
+  background: var(--ls-background);
+  color: var(--ls-text);
+  line-height: 1.6;
+}
+
+/*
+ * LES SORTIES SE REPLIENT, elles ne debordent pas. A 320 px deux boutons cote a
+ * cote laisseraient moins de 150 px chacun, sous la cible tactile confortable :
+ * ils passent donc l'un sous l'autre, et se remettent en ligne des qu'il y a la
+ * place.
+ */
+.sorties {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-3);
+  width: 100%;
+  max-width: 22rem;
+}
+
+@media (min-width: 480px) {
+  .sorties {
+    flex-direction: row;
+    justify-content: center;
+    max-width: none;
+  }
+}
+
+.actionPrincipale {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 44 px minimum, la cible tactile de `frontend-design.md`. */
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-3) var(--ls-space-5);
+  border: 1px solid var(--ls-primary);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  text-decoration: none;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.actionPrincipale:hover {
+  background: var(--ls-primary-hover);
+  border-color: var(--ls-primary-hover);
+  color: var(--ls-text-on-primary);
+}
+
+.actionSecondaire {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-3) var(--ls-space-5);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface);
+  color: var(--ls-primary);
+  text-decoration: none;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.actionSecondaire:hover {
+  background: var(--ls-surface-sand);
+  color: var(--ls-primary);
+}
+
+/*
+ * LA PAGE D'ERREUR RACINE N'A PAS LES JETONS. `global-error` remplace le layout
+ * racine, donc les imports de `tokens.css` et `globals.css` qu'il porte. Les
+ * valeurs sont ecrites en dur ICI ET NULLE PART AILLEURS, seule exception du
+ * projet a la regle « aucune valeur hexadecimale ».
+ *
+ * ELLES SONT REPRISES D'ADR-022 A L'IDENTIQUE, et le commentaire de chaque
+ * ligne porte le rapport mesure pour que la divergence se voie si la palette
+ * change. Un ecran de dernier recours doit rester lisible meme quand tout le
+ * reste a echoue : c'est la raison qui justifie la duplication, et elle
+ * disparaitrait si ces valeurs etaient chargees depuis un fichier qui peut
+ * lui-meme ne pas se charger.
+ */
+.pageRacine {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ls-space-4, 16px);
+  padding: 48px 16px;
+  margin: 0;
+  /* #FBF7F0, fond creme d'ADR-022. */
+  background: #fbf7f0;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+  text-align: center;
+}
+
+.titreRacine {
+  margin: 0;
+  /* #5F4519 sur #FBF7F0 : 8,36:1, AAA. */
+  color: #5f4519;
+  font-size: clamp(1.5rem, 5vw, 2rem);
+  font-weight: 600;
+}
+
+.texteRacine {
+  margin: 0;
+  max-width: 56ch;
+  /* #3B2F2A sur #FBF7F0 : 12,09:1, AAA. */
+  color: #3b2f2a;
+  line-height: 1.6;
+}
+
+.actionRacine {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 12px 24px;
+  border: 1px solid #5f4519;
+  border-radius: 4px;
+  /* #FFFFFF sur #5F4519 : 8,93:1, AAA. */
+  background: #5f4519;
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+}

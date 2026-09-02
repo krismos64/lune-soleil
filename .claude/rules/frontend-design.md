@@ -181,6 +181,47 @@ serveur, pending, disabled, indisponible, aucun résultat de filtre, rupture.
 Jamais de faux succès optimiste : une erreur serveur produit un message visible
 associé à l'action.
 
+### C32, aucun `loading.tsx` sur une route qui appelle `notFound()`
+
+**Le seul cas où l'état de chargement exigé ci-dessus est interdit.** Un
+`loading.tsx` enveloppe la page entière dans une frontière Suspense : le
+streaming commence **avant** que `notFound()` soit atteint, et Next.js ne peut
+plus changer le statut d'une réponse déjà commencée. Il laisse **200** et se
+contente d'ajouter un `noindex`.
+
+Mesuré en LS-111 : 404 sans le fichier, 200 avec.
+
+**Le défaut est invisible à l'écran**, la page rendue étant identique dans les
+deux cas. Un moteur indexerait une fiche produit inexistante, et le `noindex` ne
+protège que des moteurs qui le respectent. Le SEO tranche : un statut faux est
+un défaut de correction, un écran figé n'est qu'un défaut de confort.
+
+Ce qui rétablit le chargement sans le conflit : placer le contenu lourd sous un
+`<Suspense>` **dans** la page, en gardant le contrôle d'existence au-dessus.
+
+`scripts/verifier-loading-et-404.sh` l'attrape à l'écriture ;
+`tests/e2e/pages-erreur.spec.ts` vérifie le **code de statut** et non l'aspect
+de la page, ce qui l'attrape quelle qu'en soit la cause.
+
+### Les trois pages d'erreur publiques, LS-146
+
+| Fichier | Ce qu'il couvre |
+|---|---|
+| `app/not-found.tsx` | les appels de `notFound()` **et** toute URL sans route |
+| `app/(boutique)/error.tsx` | l'erreur serveur des écrans publics |
+| `app/global-error.tsx` | l'échec du layout racine lui-même |
+
+**Aucun détail technique n'atteint une page publique**, invariant 9 : ni trace,
+ni nom de classe, ni `error.digest`. Le message dit que le problème vient du
+site, jamais ce qui a échoué.
+
+`global-error.tsx` **remplace** le layout racine au lieu de s'y imbriquer. Il
+porte donc ses propres `html` et `body`, `lang="fr"` compris, et **ses couleurs
+sont écrites en dur** : c'est la seule exception du projet à la règle « aucune
+valeur hexadécimale », les jetons venant du fichier dont la défaillance amène
+cette page. Il n'importe aucun composant ni service, pour la même raison.
+`scripts/verifier-palette-secours.sh` garde ces deux invariants.
+
 ## Frontière avec le métier
 
 Les composants rendent des données et émettent des intentions. Le calcul métier

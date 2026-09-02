@@ -632,6 +632,10 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-rendu-texte-simple-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-contraste.sh                  # contraste WCAG des paires couleur et fond, LS-84
 ./scripts/verifier-contraste-mutation.sh         # prouve le précédent par mutation
+./scripts/verifier-loading-et-404.sh             # aucun loading.tsx ne masque un 404, LS-146
+./scripts/verifier-loading-et-404-mutation.sh    # prouve le précédent par mutation
+./scripts/verifier-palette-secours.sh            # couleurs en dur de l'écran de secours, LS-146
+./scripts/verifier-palette-secours-mutation.sh   # prouve le précédent par mutation
 ./scripts/verifier-registre-traitements.sh       # registre RGPD confronté au schéma
 ./scripts/verifier-registre-traitements-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-nginx.sh                      # résolution de l'adresse client, LS-91
