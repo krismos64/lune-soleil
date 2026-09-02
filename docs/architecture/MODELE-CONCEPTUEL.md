@@ -1441,6 +1441,17 @@ erDiagram
         identifiant acquitteeParId FK "nullable"
         horodatage creeA
     }
+    MESSAGE {
+        identifiant id PK
+        texte nom
+        texte email
+        texte sujet
+        texte corps
+        enum statut "NOUVEAU LU TRAITE"
+        horodatage luA "nullable"
+        horodatage traiteA "nullable"
+        horodatage creeA
+    }
     JOURNAL_CONNEXION {
         identifiant id PK
         identifiant utilisateurId FK "nullable"
@@ -1954,12 +1965,22 @@ côté serveur à chaque étape, conformément au parcours 1. Le persister exige
 une entité, une expiration et une purge pour un bénéfice qui reste limité même
 avec un compte client, le panier étant une intention et non un engagement.
 
-Le message de contact non plus. Une entité `Message` figurait dans une première
-version de ce document, sans qu'aucun parcours ne la mobilise. Le principe
-directeur interdit d'entrer une entité sans parcours qui la justifie. Le
-formulaire de contact relève d'un ticket propre, où sa règle principale devra
-être posée : le message est persisté avant toute tentative d'envoi d'email,
-faute de quoi une panne d'email perd le message.
+Le message de contact l'était aussi jusqu'au 2 septembre 2026. Une entité
+`Message` figurait dans une première version de ce document, sans qu'aucun
+parcours ne la mobilise, et le formulaire de contact a été renvoyé à un ticket
+propre. **LS-97 l'a porté**, et l'entité est entrée ci-dessus avec le parcours
+qui la justifie.
+
+Sa règle principale est celle que ce document annonçait : **le message est
+persisté avant toute tentative d'envoi d'email**, faute de quoi une panne
+d'email perd le message. L'ordre est imposé, pas préférable, et aucune
+contrainte de base ne peut l'exprimer : c'est une propriété du code, prouvée par
+un test de panne et par la mutation qui inverse les deux instructions.
+
+**Elle ne porte aucune clé étrangère**, ni vers un compte ni vers une commande.
+Le formulaire est public : personne n'est connecté, et rapprocher le message
+d'un compte par l'adresse email inventerait une donnée que le visiteur n'a pas
+fournie. Une adresse saisie n'est pas une identité prouvée, invariant 2.
 
 Les entités d'authentification de Better Auth sont référencées par ADR-021 et
 matérialisées en LS-13.

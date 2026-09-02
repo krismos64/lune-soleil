@@ -758,6 +758,7 @@ ENVOI_EN_ATTENTE|origine|OrigineEcriture
 ALERTE_CRITIQUE|gravite|GraviteAlerte
 JOURNAL_CONNEXION|moyen|MoyenConnexion
 JOURNAL_CONNEXION|issue|IssueConnexion
+MESSAGE|statut|StatutMessage
 "
 
 # Ancré sur la racine du dépôt et non sur une suite de « .. » comptés depuis ce

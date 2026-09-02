@@ -18,17 +18,20 @@ ouverte commercialement.
 a commencé le 19 août 2026 avec LS-114, le panier, sans attendre la clôture de
 la phase 2.
 
-| Phase | Epic | État au 1er septembre 2026 |
+| Phase | Epic | État au 2 septembre 2026 |
 |---|---|---|
-| 2, catalogue, médias et stock multicanal | LS-3 | en cours, quatorze stories ouvertes |
+| 2, catalogue, médias et stock multicanal | LS-3 | en cours, quinze stories ouvertes |
 | 3, panier, réservation, paiement et commandes | LS-4 | LS-114 à LS-121 et LS-43 livrées, **porte de sortie franchie**, deux stories ouvertes |
-| 4, factures, avoirs, emails, expédition et contact | LS-5 | **commencée** : LS-51, LS-126, LS-128, LS-129, LS-132 et LS-160 closes, LS-82 livrée et ouverte sur son critère de réception, neuf stories ouvertes |
+| 4, factures, avoirs, emails, expédition et contact | LS-5 | **aux trois quarts** : LS-51, LS-126, LS-128, LS-129, LS-130, LS-132 et LS-160 closes, tous les écrans d'administration de la phase existent, LS-82 livrée et ouverte sur son critère de réception, huit stories ouvertes |
 | 5, rétractation, conformité et protection des données | LS-6 | découpée le 27 août 2026, cinq stories ouvertes |
 | 6, durcissement, exploitation et ouverture | LS-7 | découpée le 27 août 2026, douze stories ouvertes |
 
-Comptes **relevés dans Jira** le 1er septembre 2026, jamais recopiés de mémoire :
+Comptes **relevés dans Jira** le 2 septembre 2026, jamais recopiés de mémoire :
 un chiffre écrit à la main se périme sans bruit, et le tableau annonçait encore
-l'état du 27 août.
+l'état du 27 août avant d'être repris le 1er septembre.
+
+**83 tickets terminés sur 162, soit 51 %.** LS-162 a été créée le 2 septembre,
+la navigation de l'administration : aucun écran n'y renvoie vers un autre.
 
 Les phases 4, 5 et 6 n'avaient jamais été découpées : LS-6 ne portait aucune
 story et LS-7 en portait deux pour douze sujets annoncés. Quinze stories ont été

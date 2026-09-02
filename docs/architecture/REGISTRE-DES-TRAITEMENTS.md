@@ -295,6 +295,40 @@ aujourd'hui. Portée par **LS-154**.
 **Le contenu du message n'est jamais stocké**, seulement le modèle et ses
 variables, précaution 3 d'ADR-008.
 
+### T10, messages de contact
+
+| Champ | Valeur |
+|---|---|
+| Finalité | recevoir et traiter une demande envoyée par le formulaire de contact public |
+| Personnes concernées | toute personne écrivant à la boutique, cliente ou non |
+| Catégories de données | nom, adresse email, sujet et corps du message, tels que la personne les a saisis |
+| Tables | `Message` |
+| Base légale | intérêt légitime, article 6.1.f, répondre à une sollicitation que la personne a elle-même initiée |
+| Conservation | **trois ans** à compter du message, référentiel CNIL n° 2021-131, même ancrage que T2 pour les données de prospect. La purge est branchée sur la tâche quotidienne de LS-94 |
+| Destinataires | l'exploitante seule |
+| Transfert hors UE | aucun |
+
+**Le corps du message est un champ libre**, et c'est ce qui le distingue des
+autres traitements de ce registre. Une personne peut y écrire n'importe quoi,
+y compris une donnée sensible au sens de l'article 9 qu'aucun formulaire ne lui
+a demandée : un motif médical pour justifier un retard, par exemple.
+
+Rien ne peut l'empêcher techniquement, et prétendre le filtrer donnerait une
+fausse assurance. La parade est la **durée** et le **destinataire unique** :
+trois ans, l'exploitante seule, aucun transfert.
+
+**Aucun lien vers un compte ni vers une commande**, décision de LS-97. Le
+formulaire est public, personne n'est connecté, et rapprocher le message d'un
+compte par l'adresse email inventerait un lien que la personne n'a pas établi.
+Deux personnes peuvent partager une boîte, et une adresse saisie n'est pas une
+identité prouvée, invariant 2.
+
+**L'envoi de la notification passe par l'outbox**, ADR-033, donc le destinataire
+et les variables entrent aussi dans `EnvoiEnAttente`, couvert par T9. Le message
+lui-même est écrit **avant** ce dépôt, dans la même transaction : c'est la règle
+principale de LS-97, et elle garantit qu'une panne d'email ne perd jamais la
+demande.
+
 ## Tables sans donnée personnelle
 
 Les tables suivantes ne portent aucune donnée personnelle et ne relèvent donc

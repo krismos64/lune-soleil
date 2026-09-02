@@ -299,3 +299,39 @@ ALTER TABLE commande
 ALTER TABLE intention_remboursement
   ADD CONSTRAINT chk_intention_montant_positif
   CHECK (montant_centimes > 0);
+
+-- ---------------------------------------------------------------------------
+-- Message de contact, LS-97
+-- ---------------------------------------------------------------------------
+
+-- C29, aucun champ du message n'est vide apres retrait des espaces. Un message
+-- vide n'est pas une demande : il occuperait la file de l'exploitante sans rien
+-- lui dire, et un nom vide rendrait la liste illisible.
+--
+-- LA VALIDATION ZOD EST LE CONTROLE PRINCIPAL, cette contrainte la derniere
+-- ligne de defense. Elle tient meme si un chemin futur ecrit sans passer par le
+-- service, ce qu'aucune verification applicative ne garantit.
+ALTER TABLE message
+  ADD CONSTRAINT chk_message_champs_non_vides
+  CHECK (
+    length(trim(nom)) > 0
+    AND length(trim(email)) > 0
+    AND length(trim(sujet)) > 0
+    AND length(trim(corps)) > 0
+  );
+
+-- C30, les horodatages de traitement suivent le statut, dans les deux sens.
+--
+-- C'EST UNE EQUIVALENCE ET NON UNE IMPLICATION, meme forme que
+-- `chk_evenement_traitement_coherent` : un message `TRAITE` sans date de
+-- traitement ne dirait pas QUAND, et une date posee sur un message `NOUVEAU`
+-- affirmerait un traitement qui n'a pas eu lieu.
+--
+-- `lu_a` COUVRE LES DEUX ETATS AVANCES : un message traite a forcement ete lu,
+-- et l'inverse serait un classement fait sans ouvrir le message.
+ALTER TABLE message
+  ADD CONSTRAINT chk_message_horodatages_coherents
+  CHECK (
+    (statut IN ('LU', 'TRAITE')) = (lu_a IS NOT NULL)
+    AND (statut = 'TRAITE') = (traite_a IS NOT NULL)
+  );
