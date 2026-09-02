@@ -347,3 +347,199 @@ export async function rattacherCommandes(
 
   return count;
 }
+
+/**
+ * Une commande telle que son proprietaire la voit en liste. LS-57.
+ *
+ * ELLE NE PORTE NI ADRESSE NI EMAIL NI TELEPHONE, a la difference de
+ * `CommandeEnListe` du cote administration. Ce ne sont pas les memes lecteurs :
+ * l'exploitante prepare un colis et a besoin de l'adresse, le client sait ou il
+ * habite. Une projection qui charge plus que necessaire finit affichee.
+ */
+export type CommandeDuClient = {
+  id: string;
+  numero: string;
+  statut: StatutCommande;
+  totalCentimes: number;
+  creeA: Date;
+};
+
+/**
+ * Les commandes d'un compte, les plus recentes d'abord. LS-57, critere 1.
+ *
+ * `utilisateurId` VIENT DE LA SESSION, jamais d'un parametre d'URL : c'est
+ * l'appelant qui le garantit, et la signature n'accepte rien d'autre qui
+ * pourrait servir de critere.
+ *
+ * `dissocieA: null` EST UNE CONDITION A PART ENTIERE, critere 5. Une commande
+ * dissociee garde son `utilisateurId` a nul apres la suppression du compte,
+ * donc ce filtre ne sert pas a ecarter les commandes d'autrui ; il ferme le cas
+ * ou un compte serait recree et repointe. Le redondant apparent est ce qui rend
+ * la regle vraie quel que soit l'etat de la base.
+ */
+export async function listerCommandesDuClient(
+  client: ClientBase,
+  utilisateurId: string,
+): Promise<CommandeDuClient[]> {
+  return client.commande.findMany({
+    where: { utilisateurId, dissocieA: null },
+    select: {
+      id: true,
+      numero: true,
+      statut: true,
+      totalCentimes: true,
+      creeA: true,
+    },
+    orderBy: { creeA: "desc" },
+  });
+}
+
+/**
+ * Le detail d'une commande tel que son proprietaire le voit. LS-57, critere 2.
+ *
+ * DISTINCT DE `DetailCommande` du cote administration, et la difference n'est
+ * pas cosmetique : celui-la porte `emailNormalise`, `telephone`, les historiques
+ * de statut avec leur acteur et les transitions declenchables. Rien de cela
+ * n'appartient a l'ecran du client, et reutiliser la projection de
+ * l'administration exposerait ces champs a un chemin qui ne les exige pas.
+ *
+ * L'ADRESSE FIGEE Y EST, elle : le client doit pouvoir verifier ou son colis
+ * part, et c'est SA donnee.
+ */
+export type DetailCommandeDuClient = {
+  id: string;
+  numero: string;
+  statut: StatutCommande;
+  adresseLivraison: Prisma.JsonValue;
+  modeLivraison: ModeLivraison;
+  pointRelaisAdresse: Prisma.JsonValue;
+  sousTotalCentimes: number;
+  fraisPortCentimes: number;
+  totalCentimes: number;
+  creeA: Date;
+  lignes: {
+    libelleProduitFige: string;
+    libelleVarianteFige: string;
+    prixFigeCentimes: number;
+    quantite: number;
+  }[];
+  /**
+   * L'expedition, quand elle a ete declaree, LS-130.
+   *
+   * `expedieA` EST NULLABLE MEME QUAND LA LIGNE EXISTE : le schema le prevoit,
+   * et le type le dit plutot que de le supposer. Une assertion non nulle ici
+   * aurait produit un « Invalid Date » a l'ecran le jour ou une expedition est
+   * creee sans date.
+   *
+   * `livreA` RESTE NUL AUJOURD'HUI, aucun chemin ne l'ecrit : c'est LS-33 qui
+   * decidera comment le site apprend qu'un colis est livre. Le champ est lu des
+   * maintenant pour que l'ecran n'ait pas a changer ce jour-la.
+   *
+   * `mode` EST CELUI QUE LE TRANSPORTEUR A EXECUTE, distinct de
+   * `Commande.modeLivraison` que le client a paye, ADR-025. Les deux sont
+   * affiches quand ils different : un rebasculement vers un Point Relais doit
+   * se voir, la commande n'etant jamais reecrite.
+   */
+  expedition: {
+    mode: ModeLivraison;
+    numeroSuivi: string | null;
+    expedieA: Date | null;
+    livreA: Date | null;
+  } | null;
+  facture: {
+    id: string;
+    numero: string;
+    /** Nul quand le rendu a echoue, regle F8 : etat affichable, pas une absence. */
+    cheminPdf: string | null;
+    emiseA: Date;
+    avoirs: {
+      id: string;
+      numero: string;
+      montantCentimes: number;
+      cheminPdf: string | null;
+      emisA: Date;
+    }[];
+  } | null;
+};
+
+/**
+ * Lit une commande SI elle appartient a ce compte, sinon rend `null`.
+ *
+ * LA GARDE EST DANS LE `where`, ET C'EST TOUT L'INTERET DE CETTE SIGNATURE.
+ * `utilisateurId` n'est pas un filtre d'affichage ajoute apres coup : il fait
+ * partie de la clause qui trouve la ligne. Une variante qui lirait d'abord la
+ * commande puis comparerait le proprietaire laisserait un chemin ou la
+ * comparaison est oubliee, et c'est le defaut que l'invariant 2 nomme.
+ *
+ * `dissocieA: null` FERME LE CAS DU COMPTE SUPPRIME, critere 5 : une commande
+ * dissociee n'apparait dans aucun espace client, meme si un `utilisateurId`
+ * venait a y etre reecrit.
+ *
+ * LE `null` NE DISTINGUE PAS « inexistante » DE « pas la votre », et c'est
+ * volontaire : l'appelant rend 404 dans les deux cas. Un 403 sur la commande
+ * d'autrui revelerait son existence, meme motif que la route de facture signee.
+ *
+ * LES LIGNES VIENNENT DE `LigneCommande`, JAMAIS DU CATALOGUE, invariant 3 :
+ * ce sont les copies figees au moment de la commande.
+ */
+export async function lireCommandeDuClient(
+  client: ClientBase,
+  commandeId: string,
+  utilisateurId: string,
+): Promise<DetailCommandeDuClient | null> {
+  return client.commande.findFirst({
+    where: { id: commandeId, utilisateurId, dissocieA: null },
+    select: {
+      id: true,
+      numero: true,
+      statut: true,
+      adresseLivraison: true,
+      modeLivraison: true,
+      pointRelaisAdresse: true,
+      sousTotalCentimes: true,
+      fraisPortCentimes: true,
+      totalCentimes: true,
+      creeA: true,
+      lignes: {
+        select: {
+          libelleProduitFige: true,
+          libelleVarianteFige: true,
+          prixFigeCentimes: true,
+          quantite: true,
+        },
+      },
+      expedition: {
+        select: {
+          mode: true,
+          numeroSuivi: true,
+          expedieA: true,
+          livreA: true,
+        },
+      },
+      facture: {
+        select: {
+          id: true,
+          numero: true,
+          cheminPdf: true,
+          emiseA: true,
+          /*
+           * LES AVOIRS SONT RATTACHES A LEUR FACTURE D'ORIGINE, invariant 4 :
+           * une facture n'est jamais modifiee ni remplacee, une correction
+           * produit un avoir. L'ecran doit montrer ce lien, sans quoi un client
+           * rembourse verrait une facture au montant plein sans explication.
+           */
+          avoirs: {
+            select: {
+              id: true,
+              numero: true,
+              montantCentimes: true,
+              cheminPdf: true,
+              emisA: true,
+            },
+            orderBy: { emisA: "desc" },
+          },
+        },
+      },
+    },
+  });
+}
