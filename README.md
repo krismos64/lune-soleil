@@ -23,9 +23,9 @@ la phase 2.
 | 2, catalogue, médias et stock multicanal | LS-3 | en cours, **quinze stories ouvertes**. LS-84, LS-146 et LS-162 livrées le 2 septembre ; **LS-165** et **LS-166** créées le même jour par les revues |
 | 3, panier, réservation, paiement et commandes | LS-4 | LS-114 à LS-121 et LS-43 livrées, **porte de sortie franchie**, deux stories ouvertes |
 | 4, factures, avoirs, emails, expédition et contact | LS-5 | **presque terminée** : onze stories closes, dont LS-130, LS-97, LS-154 et LS-82 le 2 septembre. Quatre ouvertes, dont **trois demandent un arbitrage ou un compte externe** : LS-33 commande toute la phase 5, LS-131 attend Mondial Relay |
-| 4bis, espace client, avis et carnet d'adresses | LS-36 | **ouverte et largement livrée le 2 septembre** : LS-54 à LS-57, LS-59 et LS-60 closes, soit le socle d'authentification, le rattachement, l'historique et les factures, le carnet d'adresses et le profil. **Six ouvertes** : LS-62 et LS-164 faisables tout de suite, LS-167 à arbitrer, LS-58, LS-61 et LS-77 attendant LS-33 et Mondial Relay |
+| 4bis, espace client, avis et carnet d'adresses | LS-36 | **au bout de ce qui est faisable, 3 septembre 2026** : LS-54 à LS-57, LS-59, LS-60, LS-62, LS-164 et LS-167 closes, soit le socle d'authentification, le rattachement, l'historique et les factures, le carnet d'adresses, le profil, la réauthentification client et les droits RGPD. **Trois ouvertes**, LS-58, LS-61 et LS-77, toutes bloquées par LS-33 et le compte Mondial Relay : aucune n'avance sans une décision qui n'est pas du code |
 | 5, rétractation, conformité et protection des données | LS-6 | découpée le 27 août 2026, cinq stories ouvertes |
-| 6, durcissement, exploitation et ouverture | LS-7 | découpée le 27 août 2026, douze stories ouvertes |
+| 6, durcissement, exploitation et ouverture | LS-7 | découpée le 27 août 2026, **treize stories ouvertes**, LS-168 ajoutée le 3 septembre sur l'instabilité de la suite de bout en bout |
 
 Comptes **relevés dans Jira** le 2 septembre 2026 au soir, après la fusion de
 LS-60, jamais recopiés de mémoire : un chiffre écrit à la main se périme sans
