@@ -1,0 +1,245 @@
+/*
+ * Rubrique Messages de l'administration, LS-97.
+ *
+ * CONCU A PARTIR DE 320 px, puis elargi. Les media queries montent, elles ne
+ * descendent jamais : ce qui est ecrit hors requete est ce que voit le plus
+ * petit ecran.
+ *
+ * DES CARTES ET NON UN TABLEAU, meme choix que les commandes et les
+ * expeditions : un message porte un sujet, un expediteur, une date et un corps
+ * pliable, ce qu'aucune grille de colonnes ne tient a 320 px.
+ *
+ * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons de `tokens.css`.
+ *
+ * LE CONTRASTE DEPEND DU FOND : `--ls-text-muted` donne 4,86:1 sur creme mais
+ * 4,35:1 sur sable, sous le seuil AA. Les blocs a fond sable emploient donc
+ * `--ls-text`, mesure refaite en LS-130 apres une regression.
+ */
+
+.page {
+  padding: var(--ls-space-4);
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+/* ZONE TACTILE DE 44 px, correction portee par LS-121 sur l'ecran voisin. */
+.retour {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  margin-bottom: var(--ls-space-3);
+  color: var(--ls-accent-gold-deep);
+  text-decoration: underline;
+}
+
+.titre {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-primary);
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  font-weight: 600;
+}
+
+.introduction {
+  margin: 0 0 var(--ls-space-4);
+  color: var(--ls-text-muted);
+}
+
+/* FOND SABLE, DONC `--ls-text`, voir l'en-tete de ce fichier. */
+.vide {
+  margin: 0;
+  padding: var(--ls-space-4);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+}
+
+/* ------------------------------------------------------------------- cartes */
+
+.listeMessages {
+  display: grid;
+  gap: var(--ls-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.carte {
+  padding: var(--ls-space-4);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+  box-shadow: var(--ls-shadow-soft);
+}
+
+/*
+ * `flex-wrap` PLUTOT QU'UNE LARGEUR FIXE : a 320 px le badge et la date ne
+ * tiennent pas toujours cote a cote, et un debordement du corps est interdit.
+ */
+.enTeteCarte {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ls-space-2);
+  margin-bottom: var(--ls-space-2);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--ls-space-2);
+  min-height: 1.75rem;
+  border-radius: var(--ls-radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+/*
+ * LE STATUT N'EST PAS PORTE PAR LA SEULE COULEUR, `frontend-design.md` : chaque
+ * badge affiche son libelle en toutes lettres, la couleur ne fait que
+ * l'appuyer. Les trois fonds sont clairs et le texte reste `--ls-text`, au-dela
+ * du seuil AA sur chacun.
+ */
+.badgeNOUVEAU {
+  background: var(--ls-accent-gold);
+  color: var(--ls-text);
+}
+
+.badgeLU {
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+}
+
+.badgeTRAITE {
+  background: var(--ls-border);
+  color: var(--ls-text);
+}
+
+.date {
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+}
+
+.sujet {
+  margin: 0 0 var(--ls-space-1);
+  color: var(--ls-text);
+  font-size: 1.125rem;
+  font-weight: 600;
+  /* Un sujet long ne doit pas elargir la carte au-dela du corps. */
+  overflow-wrap: anywhere;
+}
+
+.expediteur {
+  margin: 0 0 var(--ls-space-3);
+  color: var(--ls-text-muted);
+  overflow-wrap: anywhere;
+}
+
+/*
+ * LE LIEN `mailto:` EST LE MECANISME DE REPONSE de cette story, donc il doit se
+ * voir et s'atteindre : zone tactile pleine hauteur, souligne, jamais un texte
+ * gris parmi d'autres.
+ */
+.lienEmail {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  color: var(--ls-accent-gold-deep);
+  text-decoration: underline;
+}
+
+/* ------------------------------------------------------------ corps plie */
+
+.detail {
+  margin-bottom: var(--ls-space-3);
+}
+
+/*
+ * LE `summary` EST UNE ZONE TACTILE COMPLETE. Par defaut il fait la hauteur de
+ * sa ligne, environ 24 px : c'est le controle le plus utilise de cet ecran, et
+ * `frontend-design.md` demande 44 px.
+ */
+.resume {
+  display: flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  color: var(--ls-accent-gold-deep);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/*
+ * `pre-wrap` PRESERVE LES RETOURS A LA LIGNE saisis par la personne, et
+ * `overflow-wrap` empeche une URL collee sans espace de deborder du corps a
+ * 320 px. Les deux vont ensemble : le premier seul laisserait passer la ligne
+ * longue.
+ */
+.corps {
+  margin: var(--ls-space-2) 0 0;
+  padding: var(--ls-space-3);
+  border-left: 3px solid var(--ls-border);
+  color: var(--ls-text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------- classement */
+
+/*
+ * LE CONTENEUR EST FOCALISABLE PAR PROGRAMME, `tabIndex={-1}` cote composant :
+ * il recoit le focus quand les boutons changent apres un succes, pour que la
+ * tabulation ne reparte pas du haut du document. Motif de LS-130.
+ */
+.classement:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+.gestes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ls-space-2);
+}
+
+.bouton {
+  min-height: var(--ls-touch-target);
+  padding: 0 var(--ls-space-4);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bouton:hover:not(:disabled) {
+  background: var(--ls-surface-sand);
+}
+
+.bouton:disabled {
+  /* `0.75` ET NON `0.6`, mesure de LS-130 : a 0.6 le texte tombe sous le seuil. */
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+/*
+ * LE MESSAGE GARDE SA PLACE MEME VIDE, la region live devant preexister a son
+ * contenu pour etre annoncee.
+ */
+.message {
+  min-height: 1.5rem;
+  margin: var(--ls-space-2) 0 0;
+  color: var(--ls-success);
+}
+
+.messageErreur {
+  color: var(--ls-error);
+}
+
+@media (min-width: 48rem) {
+  .page {
+    padding: var(--ls-space-6);
+  }
+}

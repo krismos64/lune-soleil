@@ -76,7 +76,7 @@ fi
 # Il ne borne pas par le haut : ajouter une action gardée est le cas normal et
 # ne doit rien casser. Relever ce nombre quand il augmente, jamais le baisser
 # sans avoir compris quelles actions ont disparu.
-ACTIONS_ATTENDUES_MINIMUM=31
+ACTIONS_ATTENDUES_MINIMUM=32
 
 for fichier in $fichiers; do
   # Les noms des fonctions exportées, seules invocables depuis l'extérieur.

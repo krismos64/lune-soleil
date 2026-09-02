@@ -184,3 +184,33 @@ PARAMETRES_BOUTIQUE aucun ecran de parametres, hors phase 1
 # suppression d'un media, pour la meme raison : aucune des quatre familles n'est
 # definie par l'irreversibilite, et etirer l'une d'elles pour couvrir ce cas
 # deplacerait la regle au lieu de la satisfaire.
+
+# LES DEUX LIGNES ONT ETE RELUES LE 2 SEPTEMBRE 2026, LS-97, et elles restent
+# vraies. La story ajoute la rubrique Messages et une Server Action,
+# `changerStatut`, plus un formulaire PUBLIC sans aucune garde.
+#
+# LE CLASSEMENT D'UN MESSAGE N'EST PAS CLASSE SENSIBLE. Marquer « lu » ou
+# « traite » ne touche ni l'argent ni une configuration d'exploitation, et le
+# geste est REVERSIBLE dans les deux sens, contrairement a l'expedition : la
+# table `GESTES` de l'ecran propose explicitement le retour a « non lu ».
+#
+# LE POINT QUI MERITAIT D'ETRE POSE, ET IL EST SERIEUX : cet ecran AFFICHE le
+# nom, l'adresse email et le texte libre de toute personne ayant ecrit a la
+# boutique. C'est le cas le plus proche de `DONNEES_CLIENTS` rencontre jusqu'ici,
+# plus proche que le journal des connexions de LS-80.
+#
+# IL RESTE NON CLASSE, et le raisonnement est celui du 13 aout 2026, applique
+# terme a terme. ADR-021 vise le FICHIER CLIENT : nom, adresse postale,
+# telephone, historique d'achat, factures. Un message de contact n'en porte
+# aucun, sauf ce que la personne a choisi d'ecrire elle-meme. Et « en masse » y
+# serait etire : cent lignes au plus, sans recherche, sans filtre, sans export.
+#
+# CE QUI RENDRAIT LA LIGNE FAUSSE, et qu'il faudra relire le moment venu : une
+# recherche par nom ou par adresse dans cette rubrique, ou un export. Les deux
+# feraient basculer l'ecran dans « consulter en masse », et la ligne devrait
+# partir. LS-36 porte l'espace client, ou la question se reposera entiere.
+#
+# LE FORMULAIRE PUBLIC N'A AUCUNE GARDE, ET CE N'EST PAS UN OUBLI. Exiger une
+# session fermerait le seul moyen d'ecrire a la boutique a qui n'a pas de
+# compte. Sa protection est ailleurs : validation Zod cote serveur, bornes de
+# longueur, et trois couches contre les envois automatises.

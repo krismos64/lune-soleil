@@ -39,7 +39,9 @@ const COLONNES = [
     liens: [
       { href: "/aide", libelle: "Livraison et retours" },
       { href: "/aide#faq", libelle: "Questions fréquentes" },
-      { href: "/aide#contact", libelle: "Contact" },
+      // LS-97 : la page existe desormais, le lien ne pointe plus vers une
+      // ancre d'une page non livree.
+      { href: "/contact", libelle: "Contact" },
     ],
   },
   {
