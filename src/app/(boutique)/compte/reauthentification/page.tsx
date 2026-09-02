@@ -68,6 +68,7 @@ const FENETRE_MINUTES = Math.round(FENETRE_REAUTHENTIFICATION_MS / 60_000);
 const DESTINATIONS = {
   compte: "/compte",
   profil: "/compte/profil",
+  donnees: "/compte/donnees",
 } as const;
 
 type CleDestination = keyof typeof DESTINATIONS;
@@ -84,6 +85,7 @@ const DESTINATION_PAR_DEFAUT: CleDestination = "compte";
 const MOTIFS: Record<CleDestination, string> = {
   compte: "avant de supprimer votre compte",
   profil: "avant de modifier vos informations",
+  donnees: "avant de télécharger vos données",
 };
 
 function lireDestination(brut: string | string[] | undefined): CleDestination {

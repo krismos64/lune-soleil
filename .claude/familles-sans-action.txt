@@ -12,7 +12,6 @@
 #
 # Forme : NOM_DE_FAMILLE  puis la raison et le ticket qui la retirera.
 
-DONNEES_CLIENTS     aucun acces au fichier client, voir la nuance ci-dessous, LS-36
 PARAMETRES_BOUTIQUE aucun ecran de parametres, hors phase 1
 
 # LA LIGNE PARAMETRES_BOUTIQUE A ETE RELUE LE 13 AOUT 2026, LS-99, et elle reste
@@ -214,3 +213,39 @@ PARAMETRES_BOUTIQUE aucun ecran de parametres, hors phase 1
 # session fermerait le seul moyen d'ecrire a la boutique a qui n'a pas de
 # compte. Sa protection est ailleurs : validation Zod cote serveur, bornes de
 # longueur, et trois couches contre les envois automatises.
+
+# DONNEES_CLIENTS EST SORTIE DE CETTE LISTE LE 3 SEPTEMBRE 2026, LS-62.
+#
+# Sa ligne annoncait « aucun acces au fichier client, voir la nuance ci-dessous,
+# LS-36 », et le commentaire du 13 aout 2026 disait deja ou la question se
+# reposerait : « LS-36 porte l'espace client, ou la question se reposera
+# entiere ». C'est cette story.
+#
+# `exporterMesDonnees` dans `src/services/suppression-compte.ts` est la
+# TROISIEME action sensible reelle du depot. Elle livre en UN fichier le nom,
+# les adresses du carnet, l'historique d'achat avec ses adresses figees, les
+# avis et le journal des connexions : c'est la forme la plus concentree que ces
+# donnees puissent prendre dans ce projet, donc « exporter en masse » au sens
+# propre d'ADR-027, sans avoir a etirer la definition.
+#
+# LA NUANCE QUI AURAIT PU FAIRE HESITER, et elle est reelle : la personne
+# exporte SES PROPRES donnees, la ou ADR-021 vise l'acces de l'exploitante au
+# fichier client. Elle ne change pas la conclusion, et c'est le scenario
+# d'ADR-027 lui-meme qui le dit, l'ordinateur reste ouvert : quelqu'un qui
+# s'assied devant une session ouverte repart avec le dossier complet du
+# titulaire, adresse postale et factures comprises.
+#
+# LE COUT EST BORNE, ce qui satisfait le critere 6 de LS-81, « liste
+# volontairement courte » : un client exporte ses donnees une fois, pas
+# quotidiennement. Une garde sur la CONSULTATION de l'historique, elle, se
+# paierait a chaque visite et finirait contournee ; elle n'est pas posee.
+#
+# CE QUI RESTE NON CLASSE, ET LE RAISONNEMENT DU 13 AOUT 2026 TIENT TOUJOURS :
+# le journal des connexions de LS-80, la rubrique Messages de LS-97 et l'ecran
+# d'expedition de LS-130. Aucun ne porte le fichier client, tous sont bornes en
+# volume, sans recherche ni export. C'est l'EXPORT qui fait basculer, pas
+# l'affichage d'une donnee personnelle a l'ecran.
+#
+# LE CONTROLE A REFUSE CETTE LIGNE des que l'action a existe, sens 3 : une
+# famille declaree en attente alors qu'une action la couvre echoue. C'est ce
+# sens qui empeche ce fichier de devenir une decharge qui exempte a vie.

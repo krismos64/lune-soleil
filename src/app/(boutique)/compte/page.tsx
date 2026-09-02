@@ -281,20 +281,26 @@ export default async function PageCompte({
         <BoutonDeconnexion />
       </section>
 
+      {/*
+       * LE TEXTE ANNONÇAIT « LA DEMANDE SE FAIT PAR EMAIL », ET C'ETAIT VRAI
+       * jusqu'a LS-62 : LS-95 avait livre `exporterDonneesPersonnelles` sans
+       * ecran, et la procedure interne prevoyait un declenchement a la main.
+       *
+       * LE CRITERE 1 DE LS-62 LE REFUSE, « le client obtient ses donnees depuis
+       * l'espace client, SANS demarche par email », et l'ecran existe desormais.
+       * Laisser cette phrase aurait ete pire qu'un texte perime : elle aurait
+       * dissuade d'employer le chemin livre, en annonçant un delai d'un mois la
+       * ou le fichier se telecharge en un clic.
+       */}
       <section className={styles.section} aria-labelledby="titre-donnees">
-        <h2 id="titre-donnees">Obtenir une copie de mes données</h2>
+        <h2 id="titre-donnees">Mes données personnelles</h2>
         <p className={styles.texte}>
-          Vous pouvez demander une copie des données personnelles que la
-          boutique détient à votre sujet, dans un format lisible et
-          réutilisable. La demande se fait par email et la réponse intervient
-          sous un mois au plus.
+          Téléchargez une copie des données que la boutique détient à votre
+          sujet, dans un format lisible et réutilisable.
         </p>
-        <p className={styles.texte}>
-          Cette copie contient votre compte, vos adresses enregistrées, vos
-          commandes, vos avis et l&apos;historique de vos connexions. Elle ne
-          contient jamais votre mot de passe, qui n&apos;est stocké nulle part
-          en clair.
-        </p>
+        <Link href="/compte/donnees" className={styles.lien}>
+          Voir mes données
+        </Link>
       </section>
 
       <section

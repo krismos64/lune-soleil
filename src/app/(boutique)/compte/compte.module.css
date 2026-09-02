@@ -480,3 +480,18 @@
   border-bottom: none;
   padding-bottom: 0;
 }
+
+/*
+ * Ce que l'export contient, LS-62. Une liste et non un paragraphe : la personne
+ * doit pouvoir VERIFIER que la reponse a sa demande d'acces est complete, et
+ * cinq volets noyes dans une phrase ne se recensent pas d'un coup d'œil.
+ *
+ * `--ls-text` HERITE DU FOND CREME de la page, 12,09:1. Cette liste ne vit dans
+ * aucun encadre : la poser dans `.rappel`, fond sable, ferait basculer le calcul,
+ * C31. Elle est deliberement laissee sur le fond de page.
+ */
+.contenuExport {
+  margin: 0 0 var(--ls-space-3);
+  padding-left: var(--ls-space-5);
+  line-height: 1.7;
+}
