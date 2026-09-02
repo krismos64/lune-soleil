@@ -22,6 +22,7 @@
 import { createAuthMiddleware, getIp } from "better-auth/api";
 
 import { lireResultat } from "@/lib/issue-connexion";
+import { retirerSessionDeVerification } from "@/lib/session-verification";
 import {
   ADRESSE_ABSENTE,
   ADRESSE_NON_LUE,
@@ -178,6 +179,19 @@ function emailTenteDepuisCorps(corps: unknown): string | null {
  * a une valeur fausse : elle ne se fait pas passer pour une preuve.
  */
 export const hookJournalConnexion = createAuthMiddleware(async (ctx) => {
+  /*
+   * LS-167 PASSE PAR ICI, ET CE N'EST PAS UN MELANGE DE RESPONSABILITES.
+   * `hooks.after` n'accepte qu'UN middleware, verifie dans le code de dispatch
+   * de Better Auth 1.6 : ce fichier est donc le seul point d'entree disponible
+   * apres une requete. La logique elle-meme vit dans `session-verification.ts`,
+   * ou elle reste lisible et testable seule.
+   *
+   * AVANT LE FILTRE DE CHEMIN CI-DESSOUS, qui sort immediatement : les chemins
+   * surveilles sont ceux de CONNEXION, et `/verify-email` n'en est pas un.
+   * Placer l'appel apres le rendrait inatteignable.
+   */
+  await retirerSessionDeVerification(ctx);
+
   const moyen = ctx.path ? CHEMINS_SURVEILLES.get(ctx.path) : undefined;
 
   if (!moyen) {

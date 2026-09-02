@@ -550,6 +550,18 @@ export function creerAuth(
        * drapeau ouvrirait une session depuis un lien recu par email, donc
        * depuis un canal qu'un acces a la boite compromet.
        *
+       * CE DRAPEAU NE SUFFISAIT PAS, ET LE COMMENTAIRE LE TAISAIT jusqu'a
+       * LS-167. Il gouverne la branche de verification SIMPLE ; la branche
+       * `change-email-verification` ouvrait la sienne INCONDITIONNELLEMENT, si
+       * bien que la decision ci-dessus etait contredite par le code qu'elle
+       * pretendait gouverner. Mesure : trois clics sans cookie, trois sessions,
+       * le jeton etant un JWT auto-porteur que rien ne consomme.
+       *
+       * `session-verification.ts` FERME CE CHEMIN en retirant le cookie quand
+       * la requete n'en portait aucun. La ligne de session est encore ecrite,
+       * un hook `after` s'executant apres l'endpoint : elle n'ouvre rien,
+       * personne n'ayant son jeton, et elle expire d'elle-meme.
+       *
        * LA DUREE DE VIE DU JETON EST POSEE PLUS BAS, `expiresIn`, et elle ne
        * l'etait PAS quand cette phrase a ete ecrite : le commentaire affirmait
        * « elle est ecrite ici » sur un nombre absent. Releve par la revue
