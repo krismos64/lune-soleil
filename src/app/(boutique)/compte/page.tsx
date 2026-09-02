@@ -219,6 +219,25 @@ export default async function PageCompte({
         </Link>
       </section>
 
+      {/*
+       * LE LIEN VERS LE CARNET, LS-59. Sans lui, `/compte/adresses` serait
+       * inatteignable autrement qu'en saisissant l'URL, defaut exact de LS-162
+       * et de `/compte/verification`.
+       *
+       * TOUJOURS PRESENT, meme sur un carnet vide : le cacher ferait croire que
+       * la fonction n'existe pas, et l'ecran vide dit lui-meme quoi faire.
+       */}
+      <section className={styles.section} aria-labelledby="titre-adresses">
+        <h2 id="titre-adresses">Mon carnet d&apos;adresses</h2>
+        <p className={styles.texte}>
+          Enregistrez vos adresses pour les retrouver lors de vos prochaines
+          commandes.
+        </p>
+        <Link href="/compte/adresses" className={styles.lien}>
+          Gérer mes adresses
+        </Link>
+      </section>
+
       <section className={styles.section} aria-labelledby="titre-session">
         <h2 id="titre-session">Session</h2>
         <p className={styles.texte}>
