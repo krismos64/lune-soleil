@@ -784,3 +784,98 @@ describe("un changement de role prend effet sans reconnexion", () => {
     );
   });
 });
+
+/**
+ * LA JONCTION ENTRE BETTER AUTH ET LES MODELES D'EMAIL, LS-54.
+ *
+ * CE QUE CE BLOC EXISTE POUR ATTRAPER, et le defaut etait REEL au 2 septembre
+ * 2026 : `auth.ts` passait `variables: { url }` quand les modeles exigent
+ * `lien`. `rendreModele` levait donc « Variable « lien » absente », et NI la
+ * verification d'adresse NI la reinitialisation de mot de passe ne partaient.
+ * Total, et invisible.
+ *
+ * POURQUOI RIEN NE LE VOYAIT. Les tests de `modeles.ts` appellent
+ * `rendreModele` directement en lui passant `lien`, donc la bonne cle. Ceux de
+ * `auth.ts` ne rendaient aucun message. Chaque moitie etait juste isolement,
+ * et la chaine ne se construisait qu'a l'execution. Motif deja en fiche, la
+ * chaine construite a l'execution.
+ *
+ * L'ENVOYEUR INJECTE REND REELLEMENT LE MODELE au lieu de se contenter
+ * d'enregistrer l'appel. Un double qui gobe ses arguments sans les rendre
+ * resterait vert sur exactement ce defaut : c'est le rendu qui leve, pas
+ * l'envoi.
+ */
+describe("les emails d'authentification traversent le rendu, LS-54", () => {
+  type AppelEnvoi = { destinataire: string; modele: string; objet: string };
+
+  /**
+   * Monte une instance dont l'envoyeur rend le message pour de vrai.
+   *
+   * `creerAuth` prend l'envoyeur en premier parametre, ce qui evite de toucher
+   * a l'instance partagee du module et laisse ce bloc independant des autres.
+   */
+  async function authAvecEnvoiObserve(appels: AppelEnvoi[]) {
+    const { creerAuth } = await import("@/lib/auth");
+    const { rendreModele } = await import("@/integrations/email/modeles");
+
+    return creerAuth({
+      envoyer: async (message) => {
+        // LE RENDU EST L'OBJET DU TEST. Il leve si une variable manque, ce qui
+        // est exactement le defaut corrige.
+        const rendu = rendreModele(message);
+        appels.push({
+          destinataire: message.destinataire,
+          modele: message.modele,
+          objet: rendu.objet,
+        });
+      },
+    });
+  }
+
+  it("envoie la verification d'adresse a l'inscription", async () => {
+    const appels: AppelEnvoi[] = [];
+    const instance = await authAvecEnvoiObserve(appels);
+
+    await instance.api.signUpEmail({
+      body: {
+        email: "verification@exemple.fr",
+        password: MOT_DE_PASSE_VALIDE,
+        name: "Client",
+      },
+    });
+
+    const verification = appels.find(
+      (appel) => appel.modele === "verification-adresse",
+    );
+
+    // LE MESSAGE EST RENDU, donc la cle de variable est la bonne. Avant la
+    // correction, `signUpEmail` remontait l'erreur du rendu.
+    expect(verification).toBeDefined();
+    expect(verification?.destinataire).toBe("verification@exemple.fr");
+    expect(verification?.objet).toContain("adresse");
+  });
+
+  it("envoie la reinitialisation de mot de passe sur demande", async () => {
+    const appels: AppelEnvoi[] = [];
+    const instance = await authAvecEnvoiObserve(appels);
+
+    await instance.api.signUpEmail({
+      body: {
+        email: "oubli@exemple.fr",
+        password: MOT_DE_PASSE_VALIDE,
+        name: "Client",
+      },
+    });
+
+    await instance.api.requestPasswordReset({
+      body: { email: "oubli@exemple.fr", redirectTo: "/compte/mot-de-passe" },
+    });
+
+    const reinitialisation = appels.find(
+      (appel) => appel.modele === "reinitialisation-mot-de-passe",
+    );
+
+    expect(reinitialisation).toBeDefined();
+    expect(reinitialisation?.destinataire).toBe("oubli@exemple.fr");
+  });
+});

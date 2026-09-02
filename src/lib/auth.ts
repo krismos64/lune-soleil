@@ -364,23 +364,66 @@ export function creerAuth(
        */
       requireEmailVerification: false,
 
+      /**
+       * LA CLE S'APPELLE `lien` ET NON `url`, LS-54.
+       *
+       * Better Auth nomme `url` le parametre de son rappel ; les modeles de
+       * `integrations/email/modeles.ts` attendent `lien`, comme tous les autres
+       * appels du depot. La renommer ici est le seul endroit ou la jonction se
+       * fait.
+       *
+       * LE DEFAUT QUE CELA CORRIGE ETAIT TOTAL ET SILENCIEUX A LA LECTURE.
+       * `variables: { url }` faisait lever `rendreModele` sur « Variable
+       * « lien » absente », donc AUCUN de ces deux emails ne partait jamais.
+       *
+       * POURQUOI AUCUN TEST NE LE VOYAIT : ceux de `modeles.ts` appellent
+       * `rendreModele` directement avec `lien`, ceux de `auth.ts` ne rendent
+       * aucun message. Chaque moitie etait juste, la jonction ne l'etait pas.
+       * C'est le motif de la chaine construite a l'execution, deja en fiche.
+       * Le test qui le couvre traverse desormais les deux modules.
+       */
       sendResetPassword: async ({ user, url }) => {
         await envoyeurEmail.envoyer({
           destinataire: user.email,
           modele: "reinitialisation-mot-de-passe",
-          // `url` porte un jeton signe a usage unique. Il n'est pas journalise
-          // ailleurs que dans l'email lui-meme.
-          variables: { url },
+          // Le lien porte un jeton signe a usage unique. Il n'est journalise
+          // nulle part ailleurs que dans l'email lui-meme, invariant 9.
+          variables: { lien: url },
         });
       },
     },
 
     emailVerification: {
+      /**
+       * L'EMAIL DE VERIFICATION PART A L'INSCRIPTION, critere 2 de LS-54.
+       *
+       * SANS CETTE LIGNE, RIEN NE PARTAIT. `sendVerificationEmail` etait
+       * configure depuis LS-70 et n'etait JAMAIS appele a l'inscription :
+       * Better Auth ne declenche cet envoi que si `sendOnSignUp` le demande,
+       * verifie via Context7 sur la version 1.6.23. Un rappel branche sans
+       * appelant ressemble a du code qui marche.
+       *
+       * CE N'EST PAS `requireEmailVerification`, qui reste a `false` par
+       * arbitrage du 2 septembre 2026. Les deux reglages sont independants :
+       * celui-ci ENVOIE le lien, l'autre BLOQUERAIT la connexion tant que
+       * l'adresse n'est pas confirmee. Le critere 3 veut le premier sans le
+       * second.
+       *
+       * `autoSignInAfterVerification` n'est PAS active : le client est deja
+       * connecte depuis l'inscription, `autoSignIn` valant son defaut. Poser ce
+       * drapeau ouvrirait une session depuis un lien recu par email, donc
+       * depuis un canal qu'un acces a la boite compromet.
+       *
+       * La duree de vie du jeton reste le defaut de Better Auth, une heure. La
+       * laisser implicite serait un nombre invisible : elle est ecrite ici.
+       */
+      sendOnSignUp: true,
+
       sendVerificationEmail: async ({ user, url }) => {
         await envoyeurEmail.envoyer({
           destinataire: user.email,
           modele: "verification-adresse",
-          variables: { url },
+          variables: { lien: url },
         });
       },
     },
