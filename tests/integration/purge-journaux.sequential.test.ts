@@ -375,6 +375,41 @@ describe("purge de Message, trois ans", () => {
     expect(await clesRestantes("message", "sujet")).toEqual(["recent"]);
   });
 
+  it("ne deborde pas sur une annee bissextile", async () => {
+    /*
+     * LE DEFAUT QUE CE TEST VISE, et qu'aucun quantieme ordinaire n'expose.
+     *
+     * `setUTCFullYear` SEUL fait deborder le 29 fevrier : moins trois ans donne
+     * le 1er MARS de l'annee cible, ou le 29 n'existe pas. La limite part alors
+     * VERS L'AVANT, et la purge supprime un message qui n'a PAS encore trois
+     * ans.
+     *
+     * LE SENS DE L'ERREUR EST LE MAUVAIS : elle detruit une donnee personnelle
+     * avant le terme annonce au registre, ce qu'aucun rejeu ne rattrape. C'est
+     * le jumeau du debordement de `setUTCMonth` corrige en LS-80.
+     *
+     * LE MESSAGE EST DATE DU 28 FEVRIER 2021, donc il a deux ans et 366 jours au
+     * 29 fevrier 2024 : il doit SURVIVRE. Avec le calcul fautif il partait.
+     */
+    const bissextile = new Date("2024-02-29T12:00:00.000Z");
+
+    await ecrireMessage(
+      new Date("2021-02-28T12:00:00.000Z"),
+      "presque-trois-ans",
+    );
+    await ecrireMessage(
+      new Date("2021-02-27T12:00:00.000Z"),
+      "plus-de-trois-ans",
+    );
+
+    const supprimees = await purgerMessages(bissextile);
+
+    expect(supprimees).toBe(1);
+    expect(await clesRestantes("message", "sujet")).toEqual([
+      "presque-trois-ans",
+    ]);
+  });
+
   it("ne regarde pas le statut, contrairement a l'outbox", async () => {
     /*
      * L'ASYMETRIE AVEC `EnvoiEnAttente` EST VOULUE ET ELLE SE JUSTIFIE.

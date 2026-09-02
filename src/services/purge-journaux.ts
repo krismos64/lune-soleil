@@ -219,7 +219,7 @@ export async function purgerEnvoisTermines(
   const { count } = await prisma.envoiEnAttente.deleteMany({
     where: {
       statut: { in: ["ENVOYE", "ECHOUE"] },
-      creeA: { lt: limite },
+      creeA: { lte: limite },
     },
   });
 
@@ -246,14 +246,49 @@ export async function purgerEnvoisTermines(
 export async function purgerMessages(
   maintenant: Date = new Date(),
 ): Promise<number> {
-  const limite = new Date(maintenant);
-  limite.setUTCFullYear(limite.getUTCFullYear() - CONSERVATION_MESSAGE_ANNEES);
-
   const { count } = await prisma.message.deleteMany({
-    where: { creeA: { lt: limite } },
+    where: { creeA: { lt: limiteMessage(maintenant) } },
   });
 
   return count;
+}
+
+/**
+ * L'instant a partir duquel un message est purgeable.
+ *
+ * `setUTCFullYear` SEUL DEBORDE SUR UNE ANNEE BISSEXTILE, mesure plutot que
+ * suppose : le 29 fevrier 2024 moins trois ans donne le 1er MARS 2021, et non
+ * le 28 fevrier. La limite part alors VERS L'AVANT, donc la purge supprime un
+ * message qui n'a pas encore trois ans.
+ *
+ * LE SENS DE L'ERREUR EST LE MAUVAIS, et c'est ce qui la rend grave : elle
+ * detruit une donnee personnelle AVANT le terme annonce au registre, ce qu'aucun
+ * rejeu ne rattrape. Une limite trop conservatrice garderait une ligne de trop,
+ * ce que la comparaison stricte assume deja.
+ *
+ * C'EST LE JUMEAU EXACT DU DEFAUT DE `setUTCMonth` corrige en relecture de
+ * LS-80, ou le 31 aout moins six mois donnait le 3 mars. Le quantieme y bornait
+ * le debordement ; ici c'est le 29 fevrier qui n'existe pas dans l'annee cible.
+ *
+ * LE CALCUL PASSE PAR LES MOIS, donc par `limiteDeConservation` dont le
+ * mecanisme est deja eprouve : se placer au 1er avant de reculer, puis borner le
+ * quantieme au dernier jour du mois atteint. Un `3 * 365 * 86400 * 1000`
+ * deriverait au fil des annees bissextiles.
+ */
+function limiteMessage(maintenant: Date): Date {
+  const limite = new Date(maintenant);
+  const quantieme = limite.getUTCDate();
+
+  limite.setUTCDate(1);
+  limite.setUTCMonth(limite.getUTCMonth() - CONSERVATION_MESSAGE_ANNEES * 12);
+
+  const dernierJourDuMois = new Date(
+    Date.UTC(limite.getUTCFullYear(), limite.getUTCMonth() + 1, 0),
+  ).getUTCDate();
+
+  limite.setUTCDate(Math.min(quantieme, dernierJourDuMois));
+
+  return limite;
 }
 
 /**
