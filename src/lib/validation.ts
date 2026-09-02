@@ -458,6 +458,48 @@ export const schemaSaisieMessage = z.strictObject({
     ),
 });
 
+/**
+ * Une adresse du carnet, LS-59, parcours 8.
+ *
+ * ELLE COMPOSE `schemaAdressePostale` PLUTOT QUE DE LA REDECLARER : une borne
+ * recopiee est une borne qui divergera, et le code postal metropolitain comme
+ * le pays limite a `FR` doivent rester les memes des deux cotes. Le carnet
+ * ajoute trois champs que le tunnel ne porte pas.
+ *
+ * `estParDefaut` N'Y FIGURE PAS, deliberement. Le poser depuis une saisie
+ * contournerait l'ordre impose du point 9 des transactions critiques, et deux
+ * adresses par defaut violeraient l'index partiel `adresse_defaut_unique`. La
+ * bascule est un geste separe, avec sa propre transaction.
+ *
+ * `utilisateurId` N'Y FIGURE PAS NON PLUS, invariant 2 : il vient de la session,
+ * jamais d'un formulaire. `z.strictObject` fait echouer bruyamment une tentative
+ * de le poser, plutot que de l'ignorer en silence.
+ *
+ * `libelle` EST FACULTATIF, regle A8 : il distingue deux adresses proches a la
+ * lecture, il n'est ni une cle ni un critere de selection.
+ */
+export const schemaAdresseCarnet = schemaAdressePostale.extend({
+  libelle: z
+    .string()
+    .trim()
+    .max(60, "Ce champ ne peut pas dépasser 60 caractères.")
+    .optional(),
+  nomComplet: schemaNomClient,
+  /*
+   * `.optional()` SUR LA CLE, ET NON UN AUTRE SCHEMA. `schemaTelephone` accepte
+   * deja la chaine VIDE, ce qui suffit au tunnel ou le champ existe toujours,
+   * meme non rempli. Un formulaire de carnet peut en revanche ne pas envoyer la
+   * cle du tout : les deux cas se traduisent en `null` par le service.
+   *
+   * Le schema commun n'est PAS modifie : le rendre optionnel pour tout le monde
+   * relacherait le tunnel, ou l'absence de cle signalerait un formulaire
+   * incomplet plutot qu'un champ laisse vide.
+   */
+  telephone: schemaTelephone.optional(),
+});
+
+export type SaisieAdresseCarnet = z.infer<typeof schemaAdresseCarnet>;
+
 /** Coordonnees du client, etape 1 du tunnel. */
 export const schemaCoordonnees = z.strictObject({
   nomClient: schemaNomClient,
