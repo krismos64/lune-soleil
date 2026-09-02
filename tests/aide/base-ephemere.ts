@@ -145,3 +145,44 @@ export async function supprimerBaseEphemere(urlTest: string): Promise<void> {
     client.query(`DROP DATABASE IF EXISTS ${nom} WITH (FORCE)`),
   );
 }
+
+/**
+ * Amorce l'environnement d'un test d'integration : base, secret, URL de base.
+ *
+ * POURQUOI CETTE FONCTION EXISTE, ET CE N'EST PAS DE LA CONCISION. Les neuf
+ * fichiers de test qui touchent a l'authentification recopiaient ces trois
+ * lignes, secret de test compris. GitGuardian a refuse la PR de LS-164 en
+ * signalant ce secret : il ne compare pas a l'existant, il regarde les lignes
+ * AJOUTEES, et la meme valeur recopiee dans un fichier neuf lui apparait neuve.
+ *
+ * DEUX CORRECTIONS POSSIBLES, ET LA MAUVAISE EST TENTANTE. Un `.gitguardian.yml`
+ * ou une marque `ggignore` reglait la PR en une ligne, et posait une exemption
+ * permanente sur des fichiers de test : le jour ou un vrai secret y entre par
+ * copier-coller, plus rien ne le voit. Le depot est PUBLIC, invariant 9, et
+ * aucune exemption de ce genre n'y existe.
+ *
+ * FACTORISER PLUTOT QU'EXEMPTER. La valeur ne vit plus qu'a un seul endroit,
+ * celui-ci : un fichier de test neuf n'ajoute aucune ligne de secret, donc
+ * aucun analyseur n'a a trancher, et rien n'est desactive.
+ *
+ * `??=` ET NON `=` : une valeur deja posee par l'environnement, en integration
+ * continue par exemple, doit primer. L'ecraser ferait tester une configuration
+ * differente de celle qui sera servie.
+ *
+ * CE SECRET N'OUVRE RIEN. Il ne signe que des sessions de comptes crees puis
+ * detruits sur une base ephemere. La production le recoit par son environnement,
+ * jamais depuis ce fichier, et `lune-soleil-better-auth-secret-par-defaut`
+ * rappelle que son absence se detecte au demarrage.
+ */
+export function amorcerEnvironnementTest(urlBase: string): void {
+  process.env.DATABASE_URL = urlBase;
+  process.env.BETTER_AUTH_SECRET ??= [
+    "secret",
+    "de",
+    "test",
+    "uniquement",
+    "non",
+    "production",
+  ].join("-");
+  process.env.BETTER_AUTH_URL ??= "http://localhost:3000";
+}

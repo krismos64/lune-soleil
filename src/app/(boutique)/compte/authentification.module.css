@@ -213,6 +213,28 @@
   display: none;
 }
 
+/*
+ * LA MEME REGION LIVE PORTE L'ECHEC ET LE SUCCES, LS-164, et son lisere doit
+ * suivre : sans cette variante, un message d'erreur s'afficherait derriere le
+ * lisere VERT de `.confirmation`, ce qui dit exactement l'inverse de son
+ * contenu.
+ *
+ * POURQUOI UNE VARIANTE PLUTOT QUE DEUX NŒUDS. Une region live doit preexister
+ * a son texte pour etre annoncee, lecon de LS-54 : deux paragraphes alternes
+ * remettraient le nœud dans le DOM au moment meme du message, donc muet.
+ *
+ * SEUL LE LISERE CHANGE, le texte reste `--ls-text`, 10,83:1 sur sable. Passer
+ * le texte en `--ls-error` donnerait 5,50:1, conforme AA mais nettement moins
+ * lisible, et l'information est deja portee par le lisere ET par les mots :
+ * la couleur seule ne transmet jamais rien, WCAG 2.2.
+ *
+ * `--ls-error` SUR `--ls-surface-sand` VAUT 5,50:1, calcule sur CE fond et non
+ * recopie d'un autre ecran, C31.
+ */
+.confirmation[data-etat="erreur"] {
+  border-left-color: var(--ls-error);
+}
+
 .aide {
   margin: var(--ls-space-3) 0 0;
   font-size: 0.9375rem;

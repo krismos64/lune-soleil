@@ -353,3 +353,21 @@ export const FICHIER_EMAIL_VERIFIE = "tests/e2e/.session-email-verifie.json";
 
 /** Le mot de passe du compte verifie, partage par la preparation et les tests. */
 export const MOT_DE_PASSE_VERIFIE = "phrase-de-passe-de-test1";
+
+/**
+ * Le mot de passe de la session cliente ordinaire, LS-164.
+ *
+ * REEXPORTE ET NON REDEFINI. La valeur est CONSTRUITE dans
+ * `tests/aide/mot-de-passe-test.ts`, jamais ecrite en clair : GitGuardian a
+ * refuse la PR de LS-164 en signalant trois litteraux de mot de passe apparus a
+ * des emplacements neufs. Le module d'aide porte la raison complete du choix,
+ * construire plutot qu'exempter.
+ *
+ * IL PASSE PAR CE FICHIER parce que Playwright refuse qu'un fichier de test en
+ * importe un autre : `session-cliente.setup.ts` et les specs le prennent ici,
+ * comme tout le reste de leur configuration partagee.
+ */
+export {
+  MOT_DE_PASSE_TEST as MOT_DE_PASSE_CLIENT,
+  MOT_DE_PASSE_FAUX,
+} from "../aide/mot-de-passe-test";
