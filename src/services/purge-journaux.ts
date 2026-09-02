@@ -211,19 +211,42 @@ export const CONSERVATION_MESSAGE_ANNEES = 3;
 export async function purgerEnvoisTermines(
   maintenant: Date = new Date(),
 ): Promise<number> {
-  const limite = new Date(
-    maintenant.getTime() -
-      CONSERVATION_ENVOI_TERMINE_JOURS * 24 * 60 * 60 * 1000,
-  );
-
   const { count } = await prisma.envoiEnAttente.deleteMany({
     where: {
       statut: { in: ["ENVOYE", "ECHOUE"] },
-      creeA: { lte: limite },
+      /*
+       * COMPARAISON STRICTE `lt`, comme les trois autres purges de ce fichier.
+       * « A la frontiere, garder une ligne de trop vaut mieux qu'en supprimer
+       * une qui pouvait servir », position posee par LS-80 et rappelee en tete
+       * de `purgerJournalAudit`.
+       *
+       * UNE PREMIERE VERSION PORTAIT `lte`, seul ecart du projet, et AUCUN TEST
+       * ne le voyait : la mutation `lte` vers `lt` laissait les quinze tests
+       * verts. Releve par `ls-critical-reviewer` le 2 septembre 2026. Le test de
+       * frontiere qui accompagne cette ligne ferme desormais les deux sens.
+       */
+      creeA: { lt: limiteEnvoiTermine(maintenant) },
     },
   });
 
   return count;
+}
+
+/**
+ * L'instant a partir duquel une ligne d'outbox terminee est purgeable.
+ *
+ * EXPORTEE POUR QUE LE TEST DE FRONTIERE S'Y ANCRE plutot que de recopier le
+ * calcul. La leçon vient du test de `journal_audit` : une premiere version y
+ * recopiait un `setUTCMonth` qui paraissait equivalent et ne l'etait pas, la
+ * ligne se trouvait trois jours apres la limite, et la mutation restait verte.
+ *
+ * Un test qui recalcule la frontiere ne teste pas la frontiere du code.
+ */
+export function limiteEnvoiTermine(maintenant: Date): Date {
+  return new Date(
+    maintenant.getTime() -
+      CONSERVATION_ENVOI_TERMINE_JOURS * 24 * 60 * 60 * 1000,
+  );
 }
 
 /**
