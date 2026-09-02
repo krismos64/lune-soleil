@@ -629,6 +629,12 @@ Vue : motif communiqué.
 
 ## Parcours 6, rattachement d'une commande à un compte
 
+**LIVRÉ le 2 septembre 2026 par LS-56.** `services/rattachement-commandes.ts`
+porte les trois conditions cumulatives, et **deux** déclencheurs plutôt qu'un :
+la vérification d'adresse pour l'effet immédiat, et l'ouverture de session pour
+rattraper les commandes passées **après** la vérification, qu'un déclenchement
+unique laisserait orphelines pour toujours.
+
 Périmètre d'ouverture depuis le 28 juillet 2026, epic LS-36. Ce parcours était
 classé V1 cible à sa rédaction, l'espace client ayant depuis été avancé avant
 l'ouverture.
@@ -788,6 +794,11 @@ Une panne d'email ne fait perdre aucun avis, l'invitation restant valide.
 ---
 
 ## Parcours 8, gestion du carnet d'adresses
+
+**LIVRÉ le 2 septembre 2026 par LS-59.** `services/carnet-adresses.ts` porte les
+cinq étapes. L'ordre imposé de l'étape 3 ne suffisait pas : il ferme le conflit
+**dans** une transaction, jamais entre deux, et un `FOR UPDATE` a dû s'y ajouter
+après qu'une revue a mesuré douze échecs sur douze bascules concurrentes.
 
 Ajouté par LS-40 le 28 juillet 2026. `AdresseCarnet` était la seule entité du
 modèle qu'aucun parcours ne traversait, défaut relevé par la revue de LS-38.
