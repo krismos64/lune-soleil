@@ -160,3 +160,27 @@ PARAMETRES_BOUTIQUE aucun ecran de parametres, hors phase 1
 # LA PARADE EST HUMAINE : relire ce fichier a chaque story qui ajoute un ecran
 # d'administration ou une Server Action, et se demander si la ligne est encore
 # vraie. Aucun script ne pose cette question a la place de quelqu'un.
+
+# LES DEUX LIGNES ONT ETE RELUES LE 2 SEPTEMBRE 2026, LS-130, et elles restent
+# vraies. La story ajoute l'ecran d'expedition et une Server Action, `expedier`.
+#
+# ELLE N'EST PAS CLASSEE, et la question a ete posee plutot que laissee
+# implicite. Declarer qu'un colis est parti est un fait LOGISTIQUE : aucun
+# argent ne bouge, aucune configuration d'exploitation n'est touchee, et la
+# commande n'est pas reecrite. `PARAMETRES_BOUTIQUE` vise une configuration a
+# effet financier ou contractuel, ce que cette action n'est pas.
+#
+# LE POINT QUI MERITAIT D'ETRE POSE, et il est different des stories
+# precedentes : l'ecran AFFICHE une adresse de livraison, donc une donnee
+# personnelle de client. `DONNEES_CLIENTS` vise pourtant « exporter ou consulter
+# EN MASSE », et le meme raisonnement qu'en LS-80 s'applique : la file de
+# preparation est bornee aux commandes `EN_PREPARATION`, sans recherche ni
+# export, et l'adresse y est affichee parce qu'elle sert a coller l'etiquette.
+# Un ecran d'expedition sans adresse ne rendrait aucun service.
+#
+# CE QUI N'EST PAS UN CRITERE DE CLASSEMENT : l'expedition est irreversible au
+# sens ou un colis parti ne revient pas, et LS-121 refuse deja tout retour en
+# arriere depuis `EXPEDIEE`. L'argument a ete ecarte en LS-102 sur la
+# suppression d'un media, pour la meme raison : aucune des quatre familles n'est
+# definie par l'irreversibilite, et etirer l'une d'elles pour couvrir ce cas
+# deplacerait la regle au lieu de la satisfaire.

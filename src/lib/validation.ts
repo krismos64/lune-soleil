@@ -374,6 +374,59 @@ export const schemaChoixLivraison = z
     }
   });
 
+/**
+ * Declaration d'expedition par l'exploitante, LS-130, etape 11 du parcours 1.
+ *
+ * LE MODE EST CELUI REELLEMENT EXECUTE PAR LE TRANSPORTEUR, distinct de celui
+ * de la commande : un echec de livraison a domicile peut etre rebascule vers un
+ * Point Relais, ADR-025. Les deux colonnes portent deux faits, ce que le client
+ * a paye et ce qui a ete fait, et ce schema ne valide QUE le second.
+ *
+ * LE `superRefine` PORTE `chk_expedition_mode_point_relais`, EQUIVALENCE et non
+ * implication, exactement comme `schemaChoixLivraison` porte son jumeau sur la
+ * commande : un DOMICILE porteur d'un point est refuse AUTANT qu'un
+ * POINT_RELAIS sans point. Ne verifier qu'un sens laisserait le CHECK rejeter
+ * l'ecriture avec un message que l'exploitante ne comprendrait pas.
+ *
+ * LE NUMERO DE SUIVI EST FACULTATIF, et c'est un choix metier : un depot en
+ * bureau de poste ne rend pas toujours un numero immediatement, et l'exiger
+ * empecherait de declarer un colis reellement parti. Le fait « le colis est
+ * parti » ne depend pas de la disponibilite du numero.
+ *
+ * IL EST EN REVANCHE BORNE, invariant 7 : il finit dans un email et dans une
+ * URL de suivi, LS-131, ou une chaine demesuree entrerait telle quelle.
+ */
+export const schemaSaisieExpedition = z
+  .strictObject({
+    transporteur: champAdresse(80),
+    mode: schemaModeLivraison,
+    numeroSuivi: z
+      .string()
+      .trim()
+      .max(64, "Un numéro de suivi de 64 caractères au plus est attendu.")
+      .nullable(),
+    pointRelaisId: champAdresse(64).nullable(),
+  })
+  .superRefine((valeur, contexte) => {
+    const exige = valeur.mode === "POINT_RELAIS" || valeur.mode === "LOCKER";
+
+    if (exige && valeur.pointRelaisId === null) {
+      contexte.addIssue({
+        code: "custom",
+        path: ["pointRelaisId"],
+        message: "Ce mode d'expédition demande le point de retrait exécuté.",
+      });
+    }
+
+    if (!exige && valeur.pointRelaisId !== null) {
+      contexte.addIssue({
+        code: "custom",
+        path: ["pointRelaisId"],
+        message: "Une livraison à domicile n'admet pas de point de retrait.",
+      });
+    }
+  });
+
 /** Coordonnees du client, etape 1 du tunnel. */
 export const schemaCoordonnees = z.strictObject({
   nomClient: schemaNomClient,

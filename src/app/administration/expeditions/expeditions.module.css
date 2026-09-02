@@ -1,0 +1,231 @@
+/*
+ * File de preparation des colis, LS-130.
+ *
+ * CONCU A PARTIR DE 320 px, puis elargi. Les media queries montent, elles ne
+ * descendent jamais : ce qui est ecrit hors requete est ce que voit le plus
+ * petit ecran.
+ *
+ * DES CARTES ET NON UN TABLEAU, meme choix que les commandes et les stocks : un
+ * formulaire de quatre champs par ligne serait illisible en colonnes a 320 px,
+ * et `frontend-design.md` demande cartes et listes quand un tableau ne tient
+ * plus sur mobile. Une seule structure sert toutes les largeurs.
+ *
+ * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons de `tokens.css`.
+ */
+
+.page {
+  padding: var(--ls-space-4);
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+/* ZONE TACTILE DE 44 px, correction portee par LS-121 sur l'ecran voisin. */
+.retour {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  margin-bottom: var(--ls-space-3);
+  color: var(--ls-accent-gold-deep);
+  text-decoration: underline;
+}
+
+.titre {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-primary);
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  font-weight: 600;
+}
+
+.introduction {
+  margin: 0 0 var(--ls-space-4);
+  color: var(--ls-text-muted);
+}
+
+.vide {
+  margin: 0;
+  padding: var(--ls-space-4);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface-sand);
+  color: var(--ls-text-muted);
+}
+
+/* ------------------------------------------------------------------- cartes */
+
+.listeCommandes {
+  display: grid;
+  gap: var(--ls-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.carte {
+  padding: var(--ls-space-4);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+  box-shadow: var(--ls-shadow-soft);
+}
+
+/*
+ * `flex-wrap` PLUTOT QU'UNE LARGEUR FIXE : a 320 px le numero et la date ne
+ * tiennent pas cote a cote des que le numero s'allonge, et un debordement
+ * horizontal du corps est interdit.
+ */
+.enTeteCarte {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ls-space-2);
+  margin-bottom: var(--ls-space-2);
+}
+
+.numero {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  color: var(--ls-accent-gold-deep);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.date {
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+}
+
+.client {
+  margin: 0 0 var(--ls-space-1);
+  color: var(--ls-text);
+  font-weight: 600;
+  /* Un nom long ne doit pas elargir la carte au-dela du corps. */
+  overflow-wrap: anywhere;
+}
+
+.mode {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-text-muted);
+}
+
+.adresse {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: var(--ls-space-4);
+  color: var(--ls-text-muted);
+  font-style: normal;
+  overflow-wrap: anywhere;
+}
+
+/* -------------------------------------------------------------- formulaire */
+
+.formulaire {
+  display: grid;
+  gap: var(--ls-space-3);
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-1);
+}
+
+.champ label {
+  font-weight: 600;
+}
+
+/*
+ * `width: 100%` AVEC `box-sizing` HERITE : sans lui le champ deborde de son
+ * conteneur a 320 px, la bordure et le rembourrage s'ajoutant a la largeur.
+ */
+.champ input,
+.champ select {
+  width: 100%;
+  min-height: var(--ls-touch-target);
+  padding: 0 var(--ls-space-3);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  font-size: 1rem;
+}
+
+.champ input:disabled,
+.champ select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.aide {
+  margin: 0;
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+}
+
+.bouton {
+  min-height: var(--ls-touch-target);
+  padding: 0 var(--ls-space-4);
+  border: none;
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bouton:hover:not(:disabled) {
+  background: var(--ls-primary-hover);
+}
+
+.bouton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/*
+ * LE MESSAGE GARDE SA PLACE MEME VIDE, la region live devant preexister a son
+ * contenu pour etre annoncee. `min-height` evite le saut de mise en page qui
+ * decalerait la carte suivante au moment du retour.
+ */
+.message {
+  min-height: 1.5rem;
+  margin: var(--ls-space-2) 0 0;
+  color: var(--ls-success);
+}
+
+/*
+ * L'ERREUR N'EST PAS PORTEE PAR LA SEULE COULEUR, `frontend-design.md` : le
+ * texte du message dit toujours ce qui s'est passe, la couleur ne fait que
+ * l'appuyer.
+ */
+.messageErreur {
+  color: var(--ls-error);
+}
+
+@media (min-width: 48rem) {
+  .page {
+    padding: var(--ls-space-6);
+  }
+
+  /*
+   * LES CHAMPS PASSENT SUR DEUX COLONNES A PARTIR DE 768 px. En dessous, une
+   * colonne : deux champs cote a cote a 390 px reduiraient chacun sous la
+   * largeur ou un numero de suivi reste lisible.
+   */
+  .formulaire {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+
+  /*
+   * LE BOUTON RESTE SEUL SUR SA LIGNE, aligne a gauche : etendu sur deux
+   * colonnes il ferait une cible de 30 rem, disproportionnee pour un geste
+   * irreversible.
+   */
+  .bouton {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}

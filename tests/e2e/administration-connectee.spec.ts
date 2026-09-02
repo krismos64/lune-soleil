@@ -28,6 +28,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 import {
+  COMMANDE_A_EXPEDIER_TEST,
   COMMANDE_FACTUREE_TEST,
   COMMANDE_TEST,
   FICHIER_SESSION,
@@ -99,6 +100,21 @@ const ECRANS = [
   {
     chemin: `/administration/commandes/${COMMANDE_FACTUREE_TEST.commandeId}`,
     titre: COMMANDE_FACTUREE_TEST.numero,
+  },
+  /*
+   * LA FILE D'EXPEDITION, LS-130. Elle rend UN formulaire de quatre champs PAR
+   * colis a preparer, dans une carte qui porte deja le numero, le nom, le mode
+   * et l'adresse : c'est la densite la plus forte de l'administration apres le
+   * detail de commande.
+   *
+   * ELLE NE MESURE QUELQUE CHOSE QUE PARCE QUE `COMMANDE_A_EXPEDIER_TEST`
+   * EXISTE. Sans commande `EN_PREPARATION`, l'ecran rend son etat vide, un
+   * paragraphe, et aucun champ ne serait mesure a aucune largeur : c'est le
+   * motif de LS-121 puis de LS-160, rencontre une troisieme fois.
+   */
+  {
+    chemin: "/administration/expeditions",
+    titre: "Expéditions",
   },
 ] as const;
 
@@ -356,6 +372,12 @@ const ECRANS_BASCULE = [
   "/administration/commandes",
   `/administration/commandes/${COMMANDE_TEST.commandeId}`,
   `/administration/commandes/${COMMANDE_FACTUREE_TEST.commandeId}`,
+  /*
+   * LA FILE D'EXPEDITION PORTE SON PROPRE POINT DE BASCULE A 768 px, LS-130,
+   * ou le formulaire passe d'une colonne a deux. C'est exactement la largeur ou
+   * une mise en page cede, et elle n'est couverte par aucun projet.
+   */
+  "/administration/expeditions",
 ] as const;
 
 for (const chemin of ECRANS_BASCULE) {
@@ -373,3 +395,112 @@ for (const chemin of ECRANS_BASCULE) {
     expect(debordement).toBeLessThanOrEqual(TOLERANCE_DEBORDEMENT_PX);
   });
 }
+
+/**
+ * LA FILE D'EXPEDITION REND SON FORMULAIRE, LS-130.
+ *
+ * CE QUE LA BOUCLE GENERIQUE NE PROUVE PAS. Elle verifie le titre, le
+ * debordement et l'accessibilite : un ecran qui rendrait son etat vide les
+ * passerait tous les trois. Ces tests-ci verifient que la BRANCHE mesuree est
+ * bien celle du formulaire, ce qui est precisement le defaut rencontre en
+ * LS-121 puis en LS-160.
+ *
+ * AUCUN DE CES TESTS NE DECLARE L'EXPEDITION, et c'est deliberé. Le geste est
+ * IRREVERSIBLE : une commande declaree expediee quitte la file, et l'execution
+ * suivante mesurerait l'etat vide sans qu'aucune assertion ne le signale.
+ * `ON CONFLICT (id) DO NOTHING` ne la remettrait jamais en preparation.
+ *
+ * LE CHEMIN D'ECRITURE EST PROUVE AILLEURS, par les seize tests d'integration
+ * de `expedition.sequential.test.ts`, qui travaillent sur une base ephemere.
+ */
+test.describe("file d'expédition", () => {
+  test("la commande en préparation porte son formulaire complet", async ({
+    page,
+  }) => {
+    await page.goto("/administration/expeditions");
+
+    await expect(
+      page.getByRole("link", { name: COMMANDE_A_EXPEDIER_TEST.numero }),
+    ).toBeVisible();
+
+    /*
+     * LES QUATRE CHAMPS SONT ATTEINTS PAR LEUR LIBELLE, ce qui prouve du meme
+     * coup que chaque `label` est bien associe a son champ : `getByLabel`
+     * echoue si l'association est rompue. C'est le risque propre a cet ecran,
+     * qui rend un formulaire PAR commande et donc plusieurs `id` voisins.
+     */
+    await expect(page.getByLabel("Transporteur")).toBeVisible();
+    await expect(page.getByLabel("Mode réellement exécuté")).toBeVisible();
+    await expect(page.getByLabel("Numéro de suivi")).toBeVisible();
+
+    await expect(
+      page.getByRole("button", { name: "Déclarer expédiée" }),
+    ).toBeEnabled();
+  });
+
+  /*
+   * LE CHAMP DE POINT DE RETRAIT APPARAIT AVEC LE MODE, ET SEULEMENT AVEC LUI.
+   *
+   * C'EST L'EQUIVALENCE DE `chk_expedition_mode_point_relais` RENDUE VISIBLE :
+   * les deux modes de retrait l'exigent, le domicile l'interdit. Un champ
+   * toujours present ferait saisir un point sur une livraison a domicile, que
+   * la contrainte rejetterait avec un message que l'exploitante ne pourrait pas
+   * relier au champ fautif.
+   */
+  test("le point de retrait n'apparaît que pour un mode en relais", async ({
+    page,
+  }) => {
+    await page.goto("/administration/expeditions");
+
+    const mode = page.getByLabel("Mode réellement exécuté");
+    await expect(mode).toHaveValue("DOMICILE");
+    await expect(page.getByLabel("Point de retrait exécuté")).toHaveCount(0);
+
+    await mode.selectOption("POINT_RELAIS");
+    await expect(page.getByLabel("Point de retrait exécuté")).toBeVisible();
+
+    await mode.selectOption("LOCKER");
+    await expect(page.getByLabel("Point de retrait exécuté")).toBeVisible();
+
+    /*
+     * LE RETOUR A DOMICILE LE RETIRE, et ce sens compte autant que l'autre :
+     * un champ qui resterait affiche garderait sa valeur et la joindrait a
+     * l'envoi, ce que la validation refuserait.
+     */
+    await mode.selectOption("DOMICILE");
+    await expect(page.getByLabel("Point de retrait exécuté")).toHaveCount(0);
+  });
+
+  /*
+   * AUCUN CHAMP NE PERMET DE SAISIR UNE DATE, critere 3 de LS-130.
+   *
+   * `livreA` FAIT COURIR LE DELAI DE RETRACTATION : l'inventer d'un clic le
+   * ferait partir d'une date fausse, et le client perdrait des jours de droit
+   * sans que rien ne le signale. La date vient du suivi automatique de LS-131.
+   *
+   * LA VERIFICATION PORTE SUR LE DOM RENDU et non sur le source : un champ
+   * ajoute par mimetisme dans une future story serait vu ici, la ou une lecture
+   * de fichier suppose de savoir quoi chercher.
+   */
+  test("aucun champ de date de livraison n'est saisissable", async ({
+    page,
+  }) => {
+    await page.goto("/administration/expeditions");
+
+    await expect(
+      page.getByRole("button", { name: "Déclarer expédiée" }),
+    ).toBeVisible();
+
+    expect(await page.locator('input[type="date"]').count()).toBe(0);
+    expect(await page.locator('input[type="datetime-local"]').count()).toBe(0);
+
+    /*
+     * NI PAR UN CHAMP TEXTE NOMME COMME TEL. Le test precedent fermerait un
+     * `input[type=date]` ajoute par inadvertance ; celui-ci ferme la forme
+     * detournee, un champ texte qui porterait le nom de la colonne.
+     */
+    expect(
+      await page.locator('[name="livreA"], [name="livre_a"]').count(),
+    ).toBe(0);
+  });
+});

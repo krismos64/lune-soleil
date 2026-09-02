@@ -39,7 +39,14 @@ PUBLICATION="src/app/administration/produits/[id]/actions-publication.ts"
 # de `rembourser`, n'etait exercee par aucun cas.
 COMMANDES="src/app/administration/commandes/actions.ts"
 
-MUTABLES=("$MEDIAS" "$VARIANTES" "$PUBLICATION" "$COMMANDES")
+# LA CINQUIEME CIBLE EST L'EXPEDITION, LS-130. Elle n'exerce pas une forme de
+# garde neuve, `expedier` reprenant celle de `changerStatut`, mais un FICHIER
+# neuf : le releve est ancre sur le marqueur `use server`, et rien ne prouvait
+# qu'un dossier cree apres LS-159 y entre. La preuve vaut pour le releve autant
+# que pour la garde.
+EXPEDITIONS="src/app/administration/expeditions/actions.ts"
+
+MUTABLES=("$MEDIAS" "$VARIANTES" "$PUBLICATION" "$COMMANDES" "$EXPEDITIONS")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || {
@@ -202,6 +209,13 @@ cas_affectation() {
 # Cas 4 : `rembourser`, LS-160. La seule Server Action qui fasse SORTIR DE
 # L'ARGENT : une garde perdue ici est le defaut le plus cher du depot.
 cas_affectation "garde retirée sur rembourser" "$COMMANDES" "rembourser"
+
+# Cas 5 : `expedier`, LS-130, dans un DOSSIER cree apres l'ecriture de ce
+# script. Il verifie que le releve par `use server` voit bien un fichier neuf,
+# et pas seulement les quatre qu'il connaissait deja : c'est le motif « cible de
+# test inexistante » dans sa variante liste INCOMPLETE, celle qui a laisse neuf
+# actions hors de la boucle jusqu'a LS-159.
+cas_affectation "garde retirée sur expedier" "$EXPEDITIONS" "expedier"
 
 echo
 echo "-----------------------------------------"

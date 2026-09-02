@@ -82,6 +82,38 @@ export const COMMANDE_FACTUREE_TEST = {
 } as const;
 
 /**
+ * La commande EN_PREPARATION que la file d'expedition affiche, LS-130.
+ *
+ * DISTINCTE DES DEUX PRECEDENTES, ET POUR LA MEME RAISON QU'ELLES SE
+ * DISTINGUENT ENTRE ELLES. `listerCommandesAExpedier` ne lit QUE les commandes
+ * `EN_PREPARATION` : sur une commande en attente de paiement ou simplement
+ * confirmee, la file rend son etat vide, un paragraphe. Le FORMULAIRE, ses
+ * quatre champs et son bouton ne seraient mesures a AUCUNE largeur.
+ *
+ * C'EST LE MOTIF DE LS-121 ET DE LS-160, rencontre une troisieme fois : un
+ * contraste a 4,04:1 avait echappe a `axe-core` faute d'une commande remboursee
+ * en donnees de test. Mesurer un ecran qui ne rend jamais la branche
+ * interessante ne prouve rien.
+ *
+ * ELLE NE PEUT PAS ETRE PARTAGEE avec `COMMANDE_FACTUREE_TEST` : declarer son
+ * expedition la ferait passer `EXPEDIEE`, donc disparaitre de la file, et le
+ * detail de commande que LS-160 mesure changerait de branche au passage. Deux
+ * faits distincts, deux commandes.
+ *
+ * ELLE PORTE SA PROPRE VARIANTE, meme raison que les precedentes : rien de
+ * partage, aucun stock du catalogue de test consomme.
+ */
+export const COMMANDE_A_EXPEDIER_TEST = {
+  categorieId: "e1a2b3c4-1130-4aaa-8888-000000000001",
+  produitId: "e1a2b3c4-1130-4bbb-8888-000000000002",
+  varianteId: "e1a2b3c4-1130-4ccc-8888-000000000003",
+  commandeId: "e1a2b3c4-1130-4ddd-8888-000000000004",
+  ligneId: "e1a2b3c4-1130-4eee-8888-000000000005",
+  paiementId: "e1a2b3c4-1130-4fff-8888-000000000006",
+  numero: "C-TEST-0130",
+} as const;
+
+/**
  * Identifiants du produit de test rendu dans l'editeur, LS-111.
  *
  * FIGES ET NON ENGENDRES A CHAQUE EXECUTION. Le fichier de test doit construire
