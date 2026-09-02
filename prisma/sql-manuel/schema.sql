@@ -19,6 +19,11 @@ CREATE TYPE "OrigineEcriture" AS ENUM ('SYSTEME', 'ADMIN', 'RECONCILIATION');
 -- CreateEnum
 CREATE TYPE "StatutCommande" AS ENUM ('EN_ATTENTE_PAIEMENT', 'CONFIRMEE', 'EN_PREPARATION', 'EXPEDIEE', 'LIVREE', 'ANNULEE');
 
+-- CreateEnum, LS-97
+-- Etat de traitement d'un message de contact. Il ne dit rien du CONTENU, qui
+-- est immuable : seul cet etat change apres l'ecriture.
+CREATE TYPE "StatutMessage" AS ENUM ('NOUVEAU', 'LU', 'TRAITE');
+
 -- CreateEnum
 CREATE TYPE "StatutPaiement" AS ENUM ('EN_ATTENTE', 'REUSSI', 'ECHOUE', 'PARTIELLEMENT_REMBOURSE', 'REMBOURSE');
 
@@ -635,6 +640,36 @@ CREATE TABLE "compteur_numero" (
 
     CONSTRAINT "compteur_numero_pkey" PRIMARY KEY ("type","annee")
 );
+
+-- CreateTable, LS-97
+--
+-- Le message de contact, persiste AVANT toute tentative d'envoi d'email. Dette
+-- annoncee par `MODELE-CONCEPTUEL.md` et enfin portee.
+--
+-- AUCUNE CLE ETRANGERE, ET C'EST DELIBERE. Le formulaire est PUBLIC : personne
+-- n'est connecte, et rapprocher le message d'un compte par l'adresse email
+-- inventerait une donnee que le visiteur n'a pas fournie.
+--
+-- CONSERVATION : trois ans, referentiel CNIL n° 2021-131, meme ancrage que T2.
+CREATE TABLE "message" (
+    "id" TEXT NOT NULL,
+    "nom" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "sujet" TEXT NOT NULL,
+    "corps" TEXT NOT NULL,
+    "statut" "StatutMessage" NOT NULL DEFAULT 'NOUVEAU',
+    "lu_a" TIMESTAMPTZ(3),
+    "traite_a" TIMESTAMPTZ(3),
+    "cree_a" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "message_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex, LS-97
+CREATE INDEX "message_statut_cree_a" ON "message"("statut", "cree_a");
+
+-- CreateIndex, LS-97, la purge de retention balaie par date seule.
+CREATE INDEX "message_cree_a" ON "message"("cree_a");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "categorie_slug_key" ON "categorie"("slug");

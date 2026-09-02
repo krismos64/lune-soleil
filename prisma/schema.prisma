@@ -141,6 +141,15 @@ enum StatutAvis {
   RETIRE
 }
 
+// LS-97. Etat de traitement d'un message de contact, du point de vue de
+// l'exploitante. Il ne dit rien du CONTENU, qui est immuable : seul cet etat
+// change apres l'ecriture.
+enum StatutMessage {
+  NOUVEAU
+  LU
+  TRAITE
+}
+
 enum StatutEmail {
   ENVOYE
   ECHOUE
@@ -1261,4 +1270,49 @@ model CompteurNumero {
 
   @@id([type, annee])
   @@map("compteur_numero")
+}
+
+// ---------------------------------------------------------------------------
+// Message de contact, LS-97
+// ---------------------------------------------------------------------------
+//
+// DETTE ANNONCEE PAR `MODELE-CONCEPTUEL.md` ET ENFIN PORTEE. Une entite
+// `Message` figurait dans une premiere version du document, retiree faute de
+// parcours qui la mobilise, avec renvoi explicite a « un ticket propre, ou sa
+// regle principale devra etre posee ».
+//
+// LA REGLE PRINCIPALE : le message est PERSISTE AVANT toute tentative d'envoi
+// d'email. L'ordre est impose, pas preferable. Une panne du fournisseur ne doit
+// jamais faire perdre une demande client, meme logique que la trace d'envoi
+// d'ADR-008 ou la base dit « accepte » et jamais « recu ».
+//
+// AUCUN LIEN VERS UN COMPTE NI VERS UNE COMMANDE, ET C'EST DELIBERE. Le
+// formulaire est PUBLIC : personne n'est connecte, et rapprocher le message
+// d'un compte par l'adresse email inventerait une donnee que le visiteur n'a
+// pas fournie. Deux personnes peuvent partager une boite, et une adresse saisie
+// n'est pas une identite prouvee, invariant 2.
+//
+// LE CONTENU EST IMMUABLE. Seul `statut` change apres l'ecriture : l'exploitante
+// classe, elle ne reecrit pas ce qu'on lui a ecrit.
+model Message {
+  id    String @id @default(uuid())
+  nom   String
+  // Normalise a l'ecriture, comme `Commande.emailNormalise` : c'est ce qui rend
+  // deux messages de la meme personne rapprochables a l'oeil.
+  email String
+  sujet String
+  corps String
+
+  statut  StatutMessage @default(NOUVEAU)
+  // Horodatage du passage a LU, qui distingue « pas encore ouvert » de « ouvert
+  // et laisse de cote ». Sans lui, revenir a NOUVEAU effacerait l'information.
+  luA     DateTime?     @map("lu_a") @db.Timestamptz(3)
+  traiteA DateTime?     @map("traite_a") @db.Timestamptz(3)
+  creeA   DateTime      @default(now()) @map("cree_a") @db.Timestamptz(3)
+
+  // La liste d'administration lit par ce chemin, les nouveaux d'abord.
+  @@index([statut, creeA], map: "message_statut_cree_a")
+  // La purge de retention balaie par date, trois ans, referentiel CNIL 2021-131.
+  @@index([creeA], map: "message_cree_a")
+  @@map("message")
 }
