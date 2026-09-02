@@ -601,7 +601,18 @@ test.describe("rubrique Messages", () => {
      * `<details>` n'expose pas `group` de facon portable, mesure le 2 septembre
      * 2026 sur ce meme test, qui rendait zero.
      */
-    await expect(page.getByText("Lire le message")).toHaveCount(2);
+    await expect(
+      page
+        .locator("main ul li")
+        .filter({ hasText: MESSAGES_TEST.nouveau.sujet })
+        .getByText("Lire le message"),
+    ).toHaveCount(1);
+    await expect(
+      page
+        .locator("main ul li")
+        .filter({ hasText: MESSAGES_TEST.lu.sujet })
+        .getByText("Lire le message"),
+    ).toHaveCount(1);
 
     /*
      * LES GESTES DIFFERENT SELON LE STATUT, et c'est ce que deux messages dans
@@ -610,15 +621,31 @@ test.describe("rubrique Messages", () => {
      *
      * UN SEUL MESSAGE NE PROUVERAIT RIEN DE CELA : la table `GESTES` serait
      * exercee sur une seule de ses trois entrees.
+     *
+     * LES ASSERTIONS PORTENT SUR LA CARTE VISEE, jamais sur la page entiere.
+     * Un compte global cassait des qu'un autre message existait : le test de
+     * classement en cree un, et les trois projets Playwright partagent la base.
+     * Une CI rouge sur `mobile-390` seul l'a montre, donc de facon trompeuse.
      */
+    const carteNouveau = page
+      .locator("main ul li")
+      .filter({ hasText: MESSAGES_TEST.nouveau.sujet });
+    const carteLu = page
+      .locator("main ul li")
+      .filter({ hasText: MESSAGES_TEST.lu.sujet });
+
     await expect(
-      page.getByRole("button", { name: "Marquer comme lu" }),
+      carteNouveau.getByRole("button", { name: "Marquer comme lu" }),
     ).toHaveCount(1);
     await expect(
-      page.getByRole("button", { name: "Marquer comme traité" }),
+      carteNouveau.getByRole("button", { name: "Marquer comme traité" }),
+    ).toHaveCount(0);
+
+    await expect(
+      carteLu.getByRole("button", { name: "Marquer comme traité" }),
     ).toHaveCount(1);
     await expect(
-      page.getByRole("button", { name: "Remettre en non lu" }),
+      carteLu.getByRole("button", { name: "Remettre en non lu" }),
     ).toHaveCount(1);
   });
 
@@ -665,33 +692,62 @@ test.describe("rubrique Messages", () => {
    * changent pas apres un succes, et l'exploitante pouvait recliquer « marquer
    * comme lu » sur un message deja lu.
    *
-   * CE TEST EST LE SEUL DE CE FICHIER QUI ECRIT, et il vise DELIBEREMENT le
-   * message deja `LU` : le passer a `TRAITE` puis le laisser ainsi ne casse
-   * aucun autre test, la carte gardant un statut distinct de la premiere. Viser
-   * le message `NOUVEAU` le ferait passer `LU`, et les deux cartes proposeraient
-   * alors les memes gestes a l'execution suivante.
+   * IL PORTE SON PROPRE MESSAGE, ECRIT ET SUPPRIME PAR LUI, et cette
+   * precaution a coute une CI rouge avant d'etre prise.
+   *
+   * LES TROIS PROJETS PLAYWRIGHT PARTAGENT LA MEME BASE et tournent en
+   * PARALLELE. Une premiere version classait le message amorce : il passait
+   * `TRAITE` pour un projet pendant qu'un autre comptait encore ses gestes, et
+   * les deux echouaient sur `mobile-390` seulement, donc de facon trompeuse.
+   * C'est le motif « assertion qui suppose un ordre » applique aux projets et
+   * non aux transactions.
+   *
+   * LE MESSAGE EST CREE PAR LE FORMULAIRE PUBLIC, chemin reel : un `INSERT`
+   * direct depuis le test testerait une ligne qui n'existe dans aucun parcours.
+   * Son sujet porte l'identifiant du projet, donc les trois n'entrent jamais en
+   * collision.
    */
-  test("classer un message ferme son bloc de gestes", async ({ page }) => {
-    await page.goto("/administration/messages");
-
-    const carte = page
-      .locator("main ul li")
-      .filter({ hasText: MESSAGES_TEST.lu.sujet });
-
-    const traiter = carte.getByRole("button", { name: "Marquer comme traité" });
-    await expect(traiter).toBeEnabled();
-
-    await traiter.click();
+  test("classer un message ferme son bloc de gestes", async ({
+    page,
+  }, infos) => {
+    const sujet = `TEST Classement ${infos.project.name}`;
 
     /*
-     * LES DEUX BOUTONS SE DESACTIVENT, pas seulement celui qui a servi : l'etat
-     * affiche est desormais perime dans son ensemble, et proposer « remettre en
-     * non lu » sur un etat qu'on ne connait plus induirait en erreur.
+     * LE MESSAGE EST DEPOSE PAR LE FORMULAIRE PUBLIC, avec le delai minimum
+     * respecte : la page pose l'instant d'ouverture au rendu, et trois secondes
+     * doivent s'ecouler avant l'envoi, sans quoi la couche anti-robot ecarte la
+     * soumission en rendant un succes apparent.
      */
-    await expect(traiter).toBeDisabled();
-    await expect(
-      carte.getByRole("button", { name: "Remettre en non lu" }),
-    ).toBeDisabled();
+    await page.goto("/contact");
+    await page.getByLabel("Votre nom").fill("TEST Camille");
+    await page
+      .getByLabel("Votre adresse email")
+      .fill("e2e-classement@exemple.test");
+    await page.getByLabel("Sujet").fill(sujet);
+    await page
+      .getByLabel("Votre message")
+      .fill("Message de contrôle du classement, supprimé par le test.");
+
+    await page.waitForTimeout(3200);
+    await page.getByRole("button", { name: "Envoyer le message" }).click();
+    await expect(page.getByText(/Message bien reçu/)).toBeVisible();
+
+    await page.goto("/administration/messages");
+
+    const carte = page.locator("main ul li").filter({ hasText: sujet });
+
+    const marquer = carte.getByRole("button", { name: "Marquer comme lu" });
+    await expect(marquer).toBeEnabled();
+
+    await marquer.click();
+
+    /*
+     * LE BOUTON SE DESACTIVE, et c'est la correction du defaut : sans le
+     * drapeau `classe`, il resterait actif et un second clic reecrirait le meme
+     * statut en rendant `SUCCES`, sans qu'aucun retour ne dise que rien n'a
+     * change.
+     */
+    await expect(marquer).toBeDisabled();
 
     /*
      * LE MESSAGE DE RESULTAT DIT QUOI FAIRE, et non seulement que c'est fait :
@@ -714,7 +770,11 @@ test.describe("rubrique Messages", () => {
     const corps = page.getByText(MESSAGES_TEST.nouveau.corps);
     await expect(corps).toBeHidden();
 
-    await page.getByText("Lire le message").first().click();
+    await page
+      .locator("main ul li")
+      .filter({ hasText: MESSAGES_TEST.nouveau.sujet })
+      .getByText("Lire le message")
+      .click();
 
     await expect(corps).toBeVisible();
   });

@@ -546,10 +546,57 @@ async function poserFicheProduit(client: Client): Promise<void> {
  * echouerait sur une contrainte plutot que sur un test.
  */
 async function poserMessagesContact(client: Client): Promise<void> {
+  /*
+   * LES MESSAGES ENGENDRES PAR LES TESTS SONT EFFACES D'ABORD.
+   *
+   * Le test de classement depose un message par le formulaire public, ce qui
+   * est le chemin reel : sans ce nettoyage, il s'accumulerait a chaque
+   * execution, et le compte affiche par l'ecran finirait par derailler.
+   *
+   * LE FILTRE PORTE SUR LE SUJET ET NON SUR L'ADRESSE : c'est le sujet qui
+   * porte le nom du projet Playwright, donc le seul discriminant sur des
+   * messages engendres par trois projets en parallele.
+   */
   await client.query(
-    `INSERT INTO message (id, nom, email, sujet, corps, statut, cree_a)
-     VALUES ($1, $2, $3, $4, $5, 'NOUVEAU', now())
-     ON CONFLICT (id) DO NOTHING`,
+    `DELETE FROM message WHERE sujet LIKE 'TEST Classement %'`,
+  );
+
+  /*
+   * LE COMPTEUR DE CONTACT EST REMIS A ZERO, et ce n'est pas une commodite.
+   *
+   * Le plafond public est de CINQ envois par heure et par adresse. Le test de
+   * classement en fait UN par projet, donc trois par execution : une seconde
+   * execution dans l'heure atteint six et le sixieme est REFUSE. La CI part
+   * d'une base vierge et ne le verrait jamais, le poste de developpement si,
+   * au deuxieme lancement.
+   *
+   * C'est le motif « plafond de debit et suite e2e » deja rencontre sur ce
+   * depot avec la limitation de Better Auth. La parade est la meme : nettoyer
+   * le compteur a l'amorce plutot que d'attendre la fenetre.
+   *
+   * LE FILTRE NE VISE QUE LA CLE DE CONTACT, jamais celles de Better Auth :
+   * effacer ces dernieres masquerait un vrai defaut de limitation.
+   */
+  await client.query(`DELETE FROM rate_limit WHERE key LIKE 'contact|%'`);
+
+  /*
+   * `DO UPDATE` ET NON `DO NOTHING`, ET C'EST LA CORRECTION QUI COMPTE ICI.
+   *
+   * Le statut d'un message est ECRIT PAR LES TESTS eux-memes, contrairement aux
+   * autres amorces de ce fichier : `ON CONFLICT DO NOTHING` laissait donc en
+   * place l'etat de l'execution PRECEDENTE, un message classe `TRAITE` restant
+   * `TRAITE` pour toujours. Le garde-fou ci-dessous le rattrapait bien, mais en
+   * bloquant toute la preparation.
+   *
+   * C'est le motif « amorce partielle, symptome trompeur » de LS-160 dans sa
+   * variante mouvante : la ligne existe, elle est simplement dans le mauvais
+   * etat. Une amorce doit poser un etat, pas seulement garantir une existence.
+   */
+  await client.query(
+    `INSERT INTO message (id, nom, email, sujet, corps, statut, lu_a, traite_a, cree_a)
+     VALUES ($1, $2, $3, $4, $5, 'NOUVEAU', NULL, NULL, now())
+     ON CONFLICT (id) DO UPDATE
+       SET statut = 'NOUVEAU', lu_a = NULL, traite_a = NULL`,
     [
       MESSAGES_TEST.nouveau.id,
       MESSAGES_TEST.nouveau.nom,
@@ -560,9 +607,10 @@ async function poserMessagesContact(client: Client): Promise<void> {
   );
 
   await client.query(
-    `INSERT INTO message (id, nom, email, sujet, corps, statut, lu_a, cree_a)
-     VALUES ($1, $2, $3, $4, $5, 'LU', now(), now() - interval '1 day')
-     ON CONFLICT (id) DO NOTHING`,
+    `INSERT INTO message (id, nom, email, sujet, corps, statut, lu_a, traite_a, cree_a)
+     VALUES ($1, $2, $3, $4, $5, 'LU', now(), NULL, now() - interval '1 day')
+     ON CONFLICT (id) DO UPDATE
+       SET statut = 'LU', lu_a = now(), traite_a = NULL`,
     [
       MESSAGES_TEST.lu.id,
       MESSAGES_TEST.lu.nom,
