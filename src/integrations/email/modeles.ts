@@ -112,6 +112,43 @@ const RENDUS: Record<ModeleEmail, (message: MessageEmail) => MessageRendu> = {
       SIGNATURE,
     ].join("\n"),
   }),
+
+  /**
+   * Notification d'un message de contact, LS-97.
+   *
+   * ELLE S'ADRESSE A L'EXPLOITANTE ET NON AU VISITEUR, comme l'alerte de
+   * connexion ci-dessus. Le visiteur, lui, ne recoit rien : son accuse de
+   * reception est l'ecran, qui confirme l'enregistrement.
+   *
+   * LE CORPS DU MESSAGE N'Y FIGURE PAS, precaution 3 d'ADR-008 : « le contenu
+   * du message n'est pas stocke, seulement son type et son destinataire ». Les
+   * variables d'un modele traversent `EnvoiEnAttente.variables`, donc y recopier
+   * le corps le stockerait une seconde fois, dans une table dont T9 dit qu'elle
+   * est une file de travail et non une trace.
+   *
+   * ELLE PORTE DONC UN RENVOI ET NON UN CONTENU. Le message se lit dans
+   * l'administration, ou il vit deja et ou son statut se met a jour.
+   *
+   * LE SUJET Y FIGURE, ET C'EST DELIBERE : sans lui, l'exploitante ne peut pas
+   * distinguer une demande urgente d'une question ordinaire sans ouvrir
+   * l'ecran. C'est un champ court, saisi pour etre lu, la ou le corps peut
+   * porter n'importe quoi.
+   */
+  "message-contact-recu": (message) => ({
+    objet: `Nouveau message de contact : ${exiger(message, "sujet")}`,
+    texte: [
+      "Bonjour,",
+      "",
+      `${exiger(message, "nom")} vient d'écrire par le formulaire de contact.`,
+      "",
+      `Sujet : ${exiger(message, "sujet")}`,
+      "",
+      "Le message se lit dans l'administration, rubrique Messages, où il",
+      "attend d'être traité.",
+      "",
+      SIGNATURE,
+    ].join("\n"),
+  }),
 };
 
 /**

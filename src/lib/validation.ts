@@ -427,6 +427,37 @@ export const schemaSaisieExpedition = z
     }
   });
 
+/**
+ * Message de contact, LS-97. Entree PUBLIQUE, donc non fiable par definition.
+ *
+ * LE CORPS EST BORNE A 4000 CARACTERES, invariant 7. Sans borne, un envoi
+ * automatise remplirait la table en un appel. Le plafond est genereux : une
+ * demande detaillee, avec des references de bijoux et un contexte, tient
+ * largement dedans, et la borne ne doit pas tronquer une vraie question.
+ *
+ * L'EMAIL EST NORMALISE, comme celui de la commande : c'est ce qui rend deux
+ * messages de la meme personne rapprochables a l'oeil, quelle que soit la casse
+ * de saisie. La normalisation n'est PAS une identite prouvee pour autant,
+ * invariant 2 : ce champ n'autorise rien.
+ *
+ * `schemaNomClient` EST REUTILISE et non recopie : il porte deja le refus des
+ * chaines reduites a des caracteres invisibles, defaut mesure le 25 aout 2026.
+ */
+export const schemaSaisieMessage = z.strictObject({
+  nom: schemaNomClient,
+  email: schemaEmailClient,
+  sujet: champAdresse(150),
+  corps: z
+    .string()
+    .trim()
+    .min(1, "Le message est obligatoire.")
+    .max(4000, "Un message de 4000 caractères au plus est attendu.")
+    .refine(
+      (valeur) => /[\p{L}\p{N}]/u.test(valeur),
+      "Le message doit comporter du texte.",
+    ),
+});
+
 /** Coordonnees du client, etape 1 du tunnel. */
 export const schemaCoordonnees = z.strictObject({
   nomClient: schemaNomClient,
