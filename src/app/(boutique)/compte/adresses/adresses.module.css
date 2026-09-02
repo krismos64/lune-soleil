@@ -43,9 +43,20 @@
   letter-spacing: 0.04em;
 }
 
+/*
+ * `overflow-wrap: anywhere` PARCE QUE LE SCHEMA AUTORISE 60 CARACTERES SANS
+ * ESPACE. A 320 px, la largeur utile dans `.adresse` est de 254 px : un libelle
+ * ou une reference de residence sans espace deborderait. L'email voisin a recu
+ * ce traitement en LS-95 pour la meme raison, le carnet ne l'avait pas. Releve
+ * par la revue frontend.
+ *
+ * `anywhere` ET NON `break-word` : le second ne coupe qu'en dernier recours et
+ * laisse la boite reserver la largeur du mot entier dans un contexte flex.
+ */
 .libelle {
   margin: 0 0 var(--ls-space-2);
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 /*
@@ -56,6 +67,8 @@
   font-style: normal;
   line-height: 1.6;
   margin-bottom: var(--ls-space-3);
+  /* Meme motif que `.libelle` : `ligne1` accepte 120 caracteres. */
+  overflow-wrap: anywhere;
 }
 
 /*
@@ -69,11 +82,18 @@
   gap: var(--ls-space-2);
 }
 
+/*
+ * `min-width: 0` SUR L'ITEM FLEX, sans quoi il garde `min-width: auto` et ne
+ * peut pas retrecir sous la largeur de son contenu : la question « Supprimer
+ * definitivement ? » forcerait alors la ligne a deborder a 320 px, malgre le
+ * `flex-wrap` des deux niveaux. Signale par la revue frontend.
+ */
 .confirmation {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--ls-space-2);
+  min-width: 0;
 }
 
 .actionSecondaire {

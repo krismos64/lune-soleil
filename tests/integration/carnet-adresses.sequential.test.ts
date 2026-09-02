@@ -454,3 +454,101 @@ describe("critere 4, le carnet ne touche aucune commande", () => {
     expect(rows[0].adresse_livraison.ville).toBe("Pau");
   });
 });
+
+describe("bascules concurrentes, deux onglets", () => {
+  /*
+   * LE DEFAUT QUE CE BLOC FERME, mesure 12 fois sur 12 par
+   * `ls-critical-reviewer` avant correction : deux bascules vers deux adresses
+   * DIFFERENTES en faisaient echouer une, sur `adresse_defaut_unique`.
+   *
+   * LA MECANIQUE, en `READ COMMITTED` :
+   *
+   *   T1  retire le drapeau               -> 1 ligne
+   *   T2  attend le verrou de ligne, puis RE-EVALUE son predicat sur la
+   *       version commitee, et ne trouve plus rien a retirer -> 0 ligne
+   *   T2  pose son drapeau                -> 1 ligne
+   *   le second a commiter leve l'unicite
+   *
+   * C'est le motif « lecture avant verrou », deja en fiche. L'ordre des
+   * ecritures ferme le conflit INTRA-transaction, jamais celui entre deux
+   * transactions.
+   *
+   * LA DONNEE RESTAIT CORRECTE, le perdant etant annule. Ce qui cassait est
+   * l'USAGE : le client lisait « operation momentanement indisponible » sur un
+   * geste banal, et une ligne `error` partait au journal.
+   *
+   * L'ASSERTION NE NOMME PAS LE GAGNANT, motif « assertion qui suppose un
+   * ordre » : elle compte. Nommer le vainqueur d'une course rend le test
+   * instable sans rien prouver de plus.
+   */
+  it("les deux reussissent, et il reste exactement un defaut", async () => {
+    const moi = await creerCompte(EMAIL);
+    await creerAdresseEnBase(moi, "A", true);
+    const b = await creerAdresseEnBase(moi, "B");
+    const c = await creerAdresseEnBase(moi, "C");
+
+    const issues = await Promise.all([
+      choisirAdresseParDefaut(b, moi),
+      choisirAdresseParDefaut(c, moi),
+    ]);
+
+    // LES DEUX RENDENT `FAIT` : dernier clic gagnant, ce qu'un client attend de
+    // deux onglets. Avant correction, l'un des deux levait.
+    expect(issues).toEqual([{ etat: "FAIT" }, { etat: "FAIT" }]);
+
+    const { rows } = await client.query(
+      `SELECT id FROM adresse_carnet WHERE utilisateur_id = $1 AND est_par_defaut`,
+      [moi],
+    );
+
+    // EXACTEMENT UN, jamais zero ni deux. L'identite du gagnant depend de
+    // l'ordonnancement et n'est pas assertee.
+    expect(rows).toHaveLength(1);
+    expect([b, c]).toContain(rows[0].id);
+  });
+
+  it("tient sur dix courses consecutives", async () => {
+    /*
+     * UNE SEULE COURSE NE PROUVE RIEN : l'ordonnancement peut la faire tomber
+     * du bon cote par chance. La revue a mesure le defaut sur douze passages.
+     */
+    const moi = await creerCompte(EMAIL);
+    await creerAdresseEnBase(moi, "A", true);
+    const b = await creerAdresseEnBase(moi, "B");
+    const c = await creerAdresseEnBase(moi, "C");
+
+    for (let course = 0; course < 10; course += 1) {
+      const issues = await Promise.all([
+        choisirAdresseParDefaut(b, moi),
+        choisirAdresseParDefaut(c, moi),
+      ]);
+
+      expect(issues, `course ${course}`).toEqual([
+        { etat: "FAIT" },
+        { etat: "FAIT" },
+      ]);
+
+      const { rows } = await client.query(
+        `SELECT id FROM adresse_carnet WHERE utilisateur_id = $1 AND est_par_defaut`,
+        [moi],
+      );
+      expect(rows, `course ${course}`).toHaveLength(1);
+    }
+  });
+
+  it("un double clic sur la MEME adresse reste sans effet de bord", async () => {
+    // Le cas le plus frequent en pratique, et le plus benin : les deux visent
+    // la meme cible, donc aucun ne peut perdre au sens de l'affichage.
+    const moi = await creerCompte(EMAIL);
+    await creerAdresseEnBase(moi, "A", true);
+    const b = await creerAdresseEnBase(moi, "B");
+
+    const issues = await Promise.all([
+      choisirAdresseParDefaut(b, moi),
+      choisirAdresseParDefaut(b, moi),
+    ]);
+
+    expect(issues).toEqual([{ etat: "FAIT" }, { etat: "FAIT" }]);
+    expect(await lireDefaut(moi)).toBe(b);
+  });
+});

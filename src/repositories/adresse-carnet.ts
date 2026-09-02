@@ -187,3 +187,46 @@ export async function poserDefautSurAdresse(
 
   return count;
 }
+
+/**
+ * Verrouille les adresses d'un compte pour la duree de la transaction. LS-59.
+ *
+ * CE QU'IL SERIALISE, ET LE DEFAUT MESURE QU'IL FERME. Sans lui, deux bascules
+ * concurrentes vers deux adresses differentes echouent l'une des deux, mesure
+ * 12 fois sur 12 par `ls-critical-reviewer` sur PostgreSQL 18.4 :
+ *
+ *   T1  UPDATE ... est_par_defaut = false WHERE ... AND est_par_defaut  -> 1
+ *   T2  le meme UPDATE                                                 -> 0
+ *   T2  pose le drapeau sur sa cible                                   -> 1
+ *   le second a commiter leve `adresse_defaut_unique`
+ *
+ * En `READ COMMITTED`, T2 attend le verrou de ligne de T1 puis **re-evalue son
+ * predicat** sur la version commitee : il ne trouve plus rien a retirer. C'est
+ * le motif « lecture avant verrou », deja en fiche sur ce projet.
+ *
+ * LA DONNEE RESTAIT CORRECTE, le perdant etant integralement annule. Ce qui
+ * cassait est l'USAGE : un client qui bascule depuis deux onglets, ou dont le
+ * double clic produit deux requetes qui se recouvrent, lisait « operation
+ * momentanement indisponible » sur un geste banal, et une ligne `error` partait
+ * au journal.
+ *
+ * AVEC LE VERROU, les deux bascules se serialisent : la seconde ecrase la
+ * premiere, les deux rendent `FAIT`, dernier clic gagnant. C'est ce qu'un
+ * client attend de deux onglets.
+ *
+ * AUCUN CYCLE D'INTERBLOCAGE POSSIBLE : ce chemin verrouille `adresse_carnet`
+ * seul, et aucun autre chemin du depot n'ecrit sur cette table.
+ */
+export async function verrouillerCarnet(
+  client: ClientBase,
+  utilisateurId: string,
+): Promise<void> {
+  /*
+   * `$queryRaw` PARCE QUE PRISMA NE SAIT PAS EXPRIMER `FOR UPDATE`, meme motif
+   * que le verrou de facture d'`avoir.ts` et celui de la suppression de compte.
+   * Le parametre est lie, jamais interpole.
+   */
+  await client.$queryRaw`
+    SELECT id FROM adresse_carnet WHERE utilisateur_id = ${utilisateurId} FOR UPDATE
+  `;
+}
