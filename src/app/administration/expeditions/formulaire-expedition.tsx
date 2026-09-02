@@ -21,7 +21,7 @@
 import { useRef, useState, useTransition } from "react";
 
 import type { ModeLivraison } from "@/generated/prisma/enums";
-import { LIBELLES_LIVRAISON, LIBELLES_STATUT } from "../commandes/affichage";
+import { LIBELLES_LIVRAISON, LIBELLES_STATUT } from "@/lib/affichage-commande";
 import { expedier } from "./actions";
 import styles from "./expeditions.module.css";
 

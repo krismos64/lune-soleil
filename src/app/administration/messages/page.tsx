@@ -36,7 +36,7 @@ import {
 } from "@/services/autorisation";
 import type { StatutMessage } from "@/generated/prisma/enums";
 import { listerMessages } from "@/services/message-contact";
-import { formaterDate } from "../commandes/affichage";
+import { formaterDate } from "@/lib/affichage-commande";
 import { ClassementMessage } from "./classement-message";
 import styles from "./messages.module.css";
 

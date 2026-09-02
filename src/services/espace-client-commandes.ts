@@ -24,7 +24,9 @@
  */
 import { prisma } from "@/lib/prisma";
 import {
+  lireAvoirDuClient,
   lireCommandeDuClient,
+  lireFactureDuClient,
   listerCommandesDuClient,
   type CommandeDuClient,
   type DetailCommandeDuClient,
@@ -88,12 +90,7 @@ export async function autoriserMaFacture(
   commandeId: string,
   utilisateurId: string,
 ): Promise<AccesDocumentClient> {
-  const commande = await prisma.commande.findFirst({
-    where: { id: commandeId, utilisateurId, dissocieA: null },
-    select: { facture: { select: { numero: true, cheminPdf: true } } },
-  });
-
-  const facture = commande?.facture;
+  const facture = await lireFactureDuClient(prisma, commandeId, utilisateurId);
 
   if (!facture?.cheminPdf) {
     return { statut: "REFUSE" };
@@ -120,15 +117,7 @@ export async function autoriserMonAvoir(
   avoirId: string,
   utilisateurId: string,
 ): Promise<AccesDocumentClient> {
-  const avoir = await prisma.avoir.findFirst({
-    where: {
-      id: avoirId,
-      facture: {
-        commande: { utilisateurId, dissocieA: null },
-      },
-    },
-    select: { numero: true, cheminPdf: true },
-  });
+  const avoir = await lireAvoirDuClient(prisma, avoirId, utilisateurId);
 
   if (!avoir?.cheminPdf) {
     return { statut: "REFUSE" };

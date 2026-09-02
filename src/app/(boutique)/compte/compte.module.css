@@ -342,3 +342,89 @@
   background: var(--ls-surface);
   color: var(--ls-error);
 }
+
+/*
+ * Historique des commandes, LS-57.
+ *
+ * AUCUN TABLEAU, `frontend-design.md` l'interdit dans la boutique publique et
+ * une liste de commandes en est le candidat le plus tentant. Des cartes
+ * empilees se lisent a 320 px sans defilement horizontal.
+ */
+.commandes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-4);
+}
+
+.commande {
+  padding: var(--ls-space-4);
+  border: 1px solid var(--ls-surface-sand);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface);
+}
+
+/*
+ * `--ls-primary` SUR `--ls-surface` : 7,49:1. Le doré profond serait a 4,72:1,
+ * conforme mais moins lisible sur un lien qui porte l'action principale de la
+ * carte. Aucun jeton refusé par C31 n'entre ici, le fond etant blanc et non
+ * sable.
+ */
+.lienCommande {
+  display: inline-block;
+  margin-bottom: var(--ls-space-2);
+  color: var(--ls-primary);
+  font-weight: 600;
+  /* LE SOULIGNEMENT EST CONSERVE : un lien qui ne se distingue que par sa
+     couleur est invisible a qui ne percoit pas cette difference. */
+  text-decoration: underline;
+}
+
+.lienCommande:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+.articles {
+  list-style: none;
+  margin: 0 0 var(--ls-space-4);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-3);
+}
+
+.article {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-1);
+  padding-bottom: var(--ls-space-3);
+  border-bottom: 1px solid var(--ls-surface-sand);
+  line-height: 1.5;
+}
+
+/*
+ * `--ls-text-muted` SUR `--ls-surface` : 4,86:1, conforme. La meme couleur
+ * tomberait a 4,35:1 sur `--ls-surface-sand`, une des trois paires refusees du
+ * projet, C31. Ce bloc vit sur du blanc, jamais sur du sable.
+ */
+.variante {
+  color: var(--ls-text-muted);
+  font-size: 0.9375rem;
+}
+
+.quantite {
+  color: var(--ls-text-muted);
+  font-size: 0.9375rem;
+}
+
+/*
+ * `address` porte un italique par defaut dans la plupart des navigateurs, ce
+ * qui nuit a la lisibilite d'une adresse postale.
+ */
+.adresse {
+  font-style: normal;
+  line-height: 1.6;
+}

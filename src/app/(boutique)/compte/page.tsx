@@ -200,6 +200,25 @@ export default async function PageCompte({
        * aucun moyen de fermer sa session, sinon supprimer son compte. C'est un
        * etat non nominal absent, pas un defaut de rendu.
        */}
+      {/*
+       * LE LIEN VERS L'HISTORIQUE, LS-57. Sans lui, `/compte/commandes` serait
+       * inatteignable autrement qu'en saisissant l'URL : c'est le defaut exact
+       * de LS-162 cote administration, et celui de `/compte/verification`
+       * trouve par la revue frontend de LS-54.
+       *
+       * IL EST TOUJOURS PRESENT, meme sans commande : l'ecran vide dit ce qu'il
+       * faut faire, et le cacher ferait croire que la fonction n'existe pas.
+       */}
+      <section className={styles.section} aria-labelledby="titre-commandes">
+        <h2 id="titre-commandes">Mes commandes</h2>
+        <p className={styles.texte}>
+          Retrouvez vos commandes, leur suivi et vos factures.
+        </p>
+        <Link href="/compte/commandes" className={styles.lien}>
+          Voir mes commandes
+        </Link>
+      </section>
+
       <section className={styles.section} aria-labelledby="titre-session">
         <h2 id="titre-session">Session</h2>
         <p className={styles.texte}>

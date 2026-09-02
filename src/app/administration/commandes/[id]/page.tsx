@@ -31,7 +31,7 @@ import {
   LIBELLES_PAIEMENT,
   LIBELLES_STATUT,
   traduireStatut,
-} from "../affichage";
+} from "@/lib/affichage-commande";
 import { DocumentFacture } from "./document-facture";
 import { Remboursement } from "./remboursement";
 import { TransitionsCommande } from "./transitions";

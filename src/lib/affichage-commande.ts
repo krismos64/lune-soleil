@@ -1,11 +1,24 @@
 /**
- * Mise en forme de l'administration des commandes, LS-121.
+ * Mise en forme d'une commande, LS-121. Partage par l'administration et la
+ * boutique.
  *
  * CE MODULE NE DECIDE RIEN ET NE LIT RIEN : il traduit des valeurs en texte
  * lisible. Il vit a part parce qu'une page Next.js ne doit exporter que ses
  * conventions, `metadata`, `dynamic` et son composant : y ajouter des fonctions
  * utilitaires les rend inatteignables depuis le detail et brouille le contrat
  * du fichier de route.
+ *
+ * DEPLACE DE `app/administration/commandes/` VERS `lib/` PAR LS-57, et ce
+ * deplacement est ce qui evite une source seconde. L'espace client affiche les
+ * MEMES statuts et les MEMES modes de livraison : les recopier aurait produit
+ * deux tables a garder d'accord, dont la divergence se serait vue le jour ou un
+ * statut est ajoute, cote client seulement. Quatre fichiers d'administration
+ * l'importaient deja par des chemins relatifs remontants, `../commandes/
+ * affichage`, ce qui signalait qu'il n'etait plus a sa place.
+ *
+ * Un enum ajoute a `StatutCommande` fait echouer le `type-check` sur
+ * `LIBELLES_STATUT`, `Record<StatutCommande, string>` etant exhaustif : c'est
+ * ce qui empeche un statut d'apparaitre brut a l'ecran, piege deja rencontre.
  */
 import type { StatutCommande } from "@/generated/prisma/enums";
 
