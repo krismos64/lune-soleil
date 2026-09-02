@@ -41,6 +41,16 @@ import {
 const ECRANS_PUBLICS = [
   { chemin: "/compte/inscription", titre: "Créer un compte" },
   { chemin: "/compte/connexion", titre: "Se connecter" },
+  { chemin: "/compte/mot-de-passe-oublie", titre: "Mot de passe oublié" },
+  /*
+   * SANS JETON, LS-55 : la page rend son ecran de refus, qui est un etat
+   * NOMINAL et non une erreur. On y arrive en ouvrant un lien expire ou deja
+   * consomme, cas frequent puisque le jeton ne sert qu'une fois.
+   */
+  {
+    chemin: "/compte/nouveau-mot-de-passe",
+    titre: "Ce lien n'est plus valable",
+  },
 ] as const;
 
 test.describe("les ecrans d'authentification sont servis", () => {
@@ -122,6 +132,58 @@ test.describe("les ecrans s'atteignent sans saisir d'URL", () => {
       .getByRole("link", { name: "Se connecter" })
       .click();
     await expect(page).toHaveURL(/\/compte\/connexion$/);
+  });
+});
+
+/**
+ * Parcours « mot de passe oublie », LS-55.
+ *
+ * LE FORMULAIRE N'EST PAS SOUMIS AVEC UNE VRAIE ADRESSE : `/request-password-reset`
+ * est plafonne a trois appels par minute et par adresse IP, ADR-027, et ces
+ * tests sont rejoues sur trois largeurs. Le comportement de la demande, message
+ * identique que l'adresse existe ou non, est prouve en integration ou il ne
+ * traverse pas le reseau.
+ */
+test.describe("le parcours de mot de passe oublie s'atteint sans URL", () => {
+  test("la connexion mene a la demande de reinitialisation", async ({
+    page,
+  }) => {
+    await page.goto("/compte/connexion");
+
+    await page.getByRole("link", { name: "Mot de passe oublié ?" }).click();
+
+    await expect(page).toHaveURL(/\/compte\/mot-de-passe-oublie$/);
+    await expect(
+      page.getByRole("heading", { name: "Mot de passe oublié", level: 1 }),
+    ).toBeVisible();
+  });
+
+  test("un lien sans jeton propose d'en redemander un", async ({ page }) => {
+    await page.goto("/compte/nouveau-mot-de-passe");
+
+    /*
+     * LE CHEMIN DE SORTIE EST CE QUI COMPTE. Un ecran de refus sans issue
+     * laisse la personne bloquee avec un lien mort et aucune idee de la suite.
+     */
+    await page.getByRole("link", { name: "Demander un nouveau lien" }).click();
+    await expect(page).toHaveURL(/\/compte\/mot-de-passe-oublie$/);
+  });
+
+  test("un jeton invalide rend le meme refus qu'un jeton absent", async ({
+    page,
+  }) => {
+    await page.goto("/compte/nouveau-mot-de-passe?error=INVALID_TOKEN");
+
+    await expect(
+      page.getByRole("heading", {
+        name: "Ce lien n'est plus valable",
+        level: 1,
+      }),
+    ).toBeVisible();
+
+    // AUCUN CHAMP DE SAISIE : proposer le formulaire puis refuser a la
+    // soumission ferait choisir un mot de passe pour rien.
+    await expect(page.locator("input[type=password]")).toHaveCount(0);
   });
 });
 

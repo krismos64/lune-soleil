@@ -365,6 +365,27 @@ export function creerAuth(
       requireEmailVerification: false,
 
       /**
+       * TOUTE SESSION TOMBE A LA REINITIALISATION, LS-55 critere 3.
+       *
+       * LE SCENARIO QUE CELA COUVRE EST CELUI D'UN COMPTE COMPROMIS : un intrus
+       * y est connecte, le proprietaire reprend la main par « mot de passe
+       * oublie ». Sans ce reglage, la session de l'intrus survivrait jusqu'a
+       * son expiration naturelle, vingt-quatre heures, et la manœuvre de
+       * reprise ne mettrait dehors personne. Le mot de passe serait change,
+       * l'acces resterait ouvert.
+       *
+       * MESURE AVANT CORRECTION, sur base ephemere : la session ouverte avant
+       * la reinitialisation restait valide apres. Le defaut etait entier depuis
+       * LS-70, et aucun test ne le voyait.
+       *
+       * `deleteUserSessions` supprime TOUTES les sessions du compte, celle qui
+       * demande comprise, verifie via Context7 sur la version 1.6.23. Le client
+       * qui vient de choisir son mot de passe se reconnecte donc : c'est le
+       * comportement voulu, une reinitialisation n'authentifie pas.
+       */
+      revokeSessionsOnPasswordReset: true,
+
+      /**
        * LA CLE S'APPELLE `lien` ET NON `url`, LS-54.
        *
        * Better Auth nomme `url` le parametre de son rappel ; les modeles de
