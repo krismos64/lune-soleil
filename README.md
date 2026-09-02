@@ -23,18 +23,21 @@ la phase 2.
 | 2, catalogue, médias et stock multicanal | LS-3 | en cours, treize stories ouvertes. LS-84, LS-146 et LS-162 livrées le 2 septembre |
 | 3, panier, réservation, paiement et commandes | LS-4 | LS-114 à LS-121 et LS-43 livrées, **porte de sortie franchie**, deux stories ouvertes |
 | 4, factures, avoirs, emails, expédition et contact | LS-5 | **presque terminée** : onze stories closes, dont LS-130, LS-97, LS-154 et LS-82 le 2 septembre. Quatre ouvertes, dont **trois demandent un arbitrage ou un compte externe** : LS-33 commande toute la phase 5, LS-131 attend Mondial Relay |
+| 4bis, espace client, avis et carnet d'adresses | LS-36 | **ouverte le 2 septembre** : LS-54 et LS-55 livrées, socle d'authentification en place. Neuf ouvertes, dont LS-58, LS-61 et LS-77 qui attendent LS-33 et Mondial Relay |
 | 5, rétractation, conformité et protection des données | LS-6 | découpée le 27 août 2026, cinq stories ouvertes |
 | 6, durcissement, exploitation et ouverture | LS-7 | découpée le 27 août 2026, douze stories ouvertes |
 
-Comptes **relevés dans Jira** le 2 septembre 2026 après la clôture de LS-82 et
-LS-155, jamais recopiés de mémoire :
+Comptes **relevés dans Jira** le 2 septembre 2026 après la fusion de LS-54 et
+LS-55, jamais recopiés de mémoire :
 un chiffre écrit à la main se périme sans bruit, et le tableau annonçait encore
 l'état du 27 août avant d'être repris le 1er septembre.
 
-**90 tickets terminés sur 163, soit 55 %.** Deux tickets ont été créés le
+**92 tickets terminés sur 164, soit 56 %.** Trois tickets ont été créés le
 2 septembre en livrant : **LS-162**, la navigation de l'administration, aucun
 écran n'y renvoyant vers un autre ; **LS-163**, les listes qui plafonnent à cent
-sans le dire, ce qui rend faux le compte qu'elles affichent.
+sans le dire, ce qui rend faux le compte qu'elles affichent ; **LS-164**, le
+message de suppression qui réclame une confirmation d'identité sans qu'aucun
+écran client ne la permette, relevé par la revue frontend de LS-54.
 
 Les phases 4, 5 et 6 n'avaient jamais été découpées : LS-6 ne portait aucune
 story et LS-7 en portait deux pour douze sujets annoncés. Quinze stories ont été
