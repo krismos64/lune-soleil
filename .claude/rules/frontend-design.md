@@ -2,7 +2,7 @@
 paths:
   - "src/app/**/*.{ts,tsx}"
   - "src/components/**/*.{ts,tsx}"
-  - "src/styles/**/*.css"
+  - "src/**/*.css"
 ---
 
 # Design et accessibilité
