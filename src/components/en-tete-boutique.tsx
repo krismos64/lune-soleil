@@ -12,10 +12,11 @@
  * de faire ses courses.
  */
 import Link from "next/link";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 import { NOM_COOKIE_PANIER, decoderPanier } from "@/lib/panier-cookie";
 import { compterArticles } from "@/services/panier";
+import { lireIdentite } from "@/services/autorisation";
 import styles from "./en-tete-boutique.module.css";
 
 /**
@@ -47,6 +48,19 @@ export async function EnTeteBoutique() {
   const articles = compterArticles(
     decoderPanier(magasin.get(NOM_COOKIE_PANIER)?.value),
   );
+
+  /*
+   * L'ETAT DE SESSION SERT A AFFICHER, JAMAIS A AUTORISER, invariant 2. Cet
+   * en-tete choisit un libelle et une destination ; chaque page protegee
+   * revérifie la session de son cote, et `/compte` redirige toute seule.
+   *
+   * LE LIEN EXISTE PARCE QUE LES ECRANS SANS CHEMIN SONT LE DEFAUT DE LS-162 :
+   * huit ecrans d'administration ont vecu sans qu'aucun ne renvoie vers un
+   * autre, invisible parce que les tests atteignaient leur cible par une URL en
+   * dur. Livrer inscription et connexion sans entree ici aurait rejoue
+   * exactement cela cote boutique.
+   */
+  const identite = await lireIdentite(await headers());
 
   return (
     <header className={styles.entete}>
@@ -92,6 +106,20 @@ export async function EnTeteBoutique() {
          * « Panier » seul ne dirait pas a qui ecoute combien de pieces il
          * contient.
          */}
+        {/*
+         * DEUX LIBELLES, DEUX DESTINATIONS, ET LE TEXTE DIT LEQUEL. Un lien
+         * « Mon compte » qui mene au formulaire de connexion se lit comme une
+         * panne ; annoncer « Se connecter » a qui l'est deja se lit comme une
+         * deconnexion. Le nom accessible suit le meme texte, sans `aria-label`
+         * qui le contredirait.
+         */}
+        <Link
+          href={identite ? "/compte" : "/compte/connexion"}
+          className={styles.compte}
+        >
+          {identite ? "Mon compte" : "Se connecter"}
+        </Link>
+
         <Link
           href="/panier"
           className={styles.panier}

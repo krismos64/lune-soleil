@@ -74,7 +74,14 @@ export function FormulaireSuppressionCompte({
         return;
 
       case "SESSION_ABSENTE":
-        window.location.href = "/administration/connexion";
+        /*
+         * VERS LA CONNEXION CLIENT DEPUIS LS-54, second des deux chemins
+         * corriges ensemble. Celui-ci se declenche quand la session expire
+         * PENDANT que le formulaire est ouvert, cas plus frequent qu'il n'y
+         * parait sur un ecran ou l'on hesite. Corriger la page sans lui aurait
+         * laisse un client renvoye vers l'administration au pire moment.
+         */
+        window.location.href = "/compte/connexion";
         return;
 
       case "REFUSEE":

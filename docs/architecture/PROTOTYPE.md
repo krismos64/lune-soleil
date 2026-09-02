@@ -186,7 +186,7 @@ confirmation de l'exploitante avant toute publication d'origine.
 prénom réel sur l'écran de connexion de l'administration. Sans objet dans le
 produit, qui utilisera Better Auth et une passkey, ADR-021.
 
-## Six écarts relevés, et ce qu'ils deviennent
+## Sept écarts relevés, et ce qu'ils deviennent
 
 Aucun ne remet en cause la direction visuelle. Ils sont tracés pour ne pas être
 recopiés tels quels au moment d'écrire l'interface.
@@ -199,6 +199,7 @@ recopiés tels quels au moment d'écrire l'interface.
 | Le récapitulatif du tunnel n'affiche pas l'adresse de livraison saisie | **aucun texte ne l'impose**, vérifié le 25 août 2026 : ni L221-14, ni L221-5, ni L111-1. L'affichage est retenu par ergonomie et non par obligation, voir `legal.md` | LS-86, puis LS-115 |
 | L'éditeur propose cinq sections dont « Dimensions » | ADR-026 en prévoit quatre, la dimension appartient à `Variante.dimensions` | LS-87, **résolu le 14 août 2026 avec LS-100** |
 | Le gris `#7A6A5D` à 4,35:1 sur les descriptions de catégories, les libellés numérotés et les liens du pied de page, **relevé le 19 août 2026** | WCAG 2.2 AA, seuil de 4,5:1 pour du texte courant | LS-122, ou LS-84 élargie |
+| L'espace client vit sur `/espace-client`, avec un formulaire de connexion **intégré à la page**, **relevé le 2 septembre 2026** | le dépôt, qui sert `/compte` depuis LS-95 et porte deux écrans distincts depuis LS-54. Le prototype a raison sur le **principe**, un écran de connexion propre aux clients, et le chemin seul diffère | résolu par LS-54 |
 
 **L'écart sur les sections de l'éditeur** était déjà connu : la description de
 LS-76 le signalait comme « tâche et non décision, hors de cette story ». Il
