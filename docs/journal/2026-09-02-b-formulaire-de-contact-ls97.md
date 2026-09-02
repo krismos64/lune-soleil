@@ -138,6 +138,41 @@ la table `GESTES` ne serait exercée que sur une de ses trois entrées.
 C'est la leçon directe de la session A, appliquée avant que le défaut n'existe
 plutôt qu'après.
 
+## Une CI rouge, et le symptôme désignait le mauvais coupable
+
+Le test de classement, ajouté sur relevé de la revue, **a fait rougir la CI sur
+`mobile-390` seulement**. Un projet sur trois, ce qui pousse à chercher une
+particularité de largeur qui n'existe pas.
+
+**La cause est que les trois projets Playwright partagent la base et tournent en
+parallèle.** Le test classait le message amorcé : il passait `TRAITE` pour un
+projet pendant qu'un autre comptait encore ses gestes.
+
+C'est « assertion qui suppose un ordre » appliqué aux **projets** et non aux
+transactions, et j'avais pourtant écrit la règle deux heures plus tôt dans le
+fichier de contact : « ce fichier ne soumet jamais le formulaire, un envoi
+réussi écrirait un message que rien ne nettoie ». Je l'ai violée sur l'autre
+fichier.
+
+Trois corrections, dont deux vont au-delà du symptôme :
+
+- **le test crée sa propre donnée**, avec le nom du projet dans le sujet
+- **les assertions de comptage portent sur la carte visée**, jamais sur la page
+  entière : un compte global casse dès qu'un message supplémentaire existe
+- **l'amorce passe de `DO NOTHING` à `DO UPDATE`.** C'est la correction de fond :
+  le statut d'un message est **écrit par les tests**, contrairement aux autres
+  amorces de ce fichier, donc `DO NOTHING` laissait l'état de l'exécution
+  précédente. Une amorce doit poser un **état**, pas garantir une existence
+
+**Le plafond de débit se retournait aussi contre le test.** Cinq envois par heure
+et par adresse, trois consommés par exécution : une seconde exécution dans
+l'heure atteignait six, et le sixième était refusé. La CI part d'une base vierge
+et ne l'aurait jamais vu ; le poste de développement, si, au deuxième lancement.
+Le compteur est nettoyé à l'amorce, en ne visant que sa propre clé.
+
+**Prouvé par deux exécutions consécutives**, 154 verts puis 154 verts. Une seule
+ne prouve rien : c'est la seconde qui révèle une amorce non idempotente.
+
 ## Vérifications
 
 ```
