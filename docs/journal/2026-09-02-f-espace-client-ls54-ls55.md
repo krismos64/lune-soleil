@@ -273,5 +273,14 @@ la livraison constatée commande l'invitation à déposer un avis.
 
 ## État des tickets
 
-LS-54 et LS-55 livrées. Comptes relevés dans Jira après les fusions, jamais de
-mémoire, et repris dans le commentaire de clôture.
+LS-54 et LS-55 livrées et closes, PR #194 fusionnée sur `main` en rebase.
+Comptes relevés dans Jira après la fusion, jamais de mémoire : **92 terminés sur
+164, soit 56 %**.
+
+**LS-164 est créée**, la réauthentification client, rattachée à LS-36 et bloquée
+par LS-54. C'est le troisième ticket né d'une livraison ce 2 septembre, après
+LS-162 et LS-163.
+
+L'epic LS-36 passe à **neuf stories ouvertes**. Six sont faisables tout de
+suite : LS-56, LS-57, LS-59, LS-60, LS-62 et LS-164. Les trois autres, LS-58,
+LS-61 et LS-77, attendent LS-33 et le compte Mondial Relay.
