@@ -18,7 +18,11 @@
  * inventee.
  */
 import type { Prisma } from "@/generated/prisma/client";
-import type { StatutCommande, StatutPaiement } from "@/generated/prisma/enums";
+import type {
+  ModeLivraison,
+  StatutCommande,
+  StatutPaiement,
+} from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import { schemaIdentifiant, valider } from "@/lib/validation";
 import { historiserTransition } from "@/repositories/confirmation";
@@ -137,7 +141,13 @@ export type DetailCommande = {
   emailNormalise: string;
   telephone: string | null;
   adresseLivraison: unknown;
-  modeLivraison: string;
+  /*
+   * `ModeLivraison` ET NON `string`, corrige par LS-57. La colonne EST un enum,
+   * et la declarer `string` perdait cette information : `LIBELLES_LIVRAISON`
+   * devenait indexable par n'importe quoi, donc son typage exhaustif ne
+   * protegeait plus l'ecran d'administration non plus.
+   */
+  modeLivraison: ModeLivraison;
   pointRelaisAdresse: unknown;
   sousTotalCentimes: number;
   fraisPortCentimes: number;

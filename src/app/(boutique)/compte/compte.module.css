@@ -413,14 +413,27 @@
 }
 
 /*
- * `--ls-text-muted` SUR `--ls-surface` : 5,19:1, mesure.
+ * `--ls-text-muted` SUR DEUX FONDS DIFFERENTS, et c'est le point que la revue
+ * frontend a corrige deux fois de suite.
  *
- * LE JETON ANNONCE 4,86:1 DANS `tokens.css`, ET CE CHIFFRE EST CELUI DE LA
- * CREME, `--ls-background`. Sur blanc la paire est meilleure. Recopier
- * l'annotation du jeton sans recalculer est precisement ce que C31 interdit.
+ *   en LISTE, dans `.commande`   fond blanc `--ls-surface`   5,19:1
+ *   en DETAIL, dans `.article`   fond creme herite du body   4,86:1
  *
- * La meme couleur tombe a 4,35:1 sur `--ls-surface-sand`, une des trois paires
- * refusees du projet. Ce bloc vit sur du blanc, jamais sur du sable.
+ * LES DEUX PASSENT AA, la seconde de justesse, 0,36 de marge. J'avais d'abord
+ * annonce 4,86:1 en croyant parler du blanc, puis corrige en 5,19:1 en croyant
+ * que le bloc ne vivait que sur du blanc : les deux commentaires etaient faux
+ * parce que la MEME classe sert sur DEUX fonds. C31, « ce qui se mesure est une
+ * paire, jamais une couleur », s'applique aussi quand la couleur ne bouge pas.
+ *
+ * NE PAS ENVELOPPER LA SECTION « ARTICLES » DANS UN ENCADRE SABLE. Le motif est
+ * employe trois fois dans ce fichier, `.rappel`, `.rattachement` et
+ * `.sectionDanger` : ici il ferait tomber la paire a 4,35:1, une des trois
+ * refusees du projet.
+ *
+ * `verifier-contraste.sh` NE MESURE NI L'UNE NI L'AUTRE : il n'apparie une
+ * couleur et un fond que dans le MEME bloc, et ces classes n'en declarent pas.
+ * Elles sont dans les 166 declarations que le script assume ne pas voir. Seul
+ * `axe-core` les mesure, au rendu, sur les deux ecrans du test e2e.
  */
 .variante {
   color: var(--ls-text-muted);
@@ -439,4 +452,31 @@
 .adresse {
   font-style: normal;
   line-height: 1.6;
+}
+
+/*
+ * Liste des avoirs, LS-57. DISTINCTE DE `.articles`, et ce n'est pas une
+ * duplication : `.article` est `display: flex; flex-direction: column`, concu
+ * pour trois `span` empiles volontairement. Y mettre du texte coulant avec un
+ * lien inline ferait de chaque nœud un element flex sur sa propre ligne, au
+ * lieu d'un paragraphe qui s'enroule. Releve par la revue frontend.
+ */
+.avoirs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-3);
+}
+
+.avoir {
+  padding-bottom: var(--ls-space-3);
+  border-bottom: 1px solid var(--ls-surface-sand);
+  line-height: 1.6;
+}
+
+.avoir:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
 }

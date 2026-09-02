@@ -208,8 +208,26 @@ export async function lireFactureAServir(
   client: ClientBase,
   commandeId: string,
 ): Promise<FactureAServir | null> {
-  return client.facture.findUnique({
-    where: { commandeId },
+  /*
+   * LA COMMANDE DISSOCIEE NE SERT PLUS SES DOCUMENTS, ajout de LS-57 et
+   * SECONDE LIGNE DE DEFENSE.
+   *
+   * La premiere est la revocation des jetons dans la transaction de
+   * suppression, `services/suppression-compte.ts`. Celle-ci la double parce
+   * qu'une revocation oubliee par un chemin futur, un jeton reemis apres coup
+   * par exemple, rouvrirait le trou entier : ici la garde est vraie quel que
+   * soit l'etat du jeton.
+   *
+   * CE QUE CELA FERME, mesure par `ls-critical-reviewer` : un lien de facture
+   * recu par email restait valide jusqu'a trente jours apres que la personne
+   * ait exerce son droit a l'effacement, et servait un PDF portant son nom, son
+   * adresse figee et ses montants.
+   *
+   * `findFirst` ET NON `findUnique` : la condition porte desormais sur la
+   * commande liee, ce qu'une recherche par cle unique n'exprime pas.
+   */
+  return client.facture.findFirst({
+    where: { commandeId, commande: { dissocieA: null } },
     select: { id: true, numero: true, cheminPdf: true },
   });
 }
