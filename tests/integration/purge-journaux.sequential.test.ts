@@ -37,6 +37,7 @@ let purgerEnvoisTermines: typeof import("@/services/purge-journaux").purgerEnvoi
 let purgerMessages: typeof import("@/services/purge-journaux").purgerMessages;
 let CONSERVATION_ENVOI_TERMINE_JOURS: typeof import("@/services/purge-journaux").CONSERVATION_ENVOI_TERMINE_JOURS;
 let CONSERVATION_MESSAGE_ANNEES: typeof import("@/services/purge-journaux").CONSERVATION_MESSAGE_ANNEES;
+let limiteEnvoiTermine: typeof import("@/services/purge-journaux").limiteEnvoiTermine;
 let limiteDeConservation: typeof import("@/services/journal-connexion").limiteDeConservation;
 
 /**
@@ -67,6 +68,7 @@ beforeAll(async () => {
     purgerMessages,
     CONSERVATION_ENVOI_TERMINE_JOURS,
     CONSERVATION_MESSAGE_ANNEES,
+    limiteEnvoiTermine,
   } = await import("@/services/purge-journaux"));
   ({ limiteDeConservation } = await import("@/services/journal-connexion"));
 });
@@ -288,6 +290,42 @@ describe("purge de EnvoiEnAttente, les lignes TERMINEES seulement", () => {
 
     expect(supprimees).toBe(1);
     expect(await clesRestantes("envoi_en_attente", "modele")).toEqual([]);
+  });
+
+  it("conserve une ligne posee exactement a la limite, comparaison stricte", async () => {
+    /*
+     * LA FRONTIERE, et le choix `lt` plutot que `lte` qu'elle exerce. Les trois
+     * autres purges de ce fichier sont strictes, et la position est ecrite en
+     * tete de `purgerJournalAudit` : « a la frontiere, garder une ligne de trop
+     * vaut mieux qu'en supprimer une qui pouvait servir ».
+     *
+     * CE TEST MANQUAIT, ET C'EST MESURE. Une premiere version de
+     * `purgerEnvoisTermines` portait `lte`, seul ecart du projet : la mutation
+     * `lte` vers `lt` laissait les QUINZE tests verts. Releve par
+     * `ls-critical-reviewer` le 2 septembre 2026, exactement la lecon que le
+     * test jumeau de `journal_audit` documentait deja quelques lignes plus haut.
+     *
+     * LA LIMITE VIENT DU CODE, `limiteEnvoiTermine`, jamais d'un calcul recopie
+     * ici. Un test qui recalcule la frontiere ne teste pas la frontiere du
+     * code : c'est le defaut que le test de `journal_audit` avait deja eu, ou
+     * un calcul « equivalent » placait la ligne trois jours plus loin, la ou
+     * elle survit que la comparaison soit stricte ou non.
+     */
+    const limite = limiteEnvoiTermine(MAINTENANT);
+
+    await ecrireEnvoi(limite, "ENVOYE", "pile-sur-la-limite");
+    await ecrireEnvoi(
+      new Date(limite.getTime() - 1),
+      "ENVOYE",
+      "une-milliseconde-avant",
+    );
+
+    const supprimees = await purgerEnvoisTermines(MAINTENANT);
+
+    expect(supprimees).toBe(1);
+    expect(await clesRestantes("envoi_en_attente", "modele")).toEqual([
+      "pile-sur-la-limite",
+    ]);
   });
 
   it("NE SUPPRIME JAMAIS une ligne ENVOI_EN_COURS, quel que soit son age", async () => {
