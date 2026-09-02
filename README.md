@@ -20,17 +20,18 @@ la phase 2.
 
 | Phase | Epic | État au 2 septembre 2026 |
 |---|---|---|
-| 2, catalogue, médias et stock multicanal | LS-3 | en cours, seize stories ouvertes |
+| 2, catalogue, médias et stock multicanal | LS-3 | en cours, treize stories ouvertes. LS-84, LS-146 et LS-162 livrées le 2 septembre |
 | 3, panier, réservation, paiement et commandes | LS-4 | LS-114 à LS-121 et LS-43 livrées, **porte de sortie franchie**, deux stories ouvertes |
 | 4, factures, avoirs, emails, expédition et contact | LS-5 | **presque terminée** : neuf stories closes, dont LS-130, LS-97 et LS-154 le 2 septembre. Six ouvertes, dont **cinq demandent un arbitrage ou un compte externe** : LS-33 commande toute la phase 5, LS-131 attend Mondial Relay, LS-82 est livrée et ouverte sur son critère de réception |
 | 5, rétractation, conformité et protection des données | LS-6 | découpée le 27 août 2026, cinq stories ouvertes |
 | 6, durcissement, exploitation et ouverture | LS-7 | découpée le 27 août 2026, douze stories ouvertes |
 
-Comptes **relevés dans Jira** le 2 septembre 2026, jamais recopiés de mémoire :
+Comptes **relevés dans Jira** le 2 septembre 2026 après la fusion de LS-162,
+jamais recopiés de mémoire :
 un chiffre écrit à la main se périme sans bruit, et le tableau annonçait encore
 l'état du 27 août avant d'être repris le 1er septembre.
 
-**85 tickets terminés sur 163, soit 52 %.** Deux tickets ont été créés le
+**88 tickets terminés sur 163, soit 54 %.** Deux tickets ont été créés le
 2 septembre en livrant : **LS-162**, la navigation de l'administration, aucun
 écran n'y renvoyant vers un autre ; **LS-163**, les listes qui plafonnent à cent
 sans le dire, ce qui rend faux le compte qu'elles affichent.
@@ -73,6 +74,11 @@ Go-Live : aucune page 404 habillée alors que `notFound()` est appelé sur quatr
 routes, aucun favicon ni image de partage, et **l'assistant IA de la V1 cible
 qui n'avait aucun ticket**. La recherche interne et la pagination, elles, restent
 écartées par décision et non par oubli.
+
+Le premier de ces trous est **comblé depuis le 2 septembre 2026**, LS-146 : trois
+pages d'erreur publiques habillées à la charte, dont l'écran de dernier recours
+qui survit à l'échec du layout racine. Restent LS-147, le favicon et l'image de
+partage, et LS-149, l'assistant IA.
 
 **Le jalon qui compte est tenu depuis le 25 août 2026.** LS-116 prouve la
 réservation du dernier exemplaire par le service, sur une variante à un
