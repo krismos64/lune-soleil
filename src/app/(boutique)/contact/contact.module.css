@@ -1,0 +1,164 @@
+/*
+ * Page de contact, LS-97. Conception a partir de 320 px.
+ *
+ * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons d'ADR-022.
+ *
+ * LE CONTRASTE DEPEND DU FOND, et le projet s'est fait prendre deux fois :
+ * `--ls-text-muted` donne 4,86:1 sur creme mais seulement 4,35:1 sur sable,
+ * sous le seuil AA. Les blocs a fond sable emploient donc `--ls-text`.
+ */
+
+.page {
+  max-width: var(--ls-content-max);
+  margin: 0 auto;
+  padding: var(--ls-space-6) var(--ls-space-4) var(--ls-space-7);
+}
+
+.titre {
+  margin: 0 0 var(--ls-space-3);
+  color: var(--ls-primary);
+  font-size: clamp(1.75rem, 6vw, 2.5rem);
+  font-weight: 600;
+}
+
+.introduction {
+  margin: 0 0 var(--ls-space-3);
+  color: var(--ls-text);
+  font-size: 1.0625rem;
+}
+
+/*
+ * FOND SABLE, DONC `--ls-text` ET NON `--ls-text-muted` : 10,83:1 contre
+ * 4,35:1. Voir l'en-tete de ce fichier.
+ */
+.delai {
+  margin: 0 0 var(--ls-space-6);
+  padding: var(--ls-space-3);
+  border-left: 3px solid var(--ls-accent-gold-deep);
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+}
+
+/* ------------------------------------------------------------- formulaire */
+
+.formulaire {
+  display: grid;
+  gap: var(--ls-space-4);
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-1);
+}
+
+.champ label {
+  color: var(--ls-text);
+  font-weight: 600;
+}
+
+/*
+ * `width: 100%` AVEC `box-sizing` HERITE : sans lui le champ deborde de son
+ * conteneur a 320 px, la bordure et le rembourrage s'ajoutant a la largeur.
+ */
+.champ input,
+.champ textarea {
+  width: 100%;
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-2) var(--ls-space-3);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+/*
+ * LA ZONE DE TEXTE NE SE REDIMENSIONNE QU'EN HAUTEUR. `resize: both` la
+ * laisserait deborder horizontalement du corps a 320 px, ce que `mobile first`
+ * interdit, et la personne qui l'elargit ne peut pas savoir qu'elle casse la
+ * mise en page.
+ */
+.champ textarea {
+  resize: vertical;
+}
+
+.champ input:disabled,
+.champ textarea:disabled {
+  /*
+   * `0.75` ET NON `0.6`, mesure de LS-130 : a 0.6 le texte desactive tombe a
+   * 3,77:1. Le formulaire reste affiche apres un envoi reussi, donc cet etat
+   * n'est pas transitoire.
+   */
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+.aide {
+  margin: 0;
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+}
+
+/*
+ * LE CHAMP PIEGE, INVISIBLE MAIS PRESENT DANS LE FLUX DU HTML.
+ *
+ * NI `display: none` NI `visibility: hidden`, et c'est le point : ces deux
+ * proprietes sont les premieres qu'un script anti-piege verifie, et elles
+ * signalent le champ aussi surement qu'une etiquette. Le sortir de l'ecran par
+ * une position absolue le laisse indistinguable d'un champ ordinaire pour qui
+ * ne rend pas le CSS.
+ *
+ * LES PERSONNES NE LE RENCONTRENT PAS POUR AUTANT : `aria-hidden` et
+ * `tabIndex={-1}` sont poses sur le composant, donc ni la synthese vocale ni la
+ * tabulation ne l'atteignent. Le masquage visuel seul en ferait un champ
+ * fantome que seules les personnes au clavier rempliraient.
+ */
+.piege {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.bouton {
+  justify-self: start;
+  min-height: var(--ls-touch-target);
+  padding: 0 var(--ls-space-5);
+  border: none;
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bouton:hover:not(:disabled) {
+  background: var(--ls-primary-hover);
+}
+
+.bouton:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+/*
+ * LE MESSAGE GARDE SA PLACE MEME VIDE, la region live devant preexister a son
+ * contenu pour etre annoncee.
+ */
+.message {
+  min-height: 1.5rem;
+  margin: var(--ls-space-4) 0 0;
+  color: var(--ls-success);
+}
+
+/*
+ * L'ERREUR N'EST PAS PORTEE PAR LA SEULE COULEUR, `frontend-design.md` : le
+ * texte dit toujours ce qui s'est passe, la couleur ne fait que l'appuyer.
+ */
+.messageErreur {
+  color: var(--ls-error);
+}

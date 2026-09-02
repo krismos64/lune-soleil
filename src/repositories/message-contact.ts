@@ -20,19 +20,30 @@ export type SaisieMessage = {
   corps: string;
 };
 
-/** Ce que la liste d'administration affiche d'un message. */
+/**
+ * Ce que la liste d'administration affiche d'un message, CORPS COMPRIS.
+ *
+ * LE CORPS EST DANS LA LISTE ET NON RELU PAR MESSAGE, choix delibere contre une
+ * requete par carte : la liste est bornee a cent, l'ecran est reserve a
+ * l'administratrice, et un aller-retour par message pour un texte de quelques
+ * lignes couterait plus qu'il ne protege.
+ *
+ * CE N'EST PAS UNE FUITE : cette projection ne quitte jamais un ecran garde par
+ * `exigerAdministratrice`. La question se poserait autrement sur une liste
+ * publique, ou le corps n'aurait rien a faire.
+ */
 export type MessageEnListe = {
   id: string;
   nom: string;
   email: string;
   sujet: string;
+  corps: string;
   statut: StatutMessage;
   creeA: Date;
 };
 
-/** Le detail, corps compris. */
+/** Le detail, avec les horodatages de classement. */
 export type MessageDetaille = MessageEnListe & {
-  corps: string;
   luA: Date | null;
   traiteA: Date | null;
 };
@@ -69,6 +80,7 @@ export async function listerMessagesEnBase(
       nom: true,
       email: true,
       sujet: true,
+      corps: true,
       statut: true,
       creeA: true,
     },
