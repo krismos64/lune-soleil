@@ -3,12 +3,18 @@
 | Champ | Valeur |
 |---|---|
 | Ticket | LS-13 |
-| Entrée | `MODELE-CONCEPTUEL.md`, huit parcours, cinquante-sept cas d'erreur |
+| Entrée | `MODELE-CONCEPTUEL.md`, **neuf** parcours, cinquante-sept cas d'erreur |
 | Vérifié sur | PostgreSQL 18.4, Prisma 7.9.1, Node 22.14.0 |
 | Livrables | `prisma/schema.prisma`, `prisma/sql-manuel/` |
 
-Traduction du modèle conceptuel en schéma physique. Vingt-cinq tables, sept
-domaines, trente et une clés étrangères.
+Traduction du modèle conceptuel en schéma physique. **Trente-six tables** et
+**trente-neuf clés étrangères** au 2 septembre 2026, sept domaines.
+
+**Ces trois nombres sont mesurés et non recopiés**, `grep -c "^model"` sur le
+schéma et `pg_constraint` sur la base. Ceux de LS-13 disaient vingt-cinq tables,
+huit parcours et trente et une clés : justes à l'écriture, ils n'ont suivi
+aucune des stories qui ont ajouté une entité. Un compte écrit à la main se
+périme sans bruit, et celui-ci a mis cinq semaines à être relu.
 
 ## Conventions fixées par cette story
 

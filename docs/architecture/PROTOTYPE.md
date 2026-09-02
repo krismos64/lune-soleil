@@ -67,7 +67,7 @@ la fiche produit au tunnel.
 
 ## Table de correspondance, parcours vers écran
 
-Les huit parcours de `PARCOURS.md` et l'écran qui les porte. Un parcours sans
+Les **neuf** parcours de `PARCOURS.md` et l'écran qui les porte. Un parcours sans
 écran n'est pas un manque du prototype : certains sont entièrement serveur.
 
 | Parcours | Écran du prototype |
@@ -80,6 +80,7 @@ Les huit parcours de `PARCOURS.md` et l'écran qui les porte. Un parcours sans
 | 6, rattachement d'une commande | `/espace-client`, bloc « Une ancienne commande sans compte ? » |
 | 7, dépôt d'un avis | `/espace-client`, section Achats vérifiés |
 | 8, carnet d'adresses | `/espace-client`, rubrique Mes adresses |
+| 9, message de contact | `/contact` côté public, administration rubrique Messages |
 
 ## Inventaire complet des écrans, au-delà des parcours
 
