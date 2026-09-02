@@ -392,6 +392,25 @@ jobs:
       - name: 6h. Contenu de section rendu en texte simple
         run: ./scripts/verifier-rendu-texte-simple.sh
 
+      # Textuel, aucune base ni conteneur requis.
+      #
+      # CE QU'IL GARDE : le contraste de toute paire couleur et fond employee
+      # dans `src/`, LS-84. Il est GENERIQUE par arbitrage du 19 aout 2026 : il
+      # mesure un rapport plutot que de chercher un nom de jeton, parce que le
+      # defaut est venu deux fois d'un jeton parfaitement legitime pose sur le
+      # mauvais fond. `--ls-text-muted` donne 4,86:1 sur creme et 4,35:1 sur
+      # sable : interdire le jeton serait faux, l'autoriser sans regarder son
+      # fond l'est aussi.
+      #
+      # IL NE FAIT PAS DOUBLE EMPLOI AVEC axe-core, qui tourne plus bas dans la
+      # suite de bout en bout. `axe-core` voit l'heritage mais seulement sur les
+      # branches RENDUES, et deux defauts reels sont passes par ce trou, LS-121
+      # et LS-130, tous deux sur un etat que les donnees de test ne produisaient
+      # jamais. Ce script lit le CSS : il voit les branches que personne
+      # n'amorce, et ne voit pas l'heritage. Retirer l'un rouvre une moitie.
+      - name: 6i. Contraste des paires couleur et fond
+        run: ./scripts/verifier-contraste.sh
+
       # ----------------------------------------------------------------------
       # Controles 2 et 3. Le format entre ici parce qu'un depot ou seule une
       # partie des fichiers est formatee produit des diffs illisibles.
