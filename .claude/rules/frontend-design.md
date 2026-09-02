@@ -63,6 +63,36 @@ un rapport mesuré supérieur à 4,5:1.
 Le jeton `primary-night` `#1B2A41` du cahier des charges est **écarté**. Aucun
 bleu dans ce projet, le logo n'en contient pas.
 
+### C31, ce qui se mesure est une paire, jamais une couleur
+
+**Un rapport écrit à côté d'un jeton ne vaut que pour un fond**, et rien dans le
+jeton ne dit lequel. Le même `--ls-text-muted` donne 4,86:1 sur crème et
+**4,35:1 sur sable** : la couleur est légitime, la paire ne l'est pas.
+
+Avant d'employer un jeton de texte sur un fond, **recalculer sur ce fond**.
+Trois paires du projet sont sous le seuil et se ressemblent assez pour être
+écrites par recopie d'un écran sain :
+
+| Paire | Rapport | Verdict |
+|---|---|---|
+| `--ls-text-muted` sur `--ls-surface-sand` | 4,35:1 | refusée |
+| `--ls-accent-gold-deep` sur `--ls-surface-sand` | 4,23:1 | refusée |
+| `--ls-text-on-primary` sur tout fond clair | 1,00:1 | refusée |
+
+**Le sable est le fond piégeux du projet.** Sur lui, employer `--ls-text` ou
+`--ls-primary`, jamais un jeton secondaire.
+
+**Recopier une couleur en ajoutant un fond casse l'hypothèse sous laquelle elle
+était juste.** C'est la forme la plus discrète du défaut, et celle par laquelle
+il est entré deux fois : l'écran d'origine n'a aucun `background`, donc son
+texte est sur crème où le jeton tient sa promesse.
+
+`scripts/verifier-contraste.sh` mesure toute paire colocalisée dans `src/`. Il
+est **générique** et non ancré sur un nom de jeton, arbitrage du 19 août 2026 :
+un contrôle nominatif resterait vert sur une couleur insuffisante portant un
+autre nom. Il ne voit pas le fond **hérité**, que `axe-core` mesure de son côté
+sur le rendu réel ; aucun des deux ne remplace l'autre.
+
 ## Rédaction des textes visibles
 
 Tout texte affiché aux visiteuses et à l'administratrice suit les règles de

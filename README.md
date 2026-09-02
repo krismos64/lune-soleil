@@ -630,6 +630,8 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-actions-sensibles-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-rendu-texte-simple.sh         # rendu HTML interdit sur le contenu de section
 ./scripts/verifier-rendu-texte-simple-mutation.sh # prouve le précédent par mutation
+./scripts/verifier-contraste.sh                  # contraste WCAG des paires couleur et fond, LS-84
+./scripts/verifier-contraste-mutation.sh         # prouve le précédent par mutation
 ./scripts/verifier-registre-traitements.sh       # registre RGPD confronté au schéma
 ./scripts/verifier-registre-traitements-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-nginx.sh                      # résolution de l'adresse client, LS-91
