@@ -411,6 +411,41 @@ jobs:
       - name: 6i. Contraste des paires couleur et fond
         run: ./scripts/verifier-contraste.sh
 
+      # Textuel, aucune base ni conteneur requis.
+      #
+      # CE QU'IL GARDE : qu'aucun `loading.tsx` ne soit pose sur une route qui
+      # appelle `notFound()`, LS-146. La frontiere Suspense du segment demarre
+      # le streaming AVANT que l'appel soit atteint, et Next.js ne peut plus
+      # changer le statut d'une reponse commencee : il laisse 200 et ajoute un
+      # `noindex`. Mesure en LS-111, 404 sans le fichier et 200 avec.
+      #
+      # LE DEFAUT EST INVISIBLE A L'ECRAN, la page rendue etant identique dans
+      # les deux cas. Un moteur indexerait une fiche produit inexistante en 200,
+      # et le SEO est prioritaire sur ce projet. Le geste qui l'introduit est
+      # celui d'une bonne intention : `frontend-design.md` EXIGE un etat de
+      # chargement, et l'ajouter parait etre une amelioration.
+      #
+      # Son second sens verifie que les trois pages d'erreur existent toujours :
+      # sans lui, le controle resterait vert sur le depot d'AVANT LS-146, ou
+      # aucune n'existait.
+      - name: 6j. Aucun loading.tsx ne masque un 404
+        run: ./scripts/verifier-loading-et-404.sh
+
+      # Textuel, aucune base ni conteneur requis.
+      #
+      # CE QU'IL GARDE : les quatre couleurs recopiees en dur dans l'ecran de
+      # dernier recours, LS-146. `global-error.tsx` REMPLACE le layout racine,
+      # donc les imports de `tokens.css` : s'appuyer sur une variable CSS y
+      # reviendrait a dependre du fichier dont la defaillance amene cette page.
+      #
+      # POURQUOI UN CONTROLE PLUTOT QU'UNE RELECTURE. Cet ecran ne se rend que
+      # si le layout racine a echoue : aucun test de rendu ne le traverse, et
+      # aucune session de developpement ne l'affiche. Le jour ou ADR-022 change
+      # une couleur, la copie diverge en SILENCE et la divergence se decouvre
+      # pendant la panne, sur l'ecran qui doit inspirer confiance.
+      - name: 6k. Palette de secours alignee sur ADR-022
+        run: ./scripts/verifier-palette-secours.sh
+
       # ----------------------------------------------------------------------
       # Controles 2 et 3. Le format entre ici parce qu'un depot ou seule une
       # partie des fichiers est formatee produit des diffs illisibles.
