@@ -107,6 +107,20 @@ export default async function PageCompte({
   const arriveDeVerification = parametres.verifie === "1";
 
   /*
+   * L'ACCUSE DE RECEPTION DU CHANGEMENT D'ADRESSE, LS-60.
+   *
+   * `changerMonEmail` ramene ici avec `?email=1` apres que le lien a ete
+   * consomme. Le parametre etait POSE SANS ETRE LU, exactement comme
+   * `?verifie=1` avant LS-54 : qui cliquait le lien depuis sa boite
+   * atterrissait sur « Mon compte » sans le moindre signe que le changement
+   * avait abouti. Un succes muet se lit comme un echec.
+   *
+   * IL N'AUTORISE RIEN ET NE PROUVE RIEN : l'adresse affichee vient de la
+   * SESSION, et c'est elle qui dit l'etat reel.
+   */
+  const arriveDeChangementEmail = parametres.email === "1";
+
+  /*
    * LES COMMANDES RATTACHABLES, LS-56, parcours 6 etape 3.
    *
    * LECTURE SEULE, aucun rattachement automatique a l'affichage d'une page. Le
@@ -135,6 +149,13 @@ export default async function PageCompte({
       {arriveDeVerification && adresseVerifiee && (
         <p className={styles.succes} role="status">
           Votre adresse email est confirmée.
+        </p>
+      )}
+
+      {arriveDeChangementEmail && (
+        <p className={styles.succes} role="status">
+          Votre nouvelle adresse email est confirmée. Vos prochaines connexions
+          se feront avec {identite.email}.
         </p>
       )}
 
@@ -227,6 +248,20 @@ export default async function PageCompte({
        * TOUJOURS PRESENT, meme sur un carnet vide : le cacher ferait croire que
        * la fonction n'existe pas, et l'ecran vide dit lui-meme quoi faire.
        */}
+      {/*
+       * LE LIEN VERS LE PROFIL, LS-60. Sans lui, `/compte/profil` serait
+       * inatteignable autrement qu'en saisissant l'URL.
+       */}
+      <section className={styles.section} aria-labelledby="titre-profil">
+        <h2 id="titre-profil">Mes informations</h2>
+        <p className={styles.texte}>
+          Modifiez votre nom, votre adresse email ou votre mot de passe.
+        </p>
+        <Link href="/compte/profil" className={styles.lien}>
+          Gérer mes informations
+        </Link>
+      </section>
+
       <section className={styles.section} aria-labelledby="titre-adresses">
         <h2 id="titre-adresses">Mon carnet d&apos;adresses</h2>
         <p className={styles.texte}>

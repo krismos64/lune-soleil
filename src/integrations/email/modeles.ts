@@ -74,6 +74,58 @@ const RENDUS: Record<ModeleEmail, (message: MessageEmail) => MessageRendu> = {
     ].join("\n"),
   }),
 
+  /*
+   * LS-60. LE LIEN PART A LA NOUVELLE ADRESSE, et c'est ce qui prouve qu'elle
+   * appartient bien a la personne : tant qu'il n'est pas ouvert, l'ancienne
+   * reste l'adresse de connexion. Une saisie erronee ne peut donc pas enfermer
+   * le client hors de son compte.
+   */
+  "changement-adresse-verification": (message) => ({
+    objet: "Confirmez votre nouvelle adresse email",
+    texte: [
+      "Bonjour,",
+      "",
+      "Vous avez demandé à utiliser cette adresse pour votre compte Lune &",
+      "Soleil. Confirmez-la en ouvrant ce lien :",
+      "",
+      exiger(message, "lien"),
+      "",
+      "Tant que cette adresse n'est pas confirmée, votre ancienne adresse reste",
+      "celle de votre compte.",
+      "",
+      "Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.",
+      "",
+      SIGNATURE,
+    ].join("\n"),
+  }),
+
+  /*
+   * LS-60. L'AVERTISSEMENT PART A L'ANCIENNE ADRESSE, et il n'est pas
+   * decoratif : c'est le seul canal qui atteigne le proprietaire legitime si
+   * quelqu'un tente de detourner son compte depuis une session ouverte. Le lien
+   * qu'il porte APPROUVE le changement, donc rien ne se produit sans lui.
+   */
+  "changement-adresse-avertissement": (message) => ({
+    objet: "Demande de changement d'adresse email",
+    texte: [
+      "Bonjour,",
+      "",
+      "Une demande de changement d'adresse email a été faite sur votre compte",
+      "Lune & Soleil, vers :",
+      "",
+      exiger(message, "nouvelleAdresse"),
+      "",
+      "Si vous en êtes à l'origine, approuvez-la en ouvrant ce lien :",
+      "",
+      exiger(message, "lien"),
+      "",
+      "Sinon, ignorez ce message : votre adresse restera inchangée. Changez",
+      "votre mot de passe si vous pensez que quelqu'un accède à votre compte.",
+      "",
+      SIGNATURE,
+    ].join("\n"),
+  }),
+
   "reinitialisation-mot-de-passe": (message) => ({
     objet: "Réinitialisation de votre mot de passe",
     texte: [

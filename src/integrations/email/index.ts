@@ -23,7 +23,11 @@ export type ModeleEmail =
   | "verification-adresse"
   | "reinitialisation-mot-de-passe"
   | "alerte-connexion-administration"
-  | "message-contact-recu";
+  | "message-contact-recu"
+  /** LS-60, envoye a la NOUVELLE adresse pour la confirmer. */
+  | "changement-adresse-verification"
+  /** LS-60, envoye a l'ANCIENNE pour l'avertir et lui permettre de refuser. */
+  | "changement-adresse-avertissement";
 
 export type MessageEmail = {
   destinataire: string;
