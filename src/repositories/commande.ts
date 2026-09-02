@@ -259,6 +259,7 @@ export async function lireCommandeAPayer(
       fraisPortCentimes: true,
       lignes: {
         select: {
+          id: true,
           libelleProduitFige: true,
           libelleVarianteFige: true,
           prixFigeCentimes: true,
@@ -418,6 +419,8 @@ export type DetailCommandeDuClient = {
   totalCentimes: number;
   creeA: Date;
   lignes: {
+    /** L'identifiant sert de cle de rendu, plus stable qu'un rang. */
+    id: string;
     libelleProduitFige: string;
     libelleVarianteFige: string;
     prixFigeCentimes: number;
@@ -502,6 +505,7 @@ export async function lireCommandeDuClient(
       creeA: true,
       lignes: {
         select: {
+          id: true,
           libelleProduitFige: true,
           libelleVarianteFige: true,
           prixFigeCentimes: true,
