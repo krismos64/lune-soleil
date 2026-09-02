@@ -138,6 +138,125 @@ export async function purgerRateLimit(
 }
 
 /**
+ * Duree de conservation d'une ligne d'outbox TERMINEE, en jours.
+ *
+ * L'ARBITRAGE QUE LS-154 DEVAIT RENDRE, et il n'est pas de meme nature que celui
+ * de `RateLimit` ci-dessus : la question n'est pas seulement « combien de
+ * temps », mais « quelles lignes ».
+ *
+ * TRENTE JOURS, ET LE RAISONNEMENT TIENT EN DEUX TEMPS.
+ *
+ * L'information de fond ne vit PAS ici. Une ligne `ENVOYE` ou `ECHOUE` a deja
+ * produit sa trace dans `JournalEmail`, qui est le document opposable et suit
+ * la commande qu'il sert, jusqu'a dix ans au titre de l'article L123-22 du code
+ * de commerce. La ligne d'outbox n'est plus qu'un doublon de travail, et le
+ * registre le dit : « une file de travail, pas une trace ».
+ *
+ * MAIS ELLE PORTE L'ADRESSE DU DESTINATAIRE ET LES VARIABLES DU MESSAGE, donc
+ * des donnees personnelles. Conserver sans limite ce qui n'a plus d'usage
+ * contredit la minimisation, article 5.1.c, exactement le raisonnement qui a
+ * ramene `RateLimit` de six mois a vingt-quatre heures.
+ *
+ * POURQUOI PAS VINGT-QUATRE HEURES, ALORS. Parce que l'usage ne s'arrete pas a
+ * l'envoi : une reclamation « je n'ai jamais recu ma confirmation » arrive
+ * quelques jours plus tard, et la ligne d'outbox porte alors les VARIABLES du
+ * message, que `JournalEmail` ne conserve pas. Trente jours couvrent le delai
+ * ou une telle reclamation se produit, sans garder une adresse un an.
+ *
+ * POURQUOI PAS SIX MOIS. Aucun texte ne l'impose ici : la deliberation CNIL
+ * n 2021-122 vise la journalisation de securite, et cette table n'en est pas
+ * une. S'aligner dessus serait le meme faux alignement que LS-94 a corrige.
+ */
+export const CONSERVATION_ENVOI_TERMINE_JOURS = 30;
+
+/**
+ * Duree de conservation d'un message de contact, en annees.
+ *
+ * TROIS ANS, referentiel CNIL n 2021-131, meme ancrage que le traitement T2
+ * pour les donnees de prospect : « trois ans a compter du dernier contact
+ * emanant du prospect ». Un message de contact EST ce dernier contact.
+ *
+ * LA VALEUR EST VERIFIEE A LA SOURCE et non deduite : LS-97 avait d'abord
+ * retenu douze mois sans qu'aucun texte ne l'appuie.
+ */
+export const CONSERVATION_MESSAGE_ANNEES = 3;
+
+/**
+ * Supprime les lignes d'outbox TERMINEES au-dela de leur duree.
+ *
+ * LE FILTRE SUR LE STATUT EST LE COEUR DE CETTE FONCTION, et c'est pourquoi la
+ * purge n'a pas ete ecrite dans LS-82 : un `deleteMany` par age seul aurait
+ * suffi a la faire passer, et il aurait ete FAUX.
+ *
+ * LES QUATRE STATUTS N'ONT PAS LA MEME VALEUR :
+ *
+ * - `ENVOYE` et `ECHOUE` sont TERMINEES. L'information de fond survit dans
+ *   `JournalEmail` : elles peuvent partir
+ * - `ENVOI_EN_COURS` est BLOQUEE ET AMBIGUE. Personne ne sait si le message est
+ *   parti, ADR-033 refuse de trancher automatiquement, et une alerte appelle
+ *   l'exploitante a decider. La purger effacerait precisement ce qu'il faut
+ *   traiter, et le ferait EN SILENCE
+ * - `EN_ATTENTE` n'est pas encore partie : la purger priverait un client de sa
+ *   confirmation
+ *
+ * AUCUNE CONTRAINTE DE BASE NE PEUT EXPRIMER CELA, la regle portant sur un
+ * `WHERE` et non sur une ligne. C'est donc une propriete du CODE, prouvee par
+ * les quatre tests d'etat et par la mutation qui retire le filtre.
+ *
+ * `in` PLUTOT QU'UNE NEGATION, et ce choix compte. `not: { in: [...] }` aurait
+ * le meme effet aujourd'hui, et le perdrait au premier statut AJOUTE a l'enum :
+ * un `ARCHIVE` inconnu serait purge par defaut. La liste positive garde le
+ * defaut FERME, meme motif que le predicat d'index partiel de `paiement`.
+ */
+export async function purgerEnvoisTermines(
+  maintenant: Date = new Date(),
+): Promise<number> {
+  const limite = new Date(
+    maintenant.getTime() -
+      CONSERVATION_ENVOI_TERMINE_JOURS * 24 * 60 * 60 * 1000,
+  );
+
+  const { count } = await prisma.envoiEnAttente.deleteMany({
+    where: {
+      statut: { in: ["ENVOYE", "ECHOUE"] },
+      creeA: { lt: limite },
+    },
+  });
+
+  return count;
+}
+
+/**
+ * Supprime les messages de contact au-dela de trois ans.
+ *
+ * ELLE NE REGARDE PAS LE STATUT, contrairement a la purge d'outbox ci-dessus, et
+ * l'asymetrie se justifie plutot qu'elle ne s'oublie.
+ *
+ * Une ligne d'outbox bloquee est un INCIDENT a traiter : la purger effacerait le
+ * travail. Un message non lu de trois ans n'est pas un incident, c'est une
+ * demande a laquelle plus personne ne repondra : le garder au-dela de la duree
+ * annoncee contredirait la minimisation sans rendre service.
+ *
+ * LA DATE DE REFERENCE EST `creeA` ET NON `luA`. Le referentiel CNIL compte « a
+ * compter du dernier contact emanant du prospect », donc de l'envoi du message,
+ * jamais du moment ou l'exploitante l'a ouvert : ancrer sur la lecture ferait
+ * dependre une duree legale d'un geste interne, et un message jamais lu ne
+ * serait alors JAMAIS purge.
+ */
+export async function purgerMessages(
+  maintenant: Date = new Date(),
+): Promise<number> {
+  const limite = new Date(maintenant);
+  limite.setUTCFullYear(limite.getUTCFullYear() - CONSERVATION_MESSAGE_ANNEES);
+
+  const { count } = await prisma.message.deleteMany({
+    where: { creeA: { lt: limite } },
+  });
+
+  return count;
+}
+
+/**
  * Les purges a executer, et la table que chacune vide.
  *
  * UNE TABLE ET NON UNE SUITE D'APPELS, meme motif que `TACHES` et que
@@ -155,6 +274,8 @@ const PURGES: ReadonlyArray<{
   { table: "JournalConnexion", executer: purgerJournalConnexion },
   { table: "JournalAudit", executer: purgerJournalAudit },
   { table: "RateLimit", executer: purgerRateLimit },
+  { table: "EnvoiEnAttente", executer: purgerEnvoisTermines },
+  { table: "Message", executer: purgerMessages },
 ];
 
 /**

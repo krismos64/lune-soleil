@@ -33,6 +33,10 @@ let purgerJournaux: typeof import("@/services/purge-journaux").purgerJournaux;
 let purgerJournalAudit: typeof import("@/services/purge-journaux").purgerJournalAudit;
 let purgerRateLimit: typeof import("@/services/purge-journaux").purgerRateLimit;
 let CONSERVATION_RATE_LIMIT_HEURES: typeof import("@/services/purge-journaux").CONSERVATION_RATE_LIMIT_HEURES;
+let purgerEnvoisTermines: typeof import("@/services/purge-journaux").purgerEnvoisTermines;
+let purgerMessages: typeof import("@/services/purge-journaux").purgerMessages;
+let CONSERVATION_ENVOI_TERMINE_JOURS: typeof import("@/services/purge-journaux").CONSERVATION_ENVOI_TERMINE_JOURS;
+let CONSERVATION_MESSAGE_ANNEES: typeof import("@/services/purge-journaux").CONSERVATION_MESSAGE_ANNEES;
 let limiteDeConservation: typeof import("@/services/journal-connexion").limiteDeConservation;
 
 /**
@@ -59,6 +63,10 @@ beforeAll(async () => {
     purgerJournalAudit,
     purgerRateLimit,
     CONSERVATION_RATE_LIMIT_HEURES,
+    purgerEnvoisTermines,
+    purgerMessages,
+    CONSERVATION_ENVOI_TERMINE_JOURS,
+    CONSERVATION_MESSAGE_ANNEES,
   } = await import("@/services/purge-journaux"));
   ({ limiteDeConservation } = await import("@/services/journal-connexion"));
 });
@@ -69,7 +77,7 @@ afterAll(async () => {
 
 afterEach(async () => {
   await client.query(
-    "TRUNCATE journal_connexion, journal_audit, rate_limit CASCADE",
+    "TRUNCATE journal_connexion, journal_audit, rate_limit, envoi_en_attente, message CASCADE",
   );
 });
 
@@ -105,6 +113,41 @@ async function ecrireLigneRateLimit(
     `INSERT INTO rate_limit (id, key, count, last_request)
      VALUES (gen_random_uuid()::text, $1, 1, $2)`,
     [cle, derniereRequete.getTime()],
+  );
+}
+
+/**
+ * Une ligne d'outbox dans l'etat demande.
+ *
+ * `prise_a` EST POSE SUR `ENVOI_EN_COURS` SEULEMENT, C31 n'existant pas mais la
+ * coherence important : une ligne prise sans horodatage de prise serait
+ * indistinguable d'une ligne prise a l'instant, ce que le delai de garde de
+ * `envoi-email.ts` mesure precisement.
+ */
+async function ecrireEnvoi(
+  creeA: Date,
+  statut: string,
+  modele: string,
+): Promise<void> {
+  await client.query(
+    `INSERT INTO envoi_en_attente (
+       id, commande_id, destinataire, modele, variables, statut, origine,
+       tentatives, prise_a, cree_a
+     )
+     VALUES (gen_random_uuid()::text, NULL, 'test@exemple.invalid', $1,
+             '{}'::jsonb, $2::"StatutEnvoi", 'SYSTEME', 0,
+             CASE WHEN $2 = 'ENVOI_EN_COURS' THEN $3::timestamptz ELSE NULL END,
+             $3)`,
+    [modele, statut, creeA.toISOString()],
+  );
+}
+
+async function ecrireMessage(creeA: Date, sujet: string): Promise<void> {
+  await client.query(
+    `INSERT INTO message (id, nom, email, sujet, corps, statut, cree_a)
+     VALUES (gen_random_uuid()::text, 'TEST Personne', 'test@exemple.invalid',
+             $1, 'Corps du message de test.', 'NOUVEAU', $2)`,
+    [sujet, creeA.toISOString()],
   );
 }
 
@@ -210,14 +253,176 @@ describe("purge de RateLimit, vingt-quatre heures", () => {
   });
 });
 
-describe("purge des trois journaux ensemble", () => {
-  it("purge les trois tables en une passe, sans toucher aux lignes recentes", async () => {
+describe("purge de EnvoiEnAttente, les lignes TERMINEES seulement", () => {
+  it("supprime une ligne terminee ancienne ET conserve une ligne recente", async () => {
+    const horsFenetre = ilYAJours(
+      MAINTENANT,
+      CONSERVATION_ENVOI_TERMINE_JOURS + 1,
+    );
+    const dansFenetre = ilYAJours(MAINTENANT, 1);
+
+    await ecrireEnvoi(horsFenetre, "ENVOYE", "ancienne-envoyee");
+    await ecrireEnvoi(dansFenetre, "ENVOYE", "recente-envoyee");
+
+    const supprimees = await purgerEnvoisTermines(MAINTENANT);
+
+    expect(supprimees).toBe(1);
+    expect(await clesRestantes("envoi_en_attente", "modele")).toEqual([
+      "recente-envoyee",
+    ]);
+  });
+
+  it("supprime aussi les lignes ECHOUE anciennes, leur trace vivant ailleurs", async () => {
+    /*
+     * `ECHOUE` EST TERMINEE AU MEME TITRE QUE `ENVOYE`, et le registre le dit :
+     * l'information de fond survit dans `JournalEmail`, qui est la trace
+     * opposable. La distinguer ici ferait garder deux fois la meme chose.
+     */
+    await ecrireEnvoi(
+      ilYAJours(MAINTENANT, CONSERVATION_ENVOI_TERMINE_JOURS + 1),
+      "ECHOUE",
+      "ancienne-echouee",
+    );
+
+    const supprimees = await purgerEnvoisTermines(MAINTENANT);
+
+    expect(supprimees).toBe(1);
+    expect(await clesRestantes("envoi_en_attente", "modele")).toEqual([]);
+  });
+
+  it("NE SUPPRIME JAMAIS une ligne ENVOI_EN_COURS, quel que soit son age", async () => {
+    /*
+     * LE CRITERE 2, ET LE COEUR DE CETTE STORY. Une ligne bloquee est AMBIGUE :
+     * personne ne sait si le message est parti, ADR-033 refuse de trancher
+     * automatiquement, et une alerte appelle l'exploitante a decider.
+     *
+     * LA PURGER EFFACERAIT PRECISEMENT CE QU'IL FAUT TRAITER, et le ferait en
+     * silence : l'incident disparaitrait sans avoir ete resolu. C'est la raison
+     * pour laquelle cette purge n'a pas ete ecrite dans LS-82, ou un
+     * `deleteMany` par age aurait suffi.
+     *
+     * L'AGE EST DEMESURE, mille jours, pour qu'aucune borne de duree plausible
+     * ne puisse expliquer la survie de la ligne : seul le filtre sur le statut
+     * la protege.
+     */
+    await ecrireEnvoi(ilYAJours(MAINTENANT, 1000), "ENVOI_EN_COURS", "bloquee");
+
+    const supprimees = await purgerEnvoisTermines(MAINTENANT);
+
+    expect(supprimees).toBe(0);
+    expect(await clesRestantes("envoi_en_attente", "modele")).toEqual([
+      "bloquee",
+    ]);
+  });
+
+  it("NE SUPPRIME JAMAIS une ligne EN_ATTENTE, quel que soit son age", async () => {
+    /*
+     * LE CRITERE 3. Une ligne en attente n'est pas encore partie : la purger
+     * priverait un client de sa confirmation, et le message serait perdu sans
+     * qu'aucune trace ne subsiste.
+     *
+     * UNE LIGNE TRES ANCIENNE EN ATTENTE EST ELLE-MEME UN INCIDENT, la tache
+     * d'expedition tournant tous les quarts d'heure. La purger effacerait le
+     * symptome au lieu de le montrer.
+     */
+    await ecrireEnvoi(ilYAJours(MAINTENANT, 1000), "EN_ATTENTE", "en-attente");
+
+    const supprimees = await purgerEnvoisTermines(MAINTENANT);
+
+    expect(supprimees).toBe(0);
+    expect(await clesRestantes("envoi_en_attente", "modele")).toEqual([
+      "en-attente",
+    ]);
+  });
+
+  it("distingue les quatre statuts dans une seule passe", async () => {
+    /*
+     * LES QUATRE ETATS ENSEMBLE, ET TOUS ANCIENS. Les tester separement
+     * laisserait passer un filtre qui garde le bon statut par hasard : ici les
+     * quatre lignes sont hors fenetre, et seules DEUX doivent partir.
+     */
+    const vieux = ilYAJours(MAINTENANT, 1000);
+
+    await ecrireEnvoi(vieux, "ENVOYE", "a-envoyee");
+    await ecrireEnvoi(vieux, "ECHOUE", "b-echouee");
+    await ecrireEnvoi(vieux, "ENVOI_EN_COURS", "c-bloquee");
+    await ecrireEnvoi(vieux, "EN_ATTENTE", "d-attente");
+
+    const supprimees = await purgerEnvoisTermines(MAINTENANT);
+
+    expect(supprimees).toBe(2);
+    expect(await clesRestantes("envoi_en_attente", "modele")).toEqual([
+      "c-bloquee",
+      "d-attente",
+    ]);
+  });
+});
+
+describe("purge de Message, trois ans", () => {
+  it("supprime un message hors fenetre ET conserve un message recent", async () => {
+    const horsFenetre = ilYAJours(
+      MAINTENANT,
+      CONSERVATION_MESSAGE_ANNEES * 365 + 30,
+    );
+    const dansFenetre = ilYAJours(MAINTENANT, 300);
+
+    await ecrireMessage(horsFenetre, "ancien");
+    await ecrireMessage(dansFenetre, "recent");
+
+    const supprimees = await purgerMessages(MAINTENANT);
+
+    expect(supprimees).toBe(1);
+    expect(await clesRestantes("message", "sujet")).toEqual(["recent"]);
+  });
+
+  it("ne regarde pas le statut, contrairement a l'outbox", async () => {
+    /*
+     * L'ASYMETRIE AVEC `EnvoiEnAttente` EST VOULUE ET ELLE SE JUSTIFIE.
+     *
+     * Une ligne d'outbox bloquee est un INCIDENT a traiter : la purger
+     * effacerait le travail. Un message NON LU de trois ans n'est pas un
+     * incident, c'est une demande a laquelle personne n'a repondu et a laquelle
+     * plus personne ne repondra : le conserver au-dela de la duree annoncee
+     * contredirait la minimisation sans rendre service a qui que ce soit.
+     *
+     * LA DUREE EST LE SEUL CRITERE ICI, et ce test le fige : un filtre sur le
+     * statut ajoute plus tard ferait rougir.
+     */
+    const vieux = ilYAJours(MAINTENANT, CONSERVATION_MESSAGE_ANNEES * 365 + 30);
+
+    await client.query(
+      `INSERT INTO message (id, nom, email, sujet, corps, statut, lu_a, cree_a)
+       VALUES (gen_random_uuid()::text, 'TEST', 'test@exemple.invalid',
+               'ancien-lu', 'Corps.', 'LU', $1, $1)`,
+      [vieux.toISOString()],
+    );
+    await ecrireMessage(vieux, "ancien-nouveau");
+
+    const supprimees = await purgerMessages(MAINTENANT);
+
+    expect(supprimees).toBe(2);
+    expect(await clesRestantes("message", "sujet")).toEqual([]);
+  });
+});
+
+describe("purge des cinq tables ensemble", () => {
+  it("purge les cinq tables en une passe, sans toucher aux lignes recentes", async () => {
     await ecrireLigneConnexion(ilYAJours(MAINTENANT, 213), "vieux@exemple.fr");
     await ecrireLigneConnexion(ilYAJours(MAINTENANT, 2), "recent@exemple.fr");
     await ecrireLigneAudit(ilYAJours(MAINTENANT, 213), "audit-vieux");
     await ecrireLigneAudit(ilYAJours(MAINTENANT, 2), "audit-recent");
     await ecrireLigneRateLimit(ilYAJours(MAINTENANT, 30), "vieux|/sign-in");
     await ecrireLigneRateLimit(MAINTENANT, "recent|/sign-in");
+    await ecrireEnvoi(ilYAJours(MAINTENANT, 400), "ENVOYE", "envoi-vieux");
+    await ecrireEnvoi(ilYAJours(MAINTENANT, 2), "ENVOYE", "envoi-recent");
+    /*
+     * UNE LIGNE BLOQUEE ANCIENNE DANS LA PASSE COMPLETE, et non seulement dans
+     * son test isole : c'est ici qu'une purge trop large se verrait, la ou
+     * cinq tables sont traitees d'affilee et ou l'attention se relache.
+     */
+    await ecrireEnvoi(ilYAJours(MAINTENANT, 400), "ENVOI_EN_COURS", "bloquee");
+    await ecrireMessage(ilYAJours(MAINTENANT, 1500), "message-vieux");
+    await ecrireMessage(ilYAJours(MAINTENANT, 2), "message-recent");
 
     const resultats = await purgerJournaux(MAINTENANT);
 
@@ -226,9 +431,11 @@ describe("purge des trois journaux ensemble", () => {
       { table: "JournalConnexion", supprimees: 1, echec: false },
       { table: "JournalAudit", supprimees: 1, echec: false },
       { table: "RateLimit", supprimees: 1, echec: false },
+      { table: "EnvoiEnAttente", supprimees: 1, echec: false },
+      { table: "Message", supprimees: 1, echec: false },
     ]);
 
-    // Et surtout, les trois lignes recentes sont toujours la.
+    // Et surtout, les lignes recentes sont toujours la.
     expect(await clesRestantes("journal_connexion", "email_tente")).toEqual([
       "recent@exemple.fr",
     ]);
@@ -238,6 +445,17 @@ describe("purge des trois journaux ensemble", () => {
     expect(await clesRestantes("rate_limit", "key")).toEqual([
       "recent|/sign-in",
     ]);
+    /*
+     * LA LIGNE BLOQUEE SURVIT A LA PASSE COMPLETE, avec la recente. C'est
+     * l'assertion qui vaut le plus dans ce test : elle porte sur la table dont
+     * la purge est CONDITIONNELLE, la ou les quatre autres ne dependent que de
+     * l'age.
+     */
+    expect(await clesRestantes("envoi_en_attente", "modele")).toEqual([
+      "bloquee",
+      "envoi-recent",
+    ]);
+    expect(await clesRestantes("message", "sujet")).toEqual(["message-recent"]);
   });
 
   it("une purge en echec n'empeche pas les suivantes", async () => {
@@ -305,20 +523,32 @@ describe("purge des trois journaux ensemble", () => {
     await client.query("ALTER TABLE journal_connexion RENAME TO jc_off");
     await client.query("ALTER TABLE journal_audit RENAME TO ja_off");
     await client.query("ALTER TABLE rate_limit RENAME TO rl_off");
+    await client.query("ALTER TABLE envoi_en_attente RENAME TO ea_off");
+    await client.query("ALTER TABLE message RENAME TO ms_off");
 
     try {
       const resultats = await purgerJournaux(MAINTENANT);
 
       expect(resultats.every((r) => r.echec)).toBe(true);
+      /*
+       * LES CINQ TABLES SONT ENUMEREES, et cette liste en dur est ce qui rend
+       * l'ajout d'une purge VISIBLE : la sixieme fera rougir ce test, donc
+       * personne ne l'ajoutera sans se demander si elle doit figurer au
+       * registre. C'est deliberement le contraire d'une assertion souple.
+       */
       expect(resultats.map((r) => r.table)).toEqual([
         "JournalConnexion",
         "JournalAudit",
         "RateLimit",
+        "EnvoiEnAttente",
+        "Message",
       ]);
     } finally {
       await client.query("ALTER TABLE jc_off RENAME TO journal_connexion");
       await client.query("ALTER TABLE ja_off RENAME TO journal_audit");
       await client.query("ALTER TABLE rl_off RENAME TO rate_limit");
+      await client.query("ALTER TABLE ea_off RENAME TO envoi_en_attente");
+      await client.query("ALTER TABLE ms_off RENAME TO message");
     }
   });
 });
