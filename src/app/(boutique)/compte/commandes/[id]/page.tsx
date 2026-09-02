@@ -71,6 +71,26 @@ export default async function PageDetailCommande({
    */
   const adresse = (commande.adresseLivraison ?? {}) as AdresseFigee;
 
+  /*
+   * LE MODE EXECUTE EST DISTINCT DE CELUI QUI A ETE PAYE, ADR-025. Il ne
+   * s'affiche que s'il DIFFERE : le repeter a l'identique n'apprendrait rien et
+   * ferait douter d'un ecart la ou il n'y en a pas.
+   */
+  const modeExecuteDifferent =
+    commande.expedition !== null &&
+    commande.expedition.mode !== commande.modeLivraison;
+
+  /*
+   * LA SECTION DE SUIVI A-T-ELLE UNE LIGNE A MONTRER. Ses quatre lignes sont
+   * toutes conditionnelles : sans ce calcul, une expedition sans date, sans
+   * numero et au mode identique affichait un titre suivi d'une liste vide.
+   */
+  const suiviADireQuelqueChose =
+    modeExecuteDifferent ||
+    commande.expedition?.expedieA !== null ||
+    commande.expedition?.numeroSuivi !== null ||
+    commande.expedition?.livreA !== null;
+
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Commande {commande.numero}</h1>
@@ -139,20 +159,32 @@ export default async function PageDetailCommande({
 
       <section className={styles.section} aria-labelledby="titre-adresse">
         <h2 id="titre-adresse">Adresse de livraison</h2>
+        {/*
+         * CHAQUE LIGNE EST CONDITIONNELLE, PAS SEULEMENT `ligne2`. Le type
+         * `AdresseFigee` declare TOUS ses champs optionnels, ce qui est
+         * coherent avec un `Json` fige : n'en traiter qu'un laissait des `<br>`
+         * inconditionnels, donc une ligne vide en tete ou en fin de bloc des
+         * qu'un champ manquait. Releve par la revue frontend.
+         *
+         * LA LISTE EST CONSTRUITE PUIS RENDUE, plutot qu'une suite de ternaires
+         * imbriques : aucun separateur ne peut survivre a la ligne qu'il
+         * separait.
+         */}
         <address className={styles.adresse}>
-          {adresse.nom}
-          <br />
-          {adresse.ligne1}
-          {adresse.ligne2 ? (
-            <>
-              <br />
-              {adresse.ligne2}
-            </>
-          ) : null}
-          <br />
-          {adresse.codePostal} {adresse.ville}
-          <br />
-          {adresse.pays}
+          {[
+            adresse.nom,
+            adresse.ligne1,
+            adresse.ligne2,
+            [adresse.codePostal, adresse.ville].filter(Boolean).join(" "),
+            adresse.pays,
+          ]
+            .filter((ligne): ligne is string => Boolean(ligne?.trim()))
+            .map((ligne, rang, toutes) => (
+              <span key={ligne}>
+                {ligne}
+                {rang < toutes.length - 1 ? <br /> : null}
+              </span>
+            ))}
         </address>
       </section>
 
@@ -163,10 +195,33 @@ export default async function PageDetailCommande({
        * apprend qu'un colis est livre. Le champ est lu des maintenant pour que
        * cet ecran n'ait pas a changer ce jour-la.
        */}
-      {commande.expedition && (
+      {/*
+       * LA SECTION N'APPARAIT QUE SI ELLE A QUELQUE CHOSE A DIRE, et non des
+       * que l'expedition existe. Ses champs sont tous nullables : `expedieA` et
+       * `numeroSuivi` par le schema, `livreA` TOUJOURS aujourd'hui, aucun
+       * chemin ne l'ecrivant avant LS-33. Une expedition declaree sans date ni
+       * numero affichait un titre « Suivi » suivi d'une liste VIDE.
+       *
+       * LE MODE EXECUTE S'AFFICHE QUAND IL DIFFERE DE CELUI QUI A ETE PAYE,
+       * ADR-025, et c'est ce que le commentaire du repository promettait sans
+       * que le rendu le fasse. Un client rebascule de domicile vers Point
+       * Relais voyait « A domicile », sans aucun moyen d'apprendre ou son colis
+       * etait reellement parti. La commande n'etant jamais reecrite, seul cet
+       * ecart peut le dire. Les deux releves par la revue frontend.
+       */}
+      {commande.expedition && suiviADireQuelqueChose && (
         <section className={styles.section} aria-labelledby="titre-suivi">
           <h2 id="titre-suivi">Suivi</h2>
           <dl className={styles.liste}>
+            {modeExecuteDifferent && (
+              <div className={styles.ligne}>
+                <dt>Mode d&apos;expédition</dt>
+                <dd>
+                  {LIBELLES_LIVRAISON[commande.expedition.mode]}, au lieu de{" "}
+                  {LIBELLES_LIVRAISON[commande.modeLivraison]}
+                </dd>
+              </div>
+            )}
             {commande.expedition.expedieA && (
               <div className={styles.ligne}>
                 <dt>Expédiée le</dt>
@@ -237,24 +292,37 @@ export default async function PageDetailCommande({
              * facture au montant plein sans explication.
              */}
             {commande.facture.avoirs.length > 0 && (
-              <ul className={styles.articles}>
+              /*
+               * `.avoirs` ET NON `.articles` : cette derniere porte un
+               * `flex-direction: column` concu pour trois `span` empiles
+               * volontairement, et du texte coulant s'y serait brise en blocs.
+               *
+               * LA STRUCTURE SUIT CELLE DE LA FACTURE, un paragraphe descriptif
+               * puis un paragraphe de lien : la premiere version melait les deux
+               * dans le meme `li`, et le lecteur d'ecran entendait le numero
+               * deux fois de suite. Les deux releves par la revue frontend.
+               */
+              <ul className={styles.avoirs}>
                 {commande.facture.avoirs.map((avoir) => (
-                  <li key={avoir.id} className={styles.article}>
-                    Avoir {avoir.numero} de{" "}
-                    {formaterMontant(avoir.montantCentimes)}, émis le{" "}
-                    {formaterDate(avoir.emisA)}
+                  <li key={avoir.id} className={styles.avoir}>
+                    <p className={styles.texte}>
+                      Avoir {avoir.numero} de{" "}
+                      {formaterMontant(avoir.montantCentimes)}, émis le{" "}
+                      {formaterDate(avoir.emisA)}.
+                    </p>
                     {avoir.cheminPdf ? (
-                      <>
-                        {" "}
+                      <p className={styles.texte}>
                         <a
                           href={`/compte/commandes/${commande.id}/avoir/${avoir.id}`}
                           className={styles.lien}
                         >
                           Télécharger l&apos;avoir {avoir.numero}
                         </a>
-                      </>
+                      </p>
                     ) : (
-                      <> (document momentanément indisponible)</>
+                      <p className={styles.texte}>
+                        Le document de cet avoir est momentanément indisponible.
+                      </p>
                     )}
                   </li>
                 ))}

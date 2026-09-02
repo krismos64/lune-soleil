@@ -66,6 +66,25 @@ test.beforeEach(async ({}, infos) => {
 
   await avecBase(async (client) => {
     /*
+     * LA COMMANDE EST RECREEE A CHAQUE EXECUTION, jamais conservee.
+     *
+     * `ON CONFLICT DO NOTHING` seul ne suffisait pas : une fixture DURCIE ne
+     * remplaçait jamais l'ancienne, restee en base depuis l'execution
+     * precedente, et onze tests rougissaient en cherchant des valeurs que la
+     * ligne conservee ne portait pas. La cause designee, un rendu fautif,
+     * n'etait pas la vraie.
+     *
+     * LES LIGNES PARTENT AVANT LA COMMANDE, `ligne_commande` etant en
+     * `RESTRICT` : l'ordre inverse leve une violation de cle etrangere.
+     */
+    await client.query(
+      `DELETE FROM ligne_commande WHERE commande_id IN (
+         SELECT id FROM commande WHERE numero = $1)`,
+      [numero],
+    );
+    await client.query(`DELETE FROM commande WHERE numero = $1`, [numero]);
+
+    /*
      * LA COMMANDE EST RATTACHEE DES SA CREATION, `utilisateur_id` renseigne :
      * ce fichier mesure l'HISTORIQUE, pas le rattachement, qui a son propre
      * fichier. Une commande invitee n'apparaitrait pas ici, et le test
@@ -74,18 +93,54 @@ test.beforeEach(async ({}, infos) => {
      * `ON CONFLICT` SUR LE NUMERO, unique : la relance suivante reutilise la
      * ligne plutot que d'echouer, meme motif que `commande.setup.ts`.
      */
+    /*
+     * LA FIXTURE EST VOLONTAIREMENT DURE, ET C'EST CE QUI FAIT LA VALEUR DU
+     * TEST DE DEBORDEMENT. La premiere version portait « Client verifie »,
+     * « 1 rue du Test » et 49,99 € : un test qui mesure le debordement sur des
+     * valeurs courtes ne peut pas voir le defaut qu'il pretend attraper, motif
+     * du controle qui n'a jamais echoue. Releve par la revue frontend.
+     *
+     * Trois durcissements, chacun visant une colonne differente a 320 px :
+     *
+     *   nom de produit  quarante caracteres SANS espace, le seul cas qu'aucun
+     *                   `overflow-wrap` par defaut ne casse
+     *   montants        trois chiffres avant la virgule, 1 234,56 €
+     *   adresse         une `ligne2`, un nom long, un pays ecrit en toutes
+     *                   lettres
+     */
     await client.query(
       `INSERT INTO commande (id, numero, email_normalise, nom_client, utilisateur_id,
                              dissocie_a, adresse_livraison, adresse_facturation,
                              sous_total_centimes, mode_livraison, frais_port_centimes,
                              total_centimes, cgv_acceptees_a, cgv_version, cree_a)
-       SELECT gen_random_uuid()::text, $1, u.email, 'Client verifie', u.id, NULL,
-              '{"nom": "Client verifie", "ligne1": "1 rue du Test",
-                "codePostal": "64000", "ville": "Pau", "pays": "FR"}'::jsonb,
-              '{}'::jsonb, 4500, 'DOMICILE', 499, 4999, now(), 'v1', now()
+       SELECT gen_random_uuid()::text, $1, u.email,
+              'Marie-Christine de la Tour du Pin', u.id, NULL,
+              '{"nom": "Marie-Christine de la Tour du Pin",
+                "ligne1": "127 avenue des Pyrenees-Atlantiques",
+                "ligne2": "Residence les Glycines, batiment C, appartement 42",
+                "codePostal": "64000", "ville": "Pau", "pays": "France"}'::jsonb,
+              '{}'::jsonb, 123456, 'DOMICILE', 700, 124156, now(), 'v1', now()
        FROM utilisateur u WHERE u.email = $2
-       ON CONFLICT (numero) DO NOTHING`,
+`,
       [numero, email],
+    );
+
+    /*
+     * UNE LIGNE AU LIBELLE LONG SANS ESPACE. `varianteId` reste nul, la
+     * colonne etant nullable pour que la ligne survive a sa variante : ce
+     * fichier mesure un RENDU, il n'a pas besoin d'un produit au catalogue.
+     */
+    await client.query(
+      `INSERT INTO ligne_commande (id, commande_id, variante_id, reference_figee,
+                                   libelle_produit_fige, libelle_variante_fige,
+                                   prix_fige_centimes, quantite)
+       SELECT gen_random_uuid()::text, c.id, NULL, 'REF-TEST-0057',
+              'CollierAurorePendentifLapisLazuliDoreAlOrFin',
+              'chaine de 45 centimetres, fermoir mousqueton',
+              123456, 1
+       FROM commande c WHERE c.numero = $1
+`,
+      [numero],
     );
   });
 });
@@ -120,12 +175,27 @@ test("le detail s'atteint au clic et affiche les montants figes", async ({
     page.getByRole("heading", { name: `Commande ${numero}` }),
   ).toBeVisible();
 
-  // LES MONTANTS VIENNENT DES COLONNES FIGEES, invariant 3 : 4500 + 499 = 4999.
-  await expect(page.getByText("49,99 €")).toBeVisible();
-  await expect(page.getByText("4,99 €")).toBeVisible();
+  /*
+   * LES MONTANTS VIENNENT DES COLONNES FIGEES, invariant 3 : 123456 + 700 =
+   * 124156. Trois chiffres avant la virgule, ce qui exerce la colonne de
+   * montants a 320 px.
+   *
+   * L'ESPACE EST INSECABLE dans la sortie de `Intl.NumberFormat`, motif deja en
+   * fiche : `getByText` avec une chaine portant un espace ordinaire ne
+   * trouverait rien. Le motif souple evite d'ecrire le caractere en dur.
+   */
+  /*
+   * `.first()` PARCE QUE LE SOUS-TOTAL APPARAIT DEUX FOIS, dans la ligne
+   * d'article et dans le recapitulatif : la commande ne porte qu'un exemplaire.
+   * C'est le rendu attendu, et un selecteur strict le refusait pour ambiguite.
+   */
+  await expect(page.getByText(/1\s?234,56/).first()).toBeVisible();
+  await expect(page.getByText(/1\s?241,56/)).toBeVisible();
 
-  // L'ADRESSE FIGEE EST CELLE DU JOUR DE LA COMMANDE, jamais le carnet actuel.
-  await expect(page.getByText("1 rue du Test")).toBeVisible();
+  // L'ADRESSE FIGEE EST CELLE DU JOUR DE LA COMMANDE, jamais le carnet actuel,
+  // et sa `ligne2` doit apparaitre.
+  await expect(page.getByText("127 avenue des Pyrenees")).toBeVisible();
+  await expect(page.getByText(/Residence les Glycines/)).toBeVisible();
 });
 
 test("aucune facture n'est annoncee avant le paiement", async ({ page }) => {

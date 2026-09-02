@@ -48,6 +48,7 @@ import {
   lireCompteExport,
   lireDonneesExport,
 } from "@/repositories/utilisateur";
+import { revoquerJetonsActifs } from "@/repositories/jeton-acces";
 import { exigerSession } from "@/services/autorisation";
 import { exigerReauthentificationRecente } from "@/services/reauthentification";
 
@@ -131,6 +132,45 @@ export async function supprimerCompte(
         where: { utilisateurId, dissocieA: null },
         data: { dissocieA: maintenant },
       });
+
+      /**
+       * PUIS LES JETONS D'ACCES AUX DOCUMENTS SONT REVOQUES, LS-57, et cette
+       * etape manquait entierement.
+       *
+       * CE QU'ELLE FERME. `JetonAcces` pend sur `Commande`, jamais sur
+       * `Utilisateur` : ni le `DELETE` ci-dessous ni aucune politique de cle
+       * etrangere ne le touche. Un lien de facture recu par email restait donc
+       * VALIDE jusqu'a trente jours apres que la personne ait exerce son droit
+       * a l'effacement, et il sert un PDF portant son nom, son adresse figee et
+       * ses montants. Sur une boite partagee, revendue ou un poste familial,
+       * c'est un tiers qui l'ouvre.
+       *
+       * Mesure faite par `ls-critical-reviewer` sur la base : apres
+       * suppression, le chemin par session refusait, le chemin par jeton
+       * servait toujours le document.
+       *
+       * C'EST LE GESTE SYMETRIQUE DU POINT 8 des transactions critiques de
+       * `database.md`, ou la revocation de l'ancien jeton d'invitation ferme le
+       * meme trou : remplacer ou supprimer ce qui DESIGNE un jeton ne touche
+       * pas le jeton lui-meme.
+       *
+       * DANS LA MEME TRANSACTION que le marquage : une revocation qui
+       * committerait seule laisserait des liens morts sur un compte vivant, et
+       * une suppression qui committerait seule laisserait des liens vivants sur
+       * un compte mort. Le second cas est la faille.
+       *
+       * `lireCommandesDuCompte` PLUTOT QU'UNE JOINTURE : les identifiants sont
+       * relus APRES le marquage et AVANT le `DELETE`, seul moment ou le lien
+       * existe encore.
+       */
+      const commandes = await tx.commande.findMany({
+        where: { utilisateurId },
+        select: { id: true },
+      });
+
+      for (const commande of commandes) {
+        await revoquerJetonsActifs(tx, commande.id, "DOCUMENT", maintenant);
+      }
 
       /**
        * PUIS LA SUPPRESSION, qui declenche les onze autres politiques de cle

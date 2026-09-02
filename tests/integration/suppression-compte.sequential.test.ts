@@ -28,6 +28,8 @@ import { VARIABLE_URL_TEST } from "../aide/base-ephemere";
 let client: Client;
 let supprimerCompte: typeof import("@/services/suppression-compte").supprimerCompte;
 let exporterDonneesPersonnelles: typeof import("@/services/suppression-compte").exporterDonneesPersonnelles;
+let autoriserAccesDocument: typeof import("@/services/acces-document").autoriserAccesDocument;
+let reemettreJetonDocument: typeof import("@/services/acces-document").reemettreJetonDocument;
 
 const EMAIL = "cliente@exemple.fr";
 
@@ -40,6 +42,9 @@ beforeAll(async () => {
 
   ({ supprimerCompte, exporterDonneesPersonnelles } =
     await import("@/services/suppression-compte"));
+
+  ({ autoriserAccesDocument, reemettreJetonDocument } =
+    await import("@/services/acces-document"));
 });
 
 afterAll(async () => {
@@ -358,5 +363,108 @@ describe("export des donnees personnelles, articles 15 et 20", () => {
     expect(
       await exporterDonneesPersonnelles("identifiant-qui-n-existe-pas"),
     ).toBeNull();
+  });
+});
+
+describe("les liens de facture ne survivent pas a la suppression, LS-57", () => {
+  /*
+   * LA FAILLE QUE CE BLOC FERME, trouvee par `ls-critical-reviewer` et mesuree
+   * sur la base : apres suppression du compte, le chemin par SESSION refusait
+   * correctement, et le chemin par JETON servait toujours le PDF.
+   *
+   * POURQUOI ELLE EXISTAIT. `JetonAcces` pend sur `Commande`, jamais sur
+   * `Utilisateur` : ni le `DELETE` ni aucune politique de cle etrangere ne le
+   * touche. Un lien recu par email restait donc valide jusqu'a TRENTE JOURS
+   * apres que la personne ait exerce son droit a l'effacement, et il sert un
+   * document portant son nom, son adresse figee et ses montants. Sur une boite
+   * partagee, revendue, ou un poste familial, c'est un tiers qui l'ouvre.
+   *
+   * DEUX LIGNES DE DEFENSE SONT POSEES, et ce test les exerce toutes deux :
+   * la revocation dans la transaction de suppression, et le filtre `dissocieA`
+   * dans la lecture qui sert le document.
+   */
+  it("revoque les jetons actifs et refuse le document ensuite", async () => {
+    const utilisateurId = await creerCompteComplet();
+
+    const { rows } = await client.query(
+      `SELECT id FROM commande WHERE utilisateur_id = $1`,
+      [utilisateurId],
+    );
+    const commandeId = rows[0].id as string;
+
+    // Une facture avec son PDF, sans quoi l'acces serait refuse pour une autre
+    // raison et le test passerait sans rien prouver.
+    await client.query(
+      `INSERT INTO facture (id, commande_id, numero, montant_total_centimes,
+                            instantane_legal, chemin_pdf)
+       VALUES (gen_random_uuid()::text, $1, 'F-2026-9001', 4999, '{}'::jsonb,
+               '2026/F-2026-9001.pdf')`,
+      [commandeId],
+    );
+
+    const { valeur } = await reemettreJetonDocument(
+      (await import("@/lib/prisma")).prisma,
+      commandeId,
+    );
+
+    // AVANT : le lien sert le document. Sans cette assertion, le test passerait
+    // sur un jeton qui n'a jamais fonctionne.
+    expect((await autoriserAccesDocument(valeur)).statut).toBe("AUTORISE");
+
+    const resultat = await supprimerCompte(utilisateurId);
+    expect(resultat.etat).toBe("SUPPRIME");
+
+    // APRES : le meme lien est refuse.
+    expect((await autoriserAccesDocument(valeur)).statut).toBe("REFUSE");
+
+    // LE JETON EST REVOQUE EN BASE, premiere ligne de defense. Verifier le seul
+    // refus laisserait passer une correction qui ne ferait que filtrer a la
+    // lecture, donc un jeton actif indefiniment sur une commande dissociee.
+    const jetons = await client.query(
+      `SELECT revoque_a FROM jeton_acces WHERE commande_id = $1`,
+      [commandeId],
+    );
+    expect(jetons.rows).toHaveLength(1);
+    expect(jetons.rows[0].revoque_a).not.toBeNull();
+  });
+
+  it("refuse aussi un jeton qu'une revocation aurait manque", async () => {
+    /*
+     * LA SECONDE LIGNE DE DEFENSE, exercee seule. Le jeton est reemis APRES la
+     * suppression, ce qu'aucun chemin ne fait aujourd'hui : il simule une
+     * revocation oubliee par un chemin futur. Le filtre `dissocieA` de
+     * `lireFactureAServir` doit refuser malgre un jeton parfaitement valide.
+     */
+    const utilisateurId = await creerCompteComplet();
+
+    const { rows } = await client.query(
+      `SELECT id FROM commande WHERE utilisateur_id = $1`,
+      [utilisateurId],
+    );
+    const commandeId = rows[0].id as string;
+
+    await client.query(
+      `INSERT INTO facture (id, commande_id, numero, montant_total_centimes,
+                            instantane_legal, chemin_pdf)
+       VALUES (gen_random_uuid()::text, $1, 'F-2026-9002', 4999, '{}'::jsonb,
+               '2026/F-2026-9002.pdf')`,
+      [commandeId],
+    );
+
+    await supprimerCompte(utilisateurId);
+
+    const { prisma } = await import("@/lib/prisma");
+    const { valeur } = await reemettreJetonDocument(prisma, commandeId);
+
+    // LE JETON EST VALIDE, ni expire ni consomme ni revoque : seul le filtre
+    // sur la commande dissociee peut refuser.
+    const jetons = await client.query(
+      `SELECT revoque_a, utilise_a FROM jeton_acces
+       WHERE commande_id = $1 AND revoque_a IS NULL`,
+      [commandeId],
+    );
+    expect(jetons.rows).toHaveLength(1);
+
+    expect((await autoriserAccesDocument(valeur)).statut).toBe("REFUSE");
   });
 });

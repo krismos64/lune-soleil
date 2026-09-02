@@ -16,11 +16,17 @@
  * l'importaient deja par des chemins relatifs remontants, `../commandes/
  * affichage`, ce qui signalait qu'il n'etait plus a sa place.
  *
- * Un enum ajoute a `StatutCommande` fait echouer le `type-check` sur
- * `LIBELLES_STATUT`, `Record<StatutCommande, string>` etant exhaustif : c'est
- * ce qui empeche un statut d'apparaitre brut a l'ecran, piege deja rencontre.
+ * UN ENUM AJOUTE FAIT ECHOUER LE `type-check` sur `LIBELLES_STATUT` ET
+ * `LIBELLES_LIVRAISON`, tous deux exhaustifs : c'est ce qui empeche un statut
+ * ou un mode d'apparaitre vide a l'ecran, piege deja rencontre sur ce projet.
+ *
+ * `LIBELLES_LIVRAISON` ne l'etait PAS jusqu'a la revue frontend de LS-57, et
+ * cette phrase l'annonçait deja pour les deux : un commentaire qui promet plus
+ * que le code est ce qui a laisse l'asymetrie passer.
+ *
+ * `LIBELLES_PAIEMENT` reste volontairement faible, voir son propre commentaire.
  */
-import type { StatutCommande } from "@/generated/prisma/enums";
+import type { ModeLivraison, StatutCommande } from "@/generated/prisma/enums";
 
 /** Libelle affichable d'un statut, jamais la valeur brute de l'enum. */
 export const LIBELLES_STATUT: Record<StatutCommande, string> = {
@@ -32,7 +38,15 @@ export const LIBELLES_STATUT: Record<StatutCommande, string> = {
   ANNULEE: "Annulée",
 };
 
-/** Libelle d'un statut de paiement, axe distinct du statut de commande. */
+/**
+ * Libelle d'un statut de paiement, axe distinct du statut de commande.
+ *
+ * `Record<string, string>` EST ASSUME ICI, a la difference des deux tables
+ * voisines : les colonnes de paiement sont lues en `string` par
+ * l'administration, qui applique deja un repli. Aucun ecran client ne
+ * l'emploie. Le jour ou l'un le fera, ce type devra devenir exhaustif comme
+ * les autres.
+ */
 export const LIBELLES_PAIEMENT: Record<string, string> = {
   EN_ATTENTE: "En attente",
   REUSSI: "Réussi",
@@ -41,8 +55,24 @@ export const LIBELLES_PAIEMENT: Record<string, string> = {
   REMBOURSE: "Remboursé",
 };
 
-/** Libelle d'un mode de livraison, ADR-025. */
-export const LIBELLES_LIVRAISON: Record<string, string> = {
+/**
+ * Libelle d'un mode de livraison, ADR-025.
+ *
+ * `Record<ModeLivraison, string>` ET NON `Record<string, string>`, corrige par
+ * la revue frontend de LS-57. Le typage faible laissait passer un mode ajoute a
+ * l'enum : `LIBELLES_LIVRAISON[mode]` rendait `undefined`, que React affiche en
+ * chaine vide, et le champ « Livraison » de l'ecran client apparaissait VIDE
+ * sans qu'aucun controle n'ait rougi.
+ *
+ * Mutation faite pour le prouver : ajouter `CONSIGNE` a `ModeLivraison` ne
+ * faisait echouer que le tunnel, jamais ce fichier. Avec le type exhaustif, il
+ * echoue ici aussi, et c'est ce qui empeche un mode d'apparaitre vide.
+ *
+ * L'en-tete de ce fichier annonçait cette protection pour `LIBELLES_STATUT`
+ * seul : un commentaire qui couvre un cas et laisse croire qu'il les couvre
+ * tous est ce qui a permis a l'asymetrie de passer.
+ */
+export const LIBELLES_LIVRAISON: Record<ModeLivraison, string> = {
   DOMICILE: "À domicile",
   POINT_RELAIS: "Point relais",
   LOCKER: "Locker",
