@@ -22,7 +22,8 @@ import { journaliser } from "@/lib/journal";
 export type ModeleEmail =
   | "verification-adresse"
   | "reinitialisation-mot-de-passe"
-  | "alerte-connexion-administration";
+  | "alerte-connexion-administration"
+  | "message-contact-recu";
 
 export type MessageEmail = {
   destinataire: string;

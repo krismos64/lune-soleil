@@ -86,11 +86,27 @@ type ClientBase = Prisma.TransactionClient;
  * annulerait la transaction ENTIERE, donc la confirmation de commande, pour un
  * email en double. Une commande payee non confirmee est bien plus grave qu'un
  * email non envoye, regle E4.
+ *
+ * `commandeId` EST NULLABLE DEPUIS LS-97, et cet elargissement change le
+ * comportement de la cle d'unicite plutot que de l'affaiblir. Un message de
+ * contact ne decoule d'AUCUNE commande : le formulaire est public, personne
+ * n'est connecte.
+ *
+ * PostgreSQL TRAITE LES `NULL` COMME DISTINCTS dans un index unique, donc deux
+ * notifications de contact ne se refusent JAMAIS l'une l'autre, quel que soit
+ * leur modele. C'est le comportement voulu ici et l'inverse de celui des
+ * commandes : deux personnes ecrivant a une minute d'intervalle doivent produire
+ * deux notifications, la ou deux confirmations de la MEME commande n'en
+ * produisent qu'une.
+ *
+ * L'idempotence du contact ne repose donc pas sur cette cle, mais sur le fait
+ * qu'un message est un evenement neuf a chaque envoi. Le double clic est borne
+ * par la limitation de debit, pas par l'unicite.
  */
 export async function deposerEnvoi(
   transaction: ClientBase,
   intention: {
-    commandeId: string;
+    commandeId: string | null;
     destinataire: string;
     modele: ModeleEmail;
     variables: Record<string, string>;
