@@ -26,6 +26,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
 import { journaliserErreur } from "@/lib/journal";
+import type { StatutCommande } from "@/generated/prisma/enums";
 import { EntreeInvalideError, schemaIdentifiant } from "@/lib/validation";
 import { exigerRole } from "@/services/autorisation";
 import { declarerExpedition } from "@/services/expedition";
@@ -45,8 +46,17 @@ export type ResultatExpedition =
   | { statut: "INVALIDE"; message: string }
   /** Aucune commande sous cet identifiant. */
   | { statut: "INTROUVABLE" }
-  /** La commande n'est pas dans un etat d'ou l'on expedie. */
-  | { statut: "STATUT_INCOMPATIBLE"; statutActuel: string }
+  /**
+   * La commande n'est pas dans un etat d'ou l'on expedie.
+   *
+   * `StatutCommande` ET NON `string`, correction du 2 septembre 2026. Elargir
+   * ce type privait l'ecran d'indexer `LIBELLES_STATUT` sans transtypage, donc
+   * d'afficher l'etat REEL : le message se contentait alors de « elle n'est
+   * plus en preparation », quand la commande peut avoir ete annulee. Un type
+   * trop large ne casse rien a la compilation, il ferme une possibilite en
+   * silence.
+   */
+  | { statut: "STATUT_INCOMPATIBLE"; statutActuel: StatutCommande }
   /** Cette commande porte deja une expedition. */
   | { statut: "DEJA_EXPEDIEE" }
   /** Panne technique, deja journalisee. */

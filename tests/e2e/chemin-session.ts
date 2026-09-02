@@ -114,6 +114,38 @@ export const COMMANDE_A_EXPEDIER_TEST = {
 } as const;
 
 /**
+ * La SECONDE commande EN_PREPARATION, LS-130. Elle existe pour une seule raison.
+ *
+ * UNE FILE A UNE SEULE CARTE NE PROUVE RIEN DE CE QUI COMPTE ICI. La page rend
+ * un formulaire PAR commande, donc plusieurs `id`, `label` et regions live
+ * voisins : avec une carte, `getByLabel("Transporteur")` en mode strict passe
+ * QUEL QUE SOIT l'etat des identifiants.
+ *
+ * MESURE ET NON SUPPOSE, le 2 septembre 2026 : les identifiants remplaces par
+ * des constantes fixes, les trois tests de rendu restaient VERTS. Le composant
+ * etait correct, la preuve ne l'etait pas.
+ *
+ * ELLE REND AUSSI LA MESURE DE DEBORDEMENT HONNETE : le commentaire annonce
+ * « la densite la plus forte de l'administration », ce qu'une carte unique ne
+ * produit pas.
+ *
+ * SON MODE EST `POINT_RELAIS`, DELIBEREMENT DIFFERENT du premier : le champ de
+ * point de retrait est alors rendu d'entree sur cette carte, ce qui met les
+ * deux formulaires dans des etats DISTINCTS et croise donc reellement leurs
+ * identifiants.
+ */
+export const SECONDE_COMMANDE_A_EXPEDIER_TEST = {
+  categorieId: "e1a2b3c4-1131-4aaa-8888-000000000001",
+  produitId: "e1a2b3c4-1131-4bbb-8888-000000000002",
+  varianteId: "e1a2b3c4-1131-4ccc-8888-000000000003",
+  commandeId: "e1a2b3c4-1131-4ddd-8888-000000000004",
+  ligneId: "e1a2b3c4-1131-4eee-8888-000000000005",
+  paiementId: "e1a2b3c4-1131-4fff-8888-000000000006",
+  numero: "C-TEST-0131",
+  pointRelaisId: "FR-TEST-9131",
+} as const;
+
+/**
  * Identifiants du produit de test rendu dans l'editeur, LS-111.
  *
  * FIGES ET NON ENGENDRES A CHAQUE EXECUTION. Le fichier de test doit construire

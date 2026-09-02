@@ -595,6 +595,36 @@ describe("declarerExpedition", () => {
     expect(await lireStatut(commandeId)).toBe("EN_PREPARATION");
   });
 
+  it("ramene a nul un numero de suivi sans lettre ni chiffre", async () => {
+    const commandeId = await commanderEtPreparer();
+
+    /*
+     * L'ESPACE SANS CHASSE, U+200B, TRAVERSE `trim()` : `"\u200B".trim()` ne
+     * rend PAS la chaine vide, mesure. Un copier-coller depuis l'interface web
+     * d'un transporteur ramene couramment ce caractere, et l'exploitante croit
+     * avoir laisse le champ vide.
+     *
+     * PERSISTE TEL QUEL, IL MENTIRAIT : la colonne serait non nulle, l'ecran
+     * afficherait un numero invisible, et LS-131 construirait une URL de suivi
+     * sur du vide. « Aucun numero » et « un numero qu'on ne voit pas » sont
+     * deux etats distincts, et un seul des deux est vrai.
+     */
+    const issue = await declarerExpedition({
+      commandeId,
+      saisie: { ...SAISIE_EXPEDITION, numeroSuivi: "\u200B \u00A0" },
+      acteurId: administratriceId,
+    });
+
+    expect(issue.statut).toBe("EXPEDIEE");
+
+    const { rows } = await client.query<{ numero_suivi: string | null }>(
+      "SELECT numero_suivi FROM expedition WHERE commande_id = $1",
+      [commandeId],
+    );
+
+    expect(rows[0]?.numero_suivi).toBeNull();
+  });
+
   it("accepte une expedition sans numero de suivi, le transporteur ne le donne pas toujours", async () => {
     const commandeId = await commanderEtPreparer();
 

@@ -34,6 +34,7 @@ import {
   FICHIER_SESSION,
   FICHIER_SESSION_ADMINISTRATION,
   PRODUIT_TEST,
+  SECONDE_COMMANDE_A_EXPEDIER_TEST,
 } from "./chemin-session";
 import {
   TOLERANCE_DEBORDEMENT_PX,
@@ -414,7 +415,7 @@ for (const chemin of ECRANS_BASCULE) {
  * de `expedition.sequential.test.ts`, qui travaillent sur une base ephemere.
  */
 test.describe("file d'expédition", () => {
-  test("la commande en préparation porte son formulaire complet", async ({
+  test("les deux commandes en préparation portent chacune leur formulaire", async ({
     page,
   }) => {
     await page.goto("/administration/expeditions");
@@ -422,20 +423,44 @@ test.describe("file d'expédition", () => {
     await expect(
       page.getByRole("link", { name: COMMANDE_A_EXPEDIER_TEST.numero }),
     ).toBeVisible();
+    await expect(
+      page.getByRole("link", {
+        name: SECONDE_COMMANDE_A_EXPEDIER_TEST.numero,
+      }),
+    ).toBeVisible();
 
     /*
-     * LES QUATRE CHAMPS SONT ATTEINTS PAR LEUR LIBELLE, ce qui prouve du meme
-     * coup que chaque `label` est bien associe a son champ : `getByLabel`
-     * echoue si l'association est rompue. C'est le risque propre a cet ecran,
-     * qui rend un formulaire PAR commande et donc plusieurs `id` voisins.
+     * DEUX CHAMPS PAR LIBELLE, ET C'EST L'ASSERTION QUI COMPTE.
+     *
+     * `getByLabel` ne rend deux elements QUE si chaque `label` pointe vers un
+     * champ DISTINCT. Des `id` partages entre les deux cartes feraient pointer
+     * les deux libelles vers le MEME champ, et ce compte tomberait a un.
+     *
+     * L'ASSERTION PRECEDENTE, `toBeVisible` sur une carte unique, NE PROUVAIT
+     * RIEN : mesure le 2 septembre 2026, les identifiants remplaces par des
+     * constantes fixes laissaient les trois tests verts. Le composant etait
+     * correct, la preuve ne l'etait pas.
      */
-    await expect(page.getByLabel("Transporteur")).toBeVisible();
-    await expect(page.getByLabel("Mode réellement exécuté")).toBeVisible();
-    await expect(page.getByLabel("Numéro de suivi")).toBeVisible();
-
+    await expect(page.getByLabel("Transporteur")).toHaveCount(2);
+    await expect(page.getByLabel("Mode réellement exécuté")).toHaveCount(2);
+    await expect(page.getByLabel("Numéro de suivi")).toHaveCount(2);
     await expect(
       page.getByRole("button", { name: "Déclarer expédiée" }),
-    ).toBeEnabled();
+    ).toHaveCount(2);
+
+    /*
+     * LA SECONDE CARTE EST EN `POINT_RELAIS`, donc elle SEULE rend le champ de
+     * point de retrait : un compte de 1 prouve a la fois que le champ suit le
+     * mode de sa propre carte, et qu'il ne fuit pas sur la voisine.
+     */
+    await expect(page.getByLabel("Point de retrait exécuté")).toHaveCount(1);
+
+    /*
+     * L'AVERTISSEMENT D'IRREVERSIBILITE EST SUR CHAQUE CARTE, et il est
+     * VISIBLE : LS-121 ne permet aucun retour depuis `EXPEDIEE`, donc une
+     * declaration par erreur ne se rattrape pas depuis l'interface.
+     */
+    await expect(page.getByText(/irréversible/)).toHaveCount(2);
   });
 
   /*
@@ -452,15 +477,24 @@ test.describe("file d'expédition", () => {
   }) => {
     await page.goto("/administration/expeditions");
 
-    const mode = page.getByLabel("Mode réellement exécuté");
+    /*
+     * LA CARTE EST DESIGNEE PAR SON NUMERO, jamais par un indice de position :
+     * la file est triee par anciennete, et un test qui prendrait « la premiere »
+     * changerait de cible au premier ajout de donnee de test.
+     */
+    const carte = page
+      .locator("li")
+      .filter({ hasText: COMMANDE_A_EXPEDIER_TEST.numero });
+
+    const mode = carte.getByLabel("Mode réellement exécuté");
     await expect(mode).toHaveValue("DOMICILE");
-    await expect(page.getByLabel("Point de retrait exécuté")).toHaveCount(0);
+    await expect(carte.getByLabel("Point de retrait exécuté")).toHaveCount(0);
 
     await mode.selectOption("POINT_RELAIS");
-    await expect(page.getByLabel("Point de retrait exécuté")).toBeVisible();
+    await expect(carte.getByLabel("Point de retrait exécuté")).toBeVisible();
 
     await mode.selectOption("LOCKER");
-    await expect(page.getByLabel("Point de retrait exécuté")).toBeVisible();
+    await expect(carte.getByLabel("Point de retrait exécuté")).toBeVisible();
 
     /*
      * LE RETOUR A DOMICILE LE RETIRE, et ce sens compte autant que l'autre :
@@ -468,7 +502,18 @@ test.describe("file d'expédition", () => {
      * l'envoi, ce que la validation refuserait.
      */
     await mode.selectOption("DOMICILE");
-    await expect(page.getByLabel("Point de retrait exécuté")).toHaveCount(0);
+    await expect(carte.getByLabel("Point de retrait exécuté")).toHaveCount(0);
+
+    /*
+     * LA CARTE VOISINE N'A PAS BOUGE, et c'est ce que deux cartes permettent de
+     * verifier : son champ de point de retrait est toujours la. Un etat partage
+     * entre les deux formulaires, ou des `id` croises, le ferait disparaitre
+     * avec celui d'ici.
+     */
+    const voisine = page
+      .locator("li")
+      .filter({ hasText: SECONDE_COMMANDE_A_EXPEDIER_TEST.numero });
+    await expect(voisine.getByLabel("Point de retrait exécuté")).toBeVisible();
   });
 
   /*
@@ -487,9 +532,14 @@ test.describe("file d'expédition", () => {
   }) => {
     await page.goto("/administration/expeditions");
 
+    /*
+     * LES DEUX FORMULAIRES SONT RENDUS AVANT DE COMPTER, sans quoi un compte de
+     * zero champ de date serait vrai sur une page vide : c'est le motif « la
+     * cible n'existe pas », qui rend un controle vert sans rien avoir vu.
+     */
     await expect(
       page.getByRole("button", { name: "Déclarer expédiée" }),
-    ).toBeVisible();
+    ).toHaveCount(2);
 
     expect(await page.locator('input[type="date"]').count()).toBe(0);
     expect(await page.locator('input[type="datetime-local"]').count()).toBe(0);
