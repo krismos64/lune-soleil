@@ -113,7 +113,11 @@
  */
 /*
  * Lien vers le compte, LS-54. Memes regles que le panier voisin : zone tactile
- * a 44 px, texte courant sur creme a 12,09:1.
+ * a 44 px, texte courant sur `--ls-surface` a 12,92:1.
+ *
+ * LE FOND EST BLANC ET NON CREME : `.entete` pose `background: var(--ls-surface)`.
+ * Les deux passent AA, mais un rapport ecrit sous une hypothese de fond fausse
+ * est exactement ce par quoi le defaut de C31 est entre deux fois.
  *
  * `white-space: nowrap` PARCE QUE LE LIBELLE VARIE. « Se connecter » se couperait
  * en deux lignes a 320 px la ou « Panier » tient : la barre sauterait selon

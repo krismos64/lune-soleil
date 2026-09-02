@@ -31,6 +31,36 @@ export async function ecrireProfil(
 }
 
 /**
+ * L'etat de verification de l'adresse, LS-54.
+ *
+ * LECTURE DEDIEE PLUTOT QU'UN CHAMP AJOUTE A `IdentiteAppelant`. Ce type est
+ * volontairement reduit a ce dont une decision d'AUTORISATION a besoin, et son
+ * fichier le dit : « une vue qui les veut les relit, ce qui evite qu'un champ
+ * d'affichage se retrouve a fonder une autorisation ».
+ *
+ * Le distinguo compte ici plus qu'ailleurs : la verification d'adresse ne
+ * conditionne AUCUN acces, arbitrage du 2 septembre 2026. La porter dans
+ * l'identite inviterait tot ou tard a l'y employer.
+ */
+export async function lireEtatVerification(
+  client: ClientBase,
+  utilisateurId: string,
+): Promise<boolean> {
+  const utilisateur = await client.utilisateur.findUnique({
+    where: { id: utilisateurId },
+    select: { emailVerifie: true },
+  });
+
+  /*
+   * DEFAUT « NON VERIFIE » quand le compte est introuvable. Le cas ne devrait
+   * pas se produire, l'identite venant d'une session valide, mais le sens du
+   * repli n'est pas neutre : « verifie » ferait disparaitre le rappel a
+   * l'ecran, donc masquerait l'anomalie au lieu de la montrer.
+   */
+  return utilisateur?.emailVerifie ?? false;
+}
+
+/**
  * Le compte pour l'export RGPD : identite et nombres de moyens de connexion.
  *
  * LES VALEURS NE SORTENT PAS, seul leur nombre : `_count` compte les comptes

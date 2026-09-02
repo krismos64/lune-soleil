@@ -13,7 +13,7 @@
  * qui epuise le plafond de trois demandes par minute et fait croire a une
  * panne.
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { authClient } from "@/lib/auth-client";
 
@@ -34,6 +34,18 @@ export function FormulaireDemandeReinitialisation() {
   const [etat, setEtat] = useState<EtatSoumission>("repos");
   const [messageErreur, setMessageErreur] = useState<string | null>(null);
   const [email, setEmail] = useState("");
+  const confirmation = useRef<HTMLParagraphElement>(null);
+
+  /*
+   * L'EFFET SE DECLENCHE AU MONTAGE DE LA CONFIRMATION, jamais dans le
+   * gestionnaire de clic : a cet instant l'element n'existe pas encore, React
+   * n'ayant pas re-rendu. Un `focus()` appele la ne trouverait rien.
+   */
+  useEffect(() => {
+    if (etat === "envoye") {
+      confirmation.current?.focus();
+    }
+  }, [etat]);
 
   const demander = async (evenement: React.FormEvent<HTMLFormElement>) => {
     evenement.preventDefault();
@@ -72,7 +84,26 @@ export function FormulaireDemandeReinitialisation() {
 
   if (etat === "envoye") {
     return (
-      <p className={styles.confirmation} role="status">
+      /*
+       * LE FOCUS SUIT LE REMPLACEMENT, et c'est ce que `tabIndex={-1}` plus
+       * `focus()` permettent.
+       *
+       * Le bouton qui portait le focus vient d'etre retire du DOM : sans cela
+       * le focus retombe sur `body`, et la tabulation suivante repart du haut
+       * de la page. Au clavier, la confirmation serait invisible et la suite du
+       * parcours exigerait de retraverser tout l'en-tete.
+       *
+       * `tabIndex={-1}` rend l'element focalisable par script SANS l'ajouter a
+       * l'ordre de tabulation : c'est le meme motif que la cible du lien
+       * d'evitement, ou une cible non focalisable faisait defiler la page sans
+       * deplacer le focus.
+       */
+      <p
+        ref={confirmation}
+        tabIndex={-1}
+        className={styles.confirmation}
+        role="status"
+      >
         Si un compte existe avec cette adresse, un message vient de partir.
         Ouvrez le lien qu&apos;il contient pour choisir un nouveau mot de passe.
         Il reste valable une heure.
