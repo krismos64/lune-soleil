@@ -19,7 +19,7 @@ import {
 } from "@/services/autorisation";
 import { listerCommandes } from "@/services/administration-commandes";
 import { formaterMontant } from "@/lib/montant";
-import { formaterDate, LIBELLES_STATUT } from "./affichage";
+import { formaterDate, LIBELLES_STATUT } from "@/lib/affichage-commande";
 import styles from "./commandes.module.css";
 
 export const metadata = {

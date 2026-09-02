@@ -543,3 +543,50 @@ export async function lireCommandeDuClient(
     },
   });
 }
+
+/**
+ * La facture d'une commande, SI cette commande appartient a ce compte. LS-57.
+ *
+ * ELLE PART DE LA COMMANDE ET NON DE LA FACTURE, et ce sens porte la garde :
+ * `Facture` ne connait son proprietaire que par sa commande. Partir de la
+ * facture obligerait a remonter le lien puis a comparer, donc a ecrire
+ * l'autorisation a la main, et c'est la que la comparaison s'oublie. Ici
+ * l'appartenance est dans le `where`, invariant 2.
+ *
+ * Meme motif que `lireFactureAServir` de `repositories/facture.ts`, qui porte
+ * la variante du jeton signe : les deux chemins ont chacun leur preuve.
+ */
+export async function lireFactureDuClient(
+  client: ClientBase,
+  commandeId: string,
+  utilisateurId: string,
+): Promise<{ numero: string; cheminPdf: string | null } | null> {
+  const commande = await client.commande.findFirst({
+    where: { id: commandeId, utilisateurId, dissocieA: null },
+    select: { facture: { select: { numero: true, cheminPdf: true } } },
+  });
+
+  return commande?.facture ?? null;
+}
+
+/**
+ * Un avoir, SI la commande de sa facture appartient a ce compte. LS-57.
+ *
+ * LA CHAINE EST PARCOURUE EN ENTIER, avoir -> facture -> commande ->
+ * utilisateur, en UNE requete. Un avoir n'appartient a personne directement :
+ * sauter un maillon en supposant qu'il suit sa facture ferait dependre la garde
+ * d'une hypothese non ecrite.
+ */
+export async function lireAvoirDuClient(
+  client: ClientBase,
+  avoirId: string,
+  utilisateurId: string,
+): Promise<{ numero: string; cheminPdf: string | null } | null> {
+  return client.avoir.findFirst({
+    where: {
+      id: avoirId,
+      facture: { commande: { utilisateurId, dissocieA: null } },
+    },
+    select: { numero: true, cheminPdf: true },
+  });
+}

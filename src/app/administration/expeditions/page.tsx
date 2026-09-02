@@ -24,7 +24,7 @@ import {
   exigerAdministratrice,
 } from "@/services/autorisation";
 import { listerCommandesAExpedier } from "@/services/expedition";
-import { formaterDate, LIBELLES_LIVRAISON } from "../commandes/affichage";
+import { formaterDate, LIBELLES_LIVRAISON } from "@/lib/affichage-commande";
 import { FormulaireExpedition } from "./formulaire-expedition";
 import styles from "./expeditions.module.css";
 

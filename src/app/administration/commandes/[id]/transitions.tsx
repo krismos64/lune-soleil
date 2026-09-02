@@ -17,7 +17,7 @@ import { useState, useTransition } from "react";
 
 import type { StatutCommande } from "@/generated/prisma/enums";
 import { changerStatut } from "../actions";
-import { LIBELLES_STATUT } from "../affichage";
+import { LIBELLES_STATUT } from "@/lib/affichage-commande";
 import styles from "../commandes.module.css";
 
 /** Verbe de l'action, plus parlant qu'un nom d'etat sur un bouton. */
