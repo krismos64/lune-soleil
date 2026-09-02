@@ -34,6 +34,7 @@ import {
   AutorisationRefuseeError,
   exigerAdministratrice,
 } from "@/services/autorisation";
+import type { StatutMessage } from "@/generated/prisma/enums";
 import { listerMessages } from "@/services/message-contact";
 import { formaterDate } from "../commandes/affichage";
 import { ClassementMessage } from "./classement-message";
@@ -53,8 +54,21 @@ export const metadata = {
  */
 export const dynamic = "force-dynamic";
 
-/** Libelle affichable d'un statut, jamais la valeur brute de l'enum. */
-const LIBELLES: Record<string, string> = {
+/**
+ * Libelle affichable d'un statut, jamais la valeur brute de l'enum.
+ *
+ * `Record<StatutMessage, string>` ET NON `Record<string, string>`, correction du
+ * 2 septembre 2026 relevee par `ls-frontend-revue`. La forme large compilait
+ * sans rien garantir : ajouter une valeur a l'enum aurait affiche `ARCHIVE` en
+ * majuscules, sans badge ni couleur, et aucun controle n'aurait rougi.
+ *
+ * TYPE SUR L'ENUM, `tsc` REFUSE LE FICHIER tant que le libelle manque. C'est le
+ * meme mecanisme que `LIBELLES_STATUT` de l'ecran des commandes et que le
+ * `Record` des modeles d'email : le piege « un enum ajoute casse l'affichage »
+ * a deja frappe ce depot, et il se ferme par le typage, jamais par la
+ * vigilance.
+ */
+const LIBELLES: Record<StatutMessage, string> = {
   NOUVEAU: "Nouveau",
   LU: "Lu",
   TRAITE: "Traité",
@@ -108,10 +122,21 @@ export default async function PageMessages() {
           {messages.map((message) => (
             <li key={message.id} className={styles.carte}>
               <div className={styles.enTeteCarte}>
+                {/*
+                 * LE REPLI `?? message.statut` A DISPARU avec le typage
+                 * ci-dessus : il masquait le trou au lieu de le signaler, en
+                 * affichant une valeur brute d'enum a une exploitante. Le
+                 * libelle est desormais garanti par `tsc`.
+                 *
+                 * LA CLASSE DE BADGE GARDE SON REPLI, elle : les modules CSS
+                 * sont types `Record<string, string>` par le chargeur, donc
+                 * `tsc` ne peut rien garantir de ce cote. Un statut sans style
+                 * s'affiche alors sans fond plutot que de faire lever le rendu.
+                 */}
                 <span
                   className={`${styles.badge} ${styles[`badge${message.statut}`] ?? ""}`}
                 >
-                  {LIBELLES[message.statut] ?? message.statut}
+                  {LIBELLES[message.statut]}
                 </span>
                 <span className={styles.date}>
                   {formaterDate(message.creeA)}
@@ -133,7 +158,20 @@ export default async function PageMessages() {
                  * retaperait a chaque fois, et le fil se casserait cote client.
                  */}
                 <a
-                  href={`mailto:${encodeURIComponent(message.email)}?subject=${encodeURIComponent(`Re : ${message.sujet}`)}`}
+                  /*
+                   * L'ADRESSE N'EST PAS ENCODEE, LE SUJET L'EST, et cette
+                   * asymetrie est mesuree plutot que supposee.
+                   *
+                   * `encodeURIComponent` transforme l'arobase en `%40` :
+                   * certains clients mail l'acceptent, d'autres ouvrent une
+                   * fenetre avec une adresse illisible, et l'adresse est de
+                   * toute facon deja validee par `schemaEmailClient`, donc sans
+                   * caractere a echapper.
+                   *
+                   * LE SUJET, LUI, PORTE DES ESPACES ET DES DEUX-POINTS, qui
+                   * couperaient l'URL sans encodage.
+                   */
+                  href={`mailto:${message.email}?subject=${encodeURIComponent(`Re : ${message.sujet}`)}`}
                   className={styles.lienEmail}
                 >
                   {message.email}

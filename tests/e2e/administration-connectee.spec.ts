@@ -33,6 +33,7 @@ import {
   COMMANDE_TEST,
   FICHIER_SESSION,
   FICHIER_SESSION_ADMINISTRATION,
+  MESSAGES_TEST,
   PRODUIT_TEST,
   SECONDE_COMMANDE_A_EXPEDIER_TEST,
 } from "./chemin-session";
@@ -116,6 +117,19 @@ const ECRANS = [
   {
     chemin: "/administration/expeditions",
     titre: "Expéditions",
+  },
+  /*
+   * LA RUBRIQUE MESSAGES, LS-97. Elle rend un bloc de classement PAR message,
+   * plus un corps pliable pouvant atteindre 4000 caracteres : c'est le texte
+   * libre le plus long de l'administration, donc le premier candidat au
+   * debordement a 320 px.
+   *
+   * DEUX MESSAGES SONT AMORCES, statuts differents, ce qui rend le croisement
+   * des identifiants entre cartes reellement exerce.
+   */
+  {
+    chemin: "/administration/messages",
+    titre: "Messages",
   },
 ] as const;
 
@@ -552,5 +566,156 @@ test.describe("file d'expédition", () => {
     expect(
       await page.locator('[name="livreA"], [name="livre_a"]').count(),
     ).toBe(0);
+  });
+});
+
+/**
+ * LA RUBRIQUE MESSAGES REND SES DEUX CARTES, LS-97.
+ *
+ * CE QUE LA BOUCLE GENERIQUE NE PROUVE PAS : elle verifie le titre, le
+ * debordement et l'accessibilite, qu'un ecran vide passerait tous les trois.
+ *
+ * AUCUN DE CES TESTS NE CLASSE UN MESSAGE, et c'est deliberé. Le geste est
+ * persistant : un message passe en `TRAITE` ne redevient pas `NOUVEAU` a
+ * l'execution suivante, `ON CONFLICT (id) DO NOTHING` ne le remettant jamais en
+ * etat. Les deux cartes cesseraient d'avoir des statuts distincts, et le test
+ * des gestes differencies passerait sans rien prouver.
+ *
+ * LE CHEMIN D'ECRITURE EST PROUVE PAR LES TESTS D'INTEGRATION, sur base
+ * ephemere.
+ */
+test.describe("rubrique Messages", () => {
+  test("les deux messages portent chacun leur bloc de classement", async ({
+    page,
+  }) => {
+    await page.goto("/administration/messages");
+
+    await expect(page.getByText(MESSAGES_TEST.nouveau.sujet)).toBeVisible();
+    await expect(page.getByText(MESSAGES_TEST.lu.sujet)).toBeVisible();
+
+    /*
+     * DEUX CORPS PLIABLES, UN PAR CARTE. Un compte de 1 signifierait que les
+     * deux cartes partagent un `details`, ou qu'une seule est rendue.
+     *
+     * LE SELECTEUR VISE LE `summary` PAR SON TEXTE et non un role : un
+     * `<details>` n'expose pas `group` de facon portable, mesure le 2 septembre
+     * 2026 sur ce meme test, qui rendait zero.
+     */
+    await expect(page.getByText("Lire le message")).toHaveCount(2);
+
+    /*
+     * LES GESTES DIFFERENT SELON LE STATUT, et c'est ce que deux messages dans
+     * deux etats permettent de verifier. `NOUVEAU` ne propose que « marquer
+     * comme lu » ; `LU` propose « traité » et « remettre en non lu ».
+     *
+     * UN SEUL MESSAGE NE PROUVERAIT RIEN DE CELA : la table `GESTES` serait
+     * exercee sur une seule de ses trois entrees.
+     */
+    await expect(
+      page.getByRole("button", { name: "Marquer comme lu" }),
+    ).toHaveCount(1);
+    await expect(
+      page.getByRole("button", { name: "Marquer comme traité" }),
+    ).toHaveCount(1);
+    await expect(
+      page.getByRole("button", { name: "Remettre en non lu" }),
+    ).toHaveCount(1);
+  });
+
+  /*
+   * LE LIEN `mailto:` EST LE MECANISME DE REPONSE de cette story, arbitrage du
+   * 2 septembre 2026 : la correspondance ne passe pas par le code, ADR-008.
+   *
+   * LE SUJET EST PREREMPLI AVEC « Re : », sans quoi l'exploitante le retaperait
+   * a chaque fois et le fil se casserait cote client.
+   */
+  test("chaque message porte un lien mailto au sujet prérempli", async ({
+    page,
+  }) => {
+    await page.goto("/administration/messages");
+
+    const lien = page.getByRole("link", {
+      name: MESSAGES_TEST.nouveau.email,
+    });
+
+    await expect(lien).toBeVisible();
+
+    const href = await lien.getAttribute("href");
+
+    /*
+     * L'ADRESSE EST LITTERALE DANS L'URL, jamais encodee. `encodeURIComponent`
+     * y transformait l'arobase en `%40` : la RFC 6068 laisse `@` litteral dans
+     * la partie adresse, et certains clients mail anciens ne le decodent pas.
+     * Corrige le 2 septembre 2026 sur relevé de `ls-frontend-revue`, et cette
+     * assertion est ce qui empeche le retour du defaut.
+     */
+    expect(href).toContain(`mailto:${MESSAGES_TEST.nouveau.email}`);
+    expect(href).not.toContain("%40");
+    expect(decodeURIComponent(href ?? "")).toContain(
+      `Re : ${MESSAGES_TEST.nouveau.sujet}`,
+    );
+  });
+
+  /*
+   * LE CLASSEMENT FERME SON BLOC, ET C'EST L'ANGLE MORT QUE LA REVUE A RELEVE.
+   *
+   * Les autres tests verifient que les blocs s'AFFICHENT ; aucun ne verifiait ce
+   * qui se passe APRES un clic. C'est precisement la ou vivait le defaut :
+   * `statutActuel` etant une prop figee par le rendu serveur, les boutons ne
+   * changent pas apres un succes, et l'exploitante pouvait recliquer « marquer
+   * comme lu » sur un message deja lu.
+   *
+   * CE TEST EST LE SEUL DE CE FICHIER QUI ECRIT, et il vise DELIBEREMENT le
+   * message deja `LU` : le passer a `TRAITE` puis le laisser ainsi ne casse
+   * aucun autre test, la carte gardant un statut distinct de la premiere. Viser
+   * le message `NOUVEAU` le ferait passer `LU`, et les deux cartes proposeraient
+   * alors les memes gestes a l'execution suivante.
+   */
+  test("classer un message ferme son bloc de gestes", async ({ page }) => {
+    await page.goto("/administration/messages");
+
+    const carte = page
+      .locator("main ul li")
+      .filter({ hasText: MESSAGES_TEST.lu.sujet });
+
+    const traiter = carte.getByRole("button", { name: "Marquer comme traité" });
+    await expect(traiter).toBeEnabled();
+
+    await traiter.click();
+
+    /*
+     * LES DEUX BOUTONS SE DESACTIVENT, pas seulement celui qui a servi : l'etat
+     * affiche est desormais perime dans son ensemble, et proposer « remettre en
+     * non lu » sur un etat qu'on ne connait plus induirait en erreur.
+     */
+    await expect(traiter).toBeDisabled();
+    await expect(
+      carte.getByRole("button", { name: "Remettre en non lu" }),
+    ).toBeDisabled();
+
+    /*
+     * LE MESSAGE DE RESULTAT DIT QUOI FAIRE, et non seulement que c'est fait :
+     * `revalidatePath` invalide le cache serveur sans remonter ce composant
+     * client, donc le badge affiche encore l'ancien statut.
+     */
+    await expect(carte.getByText(/Message classé/)).toBeVisible();
+  });
+
+  /*
+   * LE CORPS EST PLIE PAR DEFAUT, et il s'ouvre au clic.
+   *
+   * PLIE : un corps de 4000 caracteres deplie sur cinq cartes rendrait la liste
+   * impraticable a 320 px. OUVRABLE : c'est quand meme le contenu qu'on vient
+   * lire, un pli qui ne s'ouvre pas serait pire que pas de pli.
+   */
+  test("le corps du message est plié puis s'ouvre", async ({ page }) => {
+    await page.goto("/administration/messages");
+
+    const corps = page.getByText(MESSAGES_TEST.nouveau.corps);
+    await expect(corps).toBeHidden();
+
+    await page.getByText("Lire le message").first().click();
+
+    await expect(corps).toBeVisible();
   });
 });

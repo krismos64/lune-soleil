@@ -1,6 +1,6 @@
 # Parcours critiques
 
-Séquences d'états des huit parcours critiques du projet, cas d'erreur compris.
+Séquences d'états des neuf parcours critiques du projet, cas d'erreur compris.
 
 Ce document ne décrit aucun écran. Il décrit ce qui est **persisté** à chaque
 étape, ce que **voit la personne**, et ce qui se passe quand ça échoue. Il
@@ -40,6 +40,12 @@ sixième. Le rattachement appartenait à la V1 cible à cette date, et le modèl
 devait le prévoir dès maintenant pour éviter une migration sur des données
 historiques. Il est entré en périmètre d'ouverture le 28 juillet 2026, epic
 LS-36, ce qui confirme le choix sans le modifier.
+
+Le **neuvième**, le message de contact, est venu de LS-97 le 2 septembre 2026
+pour la MÊME raison que le huitième, en sens inverse : `Message` a été écarté du
+modèle conceptuel faute de parcours qui la mobilise, et le document renvoyait
+explicitement à « un ticket propre ». Le parcours est écrit ici, l'entité entre
+donc au modèle avec ce qui la justifie.
 
 Le huitième, la gestion du carnet d'adresses, est venu de LS-40 pour une raison
 différente des sept autres : `AdresseCarnet` était modélisée sans qu'aucun
@@ -937,6 +943,95 @@ les deux. Proposer au client d'enregistrer une de ces adresses reste possible,
 comme geste explicite de sa part, jamais automatiquement.
 
 ---
+
+
+## Parcours 9, message de contact
+
+Ajouté par LS-97 le 2 septembre 2026. `MODELE-CONCEPTUEL.md` avait écarté
+l'entité `Message` faute de parcours qui la mobilise, en renvoyant à « un ticket
+propre, où sa règle principale devra être posée ». Ce parcours est cette pose.
+
+**La règle principale : le message est persisté AVANT toute tentative d'envoi
+d'email.** L'ordre est imposé, pas préférable. Une panne du fournisseur ne doit
+jamais faire perdre une demande client, et aucune contrainte de base ne peut
+l'exprimer : c'est une propriété du code, prouvée par un test de panne.
+
+**Le formulaire est public.** Personne n'est connecté, et c'est son objet :
+exiger un compte fermerait le seul moyen d'écrire à la boutique à la
+quasi-totalité des visiteurs.
+
+### Chemin nominal
+
+| # | Étape | Base | Vue |
+|---|---|---|---|
+| 1 | Affichage du formulaire | rien | champs vides, instant d'ouverture engendré au rendu serveur |
+| 2 | Soumission | rien encore, les trois couches anti-robot s'appliquent d'abord | bouton désactivé, envoi en cours |
+| 3 | Validation serveur | rien | messages d'erreur par champ si la saisie est refusée |
+| 4 | Écriture du message, **transaction propre qui commite** | `Message` créé, statut `NOUVEAU` | rien encore |
+| 5 | Dépôt de la notification, **après le commit** | `EnvoiEnAttente` avec `commandeId` nul, modèle `message-contact-recu` | accusé de réception à l'écran |
+| 6 | Envoi de la notification | tâche planifiée existante, `JournalEmail` écrit | l'exploitante reçoit l'alerte |
+| 7 | Lecture | `statut` à `LU`, `luA` horodaté **une seule fois** | le message s'ouvre dans l'administration |
+| 8 | Traitement | `statut` à `TRAITE`, `traiteA` horodaté, `luA` conservé | le message quitte la file des nouveaux |
+
+**Les étapes 4 et 5 sont deux transactions distinctes**, et c'est tout l'objet de
+ce parcours. Les fondre ferait perdre le message quand l'outbox est
+indisponible : le risque n'est pas symétrique, une demande client perdue ne se
+rattrape par aucun rejeu, alors qu'une notification manquée se voit dans
+l'administration où le message attend.
+
+**L'étape 7 n'horodate qu'une fois.** Rouvrir un message ne le rend pas lu à
+nouveau : réécrire `luA` à chaque affichage ferait croire qu'une demande de la
+semaine dernière vient d'être vue, et l'ancienneté réelle disparaîtrait.
+
+**L'étape 8 conserve `luA`**, C30 l'exigeant : un message traité a forcément été
+lu, et l'inverse serait un classement fait sans ouvrir le message.
+
+**La réponse ne passe pas par le code**, arbitrage du 2 septembre 2026 confirmé
+par ADR-008 : « la boîte contact@lune-soleil.fr garde son usage humain ».
+L'administration propose un lien `mailto:` au sujet prérempli, et le fil reste
+dans la boîte de l'exploitante.
+
+### Cas d'erreur
+
+**Le fournisseur d'email est indisponible, après l'étape 4**
+Base : le message existe, aucune ligne d'outbox.
+Vue : accusé de réception normal, le client n'apprend rien de la panne.
+C'est le cas que ce parcours existe pour traiter. L'exploitante découvre le
+message en ouvrant l'administration, où il attend en `NOUVEAU`.
+
+**La base est indisponible à l'étape 4**
+Base : rien.
+Vue : « le service est momentanément indisponible », avec l'adresse email de
+l'atelier en repli. Refuser sans donner d'autre porte fermerait le seul moyen de
+joindre la boutique.
+
+**Champ piège rempli, étape 2**
+Base : rien.
+Vue : accusé de réception **normal**, délibérément. Dire « refusé » à un robot
+lui apprend l'existence du piège, et la version suivante de son script le
+contournera.
+
+**Soumission instantanée, étape 2**
+Base : rien.
+Vue : accusé de réception normal, même raison que ci-dessus. Personne ne rédige
+un message en moins de trois secondes.
+
+**Plafond de messages atteint pour une adresse, étape 2**
+Base : compteur incrémenté, aucun message.
+Vue : le refus **est dit**, avec le délai et l'adresse email en repli. Un plafond
+concerne une personne réelle dans l'immense majorité des cas, et lui laisser
+croire que son message est parti serait le vrai défaut.
+
+**L'adresse IP est inconnue, étape 2**
+Base : aucun compteur.
+Vue : rien de particulier, le message passe.
+Le plafond ne s'applique pas plutôt que de ranger tout le monde sous une clé
+commune, ce qui offrirait un déni de service au premier venu.
+
+**Saisie refusée par la validation, étape 3**
+Base : rien.
+Vue : le message d'erreur nomme ce qui ne va pas, jamais la valeur refusée,
+invariant 9.
 
 ## Ce que ces parcours imposent au modèle de données
 
