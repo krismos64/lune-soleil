@@ -31,6 +31,7 @@ import {
   COMMANDE_FACTUREE_TEST,
   COMMANDE_TEST,
   FICHIER_COMMANDE,
+  SECONDE_COMMANDE_A_EXPEDIER_TEST,
 } from "./chemin-session";
 
 preparation("commande en attente de paiement amorcee", async () => {
@@ -554,6 +555,147 @@ preparation(
             JSON.stringify(preparee ?? { commande: "absente" }) +
             `. Attendu numero ${COMMANDE_A_EXPEDIER_TEST.numero}, statut ` +
             "EN_PREPARATION et aucune expedition.",
+        );
+      }
+
+      /*
+       * LA SECONDE COMMANDE `EN_PREPARATION`, ET ELLE N'EST PAS UN DOUBLON.
+       *
+       * La file rend un formulaire PAR commande : avec UNE carte, un test qui
+       * atteint un champ par son libelle passe quel que soit l'etat des `id`.
+       * Mesure faite le 2 septembre 2026, identifiants remplaces par des
+       * constantes fixes : les trois tests restaient verts. Cette carte est ce
+       * qui rend l'assertion capable d'echouer.
+       *
+       * SON MODE EST `POINT_RELAIS`, donc son formulaire rend d'entree le champ
+       * de point de retrait que la premiere carte n'affiche pas : les deux
+       * formulaires sont dans des etats distincts, et leurs identifiants se
+       * croisent reellement.
+       *
+       * `ordre` 9131, reserve comme les precedents.
+       */
+      await client.query(
+        `INSERT INTO categorie (id, nom, slug, ordre, cree_a)
+       VALUES ($1, 'TEST Catégorie LS130 bis', 'test-categorie-ls130-bis', 9131, now())
+       ON CONFLICT (id) DO NOTHING`,
+        [SECONDE_COMMANDE_A_EXPEDIER_TEST.categorieId],
+      );
+
+      await client.query(
+        `INSERT INTO produit (id, categorie_id, nom, slug, statut, cree_a, modifie_a)
+       VALUES ($1, $2, 'TEST Seconde pièce à expédier',
+               'test-seconde-piece-a-expedier-ls130', 'BROUILLON', now(), now())
+       ON CONFLICT (id) DO NOTHING`,
+        [
+          SECONDE_COMMANDE_A_EXPEDIER_TEST.produitId,
+          SECONDE_COMMANDE_A_EXPEDIER_TEST.categorieId,
+        ],
+      );
+
+      await client.query(
+        `INSERT INTO variante (
+         id, produit_id, reference, libelle, prix_centimes,
+         quantite_physique, quantite_reservee, vente_web_activee, cree_a
+       )
+       VALUES ($1, $2, 'TEST-LS130-BIS', 'TEST Déclinaison', 3800, 1, 0, true, now())
+       ON CONFLICT (id) DO NOTHING`,
+        [
+          SECONDE_COMMANDE_A_EXPEDIER_TEST.varianteId,
+          SECONDE_COMMANDE_A_EXPEDIER_TEST.produitId,
+        ],
+      );
+
+      /*
+       * `point_relais_id` EST OBLIGATOIRE SUR CE MODE, contrainte
+       * `chk_commande_mode_point_relais` : c'est une EQUIVALENCE, un
+       * `POINT_RELAIS` sans point n'atteint jamais la base. Amorcer sans lui
+       * ferait echouer la preparation entiere, pas seulement ce test.
+       */
+      await client.query(
+        `INSERT INTO commande (
+         id, numero, statut, email_normalise, nom_client,
+         adresse_livraison, adresse_facturation,
+         point_relais_id, point_relais_adresse,
+         sous_total_centimes, mode_livraison, frais_port_centimes,
+         total_centimes, montant_taxe_centimes,
+         cgv_acceptees_a, cgv_version, cree_a
+       )
+       VALUES (
+         $1, $2, 'EN_PREPARATION', 'e2e-ls130-bis@exemple.test', 'TEST Alix',
+         $3::jsonb, $3::jsonb,
+         $4, $5::jsonb,
+         3800, 'POINT_RELAIS', 410,
+         4210, 0,
+         now(), 'test', now()
+       )
+       ON CONFLICT (id) DO NOTHING`,
+        [
+          SECONDE_COMMANDE_A_EXPEDIER_TEST.commandeId,
+          SECONDE_COMMANDE_A_EXPEDIER_TEST.numero,
+          JSON.stringify({
+            nom: "TEST Alix",
+            ligne1: "4 rue de Test",
+            codePostal: "69000",
+            ville: "TESTVILLE",
+            pays: "FR",
+          }),
+          SECONDE_COMMANDE_A_EXPEDIER_TEST.pointRelaisId,
+          JSON.stringify({
+            identifiant: SECONDE_COMMANDE_A_EXPEDIER_TEST.pointRelaisId,
+            nom: "TEST Point relais",
+            ligne1: "5 place de Test",
+            codePostal: "69000",
+            ville: "TESTVILLE",
+          }),
+        ],
+      );
+
+      await client.query(
+        `INSERT INTO ligne_commande (
+         id, commande_id, variante_id, reference_figee,
+         libelle_produit_fige, libelle_variante_fige,
+         prix_fige_centimes, quantite
+       )
+       VALUES ($1, $2, $3, 'TEST-LS130-BIS', 'TEST Seconde pièce à expédier',
+               'TEST Déclinaison', 3800, 1)
+       ON CONFLICT (id) DO NOTHING`,
+        [
+          SECONDE_COMMANDE_A_EXPEDIER_TEST.ligneId,
+          SECONDE_COMMANDE_A_EXPEDIER_TEST.commandeId,
+          SECONDE_COMMANDE_A_EXPEDIER_TEST.varianteId,
+        ],
+      );
+
+      await client.query(
+        `INSERT INTO paiement (
+         id, commande_id, statut, montant_centimes,
+         montant_rembourse_centimes, identifiant_fournisseur, confirme_a, cree_a
+       )
+       VALUES ($1, $2, 'REUSSI', 4210, 0, 'cs_test_ls130_bis', now(), now())
+       ON CONFLICT (id) DO NOTHING`,
+        [
+          SECONDE_COMMANDE_A_EXPEDIER_TEST.paiementId,
+          SECONDE_COMMANDE_A_EXPEDIER_TEST.commandeId,
+        ],
+      );
+
+      /*
+       * LES DEUX CARTES SONT VERIFIEES ENSEMBLE, et le compte porte sur la FILE
+       * entiere : c'est lui qui garantit ce que les tests mesurent. Une seule
+       * carte les rendrait incapables d'echouer sans qu'aucune assertion ne le
+       * signale.
+       */
+      const { rows: file } = await client.query<{ nombre: string }>(
+        `SELECT count(*)::text AS nombre FROM commande c
+         WHERE c.statut = 'EN_PREPARATION'
+           AND NOT EXISTS (SELECT 1 FROM expedition e WHERE e.commande_id = c.id)`,
+      );
+
+      if (Number(file[0]?.nombre) < 2) {
+        throw new Error(
+          `File de preparation incomplete : ${file[0]?.nombre ?? "0"} commande(s) ` +
+            "en attente d'expedition, deux attendues. Les tests d'unicite des " +
+            "identifiants passeraient sans rien prouver.",
         );
       }
     } finally {

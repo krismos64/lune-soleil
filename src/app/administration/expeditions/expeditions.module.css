@@ -41,13 +41,33 @@
   color: var(--ls-text-muted);
 }
 
+/*
+ * `--ls-text` ET NON `--ls-text-muted`, ET C'EST UNE MESURE ET NON UN GOUT.
+ *
+ * Le jeton annonce « 4,86:1, AA », mais cette valeur vaut SUR CREME. Sur
+ * `--ls-surface-sand` il tombe a 4,35:1, sous le seuil AA de 4,5:1 pour du petit
+ * texte. Mesure refaite le 2 septembre 2026 : `#7A6A5D` sur `#F2EADF`.
+ *
+ * L'ECRAN VOISIN N'A PAS CE DEFAUT PARCE QU'IL N'A PAS DE FOND. `.vide` de
+ * `commandes.module.css` laisse le fond de page, donc du creme, ou le jeton
+ * tient sa promesse : recopier sa COULEUR en ajoutant un FOND a casse
+ * l'hypothese sous laquelle elle etait juste. Motif « le contraste depend du
+ * fond », deja rencontre sur ce depot.
+ *
+ * `axe-core` NE L'A PAS VU, et c'est previsible : la file de test porte toujours
+ * une commande, donc cette branche n'est rendue par aucun test. Meme angle mort
+ * que le contraste a 4,04:1 de LS-121.
+ *
+ * SUR L'ETAT LE PLUS SOUVENT AFFICHE, de surcroit : une file vide est le cas
+ * normal la plupart du temps.
+ */
 .vide {
   margin: 0;
   padding: var(--ls-space-4);
   border: 1px solid var(--ls-border);
   border-radius: var(--ls-radius-md);
   background: var(--ls-surface-sand);
-  color: var(--ls-text-muted);
+  color: var(--ls-text);
 }
 
 /* ------------------------------------------------------------------- cartes */
@@ -120,6 +140,33 @@
 
 /* -------------------------------------------------------------- formulaire */
 
+/*
+ * LE CONTENEUR EST FOCALISABLE PAR PROGRAMME, `tabIndex={-1}` cote composant :
+ * il recoit le focus quand le formulaire se ferme, pour que la tabulation ne
+ * reparte pas du haut du document.
+ *
+ * SON ANNEAU DE FOCUS RESTE VISIBLE, jamais supprime : `frontend-design.md`
+ * l'exige, et c'est ce qui rend le deplacement lisible plutot que magique.
+ */
+.bloc:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+/*
+ * MEME FORME QUE L'AVERTISSEMENT DE L'ECRAN DE REMBOURSEMENT, y compris ses
+ * couleurs : `--ls-text` sur `--ls-surface-sand` mesure 10,83:1, tres au-dessus
+ * du seuil AA. Le filet `--ls-error` porte l'alerte sans que la couleur soit le
+ * seul vecteur de l'information, le texte disant lui-meme l'irreversibilite.
+ */
+.avertissement {
+  margin: 0 0 var(--ls-space-3);
+  padding: var(--ls-space-3);
+  border-left: 3px solid var(--ls-error);
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+}
+
 .formulaire {
   display: grid;
   gap: var(--ls-space-3);
@@ -151,9 +198,25 @@
   font-size: 1rem;
 }
 
+/*
+ * `0.75` ET NON `0.6`, ET C'EST UNE MESURE. A 0.6, le texte du bouton desactive
+ * tombe a 3,15:1 sur son propre fond, et le texte des champs a 3,77:1. A 0.75,
+ * le bouton remonte a 4,52:1, au-dessus du seuil AA.
+ *
+ * UN COMPOSANT DESACTIVE EST FORMELLEMENT EXEMPTE de WCAG 1.4.3, et ce n'est
+ * pas pour autant sans consequence ICI : apres un succes, `declaree` laisse le
+ * formulaire entier desactive EN PERMANENCE jusqu'au rafraichissement manuel.
+ * Ce n'est donc pas un etat transitoire d'une seconde, mais l'etat dans lequel
+ * l'exploitante relit ce qu'elle vient de saisir.
+ *
+ * `axe-core` NE LE SIGNALE PAS, exemption oblige : releve par
+ * `ls-frontend-revue` le 2 septembre 2026, mesure avant d'etre corrige. La
+ * difference reste visible a l'oeil, l'etat desactive continue de se lire comme
+ * tel.
+ */
 .champ input:disabled,
 .champ select:disabled {
-  opacity: 0.6;
+  opacity: 0.75;
   cursor: not-allowed;
 }
 
@@ -179,8 +242,9 @@
   background: var(--ls-primary-hover);
 }
 
+/* Meme mesure que les champs ci-dessus, 4,52:1 contre 3,15:1 a 0.6. */
 .bouton:disabled {
-  opacity: 0.6;
+  opacity: 0.75;
   cursor: not-allowed;
 }
 

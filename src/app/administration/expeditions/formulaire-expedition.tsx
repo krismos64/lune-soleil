@@ -18,10 +18,10 @@
  * date de remise au destinataire vient du suivi automatique de LS-131, et
  * l'inventer ferait courir le delai de retractation depuis une date fausse.
  */
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 
 import type { ModeLivraison } from "@/generated/prisma/enums";
-import { LIBELLES_LIVRAISON } from "../commandes/affichage";
+import { LIBELLES_LIVRAISON, LIBELLES_STATUT } from "../commandes/affichage";
 import { expedier } from "./actions";
 import styles from "./expeditions.module.css";
 
@@ -78,6 +78,24 @@ export function FormulaireExpedition({
    */
   const [declaree, setDeclaree] = useState(false);
 
+  /*
+   * LE FOCUS DOIT ATTERRIR QUELQUE PART APRES LE GESTE, et ce point existe pour
+   * cela. Au succes, `declaree` desactive le bouton QUI PORTE LE FOCUS : un
+   * element desactive le perd, et le focus retombe sur `<body>`. Au clavier, la
+   * tabulation repart alors du haut du document, donc avant la premiere carte,
+   * sur une file qui peut en compter dix.
+   *
+   * C'EST LA VARIANTE DESACTIVEE DU PIEGE DEJA RENCONTRE sur un element
+   * DETACHE : le bouton reste dans le DOM, donc aucune verification
+   * d'`isConnected` ne l'attraperait, et le resultat pour la personne est le
+   * meme. Releve par `ls-frontend-revue` le 2 septembre 2026.
+   *
+   * `tabIndex={-1}` REND LE CONTENEUR FOCALISABLE SANS L'AJOUTER A L'ORDRE DE
+   * TABULATION : il se recoit par programme, jamais par la touche Tab, donc
+   * rien n'est ajoute au parcours clavier normal.
+   */
+  const conteneur = useRef<HTMLDivElement>(null);
+
   const exigePointRelais = mode === "POINT_RELAIS" || mode === "LOCKER";
 
   const idTransporteur = `transporteur-${commandeId}`;
@@ -113,6 +131,7 @@ export function FormulaireExpedition({
       switch (resultat.statut) {
         case "SUCCES":
           setDeclaree(true);
+          conteneur.current?.focus();
           setMessage({
             texte: `Commande ${numero} déclarée expédiée. Rafraîchir la page pour mettre la file à jour.`,
             erreur: false,
@@ -120,6 +139,7 @@ export function FormulaireExpedition({
           break;
         case "DEJA_EXPEDIEE":
           setDeclaree(true);
+          conteneur.current?.focus();
           setMessage({
             texte:
               "Cette commande porte déjà une expédition, aucune seconde " +
@@ -129,13 +149,23 @@ export function FormulaireExpedition({
           break;
         case "STATUT_INCOMPATIBLE":
           /*
-           * L'ETAT REEL EST DIT : entre l'affichage et le clic, la commande a
-           * pu etre annulee depuis son detail ou par une tache, et un refus
-           * opaque laisserait croire a une panne.
+           * L'ETAT REEL EST NOMME, comme sur l'ecran voisin des transitions.
+           * Entre l'affichage et le clic, la commande a pu etre ANNULEE depuis
+           * son detail ou par une tache : dire seulement « elle n'est plus en
+           * preparation » laisserait chercher du cote d'une panne, quand la
+           * cause est lisible et deja connue du serveur.
+           *
+           * Le commentaire de la premiere version promettait cet etat sans que
+           * le message le porte, releve par `ls-frontend-revue` le 2 septembre
+           * 2026. La cause etait un type elargi a `string` dans `actions.ts`,
+           * qui interdisait d'indexer `LIBELLES_STATUT`.
            */
           setDeclaree(true);
+          conteneur.current?.focus();
           setMessage({
-            texte: `Action impossible, cette commande n'est plus en préparation. Rafraîchir la page.`,
+            texte:
+              `Action impossible, la commande est « ${LIBELLES_STATUT[resultat.statutActuel]} ». ` +
+              "Rafraîchir la page.",
             erreur: true,
           });
           break;
@@ -162,7 +192,28 @@ export function FormulaireExpedition({
   }
 
   return (
-    <div>
+    <div ref={conteneur} tabIndex={-1} className={styles.bloc}>
+      {/*
+       * L'AVERTISSEMENT EST AVANT LE FORMULAIRE, jamais apres le bouton, meme
+       * regle que l'ecran de remboursement : l'irreversibilite doit se lire
+       * AVANT le geste, pas au moment de le regretter.
+       *
+       * ELLE EST REELLE ET NON THEORIQUE. `TRANSITIONS_ADMINISTRATRICE` de
+       * LS-121 ne porte AUCUN retour depuis `EXPEDIEE` : une commande declaree
+       * partie par erreur ne redevient pas « en preparation » depuis
+       * l'interface, et l'unicite `commande_id` interdit une seconde
+       * declaration. Une erreur se corrige alors en base, pas d'un clic.
+       *
+       * ELLE MANQUAIT ENTIEREMENT dans la premiere version : le mot
+       * n'apparaissait que dans des commentaires de code, invisibles pour
+       * l'exploitante. Releve par `ls-frontend-revue` le 2 septembre 2026.
+       */}
+      <p className={styles.avertissement}>
+        Déclarer une expédition est irréversible : la commande passe à «
+        Expédiée » et ne revient pas en préparation. À faire une fois le colis
+        réellement remis au transporteur.
+      </p>
+
       <form onSubmit={envoyer} className={styles.formulaire}>
         <div className={styles.champ}>
           <label htmlFor={idTransporteur}>Transporteur</label>
@@ -206,11 +257,20 @@ export function FormulaireExpedition({
            * L'AIDE DIT POURQUOI CE CHAMP EXISTE, et elle n'est pas decorative :
            * sans elle, un mode different de celui de la commande se lit comme
            * une erreur de saisie a corriger, alors que c'est le cas d'usage.
+           *
+           * ELLE ANNONCE AUSSI LE CHAMP QUI APPARAIT, ajout du 2 septembre 2026
+           * sur relevé de `ls-frontend-revue`. Changer le mode insere un champ
+           * OBLIGATOIRE sous ce `select` : sans mention, la synthese vocale
+           * n'annonce rien, et l'envoi echoue ensuite sur un champ dont
+           * l'existence n'a jamais ete dite. Le rattachement passe par
+           * `aria-describedby`, deja pose sur ce `select`, donc la phrase est
+           * lue au moment ou le mode est choisi.
            */}
           <p id={idAideMode} className={styles.aide}>
             Le modifier n&apos;altère pas la commande, qui garde le mode choisi
             et payé par le client. À changer seulement si le colis a réellement
-            été remis autrement.
+            été remis autrement. Un mode en relais ajoute un champ obligatoire,
+            le point de retrait exécuté.
           </p>
         </div>
 

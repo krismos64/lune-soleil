@@ -136,12 +136,24 @@ export async function declarerExpedition({
     saisieValidee = {
       ...brute,
       /*
-       * UN NUMERO REDUIT A DES ESPACES DEVIENT NUL, jamais une chaine vide. Les
-       * deux se ressemblent a l'ecran et se distinguent en base : `""` ferait
-       * croire a un numero connu, et LS-131 construirait une URL de suivi vide.
+       * UN NUMERO SANS AUCUNE LETTRE NI CHIFFRE DEVIENT NUL, jamais une chaine
+       * vide ni une chaine invisible. Les trois se ressemblent a l'ecran et se
+       * distinguent en base : une valeur non nulle ferait croire a un numero
+       * connu, et LS-131 construirait une URL de suivi sur du vide.
+       *
+       * `trim()` NE SUFFIT PAS, ET C'EST MESURE. Il ne retire ni l'espace sans
+       * chasse U+200B ni ses voisins, qui traversent donc la validation Zod et
+       * se persistent : `"\u200B".trim() === ""` vaut FAUX. Un copier-coller
+       * depuis l'interface d'un transporteur ramene couramment ce caractere, et
+       * l'exploitante croit alors avoir laisse le champ vide.
+       *
+       * LE MEME PREDICAT QUE `champAdresse`, deliberement : il porte deja ce
+       * `refine` depuis le defaut mesure le 25 aout 2026 sur `nomClient`.
+       * `numeroSuivi` ne peut pas l'employer directement, etant facultatif, donc
+       * la regle est appliquee ici plutot que recopiee dans le schema.
        */
       numeroSuivi:
-        brute.numeroSuivi === null || brute.numeroSuivi === ""
+        brute.numeroSuivi === null || !/[\p{L}\p{N}]/u.test(brute.numeroSuivi)
           ? null
           : brute.numeroSuivi,
     };
