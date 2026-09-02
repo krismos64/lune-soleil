@@ -268,11 +268,15 @@ export async function supprimerMonCompte(
  * peut reutiliser, article 20, et l'empreinte est un secret au sens de
  * l'invariant 9. Leur EXISTENCE est rapportee, jamais leur valeur.
  *
- * IL N'EST PAS DECLENCHE PAR UN ECRAN AUJOURD'HUI. Le ticket l'admet : « meme
- * si l'export est declenche a la main par l'exploitante ». La procedure est
- * ecrite dans `docs/PROCEDURE-DROITS-DES-PERSONNES.md`, et cette fonction est
- * ce qu'elle appelle. Une demande d'acces se traite en un mois, article 12
- * paragraphe 3 : un traitement manuel tient ce delai sans difficulte.
+ * DEPUIS LS-62, UN ECRAN LE DECLENCHE, `/compte/donnees`, et le client obtient
+ * son fichier sans aucune demarche par email, critere 1. L'appel manuel de
+ * `docs/PROCEDURE-DROITS-DES-PERSONNES.md` demeure : il sert la demande d'une
+ * personne qui n'a PAS de compte, un acheteur invite, que l'ecran ne peut pas
+ * servir faute de session.
+ *
+ * CETTE FONCTION N'A AUCUNE GARDE, volontairement : c'est la primitive, et
+ * `exporterMesDonnees` plus bas est le point d'entree garde. Le controle
+ * `verifier-actions-sensibles.sh` s'ancre sur la fonction marquee.
  */
 export type ExportDonneesPersonnelles = {
   genereLe: string;
@@ -322,4 +326,77 @@ export async function exporterDonneesPersonnelles(
     avis,
     connexions,
   };
+}
+
+/**
+ * Ce que l'export garde rend a l'appelant. LS-62, critere 1.
+ *
+ * `SESSION_ABSENTE` EST UNE VALEUR ET NON UNE EXCEPTION, meme convention que
+ * `supprimerMonCompte` : l'adaptateur redirige vers la connexion plutot que de
+ * rendre une page d'erreur. La reauthentification manquante, elle, se propage
+ * en `ReauthentificationRequiseError`, l'ecran devant proposer de la lever.
+ */
+export type ResultatExportGarde =
+  | { etat: "EXPORTE"; donnees: ExportDonneesPersonnelles }
+  | { etat: "SESSION_ABSENTE" }
+  | { etat: "COMPTE_INTROUVABLE" };
+
+/**
+ * Exporte les donnees de la personne connectee, apres preuve d'identite recente.
+ *
+ * POURQUOI CETTE ACTION EST SENSIBLE, ET LA QUESTION MERITE D'ETRE POSEE plutot
+ * que tranchee par reflexe. `.claude/familles-sans-action.txt` annonçait depuis
+ * le 13 aout 2026 que `DONNEES_CLIENTS` ne couvrait rien, en precisant que
+ * « LS-36 porte l'espace client, ou la question se reposera entiere ». C'est
+ * cette story.
+ *
+ * ADR-027 definit la famille comme « exporter ou consulter EN MASSE les donnees
+ * clients ». Un export qui livre en un fichier le nom, les adresses,
+ * l'historique d'achat, les factures et le journal des connexions est
+ * exactement cela : c'est meme la forme la plus concentree que ces donnees
+ * puissent prendre dans ce projet.
+ *
+ * LA NUANCE QUI AURAIT PU FAIRE HESITER : la personne exporte SES PROPRES
+ * donnees, pas celles d'un tiers, la ou ADR-021 vise l'acces de l'exploitante
+ * au fichier client. Elle ne change pas la conclusion, et c'est le scenario
+ * d'ADR-027 qui le dit : l'ordinateur reste ouvert. Quelqu'un qui s'assied
+ * devant une session ouverte repart avec le dossier complet du titulaire, dont
+ * son adresse postale et ses factures. Une session ouverte prouve qu'on s'est
+ * connecte un jour, pas que c'est bien cette personne maintenant.
+ *
+ * LE COUT EST BORNE, ce qui compte pour le critere 6 de LS-81, « liste
+ * volontairement courte » : un client exporte ses donnees une fois, pas
+ * quotidiennement. La mesure ne se paie pas en saisies repetees, contrairement
+ * a ce qu'une garde sur la consultation de l'historique produirait.
+ *
+ * AUCUN IDENTIFIANT EN PARAMETRE, invariant 2 : les donnees exportees sont
+ * celles de la SESSION, jamais celles qu'on demande. Une signature acceptant un
+ * `utilisateurId` ouvrirait l'export du dossier d'autrui a qui devine un
+ * identifiant, ce qui serait la fuite la plus grave que ce projet puisse
+ * produire.
+ */
+/** @sensible DONNEES_CLIENTS */
+export async function exporterMesDonnees(
+  enTetes: Headers,
+): Promise<ResultatExportGarde> {
+  const identite = await exigerSession(enTetes);
+
+  if (!identite) {
+    return { etat: "SESSION_ABSENTE" };
+  }
+
+  // LEVE `ReauthentificationRequiseError` quand la preuve manque ou depasse
+  // quinze minutes. L'adaptateur la traduit, il ne la rattrape pas ici : une
+  // exception avalee au milieu d'un service masquerait la garde.
+  await exigerReauthentificationRecente(enTetes, "DONNEES_CLIENTS");
+
+  const donnees = await exporterDonneesPersonnelles(identite.utilisateurId);
+
+  if (!donnees) {
+    // La session designait un compte disparu entre-temps. Rendre une valeur
+    // plutot que `null` evite que l'adaptateur confonde ce cas avec une panne.
+    return { etat: "COMPTE_INTROUVABLE" };
+  }
+
+  return { etat: "EXPORTE", donnees };
 }

@@ -48,7 +48,23 @@ passkey.** Ni l'une ni l'autre n'est réutilisable par la personne, ce que
 l'article 20 vise, et l'empreinte est un secret au sens de l'invariant 9. Leur
 existence est rapportée, jamais leur valeur. Un test le verrouille.
 
-Déclenchement, depuis la racine du dépôt, base de production configurée :
+### Le client titulaire d'un compte se sert lui-même
+
+**Depuis LS-62, il n'y a rien à faire.** L'écran `/compte/donnees` télécharge le
+fichier, et la demande n'a pas à passer par l'exploitante. Une demande d'accès
+arrivant malgré tout par email se répond en indiquant ce chemin, comme pour la
+rectification.
+
+Le téléchargement exige une **confirmation d'identité**, l'export étant une
+action sensible de la famille `DONNEES_CLIENTS`, ADR-027 décision 3 : il livre en
+un fichier tout le dossier de la personne, ce qu'un ordinateur laissé ouvert
+suffirait sinon à emporter. La confirmation reste valable quinze minutes.
+
+### L'appel manuel reste nécessaire pour qui n'a pas de compte
+
+**Un acheteur invité ne peut pas être servi par l'écran**, faute de session, et
+c'est le seul cas où cette procédure s'applique encore. Depuis la racine du
+dépôt, base de production configurée :
 
 ```bash
 npx tsx -e '
@@ -58,10 +74,11 @@ npx tsx -e '
 ' "<identifiant-du-compte>"
 ```
 
-**Aucun écran ne le déclenche aujourd'hui**, et c'est assumé : une demande
-d'accès se compte en unités par an sur une boutique de cette taille, et le délai
-d'un mois laisse largement le temps d'un traitement manuel. Un écran viendra si
-le volume le justifie.
+**`exporterDonneesPersonnelles` et non `exporterMesDonnees`** : la seconde est le
+point d'entrée gardé, elle attend des en-têtes de requête et une preuve
+d'identité, ce qu'une invocation en ligne de commande n'a pas. La première est la
+primitive, sans garde, et c'est ici le bon outil : l'identité du demandeur a été
+vérifiée en amont, section « avant de répondre, vérifier qui demande ».
 
 Transmettre le fichier **à l'adresse email du compte**, jamais à une autre.
 
