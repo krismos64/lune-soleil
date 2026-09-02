@@ -1,0 +1,94 @@
+/*
+ * Barre de navigation de l'administration, LS-162. Conception a partir de
+ * 320 px.
+ *
+ * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons d'ADR-022. Les paires
+ * couleur et fond sont COLOCALISEES, ce qui les rend mesurables par
+ * `verifier-contraste.sh` : ce controle ne remonte pas un fond herite du JSX,
+ * et une barre presente sur tous les ecrans merite d'etre mesuree plutot que
+ * supposee.
+ */
+
+.barre {
+  background: var(--ls-surface);
+  border-bottom: 1px solid var(--ls-border);
+}
+
+/*
+ * DEFILEMENT HORIZONTAL A 320 px, ET C'EST UN CHOIX ASSUME, repris de la liste
+ * de filtres du catalogue qui resout le meme probleme.
+ *
+ * Avec sept rubriques, les empiler mangerait l'ecran entier avant le contenu,
+ * ce qui est exactement le defaut que cette story ferme : l'exploitante ouvre
+ * un ecran pour travailler, pas pour lire un menu. Les envelopper produirait
+ * une hauteur imprevisible, de deux a quatre lignes selon la largeur.
+ *
+ * `overflow-x` cree ici une zone de defilement DELIBEREE, distincte d'un
+ * debordement de page : la mesure de `mesure-rendu.ts` exclut ce cas
+ * explicitement, un conteneur a defilement assume n'etant pas un defaut de
+ * mise en page.
+ *
+ * LS-144 PORTE LA DECOUVRABILITE de ce motif sur les filtres de commandes, le
+ * fait qu'une partie du contenu defile hors ecran sans que rien ne le signale.
+ * La correction qui en sortira vaudra pour cette barre : elles partagent le
+ * meme motif, et c'est la raison de ne pas inventer ici une solution
+ * differente.
+ */
+.liste {
+  display: flex;
+  gap: var(--ls-space-2);
+  margin: 0;
+  padding: var(--ls-space-2) var(--ls-space-3);
+  list-style: none;
+  overflow-x: auto;
+  /* Le defilement s'arrete sur une rubrique entiere, jamais coupee au milieu. */
+  scroll-snap-type: x proximity;
+}
+
+@media (min-width: 768px) {
+  .liste {
+    /* La place existe : les rubriques se centrent au lieu de defiler. */
+    justify-content: center;
+    flex-wrap: wrap;
+    overflow-x: visible;
+    padding: var(--ls-space-2) var(--ls-space-4);
+  }
+}
+
+.lien {
+  display: block;
+  /* 44 px de haut au total avec le remplissage, la cible tactile minimale. */
+  padding: var(--ls-space-3) var(--ls-space-4);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface);
+  color: var(--ls-primary);
+  text-decoration: none;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  /* Le libelle ne se coupe jamais en deux lignes dans la barre. */
+  white-space: nowrap;
+  scroll-snap-align: start;
+}
+
+.lien:hover {
+  background: var(--ls-surface-sand);
+  color: var(--ls-primary);
+}
+
+/*
+ * L'ECRAN COURANT. `aria-current="page"` porte l'information, ce style ne fait
+ * que l'appuyer : `frontend-design.md` interdit qu'une information passe par la
+ * seule couleur, et le selecteur s'ancre donc sur l'ATTRIBUT plutot que sur une
+ * classe. Les deux ne peuvent pas diverger.
+ *
+ * Blanc sur primaire : 8,93:1, AAA.
+ */
+.lien[aria-current="page"] {
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+}
+
+.lien[aria-current="page"]:hover {
+  background: var(--ls-primary-hover);
+  color: var(--ls-text-on-primary);
+}

@@ -445,6 +445,18 @@ jobs:
       # pendant la panne, sur l'ecran qui doit inspirer confiance.
       - name: 6k. Palette de secours alignee sur ADR-022
         run: ./scripts/verifier-palette-secours.sh
+      # CE QU'IL GARDE : que chaque ecran d'administration livre soit atteignable
+      # depuis la barre, LS-162. Il confronte les rubriques declarees aux routes
+      # du depot DANS LES DEUX SENS, et le second est celui qui compte : une
+      # route ni navigable ni exclue fait echouer le controle.
+      #
+      # C'EST LE DEFAUT D'ORIGINE QU'IL EMPECHE DE REVENIR. Huit stories ont
+      # ajoute un ecran sans le relier aux autres, et rien ne le signalait : les
+      # tests de bout en bout appellent `page.goto()` avec l'URL en dur, donc
+      # l'absence totale de menu ne faisait rougir aucune assertion. Une liste
+      # ecrite a la main reproduirait le motif d'un cran plus loin.
+      - name: 6l. Chaque ecran d'administration est navigable
+        run: ./scripts/verifier-navigation-administration.sh
 
       # ----------------------------------------------------------------------
       # Controles 2 et 3. Le format entre ici parce qu'un depot ou seule une
