@@ -27,6 +27,7 @@ import { Client } from "pg";
 
 import { encoderCommandeEnCours } from "@/lib/commande-cookie";
 import {
+  COMMANDE_A_EXPEDIER_TEST,
   COMMANDE_FACTUREE_TEST,
   COMMANDE_TEST,
   FICHIER_COMMANDE,
@@ -401,6 +402,158 @@ preparation(
             JSON.stringify(amorcee ?? { commande: "absente" }) +
             `. Attendu numero ${COMMANDE_FACTUREE_TEST.numero}, statut ` +
             "CONFIRMEE, un paiement et une facture.",
+        );
+      }
+
+      /*
+       * LA COMMANDE `EN_PREPARATION` DE LA FILE D'EXPEDITION, LS-130.
+       *
+       * `ordre` FIXE ET RESERVE, 9130, meme motif que les amorces ci-dessus :
+       * les preparations tournent EN PARALLELE, deux workers en CI, et deriver
+       * `max(ordre) + 1` sur une base vierge fait lire le meme maximum a deux
+       * amorces. C24 pose une unicite DEFERRABLE sur cette colonne, donc la
+       * violation ne se manifeste qu'au COMMIT et emporte toute l'amorce.
+       */
+      await client.query(
+        `INSERT INTO categorie (id, nom, slug, ordre, cree_a)
+       VALUES ($1, 'TEST Catégorie LS130', 'test-categorie-ls130', 9130, now())
+       ON CONFLICT (id) DO NOTHING`,
+        [COMMANDE_A_EXPEDIER_TEST.categorieId],
+      );
+
+      await client.query(
+        `INSERT INTO produit (id, categorie_id, nom, slug, statut, cree_a, modifie_a)
+       VALUES ($1, $2, 'TEST Pièce à expédier', 'test-piece-a-expedier-ls130',
+               'BROUILLON', now(), now())
+       ON CONFLICT (id) DO NOTHING`,
+        [
+          COMMANDE_A_EXPEDIER_TEST.produitId,
+          COMMANDE_A_EXPEDIER_TEST.categorieId,
+        ],
+      );
+
+      await client.query(
+        `INSERT INTO variante (
+         id, produit_id, reference, libelle, prix_centimes,
+         quantite_physique, quantite_reservee, vente_web_activee, cree_a
+       )
+       VALUES ($1, $2, 'TEST-LS130', 'TEST Déclinaison', 4200, 1, 0, true, now())
+       ON CONFLICT (id) DO NOTHING`,
+        [
+          COMMANDE_A_EXPEDIER_TEST.varianteId,
+          COMMANDE_A_EXPEDIER_TEST.produitId,
+        ],
+      );
+
+      /*
+       * `EN_PREPARATION` EST L'ETAT QUI COMPTE, et c'est le seul depuis lequel
+       * `TRANSITIONS_ADMINISTRATRICE` mene a `EXPEDIEE`. L'amorcer directement
+       * dans cet etat evite de rejouer webhook puis transition, qui feraient
+       * dependre cette preparation de deux services au lieu d'une insertion.
+       *
+       * LE MODE EST `DOMICILE`, ET IL SERT AU TEST DU REBASCULEMENT : le
+       * formulaire propose ce mode par defaut, et c'est en le changeant vers
+       * Point Relais que le champ de point de retrait apparait.
+       */
+      await client.query(
+        `INSERT INTO commande (
+         id, numero, statut, email_normalise, nom_client,
+         adresse_livraison, adresse_facturation,
+         sous_total_centimes, mode_livraison, frais_port_centimes,
+         total_centimes, montant_taxe_centimes,
+         cgv_acceptees_a, cgv_version, cree_a
+       )
+       VALUES (
+         $1, $2, 'EN_PREPARATION', 'e2e-ls130@exemple.test', 'TEST Sacha',
+         $3::jsonb, $3::jsonb,
+         4200, 'DOMICILE', 499,
+         4699, 0,
+         now(), 'test', now()
+       )
+       ON CONFLICT (id) DO NOTHING`,
+        [
+          COMMANDE_A_EXPEDIER_TEST.commandeId,
+          COMMANDE_A_EXPEDIER_TEST.numero,
+          JSON.stringify({
+            nom: "TEST Sacha",
+            ligne1: "3 rue de Test",
+            codePostal: "44000",
+            ville: "TESTVILLE",
+            pays: "FR",
+          }),
+        ],
+      );
+
+      await client.query(
+        `INSERT INTO ligne_commande (
+         id, commande_id, variante_id, reference_figee,
+         libelle_produit_fige, libelle_variante_fige,
+         prix_fige_centimes, quantite
+       )
+       VALUES ($1, $2, $3, 'TEST-LS130', 'TEST Pièce à expédier',
+               'TEST Déclinaison', 4200, 1)
+       ON CONFLICT (id) DO NOTHING`,
+        [
+          COMMANDE_A_EXPEDIER_TEST.ligneId,
+          COMMANDE_A_EXPEDIER_TEST.commandeId,
+          COMMANDE_A_EXPEDIER_TEST.varianteId,
+        ],
+      );
+
+      /*
+       * LE PAIEMENT EXISTE PARCE QU'UNE COMMANDE EN PREPARATION A ETE PAYEE.
+       * Il n'est lu par aucun test d'expedition, mais une commande en
+       * preparation sans encaissement serait un etat que le parcours ne produit
+       * jamais : amorcer un etat impossible ferait mesurer un ecran sur des
+       * donnees qui mentent.
+       */
+      await client.query(
+        `INSERT INTO paiement (
+         id, commande_id, statut, montant_centimes,
+         montant_rembourse_centimes, identifiant_fournisseur, confirme_a, cree_a
+       )
+       VALUES ($1, $2, 'REUSSI', 4699, 0, 'cs_test_ls130', now(), now())
+       ON CONFLICT (id) DO NOTHING`,
+        [
+          COMMANDE_A_EXPEDIER_TEST.paiementId,
+          COMMANDE_A_EXPEDIER_TEST.commandeId,
+        ],
+      );
+
+      /*
+       * L'AMORCE VERIFIE SON PROPRE RESULTAT, regle etablie par LS-160.
+       *
+       * ELLE VERIFIE AUSSI L'ABSENCE D'EXPEDITION, et pas seulement le statut :
+       * une execution precedente qui aurait declare l'expedition laisserait la
+       * commande hors de la file, `ON CONFLICT (id) DO NOTHING` ne la remettant
+       * jamais en preparation. Le test mesurerait alors l'etat vide en croyant
+       * mesurer le formulaire, exactement le defaut que cette commande existe
+       * pour eviter.
+       */
+      const { rows: aExpedier } = await client.query<{
+        numero: string;
+        statut: string;
+        expeditions: string;
+      }>(
+        `SELECT c.numero, c.statut,
+                (SELECT count(*) FROM expedition e WHERE e.commande_id = c.id) AS expeditions
+         FROM commande c WHERE c.id = $1`,
+        [COMMANDE_A_EXPEDIER_TEST.commandeId],
+      );
+
+      const preparee = aExpedier[0];
+
+      if (
+        preparee === undefined ||
+        preparee.numero !== COMMANDE_A_EXPEDIER_TEST.numero ||
+        preparee.statut !== "EN_PREPARATION" ||
+        Number(preparee.expeditions) !== 0
+      ) {
+        throw new Error(
+          "Amorce de la commande a expedier incomplete : " +
+            JSON.stringify(preparee ?? { commande: "absente" }) +
+            `. Attendu numero ${COMMANDE_A_EXPEDIER_TEST.numero}, statut ` +
+            "EN_PREPARATION et aucune expedition.",
         );
       }
     } finally {
