@@ -52,20 +52,35 @@ export default defineConfig({
      * protege ont besoin d'une session SANS le role. Promouvoir la session
      * cliente les ferait passer pour la mauvaise raison.
      *
-     * DEUX INSCRIPTIONS SUR LES TROIS de la minute sont donc consommees ici, et
-     * c'est la marge qui interdit d'en ajouter une troisieme sans repenser
-     * l'ensemble.
+     * TROIS SESSIONS DEPUIS LS-56, et la marge du plafond est desormais NULLE.
+     * `session-verifiee.setup.ts` ouvre un compte VERIFIE, qui ne peut pas se
+     * confondre avec la session cliente : celle-ci est volontairement NON
+     * verifiee, et c'est ce qui permet a `compte-authentification` de mesurer
+     * le rappel de verification. Les deux etats sont mutuellement exclusifs a
+     * l'ecran.
+     *
+     * `/sign-up/email` accepte trois appels par minute et par IP : les trois
+     * sont donc consommes. `session-verifiee.setup.ts` porte pour cette raison
+     * un REESSAI ESPACE sur 429, sans quoi une suite relancee dans la minute
+     * echoue a la preparation. Une quatrieme session exigerait de repenser
+     * l'ensemble, pas d'ajouter un fichier.
+     *
+     * NE PAS NEUTRALISER LE PLAFOND EN TEST : il retirerait de la mesure une
+     * protection reelle, et la suite ne dirait plus rien du comportement servi
+     * en production.
      *
      * `testMatch` isole ces fichiers des trois projets de largeur, sans quoi ils
      * s'executeraient quatre fois et le probleme resterait entier.
      */
     {
       name: "preparation",
-      testMatch: /(session-(cliente|administration)|commande)\.setup\.ts$/,
+      testMatch:
+        /(session-(cliente|verifiee|administration)|commande)\.setup\.ts$/,
     },
     {
       name: "mobile-320",
-      testIgnore: /(session-(cliente|administration)|commande)\.setup\.ts$/,
+      testIgnore:
+        /(session-(cliente|verifiee|administration)|commande)\.setup\.ts$/,
       dependencies: ["preparation"],
       use: {
         ...devices["Desktop Chrome"],
@@ -76,7 +91,8 @@ export default defineConfig({
     },
     {
       name: "mobile-390",
-      testIgnore: /(session-(cliente|administration)|commande)\.setup\.ts$/,
+      testIgnore:
+        /(session-(cliente|verifiee|administration)|commande)\.setup\.ts$/,
       dependencies: ["preparation"],
       use: {
         ...devices["Desktop Chrome"],
@@ -94,7 +110,8 @@ export default defineConfig({
     },
     {
       name: "bureau-1280",
-      testIgnore: /(session-(cliente|administration)|commande)\.setup\.ts$/,
+      testIgnore:
+        /(session-(cliente|verifiee|administration)|commande)\.setup\.ts$/,
       dependencies: ["preparation"],
       use: {
         ...devices["Desktop Chrome"],

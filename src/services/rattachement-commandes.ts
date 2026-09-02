@@ -159,6 +159,31 @@ export async function rattacherMesCommandes(
   const emailNormalise = normaliserEmailPourRattachement(email);
 
   const nombre = await prisma.$transaction(async (transaction) => {
+    /*
+     * AUCUN VERROU EXPLICITE ICI, ET C'EST UNE DECISION MESUREE, non un oubli.
+     *
+     * LA COURSE AVEC LA SUPPRESSION DE COMPTE EST REELLE, trouvee par la revue
+     * critique : si ce rattachement commite entre le marquage `dissocieA` de la
+     * suppression et son `DELETE`, la commande qu'il vient de rattacher n'a pas
+     * ete marquee, le `ON DELETE SET NULL` remet `utilisateurId` a nul, et elle
+     * redevient « jamais rattachee » alors qu'elle a appartenu au compte
+     * supprime. Quiconque controle ensuite l'adresse la recupere.
+     *
+     * LA PARADE VIT DANS `suppression-compte.ts`, qui verrouille la ligne
+     * `utilisateur` par un `FOR UPDATE` la ou un `findUnique` nu ne prenait
+     * aucun verrou. Le rattachement attend alors, et la cle etrangere refuse
+     * son ecriture vers un compte disparu.
+     *
+     * UN VERROU AJOUTE ICI A ETE ESSAYE PUIS RETIRE : sa mutation ne faisait
+     * rougir aucun test, et la mesure dit pourquoi. Dans le sens inverse, ce
+     * rattachement demarrant en premier, l'`UPDATE` de la commande pose deja
+     * un verrou de ligne qui fait attendre la suppression, laquelle marque
+     * ensuite correctement. Les deux sens sont donc couverts sans lui.
+     *
+     * Un verrou qu'aucune mutation n'exerce est du code que rien ne justifie,
+     * et il en coute : il inviterait a croire la protection portee ici, donc a
+     * accepter un jour de retirer celle de la suppression.
+     */
     const rattachees = await rattacherCommandes(
       transaction,
       emailNormalise,

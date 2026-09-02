@@ -334,3 +334,22 @@ export const FICHE_TEST = {
     },
   },
 } as const;
+
+/**
+ * Session d'un client VERIFIE, LS-56. Voir `session-verifiee.setup.ts` pour
+ * pourquoi une troisieme session est necessaire.
+ */
+export const FICHIER_SESSION_VERIFIEE = "tests/e2e/.session-verifiee.json";
+
+/**
+ * L'adresse de ce compte, ecrite sur disque par la preparation.
+ *
+ * SUR DISQUE ET NON EN VARIABLE : Playwright execute chaque projet dans son
+ * propre processus, une valeur posee dans un module n'y survit pas. Meme motif
+ * que le cookie de commande de LS-118. Ignore par git comme les etats de
+ * session : c'est une adresse, donc une donnee personnelle de test.
+ */
+export const FICHIER_EMAIL_VERIFIE = "tests/e2e/.session-email-verifie.json";
+
+/** Le mot de passe du compte verifie, partage par la preparation et les tests. */
+export const MOT_DE_PASSE_VERIFIE = "phrase-de-passe-de-test1";

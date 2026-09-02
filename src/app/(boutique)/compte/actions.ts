@@ -137,10 +137,19 @@ export async function rattacherCommandesAction(): Promise<ResultatRattachementCo
     }
 
     /*
-     * `revalidatePath` PARCE QUE LA PAGE EST `force-dynamic` MAIS LE CLIENT
-     * GARDE SON RENDU. Sans lui, la liste des commandes rattachees resterait
-     * celle d'avant l'action jusqu'a une navigation complete, et le client
-     * conclurait que rien ne s'est passe.
+     * `revalidatePath` PARCE QUE L'HISTORIQUE DOIT REFLETER LE RATTACHEMENT.
+     * Les commandes viennent d'entrer dans le perimetre du compte : sans cette
+     * ligne, `/compte/commandes` afficherait encore l'etat d'avant.
+     *
+     * CE QU'IL FAIT AUSSI, ET QUI A ETE MAL ANTICIPE : il fait retomber a zero
+     * le nombre de commandes eligibles, donc la condition d'affichage du bloc
+     * de rattachement. La premiere version laissait la page decider seule sur ce
+     * nombre, et la section entiere disparaissait au succes, emportant le focus
+     * clavier, le message de succes et la region live qui devait l'annoncer.
+     * Le geste reussi ne produisait rien de visible.
+     *
+     * Le composant porte desormais son propre etat `fait` et survit a la
+     * revalidation, voir `bloc-rattachement.tsx`. Trouve par la revue frontend.
      */
     revalidatePath("/compte");
     revalidatePath("/compte/commandes");
