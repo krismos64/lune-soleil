@@ -201,6 +201,52 @@ const RENDUS: Record<ModeleEmail, (message: MessageEmail) => MessageRendu> = {
       SIGNATURE,
     ].join("\n"),
   }),
+
+  /*
+   * LS-134. ACCUSE DE RECEPTION SUR SUPPORT DURABLE, article L221-21. L'email
+   * EST le support durable : il fait foi de la date a laquelle le client a
+   * exerce son droit, et c'est pourquoi il rappelle le numero de commande.
+   *
+   * LES FRAIS DE RETOUR SONT ANNONCES ICI, article L221-23 : le client ne les
+   * supporte QUE s'il en a ete informe, et la charge de la preuve pese sur le
+   * vendeur. Une mention oubliee ne coute pas quelques euros de port, elle les
+   * met a la charge de l'exploitante.
+   *
+   * AUCUN DELAI CHIFFRE INVENTE. Le jour limite vient du calcul de LS-133 quand
+   * il est connu, et la phrase s'adapte quand il ne l'est pas : annoncer une
+   * date fausse sur un droit est exactement ce que L221-20 sanctionne.
+   */
+  "retractation-accusee": (message) => {
+    const jourLimite = message.variables.jourLimite ?? "";
+
+    return {
+      objet: `Votre rétractation a bien été reçue, commande ${exiger(message, "numero")}`,
+      texte: [
+        "Bonjour,",
+        "",
+        `Nous avons bien reçu votre demande de rétractation pour la commande ${exiger(message, "numero")}.`,
+        "Ce message en accuse réception.",
+        "",
+        jourLimite.length > 0
+          ? `Votre droit de rétractation était ouvert jusqu'au ${jourLimite} inclus.`
+          : "Votre demande a été enregistrée à la date de ce message.",
+        "",
+        "Ce qu'il reste à faire :",
+        "",
+        "Renvoyez votre bijou dans les 14 jours qui suivent cette demande, dans",
+        "son état d'origine et si possible dans son emballage.",
+        "",
+        "Les frais de retour sont à votre charge.",
+        "",
+        "Dès que votre colis nous parvient, ou dès que vous nous transmettez",
+        "une preuve de son expédition, nous procédons au remboursement.",
+        "",
+        "Répondez simplement à ce message pour toute question.",
+        "",
+        SIGNATURE,
+      ].join("\n"),
+    };
+  },
 };
 
 /**
