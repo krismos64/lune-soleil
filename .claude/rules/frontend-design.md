@@ -138,8 +138,14 @@ Christophe a dû le signaler deux fois, les 27 et 28 juillet 2026. La règle ava
 Exception : « l'administratrice » et « l'exploitante » désignent une personne
 réelle et identifiée, l'accord y est correct.
 
-Voir LS-32 : le féminin dans les contenus
-éditoriaux, page histoire et descriptions, reste à arbitrer avec l'exploitante.
+**L'arbitrage de LS-32 est rendu, le 3 septembre 2026 : TOUT NEUTRALISER**,
+contenus éditoriaux compris. Trois positions étaient proposées à l'exploitante,
+dont une intermédiaire gardant le féminin dans la page histoire et les
+descriptions de créations. Elle a retenu la neutralisation complète.
+
+Il n'y a donc plus de zone où le féminin serait un choix de marque assumé : la
+page « Notre histoire », les descriptions de pièces et la foire aux questions
+suivent la même règle que les confirmations et les emails.
 
 ## Interdits visuels
 
@@ -384,7 +390,7 @@ Six éléments, sans en ajouter :
 
 | Élément | Formulation | Réserve |
 |---|---|---|
-| Fabrication | bijoux faits main en Béarn | **à confirmer par l'exploitante**, allégation d'origine |
+| Fabrication | bijoux faits main en Béarn | **confirmé le 3 septembre 2026**, assemblage et finition à Artix (64) |
 | Paiement | paiement sécurisé par Stripe | |
 | Livraison | Mondial Relay, Point Relais, Locker ou domicile | ADR-025 |
 | Gratuité | livraison offerte dès 39 €, tous modes | valeur issue de la configuration |
@@ -396,9 +402,18 @@ elle apparaît. L'annoncer sans elle expose au délai de douze mois de l'article
 L221-20, voir `legal.md`.
 
 « Faits main en Béarn » n'est pas un argument décoratif. Une allégation d'origine
-géographique fausse relève de la pratique commerciale trompeuse. Ne pas la
-publier avant confirmation explicite de l'exploitante sur le lieu réel de
-fabrication.
+géographique fausse relève de la pratique commerciale trompeuse, articles L121-2
+et suivants.
+
+**La confirmation est obtenue, le 3 septembre 2026** : l'assemblage et la
+finition ont lieu à **Artix**, en Pyrénées-Atlantiques, et toutes les étapes se
+font au même endroit. La formule « faits main en Béarn » est donc exacte, Artix
+appartenant au Béarn.
+
+**Ce qui reste interdit** : la formule du prototype, « Modelé, assemblé et fini à
+la main à Artix ». Le verbe « modelé » a été inventé par un générateur et décrit
+un geste qui n'a pas été confirmé, l'exploitante ayant validé l'assemblage et la
+finition, jamais le modelage. Écrire « assemblés et finis à la main à Artix ».
 
 ## Paillettes
 
