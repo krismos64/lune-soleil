@@ -28,8 +28,20 @@ getJiraIssue  fields: ["summary","status","description","comment"]
 **Un commentaire récent rectifie souvent la description**, qui n'est pas toujours
 réécrite ensuite. Le cas s'est produit plusieurs fois ici. Au 29 juillet 2026, la
 description de LS-27 annonce « Point Relais et Locker » et un tarif unique, quand
-un commentaire du même jour porte trois modes et deux tarifs, ADR-025. LS-33 est
-dans le même état sur les événements de suivi.
+un commentaire du même jour porte trois modes et deux tarifs, ADR-025.
+
+**Le titre trompe autant que la description**, et LS-33 en est le cas type,
+mesuré le 3 septembre 2026. Il annonce « Décider comment le site apprend qu'un
+colis est livré » alors que la décision est prise depuis le 28 juillet : son
+dernier commentaire dit que le ticket ne porte plus que la souscription
+commerciale, l'implémentation étant passée à LS-131. Un classement fait sur le
+seul titre a présenté ce ticket comme le plus rentable du backlog, quand il
+n'était pas réalisable du tout.
+
+**Les liens de blocage se lisent dans Jira, jamais dans une phrase.** Le même
+jour, trois tickets annoncés comme bloqués par LS-33 ne portaient aucun lien
+vers lui : deux étaient réalisables immédiatement, dont LS-135 qui a été livrée
+dans la foulée. Une dépendance affirmée en prose se périme sans bruit.
 
 Se fier à la description seule fait reconstruire une conception abandonnée, et
 aucun contrôle automatique ne le signale.

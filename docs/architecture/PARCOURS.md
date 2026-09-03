@@ -529,7 +529,7 @@ consommation. Son absence prolonge le délai de rétractation de douze mois.
 | 7a | Preuve d'expédition fournie | demande `EXPEDITION_PROUVEE`, `preuveExpeditionA` horodaté | accusé, remboursement annoncé |
 | 7b | Réception du colis | `recueA` horodaté, **sans changement de statut** | confirmation |
 | 8 | Remboursement | demande `REMBOURSEMENT_EN_COURS` puis `REMBOURSEE`, avoir si nécessaire | remboursement |
-| 9 | Réintégration de stock | mouvement de retour selon l'état réel de la pièce, déclenché par `recueA` | stock à jour |
+| 9 | Réintégration de stock | mouvement de retour selon l'état réel de la pièce, décidé par l'administratrice sur une demande dont `recueA` est renseigné | stock à jour |
 
 **Les étapes 7a et 7b sont deux faits indépendants, pas une séquence.** Le
 remboursement est dû au **premier des deux** qui survient, article L221-24.
@@ -592,7 +592,9 @@ transporteur, pas en retenant une somme due.
 
 **Colis toujours pas reçu après le remboursement**
 Base : demande `REMBOURSEE`, `recueA` nul, **aucun mouvement de stock**, alerte
-critique au-delà du seuil, règle L13.
+critique au-delà du seuil, règle L13. Le seuil est de trente jours depuis
+`retourAttenduA`, LS-135 : quatorze jours de renvoi, article L221-23, plus
+l'acheminement, un seuil plus court alerterait sur des retours en cours.
 Vue : rien côté client, il a été remboursé.
 La pièce est sortie du stock à la vente et n'y est jamais revenue. Sans l'alerte,
 l'écart resterait invisible : le journal des mouvements montrerait une vente web,
@@ -601,10 +603,25 @@ l'administratrice d'ouvrir le litige transporteur, et de décider d'un ajustemen
 de stock avec motif si la pièce est définitivement perdue.
 
 **Colis reçu après le remboursement**
-Base : `recueA` horodaté, mouvement `RETOUR` créé, statut inchangé à `REMBOURSEE`.
+Base : `recueA` horodaté, statut inchangé à `REMBOURSEE`, mouvement `RETOUR`
+**sur décision de l'administratrice** et jamais automatique.
 Vue : rien, l'opération est close côté client.
 La réception n'est pas un statut, règle L12. Elle survient quand elle survient et
-déclenche seule la réintégration.
+c'est elle qui **rend possible** la réintégration, sans la déclencher.
+
+**`recueA` NE DÉCLENCHE AUCUN MOUVEMENT PAR LUI-MÊME**, et une version
+antérieure de cette page l'écrivait, corrigé le 3 septembre 2026 en livrant
+LS-135. Une date de réception dit que le colis est arrivé, jamais dans quel
+état : un bijou revenu cassé ne retourne pas au catalogue, et S8 lie la
+réintégration à l'état réel de la pièce. C'est le motif d'ADR-030, un mouvement
+ne se compense qu'une fois et sur décision.
+
+**L'étape 9 n'a aucun chemin à ce jour**, LS-173 : LS-135 a livré les étapes 6 à
+8 et horodate `recueA` sans écrire de mouvement, ce qu'un test vérifie.
+L'écran des stocks refuse par ailleurs de compenser une vente web, à juste
+titre, un `RETOUR` y incrémenterait le stock sans toucher la commande ni la
+facture. Une pièce revenue reste donc sortie du stock tant que LS-173 n'est pas
+livrée.
 
 **Pièce retournée endommagée**
 Base : `recueA` horodaté, motif documenté. **L'ajustement du montant n'est

@@ -45,6 +45,22 @@ et au tunnel, sous peine de retomber sur l'article L221-20.
 
 Ne pas introduire de règle de remboursement partiel des frais de port.
 
+### Le colis jamais revenu s'alerte à trente jours, règle L13
+
+Valeur posée par LS-135, `SEUIL_RETOUR_JAMAIS_RECU_JOURS`, comptée depuis
+`retourAttenduA` et jamais depuis `deposeeA` : partir du dépôt compterait le
+délai de renvoi du client comme un retard du transporteur.
+
+**Trente jours et non quatorze.** Le client dispose de quatorze jours pour
+renvoyer le bien, article L221-23, et l'acheminement s'y ajoute. Un seuil calé
+sur le délai légal seul alerterait sur des retours normalement en cours, et
+l'alerte perdrait son sens à force de se déclencher pour rien.
+
+**Ce qui est signalé est un écart de stock, jamais un impayé.** La pièce est
+sortie du stock, l'argent est rendu, et rien ne dit où est le bijou. L'alerte
+n'écrit **aucun mouvement de stock**, ADR-030 : un colis peut arriver trois
+semaines plus tard, et la réintégration dépend de l'état réel de la pièce.
+
 ### Les frais de retour se perdent faute d'information
 
 Décision commerciale du 28 juillet 2026, LS-27 : les frais de retour sont à la
