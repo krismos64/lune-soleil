@@ -191,11 +191,33 @@ beforeAll(async () => {
   ({ engendrerJeton, empreinteJeton } = await import("@/lib/jeton-acces"));
 });
 
+/*
+ * LE NETTOYAGE VA JUSQU'AUX COMMANDES, ET C'EST UN DEFAUT REEL TROUVE PAR LA CI.
+ *
+ * Sa premiere version ne supprimait que les quatre tables propres a cette
+ * story, laissant derriere elle une commande, sa reservation et sa variante par
+ * test, soit vingt-cinq commandes. Le fichier voisin
+ * `commande-transaction.sequential.test.ts` lit `SELECT commande_id FROM
+ * reservation` SANS filtre et attend une seule ligne : son test de concurrence
+ * sur la piece unique, test phare du projet, a echoue en annoncant vingt-cinq
+ * acheteurs servis.
+ *
+ * IL N'A PAS ECHOUE EN LOCAL, l'ordre d'execution des fichiers y differant de
+ * celui de la CI. Un fichier qui laisse des lignes derriere lui ne casse que
+ * ses successeurs, et seulement selon l'ordre.
+ *
+ * LE `TRUNCATE ... CASCADE` REPREND CELUI DU FICHIER VOISIN, y compris
+ * `compteur_numero` : sans lui la sequence de numeros continue de croitre entre
+ * les fichiers, ce qui n'est pas faux mais rend les numeros imprevisibles.
+ */
 afterEach(async () => {
   await client.query("DELETE FROM envoi_en_attente");
   await client.query("DELETE FROM demande_retractation");
   await client.query("DELETE FROM jeton_acces");
   await client.query("DELETE FROM expedition");
+  await client.query(
+    "TRUNCATE reservation, ligne_commande, paiement, evenement_fournisseur, mouvement_stock, historique_statut, facture, commande, variante, produit, categorie, compteur_numero CASCADE",
+  );
 });
 
 afterAll(async () => {

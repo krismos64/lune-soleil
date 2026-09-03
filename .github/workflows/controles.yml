@@ -191,6 +191,35 @@ jobs:
           printf 'BETTER_AUTH_SECRET=%s\n' "$secret" >> "$GITHUB_ENV"
           printf 'BETTER_AUTH_URL=http://127.0.0.1:3100\n' >> "$GITHUB_ENV"
 
+      # ----------------------------------------------------------------------
+      # Identite de l'emetteur des factures, LS-126, ajoutee par LS-134.
+      #
+      # POURQUOI ELLE MANQUAIT SANS QUE RIEN NE ROUGISSE. `emettreFacture` leve
+      # `EmetteurNonConfigureError` quand les quatre variables sont absentes, et
+      # la confirmation ATTRAPE cette erreur pour ne pas perdre le paiement :
+      # elle journalise « Facture non emise, emetteur non configure » et
+      # continue. Le defaut etait donc ecrit trente fois dans le journal de
+      # chaque execution, en `error`, sans faire echouer une seule assertion.
+      #
+      # IL S'EST VU QUAND UN TEST A EXIGE UNE CONSEQUENCE DE LA FACTURE : les
+      # jetons de LS-134 naissent dans sa transaction, donc aucune facture
+      # signifie aucun jeton. Le meme trou faisait passer le test de concurrence
+      # de la piece unique, qui servait vingt-cinq acheteurs au lieu d'un.
+      #
+      # CES VALEURS SONT VOLONTAIREMENT FICTIVES ET LE DISENT. Elles ne sont pas
+      # des secrets, contrairement au bloc precedent : une identite legale figure
+      # sur un document public. Le prefixe TEST les rend impossibles a confondre
+      # avec l'identite reelle de l'exploitante, qui vit dans le `.env` de
+      # production et n'entre jamais dans ce depot.
+      #
+      # Le SIRET compte quatorze chiffres, contrainte de `schemaEmetteurFacture`.
+      - name: Composer l'identite de l'emetteur des factures
+        run: |
+          printf 'FACTURE_RAISON_SOCIALE=%s\n' "TEST Lune et Soleil" >> "$GITHUB_ENV"
+          printf 'FACTURE_SIRET=%s\n' "12345678901234" >> "$GITHUB_ENV"
+          printf 'FACTURE_ADRESSE=%s\n' "1 rue de Test, 64000 TESTVILLE" >> "$GITHUB_ENV"
+          printf 'FACTURE_EMAIL_CONTACT=%s\n' "test-emetteur@example.invalid" >> "$GITHUB_ENV"
+
       - name: Installer Node
         uses: actions/setup-node@v7
         with:
