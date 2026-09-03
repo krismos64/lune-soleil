@@ -101,6 +101,8 @@ DEPOT_FACTURE="src/repositories/facture.ts"
 DEPOT_UTILISATEUR="src/repositories/utilisateur.ts"
 ACCES_DOCUMENT="src/services/acces-document.ts"
 JETON_ACCES="src/lib/jeton-acces.ts"
+TRAITEMENT_RETRACTATION="src/services/traitement-retractation.ts"
+DEPOT_RETRACTATION="src/repositories/retractation.ts"
 
 # TOUT FICHIER MUTE DOIT FIGURER ICI, sans quoi il n'est ni sauvegarde ni
 # restaure et la mutation RESTE SUR LE DISQUE apres l'execution.
@@ -113,7 +115,7 @@ JETON_ACCES="src/lib/jeton-acces.ts"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -1946,6 +1948,66 @@ cas "empreinte devenue la valeur en clair" unitaire \
 mute "$JETON_ACCES" 's/\.update\("document-v1"\)/.update("panier-v1")/'
 cas "etiquette de signature partagee" unitaire \
   "refuse une signature produite avec l'etiquette d'un autre usage"
+
+echo
+echo "Traitement d'une retractation, LS-135"
+echo
+
+# Cas 144 : `EXPEDITION_PROUVEE` RENDU OBLIGATOIRE AVANT LE REMBOURSEMENT.
+#
+# C'EST LA MUTATION EXIGEE PAR LE CRITERE 9 DE LS-135, et elle porte une
+# infraction a l'article L221-24 : le remboursement est du au PREMIER des deux
+# faits, preuve d'expedition OU reception. Retirer `RETOUR_ATTENDU` des statuts
+# remboursables bloque indefiniment le retour depose en point relais sans numero
+# de suivi, cas courant, sur un droit qui est du.
+#
+# LE TEST ATTENDU EST CELUI DU RETOUR SANS SUIVI, jamais un autre : c'est lui
+# qui porte la garantie, et un echec constate ailleurs signalerait que ce test
+# precis est devenu aveugle.
+mute "$TRAITEMENT_RETRACTATION" 's/\["RETOUR_ATTENDU", "EXPEDITION_PROUVEE"\] as const;/["EXPEDITION_PROUVEE"] as const;/'
+cas "EXPEDITION_PROUVEE rendu obligatoire avant remboursement" integration \
+  "rembourse un retour recu SANS jamais voir EXPEDITION_PROUVEE"
+
+# Cas 145 : FRAIS DE PORT PLAFONNES AU TARIF LE PLUS BAS.
+#
+# SECONDE MUTATION EXIGEE PAR LE CRITERE 9. L'article L221-24 alinea 4
+# PERMETTRAIT ce plafonnement, et `legal.md` ecarte explicitement la faculte :
+# l'exercer imposerait de designer un mode standard dans les conditions
+# generales, sous peine de retomber sur L221-20 et ses douze mois.
+#
+# LA MUTATION EST DISCRETE, et c'est ce qui la rend utile : sur une commande en
+# point relais elle ne change RIEN, les deux valeurs coincidant. Seul le test a
+# domicile la voit, ce qui prouve que les deux tarifs devaient etre exerces.
+mute "$TRAITEMENT_RETRACTATION" 's/    fraisPortCentimes: montants\.fraisPortCentimes,/    fraisPortCentimes: Math.min(montants.fraisPortCentimes, 410),/'
+cas "frais de port plafonnes au tarif relais" integration \
+  "rembourse 499 de frais de port a domicile, sans plafonner au tarif relais"
+
+# Cas 146 : LA RECEPTION POSE UN STATUT, ce que LS-41 a supprime.
+#
+# Regle L12. Poser un statut a la reception fait REGRESSER une demande deja
+# `REMBOURSEE`, qui disparait alors de toute liste filtree sur le statut :
+# l'exploitante la croit non remboursee alors que l'argent est parti.
+mute "$DEPOT_RETRACTATION" 's/    data: \{ recueA: parametres\.recueA \},/    data: { recueA: parametres.recueA, statut: "RETOUR_ATTENDU" },/'
+cas "la reception pose un statut et fait regresser la demande" integration \
+  "horodate recueA sur une demande REMBOURSEE sans faire regresser son statut"
+
+# Cas 147 : LA TRANSITION DEVIENT INCONDITIONNELLE, `updateMany` sur
+# l'identifiant seul. L'horodatage d'une demande deja transitee est alors
+# reecrit, donc le seuil d'alerte de la regle L13 repart de zero et le colis
+# jamais revenu cesse d'etre signale.
+mute "$DEPOT_RETRACTATION" 's/      statut: \{ in: \[\.\.\.parametres\.statutsAdmis\] \},\n//'
+cas "transition rendue inconditionnelle, l'horodatage se reecrit" integration \
+  "ne rejoue pas une transition deja appliquee"
+
+# Cas 148 : LA GARDE DE ROLE PLACEE APRES LA LECTURE.
+#
+# DEFAUT REEL DE LA PREMIERE VERSION, trouve par le test negatif le
+# 3 septembre 2026. Les refus metier de ce service nomment l'etat REEL de la
+# demande, deliberement : lire avant de garder en fait un ORACLE, ou un appelant
+# sans session distingue une demande `DEPOSEE` d'une `REMBOURSEE`.
+mute "$TRAITEMENT_RETRACTATION" 's/    await exigerAdministratrice\(enTetes\);\n  \} catch \(erreur\) \{\n    if \(erreur instanceof AutorisationRefuseeError\) \{\n      return \{ statut: "SESSION_ABSENTE" \};\n    \}\n    throw erreur;\n  \}/    \/* mutation : garde retiree *\/\n  } catch (erreur) {\n    throw erreur;\n  }/'
+cas "garde de role retiree du traitement" integration \
+  "refuse un remboursement sans aucune session"
 
 echo
 echo "-----------------------------------------"
