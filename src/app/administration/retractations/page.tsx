@@ -21,7 +21,6 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
 
-import type { StatutRetractation } from "@/generated/prisma/enums";
 import { formaterDate } from "@/lib/affichage-commande";
 import { formaterMontant } from "@/lib/montant";
 import {
@@ -32,6 +31,7 @@ import {
   LIMITE_LISTE_DEMANDES,
   listerDemandesRetractation,
 } from "@/services/traitement-retractation";
+import { LIBELLES_RETRACTATION } from "./libelles";
 import { TraitementDemande } from "./traitement-demande";
 import styles from "./retractations.module.css";
 
@@ -50,28 +50,6 @@ export const metadata = {
  */
 export const dynamic = "force-dynamic";
 
-/**
- * Libelle affichable d'un statut, jamais la valeur brute de l'enum.
- *
- * LA TABLE EST EXHAUSTIVE PAR SON TYPE. `Record<string, string>` compilerait
- * sans rien garantir : une valeur ajoutee a l'enum afficherait
- * `REMBOURSEMENT_EN_COURS` en majuscules a l'exploitante, sans qu'aucun
- * controle ne rougisse. Motif « un enum ajoute casse l'affichage », deja
- * rencontre sur les messages et les commandes.
- *
- * ELLE EST TYPEE SUR L'ENUM PRISMA et non sur une liste locale : `tsc` refuse
- * le fichier tant qu'un libelle manque.
- */
-const LIBELLES: Record<StatutRetractation, string> = {
-  DEPOSEE: "Déposée",
-  ACCUSEE: "Accusée",
-  RETOUR_ATTENDU: "Retour attendu",
-  EXPEDITION_PROUVEE: "Expédition prouvée",
-  REMBOURSEMENT_EN_COURS: "Remboursement en cours",
-  REMBOURSEE: "Remboursée",
-  REFUSEE: "Refusée",
-};
-
 export default async function PageRetractations() {
   const enTetes = await headers();
 
@@ -87,14 +65,21 @@ export default async function PageRetractations() {
   const { demandes, tronquee } = await listerDemandesRetractation();
 
   /*
-   * LES DEMANDES A TRAITER SONT COMPTEES A PART. Une demande remboursee ou
-   * refusee reste affichee, la trace important pour un litige, mais elle ne
-   * demande plus rien : les confondre dans un compte unique ferait lire
-   * « 12 demandes » a qui n'en a que deux a traiter.
+   * LES DEMANDES A TRAITER SONT COMPTEES A PART. Une demande refusee ou
+   * remboursee ET revenue ne demande plus rien : les confondre dans un compte
+   * unique ferait lire « 12 demandes » a qui n'en a que deux a traiter.
+   *
+   * UNE DEMANDE `REMBOURSEE` DONT LE COLIS N'EST PAS REVENU RESTE A TRAITER, et
+   * une premiere version l'excluait. L'ecran lui offre pourtant « Marquer le
+   * colis recu », geste que la regle L12 rend necessaire et dont l'absence
+   * declenche l'alerte a trente jours, regle L13 : le compte annoncait donc
+   * « rien a faire » sur une demande portant un geste et surveillee par une
+   * alerte. Releve par `ls-frontend-revue` le 3 septembre 2026.
    */
   const aTraiter = demandes.filter(
     (demande) =>
-      demande.statut !== "REMBOURSEE" && demande.statut !== "REFUSEE",
+      demande.statut !== "REFUSEE" &&
+      (demande.statut !== "REMBOURSEE" || demande.recueA === null),
   ).length;
 
   /*
@@ -167,7 +152,7 @@ export default async function PageRetractations() {
                    * sont types `Record<string, string>` par le chargeur, donc
                    * `tsc` ne peut rien garantir de ce cote.
                    */}
-                  {LIBELLES[demande.statut]}
+                  {LIBELLES_RETRACTATION[demande.statut]}
                 </span>
                 <span className={styles.date}>
                   Déposée le {formaterDate(demande.deposeeA)}
@@ -194,9 +179,20 @@ export default async function PageRetractations() {
                 <div className={styles.fait}>
                   <dt className={styles.faitTitre}>Preuve d&apos;expédition</dt>
                   <dd className={styles.faitValeur}>
+                    {/*
+                     * LES DEUX COLONNES SONT INDEPENDANTES AU SCHEMA, meme si
+                     * `enregistrerPreuveExpedition` les pose ensemble : rien ne
+                     * lie leur nullite. Une premiere version concatenait
+                     * `preuveExpeditionRetour ?? ""` devant la date, ce qui
+                     * rendait « le 03/09/2026 » precede d'une espace, phrase
+                     * sans sujet au lecteur d'ecran. Releve par
+                     * `ls-frontend-revue` le 3 septembre 2026.
+                     */}
                     {demande.preuveExpeditionA === null
                       ? "Non fournie"
-                      : `${demande.preuveExpeditionRetour ?? ""} le ${formaterDate(demande.preuveExpeditionA)}`}
+                      : demande.preuveExpeditionRetour === null
+                        ? `Fournie le ${formaterDate(demande.preuveExpeditionA)}`
+                        : `${demande.preuveExpeditionRetour}, le ${formaterDate(demande.preuveExpeditionA)}`}
                   </dd>
                 </div>
                 <div className={styles.fait}>
@@ -233,6 +229,7 @@ export default async function PageRetractations() {
 
               <TraitementDemande
                 demandeId={demande.id}
+                numeroCommande={demande.numeroCommande}
                 statut={demande.statut}
                 colisRecu={demande.recueA !== null}
                 preuveFournie={demande.preuveExpeditionA !== null}

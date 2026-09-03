@@ -328,3 +328,14 @@
     gap: var(--ls-space-4);
   }
 }
+
+/*
+ * LE LIEN DANS UN MESSAGE, C33 : un message qui nomme un ecran sans moyen d'y
+ * aller oblige a saisir une URL. Zone tactile heritee de la ligne de texte, le
+ * lien restant en flux : l'isoler en bloc casserait la phrase pour un lecteur
+ * d'ecran.
+ */
+.lienMessage {
+  color: var(--ls-primary);
+  text-decoration: underline;
+}
