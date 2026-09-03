@@ -27,7 +27,9 @@ export type ModeleEmail =
   /** LS-60, envoye a la NOUVELLE adresse pour la confirmer. */
   | "changement-adresse-verification"
   /** LS-60, envoye a l'ANCIENNE pour l'avertir et lui permettre de refuser. */
-  | "changement-adresse-avertissement";
+  | "changement-adresse-avertissement"
+  /** LS-134, accuse de reception d'une retractation, article L221-21. */
+  | "retractation-accusee";
 
 export type MessageEmail = {
   destinataire: string;
