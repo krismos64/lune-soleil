@@ -419,15 +419,19 @@
  * masquerait une partie du nom du bijou achete, sur l'ecran meme ou le client
  * verifie ce qu'il a commande.
  *
- * `min-width: 0` SUR L'ELEMENT FLEX : sans lui, la taille minimale d'un enfant
- * de flexbox est celle de son contenu, et la coupure ne s'applique jamais. Le
- * defaut serait alors corrige en apparence et toujours present.
+ * PAS DE `min-width: 0` ICI, ET LA MUTATION L'A ETABLI. La premiere version en
+ * posait un, au motif habituel qu'un enfant de flexbox a pour taille minimale
+ * celle de son contenu. Le retirer laisse le test VERT : cette taille minimale
+ * automatique porte sur l'axe PRINCIPAL, et `.article` est en
+ * `flex-direction: column`, donc son axe principal est vertical.
+ *
+ * Ne pas le rajouter « par precaution » : une ligne dont la justification est
+ * demontree fausse se supprime, elle apprend a ne plus lire les voisines.
  */
 .article {
   display: flex;
   flex-direction: column;
   gap: var(--ls-space-1);
-  min-width: 0;
   overflow-wrap: anywhere;
   padding-bottom: var(--ls-space-3);
   border-bottom: 1px solid var(--ls-surface-sand);
