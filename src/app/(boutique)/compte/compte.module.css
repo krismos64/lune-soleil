@@ -403,10 +403,32 @@
   gap: var(--ls-space-3);
 }
 
+/*
+ * LE LIBELLE SE COUPE PLUTOT QUE DE DEBORDER, LS-171.
+ *
+ * `libelleProduitFige` est une saisie libre recopiee au moment de la commande,
+ * invariant 3 : rien ne garantit qu'elle porte un espace.
+ * « CollierAurorePendentifLapisLazuliDoreAlOrFin », 44 caracteres, debordait de
+ * 43 px a 320 px, largeur de conception du projet.
+ *
+ * `overflow-wrap: anywhere` ET NON `word-break: break-all` : le premier ne
+ * coupe QUE les mots trop longs pour leur ligne, le second couperait aussi les
+ * mots courts au milieu, ce qui abimerait tous les libelles normaux.
+ *
+ * AUCUNE TRONCATURE, ET C'EST UNE EXIGENCE DU TICKET : `text-overflow: ellipsis`
+ * masquerait une partie du nom du bijou achete, sur l'ecran meme ou le client
+ * verifie ce qu'il a commande.
+ *
+ * `min-width: 0` SUR L'ELEMENT FLEX : sans lui, la taille minimale d'un enfant
+ * de flexbox est celle de son contenu, et la coupure ne s'applique jamais. Le
+ * defaut serait alors corrige en apparence et toujours present.
+ */
 .article {
   display: flex;
   flex-direction: column;
   gap: var(--ls-space-1);
+  min-width: 0;
+  overflow-wrap: anywhere;
   padding-bottom: var(--ls-space-3);
   border-bottom: 1px solid var(--ls-surface-sand);
   line-height: 1.5;
