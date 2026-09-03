@@ -65,6 +65,7 @@ import styles from "./navigation-administration.module.css";
 export const RUBRIQUES = [
   { chemin: "/administration/commandes", libelle: "Commandes" },
   { chemin: "/administration/expeditions", libelle: "Expéditions" },
+  { chemin: "/administration/retractations", libelle: "Rétractations" },
   { chemin: "/administration/messages", libelle: "Messages" },
   { chemin: "/administration/produits/nouveau", libelle: "Nouveau produit" },
   { chemin: "/administration/categories", libelle: "Catégories" },
