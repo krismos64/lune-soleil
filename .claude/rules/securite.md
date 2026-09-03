@@ -264,7 +264,33 @@ Cet écran reste **non classé**, arbitrage de Christophe du 13 août 2026 : la
 finalité de T8 est la sécurité et non le fichier client, que vise ADR-021, et
 « en masse » y serait étiré sur cinquante lignes sans recherche ni export.
 Élargir la définition d'une famille pour fermer une dette déplacerait la règle
-au lieu de la satisfaire. La première action sensible réelle naîtra de LS-95.
+au lieu de la satisfaire.
+
+**Trois actions sensibles existent au 3 septembre 2026**, et cette phrase disait
+encore « la première naîtra de LS-95 », écrite au futur donc périmée sans bruit :
+
+| Action | Famille | Story |
+|---|---|---|
+| `supprimerMonCompte` | `IDENTIFIANTS` | LS-95 |
+| `demanderRemboursement` | `REMBOURSEMENT` | LS-128, sortie de la liste en LS-160 |
+| `exporterMesDonnees` | `DONNEES_CLIENTS` | LS-62 |
+
+**`DONNEES_CLIENTS` est sortie de la liste d'attente en LS-62**, et le
+raisonnement vaut d'être connu avant d'y toucher. Un export qui livre en **un**
+fichier le nom, les adresses, l'historique d'achat, les factures et le journal
+des connexions est « exporter en masse » au sens propre, sans étirer la
+définition. La nuance qui aurait pu faire hésiter, la personne exporte ses
+**propres** données, ne change rien : le scénario d'ADR-027 est l'ordinateur
+resté ouvert.
+
+**Aucune garde n'est posée sur la CONSULTATION de l'historique**, qui se paierait
+à chaque visite et finirait contournée. Le critère 6 de LS-81 veut une liste
+courte : c'est l'**export** qui fait basculer, jamais l'affichage d'une donnée
+personnelle à l'écran. Le journal des connexions de LS-80, la rubrique Messages
+de LS-97 et l'écran d'expédition de LS-130 restent non classés pour cette raison.
+
+**`PARAMETRES_BOUTIQUE` reste la seule famille sans action**, et sa ligne devra
+partir avec LS-98, qui porte le seuil de franco de port et les frais de livraison.
 
 **Les deux gardes vont ensemble sous `administration/`, et le sens 4 du contrôle
 le vérifie depuis LS-89.** `exigerReauthentificationRecente` répond à « l'identité

@@ -1,15 +1,24 @@
 /**
- * Espace client, droits des personnes. LS-95, RGPD articles 15 et 17.
+ * Espace client. LS-95 pour les droits des personnes, puis l'epic LS-36.
  *
- * CE QUE CETTE PAGE EST, ET CE QU'ELLE N'EST PAS. C'est le strict necessaire
- * pour exercer les droits que le registre des traitements annonce : voir son
- * compte, demander ses donnees, supprimer son compte. **Ce n'est pas l'espace
- * client de l'epic LS-36**, qui portera l'historique des commandes, le carnet
- * d'adresses et les avis, et qui reste a faire.
+ * CETTE PAGE EST DEVENUE LE SOMMAIRE DE L'ESPACE CLIENT, et son en-tete disait
+ * l'inverse jusqu'au 3 septembre 2026 : « ce n'est pas l'espace client de l'epic
+ * LS-36, qui portera l'historique des commandes, le carnet d'adresses et les
+ * avis, et qui reste a faire ». C'etait vrai a l'ecriture, LS-95 livrant le
+ * strict necessaire aux droits RGPD, et cela a cesse de l'etre story par story
+ * sans que personne ne relise ce paragraphe.
  *
- * Ecrire ici davantage aurait modifie le perimetre du cahier des charges sans
- * arbitrage, ce que les interdits du projet refusent. Ce qui est livre est ce
- * que LS-95 exige, pas une avance sur LS-36.
+ * ELLE PORTE DESORMAIS six sections : l'etat du compte et son rappel de
+ * verification, le rattachement des commandes invitees (LS-56), l'historique
+ * (LS-57), le profil (LS-60), le carnet d'adresses (LS-59), les donnees
+ * personnelles (LS-62) et la suppression de compte (LS-95).
+ *
+ * CE QU'ELLE NE PORTE TOUJOURS PAS : le suivi de livraison (LS-58) et les avis
+ * (LS-61), tous deux bloques par LS-33 et le compte Mondial Relay.
+ *
+ * CHAQUE SECTION EST UN LIEN, jamais un ecran de plus ici : sans eux, ces pages
+ * seraient inatteignables autrement qu'en saisissant l'URL, motif de C33
+ * transpose cote boutique et defaut rencontre trois fois sur ce depot.
  *
  * COMPOSANT SERVEUR, `exigerSession` appele AVANT tout rendu, motif pose par
  * LS-70. Pas de middleware : celui de Next.js s'execute sur la peripherie et ne
