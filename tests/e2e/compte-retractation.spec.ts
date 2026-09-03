@@ -134,7 +134,20 @@ test.beforeEach(async ({}, infos) => {
   });
 });
 
-/** Atteint le formulaire AU CLIC depuis l'historique, jamais par son URL. */
+/**
+ * Atteint le formulaire AU CLIC depuis l'historique, jamais par son URL.
+ *
+ * ELLE ATTEND L'ECRAN CIBLE AVANT DE RENDRE LA MAIN, et ce n'est pas une
+ * precaution de confort : sa premiere version rendait la main juste apres le
+ * clic, donc AVANT la fin de la navigation. Les tests qui attendent ensuite un
+ * element se synchronisaient d'eux-memes et passaient ; le test de debordement,
+ * qui mesure IMMEDIATEMENT, mesurait la page precedente.
+ *
+ * Il annoncait ainsi 43 px de debordement sur un formulaire qu'il n'avait
+ * jamais affiche, les 43 px venant du nom de produit sans espace de la fixture
+ * sur le detail de commande. Une mesure prise au mauvais moment accuse le
+ * mauvais ecran.
+ */
 async function ouvrirLaRetractation(page: import("@playwright/test").Page) {
   await page.goto("/compte/commandes");
   await page
@@ -142,6 +155,10 @@ async function ouvrirLaRetractation(page: import("@playwright/test").Page) {
     .first()
     .click();
   await page.getByRole("link", { name: /Déclarer ma rétractation/i }).click();
+
+  await expect(
+    page.getByRole("heading", { level: 1, name: /Me rétracter/i }),
+  ).toBeVisible();
 }
 
 test("le lien de retractation est atteignable au clic depuis la commande", async ({
