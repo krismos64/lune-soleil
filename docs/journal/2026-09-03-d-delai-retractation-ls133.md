@@ -104,6 +104,52 @@ donc été commité **avant** les mutations suivantes, ce qui rend `git checkout
 opérant. Motif connu, `lune-soleil-travail-non-commite-perdu`, rencontré ici sous
 une forme nouvelle : le fichier neuf.
 
+## Ce que la revue critique a trouvé
+
+`ls-critical-reviewer` a vérifié le module **par exécution** et non par lecture :
+balayage de 2026 à 2035 par pas de trois heures, 29 200 cas, quatre invariants
+contrôlés à chaque itération. **Aucune échéance trop précoce**, le seul sens qui
+portait un risque juridique. La sonde de `debutDuJourSuivantEnUtc` trouve minuit
+entre l'itération 60 et 120 sur une borne de 300, y compris aux deux changements
+d'heure et de 1890 à 2060. La borne de huit prorogations n'est jamais approchée,
+le maximum réel étant **quatre**, jeudi 7 mai 2043 suivi du 8 mai férié et d'un
+week-end.
+
+Elle a trouvé **un vrai défaut dans mon test**, pas dans le module.
+
+**`expect(feries.size).toBe(11)` était faux en général.** Deux fériés coïncident
+certaines années et le `Set` les dédoublonne : en 2059 l'Ascension tombe le
+8 mai, jour de la Victoire 1945. Mesuré à **dix** dates distinctes en 2008, 2059,
+2070, 2081 et 2092.
+
+```
+2008:10   2026:11   2059:10   2070:10   2081:10   2092:10
+```
+
+L'assertion n'était sauvée que par l'année choisie. Remplacée par le contenu
+attendu, les onze dates de 2026 en clair, ce qui teste davantage et reste vrai
+les années de collision. Le module, lui, est indifférent : un jour compté une
+fois ou deux proroge identiquement.
+
+**Le refus d'un jour mal formé n'était exercé par aucun test**, alors que ce
+garde-fou remplace l'assertion de type retirée au commit `b163ae7`. Un test
+l'exerce désormais sur trois formes, dont `2026-5-1`, d'apparence valide mais non
+remplie à deux chiffres.
+
+Les deux corrections sont prouvées par mutation, 9 et 10 : neutraliser le refus
+fait rougir un test, décaler l'Ascension d'un jour en fait rougir trois.
+
+## Le piège documenté le matin, refait l'après-midi
+
+En restaurant la mutation 10 par `git checkout`, **la correction du commentaire
+sur la collision a disparu** : elle n'était pas commitée, et le fichier est
+revenu au dernier commit. C'est la fiche
+[[lune-soleil-git-checkout-fichier-neuf]] écrite quelques heures plus tôt,
+appliquée à un fichier désormais suivi.
+
+La règle vaut donc plus largement que ce que la fiche disait : **commiter avant
+chaque mutation**, pas seulement avant la première.
+
 ## Un défaut trouvé par la propagation
 
 `legal.md` liste ses chemins de déclenchement un par un, et
