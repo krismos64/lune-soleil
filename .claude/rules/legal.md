@@ -115,6 +115,28 @@ délai expire quatorze jours après.
 Une omission d'affichage transforme quatorze jours en plus d'un an, sur toutes
 les commandes concernées. C'est le risque le plus coûteux du parcours 5.
 
+### Le lien doit ATTEINDRE le client, LS-172
+
+Une fonctionnalité qui existe sans être atteignable ne remplit pas l'article
+L221-21. Le cas s'est produit ici : LS-134 a livré la route
+`(boutique)/retractation/[jeton]` et son service, mais **personne ne transmettait
+le jeton**, dont la valeur en clair n'existe qu'à l'instant de sa création,
+règle L5.
+
+L'email `commande-confirmee` est donc le **seul** chemin par lequel un acheteur
+sans compte reçoit son droit. Trois conséquences à tenir :
+
+- il porte **deux liens distincts**, facture et rétractation, règle L6 : une
+  fuite du lien de facture ne doit pas donner le pouvoir de rétracter la
+  commande d'autrui
+- il porte la mention des frais de retour, article L221-23, comme partout où le
+  droit est annoncé
+- son modèle **lève** sur un lien absent plutôt que de rendre un message poli et
+  inutilisable dont la trace dirait `ENVOYE`
+
+**Ne jamais retirer un de ces liens du modèle sans avoir livré le chemin qui le
+remplace.** Le client n'a aucun autre moyen de les retrouver.
+
 ### Fonctionnalité en ligne obligatoire
 
 Article L221-21. Pour un contrat conclu en ligne, le professionnel met à

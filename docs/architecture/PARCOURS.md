@@ -83,10 +83,25 @@ stock à un exemplaire est le jalon technique majeur.
 | 6 | Attente de l'événement | rien | page d'attente ou retour du prestataire |
 | 7 | Événement signé reçu | événement persisté avec identifiant unique, paiement `REUSSI`, commande `CONFIRMEE`, réservation convertie en mouvement de stock, `quantitePhysique` décrémentée | page de confirmation |
 | 8 | Facture | facture avec numéro attribué dans la transaction, instantané légal, PDF | facture disponible |
-| 9 | Emails | journal d'envoi, deux entrées | commande payée, facture |
+| 9 | Email de confirmation | intention d'envoi dans la transaction, **une** entrée | commande payée, portant le lien de facture et le lien de rétractation |
 | 10 | Préparation | commande `EN_PREPARATION`, historique de statut | suivi |
 | 11 | Expédition | expédition avec transporteur, numéro de suivi, commande `EXPEDIEE` | email et lien de suivi |
 | 12 | Livraison | commande `LIVREE` uniquement sur source fiable | suivi |
+
+**Un seul message et non deux, arbitrage du 3 septembre 2026, LS-172.** La
+conception d'origine prévoyait deux entrées, « commande payée » puis
+« facture ». Elles partaient du même événement, à la même seconde, vers la même
+adresse : le client aurait reçu deux messages coup sur coup dont le second
+n'aurait porté qu'un lien.
+
+Le message unique porte les deux liens, `commande-confirmee`. C'est aussi ce qui
+rend l'unicité `envoi_en_attente (commande_id, modele)` utile ici : deux modèles
+distincts auraient exigé deux clés à tenir d'accord.
+
+**Ce message est le SEUL chemin par lequel la valeur en clair des jetons atteint
+le client**, règle L5 : la base ne garde que leur empreinte. S'il ne part pas,
+un acheteur sans compte n'a ni facture atteignable ni moyen de se rétracter, et
+seule une réémission manuelle rattrape.
 
 **L'étape 4 est une transaction unique**, décision d'ADR-024. Commande, lignes et
 réservations sont écrites ensemble : si l'`UPDATE` conditionnel de réservation ne
