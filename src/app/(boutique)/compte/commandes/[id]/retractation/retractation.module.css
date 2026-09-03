@@ -1,0 +1,171 @@
+/*
+ * Declaration de retractation, LS-134, parcours 5.
+ *
+ * MOBILE FIRST, conçu a 320 px : aucune largeur fixe, aucune valeur en pixels
+ * sur un conteneur. Zones tactiles a 44 px, champs a 16 px de fonte pour eviter
+ * le zoom automatique d'iOS a la mise au point.
+ *
+ * Aucune valeur hexadecimale en dur : tout vient des jetons d'ADR-022, et les
+ * conventions reprennent celles du reste de l'espace client.
+ */
+
+.page {
+  padding: var(--ls-space-4);
+  max-width: 60ch;
+  margin: 0 auto;
+}
+
+.titre {
+  margin-top: 0;
+}
+
+.formulaire {
+  margin-top: var(--ls-space-5);
+}
+
+.rappel {
+  margin: 0 0 var(--ls-space-5);
+  line-height: 1.6;
+}
+
+.champ {
+  margin-bottom: var(--ls-space-5);
+}
+
+.libelle {
+  display: block;
+  margin-bottom: var(--ls-space-1);
+  font-weight: 600;
+}
+
+/*
+ * « FACULTATIF » EST ECRIT, JAMAIS SUGGERE PAR L'ABSENCE D'ETOILE. Le droit de
+ * retractation est inconditionnel, article L221-18 : une interface qui laisse
+ * croire qu'il faut se justifier dissuade de l'exercer.
+ */
+.facultatif {
+  font-weight: 400;
+  color: var(--ls-text-muted);
+}
+
+.aide {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-text-muted);
+  line-height: 1.5;
+}
+
+.zoneTexte {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--ls-space-2);
+  /* 16 px minimum : en dessous, iOS zoome a la mise au point du champ. */
+  font-size: 1rem;
+  font-family: inherit;
+  line-height: 1.5;
+  color: var(--ls-text);
+  background: var(--ls-surface);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-sm);
+  resize: vertical;
+}
+
+.zoneTexte:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+.bouton {
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-2) var(--ls-space-4);
+  font-size: 1rem;
+  font-family: inherit;
+  color: var(--ls-text-on-primary);
+  background: var(--ls-primary);
+  border: none;
+  border-radius: var(--ls-radius-sm);
+  cursor: pointer;
+  transition: background var(--ls-duration-fast) var(--ls-easing);
+}
+
+.bouton:hover:not(:disabled) {
+  background: var(--ls-primary-hover);
+}
+
+.bouton:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+.bouton:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/*
+ * L'ERREUR NE PASSE JAMAIS PAR LA COULEUR SEULE, WCAG 2.2 : le liseré renforce
+ * un texte qui dit deja ce qui s'est passe et ce qu'il reste a faire.
+ */
+.erreur {
+  margin: var(--ls-space-4) 0;
+  padding: var(--ls-space-3);
+  border-left: 3px solid var(--ls-error);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface-sand);
+  line-height: 1.6;
+}
+
+.mentionFrais {
+  margin-top: var(--ls-space-4);
+  color: var(--ls-text-muted);
+  line-height: 1.5;
+}
+
+.succes {
+  padding: var(--ls-space-4);
+  border-left: 3px solid var(--ls-success);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface-sand);
+  line-height: 1.6;
+}
+
+.titreSucces {
+  margin-top: 0;
+}
+
+.succes p {
+  margin: 0 0 var(--ls-space-3);
+}
+
+.succes p:last-child {
+  margin-bottom: 0;
+}
+
+/* Un etat informatif, delai expire ou demande deja deposee, sans formulaire. */
+.information {
+  padding: var(--ls-space-4);
+  border-left: 3px solid var(--ls-border);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface-sand);
+  line-height: 1.6;
+}
+
+.information p {
+  margin: 0 0 var(--ls-space-3);
+}
+
+.information p:last-child {
+  margin-bottom: 0;
+}
+
+.retour {
+  display: inline-block;
+  margin-top: var(--ls-space-5);
+  min-height: var(--ls-touch-target);
+  line-height: var(--ls-touch-target);
+  color: var(--ls-primary);
+}
+
+.retour:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}

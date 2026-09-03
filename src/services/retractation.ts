@@ -132,12 +132,27 @@ export const MOTIF_LONGUEUR_MAX = 2000;
  * juger le PRODUIT, mais de constater qu'une commande non payee ou deja annulee
  * n'a pas de contrat a retracter. Une commande `REMBOURSEE` non plus.
  */
-const STATUTS_RETRACTABLES = new Set([
+export const STATUTS_RETRACTABLES: ReadonlySet<string> = new Set([
   "CONFIRMEE",
   "EN_PREPARATION",
   "EXPEDIEE",
   "LIVREE",
 ]);
+
+/**
+ * L'ecran de detail peut-il proposer le lien de retractation ?
+ *
+ * EXPORTEE PLUTOT QUE RECOPIEE. La page de detail doit decider quoi afficher
+ * sans ouvrir une seconde transaction, et une liste de statuts recopiee dans un
+ * composant divergerait de celle du service au premier statut ajoute : l'ecran
+ * masquerait un droit ouvert, ou en proposerait un qui n'existe pas.
+ *
+ * ELLE N'AUTORISE RIEN. La garde qui compte est dans `deposerRetractation`, la
+ * Server Action restant joignable par HTTP sans passer par cette page.
+ */
+export function commandePeutOuvrirUneRetractation(statut: string): boolean {
+  return STATUTS_RETRACTABLES.has(statut);
+}
 
 /**
  * Identite prouvee de qui agit, dejà etablie par l'appelant.
