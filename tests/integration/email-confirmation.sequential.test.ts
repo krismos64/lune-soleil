@@ -257,23 +257,21 @@ describe("depot de la confirmation a la commande payee", () => {
   });
 
   /*
-   * LE REJEU APRES ENVOI REEL, ET C'EST LA GARDE DES DEUX JETONS QUI LE FERME.
+   * LE SECOND EVENEMENT NE PRODUIT AUCUN SECOND MESSAGE, y compris quand le
+   * premier est DEJA PARTI, cas ou `envoi_en_attente_actif_unique` ne protege
+   * plus rien : cet index est partiel, filtre sur `EN_ATTENTE` et
+   * `ENVOI_EN_COURS`.
    *
-   * DEFAUT TROUVE PAR MUTATION : retirer la garde laissait les huit tests
-   * VERTS, parce que `deposerEnvoi` absorbe le `P2002` de
-   * `envoi_en_attente_actif_unique`. La SECONDE ligne de defense masquait
-   * l'absence de la premiere, motif deja en fiche sur ce depot.
+   * CE QUI FERME LE CHEMIN EST EN AMONT, et la mutation l'a etabli : retirer la
+   * garde des deux jetons laisse la suite verte, parce que le second evenement
+   * sort en `DEJA_ENCAISSE` a la premiere cle d'effet, bien avant d'atteindre
+   * la facture. Le rejeu du MEME evenement sort encore plus tot, en
+   * `DEJA_TRAITE`.
    *
-   * MAIS CET INDEX EST PARTIEL, filtre sur `EN_ATTENTE` et `ENVOI_EN_COURS` :
-   * une fois le message REELLEMENT PARTI, statut `ENVOYE`, il ne protege plus
-   * rien. Un rejeu deposerait alors un SECOND email portant
-   * `/facture/undefined` et `/retractation/undefined`, mesure : les jetons sont
-   * absents sur un rejeu et `lienDocument` ne leve pas sur `undefined`.
-   *
-   * Le client recevrait deux fois le meme message, le second avec deux liens
-   * morts vers son propre droit de retractation.
+   * Ce test verifie donc la PROPRIETE OBSERVABLE, un seul message par commande,
+   * sans pretendre exercer la garde de profondeur qui la sous-tend.
    */
-  it("ne depose rien apres un rejeu, meme le message deja envoye", async () => {
+  it("ne depose rien sur un second evenement, meme le message deja envoye", async () => {
     const commandeId = await commander();
     await confirmer(commandeId);
 
@@ -284,6 +282,7 @@ describe("depot de la confirmation a la commande payee", () => {
       [commandeId],
     );
 
+    // Un second evenement, d'identifiant distinct du premier.
     await confirmer(commandeId);
 
     const { rows } = await client.query<{ statut: string }>(

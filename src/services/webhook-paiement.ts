@@ -723,9 +723,26 @@ async function emettreFactureOuAlerter(
  *
  * SUR UN REJEU, LES DEUX JETONS SONT ABSENTS ET RIEN N'EST DEPOSE.
  * `emettreFacture` ressort sur la facture existante sans reengendrer de jeton,
- * donc `jetonAcces` et `jetonRetractation` valent `undefined`. C'est la
- * PREMIERE des deux protections contre le doublon, la seconde etant l'unicite
- * `envoi_en_attente_actif_unique` que `deposerEnvoi` absorbe deja.
+ * donc `jetonAcces` et `jetonRetractation` valent `undefined`.
+ *
+ * CETTE GARDE EST UNE PROTECTION EN PROFONDEUR, ET AUCUN TEST D'INTEGRATION NE
+ * PEUT L'EXERCER, mesure par mutation le 3 septembre 2026 : la retirer laisse
+ * la suite entierement verte. Deux barrieres en amont ferment deja le chemin,
+ * chacune plus tot que la precedente :
+ *
+ *   1. le rejeu du MEME evenement sort en `DEJA_TRAITE`,
+ *      `evenement_fournisseur` etant unique
+ *   2. un SECOND evenement sur une commande deja payee sort en `DEJA_ENCAISSE`,
+ *      premiere cle d'effet, avant meme d'atteindre la facture
+ *
+ * ELLE RESTE NECESSAIRE parce qu'elle protege d'une CONSEQUENCE et non d'un
+ * chemin : sans elle, un appelant futur qui atteindrait cette fonction avec une
+ * facture existante composerait `/facture/undefined`, `lienDocument` ne levant
+ * pas sur `undefined`. Le client recevrait un message poli portant deux liens
+ * morts vers son propre droit de retractation.
+ *
+ * Ne pas la retirer au motif qu'aucun test ne rougit : c'est le cas d'une garde
+ * dont l'absence de couverture prouve la profondeur, pas l'inutilite.
  *
  * LES DEUX JETONS SONT EXIGES ENSEMBLE. En attendre un seul deposerait un
  * message auquel `rendreModele` refuserait de donner un corps, `exiger` levant
