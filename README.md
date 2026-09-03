@@ -27,6 +27,13 @@ la phase 2.
 | 5, rétractation, conformité et protection des données | LS-6 | **LS-133, LS-134 et LS-135 livrées le 3 septembre 2026** : le calcul du délai, la fonctionnalité en ligne de l'article L221-21, puis la face administration, étapes 6 à 8. Trois stories ouvertes : **LS-136 débloquée** par LS-172, LS-148 bloquée par LS-141, plus **LS-173 et LS-174 créées le 3 septembre**, l'étape 9 de réintégration de stock sans chemin et le numéro d'avoir invisible après rechargement |
 | 6, durcissement, exploitation et ouverture | LS-7 | découpée le 27 août 2026, **treize stories ouvertes**. LS-168 ajoutée le 3 septembre sur l'instabilité de la suite de bout en bout ; **LS-169 livrée le même jour**, la chaîne ne rejoue plus les tests longs sur un diff documentaire. **Huit de ces stories attendent l'achat du VPS**, LS-151 comprise, contrairement à ce qu'annonçait le journal du 3 septembre |
 
+**Les contenus et pages légales avancent le 3 septembre 2026**, sans qu'aucun
+des trois tickets ne se close : LS-19 a produit le comparatif des médiateurs
+agréés, LS-28 les mentions légales publiées, LS-123 deux des trois pages
+publiques. Six des neuf liens du pied de page ne rendent plus 404. Les trois
+tickets attendent chacun autre chose : le choix de l'exploitante, le médiateur
+qui en découle, et les contenus de marque de LS-25.
+
 Comptes **relevés dans Jira** le 3 septembre 2026, après la livraison de LS-135,
 jamais recopiés de mémoire : un chiffre écrit à la main se périme sans bruit, et
 ce tableau a déjà annoncé l'état du 27 août plusieurs jours de trop.
