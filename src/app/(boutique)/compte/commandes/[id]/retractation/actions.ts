@@ -15,7 +15,6 @@
  * et n'autorise RIEN par lui-meme, regle L4 : c'est la lecture restreinte au
  * proprietaire qui autorise.
  */
-import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
 import { journaliserErreur } from "@/lib/journal";
@@ -86,8 +85,26 @@ export async function deposerMaRetractation(
     );
 
     if (issue.statut === "DEPOSEE") {
-      revalidatePath(`/compte/commandes/${commandeId}`);
-
+      /*
+       * AUCUNE REVALIDATION ICI, ET C'EST UN DEFAUT REEL TROUVE PAR LE TEST DE
+       * BOUT EN BOUT, invisible a tous les tests d'integration.
+       *
+       * Une Server Action qui appelle `revalidatePath` fait RE-RENDRE LA ROUTE
+       * COURANTE dans la meme reponse, documentation Next.js 16 verifiee via
+       * Context7 : « ce re-rendu est inclus quand l'action appelle updateTag,
+       * revalidatePath, refresh, modifie les cookies, ou appelle redirect ».
+       * Le second argument `"page"` n'y change rien, il borne la PORTEE de
+       * l'invalidation, pas le re-rendu de la route courante.
+       *
+       * Consequence mesuree : la page se re-rendait cote serveur, voyait la
+       * demande desormais creee, et affichait « une demande existe deja ». LE
+       * CLIENT VENAIT DE POSER UN ACTE JURIDIQUE ET NE VOYAIT AUCUNE
+       * CONFIRMATION, seulement un message donnant l'impression d'un doublon.
+       *
+       * Le detail de commande n'a pas besoin d'etre revalide : il est
+       * `force-dynamic`, donc relu a chaque visite, et le retour s'y fait par
+       * une navigation.
+       */
       return { statut: "FAIT", jourLimite: issue.jourLimite };
     }
 
