@@ -193,6 +193,41 @@ Le repli en l'absence de suivi appartient à LS-131, qui allonge le délai sans
 jamais l'avancer. L'inventer ici aurait été la faute que `legal.md` nomme
 explicitement.
 
+## Deux défauts que seule la CI pouvait révéler
+
+**Les quatre variables `FACTURE_*` n'étaient pas définies en intégration
+continue**, et c'est un défaut préexistant depuis LS-126.
+
+`emettreFacture` lève `EmetteurNonConfigureError` quand elles manquent, et la
+confirmation **attrape** cette erreur pour ne pas perdre le paiement : elle
+journalise et continue. Le défaut était donc écrit **trente fois par exécution
+en niveau `error`** sans faire échouer une seule assertion.
+
+```
+{"niveau":"error","message":"Facture non emise, emetteur non configure",
+ "erreur":"EmetteurNonConfigureError"}
+```
+
+Il s'est vu quand un test a exigé une **conséquence** de la facture : les jetons
+de LS-134 naissent dans sa transaction, donc aucune facture signifie aucun
+jeton. Reproduit en local en vidant les quatre variables, quatre échecs
+identiques à ceux de la CI.
+
+**Le motif est réutilisable** : une erreur rattrapée pour ne pas perdre un
+paiement devient une erreur invisible aux tests. Ce qui l'a révélée n'est pas un
+contrôle, c'est une assertion sur un effet en aval.
+
+**Mon nettoyage de test laissait vingt-cinq commandes derrière lui.** Le
+`afterEach` ne supprimait que les quatre tables propres à la story.
+`commande-transaction.sequential.test.ts` lit `SELECT commande_id FROM
+reservation` **sans filtre** et attend une seule ligne : son test de concurrence
+sur la pièce unique, **test phare du projet**, a échoué en annonçant vingt-cinq
+acheteurs servis.
+
+Invisible en local, l'ordre d'exécution des fichiers y différant de celui de la
+CI. Un fichier qui laisse des lignes ne casse que ses successeurs, et seulement
+selon l'ordre.
+
 ## Vérifications
 
 ```
