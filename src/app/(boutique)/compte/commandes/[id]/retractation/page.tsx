@@ -71,7 +71,7 @@ export default async function PageRetractation({
 
   if (etat.statut === "DEJA_DEPOSEE") {
     return (
-      <main className={styles.page}>
+      <main id="contenu" tabIndex={-1} className={styles.page}>
         <h1 className={styles.titre}>Me rétracter</h1>
         <div className={styles.information}>
           <p>
@@ -79,8 +79,8 @@ export default async function PageRetractation({
             commande.
           </p>
           <p>
-            Vous avez reçu un accusé de réception par email. Écrivez-nous depuis
-            la page Contact si vous avez une question sur son avancement.
+            Un accusé de réception vous a été adressé par email. Écrivez-nous
+            depuis la page Contact si vous avez une question sur son avancement.
           </p>
         </div>
         {retour}
@@ -96,7 +96,7 @@ export default async function PageRetractation({
    */
   if (etat.statut === "EXPIREE") {
     return (
-      <main className={styles.page}>
+      <main id="contenu" tabIndex={-1} className={styles.page}>
         <h1 className={styles.titre}>Me rétracter</h1>
         <div className={styles.information}>
           <p>
@@ -109,7 +109,11 @@ export default async function PageRetractation({
           </p>
           <p>
             Si votre situation vous semble particulière, écrivez-nous depuis la
-            page <Link href="/aide#contact">Contact</Link>, nous la regarderons.
+            page{" "}
+            <Link href="/contact" className={styles.lien}>
+              Contact
+            </Link>
+            , nous la regarderons.
           </p>
         </div>
         {retour}
@@ -118,7 +122,7 @@ export default async function PageRetractation({
   }
 
   return (
-    <main className={styles.page}>
+    <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Me rétracter</h1>
 
       <FormulaireRetractation

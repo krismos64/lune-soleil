@@ -1,39 +1,36 @@
 "use client";
 
 /**
- * Formulaire de declaration de retractation. LS-134, etapes 3 et 4 du parcours 5.
+ * Formulaire de retractation SANS COMPTE, LS-134. Article L221-21.
  *
  * COMPOSANT CLIENT PAR NECESSITE : la soumission a un etat en cours, un message
  * d'erreur et un ecran de succes. Rien de ce qui decide n'est ici, la Server
- * Action verifie la session et le delai cote serveur, invariant 2.
+ * Action delegue au service qui verifie la signature du jeton, invariant 2.
+ *
+ * LE JETON EST DANS UN CHAMP CACHE ET NON DANS UNE VARIABLE DE MODULE : il doit
+ * repartir avec la soumission, et c'est le formulaire qui le porte.
  *
  * LE MOTIF EST FACULTATIF ET L'INTERFACE LE DIT, article L221-18. Le champ ne
- * porte ni `required` ni etoile d'obligation : le droit de retractation est
- * INCONDITIONNEL, et une interface qui suggere qu'il faut se justifier dissuade
- * de l'exercer.
- *
- * LE BOUTON N'EST JAMAIS DESACTIVE PAR UNE SAISIE VIDE, pour la meme raison :
- * une demande sans motif est une demande valide.
+ * porte ni `required` ni etoile d'obligation : le droit est INCONDITIONNEL, et
+ * une interface qui suggere qu'il faut se justifier dissuade de l'exercer.
  */
 import { useActionState, useEffect, useRef } from "react";
 
-import { deposerMaRetractation } from "./actions";
-import type { ResultatRetractation } from "./actions";
-import styles from "./retractation.module.css";
+import { deposerRetractationParJeton } from "./actions";
+import type { ResultatRetractationJeton } from "./actions";
+import styles from "../../compte/commandes/[id]/retractation/retractation.module.css";
 
 /** Ce que chaque refus dit au client, en clair et sans jargon. */
-function messageDeRefus(resultat: ResultatRetractation): string | null {
+function messageDeRefus(resultat: ResultatRetractationJeton): string | null {
   switch (resultat.statut) {
     case "REFUSE_HORS_DELAI":
       return `Le délai de rétractation de cette commande s'est terminé le ${resultat.jourLimite}. Vous pouvez nous écrire depuis la page Contact, nous regarderons votre situation.`;
     case "REFUSE_DEJA_DEPOSEE":
-      return "Une demande de rétractation existe déjà pour cette commande. Retrouvez son avancement sur le détail de la commande.";
+      return "Une demande de rétractation existe déjà pour cette commande. Vous avez reçu un accusé de réception par email.";
     case "REFUSE_ETAT_COMMANDE":
       return "Cette commande ne peut pas faire l'objet d'une rétractation. Écrivez-nous depuis la page Contact si cela vous semble être une erreur.";
     case "REFUSE_ACCES":
-      return "Cette commande est introuvable.";
-    case "SESSION_ABSENTE":
-      return "Votre session a expiré. Reconnectez-vous, votre saisie n'a pas été envoyée.";
+      return "Ce lien n'est plus valable. Écrivez-nous depuis la page Contact, nous vous aiderons.";
     case "INDISPONIBLE":
       return "La demande n'a pas pu être enregistrée. Réessayez dans un instant, rien n'a été perdu.";
     default:
@@ -41,20 +38,18 @@ function messageDeRefus(resultat: ResultatRetractation): string | null {
   }
 }
 
-export function FormulaireRetractation({
-  commandeId,
-  numero,
+export function FormulaireRetractationJeton({
+  jeton,
   jourLimite,
 }: {
-  commandeId: string;
-  numero: string;
+  jeton: string;
   /** `null` tant que la reception n'est pas connue, LS-131. */
   jourLimite: string | null;
 }) {
   const [resultat, action, enCours] = useActionState<
-    ResultatRetractation | null,
+    ResultatRetractationJeton | null,
     FormData
-  >(deposerMaRetractation, null);
+  >(deposerRetractationParJeton, null);
 
   const confirmation = useRef<HTMLDivElement>(null);
 
@@ -83,13 +78,6 @@ export function FormulaireRetractation({
         <h2 className={styles.titreSucces}>
           Votre rétractation est enregistrée
         </h2>
-        {/*
-         * LA DATE DE DEPOT FAIT FOI, PAS L'EMAIL, et la nuance est juridique.
-         * L'accuse n'est qu'en attente dans l'outbox quand cet ecran s'affiche :
-         * affirmer « nous vous avons envoye » designerait comme preuve unique un
-         * message qui peut echouer, alors que `deposeeA` est deja en base.
-         * Releve par la revue frontend du 3 septembre 2026.
-         */}
         <p>
           Votre demande est datée du jour et cette date fait foi. Un accusé de
           réception vous parvient par email.
@@ -110,10 +98,10 @@ export function FormulaireRetractation({
 
   return (
     <form action={action} className={styles.formulaire}>
-      <input type="hidden" name="commandeId" value={commandeId} />
+      <input type="hidden" name="jeton" value={jeton} />
 
       <p className={styles.rappel}>
-        Vous vous apprêtez à vous rétracter de la commande {numero}.
+        Vous vous apprêtez à vous rétracter de votre commande.
         {jourLimite === null
           ? " Votre droit est ouvert."
           : ` Votre droit est ouvert jusqu'au ${jourLimite} inclus.`}

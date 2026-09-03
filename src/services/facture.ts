@@ -18,7 +18,11 @@
  * qu'une facture ne se recree pas.
  */
 import { reserverNumero } from "@/repositories/commande";
-import { engendrerJeton, expirationDocument } from "@/lib/jeton-acces";
+import {
+  engendrerJeton,
+  expirationDocument,
+  expirationRetractation,
+} from "@/lib/jeton-acces";
 import { ecrireJeton } from "@/repositories/jeton-acces";
 import { ecrireFacture, lireFactureDeCommande } from "@/repositories/facture";
 import type { FactureEmise } from "@/repositories/facture";
@@ -96,6 +100,14 @@ export function lireEmetteur(): EmetteurFacture {
 export type FactureEmiseAvecAcces = FactureEmise & {
   /** Valeur en clair, a transmettre puis oublier. Absente sur un rejeu. */
   jetonAcces?: string;
+  /**
+   * Jeton de retractation, LS-134. Meme regime que `jetonAcces` : en clair une
+   * seule fois, absent sur un rejeu, a transmettre par email puis oublier.
+   *
+   * DISTINCT DU PRECEDENT, regle L6 : une fuite du lien de facture ne doit pas
+   * donner le pouvoir de retracter la commande d'autrui.
+   */
+  jetonRetractation?: string;
 };
 
 /** Ce que la commande apporte au document, deja fige par elle. */
@@ -191,7 +203,40 @@ export async function emettreFacture(
     expireA: expirationDocument(),
   });
 
-  return { ...facture, jetonAcces: jeton.valeur };
+  /*
+   * LE JETON DE RETRACTATION NAIT AU MEME ENDROIT, LS-134, ET POUR LA MEME
+   * RAISON. Un achat sans compte ouvre le meme droit de retractation qu'un
+   * achat avec compte, article L221-21, et l'ecran de `/compte` est derriere
+   * une session : sans ce jeton, un client sans compte n'a AUCUNE
+   * fonctionnalite en ligne pour se retracter, ce que L221-20 sanctionne par
+   * un delai porte a douze mois.
+   *
+   * LE MEME CHEMIN DE SORTIE ANTICIPE LE PROTEGE DU REJEU, `facture
+   * (commande_id)` etant unique : un evenement rejoue ressort avant d'arriver
+   * ici et n'engendre pas un second jeton.
+   *
+   * SA DUREE EST PLUS LONGUE QUE CELLE DU DOCUMENT, soixante jours contre
+   * trente : le delai de retractation court a compter de la RECEPTION, qui
+   * survient plusieurs jours apres cette emission.
+   *
+   * DEUX JETONS ET NON UN SEUL, regle L6, moindre privilege. Un jeton unique
+   * qui ouvrirait la facture ET la retractation ferait d'une fuite du lien de
+   * facture un pouvoir de retracter la commande d'autrui.
+   */
+  const jetonRetractation = engendrerJeton();
+
+  await ecrireJeton(client, {
+    commandeId: commande.id,
+    empreinte: jetonRetractation.empreinte,
+    portee: "RETRACTATION",
+    expireA: expirationRetractation(),
+  });
+
+  return {
+    ...facture,
+    jetonAcces: jeton.valeur,
+    jetonRetractation: jetonRetractation.valeur,
+  };
 }
 
 /**

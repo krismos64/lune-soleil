@@ -157,6 +157,26 @@
   margin-bottom: 0;
 }
 
+/*
+ * `--ls-primary` ET NON UN JETON SECONDAIRE : ces liens vivent sur du sable,
+ * ou `--ls-text-muted` et `--ls-accent-gold-deep` tombent sous le seuil AA,
+ * regle C31. Mesure : `--ls-primary` sur `--ls-surface-sand` donne 7,49:1.
+ *
+ * SANS CETTE CLASSE, un lien rendait en bleu du navigateur, `#0000EE`, alors
+ * qu'ADR-022 ecarte tout bleu du projet. Releve par la revue frontend.
+ *
+ * LE SOULIGNEMENT EST CONSERVE : un lien qui ne se distingue que par sa
+ * couleur est invisible pour qui ne percoit pas cette difference.
+ */
+.lien {
+  color: var(--ls-primary);
+}
+
+.lien:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
 .retour {
   display: inline-block;
   margin-top: var(--ls-space-5);

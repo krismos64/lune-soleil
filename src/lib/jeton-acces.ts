@@ -194,6 +194,56 @@ export function expirationDocument(maintenant: Date = new Date()): Date {
 export const CHEMIN_ACCES_DOCUMENT = "/facture";
 
 /**
+ * Duree d'un jeton de retractation, LS-134.
+ *
+ * PLUS LONGUE QUE LE DELAI LEGAL DE QUATORZE JOURS, et deliberement. Le delai
+ * court a compter de la RECEPTION, article L221-18, qui survient plusieurs
+ * jours apres l'emission de ce jeton : une duree de quatorze jours expirerait
+ * avant la fin du droit, et un lien mort a cet endroit est un defaut
+ * d'information que l'article L221-20 sanctionne par douze mois.
+ *
+ * Soixante jours couvrent un acheminement lent, un retrait tardif en Point
+ * Relais et les quatorze jours pleins qui suivent, avec de la marge.
+ */
+export const DUREE_JETON_RETRACTATION_JOURS = 60;
+
+/** Date d'expiration d'un jeton de retractation, a ecrire dans `expireA`. */
+export function expirationRetractation(maintenant: Date = new Date()): Date {
+  return new Date(
+    maintenant.getTime() + DUREE_JETON_RETRACTATION_JOURS * 24 * 60 * 60 * 1000,
+  );
+}
+
+/**
+ * Chemin de la route publique de retractation, LS-134.
+ *
+ * CONSTANTE PARTAGEE, meme motif que `CHEMIN_ACCES_DOCUMENT` : le jour ou la
+ * route bouge, un lien construit a la main partirait vers un 404 sans que rien
+ * ne rougisse.
+ */
+export const CHEMIN_RETRACTATION = "/retractation";
+
+/**
+ * Compose le lien de retractation a transmettre au client sans compte.
+ *
+ * DEFAUT FERME SUR LA BASE, comme `lienDocument` : un lien errone emporterait
+ * le jeton hors du domaine, et un client sans compte n'aurait plus aucun moyen
+ * d'exercer son droit.
+ */
+export function lienRetractation(valeurJeton: string): string {
+  const base = process.env.NEXT_PUBLIC_SITE_URL;
+
+  if (base === undefined || base === "") {
+    throw new Error(
+      "NEXT_PUBLIC_SITE_URL est requise pour composer un lien de retractation. " +
+        "Aucun repli : un lien errone emporterait le jeton hors du domaine.",
+    );
+  }
+
+  return `${base.replace(/\/+$/, "")}${CHEMIN_RETRACTATION}/${valeurJeton}`;
+}
+
+/**
  * Compose le lien complet a transmettre au client, LS-82 le consommera.
  *
  * DEFAUT FERME SUR LA BASE, contrairement au retour navigateur de
