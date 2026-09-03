@@ -47,7 +47,13 @@ const COLONNES = [
   {
     titre: "Informations",
     liens: [
-      { href: "/informations-legales", libelle: "Mentions légales" },
+      // L'ANCRE EST EXPLICITE, comme les trois liens suivants : sans elle, ce
+      // lien atteignait bien la page mais ne portait PAS le focus sur la
+      // section, le `tabIndex={-1}` vivant sur les `section` et non sur le
+      // `main`. Au clavier, un lien de la meme rubrique se comportait donc
+      // differemment des trois autres. Releve par `ls-frontend-revue` le
+      // 3 septembre 2026.
+      { href: "/informations-legales#mentions", libelle: "Mentions légales" },
       { href: "/informations-legales#cgv", libelle: "Conditions de vente" },
       {
         href: "/informations-legales#confidentialite",

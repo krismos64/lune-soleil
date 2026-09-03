@@ -44,6 +44,18 @@ const LIENS_PIED = [
   { libelle: "Rétractation", titre: "Droit de rétractation" },
 ] as const;
 
+/**
+ * Les liens du pied vers la page d'aide, LS-123.
+ *
+ * ILS SONT DANS UNE LISTE SEPAREE parce qu'ils mènent à une AUTRE page : les
+ * confondre avec les quatre precedents ferait passer le test tant qu'une seule
+ * des deux pages existe.
+ */
+const LIENS_AIDE = [
+  { libelle: "Livraison et retours", titre: "Livraison" },
+  { libelle: "Questions fréquentes", titre: "Questions fréquentes" },
+] as const;
+
 test("les quatre liens du pied de page atteignent une page réelle", async ({
   page,
 }) => {
@@ -66,6 +78,83 @@ test("les quatre liens du pied de page atteignent une page réelle", async ({
       page.getByRole("heading", { name: lien.titre, level: 2 }),
     ).toBeVisible();
   }
+});
+
+test("les deux liens d'aide du pied de page atteignent leur section", async ({
+  page,
+}) => {
+  for (const lien of LIENS_AIDE) {
+    await page.goto("/");
+
+    await page
+      .getByRole("contentinfo")
+      .getByRole("link", { name: lien.libelle })
+      .click();
+
+    await expect(page).toHaveURL(/\/aide/);
+
+    await expect(
+      page.getByRole("heading", { name: lien.titre, level: 2 }),
+    ).toBeVisible();
+  }
+});
+
+/**
+ * LA PAGE D'AIDE N'ANNONCE AUCUN DELAI D'EXPEDITION, et ce test le VERIFIE
+ * plutot que de faire confiance a la relecture.
+ *
+ * Les questions 38 a 42 de la fiche exploitante sont sans reponse : annoncer
+ * « expedition sous 24 heures » sans pouvoir le tenir serait une pratique
+ * commerciale trompeuse, articles L121-2 et suivants. Le jour ou le delai sera
+ * connu, ce test devra etre reecrit, ce qui est le comportement voulu.
+ */
+test("la page d'aide n'invente aucun délai d'expédition", async ({ page }) => {
+  await page.goto("/aide");
+
+  const texte = (await page.getByRole("main").textContent()) ?? "";
+
+  expect(texte).not.toMatch(/sous \d+ ?(heures?|h|jours?)/i);
+  expect(texte).toMatch(/délai de préparation.*sera précisé/i);
+});
+
+test("la page d'aide affiche les trois modes et leurs tarifs", async ({
+  page,
+}) => {
+  await page.goto("/aide#livraison");
+
+  const section = page.locator("#livraison");
+  const texte = (await section.textContent()) ?? "";
+
+  /*
+   * LES TROIS MODES D'ADR-025, et les deux tarifs distincts : un seul tarif
+   * affiche signalerait que la page a ete ecrite en dur au lieu de lire la
+   * configuration.
+   */
+  expect(texte).toMatch(/Point Relais/);
+  expect(texte).toMatch(/Locker/);
+  expect(texte).toMatch(/domicile/i);
+  expect(texte).toMatch(/4,10/);
+  expect(texte).toMatch(/4,99/);
+});
+
+test("la page d'aide ne déborde pas horizontalement", async ({ page }) => {
+  await page.goto("/aide");
+
+  expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+    TOLERANCE_DEBORDEMENT_PX,
+  );
+});
+
+test("aucune violation d'accessibilité sur la page d'aide", async ({
+  page,
+}) => {
+  await page.goto("/aide");
+
+  const resultats = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+    .analyze();
+
+  expect(resultats.violations).toEqual([]);
 });
 
 /**
