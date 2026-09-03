@@ -309,8 +309,18 @@ describe("depot par jeton signe, le cas sans compte", () => {
     expect(demande.rows[0]?.statut).toBe("DEPOSEE");
     expect(demande.rows[0]?.deposee_a).not.toBeNull();
 
+    /*
+     * LE MODELE EST DANS LA CLAUSE DEPUIS LS-172. La confirmation depose
+     * desormais son propre message, `commande-confirmee`, porteur des deux
+     * liens signes : une commande porte donc DEUX intentions d'envoi, et lire
+     * « l'envoi de la commande » tombait sur celle de la confirmation.
+     *
+     * Meme motif que les deux jetons, rencontre le matin meme : ce qui est
+     * unique par commande ne l'est plus des qu'un second usage apparait.
+     */
     const envoi = await client.query<{ modele: string; statut: string }>(
-      "SELECT modele, statut FROM envoi_en_attente WHERE commande_id = $1",
+      `SELECT modele, statut FROM envoi_en_attente
+       WHERE commande_id = $1 AND modele = 'retractation-accusee'`,
       [commandeId],
     );
 
@@ -343,7 +353,8 @@ describe("depot par jeton signe, le cas sans compte", () => {
       [commandeId],
     );
     const envois = await client.query(
-      "SELECT 1 FROM envoi_en_attente WHERE commande_id = $1",
+      `SELECT 1 FROM envoi_en_attente
+       WHERE commande_id = $1 AND modele = 'retractation-accusee'`,
       [commandeId],
     );
 
