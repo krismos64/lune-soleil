@@ -63,9 +63,42 @@ describe("lundiDePaques", () => {
 });
 
 describe("joursFeriesFrance", () => {
+  /*
+   * LE CONTENU ET NON LA TAILLE. `expect(size).toBe(11)` etait faux en general,
+   * et seulement sauve par l'annee choisie : deux feries COINCIDENT certaines
+   * annees, et le `Set` dedoublonne. L'Ascension tombe le 8 mai en 2059, jour
+   * de la Victoire 1945, et `size` vaut alors 10. Mesure : 2008, 2059, 2070,
+   * 2081 et 2092 rendent dix dates distinctes.
+   *
+   * Le calcul d'echeance reste juste dans tous les cas, un jour compte une fois
+   * ou deux dans un `Set` prorogeant identiquement. C'etait l'assertion qui
+   * etait fausse, pas le module. Trouve par la revue critique de LS-133.
+   */
   it("rend les onze feries legaux de metropole", () => {
-    const feries = joursFeriesFrance(2026);
-    expect(feries.size).toBe(11);
+    expect([...joursFeriesFrance(2026)].sort()).toEqual([
+      "2026-01-01", // Jour de l'An
+      "2026-04-06", // lundi de Paques
+      "2026-05-01", // Fete du Travail
+      "2026-05-08", // Victoire 1945
+      "2026-05-14", // Ascension
+      "2026-05-25", // lundi de Pentecote
+      "2026-07-14", // Fete nationale
+      "2026-08-15", // Assomption
+      "2026-11-01", // Toussaint
+      "2026-11-11", // Armistice 1918
+      "2026-12-25", // Noel
+    ]);
+  });
+
+  /*
+   * L'ANNEE DE COLLISION, qui rendait l'assertion de taille fausse. Le test la
+   * fige plutot que de la decouvrir a nouveau : en 2059 l'Ascension et la
+   * Victoire 1945 tombent le meme jour.
+   */
+  it("dedoublonne deux feries qui coincident", () => {
+    const en2059 = joursFeriesFrance(2059);
+    expect(en2059.has("2059-05-08")).toBe(true);
+    expect(en2059.size).toBe(10);
   });
 
   /*
@@ -111,6 +144,20 @@ describe("joursFeriesFrance", () => {
   it("ne retient aucun ferie regional", () => {
     expect(estJourFerie("2026-04-03")).toBe(false); // Vendredi saint 2026
     expect(estJourFerie("2026-12-26")).toBe(false); // Saint-Etienne
+  });
+
+  /*
+   * LE REFUS D'UN JOUR MAL FORME, seule ligne que la couverture ne touchait
+   * pas. Ce garde-fou remplace une assertion de type qui aurait laisse passer
+   * `NaN` jusqu'au calcul : sans test, rien ne prouvait qu'il refuse.
+   *
+   * `2026-5-1` est le piege du lot, une date d'apparence valide mais non
+   * remplie a deux chiffres, qui rendrait un jour introuvable dans la table.
+   */
+  it("refuse un jour civil mal forme plutot que de rendre un resultat faux", () => {
+    expect(() => estJourFerie("2026-5-1")).toThrow(/invalide/i);
+    expect(() => estJourFerie("pas-un-jour")).toThrow(/invalide/i);
+    expect(() => estJourFerie("2026-05-01T00:00:00Z")).toThrow(/invalide/i);
   });
 });
 

@@ -196,6 +196,13 @@ export function lundiDePaques(annee: number): JourCivil {
  * chome supplementaire ne s'applique ici, un jour chome relevant d'un accord
  * collectif propre a une entreprise, et l'exploitante n'en a aucun. Si un jour
  * chome devait s'ajouter, il ne pourrait qu'ALLONGER le delai, jamais l'avancer.
+ *
+ * ONZE FERIES LEGAUX, MAIS PAS TOUJOURS ONZE DATES. Deux d'entre eux coincident
+ * certaines annees et le `Set` les dedoublonne : en 2059 l'Ascension tombe le
+ * 8 mai, jour de la Victoire 1945, et l'ensemble n'a que dix elements. Egalement
+ * en 2008, 2070, 2081 et 2092. Le calcul d'echeance est indifferent a cela, un
+ * jour compte une fois ou deux prorogeant identiquement ; ne pas ecrire un
+ * controle sur la TAILLE de cet ensemble, qui serait faux ces annees-la.
  */
 export function joursFeriesFrance(annee: number): ReadonlySet<JourCivil> {
   const paques = dimancheDePaques(annee);
