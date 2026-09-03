@@ -94,6 +94,40 @@ Les champs de saisie emploient `--ls-border`, jeton décrit « décoratif » dan
 particulier aurait compliqué sa correction globale. Écrit dans la feuille de
 style plutôt que laissé implicite.
 
+## La revue frontend, cinq corrections et un ticket
+
+`ls-frontend-revue` a relu l'écran avant clôture et relevé onze points. Cinq
+étaient des défauts réels, corrigés dans la foulée.
+
+**La table de libellés vivait dans `page.tsx` sans être exportée.** Le message
+d'incompatibilité affichait donc `REMBOURSEMENT_EN_COURS` en majuscules à
+l'exploitante, contournant dix lignes plus bas la règle que la page appliquait
+au badge. Sortie dans `libelles.ts`, module sans autre import que le type.
+
+**Le compte « à traiter » contredisait les gestes offerts.** Il excluait toute
+demande `REMBOURSEE`, y compris celles dont le colis n'est jamais revenu :
+l'écran leur propose pourtant « Marquer le colis reçu », règle L12, et leur
+absence déclenche l'alerte à trente jours, règle L13.
+
+**Toutes les régions live portaient le même nom.** Elles restaient donc
+indiscernables, ce que le nom existait précisément pour éviter, et VoiceOver
+comme NVDA énoncent le nom avant le texte. Chacune porte désormais son numéro de
+commande.
+
+Deux autres corrections : la preuve d'expédition nulle laissait une espace
+devant la date, et le message de réauthentification nommait un écran sans aucun
+moyen d'y aller, la barre excluant cette route, C33.
+
+**Le point 3 est devenu LS-174.** Le numéro d'avoir n'est lisible qu'une fois,
+dans la région live : `Avoir.demandeRetractationId` existe au schéma et n'est
+écrit par personne. La revue l'a elle-même signalé hors périmètre, la correction
+touchant le repository.
+
+**Une correction a échoué en silence** avant d'être rattrapée par le lint :
+Prettier avait reformaté le commentaire servant d'ancre, la substitution n'a rien
+trouvé, et le code inséré est resté mort. Les deux avertissements
+`no-unused-vars` l'ont révélé.
+
 ## Vérifications
 
 | Contrôle | Résultat |
@@ -116,5 +150,7 @@ pour les mentions légales, et **LS-123** pour les gabarits qui les porteront.
 
 ## État des tickets
 
-**LS-135 close.** LS-173 créée et ouverte. Comptes relevés dans Jira :
-**104 terminés sur 163**, soit 64 %.
+**LS-135 close.** **LS-173** créée en livrant, l'étape 9 sans chemin, et
+**LS-174** créée par la revue, le numéro d'avoir invisible après rechargement.
+Toutes deux rattachées à LS-6. Comptes relevés dans Jira : **104 terminés sur
+165**, soit 63 %.
