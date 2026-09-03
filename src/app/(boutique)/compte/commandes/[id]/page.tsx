@@ -25,6 +25,7 @@ import {
 import { formaterMontant } from "@/lib/montant";
 import { exigerSession } from "@/services/autorisation";
 import { lireMaCommande } from "@/services/espace-client-commandes";
+import { commandePeutOuvrirUneRetractation } from "@/services/retractation";
 
 import styles from "../../compte.module.css";
 
@@ -70,6 +71,21 @@ export default async function PageDetailCommande({
    * d'aujourd'hui sur un colis parti il y a six mois.
    */
   const adresse = (commande.adresseLivraison ?? {}) as AdresseFigee;
+
+  /*
+   * LS-134. LE LIEN NE S'AFFICHE QUE SUR UNE COMMANDE QUI PORTE UN CONTRAT,
+   * jamais sur une commande non payee ou annulee. CE N'EST PAS UNE EXCLUSION
+   * AU SENS DE L221-28, regle L3 : il ne s'agit pas de juger le PRODUIT, mais
+   * de constater qu'il n'y a rien a retracter.
+   *
+   * LE PREDICAT VIENT DU SERVICE ET N'EST PAS RECOPIE ICI : une liste de
+   * statuts dupliquee dans un composant divergerait au premier statut ajoute,
+   * et l'ecran masquerait un droit ouvert. Il n'autorise rien, la garde qui
+   * compte etant dans le service.
+   */
+  const etatRetractationAffichable = commandePeutOuvrirUneRetractation(
+    commande.statut,
+  );
 
   /*
    * LE MODE EXECUTE EST DISTINCT DE CELUI QUI A ETE PAYE, ADR-025. Il ne
@@ -331,6 +347,38 @@ export default async function PageDetailCommande({
           </>
         )}
       </section>
+
+      {/*
+       * LE LIEN EST VISIBLE ET PERMANENT, article L221-21 : la fonctionnalite
+       * doit rester accessible pendant TOUT le delai, et un lien qui
+       * disparaitrait au mauvais moment serait un defaut d'information que
+       * l'article L221-20 sanctionne par un delai porte a douze mois.
+       *
+       * IL S'AFFICHE AUSSI QUAND LE DELAI EST EXPIRE OU LA DEMANDE DEJA
+       * DEPOSEE : c'est la page cible qui explique la situation. Le masquer
+       * laisserait le client sans reponse sur un droit qu'il croit avoir.
+       *
+       * LA GARDE N'EST PAS DANS CE COMPOSANT, elle est dans le service : un
+       * ecran qui n'affiche pas un bouton ne protege rien, la Server Action
+       * restant joignable par HTTP.
+       */}
+      {etatRetractationAffichable && (
+        <section className={styles.section}>
+          <h2>Me rétracter</h2>
+          <p className={styles.texte}>
+            Vous disposez de 14 jours après réception pour changer d&apos;avis,
+            sans avoir à vous justifier.
+          </p>
+          <p className={styles.texte}>
+            <Link
+              href={`/compte/commandes/${commande.id}/retractation`}
+              className={styles.lien}
+            >
+              Déclarer ma rétractation
+            </Link>
+          </p>
+        </section>
+      )}
     </main>
   );
 }
