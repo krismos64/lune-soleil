@@ -349,16 +349,20 @@ describe("depot par jeton signe, le cas sans compte", () => {
     );
 
     /*
-     * LA PORTEE EST DANS LA CLAUSE, ET C'EST LE POINT DU TEST. La confirmation
-     * de paiement emet DEJA un jeton `DOCUMENT` pour la facture, LS-132 : une
-     * commande en porte donc deux, et lire « le premier jeton de la commande »
-     * tombait sur celui de la facture, jamais consomme. Le test echouait sur un
-     * code pourtant correct, et sa premiere version accusait le service.
+     * L'ASSERTION PORTE SUR LE JETON EMPLOYE, DESIGNE PAR SON EMPREINTE, et non
+     * sur un compte de lignes. Deux versions successives se sont trompees de
+     * cible ici, chacune parce qu'une commande porte PLUSIEURS jetons.
+     *
+     * D'abord « le premier jeton de la commande », qui tombait sur celui de la
+     * facture, LS-132, jamais consomme. Puis « il y a exactement un jeton
+     * RETRACTATION », qui est devenu faux quand la confirmation s'est mise a en
+     * emettre un : celui-ci coexiste avec celui que le test pose.
+     *
+     * Nommer le jeton par son empreinte est insensible aux deux.
      */
     const consomme = await client.query<{ utilise_a: Date | null }>(
-      `SELECT utilise_a FROM jeton_acces
-       WHERE commande_id = $1 AND portee = 'RETRACTATION'::"PorteeJeton"`,
-      [commandeId],
+      `SELECT utilise_a FROM jeton_acces WHERE empreinte = $1`,
+      [empreinteJeton(valeur)],
     );
 
     expect(consomme.rowCount).toBe(1);
@@ -545,6 +549,74 @@ describe("les quatre conditions du jeton, testees separement", () => {
     );
 
     expect(refusExpire).toEqual(refusInexistant);
+  });
+});
+
+/*
+ * L'EMISSION DU JETON, defaut majeur trouve par la revue critique du
+ * 3 septembre 2026. Le service annoncait deux chemins d'autorisation, mais
+ * AUCUN code n'emettait jamais de jeton `RETRACTATION` : un acheteur sans
+ * compte n'avait aucune fonctionnalite en ligne pour se retracter, ce qui est
+ * le manquement meme a l'article L221-21 que cette story doit fermer.
+ *
+ * CES TESTS EXERCENT LA CONFIRMATION REELLE, jamais un `INSERT` : c'est
+ * `emettreFacture` qui doit engendrer le jeton, dans la transaction du webhook.
+ */
+describe("emission du jeton de retractation a la confirmation", () => {
+  it("engendre un jeton RETRACTATION en meme temps que la facture", async () => {
+    const commandeId = await commanderEtConfirmer();
+
+    const { rows } = await client.query<{ portee: string; expire_a: Date }>(
+      `SELECT portee, expire_a FROM jeton_acces
+       WHERE commande_id = $1 AND portee = 'RETRACTATION'::"PorteeJeton"`,
+      [commandeId],
+    );
+
+    expect(rows).toHaveLength(1);
+  });
+
+  /*
+   * DEUX JETONS DISTINCTS ET NON UN SEUL, regle L6, moindre privilege. Un jeton
+   * unique qui ouvrirait la facture ET la retractation ferait d'une fuite du
+   * lien de facture un pouvoir de retracter la commande d'autrui.
+   */
+  it("emet deux jetons d'empreintes differentes, document et retractation", async () => {
+    const commandeId = await commanderEtConfirmer();
+
+    const { rows } = await client.query<{ portee: string; empreinte: string }>(
+      `SELECT portee, empreinte FROM jeton_acces WHERE commande_id = $1
+       ORDER BY portee`,
+      [commandeId],
+    );
+
+    expect(rows.map((ligne) => ligne.portee)).toEqual([
+      "DOCUMENT",
+      "RETRACTATION",
+    ]);
+    expect(rows[0]?.empreinte).not.toBe(rows[1]?.empreinte);
+  });
+
+  /*
+   * SA DUREE DEPASSE CELLE DU DOCUMENT, et ce n'est pas cosmetique : le delai
+   * de retractation court a compter de la RECEPTION, plusieurs jours apres
+   * cette emission. Un jeton de trente jours expirerait avant la fin du droit,
+   * et un lien mort a cet endroit est un defaut d'information sanctionne par
+   * douze mois, article L221-20.
+   */
+  it("donne au jeton de retractation une duree superieure a celle du document", async () => {
+    const commandeId = await commanderEtConfirmer();
+
+    const { rows } = await client.query<{ portee: string; expire_a: Date }>(
+      `SELECT portee, expire_a FROM jeton_acces WHERE commande_id = $1`,
+      [commandeId],
+    );
+
+    const document = rows.find((ligne) => ligne.portee === "DOCUMENT");
+    const retractation = rows.find((ligne) => ligne.portee === "RETRACTATION");
+
+    expect(retractation!.expire_a.getTime()).toBeGreaterThan(
+      document!.expire_a.getTime(),
+    );
   });
 });
 

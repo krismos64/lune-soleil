@@ -219,6 +219,12 @@ export async function emettreFacture(
    * trente : le delai de retractation court a compter de la RECEPTION, qui
    * survient plusieurs jours apres cette emission.
    *
+   * LA VALEUR RESSORT MAIS PERSONNE NE LA TRANSMET ENCORE, exactement comme
+   * `jetonAcces` : l'email de confirmation qui portera les deux liens n'est pas
+   * branche, il appartient a LS-172. Tant qu'il n'existe pas, un acheteur sans
+   * compte ne RECOIT pas son lien, meme si la route qui le consomme existe.
+   * Ne pas lire cette emission comme une couverture complete de L221-21.
+   *
    * DEUX JETONS ET NON UN SEUL, regle L6, moindre privilege. Un jeton unique
    * qui ouvrirait la facture ET la retractation ferait d'une fuite du lien de
    * facture un pouvoir de retracter la commande d'autrui.
