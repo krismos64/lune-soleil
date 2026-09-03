@@ -22,9 +22,11 @@
  * composant, et un rafraichissement produirait une reference neuve pour la MEME
  * intention, donc un second remboursement REEL.
  */
+import Link from "next/link";
 import { useState, useTransition } from "react";
 
 import { formaterMontant, centimesVersSaisie } from "@/lib/montant";
+import { libelleStatut } from "./libelles";
 import {
   declarerPreuveExpedition,
   declarerReception,
@@ -36,11 +38,45 @@ import {
 } from "./actions";
 import styles from "./retractations.module.css";
 
-/** Statuts depuis lesquels un remboursement peut partir, cote affichage. */
+/**
+ * Statuts depuis lesquels un remboursement peut partir, cote affichage.
+ *
+ * ILS MIROITENT `STATUTS_REMBOURSABLES` DU SERVICE, qui fait autorite : cette
+ * copie decide seulement de ce qui s'AFFICHE, jamais de ce qui est accepte. La
+ * garde reste dans `rembourserRetractation`, la Server Action etant joignable
+ * par HTTP sans passer par cet ecran.
+ *
+ * `REMBOURSEMENT_EN_COURS` N'Y FIGURE PAS, ET C'EST JUSTE : aucun chemin ne
+ * l'ecrit, le service posant `REMBOURSEE` directement apres le depart de
+ * l'argent. Un palier tenu en base pendant l'appel obligerait a le defaire sur
+ * echec, donc a faire regresser un statut.
+ */
 const STATUTS_REMBOURSABLES = ["RETOUR_ATTENDU", "EXPEDITION_PROUVEE"];
 
 /** Statuts qui acceptent encore un refus motive. */
 const STATUTS_REFUSABLES = ["DEPOSEE", "ACCUSEE", "RETOUR_ATTENDU"];
+
+/**
+ * Statuts sur lesquels l'ecran n'offre volontairement plus aucun geste.
+ *
+ * ELLE EXISTE POUR RENDRE L'ABSENCE DE GESTE EXPLICITE plutot que silencieuse,
+ * releve par `ls-frontend-revue` le 3 septembre 2026. Un statut absent des trois
+ * listes ne rendrait AUCUN bouton et AUCUNE explication : l'exploitante verrait
+ * une carte inerte sans savoir si l'ecran est casse ou la demande close.
+ *
+ * `REMBOURSEMENT_EN_COURS` Y FIGURE bien que rien ne l'ecrive aujourd'hui : le
+ * jour ou un chemin le poserait, l'ecran dirait au moins pourquoi il n'offre
+ * rien. C'est le motif « un enum ajoute casse l'affichage » pris a l'envers, la
+ * valeur existant deja dans l'enum sans etre atteignable.
+ */
+const EXPLICATION_SANS_GESTE: Record<string, string> = {
+  REMBOURSEE: "Demande close, le remboursement est parti.",
+  REFUSEE: "Demande refusée, son motif est indiqué ci-dessus.",
+  REMBOURSEMENT_EN_COURS:
+    "Remboursement en cours auprès du prestataire. Rechargez la page dans un moment.",
+  EXPEDITION_PROUVEE:
+    "Le remboursement est dû depuis la preuve d'expédition, article L221-24 : il ne peut plus être refusé.",
+};
 
 /**
  * Message lisible pour chaque issue de transition.
@@ -50,10 +86,14 @@ const STATUTS_REFUSABLES = ["DEPOSEE", "ACCUSEE", "RETOUR_ATTENDU"];
  * avalerait le cas neuf en silence, et l'exploitante lirait un message generique
  * a la place de ce qui s'est reellement passe.
  */
-function messageTransition(resultat: ResultatTransition): {
+type MessageAffiche = {
   texte: string;
   erreur: boolean;
-} {
+  /** Geste proposé quand le message seul ne suffit pas à débloquer, C33. */
+  lien?: { chemin: string; libelle: string };
+};
+
+function messageTransition(resultat: ResultatTransition): MessageAffiche {
   switch (resultat.statut) {
     case "SUCCES":
       return { texte: "Enregistré.", erreur: false };
@@ -68,7 +108,7 @@ function messageTransition(resultat: ResultatTransition): {
       return { texte: "Cette demande n'existe plus.", erreur: true };
     case "STATUT_INCOMPATIBLE":
       return {
-        texte: `Impossible : la demande est « ${resultat.statutActuel} ». Rechargez la page.`,
+        texte: `Impossible : la demande est « ${libelleStatut(resultat.statutActuel)} ». Rechargez la page.`,
         erreur: true,
       };
     case "MOTIF_REQUIS":
@@ -87,10 +127,7 @@ function messageTransition(resultat: ResultatTransition): {
 }
 
 /** Message lisible pour chaque issue de remboursement. */
-function messageRemboursement(resultat: ResultatRemboursement): {
-  texte: string;
-  erreur: boolean;
-} {
+function messageRemboursement(resultat: ResultatRemboursement): MessageAffiche {
   switch (resultat.statut) {
     case "SUCCES":
       return {
@@ -103,10 +140,19 @@ function messageRemboursement(resultat: ResultatRemboursement): {
         erreur: true,
       };
     case "REAUTHENTIFICATION_REQUISE":
+      /*
+       * LE LIEN ACCOMPAGNE LE MESSAGE, C33 : sans lui, l'ecran nommait une
+       * confirmation d'identite sans aucun moyen d'y aller, la barre de
+       * navigation excluant deliberement cette route. L'exploitante devait
+       * saisir l'URL. Releve par `ls-frontend-revue` le 3 septembre 2026.
+       */
       return {
-        texte:
-          "Confirmez votre identité pour rembourser : rendez-vous sur l'écran de confirmation.",
+        texte: "Confirmez votre identité pour rembourser.",
         erreur: true,
+        lien: {
+          chemin: "/administration/reauthentification",
+          libelle: "Confirmer mon identité",
+        },
       };
     case "INVALIDE":
       return { texte: resultat.message, erreur: true };
@@ -114,7 +160,7 @@ function messageRemboursement(resultat: ResultatRemboursement): {
       return { texte: "Cette demande n'existe plus.", erreur: true };
     case "STATUT_INCOMPATIBLE":
       return {
-        texte: `Impossible : la demande est « ${resultat.statutActuel} ». Rechargez la page.`,
+        texte: `Impossible : la demande est « ${libelleStatut(resultat.statutActuel)} ». Rechargez la page.`,
         erreur: true,
       };
     case "AUCUN_FAIT_DECLENCHEUR":
@@ -170,6 +216,7 @@ function messageRemboursement(resultat: ResultatRemboursement): {
 
 export function TraitementDemande({
   demandeId,
+  numeroCommande,
   statut,
   colisRecu,
   preuveFournie,
@@ -177,6 +224,8 @@ export function TraitementDemande({
   referenceDemande,
 }: {
   demandeId: string;
+  /** Sert à nommer la région live, une par carte, jamais à autoriser. */
+  numeroCommande: string;
   statut: string;
   colisRecu: boolean;
   preuveFournie: boolean;
@@ -184,10 +233,7 @@ export function TraitementDemande({
   referenceDemande: string;
 }) {
   const [enCours, demarrer] = useTransition();
-  const [message, setMessage] = useState<{
-    texte: string;
-    erreur: boolean;
-  } | null>(null);
+  const [message, setMessage] = useState<MessageAffiche | null>(null);
 
   /*
    * LE MONTANT EST PRE-REMPLI AU TOTAL PAYE, frais de port compris, arbitrage
@@ -213,6 +259,24 @@ export function TraitementDemande({
     STATUTS_REMBOURSABLES.includes(statut) && (colisRecu || preuveFournie);
   const peutRefuser = STATUTS_REFUSABLES.includes(statut);
 
+  /*
+   * L'ABSENCE DE GESTE SE DIT, elle ne se constate pas. Les quatre conditions
+   * reprennent exactement celles des blocs rendus plus bas : si aucune n'ouvre,
+   * la carte serait inerte et l'exploitante ne saurait pas si l'ecran est casse
+   * ou la demande close.
+   *
+   * `colisRecu` COMPTE COMME UN GESTE OFFERT tant qu'il est faux, regle L12 : le
+   * bouton reste propose meme sur une demande deja `REMBOURSEE`, le colis
+   * pouvant arriver trois semaines apres le versement.
+   */
+  const ouvreLeRetour = statut === "DEPOSEE" || statut === "ACCUSEE";
+  const aucunGeste =
+    !ouvreLeRetour &&
+    statut !== "RETOUR_ATTENDU" &&
+    colisRecu &&
+    !(peutRembourser && !remboursementFait) &&
+    !peutRefuser;
+
   function lancer(action: () => Promise<ResultatTransition>) {
     demarrer(async () => {
       setMessage(messageTransition(await action()));
@@ -232,7 +296,7 @@ export function TraitementDemande({
 
   return (
     <div className={styles.actions}>
-      {statut === "DEPOSEE" || statut === "ACCUSEE" ? (
+      {ouvreLeRetour ? (
         <button
           type="button"
           className={styles.bouton}
@@ -369,13 +433,25 @@ export function TraitementDemande({
         </details>
       ) : null}
 
+      {aucunGeste ? (
+        <p className={styles.aide}>
+          {EXPLICATION_SANS_GESTE[statut] ??
+            "Aucune action disponible sur cette demande."}
+        </p>
+      ) : null}
+
       {/*
        * LA REGION LIVE EST TOUJOURS DANS LE DOM, jamais montee a l'apparition du
        * message : un lecteur d'ecran n'annonce que ce qui CHANGE dans une region
        * deja presente. Motif rencontre en LS-85.
        *
-       * ELLE PORTE UN NOM ACCESSIBLE, sans quoi deux regions live anonymes
-       * seraient indiscernables, et `axe-core` ne le signale pas.
+       * SON NOM PORTE LE NUMERO DE COMMANDE, et c'est ce qui le rend utile. Une
+       * premiere version posait « Resultat de la derniere action » sur CHAQUE
+       * carte : toutes les regions portaient alors le meme libelle, donc
+       * restaient indiscernables, ce que le nom existait justement pour eviter.
+       * Pire, VoiceOver et NVDA enoncent le nom AVANT le texte, donc
+       * l'exploitante entendait la meme phrase avant chaque message. Releve par
+       * `ls-frontend-revue` le 3 septembre 2026.
        */}
       <p
         className={
@@ -387,9 +463,17 @@ export function TraitementDemande({
         }
         role="status"
         aria-live="polite"
-        aria-label="Résultat de la dernière action"
+        aria-label={`Résultat pour la commande ${numeroCommande}`}
       >
         {message?.texte ?? ""}
+        {message?.lien === undefined ? null : (
+          <>
+            {" "}
+            <Link href={message.lien.chemin} className={styles.lienMessage}>
+              {message.lien.libelle}
+            </Link>
+          </>
+        )}
       </p>
     </div>
   );
