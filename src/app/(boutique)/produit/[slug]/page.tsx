@@ -189,21 +189,28 @@ export default async function PageFicheProduit({
            * quoi le delai de retractation passe a douze mois, article L221-20.
            */}
           {/*
-           * AUCUN LIEN VERS LA PAGE DE RETRACTATION TANT QU'ELLE N'EXISTE PAS.
-           * Elle appartient a LS-28, contenus juridiques, encore a faire, dont
-           * un critere exige que les liens « pointent vers ces pages reelles,
-           * aucun href vide ni diese ». Un lien pose d'avance meme vers une
-           * 404 sur la page ou le client decide d'acheter.
+           * LE LIEN EST POSE DEPUIS LE 3 SEPTEMBRE 2026, LS-28 : la page
+           * `/informations-legales` existe, et son ancre `#retractation` porte
+           * le detail. Il etait deliberement absent jusque-la, un lien vers une
+           * 404 sur la page ou le client decide d'acheter etant pire que son
+           * absence.
            *
-           * LE TEXTE, LUI, RESTE : l'information sur le delai et sur les frais
-           * de retour est obligatoire des maintenant, et son absence coute plus
-           * cher que l'absence de lien. LS-28 ajoutera le renvoi.
+           * LE TEXTE COURT RESTE, il ne se remplace pas par le lien : le delai
+           * et la charge des frais de retour doivent se lire SUR la fiche,
+           * `legal.md` et l'article L221-23. Renvoyer sans les afficher exposerait
+           * au delai de douze mois de l'article L221-20.
            */}
           <section className={styles.legal}>
             <h2 className={styles.titreSection}>Retours et rétractation</h2>
             <p className={styles.texteSection}>
               14 jours pour changer d&apos;avis à compter de la réception, frais
-              de retour à la charge du client.
+              de retour à la charge du client.{" "}
+              <Link
+                href="/informations-legales#retractation"
+                className={styles.lienLegal}
+              >
+                Détail du droit de rétractation
+              </Link>
             </p>
           </section>
 

@@ -1,0 +1,175 @@
+/*
+ * Informations legales, LS-28 et LS-123.
+ *
+ * CONCU A PARTIR DE 320 px, puis elargi. Les media queries montent, elles ne
+ * descendent jamais.
+ *
+ * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons de `tokens.css`.
+ *
+ * LE CONTRASTE DEPEND DU FOND, C31 : `--ls-text-muted` donne 4,86:1 sur creme
+ * mais 4,35:1 sur sable, sous le seuil AA. Tout bloc a fond sable emploie donc
+ * `--ls-text`, et `--ls-accent-gold-deep` y tombe a 4,23:1 : sur sable, employer
+ * `--ls-primary`, releve mesure porte par LS-105.
+ *
+ * UNE PAGE DE TEXTE LONG, ET C'EST SA CONTRAINTE PROPRE. La mesure de lecture
+ * est bornee a 68 caracteres environ : une ligne de texte juridique qui traverse
+ * un ecran de 1280 px se relit mal, et personne ne relit deux fois des mentions
+ * legales.
+ */
+
+.page {
+  padding: var(--ls-space-4);
+  max-width: 48rem;
+  margin: 0 auto;
+}
+
+.titre {
+  margin: 0 0 var(--ls-space-4);
+  color: var(--ls-primary);
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  font-weight: 600;
+}
+
+/* FOND SABLE, DONC `--ls-primary` SUR LES LIENS, jamais le doré. */
+.sommaire {
+  margin-bottom: var(--ls-space-5);
+  padding: var(--ls-space-3);
+  background: var(--ls-surface-sand);
+  border-radius: var(--ls-radius-md);
+}
+
+.listeSommaire {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ls-space-2) var(--ls-space-4);
+}
+
+/* ZONE TACTILE DE 44 px sur chaque lien du sommaire. */
+.listeSommaire a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  color: var(--ls-primary);
+  text-decoration: underline;
+}
+
+.section {
+  margin-bottom: var(--ls-space-5);
+}
+
+/*
+ * LE FOCUS DE L'ANCRE EST VISIBLE, et il doit l'etre : `tabIndex={-1}` rend la
+ * section focusable pour que le clavier suive le saut, mais un focus invisible
+ * laisserait la personne sans repere apres le clic.
+ */
+.section:focus-visible {
+  outline: 3px solid var(--ls-primary);
+  outline-offset: var(--ls-space-2);
+}
+
+.titreSection {
+  margin: 0 0 var(--ls-space-3);
+  padding-bottom: var(--ls-space-2);
+  border-bottom: 1px solid var(--ls-border);
+  color: var(--ls-primary);
+  font-size: 1.375rem;
+  font-weight: 600;
+}
+
+.titreBloc {
+  margin: var(--ls-space-4) 0 var(--ls-space-2);
+  color: var(--ls-text);
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.texte {
+  margin: 0 0 var(--ls-space-3);
+  color: var(--ls-text);
+  line-height: 1.6;
+}
+
+.liste {
+  margin: 0 0 var(--ls-space-3);
+  padding-left: var(--ls-space-4);
+  color: var(--ls-text);
+  line-height: 1.6;
+}
+
+/*
+ * CE QUI MANQUE SE VOIT, sans crier. Le fond sable distingue l'information
+ * absente du texte publie, et `--ls-text` y reste lisible la ou le jeton
+ * attenue tomberait a 4,35:1.
+ *
+ * AUCUNE COULEUR D'ALERTE : une section en cours de redaction n'est pas une
+ * erreur, et un bandeau rouge sur une page legale inquieterait sans motif.
+ */
+.manquant {
+  margin: 0 0 var(--ls-space-3);
+  padding: var(--ls-space-3);
+  background: var(--ls-surface-sand);
+  border-left: 4px solid var(--ls-primary);
+  border-radius: var(--ls-radius-sm);
+  color: var(--ls-text);
+  line-height: 1.6;
+}
+
+/*
+ * UNE LISTE DE DEFINITIONS ET NON UN TABLEAU. `frontend-design.md` interdit le
+ * tableau dans la boutique publique, et l'identite legale est exactement ce
+ * qu'un `dl` decrit : des paires terme et valeur.
+ *
+ * EMPILEE A 320 px, en deux colonnes au-dela : cote a cote sur un petit ecran,
+ * une adresse de deux lignes casserait la grille.
+ */
+.definitions {
+  margin: 0 0 var(--ls-space-3);
+}
+
+.definition {
+  padding: var(--ls-space-2) 0;
+  border-bottom: 1px solid var(--ls-border);
+}
+
+.definition dt {
+  margin: 0 0 0.15rem;
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+}
+
+/*
+ * `overflow-wrap` PARCE QU'UN SIRET, UNE URL DE SAISINE OU UNE ADRESSE
+ * D'HEBERGEUR N'ONT PAS TOUJOURS D'ESPACE. Une chaine continue deborde a
+ * 320 px, defaut mesure en LS-171 sur un libelle sans espace.
+ */
+.definition dd {
+  margin: 0;
+  color: var(--ls-text);
+  overflow-wrap: anywhere;
+}
+
+.definition a {
+  color: var(--ls-accent-gold-deep);
+  text-decoration: underline;
+}
+
+.texte a {
+  color: var(--ls-accent-gold-deep);
+  text-decoration: underline;
+}
+
+@media (min-width: 48rem) {
+  .definition {
+    display: grid;
+    grid-template-columns: 14rem 1fr;
+    gap: var(--ls-space-3);
+    align-items: baseline;
+  }
+
+  .definition dt {
+    margin: 0;
+  }
+}
