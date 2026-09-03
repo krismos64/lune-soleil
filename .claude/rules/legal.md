@@ -5,6 +5,7 @@ paths:
   - "src/integrations/pdf/**"
   - "src/integrations/mondial-relay/**"
   - "src/lib/livraison.ts"
+  - "src/lib/retractation.ts"
   - "src/app/(boutique)/commande/**"
 ---
 
@@ -74,12 +75,35 @@ Article L221-19, trois règles cumulatives :
 1. le jour de réception du bien **n'est pas compté** dans le délai
 2. le délai commence à la première heure du premier jour et finit à la dernière
    heure du dernier jour
-3. si l'échéance tombe un **samedi, un dimanche ou un jour férié**, elle est
-   prorogée jusqu'au premier jour ouvrable suivant
+3. si l'échéance tombe un **samedi, un dimanche ou un jour férié ou chômé**, elle
+   est prorogée jusqu'au premier jour ouvrable suivant
 
 Le calendrier des jours fériés français est donc nécessaire côté serveur.
 Couvrir par des tests les cas limites : échéance au 1er mai, au 25 décembre, un
 week-end prolongé.
+
+**Le calcul est livré depuis LS-133**, `src/lib/retractation.ts`, source unique :
+l'échéance affichée au client, l'acceptation d'une demande et le refus d'une
+demande hors délai lisent la même fonction. Trois implémentations divergentes
+produiraient un écran qui annonce une date et un service qui en applique une
+autre, et c'est l'écran qui engage.
+
+Quatre points relevés en l'écrivant, chacun invisible à la lecture du code :
+
+- **le texte dit « férié ou chômé »**, plus large que « férié ». Aucun jour chômé
+  supplémentaire ne s'applique ici, un jour chômé relevant d'un accord collectif
+  d'entreprise. S'il s'en ajoutait un, il ne pourrait qu'**allonger** le délai
+- **la prorogation est itérative**, jamais un décalage d'un jour. Le 25 décembre
+  2026 est un vendredi suivi d'un week-end, et l'échéance saute au lundi 28
+- **la table des jours fériés est celle de l'année du jour testé**, jamais celle
+  de la réception : une échéance au 1er janvier appartient à l'année suivante, et
+  consulter la mauvaise table la laisse passer pour ouvrable
+- **les fériés d'Alsace-Moselle sont exclus**, Vendredi saint et 26 décembre : la
+  liste retenue est celle de l'article L3133-1 du Code du travail
+
+**Aucune arithmétique en millisecondes.** Ajouter quatorze fois 86 400 000 dérive
+d'une heure au passage à l'heure d'hiver et peut changer de jour civil. Les jours
+s'ajoutent sur une date civile parisienne, où un jour vaut un jour.
 
 ### Le piège des douze mois
 
