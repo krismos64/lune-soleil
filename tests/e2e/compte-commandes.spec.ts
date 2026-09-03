@@ -254,6 +254,11 @@ test("le detail ne deborde pas horizontalement", async ({ page }) => {
   await page.goto("/compte/commandes");
   await page.getByRole("link", { name: `Commande ${numero}` }).click();
 
+  // DIAGNOSTIC LS-171 : quelle page est reellement mesuree ?
+  await expect(
+    page.getByRole("heading", { level: 1, name: `Commande ${numero}` }),
+  ).toBeVisible();
+
   expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
     TOLERANCE_DEBORDEMENT_PX,
   );
