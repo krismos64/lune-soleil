@@ -226,7 +226,9 @@ describe("calculerEcheanceRetractation", () => {
 
     expect(resultat.jourLimite).toBe("2026-05-29");
     // Minuit a Paris le 30 mai (ete, UTC+2) vaut 22h00 UTC le 29 mai.
-    expect(resultat.finInclusive.toISOString()).toBe("2026-05-29T22:00:00.000Z");
+    expect(resultat.finInclusive.toISOString()).toBe(
+      "2026-05-29T22:00:00.000Z",
+    );
   });
 
   /*
@@ -258,8 +260,8 @@ describe("calculerEcheanceRetractation", () => {
   });
 
   it("refuse une date invalide", () => {
-    expect(() => calculerEcheanceRetractation(new Date("pas une date"))).toThrow(
-      /invalide/i,
-    );
+    expect(() =>
+      calculerEcheanceRetractation(new Date("pas une date")),
+    ).toThrow(/invalide/i);
   });
 });

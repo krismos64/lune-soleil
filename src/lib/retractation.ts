@@ -93,18 +93,36 @@ function jourCivilParisien(instant: Date): JourCivil {
   return FORMATEUR_JOUR_PARIS.format(instant);
 }
 
-/** Decompose un jour civil, sans passer par `Date` ni son fuseau. */
+/**
+ * Decompose un jour civil, sans passer par `Date` ni son fuseau.
+ *
+ * LA FORME EST VERIFIEE ET NON SUPPOSEE. TypeScript strict refuse a juste titre
+ * la destructuration d'un `split`, dont chaque element peut manquer : forcer le
+ * type par une assertion aurait fait passer `NaN` jusqu'au calcul, ou une date
+ * fausse serait sortie sans que rien ne leve.
+ */
 function partiesDuJour(jour: JourCivil): {
   annee: number;
   mois: number;
   quantieme: number;
 } {
-  const [annee, mois, quantieme] = jour.split("-").map(Number);
-  return { annee, mois, quantieme };
+  const parties = /^(\d{4})-(\d{2})-(\d{2})$/.exec(jour);
+  if (parties === null) {
+    throw new DateReceptionInvalideError(`Jour civil invalide : ${jour}`);
+  }
+  return {
+    annee: Number(parties[1]),
+    mois: Number(parties[2]),
+    quantieme: Number(parties[3]),
+  };
 }
 
 /** Recompose un jour civil depuis ses parties. */
-function versJourCivil(annee: number, mois: number, quantieme: number): JourCivil {
+function versJourCivil(
+  annee: number,
+  mois: number,
+  quantieme: number,
+): JourCivil {
   const mm = String(mois).padStart(2, "0");
   const jj = String(quantieme).padStart(2, "0");
   return `${annee}-${mm}-${jj}`;
