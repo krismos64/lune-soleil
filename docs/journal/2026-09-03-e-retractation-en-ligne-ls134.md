@@ -91,6 +91,70 @@ durcie, choisie exprès pour ce motif, et son test de débordement passe.
 **LS-171** est créée sous LS-3 et demande d'élucider cet angle mort **avant** de
 corriger le style.
 
+## Ce que les deux revues ont trouvé
+
+**La revue critique a trouvé le défaut majeur de la session, et il était grave.**
+
+Le service annonçait deux chemins d'autorisation. Recherche exhaustive : les
+deux seuls appels à `ecrireJeton` du dépôt écrivent une portée `DOCUMENT`, et
+aucune route publique ne consommait la voie `JETON`. **Un acheteur sans compte
+n'avait donc aucune fonctionnalité en ligne pour se rétracter**, ce qui est le
+manquement même à l'article L221-21 que cette story doit fermer. Le critère 1
+n'était pas rempli, et le code avait la forme d'un travail complet.
+
+Corrigé dans la session : le jeton naît dans la transaction d'émission de
+facture, protégé du rejeu par la même sortie anticipée, et la route
+`(boutique)/retractation/[jeton]` le consomme. **Deux jetons distincts et non
+un seul**, règle L6 : une fuite du lien de facture ne doit pas donner le pouvoir
+de rétracter la commande d'autrui. Sa durée est de soixante jours quand celle du
+document est de trente, le délai courant à compter de la réception.
+
+**Ce qui reste ouvert, et qui est ticketé.** Personne ne transmet encore ces
+jetons : `jetonAcces` non plus n'a jamais eu de consommateur depuis LS-132,
+l'email de confirmation n'étant pas branché. **LS-172** le porte, en High, et
+bloque LS-136. Tant qu'elle n'est pas livrée, la route existe mais le lien
+n'arrive pas au client : le commentaire de `facture.ts` le dit explicitement
+plutôt que de laisser croire le contraire.
+
+**Deux commentaires décrivaient une garde qui n'existe pas.** Ils annonçaient
+une lecture préalable avant la création de la demande. Il n'y en a aucune :
+`P2002` est le seul rempart. Le rattrapage **hors** transaction est correct
+précisément parce que la création est la première écriture du bloc, donc son
+échec n'y laisse rien à annuler et le `25P02` ne peut pas se produire. Les
+commentaires disent maintenant cela, et interdisent de déplacer la création.
+
+**La revue frontend a trouvé six défauts réels**, tous corrigés :
+
+- **le lien « Contact » menait à `/aide#contact`, une route qui n'existe pas**,
+  sur l'écran du délai expiré où c'était la seule issue offerte au client
+- il ne portait aucune classe, donc rendait en bleu du navigateur, qu'ADR-022
+  écarte du projet
+- **le focus retombait sur `body`** quand le bloc de succès remplaçait le
+  formulaire : au clavier, la confirmation était inatteignable
+- le `role="status"` n'avait ni `aria-live` ni `aria-label`, contre la
+  convention du projet et la fiche sur l'ambiguïté de `getByRole("status")`
+- **l'écran affirmait « nous vous avons envoyé un accusé »** alors que l'envoi
+  n'est qu'en attente dans l'outbox, et désignait cet email comme preuve unique.
+  C'est `deposeeA` qui fait foi, et le texte le dit maintenant
+- **le bloc du détail de commande annonçait la rétractation sans les frais de
+  retour**, alors que c'est le premier endroit où le droit apparaît et le seul
+  atteint par un client qui ne clique pas
+
+**Deux défauts signalés n'en étaient pas**, vérifiés avant correction : le
+détail de commande porte bien `force-dynamic`, donc mon commentaire était exact,
+et la revue avait eu raison de dire qu'elle ne pouvait pas conclure.
+
+## L'ajout du jeton a fait rougir deux tests de LS-132
+
+Tous deux supposaient **un seul jeton par commande**. Le premier les comptait,
+le second exigeait la révocation de tous les jetons actifs alors que
+`reemettreJetonDocument` ne doit précisément pas toucher celui de rétractation.
+
+Le même piège m'a repris dans mon propre test de consommation, deux fois de
+suite : d'abord « le premier jeton de la commande », puis « il y a exactement un
+jeton `RETRACTATION` ». L'assertion désigne maintenant le jeton **par son
+empreinte**, ce qui est insensible au nombre de jetons présents.
+
 ## La preuve par mutation, neuf sur neuf
 
 | # | Mutation | Tests rouges |
@@ -132,16 +196,18 @@ explicitement.
 ## Vérifications
 
 ```
-npm run type-check                       aucune erreur
-npm run lint                             aucun signalement
-npx prettier --check                     All matched files use Prettier code style
-npm run test:integration -- retractation 22 tests, tous verts
-npx playwright test compte-retractation  26 tests sur 3 largeurs, tous verts
-axe-core sur le formulaire               aucune violation
-./scripts/verifier-regles.sh             code 0
-./scripts/verifier-actions-sensibles.sh  code 0
-./scripts/verifier-tests-non-ignores.sh  code 0
-mutations                                9 jouées, 9 détectées
+npm run type-check                           aucune erreur
+npm run lint                                 aucun signalement
+npx prettier --check                         code style conforme
+npx vitest run --project unitaire            411 tests, tous verts
+npm run test:integration                     47 fichiers, 670 tests, tous verts
+npx playwright test compte-retractation      26 tests sur 3 largeurs
+npx playwright test retractation-sans-compte 20 tests sur 3 largeurs
+axe-core sur les deux formulaires            aucune violation
+./scripts/verifier-regles.sh                 code 0
+./scripts/verifier-actions-sensibles.sh      code 0
+./scripts/verifier-tests-non-ignores.sh      code 0
+mutations                                    9 jouées, 9 détectées
 ```
 
 **Le plafond de débit a fait échouer la préparation e2e trois fois**, ce qui est
@@ -164,4 +230,8 @@ désormais LS-171.
 
 ## État des tickets
 
-LS-134 **livrée**, epic LS-6. LS-171 créée sous LS-3, priorité Medium.
+LS-134 **livrée**, epic LS-6, les neuf critères remplis.
+
+**LS-171** créée sous LS-3, priorité Medium : le débordement du détail de
+commande. **LS-172** créée sous LS-5, priorité High : l'email de confirmation
+porteur des deux liens, qui **bloque LS-136**.
