@@ -220,6 +220,25 @@ jobs:
           printf 'FACTURE_ADRESSE=%s\n' "1 rue de Test, 64000 TESTVILLE" >> "$GITHUB_ENV"
           printf 'FACTURE_EMAIL_CONTACT=%s\n' "test-emetteur@example.invalid" >> "$GITHUB_ENV"
 
+      # ----------------------------------------------------------------------
+      # Base publique du site, LS-132 et LS-172.
+      #
+      # `lienDocument` et `lienRetractation` LEVENT quand elle manque, et c'est
+      # deliberement un defaut ferme : un lien errone emporterait un jeton signe
+      # hors du domaine, donc vers un tiers.
+      #
+      # ELLE EST DONC INDISPENSABLE DEPUIS LS-172, qui compose les deux liens
+      # DANS la transaction de confirmation. Son absence ne se rattraperait pas
+      # comme celle de l'emetteur : l'erreur remonte hors du `catch` de
+      # `EmetteurNonConfigureError` et fait echouer la transaction entiere,
+      # donc perd le paiement.
+      #
+      # Le port 3100 est celui de playwright.config.ts, pour que les liens
+      # composes pendant la suite de bout en bout designent le serveur servi.
+      - name: Composer la base publique du site
+        run: |
+          printf 'NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3100\n' >> "$GITHUB_ENV"
+
       - name: Installer Node
         uses: actions/setup-node@v7
         with:

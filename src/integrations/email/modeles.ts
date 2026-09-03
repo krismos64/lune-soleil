@@ -216,6 +216,59 @@ const RENDUS: Record<ModeleEmail, (message: MessageEmail) => MessageRendu> = {
    * il est connu, et la phrase s'adapte quand il ne l'est pas : annoncer une
    * date fausse sur un droit est exactement ce que L221-20 sanctionne.
    */
+  /*
+   * LS-172. CONFIRMATION DE COMMANDE, PORTEUSE DES DEUX LIENS SIGNES.
+   *
+   * C'EST LE SEUL CHEMIN PAR LEQUEL UN CLIENT SANS COMPTE ATTEINT SA FACTURE ET
+   * SON DROIT DE RETRACTATION. La valeur en clair des jetons n'existe qu'a
+   * l'instant de leur creation, regle L5 : si ce message ne part pas, elle est
+   * perdue, et seule une reemission manuelle la retrouve.
+   *
+   * LES DEUX LIENS SONT DISTINCTS, regle L6, moindre privilege : une fuite du
+   * lien de facture ne doit pas donner le pouvoir de retracter la commande
+   * d'autrui. Ne jamais les fusionner en un seul jeton « qui ouvre tout ».
+   *
+   * `exiger` SUR LES DEUX, ET C'EST DELIBERE. Un lien absent produirait un
+   * message poli et inutilisable, dont la trace en base dirait `ENVOYE` : le
+   * defaut serait invisible des deux cotes. Lever le rend visible avant l'envoi,
+   * et l'outbox retentera une fois la cause corrigee.
+   *
+   * LA MENTION DES FRAIS DE RETOUR ACCOMPAGNE CELLE DE LA RETRACTATION, article
+   * L221-23 et `frontend-design.md` : sans elle, ces frais reviennent au
+   * vendeur, et la charge de la preuve pese sur lui.
+   *
+   * AUCUN DELAI D'ACHEMINEMENT CHIFFRE. Le transporteur n'est pas branche,
+   * LS-131, et annoncer « sous 48 heures » serait une information
+   * precontractuelle fausse.
+   */
+  "commande-confirmee": (message) => ({
+    objet: `Votre commande ${exiger(message, "numero")} est confirmée`,
+    texte: [
+      "Bonjour,",
+      "",
+      `Nous avons bien reçu votre paiement pour la commande ${exiger(message, "numero")}.`,
+      "Elle est confirmée, et nous la préparons.",
+      "",
+      "Votre facture :",
+      "",
+      exiger(message, "lienFacture"),
+      "",
+      "Vous disposez de 14 jours après réception pour changer d'avis, sans",
+      "avoir à vous justifier. Pour vous rétracter :",
+      "",
+      exiger(message, "lienRetractation"),
+      "",
+      "Les frais de retour sont à votre charge.",
+      "",
+      "Conservez ce message : ces deux liens vous sont personnels et ne sont",
+      "pas retrouvables ailleurs.",
+      "",
+      "Répondez simplement à ce message pour toute question.",
+      "",
+      SIGNATURE,
+    ].join("\n"),
+  }),
+
   "retractation-accusee": (message) => {
     const jourLimite = message.variables.jourLimite ?? "";
 

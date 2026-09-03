@@ -29,7 +29,9 @@ export type ModeleEmail =
   /** LS-60, envoye a l'ANCIENNE pour l'avertir et lui permettre de refuser. */
   | "changement-adresse-avertissement"
   /** LS-134, accuse de reception d'une retractation, article L221-21. */
-  | "retractation-accusee";
+  | "retractation-accusee"
+  /** LS-172, confirmation de commande, porteuse des deux liens signes. */
+  | "commande-confirmee";
 
 export type MessageEmail = {
   destinataire: string;
