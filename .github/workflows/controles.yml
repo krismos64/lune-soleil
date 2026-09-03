@@ -203,6 +203,64 @@ jobs:
           cache: npm
 
       # ----------------------------------------------------------------------
+      # LS-169, la suite longue ne se rejoue pas sur un diff documentaire.
+      #
+      # CE QUE CETTE ETAPE EXISTE POUR EVITER. Mesure du 3 septembre 2026 : une
+      # execution dure treize minutes, dont 678 s pour les scenarios de bout en
+      # bout et 268 s pour les tests d'integration. Tout le reste tient en moins
+      # de deux minutes. Les pull requests 205 et 206 ne touchaient QUE de la
+      # documentation et ont rejoue sept cents tests, tunnel d'achat compris.
+      #
+      # LA CONDITION VIT SUR LES ETAPES, JAMAIS SUR LE JOB, et ce n'est pas un
+      # detail de style. « Les huit controles de CONTRIBUTING » est un controle
+      # REQUIS par la protection de branche : un job saute laisserait la pull
+      # request en attente d'un resultat qui n'arrive jamais. Un `paths:` au
+      # niveau de `on:` produirait le meme blocage.
+      #
+      # LA DECISION VIT DANS UN SCRIPT, pas dans une expression YAML : elle est
+      # ainsi exerçable hors de GitHub, et `verifier-decision-suite.sh` la prouve
+      # sur vingt-quatre cas. Trois mutations ont ete jouees, trois detectees,
+      # dont une qui a REVELE UN CAS MANQUANT : retirer l'ancrage de fin de
+      # `\.md` laissait vingt-deux cas verts, `src/lib/md-parser.ts` passant pour
+      # de la documentation.
+      #
+      # LA LISTE DES FICHIERS VIENT DE L'API, pas de `git diff`. Le checkout est
+      # a profondeur 1 : `origin/main` n'existe pas localement, et une
+      # comparaison silencieusement vide ferait basculer la decision. L'augmenter
+      # coûterait un clone complet a chaque execution, pour la seule decision.
+      #
+      # SUR `main`, TOUT S'EXECUTE, sans consulter quoi que ce soit : c'est le
+      # dernier etat verifie avant deploiement, et une fusion en rebase rejoue
+      # les commits sur une base differente de celle testee.
+      # ----------------------------------------------------------------------
+      - name: Decider de la portee de la suite
+        id: portee
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "Sur ${{ github.ref_name }}, la suite complete s'execute toujours."
+            echo "suite=complete" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # `--paginate` EST INDISPENSABLE : l'API rend trente fichiers par page,
+          # et une pull request plus large verrait ses fichiers de code disparaitre
+          # de la liste. Le defaut serait alors ALLEGE sur un diff qui contient du
+          # code, exactement le sens d'erreur que ce filtre doit fermer.
+          fichiers=$(gh api --paginate \
+            "repos/${{ github.repository }}/pulls/${{ github.event.number }}/files" \
+            --jq '.[].filename' 2>/dev/null || true)
+
+          portee=$(printf '%s\n' "$fichiers" | ./scripts/decider-suite-complete.sh)
+
+          echo "Fichiers modifies :"
+          printf '%s\n' "$fichiers" | sed 's/^/  /'
+          echo "Portee retenue : $portee"
+
+          echo "suite=$portee" >> "$GITHUB_OUTPUT"
+
+      # ----------------------------------------------------------------------
       # Controle 1, installation des dependances avec verrouillage.
       #
       # `npm ci` et non `npm install` : il exige package-lock.json, echoue si le
@@ -490,6 +548,13 @@ jobs:
       # socle etait passe de sept a quatorze schemas : le document de reference
       # ignorait la moitie de ce qu'il pretend recenser.
       # ----------------------------------------------------------------------
+      # LS-169. Le filtre de portee est du code, il se controle comme tel : sans
+      # cette etape, une exemption elargie par megarde ne se verrait que le jour
+      # ou une regression passerait. Purement textuel, aucune base ni conteneur,
+      # et il tourne dans les DEUX portees : c'est lui qui garde le filtre.
+      - name: 3quater. Le filtre de portee distingue documentation et code
+        run: ./scripts/verifier-decision-suite.sh
+
       - name: 3ter. Socle Zod et son document accordes
         run: ./scripts/verifier-propagation-docs.sh
 
@@ -514,6 +579,7 @@ jobs:
       # exemplaire en concurrence.
       # ----------------------------------------------------------------------
       - name: 5. Tests d'integration sur base ephemere
+        if: steps.portee.outputs.suite == 'complete'
         run: npm run test:integration
 
       # ----------------------------------------------------------------------
@@ -565,11 +631,58 @@ jobs:
       # conclusion `failure`, et les etapes suivantes ont ete ignorees. Une
       # borne jamais franchie ne prouve pas qu'elle protege.
       - name: Installer le navigateur de test
+        if: steps.portee.outputs.suite == 'complete'
         timeout-minutes: 5
         run: npx playwright install --with-deps chromium
 
       - name: 8. Scenarios critiques de bout en bout
+        if: steps.portee.outputs.suite == 'complete'
         run: npm run test:e2e
+
+      # ----------------------------------------------------------------------
+      # LS-169 critere 6 : un saut se VOIT, il ne se devine pas.
+      #
+      # GitHub affiche une etape ignoree en gris, ce qui se distingue mal d'une
+      # etape verte dans un journal de trente lignes. Sans ce recapitulatif, une
+      # execution allegee et une execution complete se ressemblent, et personne
+      # ne remarquerait qu'un filtre trop large a desarme la suite.
+      #
+      # `always()` PARCE QUE LE RECAPITULATIF COMPTE SURTOUT EN CAS D'ECHEC :
+      # savoir qu'une etape n'a PAS tourne fait partie du diagnostic. Il n'est
+      # pas conditionne a la portee non plus, une execution complete devant le
+      # dire aussi.
+      #
+      # IL N'AFFIRME PAS QUE LA SUITE EST PASSEE : il dit ce qui a ete EXECUTE.
+      # Le resultat des etapes reste porte par leur propre conclusion.
+      # ----------------------------------------------------------------------
+      - name: Recapitulatif de portee
+        if: always()
+        run: |
+          portee='${{ steps.portee.outputs.suite }}'
+
+          {
+            echo "## Portée de cette exécution"
+            echo
+            if [ "$portee" = "complete" ]; then
+              echo "**Suite complète.** Tests d'intégration et scénarios de bout"
+              echo "en bout inclus."
+            else
+              echo "**Suite allégée**, LS-169 : le diff ne touche que de la"
+              echo "documentation."
+              echo
+              echo "N'ONT PAS ÉTÉ EXÉCUTÉS :"
+              echo "- 5. Tests d'intégration sur base éphémère"
+              echo "- 8. Scénarios critiques de bout en bout"
+              echo
+              echo "Tout le reste a tourné : types, analyse statique, format,"
+              echo "schéma, règles, construction et image Docker."
+              echo
+              echo "Sur \`main\` après fusion, la suite complète s'exécute"
+              echo "toujours, quel que soit le diff."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "Portée : $portee"
 
       # ----------------------------------------------------------------------
       # Prolongement du controle 7 : l'image se construit-elle, et est-elle

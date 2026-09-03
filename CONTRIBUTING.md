@@ -136,6 +136,51 @@ conception vérifie que le SQL de référence dit ce qu'on croit, le mode
 `--base-migree` vérifie ce que Prisma crée réellement : une divergence entre
 `schema.prisma` et `schema.sql` n'est visible que par le second.
 
+### La portée dépend de ce que la pull request touche, LS-169
+
+**Une pull request qui ne touche que de la documentation n'exécute ni les tests
+d'intégration, ni les scénarios de bout en bout.** Tout le reste tourne : types,
+analyse statique, format, schéma, règles, construction et image Docker.
+
+Ce que la mesure disait, le 3 septembre 2026, sur une exécution de treize
+minutes :
+
+| Étape | Durée |
+|---|---|
+| Scénarios de bout en bout | 678 s |
+| Tests d'intégration | 268 s |
+| Tout le reste | moins de 120 s |
+
+Deux pull requests de cette seule journée ne portaient que du Markdown et ont
+rejoué sept cents tests, tunnel d'achat et paiements compris.
+
+**Le filtre liste ce qui est EXEMPTÉ, jamais ce qui est testé.** Une liste
+blanche laisserait passer en silence tout fichier d'une forme non prévue. Le
+défaut est fermé : un chemin inconnu, une liste vide ou une erreur d'API font
+exécuter la suite complète.
+
+**Un seul fichier de code suffit à tout déclencher**, même noyé dans dix
+documents. C'est le cas nominal du projet, la traçabilité imposant un commit
+documentaire par story.
+
+**Sur `main` après fusion, tout s'exécute toujours**, quel que soit le diff :
+c'est le dernier état vérifié avant déploiement, et une fusion en rebase rejoue
+les commits sur une base différente de celle testée.
+
+La décision vit dans `scripts/decider-suite-complete.sh`, hors du YAML pour être
+exerçable : `scripts/verifier-decision-suite.sh` la prouve sur vingt-quatre cas.
+Trois mutations ont été jouées, trois détectées, dont une qui a **révélé un cas
+manquant** — retirer l'ancrage de fin de `\.md` laissait vingt-deux cas verts,
+`src/lib/md-parser.ts` passant alors pour de la documentation.
+
+**La condition vit sur les étapes, jamais sur le job ni sur un `paths:`.** « Les
+huit contrôles de CONTRIBUTING » est un contrôle **requis** par la protection de
+branche : un job sauté laisserait la pull request en attente d'un résultat qui
+n'arrive jamais.
+
+Une exécution allégée le dit dans son récapitulatif, et nomme les étapes non
+exécutées : un saut se voit, il ne se devine pas.
+
 ### Ce qui se lance à la main
 
 La chaîne rejoue tout avant fusion, mais attendre son verdict pour découvrir une
