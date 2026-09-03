@@ -113,9 +113,21 @@ la **composition des métaux**, qui commandent tout le catalogue.
 Côté code sans dépendance externe : **LS-137**, le référencement technique, et
 **LS-147**, l'identité du site au partage.
 
+## Un compte faux, corrigé en fin de session
+
+Le tableau du `README.md` annonçait **104 terminés sur 165**. Les deux nombres
+étaient faux : le relevé de la session I datait d'avant la création de LS-173 et
+LS-174, et j'ai ajouté 2 au dénominateur en oubliant que LS-135 était passée à
+Terminé entre-temps. Un compte dérivé d'un autre compte n'est pas une mesure.
+
+Relevé dans Jira en fin de session : **105 terminés sur 164**. Le journal de la
+session I garde son chiffre, exact à sa date.
+
 ## État des tickets
 
 **Aucun des trois n'est clos**, et chacun pour une raison différente : LS-19
 attend le choix de l'exploitante, LS-28 attend le médiateur qui en découle,
-LS-123 attend les contenus de LS-25. Les trois passent en cours avec leur part
-livrée.
+LS-123 attend les contenus de LS-25. Les trois sont en cours avec leur part
+livrée, vérifié dans Jira.
+
+**LS-135 est close**, LS-173 et LS-174 ouvertes et rattachées à LS-6.

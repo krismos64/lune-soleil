@@ -34,11 +34,11 @@ publiques. Six des neuf liens du pied de page ne rendent plus 404. Les trois
 tickets attendent chacun autre chose : le choix de l'exploitante, le médiateur
 qui en découle, et les contenus de marque de LS-25.
 
-Comptes **relevés dans Jira** le 3 septembre 2026, après la livraison de LS-135,
-jamais recopiés de mémoire : un chiffre écrit à la main se périme sans bruit, et
+Comptes **relevés dans Jira** le 3 septembre 2026 en fin de session, jamais
+recopiés de mémoire : un chiffre écrit à la main se périme sans bruit, et
 ce tableau a déjà annoncé l'état du 27 août plusieurs jours de trop.
 
-**104 tickets terminés sur 165, soit 63 %.** Six tickets ont été créés le
+**105 tickets terminés sur 164, soit 64 %.** Six tickets ont été créés le
 2 septembre en livrant, tous par une revue ou par une mesure :
 
 - **LS-162**, la navigation de l'administration, aucun écran n'y renvoyant vers
