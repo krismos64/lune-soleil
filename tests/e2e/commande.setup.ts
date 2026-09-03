@@ -28,6 +28,7 @@ import { Client } from "pg";
 import { encoderCommandeEnCours } from "@/lib/commande-cookie";
 import {
   COMMANDE_A_EXPEDIER_TEST,
+  DEMANDE_RETRACTATION_TEST,
   COMMANDE_FACTUREE_TEST,
   COMMANDE_TEST,
   FICHIER_COMMANDE,
@@ -403,6 +404,53 @@ preparation(
             JSON.stringify(amorcee ?? { commande: "absente" }) +
             `. Attendu numero ${COMMANDE_FACTUREE_TEST.numero}, statut ` +
             "CONFIRMEE, un paiement et une facture.",
+        );
+      }
+
+      /*
+       * LA DEMANDE DE RETRACTATION DE LS-135, greffee sur la commande facturee.
+       *
+       * ELLE REUTILISE CETTE COMMANDE plutot que d'en creer une : le
+       * remboursement d'une retractation exige un paiement encaisse ET une
+       * facture, que celle-ci porte deja. Une commande neuve dupliquerait
+       * cinquante lignes d'amorce pour le meme etat.
+       *
+       * ELLE EST `RETOUR_ATTENDU` ET NON `DEPOSEE`, ce qui est l'etat le plus
+       * DENSE de l'ecran : c'est le seul ou les quatre gestes coexistent, la
+       * preuve d'expedition, la reception, le remboursement et le refus. Une
+       * demande `DEPOSEE` n'en rendrait qu'un, et le debordement a 320 px ne
+       * serait mesure sur rien. Motif rencontre trois fois, LS-121, LS-160 puis
+       * LS-130.
+       *
+       * `recue_a` EST RENSEIGNE pour que le bouton de remboursement, avec son
+       * champ de montant, soit REELLEMENT rendu : sans l'un des deux faits de
+       * l'article L221-24, le formulaire n'apparait pas.
+       */
+      await client.query(
+        `INSERT INTO demande_retractation (
+           id, commande_id, statut, motif_client, retour_attendu_a, recue_a,
+           deposee_a
+         )
+         VALUES ($1, $2, 'RETOUR_ATTENDU'::"StatutRetractation",
+                 'TEST La taille ne convient pas.', now(), now(), now())
+         ON CONFLICT (id) DO NOTHING`,
+        [
+          DEMANDE_RETRACTATION_TEST.demandeId,
+          COMMANDE_FACTUREE_TEST.commandeId,
+        ],
+      );
+
+      /* L'AMORCE VERIFIE SON PROPRE RESULTAT, meme motif que ci-dessus. */
+      const { rows: retractation } = await client.query<{ statut: string }>(
+        "SELECT statut FROM demande_retractation WHERE id = $1",
+        [DEMANDE_RETRACTATION_TEST.demandeId],
+      );
+
+      if (retractation[0]?.statut !== "RETOUR_ATTENDU") {
+        throw new Error(
+          "Amorce de la demande de retractation incomplete : " +
+            JSON.stringify(retractation[0] ?? { demande: "absente" }) +
+            ". Attendu statut RETOUR_ATTENDU.",
         );
       }
 

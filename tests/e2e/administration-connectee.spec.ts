@@ -131,6 +131,21 @@ const ECRANS = [
     chemin: "/administration/messages",
     titre: "Messages",
   },
+  /*
+   * LA RUBRIQUE RETRACTATIONS, LS-135. La demande amorcee est `RETOUR_ATTENDU`
+   * ET son colis est marque recu : c'est l'etat le plus DENSE de l'ecran, le
+   * seul ou les quatre gestes coexistent, preuve d'expedition, reception,
+   * remboursement avec son champ de montant, et refus avec sa zone de texte.
+   *
+   * SANS CETTE DENSITE, RIEN NE SERAIT MESURE. Une demande `DEPOSEE` ne rend
+   * qu'un bouton, et le debordement a 320 px se joue precisement sur les champs
+   * de saisie qui prennent toute la largeur. Motif rencontre trois fois avant
+   * cette story, LS-121, LS-160 puis LS-130.
+   */
+  {
+    chemin: "/administration/retractations",
+    titre: "Rétractations",
+  },
 ] as const;
 
 for (const ecran of ECRANS) {

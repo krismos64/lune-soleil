@@ -69,6 +69,18 @@ export const COMMANDE_TEST = {
  * ELLE PORTE SA PROPRE VARIANTE, meme raison que la precedente : rien de
  * partage, aucun stock du catalogue de test consomme.
  */
+/**
+ * La demande de retractation amorcee sur la commande facturee, LS-135.
+ *
+ * ELLE N'A PAS SA PROPRE COMMANDE, contrairement aux amorces voisines : le
+ * remboursement exige un paiement encaisse et une facture, que
+ * `COMMANDE_FACTUREE_TEST` porte deja. Greffer coute une ligne, dupliquer en
+ * couterait cinquante pour le meme etat.
+ */
+export const DEMANDE_RETRACTATION_TEST = {
+  demandeId: "e1a2b3c4-1135-4aaa-8888-000000000001",
+} as const;
+
 export const COMMANDE_FACTUREE_TEST = {
   categorieId: "e1a2b3c4-1160-4aaa-8888-000000000001",
   produitId: "e1a2b3c4-1160-4bbb-8888-000000000002",

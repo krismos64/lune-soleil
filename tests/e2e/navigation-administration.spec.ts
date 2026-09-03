@@ -39,6 +39,7 @@ test.use({ storageState: FICHIER_SESSION_ADMINISTRATION });
 const RUBRIQUES = [
   { libelle: "Commandes", titre: "Commandes" },
   { libelle: "Expéditions", titre: "Expéditions" },
+  { libelle: "Rétractations", titre: "Rétractations" },
   { libelle: "Messages", titre: "Messages" },
   { libelle: "Nouveau produit", titre: "Nouveau produit" },
   { libelle: "Catégories", titre: "Catégories du catalogue" },
