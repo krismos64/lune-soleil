@@ -130,7 +130,10 @@ export const MOTIF_LONGUEUR_MAX = 2000;
  *
  * CE N'EST PAS UNE EXCLUSION AU SENS DE L221-28, regle L3 : il ne s'agit pas de
  * juger le PRODUIT, mais de constater qu'une commande non payee ou deja annulee
- * n'a pas de contrat a retracter. Une commande `REMBOURSEE` non plus.
+ * n'a pas de contrat a retracter. Les deux valeurs ecartees de `StatutCommande`
+ * sont `EN_ATTENTE_PAIEMENT` et `ANNULEE`, et aucune transition ne ramene une
+ * commande `LIVREE` ou `EXPEDIEE` vers elles : aucun droit ouvert ne se ferme
+ * par un changement de statut.
  */
 export const STATUTS_RETRACTABLES: ReadonlySet<string> = new Set([
   "CONFIRMEE",
@@ -344,10 +347,20 @@ function echeanceDe(
  * `ACCUSEE` ici affirmerait qu'un accuse est parti alors qu'il n'est qu'en
  * attente, ce qu'aucune trace ne pourrait justifier devant un litige.
  *
- * L'UNICITE EST TENUE PAR LA BASE, `commande_id` etant unique. La garde
- * applicative existe pour rendre un refus lisible, la contrainte reste la
- * seconde ligne de defense : entre les deux, deux envois simultanes du
- * formulaire ne creeraient qu'une demande.
+ * L'UNICITE EST TENUE PAR LA BASE SEULE, `commande_id` etant unique, ET IL N'Y
+ * A AUCUNE LECTURE PREALABLE ICI. Le commentaire d'origine en decrivait une,
+ * qui n'existait pas : releve par la revue critique du 3 septembre 2026.
+ *
+ * `creerDemandeRetractation` EST LA PREMIERE ECRITURE DE LA TRANSACTION, et
+ * cet ordre porte la correction du rattrapage. Quand elle viole l'unicite,
+ * aucune instruction ne suit dans le bloc : Prisma annule, et le `catch`
+ * EXTERNE traduit en refus lisible. Rattraper `P2002` a l'INTERIEUR puis
+ * continuer produirait le `25P02` documente sur ce depot, une violation
+ * d'unicite avortant la transaction PostgreSQL entiere.
+ *
+ * NE PAS DEPLACER CETTE CREATION APRES `consommerJeton` NI APRES
+ * `deposerEnvoi`, et ne pas « ajouter la garde manquante » : les deux
+ * rouvriraient ce piege.
  */
 export async function deposerRetractation(
   preuve: PreuveAcces,
@@ -429,10 +442,14 @@ export async function deposerRetractation(
     };
   } catch (erreur) {
     /*
-     * `P2002` EST LE DOUBLON, seconde ligne de defense de l'unicite. Il se
-     * produit quand deux envois du formulaire se croisent, la garde lue plus
-     * haut ayant vu la meme absence de demande. Le refus rendu est le meme que
-     * celui de la garde, l'utilisateur ne devant pas distinguer les deux.
+     * `P2002` EST LE SEUL REMPART CONTRE LE DOUBLON, et il se declenche aussi
+     * bien sur un second envoi tranquille que sur deux envois croises : aucune
+     * lecture prealable ne le precede, contrairement a ce que le commentaire
+     * d'origine affirmait.
+     *
+     * LE RATTRAPAGE EST HORS TRANSACTION, ET C'EST CE QUI LE REND SUR. La
+     * creation etant la premiere ecriture du bloc, son echec n'y laisse rien a
+     * annuler : le `25P02` ne peut pas se produire.
      */
     if (
       erreur instanceof Prisma.PrismaClientKnownRequestError &&

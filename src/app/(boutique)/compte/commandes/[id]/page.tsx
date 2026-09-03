@@ -365,9 +365,18 @@ export default async function PageDetailCommande({
       {etatRetractationAffichable && (
         <section className={styles.section}>
           <h2>Me rétracter</h2>
+          {/*
+           * LA MENTION DES FRAIS DE RETOUR ACCOMPAGNE CELLE DE LA
+           * RETRACTATION, PARTOUT OU ELLE APPARAIT, `frontend-design.md` :
+           * l'annoncer sans elle expose au delai de douze mois de L221-20. Ce
+           * bloc est le PREMIER endroit ou le droit est annonce, et le seul
+           * atteint par un client qui ne clique pas le lien. Omission relevee
+           * par la revue frontend du 3 septembre 2026.
+           */}
           <p className={styles.texte}>
             Vous disposez de 14 jours après réception pour changer d&apos;avis,
-            sans avoir à vous justifier.
+            sans avoir à vous justifier. Les frais de retour sont à votre
+            charge.
           </p>
           <p className={styles.texte}>
             <Link
