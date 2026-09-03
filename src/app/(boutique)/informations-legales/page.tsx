@@ -36,6 +36,8 @@ import {
   lireIdentiteLegale,
   lireMediateur,
 } from "@/lib/identite-legale";
+import { EmetteurNonConfigureError } from "@/services/facture";
+import { MENTION_FRANCHISE_TVA } from "@/lib/validation";
 import {
   ConfigurationLivraisonInvalideError,
   lireConfigurationLivraison,
@@ -74,7 +76,19 @@ export default async function PageInformationsLegales() {
   try {
     identite = lireIdentiteLegale();
   } catch (erreur) {
-    if (!(erreur instanceof IdentiteLegaleNonConfigureeError)) {
+    /*
+     * DEUX CLASSES D'ERREUR, ET N'EN ATTRAPER QU'UNE RENDAIT 500.
+     * `lireIdentiteLegale` commence par appeler `lireEmetteur`, qui leve
+     * `EmetteurNonConfigureError`, une classe DISTINCTE : il suffisait qu'une
+     * seule variable `FACTURE_*` manque pour que la page entiere tombe, y
+     * compris la section retractation qui n'en depend pas. Motif
+     * « configuration corrigee a moitie », releve par `ls-frontend-revue` le
+     * 3 septembre 2026.
+     */
+    if (
+      !(erreur instanceof IdentiteLegaleNonConfigureeError) &&
+      !(erreur instanceof EmetteurNonConfigureError)
+    ) {
       throw erreur;
     }
   }
@@ -98,7 +112,13 @@ export default async function PageInformationsLegales() {
   }
 
   return (
-    <main className={styles.page}>
+    /*
+     * `id="contenu"` EST LA CIBLE DU LIEN D'EVITEMENT de l'en-tete, et
+     * `tabIndex={-1}` porte le focus avec le defilement : sans lui la page
+     * defile mais le focus reste sur le lien. Les vingt autres pages du groupe
+     * le portent, ces deux-ci l'avaient oublie.
+     */
+    <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Informations légales</h1>
 
       <nav className={styles.sommaire} aria-label="Sections de cette page">
@@ -195,10 +215,14 @@ export default async function PageInformationsLegales() {
                  * a un oubli. Le seuil est de 85 000 EUR pour la vente de
                  * biens, a surveiller pendant l'exploitation.
                  */}
-                <dd>
-                  Non applicable, TVA non applicable au titre de l&apos;article
-                  293 B du Code général des impôts
-                </dd>
+                {/*
+                 * LA MENTION VIENT DE LA CONSTANTE CANONIQUE, celle que la
+                 * facture imprime. La reecrire produisait deux formulations a
+                 * garder d'accord, et la variante disait « Non applicable »
+                 * deux fois dans la meme phrase, sous un terme qui l'annoncait
+                 * deja. Releve par `ls-frontend-revue` le 3 septembre 2026.
+                 */}
+                <dd>{MENTION_FRANCHISE_TVA}</dd>
               </div>
             </dl>
 
@@ -240,10 +264,16 @@ export default async function PageInformationsLegales() {
          * mois : le risque depasse de loin l'inconvenient d'une section
          * incomplete avant l'ouverture.
          */}
+        {/*
+         * NE PAS ECRIRE « aucune commande n'est possible » : le tunnel est
+         * livre et fonctionnel, et l'affirmation etait FAUSSE. Un texte de page
+         * legale qui se trompe sur les conditions de la vente releve
+         * exactement de l'information incorrecte que ce ticket cherche a
+         * eviter. Releve par `ls-frontend-revue` le 3 septembre 2026.
+         */}
         <p className={styles.manquant}>
           Les conditions générales de vente sont en cours de rédaction et seront
-          publiées avant la première vente. Aucune commande n&apos;est possible
-          sur ce site tant qu&apos;elles ne le sont pas.
+          publiées avant l&apos;ouverture commerciale de la boutique.
         </p>
 
         <p className={styles.texte}>
@@ -385,8 +415,8 @@ export default async function PageInformationsLegales() {
           Un formulaire en ligne est à votre disposition pendant toute la durée
           du délai. Il est accessible depuis votre espace client, et par un lien
           personnel envoyé avec votre confirmation de commande si vous avez
-          commandé sans créer de compte. Vous recevez un accusé de réception par
-          courriel.
+          commandé sans créer de compte. Un accusé de réception vous est envoyé
+          par courriel.
         </p>
 
         <h3 className={styles.titreBloc}>Remboursement</h3>
@@ -400,6 +430,18 @@ export default async function PageInformationsLegales() {
           premier de ces deux événements : la réception de votre retour, ou la
           preuve que vous nous avez transmise de son expédition. Un numéro de
           suivi suffit.
+        </p>
+
+        <h3 className={styles.titreBloc}>Délai pour nous renvoyer le bijou</h3>
+        {/*
+         * SECOND DELAI DE QUATORZE JOURS, article L221-23, et il conditionne le
+         * remboursement du client. Il manquait : la page detaillait le delai
+         * pour se retracter sans dire qu'un autre court ensuite. Releve par
+         * `ls-frontend-revue` le 3 septembre 2026.
+         */}
+        <p className={styles.texte}>
+          Une fois votre décision déclarée, vous disposez de{" "}
+          <strong>quatorze jours</strong> pour nous renvoyer le bijou.
         </p>
 
         <h3 className={styles.titreBloc}>Frais de retour</h3>
