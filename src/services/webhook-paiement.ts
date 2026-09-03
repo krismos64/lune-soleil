@@ -45,6 +45,8 @@ import { estInterblocage, TENTATIVES_MAXIMUM } from "@/services/reservation";
 import { rendreFactureDeCommande } from "@/services/document-comptable";
 import { emettreFacture, EmetteurNonConfigureError } from "@/services/facture";
 import type { CommandeAFacturer } from "@/services/facture";
+import { deposerEnvoi } from "@/services/envoi-email";
+import { lienDocument, lienRetractation } from "@/lib/jeton-acces";
 import {
   consommerReservationEtSortirStock,
   ecrireMouvementVenteWeb,
@@ -635,7 +637,9 @@ async function emettreFactureOuAlerter(
   }
 
   try {
-    await emettreFacture(transaction, commande);
+    const facture = await emettreFacture(transaction, commande);
+
+    await deposerConfirmationAuClient(transaction, commande, facture);
   } catch (erreur) {
     if (erreur instanceof EmetteurNonConfigureError) {
       journaliserErreur("Facture non emise, emetteur non configure", erreur, {
@@ -701,6 +705,57 @@ async function emettreFactureOuAlerter(
       idCible: commande.id,
     });
   }
+}
+
+/**
+ * Depose l'email de confirmation, porteur des deux liens signes. LS-172.
+ *
+ * C'EST LE SEUL CHEMIN PAR LEQUEL LA VALEUR EN CLAIR DES JETONS ATTEINT LE
+ * CLIENT, regle L5 : la base ne garde que leur empreinte, et cette valeur
+ * n'existe qu'a l'instant de sa creation. Sans ce depot, elle etait
+ * simplement perdue, ce qui laissait un acheteur sans compte sans facture
+ * atteignable et sans moyen de se retracter, article L221-21.
+ *
+ * DANS LA TRANSACTION, PAR L'OUTBOX, ADR-033. L'intention d'envoi et la facture
+ * existent ensemble ou aucune des deux : un `deposerEnvoi` place apres le commit
+ * perdrait le message sur une panne, et un appel direct au fournisseur tiendrait
+ * la transaction pendant un aller-retour SMTP.
+ *
+ * SUR UN REJEU, LES DEUX JETONS SONT ABSENTS ET RIEN N'EST DEPOSE.
+ * `emettreFacture` ressort sur la facture existante sans reengendrer de jeton,
+ * donc `jetonAcces` et `jetonRetractation` valent `undefined`. C'est la
+ * PREMIERE des deux protections contre le doublon, la seconde etant l'unicite
+ * `envoi_en_attente_actif_unique` que `deposerEnvoi` absorbe deja.
+ *
+ * LES DEUX JETONS SONT EXIGES ENSEMBLE. En attendre un seul deposerait un
+ * message auquel `rendreModele` refuserait de donner un corps, `exiger` levant
+ * sur la variable manquante : la ligne resterait bloquee en `EN_ATTENTE` et
+ * sortirait par l'alerte, ce qui est bruyant pour un cas qui ne doit pas
+ * arriver.
+ */
+async function deposerConfirmationAuClient(
+  transaction: Prisma.TransactionClient,
+  commande: CommandeAFacturer,
+  facture: { jetonAcces?: string; jetonRetractation?: string },
+): Promise<void> {
+  if (
+    facture.jetonAcces === undefined ||
+    facture.jetonRetractation === undefined
+  ) {
+    return;
+  }
+
+  await deposerEnvoi(transaction, {
+    commandeId: commande.id,
+    destinataire: commande.emailNormalise,
+    modele: "commande-confirmee",
+    variables: {
+      numero: commande.numero,
+      lienFacture: lienDocument(facture.jetonAcces),
+      lienRetractation: lienRetractation(facture.jetonRetractation),
+    },
+    origine: "SYSTEME",
+  });
 }
 
 /**
