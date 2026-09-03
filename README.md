@@ -24,14 +24,14 @@ la phase 2.
 | 3, panier, réservation, paiement et commandes | LS-4 | LS-114 à LS-121 et LS-43 livrées, **porte de sortie franchie**, deux stories ouvertes |
 | 4, factures, avoirs, emails, expédition et contact | LS-5 | **presque terminée** : onze stories closes, dont LS-130, LS-97, LS-154 et LS-82 le 2 septembre. Quatre ouvertes, dont **trois attendent une démarche et non du code** : LS-33 ne porte plus que la souscription Mondial Relay, sa décision technique étant tranchée depuis le 28 juillet 2026, et LS-131 attend les accès de cette même API. **LS-172 livrée le 3 septembre 2026** : l'email de confirmation porte les deux liens signés, facture et rétractation, qui étaient émis puis perdus depuis LS-132 |
 | 4bis, espace client, avis et carnet d'adresses | LS-36 | **au bout de ce qui est faisable, 3 septembre 2026** : LS-54 à LS-57, LS-59, LS-60, LS-62, LS-164 et LS-167 closes, soit le socle d'authentification, le rattachement, l'historique et les factures, le carnet d'adresses, le profil, la réauthentification client et les droits RGPD. **Trois ouvertes**, LS-58, LS-61 et LS-77. Seule LS-58 dépend réellement du compte Mondial Relay : **LS-61 et LS-77 ne portent aucun lien de blocage**, vérifié dans Jira le 3 septembre 2026 contre une affirmation périmée de ce tableau. LS-61 bute en pratique sur la date de livraison que LS-131 renseignera, l'invitation partant après livraison |
-| 5, rétractation, conformité et protection des données | LS-6 | **LS-133, LS-134 et LS-135 livrées le 3 septembre 2026** : le calcul du délai, la fonctionnalité en ligne de l'article L221-21, puis la face administration, étapes 6 à 8. Trois stories ouvertes : **LS-136 débloquée** par LS-172, LS-148 bloquée par LS-141, et **LS-173 créée en livrant**, l'étape 9 de réintégration de stock n'ayant aucun chemin |
+| 5, rétractation, conformité et protection des données | LS-6 | **LS-133, LS-134 et LS-135 livrées le 3 septembre 2026** : le calcul du délai, la fonctionnalité en ligne de l'article L221-21, puis la face administration, étapes 6 à 8. Trois stories ouvertes : **LS-136 débloquée** par LS-172, LS-148 bloquée par LS-141, plus **LS-173 et LS-174 créées le 3 septembre**, l'étape 9 de réintégration de stock sans chemin et le numéro d'avoir invisible après rechargement |
 | 6, durcissement, exploitation et ouverture | LS-7 | découpée le 27 août 2026, **treize stories ouvertes**. LS-168 ajoutée le 3 septembre sur l'instabilité de la suite de bout en bout ; **LS-169 livrée le même jour**, la chaîne ne rejoue plus les tests longs sur un diff documentaire. **Huit de ces stories attendent l'achat du VPS**, LS-151 comprise, contrairement à ce qu'annonçait le journal du 3 septembre |
 
 Comptes **relevés dans Jira** le 3 septembre 2026, après la livraison de LS-135,
 jamais recopiés de mémoire : un chiffre écrit à la main se périme sans bruit, et
 ce tableau a déjà annoncé l'état du 27 août plusieurs jours de trop.
 
-**104 tickets terminés sur 163, soit 64 %.** Six tickets ont été créés le
+**104 tickets terminés sur 165, soit 63 %.** Six tickets ont été créés le
 2 septembre en livrant, tous par une revue ou par une mesure :
 
 - **LS-162**, la navigation de l'administration, aucun écran n'y renvoyant vers
