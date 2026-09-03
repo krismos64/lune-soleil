@@ -38,6 +38,7 @@ let traiterEvenementPaiement: typeof import("@/services/webhook-paiement").trait
 let deposerRetractation: typeof import("@/services/retractation").deposerRetractation;
 let lireEtatRetractation: typeof import("@/services/retractation").lireEtatRetractation;
 let engendrerJeton: typeof import("@/lib/jeton-acces").engendrerJeton;
+let empreinteJeton: typeof import("@/lib/jeton-acces").empreinteJeton;
 
 const SAISIE_DOMICILE = {
   nomClient: "TEST Camille Dupont",
@@ -187,7 +188,7 @@ beforeAll(async () => {
   ({ traiterEvenementPaiement } = await import("@/services/webhook-paiement"));
   ({ deposerRetractation, lireEtatRetractation } =
     await import("@/services/retractation"));
-  ({ engendrerJeton } = await import("@/lib/jeton-acces"));
+  ({ engendrerJeton, empreinteJeton } = await import("@/lib/jeton-acces"));
 });
 
 afterEach(async () => {
@@ -384,41 +385,48 @@ describe("depot par jeton signe, le cas sans compte", () => {
  */
 describe("les quatre conditions du jeton, testees separement", () => {
   /*
-   * LE JETON FORGE GARDE L'ALEA D'UN JETON REEL, et c'est tout le test. Sa
-   * premiere version changeait un caractere de la valeur entiere : l'empreinte
-   * changeait aussi, la ligne n'etait plus trouvee, et le refus venait
-   * d'`INTROUVABLE` et non de la signature. La mutation l'a prouve, retirer la
-   * verification de signature laissait les 22 tests VERTS.
+   * CONDITION 1 sur 4 : MODIFIE, et ce test a demande DEUX versions, comme
+   * celui de LS-132 avant lui. Le meme piege, retrouve independamment.
    *
-   * En ne remplacant que la partie signature, la ligne EXISTE en base : seule
-   * la signature peut refuser, et c'est bien la quatrieme condition de L9 qui
-   * est exercee.
+   * NI L'UNE NI L'AUTRE DES DEUX PREMIERES TENTATIVES NE PROUVAIT RIEN.
+   * `empreinteJeton` porte sur la valeur COMPLETE, signature comprise : toute
+   * alteration change l'empreinte, la ligne devient INTROUVABLE, et le refus
+   * vient de la plutot que de la signature. Neutraliser `signatureJetonValide`
+   * laissait les 22 tests VERTS, mesure par mutation.
+   *
+   * LA VERSION JUSTE POSE EN BASE L'EMPREINTE DE LA VALEUR MODIFIEE. La ligne
+   * existe donc, la portee est bonne, l'expiration est bonne, rien n'est
+   * consomme ni revoque : la signature est le SEUL motif de refus possible.
    */
-  it("refuse un jeton dont la signature ne tient pas, regle L9 modifie", async () => {
+  it("refuse un jeton dont la valeur a ete modifiee, regle L9", async () => {
     const commandeId = await commanderEtConfirmer();
     await poserLivraison(commandeId, receptionRecente());
-    const valeur = await poserJeton(commandeId);
 
+    const valeur = engendrerJeton().valeur;
     const separateur = valeur.lastIndexOf(".");
     const alea = valeur.slice(0, separateur);
     const signature = valeur.slice(separateur + 1);
+    const modifie = `${alea.slice(0, -1)}${alea.at(-1) === "A" ? "B" : "A"}.${signature}`;
 
-    // Meme longueur, meme alphabet base64url, mais ce n'est pas la signature
-    // du serveur : `timingSafeEqual` compare des tampons de taille egale.
-    const contrefaite = signature
-      .split("")
-      .map((caractere) => (caractere === "A" ? "B" : "A"))
-      .join("");
+    await client.query(
+      `INSERT INTO jeton_acces (id, commande_id, empreinte, portee, expire_a)
+       VALUES ($1, $2, $3, 'RETRACTATION'::"PorteeJeton", $4)`,
+      [
+        randomUUID(),
+        commandeId,
+        empreinteJeton(modifie),
+        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      ],
+    );
 
     const issue = await deposerRetractation(
-      { voie: "JETON", valeurJeton: `${alea}.${contrefaite}` },
+      { voie: "JETON", valeurJeton: modifie },
       { motif: null },
     );
 
     expect(issue.statut).toBe("REFUSE_ACCES");
 
-    // ET AUCUNE DEMANDE N'EST CREEE : un refus qui laisserait une trace serait
-    // pire qu'un refus, la commande existant bel et bien.
+    // AUCUNE DEMANDE CREEE : un refus qui laisserait une trace serait pire.
     const { rowCount } = await client.query(
       "SELECT 1 FROM demande_retractation WHERE commande_id = $1",
       [commandeId],
