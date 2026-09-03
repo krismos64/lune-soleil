@@ -383,20 +383,48 @@ describe("depot par jeton signe, le cas sans compte", () => {
  * plus la portee et le numero de commande nu.
  */
 describe("les quatre conditions du jeton, testees separement", () => {
+  /*
+   * LE JETON FORGE GARDE L'ALEA D'UN JETON REEL, et c'est tout le test. Sa
+   * premiere version changeait un caractere de la valeur entiere : l'empreinte
+   * changeait aussi, la ligne n'etait plus trouvee, et le refus venait
+   * d'`INTROUVABLE` et non de la signature. La mutation l'a prouve, retirer la
+   * verification de signature laissait les 22 tests VERTS.
+   *
+   * En ne remplacant que la partie signature, la ligne EXISTE en base : seule
+   * la signature peut refuser, et c'est bien la quatrieme condition de L9 qui
+   * est exercee.
+   */
   it("refuse un jeton dont la signature ne tient pas, regle L9 modifie", async () => {
     const commandeId = await commanderEtConfirmer();
     await poserLivraison(commandeId, receptionRecente());
     const valeur = await poserJeton(commandeId);
 
-    // Un caractere change, la signature ne verifie plus.
-    const falsifie = `${valeur.slice(0, -1)}${valeur.endsWith("a") ? "b" : "a"}`;
+    const separateur = valeur.lastIndexOf(".");
+    const alea = valeur.slice(0, separateur);
+    const signature = valeur.slice(separateur + 1);
+
+    // Meme longueur, meme alphabet base64url, mais ce n'est pas la signature
+    // du serveur : `timingSafeEqual` compare des tampons de taille egale.
+    const contrefaite = signature
+      .split("")
+      .map((caractere) => (caractere === "A" ? "B" : "A"))
+      .join("");
 
     const issue = await deposerRetractation(
-      { voie: "JETON", valeurJeton: falsifie },
+      { voie: "JETON", valeurJeton: `${alea}.${contrefaite}` },
       { motif: null },
     );
 
     expect(issue.statut).toBe("REFUSE_ACCES");
+
+    // ET AUCUNE DEMANDE N'EST CREEE : un refus qui laisserait une trace serait
+    // pire qu'un refus, la commande existant bel et bien.
+    const { rowCount } = await client.query(
+      "SELECT 1 FROM demande_retractation WHERE commande_id = $1",
+      [commandeId],
+    );
+
+    expect(rowCount).toBe(0);
   });
 
   it("refuse un jeton expire", async () => {
