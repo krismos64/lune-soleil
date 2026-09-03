@@ -232,8 +232,16 @@ describe("emission : le jeton nait avec la facture", () => {
       revoque_a: Date | null;
       expire_a: Date;
     }>(
+      /*
+       * LA PORTEE EST DANS LA CLAUSE DEPUIS LS-134. La confirmation emet
+       * desormais DEUX jetons, `DOCUMENT` pour la facture et `RETRACTATION`
+       * pour le droit du client sans compte : « la commande porte un jeton »
+       * est devenu faux, alors que « elle porte un jeton DOCUMENT » reste
+       * exactement ce que ce test veut dire.
+       */
       `SELECT portee, empreinte, utilise_a, revoque_a, expire_a
-       FROM jeton_acces WHERE commande_id = $1`,
+       FROM jeton_acces
+       WHERE commande_id = $1 AND portee = 'DOCUMENT'::"PorteeJeton"`,
       [commandeId],
     );
 
@@ -770,7 +778,16 @@ describe("reemission d'un jeton de document, regle L10", () => {
       id: string;
       expire_a: Date;
     }>(
-      "SELECT id, expire_a FROM jeton_acces WHERE commande_id = $1 AND revoque_a IS NULL",
+      /*
+       * RESTREINT AUX JETONS `DOCUMENT` DEPUIS LS-134. La confirmation emet
+       * aussi un jeton `RETRACTATION`, que `reemettreJetonDocument` ne doit
+       * precisement PAS revoquer, regle L6 : reemettre un lien de facture ne
+       * ferme pas le droit de retractation du client. Sans cette clause, le
+       * test exigeait la revocation d'un jeton qu'il est correct d'epargner.
+       */
+      `SELECT id, expire_a FROM jeton_acces
+       WHERE commande_id = $1 AND revoque_a IS NULL
+         AND portee = 'DOCUMENT'::"PorteeJeton"`,
       [commandeId],
     );
 
