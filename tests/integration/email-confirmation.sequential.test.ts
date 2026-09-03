@@ -257,6 +257,46 @@ describe("depot de la confirmation a la commande payee", () => {
   });
 
   /*
+   * LE REJEU APRES ENVOI REEL, ET C'EST LA GARDE DES DEUX JETONS QUI LE FERME.
+   *
+   * DEFAUT TROUVE PAR MUTATION : retirer la garde laissait les huit tests
+   * VERTS, parce que `deposerEnvoi` absorbe le `P2002` de
+   * `envoi_en_attente_actif_unique`. La SECONDE ligne de defense masquait
+   * l'absence de la premiere, motif deja en fiche sur ce depot.
+   *
+   * MAIS CET INDEX EST PARTIEL, filtre sur `EN_ATTENTE` et `ENVOI_EN_COURS` :
+   * une fois le message REELLEMENT PARTI, statut `ENVOYE`, il ne protege plus
+   * rien. Un rejeu deposerait alors un SECOND email portant
+   * `/facture/undefined` et `/retractation/undefined`, mesure : les jetons sont
+   * absents sur un rejeu et `lienDocument` ne leve pas sur `undefined`.
+   *
+   * Le client recevrait deux fois le meme message, le second avec deux liens
+   * morts vers son propre droit de retractation.
+   */
+  it("ne depose rien apres un rejeu, meme le message deja envoye", async () => {
+    const commandeId = await commander();
+    await confirmer(commandeId);
+
+    // L'envoi est reellement parti : l'index partiel ne protege plus.
+    await client.query(
+      `UPDATE envoi_en_attente SET statut = 'ENVOYE'::"StatutEnvoi"
+       WHERE commande_id = $1 AND modele = 'commande-confirmee'`,
+      [commandeId],
+    );
+
+    await confirmer(commandeId);
+
+    const { rows } = await client.query<{ statut: string }>(
+      `SELECT statut FROM envoi_en_attente
+       WHERE commande_id = $1 AND modele = 'commande-confirmee'`,
+      [commandeId],
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.statut).toBe("ENVOYE");
+  });
+
+  /*
    * CRITERE 6, LA PANNE DU FOURNISSEUR. Ce chemin n'appelle JAMAIS le
    * fournisseur : l'intention est deposee dans la transaction metier, donc
    * l'envoi reste rejouable et aucune commande n'est perdue. Il n'y a rien a
