@@ -1,0 +1,330 @@
+/*
+ * Rubrique Retractations de l'administration, LS-135.
+ *
+ * CONCU A PARTIR DE 320 px, puis elargi. Les media queries montent, elles ne
+ * descendent jamais : ce qui est ecrit hors requete est ce que voit le plus
+ * petit ecran.
+ *
+ * DES CARTES ET NON UN TABLEAU, meme choix que les messages, les commandes et
+ * les expeditions : une demande porte un statut, deux faits independants, un
+ * motif pliable et jusqu'a quatre gestes, ce qu'aucune grille de colonnes ne
+ * tient a 320 px.
+ *
+ * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons de `tokens.css`.
+ *
+ * LE CONTRASTE DEPEND DU FOND, C31 : `--ls-text-muted` donne 4,86:1 sur creme
+ * mais 4,35:1 sur sable, sous le seuil AA. Tout bloc a fond sable emploie donc
+ * `--ls-text` ou `--ls-primary`, jamais un jeton secondaire.
+ *
+ * LES BADGES DE STATUT SONT EN PETIT TEXTE, donc `--ls-accent-terracotta-deep`
+ * et jamais `--ls-accent-terracotta`, qui donne 4,35:1 sur blanc. La regle
+ * l'ecrit noir sur blanc, et le defaut a deja ete commis de bonne foi en
+ * LS-104 en suivant une version fautive de cette meme regle.
+ *
+ * `--ls-border` SUR LES CHAMPS DE SAISIE EST UNE DETTE CONNUE, portee par
+ * LS-108 : ce jeton est decrit « bordures fines, decoratif » dans `tokens.css`
+ * et passe sous le seuil AA pour la bordure d'un CONTROLE. Les huit ecrans
+ * existants l'emploient deja, et cet ecran s'aligne plutot que d'introduire un
+ * neuvieme cas particulier : la correction appartient a LS-108, qui la fera
+ * partout d'un coup avec un jeton dedie.
+ */
+
+.page {
+  padding: var(--ls-space-4);
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+.titre {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-primary);
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  font-weight: 600;
+}
+
+.introduction {
+  margin: 0 0 var(--ls-space-4);
+  color: var(--ls-text-muted);
+}
+
+/* FOND SABLE, DONC `--ls-text`, voir l'en-tete de ce fichier. */
+.avertissement {
+  margin: 0 0 var(--ls-space-4);
+  padding: var(--ls-space-3);
+  background: var(--ls-surface-sand);
+  border-radius: var(--ls-radius-md);
+  color: var(--ls-text);
+}
+
+/* FOND SABLE, DONC `--ls-text`. */
+.vide {
+  margin: 0;
+  padding: var(--ls-space-4);
+  background: var(--ls-surface-sand);
+  border-radius: var(--ls-radius-md);
+  color: var(--ls-text);
+}
+
+.liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-4);
+}
+
+.carte {
+  padding: var(--ls-space-4);
+  background: var(--ls-surface);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+}
+
+/*
+ * `flex-wrap` EST INDISPENSABLE ICI. Le badge « Remboursement en cours » et une
+ * date sur la meme ligne depassent 320 px : sans le retour a la ligne, la carte
+ * deborde horizontalement, defaut mesure en LS-171 sur un libelle voisin.
+ */
+.enTeteCarte {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ls-space-2);
+  margin-bottom: var(--ls-space-3);
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.15rem var(--ls-space-2);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-accent-terracotta-deep);
+  color: var(--ls-surface);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+/* Une demande close ne demande plus rien : le badge cesse d'alerter. */
+.badgeREMBOURSEE,
+.badgeREFUSEE {
+  background: var(--ls-primary);
+}
+
+.date {
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+}
+
+.commande {
+  margin: 0 0 var(--ls-space-1);
+  color: var(--ls-text);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.client {
+  margin: 0 0 var(--ls-space-3);
+  color: var(--ls-text-muted);
+}
+
+/*
+ * LES DEUX FAITS DE L'ARTICLE L221-24, COTE A COTE ET DE MEME POIDS. La grille
+ * ne les numerote pas et ne les ordonne pas : ils sont INDEPENDANTS, le
+ * remboursement etant du au premier qui survient.
+ *
+ * UNE SEULE COLONNE A 320 px, deux au-dela : cote a cote sur un petit ecran,
+ * les valeurs se casseraient sur trois lignes chacune.
+ */
+.faits {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--ls-space-2);
+  margin: 0 0 var(--ls-space-3);
+  padding: var(--ls-space-3);
+  background: var(--ls-surface-sand);
+  border-radius: var(--ls-radius-md);
+}
+
+.fait {
+  min-width: 0;
+}
+
+/* FOND SABLE, DONC `--ls-text` ET NON `--ls-text-muted`. */
+.faitTitre {
+  margin: 0 0 0.15rem;
+  color: var(--ls-text);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/*
+ * `overflow-wrap` PARCE QU'UN NUMERO DE SUIVI N'A AUCUNE ESPACE. Une chaine de
+ * trente caracteres sans coupure possible deborde a 320 px, defaut exactement
+ * mesure en LS-171 sur un libelle sans espace.
+ */
+.faitValeur {
+  margin: 0;
+  color: var(--ls-text);
+  overflow-wrap: anywhere;
+}
+
+.motifDecision,
+.rembourse {
+  margin: 0 0 var(--ls-space-3);
+  color: var(--ls-text);
+}
+
+.detail {
+  margin-bottom: var(--ls-space-3);
+}
+
+/* ZONE TACTILE DE 44 px sur un controle repliable. */
+.resume {
+  display: flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  color: var(--ls-accent-gold-deep);
+  cursor: pointer;
+}
+
+.corps {
+  margin: 0;
+  padding: var(--ls-space-3);
+  background: var(--ls-surface-sand);
+  border-radius: var(--ls-radius-md);
+  color: var(--ls-text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-3);
+}
+
+.groupe {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-2);
+}
+
+.libelle {
+  color: var(--ls-text);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.aide {
+  margin: 0;
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+}
+
+.champ,
+.zoneTexte {
+  width: 100%;
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-2);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  font: inherit;
+}
+
+.zoneTexte {
+  resize: vertical;
+}
+
+.bouton {
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-2) var(--ls-space-3);
+  border: 1px solid var(--ls-primary);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface);
+  color: var(--ls-primary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.boutonPrincipal {
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+}
+
+.bouton:hover:not(:disabled) {
+  border-color: var(--ls-primary-hover);
+  color: var(--ls-primary-hover);
+}
+
+.boutonPrincipal:hover:not(:disabled) {
+  background: var(--ls-primary-hover);
+  color: var(--ls-text-on-primary);
+}
+
+/*
+ * L'ETAT DESACTIVE NE REPOSE SUR AUCUNE OPACITE, meme regle que les ecrans
+ * d'authentification : `verifier-contraste.sh` compare des jetons sans calculer
+ * l'opacite, donc un `opacity: 0.5` rendrait le controle illisible sans
+ * qu'aucun controle ne le voie.
+ */
+.bouton:disabled {
+  border-color: var(--ls-border);
+  background: var(--ls-surface-sand);
+  /*
+   * `--ls-text` ET NON `--ls-text-muted`, C31 : sur sable le jeton attenue
+   * tombe a 4,35:1, sous le seuil AA. C'est le piege exact que la regle nomme,
+   * et il se commet en recopiant un bouton desactive d'un ecran a fond creme,
+   * ou le meme jeton donne 4,86:1 et tient sa promesse.
+   */
+  color: var(--ls-text);
+  cursor: not-allowed;
+}
+
+/*
+ * LA REGION LIVE RESTE DANS LE DOM MEME VIDE : un lecteur d'ecran n'annonce que
+ * ce qui CHANGE dans une region deja presente. `:empty` retirerait la boite
+ * sans retirer le noeud, ce qui est exactement l'effet voulu.
+ */
+.messageVide {
+  margin: 0;
+}
+
+.messageVide:empty {
+  display: none;
+}
+
+.messageSucces,
+.messageErreur {
+  margin: 0;
+  padding: var(--ls-space-2) var(--ls-space-3);
+  border-radius: var(--ls-radius-sm);
+  font-weight: 600;
+}
+
+.messageSucces {
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+}
+
+/*
+ * L'ERREUR NE PASSE PAS PAR LA SEULE COULEUR : le texte dit ce qui s'est passe,
+ * et la bordure epaisse appuie sans porter l'information.
+ */
+.messageErreur {
+  background: var(--ls-surface-sand);
+  border-left: 4px solid var(--ls-accent-terracotta-deep);
+  color: var(--ls-text);
+}
+
+@media (min-width: 48rem) {
+  .faits {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .actions {
+    gap: var(--ls-space-4);
+  }
+}
