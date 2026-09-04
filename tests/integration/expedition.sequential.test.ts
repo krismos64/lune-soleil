@@ -671,11 +671,20 @@ describe("lireExpedition", () => {
 });
 
 describe("listerCommandesAExpedier", () => {
-  it("ne liste que les commandes EN_PREPARATION, avec le mode CHOISI par le client", async () => {
+  /*
+   * TROIS STATUTS DEPUIS LS-181, contre le seul `EN_PREPARATION` d'avant.
+   * L'ecran porte desormais trois colonnes, et cette liste les alimente toutes.
+   *
+   * UNE COMMANDE NON PAYEE RESTE EXCLUE, et c'est la garantie que ce test
+   * conserve de sa version d'origine : elle existe en base des le tunnel, avant
+   * tout paiement, et l'afficher ferait preparer un colis pour un panier
+   * abandonne. Invariant 5.
+   */
+  it("liste les trois etats d'acheminement, jamais une commande non payee", async () => {
     const aExpedier = await commanderEtPreparer();
 
     const { varianteId } = await creerVarianteEnStock(client);
-    await passerCommande({
+    const nonPayee = await passerCommande({
       lignesCookie: [{ varianteId, quantite: 1 }],
       saisie: SAISIE_DOMICILE,
       configuration: CONFIGURATION,
@@ -684,6 +693,16 @@ describe("listerCommandesAExpedier", () => {
     const liste = await listerCommandesAExpedier();
 
     expect(liste.map((commande) => commande.id)).toEqual([aExpedier]);
+    expect(liste.map((commande) => commande.id)).not.toContain(
+      nonPayee.commandeId,
+    );
+
+    /*
+     * LE STATUT EST LU ET NON DEDUIT : c'est lui qui decide de la colonne, et
+     * l'ecran ne doit pas le recalculer depuis une autre donnee.
+     */
+    expect(liste[0]?.statut).toBe("EN_PREPARATION");
+
     /*
      * LE MODE AFFICHE DANS LA LISTE EST CELUI DE LA COMMANDE, ce que le client
      * a choisi : c'est l'information dont l'exploitante a besoin pour preparer
@@ -693,7 +712,18 @@ describe("listerCommandesAExpedier", () => {
     expect(liste[0]?.nomClient).toBe("TEST Camille Dupont");
   });
 
-  it("retire une commande de la liste une fois expediee", async () => {
+  /*
+   * UNE COMMANDE EXPEDIEE RESTE, EN CHANGEANT DE COLONNE, LS-181.
+   *
+   * CE TEST DISAIT L'INVERSE jusqu'au 4 septembre 2026, « retire une commande
+   * de la liste une fois expediee », et il avait raison pour un ecran a une
+   * seule file. Le tableau a trois colonnes montre desormais ce qui est chez le
+   * transporteur : la faire disparaitre priverait l'exploitante du suivi.
+   *
+   * CE QUI SORT VRAIMENT DE LA LISTE, c'est `LIVREE` : un colis remis ne
+   * demande plus rien.
+   */
+  it("garde une commande expediee, avec son statut change", async () => {
     const commandeId = await commanderEtPreparer();
 
     await declarerExpedition({
@@ -701,6 +731,15 @@ describe("listerCommandesAExpedier", () => {
       saisie: SAISIE_EXPEDITION,
       acteurId: administratriceId,
     });
+
+    const liste = await listerCommandesAExpedier();
+
+    expect(liste.map((commande) => commande.id)).toEqual([commandeId]);
+    expect(liste[0]?.statut).toBe("EXPEDIEE");
+
+    await client.query("UPDATE commande SET statut = 'LIVREE' WHERE id = $1", [
+      commandeId,
+    ]);
 
     expect(await listerCommandesAExpedier()).toEqual([]);
   });

@@ -29,11 +29,28 @@
   text-decoration: underline;
 }
 
+/*
+ * LE SUR-TITRE EMPLOIE `gold-deep` ET NON `terracotta`, LS-181. Un libelle de
+ * 11 px gras n'est PAS du texte large, seuil de 18,66 px : `terracotta` y donne
+ * 4,07:1, sous AA. `--ls-accent-gold-deep` sur `--ls-background` : 4,72:1.
+ */
+.surtitre {
+  margin: 0 0 var(--ls-space-1);
+  color: var(--ls-accent-gold-deep);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Serif de titre, meme jeton que le tableau de bord, LS-181. */
 .titre {
   margin: 0 0 var(--ls-space-2);
-  color: var(--ls-primary);
-  font-size: clamp(1.5rem, 5vw, 2.25rem);
-  font-weight: 600;
+  color: var(--ls-text);
+  font-family: var(--ls-police-titre);
+  font-size: clamp(1.75rem, 6vw, 2.75rem);
+  font-weight: 500;
+  line-height: 1.1;
 }
 
 .introduction {
@@ -71,6 +88,97 @@
 }
 
 /* ------------------------------------------------------------------- cartes */
+
+/* ----------------------------------------------------------- les colonnes */
+
+/*
+ * TROIS COLONNES SUR GRAND ECRAN, EMPILEES A 320 px, LS-181.
+ *
+ * `auto-fit` ET `minmax` PLUTOT QUE `repeat(3, 1fr)` : trois colonnes forcees a
+ * 320 px donneraient 100 px chacune, ou une adresse postale ne tient pas. La
+ * grille retombe donc a une colonne d'elle-meme, sans palier ecrit a la main.
+ */
+.colonnes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+  gap: var(--ls-space-4);
+  align-items: start;
+}
+
+/*
+ * LE FOND EST `--ls-surface-sand` ET LES CARTES SONT BLANCHES PAR-DESSUS. Le
+ * contraste des textes de carte reste donc mesure sur du blanc, ce qu'il etait
+ * deja : poser du texte secondaire directement sur ce fond donnerait 4,35:1
+ * pour `--ls-text-muted`, sous le seuil. Aucun texte n'est pose ici sans carte,
+ * hors le titre de colonne et l'etat vide, tous deux en `--ls-text`.
+ */
+.colonne {
+  padding: var(--ls-space-3);
+  border: 1px solid var(--ls-border);
+  background: var(--ls-surface-sand);
+}
+
+.enTeteColonne {
+  display: flex;
+  align-items: center;
+  gap: var(--ls-space-2);
+  margin-bottom: var(--ls-space-3);
+}
+
+/* `--ls-text` sur `--ls-surface-sand` : 10,83:1, AAA. */
+.titreColonne {
+  flex: 1;
+  margin: 0;
+  color: var(--ls-text);
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+/*
+ * LE COMPTEUR EST BLANC ET NON SABLE, pour se detacher du fond de colonne : sur
+ * `--ls-surface-sand`, une pastille sable serait invisible.
+ *
+ * `--ls-text` sur `--ls-surface` : 12,92:1, AAA.
+ */
+.compteurColonne {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 var(--ls-space-1);
+  border: 1px solid var(--ls-border);
+  border-radius: 999px;
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* `--ls-text` sur `--ls-surface-sand` : 10,83:1, AAA. */
+.colonneVide {
+  margin: 0;
+  padding: var(--ls-space-3) 0;
+  color: var(--ls-text);
+  font-size: 0.8125rem;
+}
+
+/*
+ * TEXTE RESERVE AUX LECTEURS D'ECRAN. Ni `display: none` ni `visibility`, qui
+ * le retireraient de l'arbre d'accessibilite donc de la lecture.
+ */
+.invisible {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
 
 .listeCommandes {
   display: grid;

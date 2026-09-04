@@ -502,3 +502,74 @@ test("Escape referme le panneau de navigation", async ({ page }) => {
   await expect(barre).toBeHidden();
   await expect(bascule).toBeFocused();
 });
+
+/**
+ * LE TABLEAU D'EXPEDITION PORTE TROIS COLONNES, LS-181, critere 8.
+ *
+ * L'ECRAN NE MONTRAIT QU'UN SEUL ETAT avant cette story, les commandes
+ * `EN_PREPARATION` : l'exploitante ne voyait ni ce qui arrive, ni ce qui est
+ * parti. L'elargissement aux trois statuts est un arbitrage de Christophe du
+ * 4 septembre 2026, et non une simple mise en forme.
+ *
+ * LE TEST COMPARE CHAQUE COMPTEUR AU NOMBRE REEL DE CARTES de sa colonne,
+ * jamais a un nombre attendu. Un nombre ecrit ici serait une seconde source de
+ * verite qu'une valeur en dur dans le composant satisferait tout autant.
+ */
+test("le tableau d'expédition porte trois colonnes comptées juste", async ({
+  page,
+}) => {
+  await page.goto("/administration/expeditions");
+
+  const releve = await page.evaluate(() =>
+    [...document.querySelectorAll("main section")].map((section) => ({
+      titre: section.querySelector("h2")?.textContent?.trim() ?? "",
+      compteur: Number(
+        section.querySelector("h2")?.nextElementSibling?.textContent?.trim(),
+      ),
+      cartes: section.querySelectorAll("li").length,
+      formulaires: section.querySelectorAll("form").length,
+    })),
+  );
+
+  expect(releve.map((colonne) => colonne.titre)).toEqual([
+    "À préparer",
+    "Prête à expédier",
+    "En transit",
+  ]);
+
+  for (const colonne of releve) {
+    expect(colonne.compteur).toBe(colonne.cartes);
+  }
+
+  /*
+   * LE GESTE N'EXISTE QUE SUR LA COLONNE DU MILIEU. Une commande payee n'est
+   * pas encore preparee, une commande partie ne repart pas : afficher le
+   * formulaire ailleurs proposerait une action que le service refuse.
+   *
+   * CE TEST NE PROUVE PAS LA SECURITE, et ne doit pas etre lu ainsi.
+   * `declarerExpedition` relit le statut EN BASE dans sa transaction : c'est
+   * la garde, et `action-sensible-gardee` la couvre. Ici on verifie que l'ecran
+   * ne PROPOSE pas un geste voue au refus.
+   */
+  const [aPreparer, prete, enTransit] = releve;
+
+  expect(aPreparer?.formulaires).toBe(0);
+  expect(enTransit?.formulaires).toBe(0);
+  expect(prete?.formulaires).toBe(prete?.cartes);
+});
+
+/**
+ * LE TABLEAU D'EXPEDITION NE DEBORDE PAS, ET C'EST L'ECRAN LE PLUS EXPOSE.
+ *
+ * Trois colonnes portant chacune des adresses postales : a 320 px elles doivent
+ * s'empiler, sans quoi une adresse tiendrait sur 100 px de large.
+ */
+test("le tableau d'expédition ne déborde pas horizontalement", async ({
+  page,
+}) => {
+  await page.goto("/administration/expeditions");
+
+  expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+    TOLERANCE_DEBORDEMENT_PX,
+  );
+});

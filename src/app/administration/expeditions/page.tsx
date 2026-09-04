@@ -23,6 +23,7 @@ import {
   AutorisationRefuseeError,
   exigerAdministratrice,
 } from "@/services/autorisation";
+import type { StatutCommande } from "@/generated/prisma/enums";
 import { listerCommandesAExpedier } from "@/services/expedition";
 import { formaterDate, LIBELLES_LIVRAISON } from "@/lib/affichage-commande";
 import { FormulaireExpedition } from "./formulaire-expedition";
@@ -77,6 +78,41 @@ function lignesAdresse(valeur: unknown): string[] {
   );
 }
 
+/**
+ * Les trois colonnes du tableau, dans l'ordre du cycle de vie d'un colis.
+ *
+ * ELLES SONT ANCREES SUR LE STATUT DE LA COMMANDE et non sur une notion propre
+ * a cet ecran : les trois valeurs viennent de `StatutCommande`, et la table de
+ * transitions de LS-121 gouverne le passage de l'une a l'autre. Inventer ici un
+ * etat « en transit » distinct ouvrirait un second vocabulaire pour la meme
+ * chose.
+ *
+ * `LIVREE` N'A PAS DE COLONNE, et c'est deliberé : un colis remis ne demande
+ * plus rien, et l'y garder ferait grossir l'ecran sans fin. Le detail de la
+ * commande porte cette information.
+ */
+const COLONNES = [
+  {
+    statut: "CONFIRMEE",
+    titre: "À préparer",
+    vide: "Aucune commande payée en attente.",
+  },
+  {
+    statut: "EN_PREPARATION",
+    titre: "Prête à expédier",
+    vide: "Aucun colis prêt à partir.",
+  },
+  {
+    statut: "EXPEDIEE",
+    titre: "En transit",
+    vide: "Aucun colis chez le transporteur.",
+  },
+] as const satisfies readonly {
+  statut: StatutCommande;
+  titre: string;
+  vide: string;
+}[];
+
 export default async function PageExpeditions() {
   const enTetes = await headers();
 
@@ -97,81 +133,149 @@ export default async function PageExpeditions() {
         Retour aux commandes
       </Link>
 
+      <p className={styles.surtitre}>Mondial Relay</p>
       <h1 className={styles.titre}>Expéditions</h1>
 
       <p className={styles.introduction}>
         {commandes.length === 0
-          ? "Aucun colis à préparer."
-          : `${commandes.length} colis à préparer, du plus ancien au plus récent.`}
+          ? "Aucune commande en cours d'acheminement."
+          : "Les trois étapes d'un colis, de la commande payée à la remise."}
       </p>
 
       {commandes.length === 0 ? (
         /*
-         * L'ETAT VIDE DIT POURQUOI ET NON SEULEMENT QU'IL EST VIDE. Une file
-         * vide est le cas NORMAL la plupart du temps : sans cette phrase, elle
-         * se lit comme un ecran casse ou un filtre mal compris.
+         * L'ETAT VIDE DIT POURQUOI ET NON SEULEMENT QU'IL EST VIDE. Un tableau
+         * vide est le cas NORMAL la plupart du temps : sans cette phrase, il se
+         * lit comme un ecran casse ou un filtre mal compris.
          */
         <p className={styles.vide}>
-          Une commande entre dans cette file quand elle est mise en préparation
-          depuis son détail. Les commandes déjà expédiées n&apos;y figurent
-          plus.
+          Une commande apparaît ici dès que son paiement est confirmé, et la
+          quitte une fois le colis remis à son destinataire.
         </p>
       ) : (
-        <ul className={styles.listeCommandes}>
-          {commandes.map((commande) => {
-            const pointRelais = lignesAdresse(commande.pointRelaisAdresse);
-            const adresse = lignesAdresse(commande.adresseLivraison);
+        <div className={styles.colonnes}>
+          {COLONNES.map((colonne) => {
+            const deLaColonne = commandes.filter(
+              (commande) => commande.statut === colonne.statut,
+            );
 
             return (
-              <li key={commande.id} className={styles.carte}>
-                <div className={styles.enTeteCarte}>
-                  <Link
-                    href={`/administration/commandes/${commande.id}`}
-                    className={styles.numero}
+              <section
+                key={colonne.statut}
+                className={styles.colonne}
+                aria-labelledby={`colonne-${colonne.statut}`}
+              >
+                <div className={styles.enTeteColonne}>
+                  <h2
+                    className={styles.titreColonne}
+                    id={`colonne-${colonne.statut}`}
                   >
-                    {commande.numero}
-                  </Link>
-                  <span className={styles.date}>
-                    {formaterDate(commande.creeA)}
+                    {colonne.titre}
+                  </h2>
+                  {/*
+                   * LE COMPTEUR EST DECORATIF, le titre de section portant deja
+                   * le nombre dans son texte masque : le faire lire donnerait
+                   * « À préparer 2, 2 commandes ».
+                   */}
+                  <span className={styles.compteurColonne} aria-hidden="true">
+                    {deLaColonne.length}
                   </span>
+                  {/*
+                   * A ZERO, RIEN N'EST ANNONCE : l'etat vide juste en dessous
+                   * dit deja « Aucun colis chez le transporteur », en toutes
+                   * lettres. Ajouter « 0 commande » ferait entendre deux fois
+                   * la meme absence.
+                   */}
+                  {deLaColonne.length > 0 ? (
+                    <span className={styles.invisible}>
+                      , {deLaColonne.length}{" "}
+                      {deLaColonne.length > 1 ? "commandes" : "commande"}
+                    </span>
+                  ) : null}
                 </div>
 
-                <p className={styles.client}>{commande.nomClient}</p>
+                {deLaColonne.length === 0 ? (
+                  <p className={styles.colonneVide}>{colonne.vide}</p>
+                ) : (
+                  <ul className={styles.listeCommandes}>
+                    {deLaColonne.map((commande) => {
+                      const pointRelais = lignesAdresse(
+                        commande.pointRelaisAdresse,
+                      );
+                      const adresse = lignesAdresse(commande.adresseLivraison);
 
-                {/*
-                 * LE MODE AFFICHE EST CELUI QUE LE CLIENT A CHOISI ET PAYE,
-                 * `Commande.modeLivraison`. C'est lui qui dit comment preparer
-                 * le colis. Le mode REELLEMENT execute se saisit plus bas et
-                 * peut differer, ADR-025 : les deux ne se confondent jamais.
-                 */}
-                <p className={styles.mode}>
-                  Mode choisi :{" "}
-                  {LIBELLES_LIVRAISON[commande.modeLivraison] ??
-                    commande.modeLivraison}
-                </p>
+                      return (
+                        <li key={commande.id} className={styles.carte}>
+                          <div className={styles.enTeteCarte}>
+                            <Link
+                              href={`/administration/commandes/${commande.id}`}
+                              className={styles.numero}
+                            >
+                              {commande.numero}
+                            </Link>
+                            <span className={styles.date}>
+                              {formaterDate(commande.creeA)}
+                            </span>
+                          </div>
 
-                {/*
-                 * LE POINT DE RETRAIT PREND LA PLACE DE L'ADRESSE quand il
-                 * existe, meme regle que le detail de commande : c'est la
-                 * destination reelle du colis.
-                 */}
-                <address className={styles.adresse}>
-                  {(pointRelais.length > 0 ? pointRelais : adresse).map(
-                    (ligne) => (
-                      <span key={ligne}>{ligne}</span>
-                    ),
-                  )}
-                </address>
+                          <p className={styles.client}>{commande.nomClient}</p>
 
-                <FormulaireExpedition
-                  commandeId={commande.id}
-                  numero={commande.numero}
-                  modeCommande={commande.modeLivraison}
-                />
-              </li>
+                          {/*
+                           * LE MODE AFFICHE EST CELUI QUE LE CLIENT A CHOISI ET PAYE,
+                           * `Commande.modeLivraison`. C'est lui qui dit comment preparer
+                           * le colis. Le mode REELLEMENT execute se saisit plus bas et
+                           * peut differer, ADR-025 : les deux ne se confondent jamais.
+                           */}
+                          <p className={styles.mode}>
+                            Mode choisi :{" "}
+                            {LIBELLES_LIVRAISON[commande.modeLivraison] ??
+                              commande.modeLivraison}
+                          </p>
+
+                          {/*
+                           * LE POINT DE RETRAIT PREND LA PLACE DE L'ADRESSE quand il
+                           * existe, meme regle que le detail de commande : c'est la
+                           * destination reelle du colis.
+                           */}
+                          <address className={styles.adresse}>
+                            {(pointRelais.length > 0
+                              ? pointRelais
+                              : adresse
+                            ).map((ligne) => (
+                              <span key={ligne}>{ligne}</span>
+                            ))}
+                          </address>
+
+                          {/*
+                           * LE FORMULAIRE N'EXISTE QUE SUR LA COLONNE DU MILIEU.
+                           *
+                           * CE N'EST PAS LA PROTECTION, et il ne faut pas le lire ainsi.
+                           * `declarerExpedition` relit le statut EN BASE dans sa
+                           * transaction et s'appuie sur `TRANSITIONS_ADMINISTRATRICE` :
+                           * une commande `CONFIRMEE` ou `EXPEDIEE` est refusee meme si
+                           * l'action est appelee directement en HTTP. Motif de LS-89, un
+                           * ecran qui n'affiche pas un bouton n'empeche personne
+                           * d'invoquer l'action.
+                           *
+                           * Ce test-ci evite d'AFFICHER un geste qui serait refuse, ce
+                           * qui est une question de justesse de l'ecran, pas de securite.
+                           */}
+                          {commande.statut === "EN_PREPARATION" ? (
+                            <FormulaireExpedition
+                              commandeId={commande.id}
+                              numero={commande.numero}
+                              modeCommande={commande.modeLivraison}
+                            />
+                          ) : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </section>
             );
           })}
-        </ul>
+        </div>
       )}
     </main>
   );
