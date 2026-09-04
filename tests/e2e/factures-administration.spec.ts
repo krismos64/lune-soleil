@@ -15,10 +15,15 @@
  * qu'une facture soit modifiee ou supprimee : le jour ou quelqu'un ajouterait un
  * bouton d'action ici, ce fichier doit rougir.
  */
+import { Client } from "pg";
+
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-import { FICHIER_SESSION_ADMINISTRATION } from "./chemin-session";
+import {
+  COMMANDE_FACTUREE_TEST,
+  FICHIER_SESSION_ADMINISTRATION,
+} from "./chemin-session";
 import {
   TOLERANCE_DEBORDEMENT_PX,
   debordementHorizontal,
@@ -34,6 +39,89 @@ const ECRAN = "/administration/factures";
  * Ce qui est mesure ici est qu'aucun document ne sort sans session.
  */
 const PIECE_INEXISTANTE = "3f2504e0-4f89-41d3-9a0c-0305e82c3310";
+
+/**
+ * L'avoir que ce fichier pose, et que la base de test ne porte pas.
+ *
+ * POURQUOI IL FAUT LE POSER ICI. `commande.setup.ts` amorce UNE facture, sans
+ * `chemin_pdf` et sans avoir : la branche `.sansPdf` etait donc la seule jamais
+ * rendue, et ni le lien de telechargement, ni le badge d'avoir, ni le montant
+ * negatif n'atteignaient axe-core ni la mesure de debordement.
+ *
+ * Le defaut n'etait pas dans le rendu, il etait dans la PREUVE : les etats que
+ * les criteres 2 et 3 demandent de verifier n'etaient couverts qu'en
+ * integration, cote service, jamais a l'ecran. Trouve par la revue d'interface.
+ *
+ * LA FIXTURE PARTAGEE N'EST PAS MODIFIEE, et c'est deliberе : elle sert cinq
+ * autres fichiers, dont l'ecran de remboursement qui compte les avoirs de cette
+ * facture. Ce fichier greffe ses donnees et les retire, donc reste maitre de ce
+ * qu'il mesure sans changer ce que les autres voient.
+ */
+const AVOIR_TEST = {
+  id: "e1a2b3c4-1184-4aaa-8888-000000000001",
+  numero: "A-TEST-0184",
+  montantCentimes: 1200,
+} as const;
+
+const CHEMIN_PDF_TEST = "factures/test-ls184.pdf";
+
+async function avecClient<T>(
+  travail: (client: Client) => Promise<T>,
+): Promise<T> {
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+
+  try {
+    return await travail(client);
+  } finally {
+    await client.end();
+  }
+}
+
+test.beforeAll(async () => {
+  await avecClient(async (client) => {
+    /*
+     * LE CHEMIN N'A PAS BESOIN DE DESIGNER UN FICHIER REEL. Ce qui est mesure
+     * ici est le RENDU du lien, pas le telechargement : la route qui sert le
+     * fichier est couverte par son propre test, et un chemin sans fichier y
+     * rend le meme 404 qu'une piece absente, ce qui est le comportement voulu.
+     */
+    await client.query(`UPDATE facture SET chemin_pdf = $2 WHERE id = $1`, [
+      COMMANDE_FACTUREE_TEST.factureId,
+      CHEMIN_PDF_TEST,
+    ]);
+
+    /*
+     * L'INSTANTANE EST RECOPIE DE LA FACTURE, jamais reconstruit : un avoir
+     * porte SON PROPRE instantane derive de celui de la facture, invariant 3,
+     * et le schema qui le relit est un `strictObject` qui refuse une forme
+     * partielle. Recopier est donc a la fois juste et sur.
+     */
+    await client.query(
+      `INSERT INTO avoir (id, facture_id, numero, montant_centimes, motif,
+                          instantane_legal, chemin_pdf, emis_a)
+       SELECT $1, id, $2, $3, 'TEST correction LS-184', instantane_legal,
+              NULL, now()
+       FROM facture WHERE id = $4
+       ON CONFLICT (id) DO NOTHING`,
+      [
+        AVOIR_TEST.id,
+        AVOIR_TEST.numero,
+        AVOIR_TEST.montantCentimes,
+        COMMANDE_FACTUREE_TEST.factureId,
+      ],
+    );
+  });
+});
+
+test.afterAll(async () => {
+  await avecClient(async (client) => {
+    await client.query(`DELETE FROM avoir WHERE id = $1`, [AVOIR_TEST.id]);
+    await client.query(`UPDATE facture SET chemin_pdf = NULL WHERE id = $1`, [
+      COMMANDE_FACTUREE_TEST.factureId,
+    ]);
+  });
+});
 
 test.describe("sans session", () => {
   test("l'ecran redirige vers la connexion sans rien rendre", async ({
@@ -191,6 +279,86 @@ test.describe("connectee en administration", () => {
      * afficherait forcement, un formulaire ne vivant pas dans la barre.
      */
     await expect(page.getByRole("main").getByRole("button")).toHaveCount(0);
+  });
+
+  /*
+   * LES DEUX BRANCHES DE PDF SONT RENDUES, ET C'EST CE QUI MANQUAIT.
+   *
+   * La fixture pose un `chemin_pdf` sur la facture partagee et un avoir sans
+   * PDF : les deux etats du critere 3 coexistent donc a l'ecran, le lien et la
+   * mention d'indisponibilite, et l'assertion d'accessibilite plus bas les
+   * traverse tous les deux.
+   */
+  test("le lien de telechargement porte le numero dans son nom accessible", async ({
+    page,
+  }) => {
+    await page.goto(ECRAN);
+
+    /*
+     * LE NOM ACCESSIBLE PORTE LE NUMERO, exigence WCAG « Link Purpose ». Sans
+     * lui, une liste de vingt pieces offre vingt liens nommes « Télécharger le
+     * PDF » : un lecteur d'ecran qui liste les liens de la page ne peut pas les
+     * distinguer, et l'utilisateur ne sait pas lequel il active.
+     */
+    const lien = page.getByRole("link", {
+      name: `Télécharger le PDF ${COMMANDE_FACTUREE_TEST.numeroFacture}`,
+    });
+
+    await expect(lien).toBeVisible();
+    await expect(lien).toHaveAttribute(
+      "href",
+      `${ECRAN}/${COMMANDE_FACTUREE_TEST.factureId}`,
+    );
+
+    /*
+     * ZONE TACTILE DE 44 px, minimum de `frontend-design.md`. Un lien de texte
+     * fait sinon la hauteur de sa ligne, environ 24 px.
+     */
+    const boite = await lien.boundingBox();
+
+    expect(boite?.height ?? 0).toBeGreaterThanOrEqual(44);
+  });
+
+  test("un avoir se distingue par son libelle, son signe et sa facture d'origine", async ({
+    page,
+  }) => {
+    await page.goto(ECRAN);
+
+    const carteAvoir = page
+      .getByRole("listitem")
+      .filter({ hasText: AVOIR_TEST.numero });
+
+    /*
+     * LE TYPE EST DIT PAR UN LIBELLE, jamais par la seule couleur ni par le
+     * seul prefixe du numero : « A-TEST-0184 » se distingue de « F-TEST-0160 »
+     * a la lecture attentive, ce qui n'est pas une distinction accessible.
+     */
+    await expect(carteAvoir.getByText("Avoir", { exact: true })).toBeVisible();
+
+    /*
+     * LE MONTANT EST NEGATIF A L'ECRAN. Il est stocke POSITIF en base,
+     * `chk_facture_avoir_borne` le comparant au total de la facture : c'est la
+     * lecture qui lui donne son sens comptable, et sans le signe un
+     * remboursement se lirait comme une recette.
+     */
+    await expect(carteAvoir.getByText(/-\s?12,00/)).toBeVisible();
+
+    /*
+     * L'AVOIR DIT LA FACTURE QU'IL CORRIGE, critere 2 : la liste etant
+     * chronologique, les deux pieces peuvent etre eloignees de plusieurs
+     * ecrans, et un avoir isole de sa facture ne veut rien dire.
+     */
+    await expect(
+      carteAvoir.getByText(
+        `Corrige la facture ${COMMANDE_FACTUREE_TEST.numeroFacture}`,
+      ),
+    ).toBeVisible();
+
+    /*
+     * SON PDF EST ABSENT, ET C'EST UN ETAT AFFICHE et non une erreur : le
+     * document existe et reste numerote, seul son rendu a echoue, LS-129.
+     */
+    await expect(carteAvoir.getByText(/PDF indisponible/)).toBeVisible();
   });
 
   test("l'ecran ne deborde pas et ne porte aucune violation d'accessibilite", async ({

@@ -122,6 +122,15 @@ export default async function PageFactures({
           <span className={styles.comptageValeur}>{vue.nombreAvoirs}</span>
         </li>
         <li className={styles.comptage}>
+          {/*
+           * « TOTAL DE LA PERIODE » ET NON « MONTANT ENCAISSE », ecart assume
+           * au prototype.
+           *
+           * Cette tuile porte une somme SIGNEE, dont les avoirs sont deduits :
+           * « montant encaissé » decrirait mal un chiffre qui baisse quand un
+           * remboursement est emis, et laisserait croire a une recette reelle.
+           * Le libelle dit ce que le nombre est, la somme des pieces affichees.
+           */}
           <span className={styles.comptageLibelle}>Total de la période</span>
           {/*
            * LE TOTAL EST CALCULE COTE SERVEUR, en centimes entiers, invariant 1.
