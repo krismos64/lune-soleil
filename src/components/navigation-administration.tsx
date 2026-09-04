@@ -82,16 +82,17 @@ export type Comptages = {
  *
  *   /administration/connexion             on n'y est pas connecte
  *   /administration/reauthentification    on y arrive par une action, jamais par choix
+ *   /administration/produits/nouveau      bouton d'action de l'ecran Catalogue
  *   /administration/commandes/[id]        et /produits/[id], ecrans de detail
  *
  * Un ecran de detail n'a pas de place dans une navigation : son URL contient un
  * identifiant, et il s'atteint depuis sa liste.
  *
- * `/administration/produits/nouveau` RESTE UNE RUBRIQUE bien que le prototype
- * en fasse un bouton d'action. La raison est le controle d'atteignabilite : la
- * route existe, et toute route doit etre navigable ou exclue en disant
- * pourquoi. La transformer en bouton demanderait un ecran « Catalogue » qui le
- * porte, ce que LS-87 livrera.
+ * `/administration/produits/nouveau` A QUITTE LA BARRE EN LS-183, arbitrage de
+ * Christophe : c'est la forme du prototype, et creer un produit se fait depuis
+ * l'ecran qui les liste. La route existe toujours et reste atteignable, par le
+ * bouton du catalogue : elle figure donc dans les EXCLUSIONS du controle
+ * d'atteignabilite, avec cette raison ecrite.
  */
 export const RUBRIQUES: readonly Rubrique[] = [
   { chemin: "/administration", libelle: "Tableau de bord" },
@@ -115,7 +116,7 @@ export const RUBRIQUES: readonly Rubrique[] = [
     libelle: "Messages",
     compteur: "messagesNonLus",
   },
-  { chemin: "/administration/produits/nouveau", libelle: "Nouveau produit" },
+  { chemin: "/administration/produits", libelle: "Catalogue" },
   { chemin: "/administration/categories", libelle: "Catégories" },
   {
     chemin: "/administration/stocks",
@@ -147,12 +148,17 @@ export const RUBRIQUES: readonly Rubrique[] = [
  * 2026 et non suppose : Catalogue, Factures et avoirs, et Clients. Le METIER
  * existe pourtant, LS-126, LS-128 et LS-129 ayant livre factures et avoirs, et
  * LS-95 la suppression de compte : ce sont les ECRANS d'administration qui
- * manquaient, personne ne pouvant aujourd'hui lister une facture ni un client.
+ * manquaient.
  *
  * LS-182 a porte ce constat puis a ete DECOUPEE le meme jour en LS-183, LS-184
  * et LS-185, une par ecran. Les clefs ci-dessous designent donc chacune la
  * story qui livrera SA rubrique, et non le ticket de constat : c'est la forme
  * utile, celle qui repond a « quand cette rubrique arrive-t-elle ».
+ *
+ * CATALOGUE A QUITTE CETTE LISTE, LS-183 l'ayant livre : une entree y reste
+ * tant que son ecran n'existe pas, et pas une minute de plus. Le sens 1 du
+ * controle d'atteignabilite le verifie dans l'autre sens, en refusant une
+ * rubrique navigable sans route.
  *
  * NE PAS INVENTER DE CLE ICI POUR COMBLER LA COLONNE. Un renvoi vers un ticket
  * qui porte autre chose est pire qu'un « sans ticket » : trois des six clefs
@@ -161,7 +167,6 @@ export const RUBRIQUES: readonly Rubrique[] = [
  */
 export const RUBRIQUES_A_VENIR = [
   { libelle: "Statistiques", ticket: "LS-64" },
-  { libelle: "Catalogue", ticket: "LS-183" },
   { libelle: "Factures et avoirs", ticket: "LS-184" },
   { libelle: "Clients", ticket: "LS-185" },
   { libelle: "Avis", ticket: "LS-61" },

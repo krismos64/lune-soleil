@@ -69,6 +69,12 @@ const ECRANS = [
     titre: "Catégories du catalogue",
   },
   {
+    /* LS-183. La liste du catalogue, qui rendait l'editeur inatteignable sans
+     * connaitre un UUID tant qu'elle n'existait pas. */
+    chemin: "/administration/produits",
+    titre: "Produits",
+  },
+  {
     chemin: "/administration/produits/nouveau",
     titre: "Nouveau produit",
   },

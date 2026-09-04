@@ -42,7 +42,9 @@ const RUBRIQUES = [
   { libelle: "Expéditions", titre: "Expéditions" },
   { libelle: "Rétractations", titre: "Rétractations" },
   { libelle: "Messages", titre: "Messages" },
-  { libelle: "Nouveau produit", titre: "Nouveau produit" },
+  /* LS-183 : « Nouveau produit » a quitte la barre pour devenir un bouton de
+   * l'ecran Catalogue, qui prend sa place ici. */
+  { libelle: "Catalogue", titre: "Produits" },
   { libelle: "Catégories", titre: "Catégories du catalogue" },
   { libelle: "Stocks et marchés", titre: "Stocks et marchés" },
   { libelle: "Connexions", titre: "Journal des connexions" },
@@ -568,6 +570,188 @@ test("le tableau d'expédition ne déborde pas horizontalement", async ({
   page,
 }) => {
   await page.goto("/administration/expeditions");
+
+  expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+    TOLERANCE_DEBORDEMENT_PX,
+  );
+});
+
+/* ==========================================================================
+ * LS-183, la liste du catalogue.
+ * ========================================================================== */
+
+/**
+ * LE TEST QUE LA STORY EXISTE POUR RENDRE POSSIBLE : ouvrir la fiche d'un
+ * produit SANS connaitre son identifiant, critere 2.
+ *
+ * AVANT CETTE STORY, `/administration/produits/[id]` n'etait atteignable qu'en
+ * saisissant un UUID : aucun ecran ne listait les produits. Modifier un prix
+ * supposait d'aller chercher l'identifiant en base.
+ *
+ * LE TEST NAVIGUE AU CLIC, jamais par `goto` vers la fiche. C'est la seule
+ * facon de prouver qu'un chemin y mene : un test qui atteint toujours sa cible
+ * directement ne peut pas decouvrir qu'aucun chemin n'existe. Motif de LS-162,
+ * « un defaut absent n'est pas un defaut empeche ».
+ */
+test("un produit s'ouvre au clic depuis le catalogue, sans saisir d'identifiant", async ({
+  page,
+}) => {
+  await page.goto("/administration");
+  await ouvrirLaBarreSiRepliee(page);
+
+  await page
+    .getByRole("navigation", { name: "Sections de l'administration" })
+    .getByRole("link", { name: /^Catalogue/ })
+    .click();
+
+  await expect(
+    page.getByRole("heading", { name: "Produits", level: 1 }),
+  ).toBeVisible();
+
+  /*
+   * LE LIEN EST CIBLE PAR SON URL ET NON PAR SON LIBELLE, qui est le NOM du
+   * produit : ancrer sur un nom lierait le test au jeu de donnees.
+   *
+   * `:not([href$="/nouveau"])` EST INDISPENSABLE, et le test l'a montre. Le
+   * bouton « Nouveau produit » pointe vers `/administration/produits/nouveau`,
+   * donc le prefixe le capture AUSSI, et il vient AVANT les cartes dans le DOM :
+   * `.first()` cliquait donc sur la creation et non sur une fiche. Le test
+   * echouait en cherchant « Informations générales » sur l'ecran de creation.
+   */
+  await page
+    .getByRole("main")
+    .locator('a[href^="/administration/produits/"]:not([href$="/nouveau"])')
+    .first()
+    .click();
+
+  /*
+   * L'EDITEUR EST ATTEINT. Son premier titre est « Informations générales », ce
+   * que la table de `administration-connectee.spec.ts` verifie aussi : les deux
+   * doivent rester d'accord.
+   */
+  await expect(
+    page.getByRole("heading", { name: "Informations générales" }),
+  ).toBeVisible();
+});
+
+/**
+ * LES BROUILLONS SONT VISIBLES, ET LES ARCHIVES DERRIERE UN FILTRE.
+ *
+ * Arbitrage de Christophe du 4 septembre 2026. Le test compare le nombre de
+ * cartes entre deux filtres plutot que d'attendre un nombre ecrit ici : un
+ * nombre attendu serait une seconde source de verite, qu'une valeur en dur dans
+ * le composant satisferait tout autant.
+ */
+test("le filtre par état change ce que le catalogue montre", async ({
+  page,
+}) => {
+  await page.goto("/administration/produits");
+
+  /* Meme exclusion que ci-dessus : le bouton de creation porte le meme prefixe. */
+  const cartes = page
+    .getByRole("main")
+    .locator('a[href^="/administration/produits/"]:not([href$="/nouveau"])');
+
+  const filtres = page.getByRole("navigation", { name: "Filtrer par état" });
+
+  /**
+   * Compte les cartes APRES que le filtre demande soit devenu courant.
+   *
+   * L'ATTENTE EST INDISPENSABLE, ET LE TEST L'A MONTRE : sans elle, `count()`
+   * s'evalue pendant la navigation et additionne les cartes de l'ancienne vue
+   * et de la nouvelle. Le total valait exactement le DOUBLE, 16 pour 8, ce qui
+   * ressemblait a un doublon de rendu alors que le HTML n'en portait aucun.
+   *
+   * Motif « fenetre de course dans un test », deja rencontre sur ce depot :
+   * une assertion qui ne dit pas QUAND elle mesure finit par mesurer un etat
+   * intermediaire.
+   */
+  async function compterApresFiltre(libelle: string): Promise<number> {
+    await filtres.getByRole("link", { name: libelle, exact: true }).click();
+    await expect(
+      filtres.getByRole("link", { name: libelle, exact: true }),
+    ).toHaveAttribute("aria-current", "page");
+
+    return cartes.count();
+  }
+
+  const vivants = await cartes.count();
+  const brouillons = await compterApresFiltre("Brouillons");
+  const publies = await compterApresFiltre("Publiés");
+
+  /*
+   * LES DEUX SOUS-ENSEMBLES REDONNENT LE TOUT. C'est ce qui prouve que le
+   * filtre partitionne au lieu de masquer arbitrairement, et qu'aucun produit
+   * vivant n'echappe aux deux vues.
+   */
+  expect(brouillons + publies).toBe(vivants);
+
+  /*
+   * LE FILTRE COURANT EST ANNONCE, et un seul a la fois : sans la seconde
+   * assertion, un ecran qui marquerait tous les filtres courants passerait.
+   */
+  await expect(filtres.locator('[aria-current="page"]')).toHaveCount(1);
+  await expect(
+    filtres.getByRole("link", { name: "Publiés", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+});
+
+/**
+ * UN FILTRE INCONNU REND L'ECRAN ORDINAIRE, jamais une erreur.
+ *
+ * Le parametre vient d'une URL, donc d'une entree non fiable : un lien perime
+ * ou une saisie a la main doit retomber sur le defaut. Un 500 sur une URL
+ * bricolee serait un defaut de robustesse, et le test le mesure sur le STATUT
+ * autant que sur le rendu.
+ */
+test("un filtre inconnu retombe sur la vue par défaut", async ({ page }) => {
+  const reponse = await page.goto(
+    "/administration/produits?statut=NIMPORTEQUOI",
+  );
+
+  expect(reponse?.status()).toBe(200);
+  await expect(
+    page.getByRole("heading", { name: "Produits", level: 1 }),
+  ).toBeVisible();
+
+  const filtres = page.getByRole("navigation", { name: "Filtrer par état" });
+  await expect(
+    filtres.getByRole("link", { name: "Tous", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+});
+
+/**
+ * « NOUVEAU PRODUIT » EST ATTEIGNABLE DEPUIS LE CATALOGUE.
+ *
+ * Il a quitte la barre en LS-183 pour devenir un bouton de cet ecran, et son
+ * EXCLUSION dans `verifier-navigation-administration.sh` repose sur ce chemin :
+ * si le bouton disparaissait, la route deviendrait inatteignable sans que le
+ * controle textuel ne le voie, son exclusion etant justement de ne pas exiger
+ * de rubrique.
+ */
+test("le bouton Nouveau produit mène à la création depuis le catalogue", async ({
+  page,
+}) => {
+  await page.goto("/administration/produits");
+
+  await page
+    .getByRole("main")
+    .getByRole("link", { name: "Nouveau produit", exact: true })
+    .click();
+
+  await expect(
+    page.getByRole("heading", { name: "Nouveau produit", level: 1 }),
+  ).toBeVisible();
+});
+
+/**
+ * LE CATALOGUE NE DEBORDE PAS, ET C'EST L'ECRAN LE PLUS CHARGE EN LIGNE.
+ *
+ * Vignette, categorie, nom, prix, declinaisons et badge sur une meme carte :
+ * a 320 px tout doit tenir ou se replier, jamais deborder.
+ */
+test("le catalogue ne déborde pas horizontalement", async ({ page }) => {
+  await page.goto("/administration/produits");
 
   expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
     TOLERANCE_DEBORDEMENT_PX,

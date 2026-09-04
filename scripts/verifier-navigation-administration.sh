@@ -46,6 +46,7 @@ ko=0
 #   /administration                     la barre y mène, c'est le point d'entrée
 #   /administration/connexion           on n'y est pas encore connecté
 #   /administration/reauthentification  on y arrive par une action, jamais par choix
+#   /administration/produits/nouveau    bouton d'action de l'écran Catalogue, LS-183
 #
 # LES ÉCRANS DE DÉTAIL SONT EXCLUS PAR LEUR FORME et non par leur nom : un
 # segment dynamique, `[id]`, porte un identifiant dans son URL et s'atteint
@@ -56,6 +57,7 @@ EXCLUSIONS="
 /administration
 /administration/connexion
 /administration/reauthentification
+/administration/produits/nouveau
 "
 
 est_exclue() {
