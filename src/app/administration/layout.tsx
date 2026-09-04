@@ -1,10 +1,11 @@
 /**
- * Layout de l'administration, LS-162.
+ * Layout de l'administration, LS-162 puis LS-181.
  *
  * IL EXISTE POUR PORTER LA BARRE DE NAVIGATION, arbitrage de Christophe du
  * 2 septembre 2026 : barre permanente plutot qu'index sur l'accueil. Sept URL a
  * connaitre par coeur ne se reglent pas en imposant un retour a l'accueil entre
- * chaque ecran.
+ * chaque ecran. LS-181 y ajoute le GABARIT, deux colonnes sur grand ecran, et
+ * le BANDEAU superieur, tous deux absents jusque-la.
  *
  * IL N'AUTORISE RIEN, ET C'EST DELIBERE. Chaque page appelle deja
  * `exigerAdministratrice` avant de rendre quoi que ce soit, et c'est LA
@@ -21,14 +22,25 @@
  *
  * CE QU'IL FAIT DE LA SESSION, il ne s'en sert QUE POUR AFFICHER. `lireIdentite`
  * ne leve pas et rend `null` sans session : la barre disparait alors, ce qui
- * evite de proposer sept liens vers des ecrans protetes a qui n'est pas
+ * evite de proposer onze liens vers des ecrans proteges a qui n'est pas
  * connecte, sur la page de connexion en particulier. Cacher la barre n'est pas
  * une protection et n'en tient pas lieu : les pages restent gardees.
+ *
+ * LES COMPTAGES SONT LUS ICI, une fois par rendu de page, et passes en props.
+ * Un composant client ne doit pas ouvrir sa propre porte vers les donnees pour
+ * afficher une pastille. Ils ne sont lus QUE SI la session porte le role : sans
+ * cela, un client inscrit ferait jouer une requete d'agregation a chaque
+ * navigation sur une barre qu'il ne verra jamais.
  */
+import Link from "next/link";
 import { headers } from "next/headers";
 
 import { NavigationAdministration } from "@/components/navigation-administration";
 import { lireIdentite } from "@/services/autorisation";
+import { lireComptages } from "@/services/tableau-bord";
+
+import { BoutonDeconnexion } from "./bouton-deconnexion";
+import styles from "./layout.module.css";
 
 export default async function LayoutAdministration({
   children,
@@ -39,16 +51,61 @@ export default async function LayoutAdministration({
    * LE ROLE EST VERIFIE, PAS SEULEMENT LA PRESENCE D'UNE SESSION. Un client
    * inscrit sur la boutique porte une session valide avec le role `CLIENT` :
    * sans ce test, la barre de l'administration s'afficherait pour lui s'il
-   * ouvrait une de ces URL, en annoncant sept ecrans auxquels il n'a pas acces.
+   * ouvrait une de ces URL, en annoncant onze ecrans auxquels il n'a pas acces.
    * Les pages le refuseraient bien, mais l'affichage aurait deja divulgue la
    * structure de l'administration. Motif « fabriquer la preuve sans le role ».
    */
   const estAdministratrice = identite?.role === "ADMINISTRATRICE";
 
+  if (!estAdministratrice) {
+    return <>{children}</>;
+  }
+
+  const comptages = await lireComptages();
+
+  /*
+   * LE NOM AFFICHE EST L'EMAIL, faute de mieux aujourd'hui : `lireIdentite` ne
+   * rend pas le nom, et l'ajouter toucherait la frontiere de session pour un
+   * gain d'affichage. La partie locale suffit a identifier la personne dans une
+   * administration a compte unique.
+   */
+  const nom = identite.email.split("@")[0] ?? identite.email;
+
   return (
-    <>
-      {estAdministratrice ? <NavigationAdministration /> : null}
-      {children}
-    </>
+    <div className={styles.gabarit}>
+      <NavigationAdministration
+        comptages={comptages}
+        nom={nom}
+        deconnexion={<BoutonDeconnexion />}
+      />
+
+      <div className={styles.colonne}>
+        {/*
+         * LE BANDEAU SUPERIEUR. Il ne porte PAS le nom de l'ecran, contrairement
+         * au prototype : le layout ne connait pas la page rendue sous lui, et le
+         * deduire du chemin dupliquerait la table des rubriques a un second
+         * endroit qui divergerait. Chaque page porte deja son titre en tete de
+         * contenu, ou il est un `h1` et non un ornement de bandeau.
+         *
+         * `role="banner"` N'EST PAS POSE ICI. Il appartient a l'en-tete de la
+         * page, et un second serait ambigu pour un lecteur d'ecran.
+         */}
+        <div className={styles.bandeau}>
+          <span className={styles.bandeauSurtitre}>Administration</span>
+
+          {/*
+           * LIEN VERS LA BOUTIQUE, et non un bouton. C'est une navigation vers
+           * une autre partie du site, ouverte dans le meme onglet : ouvrir un
+           * nouvel onglet sans le dire est une surprise, et le signaler
+           * alourdirait un lien secondaire.
+           */}
+          <Link className={styles.bandeauLien} href="/">
+            Voir la boutique
+          </Link>
+        </div>
+
+        {children}
+      </div>
+    </div>
   );
 }

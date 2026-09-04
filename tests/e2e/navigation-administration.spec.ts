@@ -37,15 +37,41 @@ test.use({ storageState: FICHIER_SESSION_ADMINISTRATION });
  * son libelle l'annonce.
  */
 const RUBRIQUES = [
+  { libelle: "Tableau de bord", titre: "Tableau de bord" },
   { libelle: "Commandes", titre: "Commandes" },
   { libelle: "Expéditions", titre: "Expéditions" },
   { libelle: "Rétractations", titre: "Rétractations" },
   { libelle: "Messages", titre: "Messages" },
   { libelle: "Nouveau produit", titre: "Nouveau produit" },
   { libelle: "Catégories", titre: "Catégories du catalogue" },
-  { libelle: "Stocks", titre: "Stocks et marchés" },
+  { libelle: "Stocks et marchés", titre: "Stocks et marchés" },
   { libelle: "Connexions", titre: "Journal des connexions" },
 ] as const;
+
+/**
+ * Ouvre le panneau de navigation quand il est replie, LS-181.
+ *
+ * SOUS 768 px LA BARRE EST DERRIERE UN BOUTON, et c'est voulu : onze rubriques
+ * empilees mangeraient l'ecran entier avant le contenu, ce qui reproduirait
+ * sous une autre forme le defaut que LS-162 a ferme. Au-dela, elle est une
+ * colonne permanente et le bouton n'existe pas.
+ *
+ * CETTE FONCTION EXISTE PARCE QUE LA SUITE TOURNE AUX TROIS LARGEURS, 320, 390
+ * et 1280. Le meme test doit passer dans les trois projets sans supposer
+ * laquelle : `isVisible` decide au lieu de comparer une largeur, ce qui reste
+ * juste si le point de bascule change.
+ *
+ * ELLE NE CACHE PAS UN ECHEC. Si le bouton est absent ET la barre invisible, le
+ * clic suivant echouera en nommant la rubrique introuvable, ce qui est le bon
+ * message : la barre est inatteignable.
+ */
+async function ouvrirLaBarreSiRepliee(page: import("@playwright/test").Page) {
+  const bascule = page.getByRole("button", { name: "Menu", exact: true });
+
+  if (await bascule.isVisible()) {
+    await bascule.click();
+  }
+}
 
 /**
  * LE TEST QUE LA STORY EXISTE POUR RENDRE POSSIBLE : atteindre chaque ecran
@@ -60,9 +86,25 @@ test("chaque écran est atteignable au clic depuis l'accueil", async ({
   await page.goto("/administration");
 
   for (const rubrique of RUBRIQUES) {
+    /*
+     * LE PANNEAU SE REFERME APRES CHAQUE CLIC sous 768 px, et c'est voulu :
+     * laisser un menu ouvert par-dessus l'ecran qu'on vient d'atteindre
+     * obligerait a le fermer a la main a chaque navigation. Il faut donc le
+     * rouvrir a chaque tour, exactement comme l'exploitante le fait.
+     */
+    await ouvrirLaBarreSiRepliee(page);
+
     await page
       .getByRole("navigation", { name: "Sections de l'administration" })
-      .getByRole("link", { name: rubrique.libelle })
+      /*
+       * LE LIEN SE CIBLE PAR LE DEBUT DE SON NOM, jamais par egalite stricte.
+       * Une rubrique a pastille porte son compteur DANS son nom accessible,
+       * « Commandes 3 (3 en attente) » : c'est voulu, un lecteur d'ecran doit
+       * entendre ce qui attend. Une egalite stricte ne trouverait alors que
+       * les rubriques sans pastille, et le test verdirait sur la moitie de la
+       * barre en silence.
+       */
+      .getByRole("link", { name: new RegExp(`^${rubrique.libelle}`) })
       .click();
 
     await expect(
@@ -84,15 +126,15 @@ test("la rubrique de l'écran ouvert est annoncée comme courante", async ({
   page,
 }) => {
   await page.goto("/administration/stocks");
+  await ouvrirLaBarreSiRepliee(page);
 
   const barre = page.getByRole("navigation", {
     name: "Sections de l'administration",
   });
 
-  await expect(barre.getByRole("link", { name: "Stocks" })).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
+  await expect(
+    barre.getByRole("link", { name: /^Stocks et marchés/ }),
+  ).toHaveAttribute("aria-current", "page");
 
   /*
    * ET UNE SEULE A LA FOIS. Sans cette seconde assertion, une barre qui
@@ -129,7 +171,9 @@ test("le détail d'une commande garde sa rubrique marquée", async ({ page }) =>
     .first()
     .click();
 
-  await expect(barre.getByRole("link", { name: "Commandes" })).toHaveAttribute(
+  await ouvrirLaBarreSiRepliee(page);
+
+  await expect(barre.getByRole("link", { name: /^Commandes/ })).toHaveAttribute(
     "aria-current",
     "page",
   );
@@ -178,6 +222,7 @@ test("les rubriques se parcourent au clavier dans l'ordre", async ({
   page,
 }) => {
   await page.goto("/administration/commandes");
+  await ouvrirLaBarreSiRepliee(page);
 
   const libelles = RUBRIQUES.map((rubrique) => rubrique.libelle);
   const rencontres: string[] = [];
@@ -199,8 +244,16 @@ test("les rubriques se parcourent au clavier dans l'ordre", async ({
         : null;
     });
 
-    if (actif && !rencontres.includes(actif)) {
-      rencontres.push(actif);
+    /*
+     * LE LIBELLE EST ISOLE DU COMPTEUR. `textContent` concatene la pastille et
+     * le texte reserve aux lecteurs d'ecran : « Commandes3 (3 en attente) ».
+     * L'ordre de tabulation se verifie sur les LIBELLES, le contenu des
+     * pastilles etant teste ailleurs et variable selon le jeu de donnees.
+     */
+    const libelle = libelles.find((attendu) => actif?.startsWith(attendu));
+
+    if (libelle && !rencontres.includes(libelle)) {
+      rencontres.push(libelle);
     }
 
     if (rencontres.length === libelles.length) break;
@@ -211,6 +264,7 @@ test("les rubriques se parcourent au clavier dans l'ordre", async ({
 
 test("la barre ne porte aucune violation d'accessibilité", async ({ page }) => {
   await page.goto("/administration/commandes");
+  await ouvrirLaBarreSiRepliee(page);
 
   const resultat = await new AxeBuilder({ page })
     .include('nav[aria-label="Sections de l\'administration"]')
@@ -218,4 +272,152 @@ test("la barre ne porte aucune violation d'accessibilité", async ({ page }) => 
     .analyze();
 
   expect(resultat.violations).toEqual([]);
+});
+
+/* ==========================================================================
+ * LS-181, la barre laterale, les pastilles et le tableau de bord.
+ * ========================================================================== */
+
+/**
+ * LA BARRE SE REPLIE SOUS 768 px ET RESTE PERMANENTE AU-DELA, critere 1.
+ *
+ * LE TEST NE COMPARE PAS UNE LARGEUR ECRITE EN DUR : il lit celle du viewport
+ * et en deduit ce qu'il doit voir. Ecrire « a 320 px le bouton existe »
+ * obligerait a trois tests presque identiques, et le projet mobile-390 les
+ * jouerait tous les trois en n'en verifiant qu'un.
+ *
+ * LES DEUX SENS SONT VERIFIES. N'exiger que la presence du bouton en petit
+ * ecran laisserait passer une barre qui resterait repliee a 1280 px, c'est-a-
+ * dire un menu permanent devenu un menu cache sans que rien ne le dise.
+ */
+test("la barre est repliée sous 768 px et permanente au-delà", async ({
+  page,
+}) => {
+  await page.goto("/administration");
+
+  const largeur = page.viewportSize()?.width ?? 0;
+  const bascule = page.getByRole("button", { name: "Menu", exact: true });
+  const barre = page.getByRole("navigation", {
+    name: "Sections de l'administration",
+  });
+
+  if (largeur < 768) {
+    await expect(bascule).toBeVisible();
+    await expect(barre).toBeHidden();
+
+    /*
+     * ET ELLE S'OUVRE VRAIMENT. Sans cette assertion, un bouton inerte
+     * passerait : la barre serait alors inatteignable en petit ecran, ce qui
+     * est le defaut d'origine de LS-162 revenu par une autre porte.
+     */
+    await bascule.click();
+    await expect(barre).toBeVisible();
+  } else {
+    await expect(bascule).toBeHidden();
+    await expect(barre).toBeVisible();
+  }
+});
+
+/**
+ * LES PASTILLES VIENNENT DES DONNEES, critere 2.
+ *
+ * LE TEST COMPARE LA PASTILLE AU CONTENU REEL DE L'ECRAN qu'elle annonce,
+ * jamais a un nombre attendu. Un nombre ecrit ici serait une seconde source de
+ * verite : il faudrait le corriger a chaque evolution du jeu de donnees, et
+ * une valeur codee en dur dans le COMPOSANT le satisferait tout autant.
+ *
+ * C'est ce qui distingue « la pastille affiche 3 » de « la pastille dit la
+ * verite ». Seul le second tient le critere.
+ */
+test("la pastille des messages compte les messages réellement non lus", async ({
+  page,
+}) => {
+  await page.goto("/administration/messages");
+  await ouvrirLaBarreSiRepliee(page);
+
+  const barre = page.getByRole("navigation", {
+    name: "Sections de l'administration",
+  });
+
+  const lien = barre.getByRole("link", { name: /^Messages/ });
+  const texteLien = (await lien.textContent()) ?? "";
+  const pastille = texteLien.match(/(\d+)/)?.[1];
+
+  /*
+   * L'ECRAN DES MESSAGES MARQUE LES NON LUS. La pastille doit valoir leur
+   * nombre ; s'il n'y en a aucun, elle ne doit pas exister du tout, « 0 »
+   * n'etant pas une information.
+   */
+  const nonLus = await page
+    .getByRole("main")
+    .getByText("Nouveau", { exact: true })
+    .count();
+
+  if (nonLus === 0) {
+    expect(pastille).toBeUndefined();
+  } else {
+    expect(Number(pastille)).toBe(nonLus);
+  }
+});
+
+/**
+ * LE TABLEAU DE BORD NE DEBORDE PAS, critere 1.
+ *
+ * C'est l'ecran le plus dense de l'administration, quatre tuiles et un panneau
+ * de liste : s'il tient a 320 px, les autres tiennent.
+ */
+test("le tableau de bord ne déborde pas horizontalement", async ({ page }) => {
+  await page.goto("/administration");
+
+  expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+    TOLERANCE_DEBORDEMENT_PX,
+  );
+});
+
+/**
+ * LE TABLEAU DE BORD NE PORTE AUCUNE VIOLATION D'ACCESSIBILITE.
+ *
+ * `axe-core` MESURE LE CONTRASTE SUR LE RENDU REEL, avec le fond effectivement
+ * herite, ce que `verifier-contraste.sh` ne peut pas voir. Les deux sont
+ * necessaires et aucun ne remplace l'autre : le script lit toute branche du
+ * CSS, celui-ci ne voit que ce qui est rendu.
+ */
+test("le tableau de bord ne porte aucune violation d'accessibilité", async ({
+  page,
+}) => {
+  await page.goto("/administration");
+
+  const resultat = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+    .analyze();
+
+  expect(resultat.violations).toEqual([]);
+});
+
+/**
+ * LES RUBRIQUES NON LIVREES NE SONT PAS DES LIENS, arbitrage du 4 septembre.
+ *
+ * ELLES ANNONCENT LA STRUCTURE COMPLETE DE L'OUTIL sans rien promettre qui
+ * n'existe : un lien vers un ecran non livre rendrait un 404 a l'exploitante.
+ * Le test verifie qu'elles sont VISIBLES et qu'aucune n'est cliquable, les
+ * deux moities important autant.
+ */
+test("les rubriques à venir sont annoncées sans être cliquables", async ({
+  page,
+}) => {
+  await page.goto("/administration");
+  await ouvrirLaBarreSiRepliee(page);
+
+  const barre = page.getByRole("navigation", {
+    name: "Sections de l'administration",
+  });
+
+  await expect(barre.getByText("Bientôt disponible")).toBeVisible();
+
+  for (const libelle of ["Statistiques", "Clients", "Paramètres"]) {
+    await expect(barre.getByText(libelle, { exact: true })).toBeVisible();
+    await expect(
+      barre.getByRole("link", { name: libelle, exact: true }),
+    ).toHaveCount(0);
+  }
 });

@@ -1,0 +1,256 @@
+/*
+ * Tableau de bord de l'administration, LS-181.
+ *
+ * CONCU A PARTIR DE 320 px, puis elargi. Les media queries montent, elles ne
+ * descendent jamais : ce qui est ecrit hors requete est ce que voit le plus
+ * petit ecran.
+ *
+ * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons d'ADR-022 et de LS-181.
+ * Les paires couleur et fond sont colocalisees, donc mesurables par
+ * `verifier-contraste.sh`.
+ */
+
+.page {
+  padding: var(--ls-space-4);
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+/* --------------------------------------------------------------- l'en-tete */
+
+/*
+ * LE SUR-TITRE EST EN TERRACOTTA ET C'EST LE SEUL ENDROIT OU IL EST PERMIS EN
+ * PETIT TEXTE... NON : il ne l'est pas. `--ls-accent-terracotta` donne 4,07:1
+ * sur creme, sous le seuil AA, et « texte large » commence a 18,66 px en gras.
+ * Un sur-titre de 11 px gras N'EST PAS du texte large, c'est l'erreur que la
+ * regle signale comme la plus facile a commettre, et que le prototype commet
+ * 35 fois.
+ *
+ * `--ls-accent-gold-deep` sur `--ls-background` : 4,72:1, AA. C'est le jeton
+ * prescrit pour ce cas exact.
+ */
+.surtitre {
+  margin: 0 0 var(--ls-space-1);
+  color: var(--ls-accent-gold-deep);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/*
+ * LE TITRE EST EN SERIF, jeton `--ls-police-titre`. C'est ce contraste entre
+ * serif de titre et sans-serif de texte qui porte le caractere de la marque,
+ * bien plus que la couleur.
+ *
+ * `clamp` PLUTOT QU'UNE MEDIA QUERY : la taille suit la largeur en continu, ce
+ * qui evite un saut brutal a 768 px. La borne basse tient sur 320 px.
+ */
+.titre {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-text);
+  font-family: var(--ls-police-titre);
+  font-size: clamp(1.75rem, 6vw, 2.75rem);
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.introduction {
+  margin: 0 0 var(--ls-space-5);
+  color: var(--ls-text-muted);
+}
+
+/* ----------------------------------------------------------------- les tuiles */
+
+/*
+ * `auto-fit` ET `minmax` PLUTOT QUE DES COLONNES FIXES. La grille passe de une
+ * a quatre colonnes selon la place, sans qu'aucun palier ne soit ecrit : a
+ * 320 px les tuiles s'empilent, a 1280 px elles tiennent sur une ligne. Ecrire
+ * les paliers a la main obligerait a les reprendre a chaque tuile ajoutee.
+ */
+.tuiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: var(--ls-space-3);
+  margin-bottom: var(--ls-space-6);
+}
+
+/*
+ * LE FILET SUPERIEUR EST TOUJOURS PRESENT, neutre par defaut. Le poser
+ * seulement sur les tuiles colorees decalerait les autres de 3 px vers le bas,
+ * et la rangee ne serait plus alignee.
+ */
+.tuile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-1);
+  padding: var(--ls-space-4);
+  border: 1px solid var(--ls-border);
+  border-top: 3px solid var(--ls-border);
+  background: var(--ls-surface);
+}
+
+/*
+ * LE FILET COLORE N'EST QUE DECORATIF, et c'est ce qui le rend acceptable.
+ * `--ls-accent-terracotta` est interdit pour du TEXTE en petite taille ; en
+ * filet il ne porte aucune information, la precision sous le chiffre disant en
+ * toutes lettres ce qui se passe. `frontend-design.md` autorise ce jeton pour
+ * les filets et le decor.
+ */
+.tuileUrgente {
+  border-top-color: var(--ls-accent-terracotta);
+}
+
+.tuileRecette {
+  border-top-color: var(--ls-success);
+}
+
+/* `--ls-text-muted` sur `--ls-surface` : 5,19:1, AA. */
+.tuileLibelle {
+  color: var(--ls-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+/* `--ls-text` sur `--ls-surface` : 12,92:1, AAA. */
+.tuileValeur {
+  color: var(--ls-text);
+  font-family: var(--ls-police-titre);
+  font-size: 2.25rem;
+  font-weight: 500;
+  line-height: 1.1;
+  /*
+   * `overflow-wrap` PARCE QU'UN MONTANT PEUT ETRE LONG. « 1 234,56 € » sur une
+   * tuile de 13 rem tient, mais la borne haute du chiffre d'affaires n'est pas
+   * connue : mieux vaut une coupure qu'un debordement.
+   */
+  overflow-wrap: anywhere;
+}
+
+.tuilePrecision {
+  color: var(--ls-text-muted);
+  font-size: 0.75rem;
+}
+
+/* ---------------------------------------------------------------- le panneau */
+
+.panneau {
+  padding: var(--ls-space-4);
+  border: 1px solid var(--ls-border);
+  background: var(--ls-surface);
+}
+
+/* Meme raison que `.surtitre` : gold-deep et non terracotta en petit texte. */
+.panneauSurtitre {
+  margin: 0 0 var(--ls-space-1);
+  color: var(--ls-accent-gold-deep);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.panneauTitre {
+  margin: 0 0 var(--ls-space-4);
+  color: var(--ls-text);
+  font-family: var(--ls-police-titre);
+  font-size: 1.5rem;
+  font-weight: 500;
+}
+
+.vide {
+  margin: 0;
+  color: var(--ls-text-muted);
+}
+
+.liste {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * L'ENTREE EST EN COLONNE A 320 px, EN LIGNE AU-DELA. Le libelle « 2 commandes
+ * à préparer » et son action ne tiennent pas cote a cote sur 320 px : les
+ * mettre en ligne d'office couperait l'un des deux.
+ */
+.entree {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ls-space-2) var(--ls-space-3);
+  padding: var(--ls-space-3) 0;
+  border-top: 1px solid var(--ls-border);
+}
+
+.entree:first-child {
+  border-top: 0;
+}
+
+/*
+ * LA PASTILLE RONDE, decorative : le libelle a cote porte deja le nombre en
+ * toutes lettres, « 2 commandes à préparer ». La faire lire donnerait « 2, 2
+ * commandes à préparer ».
+ *
+ * `--ls-primary-hover` sur `--ls-admin-pastille` : 9,33:1, AAA.
+ */
+.entreeNombre {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--ls-admin-pastille);
+  color: var(--ls-primary-hover);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.entreeLibelle {
+  flex: 1;
+  /* `min-width` autorise la coupure plutot que le debordement. */
+  min-width: 0;
+  color: var(--ls-text);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * ZONE TACTILE DE 44 px. C'est le lien le plus clique de l'ecran, et sur un
+ * telephone tenu d'une main sur un stand il doit se viser sans effort.
+ *
+ * `--ls-accent-gold-deep` sur `--ls-surface` : 5,04:1, AA.
+ */
+.entreeAction {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  padding: 0 var(--ls-space-2);
+  color: var(--ls-accent-gold-deep);
+  font-weight: 600;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+.entreeAction:hover {
+  color: var(--ls-primary-hover);
+}
+
+/*
+ * TEXTE RESERVE AUX LECTEURS D'ECRAN. Ni `display: none` ni
+ * `visibility: hidden`, qui le retireraient de l'arbre d'accessibilite et donc
+ * de la lecture, ce qui est l'inverse du but.
+ */
+.invisible {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
