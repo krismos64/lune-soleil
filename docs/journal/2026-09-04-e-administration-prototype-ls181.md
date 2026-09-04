@@ -1,6 +1,6 @@
 # 4 septembre 2026, session E : l'administration ressemble enfin au prototype, LS-181
 
-Livrée, commit `32b2972`. Le constat de départ est de Christophe, en testant
+Livrée, trois commits, `32b2972`, `c3ac84f` et `662e5d1`. Le constat de départ est de Christophe, en testant
 l'administration : « visuellement très décevant par rapport au prototype ».
 
 Vingt-trois stories ont livré les **fonctions** de l'administration. Personne
@@ -94,15 +94,16 @@ colocalisées dans une règle.
 | Contrôle | Résultat |
 | --- | --- |
 | Vitest | **1123 tests verts**, 73 fichiers, dont 10 neufs sur les comptages |
-| Playwright | **41 tests verts** sur la navigation, aux trois largeurs |
-| Suite complète de bout en bout | 812 verts, 2 échecs de LS-168 reproduits hors de cette story |
-| `verifier-contraste.sh` | **128 paires** mesurées, contre 81 avant |
+| Playwright, navigation | **47 tests verts**, aux trois largeurs, 2 sautés à 1280 px |
+| Suite complète de bout en bout | **830 verts, aucun échec** |
+| `verifier-contraste.sh` | **129 paires** mesurées, contre 81 avant |
 | axe-core | vert sur la barre et le tableau de bord, aux trois largeurs |
 | Débordement horizontal | nul, mesuré par `getBoundingClientRect` |
 | `verifier-regles.sh`, `verifier-navigation-administration.sh` | verts |
 
-**Quatre mutations prouvent les tests neufs**, chacune attrapée par le seul test
-qui la vise et non par la suite entière :
+**Six mutations prouvent les tests neufs**, chacune attrapée par le seul test
+qui la vise et non par la suite entière, ce qui écarte le motif « mutation trop
+brutale » :
 
 | Mutation | Test qui rougit |
 | --- | --- |
@@ -110,31 +111,94 @@ qui la vise et non par la suite entière :
 | Dater la recette sur la commande | « écarte un paiement confirmé un autre jour » |
 | Pastille à une valeur en dur | « la pastille compte les messages réellement non lus » |
 | Barre jamais repliée | « la barre est repliée sous 768 px », aux deux largeurs mobiles |
+| Focus non rendu à la fermeture | « le focus ne se perd pas », qui rend `"body"`, le défaut exact |
+| Formulaire sur les trois colonnes | « le tableau d'expédition porte trois colonnes comptées juste » |
 
-Les deux échecs de la suite complète sont ceux de **LS-168**, le fond de bruit
-des plafonds d'authentification quand plusieurs fichiers s'inscrivent en
-parallèle. `compte-profil.spec.ts` passe intégralement joué seul, 26 tests
-verts, et cette story ne touche pas ce fichier.
+**Une mutation a aussi prouvé un contrôle de script** : donner un `chemin` à une
+rubrique « à venir » fait échouer le sens 4 neuf de
+`verifier-navigation-administration.sh`.
+
+Le fond de bruit de **LS-168** s'est manifesté deux fois pendant la session, sur
+`compte-profil.spec.ts`, un fichier que cette story ne touche pas : il passe
+intégralement joué seul, 26 tests verts. La dernière exécution complète est
+verte de bout en bout.
+
+## La revue d'interface a trouvé six défauts
+
+`ls-frontend-revue` est passée avant clôture, comme le ticket l'exige. Deux
+défauts de correction, un d'accessibilité, trois de justesse.
+
+**Le focus se perdait à chaque navigation au clavier**, sous 768 px. Activer une
+rubrique referme le panneau, ce qui applique `display: none` à l'élément
+focalisé : le focus retombait sur `body` et la tabulation repartait du haut du
+document. Motif « focus sur un élément détaché », déjà en fiche avec
+`revalidatePath`. Le test clavier existant ne le voyait pas, il tabule sans
+jamais **activer** de lien.
+
+**Les initiales ne pouvaient jamais rendre deux lettres.** L'entrée est la partie
+locale d'une adresse, `stacy.menendez`, qui ne contient aucun espace : la
+découpe sur `\s+` rendait toujours un seul mot. Vérifié par exécution. Motif
+« cible de test inexistante », le commentaire décrivait un cas, « SM Stacy
+Menendez », qui ne pouvait pas se produire.
+
+**Le `h2` de la barre précédait le `h1` de chaque page**, le layout rendant la
+barre avant le contenu. `axe-core` ne l'attrape pas : sa règle `heading-order`
+est classée `best-practice` et n'appartient à aucun des tags WCAG employés par
+la suite. Son vert ne disait rien sur ce point.
+
+**`Escape` ne fermait pas le panneau**, alors que `aria-expanded` et
+`aria-controls` annoncent un motif de divulgation. La correction a échoué au
+premier essai : le gestionnaire posé sur le `nav` ne voit jamais la frappe, le
+focus restant sur le bouton, qui est **hors** du `nav`. Il vit désormais sur une
+enveloppe en `display: contents`.
+
+**Deux tuiles ne s'adaptaient pas au cas nul**, « 0 / Étiquette à générer » et un
+filet vert de recette allumé sur « 0,00 € ». Un marqueur toujours allumé ne
+marque plus rien.
+
+**Six décomptes de commentaires étaient faux** et une annotation de contraste
+nommait le mauvais fond. Les deux paires sont conformes, mais C31 dit qu'un
+rapport ne vaut que pour **un** fond : une annotation fausse rend fausse la
+prochaine paire écrite par recopie.
+
+## Le tableau d'expédition, dernier critère
+
+Arbitrage de Christophe : traiter le kanban dans cette story plutôt que d'ouvrir
+un ticket. **La requête passe de un à trois statuts**, ce qui élargit ce que
+l'écran montre et n'est donc pas qu'une mise en forme.
+
+**Le formulaire ne s'affiche que sur la colonne du milieu, et ce n'est pas la
+protection.** `declarerExpedition` relit le statut en base dans sa transaction :
+une commande `CONFIRMEE` ou `EXPEDIEE` est refusée même appelée directement en
+HTTP. Le test d'affichage évite de proposer un geste voué au refus.
+
+**Deux tests d'intégration disaient l'inverse**, et ils avaient raison pour un
+écran à une seule file. Réécrits en gardant leur garantie d'origine : une
+commande non payée reste exclue, invariant 5.
 
 ## Ce qui n'est pas fait
-
-**Les écrans Commandes, Stocks et Expéditions gardent leur mise en forme
-actuelle.** Le ticket demandait que « Expéditions et Tableau de bord portent
-leur mise en forme propre » : seul le tableau de bord est traité. Le kanban à
-trois colonnes des expéditions reste à faire, et la story reste **ouverte** sur
-ce critère plutôt que d'être close à tort.
 
 **Le nom affiché est la partie locale de l'email**, `lireIdentite` ne rendant
 pas le nom. Suffisant pour une administration à compte unique, à reprendre si
 l'identité de session s'élargit.
 
+**Les écrans Commandes et Stocks gardent leur mise en forme actuelle.** Le
+ticket ne nommait qu'Expéditions et Tableau de bord, « les deux plus éloignés du
+rendu actuel », et ils sont traités.
+
+**Aucune frontière d'erreur ne couvre le nouveau layout**, relevé par la revue :
+`lireComptages` lève quand la requête ne rend rien, et un `error.tsx` ne
+rattrape pas l'erreur du layout de son propre segment. Une base injoignable
+envoie donc l'administration sur `global-error.tsx`. Hors périmètre de cette
+story, à ticketer.
+
 ## État des tickets
 
-**LS-181 reste EN COURS**, un critère sur treize n'étant pas rempli, la mise en
-forme propre de l'écran Expéditions. **LS-182 est créée**, sous LS-3, Medium.
+**LS-181 est TERMINÉE**, les treize critères remplis. **LS-182 est créée**, sous
+LS-3, Medium : trois écrans du prototype sans aucun ticket.
 
 ## Prochaine étape
 
-Terminer LS-181 par l'écran Expéditions, puis **LS-180**, la story jumelle pour
-l'espace client, qui partagera le gabarit posé ici. Côté code sans dépendance
-externe, **LS-137** et **LS-147** restent les deux suivantes.
+**LS-180**, la story jumelle pour l'espace client, qui partagera le gabarit posé
+ici. Côté code sans dépendance externe, **LS-137** et **LS-147** restent les
+deux suivantes.
