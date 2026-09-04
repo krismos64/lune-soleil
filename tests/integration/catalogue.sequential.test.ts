@@ -503,6 +503,61 @@ describe("listerProduitsAdministration", () => {
   });
 
   /**
+   * UN MEDIA NON TRAITE NE DONNE AUCUNE VIGNETTE, trouve par la revue.
+   *
+   * LE DEFAUT QU'IL FERME. Un media `EN_ATTENTE` ou `ECHOUE` n'a AUCUN fichier
+   * sous le volume, C8 : remonter son chemin ferait construire une URL, et
+   * l'ecran afficherait l'icone d'image cassee du navigateur la ou il doit
+   * montrer un emplacement vide.
+   *
+   * LE CAS EST LE CHEMIN NOMINAL DE LA CREATION, pas un cas limite : un media
+   * televerse vaut `EN_ATTENTE` par defaut, et la publication exige
+   * `mediasNonTraites === 0`. Un media non traite ne peut donc exister QUE sur
+   * un brouillon ou un archive, c'est-a-dire exactement ce que cet ecran est le
+   * seul a lister.
+   *
+   * AUCUNE DONNEE DE DEVELOPPEMENT NE LE PORTE, mesure : les deux medias en
+   * base sont `TRAITE`. Meme motif que le produit sans variante plus haut,
+   * « cible de test inexistante », et il s'est reproduit dans la meme story.
+   */
+  it("ne remonte pas la vignette d'un média non traité", async () => {
+    const categorie = await catalogue.creerCategorie({ nom: "Photos" });
+    const produit = await catalogue.creerProduit({
+      nom: "Pièce en cours de photo",
+      categorieId: categorie.id,
+    });
+
+    await client.query(
+      `INSERT INTO media (id, produit_id, chemin, texte_alternatif, ordre,
+                          statut_traitement, cree_a)
+       VALUES (gen_random_uuid(), $1, 'produits/test-en-attente/', 'Test', 1,
+               'EN_ATTENTE', now())`,
+      [produit.id],
+    );
+
+    const enAttente = await catalogue.listerProduitsAdministration();
+    expect(
+      enAttente.find((ligne) => ligne.id === produit.id)?.mediaChemin,
+    ).toBeNull();
+
+    /*
+     * ET LA VIGNETTE APPARAIT DES QUE LE TRAITEMENT ABOUTIT. Sans cette
+     * seconde moitie, une jointure qui ne remonterait JAMAIS de media
+     * passerait le test : le filtre serait alors trop large sans que rien ne
+     * le dise.
+     */
+    await client.query(
+      "UPDATE media SET statut_traitement = 'TRAITE' WHERE produit_id = $1",
+      [produit.id],
+    );
+
+    const traite = await catalogue.listerProduitsAdministration();
+    expect(traite.find((ligne) => ligne.id === produit.id)?.mediaChemin).toBe(
+      "produits/test-en-attente/",
+    );
+  });
+
+  /**
    * L'ORDRE SUIT LA DERNIERE MODIFICATION, le plus recent d'abord.
    *
    * C'est l'ordre du travail : ce qu'on vient de toucher est ce qu'on rouvre.

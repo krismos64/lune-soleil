@@ -590,8 +590,16 @@ export type ProduitAdministration = {
   prixMinimumCentimes: number | null;
   /** Variantes non archivees, `0` disant « ce produit n'a rien a vendre ». */
   variantesVivantes: number;
+  /**
+   * Chemin du media principal, deja suffixe d'une barre, `null` sans photo
+   * SERVABLE.
+   *
+   * AUCUN `mediaTexteAlternatif` ICI, contrairement a la lecture publique. La
+   * vignette de l'administration est DECORATIVE, le lien voisin portant deja le
+   * nom du produit : le texte alternatif y serait lu deux fois. Le remonter
+   * sans l'employer serait du bruit, releve par la revue d'interface.
+   */
   mediaChemin: string | null;
-  mediaTexteAlternatif: string | null;
 };
 
 /**
@@ -621,6 +629,22 @@ export type ProduitAdministration = {
  * `archivee_a IS NULL` PORTE SUR LA VARIANTE, jamais sur le produit : une
  * variante archivee ne compte ni dans le prix ni dans le nombre, alors que son
  * PRODUIT reste listable. Les deux archivages sont distincts, C13.
+ *
+ * `statut_traitement = 'TRAITE'` SUR LE MEDIA, ET C'EST UNE CORRECTION. Un
+ * media `EN_ATTENTE` ou `ECHOUE` n'a AUCUN fichier sous le volume, C8 : lui
+ * fabriquer une URL produirait l'icone d'image cassee du navigateur la ou
+ * l'ecran doit montrer un emplacement vide.
+ *
+ * LA LECTURE PUBLIQUE N'A PAS CE FILTRE, ET ELLE A RAISON : son
+ * `WHERE p.statut = 'ACTIF'` garantit deja des medias traites, la publication
+ * exigeant `mediasNonTraites === 0`. Recopier sa jointure ICI a donc repris la
+ * forme en LAISSANT TOMBER l'hypothese qui la rendait juste, cet ecran etant le
+ * seul a lister des brouillons. Motif « recopier une forme en changeant son
+ * hypothese ».
+ *
+ * LE FILTRE VIT DANS LA JOINTURE ET NON DANS LA PAGE, ce qui garde le contrat
+ * lisible : `mediaChemin` non nul implique un fichier servable, sans qu'aucun
+ * appelant n'ait a s'en souvenir.
  */
 export async function listerProduitsAdministration(
   client: ClientBase,
@@ -663,7 +687,6 @@ export async function listerProduitsAdministration(
       prixMinimumCentimes: bigint | number | null;
       variantesVivantes: bigint | number;
       mediaChemin: string | null;
-      mediaTexteAlternatif: string | null;
     }[]
   >`
     SELECT
@@ -675,15 +698,14 @@ export async function listerProduitsAdministration(
       p.modifie_a        AS "modifieA",
       min(v.prix_centimes)          AS "prixMinimumCentimes",
       count(v.id)                   AS "variantesVivantes",
-      m.chemin           AS "mediaChemin",
-      m.texte_alternatif AS "mediaTexteAlternatif"
+      m.chemin           AS "mediaChemin"
     FROM produit p
     JOIN categorie c ON c.id = p.categorie_id
     LEFT JOIN variante v ON v.produit_id = p.id AND v.archivee_a IS NULL
     LEFT JOIN media m ON m.produit_id = p.id AND m.ordre = 1
+      AND m.statut_traitement = 'TRAITE'
     ${conditionStatut}
-    GROUP BY p.id, p.nom, c.nom, p.statut, p.publie_a, p.modifie_a,
-             m.chemin, m.texte_alternatif
+    GROUP BY p.id, p.nom, c.nom, p.statut, p.publie_a, p.modifie_a, m.chemin
     ORDER BY p.modifie_a DESC
   `;
 

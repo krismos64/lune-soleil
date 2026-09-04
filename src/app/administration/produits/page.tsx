@@ -91,7 +91,22 @@ const FILTRES: readonly Filtre[] = [
   { valeur: "ARCHIVE", libelle: "Archivés", statuts: ["ARCHIVE"] },
 ];
 
-/** Ce que chaque statut affiche, libelle et classe de badge. */
+/**
+ * Ce que chaque statut affiche, libelle et classe de badge.
+ *
+ * L'ACCORD PORTE SUR « LE PRODUIT », d'ou « Publié » et « Archivé » au
+ * masculin. L'editeur de fiche accorde au feminin, « Publiée », et les deux
+ * sont justes : ses explications disent « Cette fiche est visible dans la
+ * boutique », quand cet ecran liste des PRODUITS. Uniformiser rendrait l'un des
+ * deux faux.
+ *
+ * Releve par la revue d'interface comme un ecart de vocabulaire possible entre
+ * deux ecrans qu'on enchaine ; verifie, chacun accorde sur ce qu'il nomme.
+ *
+ * `Record<StatutProduit, ...>` EXHAUSTIF ET NON UN TERNAIRE : une quatrieme
+ * valeur d'enum casserait la compilation au lieu de rendre un badge vide. Motif
+ * « un enum ajoute casse l'affichage », deja en fiche sur ce depot.
+ */
 const BADGES: Record<StatutProduit, { libelle: string; classe: string }> = {
   ACTIF: { libelle: "Publié", classe: "badgeActif" },
   BROUILLON: { libelle: "Brouillon", classe: "badgeBrouillon" },
@@ -143,11 +158,18 @@ export default async function PageCatalogue({
         </Link>
       </div>
 
-      <p className={styles.introduction}>
-        {produits.length === 0
-          ? "Aucun produit dans cette vue."
-          : `${produits.length} ${produits.length > 1 ? "produits" : "produit"}, du plus récemment modifié au plus ancien.`}
-      </p>
+      {/*
+       * L'INTRODUCTION SE TAIT QUAND LA LISTE EST VIDE, correction de la revue.
+       * Le bloc `vide` plus bas dit deja tout, et avec plus de precision : deux
+       * messages superposes se contredisaient presque, « aucun produit dans
+       * cette vue » suggerant un filtre la ou il n'y en avait pas.
+       */}
+      {produits.length > 0 ? (
+        <p className={styles.introduction}>
+          {produits.length} {produits.length > 1 ? "produits" : "produit"}, du
+          plus récemment modifié au plus ancien.
+        </p>
+      ) : null}
 
       {/*
        * LES FILTRES SONT DES LIENS ET NON DES BOUTONS. L'etat est dans l'URL,
@@ -223,6 +245,15 @@ export default async function PageCatalogue({
                      * LA PLACE EST RESERVEE PAR LE CSS : `.cadreImage` fixe
                      * 64 par 64 et `object-fit: cover` recadre, ce qui stabilise
                      * la carte sans rien affirmer du ratio reel.
+                     *
+                     * LE JPEG SEUL, SANS `<picture>` A TROIS SOURCES, et c'est
+                     * delibere. Un `<img src>` ne negocie aucun format : servir
+                     * l'AVIF directement casserait l'image pour qui ne le
+                     * supporte pas. Le `<picture>` du catalogue public existe
+                     * parce que le poids y compte vraiment, sur des images
+                     * pleine largeur ; ici quarante vignettes de 64 px pesent
+                     * moins que le gain de complexite. Ne pas « harmoniser »
+                     * avec la boutique sans mesurer ce que cela coute.
                      */
                     // eslint-disable-next-line @next/next/no-img-element -- fichiers servis par Nginx depuis un volume, hors de la portee de l'optimiseur de Next.js
                     <img
