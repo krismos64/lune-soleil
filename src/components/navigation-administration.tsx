@@ -143,12 +143,16 @@ export const RUBRIQUES: readonly Rubrique[] = [
  * LE TICKET QUI LIVRERA CHACUNE EST ECRIT, pour que cette liste ne devienne pas
  * un cimetiere : une entree sans ticket n'a rien a faire ici.
  *
- * TROIS D'ENTRE ELLES N'ONT AUCUN TICKET, constate dans Jira le 4 septembre
+ * TROIS D'ENTRE ELLES N'AVAIENT AUCUN TICKET, constate dans Jira le 4 septembre
  * 2026 et non suppose : Catalogue, Factures et avoirs, et Clients. Le METIER
  * existe pourtant, LS-126, LS-128 et LS-129 ayant livre factures et avoirs, et
  * LS-95 la suppression de compte : ce sont les ECRANS d'administration qui
- * manquent, personne ne pouvant aujourd'hui lister une facture ni un client.
- * LS-182 porte ce constat, cree en livrant cette story.
+ * manquaient, personne ne pouvant aujourd'hui lister une facture ni un client.
+ *
+ * LS-182 a porte ce constat puis a ete DECOUPEE le meme jour en LS-183, LS-184
+ * et LS-185, une par ecran. Les clefs ci-dessous designent donc chacune la
+ * story qui livrera SA rubrique, et non le ticket de constat : c'est la forme
+ * utile, celle qui repond a « quand cette rubrique arrive-t-elle ».
  *
  * NE PAS INVENTER DE CLE ICI POUR COMBLER LA COLONNE. Un renvoi vers un ticket
  * qui porte autre chose est pire qu'un « sans ticket » : trois des six clefs
@@ -157,9 +161,9 @@ export const RUBRIQUES: readonly Rubrique[] = [
  */
 export const RUBRIQUES_A_VENIR = [
   { libelle: "Statistiques", ticket: "LS-64" },
-  { libelle: "Catalogue", ticket: "LS-182" },
-  { libelle: "Factures et avoirs", ticket: "LS-182" },
-  { libelle: "Clients", ticket: "LS-182" },
+  { libelle: "Catalogue", ticket: "LS-183" },
+  { libelle: "Factures et avoirs", ticket: "LS-184" },
+  { libelle: "Clients", ticket: "LS-185" },
   { libelle: "Avis", ticket: "LS-61" },
   { libelle: "Paramètres", ticket: "LS-98" },
 ] as const;
