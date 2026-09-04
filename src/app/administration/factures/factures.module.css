@@ -1,0 +1,443 @@
+/*
+ * Ecran « Factures et avoirs », LS-184.
+ *
+ * CONCU A PARTIR DE 320 px, puis elargi. Les media queries montent, elles ne
+ * descendent jamais : ce qui est ecrit hors requete est ce que voit le plus
+ * petit ecran.
+ *
+ * DES CARTES ET NON UN TABLEAU. Le prototype montre six colonnes, document,
+ * commande, client, date, montant et action : elles ne tiennent pas dans
+ * 320 px, et un tableau a defilement horizontal cache ses dernieres colonnes
+ * sans le dire. Chaque piece est donc une carte dont les couples libelle-valeur
+ * s'empilent, motif deja employe par l'ecran des commandes.
+ *
+ * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons d'ADR-022. Les paires
+ * couleur et fond sont COLOCALISEES, ce qui les rend mesurables par
+ * `verifier-contraste.sh` : il n'apparie jamais un fond herite du JSX.
+ */
+
+.page {
+  padding: var(--ls-space-4);
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .page {
+    padding: var(--ls-space-6);
+  }
+}
+
+/* ------------------------------------------------------------------ en-tete */
+
+/*
+ * `--ls-accent-terracotta-deep` sur `--ls-background` : 5,51:1, AA.
+ *
+ * PAS `--ls-accent-terracotta`, qui donne 4,07:1 sur creme, sous le seuil AA.
+ * `frontend-design.md` ne l'autorise qu'en texte large, 18,66 px en gras ou
+ * 24 px en graisse normale : un sur-titre de 11 px n'en est pas, et le document
+ * previent que le prototype commet cette erreur 35 fois.
+ *
+ * LE FOND EST DECLARE ICI POUR ETRE MESURE, et c'est celui que la page pose
+ * deja : rien ne change a l'ecran, mais la paire devient visible du controle.
+ */
+.surtitre {
+  margin: 0 0 var(--ls-space-1);
+  background: var(--ls-background);
+  color: var(--ls-accent-terracotta-deep);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* `--ls-primary` sur `--ls-background` : 7,86:1, AAA. */
+.titre {
+  margin: 0 0 var(--ls-space-3);
+  background: var(--ls-background);
+  color: var(--ls-primary);
+  font-family: var(--ls-police-titre);
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+/*
+ * `--ls-text-muted` sur `--ls-background` : 4,86:1, AA.
+ *
+ * DE JUSTESSE, 0,36 de marge. C'est la paire documentee du jeton, et elle ne
+ * vaut QUE sur ce fond : sur `--ls-surface-sand` elle tomberait a 4,35:1, une
+ * des trois paires refusees du projet, C31.
+ */
+.introduction {
+  margin: 0 0 var(--ls-space-5);
+  max-width: 60ch;
+  background: var(--ls-background);
+  color: var(--ls-text-muted);
+  line-height: 1.6;
+}
+
+/* --------------------------------------------------------------- comptages */
+
+/*
+ * `auto-fit` ET `minmax` PLUTOT QU'UNE MEDIA QUERY : les trois tuiles passent
+ * d'une a trois colonnes quand la place existe, sans point de bascule ecrit en
+ * dur. A 320 px, `1fr` gagne et elles s'empilent.
+ */
+.comptages {
+  list-style: none;
+  margin: 0 0 var(--ls-space-4);
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: var(--ls-space-3);
+}
+
+.comptage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-1);
+  padding: var(--ls-space-4);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+}
+
+/* `--ls-text-muted` sur `--ls-surface` : 5,19:1, AA. Mesure sur CE fond. */
+.comptageLibelle {
+  background: var(--ls-surface);
+  color: var(--ls-text-muted);
+  font-size: 0.8125rem;
+}
+
+/*
+ * `--ls-text` sur `--ls-surface` : 12,92:1, AAA.
+ *
+ * `overflow-wrap: anywhere` PARCE QU'UN TOTAL PEUT ETRE LONG. « 12 345,67 € »
+ * tient, mais l'espace insecable du format francais empeche la coupure
+ * naturelle : sans cette regle, un montant a cinq chiffres deborde de sa tuile
+ * a 320 px.
+ */
+.comptageValeur {
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  font-family: var(--ls-police-titre);
+  font-size: 1.5rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * LA MENTION DE FRANCHISE.
+ *
+ * `--ls-text` sur `--ls-surface-sand` : 10,83:1, AAA. Le sable est le fond
+ * piegeux du projet, C31 : seuls `--ls-text` et `--ls-primary` y tiennent le
+ * seuil, et `--ls-text-muted` y tomberait a 4,35:1. La couleur est donc
+ * declaree explicitement plutot qu'heritee.
+ */
+.franchise {
+  margin: 0 0 var(--ls-space-5);
+  padding: var(--ls-space-3);
+  border-left: 3px solid var(--ls-accent-terracotta-deep);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+/* ----------------------------------------------------------------- filtres */
+
+.filtres {
+  margin-bottom: var(--ls-space-5);
+}
+
+/*
+ * `overflow-x: auto` SUR LE CONTENEUR DE FILTRES, jamais sur la page.
+ *
+ * C'est un defilement ASSUME et local : quatre periodes tiennent a 320 px, mais
+ * une cinquieme ne tiendrait pas, et la mesure de debordement de la suite e2e
+ * exclut a juste titre les conteneurs qui defilent d'eux-memes. Le poser sur la
+ * page rendrait au contraire la mesure aveugle pour tout le contenu.
+ */
+.listeFiltres {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ls-space-2);
+  overflow-x: auto;
+}
+
+/*
+ * `--ls-primary` sur `--ls-surface` : 8,93:1, AAA.
+ *
+ * ZONE TACTILE DE 44 px, `--ls-touch-target`, minimum de `frontend-design.md`.
+ */
+.filtre {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  padding: 0 var(--ls-space-4);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface);
+  color: var(--ls-primary);
+  font-size: 0.875rem;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background var(--ls-duration-fast) var(--ls-easing);
+}
+
+.filtre:hover {
+  border-color: var(--ls-primary);
+}
+
+/*
+ * LE FILTRE COURANT PORTE DEUX MARQUEURS, l'aplat et la graisse, jamais la
+ * seule couleur. Le selecteur est `aria-current` et non une classe : l'attribut
+ * qui porte l'information pour un lecteur d'ecran est le meme qui declenche le
+ * style, donc l'un ne peut pas exister sans l'autre.
+ *
+ * `--ls-text-on-primary` sur `--ls-primary` : 8,93:1, AAA.
+ */
+.filtre[aria-current="page"] {
+  border-color: var(--ls-primary);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------ liste, cartes */
+
+.liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-3);
+}
+
+.piece {
+  padding: var(--ls-space-4);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+}
+
+.enTetePiece {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ls-space-2);
+  margin-bottom: var(--ls-space-2);
+}
+
+/*
+ * `--ls-text` sur `--ls-surface` : 12,92:1, AAA.
+ *
+ * LE NUMERO N'EST PAS UN LIEN, et c'est une consequence du critere 5 : cet
+ * ecran est en lecture seule, il n'y a pas d'ecran de detail de facture ou
+ * mener. La seule action est le telechargement, qui a son propre lien.
+ */
+.numero {
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  font-family: var(--ls-police-titre);
+  font-size: 1.125rem;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * `--ls-text-on-primary` sur `--ls-primary` : 8,93:1, AAA.
+ */
+.nature {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--ls-space-1) var(--ls-space-2);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/*
+ * L'AVOIR SE DISTINGUE PAR SA COULEUR **ET** PAR SON LIBELLE, qui dit « Avoir »
+ * en toutes lettres : la couleur seule ne transmet jamais l'information.
+ *
+ * `--ls-text-on-primary` sur `--ls-accent-terracotta-deep` : 5,89:1, AA. C'est
+ * le jeton prevu par `frontend-design.md` pour un badge en petit texte, le
+ * terracotta clair donnant 4,35:1 avec du blanc, sous le seuil.
+ */
+.natureAvoir {
+  background: var(--ls-accent-terracotta-deep);
+}
+
+/* `--ls-text-muted` sur `--ls-surface` : 5,19:1, AA. */
+.correction {
+  margin: 0 0 var(--ls-space-2);
+  background: var(--ls-surface);
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+}
+
+.details {
+  margin: 0;
+}
+
+/*
+ * LE COUPLE LIBELLE-VALEUR EN `space-between` : c'est ce qui donne l'aspect
+ * d'une ligne de tableau sans en etre un, et qui tient a 320 px.
+ */
+.detail,
+.detailMontant {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--ls-space-3);
+  padding: var(--ls-space-1) 0;
+}
+
+/* `--ls-text-muted` sur `--ls-surface` : 5,19:1, AA. */
+.detail dt,
+.detailMontant dt {
+  background: var(--ls-surface);
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+}
+
+.detail dd,
+.detailMontant dd {
+  margin: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * LE MONTANT SE DETACHE, filet superieur et graisse, comme le total d'une
+ * commande. `--ls-price` sur `--ls-surface` : 8,93:1, AAA, le jeton valant
+ * `--ls-primary`.
+ */
+.detailMontant {
+  margin-top: var(--ls-space-2);
+  border-top: 1px solid var(--ls-border);
+  padding-top: var(--ls-space-2);
+}
+
+.detailMontant dd {
+  background: var(--ls-surface);
+  color: var(--ls-price);
+  font-weight: 700;
+}
+
+/*
+ * LE NOM DU CLIENT PEUT NE PORTER AUCUN ESPACE, `Commande.nomClient` etant une
+ * saisie libre recopiee a la commande, invariant 3. Meme motif que LS-171, ou
+ * un libelle de 44 caracteres debordait de 43 px a 320 px.
+ */
+.client {
+  overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------- action et etats vides */
+
+/*
+ * `--ls-primary` sur `--ls-surface` : 8,93:1, AAA.
+ *
+ * ZONE TACTILE DE 44 px, et LE SOULIGNEMENT EST CONSERVE : un lien qui ne se
+ * distingue que par sa couleur est invisible a qui ne percoit pas cette
+ * difference.
+ */
+.telecharger {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  margin-top: var(--ls-space-2);
+  background: var(--ls-surface);
+  color: var(--ls-primary);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+/*
+ * LE NUMERO EST AJOUTE AU NOM ACCESSIBLE, invisible a l'œil.
+ *
+ * Sans lui, une liste de vingt pieces porte vingt liens nommes « Télécharger le
+ * PDF » : un lecteur d'ecran qui liste les liens de la page ne peut alors pas
+ * les distinguer. C'est un critere WCAG 2.2, « Link Purpose ».
+ *
+ * `clip-path` ET NON `left: -9999px` : la technique par decalage produit un
+ * element hors ecran que la mesure de debordement doit exclure a la main, et
+ * elle le fait ; autant ne pas creer le cas.
+ */
+.invisible {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/*
+ * L'ABSENCE DE PDF EST UN ETAT, PAS UNE ERREUR : ni liseré rouge ni couleur
+ * d'alerte. Le document existe, il est numerote, seul son rendu a echoue.
+ *
+ * `--ls-text` sur `--ls-surface-sand` : 10,83:1, AAA. Le sable impose
+ * `--ls-text` ou `--ls-primary`, C31.
+ */
+.sansPdf {
+  margin: var(--ls-space-2) 0 0;
+  padding: var(--ls-space-3);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+/*
+ * `--ls-text-muted` sur `--ls-background` : 4,86:1, AA.
+ *
+ * LE POINTILLE DIT « RIEN ICI » SANS DIRE « ERREUR », convention des autres
+ * ecrans d'administration.
+ */
+.vide {
+  padding: var(--ls-space-5);
+  border: 1px dashed var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-background);
+  color: var(--ls-text-muted);
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* `--ls-text` sur `--ls-surface-sand` : 10,83:1, AAA. */
+.plafond {
+  margin: var(--ls-space-4) 0 0;
+  padding: var(--ls-space-3);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+/* ------------------------------------------------------------------- focus */
+
+.filtre:focus-visible,
+.telecharger:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .filtre {
+    transition: none;
+  }
+}

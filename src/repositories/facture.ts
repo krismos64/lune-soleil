@@ -231,3 +231,160 @@ export async function lireFactureAServir(
     select: { id: true, numero: true, cheminPdf: true },
   });
 }
+
+/**
+ * Une piece comptable de la liste d'administration, LS-184.
+ *
+ * FACTURE ET AVOIR PARTAGENT CE TYPE, et le prototype les melange dans une
+ * seule liste chronologique : c'est la forme juste, une comptabilite se lit par
+ * date d'emission et non par nature de document.
+ *
+ * `montantCentimes` EST SIGNE, negatif pour un avoir. Ce n'est pas un artifice
+ * d'affichage : un avoir RETIRE de l'encaisse, et le total de la periode se
+ * calcule en additionnant ces montants tels quels. Une valeur absolue
+ * obligerait chaque appelant a retrouver le sens, ce qu'un oubli ferait compter
+ * un remboursement comme une recette.
+ */
+export type PieceComptable = {
+  id: string;
+  type: "FACTURE" | "AVOIR";
+  numero: string;
+  emiseA: Date;
+  /** Signe : positif pour une facture, negatif pour un avoir. */
+  montantCentimes: number;
+  /** Le numero de la commande a laquelle la piece se rattache. */
+  numeroCommande: string;
+  /** Le nom fige a la commande, invariant 3, jamais le nom actuel du compte. */
+  nomClient: string;
+  /** Nul signifie un rendu PDF en echec, LS-129, jamais un document absent. */
+  cheminPdf: string | null;
+  /** Pour un avoir, le numero de la facture qu'il corrige. Nul sur une facture. */
+  numeroFactureCorrigee: string | null;
+};
+
+/**
+ * Les pieces comptables emises sur une periode, LS-184.
+ *
+ * LES DEUX TABLES SONT LUES SEPAREMENT PUIS FUSIONNEES, et il n'y a pas de
+ * meilleure voie : `Facture` et `Avoir` sont deux entites distinctes, sans
+ * ancetre commun. Une union SQL brute rendrait les colonnes typees a la main,
+ * ce que `.claude/rules/database.md` reserve aux cas ou l'ORM ne suffit pas ;
+ * ici il suffit, deux requetes indexees sur `emise_a` et `emis_a`.
+ *
+ * LA COMMANDE DISSOCIEE RESTE LISTEE, ET C'EST L'INVERSE DE
+ * `lireFactureAServir`. Celle-la sert le CLIENT par lien signe, et une personne
+ * ayant exerce son droit a l'effacement ne doit plus recevoir ses documents.
+ * Celle-ci sert l'EXPLOITANTE, qui doit pouvoir presenter ses pieces a
+ * l'administration fiscale : l'article L123-22 du code de commerce impose de
+ * les conserver dix ans, et l'article 17 paragraphe 3 point b du RGPD ecarte
+ * l'effacement quand la loi impose la conservation. Retirer ces factures de la
+ * liste creerait un trou dans une numerotation qui doit etre continue.
+ *
+ * LE NOM VIENT DE `Commande.nomClient`, FIGE A L'ACHAT, jamais du compte : le
+ * profil peut avoir change depuis, et un document comptable porte le nom qu'il
+ * portait a l'emission, invariant 3. Ce champ est deja la copie figee, la
+ * jointure est donc exacte tout en evitant de charger l'instantane legal
+ * entier, qui porte toutes les lignes de la commande.
+ *
+ * LE PLAFOND EST APPLIQUE PAR REQUETE PUIS APRES FUSION, ce qui peut rendre
+ * moins de lignes que `limite` en apparence : c'est voulu et l'appelant le sait
+ * par `limiteAtteinte`. Prendre `limite` de chaque table garantit que les
+ * `limite` plus recentes toutes tables confondues sont bien dans le lot.
+ */
+export async function listerPiecesComptables(
+  client: ClientBase,
+  options: { depuis?: Date; jusqua?: Date; limite: number },
+): Promise<{ pieces: PieceComptable[]; limiteAtteinte: boolean }> {
+  const { depuis, jusqua, limite } = options;
+
+  /*
+   * LA BORNE HAUTE EST INCLUSIVE COTE APPELANT, ET C'EST LUI QUI LA CONSTRUIT.
+   * Ce fichier ne decide rien : il reçoit deux instants et filtre. Le service
+   * traduit « le mois de juillet » en deux instants, ce qui garde ici une
+   * requete sans regle metier.
+   */
+  const fenetre =
+    depuis || jusqua
+      ? {
+          ...(depuis ? { gte: depuis } : {}),
+          ...(jusqua ? { lte: jusqua } : {}),
+        }
+      : undefined;
+
+  const [factures, avoirs] = await Promise.all([
+    client.facture.findMany({
+      where: fenetre ? { emiseA: fenetre } : {},
+      orderBy: { emiseA: "desc" },
+      take: limite + 1,
+      select: {
+        id: true,
+        numero: true,
+        emiseA: true,
+        montantTotalCentimes: true,
+        cheminPdf: true,
+        commande: { select: { numero: true, nomClient: true } },
+      },
+    }),
+    client.avoir.findMany({
+      where: fenetre ? { emisA: fenetre } : {},
+      orderBy: { emisA: "desc" },
+      take: limite + 1,
+      select: {
+        id: true,
+        numero: true,
+        emisA: true,
+        montantCentimes: true,
+        cheminPdf: true,
+        facture: {
+          select: {
+            numero: true,
+            commande: { select: { numero: true, nomClient: true } },
+          },
+        },
+      },
+    }),
+  ]);
+
+  /*
+   * `take: limite + 1` SUR CHAQUE TABLE : la ligne excedentaire ne s'affiche
+   * pas, elle REPOND A LA QUESTION « y en a-t-il d'autres ». Compter par un
+   * `count` separe couterait une requete de plus et repondrait sur un instant
+   * different, motif de LS-163.
+   */
+  const limiteAtteinte = factures.length > limite || avoirs.length > limite;
+
+  const pieces: PieceComptable[] = [
+    ...factures.map((facture) => ({
+      id: facture.id,
+      type: "FACTURE" as const,
+      numero: facture.numero,
+      emiseA: facture.emiseA,
+      montantCentimes: facture.montantTotalCentimes,
+      numeroCommande: facture.commande.numero,
+      nomClient: facture.commande.nomClient,
+      cheminPdf: facture.cheminPdf,
+      numeroFactureCorrigee: null,
+    })),
+    ...avoirs.map((avoir) => ({
+      id: avoir.id,
+      type: "AVOIR" as const,
+      numero: avoir.numero,
+      emiseA: avoir.emisA,
+      /*
+       * LE SIGNE EST POSE ICI, une seule fois. Le montant est stocke POSITIF en
+       * base, `chk_facture_avoir_borne` le comparant au total de la facture :
+       * c'est la lecture qui lui donne son sens comptable, et le faire une
+       * seule fois evite qu'un appelant l'oublie en sommant.
+       */
+      montantCentimes: -avoir.montantCentimes,
+      numeroCommande: avoir.facture.commande.numero,
+      nomClient: avoir.facture.commande.nomClient,
+      cheminPdf: avoir.cheminPdf,
+      numeroFactureCorrigee: avoir.facture.numero,
+    })),
+  ]
+    .sort((a, b) => b.emiseA.getTime() - a.emiseA.getTime())
+    .slice(0, limite);
+
+  return { pieces, limiteAtteinte };
+}
