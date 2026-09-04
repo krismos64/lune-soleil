@@ -15,7 +15,7 @@
  * ils appartiennent au suivi automatique, et les remplir a la declaration
  * ferait croire a une synchronisation qui n'a pas eu lieu.
  */
-import type { ModeLivraison } from "@/generated/prisma/enums";
+import type { ModeLivraison, StatutCommande } from "@/generated/prisma/enums";
 import type { ClientBase } from "@/repositories/stock";
 
 /** Ce que l'exploitante declare quand un colis part. */
@@ -95,22 +95,43 @@ export type CommandeAExpedier = {
   adresseLivraison: unknown;
   pointRelaisAdresse: unknown;
   creeA: Date;
+  /**
+   * L'etat de la commande, qui decide de SA COLONNE, LS-181.
+   *
+   * IL EST LU ET NON DEDUIT. Les trois colonnes du tableau correspondent a
+   * trois statuts, et laisser l'ecran les recalculer depuis une autre donnee
+   * ouvrirait un second endroit ou la verite se dit.
+   */
+  statut: StatutCommande;
 };
 
 /**
- * Les commandes en attente de depart, la plus ancienne d'abord.
+ * Les commandes du tableau d'expedition, la plus ancienne d'abord.
+ *
+ * TROIS STATUTS DEPUIS LS-181, contre le seul `EN_PREPARATION` d'avant. Le
+ * prototype montre un tableau a trois colonnes, et cette liste n'en portait
+ * qu'une : l'exploitante ne voyait ni ce qui arrive, ni ce qui est parti.
+ *
+ * CE N'EST PAS QU'UN CHANGEMENT D'AFFICHAGE, c'est un elargissement de ce que
+ * l'ecran montre, arbitre par Christophe le 4 septembre 2026. Les gestes, eux,
+ * restent bornes aux commandes `EN_PREPARATION` : `declarerExpedition` porte sa
+ * propre garde, et lire une commande ne donne pas le droit d'agir dessus.
  *
  * L'ORDRE EST INVERSE DE CELUI DE LA LISTE DES COMMANDES, et c'est deliberé :
  * une file de preparation se traite par anciennete, la commande qui attend
  * depuis le plus longtemps etant la plus urgente. La liste generale, elle,
  * repond a « que s'est-il passe recemment ».
+ *
+ * LA LIMITE PORTE SUR LE TOTAL DES TROIS COLONNES. Une limite par colonne
+ * demanderait trois requetes, et le plafond existe pour borner le rendu, pas
+ * pour equilibrer les colonnes : `LIMITE_LISTE` reste le meme.
  */
 export async function listerAExpedier(
   client: ClientBase,
   limite: number,
 ): Promise<CommandeAExpedier[]> {
   return client.commande.findMany({
-    where: { statut: "EN_PREPARATION" },
+    where: { statut: { in: ["CONFIRMEE", "EN_PREPARATION", "EXPEDIEE"] } },
     orderBy: { creeA: "asc" },
     take: limite,
     select: {
@@ -121,6 +142,7 @@ export async function listerAExpedier(
       adresseLivraison: true,
       pointRelaisAdresse: true,
       creeA: true,
+      statut: true,
     },
   });
 }
