@@ -38,9 +38,10 @@ Comptes **relevés dans Jira** le 3 septembre 2026 en fin de session, jamais
 recopiés de mémoire : un chiffre écrit à la main se périme sans bruit, et
 ce tableau a déjà annoncé l'état du 27 août plusieurs jours de trop.
 
-**110 tickets terminés sur 177, soit 62 %**, relevés le 4 septembre 2026 en fin
-de session F, hors epics. **LS-183 n'y est pas comptée**, elle attend sa fusion :
-un ticket dont le travail n'est pas sur `main` ne se clôt pas. Six tickets ont été créés le
+**111 tickets terminés sur 178, soit 62 %**, relevés le 4 septembre 2026 après la
+fusion de LS-183, hors epics. Six tickets ont été créés dans la journée par des
+vérifications et non par des intuitions, LS-182 puis LS-183 à LS-188 : chacun
+porte une mesure dans sa description. Six tickets ont été créés le
 2 septembre en livrant, tous par une revue ou par une mesure :
 
 - **LS-162**, la navigation de l'administration, aucun écran n'y renvoyant vers

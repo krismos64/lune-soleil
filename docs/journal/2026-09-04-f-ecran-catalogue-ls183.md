@@ -1,6 +1,6 @@
 # 4 septembre 2026, session F : l'écran Catalogue, LS-183
 
-Trois commits, `ebd40d2`, `e83875f` et `3131319`. Première des trois stories
+**Livrée et FUSIONNÉE**, PR #230 en rebase. Sur `main` : `b0aa643`, `a0ff4aa` et `10bf837`, les SHA ayant changé au rebase. Première des trois stories
 issues du découpage de LS-182, et la seule en High.
 
 ## Le défaut qu'elle ferme
@@ -167,9 +167,25 @@ complet. Ce n'est pas une régression de cette story, c'est une cohérence de
 projet, et la voie recommandée par `frontend-design.md` reste ouverte, un
 `<Suspense>` interne. À ticketer.
 
+## Un second ticket né de la revue
+
+**LS-188 créée**, Low : aucun écran d'administration n'a d'état de chargement.
+Mesuré, quatorze pages en `force-dynamic` et zéro `loading.tsx`, quand la
+boutique publique en a un.
+
+**Le ticket distingue deux familles**, et c'est ce qui le rend utile : douze
+écrans peuvent recevoir un `loading.tsx` ordinaire, mais **deux écrans de détail
+appellent `notFound()`** et relèvent de C32, qui l'interdit. Sans cette
+distinction, quatorze `loading.tsx` auraient cassé deux 404 en silence, le
+streaming commençant avant que `notFound()` soit atteint.
+
 ## État des tickets
 
-**LS-183 est livrée**, en attente de fusion. **LS-187 créée**, Low, sous LS-3.
+**LS-183 est TERMINÉE et FUSIONNÉE**, neuf critères sur dix remplis, le dixième
+ayant été écarté comme faux. **LS-187 et LS-188 créées**, toutes deux Low sous
+LS-3.
+
+**111 tickets terminés sur 178**, relevés dans Jira après la fusion.
 
 ## Prochaine étape
 
