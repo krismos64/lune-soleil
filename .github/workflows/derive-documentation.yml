@@ -38,6 +38,13 @@ on:
 permissions:
   contents: read
   issues: write
+  # LS-176. `verifier-protection-branche.sh` lit la protection de `main`, ce qui
+  # exige cette portée. Elle est accordée ICI et non dans `controles.yml`, et la
+  # différence est délibérée : ce workflow ne tourne que sur planification ou
+  # déclenchement manuel, jamais sur une pull request venue d'ailleurs. Donner un
+  # droit d'administration au jeton de la chaîne de fusion créerait un risque
+  # plus grand que celui qu'il couvre.
+  administration: read
 
 jobs:
   derive:
@@ -52,12 +59,28 @@ jobs:
       # sur une pull request que l'on regarde.
       - name: Contrôler la cohérence de la configuration
         id: controle
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if bash ./scripts/verifier-config-claude.sh --strict > rapport.txt 2>&1; then
             echo "derive=non" >> "$GITHUB_OUTPUT"
           else
             echo "derive=oui" >> "$GITHUB_OUTPUT"
           fi
+
+          # LS-176. LE SEUL ENDROIT OU CE CONTROLE PEUT CONCLURE. Lire la
+          # protection de branche exige `administration: read`, que
+          # `controles.yml` n'accorde pas et ne doit pas accorder : il s'y tait
+          # donc et sort en 0. Ici le jeton la lit, et une derive de `strict` ou
+          # du nom du controle requis ouvre une issue.
+          #
+          # SA SORTIE VA DANS LE MEME RAPPORT, sans quoi elle ne serait vue par
+          # personne : ce workflow ne tourne sur aucune pull request qu'on
+          # regarde.
+          if ! bash ./scripts/verifier-protection-branche.sh >> rapport.txt 2>&1; then
+            echo "derive=oui" >> "$GITHUB_OUTPUT"
+          fi
+
           cat rapport.txt
 
       # Une issue plutôt qu'un simple rouge : elle survit à la rétention des

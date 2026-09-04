@@ -21,6 +21,21 @@
 # distinguo compte : il ne peut pas empêcher un push direct, il peut seulement
 # dire que le réglage sur lequel un autre choix s'appuie a changé.
 #
+# OÙ IL CONCLUT VRAIMENT, ET IL FAUT LE SAVOIR POUR NE PAS SE RASSURER À TORT.
+# Lire la protection de branche exige la portée `administration: read`, que
+# `controles.yml` n'accorde pas : il tourne en `contents: read`, durcissement
+# délibéré. En intégration continue, ce script se tait donc et sort en 0.
+#
+# ÉLARGIR LES DROITS DU JETON POUR LE FAIRE PARLER SERAIT UN MAUVAIS ÉCHANGE :
+# on ajouterait une permission d'administration à chaque exécution, y compris sur
+# une pull request venue d'ailleurs, pour un contrôle de cohérence. Le risque
+# créé dépasserait le risque couvert.
+#
+# IL CONCLUT DONC EN LOCAL, où le jeton personnel lit tout, et par
+# `derive-documentation.yml` qui tourne chaque lundi et ouvre une issue. Une
+# dérive de la protection serait vue en une semaine au pire, ce qui est le bon
+# ordre de grandeur pour un réglage que personne ne change par accident.
+#
 # IL VÉRIFIE AUSSI LE NOM DU CONTRÔLE REQUIS. Renommer un job renomme son check,
 # et la protection cesse alors d'exiger quoi que ce soit : une pull request
 # devient fusionnable SANS AUCUN contrôle vert, sans message d'erreur. Le nom
@@ -64,6 +79,36 @@ protection=$(gh api "repos/$DEPOT/branches/main/protection" 2>/dev/null)
 
 if [ -z "$protection" ]; then
   echo "IGNORÉ protection de branche illisible, jeton sans droit d'administration."
+  echo "       Ce contrôle n'a rien vérifié, il ne conclut pas que tout va bien."
+  exit 0
+fi
+
+# ---------------------------------------------------------------------------
+# UNE REPONSE PARTIELLE N'EST PAS UNE PROTECTION DESACTIVEE.
+#
+# MESURE DU 4 SEPTEMBRE 2026, ET C'EST CE SCRIPT QUI S'EST FAIT PRENDRE. Sa
+# premiere version testait seulement `[ -z "$protection" ]`. En integration
+# continue, le `github.token` par defaut n'a pas le droit d'administration : il
+# ne rend pas une reponse VIDE, il rend un objet AMPUTE, sans
+# `required_status_checks`. Le script a donc lu « absent » et conclu que `strict`
+# valait autre chose que true, faisant echouer la chaine sur une protection qui
+# etait pourtant intacte.
+#
+# En local, avec un jeton personnel, la meme commande rend l'objet complet : le
+# defaut ne se voyait pas avant de tourner en CI.
+#
+# C'est exactement le defaut que ce script pretend eviter, retourne contre
+# lui-meme : conclure a partir de ce qu'on n'a pas pu mesurer. Un champ absent
+# veut dire « je n'ai pas pu lire », jamais « le reglage est desactive ».
+#
+# LA PRESENCE DE LA CLE EST DONC TESTEE AVANT SA VALEUR, et par `has` plutot que
+# par une comparaison a une chaine : un `null` legitime doit se distinguer d'une
+# cle absente.
+# ---------------------------------------------------------------------------
+if ! printf '%s' "$protection" | jq -e 'has("required_status_checks")' >/dev/null 2>&1; then
+  echo "IGNORÉ réponse partielle de l'API, sans « required_status_checks »."
+  echo "       Le jeton lit la protection mais pas son détail, cas du jeton par"
+  echo "       défaut en intégration continue."
   echo "       Ce contrôle n'a rien vérifié, il ne conclut pas que tout va bien."
   exit 0
 fi

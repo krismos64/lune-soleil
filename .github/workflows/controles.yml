@@ -656,19 +656,26 @@ jobs:
       - name: 3ter. Socle Zod et son document accordes
         run: ./scripts/verifier-propagation-docs.sh
 
-      # LS-176. La chaine ne se declenche plus sur `main` : cette suppression
-      # repose sur `strict`, et ce controle echoue si le reglage change. Sans
-      # lui, la condition ne vivrait que dans un commentaire.
+      # LS-176. `verifier-protection-branche.sh` N'EST PAS BRANCHE ICI, ET C'EST
+      # UNE DECISION, PAS UN OUBLI.
       #
-      # `GH_TOKEN` LUI EST NECESSAIRE, il interroge l'API. Le jeton par defaut
-      # n'a pas le droit de lire la protection de branche : le script le dit et
-      # sort en 0 plutot que de pretendre avoir verifie. Il garde donc sa valeur
-      # sur un poste de developpement, ou le jeton personnel l'autorise.
-      - name: 3quinquies. La protection de main porte ce dont la chaine depend
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: ./scripts/verifier-protection-branche.sh
-
+      # La chaine ne se declenche plus sur `main`, et cette suppression repose
+      # sur `required_status_checks.strict`. Le controle qui le verifie a d'abord
+      # ete pose a cet endroit, puis retire apres mesure : lire la protection de
+      # branche exige la portee `administration: read`, que ce workflow n'accorde
+      # pas. Il tourne en `contents: read`, durcissement delibere.
+      #
+      # LE JETON PAR DEFAUT NE REND PAS UNE REPONSE VIDE, IL REND UN OBJET
+      # AMPUTE, sans `required_status_checks`. La premiere version du script a
+      # donc lu « absent » et fait echouer la chaine sur une protection pourtant
+      # intacte, defaut invisible en local ou le jeton personnel lit tout.
+      #
+      # ELARGIR LES DROITS POUR LE FAIRE PARLER SERAIT UN MAUVAIS ECHANGE : un
+      # droit d'administration a chaque execution, pull request venue d'ailleurs
+      # comprise, pour un controle de coherence. Il tourne donc dans
+      # `derive-documentation.yml`, hebdomadaire, ou la portee est accordee sans
+      # exposer la chaine de fusion, et en local ou il conclut aussi.
+      #
       # LS-176. L'etape d'audit ne fait plus echouer sur une panne du registre :
       # ce controle prouve que le relachement reste ETROIT, et qu'une
       # vulnerabilite continue de bloquer. Purement textuel, il tourne dans les
