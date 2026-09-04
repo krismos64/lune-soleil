@@ -18,12 +18,12 @@
  * 320 px ; le prototype la veut LATERALE. Ce n'est pas qu'une affaire de gout :
  * une barre horizontale a defilement cache ses dernieres rubriques hors ecran
  * sans que rien ne le signale, defaut que LS-144 porte deja pour les filtres.
- * En colonne, les onze rubriques sont toutes visibles d'un coup sur un ecran de
- * bureau.
+ * En colonne, les quinze entrees, neuf liens et six rubriques a venir, sont
+ * toutes visibles d'un coup sur un ecran de bureau.
  *
  * SOUS 768 px LA COLONNE SERAIT UN MUR. Une barre laterale permanente est un
- * motif de BUREAU, et le prototype ne montre jamais le cas mobile. Onze
- * rubriques empilees mangeraient l'ecran entier avant le contenu, ce qui est
+ * motif de BUREAU, et le prototype ne montre jamais le cas mobile. Quinze
+ * entrees empilees mangeraient l'ecran entier avant le contenu, ce qui est
  * exactement le defaut d'origine sous une autre forme. Elle se replie donc dans
  * un panneau que l'on ouvre, et le CSS porte le detail de ce choix.
  *
@@ -41,7 +41,7 @@
  */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 
 import styles from "./navigation-administration.module.css";
 
@@ -187,9 +187,28 @@ export function estRubriqueCourante(chemin: string, rubrique: string): boolean {
   return chemin === rubrique || chemin.startsWith(`${rubrique}/`);
 }
 
-/** Les initiales affichees en pied de barre, deux lettres au plus. */
+/**
+ * Les initiales affichees en pied de barre, deux lettres au plus.
+ *
+ * LE SEPARATEUR N'EST PAS L'ESPACE, ET C'EST CE QUI COMPTE. L'entree reelle est
+ * la partie locale d'une adresse email, `stacy.menendez`, qui ne contient
+ * JAMAIS d'espace : une decoupe sur `\s+` rendrait toujours un seul mot, donc
+ * toujours une seule lettre, et le `slice(0, 2)` n'aurait aucun effet. La
+ * premiere version de cette fonction faisait exactement cela, et son commentaire
+ * decrivait un cas, « SM Stacy Menendez », qui ne pouvait pas se produire.
+ *
+ * Motif « cible de test inexistante » : un test ecrit sur « Stacy Menendez »
+ * aurait verdi sans rien prouver de l'entree que la fonction recoit vraiment.
+ *
+ * LES TROIS SEPARATEURS COUVRENT LES FORMES D'ADRESSE COURANTES, point, tiret
+ * et souligne, plus l'espace au cas ou un vrai nom arriverait le jour ou
+ * `lireIdentite` en portera un.
+ */
 export function initiales(nom: string): string {
-  const mots = nom.trim().split(/\s+/).filter(Boolean);
+  const mots = nom
+    .trim()
+    .split(/[\s._-]+/)
+    .filter(Boolean);
 
   if (mots.length === 0) {
     return "?";
@@ -214,9 +233,52 @@ export function NavigationAdministration({
   const chemin = usePathname();
   const [ouverte, setOuverte] = useState(false);
   const identifiantPanneau = useId();
+  const bascule = useRef<HTMLButtonElement>(null);
+
+  /**
+   * Referme le panneau EN RAMENANT LE FOCUS SUR LE BOUTON.
+   *
+   * LE DEFAUT QUE CETTE FONCTION FERME, trouve par la revue d'interface. Fermer
+   * le panneau lui applique `display: none`, ce qui detache du DOM visible
+   * l'element qui porte le focus : le focus retombe alors sur `body` et la
+   * tabulation suivante repart du HAUT du document. Au clavier, chaque
+   * navigation renvoyait donc au debut de la page.
+   *
+   * Motif « focus sur un element detache », deja en fiche sur ce depot avec
+   * `revalidatePath` : la cause differe, le symptome et la parade sont les
+   * memes.
+   *
+   * LE TEST CLAVIER EXISTANT NE LE VOYAIT PAS : il ouvre le panneau puis tabule
+   * sans jamais ACTIVER de lien, et c'est l'activation qui declenche le defaut.
+   */
+  function fermer() {
+    setOuverte(false);
+    bascule.current?.focus();
+  }
 
   return (
-    <>
+    /*
+     * `Escape` REFERME LE PANNEAU, et le gestionnaire vit sur ce conteneur.
+     *
+     * PAS SUR LE `nav`, ET C'EST UN DEFAUT MESURE. Apres un clic sur le bouton
+     * d'ouverture, le focus reste SUR LE BOUTON, qui est hors du `nav` : un
+     * gestionnaire pose sur le `nav` ne voit jamais la frappe, l'evenement ne
+     * remontant que vers les ANCETRES de l'element focalise. Le test l'a
+     * attrape, le panneau restant ouvert.
+     *
+     * PAS SUR `document` NON PLUS. Un ecouteur global intercepterait `Escape`
+     * partout, y compris dans un futur dialogue de l'administration qui devrait
+     * le recevoir en premier. Ce conteneur englobe le bouton et le panneau,
+     * exactement la portee voulue.
+     */
+    <div
+      className={styles.enveloppe}
+      onKeyDown={(evenement) => {
+        if (evenement.key === "Escape" && ouverte) {
+          fermer();
+        }
+      }}
+    >
       {/*
        * LE BOUTON D'OUVERTURE N'EXISTE QUE SOUS 768 px, masque en CSS au-dela.
        * Il est rendu dans les deux cas plutot que conditionne en JavaScript :
@@ -224,6 +286,7 @@ export function NavigationAdministration({
        * provoquerait un saut visible, et `window` n'existe pas au rendu serveur.
        */}
       <button
+        ref={bascule}
         type="button"
         className={styles.bascule}
         aria-expanded={ouverte}
@@ -264,13 +327,13 @@ export function NavigationAdministration({
                    * interdit qu'une information passe par la seule couleur.
                    */
                   aria-current={courante ? "page" : undefined}
-                  onClick={() => setOuverte(false)}
+                  onClick={fermer}
                 >
                   <span className={styles.lienLibelle}>{rubrique.libelle}</span>
 
                   {/*
                    * UNE PASTILLE A ZERO NE S'AFFICHE PAS. « 0 messages » n'est
-                   * pas une information, c'est du bruit sur onze lignes : la
+                   * pas une information, c'est du bruit sur neuf lignes : la
                    * pastille doit vouloir dire « il y a quelque chose ici ».
                    *
                    * LE NOMBRE EST DOUBLE D'UN TEXTE POUR LES LECTEURS D'ECRAN.
@@ -311,15 +374,37 @@ export function NavigationAdministration({
         {/*
          * LES RUBRIQUES A VENIR, hors de la liste navigable.
          *
-         * Elles vivent dans un `<ul>` distinct sous un titre qui dit leur etat,
-         * plutot que grisees au milieu des autres : melangees, elles feraient
-         * onze cibles dont quatre repondent par rien, et l'exploitante
+         * Elles vivent dans un `<ul>` distinct sous une etiquette qui dit leur
+         * etat, plutot que grisees au milieu des autres : melangees, elles
+         * feraient quinze cibles dont six repondent par rien, et l'exploitante
          * cliquerait avant de comprendre. Separees et annoncees, elles se
          * lisent comme ce qu'elles sont, une feuille de route.
+         *
+         * L'ETIQUETTE N'EST PAS UN TITRE, ET C'EST UNE CORRECTION. Un `h2` ici
+         * precederait le `h1` DE CHAQUE PAGE, le layout rendant la barre avant
+         * le contenu : le premier titre du document serait « Bientôt
+         * disponible » sur les douze ecrans de l'administration.
+         *
+         * `axe-core` NE L'ATTRAPE PAS : sa regle `heading-order` est classee
+         * `best-practice` et n'appartient a aucun des tags WCAG employes par la
+         * suite. Le vert d'axe-core ne disait rien sur ce point, la revue
+         * d'interface l'a trouve.
+         *
+         * `aria-labelledby` GARDE L'ANNONCE. La liste reste nommee pour un
+         * lecteur d'ecran, sans introduire de niveau de titre : c'est ce que
+         * l'etiquette d'une liste dans une navigation deja nommee demande.
          */}
         <div className={styles.aVenir}>
-          <h2 className={styles.aVenirTitre}>Bientôt disponible</h2>
-          <ul className={styles.aVenirListe}>
+          <p
+            className={styles.aVenirTitre}
+            id={`${identifiantPanneau}-a-venir`}
+          >
+            Bientôt disponible
+          </p>
+          <ul
+            className={styles.aVenirListe}
+            aria-labelledby={`${identifiantPanneau}-a-venir`}
+          >
             {RUBRIQUES_A_VENIR.map((rubrique) => (
               <li key={rubrique.libelle} className={styles.aVenirEntree}>
                 {rubrique.libelle}
@@ -339,6 +424,6 @@ export function NavigationAdministration({
           {deconnexion}
         </div>
       </nav>
-    </>
+    </div>
   );
 }

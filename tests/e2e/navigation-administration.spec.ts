@@ -421,3 +421,84 @@ test("les rubriques à venir sont annoncées sans être cliquables", async ({
     ).toHaveCount(0);
   }
 });
+
+/**
+ * LE FOCUS SURVIT A UNE NAVIGATION AU CLAVIER, sous 768 px.
+ *
+ * LE DEFAUT QUE CE TEST FERME, trouve par la revue d'interface. Activer une
+ * rubrique referme le panneau, ce qui lui applique `display: none` : l'element
+ * qui portait le focus se retrouve dans un sous-arbre masque, le focus retombe
+ * sur `body`, et la tabulation suivante repart du HAUT du document. Au clavier,
+ * chaque navigation renvoyait donc au debut de la page.
+ *
+ * LE TEST CLAVIER VOISIN NE LE VOYAIT PAS : il ouvre le panneau puis tabule
+ * sans jamais ACTIVER de lien, et c'est l'activation qui declenche le defaut.
+ * Motif « focus sur un element detache ».
+ *
+ * IL NE S'EXECUTE QUE SOUS 768 px, la barre etant permanente au-dela : rien ne
+ * se referme, donc rien ne peut detacher le focus. Sauter plutot que verdir a
+ * vide, un test qui passe sans rien exercer est un faux temoin.
+ */
+test("le focus ne se perd pas en naviguant au clavier", async ({ page }) => {
+  test.skip(
+    (page.viewportSize()?.width ?? 0) >= 768,
+    "la barre est permanente au-dela de 768 px, rien ne se referme",
+  );
+
+  await page.goto("/administration");
+  await ouvrirLaBarreSiRepliee(page);
+
+  await page
+    .getByRole("navigation", { name: "Sections de l'administration" })
+    .getByRole("link", { name: /^Commandes/ })
+    .focus();
+
+  await page.keyboard.press("Enter");
+
+  await expect(
+    page.getByRole("heading", { name: "Commandes", level: 1 }),
+  ).toBeVisible();
+
+  /*
+   * LE FOCUS EST SUR LE BOUTON DE BASCULE, jamais sur `body`. C'est la seule
+   * position qui garde le parcours clavier continu : la personne reprend la
+   * tabulation la ou elle etait, et peut rouvrir le menu d'une frappe.
+   */
+  const focalise = await page.evaluate(() => {
+    const actif = document.activeElement;
+    if (!actif || actif === document.body) return "body";
+    return actif.tagName + ":" + (actif.textContent?.trim().slice(0, 20) ?? "");
+  });
+
+  expect(focalise).toContain("BUTTON");
+  expect(focalise).toContain("Menu");
+});
+
+/**
+ * `Escape` REFERME LE PANNEAU, sous 768 px.
+ *
+ * Le couple `aria-expanded` et `aria-controls` annonce un motif de divulgation,
+ * et qui connait ce motif attend cette touche. Poser les attributs sans le
+ * comportement promet un geste qui ne repond pas.
+ */
+test("Escape referme le panneau de navigation", async ({ page }) => {
+  test.skip(
+    (page.viewportSize()?.width ?? 0) >= 768,
+    "la barre est permanente au-dela de 768 px, rien ne se referme",
+  );
+
+  await page.goto("/administration");
+
+  const bascule = page.getByRole("button", { name: "Menu", exact: true });
+  const barre = page.getByRole("navigation", {
+    name: "Sections de l'administration",
+  });
+
+  await bascule.click();
+  await expect(barre).toBeVisible();
+
+  await page.keyboard.press("Escape");
+
+  await expect(barre).toBeHidden();
+  await expect(bascule).toBeFocused();
+});
