@@ -132,3 +132,48 @@ est tenu en régime nominal mais pas garanti un jour où le registre npm rame.
 Mesurer le nouveau régime sur quelques livraisons. Côté code sans dépendance
 externe : **LS-137**, le référencement technique, et **LS-147**, l'identité du
 site au partage.
+
+## Clôture de la reconfiguration, fin de session
+
+**Le contrôle nocturne est vert dès sa première exécution**, déclenché à la main
+après la fusion : un workflow jamais exécuté n'est pas un workflow prouvé.
+
+| Contrôle déplacé | Durée | Résultat |
+| --- | --- | --- |
+| Scénarios de bout en bout, trois largeurs | 331 s | vert |
+| Construction de l'image Docker | 160 s | vert |
+| Sécurité de l'image | 4 s | vert |
+| `npm audit` | 12 s | vert |
+
+Aucune issue ouverte, ce qui est le comportement attendu : le dispositif n'en
+crée qu'en cas d'échec. Le cache du navigateur a servi, 0 s contre 30 s à la
+première exécution.
+
+**LS-176 est close sur neuf critères sur dix.** Le critère des contrôles courts
+sous trois minutes ne sera pas rempli : il dépendait du découpage en deux jobs,
+écarté parce qu'un job sauté rend « Success » chez GitHub. Son besoin est
+satisfait autrement, LS-177 ayant sorti les tests longs de la pull request.
+
+Un ticket gardé ouvert pour un critère qu'on a décidé de ne pas remplir devient
+un ticket qu'on ignore : la décision est tracée plutôt que laissée en suspens.
+
+## Ce que la journée laisse comme sujet neuf
+
+**`npm ci` est devenu le premier poste de dépense**, et ce n'est un reliquat
+d'aucune des deux stories : le problème était masqué par tout ce qui l'entourait.
+
+Cinq mesures le même jour, même verrou, aucune dépendance modifiée : 12 s, 19 s,
+335 s, 423 s, 426 s. **Facteur trente-cinq.** Sur une pull request documentaire
+de 9 min 24, il en portait 423 s, soit 75 %, quand tout ce que la chaîne vérifie
+réellement tenait en 2 min 20.
+
+Un constat oriente le diagnostic sans le conclure : `Post Installer Node`, l'étape
+qui **sauvegarde** le cache npm, prend 0 s. Un cache qui ne se sauvegarde pas ne
+se restaure jamais. À confirmer dans les journaux plutôt qu'à supposer.
+
+**LS-178 créée**, sous LS-7, Medium. Sa première exigence est d'établir la cause
+avant de choisir une correction : la parallélisation des tests d'intégration
+avait été proposée ce matin sur une analyse fausse, et le précédent est écrit
+dans le ticket.
+
+Comptes relevés dans Jira hors epics : **107 terminés sur 168**.
