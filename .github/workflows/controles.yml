@@ -366,8 +366,60 @@ jobs:
       # chaine qui met a jour ses dependances toute seule ne teste pas ce qui
       # sera deploye.
       # ----------------------------------------------------------------------
+      # ----------------------------------------------------------------------
+      # LS-178, INSTRUMENTATION TEMPORAIRE. A RETIRER une fois la cause etablie.
+      #
+      # CE QU'ON CHERCHE. `npm ci` varie d'un facteur trente sans cause dans le
+      # depot. Huit mesures du 4 septembre 2026, meme verrou, meme cache restaure,
+      # meme version d'executeur : 14, 17, 19, 216, 423, 425, 426 s.
+      #
+      # LES SEPT PREMIERES MESURES SEMBLAIENT BINAIRES, deux groupes nets autour
+      # de 17 s et de 425 s, et cette lecture a ete ecrite ici avant d'etre
+      # DEMENTIE par la huitieme, a 216 s. Le motif est donc continu, ce qui
+      # ecarte l'hypothese d'un basculement franc entre deux etats.
+      #
+      # Ni la branche, ni le declencheur, ni l'heure ne separent les mesures.
+      #
+      # CE QUI A DEJA ETE ECARTE, ET IL FAUT LE SAVOIR POUR NE PAS Y REVENIR. Le
+      # cache npm FONCTIONNE : les journaux disent « Cache hit », « Cache restored
+      # successfully », 323 Mo. Le `Post Installer Node` a 0 s des runs lents dit
+      # « not saving cache », c'est-a-dire « rien a sauvegarder », et non un echec
+      # de sauvegarde. La premiere hypothese de LS-178 etait donc fausse.
+      #
+      # L'INDICE QUI RESTE. Sur les runs RAPIDES, `npm ci` n'affiche RIEN. Sur les
+      # LENTS, il annonce « added 704 packages in 7m ». Hypothese a eprouver :
+      # `node_modules` serait deja present sur les runs rapides, et `npm ci`
+      # sortirait sans rien faire. Ces traces la confirment ou l'infirment.
+      #
+      # ELLES NE CHANGENT AUCUN COMPORTEMENT et ne peuvent pas faire echouer la
+      # chaine : `|| true` sur chaque relev, et `du` comme `find` sont sans effet
+      # de bord. Une instrumentation qui casse ce qu'elle mesure ne mesure rien.
+      # ----------------------------------------------------------------------
+      - name: LS-178. Etat avant installation, instrumentation temporaire
+        run: |
+          echo "node_modules present : $([ -d node_modules ] && echo oui || echo non)"
+          echo "entrees de premier niveau : $(ls node_modules 2>/dev/null | wc -l | tr -d ' ')"
+          echo "taille node_modules : $(du -sh node_modules 2>/dev/null | cut -f1 || echo absent)"
+          echo "cache npm : $(npm config get cache)"
+          echo "taille du cache npm : $(du -sh "$(npm config get cache)" 2>/dev/null | cut -f1 || echo absent)"
+          echo "entrees dans le cache : $(find "$(npm config get cache)" -type f 2>/dev/null | wc -l | tr -d ' ')"
+          echo "espace disque :"
+          df -h / | tail -1
+
       - name: 1. Installation des dependances
-        run: npm ci
+        # `--foreground-scripts` REND VISIBLE CE QUI EST INVISIBLE. Sans lui, les
+        # scripts d'installation des dependances tournent en arriere-plan et leur
+        # sortie n'apparait pas : sept minutes s'ecoulent sans une seule ligne,
+        # ce qui est exactement ce qu'on observe. S'ils sont la cause, cette
+        # option les nomme.
+        run: npm ci --foreground-scripts
+
+      - name: LS-178. Etat apres installation, instrumentation temporaire
+        run: |
+          echo "entrees de premier niveau : $(ls node_modules 2>/dev/null | wc -l | tr -d ' ')"
+          echo "taille node_modules : $(du -sh node_modules 2>/dev/null | cut -f1 || echo absent)"
+          echo "espace disque :"
+          df -h / | tail -1
 
       # `src/generated/prisma` n'est pas versionne : le generateur ecrit plusieurs
       # centaines de fichiers qu'aucune relecture ne couvre. Sans cette etape, la

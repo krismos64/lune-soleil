@@ -181,8 +181,27 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
+      # LS-178, instrumentation temporaire, a retirer avec celle de
+      # `controles.yml`. Elle est ici AUSSI parce que ce workflow tourne chaque
+      # nuit sans intervention : il fournit un point de mesure par jour a heure
+      # fixe, ce qu'une pull request ne donne pas.
+      - name: LS-178. Etat avant installation, instrumentation temporaire
+        run: |
+          echo "node_modules present : $([ -d node_modules ] && echo oui || echo non)"
+          echo "entrees de premier niveau : $(ls node_modules 2>/dev/null | wc -l | tr -d ' ')"
+          echo "taille node_modules : $(du -sh node_modules 2>/dev/null | cut -f1 || echo absent)"
+          echo "cache npm : $(npm config get cache)"
+          echo "taille du cache npm : $(du -sh "$(npm config get cache)" 2>/dev/null | cut -f1 || echo absent)"
+          echo "espace disque :"
+          df -h / | tail -1
+
       - name: Installation des dependances
-        run: npm ci
+        run: npm ci --foreground-scripts
+
+      - name: LS-178. Etat apres installation, instrumentation temporaire
+        run: |
+          echo "entrees de premier niveau : $(ls node_modules 2>/dev/null | wc -l | tr -d ' ')"
+          echo "taille node_modules : $(du -sh node_modules 2>/dev/null | cut -f1 || echo absent)"
 
       - name: Engendrer le client Prisma
         run: npx prisma generate
