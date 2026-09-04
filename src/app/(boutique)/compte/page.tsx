@@ -41,7 +41,6 @@ import { consulterCommandesRattachables } from "@/services/rattachement-commande
 import { FENETRE_REAUTHENTIFICATION_MS } from "@/services/reauthentification";
 
 import { BlocRattachement } from "./bloc-rattachement";
-import { BoutonDeconnexion } from "./bouton-deconnexion";
 import { FormulaireSuppressionCompte } from "./formulaire-suppression";
 import styles from "./compte.module.css";
 
@@ -153,6 +152,19 @@ export default async function PageCompte({
 
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
+      {/*
+       * LE SUR-TITRE, forme du prototype, LS-180. Il n'est PAS un titre au sens
+       * du document : c'est un `p` qui precede le `h1`, et le mettre en `h2`
+       * ferait passer un niveau 2 AVANT le niveau 1 sur chaque ecran.
+       *
+       * `aria-hidden` LE RETIRE DE L'ARBRE D'ACCESSIBILITE. Lu a voix haute,
+       * « ESPACE CLIENT, Mon compte » redit deux fois la meme chose : c'est un
+       * repere visuel de rubrique, et le `h1` juste dessous porte deja
+       * l'information.
+       */}
+      <p className={styles.surTitre} aria-hidden="true">
+        Espace client
+      </p>
       <h1 className={styles.titre}>Mon compte</h1>
 
       {arriveDeVerification && adresseVerifiee && (
@@ -231,86 +243,100 @@ export default async function PageCompte({
        * etat non nominal absent, pas un defaut de rendu.
        */}
       {/*
-       * LE LIEN VERS L'HISTORIQUE, LS-57. Sans lui, `/compte/commandes` serait
-       * inatteignable autrement qu'en saisissant l'URL : c'est le defaut exact
-       * de LS-162 cote administration, et celui de `/compte/verification`
-       * trouve par la revue frontend de LS-54.
+       * LES QUATRE RACCOURCIS, LS-180.
        *
-       * IL EST TOUJOURS PRESENT, meme sans commande : l'ecran vide dit ce qu'il
-       * faut faire, et le cacher ferait croire que la fonction n'existe pas.
+       * CE BLOC REMPLACE QUATRE SECTIONS, une par ecran, que cette page portait
+       * jusqu'ici : chacune avait son `h2`, son paragraphe et son lien. Elles
+       * existaient pour une raison qui reste vraie, rendre les ecrans
+       * atteignables sans saisir leur URL, motif de C33 transpose cote
+       * boutique. LA BARRE LATERALE LES PORTE DESORMAIS, sur TOUS les ecrans et
+       * plus seulement depuis celui-ci.
+       *
+       * ILS NE DISPARAISSENT PAS POUR AUTANT, et c'est la forme du prototype :
+       * la vue d'ensemble garde des tuiles vers les rubriques. Le doublon avec
+       * la barre est voulu, un raccourci au centre de l'ecran se voit mieux
+       * qu'une entree de menu, en particulier au premier passage.
+       *
+       * LE LIBELLE DES LIENS EST INCHANGE, « Voir mes commandes », « Gérer mes
+       * adresses », « Gérer mes informations », « Voir mes données » : ce sont
+       * les noms accessibles sur lesquels quatre fichiers de tests de bout en
+       * bout naviguent, et les changer casserait des tests qui vérifient le
+       * parcours réel, pas le rendu.
        */}
-      <section className={styles.section} aria-labelledby="titre-commandes">
-        <h2 id="titre-commandes">Mes commandes</h2>
-        <p className={styles.texte}>
-          Retrouvez vos commandes, leur suivi et vos factures.
-        </p>
-        <Link href="/compte/commandes" className={styles.lien}>
-          Voir mes commandes
-        </Link>
+      <section className={styles.section} aria-labelledby="titre-raccourcis">
+        <h2 id="titre-raccourcis">Mon espace</h2>
+
+        <ul className={styles.raccourcis}>
+          <li className={styles.raccourci}>
+            <Link href="/compte/commandes" className={styles.raccourciLien}>
+              Voir mes commandes
+            </Link>
+            <p className={styles.raccourciTexte}>
+              Vos commandes, leur suivi et vos factures.
+            </p>
+          </li>
+
+          <li className={styles.raccourci}>
+            <Link href="/compte/adresses" className={styles.raccourciLien}>
+              Gérer mes adresses
+            </Link>
+            <p className={styles.raccourciTexte}>
+              Vos adresses enregistrées pour vos prochaines commandes.
+            </p>
+          </li>
+
+          <li className={styles.raccourci}>
+            <Link href="/compte/profil" className={styles.raccourciLien}>
+              Gérer mes informations
+            </Link>
+            <p className={styles.raccourciTexte}>
+              Votre nom, votre adresse email ou votre mot de passe.
+            </p>
+          </li>
+
+          <li className={styles.raccourci}>
+            <Link href="/compte/donnees" className={styles.raccourciLien}>
+              Voir mes données
+            </Link>
+            <p className={styles.raccourciTexte}>
+              Une copie de vos données, et vos droits sur celles-ci.
+            </p>
+          </li>
+        </ul>
       </section>
 
       {/*
-       * LE LIEN VERS LE CARNET, LS-59. Sans lui, `/compte/adresses` serait
-       * inatteignable autrement qu'en saisissant l'URL, defaut exact de LS-162
-       * et de `/compte/verification`.
+       * LA SECTION « SESSION » A ETE RETIREE PAR LS-180, ET CE N'EST PAS UNE
+       * PERTE DE FONCTION : la deconnexion vit maintenant en pied de barre
+       * laterale, donc atteignable depuis TOUS les ecrans de l'espace client et
+       * plus seulement depuis celui-ci, ce qui est un gain pour un appareil
+       * partage.
        *
-       * TOUJOURS PRESENT, meme sur un carnet vide : le cacher ferait croire que
-       * la fonction n'existe pas, et l'ecran vide dit lui-meme quoi faire.
+       * IL FALLAIT LA RETIRER, ET PAS SEULEMENT PAR ELEGANCE. Le bouton aurait
+       * existe DEUX FOIS sur cette page, dans la barre et dans la section, et
+       * `compte-authentification.spec.ts` cherche
+       * `getByRole("button", { name: "Se déconnecter" })` sans ancrage : deux
+       * occurrences font echouer Playwright en violation de mode strict.
        */}
-      {/*
-       * LE LIEN VERS LE PROFIL, LS-60. Sans lui, `/compte/profil` serait
-       * inatteignable autrement qu'en saisissant l'URL.
-       */}
-      <section className={styles.section} aria-labelledby="titre-profil">
-        <h2 id="titre-profil">Mes informations</h2>
-        <p className={styles.texte}>
-          Modifiez votre nom, votre adresse email ou votre mot de passe.
-        </p>
-        <Link href="/compte/profil" className={styles.lien}>
-          Gérer mes informations
-        </Link>
-      </section>
-
-      <section className={styles.section} aria-labelledby="titre-adresses">
-        <h2 id="titre-adresses">Mon carnet d&apos;adresses</h2>
-        <p className={styles.texte}>
-          Enregistrez vos adresses pour les retrouver lors de vos prochaines
-          commandes.
-        </p>
-        <Link href="/compte/adresses" className={styles.lien}>
-          Gérer mes adresses
-        </Link>
-      </section>
-
-      <section className={styles.section} aria-labelledby="titre-session">
-        <h2 id="titre-session">Session</h2>
-        <p className={styles.texte}>
-          Fermez votre session si vous utilisez un appareil partagé.
-        </p>
-        <BoutonDeconnexion />
-      </section>
 
       {/*
-       * LE TEXTE ANNONÇAIT « LA DEMANDE SE FAIT PAR EMAIL », ET C'ETAIT VRAI
-       * jusqu'a LS-62 : LS-95 avait livre `exporterDonneesPersonnelles` sans
-       * ecran, et la procedure interne prevoyait un declenchement a la main.
+       * LA SECTION « MES DONNEES PERSONNELLES » A ETE RETIREE PAR LS-180, ET
+       * C'EST LA MEME RAISON QUE LA SECTION « SESSION » CI-DESSUS : la tuile de
+       * raccourci « Voir mes données » pointe vers la meme route, et la barre
+       * laterale porte l'entree sur tous les ecrans.
        *
-       * LE CRITERE 1 DE LS-62 LE REFUSE, « le client obtient ses donnees depuis
-       * l'espace client, SANS demarche par email », et l'ecran existe desormais.
-       * Laisser cette phrase aurait ete pire qu'un texte perime : elle aurait
-       * dissuade d'employer le chemin livre, en annonçant un delai d'un mois la
-       * ou le fichier se telecharge en un clic.
+       * DEUX LIENS IDENTIQUES VERS LA MEME CIBLE SUR UN MEME ECRAN EST UN
+       * DEFAUT, pas seulement une gene de test. `compte-donnees.spec.ts` l'a
+       * attrape en violation de mode strict, « resolved to 2 elements », et il
+       * avait raison de le faire : au clavier, la tabulation traverse deux fois
+       * la meme destination, et un lecteur d'ecran annonce deux fois « Voir mes
+       * données » sans que rien ne distingue les deux.
+       *
+       * CE QUE LE TEXTE DE CETTE SECTION DISAIT N'EST PAS PERDU : l'ecran
+       * `/compte/donnees` annonce lui-meme ce que le fichier contient et ce
+       * qu'il ne contient pas, et `compte-donnees.spec.ts` le verifie. Cette
+       * section n'en etait qu'une porte d'entree.
        */}
-      <section className={styles.section} aria-labelledby="titre-donnees">
-        <h2 id="titre-donnees">Mes données personnelles</h2>
-        <p className={styles.texte}>
-          Téléchargez une copie des données que la boutique détient à votre
-          sujet, dans un format lisible et réutilisable.
-        </p>
-        <Link href="/compte/donnees" className={styles.lien}>
-          Voir mes données
-        </Link>
-      </section>
 
       <section
         className={styles.sectionDanger}

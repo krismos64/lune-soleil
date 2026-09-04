@@ -1,0 +1,54 @@
+/*
+ * Gabarit de l'espace client, LS-180.
+ *
+ * CONCU A PARTIR DE 320 px : hors media query, tout est empile, la barre etant
+ * repliee dans son panneau. La colonne n'apparait qu'a 768 px, largeur a partir
+ * de laquelle 240 px de barre laissent encore de quoi lire une commande.
+ *
+ * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons d'ADR-022.
+ */
+
+.gabarit {
+  display: flex;
+  flex-direction: column;
+  /*
+   * `min-height: 100vh` PORTE LE FOND SUR TOUTE LA HAUTEUR. Sans lui, une page
+   * courte, l'export de donnees par exemple, laisserait la barre laterale
+   * s'arreter au milieu de l'ecran, le filet de separation dans le vide.
+   */
+  min-height: 100vh;
+}
+
+@media (min-width: 768px) {
+  .gabarit {
+    flex-direction: row;
+    /*
+     * `align-items: flex-start` EST INDISPENSABLE AU `position: sticky` DE LA
+     * BARRE. La valeur par defaut `stretch` etire l'element sur la hauteur du
+     * conteneur : un element etire ne peut pas coller, sa boite couvrant deja
+     * toute la zone de defilement. Sans cette ligne, la barre defilerait avec
+     * la page et le bloc d'identite sortirait de l'ecran.
+     */
+    align-items: flex-start;
+  }
+}
+
+/*
+ * `min-width: 0` AUTORISE LA COLONNE A RETRECIR SOUS SON CONTENU.
+ *
+ * SANS LUI, UN LIBELLE DE PRODUIT SANS ESPACE POUSSE LA PAGE ENTIERE. Un
+ * element flex refuse par defaut de passer sous la largeur de son contenu :
+ * c'est exactement le defaut de LS-171, ou un nom de 44 caracteres debordait de
+ * 43 px sur le detail de commande, remonte ici a l'echelle du gabarit.
+ *
+ * AUCUN `overflow` N'EST POSE, ET C'EST UN CHOIX. Un `overflow: hidden` ou un
+ * `overflow-x: auto` sur cette colonne masquerait le debordement au lieu de le
+ * corriger, et surtout rendrait AVEUGLE `debordementHorizontal` de la suite de
+ * bout en bout : sa mesure exclut tout descendant d'un ancetre qui defile. Ce
+ * serait un moyen de faire verdir les trente-neuf mesures de l'espace client
+ * sans avoir rien corrige.
+ */
+.colonne {
+  flex: 1;
+  min-width: 0;
+}

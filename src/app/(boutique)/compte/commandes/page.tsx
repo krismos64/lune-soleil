@@ -42,6 +42,17 @@ export default async function PageMesCommandes() {
 
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
+      {/*
+       * LE SUR-TITRE DE RUBRIQUE, forme du prototype, LS-180. Il n'est PAS un
+       * titre au sens du document : c'est un `p` qui precede le `h1`, et le
+       * passer en `h2` ferait ouvrir la page sur un niveau 2.
+       *
+       * `aria-hidden` LE RETIRE DE L'ARBRE D'ACCESSIBILITE : lu a voix haute,
+       * il redirait ce que le `h1` juste dessous porte deja.
+       */}
+      <p className={styles.surTitre} aria-hidden="true">
+        Historique
+      </p>
       <h1 className={styles.titre}>Mes commandes</h1>
 
       <p className={styles.texte}>

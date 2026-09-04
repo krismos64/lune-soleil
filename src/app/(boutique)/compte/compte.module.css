@@ -521,3 +521,132 @@
   padding-left: var(--ls-space-5);
   line-height: 1.7;
 }
+
+/* ============================================================== LS-180
+ *
+ * Le gabarit de l'espace client. Ce qui suit sert les SIX ECRANS, la barre
+ * laterale vivant, elle, dans `components/navigation-espace-client.module.css`.
+ */
+
+/*
+ * LE SUR-TITRE DE RUBRIQUE, forme du prototype.
+ *
+ * `--ls-accent-terracotta-deep` ET NON `--ls-accent-terracotta`, ET C'EST UNE
+ * MESURE, PAS UNE PREFERENCE. Le prototype emploie le terracotta clair pour ces
+ * petites capitales ; il donne 4,07:1 sur creme, sous le seuil AA de 4,5:1.
+ * `frontend-design.md` ne l'autorise qu'en TEXTE LARGE, c'est-a-dire 18,66 px
+ * en gras ou 24 px en graisse normale : un sur-titre de 11 px en gras n'en est
+ * pas, et le document previent que « le prototype commet cette erreur 35 fois ».
+ *
+ * `--ls-accent-terracotta-deep` sur `--ls-background` : 5,44:1, AA. C'est la
+ * regle de divergence de `frontend-design.md`, en cas de desaccord c'est le
+ * prototype qui a tort.
+ *
+ * LE FOND EST DECLARE ICI POUR ETRE MESURE. `verifier-contraste.sh` n'apparie
+ * une couleur et un fond que dans le MEME bloc : sans cette ligne, la paire
+ * neuve du critere 6 ne serait vue par aucun controle textuel. Le fond declare
+ * est celui que la page pose deja, donc rien ne change a l'ecran.
+ */
+.surTitre {
+  margin: 0 0 var(--ls-space-2);
+  background: var(--ls-background);
+  color: var(--ls-accent-terracotta-deep);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/*
+ * LE TITRE EN SERIF, critere 3. `--ls-police-titre` est le jeton de titre
+ * d'ADR-022, deja employe par l'enseigne de l'administration.
+ *
+ * `clamp` PLUTOT QU'UNE TAILLE FIXE. Le prototype montre un titre « de tres
+ * grande taille », mesure sur un ecran de bureau : repris tel quel a 320 px,
+ * « Mes données personnelles » tiendrait sur quatre lignes et pousserait le
+ * contenu hors de l'ecran. La borne basse, 1,5rem, est ce qui tient a 320 px ;
+ * la haute, 2,25rem, est la taille du prototype.
+ */
+.titre {
+  margin-top: 0;
+  font-family: var(--ls-police-titre);
+  font-size: clamp(1.5rem, 1.1rem + 2vw, 2.25rem);
+  font-weight: 400;
+  line-height: 1.2;
+  /*
+   * UN TITRE PEUT PORTER UN NUMERO DE COMMANDE SANS ESPACE DE COUPURE, et le
+   * detail de commande en affiche un : « Commande LS-2026-000042 » deborde
+   * sinon a 320 px. Meme motif que LS-171, applique au titre.
+   */
+  overflow-wrap: anywhere;
+}
+
+/*
+ * LES RACCOURCIS DE LA VUE D'ENSEMBLE.
+ *
+ * UNE LISTE ET NON DES `div`, pour que la nature de l'ensemble soit annoncee :
+ * « liste de 4 elements » dit d'emblee combien de rubriques existent.
+ *
+ * `auto-fit` ET `minmax` PLUTOT QU'UNE MEDIA QUERY : les tuiles passent d'une
+ * a deux colonnes quand la place existe, sans point de bascule ecrit en dur.
+ * A 320 px, `1fr` gagne et la liste s'empile.
+ */
+.raccourcis {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: var(--ls-space-3);
+}
+
+/*
+ * LA TUILE. Fond blanc sur la creme de la page, ce qui la detache sans ombre.
+ */
+.raccourci {
+  padding: var(--ls-space-4);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+}
+
+/*
+ * `--ls-primary` sur `--ls-surface` : 8,93:1, AAA. Mesure sur le fond que
+ * `.raccourci` pose juste au-dessus, et non recopie d'un voisin : C31.
+ *
+ * ZONE TACTILE DE 44 px. Un lien de titre fait sinon la hauteur de sa ligne, et
+ * `frontend-design.md` fixe le minimum a `--ls-touch-target`.
+ *
+ * LE SOULIGNEMENT EST CONSERVE : un lien qui ne se distingue que par sa couleur
+ * est invisible a qui ne percoit pas cette difference.
+ */
+.raccourciLien {
+  display: flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  color: var(--ls-primary);
+  font-family: var(--ls-police-titre);
+  font-size: 1.125rem;
+  text-decoration: underline;
+}
+
+.raccourciLien:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+/*
+ * `--ls-text-muted` sur `--ls-surface` : 5,19:1, AA.
+ *
+ * MESURE SUR CE FOND, ET LE FOND EST REDECLARE POUR QUE LE CONTROLE LE VOIE.
+ * Le jeton est documente a 4,86:1, valeur qui vaut sur CREME : ici la tuile
+ * pose du blanc. Sur le sable, la meme couleur tomberait a 4,35:1, une des
+ * trois paires refusees du projet.
+ */
+.raccourciTexte {
+  margin: var(--ls-space-2) 0 0;
+  background: var(--ls-surface);
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}

@@ -56,6 +56,17 @@ export default async function PageProfil() {
 
   return (
     <main id="contenu" tabIndex={-1} className={stylesCompte.page}>
+      {/*
+       * LE SUR-TITRE DE RUBRIQUE, forme du prototype, LS-180. Il n'est PAS un
+       * titre au sens du document : c'est un `p` qui precede le `h1`, et le
+       * passer en `h2` ferait ouvrir la page sur un niveau 2.
+       *
+       * `aria-hidden` LE RETIRE DE L'ARBRE D'ACCESSIBILITE : lu a voix haute,
+       * il redirait ce que le `h1` juste dessous porte deja.
+       */}
+      <p className={stylesCompte.surTitre} aria-hidden="true">
+        Compte
+      </p>
       <h1 className={stylesCompte.titre}>Mon profil</h1>
 
       <p className={stylesCompte.texte}>
