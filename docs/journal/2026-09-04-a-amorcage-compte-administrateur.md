@@ -106,6 +106,23 @@ d'exiger quoi que ce soit : une pull request deviendrait fusionnable **sans aucu
 contrôle vert**, en silence. Deux critères le couvrent, dont l'obligation de
 prouver le défaut avant de le refermer.
 
+## Une cinquième cause, trouvée après la fusion
+
+La PR de cette session était documentaire, **le filtre de portée a joué**, les
+deux étapes longues sont sorties en `skipped`. Le run a pourtant duré
+**10 min 38**, dont **7 min 06 de `npm ci`**, soit 67 % d'un run allégé.
+
+Relevé sur six runs consécutifs, même verrou : 14 s, 426 s, 178 s, 16 s, 18 s,
+19 s. **Facteur trente sans aucune cause dans le code**, et `cache: npm` est déjà
+actif sur `actions/setup-node@v7` : la variation vient du registre ou de
+l'exécuteur.
+
+Les quatre changements de LS-176 ne touchent pas cette étape. Un jour où le
+registre répond mal, un run allégé peut donc coûter plus cher qu'un run complet
+un bon jour. La piste est consignée en commentaire du ticket, avec sa réserve :
+la variation est **subie**, et un critère visant une durée cible promettrait ce
+que la story ne contrôle pas.
+
 ## État des tickets
 
 **LS-175 créée**, sous LS-7, priorité High. Elle **bloque LS-153**, la première
