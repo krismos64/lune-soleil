@@ -367,32 +367,45 @@ jobs:
       # sera deploye.
       # ----------------------------------------------------------------------
       # ----------------------------------------------------------------------
-      # LS-178. `npm ci` VARIAIT D'UN FACTEUR TRENTE, ET LA CAUSE EST LE
-      # TELECHARGEMENT DES MOTEURS PRISMA.
+      # LS-178. `npm ci` VARIE D'UN FACTEUR TRENTE, ET LA CAUSE EST EXTERNE :
+      # LE DEBIT DISQUE DE L'EXECUTEUR GITHUB.
       #
-      # LE SYMPTOME. Huit mesures du 4 septembre 2026, meme verrou, meme cache npm
-      # restaure, meme version d'executeur : 14, 17, 19, 216, 217, 423, 425, 426 s.
-      # Ni la branche, ni le declencheur, ni l'heure ne les separaient.
+      # LE SYMPTOME. Neuf mesures du 4 septembre 2026, meme verrou, meme cache npm
+      # restaure, meme version d'executeur : 14, 17, 19, 216, 217, 423, 425, 426,
+      # 431 s. Ni la branche, ni le declencheur, ni l'heure ne les separaient.
       #
-      # DEUX HYPOTHESES ONT ETE POSEES ET DEMENTIES, ecrites ici pour qu'on n'y
-      # revienne pas. Le cache npm ne serait pas sauvegarde : FAUX, les journaux
-      # disent « Cache hit » et « Cache restored successfully », et le
-      # `Post Installer Node` a 0 s signifie « rien a sauvegarder ». Le motif
-      # serait binaire, 17 s ou 425 s : FAUX, deux mesures a 216 et 217 s.
+      # CE QUI A TRANCHE, ET C'EST LA LECON A GARDER. Les HORODATAGES, pas les
+      # hypotheses. `--foreground-scripts` avait revele trois scripts
+      # d'installation, ce qui les a fait accuser a tort : ils s'executent tous
+      # en MOINS D'UNE SECONDE, a 14 s du debut de l'etape. Suivent 6 min 49 de
+      # SILENCE COMPLET avant « added 704 packages in 7m ».
       #
-      # CE QUI A TRANCHE, ET C'EST LA LECON REUTILISABLE. `--foreground-scripts`
-      # a rendu visible ce qui ne l'etait pas : trois `postinstall` tournaient en
-      # arriere-plan, dont celui de `@prisma/engines`, qui telecharge un binaire
-      # de 24 Mo depuis les serveurs de Prisma. Sans cette option, sept minutes
-      # s'ecoulaient SANS UNE SEULE LIGNE de journal, et le temps semblait venir
-      # de nulle part. Une instrumentation a devine la cause la ou trois analyses
-      # l'avaient manquee.
+      # Ce silence, c'est l'ecriture de `node_modules` sur disque : 1,3 Go pour
+      # 704 paquets, soit environ 3,2 Mo/s. Un debit anormalement bas, qui varie
+      # d'un executeur a l'autre. Cela explique enfin pourquoi aucun critere du
+      # depot ne separait les mesures : la cause n'est pas dans le depot.
       #
-      # POURQUOI LE CACHE NPM NE POUVAIT PAS AIDER. Il garde `~/.npm`, les
-      # archives venant du REGISTRE. Les moteurs Prisma ne viennent pas du
-      # registre : ils sont tires par un script d'installation depuis un autre
-      # serveur, et atterrissent dans `~/.cache/prisma`. Deux caches distincts
-      # pour deux origines distinctes.
+      # CINQ HYPOTHESES ONT ETE POSEES ET DEMENTIES, ecrites ici pour qu'on n'y
+      # revienne pas :
+      #   - le cache npm ne serait pas sauvegarde : FAUX, « Cache restored
+      #     successfully », et 0 s au Post signifie « rien a sauvegarder »
+      #   - le motif serait binaire, 17 s ou 425 s : FAUX, mesures a 216 et 217 s
+      #   - `node_modules` serait deja present sur les runs rapides : FAUX, les
+      #     releves disent 0 entree avant et 498 apres
+      #   - les `postinstall` seraient couteux : FAUX, moins d'une seconde chacun
+      #   - le cache Prisma corrigerait le probleme : FAUX, 423 s avec le cache
+      #     restaure contre 425 s sans
+      #
+      # CE QUI EST GARDE MALGRE TOUT, et pourquoi. Le cache Prisma coute zero et
+      # supprime un telechargement de 8 Mo, mesure : le `preinstall` de `prisma`
+      # disparait du journal quand il est restaure. `--foreground-scripts` coute
+      # zero aussi et rendra visible le jour ou une dependance ajoutera un
+      # `postinstall` reellement couteux. Aucun des deux ne resout LS-178.
+      #
+      # 1,3 Go DE DEPENDANCES EST NORMAL pour Next.js 16, Prisma et Playwright
+      # reunis, et l'executeur ne se choisit pas. La cause est donc hors de notre
+      # controle, et LS-178 se clot sur ce constat plutot que sur une correction
+      # cosmetique, ce que son dernier critere prevoyait explicitement.
       # ----------------------------------------------------------------------
       # LE CACHE PRISMA, ET C'EST LUI QUI MANQUAIT. `cache: npm` de setup-node ne
       # couvre QUE `~/.npm`, les archives venant du registre. Les moteurs Prisma
