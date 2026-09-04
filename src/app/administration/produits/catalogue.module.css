@@ -1,0 +1,321 @@
+/*
+ * Liste du catalogue pour l'administration, LS-183.
+ *
+ * CONCU A PARTIR DE 320 px, puis elargi. Les media queries montent, elles ne
+ * descendent jamais : ce qui est ecrit hors requete est ce que voit le plus
+ * petit ecran.
+ *
+ * DES CARTES ET NON UN TABLEAU, meme choix que les ecrans de commandes et de
+ * stocks : vignette, nom, categorie, prix, declinaisons et badge ne tiennent pas
+ * en colonnes a 320 px, et `frontend-design.md` demande cartes et listes quand
+ * un tableau ne tient plus sur mobile. Une seule structure sert toutes les
+ * largeurs, sans deux arbres de DOM concurrents.
+ *
+ * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons d'ADR-022. Les paires
+ * couleur et fond sont colocalisees, donc mesurables par
+ * `verifier-contraste.sh`.
+ */
+
+.page {
+  padding: var(--ls-space-4);
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+/* --------------------------------------------------------------- l'en-tete */
+
+/*
+ * `--ls-accent-gold-deep` sur `--ls-background` : 4,72:1, AA.
+ *
+ * PAS DE TERRACOTTA ICI. Un sur-titre de 11 px gras n'est PAS du texte large,
+ * seuil de 18,66 px, et `--ls-accent-terracotta` y donne 4,07:1, sous AA. C'est
+ * l'erreur que `frontend-design.md` signale comme la plus facile a commettre.
+ */
+.surtitre {
+  margin: 0 0 var(--ls-space-1);
+  color: var(--ls-accent-gold-deep);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/*
+ * `flex-wrap` PLUTOT QU'UNE LARGEUR FIXE : a 320 px le titre et le bouton ne
+ * tiennent pas cote a cote, et un debordement horizontal du corps est interdit.
+ */
+.enTete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ls-space-3);
+  margin-bottom: var(--ls-space-2);
+}
+
+/* Serif de titre, meme jeton que le tableau de bord et les expeditions. */
+.titre {
+  margin: 0;
+  color: var(--ls-text);
+  font-family: var(--ls-police-titre);
+  font-size: clamp(1.75rem, 6vw, 2.75rem);
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+/*
+ * L'ACTION PRINCIPALE, EN APLAT PLEIN. Blanc sur `--ls-primary` : 8,93:1, AAA.
+ *
+ * ZONE TACTILE DE 44 px, `--ls-touch-target` : c'est le geste le plus frequent
+ * apres l'ouverture d'une fiche, et il se vise au doigt sur un stand.
+ */
+.action {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  padding: 0 var(--ls-space-4);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.action:hover {
+  background: var(--ls-primary-hover);
+  color: var(--ls-text-on-primary);
+}
+
+.introduction {
+  margin: 0 0 var(--ls-space-4);
+  color: var(--ls-text-muted);
+}
+
+/* ---------------------------------------------------------------- les filtres */
+
+.filtres {
+  margin-bottom: var(--ls-space-5);
+}
+
+/*
+ * LES FILTRES DEFILENT DANS LEUR PROPRE CONTENEUR a 320 px, quatre libelles ne
+ * tenant pas sur une ligne. `overflow-x` sur le conteneur et non sur la page :
+ * c'est la regle mobile, aucun debordement horizontal du corps.
+ *
+ * LS-144 PORTE LA DECOUVRABILITE de ce motif, le fait qu'une partie du contenu
+ * defile hors ecran sans que rien ne le signale. La correction qui en sortira
+ * vaudra pour cette liste : meme motif, donc pas de solution differente ici.
+ */
+.listeFiltres {
+  display: flex;
+  gap: var(--ls-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+}
+
+/*
+ * `--ls-text-muted` sur `--ls-surface` : 5,19:1, AA.
+ *
+ * LE FOND EST BLANC ET NON SABLE, et c'est mesure : sur `--ls-surface-sand`,
+ * `--ls-text-muted` ne rend que 4,35:1, sous le seuil. Le sable est le fond
+ * piegeux du projet, regle C31.
+ */
+.filtre {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  padding: 0 var(--ls-space-3);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface);
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.filtre:hover {
+  background: var(--ls-admin-actif);
+  color: var(--ls-primary-hover);
+}
+
+/*
+ * LE FILTRE COURANT. `aria-current="page"` porte l'information, ces styles ne
+ * font que l'appuyer, et le selecteur s'ancre sur l'ATTRIBUT plutot que sur une
+ * classe : deux sources distinctes finiraient par designer des filtres
+ * differents sans que rien ne rende l'ecart visible.
+ *
+ * DEUX MARQUEURS, l'aplat et la graisse : la couleur seule ne suffit pas.
+ *
+ * Blanc sur `--ls-primary` : 8,93:1, AAA.
+ */
+.filtre[aria-current="page"] {
+  border-color: var(--ls-primary);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  font-weight: 700;
+}
+
+.filtre[aria-current="page"]:hover {
+  background: var(--ls-primary-hover);
+  color: var(--ls-text-on-primary);
+}
+
+/* ------------------------------------------------------------------ la liste */
+
+.vide {
+  margin: 0;
+  color: var(--ls-text-muted);
+}
+
+.liste {
+  display: grid;
+  gap: var(--ls-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * LA CARTE EST EN LIGNE, vignette a gauche, comme le prototype. `flex-wrap`
+ * autorise le badge a passer sous le corps quand la place manque, plutot que de
+ * comprimer le nom du produit.
+ */
+.carte {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ls-space-3);
+  padding: var(--ls-space-3);
+  border: 1px solid var(--ls-border);
+  background: var(--ls-surface);
+}
+
+/*
+ * LE CADRE GARDE SA PLACE MEME SANS PHOTO. Sans dimension fixe, les cartes
+ * s'aligneraient differemment selon qu'un produit porte une image, et la liste
+ * semblerait tressauter.
+ */
+.cadreImage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid var(--ls-border);
+  background: var(--ls-surface-sand);
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/*
+ * SANS PHOTO, UN EMPLACEMENT ET NON UN VIDE. Un produit sans image reste
+ * listable, et c'est le cas d'un brouillon en cours : le cadre sable dit qu'il
+ * manque quelque chose sans crier a l'erreur.
+ */
+.imageAbsente {
+  width: 100%;
+  height: 100%;
+  background: var(--ls-surface-sand);
+}
+
+/*
+ * `min-width: 0` AUTORISE LE CORPS A RETRECIR SOUS SON CONTENU. Sans lui, un
+ * element flex refuse de passer sous la largeur de son contenu : un nom de
+ * produit long pousserait la carte en debordement horizontal. Motif de LS-171,
+ * un libelle sans espace debordant de 43 px.
+ */
+.corps {
+  flex: 1;
+  min-width: 0;
+}
+
+/* `--ls-text-muted` sur `--ls-surface` : 5,19:1, AA. */
+.categorie {
+  margin: 0 0 var(--ls-space-1);
+  color: var(--ls-text-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.nom {
+  margin: 0 0 var(--ls-space-1);
+  font-family: var(--ls-police-titre);
+  font-size: 1.125rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+/*
+ * `--ls-primary` sur `--ls-surface` : 8,93:1, AAA.
+ *
+ * `overflow-wrap` PARCE QU'UN NOM PEUT N'AVOIR AUCUN ESPACE. Motif de LS-171 :
+ * un libelle insecable deborde de sa carte sans que rien ne l'arrete.
+ */
+.lien {
+  color: var(--ls-primary);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.lien:hover {
+  color: var(--ls-primary-hover);
+  text-decoration: underline;
+}
+
+/* `--ls-price` sur `--ls-surface` : 8,93:1, AAA. */
+.prix {
+  margin: 0 0 var(--ls-space-1);
+  color: var(--ls-price);
+  font-weight: 600;
+}
+
+/* `--ls-text-muted` sur `--ls-surface` : 5,19:1, AA. */
+.variantes {
+  margin: 0;
+  color: var(--ls-text-muted);
+  font-size: 0.8125rem;
+}
+
+/* ------------------------------------------------------------------- badges */
+
+/*
+ * LE SENS EST DANS LE TEXTE, jamais dans la seule couleur : « Publié »,
+ * « Brouillon » et « Archivé » se lisent en vision monochrome comme a
+ * l'oreille. La couleur ne fait qu'appuyer.
+ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--ls-space-1) var(--ls-space-2);
+  border-radius: var(--ls-radius-sm);
+  color: var(--ls-text-on-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Blanc sur `--ls-success` : 6,15:1, AA. */
+.badgeActif {
+  background: var(--ls-success);
+}
+
+/* Blanc sur `--ls-text-muted` : 5,19:1, AA. */
+.badgeBrouillon {
+  background: var(--ls-text-muted);
+}
+
+/* Blanc sur `--ls-text` : 12,92:1, AAA. */
+.badgeArchive {
+  background: var(--ls-text);
+}
