@@ -1,0 +1,106 @@
+/*
+ * Gabarit de l'administration, LS-181.
+ *
+ * CONCU A PARTIR DE 320 px : hors media query, tout est empile, la barre etant
+ * repliee dans son panneau. La colonne n'apparait qu'a 768 px, largeur a partir
+ * de laquelle 250 px de barre laissent encore de quoi lire un tableau.
+ *
+ * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons d'ADR-022 et de LS-181.
+ */
+
+.gabarit {
+  display: flex;
+  flex-direction: column;
+  /*
+   * `min-height: 100vh` PORTE LE FOND SUR TOUTE LA HAUTEUR. Sans lui, une page
+   * courte laisserait apparaitre le fond du `body` sous la colonne, et la barre
+   * laterale s'arreterait au milieu de l'ecran.
+   */
+  min-height: 100vh;
+}
+
+@media (min-width: 768px) {
+  .gabarit {
+    flex-direction: row;
+    /*
+     * `align-items: flex-start` EST INDISPENSABLE AU `position: sticky` DE LA
+     * BARRE. La valeur par defaut `stretch` etire l'element sur la hauteur du
+     * conteneur : un element etire ne peut pas coller, sa boite couvrant deja
+     * toute la zone de defilement. Sans cette ligne, la barre defilerait avec
+     * la page et le bloc d'identite sortirait de l'ecran.
+     */
+    align-items: flex-start;
+  }
+}
+
+/*
+ * `min-width: 0` AUTORISE LA COLONNE A RETRECIR SOUS SON CONTENU. Sans lui, un
+ * element flex refuse de passer sous la largeur de son contenu : un tableau
+ * large pousserait la colonne, donc la page entiere, en debordement
+ * horizontal. C'est le meme motif que LS-171, a l'echelle du gabarit.
+ */
+.colonne {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---------------------------------------------------------------- le bandeau */
+
+/*
+ * `position: sticky` : le bandeau reste visible au defilement d'une longue
+ * liste de commandes, ce qui garde le lien vers la boutique atteignable sans
+ * remonter. Il ne porte pas d'ombre, un filet suffisant a le detacher.
+ */
+.bandeau {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ls-space-3);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: var(--ls-space-3) var(--ls-space-4);
+  border-bottom: 1px solid var(--ls-border);
+  /*
+   * FOND OPAQUE ET NON TRANSPARENT. Le prototype emploie un blanc a 97 %
+   * d'opacite ; le contenu defilant se verrait alors par transparence sous le
+   * bandeau, ce qui brouille le texte. Un aplat plein est plus lisible et evite
+   * de composer un contraste sur un fond variable, impossible a mesurer.
+   */
+  background: var(--ls-admin-barre);
+}
+
+.bandeauSurtitre {
+  color: var(--ls-text-muted);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/*
+ * `--ls-primary` sur `--ls-admin-barre` : 8,79:1, AAA.
+ *
+ * ZONE TACTILE DE 44 px, `--ls-touch-target` : ce lien fait sinon la hauteur de
+ * sa ligne, environ 24 px. Correction du meme type que celle du lien « retour »
+ * de l'ecran des commandes, le 27 aout 2026.
+ */
+.bandeauLien {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  padding: 0 var(--ls-space-3);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface);
+  color: var(--ls-primary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.bandeauLien:hover {
+  background: var(--ls-admin-actif);
+  color: var(--ls-primary-hover);
+}

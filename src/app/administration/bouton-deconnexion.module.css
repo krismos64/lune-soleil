@@ -1,0 +1,64 @@
+/*
+ * Bouton de deconnexion de la barre d'administration, LS-181.
+ *
+ * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons d'ADR-022. Les paires
+ * couleur et fond sont colocalisees pour rester mesurables par
+ * `verifier-contraste.sh`.
+ */
+
+.bloc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-1);
+  /*
+   * LARGEUR PLEINE SUR SA LIGNE. Le bloc d'identite est en `flex-wrap`, et ce
+   * `flex-basis` force la deconnexion a passer sous le nom plutot que de se
+   * coincer a cote sur une colonne de 250 px.
+   */
+  flex-basis: 100%;
+}
+
+/*
+ * UN BOUTON QUI RESSEMBLE A UN LIEN, ET C'EST DELIBERE. C'est bien un bouton
+ * dans le DOM, la deconnexion etant une action et non une navigation : un lien
+ * serait suivi par un pre-chargement ou une visite de robot. Seule son
+ * apparence est discrete, la deconnexion n'etant pas l'action principale de
+ * l'ecran.
+ *
+ * `--ls-accent-gold-deep` sur `--ls-admin-barre` : 4,96:1, AA.
+ */
+.bouton {
+  align-self: flex-start;
+  min-height: var(--ls-touch-target);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ls-accent-gold-deep);
+  font: inherit;
+  font-size: 0.8125rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.bouton:hover {
+  color: var(--ls-primary-hover);
+}
+
+/*
+ * L'ETAT `disabled` SE VOIT AUTREMENT QUE PAR LA COULEUR : le libelle devient
+ * « Déconnexion… ». La couleur seule ne suffirait pas, et le curseur barre
+ * n'existe pas au doigt sur un telephone.
+ */
+.bouton:disabled {
+  color: var(--ls-text-muted);
+  text-decoration: none;
+  cursor: default;
+}
+
+/*
+ * `--ls-error` sur `--ls-admin-barre` : 6,46:1, AA.
+ */
+.erreur {
+  color: var(--ls-error);
+  font-size: 0.75rem;
+}

@@ -76,7 +76,13 @@ est_exclue() {
 # pourquoi elles n'y sont pas. Les lire comme des rubriques ferait échouer le
 # sens 1 sur du code exemplaire. Motif « contrôle satisfait par un commentaire »,
 # déjà en fiche sur ce dépôt.
-rubriques=$(awk '/^export const RUBRIQUES = \[/,/^\] as const;/' "$NAVIGATION" \
+#
+# LE MOTIF ACCEPTE UNE ANNOTATION DE TYPE, `RUBRIQUES: readonly Rubrique[] = [`.
+# LS-181 en a ajouté une, et l'ancrage d'origine, qui exigeait `RUBRIQUES = [`,
+# a cessé de trouver le tableau : le script est sorti en ECHEC plutôt qu'en
+# faux vert, ce qui est le bon défaut mais reste une panne du contrôle. Le
+# `[^=]*` couvre toute annotation future sans rouvrir le motif à autre chose.
+rubriques=$(awk '/^export const RUBRIQUES[^=]*= \[/,/^\] as const;/' "$NAVIGATION" \
   | grep -oE 'chemin: "[^"]+"' | sed 's/chemin: "//; s/"//' | sort)
 
 if [ -z "$rubriques" ]; then
@@ -159,6 +165,29 @@ elif ! grep -q '<NavigationAdministration' "$LAYOUT"; then
   echo "ECHEC le layout d'administration ne rend plus la barre"
   echo "      les listes de ce contrôle resteraient cohérentes pendant que"
   echo "      l'administration redeviendrait un ensemble d'écrans sans liens."
+  ko=$((ko + 1))
+fi
+
+# ---------------------------------------------------------------------------
+# Sens 4 : une rubrique « à venir » ne porte aucun chemin, LS-181.
+#
+# CES ENTRÉES SONT DES `<span>`, PAS DES LIENS. Elles annoncent la structure
+# complète de l'outil, arbitrage du 4 septembre 2026, et six des onze rubriques
+# du prototype ne sont pas livrées. Leur donner un `chemin` en ferait des liens
+# vers des écrans inexistants, c'est-à-dire des 404 promis à l'exploitante,
+# exactement ce que le sens 1 empêche pour les autres.
+#
+# LE SENS 1 NE LES VOIT PAS, et c'est pour cela que ce sens existe : il lit le
+# tableau `RUBRIQUES`, pas celui-ci. Une entrée déplacée d'un tableau à l'autre
+# serait attrapée par le sens 1 ; une entrée à qui l'on ajoute un `chemin` sur
+# place ne le serait par rien.
+# ---------------------------------------------------------------------------
+if awk '/^export const RUBRIQUES_A_VENIR[^=]*= \[/,/^\] as const;/' "$NAVIGATION" \
+  | grep -q 'chemin:'; then
+  echo "ECHEC une rubrique « à venir » porte un chemin"
+  echo "      ces entrées désignent des écrans NON LIVRÉS : un chemin en"
+  echo "      ferait des liens vers des routes inexistantes. Livrer l'écran"
+  echo "      et déplacer l'entrée dans RUBRIQUES, ou retirer le chemin."
   ko=$((ko + 1))
 fi
 

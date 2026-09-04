@@ -53,6 +53,57 @@
   /* Prix, aligne sur l'action principale */
   --ls-price: #5f4519;
 
+  /*
+   * ADMINISTRATION, LS-181. Ces jetons ne servent QUE l'administration : la
+   * boutique publique n'a ni barre laterale, ni pastille de comptage, ni badge
+   * de statut. Les nommer a part evite qu'un ecran public reprenne une couleur
+   * concue pour un fond de panneau lu de pres, en pleine lumiere de stand.
+   *
+   * TOUTES LES PAIRES SONT MESUREES, jamais supposees, et chacune porte son
+   * rapport avec le fond sur lequel elle est REELLEMENT posee, regle C31 : un
+   * rapport annonce a cote d'un jeton ne vaut que pour un fond.
+   */
+
+  /* Fond de la barre laterale. Plus clair que le sable, et c'est mesure : */
+  /* --ls-text-muted y donne 5,11:1 quand le sable ne rend que 4,35:1. */
+  --ls-admin-barre: #fffdf9;
+  /* Fond de la rubrique courante, texte --ls-primary-hover dessus : 10,82:1 */
+  --ls-admin-actif: #f2eadf;
+  /* Pastille de comptage, texte --ls-primary-hover dessus : 9,33:1, AAA */
+  --ls-admin-pastille: #ead9c0;
+
+  /*
+   * AUCUN JETON DE BADGE N'EST DECLARE ICI, ET C'EST DELIBERE. LS-181 en avait
+   * ajoute trois familles avant de constater que l'ecran des commandes porte
+   * DEJA ses badges, mesures et conformes, dans `commandes.module.css`. Deux
+   * palettes de badge auraient fait deux sources de verite pour la meme notion,
+   * et la seconde se serait perimee sans bruit.
+   *
+   * Un jeton declare et jamais employe est du code mort qu'aucun controle ne
+   * signale : `verifier-contraste.sh` ne mesure QUE les paires colocalisees
+   * dans une regle CSS, une declaration seule lui est invisible.
+   */
+
+  /*
+   * TYPOGRAPHIE, LS-181. Le prototype oppose un serif de titre a un sans-serif
+   * de texte, et c'est ce contraste qui porte le caractere « artisanal, un peu
+   * premium » de la direction, bien plus que la couleur.
+   *
+   * PILE SYSTEME ET AUCUN TELECHARGEMENT. Une police web couterait un fichier
+   * a charger sur chaque ecran, un ADR sur son hebergement (le depot etant
+   * public et le RGPD interdisant un CDN tiers qui journalise les IP, voir la
+   * fiche « pas de service tiers »), et une licence a verifier. Le gain
+   * esthetique ne justifie pas ces trois-la aujourd'hui : la pile ci-dessous
+   * rend un serif de qualite sur macOS, iOS et Windows sans un octet.
+   *
+   * SEUL LE JETON DE TITRE EXISTE. Le sans-serif du texte courant est deja pose
+   * sur `body` dans `globals.css` et herite partout : un second jeton disant la
+   * meme chose se serait desynchronise du premier.
+   */
+  --ls-police-titre:
+    "Iowan Old Style", "Palatino Linotype", Palatino, Baskerville, Georgia,
+    "Times New Roman", serif;
+
   /* Espacement, repris de l'annexe A du cahier des charges */
   --ls-space-1: 4px;
   --ls-space-2: 8px;

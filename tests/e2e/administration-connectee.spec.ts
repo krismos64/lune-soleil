@@ -56,7 +56,13 @@ test.use({ storageState: FICHIER_SESSION_ADMINISTRATION });
 const ECRANS = [
   {
     chemin: "/administration",
-    titre: "Administration",
+    /*
+     * « Tableau de bord » DEPUIS LS-181. Le titre etait « Administration »
+     * quand la page ne portait qu'un `h1` et la phrase « Connexion réussie » :
+     * elle existait pour etre la premiere route protegee, LS-70, pas pour
+     * afficher quoi que ce soit.
+     */
+    titre: "Tableau de bord",
   },
   {
     chemin: "/administration/categories",

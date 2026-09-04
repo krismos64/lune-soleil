@@ -1,94 +1,323 @@
 /*
- * Barre de navigation de l'administration, LS-162. Conception a partir de
- * 320 px.
+ * Barre de navigation de l'administration, LS-162 puis LS-181.
  *
- * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons d'ADR-022. Les paires
- * couleur et fond sont COLOCALISEES, ce qui les rend mesurables par
- * `verifier-contraste.sh` : ce controle ne remonte pas un fond herite du JSX,
- * et une barre presente sur tous les ecrans merite d'etre mesuree plutot que
- * supposee.
+ * CONCU A PARTIR DE 320 px, puis elargi. Les media queries montent, elles ne
+ * descendent jamais : ce qui est ecrit hors requete est ce que voit le plus
+ * petit ecran. C'est ce qui rend le cas mobile impossible a oublier, et il est
+ * ici le cas dur, le prototype ne le montrant jamais.
+ *
+ * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons d'ADR-022 et ceux ajoutes
+ * par LS-181. Les paires couleur et fond sont COLOCALISEES, ce qui les rend
+ * mesurables par `verifier-contraste.sh` : ce controle ne remonte pas un fond
+ * herite du JSX, et une barre presente sur tous les ecrans merite d'etre
+ * mesuree plutot que supposee.
+ *
+ * POURQUOI LE FOND EST `--ls-admin-barre` ET NON `--ls-surface-sand`. Le sable
+ * est la couleur du prototype, et il est FAUX ici : `--ls-text-muted` y donne
+ * 4,35:1, sous le seuil AA, alors qu'il rend 5,11:1 sur ce blanc casse. Les
+ * rubriques inactives sont ecrites dans ce gris, donc le fond du prototype
+ * rendrait toute la barre non conforme. Regle de divergence de
+ * `frontend-design.md` : en cas de desaccord, c'est le prototype qui a tort.
  */
 
+/* --------------------------------------------------------------- la bascule */
+
+/*
+ * LE BOUTON D'OUVERTURE, SOUS 768 px UNIQUEMENT.
+ *
+ * IL EST EN FLUX, PAS EN `position: fixed`. Un bouton flottant recouvrirait le
+ * contenu de la page en permanence, et sur un ecran de 320 px c'est la surface
+ * qui manque le plus. Il occupe donc sa ligne, en haut de l'ecran, et defile
+ * avec la page : l'exploitante remonte pour changer d'ecran, geste courant.
+ */
+.bascule {
+  display: flex;
+  align-items: center;
+  gap: var(--ls-space-2);
+  width: 100%;
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-3) var(--ls-space-4);
+  border: 0;
+  border-bottom: 1px solid var(--ls-border);
+  background: var(--ls-admin-barre);
+  color: var(--ls-primary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.basculeIcone {
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+/* ----------------------------------------------------------------- la barre */
+
+/*
+ * A 320 px, LA BARRE EST REPLIEE PAR DEFAUT.
+ *
+ * `display: none` ET NON UNE HAUTEUR NULLE : un panneau masque doit sortir de
+ * l'ordre de tabulation, sans quoi onze liens invisibles se prennent au clavier
+ * avant d'atteindre le contenu. C'est aussi ce qui le retire de l'arbre
+ * d'accessibilite, plutot que de le laisser lu par un lecteur d'ecran.
+ */
 .barre {
-  background: var(--ls-surface);
+  display: none;
+  background: var(--ls-admin-barre);
   border-bottom: 1px solid var(--ls-border);
 }
 
-/*
- * DEFILEMENT HORIZONTAL A 320 px, ET C'EST UN CHOIX ASSUME, repris de la liste
- * de filtres du catalogue qui resout le meme probleme.
- *
- * Avec sept rubriques, les empiler mangerait l'ecran entier avant le contenu,
- * ce qui est exactement le defaut que cette story ferme : l'exploitante ouvre
- * un ecran pour travailler, pas pour lire un menu. Les envelopper produirait
- * une hauteur imprevisible, de deux a quatre lignes selon la largeur.
- *
- * `overflow-x` cree ici une zone de defilement DELIBEREE, distincte d'un
- * debordement de page : la mesure de `mesure-rendu.ts` exclut ce cas
- * explicitement, un conteneur a defilement assume n'etant pas un defaut de
- * mise en page.
- *
- * LS-144 PORTE LA DECOUVRABILITE de ce motif sur les filtres de commandes, le
- * fait qu'une partie du contenu defile hors ecran sans que rien ne le signale.
- * La correction qui en sortira vaudra pour cette barre : elles partagent le
- * meme motif, et c'est la raison de ne pas inventer ici une solution
- * differente.
- */
-.liste {
-  display: flex;
-  gap: var(--ls-space-2);
-  margin: 0;
-  padding: var(--ls-space-2) var(--ls-space-3);
-  list-style: none;
-  overflow-x: auto;
-  /* Le defilement s'arrete sur une rubrique entiere, jamais coupee au milieu. */
-  scroll-snap-type: x proximity;
+.barreOuverte {
+  display: block;
 }
 
+/*
+ * AU-DELA DE 768 px, LA BARRE EST UNE COLONNE PERMANENTE.
+ *
+ * `position: sticky` et non `fixed` : elle suit le defilement sans sortir du
+ * flux, donc le contenu n'a pas besoin d'une marge compensatoire qui se
+ * desynchroniserait de la largeur. La hauteur de viewport permet au bloc
+ * d'identite de rester en pied de barre.
+ *
+ * 250 px, mesures sur le prototype. En dessous, « Stocks et marches » et
+ * « Factures et avoirs » se coupent en deux lignes ; au-dela, la colonne mange
+ * la place du tableau des commandes qui porte six colonnes.
+ */
 @media (min-width: 768px) {
-  .liste {
-    /* La place existe : les rubriques se centrent au lieu de defiler. */
-    justify-content: center;
-    flex-wrap: wrap;
-    overflow-x: visible;
-    padding: var(--ls-space-2) var(--ls-space-4);
+  .bascule {
+    display: none;
+  }
+
+  .barre {
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    width: 250px;
+    height: 100vh;
+    flex-shrink: 0;
+    border-bottom: 0;
+    border-right: 1px solid var(--ls-border);
+    overflow-y: auto;
   }
 }
 
-.lien {
-  display: block;
-  /* 44 px de haut au total avec le remplissage, la cible tactile minimale. */
-  padding: var(--ls-space-3) var(--ls-space-4);
-  border-radius: var(--ls-radius-sm);
-  background: var(--ls-surface);
-  color: var(--ls-primary);
-  text-decoration: none;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  /* Le libelle ne se coupe jamais en deux lignes dans la barre. */
-  white-space: nowrap;
-  scroll-snap-align: start;
+/* -------------------------------------------------------------- l'enseigne */
+
+.enseigne {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-1);
+  padding: var(--ls-space-4);
+  border-bottom: 1px solid var(--ls-border);
 }
 
-.lien:hover {
-  background: var(--ls-surface-sand);
-  color: var(--ls-primary);
+.enseigneNom {
+  color: var(--ls-text);
+  font-family: var(--ls-police-titre);
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.enseigneRole {
+  color: var(--ls-text-muted);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ------------------------------------------------------------- les rubriques */
+
+.liste {
+  margin: 0;
+  padding: var(--ls-space-2) 0;
+  list-style: none;
 }
 
 /*
- * L'ECRAN COURANT. `aria-current="page"` porte l'information, ce style ne fait
- * que l'appuyer : `frontend-design.md` interdit qu'une information passe par la
- * seule couleur, et le selecteur s'ancre donc sur l'ATTRIBUT plutot que sur une
- * classe. Les deux ne peuvent pas diverger.
+ * LE FILET VERTICAL EST TOUJOURS LA, TRANSPARENT QUAND LA RUBRIQUE NE L'EST
+ * PAS. Le poser seulement sur la rubrique courante decalerait son libelle de
+ * 3 px vers la droite au changement d'ecran, et la liste entiere semblerait
+ * tressauter a chaque navigation.
+ */
+.lien {
+  display: flex;
+  align-items: center;
+  gap: var(--ls-space-2);
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-3) var(--ls-space-4);
+  border-left: 3px solid transparent;
+  background: var(--ls-admin-barre);
+  color: var(--ls-text-muted);
+  text-decoration: none;
+  font-size: 0.9375rem;
+}
+
+.lienLibelle {
+  flex: 1;
+}
+
+.lien:hover {
+  background: var(--ls-admin-actif);
+  color: var(--ls-primary-hover);
+}
+
+/*
+ * L'ECRAN COURANT. `aria-current="page"` porte l'information, ces styles ne
+ * font que l'appuyer : `frontend-design.md` interdit qu'une information passe
+ * par la seule couleur, et le selecteur s'ancre donc sur l'ATTRIBUT plutot que
+ * sur une classe. Les deux ne peuvent pas diverger.
+ *
+ * TROIS MARQUEURS PLUTOT QU'UN : le filet vertical, le fond soutenu et la
+ * graisse. Le filet reste percu en vision monochrome, et la graisse survit a
+ * un ecran de telephone en plein soleil sur un stand.
+ *
+ * `--ls-primary-hover` sur `--ls-admin-actif` : 10,82:1, AAA.
+ */
+.lien[aria-current="page"] {
+  border-left-color: var(--ls-primary);
+  background: var(--ls-admin-actif);
+  color: var(--ls-primary-hover);
+  font-weight: 700;
+}
+
+/*
+ * LA PASTILLE DE COMPTAGE.
+ *
+ * `min-width` EGAL A LA HAUTEUR, avec `border-radius: 50%` : un nombre a un
+ * chiffre donne un cercle, un nombre a deux chiffres s'etire en pilule au lieu
+ * d'etre coupe. Une largeur fixe tronquerait « 12 » des le douzieme message.
+ *
+ * `--ls-primary-hover` sur `--ls-admin-pastille` : 9,33:1, AAA.
+ */
+.pastille {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 var(--ls-space-1);
+  border-radius: 999px;
+  background: var(--ls-admin-pastille);
+  color: var(--ls-primary-hover);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/*
+ * TEXTE RESERVE AUX LECTEURS D'ECRAN.
+ *
+ * NE PAS EMPLOYER `display: none` NI `visibility: hidden` : les deux retirent
+ * l'element de l'arbre d'accessibilite, donc le texte ne serait pas lu, ce qui
+ * est exactement l'inverse du but. Le motif ci-dessous est celui de WCAG, un
+ * rectangle de 1 px decoupe.
+ */
+.invisible {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ------------------------------------------------------- les rubriques a venir */
+
+/*
+ * `margin-top: auto` POUSSE CE BLOC ET L'IDENTITE EN BAS DE COLONNE sur grand
+ * ecran, la barre etant en `flex-direction: column` sur toute la hauteur. Sous
+ * 768 px la barre n'est pas un conteneur flex, la propriete est sans effet et
+ * les blocs suivent simplement les rubriques.
+ */
+.aVenir {
+  margin-top: auto;
+  padding: var(--ls-space-3) var(--ls-space-4);
+  border-top: 1px solid var(--ls-border);
+}
+
+.aVenirTitre {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-text-muted);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.aVenirListe {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * ELLES NE SONT PAS DES LIENS, et rien ici ne doit leur en donner l'apparence :
+ * ni soulignement, ni couleur d'action, ni curseur de pointeur. Un element qui
+ * ressemble a un lien sans en etre un est un piege, la personne cliquant sans
+ * comprendre pourquoi rien ne se passe.
+ */
+.aVenirEntree {
+  padding: var(--ls-space-2) 0;
+  color: var(--ls-text-muted);
+  font-size: 0.8125rem;
+}
+
+/* ---------------------------------------------------------------- l'identite */
+
+.identite {
+  display: flex;
+  align-items: center;
+  gap: var(--ls-space-3);
+  flex-wrap: wrap;
+  padding: var(--ls-space-4);
+  border-top: 1px solid var(--ls-border);
+}
+
+/*
+ * LES INITIALES SONT DECORATIVES, `aria-hidden` dans le JSX : le nom complet
+ * est juste a cote, les faire lire donnerait « SM Stacy Menendez ».
  *
  * Blanc sur primaire : 8,93:1, AAA.
  */
-.lien[aria-current="page"] {
+.identiteInitiales {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 50%;
   background: var(--ls-primary);
   color: var(--ls-text-on-primary);
+  font-size: 0.8125rem;
+  font-weight: 700;
 }
 
-.lien[aria-current="page"]:hover {
-  background: var(--ls-primary-hover);
-  color: var(--ls-text-on-primary);
+.identiteTextes {
+  display: flex;
+  flex-direction: column;
+  /*
+   * `min-width: 0` AUTORISE L'ENFANT A RETRECIR. Sans lui, un element flex
+   * refuse de passer sous la largeur de son contenu, et un nom long pousserait
+   * la barre au-dela de ses 250 px au lieu de se couper. Motif deja rencontre
+   * en LS-171, un libelle sans espace debordant de 43 px.
+   */
+  min-width: 0;
+}
+
+.identiteNom {
+  color: var(--ls-text);
+  font-size: 0.875rem;
+  font-weight: 600;
+  /* Un nom trop long se coupe proprement plutot que d'elargir la colonne. */
+  overflow-wrap: anywhere;
+}
+
+.identiteRole {
+  color: var(--ls-text-muted);
+  font-size: 0.75rem;
 }
