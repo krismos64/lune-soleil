@@ -99,6 +99,40 @@ export async function listerCategories(): Promise<depot.CategorieAvecCompte[]> {
   return depot.listerCategories(prisma);
 }
 
+export type ProduitAdministration = depot.ProduitAdministration;
+
+/**
+ * Les statuts que l'ecran de catalogue montre par defaut, LS-183.
+ *
+ * LE CATALOGUE VIVANT, arbitrage de Christophe du 4 septembre 2026 : brouillons
+ * ET actifs, les archives derriere un filtre explicite. Un archive reste donc
+ * RETROUVABLE, ce qui compte : invisible, un produit archive par erreur se
+ * recree en double avec une reference neuve, et C14 interdit de reattribuer la
+ * premiere.
+ *
+ * `ARCHIVE` N'EST PAS ICI, ce qui n'est pas la meme chose que « nulle part ».
+ * L'ecran l'obtient en passant explicitement le statut, et c'est le seul moyen
+ * de distinguer « je ne veux pas les voir » de « ils n'existent pas ».
+ */
+export const STATUTS_VIVANTS = ["BROUILLON", "ACTIF"] as const;
+
+/**
+ * Les produits de l'ecran d'administration, LS-183.
+ *
+ * `statuts` NON PRECISE VAUT « LE CATALOGUE VIVANT », jamais « tout » : le cas
+ * frequent est celui qu'on veut le plus court a ecrire, et surtout le plus dur
+ * a se tromper. Demander les archives est un geste explicite.
+ *
+ * L'AUTORISATION N'EST PAS FAITE ICI, invariant 2 : la page appelle
+ * `exigerAdministratrice` avant de rendre. Ce service ne lit ni cookie ni
+ * en-tete.
+ */
+export async function listerProduitsAdministration(
+  statuts: readonly StatutProduit[] = STATUTS_VIVANTS,
+): Promise<ProduitAdministration[]> {
+  return depot.listerProduitsAdministration(prisma, { statuts });
+}
+
 /**
  * Cree une categorie au rang suivant.
  *
