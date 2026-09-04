@@ -142,10 +142,27 @@ async function lireFactureUnique(commandeId: string): Promise<{
   return rows[0];
 }
 
-async function lireAlertes(type: string): Promise<{ id_cible: string }[]> {
+/**
+ * Les alertes d'un type, POUR UNE CIBLE DONNEE.
+ *
+ * `idCible` EST OBLIGATOIRE, ET C'EST UNE CORRECTION DU 4 SEPTEMBRE 2026. Cette
+ * fonction lisait TOUTES les alertes du type, sans distinguer celles de ce
+ * test : la base etant partagee entre fichiers `.sequential`, un fichier voisin
+ * qui ecrit une alerte entre le `afterEach` d'ici et cette assertion la faisait
+ * echouer, « expected [ ...(6) ] to have a length of +0 ».
+ *
+ * LE DEFAUT NE SE VOIT QU'EN SUITE COMPLETE, jamais sur le fichier joue seul, et
+ * il depend de l'ORDONNANCEMENT : ajouter des tests ailleurs suffit a le
+ * reveiller, ce qui accuse la mauvaise story. Une assertion qui suppose une
+ * table globalement vide n'est pas une assertion sur SON effet.
+ */
+async function lireAlertes(
+  type: string,
+  idCible: string,
+): Promise<{ id_cible: string }[]> {
   const { rows } = await client.query(
-    "SELECT id_cible FROM alerte_critique WHERE type = $1",
-    [type],
+    "SELECT id_cible FROM alerte_critique WHERE type = $1 AND id_cible = $2",
+    [type, idCible],
   );
 
   return rows;
@@ -204,7 +221,9 @@ describe("rendu du PDF a la confirmation", () => {
     const octets = await readFile(join(racine, facture.chemin_pdf as string));
 
     expect(octets.subarray(0, 5).toString("latin1")).toBe("%PDF-");
-    expect(await lireAlertes("PDF_FACTURE_EN_ECHEC")).toHaveLength(0);
+    expect(
+      await lireAlertes("PDF_FACTURE_EN_ECHEC", facture.id as string),
+    ).toHaveLength(0);
   });
 });
 
@@ -234,9 +253,9 @@ describe("echec du rendu", () => {
     expect(facture.instantane_legal).not.toBeNull();
 
     // L'alerte porte la facture, seul moyen de savoir qu'il y a un document a rattraper.
-    expect(await lireAlertes("PDF_FACTURE_EN_ECHEC")).toEqual([
-      { id_cible: facture.id },
-    ]);
+    expect(
+      await lireAlertes("PDF_FACTURE_EN_ECHEC", facture.id as string),
+    ).toEqual([{ id_cible: facture.id }]);
 
     /*
      * ET SURTOUT : LA TRANSACTION N'A PAS ETE ANNULEE. C'est ce que le
