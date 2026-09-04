@@ -368,3 +368,173 @@ describe("lecture des categories", () => {
     expect(await catalogue.listerCategories()).toEqual([]);
   });
 });
+
+/* ==========================================================================
+ * LS-183, la liste du catalogue pour l'administration.
+ * ========================================================================== */
+
+describe("listerProduitsAdministration", () => {
+  /**
+   * LE TEST QUI JUSTIFIE LA STORY, et le piege qu'elle evite.
+   *
+   * `creerProduit` NE CREE AUCUNE VARIANTE : il ecrit le produit et ses
+   * sections, rien de plus. Tout produit vient donc de naitre sans variante, et
+   * ce n'est PAS un cas limite mais le cas nominal juste apres la creation.
+   *
+   * LA LECTURE PUBLIQUE EMPLOIE UN `JOIN` sur les variantes vivantes, ce qui
+   * fait disparaitre ces produits. Repris tel quel ici, l'ecran cense retrouver
+   * un produit aurait masque celui qu'on vient de creer, c'est-a-dire le seul
+   * qu'on cherche a ce moment-la.
+   *
+   * LE CAS N'EXISTE DANS AUCUNE DONNEE DE DEVELOPPEMENT, mesure le 4 septembre
+   * 2026 : huit produits, zero sans variante. Un test ecrit sur ces donnees
+   * serait passe au vert sans rien prouver, motif « cible de test inexistante ».
+   */
+  it("montre un produit qui n'a encore aucune variante", async () => {
+    const categorie = await catalogue.creerCategorie({ nom: "Sans variante" });
+    const produit = await catalogue.creerProduit({
+      nom: "Pièce toute neuve",
+      categorieId: categorie.id,
+    });
+
+    const liste = await catalogue.listerProduitsAdministration();
+    const trouve = liste.find((ligne) => ligne.id === produit.id);
+
+    expect(trouve).toBeDefined();
+    expect(trouve?.variantesVivantes).toBe(0);
+
+    /*
+     * LE PRIX EST NUL, JAMAIS ZERO. « 0,00 € » se lirait comme un prix decide,
+     * quand la verite est qu'aucun prix n'existe encore.
+     */
+    expect(trouve?.prixMinimumCentimes).toBeNull();
+  });
+
+  /**
+   * LES BROUILLONS SORTENT ICI, CONTRAIREMENT A LA LECTURE PUBLIQUE.
+   *
+   * C'est toute la raison d'avoir deux lectures : la publique filtre sur
+   * `ACTIF` au plus pres de la donnee pour ne jamais exposer du travail en
+   * cours, celle-ci montre ce que l'exploitante doit pouvoir reprendre.
+   */
+  it("montre les brouillons, que la lecture publique cache", async () => {
+    const categorie = await catalogue.creerCategorie({ nom: "Mixte" });
+    const brouillon = await catalogue.creerProduit({
+      nom: "En cours de rédaction",
+      categorieId: categorie.id,
+    });
+
+    const liste = await catalogue.listerProduitsAdministration();
+
+    expect(liste.map((ligne) => ligne.id)).toContain(brouillon.id);
+    expect(liste.find((ligne) => ligne.id === brouillon.id)?.statut).toBe(
+      "BROUILLON",
+    );
+  });
+
+  /**
+   * LES ARCHIVES SONT DEHORS PAR DEFAUT, ET RETROUVABLES SUR DEMANDE.
+   *
+   * Arbitrage de Christophe du 4 septembre 2026. Les deux moities comptent :
+   * absents de la vue courante pour qu'elle ne grossisse pas sans fin, mais
+   * atteignables, sans quoi un produit archive par erreur devient introuvable et
+   * se recree en double avec une reference neuve, C14 interdisant de reattribuer
+   * la premiere.
+   */
+  it("écarte les archivés par défaut et les rend sur demande", async () => {
+    const categorie = await catalogue.creerCategorie({ nom: "Archivage" });
+    const produit = await catalogue.creerProduit({
+      nom: "Pièce retirée",
+      categorieId: categorie.id,
+    });
+
+    await client.query(
+      "UPDATE produit SET statut = 'ARCHIVE', archive_a = now() WHERE id = $1",
+      [produit.id],
+    );
+
+    const parDefaut = await catalogue.listerProduitsAdministration();
+    expect(parDefaut.map((ligne) => ligne.id)).not.toContain(produit.id);
+
+    const surDemande = await catalogue.listerProduitsAdministration([
+      "ARCHIVE",
+    ]);
+    expect(surDemande.map((ligne) => ligne.id)).toContain(produit.id);
+  });
+
+  /**
+   * LE PRIX EST LE PLUS BAS DES VARIANTES VIVANTES, l'archivee etant ignoree.
+   *
+   * DEUX ARCHIVAGES DISTINCTS SE CROISENT ICI, et les confondre est le piege :
+   * `variante.archivee_a` retire une declinaison, `produit.statut = ARCHIVE`
+   * retire la fiche entiere. Une variante archivee ne doit ni compter, ni
+   * porter le prix affiche, alors que son produit reste listable. C13.
+   */
+  it("ignore une variante archivée dans le prix et le compte", async () => {
+    const categorie = await catalogue.creerCategorie({ nom: "Deux tailles" });
+    const produit = await catalogue.creerProduit({
+      nom: "Pièce à deux tailles",
+      categorieId: categorie.id,
+    });
+
+    await client.query(
+      `INSERT INTO variante (id, produit_id, reference, libelle, prix_centimes,
+                             quantite_physique, cree_a)
+       VALUES (gen_random_uuid(), $1, 'TEST-VIVANTE', '45 cm', 4900, 1, now())`,
+      [produit.id],
+    );
+    await client.query(
+      `INSERT INTO variante (id, produit_id, reference, libelle, prix_centimes,
+                             quantite_physique, archivee_a, cree_a)
+       VALUES (gen_random_uuid(), $1, 'TEST-ARCHIVEE', '40 cm', 1900, 1,
+               now(), now())`,
+      [produit.id],
+    );
+
+    const liste = await catalogue.listerProduitsAdministration();
+    const trouve = liste.find((ligne) => ligne.id === produit.id);
+
+    /*
+     * 4900 ET NON 1900 : la variante archivee est la MOINS chere, donc un
+     * oubli du filtre se verrait ici et nulle part ailleurs.
+     */
+    expect(trouve?.prixMinimumCentimes).toBe(4900);
+    expect(trouve?.variantesVivantes).toBe(1);
+  });
+
+  /**
+   * L'ORDRE SUIT LA DERNIERE MODIFICATION, le plus recent d'abord.
+   *
+   * C'est l'ordre du travail : ce qu'on vient de toucher est ce qu'on rouvre.
+   * Un tri alphabetique obligerait a chercher dans la liste le produit qu'on
+   * vient de quitter.
+   */
+  it("range du plus récemment modifié au plus ancien", async () => {
+    const categorie = await catalogue.creerCategorie({ nom: "Ordre" });
+
+    const ancien = await catalogue.creerProduit({
+      nom: "Créé en premier",
+      categorieId: categorie.id,
+    });
+    const recent = await catalogue.creerProduit({
+      nom: "Créé ensuite",
+      categorieId: categorie.id,
+    });
+
+    /*
+     * L'ANCIEN EST TOUCHE APRES LE RECENT, ce qui le fait remonter en tete.
+     * Sans cette modification, le test confondrait un tri par date de creation
+     * avec un tri par date de modification : les deux donneraient le meme ordre.
+     */
+    await client.query(
+      "UPDATE produit SET modifie_a = now() + interval '1 second' WHERE id = $1",
+      [ancien.id],
+    );
+
+    const liste = await catalogue.listerProduitsAdministration();
+    const rangAncien = liste.findIndex((ligne) => ligne.id === ancien.id);
+    const rangRecent = liste.findIndex((ligne) => ligne.id === recent.id);
+
+    expect(rangAncien).toBeLessThan(rangRecent);
+  });
+});

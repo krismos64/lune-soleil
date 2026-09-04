@@ -570,3 +570,137 @@ export async function lireFicheParSlug(
     })),
   };
 }
+
+/** Ce que la liste d'administration affiche d'un produit, LS-183. */
+export type ProduitAdministration = {
+  id: string;
+  nom: string;
+  categorieNom: string;
+  statut: StatutProduit;
+  publieA: Date | null;
+  modifieA: Date;
+  /**
+   * Prix le plus bas parmi les variantes vivantes, `null` s'il n'y en a aucune.
+   *
+   * NULLABLE, ET C'EST LE CAS NOMINAL D'UN PRODUIT NEUF. `creerProduit` cree le
+   * produit et ses sections, JAMAIS de variante : tout produit fraichement cree
+   * passe donc par cet etat. Un type non nullable obligerait a inventer un zero,
+   * que l'ecran afficherait comme un prix de 0,00 euro.
+   */
+  prixMinimumCentimes: number | null;
+  /** Variantes non archivees, `0` disant « ce produit n'a rien a vendre ». */
+  variantesVivantes: number;
+  mediaChemin: string | null;
+  mediaTexteAlternatif: string | null;
+};
+
+/**
+ * Tous les produits, pour l'ecran d'administration, LS-183.
+ *
+ * ELLE NE REMPLACE PAS `listerProduitsPublies`, ET LES DEUX DOIVENT COEXISTER.
+ * La lecture publique filtre sur `ACTIF` au plus pres de la donnee, ce qui
+ * protege des brouillons ; celle-ci montre TOUT, ce qui est son objet. Les
+ * fondre exposerait du travail en cours a la boutique le jour ou un appelant
+ * oublierait son filtre.
+ *
+ * `LEFT JOIN` SUR LES VARIANTES, ET C'EST LA DIFFERENCE QUI COMPTE. La lecture
+ * publique emploie un `JOIN` : un produit sans variante en disparait, ce qui est
+ * juste pour la boutique, rien n'etant vendable. Ici ce serait un defaut GRAVE,
+ * et pas un cas limite : `creerProduit` ne cree AUCUNE variante, donc tout
+ * produit vient de naitre dans cet etat. Avec un `JOIN`, l'ecran cense retrouver
+ * un produit ferait disparaitre celui qu'on vient de creer.
+ *
+ * Le cas n'existe dans aucune donnee de developpement, mesure le 4 septembre
+ * 2026 : huit produits, zero sans variante. Un test ecrit sur ces donnees
+ * passerait au vert sans rien prouver, motif « cible de test inexistante ».
+ *
+ * AUCUNE LIMITE, meme regle que la lecture publique. Le dimensionnement du
+ * catalogue, 10 a 40 references, l'exclut, et `frontend-design.md` interdit
+ * d'introduire un plafond que le schema ne porte pas.
+ *
+ * `archivee_a IS NULL` PORTE SUR LA VARIANTE, jamais sur le produit : une
+ * variante archivee ne compte ni dans le prix ni dans le nombre, alors que son
+ * PRODUIT reste listable. Les deux archivages sont distincts, C13.
+ */
+export async function listerProduitsAdministration(
+  client: ClientBase,
+  filtre: { statuts?: readonly StatutProduit[] } = {},
+): Promise<ProduitAdministration[]> {
+  /*
+   * LE FILTRE EST PARAMETRE, JAMAIS CONCATENE. Il vient d'une URL, donc d'une
+   * entree non fiable, invariant 7. `Prisma.sql` produit une requete parametree
+   * et `$queryRaw` la transmet telle quelle.
+   *
+   * UNE LISTE VIDE NE FILTRE RIEN plutot que de rendre zero ligne : un appelant
+   * qui passe un tableau vide veut « tout », et un `IN ()` serait de surcroit
+   * une erreur de syntaxe SQL.
+   *
+   * `= ANY(...)` ET NON `IN (...)`, ET C'EST MESURE. Un tableau passe en
+   * parametre unique se compare avec `ANY` ; `IN` attend une liste de valeurs
+   * et PostgreSQL refuse la forme melangee :
+   *
+   *   ERROR: operator does not exist: "StatutProduit" = "StatutProduit"[]
+   *
+   * LE CAST VERS L'ENUM EST OBLIGATOIRE. Sans lui le tableau arrive en `text[]`
+   * et la comparaison echoue de la meme facon, l'enum n'ayant pas d'operateur
+   * d'egalite avec du texte.
+   */
+  const conditionStatut =
+    filtre.statuts && filtre.statuts.length > 0
+      ? Prisma.sql`WHERE p.statut = ANY(${Prisma.sql`ARRAY[${Prisma.join(
+          filtre.statuts.map((statut) => Prisma.sql`${statut}`),
+        )}]::"StatutProduit"[]`})`
+      : Prisma.empty;
+
+  const lignes = await client.$queryRaw<
+    {
+      id: string;
+      nom: string;
+      categorieNom: string;
+      statut: StatutProduit;
+      publieA: Date | null;
+      modifieA: Date;
+      prixMinimumCentimes: bigint | number | null;
+      variantesVivantes: bigint | number;
+      mediaChemin: string | null;
+      mediaTexteAlternatif: string | null;
+    }[]
+  >`
+    SELECT
+      p.id,
+      p.nom,
+      c.nom              AS "categorieNom",
+      p.statut,
+      p.publie_a         AS "publieA",
+      p.modifie_a        AS "modifieA",
+      min(v.prix_centimes)          AS "prixMinimumCentimes",
+      count(v.id)                   AS "variantesVivantes",
+      m.chemin           AS "mediaChemin",
+      m.texte_alternatif AS "mediaTexteAlternatif"
+    FROM produit p
+    JOIN categorie c ON c.id = p.categorie_id
+    LEFT JOIN variante v ON v.produit_id = p.id AND v.archivee_a IS NULL
+    LEFT JOIN media m ON m.produit_id = p.id AND m.ordre = 1
+    ${conditionStatut}
+    GROUP BY p.id, p.nom, c.nom, p.statut, p.publie_a, p.modifie_a,
+             m.chemin, m.texte_alternatif
+    ORDER BY p.modifie_a DESC
+  `;
+
+  /*
+   * `min` ET `count` RENDENT DU `bigint`, que le pilote transmet en `BigInt`.
+   * Le laisser passer ferait echouer la serialisation vers un composant client,
+   * defaut deja rencontre en LS-104 et LS-105.
+   *
+   * `min` REND `NULL` SANS AUCUNE LIGNE, et ce nul est CONSERVE : il dit « ce
+   * produit n'a pas de prix », ce qu'un zero confondrait avec « il est gratuit ».
+   */
+  return lignes.map((ligne) => ({
+    ...ligne,
+    prixMinimumCentimes:
+      ligne.prixMinimumCentimes === null
+        ? null
+        : Number(ligne.prixMinimumCentimes),
+    variantesVivantes: Number(ligne.variantesVivantes),
+  }));
+}
