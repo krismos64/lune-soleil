@@ -181,27 +181,34 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
-      # LS-178, instrumentation temporaire, a retirer avec celle de
-      # `controles.yml`. Elle est ici AUSSI parce que ce workflow tourne chaque
-      # nuit sans intervention : il fournit un point de mesure par jour a heure
-      # fixe, ce qu'une pull request ne donne pas.
-      - name: LS-178. Etat avant installation, instrumentation temporaire
+      # LS-178, meme cache que dans `controles.yml` et pour la meme raison : les
+      # moteurs Prisma sont tires par un `postinstall` depuis les serveurs de
+      # Prisma, hors du cache npm qui ne couvre que le registre. Sans lui, ce
+      # workflow retelechargeait 24 Mo chaque nuit.
+      - name: Version de Prisma pour la cle de cache
+        id: prisma
         run: |
-          echo "node_modules present : $([ -d node_modules ] && echo oui || echo non)"
-          echo "entrees de premier niveau : $(ls node_modules 2>/dev/null | wc -l | tr -d ' ')"
-          echo "taille node_modules : $(du -sh node_modules 2>/dev/null | cut -f1 || echo absent)"
-          echo "cache npm : $(npm config get cache)"
-          echo "taille du cache npm : $(du -sh "$(npm config get cache)" 2>/dev/null | cut -f1 || echo absent)"
-          echo "espace disque :"
-          df -h / | tail -1
+          version=$(node -e "const l=require('./package-lock.json'); process.stdout.write(l.packages['node_modules/prisma'].version)")
+
+          if [ -z "$version" ]; then
+            echo "::error::Version de prisma illisible dans le verrou."
+            exit 1
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Prisma $version"
+
+      - name: Cache des moteurs Prisma
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/prisma
+          key: prisma-engines-${{ runner.os }}-${{ steps.prisma.outputs.version }}
 
       - name: Installation des dependances
+        # `--foreground-scripts` garde : il rend visible le jour ou une
+        # dependance ajoute un `postinstall` couteux, defaut qui a demande huit
+        # mesures pour etre identifie en LS-178.
         run: npm ci --foreground-scripts
-
-      - name: LS-178. Etat apres installation, instrumentation temporaire
-        run: |
-          echo "entrees de premier niveau : $(ls node_modules 2>/dev/null | wc -l | tr -d ' ')"
-          echo "taille node_modules : $(du -sh node_modules 2>/dev/null | cut -f1 || echo absent)"
 
       - name: Engendrer le client Prisma
         run: npx prisma generate
