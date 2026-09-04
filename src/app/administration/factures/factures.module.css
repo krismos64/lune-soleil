@@ -51,7 +51,7 @@
   text-transform: uppercase;
 }
 
-/* `--ls-primary` sur `--ls-background` : 7,86:1, AAA. */
+/* `--ls-primary` sur `--ls-background` : 8,36:1, AAA. */
 .titre {
   margin: 0 0 var(--ls-space-3);
   background: var(--ls-background);
@@ -247,6 +247,13 @@
   color: var(--ls-text);
   font-family: var(--ls-police-titre);
   font-size: 1.125rem;
+  /*
+   * MEME PAIRE QUE LES `dd` CI-DESSOUS, et pour la meme raison : item flex de
+   * `.enTetePiece`, donc `min-width: auto` par defaut. Le risque est moindre,
+   * un numero faisant onze caracteres par ADR-031, mais une parade incomplete
+   * d'un cote apprend a ne pas la lire de l'autre.
+   */
+  min-width: 0;
   overflow-wrap: anywhere;
 }
 
@@ -308,9 +315,23 @@
   font-size: 0.875rem;
 }
 
+/*
+ * `min-width: 0` EST INDISPENSABLE, ET `overflow-wrap` NE LE REMPLACE PAS.
+ *
+ * Un item flex porte `min-width: auto` par defaut : il REFUSE de passer sous la
+ * largeur minimale de son contenu. Sur un nom sans espace, cette largeur est le
+ * mot entier, donc le `dd` pousse la ligne au-dela de la carte AVANT que
+ * `overflow-wrap` n'ait l'occasion de couper. Les deux vont ensemble, l'un
+ * autorise la boite a retrecir, l'autre coupe le mot dedans.
+ *
+ * Motif de LS-171, deja pose cinq fois dans ce depot, et cet ecran etait le
+ * seul a empiler un couple libelle-valeur en flex sans lui. Trouve par la revue
+ * d'interface.
+ */
 .detail dd,
 .detailMontant dd {
   margin: 0;
+  min-width: 0;
   text-align: right;
   overflow-wrap: anywhere;
 }
