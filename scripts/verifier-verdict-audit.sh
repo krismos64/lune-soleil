@@ -26,7 +26,23 @@
 set -uo pipefail
 
 RACINE="$(cd "$(dirname "$0")/.." && pwd)"
-WORKFLOW="$RACINE/.github/workflows/controles.yml"
+
+# LS-177 : `npm audit` a quitté `controles.yml` pour le contrôle nocturne, une
+# vulnérabilité n'apparaissant pas parce qu'un composant a changé mais parce
+# qu'un avis de sécurité est publié.
+#
+# CE CHEMIN A ÉTÉ CORRIGÉ PARCE QUE LE GARDE-FOU L'A SIGNALÉ, et c'est la preuve
+# qu'il sert : après le déplacement, il a échoué en disant « le motif de
+# reconnaissance de panne est absent du workflow ». Sans lui, ce script aurait
+# continué d'éprouver une décision que plus aucun workflow n'appliquait, en
+# restant vert. C'est le motif du contrôle de mutation mort, un chemin périmé
+# arrêtant le script avant la vérification qui compte.
+#
+# CE SCRIPT RESTE BRANCHÉ DANS `controles.yml`, lui, et c'est délibéré : il est
+# purement textuel, donc rapide, et il protège une décision de sécurité qui doit
+# rougir AVANT fusion si quelqu'un l'affaiblit. Le contrôle voyage avec la
+# décision qu'il garde, pas avec le fichier qui l'exécute.
+WORKFLOW="$RACINE/.github/workflows/nocturne.yml"
 
 # LA CHAÎNE EXACTE que le workflow cherche. Écrite une seule fois ici, et
 # confrontée au workflow plus bas : deux littéraux divergeraient un jour.
