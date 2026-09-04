@@ -181,10 +181,15 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
-      # LS-178, meme cache que dans `controles.yml` et pour la meme raison : les
-      # moteurs Prisma sont tires par un `postinstall` depuis les serveurs de
-      # Prisma, hors du cache npm qui ne couvre que le registre. Sans lui, ce
-      # workflow retelechargeait 24 Mo chaque nuit.
+      # LS-178, meme cache que dans `controles.yml`. Les moteurs Prisma sont tires
+      # par un script d'installation depuis les serveurs de Prisma, hors du cache
+      # npm qui ne couvre que le registre.
+      #
+      # IL NE RESOUT PAS LA LENTEUR DE `npm ci`, contrairement a ce que cette
+      # story a d'abord conclu : 423 s avec le cache restaure contre 425 s sans.
+      # La cause est le debit disque de l'executeur, voir `controles.yml`. Ce
+      # cache est garde parce qu'il coute zero et supprime un telechargement de
+      # 8 Mo, pas parce qu'il corrige quoi que ce soit.
       - name: Version de Prisma pour la cle de cache
         id: prisma
         run: |
