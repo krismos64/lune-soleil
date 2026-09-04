@@ -1,9 +1,9 @@
 # 4 septembre 2026, session A : le compte que personne ne peut créer
 
-Session courte et sans code. Christophe demandait d'abord un état du projet et
-les prochaines étapes, puis comment tester les comptes admin et client en local.
-La réponse à la seconde question a fait apparaître un trou que la première
-n'avait pas vu.
+Session sans code, **deux tickets créés**. Christophe demandait d'abord un état
+du projet et les prochaines étapes, puis comment tester les comptes admin et
+client en local. La réponse à la seconde question a fait apparaître un trou que
+la première n'avait pas vu, LS-175. La chaîne de contrôle a suivi, LS-176.
 
 ## La question qui a trouvé le défaut
 
@@ -72,6 +72,40 @@ Le sens du lien a été vérifié plutôt que supposé : `createIssueLink` pose
 signale une seule dépendance textuelle sans lien, LS-68 vers LS-50, préexistante
 et sans rapport.
 
+## La chaîne de contrôle, second ticket de la session
+
+Christophe a demandé si la chaîne pouvait être allégée, proposant de ne lancer la
+suite qu'en fin de session pour économiser le quota et l'attente.
+
+**La mesure a déplacé le sujet.** Un run complet dure 17 min 30, dont 7 min 54 de
+tests d'intégration et 5 min 02 de bout en bout : deux étapes pèsent **74 %** du
+temps, tout le reste rendant son verdict en deux minutes.
+
+Surtout, **la chaîne tourne deux fois par livraison**, sur la pull request puis
+sur `main` après fusion, et **le run sur `main` ignore le filtre de portée de
+LS-169**. Une pull request documentaire passe en allégée, puis rejoue dix-sept
+minutes de tests complets après fusion. Le défaut que LS-169 corrigeait est resté
+ouvert sur sa moitié `main`.
+
+**Le doublon se justifiait par une raison devenue sans objet.** Le workflow
+invoque le rebase qui « rejoue les commits sur une base différente ». Vrai en
+général, faux ici : `strict: true` est actif sur la protection de branche,
+relevé par l'API, donc l'arbre fusionné est exactement celui que la pull request
+a testé.
+
+**La proposition initiale a été écartée, et la raison est écrite dans le
+ticket** : `main` exige le vert, donc une suite repoussée en fin de journée
+interdirait toute fusion entre-temps, ou obligerait à retirer la protection, ce
+que LS-69 a déjà eu à corriger. Elle est conservée en déclencheur manuel, en
+complément.
+
+**Un risque a été trouvé en vérifiant, absent de la proposition initiale.** Le
+check exigé par la protection porte un nom de job, `Les huit controles de
+CONTRIBUTING`. Découper le job **renomme les checks**, et la protection cesserait
+d'exiger quoi que ce soit : une pull request deviendrait fusionnable **sans aucun
+contrôle vert**, en silence. Deux critères le couvrent, dont l'obligation de
+prouver le défaut avant de le refermer.
+
 ## État des tickets
 
 **LS-175 créée**, sous LS-7, priorité High. Elle **bloque LS-153**, la première
@@ -81,7 +115,11 @@ l'amorçage s'exécute.
 Dix critères d'acceptation, dont trois reprennent des exigences d'ADR-021 restées
 sans porteur.
 
-Comptes relevés dans Jira ce jour, hors epics : **105 terminés sur 165**.
+**LS-176 créée**, sous LS-7, priorité High : alléger la chaîne de contrôle, quatre
+changements et dix critères. Aucun lien de blocage, elle ne dépend de rien et ne
+bloque rien.
+
+Comptes relevés dans Jira ce jour, hors epics : **105 terminés sur 166**.
 
 ## Prochaine étape
 
