@@ -15,9 +15,14 @@
   margin: 0 auto;
 }
 
-.titre {
-  margin-top: 0;
-}
+/*
+ * `.titre` EST DEFINI PLUS BAS, avec le reste du gabarit de LS-180. Il ne l'est
+ * PAS ici, et cette absence est deliberee : la premiere version de cette story
+ * laissait un `.titre { margin-top: 0 }` a cette place ET un second bloc en fin
+ * de fichier. La cascade rendait le bon resultat, mais qui lisait celui-ci
+ * croyait tenir la definition complete. Une seule definition, celle qui porte
+ * la police, la taille et la coupure.
+ */
 
 .section {
   margin-bottom: var(--ls-space-6);
@@ -531,6 +536,23 @@
 /*
  * LE SUR-TITRE DE RUBRIQUE, forme du prototype.
  *
+ * IL NE VIT QUE SUR LES CINQ ECRANS DE RUBRIQUE, decision de LS-180 apres que
+ * la revue d'interface eut releve trois ecrans sans sur-titre : la
+ * verification, la reauthentification et la retractation. Les trois portent
+ * pourtant la barre laterale, donc la question etait legitime.
+ *
+ * CE SONT DES ECRANS DE PASSAGE, ET C'EST CE QUI LES DISTINGUE. « Votre compte
+ * est créé », « Confirmer votre identité » et « Me rétracter » repondent a un
+ * geste ponctuel, ils ne sont aucune des rubriques de la barre : un sur-titre
+ * les rangerait sous une rubrique qui n'existe pas, ou repeterait le titre.
+ * Le prototype ne montre de sur-titre que sur ses cinq onglets, et c'est la
+ * meme logique.
+ *
+ * LA CLASSE N'EST DONC PAS DUPLIQUEE dans `authentification.module.css` ni dans
+ * `retractation.module.css`, ou ces trois ecrans puisent leur `.titre`. Si un
+ * jour l'un d'eux devient une rubrique, la classe se recopie a ce moment-la,
+ * avec sa mesure de contraste refaite sur le fond de ce fichier-la.
+ *
  * `--ls-accent-terracotta-deep` ET NON `--ls-accent-terracotta`, ET C'EST UNE
  * MESURE, PAS UNE PREFERENCE. Le prototype emploie le terracotta clair pour ces
  * petites capitales ; il donne 4,07:1 sur creme, sous le seuil AA de 4,5:1.
@@ -538,7 +560,7 @@
  * en gras ou 24 px en graisse normale : un sur-titre de 11 px en gras n'en est
  * pas, et le document previent que « le prototype commet cette erreur 35 fois ».
  *
- * `--ls-accent-terracotta-deep` sur `--ls-background` : 5,44:1, AA. C'est la
+ * `--ls-accent-terracotta-deep` sur `--ls-background` : 5,51:1, AA. C'est la
  * regle de divergence de `frontend-design.md`, en cas de desaccord c'est le
  * prototype qui a tort.
  *

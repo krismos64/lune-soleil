@@ -23,12 +23,23 @@
  *
  * CE QU'IL FAIT DE LA SESSION, IL NE S'EN SERT QUE POUR AFFICHER.
  * `lireIdentite` ne leve pas et rend `null` sans session : la barre disparait
- * alors. C'est ce qui laisse les SEPT ECRANS D'AUTHENTIFICATION intacts,
- * `/compte/connexion`, `/compte/inscription`, `/compte/verification`,
- * `/compte/mot-de-passe-oublie`, `/compte/nouveau-mot-de-passe` et
- * `/compte/reauthentification` : ils vivent sous ce chemin, mais on n'y est
- * justement pas connecte, et leur proposer cinq liens vers des ecrans proteges
- * n'aurait aucun sens.
+ * alors. C'est ce qui laisse intacts les QUATRE ECRANS QUI S'OUVRENT SANS
+ * SESSION, `/compte/connexion`, `/compte/inscription`,
+ * `/compte/mot-de-passe-oublie` et `/compte/nouveau-mot-de-passe` : ils vivent
+ * sous ce chemin, mais on n'y est justement pas connecte, et leur proposer cinq
+ * liens vers des ecrans proteges n'aurait aucun sens.
+ *
+ * LE COMPTE A ETE VERIFIE ROUTE PAR ROUTE, pas ecrit de memoire. Une premiere
+ * version annonçait « les SEPT ECRANS D'AUTHENTIFICATION » puis en enumerait
+ * six, dont `/compte/verification` qui appelle au contraire `exigerSession` et
+ * porte donc la barre. Motif « un compte recopie n'est pas une mesure », et il
+ * ne coute rien ici puisque le layout ne decide de rien : c'est la SESSION qui
+ * tranche, ecran par ecran, et non cette liste.
+ *
+ * `/compte/reauthentification` EST LE CAS QUI SE LIT MAL. Son nom le range avec
+ * l'authentification, mais on y arrive AVEC une session, pour prouver son
+ * identite avant un geste sensible : la barre y est donc presente, et c'est
+ * juste.
  *
  * POURQUOI PAS UN GROUPE DE ROUTES POUR LES EXCLURE. C'est la voie que la
  * documentation de Next.js decrit pour « opting specific segments into a

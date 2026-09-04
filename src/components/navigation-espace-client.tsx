@@ -168,24 +168,43 @@ export function NavigationEspaceClient({
       }}
     >
       {/*
-       * LE BOUTON D'OUVERTURE N'EXISTE QUE SOUS 768 px, masque en CSS au-dela.
-       * Il est rendu dans les deux cas plutot que conditionne en JavaScript :
-       * une largeur lue au rendu serait fausse au premier affichage et
-       * provoquerait un saut visible, et `window` n'existe pas au rendu serveur.
+       * LA LIGNE MOBILE : la bascule ET LA DECONNEXION, cote a cote.
+       *
+       * ELLE N'EXISTE QUE SOUS 768 px, masquee en CSS au-dela. Elle est rendue
+       * dans les deux cas plutot que conditionnee en JavaScript : une largeur
+       * lue au rendu serait fausse au premier affichage et provoquerait un saut
+       * visible, et `window` n'existe pas au rendu serveur.
+       *
+       * POURQUOI LA DECONNEXION EST ICI ET NON DANS LE PANNEAU, defaut trouve
+       * par la revue d'interface. Placee en pied de barre, elle disparaissait
+       * avec le panneau replie : il fallait ouvrir un menu pour fermer sa
+       * session. C'est l'inverse de ce que cet etat demande, sur un appareil
+       * partage ou un telephone emprunte le geste doit etre immediat, et deux
+       * tests de bout en bout l'ont attrape a 320 et 390 px.
+       *
+       * LE BOUTON N'EXISTE QU'UNE FOIS DANS LE DOM, et c'est ce qui compte : le
+       * meme nœud sert les deux dispositions, le CSS le deplacant en pied de
+       * colonne au-dela de 768 px. Le rendre deux fois recreerait exactement le
+       * doublon que cette story a retire de `/compte`, ou la tabulation
+       * traversait deux fois la meme action.
        */}
-      <button
-        ref={bascule}
-        type="button"
-        className={styles.bascule}
-        aria-expanded={ouverte}
-        aria-controls={identifiantPanneau}
-        onClick={() => setOuverte((etat) => !etat)}
-      >
-        <span className={styles.basculeIcone} aria-hidden="true">
-          {ouverte ? "✕" : "☰"}
-        </span>
-        {ouverte ? "Fermer le menu" : "Mon espace"}
-      </button>
+      <div className={styles.ligneMobile}>
+        <button
+          ref={bascule}
+          type="button"
+          className={styles.bascule}
+          aria-expanded={ouverte}
+          aria-controls={identifiantPanneau}
+          onClick={() => setOuverte((etat) => !etat)}
+        >
+          <span className={styles.basculeIcone} aria-hidden="true">
+            {ouverte ? "✕" : "☰"}
+          </span>
+          {ouverte ? "Fermer le menu" : "Mon espace"}
+        </button>
+
+        <div className={styles.deconnexionMobile}>{deconnexion}</div>
+      </div>
 
       <nav
         id={identifiantPanneau}
@@ -280,12 +299,15 @@ export function NavigationEspaceClient({
         </div>
 
         {/*
-         * LA DECONNEXION FERME LA BARRE, et c'est la sixieme entree du
-         * prototype. Elle est rendue par le layout parce qu'elle appelle une
-         * action serveur : ce composant client ne doit pas ouvrir de porte vers
-         * l'authentification.
+         * LA DECONNEXION N'EST PAS ICI, elle vit dans la ligne au-dessus du
+         * panneau, et le commentaire de cette ligne dit pourquoi : dans le pied
+         * de barre elle disparaissait avec le panneau replie.
+         *
+         * ELLE RESTE LA SIXIEME ENTREE DU PROTOTYPE, et le CSS la ramene en
+         * pied de colonne au-dela de 768 px, ou la barre est permanente : la
+         * forme du prototype est donc tenue la ou le prototype la montre, sur
+         * un ecran de bureau, sans l'imposer au cas mobile qu'il ne montre pas.
          */}
-        <div className={styles.pied}>{deconnexion}</div>
       </nav>
     </div>
   );
