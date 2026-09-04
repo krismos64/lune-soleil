@@ -1,6 +1,6 @@
 # 4 septembre 2026, session E : l'administration ressemble enfin au prototype, LS-181
 
-Livrée, trois commits, `32b2972`, `c3ac84f` et `662e5d1`. Le constat de départ est de Christophe, en testant
+**Livrée et FUSIONNÉE**, PR #228 en rebase. Sur `main` : `a8d25c7`, `4c2aba0` et `b18f875`, les SHA ayant changé au rebase. Le constat de départ est de Christophe, en testant
 l'administration : « visuellement très décevant par rapport au prototype ».
 
 Vingt-trois stories ont livré les **fonctions** de l'administration. Personne
@@ -192,13 +192,64 @@ rattrape pas l'erreur du layout de son propre segment. Une base injoignable
 envoie donc l'administration sur `global-error.tsx`. Hors périmètre de cette
 story, à ticketer.
 
+## Le découpage de LS-182, décidé en fin de session
+
+Arbitrage de Christophe : découper avant d'enchaîner. Trois stories, chacune
+sous l'epic où le travail s'exécute réellement.
+
+| Story | Epic | Priorité | Sujet |
+| --- | --- | --- | --- |
+| **LS-183** | LS-3 | **High** | Écran Catalogue |
+| **LS-184** | LS-5 | Medium | Écran Factures et avoirs |
+| **LS-185** | LS-36 | Low | Écran Clients, précédé d'un arbitrage RGPD |
+
+**Aucun des trois ne se réduit à de la mise en forme**, et c'est ce que le
+découpage a montré : il n'existe **aucune fonction de liste** pour ces trois
+domaines. `listerProduitsPublies` sert le catalogue public et filtre sur les
+produits publiés ; `facture.ts` lit la facture d'une commande, `avoir.ts` les
+avoirs d'une facture ; `utilisateur.ts` lit un profil. Chaque story crée sa
+lecture.
+
+**LS-185 commence par un arbitrage, pas par du code.** Un écran qui liste des
+personnes est un traitement de données personnelles, et la réponse peut être
+« cet écran ne se fait pas ».
+
+## Un workflow cassé depuis le matin même, LS-186
+
+Trouvé en vérifiant la CI avant de fusionner. `derive-documentation.yml`
+échouait sur **chaque push**, `main` comprise, et pas seulement sur cette
+branche.
+
+**La cause** : `administration: read` n'est pas une portée valide de
+`permissions:`, vérifié sur la documentation officielle de GitHub, qui en liste
+seize et pas celle-ci. Le workflow est **rejeté au chargement**, avant tout job.
+
+**Elle a été introduite le matin même** par `b349d36`, LS-176, dans le commit
+qui ajoutait `verifier-protection-branche.sh` et la permission censée lui donner
+ses droits. Le workflow tournait bien avant : quatre succès les lundis du mois
+d'août, sur sa planification.
+
+**Le contrôle hebdomadaire de dérive documentaire n'aurait donc pas tourné
+lundi**, sans que rien ne le signale : personne ne consulte l'onglet Actions
+d'un workflow planifié qui se tait.
+
+**Une correction de syntaxe ne suffira pas.** Le script lit
+`branches/main/protection`, endpoint qui exige des droits d'administration du
+dépôt : le `GITHUB_TOKEN` ne peut pas les obtenir par une clé `permissions:`,
+quelle qu'elle soit. LS-186 porte les trois voies possibles et l'arbitrage.
+
 ## État des tickets
 
-**LS-181 est TERMINÉE**, les treize critères remplis. **LS-182 est créée**, sous
-LS-3, Medium : trois écrans du prototype sans aucun ticket.
+**LS-181 est TERMINÉE et FUSIONNÉE**, les treize critères remplis. **LS-182 est
+créée puis close**, son objet étant le constat et le découpage. **LS-183,
+LS-184, LS-185 et LS-186 sont créées.**
 
 ## Prochaine étape
 
-**LS-180**, la story jumelle pour l'espace client, qui partagera le gabarit posé
-ici. Côté code sans dépendance externe, **LS-137** et **LS-147** restent les
-deux suivantes.
+**LS-183**, l'écran Catalogue, dont la conception est faite : le ticket est
+prêt, `motifsNonPubliable` existe déjà et servira à dire pourquoi un brouillon
+n'est pas publiable, et deux arbitrages sont rendus, les archivés derrière un
+filtre et « Nouveau produit » devenant un bouton de cet écran.
+
+Puis **LS-180**, la story jumelle pour l'espace client, qui partagera le gabarit
+posé ici.
