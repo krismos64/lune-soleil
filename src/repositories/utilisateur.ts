@@ -61,6 +61,35 @@ export async function lireEtatVerification(
 }
 
 /**
+ * Ce que le GABARIT de l'espace client affiche en tete de barre, LS-180.
+ *
+ * UNE SEULE REQUETE POUR DEUX CHAMPS, ET C'EST LA RAISON D'ETRE DE CETTE
+ * FONCTION. Le layout a besoin du nom, pour la pastille d'initiales et la
+ * salutation, ET de l'etat de verification, pour la mention sous le nom.
+ * Composer `lireEtatVerification` avec une seconde lecture ferait DEUX allers
+ * vers la base a chaque rendu de page de l'espace client, sur toutes les
+ * navigations, pour deux colonnes de la meme ligne.
+ *
+ * `lireEtatVerification` RESTE, ET N'EST PAS REMPLACEE : la page `/compte`
+ * l'appelle pour son rappel de verification, et elle seule. Les deux fonctions
+ * lisent la meme colonne sans se recouvrir, l'une pour une decision d'affichage
+ * ponctuelle, l'autre pour l'en-tete permanent.
+ *
+ * LE NOM PEUT ETRE VIDE, et ce n'est pas une anomalie : `nom` est facultatif au
+ * compte, l'inscription ne le demandant pas. L'appelant decide quoi montrer a
+ * sa place, ce fichier ne tranche pas un affichage.
+ */
+export async function lireEnteteEspaceClient(
+  client: ClientBase,
+  utilisateurId: string,
+): Promise<{ nom: string | null; emailVerifie: boolean } | null> {
+  return client.utilisateur.findUnique({
+    where: { id: utilisateurId },
+    select: { nom: true, emailVerifie: true },
+  });
+}
+
+/**
  * Le compte pour l'export RGPD : identite et nombres de moyens de connexion.
  *
  * LES VALEURS NE SORTENT PAS, seul leur nombre : `_count` compte les comptes

@@ -1,0 +1,326 @@
+/*
+ * Barre laterale de l'espace client, LS-180.
+ *
+ * CONCU A PARTIR DE 320 px, puis elargi. Les media queries montent, elles ne
+ * descendent jamais : ce qui est ecrit hors requete est ce que voit le plus
+ * petit ecran. C'est ce qui rend le cas mobile impossible a oublier, et il est
+ * ici le cas dur, le prototype ne le montrant jamais.
+ *
+ * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons d'ADR-022. Les paires
+ * couleur et fond sont COLOCALISEES, ce qui les rend mesurables par
+ * `verifier-contraste.sh` : ce controle ne remonte pas un fond herite du JSX.
+ *
+ * POURQUOI LE FOND EST `--ls-surface` ET NON `--ls-surface-sand`. Le sable est
+ * la couleur du prototype, et il est FAUX ici : C31 le nomme « le fond piegeux
+ * du projet », ou `--ls-text-muted` tombe a 4,35:1, sous le seuil AA. La
+ * mention d'etat sous le nom et l'etiquette « Bientôt disponible » sont
+ * ecrites dans ce gris. Regle de divergence de `frontend-design.md` : en cas de
+ * desaccord, c'est le prototype qui a tort. C'est le meme arbitrage que la
+ * barre d'administration, pour la meme mesure.
+ */
+
+/* -------------------------------------------------------------- l'enveloppe */
+
+/*
+ * ELLE N'EXISTE QUE POUR PORTER LE GESTIONNAIRE `Escape`, qui doit englober le
+ * bouton ET le panneau : apres un clic sur le bouton, le focus reste sur le
+ * bouton, qui est hors du `nav`.
+ *
+ * `display: contents` LA REND TRANSPARENTE AU GABARIT. Le layout dispose la
+ * barre et la colonne en `flex` : une boite intermediaire ordinaire capterait
+ * cette disposition et la barre cesserait d'etre une colonne. Avec `contents`,
+ * ses enfants deviennent enfants directs du conteneur flex.
+ *
+ * LE COMPORTEMENT AU CLAVIER N'EST PAS AFFECTE : `display: contents` retire la
+ * boite du rendu, jamais du DOM, donc l'evenement remonte toujours jusqu'ici.
+ */
+.enveloppe {
+  display: contents;
+}
+
+/* --------------------------------------------------------------- la bascule */
+
+/*
+ * LE BOUTON D'OUVERTURE, SOUS 768 px UNIQUEMENT.
+ *
+ * IL EST EN FLUX, PAS EN `position: fixed`. Un bouton flottant recouvrirait le
+ * contenu de la page en permanence, et sur un ecran de 320 px c'est la surface
+ * qui manque le plus.
+ *
+ * `--ls-primary` sur `--ls-surface` : 8,93:1, AAA.
+ */
+.bascule {
+  display: flex;
+  align-items: center;
+  gap: var(--ls-space-2);
+  width: 100%;
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-3) var(--ls-space-4);
+  border: 0;
+  border-bottom: 1px solid var(--ls-border);
+  background: var(--ls-surface);
+  color: var(--ls-primary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bascule:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: -3px;
+}
+
+.basculeIcone {
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+/* ----------------------------------------------------------------- la barre */
+
+/*
+ * A 320 px, LA BARRE EST REPLIEE PAR DEFAUT.
+ *
+ * `display: none` ET NON UNE HAUTEUR NULLE : un panneau masque doit sortir de
+ * l'ordre de tabulation, sans quoi cinq liens et le bouton de deconnexion se
+ * prennent au clavier avant d'atteindre le contenu. C'est aussi ce qui le
+ * retire de l'arbre d'accessibilite.
+ */
+.barre {
+  display: none;
+  background: var(--ls-surface);
+  border-bottom: 1px solid var(--ls-border);
+}
+
+.barreOuverte {
+  display: block;
+}
+
+/*
+ * AU-DELA DE 768 px, LA BARRE EST UNE COLONNE PERMANENTE.
+ *
+ * `position: sticky` et non `fixed` : elle suit le defilement sans sortir du
+ * flux, donc le contenu n'a pas besoin d'une marge compensatoire qui se
+ * desynchroniserait de la largeur.
+ *
+ * 240 px, DIX DE MOINS QUE L'ADMINISTRATION, et ce n'est pas un caprice : la
+ * barre cliente porte cinq entrees courtes, « Mes commandes » etant la plus
+ * longue, quand celle de l'administration doit loger « Stocks et marchés ».
+ * Dix pixels rendus au contenu comptent sur une tablette a 768 px.
+ *
+ * `height: 100vh` ET `overflow-y: auto` : la barre ne depasse jamais l'ecran,
+ * et defile sur elle-meme si un jour elle porte plus d'entrees.
+ */
+@media (min-width: 768px) {
+  .bascule {
+    display: none;
+  }
+
+  .barre {
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    width: 240px;
+    height: 100vh;
+    flex-shrink: 0;
+    border-bottom: 0;
+    border-right: 1px solid var(--ls-border);
+    overflow-y: auto;
+  }
+}
+
+/* --------------------------------------------------------------- l'identite */
+
+.identite {
+  display: flex;
+  align-items: center;
+  gap: var(--ls-space-3);
+  padding: var(--ls-space-4);
+  border-bottom: 1px solid var(--ls-border);
+}
+
+/*
+ * LA PASTILLE D'INITIALES, forme du prototype.
+ *
+ * `--ls-text-on-primary` sur `--ls-primary` : 8,93:1, AAA. C'est la paire
+ * d'aplat prevue par ADR-022, et elle est ecrite ici en toutes lettres pour que
+ * `verifier-contraste.sh` la mesure plutot que de la supposer.
+ *
+ * `flex-shrink: 0` EST INDISPENSABLE. Sans lui, un nom long comprime la
+ * pastille en ovale a 320 px : un cercle de 40 px devient une ellipse, et les
+ * initiales debordent de leur boite.
+ *
+ * ELLE EST `aria-hidden` DANS LE JSX : « MD » lu a voix haute n'apprend rien
+ * que le nom juste a cote ne dise mieux.
+ */
+.identiteInitiales {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/*
+ * `min-width: 0` AUTORISE LE TEXTE A RETRECIR SOUS SA LARGEUR NATURELLE.
+ *
+ * SANS LUI, UN NOM LONG POUSSE LA BARRE ENTIERE. Un enfant de flexbox a pour
+ * taille minimale celle de son contenu sur l'AXE PRINCIPAL, ici horizontal :
+ * « Marie-Christine Vandenberghe » elargirait la colonne de 240 px, donc
+ * decalerait le contenu de toutes les pages. C'est le motif de LS-171 a
+ * l'echelle de la barre.
+ */
+.identiteTextes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-1);
+  min-width: 0;
+}
+
+/*
+ * `overflow-wrap: anywhere` PLUTOT QU'UNE TRONCATURE. Un nom saisi au profil
+ * peut ne porter aucun espace, et `text-overflow: ellipsis` masquerait une
+ * partie du nom de la personne sur son propre espace. Il s'enroule.
+ *
+ * `--ls-text` sur `--ls-surface` : 12,63:1, AAA.
+ */
+.identiteNom {
+  color: var(--ls-text);
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * `--ls-text-muted` sur `--ls-surface` : 5,19:1, AA.
+ *
+ * MESURE SUR CE FOND ET NON RECOPIEE. Le jeton est documente a 4,86:1, valeur
+ * qui vaut sur CREME : C31, « ce qui se mesure est une paire, jamais une
+ * couleur ». Sur le sable du prototype il tomberait a 4,35:1, refuse.
+ */
+.identiteEtat {
+  color: var(--ls-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
+
+/* ----------------------------------------------------------- les rubriques */
+
+.liste {
+  list-style: none;
+  margin: 0;
+  padding: var(--ls-space-2) 0;
+  flex: 1;
+}
+
+/*
+ * `--ls-text` sur `--ls-surface` : 12,63:1, AAA.
+ *
+ * ZONE TACTILE DE 44 px, `--ls-touch-target`. Un lien de barre laterale fait
+ * sinon la hauteur de sa ligne, environ 24 px, sous le minimum de
+ * `frontend-design.md`.
+ *
+ * `border-left: 3px solid transparent` EST POSE DES L'ETAT AU REPOS, et ce
+ * n'est pas un ornement inutile : sans lui, l'apparition du filet sur l'entree
+ * courante decalerait le libelle de trois pixels vers la droite. Le filet
+ * change de couleur, jamais d'existence.
+ */
+.lien {
+  display: flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-2) var(--ls-space-4);
+  border-left: 3px solid transparent;
+  color: var(--ls-text);
+  font-size: 0.9375rem;
+  text-decoration: none;
+}
+
+.lien:hover {
+  background: var(--ls-surface-sand);
+}
+
+.lien:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: -3px;
+}
+
+/*
+ * L'ENTREE COURANTE, MARQUEE PAR TROIS SIGNES ET NON PAR LA COULEUR SEULE :
+ * le fond, le filet vertical, et la graisse du libelle. C'est le critere 2 de
+ * la story, et `frontend-design.md` interdit qu'une information passe par la
+ * seule couleur.
+ *
+ * LE SELECTEUR EST `aria-current`, PAS UNE CLASSE. L'attribut qui porte
+ * l'information pour un lecteur d'ecran est le meme qui declenche le style :
+ * l'un ne peut pas exister sans l'autre, et un futur changement ne peut pas
+ * styler une entree sans l'annoncer.
+ *
+ * `--ls-primary` sur `--ls-surface-sand` : 7,49:1, AA. Mesure sur CE fond, que
+ * cette regle pose elle-meme.
+ */
+.lien[aria-current="page"] {
+  border-left-color: var(--ls-primary);
+  background: var(--ls-surface-sand);
+  color: var(--ls-primary);
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------- rubriques a venir */
+
+.aVenir {
+  padding: var(--ls-space-3) var(--ls-space-4);
+  border-top: 1px solid var(--ls-border);
+}
+
+/*
+ * CE N'EST PAS UN TITRE, c'est un `p` etiquetant la liste, et le JSX dit
+ * pourquoi : un `h2` ici precederait le `h1` de chaque page.
+ *
+ * `--ls-text-muted` sur `--ls-surface` : 5,19:1, AA.
+ */
+.aVenirTitre {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-text-muted);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.aVenirListe {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-1);
+}
+
+/*
+ * `--ls-text-muted` sur `--ls-surface` : 5,19:1, AA.
+ *
+ * AUCUNE OPACITE POUR DIRE L'INDISPONIBLE. `verifier-contraste.sh` ne calcule
+ * pas l'opacite : un `opacity: 0.6` ferait chuter le rapport reel sans qu'aucun
+ * controle ne le voie. Le gris et l'absence de lien disent l'etat, et
+ * l'etiquette au-dessus le nomme en toutes lettres.
+ */
+.aVenirEntree {
+  color: var(--ls-text-muted);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+/* ------------------------------------------------------------------- le pied */
+
+.pied {
+  padding: var(--ls-space-4);
+  border-top: 1px solid var(--ls-border);
+}
