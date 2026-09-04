@@ -74,7 +74,51 @@ jobs:
       # Ce workflow ne s'execute que sur `push: main`, donc `github.sha` est
       # bien le commit de `main` et non un commit de fusion de pull request.
       # ----------------------------------------------------------------------
-      - name: Construire et publier
+      # ----------------------------------------------------------------------
+      # CONSTRUIRE, VERIFIER, PUIS PUBLIER. L'ORDRE EST LE SUJET, LS-177.
+      #
+      # CE QUI ETAIT FAIT AVANT, ET LE TROU QUE CELA OUVRAIT. Ce workflow
+      # publiait d'abord, `push: true`, puis rejouait les controles de securite
+      # sur l'image tiree du registre. Le commentaire justifiait cet ordre :
+      # verifier une image construite localement ne dit rien de celle qui est
+      # partie. L'argument est juste, la consequence ne l'etait pas.
+      #
+      # GHCR EST PUBLIC ET LE DEPOT AUSSI, invariant 9. Une image portant un
+      # `.env` dans une couche etait donc PUBLIEE avant qu'aucun controle ne
+      # l'attrape, et une image publiee ne se derappelle pas : elle a pu etre
+      # tiree, indexee, copiee. Le controle d'apres ne pouvait que constater.
+      #
+      # CE TROU N'ETAIT PAS VISIBLE tant que `controles.yml` construisait l'image
+      # sur chaque pull request : ce pas-la servait de barriere AVANT publication,
+      # sans que ce soit son role declare. LS-177 le retire du chemin des pull
+      # requests, ce qui a rendu la dependance visible.
+      #
+      # `load: true` CHARGE L'IMAGE DANS LE DEMON LOCAL SANS LA PUBLIER, verifie
+      # sur la documentation de `build-push-action` via Context7. L'image
+      # verifiee est alors LA MEME que celle qui sera publiee, meme empreinte :
+      # l'objection d'origine tombe, sans qu'il faille publier pour verifier.
+      #
+      # LE SECOND APPEL NE RECONSTRUIT RIEN, le cache `type=gha` etant partage
+      # entre les deux pas. Il pousse les couches deja construites.
+      # ----------------------------------------------------------------------
+      - name: Construire l'image sans la publier
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          push: false
+          tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # LA BARRIERE. Elle s'execute sur l'image chargee localement, avant tout
+      # envoi vers le registre : un echec ici laisse GHCR intact.
+      - name: Controles de securite avant publication
+        env:
+          IMAGE: ghcr.io/${{ github.repository }}:${{ github.sha }}
+        run: ./scripts/verifier-image-docker.sh "$IMAGE"
+
+      - name: Publier l'image verifiee
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -84,16 +128,6 @@ jobs:
             ghcr.io/${{ github.repository }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      # Les memes controles qu'en pull request, rejoues sur l'image REELLEMENT
-      # publiee. Une verification faite sur une image construite localement ne
-      # dit rien de celle qui est partie sur le registre.
-      - name: Controles de securite de l'image publiee
-        env:
-          IMAGE: ghcr.io/${{ github.repository }}:${{ github.sha }}
-        run: |
-          docker pull "$IMAGE"
-          ./scripts/verifier-image-docker.sh "$IMAGE"
 
       - name: Rappeler la reference de retour arriere
         env:

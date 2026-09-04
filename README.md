@@ -835,6 +835,37 @@ soit sans qu'aucun message ne le signale.
 Une relance complète à la demande reste possible, `workflow_dispatch`, et elle
 exécute toujours la suite entière.
 
+**Trois contrôles ont quitté la pull request depuis LS-177**, arbitrage explicite
+du 4 septembre 2026 pour ramener une pull request de code de 24 à environ onze
+minutes : les **scénarios de bout en bout**, **`npm audit`** et la **construction
+de l'image Docker**. Ils vivent dans `nocturne.yml`, rejoué chaque nuit à 2 h UTC
+et déclenchable à la main.
+
+**Cette story réduit la couverture avant fusion**, contrairement à LS-176 qui n'en
+retirait aucune. Un défaut d'interface, débordement à 320 px ou lien mort, peut
+entrer sur `main` et n'être vu que le lendemain. Le dépôt a déjà connu ces
+défauts, LS-171 et LS-162.
+
+**Le jalon reste vérifié à chaque pull request**, et c'est ce qui rend
+l'arbitrage tenable : l'achat de bout en bout sur une pièce unique vit dans
+`tests/integration/parcours-complet.sequential.test.ts`, pas dans la suite
+Playwright. Les tests d'intégration ne bougent pas, réservation et concurrence
+comprises.
+
+Le contrôle nocturne **ouvre une issue** en cas d'échec plutôt que de rougir dans
+un onglet que personne ne consulte, et il **ne bloque aucune fusion** : son rouge
+signifie « un défaut est entré hier », pas « ne pas fusionner ».
+
+**À reconsidérer avant le Go-Live**, LS-153, quand un défaut d'interface
+commencera à coûter des ventes.
+
+`publier-image.yml` **construit, vérifie, puis publie** depuis la même story.
+L'ordre inverse laissait une image atteindre GHCR, registre public, avant que le
+contrôle des couches ne l'examine : un `.env` entré dans une couche aurait été
+publié avant d'être vu, invariant 9. Le pas de construction des pull requests
+servait de barrière sans que ce soit son rôle déclaré, ce que son retrait a rendu
+visible.
+
 La validation du schéma passe **en premier**, sous ses deux modes : c'est le seul
 contrôle dont l'absence d'exécution a déjà laissé passer un défaut, le 29 juillet
 2026.
@@ -856,12 +887,23 @@ La chaîne démarre son propre conteneur `lune-soleil-db` par `docker run`, sans
 passer par `docker-compose.yml` qui exige un `.env` absent en intégration
 continue. Le nom est celui qu'attend le mode `--base-migree`.
 
-Un second workflow, `derive-documentation.yml`, rejoue `verifier-config-claude.sh`
-**chaque lundi matin** et ouvre une issue étiquetée `derive-documentation` si la
-documentation ne décrit plus le dépôt. Il est séparé délibérément : une dérive
-documentaire ne bloque aucune fusion, et un rouge qui signifie parfois « ne pas
-fusionner » et parfois « à relire » est un rouge que l'on apprend à ignorer. Il se
-déclenche aussi à la main depuis l'onglet Actions.
+**Trois autres workflows** accompagnent `controles.yml`, tous séparés pour la même
+raison : un rouge qui signifie parfois « ne pas fusionner » et parfois « à
+relire » est un rouge que l'on apprend à ignorer.
+
+`derive-documentation.yml` rejoue `verifier-config-claude.sh` et
+`verifier-protection-branche.sh` **chaque lundi matin**, et ouvre une issue
+étiquetée `derive-documentation` si la documentation ne décrit plus le dépôt ou si
+un réglage de protection a changé. Il porte `administration: read`, portée que
+`controles.yml` n'a pas et ne doit pas avoir.
+
+`nocturne.yml` rejoue **chaque nuit** ce que LS-177 a sorti des pull requests, et
+ouvre une issue étiquetée `controle-nocturne`.
+
+`publier-image.yml` construit, vérifie et publie l'image sur `main` après chaque
+fusion.
+
+Les trois se déclenchent aussi à la main depuis l'onglet Actions.
 
 Il a été prouvé par quinze mutations, toutes détectées. Le compte se mesure,
 `grep -cE '^\s*mutation "' scripts/verifier-config-claude-mutation.sh`, il grandit

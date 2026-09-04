@@ -756,67 +756,33 @@ jobs:
       # conclusion `failure`, et les etapes suivantes ont ete ignorees. Une
       # borne jamais franchie ne prouve pas qu'elle protege.
       # ----------------------------------------------------------------------
-      # LS-176. Le navigateur est mis en cache, environ 35 s par execution.
+      # LS-177. LES SCENARIOS DE BOUT EN BOUT NE SONT PLUS ICI, arbitrage
+      # explicite de Christophe du 4 septembre 2026. Ils coutaient 5 min 32 sur
+      # chaque pull request de code, plusieurs fois par jour pour un developpeur
+      # seul, et le cache du navigateur les accompagne.
       #
-      # LA CLE PORTE LA VERSION DE PLAYWRIGHT, lue dans le verrou et jamais
-      # ecrite ici : les navigateurs sont lies a la version de la bibliotheque,
-      # et une cle figee servirait un binaire incompatible apres une montee de
-      # version. Le symptome serait un echec de lancement du navigateur, loin de
-      # sa cause.
+      # CETTE STORY RETIRE DE LA COUVERTURE AVANT FUSION, contrairement a
+      # LS-176 qui n'en retirait aucune. L'arbitrage est trace, pas subi :
+      # `nocturne.yml` les rejoue chaque nuit sur les TROIS largeurs et ouvre une
+      # issue en cas d'echec.
       #
-      # `hashFiles` NE CONVIENT PAS ICI. Le verrou change a chaque montee de
-      # n'importe quelle dependance, ce qui jetterait le cache du navigateur sans
-      # raison. La version de Playwright, elle, ne bouge que quand le navigateur
-      # doit changer.
+      # CE QUI RESTE VERIFIE AVANT FUSION, ET C'EST LE POINT QUI DECIDE. Le jalon
+      # de CLAUDE.md, « un achat de bout en bout sur une variante en stock a un
+      # exemplaire », vit dans `tests/integration/parcours-complet.sequential.test.ts`
+      # et non dans la suite Playwright. Verifie avant d'arbitrer. Les tests
+      # d'integration restent donc integralement ici, reservation et concurrence
+      # comprises : le jalon n'est pas contourne, exigence de CLAUDE.md tenue.
       #
-      # UN DEFAUT DE CACHE NE FAIT JAMAIS ECHOUER, il ralentit : `playwright
-      # install` s'execute alors normalement. C'est le sens d'erreur voulu, un
-      # cache absent n'etant pas un defaut du code. `fail-on-cache-miss` est donc
-      # laisse a false, sa valeur par defaut.
+      # CE QUI PART AU NOCTURNE EST L'INTERFACE : seize tests du tunnel d'achat,
+      # quatre de la confirmation, plus le catalogue, l'administration et
+      # l'espace client. Un debordement a 320 px ou un lien mort peut donc entrer
+      # sur `main` et n'etre vu que le lendemain. Le depot a deja connu ces
+      # defauts, LS-171 et LS-162.
+      #
+      # CE RISQUE EST ACCEPTABLE AUJOURD'HUI ET NE LE RESTERA PAS : la boutique
+      # n'est pas ouverte commercialement. A RECONSIDERER AVANT LE GO-LIVE,
+      # LS-153, quand un defaut d'interface commencera a couter des ventes.
       # ----------------------------------------------------------------------
-      - name: Version de Playwright pour la cle de cache
-        if: steps.portee.outputs.suite == 'complete'
-        id: playwright
-        run: |
-          version=$(node -e "const l=require('./package-lock.json'); process.stdout.write(l.packages['node_modules/@playwright/test'].version)")
-
-          # ECHOUER PLUTOT QUE DE POSER UNE CLE VIDE. Une cle sans version
-          # servirait le meme cache a toutes les versions, ce qui est exactement
-          # le defaut que la version doit fermer.
-          if [ -z "$version" ]; then
-            echo "::error::Version de @playwright/test illisible dans le verrou."
-            exit 1
-          fi
-
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "Playwright $version"
-
-      - name: Cache du navigateur de test
-        if: steps.portee.outputs.suite == 'complete'
-        id: cache-navigateur
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
-
-      # DEUX CHEMINS, ET LA DIFFERENCE N'EST PAS COSMETIQUE. Sur cache trouve,
-      # seules les dependances systeme sont posees, `install-deps` : elles vivent
-      # hors du dossier mis en cache et manqueraient sinon, le navigateur ne se
-      # lancerait pas. Sur cache absent, l'installation complete.
-      - name: Installer le navigateur de test
-        if: steps.portee.outputs.suite == 'complete'
-        timeout-minutes: 5
-        run: |
-          if [ "${{ steps.cache-navigateur.outputs.cache-hit }}" = "true" ]; then
-            echo "Navigateur servi par le cache, seules les dependances systeme sont posees."
-            npx playwright install-deps chromium
-          else
-            npx playwright install --with-deps chromium
-          fi
-
-      - name: 8. Scenarios critiques de bout en bout
-        if: steps.portee.outputs.suite == 'complete'
-        run: npm run test:e2e
 
       # ----------------------------------------------------------------------
       # LS-169 critere 6 : un saut se VOIT, il ne se devine pas.
@@ -843,55 +809,76 @@ jobs:
             echo "## Portée de cette exécution"
             echo
             if [ "$portee" = "complete" ]; then
-              echo "**Suite complète.** Tests d'intégration et scénarios de bout"
-              echo "en bout inclus."
+              echo "**Suite complète.** Tests unitaires et tests d'intégration"
+              echo "inclus, dont le jalon de la pièce unique."
             else
               echo "**Suite allégée**, LS-169 : le diff ne touche que de la"
               echo "documentation."
               echo
-              echo "N'ONT PAS ÉTÉ EXÉCUTÉS :"
+              echo "N'A PAS ÉTÉ EXÉCUTÉ :"
               echo "- 5. Tests d'intégration sur base éphémère"
-              echo "- 8. Scénarios critiques de bout en bout"
               echo
               echo "Tout le reste a tourné : types, analyse statique, format,"
-              echo "schéma, règles, construction et image Docker."
-              echo
-              echo "LS-176 : la chaîne ne se rejoue plus sur \`main\` après"
-              echo "fusion, \`strict\` garantissant que l'arbre fusionné est"
-              echo "celui qui vient d'être testé ici. Une relance complète"
-              echo "reste possible à la demande, \`workflow_dispatch\`."
+              echo "schéma, règles et construction."
             fi
+
+            echo
+            echo "### Ce que cette chaîne ne vérifie plus, LS-177"
+            echo
+            echo "Trois contrôles ont quitté la pull request et vivent"
+            echo "désormais dans \`nocturne.yml\`, rejoué chaque nuit :"
+            echo
+            echo "- les **scénarios de bout en bout**, trois largeurs"
+            echo "- \`npm audit\`"
+            echo "- la **construction de l'image Docker**, également refaite"
+            echo "  sur \`main\` par \`publier-image.yml\`, qui vérifie"
+            echo "  désormais AVANT de publier"
+            echo
+            echo "Un défaut d'interface peut donc entrer sur \`main\` et"
+            echo "n'être vu que le lendemain. Le jalon métier, lui, reste"
+            echo "vérifié ici : il vit dans les tests d'intégration."
+            echo
+            echo "LS-176 : la chaîne ne se rejoue plus sur \`main\` après"
+            echo "fusion, \`strict\` garantissant que l'arbre fusionné est"
+            echo "celui qui vient d'être testé ici. Une relance complète"
+            echo "reste possible à la demande, \`workflow_dispatch\`."
           } >> "$GITHUB_STEP_SUMMARY"
 
           echo "Portée : $portee"
 
       # ----------------------------------------------------------------------
-      # Prolongement du controle 7 : l'image se construit-elle, et est-elle
-      # sure ? LS-74.
+      # LS-177. LA CONSTRUCTION DE L'IMAGE N'EST PLUS ICI, elle coutait 3 min 25
+      # sur CHAQUE pull request, Dockerfile inchange compris.
       #
-      # ICI ET NON DANS LE WORKFLOW DE PUBLICATION. Une image qui ne se
-      # construit pas doit faire rougir la pull request, pas etre decouverte
-      # apres la fusion, quand `main` est deja cassee. Ce pas ne publie rien :
-      # le jeton de ce workflow reste en `contents: read`.
+      # CE QUI ETAIT ECRIT ICI : « une image qui ne se construit pas doit faire
+      # rougir la pull request, pas etre decouverte apres la fusion, quand `main`
+      # est deja cassee ». L'argument reste valable, il est simplement paye trop
+      # cher : le Dockerfile change rarement, et une image qui ne se construit
+      # pas est rattrapee par `publier-image.yml` sur du code que tout le reste a
+      # deja verifie.
       #
-      # LE DEFAUT QUE CE PAS RATTRAPE EST REEL. `public/` etait vide et git ne
-      # suit pas les dossiers vides : la construction reussissait sur le poste
-      # de developpement et echouait sur un clone neuf. Sans ce pas, personne ne
-      # l'aurait vu avant la phase 6.
+      # CE PAS SERVAIT AUSSI DE BARRIERE AVANT PUBLICATION, SANS QUE CE SOIT SON
+      # ROLE DECLARE, et c'est le point qui a failli etre perdu. Le controle des
+      # couches protege l'invariant 9, un `.env` entre dans une couche y restant
+      # meme supprime ensuite, et GHCR est PUBLIC. Or `publier-image.yml`
+      # publiait AVANT de verifier : retirer ce pas sans rien faire d'autre
+      # aurait laisse une image fautive atteindre le registre.
+      #
+      # `publier-image.yml` A DONC ETE REORDONNE dans la meme story : il
+      # construit avec `load: true`, verifie, puis publie. La barriere existe
+      # toujours, elle est desormais au bon endroit et porte son nom.
+      #
+      # LE CONTROLE DES COUCHES N'EST PAS AFFAIBLI, il est deplace : meme script,
+      # meme image, `verifier-image-docker.sh`, et sa preuve par mutation vit
+      # toujours dans `scripts/verifier-image-docker-mutation.sh`.
       # ----------------------------------------------------------------------
-      - name: 7b. Construction de l'image Docker
-        run: docker build -t lune-soleil:verification .
-
-      # Le controle des couches est ce qui protege l'invariant 9 : un `.env`
-      # entre dans une couche y reste meme supprime ensuite, et l'image part sur
-      # un registre public. Sa preuve par mutation vit dans
-      # `scripts/verifier-image-docker-mutation.sh`, hors CI, elle construit des
-      # images volontairement fautives.
-      - name: 7c. Controles de securite de l'image
-        run: ./scripts/verifier-image-docker.sh lune-soleil:verification
 
       # Le rapport n'existe qu'en cas d'echec exploitable ; `if: failure()` evite
       # de televerser un dossier vide a chaque execution verte.
+      #
+      # LS-177 : les scenarios de bout en bout sont passes au controle nocturne,
+      # ce pas ne sert donc plus que si un jour ils reviennent ici. Il est garde
+      # inerte plutot que supprime, `if: failure()` le rendant gratuit.
       - name: Rapport Playwright en cas d'echec
         if: failure()
         uses: actions/upload-artifact@v7
@@ -901,74 +888,25 @@ jobs:
           retention-days: 7
 
       # ----------------------------------------------------------------------
-      # Hors des huit : l'absence de vulnerabilite connue.
+      # LS-177. `npm audit` N'EST PLUS ICI, et c'est le deplacement le mieux
+      # fonde des trois.
       #
-      # CLAUDE.md exige `npm audit` a zero. Le controle est ici plutot que dans
-      # un travail de veille separe parce qu'une dependance vulnerable entre par
-      # une pull request, jamais autrement.
+      # UNE VULNERABILITE N'APPARAIT PAS PARCE QU'UN COMPOSANT A CHANGE, elle
+      # apparait parce qu'un avis de securite est PUBLIE. La lier a une pull
+      # request n'a jamais eu de sens : le meme verrou, inchange, est sain un
+      # jour et vulnerable le lendemain sans qu'aucun commit ne l'explique.
       #
+      # ELLE COUTAIT 4 min 37 le 4 septembre, sur une pull request qui ne
+      # touchait pas une seule dependance.
+      #
+      # `nocturne.yml` LA REJOUE CHAQUE NUIT, `--audit-level=low` inchange, et
+      # ouvre une issue en cas de vulnerabilite. L'invariant de CLAUDE.md, npm
+      # audit a zero, reste tenu : il est verifie chaque jour au lieu d'etre
+      # verifie a chaque commit.
+      #
+      # LA DISTINCTION PANNE / VULNERABILITE DE LS-176 PART AVEC ELLE, et
+      # `verifier-verdict-audit.sh` la suit : son garde-fou cherche desormais le
+      # motif dans `nocturne.yml`. Il reste branche ICI, purement textuel, parce
+      # qu'il protege une decision de securite qui doit rougir avant fusion si
+      # quelqu'un l'affaiblit.
       # ----------------------------------------------------------------------
-      # LS-176. UNE PANNE DU REGISTRE N'EST PAS UNE VULNERABILITE, et jusqu'ici
-      # les deux rendaient le meme rouge.
-      #
-      # MESURE DU 4 SEPTEMBRE 2026. Sur une pull request de dix-sept lignes de
-      # Markdown, cette etape a echoue DEUX FOIS de suite :
-      #
-      #   npm notice This endpoint is being retired. Use the bulk advisory
-      #     endpoint instead.
-      #   npm warn audit 400 Bad Request - POST /-/npm/v1/security/audits/quick
-      #   { statusCode: 400, error: 'Bad Request',
-      #     message: 'Invalid package tree, run npm install to rebuild your
-      #               package-lock.json' }
-      #   npm error audit endpoint returned an error
-      #
-      # LE MESSAGE ACCUSE LE VERROU, LA CAUSE EST AILLEURS. Rejoue en local, hors
-      # GitHub, sur le meme verrou : erreur identique. Une heure plus tard, sans
-      # qu'une ligne ait bouge, `found 0 vulnerabilities`. Le depot etait sain
-      # pendant toute la panne.
-      #
-      # POURQUOI LE DEFAUT COMPTE. Un garde-fou qui ne peut pas conclure doit se
-      # taire ou bloquer, jamais accuser : ici il criait au loup, et un rouge qui
-      # ment finit par etre relache d'un clic. C'est le sens d'erreur inverse de
-      # celui du filtre de portee, ou le defaut ferme est le bon.
-      #
-      # CE QUI N'EST PAS RELACHE. Une vulnerabilite trouvee fait toujours
-      # echouer, `--audit-level=low` inchange, invariant de CLAUDE.md intact.
-      # Seule l'INDISPONIBILITE du registre cesse d'etre traitee comme une
-      # vulnerabilite : elle est signalee, et la chaine continue.
-      #
-      # LE CODE DE SORTIE NE SUFFIT PAS A DISTINGUER LES DEUX CAS, `npm audit`
-      # rendant 1 dans les deux. C'est la sortie qui tranche : le message d'erreur
-      # du registre y est explicite.
-      # ----------------------------------------------------------------------
-      - name: Audit des dependances
-        run: |
-          set +e
-          sortie=$(npm audit --audit-level=low 2>&1)
-          code=$?
-          set -e
-
-          printf '%s\n' "$sortie"
-
-          if [ "$code" -eq 0 ]; then
-            echo "Aucune vulnerabilite connue."
-            exit 0
-          fi
-
-          # LE MOTIF VISE L'INDISPONIBILITE, PAS UN NIVEAU DE GRAVITE. « audit
-          # endpoint returned an error » est le message que npm emet quand le
-          # service ne repond pas ; un rapport de vulnerabilite ne le contient
-          # jamais, il liste des paquets et des severites.
-          if printf '%s' "$sortie" | grep -q "audit endpoint returned an error"; then
-            echo "::warning::Le registre npm n'a pas repondu, l'audit n'a rien mesure."
-            echo ""
-            echo "CE N'EST PAS UNE VULNERABILITE : l'audit n'a pas pu s'executer."
-            echo "Le depot n'a pas ete declare sain pour autant, il n'a pas ete"
-            echo "verifie du tout. Rejouer cette etape quand le registre repond,"
-            echo "et ne jamais fusionner en supposant que l'absence de reponse"
-            echo "vaut absence de vulnerabilite."
-            exit 0
-          fi
-
-          echo "::error::Vulnerabilite connue dans les dependances."
-          exit 1

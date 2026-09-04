@@ -1,0 +1,427 @@
+# Controle nocturne, LS-177.
+#
+# POURQUOI CE WORKFLOW EXISTE. Chaque pull request de code coutait 24 minutes,
+# plusieurs fois par jour pour un developpeur seul. Trois controles longs en
+# portaient la majeure partie sans avoir besoin de tourner a chaque commit :
+# les scenarios de bout en bout, `npm audit` et la construction de l'image.
+#
+# ARBITRAGE EXPLICITE DE CHRISTOPHE, 4 septembre 2026. Il REDUIT la couverture
+# avant fusion, contrairement a LS-176 qui n'en retirait aucune. La decision est
+# tracee ici et dans LS-177 plutot que subie.
+#
+# CE QUI RESTE VERIFIE AVANT FUSION, ET C'EST CE QUI REND L'ARBITRAGE TENABLE.
+# Le jalon de CLAUDE.md, « un achat de bout en bout sur une variante en stock a
+# un exemplaire », vit dans `tests/integration/parcours-complet.sequential.test.ts`
+# et non dans la suite Playwright : verifie avant d'arbitrer. Les tests
+# d'integration restent integralement sur la pull request, reservation et
+# concurrence comprises. L'exigence « ne se contourne jamais » est tenue.
+#
+# CE QUI PART ICI EST L'INTERFACE. Un debordement a 320 px, un lien mort ou un
+# tunnel d'achat casse a l'ecran peut donc entrer sur `main` et n'etre vu que le
+# lendemain. Le depot a deja connu ces defauts, LS-171 et LS-162.
+#
+# CE RISQUE EST ACCEPTABLE AUJOURD'HUI ET NE LE RESTERA PAS : la boutique n'est
+# pas ouverte commercialement, donc un defaut d'interface d'une journee ne touche
+# aucun client reel. A RECONSIDERER AVANT LE GO-LIVE, LS-153.
+#
+# IL OUVRE UNE ISSUE PLUTOT QUE DE ROUGIR DANS UN ONGLET. Un rouge nocturne que
+# personne ne regarde ne vaut rien : ce serait avoir supprime les tests en
+# croyant les avoir deplaces. Meme raison que `derive-documentation.yml`, dont ce
+# fichier reprend la mecanique.
+#
+# IL NE BLOQUE AUCUNE FUSION, et ce n'est pas un oubli. Son rouge signifie « un
+# defaut est entre hier », pas « ne pas fusionner » : melanger les deux rendrait
+# le signal ambigu, et un rouge ambigu s'apprend a ignorer.
+name: Controle nocturne
+
+on:
+  schedule:
+    # 2 h UTC, soit 4 h a Paris en ete. La nuit plutot que le matin : le
+    # resultat est lu au reveil, et l'executeur GitHub est moins charge.
+    - cron: "0 2 * * *"
+  # Declenchable a la main, critere de LS-177 : verifier avant une livraison
+  # importante sans attendre la nuit.
+  workflow_dispatch:
+    inputs:
+      raison:
+        description: "Pourquoi ce controle a la demande"
+        required: false
+        default: "Verification complete avant une livraison"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  nocturne:
+    name: Scenarios de bout en bout, audit et image
+    runs-on: ubuntu-latest
+    # Meme borne que `controles.yml` et pour la meme raison : elle evite qu'une
+    # etape bloquee consomme une heure, sans contraindre une execution normale.
+    timeout-minutes: 45
+
+    env:
+      PGUSER: lunesoleil
+      PGPASSWORD: ci_local_jetable
+      PGDATABASE: lunesoleil
+      PGPORT: "55432"
+      CI: "true"
+      SHIPPING_RELAY_RATE_CENTS: "410"
+      SHIPPING_HOME_RATE_CENTS: "499"
+      SHIPPING_FREE_THRESHOLD_CENTS: "3900"
+
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v7
+
+      - name: Composer l'URL de connexion
+        run: |
+          # Le prefixe du protocole est lui aussi assemble. Ecrit d'un seul
+          # tenant, meme avec des variables a la place de l'utilisateur et du mot
+          # de passe, la forme reconnue par l'analyse de secrets reste litterale
+          # dans le fichier et le commit est bloque. L'analyse ne peut pas savoir
+          # que ces valeurs sont jetables, et c'est le bon comportement pour un
+          # depot public.
+          schema='postgre'
+          schema="${schema}sql://"
+          printf 'DATABASE_URL=%s%s:%s@localhost:%s/%s?schema=public\n' \
+            "$schema" "$PGUSER" "$PGPASSWORD" "$PGPORT" "$PGDATABASE" >> "$GITHUB_ENV"
+
+      # ----------------------------------------------------------------------
+      # Authentification, LS-70.
+      #
+      # LE CONTROLE 8 SERT UNE VRAIE APPLICATION. Playwright demarre
+      # `next start`, qui evalue src/lib/auth.ts hors phase de construction :
+      # le garde-fou y exige BETTER_AUTH_SECRET, et il a raison. Sans lui,
+      # Better Auth signerait ses cookies avec un secret par defaut public.
+      #
+      # CE N'EST PAS UN SECRET DE COMPLAISANCE. Il ne contente pas un controle,
+      # il configure un serveur reellement servi le temps de la suite. La
+      # nuance est visible dans sa duree de vie : engendre a chaque execution,
+      # jamais ecrit dans le depot, detruit avec le runner. Aucune session
+      # signee par cette valeur n'existe ailleurs que dans ces neuf minutes.
+      #
+      # `openssl` plutot qu'une constante, pour la meme raison que le mot de
+      # passe de la base est jetable : une valeur litterale dans un depot
+      # PUBLIC serait bloquee par l'analyse de secrets, a juste titre, et un
+      # faux positif tolere apprend a ignorer l'alerte suivante.
+      #
+      # BETTER_AUTH_URL doit designer le serveur REELLEMENT servi, port compris,
+      # sinon Better Auth rejette toute connexion en « Invalid origin ». Le port
+      # 3100 est celui de playwright.config.ts.
+      #
+      # `add-mask` est indispensable : GitHub ne masque que ce qu'il connait
+      # deja, et une valeur engendree pendant l'execution lui est inconnue. Sans
+      # cette ligne elle s'affiche EN CLAIR dans le bloc `env:` de chaque etape
+      # suivante, sur un depot public. Sans consequence ici puisqu'elle meurt
+      # avec le runner, mais une valeur en clair toleree dans un journal apprend
+      # a ne plus regarder les suivantes.
+      #
+      # La valeur passe par une variable AVANT d'etre masquee puis ecrite :
+      # appeler openssl deux fois produirait deux valeurs distinctes, et celle
+      # qui serait masquee ne serait pas celle qui sert.
+      - name: Composer les variables d'authentification
+        run: |
+          secret="$(openssl rand -base64 32)"
+          echo "::add-mask::$secret"
+          printf 'BETTER_AUTH_SECRET=%s\n' "$secret" >> "$GITHUB_ENV"
+          printf 'BETTER_AUTH_URL=http://127.0.0.1:3100\n' >> "$GITHUB_ENV"
+
+      # ----------------------------------------------------------------------
+      # Identite de l'emetteur des factures, LS-126, ajoutee par LS-134.
+      #
+      # POURQUOI ELLE MANQUAIT SANS QUE RIEN NE ROUGISSE. `emettreFacture` leve
+      # `EmetteurNonConfigureError` quand les quatre variables sont absentes, et
+      # la confirmation ATTRAPE cette erreur pour ne pas perdre le paiement :
+      # elle journalise « Facture non emise, emetteur non configure » et
+      # continue. Le defaut etait donc ecrit trente fois dans le journal de
+      # chaque execution, en `error`, sans faire echouer une seule assertion.
+      #
+      # IL S'EST VU QUAND UN TEST A EXIGE UNE CONSEQUENCE DE LA FACTURE : les
+      # jetons de LS-134 naissent dans sa transaction, donc aucune facture
+      # signifie aucun jeton. Le meme trou faisait passer le test de concurrence
+      # de la piece unique, qui servait vingt-cinq acheteurs au lieu d'un.
+      #
+      # CES VALEURS SONT VOLONTAIREMENT FICTIVES ET LE DISENT. Elles ne sont pas
+      # des secrets, contrairement au bloc precedent : une identite legale figure
+      # sur un document public. Le prefixe TEST les rend impossibles a confondre
+      # avec l'identite reelle de l'exploitante, qui vit dans le `.env` de
+      # production et n'entre jamais dans ce depot.
+      #
+      # Le SIRET compte quatorze chiffres, contrainte de `schemaEmetteurFacture`.
+      - name: Composer l'identite de l'emetteur des factures
+        run: |
+          printf 'FACTURE_RAISON_SOCIALE=%s\n' "TEST Lune et Soleil" >> "$GITHUB_ENV"
+          printf 'FACTURE_SIRET=%s\n' "12345678901234" >> "$GITHUB_ENV"
+          printf 'FACTURE_ADRESSE=%s\n' "1 rue de Test, 64000 TESTVILLE" >> "$GITHUB_ENV"
+          printf 'FACTURE_EMAIL_CONTACT=%s\n' "test-emetteur@example.invalid" >> "$GITHUB_ENV"
+
+      # ----------------------------------------------------------------------
+      # Base publique du site, LS-132 et LS-172.
+      #
+      # `lienDocument` et `lienRetractation` LEVENT quand elle manque, et c'est
+      # deliberement un defaut ferme : un lien errone emporterait un jeton signe
+      # hors du domaine, donc vers un tiers.
+      #
+      # ELLE EST DONC INDISPENSABLE DEPUIS LS-172, qui compose les deux liens
+      # DANS la transaction de confirmation. Son absence ne se rattraperait pas
+      # comme celle de l'emetteur : l'erreur remonte hors du `catch` de
+      # `EmetteurNonConfigureError` et fait echouer la transaction entiere,
+      # donc perd le paiement.
+      #
+      # Le port 3100 est celui de playwright.config.ts, pour que les liens
+      # composes pendant la suite de bout en bout designent le serveur servi.
+      - name: Composer la base publique du site
+        run: |
+          printf 'NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3100\n' >> "$GITHUB_ENV"
+
+      - name: Installer Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Installation des dependances
+        run: npm ci
+
+      - name: Engendrer le client Prisma
+        run: npx prisma generate
+
+      - name: Demarrer la base de controle
+        run: |
+          docker run -d --name lune-soleil-db \
+            -e POSTGRES_USER="$PGUSER" \
+            -e POSTGRES_PASSWORD="$PGPASSWORD" \
+            -e POSTGRES_DB="$PGDATABASE" \
+            -e POSTGRES_INITDB_ARGS="--encoding=UTF8 --locale=C.UTF-8" \
+            -p "127.0.0.1:$PGPORT:5432" \
+            postgres:18.4
+
+          # `pg_isready` seul repond avant que la base applicative n'existe. La
+          # requete confirme que POSTGRES_DB accepte les connexions, meme motif
+          # que le healthcheck de docker-compose.yml.
+          for _ in $(seq 1 30); do
+            if docker exec lune-soleil-db \
+                 psql -U "$PGUSER" -d "$PGDATABASE" -c 'SELECT 1' >/dev/null 2>&1; then
+              echo "base prete"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "la base n'est pas prete apres 60 secondes"
+          docker logs lune-soleil-db
+          exit 1
+
+      # Le schema arrive par les migrations versionnees, jamais par le SQL de
+      # reference : c'est ce qui rend le controle suivant capable de voir une
+      # divergence entre schema.prisma et schema.sql.
+      - name: Appliquer les migrations
+        run: npx prisma migrate deploy
+
+      # ----------------------------------------------------------------------
+      # Controle 6, seconde moitie : Prisma cree-t-il ce que le SQL de reference
+      # decrit ?
+      #
+      # LES DEUX MODES NE SONT PAS REDONDANTS. Le premier valide l'intention, le
+      # second valide ce que la production recevra reellement. Une divergence
+      # entre schema.prisma et schema.sql n'est visible QUE par celui-ci : le
+      # premier passerait au vert sur un SQL de reference juste et une migration
+      # fausse. C'est exactement le defaut passe le 29 juillet.
+      # ----------------------------------------------------------------------
+
+      - name: Construction de l'application
+        run: npm run build
+
+      # ----------------------------------------------------------------------
+      # LS-176. Le navigateur est mis en cache, environ 35 s par execution.
+      #
+      # LA CLE PORTE LA VERSION DE PLAYWRIGHT, lue dans le verrou et jamais
+      # ecrite ici : les navigateurs sont lies a la version de la bibliotheque,
+      # et une cle figee servirait un binaire incompatible apres une montee de
+      # version. Le symptome serait un echec de lancement du navigateur, loin de
+      # sa cause.
+      #
+      # `hashFiles` NE CONVIENT PAS ICI. Le verrou change a chaque montee de
+      # n'importe quelle dependance, ce qui jetterait le cache du navigateur sans
+      # raison. La version de Playwright, elle, ne bouge que quand le navigateur
+      # doit changer.
+      #
+      # UN DEFAUT DE CACHE NE FAIT JAMAIS ECHOUER, il ralentit : `playwright
+      # install` s'execute alors normalement. C'est le sens d'erreur voulu, un
+      # cache absent n'etant pas un defaut du code. `fail-on-cache-miss` est donc
+      # laisse a false, sa valeur par defaut.
+      # ----------------------------------------------------------------------
+      - name: Version de Playwright pour la cle de cache
+        id: playwright
+        run: |
+          version=$(node -e "const l=require('./package-lock.json'); process.stdout.write(l.packages['node_modules/@playwright/test'].version)")
+
+          # ECHOUER PLUTOT QUE DE POSER UNE CLE VIDE. Une cle sans version
+          # servirait le meme cache a toutes les versions, ce qui est exactement
+          # le defaut que la version doit fermer.
+          if [ -z "$version" ]; then
+            echo "::error::Version de @playwright/test illisible dans le verrou."
+            exit 1
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Playwright $version"
+
+      - name: Cache du navigateur de test
+        id: cache-navigateur
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
+      # DEUX CHEMINS, ET LA DIFFERENCE N'EST PAS COSMETIQUE. Sur cache trouve,
+      # seules les dependances systeme sont posees, `install-deps` : elles vivent
+      # hors du dossier mis en cache et manqueraient sinon, le navigateur ne se
+      # lancerait pas. Sur cache absent, l'installation complete.
+      - name: Installer le navigateur de test
+        timeout-minutes: 5
+        run: |
+          if [ "${{ steps.cache-navigateur.outputs.cache-hit }}" = "true" ]; then
+            echo "Navigateur servi par le cache, seules les dependances systeme sont posees."
+            npx playwright install-deps chromium
+          else
+            npx playwright install --with-deps chromium
+          fi
+
+      - name: Scenarios critiques de bout en bout, trois largeurs
+        run: npm run test:e2e
+
+      # Le rapport n'existe qu'en cas d'echec ; il est televerse pour que l'issue
+      # ouverte plus bas renvoie vers quelque chose d'exploitable.
+      - name: Rapport Playwright en cas d'echec
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: rapport-playwright
+          path: playwright-report/
+          retention-days: 7
+
+      # ----------------------------------------------------------------------
+      # L'image, deplacee depuis `controles.yml` par LS-177. Elle y coutait
+      # 3 min 25 sur chaque pull request, Dockerfile inchange compris.
+      #
+      # LE CONTROLE DES COUCHES RESTE, meme script : il protege l'invariant 9, un
+      # `.env` entre dans une couche y restant meme supprime ensuite. La barriere
+      # AVANT publication, elle, vit desormais dans `publier-image.yml`, qui
+      # construit puis verifie puis publie.
+      # ----------------------------------------------------------------------
+      - name: Construction de l'image Docker
+        run: docker build -t lune-soleil:verification .
+
+      - name: Controles de securite de l'image
+        run: ./scripts/verifier-image-docker.sh lune-soleil:verification
+
+      # ----------------------------------------------------------------------
+      # Hors des huit : l'absence de vulnerabilite connue.
+      #
+      # CLAUDE.md exige `npm audit` a zero. Le controle est ici plutot que dans
+      # un travail de veille separe parce qu'une dependance vulnerable entre par
+      # une pull request, jamais autrement.
+      #
+      # ----------------------------------------------------------------------
+      # LS-176. UNE PANNE DU REGISTRE N'EST PAS UNE VULNERABILITE, et jusqu'ici
+      # les deux rendaient le meme rouge.
+      #
+      # MESURE DU 4 SEPTEMBRE 2026. Sur une pull request de dix-sept lignes de
+      # Markdown, cette etape a echoue DEUX FOIS de suite :
+      #
+      #   npm notice This endpoint is being retired. Use the bulk advisory
+      #     endpoint instead.
+      #   npm warn audit 400 Bad Request - POST /-/npm/v1/security/audits/quick
+      #   { statusCode: 400, error: 'Bad Request',
+      #     message: 'Invalid package tree, run npm install to rebuild your
+      #               package-lock.json' }
+      #   npm error audit endpoint returned an error
+      #
+      # LE MESSAGE ACCUSE LE VERROU, LA CAUSE EST AILLEURS. Rejoue en local, hors
+      # GitHub, sur le meme verrou : erreur identique. Une heure plus tard, sans
+      # qu'une ligne ait bouge, `found 0 vulnerabilities`. Le depot etait sain
+      # pendant toute la panne.
+      #
+      # POURQUOI LE DEFAUT COMPTE. Un garde-fou qui ne peut pas conclure doit se
+      # taire ou bloquer, jamais accuser : ici il criait au loup, et un rouge qui
+      # ment finit par etre relache d'un clic. C'est le sens d'erreur inverse de
+      # celui du filtre de portee, ou le defaut ferme est le bon.
+      #
+      # CE QUI N'EST PAS RELACHE. Une vulnerabilite trouvee fait toujours
+      # echouer, `--audit-level=low` inchange, invariant de CLAUDE.md intact.
+      # Seule l'INDISPONIBILITE du registre cesse d'etre traitee comme une
+      # vulnerabilite : elle est signalee, et la chaine continue.
+      #
+      # LE CODE DE SORTIE NE SUFFIT PAS A DISTINGUER LES DEUX CAS, `npm audit`
+      # rendant 1 dans les deux. C'est la sortie qui tranche : le message d'erreur
+      # du registre y est explicite.
+      # ----------------------------------------------------------------------
+      - name: Audit des dependances
+        run: |
+          set +e
+          sortie=$(npm audit --audit-level=low 2>&1)
+          code=$?
+          set -e
+
+          printf '%s\n' "$sortie"
+
+          if [ "$code" -eq 0 ]; then
+            echo "Aucune vulnerabilite connue."
+            exit 0
+          fi
+
+          # LE MOTIF VISE L'INDISPONIBILITE, PAS UN NIVEAU DE GRAVITE. « audit
+          # endpoint returned an error » est le message que npm emet quand le
+          # service ne repond pas ; un rapport de vulnerabilite ne le contient
+          # jamais, il liste des paquets et des severites.
+          if printf '%s' "$sortie" | grep -q "audit endpoint returned an error"; then
+            echo "::warning::Le registre npm n'a pas repondu, l'audit n'a rien mesure."
+            echo ""
+            echo "CE N'EST PAS UNE VULNERABILITE : l'audit n'a pas pu s'executer."
+            echo "Le depot n'a pas ete declare sain pour autant, il n'a pas ete"
+            echo "verifie du tout. Rejouer cette etape quand le registre repond,"
+            echo "et ne jamais fusionner en supposant que l'absence de reponse"
+            echo "vaut absence de vulnerabilite."
+            exit 0
+          fi
+
+          echo "::error::Vulnerabilite connue dans les dependances."
+          exit 1
+
+      # ----------------------------------------------------------------------
+      # L'ISSUE, ET POURQUOI ELLE EST LA CONDITION DE TOUT LE RESTE.
+      #
+      # Sans elle, deplacer ces controles reviendrait a les supprimer : personne
+      # ne consulte l'onglet Actions d'un workflow planifie. `if: failure()`
+      # plutot qu'une condition sur une etape precise, pour qu'un echec de
+      # PREPARATION soit signale aussi : une base qui ne demarre pas laisse les
+      # tests non executes, ce qui ressemble a du vert sans en etre.
+      #
+      # LE CORPS NE RECOPIE AUCUNE SORTIE DE COMMANDE : les journaux sont
+      # accessibles par le lien, et une sortie de test peut porter des valeurs
+      # que le depot public ne doit pas afficher.
+      # ----------------------------------------------------------------------
+      - name: Ouvrir une issue en cas d'echec
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LIEN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          titre="Controle nocturne en echec"
+
+          # UNE SEULE ISSUE OUVERTE A LA FOIS. Sans ce filtre, une semaine
+          # d'echecs produirait sept issues identiques, et le bruit ferait
+          # ignorer la premiere.
+          existante=$(gh issue list --state open --label controle-nocturne \
+            --json number --jq '.[0].number' 2>/dev/null || true)
+
+          corps=$(printf 'Le controle nocturne a echoue.\n\nCes controles ne tournent plus sur les pull requests depuis LS-177 : les scenarios de bout en bout, `npm audit` et la construction de l image. Un echec ici signifie qu un defaut est entre sur `main`, pas qu une fusion est a bloquer.\n\nJournal complet : %s\n\nCe qui a pu echouer :\n\n- un defaut d interface, debordement, lien mort, etat non nominal\n- une vulnerabilite publiee depuis hier, `npm audit`\n- une image qui ne se construit plus\n\nLe jalon metier, lui, est verifie a chaque pull request : il vit dans les tests d integration.\n' "$LIEN")
+
+          if [ -n "$existante" ]; then
+            gh issue comment "$existante" --body "$corps"
+            echo "Commentaire ajoute a l issue #$existante."
+          else
+            gh issue create --title "$titre" --body "$corps" \
+              --label controle-nocturne
+          fi
