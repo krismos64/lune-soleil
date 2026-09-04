@@ -657,7 +657,8 @@ restent invisibles en SMTP : il faut ouvrir la boîte.
 
 ### Scripts de vérification
 
-Vingt-sept scripts, dont neuf de mutation qui prouvent les autres.
+Trente-huit scripts, dont quatorze de mutation qui prouvent les autres, comptés
+dans `scripts/` le 4 septembre 2026. La liste ci-dessous n'en cite qu'une partie.
 `preparer-base-locale.sh` n'y figure pas, il s'appelle par `npm run db:preparer`
 et `db:reinitialiser`, cités plus haut.
 
@@ -692,6 +693,10 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-nginx.sh                      # résolution de l'adresse client, LS-91
 ./scripts/verifier-nginx-mutation.sh             # prouve le précédent par mutation
 ./scripts/verifier-emetteur-facture.sh            # identité légale des factures, sans afficher les valeurs
+./scripts/decider-suite-complete.sh              # portée de la chaîne selon le diff, LS-169
+./scripts/verifier-decision-suite.sh             # prouve le précédent sur 24 cas
+./scripts/verifier-protection-branche.sh         # réglages de main dont la chaîne dépend, LS-176
+./scripts/verifier-verdict-audit.sh              # panne du registre npm contre vulnérabilité, LS-176
 ./scripts/verifier-jira.sh                       # epics et dépendances du backlog, local
 ./scripts/controle-fumee.sh                      # santé du service déployé, LS-73
 ./docs/prototypes/reservation-test.sh            # concurrence sur la pièce unique, exige Docker
@@ -810,17 +815,35 @@ l'information utile. Le 4 août 2026, « deux hooks » était faux parce qu'un
 ### Intégration continue
 
 `.github/workflows/controles.yml`, LS-69. Il s'exécute sur chaque pull request
-vers `main` et sur `main` après fusion, et rejoue les huit contrôles de
-`CONTRIBUTING.md` plus le format, les règles, la cohérence de configuration et
-`npm audit`.
+vers `main`, et rejoue les huit contrôles de `CONTRIBUTING.md` plus le format,
+les règles, la cohérence de configuration et `npm audit`.
+
+**Il ne s'exécute plus sur `main` après fusion depuis LS-176**, et cette
+suppression a une condition. `required_status_checks.strict` vaut true, donc
+GitHub exige qu'une branche soit à jour avec `main` avant de fusionner : l'arbre
+fusionné est exactement celui que la pull request a testé, et le second passage
+revalidait un état déjà vert. Il coûtait la moitié du quota et jusqu'à dix-sept
+minutes par livraison.
+
+`verifier-protection-branche.sh` **échoue si `strict` repasse à false**, cas où
+une fusion pourrait produire un arbre jamais testé. Sans ce contrôle, la
+condition ne vivrait que dans un commentaire et la protection sauterait en
+silence. Il vérifie aussi que le contrôle requis porte bien le nom du job : un
+job renommé renomme son check, et la protection cesse alors d'exiger quoi que ce
+soit sans qu'aucun message ne le signale.
+
+Une relance complète à la demande reste possible, `workflow_dispatch`, et elle
+exécute toujours la suite entière.
 
 La validation du schéma passe **en premier**, sous ses deux modes : c'est le seul
 contrôle dont l'absence d'exécution a déjà laissé passer un défaut, le 29 juillet
 2026.
 
-**Trois scripts seulement tournent en intégration continue**, les sept autres se
-lancent à la main. Ne pas recopier ces nombres, les mesurer :
-`grep -ohE '\./[a-z/-]+\.sh' .github/workflows/*.yml | sort -u`.
+**Dix-neuf scripts tournent en intégration continue**, mesurés le 4 septembre
+2026. Ne pas recopier ce nombre, le mesurer :
+`grep -ohE '\./[a-z/-]+\.sh' .github/workflows/*.yml | sort -u`. Il annonçait
+« trois scripts seulement » alors qu'ils étaient déjà dix-sept, preuve que
+l'avertissement ci-dessus ne suffit pas s'il n'est pas suivi.
 
 Quatre raisons de rester hors chaîne, une par famille. Les **quatre** scripts de
 mutation modifient des fichiers du dépôt en place, ce qu'une exécution partagée
