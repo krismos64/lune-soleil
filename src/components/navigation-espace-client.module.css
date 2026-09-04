@@ -38,6 +38,85 @@
   display: contents;
 }
 
+/*
+ * AU-DELA DE 768 px, L'ENVELOPPE REDEVIENT UNE BOITE, et c'est ce qui permet
+ * a la deconnexion de retrouver sa place en pied de colonne.
+ *
+ * SOUS 768 px elle reste `display: contents`, la ligne mobile et le panneau
+ * devant s'empiler comme enfants directs du gabarit. Au-dela, elle doit au
+ * contraire GROUPER la barre et le bouton dans une meme colonne collante :
+ * `contents` en ferait deux elements flex separes du gabarit, donc deux
+ * colonnes cote a cote, et le bouton se retrouverait entre la barre et le
+ * contenu.
+ *
+ * `position: sticky` MIGRE ICI, de `.barre` vers l'enveloppe. C'est la boite
+ * qui porte desormais la hauteur d'ecran, donc c'est elle qui colle.
+ */
+@media (min-width: 768px) {
+  .enveloppe {
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    width: 240px;
+    height: 100vh;
+    flex-shrink: 0;
+    border-right: 1px solid var(--ls-border);
+    background: var(--ls-surface);
+  }
+}
+
+/* ------------------------------------------------------------ ligne mobile */
+
+/*
+ * LA BASCULE ET LA DECONNEXION SUR UNE MEME LIGNE, sous 768 px.
+ *
+ * ELLE PORTE LE FILET INFERIEUR que `.bascule` portait seule : le bouton de
+ * deconnexion vit maintenant a cote, et un filet sur la seule bascule
+ * s'arreterait au milieu de la ligne.
+ */
+.ligneMobile {
+  display: flex;
+  align-items: stretch;
+  gap: var(--ls-space-2);
+  padding-right: var(--ls-space-3);
+  border-bottom: 1px solid var(--ls-border);
+  background: var(--ls-surface);
+}
+
+.deconnexionMobile {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/*
+ * AU-DELA DE 768 px, LA LIGNE DEVIENT LE PIED DE LA COLONNE.
+ *
+ * `order: 1` LA FAIT PASSER SOUS LE `nav`, qui garde l'ordre implicite 0 : le
+ * meme nœud sert donc les deux dispositions, en tete sur mobile et en pied sur
+ * grand ecran, sans etre rendu deux fois dans le DOM.
+ *
+ * L'ORDRE VISUEL S'ECARTE ICI DE L'ORDRE DE TABULATION, et c'est assume : le
+ * bouton se prend au clavier AVANT les rubriques alors qu'il s'affiche apres.
+ * WCAG 2.2 le tolere, l'ordre de focus restant coherent et previsible ; et
+ * l'inverse serait pire, la deconnexion devant rester le premier element
+ * atteignable au clavier sur un appareil partage. C'est la meme intention qui
+ * la sort du panneau replie sur mobile.
+ */
+@media (min-width: 768px) {
+  .ligneMobile {
+    order: 1;
+    padding: var(--ls-space-4);
+    border-bottom: 0;
+    border-top: 1px solid var(--ls-border);
+  }
+
+  .deconnexionMobile {
+    flex: 1;
+  }
+}
+
 /* --------------------------------------------------------------- la bascule */
 
 /*
@@ -57,7 +136,6 @@
   min-height: var(--ls-touch-target);
   padding: var(--ls-space-3) var(--ls-space-4);
   border: 0;
-  border-bottom: 1px solid var(--ls-border);
   background: var(--ls-surface);
   color: var(--ls-primary);
   font: inherit;
@@ -96,19 +174,18 @@
 }
 
 /*
- * AU-DELA DE 768 px, LA BARRE EST UNE COLONNE PERMANENTE.
+ * AU-DELA DE 768 px, LA BARRE OCCUPE LA COLONNE ET DEFILE SEULE.
  *
- * `position: sticky` et non `fixed` : elle suit le defilement sans sortir du
- * flux, donc le contenu n'a pas besoin d'une marge compensatoire qui se
- * desynchroniserait de la largeur.
+ * LA LARGEUR, LA HAUTEUR ET LE `sticky` NE SONT PLUS ICI, ils vivent sur
+ * `.enveloppe` depuis que la deconnexion l'a rejointe : c'est elle qui groupe
+ * le panneau et le bouton en une colonne, et donc elle qui colle. Ce bloc ne
+ * garde que ce qui appartient au panneau lui-meme, sa place dans la colonne et
+ * son propre defilement.
  *
- * 240 px, DIX DE MOINS QUE L'ADMINISTRATION, et ce n'est pas un caprice : la
- * barre cliente porte cinq entrees courtes, « Mes commandes » etant la plus
- * longue, quand celle de l'administration doit loger « Stocks et marchés ».
- * Dix pixels rendus au contenu comptent sur une tablette a 768 px.
- *
- * `height: 100vh` ET `overflow-y: auto` : la barre ne depasse jamais l'ecran,
- * et defile sur elle-meme si un jour elle porte plus d'entrees.
+ * 240 px SUR L'ENVELOPPE, DIX DE MOINS QUE L'ADMINISTRATION, et ce n'est pas un
+ * caprice : la barre cliente porte cinq entrees courtes, « Mes commandes » etant
+ * la plus longue, quand celle de l'administration doit loger « Stocks et
+ * marchés ». Dix pixels rendus au contenu comptent sur une tablette a 768 px.
  */
 @media (min-width: 768px) {
   .bascule {
@@ -118,13 +195,16 @@
   .barre {
     display: flex;
     flex-direction: column;
-    position: sticky;
-    top: 0;
-    width: 240px;
-    height: 100vh;
-    flex-shrink: 0;
+    flex: 1;
     border-bottom: 0;
-    border-right: 1px solid var(--ls-border);
+    /*
+     * `min-height: 0` AUTORISE LA BARRE A DEFILER DANS SON ENVELOPPE. Un
+     * element flex a pour taille minimale celle de son contenu : sans cette
+     * ligne, une liste plus haute que l'ecran pousserait le pied de colonne
+     * hors du champ au lieu de defiler, et la deconnexion redeviendrait
+     * inatteignable, le defaut meme que cette disposition corrige.
+     */
+    min-height: 0;
     overflow-y: auto;
   }
 }
@@ -189,7 +269,7 @@
  * peut ne porter aucun espace, et `text-overflow: ellipsis` masquerait une
  * partie du nom de la personne sur son propre espace. Il s'enroule.
  *
- * `--ls-text` sur `--ls-surface` : 12,63:1, AAA.
+ * `--ls-text` sur `--ls-surface` : 12,92:1, AAA.
  */
 .identiteNom {
   color: var(--ls-text);
@@ -221,7 +301,7 @@
 }
 
 /*
- * `--ls-text` sur `--ls-surface` : 12,63:1, AAA.
+ * `--ls-text` sur `--ls-surface` : 12,92:1, AAA.
  *
  * ZONE TACTILE DE 44 px, `--ls-touch-target`. Un lien de barre laterale fait
  * sinon la hauteur de sa ligne, environ 24 px, sous le minimum de
@@ -316,11 +396,4 @@
   color: var(--ls-text-muted);
   font-size: 0.9375rem;
   line-height: 1.6;
-}
-
-/* ------------------------------------------------------------------- le pied */
-
-.pied {
-  padding: var(--ls-space-4);
-  border-top: 1px solid var(--ls-border);
 }
