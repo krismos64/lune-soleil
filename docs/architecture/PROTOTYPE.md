@@ -89,21 +89,36 @@ que **le prototype porte sans qu'un parcours les mobilise**, et c'est par là qu
 deux fonctions entières avaient échappé au suivi jusqu'au 13 août 2026.
 
 **L'administration compte onze rubriques**, navigables par état interne et non
-par URL, ce qui explique qu'aucune adresse ne les révèle :
+par URL, ce qui explique qu'aucune adresse ne les révèle.
 
-| Rubrique | Couverte par |
-|---|---|
-| Tableau de bord | aucune story dédiée, agrège les autres rubriques |
-| Statistiques | LS-64, interface en V1 cible, collecte au Go-Live |
-| Commandes | phase 3, epic LS-4 |
-| Catalogue | phase 2, epic LS-3, éditeur à sections en LS-87 |
-| Stocks et marchés | phase 2, et LS-63 pour le montant encaissé |
-| Expéditions | phase 4, epic LS-5 |
-| Factures et avoirs | phase 4, epic LS-5 |
-| Clients | phase 4bis, epic LS-36 |
-| Avis | LS-61, modération sans réécriture |
-| Messages | **LS-97**, créée le 13 août 2026 |
-| Paramètres | **LS-98**, créée le 13 août 2026 |
+**LA COLONNE DIT L'ÉCRAN, JAMAIS LE MÉTIER, et c'est une correction du
+4 septembre 2026.** La version précédente citait des epics et des stories de
+métier, ce qui a fait croire pendant des semaines que Catalogue, Factures et
+Clients étaient couverts : « Catalogue, phase 2, epic LS-3 » était vrai du
+métier et **faux de l'écran**. Trois rubriques n'avaient en réalité aucun
+ticket, constat de LS-182, découpé en LS-183, LS-184 et LS-185.
+
+Une colonne qui répond à « le sujet est-il traité ? » ne répond pas à « l'écran
+existe-t-il ? », et c'est la seconde question que cet inventaire pose.
+
+| Rubrique | Écran livré par | État |
+|---|---|---|
+| Tableau de bord | **LS-181** | livré, tuiles et panneau « À traiter » |
+| Statistiques | LS-64 | à faire, V1 cible, collecte au Go-Live |
+| Commandes | LS-121 | livré |
+| Catalogue | **LS-183** | livré, liste, filtres par état et badges |
+| Stocks et marchés | LS-106 | livré, LS-63 pour le montant encaissé |
+| Expéditions | LS-130, **LS-181** | livré, trois colonnes depuis LS-181 |
+| Factures et avoirs | LS-184 | **à faire**, le métier existe sans son écran |
+| Clients | LS-185 | **à faire**, précédé d'un arbitrage RGPD |
+| Avis | LS-61 | à faire |
+| Messages | LS-97 | livré |
+| Paramètres | LS-98 | à faire |
+
+**« Nouveau produit » n'est pas une rubrique**, ni au prototype ni dans le code
+depuis LS-183 : c'est un bouton d'action de l'écran Catalogue. Sa route existe
+et figure dans les exclusions justifiées de
+`verifier-navigation-administration.sh`.
 
 **L'espace client compte cinq onglets** : Vue d'ensemble, Mes commandes, Mes
 adresses, Mes avis, Profil et données. Il porte aussi son **propre écran de
