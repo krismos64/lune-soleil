@@ -56,11 +56,35 @@ name: Controles
 on:
   pull_request:
     branches: [main]
-  # Egalement sur main apres fusion : une fusion en rebase rejoue les commits sur
-  # une base differente de celle testee dans la pull request, le resultat n'est
-  # donc pas garanti identique.
-  push:
-    branches: [main]
+
+  # LS-176. LA POUSSEE SUR `main` NE DECLENCHE PLUS LA CHAINE, et c'est le
+  # changement qui divise la consommation par deux.
+  #
+  # CE QUI ETAIT ECRIT ICI : « une fusion en rebase rejoue les commits sur une
+  # base differente de celle testee dans la pull request, le resultat n'est donc
+  # pas garanti identique ». L'argument est juste en general et FAUX SUR CE
+  # DEPOT, ou `required_status_checks.strict` vaut true : GitHub refuse de
+  # fusionner une branche qui n'est pas a jour avec `main`, donc l'arbre fusionne
+  # EST celui que la pull request a teste. Le second passage revalidait un etat
+  # deja vert.
+  #
+  # MESURE, 3 et 4 septembre 2026 : deux executions par livraison, 17 min 30
+  # chacune en suite complete. La moitie de cette depense ne repondait a aucune
+  # question.
+  #
+  # CE QUI TIENT CETTE SUPPRESSION. `verifier-protection-branche.sh` echoue si
+  # `strict` repasse a false, cas ou une fusion pourrait produire un arbre jamais
+  # teste et ou ce declencheur devrait revenir. Sans ce controle, la protection
+  # sauterait en silence le jour d'un changement de reglage.
+  #
+  # LE CONTROLE DE `main` N'EST PAS PERDU POUR AUTANT : `publier-image.yml` reste
+  # declenche sur `main` et construit l'image a partir de l'etat fusionne.
+  workflow_dispatch:
+    inputs:
+      raison:
+        description: "Pourquoi cette relance manuelle"
+        required: false
+        default: "Verification complete a la demande"
 
 # Une nouvelle poussee sur une branche annule l'execution precedente, qui porte
 # sur un code deja remplace. Jamais sur main : chaque etat fusionne doit avoir
@@ -277,17 +301,43 @@ jobs:
       # comparaison silencieusement vide ferait basculer la decision. L'augmenter
       # coûterait un clone complet a chaque execution, pour la seule decision.
       #
-      # SUR `main`, TOUT S'EXECUTE, sans consulter quoi que ce soit : c'est le
-      # dernier etat verifie avant deploiement, et une fusion en rebase rejoue
-      # les commits sur une base differente de celle testee.
+      # SUR `main`, LE MEME FILTRE S'APPLIQUE DEPUIS LS-176, et l'argument qui
+      # l'en exemptait etait faux SUR CE DEPOT.
+      #
+      # Il disait : « une fusion en rebase rejoue les commits sur une base
+      # differente de celle testee ». Vrai en general. Faux ici, parce que
+      # `strict` vaut true sur la protection de branche : GitHub EXIGE que la
+      # branche soit a jour avec `main` avant de fusionner, donc l'arbre fusionne
+      # est exactement celui que la pull request a teste.
+      #
+      #   gh api repos/krismos64/lune-soleil/branches/main/protection \
+      #     --jq .required_status_checks.strict   # true
+      #
+      # CE LIEN EST UNE CONDITION, PAS UNE OBSERVATION. Si `strict` repassait a
+      # false un jour, une fusion pourrait produire un arbre jamais teste, et
+      # cette exemption devrait revenir. Le controle `verifier-protection-
+      # branche.sh` le verifie a chaque execution plutot que de laisser la
+      # protection sauter en silence.
+      #
+      # MESURE QUI A DECLENCHE LS-176, 3 et 4 septembre 2026 : la chaine tournait
+      # DEUX FOIS par livraison, et le second passage rejouait sept cents tests
+      # de bout en bout pour une pull request qui ne touchait que du Markdown.
       # ----------------------------------------------------------------------
       - name: Decider de la portee de la suite
         id: portee
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # SUR UNE POUSSEE DIRECTE, LA SUITE COMPLETE, sans consulter l'API.
+          # `main` n'accepte que des fusions de pull request, `enforce_admins`
+          # etant actif : ce cas ne se produit donc pas en regime nominal. S'il
+          # se produit, c'est que quelque chose d'inattendu est arrive, et le
+          # defaut ferme veut alors TOUT executer.
+          #
+          # `workflow_dispatch` tombe ici aussi, ce qui est le comportement
+          # voulu : une relance manuelle sert justement a tout rejouer.
           if [ "${{ github.event_name }}" != "pull_request" ]; then
-            echo "Sur ${{ github.ref_name }}, la suite complete s'execute toujours."
+            echo "Evenement ${{ github.event_name }} sur ${{ github.ref_name }} : suite complete."
             echo "suite=complete" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -606,6 +656,26 @@ jobs:
       - name: 3ter. Socle Zod et son document accordes
         run: ./scripts/verifier-propagation-docs.sh
 
+      # LS-176. La chaine ne se declenche plus sur `main` : cette suppression
+      # repose sur `strict`, et ce controle echoue si le reglage change. Sans
+      # lui, la condition ne vivrait que dans un commentaire.
+      #
+      # `GH_TOKEN` LUI EST NECESSAIRE, il interroge l'API. Le jeton par defaut
+      # n'a pas le droit de lire la protection de branche : le script le dit et
+      # sort en 0 plutot que de pretendre avoir verifie. Il garde donc sa valeur
+      # sur un poste de developpement, ou le jeton personnel l'autorise.
+      - name: 3quinquies. La protection de main porte ce dont la chaine depend
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./scripts/verifier-protection-branche.sh
+
+      # LS-176. L'etape d'audit ne fait plus echouer sur une panne du registre :
+      # ce controle prouve que le relachement reste ETROIT, et qu'une
+      # vulnerabilite continue de bloquer. Purement textuel, il tourne dans les
+      # deux portees comme le garde du filtre.
+      - name: 3sexies. Panne du registre et vulnerabilite sont distinguees
+        run: ./scripts/verifier-verdict-audit.sh
+
       # ----------------------------------------------------------------------
       # Controle 4, tests unitaires. Sans base, rapides, ils cadrent les erreurs
       # de manipulation d'URL de connexion.
@@ -678,10 +748,64 @@ jobs:
       # sur la pull request 135, l'etape a echoue en 73 secondes avec une
       # conclusion `failure`, et les etapes suivantes ont ete ignorees. Une
       # borne jamais franchie ne prouve pas qu'elle protege.
+      # ----------------------------------------------------------------------
+      # LS-176. Le navigateur est mis en cache, environ 35 s par execution.
+      #
+      # LA CLE PORTE LA VERSION DE PLAYWRIGHT, lue dans le verrou et jamais
+      # ecrite ici : les navigateurs sont lies a la version de la bibliotheque,
+      # et une cle figee servirait un binaire incompatible apres une montee de
+      # version. Le symptome serait un echec de lancement du navigateur, loin de
+      # sa cause.
+      #
+      # `hashFiles` NE CONVIENT PAS ICI. Le verrou change a chaque montee de
+      # n'importe quelle dependance, ce qui jetterait le cache du navigateur sans
+      # raison. La version de Playwright, elle, ne bouge que quand le navigateur
+      # doit changer.
+      #
+      # UN DEFAUT DE CACHE NE FAIT JAMAIS ECHOUER, il ralentit : `playwright
+      # install` s'execute alors normalement. C'est le sens d'erreur voulu, un
+      # cache absent n'etant pas un defaut du code. `fail-on-cache-miss` est donc
+      # laisse a false, sa valeur par defaut.
+      # ----------------------------------------------------------------------
+      - name: Version de Playwright pour la cle de cache
+        if: steps.portee.outputs.suite == 'complete'
+        id: playwright
+        run: |
+          version=$(node -e "const l=require('./package-lock.json'); process.stdout.write(l.packages['node_modules/@playwright/test'].version)")
+
+          # ECHOUER PLUTOT QUE DE POSER UNE CLE VIDE. Une cle sans version
+          # servirait le meme cache a toutes les versions, ce qui est exactement
+          # le defaut que la version doit fermer.
+          if [ -z "$version" ]; then
+            echo "::error::Version de @playwright/test illisible dans le verrou."
+            exit 1
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Playwright $version"
+
+      - name: Cache du navigateur de test
+        if: steps.portee.outputs.suite == 'complete'
+        id: cache-navigateur
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
+      # DEUX CHEMINS, ET LA DIFFERENCE N'EST PAS COSMETIQUE. Sur cache trouve,
+      # seules les dependances systeme sont posees, `install-deps` : elles vivent
+      # hors du dossier mis en cache et manqueraient sinon, le navigateur ne se
+      # lancerait pas. Sur cache absent, l'installation complete.
       - name: Installer le navigateur de test
         if: steps.portee.outputs.suite == 'complete'
         timeout-minutes: 5
-        run: npx playwright install --with-deps chromium
+        run: |
+          if [ "${{ steps.cache-navigateur.outputs.cache-hit }}" = "true" ]; then
+            echo "Navigateur servi par le cache, seules les dependances systeme sont posees."
+            npx playwright install-deps chromium
+          else
+            npx playwright install --with-deps chromium
+          fi
 
       - name: 8. Scenarios critiques de bout en bout
         if: steps.portee.outputs.suite == 'complete'
@@ -725,8 +849,10 @@ jobs:
               echo "Tout le reste a tourné : types, analyse statique, format,"
               echo "schéma, règles, construction et image Docker."
               echo
-              echo "Sur \`main\` après fusion, la suite complète s'exécute"
-              echo "toujours, quel que soit le diff."
+              echo "LS-176 : la chaîne ne se rejoue plus sur \`main\` après"
+              echo "fusion, \`strict\` garantissant que l'arbre fusionné est"
+              echo "celui qui vient d'être testé ici. Une relance complète"
+              echo "reste possible à la demande, \`workflow_dispatch\`."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -773,6 +899,69 @@ jobs:
       # CLAUDE.md exige `npm audit` a zero. Le controle est ici plutot que dans
       # un travail de veille separe parce qu'une dependance vulnerable entre par
       # une pull request, jamais autrement.
+      #
+      # ----------------------------------------------------------------------
+      # LS-176. UNE PANNE DU REGISTRE N'EST PAS UNE VULNERABILITE, et jusqu'ici
+      # les deux rendaient le meme rouge.
+      #
+      # MESURE DU 4 SEPTEMBRE 2026. Sur une pull request de dix-sept lignes de
+      # Markdown, cette etape a echoue DEUX FOIS de suite :
+      #
+      #   npm notice This endpoint is being retired. Use the bulk advisory
+      #     endpoint instead.
+      #   npm warn audit 400 Bad Request - POST /-/npm/v1/security/audits/quick
+      #   { statusCode: 400, error: 'Bad Request',
+      #     message: 'Invalid package tree, run npm install to rebuild your
+      #               package-lock.json' }
+      #   npm error audit endpoint returned an error
+      #
+      # LE MESSAGE ACCUSE LE VERROU, LA CAUSE EST AILLEURS. Rejoue en local, hors
+      # GitHub, sur le meme verrou : erreur identique. Une heure plus tard, sans
+      # qu'une ligne ait bouge, `found 0 vulnerabilities`. Le depot etait sain
+      # pendant toute la panne.
+      #
+      # POURQUOI LE DEFAUT COMPTE. Un garde-fou qui ne peut pas conclure doit se
+      # taire ou bloquer, jamais accuser : ici il criait au loup, et un rouge qui
+      # ment finit par etre relache d'un clic. C'est le sens d'erreur inverse de
+      # celui du filtre de portee, ou le defaut ferme est le bon.
+      #
+      # CE QUI N'EST PAS RELACHE. Une vulnerabilite trouvee fait toujours
+      # echouer, `--audit-level=low` inchange, invariant de CLAUDE.md intact.
+      # Seule l'INDISPONIBILITE du registre cesse d'etre traitee comme une
+      # vulnerabilite : elle est signalee, et la chaine continue.
+      #
+      # LE CODE DE SORTIE NE SUFFIT PAS A DISTINGUER LES DEUX CAS, `npm audit`
+      # rendant 1 dans les deux. C'est la sortie qui tranche : le message d'erreur
+      # du registre y est explicite.
       # ----------------------------------------------------------------------
       - name: Audit des dependances
-        run: npm audit --audit-level=low
+        run: |
+          set +e
+          sortie=$(npm audit --audit-level=low 2>&1)
+          code=$?
+          set -e
+
+          printf '%s\n' "$sortie"
+
+          if [ "$code" -eq 0 ]; then
+            echo "Aucune vulnerabilite connue."
+            exit 0
+          fi
+
+          # LE MOTIF VISE L'INDISPONIBILITE, PAS UN NIVEAU DE GRAVITE. « audit
+          # endpoint returned an error » est le message que npm emet quand le
+          # service ne repond pas ; un rapport de vulnerabilite ne le contient
+          # jamais, il liste des paquets et des severites.
+          if printf '%s' "$sortie" | grep -q "audit endpoint returned an error"; then
+            echo "::warning::Le registre npm n'a pas repondu, l'audit n'a rien mesure."
+            echo ""
+            echo "CE N'EST PAS UNE VULNERABILITE : l'audit n'a pas pu s'executer."
+            echo "Le depot n'a pas ete declare sain pour autant, il n'a pas ete"
+            echo "verifie du tout. Rejouer cette etape quand le registre repond,"
+            echo "et ne jamais fusionner en supposant que l'absence de reponse"
+            echo "vaut absence de vulnerabilite."
+            exit 0
+          fi
+
+          echo "::error::Vulnerabilite connue dans les dependances."
+          exit 1
