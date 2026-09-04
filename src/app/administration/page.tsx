@@ -187,7 +187,17 @@ export default async function PageAdministration() {
         <Tuile
           libelle="Prêtes à expédier"
           valeur={String(comptages.commandesPretesAExpedier)}
-          precision="Étiquette à générer"
+          /*
+           * LA PRECISION S'ADAPTE AU CAS NUL, comme les trois autres tuiles.
+           * « 0 / Étiquette à générer » se lit comme une consigne : sur une
+           * boutique qui demarre, c'est ce que l'exploitante verrait en premier
+           * alors qu'il n'y a rien a faire.
+           */
+          precision={
+            comptages.commandesPretesAExpedier > 0
+              ? "Étiquette à générer"
+              : "Aucun colis en attente"
+          }
         />
         <Tuile
           libelle="Stock faible"
@@ -211,7 +221,13 @@ export default async function PageAdministration() {
            * dans cet ecran.
            */
           precision="Ventes en ligne et marchés"
-          ton="recette"
+          /*
+           * LE FILET VERT NE S'ALLUME QUE SUR UNE RECETTE REELLE. Il marque une
+           * bonne nouvelle : le poser sur « 0,00 € » en ferait un ornement
+           * permanent, et un marqueur toujours allume ne marque plus rien. Meme
+           * regle que les deux tons `urgent`, conditionnes a un compte non nul.
+           */
+          ton={comptages.encaisseDuJourCentimes > 0 ? "recette" : undefined}
         />
       </div>
 

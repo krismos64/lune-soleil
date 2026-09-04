@@ -20,6 +20,27 @@
  * `frontend-design.md` : en cas de desaccord, c'est le prototype qui a tort.
  */
 
+/* -------------------------------------------------------------- l'enveloppe */
+
+/*
+ * ELLE N'EXISTE QUE POUR PORTER LE GESTIONNAIRE `Escape`, qui doit englober le
+ * bouton ET le panneau : apres un clic sur le bouton, le focus reste sur le
+ * bouton, qui est hors du `nav`, et un gestionnaire pose sur le `nav` ne verrait
+ * jamais la frappe.
+ *
+ * `display: contents` LA REND TRANSPARENTE AU GABARIT. Le layout dispose la
+ * barre et la colonne en `flex` : une boite intermediaire ordinaire capterait
+ * cette disposition et la barre cesserait d'etre une colonne. Avec `contents`,
+ * ses enfants deviennent enfants directs du conteneur flex, exactement comme
+ * avant l'ajout de cette boite.
+ *
+ * LE COMPORTEMENT AU CLAVIER N'EST PAS AFFECTE : `display: contents` retire la
+ * boite du rendu, jamais du DOM, donc l'evenement remonte toujours jusqu'ici.
+ */
+.enveloppe {
+  display: contents;
+}
+
 /* --------------------------------------------------------------- la bascule */
 
 /*
@@ -57,9 +78,10 @@
  * A 320 px, LA BARRE EST REPLIEE PAR DEFAUT.
  *
  * `display: none` ET NON UNE HAUTEUR NULLE : un panneau masque doit sortir de
- * l'ordre de tabulation, sans quoi onze liens invisibles se prennent au clavier
- * avant d'atteindre le contenu. C'est aussi ce qui le retire de l'arbre
- * d'accessibilite, plutot que de le laisser lu par un lecteur d'ecran.
+ * l'ordre de tabulation, sans quoi neuf liens et le bouton de deconnexion se
+ * prennent au clavier avant d'atteindre le contenu. C'est aussi ce qui le
+ * retire de l'arbre d'accessibilite, plutot que de le laisser lu par un lecteur
+ * d'ecran.
  */
 .barre {
   display: none;

@@ -22,7 +22,7 @@
  *
  * CE QU'IL FAIT DE LA SESSION, il ne s'en sert QUE POUR AFFICHER. `lireIdentite`
  * ne leve pas et rend `null` sans session : la barre disparait alors, ce qui
- * evite de proposer onze liens vers des ecrans proteges a qui n'est pas
+ * evite de proposer neuf liens vers des ecrans proteges a qui n'est pas
  * connecte, sur la page de connexion en particulier. Cacher la barre n'est pas
  * une protection et n'en tient pas lieu : les pages restent gardees.
  *
@@ -51,7 +51,7 @@ export default async function LayoutAdministration({
    * LE ROLE EST VERIFIE, PAS SEULEMENT LA PRESENCE D'UNE SESSION. Un client
    * inscrit sur la boutique porte une session valide avec le role `CLIENT` :
    * sans ce test, la barre de l'administration s'afficherait pour lui s'il
-   * ouvrait une de ces URL, en annoncant onze ecrans auxquels il n'a pas acces.
+   * ouvrait une de ces URL, en annoncant la structure d'ecrans auxquels il n'a pas acces.
    * Les pages le refuseraient bien, mais l'affichage aurait deja divulgue la
    * structure de l'administration. Motif « fabriquer la preuve sans le role ».
    */
