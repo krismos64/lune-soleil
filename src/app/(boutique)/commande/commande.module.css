@@ -391,6 +391,23 @@
   border: 1px solid var(--ls-border);
   border-radius: var(--ls-radius-md);
   background: var(--ls-surface-sand);
+
+  /*
+   * `color` EST DECLARE ICI AVEC LE FOND, ET C'EST CE QUI REND LA PAIRE
+   * MESURABLE. `verifier-contraste.sh` exige les deux dans le MEME bloc de
+   * selecteur : une couleur declaree ailleurs, meme juste, echappe au controle.
+   *
+   * Sans cette ligne, les trois classes de ce bloc n'etaient couvertes par
+   * AUCUN des 171 couples mesures, releve en revue. La valeur est deja celle
+   * qu'heritent les enfants, le rendu ne change pas ; ce qui change est qu'une
+   * session future qui passerait a `--ls-text-muted` ferait desormais rougir la
+   * chaine. Sur sable ce jeton donne 4,35:1, sous le seuil, et le sable est le
+   * fond piegeux du projet.
+   *
+   * La classe voisine `.avertissement` colocalise deja les deux pour la meme
+   * raison, avec le meme commentaire.
+   */
+  color: var(--ls-text);
 }
 
 .texteLegal {
