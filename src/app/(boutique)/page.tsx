@@ -11,14 +11,32 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { DonneesStructurees } from "@/components/donnees-structurees";
+import { jsonLdOrganisation } from "@/lib/seo";
 import { lireCataloguePublic } from "@/services/catalogue";
 import { CarteProduit } from "./catalogue/carte-produit";
 import styles from "./page.module.css";
 
+/**
+ * LS-137. Le titre est ABSOLU et non modelé.
+ *
+ * Le gabarit du layout racine ajoute « , Lune & Soleil » à chaque titre, ce qui
+ * donnerait ici « Lune & Soleil, bijoux artisanaux faits main, Lune & Soleil ».
+ * `absolute` court-circuite le gabarit, et c'est le cas prévu pour l'accueil.
+ */
 export const metadata = {
-  title: "Lune & Soleil, bijoux artisanaux faits main",
+  title: {
+    absolute: "Lune & Soleil, bijoux artisanaux faits main",
+  },
   description:
     "Des bijoux faits main, créés à l'unité et en petite série. Livraison en France métropolitaine, Corse comprise.",
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "Lune & Soleil, bijoux artisanaux faits main",
+    description:
+      "Des bijoux faits main, créés à l'unité et en petite série. Livraison en France métropolitaine, Corse comprise.",
+    url: "/",
+  },
 };
 
 export const dynamic = "force-dynamic";
@@ -52,6 +70,13 @@ export default async function PageAccueil() {
    */
   return (
     <main id="contenu" tabIndex={-1}>
+      {/*
+       * LS-137. `Organization` est posée ICI SEULEMENT, et non sur chaque page :
+       * les moteurs rattachent l'organisation au domaine, la répéter partout
+       * n'ajoute rien et multiplie les occasions de divergence.
+       */}
+      <DonneesStructurees balisage={jsonLdOrganisation()} />
+
       <section className={styles.hero}>
         <div className={styles.heroTexte}>
           <p className={styles.surtitre}>Bijoux faits main</p>

@@ -26,8 +26,15 @@ import { EtapesTunnel } from "./etapes-tunnel";
 import styles from "./commande.module.css";
 
 export const metadata = {
-  title: "Votre commande, Lune & Soleil",
+  title: "Votre commande",
   description: "Coordonnées, livraison et récapitulatif avant paiement.",
+  /*
+   * LS-137, critère 4. LE TUNNEL N'EST PAS INDEXABLE. Ses quatre étapes vivent
+   * dans l'URL, `?etape=`, donc chaque étape est une adresse explorable ; sans
+   * `noindex` les moteurs indexeraient quatre pages de formulaire vide sous le
+   * nom de la boutique. La page de confirmation porte déjà la même garde.
+   */
+  robots: { index: false, follow: true },
 };
 
 export const dynamic = "force-dynamic";

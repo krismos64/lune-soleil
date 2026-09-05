@@ -14,17 +14,74 @@
  * references, l'exclut, et `frontend-design.md` interdit d'introduire un plafond
  * que le schema ne porte pas.
  */
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { lireCataloguePublic } from "@/services/catalogue";
 import { CarteProduit } from "./carte-produit";
 import styles from "./catalogue.module.css";
 
-export const metadata = {
-  title: "Le catalogue, Lune & Soleil",
-  description:
-    "Bijoux artisanaux faits main, créés à l'unité. Chaque pièce est unique.",
-};
+/**
+ * LS-137. `generateMetadata` ET NON UN OBJET FIGE, parce que le filtre vit dans
+ * l'URL.
+ *
+ * LE DEFAUT QU'IL EVITE. Un canonical fige a `/catalogue` sur toutes les URL
+ * filtrees dirait aux moteurs que `?categorie=colliers` EST le catalogue
+ * complet : la page filtree disparaitrait de l'index au profit de la page nue,
+ * en emportant les mots-cles de la categorie.
+ *
+ * CHAQUE FILTRE PORTE DONC SON PROPRE CANONICAL, et reste indexable : la barre
+ * de filtres etant une liste de liens, ces URL sont explorees, partageables et
+ * legitimes. C'est le choix de LS-104 d'avoir mis l'etat dans l'URL plutot que
+ * dans un `useState`.
+ *
+ * UN SLUG INCONNU RETOMBE SUR `/catalogue`, exactement comme le fait le corps de
+ * la page : `lireCataloguePublic` ignore un filtre qui ne correspond a rien, et
+ * poser le canonical sur `?categorie=nimportequoi` creerait autant d'URL
+ * canoniques que de slugs inventes.
+ */
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ [cle: string]: string | string[] | undefined }>;
+}): Promise<Metadata> {
+  const parametres = await searchParams;
+  const brut = parametres.categorie;
+  const slugDemande = Array.isArray(brut) ? brut[0] : brut;
+
+  /*
+   * LE MEME SERVICE QUE LE CORPS DE LA PAGE, et non une lecture parallele.
+   *
+   * `lireCataloguePublic` porte deja la resolution du slug ET la regle du slug
+   * inconnu. Ajouter ici une seconde lecture donnerait deux endroits ou cette
+   * regle vit, et rien ne les garderait d'accord : le titre pourrait annoncer
+   * une categorie que la page n'a pas filtree.
+   *
+   * CE SECOND APPEL TOUCHE REELLEMENT LA BASE, et c'est assume : ni le service
+   * ni le client Prisma ne sont enveloppes dans `cache()`, donc `generateMetadata`
+   * et le corps de la page font chacun leur lecture. Le catalogue tient en 10 a
+   * 40 references, la requete est indexee, et deux lectures d'un tel volume ne
+   * justifient pas d'introduire une couche de memoisation que le projet n'a nulle
+   * part ailleurs. A revoir si le catalogue change d'ordre de grandeur.
+   */
+  const { categorieRetenue: categorie } =
+    await lireCataloguePublic(slugDemande);
+
+  const titre = categorie ? categorie.nom : "Le catalogue";
+  const description = categorie
+    ? `${categorie.nom} : bijoux artisanaux faits main, créés à l'unité.`
+    : "Bijoux artisanaux faits main, créés à l'unité. Chaque pièce est unique.";
+  const chemin = categorie
+    ? `/catalogue?categorie=${categorie.slug}`
+    : "/catalogue";
+
+  return {
+    title: titre,
+    description,
+    alternates: { canonical: chemin },
+    openGraph: { title: titre, description, url: chemin },
+  };
+}
 
 /**
  * La page lit la base a chaque affichage.

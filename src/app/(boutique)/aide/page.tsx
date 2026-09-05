@@ -39,6 +39,14 @@ export const metadata: Metadata = {
   title: "Livraison, retours et questions fréquentes",
   description:
     "Modes de livraison, tarifs, droit de rétractation et réponses aux questions fréquentes sur les bijoux Lune & Soleil.",
+  // LS-137, page publique indexable : canonical explicite.
+  alternates: { canonical: "/aide" },
+  openGraph: {
+    title: "Livraison, retours et questions fréquentes",
+    description:
+      "Modes de livraison, tarifs, droit de rétractation et réponses aux questions fréquentes.",
+    url: "/aide",
+  },
 };
 
 /** Les tarifs se lisent a chaque affichage, jamais au chargement du module. */

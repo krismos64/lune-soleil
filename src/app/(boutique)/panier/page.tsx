@@ -18,8 +18,16 @@ import { LignesPanier } from "./lignes-panier";
 import styles from "./panier.module.css";
 
 export const metadata = {
-  title: "Votre panier, Lune & Soleil",
+  title: "Votre panier",
   description: "Les pièces que vous avez sélectionnées.",
+  /*
+   * LS-137, critère 4. `noindex` : le contenu de cette page vient d'un cookie,
+   * elle est donc différente pour chaque visiteur et vide pour un robot. Une
+   * indexation ferait remonter « Votre panier est vide » sur le nom de la
+   * boutique. `follow` reste vrai : les liens vers le catalogue restent utiles
+   * à suivre.
+   */
+  robots: { index: false, follow: true },
 };
 
 export const dynamic = "force-dynamic";
