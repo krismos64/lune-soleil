@@ -750,15 +750,23 @@ function Recapitulatif({
           Votre droit de rétractation
         </h2>
         <p className={styles.texteLegal}>{MENTION_TUNNEL.droit}</p>
-        <p className={styles.texteLegal}>
-          {MENTION_TUNNEL.fraisRetour}{" "}
-          <Link
-            href="/informations-legales#retractation"
-            className={styles.lienLegal}
-          >
-            Conditions détaillées
-          </Link>
-        </p>
+        <p className={styles.texteLegal}>{MENTION_TUNNEL.fraisRetour}</p>
+        {/*
+         * LE LIEN SORT DU PARAGRAPHE, ET C'EST POUR SA ZONE TACTILE.
+         *
+         * En ligne dans la phrase, il mesurait 17 px de haut, la ou
+         * `frontend-design.md` demande des cibles proches de 44 px et ou les
+         * deux autres liens de ce module portent deja `min-height`. C'est le
+         * dernier element cliquable avant le bouton de paiement : a 320 px, une
+         * cible etroite juste au-dessus de lui se manque, et le doigt tombe sur
+         * l'engagement. Releve en revue d'interface.
+         */}
+        <Link
+          href="/informations-legales#retractation"
+          className={styles.lienLegal}
+        >
+          Conditions détaillées de rétractation
+        </Link>
       </section>
 
       {/*

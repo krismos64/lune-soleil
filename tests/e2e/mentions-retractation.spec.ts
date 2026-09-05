@@ -163,15 +163,29 @@ test.describe("emplacement 2, conditions générales", () => {
   });
 });
 
-test.describe("rendu à 320 px", () => {
+test.describe("rendu", () => {
   /*
-   * LA MENTION DOIT RESTER LISIBLE SUR LE PLUS PETIT ECRAN CIBLE. Une mention
-   * legale qui deborde hors du viewport est illisible, donc non delivree :
-   * l'obligation porte sur l'information recue, pas sur sa presence dans le
-   * DOM.
+   * ------------------------------------------------------------------
+   * IL MESURE LA LARGEUR DE SON PROJET, IL NE LA FIXE PAS.
+   *
+   * La premiere version appelait `setViewportSize({ width: 320 })`, ce qui
+   * ECRASAIT le viewport du projet : le test tournait trois fois, sur
+   * `mobile-320`, `mobile-390` et `bureau-1280`, et mesurait 320 px les trois
+   * fois. Le cout etait triple, la couverture d'une seule largeur. Releve en
+   * revue d'interface.
+   *
+   * Sans cet appel, chaque projet apporte sa propre largeur, ce qui est
+   * exactement ce pour quoi les trois projets existent.
+   *
+   * 768 PX RESTE NON COUVERT, et ce n'est pas propre a cette story : aucun
+   * projet Playwright ne porte cette largeur, alors que l'invariant 10 la
+   * cite. C'est LS-166 qui porte ce manque, et le tunnel y est sensible, son
+   * fil d'etapes basculant en ligne a `min-width: 768px`.
+   * ------------------------------------------------------------------
    */
-  test("le récapitulatif ne déborde pas à 320 px", async ({ page }) => {
-    await page.setViewportSize({ width: 320, height: 800 });
+  test("le récapitulatif ne déborde pas, à la largeur du projet", async ({
+    page,
+  }) => {
     await allerAuRecapitulatif(page);
 
     await expect(page.getByText(/frais de retour/i).first()).toBeVisible();
