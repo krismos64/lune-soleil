@@ -28,6 +28,7 @@ MUTABLES=(
   "src/app/(boutique)/commande/etapes-tunnel.tsx"
   "src/app/(boutique)/informations-legales/page.tsx"
   "src/app/(boutique)/compte/commandes/[id]/retractation/formulaire-retractation.tsx"
+  "src/app/(boutique)/retractation/[jeton]/formulaire-jeton.tsx"
   "src/lib/mentions-retractation.ts"
 )
 
@@ -93,10 +94,38 @@ muter() {
 # tunnel ne portait AUCUNE occurrence du mot « rétractation » : cette mutation
 # reproduit exactement l'état d'avant.
 # ---------------------------------------------------------------------------
-muter "emplacement 1, tunnel" \
+muter "emplacement 1, tunnel entier" \
   "src/app/(boutique)/commande/etapes-tunnel.tsx" \
-  "emplacement 1" \
+  "emplacement 1, le droit lui-même" \
   "perl -0pi -e 's/MENTION_TUNNEL/MENTION_ABSENTE/g' 'src/app/(boutique)/commande/etapes-tunnel.tsx'"
+
+# ---------------------------------------------------------------------------
+# Mutation 1bis, LE DROIT SEUL DISPARAÎT, les frais restent.
+#
+# TROUVÉE EN REVUE CRITIQUE, et elle laissait le contrôle VERT : il cherchait
+# `MENTION_TUNNEL` sans distinguer ses deux propriétés, et `fraisRetour`
+# satisfaisait le motif à lui seul. L'écran annonçait alors qui paie le retour
+# sans jamais dire qu'un droit de rétractation existe.
+#
+# Les deux notions se retirent indépendamment, elles se vérifient donc
+# indépendamment. Motif « nom nu hors ancrage », deuxième occurrence dans ce
+# même contrôle : je l'avais fermé pour l'import, pas pour le second usage.
+# ---------------------------------------------------------------------------
+muter "emplacement 1, le droit seul retiré" \
+  "src/app/(boutique)/commande/etapes-tunnel.tsx" \
+  "emplacement 1, le droit lui-même" \
+  "perl -0pi -e 's/MENTION_TUNNEL\\.droit/TEXTE_RETIRE/g' 'src/app/(boutique)/commande/etapes-tunnel.tsx'"
+
+# ---------------------------------------------------------------------------
+# Mutation 1ter, les frais seuls disparaissent du tunnel.
+#
+# Le versant symétrique : sans cette mention, les frais de retour reviennent au
+# vendeur, article L221-23, et la charge de la preuve pèse sur lui.
+# ---------------------------------------------------------------------------
+muter "emplacement 1, les frais seuls retirés" \
+  "src/app/(boutique)/commande/etapes-tunnel.tsx" \
+  "emplacement 1, les frais de retour" \
+  "perl -0pi -e 's/MENTION_TUNNEL\\.fraisRetour/TEXTE_RETIRE/g' 'src/app/(boutique)/commande/etapes-tunnel.tsx'"
 
 # ---------------------------------------------------------------------------
 # Mutation 2, l'emplacement 2 : les frais de retour quittent les CGV.
@@ -113,10 +142,23 @@ muter "emplacement 2, frais de retour dans les CGV" \
 # ---------------------------------------------------------------------------
 # Mutation 3, l'emplacement 3 : le formulaire type perd sa mention.
 # ---------------------------------------------------------------------------
-muter "emplacement 3, formulaire type" \
+muter "emplacement 3, espace client" \
   "src/app/(boutique)/compte/commandes/[id]/retractation/formulaire-retractation.tsx" \
-  "emplacement 3" \
+  "emplacement 3, formulaire type, espace client" \
   "perl -0pi -e 's/MENTION_FORMULAIRE/MENTION_RETIREE/g' 'src/app/(boutique)/compte/commandes/[id]/retractation/formulaire-retractation.tsx'"
+
+# ---------------------------------------------------------------------------
+# Mutation 3bis, LE CHEMIN SANS COMPTE.
+#
+# CE FICHIER MANQUAIT AU CONTRÔLE jusqu'à la revue critique : il portait sa
+# propre copie du texte, identique par coïncidence et libre de diverger. C'est
+# le chemin le PLUS exposé, `legal.md` : l'email de confirmation est le seul par
+# lequel un acheteur sans compte reçoit son droit.
+# ---------------------------------------------------------------------------
+muter "emplacement 3, lien signé sans compte" \
+  "src/app/(boutique)/retractation/[jeton]/formulaire-jeton.tsx" \
+  "emplacement 3, formulaire type, lien signé sans compte" \
+  "perl -0pi -e 's/MENTION_FORMULAIRE/MENTION_RETIREE/g' 'src/app/(boutique)/retractation/[jeton]/formulaire-jeton.tsx'"
 
 # ---------------------------------------------------------------------------
 # Mutation 4, le délai découplé du calcul.
@@ -124,10 +166,16 @@ muter "emplacement 3, formulaire type" \
 # Annoncer un délai que le service n'applique pas est l'information incorrecte
 # que l'article L221-20 sanctionne, et c'est l'affichage qui engage.
 # ---------------------------------------------------------------------------
+# LA CIBLE A CHANGÉ EN COURS DE STORY, et le garde-fou du script l'a dit plutôt
+# que de conclure « non détecté » : la première version du module RÉEXPORTAIT la
+# constante sans jamais la lire, ce que les deux revues ont relevé. Elle est
+# désormais importée et consommée par `delaiEnLettres()`.
+#
+# LA MUTATION VISE DONC L'IMPORT, seul point par lequel le couplage passe.
 muter "délai découplé du calcul de LS-133" \
   "src/lib/mentions-retractation.ts" \
   "DUREE_RETRACTATION_JOURS" \
-  "perl -0pi -e 's/export \{ DUREE_RETRACTATION_JOURS \} from \"\@\/lib\/retractation\";/export const DELAI_ANNONCE = 14;/' 'src/lib/mentions-retractation.ts'"
+  "perl -0pi -e 's/^import \{ DUREE_RETRACTATION_JOURS \} from \"\@\/lib\/retractation\";\$/const DUREE_RETRACTATION_JOURS = 14;/m' 'src/lib/mentions-retractation.ts'"
 
 # ---------------------------------------------------------------------------
 # Mutation 5, LE CONTRÔLE SATISFAIT PAR UN COMMENTAIRE.
@@ -147,7 +195,7 @@ muter "mention déplacée dans un commentaire" \
 
 echo
 if [ "$ko" -eq 0 ]; then
-  echo "OK les cinq mutations sont détectées, et l'emplacement fautif est nommé"
+  echo "OK les huit mutations sont détectées, et l'emplacement fautif est nommé"
 else
   echo "$ko mutation(s) NON détectée(s) : le contrôle ne protège pas ce qu'il annonce"
 fi

@@ -178,7 +178,17 @@ else
   # LE DÉLAI VIENT DU CALCUL, JAMAIS D'UNE SECONDE CONSTANTE. Annoncer un délai
   # que le service n'applique pas est exactement l'information incorrecte que
   # l'article L221-20 sanctionne, et c'est l'affichage qui engage.
-  if ! printf '%s' "$corps" | grep -q "DUREE_RETRACTATION_JOURS"; then
+  #
+  # C'EST L'IMPORT QUI EST VÉRIFIÉ, PAS LE NOM, et cette ligne a été corrigée
+  # après la mutation 4 : chercher `DUREE_RETRACTATION_JOURS` restait VERT sur
+  # un `const DUREE_RETRACTATION_JOURS = 14;` déclaré localement, c'est-à-dire
+  # sur exactement le défaut visé, un second nombre écrit à côté du calcul.
+  #
+  # Troisième occurrence de « nom nu hors ancrage » dans ce seul contrôle :
+  # d'abord l'import qui suffisait, puis la propriété non distinguée, et ici le
+  # nom qui ne dit pas d'où il vient. Le motif se répète parce qu'une recherche
+  # textuelle ne connaît que des chaînes, jamais leur provenance.
+  if ! printf '%s' "$corps" | grep -qE 'import \{[^}]*DUREE_RETRACTATION_JOURS[^}]*\} from "@/lib/retractation"'; then
     echo "ECHEC la source unique ne reprend plus DUREE_RETRACTATION_JOURS"
     echo "      Le délai annoncé au client doit venir du calcul de LS-133,"
     echo "      jamais d'un second nombre écrit à côté."
