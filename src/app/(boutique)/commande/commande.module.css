@@ -374,3 +374,38 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/*
+ * LS-136, la mention de retractation avant validation.
+ *
+ * ELLE NE PORTE PAS `.aide`, qui emploie `--ls-text-muted` a 4,86:1 : une
+ * mention legale que le client doit lire avant de s'engager n'est pas une
+ * precision secondaire. Le texte est au contraste plein.
+ *
+ * LE FOND LA DISTINGUE DU RECAPITULATIF sans l'isoler comme un avertissement :
+ * `--ls-surface-sand` la pose comme une information de la page, quand
+ * `.avertissement` signale un probleme. Ce n'en est pas un.
+ */
+.mentionLegale {
+  padding: var(--ls-space-4);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface-sand);
+}
+
+.texteLegal {
+  margin: var(--ls-space-2) 0 0;
+  color: var(--ls-text);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/*
+ * LE LIEN RESTE SOULIGNE. `frontend-design.md` interdit de porter une
+ * information par la couleur seule, et un lien dans un paragraphe de texte
+ * legal doit se distinguer sans dependre de la perception des couleurs.
+ */
+.lienLegal {
+  color: var(--ls-text);
+  text-decoration: underline;
+}
