@@ -259,8 +259,9 @@ PARAMETRES_BOUTIQUE aucun ecran de parametres, hors phase 1
 # l'ecran dans consulter en masse », et « LS-36 porte l'espace client, ou la
 # question se reposera entiere ». Elle s'est reposee, et voici la reponse.
 #
-# CE QUE L'ECRAN PORTE : nom, adresse email, telephone, adresses du carnet,
-# historique de connexion, toutes les commandes et leurs montants, avec une
+# CE QUE L'ECRAN PORTE : nom, adresse email, date d'inscription, derniere
+# connexion reussie, NOMBRE d'adresses enregistrees, nombre et montant des
+# commandes, avec une
 # RECHERCHE LIBRE sur le nom et l'adresse email. C'est le fichier client au sens
 # propre d'ADR-021, dont l'enumeration est « nom, adresse postale, telephone,
 # historique d'achat, factures » : il n'y a rien a etirer pour l'y ranger.

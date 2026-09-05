@@ -104,10 +104,21 @@ export default async function PageClients({
        * se partagerait pas par son lien. Un `GET` ecrit `?recherche=...`, ce que
        * la page relit a chaque rendu.
        *
-       * CE N'EST PAS UNE SERVER ACTION, donc l'ecran reste sans ecriture : le
-       * formulaire ne fait que naviguer.
+       * `method="get"` EXPLICITE ET `action` ABSENT, jamais `action=""`.
+       *
+       * DEUX RAISONS. React 19 traite `action` comme une prop SPECIALE, point
+       * d'entree des Server Actions : lui donner une chaine vide est exactement
+       * la forme qui prete a confusion sur un formulaire dont le commentaire
+       * insiste qu'il n'en est pas une. Et une chaine vide se resout vers l'URL
+       * courante QUERY COMPRISE, ce qui marche aujourd'hui parce que ce
+       * formulaire porte le seul parametre de l'ecran, mais effacerait en
+       * silence un filtre ou une pagination ajoutes plus tard.
+       *
+       * `action` ABSENT resout vers l'URL de la page sans sa query, ce qui est
+       * le comportement voulu : la soumission remplace la recherche, elle ne
+       * s'ajoute pas a l'ancienne.
        */}
-      <form className={styles.recherche} role="search" action="">
+      <form className={styles.recherche} role="search" method="get">
         <label className={styles.rechercheLabel} htmlFor="recherche">
           Rechercher par nom ou adresse email
         </label>
@@ -127,6 +138,18 @@ export default async function PageClients({
              * les noms de clients recherches dans son profil local.
              */
             autoComplete="off"
+            /*
+             * `spellCheck` DESACTIVE PARCE QUE CE CHAMP REÇOIT DES NOMS DE
+             * PERSONNES. Le correcteur orthographique de macOS et d'iOS
+             * transmet le contenu des champs texte a un service systeme : sur
+             * un ecran qui affiche un fichier client, c'est un transfert que
+             * rien ne justifie. Les deux autres attributs ferment la correction
+             * et la capitalisation automatiques, qui deformeraient un nom
+             * propre pendant la saisie.
+             */
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="off"
           />
 
           <button type="submit" className={styles.rechercheBouton}>

@@ -189,13 +189,24 @@
 /*
  * `--ls-text` sur `--ls-surface` : 12,92:1, AAA.
  *
- * `min-width: 0` ET `overflow-wrap` ENSEMBLE. Un nom saisi au profil peut ne
- * porter aucun espace, et l'adresse email prend sa place quand il manque : les
- * deux sont des chaines sans point de coupure naturel. `overflow-wrap` seul ne
- * suffit pas, un item flex refusant de passer sous la largeur de son contenu.
+ * `overflow-wrap: anywhere` EST INDISPENSABLE ICI, ET MESURE. Un nom saisi au
+ * profil peut ne porter aucun espace, et l'adresse email prend sa place quand
+ * il manque : les deux sont des chaines sans point de coupure naturel. Une
+ * mutation retirant cette ligne fait deborder la page de 125 px a 320 px, sur
+ * un nom de quarante-cinq caracteres que le test pose exprès.
+ *
+ * PAS DE `min-width: 0` ICI, ET LA MUTATION L'A ETABLI. La premiere version en
+ * posait un, au motif habituel qu'un item flex refuse de passer sous la largeur
+ * de son contenu. Le retirer laisse le test VERT : `.enTeteClient` est en
+ * `flex-wrap: wrap`, donc l'element passe A LA LIGNE au lieu de pousser, et la
+ * taille minimale automatique ne se manifeste jamais.
+ *
+ * Ne pas le rajouter « par precaution » : une ligne dont la justification est
+ * demontree fausse se supprime, elle apprend a ne plus lire les voisines. Meme
+ * constat que `.article` de l'espace client, ou la mutation avait rendu le meme
+ * verdict pour une raison differente, l'axe principal y etant vertical.
  */
 .nom {
-  min-width: 0;
   background: var(--ls-surface);
   color: var(--ls-text);
   font-family: var(--ls-police-titre);

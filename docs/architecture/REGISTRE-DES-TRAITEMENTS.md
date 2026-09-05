@@ -356,12 +356,29 @@ demande.
 |---|---|
 | Finalité | **trois finalités distinctes**, arbitrage de Christophe du 5 septembre 2026 : répondre à une demande RGPD reçue par email, retrouver un acheteur qui contacte la boutique au sujet d'une commande, et suivre l'activité commerciale par client |
 | Personnes concernées | toute personne titulaire d'un compte client |
-| Catégories de données | nom, adresse email, téléphone, adresses du carnet, date d'inscription, état de vérification, nombre et montant des commandes, date de dernière connexion |
+| Catégories de données | nom, adresse email, date d'inscription, état de vérification, **nombre** d'adresses enregistrées, nombre et montant des commandes, date de dernière connexion réussie |
 | Tables | aucune propre. Le traitement **consulte** `Utilisateur`, `AdresseCarnet`, `Commande` et `JournalConnexion`, couvertes par T1, T2, T3 et T8 |
 | Base légale | **deux bases**, une par famille de finalité : exécution du contrat, article 6.1.b, pour les deux premières ; intérêt légitime, article 6.1.f, pour le suivi d'activité commerciale |
 | Conservation | **aucune durée propre**, ce traitement n'écrit rien. Les durées sont celles des traitements consultés, trois ans après le dernier contact pour T1 et T2 |
 | Destinataires | l'exploitante seule, par l'écran d'administration |
 | Transfert hors UE | aucun |
+
+**Le téléphone et le contenu des adresses ne sont PAS affichés**, et cette ligne
+a été corrigée le 5 septembre 2026 avant la clôture de LS-185 : elle les
+déclarait tous deux, l'écran n'en montre aucun. Un registre qui sur-déclare est
+aussi faux qu'un registre qui sous-déclare, et c'est celui-là qu'on présente en
+cas de contrôle.
+
+L'écran affiche le **nombre** d'adresses enregistrées, jamais leur contenu :
+retrouver un acheteur qui appelle ne demande pas de lire son adresse postale, et
+le détail d'une commande la porte déjà là où elle sert. Le téléphone suivrait le
+même raisonnement s'il était ajouté un jour, avec sa finalité écrite ici.
+
+**Ce que cette correction dit du contrôle.** `verifier-registre-traitements.sh`
+confronte le registre au SCHEMA, pas à ce que les écrans affichent : il est
+resté vert sur cet écart, à juste titre, et aucun contrôle automatique ne peut
+poser cette question. Elle se relit à chaque story qui ajoute un écran lisant des
+données personnelles.
 
 **Ce traitement n'écrit aucune donnée, et c'est ce qui le distingue des dix
 autres.** Il est inscrit ici malgré tout parce qu'une **consultation** est un
@@ -408,6 +425,21 @@ porter le rôle `ADMINISTRATRICE`, compte unique.
 **Revenir sur cet arbitrage tient en deux gestes** : marquer le service
 `@sensible DONNEES_CLIENTS` et appeler `exigerReauthentificationRecente` dans la
 page. Le contrôle `verifier-actions-sensibles.sh` fera le reste.
+
+**La recherche laisse une trace locale, et elle fait partie de l'écart.** Le
+terme est sérialisé dans l'URL, `?recherche=Dupont`, choix qui rend le retour
+navigateur et le partage de lien possibles. Il a une conséquence : le nom
+recherché entre dans l'historique de navigation, dans les suggestions de la
+barre d'adresse et dans une éventuelle synchronisation de profil.
+
+C'est le scénario de l'ordinateur laissé ouvert, aggravé d'un cran : les noms
+consultés restent lisibles après la fermeture de la session. Le champ porte
+`autoComplete="off"`, `spellCheck={false}`, `autoCorrect` et `autoCapitalize`
+désactivés, ce qui ferme l'autocomplétion et le correcteur système, mais rien ne
+ferme l'historique d'URL sans renoncer à la sérialisation.
+
+Relevé par la revue d'interface du 5 septembre 2026, et écrit ici parce qu'il
+faisait partie de l'écart sans être documenté avec lui.
 
 **Aucune donnée d'un compte supprimé ne réapparaît ici.** La suppression
 dissocie, LS-95 : `Commande.dissocieA` est renseigné et `utilisateurId` passe à

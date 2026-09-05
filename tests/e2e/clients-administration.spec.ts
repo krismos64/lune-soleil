@@ -16,6 +16,8 @@
  * donnee ne sort avant la redirection : un ecran qui rendrait son contenu puis
  * naviguerait aurait deja tout divulgue.
  */
+import { Client } from "pg";
+
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
@@ -29,6 +31,59 @@ import {
 } from "./mesure-rendu";
 
 const ECRAN = "/administration/clients";
+
+/**
+ * Un compte dont le nom et l'adresse sont DELIBEREMENT HOSTILES au rendu.
+ *
+ * POURQUOI IL EXISTE. Le CSS de cet ecran porte `min-width: 0` et
+ * `overflow-wrap: anywhere` sur quatre elements, tous justifies par le motif de
+ * LS-171. Aucune donnee ne les exerçait : les fixtures n'emploient que des noms
+ * courts, donc la protection etait AFFIRMEE et non mesuree. C'est le motif
+ * « un defaut absent n'est pas un defaut empeche », releve par la revue
+ * d'interface du 5 septembre 2026.
+ *
+ * QUARANTE-CINQ CARACTERES SANS AUCUN ESPACE : c'est la forme qui a fait
+ * deborder le detail de commande de 43 px a 320 px en LS-171, transposee a un
+ * nom de personne. L'adresse suit le meme principe, une partie locale longue
+ * n'ayant pas non plus de point de coupure naturel.
+ */
+const CLIENT_HOSTILE = {
+  id: "e1a2b3c4-1185-4aaa-8888-000000000001",
+  nom: "TESTJeanneMarieChristinedeLaTourdAuvergne",
+  email: "jeanne-marie-christine-de-la-tour-auvergne@exemple-tres-long.invalid",
+} as const;
+
+async function avecClient<T>(
+  travail: (client: Client) => Promise<T>,
+): Promise<T> {
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+
+  try {
+    return await travail(client);
+  } finally {
+    await client.end();
+  }
+}
+
+test.beforeAll(async () => {
+  await avecClient(async (client) => {
+    await client.query(
+      `INSERT INTO utilisateur (id, email, nom, email_verifie, role, cree_a, mis_a_jour_a)
+       VALUES ($1, $2, $3, false, 'CLIENT', now(), now())
+       ON CONFLICT (id) DO NOTHING`,
+      [CLIENT_HOSTILE.id, CLIENT_HOSTILE.email, CLIENT_HOSTILE.nom],
+    );
+  });
+});
+
+test.afterAll(async () => {
+  await avecClient(async (client) => {
+    await client.query(`DELETE FROM utilisateur WHERE id = $1`, [
+      CLIENT_HOSTILE.id,
+    ]);
+  });
+});
 
 test.describe("sans le role", () => {
   test("un visiteur anonyme est redirige sans qu'aucune donnee ne sorte", async ({
@@ -187,6 +242,25 @@ test.describe("connectee en administration", () => {
 
     await expect(boutons).toHaveCount(1);
     await expect(boutons).toHaveAccessibleName("Rechercher");
+  });
+
+  /*
+   * LE COMPTE HOSTILE EST RENDU, ET C'EST CE QUI DONNE SON SENS A LA MESURE.
+   * Sans lui, `debordementHorizontal` mesurait une page de noms courts, que
+   * n'importe quelle mise en page absorbe.
+   */
+  test("un nom et une adresse sans coupure naturelle ne debordent pas", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.goto(`${ECRAN}?recherche=TESTJeanneMarie`);
+
+    await expect(page.getByText(CLIENT_HOSTILE.nom)).toBeVisible();
+    await expect(page.getByText(CLIENT_HOSTILE.email)).toBeVisible();
+
+    expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+      TOLERANCE_DEBORDEMENT_PX,
+    );
   });
 
   test("l'ecran ne deborde pas et ne porte aucune violation d'accessibilite", async ({
