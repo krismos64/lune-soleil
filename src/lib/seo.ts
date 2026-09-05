@@ -21,21 +21,53 @@
 import type { EtatDisponibilite } from "@/services/catalogue";
 
 /**
+ * Adresse employee PENDANT LA CONSTRUCTION seulement, jamais servie.
+ *
+ * Elle existe parce que `new URL()` du layout racine s'evalue au moment ou
+ * Next.js collecte les donnees de page, etape qui ne sert aucune requete. Elle
+ * est volontairement reconnaissable : si elle apparaissait un jour dans un
+ * canonical servi, l'origine du defaut serait lisible d'un coup d'oeil.
+ */
+const URL_DE_CONSTRUCTION = "https://construction.invalide";
+
+/**
  * L'adresse publique du site, sans barre oblique finale.
  *
  * ELLE LEVE PLUTOT QUE DE RETOMBER SUR UNE VALEUR PAR DEFAUT. Un canonical
  * construit sur `http://localhost:3000` et servi en production pointerait chaque
- * page vers une adresse inatteignable, et les moteurs suivent le canonical :
+ * page vers une adresse inatteignable, et les moteurs SUIVENT le canonical :
  * le site entier sortirait de l'index sans qu'aucun ecran ne change d'aspect.
  * Un defaut silencieux est ici pire qu'un demarrage refuse.
  *
  * Motif deja rencontre sur ce depot avec `BETTER_AUTH_SECRET`, dont la valeur
  * par defaut laissait le build reussir en signant avec un secret connu.
+ *
+ * ------------------------------------------------------------------
+ * SAUF PENDANT `next build`, ET CETTE EXCEPTION A ETE MESUREE.
+ *
+ * Sans elle, la construction ECHOUE : « Failed to collect page data for
+ * /_not-found ». `layout.tsx` evalue `new URL(urlDuSite())` a l'analyse des
+ * pages, etape qui ne sert aucune requete et ne court donc aucun risque.
+ *
+ * La faire echouer obligerait l'integration continue a porter une adresse
+ * factice dont la seule fonction serait de contenter un controle, et c'est
+ * exactement ce qui apprend a ne plus lire l'alerte. C'est le motif
+ * « construire n'est pas servir » de `.claude/rules/securite.md`, deja applique
+ * a `BETTER_AUTH_SECRET` dans `lib/auth.ts`.
+ *
+ * `NEXT_PHASE` vaut `phase-production-build` pendant cette etape et rien du tout
+ * quand le serveur tourne : c'est le seul signal qui distingue les deux. Le
+ * serveur qui demarre sans la variable refuse toujours de servir.
+ * ------------------------------------------------------------------
  */
 export function urlDuSite(): string {
   const base = process.env.NEXT_PUBLIC_SITE_URL;
 
   if (base === undefined || base.trim() === "") {
+    if (process.env.NEXT_PHASE === "phase-production-build") {
+      return URL_DE_CONSTRUCTION;
+    }
+
     throw new Error(
       "NEXT_PUBLIC_SITE_URL est requise pour composer les URL canoniques. " +
         "La renseigner dans .env, voir .env.example.",

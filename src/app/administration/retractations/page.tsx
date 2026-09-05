@@ -36,7 +36,7 @@ import { TraitementDemande } from "./traitement-demande";
 import styles from "./retractations.module.css";
 
 export const metadata = {
-  title: "Rétractations, administration",
+  title: "Rétractations",
   robots: { index: false, follow: false },
 };
 

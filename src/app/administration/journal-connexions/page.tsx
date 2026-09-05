@@ -29,7 +29,7 @@ import {
 } from "@/services/journal-connexion";
 
 export const metadata = {
-  title: "Journal des connexions, administration",
+  title: "Journal des connexions",
   robots: { index: false, follow: false },
 };
 

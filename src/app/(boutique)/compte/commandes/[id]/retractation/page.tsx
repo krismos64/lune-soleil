@@ -29,7 +29,7 @@ import { FormulaireRetractation } from "./formulaire-retractation";
 import styles from "./retractation.module.css";
 
 export const metadata = {
-  title: "Me rétracter, Lune & Soleil",
+  title: "Me rétracter",
   robots: { index: false, follow: false },
 };
 

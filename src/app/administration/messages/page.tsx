@@ -41,7 +41,7 @@ import { ClassementMessage } from "./classement-message";
 import styles from "./messages.module.css";
 
 export const metadata = {
-  title: "Messages, administration",
+  title: "Messages",
   robots: { index: false, follow: false },
 };
 

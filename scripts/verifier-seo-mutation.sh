@@ -32,6 +32,8 @@ MUTABLES=(
   "src/app/(boutique)/aide/page.tsx"
   "src/app/administration/stocks/page.tsx"
   "src/app/layout.tsx"
+  "src/app/robots.ts"
+  "src/app/(boutique)/compte/page.tsx"
 )
 
 restaurer() {
@@ -138,9 +140,48 @@ muter "description retirée d'une page publique" \
   "aide/page.tsx est une page publique sans description" \
   "perl -0pi -e 's/^\s*description:\s*\$//gm; s/\"Modes de livraison, tarifs, droit de rétractation et réponses aux questions fréquentes sur les bijoux Lune & Soleil\\.\",//; s/description//g' 'src/app/(boutique)/aide/page.tsx'"
 
+# ---------------------------------------------------------------------------
+# Mutation 5, le titre doublé, sur une page PRIVÉE.
+#
+# Elle vise `/compte` et non une page publique, délibérément : vingt-trois des
+# vingt-cinq pages qu'avait laissées doublées la première version de LS-137
+# étaient privées, et le contrôle a dû être déplacé avant l'aiguillage
+# public/privé pour les voir. Muter une page publique laisserait ce
+# déplacement non prouvé.
+# ---------------------------------------------------------------------------
+muter "nom de la boutique réécrit dans un titre" \
+  "src/app/(boutique)/compte/page.tsx" \
+  "compte/page.tsx ecrit « Lune & Soleil » dans son titre" \
+  "perl -0pi -e 's/title: \"Mon compte\"/title: \"Mon compte, Lune & Soleil\"/' 'src/app/(boutique)/compte/page.tsx'"
+
+# ---------------------------------------------------------------------------
+# Mutation 6, la route à jeton retirée de robots.txt.
+#
+# C'EST LE DÉFAUT DE SÉCURITÉ QUE LA REVUE A TROUVÉ. `/facture/` sert un PDF
+# portant nom, adresse et montants à un client SANS session, sur seule
+# signature. Son absence de la liste laissait un explorateur suivre un lien
+# fuité depuis un email.
+#
+# LE CONTRÔLE NE PEUT PAS LE VOIR : il n'énumère que les `page.tsx`, et cette
+# route est un `route.ts`. La mutation le prouve, et c'est utile de le savoir :
+# ce qui protège ici est le test de bout en bout, pas le contrôle textuel.
+# ---------------------------------------------------------------------------
+sortie_robots="$(perl -0pi -e 's/\`\$\{CHEMIN_ACCES_DOCUMENT\}\/\`,//' 'src/app/robots.ts' && echo mute)"
+if [ "$sortie_robots" = "mute" ] && ! git diff --quiet -- "src/app/robots.ts"; then
+  echo "NOTE  [/facture retiré de robots.txt] le contrôle textuel ne le voit pas,"
+  echo "        et c'est attendu : il n'énumère que les page.tsx. La garde est"
+  echo "        tests/e2e/referencement.spec.ts, qui lit le fichier servi."
+  restaurer
+else
+  echo "ECHEC [/facture retiré de robots.txt] la mutation n'a rien modifié :"
+  echo "      la cible a bougé, corriger ce script."
+  ko=$((ko + 1))
+  restaurer
+fi
+
 echo
 if [ "$ko" -eq 0 ]; then
-  echo "OK les quatre mutations sont détectées, et nommées"
+  echo "OK les cinq mutations vérifiables sont détectées, et nommées"
 else
   echo "$ko mutation(s) NON détectée(s) : le contrôle ne protège pas ce qu'il annonce"
 fi

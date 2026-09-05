@@ -22,7 +22,7 @@ import { FormulaireNouveauMotDePasse } from "./formulaire-nouveau-mot-de-passe";
 import styles from "../authentification.module.css";
 
 export const metadata = {
-  title: "Nouveau mot de passe, Lune & Soleil",
+  title: "Nouveau mot de passe",
   robots: { index: false, follow: false },
 };
 

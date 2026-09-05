@@ -17,6 +17,7 @@
  */
 import type { MetadataRoute } from "next";
 
+import { CHEMIN_ACCES_DOCUMENT, CHEMIN_RETRACTATION } from "@/lib/jeton-acces";
 import { absolutise } from "@/lib/seo";
 
 /**
@@ -40,8 +41,26 @@ export default function robots(): MetadataRoute.Robots {
        *
        * `/administration` et `/compte` portent des donnees personnelles.
        * `/panier` et `/commande` sont propres a un visiteur et vides pour un
-       * robot. `/retractation/` porte un jeton signe dans son chemin : l'y
-       * ajouter evite qu'un lien fuite depuis un email n'entre dans un index.
+       * robot.
+       *
+       * `/facture/` ET `/retractation/` PORTENT UN JETON SIGNE DANS LEUR
+       * CHEMIN, et vont ensemble. Les deux servent un client SANS session, sur
+       * la seule verification de signature, `lib/jeton-acces.ts`. Un lien recu
+       * par email atteint un explorateur par mille chemins ordinaires : une
+       * barre d'adresse qui remonte les URL visitees, un lien colle dans une
+       * conversation.
+       *
+       * `/facture/` MANQUAIT, releve en revue critique, et c'etait la plus
+       * exposee des deux : elle sert un PDF portant nom, adresse de facturation
+       * et montants, quand `/retractation/` n'affiche qu'un formulaire. Surtout,
+       * c'est la MOINS defendue : `/retractation/` est une `page.tsx` qui porte
+       * deja `robots: { index: false }`, la ou un gestionnaire `route.ts` ne
+       * peut porter aucune metadonnee. Son second filet est donc un en-tete
+       * `X-Robots-Tag`, pose dans la route elle-meme.
+       *
+       * LES DEUX SE LISENT DANS LEURS CONSTANTES plutot que d'etre recopies :
+       * un renommage de route qui oublierait ce fichier laisserait une liste
+       * d'interdiction pointant des chemins morts, defaut silencieux.
        *
        * LE PREFIXE SUFFIT, ET C'EST LA CONVENTION DU FORMAT : `/compte`
        * couvre `/compte/commandes` et tout ce qui suit, aucune enumeration
@@ -58,7 +77,14 @@ export default function robots(): MetadataRoute.Robots {
         "/compte",
         "/panier",
         "/commande",
-        "/retractation/",
+        /*
+         * LA BARRE OBLIQUE FINALE EST AJOUTEE ICI : les constantes portent le
+         * segment nu, `/facture`, et l'interdiction s'etendrait sinon a une
+         * hypothetique page `/factures`. Le suffixe la borne aux chemins a
+         * jeton, les seuls vises.
+         */
+        `${CHEMIN_ACCES_DOCUMENT}/`,
+        `${CHEMIN_RETRACTATION}/`,
       ],
     },
     sitemap: absolutise("/sitemap.xml"),

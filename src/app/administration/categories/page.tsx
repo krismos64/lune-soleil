@@ -21,7 +21,7 @@ import styles from "./categories.module.css";
 import { GestionCategories } from "./gestion-categories";
 
 export const metadata = {
-  title: "Catégories du catalogue, administration",
+  title: "Catégories du catalogue",
   robots: { index: false, follow: false },
 };
 

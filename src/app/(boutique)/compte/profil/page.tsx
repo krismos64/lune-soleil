@@ -27,7 +27,7 @@ import styles from "./profil.module.css";
 import stylesCompte from "../compte.module.css";
 
 export const metadata = {
-  title: "Mon profil, Lune & Soleil",
+  title: "Mon profil",
   robots: { index: false, follow: false },
 };
 

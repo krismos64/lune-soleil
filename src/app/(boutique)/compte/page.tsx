@@ -45,7 +45,7 @@ import { FormulaireSuppressionCompte } from "./formulaire-suppression";
 import styles from "./compte.module.css";
 
 export const metadata = {
-  title: "Mon compte, Lune & Soleil",
+  title: "Mon compte",
   robots: { index: false, follow: false },
 };
 

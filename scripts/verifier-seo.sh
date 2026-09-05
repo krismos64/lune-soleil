@@ -106,6 +106,41 @@ while IFS= read -r page; do
     continue
   fi
 
+  # -------------------------------------------------------------------------
+  # LE NOM DE LA BOUTIQUE NE S'ECRIT PAS DANS UN TITRE DE PAGE.
+  #
+  # Le layout racine porte `template: "%s, Lune & Soleil"`, qui l'ajoute a tout
+  # titre de chaine d'un segment enfant, a n'importe quelle profondeur. Un titre
+  # qui le porte deja recoit donc le suffixe UNE SECONDE FOIS, et le HTML servi
+  # devient « Mon compte, Lune & Soleil, Lune & Soleil ».
+  #
+  # CE SENS A ETE AJOUTE APRES COUP, releve en revue. Les autres sens de ce
+  # controle ne verifient que la PRESENCE des cles, jamais leur valeur : un
+  # titre double les satisfait exactement comme un titre correct. La story avait
+  # raccourci ses six pages et laisse les vingt-cinq autres doublees.
+  #
+  # DEUX EXCEPTIONS LEGITIMES, et le controle les reconnait a leur syntaxe :
+  #   - `title.absolute`, qui court-circuite le gabarit, employe par l'accueil
+  #   - `title.default` d'un layout, qui NE passe pas par son propre gabarit
+  # Ce controle ne regarde que les `page.tsx`, donc seule la premiere le
+  # concerne ; elle se reconnait a la cle `absolute` dans le meme fichier.
+  #
+  # IL S'APPLIQUE AUX PAGES PRIVEES AUSSI, et c'est ce qui l'a fait deplacer
+  # ici : vingt-trois des vingt-cinq pages doublees etaient sous `/compte` et
+  # `/administration`. Le doublon n'y est pas un defaut de referencement, ces
+  # pages portant `noindex`, mais un titre d'onglet fautif que l'exploitante
+  # et les clients connectes lisent a chaque navigation.
+  # -------------------------------------------------------------------------
+  if printf '%s' "$corps" | grep -q 'title: "[^"]*Lune & Soleil"'; then
+    if ! printf '%s' "$corps" | grep -q "absolute:"; then
+      echo "ECHEC $relatif ecrit « Lune & Soleil » dans son titre"
+      echo "      le gabarit du layout racine l'ajoute deja : le titre servi"
+      echo "      porterait le nom deux fois. Retirer le suffixe, ou employer"
+      echo "      title: { absolute: \"...\" } si le titre doit y echapper."
+      ko=$((ko + 1))
+    fi
+  fi
+
   if est_privee "$relatif"; then
     privees_examinees=$((privees_examinees + 1))
 

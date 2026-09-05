@@ -37,7 +37,7 @@ import {
 import styles from "./clients.module.css";
 
 export const metadata = {
-  title: "Clients, administration",
+  title: "Clients",
   robots: { index: false, follow: false },
 };
 

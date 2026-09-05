@@ -34,7 +34,7 @@ import { FocusTitre } from "./focus-titre";
 import { BoutonPayer } from "./bouton-payer";
 
 export const metadata = {
-  title: "Votre commande, Lune & Soleil",
+  title: "Votre commande",
   description: "État de votre commande et de son paiement.",
   // La page depend d'un cookie et d'un parametre d'URL, rien d'indexable.
   robots: { index: false, follow: false },

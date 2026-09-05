@@ -34,7 +34,7 @@ import { formaterMontant } from "@/lib/montant";
 import styles from "./catalogue.module.css";
 
 export const metadata = {
-  title: "Catalogue, administration",
+  title: "Catalogue",
   robots: { index: false, follow: false },
 };
 

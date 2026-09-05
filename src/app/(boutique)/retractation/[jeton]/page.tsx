@@ -32,7 +32,7 @@ import { FormulaireRetractationJeton } from "./formulaire-jeton";
 import styles from "../../compte/commandes/[id]/retractation/retractation.module.css";
 
 export const metadata = {
-  title: "Me rétracter, Lune & Soleil",
+  title: "Me rétracter",
   robots: { index: false, follow: false },
 };
 

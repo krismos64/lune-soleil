@@ -30,7 +30,7 @@ import { commandePeutOuvrirUneRetractation } from "@/services/retractation";
 import styles from "../../compte.module.css";
 
 export const metadata = {
-  title: "Détail de ma commande, Lune & Soleil",
+  title: "Détail de ma commande",
   robots: { index: false, follow: false },
 };
 

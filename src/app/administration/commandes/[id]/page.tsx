@@ -38,7 +38,7 @@ import { TransitionsCommande } from "./transitions";
 import styles from "../commandes.module.css";
 
 export const metadata = {
-  title: "Détail de commande, administration",
+  title: "Détail de commande",
   robots: { index: false, follow: false },
 };
 

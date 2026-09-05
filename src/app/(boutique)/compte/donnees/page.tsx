@@ -30,7 +30,7 @@ import { FENETRE_REAUTHENTIFICATION_MS } from "@/services/preuve-identite";
 import styles from "../compte.module.css";
 
 export const metadata = {
-  title: "Mes données personnelles, Lune & Soleil",
+  title: "Mes données personnelles",
   robots: { index: false, follow: false },
 };
 

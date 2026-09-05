@@ -39,7 +39,7 @@ import { FormulaireReauthentification } from "./formulaire-reauthentification";
 import styles from "./reauthentification.module.css";
 
 export const metadata = {
-  title: "Confirmer votre identité, administration",
+  title: "Confirmer votre identité",
   robots: { index: false, follow: false },
 };
 

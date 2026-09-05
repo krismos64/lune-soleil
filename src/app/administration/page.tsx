@@ -35,7 +35,7 @@ import { formaterMontant } from "@/lib/montant";
 import styles from "./tableau-bord.module.css";
 
 export const metadata = {
-  title: "Administration, Lune & Soleil",
+  title: "Administration",
   robots: { index: false, follow: false },
 };
 

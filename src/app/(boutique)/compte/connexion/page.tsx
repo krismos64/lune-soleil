@@ -31,7 +31,7 @@ import { FormulaireConnexionClient } from "./formulaire-connexion-client";
 import styles from "../authentification.module.css";
 
 export const metadata = {
-  title: "Se connecter, Lune & Soleil",
+  title: "Se connecter",
   description: "Accédez à vos commandes, vos factures et vos adresses.",
   robots: { index: false, follow: true },
 };
