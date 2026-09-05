@@ -780,6 +780,55 @@ fi
 # Silencieux quand tout est cohérent : un hook qui parle à chaque session devient
 # un bruit que l'on apprend à ignorer.
 
+# ---------------------------------------------------------------------------
+# Portées declarees sous `permissions:` dans les workflows, LS-186.
+#
+# CE QUE CE CONTROLE FERME. `derive-documentation.yml` a declare
+# `administration: read`, une portee QUI N'EXISTE PAS : le fichier entier etait
+# alors rejete au chargement, avant tout job, et le controle hebdomadaire de
+# derive documentaire ne tournait plus. La panne a dure une journee sans etre
+# vue, personne ne consultant l'onglet Actions d'un workflow planifie.
+#
+# LA SIGNATURE NE RESSEMBLE PAS A UN ECHEC D'ETAPE : duree nulle, aucun job,
+# « log not found » sur les journaux. Le rouge a ete ecarte trois fois avant que
+# quelqu'un ne lise l'historique du workflow.
+#
+# LA LISTE EST FERMEE ET ECRITE ICI. GitHub n'accepte que ces seize portees, plus
+# les deux formes globales `read-all` et `write-all`. Une liste ecrite a la main
+# se perime, et c'est assume : elle ne bouge qu'a l'ajout d'une portee par
+# GitHub, ce qui se remarquera par un faux positif et non par un silence.
+# SUR UNE SEULE LIGNE, ET C'EST NECESSAIRE. Une chaine sur plusieurs lignes porte
+# des retours a la ligne, que la comparaison `case " $LISTE " in *" $x "*` ne
+# traite PAS comme des espaces : « contents », premier mot de la deuxieme ligne,
+# etait alors precede d'un saut de ligne et jamais reconnu. Le controle a signale
+# quatre workflows sains a sa premiere execution, ce qui l'a montre tout de suite.
+PORTEES_VALIDES="actions artifact-metadata attestations checks code-quality contents deployments discussions id-token issues packages pages pull-requests security-events statuses vulnerability-alerts"
+
+for workflow in .github/workflows/*.yml .github/workflows/*.yaml; do
+  [ -f "$workflow" ] || continue
+
+  # Les lignes de portee sont celles d'un bloc `permissions:`, indentees et de la
+  # forme `cle: valeur`. Les commentaires sont retires AVANT lecture : ce fichier
+  # en porte qui citent la portee fautive pour l'expliquer, et les compter ferait
+  # echouer le controle sur sa propre documentation. Motif deja rencontre sur
+  # `verifier-actions-sensibles.sh`.
+  portees=$(awk '
+    /^[[:space:]]*#/ { next }
+    /^permissions:[[:space:]]*$/ { dans=1; next }
+    dans && /^[[:space:]]+[a-z-]+:[[:space:]]*(read|write|none)[[:space:]]*$/ {
+      gsub(/[[:space:]]/, "", $0); split($0, p, ":"); print p[1]; next
+    }
+    dans && /^[^[:space:]#]/ { dans=0 }
+  ' "$workflow")
+
+  for portee in $portees; do
+    case " $PORTEES_VALIDES " in
+      *" $portee "*) ;;
+      *) anomalies+=("$workflow declare la portée « $portee », qui n'existe pas : le workflow sera rejeté au chargement, sans job ni journal") ;;
+    esac
+  done
+done
+
 if [ ${#anomalies[@]} -eq 0 ]; then
   [ "$STRICT" -eq 1 ] && echo "  configuration Claude Code cohérente"
   exit 0

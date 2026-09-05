@@ -38,13 +38,29 @@ on:
 permissions:
   contents: read
   issues: write
-  # LS-176. `verifier-protection-branche.sh` lit la protection de `main`, ce qui
-  # exige cette portée. Elle est accordée ICI et non dans `controles.yml`, et la
-  # différence est délibérée : ce workflow ne tourne que sur planification ou
-  # déclenchement manuel, jamais sur une pull request venue d'ailleurs. Donner un
-  # droit d'administration au jeton de la chaîne de fusion créerait un risque
-  # plus grand que celui qu'il couvre.
-  administration: read
+  # AUCUNE AUTRE PORTÉE, ET SURTOUT PAS `administration`, LS-186.
+  #
+  # Une version de ce fichier déclarait `administration: read`, au motif que
+  # `verifier-protection-branche.sh` lit la protection de `main`. **Cette portée
+  # n'existe pas** dans GitHub Actions : la liste des clés valides est fermée,
+  # et le fichier entier était donc REJETÉ AU CHARGEMENT, avant tout job.
+  #
+  # LA SIGNATURE NE RESSEMBLE PAS À UN ÉCHEC D'ÉTAPE, et c'est ce qui a fait
+  # durer la panne : durée nulle, `created_at` égale `updated_at`, aucun job
+  # dans le run, et `gh run view --log-failed` rend « log not found ». Le rouge
+  # a été vu et écarté trois fois avant que son historique ne soit lu.
+  #
+  # CORRIGER LA SYNTAXE N'AURAIT RIEN DONNÉ DE PLUS. Lire
+  # `repos/<dépôt>/branches/main/protection` exige des droits d'administration
+  # du dépôt, que le `GITHUB_TOKEN` d'un workflow ne peut obtenir par AUCUNE clé
+  # `permissions:` : il faut un jeton personnel. La portée était donc à la fois
+  # invalide et inutile.
+  #
+  # CE QUE LE SCRIPT FAIT À LA PLACE, et c'est la règle du projet sur les
+  # garde-fous : il constate qu'il ne peut pas lire, l'écrit en clair, et sort
+  # en 0 sans annoncer de verdict. Il reste utilisable en local, où `gh` porte
+  # les droits de Christophe. Un contrôle qui ne peut pas conclure le dit,
+  # plutôt que de prétendre avoir vérifié.
 
 jobs:
   derive:
