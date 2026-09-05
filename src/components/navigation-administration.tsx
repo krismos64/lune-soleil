@@ -118,6 +118,7 @@ export const RUBRIQUES: readonly Rubrique[] = [
   },
   { chemin: "/administration/produits", libelle: "Catalogue" },
   { chemin: "/administration/factures", libelle: "Factures et avoirs" },
+  { chemin: "/administration/clients", libelle: "Clients" },
   { chemin: "/administration/categories", libelle: "Catégories" },
   {
     chemin: "/administration/stocks",
@@ -156,9 +157,9 @@ export const RUBRIQUES: readonly Rubrique[] = [
  * story qui livrera SA rubrique, et non le ticket de constat : c'est la forme
  * utile, celle qui repond a « quand cette rubrique arrive-t-elle ».
  *
- * CATALOGUE A QUITTE CETTE LISTE, LS-183 l'ayant livre, ET FACTURES ET AVOIRS
- * L'A QUITTEE AVEC LS-184 : une entree y reste tant que son ecran n'existe pas,
- * et pas une minute de plus. Le sens 1 du
+ * TROIS ENTREES ONT QUITTE CETTE LISTE EN TROIS JOURS, Catalogue avec LS-183,
+ * Factures et avoirs avec LS-184, Clients avec LS-185 : une entree y reste tant
+ * que son ecran n'existe pas, et pas une minute de plus. Le sens 1 du
  * controle d'atteignabilite le verifie dans l'autre sens, en refusant une
  * rubrique navigable sans route.
  *
@@ -169,7 +170,6 @@ export const RUBRIQUES: readonly Rubrique[] = [
  */
 export const RUBRIQUES_A_VENIR = [
   { libelle: "Statistiques", ticket: "LS-64" },
-  { libelle: "Clients", ticket: "LS-185" },
   { libelle: "Avis", ticket: "LS-61" },
   { libelle: "Paramètres", ticket: "LS-98" },
 ] as const;

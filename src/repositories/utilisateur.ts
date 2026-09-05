@@ -137,3 +137,145 @@ export async function lireDonneesExport(
 
   return { adresses, commandes, avis, connexions };
 }
+
+/**
+ * Un client dans la liste de l'administration, LS-185.
+ *
+ * CE QUE CHAQUE CHAMP FAIT ICI, ET AU NOM DE QUELLE FINALITE. L'arbitrage du
+ * 5 septembre 2026 en retient trois, et le registre les porte en T11 :
+ *
+ *   nom, email, telephone, adresses  repondre a une demande RGPD, et retrouver
+ *                                    un acheteur qui contacte la boutique
+ *   nombre et montant des commandes  suivre l'activite commerciale, interet
+ *                                    legitime et non execution du contrat
+ *   derniere connexion               retrouver un acheteur, et constater qu'un
+ *                                    compte est inactif
+ *
+ * AUCUN CHAMP N'EST LA « PARCE QU'IL EST EN BASE ». La minimisation, article
+ * 5.1.c, veut qu'une donnee affichee serve une finalite nommee : le mot de
+ * passe, l'empreinte de passkey et l'adresse IP des connexions ne sortent
+ * jamais d'ici, et rien ne les demande.
+ */
+export type ClientEnListe = {
+  id: string;
+  email: string;
+  nom: string | null;
+  emailVerifie: boolean;
+  creeA: Date;
+  /** Nombre de commandes rattachees au compte, T11 finalite 3. */
+  nombreCommandes: number;
+  /** Somme des commandes rattachees, en centimes entiers, T11 finalite 3. */
+  totalCentimes: number;
+  /** Nombre d'adresses au carnet, sans leur contenu : la liste ne l'affiche pas. */
+  nombreAdresses: number;
+  /** Derniere connexion REUSSIE, nulle si le compte ne s'est jamais connecte. */
+  derniereConnexion: Date | null;
+};
+
+/**
+ * Les clients, avec leur activite, LS-185.
+ *
+ * LA RECHERCHE EST LIBRE SUR LE NOM ET L'ADRESSE, ET C'EST UN ECART ASSUME A
+ * ADR-027, arbitrage explicite de Christophe du 5 septembre 2026. La decision et
+ * ses consequences sont ecrites dans `.claude/familles-sans-action.txt` et dans
+ * le traitement T11 du registre : ne pas la « corriger » en croyant reparer un
+ * oubli, revenir dessus est une decision qui lui appartient.
+ *
+ * `mode: "insensitive"` PARCE QU'UNE RECHERCHE SENSIBLE A LA CASSE NE SERT
+ * RIEN. Personne ne saisit « Dupont » avec la bonne majuscule quand il cherche
+ * un client au telephone.
+ *
+ * LE TERME EST UN FILTRE, PAS UNE AUTORISATION, invariant 2 : il restreint ce
+ * que la requete rend, il ne decide jamais qui a le droit de la lancer. La garde
+ * de role vit dans la page, avant tout rendu.
+ *
+ * LES MONTANTS SONT AGREGES PAR LA BASE, jamais en JavaScript sur des lignes
+ * chargees. Deux raisons : l'invariant 1 veut des centimes entiers, et charger
+ * toutes les commandes de tous les clients pour en faire la somme mettrait en
+ * memoire l'historique complet de la boutique pour afficher un nombre.
+ */
+export async function listerClients(
+  client: ClientBase,
+  options: { terme?: string; limite: number },
+): Promise<{ clients: ClientEnListe[]; limiteAtteinte: boolean }> {
+  const { terme, limite } = options;
+
+  /*
+   * LE TERME VIDE NE FILTRE RIEN, et il ne doit surtout pas produire
+   * `contains: ""`, qui matche tout et couterait une comparaison par ligne pour
+   * le meme resultat. Le spread conditionnel garde la clause absente.
+   */
+  const recherche = terme?.trim();
+
+  const where =
+    recherche && recherche.length > 0
+      ? {
+          OR: [
+            { email: { contains: recherche, mode: "insensitive" as const } },
+            { nom: { contains: recherche, mode: "insensitive" as const } },
+          ],
+        }
+      : {};
+
+  const lignes = await client.utilisateur.findMany({
+    where,
+    /*
+     * LES PLUS RECEMMENT INSCRITS D'ABORD. Un tri par nom paraitrait naturel et
+     * serait moins utile : ce qui interesse a l'ouverture de l'ecran est qui
+     * vient d'arriver, la recherche servant a retrouver quelqu'un de precis.
+     */
+    orderBy: { creeA: "desc" },
+    take: limite + 1,
+    select: {
+      id: true,
+      email: true,
+      nom: true,
+      emailVerifie: true,
+      creeA: true,
+      _count: { select: { adresses: true, commandes: true } },
+      /*
+       * LA SOMME DES COMMANDES, agregee par la base.
+       *
+       * ELLE PORTE SUR TOUTES LES COMMANDES RATTACHEES, y compris celles qui ne
+       * sont pas payees : c'est une mesure d'ACTIVITE et non de chiffre
+       * d'affaires. Le chiffre d'affaires a ses propres regles de calcul, dans
+       * `STATISTIQUES.md`, et LS-64 le portera ; les confondre ici donnerait
+       * deux chiffres differents pour un meme mot.
+       */
+      commandes: { select: { totalCentimes: true } },
+      /*
+       * LA DERNIERE CONNEXION REUSSIE, et `REUSSITE` seule.
+       *
+       * Un echec ou un refus par limitation de debit ne dit pas que la personne
+       * s'est connectee : les compter ferait apparaitre comme actif un compte
+       * dont quelqu'un essaie justement de forcer l'acces.
+       */
+      journauxConnexion: {
+        where: { issue: "REUSSITE" },
+        orderBy: { creeA: "desc" },
+        take: 1,
+        select: { creeA: true },
+      },
+    },
+  });
+
+  const limiteAtteinte = lignes.length > limite;
+
+  return {
+    clients: lignes.slice(0, limite).map((ligne) => ({
+      id: ligne.id,
+      email: ligne.email,
+      nom: ligne.nom,
+      emailVerifie: ligne.emailVerifie,
+      creeA: ligne.creeA,
+      nombreCommandes: ligne._count.commandes,
+      nombreAdresses: ligne._count.adresses,
+      totalCentimes: ligne.commandes.reduce(
+        (somme, commande) => somme + commande.totalCentimes,
+        0,
+      ),
+      derniereConnexion: ligne.journauxConnexion[0]?.creeA ?? null,
+    })),
+    limiteAtteinte,
+  };
+}

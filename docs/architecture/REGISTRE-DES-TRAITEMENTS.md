@@ -350,6 +350,71 @@ lui-même est écrit **avant** ce dépôt, dans la même transaction : c'est la 
 principale de LS-97, et elle garantit qu'une panne d'email ne perd jamais la
 demande.
 
+### T11, consultation du fichier client par l'exploitante
+
+| Champ | Valeur |
+|---|---|
+| Finalité | **trois finalités distinctes**, arbitrage de Christophe du 5 septembre 2026 : répondre à une demande RGPD reçue par email, retrouver un acheteur qui contacte la boutique au sujet d'une commande, et suivre l'activité commerciale par client |
+| Personnes concernées | toute personne titulaire d'un compte client |
+| Catégories de données | nom, adresse email, téléphone, adresses du carnet, date d'inscription, état de vérification, nombre et montant des commandes, date de dernière connexion |
+| Tables | aucune propre. Le traitement **consulte** `Utilisateur`, `AdresseCarnet`, `Commande` et `JournalConnexion`, couvertes par T1, T2, T3 et T8 |
+| Base légale | **deux bases**, une par famille de finalité : exécution du contrat, article 6.1.b, pour les deux premières ; intérêt légitime, article 6.1.f, pour le suivi d'activité commerciale |
+| Conservation | **aucune durée propre**, ce traitement n'écrit rien. Les durées sont celles des traitements consultés, trois ans après le dernier contact pour T1 et T2 |
+| Destinataires | l'exploitante seule, par l'écran d'administration |
+| Transfert hors UE | aucun |
+
+**Ce traitement n'écrit aucune donnée, et c'est ce qui le distingue des dix
+autres.** Il est inscrit ici malgré tout parce qu'une **consultation** est un
+traitement au sens de l'article 4 point 2 du RGPD, qui cite explicitement « la
+consultation » parmi les opérations visées. Un écran qui rassemble en une vue ce
+que quatre tables portent séparément constitue un traitement distinct de ceux
+qui alimentent ces tables.
+
+**La troisième finalité est la plus lourde, et elle est nommée pour cela.**
+Répondre à une demande RGPD et retrouver un acheteur découlent de l'exécution du
+contrat : elles justifient le nom, l'adresse email, le téléphone et le lien vers
+les commandes. **Suivre l'activité commerciale** ne s'en déduit pas : voir qui
+achète, à quelle fréquence et pour quel montant est du profilage, il relève de
+l'intérêt légitime et c'est lui qui justifie l'affichage des totaux.
+
+Les distinguer n'est pas un raffinement de rédaction. Si l'intérêt légitime
+venait à être contesté, les deux premières finalités survivraient et l'écran
+resterait légitime en retirant les totaux : une base légale unique et large
+ferait tomber l'ensemble.
+
+**Une recherche libre est ouverte sur le nom et l'adresse email, sans
+journalisation. C'est un écart assumé à ADR-027, arbitrage explicite de
+Christophe du 5 septembre 2026.**
+
+ADR-027 décision 3 range « consulter ou exporter en masse les données clients »
+parmi les actions sensibles, qui exigent une preuve d'identité récente.
+`.claude/familles-sans-action.txt` écrit deux fois, avant cette story, que « une
+recherche par nom ou par adresse ferait basculer l'écran dans consulter en
+masse », et désigne nommément l'epic de l'espace client comme le lieu où la
+question se reposerait.
+
+Elle s'est reposée, et trois options ont été présentées : recherche avec garde de
+réauthentification, recherche avec journalisation dans `JournalAudit`, ou liste
+bornée sans recherche. La recherche libre nue a été retenue en connaissance de
+l'écart.
+
+**Ce que l'écart signifie, écrit pour ne pas être découvert plus tard.** Le
+scénario d'ADR-027 est l'ordinateur laissé ouvert : quelqu'un qui s'assied devant
+une session ouverte peut rechercher n'importe quel client par son nom et lire son
+dossier complet, sans qu'aucune trace ne distingue cette consultation d'une
+consultation légitime. Le risque est borné par le fait que l'appelant doit déjà
+porter le rôle `ADMINISTRATRICE`, compte unique.
+
+**Revenir sur cet arbitrage tient en deux gestes** : marquer le service
+`@sensible DONNEES_CLIENTS` et appeler `exigerReauthentificationRecente` dans la
+page. Le contrôle `verifier-actions-sensibles.sh` fera le reste.
+
+**Aucune donnée d'un compte supprimé ne réapparaît ici.** La suppression
+dissocie, LS-95 : `Commande.dissocieA` est renseigné et `utilisateurId` passe à
+nul. La lecture de cet écran part de `Utilisateur`, dont la ligne a disparu :
+les commandes et les factures survivent pour l'obligation comptable, jamais
+l'identité qui les rattachait.
+
 ## Tables sans donnée personnelle
 
 Les tables suivantes ne portent aucune donnée personnelle et ne relèvent donc

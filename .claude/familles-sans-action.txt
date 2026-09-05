@@ -249,3 +249,45 @@ PARAMETRES_BOUTIQUE aucun ecran de parametres, hors phase 1
 # LE CONTROLE A REFUSE CETTE LIGNE des que l'action a existe, sens 3 : une
 # famille declaree en attente alors qu'une action la couvre echoue. C'est ce
 # sens qui empeche ce fichier de devenir une decharge qui exempte a vie.
+
+# ---------------------------------------------------------------------------
+# LS-185, 5 SEPTEMBRE 2026 : L'ECRAN CLIENTS EST LIVRE AVEC UNE RECHERCHE LIBRE
+# ET SANS GARDE. C'EST UN ECART ASSUME A ADR-027, PAS UN OUBLI.
+#
+# CE FICHIER ANNONÇAIT LE CAS DEUX FOIS, en LS-97 et en LS-62 : « une recherche
+# par nom ou par adresse dans cette rubrique, ou un export, feraient basculer
+# l'ecran dans consulter en masse », et « LS-36 porte l'espace client, ou la
+# question se reposera entiere ». Elle s'est reposee, et voici la reponse.
+#
+# CE QUE L'ECRAN PORTE : nom, adresse email, telephone, adresses du carnet,
+# historique de connexion, toutes les commandes et leurs montants, avec une
+# RECHERCHE LIBRE sur le nom et l'adresse email. C'est le fichier client au sens
+# propre d'ADR-021, dont l'enumeration est « nom, adresse postale, telephone,
+# historique d'achat, factures » : il n'y a rien a etirer pour l'y ranger.
+#
+# LE RAISONNEMENT DES ECRANS NON CLASSES NE S'APPLIQUE PAS ICI. Le journal des
+# connexions, la rubrique Messages et l'ecran d'expedition restent non classes
+# parce qu'ils sont bornes en volume, SANS RECHERCHE ni export, et qu'aucun ne
+# porte le fichier client. Les trois conditions tombent ensemble sur cet ecran.
+#
+# TROIS OPTIONS ONT ETE PRESENTEES A CHRISTOPHE avant qu'il tranche : recherche
+# avec `exigerReauthentificationRecente`, recherche avec journalisation dans
+# `JournalAudit`, ou liste bornee sans recherche. Il a retenu la recherche libre
+# nue, en connaissance de l'ecart et de ses consequences.
+#
+# CE QUE L'ECART SIGNIFIE, ecrit pour ne pas etre redecouvert : sur un ordinateur
+# laisse ouvert, quelqu'un peut rechercher n'importe quel client par son nom et
+# lire son dossier complet, sans qu'aucune trace ne le distingue d'une
+# consultation legitime. Le risque est borne par le role ADMINISTRATRICE, compte
+# unique.
+#
+# NE PAS « CORRIGER » CETTE LIGNE EN CROYANT REPARER UNE NEGLIGENCE. Revenir sur
+# l'arbitrage est une decision de Christophe, et elle tient en deux gestes :
+# marquer `@sensible DONNEES_CLIENTS` sur le service et appeler
+# `exigerReauthentificationRecente` dans la page. Le controle fera le reste.
+#
+# LA FAMILLE `DONNEES_CLIENTS` N'EST PAS REVENUE DANS LA LISTE D'ATTENTE pour
+# autant, et elle ne doit pas y revenir : `exporterMesDonnees` la couvre depuis
+# LS-62, donc le sens 3 du controle refuserait la ligne. Cet ecran est un ecran
+# NON MARQUE, ce que le controle ne peut par construction pas voir, et c'est
+# exactement le trou que la section du 13 aout 2026 decrit plus haut.
