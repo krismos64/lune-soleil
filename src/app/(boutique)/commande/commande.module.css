@@ -419,10 +419,32 @@
 
 /*
  * LE LIEN RESTE SOULIGNE. `frontend-design.md` interdit de porter une
- * information par la couleur seule, et un lien dans un paragraphe de texte
- * legal doit se distinguer sans dependre de la perception des couleurs.
+ * information par la couleur seule, et un lien d'un bloc legal doit se
+ * distinguer sans dependre de la perception des couleurs.
+ *
+ * `--ls-primary` ET NON `--ls-accent-gold-deep`, contrairement aux deux autres
+ * liens de ce module. Sur `--ls-surface-sand`, l'or profond donne 4,23:1, une
+ * paire que `frontend-design.md` refuse nommement : le sable est le fond
+ * piegeux du projet, et recopier la couleur des liens voisins introduirait ici
+ * exactement le defaut que la regle nomme. Averti en revue d'interface.
+ *
+ * `background` EST REDECLARE POUR RENDRE LA PAIRE MESURABLE.
+ * `verifier-contraste.sh` exige couleur et fond dans le MEME bloc : sans lui,
+ * ce lien echapperait au controle, et une couleur fautive y passerait.
+ *
+ * `min-height` PORTE LA ZONE TACTILE, convention de `.retourPanier` plus bas.
  */
 .lienLegal {
-  color: var(--ls-text);
+  display: inline-block;
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-3) 0;
+  background: var(--ls-surface-sand);
+  color: var(--ls-primary);
+  font-size: 0.875rem;
   text-decoration: underline;
+}
+
+.lienLegal:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
 }
