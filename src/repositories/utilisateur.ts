@@ -144,12 +144,20 @@ export async function lireDonneesExport(
  * CE QUE CHAQUE CHAMP FAIT ICI, ET AU NOM DE QUELLE FINALITE. L'arbitrage du
  * 5 septembre 2026 en retient trois, et le registre les porte en T11 :
  *
- *   nom, email, telephone, adresses  repondre a une demande RGPD, et retrouver
+ *   nom, email, date d'inscription   repondre a une demande RGPD, et retrouver
  *                                    un acheteur qui contacte la boutique
  *   nombre et montant des commandes  suivre l'activite commerciale, interet
  *                                    legitime et non execution du contrat
- *   derniere connexion               retrouver un acheteur, et constater qu'un
+ *   derniere connexion reussie       retrouver un acheteur, et constater qu'un
  *                                    compte est inactif
+ *   nombre d'adresses                savoir si le carnet est renseigne, sans
+ *                                    lire son contenu
+ *
+ * LE TELEPHONE ET LE CONTENU DES ADRESSES N'EN SONT PAS, et la premiere version
+ * de ce commentaire les annonçait tous deux alors que rien ne les lit. Le
+ * registre les declarait aussi, corrige le 5 septembre 2026 : un registre qui
+ * sur-declare est aussi faux qu'un registre qui sous-declare. Les ajouter un
+ * jour demande d'ecrire leur finalite d'abord, dans T11.
  *
  * AUCUN CHAMP N'EST LA « PARCE QU'IL EST EN BASE ». La minimisation, article
  * 5.1.c, veut qu'une donnee affichee serve une finalite nommee : le mot de

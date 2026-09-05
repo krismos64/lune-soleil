@@ -72,7 +72,7 @@ export type VueClients = {
  * requete rend, il ne decide jamais qui a le droit de la lancer. La garde de
  * role vit dans la page, appelee avant tout rendu.
  *
- * IL N'EST PAS VALIDE PAR UN SCHEMA ZOD, et c'est deliberе. Ce n'est ni un
+ * IL N'EST PAS VALIDE PAR UN SCHEMA ZOD, et c'est délibéré. Ce n'est ni un
  * identifiant ni une valeur de domaine : c'est du texte libre dont la seule
  * propriete attendue est d'etre du texte. Prisma le passe en parametre lie,
  * jamais en concatenation, donc l'injection est fermee par la couche d'acces.
