@@ -120,10 +120,29 @@ fois la même largeur, piège rencontré en LS-136.
 
 ## État des tickets
 
-**LS-191 est TERMINÉE**, huit critères sur huit.
+**LS-191 est TERMINÉE**, huit critères sur huit, PR #247 fusionnée en rebase.
 
-**LS-127 est à fermer**, reprise par LS-191 et LS-188, ses cinq critères vérifiés
-un par un.
+**LS-127 est FERMÉE**, reprise par LS-191 et LS-188, ses cinq critères confrontés
+un par un aux tickets repreneurs avant fermeture.
+
+**LS-194 créée**, Medium, sous LS-3 : l'administration n'a aucun lien d'évitement
+sur ses seize écrans, WCAG 2.4.1 niveau A.
+
+**120 terminés sur 184**, relevé dans Jira après la fusion.
+
+## Trois passages de CI, dont deux de ma faute
+
+**Le `noindex` manquait** sur la route de test : j'avais lancé le contrôle SEO
+avant de créer le fichier, donc il ne pouvait rien voir.
+
+**Le bloc CSS tombait dans la zone de palette de secours**, qui va de
+`.pageRacine` jusqu'au bout du fichier. Je n'avais lancé qu'une partie des
+contrôles avant de pousser. Après cette seconde erreur, j'ai joué les vingt et un
+contrôles textuels d'un coup, ce qui aurait dû être le geste initial.
+
+**Le troisième échec ne venait pas de ce travail** : un test de rendu PDF dépasse
+les 5 secondes sur l'exécuteur GitHub, quand il tourne en 1,87 s en local. La
+relance est passée.
 
 ## Ce qui reste, et qui n'est pas de cette story
 
