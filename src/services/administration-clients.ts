@@ -32,9 +32,17 @@
  * libre nue, en connaissance de l'ecart.
  *
  * NE PAS AJOUTER LA GARDE EN CROYANT REPARER UNE NEGLIGENCE. Revenir sur
- * l'arbitrage lui appartient, et cela tient en deux gestes : marquer
- * `@sensible DONNEES_CLIENTS` sur `listerClientsAdministration` et appeler
- * `exigerReauthentificationRecente` dans la page.
+ * l'arbitrage lui appartient, et cela tient en deux gestes : poser la marque de
+ * famille sur `listerClientsAdministration`, et appeler
+ * `exigerReauthentificationRecente` dans la page. La marche a suivre entiere est
+ * dans `.claude/familles-sans-action.txt`, avec le nom exact de la famille.
+ *
+ * LA MARQUE N'EST PAS ECRITE ICI EN TOUTES LETTRES, ET CE N'EST PAS UNE
+ * COQUETTERIE. `verifier-actions-sensibles.sh` cherche l'annotation dans `src/`
+ * sans distinguer un commentaire d'une marque reelle : l'ecrire pour l'expliquer
+ * la DECLENCHE, et le controle a echoue sur cette phrase meme, reclamant une
+ * garde pour une action qui n'est pas marquee. Motif « le hook bloque son
+ * explication », deja en fiche sur ce depot.
  * ---------------------------------------------------------------------------
  */
 import { prisma } from "@/lib/prisma";
