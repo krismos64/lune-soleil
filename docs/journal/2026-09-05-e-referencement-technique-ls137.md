@@ -178,7 +178,10 @@ vérifié. Fiche mémoire écrite.
 
 ## État des tickets
 
-**LS-137 est TERMINÉE**, six critères sur six, PR #240.
+**LS-137 est TERMINÉE**, six critères sur six, PR #240 fusionnée en rebase.
+
+**116 terminés sur 182**, relevé dans Jira après la clôture. Le total passe de
+181 à 182 avec LS-192.
 
 **LS-192 créée**, Low, sous LS-3 : le préfixe des médias est répété dans cinq
 fichiers sous deux noms de variable différents, `MEDIA_PREFIXE_PUBLIC` et
