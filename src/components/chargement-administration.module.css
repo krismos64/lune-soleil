@@ -1,0 +1,82 @@
+/*
+ * Etat de chargement des ecrans d'administration, LS-188.
+ *
+ * CE FICHIER NE PORTE PAS LA MISE EN PAGE DE L'ECRAN. Le `main`, le titre et le
+ * sur-titre reçoivent les classes du module de l'ecran appelant : le squelette
+ * doit se poser DANS la mise en page de chaque ecran, pas en imposer une.
+ * N'ajouter ici que ce qui appartient a l'armature elle-meme.
+ */
+
+/*
+ * L'ANNONCE EST DU TEXTE REEL, donc elle a une paire de contraste a tenir.
+ *
+ * `--ls-text-muted` sur `--ls-background` : 4,86:1, AA. Le fond est ecrit
+ * explicitement et non herite : `verifier-contraste.sh` lit les paires dans ce
+ * fichier, et une couleur de texte sans fond declare a cote n'est pas mesurable.
+ * Motif deja rencontre en LS-191, ou une paire ecrite en hexadecimal echappait
+ * au controle.
+ */
+.annonce {
+  margin: 0 0 var(--ls-space-5);
+  background: var(--ls-background);
+  color: var(--ls-text-muted);
+  line-height: 1.6;
+}
+
+.armature {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * CHAQUE LIGNE REPREND LE GABARIT D'UNE CARTE DE LISTE : meme fond, meme
+ * bordure, meme rayon que les cartes des ecrans d'administration. C'est ce qui
+ * fait que l'arrivee des donnees ne deplace rien.
+ */
+.ligne {
+  margin-bottom: var(--ls-space-3);
+  padding: var(--ls-space-4);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+}
+
+/*
+ * DEUX BARRES GRISES A LA PLACE DU TEXTE.
+ *
+ * AUCUNE ANIMATION DE PULSATION, meme choix qu'en LS-104 : elle attire l'oeil
+ * sur une attente qui dure une fraction de seconde, et `prefers-reduced-motion`
+ * obligerait a la desactiver pour une partie des utilisateurs. Autant ne pas
+ * l'ecrire.
+ *
+ * `--ls-surface-sand` EST DECORATIF ICI, aucune paire de contraste a tenir : ces
+ * barres ne portent aucun texte et l'armature entiere est `aria-hidden`.
+ */
+.barreLongue,
+.barreCourte {
+  display: block;
+  height: 1rem;
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface-sand);
+}
+
+.barreLongue {
+  width: 70%;
+  margin-bottom: var(--ls-space-2);
+}
+
+/*
+ * LA LARGEUR VIENT DU COMPOSANT, via `--ls-largeur-barre`, avec un repli ecrit
+ * ici. Sans le repli, une barre sans variable declaree deviendrait pleine
+ * largeur, soit exactement le peigne regulier que la variation evite.
+ *
+ * `max-width: 100%` PLUTOT QUE RIEN : la valeur passee est un pourcentage du
+ * parent, donc deja bornee, mais la borne rend le debordement impossible meme
+ * si un appelant futur passait une longueur absolue. Critere 4, aucun
+ * debordement horizontal a 320 px.
+ */
+.barreCourte {
+  width: var(--ls-largeur-barre, 45%);
+  max-width: 100%;
+}

@@ -37,13 +37,27 @@ ko=0
 segments_examines=0
 
 # Pour chaque `page.tsx` du dépôt, on regarde si son segment appelle
-# `notFound()` et s'il porte un `loading.tsx` voisin.
+# `notFound()` et si un `loading.tsx` le couvre.
 #
-# LES COMMENTAIRES SONT EXCLUS DE LA RECHERCHE. Trois fichiers du dépôt NOMMENT
-# `notFound()` pour expliquer pourquoi ils n'ont pas de `loading.tsx` : les
-# compter comme des appels rendrait le contrôle rouge sur du code exemplaire, et
-# la réaction serait de retirer l'explication. Motif « contrôle satisfait par un
-# commentaire », déjà en fiche sur ce dépôt.
+# LA REMONTÉE VERS LES SEGMENTS PARENTS EST INDISPENSABLE, et son absence était
+# un trou réel de ce contrôle, mesuré le 5 septembre 2026 en LS-188.
+#
+# UN `loading.tsx` COUVRE TOUT SON SOUS-ARBRE, pas seulement sa propre page,
+# exactement comme un `error.tsx` couvre les seize écrans d'administration
+# depuis LS-191. Un `loading.tsx` posé à la racine de `administration/` a donc
+# fait passer en 200 les 404 de `produits/[id]` et `commandes/[id]`, deux
+# dossiers plus bas, pendant que ce contrôle restait vert : il ne comparait que
+# des fichiers VOISINS.
+#
+# MESURE : sur une route de diagnostic appelant `notFound()` en première
+# instruction, 404 hors de `/administration`, 200 dedans, le seul écart étant la
+# présence du `loading.tsx` racine.
+#
+# LES COMMENTAIRES SONT EXCLUS DE LA RECHERCHE. Plusieurs fichiers du dépôt
+# NOMMENT `notFound()` pour expliquer pourquoi ils n'ont pas de `loading.tsx` :
+# les compter comme des appels rendrait le contrôle rouge sur du code
+# exemplaire, et la réaction serait de retirer l'explication. Motif « contrôle
+# satisfait par un commentaire », déjà en fiche sur ce dépôt.
 while IFS= read -r page; do
   [ -n "$page" ] || continue
   segments_examines=$((segments_examines + 1))
@@ -55,14 +69,36 @@ while IFS= read -r page; do
     | grep -vE ':[[:space:]]*(//|\*|/\*)' || true)
 
   [ -n "$appelle_notfound" ] || continue
-  [ -f "$segment/loading.tsx" ] || continue
 
-  echo "ECHEC $relatif porte un loading.tsx et appelle notFound()"
-  echo "      la frontière Suspense du segment démarre le streaming avant que"
-  echo "      notFound() soit atteint : le statut reste 200 au lieu de 404, et"
-  echo "      un moteur indexe une page inexistante. Mesuré en LS-111."
-  echo "      Ce qui le rétablit sans le conflit : déplacer le contenu lourd"
-  echo "      sous un <Suspense> DANS la page, contrôle d'existence au-dessus."
+  # On remonte du segment de la page jusqu'à `src/app`, à la recherche du
+  # premier `loading.tsx` qui l'enveloppe. Le sien compte comme ceux de ses
+  # parents : les deux posent une frontière au-dessus de l'appel.
+  couvrant=""
+  courant="$segment"
+  while [ -n "$courant" ] && [ "$courant" != "$APP" ]; do
+    if [ -f "$courant/loading.tsx" ]; then
+      couvrant="$courant"
+      break
+    fi
+    courant="$(dirname "$courant")"
+  done
+  # `src/app` lui-même porte le dernier segment à examiner.
+  if [ -z "$couvrant" ] && [ -f "$APP/loading.tsx" ]; then
+    couvrant="$APP"
+  fi
+
+  [ -n "$couvrant" ] || continue
+
+  relatif_couvrant="${couvrant#"$RACINE"/}"
+
+  echo "ECHEC $relatif appelle notFound() sous un loading.tsx"
+  echo "      la frontière est posée par $relatif_couvrant/loading.tsx"
+  echo "      elle démarre le streaming avant que notFound() soit atteint : le"
+  echo "      statut reste 200 au lieu de 404, et un moteur indexe une page"
+  echo "      inexistante. Mesuré en LS-111, puis en LS-188 sur un PARENT."
+  echo "      Ce qui le rétablit sans le conflit : retirer ce loading.tsx et"
+  echo "      placer le contenu lourd sous un <Suspense> DANS la page qui le"
+  echo "      voulait, contrôle d'existence au-dessus."
   ko=$((ko + 1))
 done <<EOF
 $(find "$APP" -name "page.tsx" 2>/dev/null | sort || true)

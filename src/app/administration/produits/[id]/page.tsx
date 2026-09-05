@@ -9,6 +9,8 @@
  * peripherie et ne peut pas relire la session en base, il ne verrait que la
  * presence d'un cookie, ni sa validite ni le role.
  */
+import { Suspense } from "react";
+
 import { headers } from "next/headers";
 
 import { prisma } from "@/lib/prisma";
@@ -106,9 +108,85 @@ export default async function PageEditeurProduit({
     notFound();
   }
 
-  const sections = await listerSections(produit.id);
-  const variantes = await listerVariantes(produit.id);
-  const medias = await listerMedias(produit.id);
+  /*
+   * TOUT CE QUI SUIT EST SOUS `<Suspense>`, ET L'ORDRE EST LA PROTECTION,
+   * LS-188. La garde d'existence ci-dessus s'execute AVANT toute frontiere de
+   * Suspense : c'est ce qui garantit un vrai 404 plutot qu'un 200.
+   *
+   * C32 INTERDIT UN `loading.tsx` SUR CETTE ROUTE, et la raison vaut aussi pour
+   * l'ordre ici. Une frontiere Suspense engage la reponse en 200 des qu'un
+   * repli s'affiche : `notFound()` appele ensuite ne peut plus changer le
+   * statut, Next.js se contentant d'ajouter un `noindex`. Verifie via Context7
+   * sur Next.js 16.2.9, guide `streaming.mdx` : « Use notFound() before any
+   * await or <Suspense> boundary ».
+   *
+   * NE JAMAIS DEPLACER `lireProduit` NI SON `notFound()` SOUS LA FRONTIERE. Le
+   * defaut serait invisible a l'ecran, la page rendue etant identique dans les
+   * deux cas, et un moteur indexerait une fiche inexistante.
+   */
+  return (
+    <main className={styles.page}>
+      <p className={styles.fil}>
+        <a href="/administration/categories">Catalogue</a>
+      </p>
+      {/*
+       * L'ORDRE DES BLOCS EST DELIBERE, arbitrage du 14 aout 2026 : informations
+       * generales, puis declinaisons, puis sections editoriales.
+       *
+       * A 320 px tout est empile, et corriger un nom ne doit demander aucun
+       * defilement. C'est aussi l'ordre du parcours 3, qui cree le produit avant
+       * ses variantes. Ne pas remonter les declinaisons en tete au motif
+       * qu'elles portent le prix et le stock.
+       */}
+      {/*
+       * LE TITRE EST RENDU HORS DE LA FRONTIERE. `produit.nom` est deja lu par
+       * la garde d'existence : le faire attendre avec le reste priverait
+       * l'exploitante du seul repere qui dit QUELLE fiche se charge, sans rien
+       * economiser.
+       */}
+      <h1 className={styles.titre}>{produit.nom}</h1>
+
+      <Suspense fallback={<ChargementFiche />}>
+        <CorpsFicheProduit produit={produit} />
+      </Suspense>
+    </main>
+  );
+}
+
+/**
+ * Repli affiche pendant que le corps de la fiche se charge, LS-188.
+ *
+ * IL NE REPREND PAS L'ARMATURE DE LISTE du composant partage : une fiche produit
+ * n'est pas une liste, elle empile un bloc de publication, un formulaire, un
+ * tableau de declinaisons et une galerie. Des lignes identiques y feraient le
+ * saut de mise en page que le critere 3 interdit.
+ */
+function ChargementFiche() {
+  return (
+    <p className={styles.chargement} role="status">
+      Chargement de la fiche…
+    </p>
+  );
+}
+
+/**
+ * Corps de la fiche, tout ce qui demande des lectures supplementaires.
+ *
+ * IL RECOIT UN IDENTIFIANT DEJA VERIFIE, jamais le parametre brut de l'URL : son
+ * existence a ete etablie au-dessus de la frontiere. Il ne refait donc aucun
+ * controle d'existence, et n'appelle surtout pas `notFound()`, qui serait sans
+ * effet sur le statut a ce stade.
+ */
+async function CorpsFicheProduit({
+  produit,
+}: {
+  produit: NonNullable<Awaited<ReturnType<typeof lireProduit>>>;
+}) {
+  const produitId = produit.id;
+
+  const sections = await listerSections(produitId);
+  const variantes = await listerVariantes(produitId);
+  const medias = await listerMedias(produitId);
 
   /*
    * CE QUI MANQUE EST CALCULE AU RENDU, pour que l'ecran le montre AVANT toute
@@ -116,7 +194,7 @@ export default async function PageEditeurProduit({
    * d'ecrire : cet affichage est un confort, jamais une autorisation,
    * invariant 2.
    */
-  const motifs = await motifsNonPubliable(prisma, produit.id);
+  const motifs = await motifsNonPubliable(prisma, produitId);
 
   /*
    * LE COMPTE DE COMMANDES PAR VARIANTE SERT L'AVERTISSEMENT D'ADR-029.
@@ -138,20 +216,7 @@ export default async function PageEditeurProduit({
   );
 
   return (
-    <main className={styles.page}>
-      <p className={styles.fil}>
-        <a href="/administration/categories">Catalogue</a>
-      </p>
-      {/*
-       * L'ORDRE DES BLOCS EST DELIBERE, arbitrage du 14 aout 2026 : informations
-       * generales, puis declinaisons, puis sections editoriales.
-       *
-       * A 320 px tout est empile, et corriger un nom ne doit demander aucun
-       * defilement. C'est aussi l'ordre du parcours 3, qui cree le produit avant
-       * ses variantes. Ne pas remonter les declinaisons en tete au motif
-       * qu'elles portent le prix et le stock.
-       */}
-      <h1 className={styles.titre}>{produit.nom}</h1>
+    <>
       {/*
        * LE BLOC DE PUBLICATION EST EN TETE, apres le titre, LS-103.
        *
@@ -220,6 +285,6 @@ export default async function PageEditeurProduit({
               : null,
         }))}
       />
-    </main>
+    </>
   );
 }

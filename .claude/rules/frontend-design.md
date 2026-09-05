@@ -212,7 +212,7 @@ serveur, pending, disabled, indisponible, aucun résultat de filtre, rupture.
 Jamais de faux succès optimiste : une erreur serveur produit un message visible
 associé à l'action.
 
-### C32, aucun `loading.tsx` sur une route qui appelle `notFound()`
+### C32, aucun `loading.tsx` au-dessus d'un appel à `notFound()`
 
 **Le seul cas où l'état de chargement exigé ci-dessus est interdit.** Un
 `loading.tsx` enveloppe la page entière dans une frontière Suspense : le
@@ -222,6 +222,24 @@ contente d'ajouter un `noindex`.
 
 Mesuré en LS-111 : 404 sans le fichier, 200 avec.
 
+**La règle porte sur le SOUS-ARBRE, pas sur le segment**, et sa version
+précédente disait « sur une route qui appelle `notFound()` », ce qui se lisait
+comme une contrainte de voisinage. Un `loading.tsx` couvre tout ce qui est sous
+lui, exactement comme un `error.tsx` couvre les seize écrans d'administration
+depuis LS-191 : le fichier interdit peut être **plusieurs dossiers plus haut**
+que l'appel qu'il casse.
+
+Mesuré en LS-188, le 5 septembre 2026, sur une route de diagnostic appelant
+`notFound()` en première instruction : **404 hors de `/administration`, 200
+dedans**, le seul écart étant la présence d'un `loading.tsx` à la racine du
+sous-arbre. Trois fichiers avaient été posés de bonne foi, sur
+`administration/`, `commandes/` et `produits/`, et chacun cassait le statut
+d'écrans situés un ou deux dossiers plus bas.
+
+**Ce que la règle impose donc à un écran de liste** dont un descendant porte un
+segment dynamique : son état de chargement passe par un `<Suspense>` interne, au
+même titre que celui de l'écran de détail lui-même.
+
 **Le défaut est invisible à l'écran**, la page rendue étant identique dans les
 deux cas. Un moteur indexerait une fiche produit inexistante, et le `noindex` ne
 protège que des moteurs qui le respectent. Le SEO tranche : un statut faux est
@@ -230,9 +248,19 @@ un défaut de correction, un écran figé n'est qu'un défaut de confort.
 Ce qui rétablit le chargement sans le conflit : placer le contenu lourd sous un
 `<Suspense>` **dans** la page, en gardant le contrôle d'existence au-dessus.
 
-`scripts/verifier-loading-et-404.sh` l'attrape à l'écriture ;
-`tests/e2e/pages-erreur.spec.ts` vérifie le **code de statut** et non l'aspect
-de la page, ce qui l'attrape quelle qu'en soit la cause.
+`scripts/verifier-loading-et-404.sh` l'attrape à l'écriture, en **remontant les
+segments parents** depuis LS-188 ; `tests/e2e/pages-erreur.spec.ts` vérifie le
+**code de statut** des routes publiques, et
+`tests/e2e/statut-detail-administration.spec.ts` celui des deux écrans de détail
+de l'administration, qui n'en avaient aucun avant LS-188. Ces tests lisent le
+statut et non l'aspect de la page, ce qui les rend sensibles à une cause que
+personne n'a prévue.
+
+**Le contrôle textuel ne remplace pas le test, et l'inverse non plus.** Le
+premier voit les deux formes connues du défaut sur toutes les routes, sans
+navigateur ; le second voit le statut réel, y compris si Next.js change de
+comportement. Le trou de LS-188 était visible par les deux, et aucun des deux
+n'était en place.
 
 ### Les trois pages d'erreur publiques, LS-146
 

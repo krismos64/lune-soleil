@@ -11,6 +11,7 @@
 import { formaterMontant } from "@/lib/montant";
 import Link from "next/link";
 import { randomUUID } from "node:crypto";
+import { Suspense } from "react";
 
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
@@ -111,7 +112,20 @@ export default async function PageDetailCommande({
     notFound();
   }
 
-  const remboursement = await lireRemboursementPossible(commande.id);
+  /*
+   * LA LECTURE DU REMBOURSEMENT EST DESCENDUE SOUS `<Suspense>`, LS-188, et ce
+   * qui reste ici est deja charge par `lireDetailCommande`. C'est la seule
+   * lecture supplementaire de cet ecran : l'isoler laisse le numero, le statut,
+   * les articles et l'adresse s'afficher sans l'attendre.
+   *
+   * C32 INTERDIT UN `loading.tsx` SUR CETTE ROUTE. La raison vaut aussi pour
+   * l'ordre ici : une frontiere Suspense engage la reponse en 200 des qu'un
+   * repli s'affiche, et les deux `notFound()` ci-dessus ne pourraient plus
+   * changer le statut. Verifie via Context7 sur Next.js 16.2.9, guide
+   * `streaming.mdx` : « Use notFound() before any await or <Suspense>
+   * boundary ». Ne jamais deplacer `lireDetailCommande` ni ses `notFound()`
+   * sous la frontiere.
+   */
 
   /*
    * LA REFERENCE DE DEMANDE EST ENGENDREE ICI, UNE FOIS PAR RENDU DE PAGE, et
@@ -274,13 +288,18 @@ export default async function PageDetailCommande({
         <h2 id="titre-remboursement" className={styles.titreSection}>
           Remboursement
         </h2>
-        <Remboursement
-          commandeId={commande.id}
-          referenceDemande={referenceDemande}
-          restantCentimes={remboursement?.restantCentimes ?? 0}
-          avoirs={remboursement?.avoirs ?? []}
-          factureAbsente={remboursement === null}
-        />
+        <Suspense
+          fallback={
+            <p className={styles.chargement} role="status">
+              Chargement du remboursement…
+            </p>
+          }
+        >
+          <BlocRemboursement
+            commandeId={commande.id}
+            referenceDemande={referenceDemande}
+          />
+        </Suspense>
       </section>
 
       <section className={styles.section} aria-labelledby="titre-suivi">
@@ -340,5 +359,38 @@ export default async function PageDetailCommande({
         )}
       </section>
     </main>
+  );
+}
+
+/**
+ * Bloc de remboursement, seule lecture supplementaire de cet ecran, LS-188.
+ *
+ * IL RECOIT UN IDENTIFIANT DEJA VERIFIE, jamais le parametre brut de l'URL :
+ * l'existence de la commande a ete etablie au-dessus de la frontiere. Il ne
+ * refait aucun controle d'existence, et n'appelle surtout pas `notFound()`, qui
+ * serait sans effet sur le statut a ce stade.
+ *
+ * LA REFERENCE DE DEMANDE EST ENGENDREE AU-DESSUS ET PASSEE ICI, jamais
+ * recalculee dans ce composant. Elle ferme le double clic en donnant la MEME
+ * cle d'idempotence a deux envois successifs : la recalculer sous la frontiere
+ * la ferait varier d'un rendu a l'autre et rouvrirait le defaut.
+ */
+async function BlocRemboursement({
+  commandeId,
+  referenceDemande,
+}: {
+  commandeId: string;
+  referenceDemande: string;
+}) {
+  const remboursement = await lireRemboursementPossible(commandeId);
+
+  return (
+    <Remboursement
+      commandeId={commandeId}
+      referenceDemande={referenceDemande}
+      restantCentimes={remboursement?.restantCentimes ?? 0}
+      avoirs={remboursement?.avoirs ?? []}
+      factureAbsente={remboursement === null}
+    />
   );
 }
