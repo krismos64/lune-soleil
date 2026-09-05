@@ -109,8 +109,8 @@ existe-t-il ? », et c'est la seconde question que cet inventaire pose.
 | Catalogue | **LS-183** | livré, liste, filtres par état et badges |
 | Stocks et marchés | LS-106 | livré, LS-63 pour le montant encaissé |
 | Expéditions | LS-130, **LS-181** | livré, trois colonnes depuis LS-181 |
-| Factures et avoirs | LS-184 | **à faire**, le métier existe sans son écran |
-| Clients | LS-185 | **à faire**, précédé d'un arbitrage RGPD |
+| Factures et avoirs | **LS-184** | livré, liste chronologique, filtre par période |
+| Clients | **LS-185** | livré, recherche libre, écart ADR-027 assumé |
 | Avis | LS-61 | à faire |
 | Messages | LS-97 | livré |
 | Paramètres | LS-98 | à faire |
@@ -123,6 +123,17 @@ et figure dans les exclusions justifiées de
 **L'espace client compte cinq onglets** : Vue d'ensemble, Mes commandes, Mes
 adresses, Mes avis, Profil et données. Il porte aussi son **propre écran de
 connexion** sur `/espace-client`, distinct de celui de l'administration.
+
+**LS-180 les a livrés le 5 septembre 2026**, avec deux écarts assumés et écrits
+dans le composant. « Profil et données » devient **deux** entrées, le dépôt
+servant deux routes là où le prototype en montre une : les fondre cacherait le
+carnet de droits RGPD, où vivent l'export et la suppression. « Mes avis » est
+montrée **inerte** avec son ticket LS-61, même arbitrage que les rubriques à
+venir de l'administration.
+
+La sixième entrée du prototype, « Se déconnecter », est une **action** et non une
+rubrique : elle vit en pied de barre au-delà de 768 px, et sur la ligne de
+bascule en dessous, pour ne pas disparaître avec le panneau replié.
 
 Trois écrans méritent d'être signalés parce qu'ils devancent la documentation
 plutôt qu'ils ne s'en écartent :
