@@ -187,12 +187,27 @@ afterAll(async () => {
   await client.end();
 });
 
+/*
+ * `intention_remboursement` EST DANS LA LISTE, ET SON ABSENCE A CASSE LA CI.
+ *
+ * La base est PARTAGEE entre fichiers `.sequential`, et ce fichier ecrit des
+ * avoirs. Sans cette table dans le `TRUNCATE`, une intention residuelle survit
+ * a ce fichier et fausse le calcul du restant remboursable chez le voisin :
+ * `remboursement-garde.sequential.test.ts` echouait sur
+ * `chk_facture_avoir_borne`, la contrainte faisant a juste titre son travail.
+ *
+ * LE SYMPTOME ACCUSAIT LE MAUVAIS FICHIER, exactement comme les trois tests de
+ * rendu PDF de LS-183 : l'erreur remontait dans le code du voisin, qui n'avait
+ * pas change. Le vrai defaut etait ici, dans ce que ce fichier laisse derriere
+ * lui. Une liste de nettoyage se copie du voisin le plus proche plutot que
+ * d'etre reconstruite de memoire.
+ */
 afterEach(async () => {
   await client.query(
     `TRUNCATE alerte_critique, historique_statut, mouvement_stock,
-     evenement_fournisseur, paiement, avoir, facture, reservation,
-     ligne_commande, commande, variante, produit, categorie, compteur_numero
-     CASCADE`,
+     evenement_fournisseur, paiement, intention_remboursement, avoir, facture,
+     reservation, ligne_commande, commande, variante, produit, categorie,
+     compteur_numero CASCADE`,
   );
 });
 
