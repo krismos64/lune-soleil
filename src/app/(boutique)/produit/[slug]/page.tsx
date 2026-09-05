@@ -22,6 +22,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { DonneesStructurees } from "@/components/donnees-structurees";
+import {
+  disponibiliteDuProduit,
+  jsonLdFilAriane,
+  jsonLdProduit,
+} from "@/lib/seo";
 import { lireFichePublique } from "@/services/catalogue";
 import styles from "./fiche.module.css";
 import { Galerie } from "./galerie";
@@ -75,14 +81,51 @@ export async function generateMetadata({
   const fiche = await lireFichePublique(slug);
 
   if (fiche === null) {
-    return { title: "Pièce introuvable, Lune & Soleil" };
+    /*
+     * LS-137. `noindex` SUR L'INTROUVABLE, EN PLUS DU 404.
+     *
+     * Le statut 404 suffit aux moteurs qui le respectent, et c'est bien lui la
+     * garde principale, C32. Le `noindex` est la ceinture : il couvre le cas ou
+     * une frontiere Suspense introduite plus tard ferait retomber le statut a
+     * 200, defaut mesure en LS-111 et INVISIBLE a l'ecran. Deux lignes de
+     * defense pour un defaut qu'aucun controle visuel n'attrape.
+     *
+     * AUCUN CANONICAL ICI. Une page introuvable ne se declare canonique de rien.
+     */
+    return {
+      title: "Pièce introuvable",
+      robots: { index: false, follow: false },
+    };
   }
 
+  const description =
+    fiche.descriptionCourte ??
+    `${fiche.nom}, bijou artisanal fait main, créé à l'unité.`;
+  const chemin = `/produit/${fiche.slug}`;
+
   return {
-    title: `${fiche.nom}, Lune & Soleil`,
-    description:
-      fiche.descriptionCourte ??
-      `${fiche.nom}, bijou artisanal fait main, créé à l'unité.`,
+    title: fiche.nom,
+    description,
+    /*
+     * LE CANONICAL PORTE LE SLUG DE LA FICHE, jamais celui demande dans l'URL.
+     * Ils sont identiques aujourd'hui, la lecture se faisant par slug exact.
+     * Le prendre a la source garde le canonical juste si une redirection de
+     * slug ancien vers slug courant est ajoutee un jour.
+     */
+    alternates: { canonical: chemin },
+    openGraph: {
+      title: fiche.nom,
+      description,
+      url: chemin,
+      type: "website",
+      /*
+       * LA PREMIERE PHOTOGRAPHIE, quand il y en a une. `photos` est deja
+       * ordonnee par le service, la premiere est celle de la galerie.
+       */
+      ...(fiche.photos[0] !== undefined
+        ? { images: [{ url: fiche.photos[0].chemin }] }
+        : {}),
+    },
   };
 }
 
@@ -103,8 +146,55 @@ export default async function PageFicheProduit({
     notFound();
   }
 
+  /*
+   * LS-137. LE BALISAGE EST CONSTRUIT DEPUIS LA FICHE DEJA LUE, sans seconde
+   * lecture : ce que les moteurs voient et ce que le visiteur voit viennent du
+   * meme objet, donc ne peuvent pas diverger.
+   *
+   * LE PRIX PUBLIE EST LE PLUS BAS DES VARIANTES, comme la carte du catalogue.
+   * Publier celui de la premiere variante ferait annoncer un prix que le
+   * visiteur ne retrouve pas forcement a l'arrivee.
+   *
+   * AUCUNE QUANTITE N'ENTRE ICI, et le type `ProduitBalise` n'a pas de champ ou
+   * en mettre : la garde est dans la signature, pas dans la vigilance.
+   */
+  const prixMinimumCentimes =
+    fiche.variantes.length > 0
+      ? Math.min(...fiche.variantes.map((variante) => variante.prixCentimes))
+      : 0;
+
+  const balisageProduit = jsonLdProduit({
+    nom: fiche.nom,
+    slug: fiche.slug,
+    descriptionCourte: fiche.descriptionCourte,
+    categorieNom: fiche.categorieNom,
+    prixCentimes: prixMinimumCentimes,
+    disponibilite: disponibiliteDuProduit(
+      fiche.variantes.map((variante) => variante.disponibilite),
+    ),
+    photoChemin: fiche.photos[0]?.chemin ?? null,
+  });
+
+  /*
+   * LE FIL D'ARIANE BALISE SUIT CELUI QUI EST AFFICHE, quatre maillons dont le
+   * dernier est la page courante. Un balisage qui divergerait du fil visible
+   * serait un signal contradictoire pour les moteurs.
+   */
+  const balisageFilAriane = jsonLdFilAriane([
+    { nom: "Accueil", chemin: "/" },
+    { nom: "Le catalogue", chemin: "/catalogue" },
+    {
+      nom: fiche.categorieNom,
+      chemin: `/catalogue?categorie=${fiche.categorieSlug}`,
+    },
+    { nom: fiche.nom, chemin: `/produit/${fiche.slug}` },
+  ]);
+
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
+      <DonneesStructurees balisage={balisageProduit} />
+      <DonneesStructurees balisage={balisageFilAriane} />
+
       {/*
        * FIL D'ARIANE, retour vers la categorie. Il n'est pas dans la table des
        * onze blocs, qui commence au nom du bijou : il precede donc le bloc 1

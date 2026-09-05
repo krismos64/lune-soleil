@@ -26,9 +26,17 @@ import { FormulaireContact } from "./formulaire-contact";
 import styles from "./contact.module.css";
 
 export const metadata = {
-  title: "Nous écrire, Lune & Soleil",
+  title: "Nous écrire",
   description:
     "Une question sur un bijou, une commande ou une création sur mesure : écrivez à l'atelier, la réponse arrive sous quelques jours.",
+  // LS-137, page publique indexable : canonical explicite.
+  alternates: { canonical: "/contact" },
+  openGraph: {
+    title: "Nous écrire",
+    description:
+      "Une question sur un bijou, une commande ou une création sur mesure.",
+    url: "/contact",
+  },
 };
 
 export const dynamic = "force-dynamic";

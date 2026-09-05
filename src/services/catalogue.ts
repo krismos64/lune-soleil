@@ -577,6 +577,17 @@ export type ProduitCatalogue = {
   disponibilite: EtatDisponibilite;
   mediaChemin: string | null;
   mediaTexteAlternatif: string | null;
+  /**
+   * Date de premiere publication, LS-137.
+   *
+   * ELLE SERT AU SITEMAP et non a l'affichage. Le depot la remontait deja pour
+   * son tri, elle etait simplement perdue en sortie de service.
+   *
+   * `null` EST POSSIBLE : le schema le permet, et un produit ACTIF sans
+   * `publie_a` est un cas que le sitemap doit savoir traiter plutot que
+   * supposer absent.
+   */
+  publieA: Date | null;
 };
 
 /** Ce que le catalogue public rend, produits et filtres disponibles. */
@@ -656,6 +667,7 @@ export async function lireCataloguePublic(
       disponibilite: etatDisponibilite(ligne.quantiteDisponible),
       mediaChemin: ligne.mediaChemin,
       mediaTexteAlternatif: ligne.mediaTexteAlternatif,
+      publieA: ligne.publieA,
     })),
     categories,
     categorieRetenue,
