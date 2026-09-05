@@ -41,6 +41,21 @@ import { notFound } from "next/navigation";
  * l'exclut pour ce motif, la garde de rôle portant sur les Server Actions et
  * sur les ecrans qui LISENT.
  */
+/*
+ * `noindex` COMME TOUTE PAGE PRIVEE, LS-137, et le controle SEO a eu raison de
+ * le reclamer : la route rend 404 en production, mais une metadonnee absente
+ * reste une metadonnee absente, et le jour ou la garde bougerait la page serait
+ * indexable sans que rien ne l'ait signale.
+ *
+ * `follow: false` ICI, alors que les autres pages privees gardent `follow: true`.
+ * Elles portent des liens utiles a suivre vers le catalogue ; celle-ci ne rend
+ * jamais rien, elle leve.
+ */
+export const metadata = {
+  title: "Echec de rendu",
+  robots: { index: false, follow: false },
+};
+
 export default async function EcranEchecRendu() {
   /*
    * `AUTORISER_ECHEC_RENDU` N'EST PAS UN SECRET et n'autorise aucun acces : elle
