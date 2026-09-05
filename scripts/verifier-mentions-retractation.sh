@@ -76,7 +76,21 @@ verifier_emplacement() {
     return
   fi
 
-  if ! sans_commentaires "$chemin" | grep -q "$motif"; then
+  # L'IMPORT NE COMPTE PAS, SEUL L'USAGE COMPTE.
+  #
+  # Les lignes `import` sont retirées avant la recherche, et cette ligne a été
+  # écrite APRÈS que la cinquième mutation l'a imposée : retirer les deux usages
+  # de `MENTION_TUNNEL` du rendu laissait le contrôle VERT, l'import subsistant
+  # et satisfaisant le motif à lui seul.
+  #
+  # C'est le motif « nom nu hors ancrage », déjà en fiche : un contrôle qui
+  # cherche un identifiant n'importe où dans un fichier confond « la mention est
+  # affichée » et « le module est importé ». Un import orphelin est d'ailleurs
+  # exactement ce que produit un retrait de balise fait à la main.
+  #
+  # Le lint rattraperait l'import inutilisé, mais il ne rattraperait PAS un
+  # import encore utilisé ailleurs dans le fichier pour autre chose.
+  if ! sans_commentaires "$chemin" | grep -v "^import " | grep -q "$motif"; then
     echo "ECHEC $libelle : la mention est absente de $fichier"
     echo "      $explication"
     echo "      Article L221-23. Sans elle, l'article L221-20 porte le délai de"
