@@ -174,6 +174,24 @@ export default defineConfig({
        * d'erreur du parcours 1 que la page de confirmation doit couvrir.
        */
       STRIPE_SECRET_KEY: "",
+      /*
+       * LA ROUTE QUI ECHOUE A DESSEIN EST OUVERTE, LS-191, et UNIQUEMENT ici.
+       *
+       * `administration/echec-rendu` rend 404 sans cette variable : c'est un
+       * defaut ferme, la page n'existe nulle part ailleurs que dans cette suite.
+       * Elle est le seul moyen de faire passer une erreur reelle par la vraie
+       * frontiere d'erreur, sous le vrai layout, avec la barre de navigation
+       * reellement rendue.
+       *
+       * Le critere 6 de la story refuse une frontiere qu'aucun test ne
+       * traverse : « une frontiere qu'aucun test ne traverse est une intention,
+       * pas une garantie ».
+       *
+       * `scripts/verifier-route-echec.sh` garde l'ordre des deux instructions de
+       * cette page, et `erreur-administration.spec.ts` verifie qu'elle rend bien
+       * 404 quand la variable n'est pas posee.
+       */
+      AUTORISER_ECHEC_RENDU: "1",
     },
   },
 });

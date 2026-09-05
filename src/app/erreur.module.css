@@ -198,3 +198,41 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+/*
+ * La reference d'incident affichee a l'administratrice, LS-191.
+ *
+ * ELLE PORTE SON PROPRE STYLE PARCE QU'UN `<code>` NU TOMBE SUR LA FEUILLE DU
+ * NAVIGATEUR : police monospace absente d'ADR-022, et taille par defaut
+ * d'environ 13 px face aux 16 px du paragraphe qui l'entoure. C'etait le seul
+ * monospace de tout le depot, releve par `ls-frontend-revue`.
+ *
+ * `font-family: inherit` GARDE LA POLICE DU SITE. Le chiffre n'a pas besoin
+ * d'etre en chasse fixe pour etre lu ou recopie : ce qui aide est qu'il se
+ * detache du texte courant, ce que font le fond et le cadre.
+ *
+ * LA PAIRE EST ECRITE EN JETONS, ET C'EST CE QUI LA REND MESURABLE.
+ * `verifier-contraste.sh` ne reconnait que `var(--ls-...)` : la meme paire
+ * ecrite en hexadecimal lui est INVISIBLE, et sa premiere version l'etait.
+ * Prouve par mutation, passer la couleur a `--ls-text-muted` fait rougir le
+ * controle en nommant 4,35:1 pour un seuil de 4,5:1 ; en hexadecimal la meme
+ * degradation le laissait vert.
+ *
+ * Le sable est le fond piegeux du projet, C31 : `--ls-text` y tient a 9,68:1,
+ * un jeton de texte secondaire n'y tiendrait pas.
+ *
+ * `word-break` EXISTE POUR 320 px. Le digest est une chaine de chiffres sans
+ * espace : sans lui, un identifiant long deborderait de la colonne, motif du
+ * libelle sans espace deja rencontre en LS-171.
+ */
+.reference {
+  padding: 2px 6px;
+  border: 1px solid var(--ls-border);
+  border-radius: 3px;
+  /* --ls-text sur --ls-surface-sand : 9,68:1, AAA. */
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+  font-family: inherit;
+  font-size: inherit;
+  word-break: break-all;
+}

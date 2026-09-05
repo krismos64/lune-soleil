@@ -47,6 +47,10 @@ ko=0
 #   /administration/connexion           on n'y est pas encore connecté
 #   /administration/reauthentification  on y arrive par une action, jamais par choix
 #   /administration/produits/nouveau    bouton d'action de l'écran Catalogue, LS-183
+#   /administration/echec-rendu         page qui lève à dessein, LS-191, jamais
+#                                       navigable : elle n'existe que pour que la
+#                                       suite de bout en bout traverse la frontière
+#                                       d'erreur, et rend 404 hors des tests
 #
 # LES ÉCRANS DE DÉTAIL SONT EXCLUS PAR LEUR FORME et non par leur nom : un
 # segment dynamique, `[id]`, porte un identifiant dans son URL et s'atteint
@@ -58,6 +62,7 @@ EXCLUSIONS="
 /administration/connexion
 /administration/reauthentification
 /administration/produits/nouveau
+/administration/echec-rendu
 "
 
 est_exclue() {
