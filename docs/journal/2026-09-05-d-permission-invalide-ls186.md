@@ -83,15 +83,41 @@ expliquant quand poser une marque.
 | Mutation, portée fautive remise | **rouge**, le fichier et la portée nommés |
 | `npm run format:check` | vert |
 
-## Ce qui reste
+## Le critère 2, vérifié après la fusion
 
-**Le run manuel du critère 2 n'est pas fait.** `workflow_dispatch` s'exécute sur
-`main`, donc la preuve que le workflow atteint enfin ses jobs ne pourra être
-faite qu'après la fusion. À lancer depuis l'onglet Actions.
+`workflow_dispatch` s'exécute sur `main`, donc la preuve ne pouvait être faite
+qu'après. Elle l'est, run `33948706709`, et le contraste avec l'état d'avant est
+net :
+
+```
+workflow_dispatch completed success  cree=2026-09-05T06:01:39Z maj=2026-09-05T06:01:49Z
+push              completed failure  cree=2026-09-05T05:48:59Z maj=2026-09-05T05:48:59Z
+```
+
+La ligne du bas est un de mes pushs de la nuit, `cree` égale `maj` à la seconde.
+La ligne du haut porte **dix secondes d'écart**, donc du travail réel.
+
+```
+job: Comptes et renvois de la documentation -> success
+  Contrôler la cohérence de la configuration: success
+  Ouvrir une issue si la documentation a dérivé: skipped
+```
+
+**L'étape d'ouverture d'issue est `skipped`, et c'est le bon résultat** : aucune
+dérive documentaire trouvée. Le workflow fait donc ce pour quoi il existe, pour
+la première fois depuis le 4 septembre.
 
 ## État des tickets
 
-**LS-186 livrée**, quatre critères sur cinq, le cinquième attendant la fusion.
+**LS-186 est TERMINÉE**, cinq critères sur cinq. **115 terminés sur 180**, relevé
+dans Jira après sa clôture.
+
+**J'avais d'abord écrit 114 avec une explication inventée**, disant que le compte
+ne bougeait pas. C'était faux, et la requête l'a montré : LS-186 s'ajoute
+simplement aux 114 de la veille au soir. Le motif est celui que ce projet écrit
+depuis des semaines, « un compte se relève dans Jira au moment d'écrire, jamais
+de mémoire », et raisonner un chiffre plutôt que le lire est une variante du même
+défaut.
 
 ## Prochaine étape
 
