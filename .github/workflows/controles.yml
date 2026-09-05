@@ -748,6 +748,33 @@ jobs:
         run: ./scripts/verifier-navigation-administration.sh
 
       # ----------------------------------------------------------------------
+      # Controle 6n, LS-191. La page qui LEVE a dessein reste inatteignable.
+      #
+      # `administration/echec-rendu` existe pour que la suite de bout en bout
+      # traverse la vraie frontiere d'erreur, sous le vrai layout : le critere 6
+      # de la story refuse une frontiere qu'aucun test n'a franchie.
+      #
+      # SA SEULE PROTECTION EST L'ORDRE DE DEUX INSTRUCTIONS, `notFound()` avant
+      # `throw`. Les inverser laisse un fichier qui se relit sans alerter, et
+      # donne a quiconque atteint le site le moyen de provoquer une erreur
+      # serveur a volonte. Aucun test d'execution ne le verrait : la garde
+      # placee apres le `throw` ne s'exprime jamais.
+      # ----------------------------------------------------------------------
+      - name: 6o. La route d'echec reste gardee
+        run: ./scripts/verifier-route-echec.sh
+
+      # Preuve par mutation du controle precedent, LS-191. Textuel, secondes.
+      #
+      # IL A DEJA TROUVE DEUX DEFAUTS REELS, dans le controle et dans lui-meme.
+      # Le controle cherchait `notFound()` commentaires compris, donc le trouvait
+      # dans la phrase qui EXPLIQUE la garde et restait vert sur l'ordre inverse.
+      # Et l'un de ses propres cas ne mutait rien, `\Q...\E` rendant `\n`
+      # litteral : il comptait comme non detecte sans qu'aucun defaut n'ait ete
+      # introduit.
+      - name: 6p. Preuve par mutation de la route d'echec
+        run: ./scripts/verifier-route-echec-mutation.sh
+
+      # ----------------------------------------------------------------------
       # Controles 2 et 3. Le format entre ici parce qu'un depot ou seule une
       # partie des fichiers est formatee produit des diffs illisibles.
       # ----------------------------------------------------------------------
