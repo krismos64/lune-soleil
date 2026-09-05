@@ -30,6 +30,7 @@ MUTABLES=(
   "src/app/(boutique)/compte/commandes/[id]/retractation/formulaire-retractation.tsx"
   "src/app/(boutique)/retractation/[jeton]/formulaire-jeton.tsx"
   "src/lib/mentions-retractation.ts"
+  "src/lib/retractation.ts"
 )
 
 restaurer() {
@@ -193,9 +194,29 @@ muter "mention déplacée dans un commentaire" \
   "emplacement 1" \
   "perl -0pi -e 's|<p className=\{styles.texteLegal\}>\{MENTION_TUNNEL.droit\}</p>|{/* MENTION_TUNNEL.droit retiré */}|' 'src/app/(boutique)/commande/etapes-tunnel.tsx' && perl -0pi -e 's/\{MENTION_TUNNEL.fraisRetour\}\{\" \"\}/{\" \"}/' 'src/app/(boutique)/commande/etapes-tunnel.tsx'"
 
+# ---------------------------------------------------------------------------
+# Mutation 5, LE DÉLAI CHANGE ET LES TREIZE TEXTES NE SUIVENT PAS.
+#
+# TROUVÉE EN REVUE CRITIQUE. Le délai est écrit en dur dans treize textes
+# visibles, hors source unique : accueil, fiche produit, aide, conditions
+# générales, écrans d'expiration, détail de commande, formulaires et deux
+# modèles d'email.
+#
+# La garde par table de nombres ne couvrait que `MENTION_TUNNEL.droit` : porter
+# la constante à 30 faisait rougir ce seul test, et les treize autres textes
+# auraient continué d'annoncer quatorze jours. Un délai annoncé plus COURT que
+# le délai réel éteint un droit trop tôt, article L221-20, douze mois.
+#
+# LE CONTRÔLE NE RÉÉCRIT RIEN, il refuse le silence et nomme les fichiers.
+# ---------------------------------------------------------------------------
+muter "délai porté à 30 jours sans reprendre les textes" \
+  "src/lib/retractation.ts" \
+  "le délai de rétractation vaut 30 jours" \
+  "perl -0pi -e 's/DUREE_RETRACTATION_JOURS = 14;/DUREE_RETRACTATION_JOURS = 30;/' 'src/lib/retractation.ts'"
+
 echo
 if [ "$ko" -eq 0 ]; then
-  echo "OK les huit mutations sont détectées, et l'emplacement fautif est nommé"
+  echo "OK les neuf mutations sont détectées, et la cause est nommée"
 else
   echo "$ko mutation(s) NON détectée(s) : le contrôle ne protège pas ce qu'il annonce"
 fi
