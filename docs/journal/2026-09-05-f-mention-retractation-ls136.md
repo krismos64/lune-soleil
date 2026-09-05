@@ -111,7 +111,9 @@ Le rendu a été capturé et vérifié à 320 px, la zone tactile mesurée à 46
 
 ## État des tickets
 
-**LS-136 est TERMINÉE**, sept critères sur sept, PR #242.
+**LS-136 est TERMINÉE**, sept critères sur sept, PR #242 fusionnée en rebase.
+
+**117 terminés sur 182**, relevé dans Jira après la clôture.
 
 ## Ce qui reste, et qui n'est pas de cette story
 
