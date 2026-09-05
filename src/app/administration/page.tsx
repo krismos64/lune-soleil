@@ -21,6 +21,8 @@
  * c'est la liste qui fait foi. Un tableau de bord qui agirait demanderait les
  * memes gardes que les ecrans qu'il resume, dupliquees a un second endroit.
  */
+import { Suspense } from "react";
+
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -114,6 +116,100 @@ export default async function PageAdministration() {
     throw erreur;
   }
 
+  /*
+   * L'EN-TETE EST RENDU TOUT DE SUITE, les comptages sous `<Suspense>`.
+   */
+  return (
+    <main className={styles.page}>
+      <p className={styles.surtitre}>{dateDuJour()}</p>
+      <h1 className={styles.titre}>Tableau de bord</h1>
+      <p className={styles.introduction}>
+        Les actions à traiter sont regroupées avant les indicateurs.
+      </p>
+
+      <Suspense fallback={<ChargementIndicateurs />}>
+        <IndicateursTableauBord />
+      </Suspense>
+    </main>
+  );
+}
+
+/**
+ * Armature affichee pendant que les comptages arrivent, LS-188.
+ *
+ * TROIS BARRES PAR TUILE, aux hauteurs des trois lignes qu'elles remplacent :
+ * libelle, valeur et precision. Reprendre les hauteurs est ce qui evite que la
+ * grille change de taille a l'arrivee des chiffres.
+ */
+function ChargementIndicateurs() {
+  return (
+    <>
+      {/*
+       * `role="status"` pour qu'un lecteur d'ecran apprenne que la page
+       * travaille. `aria-live` n'est pas ajoute, `role="status"` le portant
+       * implicitement en `polite`.
+       *
+       * ELLE EST VISUELLEMENT MASQUEE, `styles.invisible`, ET C'EST LE POINT.
+       * Le rendu reel n'a AUCUNE ligne de texte entre l'introduction et la
+       * grille : une phrase visible ici descendrait les quatre tuiles d'une
+       * hauteur de ligne, puis les ferait remonter a l'arrivee des chiffres.
+       * C'est le saut de mise en page que l'armature existe pour eviter, et le
+       * critere 3 l'interdit nommement.
+       *
+       * L'ANNONCE RESTE ENTIERE POUR QUI ECOUTE. `invisible` est la technique
+       * de masquage accessible du projet, deja employee dans ce fichier pour
+       * les noms de liens : le texte sort du flux visuel sans sortir de l'arbre
+       * d'accessibilite, contrairement a `display: none`.
+       */}
+      <p className={styles.invisible} role="status">
+        Chargement des indicateurs…
+      </p>
+
+      {/*
+       * `aria-hidden` SUR L'ARMATURE : annoncer quatre tuiles vides n'apprend
+       * rien a qui ecoute, la phrase ci-dessus le fait mieux. C'est ce partage
+       * qui rend l'armature purement decorative, donc dispensee de nom
+       * accessible : le sens passe par le texte, la forme par les barres.
+       */}
+      <div className={styles.tuiles} aria-hidden="true">
+        {[0, 1, 2, 3].map((rang) => (
+          <div key={rang} className={styles.tuile}>
+            <span className={styles.ardoiseLibelle} />
+            <span className={styles.ardoiseValeur} />
+            <span className={styles.ardoisePrecision} />
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+/**
+ * Les indicateurs, seule partie de cet ecran qui lit la base.
+ *
+ * ------------------------------------------------------------------
+ * POURQUOI UN `<Suspense>` INTERNE ET NON UN `loading.tsx`, ALORS QUE CETTE
+ * PAGE N'APPELLE PAS `notFound()`.
+ *
+ * Un `loading.tsx` pose ici sa frontiere sur le SEGMENT RACINE de
+ * l'administration, donc sur les SEIZE ecrans du sous-arbre, exactement comme
+ * `error.tsx` les couvre tous depuis LS-191. Or deux d'entre eux appellent
+ * `notFound()` : leur 404 devenait un 200.
+ *
+ * MESURE DU 5 SEPTEMBRE 2026, sur une route de diagnostic appelant `notFound()`
+ * en PREMIERE instruction : 404 hors de `/administration`, 200 dedans, le seul
+ * ecart etant la presence du `loading.tsx` racine.
+ *
+ * C32 S'APPLIQUE DONC A UN SEGMENT DES QU'UN DESCENDANT appelle `notFound()`,
+ * et pas seulement quand la page du segment le fait elle-meme.
+ *
+ * NE PAS RETABLIR `administration/loading.tsx`. Le raisonnement qui l'avait
+ * justifie disait que « ce fichier couvre le segment racine, pas ses
+ * sous-dossiers, le plus proche l'emporte » : c'est vrai du REPLI affiche, faux
+ * de la frontiere, qui enveloppe tout le sous-arbre.
+ * ------------------------------------------------------------------
+ */
+async function IndicateursTableauBord() {
   const comptages = await lireComptages();
 
   /*
@@ -166,13 +262,7 @@ export default async function PageAdministration() {
   ].filter((entree) => entree.nombre > 0);
 
   return (
-    <main className={styles.page}>
-      <p className={styles.surtitre}>{dateDuJour()}</p>
-      <h1 className={styles.titre}>Tableau de bord</h1>
-      <p className={styles.introduction}>
-        Les actions à traiter sont regroupées avant les indicateurs.
-      </p>
-
+    <>
       <div className={styles.tuiles}>
         <Tuile
           libelle="À préparer"
@@ -273,6 +363,6 @@ export default async function PageAdministration() {
           </ul>
         )}
       </section>
-    </main>
+    </>
   );
 }

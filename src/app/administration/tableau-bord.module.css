@@ -254,3 +254,41 @@
   white-space: nowrap;
   border: 0;
 }
+
+/* --- Armature de chargement, LS-188 -------------------------------------- */
+
+/*
+ * TROIS BARRES PAR TUILE, aux hauteurs des trois lignes qu'elles remplacent :
+ * libelle en 0,8125rem, valeur en 2,25rem, precision en 0,75rem. Reprendre les
+ * hauteurs est ce qui evite que la grille change de taille a l'arrivee des
+ * chiffres, critere 3 de LS-188.
+ *
+ * AUCUNE ANIMATION DE PULSATION, meme choix qu'en LS-104 : elle attire l'oeil
+ * sur une attente d'une fraction de seconde, et `prefers-reduced-motion`
+ * obligerait a la desactiver pour une partie des utilisateurs.
+ *
+ * `--ls-surface-sand` EST DECORATIF ICI, aucune paire de contraste a tenir : ces
+ * barres ne portent aucun texte et la grille entiere est `aria-hidden`.
+ */
+.ardoiseLibelle,
+.ardoiseValeur,
+.ardoisePrecision {
+  display: block;
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface-sand);
+}
+
+.ardoiseLibelle {
+  width: 60%;
+  height: 0.8125rem;
+}
+
+.ardoiseValeur {
+  width: 45%;
+  height: 2.25rem;
+}
+
+.ardoisePrecision {
+  width: 75%;
+  height: 0.75rem;
+}

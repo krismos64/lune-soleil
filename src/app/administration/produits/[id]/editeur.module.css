@@ -406,3 +406,17 @@
   border-radius: var(--ls-radius-sm);
   background: var(--ls-surface-sand);
 }
+
+/*
+ * Repli de la frontiere Suspense interne, LS-188.
+ *
+ * `--ls-text-muted` sur `--ls-background` : 4,86:1, AA. Le fond est ecrit
+ * explicitement : `verifier-contraste.sh` mesure des paires colocalisees, et une
+ * couleur de texte sans fond declare a cote n'est pas mesurable, C31.
+ */
+.chargement {
+  margin: var(--ls-space-5) 0;
+  background: var(--ls-background);
+  color: var(--ls-text-muted);
+  line-height: 1.6;
+}

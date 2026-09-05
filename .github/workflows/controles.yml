@@ -671,6 +671,25 @@ jobs:
 
       # Textuel, aucune base ni conteneur requis.
       #
+      # CE QU'IL GARDE : tout ecran d'administration en `force-dynamic` porte un
+      # etat de chargement, LS-188. Quinze ecrans n'en avaient aucun, chaque
+      # navigation attendant le rendu serveur complet sans que rien ne bouge a
+      # l'ecran.
+      #
+      # AUCUN TEST DE RENDU NE PEUT VOIR CE DEFAUT au moment de l'ecriture :
+      # Playwright attend que la page soit chargee, donc il observe precisement
+      # l'instant ou l'armature a disparu. Le seizieme ecran reproduirait
+      # l'oubli sans qu'aucune assertion ne rougisse.
+      #
+      # IL EST LE PENDANT DE 6j, ET LES DEUX SONT NECESSAIRES : celui-ci EXIGE
+      # un etat de chargement, 6j INTERDIT la forme qui casserait le 404. Un
+      # ecran dont un descendant appelle `notFound()` doit satisfaire les deux,
+      # donc passer par un `<Suspense>` interne.
+      - name: 6k. Tout ecran d'administration a un etat de chargement
+        run: ./scripts/verifier-chargement-administration.sh
+
+      # Textuel, aucune base ni conteneur requis.
+      #
       # CE QU'IL GARDE : les metadonnees de referencement de toute route, LS-137.
       # Une page publique sans `title`, `description` ou canonical, une page
       # PRIVEE sans `noindex`, un titre qui reecrit le nom de la boutique que le

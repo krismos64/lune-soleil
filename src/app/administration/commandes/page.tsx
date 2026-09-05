@@ -8,6 +8,10 @@
  * page ET chaque Server Action portent la garde : proteger la page seule
  * laisserait ouvert l'appel direct a une action, defaut trouve en LS-89.
  */
+import { Suspense } from "react";
+
+import { ChargementAdministration } from "@/components/chargement-administration";
+
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -76,10 +80,6 @@ export default async function PageCommandes({
   );
   const filtreActif = filtreDemande?.valeur ?? "TOUTES";
 
-  const commandes = await listerCommandes(
-    filtreActif === "TOUTES" ? {} : { statut: filtreActif },
-  );
-
   return (
     <main className={styles.page}>
       <h1 className={styles.titre}>Commandes</h1>
@@ -110,6 +110,51 @@ export default async function PageCommandes({
         </ul>
       </nav>
 
+      <Suspense fallback={<ChargementCommandes />}>
+        <ListeCommandes filtreActif={filtreActif} />
+      </Suspense>
+    </main>
+  );
+}
+
+/**
+ * Armature affichee pendant que la liste arrive, LS-188.
+ */
+function ChargementCommandes() {
+  return (
+    <ChargementAdministration annonce="Chargement des commandes…" lignes={5} />
+  );
+}
+
+/**
+ * La liste elle-meme, seule partie de cet ecran qui lit la base.
+ *
+ * ------------------------------------------------------------------
+ * POURQUOI UN `<Suspense>` INTERNE ET NON UN `loading.tsx`, ALORS QUE CETTE
+ * PAGE N'APPELLE PAS `notFound()`.
+ *
+ * Un `loading.tsx` pose ici sa frontiere sur le segment `commandes/`, donc AUSSI
+ * sur `commandes/[id]` un dossier plus bas, qui appelle `notFound()` deux fois :
+ * son 404 devenait un 200.
+ *
+ * C32 S'APPLIQUE A UN SEGMENT DES QU'UN DESCENDANT appelle `notFound()`, et pas
+ * seulement quand la page du segment le fait elle-meme. Mesure du 5 septembre
+ * 2026, LS-188 : 404 hors du sous-arbre couvert, 200 dedans.
+ *
+ * NE PAS RETABLIR `commandes/loading.tsx`.
+ * ------------------------------------------------------------------
+ */
+async function ListeCommandes({
+  filtreActif,
+}: {
+  filtreActif: StatutCommande | "TOUTES";
+}) {
+  const commandes = await listerCommandes(
+    filtreActif === "TOUTES" ? {} : { statut: filtreActif },
+  );
+
+  return (
+    <>
       {commandes.length === 0 ? (
         /*
          * L'ETAT VIDE EST UN ETAT, pas un incident : il dit ce qui manque et
@@ -165,6 +210,6 @@ export default async function PageCommandes({
           ))}
         </ul>
       )}
-    </main>
+    </>
   );
 }

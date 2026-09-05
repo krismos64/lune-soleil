@@ -16,6 +16,10 @@
  *
  * `exigerAdministratrice` EST APPELE AVANT TOUT RENDU, motif pose par LS-70.
  */
+import { Suspense } from "react";
+
+import { ChargementAdministration } from "@/components/chargement-administration";
+
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -138,8 +142,6 @@ export default async function PageCatalogue({
     FILTRES.find((filtre) => filtre.valeur === parametres.statut) ??
     FILTRE_PAR_DEFAUT;
 
-  const produits = await listerProduitsAdministration(filtreActif.statuts);
-
   return (
     <main className={styles.page}>
       <p className={styles.surtitre}>Catalogue</p>
@@ -157,19 +159,6 @@ export default async function PageCatalogue({
           Nouveau produit
         </Link>
       </div>
-
-      {/*
-       * L'INTRODUCTION SE TAIT QUAND LA LISTE EST VIDE, correction de la revue.
-       * Le bloc `vide` plus bas dit deja tout, et avec plus de precision : deux
-       * messages superposes se contredisaient presque, « aucun produit dans
-       * cette vue » suggerant un filtre la ou il n'y en avait pas.
-       */}
-      {produits.length > 0 ? (
-        <p className={styles.introduction}>
-          {produits.length} {produits.length > 1 ? "produits" : "produit"}, du
-          plus récemment modifié au plus ancien.
-        </p>
-      ) : null}
 
       {/*
        * LES FILTRES SONT DES LIENS ET NON DES BOUTONS. L'etat est dans l'URL,
@@ -205,6 +194,67 @@ export default async function PageCatalogue({
           })}
         </ul>
       </nav>
+
+      <Suspense fallback={<ChargementProduits />}>
+        <ListeProduits filtreActif={filtreActif} />
+      </Suspense>
+    </main>
+  );
+}
+
+/**
+ * Armature affichee pendant que la liste arrive, LS-188.
+ */
+function ChargementProduits() {
+  return (
+    <ChargementAdministration annonce="Chargement des produits…" lignes={5} />
+  );
+}
+
+/**
+ * La liste elle-meme, seule partie de cet ecran qui lit la base.
+ *
+ * ------------------------------------------------------------------
+ * POURQUOI UN `<Suspense>` INTERNE ET NON UN `loading.tsx`, ALORS QUE CETTE
+ * PAGE N'APPELLE PAS `notFound()`.
+ *
+ * Un `loading.tsx` pose ici sa frontiere sur le segment `produits/`, donc AUSSI
+ * sur `produits/[id]` un dossier plus bas, qui appelle `notFound()` : son 404
+ * devenait un 200.
+ *
+ * C32 S'APPLIQUE A UN SEGMENT DES QU'UN DESCENDANT appelle `notFound()`, et pas
+ * seulement quand la page du segment le fait elle-meme. Mesure du 5 septembre
+ * 2026, LS-188 : 404 hors du sous-arbre couvert, 200 dedans.
+ *
+ * NE PAS RETABLIR `produits/loading.tsx`.
+ * ------------------------------------------------------------------
+ *
+ * L'INTRODUCTION EST RENDUE ICI et non dans la page : elle annonce le NOMBRE de
+ * produits, donc elle depend de la lecture. La laisser au-dessus de la frontiere
+ * aurait demande de compter avant de suspendre, ce qui aurait fait la requete
+ * deux fois.
+ */
+async function ListeProduits({
+  filtreActif,
+}: {
+  filtreActif: (typeof FILTRES)[number];
+}) {
+  const produits = await listerProduitsAdministration(filtreActif.statuts);
+
+  return (
+    <>
+      {/*
+       * L'INTRODUCTION SE TAIT QUAND LA LISTE EST VIDE, correction de la revue.
+       * Le bloc `vide` plus bas dit deja tout, et avec plus de precision : deux
+       * messages superposes se contredisaient presque, « aucun produit dans
+       * cette vue » suggerant un filtre la ou il n'y en avait pas.
+       */}
+      {produits.length > 0 ? (
+        <p className={styles.introduction}>
+          {produits.length} {produits.length > 1 ? "produits" : "produit"}, du
+          plus récemment modifié au plus ancien.
+        </p>
+      ) : null}
 
       {produits.length === 0 ? (
         /*
@@ -326,6 +376,6 @@ export default async function PageCatalogue({
           })}
         </ul>
       )}
-    </main>
+    </>
   );
 }
