@@ -20,7 +20,7 @@ import { FormulaireProduit } from "./formulaire-produit";
 import styles from "./nouveau-produit.module.css";
 
 export const metadata = {
-  title: "Nouveau produit, administration",
+  title: "Nouveau produit",
   robots: { index: false, follow: false },
 };
 

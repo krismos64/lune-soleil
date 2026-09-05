@@ -75,6 +75,55 @@ describe("urlDuSite", () => {
     process.env.NEXT_PUBLIC_SITE_URL = "   ";
     expect(() => urlDuSite()).toThrow(/NEXT_PUBLIC_SITE_URL/);
   });
+
+  /*
+   * ------------------------------------------------------------------
+   * L'EXCEPTION DE CONSTRUCTION, ET SES DEUX VERSANTS.
+   *
+   * Ces deux tests ont ete ecrits APRES avoir mesure l'echec : sans exception,
+   * `next build` s'arrete sur « Failed to collect page data for /_not-found ».
+   * Motif « construire n'est pas servir », `.claude/rules/securite.md`.
+   *
+   * LE SECOND TEST COMPTE AUTANT QUE LE PREMIER. Une exception trop large
+   * transformerait le garde-fou en repli silencieux, et le site partirait en
+   * production avec des canoniques pointant une adresse inexistante. Le refus
+   * doit tenir des que le serveur SERT.
+   * ------------------------------------------------------------------
+   */
+  describe("pendant next build", () => {
+    let phaseInitiale: string | undefined;
+
+    beforeEach(() => {
+      phaseInitiale = process.env.NEXT_PHASE;
+      delete process.env.NEXT_PUBLIC_SITE_URL;
+    });
+
+    afterEach(() => {
+      if (phaseInitiale === undefined) {
+        delete process.env.NEXT_PHASE;
+      } else {
+        process.env.NEXT_PHASE = phaseInitiale;
+      }
+    });
+
+    it("rend une adresse de construction plutot que de faire echouer le build", () => {
+      process.env.NEXT_PHASE = "phase-production-build";
+      expect(urlDuSite()).toBe("https://construction.invalide");
+    });
+
+    /*
+     * LE VERSANT QUI FERME L'EXCEPTION. `NEXT_PHASE` n'est renseignee que
+     * pendant la construction : une autre valeur, ou son absence, signifie que
+     * le serveur sert, et le refus doit alors tenir.
+     */
+    it("refuse toujours quand le serveur sert, phase absente ou differente", () => {
+      delete process.env.NEXT_PHASE;
+      expect(() => urlDuSite()).toThrow(/NEXT_PUBLIC_SITE_URL/);
+
+      process.env.NEXT_PHASE = "phase-development-server";
+      expect(() => urlDuSite()).toThrow(/NEXT_PUBLIC_SITE_URL/);
+    });
+  });
 });
 
 describe("absolutise", () => {

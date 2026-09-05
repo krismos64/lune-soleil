@@ -30,7 +30,7 @@ import { VariantesProduit } from "./variantes-produit";
 import styles from "./editeur.module.css";
 
 export const metadata = {
-  title: "Fiche produit, administration",
+  title: "Fiche produit",
   robots: { index: false, follow: false },
 };
 

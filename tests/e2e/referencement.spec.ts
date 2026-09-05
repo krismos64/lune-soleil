@@ -299,6 +299,51 @@ test.describe("sitemap et robots", () => {
     }
   });
 
+  /*
+   * ------------------------------------------------------------------
+   * LES DEUX ROUTES A JETON SIGNE, ajoutees apres une revue critique.
+   *
+   * `/facture/` MANQUAIT a la liste, et c'etait la plus exposee des deux :
+   * elle sert un PDF portant nom, adresse de facturation et montants a un
+   * client SANS session, sur la seule verification de signature. Un lien recu
+   * par email atteint un explorateur par des chemins ordinaires.
+   *
+   * LE CONTROLE TEXTUEL NE PEUT PAS VOIR CE DEFAUT : il n'enumere que les
+   * `page.tsx`, et `/facture/[jeton]` est un `route.ts`. Ce test est donc la
+   * seule garde automatique sur ce point, et c'est la raison d'etre du
+   * fichier : un controle textuel ne remplace pas un test d'execution.
+   * ------------------------------------------------------------------
+   */
+  test("robots.txt interdit les deux routes a jeton signe", async ({
+    request,
+  }) => {
+    const texte = await (await request.get("/robots.txt")).text();
+
+    for (const zone of ["/facture/", "/retractation/"]) {
+      expect(texte).toContain(`Disallow: ${zone}`);
+    }
+  });
+
+  /*
+   * LE SECOND FILET DE LA ROUTE FACTURE. `robots.txt` DEMANDE de ne pas
+   * explorer, il n'empeche rien : un explorateur qui l'ignore, ou qui atteint
+   * l'URL par un lien externe sans lire le robots.txt, recevrait la reponse.
+   * L'en-tete voyage avec elle.
+   *
+   * LE TEST PORTE SUR LE REFUS, avec un jeton invente : c'est la seule reponse
+   * atteignable sans fabriquer une facture reelle, et l'en-tete doit y etre
+   * autant que sur le succes, l'uniformite des deux reponses etant la regle de
+   * cette route.
+   */
+  test("la route de facture porte X-Robots-Tag, robots.txt ne suffisant pas", async ({
+    request,
+  }) => {
+    const reponse = await request.get("/facture/jeton-invente-pour-le-test");
+
+    expect(reponse.status()).toBe(404);
+    expect(reponse.headers()["x-robots-tag"]).toContain("noindex");
+  });
+
   test("robots.txt interdit les quatre zones privees et annonce le sitemap", async ({
     request,
   }) => {

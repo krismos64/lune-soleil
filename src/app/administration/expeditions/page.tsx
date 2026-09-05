@@ -30,7 +30,7 @@ import { FormulaireExpedition } from "./formulaire-expedition";
 import styles from "./expeditions.module.css";
 
 export const metadata = {
-  title: "Expéditions, administration",
+  title: "Expéditions",
   robots: { index: false, follow: false },
 };
 

@@ -39,7 +39,7 @@ import {
 import styles from "./factures.module.css";
 
 export const metadata = {
-  title: "Factures et avoirs, administration",
+  title: "Factures et avoirs",
   robots: { index: false, follow: false },
 };
 

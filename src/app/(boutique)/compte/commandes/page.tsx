@@ -21,7 +21,7 @@ import { listerMesCommandes } from "@/services/espace-client-commandes";
 import styles from "../compte.module.css";
 
 export const metadata = {
-  title: "Mes commandes, Lune & Soleil",
+  title: "Mes commandes",
   robots: { index: false, follow: false },
 };
 

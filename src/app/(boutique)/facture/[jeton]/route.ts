@@ -28,6 +28,28 @@ import { autoriserAccesDocument } from "@/services/acces-document";
 export const dynamic = "force-dynamic";
 
 /**
+ * En-tete d'interdiction d'indexation, LS-137.
+ *
+ * POURQUOI UN EN-TETE ET NON UNE METADONNEE. Un gestionnaire `route.ts` ne
+ * passe par aucun rendu de page : il ne peut porter ni `robots: { index:
+ * false }` ni balise `meta`. `X-Robots-Tag` est le seul equivalent, et il est
+ * lu par les principaux moteurs.
+ *
+ * IL DOUBLE `robots.txt`, ET LE DOUBLE UTILEMENT. Ce fichier DEMANDE de ne pas
+ * explorer, il n'empeche rien : un explorateur qui l'ignore, ou qui atteint
+ * l'URL par un lien externe sans jamais lire le robots.txt, recevrait ce PDF.
+ * L'en-tete voyage avec la reponse elle-meme.
+ *
+ * `noarchive` EN PLUS DE `noindex` : sans lui, un moteur qui n'indexe pas la
+ * page peut tout de meme en garder une copie en cache, consultable.
+ *
+ * IL EST POSE SUR LE REFUS AUSSI. Un 404 ne s'indexe normalement pas, mais
+ * l'uniformite des deux reponses est la regle de cette route, et un en-tete
+ * present d'un cote seulement les rendrait distinguables.
+ */
+const EN_TETE_NOINDEX = "noindex, nofollow, noarchive";
+
+/**
  * Reponse de refus, IDENTIQUE POUR TOUS LES MOTIFS.
  *
  * 404 ET NON 403, et la nuance porte tout l'invariant 2. Un 403 signifierait
@@ -41,7 +63,10 @@ export const dynamic = "force-dynamic";
 function refus(): Response {
   return new Response("Document introuvable", {
     status: 404,
-    headers: { "content-type": "text/plain; charset=utf-8" },
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+      "x-robots-tag": EN_TETE_NOINDEX,
+    },
   });
 }
 
@@ -84,6 +109,7 @@ export async function GET(
          */
         "cache-control": "private, no-store, max-age=0",
         "x-content-type-options": "nosniff",
+        "x-robots-tag": EN_TETE_NOINDEX,
       },
     });
   } catch (erreur) {

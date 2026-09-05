@@ -20,9 +20,19 @@ import "./globals.css";
  * SANS ELLE AUSSI, Next.js avertit au build sur toute image Open Graph relative
  * et retombe sur `localhost`. Vérifié via Context7 sur la documentation Next.js.
  *
- * ELLE EST LUE À CHAQUE RENDU, jamais figée au chargement du module :
- * `urlDuSite()` lève si la variable manque, ce qui doit se produire au démarrage
- * du serveur et non au moment où le bundle est construit.
+ * ELLE EST LUE UNE FOIS PAR PROCESSUS, ET NON À CHAQUE RENDU. `export const
+ * metadata` est un objet de niveau module : `new URL(urlDuSite())` s'évalue au
+ * chargement du module, une seule fois. Au démarrage du serveur quand il sert,
+ * à la collecte des données de page pendant `next build`.
+ *
+ * C'est exactement pourquoi `urlDuSite()` porte une exception de construction :
+ * sans elle, un build sans `NEXT_PUBLIC_SITE_URL` échoue sur « Failed to
+ * collect page data », mesuré. Le serveur qui sert refuse toujours de démarrer
+ * sans la variable, et c'est le seul comportement qui compte pour l'index.
+ *
+ * La première version de ce commentaire affirmait l'inverse, une lecture à
+ * chaque rendu, ce qui aurait fait conclure à tort que la question ne se pose
+ * pas. Relevé en revue critique.
  */
 export const metadata: Metadata = {
   metadataBase: new URL(urlDuSite()),

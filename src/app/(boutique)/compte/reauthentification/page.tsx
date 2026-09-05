@@ -35,7 +35,7 @@ import { FormulaireReauthentificationClient } from "./formulaire-reauthentificat
 import styles from "../authentification.module.css";
 
 export const metadata = {
-  title: "Confirmer votre identité, Lune & Soleil",
+  title: "Confirmer votre identité",
   robots: { index: false, follow: false },
 };
 

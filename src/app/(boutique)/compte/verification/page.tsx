@@ -30,7 +30,7 @@ import { BoutonRenvoiVerification } from "./bouton-renvoi";
 import styles from "../authentification.module.css";
 
 export const metadata = {
-  title: "Confirmez votre adresse, Lune & Soleil",
+  title: "Confirmez votre adresse",
   robots: { index: false, follow: false },
 };
 

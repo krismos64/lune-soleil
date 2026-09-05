@@ -21,7 +21,7 @@ import { FormulaireInscription } from "./formulaire-inscription";
 import styles from "../authentification.module.css";
 
 export const metadata = {
-  title: "Créer un compte, Lune & Soleil",
+  title: "Créer un compte",
   description:
     "Créez votre compte pour suivre vos commandes et retrouver vos factures.",
   /*

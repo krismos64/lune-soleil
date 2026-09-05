@@ -23,7 +23,7 @@ import { FormulaireDemandeReinitialisation } from "./formulaire-demande";
 import styles from "../authentification.module.css";
 
 export const metadata = {
-  title: "Mot de passe oublié, Lune & Soleil",
+  title: "Mot de passe oublié",
   robots: { index: false, follow: false },
 };
 

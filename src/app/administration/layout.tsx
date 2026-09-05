@@ -42,6 +42,31 @@ import { lireComptages } from "@/services/tableau-bord";
 import { BoutonDeconnexion } from "./bouton-deconnexion";
 import styles from "./layout.module.css";
 
+/**
+ * Gabarit de titre de l'administration, LS-137.
+ *
+ * IL REMPLACE CELUI DU LAYOUT RACINE plutot que de s'y ajouter. Un `template`
+ * defini dans un segment ne s'applique qu'a ses enfants, et le titre resolu
+ * d'un enfant n'est PAS repasse dans le gabarit du parent : « Stocks et
+ * marches, administration » est donc le titre final, jamais « Stocks et
+ * marches, administration, Lune & Soleil ».
+ *
+ * POURQUOI CE SUFFIXE PLUTOT QUE LE NOM DE LA BOUTIQUE. Ces ecrans ne sont vus
+ * que par l'exploitante, souvent plusieurs onglets ouverts : ce qui l'aide a
+ * s'y retrouver est de distinguer l'administration de la boutique publique, pas
+ * de lire deux fois le nom de son propre site.
+ *
+ * `default` COUVRE LE SEGMENT LUI-MEME, `/administration`, dont le titre ne
+ * passe pas par le gabarit : un `template` ne s'applique jamais au segment qui
+ * le declare.
+ */
+export const metadata = {
+  title: {
+    default: "Administration, Lune & Soleil",
+    template: "%s, administration",
+  },
+};
+
 export default async function LayoutAdministration({
   children,
 }: Readonly<{ children: React.ReactNode }>) {

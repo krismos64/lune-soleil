@@ -16,7 +16,7 @@ import { FormulaireConnexion } from "./formulaire-connexion";
 import { lireIdentite } from "@/services/autorisation";
 
 export const metadata = {
-  title: "Connexion, administration",
+  title: "Connexion",
   // L'administration ne s'indexe pas. La consigne ne protege rien par
   // elle-meme, la protection est la verification de session : elle evite
   // seulement que la page remonte dans un moteur de recherche.

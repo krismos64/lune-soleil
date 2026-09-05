@@ -22,7 +22,7 @@ import styles from "./adresses.module.css";
 import stylesCompte from "../compte.module.css";
 
 export const metadata = {
-  title: "Mon carnet d'adresses, Lune & Soleil",
+  title: "Mon carnet d'adresses",
   robots: { index: false, follow: false },
 };
 

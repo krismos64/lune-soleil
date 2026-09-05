@@ -23,7 +23,7 @@ import { formaterDate, LIBELLES_STATUT } from "@/lib/affichage-commande";
 import styles from "./commandes.module.css";
 
 export const metadata = {
-  title: "Commandes, administration",
+  title: "Commandes",
   robots: { index: false, follow: false },
 };
 
