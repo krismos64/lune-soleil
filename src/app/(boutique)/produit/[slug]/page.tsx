@@ -23,10 +23,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { DonneesStructurees } from "@/components/donnees-structurees";
+import { declinaisonsAttendues } from "@/integrations/medias/traitement";
 import {
   disponibiliteDuProduit,
   jsonLdFilAriane,
   jsonLdProduit,
+  openGraphDePage,
 } from "@/lib/seo";
 import { lireFichePublique } from "@/services/catalogue";
 import styles from "./fiche.module.css";
@@ -66,6 +68,49 @@ export const dynamic = "force-dynamic";
  */
 
 /**
+ * Prefixe sous lequel les medias sont servis, ADR-007. Meme valeur que la
+ * galerie : `Media.chemin` porte un chemin de VOLUME, jamais une URL.
+ */
+const PREFIXE_MEDIAS = process.env.MEDIA_PREFIXE_PUBLIC ?? "/medias";
+
+/**
+ * La declinaison publiee dans le balisage, LS-137.
+ *
+ * ELLE EST VERIFIEE CONTRE CE QUE LE TRAITEMENT PRODUIT REELLEMENT, comme
+ * l'ecran d'administration le fait deja pour sa vignette. Sans ce controle, un
+ * changement de format laisserait le balisage pointer une image inexistante :
+ * la chaine est construite a l'execution, donc ni les types ni le lint ne
+ * verraient `640.jpg` pour `640.jpeg`. Motif « chaine construite a
+ * l'execution », en fiche sur ce depot.
+ *
+ * `jpeg` ET NON `avif` : le balisage est lu par des agregateurs et des reseaux
+ * sociaux dont beaucoup ne decodent pas les formats recents.
+ */
+const DECLINAISON_BALISAGE = "640.jpeg";
+
+if (!declinaisonsAttendues().includes(DECLINAISON_BALISAGE)) {
+  throw new Error(
+    `La declinaison ${DECLINAISON_BALISAGE} n'est plus produite par le traitement.`,
+  );
+}
+
+/**
+ * Compose le chemin public d'une photographie pour le balisage.
+ *
+ * `Media.chemin` EST UN PREFIXE DE DOSSIER se terminant par une barre, auquel
+ * la declinaison se concatene : il ne commence PAS par « / » et n'est donc pas
+ * un chemin d'URL. Le passer tel quel a `absolutise` fait lever, et c'est le
+ * test de bout en bout qui l'a montre, pas le controle textuel.
+ */
+function cheminPublicPhoto(chemin: string | undefined): string | null {
+  if (chemin === undefined) {
+    return null;
+  }
+
+  return `${PREFIXE_MEDIAS}/${chemin}${DECLINAISON_BALISAGE}`;
+}
+
+/**
  * Metadonnees construites depuis la fiche, SEO etant prioritaire sur ce projet.
  *
  * UN PRODUIT NON SERVI NE PORTE AUCUN TITRE DE PRODUIT. Rendre « Bague fine »
@@ -102,6 +147,7 @@ export async function generateMetadata({
     fiche.descriptionCourte ??
     `${fiche.nom}, bijou artisanal fait main, créé à l'unité.`;
   const chemin = `/produit/${fiche.slug}`;
+  const photo = cheminPublicPhoto(fiche.photos[0]?.chemin);
 
   return {
     title: fiche.nom,
@@ -113,19 +159,18 @@ export async function generateMetadata({
      * slug ancien vers slug courant est ajoutee un jour.
      */
     alternates: { canonical: chemin },
-    openGraph: {
-      title: fiche.nom,
+    /*
+     * LA PHOTOGRAPHIE PASSE PAR `cheminPublicPhoto`, comme le JSON-LD :
+     * `Media.chemin` est un prefixe de dossier de volume, pas une URL. La
+     * premiere version l'employait brut, ce qui aurait publie
+     * « produits/xxx/ » en image Open Graph, adresse que rien ne sert.
+     */
+    openGraph: openGraphDePage({
+      titre: fiche.nom,
       description,
-      url: chemin,
-      type: "website",
-      /*
-       * LA PREMIERE PHOTOGRAPHIE, quand il y en a une. `photos` est deja
-       * ordonnee par le service, la premiere est celle de la galerie.
-       */
-      ...(fiche.photos[0] !== undefined
-        ? { images: [{ url: fiche.photos[0].chemin }] }
-        : {}),
-    },
+      chemin,
+      ...(photo !== null ? { image: photo } : {}),
+    }),
   };
 }
 
@@ -172,7 +217,7 @@ export default async function PageFicheProduit({
     disponibilite: disponibiliteDuProduit(
       fiche.variantes.map((variante) => variante.disponibilite),
     ),
-    photoChemin: fiche.photos[0]?.chemin ?? null,
+    photoChemin: cheminPublicPhoto(fiche.photos[0]?.chemin),
   });
 
   /*

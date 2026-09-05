@@ -145,6 +145,26 @@ export default defineConfig({
        */
       BETTER_AUTH_URL: URL_BASE,
       /*
+       * NEXT_PUBLIC_SITE_URL DOIT DESIGNER LE MEME SERVEUR, LS-137, et pour un
+       * motif jumeau de celui du dessus.
+       *
+       * Elle porte `metadataBase`, donc la resolution de TOUTES les URL
+       * canoniques. Heritee de `.env`, elle designerait le port 3000 quand
+       * Playwright sert sur 3100 : les canoniques seraient construits sur une
+       * adresse que la suite n'interroge jamais.
+       *
+       * LA SUITE PASSERAIT QUAND MEME EN GRANDE PARTIE, ce qui est le piege :
+       * un test qui verifie la seule PRESENCE d'un canonical ne verrait rien.
+       * `tests/e2e/referencement.spec.ts` compare la valeur exacte, il rougirait
+       * donc, et le premier reflexe serait d'assouplir le test plutot que de
+       * corriger la configuration.
+       *
+       * ELLE EST AUSSI REQUISE POUR DEMARRER : `lib/seo.ts` leve sur son
+       * absence, plutot que de replier sur localhost et de sortir le site de
+       * l'index en production.
+       */
+      NEXT_PUBLIC_SITE_URL: URL_BASE,
+      /*
        * LE PRESTATAIRE DE PAIEMENT EST ABSENT PENDANT TOUTE LA SUITE, LS-118,
        * et la cle est VIDEE explicitement plutot qu'heritee de `.env` : le jour
        * ou une cle de test y sera posee, LS-18, la suite partirait sinon

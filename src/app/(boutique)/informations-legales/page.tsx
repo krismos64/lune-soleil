@@ -31,6 +31,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { formaterMontant } from "@/lib/montant";
+import { openGraphDePage } from "@/lib/seo";
 import {
   IdentiteLegaleNonConfigureeError,
   lireIdentiteLegale,
@@ -51,12 +52,12 @@ export const metadata: Metadata = {
     "Mentions légales, conditions de vente, confidentialité et droit de rétractation de la boutique Lune & Soleil.",
   // LS-137, page publique indexable : canonical explicite.
   alternates: { canonical: "/informations-legales" },
-  openGraph: {
-    title: "Informations légales",
+  openGraph: openGraphDePage({
+    titre: "Informations légales",
     description:
       "Mentions légales, conditions de vente, confidentialité et droit de rétractation.",
-    url: "/informations-legales",
-  },
+    chemin: "/informations-legales",
+  }),
 };
 
 /**

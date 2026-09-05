@@ -107,6 +107,45 @@ export function jsonLdOrganisation(): Record<string, unknown> {
   };
 }
 
+/**
+ * Compose un bloc Open Graph complet pour une page.
+ *
+ * ------------------------------------------------------------------
+ * POURQUOI CETTE FONCTION EXISTE, et elle a ete ecrite APRES un test rouge.
+ *
+ * `openGraph` DECLARE DANS UNE PAGE REMPLACE INTEGRALEMENT celui du layout
+ * parent : Next.js ne fusionne pas ce champ, il l'ecrase. Verifie via Context7
+ * sur `mergeMetadata`, qui appelle `resolveOpenGraph` sur la valeur de l'enfant
+ * et affecte le resultat par-dessus la valeur clonee du parent.
+ *
+ * Le layout racine posait donc `siteName` et `locale`, et CHAQUE page qui
+ * declarait son propre `openGraph` les effacait. Le defaut est invisible a
+ * l'ecran et invisible aux types : seul le HTML servi le montre, et c'est
+ * `tests/e2e/referencement.spec.ts` qui l'a trouve.
+ *
+ * Toute page qui veut un Open Graph passe donc par ici, jamais par un objet
+ * ecrit a la main.
+ * ------------------------------------------------------------------
+ */
+export function openGraphDePage(page: {
+  titre: string;
+  description: string;
+  /** Chemin interne, barre oblique initiale comprise. */
+  chemin: string;
+  /** Chemin interne d'une image, quand la page en a une. */
+  image?: string | undefined;
+}): Record<string, unknown> {
+  return {
+    title: page.titre,
+    description: page.description,
+    url: page.chemin,
+    siteName: NOM_BOUTIQUE,
+    locale: "fr_FR",
+    type: "website",
+    ...(page.image !== undefined ? { images: [{ url: page.image }] } : {}),
+  };
+}
+
 /** Un maillon du fil d'Ariane, dans l'ordre de lecture. */
 export type MaillonFilAriane = {
   nom: string;

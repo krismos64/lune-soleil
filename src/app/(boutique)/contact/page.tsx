@@ -21,6 +21,8 @@
  */
 import { connection } from "next/server";
 
+import { openGraphDePage } from "@/lib/seo";
+
 import { instantOuverture } from "./instant-ouverture";
 import { FormulaireContact } from "./formulaire-contact";
 import styles from "./contact.module.css";
@@ -31,12 +33,12 @@ export const metadata = {
     "Une question sur un bijou, une commande ou une création sur mesure : écrivez à l'atelier, la réponse arrive sous quelques jours.",
   // LS-137, page publique indexable : canonical explicite.
   alternates: { canonical: "/contact" },
-  openGraph: {
-    title: "Nous écrire",
+  openGraph: openGraphDePage({
+    titre: "Nous écrire",
     description:
       "Une question sur un bijou, une commande ou une création sur mesure.",
-    url: "/contact",
-  },
+    chemin: "/contact",
+  }),
 };
 
 export const dynamic = "force-dynamic";

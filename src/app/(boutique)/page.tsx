@@ -12,7 +12,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { DonneesStructurees } from "@/components/donnees-structurees";
-import { jsonLdOrganisation } from "@/lib/seo";
+import { jsonLdOrganisation, openGraphDePage } from "@/lib/seo";
 import { lireCataloguePublic } from "@/services/catalogue";
 import { CarteProduit } from "./catalogue/carte-produit";
 import styles from "./page.module.css";
@@ -31,12 +31,12 @@ export const metadata = {
   description:
     "Des bijoux faits main, créés à l'unité et en petite série. Livraison en France métropolitaine, Corse comprise.",
   alternates: { canonical: "/" },
-  openGraph: {
-    title: "Lune & Soleil, bijoux artisanaux faits main",
+  openGraph: openGraphDePage({
+    titre: "Lune & Soleil, bijoux artisanaux faits main",
     description:
       "Des bijoux faits main, créés à l'unité et en petite série. Livraison en France métropolitaine, Corse comprise.",
-    url: "/",
-  },
+    chemin: "/",
+  }),
 };
 
 export const dynamic = "force-dynamic";

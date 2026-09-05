@@ -33,6 +33,24 @@ ko=0
 [ -d "$APP" ] || { echo "ECHEC dossier des routes introuvable : $APP"; exit 1; }
 
 # ---------------------------------------------------------------------------
+# Retire les commentaires d'un fichier TypeScript avant toute recherche.
+#
+# POURQUOI. Un commentaire qui EXPLIQUE une clé porte le mot de cette clé, et
+# une recherche textuelle ne distingue pas l'explication de la chose expliquée.
+# Le contrôle restait donc vert sur exactement le défaut qu'il prétend attraper.
+#
+# CE N'EST PAS UN PARSEUR, et ça n'a pas à l'être. Les trois formes du dépôt
+# suffisent : bloc `/* */`, ligne `//`, et le `*` de continuation d'un bloc
+# JSDoc, que la suppression de bloc laisse derrière elle quand `perl` travaille
+# ligne à ligne. Une chaîne de caractères contenant « // » resterait mal
+# traitée ; aucune n'existe ici, et le cas produirait un faux positif bruyant,
+# jamais un silence.
+# ---------------------------------------------------------------------------
+sans_commentaires() {
+  perl -0777 -pe 's{/\*.*?\*/}{}gs; s{^\s*//.*$}{}gm' "$1"
+}
+
+# ---------------------------------------------------------------------------
 # Les routes privées, reconnues par leur chemin.
 #
 # ELLES DOIVENT PORTER `noindex`, ET NON UN CANONICAL. Une page derrière une
@@ -61,14 +79,22 @@ while IFS= read -r page; do
   [ -n "$page" ] || continue
   relatif="${page#"$APP"/}"
 
+  # UNE SEULE FOIS PAR PAGE, toutes les recherches de clé lisent cette valeur.
+  corps="$(sans_commentaires "$page")"
+
   # Le bloc de métadonnées, `metadata` statique ou `generateMetadata`.
   #
-  # LES COMMENTAIRES NE SONT PAS RETIRÉS ICI, ET C'EST VOLONTAIRE : ce contrôle
-  # cherche des clés d'objet, pas des appels de fonction. Une clé `canonical:`
-  # ne s'écrit pas dans une phrase d'explication comme un nom de fonction le
-  # ferait. Le motif « contrôle satisfait par un commentaire » ne s'applique
-  # donc pas, et retirer les commentaires ferait perdre le numéro de ligne.
-  if ! grep -q "export const metadata\|export async function generateMetadata" "$page"; then
+  # LES COMMENTAIRES SONT RETIRÉS AVANT TOUTE RECHERCHE, et cette ligne a été
+  # écrite APRÈS que la mutation l'a imposée. La version précédente affirmait
+  # qu'une clé d'objet ne s'écrit pas dans une phrase d'explication : c'est
+  # faux, et le dépôt en portait déjà trois. Le commentaire « canonical
+  # explicite » posé au-dessus de la clé satisfaisait `grep -q canonical`, et
+  # le contrôle restait VERT sur une page dont le canonical avait disparu.
+  #
+  # C'est le motif « contrôle satisfait par un commentaire », déjà en fiche sur
+  # ce dépôt, et la première mutation l'a rattrapé. Le prix est le numéro de
+  # ligne, qu'on perd : le message nomme donc le fichier et la clé manquante.
+  if ! printf '%s' "$corps" | grep -q "export const metadata\|export async function generateMetadata"; then
     if est_privee "$relatif"; then
       echo "ECHEC $relatif ne déclare aucune métadonnée"
       echo "      une page privée doit porter robots: { index: false }"
@@ -85,7 +111,7 @@ while IFS= read -r page; do
 
     # `index: false` ET NON `robots:` SEUL. Chercher la clé `robots` resterait
     # vert sur `robots: { index: true }`, qui est exactement le défaut.
-    if ! grep -q "index: false" "$page"; then
+    if ! printf '%s' "$corps" | grep -q "index: false"; then
       echo "ECHEC $relatif est une route privée sans noindex"
       echo "      ajouter robots: { index: false, follow: false } aux métadonnées."
       echo "      Sans lui, un écran interne peut entrer dans un index public,"
@@ -99,12 +125,25 @@ while IFS= read -r page; do
 
   # Une page publique qui se déclare noindex est un cas légitime mais rare : le
   # contrôle ne l'interdit pas, il la dispense simplement du canonical.
-  if grep -q "index: false" "$page"; then
+  if printf '%s' "$corps" | grep -q "index: false"; then
     continue
   fi
 
+  # LA CLÉ EN SYNTAXE D'OBJET, et non le mot nu. `grep -q "canonical"`
+  # trouvait « canonical explicite » dans une phrase d'explication ; les deux
+  # formes ci-dessous ne s'écrivent pas par accident en français.
+  #
+  # DEUX FORMES ACCEPTÉES, et la seconde a été ajoutée après un faux positif.
+  # Le catalogue construit sa description dans une variable puis l'écrit en
+  # raccourci d'objet, `description,` : exiger `description:` l'accusait à tort
+  # sur du code parfaitement correct. Un contrôle qui rougit sur du code juste
+  # se fait désactiver, ce qui coûte plus cher que le défaut qu'il cherche.
+  #
+  # `$cle,` EN FIN DE LIGNE UNIQUEMENT, sans quoi un appel `f(title, x)`
+  # satisferait la recherche. Combiné au décommentage, il reste la syntaxe
+  # d'objet et elle seule.
   for cle in "title" "description" "canonical"; do
-    if ! grep -q "$cle" "$page"; then
+    if ! printf '%s' "$corps" | grep -qE "(^|[^a-zA-Z])$cle(:|,\s*$)"; then
       echo "ECHEC $relatif est une page publique sans $cle"
       case "$cle" in
         canonical)
@@ -164,7 +203,7 @@ done
 # `canonical: "/chemin"` est émis tel quel et résolu contre l'hôte de la
 # requête : juste par accident, faux dès qu'un second nom de domaine sert le
 # site.
-if ! grep -q "metadataBase" "$APP/layout.tsx"; then
+if ! sans_commentaires "$APP/layout.tsx" | grep -q "metadataBase:"; then
   echo "ECHEC src/app/layout.tsx ne déclare plus metadataBase"
   echo "      sans elle, les canoniques relatifs des pages ne sont plus résolus"
   ko=$((ko + 1))
