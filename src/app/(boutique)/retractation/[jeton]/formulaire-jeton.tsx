@@ -15,6 +15,7 @@
  * une interface qui suggere qu'il faut se justifier dissuade de l'exercer.
  */
 import { useActionState, useEffect, useRef } from "react";
+import { MENTION_FORMULAIRE } from "@/lib/mentions-retractation";
 
 import { deposerRetractationParJeton } from "./actions";
 import type { ResultatRetractationJeton } from "./actions";
@@ -135,9 +136,24 @@ export function FormulaireRetractationJeton({
         {enCours ? "Envoi en cours..." : "Confirmer ma rétractation"}
       </button>
 
-      <p className={styles.mentionFrais}>
-        Les frais de retour du bijou restent à votre charge.
-      </p>
+      {/*
+       * LS-136, EMPLACEMENT 3 DES TROIS, SUR LE CHEMIN SANS COMPTE.
+       *
+       * CE FICHIER PORTAIT SA PROPRE COPIE du texte, identique par coincidence
+       * a celle de l'espace client. Rien ne les gardait d'accord : une decision
+       * commerciale modifiant la charge des frais aurait suivi sur un chemin et
+       * pas sur l'autre, et deux emplacements qui se contredisent valent une
+       * absence d'information, article L221-20, douze mois.
+       *
+       * LE CHEMIN SANS COMPTE PORTE LE PLUS DE VOLUME, `legal.md` : l'email de
+       * confirmation est le seul par lequel un acheteur sans compte recoit son
+       * droit. C'etait donc le chemin le moins protege qui restait hors source
+       * unique.
+       *
+       * Releve en revue critique : mon commentaire affirmait qu'un seul
+       * composant servait les deux chemins. Il y en a deux.
+       */}
+      <p className={styles.mentionFrais}>{MENTION_FORMULAIRE.fraisRetour}</p>
     </form>
   );
 }

@@ -101,11 +101,29 @@ verifier_emplacement() {
 
 # Emplacement 1, le seul qui manquait entièrement au 5 septembre 2026 : zéro
 # occurrence du mot « rétractation » dans tout le tunnel.
+#
+# LES DEUX PROPRIÉTÉS SONT CHERCHÉES SÉPARÉMENT, et cette séparation a été
+# imposée par une revue critique : chercher `MENTION_TUNNEL` seul laissait le
+# contrôle VERT quand le paragraphe du droit disparaissait, `fraisRetour`
+# satisfaisant le motif à lui seul. L'écran annonçait alors qui paie le retour
+# sans jamais dire qu'un droit de rétractation existe, ce que l'article L221-20
+# sanctionne pleinement.
+#
+# C'est le motif « nom nu hors ancrage » une seconde fois dans ce fichier : je
+# l'avais fermé pour l'import, pas pour le second usage. Les deux notions se
+# retirent indépendamment, elles se vérifient donc indépendamment, comme les
+# conditions générales le font déjà plus bas.
 verifier_emplacement \
-  "emplacement 1, avant la validation de la commande" \
+  "emplacement 1, le droit lui-même" \
   "src/app/(boutique)/commande/etapes-tunnel.tsx" \
-  "MENTION_TUNNEL" \
+  "MENTION_TUNNEL.droit" \
   "C'est l'emplacement que legal.md désigne comme « le premier qu'on oublie »."
+
+verifier_emplacement \
+  "emplacement 1, les frais de retour" \
+  "src/app/(boutique)/commande/etapes-tunnel.tsx" \
+  "MENTION_TUNNEL.fraisRetour" \
+  "Sans elle, les frais de retour reviennent au vendeur, article L221-23."
 
 # Emplacement 2, les conditions générales. Elles portent leur propre rédaction,
 # plus détaillée : le contrôle cherche les deux notions et non une constante.
@@ -121,13 +139,22 @@ verifier_emplacement \
   "frais de retour" \
   "Les frais de retour à la charge du client s'y annoncent aussi."
 
-# Emplacement 3, le formulaire type. Un seul composant sert les DEUX chemins,
-# l'espace client et le lien signé des acheteurs sans compte.
+# Emplacement 3, le formulaire type. DEUX COMPOSANTS, UN PAR CHEMIN, et le
+# second manquait à ce contrôle jusqu'à la revue critique du 5 septembre 2026 :
+# il portait sa propre copie du texte, identique par coïncidence et libre de
+# diverger. Le chemin sans compte est le plus exposé, `legal.md` : l'email de
+# confirmation est le seul par lequel un acheteur sans compte reçoit son droit.
 verifier_emplacement \
-  "emplacement 3, formulaire type de rétractation" \
+  "emplacement 3, formulaire type, espace client" \
   "src/app/(boutique)/compte/commandes/[id]/retractation/formulaire-retractation.tsx" \
   "MENTION_FORMULAIRE" \
-  "Ce composant sert l'espace client ET le lien signé sans compte."
+  "Ce composant sert les clients disposant d'un compte."
+
+verifier_emplacement \
+  "emplacement 3, formulaire type, lien signé sans compte" \
+  "src/app/(boutique)/retractation/[jeton]/formulaire-jeton.tsx" \
+  "MENTION_FORMULAIRE" \
+  "Ce composant sert les acheteurs SANS compte, le chemin le plus exposé."
 
 # ---------------------------------------------------------------------------
 # Sens 2 : la source unique existe et porte les deux notions.

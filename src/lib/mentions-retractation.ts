@@ -32,15 +32,72 @@
  * le meme mot « frais » rapproche dangereusement.
  */
 
+import { DUREE_RETRACTATION_JOURS } from "@/lib/retractation";
+
+export { DUREE_RETRACTATION_JOURS };
+
 /**
- * Le delai de retractation, en jours, tel qu'il s'annonce au client.
+ * Les nombres dont le projet a besoin en toutes lettres.
  *
- * IL EST REPRIS DE `lib/retractation.ts` ET NON REECRIT. Le calcul de
- * l'echeance est la source de verite, LS-133 : annoncer quatorze ici pendant
- * qu'un service en applique un autre produirait exactement l'information
- * incorrecte que l'article L221-20 sanctionne, et c'est L'AFFICHAGE qui engage.
+ * ------------------------------------------------------------------
+ * POURQUOI EN LETTRES ET NON EN CHIFFRES.
+ *
+ * « quatorze jours » se lit mieux que « 14 jours » dans une phrase, et une
+ * mention legale doit d'abord etre LUE : une obligation formellement remplie
+ * mais illisible rate sa fonction. Le prix de ce choix est le decouplage, que
+ * la fonction ci-dessous paie.
+ *
+ * LA TABLE VA AU-DELA DU DELAI ACTUEL, jusqu'a trente. Une table qui ne
+ * connaitrait que la valeur attendue ne saurait pas rendre un AUTRE nombre :
+ * elle leverait a la premiere modification, ce qui est le comportement voulu,
+ * mais sans dire lequel. Motif « table de nombres trop courte », en fiche.
+ * ------------------------------------------------------------------
  */
-export { DUREE_RETRACTATION_JOURS } from "@/lib/retractation";
+const NOMBRES_EN_LETTRES: Record<number, string> = {
+  7: "sept",
+  10: "dix",
+  13: "treize",
+  14: "quatorze",
+  15: "quinze",
+  16: "seize",
+  21: "vingt et un",
+  30: "trente",
+};
+
+/**
+ * Le delai, ecrit en toutes lettres, DERIVE de la constante du calcul.
+ *
+ * ------------------------------------------------------------------
+ * ELLE LEVE PLUTOT QUE DE REPLIER SUR UN NOMBRE EN CHIFFRES.
+ *
+ * Un repli silencieux produirait « Vous disposez de 21 jours » au milieu d'une
+ * phrase redigee, ce qui passerait inapercu en relecture et resterait juste :
+ * la tentation serait alors de ne jamais completer la table.
+ *
+ * Le refus, lui, se voit au demarrage. Et l'enjeu le justifie : annoncer un
+ * delai que le service n'applique pas est l'information incorrecte que
+ * l'article L221-20 sanctionne par DOUZE MOIS, et c'est L'AFFICHAGE qui engage.
+ *
+ * LA PREMIERE VERSION DE CE MODULE REEXPORTAIT SEULEMENT la constante sans
+ * jamais la lire, en affirmant par commentaire qu'elle etait « reprise et non
+ * reecrite ». Les deux revues du 5 septembre 2026 l'ont releve : le couplage
+ * n'existait qu'au niveau du test, et le controle textuel etait satisfait par
+ * une ligne qui ne faisait rien.
+ * ------------------------------------------------------------------
+ */
+function delaiEnLettres(): string {
+  const lettres = NOMBRES_EN_LETTRES[DUREE_RETRACTATION_JOURS];
+
+  if (lettres === undefined) {
+    throw new Error(
+      `Le delai de retractation vaut ${DUREE_RETRACTATION_JOURS} jours, absent ` +
+        "de NOMBRES_EN_LETTRES. Completer la table dans lib/mentions-retractation.ts : " +
+        "les mentions legales annoncent ce delai en toutes lettres.",
+    );
+  }
+
+  return lettres;
+}
 
 /**
  * La mention affichee AVANT la validation de la commande, emplacement 1.
@@ -59,8 +116,7 @@ export { DUREE_RETRACTATION_JOURS } from "@/lib/retractation";
  */
 export const MENTION_TUNNEL = {
   /** Le droit lui-meme, son delai et son point de depart. */
-  droit:
-    "Vous disposez de quatorze jours après réception de votre commande pour changer d'avis, sans avoir à vous justifier.",
+  droit: `Vous disposez de ${delaiEnLettres()} jours après réception de votre commande pour changer d'avis, sans avoir à vous justifier.`,
   /**
    * LES FRAIS DE RETOUR, SANS LESQUELS ILS REVIENNENT AU VENDEUR.
    *
@@ -90,8 +146,14 @@ export const MENTION_TUNNEL = {
  * a deja decide, elle n'a pas besoin qu'on lui rappelle qu'elle a le droit. Ce
  * qu'elle doit savoir avant de valider est ce que le renvoi va lui couter.
  *
- * UN SEUL ECRAN LA PORTE POUR DEUX CHEMINS : `formulaire-retractation.tsx` sert
- * l'espace client ET le lien signe des acheteurs sans compte.
+ * DEUX COMPOSANTS LA PORTENT, UN PAR CHEMIN, et je l'avais ecrit faux ici :
+ * `formulaire-retractation.tsx` sert l'espace client, `formulaire-jeton.tsx`
+ * sert les acheteurs SANS COMPTE par lien signe. Les deux lisent cette
+ * constante depuis la revue critique du 5 septembre 2026 ; le second portait
+ * jusque-la sa propre copie, identique par coincidence et libre de diverger.
+ *
+ * LE CHEMIN SANS COMPTE EST LE PLUS EXPOSE, `legal.md` : l'email de
+ * confirmation est le seul par lequel un acheteur sans compte recoit son droit.
  */
 export const MENTION_FORMULAIRE = {
   fraisRetour: "Les frais de retour du bijou restent à votre charge.",
