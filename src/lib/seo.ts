@@ -122,6 +122,47 @@ export function disponibiliteSchemaOrg(etat: EtatDisponibilite): string {
 export const NOM_BOUTIQUE = "Lune & Soleil";
 
 /**
+ * L'image de partage du site, 1200 par 630, LS-147.
+ *
+ * ELLE EST ENGENDREE PAR `scripts/engendrer-images-marque.mjs` a partir du logo,
+ * et versionnee. Ne pas la retoucher a la main : le script la reecrirait, et son
+ * mode `--verifier` echouerait en attendant.
+ *
+ * C'est le format que les reseaux recadrent le moins, ratio 1,91:1. Une image
+ * carree y serait rognee a gauche et a droite, ce qui couperait le medaillon.
+ */
+export const CHEMIN_IMAGE_PARTAGE = "/habillage/partage.png";
+
+/**
+ * L'image de partage AVEC SES DIMENSIONS ET SON TEXTE ALTERNATIF, LS-147.
+ *
+ * C'EST UNE FONCTION ET NON UNE CONSTANTE, deliberement. `absolutise` lit
+ * `NEXT_PUBLIC_SITE_URL` et LEVE quand elle manque : figer l'URL dans une
+ * constante de module la ferait evaluer a l'import, donc tout import de ce
+ * fichier echouerait sans la variable, y compris depuis un test unitaire qui ne
+ * sert aucune page. Meme motif que `metadataBase` du layout racine, a ceci pres
+ * qu'ici rien n'oblige a payer ce prix.
+ *
+ * LES DIMENSIONS SONT DECLAREES parce que les robots des reseaux sociaux
+ * affichent l'apercu avant d'avoir telecharge l'image : sans elles, la carte
+ * saute a la bonne taille une fois le PNG recu, quand elle ne retombe pas sur
+ * une vignette carree. Elles doivent rester d'accord avec ce que produit
+ * `scripts/engendrer-images-marque.mjs`, seule source de l'image.
+ *
+ * LE TEXTE ALTERNATIF DECRIT CE QUE L'IMAGE MONTRE, pour qui ne la voit pas :
+ * lecteur d'ecran sur un apercu de partage, et robot d'indexation. Il ne repete
+ * pas le titre de la page, qui voyage deja dans `og:title` juste a cote.
+ */
+export function imagePartageDecrite() {
+  return {
+    url: absolutise(CHEMIN_IMAGE_PARTAGE),
+    width: 1200,
+    height: 630,
+    alt: `Le medaillon de ${NOM_BOUTIQUE}, un croissant de lune et un soleil dores, avec la mention bijoux artisanaux faits main`,
+  };
+}
+
+/**
  * Le JSON-LD `Organization`, pose une seule fois sur l'accueil.
  *
  * IL N'EST PAS REPETE SUR CHAQUE PAGE. Les moteurs rattachent l'organisation au
@@ -174,7 +215,48 @@ export function openGraphDePage(page: {
     siteName: NOM_BOUTIQUE,
     locale: "fr_FR",
     type: "website",
-    ...(page.image !== undefined ? { images: [{ url: page.image }] } : {}),
+    /*
+     * L'IMAGE DE PARTAGE SE REPOSE ICI, EXACTEMENT COMME `siteName`, LS-147.
+     *
+     * `openGraph` declare dans une page REMPLACE celui du parent, images
+     * comprises : c'est le piege documente en tete de cette fonction, applique
+     * a l'image. Une page qui ne reposerait pas la cle n'emettrait aucun
+     * `og:image`, et tout lien partage sortirait en carte de texte nu.
+     *
+     * ------------------------------------------------------------------
+     * L'URL EST ABSOLUE, ET C'EST LE POINT QUI A COUTE LA STORY.
+     *
+     * La premiere version composait l'image a la volee dans un
+     * `opengraph-image.tsx`, la forme que documente Next.js. La balise sortait
+     * en developpement et DISPARAISSAIT sous `next start`, sur les six pages
+     * publiques qui declarent leur propre `openGraph`. Le mecanisme n'a pas ete
+     * elucide malgre la lecture de `mergeStaticMetadata`, `resolveOpenGraph`,
+     * `resolveAndValidateImage` et `resolveUrl` dans Next 16.2.12.
+     *
+     * Arbitrage de Christophe : un PNG statique, reference par une URL absolue.
+     * `absolutise` la construit depuis `NEXT_PUBLIC_SITE_URL`, donc le rendu ne
+     * depend plus d'aucune resolution relative, d'aucun `metadataBase` et
+     * d'aucune convention de fichier. Le prix paye est une image figee, que
+     * `scripts/engendrer-images-marque.mjs` reproduit a l'identique.
+     * ------------------------------------------------------------------
+     *
+     * La fiche produit garde sa photographie de bijou, plus parlante dans un
+     * partage que le medaillon ; c'est seulement quand elle n'en a aucune
+     * qu'elle retombe sur l'image du site.
+     */
+    images: [
+      page.image !== undefined
+        ? /*
+           * LA PHOTOGRAPHIE DU BIJOU N'EMPORTE NI DIMENSIONS NI TEXTE
+           * ALTERNATIF. Ses largeurs sont celles d'ADR-007, 320 a 1920 px, donc
+           * annoncer 1200 par 630 la decrirait faux, et un reseau qui fait
+           * confiance a `og:image:width` recadrerait de travers. Son texte
+           * alternatif appartient au bijou, pas au medaillon : la fiche le
+           * fournira quand LS-23 apportera les photographies reelles.
+           */
+          { url: absolutise(page.image) }
+        : imagePartageDecrite(),
+    ],
   };
 }
 

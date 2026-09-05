@@ -244,6 +244,61 @@ if ! sans_commentaires "$APP/layout.tsx" | grep -q "metadataBase:"; then
   ko=$((ko + 1))
 fi
 
+# ---------------------------------------------------------------------------
+# L'IMAGE DE PARTAGE, LS-147.
+#
+# CE QUE CES TROIS SENS EMPÊCHENT, et le défaut a réellement eu lieu : LS-137 a
+# posé les balises Open Graph sur les 25 pages SANS jamais fournir d'image, et
+# rien ne l'a signalé. Tout lien partagé sortait en carte de texte nu, sur les
+# réseaux comme dans les aperçus des moteurs génératifs. Le contrôle SEO passait
+# au vert, ne regardant que `title`, `description` et canonical.
+#
+# LE FICHIER EST ENGENDRÉ, jamais retouché à la main :
+# `scripts/engendrer-images-marque.mjs --verifier` compare les empreintes et
+# c'est lui qui prouve que l'image descend bien du logo source. Ici, on vérifie
+# seulement qu'elle EXISTE et qu'elle est RÉFÉRENCÉE, ce qu'aucun test unitaire
+# ne voit : un fichier supprimé laisse les tests verts, ils ne lisent que la
+# chaîne du chemin.
+# ---------------------------------------------------------------------------
+IMAGE_PARTAGE="public/habillage/partage.png"
+
+if [ ! -f "$RACINE/$IMAGE_PARTAGE" ]; then
+  echo "ECHEC $IMAGE_PARTAGE a disparu"
+  echo "      la rejouer : node scripts/engendrer-images-marque.mjs"
+  ko=$((ko + 1))
+fi
+
+# Le layout racine sert les pages qui ne déclarent aucun `openGraph` : panier,
+# tunnel, espace client, pages d'erreur. Sans image ici, elles n'en ont aucune.
+if ! sans_commentaires "$APP/layout.tsx" | grep -q "imagePartageDecrite()"; then
+  echo "ECHEC src/app/layout.tsx ne pose plus l'image de partage"
+  echo "      les pages sans openGraph propre n'auraient aucun og:image"
+  ko=$((ko + 1))
+fi
+
+# `openGraph` déclaré dans une page REMPLACE celui du parent, images comprises :
+# une page qui ne repose pas l'image n'en émet aucune. C'est `openGraphDePage`
+# qui la repose pour toutes, elle doit donc continuer de le faire.
+# ANCRÉ SUR LE CORPS DE `openGraphDePage`, ET NON SUR LE FICHIER ENTIER. La
+# première version cherchait l'appel n'importe où dans `seo.ts` et ne prouvait
+# rien : la DÉFINITION de `imagePartageDecrite` y figure aussi, donc retirer
+# l'appel laissait le contrôle vert, sur exactement le défaut visé. Motif
+# « contrôle par fichier ou par fonction », déjà en fiche sur ce dépôt, et seule
+# la mutation l'a montré.
+#
+# LA PLAGE FERME SUR `^}$` ET NON SUR `^}`. La signature de cette fonction prend
+# un objet littéral, dont l'accolade fermante ouvre la ligne `}): Record<...> {`.
+# Une plage fermant sur `^}` s'arrêtait donc à la SIGNATURE, huit lignes, sans
+# jamais voir le corps : le contrôle échouait alors en permanence, y compris sur
+# un code juste.
+if ! sans_commentaires "$RACINE/src/lib/seo.ts" \
+  | awk '/^export function openGraphDePage/,/^\}$/' \
+  | grep -q "imagePartageDecrite()"; then
+  echo "ECHEC src/lib/seo.ts ne repose plus l'image dans openGraphDePage"
+  echo "      chaque page qui déclare son openGraph perdrait son og:image"
+  ko=$((ko + 1))
+fi
+
 echo
 if [ "$ko" -eq 0 ]; then
   echo "OK métadonnées présentes sur toutes les routes, sitemap et robots en place"
