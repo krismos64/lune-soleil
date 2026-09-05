@@ -16,6 +16,7 @@
  * une demande sans motif est une demande valide.
  */
 import { useActionState, useEffect, useRef } from "react";
+import { MENTION_FORMULAIRE } from "@/lib/mentions-retractation";
 
 import { deposerMaRetractation } from "./actions";
 import type { ResultatRetractation } from "./actions";
@@ -147,9 +148,17 @@ export function FormulaireRetractation({
         {enCours ? "Envoi en cours..." : "Confirmer ma rétractation"}
       </button>
 
-      <p className={styles.mentionFrais}>
-        Les frais de retour du bijou restent à votre charge.
-      </p>
+      {/*
+       * LS-136, EMPLACEMENT 3 DES TROIS. Le texte etait ecrit ici en clair
+       * depuis LS-134 et il etait juste ; il vient desormais de
+       * `lib/mentions-retractation.ts`, source unique des trois emplacements.
+       *
+       * CE QUE LE RAPATRIEMENT FERME : tant que la mention vivait seule dans ce
+       * composant, rien n'empechait le tunnel d'en annoncer une autre. Une
+       * information CONTRADICTOIRE entre deux emplacements est sanctionnee
+       * comme une information absente, article L221-20, douze mois.
+       */}
+      <p className={styles.mentionFrais}>{MENTION_FORMULAIRE.fraisRetour}</p>
     </form>
   );
 }

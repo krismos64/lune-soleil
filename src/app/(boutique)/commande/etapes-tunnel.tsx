@@ -17,6 +17,7 @@
  * element detache ».
  */
 import { formaterMontant } from "@/lib/montant";
+import { MENTION_TUNNEL } from "@/lib/mentions-retractation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -708,6 +709,55 @@ function Recapitulatif({
         <p className={styles.totalFinal}>
           <span>Total</span>
           <span>{formaterMontant(recapitulatif.totalCentimes)}</span>
+        </p>
+      </section>
+
+      {/*
+       * LS-136, EMPLACEMENT 1 DES TROIS : la mention AVANT la validation.
+       *
+       * ELLE MANQUAIT ENTIEREMENT, mesure le 5 septembre 2026 : zero occurrence
+       * du mot « retractation » dans tout le tunnel, quand les conditions
+       * generales en portaient six. C'est l'emplacement que `legal.md` designe
+       * comme « le premier qu'on oublie », et le plus exigeant : l'information
+       * doit atteindre le client AVANT qu'il s'engage, pas dans une page qu'il
+       * POURRAIT consulter.
+       *
+       * L'ENJEU N'EST PAS PROPORTIONNEL A L'OUBLI. L'article L221-20 porte le
+       * delai de retractation a DOUZE MOIS quand l'information est absente ou
+       * incorrecte, sur toutes les commandes concernees. Et sans la mention des
+       * frais de retour, article L221-23, ceux-ci reviennent au vendeur, la
+       * charge de la preuve pesant sur lui.
+       *
+       * ELLE EST PLACEE JUSTE AVANT LE BOUTON, deliberement : c'est le dernier
+       * element lu avant l'engagement. Placee en tete du recapitulatif, elle
+       * serait separee de la decision par le detail des pieces et des montants.
+       *
+       * LE TEXTE VIENT DE `lib/mentions-retractation.ts`, source unique des
+       * trois emplacements : trois textes ecrits separement divergeraient, et
+       * une information CONTRADICTOIRE est sanctionnee comme une information
+       * absente.
+       *
+       * PAS DE CLASSE `.aide` ICI, contrairement a la phrase sur Stripe en
+       * dessous. `.aide` emploie `--ls-text-muted`, un gris a 4,86:1 : une
+       * mention legale que le client doit lire avant de s'engager n'est pas une
+       * precision secondaire.
+       */}
+      <section
+        className={styles.mentionLegale}
+        aria-labelledby="titre-retractation"
+      >
+        <h2 id="titre-retractation" className={styles.sousTitre}>
+          Votre droit de rétractation
+        </h2>
+        <p className={styles.texteLegal}>{MENTION_TUNNEL.droit}</p>
+        <p className={styles.texteLegal}>
+          {MENTION_TUNNEL.fraisRetour}{" "}
+          <Link
+            href="/informations-legales#retractation"
+            className={styles.lienLegal}
+          >
+            Conditions détaillées
+          </Link>
         </p>
       </section>
 
