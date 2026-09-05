@@ -197,7 +197,48 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Sens 3 : la règle est toujours écrite.
+# Sens 3 : aucun texte visible n'annonce un délai que le calcul n'applique pas.
+#
+# LE DÉLAI EST ÉCRIT EN DUR DANS TREIZE TEXTES, hors source unique : accueil,
+# fiche produit, aide, conditions générales, écrans d'expiration, détail de
+# commande, formulaires et deux modèles d'email. C'est délibéré et ce n'est pas
+# une dette : « quatorze jours » se lit mieux qu'une interpolation au milieu
+# d'une phrase rédigée, et une mention légale doit d'abord être LUE.
+#
+# LE RISQUE EST LA DIVERGENCE. Si `DUREE_RETRACTATION_JOURS` changeait, par la
+# loi ou par décision, le calcul suivrait, `MENTION_TUNNEL` rougirait, et ces
+# treize textes continueraient d'annoncer quatorze jours. Un délai annoncé plus
+# COURT que le délai réel éteint un droit trop tôt, ce que l'article L221-20
+# sanctionne par douze mois.
+#
+# CE SENS NE RÉÉCRIT RIEN, IL REFUSE LE SILENCE. Il échoue si la constante ne
+# vaut plus 14 en nommant les fichiers à reprendre à la main. Relevé en revue
+# critique, qui a mesuré que la garde par table de nombres ne couvrait que
+# `MENTION_TUNNEL.droit`.
+# ---------------------------------------------------------------------------
+DELAI_ATTENDU=14
+delai_reel="$(grep -oE 'DUREE_RETRACTATION_JOURS = [0-9]+' "$RACINE/src/lib/retractation.ts" | grep -oE '[0-9]+$' || true)"
+
+if [ -z "$delai_reel" ]; then
+  echo "ECHEC DUREE_RETRACTATION_JOURS est introuvable dans src/lib/retractation.ts"
+  echo "      L'ancrage de ce sens est cassé : le corriger avant de conclure."
+  ko=$((ko + 1))
+elif [ "$delai_reel" != "$DELAI_ATTENDU" ]; then
+  echo "ECHEC le délai de rétractation vaut $delai_reel jours, ce contrôle attend $DELAI_ATTENDU"
+  echo
+  echo "      Treize textes visibles écrivent le délai en toutes lettres ou en"
+  echo "      chiffres, hors source unique. Ils ne suivent PAS automatiquement,"
+  echo "      et un délai annoncé plus court que le délai réel éteint un droit"
+  echo "      trop tôt, article L221-20, douze mois."
+  echo
+  echo "      Reprendre chacun, puis porter DELAI_ATTENDU à $delai_reel ici :"
+  grep -rln "14 jours\|quatorze jours" "$RACINE/src/app" "$RACINE/src/integrations" \
+    --include="*.tsx" --include="*.ts" 2>/dev/null | sed "s|$RACINE/|        |"
+  ko=$((ko + 1))
+fi
+
+# ---------------------------------------------------------------------------
+# Sens 4 : la règle est toujours écrite.
 #
 # Un contrôle qui applique une obligation qu'aucun document ne porte laisse la
 # session suivante la retirer de bonne foi, faute de savoir pourquoi elle est
