@@ -163,8 +163,10 @@ d'administration, pas seulement celui-ci, donc il relève d'un ticket.
 
 ## État des tickets
 
-**113 terminés sur 180**, relevés dans Jira. LS-180 et LS-184 closes et
-fusionnées, LS-185 livrée. **LS-189 et LS-190 créées** dans la journée.
+**114 terminés sur 180**, relevé dans Jira APRES la fusion de LS-185 : le
+chiffre de 113 vu pendant la session comptait avant sa clôture. LS-180, LS-184 et
+LS-185 sont closes et fusionnées. **LS-189, LS-190 et LS-191 créées** dans la
+journée.
 
 ## Prochaine étape
 
