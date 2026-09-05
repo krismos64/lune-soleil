@@ -870,6 +870,20 @@ jobs:
         run: npm run test:unitaire
 
       # ----------------------------------------------------------------------
+      # Controle 4bis, tests de composant en jsdom. Ni base ni navigateur, LS-113.
+      #
+      # POURQUOI UN PROJET DE PLUS. Certains etats dependent d'une donnee
+      # GLOBALEMENT absente : les deux etats vides « aucune categorie »
+      # s'affichent quand la table entiere est vide, ce que la fixture de bout
+      # en bout ne peut pas produire, et vider la table en cours de suite ferait
+      # voir cet etat aux travailleurs voisins, la base etant partagee.
+      #
+      # C'EST LE PREMIER ECRAN QUE VERRA L'EXPLOITANTE sur une boutique qui
+      # demarre, et rien ne le protegeait.
+      - name: 4bis. Tests de composant
+        run: npm run test:composant
+
+      # ----------------------------------------------------------------------
       # Controle 5, tests d'integration sur base ephemere.
       #
       # La preparation globale cree une base au nom unique sur le meme serveur,
