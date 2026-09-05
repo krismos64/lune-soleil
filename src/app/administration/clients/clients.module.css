@@ -1,0 +1,350 @@
+/*
+ * Ecran « Clients », LS-185.
+ *
+ * CONCU A PARTIR DE 320 px, puis elargi. Les media queries montent, elles ne
+ * descendent jamais.
+ *
+ * DES CARTES ET NON UN TABLEAU, comme l'ecran des factures et celui des
+ * commandes : sept informations par client ne tiennent pas en colonnes dans
+ * 320 px, et un tableau a defilement cache ses dernieres colonnes sans le dire.
+ *
+ * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons d'ADR-022. Les paires
+ * couleur et fond sont COLOCALISEES, ce qui les rend mesurables par
+ * `verifier-contraste.sh` : il n'apparie jamais un fond herite du JSX.
+ */
+
+.page {
+  padding: var(--ls-space-4);
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .page {
+    padding: var(--ls-space-6);
+  }
+}
+
+/* ------------------------------------------------------------------ en-tete */
+
+/*
+ * `--ls-accent-terracotta-deep` sur `--ls-background` : 5,51:1, AA.
+ *
+ * PAS `--ls-accent-terracotta`, qui donne 4,07:1 sur creme et n'est autorise
+ * qu'en texte large, 18,66 px en gras : un sur-titre de 11 px n'en est pas.
+ */
+.surtitre {
+  margin: 0 0 var(--ls-space-1);
+  background: var(--ls-background);
+  color: var(--ls-accent-terracotta-deep);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* `--ls-primary` sur `--ls-background` : 8,36:1, AAA. */
+.titre {
+  margin: 0 0 var(--ls-space-3);
+  background: var(--ls-background);
+  color: var(--ls-primary);
+  font-family: var(--ls-police-titre);
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+/* `--ls-text-muted` sur `--ls-background` : 4,86:1, AA, de justesse. */
+.introduction {
+  margin: 0 0 var(--ls-space-5);
+  max-width: 60ch;
+  background: var(--ls-background);
+  color: var(--ls-text-muted);
+  line-height: 1.6;
+}
+
+/* --------------------------------------------------------------- recherche */
+
+.recherche {
+  margin-bottom: var(--ls-space-4);
+}
+
+/*
+ * LE LIBELLE EST VISIBLE, jamais un `placeholder` seul.
+ *
+ * Un `placeholder` disparait a la saisie : qui revient sur le champ ne sait
+ * plus ce qu'il y avait mis ni ce qui est attendu, et un lecteur d'ecran ne le
+ * lit pas comme un nom accessible fiable. Le `placeholder` reste, en renfort.
+ *
+ * `--ls-text` sur `--ls-background` : 12,09:1, AAA.
+ */
+.rechercheLabel {
+  display: block;
+  margin-bottom: var(--ls-space-2);
+  background: var(--ls-background);
+  color: var(--ls-text);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/*
+ * `flex-wrap` PARCE QUE LE CHAMP ET LE BOUTON NE TIENNENT PAS COTE A COTE A
+ * 320 px. Le bouton passe alors sous le champ, ce qui reste utilisable, plutot
+ * que de comprimer le champ jusqu'a l'illisible.
+ */
+.rechercheLigne {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ls-space-2);
+}
+
+/*
+ * `min-width: 0` AVEC `flex: 1` : sans lui, un element flex refuse de passer
+ * sous la largeur de son contenu, et la valeur par defaut d'un champ de
+ * recherche est large. Motif de LS-171 applique au formulaire.
+ *
+ * `font-size: 1rem` EXACTEMENT, 16 px : en deca, iOS zoome a la mise au point
+ * et casse la mise en page a 320 px.
+ *
+ * `--ls-text` sur `--ls-surface` : 12,92:1, AAA.
+ */
+.rechercheChamp {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-2) var(--ls-space-3);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+/* `--ls-text-on-primary` sur `--ls-primary` : 8,93:1, AAA. */
+.rechercheBouton {
+  min-height: var(--ls-touch-target);
+  padding: 0 var(--ls-space-4);
+  border: 1px solid var(--ls-primary);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--ls-duration-fast) var(--ls-easing);
+}
+
+.rechercheBouton:hover {
+  background: var(--ls-primary-hover);
+}
+
+/* `--ls-text` sur `--ls-background` : 12,09:1, AAA. */
+.rappelRecherche {
+  margin: 0 0 var(--ls-space-4);
+  background: var(--ls-background);
+  color: var(--ls-text);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+/*
+ * `--ls-primary` sur `--ls-background` : 8,36:1, AAA.
+ *
+ * LE SOULIGNEMENT EST CONSERVE : un lien qui ne se distingue que par sa couleur
+ * est invisible a qui ne percoit pas cette difference.
+ */
+.lien {
+  color: var(--ls-primary);
+  text-decoration: underline;
+}
+
+/* ------------------------------------------------------------ liste, cartes */
+
+.liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-3);
+}
+
+.client {
+  padding: var(--ls-space-4);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+}
+
+.enTeteClient {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ls-space-2);
+  margin-bottom: var(--ls-space-1);
+}
+
+/*
+ * `--ls-text` sur `--ls-surface` : 12,92:1, AAA.
+ *
+ * `min-width: 0` ET `overflow-wrap` ENSEMBLE. Un nom saisi au profil peut ne
+ * porter aucun espace, et l'adresse email prend sa place quand il manque : les
+ * deux sont des chaines sans point de coupure naturel. `overflow-wrap` seul ne
+ * suffit pas, un item flex refusant de passer sous la largeur de son contenu.
+ */
+.nom {
+  min-width: 0;
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  font-family: var(--ls-police-titre);
+  font-size: 1.125rem;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * `--ls-text-on-primary` sur `--ls-primary` : 8,93:1, AAA.
+ *
+ * L'ETAT VERIFIE EST LE CAS ORDINAIRE, donc il porte la couleur ordinaire.
+ */
+.etat {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--ls-space-1) var(--ls-space-2);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/*
+ * `--ls-text-on-primary` sur `--ls-accent-terracotta-deep` : 5,89:1, AA.
+ *
+ * TERRACOTTA ET NON ROUGE, ET C'EST UNE DECISION. Un email non confirme n'est
+ * pas une erreur : la verification ne bloque rien, arbitrage du 2 septembre
+ * 2026, elle conditionne seulement le rattachement des commandes invitees. Un
+ * liseré d'erreur ferait croire a un compte en defaut, et pousserait
+ * l'exploitante a agir la ou il n'y a rien a faire.
+ *
+ * L'INFORMATION NE PASSE PAS PAR LA SEULE COULEUR : les deux etats portent des
+ * LIBELLES differents, « Email vérifié » et « Email à confirmer ».
+ */
+.etatAConfirmer {
+  background: var(--ls-accent-terracotta-deep);
+}
+
+/*
+ * `--ls-text-muted` sur `--ls-surface` : 5,19:1, AA.
+ *
+ * UNE ADRESSE EMAIL N'A PAS DE POINT DE COUPURE NATUREL : sans
+ * `overflow-wrap`, elle deborde de sa carte a 320 px.
+ */
+.email {
+  margin: 0 0 var(--ls-space-2);
+  background: var(--ls-surface);
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.details {
+  margin: 0;
+}
+
+/*
+ * LE COUPLE LIBELLE-VALEUR EN `space-between` : l'aspect d'une ligne de tableau
+ * sans en etre un, et qui tient a 320 px.
+ */
+.detail,
+.detailTotal {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--ls-space-3);
+  padding: var(--ls-space-1) 0;
+}
+
+/* `--ls-text-muted` sur `--ls-surface` : 5,19:1, AA. */
+.detail dt,
+.detailTotal dt {
+  background: var(--ls-surface);
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+}
+
+/*
+ * `min-width: 0` EST INDISPENSABLE, ET `overflow-wrap` NE LE REMPLACE PAS : un
+ * item flex porte `min-width: auto` et refuse de passer sous la largeur de son
+ * contenu. Motif de LS-171, et defaut trouve sur l'ecran des factures par la
+ * revue d'interface du 5 septembre 2026.
+ */
+.detail dd,
+.detailTotal dd {
+  margin: 0;
+  min-width: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * LE MONTANT SE DETACHE, filet superieur et graisse.
+ * `--ls-price` sur `--ls-surface` : 8,93:1, AAA, le jeton valant
+ * `--ls-primary`.
+ */
+.detailTotal {
+  margin-top: var(--ls-space-2);
+  border-top: 1px solid var(--ls-border);
+  padding-top: var(--ls-space-2);
+}
+
+.detailTotal dd {
+  background: var(--ls-surface);
+  color: var(--ls-price);
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------- etats non nominaux */
+
+/*
+ * `--ls-text-muted` sur `--ls-background` : 4,86:1, AA.
+ *
+ * LE POINTILLE DIT « RIEN ICI » SANS DIRE « ERREUR », convention des autres
+ * ecrans d'administration.
+ */
+.vide {
+  padding: var(--ls-space-5);
+  border: 1px dashed var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-background);
+  color: var(--ls-text-muted);
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* `--ls-text` sur `--ls-surface-sand` : 10,83:1, AAA. Le sable impose
+   `--ls-text` ou `--ls-primary`, C31. */
+.plafond {
+  margin: var(--ls-space-4) 0 0;
+  padding: var(--ls-space-3);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+/* ------------------------------------------------------------------- focus */
+
+.rechercheChamp:focus-visible,
+.rechercheBouton:focus-visible,
+.lien:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rechercheBouton {
+    transition: none;
+  }
+}
