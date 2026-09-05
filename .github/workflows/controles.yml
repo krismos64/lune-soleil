@@ -671,6 +671,32 @@ jobs:
 
       # Textuel, aucune base ni conteneur requis.
       #
+      # CE QU'IL GARDE : les metadonnees de referencement de toute route, LS-137.
+      # Une page publique sans `title`, `description` ou canonical, une page
+      # PRIVEE sans `noindex`, un titre qui reecrit le nom de la boutique que le
+      # gabarit du layout ajoute deja, et la disparition de `metadataBase`,
+      # `sitemap.ts` ou `robots.ts`.
+      #
+      # LES QUATRE DEFAUTS SONT INVISIBLES A L'ECRAN. La page s'affiche
+      # parfaitement, elle est seulement mal indexee, et cela se constate des
+      # semaines plus tard en voyant qu'elle ne remonte pas. Le plus couteux est
+      # le `noindex` manquant sur un ecran interne : retirer une page d'un index
+      # public prend des semaines quand l'y faire entrer prend un jour.
+      #
+      # IL EST GENERIQUE, jamais une liste de pages ecrite a la main : il part
+      # de `find` sur les `page.tsx`, une liste manuelle etant une opinion sur ce
+      # qui existe, qui se perime au premier ecran ajoute.
+      #
+      # CE QU'IL NE VOIT PAS, et c'est assume : la JUSTESSE d'un canonical, et
+      # toute route servie par un `route.ts`, qu'il n'enumere pas. Ces deux
+      # points sont couverts par `tests/e2e/referencement.spec.ts`, qui lit le
+      # HTML et les fichiers reellement servis. Un controle textuel ne remplace
+      # pas un test d'execution.
+      - name: 6m. Metadonnees de referencement
+        run: ./scripts/verifier-seo.sh
+
+      # Textuel, aucune base ni conteneur requis.
+      #
       # CE QU'IL GARDE : les quatre couleurs recopiees en dur dans l'ecran de
       # dernier recours, LS-146. `global-error.tsx` REMPLACE le layout racine,
       # donc les imports de `tokens.css` : s'appuyer sur une variable CSS y
