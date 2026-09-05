@@ -697,6 +697,31 @@ jobs:
 
       # Textuel, aucune base ni conteneur requis.
       #
+      # CE QU'IL GARDE : les trois emplacements de la mention de retractation
+      # imposes par l'article L221-23, LS-136. Le tunnel avant validation, les
+      # conditions generales, et le formulaire type.
+      #
+      # L'ENJEU N'EST PAS PROPORTIONNEL A LA TAILLE DU TEXTE. L'article L221-20
+      # porte le delai de retractation a DOUZE MOIS quand l'information est
+      # absente ou incorrecte, sur toutes les commandes concernees. Une mention
+      # retiree lors d'une refonte de gabarit ne casse aucun test de rendu et ne
+      # se voit sur aucun ecran : la page reste correcte, elle est devenue
+      # illegale.
+      #
+      # L'EMPLACEMENT DU TUNNEL MANQUAIT ENTIEREMENT avant LS-136, mesure le
+      # 5 septembre 2026 : zero occurrence du mot « retractation » dans tout le
+      # tunnel, quand les conditions generales en portaient six. C'est celui que
+      # legal.md designe comme « le premier qu'on oublie ».
+      #
+      # CE QU'IL NE VOIT PAS : qu'une mention presente dans le code soit
+      # reellement RENDUE. C'est `tests/e2e/mentions-retractation.spec.ts` qui
+      # lit le HTML servi et mesure la position de la mention par rapport au
+      # bouton d'engagement.
+      - name: 6n. Mentions de retractation aux trois emplacements
+        run: ./scripts/verifier-mentions-retractation.sh
+
+      # Textuel, aucune base ni conteneur requis.
+      #
       # CE QU'IL GARDE : les quatre couleurs recopiees en dur dans l'ecran de
       # dernier recours, LS-146. `global-error.tsx` REMPLACE le layout racine,
       # donc les imports de `tokens.css` : s'appuyer sur une variable CSS y

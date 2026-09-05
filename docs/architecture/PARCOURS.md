@@ -140,6 +140,20 @@ description de LS-86 supposait.
 | rappeler caractéristiques essentielles et prix, L221-14 al. 1 | récapitulatif, étape 3b |
 | mention « commande avec obligation de paiement » **sur le bouton**, al. 2 | validation, entre 3b et 4 |
 | restrictions de livraison au plus tard **au début** du processus, al. 3 | entrée du tunnel, avant l'étape 3b |
+| **information sur le droit de rétractation et les frais de retour, L221-23** | récapitulatif, **avant le bouton**, LS-136 |
+
+**La mention de rétractation précède le bouton, et sa position est
+l'obligation elle-même.** L'article L221-23 impose l'information *avant la
+validation*, pas seulement dans les conditions générales : une mention placée
+après le bouton serait lue après l'engagement. `tests/e2e/mentions-retractation.spec.ts`
+compare les ordonnées des deux éléments sur le DOM rendu plutôt que leur ordre
+dans le code, qu'une mise en page pourrait contredire.
+
+**Cet emplacement manquait entièrement jusqu'au 5 septembre 2026**, LS-136 :
+zéro occurrence du mot « rétractation » dans tout le tunnel, alors que les
+conditions générales en portaient six. C'est celui que `.claude/rules/legal.md`
+désigne comme « le premier qu'on oublie », et l'article L221-20 sanctionne son
+absence par un délai porté à douze mois.
 
 **L'adresse rappelée au récapitulatif n'est imposée par aucun texte**, ni
 L221-14, ni L221-5, ni L111-1. Elle est affichée par décision d'ergonomie du
