@@ -110,7 +110,15 @@ construisant l'image et en interrogeant le conteneur : c'est là que l'URL absol
 
 ## État des tickets
 
-**LS-147 est TERMINÉE**, six critères sur six.
+**LS-147 est TERMINÉE**, six critères sur six, PR #245 fusionnée en rebase.
+
+**LS-193 créée**, Medium, sous LS-3 : l'alignement du nom de marque, arbitré par
+Christophe et sorti du périmètre. Sa description porte un point à trancher avant
+de coder, le nom **juridique** de l'entreprise n'étant pas forcément le nom
+commercial : un remplacement global toucherait les mentions légales et les
+factures, où la dénomination sociale ne se modifie pas à la légère.
+
+**118 terminés sur 183**, relevé dans Jira après la clôture.
 
 Le logo source est rangé dans `assets/`, dossier neuf qui n'est pas servi par
 Next.js, avec son README de garde. Il a été recompressé sans perte, 990 Ko à
