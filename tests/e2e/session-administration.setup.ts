@@ -69,6 +69,8 @@ import {
   FICHIER_SESSION_ADMINISTRATION,
   MESSAGES_TEST,
   PRODUIT_TEST,
+  PRODUIT_VIDE,
+  SECTION_TEST,
 } from "./chemin-session";
 
 const MOT_DE_PASSE = "phrase-de-passe-de-test1";
@@ -316,6 +318,47 @@ async function poserProduitDeControle(client: Client): Promise<void> {
      VALUES ($1, $2, $3, 'TEST Déclinaison', 4900, 1, 0, true, now())
      ON CONFLICT (id) DO NOTHING`,
     [PRODUIT_TEST.varianteId, PRODUIT_TEST.produitId, "TEST-LS111"],
+  );
+
+  /*
+   * UNE SECTION SUR LA FICHE DE CONTROLE, LS-113, ET ELLE SERT LE CAS NEGATIF.
+   *
+   * Sans elle, aucune fiche du depot ne porte de section : l'assertion « l'etat
+   * vide des sections n'est PAS affiche » n'aurait nulle part ou se mesurer, et
+   * un composant qui afficherait le message en permanence resterait invisible.
+   *
+   * `ordre` FIXE A 1, la fiche n'en portant qu'une. Le piege de C22, l'unicite
+   * differable de `[produit_id, ordre]`, ne se declenche pas sur une insertion
+   * unique.
+   */
+  await client.query(
+    `INSERT INTO section_produit (
+       id, produit_id, cle, titre, contenu, ordre, visible, cree_a, modifie_a
+     )
+     VALUES ($1, $2, 'matieres', 'TEST Matières',
+             'Contenu de contrôle LS-113.', 1, true, now(), now())
+     ON CONFLICT (id) DO NOTHING`,
+    [SECTION_TEST.id, PRODUIT_TEST.produitId],
+  );
+
+  /*
+   * LE SECOND PRODUIT NE RECOIT NI VARIANTE, NI PHOTO, NI SECTION, LS-113. Ces
+   * trois absences SONT le sujet : elles rendent les trois etats vides de
+   * l'editeur, qu'aucune assertion ne nommait jusque-la.
+   *
+   * IL REUTILISE LA CATEGORIE DU PREMIER, pour ne pas changer le compte de
+   * l'ecran Categories que d'autres tests mesurent.
+   */
+  await client.query(
+    `INSERT INTO produit (id, categorie_id, nom, slug, statut, cree_a, modifie_a)
+     VALUES ($1, $2, $3, $4, 'BROUILLON', now(), now())
+     ON CONFLICT (id) DO NOTHING`,
+    [
+      PRODUIT_VIDE.produitId,
+      PRODUIT_TEST.categorieId,
+      PRODUIT_VIDE.nom,
+      PRODUIT_VIDE.slug,
+    ],
   );
 }
 

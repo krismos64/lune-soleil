@@ -595,8 +595,9 @@ est un incident silencieux. La tâche est déclarée en échec si l'une des troi
 ### Tests, LS-68
 
 ```bash
-npm run test              # Vitest, unitaire et intégration
+npm run test              # Vitest, les trois projets
 npm run test:unitaire     # sans base, lançable sans Docker
+npm run test:composant    # rendu React en jsdom, sans base ni navigateur
 npm run test:integration  # base éphémère, exige Docker
 npm run test:e2e          # Playwright, trois largeurs, deux sessions partagées
 ```
@@ -604,8 +605,17 @@ npm run test:e2e          # Playwright, trois largeurs, deux sessions partagées
 | Commande | Ce qu'elle exerce |
 |---|---|
 | `test:unitaire` | manipulation d'URL de base éphémère, sans base |
+| `test:composant` | le rendu d'un composant React isolé, pour les états qu'aucun autre projet n'atteint |
 | `test:integration` | la primitive SQL de réservation, sur le schéma réel |
 | `test:e2e` | rendu, débordement mesuré aux deux bords, accessibilité axe-core, écrans d'administration ouverts par une vraie session |
+
+**Le projet `composant` existe pour un besoin précis**, ajouté par LS-113 :
+certains états dépendent d'une donnée **globalement** absente. Les deux états
+vides « aucune catégorie » s'affichent quand la table entière est vide, ce que la
+fixture de bout en bout ne peut pas produire puisqu'elle insère toujours une
+catégorie ; et vider la table en cours de suite ferait voir cet état aux
+travailleurs voisins, la base étant partagée. Il ne remplace pas la mesure de
+bout en bout, qui reste la seule à voir une mise en page réelle.
 
 Les tests d'intégration créent une base **éphémère** au nom unique, y appliquent
 `prisma migrate deploy`, puis la détruisent. La base de développement n'est

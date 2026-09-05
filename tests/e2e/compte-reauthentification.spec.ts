@@ -98,7 +98,25 @@ test("le refus de suppression mene a l'ecran de confirmation, critere 2", async 
 
 test("un mot de passe faux est refuse, reste lisible et ne deborde pas", async ({
   page,
-}) => {
+}, infos) => {
+  /*
+   * UN SEUL PROJET, ET C'EST UNE CONTRAINTE DE PLAFOND, LS-113.
+   *
+   * Ce test provoque une VERIFICATION RATEE, et Better Auth tient un compteur
+   * global par adresse IP en plus des plafonds par route, LS-92. Rejoue aux
+   * trois largeurs, il en consomme trois : ajoutees a la connexion de la
+   * preparation, cela suffit a faire basculer le compteur lors de la toute
+   * premiere execution sur une base vierge, celle de la CI.
+   *
+   * LA MESURE DE DEBORDEMENT NE PERD RIEN. 320 px est la largeur contraignante
+   * du projet : un message d'erreur qui n'y deborde pas ne debordera pas plus
+   * large, la mise en page etant fluide.
+   */
+  test.skip(
+    infos.project.name !== "mobile-320",
+    "provoque une verification ratee, comptee par le plafond global par IP : une seule largeur suffit",
+  );
+
   await page.goto("/compte/reauthentification?retour=compte");
 
   await page.getByLabel("Mot de passe").fill(MOT_DE_PASSE_FAUX);

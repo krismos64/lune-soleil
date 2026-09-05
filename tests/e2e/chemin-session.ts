@@ -210,6 +210,51 @@ export const PRODUIT_TEST = {
 } as const;
 
 /**
+ * Second produit de controle, VIDE DE TOUT, LS-113.
+ *
+ * ------------------------------------------------------------------
+ * POURQUOI UN SECOND PRODUIT PLUTOT QUE DE VIDER LE PREMIER.
+ *
+ * `PRODUIT_TEST` porte une variante, et c'est ce qui rend l'editeur mesurable :
+ * ses cinq blocs ont du contenu, dont le bloc de publication et sa liste de
+ * motifs. Le vider casserait tout ce que LS-111 mesure.
+ *
+ * TROIS ETATS VIDES DE L'EDITEUR SONT INATTEIGNABLES SANS LUI : « aucune
+ * declinaison en vente », « aucune photo » et « aucune section ». Sur la fiche
+ * de controle, les deux derniers sont atteints PAR ACCIDENT, aucune photo ni
+ * section n'y etant posee, mais rien ne les nomme : le message pourrait
+ * disparaitre sans qu'aucune assertion ne rougisse.
+ *
+ * IL PARTAGE LA CATEGORIE DU PREMIER, deliberement : ce produit existe pour ses
+ * ABSENCES, pas pour son rangement, et une categorie de plus n'apporterait rien.
+ *
+ * CE QU'IL CHANGE MALGRE TOUT, ET QU'IL FAUT SAVOIR. La categorie de controle
+ * passe de un a DEUX produits : l'ecran Categories affiche « 2 produits y sont
+ * rattachés » au lieu du singulier, et l'ecran Produits compte deux entrees au
+ * lieu d'une. Aucun test de bout en bout ne mesure ces deux comptes
+ * aujourd'hui, verifie ; ceux de `catalogue.sequential.test.ts` tournent en
+ * INTEGRATION, sur base ephemere, donc hors de portee de cette fixture.
+ *
+ * UN TEST FUTUR QUI COMPTERAIT CES ECRANS doit donc s'attendre a deux produits,
+ * et cette phrase est la pour qu'il ne cherche pas la cause ailleurs. Le bouton
+ * Supprimer de la categorie reste desactive dans les deux cas, sa condition
+ * etant « au moins un produit ».
+ *
+ * `ordre` N'EST PAS EN JEU ICI, la table `produit` n'en portant pas : le piege
+ * de LS-160 vise `categorie`, dont ce produit ne cree aucune ligne.
+ * ------------------------------------------------------------------
+ */
+export const SECTION_TEST = {
+  id: "f5b2c3d4-7e91-4c33-8a45-3b6c7d8e9f04",
+} as const;
+
+export const PRODUIT_VIDE = {
+  produitId: "e4a1b2c3-6d89-4b22-9f34-4a5b6c7d8e93",
+  slug: "e2e-ls113-produit-vide",
+  nom: "TEST Produit sans rien LS-113",
+} as const;
+
+/**
  * Produits PUBLIES du catalogue public, LS-104.
  *
  * DISTINCTS DE `PRODUIT_TEST`, qui reste en `BROUILLON` et sert precisement de
