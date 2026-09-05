@@ -693,6 +693,10 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-contraste-mutation.sh         # prouve le précédent par mutation
 ./scripts/verifier-loading-et-404.sh             # aucun loading.tsx ne masque un 404, LS-146
 ./scripts/verifier-loading-et-404-mutation.sh    # prouve le précédent par mutation
+./scripts/verifier-seo.sh                        # métadonnées de référencement de toute route, LS-137
+./scripts/verifier-seo-mutation.sh               # prouve le précédent par mutation
+./scripts/verifier-mentions-retractation.sh      # les trois emplacements de l'article L221-23, LS-136
+./scripts/verifier-mentions-retractation-mutation.sh  # prouve le précédent par mutation
 ./scripts/verifier-palette-secours.sh            # couleurs en dur de l'écran de secours, LS-146
 ./scripts/verifier-palette-secours-mutation.sh   # prouve le précédent par mutation
 ./scripts/verifier-navigation-administration.sh  # chaque écran d'administration est navigable, LS-162

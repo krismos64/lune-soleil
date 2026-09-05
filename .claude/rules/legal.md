@@ -84,6 +84,21 @@ pas quelques euros de port, elle ouvre un an de rétractation possible.
 
 Une formule vague ne suffit pas. Le principe doit être explicite.
 
+**Les trois emplacements sont servis depuis LS-136**, 5 septembre 2026. Le texte
+vient d'une source unique, `src/lib/mentions-retractation.ts` : trois textes
+écrits séparément divergent, et une information **contradictoire** entre deux
+emplacements est sanctionnée comme une information absente.
+
+L'emplacement 1 manquait **entièrement** jusque-là, mesuré : zéro occurrence du
+mot « rétractation » dans tout le tunnel, quand les conditions générales en
+portaient six. Le mot « oublie » ci-dessus décrivait donc ce dépôt.
+
+`scripts/verifier-mentions-retractation.sh` vérifie les trois emplacements,
+`tests/e2e/mentions-retractation.spec.ts` vérifie qu'ils sont réellement rendus
+et que la mention **précède** le bouton d'engagement. Le contrôle textuel ne
+suffit pas ici : une mention appelée dans le code et jamais rendue le
+satisferait.
+
 ### Le calcul n'est pas un ajout de quatorze jours
 
 Article L221-19, trois règles cumulatives :
