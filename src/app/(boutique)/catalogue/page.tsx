@@ -17,6 +17,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { openGraphDePage } from "@/lib/seo";
 import { lireCataloguePublic } from "@/services/catalogue";
 import { CarteProduit } from "./carte-produit";
 import styles from "./catalogue.module.css";
@@ -79,7 +80,7 @@ export async function generateMetadata({
     title: titre,
     description,
     alternates: { canonical: chemin },
-    openGraph: { title: titre, description, url: chemin },
+    openGraph: openGraphDePage({ titre, description, chemin }),
   };
 }
 

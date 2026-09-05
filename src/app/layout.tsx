@@ -37,6 +37,21 @@ export const metadata: Metadata = {
   },
   description:
     "Bijoux artisanaux faits main, créés à l'unité. Boutique en cours de construction.",
+  /**
+   * IL NE SERT QUE LES PAGES QUI NE DECLARENT PAS LE LEUR.
+   *
+   * `openGraph` N'EST PAS FUSIONNE ENTRE SEGMENTS, il est REMPLACE : dès qu'une
+   * page déclare la clé, la valeur du parent est intégralement écrasée, images
+   * comprises. Vérifié via Context7 sur `mergeMetadata`, qui appelle
+   * `resolveOpenGraph` sur la valeur de l'enfant et l'affecte par-dessus celle
+   * du parent.
+   *
+   * Ce bloc a donc été écrit comme un socle hérité, ce qu'il n'est pas : chaque
+   * page effaçait `siteName` et `locale`. Les pages passent depuis par
+   * `openGraphDePage`, qui les repose à chaque fois. Le défaut est invisible à
+   * l'écran et aux types, seul le HTML servi le montre, et c'est
+   * `tests/e2e/referencement.spec.ts` qui l'a trouvé.
+   */
   openGraph: {
     siteName: NOM_BOUTIQUE,
     locale: "fr_FR",

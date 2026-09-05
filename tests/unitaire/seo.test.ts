@@ -22,6 +22,7 @@ import {
   jsonLdFilAriane,
   jsonLdOrganisation,
   jsonLdProduit,
+  openGraphDePage,
   urlDuSite,
 } from "@/lib/seo";
 
@@ -301,5 +302,48 @@ describe("jsonLdProduit", () => {
       "offers"
     ] as { availability: string };
     expect(offre.availability).toBe("https://schema.org/OutOfStock");
+  });
+});
+
+describe("openGraphDePage", () => {
+  const page = {
+    titre: "Le catalogue",
+    description: "Bijoux artisanaux faits main.",
+    chemin: "/catalogue",
+  };
+
+  /*
+   * ------------------------------------------------------------------
+   * LE TEST QUI JUSTIFIE L'EXISTENCE DE CETTE FONCTION.
+   *
+   * `openGraph` declare dans une page REMPLACE integralement celui du layout,
+   * Next.js ne fusionnant pas ce champ. Chaque page doit donc reposer
+   * `siteName` et `locale` elle-meme, sans quoi ils disparaissent du HTML.
+   *
+   * Le defaut est invisible a l'ecran, invisible aux types, et le controle
+   * textuel ne le voit pas non plus : la cle `openGraph` etait bien presente
+   * dans chaque fichier. Seul le HTML servi le montrait.
+   * ------------------------------------------------------------------
+   */
+  it("repose siteName et locale, que le layout ne transmet pas", () => {
+    const og = openGraphDePage(page);
+    expect(og["siteName"]).toBe("Lune & Soleil");
+    expect(og["locale"]).toBe("fr_FR");
+  });
+
+  it("porte le titre, la description et le chemin de la page", () => {
+    const og = openGraphDePage(page);
+    expect(og["title"]).toBe("Le catalogue");
+    expect(og["description"]).toBe("Bijoux artisanaux faits main.");
+    expect(og["url"]).toBe("/catalogue");
+  });
+
+  it("omet les images quand la page n'en a pas", () => {
+    expect("images" in openGraphDePage(page)).toBe(false);
+  });
+
+  it("porte l'image quand la page en fournit une", () => {
+    const og = openGraphDePage({ ...page, image: "/medias/x/640.jpeg" });
+    expect(og["images"]).toEqual([{ url: "/medias/x/640.jpeg" }]);
   });
 });
