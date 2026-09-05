@@ -387,12 +387,37 @@ describe("openGraphDePage", () => {
     expect(og["url"]).toBe("/catalogue");
   });
 
-  it("omet les images quand la page n'en a pas", () => {
-    expect("images" in openGraphDePage(page)).toBe(false);
+  /*
+   * LS-147. Ces trois tests remplacent « omet les images quand la page n'en a
+   * pas », qui encodait le defaut : une page sans image n'emettait aucun
+   * `og:image`, donc tout lien partage sortait en carte de texte nu. Mesure
+   * avant correction, ZERO `og:image` sur les six pages publiques.
+   */
+  it("repose l'image du site quand la page n'en fournit pas", () => {
+    const images = openGraphDePage(page)["images"] as { url: string }[];
+    expect(images).toHaveLength(1);
+    expect(images[0]?.url).toBe(`${SITE}/habillage/partage.png`);
   });
 
-  it("porte l'image quand la page en fournit une", () => {
+  it("decrit l'image du site par ses dimensions et son texte alternatif", () => {
+    const images = openGraphDePage(page)["images"] as {
+      width: number;
+      height: number;
+      alt: string;
+    }[];
+    expect(images[0]?.width).toBe(1200);
+    expect(images[0]?.height).toBe(630);
+    expect(images[0]?.alt).toContain("medaillon");
+  });
+
+  /*
+   * LA PHOTOGRAPHIE DU BIJOU N'HERITE NI DES DIMENSIONS NI DU TEXTE ALTERNATIF
+   * DU MEDAILLON. Ses largeurs sont celles d'ADR-007 : annoncer 1200 par 630 la
+   * decrirait faux, et un reseau qui fait confiance a `og:image:width`
+   * recadrerait de travers.
+   */
+  it("porte la photographie de la page, absolue et sans dimensions", () => {
     const og = openGraphDePage({ ...page, image: "/medias/x/640.jpeg" });
-    expect(og["images"]).toEqual([{ url: "/medias/x/640.jpeg" }]);
+    expect(og["images"]).toEqual([{ url: `${SITE}/medias/x/640.jpeg` }]);
   });
 });

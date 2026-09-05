@@ -360,3 +360,197 @@ test.describe("sitemap et robots", () => {
     expect(texte).toContain("/sitemap.xml");
   });
 });
+
+/**
+ * L'IDENTITE DU SITE AU PARTAGE ET DANS L'ONGLET, LS-147.
+ *
+ * CE QUE CES TESTS ATTRAPENT, ET QUI EST DEJA ARRIVE. LS-137 a pose les balises
+ * Open Graph sur les 25 pages sans jamais fournir d'image : tout lien partage
+ * sortait en carte de texte nu, et rien ne l'a signale. Le controle textuel
+ * restait vert, ne regardant que `title`, `description` et canonical ; seul le
+ * HTML servi montre l'absence.
+ *
+ * ILS LISENT LE HTML SERVI, jamais un fichier source. C'est le seul niveau ou
+ * l'heritage entre segments se voit : `openGraph` declare dans une page
+ * REMPLACE celui du parent, images comprises, donc une page peut declarer
+ * proprement son bloc et n'emettre aucune image.
+ */
+test.describe("identite du site au partage, LS-147", () => {
+  /*
+   * L'URL EST ABSOLUE, et c'est le coeur de la correction. Les robots des
+   * reseaux sociaux ne resolvent aucune URL relative : une image relative n'est
+   * pas affichee de travers, elle n'est pas affichee du tout.
+   */
+  test("l'accueil porte l'image de partage, absolue et decrite", async ({
+    page,
+    baseURL,
+  }) => {
+    await page.goto("/");
+
+    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+      "content",
+      `${siteAttendu(baseURL)}/habillage/partage.png`,
+    );
+    await expect(
+      page.locator('meta[property="og:image:width"]'),
+    ).toHaveAttribute("content", "1200");
+    await expect(
+      page.locator('meta[property="og:image:height"]'),
+    ).toHaveAttribute("content", "630");
+    await expect(page.locator('meta[property="og:image:alt"]')).toHaveAttribute(
+      "content",
+      /medaillon/i,
+    );
+  });
+
+  /*
+   * TOUTES LES PAGES PUBLIQUES, ET PAS SEULEMENT L'ACCUEIL. C'est exactement la
+   * forme du defaut de LS-137 : chaque page declarant son propre `openGraph`
+   * effacait ce que le layout racine posait. Verifier l'accueil seul laisserait
+   * passer la regression sur les cinq autres.
+   */
+  for (const chemin of [
+    "/catalogue",
+    "/aide",
+    "/contact",
+    "/informations-legales",
+  ]) {
+    test(`${chemin} porte lui aussi une image de partage`, async ({ page }) => {
+      await page.goto(chemin);
+
+      await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+        "content",
+        /\/habillage\/partage\.png$/,
+      );
+    });
+  }
+
+  /*
+   * LE LAYOUT RACINE SERT LES PAGES QUI NE DECLARENT AUCUN `openGraph` : panier,
+   * tunnel, espace client. Elles heritent de son bloc entier, image comprise.
+   *
+   * CE TEST A ETE AJOUTE PARCE QU'UNE MUTATION EST RESTEE VERTE. Retirer
+   * l'image du layout ne faisait rougir aucun test : toutes les pages couvertes
+   * jusque-la declarent leur propre `openGraph` et reposent l'image par
+   * `openGraphDePage`. La moitie de la correction n'etait donc pas protegee.
+   *
+   * `/panier` PORTE `noindex`, et c'est sans rapport : un lien de panier se
+   * partage par messagerie meme s'il ne s'indexe pas.
+   */
+  test("une page sans openGraph propre herite de l'image du layout", async ({
+    page,
+  }) => {
+    await page.goto("/panier");
+
+    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+      "content",
+      /\/habillage\/partage\.png$/,
+    );
+  });
+
+  /*
+   * CRITERE 3 DE LS-147. La photographie du bijou est l'argument de vente : une
+   * fiche partagee doit montrer LA piece, jamais le medaillon de la boutique.
+   */
+  test("une fiche produit partage SA photographie et non l'image du site", async ({
+    page,
+  }) => {
+    await page.goto(`/produit/${CATALOGUE_TEST.enStock.slug}`);
+
+    const image = page.locator('meta[property="og:image"]');
+    await expect(image).toHaveAttribute("content", /\/medias\/produits\//);
+    await expect(image).not.toHaveAttribute("content", /partage\.png/);
+  });
+
+  /*
+   * CRITERE 5 DE LS-147, et l'assertion a ete corrigee par ce que le test a
+   * montre. Une fiche non publiee rend 404, le depot filtrant sur
+   * `statut: ACTIF`, donc aucune metadonnee de PRODUIT n'est composee. Mais la
+   * page 404 herite du layout racine, image comprise : elle porte donc bien un
+   * `og:image`, celui du site.
+   *
+   * CE QUI COMPTE EST QUE CE NE SOIT PAS LA PHOTOGRAPHIE DE LA PIECE. Le critere
+   * protege contre une fiche partagee montrant un bijou deja vendu ; un
+   * medaillon sous « Page introuvable » ne trompe personne. Exiger zero balise
+   * aurait fait supprimer l'image du layout, c'est-a-dire creer le defaut que la
+   * story repare, pour satisfaire une lecture trop litterale du critere.
+   */
+  test("un produit non publie ne partage jamais sa photographie", async ({
+    page,
+  }) => {
+    const reponse = await page.goto(`/produit/${PRODUIT_TEST.slug}`);
+
+    expect(reponse?.status()).toBe(404);
+    await expect(page.locator('meta[property="og:image"]')).not.toHaveAttribute(
+      "content",
+      /\/medias\/produits\//,
+    );
+    await expect(page.locator("body")).not.toContainText(PRODUIT_TEST.nom);
+  });
+
+  /*
+   * CRITERE 1 DE LS-147, la partie mesurable. Que l'onglet AFFICHE l'icone se
+   * constate a l'oeil ; qu'elle soit declaree et SERVIE se teste, et c'est ce
+   * qui casserait en silence. Les trois fichiers passent par les conventions de
+   * Next.js, qui reecrit leur URL avec une empreinte : l'assertion porte donc
+   * sur le prefixe et jamais sur l'URL entiere.
+   */
+  test("les trois icones et le manifeste sont declares et servis", async ({
+    page,
+    request,
+  }) => {
+    await page.goto("/");
+
+    for (const selecteur of [
+      'link[rel="icon"][sizes="48x48"]',
+      'link[rel="icon"][sizes="32x32"]',
+      'link[rel="apple-touch-icon"]',
+      'link[rel="manifest"]',
+    ]) {
+      await expect(page.locator(selecteur)).toHaveCount(1);
+    }
+
+    for (const ressource of [
+      "/favicon.ico",
+      "/icon.png",
+      "/apple-icon.png",
+      "/manifest.webmanifest",
+      "/habillage/partage.png",
+    ]) {
+      const reponse = await request.get(ressource);
+      expect(reponse.status(), `${ressource} n'est pas servi`).toBe(200);
+    }
+  });
+
+  /*
+   * LE MANIFESTE EST VALIDE ET SES COULEURS VIENNENT D'ADR-022, critere 4. Un
+   * manifeste mal forme est ignore en silence par le systeme : le raccourci
+   * d'ecran d'accueil retombe alors sur une vignette de la page.
+   */
+  test("le manifeste porte ses deux icones et les couleurs d'ADR-022", async ({
+    request,
+  }) => {
+    const reponse = await request.get("/manifest.webmanifest");
+    expect(reponse.status()).toBe(200);
+
+    const manifeste = (await reponse.json()) as {
+      name: string;
+      background_color: string;
+      theme_color: string;
+      icons: { src: string; sizes: string }[];
+    };
+
+    expect(manifeste.name).toContain("Lune & Soleil");
+    expect(manifeste.background_color).toBe("#fbf7f0");
+    expect(manifeste.theme_color).toBe("#5f4519");
+    expect(manifeste.icons.map((icone) => icone.sizes)).toEqual([
+      "192x192",
+      "512x512",
+    ]);
+
+    for (const icone of manifeste.icons) {
+      const image = await request.get(icone.src);
+      expect(image.status(), `${icone.src} n'est pas servi`).toBe(200);
+    }
+  });
+});

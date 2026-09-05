@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "@/styles/tokens.css";
-import { NOM_BOUTIQUE, urlDuSite } from "@/lib/seo";
+import { imagePartageDecrite, NOM_BOUTIQUE, urlDuSite } from "@/lib/seo";
 import "./globals.css";
 
 /*
@@ -62,10 +62,18 @@ export const metadata: Metadata = {
    * l'écran et aux types, seul le HTML servi le montre, et c'est
    * `tests/e2e/referencement.spec.ts` qui l'a trouvé.
    */
+  /*
+   * L'IMAGE EST POSEE ICI POUR LES PAGES QUI NE PASSENT PAS PAR
+   * `openGraphDePage`, LS-147 : panier, tunnel, espace client, pages d'erreur.
+   * Elles ne declarent pas d'`openGraph`, donc elles heritent de ce bloc entier.
+   * Celles qui en declarent un l'ecrasent et reposent l'image par la fonction,
+   * qui porte le detail du piege.
+   */
   openGraph: {
     siteName: NOM_BOUTIQUE,
     locale: "fr_FR",
     type: "website",
+    images: [imagePartageDecrite()],
   },
 };
 
