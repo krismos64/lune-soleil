@@ -79,9 +79,19 @@ quatre tickets qui dépendent de démarches et non du code, LS-9, LS-18, LS-19 e
 LS-20.
 
 **Le compte Stripe est ouvert depuis le 31 août 2026**, LS-18 close. Le compte
-bancaire professionnel qui bloquait la démarche depuis le 29 juillet existe, ce
-qui débloque aussi le compte Mondial Relay, LS-27, dont l'ouverture reste à
-faire. Restent hors code : la médiation de la consommation, LS-19, qu'aucun
+bancaire professionnel qui bloquait la démarche depuis le 29 juillet existe.
+
+**Le compte de livraison est ouvert depuis le 6 septembre 2026**, et ce n'est pas
+un compte Mondial Relay direct : l'offre sans contrat passe désormais par
+**Sendcloud**, qui porte le contrat. La grille réelle a été confrontée aux tarifs
+annoncés le jour même, **ADR-035** : le Point Relais à 4,10 € est confirmé au
+centime, le domicile passe de 4,99 € à son prix coûtant de **7,49 €**, et la
+franchise à 39 € est réservée au Point Relais et au Locker. **LS-27 reste
+ouverte**, son critère 1 exigeant des étiquettes testées réellement quand aucune
+n'a été achetée : les tarifs viennent du simulateur, qui avertit lui-même que le
+prix définitif se fixe à la création de l'étiquette.
+
+Restent hors code : la médiation de la consommation, LS-19, qu'aucun
 commentaire ne trace comme engagée alors qu'elle conditionne les mentions
 légales, et les photographies, LS-20.
 
