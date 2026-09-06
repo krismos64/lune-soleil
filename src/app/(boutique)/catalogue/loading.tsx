@@ -27,7 +27,7 @@ const ARDOISES = [0, 1, 2, 3, 4, 5];
 
 export default function ChargementCatalogue() {
   return (
-    <main className={styles.page}>
+    <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Le catalogue</h1>
       <p className={styles.accroche}>
         Chaque bijou est fait main et créé à l&apos;unité.

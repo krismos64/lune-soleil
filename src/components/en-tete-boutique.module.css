@@ -12,20 +12,67 @@
 /*
  * Lien d'evitement : hors de l'ecran tant qu'il n'a pas le focus, jamais
  * `display: none` qui le retirerait du parcours clavier.
+ *
+ * ALIGNE SUR CELUI DE L'ADMINISTRATION, LS-196, regle C34. Les deux liens
+ * avaient diverge sur cinq proprietes sans qu'aucune raison soit ecrite, LS-122
+ * ayant pose celui-ci et LS-194 celui-la. Deux d'entre elles etaient des
+ * defauts reels, la zone tactile et la marge de focus ci-dessous.
+ *
+ * DEUX ECARTS SUBSISTENT, ET ILS SONT VOULUS.
+ *
+ * `position: absolute` contre le `fixed` de l'administration : `.entete`
+ * etablit ici un bloc englobant, ce que le gabarit flex de l'administration ne
+ * fait pas, d'ou le `fixed` de son cote. Un `fixed` ici sortirait le lien du
+ * flux de l'en-tete sans aucun gain.
+ *
+ * `z-index: 10` contre `2` : les deux valeurs sont calibrees sur ce que CHAQUE
+ * lien doit passer devant, et rien ne recommande de les egaliser. Cote
+ * administration, un bandeau `sticky` a `z-index: 1` fixe le voisin a battre,
+ * d'ou une valeur basse et voisine. Cote boutique, aucun `z-index` concurrent
+ * n'existe, mais l'enveloppe de `navigation-espace-client` passe en
+ * `position: sticky` au-dela de 768 px avec un fond opaque : elle cree un
+ * contexte d'empilement, sur les memes pages que cet en-tete. Le lien doit
+ * passer devant elle, et un lien d'evitement qu'on ne voit pas est un piege
+ * plutot qu'un raccourci.
+ *
+ * LA ZONE TACTILE VAUT 44 px, `frontend-design.md` l'exigeant de tout element
+ * actionnable. Le padding seul donnait environ 24 px de haut, et ce meme defaut
+ * a deja ete corrige deux fois sur ce depot, sur le lien de retour des
+ * commandes puis sur `.bandeauLien`. Un lien d'evitement est le PREMIER element
+ * atteint au clavier : il merite moins que tout autre d'etre difficile a viser.
  */
 .evitement {
   position: absolute;
   left: -9999px;
   top: 0;
   z-index: 10;
-  padding: var(--ls-space-3) var(--ls-space-4);
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  padding: 0 var(--ls-space-4);
   background: var(--ls-primary);
   color: var(--ls-text-on-primary);
+  font-weight: 600;
   text-decoration: none;
 }
 
+/*
+ * IL REVIENT AVEC UNE MARGE, ET NON A `left: 0`.
+ *
+ * `globals.css` trace le focus en `outline: 3px` avec `outline-offset: 2px` : a
+ * ras du bord, le contour serait dessine a -5 px en x comme en y, et ses cotes
+ * gauche et superieur sortiraient du cadre visible. Le focus ne se verrait alors
+ * que sur deux cotes sur quatre, ce qui affaiblit precisement l'element dont le
+ * role est de dire ou le focus se trouve, WCAG 2.4.7.
+ *
+ * `--ls-space-2` VAUT 8 px, DONC PLUS QUE LES 5 px NECESSAIRES. Une valeur
+ * calculee au plus juste se casserait si le contour ou son decalage changeait
+ * dans `globals.css` ; un jeton d'espacement existant tient sans creer de
+ * dependance a un chiffre ecrit ailleurs.
+ */
 .evitement:focus {
-  left: 0;
+  left: var(--ls-space-2);
+  top: var(--ls-space-2);
 }
 
 .barre {

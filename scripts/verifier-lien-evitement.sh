@@ -1,6 +1,7 @@
 #!/bin/bash
-# Vérifie que le contenu de chaque écran d'administration est atteignable par le
-# lien d'évitement, LS-194, critère 6. WCAG 2.4.1, niveau A.
+# Vérifie que le contenu de chaque écran est atteignable par le lien
+# d'évitement, des DEUX côtés du site : administration, LS-194, et boutique,
+# LS-196. WCAG 2.4.1, niveau A.
 #
 # POURQUOI UN CONTRÔLE TEXTUEL ALORS QUE LA SUITE DE BOUT EN BOUT TESTE DÉJÀ LE
 # FOCUS. Le test e2e exerce UN écran, `/administration/commandes`, et il le fait
@@ -30,6 +31,17 @@
 # fait défiler la page en laissant le focus où il était : le lien paraît marcher
 # et ne marche pas. C'est le piège classique, rencontré en LS-85 puis en LS-122.
 #
+# IL COUVRE LES DEUX CÔTÉS DEPUIS LS-196, et l'extension a immédiatement payé :
+# **trois écrans de la boutique rendaient un `<main>` nu**, deux états d'erreur
+# et un état de chargement. Le lien d'évitement y menait nulle part, exactement
+# le défaut que LS-191 avait laissé côté administration.
+#
+# CE N'ÉTAIT PAS UN OUBLI DE PLUS MAIS LE MÊME, séparé par un ancrage. Le
+# contrôle s'arrêtait à `src/app/administration`, donc il annonçait « chaque
+# écran porte sa cible » en n'ayant regardé qu'une moitié du site. Un contrôle
+# dont la portée est plus étroite que la règle qu'il énonce ment par omission,
+# motif déjà en fiche sur ce dépôt.
+#
 # Usage : ./scripts/verifier-lien-evitement.sh
 # Aucun prérequis, ni Docker ni base : contrôle purement textuel.
 
@@ -37,10 +49,14 @@ set -u
 RACINE="$(cd "$(dirname "$0")/.." && pwd)"
 ADMIN="$RACINE/src/app/administration"
 LAYOUT="$ADMIN/layout.tsx"
+BOUTIQUE="$RACINE/src/app/(boutique)"
+ENTETE="$RACINE/src/components/en-tete-boutique.tsx"
 ko=0
 
 [ -d "$ADMIN" ] || { echo "ECHEC dossier d'administration introuvable : $ADMIN"; exit 1; }
 [ -r "$LAYOUT" ] || { echo "ECHEC layout d'administration illisible : $LAYOUT"; exit 1; }
+[ -d "$BOUTIQUE" ] || { echo "ECHEC dossier de boutique introuvable : $BOUTIQUE"; exit 1; }
+[ -r "$ENTETE" ] || { echo "ECHEC en-tête de boutique illisible : $ENTETE"; exit 1; }
 
 # ---------------------------------------------------------------------------
 # Les fichiers délibérément sans ancre, chacun avec sa raison.
@@ -140,11 +156,24 @@ fi
 nb_examines=0
 nb_delegues=0
 
+# ---------------------------------------------------------------------------
+# La boucle est une FONCTION depuis LS-196, appelée une fois par côté du site.
+#
+# ELLE N'EST PAS DUPLIQUÉE, et c'est délibéré : deux copies de cette boucle se
+# seraient périmées séparément, ce qui est exactement le mécanisme qui a produit
+# le défaut d'origine des deux côtés. Le motif « recopie inversée » est en fiche
+# ici, mesuré sur les annonces de chargement en LS-195.
+#
+# Paramètres : $1 la racine des écrans, $2 le libellé du côté pour les messages.
+# ---------------------------------------------------------------------------
+verifier_les_ecrans() {
+  local racine="$1" cote="$2" ecran fichier balise
+
 while IFS= read -r ecran; do
   [ -n "$ecran" ] || continue
   est_exclu "$ecran" && continue
 
-  fichier="$ADMIN/$ecran"
+  fichier="$racine/$ecran"
   nb_examines=$((nb_examines + 1))
 
   # L'écran délègue son `main` au composant partagé : l'ancre y est vérifiée.
@@ -154,7 +183,7 @@ while IFS= read -r ecran; do
   fi
 
   if ! grep -q '<main' "$fichier"; then
-    echo "ECHEC $ecran ne rend aucun <main>"
+    echo "ECHEC [$cote] $ecran ne rend aucun <main>"
     echo "      le lien d'évitement n'a alors pas de cible sur cet écran, et"
     echo "      la page n'a pas de repère principal pour un lecteur d'écran."
     ko=$((ko + 1))
@@ -181,7 +210,7 @@ while IFS= read -r ecran; do
   balise=$(awk '/<main/{trouve=1} trouve{print; if (/>/) exit}' "$fichier" | tr '\n' ' ')
 
   if ! printf '%s' "$balise" | grep -q 'id="contenu"'; then
-    echo "ECHEC $ecran ne porte pas id=\"contenu\" SUR SON <main>"
+    echo "ECHEC [$cote] $ecran ne porte pas id=\"contenu\" SUR SON <main>"
     echo "      le lien d'évitement du layout pointe vers une ancre absente, ou"
     echo "      posée sur un autre élément : il occupe la première tabulation"
     echo "      et ne mène pas au début du contenu."
@@ -190,18 +219,68 @@ while IFS= read -r ecran; do
   fi
 
   if ! printf '%s' "$balise" | grep -q 'tabIndex={-1}'; then
-    echo "ECHEC $ecran porte l'ancre sans tabIndex={-1} sur le même <main>"
+    echo "ECHEC [$cote] $ecran porte l'ancre sans tabIndex={-1} sur le même <main>"
     echo "      la page défilerait jusqu'au contenu en laissant le focus au"
     echo "      menu : la tabulation suivante repartirait de la barre, ce que"
     echo "      le lien existe précisément pour éviter."
     ko=$((ko + 1))
   fi
-done <<EOF
+done
+}
+
+# LA LISTE ARRIVE PAR L'ENTRÉE STANDARD, jamais en argument : un nom de fichier
+# peut porter un espace, et `[slug]` porte des crochets que le shell développe.
+verifier_les_ecrans "$ADMIN" "administration" <<EOF
 $ecrans
 EOF
 
 echo "Écrans d'administration examinés : $nb_examines"
 echo "Dont délégués au composant partagé : $nb_delegues"
+
+# ---------------------------------------------------------------------------
+# Sens 3 : la boutique, LS-196.
+#
+# ELLE PORTE SON LIEN DEPUIS LS-122, deux ans de tickets avant l'administration,
+# et c'est précisément ce qui a fait croire le sujet réglé de ce côté. Trois
+# écrans y rendaient pourtant un `<main>` nu au moment d'écrire ces lignes, et
+# aucun contrôle ne pouvait le dire : celui-ci s'arrêtait au dossier voisin.
+#
+# LE LIEN VIT DANS `en-tete-boutique.tsx` ET NON DANS UN LAYOUT, la boutique
+# n'ayant pas de retour anticipé sur rôle à respecter. Il n'y a donc pas d'ordre
+# à vérifier ici, contrairement au sens 1 : l'en-tête est rendue pour tout le
+# monde, et son lien pointe toujours vers une cible que la page porte.
+# ---------------------------------------------------------------------------
+if ! grep -q 'href="#contenu"' "$ENTETE"; then
+  echo "ECHEC l'en-tête de la boutique ne pose plus de lien d'évitement"
+  echo "      les vingt-huit écrans publics redeviennent alors une traversée"
+  echo "      de la navigation au clavier avant le contenu, WCAG 2.4.1."
+  ko=$((ko + 1))
+fi
+
+# LA ZONE TACTILE ET LA MARGE DE FOCUS SE VÉRIFIENT SUR LE RENDU, par la suite
+# de bout en bout qui mesure la boîte des deux liens. Ce contrôle textuel ne
+# peut pas les voir, une `min-height` pouvant être annulée par un parent : c'est
+# la limite assumée d'un contrôle qui lit des fichiers, et les deux se
+# complètent comme le disent les sens 1 et 2 plus haut.
+
+ecrans_boutique=$(find "$BOUTIQUE" \( -name "page.tsx" -o -name "error.tsx" -o -name "loading.tsx" \) 2>/dev/null \
+  | sed "s|$BOUTIQUE/||" | sort)
+
+if [ -z "$ecrans_boutique" ]; then
+  echo "ECHEC aucun écran de boutique trouvé"
+  echo "      l'ancrage du contrôle est cassé : le groupe de routes (boutique)"
+  echo "      a été déplacé ou renommé."
+  exit 1
+fi
+
+nb_examines=0
+nb_delegues=0
+
+verifier_les_ecrans "$BOUTIQUE" "boutique" <<EOF
+$ecrans_boutique
+EOF
+
+echo "Écrans de boutique examinés : $nb_examines"
 
 echo
 if [ "$ko" -eq 0 ]; then

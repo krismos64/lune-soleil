@@ -29,7 +29,7 @@ export default function ErreurFiche({
   reset: () => void;
 }) {
   return (
-    <main className={styles.page}>
+    <main id="contenu" tabIndex={-1} className={styles.page}>
       <div className={styles.legal} role="alert">
         <h1 className={styles.titreSection}>
           Pièce momentanément indisponible
