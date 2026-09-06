@@ -705,6 +705,7 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-loading-et-404-mutation.sh    # prouve le précédent par mutation
 ./scripts/verifier-chargement-administration.sh          # tout écran d'administration a un état de chargement, LS-188
 ./scripts/verifier-chargement-administration-mutation.sh # prouve le précédent par mutation
+./scripts/verifier-etats-non-nominaux-mutation.sh        # les états non nominaux de l'administration, LS-113
 ./scripts/verifier-seo.sh                        # métadonnées de référencement de toute route, LS-137
 ./scripts/verifier-seo-mutation.sh               # prouve le précédent par mutation
 ./scripts/verifier-mentions-retractation.sh      # les trois emplacements de l'article L221-23, LS-136
