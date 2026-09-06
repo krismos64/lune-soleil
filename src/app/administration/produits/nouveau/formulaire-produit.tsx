@@ -154,7 +154,7 @@ export function FormulaireProduit({
         className={styles.bouton}
         disabled={enCours || nom.trim().length === 0 || categorieId === ""}
       >
-        {enCours ? "Création en cours..." : "Créer le brouillon"}
+        {enCours ? "Création en cours…" : "Créer le brouillon"}
       </button>
     </form>
   );

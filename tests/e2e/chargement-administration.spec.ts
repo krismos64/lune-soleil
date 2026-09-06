@@ -299,3 +299,52 @@ test.describe("etats de chargement de l'administration", () => {
     ).toBeVisible();
   });
 });
+
+/**
+ * L'ANNONCE DU CATALOGUE PUBLIC, LS-195.
+ *
+ * ELLE EST HORS DU `describe` CI-DESSUS, ET C'EST DELIBERE : ce bloc pose la
+ * session d'administration, quand le catalogue est PUBLIC. Le declarer sans
+ * `storageState` verifie au passage qu'il ne demande aucune authentification.
+ *
+ * CE QUE CE TEST AJOUTE AU CONTROLE TEXTUEL, qui garde deja la ponctuation des
+ * quinze annonces : il lit le caractere REELLEMENT SERVI, apres compilation et
+ * encodage de la reponse. `verifier-ponctuation-chargement.sh` lit le fichier
+ * source, il ne dit rien de ce qui sort. Motif « controle textuel et test
+ * d'execution », les deux etant necessaires et aucun ne remplacant l'autre.
+ *
+ * IL EMPLOIE `premierMorceau`, l'aide de ce fichier, plutot que de refaire sa
+ * requete : un motif recopie diverge de son original des que l'un des deux
+ * evolue, ce qui est exactement le defaut que LS-195 corrige par ailleurs.
+ *
+ * SON REPLI EST OBSERVABLE DANS LE FLUX, mesure du 6 septembre 2026, comme
+ * ceux des douze ecrans listes plus haut et a la difference des trois qui
+ * rendent deja leur contenu complet. Le catalogue est en `force-dynamic` et lit
+ * la base a chaque affichage.
+ */
+test("l'annonce du catalogue public se termine par un point de suspension", async ({
+  page,
+}, infos) => {
+  test.skip(
+    infos.project.name !== "mobile-320",
+    "lit un texte, pas une mise en page : une seule largeur suffit",
+  );
+
+  const html = await premierMorceau(page, "/catalogue");
+
+  /*
+   * LE CARACTERE EST CHERCHE EN TOUTES LETTRES, `…` et non `...`. Les deux se
+   * ressemblent a l'ecran, ne s'entendent pas pareil au lecteur d'ecran et ne
+   * se cherchent pas pareil.
+   *
+   * UNE SEULE ASSERTION, ET C'EST DELIBERE. La premiere version ajoutait deux
+   * negatives, `not.toContain("Chargement des pièces.<")` et `...`, censees
+   * refuser les deux formes fautives. Elles ne pouvaient pas rougir : le
+   * fichier ne porte qu'une occurrence de la phrase, donc l'absence du bon
+   * caractere entraine deja l'echec de la positive, et la premiere supposait
+   * en plus que React colle le texte a la balise fermante. Releve par la revue
+   * d'interface : une assertion qui ne peut pas echouer donne l'impression
+   * d'une garde qui n'existe pas. Motif « mutation vue par le mauvais test ».
+   */
+  expect(html).toContain("Chargement des pièces…");
+});

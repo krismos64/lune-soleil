@@ -704,6 +704,22 @@ jobs:
 
       # Textuel, aucune base ni conteneur requis.
       #
+      # CE QU'IL GARDE : la ponctuation des annonces de chargement, LS-195,
+      # regle C35. Une attente en cours se dit avec des points de suspension,
+      # le point final annoncant un chargement termine alors qu'il commence.
+      #
+      # LE DEFAUT QU'IL FERME EST UNE RECOPIE INVERSEE. Le catalogue public a
+      # porte le point final de LS-104 a LS-195, alors qu'il etait la REFERENCE
+      # citee par le composant partage : les quinze copies ont corrige la forme
+      # sans que l'original le soit. Aucune relecture de diff ne montre cela.
+      #
+      # IL VERIFIE AUSSI LE CARACTERE, trois points successifs passant la
+      # relecture visuelle sans s'entendre ni se chercher de la meme facon.
+      - name: 6n. Les annonces de chargement se terminent par des points de suspension
+        run: ./scripts/verifier-ponctuation-chargement.sh
+
+      # Textuel, aucune base ni conteneur requis.
+      #
       # CE QU'IL GARDE : les metadonnees de referencement de toute route, LS-137.
       # Une page publique sans `title`, `description` ou canonical, une page
       # PRIVEE sans `noindex`, un titre qui reecrit le nom de la boutique que le

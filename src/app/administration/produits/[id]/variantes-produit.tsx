@@ -513,7 +513,7 @@ export function VariantesProduit({
                       onClick={() => enregistrer(variante)}
                       disabled={enCours}
                     >
-                      {enCours ? "Enregistrement..." : "Enregistrer"}
+                      {enCours ? "Enregistrement…" : "Enregistrer"}
                     </button>
                     <button
                       type="button"
@@ -705,7 +705,7 @@ export function VariantesProduit({
         </div>
 
         <button type="submit" className={styles.bouton} disabled={enCours}>
-          {enCours ? "Ajout en cours..." : "Ajouter la déclinaison"}
+          {enCours ? "Ajout en cours…" : "Ajouter la déclinaison"}
         </button>
       </form>
     </section>

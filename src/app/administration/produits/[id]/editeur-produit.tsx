@@ -312,7 +312,7 @@ export function EditeurProduit({
           </div>
 
           <button type="submit" className={styles.bouton} disabled={enCours}>
-            {enCours ? "Enregistrement..." : "Enregistrer les informations"}
+            {enCours ? "Enregistrement…" : "Enregistrer les informations"}
           </button>
         </form>
       </section>
