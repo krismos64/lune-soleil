@@ -118,6 +118,42 @@ npm run format:check  propre
 
 Mutation exercée et fichier restauré, vert reconfirmé après restauration.
 
+## Ce que la CI a rattrapé, et que j'aurais dû voir
+
+**19 tests d'intégration ont échoué après le push.** Leurs commandes sont à
+domicile sur un panier au-dessus du seuil, cas où la franchise annulait les frais
+de port et ne les annule plus : le total attendu passe de 4900 à 5649.
+
+**Je n'avais lancé que le projet unitaire.** Les tests d'intégration demandent
+Docker, qui tournait sur le poste. Rien ne m'empêchait de les jouer avant de
+pousser, et c'est la cause de l'échec.
+
+Les corriger a révélé **trois défauts préexistants**, tous invisibles tant que la
+livraison était offerte, parce que deux nombres distincts valaient la même chose.
+
+**Une constante pour deux notions.** `TOTAL_ATTENDU_CENTIMES` servait à la fois de
+prix de ligne figé et de total de commande, tous deux à 4900. Des assertions
+censées prouver l'invariant 3, le figement du prix, portaient en fait sur le
+total. Le changement de tarif les a séparés, ce qu'aucune relecture n'avait fait.
+
+**Un test de refus qui n'exerçait plus de refus.** « refuse un second
+remboursement qui dépasserait le restant » posait 4000 puis 1000 en dur : la
+somme dépassait l'ancien total de 4900 et passe **sous** le nouveau de 5649. Il
+rendait `REMBOURSE` en gardant son nom.
+
+C'est le plus grave des trois. Un changement de tarif désarmait une garde de
+remboursement sans qu'aucun test ne rougisse, et le nom du test continuait
+d'affirmer qu'elle était couverte.
+
+**Une valeur recopiée au lieu d'être dérivée.** L'assertion `[2000, 2900]`
+écrivait en dur ce que l'appel voisin demandait déjà comme `TOTAL_CENTIMES - 2000`.
+
+Les commandes insérées en SQL avec 499 figé n'ont **pas** été touchées : leur
+tarif est historique, invariant 3.
+
+Le motif commun aux trois : **une valeur en dur qui coïncide avec une autre reste
+juste par accident, et le jour où les deux divergent, c'est le test qui ment.**
+
 ## Dérives et limites
 
 **Claude in Chrome a refusé de se connecter trois fois** avant de fonctionner,
