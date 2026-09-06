@@ -150,7 +150,7 @@ export default async function PageDetailCommande({
   const pointRelais = lignesAdresse(commande.pointRelaisAdresse);
 
   return (
-    <main className={styles.page}>
+    <main id="contenu" tabIndex={-1} className={styles.page}>
       <Link href="/administration/commandes" className={styles.retour}>
         Retour aux commandes
       </Link>

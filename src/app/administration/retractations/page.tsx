@@ -103,7 +103,7 @@ export default async function PageRetractations() {
   );
 
   return (
-    <main className={styles.page}>
+    <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Rétractations</h1>
 
       <p className={styles.introduction}>

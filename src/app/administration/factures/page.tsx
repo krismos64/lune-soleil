@@ -94,7 +94,7 @@ export default async function PageFactures({
   const aucunePiece = vue.pieces.length === 0;
 
   return (
-    <main className={styles.page}>
+    <main id="contenu" tabIndex={-1} className={styles.page}>
       <p className={styles.surtitre}>Comptabilité</p>
       <h1 className={styles.titre}>Factures et avoirs</h1>
 

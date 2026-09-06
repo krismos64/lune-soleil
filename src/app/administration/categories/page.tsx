@@ -49,7 +49,7 @@ export default async function PageCategories() {
   const categories = await listerCategories();
 
   return (
-    <main className={styles.page}>
+    <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Catégories du catalogue</h1>
       <p className={styles.introduction}>
         Les catégories rangent les produits de la boutique. Leur ordre ici est

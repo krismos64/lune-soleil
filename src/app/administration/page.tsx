@@ -120,7 +120,7 @@ export default async function PageAdministration() {
    * L'EN-TETE EST RENDU TOUT DE SUITE, les comptages sous `<Suspense>`.
    */
   return (
-    <main className={styles.page}>
+    <main id="contenu" tabIndex={-1} className={styles.page}>
       <p className={styles.surtitre}>{dateDuJour()}</p>
       <h1 className={styles.titre}>Tableau de bord</h1>
       <p className={styles.introduction}>

@@ -59,19 +59,22 @@ export default function ErreurAdministration({
      * dire de quoi il parle. Les sept regions du parcours ont ete nommees en
      * LS-85 pour ce motif.
      *
-     * AUCUN `id="contenu"` NI `tabIndex`, contrairement aux pages publiques, et
-     * la premiere version de ce fichier en portait avec un commentaire qui
-     * affirmait « comme sur les autres pages ». C'ETAIT FAUX : le seul lien
-     * d'evitement du depot vit dans `en-tete-boutique.tsx`, monte par le layout
-     * de la BOUTIQUE, et l'administration n'en a aucun. L'ancre ne servait donc
-     * de cible a rien, et les treize autres ecrans d'administration ouvrent un
-     * `main` nu. Releve par `ls-frontend-revue`.
+     * `id="contenu"` ET `tabIndex={-1}`, POSES PAR LS-194 et non plus tot. La
+     * premiere version de ce fichier les portait avec un commentaire affirmant
+     * « comme sur les autres pages », ce qui etait FAUX : le seul lien
+     * d'evitement du depot vivait alors dans `en-tete-boutique.tsx`, monte par
+     * le layout de la BOUTIQUE, et l'administration n'en avait aucun. L'ancre ne
+     * servait de cible a rien. Elle a ete retiree en LS-191, puis remise ici une
+     * fois le lien pose dans le layout d'administration.
      *
-     * QUE L'ADMINISTRATION N'AIT PAS DE LIEN D'EVITEMENT est un defaut reel,
-     * mais il est ANTERIEUR et couvre seize ecrans : il releve d'un ticket a
-     * lui, pas d'une ancre posee sur le seul ecran d'erreur.
+     * CET ECRAN EST UN CAS PARTICULIER PARMI LES SEIZE. Une frontiere d'erreur
+     * remplace la page sous le layout, qui lui reste monte : la barre et le lien
+     * d'evitement sont donc bien la, et le lien a besoin de sa cible ici comme
+     * ailleurs.
      */
     <main
+      id="contenu"
+      tabIndex={-1}
       className={styles.page}
       role="alert"
       aria-label="Erreur de l'administration"

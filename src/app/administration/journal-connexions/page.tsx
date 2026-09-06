@@ -115,7 +115,7 @@ export default async function PageJournalConnexions() {
   const tentatives = await lireTentativesRecentes();
 
   return (
-    <main className={styles["journal-connexions"]}>
+    <main id="contenu" tabIndex={-1} className={styles["journal-connexions"]}>
       <h1>Journal des connexions</h1>
       <p className={styles.introduction}>
         Tentatives de connexion, réussies comme échouées, sur les comptes

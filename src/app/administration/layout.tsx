@@ -98,6 +98,26 @@ export default async function LayoutAdministration({
 
   return (
     <div className={styles.gabarit}>
+      {/*
+       * LE LIEN D'EVITEMENT EST LE PREMIER ELEMENT FOCALISABLE, WCAG 2.4.1
+       * niveau A. La barre porte onze rubriques, plus le nom du compte et la
+       * deconnexion : sans lui, atteindre le contenu au clavier demande de les
+       * traverser toutes, A CHAQUE changement d'ecran. C'est l'outil quotidien
+       * de l'exploitante.
+       *
+       * IL EST RENDU SOUS LE TEST DE ROLE, deliberement. Le retour anticipe
+       * ci-dessus sort avant lui : hors session `ADMINISTRATRICE`, ni la barre
+       * ni ce lien n'existent. Un lien d'evitement affiche sur l'ecran de
+       * connexion pointerait vers une cible que la page ne porte pas, et
+       * proposerait de contourner une navigation absente.
+       *
+       * IL EST MASQUE HORS FOCUS PAR UN DEPORT, jamais par `display: none` qui
+       * le retirerait du parcours clavier, donc de son propre usage.
+       */}
+      <a href="#contenu" className={styles.evitement}>
+        Aller au contenu
+      </a>
+
       <NavigationAdministration
         comptages={comptages}
         nom={nom}

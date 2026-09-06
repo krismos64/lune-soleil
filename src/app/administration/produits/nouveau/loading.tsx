@@ -22,7 +22,7 @@ import styles from "./nouveau-produit.module.css";
 
 export default function ChargementNouveauProduit() {
   return (
-    <main className={styles.page}>
+    <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Nouveau produit</h1>
 
       {/*
