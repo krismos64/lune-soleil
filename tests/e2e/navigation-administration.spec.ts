@@ -827,11 +827,21 @@ test("le lien d'évitement déplace le focus vers le contenu", async ({
    * ne dit pas ou le focus se trouve, ce qui est le defaut que WCAG 2.4.7
    * nomme. `toBeVisible` de Playwright ne suffirait pas seul, un element
    * deporte restant « visible » a ses yeux, d'ou la mesure de sa position.
+   *
+   * SON CONTOUR DE FOCUS DOIT TENIR AUSSI, et c'est ce que mesure la marge.
+   * `globals.css` trace `outline: 3px` avec `outline-offset: 2px`, soit 5 px
+   * au-dela de la boite : un lien colle a `0` verrait ses cotes gauche et
+   * superieur coupes par le bord du cadre. Une assertion `x >= 0` laissait
+   * passer ce cas, releve par la revue d'interface, alors meme que le
+   * commentaire annoncait garder WCAG 2.4.7.
    */
   await expect(lien).toBeVisible();
   const boite = await lien.boundingBox();
   expect(boite).not.toBeNull();
-  expect(boite!.x).toBeGreaterThanOrEqual(0);
+
+  const MARGE_CONTOUR_PX = 5;
+  expect(boite!.x).toBeGreaterThanOrEqual(MARGE_CONTOUR_PX);
+  expect(boite!.y).toBeGreaterThanOrEqual(MARGE_CONTOUR_PX);
 
   await page.keyboard.press("Enter");
 
@@ -881,4 +891,41 @@ test("le lien d'évitement précède la navigation dans l'ordre de tabulation", 
   });
 
   expect(navigationSuitLeLien).toBe(true);
+});
+
+/**
+ * LA 404 SOUS `/administration` NE DOUBLE NI LE LIEN NI L'ANCRE, LS-194.
+ *
+ * LE RISQUE EST REEL ET LA MESURE L'ECARTE. `not-found.tsx` vit a la RACINE et
+ * compose lui-meme `<EnTeteBoutique />`, qui porte son propre lien
+ * d'evitement, plus son `<main id="contenu">`. Si le layout d'administration
+ * restait monte au-dessus d'une URL introuvable de ce segment, la page rendrait
+ * DEUX liens « Aller au contenu » pour une seule ancre, et le lien du layout
+ * pointerait vers un `<main>` appartenant a l'en-tete de la boutique.
+ *
+ * MESURE DU 6 SEPTEMBRE 2026 : Next.js remonte au `not-found.tsx` racine SANS
+ * monter le layout du segment, y compris sur une URL passant par un segment
+ * dynamique. Un seul lien, une seule ancre, aucune barre d'administration.
+ *
+ * CE TEST EXISTE PARCE QUE RIEN NE GARDAIT CETTE PROPRIETE, et qu'elle depend
+ * d'un comportement de Next.js et non d'une ligne du depot : une version future
+ * pourrait monter le layout, et le defaut serait alors invisible a la relecture.
+ * Les trois formes d'URL sont couvertes, la derniere passant par un segment
+ * dynamique ou le layout est le plus susceptible d'etre monte.
+ */
+test("une URL introuvable de l'administration ne double pas le lien d'évitement", async ({
+  page,
+}) => {
+  for (const url of [
+    "/administration/url-inexistante",
+    "/administration/produits/99999999",
+    "/administration/commandes/inexistante",
+  ]) {
+    await page.goto(url);
+
+    await expect(
+      page.getByRole("link", { name: "Aller au contenu" }),
+    ).toHaveCount(1);
+    await expect(page.locator("#contenu")).toHaveCount(1);
+  }
 });

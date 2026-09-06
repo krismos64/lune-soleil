@@ -161,19 +161,36 @@ while IFS= read -r ecran; do
     continue
   fi
 
-  # L'ANCRE ET SON `tabIndex` SE VÉRIFIENT ENSEMBLE. Les deux peuvent vivre sur
-  # des lignes différentes d'un `<main>` multiligne, d'où la recherche dans le
-  # fichier plutôt que sur une seule ligne.
-  if ! grep -q 'id="contenu"' "$fichier"; then
-    echo "ECHEC $ecran ne porte pas id=\"contenu\""
-    echo "      le lien d'évitement du layout pointe vers une ancre absente :"
-    echo "      il occupe la première tabulation et ne mène nulle part."
+  # L'ANCRE SE CHERCHE SUR LA BALISE `<main>`, JAMAIS DANS LE FICHIER ENTIER.
+  #
+  # LA PREMIÈRE VERSION CHERCHAIT DANS LE FICHIER, et le trou a été mesuré par la
+  # revue d'interface : un `<main>` nu suivi d'un `<h1 id="contenu"
+  # tabIndex={-1}>` satisfaisait le contrôle, qui annonçait « chaque écran porte
+  # sa cible focalisable » sur un écran où le lien menait à un titre. C'est le
+  # motif « contrôle par fichier ou par fonction », déjà en fiche ici.
+  #
+  # LE SECOND EFFET EST PLUS DISCRET : `tabIndex={-1}` est un attribut courant,
+  # posé sur un titre qu'on focalise après une action. Cherché dans le fichier,
+  # il aurait été satisfait par cet autre élément alors que le `<main>` n'en
+  # porte pas, c'est-à-dire sur le défaut exact que ce contrôle nomme.
+  #
+  # LA FENÊTRE VA DE `<main` AU `>` QUI FERME LA BALISE, et non à la ligne : les
+  # attributs d'un `<main>` s'étalent sur plusieurs lignes dès qu'il y en a
+  # trois, ce qui est le cas de `error.tsx`. `awk` la découpe, `tr` la met à plat
+  # pour que `grep` voie les attributs séparés par des retours à la ligne.
+  balise=$(awk '/<main/{trouve=1} trouve{print; if (/>/) exit}' "$fichier" | tr '\n' ' ')
+
+  if ! printf '%s' "$balise" | grep -q 'id="contenu"'; then
+    echo "ECHEC $ecran ne porte pas id=\"contenu\" SUR SON <main>"
+    echo "      le lien d'évitement du layout pointe vers une ancre absente, ou"
+    echo "      posée sur un autre élément : il occupe la première tabulation"
+    echo "      et ne mène pas au début du contenu."
     ko=$((ko + 1))
     continue
   fi
 
-  if ! grep -q 'tabIndex={-1}' "$fichier"; then
-    echo "ECHEC $ecran porte l'ancre sans tabIndex={-1}"
+  if ! printf '%s' "$balise" | grep -q 'tabIndex={-1}'; then
+    echo "ECHEC $ecran porte l'ancre sans tabIndex={-1} sur le même <main>"
     echo "      la page défilerait jusqu'au contenu en laissant le focus au"
     echo "      menu : la tabulation suivante repartirait de la barre, ce que"
     echo "      le lien existe précisément pour éviter."
