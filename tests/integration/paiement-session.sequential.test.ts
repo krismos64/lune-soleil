@@ -57,17 +57,22 @@ const SAISIE_DOMICILE = {
 /** Configuration tarifaire figee, pour ne dependre d'aucune variable. */
 const CONFIGURATION = {
   relaisCentimes: 410,
-  domicileCentimes: 499,
+  domicileCentimes: 749,
   seuilFranchiseCentimes: 3900,
 };
 
 /**
  * Total attendu de la commande de test : une variante a 4900 centimes, sous le
- * seuil de franchise a 3900 ? Non : 4900 >= 3900, la livraison est OFFERTE.
- * Le total attendu est donc 4900, et ce commentaire existe parce que la
- * premiere lecture se trompe volontiers.
+ * seuil de franchise a 3900 ? Non : 4900 >= 3900, le seuil est franchi.
+ *
+ * LA LIVRAISON N'EST PAS OFFERTE POUR AUTANT, et ce commentaire affirmait le
+ * contraire. Depuis ADR-035 la franchise ne couvre que les modes en relais, et
+ * cette commande est a domicile : le total vaut 4900 + 749.
+ *
+ * Sa derniere phrase disait « la premiere lecture se trompe volontiers ». Elle
+ * avait raison, et pour une raison de plus depuis le 6 septembre 2026.
  */
-const TOTAL_ATTENDU_CENTIMES = 4900;
+const TOTAL_ATTENDU_CENTIMES = 4900 + 749;
 
 /**
  * Double du prestataire, configurable par cas.

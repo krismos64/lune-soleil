@@ -58,12 +58,24 @@ const SAISIE_DOMICILE = {
 /** Configuration tarifaire figee, pour ne dependre d'aucune variable. */
 const CONFIGURATION = {
   relaisCentimes: 410,
-  domicileCentimes: 499,
+  domicileCentimes: 749,
   seuilFranchiseCentimes: 3900,
 };
 
-/** La variante vaut 4900, au-dessus du seuil : livraison offerte, total 4900. */
-const TOTAL_ATTENDU_CENTIMES = 4900;
+/*
+ * La variante vaut 4900, au-dessus du seuil de franchise. Le total vaut pourtant
+ * 5649 : depuis ADR-035 la franchise ne couvre PAS le domicile, et ces commandes
+ * sont toutes en `SAISIE_DOMICILE`. Ce commentaire disait « livraison offerte ».
+ */
+/*
+ * DEUX NOMBRES ET NON UN, separes par ADR-035. Ils ont longtemps ete confondus
+ * sous une constante unique, ce qui marchait tant que la livraison etait
+ * offerte : le prix de la piece et le total de la commande valaient tous deux
+ * 4900. Le domicile n'etant plus jamais offert, ils divergent, et confondre un
+ * prix de LIGNE avec un TOTAL masquerait l'invariant 3.
+ */
+const PRIX_PIECE_CENTIMES = 4900;
+const TOTAL_ATTENDU_CENTIMES = PRIX_PIECE_CENTIMES + 749;
 
 /**
  * Emetteur de test, INVENTE ET RECONNAISSABLE COMME TEL.
@@ -337,7 +349,7 @@ describe("emission de la facture, instantane legal", () => {
 
     // LE PRIX DU DOCUMENT EST CELUI DE L'ACHAT, pas les 9800 du catalogue.
     expect(instantane.lignes[0]?.prixUnitaireCentimes).toBe(
-      TOTAL_ATTENDU_CENTIMES,
+      PRIX_PIECE_CENTIMES,
     );
     expect(instantane.lignes[0]?.libelleProduit).not.toBe("PRODUIT RENOMME");
   });

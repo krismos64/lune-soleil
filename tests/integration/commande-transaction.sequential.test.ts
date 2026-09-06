@@ -48,7 +48,7 @@ const SAISIE_DOMICILE = {
 /** Configuration tarifaire figee, pour ne dependre d'aucune variable. */
 const CONFIGURATION = {
   relaisCentimes: 410,
-  domicileCentimes: 499,
+  domicileCentimes: 749,
   seuilFranchiseCentimes: 3900,
 };
 
@@ -388,14 +388,19 @@ describe("figement, invariant 3", () => {
     expect(rows[0].reference_figee).not.toBe("TEST-NOUVELLE");
 
     /*
-     * LIVRAISON OFFERTE, et le total vaut donc le seul sous-total : 4900
-     * centimes depassent le seuil de franchise de 3900. La premiere version de
-     * cette assertion ajoutait les 499 centimes du domicile, attente fausse que
-     * le service a corrigee.
+     * LA FRANCHISE NE COUVRE PAS LE DOMICILE, ADR-035. Le panier de 4900
+     * centimes depasse pourtant le seuil de 3900 : c'est le mode qui decide,
+     * et `SAISIE_DOMICILE` paie donc ses 749 centimes.
+     *
+     * CETTE ASSERTION A DIT L'INVERSE DEUX FOIS. Sa premiere version ajoutait
+     * les frais a un panier au-dessus du seuil, faux sous ADR-025 ou la
+     * franchise valait pour les trois modes ; sa deuxieme les retirait, faux
+     * depuis ADR-035. Ce que le test verifie reste le FIGEMENT du prix, et le
+     * total n'est ici qu'un temoin de coherence.
      */
     const commande = await lireCommande(issue.commandeId);
-    expect(commande.frais_port_centimes).toBe(0);
-    expect(commande.total_centimes).toBe(4900);
+    expect(commande.frais_port_centimes).toBe(749);
+    expect(commande.total_centimes).toBe(5649);
   });
 
   /*
@@ -456,10 +461,12 @@ describe("figement, invariant 3", () => {
   });
 
   /*
-   * LES MONTANTS VIENNENT DU SERVEUR, jamais du navigateur. 4900 centimes
-   * passent sous le seuil de franchise de 3900 ? Non : 4900 le depasse, donc
-   * la livraison est offerte. Le test le verifie explicitement plutot que de
-   * recopier le resultat du service.
+   * LES MONTANTS VIENNENT DU SERVEUR, jamais du navigateur.
+   *
+   * LE SEUIL EST RELEVE A 100000 pour que la franchise ne puisse pas expliquer
+   * le resultat. Depuis ADR-035 elle ne couvrirait de toute facon pas le
+   * domicile, mais le test garde ce reglage : il porte sur le calcul serveur
+   * des frais, et non sur la reserve de mode, que les tests unitaires exercent.
    */
   it("fige les frais de port calcules par le serveur", async () => {
     const { varianteId } = await creerVarianteEnStock(client);
@@ -474,8 +481,8 @@ describe("figement, invariant 3", () => {
     const commande = await lireCommande(issue.commandeId);
 
     expect(commande.sous_total_centimes).toBe(4900);
-    expect(commande.frais_port_centimes).toBe(499);
-    expect(commande.total_centimes).toBe(5399);
+    expect(commande.frais_port_centimes).toBe(749);
+    expect(commande.total_centimes).toBe(5649);
     expect(commande.montant_taxe_centimes).toBe(0);
   });
 

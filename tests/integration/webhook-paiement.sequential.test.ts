@@ -61,15 +61,17 @@ const SAISIE_DOMICILE = {
 /** Configuration tarifaire figee, pour ne dependre d'aucune variable. */
 const CONFIGURATION = {
   relaisCentimes: 410,
-  domicileCentimes: 499,
+  domicileCentimes: 749,
   seuilFranchiseCentimes: 3900,
 };
 
 /**
  * Total attendu : la variante vaut 4900 centimes, au-dessus du seuil de
- * franchise a 3900, donc la livraison est OFFERTE et le total vaut 4900.
+ * franchise a 3900. La livraison n'est PAS offerte pour autant, ces commandes
+ * etant a domicile et ADR-035 reservant la franchise aux modes en relais : le
+ * total vaut donc 4900 + 749.
  */
-const TOTAL_ATTENDU_CENTIMES = 4900;
+const TOTAL_ATTENDU_CENTIMES = 5649;
 
 /**
  * Double du verificateur de signature.
