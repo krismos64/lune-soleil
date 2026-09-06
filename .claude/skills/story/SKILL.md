@@ -256,7 +256,13 @@ Le premier vérifie ce qui est mesurable : ADR absent de la table d'aiguillage,
 motif `paths` de règle ne matchant aucun fichier suivi,
 `CLAUDE.md` au-delà de 200 lignes, renvoi vers un fichier inexistant, fiche
 mémoire hors index, lien mémoire mort, journal manquant alors que du code a été
-commité, et formulations qui se périment.
+commité, formulations qui se périment, portée de workflow inexistante depuis
+LS-186, et **étiquette posée par un workflow sans y être créée** depuis LS-199.
+
+Ce dernier sens vient d'un garde-fou muet pendant deux nuits : `gh issue create
+--label` échoue si l'étiquette n'existe pas, et l'étape entière tombe. Une
+étiquette vit dans les **réglages du dépôt**, pas dans le dépôt, donc la créer à
+la main ne survit ni à un clone ni à un dépôt recréé.
 
 **Il lit l'historique git, donc le lancer AVANT de commiter ne prouve rien** sur
 la règle du journal daté : aucun commit du jour n'existe encore, elle passe à
