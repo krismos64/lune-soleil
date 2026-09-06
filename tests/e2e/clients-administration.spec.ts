@@ -160,10 +160,29 @@ test.describe("connectee en administration", () => {
       .getByRole("link", { name: "Clients" })
       .click();
 
-    await expect(page).toHaveURL(/\/administration\/clients$/);
+    /*
+     * LE TITRE S'ATTEND, IL NE SE CONSTATE PAS, LS-199.
+     *
+     * `toHaveURL` passe des que la navigation client a change l'adresse, ce qui
+     * precede l'arrivee du contenu : le DOM ne portait AUCUN `h1` a cet
+     * instant, `loading.tsx` remplaçant le `<main>` pendant la transition.
+     * L'assertion suivante echouait donc sur un ecran fonctionnel.
+     *
+     * CE TEST PASSE PARCE QUE LE SQUELETTE REND LE MEME TITRE, `titre="Clients"`
+     * dans `clients/loading.tsx` : `toBeVisible` est satisfait par l'etat de
+     * chargement, avant les vraies donnees. Ce n'est donc pas la preuve que
+     * l'ecran est arrive, seulement que la navigation a commence.
+     *
+     * NE PAS RECOPIER CET ORDRE SUR UN ELEMENT QUE LE SQUELETTE NE REND PAS,
+     * un champ de formulaire par exemple : l'assertion porterait sur un element
+     * absent, Playwright l'attendrait, et le rapport d'echec figerait l'URL de
+     * depart en laissant croire a un lien inerte. C'est exactement ce qui s'est
+     * produit sur le test de recherche ci-dessous, ou `waitForURL` est employe.
+     */
     await expect(
       page.getByRole("heading", { name: "Clients", level: 1 }),
     ).toBeVisible();
+    await expect(page).toHaveURL(/\/administration\/clients$/);
   });
 
   test("la recherche est serialisee dans l'URL et le retour la defait", async ({
@@ -198,9 +217,29 @@ test.describe("connectee en administration", () => {
      */
     await expect(page.getByText(/Aucun compte ne correspond/)).toBeVisible();
 
-    await page.getByRole("link", { name: "Afficher tous les comptes" }).click();
+    /*
+     * LA NAVIGATION S'ATTEND EXPLICITEMENT, LS-199.
+     *
+     * `loading.tsx` REMPLACE LE `<main>` PENDANT LA NAVIGATION, et le squelette
+     * de LS-188 ne rend aucun `searchbox`. Une assertion sur ce champ juste
+     * apres le clic porte donc sur un element ABSENT du DOM : Playwright
+     * l'attend au lieu de le lire vide, et le rapport d'echec fige l'URL de
+     * l'instant du timeout, celle du depart avec son parametre.
+     *
+     * J'AI CONCLU A UN LIEN INERTE SUR CETTE SEULE LECTURE. Le lien navigue
+     * parfaitement : `page.goto` direct vide le champ, et l'ecran catalogue,
+     * qui emploie le meme motif de lien, navigue lui aussi. La difference est
+     * qu'il n'a PAS de `loading.tsx`, son Suspense etant interne, ce qui laisse
+     * son `<main>` en place pendant la transition.
+     *
+     * `waitForURL` nomme ce que ce test verifie et attend la stabilisation. Le
+     * champ est alors revenu, et sa valeur se lit sur un etat reel.
+     */
+    await Promise.all([
+      page.waitForURL(/\/administration\/clients$/),
+      page.getByRole("link", { name: "Afficher tous les comptes" }).click(),
+    ]);
 
-    await expect(page).toHaveURL(/\/administration\/clients$/);
     await expect(page.getByRole("searchbox")).toHaveValue("");
   });
 

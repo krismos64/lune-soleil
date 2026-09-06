@@ -109,6 +109,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # L'ETIQUETTE SE CREE AVANT D'ETRE POSEE, LS-199. Elle existe
+          # aujourd'hui parce qu'elle a ete creee a la main, ce qui ne survit ni
+          # a un clone ni a un depot recree : `gh issue create --label` echoue
+          # alors sur « not found » et l'etape entiere tombe en silence. C'est
+          # exactement ce qui a rendu le garde-fou du controle nocturne muet
+          # pendant deux nuits. `--force` rend l'instruction idempotente.
+          gh label create derive-documentation \
+            --description "Ecart entre la documentation et le depot" \
+            --color FBCA04 --force
+
           existante=$(gh issue list --label derive-documentation --state open \
             --json number --jq '.[0].number' 2>/dev/null || true)
 

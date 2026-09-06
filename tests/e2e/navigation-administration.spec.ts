@@ -403,6 +403,21 @@ test("le tableau de bord ne porte aucune violation d'accessibilité", async ({
  * n'existe : un lien vers un ecran non livre rendrait un 404 a l'exploitante.
  * Le test verifie qu'elles sont VISIBLES et qu'aucune n'est cliquable, les
  * deux moities important autant.
+ *
+ * LA LISTE N'EST PLUS RECOPIEE ICI, LS-199. Ce test portait
+ * `["Statistiques", "Clients", "Paramètres"]` en dur et exigeait zero lien sur
+ * chacune. LS-185 a livre l'ecran Clients, qui est donc devenu un lien : le
+ * test a commence a exiger l'INVERSE de ce que le produit doit faire, et il est
+ * reste rouge deux nuits sans que personne ne le voie.
+ *
+ * IL LIT DESORMAIS LES ENTREES REELLEMENT RENDUES sous « Bientot disponible ».
+ * Une rubrique qui quitte `RUBRIQUES_A_VENIR` sort de la liste lue, et le test
+ * suit sans etre touche. Trois entrees l'ont quittee en trois jours, Catalogue,
+ * Factures et avoirs, puis Clients : recopier cette liste, c'est signer un
+ * rendez-vous avec le meme echec.
+ *
+ * LA LISTE VIDE EST REFUSEE, sans quoi le jour ou toutes les rubriques seront
+ * livrees, ce test passerait au vert sans rien verifier.
  */
 test("les rubriques à venir sont annoncées sans être cliquables", async ({
   page,
@@ -414,9 +429,15 @@ test("les rubriques à venir sont annoncées sans être cliquables", async ({
     name: "Sections de l'administration",
   });
 
-  await expect(barre.getByText("Bientôt disponible")).toBeVisible();
+  const titre = barre.getByText("Bientôt disponible");
+  await expect(titre).toBeVisible();
 
-  for (const libelle of ["Statistiques", "Clients", "Paramètres"]) {
+  const entrees = barre.getByRole("list", { name: "Bientôt disponible" });
+  const libelles = await entrees.getByRole("listitem").allInnerTexts();
+
+  expect(libelles.length).toBeGreaterThan(0);
+
+  for (const libelle of libelles.map((texte) => texte.trim())) {
     await expect(barre.getByText(libelle, { exact: true })).toBeVisible();
     await expect(
       barre.getByRole("link", { name: libelle, exact: true }),
@@ -711,8 +732,39 @@ test("le filtre par état change ce que le catalogue montre", async ({
       filtres.getByRole("link", { name: libelle, exact: true }),
     ).toHaveAttribute("aria-current", "page");
 
+    /*
+     * LA BARRE PRECEDE LA LISTE, LS-199. `aria-current` seul dit que la
+     * navigation a eu lieu, pas que les cartes du nouveau filtre sont rendues :
+     * c'est le defaut qui rendait 0 sur la vue par defaut. Les deux filtres
+     * exerces ici portent des produits, donc attendre une carte est legitime ;
+     * un filtre legitimement vide, « Archivés », n'est pas compte par ce test.
+     */
+    await expect(cartes.first()).toBeVisible();
+
     return cartes.count();
   }
+
+  /*
+   * LA VUE PAR DEFAUT S'ATTEND, ET SUR LA LISTE, LS-199.
+   *
+   * `vivants` etait compte juste apres `goto`, sans attendre quoi que ce soit,
+   * pendant que les deux autres comptes passaient par `compterApresFiltre` et
+   * son attente d'`aria-current`. La mesure tombait pendant le rendu et rendait
+   * 0 : la somme des filtres valait 9 pour un tout annonce a 0.
+   *
+   * ATTENDRE `aria-current` NE SUFFIT PAS, mesure a l'appui : la barre de
+   * filtres est rendue AVANT la liste, donc son marqueur est deja pose quand
+   * aucune carte n'existe. Le test restait rouge avec cette attente-la.
+   *
+   * L'ATTENTE PORTE DONC SUR CE QU'ON MESURE, au moins une carte. C'est aussi
+   * ce qui empeche le test de passer sur un catalogue vide, ou 0 + 0 vaudrait 0
+   * et l'egalite serait vraie sans rien prouver.
+   *
+   * LE TEST PORTAIT DEJA LE COMMENTAIRE QUI DECRIT CE PIEGE, quelques lignes
+   * plus haut, tout en le commettant sur sa premiere mesure. L'etat de
+   * chargement ajoute par LS-188 sur ces ecrans a rendu la fenetre atteignable.
+   */
+  await expect(cartes.first()).toBeVisible();
 
   const vivants = await cartes.count();
   const brouillons = await compterApresFiltre("Brouillons");

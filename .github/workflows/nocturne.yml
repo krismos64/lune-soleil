@@ -441,6 +441,22 @@ jobs:
         run: |
           titre="Controle nocturne en echec"
 
+          # L'ETIQUETTE SE CREE AVANT D'ETRE POSEE, LS-199.
+          #
+          # CETTE ETAPE A ECHOUE DEUX NUITS SANS QUE PERSONNE NE LE VOIE, sur
+          # `could not add label: 'controle-nocturne' not found` : l'etiquette
+          # n'avait jamais ete creee dans le depot. Le garde-fou cense rendre
+          # visible un echec nocturne etait donc lui-meme muet depuis LS-177,
+          # et c'est ce qui a laisse deux nuits rouges passer inapercues.
+          #
+          # `--force` rend l'instruction idempotente : elle cree l'etiquette la
+          # premiere fois et ne change rien ensuite. Un depot clone repart ainsi
+          # sans geste manuel, ce qu'une etiquette creee a la main ne garantit
+          # pas.
+          gh label create controle-nocturne \
+            --description "Echec du controle nocturne, LS-177" \
+            --color B60205 --force
+
           # UNE SEULE ISSUE OUVERTE A LA FOIS. Sans ce filtre, une semaine
           # d'echecs produirait sept issues identiques, et le bruit ferait
           # ignorer la premiere.
