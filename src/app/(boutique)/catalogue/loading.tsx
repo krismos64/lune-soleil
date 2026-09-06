@@ -14,6 +14,11 @@
  * `aria-hidden` SUR L'ARMATURE, ET LE STATUT A COTE. Annoncer six cartes vides
  * n'apprend rien a qui ecoute ; une phrase le fait mieux. C'est la raison pour
  * laquelle l'armature est purement decorative ici.
+ *
+ * L'ANNONCE SE TERMINE PAR DES POINTS DE SUSPENSION, LS-195. Ce fichier ecrivait
+ * un point final, seul des quinze annonces de chargement du depot : un point ferme
+ * la phrase, donc l'action, alors que l'attente est en cours. C35 de
+ * `frontend-design.md`, et `verifier-ponctuation-chargement.sh` le garde.
  */
 import styles from "./catalogue.module.css";
 
@@ -29,7 +34,7 @@ export default function ChargementCatalogue() {
       </p>
 
       <p className={styles.compte} role="status">
-        Chargement des pièces.
+        Chargement des pièces…
       </p>
 
       <ul className={styles.grille} aria-hidden="true">

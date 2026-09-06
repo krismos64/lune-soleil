@@ -708,6 +708,8 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-etats-non-nominaux-mutation.sh        # les états non nominaux de l'administration, LS-113
 ./scripts/verifier-lien-evitement.sh                     # le lien d'évitement de l'administration et sa cible, LS-194
 ./scripts/verifier-lien-evitement-mutation.sh            # prouve le précédent par mutation
+./scripts/verifier-ponctuation-chargement.sh             # les annonces de chargement, ponctuation et caractère, LS-195
+./scripts/verifier-ponctuation-chargement-mutation.sh    # prouve le précédent par mutation
 ./scripts/verifier-seo.sh                        # métadonnées de référencement de toute route, LS-137
 ./scripts/verifier-seo-mutation.sh               # prouve le précédent par mutation
 ./scripts/verifier-mentions-retractation.sh      # les trois emplacements de l'article L221-23, LS-136

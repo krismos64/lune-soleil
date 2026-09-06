@@ -235,6 +235,38 @@ serveur, pending, disabled, indisponible, aucun résultat de filtre, rupture.
 Jamais de faux succès optimiste : une erreur serveur produit un message visible
 associé à l'action.
 
+### C35, une annonce de chargement se termine par des points de suspension
+
+**Le caractère est `…`, le point de suspension unique**, et jamais trois points
+successifs.
+
+**La règle vaut pour tout texte d'attente, pas seulement pour un état de
+chargement** : le libellé d'un bouton pendant son action, « Envoi en cours… »,
+« Enregistrement… », relève du même principe. Six d'entre eux employaient trois
+points en LS-195, dont deux sur le parcours de rétractation ; ils ont été
+alignés avec elle. Un badge d'ÉTAT ne porte pas cette ponctuation, « Traitement
+en cours » nommant une situation et non une action en train de se faire.
+
+Une attente **en cours** se dit avec des points de suspension. Le point final
+ferme la phrase, donc l'action : « Chargement des pièces. » annonce un
+chargement terminé alors qu'il commence. Un lecteur d'écran marque d'ailleurs la
+pause différemment sur les deux formes.
+
+Le catalogue public a porté le point final de LS-104 à LS-195, **seul des quinze
+annonces de chargement du dépôt**, et c'était l'écran public. Il était pourtant
+la référence que le composant partagé cite dans son propre en-tête : la forme
+d'origine a été recopiée quatorze fois en la corrigeant au passage, sans que
+l'original le soit. **C'est l'original qui a divergé de ses copies**, ce
+qu'aucune relecture de diff ne montre.
+
+Le ticket annonçait seize annonces, le dépôt en porte **quinze** : la seizième
+occurrence était une ligne de commentaire du composant partagé. Un nombre écrit
+dans une règle et démenti par le contrôle qui l'applique se paie à la relecture
+suivante, motif « table de nombres trop courte ».
+
+`scripts/verifier-ponctuation-chargement.sh` garde les deux points, la
+terminaison et le caractère employé.
+
 ### C32, aucun `loading.tsx` au-dessus d'un appel à `notFound()`
 
 **Le seul cas où l'état de chargement exigé ci-dessus est interdit.** Un

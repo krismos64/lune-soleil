@@ -145,7 +145,7 @@ export function FormulaireRetractation({
       )}
 
       <button type="submit" className={styles.bouton} disabled={enCours}>
-        {enCours ? "Envoi en cours..." : "Confirmer ma rétractation"}
+        {enCours ? "Envoi en cours…" : "Confirmer ma rétractation"}
       </button>
 
       {/*
