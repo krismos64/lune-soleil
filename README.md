@@ -710,6 +710,8 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-lien-evitement-mutation.sh            # prouve le précédent par mutation
 ./scripts/verifier-ponctuation-chargement.sh             # les annonces de chargement, ponctuation et caractère, LS-195
 ./scripts/verifier-ponctuation-chargement-mutation.sh    # prouve le précédent par mutation
+./scripts/engendrer-medias-test.mjs                      # les déclinaisons des photos de test, avant le build e2e, LS-187
+./scripts/verifier-medias-test.sh                        # le générateur ci-dessus contre la fixture et ADR-007
 ./scripts/verifier-seo.sh                        # métadonnées de référencement de toute route, LS-137
 ./scripts/verifier-seo-mutation.sh               # prouve le précédent par mutation
 ./scripts/verifier-mentions-retractation.sh      # les trois emplacements de l'article L221-23, LS-136

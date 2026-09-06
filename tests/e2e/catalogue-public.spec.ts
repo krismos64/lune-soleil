@@ -17,7 +17,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-import { declinaisonsAttendues } from "@/integrations/medias/traitement";
+import { declinaisonsAttendues } from "@/integrations/medias/declinaisons";
 
 import { CATALOGUE_TEST, PRODUIT_TEST } from "./chemin-session";
 import {
