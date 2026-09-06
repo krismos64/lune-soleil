@@ -690,6 +690,20 @@ jobs:
 
       # Textuel, aucune base ni conteneur requis.
       #
+      # CE QU'IL GARDE : le lien d'evitement de l'administration et la cible de
+      # chaque ecran, LS-194. WCAG 2.4.1 niveau A. Le defaut a vecu seize ecrans
+      # parce que chaque story ajoutait le sien sans rien pour signaler l'oubli.
+      #
+      # IL EST LE PENDANT TEXTUEL DU TEST DE FOCUS de la suite de bout en bout,
+      # et les deux sont necessaires. Le test exerce UN ecran et prouve ce
+      # qu'aucun texte ne peut voir, que le focus se DEPLACE vraiment. Ce
+      # controle couvre les vingt-cinq et attrape le vingt-sixieme des son
+      # ecriture, ce qu'aucun test ne fait.
+      - name: 6l. Le lien d'evitement de l'administration a sa cible partout
+        run: ./scripts/verifier-lien-evitement.sh
+
+      # Textuel, aucune base ni conteneur requis.
+      #
       # CE QU'IL GARDE : les metadonnees de referencement de toute route, LS-137.
       # Une page publique sans `title`, `description` ou canonical, une page
       # PRIVEE sans `noindex`, un titre qui reecrit le nom de la boutique que le

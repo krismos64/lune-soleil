@@ -125,12 +125,21 @@
  * lien reapparaitrait la ou la page a defile. `fixed` le ramene toujours au
  * coin superieur gauche du cadre visible, ou le regard le cherche.
  *
- * `z-index: 2`, AU-DESSUS DU BANDEAU qui vaut 1 et qui est `sticky` donc pose
- * son propre contexte d'empilement. Sans cette ligne le lien apparaitrait
- * DERRIERE lui au focus, donc invisible : un lien d'evitement qu'on ne voit pas
- * ne signale plus ou le focus se trouve, et il devient un piege plutot qu'un
- * raccourci. La valeur reste basse et voisine de celle du bandeau, plutot que
- * le grand nombre qui sert d'habitude a ne pas avoir a regarder.
+ * `z-index: 2`, AU-DESSUS DE CE QUI OCCUPE LE HAUT DE L'ECRAN, et ce n'est pas
+ * le meme element selon la largeur. Mesure du 6 septembre 2026 :
+ *
+ *   320 et 390 px  le bouton « Menu » occupe toute la largeur, 0,0 a 390 x 51
+ *   1280 px        pas de bouton, le bandeau `sticky` a `z-index: 1`
+ *
+ * Le lien focalise se pose donc SUR le bouton sous 768 px. C'est sans
+ * consequence a l'usage, le focus etant sur le lien et le bouton hors du
+ * parcours tant qu'on ne l'atteint pas ; ce qui compte est que le lien passe
+ * DEVANT dans les deux cas. Sans cette ligne il disparaitrait derriere l'un ou
+ * l'autre au focus, et un lien d'evitement qu'on ne voit pas ne signale plus ou
+ * le focus se trouve : il devient un piege plutot qu'un raccourci.
+ *
+ * LA VALEUR RESTE BASSE, voisine de celle du bandeau, plutot que le grand nombre
+ * qui sert d'habitude a ne pas avoir a regarder ce qu'on recouvre.
  */
 .evitement {
   position: fixed;
@@ -147,6 +156,24 @@
   text-decoration: none;
 }
 
+/*
+ * IL REVIENT AVEC UNE MARGE, ET NON A `left: 0`.
+ *
+ * `globals.css` trace le focus en `outline: 3px` avec `outline-offset: 2px` : a
+ * ras du bord, le contour serait dessine a -5 px en x comme en y, et ses cotes
+ * gauche et superieur sortiraient du cadre visible. Le focus ne se verrait alors
+ * que sur deux cotes sur quatre, ce qui affaiblit precisement l'element qui doit
+ * dire ou le focus se trouve, WCAG 2.4.7.
+ *
+ * `--ls-space-2` VAUT 8 px, DONC PLUS QUE LES 5 px NECESSAIRES. Une valeur
+ * calculee au plus juste se casserait si le contour ou son decalage changeait
+ * dans `globals.css` ; un jeton d'espacement existant tient sans creer de
+ * dependance a un chiffre ecrit ailleurs.
+ *
+ * Releve par `ls-frontend-revue` sur cette story. Le lien d'evitement de la
+ * boutique porte le meme defaut, hors perimetre ici et trace en ticket.
+ */
 .evitement:focus {
-  left: 0;
+  left: var(--ls-space-2);
+  top: var(--ls-space-2);
 }

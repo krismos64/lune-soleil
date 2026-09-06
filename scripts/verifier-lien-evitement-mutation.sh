@@ -20,6 +20,7 @@ MUTABLES=(
   "src/app/administration/layout.tsx"
   "src/app/administration/commandes/page.tsx"
   "src/app/administration/categories/page.tsx"
+  "src/app/administration/stocks/page.tsx"
   "src/components/chargement-administration.tsx"
 )
 
@@ -138,6 +139,24 @@ jouer "le composant de chargement partagé perd l'ancre" \
 perl -0pi -e 's/(  const estAdministratrice = )/  \/* mutation *\/ const _lien = <a href="#contenu">Aller au contenu<\/a>;\n$1/' src/app/administration/layout.tsx
 jouer "le lien est posé avant le test de rôle" \
       "posé AVANT le test de rôle"
+
+# ---------------------------------------------------------------------------
+# Cas 6 : l'ancre migre du `<main>` vers un enfant.
+#
+# LE CAS QUI SE PRODUIRA VRAIMENT, lors d'une refonte d'écran : on déplace un
+# attribut sans voir qu'il portait le lien d'évitement. La page défile bien
+# jusqu'à l'ancre, mais le focus atterrit sur un `span` ou un titre au lieu du
+# début du contenu.
+#
+# LES CINQ CAS PRÉCÉDENTS NE LE VOIENT PAS, tous RETIRANT l'ancre là où
+# celui-ci la DÉPLACE. La première version du contrôle cherchait dans le
+# fichier entier et restait verte sur cette forme, mesuré par la revue
+# d'interface du 6 septembre 2026 : « chaque écran porte sa cible focalisable »
+# sur un écran où le lien menait à un titre.
+# ---------------------------------------------------------------------------
+perl -0pi -e 's/<main id="contenu" tabIndex=\{-1\} className=\{styles\.page\}>/<main className={styles.page}>\n      <span id="contenu" tabIndex={-1} \/>/' src/app/administration/stocks/page.tsx
+jouer "l'ancre migre du <main> vers un enfant" \
+      "ne porte pas id=\"contenu\" SUR SON <main>"
 
 echo
 echo "Cas joués : $cas, réussis : $reussites, en échec : $echecs"

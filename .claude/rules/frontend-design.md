@@ -197,6 +197,29 @@ L'écran courant est annoncé par `aria-current="page"`, et **le style s'ancre s
 cet attribut** plutôt que sur une classe : deux sources distinctes finiraient
 par désigner des rubriques différentes, sans que rien ne rende l'écart visible.
 
+### C34, tout écran porte la cible du lien d'évitement
+
+Un **lien d'évitement** est le premier élément focalisable de chaque partie du
+site, WCAG 2.4.1 niveau A. Il vit dans le layout, `en-tete-boutique.tsx` côté
+boutique et `administration/layout.tsx` côté administration, jamais recopié
+page par page.
+
+**Sa cible vit dans le `<main>` de chaque page**, avec `id="contenu"` et
+`tabIndex={-1}`, et non dans un conteneur posé par le layout. Mesuré deux fois
+sur ce dépôt : `focus()` sur un `div` sans `tabindex` ne prend pas, le focus
+retombe sur `body`, et la tabulation suivante repart du haut. **La page défile,
+le lien paraît marcher, et il ne remplit pas son rôle.**
+
+**Le lien et sa cible se posent ensemble, ou aucun des deux.** Seize écrans
+d'administration ont porté un lien absent jusqu'à LS-194, et un écran a porté
+l'ancre sans lien en LS-191. Les deux moitiés se périment séparément, d'où un
+contrôle qui les vérifie dans les deux sens,
+`scripts/verifier-lien-evitement.sh`.
+
+**Un écran rendu hors de la barre n'en porte pas**, connexion et
+réauthentification côté administration : un lien d'évitement sans cible occupe
+la première tabulation et ne mène nulle part, ce qui est pire que son absence.
+
 ## Accessibilité, WCAG 2.2 AA sur les parcours critiques
 
 Focus visible d'environ 3 px, jamais supprimé sans remplacement. Navigation
