@@ -51,12 +51,14 @@ ADMIN="$RACINE/src/app/administration"
 LAYOUT="$ADMIN/layout.tsx"
 BOUTIQUE="$RACINE/src/app/(boutique)"
 ENTETE="$RACINE/src/components/en-tete-boutique.tsx"
+REGLE="$RACINE/.claude/rules/frontend-design.md"
 ko=0
 
 [ -d "$ADMIN" ] || { echo "ECHEC dossier d'administration introuvable : $ADMIN"; exit 1; }
 [ -r "$LAYOUT" ] || { echo "ECHEC layout d'administration illisible : $LAYOUT"; exit 1; }
 [ -d "$BOUTIQUE" ] || { echo "ECHEC dossier de boutique introuvable : $BOUTIQUE"; exit 1; }
 [ -r "$ENTETE" ] || { echo "ECHEC en-tête de boutique illisible : $ENTETE"; exit 1; }
+[ -r "$REGLE" ] || { echo "ECHEC règle de conception illisible : $REGLE"; exit 1; }
 
 # ---------------------------------------------------------------------------
 # Les fichiers délibérément sans ancre, chacun avec sa raison.
@@ -64,6 +66,13 @@ ko=0
 # CETTE LISTE EST LA SEULE PARTIE MANUSCRITE, et y ajouter une ligne demande
 # d'écrire pourquoi un écran n'a pas besoin d'être atteignable au clavier. C'est
 # précisément la décision qu'on veut rendre consciente.
+#
+# LES CHEMINS SONT RELATIFS À LEUR CÔTÉ, ET LA LISTE EST PARTAGÉE PAR LES TROIS
+# APPELS depuis LS-196. Une entrée écrite sans son préfixe peut donc exclure un
+# homonyme de l'autre côté : `connexion/page.tsx` vise l'administration, quand
+# la boutique porte `compte/connexion/page.tsx`, qui n'est PAS exclu et ne doit
+# pas l'être, l'en-tête publique s'affichant pour tout le monde. Une exclusion
+# future s'écrit avec assez de chemin pour ne viser qu'un seul fichier.
 #
 #   connexion/page.tsx           rendue HORS session au rôle : le layout sort par
 #                                son retour anticipé, ni barre ni lien. Il n'y a
@@ -169,63 +178,63 @@ nb_delegues=0
 verifier_les_ecrans() {
   local racine="$1" cote="$2" ecran fichier balise
 
-while IFS= read -r ecran; do
-  [ -n "$ecran" ] || continue
-  est_exclu "$ecran" && continue
+  while IFS= read -r ecran; do
+    [ -n "$ecran" ] || continue
+    est_exclu "$ecran" && continue
 
-  fichier="$racine/$ecran"
-  nb_examines=$((nb_examines + 1))
+    fichier="$racine/$ecran"
+    nb_examines=$((nb_examines + 1))
 
-  # L'écran délègue son `main` au composant partagé : l'ancre y est vérifiée.
-  if grep -q 'ChargementAdministration' "$fichier" && ! grep -q '<main' "$fichier"; then
-    nb_delegues=$((nb_delegues + 1))
-    continue
-  fi
+    # L'écran délègue son `main` au composant partagé : l'ancre y est vérifiée.
+    if grep -q 'ChargementAdministration' "$fichier" && ! grep -q '<main' "$fichier"; then
+      nb_delegues=$((nb_delegues + 1))
+      continue
+    fi
 
-  if ! grep -q '<main' "$fichier"; then
-    echo "ECHEC [$cote] $ecran ne rend aucun <main>"
-    echo "      le lien d'évitement n'a alors pas de cible sur cet écran, et"
-    echo "      la page n'a pas de repère principal pour un lecteur d'écran."
-    ko=$((ko + 1))
-    continue
-  fi
+    if ! grep -q '<main' "$fichier"; then
+      echo "ECHEC [$cote] $ecran ne rend aucun <main>"
+      echo "      le lien d'évitement n'a alors pas de cible sur cet écran, et"
+      echo "      la page n'a pas de repère principal pour un lecteur d'écran."
+      ko=$((ko + 1))
+      continue
+    fi
 
-  # L'ANCRE SE CHERCHE SUR LA BALISE `<main>`, JAMAIS DANS LE FICHIER ENTIER.
-  #
-  # LA PREMIÈRE VERSION CHERCHAIT DANS LE FICHIER, et le trou a été mesuré par la
-  # revue d'interface : un `<main>` nu suivi d'un `<h1 id="contenu"
-  # tabIndex={-1}>` satisfaisait le contrôle, qui annonçait « chaque écran porte
-  # sa cible focalisable » sur un écran où le lien menait à un titre. C'est le
-  # motif « contrôle par fichier ou par fonction », déjà en fiche ici.
-  #
-  # LE SECOND EFFET EST PLUS DISCRET : `tabIndex={-1}` est un attribut courant,
-  # posé sur un titre qu'on focalise après une action. Cherché dans le fichier,
-  # il aurait été satisfait par cet autre élément alors que le `<main>` n'en
-  # porte pas, c'est-à-dire sur le défaut exact que ce contrôle nomme.
-  #
-  # LA FENÊTRE VA DE `<main` AU `>` QUI FERME LA BALISE, et non à la ligne : les
-  # attributs d'un `<main>` s'étalent sur plusieurs lignes dès qu'il y en a
-  # trois, ce qui est le cas de `error.tsx`. `awk` la découpe, `tr` la met à plat
-  # pour que `grep` voie les attributs séparés par des retours à la ligne.
-  balise=$(awk '/<main/{trouve=1} trouve{print; if (/>/) exit}' "$fichier" | tr '\n' ' ')
+    # L'ANCRE SE CHERCHE SUR LA BALISE `<main>`, JAMAIS DANS LE FICHIER ENTIER.
+    #
+    # LA PREMIÈRE VERSION CHERCHAIT DANS LE FICHIER, et le trou a été mesuré par la
+    # revue d'interface : un `<main>` nu suivi d'un `<h1 id="contenu"
+    # tabIndex={-1}>` satisfaisait le contrôle, qui annonçait « chaque écran porte
+    # sa cible focalisable » sur un écran où le lien menait à un titre. C'est le
+    # motif « contrôle par fichier ou par fonction », déjà en fiche ici.
+    #
+    # LE SECOND EFFET EST PLUS DISCRET : `tabIndex={-1}` est un attribut courant,
+    # posé sur un titre qu'on focalise après une action. Cherché dans le fichier,
+    # il aurait été satisfait par cet autre élément alors que le `<main>` n'en
+    # porte pas, c'est-à-dire sur le défaut exact que ce contrôle nomme.
+    #
+    # LA FENÊTRE VA DE `<main` AU `>` QUI FERME LA BALISE, et non à la ligne : les
+    # attributs d'un `<main>` s'étalent sur plusieurs lignes dès qu'il y en a
+    # trois, ce qui est le cas de `error.tsx`. `awk` la découpe, `tr` la met à plat
+    # pour que `grep` voie les attributs séparés par des retours à la ligne.
+    balise=$(awk '/<main/{trouve=1} trouve{print; if (/>/) exit}' "$fichier" | tr '\n' ' ')
 
-  if ! printf '%s' "$balise" | grep -q 'id="contenu"'; then
-    echo "ECHEC [$cote] $ecran ne porte pas id=\"contenu\" SUR SON <main>"
-    echo "      le lien d'évitement du layout pointe vers une ancre absente, ou"
-    echo "      posée sur un autre élément : il occupe la première tabulation"
-    echo "      et ne mène pas au début du contenu."
-    ko=$((ko + 1))
-    continue
-  fi
+    if ! printf '%s' "$balise" | grep -q 'id="contenu"'; then
+      echo "ECHEC [$cote] $ecran ne porte pas id=\"contenu\" SUR SON <main>"
+      echo "      le lien d'évitement du layout pointe vers une ancre absente, ou"
+      echo "      posée sur un autre élément : il occupe la première tabulation"
+      echo "      et ne mène pas au début du contenu."
+      ko=$((ko + 1))
+      continue
+    fi
 
-  if ! printf '%s' "$balise" | grep -q 'tabIndex={-1}'; then
-    echo "ECHEC [$cote] $ecran porte l'ancre sans tabIndex={-1} sur le même <main>"
-    echo "      la page défilerait jusqu'au contenu en laissant le focus au"
-    echo "      menu : la tabulation suivante repartirait de la barre, ce que"
-    echo "      le lien existe précisément pour éviter."
-    ko=$((ko + 1))
-  fi
-done
+    if ! printf '%s' "$balise" | grep -q 'tabIndex={-1}'; then
+      echo "ECHEC [$cote] $ecran porte l'ancre sans tabIndex={-1} sur le même <main>"
+      echo "      la page défilerait jusqu'au contenu en laissant le focus au"
+      echo "      menu : la tabulation suivante repartirait de la barre, ce que"
+      echo "      le lien existe précisément pour éviter."
+      ko=$((ko + 1))
+    fi
+  done
 }
 
 # LA LISTE ARRIVE PAR L'ENTRÉE STANDARD, jamais en argument : un nom de fichier
@@ -252,8 +261,9 @@ echo "Dont délégués au composant partagé : $nb_delegues"
 # ---------------------------------------------------------------------------
 if ! grep -q 'href="#contenu"' "$ENTETE"; then
   echo "ECHEC l'en-tête de la boutique ne pose plus de lien d'évitement"
-  echo "      les vingt-huit écrans publics redeviennent alors une traversée"
-  echo "      de la navigation au clavier avant le contenu, WCAG 2.4.1."
+  echo "      tous les écrans publics redeviennent alors une traversée de la"
+  echo "      navigation au clavier avant le contenu, WCAG 2.4.1. Le compte"
+  echo "      exact est affiché plus bas, il ne s'écrit pas ici à la main."
   ko=$((ko + 1))
 fi
 
@@ -262,6 +272,19 @@ fi
 # peut pas les voir, une `min-height` pouvant être annulée par un parent : c'est
 # la limite assumée d'un contrôle qui lit des fichiers, et les deux se
 # complètent comme le disent les sens 1 et 2 plus haut.
+
+# `not-found.tsx` VIT HORS DU GROUPE DE ROUTES, et il a failli echapper au
+# controle : releve par la revue de LS-196. Il compose `<EnTeteBoutique />`
+# explicitement plutot que d'heriter du layout `(boutique)`, Next.js rendant la
+# page 404 racine hors de tout groupe. Il porte donc le lien d'evitement, et son
+# ancre doit etre gardee comme les autres.
+#
+# LA RECHERCHE SE FAIT PAR CE QUI REND L'EN-TETE, jamais par l'arborescence
+# seule : un ecran futur pose ailleurs et composant `EnTeteBoutique` serait
+# invisible a un `find` sur un dossier. Le motif est celui que ce script vient
+# de payer, une portee plus etroite que la regle qu'il enonce.
+hors_groupe=$(grep -rl 'EnTeteBoutique' "$RACINE/src/app" 2>/dev/null \
+  | grep -v "$BOUTIQUE/" | grep -v 'layout.tsx' | sed "s|$RACINE/src/app/||" | sort)
 
 ecrans_boutique=$(find "$BOUTIQUE" \( -name "page.tsx" -o -name "error.tsx" -o -name "loading.tsx" \) 2>/dev/null \
   | sed "s|$BOUTIQUE/||" | sort)
@@ -280,7 +303,56 @@ verifier_les_ecrans "$BOUTIQUE" "boutique" <<EOF
 $ecrans_boutique
 EOF
 
+# `nb_delegues` N'EST PAS AFFICHÉ ICI, et c'est voulu : la délégation au
+# composant de chargement partagé n'existe que côté administration, donc la
+# valeur vaudrait toujours zéro. Un compte affiché qui ne peut pas varier fait
+# croire à une mesure là où il n'y en a pas.
 echo "Écrans de boutique examinés : $nb_examines"
+
+nb_examines=0
+nb_delegues=0
+
+verifier_les_ecrans "$RACINE/src/app" "hors groupe" <<EOF
+$hors_groupe
+EOF
+
+echo "Écrans hors groupe rendant l'en-tête : $nb_examines"
+
+# ---------------------------------------------------------------------------
+# Sens 4 : la règle C34 énonce toujours ce que ce contrôle applique.
+#
+# UN CONTRÔLE À SENS UNIQUE MENT PAR OMISSION. Celui-ci fait respecter des
+# seuils, 44 px de zone tactile et une marge de retour au focus, qui ne
+# figuraient dans AUCUN document jusqu'à LS-196 : c'est précisément ce vide qui
+# a laissé poser un lien de 24 px revenant à `left: 0`, de bonne foi. Si la
+# règle disparaissait, le contrôle appliquerait une prescription que plus rien
+# n'énonce, et la session suivante la retirerait sans comprendre pourquoi il
+# rougit.
+#
+# LES MOTIFS TIENNENT SUR UN SEUL MOT OU UN SEUL NOMBRE, les documents étant
+# enveloppés à 80 colonnes : une expression de plusieurs mots peut être coupée
+# par un retour à la ligne et échapper à un grep ligne à ligne.
+# ---------------------------------------------------------------------------
+if ! grep -q 'C34' "$REGLE"; then
+  echo "ECHEC frontend-design.md ne porte plus la règle C34"
+  echo "      une règle numérotée se cite par son identifiant : sans lui, les"
+  echo "      contrôles textuels ne la retrouvent plus."
+  ko=$((ko + 1))
+fi
+
+if ! grep -q 'touch-target' "$REGLE"; then
+  echo "ECHEC C34 n'énonce plus la zone tactile du lien d'évitement"
+  echo "      le lien est le PREMIER élément atteint au clavier, et il faisait"
+  echo "      24 px de haut avant LS-196 faute de seuil écrit."
+  ko=$((ko + 1))
+fi
+
+if ! grep -q '2.4.7' "$REGLE"; then
+  echo "ECHEC C34 ne cite plus WCAG 2.4.7, qui fonde la marge de retour"
+  echo "      à ras du bord, le contour de focus sort du cadre visible et ne"
+  echo "      se voit que sur deux côtés sur quatre."
+  ko=$((ko + 1))
+fi
 
 echo
 if [ "$ko" -eq 0 ]; then

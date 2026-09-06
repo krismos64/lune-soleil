@@ -262,6 +262,35 @@ contrôle qui les vérifie dans les deux sens,
 réauthentification côté administration : un lien d'évitement sans cible occupe
 la première tabulation et ne mène nulle part, ce qui est pire que son absence.
 
+**Le lien porte 44 px de zone tactile et revient avec une marge**, LS-196. Ces
+deux seuils manquaient ici jusqu'au 6 septembre 2026, et leur absence a produit
+les deux défauts que cette story ferme : une session qui suivait C34 à la lettre
+posait un lien de 24 px revenant à `left: 0`, sans qu'aucune ligne ne l'en
+empêche. Motif « règle incomplète franchie de bonne foi », le même que la règle
+de contraste plus haut a déjà payé.
+
+| Propriété | Valeur | Pourquoi |
+|---|---|---|
+| zone tactile | `min-height: var(--ls-touch-target)`, 44 px | c'est le **premier** élément atteint au clavier, il mérite moins que tout autre d'être difficile à viser |
+| retour au focus | `left` et `top` à `var(--ls-space-2)`, 8 px | `globals.css` trace `outline: 3px` avec `outline-offset: 2px`, soit **5 px au-delà de la boîte** : à ras du bord, les côtés gauche et supérieur du contour sortent du cadre et le focus ne se voit que sur deux côtés sur quatre, WCAG 2.4.7 |
+
+Le jeton de 8 px est **plus large que les 5 px nécessaires**, délibérément : une
+valeur calculée au plus juste se casserait si le contour ou son décalage
+changeait dans `globals.css`.
+
+**Les deux côtés du site portent le même motif**, et leurs écarts restants
+portent chacun leur raison écrite dans le CSS. `scripts/verifier-lien-evitement.sh`
+couvre les trois familles d'écran : administration, boutique, et les écrans hors
+groupe de routes qui composent `EnTeteBoutique` eux-mêmes, `not-found.tsx` en
+tête. **Il ne s'ancrait que sur l'administration jusqu'à LS-196**, et il
+annonçait pourtant « chaque écran porte sa cible focalisable » : trois écrans
+publics rendaient un `<main>` nu pendant ce temps. Un contrôle dont la portée est
+plus étroite que la règle qu'il énonce ment par omission.
+
+La zone tactile et la marge se mesurent **sur le rendu**, par la suite de bout en
+bout, un contrôle textuel ne pouvant voir ni une `min-height` annulée par un
+parent ni une position calculée.
+
 ## Accessibilité, WCAG 2.2 AA sur les parcours critiques
 
 Focus visible d'environ 3 px, jamais supprimé sans remplacement. Navigation

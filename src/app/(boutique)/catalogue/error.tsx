@@ -31,7 +31,7 @@ export default function ErreurCatalogue({
   reset: () => void;
 }) {
   return (
-    <main className={styles.page}>
+    <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Le catalogue</h1>
 
       <div className={styles.etatVide} role="alert">

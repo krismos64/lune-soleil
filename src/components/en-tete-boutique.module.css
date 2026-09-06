@@ -25,15 +25,26 @@
  * fait pas, d'ou le `fixed` de son cote. Un `fixed` ici sortirait le lien du
  * flux de l'en-tete sans aucun gain.
  *
- * `z-index: 10` contre `2` : les deux valeurs sont calibrees sur ce que CHAQUE
- * lien doit passer devant, et rien ne recommande de les egaliser. Cote
- * administration, un bandeau `sticky` a `z-index: 1` fixe le voisin a battre,
- * d'ou une valeur basse et voisine. Cote boutique, aucun `z-index` concurrent
- * n'existe, mais l'enveloppe de `navigation-espace-client` passe en
- * `position: sticky` au-dela de 768 px avec un fond opaque : elle cree un
- * contexte d'empilement, sur les memes pages que cet en-tete. Le lien doit
- * passer devant elle, et un lien d'evitement qu'on ne voit pas est un piege
- * plutot qu'un raccourci.
+ * `z-index: 10` contre `2` : la valeur de l'administration est CALIBREE, celle
+ * d'ici ne l'est pas, et c'est le seul ecart reel entre les deux.
+ *
+ * Cote administration, un bandeau `sticky` a `z-index: 1` fixe le voisin a
+ * battre, d'ou 2, une valeur basse et voisine plutot que le grand nombre qui
+ * sert d'habitude a ne pas avoir a regarder ce qu'on recouvre.
+ *
+ * Cote boutique, ce 10 n'a AUCUN concurrent : c'est le seul `z-index` de tout
+ * le site public, releve le 6 septembre 2026. Une premiere version de ce
+ * commentaire justifiait la valeur par l'enveloppe `sticky` de
+ * `navigation-espace-client`, et cette justification etait FAUSSE dans les deux
+ * termes, demontee par la revue : cette enveloppe ne declare aucun `z-index`,
+ * donc elle ne cree aucun contexte d'empilement, et elle est rendue DANS
+ * `children`, donc apres cet en-tete dans l'ordre du DOM.
+ *
+ * LE 10 EST DONC CONSERVE FAUTE DE RAISON DE LE CHANGER, et non parce qu'il
+ * serait necessaire : il n'a rien a battre aujourd'hui, il ne nuit a rien, et
+ * le toucher n'apporterait aucune garantie. C'est ce qu'il faut ecrire plutot
+ * qu'une raison inventee : une justification fausse sera crue a la relecture
+ * suivante et interdira de toucher une valeur que rien ne defend.
  *
  * LA ZONE TACTILE VAUT 44 px, `frontend-design.md` l'exigeant de tout element
  * actionnable. Le padding seul donnait environ 24 px de haut, et ce meme defaut
