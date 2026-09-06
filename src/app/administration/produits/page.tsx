@@ -33,6 +33,7 @@ import {
   listerProduitsAdministration,
   STATUTS_VIVANTS,
 } from "@/services/catalogue";
+import { urlMedia } from "@/integrations/medias/urls";
 import { formaterMontant } from "@/lib/montant";
 
 import styles from "./catalogue.module.css";
@@ -50,17 +51,6 @@ export const metadata = {
  * le republie ou le croit perdu.
  */
 export const dynamic = "force-dynamic";
-
-/**
- * Le prefixe des medias, meme source que les autres ecrans.
- *
- * `Media.chemin` SE TERMINE DEJA PAR UNE BARRE, verifie en base le 4 septembre
- * 2026 : la concatenation n'en ajoute donc AUCUNE. L'editeur de produit en
- * ajoute une et produit une double barre, qui rend 308 au lieu de 200 : defaut
- * reel, porte par LS-187, et cet ecran emploie la forme correcte en attendant
- * la fonction commune que ce ticket livrera.
- */
-const PREFIXE_MEDIAS = process.env.MEDIA_PREFIXE_PUBLIC ?? "/medias";
 
 /**
  * Les filtres proposes, dans l'ordre du cycle de vie d'un produit.
@@ -307,7 +297,7 @@ async function ListeProduits({
                      */
                     // eslint-disable-next-line @next/next/no-img-element -- fichiers servis par Nginx depuis un volume, hors de la portee de l'optimiseur de Next.js
                     <img
-                      src={`${PREFIXE_MEDIAS}/${produit.mediaChemin}320.jpeg`}
+                      src={urlMedia(produit.mediaChemin, "320.jpeg")}
                       alt=""
                       className={styles.image}
                       loading="lazy"

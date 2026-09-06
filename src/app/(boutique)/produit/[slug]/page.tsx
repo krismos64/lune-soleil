@@ -23,7 +23,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { DonneesStructurees } from "@/components/donnees-structurees";
-import { declinaisonsAttendues } from "@/integrations/medias/traitement";
+import { urlVignette } from "@/integrations/medias/urls";
 import {
   disponibiliteDuProduit,
   jsonLdFilAriane,
@@ -68,46 +68,29 @@ export const dynamic = "force-dynamic";
  */
 
 /**
- * Prefixe sous lequel les medias sont servis, ADR-007. Meme valeur que la
- * galerie : `Media.chemin` porte un chemin de VOLUME, jamais une URL.
- */
-const PREFIXE_MEDIAS = process.env.MEDIA_PREFIXE_PUBLIC ?? "/medias";
-
-/**
- * La declinaison publiee dans le balisage, LS-137.
+ * Compose le chemin public d'une photographie pour le balisage, LS-137.
  *
- * ELLE EST VERIFIEE CONTRE CE QUE LE TRAITEMENT PRODUIT REELLEMENT, comme
- * l'ecran d'administration le fait deja pour sa vignette. Sans ce controle, un
- * changement de format laisserait le balisage pointer une image inexistante :
- * la chaine est construite a l'execution, donc ni les types ni le lint ne
- * verraient `640.jpg` pour `640.jpeg`. Motif « chaine construite a
- * l'execution », en fiche sur ce depot.
+ * LA CONSTRUCTION ET SON GARDE-FOU VIVENT DESORMAIS DANS `urlVignette`,
+ * LS-187. Ce fichier portait sa propre copie des deux : une declinaison
+ * verifiee contre `declinaisonsAttendues()`, et une concatenation qui COLLAIT
+ * le nom de fichier au chemin. Le garde-fou etait bon, la concatenation
+ * fausse, et le second annulait le premier : l'URL restait bien formee en
+ * pointant un fichier inexistant.
  *
- * `jpeg` ET NON `avif` : le balisage est lu par des agregateurs et des reseaux
- * sociaux dont beaucoup ne decodent pas les formats recents.
- */
-const DECLINAISON_BALISAGE = "640.jpeg";
-
-if (!declinaisonsAttendues().includes(DECLINAISON_BALISAGE)) {
-  throw new Error(
-    `La declinaison ${DECLINAISON_BALISAGE} n'est plus produite par le traitement.`,
-  );
-}
-
-/**
- * Compose le chemin public d'une photographie pour le balisage.
+ * `640.jpeg` RESTE LA DECLINAISON DU BALISAGE, et c'est le defaut d'`urlVignette` :
+ * le balisage est lu par des agregateurs et des reseaux sociaux dont beaucoup
+ * ne decodent pas les formats recents.
  *
- * `Media.chemin` EST UN PREFIXE DE DOSSIER se terminant par une barre, auquel
- * la declinaison se concatene : il ne commence PAS par « / » et n'est donc pas
- * un chemin d'URL. Le passer tel quel a `absolutise` fait lever, et c'est le
- * test de bout en bout qui l'a montre, pas le controle textuel.
+ * LE CHEMIN NE COMMENCE PAS PAR « / » DANS LA BASE, il n'est donc pas un chemin
+ * d'URL : le passer tel quel a `absolutise` fait lever, et c'est le test de bout
+ * en bout qui l'a montre, pas le controle textuel.
  */
 function cheminPublicPhoto(chemin: string | undefined): string | null {
   if (chemin === undefined) {
     return null;
   }
 
-  return `${PREFIXE_MEDIAS}/${chemin}${DECLINAISON_BALISAGE}`;
+  return urlVignette(chemin);
 }
 
 /**

@@ -21,6 +21,8 @@ import type {
   LignePanierRevalidee,
   MotifIndisponible,
 } from "@/services/panier";
+import { urlMedia } from "@/integrations/medias/urls";
+
 import { changerQuantite, retirerDuPanier } from "./actions-panier";
 import styles from "./panier.module.css";
 
@@ -37,8 +39,6 @@ const TEXTE_MOTIF: Record<MotifIndisponible, string> = {
   EPUISE: "Cette pièce est épuisée.",
   QUANTITE_REDUITE: "La quantité a été ajustée au stock restant.",
 };
-
-const PREFIXE_MEDIAS = process.env.NEXT_PUBLIC_MEDIA_PREFIXE ?? "/medias";
 
 export function LignesPanier({ lignes }: { lignes: LignePanierRevalidee[] }) {
   const [enCours, demarrer] = useTransition();
@@ -76,7 +76,7 @@ export function LignesPanier({ lignes }: { lignes: LignePanierRevalidee[] }) {
               {ligne.mediaChemin ? (
                 // eslint-disable-next-line @next/next/no-img-element -- fichiers servis par Nginx depuis un volume, hors de la portee de l'optimiseur de Next.js, declinaisons pre-generees par ADR-007
                 <img
-                  src={`${PREFIXE_MEDIAS}/${ligne.mediaChemin}320.jpeg`}
+                  src={urlMedia(ligne.mediaChemin, "320.jpeg")}
                   alt={ligne.mediaTexteAlternatif ?? ""}
                   className={styles.image}
                   width={320}

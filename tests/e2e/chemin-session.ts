@@ -288,13 +288,30 @@ export const CATALOGUE_TEST = {
    * Photo de la piece en stock, LS-104.
    *
    * UNE SEULE PIECE EN PORTE UNE : le catalogue doit exercer ses deux branches,
-   * la carte avec `<picture>` et la carte sans photo. Le chemin se termine par
-   * une barre, comme celui que le traitement ecrit, la carte y concatenant
-   * `320.avif` et les autres declinaisons.
+   * la carte avec `<picture>` et la carte sans photo.
+   *
+   * ------------------------------------------------------------------
+   * LE CHEMIN EST UN SEGMENT SIMPLE, SANS BARRE NI DOSSIER PARENT, LS-187.
+   *
+   * Il valait `produits/e2e-ls104/` avec un commentaire affirmant que c'etait
+   * « comme celui que le traitement ecrit ». C'ETAIT FAUX, et cette phrase a
+   * ete recopiee dans la description de LS-187 puis dans deux commentaires de
+   * `src/` : `exigerSegmentSimple` de `stockage.ts` impose
+   * `^[A-Za-z0-9][A-Za-z0-9._-]*$`, donc ni slash ni barre finale, et
+   * `publier()` rend ce segment nu.
+   *
+   * CE QUE LA FORME FAUTIVE MASQUAIT : les cinq ecrans de la boutique collaient
+   * le nom de fichier au chemin, ce qui rend 404 sur une photographie reelle.
+   * La barre de la fixture reparait cette faute au passage, donc aucun test ne
+   * pouvait la voir. Une donnee de test faconnee pour satisfaire le code masque
+   * le defaut au lieu de le reveler.
+   *
+   * `verifier-urls-medias.sh` garde desormais cette forme.
+   * ------------------------------------------------------------------
    */
   mediaEnStock: {
     id: "d1b2c3d4-1111-4ddd-8888-111111111111",
-    chemin: "produits/e2e-ls104/",
+    chemin: "e2e-ls104",
     texteAlternatif: "Vue de face de la pièce",
   },
   /** Exactement une piece, badge « Dernière pièce », le cas ordinaire ici. */
@@ -354,7 +371,7 @@ export const FICHE_TEST = {
    */
   mediaSecond: {
     id: "d1b2c3d4-2222-4ddd-8888-222222222222",
-    chemin: "produits/e2e-ls105-second/",
+    chemin: "e2e-ls105-second",
     texteAlternatif: "Vue de profil de la pièce",
   },
   /** La variante deja posee par `poserCataloguePublie`, renommee et dimensionnee. */

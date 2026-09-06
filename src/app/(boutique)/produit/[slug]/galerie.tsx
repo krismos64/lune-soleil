@@ -20,16 +20,9 @@
  */
 import { useState } from "react";
 
+import { srcSetMedia, urlMedia, urlVignette } from "@/integrations/medias/urls";
 import type { PhotoFiche } from "@/services/catalogue";
 import styles from "./fiche.module.css";
-
-/**
- * Prefixe sous lequel les medias sont servis, ADR-007.
- *
- * Il vient de la configuration et non des donnees : `Media.chemin` porte un
- * chemin relatif au dossier `public/` du volume, jamais une URL.
- */
-const PREFIXE_MEDIAS = process.env.MEDIA_PREFIXE_PUBLIC ?? "/medias";
 
 export function Galerie({
   photos,
@@ -58,12 +51,12 @@ export function Galerie({
       <picture>
         <source
           type="image/avif"
-          srcSet={`${PREFIXE_MEDIAS}/${affichee.chemin}320.avif 320w, ${PREFIXE_MEDIAS}/${affichee.chemin}640.avif 640w, ${PREFIXE_MEDIAS}/${affichee.chemin}1280.avif 1280w`}
+          srcSet={srcSetMedia(affichee.chemin, "avif")}
           sizes={tailles}
         />
         <source
           type="image/webp"
-          srcSet={`${PREFIXE_MEDIAS}/${affichee.chemin}320.webp 320w, ${PREFIXE_MEDIAS}/${affichee.chemin}640.webp 640w, ${PREFIXE_MEDIAS}/${affichee.chemin}1280.webp 1280w`}
+          srcSet={srcSetMedia(affichee.chemin, "webp")}
           sizes={tailles}
         />
         {/*
@@ -73,7 +66,7 @@ export function Galerie({
          * l'image.
          */}
         <img
-          src={`${PREFIXE_MEDIAS}/${affichee.chemin}640.jpeg`}
+          src={urlVignette(affichee.chemin)}
           alt={affichee.texteAlternatif ?? ""}
           className={styles.imagePrincipale}
           width={640}
@@ -126,7 +119,7 @@ export function Galerie({
                    */}
                   {/* eslint-disable-next-line @next/next/no-img-element -- fichiers servis par Nginx depuis un volume, hors de la portee de l'optimiseur de Next.js : les declinaisons sont pre-generees par ADR-007 */}
                   <img
-                    src={`${PREFIXE_MEDIAS}/${photo.chemin}320.jpeg`}
+                    src={urlMedia(photo.chemin, "320.jpeg")}
                     alt=""
                     className={styles.imageVignette}
                     width={64}

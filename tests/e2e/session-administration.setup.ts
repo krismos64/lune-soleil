@@ -455,14 +455,31 @@ async function poserCataloguePublie(client: Client): Promise<void> {
    * le cas nominal, et C8 interdit de publier un produit dont une photo a
    * echoue.
    *
-   * LE CHEMIN SE TERMINE PAR UNE BARRE, comme celui que le traitement ecrit :
-   * la carte y concatene `320.avif`, `640.jpeg` et le reste. Un chemin sans
-   * barre finale produirait des URL collees, ce que ce test attrape.
+   * LE CHEMIN EST UN SEGMENT SIMPLE, ce que le traitement produit reellement,
+   * LS-187. Il portait `produits/e2e-ls104/` avec un commentaire affirmant
+   * l'inverse, et cette phrase a essaime dans un ticket et deux fichiers de
+   * `src/`. `publier()` ne peut PAS rendre cette forme : `exigerSegmentSimple`
+   * refuse le slash.
+   *
+   * LA BARRE DE LA FIXTURE REPARAIT UNE FAUTE DE LA BOUTIQUE AU PASSAGE, qui
+   * collait le nom de fichier au chemin. Aucun test ne pouvait donc voir le
+   * defaut, et il aurait rendu 404 sur la premiere photographie reelle.
+   */
+  /*
+   * `DO UPDATE` ET NON `DO NOTHING` SUR LE CHEMIN, LS-187. Les preparations
+   * voisines emploient `DO NOTHING`, qui suffit a une ligne dont la forme ne
+   * change pas. Celle-ci a CHANGE DE FORME : une base amorcee avant LS-187
+   * porte `produits/e2e-ls104/`, et `DO NOTHING` l'y laisserait indefiniment.
+   *
+   * MESURE DU 6 SEPTEMBRE 2026, avant cette correction : les sept URL du
+   * catalogue rendaient 404 sur une base deja amorcee, alors que la fixture et
+   * les fichiers sur disque etaient tous deux corrects. Une preparation
+   * idempotente n'est pas pour autant correctrice.
    */
   await client.query(
     `INSERT INTO media (id, produit_id, chemin, texte_alternatif, ordre, statut_traitement, cree_a)
      VALUES ($1, $2, $3, $4, 1, 'TRAITE', now())
-     ON CONFLICT (id) DO NOTHING`,
+     ON CONFLICT (id) DO UPDATE SET chemin = EXCLUDED.chemin`,
     [
       CATALOGUE_TEST.mediaEnStock.id,
       CATALOGUE_TEST.enStock.id,
@@ -530,11 +547,14 @@ async function poserFicheProduit(client: Client): Promise<void> {
    *
    * `ordre = 2` ET NON 1 : l'index partiel `media_principal_unique` reserve le
    * rang 1 a un seul media par produit, deja pris par `mediaEnStock`.
+   *
+   * `DO UPDATE` SUR LE CHEMIN, meme raison que son voisin : la forme a change
+   * en LS-187, et une base deja amorcee garderait l'ancienne indefiniment.
    */
   await client.query(
     `INSERT INTO media (id, produit_id, chemin, texte_alternatif, ordre, statut_traitement, cree_a)
      VALUES ($1, $2, $3, $4, 2, 'TRAITE', now())
-     ON CONFLICT (id) DO NOTHING`,
+     ON CONFLICT (id) DO UPDATE SET chemin = EXCLUDED.chemin`,
     [
       FICHE_TEST.mediaSecond.id,
       CATALOGUE_TEST.enStock.id,
