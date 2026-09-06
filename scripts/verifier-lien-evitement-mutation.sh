@@ -63,9 +63,29 @@ cas=0
 # rougirait pour une autre raison, un ancrage cassé par exemple, passerait un
 # test qui ne regarde que le code de sortie : il rougirait sans avoir vu le
 # défaut. Motif « mutation vue par le mauvais test ».
+# `empreinte_mutables` sert à prouver qu'une substitution a MORDU. Une cible
+# déplacée par un renommage laisserait les fichiers intacts, et le cas testerait
+# alors le dépôt tel quel : motif « cible de mutation déplacée », en fiche ici.
+empreinte_mutables() {
+  cksum "${MUTABLES[@]}" 2>/dev/null | cksum
+}
+
 jouer() {
   local intitule="$1" motif_attendu="$2"
   cas=$((cas + 1))
+
+  # LA MUTATION DOIT AVOIR MODIFIÉ QUELQUE CHOSE, sans quoi ce cas mesure le
+  # dépôt sain. Le cas 8 est passé ainsi le 6 septembre 2026 : son `perl`
+  # cherchait une forme absente du fichier, et le message attendu venait d'un
+  # défaut PRÉEXISTANT que la story croyait avoir corrigé.
+  if [ "$(empreinte_mutables)" = "$EMPREINTE_REFERENCE" ]; then
+    echo "ECHEC cas $cas, $intitule"
+    echo "      la mutation n'a modifié AUCUN fichier mutable : sa cible a"
+    echo "      bougé, et ce cas mesurerait le dépôt tel quel."
+    echecs=$((echecs + 1))
+    restaurer
+    return
+  fi
 
   local sortie
   sortie=$("$SCRIPT_CIBLE" 2>&1)
@@ -96,6 +116,32 @@ jouer() {
 
 echo "Preuve par mutation de $SCRIPT_CIBLE"
 echo
+
+# ---------------------------------------------------------------------------
+# L'ÉTAT DE RÉFÉRENCE DOIT ÊTRE VERT, ET CETTE GARDE A MANQUÉ.
+#
+# Sans elle, un contrôle rouge en permanence satisfait TOUS les cas : chacun
+# n'exige qu'un code de sortie non nul et un motif présent, deux conditions que
+# le défaut préexistant remplit déjà. Le script annonçait « 8 mutations sur 8 »
+# le 6 septembre 2026 alors que sa cible échouait sans aucune mutation, sur une
+# correction perdue par une restauration `git checkout HEAD`.
+#
+# C'est le pendant exact de la garde que portent `verifier-contraste-mutation.sh`
+# et `verifier-bordure-controle-mutation.sh` : une preuve par mutation qui ne
+# part pas du vert ne prouve rien du tout.
+# ---------------------------------------------------------------------------
+if ! "$SCRIPT_CIBLE" >/dev/null 2>&1; then
+  echo "ECHEC le contrôle n'est pas vert AVANT toute mutation :"
+  "$SCRIPT_CIBLE" 2>&1 | sed 's/^/        /'
+  echo
+  echo "      Aucune mutation ne peut rien prouver dans cet état, chaque cas"
+  echo "      serait satisfait par le défaut déjà présent."
+  exit 1
+fi
+echo "État de référence : le contrôle est vert, les mutations peuvent commencer"
+echo
+
+EMPREINTE_REFERENCE="$(empreinte_mutables)"
 
 # ---------------------------------------------------------------------------
 # Cas 1 : le lien disparaît du layout.
