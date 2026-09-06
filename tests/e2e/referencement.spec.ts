@@ -458,7 +458,22 @@ test.describe("identite du site au partage, LS-147", () => {
     await page.goto(`/produit/${CATALOGUE_TEST.enStock.slug}`);
 
     const image = page.locator('meta[property="og:image"]');
-    await expect(image).toHaveAttribute("content", /\/medias\/produits\//);
+
+    /*
+     * L'ASSERTION S'ANCRE SUR LE CHEMIN DU MEDIA DE TEST, et non sur un prefixe
+     * de dossier. Elle exigeait `/medias/produits/`, ce qui figeait la forme
+     * d'une FIXTURE FAUTIVE : LS-187 a montre que `Media.chemin` ne peut pas
+     * porter de dossier parent, `exigerSegmentSimple` refusant le slash. Le
+     * test aurait donc rougi le jour de la premiere photographie reelle, en
+     * accusant le code plutot que lui-meme.
+     *
+     * LA CONSTANTE VIENT DE LA FIXTURE, donc l'assertion suit la donnee de test
+     * si elle change, sans figer une forme de chemin.
+     */
+    await expect(image).toHaveAttribute(
+      "content",
+      new RegExp(`/medias/${CATALOGUE_TEST.mediaEnStock.chemin}/`),
+    );
     await expect(image).not.toHaveAttribute("content", /partage\.png/);
   });
 

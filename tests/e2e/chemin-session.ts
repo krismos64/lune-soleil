@@ -306,7 +306,8 @@ export const CATALOGUE_TEST = {
    * pouvait la voir. Une donnee de test faconnee pour satisfaire le code masque
    * le defaut au lieu de le reveler.
    *
-   * `verifier-urls-medias.sh` garde desormais cette forme.
+   * `verifier-medias-test.sh` confronte ce chemin a celui du generateur de
+   * fichiers, et les tests unitaires d'`urls.ts` gardent la forme construite.
    * ------------------------------------------------------------------
    */
   mediaEnStock: {

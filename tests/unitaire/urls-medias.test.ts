@@ -21,7 +21,7 @@ import {
   urlMedia,
   urlVignette,
 } from "@/integrations/medias/urls";
-import { declinaisonsAttendues } from "@/integrations/medias/traitement";
+import { declinaisonsAttendues } from "@/integrations/medias/declinaisons";
 
 /**
  * Un chemin tel que `publier()` peut REELLEMENT en rendre un.

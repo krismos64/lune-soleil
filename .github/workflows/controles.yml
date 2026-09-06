@@ -720,6 +720,20 @@ jobs:
 
       # Textuel, aucune base ni conteneur requis.
       #
+      # CE QU'IL GARDE : le generateur des medias de test, LS-187. Il recopie
+      # les chemins de la fixture et les declinaisons d'ADR-007, faute de
+      # pouvoir les importer : il tourne AVANT `next build`, hors du contexte de
+      # Playwright et de ses alias de module.
+      #
+      # DEUX SOURCES DE VERITE NE RESTENT EGALES QUE SI QUELQUE CHOSE LES
+      # COMPARE. Un media de test ou une largeur ajoutee sans etre engendree
+      # ferait pointer les URL vers des fichiers absents, et le test des sept
+      # URL rougirait en accusant le code.
+      - name: 6o. Le generateur de medias de test est aligne sur ses sources
+        run: ./scripts/verifier-medias-test.sh
+
+      # Textuel, aucune base ni conteneur requis.
+      #
       # CE QU'IL GARDE : les metadonnees de referencement de toute route, LS-137.
       # Une page publique sans `title`, `description` ou canonical, une page
       # PRIVEE sans `noindex`, un titre qui reecrit le nom de la boutique que le

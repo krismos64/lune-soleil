@@ -82,6 +82,7 @@ DEPOT_CATALOGUE="src/repositories/catalogue.ts"
 SERVICE_CATALOGUE="src/services/catalogue.ts"
 # Deplacee elle aussi par LS-122, meme motif que `$PAGE` ci-dessus.
 CARTE_PRODUIT="src/app/(boutique)/catalogue/carte-produit.tsx"
+URLS_MEDIAS="src/integrations/medias/urls.ts"
 PAIEMENT="src/services/paiement.ts"
 WEBHOOK="src/services/webhook-paiement.ts"
 CONFIRMATION="src/repositories/confirmation.ts"
@@ -1452,7 +1453,17 @@ cas "seuil de derniere piece deplace" integration \
 # de verite du traitement, plutot que de les relire. Il n'existait pas avant la
 # revue de LS-104 : la preparation ne posait aucun media, donc le `<picture>`
 # n'etait execute par AUCUN des 188 tests.
-mute "$CARTE_PRODUIT" 's/640\.jpeg`\}/640.jpg`}/'
+#
+# LA CIBLE A CHANGE EN LS-187, ET LE CAS ETAIT MORT ENTRE-TEMPS. Il mutait
+# `640.jpeg`} dans `carte-produit.tsx`, forme qui a disparu quand cet ecran est
+# passe par `urlVignette`. `mute` compare le `cksum` avant et apres et sort en
+# echec sur une substitution sans effet : les six cas suivants ne s'executaient
+# plus. Motif « controle de mutation mort », releve par la revue d'interface.
+#
+# LA NOUVELLE CIBLE COUVRE SEPT ECRANS AU LIEU D'UN. `DECLINAISON_PAR_DEFAUT`
+# est la constante que la boutique, la fiche, la galerie, le panier et les deux
+# ecrans d'administration emploient tous.
+mute "$URLS_MEDIAS" 's/DECLINAISON_PAR_DEFAUT = "640\.jpeg"/DECLINAISON_PAR_DEFAUT = "640.jpg"/'
 cas "extension de vignette .jpg au lieu de .jpeg" e2e \
   "chaque URL servie correspond a une declinaison produite"
 

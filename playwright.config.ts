@@ -121,7 +121,16 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: `npm run build && npx next start --port ${PORT}`,
+    /*
+     * LES MEDIAS DE TEST SONT ENGENDRES AVANT LE BUILD, LS-187, et cet ordre
+     * n'est pas negociable : `next build` COPIE `public/` dans
+     * `.next/standalone/public/`, et `next start` sert cette copie. Un fichier
+     * cree apres le build est invisible, mesure le 6 septembre 2026.
+     *
+     * `public/medias/` etant ignore par git, sans cette etape les sept URL du
+     * catalogue rendent 404 sur tout executeur neuf, la CI comprise.
+     */
+    command: `node scripts/engendrer-medias-test.mjs && npm run build && npx next start --port ${PORT}`,
     url: URL_BASE,
     reuseExistingServer: !process.env.CI,
     // Une construction Next.js complete depasse largement le delai par defaut.
