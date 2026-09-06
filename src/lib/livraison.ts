@@ -11,10 +11,16 @@
  * TOUT EN CENTIMES ENTIERS, invariant 1. Aucun flottant n'entre dans un calcul
  * monetaire, et les entrees non entieres sont refusees plutot qu'arrondies.
  *
- * LES VALEURS VIENNENT D'ADR-025 : 410 centimes en Point Relais et Locker, 499
- * a domicile, franchise a 3900 tous modes. Elles sont dans l'environnement et
- * non ici, le seuil devant rester modifiable et desactivable sans redeploiement
- * du code.
+ * LES VALEURS VIENNENT D'ADR-035 : 410 centimes en Point Relais et Locker, 749
+ * a domicile, franchise a 3900 RESERVEE AUX MODES EN RELAIS. Elles sont dans
+ * l'environnement et non ici, le seuil devant rester modifiable et desactivable
+ * sans redeploiement du code.
+ *
+ * LA RESERVE N'EST PAS UN PARAMETRE, elle est dans `calculerFraisPort` : aucune
+ * variable d'environnement ne permet de rendre le domicile gratuit au seuil, et
+ * c'est voulu. ADR-025 accordait la franchise aux trois modes sur un tarif
+ * domicile suppose de 4,99 EUR ; la grille reelle du 6 septembre 2026 le facture
+ * 7,49 EUR, qu'une commande de 40 EUR ne finance pas.
  */
 import type { ModeLivraison } from "@/generated/prisma/enums";
 
@@ -151,6 +157,18 @@ function tarifDuMode(
  * LE SEUIL EST INCLUSIF, « a partir de 39 euros » comprend 39,00 euros. Un `>`
  * au lieu d'un `>=` facturerait le port sur la seule valeur ou le client
  * verifie que la promesse tient.
+ *
+ * LA FRANCHISE NE VAUT PAS POUR LE DOMICILE, ADR-035. ADR-025 l'accordait aux
+ * trois modes, sur un tarif domicile de 4,99 EUR suppose. La grille reelle
+ * relevee le 6 septembre 2026 le facture 7,49 EUR, montant qu'une commande de
+ * 40 EUR ne finance pas, quand elle finance les 4,10 EUR du relais. Le seuil
+ * garde ainsi son role d'incitation tout en dirigeant vers le mode le moins
+ * couteux.
+ *
+ * LA CONDITION PORTE SUR `exigePointRetrait` ET NON SUR `mode !== "DOMICILE"` :
+ * une quatrieme valeur ajoutee a l'enum recevrait la franchise en silence avec
+ * la seconde forme, alors qu'elle devra la demander explicitement en entrant
+ * dans `MODES_AVEC_POINT_RETRAIT`.
  */
 export function calculerFraisPort({
   mode,
@@ -170,6 +188,7 @@ export function calculerFraisPort({
   const { seuilFranchiseCentimes } = configuration;
 
   if (
+    exigePointRetrait(mode) &&
     seuilFranchiseCentimes !== null &&
     totalArticlesCentimes >= seuilFranchiseCentimes
   ) {

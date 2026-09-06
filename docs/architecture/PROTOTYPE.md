@@ -62,8 +62,8 @@ reprises telles quelles :
   dépôt d'un avis conditionné à la remise effective
 
 **Les trois modes de livraison d'ADR-025** avec leurs tarifs, 4,10 € en Point
-Relais et Locker, 4,99 € à domicile, et le seuil de gratuité à 39 € cohérent de
-la fiche produit au tunnel.
+Relais et Locker, **7,49 € à domicile** depuis ADR-035, et le seuil de gratuité à
+39 € cohérent de la fiche produit au tunnel, **réservé aux deux modes en relais**.
 
 ## Table de correspondance, parcours vers écran
 

@@ -546,8 +546,8 @@ Six éléments, sans en ajouter :
 |---|---|---|
 | Fabrication | bijoux faits main en Béarn | **confirmé le 3 septembre 2026**, assemblage et finition à Artix (64) |
 | Paiement | paiement sécurisé par Stripe | |
-| Livraison | Mondial Relay, Point Relais, Locker ou domicile | ADR-025 |
-| Gratuité | livraison offerte dès 39 €, tous modes | valeur issue de la configuration |
+| Livraison | Mondial Relay, Point Relais, Locker ou domicile | ADR-025, le domicile en 4 à 6 jours contre 2 à 4 en retrait, ADR-035 |
+| Gratuité | livraison offerte dès 39 € **en Point Relais et Locker** | ADR-035, valeur issue de la configuration. **Jamais « tous modes »** : le domicile n'est pas offert, et l'annoncer sans réserve est une information précontractuelle fausse |
 | Rétractation | 14 jours pour changer d'avis | frais de retour à la charge du client, mention obligatoire |
 | Contact | réponse par email | |
 

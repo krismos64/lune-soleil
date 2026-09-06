@@ -180,7 +180,7 @@ documentation technique, ticket ou règle qui le contredirait.
 | ADR-022 | Palette publique | interface, styles |
 | ADR-023 | Authentification client | espace client, comptes |
 | ADR-024 | Atomicité réservation et commande | tunnel, transactions |
-| ADR-025 | Modes de livraison, trois modes | livraison, transporteur, tunnel |
+| ADR-025 | Modes de livraison, trois modes, **partiellement remplacé par ADR-035** | livraison, transporteur, tunnel |
 | ADR-026 | Sections de fiche produit ordonnées | fiche produit, catalogue, administration des produits |
 | ADR-027 | Limitation de débit, journal des connexions, réauthentification | connexion, sessions, actions sensibles |
 | ADR-028 | Conservation des avis, sans limite de durée | avis, modération, registre des traitements |
@@ -190,6 +190,7 @@ documentation technique, ticket ou règle qui le contredirait.
 | ADR-032 | Un double encaissement est alerté et remboursé à la main | double paiement, deux sessions, remboursement, expiration de session, idempotence Stripe |
 | ADR-033 | Outbox transactionnelle pour l'envoi des emails | email, envoi, outbox, idempotence d'envoi, doublon d'email, nodemailer, SMTP |
 | ADR-034 | Rendu des documents comptables par `@react-pdf/renderer` | PDF, facture, avoir, rendu, gabarit, police, Unicode, `cheminPdf` |
+| ADR-035 | Tarifs réels constatés, domicile à 7,49 €, franchise réservée au retrait, intégration Sendcloud | tarif de livraison, frais de port, seuil de gratuité, Sendcloud, Mondial Relay, `SHIPPING_HOME_RATE_CENTS` |
 
 Cette table se met à jour à chaque ADR créé. Un ADR absent d'ici reste
 opposable : la table est un raccourci, `docs/adr/` fait foi.

@@ -18,15 +18,20 @@ import {
 } from "@/lib/livraison";
 
 /*
- * Configuration de reference, celle d'ADR-025 au 30 juillet 2026.
+ * Configuration de reference, celle d'ADR-035 au 6 septembre 2026.
  *
  * ECRITE ICI EN CENTIMES ENTIERS et non en euros : l'invariant 1 interdit tout
  * flottant dans un calcul monetaire, et un test qui manipulerait 4.10 aurait
  * deja quitte le domaine du code teste.
+ *
+ * LE DOMICILE EST PASSE DE 499 A 749 le 6 septembre 2026, ADR-035 : la grille
+ * reelle relevee a l'ouverture du compte facture 6,24 EUR HT, soit 7,49 EUR TTC,
+ * quand 4,99 EUR venait de la grille publique. Le relais a 410 est en revanche
+ * confirme au centime, 3,42 EUR HT faisant 4,104 EUR TTC.
  */
-const CONFIGURATION_ADR_025 = {
+const CONFIGURATION_ADR_035 = {
   relaisCentimes: 410,
-  domicileCentimes: 499,
+  domicileCentimes: 749,
   seuilFranchiseCentimes: 3900,
 };
 
@@ -34,11 +39,11 @@ describe("lireConfigurationLivraison", () => {
   it("lit les trois valeurs depuis l'environnement", () => {
     const configuration = lireConfigurationLivraison({
       SHIPPING_RELAY_RATE_CENTS: "410",
-      SHIPPING_HOME_RATE_CENTS: "499",
+      SHIPPING_HOME_RATE_CENTS: "749",
       SHIPPING_FREE_THRESHOLD_CENTS: "3900",
     });
 
-    expect(configuration).toEqual(CONFIGURATION_ADR_025);
+    expect(configuration).toEqual(CONFIGURATION_ADR_035);
   });
 
   /*
@@ -52,7 +57,7 @@ describe("lireConfigurationLivraison", () => {
   it("traite un seuil vide comme une franchise desactivee, et non comme zero", () => {
     const configuration = lireConfigurationLivraison({
       SHIPPING_RELAY_RATE_CENTS: "410",
-      SHIPPING_HOME_RATE_CENTS: "499",
+      SHIPPING_HOME_RATE_CENTS: "749",
       SHIPPING_FREE_THRESHOLD_CENTS: "",
     });
 
@@ -62,7 +67,7 @@ describe("lireConfigurationLivraison", () => {
   it("traite un seuil absent comme une franchise desactivee", () => {
     const configuration = lireConfigurationLivraison({
       SHIPPING_RELAY_RATE_CENTS: "410",
-      SHIPPING_HOME_RATE_CENTS: "499",
+      SHIPPING_HOME_RATE_CENTS: "749",
     });
 
     expect(configuration.seuilFranchiseCentimes).toBeNull();
@@ -77,7 +82,7 @@ describe("lireConfigurationLivraison", () => {
    * comportement sur : le defaut se voit tout de suite.
    */
   it.each([
-    ["tarif relais absent", { SHIPPING_HOME_RATE_CENTS: "499" }],
+    ["tarif relais absent", { SHIPPING_HOME_RATE_CENTS: "749" }],
     ["tarif domicile absent", { SHIPPING_RELAY_RATE_CENTS: "410" }],
     ["les deux absents", {}],
   ])("refuse de demarrer quand un tarif manque : %s", (_libelle, brut) => {
@@ -94,7 +99,7 @@ describe("lireConfigurationLivraison", () => {
     expect(() =>
       lireConfigurationLivraison({
         SHIPPING_RELAY_RATE_CENTS: valeur,
-        SHIPPING_HOME_RATE_CENTS: "499",
+        SHIPPING_HOME_RATE_CENTS: "749",
       }),
     ).toThrow(ConfigurationLivraisonInvalideError);
   });
@@ -109,12 +114,12 @@ describe("calculerFraisPort, tarifs par mode", () => {
   it.each([
     ["POINT_RELAIS" as const, 410],
     ["LOCKER" as const, 410],
-    ["DOMICILE" as const, 499],
+    ["DOMICILE" as const, 749],
   ])("applique le tarif de %s sous le seuil", (mode, attendu) => {
     const frais = calculerFraisPort({
       mode,
       totalArticlesCentimes: 1000,
-      configuration: CONFIGURATION_ADR_025,
+      configuration: CONFIGURATION_ADR_035,
     });
 
     expect(frais).toBe(attendu);
@@ -137,7 +142,7 @@ describe("calculerFraisPort, franchise a 39 euros", () => {
       calculerFraisPort({
         mode: "POINT_RELAIS",
         totalArticlesCentimes: 3899,
-        configuration: CONFIGURATION_ADR_025,
+        configuration: CONFIGURATION_ADR_035,
       }),
     ).toBe(410);
   });
@@ -147,7 +152,7 @@ describe("calculerFraisPort, franchise a 39 euros", () => {
       calculerFraisPort({
         mode: "POINT_RELAIS",
         totalArticlesCentimes: 3900,
-        configuration: CONFIGURATION_ADR_025,
+        configuration: CONFIGURATION_ADR_035,
       }),
     ).toBe(0);
   });
@@ -157,25 +162,52 @@ describe("calculerFraisPort, franchise a 39 euros", () => {
       calculerFraisPort({
         mode: "POINT_RELAIS",
         totalArticlesCentimes: 3901,
-        configuration: CONFIGURATION_ADR_025,
+        configuration: CONFIGURATION_ADR_035,
       }),
     ).toBe(0);
   });
 
   /*
-   * LA FRANCHISE VAUT POUR LES TROIS MODES, y compris le domicile plus cher.
-   * ADR-025 : « Livraison offerte des 39 euros, tous modes ».
+   * LA FRANCHISE NE VAUT QUE POUR LES MODES EN RELAIS, ADR-035.
+   *
+   * ADR-025 l'accordait « tous modes », et ce test affirmait l'inverse de ce
+   * qu'il affirme aujourd'hui : le domicile etait offert au seuil. La grille
+   * reelle a renverse la decision, un port de 7,49 EUR offert sur une commande
+   * de 40 EUR ne se finançant pas quand un port de 4,10 EUR se finance.
+   *
+   * LES DEUX CAS SONT TESTES ENSEMBLE ET NON SEPAREMENT : ecrire seulement le
+   * cas du domicile laisserait passer une implementation qui supprime la
+   * franchise pour tout le monde, et ecrire seulement le cas du relais
+   * laisserait passer celle qui ne change rien.
    */
-  it.each(["POINT_RELAIS" as const, "LOCKER" as const, "DOMICILE" as const])(
+  it.each(["POINT_RELAIS" as const, "LOCKER" as const])(
     "offre la livraison au seuil pour %s",
     (mode) => {
       expect(
         calculerFraisPort({
           mode,
           totalArticlesCentimes: 3900,
-          configuration: CONFIGURATION_ADR_025,
+          configuration: CONFIGURATION_ADR_035,
         }),
       ).toBe(0);
+    },
+  );
+
+  /*
+   * LE PANIER EST TRES AU-DESSUS DU SEUIL, pas seulement dessus. Un panier a
+   * 39,00 EUR exact ne distinguerait pas « la franchise ne s'applique pas au
+   * domicile » de « la borne du seuil est fausse ».
+   */
+  it.each([3900, 3901, 100_000])(
+    "facture le domicile a plein tarif malgre un panier de %i centimes",
+    (totalArticlesCentimes) => {
+      expect(
+        calculerFraisPort({
+          mode: "DOMICILE",
+          totalArticlesCentimes,
+          configuration: CONFIGURATION_ADR_035,
+        }),
+      ).toBe(749);
     },
   );
 
@@ -183,10 +215,25 @@ describe("calculerFraisPort, franchise a 39 euros", () => {
     const frais = calculerFraisPort({
       mode: "DOMICILE",
       totalArticlesCentimes: 100_000,
-      configuration: { ...CONFIGURATION_ADR_025, seuilFranchiseCentimes: null },
+      configuration: { ...CONFIGURATION_ADR_035, seuilFranchiseCentimes: null },
     });
 
-    expect(frais).toBe(499);
+    expect(frais).toBe(749);
+  });
+
+  /*
+   * LE RELAIS AUSSI QUAND LA FRANCHISE EST DESACTIVEE. Sans ce cas, une
+   * implementation qui rendrait le relais gratuit des que le seuil est nul
+   * passerait, le test voisin ne regardant que le domicile.
+   */
+  it("facture le relais quand la franchise est desactivee", () => {
+    const frais = calculerFraisPort({
+      mode: "POINT_RELAIS",
+      totalArticlesCentimes: 100_000,
+      configuration: { ...CONFIGURATION_ADR_035, seuilFranchiseCentimes: null },
+    });
+
+    expect(frais).toBe(410);
   });
 });
 
@@ -201,7 +248,7 @@ describe("calculerFraisPort, entrees hors domaine", () => {
       calculerFraisPort({
         mode: "DOMICILE",
         totalArticlesCentimes: -1,
-        configuration: CONFIGURATION_ADR_025,
+        configuration: CONFIGURATION_ADR_035,
       }),
     ).toThrow(RangeError);
   });
@@ -211,7 +258,7 @@ describe("calculerFraisPort, entrees hors domaine", () => {
       calculerFraisPort({
         mode: "DOMICILE",
         totalArticlesCentimes: 39.5,
-        configuration: CONFIGURATION_ADR_025,
+        configuration: CONFIGURATION_ADR_035,
       }),
     ).toThrow(RangeError);
   });
@@ -225,7 +272,7 @@ describe("calculerFraisPort, entrees hors domaine", () => {
       calculerFraisPort({
         mode: "POINT_RELAIS",
         totalArticlesCentimes: 0,
-        configuration: CONFIGURATION_ADR_025,
+        configuration: CONFIGURATION_ADR_035,
       }),
     ).toBe(410);
   });

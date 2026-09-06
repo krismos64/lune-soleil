@@ -2,10 +2,31 @@
 
 | Champ | Valeur |
 |---|---|
-| Statut | Accepté |
+| Statut | **Partiellement remplacé par ADR-035**, le 6 septembre 2026 |
 | Date | 29 juillet 2026 |
 | Décideur | Christophe Mostefaoui |
 | Ticket | LS-27, LS-33 |
+
+## Ce qu'ADR-035 remplace ici
+
+**Le contenu ci-dessous reste celui du 29 juillet 2026 et n'est pas corrigé** : il
+enregistre une décision prise sur la grille publique Mondial Relay, avant
+l'ouverture du compte. Quatre points ont changé le 6 septembre 2026, quand la
+grille réelle a été relevée. Lire ADR-035 pour ces quatre points, et cet ADR pour
+tout le reste, qui reste en vigueur.
+
+| Ce qui est périmé ici | Valeur en vigueur, ADR-035 |
+|---|---|
+| Domicile à 4,99 € | **7,49 €**, le prix coûtant |
+| Franchise à 39 € « tous modes » | **Point Relais et Locker seulement** |
+| Intégration par l'API Mondial Relay | **API Sendcloud** |
+| Corse à revérifier à l'ouverture | sujet **abandonné**, aucune vérification attendue |
+
+Restent en vigueur : les trois modes et leur définition, le tarif Point Relais et
+Locker à 4,10 €, le seuil à 39 €, le transporteur unique, le figement du mode dans
+la commande, la distinction entre `Commande.modeLivraison` et `Expedition.mode`,
+la contrainte liant le mode au point de retrait, le remboursement intégral des
+frais de livraison, et l'ensemble des alternatives écartées.
 
 ## Ce que cet ADR remplace
 
