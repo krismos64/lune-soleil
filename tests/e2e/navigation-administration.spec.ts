@@ -843,6 +843,16 @@ test("le lien d'évitement déplace le focus vers le contenu", async ({
   expect(boite!.x).toBeGreaterThanOrEqual(MARGE_CONTOUR_PX);
   expect(boite!.y).toBeGreaterThanOrEqual(MARGE_CONTOUR_PX);
 
+  /*
+   * LA ZONE TACTILE EST MESUREE ICI AUSSI, LS-196. LS-194 a pose
+   * `min-height: var(--ls-touch-target)` sur ce lien sans qu'aucun test ne le
+   * verifie : la propriete pouvait etre retiree ou annulee par un parent sans
+   * que rien ne rougisse. Le lien jumeau de la boutique porte la meme mesure,
+   * les deux liens etant gardes de la meme facon depuis cette story.
+   */
+  const CIBLE_TACTILE_PX = 44;
+  expect(boite!.height).toBeGreaterThanOrEqual(CIBLE_TACTILE_PX);
+
   await page.keyboard.press("Enter");
 
   const focalise = page.locator(":focus");

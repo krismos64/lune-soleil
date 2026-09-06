@@ -70,6 +70,39 @@ test("le lien d'evitement deplace reellement le focus", async ({ page }) => {
   const lien = page.getByRole("link", { name: "Aller au contenu" });
   await expect(lien).toBeFocused();
 
+  /*
+   * LA BOITE EST MESUREE, PAS SEULEMENT SA VISIBILITE, LS-196. Le lien vit hors
+   * de l'ecran a `left: -9999px` et revient au focus : `toBeVisible` seul reste
+   * vert sur un lien revenu a `left: 0`, dont le contour de focus deborde
+   * pourtant du cadre. Le meme defaut a ete releve cote administration en
+   * LS-194, ou une assertion `x >= 0` le laissait passer.
+   *
+   * `globals.css` trace `outline: 3px` avec `outline-offset: 2px`, soit 5 px
+   * au-dela de la boite. En deca, les cotes gauche et superieur du contour
+   * sortent du cadre visible et le focus ne se voit que sur deux cotes sur
+   * quatre, ce qui affaiblit l'element dont le role est de dire ou le focus se
+   * trouve. WCAG 2.4.7.
+   */
+  await expect(lien).toBeVisible();
+  const boite = await lien.boundingBox();
+  expect(boite).not.toBeNull();
+
+  const MARGE_CONTOUR_PX = 5;
+  expect(boite!.x).toBeGreaterThanOrEqual(MARGE_CONTOUR_PX);
+  expect(boite!.y).toBeGreaterThanOrEqual(MARGE_CONTOUR_PX);
+
+  /*
+   * LA ZONE TACTILE DE 44 px EST MESUREE SUR LE RENDU, jamais deduite du CSS.
+   * `min-height` peut etre annule par un parent, et une regle plus specifique
+   * ecrite plus tard le ferait sans que rien ne rougisse. Ce lien faisait
+   * environ 24 px de haut jusqu'a LS-196, le padding seul le dimensionnant.
+   *
+   * C'EST LA SEULE ASSERTION DE HAUTEUR DU DEPOT sur un lien d'evitement :
+   * LS-194 a pose les 44 px cote administration sans les mesurer nulle part.
+   */
+  const CIBLE_TACTILE_PX = 44;
+  expect(boite!.height).toBeGreaterThanOrEqual(CIBLE_TACTILE_PX);
+
   await page.keyboard.press("Enter");
 
   const focalise = page.locator(":focus");

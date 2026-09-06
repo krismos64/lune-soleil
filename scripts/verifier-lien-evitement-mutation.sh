@@ -22,6 +22,8 @@ MUTABLES=(
   "src/app/administration/categories/page.tsx"
   "src/app/administration/stocks/page.tsx"
   "src/components/chargement-administration.tsx"
+  "src/components/en-tete-boutique.tsx"
+  "src/app/(boutique)/catalogue/error.tsx"
 )
 
 # LA RESTAURATION PART DE `HEAD`, JAMAIS DE L'INDEX. `git checkout -- <chemin>`
@@ -157,6 +159,39 @@ jouer "le lien est posé avant le test de rôle" \
 perl -0pi -e 's/<main id="contenu" tabIndex=\{-1\} className=\{styles\.page\}>/<main className={styles.page}>\n      <span id="contenu" tabIndex={-1} \/>/' src/app/administration/stocks/page.tsx
 jouer "l'ancre migre du <main> vers un enfant" \
       "ne porte pas id=\"contenu\" SUR SON <main>"
+
+# ---------------------------------------------------------------------------
+# Cas 7 : la boutique perd son lien d'évitement.
+#
+# CE CAS ET LE SUIVANT EXISTENT PARCE QUE LE CONTRÔLE A ÉTÉ AVEUGLE À TOUT UN
+# CÔTÉ DU SITE. Jusqu'à LS-196 il s'ancrait sur `src/app/administration` seul,
+# et il annonçait pourtant « chaque écran porte sa cible focalisable ». Trois
+# écrans publics rendaient un `<main>` nu pendant ce temps.
+#
+# LES SIX CAS PRÉCÉDENTS RESTERAIENT TOUS VERTS si l'extension à la boutique
+# était retirée : ils mutent tous des fichiers d'administration. Sans ces deux
+# cas, la moitié neuve du contrôle ne serait éprouvée par rien.
+# ---------------------------------------------------------------------------
+perl -0pi -e 's/href="#contenu"/href="#ailleurs"/' src/components/en-tete-boutique.tsx
+jouer "la boutique perd son lien d'évitement" \
+      "l'en-tête de la boutique ne pose plus de lien"
+
+# ---------------------------------------------------------------------------
+# Cas 8 : un écran de boutique perd son ancre.
+#
+# LA CIBLE EST UN `error.tsx`, ET C'EST DÉLIBÉRÉ : c'est l'un des trois fichiers
+# qui portaient réellement le défaut avant LS-196. Un état d'erreur remplace la
+# page sous un layout qui reste monté, donc sous une en-tête qui reste à
+# traverser, et il est plus facile à oublier qu'une `page.tsx` parce qu'aucun
+# parcours nominal ne le montre.
+#
+# LE MESSAGE ATTENDU PORTE LE CÔTÉ, `[boutique]`. Sans cette moitié, le cas
+# resterait vert sur un contrôle qui aurait trouvé le même défaut ailleurs :
+# c'est le motif « mutation vue par le mauvais test », en fiche ici.
+# ---------------------------------------------------------------------------
+perl -0pi -e 's/<main id="contenu" tabIndex=\{-1\} className=\{styles\.page\}>/<main className={styles.page}>/' "src/app/(boutique)/catalogue/error.tsx"
+jouer "un écran de boutique perd son ancre" \
+      "[boutique] catalogue/error.tsx ne porte pas id"
 
 echo
 echo "Cas joués : $cas, réussis : $reussites, en échec : $echecs"
