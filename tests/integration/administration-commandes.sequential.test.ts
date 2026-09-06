@@ -54,11 +54,21 @@ const SAISIE_DOMICILE = {
 
 const CONFIGURATION = {
   relaisCentimes: 410,
-  domicileCentimes: 499,
+  domicileCentimes: 749,
   seuilFranchiseCentimes: 3900,
 };
 
-const TOTAL_ATTENDU_CENTIMES = 4900;
+/*
+ * DEUX NOMBRES ET NON UN. Ils ont longtemps ete confondus sous une constante
+ * unique, ce qui marchait tant que la livraison etait offerte : le prix de la
+ * ligne et le total de la commande valaient tous deux 4900.
+ *
+ * ADR-035 les separe, le domicile n'etant plus jamais offert. Les garder
+ * confondus ferait passer une assertion de prix FIGE pour une assertion de
+ * total, alors que l'invariant 3 porte precisement sur leur independance.
+ */
+const PRIX_LIGNE_FIGE_CENTIMES = 4900;
+const TOTAL_ATTENDU_CENTIMES = PRIX_LIGNE_FIGE_CENTIMES + 749;
 
 /** Identifiant d'une administratrice reelle, pour renseigner `acteurId`. */
 let administratriceId: string;
@@ -215,7 +225,7 @@ describe("lireDetailCommande", () => {
     const ligneApres = apres?.lignes[0];
 
     expect(ligneApres).toEqual(ligneAvant);
-    expect(ligneApres?.prixFigeCentimes).toBe(TOTAL_ATTENDU_CENTIMES);
+    expect(ligneApres?.prixFigeCentimes).toBe(PRIX_LIGNE_FIGE_CENTIMES);
     expect(ligneApres?.libelleVarianteFige).not.toBe("LIBELLE REECRIT");
 
     // Le total de la commande ne bouge pas non plus.

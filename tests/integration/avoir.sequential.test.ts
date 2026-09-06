@@ -57,12 +57,16 @@ const SAISIE_DOMICILE = {
 
 const CONFIGURATION = {
   relaisCentimes: 410,
-  domicileCentimes: 499,
+  domicileCentimes: 749,
   seuilFranchiseCentimes: 3900,
 };
 
-/** La variante vaut 4900, au-dessus du seuil : livraison offerte, total 4900. */
-const TOTAL_CENTIMES = 4900;
+/*
+ * La variante vaut 4900, au-dessus du seuil de franchise. Le total vaut pourtant
+ * 5649 : depuis ADR-035 la franchise ne couvre PAS le domicile, et ces commandes
+ * sont toutes en `SAISIE_DOMICILE`. Ce commentaire disait « livraison offerte ».
+ */
+const TOTAL_CENTIMES = 5649;
 
 const EMETTEUR_TEST = {
   raisonSociale: "TEST Lune et Soleil",
@@ -500,7 +504,15 @@ describe("critere 4, deux remboursements partiels produisent deux avoirs", () =>
       expect.stringMatching(/^A-\d{4}-0001$/),
       expect.stringMatching(/^A-\d{4}-0002$/),
     ]);
-    expect(avoirs.map((avoir) => avoir.montant_centimes)).toEqual([2000, 2900]);
+    /*
+     * LE SECOND MONTANT SE DERIVE, il ne se recopie pas. Ecrit en dur, il valait
+     * 2900 et a survecu au changement de tarif d'ADR-035 alors que le premier
+     * appel demandait deja `TOTAL_CENTIMES - 2000`.
+     */
+    expect(avoirs.map((avoir) => avoir.montant_centimes)).toEqual([
+      2000,
+      TOTAL_CENTIMES - 2000,
+    ]);
 
     /* APRES LE SECOND : entierement rembourse. */
     const apresSecond = await lirePaiement(commandeId);
@@ -582,9 +594,20 @@ describe("critere 5, le montant ne depasse jamais le total", () => {
 
     const fournisseur = fournisseurQuiRembourse();
 
+    /*
+     * LES DEUX MONTANTS SE DERIVENT DU TOTAL, ils ne se recopient pas. Ecrits en
+     * dur a 4000 puis 1000, ils depassaient l'ancien total de 4900 et sont
+     * passes SOUS le nouveau de 5649 : le test a cesse d'exercer le refus sans
+     * cesser de s'appeler « refuse un second remboursement ».
+     *
+     * Le premier prend tout sauf 100 centimes, le second demande le double du
+     * restant : la somme depasse quel que soit le tarif de livraison.
+     */
+    const PREMIER = TOTAL_CENTIMES - 100;
+
     await rembourserCommande({
       commandeId,
-      montantCentimes: 4000,
+      montantCentimes: PREMIER,
       motif: "Partiel",
       referenceDemande: `ref-test-11-${randomUUID()}`,
       fournisseur,
@@ -592,7 +615,7 @@ describe("critere 5, le montant ne depasse jamais le total", () => {
 
     const issue = await rembourserCommande({
       commandeId,
-      montantCentimes: 1000,
+      montantCentimes: 200,
       motif: "Depasse le restant",
       referenceDemande: `ref-test-12-${randomUUID()}`,
       fournisseur,
@@ -604,7 +627,7 @@ describe("critere 5, le montant ne depasse jamais le total", () => {
       throw new Error("le depassement a ete accepte");
     }
 
-    expect(issue.restantCentimes).toBe(TOTAL_CENTIMES - 4000);
+    expect(issue.restantCentimes).toBe(TOTAL_CENTIMES - PREMIER);
 
     /* UN SEUL AVOIR, LE PREMIER : le prestataire n'a pas ete rappele. */
     expect(await lireAvoirs(factureId)).toHaveLength(1);

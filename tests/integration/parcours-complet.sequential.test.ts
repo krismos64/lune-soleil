@@ -59,11 +59,19 @@ const SAISIE_DOMICILE = {
 
 const CONFIGURATION = {
   relaisCentimes: 410,
-  domicileCentimes: 499,
+  domicileCentimes: 749,
   seuilFranchiseCentimes: 3900,
 };
 
-const TOTAL_ATTENDU_CENTIMES = 4900;
+/*
+ * DEUX NOMBRES ET NON UN, separes par ADR-035. Ils ont longtemps ete confondus
+ * sous une constante unique, ce qui marchait tant que la livraison etait
+ * offerte : le prix de la piece et le total de la commande valaient tous deux
+ * 4900. Le domicile n'etant plus jamais offert, ils divergent, et confondre un
+ * prix de LIGNE avec un TOTAL masquerait l'invariant 3.
+ */
+const PRIX_PIECE_CENTIMES = 4900;
+const TOTAL_ATTENDU_CENTIMES = PRIX_PIECE_CENTIMES + 749;
 
 let administratriceId: string;
 
@@ -182,7 +190,7 @@ describe("porte de sortie de la phase 3, le parcours 1 de bout en bout", () => {
     const panier = await revaliderPanier([{ varianteId, quantite: 1 }]);
 
     expect(panier.lignes).toHaveLength(1);
-    expect(panier.lignes[0]?.prixUnitaireCentimes).toBe(TOTAL_ATTENDU_CENTIMES);
+    expect(panier.lignes[0]?.prixUnitaireCentimes).toBe(PRIX_PIECE_CENTIMES);
 
     // ------------------------------------------------------------ etapes 4, 5
     // LA COMMANDE ET SA RESERVATION DANS UNE SEULE TRANSACTION, ADR-024, puis

@@ -68,7 +68,7 @@ const SAISIE_DOMICILE = {
 
 const CONFIGURATION = {
   relaisCentimes: 410,
-  domicileCentimes: 499,
+  domicileCentimes: 749,
   seuilFranchiseCentimes: 3900,
 };
 

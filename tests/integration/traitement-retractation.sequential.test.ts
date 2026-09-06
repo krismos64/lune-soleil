@@ -16,10 +16,15 @@
  * compris sur une demande deja `REMBOURSEE`, cas que LS-41 a rendu possible en
  * supprimant `RECUE`.
  *
- * LES DEUX TARIFS SONT EXERCES REELLEMENT, 410 et 499, sur des commandes SOUS
- * LE SEUIL DE FRANCHISE. Une commande au-dessus du seuil a des frais de port
- * nuls : elle rendrait le critere 4 vert sans rien prouver, les deux tarifs
- * valant alors zero tous les deux.
+ * LES DEUX TARIFS SONT EXERCES REELLEMENT, 410 et 749, sur des commandes SOUS
+ * LE SEUIL DE FRANCHISE. Une commande au-dessus du seuil aurait des frais de
+ * port nuls EN RELAIS : elle rendrait le critere 4 vert sans rien prouver, le
+ * tarif relais valant alors zero.
+ *
+ * DEPUIS ADR-035 LE DOMICILE N'EST JAMAIS OFFERT, donc rester sous le seuil
+ * n'est plus indispensable de ce cote. Les deux cas y restent quand meme, pour
+ * que la comparaison porte sur deux tarifs reellement factures et non sur un
+ * tarif contre un zero.
  *
  * SUFFIXE `.sequential` : base PostgreSQL partagee entre fichiers.
  */
@@ -77,7 +82,7 @@ const ADRESSE = {
 
 const CONFIGURATION = {
   relaisCentimes: 410,
-  domicileCentimes: 499,
+  domicileCentimes: 749,
   seuilFranchiseCentimes: 3900,
 };
 
@@ -533,20 +538,24 @@ describe("les frais de livraison se remboursent au tarif reellement paye", () =>
     expect(montant?.totalCentimes).toBe(PRIX_VARIANTE_CENTIMES + 410);
   });
 
-  it("rembourse 499 de frais de port a domicile, sans plafonner au tarif relais", async () => {
+  it("rembourse 749 de frais de port a domicile, sans plafonner au tarif relais", async () => {
     const { commandeId, fraisPortCentimes } =
       await commanderEtDeposer("DOMICILE");
 
-    expect(fraisPortCentimes).toBe(499);
+    expect(fraisPortCentimes).toBe(749);
 
     const montant = await lireMontantDu(commandeId);
 
     /*
-     * L'ASSERTION QUI FERME LE PLAFONNEMENT : 499 et non 410. Rendre le tarif
+     * L'ASSERTION QUI FERME LE PLAFONNEMENT : 749 et non 410. Rendre le tarif
      * relais ici serait l'infraction que `legal.md` nomme.
+     *
+     * ELLE DISCRIMINE MIEUX DEPUIS ADR-035. L'ecart entre les deux tarifs passe
+     * de 89 a 339 centimes, et c'est aussi ce qui rendait le plafonnement plus
+     * tentant : `legal.md` confirme qu'il reste ecarte.
      */
-    expect(montant?.fraisPortCentimes).toBe(499);
-    expect(montant?.totalCentimes).toBe(PRIX_VARIANTE_CENTIMES + 499);
+    expect(montant?.fraisPortCentimes).toBe(749);
+    expect(montant?.totalCentimes).toBe(PRIX_VARIANTE_CENTIMES + 749);
   });
 
   it("rembourse reellement le total frais de port compris", async () => {
@@ -567,7 +576,7 @@ describe("les frais de livraison se remboursent au tarif reellement paye", () =>
     expect(issue.statut).toBe("REMBOURSE");
     /* L'ARGENT REELLEMENT DEMANDE AU PRESTATAIRE porte les frais de port. */
     expect(fournisseur.appels[0]?.montantCentimes).toBe(
-      PRIX_VARIANTE_CENTIMES + 499,
+      PRIX_VARIANTE_CENTIMES + 749,
     );
   });
 

@@ -49,12 +49,16 @@ const SAISIE_DOMICILE = {
 
 const CONFIGURATION = {
   relaisCentimes: 410,
-  domicileCentimes: 499,
+  domicileCentimes: 749,
   seuilFranchiseCentimes: 3900,
 };
 
-/** La variante vaut 4900, au-dessus du seuil : livraison offerte, total 4900. */
-const TOTAL_ATTENDU_CENTIMES = 4900;
+/*
+ * La variante vaut 4900, au-dessus du seuil de franchise. Le total vaut pourtant
+ * 5649 : depuis ADR-035 la franchise ne couvre PAS le domicile, et ces commandes
+ * sont toutes en `SAISIE_DOMICILE`. Ce commentaire disait « livraison offerte ».
+ */
+const TOTAL_ATTENDU_CENTIMES = 5649;
 
 /**
  * Emetteur de test, INVENTE ET RECONNAISSABLE COMME TEL. Le SIRET n'immatricule
