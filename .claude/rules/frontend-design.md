@@ -63,6 +63,48 @@ un rapport mesuré supérieur à 4,5:1.
 Le jeton `primary-night` `#1B2A41` du cahier des charges est **écarté**. Aucun
 bleu dans ce projet, le logo n'en contient pas.
 
+### C36, la bordure d'un contrôle tient 3:1, et ce n'est pas la même règle
+
+Les seuils ci-dessus valent pour du **texte**. WCAG 2.2 AA porte un second
+critère, **1.4.11 « contraste des éléments non textuels »**, qui exige **3:1**
+pour la limite visible d'un contrôle de saisie dès lors que **rien d'autre ne
+l'identifie**. Aucune exception de taille ici, un contrôle n'ayant pas de corps
+de texte.
+
+| Jeton | Valeur | Usage | Sur blanc |
+|---|---|---|---|
+| `--ls-border` | `#D9CDBA` | séparateurs, cartes, filets, **décoratif** | 1,57:1 |
+| `--ls-border-controle` | `#95836A` | **limite d'un contrôle**, champ ou bouton | 3,66:1 |
+
+**`--ls-border` ne borde jamais un champ de saisie ni un bouton secondaire.**
+Il donne 1,57:1 sur blanc, et le fond du champ étant `--ls-surface` comme celui
+de la carte qui le porte, sa bordure est le seul indice de sa présence : un
+champ vide sans bordure visible est invisible.
+
+`--ls-border-controle` a été choisi pour tenir sur **tous** les fonds du projet,
+sable compris où il donne 3,07:1. Des candidats plus clairs passaient sur blanc
+en échouant sur sable, ce qui aurait recréé le piège de C31, un jeton légitime
+dont une paire sur deux est fautive.
+
+**Deux cas sortent de ce critère, et la norme le dit elle-même :**
+
+1. un contrôle **désactivé**, WCAG 1.4.11 écartant les composants inactifs
+2. un élément que **son fond ou son texte identifie déjà**, le trait n'étant
+   alors qu'un filet : un lien souligné dont le texte est lisible, un bouton qui
+   porte son propre fond
+
+Le second cas s'écrit **dans le CSS**, par un commentaire portant
+`@bordure-decorative` suivi de sa raison, juste au-dessus du bloc.
+`scripts/verifier-bordure-controle.sh` exige cette raison et refuse un marqueur
+posé seul : une exemption sans motif est un interrupteur, pas une décision.
+
+**Ce défaut est entré de bonne foi sur vingt-cinq fichiers d'écran**, et la
+cause est écrite
+ici : jusqu'au 6 septembre 2026, cette règle ne portait **aucun seuil de
+bordure**. Elle énonçait deux règles de contraste, toutes deux sur du texte, et
+une session qui les respectait à la lettre bordait quand même ses champs avec le
+jeton décoratif. Motif « règle incomplète franchie de bonne foi ».
+
 ### C31, ce qui se mesure est une paire, jamais une couleur
 
 **Un rapport écrit à côté d'un jeton ne vaut que pour un fond**, et rien dans le

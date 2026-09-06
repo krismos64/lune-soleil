@@ -74,7 +74,7 @@
      sous 44 px, `frontend-design.md` demandant 44 par 44. */
   min-width: var(--ls-touch-target);
   padding: 0 var(--ls-space-3);
-  border: 1px solid var(--ls-border);
+  border: 1px solid var(--ls-border-controle);
   border-radius: var(--ls-radius-md);
   background: var(--ls-surface);
   color: var(--ls-text);
@@ -500,7 +500,7 @@
   width: 100%;
   min-height: var(--ls-touch-target);
   padding: 0 var(--ls-space-3);
-  border: 1px solid var(--ls-border);
+  border: 1px solid var(--ls-border-controle);
   border-radius: var(--ls-radius-md);
   background: var(--ls-surface);
   color: var(--ls-text);

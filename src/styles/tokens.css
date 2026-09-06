@@ -27,7 +27,36 @@
   --ls-background: #fbf7f0; /* fond de page, creme */
   --ls-surface: #ffffff; /* cartes, panneaux, formulaires */
   --ls-surface-sand: #f2eadf; /* sections alternees, encadres, footer */
-  --ls-border: #d9cdba; /* bordures fines, separateurs, decoratif */
+  --ls-border: #d9cdba; /* bordures fines, separateurs, DECORATIF SEULEMENT */
+  /*
+   * LIMITE D'UN CONTROLE, regle C36, LS-108. Ce jeton existe parce que `--ls-border` ne
+   * peut pas servir de bordure a un champ de saisie ni a un bouton secondaire :
+   * il donne 1,57:1 sur blanc quand WCAG 2.2 AA, critere 1.4.11 « contraste des
+   * elements non textuels », en exige 3:1 des lors que RIEN D'AUTRE n'identifie
+   * le controle. Le fond du champ et le fond de la carte qui le porte etant
+   * tous deux `--ls-surface`, la bordure est le seul indice de sa presence.
+   *
+   * MESURE SUR LES QUATRE FONDS REELLEMENT PEINTS, jamais sur un seul, regle
+   * C31 : un rapport annonce a cote d'un jeton ne vaut que pour UN fond.
+   *
+   *   sur --ls-surface       #ffffff  ->  3,66:1
+   *   sur --ls-background    #fbf7f0  ->  3,43:1
+   *   sur --ls-surface-sand  #f2eadf  ->  3,07:1   <- le fond le plus exigeant
+   *   sur --ls-admin-barre   #fffdf9  ->  3,61:1
+   *
+   * LE SABLE A DICTE LA VALEUR. Des candidats plus clairs passaient sur blanc
+   * en echouant sur sable, ce qui aurait recree exactement le piege de
+   * `--ls-text-muted` : un jeton legitime dont une paire sur deux est fautive.
+   * Un jeton qui tient sur TOUS les fonds du projet ne se franchit pas de bonne
+   * foi. Teinte H33, au centre de la famille du logo mesuree en ADR-022.
+   *
+   * CE JETON NE REMPLACE PAS `--ls-border` PARTOUT, et c'est un arbitrage du
+   * 6 septembre 2026 : un separateur, une carte ou un filet ne sont pas des
+   * controles, WCAG ne leur demande rien, et les assombrir tous alourdirait le
+   * rendu sans obligation. `scripts/verifier-bordure-controle.sh` tient la
+   * frontiere entre les deux usages.
+   */
+  --ls-border-controle: #95836a;
 
   /* Texte */
   --ls-text: #3b2f2a; /* texte courant, 12,09:1 sur creme, AAA */

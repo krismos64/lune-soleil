@@ -230,7 +230,7 @@
 }
 
 .boutonSecondaire {
-  border: 1px solid var(--ls-border);
+  border: 1px solid var(--ls-border-controle);
   background: var(--ls-surface);
   color: var(--ls-primary);
 }
@@ -238,6 +238,13 @@
 /*
  * DESACTIVE, LE BOUTON RESTE LISIBLE. `opacity` seule tomberait sous le seuil
  * de contraste ; le fond sable et le texte courant gardent 10,83:1.
+ */
+/*
+ * `--ls-border` ET NON `--ls-border-controle`, ET C'EST DELIBERE, LS-108. WCAG
+ * 2.2 critere 1.4.11 exempte explicitement les controles DESACTIVES du seuil de
+ * 3:1, et le fond sable pose ci-dessous identifie deja l'element sans sa
+ * bordure. Un bouton desactive bien contraste se lirait par ailleurs comme
+ * actionnable, ce qui est le defaut inverse.
  */
 .bouton:disabled,
 .boutonSecondaire:disabled {
@@ -276,7 +283,7 @@
   box-sizing: border-box;
   width: 100%;
   padding: var(--ls-space-2);
-  border: 1px solid var(--ls-border);
+  border: 1px solid var(--ls-border-controle);
   border-radius: var(--ls-radius-sm);
   background: var(--ls-surface);
   color: var(--ls-text);

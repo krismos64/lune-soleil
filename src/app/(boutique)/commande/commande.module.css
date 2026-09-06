@@ -147,13 +147,16 @@
 }
 
 /*
- * `--ls-border` sert de bordure decorative et tombe sous AA pour un controle de
- * saisie, defaut ouvert en LS-108. `--ls-text-muted` a 4,86:1 tient le seuil.
+ * `--ls-border-controle` ET NON `--ls-border`, regle C36 : le jeton decoratif
+ * donne 1,57:1 sur blanc quand WCAG 1.4.11 exige 3:1 pour la limite d'un
+ * controle. Ce fichier portait `--ls-text-muted` en contournement local, pose
+ * en attendant LS-108 : conforme mais hors du jeton dedie, donc invisible au
+ * controle qui garde desormais cette regle.
  */
 .saisie {
   min-height: var(--ls-touch-target);
   padding: var(--ls-space-2) var(--ls-space-3);
-  border: 1px solid var(--ls-text-muted);
+  border: 1px solid var(--ls-border-controle);
   border-radius: var(--ls-radius-sm);
   background: var(--ls-surface);
   color: var(--ls-text);

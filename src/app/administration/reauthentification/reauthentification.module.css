@@ -60,7 +60,7 @@
   width: 100%;
   min-height: 44px;
   padding: var(--ls-space-3);
-  border: 1px solid var(--ls-border);
+  border: 1px solid var(--ls-border-controle);
   border-radius: var(--ls-radius-sm);
   background: var(--ls-surface);
   color: var(--ls-text);
@@ -90,7 +90,7 @@
 }
 
 .actionSecondaire {
-  border: 1px solid var(--ls-border);
+  border: 1px solid var(--ls-border-controle);
   background: transparent;
   /* Dore profond et non `--ls-accent-gold`, qui plafonne a 2,31:1 et reste
      interdit pour tout texte. */

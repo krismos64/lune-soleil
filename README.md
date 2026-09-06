@@ -676,8 +676,9 @@ restent invisibles en SMTP : il faut ouvrir la boîte.
 
 ### Scripts de vérification
 
-Trente-huit scripts, dont quatorze de mutation qui prouvent les autres, comptés
-dans `scripts/` le 4 septembre 2026. La liste ci-dessous n'en cite qu'une partie.
+Cinquante-quatre scripts, dont vingt-deux de mutation qui prouvent les autres,
+comptés dans `scripts/` le 6 septembre 2026. La liste ci-dessous n'en cite qu'une
+partie.
 `preparer-base-locale.sh` n'y figure pas, il s'appelle par `npm run db:preparer`
 et `db:reinitialiser`, cités plus haut.
 
@@ -701,6 +702,8 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-rendu-texte-simple-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-contraste.sh                  # contraste WCAG des paires couleur et fond, LS-84
 ./scripts/verifier-contraste-mutation.sh         # prouve le précédent par mutation
+./scripts/verifier-bordure-controle.sh           # bordure d'un contrôle au seuil de 3:1, C36, LS-108
+./scripts/verifier-bordure-controle-mutation.sh  # prouve le précédent par mutation
 ./scripts/verifier-loading-et-404.sh             # aucun loading.tsx ne masque un 404, LS-146
 ./scripts/verifier-loading-et-404-mutation.sh    # prouve le précédent par mutation
 ./scripts/verifier-chargement-administration.sh          # tout écran d'administration a un état de chargement, LS-188

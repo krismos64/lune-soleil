@@ -651,6 +651,32 @@ jobs:
 
       # Textuel, aucune base ni conteneur requis.
       #
+      # CE QU'IL GARDE : la bordure d'un controle de saisie, regle C36, LS-108.
+      # WCAG 2.2 critere 1.4.11 exige 3:1 pour ce qui identifie un controle, et
+      # `--ls-border` donne 1,57:1 sur blanc. Le defaut a vecu vingt-trois jours
+      # sur vingt-cinq fichiers d'ecran, les champs y etant invisibles a vide.
+      #
+      # IL NE FAIT PAS DOUBLE EMPLOI AVEC 6i, ET C'EST STRUCTUREL. L'etape
+      # precedente ecarte DELIBEREMENT toute propriete en `-color` par un
+      # `(?<!-)` devant `color`, sans quoi une bordure decorative serait mesuree
+      # comme du texte et le controle accuserait du code correct. La consequence
+      # est qu'AUCUNE bordure n'etait mesuree nulle part, et c'est par ce trou
+      # que le defaut de LS-108 est passe. Les deux etapes mesurent deux choses
+      # disjointes, avec les deux seuils que la norme distingue :
+      #
+      #   6i  texte sur fond          4,5:1, ou 3:1 si large
+      #   6j  bordure d'un controle   3:1, sans exception de taille
+      #
+      # SA PORTE DE SORTIE EST EPROUVEE. Un marqueur `@bordure-decorative` pose
+      # dans le CSS exempte un element que son fond ou son texte identifie deja,
+      # et le script EXIGE une raison ecrite : sans elle, n'importe quel defaut
+      # se tairait d'un commentaire de trois mots. Le cas 4 de sa preuve par
+      # mutation exerce precisement ce refus.
+      - name: 6i bis. Bordure des controles de saisie, seuil de 3:1
+        run: ./scripts/verifier-bordure-controle.sh
+
+      # Textuel, aucune base ni conteneur requis.
+      #
       # CE QU'IL GARDE : qu'aucun `loading.tsx` ne soit pose sur une route qui
       # appelle `notFound()`, LS-146. La frontiere Suspense du segment demarre
       # le streaming AVANT que l'appel soit atteint, et Next.js ne peut plus

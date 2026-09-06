@@ -78,7 +78,8 @@ proximité plus grande avec le brun réellement mesuré dans le texte du logo
 | `--ls-background` | `#FBF7F0` | Fond de page | référence |
 | `--ls-surface` | `#FFFFFF` | Cartes, formulaires | référence |
 | `--ls-surface-sand` | `#F2EADF` | Sections alternées, footer | référence |
-| `--ls-border` | `#D9CDBA` | Séparateurs fins | décoratif |
+| `--ls-border` | `#D9CDBA` | Séparateurs fins, cartes, filets | décoratif, 1,57:1 |
+| `--ls-border-controle` | `#95836A` | **Limite d'un contrôle de saisie** | 3,66:1 sur blanc, AA |
 | `--ls-text` | `#3B2F2A` | Texte courant | 12,09:1 (AAA) |
 | `--ls-text-muted` | `#7A6A5D` | Légendes | 4,86:1 (AA) |
 | `--ls-primary` | `#5F4519` | Actions, bandeau, focus | 8,93:1 blanc dessus (AAA) |
@@ -156,3 +157,46 @@ terracotta en accent ponctuel et par le contraste fort du texte brun foncé.
 La vérification du contraste doit être automatisée dans les contrôles
 d'accessibilité, faute de quoi la règle sur `#C4A052` sera enfreinte par
 inadvertance lors de l'écriture de nouveaux composants.
+
+### Amendement du 6 septembre 2026, LS-108
+
+**La palette ne portait aucun jeton de bordure conforme pour un contrôle**, et
+l'omission vient de cet ADR : `--ls-border` y est décrit « séparateurs fins,
+décoratif », sans qu'aucune ligne ne dise qu'il ne peut pas border un champ de
+saisie.
+
+WCAG 2.2 AA porte un second critère que cet ADR ne citait pas, **1.4.11
+« contraste des éléments non textuels »**, qui exige **3:1** pour la limite
+visible d'un contrôle dès lors que rien d'autre ne l'identifie. Les mesures :
+
+| Combinaison | Rapport | Exigé |
+|---|---|---|
+| `#D9CDBA` sur `--ls-surface` `#FFFFFF` | **1,57:1** | 3:1 |
+| `#D9CDBA` sur `--ls-background` `#FBF7F0` | **1,47:1** | 3:1 |
+| `#D9CDBA` sur `--ls-surface-sand` `#F2EADF` | **1,31:1** | 3:1 |
+
+La condition « rien d'autre ne l'identifie » est vérifiée et non supposée : le
+fond du champ et celui de la carte qui le porte sont **tous deux**
+`--ls-surface`, donc blancs. La bordure est le seul indice de la présence du
+champ, et un champ vide sans elle est invisible.
+
+La palette gagne donc un jeton, `--ls-border-controle` `#95836A`, employé par
+les **trente-cinq** bordures de contrôle du dépôt, relevées le 6 septembre 2026.
+
+**Le sable a dicté la valeur, pas le blanc.** Deux candidats plus clairs
+passaient le seuil sur blanc en échouant sur sable, ce qui aurait recréé
+exactement le piège nommé par la règle C31 : un jeton légitime dont une paire
+sur deux est fautive. `#95836A` tient sur les cinq fonds du projet, le plus
+exigeant étant le sable à 3,07:1. Teinte H33, au centre de la famille H30-H37
+mesurée sur le logo plus haut dans cet ADR.
+
+**`--ls-border` reste inchangé et garde son usage décoratif.** Le remonter aurait
+assombri les quatre-vingt-un séparateurs, cartes et filets du site sans
+qu'aucun critère ne l'exige, arbitrage de Christophe du 6 septembre 2026.
+
+Deux familles sortent du critère, la norme les écartant elle-même : un contrôle
+**désactivé**, et un élément que son fond ou son texte identifie déjà. La seconde
+s'écrit dans le CSS par un marqueur `@bordure-decorative` suivi de sa raison, que
+`scripts/verifier-bordure-controle.sh` exige non vide.
+
+Le reste de l'ADR est inchangé : aucune autre couleur n'est touchée.

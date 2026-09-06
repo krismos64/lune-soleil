@@ -60,7 +60,7 @@
   flex: 1 1 12rem;
   min-width: 0;
   padding: var(--ls-space-3);
-  border: 1px solid var(--ls-border);
+  border: 1px solid var(--ls-border-controle);
   border-radius: var(--ls-radius-sm);
   background: var(--ls-surface);
   color: var(--ls-text);
@@ -147,7 +147,7 @@
   border-radius: var(--ls-radius-sm);
   font: inherit;
   cursor: pointer;
-  border: 1px solid var(--ls-border);
+  border: 1px solid var(--ls-border-controle);
   background: var(--ls-surface);
   color: var(--ls-text);
   transition: background var(--ls-duration-fast) var(--ls-easing);

@@ -97,6 +97,13 @@
   background: var(--ls-primary-hover);
 }
 
+/*
+ * @bordure-decorative le trait est un soulignement de lien, pas la limite d'un
+ * bouton : `padding-inline: 0` et aucun fond, la forme d'un lien textuel. Le
+ * texte en `--ls-text` sur creme donne 12,09:1 et c'est lui qui identifie
+ * l'element, comme pour `.lienSection` plus bas. La cible tactile de 44 px vient
+ * du bloc groupe avec `.actionPrincipale`, qui est un vrai bouton, lui.
+ */
 .actionSecondaire {
   padding-inline: 0;
   color: var(--ls-text);
@@ -224,6 +231,12 @@
   text-wrap: balance;
 }
 
+/*
+ * @bordure-decorative le trait est un soulignement de lien, pas la limite d'un
+ * controle. Le texte du lien est en `--ls-text` sur creme, 12,09:1, et c'est
+ * lui qui identifie l'element : retirer le trait laisse un lien parfaitement
+ * lisible. WCAG 1.4.11 ne s'applique qu'a ce qui identifie un controle.
+ */
 .lienSection {
   display: inline-flex;
   align-items: center;
@@ -281,6 +294,11 @@
   list-style: none;
 }
 
+/*
+ * @bordure-decorative le trait separe deux categories de la liste, il ne borde
+ * rien. Chaque entree porte son nom en `--ls-text` et occupe toute la largeur :
+ * l'element reste identifiable sans son filet superieur.
+ */
 .lienCategorie {
   display: flex;
   align-items: baseline;
@@ -364,6 +382,14 @@
   max-width: 56ch;
 }
 
+/*
+ * @bordure-decorative le fond n'est pas declare ici mais herite de `.editorial`
+ * qui peint `--ls-primary` : la bordure blanche y donne 8,93:1, tres au-dessus
+ * du seuil de 3:1. Le controle lit le CSS et non l'arbre rendu, donc il retombe
+ * sur `--ls-surface`, le fond le plus severe, et mesure 1,00:1 contre du blanc.
+ * C'est le trou d'heritage que `verifier-contraste.sh` documente aussi : la
+ * mesure reelle sur le rendu, aux quatre largeurs, confirme la conformite.
+ */
 .actionEditorial {
   display: inline-flex;
   align-items: center;
