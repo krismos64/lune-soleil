@@ -125,7 +125,7 @@ export default async function PageEditeurProduit({
    * deux cas, et un moteur indexerait une fiche inexistante.
    */
   return (
-    <main className={styles.page}>
+    <main id="contenu" tabIndex={-1} className={styles.page}>
       <p className={styles.fil}>
         <a href="/administration/categories">Catalogue</a>
       </p>

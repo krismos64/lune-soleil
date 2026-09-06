@@ -462,9 +462,24 @@ test("le focus ne se perd pas en naviguant au clavier", async ({ page }) => {
   ).toBeVisible();
 
   /*
-   * LE FOCUS EST SUR LE BOUTON DE BASCULE, jamais sur `body`. C'est la seule
-   * position qui garde le parcours clavier continu : la personne reprend la
-   * tabulation la ou elle etait, et peut rouvrir le menu d'une frappe.
+   * CE QUE CE TEST GARDE EST QUE LE FOCUS NE RETOMBE PAS SUR `body`, d'ou la
+   * tabulation repartirait du HAUT du document a chaque navigation. C'est le
+   * defaut d'origine, et c'est lui qu'il faut tenir.
+   *
+   * OU IL ATTERRIT A CHANGE AVEC LS-194, et pour le mieux. `fermer()` ramene
+   * bien le focus sur le bouton de bascule, mais Next.js le deplace ensuite
+   * vers le `<main>` de la page arrivante, devenu focalisable par le
+   * `tabIndex={-1}` que le lien d'evitement exige. Les deux se succedent, et
+   * c'est le second qui l'emporte.
+   *
+   * LE RESULTAT EST CELUI QU'ON VOUDRAIT ECRIRE A LA MAIN : arriver sur un
+   * ecran place le focus au debut de son contenu, c'est-a-dire exactement ou le
+   * lien d'evitement le menerait. Le bouton de bascule etait le meilleur repli
+   * TANT QUE rien de mieux n'existait.
+   *
+   * L'ASSERTION RESTE DONC SUR L'INTENTION et non sur l'element : ni `body`, ni
+   * un element detache du panneau referme. Les deux positions acceptees sont
+   * nommees, une assertion « pas body » seule verdirait sur n'importe quoi.
    */
   const focalise = await page.evaluate(() => {
     const actif = document.activeElement;
@@ -472,8 +487,17 @@ test("le focus ne se perd pas en naviguant au clavier", async ({ page }) => {
     return actif.tagName + ":" + (actif.textContent?.trim().slice(0, 20) ?? "");
   });
 
-  expect(focalise).toContain("BUTTON");
-  expect(focalise).toContain("Menu");
+  expect(focalise).not.toBe("body");
+  expect(["MAIN", "BUTTON"]).toContain(focalise.split(":")[0]);
+
+  /*
+   * ET LE PANNEAU EST BIEN REFERME. Sans cette assertion, le test verdirait sur
+   * un focus pose n'importe ou dans un panneau reste ouvert par-dessus l'ecran
+   * atteint, ce que `fermer()` existe pour eviter.
+   */
+  await expect(
+    page.getByRole("navigation", { name: "Sections de l'administration" }),
+  ).toBeHidden();
 });
 
 /**
@@ -498,6 +522,21 @@ test("Escape referme le panneau de navigation", async ({ page }) => {
 
   await bascule.click();
   await expect(barre).toBeVisible();
+
+  /*
+   * LE FOCUS EST DEPLACE DANS LE PANNEAU AVANT LA FRAPPE, et c'est ce qui rend
+   * `bascule.current?.focus()` reellement exerce ici. Sans cette ligne, le
+   * focus reste sur le bouton depuis le `click()` : `Escape` le trouverait deja
+   * la, et le test verdirait meme si `fermer()` ne le ramenait plus. Mesure du
+   * 6 septembre 2026, retirer cette ligne du composant laissait ce test vert.
+   *
+   * CE TEST EST LE SEUL A GARDER CE RETOUR DEPUIS LS-194. Son jumeau, « le
+   * focus ne se perd pas en naviguant au clavier », s'y est trouve insensible :
+   * une navigation y suit la fermeture, et Next.js pose alors le focus sur le
+   * `<main>` focalisable de l'ecran arrivant, quoi qu'ait fait `fermer()`.
+   * Ici rien ne navigue, donc rien ne recouvre le geste.
+   */
+  await barre.getByRole("link", { name: /^Commandes/ }).focus();
 
   await page.keyboard.press("Escape");
 
@@ -756,4 +795,90 @@ test("le catalogue ne déborde pas horizontalement", async ({ page }) => {
   expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
     TOLERANCE_DEBORDEMENT_PX,
   );
+});
+
+/**
+ * LE LIEN D'EVITEMENT DEPLACE REELLEMENT LE FOCUS, LS-194, critere 2.
+ *
+ * CE TEST NE MESURE PAS LE DEFILEMENT, ET C'EST TOUT SON INTERET. Une cible
+ * sans `tabIndex={-1}` fait defiler la page jusqu'a l'ancre en laissant le
+ * focus ou il etait : la tabulation suivante repart alors du menu, c'est-a-dire
+ * de ce que le lien existe pour eviter. Un lien d'evitement casse a
+ * l'apparence exacte d'un lien qui marche, et le defaut a deja ete livre une
+ * fois sur ce depot, cote boutique.
+ *
+ * IL S'EXECUTE SUR UN ECRAN DE LISTE plutot que sur le tableau de bord : c'est
+ * la que la barre coute le plus cher a traverser, onze rubriques avant la
+ * premiere ligne du tableau.
+ */
+test("le lien d'évitement déplace le focus vers le contenu", async ({
+  page,
+}) => {
+  await page.goto("/administration/commandes");
+
+  await page.keyboard.press("Tab");
+
+  const lien = page.getByRole("link", { name: "Aller au contenu" });
+  await expect(lien).toBeFocused();
+
+  /*
+   * LE LIEN EST VISIBLE UNE FOIS FOCALISE, critere 1. Deporte hors de l'ecran
+   * au repos, il doit revenir dans le cadre : un lien focalise mais invisible
+   * ne dit pas ou le focus se trouve, ce qui est le defaut que WCAG 2.4.7
+   * nomme. `toBeVisible` de Playwright ne suffirait pas seul, un element
+   * deporte restant « visible » a ses yeux, d'ou la mesure de sa position.
+   */
+  await expect(lien).toBeVisible();
+  const boite = await lien.boundingBox();
+  expect(boite).not.toBeNull();
+  expect(boite!.x).toBeGreaterThanOrEqual(0);
+
+  await page.keyboard.press("Enter");
+
+  const focalise = page.locator(":focus");
+  await expect(focalise).toHaveAttribute("id", "contenu");
+  await expect(focalise).toHaveJSProperty("tagName", "MAIN");
+});
+
+/**
+ * LE LIEN EST LE PREMIER ELEMENT FOCALISABLE, LS-194, critere 1.
+ *
+ * SANS CETTE ASSERTION, LE TEST CI-DESSUS RESTERAIT VERT sur un lien place
+ * apres la barre : la premiere tabulation trouverait alors une rubrique, et
+ * `toBeFocused` echouerait bien, mais rien ne dirait POURQUOI. Cette assertion
+ * nomme la cause, et elle garde la propriete qui fait tout l'interet du lien :
+ * un raccourci qu'il faut traverser onze rubriques pour atteindre n'en est pas
+ * un.
+ *
+ * ELLE MESURE L'ORDRE DU DOM, ou vit reellement l'ordre de tabulation. Le
+ * deport CSS ne le change pas, et c'est voulu.
+ */
+test("le lien d'évitement précède la navigation dans l'ordre de tabulation", async ({
+  page,
+}) => {
+  await page.goto("/administration/commandes");
+
+  const navigationSuitLeLien = await page.evaluate(() => {
+    const lien = document.querySelector('a[href="#contenu"]');
+    const navigation = document.querySelector("nav");
+
+    if (!lien || !navigation) {
+      return null;
+    }
+
+    /*
+     * `compareDocumentPosition` rend un MASQUE DE BITS, et
+     * `DOCUMENT_POSITION_FOLLOWING` vaut 4 : l'argument suit le noeud sur
+     * lequel on appelle. Le test se fait dans le navigateur, seul endroit ou
+     * `Node` existe ; le comparer cote Node.js leverait, la constante n'y etant
+     * pas definie. Motif deja rencontre avec les mesures de rendu.
+     */
+    return (
+      (lien.compareDocumentPosition(navigation) &
+        Node.DOCUMENT_POSITION_FOLLOWING) !==
+      0
+    );
+  });
+
+  expect(navigationSuitLeLien).toBe(true);
 });

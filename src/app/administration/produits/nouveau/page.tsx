@@ -41,7 +41,7 @@ export default async function PageNouveauProduit() {
   const categories = await listerCategories();
 
   return (
-    <main className={styles.page}>
+    <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Nouveau produit</h1>
       <p className={styles.introduction}>
         Le produit est créé en brouillon : il n&apos;apparaît pas dans la

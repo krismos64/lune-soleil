@@ -25,7 +25,7 @@ export default function ErreurMessages({
   reset: () => void;
 }) {
   return (
-    <main className={styles.page}>
+    <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Messages</h1>
 
       <div className={styles.vide} role="alert">

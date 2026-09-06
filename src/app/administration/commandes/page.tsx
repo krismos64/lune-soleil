@@ -81,7 +81,7 @@ export default async function PageCommandes({
   const filtreActif = filtreDemande?.valeur ?? "TOUTES";
 
   return (
-    <main className={styles.page}>
+    <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Commandes</h1>
       <p className={styles.introduction}>
         Les commandes en attente de paiement sont visibles : leur accumulation

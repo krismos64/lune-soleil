@@ -87,10 +87,22 @@ test("l'en-tete et le pied de page n'apparaissent pas sur l'administration", asy
    */
   await page.goto("/administration");
 
-  await expect(
-    page.getByRole("link", { name: "Aller au contenu" }),
-  ).toHaveCount(0);
+  /*
+   * LE LIEN D'EVITEMENT NE SERT PLUS DE TEMOIN ICI, LS-194. Ce test comptait
+   * zero lien « Aller au contenu » sur `/administration`, ce qui prouvait bien
+   * l'absence de l'en-tete publique tant que l'administration n'avait aucun
+   * lien d'evitement a elle. Elle en a un depuis LS-194, et ce comptage
+   * exigerait maintenant l'inverse de ce que WCAG 2.4.1 demande.
+   *
+   * LE TEMOIN EST LA NAVIGATION NOMMEE, qui distingue les deux en-tetes : la
+   * boutique nomme la sienne « Navigation principale », l'administration
+   * « Sections de l'administration ». C'est un temoin plus juste que le
+   * precedent, le nom appartenant a l'en-tete testee et non a un element que
+   * les deux peuvent legitimement porter. Le pied de page, `contentinfo`, vient
+   * du meme layout public et le confirme d'un second cote.
+   */
   await expect(
     page.getByRole("navigation", { name: "Navigation principale" }),
   ).toHaveCount(0);
+  await expect(page.getByRole("contentinfo")).toHaveCount(0);
 });

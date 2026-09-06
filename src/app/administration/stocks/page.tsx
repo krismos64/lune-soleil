@@ -58,7 +58,7 @@ export default async function PageStocks() {
   ]);
 
   return (
-    <main className={styles.page}>
+    <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Stocks et marchés</h1>
       <p className={styles.introduction}>
         Suspendre la vente en ligne avant un marché ne retire aucune pièce du

@@ -108,3 +108,45 @@
   background: var(--ls-admin-actif);
   color: var(--ls-primary-hover);
 }
+
+/* ------------------------------------------------- le lien d'evitement, LS-194 */
+
+/*
+ * MASQUE PAR UN DEPORT HORS DE L'ECRAN, jamais par `display: none` ni
+ * `visibility: hidden`, qui le retireraient du parcours clavier : un lien
+ * d'evitement inatteignable au clavier n'a plus aucun objet.
+ *
+ * `--ls-text-on-primary` sur `--ls-primary`, LE FOND QUE CE BLOC POSE lui-meme
+ * et non celui qu'il herite : 8,93:1, AAA. Meme precaution d'annotation que
+ * `.bandeauLien` ci-dessus, C31.
+ *
+ * `position: fixed` ET NON `absolute`. Le gabarit est un conteneur flex sans
+ * `position: relative`, donc un `absolute` se referait au bloc englobant, et le
+ * lien reapparaitrait la ou la page a defile. `fixed` le ramene toujours au
+ * coin superieur gauche du cadre visible, ou le regard le cherche.
+ *
+ * `z-index: 2`, AU-DESSUS DU BANDEAU qui vaut 1 et qui est `sticky` donc pose
+ * son propre contexte d'empilement. Sans cette ligne le lien apparaitrait
+ * DERRIERE lui au focus, donc invisible : un lien d'evitement qu'on ne voit pas
+ * ne signale plus ou le focus se trouve, et il devient un piege plutot qu'un
+ * raccourci. La valeur reste basse et voisine de celle du bandeau, plutot que
+ * le grand nombre qui sert d'habitude a ne pas avoir a regarder.
+ */
+.evitement {
+  position: fixed;
+  left: -9999px;
+  top: 0;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  padding: 0 var(--ls-space-4);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.evitement:focus {
+  left: 0;
+}

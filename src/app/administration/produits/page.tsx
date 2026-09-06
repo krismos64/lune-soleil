@@ -143,7 +143,7 @@ export default async function PageCatalogue({
     FILTRE_PAR_DEFAUT;
 
   return (
-    <main className={styles.page}>
+    <main id="contenu" tabIndex={-1} className={styles.page}>
       <p className={styles.surtitre}>Catalogue</p>
 
       <div className={styles.enTete}>

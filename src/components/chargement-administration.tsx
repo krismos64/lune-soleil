@@ -167,13 +167,28 @@ export function ChargementAdministration({
    * une frontiere INTERNE, sous un `<main>` et un `<h1>` que la page a deja
    * rendus : ajouter les siens produirait un `<main>` imbrique et un second
    * `<h1>`, que `axe-core` signalerait a juste titre.
+   *
+   * C'EST AUSSI CE QUI DECIDE DE L'ANCRE, LS-194. `id="contenu"` accompagne le
+   * `<main>` et jamais le fragment : deux elements portant le meme identifiant
+   * sur une page rendraient le lien d'evitement indetermine, et le repli interne
+   * arrive precisement sous un `<main>` qui porte deja l'ancre.
    */
   if (titre === undefined) {
     return corps;
   }
 
+  /*
+   * L'ANCRE DU LIEN D'EVITEMENT, avec son `tabIndex={-1}` sans lequel le focus
+   * ne se deplacerait pas : la page defilerait, et la tabulation suivante
+   * repartirait du menu. Motif « cible du lien d'evitement », LS-85.
+   *
+   * ELLE EST ICI PARCE QUE CE COMPOSANT EST LE `<main>` DE L'ECRAN pendant son
+   * chargement. Sans elle, le lien serait sans cible exactement pendant les
+   * secondes ou une navigation vient d'avoir lieu, c'est-a-dire au moment ou on
+   * s'en sert.
+   */
   return (
-    <main className={classePage}>
+    <main id="contenu" tabIndex={-1} className={classePage}>
       {tete}
       {surtitre ? <p className={classeSurtitre}>{surtitre}</p> : null}
       <h1 className={classeTitre}>{titre}</h1>

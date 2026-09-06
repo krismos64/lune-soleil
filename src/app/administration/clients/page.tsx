@@ -86,7 +86,7 @@ export default async function PageClients({
   const aucunClient = vue.clients.length === 0;
 
   return (
-    <main className={styles.page}>
+    <main id="contenu" tabIndex={-1} className={styles.page}>
       <p className={styles.surtitre}>Relation client</p>
       <h1 className={styles.titre}>Clients</h1>
 

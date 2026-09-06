@@ -225,3 +225,35 @@ test("le contenu de la connexion est centre sur grand ecran", async ({
   expect(marges.gauche).toBeGreaterThan(0);
   expect(Math.abs(marges.gauche - marges.droite)).toBeLessThanOrEqual(1);
 });
+
+/**
+ * NI BARRE NI LIEN D'EVITEMENT SANS LE ROLE, LS-194, critere 3.
+ *
+ * LE LAYOUT SORT PAR UN RETOUR ANTICIPE quand la session ne porte pas
+ * `ADMINISTRATRICE`, et le lien d'evitement est rendu APRES ce retour. Ce test
+ * garde cet ordre, qu'une reorganisation du layout deferait sans bruit : un
+ * lien pose au-dessus du test de role s'afficherait ici, et pointerait vers une
+ * cible `#contenu` que cet ecran ne porte pas.
+ *
+ * UN LIEN D'EVITEMENT SANS CIBLE EST PIRE QUE PAS DE LIEN. Il occupe la
+ * premiere position de tabulation, et ne mene nulle part.
+ *
+ * CE N'EST PAS UNE PROTECTION, et rien ici ne le pretend : les pages restent
+ * gardees par `exigerAdministratrice`, teste juste au-dessus. C'est une
+ * question d'affichage coherent.
+ */
+test("l'écran de connexion ne porte ni barre ni lien d'évitement", async ({
+  page,
+}) => {
+  await page.goto("/administration/connexion");
+
+  await expect(
+    page.getByRole("link", { name: "Aller au contenu" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("navigation", { name: "Sections de l'administration" }),
+  ).toHaveCount(0);
+
+  /* Le corollaire : aucune ancre `#contenu` n'est rendue sur cet ecran. */
+  await expect(page.locator("#contenu")).toHaveCount(0);
+});
