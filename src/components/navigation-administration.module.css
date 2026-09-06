@@ -51,6 +51,12 @@
  * qui manque le plus. Il occupe donc sa ligne, en haut de l'ecran, et defile
  * avec la page : l'exploitante remonte pour changer d'ecran, geste courant.
  */
+/*
+ * @bordure-decorative le bouton porte `border: 0` et son propre fond
+ * `--ls-admin-barre`, distinct de la page : c'est le fond et le libelle
+ * « Menu » qui l'identifient, pas ce trait. Le `border-bottom` separe la barre
+ * du contenu qui la suit, role de filet et non de limite de controle.
+ */
 .bascule {
   display: flex;
   align-items: center;

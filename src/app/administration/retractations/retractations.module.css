@@ -21,12 +21,11 @@
  * l'ecrit noir sur blanc, et le defaut a deja ete commis de bonne foi en
  * LS-104 en suivant une version fautive de cette meme regle.
  *
- * `--ls-border` SUR LES CHAMPS DE SAISIE EST UNE DETTE CONNUE, portee par
- * LS-108 : ce jeton est decrit « bordures fines, decoratif » dans `tokens.css`
- * et passe sous le seuil AA pour la bordure d'un CONTROLE. Les huit ecrans
- * existants l'emploient deja, et cet ecran s'aligne plutot que d'introduire un
- * neuvieme cas particulier : la correction appartient a LS-108, qui la fera
- * partout d'un coup avec un jeton dedie.
+ * LA BORDURE D'UN CONTROLE EMPLOIE `--ls-border-controle`, LS-108. Ce fichier
+ * portait la dette inverse jusqu'au 6 septembre 2026 : `--ls-border` y bordait
+ * la zone de texte alors qu'il donne 1,57:1 sur blanc, quand WCAG 1.4.11 en
+ * exige 3:1 pour un controle que rien d'autre n'identifie. `--ls-border` reste
+ * en place sur les cartes et les separateurs, qui ne sont pas des controles.
  */
 
 .page {
@@ -226,7 +225,7 @@
   width: 100%;
   min-height: var(--ls-touch-target);
   padding: var(--ls-space-2);
-  border: 1px solid var(--ls-border);
+  border: 1px solid var(--ls-border-controle);
   border-radius: var(--ls-radius-sm);
   background: var(--ls-surface);
   color: var(--ls-text);
@@ -269,6 +268,13 @@
  * d'authentification : `verifier-contraste.sh` compare des jetons sans calculer
  * l'opacite, donc un `opacity: 0.5` rendrait le controle illisible sans
  * qu'aucun controle ne le voie.
+ */
+/*
+ * `--ls-border` ET NON `--ls-border-controle`, ET C'EST DELIBERE, LS-108. WCAG
+ * 2.2 critere 1.4.11 exempte explicitement les controles DESACTIVES du seuil de
+ * 3:1, et le fond sable pose ci-dessous identifie deja l'element sans sa
+ * bordure. Un bouton desactive bien contraste se lirait par ailleurs comme
+ * actionnable, ce qui est le defaut inverse.
  */
 .bouton:disabled {
   border-color: var(--ls-border);

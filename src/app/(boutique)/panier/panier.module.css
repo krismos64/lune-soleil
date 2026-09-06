@@ -165,7 +165,7 @@
 .selecteur {
   min-height: var(--ls-touch-target);
   padding: var(--ls-space-2) var(--ls-space-3);
-  border: 1px solid var(--ls-border);
+  border: 1px solid var(--ls-border-controle);
   border-radius: var(--ls-radius-sm);
   background: var(--ls-surface);
   color: var(--ls-text);

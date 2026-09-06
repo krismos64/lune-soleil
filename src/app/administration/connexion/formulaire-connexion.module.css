@@ -43,7 +43,7 @@
   /* 44 px de hauteur tactile, meme regle que pour les boutons */
   min-height: 44px;
   padding: var(--ls-space-3);
-  border: 1px solid var(--ls-border);
+  border: 1px solid var(--ls-border-controle);
   border-radius: var(--ls-radius-sm);
   background: var(--ls-surface);
   color: var(--ls-text);
@@ -74,7 +74,7 @@
 }
 
 .actionSecondaire {
-  border: 1px solid var(--ls-border);
+  border: 1px solid var(--ls-border-controle);
   background: transparent;
   /* Doré profond et non `--ls-accent-gold`, plafonne a 2,31:1 et interdit
      pour tout texte. */
