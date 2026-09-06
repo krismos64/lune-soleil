@@ -20,7 +20,7 @@ import {
   AutorisationRefuseeError,
   exigerAdministratrice,
 } from "@/services/autorisation";
-import { declinaisonsAttendues } from "@/integrations/medias/traitement";
+import { urlVignette } from "@/integrations/medias/urls";
 import { lireProduit, motifsNonPubliable } from "@/services/catalogue";
 import { listerMedias } from "@/services/media";
 import { listerSections } from "@/services/sections-produit";
@@ -51,14 +51,16 @@ export const dynamic = "force-dynamic";
  * les statuts et l'ordre restent utilisables. Ce qui protege la vie privee est
  * le traitement, pas l'affichage.
  */
-const PREFIXE_MEDIAS = process.env.MEDIA_PREFIXE_PUBLIC ?? "/medias";
-
 /**
- * Declinaison servie a la vignette d'administration.
+ * LA VIGNETTE PASSE PAR `urlVignette`, LS-187, et cet ecran etait le SEUL du
+ * depot a construire la bonne URL. Les cinq ecrans de la boutique collaient le
+ * nom de fichier au chemin, ce qui rend 404 sur une photographie reelle :
+ * mesure en HTTP le 6 septembre 2026. LS-187 annoncait l'inverse, sa
+ * description ayant ete ecrite depuis une fixture de test fautive.
  *
  * 640 px ET NON 320 : l'ecran affiche la vignette sur environ 190 px CSS, soit
  * pres de 400 px physiques sur un telephone a densite double, ou la declinaison
- * 320 px paraitrait floue.
+ * 320 px paraitrait floue. C'est le defaut d'`urlVignette`.
  *
  * LE JPEG ET NON L'AVIF, alors que l'AVIF pese six fois moins. Un `<img src>`
  * simple ne negocie aucun format : le navigateur prend ce qu'on lui donne, et
@@ -67,20 +69,11 @@ const PREFIXE_MEDIAS = process.env.MEDIA_PREFIXE_PUBLIC ?? "/medias";
  * `<picture>` a trois sources appartient au catalogue public, LS-104, ou le
  * poids compte vraiment.
  *
- * LE NOM EST VERIFIE CONTRE `declinaisonsAttendues()` PLUTOT QU'ECRIT EN DUR.
- * Une premiere version portait `640.jpg` quand le traitement ecrit `640.jpeg` :
- * rien n'aurait rougi, ni `tsc` ni aucun test, et toutes les vignettes de
- * l'administration auraient ete cassees en production sans que la construction
- * le signale. Sous cette forme, renommer ou retirer une declinaison fait
- * echouer le rendu de la page immediatement.
+ * LE GARDE-FOU DE DECLINAISON A SUIVI LA CONSTRUCTION. Il vivait ici depuis
+ * qu'une premiere version eut porte `640.jpg` pour `640.jpeg`, sans que rien ne
+ * rougisse ; il est desormais dans `urls.ts`, ou il protege les sept ecrans et
+ * non plus celui-ci seul.
  */
-const NOM_VIGNETTE = "640.jpeg";
-
-if (!declinaisonsAttendues().includes(NOM_VIGNETTE)) {
-  throw new Error(
-    `La declinaison ${NOM_VIGNETTE} n'est plus produite par le traitement.`,
-  );
-}
 
 export default async function PageEditeurProduit({
   params,
@@ -281,7 +274,7 @@ async function CorpsFicheProduit({
            */
           vignette:
             media.statutTraitement === "TRAITE"
-              ? `${PREFIXE_MEDIAS}/${media.chemin}/${NOM_VIGNETTE}`
+              ? urlVignette(media.chemin)
               : null,
         }))}
       />

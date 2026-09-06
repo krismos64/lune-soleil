@@ -409,3 +409,75 @@ test.describe("la carte avec photo", () => {
     await expect(sansPhoto.locator("img")).toHaveCount(0);
   });
 });
+
+/**
+ * TOUTE URL DE MEDIA SERVIE PAR LE CATALOGUE REND 200, LS-187.
+ *
+ * ------------------------------------------------------------------
+ * CE QUE CE TEST AJOUTE AUX TESTS UNITAIRES, qui verifient deja la forme des
+ * URL construites : il ferme la boucle sur le FICHIER. Une URL peut etre
+ * parfaitement formee et pointer un fichier qui n'existe pas, et c'est
+ * exactement ce que le depot faisait.
+ *
+ * MESURE DU 6 SEPTEMBRE 2026, avant correction : les sept URL rendaient 404 sur
+ * une base amorcee avant LS-187. Avant meme cela, les cinq ecrans de la
+ * boutique COLLAIENT le nom de fichier au chemin, ce qui rend 404 sur toute
+ * photographie reelle.
+ *
+ * RIEN NE POUVAIT LE VOIR : la seule photographie du depot etait posee par une
+ * fixture, dans la forme qui reparait la faute au passage. Un `<img>` casse ne
+ * fait rougir aucune assertion de rendu, l'element existant bel et bien.
+ * ------------------------------------------------------------------
+ *
+ * IL LIT LES URL SUR LA PAGE plutot que de les reconstruire : reconstruire
+ * appliquerait la meme regle que le code, donc verifierait sa coherence avec
+ * lui-meme et resterait vert si les deux changeaient ensemble.
+ *
+ * LE `srcSet` EST COUVERT AUTANT QUE LE `src`. Les trois quarts des URL de
+ * cette page vivent dans un `srcSet`, et une erreur y est encore moins visible :
+ * le navigateur retombe silencieusement sur le `<img>` de repli.
+ */
+test("toute URL de média servie par le catalogue rend 200", async ({
+  page,
+}, infos) => {
+  test.skip(
+    infos.project.name !== "mobile-320",
+    "verifie des URL, pas une mise en page : une seule largeur suffit",
+  );
+
+  await page.goto("/catalogue");
+
+  const urls = await page.evaluate(() => {
+    const trouvees = new Set<string>();
+
+    for (const image of document.querySelectorAll("img")) {
+      const source = image.getAttribute("src");
+      if (source?.includes("/medias/")) {
+        trouvees.add(source);
+      }
+    }
+
+    for (const source of document.querySelectorAll("source")) {
+      for (const entree of (source.getAttribute("srcset") ?? "").split(", ")) {
+        const url = entree.split(" ")[0];
+        if (url?.includes("/medias/")) {
+          trouvees.add(url);
+        }
+      }
+    }
+
+    return [...trouvees];
+  });
+
+  /*
+   * LE COMPTE EST ASSERTE AVANT LES CODES, sans quoi une page qui ne rendrait
+   * AUCUNE image passerait ce test : une boucle vide ne verifie rien. Sept URL,
+   * le `<img>` de repli plus trois largeurs en AVIF et trois en WebP.
+   */
+  expect(urls).toHaveLength(7);
+
+  for (const url of urls) {
+    const reponse = await page.request.get(url);
+    expect(reponse.status(), `${url} doit etre servi`).toBe(200);
+  }
+});

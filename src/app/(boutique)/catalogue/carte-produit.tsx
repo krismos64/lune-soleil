@@ -13,6 +13,7 @@
 import { formaterMontant } from "@/lib/montant";
 import Link from "next/link";
 
+import { srcSetMedia, urlVignette } from "@/integrations/medias/urls";
 import type { EtatDisponibilite, ProduitCatalogue } from "@/services/catalogue";
 import styles from "./catalogue.module.css";
 
@@ -43,16 +44,6 @@ const CLASSE_DISPONIBILITE: Record<EtatDisponibilite, string> = {
   DERNIERE_PIECE: styles.badgeDernierePiece!,
   EPUISE: styles.badgeEpuise!,
 };
-
-/**
- * Prefixe sous lequel les medias sont servis, ADR-007.
- *
- * Il vient de la configuration et non des donnees : `Media.chemin` porte un
- * chemin relatif au dossier `public/` du volume, jamais une URL. En
- * developpement aucun Nginx ne sert ce chemin, les vignettes ne s'affichent donc
- * pas hors production, ce qui est attendu.
- */
-const PREFIXE_MEDIAS = process.env.MEDIA_PREFIXE_PUBLIC ?? "/medias";
 
 export function CarteProduit({ produit }: { produit: ProduitCatalogue }) {
   const disponibilite = LIBELLE_DISPONIBILITE[produit.disponibilite];
@@ -87,16 +78,16 @@ export function CarteProduit({ produit }: { produit: ProduitCatalogue }) {
             <picture>
               <source
                 type="image/avif"
-                srcSet={`${PREFIXE_MEDIAS}/${produit.mediaChemin}320.avif 320w, ${PREFIXE_MEDIAS}/${produit.mediaChemin}640.avif 640w, ${PREFIXE_MEDIAS}/${produit.mediaChemin}1280.avif 1280w`}
+                srcSet={srcSetMedia(produit.mediaChemin, "avif")}
                 sizes="(min-width: 1280px) 300px, (min-width: 768px) 45vw, 90vw"
               />
               <source
                 type="image/webp"
-                srcSet={`${PREFIXE_MEDIAS}/${produit.mediaChemin}320.webp 320w, ${PREFIXE_MEDIAS}/${produit.mediaChemin}640.webp 640w, ${PREFIXE_MEDIAS}/${produit.mediaChemin}1280.webp 1280w`}
+                srcSet={srcSetMedia(produit.mediaChemin, "webp")}
                 sizes="(min-width: 1280px) 300px, (min-width: 768px) 45vw, 90vw"
               />
               <img
-                src={`${PREFIXE_MEDIAS}/${produit.mediaChemin}640.jpeg`}
+                src={urlVignette(produit.mediaChemin)}
                 alt={produit.mediaTexteAlternatif ?? ""}
                 className={styles.image}
                 loading="lazy"

@@ -26,6 +26,12 @@
  */
 import sharp from "sharp";
 
+import {
+  FORMATS_PAR_LARGEUR,
+  LARGEURS_SERVIES,
+  type Format,
+} from "./declinaisons";
+
 /** Le fichier ne peut pas etre lu comme une image. */
 export class FichierNonImageError extends Error {
   constructor() {
@@ -42,33 +48,20 @@ export class FormatRefuseError extends Error {
   }
 }
 
-/**
- * Largeurs servies, ADR-007. L'ordre croissant est significatif.
- *
- * ELLES NE SE RATTRAPENT PAS. L'original etant supprime apres traitement,
- * ajouter une largeur plus tard obligerait a redemander les photographies a
- * l'exploitante. C'est la contrepartie assumee de la suppression de l'original,
- * et la raison pour laquelle 1920 px entre des maintenant : une fiche produit
- * affiche l'image sur 600 a 700 px CSS, soit environ 1400 px physiques sur un
- * ecran a densite double.
+/*
+ * LES CONSTANTES D'ADR-007 VIVENT DANS `declinaisons.ts`, LS-187, et ce module
+ * les reexporte pour ses appelants existants. Elles en ont ete SORTIES parce
+ * qu'elles sont pures et que ce module ne l'est pas : `sharp` est un binaire
+ * natif, donc tout ce qui touche ce fichier devient serveur seulement. Le
+ * panier, composant client, construit des URL de vignette et a besoin des
+ * memes constantes.
  */
-export const LARGEURS_SERVIES = [320, 640, 1280, 1920] as const;
-
-/**
- * Formats produits par largeur, ADR-007.
- *
- * LE JPEG S'ARRETE A 1280 px. Il n'est qu'un filet de securite, et son poids
- * croit vite : un navigateur qui ignore AVIF et WebP ignore aussi les ecrans a
- * haute densite, donc n'a que faire d'une image de 1920 px.
- */
-const FORMATS_PAR_LARGEUR: Record<number, readonly Format[]> = {
-  320: ["avif", "webp", "jpeg"],
-  640: ["avif", "webp", "jpeg"],
-  1280: ["avif", "webp", "jpeg"],
-  1920: ["avif", "webp"],
-};
-
-export type Format = "avif" | "webp" | "jpeg";
+export {
+  FORMATS_PAR_LARGEUR,
+  LARGEURS_SERVIES,
+  declinaisonsAttendues,
+  type Format,
+} from "./declinaisons";
 
 /**
  * Qualites retenues par ADR-007, mesurees en PSNR sur une photographie de
@@ -91,15 +84,6 @@ export type ResultatTraitement = {
   largeurSource: number;
   hauteurSource: number;
 };
-
-/** Les onze noms de fichiers attendus, pour les tests et les contrôles. */
-export function declinaisonsAttendues(): string[] {
-  return LARGEURS_SERVIES.flatMap((largeur) =>
-    (FORMATS_PAR_LARGEUR[largeur] ?? []).map(
-      (format) => `${largeur}.${format}`,
-    ),
-  );
-}
 
 /**
  * Formats d'entree refuses, arbitrage du 14 aout 2026.
