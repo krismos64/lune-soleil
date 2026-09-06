@@ -35,13 +35,20 @@ viennent du texte, pas d'une appréciation.
 
 L'article L221-24 alinéa 4 permettrait de ne pas rembourser le surcoût d'un mode
 « plus coûteux que le mode de livraison standard ». Depuis ADR-025 il existe deux
-tarifs, 4,10 € en Point Relais ou Locker et 4,99 € à domicile, ce qui rendrait la
-faculté exerçable.
+tarifs, 4,10 € en Point Relais ou Locker et **7,49 € à domicile** depuis ADR-035,
+ce qui rendrait la faculté exerçable.
 
 **Elle n'est pas retenue.** Rembourser le montant réellement payé, sans
-plafonnement ni comparaison à un mode standard. L'écart est de 0,89 €, et
-l'exercer imposerait de désigner un mode standard dans les conditions générales
-et au tunnel, sous peine de retomber sur l'article L221-20.
+plafonnement ni comparaison à un mode standard. L'exercer imposerait de désigner
+un mode standard dans les conditions générales et au tunnel, sous peine de
+retomber sur l'article L221-20.
+
+**L'écart est passé de 0,89 € à 3,39 €** le 6 septembre 2026, la grille réelle
+ayant porté le domicile de 4,99 € à son prix coûtant. Le motif d'ADR-025 citait ce
+0,89 €, ce qui rendait la décision facile ; elle l'est moins à 3,39 €. Elle est
+**confirmée** à cette date, le coût d'écrire et de tester une règle de
+remboursement plafonné dépassant toujours l'écart sur un cas rare. Ne pas rouvrir
+sans arbitrage de Christophe.
 
 Ne pas introduire de règle de remboursement partiel des frais de port.
 

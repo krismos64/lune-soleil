@@ -121,10 +121,14 @@ après le commit, un échec laisse une commande `EN_ATTENTE_PAIEMENT` que la
 réconciliation traite normalement.
 
 **L'étape 3b précède le calcul du total**, ADR-025. Les frais de port dépendent
-du mode : 4,10 € en Point Relais ou Locker, 4,99 € à domicile, offerts dès 39 €
-pour les trois. Le montant est recalculé côté serveur à partir de la
-configuration, jamais lu depuis le navigateur, puis **figé dans la commande** à
-l'étape 4 avec le mode et le point de retrait.
+du mode : 4,10 € en Point Relais ou Locker, **7,49 € à domicile**, offerts dès
+39 € **en Point Relais et Locker seulement**, ADR-035. Le montant est recalculé
+côté serveur à partir de la configuration, jamais lu depuis le navigateur, puis
+**figé dans la commande** à l'étape 4 avec le mode et le point de retrait.
+
+La réserve sur la franchise n'est pas un paramètre : `calculerFraisPort` porte la
+condition de mode, et aucune variable d'environnement ne rend le domicile gratuit
+au seuil. Un port de 7,49 € offert sur une commande de 40 € ne se finance pas.
 
 Le point de retrait est copié avec son libellé et son adresse, pas seulement son
 identifiant. Un point qui ferme rendrait autrement illisible une commande passée,

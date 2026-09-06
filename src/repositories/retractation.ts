@@ -258,8 +258,14 @@ export async function listerRetoursJamaisRecus(
  *
  * LES FRAIS DE PORT ENTRENT EN ENTIER, article L221-24 et `legal.md` : la
  * faculte de l'alinea 4 de plafonner au mode standard N'EST PAS RETENUE. Lire
- * `fraisPortCentimes` de la commande rend le tarif REELLEMENT PAYE, 410 ou 499
- * selon le mode, et non un tarif recalcule depuis la configuration courante.
+ * `fraisPortCentimes` de la commande rend le tarif REELLEMENT PAYE, et non un
+ * tarif recalcule depuis la configuration courante.
+ *
+ * LA LECTURE EST LA SEULE FORME JUSTE, et l'enumeration des valeurs possibles ne
+ * l'est plus : ce commentaire disait « 410 ou 499 selon le mode », et 499 est
+ * devenu 749 le 6 septembre 2026, ADR-035. Une commande d'avant cette date porte
+ * toujours 499, une commande d'apres porte 749, et une commande en franchise
+ * porte 0. C'est precisement pourquoi le montant se lit sur la commande.
  *
  * NE PAS INTRODUIRE DE PLAFONNEMENT ICI. C'est la faute que la regle nomme.
  */
