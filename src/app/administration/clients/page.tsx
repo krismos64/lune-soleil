@@ -125,6 +125,24 @@ export default async function PageClients({
 
         <div className={styles.rechercheLigne}>
           <input
+            /*
+             * LA `key` PORTE LE TERME, LS-199, ET CE N'EST PAS UNE COQUETTERIE.
+             *
+             * Le champ n'est pas controle : `defaultValue` ne s'applique qu'a
+             * la CREATION de l'element. Quand React reutilise le meme noeud DOM
+             * entre le rendu avec terme et celui sans, la valeur saisie reste
+             * affichee alors que la liste, elle, est bien reinitialisee.
+             *
+             * Mesure : apres un clic sur « Afficher tous les comptes », l'URL
+             * perdait bien son parametre et la liste montrait tous les comptes,
+             * pendant que le champ affichait encore « zzz-aucun-client-zzz ».
+             * L'exploitante lisait donc un filtre actif sur une liste complete.
+             *
+             * Changer la `key` force React a recreer l'element, donc a relire
+             * `defaultValue`. Un champ controle par `useState` marcherait aussi,
+             * au prix de rendre client un composant qui n'a pas besoin de l'etre.
+             */
+            key={terme}
             id="recherche"
             name="recherche"
             type="search"

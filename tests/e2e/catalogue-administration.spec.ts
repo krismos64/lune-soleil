@@ -132,10 +132,23 @@ test("un POST direct sur les ecrans du catalogue ne produit aucun effet", async 
     const corps = await reponse.text();
     expect(corps).not.toContain(NOM_FABRIQUE);
 
-    // ET AUCUN FORMULAIRE D'ADMINISTRATION N'EST SERVI EN REPONSE. Un POST qui
-    // rendrait l'ecran protege plutot que la connexion livrerait le contenu que
-    // la garde doit retenir.
-    expect(corps).not.toContain("Catégories du catalogue");
+    /*
+     * ET AUCUN FORMULAIRE D'ADMINISTRATION N'EST SERVI EN REPONSE. Un POST qui
+     * rendrait l'ecran protege plutot que la connexion livrerait le contenu que
+     * la garde doit retenir.
+     *
+     * LE MARQUEUR EST UN GESTE, PAS UN TITRE, LS-199. Cette ligne cherchait
+     * « Catégories du catalogue », qui figure aussi dans le `<title>` et dans
+     * l'etat de chargement pose par LS-188 : le squelette rendu avant que la
+     * redirection ne s'applique la satisfaisait, et le test est devenu rouge
+     * sur un comportement correct. La garde fonctionne, la reponse portant
+     * `NEXT_REDIRECT;replace;/administration/connexion;307`.
+     *
+     * « Renommer » n'existe que sur l'ecran reel, jamais dans un squelette de
+     * chargement qui ne rend que des barres grises. Un marqueur qui apparait
+     * dans un etat de chargement ne peut rien prouver sur une fuite de contenu.
+     */
+    expect(corps).not.toContain("Renommer");
     expect(corps).not.toContain("Créer le brouillon");
     // LS-100, l'editeur de fiche produit et ses gestes destructeurs.
     expect(corps).not.toContain("Sections de la fiche");

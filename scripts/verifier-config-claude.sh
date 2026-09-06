@@ -829,6 +829,40 @@ for workflow in .github/workflows/*.yml .github/workflows/*.yaml; do
   done
 done
 
+# ---------------------------------------------------------------------------
+# Une étiquette posée par un workflow doit être créée par ce même workflow
+# ---------------------------------------------------------------------------
+#
+# LS-199. `gh issue create --label X` ÉCHOUE SI L'ÉTIQUETTE N'EXISTE PAS, sur
+# « could not add label: 'X' not found », et l'étape entière échoue avec elle.
+#
+# LE GARDE-FOU DU CONTRÔLE NOCTURNE ÉTAIT MUET DEPUIS LS-177 pour cette seule
+# raison : l'étiquette `controle-nocturne` n'avait jamais été créée. Deux nuits
+# d'échecs n'ont produit aucune issue, et c'est ce silence qui a laissé les
+# tests rouges passer inaperçus.
+#
+# CRÉER L'ÉTIQUETTE À LA MAIN NE SUFFIT PAS, et c'est le motif de ce contrôle :
+# elle vit dans les réglages du dépôt, pas dans le dépôt. Un clone, un dépôt
+# recréé, une migration, et le garde-fou redevient muet sans que rien ne le
+# dise. Le workflow doit donc créer son étiquette lui-même, `--force` rendant
+# l'instruction idempotente.
+#
+# LE CONTRÔLE NE PEUT PAS INTERROGER GITHUB, il tourne hors ligne : il vérifie
+# la propriété qui rend l'appel sûr, à savoir que le workflow crée ce qu'il
+# pose, et non l'état courant du dépôt distant.
+for workflow in .github/workflows/*.yml .github/workflows/*.yaml; do
+  [ -f "$workflow" ] || continue
+
+  etiquettes=$(grep -oE -- "--label [A-Za-z0-9_-]+" "$workflow" \
+    | awk '{print $2}' | sort -u)
+
+  for etiquette in $etiquettes; do
+    grep -qE "gh label create[[:space:]\\]+$etiquette" "$workflow" && continue
+
+    anomalies+=("$(basename "$workflow") pose l'étiquette « $etiquette » sans la créer : \`gh issue create --label\` échoue si elle n'existe pas dans le dépôt, et l'étape tombe en silence. Ajouter \`gh label create $etiquette ... --force\` avant, l'étiquette vivant dans les réglages du dépôt et non dans le dépôt")
+  done
+done
+
 if [ ${#anomalies[@]} -eq 0 ]; then
   [ "$STRICT" -eq 1 ] && echo "  configuration Claude Code cohérente"
   exit 0

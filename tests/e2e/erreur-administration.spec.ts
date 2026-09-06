@@ -68,31 +68,36 @@ test.describe("frontiere d'erreur de l'administration", () => {
     await page.goto(ECRAN_QUI_ECHOUE);
 
     /*
-     * LE BOUTON « Menu » EST LA PREMIERE PREUVE. LS-181 replie la barre
-     * derriere lui sous le point de bascule : a 320 px c'est lui qui est
-     * visible, pas les rubriques.
+     * LE BOUTON « Menu » N'EXISTE QUE SOUS 768 px, LS-199.
      *
-     * Le bouton et la barre viennent du MEME layout : si la frontiere d'erreur
-     * remontait au-dessus de lui, ni l'un ni l'autre ne serait rendu. C'est
-     * bien la position de la frontiere dans l'arbre qui est mesuree.
-     */
-    await expect(page.getByRole("button", { name: /menu/i })).toBeVisible();
-
-    /*
-     * LA BARRE EST OUVERTE PUIS LUE, plutot que cherchee repliee.
+     * Ce test l'exigeait VISIBLE aux trois largeurs, et son propre commentaire
+     * disait pourtant « a 320 px c'est lui qui est visible ». Le composant est
+     * explicite, « LE BOUTON D'OUVERTURE N'EXISTE QUE SOUS 768 px, masque en
+     * CSS au-dela » : en `bureau-1280` la barre est depliee et ce bouton n'a
+     * aucune raison d'etre. Le test rougissait donc sur un comportement voulu.
      *
-     * Le `<nav>` est TOUJOURS dans le document, seule sa classe change : un
-     * `toBeAttached` semblait donc suffire, et il echoue. Un element masque par
-     * CSS n'expose PAS son role ARIA, donc `getByRole("navigation")` ne le
-     * trouve pas tant que le panneau est replie. Chercher un role sur un
-     * element cache est une mesure fausse, pas un defaut du code.
+     * CE QUI EST MESURE RESTE LE MEME : le bouton et la barre viennent du meme
+     * layout, donc si la frontiere d'erreur remontait au-dessus, aucun des deux
+     * ne serait rendu. Sous 768 px c'est le bouton qui le prouve, au-dela c'est
+     * la barre elle-meme, deja depliee.
+     *
+     * LA BARRE EST OUVERTE PUIS LUE, plutot que cherchee repliee. Le `<nav>`
+     * est TOUJOURS dans le document, seule sa classe change : un `toBeAttached`
+     * semblait donc suffire, et il echoue. Un element masque par CSS n'expose
+     * PAS son role ARIA. Chercher un role sur un element cache est une mesure
+     * fausse, pas un defaut du code.
      *
      * L'ouvrir au clic verifie AUSSI que la barre reste UTILISABLE apres
      * l'erreur, ce qui est l'objet de la story : une barre presente mais figee
      * laisserait l'exploitante sans issue tout aussi surement qu'une barre
-     * absente.
+     * absente. Au-dela de 768 px, l'utilisabilite se lit sur le lien clique
+     * plus bas.
      */
-    await page.getByRole("button", { name: /menu/i }).click();
+    const bascule = page.getByRole("button", { name: /menu/i });
+
+    if (await bascule.isVisible()) {
+      await bascule.click();
+    }
 
     await expect(
       page.getByRole("navigation", { name: /sections de l'administration/i }),
@@ -178,10 +183,25 @@ test.describe("frontiere d'erreur de l'administration", () => {
     ).toBeVisible();
   });
 
+  /*
+   * LE LIEN VISE EST CELUI DE L'ECRAN D'ERREUR, PAS CELUI DE LA BARRE, LS-199.
+   *
+   * Le selecteur cherchait « tableau de bord » dans toute la page. Sous 768 px
+   * la barre est repliee et un seul lien porte ce nom, donc le test passait ;
+   * en `bureau-1280` la barre est depliee et il en trouve DEUX, ce qui leve une
+   * violation de mode strict.
+   *
+   * Cliquer celui de la barre ne prouverait d'ailleurs rien de cette story : la
+   * barre est deja verifiee par le premier test, et c'est la SORTIE offerte par
+   * l'ecran d'erreur qui doit mener quelque part.
+   */
   test("le lien de sortie mene au tableau de bord", async ({ page }) => {
     await page.goto(ECRAN_QUI_ECHOUE);
 
-    await page.getByRole("link", { name: /tableau de bord/i }).click();
+    await page
+      .getByRole("alert", { name: /erreur de l'administration/i })
+      .getByRole("link", { name: /tableau de bord/i })
+      .click();
 
     await expect(page).toHaveURL(/\/administration$/);
   });
