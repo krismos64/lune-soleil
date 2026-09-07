@@ -100,22 +100,55 @@ Les vingt-quatre autres sont des contrôles textuels sans rapport, numérotées
 `6x` parce qu'elles ont été ajoutées là. Leur donner leur propre numéro est un
 changement de périmètre, donc un arbitrage de Christophe.
 
-## Deux anomalies signalées, non corrigées
+## Deux anomalies signalées, puis corrigées sur arbitrage
 
-Consigne explicite de Christophe pour cette session : signaler plutôt que
-ticketer.
+Consigne de la session : signaler plutôt que ticketer. Christophe a demandé la
+correction des deux dans la foulée, commit `88a2847`.
 
-**Le tarif domicile de la CI contredit ADR-035.** `controles.yml` et
-`nocturne.yml` portent `SHIPPING_HOME_RATE_CENTS: "499"` quand ADR-035 écrit
-noir sur blanc que la valeur passe à **749**, le prix coûtant. Motif « config
-corrigée à moitié », déjà en fiche : la valeur a été portée dans `.env` et dans
-les tests, jamais dans les deux workflows.
+**Le tarif domicile de la CI contredisait ADR-035.** `controles.yml` et
+`nocturne.yml` portaient `SHIPPING_HOME_RATE_CENTS: "499"` quand ADR-035 fixe
+**749** depuis le 6 septembre, le prix coûtant. La valeur avait été portée dans
+`.env.example` et dans les tests, jamais dans les deux workflows.
 
-**Deux angles morts du motif de LS-143 subsistent.** `liste-adresses.tsx:37`
-absorbe `SAISIE_INVALIDE` dans un `default` et jette son message précis pour
-afficher « momentanément indisponible » : c'est un défaut **visible
-aujourd'hui**, et le fichier voisin consomme le même type sans `default`.
-`EXPLICATION_SANS_GESTE` porte le même motif avec un repli générique.
+C'est le défaut du 25 août **reproduit à l'identique sur la même variable**, et
+le commentaire de `controles.yml` le racontait déjà quelques lignes plus haut.
+Un récit d'incident dans un commentaire n'empêche pas sa répétition ; la raison
+du chiffre est désormais écrite aux deux endroits.
+
+Les 499 restants n'ont pas été touchés : ce sont des montants **figés dans des
+commandes de test**, qu'une commande passée conserve, invariant 3.
+
+**`liste-adresses.tsx` jetait le message de saisie invalide.** Trois `case` sur
+cinq membres, le `default` absorbant les deux autres : le message composé par le
+socle Zod, qui nomme le champ fautif, était remplacé par « momentanément
+indisponible ». Le client lisait une panne là où il avait fait une faute de
+saisie. Le cas est **atteignable**, les deux gestes de la liste passant par
+`agir` qui valide l'identifiant.
+
+### Retirer le `default` ne suffisait pas, et la mutation seule l'a montré
+
+```
+6e membre ajouté, switch exhaustif sans default  ->  type-check VERT
+6e membre ajouté, avec la garde `never`          ->  TS2322, nomme la ligne
+```
+
+`appliquer` ne retourne rien, donc TypeScript n'avait rien à signaler. **Les
+`switch` du dépôt qui rougissent le font parce qu'ils rendent une valeur** :
+c'est le `return` manquant qui est signalé, jamais le `switch` lui-même. Vérifié
+sur `categories/actions.ts`, cité comme exemplaire dans son propre commentaire,
+dont un membre ajouté fait bien échouer deux fichiers en `TS2366`.
+
+La correction évidente, « retirer le `default` », aurait donc produit un code
+qui **a l'air** protégé et ne l'est pas. C'est la troisième fois de la session
+que la forme attendue ne ferme rien.
+
+### Ce que la couverture ne voyait pas
+
+Le test e2e « une saisie invalide est refusée sans quitter l'écran » porte sur le
+**formulaire**, déjà correct. Le chemin de la **liste** n'était couvert par rien.
+
+**`EXPLICATION_SANS_GESTE` reste ouvert**, même motif avec un repli générique et
+vrai, « Aucune action disponible ». Non corrigé, non ticketé.
 
 ## État des tickets
 
