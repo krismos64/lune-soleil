@@ -91,7 +91,36 @@ export async function changerStatut(
     });
 
     if (issue.statut === "SUCCES") {
-      revalidatePath(CHEMIN_MESSAGES);
+      /*
+       * ------------------------------------------------------------------
+       * `"layout"` ET NON LE DEFAUT, LS-201, ET C'EST UN DEFAUT PRODUIT.
+       *
+       * `revalidatePath(chemin)` invalide la PAGE seule, verifie via Context7 :
+       * l'option `"layout"` invalide en plus le layout et tout ce qui vit
+       * dessous.
+       *
+       * LA PASTILLE DES MESSAGES EST CALCULEE PAR LE LAYOUT,
+       * `administration/layout.tsx` appelant `lireComptages`, alors que la
+       * liste est rendue par la page, qui porte `export const dynamic =
+       * "force-dynamic"`. Sans cette option, classer un message rafraichissait
+       * la liste en laissant la pastille sur son ancienne valeur.
+       *
+       * CE QUE L'EXPLOITANTE VOYAIT : elle classe son dernier message non lu,
+       * la liste se vide, et la barre de navigation continue d'annoncer « 1 ».
+       * Elle rouvre alors l'ecran pour n'y rien trouver.
+       *
+       * MESURE DU 7 SEPTEMBRE 2026, par le test de bout en bout qui compare les
+       * deux : « Pastille "1" pour 0 affiches. Sujets non lus : [] ». Il
+       * n'echouait que sous charge, le layout etant souvent recalcule pour
+       * d'autres raisons, ce qui masquait le defaut la plupart du temps.
+       *
+       * LA PORTEE RESTE CELLE DE L'ADMINISTRATION : `CHEMIN_MESSAGES` designe
+       * `/administration/messages`, donc son layout parent et les ecrans qui le
+       * partagent. Ce n'est pas `revalidatePath("/", "layout")`, qui purgerait
+       * le cache client entier pour un simple classement.
+       * ------------------------------------------------------------------
+       */
+      revalidatePath(CHEMIN_MESSAGES, "layout");
 
       return { statut: "SUCCES", nouveauStatut };
     }

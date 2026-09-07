@@ -64,7 +64,33 @@ export type ResultatAction =
   /** Panne technique, deja journalisee. */
   | { statut: "INDISPONIBLE" };
 
-/** Chemin de l'ecran, revalide apres chaque ecriture. */
+/**
+ * Chemin de l'ecran, revalide apres chaque ecriture.
+ *
+ * ------------------------------------------------------------------
+ * LES CINQ APPELS PASSENT `"layout"`, LS-201, et ce n'est pas une precaution
+ * decorative.
+ *
+ * `revalidatePath(chemin)` invalide la PAGE seule, verifie via Context7 :
+ * l'option `"layout"` invalide en plus le layout et les ecrans qui vivent
+ * dessous.
+ *
+ * LE TABLEAU DE BORD EST CALCULE PAR LE LAYOUT de l'administration,
+ * `lireComptages`, et deux de ses comptages dependent directement du stock :
+ * `variantesStockFaible` et `variantesIndisponibles`, tous deux derives de
+ * `quantite_physique - quantite_reservee`. Sans cette option, un ajustement
+ * d'inventaire rafraichissait l'ecran des stocks en laissant le tableau de bord
+ * annoncer l'ancien nombre de variantes indisponibles.
+ *
+ * LE MEME DEFAUT A ETE TROUVE SUR LE CLASSEMENT DES MESSAGES, ou il etait
+ * VISIBLE : la pastille de la barre gardait son compte apres que la liste se
+ * soit videe. Ici il l'est moins, le tableau de bord n'etant pas toujours sous
+ * les yeux au moment du geste, ce qui ne le rend pas moins faux.
+ *
+ * CE N'EST PAS `revalidatePath("/", "layout")`, qui purgerait le cache client
+ * entier pour un mouvement de stock. La portee reste celle de l'administration.
+ * ------------------------------------------------------------------
+ */
 const CHEMIN_STOCKS = "/administration/stocks";
 
 /**
@@ -136,7 +162,7 @@ export async function suspendreVenteWebAction(
     if (refus) {
       return traduireRefus(refus);
     }
-    revalidatePath(CHEMIN_STOCKS);
+    revalidatePath(CHEMIN_STOCKS, "layout");
     return { statut: "SUCCES" };
   } catch (erreur) {
     return traduireErreur(erreur, "suspendre-vente-web");
@@ -160,7 +186,7 @@ export async function reactiverVenteWebAction(
     if (refus) {
       return traduireRefus(refus);
     }
-    revalidatePath(CHEMIN_STOCKS);
+    revalidatePath(CHEMIN_STOCKS, "layout");
     return { statut: "SUCCES" };
   } catch (erreur) {
     return traduireErreur(erreur, "reactiver-vente-web");
@@ -193,7 +219,7 @@ export async function enregistrerVenteExterneAction(entree: {
     if (refus) {
       return traduireRefus(refus);
     }
-    revalidatePath(CHEMIN_STOCKS);
+    revalidatePath(CHEMIN_STOCKS, "layout");
     return { statut: "SUCCES" };
   } catch (erreur) {
     return traduireErreur(erreur, "vente-externe");
@@ -228,7 +254,7 @@ export async function ajusterInventaireAction(entree: {
     if (sansEcart) {
       return { statut: "SANS_ECART" };
     }
-    revalidatePath(CHEMIN_STOCKS);
+    revalidatePath(CHEMIN_STOCKS, "layout");
     return { statut: "SUCCES" };
   } catch (erreur) {
     return traduireErreur(erreur, "ajustement-inventaire");
@@ -258,7 +284,7 @@ export async function corrigerMouvementAction(entree: {
     if (refus) {
       return traduireRefus(refus);
     }
-    revalidatePath(CHEMIN_STOCKS);
+    revalidatePath(CHEMIN_STOCKS, "layout");
     return { statut: "SUCCES" };
   } catch (erreur) {
     return traduireErreur(erreur, "correction-mouvement");
