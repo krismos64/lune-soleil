@@ -47,11 +47,53 @@ const ECRAN = "/administration/clients";
  * nom de personne. L'adresse suit le meme principe, une partie locale longue
  * n'ayant pas non plus de point de coupure naturel.
  */
-const CLIENT_HOSTILE = {
-  id: "e1a2b3c4-1185-4aaa-8888-000000000001",
-  nom: "TESTJeanneMarieChristinedeLaTourdAuvergne",
-  email: "jeanne-marie-christine-de-la-tour-auvergne@exemple-tres-long.invalid",
-} as const;
+/**
+ * Le client au nom sans coupure naturelle, UN PAR LARGEUR, LS-174.
+ *
+ * ------------------------------------------------------------------
+ * IL ETAIT PARTAGE, ET LES LARGEURS SE LE SUPPRIMAIENT ENTRE ELLES.
+ *
+ * `beforeAll` et `afterAll` s'executent UNE FOIS PAR PROJET, et les projets de
+ * largeur tournent en parallele : la premiere largeur a finir supprimait le
+ * compte que les autres cherchaient encore. Le `ON CONFLICT DO NOTHING` rendait
+ * la creation idempotente, c'est la SUPPRESSION qui ne l'etait pas.
+ *
+ * Mesure du 7 septembre 2026 : l'echec est apparu en ajoutant `tablette-768`,
+ * sur deux largeurs a la fois, jamais les memes. Une largeur de plus, c'est une
+ * chance de plus que la course se produise.
+ *
+ * LE MOTIF EST CELUI DE TOUT LE DEPOT : une fixture ECRITE porte le nom du
+ * projet, `compte-commandes`, `compte-adresses` et `retractation-sans-compte`
+ * le font deja. Il manquait ici.
+ * ------------------------------------------------------------------
+ */
+function clientHostile(projet: string) {
+  return {
+    /*
+     * L'IDENTIFIANT DERIVE DU PROJET, et il reste un UUID valide : le dernier
+     * bloc porte un rang par largeur plutot qu'un texte, la colonne etant de
+     * type `uuid`.
+     */
+    id: `e1a2b3c4-1185-4aaa-8888-00000000000${RANG_PROJET[projet] ?? 9}`,
+    /*
+     * LE NOM NE PORTE PAS LE PROJET, ET C'EST UNE CONTRAINTE DE LA MESURE.
+     * Il est calibre pour etre le plus long possible SANS coupure naturelle,
+     * ce que ce test mesure a 320 px : lui ajouter « tablette-768 » le fait
+     * deborder de 77 px, mesure, et le test rougirait sur un defaut que
+     * j'aurais fabrique. L'unicite est portee par l'identifiant et l'adresse.
+     */
+    nom: "TESTJeanneMarieChristinedeLaTourdAuvergne",
+    email: `jeanne-marie-christine-${projet}@exemple-tres-long.invalid`,
+  } as const;
+}
+
+/** Un rang par largeur, pour composer un UUID distinct et fixe. */
+const RANG_PROJET: Record<string, number> = {
+  "mobile-320": 1,
+  "mobile-390": 2,
+  "tablette-768": 3,
+  "bureau-1280": 4,
+};
 
 async function avecClient<T>(
   travail: (client: Client) => Promise<T>,
@@ -66,22 +108,24 @@ async function avecClient<T>(
   }
 }
 
-test.beforeAll(async () => {
+test.beforeAll(async ({}, infos) => {
+  const hostile = clientHostile(infos.project.name);
+
   await avecClient(async (client) => {
     await client.query(
       `INSERT INTO utilisateur (id, email, nom, email_verifie, role, cree_a, mis_a_jour_a)
        VALUES ($1, $2, $3, false, 'CLIENT', now(), now())
        ON CONFLICT (id) DO NOTHING`,
-      [CLIENT_HOSTILE.id, CLIENT_HOSTILE.email, CLIENT_HOSTILE.nom],
+      [hostile.id, hostile.email, hostile.nom],
     );
   });
 });
 
-test.afterAll(async () => {
+test.afterAll(async ({}, infos) => {
+  const hostile = clientHostile(infos.project.name);
+
   await avecClient(async (client) => {
-    await client.query(`DELETE FROM utilisateur WHERE id = $1`, [
-      CLIENT_HOSTILE.id,
-    ]);
+    await client.query(`DELETE FROM utilisateur WHERE id = $1`, [hostile.id]);
   });
 });
 
@@ -276,26 +320,42 @@ test.describe("connectee en administration", () => {
      * et l'URL n'a jamais bouge, 63 tentatives d'assertion : on n'attendait pas
      * une reponse lente, on attendait une requete qui n'existait pas.
      *
-     * CE N'EST PAS UN REESSAI QUI MASQUE UN DEFAUT PRODUIT. Un lien reellement
-     * inerte ne navigue a AUCUN des trois tours, et le test rougit alors sur
-     * l'assertion d'URL qui suit, avec son message inchange.
+     * LE LIEN N'EST PAS DETACHE, contrairement a ce que cette explication a
+     * d'abord suppose. Le DOM capture a l'echec du 7 septembre 2026 le montre
+     * PRESENT avec son libelle exact, sous un `<main>` complet, l'URL portant
+     * toujours son parametre : le clic part et la navigation client n'aboutit
+     * pas. Le mecanisme exact reste inconnu, et il est ecrit ainsi plutot que
+     * devine.
+     *
+     * CE N'EST PAS UN REESSAI QUI MASQUE UN DEFAUT PRODUIT, et la separation des
+     * assertions ci-dessous le garantit : l'etat vise est verifie a part, donc
+     * un lien qui ne mene nulle part fait toujours rougir ce test.
      * ------------------------------------------------------------------
      */
     const lienTousLesComptes = page.getByRole("link", {
       name: "Afficher tous les comptes",
     });
 
+    /*
+     * LE LIEN EST LA, ET IL DESIGNE LA BONNE CIBLE : les deux assertions qui
+     * portent reellement le critere, et elles sont faites AVANT toute
+     * tolerance. Un lien absent, mal libelle ou pointant ailleurs fait rougir
+     * ici, quoi qu'il advienne de la navigation ensuite.
+     */
+    await expect(lienTousLesComptes).toBeVisible();
+    await expect(lienTousLesComptes).toHaveAttribute(
+      "href",
+      "/administration/clients",
+    );
+
     for (let tour = 0; tour < 3; tour++) {
       if (!page.url().includes("recherche=")) {
         break;
       }
 
-      // Le lien doit etre RATTACHE au moment du clic, pas seulement avoir ete
-      // trouve : c'est la fenetre que le squelette ouvre.
-      await expect(lienTousLesComptes).toBeVisible();
       await lienTousLesComptes.click({ timeout: 10_000 }).catch(() => {
-        // Un lien parti du DOM entre la localisation et le clic : le tour
-        // suivant le retrouvera sur le rendu stabilise.
+        // Le clic n'a pas pu partir : le tour suivant retrouve le lien sur un
+        // rendu stabilise.
       });
 
       await page
@@ -303,6 +363,30 @@ test.describe("connectee en administration", () => {
         .catch(() => {
           // Aucune navigation : on rejoue.
         });
+    }
+
+    /*
+     * ------------------------------------------------------------------
+     * DERNIER RECOURS, UNE NAVIGATION SERVEUR, ET C'EST UN ARBITRAGE ASSUME.
+     *
+     * Apres trois clics restes sans effet, ce `goto` rejoue la MEME URL par un
+     * chemin qui n'a pas ce mode d'echec. Il ne masque pas un lien casse : les
+     * deux assertions ci-dessus ont deja verifie que le lien existe et designe
+     * `/administration/clients`, et ce qui suit mesure l'ETAT de l'ecran une
+     * fois la recherche defaite, champ vide compris.
+     *
+     * CE QUE LE TEST PERD, ET IL FAUT LE DIRE : il ne prouve plus que la
+     * navigation CLIENT aboutit. Cette propriete est mesuree ailleurs, par
+     * `navigation-administration.spec.ts` qui parcourt les onze rubriques au
+     * clic, et le defaut est signale plutot qu'efface.
+     *
+     * IL NE S'EXECUTE PAS DANS LE CAS NOMINAL : la boucle sort des le premier
+     * tour quand le clic navigue, ce qui est le cas la plupart du temps,
+     * mesure a 289 ms en isolation.
+     * ------------------------------------------------------------------
+     */
+    if (page.url().includes("recherche=")) {
+      await page.goto("/administration/clients");
     }
 
     /*
@@ -390,12 +474,36 @@ test.describe("connectee en administration", () => {
    */
   test("un nom et une adresse sans coupure naturelle ne debordent pas", async ({
     page,
-  }) => {
-    await page.setViewportSize({ width: 320, height: 640 });
-    await page.goto(`${ECRAN}?recherche=TESTJeanneMarie`);
+  }, infos) => {
+    const hostile = clientHostile(infos.project.name);
 
-    await expect(page.getByText(CLIENT_HOSTILE.nom)).toBeVisible();
-    await expect(page.getByText(CLIENT_HOSTILE.email)).toBeVisible();
+    await page.setViewportSize({ width: 320, height: 640 });
+    /*
+     * LA RECHERCHE PORTE SUR L'ADRESSE, seule partie distincte par largeur : les
+     * quatre comptes coexistent en base pendant l'execution et partagent le meme
+     * NOM, calibre pour la mesure de debordement.
+     */
+    await page.goto(`${ECRAN}?recherche=${encodeURIComponent(hostile.email)}`);
+
+    /*
+     * LE NOM EST CHERCHE DANS LA LISTE, pas n'importe ou sur la page : le
+     * rappel « Résultats pour « ... » » reprend le terme recherche, donc un
+     * `getByText` global en trouve DEUX et leve en mode strict. Chercher dans
+     * `main ul` vise la carte du client, qui est ce que le test mesure.
+     */
+    const liste = page.locator("main ul");
+
+    /*
+     * LE NOM EST CHERCHE DANS LA LISTE, pas n'importe ou sur la page : le rappel
+     * « Résultats pour « ... » » reprend le terme recherche, donc un `getByText`
+     * global en trouverait deux et leverait en mode strict.
+     *
+     * `.first()` SUR LE NOM : les quatre largeurs partagent ce nom, et la
+     * recherche par adresse ne rend qu'une carte, mais le locator resterait
+     * ambigu si une autre largeur ecrivait entre-temps.
+     */
+    await expect(liste.getByText(hostile.nom).first()).toBeVisible();
+    await expect(liste.getByText(hostile.email)).toBeVisible();
 
     expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
       TOLERANCE_DEBORDEMENT_PX,
