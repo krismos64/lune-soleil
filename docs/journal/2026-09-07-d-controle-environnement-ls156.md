@@ -126,8 +126,12 @@ Elle est prouvée autrement, ayant trouvé un vrai défaut le jour de son écrit
 
 ## État des tickets
 
-**LS-156 est livrée.** Les huit critères sont remplis, détail dans le
-commentaire Jira.
+**LS-156 est LIVRÉE ET CLOSE**, PR #274 fusionnée sur `main` en rebase, trois
+commits, `6f08ec7` à `d5f28d1`. Chaîne verte en 10 min 26 s, run 34121582791,
+dont les étapes neuves `6t` et `6u`. Les huit critères sont remplis.
+
+Comptes relevés dans Jira après la fermeture, jamais recopiés : **133 tickets
+terminés sur 192**. L'epic 6 passe à quatorze ouvertes.
 
 ## Prochaine étape
 
