@@ -760,7 +760,7 @@ jobs:
       # LE TICKET N'EN LISTAIT QUE QUATRE quand le depot en portait six, les
       # deux champs du profil ayant ete oublies. Une liste ecrite a la main est
       # une opinion ; ce controle relit le depot.
-      - name: 6o. Tout champ de mot de passe client porte sa bascule
+      - name: 6s. Tout champ de mot de passe client porte sa bascule
         run: ./scripts/verifier-bascule-mot-de-passe.sh
 
       # Textuel, aucune base ni conteneur requis.
