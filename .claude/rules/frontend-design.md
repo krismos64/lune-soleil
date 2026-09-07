@@ -416,6 +416,33 @@ du serveur, jamais d'un calcul dans le navigateur.
 L'état des filtres et du tri est sérialisé dans l'URL, pour que le retour
 navigateur et le partage de lien fonctionnent.
 
+### C37, une Server Action revalide le layout dès que le layout lit la donnée
+
+`revalidatePath(chemin)` invalide la **page** seule. L'option `"layout"` en
+second argument invalide en plus le layout et ce qui vit dessous, vérifié via
+Context7 le 7 septembre 2026.
+
+**Le layout de l'administration lit des comptages**, `lireComptages` : pastille
+des messages, variantes en stock faible, commandes à préparer, expéditions en
+transit. Une Server Action qui modifie l'une de ces données **doit** passer
+`"layout"`, sans quoi l'écran se rafraîchit pendant que la barre garde son
+ancien nombre.
+
+**Le défaut a été livré six fois** avant d'être vu, LS-201 : une fois sur le
+classement d'un message, cinq sur les actions de stock. Ce que l'exploitante
+voyait sur le premier : elle classe son dernier message non lu, la liste se
+vide, et la barre continue d'annoncer « 1 ». Elle rouvre l'écran pour n'y rien
+trouver.
+
+**Il est intermittent, ce qui le rend cher à diagnostiquer.** Le layout est
+souvent recalculé pour d'autres raisons, donc le défaut ne se voit que lorsque
+le cache tient. Un test de bout en bout qui comparait la pastille à la liste
+passait la plupart du temps.
+
+La question à se poser avant d'écrire l'appel : **cette donnée est-elle lue par
+le layout ?** Si oui, `"layout"`. Ce n'est jamais `revalidatePath("/", "layout")`,
+qui purgerait le cache client entier pour un geste local.
+
 ## Dimensionnement du catalogue
 
 Le catalogue ouvrira avec 10 à 20 références et peut atteindre 30 à 40 sans
