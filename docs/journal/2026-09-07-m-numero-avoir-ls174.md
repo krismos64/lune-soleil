@@ -100,9 +100,32 @@ tests voisins mesurent : cinq échecs sur cinq, dont trois au délai de test fau
 de trouver un élément disparu. Les tests de LS-174 vivent donc dans leur propre
 `describe`, dont Playwright borne le `beforeAll`.
 
+## Une fixture partagée que la quatrième largeur a fait craquer
+
+En vérifiant la suite complète, un test voisin s'est mis à échouer : le client au
+nom sans coupure naturelle de `clients-administration`. Son `beforeAll` le crée
+et son `afterAll` le supprime, **une fois par projet** : la première largeur à
+finir supprimait le compte que les autres cherchaient encore.
+
+Le `ON CONFLICT DO NOTHING` rendait la création idempotente, c'est la
+**suppression** qui ne l'était pas. LS-166 n'a rien cassé, elle a ajouté une
+chance de plus que la course se produise.
+
+**Le nom reste commun aux quatre largeurs**, contrairement à ce que le motif du
+dépôt suggère, et pour une raison mesurée : il est calibré pour être le plus long
+possible sans coupure naturelle, ce que ce test mesure à 320 px. Lui ajouter
+« tablette-768 » le fait déborder de **77 px**, donc le test aurait rougi sur un
+défaut fabriqué par sa propre fixture. L'unicité passe par l'identifiant et
+l'adresse.
+
+Le pouvoir du test a été vérifié après coup : retirer `overflow-wrap: anywhere`
+de `.nom` le fait déborder de **125 px**, exactement la valeur que le commentaire
+du CSS annonce.
+
 ## État des tickets
 
-**LS-174 livrée**, commits `f9945b1` et `1a544e6`. Reste à fusionner sur `main`.
+**LS-174 livrée**, commits `f9945b1`, `1a544e6` et `bc9c04e`. Reste à fusionner
+sur `main`.
 
 **LS-166 close** dans la session précédente, PR #296 fusionnée : le compte passe
 à **140 tickets terminés sur 192**.
