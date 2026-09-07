@@ -72,6 +72,30 @@ mesuré à 5/5 avec les neuf comptes déjà en base, et un échec en 196 ms, don
 un refus de connexion et non sur une inscription. La vérification passe par une
 lecture SQL, et la préparation pose l'état de session de chaque largeur.
 
+### Le plafond de `/change-password`, et un arbitrage
+
+Le ticket ne parlait que de `/sign-up/email`. Le compte des appels a montré un
+troisième cas, structurel celui-là : `compte-profil` appelle
+`/change-password` **deux fois**, le refus d'un mot de passe faux et le
+changement lui-même. Aux trois largeurs cela fait six appels pour **cinq
+places**.
+
+Aucun des six n'est supprimable, ce sont les mesures elles-mêmes, et Better Auth
+compte par IP sans option par session, vérifié via Context7.
+
+**J'ai essayé un décalage de 25 secondes par largeur, et il ne marchait pas** :
+les six appels restaient dans la même fenêtre glissante de 60 secondes,
+seulement étalés. C'est le piège des 21 secondes, reproduit par moi quelques
+heures après l'avoir documenté. Le porter à 65 secondes fonctionnait, au prix de
+quatre minutes d'attente pure par exécution, payées par la CI et le contrôle
+nocturne à chaque fois.
+
+**Arbitrage de Christophe** : limiter ces deux tests à 320 px, motif déjà
+appliqué par LS-113 sur `compte-reauthentification`. Le rendu du formulaire
+reste couvert aux trois largeurs par les cinq autres tests du fichier ; ce qui
+est restreint est le comportement du changement, qui ne dépend pas de la
+largeur.
+
 ## Mon erreur de protocole
 
 **Je purgeais les comptes sans purger `rate_limit`**, qui est persisté en base
@@ -84,9 +108,16 @@ Une mesure sur « base vierge » doit purger les deux tables.
 
 ## Le garde-fou
 
-`verifier-fixtures-e2e.sh` porte quatre sens, tous prouvés par mutation :
-adresse construite à l'exécution, réessai espacé, largeur absente de
-`PROJETS_LARGEUR`, et fenêtre recopiée qui cesserait de couvrir le plafond réel.
+`verifier-fixtures-e2e.sh` porte cinq sens, tous prouvés par mutation : adresse
+construite à l'exécution, réessai espacé, largeur absente de
+`PROJETS_LARGEUR`, fenêtre recopiée qui cesserait de couvrir le plafond réel, et
+attente **calculée**.
+
+Ce cinquième sens vient d'un angle mort trouvé sur le contrôle lui-même : il
+cherchait un nombre écrit en clair, et il est **resté vert** sur
+`waitForTimeout(rang * DECALAGE_MS)`, une attente de 25 à 50 secondes que je
+venais d'écrire. Un contrôle écrit en réaction à un défaut reconnaît la forme de
+ce défaut-là, et protège le passé plutôt que la règle.
 
 Deux exemptions seulement, nommées fichier par fichier et dont l'existence est
 elle-même vérifiée : `connexion-administration.spec.ts`, qui doit consommer le
