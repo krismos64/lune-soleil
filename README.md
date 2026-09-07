@@ -730,6 +730,8 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-lien-evitement-mutation.sh            # prouve le précédent par mutation
 ./scripts/verifier-ponctuation-chargement.sh             # les annonces de chargement, ponctuation et caractère, LS-195
 ./scripts/verifier-ponctuation-chargement-mutation.sh    # prouve le précédent par mutation
+./scripts/verifier-bascule-mot-de-passe.sh               # tout champ de mot de passe client porte sa bascule, LS-179
+./scripts/verifier-bascule-mot-de-passe-mutation.sh      # prouve le précédent par mutation
 ./scripts/engendrer-medias-test.mjs                      # les déclinaisons des photos de test, avant le build e2e, LS-187
 ./scripts/verifier-medias-test.sh                        # le générateur ci-dessus contre la fixture et ADR-007
 ./scripts/verifier-seo.sh                        # métadonnées de référencement de toute route, LS-137
