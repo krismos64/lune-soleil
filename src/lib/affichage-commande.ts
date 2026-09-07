@@ -16,17 +16,25 @@
  * l'importaient deja par des chemins relatifs remontants, `../commandes/
  * affichage`, ce qui signalait qu'il n'etait plus a sa place.
  *
- * UN ENUM AJOUTE FAIT ECHOUER LE `type-check` sur `LIBELLES_STATUT` ET
- * `LIBELLES_LIVRAISON`, tous deux exhaustifs : c'est ce qui empeche un statut
- * ou un mode d'apparaitre vide a l'ecran, piege deja rencontre sur ce projet.
+ * UN ENUM AJOUTE FAIT ECHOUER LE `type-check` sur `LIBELLES_STATUT`,
+ * `LIBELLES_LIVRAISON` ET `LIBELLES_ORIGINE`, tous trois exhaustifs : c'est ce
+ * qui empeche un statut, un mode ou une origine d'apparaitre vide ou faux a
+ * l'ecran, piege deja rencontre trois fois sur ce projet.
  *
  * `LIBELLES_LIVRAISON` ne l'etait PAS jusqu'a la revue frontend de LS-57, et
- * cette phrase l'annonçait deja pour les deux : un commentaire qui promet plus
- * que le code est ce qui a laisse l'asymetrie passer.
+ * `formaterOrigine` etait un `switch` a `default` jusqu'a LS-143. Cette phrase
+ * les annonçait deja tous : un commentaire qui promet plus que le code est ce
+ * qui a laisse les deux asymetries passer, la seconde pendant onze jours de
+ * plus que la premiere.
  *
  * `LIBELLES_PAIEMENT` reste volontairement faible, voir son propre commentaire.
  */
-import type { ModeLivraison, StatutCommande } from "@/generated/prisma/enums";
+import type {
+  ModeLivraison,
+  OrigineEcriture,
+  StatutCommande,
+  StatutPaiement,
+} from "@/generated/prisma/enums";
 
 /** Libelle affichable d'un statut, jamais la valeur brute de l'enum. */
 export const LIBELLES_STATUT: Record<StatutCommande, string> = {
@@ -41,13 +49,22 @@ export const LIBELLES_STATUT: Record<StatutCommande, string> = {
 /**
  * Libelle d'un statut de paiement, axe distinct du statut de commande.
  *
- * `Record<string, string>` EST ASSUME ICI, a la difference des deux tables
- * voisines : les colonnes de paiement sont lues en `string` par
- * l'administration, qui applique deja un repli. Aucun ecran client ne
- * l'emploie. Le jour ou l'un le fera, ce type devra devenir exhaustif comme
- * les autres.
+ * `Record<StatutPaiement, string>` DEPUIS LS-143, et cette table etait le
+ * JUMEAU EXACT de `formaterOrigine` : un `Record<string, string>` indexe par
+ * une valeur d'enum que le service elargissait en `string`. Un sixieme statut
+ * de paiement s'affichait en majuscules brutes a l'exploitante, `REMBOURSE_
+ * PARTIELLEMENT` au milieu d'un ecran accentue, sans qu'aucun type ni aucun
+ * test ne rougisse.
+ *
+ * Son commentaire annonçait deja la correction, « le jour ou un ecran client
+ * l'emploiera, ce type devra devenir exhaustif comme les autres ». Attendre cet
+ * ecran etait une erreur de raisonnement : c'est l'ELARGISSEMENT au service qui
+ * ouvrait le trou, pas l'identite de l'appelant.
+ *
+ * LE REPLI `?? paiement.statut` DE L'APPELANT DEVIENT INATTEIGNABLE et doit le
+ * rester : le type garantit desormais la presence de la cle.
  */
-export const LIBELLES_PAIEMENT: Record<string, string> = {
+export const LIBELLES_PAIEMENT: Record<StatutPaiement, string> = {
   EN_ATTENTE: "En attente",
   REUSSI: "Réussi",
   ECHOUE: "Échoué",
@@ -94,21 +111,40 @@ export function formaterDate(date: Date): string {
 }
 
 /**
+ * Libelle d'une origine d'ecriture, regle S9.
+ *
+ * `Record<OrigineEcriture, string>` ET NON un `switch` a `default`, corrige par
+ * LS-143. Le `switch` precedent rendait « Système » pour tout ce qu'il ne
+ * connaissait pas : une quatrieme valeur ajoutee a l'enum se serait affichee
+ * comme une ecriture systeme, donc FAUSSEMENT, sans qu'aucun type ni aucun test
+ * ne rougisse. Une origine erronee dans l'historique est plus trompeuse qu'un
+ * champ vide, puisqu'elle affirme quelque chose.
+ *
+ * C'est la troisieme forme du meme piege sur ce depot, apres le predicat
+ * d'index partiel et `LIBELLES_LIVRAISON` : l'ajout d'une valeur d'enum doit
+ * casser le `type-check`, jamais dependre d'une vigilance a la relecture.
+ */
+export const LIBELLES_ORIGINE: Record<OrigineEcriture, string> = {
+  SYSTEME: "Système",
+  ADMIN: "Administration",
+  RECONCILIATION: "Réconciliation automatique",
+};
+
+/**
  * Qui a decide une transition, en clair.
  *
  * LA DISTINCTION EST LE POINT DE L'HISTORIQUE, regle S9 : savoir si une commande
  * a ete avancee par une personne ou par une tache est precisement ce qu'on vient
  * y chercher six mois plus tard.
+ *
+ * LE PARAMETRE EST TYPE `OrigineEcriture` ET NON `string`, et c'est ce qui porte
+ * la protection : la colonne `origine` est un enum au schema, a la difference
+ * des colonnes d'historique de `traduireStatut` qui sont bien des `string`. Un
+ * `string` en entree rouvrirait le trou que la table exhaustive vient de
+ * fermer, en rendant `undefined` pour une valeur inconnue.
  */
-export function formaterOrigine(origine: string): string {
-  switch (origine) {
-    case "ADMIN":
-      return "Administration";
-    case "RECONCILIATION":
-      return "Réconciliation automatique";
-    default:
-      return "Système";
-  }
+export function formaterOrigine(origine: OrigineEcriture): string {
+  return LIBELLES_ORIGINE[origine];
 }
 
 /**

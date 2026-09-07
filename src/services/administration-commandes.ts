@@ -20,6 +20,7 @@
 import type { Prisma } from "@/generated/prisma/client";
 import type {
   ModeLivraison,
+  OrigineEcriture,
   StatutCommande,
   StatutPaiement,
 } from "@/generated/prisma/enums";
@@ -160,16 +161,31 @@ export type DetailCommande = {
     prixFigeCentimes: number;
     quantite: number;
   }[];
+  /*
+   * `statut` EST TYPE PAR L'ENUM DEPUIS LS-143, meme raison que `origine`
+   * ci-dessous : l'elargir en `string` privait `LIBELLES_PAIEMENT` de toute
+   * exhaustivite, un statut ajoute s'affichant alors en majuscules brutes.
+   */
   paiements: {
-    statut: string;
+    statut: StatutPaiement;
     montantCentimes: number;
     montantRembourseCentimes: number;
     confirmeA: Date | null;
   }[];
+  /**
+   * L'historique des transitions, regle S9.
+   *
+   * `origine` EST TYPEE PAR L'ENUM, ses deux voisines NON, et l'asymetrie est
+   * voulue. Les colonnes de statut conservent ce qui a ete ecrit, y compris un
+   * statut qui n'existerait plus, d'ou le `string` et le repli de
+   * `traduireStatut`. `origine` est un enum au schema : l'elargir en `string`
+   * jetait le type que Prisma rend et privait `formaterOrigine` de toute
+   * exhaustivite, ce qui est le defaut corrige par LS-143.
+   */
   historiques: {
     statutPrecedent: string | null;
     statutNouveau: string;
-    origine: string;
+    origine: OrigineEcriture;
     creeA: Date;
   }[];
   /** Les transitions que l'exploitante peut declencher depuis cet etat. */
