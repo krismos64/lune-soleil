@@ -38,9 +38,9 @@ Comptes **relevés dans Jira** le 3 septembre 2026 en fin de session, jamais
 recopiés de mémoire : un chiffre écrit à la main se périme sans bruit, et
 ce tableau a déjà annoncé l'état du 27 août plusieurs jours de trop.
 
-**136 tickets terminés sur 192, soit 71 %**, relevés dans Jira le 7 septembre
-2026 après la fermeture de LS-168, LS-201, LS-179, LS-156, puis LS-143, LS-161
-et LS-202.
+**137 tickets terminés sur 192, soit 71 %**, relevés dans Jira le 7 septembre
+2026 après la fermeture de LS-168, LS-201, LS-179, LS-156, puis LS-143, LS-161,
+LS-202 et LS-9.
 Le total est passé de 180 à
 192 tickets depuis le relevé précédent, LS-202 comprise, créée en livrant : le dénominateur bouge autant que le numérateur, et un pourcentage
 qui progresse peut recouvrir un périmètre qui s'élargit.
@@ -82,9 +82,16 @@ sont entrés au même moment, LS-143 et LS-144.
 27 août 2026 parce que le code les avait dépassés : le benchmark, LS-10, dont les
 conclusions sont passées dans `frontend-design.md` et ADR-026 ; le diagramme de
 séquence, LS-14, que `PARCOURS.md` et le test de bout en bout couvrent deux fois ;
-le filaire de création produit, LS-15, dont l'écran existe depuis LS-100. Restent
-quatre tickets qui dépendent de démarches et non du code, LS-9, LS-18, LS-19 et
-LS-20.
+le filaire de création produit, LS-15, dont l'écran existe depuis LS-100.
+
+**LS-9 est close depuis le 7 septembre 2026**, arbitrage de Christophe :
+**Confluence est abandonné** comme espace documentaire, Jira portant le suivi et
+`docs/` la documentation technique. C'était le seul point qui la gardait ouverte,
+cinq pages sur sept étant restées vides depuis juillet. La hiérarchie des sources
+de vérité de `CLAUDE.md` perd ce maillon.
+
+Restent **deux** tickets qui dépendent de démarches et non du code, LS-19 et
+LS-20, relevés dans Jira le 7 septembre 2026.
 
 **Le compte Stripe est ouvert depuis le 31 août 2026**, LS-18 close. Le compte
 bancaire professionnel qui bloquait la démarche depuis le 29 juillet existe.
