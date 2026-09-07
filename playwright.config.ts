@@ -68,8 +68,43 @@ export default defineConfig({
    * serait atteint le premier, ce qui rendrait un message moins precis.
    */
   expect: {
-    timeout: 15_000,
+    timeout: 10_000,
   },
+
+  /*
+   * LE PARALLELISME EST BORNE, LS-201, ET C'EST LA CAUSE COMMUNE DES ECHECS.
+   *
+   * ------------------------------------------------------------------
+   * PLAYWRIGHT PREND LA MOITIE DES COEURS LOGIQUES par defaut, verifie via
+   * Context7, soit CINQ travailleurs sur cette machine. Ce calcul ne connait ni
+   * le serveur Next.js ni PostgreSQL, qui tournent pourtant a cote et servent
+   * chacune de leurs requetes.
+   *
+   * MESURE DU 7 SEPTEMBRE 2026 : charge moyenne de 7,59 sur dix coeurs pendant
+   * la suite. Les rendus serveur s'allongeaient au point de depasser le delai
+   * des assertions, et les tests qui perdaient la course N'ETAIENT JAMAIS LES
+   * MEMES d'une execution a l'autre.
+   *
+   * ELEVER LE DELAI NE CORRIGEAIT PAS, IL DEPLACAIT LE SEUIL. Passe de cinq a
+   * quinze secondes, les echecs sont revenus a 15,7 s, 18,7 s et 15,3 s : la
+   * meme cause, mesuree plus haut. C'est ce qui a fait chercher la saturation
+   * plutot qu'un enieme plafond.
+   *
+   * TROIS TRAVAILLEURS laissent de la marge au serveur et a la base. La suite
+   * s'allonge de quelques dizaines de secondes, ce qui est sans commune mesure
+   * avec le cout d'un controle nocturne qui rougit sans raison : LS-199 a
+   * repare l'alerte, un bruit permanent la rendrait a nouveau inutile.
+   *
+   * DEUX EN INTEGRATION CONTINUE, ou l'executeur GitHub est plus modeste que
+   * cette machine et n'a aucune raison de mieux encaisser cinq travailleurs.
+   * ------------------------------------------------------------------
+   *
+   * LE DELAI D'ASSERTION EST REDESCENDU A DIX SECONDES pour la meme raison :
+   * une fois la saturation levee, un plafond eleve ne protege plus de rien et
+   * rend seulement l'echec d'un test reellement casse long a obtenir. Dix
+   * secondes couvrent un aller-retour serveur normal avec une marge nette.
+   */
+  workers: process.env.CI ? 2 : 3,
 
   use: {
     baseURL: URL_BASE,
@@ -154,7 +189,8 @@ export default defineConfig({
        * PLAYWRIGHT REPARTIT LES FICHIERS D'UN MEME PROJET sur plusieurs
        * travailleurs par defaut : les cinq preparations demarraient donc
        * ENSEMBLE, et leurs inscriptions tombaient dans la meme seconde. Mesure
-       * du 7 septembre 2026 : « Running 3 tests using 3 workers », et
+       * du 7 septembre 2026, AVANT que LS-201 borne le parallelisme global :
+       * « Running 3 tests using 3 workers », et
        * `comptes-profil.setup.ts` echouait en 429 des son premier appel, avant
        * meme d'avoir pu espacer quoi que ce soit.
        *
