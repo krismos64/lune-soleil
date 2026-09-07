@@ -86,6 +86,14 @@ occurrence, celle du commentaire d'en-tête, et le contrôle était resté vert 
 la bonne raison, le code étant intact. C'est en cherchant pourquoi cette
 mutation ne rougissait pas que la vraie cible est apparue.
 
+**La preuve est passée à l'écrit** en fin de session, les cinq cas ayant d'abord
+été joués à la main : `verifier-bascule-mot-de-passe-mutation.sh` les rejoue,
+cinq sur cinq. Il porte les deux gardes héritées des sessions précédentes,
+l'état de référence exigé vert, LS-196, et le refus de tourner sur un arbre sale,
+la restauration partant de `HEAD` et non de l'index. Comme les autres scripts de
+mutation du dépôt, il ne tourne pas en intégration continue : la suite complète
+dure trente-cinq minutes, elle se lance sur les cas neufs.
+
 ## Mesures
 
 Rendu réel à 320 px, valeurs et non seuils franchis :
