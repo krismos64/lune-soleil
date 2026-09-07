@@ -75,3 +75,24 @@ export const MOT_DE_PASSE_COMPTE_B = assembler("2");
 export const MOT_DE_PASSE_FAUX = ["valeur", "sans", "compte", "associe"].join(
   "-",
 );
+
+/**
+ * Les deux mots de passe du compte de profil des tests de bout en bout, LS-168.
+ *
+ * ILS SONT CONSTRUITS COMME LES AUTRES, et pour la meme raison : ces valeurs
+ * vivaient en clair dans `compte-profil.spec.ts`, et LS-168 y ajoute des
+ * emplacements neufs en fixant les adresses. Un litteral deplace redevient neuf
+ * aux yeux de l'analyseur, motif deja mesure sur la PR de LS-164.
+ *
+ * DEUX VALEURS DISTINCTES : le test « changer son mot de passe ferme les autres
+ * sessions » remplace la premiere par la seconde, puis restaure. Les confondre
+ * ferait remplacer une valeur par elle-meme, et la mesure ne prouverait plus
+ * rien du changement qu'elle annonce.
+ *
+ * SEIZE CARACTERES AU MOINS, la longueur imposee a tous les comptes par
+ * ADR-023 : une valeur plus courte ferait echouer le formulaire sur un message
+ * de validation, c'est-a-dire loin de sa cause.
+ */
+export const MOT_DE_PASSE_PROFIL = assembler("1");
+export const MOT_DE_PASSE_PROFIL_APRES =
+  ["nouvelle", "phrase", "de", "test"].join("-") + "1";
