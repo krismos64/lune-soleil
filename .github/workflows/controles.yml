@@ -543,6 +543,13 @@ jobs:
       - name: 6c. Regles Claude confrontees au schema
         run: ./scripts/verifier-regles.sh
 
+      # Coherence du registre des traitements avec le schema, LS-90. Textuel lui
+      # aussi, aucune base requise. Il attrape la table qui entre au schema sans
+      # entrer au registre, defaut qui ne fait rougir ni type ni test, et refuse
+      # qu'une table portant un champ personnel soit rangee hors traitement.
+      - name: 6d. Registre des traitements confronte au schema
+        run: ./scripts/verifier-registre-traitements.sh
+
       # `--strict` sort en 1 sur anomalie, mode ecrit pour cette story. Sans lui
       # le script se contente d'avertir, ce qui convient au hook `Stop` de fin de
       # session mais laisserait passer une derive ici.
@@ -551,15 +558,19 @@ jobs:
       # d'aiguillage, un CLAUDE.md au-dela de 200 lignes, un renvoi vers un
       # fichier inexistant, une fiche memoire hors index, un journal manquant
       # alors que du code a ete commite.
-      - name: 6d. Coherence de la configuration Claude Code
+      - name: 9a. Coherence de la configuration Claude Code
         run: ./scripts/verifier-config-claude.sh --strict
 
-      # Coherence du registre des traitements avec le schema, LS-90. Textuel lui
-      # aussi, aucune base requise. Il attrape la table qui entre au schema sans
-      # entrer au registre, defaut qui ne fait rougir ni type ni test, et refuse
-      # qu'une table portant un champ personnel soit rangee hors traitement.
-      - name: 6e. Registre des traitements confronte au schema
-        run: ./scripts/verifier-registre-traitements.sh
+      # Preuve par mutation du sens « numeros d'etape en doublon » de l'etape
+      # precedente, LS-202. Textuel, secondes.
+      #
+      # CINQ SENS EXERCES, dont deux qui gardent le controle CONTRE LUI-MEME :
+      # deux jobs portant chacun une etape « 1. » ne doivent pas rougir, ce sont
+      # deux sequences independantes ; et `9c bis` ne fait pas doublon avec
+      # `9c`, sans quoi la convention des preuves par mutation serait accusee
+      # partout ou elle est appliquee.
+      - name: 9a bis. Preuve par mutation de la numerotation des etapes
+        run: ./scripts/verifier-numerotation-etapes-mutation.sh
 
       # Coherence des actions sensibles avec ADR-027, LS-81 puis LS-99. Textuel,
       # aucune base requise.
@@ -574,12 +585,12 @@ jobs:
       # declaree que plus rien ne couvre, une ligne d'attente perimee, et depuis
       # LS-99 une Server Action d'administration sans exigerAdministratrice.
       # Aucun type, aucun test et aucun rendu ne bougent sur ces defauts.
-      - name: 6g. Actions sensibles confrontees a ADR-027
+      - name: 9b. Actions sensibles confrontees a ADR-027
         run: ./scripts/verifier-actions-sensibles.sh
 
       # Garde de role sur TOUTE Server Action d'administration, LS-121. Textuel.
       #
-      # POURQUOI IL NE FAIT PAS DOUBLON avec 6g, qui cite pourtant
+      # POURQUOI IL NE FAIT PAS DOUBLON avec 9b, qui cite pourtant
       # exigerAdministratrice. Celui-ci ne regarde que les fichiers touchant a
       # la REAUTHENTIFICATION : il passe explicitement sur tous les autres. Une
       # action d'administration ordinaire, sans garde de fraicheur, lui echappe
@@ -594,12 +605,12 @@ jobs:
       #
       # CE QU'IL VERIFIE PAR FONCTION ET NON PAR FICHIER : une action non gardee
       # voisine de trois actions gardees serait sinon invisible.
-      - name: 6h. Gardes de role des Server Actions d'administration
+      - name: 9c. Gardes de role des Server Actions d'administration
         run: ./scripts/verifier-gardes-administration.sh
 
       # Preuve par mutation du controle precedent, LS-159. Textuel, secondes.
       #
-      # POURQUOI IL EXISTE. Le controle 6h annoncait « 20 actions, toutes
+      # POURQUOI IL EXISTE. Le controle 9c annoncait « 20 actions, toutes
       # gardees » alors que le depot en portait 29 : son releve cherchait
       # `-name "actions.ts"` et ne voyait pas les trois fichiers `actions-*.ts`,
       # soit NEUF actions hors de sa boucle. Les neuf etaient gardees, le trou
@@ -607,9 +618,9 @@ jobs:
       # une cible absente ressemble a un controle vert sur du code sain.
       #
       # CE QU'IL PROUVE : une garde retiree dans CHACUN des trois fichiers
-      # autrefois invisibles fait echouer 6h en NOMMANT l'action. Sans lui,
+      # autrefois invisibles fait echouer 9c en NOMMANT l'action. Sans lui,
       # l'elargissement du motif resterait une intention.
-      - name: 6i. Preuve par mutation des gardes d'administration
+      - name: 9c bis. Preuve par mutation des gardes d'administration
         run: ./scripts/verifier-gardes-administration-mutation.sh
 
       # Resolution de l'adresse client derriere le proxy, LS-91. Textuel, aucune
@@ -621,7 +632,7 @@ jobs:
       # pendant que la colonne adresse_ip du journal des connexions se vide au
       # gre des visiteurs qui envoient un en-tete non analysable. Aucun type,
       # aucun test applicatif et aucun rendu ne bougent.
-      - name: 6f. Resolution de l'adresse client derriere le proxy
+      - name: 9d. Resolution de l'adresse client derriere le proxy
         run: ./scripts/verifier-nginx.sh
 
       # Rendu du contenu des sections de fiche produit, LS-100, regle C23.
@@ -637,7 +648,7 @@ jobs:
       # Son second sens verifie que frontend-design.md enonce toujours la regle :
       # un controle qui applique une interdiction qu'aucun document ne porte
       # laisse la session suivante l'ignorer de bonne foi.
-      - name: 6h. Contenu de section rendu en texte simple
+      - name: 9e. Contenu de section rendu en texte simple
         run: ./scripts/verifier-rendu-texte-simple.sh
 
       # Textuel, aucune base ni conteneur requis.
@@ -656,7 +667,7 @@ jobs:
       # et LS-130, tous deux sur un etat que les donnees de test ne produisaient
       # jamais. Ce script lit le CSS : il voit les branches que personne
       # n'amorce, et ne voit pas l'heritage. Retirer l'un rouvre une moitie.
-      - name: 6i. Contraste des paires couleur et fond
+      - name: 9f. Contraste des paires couleur et fond
         run: ./scripts/verifier-contraste.sh
 
       # Textuel, aucune base ni conteneur requis.
@@ -666,7 +677,7 @@ jobs:
       # `--ls-border` donne 1,57:1 sur blanc. Le defaut a vecu vingt-trois jours
       # sur vingt-cinq fichiers d'ecran, les champs y etant invisibles a vide.
       #
-      # IL NE FAIT PAS DOUBLE EMPLOI AVEC 6i, ET C'EST STRUCTUREL. L'etape
+      # IL NE FAIT PAS DOUBLE EMPLOI AVEC 9f, ET C'EST STRUCTUREL. L'etape
       # precedente ecarte DELIBEREMENT toute propriete en `-color` par un
       # `(?<!-)` devant `color`, sans quoi une bordure decorative serait mesuree
       # comme du texte et le controle accuserait du code correct. La consequence
@@ -674,15 +685,15 @@ jobs:
       # que le defaut de LS-108 est passe. Les deux etapes mesurent deux choses
       # disjointes, avec les deux seuils que la norme distingue :
       #
-      #   6i  texte sur fond          4,5:1, ou 3:1 si large
-      #   6j  bordure d'un controle   3:1, sans exception de taille
+      #   9f  texte sur fond          4,5:1, ou 3:1 si large
+      #   9g  bordure d'un controle   3:1, sans exception de taille
       #
       # SA PORTE DE SORTIE EST EPROUVEE. Un marqueur `@bordure-decorative` pose
       # dans le CSS exempte un element que son fond ou son texte identifie deja,
       # et le script EXIGE une raison ecrite : sans elle, n'importe quel defaut
       # se tairait d'un commentaire de trois mots. Le cas 4 de sa preuve par
       # mutation exerce precisement ce refus.
-      - name: 6i bis. Bordure des controles de saisie, seuil de 3:1
+      - name: 9g. Bordure des controles de saisie, seuil de 3:1
         run: ./scripts/verifier-bordure-controle.sh
 
       # Textuel, aucune base ni conteneur requis.
@@ -702,7 +713,7 @@ jobs:
       # Son second sens verifie que les trois pages d'erreur existent toujours :
       # sans lui, le controle resterait vert sur le depot d'AVANT LS-146, ou
       # aucune n'existait.
-      - name: 6j. Aucun loading.tsx ne masque un 404
+      - name: 9h. Aucun loading.tsx ne masque un 404
         run: ./scripts/verifier-loading-et-404.sh
 
       # Textuel, aucune base ni conteneur requis.
@@ -717,11 +728,11 @@ jobs:
       # l'instant ou l'armature a disparu. Le seizieme ecran reproduirait
       # l'oubli sans qu'aucune assertion ne rougisse.
       #
-      # IL EST LE PENDANT DE 6j, ET LES DEUX SONT NECESSAIRES : celui-ci EXIGE
-      # un etat de chargement, 6j INTERDIT la forme qui casserait le 404. Un
+      # IL EST LE PENDANT DE 9h, ET LES DEUX SONT NECESSAIRES : celui-ci EXIGE
+      # un etat de chargement, 9h INTERDIT la forme qui casserait le 404. Un
       # ecran dont un descendant appelle `notFound()` doit satisfaire les deux,
       # donc passer par un `<Suspense>` interne.
-      - name: 6k. Tout ecran d'administration a un etat de chargement
+      - name: 9i. Tout ecran d'administration a un etat de chargement
         run: ./scripts/verifier-chargement-administration.sh
 
       # Textuel, aucune base ni conteneur requis.
@@ -735,7 +746,7 @@ jobs:
       # qu'aucun texte ne peut voir, que le focus se DEPLACE vraiment. Ce
       # controle couvre les vingt-cinq et attrape le vingt-sixieme des son
       # ecriture, ce qu'aucun test ne fait.
-      - name: 6l. Le lien d'evitement de l'administration a sa cible partout
+      - name: 9j. Le lien d'evitement de l'administration a sa cible partout
         run: ./scripts/verifier-lien-evitement.sh
 
       # Textuel, aucune base ni conteneur requis.
@@ -751,7 +762,7 @@ jobs:
       #
       # IL VERIFIE AUSSI LE CARACTERE, trois points successifs passant la
       # relecture visuelle sans s'entendre ni se chercher de la meme facon.
-      - name: 6n. Les annonces de chargement se terminent par des points de suspension
+      - name: 9k. Les annonces de chargement se terminent par des points de suspension
         run: ./scripts/verifier-ponctuation-chargement.sh
 
       # Textuel, aucune base ni conteneur requis.
@@ -770,7 +781,7 @@ jobs:
       # LE TICKET N'EN LISTAIT QUE QUATRE quand le depot en portait six, les
       # deux champs du profil ayant ete oublies. Une liste ecrite a la main est
       # une opinion ; ce controle relit le depot.
-      - name: 6s. Tout champ de mot de passe client porte sa bascule
+      - name: 9l. Tout champ de mot de passe client porte sa bascule
         run: ./scripts/verifier-bascule-mot-de-passe.sh
 
       # Textuel, aucune base ni conteneur requis.
@@ -790,7 +801,7 @@ jobs:
       # concordance du secret de webhook et processus exposes. Il a trouve deux
       # defauts reels le jour de son ecriture, dont un secret de webhook
       # indiscernable a l'oeil du bon.
-      - name: 6t. Le fichier .env.example est coherent
+      - name: 9m. Le fichier .env.example est coherent
         run: ./scripts/verifier-environnement.sh --exemple-seul
 
       # Textuel, aucune base ni conteneur requis.
@@ -804,7 +815,7 @@ jobs:
       # refuse tout serait « sur » et se ferait desactiver a la premiere gene.
       # Cinq commandes legitimes doivent passer, cinq fuites doivent etre
       # refusees.
-      - name: 6u. Le hook refuse un secret passe en argument
+      - name: 9n. Le hook refuse un secret passe en argument
         run: ./scripts/verifier-hook-secret-argument.sh
 
       # Textuel, aucune base ni conteneur requis.
@@ -818,7 +829,7 @@ jobs:
       # COMPARE. Un media de test ou une largeur ajoutee sans etre engendree
       # ferait pointer les URL vers des fichiers absents, et le test des sept
       # URL rougirait en accusant le code.
-      - name: 6o. Le generateur de medias de test est aligne sur ses sources
+      - name: 9o. Le generateur de medias de test est aligne sur ses sources
         run: ./scripts/verifier-medias-test.sh
 
       # Textuel, aucune base ni conteneur requis.
@@ -844,7 +855,7 @@ jobs:
       # points sont couverts par `tests/e2e/referencement.spec.ts`, qui lit le
       # HTML et les fichiers reellement servis. Un controle textuel ne remplace
       # pas un test d'execution.
-      - name: 6m. Metadonnees de referencement
+      - name: 9p. Metadonnees de referencement
         run: ./scripts/verifier-seo.sh
 
       # Textuel, aucune base ni conteneur requis.
@@ -869,7 +880,7 @@ jobs:
       # reellement RENDUE. C'est `tests/e2e/mentions-retractation.spec.ts` qui
       # lit le HTML servi et mesure la position de la mention par rapport au
       # bouton d'engagement.
-      - name: 6n. Mentions de retractation aux trois emplacements
+      - name: 9q. Mentions de retractation aux trois emplacements
         run: ./scripts/verifier-mentions-retractation.sh
 
       # Textuel, aucune base ni conteneur requis.
@@ -884,7 +895,7 @@ jobs:
       # aucune session de developpement ne l'affiche. Le jour ou ADR-022 change
       # une couleur, la copie diverge en SILENCE et la divergence se decouvre
       # pendant la panne, sur l'ecran qui doit inspirer confiance.
-      - name: 6k. Palette de secours alignee sur ADR-022
+      - name: 9r. Palette de secours alignee sur ADR-022
         run: ./scripts/verifier-palette-secours.sh
       # CE QU'IL GARDE : que chaque ecran d'administration livre soit atteignable
       # depuis la barre, LS-162. Il confronte les rubriques declarees aux routes
@@ -896,11 +907,11 @@ jobs:
       # tests de bout en bout appellent `page.goto()` avec l'URL en dur, donc
       # l'absence totale de menu ne faisait rougir aucune assertion. Une liste
       # ecrite a la main reproduirait le motif d'un cran plus loin.
-      - name: 6l. Chaque ecran d'administration est navigable
+      - name: 9s. Chaque ecran d'administration est navigable
         run: ./scripts/verifier-navigation-administration.sh
 
       # ----------------------------------------------------------------------
-      # Controle 6n, LS-191. La page qui LEVE a dessein reste inatteignable.
+      # Controle 9t, LS-191. La page qui LEVE a dessein reste inatteignable.
       #
       # `administration/echec-rendu` existe pour que la suite de bout en bout
       # traverse la vraie frontiere d'erreur, sous le vrai layout : le critere 6
@@ -912,7 +923,7 @@ jobs:
       # serveur a volonte. Aucun test d'execution ne le verrait : la garde
       # placee apres le `throw` ne s'exprime jamais.
       # ----------------------------------------------------------------------
-      - name: 6o. La route d'echec reste gardee
+      - name: 9t. La route d'echec reste gardee
         run: ./scripts/verifier-route-echec.sh
 
       # Preuve par mutation du controle precedent, LS-191. Textuel, secondes.
@@ -923,11 +934,11 @@ jobs:
       # Et l'un de ses propres cas ne mutait rien, `\Q...\E` rendant `\n`
       # litteral : il comptait comme non detecte sans qu'aucun defaut n'ait ete
       # introduit.
-      - name: 6p. Preuve par mutation de la route d'echec
+      - name: 9t bis. Preuve par mutation de la route d'echec
         run: ./scripts/verifier-route-echec-mutation.sh
 
       # ----------------------------------------------------------------------
-      # Controle 6q. Les fixtures de bout en bout ne consomment pas le plafond
+      # Controle 9u. Les fixtures de bout en bout ne consomment pas le plafond
       # d'inscription, LS-168. Textuel, secondes.
       #
       # CE QU'IL EMPECHE. Une fixture qui fabrique son adresse a l'execution cree
@@ -946,7 +957,7 @@ jobs:
       # LA MESURE QUI L'A MOTIVE : 118 comptes de test accumules sur la base de
       # developpement, dont 68 laisses par la seule fixture verifiee.
       # ----------------------------------------------------------------------
-      - name: 6q. Les fixtures e2e n'inscrivent pas a chaque execution
+      - name: 9u. Les fixtures e2e n'inscrivent pas a chaque execution
         run: ./scripts/verifier-fixtures-e2e.sh
 
       # Preuve par mutation du controle precedent, LS-168. Textuel, secondes.
@@ -954,11 +965,11 @@ jobs:
       # TROIS SENS EXERCES : une adresse construite a l'execution, un reessai
       # espace, et une largeur retiree de `PROJETS_LARGEUR`. Le troisieme est le
       # defaut silencieux, la suite passerait en cessant d'amorcer un compte.
-      - name: 6r. Preuve par mutation des fixtures e2e
+      - name: 9u bis. Preuve par mutation des fixtures e2e
         run: ./scripts/verifier-fixtures-e2e-mutation.sh
 
       # ----------------------------------------------------------------------
-      # Controle 6v. Un aria-describedby ne vise jamais un element portant
+      # Controle 9v. Un aria-describedby ne vise jamais un element portant
       # aria-label, LS-161, regle C39. Textuel, secondes.
       #
       # CE QU'IL GARDE, et le defaut est SILENCIEUX : le calcul de la
@@ -973,7 +984,7 @@ jobs:
       # a son annonce, seul le CONTENU est vocalise. LS-160 n'avait corrige
       # qu'un des deux ecrans, l'autre a ete recopie de bonne foi.
       # ----------------------------------------------------------------------
-      - name: 6v. Aucune description accessible annulee par un aria-label
+      - name: 9v. Aucune description accessible annulee par un aria-label
         run: ./scripts/verifier-description-accessible.sh
 
       # Preuve par mutation du controle precedent, LS-161. Textuel, secondes.
@@ -982,7 +993,7 @@ jobs:
       # cite EN COMMENTAIRE ne doit pas faire rougir, les deux ecrans corriges
       # nommant l'attribut pour expliquer son absence ; et une cible vivant
       # dans un AUTRE fichier que celui qui la decrit doit etre vue.
-      - name: 6w. Preuve par mutation des descriptions accessibles
+      - name: 9v bis. Preuve par mutation des descriptions accessibles
         run: ./scripts/verifier-description-accessible-mutation.sh
 
       # ----------------------------------------------------------------------

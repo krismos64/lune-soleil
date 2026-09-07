@@ -105,15 +105,33 @@ Ne pas fusionner tant que les contrôles automatiques ne sont pas au vert.
 6. Validation du schéma et contrôle des migrations
 7. Construction de l'application
 8. Scénarios critiques de bout en bout selon la stratégie retenue
+9. Contrôles textuels, qui n'exigent ni base ni conteneur
 
-Ces huit contrôles tournent automatiquement depuis LS-69,
-`.github/workflows/controles.yml`. S'y ajoutent le format, `npm audit`, et les
-contrôles textuels qui n'exigent ni base ni conteneur : conformité de
-`.claude/rules/` au schéma, cohérence de la configuration Claude Code, registre
-des traitements, résolution de l'adresse client, **cohérence des actions
-sensibles avec ADR-027**, **aucun test ignoré ni focalisé**, **accord du
-socle Zod avec son document de référence**, et **gardes de rôle des Server
-Actions d'administration, doublées de leur preuve par mutation**.
+Ces contrôles tournent automatiquement depuis LS-69,
+`.github/workflows/controles.yml`. S'y ajoutent le format et `npm audit`.
+
+**Le contrôle 9 a été détaché du contrôle 6 par LS-202**, le 7 septembre 2026,
+arbitrage de Christophe. Ces vingt-six étapes vivaient sous le numéro `6x` parce
+qu'elles y avaient été ajoutées à la suite, alors que **quatre seulement
+valident réellement le schéma**. La conséquence n'était pas cosmétique : six
+numéros étaient portés par deux étapes, donc « échec à l'étape 6o » désignait
+deux domaines sans rapport, et l'alphabet était épuisé à 28 étapes pour 25
+lettres.
+
+Le contrôle 9 couvre la conformité de `.claude/rules/` au schéma, la cohérence
+de la configuration Claude Code, la résolution de l'adresse client, la
+**cohérence des actions sensibles avec ADR-027**, les **gardes de rôle des
+Server Actions d'administration**, l'accessibilité mesurée, le référencement, et
+les preuves par mutation qui les éprouvent.
+
+**Une preuve par mutation porte le numéro de ce qu'elle prouve, suffixé `bis`.**
+`9c bis` éprouve `9c` : ce n'est pas un contrôle autonome, et le numéro le dit.
+
+**Le nom du job reste « Les huit controles de CONTRIBUTING ».** Il n'est pas
+descriptif, c'est un **identifiant** : la protection de branche exige ce contexte
+exact, vérifié par l'API le 7 septembre 2026. Le renommer laisserait toute pull
+request en attente d'un résultat qui n'arrive jamais, ce que la section
+« exécution allégée » explique plus bas.
 
 Le dernier est arrivé le 25 août 2026, après qu'une revue de fin de session eut
 trouvé `VALIDATION.md` arrêté à sept schémas quand le socle en portait
