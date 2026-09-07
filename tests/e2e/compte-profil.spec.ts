@@ -40,7 +40,7 @@
 import "dotenv/config";
 
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test } from "@playwright/test";
+import { expect, test, type BrowserContext } from "@playwright/test";
 import { Client } from "pg";
 
 import {
@@ -52,6 +52,7 @@ import {
   MOT_DE_PASSE_PROFIL_APRES,
   adresseMotDePasseProfil,
   adresseProfil,
+  fichierSessionMotDePasse,
   fichierSessionProfil,
 } from "./chemin-session";
 
@@ -140,6 +141,25 @@ async function connecter(page: import("@playwright/test").Page): Promise<void> {
   await page.context().addCookies(cookies);
 }
 
+/**
+ * Lit les cookies d'un etat de session pose par la preparation.
+ *
+ * UN CONTEXTE JETABLE, ferme aussitot : il ne sert qu'a decoder le fichier, et
+ * le laisser ouvert retiendrait un navigateur pour rien.
+ */
+async function cookiesDe(
+  browser: import("@playwright/test").Browser,
+  fichier: string,
+): Promise<Awaited<ReturnType<BrowserContext["cookies"]>>> {
+  const contexte = await browser.newContext({ storageState: fichier });
+
+  try {
+    return await contexte.cookies();
+  } finally {
+    await contexte.close();
+  }
+}
+
 test("le profil s'atteint au clic depuis le compte", async ({ page }) => {
   await connecter(page);
   await page.goto("/compte");
@@ -212,11 +232,24 @@ test("un mot de passe actuel faux est refuse sans rien changer", async ({
     page.getByRole("status", { name: "Changement de mot de passe" }),
   ).toHaveText(/actuel est incorrect/);
 
-  // L'ANCIEN FONCTIONNE TOUJOURS : un refus n'a rien change.
+  /*
+   * L'ANCIEN FONCTIONNE TOUJOURS : un refus n'a rien change. C'est une VRAIE
+   * mesure, elle consomme donc une place de `/sign-in/email` a dessein, une par
+   * largeur sur les cinq disponibles.
+   *
+   * LE STATUT EST ASSERTI, ET PAS SEULEMENT `ok()`, LS-168. Un 429 ferait
+   * echouer ce test en disant « le mot de passe ne fonctionne plus », soit
+   * l'inverse de ce qui se passe : le message d'erreur nomme desormais le
+   * plafond quand c'est lui, ce qui evite exactement le diagnostic errone que
+   * cette story existe pour supprimer.
+   */
   const verification = await page.request.post("/api/auth/sign-in/email", {
     data: { email, password: MOT_DE_PASSE },
   });
-  expect(verification.ok()).toBe(true);
+  expect(
+    verification.status(),
+    `Connexion refusee en ${verification.status()} : ${await verification.text()}`,
+  ).toBe(200);
 });
 
 test("le profil ne deborde pas horizontalement", async ({ page }) => {
@@ -282,29 +315,35 @@ test("changer son mot de passe ferme les autres sessions", async ({
   /*
    * DEUX SESSIONS REELLEMENT DISTINCTES, ET C'EST TOUTE LA MESURE.
    *
-   * `revokeOtherSessions` doit faire tomber l'une et laisser l'autre : les deux
-   * ouvertures sont donc irreductibles, chacune creant sa ligne `session`.
-   * Partager un cookie entre les deux contextes les ferait tomber ENSEMBLE, et
-   * le test verdirait ou rougirait sans plus rien dire du comportement.
+   * `revokeOtherSessions` doit faire tomber l'une et laisser l'autre, donc
+   * chacune doit avoir sa propre ligne `session`. Partager un cookie entre les
+   * deux contextes les ferait tomber ENSEMBLE, et le test verdirait ou
+   * rougirait sans plus rien dire du comportement.
    *
-   * DEUX APPELS PAR LARGEUR, SIX AU TOTAL, sur les cinq places par minute de
-   * `/sign-in/email`. Ils tiennent parce que les tests de ce fichier sont
-   * SERIALISES, `describe.serial`, et que les trois largeurs ne les atteignent
-   * pas en meme temps : c'est le dernier test de chacune, apres six autres.
-   * Le `beforeAll` ne consomme plus rien depuis LS-168, ce qui a libere la
-   * marge qui manquait.
+   * ------------------------------------------------------------------
+   * ELLES SONT LUES ET NON OUVERTES, LS-168, et ma premiere correction s'est
+   * trompee ici.
+   *
+   * J'avais garde les deux ouvertures en ecrivant qu'elles tiennent « parce que
+   * les tests sont serialises ». `describe.serial` n'ordonne que les tests d'un
+   * MEME projet : les trois largeurs atteignent ce test EN MEME TEMPS, ce qui
+   * fait six appels sur les cinq places par minute de `/sign-in/email`. Mesure
+   * du 7 septembre 2026, trois echecs en 74 ms sur la premiere des deux.
+   *
+   * `comptes-profil.setup.ts` pose donc ces deux etats, la preparation etant
+   * sequentielle et pouvant espacer ses ouvertures.
+   * ------------------------------------------------------------------
    */
-  const premiere = await page.request.post("/api/auth/sign-in/email", {
-    data: { email: emailDedie, password: MOT_DE_PASSE },
-  });
-  expect(premiere.ok(), await premiere.text()).toBe(true);
+  await page
+    .context()
+    .addCookies(
+      await cookiesDe(browser, fichierSessionMotDePasse(infos.project.name, 1)),
+    );
 
-  const autre = await browser.newContext();
-  const autrePage = await autre.newPage();
-  const ouverture = await autrePage.request.post("/api/auth/sign-in/email", {
-    data: { email: emailDedie, password: MOT_DE_PASSE },
+  const autre = await browser.newContext({
+    storageState: fichierSessionMotDePasse(infos.project.name, 2),
   });
-  expect(ouverture.ok(), await ouverture.text()).toBe(true);
+  const autrePage = await autre.newPage();
 
   await autrePage.goto("/compte");
   await expect(

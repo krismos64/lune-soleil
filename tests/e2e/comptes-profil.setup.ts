@@ -49,9 +49,10 @@ import {
   PROJETS_LARGEUR,
   adresseMotDePasseProfil,
   adresseProfil,
+  fichierSessionMotDePasse,
   fichierSessionProfil,
 } from "./chemin-session";
-import { inscrireEspace } from "./inscription-espacee";
+import { connecterEspace, inscrireEspace } from "./inscription-espacee";
 
 /*
  * SIX INSCRIPTIONS ESPACEES FONT DEUX MINUTES DANS LE PIRE CAS, celui de la
@@ -82,37 +83,52 @@ preparation("amorcer les comptes du profil", async ({ page, browser }) => {
   }
 
   /*
-   * L'ETAT DE SESSION DE CHAQUE LARGEUR EST POSE ICI, voir
-   * `fichierSessionProfil` pour la raison : `compte-profil` faisait DOUZE
+   * LES ETATS DE SESSION SONT POSES ICI, voir `fichierSessionProfil` et
+   * `fichierSessionMotDePasse` pour la raison : `compte-profil` faisait DOUZE
    * connexions quand `/sign-in/email` en accepte CINQ par minute.
    *
-   * SEULES LES LARGEURS DONT L'ETAT NE VAUT PLUS sont ouvertes, et en regime
-   * etabli aucune ne l'est.
+   * TROIS PAR LARGEUR, NEUF AU TOTAL : la session de travail, plus les DEUX du
+   * test de changement de mot de passe, qui a besoin de deux sessions
+   * reellement distinctes sur le meme compte.
+   *
+   * SEULS LES ETATS QUI NE VALENT PLUS sont rouverts, et en regime etabli aucun
+   * ne l'est.
    */
   for (const projet of PROJETS_LARGEUR) {
-    await ouvrirSessionProfil(browser, projet);
+    await ouvrirSession(
+      browser,
+      fichierSessionProfil(projet),
+      adresseProfil(projet),
+    );
+
+    for (const rang of [1, 2] as const) {
+      await ouvrirSession(
+        browser,
+        fichierSessionMotDePasse(projet, rang),
+        adresseMotDePasseProfil(projet),
+      );
+    }
   }
 });
 
 /**
- * Ouvre la session de travail d'une largeur, si celle de l'execution
- * precedente ne vaut plus.
+ * Ouvre une session et l'enregistre, si celle de l'execution precedente ne vaut
+ * plus.
  *
- * UN CONTEXTE PAR LARGEUR, et non le contexte de la preparation : chaque etat
- * doit porter les cookies d'UN SEUL compte. Les poser tous sur le meme contexte
- * ferait que le dernier connecte ecraserait les precedents, et les trois
- * fichiers designeraient le meme compte.
+ * UN CONTEXTE PAR ETAT, et non le contexte de la preparation : chaque fichier
+ * doit porter les cookies d'UNE SEULE session. Les poser tous sur le meme
+ * contexte ferait que la derniere ouverte ecraserait les precedentes, et les
+ * neuf fichiers designeraient la meme session.
  *
  * ELLE NE CONSOMME RIEN EN REGIME ETABLI : les sessions durent un jour depuis
  * ADR-027, donc l'etat enregistre par l'execution precedente est presque
  * toujours encore valide.
  */
-async function ouvrirSessionProfil(
+async function ouvrirSession(
   browser: import("@playwright/test").Browser,
-  projet: string,
+  fichier: string,
+  email: string,
 ): Promise<void> {
-  const fichier = fichierSessionProfil(projet);
-
   if (await sessionEncoreValide(browser, fichier)) {
     return;
   }
@@ -122,16 +138,14 @@ async function ouvrirSessionProfil(
   try {
     const onglet = await contexte.newPage();
 
-    const reponse = await onglet.request.post("/api/auth/sign-in/email", {
-      data: {
-        email: adresseProfil(projet),
-        password: MOT_DE_PASSE_PROFIL,
-      },
-    });
-
-    // ECHOUER ICI PLUTOT QUE DANS CHAQUE TEST : la vraie cause arrive en tete
-    // de rapport, au lieu de « le formulaire est introuvable » a chaque largeur.
-    expect(reponse.ok(), await reponse.text()).toBe(true);
+    /*
+     * L'AIDE PARTAGEE PORTE L'ESPACEMENT, sur le compteur de `/sign-in/email`
+     * qui est distinct de celui de l'inscription. Neuf ouvertures sur base
+     * neuve pour cinq places par minute : voir `inscription-espacee.ts`. Elle
+     * echoue elle-meme si la connexion est refusee, avec la vraie cause en tete
+     * de rapport.
+     */
+    await connecterEspace(onglet, email, MOT_DE_PASSE_PROFIL);
 
     await contexte.storageState({ path: fichier });
   } finally {
