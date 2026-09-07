@@ -2,6 +2,9 @@
 # Vérifie que tout champ de mot de passe côté CLIENT passe par le composant de
 # bascule, LS-179, et qu'aucun `type="password"` nu ne réapparaît.
 #
+# Il applique la règle **C38** de `.claude/rules/frontend-design.md`, qui porte
+# le raisonnement complet et les cinq propriétés garanties par le composant.
+#
 # POURQUOI UN CONTRÔLE TEXTUEL ALORS QUE LA SUITE MESURE DÉJÀ LE RENDU. Les
 # tests de bout en bout exercent DEUX écrans, connexion et inscription, et les
 # tests en jsdom exercent le composant lui-même. Aucun des deux ne dit rien du
