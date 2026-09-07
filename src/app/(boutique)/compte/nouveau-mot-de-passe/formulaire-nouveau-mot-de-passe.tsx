@@ -16,6 +16,8 @@ import { useEffect, useRef, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { LONGUEUR_MINIMALE_MOT_DE_PASSE } from "@/lib/mot-de-passe";
 
+import { ChampMotDePasse } from "@/components/champ-mot-de-passe";
+
 import styles from "../authentification.module.css";
 
 type EtatSoumission = "repos" | "en-cours" | "change" | "erreur";
@@ -127,15 +129,14 @@ export function FormulaireNouveauMotDePasse({
     <form className={styles.formulaire} onSubmit={changer}>
       <div className={styles.champ}>
         <label htmlFor="mot-de-passe">Nouveau mot de passe</label>
-        <input
+        <ChampMotDePasse
           id="mot-de-passe"
           name="mot-de-passe"
-          type="password"
           autoComplete="new-password"
           required
           minLength={LONGUEUR_MINIMALE_MOT_DE_PASSE}
           value={motDePasse}
-          onChange={(evenement) => setMotDePasse(evenement.target.value)}
+          onChange={setMotDePasse}
           disabled={enCours}
           aria-describedby="aide-mot-de-passe"
         />

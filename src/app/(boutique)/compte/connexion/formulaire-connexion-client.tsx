@@ -17,6 +17,8 @@ import Link from "next/link";
 import { signIn } from "@/lib/auth-client";
 import { LONGUEUR_MINIMALE_MOT_DE_PASSE } from "@/lib/mot-de-passe";
 
+import { ChampMotDePasse } from "@/components/champ-mot-de-passe";
+
 import styles from "../authentification.module.css";
 
 /** Ou l'on arrive une fois connecte. Chemin relatif, jamais une URL fournie. */
@@ -88,15 +90,14 @@ export function FormulaireConnexionClient() {
 
       <div className={styles.champ}>
         <label htmlFor="mot-de-passe">Mot de passe</label>
-        <input
+        <ChampMotDePasse
           id="mot-de-passe"
           name="mot-de-passe"
-          type="password"
           autoComplete="current-password"
           required
           minLength={LONGUEUR_MINIMALE_MOT_DE_PASSE}
           value={motDePasse}
-          onChange={(evenement) => setMotDePasse(evenement.target.value)}
+          onChange={setMotDePasse}
           disabled={enCours}
         />
       </div>

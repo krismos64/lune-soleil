@@ -314,3 +314,91 @@ test.describe("un compte non verifie accede a son espace", () => {
     expect(resultat.violations).toEqual([]);
   });
 });
+
+/**
+ * La bascule de lisibilite du mot de passe, LS-179, critere 3.
+ *
+ * SEUL LE RENDU EST MESURE ICI. Le comportement, nom accessible qui dit l'etat,
+ * valeur et curseur preserves, defaut masque, est prouve en jsdom par
+ * `tests/composant/champ-mot-de-passe.test.tsx`, sept mutations sur sept. Ce
+ * qui reste demande un rendu REEL et ne peut pas s'y mesurer : une
+ * `min-height` de 44 px annulee par un parent en `align-items: center`, et un
+ * bouton qui sort du cadre a 320 px.
+ *
+ * DEUX ECRANS PUBLICS SUFFISENT, sur les cinq qui portent le composant. Les
+ * six champs rendent le MEME composant avec les memes styles : mesurer les six
+ * paierait trois fois le prix d'une couverture identique, et deux d'entre eux
+ * demandent une session. Le compte des champs, lui, est verifie a la source par
+ * `verifier-bascule-mot-de-passe.sh`, qui rougit si un `type="password"` nu
+ * reapparait cote client.
+ */
+test.describe("la bascule du mot de passe tient a l'ecran", () => {
+  const ECRANS_AVEC_MOT_DE_PASSE = [
+    "/compte/connexion",
+    "/compte/inscription",
+  ] as const;
+
+  for (const chemin of ECRANS_AVEC_MOT_DE_PASSE) {
+    test(`${chemin} porte une cible tactile de 44 px`, async ({ page }) => {
+      await page.goto(chemin);
+
+      const bouton = page.getByRole("button", {
+        name: "Afficher le mot de passe",
+      });
+      await expect(bouton).toBeVisible();
+
+      const cadre = await bouton.boundingBox();
+      expect(cadre).not.toBeNull();
+
+      /*
+       * LES DEUX DIMENSIONS, `frontend-design.md`. Mesurer la seule hauteur
+       * laisserait passer un bouton de 44 sur 20, aussi difficile a viser au
+       * pouce. C'est la largeur qui manque le plus souvent, un bouton se
+       * dimensionnant naturellement sur son texte.
+       */
+      expect(cadre!.height).toBeGreaterThanOrEqual(44);
+      expect(cadre!.width).toBeGreaterThanOrEqual(44);
+    });
+
+    test(`${chemin} garde le bouton dans le cadre`, async ({ page }) => {
+      await page.goto(chemin);
+
+      const bouton = page.getByRole("button", {
+        name: "Afficher le mot de passe",
+      });
+      const cadre = await bouton.boundingBox();
+      const largeurVisible = await page.evaluate(
+        () => document.documentElement.clientWidth,
+      );
+
+      /*
+       * LE BORD DROIT DU BOUTON RESTE DANS LA FENETRE. C'est le defaut de
+       * LS-171 rejoue : a 320 px, un bouton ajoute DANS un champ est le premier
+       * element pousse dehors, et `debordementHorizontal` ne le verrait pas si
+       * un ancetre le coupait.
+       */
+      expect(cadre).not.toBeNull();
+      expect(cadre!.x).toBeGreaterThanOrEqual(0);
+      expect(cadre!.x + cadre!.width).toBeLessThanOrEqual(largeurVisible);
+    });
+
+    test(`${chemin} laisse le champ lisible a cote du bouton`, async ({
+      page,
+    }) => {
+      await page.goto(chemin);
+
+      const champ = page.locator("#mot-de-passe");
+      const cadre = await champ.boundingBox();
+
+      /*
+       * LE CHAMP NE SE FAIT PAS ECRASER PAR SON BOUTON. Un `min-width: 0` mal
+       * pose le reduirait a quelques pixels sans qu'aucun debordement ne soit
+       * mesure : la page tient, et la saisie est impraticable. 120 px est la
+       * largeur en dessous de laquelle une phrase de passe de seize caracteres
+       * ne se relit plus, meme partiellement.
+       */
+      expect(cadre).not.toBeNull();
+      expect(cadre!.width).toBeGreaterThanOrEqual(120);
+    });
+  }
+});

@@ -22,6 +22,8 @@ import {
   etablirPreuveClientParMotDePasse,
   type ResultatReauthentificationClient,
 } from "./actions";
+import { ChampMotDePasse } from "@/components/champ-mot-de-passe";
+
 import styles from "../authentification.module.css";
 
 type EtatSoumission = "repos" | "en-cours" | "erreur" | "etablie";
@@ -137,10 +139,9 @@ export function FormulaireReauthentificationClient({
       <form className={styles.formulaire} onSubmit={soumettre}>
         <div className={styles.champ}>
           <label htmlFor="mot-de-passe-reauthentification">Mot de passe</label>
-          <input
+          <ChampMotDePasse
             id="mot-de-passe-reauthentification"
             name="mot-de-passe-reauthentification"
-            type="password"
             /**
              * `current-password` et non `new-password` : le gestionnaire de
              * mots de passe doit proposer celui du compte, pas en engendrer un
@@ -149,7 +150,7 @@ export function FormulaireReauthentificationClient({
             autoComplete="current-password"
             required
             value={motDePasse}
-            onChange={(evenement) => setMotDePasse(evenement.target.value)}
+            onChange={setMotDePasse}
             disabled={enCours || etat === "etablie"}
           />
         </div>
