@@ -431,6 +431,44 @@ test("le panneau entier rend ses trois groupes et leur separateur", async ({
   ).toBeVisible();
 
   /*
+   * LES TROIS GROUPES SONT DES TITRES, ET C'EST CE QUI PORTE LA NAVIGATION.
+   * `<strong>` ne produit aucune entree dans la liste des titres : la touche H
+   * sautait du `h2` du panneau a la fin de la page, alors que cet ecran venait
+   * de retirer deux `h2` atteignables en fusionnant ses sections. Releve par la
+   * revue frontend de LS-190.
+   *
+   * LE ROLE EST INTERROGE, jamais la balise : c'est ce que le lecteur d'ecran
+   * expose, et un `h3` style en texte gras reste un titre pour lui.
+   */
+  await expect(panneau.getByRole("heading", { level: 3 })).toHaveCount(3);
+  await expect(
+    panneau.getByRole("heading", { level: 3, name: "Facture" }),
+  ).toBeVisible();
+  await expect(
+    panneau.getByRole("heading", { level: 3, name: "Me rétracter" }),
+  ).toBeVisible();
+  await expect(
+    panneau.getByRole("heading", { level: 3, name: "Nous contacter" }),
+  ).toBeVisible();
+
+  /*
+   * LA ZONE TACTILE DES TROIS LIENS TIENT 44 px, `frontend-design.md`. Un lien
+   * en flux fait la hauteur de sa ligne, environ 26 px : le panneau concentre
+   * trois liens empiles, ou viser juste compte plus qu'ailleurs.
+   */
+  const cibles = await panneau.evaluate((el) =>
+    [...el.querySelectorAll("a")].map((a) =>
+      Math.round(a.getBoundingClientRect().height),
+    ),
+  );
+  expect(cibles.length, "trois liens dans le panneau").toBe(3);
+  for (const hauteur of cibles) {
+    expect(hauteur, "chaque lien tient 44 px de haut").toBeGreaterThanOrEqual(
+      44,
+    );
+  }
+
+  /*
    * LE SEPARATEUR EST LU SUR LE DEUXIEME GROUPE, celui qui porte le
    * `border-top` : le premier ne l'a pas, la regle etant `+`. Un panneau qui
    * rendrait ses groupes sans les separer passerait les trois assertions

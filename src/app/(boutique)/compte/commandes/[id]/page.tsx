@@ -292,6 +292,7 @@ export default async function PageDetailCommande({
         <h2 id="titre-documents-actions">Documents et actions</h2>
 
         <div className={styles.groupeActions}>
+          <h3 className={styles.titreGroupe}>Facture</h3>
           {/*
            * TROIS ETATS DISTINCTS, ET LES CONFONDRE EFFACERAIT UNE ANOMALIE :
            *
@@ -394,9 +395,7 @@ export default async function PageDetailCommande({
          */}
         {etatRetractationAffichable && (
           <div className={styles.groupeActions}>
-            <p className={styles.texte}>
-              <strong>Me rétracter</strong>
-            </p>
+            <h3 className={styles.titreGroupe}>Me rétracter</h3>
             {/*
              * LA MENTION DES FRAIS DE RETOUR ACCOMPAGNE CELLE DE LA
              * RETRACTATION, PARTOUT OU ELLE APPARAIT, `frontend-design.md` :
@@ -434,9 +433,7 @@ export default async function PageDetailCommande({
          * qui n'annonce qu'une attente.
          */}
         <div className={styles.groupeActions}>
-          <p className={styles.texte}>
-            <strong>Une question sur cette commande</strong>
-          </p>
+          <h3 className={styles.titreGroupe}>Nous contacter</h3>
           <p className={styles.texte}>
             Indiquez le numéro {commande.numero} dans votre message, nous
             retrouverons votre commande.
