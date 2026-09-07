@@ -100,15 +100,14 @@ fi
 # régime établi : c'est l'inverse du réessai qui attend APRÈS avoir échoué, à
 # chaque exécution. Centraliser l'attente là est précisément ce qui permet de
 # l'interdire partout ailleurs.
-# La troisième est `compte-profil.spec.ts`, LS-168. Il appelle
-# `/change-password` deux fois, et les deux sont des mesures irréductibles : le
-# refus d'un mot de passe actuel faux, et le changement qui ferme les autres
-# sessions. Trois largeurs font six appels pour cinq places par minute, et
-# Better Auth compte par IP sans option par session (vérifié via Context7). Son
-# décalage est dérivé du rang de la largeur, donc fixe et connu d'avance : il
-# empêche la collision AVANT qu'elle ait lieu, au lieu d'attendre après un
-# échec.
-EXEMPTES='connexion-administration\.spec\.ts|inscription-espacee\.ts|compte-profil\.spec\.ts'
+# `compte-profil.spec.ts` A ETE EXEMPTE PUIS RETIRE DE LA LISTE, LS-168, et le
+# motif vaut d'être noté : il portait un décalage de 25 s par largeur pour
+# étaler ses six appels à `/change-password`. Cela ne marchait pas, les six
+# restant dans la même fenêtre glissante, et le porter au-delà coûtait quatre
+# minutes par exécution. Les deux tests concernés sont désormais limités à
+# 320 px, motif de LS-113, et le fichier n'attend plus du tout : l'exemption
+# n'avait plus d'objet, la garder aurait laissé un trou ouvert pour rien.
+EXEMPTES='connexion-administration\.spec\.ts|inscription-espacee\.ts'
 
 # ---------------------------------------------------------------------------
 # LES DEUX FORMES SONT CHERCHÉES, littérale ET calculée.
@@ -158,7 +157,7 @@ fi
 # couvrir ce qu'il croit couvrir. Motif « contrôle de mutation mort » déjà en
 # fiche sur ce dépôt, où un chemin périmé arrêtait le script avant sa mesure.
 # ---------------------------------------------------------------------------
-for exempte in connexion-administration.spec.ts inscription-espacee.ts compte-profil.spec.ts; do
+for exempte in connexion-administration.spec.ts inscription-espacee.ts; do
   if [ ! -f "$DOSSIER/$exempte" ]; then
     echo "ÉCHEC : l'exemption vise $exempte, qui n'existe plus."
     echo "Retirer l'exemption devenue sans objet, ou corriger le chemin."
