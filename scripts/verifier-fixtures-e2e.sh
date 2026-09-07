@@ -130,8 +130,67 @@ if [ ! -f "$DOSSIER/connexion-administration.spec.ts" ]; then
   ko=1
 fi
 
+# ---------------------------------------------------------------------------
+# LES DEUX LISTES DE LARGEURS DOIVENT COÏNCIDER.
+#
+# `comptes-profil.setup.ts` amorce un compte par largeur en lisant
+# `PROJETS_LARGEUR`, et il s'exécute AVANT les projets de largeur : il ne peut
+# donc pas découvrir leurs noms tout seul. Une largeur ajoutée à
+# `playwright.config.ts` sans être inscrite dans cette liste verrait son compte
+# manquer, et `compte-profil` retomberait sur une inscription au moment le plus
+# chargé de la suite.
+#
+# LE DÉFAUT SERAIT INVISIBLE : la suite passerait, jusqu'au jour où le plafond
+# se retrouve consommé. C'est le motif « une largeur ajoutée casse un compte »,
+# jumeau de celui de l'enum ajouté à un index partiel, déjà rencontré ici.
+#
+# LA COMPARAISON PORTE SUR LES DEUX SENS, une largeur en trop dans la liste
+# étant tout aussi fautive : elle amorcerait un compte que personne n'utilise,
+# en consommant une place du plafond pour rien.
+# ---------------------------------------------------------------------------
+CONFIG="$RACINE/playwright.config.ts"
+MODULE="$DOSSIER/chemin-session.ts"
+
+if [ ! -f "$CONFIG" ] || [ ! -f "$MODULE" ]; then
+  echo "ÉCHEC : playwright.config.ts ou chemin-session.ts est introuvable."
+  exit 1
+fi
+
+# Les projets de largeur de la configuration : tout `name:` sauf `preparation`.
+largeurs_config=$(grep -oE 'name: "[a-z0-9-]+"' "$CONFIG" \
+  | sed 's/name: "//; s/"//' \
+  | grep -v '^preparation$' \
+  | sort)
+
+# La liste déclarée, entre `PROJETS_LARGEUR = [` et le `]` qui la ferme.
+largeurs_module=$(awk '/PROJETS_LARGEUR = \[/,/\]/' "$MODULE" \
+  | grep -oE '"[a-z0-9-]+"' \
+  | tr -d '"' \
+  | sort)
+
+# ÉCHOUER SI L'UNE DES DEUX EST VIDE : une extraction qui ne trouve rien
+# comparerait deux listes vides et se déclarerait cohérente, motif « contrôle
+# satisfait par l'absence » déjà rencontré sur ce dépôt.
+if [ -z "$largeurs_config" ] || [ -z "$largeurs_module" ]; then
+  echo "ÉCHEC : une des deux listes de largeurs est vide, le contrôle ne peut pas conclure."
+  echo "  config : $(echo "$largeurs_config" | tr '\n' ' ')"
+  echo "  module : $(echo "$largeurs_module" | tr '\n' ' ')"
+  ko=1
+elif [ "$largeurs_config" != "$largeurs_module" ]; then
+  echo "ÉCHEC : PROJETS_LARGEUR ne correspond pas aux projets de playwright.config.ts."
+  echo
+  echo "  config : $(echo "$largeurs_config" | tr '\n' ' ')"
+  echo "  module : $(echo "$largeurs_module" | tr '\n' ' ')"
+  echo
+  echo "comptes-profil.setup.ts amorce un compte par largeur en lisant cette"
+  echo "liste. Une largeur absente verrait son compte manquer, et le fichier de"
+  echo "profil retomberait sur une inscription, LS-168."
+  ko=1
+fi
+
 if [ "$ko" -eq 0 ]; then
-  echo "OK : aucune adresse de test construite à l'exécution, aucune attente longue."
+  echo "OK : aucune adresse construite à l'exécution, aucune attente longue,"
+  echo "     et les largeurs déclarées correspondent à la configuration."
 fi
 
 exit "$ko"
