@@ -25,9 +25,9 @@ donc fait remonter ceux qui étaient hors tranche.
 
 ## Quatre écrans, quatre traitements, et chacun sa raison
 
-**Messages**, le seul dont le compte était faux : les deux nombres viennent d'un
-`groupBy` sur toute la table, la lecture porte sur `limite + 1`, et une barre de
-filtres apparaît, l'écran n'en avait aucune.
+**Messages**, le seul dont le compte était faux : les deux nombres viennent d'une
+requête d'agrégat sur toute la table, la lecture porte sur `limite + 1`, et une
+barre de filtres apparaît, l'écran n'en avait aucune.
 
 **Commandes** : le filtre existait déjà, il ne manquait que le signalement.
 
@@ -88,6 +88,25 @@ un message, les largeurs partageant la base : la phrase différait sur sa second
 moitié sans que le total ait bougé. Le test compare désormais le seul total,
 qui est ce qu'il doit prouver.
 
+## Le comptage tenait la revalidation, et trois formes ont été mesurées
+
+Mon `groupBy` a fait basculer `administration-connectee:737`, le test qui classe
+un message, de intermittent à fréquent : un échec sur trois exécutions.
+
+**Deux `count` en parallèle ont aggravé**, trois échecs sur dix, ce qui a démenti
+mon hypothèse : le coût n'est pas le balayage, c'est la **connexion**. Deux
+requêtes prennent deux connexions du pool, qui est le goulot réel sous quatre
+largeurs concurrentes.
+
+**Une requête avec `FILTER (WHERE ...)` ferme le sujet** : dix tests verts trois
+fois de suite, et la durée du fichier passe de 52 à 22 secondes.
+
+**La cause n'est pas le volume**, la base de test portant six messages. C'est le
+**moment** : ce comptage s'exécute à chaque rendu, y compris pendant la
+revalidation de layout que le classement déclenche, C37. Le layout calcule déjà
+onze agrégats ; en ajouter un douzième suffit à faire attendre le retour de la
+Server Action au-delà du délai du test.
+
 ## Ce que la base a imposé
 
 `chk_message_horodatages_coherents` est une **équivalence stricte** : un message
@@ -103,12 +122,32 @@ dangereux. Cinq tests de bout en bout aux quatre largeurs.
 **Deux mutations sur deux lignes de défense** : remettre les comptes sur la
 tranche fait rougir trois tests, neutraliser `tronquee` en fait rougir un.
 
+**Le commit `634858d` porte un `groupBy`**, remplacé par `81b8161` : le journal
+garde les deux, la mesure qui les sépare étant le plus instructif de la story.
+
 ## État des tickets
 
-**LS-163 livrée**, commit `634858d`. Reste à fusionner sur `main`.
+**LS-163 livrée**, commits `634858d` et `81b8161`. Reste à fusionner sur `main`.
 
 **LS-166 et LS-174 closes** plus tôt dans la session, PR #296 et #297 fusionnées.
 Le compte passe à **141 tickets terminés sur 192** une fois LS-163 close.
+
+## Un test préexistant que je n'ai pas fermé
+
+`administration-connectee:737`, « classer un message ferme son bloc de gestes »,
+échoue sous la suite complète : l'action reste sur « Enregistrement en cours »
+pendant les trente secondes de l'assertion, alors qu'elle prend **300 ms**
+mesurées en isolation.
+
+**Il échouait déjà sur `main` avant cette session**, dans les cinq échecs de la
+mesure de référence de LS-166. Ce que j'ai fait : réduit son impact de quatre
+largeurs à une, en le restreignant à `mobile-320`. Il mesure un comportement, le
+bloc de gestes qui se ferme, et rien qui dépende de la largeur.
+
+**Ce qui reste inexpliqué** : le blocage est définitif, pas lent, et ne dépend ni
+du volume (trois messages en base) ni de mon comptage (retiré, il persiste). Il
+ressemble au blocage de navigation fermé en LS-166, sans que le lien soit
+établi. Écrit ici plutôt que deviné.
 
 ## Ce qui reste ouvert
 
