@@ -763,6 +763,8 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-numerotation-etapes-mutation.sh    # prouve le sens « numéros d'étape en doublon » de verifier-config-claude.sh, LS-202
 ./scripts/verifier-revalidation-layout.sh             # une Server Action revalide le layout quand le layout lit la donnée, C37
 ./scripts/verifier-revalidation-layout-mutation.sh    # prouve verifier-revalidation-layout.sh par mutation
+./scripts/verifier-prefixe-medias.sh                  # NEXT_PUBLIC_MEDIA_PREFIXE atteint le bundle construit, LS-197
+./scripts/verifier-prefixe-medias-mutation.sh         # prouve verifier-prefixe-medias.sh par mutation
 ./scripts/verifier-registre-traitements.sh       # registre RGPD confronté au schéma
 ./scripts/verifier-registre-traitements-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-nginx.sh                      # résolution de l'adresse client, LS-91

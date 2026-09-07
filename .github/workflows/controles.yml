@@ -1143,6 +1143,36 @@ jobs:
         run: npm run build
 
       # ----------------------------------------------------------------------
+      # Controle 7 bis. Le prefixe public des medias atteint le bundle, LS-197.
+      #
+      # IL PORTE LE NUMERO DE L'ETAPE QU'IL SUIT, ET CE N'EST PAS UN CHOIX DE
+      # STYLE : il exige un bundle CONSTRUIT, donc il ne peut pas vivre dans la
+      # famille 9 des controles textuels, qui s'execute bien avant. Le placer
+      # ailleurs le ferait echouer sur « aucun bundle construit ».
+      #
+      # CE QU'IL GARDE, et le defaut est SILENCIEUX : une variable
+      # `NEXT_PUBLIC_` est substituee a la construction, pas lue a l'execution.
+      # Avant LS-197 le Dockerfile ne la portait pas, donc tout `docker build`
+      # figeait `/medias` et aucune configuration d'execution ne pouvait le
+      # changer. Le site aurait parfaitement fonctionne jusqu'au jour d'un
+      # changement de prefixe.
+      #
+      # Il confronte le bundle REELLEMENT construit a la valeur configuree, ce
+      # qu'aucun test de forme d'URL ne peut faire.
+      # ----------------------------------------------------------------------
+      - name: 7 bis. Le prefixe des medias atteint le bundle
+        run: ./scripts/verifier-prefixe-medias.sh
+
+      # Preuve par mutation du controle precedent, LS-197. Textuel, secondes.
+      #
+      # CINQ SENS EXERCES, dont le plus instructif : l'ENV retire en laissant
+      # l'ARG seul. Un Dockerfile dans cet etat semble correct a la relecture et
+      # fige pourtant le repli, un ARG n'etant pas exporte dans l'environnement
+      # des RUN suivants.
+      - name: 7 ter. Preuve par mutation du prefixe des medias
+        run: ./scripts/verifier-prefixe-medias-mutation.sh
+
+      # ----------------------------------------------------------------------
       # Controle 8, scenarios de bout en bout.
       #
       # Trois largeurs, 320, 390 et 1280 px, plus axe-core. Le navigateur se

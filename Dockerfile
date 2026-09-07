@@ -97,6 +97,33 @@ COPY . .
 # `RUN --mount=type=secret`, qui ne laisse rien dans la couche, et jamais un
 # ARG, qu'un `docker history --no-trunc` restitue.
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# PREFIXE PUBLIC DES MEDIAS, LS-197. Il DOIT etre present a la construction.
+#
+# `NEXT_PUBLIC_MEDIA_PREFIXE` est substituee par `next build` dans le bundle
+# client : elle n'est pas lue a l'execution. Sans cet ARG, tout `docker build`
+# figeait `/medias` en dur, et une valeur posee dans l'environnement du
+# conteneur n'avait AUCUN effet. Le jour ou Nginx, un sous-domaine ou un CDN
+# servirait les medias ailleurs, les images auraient continue de pointer
+# `/medias` SANS qu'aucune ligne de journal ne le dise.
+#
+# UN ARG ICI ET NON UNE VALEUR SUR LA LIGNE DE COMMANDE, contrairement aux deux
+# remplissages ci-dessous, et la difference est le BUT. Ceux-la sont des
+# remplissages jetables qui ne doivent survivre dans aucune couche ; celui-ci
+# est une valeur de configuration que l'exploitation doit pouvoir CHOISIR au
+# moment de construire l'image, sans rouvrir ce fichier.
+#
+# CE N'EST PAS UN SECRET, et c'est ce qui rend l'ARG acceptable : un
+# `docker history --no-trunc` le restitue, et il ne revele qu'un chemin public
+# deja visible dans le HTML de chaque page. La raison est ecrite ici pour que
+# cet ARG ne serve PAS de precedent : un vrai secret passe par
+# `RUN --mount=type=secret`, jamais par un ARG, comme l'avertissement ci-dessous
+# le rappelle.
+#
+# LE DEFAUT REPREND LA VALEUR DE `.env.example`. Une construction qui ne
+# precise rien produit donc exactement l'image d'avant cette story.
+ARG NEXT_PUBLIC_MEDIA_PREFIXE=/medias
+ENV NEXT_PUBLIC_MEDIA_PREFIXE=${NEXT_PUBLIC_MEDIA_PREFIXE}
 # AUCUNE DES DEUX VALEURS N'EST ECRITE EN CLAIR ICI, et ce n'est pas de la
 # coquetterie : l'analyse de secrets du depot bloque le commit sur les deux
 # formes, la chaine `utilisateur:motdepasse@hote` et toute valeur de seize
