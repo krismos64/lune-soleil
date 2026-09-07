@@ -81,9 +81,38 @@ fi
 restaurer
 
 # ---------------------------------------------------------------------------
+# MUTATION 3 : une largeur disparaît de `PROJETS_LARGEUR`.
+#
+# C'est le défaut silencieux : la suite passerait, et le compte de la largeur
+# retirée ne serait plus amorcé. Il ne se verrait qu'au moment où le plafond se
+# retrouve consommé, très loin de sa cause.
+#
+# LA CIBLE EST UN AUTRE FICHIER, d'où sa propre garde et sa propre restauration.
+# ---------------------------------------------------------------------------
+CIBLE_MODULE="tests/e2e/chemin-session.ts"
+
+if ! git diff --quiet -- "$CIBLE_MODULE"; then
+  echo "ÉCHEC : $CIBLE_MODULE porte des modifications non commitées."
+  exit 1
+fi
+
+perl -0pi -e 's/  "mobile-390",\n//' "$CIBLE_MODULE"
+
+if "$CONTROLE" > /dev/null 2>&1; then
+  echo "ÉCHEC mutation 3 : le contrôle reste VERT alors qu'une largeur manque."
+  ko=1
+else
+  echo "OK mutation 3 : largeur retirée de PROJETS_LARGEUR -> le contrôle rougit."
+fi
+
+git checkout -- "$CIBLE_MODULE"
+
+# ---------------------------------------------------------------------------
 # CONTRÔLE DE RETOUR. La restauration a-t-elle vraiment eu lieu ? Un fichier
 # resté muté ferait passer la suite entière pour cassée à la prochaine
 # exécution, motif « mutation non restaurée » déjà en fiche.
+#
+# IL COUVRE LES DEUX FICHIERS MUTÉS, pas seulement le dernier.
 # ---------------------------------------------------------------------------
 if ! "$CONTROLE" > /dev/null 2>&1; then
   echo "ÉCHEC : le contrôle est rouge APRÈS restauration, le fichier est resté muté."

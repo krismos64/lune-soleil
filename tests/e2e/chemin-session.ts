@@ -447,6 +447,48 @@ export const FICHIER_EMAIL_VERIFIE = "tests/e2e/.session-email-verifie.json";
 export const EMAIL_VERIFIE = "e2e-rattachement@exemple.test";
 
 /**
+ * Les trois projets de largeur, tels que `playwright.config.ts` les nomme.
+ *
+ * LA LISTE VIT ICI parce que `comptes-profil.setup.ts` doit amorcer un compte
+ * par largeur AVANT que ces projets demarrent : il ne peut donc pas lire son
+ * propre `project.name`, qui vaut `preparation`.
+ *
+ * ELLE DOIT SUIVRE LA CONFIGURATION. Une largeur ajoutee sans etre inscrite ici
+ * verrait son compte manquer, et le fichier de profil retomberait sur une
+ * inscription au moment le plus charge de la suite.
+ * `scripts/verifier-fixtures-e2e.sh` confronte les deux listes.
+ */
+export const PROJETS_LARGEUR = [
+  "mobile-320",
+  "mobile-390",
+  "bureau-1280",
+] as const;
+
+/**
+ * L'adresse du compte de profil d'une largeur, LS-168.
+ *
+ * DERIVEE DU NOM DU PROJET Playwright et non de la largeur : c'est le projet qui
+ * definit le processus, donc la seule frontiere qui garantisse qu'aucune autre
+ * largeur ne touche le meme compte.
+ */
+export function adresseProfil(projet: string): string {
+  return `e2e-profil-${projet}@exemple.test`;
+}
+
+/**
+ * L'adresse du compte DEDIE au test de changement de mot de passe, LS-168.
+ *
+ * DISTINCTE DE LA PRECEDENTE, et ce n'est pas une precaution decorative : ce
+ * test consomme le mot de passe du compte, et les six autres tests de la meme
+ * largeur rejouent les cookies ouverts par le `beforeAll`. Les faire partager
+ * un compte rendrait leur session invalide au moment ou celui-ci change la
+ * valeur.
+ */
+export function adresseMotDePasseProfil(projet: string): string {
+  return `e2e-motdepasse-${projet}@exemple.test`;
+}
+
+/**
  * Le mot de passe du compte verifie, partage par la preparation et les tests.
  *
  * CONSTRUIT ET NON ECRIT EN CLAIR depuis LS-168, meme motif que

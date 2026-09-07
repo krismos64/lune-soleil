@@ -74,8 +74,20 @@ export default defineConfig({
      * LS-111, etendu par LS-113, generalise par LS-168.
      *
      * EN REGIME ETABLI, UNE EXECUTION FAIT ZERO INSCRIPTION. Les trois places
-     * par minute restent donc entierement disponibles, et le seul cas qui en
-     * consomme est la premiere execution sur une base neuve, celle de la CI.
+     * par minute restent donc entierement disponibles.
+     *
+     * LE SEUL CAS QUI INSCRIT EST LA BASE NEUVE, celle de la CI a chaque
+     * execution, et il demandait un traitement propre : neuf comptes a creer,
+     * dont six pour `compte-profil`, quand trois places sont disponibles par
+     * minute. Mesure du 7 septembre 2026 sans ce traitement, sur base ou les
+     * comptes manquaient : « Too many requests », trois echecs, et l'execution
+     * suivante pire que la premiere.
+     *
+     * `comptes-profil.setup.ts` amorce donc ces six comptes ICI, dans le projet
+     * `preparation`, qui est SEQUENTIEL et UNIQUE : c'est le seul endroit du
+     * dispositif ou des inscriptions peuvent etre espacees sans que l'attente
+     * soit multipliee par les trois largeurs. Il n'attend QUE lorsqu'il inscrit,
+     * donc jamais en regime etabli.
      *
      * UNE QUATRIEME SESSION EST REDEVENUE POSSIBLE, a la condition qu'elle
      * suive ce motif : une adresse fixe et les trois paliers. Une adresse
@@ -93,12 +105,12 @@ export default defineConfig({
     {
       name: "preparation",
       testMatch:
-        /(session-(cliente|verifiee|administration)|commande)\.setup\.ts$/,
+        /(session-(cliente|verifiee|administration)|commande|comptes-profil)\.setup\.ts$/,
     },
     {
       name: "mobile-320",
       testIgnore:
-        /(session-(cliente|verifiee|administration)|commande)\.setup\.ts$/,
+        /(session-(cliente|verifiee|administration)|commande|comptes-profil)\.setup\.ts$/,
       dependencies: ["preparation"],
       use: {
         ...devices["Desktop Chrome"],
@@ -110,7 +122,7 @@ export default defineConfig({
     {
       name: "mobile-390",
       testIgnore:
-        /(session-(cliente|verifiee|administration)|commande)\.setup\.ts$/,
+        /(session-(cliente|verifiee|administration)|commande|comptes-profil)\.setup\.ts$/,
       dependencies: ["preparation"],
       use: {
         ...devices["Desktop Chrome"],
@@ -129,7 +141,7 @@ export default defineConfig({
     {
       name: "bureau-1280",
       testIgnore:
-        /(session-(cliente|verifiee|administration)|commande)\.setup\.ts$/,
+        /(session-(cliente|verifiee|administration)|commande|comptes-profil)\.setup\.ts$/,
       dependencies: ["preparation"],
       use: {
         ...devices["Desktop Chrome"],

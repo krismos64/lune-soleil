@@ -50,6 +50,8 @@ import {
 import {
   MOT_DE_PASSE_PROFIL,
   MOT_DE_PASSE_PROFIL_APRES,
+  adresseMotDePasseProfil,
+  adresseProfil,
 } from "./chemin-session";
 
 /** Seize caracteres, la longueur imposee a tous les comptes, ADR-023. */
@@ -66,28 +68,14 @@ const MOT_DE_PASSE = MOT_DE_PASSE_PROFIL;
  */
 const MOT_DE_PASSE_APRES = MOT_DE_PASSE_PROFIL_APRES;
 
-/**
- * L'adresse du compte de cette largeur, derivee du nom du projet Playwright.
+/*
+ * LES DEUX FONCTIONS D'ADRESSE VIVENT DANS `chemin-session.ts`, LS-168.
  *
- * FIXE PAR PROJET DEPUIS LS-168, voir l'entete. Le prefixe `e2e-` est celui que
- * la retrogradation de `session-administration.setup.ts` cible : un compte de
- * test ne doit jamais garder un role sur une base de developpement.
+ * `comptes-profil.setup.ts` doit poser EXACTEMENT les memes adresses que celles
+ * lues ici, sans quoi il amorcerait des comptes que ce fichier n'utilise pas et
+ * la preparation serait silencieusement inutile. Une definition unique est la
+ * seule forme qui ne puisse pas diverger.
  */
-function adresseProfil(projet: string): string {
-  return `e2e-profil-${projet}@exemple.test`;
-}
-
-/**
- * L'adresse du compte DEDIE au test de changement de mot de passe.
- *
- * DISTINCTE DE LA PRECEDENTE, et ce n'est pas une precaution decorative : ce
- * test consomme le mot de passe du compte, et les six autres tests de la meme
- * largeur rejouent les cookies du `beforeAll`. Les faire partager un compte
- * rendrait leur session invalide au moment ou celui-ci change la valeur.
- */
-function adresseMotDePasse(projet: string): string {
-  return `e2e-motdepasse-${projet}@exemple.test`;
-}
 
 /*
  * SERIE : les tests de ce fichier partagent le compte de leur largeur, et
@@ -299,7 +287,7 @@ test("changer son mot de passe ferme les autres sessions", async ({
 }, infos) => {
   test.setTimeout(120_000);
 
-  const emailDedie = adresseMotDePasse(infos.project.name);
+  const emailDedie = adresseMotDePasseProfil(infos.project.name);
 
   /*
    * MEMES PALIERS QUE LE `beforeAll` : se connecter, sinon s'inscrire.
