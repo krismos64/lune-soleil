@@ -66,10 +66,11 @@ import {
   FICHIER_EMAIL_VERIFIE,
   EMAIL_VERIFIE,
 } from "./chemin-session";
+import { inscrireEspace } from "./inscription-espacee";
 
 import { writeFileSync } from "node:fs";
 
-preparation.setTimeout(120_000);
+preparation.setTimeout(180_000);
 
 preparation("ouvrir une session cliente verifiee", async ({ page }) => {
   /*
@@ -118,34 +119,38 @@ preparation("ouvrir une session cliente verifiee", async ({ page }) => {
    * trois de `/sign-up/email` : le palier 2 est donc nettement moins contraint
    * que le palier 3.
    */
-  let reponse = await page.request.post("/api/auth/sign-in/email", {
+  const reponse = await page.request.post("/api/auth/sign-in/email", {
     data: { email: EMAIL_VERIFIE, password: MOT_DE_PASSE_VERIFIE },
   });
 
   if (!reponse.ok()) {
-    reponse = await page.request.post("/api/auth/sign-up/email", {
-      data: {
-        email: EMAIL_VERIFIE,
-        password: MOT_DE_PASSE_VERIFIE,
-        name: "Client verifie",
-      },
-    });
+    /*
+     * L'ESPACEMENT EST COMPTE GLOBALEMENT, voir `inscription-espacee.ts` : les
+     * cinq preparations creent des comptes sur une base neuve, et c'est leur
+     * TOTAL qui franchit les trois places par minute.
+     */
+    await inscrireEspace(
+      page,
+      EMAIL_VERIFIE,
+      MOT_DE_PASSE_VERIFIE,
+      "Client verifie",
+    );
 
     /*
-     * LE COMPTE VIENT D'ETRE CREE, IL FAUT LE VERIFIER MAINTENANT. L'appel
-     * ci-dessus n'a touche aucune ligne, l'utilisateur n'existant pas encore :
-     * sans ce second passage, la toute premiere execution sur une base neuve
+     * LE COMPTE VIENT D'ETRE CREE, IL FAUT LE VERIFIER MAINTENANT. Le premier
+     * passage n'avait touche aucune ligne, l'utilisateur n'existant pas encore :
+     * sans ce second appel, la toute premiere execution sur une base neuve
      * servirait un compte NON verifie, et le bloc de rattachement resterait
      * invisible pour une raison sans rapport avec ce qu'il mesure.
      */
-    if (reponse.ok()) {
-      await marquerVerifie();
-    }
-  }
+    await marquerVerifie();
 
-  // ECHOUER ICI PLUTOT QUE DANS CHAQUE TEST : la vraie cause arrive en tete de
-  // rapport, au lieu de « le bloc est introuvable » a chaque largeur.
-  expect(reponse.ok(), await reponse.text()).toBe(true);
+    /*
+     * LA SESSION EST OUVERTE PAR L'INSCRIPTION, `autoSignIn` valant son defaut :
+     * le cookie est deja pose sur ce contexte, aucune connexion supplementaire
+     * n'est necessaire.
+     */
+  }
 
   await page.context().storageState({ path: FICHIER_SESSION_VERIFIEE });
 });

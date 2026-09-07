@@ -864,6 +864,37 @@ jobs:
         run: ./scripts/verifier-route-echec-mutation.sh
 
       # ----------------------------------------------------------------------
+      # Controle 6q. Les fixtures de bout en bout ne consomment pas le plafond
+      # d'inscription, LS-168. Textuel, secondes.
+      #
+      # CE QU'IL EMPECHE. Une fixture qui fabrique son adresse a l'execution cree
+      # un compte NEUF a chaque passage, et `/sign-up/email` n'accepte que trois
+      # inscriptions par minute et par IP. La suite se bloque alors elle-meme, et
+      # le defaut se voit tres loin de sa cause : la preparation echoue en 429,
+      # Playwright marque tous les tests « non executes », et un script de
+      # mutation conclut « le test est aveugle » sur des tests voyants.
+      #
+      # IL EXISTE PARCE QUE LE DEFAUT EST REVENU DEUX FOIS. LS-111 l'a ferme sur
+      # la session d'administration, LS-113 sur la session cliente, et il restait
+      # entier sur deux autres fichiers jusqu'a LS-168. Chaque correction portait
+      # pourtant un commentaire expliquant le piege : ce sont ces commentaires
+      # qui n'ont pas suffi.
+      #
+      # LA MESURE QUI L'A MOTIVE : 118 comptes de test accumules sur la base de
+      # developpement, dont 68 laisses par la seule fixture verifiee.
+      # ----------------------------------------------------------------------
+      - name: 6q. Les fixtures e2e n'inscrivent pas a chaque execution
+        run: ./scripts/verifier-fixtures-e2e.sh
+
+      # Preuve par mutation du controle precedent, LS-168. Textuel, secondes.
+      #
+      # TROIS SENS EXERCES : une adresse construite a l'execution, un reessai
+      # espace, et une largeur retiree de `PROJETS_LARGEUR`. Le troisieme est le
+      # defaut silencieux, la suite passerait en cessant d'amorcer un compte.
+      - name: 6r. Preuve par mutation des fixtures e2e
+        run: ./scripts/verifier-fixtures-e2e-mutation.sh
+
+      # ----------------------------------------------------------------------
       # Controles 2 et 3. Le format entre ici parce qu'un depot ou seule une
       # partie des fichiers est formatee produit des diffs illisibles.
       # ----------------------------------------------------------------------

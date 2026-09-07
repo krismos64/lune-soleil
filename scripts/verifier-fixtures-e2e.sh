@@ -94,7 +94,13 @@ fi
 # qu'il est revenu deux fois. Y ajouter un fichier demande de justifier
 # pourquoi ce fichier-là ne peut pas se passer du plafond.
 # ---------------------------------------------------------------------------
-EXEMPTES='connexion-administration\.spec\.ts'
+# La seconde exemption est `inscription-espacee.ts`, l'aide qui porte
+# l'espacement des inscriptions sur base neuve, LS-168. Elle attend AVANT de
+# dépasser le plafond, une seule fois dans la vie de la base, et jamais en
+# régime établi : c'est l'inverse du réessai qui attend APRÈS avoir échoué, à
+# chaque exécution. Centraliser l'attente là est précisément ce qui permet de
+# l'interdire partout ailleurs.
+EXEMPTES='connexion-administration\.spec\.ts|inscription-espacee\.ts'
 
 attentes=$(grep -rnE 'waitForTimeout\(\s*[0-9]{2,}_?[0-9]*\s*\)' "$DOSSIER" \
   --include='*.ts' \
@@ -124,11 +130,13 @@ fi
 # couvrir ce qu'il croit couvrir. Motif « contrôle de mutation mort » déjà en
 # fiche sur ce dépôt, où un chemin périmé arrêtait le script avant sa mesure.
 # ---------------------------------------------------------------------------
-if [ ! -f "$DOSSIER/connexion-administration.spec.ts" ]; then
-  echo "ÉCHEC : l'exemption vise connexion-administration.spec.ts, qui n'existe plus."
-  echo "Retirer l'exemption devenue sans objet, ou corriger le chemin."
-  ko=1
-fi
+for exempte in connexion-administration.spec.ts inscription-espacee.ts; do
+  if [ ! -f "$DOSSIER/$exempte" ]; then
+    echo "ÉCHEC : l'exemption vise $exempte, qui n'existe plus."
+    echo "Retirer l'exemption devenue sans objet, ou corriger le chemin."
+    ko=1
+  fi
+done
 
 # ---------------------------------------------------------------------------
 # LES DEUX LISTES DE LARGEURS DOIVENT COÏNCIDER.
@@ -188,9 +196,61 @@ elif [ "$largeurs_config" != "$largeurs_module" ]; then
   ko=1
 fi
 
+# ---------------------------------------------------------------------------
+# LA FENÊTRE RECOPIÉE DOIT SUIVRE LA CONFIGURATION RÉELLE.
+#
+# `inscription-espacee.ts` porte `FENETRE_MS` et `PLACES_PAR_FENETRE`, qui
+# recopient `"/sign-up/email": { window: 60, max: 3 }` de `src/lib/auth.ts`.
+# Une recopie se périme sans bruit : durcir le plafond à deux par minute
+# laisserait l'aide en attendre trois, et l'amorçage échouerait en 429 sur une
+# base neuve, très loin de la ligne qui aurait changé.
+#
+# LE SENS EST CELUI DE LA SÉCURITÉ. L'aide doit attendre AU MOINS aussi souvent
+# que le plafond l'exige : une fenêtre déclarée plus longue ou moins de places
+# que la réalité est prudente, l'inverse est faux. Le contrôle refuse donc les
+# valeurs qui dépassent la configuration, pas celles qui restent en deçà.
+# ---------------------------------------------------------------------------
+AUTH="$RACINE/src/lib/auth.ts"
+AIDE="$DOSSIER/inscription-espacee.ts"
+
+if [ ! -f "$AUTH" ] || [ ! -f "$AIDE" ]; then
+  echo "ÉCHEC : src/lib/auth.ts ou inscription-espacee.ts est introuvable."
+  exit 1
+fi
+
+# `{ window: 60, max: 3 }` sur la ligne de `/sign-up/email`.
+regle=$(grep -E '"/sign-up/email":' "$AUTH" | head -1)
+fenetre_auth=$(echo "$regle" | grep -oE 'window: *[0-9]+' | grep -oE '[0-9]+')
+places_auth=$(echo "$regle" | grep -oE 'max: *[0-9]+' | grep -oE '[0-9]+')
+
+fenetre_aide=$(grep -E '^const FENETRE_MS' "$AIDE" | grep -oE '[0-9_]+' | tr -d '_')
+places_aide=$(grep -E '^const PLACES_PAR_FENETRE' "$AIDE" | grep -oE '[0-9]+')
+
+if [ -z "$fenetre_auth" ] || [ -z "$places_auth" ] ||
+   [ -z "$fenetre_aide" ] || [ -z "$places_aide" ]; then
+  echo "ÉCHEC : une des quatre valeurs de plafond n'a pas pu être lue."
+  echo "  auth : window=$fenetre_auth max=$places_auth"
+  echo "  aide : FENETRE_MS=$fenetre_aide PLACES=$places_aide"
+  ko=1
+else
+  # La configuration est en SECONDES, l'aide en MILLISECONDES.
+  attendu_ms=$((fenetre_auth * 1000))
+
+  if [ "$fenetre_aide" -lt "$attendu_ms" ] || [ "$places_aide" -gt "$places_auth" ]; then
+    echo "ÉCHEC : inscription-espacee.ts attend moins que le plafond n'exige."
+    echo
+    echo "  src/lib/auth.ts        window ${fenetre_auth}s (${attendu_ms} ms), max ${places_auth}"
+    echo "  inscription-espacee.ts FENETRE_MS ${fenetre_aide}, PLACES ${places_aide}"
+    echo
+    echo "L'amorçage sur base neuve echouerait en 429, loin de la ligne changée."
+    ko=1
+  fi
+fi
+
 if [ "$ko" -eq 0 ]; then
   echo "OK : aucune adresse construite à l'exécution, aucune attente longue,"
-  echo "     et les largeurs déclarées correspondent à la configuration."
+  echo "     largeurs conformes à la configuration, et la fenêtre recopiée"
+  echo "     couvre le plafond réel."
 fi
 
 exit "$ko"

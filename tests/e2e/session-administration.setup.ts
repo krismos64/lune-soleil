@@ -72,6 +72,7 @@ import {
   PRODUIT_VIDE,
   SECTION_TEST,
 } from "./chemin-session";
+import { inscrireEspace } from "./inscription-espacee";
 
 const MOT_DE_PASSE = "phrase-de-passe-de-test1";
 
@@ -108,6 +109,15 @@ async function ouvrirConnexion(): Promise<Client> {
   return client;
 }
 
+/*
+ * LE DELAI COUVRE UNE ATTENTE DE FENETRE, LS-168. Sur une base neuve cette
+ * preparation peut devoir laisser passer la fenetre glissante de
+ * `/sign-up/email`, soixante secondes, avant d'inscrire. Les trente secondes
+ * par defaut ne la couvriraient pas, et l'echec parlerait de delai depasse au
+ * lieu du plafond.
+ */
+preparation.setTimeout(180_000);
+
 preparation(
   "ouvrir une session d'administration partagee",
   async ({ page }) => {
@@ -136,34 +146,36 @@ preparation(
        * a chaque execution rien que pour apprendre que le compte existe, ce qui
        * est exactement le defaut qu'on corrige.
        */
-      let reponse = await page.request.post("/api/auth/sign-in/email", {
+      const reponse = await page.request.post("/api/auth/sign-in/email", {
         data: { email: EMAIL_ADMINISTRATION, password: MOT_DE_PASSE },
       });
 
       if (!reponse.ok()) {
-        reponse = await page.request.post("/api/auth/sign-up/email", {
-          data: {
-            email: EMAIL_ADMINISTRATION,
-            password: MOT_DE_PASSE,
-            name: "Administration de test",
-          },
-        });
+        /*
+         * L'ESPACEMENT EST COMPTE GLOBALEMENT depuis LS-168, voir
+         * `inscription-espacee.ts` : les cinq preparations creent des comptes
+         * sur une base neuve, et c'est leur TOTAL qui franchit les trois places
+         * par minute.
+         *
+         * L'AIDE ECHOUE ELLE-MEME SI L'INSCRIPTION EST REFUSEE, avec la vraie
+         * cause en tete de rapport, au lieu d'un echec plus loin sur « le titre
+         * est introuvable ».
+         */
+        await inscrireEspace(
+          page,
+          EMAIL_ADMINISTRATION,
+          MOT_DE_PASSE,
+          "Administration de test",
+        );
 
         /*
-         * LE COMPTE VIENT D'ETRE CREE, IL FAUT LE PROMOUVOIR MAINTENANT. L'appel
-         * ci-dessus n'a touche aucune ligne, l'utilisateur n'existant pas
-         * encore : sans ce second passage, la toute premiere execution sur une
-         * base neuve serait redirigee vers la connexion.
+         * LE COMPTE VIENT D'ETRE CREE, IL FAUT LE PROMOUVOIR MAINTENANT. Le
+         * premier passage n'avait touche aucune ligne, l'utilisateur n'existant
+         * pas encore : sans ce second appel, la toute premiere execution sur
+         * une base neuve serait redirigee vers la connexion.
          */
-        if (reponse.ok()) {
-          await preparerBase(client);
-        }
+        await preparerBase(client);
       }
-
-      // ECHOUER ICI PLUTOT QUE DANS CHAQUE TEST. Les tests dependants sont alors
-      // marques non executes avec la vraie cause en tete de rapport, au lieu
-      // d'echouer plus loin sur « le titre est introuvable ».
-      expect(reponse.ok(), await reponse.text()).toBe(true);
     } finally {
       await client.end();
     }

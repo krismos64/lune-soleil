@@ -46,9 +46,10 @@
  * comportement servi en production. C'est la consommation qui baisse, pas la
  * garde.
  */
-import { expect, test as preparation } from "@playwright/test";
+import { test as preparation } from "@playwright/test";
 
 import { FICHIER_SESSION, MOT_DE_PASSE_CLIENT } from "./chemin-session";
+import { inscrireEspace } from "./inscription-espacee";
 
 /**
  * LA VALEUR VIENT DU MODULE PARTAGE DEPUIS LS-164 : les tests de
@@ -68,6 +69,15 @@ const MOT_DE_PASSE = MOT_DE_PASSE_CLIENT;
  * creee en LS-81, pour ne pas rendre les traces existantes illisibles.
  */
 const EMAIL_CLIENT = "e2e-suppression@exemple.test";
+
+/*
+ * LE DELAI COUVRE UNE ATTENTE DE FENETRE, LS-168. Sur une base neuve cette
+ * preparation peut devoir laisser passer la fenetre glissante de
+ * `/sign-up/email`, soixante secondes, avant d'inscrire. Les trente secondes
+ * par defaut ne la couvriraient pas, et l'echec parlerait de delai depasse au
+ * lieu du plafond.
+ */
+preparation.setTimeout(180_000);
 
 preparation("ouvrir une session cliente partagee", async ({ page }) => {
   /*
@@ -93,24 +103,24 @@ preparation("ouvrir une session cliente partagee", async ({ page }) => {
    * trois de `/sign-up/email` : le palier 2 est donc nettement moins contraint
    * que le palier 3.
    */
-  let reponse = await page.request.post("/api/auth/sign-in/email", {
+  const reponse = await page.request.post("/api/auth/sign-in/email", {
     data: { email: EMAIL_CLIENT, password: MOT_DE_PASSE },
   });
 
   if (!reponse.ok()) {
-    reponse = await page.request.post("/api/auth/sign-up/email", {
-      data: {
-        email: EMAIL_CLIENT,
-        password: MOT_DE_PASSE,
-        name: "Client de test",
-      },
-    });
+    /*
+     * L'ESPACEMENT EST COMPTE GLOBALEMENT depuis LS-168, voir
+     * `inscription-espacee.ts` : les cinq preparations creent des comptes sur
+     * une base neuve, celle de la CI a chaque execution, et c'est leur TOTAL
+     * qui franchit les trois places par minute.
+     *
+     * L'AIDE ECHOUE ELLE-MEME SI L'INSCRIPTION EST REFUSEE, avec la vraie cause
+     * en tete de rapport : les douze tests dependants sont alors marques non
+     * executes, au lieu d'echouer plus loin sur « le formulaire est
+     * introuvable ».
+     */
+    await inscrireEspace(page, EMAIL_CLIENT, MOT_DE_PASSE, "Client de test");
   }
-
-  // ECHOUER ICI PLUTOT QUE DANS CHAQUE TEST. Les douze tests dependants sont
-  // alors marques comme non executes, avec la vraie cause en tete de rapport,
-  // au lieu d'echouer plus loin sur « le formulaire est introuvable ».
-  expect(reponse.ok(), await reponse.text()).toBe(true);
 
   await page.context().storageState({ path: FICHIER_SESSION });
 });
