@@ -222,6 +222,13 @@ test("un mot de passe actuel faux est refuse sans rien changer", async ({
    * quelqu'un dont le nouveau est simplement trop court.
    */
   await connecter(page);
+
+  /*
+   * L'EMPREINTE EST RELEVEE AVANT LE GESTE, c'est elle qui servira de temoin :
+   * la relever apres seulement ne dirait rien, faute de point de comparaison.
+   */
+  const empreinteAvant = await releverEmpreinte(email);
+
   await page.goto("/compte/profil");
 
   await page.getByLabel("Mot de passe actuel").fill("mauvais-mot-pass");
@@ -233,23 +240,30 @@ test("un mot de passe actuel faux est refuse sans rien changer", async ({
   ).toHaveText(/actuel est incorrect/);
 
   /*
-   * L'ANCIEN FONCTIONNE TOUJOURS : un refus n'a rien change. C'est une VRAIE
-   * mesure, elle consomme donc une place de `/sign-in/email` a dessein, une par
-   * largeur sur les cinq disponibles.
+   * L'ANCIEN FONCTIONNE TOUJOURS : un refus n'a rien change.
    *
-   * LE STATUT EST ASSERTI, ET PAS SEULEMENT `ok()`, LS-168. Un 429 ferait
-   * echouer ce test en disant « le mot de passe ne fonctionne plus », soit
-   * l'inverse de ce qui se passe : le message d'erreur nomme desormais le
-   * plafond quand c'est lui, ce qui evite exactement le diagnostic errone que
-   * cette story existe pour supprimer.
+   * ------------------------------------------------------------------
+   * VERIFIE PAR L'EMPREINTE EN BASE ET NON PAR UNE CONNEXION, LS-168.
+   *
+   * La version precedente rejouait `/sign-in/email`, une fois par largeur. Ces
+   * trois appels s'ajoutaient aux TROIS de `connexion-administration.spec.ts`,
+   * qui soumet un formulaire de connexion a chaque largeur : six pour les cinq
+   * places par minute. Mesure du 7 septembre 2026, deux echecs en 429.
+   *
+   * CE TEST-LA NE PEUT PAS CEDER SA PLACE : il mesure le refus d'identifiants
+   * faux, code 401, et consommer le plafond est ce qu'il fait par nature. C'est
+   * donc a celui-ci de liberer la marge.
+   *
+   * L'EMPREINTE INCHANGEE DIT EXACTEMENT LA MEME CHOSE. Le refus ne doit RIEN
+   * avoir change : si l'empreinte relevee apres est celle d'avant, le mot de
+   * passe d'origine ouvre toujours le compte. La lecture ne consomme aucun
+   * plafond.
+   * ------------------------------------------------------------------
    */
-  const verification = await page.request.post("/api/auth/sign-in/email", {
-    data: { email, password: MOT_DE_PASSE },
-  });
   expect(
-    verification.status(),
-    `Connexion refusee en ${verification.status()} : ${await verification.text()}`,
-  ).toBe(200);
+    await releverEmpreinte(email),
+    "Le refus a modifie l'empreinte du mot de passe : il aurait change quelque chose.",
+  ).toBe(empreinteAvant);
 });
 
 test("le profil ne deborde pas horizontalement", async ({ page }) => {
