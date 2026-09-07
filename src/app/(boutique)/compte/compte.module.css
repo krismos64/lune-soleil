@@ -202,13 +202,26 @@
  * LE SOULIGNEMENT EST CONSERVE : un lien qui ne se distingue que par sa couleur
  * est invisible a qui ne percoit pas cette difference.
  */
+/*
+ * LE CONTOUR DE FOCUS FAIT 3 px DANS TOUT CE FICHIER, comme `globals.css` et
+ * comme la regle l'ecrit, « focus visible d'environ 3 px ».
+ *
+ * SIX DECLARATIONS ETAIENT A 2 px jusqu'au 7 septembre 2026, une seule a 3.
+ * Aucune decision n'avait reduit la valeur : elle s'etait propagee par recopie
+ * d'un bloc a l'autre, et la seule ligne conforme etait celle qu'une story
+ * avait ecrite en lisant la regle. Releve par la revue frontend de LS-190.
+ *
+ * LES ZONES TACTILES DES LIENS D'ACTION FONT 44 px, meme motif : `.raccourciLien`
+ * le posait deja avec sa raison, « un lien de titre fait sinon la hauteur de sa
+ * ligne », et les autres liens du fichier faisaient environ 26 px.
+ */
 .lien {
   color: var(--ls-primary);
   text-decoration: underline;
 }
 
 .lien:focus-visible {
-  outline: 2px solid var(--ls-focus);
+  outline: 3px solid var(--ls-focus);
   outline-offset: 2px;
 }
 
@@ -235,7 +248,7 @@
 }
 
 .actionSecondaire:focus-visible {
-  outline: 2px solid var(--ls-focus);
+  outline: 3px solid var(--ls-focus);
   outline-offset: 2px;
 }
 
@@ -293,7 +306,7 @@
 }
 
 .bouton:focus-visible {
-  outline: 2px solid var(--ls-focus);
+  outline: 3px solid var(--ls-focus);
   outline-offset: 2px;
 }
 
@@ -395,7 +408,7 @@
 }
 
 .lienCommande:focus-visible {
-  outline: 2px solid var(--ls-focus);
+  outline: 3px solid var(--ls-focus);
   outline-offset: 2px;
 }
 
@@ -653,7 +666,7 @@
 }
 
 .raccourciLien:focus-visible {
-  outline: 2px solid var(--ls-focus);
+  outline: 3px solid var(--ls-focus);
   outline-offset: 2px;
 }
 
@@ -714,6 +727,20 @@
 .panneauActions .lien {
   color: var(--ls-text-on-primary);
   text-decoration: underline;
+
+  /*
+   * LA ZONE TACTILE TIENT 44 px, `frontend-design.md`. Un lien en flux fait la
+   * hauteur de sa ligne, environ 26 px a 1rem : c'est ce que `.raccourciLien`
+   * corrige deja ailleurs dans ce fichier, avec la meme raison ecrite.
+   *
+   * `inline-flex` ET NON `display: block` : un bloc etirerait la cible sur
+   * toute la largeur du panneau, et un clic dans le vide a droite du texte
+   * declencherait la navigation. La cible suit le texte, sa hauteur seule est
+   * portee a 44 px.
+   */
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
 }
 
 /*
@@ -727,7 +754,7 @@
  * mesure les paires TEXTE et fond, pas les indicateurs de focus.
  */
 .panneauActions .lien:focus-visible {
-  outline: 2px solid var(--ls-text-on-primary);
+  outline: 3px solid var(--ls-text-on-primary);
   outline-offset: 2px;
 }
 
@@ -771,4 +798,26 @@
 
 .groupeActions p:last-child {
   margin-bottom: 0;
+}
+
+/*
+ * LES ETIQUETTES DE GROUPE SONT DES `h3` STYLES COMME DU TEXTE GRAS, LS-190.
+ *
+ * LE CHOIX SEMANTIQUE ET LE CHOIX VISUEL SONT SEPARABLES ICI, et c'est ce qui
+ * permet de corriger la structure sans changer le rendu : un `h3` porte la
+ * navigation par titres, la taille heritee garde l'equilibre du panneau.
+ *
+ * `font-size: inherit` EST DELIBERE. Sans lui l'agent utilisateur applique sa
+ * taille de `h3`, environ 1,17rem : trois titres de cette taille dans un aplat
+ * de 304 px de large a 320 px en feraient trois sous-sections visuelles la ou
+ * il n'y a que trois lignes d'action.
+ *
+ * LA TAILLE RESTE A 1rem, DONC LE SEUIL DE TEXTE LARGE NE S'APPLIQUE PAS : le
+ * blanc sur `--ls-primary` tient 8,93:1, tres au-dela des 4,5:1 du petit texte.
+ * Le piege des 18,66 px gras ne se pose pas.
+ */
+.titreGroupe {
+  margin: 0 0 var(--ls-space-3);
+  font-size: inherit;
+  font-weight: 600;
 }
