@@ -145,6 +145,15 @@ export async function ouvrirRetour(
     const issue = await ouvrirAttenteRetour(demandeId);
 
     if (issue.statut === "APPLIQUEE") {
+      /*
+       * PAS DE `"layout"`, ET C'EST RAISONNE, regle C37. Cette transition et
+       * les deux suivantes, preuve d'expedition et constat de reception, font
+       * passer la demande d'un statut EN COURS a un autre statut EN COURS :
+       * `retractationsEnCours` exclut les seuls `REMBOURSEE` et `REFUSEE`,
+       * donc le nombre affiche dans la barre ne bouge pas.
+       *
+       * Le refus et le remboursement, eux, en sortent : ils portent `"layout"`.
+       */
       revalidatePath(CHEMIN_RETRACTATIONS);
       return { statut: "SUCCES" };
     }
@@ -317,7 +326,12 @@ export async function refuser(donnees: FormData): Promise<ResultatTransition> {
     const issue = await refuserRetractation(demandeId, motif);
 
     if (issue.statut === "APPLIQUEE") {
-      revalidatePath(CHEMIN_RETRACTATIONS);
+      /*
+       * `"layout"` EST OBLIGATOIRE ICI, regle C37. `retractationsEnCours`
+       * compte les demandes dont le statut n'est NI `REMBOURSEE` NI `REFUSEE` :
+       * un refus fait donc SORTIR la demande du comptage de la barre.
+       */
+      revalidatePath(CHEMIN_RETRACTATIONS, "layout");
       return { statut: "SUCCES" };
     }
 
@@ -430,7 +444,13 @@ export async function rembourser(
     });
 
     if (issue.statut === "REMBOURSE") {
-      revalidatePath(CHEMIN_RETRACTATIONS);
+      /*
+       * `"layout"` EST OBLIGATOIRE ICI, regle C37, et pour TROIS raisons a la
+       * fois : la demande sort de `retractationsEnCours`, l'encaisse du jour
+       * soustrait le montant rembourse, et la reintegration de stock deplace
+       * `variantesStockFaible` et `variantesIndisponibles`.
+       */
+      revalidatePath(CHEMIN_RETRACTATIONS, "layout");
 
       return {
         statut: "SUCCES",

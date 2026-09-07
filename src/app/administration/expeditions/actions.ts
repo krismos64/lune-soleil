@@ -137,7 +137,13 @@ export async function expedier(
     });
 
     if (issue.statut === "EXPEDIEE") {
-      revalidatePath(CHEMIN_EXPEDITIONS);
+      /*
+       * `"layout"` EST OBLIGATOIRE ICI, regle C37. L'expedition fait passer la
+       * commande de `EN_PREPARATION` a `EXPEDIEE`, donc elle deplace TROIS
+       * comptages de la barre : `commandesPretesAExpedier` perd une ligne,
+       * `commandesEnCours` aussi, et `expeditionsEnTransit` en gagne une.
+       */
+      revalidatePath(CHEMIN_EXPEDITIONS, "layout");
       revalidatePath(`${CHEMIN_COMMANDES}/${commande.data}`);
 
       return { statut: "SUCCES" };

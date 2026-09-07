@@ -134,7 +134,13 @@ export async function creerVarianteAction(
       quantitePhysique,
     });
     if (typeof produitId === "string") {
-      revalidatePath(chemin(produitId));
+      /*
+       * `"layout"` EST OBLIGATOIRE ICI, regle C37. Creer, modifier ou archiver
+       * une variante ecrit `quantitePhysique` ou `archiveeA`, les deux colonnes
+       * que `variantesStockFaible` et `variantesIndisponibles` filtrent : ces
+       * deux comptages sont affiches dans la barre de l'administration.
+       */
+      revalidatePath(chemin(produitId), "layout");
     }
     return { statut: "SUCCES" };
   } catch (erreur) {
@@ -172,7 +178,8 @@ export async function modifierVarianteAction(
       quantitePhysique,
     });
     if (typeof produitId === "string") {
-      revalidatePath(chemin(produitId));
+      // `"layout"` pour la meme raison que ci-dessus, regle C37.
+      revalidatePath(chemin(produitId), "layout");
     }
     return { statut: "SUCCES" };
   } catch (erreur) {
@@ -199,7 +206,8 @@ export async function archiverVarianteAction(
   try {
     await archiverVariante({ id });
     if (typeof produitId === "string") {
-      revalidatePath(chemin(produitId));
+      // `"layout"` pour la meme raison que ci-dessus, regle C37.
+      revalidatePath(chemin(produitId), "layout");
     }
     return { statut: "SUCCES" };
   } catch (erreur) {
