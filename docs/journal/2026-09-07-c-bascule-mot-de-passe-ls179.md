@@ -134,8 +134,15 @@ passe.
 
 ## État des tickets
 
-**LS-179 est livrée**, PR #272, en attente de la chaîne au moment d'écrire.
-**LS-202 créée**, le désordre de numérotation ci-dessus.
+**LS-179 est LIVRÉE ET CLOSE**, PR #272 fusionnée sur `main` en rebase, cinq
+commits, `a85923b` à `e6d7b98`. Les huit contrôles verts en 10 min 39 s, run
+34116205956, dont l'étape `6s` qui exerce le contrôle neuf.
+
+**LS-202 créée**, Low, le désordre de numérotation ci-dessus.
+
+Comptes relevés dans Jira après la fermeture, jamais recopiés : **132 tickets
+terminés sur 192**. L'epic 4bis passe à quatre ouvertes, l'epic 6 à quinze,
+LS-202 comprise.
 
 ## Prochaine étape
 
