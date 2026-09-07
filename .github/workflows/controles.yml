@@ -746,6 +746,25 @@ jobs:
 
       # Textuel, aucune base ni conteneur requis.
       #
+      # CE QU'IL GARDE : la bascule de lisibilite du mot de passe, LS-179.
+      # ADR-023 impose seize caracteres minimum, et les saisir sans pouvoir les
+      # relire fait raccourcir le mot de passe jusqu'a la limite basse, ou
+      # renoncer a l'inscription.
+      #
+      # IL EST LE PENDANT TEXTUEL des tests en jsdom et des mesures de rendu, et
+      # les trois sont necessaires. Le jsdom prouve le comportement du
+      # composant, la suite de bout en bout mesure les 44 px sur DEUX ecrans ;
+      # ce controle couvre les SIX champs et attrape le septieme des son
+      # ecriture, ce qu'aucun des deux ne fait.
+      #
+      # LE TICKET N'EN LISTAIT QUE QUATRE quand le depot en portait six, les
+      # deux champs du profil ayant ete oublies. Une liste ecrite a la main est
+      # une opinion ; ce controle relit le depot.
+      - name: 6o. Tout champ de mot de passe client porte sa bascule
+        run: ./scripts/verifier-bascule-mot-de-passe.sh
+
+      # Textuel, aucune base ni conteneur requis.
+      #
       # CE QU'IL GARDE : le generateur des medias de test, LS-187. Il recopie
       # les chemins de la fixture et les declinaisons d'ADR-007, faute de
       # pouvoir les importer : il tourne AVANT `next build`, hors du contexte de

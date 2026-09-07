@@ -24,6 +24,8 @@ import {
 import { changePassword } from "@/lib/auth-client";
 
 import type { ResultatProfil } from "./actions";
+import { ChampMotDePasse } from "@/components/champ-mot-de-passe";
+
 import styles from "./profil.module.css";
 
 /**
@@ -364,10 +366,9 @@ export function FormulaireMotDePasse({
          * l'existant sur le premier et engendre une valeur neuve sur le second.
          * Les confondre ferait remplir les deux avec l'ancien.
          */}
-        <input
+        <ChampMotDePasse
           id="profil-courant"
           name="motDePasseCourant"
-          type="password"
           required
           autoComplete="current-password"
         />
@@ -375,10 +376,9 @@ export function FormulaireMotDePasse({
 
       <div className={styles.champ}>
         <label htmlFor="profil-nouveau">Nouveau mot de passe</label>
-        <input
+        <ChampMotDePasse
           id="profil-nouveau"
           name="nouveauMotDePasse"
-          type="password"
           required
           minLength={longueurMinimale}
           /*

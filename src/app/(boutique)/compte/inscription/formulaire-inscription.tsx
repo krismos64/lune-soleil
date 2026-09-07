@@ -25,6 +25,8 @@ import { signUp } from "@/lib/auth-client";
 // un paquet servi au navigateur.
 import { LONGUEUR_MINIMALE_MOT_DE_PASSE } from "@/lib/mot-de-passe";
 
+import { ChampMotDePasse } from "@/components/champ-mot-de-passe";
+
 import styles from "../authentification.module.css";
 
 /** Ou l'on arrive une fois inscrit. Chemin relatif, jamais une URL fournie. */
@@ -130,17 +132,16 @@ export function FormulaireInscription() {
 
       <div className={styles.champ}>
         <label htmlFor="mot-de-passe">Mot de passe</label>
-        <input
+        <ChampMotDePasse
           id="mot-de-passe"
           name="mot-de-passe"
-          type="password"
           autoComplete="new-password"
           required
           // Le serveur reste l'autorite sur cette longueur : cet attribut evite
           // un aller-retour reseau inutile, il ne garantit rien.
           minLength={LONGUEUR_MINIMALE_MOT_DE_PASSE}
           value={motDePasse}
-          onChange={(evenement) => setMotDePasse(evenement.target.value)}
+          onChange={setMotDePasse}
           disabled={enCours}
           aria-describedby="aide-mot-de-passe"
         />

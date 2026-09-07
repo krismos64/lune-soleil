@@ -1,0 +1,145 @@
+/*
+ * Champ de mot de passe avec bascule de lisibilite, LS-179.
+ *
+ * IL PORTE SES PROPRES STYLES ET N'HERITE DE RIEN. Les cinq ecrans concernes se
+ * partagent deux feuilles differentes, `authentification.module.css` pour les
+ * quatre ecrans du parcours et `profil.module.css` pour l'ecran du profil.
+ * S'appuyer sur les classes de l'appelant marcherait pour quatre d'entre eux et
+ * casserait le cinquieme, ou `.champ input` n'a pas la meme definition.
+ *
+ * Aucune valeur hexadecimale en dur : tout vient des jetons d'ADR-022.
+ */
+
+/*
+ * LE CHAMP ET SON BOUTON SUR UNE MEME LIGNE, dans un conteneur qui porte la
+ * bordure a la place de l'input.
+ *
+ * POURQUOI LA BORDURE MIGRE SUR LE CONTENEUR : garder la bordure sur l'input et
+ * poser le bouton a cote dessinerait deux rectangles accoles, l'un borde et
+ * l'autre non. Le conteneur borde et l'input transparent donnent un seul
+ * controle visuel, ce qui est ce que la personne manipule.
+ */
+.enveloppe {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--ls-border-controle);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface);
+}
+
+/*
+ * LE CONTOUR DE FOCUS SE PORTE SUR L'ENVELOPPE quand l'input a le focus.
+ * `:focus-within` et non `:focus-visible` sur l'input : le contour doit
+ * entourer le controle entier, bouton compris, sinon il coupe le bouton en
+ * deux. Le bouton garde son propre contour, gere plus bas.
+ */
+.enveloppe:has(.saisie:focus-visible) {
+  /* 3px et 2px, valeurs de `globals.css` : un contour propre a ce composant
+     divergerait du reste du site sans raison. */
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+.enveloppe:has(.saisie:disabled) {
+  background: var(--ls-surface-sand);
+}
+
+.saisie {
+  /*
+   * 16px MINIMUM, meme raison que dans `authentification.module.css` : en
+   * dessous, iOS zoome a la mise au point et le formulaire deborde.
+   */
+  font-size: 1rem;
+  font-family: inherit;
+  padding: var(--ls-space-3);
+  min-height: var(--ls-touch-target);
+  border: none;
+  background: transparent;
+  border-radius: var(--ls-radius-sm);
+  /*
+   * `min-width: 0` EST CE QUI EMPECHE LE DEBORDEMENT A 320 px. Un input est un
+   * element remplace : sa largeur intrinseque par defaut vaut environ 20
+   * caracteres, et `flex-shrink` ne descend pas en dessous sans cette ligne. Le
+   * bouton serait pousse hors du cadre, defaut de LS-171 rejoue.
+   */
+  min-width: 0;
+  flex: 1;
+}
+
+.saisie:focus-visible {
+  /* Le contour est porte par l'enveloppe, voir plus haut. */
+  outline: none;
+}
+
+.saisie:disabled {
+  cursor: not-allowed;
+}
+
+/*
+ * LE BOUTON EST UN VRAI BOUTON, atteignable au clavier et nomme.
+ *
+ * 44 px DANS LES DEUX DIMENSIONS, `frontend-design.md`. La hauteur suit celle
+ * du champ, la largeur est imposee : une icone de 24 px laisserait une cible de
+ * 24 px, sous le seuil.
+ */
+.bascule {
+  min-height: var(--ls-touch-target);
+  min-width: var(--ls-touch-target);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--ls-space-2);
+  border: none;
+  background: transparent;
+  color: var(--ls-primary);
+  font-size: 0.875rem;
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: var(--ls-radius-sm);
+  /*
+   * `flex-shrink: 0` : la cible tactile ne se negocie pas quand la place
+   * manque. C'est l'input qui cede, il porte `min-width: 0` pour cela.
+   */
+  flex-shrink: 0;
+}
+
+.bascule:hover:not(:disabled) {
+  background: var(--ls-surface-sand);
+}
+
+.bascule:focus-visible {
+  /*
+   * CONTOUR VERS L'INTERIEUR, seul ecart assume a `globals.css`. Le bouton est
+   * colle au bord de l'enveloppe : un decalage positif de 2 px tracerait son
+   * contour PAR-DESSUS la bordure du champ et hors du cadre a droite, ou 320 px
+   * ne laissent aucune marge. Le trait reste de 3 px, donc visible.
+   */
+  outline: 3px solid var(--ls-focus);
+  outline-offset: -3px;
+}
+
+.bascule:disabled {
+  color: var(--ls-text-muted);
+  cursor: not-allowed;
+}
+
+/*
+ * L'ANNONCE D'ETAT EST LUE, PAS VUE. L'etat se voit deja a l'ecran, le texte
+ * masque n'existe que pour les lecteurs d'ecran.
+ *
+ * `clip-path` ET NON `left: -9999px`, convention du depot, raison ecrite dans
+ * `factures.module.css` : la technique par decalage produit un element hors
+ * ecran que la mesure de debordement doit exclure a la main. Ici la raison est
+ * plus forte encore, `verifier-debordement` mesurant ces ecrans a 320 px.
+ */
+.annonce {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
