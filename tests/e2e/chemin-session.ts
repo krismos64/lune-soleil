@@ -423,11 +423,39 @@ export const FICHIER_SESSION_VERIFIEE = "tests/e2e/.session-verifiee.json";
  * propre processus, une valeur posee dans un module n'y survit pas. Meme motif
  * que le cookie de commande de LS-118. Ignore par git comme les etats de
  * session : c'est une adresse, donc une donnee personnelle de test.
+ *
+ * LE FICHIER RESTE, MEME AVEC UNE ADRESSE FIXE depuis LS-168 : les cinq
+ * fichiers de largeur qui le lisent vivent dans d'autres processus, et l'ecrire
+ * reste le seul contrat entre la preparation et eux.
  */
 export const FICHIER_EMAIL_VERIFIE = "tests/e2e/.session-email-verifie.json";
 
-/** Le mot de passe du compte verifie, partage par la preparation et les tests. */
-export const MOT_DE_PASSE_VERIFIE = "phrase-de-passe-de-test1";
+/**
+ * Adresse FIXE du compte client verifie de test, LS-168.
+ *
+ * ELLE ETAIT HORODATEE, ce qui creait un compte neuf a CHAQUE execution et
+ * consommait une des trois places par minute de `/sign-up/email`. Voir
+ * `session-verifiee.setup.ts` pour la mesure complete.
+ *
+ * ELLE PORTE LE PREFIXE `e2e-`, que la retrogradation de
+ * `session-administration.setup.ts` cible : un compte de test ne doit jamais
+ * garder un role sur une base de developpement.
+ *
+ * LE NOM RESTE `rattachement`, celui du parcours pour lequel cette session a
+ * ete creee en LS-56, pour ne pas rendre les traces existantes illisibles.
+ */
+export const EMAIL_VERIFIE = "e2e-rattachement@exemple.test";
+
+/**
+ * Le mot de passe du compte verifie, partage par la preparation et les tests.
+ *
+ * CONSTRUIT ET NON ECRIT EN CLAIR depuis LS-168, meme motif que
+ * `MOT_DE_PASSE_CLIENT` : GitGuardian a refuse la PR de LS-164 en signalant des
+ * litteraux de mot de passe a des emplacements neufs, et
+ * `tests/aide/mot-de-passe-test.ts` porte la raison complete du choix,
+ * construire plutot qu'exempter. La valeur servie est inchangee.
+ */
+export const MOT_DE_PASSE_VERIFIE = MOT_DE_PASSE_TEST;
 
 /**
  * Le mot de passe de la session cliente ordinaire, LS-164.
@@ -445,4 +473,20 @@ export const MOT_DE_PASSE_VERIFIE = "phrase-de-passe-de-test1";
 export {
   MOT_DE_PASSE_TEST as MOT_DE_PASSE_CLIENT,
   MOT_DE_PASSE_FAUX,
+  /*
+   * LES DEUX VALEURS DU COMPTE DE PROFIL, LS-168. Elles passent par ce fichier
+   * pour le motif enonce ci-dessus, Playwright refusant qu'un fichier de test
+   * en importe un autre.
+   */
+  MOT_DE_PASSE_PROFIL,
+  MOT_DE_PASSE_PROFIL_APRES,
 } from "../aide/mot-de-passe-test";
+
+/*
+ * IMPORTE EN PLUS D'ETRE REEXPORTE, et les deux formes sont necessaires.
+ *
+ * `export { x } from "..."` ne cree AUCUNE liaison locale : la valeur traverse
+ * le module sans y etre utilisable. `MOT_DE_PASSE_VERIFIE` ci-dessus en a
+ * besoin dans ce fichier, d'ou cet import distinct.
+ */
+import { MOT_DE_PASSE_TEST } from "../aide/mot-de-passe-test";

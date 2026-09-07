@@ -52,22 +52,40 @@ export default defineConfig({
      * protege ont besoin d'une session SANS le role. Promouvoir la session
      * cliente les ferait passer pour la mauvaise raison.
      *
-     * TROIS SESSIONS DEPUIS LS-56, et la marge du plafond est desormais NULLE.
-     * `session-verifiee.setup.ts` ouvre un compte VERIFIE, qui ne peut pas se
-     * confondre avec la session cliente : celle-ci est volontairement NON
-     * verifiee, et c'est ce qui permet a `compte-authentification` de mesurer
-     * le rappel de verification. Les deux etats sont mutuellement exclusifs a
-     * l'ecran.
+     * TROIS SESSIONS DEPUIS LS-56. `session-verifiee.setup.ts` ouvre un compte
+     * VERIFIE, qui ne peut pas se confondre avec la session cliente : celle-ci
+     * est volontairement NON verifiee, et c'est ce qui permet a
+     * `compte-authentification` de mesurer le rappel de verification. Les deux
+     * etats sont mutuellement exclusifs a l'ecran.
      *
-     * `/sign-up/email` accepte trois appels par minute et par IP : les trois
-     * sont donc consommes. `session-verifiee.setup.ts` porte pour cette raison
-     * un REESSAI ESPACE sur 429, sans quoi une suite relancee dans la minute
-     * echoue a la preparation. Une quatrieme session exigerait de repenser
-     * l'ensemble, pas d'ajouter un fichier.
+     * ------------------------------------------------------------------
+     * LA MARGE DU PLAFOND N'EST PLUS NULLE, LS-168, et cet avertissement
+     * remplace celui qui l'annoncait.
+     *
+     * `/sign-up/email` accepte TROIS appels par minute et par IP. La suite en
+     * consommait SEPT a chaque execution : une par preparation de session, plus
+     * six dans `compte-profil.spec.ts`, qui inscrivait deux fois par largeur.
+     * La parade etait un reessai espace de 21 secondes, qui REPARTIT la
+     * consommation sans la supprimer et echouait quand meme sous charge.
+     *
+     * TOUTES LES ADRESSES DE TEST SONT DESORMAIS FIXES, et les comptes
+     * reutilises d'une execution a l'autre par les memes TROIS PALIERS partout :
+     * reutiliser l'etat, sinon se connecter, sinon s'inscrire. Motif pose par
+     * LS-111, etendu par LS-113, generalise par LS-168.
+     *
+     * EN REGIME ETABLI, UNE EXECUTION FAIT ZERO INSCRIPTION. Les trois places
+     * par minute restent donc entierement disponibles, et le seul cas qui en
+     * consomme est la premiere execution sur une base neuve, celle de la CI.
+     *
+     * UNE QUATRIEME SESSION EST REDEVENUE POSSIBLE, a la condition qu'elle
+     * suive ce motif : une adresse fixe et les trois paliers. Une adresse
+     * horodatee ramenerait le defaut entier.
+     * `scripts/verifier-fixtures-e2e.sh` garde cette propriete.
+     * ------------------------------------------------------------------
      *
      * NE PAS NEUTRALISER LE PLAFOND EN TEST : il retirerait de la mesure une
      * protection reelle, et la suite ne dirait plus rien du comportement servi
-     * en production.
+     * en production. C'est la CONSOMMATION qui a baisse, jamais la garde.
      *
      * `testMatch` isole ces fichiers des trois projets de largeur, sans quoi ils
      * s'executeraient quatre fois et le probleme resterait entier.

@@ -1,29 +1,93 @@
 /**
- * Le profil du client, aux trois largeurs. LS-60, critere 6.
+ * Le profil du client, aux trois largeurs. LS-60 critere 6, puis LS-168.
  *
- * CHAQUE LARGEUR CREE SON PROPRE COMPTE, et c'est une condition de correction :
- * ce fichier CHANGE le mot de passe et l'adresse email, donc il consomme l'etat
- * du compte partage. Les trois largeurs se rendraient mutuellement inutilisable
- * la session ouverte par le projet `preparation`.
+ * CHAQUE LARGEUR A SON PROPRE COMPTE, et c'est une condition de correction : ce
+ * fichier CHANGE le mot de passe, donc il consomme l'etat du compte partage.
+ * Les trois largeurs se rendraient mutuellement inutilisable la session ouverte
+ * par le projet `preparation`.
  *
- * L'INSCRIPTION EST DONC FAITE ICI, une par largeur, et le plafond de
- * `/sign-up/email` est de trois par minute et par IP : les trois preparations
- * le consomment deja entierement. Ce fichier porte donc un REESSAI ESPACE,
- * meme parade que `session-verifiee.setup.ts`, plutot que de neutraliser le
- * plafond, ce qui retirerait de la mesure une protection reelle.
+ * ------------------------------------------------------------------
+ * CE QUE LS-168 A CORRIGE. Les comptes etaient CREES a chaque execution, avec
+ * une adresse horodatee, deux fois par largeur : le `beforeAll` et le test du
+ * mot de passe. SIX inscriptions par execution, quand `/sign-up/email` en
+ * accepte TROIS par minute et par IP.
+ *
+ * La parade etait un reessai espace de 21 secondes. UN REESSAI REPARTIT LA
+ * CONSOMMATION, IL NE LA SUPPRIME PAS : il allongeait le fichier de plusieurs
+ * minutes et echouait quand meme sous charge, ce que la mesure du 7 septembre
+ * 2026 confirme, « 1 failed » sur ce fichier a 320 px.
+ *
+ * LES ADRESSES SONT DONC FIXES, une paire par largeur, et les comptes
+ * reutilises d'une execution a l'autre avec les TROIS PALIERS eprouves par
+ * LS-111 et LS-113 : reutiliser, sinon se connecter, sinon s'inscrire. En
+ * regime etabli, ce fichier ne fait AUCUNE inscription.
+ *
+ * LA CLE D'ISOLEMENT EST LE NOM DU PROJET Playwright, `mobile-320` et ses deux
+ * voisins, et non la largeur du viewport : c'est le projet qui definit le
+ * processus, donc la seule frontiere qui garantisse qu'aucune autre largeur ne
+ * touche le meme compte.
+ *
+ * L'ETAT MODIFIE EST REMIS EN PLACE, et c'est ce qui rend l'adresse fixe
+ * tenable. Deux champs seulement changent ici : le NOM, reecrit a chaque
+ * execution donc sans importance, et le MOT DE PASSE, restaure par le test qui
+ * le change. Aucun test ne touche l'adresse email, verifie sur les sept.
+ * ------------------------------------------------------------------
+ *
+ * LE PLAFOND N'EST PAS DESACTIVE POUR AUTANT : le neutraliser en test
+ * retirerait de la mesure une protection reelle. C'est la consommation qui
+ * baisse, jamais la garde.
  */
 import "dotenv/config";
 
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { Client } from "pg";
 
 import {
   TOLERANCE_DEBORDEMENT_PX,
   debordementHorizontal,
 } from "./mesure-rendu";
+import {
+  MOT_DE_PASSE_PROFIL,
+  MOT_DE_PASSE_PROFIL_APRES,
+} from "./chemin-session";
 
 /** Seize caracteres, la longueur imposee a tous les comptes, ADR-023. */
-const MOT_DE_PASSE = "phrase-de-passe1";
+const MOT_DE_PASSE = MOT_DE_PASSE_PROFIL;
+
+/**
+ * La valeur posee par le test de changement, puis defaite par sa restauration.
+ *
+ * ELLE DOIT DIFFERER DE `MOT_DE_PASSE`, sans quoi le test « changer son mot de
+ * passe ferme les autres sessions » demanderait de remplacer une valeur par
+ * elle-meme : le formulaire pourrait le refuser, et surtout la mesure ne
+ * prouverait plus rien du changement qu'elle annonce. Motif deja rencontre ici,
+ * un test de refus qui cesse d'exercer son refus en gardant son nom.
+ */
+const MOT_DE_PASSE_APRES = MOT_DE_PASSE_PROFIL_APRES;
+
+/**
+ * L'adresse du compte de cette largeur, derivee du nom du projet Playwright.
+ *
+ * FIXE PAR PROJET DEPUIS LS-168, voir l'entete. Le prefixe `e2e-` est celui que
+ * la retrogradation de `session-administration.setup.ts` cible : un compte de
+ * test ne doit jamais garder un role sur une base de developpement.
+ */
+function adresseProfil(projet: string): string {
+  return `e2e-profil-${projet}@exemple.test`;
+}
+
+/**
+ * L'adresse du compte DEDIE au test de changement de mot de passe.
+ *
+ * DISTINCTE DE LA PRECEDENTE, et ce n'est pas une precaution decorative : ce
+ * test consomme le mot de passe du compte, et les six autres tests de la meme
+ * largeur rejouent les cookies du `beforeAll`. Les faire partager un compte
+ * rendrait leur session invalide au moment ou celui-ci change la valeur.
+ */
+function adresseMotDePasse(projet: string): string {
+  return `e2e-motdepasse-${projet}@exemple.test`;
+}
 
 /*
  * SERIE : les tests de ce fichier partagent le compte de leur largeur, et
@@ -40,35 +104,41 @@ let cookies: Awaited<
 /*
  * LE `beforeAll` A SON PROPRE DELAI, et il ne suffit pas de poser
  * `test.setTimeout` : celui-ci ne couvre QUE les tests, jamais les hooks.
- * Quatre reessais espaces de 21 s font 84 s, largement au-dela des 30 s par
- * defaut. Mesure : « "beforeAll" hook timeout of 30000ms exceeded ».
+ *
+ * IL RESTE GENEREUX bien que LS-168 ait retire les reessais : la toute premiere
+ * execution sur une base neuve inscrit encore, et c'est le seul cas ou ce hook
+ * peut attendre.
  */
-test.beforeAll(async ({ browser }) => {
-  test.setTimeout(180_000);
+test.beforeAll(async ({ browser }, infos) => {
+  test.setTimeout(120_000);
 
   const contexte = await browser.newContext();
   const page = await contexte.newPage();
 
-  email = `e2e-profil-${Date.now()}-${Math.random()
-    .toString(36)
-    .slice(2, 8)}@exemple.test`;
+  /*
+   * L'ADRESSE EST DERIVEE DU NOM DU PROJET, voir l'entete : c'est le projet qui
+   * definit le processus, donc la frontiere qui garantit l'isolement.
+   */
+  email = adresseProfil(infos.project.name);
 
   /*
-   * REESSAI ESPACE SUR 429, voir l'entete. On n'attend QUE sur un 429, jamais
-   * sur un refus de fond : reessayer une adresse deja prise echouerait quatre
-   * fois pour la meme raison, en masquant la cause derriere une minute.
+   * PALIERS 1 ET 2 : SE CONNECTER, SINON S'INSCRIRE.
+   *
+   * PAS DE PALIER « ETAT SUR DISQUE » ICI, contrairement aux trois preparations
+   * de session : ce fichier a besoin des COOKIES en memoire pour les rejouer a
+   * chaque test, pas d'un `storageState` sur disque. La connexion est de toute
+   * facon le palier bon marche, `/sign-in/email` acceptant cinq appels par
+   * minute contre trois pour l'inscription.
+   *
+   * L'ORDRE EST DELIBERE : l'inverse consommerait une place du plafond
+   * d'inscription a chaque execution rien que pour apprendre que le compte
+   * existe, ce qui est exactement le defaut que LS-168 corrige.
    */
-  let reponse = await page.request.post("/api/auth/sign-up/email", {
-    data: { email, password: MOT_DE_PASSE, name: "Client profil" },
+  let reponse = await page.request.post("/api/auth/sign-in/email", {
+    data: { email, password: MOT_DE_PASSE },
   });
 
-  for (let essai = 1; essai < 5 && !reponse.ok(); essai += 1) {
-    if (reponse.status() !== 429) {
-      break;
-    }
-
-    await page.waitForTimeout(21_000);
-
+  if (!reponse.ok()) {
     reponse = await page.request.post("/api/auth/sign-up/email", {
       data: { email, password: MOT_DE_PASSE, name: "Client profil" },
     });
@@ -82,8 +152,8 @@ test.beforeAll(async ({ browser }) => {
    * une connexion par test, sept tests fois trois largeurs, le depassait
    * largement. Mesure : « Too many requests » sur les derniers tests.
    *
-   * L'inscription a deja pose un cookie de session, `autoSignIn` valant son
-   * defaut : aucune connexion supplementaire n'est meme necessaire ici.
+   * L'appel ci-dessus a pose un cookie de session, que ce soit par connexion ou
+   * par inscription, `autoSignIn` valant son defaut.
    */
   cookies = await contexte.cookies();
 
@@ -226,30 +296,38 @@ test("aucune violation axe-core sur le profil", async ({ page }) => {
 test("changer son mot de passe ferme les autres sessions", async ({
   page,
   browser,
-}) => {
-  test.setTimeout(180_000);
+}, infos) => {
+  test.setTimeout(120_000);
 
-  const emailDedie = `e2e-motdepasse-${Date.now()}-${Math.random()
-    .toString(36)
-    .slice(2, 8)}@exemple.test`;
+  const emailDedie = adresseMotDePasse(infos.project.name);
 
-  let inscription = await page.request.post("/api/auth/sign-up/email", {
-    data: { email: emailDedie, password: MOT_DE_PASSE, name: "Client mdp" },
+  /*
+   * MEMES PALIERS QUE LE `beforeAll` : se connecter, sinon s'inscrire.
+   *
+   * UN SEUL MOT DE PASSE EST ESSAYE, celui de reference, parce que la
+   * restauration en base ci-dessous est fiable : le seul cas qui laisserait le
+   * compte sur l'autre valeur serait une execution tuee entre le changement et
+   * la restauration. L'inscription rattrape alors, en consommant une place du
+   * plafond une fois, ce qui est le comportement voulu apres un incident.
+   */
+  let acces = await page.request.post("/api/auth/sign-in/email", {
+    data: { email: emailDedie, password: MOT_DE_PASSE },
   });
 
-  for (let essai = 1; essai < 5 && !inscription.ok(); essai += 1) {
-    if (inscription.status() !== 429) {
-      break;
-    }
-
-    await page.waitForTimeout(21_000);
-
-    inscription = await page.request.post("/api/auth/sign-up/email", {
+  if (!acces.ok()) {
+    acces = await page.request.post("/api/auth/sign-up/email", {
       data: { email: emailDedie, password: MOT_DE_PASSE, name: "Client mdp" },
     });
   }
 
-  expect(inscription.ok(), await inscription.text()).toBe(true);
+  expect(acces.ok(), await acces.text()).toBe(true);
+
+  /*
+   * L'EMPREINTE EST RELEVEE MAINTENANT, avant tout changement : c'est elle qui
+   * sera reposee en fin de test. La relever apres n'aurait aucun sens, la
+   * valeur d'origine ayant alors disparu.
+   */
+  const empreinteOrigine = await releverEmpreinte(emailDedie);
 
   // UNE SECONDE SESSION, celle qu'on veut voir tomber.
   const autre = await browser.newContext();
@@ -266,7 +344,7 @@ test("changer son mot de passe ferme les autres sessions", async ({
 
   await page.goto("/compte/profil");
   await page.getByLabel("Mot de passe actuel").fill(MOT_DE_PASSE);
-  await page.getByLabel("Nouveau mot de passe").fill("nouvelle-phrase1");
+  await page.getByLabel("Nouveau mot de passe").fill(MOT_DE_PASSE_APRES);
   await page.getByRole("button", { name: "Changer mon mot de passe" }).click();
 
   await expect(
@@ -291,4 +369,125 @@ test("changer son mot de passe ferme les autres sessions", async ({
   ).toBeVisible();
 
   await autre.close();
+
+  /*
+   * L'EMPREINTE D'ORIGINE EST REPOSEE, et c'est ce qui rend l'adresse fixe
+   * tenable : sans cette etape, la prochaine execution ne pourrait pas se
+   * connecter, retomberait sur l'inscription, et le defaut que LS-168 corrige
+   * reviendrait entier des la deuxieme execution.
+   *
+   * EN BASE ET NON PAR LE FORMULAIRE, et ce choix est CONTRAINT, pas
+   * esthetique. `/change-password` est plafonnee a CINQ appels par minute et
+   * par IP, `src/lib/auth.ts` : le formulaire est le chemin naturel, mais il en
+   * consommerait un SECOND par largeur, six au total pour cinq places. La
+   * restauration reintroduirait donc exactement le defaut qu'elle sert a
+   * eviter, sous une autre route.
+   *
+   * REPOSER L'EMPREINTE PLUTOT QUE LA CALCULER : rien n'est hache ici, la
+   * valeur relevee avant le changement est simplement remise. Aucun detail
+   * d'implementation de Better Auth n'est fige, et une mise a jour qui
+   * changerait l'algorithme n'aurait aucun effet sur ce code.
+   */
+  await reposerEmpreinte(emailDedie, empreinteOrigine);
 });
+
+/**
+ * Releve l'empreinte du mot de passe telle qu'elle est stockee, avant le
+ * changement, pour pouvoir la reposer apres.
+ *
+ * `provider_id = 'credential'` : un compte peut porter plusieurs lignes dans
+ * `compte`, une par fournisseur d'identite. Seule celle du mot de passe porte
+ * une empreinte, les autres l'ont a NULL.
+ *
+ * AUCUN MOT DE PASSE NE TRANSITE ICI, seulement son empreinte, qui n'ouvre
+ * rien : elle n'est ni journalisee, ni affichee, ni ecrite sur disque.
+ */
+async function releverEmpreinte(email: string): Promise<string> {
+  const client = await ouvrirConnexion();
+
+  try {
+    const resultat = await client.query<{ password: string | null }>(
+      `SELECT c.password
+         FROM compte c
+         JOIN utilisateur u ON u.id = c.user_id
+        WHERE u.email = $1 AND c.provider_id = 'credential'`,
+      [email],
+    );
+
+    const empreinte = resultat.rows[0]?.password;
+
+    /*
+     * ECHOUER ICI PLUTOT QUE PLUS TARD. Sans empreinte relevee, la restauration
+     * ne pourrait rien reposer, et le compte resterait sur la nouvelle valeur :
+     * la prochaine execution echouerait LOIN de sa cause, exactement le defaut
+     * de diagnostic que LS-168 cherche a supprimer.
+     */
+    expect(
+      empreinte,
+      `Aucune empreinte de mot de passe pour ${email} : la restauration serait impossible.`,
+    ).toBeTruthy();
+
+    return empreinte as string;
+  } finally {
+    await client.end();
+  }
+}
+
+/**
+ * Remet l'empreinte relevee avant le changement.
+ *
+ * L'`UPDATE` EST CIBLE SUR LA LIGNE `credential` DU SEUL COMPTE CONCERNE : une
+ * clause trop large reposerait la meme empreinte sur d'autres comptes de test,
+ * et le defaut ne se verrait qu'a l'execution suivante.
+ */
+async function reposerEmpreinte(
+  email: string,
+  empreinte: string,
+): Promise<void> {
+  const client = await ouvrirConnexion();
+
+  try {
+    const resultat = await client.query(
+      `UPDATE compte
+          SET password = $2
+        WHERE provider_id = 'credential'
+          AND user_id = (SELECT id FROM utilisateur WHERE email = $1)`,
+      [email, empreinte],
+    );
+
+    /*
+     * UNE LIGNE EXACTEMENT. Zero signifierait que la restauration n'a rien
+     * fait, et le test resterait vert en laissant le compte inutilisable pour
+     * la prochaine execution : un controle qui ne compte pas ses lignes ne
+     * verifie rien, motif deja en fiche sur ce depot.
+     */
+    expect(
+      resultat.rowCount,
+      `La restauration de ${email} a touche ${resultat.rowCount} ligne(s) au lieu d'une.`,
+    ).toBe(1);
+  } finally {
+    await client.end();
+  }
+}
+
+/**
+ * Ouvre une connexion sur la base que le serveur de test sert reellement.
+ *
+ * `DATABASE_URL` et non une base ephemere : le serveur Next.js lance par
+ * `webServer` lit cette meme variable. Ecrire ailleurs reposerait l'empreinte
+ * dans une base que l'application ne consulte jamais, et la restauration
+ * resterait sans effet visible. Meme motif que
+ * `session-administration.setup.ts`.
+ */
+async function ouvrirConnexion(): Promise<Client> {
+  const url = process.env.DATABASE_URL;
+
+  expect(
+    url,
+    "DATABASE_URL absente : le mot de passe du compte de profil ne peut pas etre restaure.",
+  ).toBeTruthy();
+
+  const client = new Client({ connectionString: url });
+  await client.connect();
+  return client;
+}
