@@ -224,6 +224,62 @@ export default async function PageRetractations() {
                 <p className={styles.rembourse}>
                   Remboursé :{" "}
                   {formaterMontant(demande.montantRembourseCentimes)}
+                  {/*
+                   * ------------------------------------------------------------
+                   * LE NUMERO D'AVOIR, LS-174, ET IL EST ICI PLUTOT QU'AILLEURS.
+                   *
+                   * CE QU'IL FERME. Le numero du document qui corrige la facture
+                   * n'apparaissait que dans la region live suivant le
+                   * remboursement, et disparaissait au premier rechargement.
+                   * Rapprocher un remboursement de son avoir devant une
+                   * reclamation obligeait a passer par le detail de la commande.
+                   *
+                   * IL SUIT LE MONTANT, dans le meme paragraphe : les deux
+                   * disent la meme chose, ce qui est sorti et le document qui
+                   * l'atteste. Les separer en deux lignes ferait lire deux
+                   * informations sans rapport.
+                   *
+                   * RIEN NE S'AFFICHE SANS AVOIR, critere 3, et ce cas existe
+                   * pour de bon : un remboursement dont l'avoir a echoue laisse
+                   * une alerte `AVOIR_NON_EMIS`, l'argent etant parti sans
+                   * document. Ecrire « Avoir : » suivi de rien laisserait croire
+                   * a un defaut d'affichage.
+                   * ------------------------------------------------------------
+                   */}
+                  {demande.numeroAvoir === null ? null : (
+                    <>
+                      {" · "}
+                      {/*
+                       * LE LIEN N'EXISTE QUE SI LE PDF EXISTE, regle F8 et meme
+                       * choix que l'ecran des factures : `cheminPdf` nul est un
+                       * rendu en echec, LS-129, et le document reste valide,
+                       * son numero etant deja consomme. Offrir le lien quand
+                       * meme donnerait un 404, ce que la route rend a dessein
+                       * pour ne rien reveler.
+                       *
+                       * `<a>` ET NON `<Link>` : la cible sert un PDF, pas une
+                       * page, donc le routeur n'a rien a y faire.
+                       */}
+                      {demande.avoirPdfDisponible &&
+                      demande.avoirId !== null ? (
+                        <a
+                          className={styles.lienAvoir}
+                          href={`/administration/factures/${demande.avoirId}`}
+                        >
+                          Avoir {demande.numeroAvoir}
+                        </a>
+                      ) : (
+                        /*
+                         * LE NUMERO RESTE LISIBLE SANS SON PDF, et c'est tout
+                         * l'objet de la story : c'est le NUMERO qu'on cherche
+                         * devant une reclamation, le fichier vient apres.
+                         */
+                        <span className={styles.avoirSansPdf}>
+                          Avoir {demande.numeroAvoir}, PDF indisponible
+                        </span>
+                      )}
+                    </>
+                  )}
                 </p>
               )}
 

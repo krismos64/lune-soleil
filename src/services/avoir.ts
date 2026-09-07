@@ -125,11 +125,26 @@ export async function rembourserCommande(
      * 1er septembre 2026, deux avoirs de 2000 sur la commande 8bec5a3e.
      */
     referenceDemande: string;
+    /**
+     * La demande de retractation a l'origine du remboursement, LS-174.
+     *
+     * FACULTATIF, ET IL DOIT LE RESTER : un remboursement commercial decide
+     * depuis l'ecran de commande n'a aucune demande derriere lui. Il sert
+     * uniquement a rattacher l'avoir, `Avoir.demandeRetractationId`, pour que le
+     * numero du document reste lisible apres rechargement de la page.
+     */
+    demandeRetractationId?: string | undefined;
   },
   correlation?: Correlation,
 ): Promise<IssueRemboursementCommande> {
-  const { commandeId, montantCentimes, motif, fournisseur, referenceDemande } =
-    parametres;
+  const {
+    commandeId,
+    montantCentimes,
+    motif,
+    fournisseur,
+    referenceDemande,
+    demandeRetractationId,
+  } = parametres;
 
   const paiement = await lirePaiementEncaisse(prisma, commandeId);
 
@@ -344,6 +359,7 @@ export async function rembourserCommande(
     montantRenduCentimes: montantRendu,
     motif,
     identifiantRemboursement: issue.identifiantRemboursement,
+    demandeRetractationId,
     correlation,
   });
 }
@@ -373,6 +389,8 @@ async function emettreAvoirApresRemboursement(parametres: {
   montantRenduCentimes: number;
   motif: string;
   identifiantRemboursement: string;
+  /** La demande de retractation a l'origine, LS-174. Absente hors retractation. */
+  demandeRetractationId?: string | undefined;
   correlation?: Correlation | undefined;
 }): Promise<IssueRemboursementCommande> {
   const {
@@ -383,6 +401,7 @@ async function emettreAvoirApresRemboursement(parametres: {
     montantRenduCentimes,
     motif,
     identifiantRemboursement,
+    demandeRetractationId,
     correlation,
   } = parametres;
 
@@ -396,6 +415,7 @@ async function emettreAvoirApresRemboursement(parametres: {
         numero,
         montantCentimes: montantRenduCentimes,
         motif,
+        demandeRetractationId,
         instantaneLegal: construireInstantaneAvoir({
           instantaneFacture: facture.instantaneLegal,
           numeroFacture: facture.numero,
@@ -559,6 +579,11 @@ export async function demanderRemboursement(
     motif: string;
     fournisseur: FournisseurPaiement;
     referenceDemande: string;
+    /**
+     * La demande de retractation a l'origine, LS-174, transmise telle quelle a
+     * `rembourserCommande`. Absente pour un remboursement commercial.
+     */
+    demandeRetractationId?: string | undefined;
   },
   correlation?: Correlation,
 ): Promise<IssueDemandeRemboursement> {

@@ -441,6 +441,96 @@ describe("le remboursement est du au premier des deux faits, L221-24", () => {
     expect(demande.statut).toBe("RETOUR_ATTENDU");
     expect(demande.montant_rembourse_centimes).toBeNull();
   });
+
+  /*
+   * ------------------------------------------------------------------
+   * LS-174, CRITERE 1 : L'AVOIR EST RATTACHE A SA DEMANDE.
+   *
+   * `Avoir.demandeRetractationId` existe au schema depuis LS-49 et n'etait
+   * JAMAIS ecrit : LS-135 n'avait pas eu a l'afficher. Le numero du document
+   * qui corrige la facture n'etait donc lisible qu'une fois, dans la region
+   * live qui suit le remboursement, et disparaissait au premier rechargement.
+   *
+   * CE QUE CE TEST PROUVE ET QUE L'ECRAN NE PROUVE PAS : le lien est ECRIT en
+   * base, dans la transaction qui cree l'avoir. Un affichage qui retrouverait
+   * le numero par un autre chemin, la facture de la commande par exemple,
+   * passerait le test de bout en bout en laissant la colonne nulle.
+   * ------------------------------------------------------------------
+   */
+  it("rattache l'avoir a la demande de retractation qui l'a produit", async () => {
+    const enTetes = await sessionAdministratrice();
+    const { demandeId, totalCentimes } = await commanderEtDeposer();
+    const fournisseur = fournisseurQuiRembourse();
+
+    await ouvrirAttenteRetour(demandeId);
+    await constaterReception(demandeId);
+
+    const issue = await rembourserRetractation(enTetes, {
+      demandeId,
+      montantCentimes: totalCentimes,
+      fournisseur,
+      referenceDemande: randomUUID(),
+    });
+
+    expect(issue.statut).toBe("REMBOURSE");
+
+    const { rows } = await client.query<{
+      id: string;
+      numero: string;
+      demande_retractation_id: string | null;
+    }>(
+      `SELECT id, numero, demande_retractation_id
+       FROM avoir WHERE demande_retractation_id = $1`,
+      [demandeId],
+    );
+
+    /*
+     * UN SEUL AVOIR, ET C'EST UNE ASSERTION DE FOND : un remboursement produit
+     * exactement un document comptable. Deux lignes signaleraient soit un
+     * double encaissement, soit un rattachement fait a la mauvaise demande.
+     */
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.demande_retractation_id).toBe(demandeId);
+
+    /*
+     * LE NUMERO SUIT LA SEQUENCE DES AVOIRS, `A-` et non `F-` : une confusion
+     * de compteur produirait un numero valide et faux, ce qu'aucune contrainte
+     * de base n'attraperait.
+     */
+    expect(rows[0]!.numero).toMatch(/^A-\d{4}-\d{4}$/);
+  });
+
+  /*
+   * LS-174, CRITERE 3 : UNE DEMANDE SANS AVOIR N'EN INVENTE PAS UN.
+   *
+   * Le pendant du test precedent, et il n'est pas decoratif : une jointure
+   * ecrite un peu large, ou un rattachement fait sur la commande plutot que
+   * sur la demande, ferait apparaitre l'avoir d'une AUTRE demande de la meme
+   * commande. Le refus se mesure donc, il ne se suppose pas.
+   */
+  it("ne rattache aucun avoir a une demande non remboursee", async () => {
+    const enTetes = await sessionAdministratrice();
+    const { demandeId, totalCentimes } = await commanderEtDeposer();
+    const fournisseur = fournisseurQuiRembourse();
+
+    await ouvrirAttenteRetour(demandeId);
+
+    const issue = await rembourserRetractation(enTetes, {
+      demandeId,
+      montantCentimes: totalCentimes,
+      fournisseur,
+      referenceDemande: randomUUID(),
+    });
+
+    expect(issue.statut).toBe("AUCUN_FAIT_DECLENCHEUR");
+
+    const { rows } = await client.query(
+      `SELECT id FROM avoir WHERE demande_retractation_id = $1`,
+      [demandeId],
+    );
+
+    expect(rows).toHaveLength(0);
+  });
 });
 
 describe("la reception se constate hors statut, regle L12", () => {

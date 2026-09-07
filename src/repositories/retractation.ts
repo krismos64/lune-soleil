@@ -304,6 +304,38 @@ export type DemandeEnListe = {
   motifClient: string | null;
   motifDecision: string | null;
   montantRembourseCentimes: number | null;
+  /**
+   * Le numero de l'avoir emis pour cette demande, LS-174, `A-2026-0001`.
+   *
+   * NUL TANT QU'AUCUN REMBOURSEMENT N'A ABOUTI, et c'est un etat normal : une
+   * demande deposee, refusee ou en attente de retour n'a produit aucun document
+   * comptable. L'ecran n'affiche alors rien de plus, jamais un libelle vide.
+   *
+   * IL VIENT DU RATTACHEMENT, `Avoir.demandeRetractationId`, jamais de la
+   * facture de la commande. `DemandeRetractation.commandeId` est UNIQUE, donc
+   * une commande ne porte qu'une demande : ce n'est pas la multiplicite des
+   * demandes qui l'impose, c'est celle des AVOIRS. Une facture peut en porter
+   * plusieurs, un remboursement commercial puis une retractation, et lire
+   * « l'avoir de cette facture » afficherait le numero du mauvais document.
+   */
+  numeroAvoir: string | null;
+  /**
+   * L'identifiant de ce meme avoir, LS-174, pour composer le lien de
+   * telechargement vers `/administration/factures/[id]`.
+   *
+   * IL VA TOUJOURS AVEC `numeroAvoir` : les deux sont nuls ensemble ou remplis
+   * ensemble, l'ecran n'ayant jamais a gerer un numero sans cible.
+   */
+  avoirId: string | null;
+  /**
+   * Le PDF de cet avoir est-il rendu, LS-174 ?
+   *
+   * DISTINCT DE L'EXISTENCE DE L'AVOIR, regle F8 : `cheminPdf` nul signifie un
+   * rendu en echec, LS-129, et le document existe malgre tout, son numero etant
+   * deja consomme. Sans ce champ l'ecran offrirait un lien qui rend 404, ce que
+   * l'ecran des factures evite deja en affichant l'etat plutot que le lien.
+   */
+  avoirPdfDisponible: boolean;
   commandeId: string;
   numeroCommande: string;
   nomClient: string;
@@ -340,6 +372,22 @@ export async function listerDemandes(
       motifDecision: true,
       montantRembourseCentimes: true,
       commandeId: true,
+      /*
+       * UN SEUL AVOIR ATTENDU, ET LA REQUETE NE SUPPOSE PAS QU'IL Y EN A UN,
+       * LS-174. `take: 1` borne la lecture : un remboursement produit un
+       * document, mais la relation est un tableau au schema et rien n'interdit
+       * techniquement d'en rattacher deux. Lire tout le tableau pour n'en
+       * garder qu'un chargerait des lignes que personne n'affiche.
+       *
+       * L'ORDRE EST EXPLICITE : sans lui, deux avoirs rendraient un numero
+       * indetermine d'une execution a l'autre. Le plus ancien est celui du
+       * remboursement d'origine.
+       */
+      avoirs: {
+        select: { id: true, numero: true, cheminPdf: true },
+        orderBy: { emisA: "asc" },
+        take: 1,
+      },
       commande: {
         select: { numero: true, nomClient: true, totalCentimes: true },
       },
@@ -356,6 +404,15 @@ export async function listerDemandes(
     motifClient: demande.motifClient,
     motifDecision: demande.motifDecision,
     montantRembourseCentimes: demande.montantRembourseCentimes,
+    /*
+     * `?? null` EXPLICITE : `noUncheckedIndexedAccess` rend `avoirs[0]` en
+     * `... | undefined`, et le type de l'ecran attend `null`. Les deux disent
+     * « aucun avoir », mais un `undefined` qui traverse jusqu'a un composant se
+     * lit differemment d'une absence assumee.
+     */
+    numeroAvoir: demande.avoirs[0]?.numero ?? null,
+    avoirId: demande.avoirs[0]?.id ?? null,
+    avoirPdfDisponible: (demande.avoirs[0]?.cheminPdf ?? null) !== null,
     commandeId: demande.commandeId,
     numeroCommande: demande.commande.numero,
     nomClient: demande.commande.nomClient,
