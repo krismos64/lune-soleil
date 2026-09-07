@@ -863,6 +863,54 @@ for workflow in .github/workflows/*.yml .github/workflows/*.yaml; do
   done
 done
 
+# ---------------------------------------------------------------------------
+# Numéros d'étape en doublon dans un job de workflow, LS-202.
+#
+# POURQUOI. La numérotation existe pour SITUER un échec dans un job qui porte
+# une quarantaine d'étapes. Le 7 septembre 2026, six numéros étaient portés par
+# deux étapes de `controles.yml` : « échec à l'étape 6o » désignait aussi bien
+# la route d'échec gardée que le générateur de médias de test, deux domaines
+# sans rapport. La convention s'était érodée sans décision, motif déjà payé par
+# ce dépôt avec les liens Jira.
+#
+# LE CONTRÔLE PORTE SUR TOUS LES WORKFLOWS et pas seulement sur `controles.yml`,
+# comme le demande le critère 1 de LS-202 : un fichier neuf hériterait sinon du
+# désordre sans que rien ne le dise.
+#
+# LA COMPARAISON EST FAITE PAR JOB. Deux jobs distincts peuvent légitimement
+# porter chacun une étape « 1. », ce sont deux séquences indépendantes ; c'est
+# la répétition DANS un même job qui rend un rapport d'échec ambigu.
+#
+# CE QU'IL NE VÉRIFIE PAS, dit ici plutôt que laissé croire : l'ORDRE des
+# numéros. `6b` peut suivre `6c` sans que ce sens ne bronche. Ordonner demande
+# de savoir ce qui doit précéder quoi, et le fichier porte des étapes
+# délibérément hors séquence ; le doublon, lui, est faux dans tous les cas.
+for workflow in .github/workflows/*.yml .github/workflows/*.yaml; do
+  [ -f "$workflow" ] || continue
+
+  # Un job commence en colonne 2, ses étapes portent `- name:` plus profond.
+  # `awk` suit le job courant et n'émet que les numéros, jamais les titres.
+  doublons=$(awk '
+    /^  [A-Za-z0-9_-]+:[[:space:]]*$/ { job = $1; sub(/:$/, "", job); next }
+    /^      - name: [0-9]+[a-z]*( bis)?\./ {
+      ligne = $0
+      sub(/^      - name: /, "", ligne)
+      sub(/\..*$/, "", ligne)
+      compte[job "|" ligne]++
+    }
+    END { for (cle in compte) if (compte[cle] > 1) print cle, compte[cle] }
+  ' "$workflow")
+
+  while IFS= read -r doublon; do
+    [ -n "$doublon" ] || continue
+    numero=${doublon%% *}
+    nombre=${doublon##* }
+    anomalies+=("$(basename "$workflow") porte le numéro d'étape « ${numero#*|} » sur $nombre étapes du job « ${numero%%|*} » : un rapport « échec à l'étape ${numero#*|} » ne désigne plus rien. Renuméroter dans l'ordre d'exécution, LS-202")
+  done <<EOF
+$doublons
+EOF
+done
+
 if [ ${#anomalies[@]} -eq 0 ]; then
   [ "$STRICT" -eq 1 ] && echo "  configuration Claude Code cohérente"
   exit 0
