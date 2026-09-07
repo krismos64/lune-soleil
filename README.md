@@ -272,7 +272,6 @@ paiement. Le **téléchargement** par le client reste à écrire, LS-57 et LS-13
 | Rapports de recette | `docs/recettes/` |
 | Guides de déploiement et d'exploitation | `docs/` |
 | Backlog et statut du travail | Jira, projet LS |
-| Vision et documentation collaborative | Confluence, espace Lune-Soleil |
 
 Le cahier des charges fonctionnel et le plan directeur de réalisation ne sont pas
 versionnés dans ce dépôt public : ils contiennent l'identité complète et

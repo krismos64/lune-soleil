@@ -113,10 +113,9 @@ sortie de phase. Deux nuances qui se perdent facilement :
 
 Par ordre de priorité en cas de divergence : **loi**, **ADR accepté**
 (`docs/adr/`), cahier des charges V1.0 (hors dépôt, données personnelles),
-documentation technique du dépôt, Confluence, Jira.
-
-Toute décision structurante produit un ADR. Toute nouvelle idée entre d'abord
-dans Jira et n'intègre le périmètre que par arbitrage explicite.
+documentation technique du dépôt, Jira. **Confluence est abandonné**, arbitrage
+du 7 septembre 2026, LS-9 : ne pas y écrire ni l'y chercher. Toute décision
+structurante produit un ADR, toute idée neuve entre d'abord dans Jira.
 
 **`docs/REFERENCES.md`** porte les tables d'aiguillage : documents
 d'architecture, ADR acceptés et leur domaine, fichiers de `.claude/rules/` et
@@ -159,8 +158,8 @@ un garde-fou qui ne peut pas conclure bloque la migration.
 Trois agents projet, table dans `docs/REFERENCES.md` : `ls-critical-reviewer`,
 zones à risque ; `ls-conteneurisation`, image et déploiement ;
 `ls-frontend-revue`, interface avant clôture. **Ne pas invoquer les agents
-globaux `docker-devops`, `security-auditor` ni `nextjs-architect`**, calibrés
-sur une autre stack.
+globaux `docker-devops`, `security-auditor` ni `nextjs-architect`**, calibrés sur
+une autre stack.
 
 ## Conduite du travail
 
