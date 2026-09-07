@@ -243,3 +243,110 @@
     padding: var(--ls-space-6);
   }
 }
+
+/* ==========================================================================
+ * LS-163, les filtres et le signalement de troncature.
+ * ========================================================================== */
+
+/*
+ * LES FILTRES DEFILENT DANS LEUR PROPRE CONTENEUR, motif de l'ecran des
+ * commandes : `overflow-x` sur le conteneur et JAMAIS sur la page, la regle
+ * mobile interdisant tout debordement horizontal du corps.
+ *
+ * QUATRE LIBELLES SEULEMENT ICI, contre sept sur les commandes, donc ils
+ * tiennent probablement sur une ligne a 320 px. Le conteneur defilant est pose
+ * quand meme : il ne coute rien quand rien ne deborde, et un libelle ajoute
+ * plus tard n'aurait aucune raison de faire remonter ce reglage.
+ */
+.filtres {
+  margin-bottom: var(--ls-space-5);
+}
+
+/*
+ * CIBLE DE 44 PAR 44 px, largeur comprise : « Lus » descendrait sinon sous le
+ * seuil, `frontend-design.md` demandant 44 par 44 et non 44 de haut.
+ */
+.filtre {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--ls-touch-target);
+  min-width: var(--ls-touch-target);
+  padding: 0 var(--ls-space-3);
+  border: 1px solid var(--ls-border-controle);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.filtre:hover {
+  border-color: var(--ls-primary);
+}
+
+/*
+ * L'ETAT COURANT PASSE PAR `aria-current`, pas par une classe : l'information
+ * est alors portee par l'attribut que les lecteurs d'ecran annoncent, et la
+ * couleur ne fait que l'appuyer.
+ */
+.filtre[aria-current="page"] {
+  background: var(--ls-primary);
+  border-color: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+}
+
+.filtre:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+/*
+ * LE SIGNALEMENT DE TRONCATURE, motif de l'ecran des retractations. Fond sable,
+ * donc `--ls-text` : c'est la paire mesuree de ce fond, et recopier une couleur
+ * en changeant de fond est ce que C31 interdit.
+ */
+/*
+ * ELLE SE NOMME `.troncature` COMME SUR LES DEUX AUTRES ECRANS, et le nom
+ * compte : `.avertissement` designe ailleurs un bloc a filet `--ls-error`,
+ * reserve a l'irreversible. Deux noms pour deux regles differentes, sinon une
+ * recopie d'un ecran a l'autre donne le mauvais visuel sans que rien ne
+ * l'empeche. Releve par `ls-frontend-revue`.
+ */
+.troncature {
+  margin: 0 0 var(--ls-space-4);
+  padding: var(--ls-space-3);
+  background: var(--ls-surface-sand);
+  border-radius: var(--ls-radius-md);
+  color: var(--ls-text);
+}
+
+/*
+ * LES FILTRES DEFILENT DANS LEUR PROPRE LISTE, meme decoupage que les quatre
+ * autres barres : `.filtres` porte le `nav`, `.listeFiltres` le `ul` qui
+ * defile. Fusionner les deux donnait une structure differente pour un composant
+ * identique.
+ *
+ * ------------------------------------------------------------------
+ * ILS DEBORDENT A 320 px, ET C'EST MESURE : 309,5 px de contenu pour 288
+ * disponibles, « Traités » coupe de 21 px. Le defilement fonctionne, rien ne
+ * l'annonce.
+ *
+ * C'EST LS-144, deja ouverte sur les filtres de commandes pour ce motif exact.
+ * Le defaut est donc HERITE et non introduit : cette barre porte quatre
+ * libelles quand celle des commandes en porte sept.
+ *
+ * REDUIRE LE PADDING LES FERAIT TENIR, 277 px calcules, et c'est ecarte : la
+ * barre s'ecarterait alors des quatre autres, ce qui est precisement le defaut
+ * de coherence que la revue de cette story a releve par ailleurs. La
+ * decouvrabilite se traite pour TOUTES les barres a la fois, dans LS-144.
+ * ------------------------------------------------------------------
+ */
+.listeFiltres {
+  display: flex;
+  gap: var(--ls-space-2);
+  margin: 0;
+  padding: 0 0 var(--ls-space-2);
+  list-style: none;
+  overflow-x: auto;
+}

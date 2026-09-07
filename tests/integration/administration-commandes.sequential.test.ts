@@ -166,7 +166,7 @@ describe("listerCommandes", () => {
     const payee = await commanderUnePiece();
     await confirmer(payee.commandeId);
 
-    const commandes = await listerCommandes();
+    const { commandes } = await listerCommandes();
 
     /*
      * LES COMMANDES EN ATTENTE SONT VISIBLES, et c'est demande : elles disent a
@@ -192,7 +192,9 @@ describe("listerCommandes", () => {
     const payee = await commanderUnePiece();
     await confirmer(payee.commandeId);
 
-    const confirmees = await listerCommandes({ statut: "CONFIRMEE" });
+    const { commandes: confirmees } = await listerCommandes({
+      statut: "CONFIRMEE",
+    });
 
     expect(confirmees.map((c) => c.id)).toEqual([payee.commandeId]);
     expect(confirmees.map((c) => c.id)).not.toContain(enAttente.commandeId);
@@ -200,7 +202,12 @@ describe("listerCommandes", () => {
 
   it("rend une liste vide sans commande, et non une erreur", async () => {
     // L'ETAT VIDE EST UN ETAT, pas un incident : l'ecran affiche un message.
-    await expect(listerCommandes()).resolves.toEqual([]);
+    /* LA FORME A CHANGE EN LS-163, la liste portant desormais son drapeau de
+     * troncature : l'etat vide reste un etat, jamais un incident. */
+    await expect(listerCommandes()).resolves.toEqual({
+      commandes: [],
+      tronquee: false,
+    });
   });
 });
 

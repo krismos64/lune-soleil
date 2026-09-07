@@ -21,7 +21,10 @@ import {
   AutorisationRefuseeError,
   exigerAdministratrice,
 } from "@/services/autorisation";
-import { listerCommandes } from "@/services/administration-commandes";
+import {
+  LIMITE_LISTE_COMMANDES,
+  listerCommandes,
+} from "@/services/administration-commandes";
 import { formaterMontant } from "@/lib/montant";
 import { formaterDate, LIBELLES_STATUT } from "@/lib/affichage-commande";
 import styles from "./commandes.module.css";
@@ -150,12 +153,29 @@ async function ListeCommandes({
 }: {
   filtreActif: StatutCommande | "TOUTES";
 }) {
-  const commandes = await listerCommandes(
+  const { commandes, tronquee } = await listerCommandes(
     filtreActif === "TOUTES" ? {} : { statut: filtreActif },
   );
 
   return (
     <>
+      {tronquee ? (
+        /*
+         * LE PLAFOND EST DIT, LS-163 : une liste qui tronque en silence fait
+         * croire que tout est affiche. Le nombre vient de la constante du
+         * service, jamais ecrit ici.
+         *
+         * LE FILTRE PORTE DEJA L'ATTEIGNABILITE sur cet ecran, critere 2 :
+         * restreindre a un statut retire les commandes des autres, donc fait
+         * remonter celles que le plafond cachait. C'est pourquoi le message
+         * renvoie vers lui plutot que d'annoncer une pagination absente.
+         */
+        <p className={styles.troncature} role="status">
+          Seules les {LIMITE_LISTE_COMMANDES} commandes les plus récentes sont
+          affichées. D&apos;autres existent au-delà : filtrer par statut permet
+          de les atteindre.
+        </p>
+      ) : null}
       {commandes.length === 0 ? (
         /*
          * L'ETAT VIDE EST UN ETAT, pas un incident : il dit ce qui manque et

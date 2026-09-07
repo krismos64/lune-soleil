@@ -273,7 +273,7 @@ describe("porte de sortie de la phase 3, le parcours 1 de bout en bout", () => {
 
     // ------------------------------------------------------------ etapes 10 a 12
     // LA COMMANDE EST VISIBLE EN ADMINISTRATION, avec son encaissement.
-    const enListe = await listerCommandes();
+    const { commandes: enListe } = await listerCommandes();
     const ligneListe = enListe.find((c) => c.id === commande.commandeId);
 
     expect(ligneListe?.statut).toBe("CONFIRMEE");
