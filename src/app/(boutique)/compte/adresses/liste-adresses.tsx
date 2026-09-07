@@ -33,11 +33,39 @@ export function ListeAdresses({ adresses }: { adresses: AdresseAffichee[] }) {
   const [aSupprimer, setASupprimer] = useState<string | null>(null);
   const compteRendu = useRef<HTMLParagraphElement>(null);
 
+  /*
+   * LE `switch` EST EXHAUSTIF ET SANS `default`, corrige le 7 septembre 2026.
+   *
+   * IL EN PORTAIT UN, ET IL MENTAIT. Trois `case` couvraient cinq membres, donc
+   * `SAISIE_INVALIDE` tombait dans le repli : le message compose par le socle
+   * Zod, qui NOMME le champ fautif, etait jete au profit de « momentanement
+   * indisponible ». Le client lisait une panne la ou il avait fait une faute de
+   * saisie, donc attendait au lieu de corriger.
+   *
+   * `formulaire-adresse.tsx` consomme le MEME type avec cinq `case` et aucun
+   * `default` : l'asymetrie entre deux consommateurs d'un meme type etait le
+   * signal. Motif de LS-143, un `default` absorbe ce qu'il ne connait pas sans
+   * qu'aucun type ni aucun test ne rougisse.
+   *
+   * LE `never` FINAL N'EST PAS DECORATIF, ET RETIRER LE `default` NE SUFFISAIT
+   * PAS. Mesure le 7 septembre 2026 : un sixieme membre ajoute a
+   * `ResultatAdresse` ne faisait rougir NI le type-check NI aucun test, cette
+   * fonction ne retournant rien. Les `switch` du depot qui rougissent le font
+   * parce qu'ils RENDENT une valeur, et c'est le `return` manquant que TypeScript
+   * signale, jamais le `switch` lui-meme. Ici l'exhaustivite doit donc etre
+   * demandee explicitement.
+   */
   const appliquer = (resultat: ResultatAdresse, succes: string) => {
     switch (resultat.statut) {
       case "FAIT":
         setEnErreur(false);
         setMessage(succes);
+        break;
+      case "SAISIE_INVALIDE":
+        setEnErreur(true);
+        // LE MESSAGE NOMME LE CHAMP FAUTIF sans reproduire la valeur refusee,
+        // invariant 9 : c'est le socle Zod qui le compose.
+        setMessage(resultat.message);
         break;
       case "INTROUVABLE":
         setEnErreur(true);
@@ -47,11 +75,24 @@ export function ListeAdresses({ adresses }: { adresses: AdresseAffichee[] }) {
         setEnErreur(true);
         setMessage("Votre session a expiré.");
         break;
-      default:
+      case "INDISPONIBLE":
         setEnErreur(true);
         setMessage(
           "L'opération est momentanément indisponible. Réessayez dans quelques instants.",
         );
+        break;
+      default: {
+        /*
+         * INATTEIGNABLE TANT QUE LES CINQ MEMBRES SONT TRAITES, et c'est tout
+         * l'interet : un membre ajoute a `ResultatAdresse` n'est plus assignable
+         * a `never`, donc `npm run type-check` echoue EN NOMMANT ce fichier.
+         * Sans cette branche, il s'afficherait en silence comme une panne.
+         */
+        const jamais: never = resultat;
+        throw new Error(
+          `Statut d'adresse non traité : ${JSON.stringify(jamais)}`,
+        );
+      }
     }
 
     compteRendu.current?.focus();
