@@ -299,6 +299,60 @@ alt vide réservé au décor dupliqué. Erreur associée à son champ, jamais
 transmise par la couleur seule. Nom accessible sur tout bouton icône. Respect
 systématique de `prefers-reduced-motion`.
 
+### C38, tout champ de mot de passe client porte sa bascule de lisibilité
+
+ADR-023 impose **seize caractères minimum**, contre l'usage courant de huit.
+Saisir seize caractères à l'aveugle, sur un clavier mobile qui masque chaque
+frappe après un instant, fait raccourcir le mot de passe jusqu'à la limite basse
+ou renoncer à l'inscription. Le commentaire d'ADR-021 décrit déjà cet effet pour
+l'administration : une contrainte trop lourde « pousse à des mots de passe plus
+faibles et prévisibles ».
+
+**Le composant est `src/components/champ-mot-de-passe.tsx`**, jamais un
+`type="password"` écrit directement dans un écran. Six champs sur cinq fichiers
+l'emploient depuis LS-179.
+
+**L'administration en est dispensée**, ADR-021 faisant de son mot de passe un
+chemin de repli derrière la passkey, et LS-175 le portant. La dispense s'écrit
+dans les `EXCLUSIONS` de `scripts/verifier-bascule-mot-de-passe.sh`, avec sa
+raison : une exemption sans motif est un interrupteur, pas une décision.
+
+Cinq propriétés que le composant garantit, chacune pour une raison mesurée :
+
+| Propriété | Pourquoi |
+|---|---|
+| le **même** input change de `type` | deux inputs échangés par un ternaire perdraient valeur, focus et remplissage automatique du gestionnaire de mots de passe |
+| la position du curseur est reposée | changer le `type` d'un input monté remet le curseur à la fin sur WebKit, et la frappe suivante atterrit ailleurs qu'attendu |
+| l'état par défaut est masqué, sans mémorisation | un mot de passe affiché par surprise sur l'écran suivant est pire que pas de bouton du tout |
+| `aria-describedby` **s'ajoute** à l'aide de l'appelant | l'écraser ferait perdre « seize caractères minimum » au moment où il sert, motif de LS-161 |
+| le nom accessible **dit l'état** | « Afficher » puis « Masquer » : un bouton nommé d'une seule façon laisse un lecteur d'écran sans savoir si le mot de passe est visible |
+
+**Les deux formes sont acceptées, contrôlée et non contrôlée.** Ce n'est pas une
+généralisation prématurée : les écrans du parcours d'authentification tiennent
+leur valeur dans un `useState`, l'écran du **profil** lit son `FormData` à la
+soumission et vide ses champs par `formulaire.reset()`. Forcer le profil en
+contrôlé casserait ce `reset()`, qui ne remet pas à zéro un `useState` : les
+champs paraîtraient vides en gardant leur valeur, et le mot de passe survivrait
+à un changement réussi, sur un poste possiblement partagé.
+
+**Le bouton est un vrai bouton**, `type="button"` explicite : sans lui, afficher
+son mot de passe soumettrait le formulaire, un bouton sans type valant `submit`
+en HTML. Il tient 44 px **dans les deux dimensions**, mesuré à 67 par 44 px à
+320 px : une icône de 24 px laisserait une cible sous le seuil.
+
+**Le contour de focus du bouton part vers l'intérieur**, seul écart assumé à
+`globals.css`, qui trace 3 px avec 2 px de décalage. Le bouton étant collé au
+bord droit de l'enveloppe, un décalage positif sortirait du cadre à 320 px.
+
+`scripts/verifier-bascule-mot-de-passe.sh` garde les deux versants, l'absence de
+`type="password"` nu et le fait que le composant rende encore le service.
+**Il a porté le défaut qu'il cherchait** : il trouvait « Afficher le mot de
+passe » dans un commentaire du composant et restait vert sur un code ayant perdu
+le libellé. Troisième forme du motif « contrôle satisfait par un commentaire »,
+et la plus difficile à parer, un libellé d'interface se citant entre guillemets
+français sans marque syntaxique à exiger. Il filtre désormais les commentaires
+avant de chercher.
+
 ## États obligatoires
 
 Le prototype ne les montre pas, ils doivent exister : vide, chargement, erreur
