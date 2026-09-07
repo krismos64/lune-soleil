@@ -66,8 +66,12 @@ jobs:
       PGDATABASE: lunesoleil
       PGPORT: "55432"
       CI: "true"
+      # Tarifs d'ADR-035, a garder d'accord avec `controles.yml` et
+      # `.env.example`. Le domicile est a 749 depuis le 6 septembre 2026, son
+      # prix coutant : ce fichier est reste a 499 un jour de plus que la
+      # decision, faute d'avoir ete cherche.
       SHIPPING_RELAY_RATE_CENTS: "410"
-      SHIPPING_HOME_RATE_CENTS: "499"
+      SHIPPING_HOME_RATE_CENTS: "749"
       SHIPPING_FREE_THRESHOLD_CENTS: "3900"
 
     steps:

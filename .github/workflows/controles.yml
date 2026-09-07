@@ -148,10 +148,20 @@ jobs:
       # est arrive le 25 aout 2026 : le defaut avait ete trouve en local et
       # corrige dans `.env`, sans etre porte ici.
       #
-      # Valeurs publiques du 30 juillet 2026, aucun secret : elles figurent dans
-      # les conditions generales et sur la page Livraison.
+      # Valeurs publiques, aucun secret : elles figurent dans les conditions
+      # generales et sur la page Livraison.
+      #
+      # LE DOMICILE EST PASSE DE 499 A 749 LE 6 SEPTEMBRE 2026, ADR-035, et ces
+      # deux workflows sont restes a 499 jusqu'au 7 : la valeur avait ete portee
+      # dans `.env.example` et dans les tests, jamais ici. C'est EXACTEMENT le
+      # defaut que le paragraphe ci-dessus raconte pour le 25 aout, reproduit a
+      # l'identique sur la meme variable.
+      #
+      # 499 venait de la grille PUBLIQUE Mondial Relay et perdait 2,50 EUR par
+      # colis face au cout reel de 6,24 EUR HT. Le domicile est facture a son
+      # prix coutant, 7,49 EUR TTC.
       SHIPPING_RELAY_RATE_CENTS: "410"
-      SHIPPING_HOME_RATE_CENTS: "499"
+      SHIPPING_HOME_RATE_CENTS: "749"
       SHIPPING_FREE_THRESHOLD_CENTS: "3900"
 
     steps:
