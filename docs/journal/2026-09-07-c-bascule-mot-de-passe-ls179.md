@@ -116,9 +116,26 @@ trois. Les deux écrans sous session, réauthentification et profil, ne sont pas
 couverts en bout en bout ; leur comportement l'est en jsdom et la présence du
 composant par le contrôle textuel.
 
+## Un désordre trouvé en passant, LS-202
+
+Ajouter une étape à `controles.yml` a fait découvrir que **six numéros d'étape
+sont portés par deux étapes différentes**, et un par trois. Mon ajout avait pris
+`6o`, déjà occupé deux fois ; il est passé à `6s`.
+
+Le désordre est antérieur, et il n'est pas cosmétique : la numérotation existe
+pour situer un échec dans un job d'une trentaine d'étapes, et « échec à l'étape
+6o » désigne aujourd'hui trois étapes sans rapport. L'ordre alphabétique ne suit
+d'ailleurs plus l'ordre d'exécution, `6k` et `6l` apparaissant après `6n`.
+
+**Corrigé pour ma seule étape, ticketé pour le reste**, LS-202, Low : renuméroter
+tout le fichier dépasse le périmètre de cette story, et le faire en silence
+ferait passer une trentaine de lignes modifiées dans une PR qui parle de mots de
+passe.
+
 ## État des tickets
 
 **LS-179 est livrée**, PR #272, en attente de la chaîne au moment d'écrire.
+**LS-202 créée**, le désordre de numérotation ci-dessus.
 
 ## Prochaine étape
 
