@@ -52,6 +52,7 @@ import {
   MOT_DE_PASSE_PROFIL_APRES,
   adresseMotDePasseProfil,
   adresseProfil,
+  fichierSessionProfil,
 } from "./chemin-session";
 
 /** Seize caracteres, la longueur imposee a tous les comptes, ADR-023. */
@@ -89,60 +90,38 @@ let cookies: Awaited<
   ReturnType<import("@playwright/test").BrowserContext["cookies"]>
 >;
 
-/*
- * LE `beforeAll` A SON PROPRE DELAI, et il ne suffit pas de poser
- * `test.setTimeout` : celui-ci ne couvre QUE les tests, jamais les hooks.
+/**
+ * Charge la session posee par la preparation, une fois pour tout le fichier.
  *
- * IL RESTE GENEREUX bien que LS-168 ait retire les reessais : la toute premiere
- * execution sur une base neuve inscrit encore, et c'est le seul cas ou ce hook
- * peut attendre.
+ * ------------------------------------------------------------------
+ * LA SESSION EST LUE, PAS OUVERTE, LS-168.
+ *
+ * `comptes-profil.setup.ts` a cree le compte ET pose son etat de session avant
+ * que ce projet demarre. Ouvrir la session ici coutait un appel a
+ * `/sign-in/email` PAR LARGEUR, et ce fichier en fait trois autres qui sont de
+ * VRAIES MESURES : douze appels au total, quand le plafond en accepte CINQ par
+ * minute et par IP.
+ *
+ * LES COOKIES SONT REJOUES PAR CHAQUE TEST, exactement comme avant : seule leur
+ * PROVENANCE change.
+ * ------------------------------------------------------------------
+ *
+ * IL N'INSCRIT PLUS RIEN, et il ne doit pas : un compte manquant signalerait
+ * que la preparation n'a pas tourne, ce qui est un defaut de configuration et
+ * non un etat a rattraper ici. `storageState` echouera alors sur le fichier
+ * absent, avec une cause lisible.
  */
 test.beforeAll(async ({ browser }, infos) => {
-  test.setTimeout(120_000);
-
-  const contexte = await browser.newContext();
-  const page = await contexte.newPage();
-
   /*
    * L'ADRESSE EST DERIVEE DU NOM DU PROJET, voir l'entete : c'est le projet qui
    * definit le processus, donc la frontiere qui garantit l'isolement.
    */
   email = adresseProfil(infos.project.name);
 
-  /*
-   * PALIERS 1 ET 2 : SE CONNECTER, SINON S'INSCRIRE.
-   *
-   * PAS DE PALIER « ETAT SUR DISQUE » ICI, contrairement aux trois preparations
-   * de session : ce fichier a besoin des COOKIES en memoire pour les rejouer a
-   * chaque test, pas d'un `storageState` sur disque. La connexion est de toute
-   * facon le palier bon marche, `/sign-in/email` acceptant cinq appels par
-   * minute contre trois pour l'inscription.
-   *
-   * L'ORDRE EST DELIBERE : l'inverse consommerait une place du plafond
-   * d'inscription a chaque execution rien que pour apprendre que le compte
-   * existe, ce qui est exactement le defaut que LS-168 corrige.
-   */
-  let reponse = await page.request.post("/api/auth/sign-in/email", {
-    data: { email, password: MOT_DE_PASSE },
+  const contexte = await browser.newContext({
+    storageState: fichierSessionProfil(infos.project.name),
   });
 
-  if (!reponse.ok()) {
-    reponse = await page.request.post("/api/auth/sign-up/email", {
-      data: { email, password: MOT_DE_PASSE, name: "Client profil" },
-    });
-  }
-
-  expect(reponse.ok(), await reponse.text()).toBe(true);
-
-  /*
-   * LA SESSION EST OUVERTE UNE SEULE FOIS, ses cookies etant rejoues par chaque
-   * test. `/sign-in/email` est plafonne a CINQ appels par minute et par IP :
-   * une connexion par test, sept tests fois trois largeurs, le depassait
-   * largement. Mesure : « Too many requests » sur les derniers tests.
-   *
-   * L'appel ci-dessus a pose un cookie de session, que ce soit par connexion ou
-   * par inscription, `autoSignIn` valant son defaut.
-   */
   cookies = await contexte.cookies();
 
   await contexte.close();
@@ -290,34 +269,36 @@ test("changer son mot de passe ferme les autres sessions", async ({
   const emailDedie = adresseMotDePasseProfil(infos.project.name);
 
   /*
-   * MEMES PALIERS QUE LE `beforeAll` : se connecter, sinon s'inscrire.
+   * L'EMPREINTE EST RELEVEE AVANT TOUT CHANGEMENT : c'est elle qui sera reposee
+   * en fin de test. La relever apres n'aurait aucun sens, la valeur d'origine
+   * ayant alors disparu.
    *
-   * UN SEUL MOT DE PASSE EST ESSAYE, celui de reference, parce que la
-   * restauration en base ci-dessous est fiable : le seul cas qui laisserait le
-   * compte sur l'autre valeur serait une execution tuee entre le changement et
-   * la restauration. L'inscription rattrape alors, en consommant une place du
-   * plafond une fois, ce qui est le comportement voulu apres un incident.
-   */
-  let acces = await page.request.post("/api/auth/sign-in/email", {
-    data: { email: emailDedie, password: MOT_DE_PASSE },
-  });
-
-  if (!acces.ok()) {
-    acces = await page.request.post("/api/auth/sign-up/email", {
-      data: { email: emailDedie, password: MOT_DE_PASSE, name: "Client mdp" },
-    });
-  }
-
-  expect(acces.ok(), await acces.text()).toBe(true);
-
-  /*
-   * L'EMPREINTE EST RELEVEE MAINTENANT, avant tout changement : c'est elle qui
-   * sera reposee en fin de test. La relever apres n'aurait aucun sens, la
-   * valeur d'origine ayant alors disparu.
+   * ELLE VAUT AUSSI PREUVE QUE LE COMPTE EXISTE : `releverEmpreinte` echoue si
+   * la ligne manque, avec un message qui nomme l'adresse. La preparation
+   * `comptes-profil.setup.ts` l'a cree, ce test n'a plus a s'en charger.
    */
   const empreinteOrigine = await releverEmpreinte(emailDedie);
 
-  // UNE SECONDE SESSION, celle qu'on veut voir tomber.
+  /*
+   * DEUX SESSIONS REELLEMENT DISTINCTES, ET C'EST TOUTE LA MESURE.
+   *
+   * `revokeOtherSessions` doit faire tomber l'une et laisser l'autre : les deux
+   * ouvertures sont donc irreductibles, chacune creant sa ligne `session`.
+   * Partager un cookie entre les deux contextes les ferait tomber ENSEMBLE, et
+   * le test verdirait ou rougirait sans plus rien dire du comportement.
+   *
+   * DEUX APPELS PAR LARGEUR, SIX AU TOTAL, sur les cinq places par minute de
+   * `/sign-in/email`. Ils tiennent parce que les tests de ce fichier sont
+   * SERIALISES, `describe.serial`, et que les trois largeurs ne les atteignent
+   * pas en meme temps : c'est le dernier test de chacune, apres six autres.
+   * Le `beforeAll` ne consomme plus rien depuis LS-168, ce qui a libere la
+   * marge qui manquait.
+   */
+  const premiere = await page.request.post("/api/auth/sign-in/email", {
+    data: { email: emailDedie, password: MOT_DE_PASSE },
+  });
+  expect(premiere.ok(), await premiere.text()).toBe(true);
+
   const autre = await browser.newContext();
   const autrePage = await autre.newPage();
   const ouverture = await autrePage.request.post("/api/auth/sign-in/email", {

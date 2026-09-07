@@ -735,6 +735,8 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-navigation-administration-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-route-echec.sh                # garde la page qui lève à dessein, LS-191
 ./scripts/verifier-route-echec-mutation.sh       # prouve le précédent par mutation
+./scripts/verifier-fixtures-e2e.sh               # adresses de test fixes, plafonds préservés, LS-168
+./scripts/verifier-fixtures-e2e-mutation.sh      # prouve le précédent par mutation
 ./scripts/verifier-registre-traitements.sh       # registre RGPD confronté au schéma
 ./scripts/verifier-registre-traitements-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-nginx.sh                      # résolution de l'adresse client, LS-91

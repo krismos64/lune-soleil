@@ -108,11 +108,36 @@ fi
 git checkout -- "$CIBLE_MODULE"
 
 # ---------------------------------------------------------------------------
+# MUTATION 4 : la fenêtre recopiée cesse de couvrir le plafond réel.
+#
+# C'est la dérive silencieuse : `src/lib/auth.ts` durcit son plafond, personne
+# ne met à jour l'aide, et l'amorçage échoue en 429 sur une base neuve, très
+# loin de la ligne qui a changé. On simule en abaissant la valeur recopiée.
+# ---------------------------------------------------------------------------
+CIBLE_AIDE="tests/e2e/inscription-espacee.ts"
+
+if ! git diff --quiet -- "$CIBLE_AIDE"; then
+  echo "ÉCHEC : $CIBLE_AIDE porte des modifications non commitées."
+  exit 1
+fi
+
+perl -pi -e 's/^const FENETRE_MS = 60_000;$/const FENETRE_MS = 30_000;/' "$CIBLE_AIDE"
+
+if "$CONTROLE" > /dev/null 2>&1; then
+  echo "ÉCHEC mutation 4 : le contrôle reste VERT sur une fenêtre trop courte."
+  ko=1
+else
+  echo "OK mutation 4 : fenêtre inférieure au plafond -> le contrôle rougit."
+fi
+
+git checkout -- "$CIBLE_AIDE"
+
+# ---------------------------------------------------------------------------
 # CONTRÔLE DE RETOUR. La restauration a-t-elle vraiment eu lieu ? Un fichier
 # resté muté ferait passer la suite entière pour cassée à la prochaine
 # exécution, motif « mutation non restaurée » déjà en fiche.
 #
-# IL COUVRE LES DEUX FICHIERS MUTÉS, pas seulement le dernier.
+# IL COUVRE LES TROIS FICHIERS MUTÉS, pas seulement le dernier.
 # ---------------------------------------------------------------------------
 if ! "$CONTROLE" > /dev/null 2>&1; then
   echo "ÉCHEC : le contrôle est rouge APRÈS restauration, le fichier est resté muté."

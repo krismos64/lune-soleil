@@ -106,6 +106,28 @@ export default defineConfig({
       name: "preparation",
       testMatch:
         /(session-(cliente|verifiee|administration)|commande|comptes-profil)\.setup\.ts$/,
+      /*
+       * UN SEUL TRAVAILLEUR POUR TOUTE LA PREPARATION, LS-168, et c'est la
+       * condition qui rend l'amorçage possible.
+       *
+       * PLAYWRIGHT REPARTIT LES FICHIERS D'UN MEME PROJET sur plusieurs
+       * travailleurs par defaut : les cinq preparations demarraient donc
+       * ENSEMBLE, et leurs inscriptions tombaient dans la meme seconde. Mesure
+       * du 7 septembre 2026 : « Running 3 tests using 3 workers », et
+       * `comptes-profil.setup.ts` echouait en 429 des son premier appel, avant
+       * meme d'avoir pu espacer quoi que ce soit.
+       *
+       * J'AVAIS SUPPOSE CE PROJET SEQUENTIEL, il ne l'etait pas. L'espacement
+       * ecrit dans `comptes-profil.setup.ts` ne vaut que si rien d'autre
+       * n'inscrit en meme temps que lui.
+       *
+       * LE COUT EST NUL EN REGIME ETABLI : ces preparations ne font alors aucun
+       * appel d'authentification et rendent la main en quelques centaines de
+       * millisecondes. Les trois projets de LARGEUR, eux, gardent tout le
+       * parallelisme, ce reglage ne portant que sur ce projet.
+       */
+      fullyParallel: false,
+      workers: 1,
     },
     {
       name: "mobile-320",

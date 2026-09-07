@@ -480,12 +480,41 @@ export function adresseProfil(projet: string): string {
  *
  * DISTINCTE DE LA PRECEDENTE, et ce n'est pas une precaution decorative : ce
  * test consomme le mot de passe du compte, et les six autres tests de la meme
- * largeur rejouent les cookies ouverts par le `beforeAll`. Les faire partager
+ * largeur rejouent les cookies ouverts par la preparation. Les faire partager
  * un compte rendrait leur session invalide au moment ou celui-ci change la
  * valeur.
  */
 export function adresseMotDePasseProfil(projet: string): string {
   return `e2e-motdepasse-${projet}@exemple.test`;
+}
+
+/**
+ * L'etat de session du compte de profil d'une largeur, LS-168.
+ *
+ * ------------------------------------------------------------------
+ * POURQUOI LA PREPARATION ECRIT CES ETATS, plutot que de laisser chaque largeur
+ * ouvrir sa session.
+ *
+ * `/sign-in/email` accepte CINQ appels par minute et par IP. `compte-profil`
+ * en faisait QUATRE par largeur, donc DOUZE au total : le plafond etait franchi
+ * a chaque execution, et les dernieres largeurs echouaient sur « Too many
+ * requests » sans rapport avec ce qu'elles mesurent.
+ *
+ * TROIS DE CES QUATRE APPELS SONT DES MESURES et doivent rester : verifier
+ * qu'un mot de passe refuse n'a rien change, ouvrir la seconde session que le
+ * changement doit faire tomber. Le quatrieme, celui qui ouvrait simplement la
+ * session de travail, est remplace par la lecture de cet etat.
+ *
+ * TROIS OUVERTURES DANS LA PREPARATION AU LIEU DE DOUZE dans les tests, et
+ * elles n'ont lieu qu'a la premiere execution : ensuite l'etat sur disque vaut
+ * encore, les sessions durant un jour depuis ADR-027.
+ * ------------------------------------------------------------------
+ *
+ * IGNORE PAR GIT comme les autres etats : ces fichiers portent un cookie de
+ * session valide, invariant 9.
+ */
+export function fichierSessionProfil(projet: string): string {
+  return `tests/e2e/.session-profil-${projet}.json`;
 }
 
 /**
