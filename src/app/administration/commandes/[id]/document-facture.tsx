@@ -138,16 +138,31 @@ export function DocumentFacture({
       {/*
        * LA REGION EST TOUJOURS PRESENTE, MEME VIDE : une region live inseree en
        * meme temps que son contenu n'est pas lue par les lecteurs d'ecran.
-       *
-       * `aria-label` LA NOMME, LS-85 : cet ecran porte plusieurs regions
-       * `status`, et deux regions anonymes s'annoncent identiquement sans qu'on
-       * sache laquelle a parle.
        */}
       <p
         id="message-document"
         className={`${styles.message} ${message?.erreur === true ? styles.messageErreur : ""}`}
         role="status"
-        aria-label="Génération du document"
+        /*
+         * PAS D'`aria-label` ICI, ET C'EST DELIBERE, LS-161. Il ANNULERAIT la
+         * description : le calcul du nom accessible consulte `aria-label` avant
+         * le contenu textuel, donc le bouton qui pointe ici par
+         * `aria-describedby` s'annonçait « Générer le document, Génération du
+         * document » sans jamais lire « La génération a échoué. La facture
+         * reste valide et son numéro est inchangé ».
+         *
+         * LA JUSTIFICATION RETIREE ICI ETAIT FAUSSE, et c'est le point de
+         * LS-161 : elle invoquait LS-85 et le besoin de distinguer deux
+         * regions `status` de cet ecran. Or `aria-label` ne change RIEN a
+         * l'annonce d'une mise a jour de `role="status"`, seul le CONTENU
+         * etant vocalise. La ligne ne protegeait de rien et cassait la
+         * description ; une regle qui enonce une chose et en prescrit une
+         * autre se franchit de bonne foi.
+         *
+         * DISTINGUER DEUX REGIONS PASSE PAR LEUR CONTENU, jamais par leur nom :
+         * « La génération a échoué » se suffit, la region voisine parlant de
+         * remboursement.
+         */
       >
         {enCours ? "Génération en cours…" : (message?.texte ?? "")}
       </p>

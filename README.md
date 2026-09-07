@@ -749,6 +749,8 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-route-echec-mutation.sh       # prouve le précédent par mutation
 ./scripts/verifier-fixtures-e2e.sh               # adresses de test fixes, plafonds préservés, LS-168
 ./scripts/verifier-fixtures-e2e-mutation.sh      # prouve le précédent par mutation
+./scripts/verifier-description-accessible.sh          # aucun aria-describedby annulé par un aria-label, C39, LS-161
+./scripts/verifier-description-accessible-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-registre-traitements.sh       # registre RGPD confronté au schéma
 ./scripts/verifier-registre-traitements-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-nginx.sh                      # résolution de l'adresse client, LS-91
