@@ -63,16 +63,21 @@ export default defineConfig({
    * le cas nominal. Elever le plafond ne ralentit pas une suite qui passe, il
    * evite seulement de declarer un echec sur une lenteur.
    *
-   * QUINZE SECONDES, ET NON TRENTE : au-dela, l'echec d'un test reellement
-   * casse deviendrait long a obtenir, et le delai de test de trente secondes
-   * serait atteint le premier, ce qui rendrait un message moins precis.
+   * DIX SECONDES, ET NON TRENTE : au-dela, l'echec d'un test reellement casse
+   * deviendrait long a obtenir, et le delai de test de trente secondes serait
+   * atteint le premier, ce qui rendrait un message moins precis.
+   *
+   * QUINZE ONT ETE ESSAYEES PUIS ECARTEES : les echecs sont simplement revenus
+   * a 15,7 s, 18,7 s et 15,3 s. Un plafond qui deplace le seuil sans rien
+   * fermer ne corrige pas, il masque, et c'est ce constat qui a fait chercher
+   * la saturation. Voir le bloc `workers` ci-dessous.
    */
   expect: {
     timeout: 10_000,
   },
 
   /*
-   * LE PARALLELISME EST BORNE, LS-201, ET C'EST LA CAUSE COMMUNE DES ECHECS.
+   * LE PARALLELISME EST BORNE, LS-201, LA SATURATION ETANT UNE CAUSE MESUREE.
    *
    * ------------------------------------------------------------------
    * PLAYWRIGHT PREND LA MOITIE DES COEURS LOGIQUES par defaut, verifie via
@@ -94,6 +99,16 @@ export default defineConfig({
    * s'allonge de quelques dizaines de secondes, ce qui est sans commune mesure
    * avec le cout d'un controle nocturne qui rougit sans raison : LS-199 a
    * repare l'alerte, un bruit permanent la rendrait a nouveau inutile.
+   *
+   * CE REGLAGE N'A PAS SUFFI SUR LA MACHINE DE DEVELOPPEMENT, et il faut le
+   * dire : avec trois travailleurs, des echecs subsistent, toujours au plafond
+   * quel qu'il soit. La charge y est de 4,48 AU REPOS, Playwright arrete, les
+   * outils de developpement consommant deja la moitie des coeurs. Une mesure
+   * faite dans ces conditions calibre sur du bruit.
+   *
+   * LA REFERENCE EST DONC LA CHAINE D'INTEGRATION, sur executeur dedie. Ces
+   * memes tests passent tous en isolation, et le defaut PRODUIT qu'ils ont
+   * permis de trouver, la revalidation du layout, est corrige a la source.
    *
    * DEUX EN INTEGRATION CONTINUE, ou l'executeur GitHub est plus modeste que
    * cette machine et n'a aucune raison de mieux encaisser cinq travailleurs.
