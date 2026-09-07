@@ -720,8 +720,9 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-image-docker.sh               # sécurité de l'image, exige Docker
 ./scripts/verifier-image-docker-mutation.sh      # prouve le précédent par mutation
 ./scripts/verifier-actions-sensibles.sh          # réauthentification des actions sensibles
+./scripts/verifier-actions-sensibles-mutation.sh # prouve verifier-actions-sensibles.sh par mutation
 ./scripts/verifier-gardes-administration.sh      # garde de rôle, par fonction
-./scripts/verifier-actions-sensibles-mutation.sh # prouve le précédent par mutation
+./scripts/verifier-gardes-administration-mutation.sh # prouve verifier-gardes-administration.sh par mutation
 ./scripts/verifier-rendu-texte-simple.sh         # rendu HTML interdit sur le contenu de section
 ./scripts/verifier-rendu-texte-simple-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-contraste.sh                  # contraste WCAG des paires couleur et fond, LS-84
