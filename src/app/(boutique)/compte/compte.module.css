@@ -672,3 +672,103 @@
   font-size: 0.875rem;
   line-height: 1.5;
 }
+
+/*
+ * PANNEAU « DOCUMENTS ET ACTIONS », LS-190.
+ *
+ * IL REGROUPE CE QUE L'ECRAN AFFICHAIT EN TROIS ENDROITS : la facture et ses
+ * avoirs, la retractation, et le contact qui n'y figurait pas du tout. Un
+ * client qui cherchait sa facture parcourait la page entiere ; un client qui
+ * voulait ecrire n'avait aucun point d'entree depuis sa commande.
+ *
+ * FOND `--ls-primary`, MESURE ET NON SUPPOSE, critere 1 et regle C31 :
+ *
+ *   --ls-text-on-primary  #ffffff  sur #5f4519  ->  8,93:1   AAA
+ *   --ls-text-muted       #7a6a5d  sur #5f4519  ->  1,54:1   REFUSE
+ *
+ * `--ls-text-muted` est donc INTERDIT dans ce panneau, ce que le critere 2
+ * exige nommement. Aucun texte secondaire n'y entre : tout y est en blanc.
+ */
+.panneauActions {
+  margin-bottom: var(--ls-space-6);
+  padding: var(--ls-space-4);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+}
+
+.panneauActions h2,
+.panneauActions p {
+  color: var(--ls-text-on-primary);
+}
+
+.panneauActions h2 {
+  margin-top: 0;
+}
+
+/*
+ * LE LIEN EST BLANC SOULIGNE, ET LE SOULIGNEMENT N'EST PAS DECORATIF : sur un
+ * aplat, la couleur seule ne distingue plus un lien de son texte voisin, tous
+ * deux blancs. WCAG 1.4.1, l'information ne passe jamais par la couleur seule.
+ */
+.panneauActions .lien {
+  color: var(--ls-text-on-primary);
+  text-decoration: underline;
+}
+
+/*
+ * LE CONTOUR DE FOCUS EST BLANC ICI, ET C'EST UNE CORRECTION MESUREE.
+ * `--ls-focus` vaut #4a2a0b, un brun PLUS FONCE que le fond du panneau :
+ *
+ *   --ls-focus  #4a2a0b  sur #5f4519  ->  1,45:1   contre 3:1 exiges
+ *
+ * Le contour aurait ete quasi invisible, donc le panneau inutilisable au
+ * clavier, et aucun controle textuel ne l'aurait vu : `verifier-contraste.sh`
+ * mesure les paires TEXTE et fond, pas les indicateurs de focus.
+ */
+.panneauActions .lien:focus-visible {
+  outline: 2px solid var(--ls-text-on-primary);
+  outline-offset: 2px;
+}
+
+/*
+ * LES TROIS GROUPES SONT SEPARES PAR UNE BORDURE ET NON PAR UNE MARGE SEULE :
+ * a 320 px les actions s'empilent, et sans separateur le panneau devient un
+ * bloc de texte continu ou le client ne distingue plus les trois sujets.
+ *
+ * DEUX NIVEAUX DE TRAIT COEXISTENT DANS CE PANNEAU, ET ILS NE DOIVENT PAS SE
+ * CONFONDRE, releve par la revue frontend de LS-190 :
+ *
+ *   entre GROUPES  blanc         8,93:1   fort, il separe trois sujets
+ *   entre AVOIRS   --ls-border   5,69:1   discret, il separe des lignes
+ *                                         d'une meme liste
+ *
+ * Les deux mesures sont prises sur `--ls-primary`, le fond du panneau. Un seul
+ * niveau ferait lire la liste d'avoirs comme un quatrieme groupe.
+ */
+.groupeActions + .groupeActions {
+  margin-top: var(--ls-space-4);
+  padding-top: var(--ls-space-4);
+  border-top: 1px solid var(--ls-text-on-primary);
+}
+
+/*
+ * LE SEPARATEUR D'AVOIRS EST RECALCULE SUR LE FOND DU PANNEAU, regle C31.
+ *
+ * `.avoir` porte `--ls-surface-sand`, choisi quand cette liste vivait sur le
+ * fond CREME de la page. La liste a change de fond avec LS-190 sans que la
+ * valeur soit rejugee, ce que C31 nomme exactement : « recopier une couleur en
+ * ajoutant un fond casse l'hypothese sous laquelle elle etait juste ».
+ *
+ * Le sable restait visible, 7,49:1, donc aucun controle ne pouvait le voir :
+ * `verifier-contraste.sh` apparie une couleur et un fond declares dans le meme
+ * bloc, et `.avoir` ne declare aucun `background`. Le defaut n'etait pas la
+ * lisibilite mais la CONFUSION avec le trait blanc des groupes.
+ */
+.panneauActions .avoir {
+  border-bottom-color: var(--ls-border);
+}
+
+.groupeActions p:last-child {
+  margin-bottom: 0;
+}

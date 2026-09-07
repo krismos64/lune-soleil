@@ -57,12 +57,32 @@ test.use({ storageState: FICHIER_SESSION_VERIFIEE });
  */
 let numero: string;
 
+/**
+ * La commande qui rend le panneau « Documents et actions » ENTIER, LS-190.
+ *
+ * ELLE EXISTE PARCE QUE `numero` NE LE PEUT PAS. La commande principale de ce
+ * fichier n'ecrit pas `statut`, donc elle prend le defaut du schema,
+ * `EN_ATTENTE_PAIEMENT`. Or `STATUTS_RETRACTABLES` exclut nommement cette
+ * valeur : sur elle, le panneau ne rend QUE son groupe de contact et son etat
+ * « facture a venir ».
+ *
+ * Consequence relevee par la revue frontend de LS-190 : le selecteur
+ * `.groupeActions + .groupeActions` n'etait exerce par AUCUN test, aux trois
+ * largeurs comprises. Le separateur entre groupes n'avait jamais ete rendu.
+ *
+ * C'est le motif que `chemin-session.ts` documente deja pour
+ * `COMMANDE_FACTUREE_TEST` : mesurer un ecran qui ne rend jamais la branche
+ * interessante ne prouve rien.
+ */
+let numeroComplet: string;
+
 test.beforeEach(async ({}, infos) => {
   const { email } = JSON.parse(
     readFileSync(FICHIER_EMAIL_VERIFIE, "utf-8"),
   ) as { email: string };
 
   numero = `C-TEST-57-${infos.project.name}`;
+  numeroComplet = `C-TEST-190-${infos.project.name}`;
 
   await avecBase(async (client) => {
     /*
@@ -141,6 +161,79 @@ test.beforeEach(async ({}, infos) => {
        FROM commande c WHERE c.numero = $1
 `,
       [numero],
+    );
+
+    /*
+     * LA SECONDE COMMANDE, QUI REND LE PANNEAU ENTIER, LS-190.
+     *
+     * `LIVREE` SUFFIT, ET `livre_a` N'EST PAS ECRIT ICI. Ma premiere version le
+     * posait sur `commande` : la colonne n'existe pas, elle vit sur
+     * `Expedition`, V11. L'INSERT levait « column livre_a does not exist ».
+     *
+     * Elle etait de toute facon inutile : `commandePeutOuvrirUneRetractation`
+     * ne regarde QUE le statut, et c'est la page cible qui explique ensuite le
+     * delai. Verifier ce que la garde lit vaut mieux que deduire ce qu'elle
+     * devrait lire.
+     *
+     * L'ORDRE DE SUPPRESSION SUIT CELUI DE LA COMMANDE PRINCIPALE, avec la
+     * facture en plus : elle est en `RESTRICT` sur la commande, donc elle part
+     * AVANT elle, et les lignes avant tout le reste.
+     */
+    await client.query(
+      `DELETE FROM facture WHERE commande_id IN (
+         SELECT id FROM commande WHERE numero = $1)`,
+      [numeroComplet],
+    );
+    await client.query(
+      `DELETE FROM ligne_commande WHERE commande_id IN (
+         SELECT id FROM commande WHERE numero = $1)`,
+      [numeroComplet],
+    );
+    await client.query(`DELETE FROM commande WHERE numero = $1`, [
+      numeroComplet,
+    ]);
+
+    await client.query(
+      `INSERT INTO commande (id, numero, email_normalise, nom_client, utilisateur_id,
+                             dissocie_a, adresse_livraison, adresse_facturation,
+                             sous_total_centimes, mode_livraison, frais_port_centimes,
+                             total_centimes, cgv_acceptees_a, cgv_version, cree_a,
+                             statut)
+       SELECT gen_random_uuid()::text, $1, u.email, 'Client de test', u.id, NULL,
+              '{"nom": "Client de test", "ligne1": "1 rue du Test",
+                "codePostal": "64000", "ville": "Pau", "pays": "France"}'::jsonb,
+              '{}'::jsonb, 4500, 'DOMICILE', 499, 4999, now(), 'v1', now(),
+              'LIVREE'
+       FROM utilisateur u WHERE u.email = $2
+`,
+      [numeroComplet, email],
+    );
+
+    await client.query(
+      `INSERT INTO ligne_commande (id, commande_id, variante_id, reference_figee,
+                                   libelle_produit_fige, libelle_variante_fige,
+                                   prix_fige_centimes, quantite)
+       SELECT gen_random_uuid()::text, c.id, NULL, 'REF-TEST-0190',
+              'Collier Aurore', 'chaine de 45 cm', 4500, 1
+       FROM commande c WHERE c.numero = $1
+`,
+      [numeroComplet],
+    );
+
+    /*
+     * LA FACTURE PORTE UN `chemin_pdf`, donc le groupe 1 rend son LIEN de
+     * telechargement et non sa branche « document indisponible ». Le fichier
+     * n'existe pas sur le disque, et c'est sans importance : ce test mesure le
+     * RENDU du panneau, jamais le service du PDF, qui a ses propres tests.
+     */
+    await client.query(
+      `INSERT INTO facture (id, commande_id, numero, montant_total_centimes,
+                            instantane_legal, chemin_pdf)
+       SELECT gen_random_uuid()::text, c.id, $2, 4999, '{}'::jsonb,
+              'factures/2026/test-ls190.pdf'
+       FROM commande c WHERE c.numero = $1
+`,
+      [numeroComplet, `F-TEST-190-${numeroComplet.slice(-9)}`],
     );
   });
 });
@@ -244,6 +337,116 @@ test("l'historique ne deborde pas horizontalement", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Mes commandes", exact: true }),
   ).toBeVisible();
+
+  expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+    TOLERANCE_DEBORDEMENT_PX,
+  );
+});
+
+/**
+ * LE PANNEAU « DOCUMENTS ET ACTIONS », LS-190.
+ *
+ * CE QU'IL PROUVE ET QU'AUCUN CONTROLE TEXTUEL NE PEUT PROUVER :
+ * `verifier-contraste.sh` mesure les paires declarees dans le CSS, il ne dit
+ * pas que le panneau RENDU porte bien ce fond. Un selecteur mal ecrit, une
+ * regle plus specifique, un module CSS mal importe, et le panneau s'afficherait
+ * transparent avec du texte noir sur creme : les jetons resteraient conformes
+ * et le rendu serait faux.
+ *
+ * LE FOND EST LU SUR L'ELEMENT RENDU, en `rgb()` puisque c'est ce que
+ * `getComputedStyle` rend, jamais le nom du jeton.
+ *
+ *   #5f4519 = rgb(95, 69, 25)   --ls-primary
+ *   #ffffff = rgb(255, 255, 255) --ls-text-on-primary, 8,93:1 mesure
+ *
+ * LE CONTACT EST TOUJOURS PRESENT, sans condition : c'est le seul groupe qui ne
+ * depend d'aucun etat, et il porte le numero de commande pour que le message
+ * arrive rattache a la bonne commande.
+ */
+test("le panneau Documents et actions porte son fond mesure et le contact", async ({
+  page,
+}) => {
+  await page.goto("/compte/commandes");
+  await page.getByRole("link", { name: `Commande ${numero}` }).click();
+
+  const panneau = page.getByRole("region", { name: "Documents et actions" });
+  await expect(panneau).toBeVisible();
+
+  const rendu = await panneau.evaluate((el) => {
+    const s = getComputedStyle(el);
+    return { fond: s.backgroundColor, texte: s.color };
+  });
+
+  expect(rendu.fond, "le panneau doit porter --ls-primary").toBe(
+    "rgb(95, 69, 25)",
+  );
+  expect(rendu.texte, "son texte doit etre --ls-text-on-primary").toBe(
+    "rgb(255, 255, 255)",
+  );
+
+  /*
+   * LE NUMERO EST DANS LE PANNEAU, et pas seulement dans le titre de page : un
+   * client qui copie le message doit emporter la reference avec lui.
+   */
+  await expect(panneau).toContainText(numero);
+  await expect(
+    panneau.getByRole("link", { name: "Nous écrire" }),
+  ).toBeVisible();
+});
+
+/**
+ * LE PANNEAU ENTIER, SES TROIS GROUPES ET SON SEPARATEUR, LS-190.
+ *
+ * CE QUE CE TEST AJOUTE AU PRECEDENT, et pourquoi les deux existent : celui-ci
+ * passe par la commande LIVREE ET FACTUREE, seule a rendre les trois groupes.
+ * Le test voisin mesure le panneau MINIMAL, un seul groupe, qui est l'etat le
+ * plus frequent avant paiement.
+ *
+ * SANS LUI, `.groupeActions + .groupeActions` N'ETAIT EXERCE PAR RIEN : le
+ * separateur entre groupes n'avait jamais ete rendu, aux trois largeurs
+ * comprises. Releve par la revue frontend de LS-190.
+ *
+ * LE DEBORDEMENT EST MESURE ICI AUSSI, et c'est le cas dur : trois groupes, un
+ * numero de facture et un montant, la ou le panneau minimal ne porte qu'une
+ * phrase d'attente.
+ */
+test("le panneau entier rend ses trois groupes et leur separateur", async ({
+  page,
+}) => {
+  await page.goto("/compte/commandes");
+  await page.getByRole("link", { name: `Commande ${numeroComplet}` }).click();
+
+  const panneau = page.getByRole("region", { name: "Documents et actions" });
+  await expect(panneau).toBeVisible();
+
+  // Les trois groupes, chacun par ce qui le distingue.
+  await expect(
+    panneau.getByRole("link", { name: /Télécharger la facture/ }),
+  ).toBeVisible();
+  await expect(
+    panneau.getByRole("link", { name: "Déclarer ma rétractation" }),
+  ).toBeVisible();
+  await expect(
+    panneau.getByRole("link", { name: "Nous écrire" }),
+  ).toBeVisible();
+
+  /*
+   * LE SEPARATEUR EST LU SUR LE DEUXIEME GROUPE, celui qui porte le
+   * `border-top` : le premier ne l'a pas, la regle etant `+`. Un panneau qui
+   * rendrait ses groupes sans les separer passerait les trois assertions
+   * ci-dessus.
+   */
+  const separateurs = await panneau.evaluate((el) => {
+    const groupes = [...el.querySelectorAll(":scope > div")];
+    return groupes.map((g) => getComputedStyle(g).borderTopWidth);
+  });
+
+  expect(separateurs.length, "le panneau doit rendre trois groupes").toBe(3);
+  expect(separateurs[0], "le premier groupe n'a pas de trait au-dessus").toBe(
+    "0px",
+  );
+  expect(separateurs[1], "le deuxieme groupe porte le separateur").toBe("1px");
+  expect(separateurs[2], "le troisieme aussi").toBe("1px");
 
   expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
     TOLERANCE_DEBORDEMENT_PX,

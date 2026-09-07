@@ -271,134 +271,183 @@ export default async function PageDetailCommande({
         </section>
       )}
 
-      <section className={styles.section} aria-labelledby="titre-documents">
-        <h2 id="titre-documents">Documents</h2>
+      {/*
+       * PANNEAU « DOCUMENTS ET ACTIONS », LS-190. Il rassemble ce que l'ecran
+       * portait en TROIS endroits : la facture et ses avoirs, la retractation,
+       * et le contact qui n'y figurait pas du tout.
+       *
+       * UN SEUL `h2` POUR LES TROIS GROUPES, et les sous-groupes ne portent PAS
+       * de titre de niveau 3 : ce sont trois actions de meme rang, pas une
+       * hierarchie. Le lecteur d'ecran annonce « Documents et actions » puis
+       * parcourt trois paragraphes, ce qui est la structure reelle.
+       *
+       * LE FOND EST MESURE, jamais suppose, critere 1 et regle C31 : le detail
+       * des paires et le refus de `--ls-text-muted` vivent dans
+       * `compte.module.css`, a cote de la declaration qui les applique.
+       */}
+      <section
+        className={styles.panneauActions}
+        aria-labelledby="titre-documents-actions"
+      >
+        <h2 id="titre-documents-actions">Documents et actions</h2>
+
+        <div className={styles.groupeActions}>
+          {/*
+           * TROIS ETATS DISTINCTS, ET LES CONFONDRE EFFACERAIT UNE ANOMALIE :
+           *
+           *   aucune facture      normal avant le paiement
+           *   facture sans PDF    rendu en echec, regle F8, la facture EXISTE
+           *   facture avec PDF    le cas nominal
+           *
+           * Le deuxieme se dit explicitement plutot que de disparaitre : un
+           * client qui ne voit aucun document sur une commande payee croirait a
+           * un oubli, et l'exploitante n'en saurait rien.
+           */}
+          {!commande.facture ? (
+            <p className={styles.texte}>
+              La facture sera disponible ici une fois le paiement confirmé.
+            </p>
+          ) : (
+            <>
+              <p className={styles.texte}>
+                Facture {commande.facture.numero}, émise le{" "}
+                {formaterDate(commande.facture.emiseA)}.
+              </p>
+
+              {commande.facture.cheminPdf ? (
+                <p className={styles.texte}>
+                  <a
+                    href={`/compte/commandes/${commande.id}/facture`}
+                    className={styles.lien}
+                  >
+                    Télécharger la facture {commande.facture.numero}
+                  </a>
+                </p>
+              ) : (
+                <p className={styles.texte}>
+                  Le document de cette facture est momentanément indisponible.
+                  Contactez-nous pour en recevoir une copie.
+                </p>
+              )}
+
+              {/*
+               * L'AVOIR EST RATTACHE A SA FACTURE D'ORIGINE, invariant 4 : une
+               * facture n'est jamais modifiee ni remplacee, une correction produit
+               * un avoir. Sans ce lien affiche, un client rembourse verrait une
+               * facture au montant plein sans explication.
+               */}
+              {commande.facture.avoirs.length > 0 && (
+                /*
+                 * `.avoirs` ET NON `.articles` : cette derniere porte un
+                 * `flex-direction: column` concu pour trois `span` empiles
+                 * volontairement, et du texte coulant s'y serait brise en blocs.
+                 *
+                 * LA STRUCTURE SUIT CELLE DE LA FACTURE, un paragraphe descriptif
+                 * puis un paragraphe de lien : la premiere version melait les deux
+                 * dans le meme `li`, et le lecteur d'ecran entendait le numero
+                 * deux fois de suite. Les deux releves par la revue frontend.
+                 */
+                <ul className={styles.avoirs}>
+                  {commande.facture.avoirs.map((avoir) => (
+                    <li key={avoir.id} className={styles.avoir}>
+                      <p className={styles.texte}>
+                        Avoir {avoir.numero} de{" "}
+                        {formaterMontant(avoir.montantCentimes)}, émis le{" "}
+                        {formaterDate(avoir.emisA)}.
+                      </p>
+                      {avoir.cheminPdf ? (
+                        <p className={styles.texte}>
+                          <a
+                            href={`/compte/commandes/${commande.id}/avoir/${avoir.id}`}
+                            className={styles.lien}
+                          >
+                            Télécharger l&apos;avoir {avoir.numero}
+                          </a>
+                        </p>
+                      ) : (
+                        <p className={styles.texte}>
+                          Le document de cet avoir est momentanément
+                          indisponible.
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+        </div>
 
         {/*
-         * TROIS ETATS DISTINCTS, ET LES CONFONDRE EFFACERAIT UNE ANOMALIE :
+         * LE LIEN EST VISIBLE ET PERMANENT, article L221-21 : la fonctionnalite
+         * doit rester accessible pendant TOUT le delai, et un lien qui
+         * disparaitrait au mauvais moment serait un defaut d'information que
+         * l'article L221-20 sanctionne par un delai porte a douze mois.
          *
-         *   aucune facture      normal avant le paiement
-         *   facture sans PDF    rendu en echec, regle F8, la facture EXISTE
-         *   facture avec PDF    le cas nominal
+         * IL S'AFFICHE AUSSI QUAND LE DELAI EST EXPIRE OU LA DEMANDE DEJA
+         * DEPOSEE : c'est la page cible qui explique la situation. Le masquer
+         * laisserait le client sans reponse sur un droit qu'il croit avoir.
          *
-         * Le deuxieme se dit explicitement plutot que de disparaitre : un
-         * client qui ne voit aucun document sur une commande payee croirait a
-         * un oubli, et l'exploitante n'en saurait rien.
+         * LA GARDE N'EST PAS DANS CE COMPOSANT, elle est dans le service : un
+         * ecran qui n'affiche pas un bouton ne protege rien, la Server Action
+         * restant joignable par HTTP.
          */}
-        {!commande.facture ? (
-          <p className={styles.texte}>
-            La facture sera disponible ici une fois le paiement confirmé.
-          </p>
-        ) : (
-          <>
+        {etatRetractationAffichable && (
+          <div className={styles.groupeActions}>
             <p className={styles.texte}>
-              Facture {commande.facture.numero}, émise le{" "}
-              {formaterDate(commande.facture.emiseA)}.
+              <strong>Me rétracter</strong>
             </p>
-
-            {commande.facture.cheminPdf ? (
-              <p className={styles.texte}>
-                <a
-                  href={`/compte/commandes/${commande.id}/facture`}
-                  className={styles.lien}
-                >
-                  Télécharger la facture {commande.facture.numero}
-                </a>
-              </p>
-            ) : (
-              <p className={styles.texte}>
-                Le document de cette facture est momentanément indisponible.
-                Contactez-nous pour en recevoir une copie.
-              </p>
-            )}
-
             {/*
-             * L'AVOIR EST RATTACHE A SA FACTURE D'ORIGINE, invariant 4 : une
-             * facture n'est jamais modifiee ni remplacee, une correction produit
-             * un avoir. Sans ce lien affiche, un client rembourse verrait une
-             * facture au montant plein sans explication.
+             * LA MENTION DES FRAIS DE RETOUR ACCOMPAGNE CELLE DE LA
+             * RETRACTATION, PARTOUT OU ELLE APPARAIT, `frontend-design.md` :
+             * l'annoncer sans elle expose au delai de douze mois de L221-20. Ce
+             * bloc est le PREMIER endroit ou le droit est annonce, et le seul
+             * atteint par un client qui ne clique pas le lien. Omission relevee
+             * par la revue frontend du 3 septembre 2026.
              */}
-            {commande.facture.avoirs.length > 0 && (
-              /*
-               * `.avoirs` ET NON `.articles` : cette derniere porte un
-               * `flex-direction: column` concu pour trois `span` empiles
-               * volontairement, et du texte coulant s'y serait brise en blocs.
-               *
-               * LA STRUCTURE SUIT CELLE DE LA FACTURE, un paragraphe descriptif
-               * puis un paragraphe de lien : la premiere version melait les deux
-               * dans le meme `li`, et le lecteur d'ecran entendait le numero
-               * deux fois de suite. Les deux releves par la revue frontend.
-               */
-              <ul className={styles.avoirs}>
-                {commande.facture.avoirs.map((avoir) => (
-                  <li key={avoir.id} className={styles.avoir}>
-                    <p className={styles.texte}>
-                      Avoir {avoir.numero} de{" "}
-                      {formaterMontant(avoir.montantCentimes)}, émis le{" "}
-                      {formaterDate(avoir.emisA)}.
-                    </p>
-                    {avoir.cheminPdf ? (
-                      <p className={styles.texte}>
-                        <a
-                          href={`/compte/commandes/${commande.id}/avoir/${avoir.id}`}
-                          className={styles.lien}
-                        >
-                          Télécharger l&apos;avoir {avoir.numero}
-                        </a>
-                      </p>
-                    ) : (
-                      <p className={styles.texte}>
-                        Le document de cet avoir est momentanément indisponible.
-                      </p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </>
+            <p className={styles.texte}>
+              Vous disposez de 14 jours après réception pour changer
+              d&apos;avis, sans avoir à vous justifier. Les frais de retour sont
+              à votre charge.
+            </p>
+            <p className={styles.texte}>
+              <Link
+                href={`/compte/commandes/${commande.id}/retractation`}
+                className={styles.lien}
+              >
+                Déclarer ma rétractation
+              </Link>
+            </p>
+          </div>
         )}
-      </section>
 
-      {/*
-       * LE LIEN EST VISIBLE ET PERMANENT, article L221-21 : la fonctionnalite
-       * doit rester accessible pendant TOUT le delai, et un lien qui
-       * disparaitrait au mauvais moment serait un defaut d'information que
-       * l'article L221-20 sanctionne par un delai porte a douze mois.
-       *
-       * IL S'AFFICHE AUSSI QUAND LE DELAI EST EXPIRE OU LA DEMANDE DEJA
-       * DEPOSEE : c'est la page cible qui explique la situation. Le masquer
-       * laisserait le client sans reponse sur un droit qu'il croit avoir.
-       *
-       * LA GARDE N'EST PAS DANS CE COMPOSANT, elle est dans le service : un
-       * ecran qui n'affiche pas un bouton ne protege rien, la Server Action
-       * restant joignable par HTTP.
-       */}
-      {etatRetractationAffichable && (
-        <section className={styles.section}>
-          <h2>Me rétracter</h2>
-          {/*
-           * LA MENTION DES FRAIS DE RETOUR ACCOMPAGNE CELLE DE LA
-           * RETRACTATION, PARTOUT OU ELLE APPARAIT, `frontend-design.md` :
-           * l'annoncer sans elle expose au delai de douze mois de L221-20. Ce
-           * bloc est le PREMIER endroit ou le droit est annonce, et le seul
-           * atteint par un client qui ne clique pas le lien. Omission relevee
-           * par la revue frontend du 3 septembre 2026.
-           */}
+        {/*
+         * LE CONTACT EST LE TROISIEME GROUPE, ET IL EST NOUVEAU SUR CET ECRAN.
+         * Un client qui voulait ecrire au sujet de SA commande n'avait aucun
+         * point d'entree depuis son detail : il devait retrouver la page de
+         * contact par la navigation, sans que rien ne rattache son message a
+         * cette commande.
+         *
+         * IL EST TOUJOURS AFFICHE, sans condition : c'est le seul groupe du
+         * panneau qui ne depend d'aucun etat, et une commande sans facture ni
+         * retractation possible garde ainsi un panneau utile plutot qu'un bloc
+         * qui n'annonce qu'une attente.
+         */}
+        <div className={styles.groupeActions}>
           <p className={styles.texte}>
-            Vous disposez de 14 jours après réception pour changer d&apos;avis,
-            sans avoir à vous justifier. Les frais de retour sont à votre
-            charge.
+            <strong>Une question sur cette commande</strong>
           </p>
           <p className={styles.texte}>
-            <Link
-              href={`/compte/commandes/${commande.id}/retractation`}
-              className={styles.lien}
-            >
-              Déclarer ma rétractation
+            Indiquez le numéro {commande.numero} dans votre message, nous
+            retrouverons votre commande.
+          </p>
+          <p className={styles.texte}>
+            <Link href="/contact" className={styles.lien}>
+              Nous écrire
             </Link>
           </p>
-        </section>
-      )}
+        </div>
+      </section>
     </main>
   );
 }
