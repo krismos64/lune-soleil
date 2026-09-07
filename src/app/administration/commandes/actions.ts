@@ -108,7 +108,17 @@ export async function changerStatut(
     });
 
     if (issue.statut === "SUCCES") {
-      revalidatePath(CHEMIN_COMMANDES);
+      /*
+       * `"layout"` EST OBLIGATOIRE ICI, regle C37. Un changement de statut
+       * deplace la commande entre `commandesAPreparer`, `commandesPretesA
+       * Expedier`, `commandesEnCours` et `expeditionsEnTransit`, QUATRE des
+       * comptages que le layout d'administration affiche dans sa barre.
+       *
+       * Sans lui l'ecran se rafraichit pendant que la barre garde son ancien
+       * nombre : c'est le defaut que LS-201 a corrige sur les messages et les
+       * stocks, et qui vivait encore ici.
+       */
+      revalidatePath(CHEMIN_COMMANDES, "layout");
       revalidatePath(`${CHEMIN_COMMANDES}/${commandeId}`);
     }
 
@@ -176,6 +186,13 @@ export async function regenererDocument(
   const issue = await rendreFacture(factureId);
 
   if (issue.statut === "RENDU") {
+    /*
+     * PAS DE `"layout"` ICI, ET C'EST DELIBERE, regle C37. Rendre le PDF d'une
+     * facture ecrit un fichier et ne touche AUCUN des comptages de la barre :
+     * ni un statut de commande, ni un stock, ni un montant encaisse. Ajouter
+     * `"layout"` par symetrie ferait recalculer neuf agregats a chaque
+     * regeneration, sans qu'aucun puisse avoir change.
+     */
     revalidatePath(`${CHEMIN_COMMANDES}/${commandeId}`);
 
     return { statut: "SUCCES" };
@@ -357,7 +374,12 @@ export async function rembourser(
     });
 
     if (issue.statut === "REMBOURSE") {
-      revalidatePath(`${CHEMIN_COMMANDES}/${commande.data}`);
+      /*
+       * `"layout"` PARCE QUE L'ENCAISSE DU JOUR EN DEPEND, regle C37. Le
+       * comptage soustrait `montant_rembourse_centimes`, qu'un remboursement
+       * vient precisement d'augmenter.
+       */
+      revalidatePath(`${CHEMIN_COMMANDES}/${commande.data}`, "layout");
 
       return {
         statut: "SUCCES",

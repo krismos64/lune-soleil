@@ -997,6 +997,34 @@ jobs:
         run: ./scripts/verifier-description-accessible-mutation.sh
 
       # ----------------------------------------------------------------------
+      # Controle 9w. Une Server Action revalide le LAYOUT des que le layout lit
+      # la donnee, regle C37. Textuel, secondes.
+      #
+      # CE QU'IL GARDE, et le defaut est SILENCIEUX : `revalidatePath(chemin)`
+      # invalide la page seule. Le layout d'administration lit NEUF comptages,
+      # et une action qui en change un sans passer `"layout"` rafraichit l'ecran
+      # pendant que la barre garde son ancien nombre. Aucun type, aucun test et
+      # aucun rendu ne bougent.
+      #
+      # POURQUOI IL ARRIVE APRES LA REGLE. LS-201 a pose C37 et corrige SIX
+      # appels, sur les messages et les stocks seulement. ONZE appels restaient
+      # en violation sur quatre autres domaines, trouves le 7 septembre 2026 en
+      # cherchant quelles regles numerotees n'etaient exercees par rien. Une
+      # regle ecrite et non verifiee ne tient pas.
+      # ----------------------------------------------------------------------
+      - name: 9w. Revalidation du layout des ecrans d'administration
+        run: ./scripts/verifier-revalidation-layout.sh
+
+      # Preuve par mutation du controle precedent, regle C37. Textuel, secondes.
+      #
+      # SIX SENS EXERCES, dont deux qui gardent le controle CONTRE LUI-MEME : la
+      # regle retiree du document, et un argument qui est lui-meme un appel,
+      # `revalidatePath(chemin(id), "layout")`, qui a fait rougir la premiere
+      # version du controle sur du code parfaitement correct.
+      - name: 9w bis. Preuve par mutation de la revalidation du layout
+        run: ./scripts/verifier-revalidation-layout-mutation.sh
+
+      # ----------------------------------------------------------------------
       # Controles 2 et 3. Le format entre ici parce qu'un depot ou seule une
       # partie des fichiers est formatee produit des diffs illisibles.
       # ----------------------------------------------------------------------

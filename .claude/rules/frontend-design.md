@@ -524,6 +524,31 @@ La question à se poser avant d'écrire l'appel : **cette donnée est-elle lue p
 le layout ?** Si oui, `"layout"`. Ce n'est jamais `revalidatePath("/", "layout")`,
 qui purgerait le cache client entier pour un geste local.
 
+**Le layout lit NEUF comptages, et LS-201 n'en avait couvert que deux
+domaines.** Onze appels sont restés en violation jusqu'au 7 septembre 2026, sur
+les commandes, les expéditions, les rétractations et les variantes. La règle
+était juste, sa portée réelle n'avait jamais été mesurée : c'est le motif connu
+de ce dépôt, une règle écrite et non vérifiée ne tient pas.
+
+`scripts/verifier-revalidation-layout.sh` la vérifie désormais dans les deux
+sens, prouvé par mutation sur les quatre domaines oubliés.
+
+| Domaine | Comptages de la barre qui en dépendent |
+|---|---|
+| `commandes` | `commandesAPreparer`, `commandesPretesAExpedier`, `commandesEnCours` |
+| `expeditions` | `expeditionsEnTransit` |
+| `retractations` | `retractationsEnCours` |
+| `messages` | `messagesNonLus` |
+| `stocks` et `produits/actions-variantes` | `variantesStockFaible`, `variantesIndisponibles` |
+| tout remboursement | l'encaissé du jour, qui soustrait le montant remboursé |
+
+**Toute action de ces domaines n'a pas besoin de `"layout"` pour autant**, et le
+raisonnement se fait sur la donnée, jamais sur le dossier. Trois transitions de
+rétractation passent d'un statut *en cours* à un autre statut *en cours* :
+`retractationsEnCours` exclut les seuls `REMBOURSEE` et `REFUSEE`, donc le
+nombre ne bouge pas. Régénérer le PDF d'une facture ne touche aucun comptage non
+plus. Ajouter `"layout"` par symétrie ferait recalculer neuf agrégats pour rien.
+
 ## Dimensionnement du catalogue
 
 Le catalogue ouvrira avec 10 à 20 références et peut atteindre 30 à 40 sans
