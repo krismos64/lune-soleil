@@ -130,9 +130,34 @@ qui l'expliquaient. Un commentaire n'arrête personne.
 
 ## État des tickets
 
-**LS-168** : les quatre critères sont tenus. Aucun plafond n'est désactivé ni
-relevé, c'est la consommation qui passe de sept inscriptions à zéro en régime
-établi.
+**LS-168 est close**, PR #267 fusionnée en rebase, huit commits. Les quatre
+critères sont tenus, et aucun plafond n'est désactivé ni relevé : c'est la
+consommation qui passe de sept inscriptions à zéro en régime établi.
+
+**LS-201 créée** : trois tests d'administration échouent dans la suite complète
+et passent leurs 100 tests en isolation. Deux signatures distinctes, 30,0 s pile
+pour l'un (un délai atteint) et 127 ms pour l'autre (une assertion immédiate,
+probablement un état partagé entre largeurs). Hors du périmètre de LS-168,
+vérifié par `git diff --stat main...HEAD` : aucun de ces fichiers n'est touché.
+
+**Comptes relevés dans Jira le 7 septembre 2026**, après la fermeture : **61
+stories ouvertes**, dont quinze sur LS-7, treize sur LS-3, onze sur LS-22, cinq
+sur LS-5 et cinq sur LS-36.
+
+## Résultat mesuré
+
+Suite complète, base **et compteur** purgés avant la mesure :
+
+```
+avant   3 a 4 echecs de preparation en 429
+apres   1083 passed, aucun 429 dans toute la suite
+```
+
+| Route | Plafond | Avant | Après |
+| --- | --- | --- | --- |
+| `/sign-up/email` | 3/min | 7 appels | 0 en régime établi |
+| `/sign-in/email` | 5/min | 15 appels | 3, mesures irréductibles |
+| `/change-password` | 5/min | 6 en rafale | 2, une seule largeur |
 
 ## Prochaine étape
 
