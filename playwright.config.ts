@@ -11,9 +11,13 @@
  * different de celui de la production, avec ses avertissements de developpement
  * et sans les optimisations de build.
  *
- * TROIS TAILLES ET NON UNE. Le projet est concu a partir de 320 px, largeur
+ * QUATRE TAILLES ET NON UNE. Le projet est concu a partir de 320 px, largeur
  * imposee par CLAUDE.md. Un test de bout en bout qui ne s'executerait qu'en
  * 1280 px laisserait passer exactement le defaut que cette contrainte vise.
+ *
+ * LES QUATRE SONT CELLES DE L'INVARIANT 10, depuis LS-166 : 320, 390, 768,
+ * 1280. La troisieme a manque jusque-la, et c'est precisement la largeur ou les
+ * dispositions basculent, voir le projet `tablette-768` plus bas.
  */
 import { defineConfig, devices } from "@playwright/test";
 
@@ -250,6 +254,44 @@ export default defineConfig({
         viewport: { width: 390, height: 844 },
         isMobile: true,
         hasTouch: true,
+      },
+    },
+    {
+      /*
+       * 768 px, LA LARGEUR DE BASCULE, LS-166.
+       *
+       * ------------------------------------------------------------------
+       * ELLE MANQUAIT DEPUIS LE DEBUT DU PROJET. `CLAUDE.md` enonce quatre
+       * largeurs a l'invariant 10, « 320 px, puis 390, 768, 1280 », et
+       * `frontend-design.md` les reprend : trois seulement etaient mesurees.
+       *
+       * C'EST LA OU LES DISPOSITIONS CHANGENT DE FORME, et le depot en porte
+       * la preuve : `layout.module.css`, `navigation-administration.module.css`
+       * et `navigation-espace-client.module.css` basculent tous sur
+       * `min-width: 768px`. Une pile devient deux colonnes, la barre laterale
+       * passe de repliee a permanente. Aucun test ne voyait ce basculement.
+       *
+       * NI 390 NI 1280 NE LE COUVRENT. Un contenu qui tient empile a 390 et en
+       * trois colonnes a 1280 peut se briser en deux colonnes trop etroites
+       * ici, sans qu'aucune des deux autres largeurs ne le montre.
+       * ------------------------------------------------------------------
+       *
+       * 768 EST INCLUS DANS LA DISPOSITION LARGE, `min-width: 768px` etant
+       * inclusif. `navigation-administration.spec.ts` compare `largeur < 768`
+       * et attend donc ici la barre PERMANENTE : les deux coincident, ce qui a
+       * ete verifie avant d'ajouter ce projet plutot que constate apres.
+       *
+       * PAS DE `isMobile`, contrairement a `mobile-390` : a cette largeur on
+       * vise la tablette et le petit portable, ou le survol existe. L'activer
+       * changerait le mode de saisie sans rapport avec la largeur mesuree.
+       */
+      name: "tablette-768",
+      testIgnore:
+        /(session-(cliente|verifiee|administration)|commande|comptes-profil)\.setup\.ts$/,
+      dependencies: ["preparation"],
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 768, height: 1024 },
       },
     },
     {

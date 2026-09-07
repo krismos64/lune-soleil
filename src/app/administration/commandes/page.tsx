@@ -102,6 +102,7 @@ export default async function PageCommandes({
                 aria-current={
                   filtre.valeur === filtreActif ? "page" : undefined
                 }
+                prefetch={false}
               >
                 {filtre.libelle}
               </Link>
@@ -174,6 +175,7 @@ async function ListeCommandes({
                 <Link
                   href={`/administration/commandes/${commande.id}`}
                   className={styles.numero}
+                  prefetch={false}
                 >
                   {commande.numero}
                 </Link>

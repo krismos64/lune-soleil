@@ -27,7 +27,11 @@ export default function Chargement() {
        * le critere 3 interdit.
        */
       tete={
-        <Link href="/administration/commandes" className={styles.retour}>
+        <Link
+          href="/administration/commandes"
+          className={styles.retour}
+          prefetch={false}
+        >
           Retour aux commandes
         </Link>
       }

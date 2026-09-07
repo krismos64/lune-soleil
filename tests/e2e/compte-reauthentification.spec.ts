@@ -119,7 +119,21 @@ test("un mot de passe faux est refuse, reste lisible et ne deborde pas", async (
 
   await page.goto("/compte/reauthentification?retour=compte");
 
-  await page.getByLabel("Mot de passe").fill(MOT_DE_PASSE_FAUX);
+  /*
+   * `exact: true` ET NON UNE CORRESPONDANCE PARTIELLE, LS-166.
+   *
+   * `getByLabel` compare par SOUS-CHAINE par defaut. Depuis LS-179 le champ
+   * porte une bascule d'affichage dont le nom accessible est « Afficher le mot
+   * de passe » : le selecteur nu en trouvait DEUX, l'input et ce bouton, et
+   * `fill` echouait en « strict mode violation ».
+   *
+   * PAS `getByRole("textbox")`, qui serait le reflexe : un `input[type=password]`
+   * ne porte PAS le role `textbox`, et le selecteur ne trouverait le champ
+   * qu'une fois la bascule activee, c'est-a-dire jamais dans ce test.
+   */
+  await page
+    .getByLabel("Mot de passe", { exact: true })
+    .fill(MOT_DE_PASSE_FAUX);
   await page.getByRole("button", { name: /Confirmer mon identité/i }).click();
 
   /**

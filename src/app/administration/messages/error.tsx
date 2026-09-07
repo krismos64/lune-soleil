@@ -39,7 +39,11 @@ export default function ErreurMessages({
         <button type="button" className={styles.bouton} onClick={reset}>
           Réessayer
         </button>
-        <Link href="/administration/commandes" className={styles.retour}>
+        <Link
+          href="/administration/commandes"
+          className={styles.retour}
+          prefetch={false}
+        >
           Retour aux commandes
         </Link>
       </div>

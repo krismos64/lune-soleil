@@ -371,35 +371,77 @@ test("la pastille des messages compte les messages réellement non lus", async (
    * photographies prises a des instants differents.
    * ------------------------------------------------------------------
    */
-  const [texteLien, nonLus] = await Promise.all([
-    lien.textContent(),
-    page.getByRole("main").getByText("Nouveau", { exact: true }).count(),
-  ]);
-
-  const pastille = (texteLien ?? "").match(/(\d+)/)?.[1];
-
   /*
-   * LA PASTILLE DOIT VALOIR LE NOMBRE DE NON LUS ; s'il n'y en a aucun, elle ne
-   * doit pas exister du tout, « 0 » n'etant pas une information.
+   * ------------------------------------------------------------------
+   * LA PAGE EST RELUE JUSQU'A CE QUE LES DEUX NOMBRES S'ACCORDENT, LS-166.
+   *
+   * POURQUOI `Promise.all` NE SUFFISAIT PAS. Il supprime l'ecart entre deux
+   * lectures DU TEST, ce que LS-201 visait, mais les deux valeurs viennent
+   * toujours de DEUX rendus serveur : la pastille du LAYOUT, la liste de la
+   * PAGE. Une ecriture tombant entre ces deux rendus les desaccorde a la
+   * source, et aucune facon de lire le DOM ne peut le rattraper.
+   *
+   * LES ECRITURES CONCURRENTES SONT LES AUTRES LARGEURS.
+   * `administration-connectee:737` depose un message par le formulaire public
+   * puis le classe, une fois PAR LARGEUR, et `contact.spec.ts` en depose
+   * d'autres. Les projets de largeur partagent la base et tournent en
+   * parallele : pendant que celle-ci compte, une autre ecrit.
+   *
+   * MESURE DU 7 SEPTEMBRE 2026 : l'ajout de `tablette-768` a fait passer cet
+   * echec d'UNE largeur a QUATRE, la quatrieme ajoutant son ecriture au flot.
+   * Le test echouait meme lance seul, ses propres largeurs suffisant a se
+   * gener.
+   *
+   * CE N'EST PAS UN ASSOUPLISSEMENT DU CRITERE. Une pastille reellement fausse
+   * l'est a CHAQUE lecture, donc les cinq tours echouent et le test rougit avec
+   * le meme message qu'avant. Ce que la relecture ecarte est la photographie
+   * prise pendant une ecriture, qui n'est pas une incoherence de la pastille.
+   *
+   * `reload()` ET NON UNE SIMPLE RELECTURE DU DOM : il faut un nouveau rendu
+   * serveur des DEUX, layout et page, sans quoi on relirait indefiniment le
+   * meme desaccord.
+   * ------------------------------------------------------------------
    */
-  /*
-   * LES SUJETS AFFICHES ENTRENT DANS LE MESSAGE D'ECHEC, LS-201. Un ecart entre
-   * deux nombres ne dit pas QUELS messages ont bouge : sur un defaut qui ne se
-   * reproduit que sous charge, le rapport est la seule trace exploitable.
-   */
-  const sujets = await page
-    .getByRole("main")
-    .locator("li")
-    .filter({ hasText: "Nouveau" })
-    .allInnerTexts();
+  const TOURS = 5;
+  let detail = "";
+  let accorde = false;
 
-  const detail = `Pastille « ${pastille ?? "absente"} » pour ${nonLus} affiches. Sujets non lus : ${JSON.stringify(sujets.map((s) => s.split("\n")[0]))}`;
+  for (let tour = 0; tour < TOURS && !accorde; tour++) {
+    if (tour > 0) {
+      await page.reload();
+      await ouvrirLaBarreSiRepliee(page);
+    }
 
-  if (nonLus === 0) {
-    expect(pastille, detail).toBeUndefined();
-  } else {
-    expect(Number(pastille), detail).toBe(nonLus);
+    const [texteLien, nonLus] = await Promise.all([
+      lien.textContent(),
+      page.getByRole("main").getByText("Nouveau", { exact: true }).count(),
+    ]);
+
+    const pastille = (texteLien ?? "").match(/(\d+)/)?.[1];
+
+    /*
+     * LES SUJETS AFFICHES ENTRENT DANS LE MESSAGE D'ECHEC, LS-201. Un ecart
+     * entre deux nombres ne dit pas QUELS messages ont bouge : sur un defaut qui
+     * ne se reproduit que sous charge, le rapport est la seule trace
+     * exploitable.
+     */
+    const sujets = await page
+      .getByRole("main")
+      .locator("li")
+      .filter({ hasText: "Nouveau" })
+      .allInnerTexts();
+
+    detail = `Tour ${tour + 1}/${TOURS}. Pastille « ${pastille ?? "absente"} » pour ${nonLus} affiches. Sujets non lus : ${JSON.stringify(sujets.map((s) => s.split("\n")[0]))}`;
+
+    /*
+     * LA PASTILLE DOIT VALOIR LE NOMBRE DE NON LUS ; s'il n'y en a aucun, elle
+     * ne doit pas exister du tout, « 0 » n'etant pas une information.
+     */
+    accorde =
+      nonLus === 0 ? pastille === undefined : Number(pastille) === nonLus;
   }
+
+  expect(accorde, detail).toBe(true);
 });
 
 /**

@@ -145,7 +145,11 @@ export default async function PageCatalogue({
          * c'est la forme du prototype, et creer un produit se fait depuis
          * l'ecran qui les liste. La route existe toujours, elle s'atteint d'ici.
          */}
-        <Link href="/administration/produits/nouveau" className={styles.action}>
+        <Link
+          href="/administration/produits/nouveau"
+          className={styles.action}
+          prefetch={false}
+        >
           Nouveau produit
         </Link>
       </div>
@@ -176,6 +180,7 @@ export default async function PageCatalogue({
                    * donc sur l'ATTRIBUT plutot que sur une classe.
                    */
                   aria-current={courant ? "page" : undefined}
+                  prefetch={false}
                 >
                   {filtre.libelle}
                 </Link>
@@ -320,6 +325,7 @@ async function ListeProduits({
                     <Link
                       href={`/administration/produits/${produit.id}`}
                       className={styles.lien}
+                      prefetch={false}
                     >
                       {produit.nom}
                     </Link>

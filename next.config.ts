@@ -74,6 +74,35 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "26mb",
     },
+
+    /*
+     * ------------------------------------------------------------------
+     * `staleTimes.dynamic` A ETE ESSAYE PUIS RETIRE, LS-166, et le motif merite
+     * d'etre garde ici : c'est la parade evidente au prechargement en boucle,
+     * et elle est fausse sur ce projet.
+     *
+     * LE DEFAUT VISE. `dynamic` vaut ZERO par defaut, verifie via Context7 :
+     * une reponse prechargee d'une route dynamique est perimee a l'instant ou
+     * elle arrive, donc Next.js la jette et repart, sans fin. Toutes les routes
+     * d'administration etant `force-dynamic`, l'ecran au repos enchainait des
+     * rendus serveur en boucle, chacun interrogeant PostgreSQL.
+     *
+     * POURQUOI LE REGLAGE NE CONVIENT PAS. Il rend reutilisable une reponse
+     * DEJA LUE, layout compris. Or la barre porte des PASTILLES de comptage,
+     * rendues par le layout, quand la liste vient de la page : a cinq secondes,
+     * la pastille annonce encore « 1 message non lu » sur une liste qui n'en
+     * montre plus aucun.
+     *
+     * MESURE DU 7 SEPTEMBRE 2026, suite complete : le reglage a fait passer
+     * `navigation-administration` de DEUX largeurs en echec a TROIS, et a
+     * ajoute un echec sur les etats non nominaux. Il n'a rien ferme et a ouvert
+     * autre chose.
+     *
+     * CE QUI FERME LE DEFAUT est `prefetch={false}` sur les liens concernes,
+     * qui supprime la boucle sans introduire de cache. Voir
+     * `src/components/navigation-administration.tsx`.
+     * ------------------------------------------------------------------
+     */
   },
 
   turbopack: {

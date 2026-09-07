@@ -332,6 +332,35 @@ export function NavigationAdministration({
                   href={rubrique.chemin}
                   className={styles.lien}
                   /*
+                   * ------------------------------------------------------------
+                   * AUCUN PRECHARGEMENT, LS-166, ET C'EST UNE BOUCLE QU'IL FERME.
+                   *
+                   * LES ONZE RUBRIQUES SONT TOUTES `force-dynamic`, et
+                   * `staleTimes.dynamic` vaut ZERO par defaut, verifie via
+                   * Context7 : une reponse prechargee est donc perimee a
+                   * l'instant ou elle arrive. Next.js la jette et repart, sans
+                   * fin, tant que la barre est a l'ecran.
+                   *
+                   * MESURE DU 7 SEPTEMBRE 2026, journal du navigateur sur le
+                   * tableau de bord : chaque rubrique enchaine `200` puis
+                   * `ERR_ABORTED` puis une requete neuve, avec un jeton `_rsc`
+                   * different a chaque tour. Onze rendus serveur en boucle,
+                   * chacun interrogeant PostgreSQL, pour un ecran au repos.
+                   *
+                   * CE QUE CELA CASSAIT. La navigation reelle entre en
+                   * concurrence avec ce deluge et perd parfois la course : l'URL
+                   * change, le `<main>` n'arrive JAMAIS. Mesure : bloque encore
+                   * apres 61 secondes, deux essais sur quatre. Ni la page ni son
+                   * `loading.tsx` ne sont rendus, la personne reste devant une
+                   * coquille vide.
+                   *
+                   * ON NE PERD AUCUNE VITESSE : avec `staleTimes.dynamic` a
+                   * zero, ce prechargement ne servait deja aucune navigation, il
+                   * ne faisait que reserver le serveur.
+                   * ------------------------------------------------------------
+                   */
+                  prefetch={false}
+                  /*
                    * `aria-current="page"` PORTE L'INFORMATION, la couleur et le
                    * filet vertical ne font que l'appuyer : `frontend-design.md`
                    * interdit qu'une information passe par la seule couleur.

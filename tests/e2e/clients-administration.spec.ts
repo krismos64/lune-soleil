@@ -255,7 +255,55 @@ test.describe("connectee en administration", () => {
      * `waitForURL` nomme ce que ce test verifie et attend la stabilisation. Le
      * champ est alors revenu, et sa valeur se lit sur un etat reel.
      */
-    await page.getByRole("link", { name: "Afficher tous les comptes" }).click();
+    /*
+     * ------------------------------------------------------------------
+     * LE CLIC EST REJOUE TANT QUE L'URL N'A PAS BOUGE, LS-166.
+     *
+     * CE QUE LE JOURNAL RESEAU A MONTRE, mesure du 7 septembre 2026 aux quatre
+     * largeurs : dans le cas qui echoue, AUCUNE requete n'est emise apres le
+     * clic. Les trois largeurs qui aboutissent en emettent deux et rendent la
+     * main en 289 a 589 ms. Le clic n'a donc pas declenche de navigation du
+     * tout, il n'a pas ete lent.
+     *
+     * LA CAUSE EST LE `loading.tsx` DE CET ECRAN. Il remplace le `<main>`
+     * pendant une transition, donc le lien que Playwright vient de localiser
+     * peut etre RETIRE du DOM a l'instant ou le clic part. Playwright ne leve
+     * pas : il clique sur un element detache, et rien ne se passe. C'est le
+     * motif « focus sur un element detache » deja rencontre sur ce depot,
+     * applique ici au clic.
+     *
+     * ELEVER LE DELAI NE POUVAIT PAS CORRIGER. Trente secondes ont ete essayees
+     * et l'URL n'a jamais bouge, 63 tentatives d'assertion : on n'attendait pas
+     * une reponse lente, on attendait une requete qui n'existait pas.
+     *
+     * CE N'EST PAS UN REESSAI QUI MASQUE UN DEFAUT PRODUIT. Un lien reellement
+     * inerte ne navigue a AUCUN des trois tours, et le test rougit alors sur
+     * l'assertion d'URL qui suit, avec son message inchange.
+     * ------------------------------------------------------------------
+     */
+    const lienTousLesComptes = page.getByRole("link", {
+      name: "Afficher tous les comptes",
+    });
+
+    for (let tour = 0; tour < 3; tour++) {
+      if (!page.url().includes("recherche=")) {
+        break;
+      }
+
+      // Le lien doit etre RATTACHE au moment du clic, pas seulement avoir ete
+      // trouve : c'est la fenetre que le squelette ouvre.
+      await expect(lienTousLesComptes).toBeVisible();
+      await lienTousLesComptes.click({ timeout: 10_000 }).catch(() => {
+        // Un lien parti du DOM entre la localisation et le clic : le tour
+        // suivant le retrouvera sur le rendu stabilise.
+      });
+
+      await page
+        .waitForURL(/\/administration\/clients(\?)?$/, { timeout: 10_000 })
+        .catch(() => {
+          // Aucune navigation : on rejoue.
+        });
+    }
 
     /*
      * ------------------------------------------------------------------
@@ -276,6 +324,14 @@ test.describe("connectee en administration", () => {
      * d'assertion au lieu de bloquer le test entier, et son message d'echec
      * porte l'URL reellement obtenue, ce que `waitForURL` ne donne pas.
      * ------------------------------------------------------------------
+     */
+    /*
+     * SON DELAI RESTE CELUI DE LA CONFIGURATION, LS-166. Il a ete porte a trente
+     * secondes puis ramene ici : l'URL ne bougeait JAMAIS, 63 tentatives
+     * d'assertion, parce qu'aucune requete n'etait partie. Un plafond ne repare
+     * pas une navigation qui n'a pas eu lieu, c'est la boucle de clic ci-dessus
+     * qui la declenche. Le laisser eleve aurait seulement rendu long l'echec
+     * d'un lien reellement inerte.
      */
     await expect(page).toHaveURL(/\/administration\/clients(\?)?$/);
 

@@ -152,7 +152,11 @@ export default function ErreurAdministration({
          * est rendue a cote de ce message, et une navigation client ordinaire
          * est la bonne.
          */}
-        <Link href="/administration" className={styles.actionSecondaire}>
+        <Link
+          href="/administration"
+          className={styles.actionSecondaire}
+          prefetch={false}
+        >
           Tableau de bord
         </Link>
       </div>

@@ -469,7 +469,11 @@ export function TraitementDemande({
         {message?.lien === undefined ? null : (
           <>
             {" "}
-            <Link href={message.lien.chemin} className={styles.lienMessage}>
+            <Link
+              href={message.lien.chemin}
+              className={styles.lienMessage}
+              prefetch={false}
+            >
               {message.lien.libelle}
             </Link>
           </>
