@@ -92,7 +92,8 @@ interface et réponses de conversation.
 - Modifier le périmètre du cahier des charges. Un arbitrage explicite de
   Christophe le modifie en revanche, et se trace dans un ticket
 - Décider d'une obligation juridique. Les textes de loi se vérifient aux sources
-- Lire la valeur d'un secret dans un `.env`, une clé ou un certificat
+- Lire une clé privée ou un certificat. Le `.env`, lui, est lisible depuis le
+  7 septembre 2026, arbitrage de Christophe
 - Modifier une commande ou une facture réelle
 - Introduire les données du prototype (noms, prix, stocks) comme données réelles
 
@@ -136,10 +137,14 @@ l'emporte**, et l'écart se signale plutôt que de se résoudre en silence.
 **Travailler sans demander de validation à chaque commande.** Faire un point à
 chaque étape significative, et proposer la suite plutôt que de l'enchaîner.
 
-**Secrets** : l'**écriture** dans un `.env` est autorisée, y compris générer un
-secret avec `openssl`. La **lecture des valeurs** est bloquée, une valeur lue
-entrerait dans l'historique de session ; pour diagnostiquer, lister les noms.
-Clés privées et certificats bloqués dans les deux sens.
+**Secrets** : `.env` lisible et modifiable depuis le 7 septembre 2026, arbitrage
+de Christophe. Une valeur lue entre dans l'historique de session : une clé
+exposée se **révoque**, l'effacer ne suffit pas. Clés privées et certificats
+restent bloqués. **Lire n'est pas exposer** : une valeur en **argument** de
+commande est lisible par tout `ps`, le hook la refuse toujours ; laisser le
+processus lire le fichier. Préférer `./scripts/verifier-environnement.sh` à la
+lecture quand les deux répondent, deux secrets au même préfixe étant
+indiscernables à l'œil.
 
 **Accès opérationnels** : `ssh`, `docker`, `stripe`, `gh`, `psql` avec les accès
 configurés, sans jamais lire les identifiants sous-jacents.

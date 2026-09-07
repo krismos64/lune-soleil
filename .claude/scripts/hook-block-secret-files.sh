@@ -8,16 +8,22 @@
 # POLITIQUE, decidee avec Christophe le 27 juillet 2026
 #
 #   Fichiers d'environnement (.env et variantes)
-#     Ecriture AUTORISEE. Christophe ne peut pas les editer lui-meme, une
-#     protection qui bloque l'assistant devient un obstacle et non une
-#     securite. Ajouter une variable, en modifier une, generer un secret
-#     avec openssl : tout cela ne necessite pas de lire l'existant.
+#     Lecture ET ecriture AUTORISEES depuis le 7 septembre 2026, arbitrage
+#     de Christophe. La politique d'avant bloquait la lecture ; elle a ete
+#     levee pour que l'assistant voie les defauts de configuration au lieu
+#     de les deviner.
 #
-#     Lecture BLOQUEE. Une valeur lue entre dans le contexte de l'assistant,
-#     donc dans l'historique de session sur le disque, et peut ressortir
-#     dans une sortie de commande ou un message d'erreur. Presque aucune
-#     tache ne l'exige : pour diagnostiquer, lister les noms de variables
-#     et la longueur des valeurs suffit, sans afficher leur contenu.
+#     CE QUE CETTE OUVERTURE COUTE, ecrit ici parce qu'une decision se
+#     relit avec son prix. Une valeur lue entre dans l'historique de
+#     session sur le disque, non chiffre, et transite par l'API a chaque
+#     tour. Une cle qui y passe se REVOQUE en cas de doute, l'effacer ne
+#     suffit pas : le depot est public et l'historique lui survit.
+#
+#     CE QUE L'OUVERTURE NE CHANGE PAS : les diagnostics sans lecture
+#     restent les meilleurs sur les secrets. Deux chaines de 70 caracteres
+#     au meme prefixe sont indiscernables a l'oeil, et c'est une
+#     comparaison d'empreintes qui a tranche le 7 septembre 2026, pas une
+#     lecture. `scripts/verifier-environnement.sh` porte ces diagnostics.
 #
 #   Cles privees, certificats, magasins de secrets
 #     Lecture ET ecriture BLOQUEES. Une cle privee ne s'edite jamais a la
@@ -64,31 +70,12 @@ case "$file" in
     exit 2 ;;
 esac
 
-# Fichiers d'environnement : ecriture autorisee, lecture bloquee
+# Fichiers d'environnement : lecture ET ecriture autorisees depuis le
+# 7 septembre 2026. Le `case` est conserve plutot que supprime : il documente
+# que ces fichiers sont vus par ce hook et deliberement laisses passer, ce
+# qu'une absence de branche ne dirait pas.
 case "$base" in
   .env|.env.*)
-    if [ "$tool" = "Read" ]; then
-      echo "Hook BLOCK: lecture refusee sur un fichier d'environnement." >&2
-      echo "Fichier : $file" >&2
-      echo "" >&2
-      echo "L'ECRITURE est autorisee sur ce fichier, seule la lecture des" >&2
-      echo "valeurs est bloquee : une valeur lue entrerait dans l'historique" >&2
-      echo "de session et pourrait ressortir dans une sortie de commande." >&2
-      echo "" >&2
-      echo "Alternatives sans lire les valeurs :" >&2
-      echo "  Lister les variables definies, sans leur contenu" >&2
-      echo "    grep -oE '^[A-Z_]+=' \"$file\"" >&2
-      echo "  Verifier qu'une variable est renseignee" >&2
-      echo "    grep -qE '^NOM_VARIABLE=.+' \"$file\" && echo presente" >&2
-      echo "  Comparer avec le fichier d'exemple" >&2
-      echo "    comm -23 <(grep -oE '^[A-Z_]+=' .env.example | sort) \\" >&2
-      echo "             <(grep -oE '^[A-Z_]+=' \"$file\" | sort)" >&2
-      echo "" >&2
-      echo "Si la lecture d'une valeur est reellement necessaire, Christophe" >&2
-      echo "peut retirer temporairement ce blocage." >&2
-      exit 2
-    fi
-    # Edit et Write passent
     exit 0 ;;
 esac
 
