@@ -531,3 +531,20 @@
   color: var(--ls-text-muted);
   line-height: 1.6;
 }
+
+/*
+ * LE SIGNALEMENT DE TRONCATURE, LS-163.
+ *
+ * IL N'EST PAS `.avertissement`, dont le filet `--ls-error` signale une action
+ * irreversible : une liste tronquee est un etat, pas une alerte, et lui donner
+ * le filet rouge userait ce signal la ou il doit rester rare.
+ *
+ * `--ls-text` sur `--ls-surface-sand`, la paire mesuree de ce fond, 10,83:1.
+ */
+.troncature {
+  margin: 0 0 var(--ls-space-4);
+  padding: var(--ls-space-3);
+  background: var(--ls-surface-sand);
+  border-radius: var(--ls-radius-md);
+  color: var(--ls-text);
+}

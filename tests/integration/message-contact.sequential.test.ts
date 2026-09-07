@@ -348,7 +348,7 @@ describe("listerMessages et lireMessage", () => {
       adresseIp: null,
     });
 
-    const messages = await listerMessages();
+    const { messages } = await listerMessages();
 
     expect(messages).toHaveLength(2);
     expect(messages[0]?.sujet).toBe("Le second");
@@ -360,7 +360,7 @@ describe("listerMessages et lireMessage", () => {
       adresseIp: null,
     });
 
-    const [resume] = await listerMessages();
+    const [resume] = (await listerMessages()).messages;
     const detail = await lireMessage(resume!.id);
 
     expect(detail?.corps).toBe(SAISIE.corps);
@@ -380,7 +380,7 @@ describe("changerStatutMessage", () => {
       saisie: { ...SAISIE, ouvertA: ouvertIlYa(30) },
       adresseIp: null,
     });
-    const [resume] = await listerMessages();
+    const [resume] = (await listerMessages()).messages;
 
     await changerStatutMessage({ messageId: resume!.id, statut: "LU" });
 
@@ -421,7 +421,7 @@ describe("changerStatutMessage", () => {
       saisie: { ...SAISIE, ouvertA: ouvertIlYa(30) },
       adresseIp: null,
     });
-    const [resume] = await listerMessages();
+    const [resume] = (await listerMessages()).messages;
 
     await changerStatutMessage({ messageId: resume!.id, statut: "LU" });
 
@@ -458,5 +458,131 @@ describe("changerStatutMessage", () => {
     await expect(
       changerStatutMessage({ messageId: "pas-un-identifiant", statut: "LU" }),
     ).rejects.toThrow();
+  });
+});
+
+/* ==========================================================================
+ * LS-163, le plafond de cent et ce qu'il cachait.
+ * ========================================================================== */
+
+describe("listerMessages au-dela du plafond", () => {
+  /**
+   * Amorce `nombre` messages directement en base.
+   *
+   * PAS PAR `deposerMessage`, ET C'EST DELIBERE : le depot porte un plafond de
+   * debit par adresse et un delai anti-robot de trois secondes, donc cent
+   * appels prendraient cinq minutes et se feraient refuser. Ce test mesure le
+   * LISTAGE, jamais le depot, qui a ses propres tests plus haut.
+   *
+   * `creeA` EST ECHELONNE d'une minute : l'ordre du listage est
+   * `creeA desc`, et cent lignes au meme instant rendraient l'ordre
+   * indetermine, donc l'assertion sur le message le plus ancien serait fausse
+   * une fois sur deux.
+   */
+  async function amorcerMessages(nombre: number): Promise<void> {
+    await client.query(
+      /*
+       * LES HORODATAGES DE CLASSEMENT SUIVENT LE STATUT, `CHECK
+       * chk_message_horodatages_coherents` : c'est une EQUIVALENCE stricte,
+       * `TRAITE` exige `lu_a` ET `traite_a`, `NOUVEAU` exige les deux nuls.
+       * Une amorce qui les omet est refusee par la base, mesure ici.
+       */
+      `INSERT INTO message (id, nom, email, sujet, corps, statut, cree_a,
+                            lu_a, traite_a)
+       SELECT gen_random_uuid(),
+              'TEST Client ' || rang,
+              'test-' || rang || '@exemple.test',
+              'TEST Sujet ' || rang,
+              'TEST corps du message ' || rang,
+              CASE WHEN rang = 1 THEN 'NOUVEAU'::"StatutMessage"
+                   ELSE 'TRAITE'::"StatutMessage" END,
+              now() - make_interval(mins => $1 - rang),
+              CASE WHEN rang = 1 THEN NULL ELSE now() END,
+              CASE WHEN rang = 1 THEN NULL ELSE now() END
+       FROM generate_series(1, $1) AS rang`,
+      [nombre],
+    );
+  }
+
+  /**
+   * CRITERE 1 : LES COMPTES NE PORTENT PAS SUR LA TRANCHE.
+   *
+   * C'est le defaut central de la story. Avant LS-163, `total` valait
+   * `messages.length`, donc cent : l'ecran aurait annonce « 100 messages » de
+   * facon permanente une fois le seuil franchi.
+   */
+  it("compte tous les messages, pas seulement les cent affiches", async () => {
+    await amorcerMessages(105);
+
+    const liste = await listerMessages();
+
+    expect(liste.messages).toHaveLength(100);
+    expect(liste.total).toBe(105);
+    expect(liste.tronquee).toBe(true);
+  });
+
+  /**
+   * CRITERE 1, SECONDE MOITIE : LE COMPTE DE NON-LUS AUSSI.
+   *
+   * L'amorce place le SEUL message `NOUVEAU` en position la plus ancienne,
+   * donc HORS de la tranche de cent. Avant la correction, l'ecran affichait
+   * « 0 non lu » : une demande client jamais lue devenait invisible ET non
+   * comptee, ce que le ticket nomme comme le vrai danger.
+   */
+  it("compte un non-lu situe au-dela du plafond", async () => {
+    await amorcerMessages(105);
+
+    const liste = await listerMessages();
+
+    /* IL N'EST PAS DANS LA TRANCHE, l'assertion qui donne son sens a la
+     * suivante : sans elle, le test passerait aussi sur un message visible. */
+    expect(liste.messages.some((message) => message.statut === "NOUVEAU")).toBe(
+      false,
+    );
+
+    expect(liste.nouveaux).toBe(1);
+  });
+
+  /**
+   * CRITERE 2 : LE MESSAGE AU-DELA DU PLAFOND RESTE ATTEIGNABLE.
+   *
+   * Sans pagination, c'est le filtre qui porte cette propriete. Filtrer sur
+   * `NOUVEAU` retire les cent messages traites, donc fait remonter celui que le
+   * plafond cachait.
+   */
+  it("rend atteignable par le filtre un message cache par le plafond", async () => {
+    await amorcerMessages(105);
+
+    const filtree = await listerMessages(undefined, "NOUVEAU");
+
+    expect(filtree.messages).toHaveLength(1);
+    expect(filtree.messages[0]?.statut).toBe("NOUVEAU");
+
+    /*
+     * LA LISTE FILTREE N'EST PAS TRONQUEE, et les comptes restent GLOBAUX :
+     * `total` decrit la boite entiere, pas le filtre. Un `total` qui suivrait
+     * le filtre ferait afficher « 1 message » sur une boite qui en compte 105,
+     * ce qui serait un second compte faux.
+     */
+    expect(filtree.tronquee).toBe(false);
+    expect(filtree.total).toBe(105);
+    expect(filtree.nouveaux).toBe(1);
+  });
+
+  /**
+   * LE CAS NOMINAL N'ANNONCE AUCUNE TRONCATURE.
+   *
+   * Sans ce test, poser `tronquee: true` en dur satisferait les trois
+   * precedents, et l'ecran afficherait un avertissement permanent sur une
+   * boutique qui ouvre avec dix messages.
+   */
+  it("n'annonce aucune troncature sous le plafond", async () => {
+    await amorcerMessages(3);
+
+    const liste = await listerMessages();
+
+    expect(liste.tronquee).toBe(false);
+    expect(liste.total).toBe(3);
+    expect(liste.messages).toHaveLength(3);
   });
 });

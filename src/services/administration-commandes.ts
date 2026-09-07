@@ -94,19 +94,39 @@ export type CommandeEnListe = {
  * disent a l'exploitante ce qui se passe en ce moment, et une accumulation
  * soudaine est le signe d'une panne de paiement.
  */
+export type ListeCommandes = {
+  commandes: CommandeEnListe[];
+  /** Vrai si des commandes existent au-dela de la limite affichee, LS-163. */
+  tronquee: boolean;
+};
+
+/**
+ * Le plafond par defaut de cette liste.
+ *
+ * EXPORTE DEPUIS LS-163, l'ecran devant nommer le plafond qu'il annonce plutot
+ * que d'ecrire « 100 » en dur, ce qui en ferait une seconde source de verite.
+ */
+export const LIMITE_LISTE_COMMANDES = 100;
+
 export async function listerCommandes({
   statut,
-  limite = 100,
+  limite = LIMITE_LISTE_COMMANDES,
   client = prisma,
 }: {
   statut?: StatutCommande;
   limite?: number;
   client?: typeof prisma;
-} = {}): Promise<CommandeEnListe[]> {
+} = {}): Promise<ListeCommandes> {
   const commandes = await client.commande.findMany({
     ...(statut === undefined ? {} : { where: { statut } }),
     orderBy: { creeA: "desc" },
-    take: limite,
+    /*
+     * `limite + 1`, LS-163 : une ligne de plus que ce qui sera rendu suffit a
+     * savoir qu'il en existe d'autres, sans compter la table. L'ecran porte
+     * DEJA son filtre par statut, qui tient le critere 2 d'atteignabilite ; il
+     * lui manquait de dire qu'il tronque.
+     */
+    take: limite + 1,
     select: {
       id: true,
       numero: true,
@@ -122,15 +142,18 @@ export async function listerCommandes({
     },
   });
 
-  return commandes.map((commande) => ({
-    id: commande.id,
-    numero: commande.numero,
-    statut: commande.statut,
-    nomClient: commande.nomClient,
-    totalCentimes: commande.totalCentimes,
-    creeA: commande.creeA,
-    encaissee: commande.paiements.length > 0,
-  }));
+  return {
+    commandes: commandes.slice(0, limite).map((commande) => ({
+      id: commande.id,
+      numero: commande.numero,
+      statut: commande.statut,
+      nomClient: commande.nomClient,
+      totalCentimes: commande.totalCentimes,
+      creeA: commande.creeA,
+      encaissee: commande.paiements.length > 0,
+    })),
+    tronquee: commandes.length > limite,
+  };
 }
 
 /** Le detail complet d'une commande, tel que l'ecran l'affiche. */

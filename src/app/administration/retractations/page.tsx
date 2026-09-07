@@ -120,7 +120,20 @@ export default async function PageRetractations() {
          */
         <p className={styles.avertissement} role="status">
           Seules les {LIMITE_LISTE_DEMANDES} demandes les plus anciennes sont
-          affichées. D&apos;autres existent au-delà.
+          affichées. D&apos;autres existent au-delà : elles remonteront à mesure
+          que celles-ci sont traitées.
+          {/*
+           * LE TEXTE DIT QUOI FAIRE, aligne sur les trois signalements de
+           * LS-163. Il s'arretait a « D'autres existent au-delà », et c'est
+           * l'ORIGINAL qui a diverge de ses copies : motif deja paye en LS-195
+           * sur la ponctuation des annonces de chargement.
+           *
+           * AUCUN FILTRE N'EST PROPOSE ICI, contrairement aux messages : cet
+           * ecran n'en a pas, et la liste est triee du PLUS ANCIEN au plus
+           * recent. Les demandes affichees sont donc les plus urgentes, celles
+           * qui portent le delai legal le plus avance : la troncature cache du
+           * travail futur, jamais du travail en retard.
+           */}
         </p>
       ) : null}
 

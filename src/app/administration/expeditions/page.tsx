@@ -24,7 +24,7 @@ import {
   exigerAdministratrice,
 } from "@/services/autorisation";
 import type { StatutCommande } from "@/generated/prisma/enums";
-import { listerCommandesAExpedier } from "@/services/expedition";
+import { LIMITE_LISTE, listerCommandesAExpedier } from "@/services/expedition";
 import { formaterDate, LIBELLES_LIVRAISON } from "@/lib/affichage-commande";
 import { FormulaireExpedition } from "./formulaire-expedition";
 import styles from "./expeditions.module.css";
@@ -125,7 +125,7 @@ export default async function PageExpeditions() {
     throw erreur;
   }
 
-  const commandes = await listerCommandesAExpedier();
+  const { commandes, tronquee } = await listerCommandesAExpedier();
 
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
@@ -145,6 +145,32 @@ export default async function PageExpeditions() {
           ? "Aucune commande en cours d'acheminement."
           : "Les trois étapes d'un colis, de la commande payée à la remise."}
       </p>
+
+      {tronquee ? (
+        /*
+         * LE PLAFOND EST DIT, LS-163 : une file qui tronque en silence fait
+         * croire que tout est affiche, et l'exploitante conclut qu'elle a tout
+         * prepare. Le nombre vient de la constante du service, jamais ecrit ici.
+         *
+         * AUCUN FILTRE N'ACCOMPAGNE CE MESSAGE, contrairement aux messages :
+         * cette file ne porte QUE des commandes `EN_PREPARATION`, donc un filtre
+         * ne revelerait rien.
+         *
+         * L'ARGUMENT DE FOND EST AILLEURS, ET IL EST PLUS SOLIDE, releve par
+         * `ls-frontend-revue` : la file est triee du PLUS ANCIEN au plus recent.
+         * Les cent affichees sont donc exactement celles a traiter en premier,
+         * et la troncature cache du travail FUTUR, jamais du travail en retard.
+         *
+         * « COMMANDES A PREPARER » ET NON « COLIS » : rien n'est encore un colis
+         * a ce stade, ces commandes n'ayant ni etiquette ni numero de suivi, et
+         * l'ecran lui-meme parle de « la commande payée à la remise ».
+         */
+        <p className={styles.troncature} role="status">
+          Seules les {LIMITE_LISTE} commandes à préparer les plus anciennes sont
+          affichées. D&apos;autres attendent au-delà : elles remonteront à
+          mesure que celles-ci partent.
+        </p>
+      ) : null}
 
       {commandes.length === 0 ? (
         /*

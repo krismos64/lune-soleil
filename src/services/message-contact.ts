@@ -35,6 +35,7 @@ import { incrementerCompteur } from "@/repositories/limitation";
 import {
   changerStatutEnBase,
   creerMessage,
+  compterMessagesEnBase,
   listerMessagesEnBase,
   lireMessageEnBase,
   type MessageDetaille,
@@ -71,8 +72,14 @@ export type IssueDepot =
 /** Ce qu'un changement de statut rend. */
 export type IssueStatut = { statut: "SUCCES" } | { statut: "INTROUVABLE" };
 
-/** Nombre de messages affiches dans l'administration. */
-const LIMITE_LISTE = 100;
+/**
+ * Nombre de messages affiches dans l'administration.
+ *
+ * IL EST EXPORTE DEPUIS LS-163, l'ecran devant nommer le plafond qu'il annonce :
+ * ecrire « 100 » dans le texte en ferait une seconde source de verite, fausse
+ * des que cette constante bouge.
+ */
+export const LIMITE_LISTE = 100;
 
 /**
  * Delai minimum entre l'affichage du formulaire et sa soumission.
@@ -284,11 +291,55 @@ function destinataireNotification(): string {
   );
 }
 
-/** Les messages pour l'administration, les plus recents d'abord. */
+/** Ce que la liste d'administration rend, LS-163. */
+export type ListeMessages = {
+  messages: MessageEnListe[];
+  /** Vrai si des messages existent au-dela de la limite affichee. */
+  tronquee: boolean;
+  /** Le nombre total, compte en base et NON sur la tranche affichee. */
+  total: number;
+  /** Les non-lus, comptes de meme sur l'ensemble. */
+  nouveaux: number;
+};
+
+/**
+ * Les messages pour l'administration, les plus recents d'abord.
+ *
+ * ------------------------------------------------------------------
+ * LES COMPTES NE VIENNENT PAS DE LA TRANCHE, LS-163, critere 1.
+ *
+ * `listerMessagesEnBase` rend au plus cent lignes. Compter dessus faisait dire
+ * « 100 messages » de facon permanente une fois le seuil franchi, et un message
+ * `NOUVEAU` plus ancien que les cent derniers devenait invisible ET non compte.
+ * Les deux nombres viennent donc d'un `groupBy` sur toute la table.
+ *
+ * LA LECTURE PORTE SUR `limite + 1`, motif de `traitement-retractation.ts` : une
+ * ligne de plus que ce qui sera rendu suffit a savoir qu'il y en a d'autres,
+ * sans compter quoi que ce soit. Le compte, lui, sert a dire COMBIEN.
+ *
+ * LE FILTRE PAR STATUT PORTE LE CRITERE 2, l'atteignabilite. Sans pagination,
+ * c'est lui qui rend joignable un message ancien : filtrer sur `NOUVEAU` retire
+ * de la liste les messages deja traites, donc fait remonter ceux que le plafond
+ * cachait. La pagination a ete ecartee, arbitrage du 8 septembre 2026 : elle
+ * coute une barre de navigation a 320 px pour un seuil qui ne sera pas atteint
+ * avant des mois, quand le filtre sert aussi l'usage quotidien.
+ * ------------------------------------------------------------------
+ */
 export async function listerMessages(
   client: typeof prisma = prisma,
-): Promise<MessageEnListe[]> {
-  return listerMessagesEnBase(client, LIMITE_LISTE);
+  statut?: StatutMessage,
+): Promise<ListeMessages> {
+  const [lus, comptes] = await Promise.all([
+    listerMessagesEnBase(client, LIMITE_LISTE + 1, statut),
+    compterMessagesEnBase(client),
+  ]);
+
+  return {
+    messages: lus.slice(0, LIMITE_LISTE),
+    tronquee: lus.length > LIMITE_LISTE,
+    total: comptes.total,
+    nouveaux: comptes.nouveaux,
+  };
 }
 
 /** Le detail d'un message, corps compris. */

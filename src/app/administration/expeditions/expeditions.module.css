@@ -401,3 +401,21 @@
     justify-self: start;
   }
 }
+
+/*
+ * LE SIGNALEMENT DE TRONCATURE, LS-163.
+ *
+ * IL N'EST PAS `.avertissement`, ET LA DISTINCTION COMPTE : celui-ci porte un
+ * filet `--ls-error` qui signale une action IRREVERSIBLE. Une file tronquee
+ * n'est pas une alerte, c'est un etat de la liste ; lui donner le filet rouge
+ * userait le signal la ou il doit rester rare.
+ *
+ * `--ls-text` sur `--ls-surface-sand`, la paire mesuree de ce fond, 10,83:1.
+ */
+.troncature {
+  margin: 0 0 var(--ls-space-3);
+  padding: var(--ls-space-3);
+  background: var(--ls-surface-sand);
+  border-radius: var(--ls-radius-md);
+  color: var(--ls-text);
+}

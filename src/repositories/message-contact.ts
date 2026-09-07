@@ -71,8 +71,17 @@ export async function creerMessage(
 export async function listerMessagesEnBase(
   client: ClientBase,
   limite: number,
+  /**
+   * Le statut a montrer, LS-163. Omis, la liste porte tous les messages.
+   *
+   * IL PORTE L'ATTEIGNABILITE, critere 2 : sans pagination, filtrer sur
+   * `NOUVEAU` retire de la liste les messages deja traites, donc fait remonter
+   * ceux que le plafond de cent cachait.
+   */
+  statut?: StatutMessage,
 ): Promise<MessageEnListe[]> {
   return client.message.findMany({
+    ...(statut === undefined ? {} : { where: { statut } }),
     orderBy: { creeA: "desc" },
     take: limite,
     select: {
@@ -85,6 +94,43 @@ export async function listerMessagesEnBase(
       creeA: true,
     },
   });
+}
+
+/**
+ * Compte les messages, en tout et par statut, LS-163.
+ *
+ * ------------------------------------------------------------------
+ * IL EST DISTINCT DU LISTAGE, ET C'EST TOUT L'OBJET DE LA STORY.
+ *
+ * L'ecran affichait « N messages, dont M non lus » en comptant la TRANCHE
+ * rendue par `listerMessagesEnBase`, plafonnee a cent. Une fois le seuil
+ * franchi, il aurait annonce « 100 messages » de facon permanente, et un
+ * message `NOUVEAU` plus ancien que les cent derniers serait devenu invisible
+ * ET non compte : personne n'aurait su qu'il existe.
+ *
+ * C'est le motif « un compte recopie n'est pas une mesure » sous sa forme la
+ * plus discrete : le compte etait bien CALCULE, mais sur un ensemble qui n'est
+ * pas celui qu'il pretend decrire.
+ * ------------------------------------------------------------------
+ *
+ * DEUX AGREGATS EN UNE REQUETE, `groupBy` plutot que deux `count` : les deux
+ * nombres viennent alors du meme instant, et un message classe entre les deux
+ * lectures ne peut pas rendre le total inferieur au nombre de non-lus.
+ */
+export async function compterMessagesEnBase(client: ClientBase): Promise<{
+  total: number;
+  nouveaux: number;
+}> {
+  const parStatut = await client.message.groupBy({
+    by: ["statut"],
+    _count: { _all: true },
+  });
+
+  return {
+    total: parStatut.reduce((somme, ligne) => somme + ligne._count._all, 0),
+    nouveaux:
+      parStatut.find((ligne) => ligne.statut === "NOUVEAU")?._count._all ?? 0,
+  };
 }
 
 /** Le detail d'un message, `null` s'il n'existe pas. */

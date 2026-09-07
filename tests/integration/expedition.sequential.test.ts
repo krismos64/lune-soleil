@@ -690,7 +690,7 @@ describe("listerCommandesAExpedier", () => {
       configuration: CONFIGURATION,
     });
 
-    const liste = await listerCommandesAExpedier();
+    const { commandes: liste } = await listerCommandesAExpedier();
 
     expect(liste.map((commande) => commande.id)).toEqual([aExpedier]);
     expect(liste.map((commande) => commande.id)).not.toContain(
@@ -732,7 +732,7 @@ describe("listerCommandesAExpedier", () => {
       acteurId: administratriceId,
     });
 
-    const liste = await listerCommandesAExpedier();
+    const { commandes: liste } = await listerCommandesAExpedier();
 
     expect(liste.map((commande) => commande.id)).toEqual([commandeId]);
     expect(liste[0]?.statut).toBe("EXPEDIEE");
@@ -741,10 +741,18 @@ describe("listerCommandesAExpedier", () => {
       commandeId,
     ]);
 
-    expect(await listerCommandesAExpedier()).toEqual([]);
+    /* LA FORME A CHANGE EN LS-163, la file portant desormais son drapeau de
+     * troncature : l'etat vide reste un etat, jamais un incident. */
+    expect(await listerCommandesAExpedier()).toEqual({
+      commandes: [],
+      tronquee: false,
+    });
   });
 
   it("rend une liste vide sans commande, et non une erreur", async () => {
-    expect(await listerCommandesAExpedier()).toEqual([]);
+    expect(await listerCommandesAExpedier()).toEqual({
+      commandes: [],
+      tronquee: false,
+    });
   });
 });

@@ -63,8 +63,13 @@ export type IssueExpedition =
   /** Saisie refusee, le message dit lequel des champs. */
   | { statut: "INVALIDE"; message: string };
 
-/** Nombre de colis affiches dans la file de preparation. */
-const LIMITE_LISTE = 100;
+/**
+ * Nombre de colis affiches dans la file de preparation.
+ *
+ * EXPORTE DEPUIS LS-163, l'ecran devant nommer le plafond qu'il annonce plutot
+ * que d'ecrire « 100 » en dur, ce qui en ferait une seconde source de verite.
+ */
+export const LIMITE_LISTE = 100;
 
 /**
  * Les commandes en attente de depart.
@@ -74,10 +79,33 @@ const LIMITE_LISTE = 100;
  * l'exploitante ait declare s'en occuper, et la file cesserait de dire ce qui
  * reste a faire.
  */
+export type FileExpedition = {
+  commandes: CommandeAExpedier[];
+  /** Vrai si des colis existent au-dela de la limite affichee, LS-163. */
+  tronquee: boolean;
+};
+
 export async function listerCommandesAExpedier(
   client: typeof prisma = prisma,
-): Promise<CommandeAExpedier[]> {
-  return listerAExpedier(client, LIMITE_LISTE);
+): Promise<FileExpedition> {
+  /*
+   * LA LECTURE PORTE SUR `limite + 1`, LS-163 : une ligne de plus que ce qui
+   * sera rendu suffit a savoir qu'il en existe d'autres, sans compter la table.
+   *
+   * AUCUN FILTRE N'EST AJOUTE ICI, contrairement a l'ecran des messages, et
+   * c'est un choix mesure : cette file ne lit QUE `EN_PREPARATION`, elle est
+   * donc deja filtree par nature. Un filtre de plus ne revelerait rien que le
+   * plafond cache, tous les colis affiches partageant le meme statut. Le
+   * signalement suffit a tenir le critere 1 ; le critere 2 est tenu par le
+   * traitement lui-meme, un colis expedie quittant la file et laissant remonter
+   * le suivant.
+   */
+  const lues = await listerAExpedier(client, LIMITE_LISTE + 1);
+
+  return {
+    commandes: lues.slice(0, LIMITE_LISTE),
+    tronquee: lues.length > LIMITE_LISTE,
+  };
 }
 
 /** Relit l'expedition d'une commande, `null` tant qu'aucune n'existe. */

@@ -857,6 +857,165 @@ test.describe("rubrique Messages", () => {
     );
   });
 
+  /* ==========================================================================
+   * LS-163, le plafond des listes et les filtres qui le rendent franchissable.
+   * ========================================================================== */
+
+  /**
+   * LES FILTRES SONT LA ET ILS FILTRENT, critere 2.
+   *
+   * Ils portent l'atteignabilite : sans pagination, filtrer sur « Nouveaux »
+   * retire les messages deja traites, donc fait remonter ceux que le plafond de
+   * cent cacherait. Le test verifie les DEUX sens, ce qui reste et ce qui part.
+   */
+  test("le filtre par statut retire les messages des autres statuts", async ({
+    page,
+  }) => {
+    await page.goto("/administration/messages");
+
+    /* SANS FILTRE, LES DEUX SONT LA, moitie indispensable de l'assertion : sans
+     * elle, un ecran vide satisferait le filtre teste juste apres. */
+    await expect(page.getByText(MESSAGES_TEST.nouveau.sujet)).toBeVisible();
+    await expect(page.getByText(MESSAGES_TEST.lu.sujet)).toBeVisible();
+
+    await page
+      .getByRole("navigation", { name: "Filtrer par statut" })
+      .getByRole("link", { name: "Nouveaux" })
+      .click();
+
+    await expect(page).toHaveURL(/\?statut=NOUVEAU$/);
+
+    await expect(page.getByText(MESSAGES_TEST.nouveau.sujet)).toBeVisible();
+    await expect(page.getByText(MESSAGES_TEST.lu.sujet)).toHaveCount(0);
+  });
+
+  /**
+   * LE COMPTE ANNONCE PORTE SUR TOUTE LA BOITE, critere 1, ET NON SUR LE FILTRE.
+   *
+   * C'est la moitie du defaut la plus facile a reintroduire : faire suivre le
+   * total au filtre paraitrait meme logique. Il ferait alors afficher « 1
+   * message » sur une boite qui en compte plusieurs, soit un second compte faux
+   * a la place du premier.
+   */
+  test("le compte annoncé ne suit pas le filtre", async ({ page }) => {
+    await page.goto("/administration/messages");
+
+    const introduction = page.getByText(/message.*dont .* non lu/);
+    await expect(introduction).toBeVisible();
+
+    /*
+     * ------------------------------------------------------------------
+     * LE TOTAL EST COMPARE, ET NON LA PHRASE ENTIERE, LS-163.
+     *
+     * Une premiere version comparait le texte complet avant et apres filtrage.
+     * Elle echouait sous charge, et pour une raison qui n'est PAS un defaut :
+     * le nombre de NON LUS change quand un autre test classe un message, les
+     * quatre largeurs partageant la base. La phrase differait donc sur sa
+     * seconde moitie, sans que le compte total ait bouge.
+     *
+     * CE QUE LE TEST DOIT PROUVER est que le TOTAL ne suit pas le filtre, ce
+     * qui serait le defaut : afficher « 1 message » sur une boite qui en compte
+     * plusieurs remplacerait un compte faux par un autre. Le nombre de non-lus
+     * est mesure ailleurs, par les tests d'integration qui, eux, maitrisent
+     * leur base.
+     * ------------------------------------------------------------------
+     */
+    const totalDe = (texte: string | null): string =>
+      (texte ?? "").match(/^(\d+) message/)?.[1] ?? "";
+
+    const avantFiltre = totalDe(await introduction.textContent());
+    expect(avantFiltre).not.toBe("");
+
+    await page
+      .getByRole("navigation", { name: "Filtrer par statut" })
+      .getByRole("link", { name: "Nouveaux" })
+      .click();
+
+    await expect(page).toHaveURL(/\?statut=NOUVEAU$/);
+    await expect(introduction).toBeVisible();
+
+    expect(totalDe(await introduction.textContent())).toBe(avantFiltre);
+  });
+
+  /**
+   * UN STATUT INCONNU DANS L'URL RETOMBE SUR « Tous », invariant 7.
+   *
+   * La valeur de l'URL n'atteint jamais la requete : elle sert a retrouver une
+   * entree de la table des filtres. Une valeur inconnue qui produirait une liste
+   * vide ferait croire a une boite vide sur un lien partage devenu perime.
+   */
+  test("un statut inconnu dans l'URL retombe sur Tous", async ({ page }) => {
+    await page.goto("/administration/messages?statut=INEXISTANT");
+
+    await expect(page.getByText(MESSAGES_TEST.nouveau.sujet)).toBeVisible();
+    await expect(page.getByText(MESSAGES_TEST.lu.sujet)).toBeVisible();
+
+    await expect(
+      page
+        .getByRole("navigation", { name: "Filtrer par statut" })
+        .getByRole("link", { name: "Tous" }),
+    ).toHaveAttribute("aria-current", "page");
+  });
+
+  /**
+   * LA BARRE DE FILTRES NE FAIT PAS DEBORDER LA PAGE, critere 4.
+   *
+   * Elle defile dans son propre conteneur, `overflow-x` sur la barre et jamais
+   * sur le corps. La mesure porte sur la PAGE : c'est elle que la regle mobile
+   * protege, et un conteneur qui defile pour lui-meme est un choix de mise en
+   * page, pas un defaut.
+   */
+  test("la barre de filtres ne fait pas déborder la page", async ({ page }) => {
+    await page.goto("/administration/messages");
+
+    await expect(
+      page.getByRole("navigation", { name: "Filtrer par statut" }),
+    ).toBeVisible();
+
+    expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+      TOLERANCE_DEBORDEMENT_PX,
+    );
+  });
+
+  /**
+   * CHAQUE FILTRE TIENT 44 PAR 44 px, `frontend-design.md`.
+   *
+   * LA LARGEUR COMPTE AUTANT QUE LA HAUTEUR, et « Lus » est le libelle qui la
+   * met a l'epreuve : trois caracteres descendraient sous le seuil sans
+   * `min-width`, motif deja mesure sur l'ecran des commandes.
+   */
+  test("chaque filtre tient la cible tactile de 44 px", async ({ page }) => {
+    await page.goto("/administration/messages");
+
+    const barre = page.getByRole("navigation", { name: "Filtrer par statut" });
+
+    /*
+     * LA BARRE EST ATTENDUE AVANT D'ETRE COMPTEE, LS-163.
+     *
+     * `count()` NE REESSAIE PAS, contrairement aux assertions Playwright : il
+     * lit le DOM une fois. Sous la charge des quatre largeurs, cette lecture
+     * tombe parfois pendant le `loading.tsx`, dont le squelette ne rend aucune
+     * barre : le test recevait alors zero et echouait sur un ecran parfaitement
+     * correct. Motif « loading.tsx escamote le DOM », deja en fiche.
+     *
+     * L'ASSERTION SUR LE COMPTE EXACT REMPLACE `toBeGreaterThan(0)` : quatre
+     * filtres sont attendus, et un nombre plancher aurait laissé passer une
+     * barre amputee.
+     */
+    await expect(barre).toBeVisible();
+
+    const liens = barre.getByRole("link");
+    await expect(liens).toHaveCount(4);
+
+    const nombre = await liens.count();
+
+    for (let rang = 0; rang < nombre; rang++) {
+      const boite = await liens.nth(rang).boundingBox();
+      expect(boite?.height ?? 0).toBeGreaterThanOrEqual(44);
+      expect(boite?.width ?? 0).toBeGreaterThanOrEqual(44);
+    }
+  });
+
   /*
    * LE CORPS EST PLIE PAR DEFAUT, et il s'ouvre au clic.
    *
