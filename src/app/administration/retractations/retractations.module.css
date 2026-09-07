@@ -173,6 +173,54 @@
   color: var(--ls-text);
 }
 
+/*
+ * LE LIEN VERS L'AVOIR, LS-174.
+ *
+ * `inline-flex` ET NON `block`, motif de LS-190 : `block` etirerait la cible sur
+ * toute la largeur de la carte, et un clic dans le vide a cote du texte
+ * declencherait un telechargement.
+ *
+ * LA CIBLE TIENT 44 px, `--ls-touch-target`, comme tout controle du projet. Le
+ * lien vivant DANS un paragraphe, `vertical-align` le recale sur la ligne du
+ * montant : sans lui, la hauteur imposee decale le texte voisin vers le haut.
+ *
+ * LES COULEURS SONT CELLES DE `.telecharger` DE L'ECRAN DES FACTURES, sur le
+ * meme fond `--ls-surface` : le contraste de `--ls-primary` y est deja mesure,
+ * et recopier une couleur en changeant de fond est precisement ce que C31
+ * interdit. Ici le fond est identique, l'hypothese tient.
+ *
+ * LE SOULIGNEMENT N'EST PAS DECORATIF : le lien est entoure de texte ordinaire,
+ * et `frontend-design.md` interdit qu'une information passe par la seule
+ * couleur.
+ */
+.lienAvoir {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  vertical-align: middle;
+  color: var(--ls-primary);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.lienAvoir:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+/*
+ * L'AVOIR SANS PDF, regle F8 : le document existe et son numero est deja
+ * consomme, seul le rendu a echoue. Le numero reste donc lisible, en texte
+ * ordinaire puisqu'il n'y a rien a atteindre.
+ *
+ * `--ls-text` ET NON `--ls-text-muted` : c'est l'information que la story existe
+ * pour rendre lisible, l'attenuer contredirait son objet.
+ */
+.avoirSansPdf {
+  color: var(--ls-text);
+  font-weight: 600;
+}
+
 .detail {
   margin-bottom: var(--ls-space-3);
 }

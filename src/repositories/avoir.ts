@@ -122,6 +122,19 @@ export async function ecrireAvoir(
     montantCentimes: number;
     motif: string;
     instantaneLegal: InstantaneLegal;
+    /**
+     * La demande de retractation a l'origine du remboursement, LS-174.
+     *
+     * FACULTATIF, ET IL DOIT LE RESTER : un remboursement commercial decide
+     * depuis l'ecran de commande n'a aucune demande derriere lui, et l'exiger
+     * ici casserait ce chemin. `null` est donc un etat legitime de la colonne,
+     * pas une donnee manquante.
+     *
+     * IL N'EST PAS DEDUIT DE LA COMMANDE. Une commande peut porter plusieurs
+     * demandes, et derouler « la demande de cette commande » rattacherait
+     * l'avoir a la mauvaise : c'est l'appelant qui SAIT laquelle il traite.
+     */
+    demandeRetractationId?: string | undefined;
   },
 ): Promise<AvoirEmis> {
   const avoir = await client.avoir.create({
@@ -130,6 +143,13 @@ export async function ecrireAvoir(
       numero: parametres.numero,
       montantCentimes: parametres.montantCentimes,
       motif: parametres.motif,
+      /*
+       * `?? null` PLUTOT QUE L'OMISSION, LS-174 : `exactOptionalPropertyTypes`
+       * est actif, et passer `undefined` a Prisma sur une colonne nullable est
+       * ambigu a la lecture. La valeur nulle dit explicitement « aucune
+       * demande », ce qui est le cas nominal du remboursement commercial.
+       */
+      demandeRetractationId: parametres.demandeRetractationId ?? null,
       /*
        * LE CAST EST CELUI DE PRISMA POUR UNE COLONNE `Json`, et il ne masque
        * aucune incertitude : la valeur a ete validee par le service AVANT

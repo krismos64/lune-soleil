@@ -19,11 +19,14 @@
  * qu'en panne. L'effet reel est prouve par les 23 tests d'integration, qui
  * exercent le service avec un fournisseur double.
  */
+import { Client } from "pg";
+
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 import {
   COMMANDE_FACTUREE_TEST,
+  DEMANDE_RETRACTATION_TEST,
   FICHIER_SESSION_ADMINISTRATION,
 } from "./chemin-session";
 import {
@@ -191,4 +194,291 @@ test("aucune violation d'accessibilité, formulaires déployés", async ({
     .analyze();
 
   expect(resultats.violations).toEqual([]);
+});
+
+/* ==========================================================================
+ * LS-174, le numero d'avoir reste lisible apres rechargement.
+ * ========================================================================== */
+
+/**
+ * Une demande REMBOURSEE portant son avoir, greffee par ce fichier seul.
+ *
+ * ELLE NE TOUCHE PAS LA DEMANDE PARTAGEE. `commande.setup.ts` amorce une
+ * demande `RETOUR_ATTENDU` dont quatre tests ci-dessus dependent : la faire
+ * passer en `REMBOURSEE` retirerait les gestes qu'ils mesurent. Ce fichier
+ * greffe donc la sienne et la retire, motif de `factures-administration`.
+ *
+ * LES IDENTIFIANTS SONT FIXES ET RESERVES, comme toutes les fixtures du depot :
+ * une valeur engendree a l'execution accumulerait des lignes a chaque passage.
+ * Le suffixe porte le numero de la story.
+ */
+const DEMANDE_AVEC_AVOIR = {
+  demandeId: "e1a2b3c4-1174-4aaa-8888-000000000001",
+  avoirId: "e1a2b3c4-1174-4bbb-8888-000000000002",
+  numeroAvoir: "A-TEST-0174",
+  montantCentimes: 2400,
+} as const;
+
+async function avecClient<T>(
+  travail: (client: Client) => Promise<T>,
+): Promise<T> {
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+
+  try {
+    return await travail(client);
+  } finally {
+    await client.end();
+  }
+}
+
+/*
+ * ------------------------------------------------------------------
+ * LES TESTS DE LS-174 VIVENT DANS LEUR PROPRE `describe`, ET C'EST OBLIGATOIRE.
+ *
+ * Leur amorce fait passer la demande partagee en `REMBOURSEE` pour lui attacher
+ * un avoir. Un `beforeAll` de FICHIER l'appliquerait aussi aux cinq tests
+ * ci-dessus, qui mesurent les gestes offerts sur une demande `RETOUR_ATTENDU` :
+ * ils ne trouveraient plus ni bouton de remboursement ni formulaire de refus.
+ *
+ * Mesure du 7 septembre 2026 : cinq echecs sur cinq, dont trois au delai de
+ * test faute de trouver un element qui n'existait plus.
+ *
+ * Playwright borne un `beforeAll` a son bloc, donc l'etat partage n'est modifie
+ * que pendant ces quatre tests, et le `afterAll` le rend ensuite.
+ * ------------------------------------------------------------------
+ */
+test.describe("le numéro d'avoir survit au rechargement, LS-174", () => {
+  test.beforeAll(async () => {
+    await avecClient(async (client) => {
+      /*
+       * UNE SEULE DEMANDE, ET C'EST LE SCHEMA QUI L'IMPOSE.
+       * `DemandeRetractation.commandeId` est UNIQUE : une commande porte au plus
+       * une demande. Le depot ne compte qu'UNE commande facturee de test, et en
+       * amorcer une seconde dupliquerait cinquante lignes pour un seul champ.
+       *
+       * ELLE NE TOUCHE PAS LA DEMANDE PARTAGEE, qui vit sur cette meme commande :
+       * celle-ci est `RETOUR_ATTENDU` et quatre tests ci-dessus en dependent. Ce
+       * fichier REMPLACE donc temporairement son statut, et le `afterAll` le
+       * remet. Motif de `factures-administration`, qui greffe et retire son avoir.
+       */
+      await client.query(
+        `UPDATE demande_retractation
+       SET statut = 'REMBOURSEE'::"StatutRetractation",
+           montant_rembourse_centimes = $2
+       WHERE id = $1`,
+        [
+          DEMANDE_RETRACTATION_TEST.demandeId,
+          DEMANDE_AVEC_AVOIR.montantCentimes,
+        ],
+      );
+
+      /*
+       * L'INSTANTANE EST RECOPIE DE LA FACTURE, jamais reconstruit : un avoir
+       * porte SON PROPRE instantane derive de celui de la facture, invariant 3, et
+       * le schema qui le relit refuse une forme partielle.
+       */
+      await client.query(
+        `INSERT INTO avoir (id, facture_id, demande_retractation_id, numero,
+                          montant_centimes, motif, instantane_legal, chemin_pdf,
+                          emis_a)
+       SELECT $1, id, $2, $3, $4, 'TEST LS-174', instantane_legal,
+              'factures/test-ls174.pdf', now()
+       FROM facture WHERE id = $5
+       ON CONFLICT (id) DO NOTHING`,
+        [
+          DEMANDE_AVEC_AVOIR.avoirId,
+          DEMANDE_RETRACTATION_TEST.demandeId,
+          DEMANDE_AVEC_AVOIR.numeroAvoir,
+          DEMANDE_AVEC_AVOIR.montantCentimes,
+          COMMANDE_FACTUREE_TEST.factureId,
+        ],
+      );
+    });
+  });
+
+  test.afterAll(async () => {
+    await avecClient(async (client) => {
+      /*
+       * L'AVOIR PART AVANT LE STATUT : la cle etrangere est en `SetNull`, donc
+       * l'ordre inverse laisserait un avoir orphelin que l'ecran des factures
+       * compterait.
+       */
+      await client.query(`DELETE FROM avoir WHERE id = $1`, [
+        DEMANDE_AVEC_AVOIR.avoirId,
+      ]);
+
+      /*
+       * LA DEMANDE PARTAGEE RETROUVE SON ETAT, `RETOUR_ATTENDU` avec son colis
+       * recu : c'est celui dont les quatre tests ci-dessus dependent, et le
+       * laisser `REMBOURSEE` les ferait echouer a l'execution suivante.
+       */
+      await client.query(
+        `UPDATE demande_retractation
+       SET statut = 'RETOUR_ATTENDU'::"StatutRetractation",
+           montant_rembourse_centimes = NULL
+       WHERE id = $1`,
+        [DEMANDE_RETRACTATION_TEST.demandeId],
+      );
+    });
+  });
+
+  /**
+   * CRITERE 2, ET C'EST LE DEFAUT QUE LA STORY FERME.
+   *
+   * Le numero d'avoir n'apparaissait que dans la region live suivant le
+   * remboursement, et disparaissait au premier rechargement. Ce test charge la
+   * page A FROID, sans avoir rien declenche : c'est exactement la situation de
+   * l'exploitante qui revient sur l'ecran devant une reclamation.
+   */
+  test("le numéro d'avoir est lisible après rechargement, avec son lien", async ({
+    page,
+  }) => {
+    await page.goto("/administration/retractations");
+
+    const carte = carteDemande(page);
+
+    const lien = carte.getByRole("link", {
+      name: `Avoir ${DEMANDE_AVEC_AVOIR.numeroAvoir}`,
+    });
+
+    await expect(lien).toBeVisible();
+
+    /*
+     * LA CIBLE EST LA ROUTE D'ADMINISTRATION, jamais celle de l'espace client :
+     * cette derniere est gardee par une session CLIENTE et rendrait 404 ici.
+     */
+    await expect(lien).toHaveAttribute(
+      "href",
+      `/administration/factures/${DEMANDE_AVEC_AVOIR.avoirId}`,
+    );
+
+    /*
+     * LA CIBLE TACTILE TIENT 44 px, `frontend-design.md`. Mesuree et non
+     * supposee : `inline-flex` la rend reelle, `display: inline` la laisserait a
+     * la hauteur de la ligne de texte, motif mesure en LS-190 ou des liens
+     * faisaient 18 px.
+     */
+    const boite = await lien.boundingBox();
+    expect(boite?.height ?? 0).toBeGreaterThanOrEqual(44);
+  });
+
+  /**
+   * CRITERE 2 SUR L'AUTRE BRANCHE, regle F8 : le PDF a echoue, le document existe.
+   *
+   * C'est le NUMERO qu'on cherche devant une reclamation, le fichier vient apres :
+   * un ecran qui n'afficherait rien faute de PDF perdrait l'information meme que
+   * la story rend lisible.
+   *
+   * IL BASCULE `chemin_pdf` PLUTOT QUE D'AMORCER UN SECOND AVOIR, et le schema y
+   * oblige : `DemandeRetractation.commandeId` est UNIQUE, une commande ne porte
+   * qu'une demande, et le depot ne compte qu'une commande facturee de test. Le
+   * test remet la valeur d'origine, y compris s'il echoue.
+   */
+  test("un avoir sans PDF affiche son numéro, sans lien mort", async ({
+    page,
+  }) => {
+    await avecClient(async (client) => {
+      await client.query(`UPDATE avoir SET chemin_pdf = NULL WHERE id = $1`, [
+        DEMANDE_AVEC_AVOIR.avoirId,
+      ]);
+    });
+
+    try {
+      await page.goto("/administration/retractations");
+
+      const carte = carteDemande(page);
+
+      await expect(
+        carte.getByText(
+          `Avoir ${DEMANDE_AVEC_AVOIR.numeroAvoir}, PDF indisponible`,
+        ),
+      ).toBeVisible();
+
+      /*
+       * AUCUN LIEN, et c'est l'assertion qui porte le critere : un lien ici
+       * rendrait 404, la route refusant de servir une piece sans fichier.
+       */
+      await expect(
+        carte.getByRole("link", {
+          name: new RegExp(DEMANDE_AVEC_AVOIR.numeroAvoir),
+        }),
+      ).toHaveCount(0);
+    } finally {
+      /*
+       * `finally` ET NON UNE LIGNE EN FIN DE TEST : un echec d'assertion laisserait
+       * sinon `chemin_pdf` nul, et les tests suivants de ce fichier, comme la
+       * prochaine execution, mesureraient une branche qu'ils ne visent pas.
+       */
+      await avecClient(async (client) => {
+        await client.query(
+          `UPDATE avoir SET chemin_pdf = 'factures/test-ls174.pdf' WHERE id = $1`,
+          [DEMANDE_AVEC_AVOIR.avoirId],
+        );
+      });
+    }
+  });
+
+  /**
+   * CRITERE 3, une demande sans avoir n'affiche RIEN de plus.
+   *
+   * Un libelle vide, « Avoir : » suivi de rien, ferait croire a un defaut
+   * d'affichage sur l'ecran le plus consulte en cas de litige. Ce cas EXISTE pour
+   * de bon : un remboursement dont l'emission de l'avoir a echoue laisse une
+   * alerte `AVOIR_NON_EMIS`, l'argent etant parti sans document.
+   *
+   * L'AVOIR EST RETIRE LE TEMPS DU TEST plutot que de viser une autre demande :
+   * celles que `compte-retractation.spec.ts` depose ne sont pas garanties
+   * presentes, et un test qui passerait faute de cible ne prouverait rien.
+   */
+  test("une demande sans avoir n'affiche aucun libellé d'avoir", async ({
+    page,
+  }) => {
+    await avecClient(async (client) => {
+      await client.query(
+        `UPDATE avoir SET demande_retractation_id = NULL WHERE id = $1`,
+        [DEMANDE_AVEC_AVOIR.avoirId],
+      );
+    });
+
+    try {
+      await page.goto("/administration/retractations");
+
+      const carte = carteDemande(page);
+
+      /*
+       * LA CARTE EST LA, ET C'EST LA MOITIE DE L'ASSERTION : sans elle, un ecran
+       * vide satisferait le `toHaveCount(0)` qui suit, motif « contrôle satisfait
+       * par l'absence » deja rencontre sur ce depot.
+       */
+      await expect(carte).toBeVisible();
+      await expect(carte.getByText(/Avoir/)).toHaveCount(0);
+    } finally {
+      await avecClient(async (client) => {
+        await client.query(
+          `UPDATE avoir SET demande_retractation_id = $2 WHERE id = $1`,
+          [DEMANDE_AVEC_AVOIR.avoirId, DEMANDE_RETRACTATION_TEST.demandeId],
+        );
+      });
+    }
+  });
+
+  /**
+   * LE RENDU NE DEBORDE PAS AVEC LE NUMERO D'AVOIR, invariant 10.
+   *
+   * Le numero ajoute treize caracteres a la ligne du montant, sur un ecran concu
+   * a partir de 320 px : c'est precisement le genre d'ajout qui deborde, motif
+   * mesure en LS-171 sur un libelle voisin de cet ecran.
+   */
+  test("la carte portant un avoir ne déborde pas horizontalement", async ({
+    page,
+  }) => {
+    await page.goto("/administration/retractations");
+
+    await expect(carteDemande(page)).toBeVisible();
+
+    expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+      TOLERANCE_DEBORDEMENT_PX,
+    );
+  });
 });

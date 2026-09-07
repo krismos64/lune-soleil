@@ -468,6 +468,22 @@ export async function rembourserRetractation(
       motif: `Retractation, article L221-18`,
       fournisseur: parametres.fournisseur,
       referenceDemande: parametres.referenceDemande,
+      /*
+       * L'AVOIR EST RATTACHE A SA DEMANDE, LS-174.
+       *
+       * `Avoir.demandeRetractationId` existait au schema depuis LS-49 et
+       * n'etait jamais ecrit : le numero du document qui corrige la facture
+       * n'apparaissait que dans la region live suivant le remboursement, et
+       * disparaissait au premier rechargement. Rapprocher un remboursement de
+       * son avoir devant une reclamation obligeait a passer par le detail de la
+       * commande.
+       *
+       * L'IDENTIFIANT VIENT D'ICI ET NON D'UNE DERIVATION. Une facture peut
+       * porter PLUSIEURS avoirs, un remboursement commercial puis une
+       * retractation : c'est le service qui traite la demande qui sait lequel
+       * il vient d'emettre, et lui seul.
+       */
+      demandeRetractationId: parametres.demandeId,
     },
     correlation,
   );
