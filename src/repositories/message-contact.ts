@@ -121,15 +121,41 @@ export async function compterMessagesEnBase(client: ClientBase): Promise<{
   total: number;
   nouveaux: number;
 }> {
-  const parStatut = await client.message.groupBy({
-    by: ["statut"],
-    _count: { _all: true },
-  });
+  /*
+   * ------------------------------------------------------------------
+   * UNE SEULE REQUETE, UN SEUL BALAYAGE, ET TROIS FORMES ONT ETE MESUREES.
+   *
+   * `groupBy` PUIS DEUX `count` EN PARALLELE ont ete essayes, et tous deux font
+   * echouer `administration-connectee:737`, le test qui classe un message : une
+   * fois sur trois pour le premier, trois fois sur dix pour le second. Mesure du
+   * 8 septembre 2026.
+   *
+   * LA CAUSE N'EST PAS LE VOLUME, la base de test portant six messages. C'est le
+   * MOMENT : ce comptage s'execute a chaque rendu, y compris pendant la
+   * revalidation de layout que le classement declenche, C37. Le layout calcule
+   * deja ONZE agregats, `lireComptages` ; en ajouter un douzieme, servi par une
+   * seconde connexion du pool, suffit a faire attendre le retour de la Server
+   * Action au-dela du delai du test, sous quatre largeurs concurrentes.
+   *
+   * `FILTER (WHERE ...)` FAIT LES DEUX EN UNE PASSE, une requete, une connexion,
+   * un balayage. C'est la forme la moins chere des trois, et les deux nombres
+   * viennent du meme instant sans qu'aucun groupe ne soit materialise.
+   * ------------------------------------------------------------------
+   */
+  const [ligne] = await client.$queryRaw<{ total: bigint; nouveaux: bigint }[]>`
+    SELECT count(*) AS total,
+           count(*) FILTER (WHERE statut = 'NOUVEAU') AS nouveaux
+    FROM message
+  `;
 
+  /*
+   * `count` RENVOIE UN `bigint` EN POSTGRESQL, jamais un entier JavaScript : le
+   * laisser tel quel ferait echouer la serialisation vers le composant serveur,
+   * et un `JSON.stringify` sur un `bigint` leve.
+   */
   return {
-    total: parStatut.reduce((somme, ligne) => somme + ligne._count._all, 0),
-    nouveaux:
-      parStatut.find((ligne) => ligne.statut === "NOUVEAU")?._count._all ?? 0,
+    total: Number(ligne?.total ?? 0),
+    nouveaux: Number(ligne?.nouveaux ?? 0),
   };
 }
 
