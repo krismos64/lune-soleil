@@ -299,6 +299,33 @@ alt vide réservé au décor dupliqué. Erreur associée à son champ, jamais
 transmise par la couleur seule. Nom accessible sur tout bouton icône. Respect
 systématique de `prefers-reduced-motion`.
 
+### C39, un `aria-describedby` ne vise jamais un élément portant `aria-label`
+
+Le calcul de la **description** accessible consulte `aria-label` avant le
+contenu textuel, exactement comme celui du nom. Un élément décrit par un autre
+qui porte un `aria-label` s'annonce donc avec ce label, et **jamais avec son
+texte réel** : le rattachement que `aria-describedby` cherche à obtenir est
+annulé.
+
+Mesuré sur `document-facture.tsx`, LS-161. Le bouton s'annonçait « Générer le
+document, Génération du document » au lieu de lire « La génération a échoué. La
+facture reste valide et son numéro est inchangé », c'est-à-dire la seule phrase
+qui apprenait quelque chose.
+
+**Nommer une région live ne sert à rien**, et c'est la croyance qui a produit le
+défaut. `aria-label` ne change pas l'annonce d'une mise à jour de
+`role="status"` : seul le **contenu** est vocalisé. La justification écrite dans
+le fichier invoquait pourtant le besoin de distinguer deux régions `status` du
+même écran. Une règle qui énonce une chose et en prescrit une autre se franchit
+de bonne foi, et c'est ainsi que le second écran a recopié le premier.
+
+**Distinguer deux régions passe par leur contenu**, jamais par leur nom : « La
+génération a échoué » se suffit quand la région voisine parle de remboursement.
+
+`scripts/verifier-description-accessible.sh` le vérifie dans les deux sens, et
+il ne voit pas les identifiants construits à l'exécution, qu'un test de rendu
+resterait seul à couvrir.
+
 ### C38, tout champ de mot de passe client porte sa bascule de lisibilité
 
 ADR-023 impose **seize caractères minimum**, contre l'usage courant de huit.

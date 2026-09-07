@@ -948,6 +948,34 @@ jobs:
         run: ./scripts/verifier-fixtures-e2e-mutation.sh
 
       # ----------------------------------------------------------------------
+      # Controle 6v. Un aria-describedby ne vise jamais un element portant
+      # aria-label, LS-161, regle C39. Textuel, secondes.
+      #
+      # CE QU'IL GARDE, et le defaut est SILENCIEUX : le calcul de la
+      # description accessible consulte `aria-label` AVANT le contenu textuel.
+      # Un bouton decrit par une region qui porte un label s'annonce avec ce
+      # label et jamais avec le texte reel. Aucun type, aucun test et aucun
+      # rendu ne bougent, seule une ecoute au lecteur d'ecran le revele.
+      #
+      # POURQUOI IL SE REINTRODUIT PAR MIMETISME : la justification ecrite dans
+      # le fichier etait FAUSSE, elle invoquait le besoin de nommer deux
+      # regions `status` d'un meme ecran. Nommer une region live ne change rien
+      # a son annonce, seul le CONTENU est vocalise. LS-160 n'avait corrige
+      # qu'un des deux ecrans, l'autre a ete recopie de bonne foi.
+      # ----------------------------------------------------------------------
+      - name: 6v. Aucune description accessible annulee par un aria-label
+        run: ./scripts/verifier-description-accessible.sh
+
+      # Preuve par mutation du controle precedent, LS-161. Textuel, secondes.
+      #
+      # CINQ SENS EXERCES, dont deux qui ne vont pas de soi : un `aria-label`
+      # cite EN COMMENTAIRE ne doit pas faire rougir, les deux ecrans corriges
+      # nommant l'attribut pour expliquer son absence ; et une cible vivant
+      # dans un AUTRE fichier que celui qui la decrit doit etre vue.
+      - name: 6w. Preuve par mutation des descriptions accessibles
+        run: ./scripts/verifier-description-accessible-mutation.sh
+
+      # ----------------------------------------------------------------------
       # Controles 2 et 3. Le format entre ici parce qu'un depot ou seule une
       # partie des fichiers est formatee produit des diffs illisibles.
       # ----------------------------------------------------------------------

@@ -351,10 +351,6 @@ export function Remboursement({
       {/*
        * LA REGION EST TOUJOURS PRESENTE, MEME VIDE : une region live inseree en
        * meme temps que son contenu n'est pas lue par les lecteurs d'ecran.
-       *
-       * `aria-label` LA NOMME, LS-85 : cet ecran porte plusieurs regions
-       * `status`, et deux regions anonymes s'annoncent identiquement sans qu'on
-       * sache laquelle a parle.
        */}
       <p
         id="message-remboursement"
@@ -368,11 +364,12 @@ export function Remboursement({
          * remboursement » sans jamais lire « Montant trop élevé, il reste
          * 20,00 € remboursables ».
          *
-         * L'ECRAN VOISIN EN PORTE UN, et sa justification ne tient pas :
+         * L'ECRAN VOISIN EN PORTAIT UN, et sa justification ne tenait pas :
          * `aria-label` ne change rien a l'annonce d'une mise a jour de
          * `role="status"`, seul le CONTENU etant vocalise. Relevé par
-         * `ls-frontend-revue` le 1er septembre 2026, et le meme defaut vit dans
-         * `document-facture.tsx`, hors perimetre de cette story.
+         * `ls-frontend-revue` le 1er septembre 2026 ; `document-facture.tsx`
+         * etait hors perimetre de LS-160 et a ete ferme par LS-161, qui pose
+         * aussi le controle empechant le retour du defaut.
          */
       >
         {enCours ? "Remboursement en cours…" : (message?.texte ?? "")}
