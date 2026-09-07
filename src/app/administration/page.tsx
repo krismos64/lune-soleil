@@ -346,7 +346,11 @@ async function IndicateursTableauBord() {
                 <span className={styles.entreeLibelle}>
                   {entree.nombre} {entree.libelle(entree.nombre)}
                 </span>
-                <Link href={entree.chemin} className={styles.entreeAction}>
+                <Link
+                  href={entree.chemin}
+                  className={styles.entreeAction}
+                  prefetch={false}
+                >
                   {entree.action}
                   {/*
                    * LE NOM ACCESSIBLE DIT DE QUOI, jamais « Ouvrir » seul. Une

@@ -163,7 +163,20 @@ test.describe("connectee en administration", () => {
 
   test("l'ecran s'atteint au clic depuis la barre, jamais par l'URL seule", async ({
     page,
-  }) => {
+  }, infos) => {
+    /*
+     * UN SEUL PROJET, LS-166, ET LE TEST FORCAIT DEJA SA LARGEUR.
+     *
+     * `setViewportSize(1280)` ci-dessous ecrase celle du projet : les quatre
+     * largeurs jouaient donc QUATRE FOIS le meme parcours, a 1280 px chaque
+     * fois. Ce que ce test mesure est le LIEN, pas la mise en page, et la barre
+     * depliee est le seul etat ou il est visible sans ouvrir le menu.
+     */
+    test.skip(
+      infos.project.name !== "bureau-1280",
+      "mesure le lien et non la mise en page, et force deja 1280 px",
+    );
+
     /*
      * AU CLIC ET NON PAR `goto`, motif de C33 : un ecran qu'aucun lien ne
      * designe est inatteignable en pratique, et un test qui y arrive par URL ne
@@ -180,6 +193,12 @@ test.describe("connectee en administration", () => {
       .click();
 
     await expect(page).toHaveURL(/\/administration\/factures$/);
+
+    /*
+     * L'URL NE PROUVE PAS QUE LE CONTENU EST ARRIVE, LS-166 : le routeur la
+     * change des le clic, avant la reponse RSC. C'est le `<main>` qui manque
+     * quand la navigation se perd, et c'est donc lui qu'il faut mesurer.
+     */
     await expect(
       page.getByRole("heading", { name: "Factures et avoirs", level: 1 }),
     ).toBeVisible();

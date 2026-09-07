@@ -129,7 +129,11 @@ export default async function PageExpeditions() {
 
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
-      <Link href="/administration/commandes" className={styles.retour}>
+      <Link
+        href="/administration/commandes"
+        className={styles.retour}
+        prefetch={false}
+      >
         Retour aux commandes
       </Link>
 
@@ -210,6 +214,7 @@ export default async function PageExpeditions() {
                             <Link
                               href={`/administration/commandes/${commande.id}`}
                               className={styles.numero}
+                              prefetch={false}
                             >
                               {commande.numero}
                             </Link>

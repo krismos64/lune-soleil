@@ -447,7 +447,7 @@ export const FICHIER_EMAIL_VERIFIE = "tests/e2e/.session-email-verifie.json";
 export const EMAIL_VERIFIE = "e2e-rattachement@exemple.test";
 
 /**
- * Les trois projets de largeur, tels que `playwright.config.ts` les nomme.
+ * Les quatre projets de largeur, tels que `playwright.config.ts` les nomme.
  *
  * LA LISTE VIT ICI parce que `comptes-profil.setup.ts` doit amorcer un compte
  * par largeur AVANT que ces projets demarrent : il ne peut donc pas lire son
@@ -457,10 +457,17 @@ export const EMAIL_VERIFIE = "e2e-rattachement@exemple.test";
  * verrait son compte manquer, et le fichier de profil retomberait sur une
  * inscription au moment le plus charge de la suite.
  * `scripts/verifier-fixtures-e2e.sh` confronte les deux listes.
+ *
+ * `tablette-768` EST ARRIVE EN LS-166, et il coute DEUX comptes de plus, huit
+ * au lieu de six. Ils ne sont inscrits qu'une fois dans la vie de la base, par
+ * `comptes-profil.setup.ts` et son espacement : en regime etabli ce projet ne
+ * fait aucun appel d'authentification, donc les trois places par minute de
+ * `/sign-up/email` restent entierement disponibles.
  */
 export const PROJETS_LARGEUR = [
   "mobile-320",
   "mobile-390",
+  "tablette-768",
   "bureau-1280",
 ] as const;
 

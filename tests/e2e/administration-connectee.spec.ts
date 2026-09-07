@@ -740,6 +740,31 @@ test.describe("rubrique Messages", () => {
     const sujet = `TEST Classement ${infos.project.name}`;
 
     /*
+     * ------------------------------------------------------------------
+     * CE TEST A SON PROPRE DELAI, LS-166, ET LE PLAFOND ATTEINT ETAIT CELUI DU
+     * TEST, PAS CELUI DES ASSERTIONS.
+     *
+     * IL FAIT TROIS ALLERS-RETOURS SERVEUR : le depot du message par le
+     * formulaire public, qui attend 3,2 s de delai anti-robot, la navigation
+     * vers la liste, puis la Server Action de classement. Celle-ci appelle
+     * `revalidatePath(chemin, "layout")`, C37, ce qui fait recalculer les ONZE
+     * comptages du layout en plus de la liste.
+     *
+     * MESURE DU 7 SEPTEMBRE 2026, en ajoutant `tablette-768` : la region de
+     * statut affichait « Enregistrement en cours… » pendant les trente secondes
+     * entieres, 56 tentatives d'assertion. Le delai des ASSERTIONS avait deja
+     * ete porte a trente secondes sans rien fermer, ce qui nomme le vrai
+     * plafond : celui du test, trente secondes par defaut, atteint le premier.
+     *
+     * LA QUATRIEME LARGEUR A FAIT FRANCHIR LE SEUIL, elle ne l'a pas cree :
+     * quatre revalidations de layout concurrentes sur la meme base au lieu de
+     * trois. Hors charge, la meme action rend la main en quelques centaines de
+     * millisecondes.
+     * ------------------------------------------------------------------
+     */
+    test.setTimeout(120_000);
+
+    /*
      * LE MESSAGE EST DEPOSE PAR LE FORMULAIRE PUBLIC, avec le delai minimum
      * respecte : la page pose l'instant d'ouverture au rendu, et trois secondes
      * doivent s'ecouler avant l'envoi, sans quoi la couche anti-robot ecarte la
@@ -761,7 +786,23 @@ test.describe("rubrique Messages", () => {
 
     await page.goto("/administration/messages");
 
-    const carte = page.locator("main ul li").filter({ hasText: sujet });
+    /*
+     * LA CARTE LA PLUS RECENTE, ET NON « la » carte, LS-166.
+     *
+     * `session-administration.setup.ts` efface les sujets `TEST Classement %`
+     * au demarrage de la preparation, donc une execution complete part propre.
+     * MAIS ce test DEPOSE un message a chaque passage : relancer le fichier
+     * seul, sans repasser par la preparation, en laisse deux portant le meme
+     * sujet, l'ancien deja classe et le neuf.
+     *
+     * LE LOCATOR EN TROUVAIT ALORS DEUX, et `toBeEnabled` echouait sur
+     * l'ancien, dont le bouton est justement desactive. L'echec accusait le
+     * drapeau `classe`, qui fonctionnait parfaitement.
+     *
+     * `.first()` DESIGNE LE PLUS RECENT, la liste etant ordonnee du plus neuf
+     * au plus ancien, ce que `messages-administration` garantit par son tri.
+     */
+    const carte = page.locator("main ul li").filter({ hasText: sujet }).first();
 
     const marquer = carte.getByRole("button", { name: "Marquer comme lu" });
     await expect(marquer).toBeEnabled();
@@ -773,15 +814,47 @@ test.describe("rubrique Messages", () => {
      * drapeau `classe`, il resterait actif et un second clic reecrirait le meme
      * statut en rendant `SUCCES`, sans qu'aucun retour ne dise que rien n'a
      * change.
+     *
+     * MEME PLAFOND QUE LE MESSAGE CI-DESSOUS, LS-166 : les deux attendent le
+     * MEME retour de Server Action, et cette action prend plus de dix secondes
+     * sous la charge des quatre largeurs. Le laisser au plafond global ferait
+     * echouer ici ce que la ligne suivante finirait par mesurer.
      */
-    await expect(marquer).toBeDisabled();
+    await expect(marquer).toBeDisabled({ timeout: 30_000 });
 
     /*
      * LE MESSAGE DE RESULTAT DIT QUOI FAIRE, et non seulement que c'est fait :
      * `revalidatePath` invalide le cache serveur sans remonter ce composant
      * client, donc le badge affiche encore l'ancien statut.
+     *
+     * ------------------------------------------------------------------
+     * IL EST LU DANS LA REGION `role="status"`, ET SON DELAI EST PORTE A TRENTE
+     * SECONDES, LS-166.
+     *
+     * LA REGION DIT CE QUE L'ATTENTE COUTE, et c'est ce qui a permis de
+     * conclure. Ancree sur elle, l'assertion rapporte la valeur REELLEMENT lue
+     * au lieu de « element(s) not found » : mesure du 7 septembre 2026, elle
+     * affichait « Enregistrement en cours… » pendant les dix secondes entieres.
+     * La Server Action etait donc simplement LENTE sous la charge des quatre
+     * largeurs, jamais perdue.
+     *
+     * DEUX HYPOTHESES ONT ETE ECARTEES PAR LA MESURE avant celle-la, et elles
+     * sont notees parce qu'elles paraissaient solides : un composant remonte
+     * par la revalidation, dementi par `toBeDisabled` qui passait ; puis un
+     * `disabled` d'origine serveur survivant a ce remontage, dementi en
+     * inversant les deux assertions, ce qui a fait echouer `toBeDisabled` sur
+     * les quatre largeurs. Les deux etats vivent bien ensemble.
+     *
+     * UN PLAFOND, PAS UNE ATTENTE : l'assertion rend la main des que le message
+     * arrive, en quelques centaines de millisecondes hors charge. Un classement
+     * qui n'aboutit vraiment pas echoue toujours, seulement plus tard, et le
+     * rapport nomme alors l'etat exact de la region.
+     * ------------------------------------------------------------------
      */
-    await expect(carte.getByText(/Message classé/)).toBeVisible();
+    await expect(carte.locator('[role="status"]')).toContainText(
+      /Message classé/,
+      { timeout: 30_000 },
+    );
   });
 
   /*

@@ -210,6 +210,18 @@ horizontal à 320 px, y compris avec un nom de produit long et un prix à trois
 chiffres. Zones tactiles proches de 44 par 44 px. Zoom à 200 % sans perte de
 contenu ni blocage de l'achat.
 
+**Les quatre largeurs sont mesurées** par la suite de bout en bout depuis
+LS-166, un projet Playwright chacune : `mobile-320`, `mobile-390`,
+`tablette-768`, `bureau-1280`. La troisième a manqué du début du projet au
+7 septembre 2026, alors que c'est **la largeur où les dispositions basculent** :
+`min-width: 768px` fait passer la barre d'administration de repliée à
+permanente, et les grilles d'une pile à plusieurs colonnes. Un contenu qui tient
+empilé à 390 et en trois colonnes à 1280 peut se briser ici sans qu'aucune des
+deux autres largeurs ne le montre.
+
+**768 appartient à la disposition large**, `min-width` étant inclusif : un test
+qui compare `largeur < 768` attend donc à cette largeur ce que 1280 rend.
+
 Le back-office adopte cartes et listes quand un tableau devient illisible sur
 mobile. Cible : créer un produit complet en moins de trois minutes sur
 smartphone, photographies comprises.
@@ -548,6 +560,40 @@ rétractation passent d'un statut *en cours* à un autre statut *en cours* :
 `retractationsEnCours` exclut les seuls `REMBOURSEE` et `REFUSEE`, donc le
 nombre ne bouge pas. Régénérer le PDF d'une facture ne touche aucun comptage non
 plus. Ajouter `"layout"` par symétrie ferait recalculer neuf agrégats pour rien.
+
+### C40, un lien vers une route `force-dynamic` désactive le préchargement
+
+`<Link>` précharge par défaut, et `staleTimes.dynamic` vaut **zéro**, vérifié via
+Context7 le 7 septembre 2026 : la réponse préchargée d'une route dynamique est
+donc périmée à l'instant où elle arrive. Next.js la jette, repart, et
+**recommence sans fin** tant que le lien est à l'écran.
+
+**Toutes les routes d'administration sont `force-dynamic`**, et la barre latérale
+en désigne onze. Mesure sur le tableau de bord au repos, journal du navigateur :
+chaque rubrique enchaîne `200`, `ERR_ABORTED`, puis une requête neuve avec un
+jeton `_rsc` différent. Des rendus serveur en boucle, chacun interrogeant
+PostgreSQL, pour un écran que personne ne touche.
+
+**Ce n'est pas qu'une dépense.** La navigation réelle entre en concurrence avec
+ce flot et perd parfois la course : l'URL change, et le `<main>` n'arrive
+**jamais**, ni celui de la page ni celui de son `loading.tsx`. Mesuré : toujours
+bloqué après 61 secondes, deux essais sur quatre. La personne reste devant une
+coquille vide, sans rien qui lui dise quoi faire ni bouton pour repartir.
+
+**`staleTimes.dynamic` est la parade évidente, et elle est fausse ici.** Le
+réglage rend réutilisable le **layout**, dont les pastilles de comptage : la
+barre annonce alors « 1 message non lu » sur une liste qui n'en montre plus. Il a
+été essayé à cinq secondes le 7 septembre 2026, et il a fait passer
+`navigation-administration` de deux largeurs en échec à trois. Le motif est écrit
+dans `next.config.ts`, à l'endroit où l'on serait tenté de l'ajouter.
+
+**La boutique publique n'est pas concernée de la même façon** : ses pages de
+contenu sont statiques, et le préchargement y sert réellement la navigation. La
+règle porte sur les routes dynamiques, pas sur le mot `<Link>`.
+
+`scripts/verifier-prefetch-administration.sh` la vérifie sur les deux
+emplacements, le dossier de routes **et** la barre qui vit dans `src/components/`,
+prouvé par mutation sur quatre sens dont un faux positif du contrôle lui-même.
 
 ## Dimensionnement du catalogue
 

@@ -144,7 +144,7 @@ export default async function LayoutAdministration({
            * nouvel onglet sans le dire est une surprise, et le signaler
            * alourdirait un lien secondaire.
            */}
-          <Link className={styles.bandeauLien} href="/">
+          <Link className={styles.bandeauLien} href="/" prefetch={false}>
             Voir la boutique
           </Link>
         </div>

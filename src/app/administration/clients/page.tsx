@@ -179,7 +179,24 @@ export default async function PageClients({
       {terme.length > 0 ? (
         <p className={styles.rappelRecherche}>
           Résultats pour «&nbsp;{terme}&nbsp;».{" "}
-          <Link href="/administration/clients" className={styles.lien}>
+          {/*
+           * AUCUN PRECHARGEMENT, LS-166, meme motif que la barre laterale.
+           *
+           * CET ECRAN EST `force-dynamic` et `staleTimes.dynamic` vaut zero :
+           * la reponse prechargee est perimee des son arrivee, donc Next.js la
+           * jette et repart, sans fin. La navigation reelle entre alors en
+           * concurrence avec ce flot et perd parfois : l'URL perd bien son
+           * parametre, et le `<main>` n'arrive jamais.
+           *
+           * MESURE DU 7 SEPTEMBRE 2026 : ce lien faisait echouer
+           * `clients-administration.spec.ts` sur DEUX largeurs a chaque
+           * execution de la suite complete, jamais en isolation.
+           */}
+          <Link
+            href="/administration/clients"
+            className={styles.lien}
+            prefetch={false}
+          >
             Afficher tous les comptes
           </Link>
         </p>

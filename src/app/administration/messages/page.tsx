@@ -93,7 +93,11 @@ export default async function PageMessages() {
 
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
-      <Link href="/administration/commandes" className={styles.retour}>
+      <Link
+        href="/administration/commandes"
+        className={styles.retour}
+        prefetch={false}
+      >
         Retour aux commandes
       </Link>
 
