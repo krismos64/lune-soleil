@@ -278,7 +278,7 @@ vérifiée par `./scripts/verifier-config-claude.sh`.
 | Événement | Script | Ce qu'il garde |
 |---|---|---|
 | `SessionStart` | `hook-session-start.sh` | injecte branche, état du dépôt et prochaine étape du dernier journal. Matcher `startup\|clear` seulement, pour ne pas réinjecter après chaque compaction |
-| `PreToolUse` | `hook-block-secret-files.sh`, `hook-block-secret-commands.sh` | bloque la lecture d'une valeur de secret, fichier comme commande |
+| `PreToolUse` | `hook-block-secret-files.sh`, `hook-block-secret-commands.sh` | bloque les clés privées et certificats, et le passage d'une valeur de secret en **argument** de commande, lisible par tout `ps`. Le `.env` est lisible depuis le 7 septembre 2026, arbitrage de Christophe, LS-156 |
 | `PostToolUse` | `hook-verifier-regles.sh` | rejoue `verifier-regles.sh` après une écriture |
 | `PreCompact` | `hook-precompact.sh` | avertit avant que le contexte disparaisse. **Ne peut pas injecter de contexte**, seuls `SessionStart`, `UserPromptSubmit` et `UserPromptExpansion` le peuvent |
 | `Stop` | `hook-warn-unpushed.sh`, `verifier-config-claude.sh`, `verifier-jira.sh` | contrôle le canal Dépôt, la configuration et Jira en fin de session |
