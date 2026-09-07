@@ -51,7 +51,6 @@ import {
   MOT_DE_PASSE_PROFIL,
   MOT_DE_PASSE_PROFIL_APRES,
   adresseMotDePasseProfil,
-  PROJETS_LARGEUR,
   adresseProfil,
   fichierSessionMotDePasse,
   fichierSessionProfil,
@@ -88,33 +87,43 @@ const MOT_DE_PASSE_APRES = MOT_DE_PASSE_PROFIL_APRES;
 test.describe.configure({ mode: "serial" });
 
 /**
- * Le decalage applique avant chaque appel a `/change-password`, LS-168.
+ * La largeur qui porte les deux tests de `/change-password`, LS-168.
  *
  * ------------------------------------------------------------------
- * POURQUOI IL EST NECESSAIRE, ET POURQUOI IL N'EST PAS UN REESSAI.
+ * POURQUOI CES DEUX TESTS NE TOURNENT PAS AUX TROIS LARGEURS.
  *
  * Ce fichier appelle `/change-password` DEUX fois, et les deux sont des mesures
  * irreductibles : le refus d'un mot de passe actuel faux, et le changement qui
- * ferme les autres sessions. Trois largeurs font donc SIX appels, quand le
- * plafond en accepte CINQ par minute et par IP, `src/lib/auth.ts`.
+ * ferme les autres sessions. Aux trois largeurs cela fait SIX appels par minute,
+ * quand le plafond en accepte CINQ par IP, `src/lib/auth.ts`.
  *
  * AUCUNE DES SIX NE PEUT ETRE SUPPRIMEE ni deplacee vers la preparation :
  * contrairement a l'ouverture d'une session, un changement de mot de passe est
  * l'objet meme de la mesure. Et le plafond ne peut pas etre releve, le critere 2
  * de la story l'interdit : ce qui change est l'environnement de test, jamais la
- * protection.
+ * protection. Better Auth compte par IP sans option par session, verifie via
+ * Context7.
  *
- * BETTER AUTH COMPTE PAR IP, sans option par session, verifie via Context7 : les
- * six appels partagent donc le meme compteur bien qu'ils visent six comptes
- * distincts.
+ * UN DECALAGE A ETE ESSAYE PUIS ECARTE. Decaler chaque largeur de 25 s ne
+ * changeait rien, les six appels restant dans la MEME fenetre glissante de 60 s,
+ * seulement etales : c'est le piege que cette story corrige par ailleurs, sous
+ * une autre forme. Le porter au-dela de la fenetre marchait, au prix de QUATRE
+ * MINUTES d'attente pure par execution, payees par la CI et le controle
+ * nocturne a chaque fois. Arbitrage de Christophe le 7 septembre 2026.
  *
- * LE DECALAGE EST DERIVE DU RANG DE LA LARGEUR, donc fixe et connu d'avance, et
- * il repartit les six appels sur deux fenetres. Ce n'est pas un reessai : il
- * n'attend pas APRES un echec, il empeche la collision AVANT qu'elle ait lieu,
- * et il ne depend d'aucune reponse du serveur.
+ * LE MOTIF EXISTE DEJA DANS LE DEPOT : LS-113 a limite
+ * `compte-reauthentification.spec.ts` a cette meme largeur, pour cette meme
+ * raison. 320 px est la largeur CONTRAIGNANTE du projet.
+ *
+ * CE QUE L'ON PERD est la mesure du formulaire de mot de passe en 390 et
+ * 1280 px. Son rendu reste couvert : les cinq autres tests de ce fichier
+ * tournent aux trois largeurs, dont « les trois formulaires sont presents et
+ * distincts », « le profil ne deborde pas horizontalement » et la verification
+ * axe-core. Ce qui est restreint est le COMPORTEMENT du changement, qui ne
+ * depend pas de la largeur.
  * ------------------------------------------------------------------
  */
-const DECALAGE_PAR_LARGEUR_MS = 25_000;
+const LARGEUR_CHANGEMENT_MOT_DE_PASSE = "mobile-320";
 
 let email: string;
 let cookies: Awaited<
@@ -172,30 +181,18 @@ async function connecter(page: import("@playwright/test").Page): Promise<void> {
 }
 
 /**
- * Decale cette largeur avant un appel a `/change-password`, voir
- * `DECALAGE_PAR_LARGEUR_MS`.
+ * Saute ce test hors de la largeur qui porte les appels a `/change-password`.
  *
- * LE RANG VIENT DE `PROJETS_LARGEUR`, donc de la meme source que les adresses :
- * une largeur ajoutee a la configuration sans y etre inscrite recevrait le rang
- * -1 et ne serait pas decalee. `scripts/verifier-fixtures-e2e.sh` confronte les
- * deux listes, ce qui ferme ce trou.
- *
- * LA PREMIERE LARGEUR N'ATTEND PAS, son rang valant zero : le decalage est
- * relatif, il n'ajoute pas une minute a la suite entiere.
+ * `test.skip` ET NON UNE SORTIE SILENCIEUSE : Playwright marque alors le test
+ * comme saute, avec sa raison, au lieu de le compter vert sans rien avoir
+ * mesure. Un test qui se desactive en silence affiche « aucun echec » pendant
+ * qu'il ne verifie rien.
  */
-async function decalerSelonLargeur(
-  page: import("@playwright/test").Page,
-  projet: string,
-): Promise<void> {
-  const rang = PROJETS_LARGEUR.indexOf(
-    projet as (typeof PROJETS_LARGEUR)[number],
+function seulementSurLaLargeurDeChangement(projet: string): void {
+  test.skip(
+    projet !== LARGEUR_CHANGEMENT_MOT_DE_PASSE,
+    `Les appels a /change-password sont limites a ${LARGEUR_CHANGEMENT_MOT_DE_PASSE}, plafond de cinq par minute et par IP, LS-168.`,
   );
-
-  if (rang <= 0) {
-    return;
-  }
-
-  await page.waitForTimeout(rang * DECALAGE_PAR_LARGEUR_MS);
 }
 
 /**
@@ -273,6 +270,8 @@ test("changer son nom annonce le succes et deplace le focus", async ({
 test("un mot de passe actuel faux est refuse sans rien changer", async ({
   page,
 }, infos) => {
+  seulementSurLaLargeurDeChangement(infos.project.name);
+
   /*
    * LE TEST NEGATIF, critere 3. Le message doit distinguer « actuel incorrect »
    * de « nouveau trop court » : les confondre ferait ressaisir l'ancien a
@@ -287,8 +286,6 @@ test("un mot de passe actuel faux est refuse sans rien changer", async ({
   const empreinteAvant = await releverEmpreinte(email);
 
   await page.goto("/compte/profil");
-
-  await decalerSelonLargeur(page, infos.project.name);
 
   await page.getByLabel("Mot de passe actuel").fill("mauvais-mot-pass");
   await page.getByLabel("Nouveau mot de passe").fill("autre-phrase-de1");
@@ -370,7 +367,7 @@ test("changer son mot de passe ferme les autres sessions", async ({
   page,
   browser,
 }, infos) => {
-  test.setTimeout(120_000);
+  seulementSurLaLargeurDeChangement(infos.project.name);
 
   const emailDedie = adresseMotDePasseProfil(infos.project.name);
 
@@ -422,8 +419,6 @@ test("changer son mot de passe ferme les autres sessions", async ({
   await expect(
     autrePage.getByRole("heading", { name: "Mon compte", exact: true }),
   ).toBeVisible();
-
-  await decalerSelonLargeur(page, infos.project.name);
 
   await page.goto("/compte/profil");
   await page.getByLabel("Mot de passe actuel").fill(MOT_DE_PASSE);
