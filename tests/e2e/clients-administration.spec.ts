@@ -188,6 +188,26 @@ test.describe("connectee en administration", () => {
   test("la recherche est serialisee dans l'URL et le retour la defait", async ({
     page,
   }) => {
+    /*
+     * CE TEST A SON PROPRE DELAI, LS-201, et c'est le seul du fichier.
+     *
+     * IL FAIT DEUX NAVIGATIONS COMPLETES, la recherche puis son annulation, et
+     * cet ecran porte un `loading.tsx` : chacune passe par un rendu serveur
+     * pendant lequel le squelette remplace le `<main>`. Sous la charge de la
+     * suite entiere, cinq travailleurs plus un serveur Next.js plus PostgreSQL,
+     * l'ensemble depassait les trente secondes par defaut.
+     *
+     * Mesure du 7 septembre 2026 : echec a `30,0 s` PILE, aux deux largeurs.
+     * Une valeur ronde de cette precision ne vient jamais d'une assertion
+     * fausse, elle nomme un delai atteint.
+     *
+     * LE DELAI DE TEST N'EST PAS CELUI DES ASSERTIONS. `expect.timeout` vaut
+     * quinze secondes depuis LS-201 et couvre chaque assertion prise a part ;
+     * celui-ci borne le test ENTIER, `waitForURL` compris, qui herite de lui.
+     * Elever le premier ne pouvait donc pas corriger cet echec-la.
+     */
+    test.setTimeout(90_000);
+
     await page.goto(ECRAN);
 
     await page.getByRole("searchbox").fill("zzz-aucun-client-zzz");

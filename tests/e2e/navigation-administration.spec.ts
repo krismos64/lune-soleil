@@ -342,23 +342,53 @@ test("la pastille des messages compte les messages réellement non lus", async (
   });
 
   const lien = barre.getByRole("link", { name: /^Messages/ });
-  const texteLien = (await lien.textContent()) ?? "";
-  const pastille = texteLien.match(/(\d+)/)?.[1];
 
   /*
-   * L'ECRAN DES MESSAGES MARQUE LES NON LUS. La pastille doit valoir leur
-   * nombre ; s'il n'y en a aucun, elle ne doit pas exister du tout, « 0 »
-   * n'etant pas une information.
+   * ------------------------------------------------------------------
+   * LES DEUX COMPTES SE LISENT ENSEMBLE, ET C'EST TOUTE LA CORRECTION, LS-201.
+   *
+   * LE DEFAUT ETAIT UNE COURSE, pas une pastille fausse. Ce test comparait deux
+   * valeurs venues de DEUX rendus serveur distincts : la pastille est calculee
+   * par le LAYOUT, `lireComptages`, et les badges « Nouveau » par la PAGE. Entre
+   * les deux lectures, un autre projet de largeur pouvait avoir change la liste.
+   *
+   * TROIS FICHIERS ECRIVENT DANS CETTE MEME LISTE pendant la suite :
+   * `administration-connectee:737` depose un message par le formulaire public
+   * puis le classe, aux trois largeurs, et `contact.spec.ts` en depose d'autres.
+   * Le test lisait donc un etat qui bougeait sous lui.
+   *
+   * Mesure du 7 septembre 2026 : echec en 192 ms et 219 ms, trop rapide pour un
+   * delai atteint, et sur une suite qui a tourne en 1,7 min au lieu de 4, donc
+   * sous une charge machine bien plus forte.
+   *
+   * `Promise.all` LIT LES DEUX DANS LE MEME RENDU. Les deux valeurs viennent
+   * alors du meme instant, et une ecriture concurrente les deplace TOUTES LES
+   * DEUX au lieu d'en decaler une seule.
+   *
+   * CE N'EST PAS UN CONTOURNEMENT, et la nuance compte : le test verifie
+   * toujours que la pastille dit la verite sur ce qui est affiche, ce qui est
+   * exactement son critere. Ce qui change est qu'il ne compare plus deux
+   * photographies prises a des instants differents.
+   * ------------------------------------------------------------------
    */
-  const nonLus = await page
-    .getByRole("main")
-    .getByText("Nouveau", { exact: true })
-    .count();
+  const [texteLien, nonLus] = await Promise.all([
+    lien.textContent(),
+    page.getByRole("main").getByText("Nouveau", { exact: true }).count(),
+  ]);
 
+  const pastille = (texteLien ?? "").match(/(\d+)/)?.[1];
+
+  /*
+   * LA PASTILLE DOIT VALOIR LE NOMBRE DE NON LUS ; s'il n'y en a aucun, elle ne
+   * doit pas exister du tout, « 0 » n'etant pas une information.
+   */
   if (nonLus === 0) {
     expect(pastille).toBeUndefined();
   } else {
-    expect(Number(pastille)).toBe(nonLus);
+    expect(
+      Number(pastille),
+      `Pastille « ${pastille} » pour ${nonLus} messages non lus affiches.`,
+    ).toBe(nonLus);
   }
 });
 

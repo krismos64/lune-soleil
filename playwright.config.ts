@@ -30,6 +30,47 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? "github" : "list",
 
+  /*
+   * LE DELAI D'ASSERTION, LS-201, et pourquoi il ne suffisait pas.
+   *
+   * Playwright reessaie chaque assertion pendant CINQ secondes par defaut,
+   * verifie via Context7. Ce delai est independant de celui du test, trente
+   * secondes, et c'est la confusion des deux qui a rendu ces echecs illisibles.
+   *
+   * ------------------------------------------------------------------
+   * CE QUE LA MESURE A MONTRE, le 7 septembre 2026 sur la suite complete.
+   *
+   * Cinq tests d'administration echouaient sous charge et passaient tous en
+   * isolation. Leurs durees nomment le plafond atteint :
+   *
+   *   5,5 s / 5,3 s / 8,9 s   delai d'ASSERTION, cinq secondes
+   *   30,0 s                  delai de TEST, sur un `waitForURL`
+   *
+   * TOUS VISENT UN ETAT QUI SUIT UN ALLER-RETOUR SERVEUR : une Server Action
+   * avec `revalidatePath`, ou une navigation dont le `loading.tsx` remplace le
+   * `<main>` le temps du rendu. Cinq secondes suffisent sur une machine au
+   * repos ; elles ne suffisent plus quand cinq travailleurs Playwright, un
+   * serveur Next.js et PostgreSQL se partagent le processeur.
+   *
+   * LA MEME SUITE A TOURNE EN 1,7 MIN AU LIEU DE 4 ce jour-la, donc sous une
+   * charge machine bien plus forte : c'est ce qui a rendu le defaut visible.
+   * ------------------------------------------------------------------
+   *
+   * CE N'EST PAS UNE ATTENTE AJOUTEE, et la distinction compte. Un
+   * `waitForTimeout` fait perdre son delai a CHAQUE execution, qu'il soit
+   * necessaire ou non. Un delai d'assertion est un PLAFOND : l'assertion rend
+   * la main des que la condition est vraie, donc en quelques millisecondes dans
+   * le cas nominal. Elever le plafond ne ralentit pas une suite qui passe, il
+   * evite seulement de declarer un echec sur une lenteur.
+   *
+   * QUINZE SECONDES, ET NON TRENTE : au-dela, l'echec d'un test reellement
+   * casse deviendrait long a obtenir, et le delai de test de trente secondes
+   * serait atteint le premier, ce qui rendrait un message moins precis.
+   */
+  expect: {
+    timeout: 15_000,
+  },
+
   use: {
     baseURL: URL_BASE,
     trace: "on-first-retry",
