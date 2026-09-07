@@ -63,6 +63,21 @@ import {
  * et une lecture differee ne verrait rien. La contrepartie est qu'un changement
  * de valeur demande une reconstruction, ce qui est le cas de toute variable
  * publique de Next.js.
+ *
+ * ELLE ATTEINT LA CONSTRUCTION DE L'IMAGE DEPUIS LS-197, par un `ARG` du
+ * Dockerfile repris en `ENV`. Avant cela, tout `docker build` figeait le repli
+ * `/medias` dans le bundle servi, et une valeur posee dans l'environnement du
+ * conteneur n'avait AUCUN effet : le jour ou un CDN aurait servi les medias, les
+ * images auraient continue de pointer `/medias` sans qu'aucune ligne de journal
+ * ne le dise.
+ *
+ * DEUX FORMES SONT NORMALES DANS LE BUNDLE, mesurees en LS-197. Valeur definie a
+ * la construction, Next.js l'inline dans un litteral de gabarit ; valeur absente,
+ * il laisse l'expression entiere ci-dessous et c'est le `??` qui s'applique dans
+ * le navigateur, ou `process.env` est vide.
+ *
+ * `scripts/verifier-prefixe-medias.sh` confronte le bundle CONSTRUIT a la valeur
+ * configuree, ce qu'aucun test de forme d'URL ne peut faire.
  */
 const PREFIXE = process.env.NEXT_PUBLIC_MEDIA_PREFIXE ?? "/medias";
 
