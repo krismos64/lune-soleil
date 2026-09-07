@@ -518,6 +518,35 @@ export function fichierSessionProfil(projet: string): string {
 }
 
 /**
+ * Les DEUX etats de session du compte dedie au changement de mot de passe,
+ * LS-168.
+ *
+ * ------------------------------------------------------------------
+ * POURQUOI DEUX, ET POURQUOI ILS SONT POSES PAR LA PREPARATION.
+ *
+ * Le test « changer son mot de passe ferme les autres sessions » a besoin de
+ * deux sessions REELLEMENT distinctes sur le meme compte : le changement doit
+ * en faire tomber une et laisser l'autre. Partager un cookie entre les deux
+ * contextes les ferait tomber ENSEMBLE, et la mesure ne dirait plus rien.
+ *
+ * DEUX OUVERTURES PAR LARGEUR FONT SIX APPELS pour les cinq places par minute
+ * de `/sign-in/email`. Les serialiser dans le fichier ne suffit pas : les trois
+ * largeurs atteignent ce test EN MEME TEMPS, `describe.serial` n'ordonnant que
+ * les tests d'un meme projet. Mesure du 7 septembre 2026, trois echecs en 74 ms
+ * sur la premiere des deux connexions.
+ *
+ * LA PREPARATION LES POSE DONC, elle qui est sequentielle : six ouvertures y
+ * sont espacees dans le temps, et n'ont lieu qu'a la premiere execution.
+ * ------------------------------------------------------------------
+ *
+ * `rang` VAUT 1 OU 2. La session 1 est celle qui doit SURVIVRE, celle depuis
+ * laquelle le changement est fait ; la session 2 est celle qui doit TOMBER.
+ */
+export function fichierSessionMotDePasse(projet: string, rang: 1 | 2): string {
+  return `tests/e2e/.session-motdepasse-${projet}-${rang}.json`;
+}
+
+/**
  * Le mot de passe du compte verifie, partage par la preparation et les tests.
  *
  * CONSTRUIT ET NON ECRIT EN CLAIR depuis LS-168, meme motif que
