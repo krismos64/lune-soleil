@@ -765,6 +765,40 @@ jobs:
 
       # Textuel, aucune base ni conteneur requis.
       #
+      # `--exemple-seul` PARCE QUE LA CHAINE N'A PAS DE `.env` et n'en aura
+      # jamais : le fichier n'est pas commite et ne doit pas l'etre. Ce mode ne
+      # verifie que la coherence de `.env.example`, qui est versionne, et il
+      # ANNONCE ce qu'il n'a pas pu verifier plutot que de conclure au vert.
+      #
+      # CE QU'IL GARDE : un marqueur `@facultative` pose sans raison, LS-156.
+      # Rendre une variable optionnelle demande alors un geste ET sa
+      # justification ; sans ce sens, la liste des facultatives grossirait sans
+      # que rien ne l'interroge, et une variable requise deviendrait optionnelle
+      # d'un trait de plume.
+      #
+      # LE CONTROLE COMPLET RESTE UN OUTIL DE POSTE, presence, forme, doublons,
+      # concordance du secret de webhook et processus exposes. Il a trouve deux
+      # defauts reels le jour de son ecriture, dont un secret de webhook
+      # indiscernable a l'oeil du bon.
+      - name: 6t. Le fichier .env.example est coherent
+        run: ./scripts/verifier-environnement.sh --exemple-seul
+
+      # Textuel, aucune base ni conteneur requis.
+      #
+      # CE QU'IL GARDE : le refus, par le hook de secrets, d'une commande
+      # portant une VALEUR de secret en argument, LS-156 critere 6. Une valeur
+      # passee en argument est lisible par tout `ps` de la machine, et elle est
+      # deja ressortie une fois dans une sortie de `pgrep`, le 31 aout 2026.
+      #
+      # IL VERIFIE LES DEUX SENS, et c'est la moitie qui compte : un hook qui
+      # refuse tout serait « sur » et se ferait desactiver a la premiere gene.
+      # Cinq commandes legitimes doivent passer, cinq fuites doivent etre
+      # refusees.
+      - name: 6u. Le hook refuse un secret passe en argument
+        run: ./scripts/verifier-hook-secret-argument.sh
+
+      # Textuel, aucune base ni conteneur requis.
+      #
       # CE QU'IL GARDE : le generateur des medias de test, LS-187. Il recopie
       # les chemins de la fixture et les declinaisons d'ADR-007, faute de
       # pouvoir les importer : il tourne AVANT `next build`, hors du contexte de
