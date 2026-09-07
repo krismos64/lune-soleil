@@ -100,13 +100,41 @@ fi
 # régime établi : c'est l'inverse du réessai qui attend APRÈS avoir échoué, à
 # chaque exécution. Centraliser l'attente là est précisément ce qui permet de
 # l'interdire partout ailleurs.
-EXEMPTES='connexion-administration\.spec\.ts|inscription-espacee\.ts'
+# La troisième est `compte-profil.spec.ts`, LS-168. Il appelle
+# `/change-password` deux fois, et les deux sont des mesures irréductibles : le
+# refus d'un mot de passe actuel faux, et le changement qui ferme les autres
+# sessions. Trois largeurs font six appels pour cinq places par minute, et
+# Better Auth compte par IP sans option par session (vérifié via Context7). Son
+# décalage est dérivé du rang de la largeur, donc fixe et connu d'avance : il
+# empêche la collision AVANT qu'elle ait lieu, au lieu d'attendre après un
+# échec.
+EXEMPTES='connexion-administration\.spec\.ts|inscription-espacee\.ts|compte-profil\.spec\.ts'
 
-attentes=$(grep -rnE 'waitForTimeout\(\s*[0-9]{2,}_?[0-9]*\s*\)' "$DOSSIER" \
+# ---------------------------------------------------------------------------
+# LES DEUX FORMES SONT CHERCHÉES, littérale ET calculée.
+#
+# La première version ne reconnaissait qu'un nombre écrit en clair,
+# `waitForTimeout(21_000)`. Elle est restée VERTE sur
+# `waitForTimeout(rang * DECALAGE_PAR_LARGEUR_MS)`, une attente de 25 à 50
+# secondes : l'argument étant une expression, aucun chiffre n'apparaissait.
+#
+# Mesuré le 7 septembre 2026 en écrivant ce décalage. Un contrôle qui ne voit
+# que la forme qu'il a servi à corriger ne protège que le passé.
+#
+# UNE ATTENTE CALCULÉE COMPTE DONC COMME LONGUE, sans chercher à évaluer sa
+# valeur : un script textuel ne peut pas la connaître, et la supposer courte
+# serait exactement l'erreur à éviter. Elle doit être exemptée nommément, ce qui
+# oblige à écrire pourquoi.
+# ---------------------------------------------------------------------------
+attentes=$(grep -rnE 'waitForTimeout\(' "$DOSSIER" \
   --include='*.ts' \
   | grep -vE "$EXEMPTES" \
   | awk -F'waitForTimeout\\(' '{
-      valeur = $2
+      argument = $2
+      # Un argument sans aucun chiffre est une expression : on ne peut pas
+      # l évaluer, donc on la signale.
+      if (argument !~ /[0-9]/) { print $0; next }
+      valeur = argument
       gsub(/[^0-9]/, "", valeur)
       if (valeur + 0 >= 10000) print $0
     }' || true)
@@ -130,7 +158,7 @@ fi
 # couvrir ce qu'il croit couvrir. Motif « contrôle de mutation mort » déjà en
 # fiche sur ce dépôt, où un chemin périmé arrêtait le script avant sa mesure.
 # ---------------------------------------------------------------------------
-for exempte in connexion-administration.spec.ts inscription-espacee.ts; do
+for exempte in connexion-administration.spec.ts inscription-espacee.ts compte-profil.spec.ts; do
   if [ ! -f "$DOSSIER/$exempte" ]; then
     echo "ÉCHEC : l'exemption vise $exempte, qui n'existe plus."
     echo "Retirer l'exemption devenue sans objet, ou corriger le chemin."
