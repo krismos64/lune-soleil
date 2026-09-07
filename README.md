@@ -38,8 +38,9 @@ Comptes **relevés dans Jira** le 3 septembre 2026 en fin de session, jamais
 recopiés de mémoire : un chiffre écrit à la main se périme sans bruit, et
 ce tableau a déjà annoncé l'état du 27 août plusieurs jours de trop.
 
-**135 tickets terminés sur 192, soit 70 %**, relevés dans Jira le 7 septembre
-2026 après la fermeture de LS-168, LS-201, LS-179, LS-156, puis LS-143 et LS-161.
+**136 tickets terminés sur 192, soit 71 %**, relevés dans Jira le 7 septembre
+2026 après la fermeture de LS-168, LS-201, LS-179, LS-156, puis LS-143, LS-161
+et LS-202.
 Le total est passé de 180 à
 192 tickets depuis le relevé précédent, LS-202 comprise, créée en livrant : le dénominateur bouge autant que le numérateur, et un pourcentage
 qui progresse peut recouvrir un périmètre qui s'élargit.
