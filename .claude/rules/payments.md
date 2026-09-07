@@ -193,6 +193,31 @@ base.
 
 Une facture existante est renvoyée, jamais recréée.
 
+### F10, un avoir issu d'une rétractation référence sa demande
+
+`Avoir.demandeRetractationId` est renseigné par le service qui traite la
+demande, et **nul pour un geste commercial** décidé depuis l'écran de commande.
+Le champ est facultatif sur toute la chaîne d'émission, de
+`rembourserRetractation` jusqu'à `ecrireAvoir` : l'exiger casserait le
+remboursement commercial, qui n'a aucune demande derrière lui.
+
+**L'identifiant vient de l'appelant, jamais d'une dérivation.** Une facture peut
+porter plusieurs avoirs, un remboursement commercial puis une rétractation :
+lire « l'avoir de cette facture » afficherait le mauvais document. C'est le
+service qui traite la demande qui sait lequel il vient d'émettre.
+
+**La règle était écrite et inappliquée.** Posée au modèle conceptuel dès LS-49,
+la colonne existait au schéma et n'a jamais été écrite jusqu'à LS-174 : LS-135
+n'avait pas eu à l'afficher, LS-128 émettait l'avoir sans connaître la demande.
+Le numéro du document qui corrige la facture n'était donc lisible qu'une fois,
+dans la région live suivant le remboursement, et disparaissait au premier
+rechargement. Motif connu de ce dépôt, une règle qu'aucun contrôle n'exerce ne
+tient pas.
+
+**Ce qui la garde désormais** : deux tests d'intégration, dont un test négatif
+sur une demande non remboursée, et deux mutations qui portent sur des lignes de
+défense distinctes, l'écriture du lien et sa lecture.
+
 ### Le rendu PDF, ADR-034
 
 `Facture.cheminPdf` et `Avoir.cheminPdf` sont **nullables, et c'est le mécanisme

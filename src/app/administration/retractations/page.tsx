@@ -239,11 +239,19 @@ export default async function PageRetractations() {
                    * l'atteste. Les separer en deux lignes ferait lire deux
                    * informations sans rapport.
                    *
-                   * RIEN NE S'AFFICHE SANS AVOIR, critere 3, et ce cas existe
-                   * pour de bon : un remboursement dont l'avoir a echoue laisse
-                   * une alerte `AVOIR_NON_EMIS`, l'argent etant parti sans
-                   * document. Ecrire « Avoir : » suivi de rien laisserait croire
-                   * a un defaut d'affichage.
+                   * RIEN NE S'AFFICHE SANS AVOIR, critere 3 : ecrire « Avoir : »
+                   * suivi de rien laisserait croire a un defaut d'affichage.
+                   *
+                   * CE N'EST PAS LE CAS `AVOIR_NON_EMIS`, contrairement a ce que
+                   * ce commentaire a d'abord affirme. Quand l'emission echoue,
+                   * `avoir.ts` leve apres avoir pose l'alerte, donc
+                   * `appliquerTransition` n'est jamais atteint et
+                   * `montantRembourseCentimes` reste nul : c'est le bloc ENTIER
+                   * ci-dessus qui ne s'affiche pas, pas seulement le numero.
+                   * Releve par `ls-frontend-revue` le 7 septembre 2026, et
+                   * signale comme defaut a ticketer : l'argent est parti, la
+                   * carte n'en montre rien, et les boutons de remboursement
+                   * restent offerts.
                    * ------------------------------------------------------------
                    */}
                   {demande.numeroAvoir === null ? null : (
@@ -267,6 +275,18 @@ export default async function PageRetractations() {
                           href={`/administration/factures/${demande.avoirId}`}
                         >
                           Avoir {demande.numeroAvoir}
+                          {/*
+                           * LA NATURE DE LA CIBLE ENTRE DANS LE NOM ACCESSIBLE,
+                           * WCAG 2.4.4, meme choix que `.telecharger` de l'ecran
+                           * des factures. « Avoir A-2026-0001 » nomme un OBJET :
+                           * qui liste les liens de la page entend une reference
+                           * comptable sans savoir si elle ouvre une page, un
+                           * fichier ou une action. L'ajout est invisible a
+                           * l'oeil, le numero restant seul a l'ecran.
+                           */}
+                          <span className={styles.invisible}>
+                            , télécharger le PDF
+                          </span>
                         </a>
                       ) : (
                         /*
@@ -275,7 +295,21 @@ export default async function PageRetractations() {
                          * devant une reclamation, le fichier vient apres.
                          */
                         <span className={styles.avoirSansPdf}>
-                          Avoir {demande.numeroAvoir}, PDF indisponible
+                          {/*
+                           * LE TEXTE DIT QUOI FAIRE, motif de l'ecran des
+                           * factures : « PDF indisponible » seul laisserait
+                           * croire a une perte definitive, alors que la
+                           * generation se relance depuis la commande.
+                           *
+                           * IL EST PLUS COURT QUE CELUI DES FACTURES, et c'est
+                           * mesure : la phrase complete de cet ecran-la porte le
+                           * numero de facture et fait passer ce bloc de 70 a
+                           * 128 px a 320 px, sur une carte deja dense. Le numero
+                           * de commande est ici dans le titre de la carte, donc
+                           * « depuis la commande » suffit a designer l'ecran.
+                           */}
+                          Avoir {demande.numeroAvoir}, PDF à regénérer depuis la
+                          commande
                         </span>
                       )}
                     </>

@@ -338,11 +338,27 @@ test.describe("le numéro d'avoir survit au rechargement, LS-174", () => {
 
     const carte = carteDemande(page);
 
+    /*
+     * LE NOM EST CHERCHE PAR MOTIF, jamais par egalite : il porte la NATURE de
+     * la cible en plus du numero, « Avoir A-TEST-0174, télécharger le PDF »,
+     * WCAG 2.4.4. Une egalite stricte se casserait au premier ajustement de
+     * cette mention sans qu'aucun defaut reel n'existe.
+     */
     const lien = carte.getByRole("link", {
-      name: `Avoir ${DEMANDE_AVEC_AVOIR.numeroAvoir}`,
+      name: new RegExp(`Avoir ${DEMANDE_AVEC_AVOIR.numeroAvoir}`),
     });
 
     await expect(lien).toBeVisible();
+
+    /*
+     * LA DESTINATION EST DANS LE NOM, assertion a part : sans elle, le motif
+     * ci-dessus resterait vert si la mention disparaissait, et le lien
+     * s'annoncerait a nouveau comme une simple reference comptable. « Avoir
+     * A-2026-0001 » nomme un OBJET, pas une destination : qui liste les liens
+     * de la page n'apprendrait pas qu'il telecharge un fichier. Meme choix que
+     * `.telecharger` de l'ecran des factures, releve par `ls-frontend-revue`.
+     */
+    await expect(lien).toHaveAccessibleName(/télécharger le PDF/);
 
     /*
      * LA CIBLE EST LA ROUTE D'ADMINISTRATION, jamais celle de l'espace client :
@@ -391,8 +407,24 @@ test.describe("le numéro d'avoir survit au rechargement, LS-174", () => {
 
       await expect(
         carte.getByText(
-          `Avoir ${DEMANDE_AVEC_AVOIR.numeroAvoir}, PDF indisponible`,
+          `Avoir ${DEMANDE_AVEC_AVOIR.numeroAvoir}, PDF à regénérer depuis la commande`,
         ),
+      ).toBeVisible();
+
+      /*
+       * LE TEXTE DIT QUOI FAIRE, et non seulement que le PDF manque : « PDF
+       * indisponible » seul laisserait croire a une perte definitive, alors que
+       * la generation se relance depuis la commande. Motif ecrit par l'ecran des
+       * factures, que ma premiere version avait recopie a moitie.
+       */
+      /*
+       * LE TEXTE DIT QUOI FAIRE, assertion a part : « PDF indisponible » seul
+       * laisserait croire a une perte definitive, alors que la generation se
+       * relance depuis la commande. Sans cette assertion, revenir au texte
+       * ampute ne ferait rougir personne.
+       */
+      await expect(
+        carte.getByText(/à regénérer depuis la commande/),
       ).toBeVisible();
 
       /*
@@ -423,9 +455,15 @@ test.describe("le numéro d'avoir survit au rechargement, LS-174", () => {
    * CRITERE 3, une demande sans avoir n'affiche RIEN de plus.
    *
    * Un libelle vide, « Avoir : » suivi de rien, ferait croire a un defaut
-   * d'affichage sur l'ecran le plus consulte en cas de litige. Ce cas EXISTE pour
-   * de bon : un remboursement dont l'emission de l'avoir a echoue laisse une
-   * alerte `AVOIR_NON_EMIS`, l'argent etant parti sans document.
+   * d'affichage sur l'ecran le plus consulte en cas de litige.
+   *
+   * CE N'EST PAS LE CAS `AVOIR_NON_EMIS`, contrairement a ce que ce commentaire
+   * a d'abord affirme : quand l'emission echoue, `avoir.ts` leve apres avoir
+   * pose l'alerte, donc `montantRembourseCentimes` reste nul et le bloc ENTIER
+   * disparait. L'etat exerce ici est celui d'un remboursement dont l'avoir n'est
+   * PAS rattache, que le service ne produit pas aujourd'hui : ce test garde la
+   * branche d'affichage, il ne reproduit pas un etat metier. Releve par
+   * `ls-frontend-revue` le 7 septembre 2026.
    *
    * L'AVOIR EST RETIRE LE TEMPS DU TEST plutot que de viser une autre demande :
    * celles que `compte-retractation.spec.ts` depose ne sont pas garanties
