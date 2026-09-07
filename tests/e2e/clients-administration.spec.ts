@@ -255,11 +255,35 @@ test.describe("connectee en administration", () => {
      * `waitForURL` nomme ce que ce test verifie et attend la stabilisation. Le
      * champ est alors revenu, et sa valeur se lit sur un etat reel.
      */
-    await Promise.all([
-      page.waitForURL(/\/administration\/clients$/),
-      page.getByRole("link", { name: "Afficher tous les comptes" }).click(),
-    ]);
+    await page.getByRole("link", { name: "Afficher tous les comptes" }).click();
 
+    /*
+     * ------------------------------------------------------------------
+     * L'ATTENTE PORTE SUR L'ETAT VISE, PAS SUR LA FORME DE L'URL, LS-201.
+     *
+     * La version precedente attendait `waitForURL(/\/administration\/clients$/)`
+     * dans un `Promise.all` avec le clic. Ce motif exige une URL se TERMINANT
+     * exactement la : il refuse un `?` residuel, que Next.js peut laisser en
+     * remplacant l'historique sur un `<Link>` vers la meme route.
+     *
+     * Mesure du 7 septembre 2026 : echec a 30,0 s pile sous charge, puis a
+     * 1,5 min apres avoir eleve le delai du test. Une attente qui ne se
+     * satisfait pas d'un delai DOUBLE n'est pas lente, elle attend une
+     * condition qui n'arrive jamais.
+     *
+     * `toHaveURL` AVEC LE MEME MOTIF ASSOUPLI dit ce que le test verifie
+     * vraiment : le parametre `recherche` a disparu. Il reessaie jusqu'au delai
+     * d'assertion au lieu de bloquer le test entier, et son message d'echec
+     * porte l'URL reellement obtenue, ce que `waitForURL` ne donne pas.
+     * ------------------------------------------------------------------
+     */
+    await expect(page).toHaveURL(/\/administration\/clients(\?)?$/);
+
+    /*
+     * LE CHAMP EST RELU APRES la stabilisation de l'URL. `loading.tsx` retire
+     * le `searchbox` du DOM pendant la navigation : l'assertion porterait sinon
+     * sur un element absent, motif documente par LS-199.
+     */
     await expect(page.getByRole("searchbox")).toHaveValue("");
   });
 

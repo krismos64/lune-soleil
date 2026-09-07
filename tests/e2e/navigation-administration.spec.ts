@@ -382,13 +382,23 @@ test("la pastille des messages compte les messages réellement non lus", async (
    * LA PASTILLE DOIT VALOIR LE NOMBRE DE NON LUS ; s'il n'y en a aucun, elle ne
    * doit pas exister du tout, « 0 » n'etant pas une information.
    */
+  /*
+   * LES SUJETS AFFICHES ENTRENT DANS LE MESSAGE D'ECHEC, LS-201. Un ecart entre
+   * deux nombres ne dit pas QUELS messages ont bouge : sur un defaut qui ne se
+   * reproduit que sous charge, le rapport est la seule trace exploitable.
+   */
+  const sujets = await page
+    .getByRole("main")
+    .locator("li")
+    .filter({ hasText: "Nouveau" })
+    .allInnerTexts();
+
+  const detail = `Pastille « ${pastille ?? "absente"} » pour ${nonLus} affiches. Sujets non lus : ${JSON.stringify(sujets.map((s) => s.split("\n")[0]))}`;
+
   if (nonLus === 0) {
-    expect(pastille).toBeUndefined();
+    expect(pastille, detail).toBeUndefined();
   } else {
-    expect(
-      Number(pastille),
-      `Pastille « ${pastille} » pour ${nonLus} messages non lus affiches.`,
-    ).toBe(nonLus);
+    expect(Number(pastille), detail).toBe(nonLus);
   }
 });
 
