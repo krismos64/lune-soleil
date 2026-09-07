@@ -51,6 +51,7 @@ import {
   MOT_DE_PASSE_PROFIL,
   MOT_DE_PASSE_PROFIL_APRES,
   adresseMotDePasseProfil,
+  PROJETS_LARGEUR,
   adresseProfil,
   fichierSessionMotDePasse,
   fichierSessionProfil,
@@ -85,6 +86,35 @@ const MOT_DE_PASSE_APRES = MOT_DE_PASSE_PROFIL_APRES;
  * connecter s'ils tournaient en parallele.
  */
 test.describe.configure({ mode: "serial" });
+
+/**
+ * Le decalage applique avant chaque appel a `/change-password`, LS-168.
+ *
+ * ------------------------------------------------------------------
+ * POURQUOI IL EST NECESSAIRE, ET POURQUOI IL N'EST PAS UN REESSAI.
+ *
+ * Ce fichier appelle `/change-password` DEUX fois, et les deux sont des mesures
+ * irreductibles : le refus d'un mot de passe actuel faux, et le changement qui
+ * ferme les autres sessions. Trois largeurs font donc SIX appels, quand le
+ * plafond en accepte CINQ par minute et par IP, `src/lib/auth.ts`.
+ *
+ * AUCUNE DES SIX NE PEUT ETRE SUPPRIMEE ni deplacee vers la preparation :
+ * contrairement a l'ouverture d'une session, un changement de mot de passe est
+ * l'objet meme de la mesure. Et le plafond ne peut pas etre releve, le critere 2
+ * de la story l'interdit : ce qui change est l'environnement de test, jamais la
+ * protection.
+ *
+ * BETTER AUTH COMPTE PAR IP, sans option par session, verifie via Context7 : les
+ * six appels partagent donc le meme compteur bien qu'ils visent six comptes
+ * distincts.
+ *
+ * LE DECALAGE EST DERIVE DU RANG DE LA LARGEUR, donc fixe et connu d'avance, et
+ * il repartit les six appels sur deux fenetres. Ce n'est pas un reessai : il
+ * n'attend pas APRES un echec, il empeche la collision AVANT qu'elle ait lieu,
+ * et il ne depend d'aucune reponse du serveur.
+ * ------------------------------------------------------------------
+ */
+const DECALAGE_PAR_LARGEUR_MS = 25_000;
 
 let email: string;
 let cookies: Awaited<
@@ -139,6 +169,33 @@ test.setTimeout(120_000);
  */
 async function connecter(page: import("@playwright/test").Page): Promise<void> {
   await page.context().addCookies(cookies);
+}
+
+/**
+ * Decale cette largeur avant un appel a `/change-password`, voir
+ * `DECALAGE_PAR_LARGEUR_MS`.
+ *
+ * LE RANG VIENT DE `PROJETS_LARGEUR`, donc de la meme source que les adresses :
+ * une largeur ajoutee a la configuration sans y etre inscrite recevrait le rang
+ * -1 et ne serait pas decalee. `scripts/verifier-fixtures-e2e.sh` confronte les
+ * deux listes, ce qui ferme ce trou.
+ *
+ * LA PREMIERE LARGEUR N'ATTEND PAS, son rang valant zero : le decalage est
+ * relatif, il n'ajoute pas une minute a la suite entiere.
+ */
+async function decalerSelonLargeur(
+  page: import("@playwright/test").Page,
+  projet: string,
+): Promise<void> {
+  const rang = PROJETS_LARGEUR.indexOf(
+    projet as (typeof PROJETS_LARGEUR)[number],
+  );
+
+  if (rang <= 0) {
+    return;
+  }
+
+  await page.waitForTimeout(rang * DECALAGE_PAR_LARGEUR_MS);
 }
 
 /**
@@ -215,7 +272,7 @@ test("changer son nom annonce le succes et deplace le focus", async ({
 
 test("un mot de passe actuel faux est refuse sans rien changer", async ({
   page,
-}) => {
+}, infos) => {
   /*
    * LE TEST NEGATIF, critere 3. Le message doit distinguer « actuel incorrect »
    * de « nouveau trop court » : les confondre ferait ressaisir l'ancien a
@@ -230,6 +287,8 @@ test("un mot de passe actuel faux est refuse sans rien changer", async ({
   const empreinteAvant = await releverEmpreinte(email);
 
   await page.goto("/compte/profil");
+
+  await decalerSelonLargeur(page, infos.project.name);
 
   await page.getByLabel("Mot de passe actuel").fill("mauvais-mot-pass");
   await page.getByLabel("Nouveau mot de passe").fill("autre-phrase-de1");
@@ -363,6 +422,8 @@ test("changer son mot de passe ferme les autres sessions", async ({
   await expect(
     autrePage.getByRole("heading", { name: "Mon compte", exact: true }),
   ).toBeVisible();
+
+  await decalerSelonLargeur(page, infos.project.name);
 
   await page.goto("/compte/profil");
   await page.getByLabel("Mot de passe actuel").fill(MOT_DE_PASSE);

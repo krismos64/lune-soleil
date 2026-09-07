@@ -133,6 +133,27 @@ fi
 git checkout -- "$CIBLE_AIDE"
 
 # ---------------------------------------------------------------------------
+# MUTATION 5 : une attente CALCULÉE, dont la valeur n'apparaît nulle part.
+#
+# C'est l'angle mort trouvé le 7 septembre 2026 : le contrôle ne reconnaissait
+# qu'un nombre écrit en clair, et restait vert sur
+# `waitForTimeout(rang * DECALAGE_MS)`, une attente de 25 à 50 secondes.
+#
+# LA MUTATION N'ÉCRIT AUCUN CHIFFRE, sans quoi elle serait attrapée par l'autre
+# moitié du contrôle et ne prouverait pas ce qu'elle prétend.
+# ---------------------------------------------------------------------------
+printf '\nconst DELAI_MUTANT = 30_000;\nasync function attenteMutante(p: { waitForTimeout: (n: number) => Promise<void> }) {\n  await p.waitForTimeout(DELAI_MUTANT);\n}\nvoid attenteMutante;\n' >> "$CIBLE"
+
+if "$CONTROLE" > /dev/null 2>&1; then
+  echo "ÉCHEC mutation 5 : le contrôle reste VERT sur une attente calculée."
+  ko=1
+else
+  echo "OK mutation 5 : attente par constante nommée -> le contrôle rougit."
+fi
+
+restaurer
+
+# ---------------------------------------------------------------------------
 # CONTRÔLE DE RETOUR. La restauration a-t-elle vraiment eu lieu ? Un fichier
 # resté muté ferait passer la suite entière pour cassée à la prochaine
 # exécution, motif « mutation non restaurée » déjà en fiche.
