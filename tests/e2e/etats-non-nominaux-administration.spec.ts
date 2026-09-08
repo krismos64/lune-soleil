@@ -245,6 +245,26 @@ test.describe("etats non nominaux de l'administration", () => {
     await page.getByRole("button", { name: `Supprimer ${nom}` }).click();
 
     /*
+     * LE SUCCES SERVEUR D'ABORD, LA DISPARITION ENSUITE, ET L'ORDRE COMPTE.
+     *
+     * LA CREATION SUIT DEJA CE MOTIF vingt lignes plus haut, la suppression
+     * etait le seul geste du fichier a en manquer. Sans cette attente
+     * intermediaire, l'assertion suivante court apres un aller-retour serveur
+     * complet : re-rendu de la page `force-dynamic`, PLUS celui du layout et de
+     * ses neuf comptages.
+     *
+     * ELLE NE RALENTIT RIEN dans le cas nominal, une assertion rendant la main
+     * des que sa condition est vraie. Elle SEPARE en revanche deux causes
+     * d'echec que la version precedente confondait : « le serveur n'a pas
+     * repondu » et « la liste ne s'est pas rafraichie ».
+     */
+    await expect(
+      page
+        .getByRole("status")
+        .filter({ hasText: `Catégorie ${nom} supprimée.` }),
+    ).toBeVisible();
+
+    /*
      * LA LIGNE DE LISTE EST VISEE, ET NON LE TEXTE NU. Le message de succes de
      * la suppression REPREND le nom de la categorie, « Catégorie X supprimée » :
      * un `getByText(nom)` le trouverait et l'assertion echouerait sur une
