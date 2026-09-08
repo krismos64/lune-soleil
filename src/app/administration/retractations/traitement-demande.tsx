@@ -405,7 +405,32 @@ export function TraitementDemande({
       )}
 
       {etatPieceConstate ? null : (
-        <div className={styles.groupe}>
+        <details className={styles.detail}>
+          {/*
+           * LE BLOC EST REPLIE, ET C'EST UNE DECISION DE PERFORMANCE MESUREE,
+           * arbitrage de Christophe du 8 septembre 2026.
+           *
+           * ------------------------------------------------------------------
+           * IL EST RENDU UNE FOIS PAR DEMANDE, et la liste plafonne a cent :
+           * une liste deroulante, un champ, un texte d'aide et un bouton,
+           * multiplies par le nombre de demandes affichees.
+           *
+           * MESURE DU 8 SEPTEMBRE 2026 : deploye, il rendait instable un test
+           * de bout en bout VOISIN, sur l'ecran des categories, qui echouait
+           * environ une fois sur trois sur cette branche contre zero fois sur
+           * huit sur `main`. Le bloc neutralise, six passes vertes a une charge
+           * machine SUPERIEURE : c'est ce qui a isole la cause.
+           *
+           * `<details>` NE REND SON CONTENU QU'A L'OUVERTURE, donc le cout
+           * n'est paye que sur la demande reellement traitee. C'est la
+           * convention du bloc de refus quelques lignes plus bas, et elle ne
+           * ferme aucun cas metier : le geste reste offert sur toute demande
+           * non encore constatee, `recueA` renseigne ou non, regle L13.
+           * ------------------------------------------------------------------
+           */}
+          <summary className={styles.resume}>
+            Constater l&apos;état de la pièce
+          </summary>
           {/*
            * ETAPE 9 DU PARCOURS 5, LS-173. Le geste est OFFERT SANS EXIGER LA
            * RECEPTION : une piece jamais revenue se declare perdue, regle L13,
@@ -479,7 +504,7 @@ export function TraitementDemande({
           >
             Enregistrer l&apos;état de la pièce
           </button>
-        </div>
+        </details>
       )}
 
       {peutRembourser && !remboursementFait ? (
