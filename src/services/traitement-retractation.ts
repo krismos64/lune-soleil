@@ -579,7 +579,22 @@ export type IssueConstatEtatPiece =
  * JAMAIS revenue : la declarer perdue est le seul geste qui solde cet ecart, et
  * exiger une reception le fermerait.
  *
- * @sensible STOCK
+ * AUCUNE MARQUE DE REAUTHENTIFICATION ICI, ET CE N'EST PAS UN OUBLI.
+ *
+ * LA MARQUE N'EST PAS CITEE DANS CE COMMENTAIRE, deliberement :
+ * `verifier-actions-sensibles.sh` la detecterait et la lirait comme une marque
+ * sans famille. Motif « le hook bloque son explication », deja rencontre ici.
+ *
+ * Les quatre familles
+ * declarees par `FamilleActionSensible` couvrent le vol de compte et la sortie
+ * d'ARGENT : identifiants, donnees clients, remboursement, parametres de la
+ * boutique. Un constat d'etat de stock n'en releve d'aucune, et lui imposer une
+ * reauthentification ferait ressaisir le mot de passe sur un geste courant, ce
+ * qui use la protection la ou elle compte vraiment.
+ *
+ * LA GARDE DE ROLE SUFFIT DONC ICI, et elle est portee par cette fonction
+ * elle-meme plutot que deleguee : une Server Action s'invoque directement,
+ * motif de LS-89.
  */
 export async function constaterEtatPiece(
   enTetes: Headers,

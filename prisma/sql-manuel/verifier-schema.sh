@@ -749,6 +749,7 @@ JOURNAL_EMAIL|origine|OrigineEcriture
 COMMANDE|modeLivraison|ModeLivraison
 EXPEDITION|mode|ModeLivraison
 DEMANDE_RETRACTATION|statut|StatutRetractation
+DEMANDE_RETRACTATION|etatPieceRetournee|EtatPieceRetournee
 JETON_ACCES|portee|PorteeJeton
 AVIS|statut|StatutAvis
 UTILISATEUR|role|Role
@@ -1102,6 +1103,48 @@ verifier "descriptionCourte est conservée sur produit, ADR-026" "1" \
 verifier "dimensions reste sur variante, source de vérité, ADR-026" "1" \
   "$(R "SELECT count(*) FROM information_schema.columns
         WHERE table_name = 'variante' AND column_name = 'dimensions';")"
+
+echo
+echo "== Etat de la piece retournee, C41, LS-173 =="
+
+# L'EQUIVALENCE S'EPROUVE DANS LES DEUX SENS, ET C'EST TOUT L'INTERET.
+#
+# Une IMPLICATION laisserait passer exactement la moitie des etats incoherents,
+# et c'est un piege deja rencontre sur ce depot : copier la forme d'un CHECK
+# voisin en gardant le mauvais sens. Les deux rejets ci-dessous, plus les deux
+# acceptations, couvrent les quatre combinaisons possibles.
+R "INSERT INTO commande (id,numero,statut,email_normalise,nom_client,adresse_livraison,adresse_facturation,
+     sous_total_centimes,mode_livraison,point_relais_id,frais_port_centimes,total_centimes,montant_taxe_centimes,cgv_acceptees_a,cgv_version,cree_a)
+   VALUES ('cmdc41','C-2026-0941','EN_ATTENTE_PAIEMENT','c41@x.fr','Client','{}','{}',1200,'DOMICILE',NULL,499,1699,0,now(),'v1',now());" >/dev/null
+
+# Premier sens : un etat sans sa date ne dit pas QUAND la decision a ete prise.
+sortie=$(R "INSERT INTO demande_retractation (id,commande_id,statut,deposee_a,etat_piece_retournee,etat_constate_a)
+   VALUES ('drko1','cmdc41','DEPOSEE',now(),'REMISE_EN_VENTE',NULL);")
+verifier_rejet "etat de piece sans date de constat rejete, C41" "chk_retractation_etat_piece_coherent" "$sortie"
+
+# Second sens : une date sans etat affirmerait un constat qui n'a rien conclu.
+sortie=$(R "INSERT INTO demande_retractation (id,commande_id,statut,deposee_a,etat_piece_retournee,etat_constate_a)
+   VALUES ('drko2','cmdc41','DEPOSEE',now(),NULL,now());")
+verifier_rejet "date de constat sans etat de piece rejetee, C41" "chk_retractation_etat_piece_coherent" "$sortie"
+
+# LES DEUX NULS SONT LE CAS NOMINAL : une demande dont l'etat n'a pas encore ete
+# constate. Sans ce controle, une contrainte qui exigerait les deux non nuls
+# passerait les deux rejets ci-dessus tout en fermant l'etat initial.
+sortie=$(R "INSERT INTO demande_retractation (id,commande_id,statut,deposee_a,etat_piece_retournee,etat_constate_a)
+   VALUES ('drok1','cmdc41','DEPOSEE',now(),NULL,NULL);")
+verifier_accepte "demande sans constat d'etat acceptee, cas nominal" "$sortie"
+
+R "DELETE FROM demande_retractation WHERE id = 'drok1';" >/dev/null
+
+# LA PERTE SE CONSTATE SANS RECEPTION, regle L13, et ce cas est le seul geste
+# qui solde une piece jamais revenue. Une contrainte qui lierait l'etat a
+# `recue_a` le fermerait, et l'ecart resterait ouvert indefiniment.
+sortie=$(R "INSERT INTO demande_retractation (id,commande_id,statut,deposee_a,recue_a,etat_piece_retournee,etat_constate_a)
+   VALUES ('drok2','cmdc41','DEPOSEE',now(),NULL,'PERTE_CONSTATEE',now());")
+verifier_accepte "perte constatee sans colis recu acceptee, L13" "$sortie"
+
+R "DELETE FROM demande_retractation WHERE id = 'drok2';" >/dev/null
+R "DELETE FROM commande WHERE id = 'cmdc41';" >/dev/null
 
 echo
 echo "== Confirmation du paiement, LS-76 =="

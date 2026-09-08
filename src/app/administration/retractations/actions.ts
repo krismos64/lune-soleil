@@ -37,6 +37,7 @@ import { exigerRole } from "@/services/autorisation";
 import { centimesDepuisEuros } from "@/services/variante-validation";
 import { fournisseurStripe } from "@/integrations/stripe";
 import {
+  constaterEtatPiece,
   constaterReception,
   enregistrerPreuveExpedition,
   ouvrirAttenteRetour,
@@ -65,6 +66,8 @@ export type ResultatTransition =
   | { statut: "MOTIF_REQUIS" }
   /** Le colis est deja marque recu, un colis ne se recoit qu'une fois. */
   | { statut: "DEJA_RECUE" }
+  /** L'etat de la piece a deja ete constate, il ne se reecrit pas, LS-173. */
+  | { statut: "DEJA_CONSTATE" }
   /** Panne technique, deja journalisee. */
   | { statut: "INDISPONIBLE" };
 
@@ -251,6 +254,98 @@ export async function declarerPreuveExpedition(
     return { statut: "INDISPONIBLE" };
   } catch (erreur) {
     journaliserErreur("Preuve d'expedition non enregistree", erreur, {});
+    return { statut: "INDISPONIBLE" };
+  }
+}
+
+/**
+ * Constate l'etat REEL de la piece retournee, etape 9, LS-173.
+ *
+ * ELLE NE CHANGE AUCUN STATUT, regle L12, exactement comme la reception : le
+ * colis arrive quand il arrive, y compris apres le remboursement.
+ *
+ * `"layout"` EST OBLIGATOIRE ICI, regle C37, ET LE MOTIF N'EST PAS CELUI DES
+ * VOISINES. Une remise en vente INCREMENTE `quantite_physique`, or la barre de
+ * navigation compte `variantesStockFaible` et `variantesIndisponibles` sur
+ * cette colonne : sans `"layout"`, l'exploitante remet une piece en vente et la
+ * barre continue d'annoncer une variante indisponible.
+ *
+ * VERIFIE DANS `compterPourAdministration` PLUTOT QUE SUPPOSE. Les deux
+ * comptages portent bien sur `quantite_physique - quantite_reservee`, ce qui
+ * fait entrer cette action dans le champ de C37 alors qu'elle ne touche ni au
+ * statut de la demande ni aux comptages de commandes.
+ */
+export async function declarerEtatPiece(
+  donnees: FormData,
+): Promise<ResultatTransition> {
+  const identite = await exigerRole(await headers());
+
+  if (identite === null) {
+    return { statut: "SESSION_ABSENTE" };
+  }
+
+  let demandeId: string;
+
+  try {
+    demandeId = lireIdentifiant(donnees);
+  } catch (erreur) {
+    if (erreur instanceof EntreeInvalideError) {
+      return { statut: "INVALIDE", message: erreur.message };
+    }
+    throw erreur;
+  }
+
+  /*
+   * L'ETAT VIENT D'UNE LISTE FERMEE, jamais du formulaire tel quel : une valeur
+   * inventee atteindrait l'enum PostgreSQL et leverait une erreur technique la
+   * ou un refus lisible est attendu. Invariant 7, toute entree non fiable est
+   * validee cote serveur.
+   */
+  const etatBrut = String(donnees.get("etat") ?? "");
+
+  if (etatBrut !== "REMISE_EN_VENTE" && etatBrut !== "PERTE_CONSTATEE") {
+    return {
+      statut: "INVALIDE",
+      message: "L'état de la pièce est obligatoire.",
+    };
+  }
+
+  const motif = String(donnees.get("motif") ?? "")
+    .trim()
+    .slice(0, MOTIF_LONGUEUR_MAX);
+
+  try {
+    const issue = await constaterEtatPiece(await headers(), {
+      demandeId,
+      etat: etatBrut,
+      motif,
+    });
+
+    if (issue.statut === "CONSTATEE") {
+      /*
+       * `"layout"` : la remise en vente change `quantite_physique`, que la
+       * barre lit pour ses deux comptages de stock. Voir le commentaire de
+       * cette fonction.
+       */
+      revalidatePath(CHEMIN_RETRACTATIONS, "layout");
+      return { statut: "SUCCES" };
+    }
+
+    if (issue.statut === "MOTIF_REQUIS") {
+      return { statut: "MOTIF_REQUIS" };
+    }
+
+    if (issue.statut === "DEJA_CONSTATE") {
+      return { statut: "DEJA_CONSTATE" };
+    }
+
+    if (issue.statut === "SESSION_ABSENTE") {
+      return { statut: "SESSION_ABSENTE" };
+    }
+
+    return { statut: "INTROUVABLE" };
+  } catch (erreur) {
+    journaliserErreur("Etat de la piece non enregistre", erreur, {});
     return { statut: "INDISPONIBLE" };
   }
 }

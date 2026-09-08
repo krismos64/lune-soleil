@@ -29,6 +29,7 @@ import { formaterMontant, centimesVersSaisie } from "@/lib/montant";
 import { libelleStatut } from "./libelles";
 import {
   declarerPreuveExpedition,
+  declarerEtatPiece,
   declarerReception,
   ouvrirRetour,
   refuser,
@@ -112,12 +113,24 @@ function messageTransition(resultat: ResultatTransition): MessageAffiche {
         erreur: true,
       };
     case "MOTIF_REQUIS":
+      /*
+       * LE LIBELLE NE DIT PLUS « UN REFUS », LS-173 : deux gestes exigent
+       * desormais un motif, le refus d'une demande et le constat de l'etat de
+       * la piece. Nommer le refus ici rendait le message faux sur le second.
+       */
       return {
-        texte: "Un refus doit être motivé. Indiquez pourquoi.",
+        texte: "Ce geste doit être motivé. Indiquez pourquoi.",
         erreur: true,
       };
     case "DEJA_RECUE":
       return { texte: "Le colis est déjà marqué reçu.", erreur: true };
+    case "DEJA_CONSTATE":
+      return {
+        texte:
+          "L'état de cette pièce a déjà été constaté. Il ne se modifie pas : " +
+          "un mouvement de stock est immuable.",
+        erreur: true,
+      };
     case "INDISPONIBLE":
       return {
         texte: "Enregistrement impossible pour le moment. Réessayez.",
@@ -214,12 +227,16 @@ function messageRemboursement(resultat: ResultatRemboursement): MessageAffiche {
   }
 }
 
+/** Les deux etats qu'un constat peut poser, LS-173. */
+type EtatPieceSaisi = "REMISE_EN_VENTE" | "PERTE_CONSTATEE";
+
 export function TraitementDemande({
   demandeId,
   numeroCommande,
   statut,
   colisRecu,
   preuveFournie,
+  etatPieceConstate,
   montantDuCentimes,
   referenceDemande,
 }: {
@@ -229,6 +246,11 @@ export function TraitementDemande({
   statut: string;
   colisRecu: boolean;
   preuveFournie: boolean;
+  /**
+   * L'etat de la piece a-t-il deja ete constate, LS-173 ? Un mouvement de stock
+   * etant immuable, le geste ne se propose qu'une fois.
+   */
+  etatPieceConstate: boolean;
   montantDuCentimes: number;
   referenceDemande: string;
 }) {
@@ -246,6 +268,14 @@ export function TraitementDemande({
   );
   const [preuve, setPreuve] = useState("");
   const [motifRefus, setMotifRefus] = useState("");
+  const [motifEtat, setMotifEtat] = useState("");
+  /*
+   * LE DEFAUT EST LA REMISE EN VENTE, cas le PLUS FREQUENT : la majorite des
+   * retours arrivent intacts. Un defaut vide obligerait a un choix explicite
+   * sur le cas courant, et un defaut « perte » ferait sortir une piece du stock
+   * sur une validation distraite.
+   */
+  const [etatPiece, setEtatPiece] = useState<EtatPieceSaisi>("REMISE_EN_VENTE");
 
   /*
    * LA REFERENCE EST BRULEE DES QU'ELLE A SERVI, et le bouton se ferme avec
@@ -274,6 +304,13 @@ export function TraitementDemande({
     !ouvreLeRetour &&
     statut !== "RETOUR_ATTENDU" &&
     colisRecu &&
+    /*
+     * LE CONSTAT D'ETAT COMPTE COMME UN GESTE OFFERT, LS-173. L'oublier ici
+     * ferait annoncer « aucun geste » sur une carte qui en propose un : c'est
+     * le meme piege que `colisRecu` ci-dessus, et les conditions de ce calcul
+     * doivent reprendre EXACTEMENT celles des blocs rendus plus bas.
+     */
+    etatPieceConstate &&
     !(peutRembourser && !remboursementFait) &&
     !peutRefuser;
 
@@ -352,6 +389,69 @@ export function TraitementDemande({
            */}
           Marquer le colis reçu
         </button>
+      )}
+
+      {etatPieceConstate ? null : (
+        <div className={styles.groupe}>
+          {/*
+           * ETAPE 9 DU PARCOURS 5, LS-173. Le geste est OFFERT SANS EXIGER LA
+           * RECEPTION : une piece jamais revenue se declare perdue, regle L13,
+           * et c'est le seul geste qui solde cet ecart. Le masquer tant que
+           * `colisRecu` est faux fermerait ce cas.
+           *
+           * IL RESTE OFFERT SUR UNE DEMANDE DEJA REMBOURSEE, meme motif que le
+           * bouton ci-dessus : le colis arrive quand il arrive.
+           */}
+          <label className={styles.libelle} htmlFor={`etat-${demandeId}`}>
+            État de la pièce retournée
+          </label>
+          <select
+            id={`etat-${demandeId}`}
+            className={styles.champ}
+            value={etatPiece}
+            onChange={(evenement) =>
+              setEtatPiece(evenement.target.value as EtatPieceSaisi)
+            }
+          >
+            <option value="REMISE_EN_VENTE">Bon état, remettre en vente</option>
+            <option value="PERTE_CONSTATEE">
+              Cassée, incomplète ou jamais revenue
+            </option>
+          </select>
+
+          <label className={styles.libelle} htmlFor={`motif-etat-${demandeId}`}>
+            Motif du constat
+          </label>
+          <input
+            id={`motif-etat-${demandeId}`}
+            className={styles.champ}
+            value={motifEtat}
+            onChange={(evenement) => setMotifEtat(evenement.target.value)}
+            maxLength={500}
+            autoComplete="off"
+            aria-describedby={`aide-etat-${demandeId}`}
+          />
+          <p id={`aide-etat-${demandeId}`} className={styles.aide}>
+            {etatPiece === "REMISE_EN_VENTE"
+              ? "La pièce retourne au catalogue : le stock remonte d'une unité."
+              : "Aucun retour en stock. La pièce reste sortie de l'inventaire."}{" "}
+            Ce constat ne se modifie pas ensuite.
+          </p>
+          <button
+            type="button"
+            className={styles.bouton}
+            disabled={enCours || motifEtat.trim().length === 0}
+            onClick={() =>
+              lancer(() =>
+                declarerEtatPiece(
+                  formulaireDe({ etat: etatPiece, motif: motifEtat }),
+                ),
+              )
+            }
+          >
+            Enregistrer l&apos;état de la pièce
+          </button>
+        </div>
       )}
 
       {peutRembourser && !remboursementFait ? (
