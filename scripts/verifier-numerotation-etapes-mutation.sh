@@ -18,6 +18,27 @@
 #   5. une etape `bis` ne doit PAS etre confondue avec celle qu'elle prouve :
 #      `9c bis` et `9c` sont deux numeros distincts
 #
+# ---------------------------------------------------------------------------
+# CE QUI RESTE OUVERT, LS-204, ET IL FAUT LE DIRE PLUTOT QUE DE LE TAIRE.
+#
+# Ce script a rougi UNE FOIS en integration continue, sur son cas 5, pendant une
+# pull request purement documentaire. La cause exacte n'est PAS identifiee :
+# elle ne se reproduit ni localement, ni dans un clone superficiel imitant le
+# `fetch-depth: 1` de la CI, ni avec le fichier temoin present.
+#
+# MESURES FAITES, toutes vertes : 25 executions consecutives du controle,
+# 6 executions du script complet dans un clone superficiel, et le controle lance
+# pendant que le temoin du cas 4 existe.
+#
+# CE QUI EST CORRIGE est le seul defaut ETABLI : le rapport lancait le controle
+# DEUX fois, et pouvait donc decrire une execution en concluant sur une autre.
+# C'est ce qui rendait le diagnostic impossible, la sortie affichant
+# « configuration Claude Code cohérente » sous le mot ECHEC.
+#
+# SI LE CAS 5 ROUGIT A NOUVEAU, sa sortie est desormais celle de l'execution qui
+# a reellement echoue, avec son code : elle nommera la cause.
+# ---------------------------------------------------------------------------
+#
 # Usage : ./scripts/verifier-numerotation-etapes-mutation.sh
 # Aucun prerequis, ni Docker ni base.
 
@@ -57,10 +78,15 @@ ko=0
 cas=0
 
 attendre_rouge() {
-  local titre="$1" motif="$2" sortie
+  local titre="$1" motif="$2" sortie code
   cas=$((cas + 1))
-  sortie="$("$CONTROLE" --strict 2>&1)"
-  if "$CONTROLE" --strict >/dev/null 2>&1; then
+
+  # UNE SEULE EXECUTION, meme motif que `attendre_vert`, LS-204 : la sortie
+  # affichee et le code juge doivent venir du MEME appel, sans quoi le rapport
+  # peut decrire une execution et conclure sur une autre.
+  sortie="$("$CONTROLE" --strict 2>&1)" && code=0 || code=$?
+
+  if [ "$code" -eq 0 ]; then
     echo "  NON DETECTE  $titre"
     echo "               le contrôle reste vert sur le défaut réintroduit"
     ko=1
@@ -76,13 +102,35 @@ attendre_rouge() {
 }
 
 attendre_vert() {
-  local titre="$1"
+  local titre="$1" sortie code
   cas=$((cas + 1))
-  if "$CONTROLE" --strict >/dev/null 2>&1; then
+
+  # ---------------------------------------------------------------------------
+  # UNE SEULE EXECUTION, ET C'EST LA CORRECTION DE LS-204.
+  #
+  # LA VERSION PRECEDENTE LANCAIT LE CONTROLE DEUX FOIS : une pour le code de
+  # sortie, une seconde pour afficher sa sortie en cas d'echec. Deux executions
+  # d'un controle qui LIT LE DEPOT peuvent diverger, et le rapport devenait
+  # alors incomprehensible.
+  #
+  # MESURE DU 8 SEPTEMBRE 2026, en CI sur une pull request purement
+  # documentaire : le cas 5 etait compte en FAUX POSITIF, et la ligne juste en
+  # dessous affichait « configuration Claude Code cohérente », c'est-a-dire le
+  # verdict de REUSSITE de la seconde execution. Un rapport qui affiche le
+  # succes sous le mot ECHEC coute plus cher qu'il ne rapporte.
+  #
+  # LA SORTIE ET LE CODE VIENNENT DESORMAIS DU MEME APPEL, donc ils ne peuvent
+  # plus se contredire. Meme motif que `attendre_rouge` ci-dessus, qui capturait
+  # deja sa sortie mais relancait pour le code : les deux sont alignes.
+  # ---------------------------------------------------------------------------
+  sortie="$("$CONTROLE" --strict 2>&1)" && code=0 || code=$?
+
+  if [ "$code" -eq 0 ]; then
     echo "  detecte      $titre"
   else
     echo "  FAUX POSITIF $titre"
-    "$CONTROLE" --strict 2>&1 | sed 's/^/               /'
+    echo "               le contrôle sort en $code sur un dépôt sain"
+    printf '%s\n' "$sortie" | sed 's/^/               /'
     ko=1
   fi
   restaurer
