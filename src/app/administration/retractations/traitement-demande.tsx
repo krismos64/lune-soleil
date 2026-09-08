@@ -353,7 +353,7 @@ export function TraitementDemande({
           disabled={enCours}
           onClick={() => lancer(() => ouvrirRetour(formulaireDe({})))}
         >
-          Attendre le retour du colis
+          {enCours ? "Enregistrement en cours…" : "Attendre le retour du colis"}
         </button>
       ) : null}
 
@@ -383,7 +383,7 @@ export function TraitementDemande({
               lancer(() => declarerPreuveExpedition(formulaireDe({ preuve })))
             }
           >
-            Enregistrer la preuve
+            {enCours ? "Enregistrement en cours…" : "Enregistrer la preuve"}
           </button>
         </div>
       ) : null}
@@ -400,7 +400,7 @@ export function TraitementDemande({
            * le colis peut arriver trois semaines apres le versement, et le
            * masquer rendrait ce cas insaisissable. Le statut ne bouge pas.
            */}
-          Marquer le colis reçu
+          {enCours ? "Enregistrement en cours…" : "Marquer le colis reçu"}
         </button>
       )}
 
@@ -502,7 +502,9 @@ export function TraitementDemande({
               )
             }
           >
-            Enregistrer l&apos;état de la pièce
+            {enCours
+              ? "Enregistrement en cours…"
+              : "Enregistrer l\u2019état de la pièce"}
           </button>
         </details>
       )}
@@ -544,7 +546,7 @@ export function TraitementDemande({
               })
             }
           >
-            Rembourser
+            {enCours ? "Remboursement en cours…" : "Rembourser"}
           </button>
         </div>
       ) : null}
@@ -581,7 +583,7 @@ export function TraitementDemande({
               lancer(() => refuser(formulaireDe({ motif: motifRefus })))
             }
           >
-            Refuser
+            {enCours ? "Refus en cours…" : "Refuser"}
           </button>
         </details>
       ) : null}
@@ -618,7 +620,18 @@ export function TraitementDemande({
         aria-live="polite"
         aria-label={`Résultat pour la commande ${numeroCommande}`}
       >
-        {message?.texte ?? ""}
+        {/*
+         * LA REGION ANNONCE L'ATTENTE, ET PAS SEULEMENT LE BOUTON, LS-203.
+         *
+         * UN LECTEUR D'ECRAN NE VOCALISE PAS le changement de libelle d'un
+         * bouton qui n'a pas le focus : sans cette ligne, l'annonce du bouton
+         * ne servirait qu'a la vue. C'est le motif de `remboursement.tsx` et de
+         * ses voisins, ou les deux annoncent ensemble.
+         *
+         * NOMMER LA REGION NE SUFFIT PAS, C39 : son `aria-label` sert a la
+         * distinguer de celles des autres cartes, seul le CONTENU est vocalise.
+         */}
+        {enCours ? "Enregistrement en cours…" : (message?.texte ?? "")}
         {message?.lien === undefined ? null : (
           <>
             {" "}
