@@ -49,10 +49,16 @@ echo
 # propre explication, motif « controle satisfait par un commentaire » deja
 # rencontre sur ce depot.
 #
-# La ligne cherchee est l'AFFECTATION, `DATABASE_URL:` suivi de la variable, ce
-# qu'aucun commentaire ne porte.
+# La ligne cherchee est l'AFFECTATION conditionnelle, qui pose `DATABASE_URL`
+# depuis la valeur lue dans `.env`. Aucun commentaire ne porte cette forme.
+#
+# LE MOTIF A DEJA CHANGE UNE FOIS, le 8 septembre 2026 : la premiere ecriture
+# posait `DATABASE_URL: process.env.DATABASE_URL_E2E ?? ...`, remplacee parce
+# qu'un repli en chaine vide ECRASAIT la variable heritee en CI. Un controle
+# ancre sur la forme abandonnee serait reste ROUGE sur un code correct, ce qui
+# est le symetrique du defaut habituel et se remarque au moins tout de suite.
 # ---------------------------------------------------------------------------
-surcharge=$(grep -nE '^\s*DATABASE_URL:\s*process\.env\.DATABASE_URL_E2E' "$CONFIG" || true)
+surcharge=$(grep -nE 'DATABASE_URL:\s*BASE_E2E' "$CONFIG" || true)
 
 if [ -n "$surcharge" ]; then
   echo "  OK    playwright.config.ts surcharge DATABASE_URL par DATABASE_URL_E2E"

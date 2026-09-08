@@ -19,7 +19,60 @@
  * 1280. La troisieme a manque jusque-la, et c'est precisement la largeur ou les
  * dispositions basculent, voir le projet `tablette-768` plus bas.
  */
+import { readFileSync } from "node:fs";
+
 import { defineConfig, devices } from "@playwright/test";
+import { parse } from "dotenv";
+
+/*
+ * LA BASE DE BOUT EN BOUT EST LUE DANS `.env`, LS-189.
+ *
+ * PAS `process.env.DATABASE_URL_E2E` : ce fichier de configuration est evalue
+ * sans que `.env` soit charge, la variable y est donc `undefined`. Un repli
+ * `?? ""` transmettait alors une chaine VIDE au sous-processus, qui ECRASE la
+ * valeur heritee au lieu de laisser le repli jouer : le build echouait sur
+ * « DATABASE_URL absente. La renseigner dans .env ». Mesure du 8 septembre
+ * 2026. Motif « valeur par defaut qui ment », deja en fiche sur ce depot.
+ *
+ * L'ABSENCE DU FICHIER EST UN CAS NOMINAL, celui de l'integration continue : le
+ * workflow pose ses variables dans l'environnement, sans `.env`. `undefined`
+ * est alors rendu, et la cle est OMISE du bloc `env`, ce qui laisse le
+ * sous-processus heriter de la `DATABASE_URL` du workflow.
+ */
+function baseDeBoutEnBout(): string | undefined {
+  try {
+    return parse(readFileSync(".env")).DATABASE_URL_E2E || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+const BASE_E2E = baseDeBoutEnBout();
+
+/*
+ * LA VARIABLE EST POSEE ICI, POUR LE PROCESSUS PLAYWRIGHT LUI-MEME, LS-189.
+ *
+ * ------------------------------------------------------------------
+ * LE BLOC `env` DE `webServer` NE SUFFIT PAS, et c'est le piege de ce
+ * dispositif : il ne gouverne que le SOUS-PROCESSUS du serveur Next.js. Les
+ * cinq fichiers `.setup.ts` tournent, eux, dans le processus Playwright, et
+ * ouvrent leur PROPRE connexion `pg` sur `process.env.DATABASE_URL`.
+ *
+ * SANS CETTE LIGNE, LA MOITIE DE LA SUITE ECRIT AILLEURS QUE L'AUTRE. Mesure du
+ * 8 septembre 2026 : le serveur servait bien la base de test, pendant que la
+ * preparation continuait d'ecrire sur celle de developpement et y echouait sur
+ * « duplicate key value violates unique constraint ». La base de test est
+ * restee VIDE, ce qui a designe la cause : `SELECT ... FROM utilisateur` y
+ * rendait zero ligne apres l'echec.
+ * ------------------------------------------------------------------
+ *
+ * `dotenv` NE REMPLACE PAS UNE VARIABLE DEJA POSEE, verifie par mesure : les
+ * `import "dotenv/config"` en tete des preparations n'ecrasent donc pas cette
+ * valeur, ils la laissent en place.
+ */
+if (BASE_E2E) {
+  process.env.DATABASE_URL = BASE_E2E;
+}
 
 const PORT = 3100;
 const URL_BASE = `http://127.0.0.1:${PORT}`;
@@ -358,17 +411,20 @@ export default defineConfig({
        * ELLE VAUT POUR LE SERVEUR **ET** POUR LES PREPARATIONS. Les cinq
        * fichiers `.setup.ts` ouvrent leur propre connexion `pg` sur
        * `process.env.DATABASE_URL` : `dotenv` ne remplace pas une variable deja
-       * posee, donc la valeur exportee ci-dessous par le processus Playwright
+       * posee, VERIFIE PAR MESURE et non suppose, donc la valeur exportee ici
        * les gouverne aussi. Les deux moities de la suite lisent la meme base,
        * ce que `verifier-base-e2e.sh` garde.
        *
-       * EN CI ELLE EST ABSENTE et le repli sur `DATABASE_URL` s'applique : le
-       * PostgreSQL du workflow est vierge a chaque execution, sans compte reel
-       * a proteger. Le repli est deliberement SILENCIEUX la-bas, et refuse
-       * localement par `preparer-base-e2e.sh`, qui exige la variable.
+       * LA CLE EST OMISE quand `.env` ne porte pas la variable, cas de
+       * l'integration continue : le sous-processus herite alors de la
+       * `DATABASE_URL` du workflow, dont le PostgreSQL est vierge a chaque
+       * execution et ne porte donc aucun compte reel a proteger.
+       *
+       * OMETTRE ET NON POSER UNE CHAINE VIDE. Un repli `?? ""` transmettait une
+       * valeur vide qui ECRASAIT celle du workflow, et le build echouait sur
+       * « DATABASE_URL absente ». Mesure du 8 septembre 2026.
        */
-      DATABASE_URL:
-        process.env.DATABASE_URL_E2E ?? process.env.DATABASE_URL ?? "",
+      ...(BASE_E2E ? { DATABASE_URL: BASE_E2E } : {}),
       /*
        * BETTER_AUTH_URL DOIT DESIGNER LE SERVEUR REELLEMENT SERVI, LS-70.
        *

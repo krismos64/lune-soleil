@@ -477,11 +477,50 @@ pas commencé : le code ne les lit pas encore.
 | `npm run db:arreter` | arrête le conteneur, conserve les données |
 | `npm run db:preparer` | démarre, applique les migrations puis le SQL non généré |
 | `npm run db:reinitialiser` | **détruit le volume** et reconstruit tout |
+| `npm run db:e2e` | prépare la base **de bout en bout**, distincte, port 55433 |
+| `npm run db:e2e:reinitialiser` | détruit le volume de test seul et le reconstruit |
 | `npm run db:verifier` | les contrôles sur la base issue de la migration |
 | `npm run db:verifier:conception` | les mêmes sur un conteneur jetable, SQL de référence |
 | `npm run db:console` | ouvre `psql` sur la base locale |
 | `npm run db:studio` | interface graphique Prisma Studio |
 | `EMAIL_TEST_DESTINATAIRE=... npm run email:reel` | envoie un **vrai** message, LS-82 critère 1 |
+
+#### Deux bases, et pourquoi elles ne se confondent pas
+
+La suite de bout en bout tourne sur **sa propre base**, port 55433, séparée de
+celle de développement, port 55432. `npm run test:e2e` la prépare seul : il n'y a
+rien à lancer à la main.
+
+L'écart tient à une contrainte du modèle. La préparation Playwright promeut son
+compte d'administration, et l'index partiel `utilisateur_administratrice_unique`
+n'admet **qu'une** administratrice, règle E1. Le compte réel de l'exploitante
+occupe cette place sur la base de développement : la préparation y échouait sur
+`duplicate key value violates unique constraint`, avant tout test, et Playwright
+marquait la suite entière « did not run ». Mesuré le 5 septembre 2026 en livrant
+LS-180, reproduit le 8 septembre, LS-189.
+
+Élargir la clause de rétrogradation aurait fermé ce défaut en ouvrant celui que
+le garde-fou existant empêche : un `UPDATE` sans clause retire son rôle au compte
+réel, en silence. L'isolement par la base ferme les deux, et le fait
+structurellement, aucune requête de la suite n'atteignant la base de
+développement.
+
+Trois conséquences pratiques :
+
+- les comptes, produits et commandes de test vivent sur la base 55433. La base de
+  développement ne les porte plus, et `npm run db:console` ouvre bien celle de
+  développement
+- `DATABASE_URL_E2E` doit différer de `DATABASE_URL` par le **port** :
+  `preparer-base-e2e.sh` compare les deux valeurs écrites dans `.env` et refuse
+  de préparer si elles coïncident
+- sur une base de test neuve, la première exécution crée neuf comptes quand
+  `/sign-up/email` en accepte trois par minute : elle échoue partiellement, et la
+  suivante complète. `npm run db:e2e:reinitialiser` remet ce compteur à zéro en
+  détruisant le volume de test, jamais celui de développement
+
+L'intégration continue ne s'en sert pas : son PostgreSQL est vierge à chaque
+exécution, donc sans compte réel à protéger. `DATABASE_URL_E2E` y est absente et
+la clé est alors omise, le processus héritant de la variable du workflow.
 
 **`db:verifier` refuse de tourner sur une base qui contient des données**, parce
 que ses contrôles insèrent puis tronquent : ils détruiraient un jeu de
@@ -757,6 +796,8 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-route-echec.sh                # garde la page qui lève à dessein, LS-191
 ./scripts/verifier-route-echec-mutation.sh       # prouve le précédent par mutation
 ./scripts/verifier-fixtures-e2e.sh               # adresses de test fixes, plafonds préservés, LS-168
+./scripts/verifier-base-e2e.sh                   # isolement de la base de bout en bout, LS-189
+./scripts/verifier-base-e2e-mutation.sh          # prouve le précédent par mutation
 ./scripts/verifier-fixtures-e2e-mutation.sh      # prouve le précédent par mutation
 ./scripts/verifier-description-accessible.sh          # aucun aria-describedby annulé par un aria-label, C39, LS-161
 ./scripts/verifier-description-accessible-mutation.sh # prouve le précédent par mutation
