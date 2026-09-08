@@ -1,8 +1,12 @@
-# 8 septembre 2026, b : LS-193, un contrôle voisin était devenu aveugle en restant vert
+# 8 septembre 2026, b : LS-193, deux contrôles verts sur des défauts réels
 
 Le nom suit désormais le logo, « Lune-soleil », et il ne s'écrit plus qu'à un
-endroit. Le plus instructif est ce que le nouveau contrôle a trouvé dès sa
-première exécution.
+endroit. Ce que la story a coûté à apprendre tient en une phrase : **un contrôle
+vert ne prouve rien tant qu'on ne l'a pas confronté aux défauts qui existent
+déjà**, et cela m'est arrivé deux fois dans la même journée.
+
+Le premier était celui d'une story voisine, que mon nouveau contrôle a trouvé
+cassé. Le second était le mien, et c'est la revue qui l'a trouvé.
 
 ## L'écart, et où il se voyait
 
@@ -67,6 +71,11 @@ la mutation avait bien pris contenait « Lune & Soleil » en clair, donc le
 contrôle le détectait et rougissait en permanence. Motif « le hook bloque son
 explication ». La chaîne est composée à l'exécution.
 
+**`sed` a réinséré le motif.** Un `&` nu dans un remplacement `sed` signifie
+« toute la chaîne trouvée » : ma mutation fabriquait un JSX absurde au lieu de
+l'esperluette, et le contrôle ne le reconnaissait pas. Même famille que le
+`${...}` de Perl, rencontrée **deux fois** dans cette seule story.
+
 ## Le changement de `rpName` et les passkeys
 
 Vérifié via Context7 plutôt que supposé : la spécification WebAuthn lie une
@@ -74,11 +83,57 @@ passkey au **`rpID`**, le domaine, jamais au `rpName` qui n'est qu'un libellé
 d'affichage. Le `rpID` reste dérivé du domaine et n'est pas touché : les passkeys
 déjà enregistrées ne sont pas affectées.
 
+## La revue a trouvé ce que ma preuve par mutation n'avait pas vu
+
+**Quatre occurrences visibles subsistaient** après ce que je croyais être un
+travail complet : l'en-tête de **toutes** les pages publiques, le nom du pied de
+page, l'enseigne de la barre d'administration, et un email transactionnel.
+
+`pied-boutique.tsx` est le cas le plus parlant : il importait `NOM_BOUTIQUE` et
+l'employait pour le copyright, **quarante-sept lignes plus bas** que l'occurrence
+en dur. Le fichier affichait donc les deux graphies l'une au-dessus de l'autre,
+soit exactement le défaut d'origine du ticket reproduit dans le DOM.
+
+### Mon contrôle était vert dessus
+
+**Trois formes de l'ancienne graphie existent, il n'en cherchait qu'une.**
+
+| Forme | Où |
+|---|---|
+| `Lune & Soleil` | la forme littérale, seule cherchée |
+| `Lune &amp; Soleil` | la forme **JSX**, l'esperluette s'y échappant |
+| « Lune & » puis « Soleil » à la ligne | l'enveloppement à 80 colonnes, dans un email |
+
+La deuxième est la plus dure à admettre : **mon propre commentaire dans `seo.ts`
+mentionne cet échappement** comme un gain du changement de graphie. Je l'avais
+écrit sans le porter dans le motif de recherche.
+
+### Pourquoi quatre mutations sur quatre n'avaient rien prouvé
+
+Elles injectaient **toutes la forme littérale**. Une mutation prouve que le
+contrôle voit ce qu'elle fabrique, jamais ce qui existe déjà dans le dépôt.
+Motif « mutation satisfaite ailleurs », déjà en fiche.
+
+**Le test décisif était à portée de main** : lancer le contrôle **avant** la
+correction et vérifier qu'il désigne les douze fichiers. Il en aurait manqué
+quatre, et j'aurais vu le trou en trente secondes.
+
+Deux sens sont ajoutés, chacun prouvé sur le défaut **réel** qui existait : la
+forme JSX sur l'en-tête, la forme coupée sur l'email. Six mutations sur six.
+
+### Un modèle d'email avait divergé de son jumeau
+
+`changement-adresse-avertissement` avait été corrigé,
+`changement-adresse-verification` non : les deux emails du même parcours ne
+disaient plus la même chose. La coupure de ligne les rendait invisibles à toute
+recherche, et c'est ce qui les a laissés diverger.
+
 ## Preuves
 
-`verifier-graphie-marque.sh`, deux sens, **quatre mutations sur quatre**, dont
-deux qui gardent le contrôle contre lui-même. La quatrième vise le mode de
-défaillance rencontré sur `verifier-seo.sh` : vider la liste des fichiers
+`verifier-graphie-marque.sh`, deux sens, **six mutations sur six** : les quatre
+d'origine, plus les deux ajoutées après la revue sur les formes qu'il ratait.
+Deux de ces mutations gardent le contrôle contre lui-même, dont celle qui vise le
+mode de défaillance rencontré sur `verifier-seo.sh` : vider la liste des fichiers
 examinés doit faire échouer le garde-fou de cardinalité, jamais rendre un OK
 silencieux.
 
