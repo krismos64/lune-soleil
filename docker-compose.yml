@@ -89,6 +89,86 @@ services:
       retries: 30
       start_period: 10s
 
+  # ---------------------------------------------------------------------------
+  # BASE DE BOUT EN BOUT, LS-189. Distincte de `db`, et c'est tout le sujet.
+  #
+  # POURQUOI ELLE EXISTE. La suite Playwright promeut son propre compte
+  # d'administration en base, et l'index partiel `utilisateur_administratrice_unique`
+  # n'admet QU'UNE ligne dont le role vaut ADMINISTRATRICE, regle E1. Sur la
+  # base de developpement, le compte REEL de l'exploitante occupe cette place :
+  # la preparation echouait alors sur « duplicate key value violates unique
+  # constraint », avant tout test, et la suite entiere etait marquee « did not
+  # run ». Mesure du 5 septembre 2026 en livrant LS-180, reproduite le
+  # 8 septembre : echec en 189 ms.
+  #
+  # POURQUOI PAS UNE CLAUSE SQL PLUS LARGE. La retrogradation de la preparation
+  # ne vise QUE le prefixe `e2e-`, et cette etroitesse est deliberee : un
+  # `UPDATE` sans clause retirerait son role au compte reel, en silence. Elargir
+  # la clause fermerait le defaut en ouvrant celui que le garde-fou existant
+  # empeche. L'isolement par la base ferme les deux.
+  #
+  # LA PROPRIETE OBTENUE EST STRUCTURELLE, pas contractuelle : aucune requete de
+  # la suite n'atteint la base qui porte le compte reel, quelle que soit la
+  # clause qu'un futur ticket ecrira. C'est le critere 2 de LS-189, tenu par
+  # construction plutot que par vigilance.
+  #
+  # ELLE EST JETABLE, et c'est la seconde difference. `db` conserve ses donnees
+  # entre deux demarrages, celle-ci peut etre detruite et recreee sans rien
+  # perdre : `npm run db:e2e -- --reinitialiser`.
+  #
+  # LA CI NE S'EN SERT PAS et n'en a pas besoin : son PostgreSQL est vierge a
+  # chaque execution, donc sans compte reel a proteger. Le workflow garde sa
+  # base, cette composition ne concerne que le poste de developpement.
+  # ---------------------------------------------------------------------------
+  db-e2e:
+    image: postgres:18.4
+    container_name: lune-soleil-db-e2e
+    # `no` et non `unless-stopped` : une base de test n'a aucune raison de
+    # redemarrer avec le poste, contrairement a celle de developpement.
+    restart: "no"
+
+    environment:
+      # LES MEMES IDENTIFIANTS QUE `db`, deliberement. Ce qui isole les deux
+      # bases est le PORT et le VOLUME, pas le mot de passe : reutiliser les
+      # variables existantes evite un secret de plus dans `.env` et garde
+      # `DATABASE_URL_E2E` derivable de `DATABASE_URL`, au port pres.
+      POSTGRES_USER: ${POSTGRES_USER:?}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: ${POSTGRES_DB:?}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C.UTF-8"
+
+    ports:
+      # Boucle locale uniquement, meme motif que `db` : Docker publierait sinon
+      # sur toutes les interfaces, en amont du pare-feu de macOS.
+      #
+      # 55433, soit le port de developpement plus un. C'est le SEUL ecart de
+      # connexion entre les deux bases, ce qui rend `DATABASE_URL_E2E` lisible.
+      - "127.0.0.1:${POSTGRES_PORT_E2E:-55433}:5432"
+
+    volumes:
+      # VOLUME DISTINCT, sans quoi les deux conteneurs se partageraient les
+      # memes donnees et l'isolement serait nul.
+      #
+      # Point de montage /var/lib/postgresql et NON .../data : rupture de
+      # l'image postgres:18, voir le commentaire de `db`.
+      - lune-soleil-pgdata-e2e:/var/lib/postgresql
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB} -q && psql -U $${POSTGRES_USER} -d $${POSTGRES_DB} -c 'SELECT 1' >/dev/null 2>&1",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
 volumes:
   lune-soleil-pgdata:
     name: lune-soleil-pgdata
+
+  # Volume de la base de bout en bout, LS-189. Jetable : le detruire ne fait
+  # perdre que des fixtures, que la preparation Playwright repose seule.
+  lune-soleil-pgdata-e2e:
+    name: lune-soleil-pgdata-e2e
