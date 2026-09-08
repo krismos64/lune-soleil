@@ -177,13 +177,38 @@ test("le refus reste fermé tant qu'aucun motif n'est saisi", async ({
 test("le bouton et la région annoncent l'attente pendant la transition", async ({
   page,
 }) => {
+  /*
+   * LA REQUETE EST RETENUE PUIS ABANDONNEE, ET C'EST CE QUI REND CE TEST
+   * REJOUABLE.
+   *
+   * ------------------------------------------------------------------
+   * UNE PREMIERE VERSION LA LAISSAIT PARTIR apres un delai d'une seconde. Le
+   * constat s'ecrivait donc reellement, et il est IRREVERSIBLE par conception :
+   * `etatPieceRetournee` ne se reecrit pas. Les trois projets de largeur
+   * partagent la MEME demande de fixture, donc le premier consommait le geste
+   * et les deux autres ne trouvaient plus le bloc.
+   *
+   * MESURE DU 8 SEPTEMBRE 2026, suite complete : `mobile-320` vert, les trois
+   * autres largeurs en echec, plus le test de debordement voisin qui mesure le
+   * meme bloc. Les memes tests passaient tous en isolation.
+   *
+   * `route.abort()` NE FAIT JAMAIS ATTEINDRE LE SERVEUR a la Server Action :
+   * l'ecran reste en attente, ce que ce test mesure, et la base n'est pas
+   * touchee. Aucun nettoyage n'est alors necessaire, donc rien a oublier.
+   * ------------------------------------------------------------------
+   */
   await page.route("**/administration/retractations", async (route) => {
     if (route.request().method() !== "POST") {
       return route.fallback();
     }
 
-    await new Promise((resoudre) => setTimeout(resoudre, 1000));
-    return route.fallback();
+    /*
+     * LE DELAI PRECEDE L'ABANDON : sans lui, React reprendrait la main avant
+     * que l'assertion n'observe l'attente, la transition se refermant sur
+     * l'erreur reseau.
+     */
+    await new Promise((resoudre) => setTimeout(resoudre, 3000));
+    return route.abort();
   });
 
   await page.goto("/administration/retractations");
