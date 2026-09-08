@@ -547,7 +547,7 @@ consommation. Son absence prolonge le délai de rétractation de douze mois.
 | 7a | Preuve d'expédition fournie | demande `EXPEDITION_PROUVEE`, `preuveExpeditionA` horodaté | accusé, remboursement annoncé |
 | 7b | Réception du colis | `recueA` horodaté, **sans changement de statut** | confirmation |
 | 8 | Remboursement | demande `REMBOURSEMENT_EN_COURS` puis `REMBOURSEE`, avoir si nécessaire | remboursement |
-| 9 | Réintégration de stock | mouvement de retour selon l'état réel de la pièce, décidé par l'administratrice sur une demande dont `recueA` est renseigné | stock à jour |
+| 9 | Réintégration de stock | constat de l'état réel de la pièce par l'administratrice, avec motif : `REMISE_EN_VENTE` écrit un mouvement `RETOUR`, `PERTE_CONSTATEE` n'en écrit aucun. `recueA` n'est **pas** exigé, une pièce jamais revenue se déclarant perdue, règle L13 | stock à jour |
 
 **Les étapes 7a et 7b sont deux faits indépendants, pas une séquence.** Le
 remboursement est dû au **premier des deux** qui survient, article L221-24.
@@ -634,12 +634,36 @@ LS-135. Une date de réception dit que le colis est arrivé, jamais dans quel
 réintégration à l'état réel de la pièce. C'est le motif d'ADR-030, un mouvement
 ne se compense qu'une fois et sur décision.
 
-**L'étape 9 n'a aucun chemin à ce jour**, LS-173 : LS-135 a livré les étapes 6 à
-8 et horodate `recueA` sans écrire de mouvement, ce qu'un test vérifie.
-L'écran des stocks refuse par ailleurs de compenser une vente web, à juste
-titre, un `RETOUR` y incrémenterait le stock sans toucher la commande ni la
-facture. Une pièce revenue reste donc sortie du stock tant que LS-173 n'est pas
-livrée.
+**L'étape 9 est livrée depuis LS-173**, le 8 septembre 2026. L'exploitante
+constate l'état réel de la pièce depuis la rubrique Rétractations, avec son
+motif obligatoire, et ce constat décide seul de la réintégration :
+
+- `REMISE_EN_VENTE` écrit un mouvement `RETOUR` qui **compense la vente web**,
+  `compenseId` pointant le mouvement d'origine. L'index
+  `mouvement_compense_unique` d'ADR-030 rend la double remise en vente
+  impossible en base
+- `PERTE_CONSTATEE` n'écrit **aucun** mouvement et pose quand même un état :
+  sans lui, une pièce déclarée perdue serait indistinguable d'une demande jamais
+  traitée, les deux ne portant aucune ligne au journal
+
+**Le constat ne dépend ni du statut ni de `recueA`.** Il ne touche pas au statut,
+règle L12, et il ne l'exige pas non plus : une pièce **jamais revenue** se
+déclare perdue, ce qui est le seul geste soldant l'écart signalé par la règle
+L13. La contrainte C41 lie l'état et sa date dans les deux sens, sans rien dire
+de la réception.
+
+**Une commande à plusieurs articles voit toutes ses lignes compensées**, le
+webhook écrivant un mouvement `VENTE_WEB` par ligne et `DemandeRetractation.commandeId`
+étant unique : il n'existe pas de rétractation partielle.
+
+**Une variante archivée refuse la remise en vente**, sans rien écrire. Son stock
+ne peut pas remonter, `incrementerStockPhysique` filtrant sur `archivee_a IS
+NULL` : écrire le mouvement quand même ferait diverger le journal de la colonne.
+La perte, elle, reste déclarable, n'écrivant aucun mouvement.
+
+L'écran des stocks continue de refuser de compenser une vente web, à juste
+titre : un `RETOUR` y incrémenterait le stock sans toucher la commande ni la
+facture, et ce parcours-ci est le chemin prévu.
 
 **Pièce retournée endommagée**
 Base : `recueA` horodaté, motif documenté. **L'ajustement du montant n'est
