@@ -309,9 +309,14 @@ export async function corrigerMouvement(
        * Une piece vendue en ligne et expediee serait remise en vente, et rien
        * dans le journal ne dirait que la commande existe toujours.
        *
-       * UN RETOUR DE MARCHANDISE WEB SE TRAITE PAR LE PARCOURS 4, phase 4, avec
-       * son remboursement et son avoir : S8 lie la reintegration de stock au
-       * retour PHYSIQUE, jamais a une correction de saisie.
+       * UN RETOUR DE MARCHANDISE WEB SE TRAITE AILLEURS, et ce chemin EXISTE
+       * depuis LS-173 : `constaterEtatPiece` dans `traitement-retractation.ts`,
+       * etape 9 du parcours 5. Il compense la vente web avec son `compenseId`,
+       * et le refus de double compensation vient du meme index qu'ici.
+       *
+       * S8 LIE LA REINTEGRATION AU RETOUR PHYSIQUE, jamais a une correction de
+       * saisie : c'est pourquoi le geste vit sur la demande de retractation, ou
+       * l'etat reel de la piece est constate, et non sur cet ecran.
        *
        * `AJUSTEMENT` ET `ENTREE` SONT EXCLUS AUSSI. Un inventaire errone se
        * corrige par un nouvel inventaire, qui constate la realite : le
