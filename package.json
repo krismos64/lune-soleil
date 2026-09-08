@@ -23,6 +23,8 @@
     "db:demarrer": "docker compose up -d db",
     "db:arreter": "docker compose stop db",
     "db:preparer": "./scripts/preparer-base-locale.sh",
+    "db:e2e": "./scripts/preparer-base-e2e.sh",
+    "db:e2e:reinitialiser": "./scripts/preparer-base-e2e.sh --reinitialiser",
     "db:reinitialiser": "./scripts/preparer-base-locale.sh --reinitialiser",
     "db:verifier": "./prisma/sql-manuel/verifier-schema.sh --base-migree",
     "db:verifier:conception": "./prisma/sql-manuel/verifier-schema.sh",

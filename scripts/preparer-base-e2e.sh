@@ -1,0 +1,205 @@
+#!/bin/bash
+# Prepare la base de BOUT EN BOUT, LS-189.
+#
+# ---------------------------------------------------------------------------
+# POURQUOI CETTE BASE EXISTE, ET POURQUOI ELLE N'EST PAS CELLE DU DEVELOPPEMENT
+#
+# La suite Playwright promeut son propre compte d'administration,
+# `e2e-administration@exemple.test`, pour ouvrir une session sur les ecrans
+# proteges. L'index partiel `utilisateur_administratrice_unique` n'admet QU'UNE
+# ligne dont le role vaut ADMINISTRATRICE, regle E1.
+#
+# Sur la base de developpement, le compte REEL de l'exploitante occupe cette
+# place unique. La preparation echouait donc avant tout test :
+#
+#   error: duplicate key value violates unique constraint
+#          "utilisateur_administratrice_unique"
+#
+# et Playwright marquait la suite entiere « did not run ». Mesure du 5 septembre
+# 2026 en livrant LS-180, reproduite le 8 septembre : echec en 189 ms.
+#
+# LA PARADE N'EST PAS UNE CLAUSE SQL PLUS LARGE. La retrogradation ecrite dans
+# `tests/e2e/session-administration.setup.ts` ne vise que le prefixe `e2e-`, et
+# cette etroitesse PROTEGE le compte reel : un `UPDATE` sans clause lui
+# retirerait son role en silence sur un poste de developpement. Elargir la
+# clause fermerait un defaut en ouvrant celui que le garde-fou existant empeche.
+#
+# L'ISOLEMENT PAR LA BASE FERME LES DEUX, et il le fait STRUCTURELLEMENT :
+# aucune requete de la suite n'atteint la base qui porte le compte reel, quelle
+# que soit la clause qu'un futur ticket ecrira. C'est le critere 2 de LS-189,
+# tenu par construction plutot que par vigilance.
+# ---------------------------------------------------------------------------
+#
+# CE SCRIPT NE POSE AUCUNE FIXTURE. Il pose le SCHEMA, rien d'autre : les
+# comptes, produits et commandes de test sont amorces par les cinq fichiers
+# `.setup.ts` du projet `preparation` de Playwright, qui en restent la seule
+# source. Deux endroits qui amorcent divergent, ce depot en a fait l'experience.
+#
+# Usage :
+#   ./scripts/preparer-base-e2e.sh                  # prepare, conserve les donnees
+#   ./scripts/preparer-base-e2e.sh --reinitialiser  # repart d'une base vide
+#
+# `npm run test:e2e` l'appelle seul, il n'y a donc rien a lancer a la main dans
+# le cas courant.
+set -euo pipefail
+
+RACINE="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$RACINE"
+
+CONTENEUR=lune-soleil-db-e2e
+SERVICE=db-e2e
+
+REINITIALISER=0
+if [ "${1:-}" = "--reinitialiser" ]; then
+  REINITIALISER=1
+elif [ -n "${1:-}" ]; then
+  echo "Argument inconnu : $1"
+  echo "Usage : $0 [--reinitialiser]"
+  exit 2
+fi
+
+echec() {
+  echo
+  echo "ECHEC : $1"
+  echo
+  exit 1
+}
+
+command -v docker >/dev/null 2>&1 || echec "docker introuvable dans le PATH"
+docker info >/dev/null 2>&1 || echec "le demon Docker ne repond pas, est-il demarre ?"
+
+[ -f "$RACINE/.env" ] || echec "fichier .env absent.
+       Le creer a partir de .env.example, puis renseigner POSTGRES_PASSWORD,
+       DATABASE_URL et DATABASE_URL_E2E."
+
+# ---------------------------------------------------------------------------
+# DATABASE_URL_E2E EST EXIGEE, ET ELLE EST COMPAREE A DATABASE_URL.
+#
+# C'EST LE GARDE-FOU CENTRAL DE CE SCRIPT. Les deux bases partageant leurs
+# identifiants et leur nom, seul le PORT les distingue : une variable recopiee
+# sans changer le port ferait tourner la suite sur la base de developpement, et
+# le defaut de LS-189 reviendrait a l'identique sans que rien ne le signale.
+#
+# La lecture passe par node plutot que par un `grep` sur .env : les valeurs
+# n'apparaissent ainsi dans aucun argument de commande, donc dans aucun `ps`.
+# ---------------------------------------------------------------------------
+verdict=$(node -e '
+require("dotenv/config");
+const dev = process.env.DATABASE_URL;
+const e2e = process.env.DATABASE_URL_E2E;
+if (!e2e) { console.log("ABSENTE"); process.exit(0); }
+if (!dev) { console.log("DEV_ABSENTE"); process.exit(0); }
+if (dev === e2e) { console.log("IDENTIQUES"); process.exit(0); }
+try {
+  const a = new URL(dev), b = new URL(e2e);
+  console.log(a.port === b.port && a.hostname === b.hostname ? "MEME_PORT" : "OK " + b.port);
+} catch { console.log("MALFORMEE"); }
+' 2>/dev/null) || echec "la lecture de l'environnement a echoue"
+
+case "$verdict" in
+  ABSENTE)
+    echec "DATABASE_URL_E2E absente de .env.
+       Elle doit pointer la base de bout en bout, port 55433 par defaut, la
+       meme URL que DATABASE_URL au PORT pres. Voir .env.example, LS-189." ;;
+  DEV_ABSENTE)
+    echec "DATABASE_URL absente de .env, la comparaison ne peut pas conclure." ;;
+  IDENTIQUES)
+    echec "DATABASE_URL_E2E est IDENTIQUE a DATABASE_URL.
+       La suite tournerait sur la base de developpement et retrograderait des
+       comptes reels. Changer le port, 55433 par defaut, LS-189." ;;
+  MEME_PORT)
+    echec "DATABASE_URL_E2E designe le MEME hote et le MEME port que
+       DATABASE_URL. Les deux bases seraient confondues, LS-189." ;;
+  MALFORMEE)
+    echec "DATABASE_URL_E2E n'est pas une URL analysable." ;;
+esac
+echo "== Environnement =="
+echo "   DATABASE_URL_E2E distincte de DATABASE_URL, port ${verdict#OK }"
+
+# ---------------------------------------------------------------------------
+# Conteneur
+# ---------------------------------------------------------------------------
+if [ "$REINITIALISER" -eq 1 ]; then
+  echo "== Reinitialisation, suppression du volume de test =="
+  # Ne touche QUE le service de test : `docker compose down -v` sans argument
+  # detruirait aussi le volume de developpement et ses donnees reelles.
+  docker compose rm -sfv "$SERVICE" >/dev/null 2>&1 || true
+  docker volume rm lune-soleil-pgdata-e2e >/dev/null 2>&1 || true
+fi
+
+echo "== Demarrage de PostgreSQL 18, base de test =="
+docker compose up -d "$SERVICE" >/dev/null 2>&1 || echec "le conteneur $CONTENEUR n'a pas demarre"
+
+echo -n "   attente du controle de sante"
+sante=""
+for _ in $(seq 1 60); do
+  sante=$(docker inspect --format '{{.State.Health.Status}}' "$CONTENEUR" 2>/dev/null || echo absent)
+  [ "$sante" = "healthy" ] && break
+  echo -n "."
+  sleep 2
+done
+echo
+[ "$sante" = "healthy" ] || echec "la base de test n'est pas saine apres 120 secondes (etat : $sante).
+       Journaux : docker compose logs $SERVICE"
+echo "   sain"
+
+# ---------------------------------------------------------------------------
+# Migration
+#
+# `migrate deploy` et NON `db push` : la base de test doit valoir exactement ce
+# que les migrations produisent, contraintes CHECK et unicite differable
+# comprises. `db push` derive du schema Prisma et laisserait de cote le SQL que
+# Prisma ne sait pas exprimer, ADR-006 et ADR-026. Motif deja en fiche sur ce
+# depot.
+#
+# DATABASE_URL EST SURCHARGEE POUR CETTE COMMANDE SEULEMENT, par
+# l'environnement du processus et non par un argument : une URL en argument
+# porterait le mot de passe dans la ligne de commande, lisible par tout `ps`.
+# ---------------------------------------------------------------------------
+echo "== Migration Prisma sur la base de test =="
+node -e '
+require("dotenv/config");
+process.env.DATABASE_URL = process.env.DATABASE_URL_E2E;
+const { spawnSync } = require("node:child_process");
+const r = spawnSync("npx", ["prisma", "migrate", "deploy"], { stdio: "inherit", env: process.env });
+process.exit(r.status === null ? 1 : r.status);
+' || echec "l'application des migrations a echoue sur la base de test"
+
+# ---------------------------------------------------------------------------
+# Etat final, mesure et non suppose.
+#
+# Les comptes attendus sont CALCULES depuis les fichiers de reference, jamais
+# figes : un nombre ecrit ici deviendrait faux a la premiere contrainte
+# ajoutee, et ce depot en a deja fait l'experience.
+# ---------------------------------------------------------------------------
+interroger() {
+  docker exec -i "$CONTENEUR" psql -U "${POSTGRES_USER:-lunesoleil}" -d "${POSTGRES_DB:-lunesoleil}" -tAq -c "$1" | tr -d '[:space:]'
+}
+
+tables=$(interroger "SELECT count(*) FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name <> '_prisma_migrations';")
+checks=$(interroger "SELECT count(*) FROM pg_constraint
+    WHERE contype = 'c' AND connamespace = 'public'::regnamespace
+      AND conname LIKE 'chk_%';")
+checks_attendus=$(grep -c "ADD CONSTRAINT" "$RACINE/prisma/sql-manuel/001_contraintes_check.sql")
+
+# L'INDEX QUI MOTIVE CETTE BASE EST VERIFIE NOMMEMENT. Sans lui, la suite
+# passerait sur une base ou DEUX administratrices coexistent : elle ne dirait
+# alors plus rien de la regle E1 servie en production, et le defaut d'origine
+# serait remplace par un test aveugle.
+index_e1=$(interroger "SELECT count(*) FROM pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'utilisateur_administratrice_unique';")
+
+echo
+echo "-----------------------------------------"
+echo "  Base de bout en bout prete"
+echo "    tables            : $tables"
+echo "    contraintes CHECK : $checks sur $checks_attendus attendues"
+echo "    index E1 present  : $index_e1"
+echo "-----------------------------------------"
+echo
+
+[ "$checks" = "$checks_attendus" ] || echec "la migration n'a pose que $checks contraintes CHECK sur $checks_attendus."
+[ "$index_e1" = "1" ] || echec "l'index utilisateur_administratrice_unique est absent de la base de test.
+       La regle E1 ne serait plus exercee par la suite, LS-189."

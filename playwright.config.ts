@@ -316,12 +316,59 @@ export default defineConfig({
      * `public/medias/` etant ignore par git, sans cette etape les sept URL du
      * catalogue rendent 404 sur tout executeur neuf, la CI comprise.
      */
-    command: `node scripts/engendrer-medias-test.mjs && npm run build && npx next start --port ${PORT}`,
+    /*
+     * LA BASE DE TEST EST PREPAREE AVANT LE BUILD, LS-189, et l'ordre importe :
+     * `next build` execute du code applicatif qui ouvre des connexions, il ne
+     * doit pas trouver la base absente.
+     */
+    command: `./scripts/preparer-base-e2e.sh && node scripts/engendrer-medias-test.mjs && npm run build && npx next start --port ${PORT}`,
     url: URL_BASE,
     reuseExistingServer: !process.env.CI,
     // Une construction Next.js complete depasse largement le delai par defaut.
     timeout: 180_000,
     env: {
+      /*
+       * LA SUITE TOURNE SUR SA PROPRE BASE, LS-189, ET C'EST LA LIGNE QUI
+       * FERME LE DEFAUT.
+       *
+       * ------------------------------------------------------------------
+       * LE DEFAUT. La preparation promeut `e2e-administration@exemple.test` en
+       * ADMINISTRATRICE, et l'index partiel `utilisateur_administratrice_unique`
+       * n'admet QU'UNE ligne portant ce role, regle E1. Sur la base de
+       * developpement, le compte REEL de l'exploitante occupe cette place :
+       *
+       *   error: duplicate key value violates unique constraint
+       *          "utilisateur_administratrice_unique"
+       *
+       * La preparation echouait avant tout test et Playwright marquait la suite
+       * entiere « did not run ». Mesure du 5 septembre 2026 en livrant LS-180,
+       * reproduite le 8 septembre : echec en 189 ms.
+       *
+       * POURQUOI PAS UNE CLAUSE SQL PLUS LARGE. La retrogradation de
+       * `session-administration.setup.ts` ne vise que le prefixe `e2e-`, et
+       * cette etroitesse PROTEGE le compte reel : un `UPDATE` sans clause lui
+       * retirerait son role en silence. Elargir fermerait un defaut en ouvrant
+       * celui que le garde-fou existant empeche.
+       *
+       * L'ISOLEMENT EST DONC STRUCTUREL : aucune requete de la suite n'atteint
+       * la base qui porte le compte reel, quelle que soit la clause qu'un futur
+       * ticket ecrira. Critere 2 de LS-189, tenu par construction.
+       * ------------------------------------------------------------------
+       *
+       * ELLE VAUT POUR LE SERVEUR **ET** POUR LES PREPARATIONS. Les cinq
+       * fichiers `.setup.ts` ouvrent leur propre connexion `pg` sur
+       * `process.env.DATABASE_URL` : `dotenv` ne remplace pas une variable deja
+       * posee, donc la valeur exportee ci-dessous par le processus Playwright
+       * les gouverne aussi. Les deux moities de la suite lisent la meme base,
+       * ce que `verifier-base-e2e.sh` garde.
+       *
+       * EN CI ELLE EST ABSENTE et le repli sur `DATABASE_URL` s'applique : le
+       * PostgreSQL du workflow est vierge a chaque execution, sans compte reel
+       * a proteger. Le repli est deliberement SILENCIEUX la-bas, et refuse
+       * localement par `preparer-base-e2e.sh`, qui exige la variable.
+       */
+      DATABASE_URL:
+        process.env.DATABASE_URL_E2E ?? process.env.DATABASE_URL ?? "",
       /*
        * BETTER_AUTH_URL DOIT DESIGNER LE SERVEUR REELLEMENT SERVI, LS-70.
        *
