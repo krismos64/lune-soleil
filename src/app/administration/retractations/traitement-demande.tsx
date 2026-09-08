@@ -353,7 +353,7 @@ export function TraitementDemande({
           disabled={enCours}
           onClick={() => lancer(() => ouvrirRetour(formulaireDe({})))}
         >
-          {enCours ? "Enregistrement en cours…" : "Attendre le retour du colis"}
+          {enCours ? "Ouverture en cours…" : "Attendre le retour du colis"}
         </button>
       ) : null}
 
@@ -383,7 +383,7 @@ export function TraitementDemande({
               lancer(() => declarerPreuveExpedition(formulaireDe({ preuve })))
             }
           >
-            {enCours ? "Enregistrement en cours…" : "Enregistrer la preuve"}
+            {enCours ? "Enregistrement de la preuve…" : "Enregistrer la preuve"}
           </button>
         </div>
       ) : null}
@@ -400,7 +400,7 @@ export function TraitementDemande({
            * le colis peut arriver trois semaines apres le versement, et le
            * masquer rendrait ce cas insaisissable. Le statut ne bouge pas.
            */}
-          {enCours ? "Enregistrement en cours…" : "Marquer le colis reçu"}
+          {enCours ? "Réception en cours…" : "Marquer le colis reçu"}
         </button>
       )}
 
@@ -502,9 +502,7 @@ export function TraitementDemande({
               )
             }
           >
-            {enCours
-              ? "Enregistrement en cours…"
-              : "Enregistrer l\u2019état de la pièce"}
+            {enCours ? "Constat en cours…" : "Enregistrer l'état de la pièce"}
           </button>
         </details>
       )}
@@ -631,7 +629,7 @@ export function TraitementDemande({
          * NOMMER LA REGION NE SUFFIT PAS, C39 : son `aria-label` sert a la
          * distinguer de celles des autres cartes, seul le CONTENU est vocalise.
          */}
-        {enCours ? "Enregistrement en cours…" : (message?.texte ?? "")}
+        {enCours ? "Traitement en cours…" : (message?.texte ?? "")}
         {message?.lien === undefined ? null : (
           <>
             {" "}
