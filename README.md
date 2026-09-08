@@ -799,6 +799,8 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-base-e2e.sh                   # isolement de la base de bout en bout, LS-189
 ./scripts/verifier-base-e2e-mutation.sh          # prouve le précédent par mutation
 ./scripts/verifier-reintegration-stock-mutation.sh # étape 9 du parcours 5, LS-173
+./scripts/amorcer-compte-administration.sh       # promeut le compte de l'exploitante, LS-175
+./scripts/verifier-comptes-production.sh         # une seule administratrice, aucun compte de test
 ./scripts/verifier-fixtures-e2e-mutation.sh      # prouve le précédent par mutation
 ./scripts/verifier-description-accessible.sh          # aucun aria-describedby annulé par un aria-label, C39, LS-161
 ./scripts/verifier-description-accessible-mutation.sh # prouve le précédent par mutation
