@@ -63,6 +63,23 @@ Le test **rougit sans l'annonce**, vérifié par mutation. 1503 tests de bout en
 bout au vert, zéro échec, ce qui valide aussi le parallélisme des trois largeurs.
 1291 en Vitest, les 4 échecs `chemin_pdf` restant préexistants.
 
+## Un faux positif de la chaîne, ticketé
+
+La pull request **documentaire** qui suit la livraison a été bloquée par l'étape
+`9a bis`, sur son cas 5. Sa sortie affichait pourtant « configuration Claude Code
+cohérente » juste sous le mot ÉCHEC : le contrôle avait **réussi** et était
+compté en échec.
+
+Trois vérifications ont écarté ma modification : elle ne touchait que
+`README.md`, le contrôle est vert sur `main` comme sur la branche, et la règle du
+journal daté est satisfaite, cinq pages existant pour 81 fichiers commités ce
+jour-là. **La relance de la CI a rendu vert sans aucune modification.**
+
+**LS-204 créée**, rattachée à la phase 6. Un garde-fou qui rougit sans raison
+finit ignoré, motif que LS-199 a déjà payé. Le ticket demande la **cause**, pas
+un réessai automatique, et note que la sortie actuelle rend le diagnostic
+trompeur en affichant le verdict de réussite sous le mot ÉCHEC.
+
 ## Prochaine étape
 
 Le backlog réalisable sans VPS porte la part documentaire de **LS-175**, la
