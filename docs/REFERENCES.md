@@ -198,6 +198,7 @@ documentation technique, ticket ou règle qui le contredirait.
 | ADR-033 | Outbox transactionnelle pour l'envoi des emails | email, envoi, outbox, idempotence d'envoi, doublon d'email, nodemailer, SMTP |
 | ADR-034 | Rendu des documents comptables par `@react-pdf/renderer` | PDF, facture, avoir, rendu, gabarit, police, Unicode, `cheminPdf` |
 | ADR-035 | Tarifs réels constatés, domicile à 7,49 €, franchise réservée au retrait, intégration Sendcloud | tarif de livraison, frais de port, seuil de gratuité, Sendcloud, Mondial Relay, `SHIPPING_HOME_RATE_CENTS` |
+| ADR-036 | Hébergement sur le VPS existant, en cohabitation avec SmartPlanning | hébergement, VPS, OVH, serveur de production, port 3002, limites de ressources, cohabitation |
 
 Cette table se met à jour à chaque ADR créé. Un ADR absent d'ici reste
 opposable : la table est un raccourci, `docs/adr/` fait foi.
