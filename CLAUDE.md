@@ -12,7 +12,7 @@ refuse les versions impaires de Node.
 npm ci && npx prisma generate        # le client Prisma n'est pas versionné
 npm run type-check && npm run lint && npm run build
 npm run test && npm run test:e2e  # Vitest sur base éphémère, puis Playwright
-npm run db:preparer    # base locale : conteneur, migrations, SQL non généré
+npm run db:preparer && npm run db:e2e  # les deux bases, 55432 et 55433
 npm run db:verifier    # les contrôles du modèle sur cette base, exige Docker
 ./scripts/verifier-regles.sh         # .claude/rules/ : schéma, code, couverture
 ./scripts/verifier-config-claude.sh  # cohérence config, ADR, mémoire, journal
@@ -20,8 +20,12 @@ npm run db:verifier    # les contrôles du modèle sur cette base, exige Docker
 
 Liste complète dans `README.md`, la CI rejoue tout sur chaque PR. `npm audit`
 reste à **zéro**. Une migration se **crée** à la main, `npx prisma migrate dev
---name sujet`, interactive donc non scriptable. Les tests d'intégration créent
-leur base éphémère, ne jamais les pointer sur celle de développement.
+--name sujet`, interactive donc non scriptable.
+
+**Trois bases, jamais confondues** : développement sur 55432, bout en bout sur
+55433, et celle qu'un test d'intégration crée. Ne jamais pointer les deux
+dernières sur la première, la suite y promeut son compte d'administration et E1
+n'admet qu'une administratrice.
 
 ## Architecture
 
@@ -101,13 +105,11 @@ interface et réponses de conversation.
 
 Deux axes à ne pas confondre. **Importance** : Must, Should, Could, Won't.
 **Jalon** : Go-Live, V1 cible, V1.x, Hors V1. Un Must sur Go-Live ne se repousse
-jamais. Aucune date de livraison n'est fixée, le pilotage se fait par portes de
-sortie de phase. Deux nuances qui se perdent facilement :
-
-- l'assistant IA et l'**interface** de statistiques sont en V1 cible, mais la
-  **collecte** des montants est au Go-Live : une donnée non capturée est perdue
-- l'espace client, les avis vérifiés et le carnet d'adresses sont dans le
-  périmètre d'ouverture depuis le 28 juillet 2026, epic LS-36, jamais différables
+jamais. Aucune date fixée, le pilotage se fait par portes de sortie de phase.
+Deux nuances qui se perdent : l'assistant IA et l'**interface** de statistiques
+sont en V1 cible mais la **collecte** des montants est au Go-Live, une donnée non
+capturée étant perdue ; l'espace client, les avis et le carnet d'adresses sont
+dans le périmètre d'ouverture depuis le 28 juillet 2026, epic LS-36.
 
 ## Sources de vérité
 
@@ -156,10 +158,9 @@ un garde-fou qui ne peut pas conclure bloque la migration.
 ## Agents
 
 Trois agents projet, table dans `docs/REFERENCES.md` : `ls-critical-reviewer`,
-zones à risque ; `ls-conteneurisation`, image et déploiement ;
-`ls-frontend-revue`, interface avant clôture. **Ne pas invoquer les agents
-globaux `docker-devops`, `security-auditor` ni `nextjs-architect`**, calibrés sur
-une autre stack.
+zones à risque ; `ls-conteneurisation`, déploiement ; `ls-frontend-revue`,
+interface. **Ne pas invoquer `docker-devops`, `security-auditor` ni
+`nextjs-architect`**, calibrés sur une autre stack.
 
 ## Conduite du travail
 

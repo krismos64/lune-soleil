@@ -796,12 +796,13 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-route-echec.sh                # garde la page qui lève à dessein, LS-191
 ./scripts/verifier-route-echec-mutation.sh       # prouve le précédent par mutation
 ./scripts/verifier-fixtures-e2e.sh               # adresses de test fixes, plafonds préservés, LS-168
+./scripts/verifier-fixtures-e2e-mutation.sh      # prouve le précédent par mutation
 ./scripts/verifier-base-e2e.sh                   # isolement de la base de bout en bout, LS-189
 ./scripts/verifier-base-e2e-mutation.sh          # prouve le précédent par mutation
 ./scripts/verifier-reintegration-stock-mutation.sh # étape 9 du parcours 5, LS-173
 ./scripts/amorcer-compte-administration.sh       # promeut le compte de l'exploitante, LS-175
-./scripts/verifier-comptes-production.sh         # une seule administratrice, aucun compte de test
-./scripts/verifier-fixtures-e2e-mutation.sh      # prouve le précédent par mutation
+#   la procédure complète vit dans docs/PROCEDURE-AMORCAGE-ADMINISTRATION.md
+./scripts/verifier-comptes-production.sh         # une administratrice, aucun compte de test, LS-175
 ./scripts/verifier-description-accessible.sh          # aucun aria-describedby annulé par un aria-label, C39, LS-161
 ./scripts/verifier-description-accessible-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-numerotation-etapes-mutation.sh    # prouve le sens « numéros d'étape en doublon » de verifier-config-claude.sh, LS-202
