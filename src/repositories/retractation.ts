@@ -363,6 +363,12 @@ export type DemandeEnListe = {
   motifDecision: string | null;
   montantRembourseCentimes: number | null;
   /**
+   * L'etat constate de la piece retournee, LS-173, nul tant qu'aucun constat
+   * n'a ete fait. L'ecran s'en sert pour ne proposer le geste qu'une fois, un
+   * mouvement de stock etant immuable.
+   */
+  etatPieceRetournee: EtatPieceRetournee | null;
+  /**
    * Le numero de l'avoir emis pour cette demande, LS-174, `A-2026-0001`.
    *
    * NUL TANT QU'AUCUN REMBOURSEMENT N'A ABOUTI, et c'est un etat normal : une
@@ -429,6 +435,8 @@ export async function listerDemandes(
       motifClient: true,
       motifDecision: true,
       montantRembourseCentimes: true,
+      // LS-173, l'ecran ne propose le constat qu'une fois.
+      etatPieceRetournee: true,
       commandeId: true,
       /*
        * UN SEUL AVOIR ATTENDU, ET LA REQUETE NE SUPPOSE PAS QU'IL Y EN A UN,
@@ -462,6 +470,7 @@ export async function listerDemandes(
     motifClient: demande.motifClient,
     motifDecision: demande.motifDecision,
     montantRembourseCentimes: demande.montantRembourseCentimes,
+    etatPieceRetournee: demande.etatPieceRetournee,
     /*
      * `?? null` EXPLICITE : `noUncheckedIndexedAccess` rend `avoirs[0]` en
      * `... | undefined`, et le type de l'ecran attend `null`. Les deux disent

@@ -906,6 +906,8 @@ erDiagram
         texte preuveExpeditionRetour "nullable, numero de suivi ou reference"
         horodatage preuveExpeditionA "nullable, declenche le remboursement, L221-24"
         horodatage recueA "nullable"
+        enum etatPieceRetournee "REMISE_EN_VENTE PERTE_CONSTATEE"
+        horodatage etatConstateA "nullable, avec etatPieceRetournee, C41"
     }
     JETON_ACCES {
         identifiant id PK

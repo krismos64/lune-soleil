@@ -336,6 +336,7 @@ export default async function PageRetractations() {
                 statut={demande.statut}
                 colisRecu={demande.recueA !== null}
                 preuveFournie={demande.preuveExpeditionA !== null}
+                etatPieceConstate={demande.etatPieceRetournee !== null}
                 montantDuCentimes={demande.totalCentimes}
                 referenceDemande={references.get(demande.id) ?? ""}
               />
