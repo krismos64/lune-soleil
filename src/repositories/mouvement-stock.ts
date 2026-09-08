@@ -107,12 +107,18 @@ export async function incrementerStockPhysique(
 /**
  * Ecrit une ligne au journal des mouvements, LS-106.
  *
- * `commandeId` N'EST PAS UN PARAMETRE, et c'est deliberé. Cette fonction sert
- * les mouvements d'ADMINISTRATION : vente externe, entree, ajustement, retour
- * saisi a la main. Aucun d'eux ne porte de commande, et la clé d'idempotence
- * `mouvement_vente_web_unique` ne s'applique donc jamais ici. Les mouvements de
- * type `VENTE_WEB` naissent du webhook de paiement, ailleurs, avec leur propre
- * garantie d'unicite.
+ * `commandeId` EST FACULTATIF, ET IL L'EST DEVENU EN LS-173. Cette fonction a
+ * d'abord servi les seuls mouvements d'ADMINISTRATION sans commande : vente
+ * externe, entree, ajustement, retour saisi a la main.
+ *
+ * LE RETOUR DE RETRACTATION A CASSE CETTE HYPOTHESE. Il compense une VENTE WEB,
+ * donc il porte la commande dont la piece revient : sans elle, le journal
+ * afficherait un retour orphelin, et l'historique d'une commande retractee ne
+ * montrerait que la sortie.
+ *
+ * LA CLE `mouvement_vente_web_unique` N'EST PAS TOUCHEE : son predicat porte
+ * `type = 'VENTE_WEB'`, et aucun mouvement ecrit ici n'a ce type. Les ventes web
+ * naissent du webhook de paiement, ailleurs, avec leur propre garantie.
  *
  * `origine` EST `ADMIN` ET `acteurId` OBLIGATOIRE, regle S9 : une ecriture faite
  * par une personne se distingue d'une ecriture systeme, et l'auteur d'un
@@ -123,6 +129,11 @@ export async function creerMouvement(
   client: ClientBase,
   parametres: {
     varianteId: string;
+    /**
+     * La commande dont ce mouvement decoule, LS-173. Nulle sur les mouvements
+     * d'administration, qui ne se rattachent a aucune vente en ligne.
+     */
+    commandeId?: string | null;
     type: TypeMouvementStock;
     quantite: number;
     canal?: string | null;
@@ -142,6 +153,7 @@ export async function creerMouvement(
   const ligne = await client.mouvementStock.create({
     data: {
       varianteId: parametres.varianteId,
+      commandeId: parametres.commandeId ?? null,
       type: parametres.type,
       quantite: parametres.quantite,
       canal: parametres.canal ?? null,

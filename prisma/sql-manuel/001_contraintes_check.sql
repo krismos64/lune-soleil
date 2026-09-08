@@ -335,3 +335,24 @@ ALTER TABLE message
     (statut IN ('LU', 'TRAITE')) = (lu_a IS NOT NULL)
     AND (statut = 'TRAITE') = (traite_a IS NOT NULL)
   );
+
+-- C41, l'etat constate de la piece retournee et sa date vont ensemble, LS-173.
+--
+-- C'EST UNE EQUIVALENCE ET NON UNE IMPLICATION, meme forme que C30 : un etat
+-- pose sans date ne dirait pas QUAND la decision a ete prise, et une date sans
+-- etat affirmerait un constat qui n'a rien conclu.
+--
+-- LE PIEGE EVITE ICI A DEJA ETE RENCONTRE SUR CE DEPOT : copier la forme d'un
+-- CHECK voisin en gardant une implication laisse passer exactement la moitie
+-- des etats incoherents, motif « implication et non equivalence ».
+--
+-- ELLE NE DIT RIEN DE `recue_a`, ET C'EST DELIBERE. On pourrait croire qu'un
+-- etat constate exige un colis recu, mais la regle L13 decrit precisement le
+-- cas contraire : une piece JAMAIS revenue se declare `PERTE_CONSTATEE` sans
+-- que `recue_a` soit renseigne. Lier les deux fermerait le seul geste qui
+-- solde une demande dont le colis s'est perdu en transit.
+ALTER TABLE demande_retractation
+  ADD CONSTRAINT chk_retractation_etat_piece_coherent
+  CHECK (
+    (etat_piece_retournee IS NOT NULL) = (etat_constate_a IS NOT NULL)
+  );

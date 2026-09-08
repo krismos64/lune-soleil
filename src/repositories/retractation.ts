@@ -13,7 +13,10 @@
  * legale du moment ou le client a exerce son droit, et la conserver telle
  * quelle est ce qui la rend opposable.
  */
-import type { StatutRetractation } from "@/generated/prisma/enums";
+import type {
+  EtatPieceRetournee,
+  StatutRetractation,
+} from "@/generated/prisma/enums";
 import type { ClientBase } from "@/repositories/stock";
 
 /** Ce qu'une commande doit dire pour juger d'une retractation. */
@@ -130,6 +133,15 @@ export type DemandePourTraitement = {
   recueA: Date | null;
   preuveExpeditionA: Date | null;
   montantRembourseCentimes: number | null;
+  /*
+   * LS-173. TYPES PAR L'ENUM ET NON PAR `string`, contrairement a `statut`
+   * ci-dessus : declarer `string` jetterait la valeur que Prisma rend, et un
+   * `switch` d'affichage exhaustif cesserait de l'etre en silence si une
+   * troisieme valeur etait ajoutee. C'est le motif « elargissement en amont »
+   * corrige par LS-143, qu'il ne faut pas reintroduire ici.
+   */
+  etatPieceRetournee: EtatPieceRetournee | null;
+  etatConstateA: Date | null;
 };
 
 /**
@@ -153,8 +165,54 @@ export async function lireDemandePourTraitement(
       recueA: true,
       preuveExpeditionA: true,
       montantRembourseCentimes: true,
+      // LS-173. Sans eux, le service ne peut pas distinguer une demande jamais
+      // arbitree d'une piece deja declaree perdue, les deux ne portant aucun
+      // mouvement de stock.
+      etatPieceRetournee: true,
+      etatConstateA: true,
     },
   });
+}
+
+/**
+ * Constate l'etat de la piece retournee, ETAPE 9, DE FACON CONDITIONNELLE.
+ *
+ * `updateMany` AVEC `etatPieceRetournee: null` DANS LE `where`, meme propriete
+ * que `horodaterReception` : deux constats concurrents ne peuvent pas reussir
+ * tous les deux, le second ne trouvant plus aucune ligne. Un `update` sur
+ * l'identifiant seul ecraserait une decision deja prise, et deplacerait la date
+ * qui l'horodate.
+ *
+ * CE REFUS PROTEGE LES DEUX ETATS, et c'est ce qui le rend utile au-dela de la
+ * remise en vente : la seconde ecriture est refusee aussi bien sur une piece
+ * deja remise en vente que sur une piece deja declaree perdue. L'index
+ * `mouvement_compense_unique` ne couvre QUE le premier cas, la perte n'ecrivant
+ * aucun mouvement. Sans cette clause, une perte constatee se reecrirait
+ * indefiniment.
+ *
+ * IL NE TOUCHE PAS AU STATUT, regle L12. L'etat de la piece est un fait
+ * physique, independant du cycle de la demande : il se constate sur une demande
+ * `RETOUR_ATTENDU` comme sur une demande `REMBOURSEE` depuis trois semaines.
+ */
+export async function constaterEtatPiece(
+  client: ClientBase,
+  parametres: {
+    demandeId: string;
+    etat: EtatPieceRetournee;
+    constateA: Date;
+  },
+): Promise<{ appliquee: boolean }> {
+  const { count } = await client.demandeRetractation.updateMany({
+    where: { id: parametres.demandeId, etatPieceRetournee: null },
+    data: {
+      etatPieceRetournee: parametres.etat,
+      // C41 EXIGE LES DEUX ENSEMBLE, dans les deux sens : ecrire l'etat sans la
+      // date leverait la contrainte, ce qui est exactement son role.
+      etatConstateA: parametres.constateA,
+    },
+  });
+
+  return { appliquee: count > 0 };
 }
 
 /**

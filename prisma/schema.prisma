@@ -67,6 +67,25 @@ enum TypeMouvementStock {
   ENTREE
 }
 
+// LS-173, parcours 5 etape 9. L'etat REEL de la piece revenue, que seule
+// l'exploitante constate : `recueA` dit qu'un colis est arrive, jamais dans quel
+// etat. Regle S8, la reintegration depend du retour PHYSIQUE et de son etat.
+//
+// DEUX VALEURS ET NON TROIS. « Pas encore constate » est l'ABSENCE de valeur,
+// la colonne etant nullable : en faire une troisieme valeur d'enum obligerait a
+// la poser a la creation de la demande, et un defaut de mise a jour deviendrait
+// indistinguable d'un etat delibere.
+enum EtatPieceRetournee {
+  // La piece retourne au catalogue : un mouvement RETOUR compense la vente.
+  REMISE_EN_VENTE
+  // La piece est cassee, incomplete ou jamais revenue : AUCUN mouvement.
+  //
+  // ELLE S'ECRIT QUAND MEME, et c'est tout l'interet de cette valeur : sans
+  // elle, une piece declaree perdue serait indistinguable d'une demande jamais
+  // traitee, les deux ne portant aucun mouvement.
+  PERTE_CONSTATEE
+}
+
 enum OrigineEcriture {
   SYSTEME
   ADMIN
@@ -804,6 +823,13 @@ model DemandeRetractation {
   preuveExpeditionRetour   String?            @map("preuve_expedition_retour") // L7, article L221-24
   preuveExpeditionA        DateTime?          @map("preuve_expedition_a") @db.Timestamptz(3) // premier des deux faits
   recueA                   DateTime?          @map("recue_a") @db.Timestamptz(3) // L12, hors statut, déclenche le RETOUR
+  // LS-173, etape 9. L'etat constate de la piece revenue, nul tant que
+  // l'exploitante n'a pas tranche. C'est lui, et jamais `recueA`, qui dit si le
+  // stock est reintegre : une date de reception ne renseigne pas sur l'etat.
+  etatPieceRetournee       EtatPieceRetournee? @map("etat_piece_retournee")
+  // Quand l'etat a ete constate. Distinct de `recueA` : le colis peut arriver un
+  // jour et etre ouvert le lendemain, et c'est la DECISION qui est horodatee ici.
+  etatConstateA            DateTime?          @map("etat_constate_a") @db.Timestamptz(3)
 
   commande Commande @relation(fields: [commandeId], references: [id], onDelete: Restrict)
   avoirs   Avoir[]
