@@ -87,8 +87,13 @@ echo
 
 # 1. L'ETAT D'AVANT LA STORY : la surcharge n'existe pas. C'est litteralement le
 #    depot du 8 septembre au matin, et le defaut que le ticket decrit.
+#
+#    LE MOTIF VISE LA FORME REELLEMENT PRESENTE, l'affectation conditionnelle.
+#    Une premiere version visait `DATABASE_URL: process.env.DATABASE_URL_E2E`,
+#    forme abandonnee en cours de story : la mutation ne modifiait plus rien et
+#    la garde ci-dessus l'a signalee, au lieu de rendre un vert trompeur.
 eprouver "surcharge DATABASE_URL retiree (etat d'avant LS-189)" "$CONFIG" \
-  "perl -0777 -pi -e 's/^\s*DATABASE_URL:\s*process\.env\.DATABASE_URL_E2E.*\n//m' '$CONFIG'"
+  "perl -0777 -pi -e 's/^\s*\.\.\.\(BASE_E2E \?.*\n//m' '$CONFIG'"
 
 # 2. LA « CORRECTION » QU'IL FALLAIT ECARTER : elargir la clause pour que la
 #    preparation passe sur la base de developpement. Elle retire son role au

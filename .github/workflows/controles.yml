@@ -1025,6 +1025,43 @@ jobs:
         run: ./scripts/verifier-revalidation-layout-mutation.sh
 
       # ----------------------------------------------------------------------
+      # Controle 9x. La suite de bout en bout tourne sur SA base, LS-189.
+      # Textuel, secondes.
+      #
+      # CE QU'IL GARDE, et le defaut a deux faces opposees. La preparation
+      # promeut son compte d'administration, et l'index partiel
+      # `utilisateur_administratrice_unique` n'admet QU'UNE administratrice,
+      # regle E1. Si la suite retombe sur la base de developpement :
+      #
+      #   - le compte REEL de l'exploitante occupe la place, la preparation
+      #     echoue avant tout test et Playwright marque tout « did not run »
+      #   - ou bien la clause de retrogradation est elargie pour passer outre,
+      #     et c'est le compte reel qui perd son role, en silence
+      #
+      # LES DEUX SENS SONT DONC INDEPENDANTS, et un seul laisserait un chemin
+      # ouvert. Un troisieme garde la comparaison des deux URL : les bases
+      # partagent leurs identifiants, seul le PORT les distingue, donc une
+      # variable recopiee sans le changer ramenerait le defaut entier pendant
+      # que les deux premiers sens resteraient verts.
+      #
+      # LA CI NE MONTE PAS CETTE BASE et n'en a pas besoin : son PostgreSQL est
+      # vierge a chaque execution, sans compte reel a proteger. Ce controle est
+      # TEXTUEL, il verifie le dispositif, jamais l'existence du conteneur.
+      # ----------------------------------------------------------------------
+      - name: 9x. Isolement de la base de bout en bout
+        run: ./scripts/verifier-base-e2e.sh
+
+      # Preuve par mutation du controle precedent, LS-189. Textuel, secondes.
+      #
+      # QUATRE SENS EXERCES, chacun sur un etat qui a REELLEMENT existe ou qui
+      # est le chemin naturel vers le defaut : la surcharge absente, soit le
+      # depot d'avant la story ; la clause elargie, soit la « correction » qu'il
+      # fallait ecarter ; la comparaison des URL retiree ; et l'ancrage casse,
+      # qui doit faire ECHOUER le controle plutot que rendre un OK silencieux.
+      - name: 9x bis. Preuve par mutation de l'isolement de la base e2e
+        run: ./scripts/verifier-base-e2e-mutation.sh
+
+      # ----------------------------------------------------------------------
       # Controles 2 et 3. Le format entre ici parce qu'un depot ou seule une
       # partie des fichiers est formatee produit des diffs illisibles.
       # ----------------------------------------------------------------------
