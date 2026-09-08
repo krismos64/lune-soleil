@@ -79,9 +79,25 @@ echo "Mutations de verifier-graphie-marque.sh"
 echo
 
 # --- 1. L'ancienne graphie revient dans du code ----------------------------
-perl -0pi -e 's/\{`© \$\{new Date\(\)\.getFullYear\(\)\} \$\{NOM_BOUTIQUE\}`\}/{`© ${new Date().getFullYear()} Lune \& Soleil`}/' \
+#
+# `sed` ET NON `perl` ICI, ET C'EST UNE MESURE : Perl interprète `${...}` DANS LE
+# REMPLACEMENT, donc `${new Date()...}` de la ligne visée le fait échouer sur
+# « Can't locate object method "new" via package "Date" ». Motif « substitution
+# mal formée » déjà en fiche sur ce dépôt, rencontré à nouveau ici.
+#
+# LA SUBSTITUTION EST DONC MINIMALE : seule l'expression du nom devient une
+# chaîne, le reste de la ligne n'est pas touché.
+sed -i '' 's/\${NOM_BOUTIQUE}`}/Lune \& Soleil`}/' \
   "src/components/pied-boutique.tsx"
-essayer "ancienne graphie réintroduite dans le pied de page" "rouge"
+
+if ! grep -q 'Lune & Soleil' "src/components/pied-boutique.tsx"; then
+  echo "  ÉCHEC ancienne graphie : la substitution n'a pas trouvé sa cible,"
+  echo "        le sens 1 ne prouve donc rien. Corriger le motif de ce script."
+  ko=1
+  restaurer
+else
+  essayer "ancienne graphie réintroduite dans le pied de page" "rouge"
+fi
 
 # --- 2. Le nom est recopié en dur au lieu d'être dérivé --------------------
 # Le défaut le plus insidieux : la graphie est JUSTE, mais la valeur est
