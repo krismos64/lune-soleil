@@ -540,6 +540,16 @@ export type IssueConstatEtatPiece =
    * cassee pourrait etre requalifiee en remise en vente.
    */
   | { statut: "DEJA_CONSTATE" }
+  /**
+   * La variante a ete archivee : le stock ne peut pas remonter, LS-173.
+   *
+   * LE CAS EST ORDINAIRE. Une piece unique vendue n'a plus de reservation
+   * active, donc `archiverVariante` l'accepte. Si le client se retracte
+   * ensuite, la remise en vente heurterait le filtre `archivee_a IS NULL` de
+   * `incrementerStockPhysique` : l'UPDATE ne toucherait aucune ligne pendant
+   * que le mouvement s'ecrirait, et le journal divergerait de la colonne.
+   */
+  | { statut: "VARIANTE_ARCHIVEE" }
   /** Ni session ni role d'administration. */
   | { statut: "SESSION_ABSENTE" };
 
@@ -675,6 +685,21 @@ export async function constaterEtatPiece(
 }
 
 /**
+ * Levee quand la variante a compenser est archivee, LS-173.
+ *
+ * UNE EXCEPTION ET NON UN `return`, ET LA DISTINCTION EST CRITIQUE. Dans un
+ * `prisma.$transaction`, seule une exception annule : un `return` VALIDE la
+ * transaction, donc l'etat constate serait committe sans son mouvement de
+ * stock. Motif « un return valide la transaction », en fiche sur ce depot.
+ */
+class VarianteArchiveeError extends Error {
+  constructor() {
+    super("Variante archivee");
+    this.name = "VarianteArchiveeError";
+  }
+}
+
+/**
  * Ecrit l'etat, et le mouvement compensateur quand la piece revient au
  * catalogue. Rend `null` en cas de succes, un refus sinon.
  *
@@ -753,10 +778,29 @@ async function reintegrerPieceRetournee(parametres: {
          */
         const quantiteCompensatrice = -vente.quantite;
 
-        await incrementerStockPhysique(tx, {
+        /*
+         * LE RETOUR DE L'UPDATE EST LU, ET C'EST TOUT L'OBJET DE CE BLOC.
+         *
+         * `incrementerStockPhysique` porte `AND archivee_a IS NULL` dans son
+         * `WHERE` et rend le nombre de lignes touchees. L'ignorer laissait
+         * ecrire le mouvement `RETOUR` sur une variante archivee sans que le
+         * stock remonte : le journal totalisait zero sur la commande, donc
+         * l'inventaire reconstruit annoncait une piece en stock quand
+         * `quantite_physique` disait zero. Defaut trouve par
+         * `ls-critical-reviewer` le 8 septembre 2026.
+         *
+         * ET LE GESTE ETAIT BRULE : l'etat pose et l'index
+         * `mouvement_compense_unique` consomme, la piece n'etait plus
+         * reintegrable par ce chemin.
+         */
+        const lignes = await incrementerStockPhysique(tx, {
           varianteId: vente.varianteId,
           quantite: quantiteCompensatrice,
         });
+
+        if (lignes === 0) {
+          throw new VarianteArchiveeError();
+        }
 
         await creerMouvement(tx, {
           varianteId: vente.varianteId,
@@ -772,6 +816,14 @@ async function reintegrerPieceRetournee(parametres: {
       return null;
     });
   } catch (erreur) {
+    /*
+     * LA VARIANTE ARCHIVEE EST UN REFUS METIER, jamais une panne : rien n'a
+     * ete ecrit, la transaction ayant ete annulee par l'exception.
+     */
+    if (erreur instanceof VarianteArchiveeError) {
+      return { statut: "VARIANTE_ARCHIVEE" };
+    }
+
     /*
      * `P2002` SUR `mouvement_compense_unique` EST UN REFUS METIER, ADR-030 :
      * deux remises en vente simultanees ont vise la meme vente. Meme traduction

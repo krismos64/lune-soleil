@@ -257,7 +257,28 @@ cas "une seule ligne compensee sur une commande a deux articles" \
   "reintegre les DEUX pieces d'une commande a deux articles"
 
 # ---------------------------------------------------------------------------
-# CAS 7 : LE CONSTAT POSE UN STATUT, regle L12.
+# CAS 7 : LE RETOUR DE L'UPDATE DE STOCK EST IGNORE.
+#
+# CE DEFAUT A REELLEMENT EXISTE, trouve par `ls-critical-reviewer` le
+# 8 septembre 2026, et il est SILENCIEUX au nominal.
+#
+# `incrementerStockPhysique` porte `AND archivee_a IS NULL` dans son `WHERE`.
+# Sur une variante archivee, l'UPDATE ne touche AUCUNE ligne pendant que le
+# mouvement `RETOUR` s'ecrit : le journal totalise zero sur la commande, donc
+# l'inventaire reconstruit annonce une piece en stock quand `quantite_physique`
+# dit zero. Deux verites, aucune contrainte pour les departager.
+#
+# LE SCENARIO EST ORDINAIRE : une piece unique vendue n'a plus de reservation
+# active, donc l'archivage l'accepte. Une retractation trois semaines plus tard
+# tombe exactement dedans.
+# ---------------------------------------------------------------------------
+cas "retour de l'UPDATE de stock ignore, variante archivee" \
+  "$SERVICE" \
+  's/if \(lignes === 0\) \{\n          throw new VarianteArchiveeError\(\);\n        \}/if (false) {\n          throw new VarianteArchiveeError();\n        }/s' \
+  "refuse la remise en vente d'une variante archivee, sans rien ecrire"
+
+# ---------------------------------------------------------------------------
+# CAS 8 : LE CONSTAT POSE UN STATUT, regle L12.
 #
 # C'est le piege que LS-41 a ferme en supprimant `RECUE` : poser un statut ici
 # ferait REGRESSER une demande deja `REMBOURSEE`, qui disparaitrait de toute
