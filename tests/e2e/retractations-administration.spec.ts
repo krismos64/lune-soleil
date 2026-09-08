@@ -153,6 +153,82 @@ test("le refus reste fermé tant qu'aucun motif n'est saisi", async ({
 });
 
 /**
+ * L'ATTENTE EST ANNONCEE PENDANT LA TRANSITION, LS-203, critere 4.
+ *
+ * ------------------------------------------------------------------
+ * LA REPONSE EST RALENTIE A DESSEIN, ET C'EST CE QUI REND LE TEST FIABLE.
+ *
+ * Une Server Action rend la main en quelques centaines de millisecondes hors
+ * charge : courir apres cette fenetre produirait un test qui passe ou echoue
+ * selon la machine. `page.route` retarde la reponse d'une seconde, donc
+ * l'annonce est observable sans dependre de la vitesse du serveur.
+ *
+ * LE PIEGE INVERSE EXISTE AUSSI, et il est documente dans
+ * `administration-connectee.spec.ts` : sous charge, la meme annonce est restee
+ * affichee TRENTE SECONDES, le delai du test etant atteint avant celui des
+ * assertions. Un test qui attend la DISPARITION de l'annonce serait donc
+ * fragile dans l'autre sens ; celui-ci n'observe que son APPARITION.
+ *
+ * LE FILTRE PORTE SUR LA REQUETE DE SERVER ACTION, un POST vers l'ecran
+ * courant : retarder toute requete ralentirait aussi le chargement de la page
+ * et le rendrait illisible en cas d'echec.
+ * ------------------------------------------------------------------
+ */
+test("le bouton et la région annoncent l'attente pendant la transition", async ({
+  page,
+}) => {
+  await page.route("**/administration/retractations", async (route) => {
+    if (route.request().method() !== "POST") {
+      return route.fallback();
+    }
+
+    await new Promise((resoudre) => setTimeout(resoudre, 1000));
+    return route.fallback();
+  });
+
+  await page.goto("/administration/retractations");
+
+  const carte = carteDemande(page);
+
+  /*
+   * LE CONSTAT D'ETAT EST CHOISI parce qu'il est le geste le plus lourd de
+   * l'ecran apres le remboursement : il ouvre une transaction et ecrit un
+   * mouvement de stock. Le remboursement, lui, exige une reauthentification
+   * recente que cette suite ne pose pas.
+   */
+  await carte.getByText("Constater l'état de la pièce").click();
+  await carte.getByLabel("Motif du constat").fill("TEST Annonce d'attente");
+
+  await carte
+    .getByRole("button", { name: "Enregistrer l'état de la pièce" })
+    .click();
+
+  /*
+   * LES DEUX ANNONCES SONT VERIFIEES, et pas seulement celle du bouton : un
+   * lecteur d'ecran ne vocalise pas le libelle d'un bouton sans focus, donc
+   * l'annonce visuelle seule ne servirait qu'a la vue.
+   */
+  /*
+   * LE LIBELLE EST PROPRE A CE GESTE, « Constat en cours… », et ce test l'a
+   * IMPOSE : une premiere version posait « Enregistrement en cours… » sur
+   * quatre boutons, et Playwright a refuse l'ambiguite en resolvant deux
+   * elements. Le critere 2 du ticket l'interdisait deja, un libelle generique
+   * ne disant pas a l'exploitante lequel des six gestes travaille.
+   */
+  await expect(
+    carte.getByRole("button", { name: "Constat en cours…" }),
+  ).toBeVisible();
+
+  /*
+   * LA REGION, ELLE, RESTE GENERIQUE : elle est UNIQUE par carte et ne sait pas
+   * quel geste tourne. La precision vit dans le bouton, qui la porte deja.
+   */
+  await expect(
+    carte.getByRole("status").filter({ hasText: "Traitement en cours…" }),
+  ).toBeVisible();
+});
+
+/**
  * LE RENDU AUX TROIS LARGEURS, avec les champs de saisie DEPLOYES.
  *
  * LE REFUS EST OUVERT AVANT LA MESURE, et c'est ce qui la rend utile : replie,
