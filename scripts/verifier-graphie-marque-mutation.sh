@@ -156,7 +156,13 @@ fi
 # C'EST LA FORME QUI A ÉCHAPPÉ AU CONTRÔLE sur trois composants visibles, dont
 # l'en-tête de toutes les pages publiques. L'esperluette s'écrit `&amp;` en JSX,
 # ce que le commentaire de `seo.ts` disait déjà sans que le motif le porte.
-sed -i '' "s|<span className={styles.nom}>{NOM_BOUTIQUE}</span>|<span className={styles.nom}>Lune $(printf '\046')amp; Soleil</span>|" \
+#
+# L'ESPERLUETTE EST ECHAPPEE DANS LE REMPLACEMENT, `\&`, ET C'EST MESURE : `sed`
+# interprete un `&` nu comme « toute la chaine trouvee », donc il reinserait le
+# motif entier a la place de l'esperluette et fabriquait un JSX absurde que le
+# controle ne reconnaissait pas. Meme famille que le `${...}` de Perl, rencontre
+# deux fois dans cette meme story.
+sed -i '' 's|<span className={styles.nom}>{NOM_BOUTIQUE}</span>|<span className={styles.nom}>Lune \&amp; Soleil</span>|' \
   "src/components/en-tete-boutique.tsx"
 
 if grep -q 'amp; Soleil' "src/components/en-tete-boutique.tsx"; then
