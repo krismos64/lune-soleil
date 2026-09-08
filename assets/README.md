@@ -35,9 +35,16 @@ hero, il n'affirme rien de faux sur les produits, une identité de marque
 n'engageant aucune allégation commerciale. Il n'y a donc pas d'obligation de le
 remplacer avant l'ouverture.
 
-**Il écrit « Lune-soleil » quand tout le code porte « Lune & Soleil ».** L'écart
-est réel et suivi par un ticket : la graphie du nom compte pour le référencement,
-les moteurs recoupant le texte, le JSON-LD et le logo pour établir l'entité.
+**Il écrit « Lune-soleil », et le code le suit depuis LS-193**, close le
+8 septembre 2026. L'écart a existé jusque-là : le code portait « Lune & Soleil »,
+et l'image de partage engendrée à partir de ce logo affichait les DEUX graphies,
+le médaillon d'un côté et le titre de l'autre.
+
+**La graphie du nom compte pour le référencement**, les moteurs recoupant le
+texte des pages, le JSON-LD et le logo pour établir l'entité commerciale.
+`NOM_BOUTIQUE` de `src/lib/seo.ts` en est désormais la seule source, et
+`scripts/verifier-graphie-marque.sh` le garde dans les deux sens : l'ancienne
+graphie ne revient pas, et le nom ne se recopie pas.
 
 ## Modifier une image de marque
 

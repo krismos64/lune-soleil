@@ -176,6 +176,40 @@ sans le prouver. Si un résultat paraît incohérent, le vérifier plutôt que d
 l'accepter : un test qui passe pour la mauvaise raison est plus dangereux qu'un
 test qui échoue.
 
+### La preuve par mutation, et ce qu'elle ne prouve pas
+
+`CLAUDE.md` l'exige : **un contrôle qui n'a jamais échoué sur le défaut qu'il
+prétend attraper n'est pas un contrôle.** Poser le défaut, vérifier que le
+contrôle rougit, restaurer. Le dépôt porte une trentaine de scripts
+`verifier-*-mutation.sh` sur ce modèle.
+
+**Une mutation ne prouve que la forme qu'elle fabrique**, et c'est sa limite la
+plus coûteuse. Le 8 septembre 2026, `verifier-graphie-marque.sh` a été prouvé par
+quatre mutations réussies pendant qu'il laissait passer **quatre défauts réels**
+du dépôt, dont l'en-tête de toutes les pages publiques : les quatre injectaient
+la forme littérale `Lune & Soleil`, quand les défauts existants étaient en JSX,
+`Lune &amp; Soleil`, et coupés par l'enveloppement à 80 colonnes.
+
+**Le geste qui l'aurait vu tient en une commande** : lancer le contrôle **sur le
+dépôt d'avant la correction** et confronter le nombre de fichiers désignés à
+ceux trouvés à la main. Douze contre huit se voit immédiatement.
+
+Trois règles qui en découlent :
+
+- **choisir les mutations sur les formes réellement présentes** dans le dépôt,
+  jamais sur celle qui est la plus commode à écrire dans un `sed`
+- **garder le contrôle contre lui-même** : une mutation doit vérifier qu'il
+  échoue quand il ne trouve plus rien à examiner, sans quoi un ancrage cassé
+  rendrait un OK silencieux
+- **commiter avant de lancer une preuve par mutation.** Ces scripts restaurent
+  par `git checkout` et effacent tout travail non commité, ce qui s'est produit
+  deux fois sur ce dépôt
+
+**Trois pièges d'écriture reviennent** dans ces scripts, tous rencontrés
+plusieurs fois : Perl interprète `${...}` dans le remplacement, `sed` traite un
+`&` nu comme la chaîne trouvée entière, et un garde-fou qui cite la valeur
+interdite se fait détecter par le contrôle qu'il éprouve.
+
 ## 6. Clôturer la traçabilité, sur les quatre canaux
 
 **Cette étape n'est pas optionnelle, y compris pour un travail exploratoire.**
@@ -214,6 +248,7 @@ pour chaque ligne concernée ce qui a été fait.
 | **un cookie portant autre chose qu'un identifiant technique** | la section « données personnelles hors base » de `REGISTRE-DES-TRAITEMENTS.md`, avec sa durée et pourquoi elle diffère |
 | **une étape d'un parcours, ou une obligation légale sur cette étape** | `PARCOURS.md` pour l'étape, `.claude/rules/legal.md` pour l'obligation et sa source |
 | **une story livrée ou close** | la fiche mémoire « où en est le projet », le tableau d'état du `README.md`, et les **comptes**, relevés dans Jira et jamais de mémoire |
+| **une image de marque ou un asset engendré** | rejouer `node scripts/engendrer-images-marque.mjs`, RELIRE le rendu à l'œil, et `assets/README.md` si l'écart qu'il documente est fermé. Le mode `--verifier` échoue tant que les fichiers versionnés ne correspondent pas au source |
 | **un ticket bloqué par un compte ou un accès externe** | dire ce qui est livrable sans lui et ce qui attend, dans le ticket **et** dans le code qui simule l'absence |
 
 **L'avant-dernier point compte autant que les autres.** `CLAUDE.md` a atteint 312
