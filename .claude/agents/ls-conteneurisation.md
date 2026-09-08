@@ -12,17 +12,42 @@ Tu travailles sur une boutique de bijoux artisanaux faits main. **Mono-tenant**,
 une seule exploitante, France métropolitaine, euro en centimes entiers. Le dépôt
 est **public** : tout ce que tu écris est lisible par n'importe qui.
 
+## La machine est PARTAGÉE, ADR-036
+
+**Le VPS ne sert pas que cette boutique.** Il héberge aussi SmartPlanning, un
+produit payant avec des clients, et son Umami. Décision du 8 septembre 2026,
+prise faute de VPS disponible chez OVHcloud.
+
+Trois conséquences qui changent ce que tu écris :
+
+1. **Le port applicatif est 3002**, jamais 3000 ni 3001, qui sont pris. Il se
+   publie en **`127.0.0.1:3002:3002`** et jamais `3002:3002` : Docker insère ses
+   règles DNAT en amont d'`ufw`, donc un port publié sur toutes les interfaces
+   est ouvert sur Internet **malgré le pare-feu**. Le défaut a été constaté sur
+   SmartPlanning le 8 septembre 2026, son application répondant en clair depuis
+   l'extérieur.
+2. **Les limites de ressources sont obligatoires**, pas un confort. Elles
+   protègent SmartPlanning des pics de `sharp` au téléversement. Aucun service
+   sans `mem_limit` ou son équivalent `deploy.resources`.
+3. **Rien ne doit interrompre l'autre site.** Nginx sur l'hôte sert trois sites :
+   `nginx -t` avant tout `reload`, et jamais `restart`. Un retour arrière qui
+   filtrerait large sur les conteneurs ou toucherait au Nginx de l'hôte au-delà
+   du fichier de la boutique casserait un service payant.
+
+Le fuseau de la machine est **`Etc/UTC`** : les horaires de `docker/cron/crontab`
+se lisent dans ce fuseau, pas en heure de Paris.
+
 ## La topologie réelle, et rien d'autre
 
-Quatre conteneurs, pas un de plus. Cette liste est le périmètre : ajouter un
-service ne relève pas de ton jugement mais d'un arbitrage de Christophe tracé
-dans un ticket.
+**Trois conteneurs décidés**, pas un de plus, le quatrième dépendant d'un ADR qui
+n'existe pas. Cette liste est le périmètre : ajouter un service ne relève pas de
+ton jugement mais d'un arbitrage de Christophe tracé dans un ticket.
 
 | Conteneur | Rôle | Exposition |
 |---|---|---|
 | application | Next.js 16, utilisateur non privilégié | port privé, jamais publié sur l'extérieur |
 | base | PostgreSQL 18 | **aucun port public**, joignable par le seul réseau Docker |
-| mesure d'audience | Umami auto-hébergé | port privé, servi derrière Nginx |
+| mesure d'audience | **non décidée**, voir ci-dessous | sans objet tant que l'ADR n'existe pas |
 | tâches planifiées | appelle des routes internes protégées par un secret partagé | aucun port |
 
 **Nginx tourne sur l'hôte et non en conteneur.** La raison est la terminaison
@@ -39,6 +64,13 @@ et porte deux sous-dossiers, `quarantaine/` et `public/`. **Nginx ne publie que
 `public/`** : un alias posé sur la racine du volume servirait la quarantaine et
 annulerait la décision, les fichiers y étant non traités et portant encore la
 position GPS du domicile de l'exploitante.
+
+**La mesure d'audience n'est pas tranchée pour cette boutique.** LS-141 exige un
+ADR préalable sur le choix, et cet ADR n'existe pas au 8 septembre 2026. Aucun
+fichier du dépôt ne mentionne Umami : celui qui tourne sur la machine appartient
+à **SmartPlanning**, pas ici. Ne pose aucun conteneur de mesure d'audience tant
+que la décision n'est pas écrite, et ne déduis pas de sa présence sur l'hôte
+qu'elle vaut pour la boutique.
 
 ### Ce que ce projet n'a pas
 
