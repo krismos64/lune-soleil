@@ -118,11 +118,11 @@ fi
 #   - les tests, qui doivent FIGER la valeur attendue : un test qui dérive la
 #     constante qu'il vérifie ne teste rien, motif « valeurs qui coïncident »
 #     déjà en fiche sur ce dépôt
-#   - `scripts/verifier-seo-mutation.sh`, qui INJECTE le nom pour prouver qu'un
-#     contrôle voisin le détecte : une mutation cite forcément la valeur exacte
-#     qu'elle fabrique, et la dériver la rendrait toujours vraie
+#   - les deux scripts de MUTATION, `verifier-seo-mutation.sh` et celui de ce
+#     contrôle : une mutation INJECTE la valeur exacte qu'elle fabrique, et la
+#     dériver la rendrait toujours vraie, donc sans pouvoir de détection
 # ---------------------------------------------------------------------------
-EXEMPTS='^src/lib/seo\.ts:|^scripts/engendrer-images-marque\.mjs:|^tests/|^scripts/verifier-graphie-marque\.sh:|^scripts/verifier-seo-mutation\.sh:'
+EXEMPTS='^src/lib/seo\.ts:|^scripts/engendrer-images-marque\.mjs:|^tests/|^scripts/verifier-graphie-marque(-mutation)?\.sh:|^scripts/verifier-seo-mutation\.sh:'
 
 en_dur=$(grep -rn "$NOM" src/ scripts/ 2>/dev/null \
   | grep -v '^src/generated/' \
