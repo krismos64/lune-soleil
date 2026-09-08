@@ -405,10 +405,24 @@ export function TraitementDemande({
           <label className={styles.libelle} htmlFor={`etat-${demandeId}`}>
             État de la pièce retournée
           </label>
+          {/*
+           * LES DEUX CHAMPS SE FERMENT PENDANT L'ENVOI, et c'est le GESTE
+           * IRREVERSIBLE qui l'impose, LS-173.
+           *
+           * Sans `disabled`, l'exploitante peut basculer le choix pendant
+           * l'aller-retour serveur : la valeur ENVOYEE reste celle capturee au
+           * clic, mais l'ecran affiche l'autre, texte d'aide compris. L'ecart
+           * ne se rattrape nulle part, le constat ne se reecrivant pas.
+           *
+           * C'est la convention des deux autres listes deroulantes de
+           * l'administration, `formulaire-expedition.tsx` en tete. Releve par
+           * `ls-frontend-revue` le 8 septembre 2026.
+           */}
           <select
             id={`etat-${demandeId}`}
             className={styles.champ}
             value={etatPiece}
+            disabled={enCours}
             onChange={(evenement) =>
               setEtatPiece(evenement.target.value as EtatPieceSaisi)
             }
@@ -426,6 +440,7 @@ export function TraitementDemande({
             id={`motif-etat-${demandeId}`}
             className={styles.champ}
             value={motifEtat}
+            disabled={enCours}
             onChange={(evenement) => setMotifEtat(evenement.target.value)}
             maxLength={500}
             autoComplete="off"

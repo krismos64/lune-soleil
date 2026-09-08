@@ -369,6 +369,11 @@ export type DemandeEnListe = {
    */
   etatPieceRetournee: EtatPieceRetournee | null;
   /**
+   * Quand l'etat a ete constate, LS-173. Toujours pose avec l'etat, C41 etant
+   * une equivalence : l'ecran affiche donc les deux ensemble.
+   */
+  etatConstateA: Date | null;
+  /**
    * Le numero de l'avoir emis pour cette demande, LS-174, `A-2026-0001`.
    *
    * NUL TANT QU'AUCUN REMBOURSEMENT N'A ABOUTI, et c'est un etat normal : une
@@ -435,8 +440,10 @@ export async function listerDemandes(
       motifClient: true,
       motifDecision: true,
       montantRembourseCentimes: true,
-      // LS-173, l'ecran ne propose le constat qu'une fois.
+      // LS-173. Les DEUX, et non le seul etat : l'ecran affiche ce qui a ete
+      // constate ET quand, comme il le fait pour la preuve d'expedition.
       etatPieceRetournee: true,
+      etatConstateA: true,
       commandeId: true,
       /*
        * UN SEUL AVOIR ATTENDU, ET LA REQUETE NE SUPPOSE PAS QU'IL Y EN A UN,
@@ -471,6 +478,7 @@ export async function listerDemandes(
     motifDecision: demande.motifDecision,
     montantRembourseCentimes: demande.montantRembourseCentimes,
     etatPieceRetournee: demande.etatPieceRetournee,
+    etatConstateA: demande.etatConstateA,
     /*
      * `?? null` EXPLICITE : `noUncheckedIndexedAccess` rend `avoirs[0]` en
      * `... | undefined`, et le type de l'ecran attend `null`. Les deux disent
