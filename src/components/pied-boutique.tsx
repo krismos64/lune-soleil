@@ -73,7 +73,7 @@ export function PiedBoutique() {
     <footer className={styles.pied}>
       <div className={styles.contenu}>
         <div className={styles.marque}>
-          <p className={styles.nom}>Lune &amp; Soleil</p>
+          <p className={styles.nom}>{NOM_BOUTIQUE}</p>
           {/*
            * AUCUNE MENTION D'ORIGINE GEOGRAPHIQUE ICI. `frontend-design.md`
            * l'interdit tant que l'exploitante n'a pas confirme le lieu reel de

@@ -18,6 +18,7 @@ import { NOM_COOKIE_PANIER, decoderPanier } from "@/lib/panier-cookie";
 import { compterArticles } from "@/services/panier";
 import { lireIdentite } from "@/services/autorisation";
 import styles from "./en-tete-boutique.module.css";
+import { NOM_BOUTIQUE } from "@/lib/seo";
 
 /**
  * Les entrees de navigation, dans l'ordre du prototype.
@@ -76,7 +77,7 @@ export async function EnTeteBoutique() {
 
       <div className={styles.barre}>
         <Link href="/" className={styles.marque}>
-          <span className={styles.nom}>Lune &amp; Soleil</span>
+          <span className={styles.nom}>{NOM_BOUTIQUE}</span>
           <span className={styles.baseline}>Bijoux faits main</span>
         </Link>
 

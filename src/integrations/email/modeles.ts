@@ -86,8 +86,17 @@ const RENDUS: Record<ModeleEmail, (message: MessageEmail) => MessageRendu> = {
     texte: [
       "Bonjour,",
       "",
-      "Vous avez demandé à utiliser cette adresse pour votre compte Lune &",
-      "Soleil. Confirmez-la en ouvrant ce lien :",
+      /*
+       * LE NOM EST DERIVE, LS-193, ET IL ETAIT COUPE SUR DEUX LIGNES.
+       *
+       * L'enveloppement a 80 colonnes separait « Lune & » de « Soleil », donc
+       * AUCUNE recherche de la chaine complete ne pouvait le trouver : le
+       * modele jumeau ci-dessous a ete corrige, celui-ci non, et les deux
+       * emails du meme parcours ont diverge. Motif « motif de recherche et
+       * retour a la ligne », deja en fiche. Releve par `ls-frontend-revue`.
+       */
+      `Vous avez demandé à utiliser cette adresse pour votre compte ${NOM_BOUTIQUE}.`,
+      "Confirmez-la en ouvrant ce lien :",
       "",
       exiger(message, "lien"),
       "",
