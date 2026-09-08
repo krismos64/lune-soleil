@@ -1357,6 +1357,74 @@ describe("l'etat de la piece retournee decide de la reintegration, LS-173", () =
     ]);
   });
 
+  /*
+   * DEUX CONSTATS LANCES ENSEMBLE, ET CE QUE CE TEST PROUVE EXACTEMENT.
+   *
+   * ------------------------------------------------------------------
+   * IL N'EPROUVE PAS LE SECOND FILET, ET J'AI CRU LE CONTRAIRE EN L'ECRIVANT.
+   *
+   * La protection tient a DEUX filets : le service LIT `etatPieceRetournee`
+   * avant d'ecrire, et le depot pose `etatPieceRetournee: null` dans son
+   * `where`. J'ai suppose qu'un `Promise.all` ferait passer les deux appels par
+   * la lecture avant toute ecriture, donc que la clause du `where` deviendrait
+   * seule juge.
+   *
+   * MESURE DU 8 SEPTEMBRE 2026 : retirer la clause du `where` laisse ce test
+   * VERT. `Promise.all` sur une connexion unique est SERIALISE par le pilote,
+   * ce que `reservation.sequential.test.ts` documente deja pour ses propres
+   * preparations. Il n'y a donc pas de course reelle ici.
+   *
+   * CE QU'IL PROUVE QUAND MEME : que deux constats lances ensemble rendent un
+   * succes ET un refus, jamais deux succes ni une erreur technique, et que
+   * l'inventaire reste juste. C'est le comportement que l'ecran produit sur un
+   * double clic, cas le plus courant.
+   *
+   * UNE VRAIE COURSE DEMANDERAIT UN POOL de connexions distinctes, comme le
+   * fait le test de reservation a vingt acheteurs. Le second filet reste donc
+   * un filet NON EPROUVE, motif en fiche sur ce depot, et la preuve par
+   * mutation le dit explicitement plutot que de le passer sous silence.
+   * ------------------------------------------------------------------
+   *
+   * L'ASSERTION PORTE SUR LE STOCK, jamais sur le seul compte de refus :
+   * l'inventaire est le sujet d'ADR-030, et deux mouvements ecrits feraient
+   * remonter le stock de deux pieces la ou une seule est revenue.
+   */
+  it("sert un seul constat sur deux lances ensemble, stock remonte d'une piece", async () => {
+    const { commandeId, demandeId } = await commanderEtDeposer();
+    const enTetes = await sessionAdministratrice();
+
+    await ouvrirAttenteRetour(demandeId);
+    await constaterReception(demandeId);
+
+    const stockAvant = await lireStockPhysique(commandeId);
+
+    const issues = await Promise.all([
+      constaterEtatPiece(enTetes, {
+        demandeId,
+        etat: "REMISE_EN_VENTE",
+        motif: "TEST Constat concurrent A",
+      }),
+      constaterEtatPiece(enTetes, {
+        demandeId,
+        etat: "REMISE_EN_VENTE",
+        motif: "TEST Constat concurrent B",
+      }),
+    ]);
+
+    const statuts = issues.map((issue) => issue.statut).sort();
+
+    // UN SEUL PASSE, L'AUTRE EST REFUSE. Compter les succes sans verifier le
+    // refus laisserait passer une implementation qui leve une erreur technique.
+    expect(statuts).toEqual(["CONSTATEE", "DEJA_CONSTATE"]);
+
+    // ET L'INVENTAIRE RESTE JUSTE : une seule piece est revenue.
+    expect(await lireStockPhysique(commandeId)).toBe(stockAvant + 1);
+    expect((await lireMouvements(commandeId)).map((m) => m.type)).toEqual([
+      "VENTE_WEB",
+      "RETOUR",
+    ]);
+  });
+
   it("refuse le constat sur une demande introuvable", async () => {
     const enTetes = await sessionAdministratrice();
 
