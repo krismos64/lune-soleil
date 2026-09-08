@@ -89,9 +89,13 @@ Tout ce que Nginx apporte est court-circuité : TLS, limitation de débit, en-t�
 de sécurité. Cinq appels consécutifs à `/api/auth/session` rendent 200 sans
 ralentissement, alors que la zone `auth` limite à 60 par minute.
 
-**Non corrigé délibérément.** C'est un autre projet, un service payant, et une
-correction mal faite couperait des clients. Un ticket détaillé a été rédigé pour
-le projet SP, avec le correctif en deux lignes, `127.0.0.1:3000`.
+**Non corrigé par moi, délibérément.** C'est un autre projet, un service payant,
+et une correction mal faite couperait des clients. Un ticket détaillé a été
+rédigé pour le projet SP, avec le correctif en deux lignes, `127.0.0.1:3000`.
+
+**Christophe l'a corrigé le jour même**, SP-583, et la correction a été vérifiée
+depuis l'extérieur : les deux ports sont fermés, les règles DNAT ciblent
+`127.0.0.1` au lieu de `0.0.0.0/0`, et les trois sites répondent toujours.
 
 **Pour la boutique, la leçon est directe** : LS-152 publiera en `127.0.0.1:3002`.
 C'était déjà un de ses critères, il gagne ici sa démonstration.
