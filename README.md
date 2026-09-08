@@ -798,6 +798,7 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-fixtures-e2e.sh               # adresses de test fixes, plafonds préservés, LS-168
 ./scripts/verifier-base-e2e.sh                   # isolement de la base de bout en bout, LS-189
 ./scripts/verifier-base-e2e-mutation.sh          # prouve le précédent par mutation
+./scripts/verifier-reintegration-stock-mutation.sh # étape 9 du parcours 5, LS-173
 ./scripts/verifier-fixtures-e2e-mutation.sh      # prouve le précédent par mutation
 ./scripts/verifier-description-accessible.sh          # aucun aria-describedby annulé par un aria-label, C39, LS-161
 ./scripts/verifier-description-accessible-mutation.sh # prouve le précédent par mutation
