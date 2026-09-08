@@ -30,15 +30,17 @@ la boutique en hérite.
 `docker/cron/crontab` se lisent dans ce fuseau : une tâche écrite pour 3 h du
 matin s'exécute à 5 h heure française en été. À vérifier au moment de LS-152.
 
-## Étape 1, le répertoire du challenge ACME
+## Étape 1, rien à créer pour le challenge ACME
 
-```bash
-sudo mkdir -p /var/www/certbot
-sudo chown -R www-data:www-data /var/www/certbot
-```
+**Aucun répertoire n'est à poser**, et c'est une contrainte du projet et non un
+raccourci. `verifier-nginx.sh` refuse toute directive `root` ou `alias` dans ce
+fichier : Nginx qui sert des fichiers rendrait une facture atteignable sans
+jeton, LS-132 critère 6. Une première version de cette procédure utilisait
+`root /var/www/certbot`, et **la CI l'a refusée à juste titre**.
 
-C'est par ce répertoire que Let's Encrypt valide le domaine. Sans lui, la
-demande de certificat échoue.
+Le challenge passe par **certbot en mode `standalone`**, qui écoute sur
+`127.0.0.1:8888` le temps de la validation, et Nginx relaie
+`/.well-known/acme-challenge/` vers ce port.
 
 ## Étape 2, sauvegarder l'état de Nginx
 
@@ -78,13 +80,16 @@ server {
     server_name lune-soleil.fr www.lune-soleil.fr;
 
     location ^~ /.well-known/acme-challenge/ {
-        root /var/www/certbot;
+        proxy_pass http://127.0.0.1:8888;
+        proxy_set_header Host $host;
     }
     location / {
         return 503;
     }
 }
 ```
+
+Le relais vers `8888` et non un `root`, pour la raison donnée à l'étape 1.
 
 Le `503` est délibéré : il dit « pas encore de service » plutôt que d'afficher le
 site par défaut de la machine, qui est SmartPlanning.
@@ -121,12 +126,20 @@ Toujours simuler d'abord. Let's Encrypt limite le nombre de demandes par semaine
 et un échec réel consomme ce quota.
 
 ```bash
-sudo certbot certonly --webroot -w /var/www/certbot \
+sudo certbot certonly --standalone \
+  --http-01-address 127.0.0.1 --http-01-port 8888 \
   -d lune-soleil.fr -d www.lune-soleil.fr \
   --dry-run --non-interactive --agree-tos --email <adresse>
 ```
 
 Puis, seulement si la simulation réussit, retirer `--dry-run`.
+
+**Vérifier ensuite le fichier de renouvellement**,
+`/etc/letsencrypt/renewal/lune-soleil.fr.conf`. Il doit porter `authenticator =
+standalone`, `http01_address = 127.0.0.1` et `http01_port = 8888`. S'il reste sur
+`webroot`, le renouvellement automatique échouera dans quatre-vingt-dix jours,
+**en silence**, et le site deviendra inaccessible avec un avertissement de
+sécurité.
 
 **Certbot est lent sur cette machine**, plusieurs minutes, et il pose un verrou :
 une seconde exécution simultanée échoue sur « Another instance of Certbot is
