@@ -135,10 +135,26 @@ async function imageDePartage() {
     .png()
     .toBuffer();
 
+  /*
+   * LE NOM SUIT LE LOGO, LS-193. Ce texte ecrivait « Lune & Soleil » a cote d'un
+   * medaillon qui dit « Lune-soleil » : les DEUX graphies coexistaient dans la
+   * meme image de partage, celle que les reseaux sociaux affichent. C'est cet
+   * ecart qui a fait ouvrir le ticket.
+   *
+   * IL N'IMPORTE PAS `NOM_BOUTIQUE` : ce script est un module `.mjs` autonome,
+   * lance hors du bundle Next.js, et resoudre l'alias `@/` demanderait une
+   * chaine de build pour une seule chaine de caracteres.
+   * `verifier-graphie-marque.sh` confronte les deux, ce qui ferme l'ecart sans
+   * creer la dependance.
+   *
+   * LE COMMENTAIRE EST ICI ET NON DANS LE SVG : un backtick a l'interieur du
+   * gabarit le fermerait, et le fichier ne se charge alors plus du tout.
+   * Mesure faite en l'ecrivant.
+   */
   const texte = Buffer.from(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${LARGEUR}" height="${HAUTEUR}">
        <text x="600" y="275" font-family="Helvetica, Arial, sans-serif"
-             font-size="76" font-weight="700" fill="${BRUN}">Lune &amp; Soleil</text>
+             font-size="76" font-weight="700" fill="${BRUN}">Lune-soleil</text>
        <text x="600" y="338" font-family="Helvetica, Arial, sans-serif"
              font-size="34" fill="${BRUN}">Bijoux artisanaux</text>
        <text x="600" y="384" font-family="Helvetica, Arial, sans-serif"

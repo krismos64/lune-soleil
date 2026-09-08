@@ -96,7 +96,7 @@ test.describe("metadonnees des pages publiques", () => {
     );
     await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute(
       "content",
-      "Lune & Soleil",
+      "Lune-soleil",
     );
     await expect(page.locator('meta[property="og:locale"]')).toHaveAttribute(
       "content",
@@ -555,7 +555,7 @@ test.describe("identite du site au partage, LS-147", () => {
       icons: { src: string; sizes: string }[];
     };
 
-    expect(manifeste.name).toContain("Lune & Soleil");
+    expect(manifeste.name).toContain("Lune-soleil");
     expect(manifeste.background_color).toBe("#fbf7f0");
     expect(manifeste.theme_color).toBe("#5f4519");
     expect(manifeste.icons.map((icone) => icone.sizes)).toEqual([

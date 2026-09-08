@@ -37,11 +37,16 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL(urlDuSite()),
   title: {
-    default: "Lune & Soleil, bijoux artisanaux faits main",
+    /*
+     * LE NOM EST DERIVE, jamais recopie, LS-193 : ce fichier importait deja
+     * `NOM_BOUTIQUE` pour son gabarit tout en l'ecrivant en dur juste
+     * au-dessus. C'est ce qui a laisse les deux graphies coexister.
+     */
+    default: `${NOM_BOUTIQUE}, bijoux artisanaux faits main`,
     /*
      * LE GABARIT ÉVITE DE RÉPÉTER LE NOM DE LA BOUTIQUE dans chaque page.
      * Les titres des pages qui le portaient déjà ont été raccourcis en
-     * conséquence : « Le catalogue, Lune & Soleil » redoublait la marque.
+     * conséquence : « Le catalogue, Lune-soleil » redoublait la marque.
      */
     template: `%s, ${NOM_BOUTIQUE}`,
   },

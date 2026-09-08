@@ -15,6 +15,7 @@
 import Link from "next/link";
 
 import styles from "./pied-boutique.module.css";
+import { NOM_BOUTIQUE } from "@/lib/seo";
 
 /**
  * Les trois colonnes du pied de page, dans l'ordre du prototype.
@@ -119,7 +120,7 @@ export function PiedBoutique() {
          * statique, l'annee y resterait celle de la construction.
          */}
         <p className={styles.mention}>
-          {`© ${new Date().getFullYear()} Lune & Soleil`}
+          {`© ${new Date().getFullYear()} ${NOM_BOUTIQUE}`}
         </p>
         <p className={styles.mention}>France métropolitaine, Corse comprise</p>
       </div>

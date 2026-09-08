@@ -27,6 +27,25 @@
 
 set -u
 RACINE="$(cd "$(dirname "$0")/.." && pwd)"
+
+# ---------------------------------------------------------------------------
+# LE NOM COMMERCIAL EST LU DANS LE CODE, jamais recopie, LS-193.
+#
+# Ce script cherchait « Lune & Soleil » en dur pour detecter un titre qui
+# redouble la marque. Le jour ou la graphie a change, il est devenu AVEUGLE en
+# restant VERT : le pire etat pour un garde-fou, puisque rien ne l'annonce.
+#
+# UN CONTROLE QUI PORTE SA PROPRE COPIE DE LA VALEUR QU'IL JUGE se perime en
+# silence. Le lire a la source ferme ce mode de defaillance.
+# ---------------------------------------------------------------------------
+NOM_BOUTIQUE=$(grep -oE 'export const NOM_BOUTIQUE = "[^"]+"' \
+  "$RACINE/src/lib/seo.ts" | sed 's/.*= "//; s/"$//')
+
+if [ -z "$NOM_BOUTIQUE" ]; then
+  echo "ECHEC : NOM_BOUTIQUE n'a pas pu etre lue dans src/lib/seo.ts."
+  echo "La constante a-t-elle ete renommee ou sa forme modifiee ?"
+  exit 1
+fi
 APP="$RACINE/src/app"
 ko=0
 
@@ -109,10 +128,15 @@ while IFS= read -r page; do
   # -------------------------------------------------------------------------
   # LE NOM DE LA BOUTIQUE NE S'ECRIT PAS DANS UN TITRE DE PAGE.
   #
-  # Le layout racine porte `template: "%s, Lune & Soleil"`, qui l'ajoute a tout
-  # titre de chaine d'un segment enfant, a n'importe quelle profondeur. Un titre
-  # qui le porte deja recoit donc le suffixe UNE SECONDE FOIS, et le HTML servi
-  # devient « Mon compte, Lune & Soleil, Lune & Soleil ».
+  # Le layout racine porte `template: "%s, ${NOM_BOUTIQUE}"`, qui l'ajoute a
+  # tout titre de chaine d'un segment enfant, a n'importe quelle profondeur. Un
+  # titre qui le porte deja recoit donc le suffixe UNE SECONDE FOIS, et le HTML
+  # servi devient « Mon compte, Lune-soleil, Lune-soleil ».
+  #
+  # LE NOM EST LU DANS `seo.ts`, JAMAIS RECOPIE ICI, LS-193. Ce controle
+  # cherchait « Lune & Soleil » en dur : le jour ou la graphie a change, il est
+  # devenu AVEUGLE en restant vert, ce qui est le pire etat pour un garde-fou.
+  # Trouve par `verifier-graphie-marque.sh` des sa premiere execution.
   #
   # CE SENS A ETE AJOUTE APRES COUP, releve en revue. Les autres sens de ce
   # controle ne verifient que la PRESENCE des cles, jamais leur valeur : un
@@ -131,9 +155,9 @@ while IFS= read -r page; do
   # pages portant `noindex`, mais un titre d'onglet fautif que l'exploitante
   # et les clients connectes lisent a chaque navigation.
   # -------------------------------------------------------------------------
-  if printf '%s' "$corps" | grep -q 'title: "[^"]*Lune & Soleil"'; then
+  if printf '%s' "$corps" | grep -q "title: \"[^\"]*${NOM_BOUTIQUE}\""; then
     if ! printf '%s' "$corps" | grep -q "absolute:"; then
-      echo "ECHEC $relatif ecrit « Lune & Soleil » dans son titre"
+      echo "ECHEC $relatif ecrit « ${NOM_BOUTIQUE} » dans son titre"
       echo "      le gabarit du layout racine l'ajoute deja : le titre servi"
       echo "      porterait le nom deux fois. Retirer le suffixe, ou employer"
       echo "      title: { absolute: \"...\" } si le titre doit y echapper."

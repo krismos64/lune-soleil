@@ -88,7 +88,7 @@ async function agir(
      * par « le nom apparait dans le champ et dans l'en-tete ». Les DEUX
      * affirmations etaient fausses, verifiees par la revue frontend :
      *
-     *   l'en-tete affiche « Lune & Soleil », jamais le nom du client
+     *   l'en-tete affiche « Lune-soleil », jamais le nom du client
      *   le champ emploie `defaultValue`, que React ignore sur un input non
      *   controle deja monte
      *

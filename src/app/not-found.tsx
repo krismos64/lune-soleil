@@ -36,6 +36,7 @@ import { EnTeteBoutique } from "@/components/en-tete-boutique";
 import { PiedBoutique } from "@/components/pied-boutique";
 
 import styles from "./erreur.module.css";
+import { NOM_BOUTIQUE } from "@/lib/seo";
 
 /*
  * `noindex` EST DEJA POSE PAR NEXT.JS sur une reponse 404. Ce bloc ne sert donc
@@ -44,7 +45,7 @@ import styles from "./erreur.module.css";
  * comme la boutique elle-meme.
  */
 export const metadata: Metadata = {
-  title: "Page introuvable, Lune & Soleil",
+  title: `Page introuvable, ${NOM_BOUTIQUE}`,
   description: "Cette page n'existe pas ou n'existe plus.",
 };
 

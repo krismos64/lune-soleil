@@ -138,7 +138,7 @@ muter "metadataBase retirée du layout racine" \
 muter "description retirée d'une page publique" \
   "src/app/(boutique)/aide/page.tsx" \
   "aide/page.tsx est une page publique sans description" \
-  "perl -0pi -e 's/^\s*description:\s*\$//gm; s/\"Modes de livraison, tarifs, droit de rétractation et réponses aux questions fréquentes sur les bijoux Lune & Soleil\\.\",//; s/description//g' 'src/app/(boutique)/aide/page.tsx'"
+  "perl -0pi -e 's/^\s*description:\s*\$//gm; s/\`Modes de livraison[^\`]*\`,//; s/description//g' 'src/app/(boutique)/aide/page.tsx'"
 
 # ---------------------------------------------------------------------------
 # Mutation 5, le titre doublé, sur une page PRIVÉE.
@@ -151,8 +151,8 @@ muter "description retirée d'une page publique" \
 # ---------------------------------------------------------------------------
 muter "nom de la boutique réécrit dans un titre" \
   "src/app/(boutique)/compte/page.tsx" \
-  "compte/page.tsx ecrit « Lune & Soleil » dans son titre" \
-  "perl -0pi -e 's/title: \"Mon compte\"/title: \"Mon compte, Lune & Soleil\"/' 'src/app/(boutique)/compte/page.tsx'"
+  "compte/page.tsx ecrit « Lune-soleil » dans son titre" \
+  "perl -0pi -e 's/title: \"Mon compte\"/title: \"Mon compte, Lune-soleil\"/' 'src/app/(boutique)/compte/page.tsx'"
 
 # ---------------------------------------------------------------------------
 # Mutation 6, la route à jeton retirée de robots.txt.

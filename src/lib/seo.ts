@@ -118,8 +118,37 @@ export function disponibiliteSchemaOrg(etat: EtatDisponibilite): string {
   return DISPONIBILITE_SCHEMA_ORG[etat];
 }
 
-/** Le nom commercial, tel qu'il doit apparaitre dans le balisage. */
-export const NOM_BOUTIQUE = "Lune & Soleil";
+/**
+ * Le nom commercial, tel qu'il doit apparaitre PARTOUT, LS-193.
+ *
+ * ------------------------------------------------------------------
+ * IL SUIT LE LOGO, ARBITRAGE DE CHRISTOPHE DU 5 SEPTEMBRE 2026.
+ *
+ * Le medaillon de `assets/logo-lune-soleil.png` ecrit « Lune-soleil », trait
+ * d'union et minuscule a soleil, ce que l'ADR-022 confirme. Le code portait
+ * « Lune & Soleil » : l'image de partage engendree par LS-147 montrait les deux
+ * graphies DANS LA MEME IMAGE, le medaillon d'un cote et le titre de l'autre.
+ *
+ * CE N'EST PAS COSMETIQUE. Les moteurs, classiques comme generatifs, recoupent
+ * le texte des pages, le JSON-LD `Organization`, le JSON-LD `Brand` et le logo
+ * pour etablir l'entite commerciale. Deux graphies concurrentes affaiblissent ce
+ * recoupement, et le referencement est priorite maximale sur ce projet.
+ *
+ * ELLE N'EST PAS LA DENOMINATION SOCIALE, et la distinction est structurelle :
+ * celle-ci vient de `FACTURE_RAISON_SOCIALE`, lue dans l'environnement par
+ * `identite-legale.ts`, et n'apparait dans aucun fichier du depot. Les mentions
+ * legales et les factures ne peuvent donc pas etre touchees par un changement
+ * ici, ce que le critere 4 du ticket demandait de verifier.
+ *
+ * L'ESPERLUETTE DISPARAIT AU PASSAGE, et c'est un gain : elle s'echappait en
+ * `&amp;` dans le balisage servi.
+ * ------------------------------------------------------------------
+ *
+ * ELLE EST LA SEULE SOURCE DU NOM DANS LE CODE, critere 1. Douze fichiers
+ * l'ecrivaient en dur, y compris ceux qui importaient deja ce module : c'est ce
+ * qui a laisse l'ecart vivre. Un controle textuel le garde desormais.
+ */
+export const NOM_BOUTIQUE = "Lune-soleil";
 
 /**
  * L'image de partage du site, 1200 par 630, LS-147.
