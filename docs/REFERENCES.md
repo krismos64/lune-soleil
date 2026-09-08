@@ -6,10 +6,15 @@ dépassant les 200 lignes recommandées pour un fichier chargé à chaque sessio
 
 `CLAUDE.md` garde l'ordre de priorité des sources et renvoie ici pour le détail.
 
-## Documentation technique, les cinq documents à connaître
+## Documentation technique, les documents à connaître
 
 Les lire avant de concevoir sur le domaine concerné, plutôt que de reconstituer
 une règle depuis le schéma.
+
+**Le titre ne porte plus de compte**, corrigé le 8 septembre 2026 : il annonçait
+« cinq documents » quand le tableau en listait neuf, quatre ayant été ajoutés
+depuis sans que le titre suive. Un nombre dans un titre se périme à la première
+ligne ajoutée, et rien ne le signale.
 
 | Fichier | Ce qu'il porte | À lire avant |
 |---|---|---|

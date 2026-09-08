@@ -2,8 +2,13 @@
 
 Registre du responsable de traitement, article 30 paragraphe 1 du RGPD. Il
 recense les traitements de données personnelles mis en oeuvre par la boutique
-Lune & Soleil, leurs finalités, les catégories de données, les durées de
+Lune-soleil, leurs finalités, les catégories de données, les durées de
 conservation et leur base légale.
+
+**Le nom commercial suit le logo depuis LS-193**, le 8 septembre 2026 : ce
+document écrivait « Lune & Soleil ». La dénomination sociale, elle, n'apparaît
+nulle part dans le dépôt, elle vient de `FACTURE_RAISON_SOCIALE` et c'est elle
+qui identifie le responsable de traitement devant la CNIL.
 
 **Valeurs vérifiées aux sources officielles le 12 août 2026.** Le cahier des
 charges interdit de décider d'une obligation juridique : chaque durée citée ici
@@ -48,7 +53,7 @@ condition d'exclusion est objectivement remplie.
 
 | Champ | Valeur |
 |---|---|
-| Responsable | l'exploitante de la boutique Lune & Soleil |
+| Responsable | l'exploitante de la boutique Lune-soleil, sous sa dénomination sociale, portée par `FACTURE_RAISON_SOCIALE` |
 | Coordonnées | portées par les mentions légales, hors dépôt, données personnelles |
 | Délégué à la protection des données | aucun, la désignation n'étant pas obligatoire au titre de l'article 37 |
 | Responsable conjoint | aucun |
