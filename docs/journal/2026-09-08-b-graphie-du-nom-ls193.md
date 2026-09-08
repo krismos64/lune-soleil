@@ -145,11 +145,15 @@ en bout qui lisent le HTML réellement servi.
 
 ## État des tickets
 
-**LS-193 livrée.** Reste à fusionner sur `main`.
+**LS-193 close**, PR #299 fusionnée en rebase.
 
 **LS-166, LS-174 et LS-163 closes** plus tôt dans la session, PR #296, #297 et
-#298 fusionnées. Le compte passe à **142 tickets terminés sur 192** une fois
-LS-193 close.
+#298 fusionnées. Quatre tickets sur quatre.
+
+**Le compte est de 143 terminés sur 202**, relevé dans Jira après la fermeture et
+non déduit. J'avais écrit « 142 sur 192 » en dérivant du chiffre de la session
+précédente : les deux termes étaient faux, le total ayant grossi depuis. Motif
+« un compte recopié n'est pas une mesure », qui reste le plus facile à répéter.
 
 ## Ce qui reste ouvert
 

@@ -128,7 +128,9 @@ du CSS annonce.
 sur `main`.
 
 **LS-166 close** dans la session précédente, PR #296 fusionnée : le compte passe
-à **140 tickets terminés sur 192**.
+à **143 terminés sur 202** une fois la série close, relevé dans Jira le
+8 septembre. Le « 140 sur 192 » écrit ici d'abord était DÉRIVÉ du chiffre de la
+veille : les deux termes bougent, et un compte additionné n'est pas une mesure.
 
 ## Ce qui reste ouvert
 

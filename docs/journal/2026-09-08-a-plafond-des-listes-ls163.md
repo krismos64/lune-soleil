@@ -130,7 +130,10 @@ garde les deux, la mesure qui les sépare étant le plus instructif de la story.
 **LS-163 livrée**, commits `634858d` et `81b8161`. Reste à fusionner sur `main`.
 
 **LS-166 et LS-174 closes** plus tôt dans la session, PR #296 et #297 fusionnées.
-Le compte passe à **141 tickets terminés sur 192** une fois LS-163 close.
+Le compte réel est de **143 terminés sur 202** après la série entière, relevé
+dans Jira le 8 septembre. Le « 141 sur 192 » écrit ici d'abord était DÉRIVÉ du
+chiffre de la veille, et les deux termes étaient faux : le dénominateur grossit
+autant que le numérateur.
 
 ## Un test préexistant que je n'ai pas fermé
 
