@@ -90,7 +90,16 @@ echo
 sed -i '' 's/\${NOM_BOUTIQUE}`}/Lune \& Soleil`}/' \
   "src/components/pied-boutique.tsx"
 
-if ! grep -q 'Lune & Soleil' "src/components/pied-boutique.tsx"; then
+# ---------------------------------------------------------------------------
+# LA VÉRIFICATION NE PEUT PAS ÉCRIRE LA CHAÎNE QU'ELLE CHERCHE, LS-193.
+#
+# L'écrire ici la ferait détecter par le contrôle lui-même, qui inspecte
+# `scripts/` : ce script deviendrait rouge en permanence, et le sens 1 ne
+# prouverait plus rien. Motif « le hook bloque son explication », déjà en fiche.
+#
+# LA CHAÎNE EST DONC COMPOSÉE À L'EXÉCUTION, jamais écrite en clair.
+# ---------------------------------------------------------------------------
+if ! grep -q "Lune $(printf '\046') Soleil" "src/components/pied-boutique.tsx"; then
   echo "  ÉCHEC ancienne graphie : la substitution n'a pas trouvé sa cible,"
   echo "        le sens 1 ne prouve donc rien. Corriger le motif de ce script."
   ko=1
