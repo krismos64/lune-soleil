@@ -226,6 +226,21 @@ test("le bouton et la région annoncent l'attente pendant la transition", async 
   await expect(
     carte.getByRole("status").filter({ hasText: "Traitement en cours…" }),
   ).toBeVisible();
+
+  /*
+   * LE DEBORDEMENT EST MESURE PENDANT L'ATTENTE, critere 3, et cette mesure ne
+   * fait pas double emploi avec celle du test voisin : celui-ci mesure l'ecran
+   * AU REPOS, quand plusieurs libelles d'attente sont PLUS LONGS que le libelle
+   * qu'ils remplacent. « Enregistrement de la preuve… » fait 27 caracteres
+   * contre 21 pour « Enregistrer la preuve ».
+   *
+   * LA MESURE TOMBE ICI plutot que dans un test dedie : la fenetre d'attente
+   * est ouverte par le ralentissement de `page.route`, et la rouvrir ailleurs
+   * couterait un second aller-retour pour la meme information.
+   */
+  expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+    TOLERANCE_DEBORDEMENT_PX,
+  );
 });
 
 /**
