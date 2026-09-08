@@ -5,9 +5,18 @@
 # PAS UN CONTRÔLE. Ce script pose des défauts réels, vérifie que le contrôle les
 # voit, et restaure le dépôt dans tous les cas.
 #
-# QUATRE SENS : les deux du contrôle, plus deux qui le gardent contre lui-même.
-# Le quatrième est le plus important, il vise le mode de défaillance que la story
-# a rencontré sur un contrôle voisin : rester VERT en ayant cessé de voir.
+# SIX SENS : les deux du contrôle, deux qui le gardent contre lui-même, et deux
+# ajoutés APRÈS COUP sur des défauts qu'il ne voyait pas.
+#
+# LES DEUX DERNIERS SONT LA LEÇON DE CETTE STORY. Les quatre premiers étaient
+# verts pendant que le contrôle laissait passer QUATRE défauts réels, dont
+# l'en-tête de toutes les pages publiques : chaque mutation injectait la forme
+# littérale `Lune & Soleil`, donc elles prouvaient que le contrôle voit ce
+# qu'elles fabriquent, jamais ce qui existait déjà dans le dépôt. Motif
+# « mutation satisfaite ailleurs », relevé par `ls-frontend-revue`.
+#
+# UNE MUTATION SE CHOISIT SUR LES FORMES RÉELLES du dépôt, pas sur la forme la
+# plus commode à écrire.
 #
 # Usage : ./scripts/verifier-graphie-marque-mutation.sh
 # Aucun prérequis, ni Docker ni base.
@@ -22,6 +31,8 @@ ko=0
 MUTABLES=(
   "src/lib/seo.ts"
   "src/components/pied-boutique.tsx"
+  "src/components/en-tete-boutique.tsx"
+  "src/integrations/email/modeles.ts"
 )
 
 for fichier in "${MUTABLES[@]}"; do
@@ -141,9 +152,40 @@ else
   restaurer
 fi
 
+# --- 5. La forme JSX, `&amp;` ----------------------------------------------
+# C'EST LA FORME QUI A ÉCHAPPÉ AU CONTRÔLE sur trois composants visibles, dont
+# l'en-tête de toutes les pages publiques. L'esperluette s'écrit `&amp;` en JSX,
+# ce que le commentaire de `seo.ts` disait déjà sans que le motif le porte.
+sed -i '' "s|<span className={styles.nom}>{NOM_BOUTIQUE}</span>|<span className={styles.nom}>Lune $(printf '\046')amp; Soleil</span>|" \
+  "src/components/en-tete-boutique.tsx"
+
+if grep -q 'amp; Soleil' "src/components/en-tete-boutique.tsx"; then
+  essayer "ancienne graphie sous sa forme JSX échappée" "rouge"
+else
+  echo "  ÉCHEC forme JSX : la substitution n'a pas trouvé sa cible,"
+  echo "        le sens 5 ne prouve donc rien."
+  ko=1
+  restaurer
+fi
+
+# --- 6. La forme coupée par l'enveloppement à 80 colonnes -------------------
+# ELLE ÉCHAPPE À TOUTE RECHERCHE MONO-LIGNE, et c'est ainsi que les deux emails
+# du même parcours ont divergé : le jumeau avait été corrigé, celui-ci non.
+perl -0pi -e 's/`Vous avez demandé à utiliser cette adresse pour votre compte \$\{NOM_BOUTIQUE\}\.`,\n      "Confirmez-la en ouvrant ce lien :",/"Vous avez demandé à utiliser cette adresse pour votre compte Lune &",\n      "Soleil. Confirmez-la en ouvrant ce lien :",/' \
+  "src/integrations/email/modeles.ts"
+
+if grep -q '"Soleil\. Confirmez-la' "src/integrations/email/modeles.ts"; then
+  essayer "ancienne graphie coupée sur deux lignes" "rouge"
+else
+  echo "  ÉCHEC forme coupée : la substitution n'a pas trouvé sa cible,"
+  echo "        le sens 6 ne prouve donc rien."
+  ko=1
+  restaurer
+fi
+
 echo
 if [ "$ko" -eq 0 ]; then
-  echo "OK : les quatre mutations sont détectées."
+  echo "OK : les six mutations sont détectées."
 else
   echo "ÉCHEC : au moins une mutation passe inaperçue."
 fi

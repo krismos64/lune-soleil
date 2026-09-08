@@ -44,6 +44,7 @@ import { usePathname } from "next/navigation";
 import { useId, useRef, useState } from "react";
 
 import styles from "./navigation-administration.module.css";
+import { NOM_BOUTIQUE } from "@/lib/seo";
 
 /**
  * Ce qu'une rubrique de la barre porte.
@@ -315,7 +316,7 @@ export function NavigationAdministration({
         aria-label="Sections de l'administration"
       >
         <div className={styles.enseigne}>
-          <span className={styles.enseigneNom}>Lune &amp; Soleil</span>
+          <span className={styles.enseigneNom}>{NOM_BOUTIQUE}</span>
           <span className={styles.enseigneRole}>Administration</span>
         </div>
 

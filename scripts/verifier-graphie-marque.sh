@@ -71,12 +71,46 @@ fi
 #
 # `src/generated/` est exclu comme partout, il est engendré.
 # ---------------------------------------------------------------------------
-ANCIENNE='Lune & Soleil'
+# ---------------------------------------------------------------------------
+# TROIS FORMES DE L'ANCIENNE GRAPHIE, ET LA PREMIERE VERSION N'EN VOYAIT
+# QU'UNE. Elle a rendu VERT sur quatre defauts reels, dont l'en-tete de TOUTES
+# les pages publiques. Releve par `ls-frontend-revue`, LS-193.
+#
+#   1. `Lune & Soleil`, la forme litterale, seule cherchee au depart
+#   2. `Lune &amp; Soleil`, la forme JSX : l'esperluette s'y ecrit `&amp;`, ce
+#      que le commentaire de `seo.ts` DISAIT deja sans que le controle le porte
+#   3. « Lune & » suivi de « Soleil » a la ligne : l'enveloppement a 80 colonnes
+#      coupe le nom dans les modeles d'email, et aucune recherche mono-ligne ne
+#      peut le trouver. Motif « motif de recherche et retour a la ligne »
+#
+# LES QUATRE MUTATIONS N'AVAIENT RIEN VU parce qu'elles injectaient toutes la
+# forme 1 : une mutation prouve que le controle voit ce qu'elle fabrique, jamais
+# ce qui existe deja dans le depot. Motif « mutation satisfaite ailleurs ».
+# Le sens 4 ci-dessous ferme desormais ce trou en injectant la forme JSX.
+# ---------------------------------------------------------------------------
+ANCIENNE='Lune &(amp;)? Soleil'
 
-anciennes=$(grep -rn "$ANCIENNE" src/ tests/ scripts/ public/ 2>/dev/null \
+anciennes=$(grep -rnE "$ANCIENNE" src/ tests/ scripts/ public/ 2>/dev/null \
   | grep -v '^src/generated/' \
   | grep -v 'verifier-graphie-marque.sh' \
   || true)
+
+# ---------------------------------------------------------------------------
+# LA FORME COUPEE, cherchee sur DEUX lignes consecutives, `grep -A 1`.
+#
+# `modeles.ts` ecrivait « votre compte Lune & » puis « Soleil. Confirmez-la »
+# a la ligne suivante. Le modele JUMEAU du meme parcours avait ete corrige, pas
+# celui-la : les deux emails ont diverge sans qu'aucun controle ne le voie.
+# ---------------------------------------------------------------------------
+coupees=$(grep -rn -A 1 'Lune &"' src/ tests/ 2>/dev/null \
+  | grep -v '^src/generated/' \
+  | grep -B 1 '^[^:]*[:-][[:space:]]*"Soleil' \
+  || true)
+
+if [ -n "$coupees" ]; then
+  anciennes="${anciennes}
+${coupees}"
+fi
 
 # ---------------------------------------------------------------------------
 # UNE CITATION EN COMMENTAIRE EST LÉGITIME, et il en existe plusieurs : les

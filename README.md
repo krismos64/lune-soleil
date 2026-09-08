@@ -765,6 +765,8 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-revalidation-layout-mutation.sh    # prouve verifier-revalidation-layout.sh par mutation
 ./scripts/verifier-prefetch-administration.sh         # les liens de l'administration désactivent le préchargement, C40, LS-166
 ./scripts/verifier-prefetch-administration-mutation.sh # prouve le précédent par mutation
+./scripts/verifier-graphie-marque.sh                  # le nom commercial suit le logo et ne s'écrit qu'une fois, LS-193
+./scripts/verifier-graphie-marque-mutation.sh         # prouve le précédent par mutation
 ./scripts/verifier-prefixe-medias.sh                  # NEXT_PUBLIC_MEDIA_PREFIXE atteint le bundle construit, LS-197
 ./scripts/verifier-prefixe-medias-mutation.sh         # prouve verifier-prefixe-medias.sh par mutation
 ./scripts/verifier-registre-traitements.sh       # registre RGPD confronté au schéma
