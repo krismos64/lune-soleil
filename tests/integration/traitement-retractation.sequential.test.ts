@@ -1535,6 +1535,98 @@ describe("l'etat de la piece retournee decide de la reintegration, LS-173", () =
     expect(new Set(compenses).size).toBe(2);
   });
 
+  /*
+   * UNE VARIANTE ARCHIVEE NE SE REINTEGRE PAS EN SILENCE, defaut trouve par
+   * `ls-critical-reviewer` le 8 septembre 2026.
+   *
+   * ------------------------------------------------------------------
+   * LE SCENARIO EST ORDINAIRE, ET C'EST CE QUI LE REND DANGEREUX. Une piece
+   * unique est vendue, la reservation est consommee a la confirmation, donc
+   * `archiverVariante` accepte : il n'exige que l'absence de reservation
+   * ACTIVE. Trois semaines plus tard le client se retracte et la piece revient.
+   *
+   * CE QUE LA PREMIERE VERSION PRODUISAIT : `incrementerStockPhysique` porte
+   * `AND archivee_a IS NULL`, donc l'UPDATE ne touchait AUCUNE ligne, pendant
+   * que le mouvement `RETOUR` s'ecrivait quand meme. Le journal totalisait zero
+   * sur la commande, donc l'inventaire reconstruit disait « une piece en
+   * stock », quand `quantite_physique` disait zero. Deux verites, aucune
+   * contrainte pour les departager.
+   *
+   * ET LE GESTE ETAIT BRULE : l'etat pose et l'index `mouvement_compense_unique`
+   * consomme, toute nouvelle tentative rendant `DEJA_CONSTATE`. La piece
+   * n'etait plus reintegrable par ce chemin.
+   * ------------------------------------------------------------------
+   */
+  it("refuse la remise en vente d'une variante archivee, sans rien ecrire", async () => {
+    const { commandeId, demandeId } = await commanderEtDeposer();
+    const enTetes = await sessionAdministratrice();
+
+    await ouvrirAttenteRetour(demandeId);
+    await constaterReception(demandeId);
+
+    await client.query(
+      `UPDATE variante SET archivee_a = now() WHERE id IN (
+         SELECT variante_id FROM ligne_commande WHERE commande_id = $1)`,
+      [commandeId],
+    );
+
+    const stockAvant = await lireStockPhysique(commandeId);
+
+    const issue = await constaterEtatPiece(enTetes, {
+      demandeId,
+      etat: "REMISE_EN_VENTE",
+      motif: "TEST Piece revenue sur une variante archivee",
+    });
+
+    expect(issue.statut).toBe("VARIANTE_ARCHIVEE");
+
+    /*
+     * RIEN N'EST ECRIT, ET LES TROIS ASSERTIONS SONT NECESSAIRES. Un `return`
+     * au lieu d'une exception laisserait l'etat committe sans son mouvement :
+     * dans `$transaction` seule une exception annule, motif « un return valide
+     * la transaction », en fiche sur ce depot.
+     */
+    expect(await lireStockPhysique(commandeId)).toBe(stockAvant);
+    expect((await lireMouvements(commandeId)).map((m) => m.type)).toEqual([
+      "VENTE_WEB",
+    ]);
+
+    const demande = await lireDemande(demandeId);
+    expect(demande.etat_piece_retournee).toBeNull();
+    expect(demande.etat_constate_a).toBeNull();
+  });
+
+  /*
+   * LA PERTE RESTE POSSIBLE SUR UNE VARIANTE ARCHIVEE, et cette asymetrie est
+   * voulue : declarer une perte n'ecrit AUCUN mouvement, donc l'archivage ne
+   * gene rien. Refuser les deux fermerait le seul geste qui solde une demande
+   * dont la piece ne reviendra jamais au catalogue.
+   */
+  it("declare quand meme une perte sur une variante archivee", async () => {
+    const { commandeId, demandeId } = await commanderEtDeposer();
+    const enTetes = await sessionAdministratrice();
+
+    await ouvrirAttenteRetour(demandeId);
+    await constaterReception(demandeId);
+
+    await client.query(
+      `UPDATE variante SET archivee_a = now() WHERE id IN (
+         SELECT variante_id FROM ligne_commande WHERE commande_id = $1)`,
+      [commandeId],
+    );
+
+    const issue = await constaterEtatPiece(enTetes, {
+      demandeId,
+      etat: "PERTE_CONSTATEE",
+      motif: "TEST Piece cassee sur une variante archivee",
+    });
+
+    expect(issue.statut).toBe("CONSTATEE");
+    expect((await lireDemande(demandeId)).etat_piece_retournee).toBe(
+      "PERTE_CONSTATEE",
+    );
+  });
+
   it("refuse le constat sur une demande introuvable", async () => {
     const enTetes = await sessionAdministratrice();
 

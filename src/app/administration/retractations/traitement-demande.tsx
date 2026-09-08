@@ -124,6 +124,19 @@ function messageTransition(resultat: ResultatTransition): MessageAffiche {
       };
     case "DEJA_RECUE":
       return { texte: "Le colis est déjà marqué reçu.", erreur: true };
+    case "VARIANTE_ARCHIVEE":
+      /*
+       * LE MESSAGE DIT QUOI FAIRE, C33 : un refus qui nomme seulement la cause
+       * laisse l'exploitante devant une piece revenue qu'elle ne peut pas
+       * ranger. Le desarchivage est le geste qui debloque, et il vit sur un
+       * autre ecran.
+       */
+      return {
+        texte:
+          "Cette pièce a été archivée, son stock ne peut pas remonter. " +
+          "Désarchivez la déclinaison, puis recommencez. Rien n'a été enregistré.",
+        erreur: true,
+      };
     case "DEJA_CONSTATE":
       return {
         texte:

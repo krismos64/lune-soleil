@@ -68,6 +68,8 @@ export type ResultatTransition =
   | { statut: "DEJA_RECUE" }
   /** L'etat de la piece a deja ete constate, il ne se reecrit pas, LS-173. */
   | { statut: "DEJA_CONSTATE" }
+  /** La variante est archivee : le stock ne peut pas remonter, LS-173. */
+  | { statut: "VARIANTE_ARCHIVEE" }
   /** Panne technique, deja journalisee. */
   | { statut: "INDISPONIBLE" };
 
@@ -337,6 +339,10 @@ export async function declarerEtatPiece(
 
     if (issue.statut === "DEJA_CONSTATE") {
       return { statut: "DEJA_CONSTATE" };
+    }
+
+    if (issue.statut === "VARIANTE_ARCHIVEE") {
+      return { statut: "VARIANTE_ARCHIVEE" };
     }
 
     if (issue.statut === "SESSION_ABSENTE") {
