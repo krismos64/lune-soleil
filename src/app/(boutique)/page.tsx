@@ -12,7 +12,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { DonneesStructurees } from "@/components/donnees-structurees";
-import { jsonLdOrganisation, openGraphDePage } from "@/lib/seo";
+import { jsonLdOrganisation, NOM_BOUTIQUE, openGraphDePage } from "@/lib/seo";
 import { lireCataloguePublic } from "@/services/catalogue";
 import { CarteProduit } from "./catalogue/carte-produit";
 import styles from "./page.module.css";
@@ -20,19 +20,19 @@ import styles from "./page.module.css";
 /**
  * LS-137. Le titre est ABSOLU et non modelé.
  *
- * Le gabarit du layout racine ajoute « , Lune & Soleil » à chaque titre, ce qui
- * donnerait ici « Lune & Soleil, bijoux artisanaux faits main, Lune & Soleil ».
+ * Le gabarit du layout racine ajoute « , Lune-soleil » à chaque titre, ce qui
+ * donnerait ici « Lune-soleil, bijoux artisanaux faits main, Lune-soleil ».
  * `absolute` court-circuite le gabarit, et c'est le cas prévu pour l'accueil.
  */
 export const metadata = {
   title: {
-    absolute: "Lune & Soleil, bijoux artisanaux faits main",
+    absolute: `${NOM_BOUTIQUE}, bijoux artisanaux faits main`,
   },
   description:
     "Des bijoux faits main, créés à l'unité et en petite série. Livraison en France métropolitaine, Corse comprise.",
   alternates: { canonical: "/" },
   openGraph: openGraphDePage({
-    titre: "Lune & Soleil, bijoux artisanaux faits main",
+    titre: `${NOM_BOUTIQUE}, bijoux artisanaux faits main`,
     description:
       "Des bijoux faits main, créés à l'unité et en petite série. Livraison en France métropolitaine, Corse comprise.",
     chemin: "/",

@@ -41,6 +41,7 @@ import { lireComptages } from "@/services/tableau-bord";
 
 import { BoutonDeconnexion } from "./bouton-deconnexion";
 import styles from "./layout.module.css";
+import { NOM_BOUTIQUE } from "@/lib/seo";
 
 /**
  * Gabarit de titre de l'administration, LS-137.
@@ -49,7 +50,7 @@ import styles from "./layout.module.css";
  * defini dans un segment ne s'applique qu'a ses enfants, et le titre resolu
  * d'un enfant n'est PAS repasse dans le gabarit du parent : « Stocks et
  * marches, administration » est donc le titre final, jamais « Stocks et
- * marches, administration, Lune & Soleil ».
+ * marches, administration, Lune-soleil ».
  *
  * POURQUOI CE SUFFIXE PLUTOT QUE LE NOM DE LA BOUTIQUE. Ces ecrans ne sont vus
  * que par l'exploitante, souvent plusieurs onglets ouverts : ce qui l'aide a
@@ -62,7 +63,7 @@ import styles from "./layout.module.css";
  */
 export const metadata = {
   title: {
-    default: "Administration, Lune & Soleil",
+    default: `Administration, ${NOM_BOUTIQUE}`,
     template: "%s, administration",
   },
 };

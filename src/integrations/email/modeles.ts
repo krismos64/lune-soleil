@@ -22,6 +22,7 @@
  * en variable, jamais d'un chiffre ecrit a la main.
  */
 import type { MessageEmail, ModeleEmail } from "./index";
+import { NOM_BOUTIQUE } from "@/lib/seo";
 
 export type MessageRendu = {
   objet: string;
@@ -35,7 +36,7 @@ export type MessageRendu = {
  * marque, il ne change pas d'un environnement a l'autre, et le rendre
  * configurable inviterait a le modifier sans arbitrage.
  */
-const SIGNATURE = "Lune & Soleil";
+const SIGNATURE = NOM_BOUTIQUE;
 
 /**
  * Une variable attendue, ou un refus explicite.
@@ -111,7 +112,7 @@ const RENDUS: Record<ModeleEmail, (message: MessageEmail) => MessageRendu> = {
       "Bonjour,",
       "",
       "Une demande de changement d'adresse email a été faite sur votre compte",
-      "Lune & Soleil, vers :",
+      `${NOM_BOUTIQUE}, vers :`,
       "",
       exiger(message, "nouvelleAdresse"),
       "",

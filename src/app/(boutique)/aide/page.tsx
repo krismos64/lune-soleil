@@ -29,7 +29,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { formaterMontant } from "@/lib/montant";
-import { openGraphDePage } from "@/lib/seo";
+import { NOM_BOUTIQUE, openGraphDePage } from "@/lib/seo";
 import {
   ConfigurationLivraisonInvalideError,
   lireConfigurationLivraison,
@@ -38,8 +38,7 @@ import styles from "./aide.module.css";
 
 export const metadata: Metadata = {
   title: "Livraison, retours et questions fréquentes",
-  description:
-    "Modes de livraison, tarifs, droit de rétractation et réponses aux questions fréquentes sur les bijoux Lune & Soleil.",
+  description: `Modes de livraison, tarifs, droit de rétractation et réponses aux questions fréquentes sur les bijoux ${NOM_BOUTIQUE}.`,
   // LS-137, page publique indexable : canonical explicite.
   alternates: { canonical: "/aide" },
   openGraph: openGraphDePage({

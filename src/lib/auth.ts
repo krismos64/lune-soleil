@@ -29,6 +29,7 @@ import {
 
 import { prisma } from "@/lib/prisma";
 import { lireProxiesDeConfiance } from "@/lib/proxies-de-confiance";
+import { NOM_BOUTIQUE } from "@/lib/seo";
 
 /**
  * L'URL publique du site, et un repli qui NE VAUT QU'EN DEVELOPPEMENT.
@@ -712,7 +713,7 @@ export function creerAuth(
     plugins: [
       passkey({
         rpID: domaineRelyingPartyDe(urlSite),
-        rpName: "Lune & Soleil",
+        rpName: NOM_BOUTIQUE,
         // `origin` EXPLICITE, a ne pas retirer. Sans lui, le plugin retombe
         // sur l'en-tete `Origin` de la requete, donc sur une valeur fournie
         // par le client, comme `expectedOrigin` de la verification WebAuthn.

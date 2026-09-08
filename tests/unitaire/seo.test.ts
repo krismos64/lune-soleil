@@ -376,7 +376,7 @@ describe("openGraphDePage", () => {
    */
   it("repose siteName et locale, que le layout ne transmet pas", () => {
     const og = openGraphDePage(page);
-    expect(og["siteName"]).toBe("Lune & Soleil");
+    expect(og["siteName"]).toBe("Lune-soleil");
     expect(og["locale"]).toBe("fr_FR");
   });
 
