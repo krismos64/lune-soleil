@@ -239,7 +239,25 @@ cas "les deux filets du constat unique retires ensemble" \
   's/if \(demande\.etatPieceRetournee !== null\) \{\n    return \{ statut: "DEJA_CONSTATE" \};\n  \}/if (false) {\n    return { statut: "DEJA_CONSTATE" };\n  }/s'
 
 # ---------------------------------------------------------------------------
-# CAS 6 : LE CONSTAT POSE UN STATUT, regle L12.
+# CAS 6 : UNE SEULE LIGNE COMPENSEE SUR UNE COMMANDE A DEUX BIJOUX.
+#
+# CE DEFAUT A REELLEMENT EXISTE dans la premiere version du service, qui
+# employait `findFirst`. Il est SILENCIEUX sur une commande a un article, cas de
+# tous les autres tests de ce fichier : la seconde piece serait restee sortie du
+# stock indefiniment, soit exactement le defaut que cette story ferme, reproduit
+# a l'interieur d'elle-meme.
+#
+# LE WEBHOOK ECRIT UN MOUVEMENT PAR LIGNE, sa cle d'idempotence portant
+# `(commandeId, varianteId)`. Une commande a deux bijoux porte donc deux ventes
+# a compenser.
+# ---------------------------------------------------------------------------
+cas "une seule ligne compensee sur une commande a deux articles" \
+  "$SERVICE" \
+  's/const ventes = await tx\.mouvementStock\.findMany\(\{/const ventes = [await tx.mouvementStock.findFirst({/s ; s/(select: \{ id: true, varianteId: true, quantite: true \},\n      \})\);/$1)].filter((v) => v !== null);/s' \
+  "reintegre les DEUX pieces d'une commande a deux articles"
+
+# ---------------------------------------------------------------------------
+# CAS 7 : LE CONSTAT POSE UN STATUT, regle L12.
 #
 # C'est le piege que LS-41 a ferme en supprimant `RECUE` : poser un statut ici
 # ferait REGRESSER une demande deja `REMBOURSEE`, qui disparaitrait de toute

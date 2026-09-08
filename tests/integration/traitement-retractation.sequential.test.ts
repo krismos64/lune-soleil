@@ -1425,6 +1425,116 @@ describe("l'etat de la piece retournee decide de la reintegration, LS-173", () =
     ]);
   });
 
+  /*
+   * UNE COMMANDE A DEUX BIJOUX REINTEGRE LES DEUX, ET CE TEST A TROUVE UN
+   * DEFAUT REEL.
+   *
+   * ------------------------------------------------------------------
+   * LA PREMIERE VERSION DU SERVICE EMPLOYAIT `findFirst` sur le mouvement de
+   * vente. Une retractation sur un panier a deux articles n'aurait donc
+   * reintegre QU'UNE piece, et la seconde serait restee sortie du stock
+   * indefiniment : exactement le defaut que cette story ferme, reproduit a
+   * l'interieur d'elle-meme.
+   *
+   * LE WEBHOOK ECRIT UN MOUVEMENT PAR LIGNE, `webhook-paiement.ts` bouclant
+   * sur les lignes avec `varianteId` dans son filtre : la cle d'idempotence
+   * porte `(commandeId, varianteId)` et non la commande seule.
+   *
+   * LA RETRACTATION PORTE SUR TOUTE LA COMMANDE : `commandeId` est UNIQUE sur
+   * `DemandeRetractation`, il n'existe aucune demande partielle.
+   * ------------------------------------------------------------------
+   */
+  it("reintegre les DEUX pieces d'une commande a deux articles", async () => {
+    const { varianteId: premiere } = await creerVarianteEnStock(client);
+    const { varianteId: seconde } = await creerVarianteEnStock(client);
+
+    await client.query(
+      "UPDATE variante SET prix_centimes = $1 WHERE id = ANY($2::text[])",
+      [PRIX_VARIANTE_CENTIMES, [premiere, seconde]],
+    );
+
+    const issue = await passerCommande({
+      lignesCookie: [
+        { varianteId: premiere, quantite: 1 },
+        { varianteId: seconde, quantite: 1 },
+      ],
+      saisie: saisie("DOMICILE"),
+      configuration: CONFIGURATION,
+    });
+
+    const { rows: avant } = await client.query<{ total_centimes: number }>(
+      "SELECT total_centimes FROM commande WHERE id = $1",
+      [issue.commandeId],
+    );
+
+    const evenement: EvenementPaiement = {
+      identifiant: `evt_test_${randomUUID()}`,
+      type: "PAIEMENT_REUSSI",
+      commandeId: issue.commandeId,
+      identifiantSession: `cs_test_${issue.commandeId.slice(0, 8)}`,
+      montantCentimes: avant[0]!.total_centimes,
+      montantRembourseCentimes: 0,
+      charge: { source: "test" },
+    };
+
+    await traiterEvenementPaiement({
+      corpsBrut: JSON.stringify(evenement),
+      signature: "signature-de-test",
+      verificateur: verificateurDouble(evenement),
+    });
+
+    const demandeId = randomUUID();
+    await client.query(
+      `INSERT INTO demande_retractation (id, commande_id, statut, deposee_a)
+       VALUES ($1, $2, 'DEPOSEE'::"StatutRetractation", now())`,
+      [demandeId, issue.commandeId],
+    );
+
+    const enTetes = await sessionAdministratrice();
+    await ouvrirAttenteRetour(demandeId);
+    await constaterReception(demandeId);
+
+    const stockAvant = await client.query<{ id: string; quantite: number }>(
+      `SELECT id, quantite_physique AS quantite FROM variante
+       WHERE id = ANY($1::text[]) ORDER BY id`,
+      [[premiere, seconde]],
+    );
+
+    const constat = await constaterEtatPiece(enTetes, {
+      demandeId,
+      etat: "REMISE_EN_VENTE",
+      motif: "TEST Les deux pieces reviennent intactes",
+    });
+
+    expect(constat.statut).toBe("CONSTATEE");
+
+    /*
+     * LES DEUX STOCKS REMONTENT, et l'assertion porte sur CHAQUE variante.
+     * Sommer les deux laisserait passer une implementation qui incremente deux
+     * fois la meme piece, ce qui est exactement ce que `findFirst` produisait
+     * en apparence si l'on ne regardait que le total.
+     */
+    const stockApres = await client.query<{ id: string; quantite: number }>(
+      `SELECT id, quantite_physique AS quantite FROM variante
+       WHERE id = ANY($1::text[]) ORDER BY id`,
+      [[premiere, seconde]],
+    );
+
+    for (const [rang, ligne] of stockApres.rows.entries()) {
+      expect(ligne.quantite).toBe(stockAvant.rows[rang]!.quantite + 1);
+    }
+
+    // DEUX MOUVEMENTS DE RETOUR, un par ligne compensee.
+    const mouvements = await lireMouvements(issue.commandeId);
+    expect(mouvements.filter((m) => m.type === "RETOUR")).toHaveLength(2);
+
+    // ET CHACUN COMPENSE SA PROPRE VENTE, jamais deux fois la meme.
+    const compenses = mouvements
+      .filter((m) => m.type === "RETOUR")
+      .map((m) => m.compense_id);
+    expect(new Set(compenses).size).toBe(2);
+  });
+
   it("refuse le constat sur une demande introuvable", async () => {
     const enTetes = await sessionAdministratrice();
 
