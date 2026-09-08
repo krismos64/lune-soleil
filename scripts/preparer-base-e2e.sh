@@ -82,11 +82,29 @@ docker info >/dev/null 2>&1 || echec "le demon Docker ne repond pas, est-il dema
 #
 # La lecture passe par node plutot que par un `grep` sur .env : les valeurs
 # n'apparaissent ainsi dans aucun argument de commande, donc dans aucun `ps`.
+#
+# ---------------------------------------------------------------------------
+# LA COMPARAISON PORTE SUR LE FICHIER `.env`, JAMAIS SUR L'ENVIRONNEMENT, et
+# c'est une correction MESUREE, pas une precaution.
+#
+# Playwright appelle ce script depuis `webServer`, apres avoir pose
+# `DATABASE_URL = DATABASE_URL_E2E` pour tout le processus. Lire
+# `process.env.DATABASE_URL` compare alors la variable a ELLE-MEME : le verdict
+# tombait sur « IDENTIQUES » et le script refusait de preparer, faisant echouer
+# le demarrage entier du serveur. Mesure du 8 septembre 2026, premiere execution
+# apres la bascule : « Process from config.webServer was not able to start ».
+#
+# LE REFUS ETAIT JUSTE DANS SON PRINCIPE ET FAUX DANS SON ANCRAGE. Ce qu'il faut
+# comparer est ce que l'exploitant a ECRIT dans `.env`, la seule chose qu'une
+# recopie sans changement de port peut rendre identique. `dotenv.parse` lit le
+# fichier sans toucher a `process.env`, donc sans subir la surcharge.
 # ---------------------------------------------------------------------------
 verdict=$(node -e '
-require("dotenv/config");
-const dev = process.env.DATABASE_URL;
-const e2e = process.env.DATABASE_URL_E2E;
+const fs = require("node:fs");
+const dotenv = require("dotenv");
+const fichier = dotenv.parse(fs.readFileSync(".env"));
+const dev = fichier.DATABASE_URL;
+const e2e = fichier.DATABASE_URL_E2E;
 if (!e2e) { console.log("ABSENTE"); process.exit(0); }
 if (!dev) { console.log("DEV_ABSENTE"); process.exit(0); }
 if (dev === e2e) { console.log("IDENTIQUES"); process.exit(0); }
@@ -104,12 +122,12 @@ case "$verdict" in
   DEV_ABSENTE)
     echec "DATABASE_URL absente de .env, la comparaison ne peut pas conclure." ;;
   IDENTIQUES)
-    echec "DATABASE_URL_E2E est IDENTIQUE a DATABASE_URL.
+    echec "DATABASE_URL_E2E est IDENTIQUE a DATABASE_URL dans .env.
        La suite tournerait sur la base de developpement et retrograderait des
        comptes reels. Changer le port, 55433 par defaut, LS-189." ;;
   MEME_PORT)
-    echec "DATABASE_URL_E2E designe le MEME hote et le MEME port que
-       DATABASE_URL. Les deux bases seraient confondues, LS-189." ;;
+    echec "DATABASE_URL_E2E designe, dans .env, le MEME hote et le MEME port
+       que DATABASE_URL. Les deux bases seraient confondues, LS-189." ;;
   MALFORMEE)
     echec "DATABASE_URL_E2E n'est pas une URL analysable." ;;
 esac
@@ -158,8 +176,11 @@ echo "   sain"
 # ---------------------------------------------------------------------------
 echo "== Migration Prisma sur la base de test =="
 node -e '
-require("dotenv/config");
-process.env.DATABASE_URL = process.env.DATABASE_URL_E2E;
+const fs = require("node:fs");
+const dotenv = require("dotenv");
+// MEME SOURCE QUE LA COMPARAISON CI-DESSUS, le fichier et non l`environnement :
+// Playwright a pu surcharger DATABASE_URL avant d`appeler ce script.
+process.env.DATABASE_URL = dotenv.parse(fs.readFileSync(".env")).DATABASE_URL_E2E;
 const { spawnSync } = require("node:child_process");
 const r = spawnSync("npx", ["prisma", "migrate", "deploy"], { stdio: "inherit", env: process.env });
 process.exit(r.status === null ? 1 : r.status);
