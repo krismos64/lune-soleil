@@ -715,7 +715,27 @@ async function reintegrerPieceRetournee(parametres: {
         return null;
       }
 
-      const vente = await tx.mouvementStock.findFirst({
+      /*
+       * TOUTES LES VENTES DE LA COMMANDE, ET NON LA PREMIERE.
+       *
+       * ------------------------------------------------------------------
+       * UN PANIER A DEUX BIJOUX PRODUIT DEUX MOUVEMENTS `VENTE_WEB`, un par
+       * ligne : `webhook-paiement.ts` boucle sur les lignes et filtre sur
+       * `varianteId`, donc la cle d'idempotence `mouvement_vente_web_unique`
+       * porte bien `(commandeId, varianteId)` et non la commande seule.
+       *
+       * UNE PREMIERE VERSION EMPLOYAIT `findFirst`. Une retractation sur une
+       * commande a deux articles n'aurait alors reintegre QU'UNE piece, et la
+       * seconde serait restee sortie du stock indefiniment : exactement le
+       * defaut que cette story vient fermer, reproduit a l'interieur d'elle.
+       *
+       * LA RETRACTATION PORTE SUR TOUTE LA COMMANDE, et non sur une ligne :
+       * `DemandeRetractation.commandeId` est UNIQUE au schema, il n'existe
+       * aucune demande partielle. Compenser toutes les lignes est donc le seul
+       * comportement coherent avec le modele.
+       * ------------------------------------------------------------------
+       */
+      const ventes = await tx.mouvementStock.findMany({
         where: { commandeId: parametres.commandeId, type: "VENTE_WEB" },
         select: { id: true, varianteId: true, quantite: true },
       });
@@ -725,31 +745,29 @@ async function reintegrerPieceRetournee(parametres: {
        * paiement n'a jamais ete confirme ne porte aucun mouvement. Rien a
        * reintegrer, l'etat reste ecrit et dit ce qui a ete constate.
        */
-      if (vente === null) {
-        return null;
+      for (const vente of ventes) {
+        /*
+         * LE SIGNE EST L'INVERSE DE LA VENTE, jamais une constante. La vente
+         * ayant ete ecrite en negatif, la compensation est positive, et la
+         * somme du journal retombe a zero sur une commande retractee.
+         */
+        const quantiteCompensatrice = -vente.quantite;
+
+        await incrementerStockPhysique(tx, {
+          varianteId: vente.varianteId,
+          quantite: quantiteCompensatrice,
+        });
+
+        await creerMouvement(tx, {
+          varianteId: vente.varianteId,
+          commandeId: parametres.commandeId,
+          type: "RETOUR",
+          quantite: quantiteCompensatrice,
+          motif: parametres.motif,
+          acteurId: parametres.acteurId,
+          compenseId: vente.id,
+        });
       }
-
-      /*
-       * LE SIGNE EST L'INVERSE DE LA VENTE, jamais une constante. La vente
-       * ayant ete ecrite en negatif, la compensation est positive, et la somme
-       * du journal retombe a zero sur une commande retractee.
-       */
-      const quantiteCompensatrice = -vente.quantite;
-
-      await incrementerStockPhysique(tx, {
-        varianteId: vente.varianteId,
-        quantite: quantiteCompensatrice,
-      });
-
-      await creerMouvement(tx, {
-        varianteId: vente.varianteId,
-        commandeId: parametres.commandeId,
-        type: "RETOUR",
-        quantite: quantiteCompensatrice,
-        motif: parametres.motif,
-        acteurId: parametres.acteurId,
-        compenseId: vente.id,
-      });
 
       return null;
     });
