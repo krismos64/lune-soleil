@@ -167,6 +167,22 @@ test("l'écran ne déborde pas, formulaires déployés", async ({ page }) => {
   await carte.getByText("Refuser cette demande").click();
   await expect(carte.getByLabel("Motif du refus")).toBeVisible();
 
+  /*
+   * LE BLOC DE CONSTAT D'ETAT EST NOMME, ET NON SEULEMENT MESURE, LS-173.
+   *
+   * Il est rendu par defaut, la fixture ne posant aucun `etat_piece_retournee`,
+   * donc la mesure de debordement le couvrait deja. Mais elle resterait VERTE
+   * s'il disparaissait de l'ecran : une mesure de largeur ne dit rien de ce
+   * qu'elle mesure. L'assertion l'ancre.
+   *
+   * SA LISTE DEROULANTE PORTE LE PLUS LONG LIBELLE DE L'ECRAN, « Cassée,
+   * incomplète ou jamais revenue », 34 caracteres : c'est le candidat naturel
+   * au debordement a 320 px, un `select` ferme s'elargissant sur certains
+   * moteurs au texte de son option la plus longue.
+   */
+  await expect(carte.getByLabel("État de la pièce retournée")).toBeVisible();
+  await expect(carte.getByLabel("Motif du constat")).toBeVisible();
+
   expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
     TOLERANCE_DEBORDEMENT_PX,
   );

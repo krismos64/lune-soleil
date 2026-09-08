@@ -31,7 +31,7 @@ import {
   LIMITE_LISTE_DEMANDES,
   listerDemandesRetractation,
 } from "@/services/traitement-retractation";
-import { LIBELLES_RETRACTATION } from "./libelles";
+import { LIBELLES_ETAT_PIECE, LIBELLES_RETRACTATION } from "./libelles";
 import { TraitementDemande } from "./traitement-demande";
 import styles from "./retractations.module.css";
 
@@ -214,6 +214,29 @@ export default async function PageRetractations() {
                     {demande.recueA === null
                       ? "Pas encore"
                       : formaterDate(demande.recueA)}
+                  </dd>
+                </div>
+                <div className={styles.fait}>
+                  {/*
+                   * LE CONSTAT S'AFFICHE, ET IL A FAILLI NE PAS L'ETRE, LS-173.
+                   *
+                   * Une premiere version ne remontait qu'un BOOLEEN jusqu'au
+                   * composant, pour masquer le bloc de saisie : la donnee etait
+                   * lue en base puis jetee, et l'ecran perdait l'information au
+                   * moment meme ou elle existait. L'exploitante qui rouvrait la
+                   * page ne pouvait plus distinguer une remise en vente d'une
+                   * perte. Releve par `ls-frontend-revue` le 8 septembre 2026.
+                   *
+                   * LES DEUX VONT ENSEMBLE, C41 etant une equivalence : afficher
+                   * l'etat sans sa date serait un fait a moitie dit, et les deux
+                   * faits voisins portent tous deux la leur.
+                   */}
+                  <dt className={styles.faitTitre}>État de la pièce</dt>
+                  <dd className={styles.faitValeur}>
+                    {demande.etatPieceRetournee === null ||
+                    demande.etatConstateA === null
+                      ? "Pas encore constaté"
+                      : `${LIBELLES_ETAT_PIECE[demande.etatPieceRetournee]}, le ${formaterDate(demande.etatConstateA)}`}
                   </dd>
                 </div>
               </dl>

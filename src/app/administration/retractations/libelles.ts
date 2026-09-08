@@ -1,4 +1,7 @@
-import type { StatutRetractation } from "@/generated/prisma/enums";
+import type {
+  EtatPieceRetournee,
+  StatutRetractation,
+} from "@/generated/prisma/enums";
 
 /**
  * Libelle affichable d'un statut de retractation, LS-135.
@@ -26,6 +29,22 @@ export const LIBELLES_RETRACTATION: Record<StatutRetractation, string> = {
   REMBOURSEMENT_EN_COURS: "Remboursement en cours",
   REMBOURSEE: "Remboursée",
   REFUSEE: "Refusée",
+};
+
+/**
+ * Libelle de l'etat constate d'une piece retournee, LS-173.
+ *
+ * EXHAUSTIF PAR SON TYPE, meme motif que la table ci-dessus : `Record<string,
+ * string>` compilerait sans rien garantir, et une troisieme valeur d'enum
+ * afficherait sa forme brute a l'exploitante sans qu'aucun controle ne rougisse.
+ *
+ * LES LIBELLES DISENT L'EFFET SUR LE STOCK, jamais la seule qualification. « En
+ * bon etat » ne dit pas si la piece est revenue au catalogue, et c'est
+ * precisement ce que l'exploitante vient verifier en rouvrant l'ecran.
+ */
+export const LIBELLES_ETAT_PIECE: Record<EtatPieceRetournee, string> = {
+  REMISE_EN_VENTE: "Bon état, remise en vente",
+  PERTE_CONSTATEE: "Perte constatée, non remise en vente",
 };
 
 /**
