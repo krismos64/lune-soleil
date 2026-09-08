@@ -29,12 +29,15 @@
  * dont l'ordre prestataire-puis-base et la cle d'idempotence sont deja eprouves.
  * Ce service decide QUAND rembourser et COMBIEN, jamais COMMENT.
  */
+import { Prisma } from "@/generated/prisma/client";
+import type { EtatPieceRetournee } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import { journaliser } from "@/lib/journal";
 import type { Correlation } from "@/lib/journal";
 import type { FournisseurPaiement } from "@/integrations/stripe/fournisseur";
 import {
   appliquerTransition,
+  constaterEtatPiece as constaterEtatPieceDepot,
   horodaterReception,
   lireDemandePourTraitement,
   lireMontantRemboursable,
@@ -43,6 +46,10 @@ import {
   type DemandeEnListe,
 } from "@/repositories/retractation";
 import { leverAlerteCritique } from "@/repositories/confirmation";
+import {
+  creerMouvement,
+  incrementerStockPhysique,
+} from "@/repositories/mouvement-stock";
 import {
   AutorisationRefuseeError,
   exigerAdministratrice,
@@ -516,6 +523,235 @@ export async function rembourserRetractation(
   );
 
   return issue;
+}
+
+/** Ce que le constat de l'etat de la piece rend a l'ecran, jamais une exception. */
+export type IssueConstatEtatPiece =
+  | { statut: "CONSTATEE" }
+  | { statut: "INTROUVABLE" }
+  /** Un constat exige son motif, comme toute compensation, S14. */
+  | { statut: "MOTIF_REQUIS" }
+  /**
+   * L'etat de cette piece a deja ete constate, et il ne se reecrit pas.
+   *
+   * IL COUVRE LES DEUX ETATS, et c'est ce qui le rend indispensable :
+   * `mouvement_compense_unique` ne garde QUE la remise en vente, la perte
+   * n'ecrivant aucun mouvement. Sans le refus applicatif, une piece declaree
+   * cassee pourrait etre requalifiee en remise en vente.
+   */
+  | { statut: "DEJA_CONSTATE" }
+  /** Ni session ni role d'administration. */
+  | { statut: "SESSION_ABSENTE" };
+
+/**
+ * Constate l'etat REEL de la piece retournee, ETAPE 9 DU PARCOURS 5, LS-173.
+ *
+ * ------------------------------------------------------------------
+ * POURQUOI CE GESTE EXISTE, ET POURQUOI IL N'EST PAS AUTOMATIQUE.
+ *
+ * `recueA` dit qu'un colis est ARRIVE, jamais dans quel etat. La regle S8 lie
+ * la reintegration de stock au retour PHYSIQUE et a l'etat REEL de la piece :
+ * un bijou revenu casse ne retourne pas au catalogue. `constaterReception`
+ * n'ecrit donc deliberement aucun mouvement, et un test le verifie.
+ *
+ * CE SERVICE EST LE CHEMIN QUI MANQUAIT. Sans lui, une piece revenue intacte
+ * restait sortie du stock indefiniment : `corrigerMouvement` refuse les ventes
+ * web, a juste titre, un `RETOUR` y incrementerait le stock sans rien dire de
+ * la commande ni de la facture.
+ * ------------------------------------------------------------------
+ *
+ * LA REMISE EN VENTE COMPENSE LA VENTE WEB, ADR-030. Le `compenseId` designe le
+ * mouvement d'origine, donc l'index `mouvement_compense_unique` rend le refus
+ * de double remise en vente STRUCTUREL : deux clics simultanes ne peuvent pas
+ * passer tous les deux, la ou un controle applicatif les laisserait passer
+ * entre son `SELECT` et son `INSERT`.
+ *
+ * LA PERTE N'ECRIT AUCUN MOUVEMENT, et elle ecrit quand meme UN ETAT. C'est
+ * toute la raison d'etre de `PERTE_CONSTATEE` : sans elle, une piece declaree
+ * perdue serait indistinguable d'une demande jamais traitee, les deux ne
+ * portant aucune ligne au journal.
+ *
+ * IL NE TOUCHE PAS AU STATUT DE LA DEMANDE, regle L12, exactement comme la
+ * reception. Le colis arrive quand il arrive, y compris trois semaines apres le
+ * remboursement, et poser un statut ferait regresser une demande `REMBOURSEE`.
+ *
+ * IL N'EXIGE PAS `recueA`, ET C'EST DELIBERE. La regle L13 decrit la piece
+ * JAMAIS revenue : la declarer perdue est le seul geste qui solde cet ecart, et
+ * exiger une reception le fermerait.
+ *
+ * @sensible STOCK
+ */
+export async function constaterEtatPiece(
+  enTetes: Headers,
+  parametres: {
+    demandeId: string;
+    etat: EtatPieceRetournee;
+    motif: string;
+  },
+  correlation?: Correlation,
+): Promise<IssueConstatEtatPiece> {
+  /*
+   * LA GARDE DE ROLE EST LA PREMIERE INSTRUCTION, AVANT TOUTE LECTURE, meme
+   * motif que `rembourserRetractation` : les refus de ce service NOMMENT l'etat
+   * reel de la demande, deliberement, l'appelante etant l'exploitante. Lire
+   * avant de garder en ferait un oracle pour un appelant sans session.
+   */
+  let acteurId: string;
+
+  try {
+    /*
+     * L'IDENTITE VIENT DE LA GARDE ELLE-MEME, jamais d'un second appel ni d'un
+     * parametre : `acteurId` alimente le mouvement de stock, et une valeur
+     * venue de l'appelant permettrait d'attribuer une ecriture a quelqu'un
+     * d'autre. Invariant 2.
+     */
+    ({ utilisateurId: acteurId } = await exigerAdministratrice(enTetes));
+  } catch (erreur) {
+    if (erreur instanceof AutorisationRefuseeError) {
+      return { statut: "SESSION_ABSENTE" };
+    }
+    throw erreur;
+  }
+
+  const motif = parametres.motif.trim();
+
+  if (motif.length === 0) {
+    return { statut: "MOTIF_REQUIS" };
+  }
+
+  const demande = await lireDemandePourTraitement(prisma, parametres.demandeId);
+
+  if (demande === null) {
+    return { statut: "INTROUVABLE" };
+  }
+
+  if (demande.etatPieceRetournee !== null) {
+    return { statut: "DEJA_CONSTATE" };
+  }
+
+  const issue = await reintegrerPieceRetournee({
+    demandeId: parametres.demandeId,
+    commandeId: demande.commandeId,
+    etat: parametres.etat,
+    motif,
+    acteurId,
+  });
+
+  if (issue !== null) {
+    return issue;
+  }
+
+  journaliser(
+    "info",
+    "Etat de la piece retournee constate",
+    {
+      demande: parametres.demandeId,
+      etat: parametres.etat,
+      /*
+       * LE STATUT EST JOURNALISE, PAS MODIFIE. Il dit a quel moment du cycle le
+       * colis a ete constate, information utile devant un ecart d'inventaire.
+       */
+      statutDemande: demande.statut,
+    },
+    correlation,
+  );
+
+  return { statut: "CONSTATEE" };
+}
+
+/**
+ * Ecrit l'etat, et le mouvement compensateur quand la piece revient au
+ * catalogue. Rend `null` en cas de succes, un refus sinon.
+ *
+ * TOUT EN UNE SEULE TRANSACTION, et c'est indispensable : l'etat constate et le
+ * mouvement de stock doivent apparaitre ou disparaitre ENSEMBLE. Un etat ecrit
+ * sans son mouvement laisserait une piece marquee remise en vente qui n'est
+ * jamais rentree au stock, et le journal ne permettrait pas de le voir.
+ */
+async function reintegrerPieceRetournee(parametres: {
+  demandeId: string;
+  commandeId: string;
+  etat: EtatPieceRetournee;
+  motif: string;
+  acteurId: string;
+}): Promise<IssueConstatEtatPiece | null> {
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const { appliquee } = await constaterEtatPieceDepot(tx, {
+        demandeId: parametres.demandeId,
+        etat: parametres.etat,
+        constateA: new Date(),
+      });
+
+      /*
+       * LA CLAUSE CONDITIONNELLE DU DEPOT A REFUSE : un constat concurrent est
+       * passe entre la lecture ci-dessus et cette ecriture. Le refus vient donc
+       * de la base, pas seulement de la lecture prealable.
+       */
+      if (!appliquee) {
+        return { statut: "DEJA_CONSTATE" as const };
+      }
+
+      /*
+       * UNE PERTE S'ARRETE ICI. Aucun mouvement, aucun stock touche : c'est
+       * l'etat qui est enregistre, et lui seul. Regle S8.
+       */
+      if (parametres.etat === "PERTE_CONSTATEE") {
+        return null;
+      }
+
+      const vente = await tx.mouvementStock.findFirst({
+        where: { commandeId: parametres.commandeId, type: "VENTE_WEB" },
+        select: { id: true, varianteId: true, quantite: true },
+      });
+
+      /*
+       * AUCUNE VENTE WEB A COMPENSER. Le cas existe : une commande dont le
+       * paiement n'a jamais ete confirme ne porte aucun mouvement. Rien a
+       * reintegrer, l'etat reste ecrit et dit ce qui a ete constate.
+       */
+      if (vente === null) {
+        return null;
+      }
+
+      /*
+       * LE SIGNE EST L'INVERSE DE LA VENTE, jamais une constante. La vente
+       * ayant ete ecrite en negatif, la compensation est positive, et la somme
+       * du journal retombe a zero sur une commande retractee.
+       */
+      const quantiteCompensatrice = -vente.quantite;
+
+      await incrementerStockPhysique(tx, {
+        varianteId: vente.varianteId,
+        quantite: quantiteCompensatrice,
+      });
+
+      await creerMouvement(tx, {
+        varianteId: vente.varianteId,
+        commandeId: parametres.commandeId,
+        type: "RETOUR",
+        quantite: quantiteCompensatrice,
+        motif: parametres.motif,
+        acteurId: parametres.acteurId,
+        compenseId: vente.id,
+      });
+
+      return null;
+    });
+  } catch (erreur) {
+    /*
+     * `P2002` SUR `mouvement_compense_unique` EST UN REFUS METIER, ADR-030 :
+     * deux remises en vente simultanees ont vise la meme vente. Meme traduction
+     * que `corrigerMouvement`, et c'est la base qui garantit, jamais la lecture.
+     */
+    if (
+      erreur instanceof Prisma.PrismaClientKnownRequestError &&
+      erreur.code === "P2002"
+    ) {
+      return { statut: "DEJA_CONSTATE" };
+    }
+    throw erreur;
+  }
 }
 
 /**

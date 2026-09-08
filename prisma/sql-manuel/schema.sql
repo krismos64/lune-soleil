@@ -15,6 +15,9 @@ CREATE TYPE "TypeMouvementStock" AS ENUM ('VENTE_WEB', 'VENTE_EXTERNE', 'RETOUR'
 
 -- CreateEnum
 CREATE TYPE "OrigineEcriture" AS ENUM ('SYSTEME', 'ADMIN', 'RECONCILIATION');
+-- LS-173. L'etat REEL de la piece revenue, que seule l'exploitante constate.
+-- « Pas encore constate » est l'ABSENCE de valeur, la colonne etant nullable.
+CREATE TYPE "EtatPieceRetournee" AS ENUM ('REMISE_EN_VENTE', 'PERTE_CONSTATEE');
 
 -- CreateEnum
 CREATE TYPE "StatutCommande" AS ENUM ('EN_ATTENTE_PAIEMENT', 'CONFIRMEE', 'EN_PREPARATION', 'EXPEDIEE', 'LIVREE', 'ANNULEE');
@@ -362,6 +365,8 @@ CREATE TABLE "demande_retractation" (
     "preuve_expedition_retour" TEXT,
     "preuve_expedition_a" TIMESTAMPTZ(3),
     "recue_a" TIMESTAMPTZ(3),
+    "etat_piece_retournee" "EtatPieceRetournee",
+    "etat_constate_a" TIMESTAMPTZ(3),
 
     CONSTRAINT "demande_retractation_pkey" PRIMARY KEY ("id")
 );

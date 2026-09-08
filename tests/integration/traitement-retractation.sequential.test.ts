@@ -59,6 +59,7 @@ let refuserRetractation: typeof import("@/services/traitement-retractation").ref
 let lireMontantDu: typeof import("@/services/traitement-retractation").lireMontantDu;
 let alerterRetoursJamaisRecus: typeof import("@/services/traitement-retractation").alerterRetoursJamaisRecus;
 let SEUIL_RETOUR_JAMAIS_RECU_JOURS: typeof import("@/services/traitement-retractation").SEUIL_RETOUR_JAMAIS_RECU_JOURS;
+let constaterEtatPiece: typeof import("@/services/traitement-retractation").constaterEtatPiece;
 
 const MOT_DE_PASSE_VALIDE = "phrase-de-passe1";
 const EMAIL_ADMINISTRATRICE = "exploitante@exemple.fr";
@@ -282,15 +283,47 @@ async function lireDemande(demandeId: string): Promise<{
   preuve_expedition_a: Date | null;
   montant_rembourse_centimes: number | null;
   motif_decision: string | null;
+  etat_piece_retournee: string | null;
+  etat_constate_a: Date | null;
 }> {
   const { rows } = await client.query(
     `SELECT statut, recue_a, preuve_expedition_a, montant_rembourse_centimes,
-            motif_decision
+            motif_decision, etat_piece_retournee, etat_constate_a
      FROM demande_retractation WHERE id = $1`,
     [demandeId],
   );
 
   return rows[0]!;
+}
+
+/** Les mouvements de stock d'une commande, dans l'ordre d'ecriture. */
+async function lireMouvements(commandeId: string): Promise<
+  {
+    type: string;
+    quantite: number;
+    motif: string | null;
+    compense_id: string | null;
+  }[]
+> {
+  const { rows } = await client.query(
+    `SELECT type, quantite, motif, compense_id FROM mouvement_stock
+     WHERE commande_id = $1 ORDER BY cree_a, type`,
+    [commandeId],
+  );
+
+  return rows;
+}
+
+/** La quantite physique d'une variante, lue en base. */
+async function lireStockPhysique(commandeId: string): Promise<number> {
+  const { rows } = await client.query<{ quantite_physique: number }>(
+    `SELECT v.quantite_physique FROM variante v
+     JOIN ligne_commande lc ON lc.variante_id = v.id
+     WHERE lc.commande_id = $1`,
+    [commandeId],
+  );
+
+  return rows[0]!.quantite_physique;
 }
 
 beforeAll(async () => {
@@ -321,6 +354,7 @@ beforeAll(async () => {
     lireMontantDu,
     alerterRetoursJamaisRecus,
     SEUIL_RETOUR_JAMAIS_RECU_JOURS,
+    constaterEtatPiece,
   } = await import("@/services/traitement-retractation"));
 });
 
@@ -995,5 +1029,343 @@ describe("les transitions sont conditionnees a l'etat lu", () => {
     expect(seconde.rows[0]!.retour_attendu_a.getTime()).toBe(
       premiere.rows[0]!.retour_attendu_a.getTime(),
     );
+  });
+});
+
+/**
+ * ETAPE 9 DU PARCOURS 5, LS-173 : la reintegration de stock apres un retour.
+ *
+ * ZONE CRITIQUE : stock, autorisation, ecriture immuable.
+ *
+ * CE QUE CETTE SUITE PROUVE, ET QUI EST LE COEUR DE LA STORY : la reintegration
+ * depend de l'ETAT REEL de la piece et JAMAIS de `recueA`, regle S8. Un bijou
+ * revenu casse ne retourne pas au catalogue, et une date de reception ne dit
+ * rien de l'etat du bijou.
+ *
+ * LES DEUX ETATS ONT LEUR TEST, et celui de la PERTE est le plus important : il
+ * n'ecrit AUCUN mouvement, donc un test qui se contenterait de verifier la
+ * remise en vente passerait sur une implementation qui reintegre toujours.
+ */
+describe("l'etat de la piece retournee decide de la reintegration, LS-173", () => {
+  /*
+   * CRITERE 1. Le mouvement `RETOUR` compense la vente web, ADR-030 : le
+   * `compenseId` pointe le mouvement d'origine, ce qui rend le refus de seconde
+   * remise en vente structurel plutot qu'applicatif.
+   */
+  it("remet en vente une piece revenue en bon etat, mouvement RETOUR ecrit", async () => {
+    const { commandeId, demandeId } = await commanderEtDeposer();
+    const enTetes = await sessionAdministratrice();
+
+    await ouvrirAttenteRetour(demandeId);
+    await constaterReception(demandeId);
+
+    const stockAvant = await lireStockPhysique(commandeId);
+
+    const issue = await constaterEtatPiece(enTetes, {
+      demandeId,
+      etat: "REMISE_EN_VENTE",
+      motif: "TEST Piece revenue intacte, remise au catalogue",
+    });
+
+    expect(issue.statut).toBe("CONSTATEE");
+
+    /*
+     * LE STOCK PHYSIQUE REMONTE D'UNE PIECE. Verifier le seul mouvement ne
+     * suffirait pas : une implementation qui ecrit la ligne sans incrementer
+     * laisserait le catalogue vide en affichant un retour dans le journal.
+     */
+    expect(await lireStockPhysique(commandeId)).toBe(stockAvant + 1);
+
+    const mouvements = await lireMouvements(commandeId);
+    // L'ORDRE EST CHRONOLOGIQUE : la vente d'abord, sa compensation ensuite.
+    expect(mouvements.map((m) => m.type)).toEqual(["VENTE_WEB", "RETOUR"]);
+
+    const retour = mouvements.find((m) => m.type === "RETOUR")!;
+    const vente = mouvements.find((m) => m.type === "VENTE_WEB")!;
+
+    // Le signe est l'INVERSE de la vente, jamais une constante : c'est ce qui
+    // fait retomber la somme du journal a zero sur une commande retractee.
+    expect(retour.quantite).toBe(-vente.quantite);
+    // ADR-030, le compensateur designe ce qu'il compense.
+    expect(retour.compense_id).toBe(
+      (
+        await client.query<{ id: string }>(
+          "SELECT id FROM mouvement_stock WHERE commande_id = $1 AND type = 'VENTE_WEB'",
+          [commandeId],
+        )
+      ).rows[0]!.id,
+    );
+
+    const demande = await lireDemande(demandeId);
+    expect(demande.etat_piece_retournee).toBe("REMISE_EN_VENTE");
+    expect(demande.etat_constate_a).not.toBeNull();
+  });
+
+  /*
+   * CRITERE 2, ET C'EST LE TEST QUI COMPTE LE PLUS. Une piece cassee ne
+   * retourne pas au catalogue : aucun mouvement, et le stock physique NE BOUGE
+   * PAS. Sans cette assertion, une implementation qui reintegre toujours
+   * passerait le critere 1 sans que rien ne le signale.
+   */
+  it("ne remet rien en vente sur une piece declaree perdue ou cassee", async () => {
+    const { commandeId, demandeId } = await commanderEtDeposer();
+    const enTetes = await sessionAdministratrice();
+
+    await ouvrirAttenteRetour(demandeId);
+    await constaterReception(demandeId);
+
+    const stockAvant = await lireStockPhysique(commandeId);
+
+    const issue = await constaterEtatPiece(enTetes, {
+      demandeId,
+      etat: "PERTE_CONSTATEE",
+      motif: "TEST Fermoir casse, piece non revendable",
+    });
+
+    expect(issue.statut).toBe("CONSTATEE");
+
+    // NI MOUVEMENT NI STOCK : les deux, un seul des deux se satisferait d'une
+    // implementation qui ecrit la ligne sans incrementer, ou l'inverse.
+    expect(await lireStockPhysique(commandeId)).toBe(stockAvant);
+    expect((await lireMouvements(commandeId)).map((m) => m.type)).toEqual([
+      "VENTE_WEB",
+    ]);
+
+    /*
+     * L'ETAT EST QUAND MEME ECRIT, et c'est toute la raison d'etre de cette
+     * valeur d'enum : sans elle, une piece declaree perdue serait
+     * indistinguable d'une demande jamais traitee, les deux ne portant aucun
+     * mouvement de stock.
+     */
+    const demande = await lireDemande(demandeId);
+    expect(demande.etat_piece_retournee).toBe("PERTE_CONSTATEE");
+    expect(demande.etat_constate_a).not.toBeNull();
+  });
+
+  /* CRITERE 3, le motif est obligatoire, comme sur toute compensation, S14. */
+  it("refuse un constat sans motif, et n'ecrit alors rien du tout", async () => {
+    const { commandeId, demandeId } = await commanderEtDeposer();
+    const enTetes = await sessionAdministratrice();
+
+    await ouvrirAttenteRetour(demandeId);
+    await constaterReception(demandeId);
+
+    const issue = await constaterEtatPiece(enTetes, {
+      demandeId,
+      etat: "REMISE_EN_VENTE",
+      // Des espaces seuls, et non une chaine vide : c'est la forme qu'un
+      // formulaire produit reellement quand on saisit une espace par megarde.
+      motif: "   ",
+    });
+
+    expect(issue.statut).toBe("MOTIF_REQUIS");
+
+    // LE REFUS NE LAISSE AUCUNE TRACE, ni sur la demande ni au journal.
+    const demande = await lireDemande(demandeId);
+    expect(demande.etat_piece_retournee).toBeNull();
+    expect(demande.etat_constate_a).toBeNull();
+    expect((await lireMouvements(commandeId)).map((m) => m.type)).toEqual([
+      "VENTE_WEB",
+    ]);
+  });
+
+  /*
+   * CRITERE 4, l'unicite. DEUX CAS DISTINCTS, et c'est necessaire : l'index
+   * `mouvement_compense_unique` ne couvre QUE la remise en vente, la perte
+   * n'ecrivant aucun mouvement. C'est la clause `etatPieceRetournee: null` du
+   * depot qui ferme le second cas.
+   */
+  it("refuse une seconde remise en vente, le stock ne remonte qu'une fois", async () => {
+    const { commandeId, demandeId } = await commanderEtDeposer();
+    const enTetes = await sessionAdministratrice();
+
+    await ouvrirAttenteRetour(demandeId);
+    await constaterReception(demandeId);
+
+    const stockAvant = await lireStockPhysique(commandeId);
+
+    await constaterEtatPiece(enTetes, {
+      demandeId,
+      etat: "REMISE_EN_VENTE",
+      motif: "TEST Premier constat",
+    });
+
+    const seconde = await constaterEtatPiece(enTetes, {
+      demandeId,
+      etat: "REMISE_EN_VENTE",
+      motif: "TEST Second constat, double clic",
+    });
+
+    expect(seconde.statut).toBe("DEJA_CONSTATE");
+
+    /*
+     * LE STOCK N'A REMONTE QUE D'UNE PIECE. C'est l'assertion qui compte :
+     * compter les mouvements dirait « deux lignes » sans dire que l'inventaire
+     * est faux, et c'est l'inventaire qui est le sujet d'ADR-030.
+     */
+    expect(await lireStockPhysique(commandeId)).toBe(stockAvant + 1);
+    expect((await lireMouvements(commandeId)).map((m) => m.type)).toEqual([
+      "VENTE_WEB",
+      "RETOUR",
+    ]);
+  });
+
+  it("refuse un second constat sur une piece deja declaree perdue", async () => {
+    const { commandeId, demandeId } = await commanderEtDeposer();
+    const enTetes = await sessionAdministratrice();
+
+    await ouvrirAttenteRetour(demandeId);
+    await constaterReception(demandeId);
+
+    await constaterEtatPiece(enTetes, {
+      demandeId,
+      etat: "PERTE_CONSTATEE",
+      motif: "TEST Piece cassee",
+    });
+
+    /*
+     * LE SECOND CONSTAT CHANGE D'ETAT, et c'est le cas qui piege : l'index
+     * `mouvement_compense_unique` est MUET ici, aucun mouvement n'ayant ete
+     * ecrit au premier passage. Sans la clause `etatPieceRetournee: null` du
+     * depot, cette seconde tentative REUSSIRAIT et remettrait en vente une
+     * piece declaree cassee.
+     */
+    const seconde = await constaterEtatPiece(enTetes, {
+      demandeId,
+      etat: "REMISE_EN_VENTE",
+      motif: "TEST Tentative de requalification",
+    });
+
+    expect(seconde.statut).toBe("DEJA_CONSTATE");
+    expect((await lireMouvements(commandeId)).map((m) => m.type)).toEqual([
+      "VENTE_WEB",
+    ]);
+
+    const demande = await lireDemande(demandeId);
+    expect(demande.etat_piece_retournee).toBe("PERTE_CONSTATEE");
+  });
+
+  /*
+   * CRITERE 5, TEST NEGATIF DE SECURITE. La garde est exigee PAR FONCTION et
+   * non par delegation : motif de LS-89, une Server Action s'invoque
+   * directement sans passer par l'ecran.
+   *
+   * SANS SESSION DU TOUT, et non avec une session cliente : les deux cas sont
+   * distincts, celui-ci ferme l'appel direct depuis l'exterieur.
+   */
+  it("refuse le constat sans session, et n'ecrit alors aucun mouvement", async () => {
+    const { commandeId, demandeId } = await commanderEtDeposer();
+
+    await ouvrirAttenteRetour(demandeId);
+    await constaterReception(demandeId);
+
+    const stockAvant = await lireStockPhysique(commandeId);
+
+    const issue = await constaterEtatPiece(new Headers(), {
+      demandeId,
+      etat: "REMISE_EN_VENTE",
+      motif: "TEST Sans session",
+    });
+
+    expect(issue.statut).toBe("SESSION_ABSENTE");
+    expect(await lireStockPhysique(commandeId)).toBe(stockAvant);
+    expect((await lireMouvements(commandeId)).map((m) => m.type)).toEqual([
+      "VENTE_WEB",
+    ]);
+
+    const demande = await lireDemande(demandeId);
+    expect(demande.etat_piece_retournee).toBeNull();
+  });
+
+  /*
+   * UNE SESSION CLIENTE NE SUFFIT PAS, et ce cas est DISTINCT du precedent.
+   * Motif « fabriquer la preuve sans le role » : un test qui n'exerce que
+   * l'absence de session passerait sur une implementation qui verifie la
+   * session sans verifier le ROLE.
+   */
+  it("refuse le constat a une session cliente, le role ne suffit pas d'etre connecte", async () => {
+    const { commandeId, demandeId } = await commanderEtDeposer();
+
+    await ouvrirAttenteRetour(demandeId);
+    await constaterReception(demandeId);
+
+    const { enTetes } = await ouvrirSession(EMAIL_CLIENT, "CLIENT");
+
+    const issue = await constaterEtatPiece(enTetes, {
+      demandeId,
+      etat: "REMISE_EN_VENTE",
+      motif: "TEST Session cliente",
+    });
+
+    expect(issue.statut).toBe("SESSION_ABSENTE");
+    expect((await lireMouvements(commandeId)).map((m) => m.type)).toEqual([
+      "VENTE_WEB",
+    ]);
+  });
+
+  /*
+   * LE CONSTAT NE TOUCHE PAS AU STATUT, regle L12, exactement comme la
+   * reception. La piece peut etre constatee sur une demande deja `REMBOURSEE`,
+   * cas COURANT : le remboursement part sur la preuve d'expedition, le colis
+   * arrive trois semaines plus tard.
+   */
+  it("constate l'etat sans faire regresser le statut d'une demande REMBOURSEE", async () => {
+    const { demandeId } = await commanderEtDeposer();
+    const enTetes = await sessionAdministratrice();
+
+    await ouvrirAttenteRetour(demandeId);
+    await client.query(
+      `UPDATE demande_retractation SET statut = 'REMBOURSEE'::"StatutRetractation" WHERE id = $1`,
+      [demandeId],
+    );
+    await constaterReception(demandeId);
+
+    const issue = await constaterEtatPiece(enTetes, {
+      demandeId,
+      etat: "REMISE_EN_VENTE",
+      motif: "TEST Colis arrive apres le remboursement",
+    });
+
+    expect(issue.statut).toBe("CONSTATEE");
+    expect((await lireDemande(demandeId)).statut).toBe("REMBOURSEE");
+  });
+
+  /*
+   * UNE PIECE JAMAIS REVENUE SE DECLARE PERDUE SANS `recueA`, regle L13.
+   *
+   * C'EST POURQUOI C41 NE LIE PAS L'ETAT A LA RECEPTION : le colis perdu en
+   * transit est precisement le cas que l'alerte des retours jamais recus
+   * signale, et il faut pouvoir le solder. Lier les deux fermerait le seul
+   * geste qui traite cet ecart.
+   */
+  it("declare perdue une piece jamais recue, sans exiger recueA", async () => {
+    const { commandeId, demandeId } = await commanderEtDeposer();
+    const enTetes = await sessionAdministratrice();
+
+    await ouvrirAttenteRetour(demandeId);
+
+    const issue = await constaterEtatPiece(enTetes, {
+      demandeId,
+      etat: "PERTE_CONSTATEE",
+      motif: "TEST Colis perdu par le transporteur, jamais recu",
+    });
+
+    expect(issue.statut).toBe("CONSTATEE");
+    expect((await lireDemande(demandeId)).recue_a).toBeNull();
+    expect((await lireMouvements(commandeId)).map((m) => m.type)).toEqual([
+      "VENTE_WEB",
+    ]);
+  });
+
+  it("refuse le constat sur une demande introuvable", async () => {
+    const enTetes = await sessionAdministratrice();
+
+    const issue = await constaterEtatPiece(enTetes, {
+      demandeId: randomUUID(),
+      etat: "REMISE_EN_VENTE",
+      motif: "TEST Demande inexistante",
+    });
+
+    expect(issue.statut).toBe("INTROUVABLE");
   });
 });
