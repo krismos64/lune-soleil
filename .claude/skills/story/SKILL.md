@@ -180,8 +180,8 @@ test qui échoue.
 
 `CLAUDE.md` l'exige : **un contrôle qui n'a jamais échoué sur le défaut qu'il
 prétend attraper n'est pas un contrôle.** Poser le défaut, vérifier que le
-contrôle rougit, restaurer. Le dépôt porte une trentaine de scripts
-`verifier-*-mutation.sh` sur ce modèle.
+contrôle rougit, restaurer. Le dépôt porte **trente-cinq** scripts
+`verifier-*-mutation.sh` sur ce modèle, compte à mesurer et non à recopier.
 
 **Une mutation ne prouve que la forme qu'elle fabrique**, et c'est sa limite la
 plus coûteuse. Le 8 septembre 2026, `verifier-graphie-marque.sh` a été prouvé par
@@ -249,6 +249,7 @@ pour chaque ligne concernée ce qui a été fait.
 | **une étape d'un parcours, ou une obligation légale sur cette étape** | `PARCOURS.md` pour l'étape, `.claude/rules/legal.md` pour l'obligation et sa source |
 | **une story livrée ou close** | la fiche mémoire « où en est le projet », le tableau d'état du `README.md`, et les **comptes**, relevés dans Jira et jamais de mémoire |
 | **une image de marque ou un asset engendré** | rejouer `node scripts/engendrer-images-marque.mjs`, RELIRE le rendu à l'œil, et `assets/README.md` si l'écart qu'il documente est fermé. Le mode `--verifier` échoue tant que les fichiers versionnés ne correspondent pas au source |
+| **la chaîne de déploiement**, `deploiement/*` ou `.github/workflows/deployer.yml` | `docs/deploiement/EXPLOITATION.md`, l'agent `ls-conteneurisation`, et le script **installé sur la machine** en `/usr/local/sbin/lune-soleil-deployer`, qui ne se met pas à jour tout seul |
 | **un ticket bloqué par un compte ou un accès externe** | dire ce qui est livrable sans lui et ce qui attend, dans le ticket **et** dans le code qui simule l'absence |
 
 **L'avant-dernier point compte autant que les autres.** `CLAUDE.md` a atteint 312
