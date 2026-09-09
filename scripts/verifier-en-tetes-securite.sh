@@ -217,7 +217,14 @@ fi
 # tard.
 STRUCT="$RACINE/src/components/donnees-structurees.tsx"
 if [ -f "$STRUCT" ]; then
-  if grep -qE "nonce=\{" "$STRUCT"; then
+  # L'ANCRAGE PORTE SUR LA BALISE `<script>`, jamais sur la présence de
+  # `nonce={` quelque part dans le fichier.
+  #
+  # Le composant est coupé en deux depuis LS-139 : `DonneesStructurees` PASSE le
+  # nonce, `BlocJsonLd` le POSE. Un motif large trouvait le passage en propriété
+  # et restait vert alors que la balise ne portait plus rien, ce qui est
+  # exactement le défaut à attraper. Sa mutation l'a montré, pas la relecture.
+  if grep -qE "<script[^>]*nonce=\{" "$STRUCT"; then
     echo "  OK    le bloc JSON-LD porte le nonce"
   else
     echo "  ECHEC le bloc JSON-LD ne porte pas de nonce."
