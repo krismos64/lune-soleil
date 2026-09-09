@@ -1151,6 +1151,35 @@ jobs:
         run: ./scripts/verifier-navigation-client-mutation.sh
 
       # ----------------------------------------------------------------------
+      # Controle 9z quinquies, LS-139. Les cinq en-tetes de securite.
+      #
+      # CE QU'IL GARDE. La production ne servait qu'UN en-tete sur cinq le
+      # 9 septembre 2026, HSTS seul, alors que la boutique tourne. Les quatre
+      # autres n'etaient ecrits nulle part.
+      #
+      # LE PIEGE DE NGINX QU'IL ATTRAPE : `add_header` dans un `location`
+      # REMPLACE le jeu herite du bloc serveur au lieu de s'y ajouter. Un
+      # `location` qui pose un seul en-tete perd donc les quatre autres, en
+      # silence. Le bloc `/medias/` etait dans ce cas, et ce sont justement des
+      # fichiers TELEVERSES.
+      #
+      # IL EST TEXTUEL, donc il verifie que les en-tetes sont DECLARES et jamais
+      # qu'ils sont SERVIS. `tests/e2e/en-tetes-securite.spec.ts` mesure les
+      # reponses reelles ; les deux sont necessaires.
+      # ----------------------------------------------------------------------
+      - name: 9z quinquies. Les cinq en-tetes de securite sont declares
+        run: ./scripts/verifier-en-tetes-securite.sh
+
+      # Preuve par mutation du controle precedent, LS-139 critere 7, qui exige
+      # que chaque en-tete fasse rougir SEPAREMENT. Neuf cas, dont deux qui ont
+      # trouve le controle aveugle a sa premiere ecriture : il attrapait le
+      # COMMENTAIRE expliquant pourquoi `unsafe-inline` est refuse, et il
+      # cherchait `development` n'importe ou plutot que sur la ligne qui pose
+      # `unsafe-eval`.
+      - name: 9z sexies. Preuve par mutation des en-tetes de securite
+        run: ./scripts/verifier-en-tetes-securite-mutation.sh
+
+      # ----------------------------------------------------------------------
       # Controles 2 et 3. Le format entre ici parce qu'un depot ou seule une
       # partie des fichiers est formatee produit des diffs illisibles.
       # ----------------------------------------------------------------------
