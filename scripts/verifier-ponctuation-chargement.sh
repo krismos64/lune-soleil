@@ -193,6 +193,22 @@ EOF
 echo "Annonces de chargement examinées : $nb"
 echo "États de chargement inventoriés   : $nb_etats"
 
+# SECONDE GARDE, sur le NOMBRE D'ANNONCES RETENUES et non sur la recherche.
+#
+# Elle ne double pas celle du haut, et la nuance vient d'une mutation de
+# LS-139 : celle du haut sort quand `grep` ne trouve RIEN, celle-ci attrape le
+# cas où il trouve des lignes dont la boucle ne retient aucune annonce, un
+# filtre trop strict par exemple. Le contrôle rendrait alors « OK » en n'ayant
+# examiné aucune annonce.
+if [ "$nb" -eq 0 ]; then
+  echo
+  echo "ECHEC aucune annonce de chargement examinée"
+  echo "      des lignes ont été trouvées, mais la boucle n'en a retenu aucune :"
+  echo "      le filtre est devenu trop strict. Un contrôle qui n'examine rien"
+  echo "      ne prouve rien."
+  ko=$((ko + 1))
+fi
+
 echo
 if [ "$ko" -eq 0 ]; then
   echo "OK toute annonce de chargement se termine par un point de suspension, C35"
