@@ -157,8 +157,23 @@ jouer "unsafe-eval sans condition" "condition" \
 # disparaissent pour les moteurs. Le référencement se dégrade des semaines plus
 # tard sans qu'on relie les deux.
 # ---------------------------------------------------------------------------
+#
+# LA MUTATION VISE LA POSE SUR LE `<script>`, PAS LE PASSAGE EN PROPRIETE. Depuis
+# que le composant est coupe en deux, `nonce={nonce}` apparait DEUX fois : une
+# fois passe a `BlocJsonLd`, une fois pose sur la balise. Une substitution sans
+# `/g` retirait la premiere, celle qui ne protege rien, et le controle restait
+# vert a JUSTE TITRE : la balise portait toujours son nonce.
+#
+# Mesure du 9 septembre 2026, apres le decoupage impose par les tests unitaires.
+# La mutation accusait le controle d'etre aveugle alors qu'elle visait a cote,
+# motif « cible de mutation deplacee », deja en fiche sur ce depot.
+#
+# LA SUBSTITUTION PASSE PAR `sed` ET NON `perl`, pour une raison de forme : la
+# commande traverse un `eval`, et le motif Perl y demande une double couche
+# d'echappement que la moindre retouche casse en silence. `sed` sur une chaine
+# litterale reste lisible.
 jouer "le JSON-LD perd son nonce" "JSON-LD" \
-  "perl -0pi -e 's/ nonce=\{nonce\}//' '$STRUCT'"
+  "sed -i.bak 's| nonce={nonce}>| >|' '$STRUCT' && rm -f '$STRUCT.bak'"
 
 # ---------------------------------------------------------------------------
 # CAS 9 : LE CONTRÔLE CONTRE LUI-MÊME, l'ancrage cassé.
