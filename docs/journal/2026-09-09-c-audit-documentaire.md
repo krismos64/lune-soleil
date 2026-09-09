@@ -129,7 +129,8 @@ verifier-registre-traitements.sh            registre cohérent
 verifier-nginx.sh                           seul medias/public/ est servi
 npm run format:check                        All matched files use Prettier code style!
 CLAUDE.md                                   200 lignes, au plafond
-README.md                                   1024 lignes, était 1139
+README.md                                   1024 lignes, etait 1139
+                                            (1072 apres LS-138)
 38 stories citées                           toutes présentes dans docs/journal/
 ```
 
@@ -138,7 +139,9 @@ README.md                                   1024 lignes, était 1139
 **LS-152 est CLOSE.** Ses huit critères étaient prouvés en session a, et les
 trois défauts qui la maintenaient ouverte ont été fermés en session b.
 
-**152 tickets terminés sur 208**, les deux termes relevés dans Jira ce jour.
+**152 tickets terminés sur 208**, les deux termes relevés dans Jira à cet
+instant. **155 sur 208 après la session d**, LS-138 et LS-96 ayant été closes
+depuis, puis 156 après la clôture de l'epic LS-2.
 
 ## Prochaine étape
 

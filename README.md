@@ -24,7 +24,7 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | Phase | Epic | Stories ouvertes | Ce qui reste |
 |---|---|---|---|
 | 0, cadrage | LS-1 | 2 | médiation (compte tiers) et photographies, toutes deux externes |
-| 1, fondations | LS-2 | 0 | close, porte de sortie constatée le 13 août 2026 |
+| 1, fondations | LS-2 | 0 | **close**, porte de sortie constatée le 13 août 2026 |
 | 2, catalogue et médias | LS-3 | 7 | finitions d'interface et d'accessibilité, aucune bloquante |
 | 3, panier et paiement | LS-4 | 2 | LS-86 et LS-125, deux stories d'interface qui ne bloquent rien |
 | 4, factures et expédition | LS-5 | 5 | dépend du compte Sendcloud, LS-200 en tête |
@@ -34,9 +34,13 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 7, V1 cible | LS-8 | 3 | après ouverture, hors Go-Live |
 | Contenus | LS-22 | 11 | **attend l'exploitante**, rien n'est faisable sans elle |
 
-**155 tickets terminés sur 208**, les deux termes relevés dans Jira le
+**156 tickets terminés sur 208**, les deux termes relevés dans Jira le
 9 septembre 2026 et jamais dérivés l'un de l'autre. 43 stories ouvertes hors
-epics.
+epics, plus neuf epics.
+
+**La phase 1 est close dans Jira depuis le 9 septembre**, ses 26 stories étant
+terminées : l'epic était resté En cours alors que sa porte de sortie datait du
+13 août, sa dernière story ouverte étant LS-96.
 
 Un compte écrit à la main se périme sans bruit, et **le dénominateur bouge
 autant que le numérateur** : il est passé de 180 à 208 depuis le 5 septembre,
@@ -65,7 +69,7 @@ exigeant sa présence physique. Plus rien ne dépend du code seul.
 ### Où lire le détail
 
 **Ce tableau dit l'état, pas l'histoire.** `docs/journal/` porte une page par
-session, 149 à ce jour, avec ce qui a été fait, ce qui a dérapé et pourquoi.
+session, 151 à ce jour, avec ce qui a été fait, ce qui a dérapé et pourquoi.
 C'est là que se lit le détail d'une story livrée, et la page la plus récente
 donne l'état du projet plus vite que Jira.
 
@@ -762,17 +766,31 @@ grep -cE '^mutation(_code)? "' scripts/verifier-image-docker-mutation.sh
 Le motif exige le guillemet ouvrant : sans lui il compte aussi les deux
 définitions de fonctions et annonce onze cas pour neuf.
 
-`verifier-nginx.sh` garde **une seule directive**, celle qui décide de l'adresse
-IP écrite au journal des connexions : `proxy_set_header X-Forwarded-For
-$remote_addr`. La forme répandue, `$proxy_add_x_forwarded_for`, concatène
-l'en-tête envoyé par le client, et il suffit alors d'un jeton non analysable
-pour que Better Auth renonce à toute adresse. Un visiteur choisirait ainsi de ne
-pas être journalisé, ce qui est pire que le défaut d'origine.
+`verifier-nginx.sh` garde **quatre sens** du fichier de configuration.
+
+Le premier est la directive qui décide de l'adresse IP écrite au journal des
+connexions, `proxy_set_header X-Forwarded-For $remote_addr`. La forme répandue,
+`$proxy_add_x_forwarded_for`, concatène l'en-tête envoyé par le client, et il
+suffit alors d'un jeton non analysable pour que Better Auth renonce à toute
+adresse. Un visiteur choisirait ainsi de ne pas être journalisé, ce qui est pire
+que le défaut d'origine.
 
 Le contrôle **retire les commentaires avant de chercher**, parce que le fichier
-de configuration cite la forme interdite pour expliquer pourquoi elle l'est : un
-`grep` brut serait soit toujours rouge, soit satisfait par la phrase qui nie
-l'usage. Six mutations le prouvent, dont le rétablissement de la concaténation.
+cite la forme interdite pour expliquer pourquoi elle l'est : un `grep` brut
+serait soit toujours rouge, soit satisfait par la phrase qui nie l'usage.
+
+**Le quatrième sens s'ancre sur un CHEMIN et non sur une directive**, depuis
+LS-205. Il refusait auparavant tout `alias` ou `root`, ce qui rendait ADR-007
+inapplicable : plus rien ne servait les médias, et le catalogue aurait affiché
+des images cassées pendant que `/api/sante` rendait 200. Un seul chemin est
+désormais autorisé, `medias/public/`, et le contrôle exige aussi qu'il soit
+**présent** — sans quoi il serait satisfait par un fichier où personne ne sert
+les médias. Ce n'est pas une exemption mais un resserrement : la racine du
+volume, qui publierait la quarantaine et ses données EXIF, la racine des
+documents comptables et tout chemin parent restent refusés.
+
+**Douze mutations le prouvent**, dont les sept d'origine, ce qui montre que le
+resserrement n'a rien ouvert.
 
 `controle-fumee.sh` interroge `/api/sante` et décide si un déploiement est
 retenu : code 0 si le service répond avec sa base, 1 sinon. Il vise la **route**
@@ -830,7 +848,7 @@ fois, sans que rien ne le voie.
 Elle s'arrêtait à « dix » : au-delà, la conversion rendait une chaîne vide et la
 comparaison était **sautée**, donc verte sans avoir rien vérifié. Le seuil était
 déjà franchi à l'époque, `verifier-tests-mutation.sh` portant alors vingt-et-un
-cas ; il en porte **cent trente-six** au 31 août 2026, compte relevé par
+cas ; il en porte **148** au 9 septembre 2026, compte relevé par
 `grep -cE '^cas "' scripts/verifier-tests-mutation.sh` et jamais de mémoire. Un contrôle qui se tait
 quand il ne comprend pas est pire qu'un contrôle absent : il occupe la place et
 personne ne le remplace.
@@ -926,8 +944,8 @@ La chaîne démarre son propre conteneur `lune-soleil-db` par `docker run`, sans
 passer par `docker-compose.yml` qui exige un `.env` absent en intégration
 continue. Le nom est celui qu'attend le mode `--base-migree`.
 
-**Trois autres workflows** accompagnent `controles.yml`, tous séparés pour la même
-raison : un rouge qui signifie parfois « ne pas fusionner » et parfois « à
+**Quatre autres workflows** accompagnent `controles.yml`, tous séparés pour la
+même raison : un rouge qui signifie parfois « ne pas fusionner » et parfois « à
 relire » est un rouge que l'on apprend à ignorer.
 
 `derive-documentation.yml` rejoue `verifier-config-claude.sh` et
@@ -942,20 +960,35 @@ ouvre une issue étiquetée `controle-nocturne`.
 `publier-image.yml` construit, vérifie et publie l'image sur `main` après chaque
 fusion.
 
-Les trois se déclenchent aussi à la main depuis l'onglet Actions.
+`deployer.yml` bascule la production vers une image déjà publiée, ou revient à la
+précédente, LS-138. **Il ne se déclenche qu'à la main** : les migrations tournent
+depuis le dépôt, le garde-fou destructif exige une lecture humaine du SQL, et
+chaque déploiement recrée des conteneurs sur une machine que partage un produit
+payant. Il n'envoie qu'un identifiant de commit validé à une clé SSH **enfermée**
+qui ne peut exécuter que `deploiement/deployer.sh`.
+
+Les quatre se déclenchent aussi à la main depuis l'onglet Actions.
 
 Il a été prouvé par quinze mutations, toutes détectées. Le compte se mesure,
 `grep -cE '^\s*mutation "' scripts/verifier-config-claude-mutation.sh`, il grandit
 avec les contrôles.
 
 `verifier-migration-mutation.sh` prouve les garde-fous de
-`scripts/migrate-production.sh` sur dix cas, sans base réelle : `psql`, `pg_dump`
-et `npx` sont remplacés par des doublures. Cinq familles d'instructions
+`scripts/migrate-production.sh` sur **seize** cas, sans base réelle : `psql`,
+`pg_dump` et `npx` sont remplacés par des doublures. Cinq familles d'instructions
 destructives doivent bloquer, une migration additive doit passer, et une
 détection qui ne peut pas conclure doit bloquer plutôt que supposer. Lancé contre
-la version d'avant LS-42, il échoue sur sept de ces dix cas.
+la version d'avant LS-42, il échoue sur sept des dix cas d'origine.
 
-`verifier-tests-mutation.sh` casse **cent fois** le comportement
+**Six cas se sont ajoutés en LS-208**, écrits avant la correction et rouges à ce
+moment : un commentaire portant `DROP INDEX` ne doit plus déclencher le
+garde-fou, une instruction réelle suivie d'un commentaire doit toujours bloquer,
+et la première migration d'une base vide doit passer, son dump de 887 octets
+tombant sous le seuil de 1024. La doublure `pg_dump` est devenue pilotable en
+taille : écrivant toujours 4096 octets, elle n'exerçait **jamais** ce seuil,
+ce qui avait laissé passer le second défaut.
+
+`verifier-tests-mutation.sh` casse **148 fois** le comportement
 testé et exige que la suite rougisse à chaque fois. Les cibles, par domaine :
 réservation et stock, authentification et autorisation, socle de validation et
 journalisation, journal des connexions, verrou de tâche planifiée, preuve

@@ -150,10 +150,10 @@ indiscernables à l'œil.
 **Accès opérationnels** : `ssh`, `docker`, `stripe`, `gh`, `psql` avec les accès
 configurés, sans jamais lire les identifiants sous-jacents.
 
-**Migrations de production** : autonomes, mais **toujours** via
-`./scripts/migrate-production.sh`, jamais `prisma migrate deploy` en direct.
-L'autonomie tient à ses garde-fous, détaillés dans `.claude/rules/database.md` :
-un garde-fou qui ne peut pas conclure bloque la migration.
+**Production** : autonome, mais **toujours par l'outil prévu**. Migrer via
+`./scripts/migrate-production.sh` et jamais `prisma migrate deploy` ; déployer
+par le workflow « Déployer en production » et jamais à la main. Un garde-fou qui
+ne peut pas conclure bloque, `database.md` et `EXPLOITATION.md` les détaillent.
 
 ## Agents
 

@@ -33,7 +33,8 @@ Trois éléments du dépôt cadrent la décision :
 - `next.config.ts` fixe `output: "standalone"`. Le dossier `public/` est copié
   dans l'image à la construction, ce qui interdit de l'employer comme
   destination d'écriture à l'exécution
-- Nginx tourne sur l'hôte, décidé en phase 6, et le modèle `Media` porte déjà
+- Nginx tourne sur l'hôte, décidé en phase 6 et **en service depuis LS-151**,
+  le 8 septembre 2026, et le modèle `Media` porte déjà
   `chemin`, `statutTraitement` (C8) et l'index partiel C9
 
 ## Décision

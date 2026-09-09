@@ -110,6 +110,10 @@ de fonctionner.
 emporte les deux. C'est la limite connue de ce choix, et elle n'est pas fermée
 ici : une copie hors site relève de LS-107, qui porte la politique.
 
-**L'exploitation est manuelle.** Restaurer demande une intervention, là où une
-base gérée offrirait un bouton. Le mode opératoire est écrit plutôt que supposé,
-et la restauration est jouée une fois pour de vrai avant l'ouverture.
+**La restauration est manuelle.** Elle demande une intervention, là où une base
+gérée offrirait un bouton. Le mode opératoire est écrit plutôt que supposé, et
+elle a été jouée pour de vrai le 9 septembre 2026.
+
+**Le déploiement, lui, ne l'est plus** depuis LS-138 : il part d'un commit et
+aboutit sur la machine par le workflow, retour arrière compris. Ce risque
+accepté ne porte donc plus que sur la restauration d'une sauvegarde.

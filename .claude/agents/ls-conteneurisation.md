@@ -83,10 +83,56 @@ existe et propose des modifications.
 | Fichier | Ce qu'il porte |
 |---|---|
 | `docker-compose.production.yml` | les trois services, leurs limites, leurs volumes |
+| `deploiement/deployer.sh` | **la bascule, le retour arrière et l'état**, LS-138 |
+| `.github/workflows/deployer.yml` | ce qui l'appelle, en déclenchement **manuel** |
 | `deploiement/sauvegarder-base.sh` | la sauvegarde quotidienne, base **et** fichiers |
 | `deploiement/lune-soleil-sauvegarde.{service,timer}` | son déclenchement par systemd |
-| `docs/deploiement/EXPLOITATION.md` | l'exploitation courante, migrer, restaurer, vérifier |
+| `docs/deploiement/EXPLOITATION.md` | l'exploitation courante, déployer, migrer, restaurer, vérifier |
 | `docs/deploiement/PREPARATION-SERVEUR.md` | la mise en place initiale du serveur |
+
+## La chaîne de déploiement est écrite, LS-138
+
+**Ne propose pas d'écrire un workflow de déploiement, il existe.** Lis
+`deploiement/deployer.sh` et propose des modifications, jamais un second
+mécanisme à côté.
+
+**Le script vit sur la machine**, en `/usr/local/sbin/lune-soleil-deployer`,
+installé depuis le dépôt. Le workflow ne lui envoie qu'un identifiant de commit
+validé, un nombre de migrations et une empreinte de composition.
+
+**La clé SSH ne peut exécuter que lui.** `authorized_keys` l'enferme par
+`command=` et `restrict`, sur un utilisateur `ls-deploy` qui n'est dans **aucun
+groupe privilégié**. Ne propose jamais d'ajouter un utilisateur de déploiement
+au groupe `docker` : cela équivaut à root sur la machine, donc à la base et aux
+secrets de SmartPlanning. C'est le geste le plus naturel de tout ce domaine et
+celui qui casse exactement l'objectif.
+
+**L'ordre du script, et chaque étape a sa raison** :
+
+1. sauvegarde, **réutilisée** si elle a moins de quinze minutes, la rotation à
+   quatorze jeux étant sinon consommée par un simple rejeu
+2. **image tirée AVANT toute bascule**, pour qu'une panne de registre laisse la
+   production intacte et en service
+3. contrôle du schéma, qui **dit** quand il n'a pas vérifié plutôt que de
+   prétendre l'avoir fait
+4. bascule, après vérification que la composition de la machine n'a pas dérivé
+   du dépôt : elle porte les limites qui protègent SmartPlanning
+5. attente d'un conteneur **sain** et non seulement démarré
+6. vérification par le **domaine public**, ce que voit un client
+
+Tout échec de 4 à 6 ramène automatiquement l'image précédente.
+
+**Le retour arrière lit `/var/lib/lune-soleil/deploiements.log`**, l'historique
+des bascules réussies, et vise son **avant-dernière** ligne. Deux déploiements y
+sont nécessaires au minimum.
+
+**Il a été joué réellement le 9 septembre 2026** : déploiement en une vingtaine
+de secondes, retour arrière en quatorze, cohérence de la base prouvée par un
+témoin, limites de ressources toujours appliquées après recréation.
+
+**Le cas de la migration appliquée entre-temps n'a pas de retour arrière
+automatique** : le code revient, les données non. Ne propose pas d'en
+automatiser un, le chemin réel est de réparer le schéma en avant.
 
 **La sauvegarde tourne sur l'HÔTE et non dans la composition**, ADR-037 : les
 moments où elle compte le plus sont ceux où la composition est arrêtée. Ne
@@ -228,7 +274,8 @@ référence de retour arrière. Un tag mouvant, `latest` ou `main`, désigne une
 image différente selon le moment : il ne permet pas de revenir à une version
 connue. Publication sur GHCR.
 
-Ordre d'un déploiement :
+Ordre d'un déploiement. **`deploiement/deployer.sh` l'implémente depuis
+LS-138**, cette liste dit donc le principe et non un geste à faire à la main :
 
 1. sauvegarde de la base **et du volume des médias**, **vérifiée** et non
    seulement lancée. Une sauvegarde qui ne prend que PostgreSQL restaure un
