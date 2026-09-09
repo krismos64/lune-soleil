@@ -109,16 +109,102 @@ pris, et Docker ne le dit pas : « n'a pas démarré », sans plus. Le cas arriv
 qu'on a joué le mode CI sur la même machine. Détecté par l'absence d'étiquette
 Compose et retiré, prouvé en recréant la collision.
 
+## Ce que les exécutions réelles ont trouvé, et que la simulation ne pouvait pas voir
+
+Trois lancements du nocturne ont été nécessaires. Chacun a trouvé un défaut de
+plus, et aucun n'était visible depuis ma machine.
+
+**Lancement 1, échec en 1 seconde sans une ligne de cause.** `webServer` avale la
+sortie de sa commande. La préparation est donc devenue une **étape propre** du
+workflow, ce qui rend son journal lisible et distingue une panne de préparation
+d'une panne de serveur.
+
+**Lancement 2, la garde comparait la variable à elle-même.** Playwright
+**surcharge** `DATABASE_URL` avec la valeur e2e pour toute la commande du
+`webServer`, ce script compris : lire `process.env.DATABASE_URL` comparait la
+variable à elle-même, verdict « IDENTIQUES », préparation refusée.
+
+C'est le défaut que LS-189 avait fermé en s'ancrant sur `.env`, rouvert par mon
+repli sur l'environnement. La garde s'appuie désormais sur `PGPORT`, que
+Playwright ne touche jamais.
+
+**Ma simulation posait `DATABASE_URL` sur 55432**, comme le workflow. Playwright
+la réécrit à 55433 pour le sous-processus. Reproduire l'environnement du **job**
+ne suffisait pas, il fallait celui du **sous-processus**.
+
+**Lancement 3, la suite tourne et trouve un test périmé.** 1503 passés, 4
+échoués, les quatre étant le même test sur quatre largeurs : il exigeait
+**4,99 €** quand ADR-035 porte le domicile à **7,49 €** depuis le 6 septembre. Le
+code était juste, la page affiche le bon tarif. Trois jours entre la décision et
+le test qui la contredit, sans un signal, faute de chaîne qui l'exécute.
+
+## Une correction faite puis défaite, et c'est la leçon la plus utile
+
+Ma première correction de ce test **dérivait les tarifs de** `process.env`. Plus
+propre en apparence, elle **ne gardait plus rien** : le test lisait la même
+variable que la page, les deux bougeaient ensemble.
+
+Mesuré plutôt que supposé : la mutation `const domicile = "499"` dans
+`livraison.ts` laissait les **18 tests verts**. Motif « garde-fou comparé à
+lui-même », déjà en fiche.
+
+L'assertion est ancrée sur ADR-035, décision commerciale et non valeur
+dérivable. La même mutation fait désormais rougir **1 test sur 18**, et lui seul.
+
+**Un second piège s'est glissé là** : le commit poussé portait encore la version
+faible, `gh pr create` l'a signalé par « 1 uncommitted change ». Le nocturne vert
+tournait donc sur l'assertion qui ne garde rien. Corrigé et rejoué.
+
+## Le résultat, mesuré sur la machine de GitHub
+
+```
+18 success  Preparer la base de bout en bout, port 55433
+              tables 36, contraintes CHECK 33 sur 33, index E1 present
+19 success  Scenarios critiques de bout en bout, trois largeurs
+              1507 passed (11.5m)
+21 success  Construction de l'image Docker
+22 success  Controles de securite de l'image
+23 failure  Audit des dependances   <- 3 vulnerabilites vitest, LS-210
+```
+
+La suite passait de **1 seconde d'échec** à **11,5 minutes de tests réels**.
+
+## Le rouge qui reste est un progrès
+
+`npm audit` échoue sur 3 vulnérabilités vitest, en dépendance de
+**développement**, jamais expédiées. Cinq voies essayées pour les fermer, toutes
+en échec sur le même bug de npm 10.9.8, `Cannot read properties of null
+(edgesOut)`. **LS-210** ouverte plutôt que de dégrader la configuration pour
+forcer un vert.
+
+Cette étape sortait `skipped` avant, et ce silence avait laissé passer sept
+vulnérabilités dont une RCE critique atteignable en production. Un rouge honnête
+vaut mieux qu'un vert muet.
+
+**Le risque à surveiller est l'accoutumance** : un contrôle qui échoue tous les
+jours pour une raison connue finit par ne plus être lu. C'est le critère 3 de
+LS-210.
+
 ## État des tickets
 
-**LS-209 créée et livrée**, epic LS-7. LS-189 n'est pas rouverte : son critère 4
-était mal évalué, et le commentaire de LS-209 le dit sans réécrire l'histoire.
+**LS-209 livrée et close**, epic LS-7, PR #331 et #332 fusionnées. Sa preuve
+n'est pas une simulation : trois exécutions réelles du nocturne, la dernière
+rendant 1507 tests verts.
 
-L'issue #302 du nocturne reste ouverte jusqu'à ce qu'une exécution réelle passe :
-la correction se vérifie sur la machine de GitHub, pas sur la mienne.
+**LS-210 créée**, epic LS-7 : les trois vulnérabilités vitest bloquées par le
+bug de npm. Elle porte aussi le risque d'accoutumance au rouge.
+
+LS-189 n'est pas rouverte : son critère 4 était mal évalué, et le commentaire de
+LS-209 le dit sans réécrire l'histoire.
+
+**L'issue #302 peut fermer** : son objet, l'échec des scénarios de bout en bout,
+est corrigé et prouvé. Le rouge restant du nocturne a sa propre story.
 
 ## Prochaine étape
 
-**LS-139**, le durcissement, inchangé depuis la session d. Le nocturne dira dès
-demain matin si la suite tourne réellement en intégration continue ; c'est la
-seule preuve qui vaille, celle d'ici étant une simulation.
+**LS-139**, le durcissement, inchangé depuis la session d. La question de la
+session g est réglée : la suite tourne réellement en intégration continue, et
+c'est mesuré sur la machine de GitHub plutôt que simulé ici.
+
+**LS-210** avant ou après, selon que npm publie un correctif : tant qu'elle est
+ouverte, le nocturne reste rouge pour une raison connue.
