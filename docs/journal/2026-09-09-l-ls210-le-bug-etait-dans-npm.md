@@ -84,3 +84,8 @@ Clore LS-139, dont les sept critères seront alors satisfaits, et vérifier que 
 nocturne repasse au vert sur sa prochaine exécution plutôt que de le supposer :
 c'est cette même erreur qui avait fait croire que `npm audit` passait, alors que
 l'étape était **sautée** et non en échec.
+
+**Cette vérification a payé, session `m`.** L'audit est bien passé au vert, et le
+nocturne est resté rouge sur autre chose : huit tests que j'avais cassés en
+retirant les `loading.tsx`, cinq heures plus tôt. LS-139 n'était donc pas
+closable, contrairement à ce que ce journal laissait attendre.
