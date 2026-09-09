@@ -259,10 +259,20 @@ describe("emission de la facture, cas nominal", () => {
     expect(facture.montant_total_centimes).toBe(TOTAL_ATTENDU_CENTIMES);
     expect(facture.montant_avoir_centimes).toBe(0);
 
-    // LE PDF EST ABSENT ET LA FACTURE EXISTE QUAND MEME, regle F8. Le rendu est
-    // le sujet de LS-129 : `chemin_pdf` nul est l'etat « PDF a produire », pas
-    // un document invalide.
-    expect(facture.chemin_pdf).toBeNull();
+    // LE PDF EST RENDU DANS LA FOULEE DE LA CONFIRMATION, depuis LS-129.
+    //
+    // CETTE ASSERTION DISAIT L'INVERSE JUSQU'AU 9 SEPTEMBRE 2026, et son propre
+    // commentaire annoncait pourquoi : « le rendu est le sujet de LS-129 ». La
+    // story a ete livree, `webhook-paiement.ts` appelle desormais
+    // `rendreFactureDeCommande` juste apres la confirmation, et le test est
+    // reste sur l'etat d'avant. Le code etait juste, l'assertion avait vieilli.
+    //
+    // CE QUE LA REGLE F8 GARANTIT RESTE VRAI ET RESTE VERIFIE : la facture
+    // existe independamment de son PDF, `chemin_pdf` nul etant l'etat « PDF a
+    // produire » et non un document invalide. C'est le cas d'ECHEC du rendu qui
+    // porte cette garantie, couvert par les tests de `document-comptable`, pas
+    // le cas nominal, ou le document est bien la.
+    expect(facture.chemin_pdf).toBe(`2026/${facture.numero}.pdf`);
   });
 
   /** CRITERE 2. Le numero vient du compteur, dans la meme transaction. */
