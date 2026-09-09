@@ -132,6 +132,27 @@ fi
 # LE DEMARRAGE DU CONTENEUR PORTE LA MEME DOUBLE VOIE, plus bas : `docker
 # compose` en local, `docker run` sans `.env`. Les deux vont ensemble, corriger
 # l'une sans l'autre ne fait pas tourner la suite d'un pouce.
+#
+# ---------------------------------------------------------------------------
+# SANS FICHIER, LE TERME DE COMPARAISON EST `PGPORT` ET NON `DATABASE_URL`.
+#
+# C'EST LE PIEGE QUI A COUTE UNE EXECUTION DE NOCTURNE, le 9 septembre 2026.
+# Playwright SURCHARGE `DATABASE_URL` avec la valeur e2e pour toute la commande
+# du `webServer`, ce script compris : lire `process.env.DATABASE_URL` compare
+# alors la variable a ELLE-MEME, le verdict tombe sur « IDENTIQUES » et la
+# preparation refuse. L'echec arrivait en une seconde, sans une ligne de cause,
+# `webServer` avalant la sortie de sa commande.
+#
+# C'EST EXACTEMENT LE DEFAUT QUE LS-189 AVAIT FERME en ancrant sur `.env`, et
+# que le repli sur l'environnement a rouvert pour le seul cas ou il n'y a pas de
+# fichier. La correction n'est pas de retirer la garde mais de lui donner un
+# terme que Playwright ne touche pas.
+#
+# `PGPORT` EST CE TERME. La chaine le pose pour la base de developpement, 55432,
+# et Playwright ne le surcharge jamais : il ne gouverne que `psql` et
+# `pg_isready`. Comparer le port de `DATABASE_URL_E2E` a `PGPORT` garde donc la
+# meme propriete qu'avant, deux bases distinctes, sans dependre d'une variable
+# qui peut avoir ete reecrite en amont.
 # ---------------------------------------------------------------------------
 verdict=$(node -e '
 const fs = require("node:fs");
@@ -144,7 +165,13 @@ const fichier = existe ? dotenv.parse(fs.readFileSync(".env")) : {};
 const source = existe && fichier.DATABASE_URL_E2E ? ".env" : "l`environnement";
 // Le fichier prime quand il existe : lui seul peut porter une recopie sans
 // changement de port. Sans lui, en CI, l environnement est la seule source.
-const dev = fichier.DATABASE_URL ?? process.env.DATABASE_URL;
+// Sans fichier, `PGPORT` fait foi : Playwright surcharge `DATABASE_URL` et non
+// lui, voir le bloc ci-dessus.
+const dev = existe && fichier.DATABASE_URL
+  ? fichier.DATABASE_URL
+  : (process.env.PGPORT
+      ? "postgresql://x@localhost:" + process.env.PGPORT + "/d"
+      : process.env.DATABASE_URL);
 const e2e = fichier.DATABASE_URL_E2E ?? process.env.DATABASE_URL_E2E;
 if (!e2e) { console.log("ABSENTE"); process.exit(0); }
 if (!dev) { console.log("DEV_ABSENTE"); process.exit(0); }
