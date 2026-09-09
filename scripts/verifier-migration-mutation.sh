@@ -51,10 +51,18 @@ DOUBLURE
 
 cat > "$FAUX/pg_dump" <<'DOUBLURE'
 #!/bin/bash
-# Ecrit un dump factice de plus de 1024 octets a l'emplacement demande
+# PG_DUMP_TAILLE pilote la taille du dump produit.
+#
+# ELLE EXISTE PARCE QUE SON ABSENCE A CACHE UN DEFAUT. La doublure ecrivait
+# toujours 4096 octets, donc le seuil de 1024 n'etait JAMAIS exerce : le cas
+# « table absente » passait sans que personne ne mesure ce que vaut un dump de
+# base VIDE. Il vaut 887 octets, mesure du 8 septembre 2026 sur la production,
+# et la premiere migration etait donc impossible. LS-208.
+#
+# Defaut 887 pour rester sous le seuil, ce qui reproduit une base vide.
 CIBLE=""
 for ARG in "$@"; do [[ "$ARG" == --file=* ]] && CIBLE="${ARG#--file=}"; done
-[ -n "$CIBLE" ] && head -c 4096 /dev/zero | tr '\0' 'x' > "$CIBLE"
+[ -n "$CIBLE" ] && head -c "${PG_DUMP_TAILLE:-4096}" /dev/zero | tr '\0' 'x' > "$CIBLE"
 exit 0
 DOUBLURE
 
@@ -96,6 +104,7 @@ attendre_code() {
     MIGRATIONS_DIR="$REP" \
     BACKUP_DIR="$BAC/sauvegardes" \
     PSQL_ETAT="$ETAT" \
+    PG_DUMP_TAILLE="${PG_DUMP_TAILLE:-4096}" \
     bash "$SCRIPT" $ARG 2>&1)
   OBTENU=$?
 
@@ -187,6 +196,89 @@ attendre_code "migration sans SQL bloque" 1 ok "$REP_VIDE"
 echo
 echo "Premiere migration, table absente mais base joignable"
 attendre_code "table absente acceptee" 0 sans-table "$REP_ADDITIF"
+
+# ===========================================================================
+# LS-208. Les deux defauts trouves a la PREMIERE MIGRATION REELLE, le
+# 8 septembre 2026, contre la base de production. Les dix cas ci-dessus
+# etaient verts pendant que les deux passaient.
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# Cas 11 a 13 : un COMMENTAIRE n'est pas une instruction.
+#
+# Le script a annonce « MIGRATION DESTRUCTIVE DETECTEE » sur trois lignes de
+# DOCUMENTATION d'une migration additive, celle de Better Auth, qui explique
+# dans son en-tete quels DROP INDEX ont ete ECARTES.
+#
+# LE COUT N'EST PAS L'AGACEMENT. Un faux positif impose `--confirm-destructive`
+# sur une migration entierement additive, donc il APPREND a passer outre. Un
+# garde-fou qu'on contourne par habitude ne protege plus rien, et c'est le
+# defaut que LS-42 a corrige dans l'autre sens.
+# ---------------------------------------------------------------------------
+
+echo
+echo "Un commentaire n'est pas une instruction, LS-208"
+
+REP_COMMENTAIRE="$BAC/commentaire-simple"
+fabriquer_migration "$REP_COMMENTAIRE" "20260730000000_init" \
+  "-- Migration ecrite a la main, les trois instructions suivantes ont ete
+--   DROP INDEX journal_email_systeme_unique
+--   DROP INDEX paiement_reussi_unique
+-- ecartees parce que la derive est une fausse derive.
+CREATE TABLE produits (id uuid PRIMARY KEY);"
+attendre_code "commentaire en ligne ignore" 0 ok "$REP_COMMENTAIRE"
+
+REP_BLOC="$BAC/commentaire-bloc"
+fabriquer_migration "$REP_BLOC" "20260730000000_init" \
+  "/* Ce bloc explique ce qui a ete ecarte :
+     DROP TABLE commandes;
+     TRUNCATE mouvements_stock;
+   et rien de tout cela ne s'execute. */
+CREATE TABLE produits (id uuid PRIMARY KEY);"
+attendre_code "commentaire en bloc ignore" 0 ok "$REP_BLOC"
+
+# LE CAS QUI COMPTE LE PLUS, et c'est le troisieme critere de LS-208 : un
+# retrait naif des commentaires pourrait masquer une instruction REELLE placee
+# avant le `--` sur la meme ligne. Elle doit toujours bloquer.
+REP_MIXTE="$BAC/code-puis-commentaire"
+fabriquer_migration "$REP_MIXTE" "20260730000000_init" \
+  "CREATE TABLE produits (id uuid PRIMARY KEY);
+DROP TABLE commandes; -- retire l'ancienne table, volontaire"
+attendre_code "instruction reelle suivie d'un commentaire bloque" 1 ok "$REP_MIXTE"
+
+# ---------------------------------------------------------------------------
+# Cas 14 : une instruction destructive DISSIMULEE derriere un commentaire.
+#
+# Le sens choisi est ecrit : ce qui suit `--` sur une ligne est du commentaire
+# pour PostgreSQL, donc ne s'execute pas, donc n'est pas destructif. Le script
+# doit l'ignorer comme PostgreSQL l'ignore. Le contraire ferait bloquer une
+# migration inoffensive.
+# ---------------------------------------------------------------------------
+
+REP_DISSIMULE="$BAC/dissimule"
+fabriquer_migration "$REP_DISSIMULE" "20260730000000_init" \
+  "CREATE TABLE produits (id uuid PRIMARY KEY); -- DROP TABLE commandes;"
+attendre_code "destructif apres -- sur une ligne de code, ignore" 0 ok "$REP_DISSIMULE"
+
+# ---------------------------------------------------------------------------
+# Cas 15 et 16 : le seuil de sauvegarde et la PREMIERE migration.
+#
+# Un `pg_dump --format=custom` d'une base VIDE fait 887 octets, mesure sur la
+# production. Le seuil de 1024 rendait donc la toute premiere migration
+# IMPOSSIBLE : il faut des donnees pour migrer, et il faut migrer pour en
+# avoir. Contourne le 8 septembre par un `prisma migrate deploy` en direct, ce
+# que CLAUDE.md interdit.
+#
+# Le seuil garde tout son sens des que la base porte des donnees : c'est la
+# presence de `_prisma_migrations` qui distingue les deux situations, et le
+# script la detecte deja.
+# ---------------------------------------------------------------------------
+
+echo
+echo "Seuil de sauvegarde et premiere migration, LS-208"
+
+PG_DUMP_TAILLE=887 attendre_code "base vide, premiere migration passe" 0 sans-table "$REP_ADDITIF"
+PG_DUMP_TAILLE=887 attendre_code "base peuplee, dump minuscule bloque" 1 ok "$REP_ADDITIF"
 
 # ---------------------------------------------------------------------------
 
