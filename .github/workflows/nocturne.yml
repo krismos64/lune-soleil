@@ -339,6 +339,20 @@ jobs:
             npx playwright install --with-deps chromium
           fi
 
+      # LA PREPARATION EST LANCEE ICI PLUTOT QUE PAR PLAYWRIGHT, LS-209.
+      #
+      # `webServer` avale la sortie de sa commande : quand elle echoue, Playwright
+      # ne rend que « Process from config.webServer was not able to start.
+      # Exit code: 1 », sans une ligne de la cause. Mesure du 9 septembre 2026,
+      # ou l'echec tombait en 1,1 seconde sans rien dire.
+      #
+      # La lancer en etape propre rend sa sortie LISIBLE dans le journal, et une
+      # panne de preparation se distingue alors d'une panne de serveur. La
+      # commande du `webServer` la rejoue ensuite : elle est idempotente, le
+      # conteneur deja sain n'etant pas recree.
+      - name: Preparer la base de bout en bout, port 55433
+        run: ./scripts/preparer-base-e2e.sh
+
       - name: Scenarios critiques de bout en bout, trois largeurs
         run: npm run test:e2e
 
