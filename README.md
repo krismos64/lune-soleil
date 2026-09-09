@@ -818,6 +818,8 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-registre-traitements-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-nginx.sh                      # résolution de l'adresse client, LS-91
 ./scripts/verifier-nginx-mutation.sh             # prouve le précédent par mutation
+./scripts/verifier-taches-planifiees.sh          # toute tâche déclarée est déclenchée, LS-206
+./scripts/verifier-taches-planifiees-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-emetteur-facture.sh            # identité légale des factures, sans afficher les valeurs
 ./scripts/decider-suite-complete.sh              # portée de la chaîne selon le diff, LS-169
 ./scripts/verifier-decision-suite.sh             # prouve le précédent sur 24 cas
