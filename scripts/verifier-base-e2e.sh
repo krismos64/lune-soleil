@@ -70,6 +70,49 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# SENS 1 bis : la valeur surchargee se lit AUSSI dans l'environnement.
+#
+# LE SENS 1 SEUL RESTE VERT SUR UN ISOLEMENT QUI NE TIENT PAS EN CI, et c'est
+# mesure plutot que craint. `baseDeBoutEnBout()` n'a longtemps lu que `.env` :
+# sans fichier elle rendait `undefined`, la cle etait OMISE du bloc `env`, et la
+# suite heritait de `DATABASE_URL`, c'est-a-dire de la base de developpement. La
+# surcharge du sens 1 etait pourtant bien la, ecrite noir sur blanc.
+#
+# CE DEFAUT NE S'EST JAMAIS EXPRIME parce que la suite ne tournait pas en CI :
+# `preparer-base-e2e.sh` exigeait ce meme `.env` et echouait avant. Deux manques
+# qui se masquaient l'un l'autre, et corriger le premier seul aurait produit un
+# vert trompeur, la CI partant d'une base vierge ou l'isolement ne se voit pas.
+#
+# CE SENS EXISTE POUR QUE LE RETOUR EN ARRIERE SE VOIE.
+#
+# IL A ETE AVEUGLE A SA PREMIERE ECRITURE, et sa propre mutation l'a montre : le
+# motif cherchait `process.env.DATABASE_URL_E2E` n'importe ou dans le fichier, et
+# un COMMENTAIRE de la ligne 30 le porte, « PAS `process.env.DATABASE_URL_E2E` :
+# ce fichier de configuration est evalue... ». Le controle restait donc vert sur
+# un code d'ou la lecture avait disparu. Motif « controle satisfait par un
+# commentaire », que le sens 1 documente deux blocs plus haut et que j'ai
+# reproduit en l'ayant sous les yeux.
+#
+# L'ANCRAGE PORTE DESORMAIS SUR LA FORME EXECUTABLE, le repli `||` suivi de
+# `undefined` ou la ligne de retour, qu'aucune prose ne porte. Les lignes de
+# commentaire sont exclues explicitement, ce qui rend le motif lisible plutot
+# que subtil.
+# ---------------------------------------------------------------------------
+repli=$(grep -nE 'process\.env\.DATABASE_URL_E2E\s*\|\|' "$CONFIG" \
+  | grep -vE '^\s*[0-9]+:\s*\*' \
+  | grep -vE '^\s*[0-9]+:\s*//' || true)
+
+if [ -n "$repli" ]; then
+  echo "  OK    la valeur se lit aussi dans l'environnement, cas de la CI"
+else
+  echo "  ECHEC playwright.config.ts ne lit DATABASE_URL_E2E que dans .env."
+  echo "        Sans ce fichier, en integration continue, la cle est omise du"
+  echo "        bloc env et la suite retombe sur la base de developpement :"
+  echo "        l'isolement de LS-189 est rouvert sans qu'une ligne le dise."
+  ko=1
+fi
+
+# ---------------------------------------------------------------------------
 # SENS 2 : la retrogradation reste BORNEE au prefixe de test.
 #
 # C'est le critere 2 de LS-189, et il se perd autrement que le premier : la

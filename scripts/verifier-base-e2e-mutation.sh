@@ -106,6 +106,18 @@ eprouver "clause de retrogradation elargie a tous les comptes" "$SETUP" \
 eprouver "preparer-base-e2e.sh ne compare plus les deux URL" "$PREPARATION" \
   "perl -0777 -pi -e 's/IDENTIQUES/COMPARAISON_RETIREE/g' '$PREPARATION'"
 
+# 5. L'ISOLEMENT QUI NE TIENT QU'AVEC UN FICHIER. La lecture retombe sur `.env`
+#    seul, etat du depot jusqu'au 9 septembre 2026 : en CI, ou ce fichier
+#    n'existe jamais, la cle est OMISE du bloc `env` et la suite herite de la
+#    base de developpement.
+#
+#    LE SENS 1 RESTE VERT SUR CETTE MUTATION, la surcharge etant toujours
+#    ecrite : c'est tout l'interet du sens 1 bis. Le defaut ne s'est jamais
+#    exprime parce que la suite ne tournait pas en CI, l'autre manque
+#    l'empechant, et corriger celui-la seul aurait rendu un vert trompeur.
+eprouver "la valeur ne se lit plus que dans .env, l'isolement tombe en CI" "$CONFIG" \
+  "perl -0777 -pi -e 's/\s*process\.env\.DATABASE_URL_E2E \|\|//g' '$CONFIG'"
+
 # 4. LE CONTROLE CONTRE LUI-MEME. Si la retrogradation disparait du fichier,
 #    l'ancrage du sens 2 ne trouve plus rien : il doit ECHOUER, jamais rendre un
 #    OK silencieux. C'est le mode de defaillance de `verifier-seo.sh`, devenu

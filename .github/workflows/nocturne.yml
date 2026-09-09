@@ -66,6 +66,15 @@ jobs:
       PGDATABASE: lunesoleil
       PGPORT: "55432"
       CI: "true"
+      # LES MEMES VALEURS SOUS LES NOMS QU'ATTEND L'IMAGE POSTGRES, pour la base
+      # de bout en bout que `preparer-base-e2e.sh` demarre par `docker run` en
+      # l'absence de `.env`. Les variables `PG*` ci-dessus gouvernent le CLIENT,
+      # `psql` et `pg_isready` ; ce sont les `POSTGRES_*` qui gouvernent le
+      # SERVEUR au premier demarrage. Les omettre poserait une base aux valeurs
+      # par defaut, et la connexion echouerait ensuite sans dire pourquoi.
+      POSTGRES_USER: lunesoleil
+      POSTGRES_PASSWORD: ci_local_jetable
+      POSTGRES_DB: lunesoleil
       # Tarifs d'ADR-035, a garder d'accord avec `controles.yml` et
       # `.env.example`. Le domicile est a 749 depuis le 6 septembre 2026, son
       # prix coutant : ce fichier est reste a 499 un jour de plus que la
