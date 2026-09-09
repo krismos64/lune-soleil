@@ -180,8 +180,10 @@ test qui échoue.
 
 `CLAUDE.md` l'exige : **un contrôle qui n'a jamais échoué sur le défaut qu'il
 prétend attraper n'est pas un contrôle.** Poser le défaut, vérifier que le
-contrôle rougit, restaurer. Le dépôt porte **trente-cinq** scripts
-`verifier-*-mutation.sh` sur ce modèle, compte à mesurer et non à recopier.
+contrôle rougit, restaurer. Le dépôt en porte plusieurs dizaines sur ce modèle,
+`ls scripts/*mutation*.sh | wc -l` le dit. Le nombre n'est plus inscrit ici : il
+s'était périmé le jour même où cette phrase disait « compte à mesurer et non à
+recopier ».
 
 **Une mutation ne prouve que la forme qu'elle fabrique**, et c'est sa limite la
 plus coûteuse. Le 8 septembre 2026, `verifier-graphie-marque.sh` a été prouvé par

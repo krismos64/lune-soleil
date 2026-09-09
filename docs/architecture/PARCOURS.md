@@ -13,7 +13,7 @@ manquant.
 | Ticket | LS-11 |
 | Source | Cahier des charges V1.0, sections 9, 11 et 15.5 |
 | Débloque | LS-12 modèle conceptuel, LS-14 diagramme de séquence |
-| Cas d'erreur | 57, dont un ajouté par LS-12, onze par LS-37, onze par LS-40 et trois par LS-41 |
+| Cas d'erreur | se comptent plutôt qu'ils ne se recopient, le total inscrit ici s'est périmé deux fois. Un cas découvert s'ajoute dans son parcours |
 
 Le document reste ouvert : modéliser révèle des cas que la lecture du cahier des
 charges n'avait pas fait apparaître, et le périmètre évolue. Un cas découvert plus
@@ -23,7 +23,7 @@ Le trente-deuxième cas, l'événement de paiement tardif au parcours 1, est ven
 LS-12. Le **parcours 7**, dépôt d'un avis, est venu de LS-37 après le passage des
 avis en périmètre d'ouverture, epic LS-36.
 
-## Pourquoi huit parcours et non cinq
+## Pourquoi neuf parcours et non cinq
 
 Le plan directeur exige en section 4.4 que le modèle logique soit « validé sur
 les cinq scénarios critiques sans invention de champ manquant », sans jamais

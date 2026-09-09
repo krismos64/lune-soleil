@@ -18,14 +18,14 @@ npm run db:verifier    # les contrôles du modèle sur cette base, exige Docker
 ./scripts/verifier-config-claude.sh  # cohérence config, ADR, mémoire, journal
 ```
 
-Liste complète dans `README.md`, la CI rejoue tout sur chaque PR. `npm audit`
-reste à **zéro**. Une migration se **crée** à la main, `npx prisma migrate dev
---name sujet`, interactive donc non scriptable.
+Liste complète dans `README.md`. La CI rejoue presque tout par PR : bout en bout,
+`npm audit` et image sont au **nocturne** depuis LS-177, un défaut de ces trois-là
+entre donc sur `main` sans bloquer. `npm audit` doit rester à **zéro**, à mesurer.
+Une migration se **crée** à la main, `npx prisma migrate dev --name sujet`.
 
 **Trois bases, jamais confondues** : développement sur 55432, bout en bout sur
 55433, et celle qu'un test d'intégration crée. Ne jamais pointer les deux
-dernières sur la première, la suite y promeut son compte d'administration et E1
-n'admet qu'une administratrice.
+dernières sur la première : la suite y promeut son admin, et E1 n'en admet qu'une.
 
 ## Architecture
 

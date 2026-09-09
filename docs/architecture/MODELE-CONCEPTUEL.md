@@ -603,14 +603,15 @@ plus explicite, et le schéma reçoit l'état de remboursement partiel.
 
 La divergence a vécu dans le dépôt sans que rien ne la signale, les contrôles de
 LS-13 ne testant la valeur d'aucun enum. `verifier-schema.sh` compare désormais
-les treize enums de ce document à ceux de la base, et vérifie qu'aucun type
+les enums de ce document à ceux de la base, et vérifie qu'aucun type
 déclaré n'échappe à la comparaison. Ce fichier est donc une source contrôlée :
 une valeur modifiée ici sans être portée dans le schéma fait échouer le script.
 
-Le contrôle reste manuel tant que l'intégration continue n'existe pas, elle est
-prévue en phase 1. Un contrôle qu'il faut penser à lancer ne garde rien de façon
-fiable : LS-2 doit brancher ce script, sans quoi la prochaine divergence
-attendra la revue suivante.
+**Le contrôle n'est plus manuel**, LS-69 l'a branché dans l'intégration continue
+et la phase 1 est close : `verifier-schema.sh` tourne à chaque pull request, sur
+la base de contrôle et sur la base issue des seules migrations. Le raisonnement
+qui l'exigeait reste vrai, un contrôle qu'il faut penser à lancer ne garde rien
+de façon fiable.
 
 ### Décision C, la ligne de commande référence la variante sans en dépendre
 

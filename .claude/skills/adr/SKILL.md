@@ -16,11 +16,11 @@ nouvelles décisions démarrent à 023.
 
 Nom de fichier : `docs/adr/ADR-0XX-sujet-en-kebab-case.md`.
 
-Les décisions déjà identifiées comme ouvertes dans le cahier des charges :
-
-| Numéro | Sujet | À trancher avant |
-|---|---|---|
-| ADR-010 | Technique de génération des PDF | l'epic facturation |
+Les décisions ouvertes du cahier des charges sont **toutes tranchées** au
+9 septembre 2026. La dernière, le rendu des PDF, l'a été par **ADR-034** le
+1er septembre 2026, LS-129 : ce tableau la portait encore sous le numéro
+provisoire ADR-010, alors que le skill lui-même dit qu'une décision tranchée
+sort du tableau.
 
 Si le sujet correspond à l'une d'elles, reprendre son numéro d'origine. Une
 décision tranchée sort de ce tableau et entre dans la table des ADR acceptés de

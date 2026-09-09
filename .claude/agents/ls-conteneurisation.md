@@ -21,7 +21,9 @@ prise faute de VPS disponible chez OVHcloud.
 Trois conséquences qui changent ce que tu écris :
 
 1. **Le port applicatif est 3002**, jamais 3000 ni 3001, qui sont pris. Il se
-   publie en **`127.0.0.1:3002:3002`** et jamais `3002:3002` : Docker insère ses
+   publie en **`127.0.0.1:3002:3000`** et jamais `3002:3000` : l'application
+   écoute sur 3000 DANS le conteneur, 3002 étant le port côté hôte, et confondre
+   les deux rend un 502 chez Nginx. Docker insère ses
    règles DNAT en amont d'`ufw`, donc un port publié sur toutes les interfaces
    est ouvert sur Internet **malgré le pare-feu**. Le défaut a été constaté sur
    SmartPlanning le 8 septembre 2026, son application répondant en clair depuis
@@ -232,15 +234,17 @@ deux fois ici.
 
 Construction multi-étapes, dépendances puis construction puis exécution.
 
-**Sortie autonome, À ACTIVER et non acquise.** `output: "standalone"` **n'est pas
-dans `next.config.ts`** à ce jour : le fichier ne porte que `turbopack.root`,
-`outputFileTracingRoot` et `poweredByHeader`. La confusion est facile, son
-commentaire d'en-tête parle déjà de sortie autonome et de construction Docker
-pour justifier le traçage. Écrire un `COPY .next/standalone` sans avoir ajouté
-l'option fait échouer la construction sur un chemin introuvable. Vérifier avant
-d'écrire, `grep -n output next.config.ts`.
+**Sortie autonome, POSÉE depuis LS-74.** `output: "standalone"` est dans
+`next.config.ts`, ajouté le 10 août 2026, aux côtés de `turbopack.root`,
+`outputFileTracingRoot`, `poweredByHeader`, `experimental.serverActions.bodySizeLimit`
+et `outputFileTracingIncludes`.
 
-Une fois l'option posée, l'image finale ne reçoit que `.next/standalone` et
+**Cette consigne a dit l'inverse jusqu'au 9 septembre 2026**, annonçant l'option
+absente un mois après sa pose : une session qui l'aurait suivie aurait rouvert
+une étape close. Le principe qu'elle portait reste valable et se vérifie plutôt
+que se suppose, `grep -n output next.config.ts`.
+
+L'image finale ne reçoit que `.next/standalone` et
 `.next/static`, et l'exécution passe par `node server.js` plutôt que
 `next start`. Attention, **le serveur autonome ne copie ni `public/` ni
 `.next/static`** : les deux se copient explicitement, sinon le site sert des

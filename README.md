@@ -14,9 +14,10 @@ Projet en cours de développement. **La boutique tourne en production depuis le
 9 septembre 2026** mais n'est pas ouverte commercialement : il manque les clés
 de paiement et d'envoi d'email, LS-153, et les contenus de l'exploitante.
 
-Les portes de sortie des phases 1 et 3 sont constatées, voir plus bas. Trois
-stories de la phase 0 restent ouvertes, chacune sur une dépendance externe et
-non sur du travail à faire.
+Les portes de sortie des phases 1 et 3 sont constatées, voir plus bas. Deux
+stories de la phase 0 restent ouvertes, LS-19 la médiation et LS-20 les
+photographies, chacune sur une dépendance externe et non sur du travail à faire.
+Le tableau ci-dessus porte le compte mesuré.
 
 **Plusieurs phases avancent en parallèle**, et ce n'est pas un dérapage : le
 travail suit les dépendances réelles plutôt que l'ordre des numéros.
@@ -25,7 +26,7 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 |---|---|---|---|
 | 0, cadrage | LS-1 | 2 | médiation (compte tiers) et photographies, toutes deux externes |
 | 1, fondations | LS-2 | 0 | **close**, porte de sortie constatée le 13 août 2026 |
-| 2, catalogue et médias | LS-3 | 7 | finitions d'interface et d'accessibilité, aucune bloquante |
+| 2, catalogue et médias | LS-3 | 5 | finitions d'interface et d'accessibilité, aucune bloquante |
 | 3, panier et paiement | LS-4 | 2 | LS-86 et LS-125, deux stories d'interface qui ne bloquent rien |
 | 4, factures et expédition | LS-5 | 5 | dépend du compte Sendcloud, LS-200 en tête |
 | 4bis, espace client et avis | LS-36 | 4 | LS-190 attend LS-58, qui attend le suivi de livraison |
@@ -69,7 +70,7 @@ exigeant sa présence physique. Plus rien ne dépend du code seul.
 ### Où lire le détail
 
 **Ce tableau dit l'état, pas l'histoire.** `docs/journal/` porte une page par
-session, 151 à ce jour, avec ce qui a été fait, ce qui a dérapé et pourquoi.
+session, avec ce qui a été fait, ce qui a dérapé et pourquoi.
 C'est là que se lit le détail d'une story livrée, et la page la plus récente
 donne l'état du projet plus vite que Jira.
 
@@ -528,7 +529,10 @@ docker compose -f docker-compose.yml -f docker-compose.cron.yml \
 tâche qui ne tourne pas se remarque, une route interne ouverte à tous ne se
 remarque pas.
 
-Quatre tâches sont déclarées, et **toutes travaillent** depuis LS-120.
+**Cinq tâches** sont déclarées et toutes travaillent : les quatre décrites
+ci-dessous depuis LS-120, plus `envoi-emails` qui vide la file d'attente
+d'ADR-033 chaque minute. Le compte se mesure,
+`grep -vcE '^\s*#|^\s*$' docker/cron/crontab`.
 
 `liberation-reservations`, toutes les cinq minutes : elle rend au catalogue les
 réservations échues, ce sans quoi `quantiteReservee` ne redescendait jamais et
@@ -633,9 +637,10 @@ restent invisibles en SMTP : il faut ouvrir la boîte.
 
 ### Scripts de vérification
 
-Quatre-vingt-quatre scripts, dont trente-cinq de mutation qui prouvent les autres,
-comptés dans `scripts/` le 6 septembre 2026. La liste ci-dessous n'en cite qu'une
-partie.
+Les comptes se mesurent plutôt qu'ils ne se recopient, ils bougent à chaque
+story : `ls scripts/*.sh | wc -l` pour le total, `ls scripts/*mutation*.sh | wc -l`
+pour ceux qui prouvent les autres. Ils valaient 84 et 36 le 9 septembre 2026. La
+liste ci-dessous n'en cite qu'une partie.
 `preparer-base-locale.sh` n'y figure pas, il s'appelle par `npm run db:preparer`
 et `db:reinitialiser`, cités plus haut.
 
@@ -728,7 +733,7 @@ et `db:reinitialiser`, cités plus haut.
 # qui ne peut exécuter QUE le premier. Voir docs/deploiement/EXPLOITATION.md.
 ./scripts/verifier-emetteur-facture.sh            # identité légale des factures, sans afficher les valeurs
 ./scripts/decider-suite-complete.sh              # portée de la chaîne selon le diff, LS-169
-./scripts/verifier-decision-suite.sh             # prouve le précédent sur 24 cas
+./scripts/verifier-decision-suite.sh             # prouve le précédent sur 24 cas, chiffre que le script imprime
 ./scripts/verifier-protection-branche.sh         # réglages de main dont la chaîne dépend, LS-176
 ./scripts/verifier-verdict-audit.sh              # panne du registre npm contre vulnérabilité, LS-176
 ./scripts/verifier-jira.sh                       # epics et dépendances du backlog, local
@@ -925,19 +930,23 @@ La validation du schéma passe **en premier**, sous ses deux modes : c'est le se
 contrôle dont l'absence d'exécution a déjà laissé passer un défaut, le 29 juillet
 2026.
 
-**Quarante-deux scripts tournent en intégration continue**, mesurés le
-9 septembre 2026. Ne pas recopier ce nombre, le mesurer :
+**Le nombre de scripts qui tournent en intégration continue ne s'inscrit plus
+ici**, il se mesure. Il valait 44 le 9 septembre 2026 :
 `grep -ohE '\./[a-z/-]+\.sh' .github/workflows/*.yml | sort -u`.
 
-**Ce nombre s'est déjà périmé deux fois**, et la seconde est la plus instructive :
-il annonçait « trois scripts » quand ils étaient dix-sept, puis « dix-neuf »
-quand ils étaient quarante-deux. Un avertissement écrit à côté d'un chiffre ne
-suffit pas à empêcher ce chiffre de vieillir : seule la commande le dit.
+**Ce nombre s'est périmé TROIS fois**, et la troisième est la plus
+instructive : il annonçait « trois scripts » quand ils étaient dix-sept, puis
+« dix-neuf » quand ils étaient quarante-deux, puis « quarante-deux » quand
+LS-110 en a ajouté deux le jour même où ce paragraphe avertissait de ne pas le
+recopier. Un avertissement écrit à côté d'un chiffre n'empêche pas ce chiffre de
+vieillir : seule la commande le dit, d'où sa suppression ci-dessus.
 
-Quatre raisons de rester hors chaîne, une par famille. **Vingt-sept** scripts de
-mutation sur trente-cinq restent dehors : ils modifient des fichiers du dépôt en
-place, ce qu'une exécution partagée ne tolère pas. Les huit qui y tournent sont
-ceux qui travaillent sur des copies dans un bac temporaire. Le prototype d'interblocage documente un défaut ouvert, LS-50 : le
+Quatre raisons de rester hors chaîne, une par famille. **La plupart des scripts
+de mutation restent dehors** : ils modifient des fichiers du dépôt en place, ce
+qu'une exécution partagée ne tolère pas. Ceux qui y tournent sont ceux qui
+travaillent sur des copies dans un bac temporaire ; leur nombre se mesure,
+`grep -ohE '\./[a-z/-]+\.sh' .github/workflows/*.yml | sort -u | grep -c mutation`,
+et valait 9 sur 36 le 9 septembre 2026. Le prototype d'interblocage documente un défaut ouvert, LS-50 : le
 brancher rendrait la chaîne rouge en permanence. `verifier-jira.sh` exige des
 identifiants que la CI n'a pas, le dépôt étant public. `controle-fumee.sh` et
 `preparer-base-locale.sh` visent un service qui tourne, pas un dépôt.
