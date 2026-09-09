@@ -35,10 +35,16 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 7, V1 cible | LS-8 | 3 | après ouverture, hors Go-Live |
 | Contenus | LS-22 | 11 | **attend l'exploitante**, rien n'est faisable sans elle |
 
-**159 tickets terminés sur 211**, les deux termes relevés dans Jira le
+**161 tickets terminés sur 211**, les deux termes relevés dans Jira le
 9 septembre 2026 au soir et jamais dérivés l'un de l'autre. Le dénominateur a
 bougé de 208 à 211 dans la même journée, LS-209, LS-210 et LS-211 ayant été
 créées en livrant.
+
+**L'epic LS-7 avance : LS-139 est close**, ses sept critères satisfaits et le
+nocturne vert de bout en bout. Elle a fermé trois trous réels que la lecture ne
+voyait pas : deux en-têtes de sécurité servis sur cinq, SSH ouvert au mot de
+passe derrière un durcissement inopérant depuis huit mois, et un disque qui
+croissait par les images de déploiement.
 
 **Le nocturne est redevenu vert le 9 septembre 2026**, LS-210 close : les trois
 vulnérabilités `vitest` sont corrigées par la montée en **4.1.11**, une version
