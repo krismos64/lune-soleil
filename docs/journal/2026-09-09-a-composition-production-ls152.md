@@ -198,14 +198,51 @@ npm run format:check              All matched files use Prettier code style!
 ./scripts/verifier-registre-traitements.sh  OK, 36 tables rangees
 ```
 
+## LS-151 close, ses huit critères rejoués le jour même
+
+La story attendait LS-152 pour son critère 2. Plutôt que de la fermer sur les
+preuves de la veille, **les huit critères ont été rejoués sur la machine**, celle-ci
+ayant changé entre-temps.
+
+```
+C1  root par mot de passe   tente reellement : Permission denied
+C2  pare-feu de l'exterieur 22, 80, 443 ouverts ; 3000, 3001, 3002,
+                            5432, 55432, 6379, 8888 fermes
+C3  Docker et Compose       v5.0.1, conteneur de test demarre
+C4  HTTPS et redirections   200, 301 depuis http et depuis www
+                            certificat servi valide au 7 decembre, deux domaines
+C5  renouvellement a blanc  « all simulated renewals succeeded », 04h48 ce jour
+C6  fichier Nginx du depot  diff identique, en-tetes LS-91 lignes 191 et 192
+C7  fuseau horaire          Etc/UTC, crontab du conteneur lu dans ce fuseau
+C8  procedure reproductible PREPARATION-SERVEUR.md, huit etapes
+```
+
+`certbot.timer` est armé et actif, prochaine échéance dans six heures, et le
+fichier de renouvellement porte bien `authenticator = standalone` sur le port
+8888 : la bascule imposée par le contrôle du projet a tenu.
+
+**Une mesure fausse a failli passer.** Mon premier test de ports annonçait 22, 80
+et 443 **fermés**, ce qui contredisait le fait que la session SSH fonctionnait à
+cet instant. La cause était ma méthode, `/dev/tcp` dans un sous-shell sous
+`timeout`, et non la machine. Refait avec `nc`, tout était conforme. Une mesure
+qui contredit un fait établi se refait avant d'être crue.
+
+**Le renouvellement a paru bloqué neuf minutes** : certbot applique un délai
+aléatoire de 384 secondes en mode non interactif, pour étaler la charge sur les
+serveurs de Let's Encrypt. Lire son journal a évité de conclure à un blocage.
+
+**Deux affirmations de la procédure étaient périmées** et ont été corrigées : le
+502 annoncé comme résultat attendu est désormais un 200, et le défaut des ports
+de SmartPlanning n'est plus « non corrigé » depuis SP-583. La section est gardée
+pour le motif, qui survit à sa correction.
+
 ## État des tickets
 
 **LS-152 reste En cours**, ses huit critères étant prouvés mais la production
 n'étant pas exploitable tant que LS-205, LS-206 et LS-207 ne sont pas fermées.
 La composition, elle, n'est pas remise en cause par ces trois défauts.
 
-**LS-151 peut maintenant fermer son critère 2** : le port 3002 est vérifié non
-joignable depuis l'extérieur, ce qu'elle attendait de LS-152.
+**LS-151 est CLOSE**, ses huit critères rejoués et prouvés le 9 septembre.
 
 **Quatre tickets créés**, tous rattachés à LS-7 : LS-205, LS-206 et LS-207
 bloquent LS-153 ; LS-208 non, la migration ayant abouti.
