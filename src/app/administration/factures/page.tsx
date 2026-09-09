@@ -18,6 +18,7 @@
  * middleware : celui de Next.js s'execute sur la peripherie et ne peut pas
  * relire la session en base, il ne verrait que la presence d'un cookie.
  */
+import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -161,7 +162,7 @@ export default async function PageFactures({
         <ul className={styles.listeFiltres}>
           {PERIODES.map((periode) => (
             <li key={periode.valeur}>
-              <a
+              <Link
                 className={styles.filtre}
                 /*
                  * LE FILTRE PAR DEFAUT POINTE VERS L'URL NUE, les autres portent
@@ -183,7 +184,7 @@ export default async function PageFactures({
                 }
               >
                 {periode.libelle}
-              </a>
+              </Link>
             </li>
           ))}
         </ul>
