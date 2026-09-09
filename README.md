@@ -710,6 +710,12 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-taches-planifiees-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-plafonds-corps.sh             # service, Next et Nginx s'accordent sur la taille, LS-207
 ./scripts/verifier-plafonds-corps-mutation.sh    # prouve le précédent par mutation
+#
+# Déploiement, LS-138. Ces deux-là vivent sur la MACHINE, pas dans scripts/ :
+#   deploiement/deployer.sh          bascule, retour arrière, état de la production
+#   deploiement/sauvegarder-base.sh  sauvegarde quotidienne, base et fichiers
+# Le workflow « Déployer en production » les appelle par une clé SSH enfermée
+# qui ne peut exécuter QUE le premier. Voir docs/deploiement/EXPLOITATION.md.
 ./scripts/verifier-emetteur-facture.sh            # identité légale des factures, sans afficher les valeurs
 ./scripts/decider-suite-complete.sh              # portée de la chaîne selon le diff, LS-169
 ./scripts/verifier-decision-suite.sh             # prouve le précédent sur 24 cas
