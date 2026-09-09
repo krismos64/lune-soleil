@@ -1,0 +1,258 @@
+# Déploiement de la boutique sur le VPS, LS-138.
+#
+# CE QU'IL FAIT : bascule la production vers une image déjà publiée sur GHCR, ou
+# revient à la précédente. Il ne construit RIEN et ne migre RIEN.
+#
+# DÉCLENCHEMENT MANUEL, ET C'EST UNE DÉCISION, non une prudence vague.
+#
+# Trois raisons mesurées sur ce projet :
+#
+#   1. Les migrations tournent DEPUIS LE DÉPÔT, `migrate-production.sh` lisant
+#      `prisma/migrations/` sur disque et parlant à une base qui n'expose aucun
+#      port, ADR-037. Elles précèdent le déploiement et demandent un geste
+#      humain, EXPLOITATION.md le décrit.
+#
+#   2. Le garde-fou 1 de `migrate-production.sh` s'arrête sur une migration
+#      destructive et attend une lecture du SQL. Un déploiement automatique qui
+#      échoue là-dessus régulièrement apprend à passer outre par réflexe, ce qui
+#      reproduit le défaut de LS-42 par un autre chemin.
+#
+#   3. La machine est PARTAGÉE avec SmartPlanning, ADR-036, un produit payant.
+#      Chaque déploiement recrée des conteneurs chez lui. Il n'y a aucune
+#      urgence à ce qu'une fusion de documentation redémarre l'application.
+#
+# CE QU'IL NE FAUT PAS FAIRE : un `workflow_run` après `publier-image.yml`. Il
+# se déclenche aussi quand le workflow amont ÉCHOUE, sauf filtre explicite sur
+# `conclusion == 'success'`, et `publier-image.yml` porte lui-même un
+# `workflow_dispatch` qui republie sans nouveau commit : une republication
+# manuelle déclencherait alors un déploiement que personne n'attend.
+
+name: Déployer en production
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Identifiant de commit complet, 40 caractères, de l'image à déployer"
+        required: true
+        type: string
+      action:
+        description: "Ce qu'il faut faire"
+        required: true
+        default: deployer
+        type: choice
+        options:
+          - deployer
+          - retour-arriere
+          - etat
+
+# UN DÉPLOIEMENT À LA FOIS, et `cancel-in-progress` volontairement absent : un
+# déploiement interrompu à mi-chemin est pire qu'un déploiement en attente. Même
+# motif que `publier-image.yml`.
+concurrency:
+  group: deployer-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deployer:
+    name: Basculer la production
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v7
+        with:
+          # `actions/checkout` laisse par défaut le GITHUB_TOKEN dans le
+          # `.git/config` de l'exécuteur. Sur un job qui manipule aussi une clé
+          # SSH de production, cette accumulation n'a rien à faire là.
+          persist-credentials: false
+
+      # ----------------------------------------------------------------------
+      # Étape 0. Tout ce qui peut être refusé l'est AVANT de toucher la machine.
+      #
+      # Le SHA vient d'une saisie humaine, donc d'une entrée non fiable. Il est
+      # validé ici, puis validé une SECONDE fois par le script sur la machine :
+      # les deux gardes sont indépendantes, et celle du script protège même si
+      # ce workflow est contourné.
+      # ----------------------------------------------------------------------
+      - name: 0. Valider l'entrée
+        env:
+          SHA: ${{ inputs.sha }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$SHA" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "::error::'$SHA' n'est pas un identifiant de commit de 40 caractères hexadécimaux."
+            exit 1
+          fi
+          echo "SHA validé."
+
+      # ----------------------------------------------------------------------
+      # Étape 1. L'image existe-t-elle sur GHCR ?
+      #
+      # On l'apprend AVANT d'engager quoi que ce soit sur la machine. Découvrir
+      # l'absence après avoir écrit IMAGE_TAG laisserait la production sur un
+      # tag introuvable.
+      # ----------------------------------------------------------------------
+      - name: 1. Vérifier que l'image est publiée
+        if: inputs.action == 'deployer'
+        env:
+          SHA: ${{ inputs.sha }}
+          JETON: ${{ secrets.GITHUB_TOKEN }}
+          # TOUT PASSE PAR `env:`, y compris ce que GitHub fournit lui-même.
+          # `github.actor` et `github.repository` ne sont pas contrôlables par un
+          # tiers ici, mais la règle du dépôt ne fait pas d'exception : elle vaut
+          # justement parce qu'on ne réévalue pas au cas par cas. Même motif que
+          # le commentaire de `publier-image.yml` sur le passage du SHA.
+          ACTEUR: ${{ github.actor }}
+          DEPOT: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          echo "$JETON" | docker login ghcr.io -u "$ACTEUR" --password-stdin
+          if ! docker manifest inspect "ghcr.io/$DEPOT:$SHA" >/dev/null 2>&1; then
+            echo "::error::l'image ghcr.io/$DEPOT:$SHA n'existe pas. Publier d'abord."
+            exit 1
+          fi
+          echo "Image publiée et accessible."
+
+      # ----------------------------------------------------------------------
+      # Étape 2. Les deux valeurs que le script ne peut pas connaître seul.
+      #
+      # LE NOMBRE DE MIGRATIONS se lit dans le DÉPÔT et non dans l'image :
+      # la sortie `standalone` de Next.js n'embarque pas `prisma/`, mesuré le
+      # 9 septembre 2026. Un contrôle qui lirait l'image compterait toujours
+      # zéro et ne détecterait jamais rien, garde-fou muet.
+      #
+      # L'EMPREINTE DE LA COMPOSITION permet au script de refuser si le fichier
+      # de la machine a dérivé : il porte les limites de ressources, et ce sont
+      # elles qui protègent SmartPlanning.
+      # ----------------------------------------------------------------------
+      - name: 2. Relever les références du dépôt
+        id: references
+        run: |
+          set -euo pipefail
+          MIGRATIONS=$(ls -1 prisma/migrations 2>/dev/null | grep -c '^[0-9]' || true)
+          EMPREINTE=$(sha256sum docker-compose.production.yml | cut -d' ' -f1)
+          echo "migrations=$MIGRATIONS" >> "$GITHUB_OUTPUT"
+          echo "empreinte=$EMPREINTE" >> "$GITHUB_OUTPUT"
+          echo "Migrations dans le dépôt : $MIGRATIONS"
+          echo "Empreinte de la composition : $EMPREINTE"
+
+      # ----------------------------------------------------------------------
+      # Étape 3. L'accès SSH.
+      #
+      # LA CLÉ EST ENFERMÉE côté machine par `command=` dans `authorized_keys` :
+      # elle ne peut exécuter QUE `deployer.sh`, quoi que ce workflow envoie.
+      # Ce qui est écrit ici arrive dans `SSH_ORIGINAL_COMMAND` et n'est jamais
+      # exécuté, seulement analysé.
+      #
+      # L'EMPREINTE D'HÔTE SE FIGE. `StrictHostKeyChecking=no` accepterait
+      # n'importe quel hôte qui répond, donc un détournement DNS.
+      # ----------------------------------------------------------------------
+      - name: 3. Préparer la connexion
+        env:
+          CLE: ${{ secrets.VPS_CLE_PRIVEE }}
+          EMPREINTE_HOTE: ${{ secrets.VPS_EMPREINTE_HOTE }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$CLE" > ~/.ssh/deploiement
+          chmod 600 ~/.ssh/deploiement
+          printf '%s\n' "$EMPREINTE_HOTE" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      # ----------------------------------------------------------------------
+      # Étape 4. Le déploiement lui-même.
+      #
+      # Tout le travail est dans le script de la machine : sauvegarde, tirage de
+      # l'image, contrôle du schéma, bascule, attente de santé, vérification par
+      # le domaine public, et retour automatique à la version précédente si l'un
+      # de ces points échoue.
+      #
+      # AUCUNE COMMANDE `docker` N'EST ENVOYÉE D'ICI. La clé ne le permettrait
+      # pas, et c'est le but : un compromis de ce dépôt PUBLIC ne doit pas
+      # donner un shell sur la machine de SmartPlanning.
+      # ----------------------------------------------------------------------
+      - name: 4. Déployer
+        env:
+          HOTE: ${{ secrets.VPS_HOTE }}
+          UTILISATEUR: ${{ secrets.VPS_UTILISATEUR }}
+          SHA: ${{ inputs.sha }}
+          MIGRATIONS: ${{ steps.references.outputs.migrations }}
+          EMPREINTE: ${{ steps.references.outputs.empreinte }}
+          ACTION: ${{ inputs.action }}
+        run: |
+          set -euo pipefail
+          case "$ACTION" in
+            deployer)       COMMANDE="$SHA $MIGRATIONS $EMPREINTE" ;;
+            retour-arriere) COMMANDE="--retour-arriere" ;;
+            etat)           COMMANDE="--etat" ;;
+            *) echo "::error::action inconnue"; exit 1 ;;
+          esac
+
+          # La sortie du script est reprise telle quelle : elle porte le journal
+          # horodaté de chaque étape, et c'est la preuve du déploiement.
+          ssh -i ~/.ssh/deploiement \
+            -o BatchMode=yes -o ConnectTimeout=15 \
+            "$UTILISATEUR@$HOTE" "$COMMANDE" | tee /tmp/sortie.txt
+
+          # LE CODE DE SORTIE SE LIT DANS PIPESTATUS, jamais après le pipe :
+          # `commande | tee` rend le code de `tee`, donc 0, y compris sur un
+          # échec. Le piège est documenté trois fois dans ce dépôt.
+          CODE=${PIPESTATUS[0]}
+          [ "$CODE" -eq 0 ] || { echo "::error::le déploiement a échoué, code $CODE"; exit "$CODE"; }
+
+      # ----------------------------------------------------------------------
+      # Étape 5. Ce que seule une machine tierce peut vérifier.
+      #
+      # L'exécuteur GitHub EST une autre machine, ce qui rend cette
+      # vérification gratuite ici et impossible depuis le VPS : un `ss -tlnp`
+      # sur la machine ne dit pas si le pare-feu laisse passer.
+      #
+      # Docker écrit ses règles DNAT en amont d'`ufw` : sans le préfixe
+      # `127.0.0.1:` dans la composition, l'application serait ouverte sur
+      # Internet malgré le pare-feu. C'est le défaut mesuré sur SmartPlanning le
+      # 8 septembre 2026, SP-583.
+      # ----------------------------------------------------------------------
+      - name: 5. Le port applicatif reste fermé depuis l'extérieur
+        if: inputs.action != 'etat'
+        env:
+          HOTE: ${{ secrets.VPS_HOTE }}
+        run: |
+          set -euo pipefail
+          if timeout 10 bash -c "cat < /dev/null > /dev/tcp/$HOTE/3002" 2>/dev/null; then
+            echo "::error::le port 3002 est JOIGNABLE depuis Internet. La composition doit publier sur 127.0.0.1."
+            exit 1
+          fi
+          echo "Port 3002 injoignable depuis l'extérieur, conforme."
+
+      # ----------------------------------------------------------------------
+      # Étape 6. La boutique répond, et SmartPlanning n'a pas été touché.
+      #
+      # Le second point n'est pas une politesse : c'est la garantie que cette
+      # chaîne doit rendre sur une machine partagée, et elle se mesure.
+      # ----------------------------------------------------------------------
+      - name: 6. Les trois sites répondent
+        if: inputs.action != 'etat'
+        run: |
+          set -euo pipefail
+          ECHEC=0
+          for SITE in lune-soleil.fr smartplanning.fr analytics.smartplanning.fr; do
+            CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "https://$SITE" || echo 000)
+            if [ "$CODE" = "200" ]; then
+              echo "  $SITE -> 200"
+            else
+              echo "::error::$SITE rend $CODE"
+              ECHEC=1
+            fi
+          done
+          exit "$ECHEC"
+
+      # La clé privée disparaît avec l'exécuteur, mais l'effacer explicitement
+      # évite qu'une étape ajoutée plus tard la trouve encore là.
+      - name: 7. Effacer la clé
+        if: always()
+        run: rm -f ~/.ssh/deploiement
