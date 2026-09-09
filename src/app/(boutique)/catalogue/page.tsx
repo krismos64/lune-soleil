@@ -68,8 +68,48 @@ export async function generateMetadata({
    * justifient pas d'introduire une couche de memoisation que le projet n'a nulle
    * part ailleurs. A revoir si le catalogue change d'ordre de grandeur.
    */
-  const { categorieRetenue: categorie } =
-    await lireCataloguePublic(slugDemande);
+  /*
+   * LA LECTURE EST ENVELOPPEE, ET C'EST CE QUI REND LE STATUT HONNETE, LS-139.
+   *
+   * CE QUE LA MESURE A MONTRE, base de production reellement arretee le
+   * 9 septembre 2026, meme URL et seul l'agent changeant :
+   *
+   *   navigateur ordinaire  -> 200      Twitterbot -> 500      Googlebot -> 200
+   *
+   * NEXT.JS 16 DIFFUSE LES METADONNEES SEPAREMENT sur une page dynamique, sans
+   * bloquer le rendu de l'UI, verifie par Context7. Le flux part donc AVANT que
+   * cette fonction ait fini, et un statut ne se change plus une fois les octets
+   * partis. Le comportement est desactive pour les robots de `htmlLimitedBots`,
+   * d'ou le 500 sur Twitterbot : c'est cet ecart qui a identifie la cause.
+   *
+   * `generateMetadata` AVALE SES ERREURS PAR AILLEURS, meme source : Next.js y
+   * attache un `.catch()` qui transforme tout rejet en valeur resolue, jamais
+   * relancee. L'echec y est donc DOUBLEMENT silencieux, et rien n'arrete la
+   * page.
+   *
+   * LE REPLI ALIGNE CE CHEMIN SUR CELUI DE L'ACCUEIL, qui rend un vrai 500
+   * parce qu'il n'a AUCUN `generateMetadata` : la lecture qui compte redevient
+   * celle du corps de la page, sous la frontiere Suspense interne, et son echec
+   * fixe le statut.
+   *
+   * LES METADONNEES PAR DEFAUT SUFFISENT SUR UNE PAGE EN PANNE. Le canonical
+   * par filtre de LS-137 est conserve des que la base repond, et une page qui
+   * rend 500 n'a de toute façon pas vocation a etre indexee.
+   */
+  let categorie: Awaited<
+    ReturnType<typeof lireCataloguePublic>
+  >["categorieRetenue"] = null;
+
+  try {
+    ({ categorieRetenue: categorie } = await lireCataloguePublic(slugDemande));
+  } catch {
+    /*
+     * AUCUNE JOURNALISATION ICI, delibere : le corps de la page leve la MEME
+     * panne une fraction de seconde plus tard, et elle y est journalisee une
+     * fois. Tracer aux deux endroits ferait compter double une seule
+     * indisponibilite dans les journaux d'exploitation.
+     */
+  }
 
   const titre = categorie ? categorie.nom : "Le catalogue";
   const description = categorie
