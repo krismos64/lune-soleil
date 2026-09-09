@@ -1093,6 +1093,33 @@ jobs:
         run: ./scripts/verifier-taches-planifiees-mutation.sh
 
       # ----------------------------------------------------------------------
+      # Controle 9z. Les trois plafonds de televersement decroissent dans le
+      # bon ordre, LS-207. Textuel, secondes.
+      #
+      # LE DEFAUT QU'IL FERME A VECU DEPUIS LS-91 : `client_max_body_size`
+      # valait 12M quand le service acceptait 25 Mo. Une photographie de 17 Mo,
+      # cas eprouve par ADR-007, recevait un 413 de Nginx AVANT que la Server
+      # Action ne s'execute, donc sans que le message « 25 Mo au maximum » ne
+      # s'affiche jamais : l'ecran restait sur sa progression.
+      #
+      # C'est le defaut que `next.config.ts` decrit et a corrige a son niveau,
+      # reproduit un cran plus haut. Son commentaire DESIGNE cette directive
+      # comme la borne de production, et rien ne verifiait qu'elle suivait : les
+      # trois valeurs vivent dans trois fichiers sans lien, dans trois unites
+      # differentes.
+      - name: 9z. Plafonds de corps coherents entre service, Next et Nginx
+        run: ./scripts/verifier-plafonds-corps.sh
+
+      # Preuve par mutation du controle precedent, LS-207. Textuel, secondes.
+      #
+      # DIX SENS EXERCES, dont le seul qui compte vraiment : l'etat REEL du
+      # depot avant la correction, `client_max_body_size 12M`, doit etre refuse.
+      # Une mutation ne prouve que la forme qu'elle fabrique, donc celle-ci
+      # rejoue le defaut tel qu'il a existe et non une forme commode a ecrire.
+      - name: 9z bis. Preuve par mutation des plafonds de corps
+        run: ./scripts/verifier-plafonds-corps-mutation.sh
+
+      # ----------------------------------------------------------------------
       # Controles 2 et 3. Le format entre ici parce qu'un depot ou seule une
       # partie des fichiers est formatee produit des diffs illisibles.
       # ----------------------------------------------------------------------
