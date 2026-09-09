@@ -137,6 +137,46 @@ cas "BETTER_AUTH_TRUSTED_PROXIES renseignee avec une plage large" "$ENVEX" \
 cas "alias Nginx vers le volume des documents" "$CONF" \
   's/    location \/ \{/    location \/documents\/ \{\n        alias \/var\/lib\/lune-soleil\/documents\/;\n    \}\n\n    location \/ \{/'
 
+# ---------------------------------------------------------------------------
+# Cas 8 a 12, LS-205. Le controle est passe de « aucune directive de service de
+# fichiers » a « un seul chemin autorise ». Ces cas prouvent que le
+# resserrement n'a RIEN ouvert : tout ce qui etait refuse l'est toujours.
+# ---------------------------------------------------------------------------
+
+# Cas 8 : LA RACINE DU VOLUME AU LIEU DE public/. C'est le contournement le plus
+# probable, parce qu'il a l'air d'une simplification innocente : un caractere de
+# moins et `quarantaine/` devient public. Elle porte les ORIGINAUX non traites,
+# avec leurs metadonnees EXIF et la position GPS du domicile de l'exploitante,
+# soit exactement la donnee qu'ADR-007 existe pour retirer.
+cas "alias sur la racine du volume, la quarantaine devient publique" "$CONF" \
+  's/alias \/var\/lib\/lune-soleil\/medias\/public\/;/alias \/var\/lib\/lune-soleil\/medias\/;/'
+
+# Cas 9 : LE PARENT COMMUN. Il atteint d'un coup les medias, la quarantaine ET
+# les documents comptables. C'est le cas que l'ancien commentaire du controle
+# citait pour justifier de refuser la directive plutot que le chemin, et il
+# reste refuse.
+cas "alias sur le parent commun des medias et des documents" "$CONF" \
+  's/alias \/var\/lib\/lune-soleil\/medias\/public\/;/alias \/var\/lib\/lune-soleil\/;/'
+
+# Cas 10 : la quarantaine visee directement, sans detour par un parent.
+cas "alias directement sur la quarantaine" "$CONF" \
+  's/alias \/var\/lib\/lune-soleil\/medias\/public\/;/alias \/var\/lib\/lune-soleil\/medias\/quarantaine\/;/'
+
+# Cas 11 : `root` plutot qu'`alias`, meme risque par une autre directive. Le
+# controle porte sur les deux, et un resserrement qui n'aurait couvert qu'`alias`
+# laisserait ce chemin ouvert.
+cas "root vers le volume des documents" "$CONF" \
+  's/    location \/ \{/    location \/telechargements\/ \{\n        root \/var\/lib\/lune-soleil\/documents;\n    \}\n\n    location \/ \{/'
+
+# Cas 12 : L'ALIAS ATTENDU DISPARAIT, et c'est le sens que LS-205 ajoute.
+#
+# Sans ce cas, le controle serait satisfait par un fichier ou PERSONNE ne sert
+# les medias : precisement l'etat qui a produit ce ticket, un catalogue
+# d'images cassees pendant que /api/sante rend 200. Un garde-fou qui accepte
+# l'absence de ce qu'il garde ne garde rien.
+cas "le bloc qui sert les medias disparait" "$CONF" \
+  's/        alias \/var\/lib\/lune-soleil\/medias\/public\/;\n//'
+
 echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then
