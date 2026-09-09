@@ -202,8 +202,12 @@ SmartPlanning.
 
 ## Résultat attendu à la fin
 
-`https://lune-soleil.fr` répond **502**. C'est le bon résultat : Nginx fonctionne,
-et aucune application n'écoute encore sur le port 3002. LS-152 la posera.
+`https://lune-soleil.fr` répond **502**. C'est le bon résultat **à ce stade** :
+Nginx fonctionne, et aucune application n'écoute encore sur le port 3002.
+
+**Depuis LS-152, la boutique répond 200**, la composition de production ayant posé
+l'application. Un 502 après cette étape signale donc un vrai incident, et la
+marche à suivre est dans `EXPLOITATION.md`.
 
 ## Ce que cette procédure ne fait pas
 
@@ -211,10 +215,15 @@ Le pare-feu au-delà de l'existant, le durcissement approfondi et la répétitio
 d'incidents appartiennent à LS-139. La composition de production, les secrets et
 la sauvegarde en routine sont LS-152. La chaîne de déploiement est LS-138.
 
-## Un défaut trouvé et non corrigé, qui appartient à SmartPlanning
+## Un défaut trouvé ici, corrigé depuis, qui appartenait à SmartPlanning
 
-Les ports **3000 et 3001 sont joignables depuis Internet**, vérifié depuis
-l'extérieur : `http://51.77.146.72:3000` répond 200.
+**Corrigé le 8 septembre 2026 par Christophe, ticket SP-583**, et vérifié fermé
+depuis l'extérieur le 9 septembre : les règles DNAT ciblent désormais
+`127.0.0.1`. La section est gardée pour le **motif**, qui reste entier et se
+reproduira sur toute publication de port future.
+
+Les ports **3000 et 3001 étaient joignables depuis Internet**, vérifié depuis
+l'extérieur : `http://51.77.146.72:3000` répondait 200.
 
 `ufw` ne les autorise pourtant pas. La cause est que **Docker insère ses règles
 DNAT en amont de celles d'`ufw`**, un contournement connu de la publication de
@@ -223,11 +232,16 @@ ports : `-p 3000:3000` ouvre le port quoi qu'en dise le pare-feu.
 L'application de SmartPlanning est donc atteignable sans passer par Nginx, donc
 sans TLS, sans sa limitation de débit et sans ses en-têtes de sécurité.
 
-**Ce point n'a pas été corrigé** : il concerne un autre projet, et le corriger
-sans arbitrage aurait pu interrompre un service payant. Il est signalé à
-Christophe.
+**Il n'a pas été corrigé depuis cette procédure** : il concernait un autre
+projet, et le corriger sans arbitrage aurait pu interrompre un service payant. Il
+a été signalé, puis fermé par SP-583 le jour même.
 
-**Pour la boutique, la leçon est directement applicable** : LS-152 doit publier le
-port applicatif en `127.0.0.1:3002` et non `3002`, faute de quoi la boutique
-serait exposée de la même manière. C'est déjà un critère de cette story, et il
-gagne ici sa démonstration.
+**Pour la boutique, la leçon a été appliquée** : LS-152 publie le port applicatif
+en `127.0.0.1:3002`, et la mesure du 9 septembre 2026 confirme que la protection
+est structurelle, la règle DNAT ciblant `127.0.0.1` et non `0.0.0.0/0`. Elle ne
+dépend donc pas d'`ufw`, contrairement à ce que ce défaut avait révélé.
+
+**Le motif survit à sa correction** : une publication de port écrite sans préfixe
+d'adresse expose le service quoi qu'en dise le pare-feu, et seule une mesure
+depuis l'extérieur le voit. Un `ss -tlnp` sur la machine ne l'aurait jamais
+montré.
