@@ -9,6 +9,8 @@
  * laisserait ouvert l'appel direct a une action, defaut trouve en relecture de
  * LS-89.
  */
+import { Suspense } from "react";
+
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -16,6 +18,7 @@ import {
   AutorisationRefuseeError,
   exigerAdministratrice,
 } from "@/services/autorisation";
+import { ChargementAdministration } from "@/components/chargement-administration";
 import { listerCategories } from "@/services/catalogue";
 import styles from "./categories.module.css";
 import { GestionCategories } from "./gestion-categories";
@@ -46,8 +49,6 @@ export default async function PageCategories() {
     throw erreur;
   }
 
-  const categories = await listerCategories();
-
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Catégories du catalogue</h1>
@@ -57,7 +58,46 @@ export default async function PageCategories() {
         peut pas être supprimée.
       </p>
 
-      <GestionCategories categories={categories} />
+      <Suspense fallback={<ChargementCategories />}>
+        <ListeCategories />
+      </Suspense>
     </main>
   );
+}
+
+/** Armature affichee pendant que la liste arrive, LS-188 puis LS-139. */
+function ChargementCategories() {
+  return (
+    <ChargementAdministration annonce="Chargement des catégories…" lignes={4} />
+  );
+}
+
+/**
+ * La liste elle-meme, seule partie de cet ecran qui lit la base.
+ *
+ * POURQUOI UN `<Suspense>` INTERNE ET NON UN `loading.tsx`, LS-139. Un fichier
+ * de segment pose sa frontiere sur la page ENTIERE : le streaming demarre alors
+ * des le premier `await`, et un statut ne se change plus une fois les octets
+ * partis. Une base injoignable rendait donc **200** avec l'armature figee, au
+ * lieu du 500 que `error.tsx` doit servir.
+ *
+ * MESURE EN ARRETANT REELLEMENT LA BASE DE PRODUCTION, le 9 septembre 2026, sur
+ * le catalogue public qui portait le meme defaut : 200 avec « Chargement des
+ * pieces… » comme etat FINAL, quand l'accueil, sans frontiere au-dessus de lui,
+ * rendait un vrai 500.
+ *
+ * UNE SONDE EN TETE DE PAGE NE SUFFIT PAS, essayee et mesuree : elle est
+ * elle-meme un `await` SOUS la frontiere, donc elle demarre le flux avant de
+ * lever. La documentation de Next.js 16, verifiee par Context7, exige un
+ * controle avant « any await that may suspend ».
+ *
+ * LA GARDE D'AUTORISATION RESTE AU-DESSUS, dans la page : une redirection subit
+ * le meme sort qu'un statut, elle ne part plus une fois le flux commence.
+ *
+ * NE PAS RETABLIR `categories/loading.tsx`.
+ */
+async function ListeCategories() {
+  const categories = await listerCategories();
+
+  return <GestionCategories categories={categories} />;
 }

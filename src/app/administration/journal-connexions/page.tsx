@@ -13,6 +13,8 @@
  * regle E13. Dix echecs suivis d'une reussite est le motif qu'il doit rendre
  * lisible d'un coup d'oeil, d'ou le badge sur l'issue.
  */
+import { Suspense } from "react";
+
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -20,6 +22,7 @@ import {
   AutorisationRefuseeError,
   exigerAdministratrice,
 } from "@/services/autorisation";
+import { ChargementAdministration } from "@/components/chargement-administration";
 import styles from "./journal-connexions.module.css";
 import {
   CONSERVATION_JOURNAL_MOIS,
@@ -112,8 +115,6 @@ export default async function PageJournalConnexions() {
     throw erreur;
   }
 
-  const tentatives = await lireTentativesRecentes();
-
   return (
     <main id="contenu" tabIndex={-1} className={styles["journal-connexions"]}>
       <h1>Journal des connexions</h1>
@@ -123,6 +124,39 @@ export default async function PageJournalConnexions() {
         {CONSERVATION_JOURNAL_MOIS} mois sont supprimées automatiquement.
       </p>
 
+      <Suspense fallback={<ChargementJournal />}>
+        <ListeTentatives />
+      </Suspense>
+    </main>
+  );
+}
+
+/** Armature affichee pendant que le journal arrive, LS-139. */
+function ChargementJournal() {
+  return (
+    <ChargementAdministration annonce="Chargement du journal…" lignes={6} />
+  );
+}
+
+/**
+ * La liste elle-meme, seule partie de cet ecran qui lit la base.
+ *
+ * POURQUOI UN `<Suspense>` INTERNE ET NON UN `loading.tsx`, LS-139. Un fichier
+ * de segment pose sa frontiere sur la page ENTIERE : le streaming demarre alors
+ * des le premier `await`, et un statut ne se change plus une fois les octets
+ * partis. Une base injoignable rendait donc **200** avec l'armature figee, au
+ * lieu du 500 que `error.tsx` doit servir.
+ *
+ * Mesure en arretant reellement la base de production le 9 septembre 2026, sur
+ * le catalogue public qui portait le meme defaut.
+ *
+ * NE PAS RETABLIR `journal-connexions/loading.tsx`.
+ */
+async function ListeTentatives() {
+  const tentatives = await lireTentativesRecentes();
+
+  return (
+    <>
       {tentatives.length === 0 ? (
         <p className={styles.vide}>
           Aucune tentative de connexion enregistrée.
@@ -159,7 +193,7 @@ export default async function PageJournalConnexions() {
                   <dd>
                     {tentative.emailCompte ?? (
                       /* Nul sur un echec contre une adresse sans compte, cas
-                         normal et revelateur : c'est le motif d'un balayage. */
+                           normal et revelateur : c'est le motif d'un balayage. */
                       <span className={styles.absent}>
                         aucun compte correspondant
                       </span>
@@ -187,6 +221,6 @@ export default async function PageJournalConnexions() {
           ))}
         </ul>
       )}
-    </main>
+    </>
   );
 }

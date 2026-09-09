@@ -17,6 +17,8 @@
  * retractation porte un DELAI LEGAL, donc la plus ancienne est la plus urgente,
  * quand un message recent est le plus interessant.
  */
+import { Suspense } from "react";
+
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
@@ -33,6 +35,7 @@ import {
 } from "@/services/traitement-retractation";
 import { LIBELLES_ETAT_PIECE, LIBELLES_RETRACTATION } from "./libelles";
 import { TraitementDemande } from "./traitement-demande";
+import { ChargementAdministration } from "@/components/chargement-administration";
 import styles from "./retractations.module.css";
 
 export const metadata = {
@@ -62,6 +65,46 @@ export default async function PageRetractations() {
     throw erreur;
   }
 
+  return (
+    <main id="contenu" tabIndex={-1} className={styles.page}>
+      <h1 className={styles.titre}>Rétractations</h1>
+
+      <Suspense fallback={<ChargementRetractations />}>
+        <ListeDemandes />
+      </Suspense>
+    </main>
+  );
+}
+
+/** Armature affichee pendant que les demandes arrivent, LS-139. */
+function ChargementRetractations() {
+  return (
+    <ChargementAdministration
+      annonce="Chargement des rétractations…"
+      lignes={4}
+    />
+  );
+}
+
+/**
+ * La liste elle-meme, seule partie de cet ecran qui lit la base.
+ *
+ * POURQUOI UN `<Suspense>` INTERNE ET NON UN `loading.tsx`, LS-139. Un fichier
+ * de segment pose sa frontiere sur la page ENTIERE : le streaming demarre alors
+ * des le premier `await`, et un statut ne se change plus une fois les octets
+ * partis. Une base injoignable rendait donc **200** avec l'armature figee, au
+ * lieu du 500 que `error.tsx` doit servir.
+ *
+ * Mesure en arretant reellement la base de production le 9 septembre 2026, sur
+ * le catalogue public qui portait le meme defaut.
+ *
+ * LES REFERENCES DE REMBOURSEMENT SONT ENGENDREES ICI, avec la lecture dont
+ * elles dependent, et le commentaire d'ADR-032 ci-dessous garde sa valeur : une
+ * reference par demande, engendree cote serveur, une fois par rendu.
+ *
+ * NE PAS RETABLIR `retractations/loading.tsx`.
+ */
+async function ListeDemandes() {
   const { demandes, tronquee } = await listerDemandesRetractation();
 
   /*
@@ -103,9 +146,7 @@ export default async function PageRetractations() {
   );
 
   return (
-    <main id="contenu" tabIndex={-1} className={styles.page}>
-      <h1 className={styles.titre}>Rétractations</h1>
-
+    <>
       <p className={styles.introduction}>
         {demandes.length === 0
           ? "Aucune demande de rétractation."
@@ -367,6 +408,6 @@ export default async function PageRetractations() {
           ))}
         </ul>
       )}
-    </main>
+    </>
   );
 }

@@ -16,6 +16,8 @@
  * consultation en masse au sens d'ADR-021.
  */
 import Link from "next/link";
+import { Suspense } from "react";
+
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -27,6 +29,7 @@ import type { StatutCommande } from "@/generated/prisma/enums";
 import { LIMITE_LISTE, listerCommandesAExpedier } from "@/services/expedition";
 import { formaterDate, LIBELLES_LIVRAISON } from "@/lib/affichage-commande";
 import { FormulaireExpedition } from "./formulaire-expedition";
+import { ChargementAdministration } from "@/components/chargement-administration";
 import styles from "./expeditions.module.css";
 
 export const metadata = {
@@ -125,8 +128,6 @@ export default async function PageExpeditions() {
     throw erreur;
   }
 
-  const { commandes, tronquee } = await listerCommandesAExpedier();
-
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
       <Link
@@ -140,6 +141,42 @@ export default async function PageExpeditions() {
       <p className={styles.surtitre}>Mondial Relay</p>
       <h1 className={styles.titre}>Expéditions</h1>
 
+      <Suspense fallback={<ChargementExpeditions />}>
+        <FileExpeditions />
+      </Suspense>
+    </main>
+  );
+}
+
+/** Armature affichee pendant que la file arrive, LS-139. */
+function ChargementExpeditions() {
+  return (
+    <ChargementAdministration
+      annonce="Chargement des expéditions…"
+      lignes={4}
+    />
+  );
+}
+
+/**
+ * La file elle-meme, seule partie de cet ecran qui lit la base.
+ *
+ * POURQUOI UN `<Suspense>` INTERNE ET NON UN `loading.tsx`, LS-139. Un fichier
+ * de segment pose sa frontiere sur la page ENTIERE : le streaming demarre alors
+ * des le premier `await`, et un statut ne se change plus une fois les octets
+ * partis. Une base injoignable rendait donc **200** avec l'armature figee, au
+ * lieu du 500 que `error.tsx` doit servir.
+ *
+ * Mesure en arretant reellement la base de production le 9 septembre 2026, sur
+ * le catalogue public qui portait le meme defaut.
+ *
+ * NE PAS RETABLIR `expeditions/loading.tsx`.
+ */
+async function FileExpeditions() {
+  const { commandes, tronquee } = await listerCommandesAExpedier();
+
+  return (
+    <>
       <p className={styles.introduction}>
         {commandes.length === 0
           ? "Aucune commande en cours d'acheminement."
@@ -308,6 +345,6 @@ export default async function PageExpeditions() {
           })}
         </div>
       )}
-    </main>
+    </>
   );
 }

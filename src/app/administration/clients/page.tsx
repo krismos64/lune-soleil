@@ -20,6 +20,8 @@
  * famille `IDENTIFIANTS` portee par l'espace client. L'exploitante ne supprime
  * pas un compte a la place de son titulaire.
  */
+import { Suspense } from "react";
+
 import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -34,6 +36,7 @@ import {
   exigerAdministratrice,
 } from "@/services/autorisation";
 
+import { ChargementAdministration } from "@/components/chargement-administration";
 import styles from "./clients.module.css";
 
 export const metadata = {
@@ -78,12 +81,6 @@ export default async function PageClients({
 
   const parametres = await searchParams;
   const terme = parametres.recherche?.trim() ?? "";
-
-  const vue = await listerClientsAdministration(
-    terme.length > 0 ? { terme } : {},
-  );
-
-  const aucunClient = vue.clients.length === 0;
 
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
@@ -202,6 +199,46 @@ export default async function PageClients({
         </p>
       ) : null}
 
+      <Suspense fallback={<ChargementClients />}>
+        <ListeClients terme={terme} />
+      </Suspense>
+    </main>
+  );
+}
+
+/** Armature affichee pendant que la liste arrive, LS-139. */
+function ChargementClients() {
+  return (
+    <ChargementAdministration annonce="Chargement des clients…" lignes={5} />
+  );
+}
+
+/**
+ * La liste elle-meme, seule partie de cet ecran qui lit la base.
+ *
+ * POURQUOI UN `<Suspense>` INTERNE ET NON UN `loading.tsx`, LS-139. Un fichier
+ * de segment pose sa frontiere sur la page ENTIERE : le streaming demarre alors
+ * des le premier `await`, et un statut ne se change plus une fois les octets
+ * partis. Une base injoignable rendait donc **200** avec l'armature figee, au
+ * lieu du 500 que `error.tsx` doit servir.
+ *
+ * Mesure en arretant reellement la base de production le 9 septembre 2026, sur
+ * le catalogue public qui portait le meme defaut.
+ *
+ * `searchParams` RESTE AU-DESSUS, dans la page : c'est une promesse du
+ * framework, resolue sans acces base, et le terme descend en propriete.
+ *
+ * NE PAS RETABLIR `clients/loading.tsx`.
+ */
+async function ListeClients({ terme }: { terme: string }) {
+  const vue = await listerClientsAdministration(
+    terme.length > 0 ? { terme } : {},
+  );
+
+  const aucunClient = vue.clients.length === 0;
+
+  return (
+    <>
       {aucunClient ? (
         /*
          * L'ETAT VIDE EST UN ETAT, pas un incident, et son texte DIFFERE selon
@@ -305,6 +342,6 @@ export default async function PageClients({
           ) : null}
         </>
       )}
-    </main>
+    </>
   );
 }
