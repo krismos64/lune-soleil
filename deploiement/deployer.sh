@@ -409,4 +409,64 @@ for SITE in smartplanning.fr analytics.smartplanning.fr; do
   fi
 done
 
+# ---------------------------------------------------------------------------
+# Étape 9, purge des images anciennes. LS-139.
+#
+# CE QU'ELLE FERME. Chaque déploiement tire une image de 459 Mo et n'en retire
+# aucune. Mesure du 9 septembre 2026 : dix images `lune-soleil` sur la machine,
+# 9,5 Go d'images au total dont 3 Go récupérables, et le disque passé de 13 % à
+# 20 % en une journée. Le poste ne croît pas avec l'activité de la boutique mais
+# avec celle du développement, ce qui le rend invisible au raisonnement usuel
+# sur les médias et les sauvegardes.
+#
+# ELLE NE PEUT PAS ÊTRE UN `prune`, et l'en-tête de ce fichier l'écrit déjà :
+# la machine est PARTAGÉE avec SmartPlanning. `docker image prune -a` emporterait
+# les images d'un produit payant. La purge est donc ancrée sur le seul dépôt
+# `$IMAGE_DEPOT`, et le filtre est construit à partir de cette variable plutôt
+# qu'écrit en clair, pour qu'un changement de dépôt ne laisse pas un filtre
+# périmé viser autre chose.
+#
+# COMBIEN ON GARDE. Trois, et ce n'est pas un chiffre de confort : le retour
+# arrière de l'étape 6 vise `$SHA_PRECEDENT`, donc l'image en service ET la
+# précédente doivent survivre. La troisième laisse une marge pour un second
+# retour arrière, cas déjà rencontré le 9 septembre 2026 quand un `revert` a
+# suivi une correction livrée.
+#
+# ELLE N'ÉCHOUE JAMAIS LE DÉPLOIEMENT. Il est terminé et vérifié à ce point ;
+# un disque encombré est un problème, un déploiement annulé pour cette raison en
+# serait un pire. Les erreurs sont donc absorbées et DITES.
+# ---------------------------------------------------------------------------
+
+journaliser "Étape 9, purge des images anciennes de $IMAGE_DEPOT"
+
+IMAGES_CONSERVEES="${IMAGES_CONSERVEES:-3}"
+
+# `--filter reference=` restreint à ce dépôt. Le tri est fait par Docker, le
+# plus récent d'abord, et `tail -n +N` saute les N-1 premières.
+#
+# L'IMAGE EN SERVICE EST PROTÉGÉE DEUX FOIS : par son rang, puisqu'elle vient
+# d'être tirée et se trouve en tête, et par Docker lui-même, qui refuse de
+# supprimer une image dont un conteneur dépend. La ceinture et les bretelles
+# sont voulues ici, une erreur de tri effacerait la production en service.
+PURGEES=0
+while IFS= read -r VIEILLE; do
+  [ -n "$VIEILLE" ] || continue
+  # Jamais l'image en service ni celle du retour arrière, quel que soit le rang.
+  case "$VIEILLE" in
+    *:"$SHA_VISE" | *:"$SHA_PRECEDENT") continue ;;
+  esac
+  if docker rmi "$VIEILLE" >/dev/null 2>&1; then
+    PURGEES=$((PURGEES + 1))
+  fi
+done < <(docker images --filter "reference=$IMAGE_DEPOT" \
+  --format '{{.Repository}}:{{.Tag}}' 2>/dev/null | tail -n +$((IMAGES_CONSERVEES + 1)))
+
+RESTANTES=$(docker images --filter "reference=$IMAGE_DEPOT" --format '{{.ID}}' 2>/dev/null | wc -l | tr -d ' ')
+journaliser "  $PURGEES image(s) supprimée(s), $RESTANTES conservée(s)"
+
+# L'ESPACE DISQUE EST DIT À CHAQUE DÉPLOIEMENT, et c'est le seul endroit où
+# quelqu'un le lira sans le chercher. L'alerte de seuil, elle, est portée par
+# `lune-soleil-seuil-disque.service`.
+journaliser "  espace disque : $(df -h / | awk 'NR==2 {print $5" utilisés, "$4" libres"}')"
+
 journaliser "Déploiement terminé, $SHA_PRECEDENT -> $SHA_VISE"

@@ -1,0 +1,49 @@
+# Alerte de seuil sur l'espace disque. LS-139.
+#
+# S'installe dans /etc/systemd/system/ et se declenche par le timer voisin.
+# Type=oneshot : le service s'execute et se termine.
+
+[Unit]
+Description=Alerte de seuil sur l'espace disque, Lune & Soleil
+Documentation=file:///opt/lune-soleil/docs/deploiement/EXPLOITATION.md
+
+# PAS DE `Requires=docker.service` ICI, contrairement a la sauvegarde. Le
+# controle de disque doit fonctionner MEME SI Docker est tombe, et un disque
+# plein est precisement une cause de chute de Docker. Exiger Docker rendrait
+# l'alerte muette au moment ou elle sert le plus.
+#
+# `After` sans `Requires` : si Docker est la, le detail des images est mesure ;
+# sinon le script le dit et continue.
+After=docker.service
+
+[Service]
+Type=oneshot
+
+# ROOT pour lire /var/backups (0700) et interroger Docker. Le script ne lit
+# aucun secret : il ne touche pas a /etc/lune-soleil/production.env.
+User=root
+Group=root
+
+ExecStart=/opt/lune-soleil/deploiement/verifier-seuil-disque.sh
+
+# LES CODES 1 ET 2 SONT DES ALERTES, PAS DES PANNES DU SERVICE.
+#
+# Sans cette ligne, systemd marquerait l'unite `failed` des le premier
+# franchissement de seuil, et `systemctl --failed` melangerait « le disque se
+# remplit » avec « le controle est casse ». Ce sont deux etats differents : le
+# premier demande d'agir sur le disque, le second de reparer le controle.
+#
+# Le code 3, lui, reste un echec : il signale que la mesure elle-meme n'a pas
+# abouti, donc que l'alerte ne protege plus rien.
+SuccessExitStatus=1 2
+
+TimeoutStartSec=2min
+
+StandardOutput=journal
+StandardError=journal
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
