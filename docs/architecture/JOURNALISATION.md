@@ -141,7 +141,7 @@ une inscription au registre des traitements, pas un simple ajout de dépendance.
 ## Aucune dépendance externe
 
 Même arbitrage. Le besoin tient dans un formateur JSON ; une bibliothèque
-ajouterait une surface à `npm audit`, qui porte déjà sept overrides dont deux
+ajouterait une surface à `npm audit`, qui porte déjà plusieurs overrides dont deux
 posés dans les trois jours précédant cette story.
 
 ## Preuve

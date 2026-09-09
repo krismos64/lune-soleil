@@ -496,7 +496,8 @@ model MouvementStock {
   // LE PRÉDICAT NE CHANGE RIEN AU REJET : PostgreSQL traite les `NULL` comme
   // distincts, un index sans `WHERE` rejetterait les mêmes lignes. Mesuré.
   // Sa vertu est d'éviter d'indexer pour rien un journal qui ne fait que
-  // croître. Septième index partiel du projet, même piège que les six autres.
+  // croître. Index partiel comme les autres du projet, même piège : le nombre
+  // se mesure, `grep -c 'where: raw'`, il ne se recopie pas en commentaire.
   @@unique([compenseId], where: raw("compense_id IS NOT NULL"), map: "mouvement_compense_unique")
   @@index([varianteId], map: "mouvement_variante_idx") // historique d'une pièce, et contrôle RESTRICT
   // LS-63. Toute statistique de vente externe et le futur e-reporting de LS-35
