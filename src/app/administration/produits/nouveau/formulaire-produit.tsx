@@ -9,6 +9,7 @@
  * story non commencee, et le service refuserait la cle inconnue.
  */
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 
 import {
@@ -69,7 +70,7 @@ export function FormulaireProduit({
       <p className={styles.vide}>
         Aucune catégorie n&apos;existe encore. Créez-en une avant d&apos;ajouter
         un produit :{" "}
-        <a href="/administration/categories">gérer les catégories</a>.
+        <Link href="/administration/categories">gérer les catégories</Link>.
       </p>
     );
   }

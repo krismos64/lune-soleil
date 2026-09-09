@@ -11,6 +11,7 @@
  */
 import { Suspense } from "react";
 
+import Link from "next/link";
 import { headers } from "next/headers";
 
 import { prisma } from "@/lib/prisma";
@@ -120,7 +121,7 @@ export default async function PageEditeurProduit({
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
       <p className={styles.fil}>
-        <a href="/administration/categories">Catalogue</a>
+        <Link href="/administration/categories">Catalogue</Link>
       </p>
       {/*
        * L'ORDRE DES BLOCS EST DELIBERE, arbitrage du 14 aout 2026 : informations
