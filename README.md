@@ -413,9 +413,21 @@ Trois conséquences pratiques :
   suivante complète. `npm run db:e2e:reinitialiser` remet ce compteur à zéro en
   détruisant le volume de test, jamais celui de développement
 
-L'intégration continue ne s'en sert pas : son PostgreSQL est vierge à chaque
-exécution, donc sans compte réel à protéger. `DATABASE_URL_E2E` y est absente et
-la clé est alors omise, le processus héritant de la variable du workflow.
+**L'intégration continue s'en sert aussi, depuis le 9 septembre 2026.** Le
+contrôle nocturne compose `DATABASE_URL_E2E` dans son environnement et
+`preparer-base-e2e.sh` démarre la base par `docker run` plutôt que par
+`docker compose`, ce dernier interpolant trois variables depuis un `.env` que la
+chaîne ne crée jamais, le dépôt étant public.
+
+Ce paragraphe affirmait l'inverse, « l'intégration continue ne s'en sert pas »,
+et c'était vrai au mauvais sens du terme : **la suite n'y tournait pas du tout**.
+Le nocturne échouait avant elle depuis le 8 septembre, et l'étape `npm audit` qui
+la suit sortait `skipped` plutôt que `failure`. Les huit parcours critiques
+n'étaient rejoués par personne.
+
+La distinction entre les deux voies se fait sur la **présence des variables**, et
+non sur un drapeau `CI` qui se pose et s'oublie : ce qui compte est de savoir où
+lire, pas dans quel décor on tourne.
 
 **`db:verifier` refuse de tourner sur une base qui contient des données**, parce
 que ses contrôles insèrent puis tronquent : ils détruiraient un jeu de
