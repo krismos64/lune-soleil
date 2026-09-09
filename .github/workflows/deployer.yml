@@ -193,11 +193,20 @@ jobs:
             *) echo "::error::action inconnue"; exit 1 ;;
           esac
 
+          # LE `--` EST OBLIGATOIRE, et son absence a fait échouer le premier
+          # retour arrière, le 9 septembre 2026 : `ssh` lisait `--retour-arriere`
+          # comme une option À LUI et rendait « unknown option », code 255.
+          #
+          # L'échec est survenu AVANT toute connexion, donc la production n'a
+          # pas été touchée. Le piège ne se voit pas sur un déploiement normal,
+          # dont l'argument est un SHA qui ne commence pas par un tiret : seul
+          # le chemin de retour arrière le rencontre.
+          #
           # La sortie du script est reprise telle quelle : elle porte le journal
           # horodaté de chaque étape, et c'est la preuve du déploiement.
           ssh -i ~/.ssh/deploiement \
             -o BatchMode=yes -o ConnectTimeout=15 \
-            "$UTILISATEUR@$HOTE" "$COMMANDE" | tee /tmp/sortie.txt
+            "$UTILISATEUR@$HOTE" -- "$COMMANDE" | tee /tmp/sortie.txt
 
           # LE CODE DE SORTIE SE LIT DANS PIPESTATUS, jamais après le pipe :
           # `commande | tee` rend le code de `tee`, donc 0, y compris sur un
