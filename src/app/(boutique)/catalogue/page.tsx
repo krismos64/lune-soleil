@@ -19,6 +19,7 @@ import Link from "next/link";
 
 import { openGraphDePage } from "@/lib/seo";
 import { lireCataloguePublic } from "@/services/catalogue";
+import { verifierSante } from "@/services/sante";
 import { CarteProduit } from "./carte-produit";
 import styles from "./catalogue.module.css";
 
@@ -93,11 +94,67 @@ export async function generateMetadata({
  */
 export const dynamic = "force-dynamic";
 
+/**
+ * Base injoignable : cette page doit rendre un VRAI 500, LS-139.
+ *
+ * CE QUE L'INCIDENT 1 A MESURE, en arretant reellement `lune-soleil-db` le
+ * 9 septembre 2026. Sans cette sonde, `/catalogue` repondait **200** avec
+ * « Chargement des pieces… » comme etat FINAL : le HTML pesait 39 462 octets
+ * contre 45 748 au nominal, et se terminait sur deux erreurs serialisees
+ * `E{"digest":...}` sans que le contenu n'arrive jamais.
+ *
+ * POURQUOI `error.tsx` NE SUFFISAIT PAS, alors qu'il existe et qu'il est juste.
+ * `loading.tsx` enveloppe la page entiere dans une frontiere Suspense : le
+ * streaming commence donc AVANT que la lecture echoue, et un statut ne se
+ * change plus une fois les octets partis. Next.js transmet bien l'erreur, mais
+ * seulement au client : la frontiere ne s'affiche qu'APRES hydratation.
+ * Documentation de Next.js 16 verifiee par Context7, « response headers are set
+ * at this point, preventing later status code changes ».
+ *
+ * CE QUE LE 200 COUTAIT REELLEMENT, et c'est ce qui tranche :
+ *
+ *   - un visiteur SANS JavaScript reste devant un chargement qui n'aboutit
+ *     jamais, sans jamais apprendre qu'il y a une panne
+ *   - un MOTEUR indexe « Chargement des pieces… » en 200 sur la page
+ *     commerciale principale, et le SEO est prioritaire sur ce projet
+ *   - une SUPERVISION qui lit le code HTTP conclut que tout va bien
+ *
+ * LA SONDE EST AU-DESSUS DE TOUT `await` DE DONNEES, c'est ce qui la rend
+ * efficace : elle s'execute avant que le fallback ne demarre le flux. Le motif
+ * est celui que la fiche produit a deja tranche dans l'autre sens, en RETIRANT
+ * son `loading.tsx` faute d'en avoir besoin. Ici le fichier sert un vrai
+ * besoin, les filtres d'URL, donc c'est le controle qui remonte.
+ *
+ * `verifierSante` PLUTOT QU'UN `try/catch` AUTOUR DE LA LECTURE. Elle ne leve
+ * jamais, elle est bornee par un delai, et un `SELECT 1` mesure la base sans
+ * dependre d'une table metier. Un `catch` autour de `lireCataloguePublic`
+ * arriverait trop tard : la lecture est deja sous la frontiere Suspense.
+ */
+async function exigerBaseDisponible(): Promise<void> {
+  const etat = await verifierSante();
+
+  if (!etat.operationnel) {
+    /*
+     * LEVER, ET NON `notFound()`. Le catalogue existe, il est momentanement
+     * illisible : un 404 dirait aux moteurs de le desindexer, ce qui est faux
+     * et durable, quand un 500 dit « reviens plus tard ». `error.tsx` de ce
+     * segment rend le message, il est deja ecrit et n'a pas a changer.
+     *
+     * LE MESSAGE NE DIT PAS CE QUI A ECHOUE, meme raison que dans `error.tsx` :
+     * il part dans le journal, pas a l'ecran, et « base indisponible »
+     * renseignerait sur l'infrastructure sans aider le visiteur.
+     */
+    throw new Error("catalogue indisponible, base injoignable");
+  }
+}
+
 export default async function PageCatalogue({
   searchParams,
 }: {
   searchParams: Promise<{ [cle: string]: string | string[] | undefined }>;
 }) {
+  await exigerBaseDisponible();
+
   const parametres = await searchParams;
 
   /*
