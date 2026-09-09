@@ -135,24 +135,26 @@ test("la page d'aide affiche les trois modes et leurs tarifs", async ({
   expect(texte).toMatch(/domicile/i);
 
   /*
-   * LES DEUX TARIFS SONT DERIVES DE LA CONFIGURATION, jamais ecrits en dur ici.
+   * LES DEUX TARIFS D'ADR-035, ECRITS ICI ET NON DERIVES DE L'ENVIRONNEMENT.
    *
    * CETTE ASSERTION A FIGE 4,99 EUR ET N'A JAMAIS ROUGI, alors qu'ADR-035 porte
    * le domicile a 7,49 EUR depuis le 6 septembre 2026. Elle ne pouvait pas
    * rougir : la suite de bout en bout ne tournait dans AUCUNE chaine, LS-209,
-   * et son premier passage reel en integration continue l'a trouvee, le
-   * 9 septembre 2026.
+   * et son premier passage reel en integration continue l'a trouvee.
    *
-   * UN TARIF ECRIT EN DUR DANS UN TEST NE VERIFIE PLUS RIEN des qu'il diverge :
-   * il accuse la page, qui a raison. Le lire dans la meme source que la page
-   * garde ce que l'assertion visait, qu'aucun tarif ne soit ecrit en dur DANS
-   * LA PAGE, sans se perimer a la prochaine decision commerciale.
+   * LIRE `process.env` ICI A ETE ESSAYE, ET NE GARDE RIEN. Le test lirait alors
+   * la MEME variable que la page, les deux bougeraient ensemble, et un tarif
+   * fige dans `livraison.ts` passerait inapercu : mesure du 9 septembre 2026,
+   * la mutation `const domicile = "499"` laisse les 18 tests VERTS. Motif
+   * « garde-fou compare a lui-meme », deja en fiche sur ce depot.
+   *
+   * LA SOURCE EST DONC L'ADR, recopiee a dessein : c'est une DECISION
+   * COMMERCIALE, pas une valeur derivable. Quand elle change, cette ligne
+   * change avec `.env.example` et les deux workflows, et le test rouge est le
+   * rappel que la propagation n'est pas finie.
    */
-  const enEuros = (centimes: string | undefined, defaut: number): string =>
-    (Number(centimes ?? defaut) / 100).toFixed(2).replace(".", ",");
-
-  expect(texte).toContain(enEuros(process.env.SHIPPING_RELAY_RATE_CENTS, 410));
-  expect(texte).toContain(enEuros(process.env.SHIPPING_HOME_RATE_CENTS, 749));
+  expect(texte).toMatch(/4,10/);
+  expect(texte).toMatch(/7,49/);
 });
 
 test("la page d'aide ne déborde pas horizontalement", async ({ page }) => {
