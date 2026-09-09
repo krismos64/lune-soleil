@@ -459,15 +459,48 @@ suivante, motif « table de nombres trop courte ».
 `scripts/verifier-ponctuation-chargement.sh` garde les deux points, la
 terminaison et le caractère employé.
 
-### C32, aucun `loading.tsx` au-dessus d'un appel à `notFound()`
+**LES ANNONCES NE VIVENT PLUS DANS UN `loading.tsx` DEPUIS LS-139**, et ce
+contrôle a rougi le jour où les dix derniers ont été retirés : il les
+inventoriait, et sa garde a annoncé « l'ancrage est cassé » plutôt que de rendre
+un OK muet sur zéro fichier examiné. Son ancrage porte désormais sur les
+fichiers qui **rendent** l'annonce, `<Suspense fallback>` compris. Voir C32.
+
+**SON MOTIF N'EMPLOIE AUCUN INTERVALLE ACCENTUÉ**, et c'est une contrainte pour
+tout script d'ici : `[a-zà-ÿ]` dépend de la locale, il trouvait seize fichiers
+en développement et **aucun** en intégration continue, où le contrôle accusait
+alors son propre ancrage sur un dépôt sain.
+
+### C32, aucun `loading.tsx` de segment au-dessus de ce qui décide d'un statut
 
 **Le seul cas où l'état de chargement exigé ci-dessus est interdit.** Un
 `loading.tsx` enveloppe la page entière dans une frontière Suspense : le
-streaming commence **avant** que `notFound()` soit atteint, et Next.js ne peut
-plus changer le statut d'une réponse déjà commencée. Il laisse **200** et se
-contente d'ajouter un `noindex`.
+streaming commence **avant** que le code de la page décide, et Next.js ne peut
+plus changer le statut d'une réponse déjà commencée.
 
-Mesuré en LS-111 : 404 sans le fichier, 200 avec.
+**DEUX CAS, ET LA RÈGLE A ÉTÉ ÉLARGIE LE 9 SEPTEMBRE 2026, LS-139.** Sa version
+précédente ne visait que `notFound()`, et le second cas est passé dessous
+pendant des mois.
+
+| Ce qui décide du statut | Sans frontière | Sous un `loading.tsx` |
+|---|---|---|
+| `notFound()`, LS-111 | 404 | 200 plus un `noindex` |
+| une **lecture de base qui échoue**, LS-139 | 500 | 200, chargement figé |
+
+Le second a été mesuré en arrêtant réellement la base de production :
+`/catalogue` rendait 200 avec « Chargement des pièces… » comme état **final**,
+quand l'accueil, qui ne porte aucune frontière, rendait un vrai 500. `error.tsx`
+existait et était juste : il ne s'affiche qu'**après hydratation**, donc un
+visiteur sans JavaScript reste devant un chargement perpétuel.
+
+**LE DÉPÔT NE PORTE PLUS AUCUN `loading.tsx`** depuis LS-139 : les dix derniers
+ont été remplacés par un `<Suspense>` interne, le catalogue public plus neuf
+écrans d'administration. Les états de chargement vivent désormais en `fallback`,
+et `ChargementAdministration` les rend tous.
+
+**UNE SONDE EN TÊTE DE PAGE NE RATTRAPE RIEN**, essayée et mesurée : elle est
+elle-même un `await` **sous** la frontière, donc elle suspend et démarre le flux
+avant de lever. Le contrôle doit précéder « any await that may suspend »,
+frontière de segment comprise, ✅ via Context7.
 
 **La règle porte sur le SOUS-ARBRE, pas sur le segment**, et sa version
 précédente disait « sur une route qui appelle `notFound()` », ce qui se lisait

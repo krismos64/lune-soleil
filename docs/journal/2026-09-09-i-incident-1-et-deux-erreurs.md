@@ -101,7 +101,19 @@ APRÈS le repli   navigateur 200   Twitterbot 200   Googlebot 200
 
 `generateMetadata` **réussit** quand sa lecture est rattrapée, donc la page rend
 son titre et continue. J'avais supprimé le seul chemin qui produisait un statut
-honnête. Annulé par `revert`.
+honnête.
+
+**Annulé par `revert`, ET DÉPLOYÉ**, ce dernier point comptant autant que le
+premier : une régression annulée dans le dépôt reste en service tant que la
+production ne l'a pas reçue, motif que cette même session a documenté deux fois.
+Vérification après déploiement, base réellement arrêtée :
+
+```
+/catalogue navigateur  200      /catalogue Twitterbot  500      /  500
+```
+
+Twitterbot a retrouvé son 500 : l'état d'avant mon erreur est rétabli en
+production.
 
 ## Les deux erreurs, nommées
 
