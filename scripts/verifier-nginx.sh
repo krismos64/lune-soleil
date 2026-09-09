@@ -107,16 +107,61 @@ fi
 # `root` vers le volume des documents court-circuiterait entierement ce
 # controle, et le defaut serait invisible depuis le code applicatif.
 #
-# LE CONTROLE PORTE SUR LA DIRECTIVE ET NON SUR LE CHEMIN. Chercher le mot
-# « documents » laisserait passer un `alias /var/lib/lune-soleil/` pose une
-# ligne plus haut, qui expose le meme contenu par un chemin parent. Toute
-# directive de service de fichiers dans cette configuration est donc signalee :
-# l'application sert ses propres statiques, Nginx ne fait que relayer.
+# LE CONTROLE PORTAIT SUR LA DIRECTIVE, IL PORTE MAINTENANT SUR LE CHEMIN,
+# LS-205. Le changement est motive et non un assouplissement de confort.
+#
+# CE QUE LA VERSION PRECEDENTE FAISAIT. Elle refusait TOUTE directive `alias` ou
+# `root`, quel que soit son chemin, au motif que chercher le mot « documents »
+# laisserait passer un `alias /var/lib/lune-soleil/` pose une ligne plus haut,
+# qui expose le meme contenu par un chemin parent. Le raisonnement etait juste.
+#
+# POURQUOI ELLE NE POUVAIT PAS TENIR. ADR-007 decide que **Nginx sert les
+# medias** et ecarte nommement un gestionnaire de route Next.js. La regle
+# rendait donc cet ADR inapplicable, et le resultat mesure le 8 septembre 2026
+# etait qu'AUCUN chemin ne servait `/medias/` : le catalogue aurait affiche des
+# images cassees pendant que `/api/sante` rendait 200. La contradiction naissait
+# de l'ordre des decisions, ADR-007 supposant Nginx capable de servir des
+# fichiers, ce que LS-132 a interdit apres lui.
+#
+# LE SENS RETENU, arbitrage de Christophe du 9 septembre 2026 : c'est le CHEMIN
+# qui porte le risque, pas la directive. Une liste blanche EXHAUSTIVE remplace
+# l'interdiction, et tout ce qui n'y figure pas est refuse.
+#
+# UN SEUL CHEMIN EST AUTORISE, exactement : `medias/public/`. Ni la racine du
+# volume, qui publierait `quarantaine/` et ses originaux portant la position GPS
+# du domicile ; ni la racine des documents, dont chaque facture passe par un
+# jeton signe, invariant 2 et LS-132 critere 6 ; ni aucun chemin parent, qui
+# atteindrait les deux.
+#
+# CE N'EST PAS UNE EXEMPTION MAIS UN RESSERREMENT. La version precedente
+# refusait une forme, celle-ci exige une valeur : un `alias` vers
+# `/var/lib/lune-soleil/` etait refuse avant et l'est toujours, et un `alias`
+# vers `/var/lib/lune-soleil/documents/` aussi. Ce qui change est qu'un seul
+# chemin, celui qu'ADR-007 designe, cesse d'etre refuse.
 #
 # `rendu-document.ts` porte l'autre moitie de cette garantie, la racine des
-# documents etant distincte de celle des medias, eux servis publiquement.
-if grep -nE '^\s*(alias|root)\s' "$CONF" >/dev/null 2>&1; then
-  anomalies+=("une directive alias ou root sert des fichiers depuis Nginx : une facture deviendrait atteignable sans jeton, LS-132 critere 6")
+# documents etant distincte de celle des medias.
+CHEMIN_MEDIAS_AUTORISE='/var/lib/lune-soleil/medias/public/'
+
+while IFS= read -r ligne; do
+  [ -n "$ligne" ] || continue
+
+  NUM="${ligne%%:*}"
+  CONTENU="${ligne#*:}"
+
+  # Le chemin est le second mot de la directive, sans son point-virgule final.
+  CHEMIN=$(printf '%s' "$CONTENU" | awk '{print $2}' | tr -d ';')
+
+  if [ "$CHEMIN" != "$CHEMIN_MEDIAS_AUTORISE" ]; then
+    anomalies+=("ligne $NUM, une directive alias ou root sert '$CHEMIN' : seul '$CHEMIN_MEDIAS_AUTORISE' est autorise, ADR-007. Tout autre chemin atteindrait la quarantaine et ses donnees EXIF, ou les documents comptables qui exigent un jeton signe, LS-132 critere 6")
+  fi
+done < <(grep -nE '^[[:space:]]*(alias|root)[[:space:]]' "$CONF" || true)
+
+# LE CHEMIN AUTORISE DOIT ETRE PRESENT, sans quoi ce controle deviendrait un
+# garde-fou qui ne garde rien : un fichier ou personne ne sert les medias le
+# satisferait silencieusement, et c'est exactement l'etat que LS-205 corrige.
+if ! grep -qE "^[[:space:]]*alias[[:space:]]+${CHEMIN_MEDIAS_AUTORISE}[[:space:]]*;" "$CONF"; then
+  anomalies+=("aucun alias ne sert '$CHEMIN_MEDIAS_AUTORISE' : les medias ne seraient servis par personne et le catalogue afficherait des images cassees, ADR-007 et LS-205")
 fi
 
 echo "CONFIGURATION NGINX, LS-91"
@@ -126,7 +171,7 @@ if [ ${#anomalies[@]} -eq 0 ]; then
   echo "  X-Forwarded-For ecrase par \$remote_addr"
   echo "  route interne non exposee"
   echo "  BETTER_AUTH_TRUSTED_PROXIES declaree et vide"
-  echo "  aucun document comptable servi statiquement"
+  echo "  seul medias/public/ est servi statiquement, ni quarantaine ni documents"
   echo
   echo "OK la resolution de l'adresse client est coherente"
   exit 0
