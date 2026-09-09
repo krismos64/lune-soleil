@@ -160,7 +160,17 @@ EOF
 # délègue l'annonce à l'armature, et l'exiger d'elle la déclarerait fautive
 # alors qu'elle est exemplaire. Première écriture de cet élargissement, et sa
 # mesure l'a montrée sur le catalogue.
-etats=$(grep -rlE 'annonce=|Chargement [a-zà-ÿ]' "$SRC/app" "$SRC/components" 2>/dev/null \
+#
+# LE MOTIF N'EMPLOIE AUCUN INTERVALLE DE CARACTERES ACCENTUES, et sa premiere
+# ecriture le faisait : `[a-zà-ÿ]` depend de la LOCALE, donc il trouvait seize
+# fichiers sur ce poste et AUCUN sur la CI, ou la locale est différente. Le
+# contrôle passait en local et rougissait en intégration, sur son propre
+# ancrage. Motif « grep BSD et alternance », déjà en fiche sous une autre forme.
+#
+# `Chargement ` suivi d'un espace suffit : c'est la forme de toutes les annonces
+# du dépôt, « Chargement des pièces… », et elle ne contient aucun accent avant
+# l'espace.
+etats=$(grep -rlE 'annonce=|Chargement ' "$SRC/app" "$SRC/components" 2>/dev/null \
   | grep -vE '/(error|not-found|global-error)\.tsx$' \
   | sed "s|$RACINE/||" | sort -u)
 
