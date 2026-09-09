@@ -1,0 +1,33 @@
+# Declenchement du controle de seuil disque. LS-139.
+#
+# S'installe dans /etc/systemd/system/ puis :
+#   sudo systemctl enable --now lune-soleil-seuil-disque.timer
+
+[Unit]
+Description=Controle horaire du seuil disque, Lune & Soleil
+Documentation=file:///opt/lune-soleil/docs/deploiement/EXPLOITATION.md
+
+[Timer]
+# TOUTES LES HEURES, ET NON UNE FOIS PAR JOUR.
+#
+# La sauvegarde est quotidienne parce qu'elle PRODUIT quelque chose de couteux.
+# Ce controle ne fait que lire `df`, donc sa frequence se choisit sur le delai
+# de reaction voulu et non sur son cout. La mesure du 9 septembre 2026 donne
+# l'echelle : 7 points d'occupation gagnes en une journee, soit environ un tiers
+# de point par heure sur cette machine en activite. Une verification quotidienne
+# laisserait franchir le seuil critique sans un mot pendant vingt-trois heures.
+OnCalendar=hourly
+
+# PAS DE `Persistent=true`, contrairement a la sauvegarde. Un rattrapage aurait
+# du sens pour une tache qui produit un artefact manquant ; ici il ferait
+# afficher, au demarrage, une mesure d'espace disque perimee. La mesure qui
+# compte est celle de maintenant.
+
+# DISPERSION SUR DIX MINUTES. La machine est partagee, ADR-036, et `hourly`
+# tombe a la minute zero, ou se pressent deja les taches horaires des deux
+# projets. Dix minutes sur une tache horaire restent negligeables devant le
+# delai de reaction vise.
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target
