@@ -153,9 +153,26 @@ fi
 
 if [ "$ARGUMENT" = "--retour-arriere" ]; then
   # L'AVANT-DERNIÈRE LIGNE, et non la dernière : la dernière est ce qui tourne.
+  NB_LIGNES=$(grep -c . "$HISTORIQUE" 2>/dev/null || echo 0)
+
+  # LES DEUX CAS SE DISTINGUENT, et la première version les confondait.
+  #
+  # Avec une seule ligne d'historique, il n'y a pas d'avant-dernière : `tail -2 |
+  # head -1` rend alors la DERNIÈRE, donc l'image en service, et le message
+  # « l'image précédente est celle en service » désignait la mauvaise cause.
+  # Mesuré le 9 septembre 2026 en jouant le premier retour arrière, l'historique
+  # ne portant qu'une ligne parce que la version antérieure avait été posée à la
+  # main pendant LS-152.
+  #
+  # Un message d'erreur qui nomme la mauvaise cause fait chercher au mauvais
+  # endroit : ici il aurait fait croire à un déploiement déjà annulé.
+  if [ "$NB_LIGNES" -lt 2 ]; then
+    echouer "l'historique ne porte que $NB_LIGNES déploiement(s), il en faut deux pour revenir en arrière. Voir $HISTORIQUE."
+  fi
+
   SHA_VISE=$(awk '{print $2}' "$HISTORIQUE" | tail -2 | head -1)
-  [ -n "$SHA_VISE" ] || echouer "aucun déploiement précédent dans $HISTORIQUE, retour arrière impossible."
-  [ "$SHA_VISE" != "$(tag_courant)" ] || echouer "l'image précédente est celle en service, rien à faire."
+  [ -n "$SHA_VISE" ] || echouer "avant-dernière ligne illisible dans $HISTORIQUE."
+  [ "$SHA_VISE" != "$(tag_courant)" ] || echouer "l'avant-dernier déploiement est déjà en service, rien à faire."
   journaliser "RETOUR ARRIÈRE vers $SHA_VISE"
 else
   SHA_VISE="$ARGUMENT"
