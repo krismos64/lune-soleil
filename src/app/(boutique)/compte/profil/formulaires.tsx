@@ -141,7 +141,10 @@ function FormulaireProfil({
       </p>
 
       {/*
-       * LE CHEMIN DE SORTIE ACCOMPAGNE LE REFUS, jamais un message seul. Le
+       * @rechargement-delibere la session est invalide, un rendu serveur neuf
+      * evite un en-tete rendu pour une session qui n'existe plus.
+      *
+      * LE CHEMIN DE SORTIE ACCOMPAGNE LE REFUS, jamais un message seul. Le
        * seul lien de la page mene a `/compte`, qui redirigerait a son tour :
        * le client lisait « votre session a expiré » sans aucun moyen d'agir.
        * Motif deja pose par `bloc-rattachement.tsx`, recopie ici depuis LS-59.

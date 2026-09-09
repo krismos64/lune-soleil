@@ -109,6 +109,8 @@ export function FormulaireNouveauMotDePasse({
 
         {/*
          * `<a>` ET NON `<Link>`, seul endroit du parcours ou c'est vrai. Toutes
+         * @rechargement-delibere voir la raison ci-dessous.
+         *
          * les sessions viennent d'etre supprimees cote serveur : une navigation
          * client conserverait le cache de route de Next.js, donc un en-tete
          * rendu avec « Mon compte » pour une session qui n'existe plus. Le
