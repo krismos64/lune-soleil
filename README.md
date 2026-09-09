@@ -40,12 +40,19 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 bougé de 208 à 211 dans la même journée, LS-209, LS-210 et LS-211 ayant été
 créées en livrant.
 
-**Le contrôle nocturne est rouge pour une raison connue**, LS-210 : trois
-vulnérabilités `vitest` en dépendance de développement, jamais expédiées, que
-npm refuse de résoudre sur un bug reproduit en cinq tentatives. Tout le reste du
-nocturne passe, scénarios de bout en bout compris. Ne pas prendre ce rouge pour
-un défaut neuf, et ne pas s'y habituer non plus : c'est le risque que LS-210
-porte explicitement.
+**Le nocturne est redevenu vert le 9 septembre 2026**, LS-210 close : les trois
+vulnérabilités `vitest` sont corrigées par la montée en **4.1.11**, une version
+corrective que `^4.1.10` autorisait déjà.
+
+**Le blocage venait de npm lui-même, pas du projet.** Cinq voies avaient échoué
+sur `Cannot read properties of null (reading 'edgesOut')`. L'erreur se reproduit
+sur un `package.json` de six lignes ne contenant que `vitest` : c'est un bug de
+**npm 10.9.8**, celui qu'embarque Node 22. `npx npm@11` passe.
+
+Le correctif a donc été posé avec npm 11, et le dépôt reste sur npm 10 : le
+`lockfileVersion` est inchangé et `npm ci` en 10.9.8 l'installe sans broncher,
+ce qui a été vérifié avant de conclure. Détail dans le journal du 9 septembre,
+session l.
 
 **La phase 1 est close dans Jira depuis le 9 septembre**, ses 26 stories étant
 terminées : l'epic était resté En cours alors que sa porte de sortie datait du
