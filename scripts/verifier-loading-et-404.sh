@@ -144,11 +144,23 @@ while IFS= read -r page; do
   segment="$(dirname "$page")"
   relatif="${segment#"$RACINE"/}"
 
-  # Une page publique qui lit le catalogue. L'ancrage porte sur l'APPEL, jamais
-  # sur la présence du nom quelque part : un import ou un commentaire qui cite
-  # la fonction ne lit rien, et le compter rendrait le contrôle rouge sur du
-  # code exemplaire. Motif « contrôle satisfait par un commentaire ».
-  lit_la_base=$(grep -nE 'await[[:space:]]+lireCataloguePublic\(' "$page" \
+  # UNE PAGE QUI LIT LA BASE, quelle que soit la fonction employée.
+  #
+  # L'ANCRAGE A ÉTÉ ÉLARGI LE 9 SEPTEMBRE 2026, et sa version étroite est la
+  # raison : il ne cherchait que `lireCataloguePublic`, donc il ne voyait que
+  # la boutique. Neuf `loading.tsx` d'administration restaient hors de sa vue,
+  # et le retrait du dixième l'a rendu muet sans que rien ne le signale. Motif
+  # « couverture des règles », un contrôle dont la portée est plus étroite que
+  # la règle qu'il énonce ment par omission.
+  #
+  # Les verbes de lecture du dépôt, `lire`, `lister`, `compter`, `exiger`, plus
+  # les appels directs à Prisma. `exiger*` compte : `exigerAdministratrice` lit
+  # la session en base, donc elle échoue exactement comme une lecture métier.
+  #
+  # L'ancrage porte sur l'APPEL, jamais sur la présence du nom : un import ou un
+  # commentaire qui cite la fonction ne lit rien, et le compter rendrait le
+  # contrôle rouge sur du code exemplaire.
+  lit_la_base=$(grep -nE 'await[[:space:]]+(lire|lister|compter|exiger)[A-Z][a-zA-Z]*\(|await[[:space:]]+prisma\.' "$page" \
     | grep -vE ':[[:space:]]*(//|\*|/\*)' || true)
 
   [ -n "$lit_la_base" ] || continue
@@ -204,7 +216,7 @@ while IFS= read -r page; do
   if [ -n "$sonde" ]; then
     rang_sonde=$(printf '%s' "$sonde" | head -1 | cut -d: -f1)
     rang_lecture=$(printf '%s' "$corps_page" \
-      | grep -nE 'await[[:space:]]+lireCataloguePublic\(' \
+      | grep -nE 'await[[:space:]]+(lire|lister|compter|exiger)[A-Z][a-zA-Z]*\(|await[[:space:]]+prisma\.' \
       | grep -vE ':[[:space:]]*(//|\*|/\*)' | head -1 | cut -d: -f1)
 
     if [ -n "$rang_lecture" ] && [ "$rang_sonde" -gt "$rang_lecture" ]; then
@@ -220,14 +232,17 @@ while IFS= read -r page; do
 
   if [ -z "$sonde" ]; then
     relatif_couvrant="${couvrant#"$RACINE"/}"
-    echo "ECHEC $relatif lit la base sous un loading.tsx sans sonder d'abord"
+    echo "ECHEC $relatif lit la base sous un loading.tsx de segment"
     echo "      la frontière est posée par $relatif_couvrant/loading.tsx"
     echo "      elle démarre le streaming avant que la lecture échoue : une base"
     echo "      injoignable rend 200 avec l'état de chargement FIGÉ, et error.tsx"
     echo "      ne s'affiche qu'après hydratation. Mesuré en LS-139 en arrêtant"
     echo "      réellement la base de production."
-    echo "      Ce qui le ferme : un await sur la sonde de santé AVANT tout await"
-    echo "      de données, en tête de la fonction de page."
+    echo "      UNE SONDE EN TÊTE DE PAGE NE SUFFIT PAS, essayée et mesurée : elle"
+    echo "      est elle-même un await SOUS la frontière, donc elle démarre le flux"
+    echo "      avant de lever."
+    echo "      Ce qui le ferme : retirer ce loading.tsx et poser un <Suspense>"
+    echo "      DANS la page, la lecture passant sous cette frontière interne."
     ko=$((ko + 1))
   fi
 done <<EOF

@@ -138,17 +138,38 @@ EOF
 # interne. C'est la même mécanique que `verifier-lien-evitement.sh`, et pour la
 # même raison : une liste de textes est une opinion sur ce qui existe.
 #
-# UN `loading.tsx` PEUT DÉLÉGUER SON ANNONCE, en passant la propriété au
+# UN ÉTAT DE CHARGEMENT PEUT DÉLÉGUER SON ANNONCE, en passant la propriété au
 # composant partagé, ou la rendre lui-même en JSX. Les deux formes portent le
 # mot « Chargement », d'où la recherche dans le fichier entier : ce qui est
 # vérifié ici est la PRÉSENCE, la forme l'étant par le sens 1.
+#
+# L'ANCRAGE NE PART PLUS DE `loading.tsx`, ET C'EST LS-139 QUI L'A CHANGÉ. Les
+# dix fichiers de segment ont été retirés : sous un `loading.tsx`, la frontière
+# couvre la page ENTIÈRE, donc une base injoignable rendait 200 avec l'armature
+# figée au lieu du 500 que `error.tsx` doit servir. Les états vivent désormais
+# en `fallback` d'un `<Suspense>` INTERNE, dans la page elle-même.
+#
+# CE CONTRÔLE A ROUGI À CE MOMENT-LÀ, et c'est sa garde contre lui-même qui a
+# fonctionné : il annonçait « aucun loading.tsx trouvé, l'ancrage est cassé »
+# plutôt que de rendre un OK muet sur zéro fichier examiné. Un contrôle dont la
+# cible disparaît doit le dire.
 # ---------------------------------------------------------------------------
-etats=$(find "$SRC/app" -name "loading.tsx" 2>/dev/null | sed "s|$RACINE/||" | sort)
+#
+# L'INVENTAIRE PORTE SUR LES FICHIERS QUI RENDENT L'ANNONCE, jamais sur ceux
+# qui référencent le composant : une page qui pose `<Suspense fallback={...}>`
+# délègue l'annonce à l'armature, et l'exiger d'elle la déclarerait fautive
+# alors qu'elle est exemplaire. Première écriture de cet élargissement, et sa
+# mesure l'a montrée sur le catalogue.
+etats=$(grep -rlE 'annonce=|Chargement [a-zà-ÿ]' "$SRC/app" "$SRC/components" 2>/dev/null \
+  | grep -vE '/(error|not-found|global-error)\.tsx$' \
+  | sed "s|$RACINE/||" | sort -u)
 
 if [ -z "$etats" ]; then
-  echo "ECHEC aucun loading.tsx trouvé dans src/app"
+  echo "ECHEC aucun état de chargement trouvé dans src/"
   echo "      l'ancrage de ce sens est cassé : soit les états de chargement ont"
   echo "      disparu, ce qui serait grave, soit ils ont changé de forme."
+  echo "      Depuis LS-139 ils vivent en fallback d'un <Suspense> interne,"
+  echo "      plus dans un loading.tsx de segment."
   exit 1
 fi
 

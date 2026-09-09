@@ -27,6 +27,8 @@
  * Une reponse integree reste possible plus tard, dans une story a elle.
  */
 import Link from "next/link";
+import { Suspense } from "react";
+
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -38,6 +40,7 @@ import type { StatutMessage } from "@/generated/prisma/enums";
 import { LIMITE_LISTE, listerMessages } from "@/services/message-contact";
 import { formaterDate } from "@/lib/affichage-commande";
 import { ClassementMessage } from "./classement-message";
+import { ChargementAdministration } from "@/components/chargement-administration";
 import styles from "./messages.module.css";
 
 export const metadata = {
@@ -121,11 +124,6 @@ export default async function PageMessages({
   );
   const filtreActif = filtreDemande ?? FILTRES[0]!;
 
-  const { messages, tronquee, total, nouveaux } = await listerMessages(
-    undefined,
-    filtreActif.valeur === "TOUS" ? undefined : filtreActif.valeur,
-  );
-
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
       <Link
@@ -138,6 +136,53 @@ export default async function PageMessages({
 
       <h1 className={styles.titre}>Messages</h1>
 
+      <Suspense fallback={<ChargementMessages />}>
+        <ListeMessages filtreActif={filtreActif} />
+      </Suspense>
+    </main>
+  );
+}
+
+/** Armature affichee pendant que les messages arrivent, LS-139. */
+function ChargementMessages() {
+  return (
+    <ChargementAdministration annonce="Chargement des messages…" lignes={5} />
+  );
+}
+
+/**
+ * La liste elle-meme, seule partie de cet ecran qui lit la base.
+ *
+ * POURQUOI UN `<Suspense>` INTERNE ET NON UN `loading.tsx`, LS-139. Un fichier
+ * de segment pose sa frontiere sur la page ENTIERE : le streaming demarre alors
+ * des le premier `await`, et un statut ne se change plus une fois les octets
+ * partis. Une base injoignable rendait donc **200** avec l'armature figee, au
+ * lieu du 500 que `error.tsx` doit servir.
+ *
+ * Mesure en arretant reellement la base de production le 9 septembre 2026, sur
+ * le catalogue public qui portait le meme defaut.
+ *
+ * LES FILTRES DESCENDENT AVEC LA LISTE bien qu'ils n'en dependent pas : les
+ * deux nombres qui les PRECEDENT a l'ecran en dependent, eux, et les laisser
+ * au-dessus aurait change l'ordre des blocs.
+ *
+ * `searchParams` RESTE AU-DESSUS, dans la page : c'est une promesse du
+ * framework, resolue sans acces base, et le filtre descend en propriete.
+ *
+ * NE PAS RETABLIR `messages/loading.tsx`.
+ */
+async function ListeMessages({
+  filtreActif,
+}: {
+  filtreActif: (typeof FILTRES)[number];
+}) {
+  const { messages, tronquee, total, nouveaux } = await listerMessages(
+    undefined,
+    filtreActif.valeur === "TOUS" ? undefined : filtreActif.valeur,
+  );
+
+  return (
+    <>
       {/*
        * LES DEUX NOMBRES VIENNENT DE LA BASE, JAMAIS DE LA TRANCHE, LS-163 et
        * critere 1. Ils comptent TOUS les messages, filtre compris : c'est ce
@@ -332,6 +377,6 @@ export default async function PageMessages({
           ))}
         </ul>
       )}
-    </main>
+    </>
   );
 }

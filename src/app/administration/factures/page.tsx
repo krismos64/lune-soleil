@@ -19,6 +19,8 @@
  * relire la session en base, il ne verrait que la presence d'un cookie.
  */
 import Link from "next/link";
+import { Suspense } from "react";
+
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -37,6 +39,7 @@ import {
   exigerAdministratrice,
 } from "@/services/autorisation";
 
+import { ChargementAdministration } from "@/components/chargement-administration";
 import styles from "./factures.module.css";
 
 export const metadata = {
@@ -90,10 +93,6 @@ export default async function PageFactures({
    * lien partage avec un parametre perime doit montrer quelque chose.
    */
   const periodeActive = reconnaitrePeriode(parametres.periode);
-  const vue = await lireVueComptable(bornesDePeriode(periodeActive));
-
-  const aucunePiece = vue.pieces.length === 0;
-
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
       <p className={styles.surtitre}>Comptabilité</p>
@@ -113,6 +112,53 @@ export default async function PageFactures({
        * correspondrait a aucune liste visible, et personne ne pourrait le
        * verifier a la main. Motif « numerateur et denominateur apparies ».
        */}
+      <Suspense fallback={<ChargementFactures />}>
+        <VueComptable periodeActive={periodeActive} />
+      </Suspense>
+    </main>
+  );
+}
+
+/** Armature affichee pendant que la vue comptable arrive, LS-139. */
+function ChargementFactures() {
+  return (
+    <ChargementAdministration annonce="Chargement des documents…" lignes={5} />
+  );
+}
+
+/**
+ * La vue comptable, seule partie de cet ecran qui lit la base.
+ *
+ * POURQUOI UN `<Suspense>` INTERNE ET NON UN `loading.tsx`, LS-139. Un fichier
+ * de segment pose sa frontiere sur la page ENTIERE : le streaming demarre alors
+ * des le premier `await`, et un statut ne se change plus une fois les octets
+ * partis. Une base injoignable rendait donc **200** avec l'armature figee, au
+ * lieu du 500 que `error.tsx` doit servir.
+ *
+ * Mesure en arretant reellement la base de production le 9 septembre 2026, sur
+ * le catalogue public qui portait le meme defaut.
+ *
+ * LES FILTRES DE PERIODE DESCENDENT AVEC LA VUE bien qu'ils n'en dependent pas,
+ * et c'est delibere : les comptages qui les PRECEDENT a l'ecran en dependent,
+ * eux. Les laisser au-dessus aurait fait remonter les comptages sous la
+ * frontiere en changeant l'ordre des blocs, donc l'ecran.
+ *
+ * `searchParams` RESTE AU-DESSUS, dans la page : c'est une promesse du
+ * framework, resolue sans acces base, et la periode descend en propriete.
+ *
+ * NE PAS RETABLIR `factures/loading.tsx`.
+ */
+async function VueComptable({
+  periodeActive,
+}: {
+  periodeActive: ReturnType<typeof reconnaitrePeriode>;
+}) {
+  const vue = await lireVueComptable(bornesDePeriode(periodeActive));
+
+  const aucunePiece = vue.pieces.length === 0;
+
+  return (
+    <>
       <ul className={styles.comptages}>
         <li className={styles.comptage}>
           <span className={styles.comptageLibelle}>Factures</span>
@@ -305,6 +351,6 @@ export default async function PageFactures({
           ) : null}
         </>
       )}
-    </main>
+    </>
   );
 }
