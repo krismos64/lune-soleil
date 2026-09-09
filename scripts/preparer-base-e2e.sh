@@ -68,9 +68,21 @@ echec() {
 command -v docker >/dev/null 2>&1 || echec "docker introuvable dans le PATH"
 docker info >/dev/null 2>&1 || echec "le demon Docker ne repond pas, est-il demarre ?"
 
-[ -f "$RACINE/.env" ] || echec "fichier .env absent.
-       Le creer a partir de .env.example, puis renseigner POSTGRES_PASSWORD,
-       DATABASE_URL et DATABASE_URL_E2E."
+# LE FICHIER EST EXIGE EN LOCAL, PAS EN INTEGRATION CONTINUE, ou il n'existe
+# jamais : le depot est public, invariant 9, et la chaine compose ses variables
+# dans l'environnement. Exiger le fichier partout rendait ce script inutilisable
+# en CI, donc la suite de bout en bout injouable, donc les huit parcours
+# critiques rejoues par personne.
+#
+# LA DISTINCTION SE FAIT SUR LA PRESENCE DES VARIABLES et non sur un drapeau
+# `CI`, qui se pose et s'oublie : ce qui compte est de savoir OU lire, pas dans
+# quel decor on tourne.
+if [ ! -f "$RACINE/.env" ] && [ -z "${DATABASE_URL_E2E:-}" ]; then
+  echec "fichier .env absent, et DATABASE_URL_E2E absente de l'environnement.
+       En local, creer .env a partir de .env.example, puis renseigner
+       POSTGRES_PASSWORD, DATABASE_URL et DATABASE_URL_E2E.
+       En integration continue, composer les deux URL dans l'environnement."
+fi
 
 # ---------------------------------------------------------------------------
 # DATABASE_URL_E2E EST EXIGEE, ET ELLE EST COMPAREE A DATABASE_URL.
@@ -117,29 +129,29 @@ docker info >/dev/null 2>&1 || echec "le demon Docker ne repond pas, est-il dema
 # facon. Ce qui disparait est la seule EXIGENCE d'un fichier, jamais le controle
 # qu'il permettait.
 #
-# CELA NE SUFFIT PAS A FAIRE TOURNER LA SUITE EN CI, et il faut le dire plutot
-# que de laisser croire le contraire : le demarrage du conteneur passe par
-# `docker compose`, qui exige lui aussi un `.env` et echoue sans lui, mesure
-# faite. Rendre le nocturne capable de jouer les scenarios de bout en bout
-# demande de demarrer la base 55433 par `docker run` comme la chaine le fait
-# deja pour 55432, ce qui depasse cette correction. En attendant, l'echec du
-# nocturne est CONNU et ne masque plus l'audit des dependances.
+# LE DEMARRAGE DU CONTENEUR PORTE LA MEME DOUBLE VOIE, plus bas : `docker
+# compose` en local, `docker run` sans `.env`. Les deux vont ensemble, corriger
+# l'une sans l'autre ne fait pas tourner la suite d'un pouce.
 # ---------------------------------------------------------------------------
 verdict=$(node -e '
 const fs = require("node:fs");
 const dotenv = require("dotenv");
 const existe = fs.existsSync(".env");
 const fichier = existe ? dotenv.parse(fs.readFileSync(".env")) : {};
+// LA SOURCE REELLEMENT LUE EST ANNONCEE, jamais supposee : un message qui
+// designe `.env` quand la valeur vient de l`environnement fait corriger au
+// mauvais endroit. Motif deja rencontre sur ce depot, LS-138.
+const source = existe && fichier.DATABASE_URL_E2E ? ".env" : "l`environnement";
 // Le fichier prime quand il existe : lui seul peut porter une recopie sans
 // changement de port. Sans lui, en CI, l environnement est la seule source.
 const dev = fichier.DATABASE_URL ?? process.env.DATABASE_URL;
 const e2e = fichier.DATABASE_URL_E2E ?? process.env.DATABASE_URL_E2E;
 if (!e2e) { console.log("ABSENTE"); process.exit(0); }
 if (!dev) { console.log("DEV_ABSENTE"); process.exit(0); }
-if (dev === e2e) { console.log("IDENTIQUES"); process.exit(0); }
+if (dev === e2e) { console.log("IDENTIQUES " + source); process.exit(0); }
 try {
   const a = new URL(dev), b = new URL(e2e);
-  console.log(a.port === b.port && a.hostname === b.hostname ? "MEME_PORT" : "OK " + b.port);
+  console.log(a.port === b.port && a.hostname === b.hostname ? "MEME_PORT " + source : "OK " + b.port);
 } catch { console.log("MALFORMEE"); }
 ' 2>/dev/null) || echec "la lecture de l'environnement a echoue"
 
@@ -151,12 +163,12 @@ case "$verdict" in
        En integration continue, la composer comme DATABASE_URL, au port pres." ;;
   DEV_ABSENTE)
     echec "DATABASE_URL absente de .env, la comparaison ne peut pas conclure." ;;
-  IDENTIQUES)
-    echec "DATABASE_URL_E2E est IDENTIQUE a DATABASE_URL dans .env.
+  IDENTIQUES*)
+    echec "DATABASE_URL_E2E est IDENTIQUE a DATABASE_URL dans ${verdict#IDENTIQUES }.
        La suite tournerait sur la base de developpement et retrograderait des
        comptes reels. Changer le port, 55433 par defaut, LS-189." ;;
-  MEME_PORT)
-    echec "DATABASE_URL_E2E designe, dans .env, le MEME hote et le MEME port
+  MEME_PORT*)
+    echec "DATABASE_URL_E2E designe, dans ${verdict#MEME_PORT }, le MEME hote et le MEME port
        que DATABASE_URL. Les deux bases seraient confondues, LS-189." ;;
   MALFORMEE)
     echec "DATABASE_URL_E2E n'est pas une URL analysable." ;;
@@ -165,30 +177,106 @@ echo "== Environnement =="
 echo "   DATABASE_URL_E2E distincte de DATABASE_URL, port ${verdict#OK }"
 
 # ---------------------------------------------------------------------------
-# Conteneur
+# Conteneur, DEUX VOIES SELON L'ENVIRONNEMENT.
+#
+# `docker compose` en local, `docker run` en integration continue, et ce n'est
+# pas un confort : le fichier Compose interpole `${POSTGRES_USER:?}` et deux
+# autres variables depuis `.env`, fichier que la chaine ne cree JAMAIS, le depot
+# etant public, invariant 9. `docker compose config` y echoue donc avant meme de
+# demarrer quoi que ce soit, mesure faite.
+#
+# CE QUE CE MANQUE A COUTE. Le controle nocturne echouait depuis le 8 septembre
+# 2026 sur « Process from config.webServer was not able to start », donc les
+# huit parcours critiques n'etaient rejoues par personne. Pire, l'etape
+# `npm audit` qui SUIT sortait `skipped` et non `failure` : sept vulnerabilites
+# sont entrees sans un mot, dont une RCE critique atteignable en production.
+#
+# LS-189 A ANNONCE CE CAS COUVERT ET IL NE L'ETAIT PAS. Son critere 4 raisonnait
+# sur `controles.yml`, ou le controle 9x est purement TEXTUEL et ne lance jamais
+# la suite. Seul le nocturne l'execute. Motif « un defaut absent n'est pas un
+# defaut empeche », deja en fiche.
+#
+# LA CHAINE FAIT DEJA CE `docker run` POUR LA BASE 55432, etape « Demarrer la
+# base de controle » du nocturne : cette branche en est la jumelle, au port et
+# au nom pres.
 # ---------------------------------------------------------------------------
+if [ -f .env ]; then
+  MODE_CONTENEUR=compose
+else
+  MODE_CONTENEUR=run
+  echo "== Pas de .env, demarrage par docker run =="
+fi
+
 if [ "$REINITIALISER" -eq 1 ]; then
   echo "== Reinitialisation, suppression du volume de test =="
   # Ne touche QUE le service de test : `docker compose down -v` sans argument
   # detruirait aussi le volume de developpement et ses donnees reelles.
-  docker compose rm -sfv "$SERVICE" >/dev/null 2>&1 || true
+  if [ "$MODE_CONTENEUR" = compose ]; then
+    docker compose rm -sfv "$SERVICE" >/dev/null 2>&1 || true
+  else
+    docker rm -f "$CONTENEUR" >/dev/null 2>&1 || true
+  fi
   docker volume rm lune-soleil-pgdata-e2e >/dev/null 2>&1 || true
 fi
 
 echo "== Demarrage de PostgreSQL 18, base de test =="
-docker compose up -d "$SERVICE" >/dev/null 2>&1 || echec "le conteneur $CONTENEUR n'a pas demarre"
+if [ "$MODE_CONTENEUR" = compose ]; then
+  # UN CONTENEUR NE PORTANT PAS LES ETIQUETTES COMPOSE BLOQUE `compose up`, le
+  # nom etant deja pris. Le cas arrive des qu'on a joue le mode CI sur la meme
+  # machine, et le message de Docker ne le dit pas : « n'a pas demarre » sans
+  # plus. Rencontre a l'ecriture de cette correction.
+  if [ -n "$(docker ps -aq -f "name=^${CONTENEUR}$")" ] &&
+     [ -z "$(docker ps -aq -f "name=^${CONTENEUR}$" -f 'label=com.docker.compose.project')" ]; then
+    echo "   conteneur hors Compose trouve sous le meme nom, il est retire"
+    docker rm -f "$CONTENEUR" >/dev/null 2>&1 || true
+  fi
+  docker compose up -d "$SERVICE" >/dev/null 2>&1 || echec "le conteneur $CONTENEUR n'a pas demarre.
+       Journaux : docker compose logs $SERVICE"
+else
+  # Le port vient de l'URL plutot que d'une constante : les deux ne peuvent pas
+  # diverger, et un port change dans l'environnement est suivi sans retouche.
+  PORT_E2E=$(node -e 'process.stdout.write(new URL(process.env.DATABASE_URL_E2E).port || "5432")')
+  # Idempotent : une execution qui rejoue ne doit pas echouer sur un conteneur
+  # deja la, ce qui arrive des qu'une etape amont est relancee.
+  if [ -z "$(docker ps -q -f "name=^${CONTENEUR}$")" ]; then
+    docker rm -f "$CONTENEUR" >/dev/null 2>&1 || true
+    # LES IDENTIFIANTS VIENNENT DE L'ENVIRONNEMENT, jamais d'un argument en
+    # clair : `-e VAR` sans valeur transmet celle du processus, invisible a
+    # `ps`. Meme motif que la surcharge de DATABASE_URL plus bas.
+    docker run -d --name "$CONTENEUR" \
+      -e POSTGRES_USER \
+      -e POSTGRES_PASSWORD \
+      -e POSTGRES_DB \
+      -e POSTGRES_INITDB_ARGS="--encoding=UTF8 --locale=C.UTF-8" \
+      -p "127.0.0.1:${PORT_E2E}:5432" \
+      postgres:18.4 >/dev/null || echec "le conteneur $CONTENEUR n'a pas demarre"
+  fi
+fi
 
-echo -n "   attente du controle de sante"
+echo -n "   attente de la base"
 sante=""
 for _ in $(seq 1 60); do
-  sante=$(docker inspect --format '{{.State.Health.Status}}' "$CONTENEUR" 2>/dev/null || echo absent)
+  if [ "$MODE_CONTENEUR" = compose ]; then
+    sante=$(docker inspect --format '{{.State.Health.Status}}' "$CONTENEUR" 2>/dev/null || echo absent)
+  else
+    # AUCUN `healthcheck` SUR UN `docker run` NU, donc l'etat de sante n'existe
+    # pas : c'est la REQUETE qui fait foi, et elle vaut mieux qu'un `pg_isready`
+    # qui repond avant que la base applicative n'existe. Meme motif que le
+    # nocturne pour la base 55432.
+    if docker exec "$CONTENEUR" psql -U "${POSTGRES_USER:-lunesoleil}" \
+         -d "${POSTGRES_DB:-lunesoleil}" -c 'SELECT 1' >/dev/null 2>&1; then
+      sante=healthy
+    else
+      sante=absent
+    fi
+  fi
   [ "$sante" = "healthy" ] && break
   echo -n "."
   sleep 2
 done
 echo
 [ "$sante" = "healthy" ] || echec "la base de test n'est pas saine apres 120 secondes (etat : $sante).
-       Journaux : docker compose logs $SERVICE"
+       Journaux : docker logs $CONTENEUR"
 echo "   sain"
 
 # ---------------------------------------------------------------------------
@@ -208,9 +296,13 @@ echo "== Migration Prisma sur la base de test =="
 node -e '
 const fs = require("node:fs");
 const dotenv = require("dotenv");
-// MEME SOURCE QUE LA COMPARAISON CI-DESSUS, le fichier et non l`environnement :
-// Playwright a pu surcharger DATABASE_URL avant d`appeler ce script.
-process.env.DATABASE_URL = dotenv.parse(fs.readFileSync(".env")).DATABASE_URL_E2E;
+// MEME SOURCE QUE LA COMPARAISON CI-DESSUS, le fichier quand il existe et non
+// l`environnement : Playwright a pu surcharger DATABASE_URL avant d`appeler ce
+// script. Sans fichier, en integration continue, l`environnement est la seule
+// source et il n`a subi aucune surcharge, ce script y etant appele avant
+// Playwright.
+const fichier = fs.existsSync(".env") ? dotenv.parse(fs.readFileSync(".env")) : {};
+process.env.DATABASE_URL = fichier.DATABASE_URL_E2E ?? process.env.DATABASE_URL_E2E;
 const { spawnSync } = require("node:child_process");
 const r = spawnSync("npx", ["prisma", "migrate", "deploy"], { stdio: "inherit", env: process.env });
 process.exit(r.status === null ? 1 : r.status);
