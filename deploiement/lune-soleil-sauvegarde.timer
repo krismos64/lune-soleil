@@ -1,0 +1,40 @@
+# Declenchement quotidien de la sauvegarde. LS-152, ADR-037.
+#
+# S'installe dans /etc/systemd/system/ puis :
+#   sudo systemctl enable --now lune-soleil-sauvegarde.timer
+
+[Unit]
+Description=Declenchement quotidien de la sauvegarde Lune & Soleil
+Documentation=file:///opt/lune-soleil/docs/deploiement/EXPLOITATION.md
+
+[Timer]
+# 02h30 UTC, ET L'HEURE EST CHOISIE, PAS PRISE AU HASARD.
+#
+# LA MACHINE EST EN Etc/UTC, verifie le 8 septembre 2026 par `timedatectl`.
+# 02h30 UTC vaut 04h30 a Paris en heure d'ete et 03h30 en hiver : creux dans
+# les deux cas, pour une boutique dont les clients sont en France.
+#
+# ELLE EVITE DELIBEREMENT DEUX RENDEZ-VOUS. La purge des journaux de
+# `docker/cron/crontab` tourne a 03h17 UTC : une purge qui verrouille des
+# lignes pendant une sauvegarde n'aide personne, et le meme raisonnement avait
+# fait ecarter minuit pile pour elle. Les timers systemd de la machine
+# (`logrotate`, `dpkg-db-backup`) se declenchent a 00h00, evites aussi.
+#
+# PAS DE MINUIT PILE, pour la raison qu'enonce deja `docker/cron/crontab` : un
+# `0 0` fait converger la tache avec tout ce que la planete lance a minuit.
+OnCalendar=*-*-* 02:30:00
+
+# RATTRAPAGE APRES UNE MACHINE ETEINTE. Sans `Persistent`, un VPS redemarre a
+# 03h00 sauterait purement la sauvegarde du jour, en silence. Avec, systemd la
+# lance des le demarrage si l'echeance est passee.
+Persistent=true
+
+# DISPERSION ALEATOIRE SUR CINQ MINUTES. La machine est PARTAGEE avec un
+# produit payant depuis ADR-036 : si une tache de SmartPlanning venait a se
+# poser a la meme minute, la collision serait systematique plutot
+# qu'occasionnelle. Cinq minutes suffisent a la rendre improbable sans
+# deplacer la sauvegarde hors de son creux.
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target

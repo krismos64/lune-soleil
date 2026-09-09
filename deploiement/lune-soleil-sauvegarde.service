@@ -1,0 +1,46 @@
+# Sauvegarde quotidienne de la base de production. LS-152, ADR-037.
+#
+# S'installe dans /etc/systemd/system/ et se declenche par le timer voisin.
+# Type=oneshot : le service s'execute et se termine, il ne reste pas en vie.
+
+[Unit]
+Description=Sauvegarde de la base Lune & Soleil
+Documentation=file:///opt/lune-soleil/docs/deploiement/EXPLOITATION.md
+
+# LA SAUVEGARDE A BESOIN DE DOCKER, le dump passant par `docker exec`.
+# `After` ordonne sans exiger ; `Requires` exigerait et ferait echouer le
+# service si Docker n'est pas la, ce qui est le comportement voulu : une
+# sauvegarde qui ne peut pas s'executer doit le DIRE, pas etre sautee.
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+
+# ROOT EST NECESSAIRE et ce n'est pas un raccourci : le script lit
+# /etc/lune-soleil/production.env en 0600 et ecrit dans /var/backups.
+User=root
+Group=root
+
+ExecStart=/opt/lune-soleil/deploiement/sauvegarder-base.sh
+
+# UNE HEURE DE PLAFOND. Sans cette borne, un dump bloque sur une base
+# verrouillee tiendrait indefiniment et le timer du lendemain se
+# superposerait. La sauvegarde reelle prend quelques secondes sur ce volume de
+# donnees ; une heure est une borne de securite, pas une attente prevue.
+TimeoutStartSec=1h
+
+# La sortie part dans le journal systemd, consultable par
+# `journalctl -u lune-soleil-sauvegarde`. Le script n'affiche JAMAIS le contenu
+# du fichier d'environnement, invariant 9 : les journaux sont lisibles par plus
+# de monde que le fichier lui-meme.
+StandardOutput=journal
+StandardError=journal
+
+# DURCISSEMENT. Ce service n'a besoin ni d'ecrire ailleurs que dans
+# /var/backups, ni d'obtenir de nouveaux privileges.
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

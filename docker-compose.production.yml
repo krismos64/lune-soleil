@@ -1,0 +1,422 @@
+# Composition de PRODUCTION, LS-152. ADR-036 et ADR-037.
+#
+# CE FICHIER NE DECRIT QUE LA PRODUCTION. Le developpement local vit dans
+# `docker-compose.yml`, qui ne porte QUE des bases et dont l'en-tete interdit
+# d'y ajouter quoi que ce soit pour la production. Les deux fichiers ne se
+# melangent jamais et ne se lancent jamais ensemble.
+#
+# LA MACHINE N'EST PAS VIERGE, ADR-036. Elle sert deja SmartPlanning, produit
+# PAYANT avec des clients, dont quatre conteneurs tournent a cote de ceux-ci.
+# Tout ce qui porte un nom ici est prefixe `lune-soleil` pour qu'aucune
+# collision ne soit possible : un volume ecrase serait une perte de donnees
+# chez quelqu'un d'autre.
+#
+# AUCUN SECRET DANS CE FICHIER, le depot est public, invariant 9. Les valeurs
+# viennent de `/etc/lune-soleil/production.env` sur l'hote, fichier en 0600 qui
+# n'est ni dans le depot ni dans l'image. Voir la section SECRETS plus bas.
+#
+# LANCEMENT :
+#   docker compose -f docker-compose.production.yml -p lune-soleil up -d
+#
+# Le `-p lune-soleil` n'est pas facultatif : sans lui, Compose deduit le nom de
+# projet du repertoire courant, et les noms de reseau et de volume changeraient
+# selon l'endroit d'ou la commande est lancee.
+
+name: lune-soleil
+
+services:
+  # ==========================================================================
+  # APPLICATION
+  # ==========================================================================
+  app:
+    # IMAGE TIRÉE DU REGISTRE, JAMAIS CONSTRUITE ICI.
+    #
+    # `publier-image.yml` construit et publie sur GHCR apres fusion sur `main`,
+    # taguee par identifiant de commit, et `verifier-image-docker.sh` ouvre ses
+    # couches avant publication. Construire sur le VPS referait ce travail sans
+    # ses controles, et sur une machine partagee avec un produit payant.
+    #
+    # LE TAG EST UN SHA, JAMAIS `latest`, et c'est la condition du retour
+    # arriere : `latest` designe toujours la derniere image, donc « revenir a
+    # latest » revient a rester ou l'on est. LS-138 porte la chaine qui pose
+    # cette variable ; ici elle est exigee sans valeur par defaut.
+    image: ghcr.io/krismos64/lune-soleil:${IMAGE_TAG:?}
+    container_name: lune-soleil-app
+    restart: unless-stopped
+
+    # LE PORT EST PUBLIE SUR LA BOUCLE LOCALE, ET C'EST UN CRITERE DE LA STORY.
+    #
+    # 3002 et non 3000, ADR-036 : 3000 est occupe par SmartPlanning et 3001 par
+    # son Umami. `docker/nginx/lune-soleil.conf` porte deja `proxy_pass
+    # http://127.0.0.1:3002`.
+    #
+    # LE PREFIXE `127.0.0.1:` EST LA PROTECTION, PAS `ufw`. Docker ecrit ses
+    # regles DNAT EN AMONT de la chaine d'ufw : un `- "3002:3000"` publierait
+    # sur toutes les interfaces et le pare-feu de l'hote ne s'appliquerait pas.
+    # Mesure le 8 septembre 2026 sur cette machine meme : les ports 3000 et
+    # 3001 de SmartPlanning repondaient depuis Internet en HTTP clair, son API
+    # d'authentification comprise, alors qu'ufw ne les ouvrait pas. Corrige
+    # depuis, SP-583. Ne JAMAIS retirer ce prefixe.
+    ports:
+      - "127.0.0.1:3002:3000"
+
+    # Les secrets et la configuration viennent d'un fichier hors depot.
+    # Voir la section SECRETS en fin de fichier.
+    env_file:
+      - /etc/lune-soleil/production.env
+
+    environment:
+      NODE_ENV: production
+      # L'application ecoute sur 3000 DANS le conteneur ; c'est la publication
+      # ci-dessus qui la place sur 3002 cote hote. Ne pas confondre les deux :
+      # changer celle-ci sans changer celle-la rend un 502 chez Nginx.
+      PORT: 3000
+      # LE TAS DE V8 EST BORNE SOUS LA LIMITE DU CONTENEUR.
+      #
+      # Sans cette variable, V8 dimensionne son tas sur la memoire de L'HOTE,
+      # 7,6 Go ici, et non sur `limits.memory`. L'application se croirait donc
+      # autorisee a depasser 1,25 Go, et le noyau la tuerait par OOM-kill : un
+      # conteneur qui disparait sans trace exploitable, la ou un
+      # `heap out of memory` de Node nomme la cause. 1024 sous une limite de
+      # 1280 Mo laisse la marge du hors-tas, dont les tampons de `sharp`.
+      NODE_OPTIONS: --max-old-space-size=1024
+      # LA BASE EST ATTEINTE PAR LE NOM DE SERVICE `db`, jamais par 127.0.0.1 :
+      # dans le reseau Compose, la boucle locale designe le conteneur lui-meme.
+      # Le port est 5432, celui du conteneur, et non le 55432 du developpement
+      # qui n'existe que cote hote.
+      #
+      # `DATABASE_URL` N'EST PAS ICI, ET C'EST DELIBERE. Elle vit dans
+      # `/etc/lune-soleil/production.env` avec les autres secrets, chargee par
+      # l'`env_file` ci-dessus.
+      #
+      # DEUX RAISONS, ET LA SECONDE EST LA BONNE. Assemblee ici, elle formait
+      # la structure d'un URI de connexion complet, que l'analyse de secrets du
+      # depot refuse et que GitGuardian signale meme quand chaque morceau est
+      # une variable : ni l'une ni l'autre ne peut distinguer un gabarit d'une
+      # vraie fuite, et les affaiblir les rendrait aveugles le jour ou une
+      # vraie valeur passerait. Mesure du 8 septembre 2026, deux blocages
+      # successifs sur ce fichier.
+      #
+      # Et surtout : cette chaine CONTIENT le mot de passe de la base. Sa place
+      # est donc avec les secrets, pas dans un fichier versionne, quelle que
+      # soit la facon dont elle y serait ecrite. Le detour par les variables
+      # etait un contournement ; le ranger au bon endroit est la correction.
+      #
+      # La forme attendue dans le fichier d'environnement, l'hote etant `db` et
+      # le port celui du conteneur :
+      #   DATABASE_URL=<protocole><utilisateur>:<mot de passe>@db:5432/<base>
+
+    volumes:
+      # LES DEUX RACINES SONT DISTINCTES, ET CE N'EST PAS DU RANGEMENT.
+      # `.env.example` le pose : les medias sont servis publiquement, une
+      # facture ne doit JAMAIS l'etre, son acces passant par un controle de
+      # propriete. Les ranger sous une racine commune exposerait les factures a
+      # une URL devinable le jour ou la configuration changerait.
+      #
+      # MONTAGES D'HOTE ET NON VOLUMES NOMMES, contrairement a la base. Ces
+      # deux arborescences doivent etre lisibles et sauvegardables depuis
+      # l'hote sans passer par Docker : un document comptable se conserve dix
+      # ans, ADR-007, et doit survivre a la disparition de la composition.
+      - ${MEDIA_RACINE:-/var/lib/lune-soleil/medias}:/var/lib/lune-soleil/medias
+      - ${DOCUMENTS_RACINE:-/var/lib/lune-soleil/documents}:/var/lib/lune-soleil/documents
+
+    depends_on:
+      db:
+        # `service_healthy` et non `service_started` : l'application ouvre une
+        # connexion des son demarrage, et un PostgreSQL qui accepte les
+        # connexions avant d'avoir ouvert sa base applicative ferait echouer ce
+        # premier appel. Le healthcheck de `db` verifie la base, pas seulement
+        # le serveur.
+        condition: service_healthy
+
+    networks:
+      - interne
+
+    # LIMITES DE RESSOURCES, OBLIGATOIRES ET NON UN CONFORT, ADR-036.
+    #
+    # Elles protegent SmartPlanning : `sharp` consomme par pics lors d'un
+    # televersement de photographies, et rien ne doit permettre a la boutique
+    # d'affamer un produit payant.
+    #
+    # LA SYNTAXE `deploy.resources` FONCTIONNE BIEN HORS SWARM SUR CETTE
+    # MACHINE, et c'est contraire a la croyance repandue, qu'un rapport de
+    # relecture a d'ailleurs opposee a ce fichier.
+    #
+    # TRANCHE PAR LA MESURE plutot que par l'usage, le 8 septembre 2026, avec
+    # Docker Compose v5.0.1 : deux services jetables declarant les MEMES
+    # limites, l'un en `deploy.resources.limits`, l'autre en `mem_limit` et
+    # `cpus`, ont rendu au `docker inspect` un resultat IDENTIQUE,
+    # `memoire=268435456 nanocpus=500000000`. Les deux formes s'appliquent.
+    #
+    # CE QUI RESTE VRAI DANS L'AVERTISSEMENT : la forme ne se lit pas dans le
+    # fichier, elle se verifie sur le conteneur. Un `0` a l'inspection signifie
+    # « aucune limite », et c'est la seule preuve qui vaille. La verification
+    # est un critere de cette story, pas un confort, et une regression de
+    # Compose la ferait rougir.
+    #
+    #   docker inspect lune-soleil-app \
+    #     --format '{{.HostConfig.Memory}} {{.HostConfig.NanoCpus}}'
+    #
+    # LES VALEURS. La machine a 7,6 Go dont 6,4 disponibles et 4 vCores, et
+    # SmartPlanning en reserve 1,75 Go par ses propres limites. Le total
+    # reserve ici est de 1,75 Go, ce qui laisse plus de 2,8 Go libres apres les
+    # deux projets.
+    #
+    # 1,25 Go pour l'application : elle consomme environ 150 Mo au repos, comme
+    # son homologue de SmartPlanning mesuree a 146 Mo, et la marge couvre les
+    # pics de `sharp`, qui charge une image entiere en memoire pour la
+    # redimensionner en plusieurs resolutions.
+    #
+    # 1,5 vCPU sur 4 : un televersement ne doit jamais prendre plus de la
+    # moitie des processeurs. SmartPlanning ne declare AUCUNE limite CPU,
+    # mesure du 8 septembre : `NanoCpus` vaut zero sur ses trois conteneurs.
+    # Rien ne le borde donc cote processeur, raison de plus pour que la
+    # boutique se borde elle-meme plutot que de compter sur l'ordonnanceur.
+    deploy:
+      resources:
+        limits:
+          memory: 1280M
+          cpus: "1.5"
+          # PLAFOND DE PROCESSUS, ET IL FERME CE QUE LA MEMOIRE NE FERME PAS.
+          #
+          # La table des PID est une ressource du NOYAU, donc de l'hote, et
+          # elle est partagee. Une fuite de processus dans ce conteneur
+          # l'epuiserait pour la machine entiere : une limite de memoire ne
+          # protege pas de ce cas, et SmartPlanning ne pourrait plus engendrer
+          # un processus. 512 est large pour Node et le pool de threads de
+          # libvips, et ne se rencontre pas au nominal.
+          #
+          # SOUS `deploy.resources.limits` ET NON EN `pids_limit`, qui est la
+          # forme de premier niveau. Compose REFUSE les deux ensemble, mesure
+          # du 8 septembre 2026 : « can't set distinct values on 'pids_limit'
+          # and 'deploy.resources.limits.pids' ». Il faut choisir une famille,
+          # et ce fichier tient la sienne.
+          pids: 512
+        reservations:
+          memory: 384M
+
+    # Journalisation bornee. Sans ces options, le journal JSON d'un conteneur
+    # croit sans limite jusqu'a saturer le disque, QUI EST PARTAGE depuis
+    # ADR-036 : une saturation arreterait les deux projets. 30 Mo par service
+    # au maximum, trois fichiers de dix.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==========================================================================
+  # BASE DE DONNEES, ADR-037
+  # ==========================================================================
+  db:
+    # MEME VERSION EXACTE QU'EN DEVELOPPEMENT, `docker-compose.yml` porte
+    # `postgres:18.4`. Un tag mouvant comme `18` ferait diverger la production
+    # du developpement au premier `docker compose pull`, sans qu'aucun commit
+    # ne le dise.
+    #
+    # La machine heberge deja un PostgreSQL 16 pour SmartPlanning, sans
+    # conflit : les deux vivent dans des conteneurs distincts et aucun des deux
+    # ne publie de port sur l'hote.
+    image: postgres:18.4
+    container_name: lune-soleil-db
+    restart: unless-stopped
+
+    # AUCUNE SECTION `ports`, ET C'EST DELIBERE, ADR-037.
+    #
+    # La composition de developpement publie `127.0.0.1:55432` pour que le
+    # poste puisse s'y connecter. En production personne ne s'y connecte depuis
+    # l'hote : seule l'application y accede, par le reseau Docker interne.
+    # Publier le port ajouterait une surface sans aucun usage. SmartPlanning
+    # fait de meme pour son propre PostgreSQL, verifie le 8 septembre 2026 :
+    # `5432/tcp` sans adresse hote.
+
+    environment:
+      # `${VAR:?}` exige la variable et fait echouer franchement si elle
+      # manque, plutot que de demarrer une base avec une configuration
+      # incoherente. Le message apres `:?` est volontairement omis : la forme
+      # `${VAR:?texte}` fait lire « POSTGRES_PASSWORD: <quelque chose> » a
+      # l'analyse de secrets, qui prend le message pour une valeur et bloque la
+      # pull request. Mesure sur ce depot le 30 juillet 2026, LS-66.
+      POSTGRES_USER: ${POSTGRES_USER:?}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: ${POSTGRES_DB:?}
+      # Encodage et collation figes a la creation du volume, identiques au
+      # developpement : deux bases censees etre identiques trieraient sinon les
+      # chaines differemment, ce qui change l'ordre d'un catalogue et peut
+      # faire diverger un index. Cette variable n'agit qu'a l'initialisation.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C.UTF-8"
+
+    volumes:
+      # POINT DE MONTAGE /var/lib/postgresql ET NON /var/lib/postgresql/data.
+      #
+      # Rupture introduite par l'image postgres:18 : jusqu'en 17 le volume se
+      # montait sur .../data ; depuis la 18 les donnees vivent dans un
+      # sous-dossier nomme d'apres la version majeure, pour rendre possible un
+      # `pg_upgrade --link` sans traverser une frontiere de montage.
+      #
+      # Monter sur .../data fait sortir l'entrypoint en erreur et le conteneur
+      # redemarre en boucle, avec « there appears to be PostgreSQL data in
+      # /var/lib/postgresql/data (unused mount/volume) ». Mesure sur ce depot le
+      # 30 juillet 2026, docker-library/postgres#1259. Le critere 3 de LS-152
+      # exige de le PROUVER en redemarrant, pas de le supposer.
+      - lune-soleil-pgdata-prod:/var/lib/postgresql
+
+    healthcheck:
+      # `pg_isready` seul repond « accepting connections » pendant la phase
+      # d'initialisation, avant que la base applicative n'existe. La requete
+      # confirme que POSTGRES_DB est reellement ouverte, ce dont depend le
+      # `service_healthy` de l'application.
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB} -q && psql -U $${POSTGRES_USER} -d $${POSTGRES_DB} -c 'SELECT 1' >/dev/null 2>&1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+    networks:
+      - interne
+
+    # 512 Mo, comme le PostgreSQL de SmartPlanning qui sert une charge
+    # comparable et consomme 66 Mo mesures. 1 vCPU : une requete lourde ne doit
+    # pas monopoliser la machine.
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+          # Meme motif que pour l'application, valeur plus basse : PostgreSQL
+          # engendre un processus par connexion, et le pool de l'application
+          # est borne bien en deca.
+          pids: 256
+        reservations:
+          memory: 256M
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==========================================================================
+  # TACHES PLANIFIEES, LS-72
+  # ==========================================================================
+  cron:
+    build:
+      context: ./docker/cron
+    image: lune-soleil-cron:local
+    container_name: lune-soleil-cron
+    restart: unless-stopped
+
+    # CE CONTENEUR NE PORTE AUCUNE LOGIQUE METIER, il appelle les routes
+    # internes de l'application a l'echeance. Le verrou vit en base, ce qui
+    # rend un double declenchement inoffensif.
+    #
+    # LES HORAIRES DE `docker/cron/crontab` SE LISENT EN UTC sur cette machine,
+    # `timedatectl` rendant `Etc/UTC`, verifie le 8 septembre 2026. La purge
+    # quotidienne annoncee a 03h17 s'execute donc a 03h17 UTC, soit 05h17 a
+    # Paris en heure d'ete et 04h17 en hiver. C'est une heure creuse dans les
+    # deux cas, l'intention du commentaire est tenue et rien n'est a changer.
+    # Le TZ est pose explicitement pour que ce raisonnement ne depende pas du
+    # reglage de l'hote, qu'une reinstallation pourrait changer.
+    environment:
+      TZ: Etc/UTC
+      # L'URL INTERNE DU SERVICE, jamais l'URL publique : le trafic ne sort pas
+      # de l'hote, et la route n'a donc pas besoin d'etre exposee au monde. Le
+      # port est 3000, celui du conteneur, et non le 3002 de l'hote.
+      APP_INTERNAL_URL: http://app:3000
+
+    # CRON_SHARED_SECRET vient du fichier hors depot, comme le reste.
+    env_file:
+      - /etc/lune-soleil/production.env
+
+    depends_on:
+      - app
+
+    networks:
+      - interne
+
+    # Ce conteneur fait deux requetes HTTP par quart d'heure. 64 Mo et un
+    # dixieme de vCPU suffisent largement, et une limite basse rend visible
+    # toute derive qui voudrait y mettre de la logique.
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: "0.10"
+          # Tres bas, et c'est delibere : ce conteneur ne doit engendrer qu'un
+          # `crond` et un `wget` par echeance. Une valeur qui serait atteinte
+          # signalerait qu'on y a mis de la logique, ce que son en-tete
+          # interdit.
+          pids: 64
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# ============================================================================
+# CE QUI N'EST PAS ICI
+# ============================================================================
+#
+# AUCUN REDIS. La topologie l'ecarte, la description de LS-152 le dit
+# explicitement et l'agent `ls-conteneurisation` existe notamment pour que
+# l'habitude d'un autre projet ne l'introduise pas ici. Les sessions vivent en
+# base, ADR-021 et ADR-023, et le verrou des taches planifiees aussi.
+#
+# AUCUN NGINX. Il tourne SUR L'HOTE, hors conteneur, et sert deja les deux
+# sites de SmartPlanning. `docker/nginx/lune-soleil.conf` se copie dans
+# /etc/nginx/sites-available/, il n'est jamais lu par Compose. Poser un Nginx
+# conteneurise ici entrerait en conflit avec celui de l'hote sur les ports 80
+# et 443, donc couperait les deux sites du produit payant.
+#
+# AUCUN SERVICE DE SAUVEGARDE, et c'est un choix motive, ADR-037. La sauvegarde
+# tourne sur l'HOTE par une unite systemd, `deploiement/lune-soleil-sauvegarde.*`,
+# parce que les moments ou elle compte le plus sont ceux ou la composition est
+# arretee : un `down` avant manipulation, une image qui ne demarre pas, un
+# retour arriere en cours. Un conteneur de sauvegarde s'arreterait avec eux.
+
+# ============================================================================
+# SECRETS
+# ============================================================================
+#
+# ILS VIENNENT DE `/etc/lune-soleil/production.env`, sur l'hote, en 0600 et
+# possede par root. Ce fichier n'est ni dans le depot, qui est PUBLIC, ni dans
+# l'image.
+#
+# POURQUOI `env_file` SUFFIT ICI, ET CE QU'IL NE FAIT PAS. Il charge les
+# valeurs dans l'environnement du conteneur au demarrage, sans jamais les
+# ecrire dans une couche d'image : un `docker history` ne les montre pas, et
+# l'image publiee sur GHCR reste utilisable par quiconque sans rien reveler.
+# En revanche `docker inspect lune-soleil-app` LES AFFICHE, comme tout
+# environnement de conteneur. C'est acceptable : cette commande exige deja
+# l'acces au demon Docker, donc la racine de la machine, a partir de laquelle
+# le fichier lui-meme serait lisible de toute facon.
+#
+# LE PIEGE QUI NE VIENT PAS D'ICI. `next build` RECOPIE le `.env` du contexte
+# dans `.next/standalone/.env`, mesure sur ce depot le 10 aout 2026 : le
+# secret entrerait dans l'image par la CONSTRUCTION, pas par ce fichier. Seul
+# `.dockerignore` ferme ce chemin, en empechant le `.env` d'entrer dans le
+# contexte. Ne jamais l'alleger, et `verifier-image-docker.sh` ouvre les
+# couches pour le prouver plutot que de le croire.
+
+volumes:
+  # NOM EXPLICITE ET SUFFIXE `-prod`. Sans le `name:`, Compose prefixerait du
+  # nom de projet ; avec un nom fige, le volume est designe de la meme facon
+  # d'ou que la commande parte. Le suffixe le distingue de `lune-soleil-pgdata`,
+  # volume de DEVELOPPEMENT : sur une machine ou les deux coexisteraient, une
+  # confusion ferait pointer la production sur des donnees de test.
+  lune-soleil-pgdata-prod:
+    name: lune-soleil-pgdata-prod
+
+networks:
+  # RESEAU DEDIE ET NOMME. SmartPlanning porte le sien,
+  # `smartplanning_smartplanning-network`, verifie le 8 septembre 2026 : les
+  # deux ne se croisent pas, et aucun conteneur de la boutique ne peut joindre
+  # la base d'un produit payant.
+  interne:
+    name: lune-soleil-interne
+    driver: bridge
