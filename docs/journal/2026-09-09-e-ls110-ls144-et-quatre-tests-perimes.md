@@ -128,6 +128,39 @@ qu'affirmés : remplacer la garde `cheminPdf === null` par `if (false)` dans
 `acces-document.ts` fait rougir « refuse quand le PDF n'a pas encore été rendu »,
 **et lui seul**. Un test rendu vert sans exercer son cas serait resté vert.
 
+## La CI a refusé ma correction, et elle avait raison
+
+Le point le plus instructif de la session, arrivé après l'ouverture de la PR.
+
+`DOCUMENTS_RACINE` **n'est définie nulle part dans le workflow**. Le rendu du PDF
+échoue donc **systématiquement en CI**, « Rendu du PDF de facture en echec » dans
+les journaux du job 5, alors qu'il réussit en local où la variable est
+configurée. `chemin_pdf` vaut `null` là-bas et le chemin réel ici, pour le même
+code et le même test.
+
+**Deux assertions successives étaient fausses, chacune dans un sens.**
+`toBeNull()` rougissait en local, `toBe("2026/F-2026-0001.pdf")` rougissait en
+CI. J'ai écrit les deux le même jour.
+
+Les deux issues du rendu sont légitimes, et **aucune n'est le sujet** des deux
+tests concernés, qui portent l'émission de la facture et la vue comptable.
+Affirmer l'une ou l'autre revenait à tester la configuration de l'environnement.
+Ce qui doit tenir dans les deux cas est désormais ce qui est vérifié : la facture
+est émise, avec son numéro, son montant figé et son existence, regle F8.
+
+Les deux tests qui visent le cas d'**échec** posent l'état eux-mêmes et restent
+prouvés par mutation.
+
+**La leçon tient en une commande** : la condition CI se reproduit en local par
+`DOCUMENTS_RACINE=/inexistant/interdit npx vitest run ...`, et vérifier dans les
+deux environnements aurait évité un aller-retour. En fiche,
+[[lune-soleil-rendu-pdf-echoue-en-ci]].
+
+**Un manque reste ouvert et non ticketé**, consigne de la session : le rendu du
+PDF n'est **jamais exercé en CI**, ni en réussite ni sur un vrai fichier. Poser
+`DOCUMENTS_RACINE` sur un répertoire temporaire dans le workflow le rendrait
+exerçable.
+
 ## État des tickets
 
 **LS-110 est livrée**, ses deux points restants faits, plus deux écrans que le
