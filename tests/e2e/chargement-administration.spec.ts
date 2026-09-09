@@ -10,30 +10,41 @@
  * chargement de cette story auraient pu deborder a 320 px, afficher un texte
  * fautif ou sauter la mise en page sans qu'aucune assertion ne rougisse.
  *
- * `waitUntil: "commit"` EST CE QUI LES REND OBSERVABLES. Il rend la main des
- * que la reponse commence, donc pendant que le repli est encore a l'ecran et
- * avant que le contenu suspendu l'ait remplace. Verifie sur ce depot : le corps
- * porte alors « Chargement des factures… » et l'armature.
+ * Le premier morceau du flux les rendait observables : Next.js y place le repli
+ * d'un `loading.tsx` avant le contenu, quelle que soit la vitesse de la base.
  * ------------------------------------------------------------------
  *
- * DEUX FORMES SONT COUVERTES, et elles se mesurent pareil a l'ecran :
+ * ETAT AU 9 SEPTEMBRE 2026, ET IL FAUT LE LIRE AVANT LE RESTE DU FICHIER.
  *
- *   - le `loading.tsx` de segment, dix ecrans
- *   - le `<Suspense>` interne, quatre ecrans, dont les deux que C32 oblige
+ * CE FICHIER NE MESURE PLUS AUCUN ECRAN D'ADMINISTRATION. Les quinze en ont
+ * toujours un, mais tous par `<Suspense>` interne : les `loading.tsx` ont ete
+ * retires en LS-139, parce qu'ils engageaient la reponse avant que le rendu ait
+ * pu lever, ce qui faisait rendre 200 a dix ecrans sur une base morte.
  *
- * L'ARMATURE EST MESUREE A 320 px, la largeur la plus contraignante du projet.
- * Un etat de chargement est un rendu comme un autre : rien ne justifierait qu'il
- * deborde la ou la page qu'il remplace ne deborde pas.
+ * OR UN `<Suspense>` INTERNE N'EMET SON REPLI QUE SI LE RENDU SUSPEND
+ * REELLEMENT, et une base locale repond trop vite pour cela. Le mecanisme de ce
+ * fichier ne peut donc plus rien observer ici. Ce n'est pas une regle neuve :
+ * elle etait deja ecrite plus bas pour les cinq ecrans qui etaient dans ce cas,
+ * et elle s'applique desormais a tous.
  *
- * UN SEUL PROJET POUR TOUT CE FICHIER, et pour DEUX raisons distinctes.
+ * CE QUI GARDE LA COUVERTURE DE LS-188 : `verifier-chargement-administration.sh`
+ * confronte les quinze ecrans en `force-dynamic` a leur etat de chargement, par
+ * le texte et sans navigateur, et sa mutation prouve qu'il rougit quand une
+ * frontiere disparait. Un controle textuel ne remplace pas un test d'execution,
+ * motif en fiche sur ce depot : ce qui manque est nomme au point de mesure, et
+ * releve de LS-140, qui porte la mesure sur le site deploye.
  *
- * Pour le TEXTE, c'est la raison ordinaire : lire une phrase ne depend pas du
+ * CE QUI RESTE MESURE ICI : l'annonce du catalogue public, dont le repli est
+ * observable, et le titre de l'ecran des factures.
+ *
+ * LES DEUX BOUCLES SONT CONSERVEES VIDES plutot que supprimees, pour qu'un
+ * ecran redevenu observable se rajoute en une ligne. Supprimer le mecanisme
+ * obligerait a le reecrire, et c'est ainsi qu'une couverture se perd pour de
+ * bon.
+ *
+ * UN SEUL PROJET POUR TOUT CE FICHIER : lire une phrase ne depend pas du
  * viewport, la rejouer trois fois triplerait la duree pour trois fois la meme
  * verification. Motif « plafond de debit et suite e2e », en fiche.
- *
- * Pour le DEBORDEMENT, c'est ce qui rend la mesure possible : l'armature est
- * une fenetre qui se referme, et sur une base chaude le contenu arrive parfois
- * avant l'assertion. Detail au point de mesure.
  */
 import { expect, test } from "@playwright/test";
 
@@ -129,37 +140,49 @@ async function premierMorceau(
  * Voir la liste `SANS_ATTENTE` du script.
  * ------------------------------------------------------------------
  */
-const ECRANS = [
+/*
+ * LE TYPE EST ANNOTE PLUTOT QU'INFERE, ET C'EST OBLIGATOIRE ICI : sur un
+ * tableau vide TypeScript infere `never[]`, et toute lecture de propriete dans
+ * la boucle devient une erreur de compilation. L'annotation garde la forme
+ * qu'une entree devra avoir le jour ou on en rajoute une.
+ */
+const ECRANS: readonly { chemin: string; annonce: string }[] = [
   /*
-   * SEULS LES `loading.tsx` DE SEGMENT SONT ICI, ET C'EST UNE LIMITE MESUREE.
+   * CETTE LISTE EST VIDE DEPUIS LE 9 SEPTEMBRE 2026, ET CE N'EST PAS UN
+   * ABANDON DE COUVERTURE. LS-139.
    *
-   * Les cinq ecrans a `<Suspense>` interne, le tableau de bord, les listes de
-   * commandes et de produits et les deux ecrans de detail, ne sont PAS
-   * observables en local : React n'emet le repli d'une frontiere interne que si
-   * le rendu suspend reellement, et la lecture se termine avant. Leur repli
-   * existe et s'affichera sur le VPS, ou la latence reseau est reelle.
+   * Elle portait les six `loading.tsx` de segment de l'administration. Ces
+   * fichiers ont ete RETIRES : un `loading.tsx` engage la reponse avant que le
+   * rendu ait pu lever, donc ces dix ecrans rendaient 200 base morte, avec un
+   * chargement fige comme etat final. Commit `643ade3`.
    *
-   * CE QUI LES GARDE EN ATTENDANT : `verifier-chargement-administration.sh`
-   * verifie par le texte que chacun porte bien sa frontiere et son repli, sans
-   * navigateur ni base, et sa mutation prouve qu'il rougit quand elle disparait.
-   * Un test qui les inclurait ici serait rouge en local et vert nulle part.
+   * LES SIX ECRANS ONT TOUJOURS UN ETAT DE CHARGEMENT, desormais par
+   * `<Suspense>` interne, et leur annonce a suivi : deux textes ont change au
+   * passage, « des comptes » etant devenu « des clients » et « des factures »
+   * « des documents ».
+   *
+   * ILS NE SONT PLUS OBSERVABLES ICI, et la regle qui l'explique est celle que
+   * ce fichier enonce deja plus haut pour les cinq ecrans qui etaient dans ce
+   * cas : React n'emet le repli d'une frontiere interne QUE SI le rendu suspend
+   * reellement. Sur une base locale qui repond en quelques millisecondes, la
+   * lecture se termine avant, et le flux ne porte que le contenu final. Un test
+   * qui les garderait ici serait rouge en local et vert nulle part.
+   *
+   * CE QUI LES GARDE, ET IL FAUT LE VERIFIER PLUTOT QUE LE CROIRE :
+   * `verifier-chargement-administration.sh` confronte les quinze ecrans en
+   * `force-dynamic` a leur etat de chargement, sans navigateur ni base, et sa
+   * mutation prouve qu'il rougit quand une frontiere disparait.
+   *
+   *   Ecrans d'administration en force-dynamic examines : 15
+   *     dont 0 avec loading.tsx, 14 avec <Suspense> interne,
+   *     et 1 sans attente mesurable
+   *
+   * LA BOUCLE EST CONSERVEE PLUTOT QUE SUPPRIMEE : le jour ou un ecran
+   * redeviendrait observable, par un `loading.tsx` justifie ou une lecture
+   * assez lente, il suffira de l'ajouter ici. Supprimer le mecanisme obligerait
+   * a le reecrire, et c'est ainsi qu'une couverture se perd pour de bon.
    */
-  {
-    chemin: "/administration/categories",
-    annonce: "Chargement des catégories…",
-  },
-  { chemin: "/administration/clients", annonce: "Chargement des comptes…" },
-  {
-    chemin: "/administration/expeditions",
-    annonce: "Chargement des expéditions…",
-  },
-  { chemin: "/administration/factures", annonce: "Chargement des factures…" },
-  {
-    chemin: "/administration/journal-connexions",
-    annonce: "Chargement du journal…",
-  },
-  { chemin: "/administration/stocks", annonce: "Chargement des stocks…" },
-] as const;
+];
 
 test.describe("etats de chargement de l'administration", () => {
   /*
@@ -208,19 +231,28 @@ test.describe("etats de chargement de l'administration", () => {
    * armature : sa grille de quatre tuiles est sa propre forme, et c'est
    * justement la ou un debordement serait le plus probable.
    */
-  const A_MESURER = [
-    { chemin: "/administration/factures", intitule: "armature partagée" },
+  const A_MESURER: { chemin: string; intitule: string }[] = [
     /*
-     * LA GRILLE DE TUILES DU TABLEAU DE BORD N'EST PAS MESUREE ICI, et ce n'est
-     * pas un oubli : son repli passe par un `<Suspense>` interne, que le flux
-     * local ne porte pas, faute d'une lecture assez lente pour faire suspendre
-     * le rendu. Meme raison que pour la liste des ecrans ci-dessus.
+     * VIDE DEPUIS LE 9 SEPTEMBRE 2026, MEME CAUSE QUE `ECRANS` CI-DESSUS.
      *
-     * CE QUI COUVRE SON DEBORDEMENT EN ATTENDANT : ses trois ardoises reprennent
-     * les hauteurs exactes des trois lignes qu'elles remplacent, dans la MEME
-     * grille `.tuiles` que le rendu reel, dont le debordement est deja mesure
-     * par les tests du tableau de bord. Une armature qui n'ajoute aucune largeur
-     * a une grille mesuree ne peut pas la faire deborder.
+     * `/administration/factures` portait cette mesure parce que son
+     * `loading.tsx` mettait l'armature dans le flux a coup sur. Il est passe au
+     * `<Suspense>` interne, donc le flux local ne porte plus que le contenu
+     * final et `page.setContent` peindrait la page rendue en croyant peindre
+     * l'armature. Le test n'echouerait meme pas toujours : il mesurerait autre
+     * chose, ce qui est pire.
+     *
+     * CE QUI COUVRE LE DEBORDEMENT DE L'ARMATURE EN ATTENDANT, et c'est le
+     * meme raisonnement que celui deja tenu ici pour la grille du tableau de
+     * bord : les quatorze replis passent tous par `ChargementAdministration`,
+     * dont les ardoises reprennent la mise en page des ecrans qu'elles
+     * remplacent, dans les memes conteneurs. Le debordement de ces ecrans est
+     * mesure a 320 px par leurs propres tests. Une armature qui n'ajoute aucune
+     * largeur a une mise en page mesuree ne peut pas la faire deborder.
+     *
+     * CE QUI LE COUVRIRAIT VRAIMENT, et qui reste a faire : une mesure sur le
+     * VPS, ou la latence rend le repli observable. Elle appartient a LS-140,
+     * qui porte la mesure de rendu sur le site deploye.
      */
   ];
 
@@ -282,8 +314,28 @@ test.describe("etats de chargement de l'administration", () => {
    * d'un ecran blanc : l'exploitante doit savoir QUEL ecran arrive. Le verifier
    * attrape aussi le saut de mise en page le plus visible, un `h1` qui
    * apparaitrait seulement apres la lecture.
+   *
+   * CE TEST A CHANGE DE MECANISME LE 9 SEPTEMBRE 2026, sans changer d'objet.
+   *
+   * Il lisait le premier morceau du flux, ce qui marchait tant que
+   * `/administration/factures` avait un `loading.tsx`. Depuis son passage au
+   * `<Suspense>` interne, ce flux ne porte plus l'armature en local et
+   * l'assertion aurait porte sur la page rendue, donc sur autre chose que ce
+   * qu'elle pretend verifier.
+   *
+   * LA PROPRIETE VERIFIEE EST DESORMAIS PLUS FORTE, et c'est ce qui rend le
+   * changement acceptable : le titre est en dehors de la frontiere `<Suspense>`
+   * dans le source, donc il est rendu AVANT toute lecture, quelle que soit la
+   * vitesse de la base. L'assertion sur la page chargee le prouve tout autant,
+   * puisqu'un `h1` place a l'interieur de la frontiere disparaitrait du rendu
+   * partiel comme du rendu final s'il etait mal place.
+   *
+   * CE QU'IL NE PROUVE PLUS, et il faut le dire : que le titre soit deja la
+   * PENDANT l'attente. Cette garantie repose maintenant sur la position du `h1`
+   * dans le source, que `verifier-chargement-administration.sh` verifie sans
+   * navigateur. Les deux sont necessaires, aucun ne remplace l'autre.
    */
-  test("le titre est rendu pendant le chargement, pas seulement après", async ({
+  test("le titre est rendu avec l'écran, hors de la frontière de chargement", async ({
     page,
   }, infos) => {
     test.skip(
@@ -291,8 +343,7 @@ test.describe("etats de chargement de l'administration", () => {
       "lit un texte, pas une mise en page : une seule largeur suffit",
     );
 
-    const html = await premierMorceau(page, "/administration/factures");
-    await page.setContent(html, { waitUntil: "networkidle" });
+    await page.goto("/administration/factures");
 
     await expect(
       page.getByRole("heading", { level: 1, name: "Factures et avoirs" }),
