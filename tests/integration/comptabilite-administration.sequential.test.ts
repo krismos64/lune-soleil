@@ -252,11 +252,17 @@ describe("lireVueComptable", () => {
     expect(piece.nomClient).toBe(SAISIE_DOMICILE.nomClient);
 
     /*
-     * LE PDF EST ABSENT ET LA PIECE EXISTE QUAND MEME, regle F8 : le rendu est
-     * declenche APRES le commit du webhook, et son echec ne perd pas la
-     * facture. L'ecran en fait un etat affiche, jamais une erreur.
+     * LE PDF EST RENDU DANS LA FOULEE DE LA CONFIRMATION, depuis LS-129, et
+     * cette assertion exigeait l'inverse jusqu'au 9 septembre 2026.
+     *
+     * CE QUE LA REGLE F8 GARANTIT N'A PAS CHANGE et reste verifie ailleurs : la
+     * piece existe independamment de son PDF, le rendu etant declenche APRES le
+     * commit du webhook et son echec ne perdant pas la facture. C'est le test
+     * « refuse de servir une facture dont le rendu a echoue » qui porte ce cas,
+     * en remettant la colonne a nul explicitement. Le cas NOMINAL, lui, a bien
+     * son document.
      */
-    expect(piece.cheminPdf).toBeNull();
+    expect(piece.cheminPdf).toBe(`2026/${piece.numero}.pdf`);
     expect(piece.numeroFactureCorrigee).toBeNull();
   });
 
@@ -350,8 +356,16 @@ describe("lirePieceAServir", () => {
   it("refuse de servir une facture dont le rendu a echoue", async () => {
     const { commandeId } = await commanderEtFacturer();
 
+    /*
+     * LA COLONNE EST REMISE A NUL EXPLICITEMENT, et s'en abstenir suffisait
+     * avant LS-129 : la confirmation rend desormais le PDF dans la foulee, donc
+     * l'etat d'ECHEC du rendu ne s'obtient plus en ne faisant rien. Le test
+     * gardait son nom en cessant d'exercer ce qu'il annonce, motif « valeurs
+     * qui coincident » deja rencontre sur ce depot.
+     */
     const { rows } = await client.query(
-      `SELECT id FROM facture WHERE commande_id = $1`,
+      `UPDATE facture SET chemin_pdf = NULL
+       WHERE commande_id = $1 RETURNING id`,
       [commandeId],
     );
 

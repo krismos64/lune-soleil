@@ -179,6 +179,22 @@ async function poserCheminPdf(factureId: string): Promise<void> {
   ]);
 }
 
+/**
+ * Remet `chemin_pdf` a nul pour eprouver l'etat « PDF a produire ».
+ *
+ * CETTE AIDE EST NEE D'UN TEST DEVENU FAUX. Jusqu'a LS-129 la confirmation du
+ * paiement laissait la colonne nulle, et ne rien faire suffisait : le
+ * commentaire du test disait « aucun poserCheminPdf, la colonne reste nulle ».
+ * Depuis, `webhook-paiement.ts` rend le PDF dans la foulee, et la mise en place
+ * n'atteignait plus l'etat qu'elle visait. Le comportement teste, lui, reste
+ * exactement le meme, regle F8.
+ */
+async function retirerCheminPdf(factureId: string): Promise<void> {
+  await client.query("UPDATE facture SET chemin_pdf = NULL WHERE id = $1", [
+    factureId,
+  ]);
+}
+
 beforeAll(async () => {
   const url = inject(VARIABLE_URL_TEST);
 
@@ -616,9 +632,15 @@ describe("etats du document", () => {
    * est un etat attendu, et il n'y a rien a servir.
    */
   it("refuse quand le PDF n'a pas encore ete rendu", async () => {
-    const { commandeId } = await commanderEtConfirmer();
+    const { commandeId, factureId } = await commanderEtConfirmer();
 
-    /* Aucun `poserCheminPdf` : la colonne reste nulle. */
+    /*
+     * LA COLONNE EST REMISE A NUL EXPLICITEMENT, et ne pas le faire suffisait
+     * avant LS-129 : la confirmation rend desormais le PDF dans la foulee, donc
+     * l'etat « PDF a produire » ne s'obtient plus en s'abstenant.
+     */
+    await retirerCheminPdf(factureId);
+
     const valeur = await poserJeton(commandeId);
 
     expect((await autoriserAccesDocument(valeur)).statut).toBe("REFUSE");
