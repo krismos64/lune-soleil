@@ -31,13 +31,14 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 4, factures et expédition | LS-5 | 5 | dépend du compte Sendcloud, LS-200 en tête |
 | 4bis, espace client et avis | LS-36 | 4 | LS-190 attend LS-58, qui attend le suivi de livraison |
 | 5, rétractation et conformité | LS-6 | 1 | LS-148, établir si le consentement aux cookies est dû |
-| 6, exploitation et ouverture | LS-7 | 9 | **LS-153 attend l'exploitante**, LS-142 et LS-175. LS-139 est en cours, premier volet livré |
+| 6, exploitation et ouverture | LS-7 | 10 | **LS-153 attend l'exploitante**, LS-142 et LS-175. LS-139 est en cours : en-têtes servis et incident 1 joué, restent l'incident 3, SSH et le seuil disque. LS-211 porte le statut du catalogue |
 | 7, V1 cible | LS-8 | 3 | après ouverture, hors Go-Live |
 | Contenus | LS-22 | 11 | **attend l'exploitante**, rien n'est faisable sans elle |
 
-**159 tickets terminés sur 210**, les deux termes relevés dans Jira le
-9 septembre 2026 et jamais dérivés l'un de l'autre. Le dénominateur a bougé de
-208 à 210 dans la même journée, LS-209 et LS-210 ayant été créées en livrant.
+**159 tickets terminés sur 211**, les deux termes relevés dans Jira le
+9 septembre 2026 au soir et jamais dérivés l'un de l'autre. Le dénominateur a
+bougé de 208 à 211 dans la même journée, LS-209, LS-210 et LS-211 ayant été
+créées en livrant.
 
 **Le contrôle nocturne est rouge pour une raison connue**, LS-210 : trois
 vulnérabilités `vitest` en dépendance de développement, jamais expédiées, que

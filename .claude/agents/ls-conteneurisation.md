@@ -35,6 +35,20 @@ Trois conséquences qui changent ce que tu écris :
    `nginx -t` avant tout `reload`, et jamais `restart`. Un retour arrière qui
    filtrerait large sur les conteneurs ou toucherait au Nginx de l'hôte au-delà
    du fichier de la boutique casserait un service payant.
+4. **La configuration Nginx n'est PAS transportée par le déploiement**, LS-139.
+   `docker/nginx/lune-soleil.conf` est un fichier de **l'hôte** : ni le workflow
+   « Déployer en production » ni `deploiement/deployer.sh` ne le copient, et le
+   fichier du dépôt n'est qu'une **référence à recopier à la main**.
+
+   Ce que ça a coûté le 9 septembre 2026 : un travail écrit, prouvé par neuf
+   mutations, fusionné **et déployé**, pendant que la production servait deux
+   en-têtes de sécurité sur cinq. Une version antérieure dormait sur la machine,
+   et son bloc `/medias/` n'en redéclarait que deux sur quatre.
+
+   Après toute modification de ce fichier : sauvegarde datée, `sudo cp`,
+   `sudo nginx -t`, `sudo systemctl reload nginx`, puis **mesurer** par
+   `./scripts/verifier-en-tetes-production.sh`, qui interroge le domaine public
+   et distingue « écrit » de « en service ».
 
 Le fuseau de la machine est **`Etc/UTC`** : les horaires de `docker/cron/crontab`
 se lisent dans ce fuseau, pas en heure de Paris.
