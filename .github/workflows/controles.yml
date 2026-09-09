@@ -1120,6 +1120,37 @@ jobs:
         run: ./scripts/verifier-plafonds-corps-mutation.sh
 
       # ----------------------------------------------------------------------
+      # Controle 9z ter, LS-110. Toute navigation interne passe par `Link`.
+      #
+      # CE CONTROLE EXISTE PARCE QU'ESLINT NE VOIT PAS CE DEFAUT, et c'est le
+      # point qui justifie un script de plus. `@next/next/no-html-link-for-pages`
+      # est active en ERREUR par core-web-vitals, et reste muette : mesure sur
+      # Next.js 16.2.12, seul `href="/"` la fait rougir, ni `/panier` ni
+      # `/administration/categories` ne sont vus. Elle ne signale que le seul
+      # lien que personne n'ecrit par erreur.
+      #
+      # UNE BALISE NATIVE RECHARGE LE DOCUMENT ENTIER, jette le cache de route
+      # et repart d'un rendu serveur complet la ou une navigation client
+      # suffisait. Le fil d'Ariane de l'editeur de produit le faisait a chaque
+      # retour au catalogue.
+      #
+      # LES RECHARGEMENTS VOULUS SE DECLARENT, marqueur `@rechargement-delibere`
+      # avec sa raison : quatre liens du depot rechargent a dessein apres une
+      # invalidation de session, et les interdire ferait supprimer la ligne qui
+      # protege.
+      # ----------------------------------------------------------------------
+      - name: 9z ter. Toute navigation interne passe par Link
+        run: ./scripts/verifier-navigation-client.sh
+
+      # Preuve par mutation du controle precedent, LS-110. Textuel, secondes.
+      # SA MUTATION 3 A TROUVE UN VRAI TROU : le motif employait l'alternance de
+      # GNU, que le grep BSD de macOS lit litteralement, et dix des trente et une
+      # balises du depot echappaient au controle, dont toutes celles enveloppees
+      # sur plusieurs lignes. Le vert etait celui d'un depot examine au tiers.
+      - name: 9z quater. Preuve par mutation de la navigation client
+        run: ./scripts/verifier-navigation-client-mutation.sh
+
+      # ----------------------------------------------------------------------
       # Controles 2 et 3. Le format entre ici parce qu'un depot ou seule une
       # partie des fichiers est formatee produit des diffs illisibles.
       # ----------------------------------------------------------------------

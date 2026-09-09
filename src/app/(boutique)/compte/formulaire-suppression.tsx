@@ -13,6 +13,7 @@
  * enfoncee. Pour une action irreversible, la confirmation doit demander un
  * geste DIFFERENT du geste initial : ici, recopier un mot.
  */
+import Link from "next/link";
 import { useState } from "react";
 
 import { supprimerCompteAction } from "./actions";
@@ -183,12 +184,12 @@ export function FormulaireSuppressionCompte({
        * URL fournie, ce qui ferme la redirection ouverte.
        */}
       {etat === "reauthentification" && (
-        <a
+        <Link
           className={styles.lien}
           href="/compte/reauthentification?retour=compte"
         >
           Confirmer mon identité
-        </a>
+        </Link>
       )}
     </form>
   );

@@ -66,8 +66,19 @@ MARQUEUR="@rechargement-delibere"
 # relu à la main. Les lignes de COMMENTAIRE sont exclues, sinon le contrôle
 # s'accuserait lui-même sur sa propre documentation. Motif « contrôle satisfait
 # par un commentaire », déjà en fiche sur ce dépôt.
+#
+# LE MOTIF EST ÉTENDU, `-E`, ET CE N'EST PAS UN DÉTAIL DE STYLE. La première
+# version employait l'alternance de GNU, `"<a$\|<a \|<a>"`, qui ne veut rien
+# dire pour le grep BSD de macOS : celui-ci la lit littéralement et manquait
+# DIX des trente et une balises du dépôt, dont toutes celles enveloppées sur
+# plusieurs lignes. Le contrôle rendait un OK sur un dépôt examiné au tiers.
+#
+# LA PREUVE PAR MUTATION EST CE QUI L'A TROUVÉ, pas la relecture : le contrôle
+# était vert sur le dépôt sain ET vert sur le dépôt muté, ce qui ne se voit
+# qu'en posant le défaut. Une session interactive ne pouvait pas le voir non
+# plus, `grep` y étant aliasé sur ugrep, qui accepte les deux formes.
 # ---------------------------------------------------------------------------
-balises=$(grep -rn "<a$\|<a \|<a>" "$SRC" --include="*.tsx" \
+balises=$(grep -rnE "<a$|<a |<a>" "$SRC" --include="*.tsx" \
   | grep -v "/generated/" \
   | grep -v '^\([^:]*\):\([0-9]*\):\s*\*' \
   | grep -v '^\([^:]*\):\([0-9]*\):\s*//' \
@@ -110,17 +121,34 @@ while IFS= read -r ligne; do
   # Aucun href : ce n'est pas une navigation.
   [ -n "$href" ] || continue
 
-  # HREF CONSTRUIT À L'EXÉCUTION. Un contrôle textuel ne peut pas savoir où il
-  # mène : le compter et le dire vaut mieux que le juger à tort dans un sens ou
-  # dans l'autre. Ils sont annoncés pour que le nombre se relise.
-  case "$href" in
-    "href={")
-      nb_dynamiques=$((nb_dynamiques + 1))
-      continue
-      ;;
-  esac
+  # HREF CONSTRUIT À L'EXÉCUTION, `href={...}`. Un contrôle textuel ne peut pas
+  # savoir où il mène : le compter et le dire vaut mieux que le juger à tort.
+  #
+  # LA TENTATION EST D'EN LIRE LE LITTÉRAL DE TÊTE, et elle a été essayée le
+  # 9 septembre 2026 : elle trouve bien le vrai défaut des filtres de factures,
+  # mais accuse aussi les liens vers les PDF de facture et d'avoir, qui pointent
+  # vers un `route.ts` répondant en `application/pdf`. Distinguer les deux
+  # demande de résoudre une expression, ce qu'un script textuel ne fait pas
+  # honnêtement : le faire à moitié produit des accusations fausses, et une
+  # personne qui corrige un faux défaut casse un téléchargement.
+  #
+  # CE QUI COMBLE LE TROU N'EST DONC PAS CE CONTRÔLE mais la relecture, qui a eu
+  # lieu et a corrigé les filtres de factures. Le nombre est ANNONCÉ pour qu'une
+  # hausse se voie et appelle cette relecture.
+  if [ "$href" = "href={" ]; then
+    nb_dynamiques=$((nb_dynamiques + 1))
+    continue
+  fi
 
   cible=$(printf '%s' "$href" | sed 's|^href="||; s|"$||')
+
+  # UN TÉLÉCHARGEMENT N'EST PAS UNE NAVIGATION. L'attribut `download` demande
+  # au navigateur d'enregistrer la ressource au lieu d'y aller : `Link` ne le
+  # porte pas et casserait le comportement. L'export des données personnelles
+  # du compte est dans ce cas.
+  if printf '%s' "$bloc" | grep -qE '^\s*download\s*$|<a[^>]*\sdownload[\s>]'; then
+    continue
+  fi
 
   # Ce qui ne navigue pas dans le site : ancre, protocole, URL absolue.
   case "$cible" in
