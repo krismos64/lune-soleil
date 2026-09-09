@@ -89,6 +89,50 @@ dit avant le déploiement.
 Six pages publiques répondent 200 avec la politique, et les **trois scripts
 inline portent le nonce**, JSON-LD compris : Next.js le propage seul.
 
+## Ce que la CI a refusé, deux fois, et qu'elle avait raison de refuser
+
+Écrit après coup : ces deux défauts sont sortis **après** la première rédaction
+de ce journal, et ils portent la leçon la plus utile du volet.
+
+### Le composant asynchrone cassait cinq tests de sécurité
+
+Rendre `DonneesStructurees` asynchrone pour lire le nonce a cassé les cinq tests
+unitaires de LS-137 : ils appellent le composant **comme une fonction** pour
+mesurer le HTML réellement rendu, et un composant asynchrone leur rend « A
+component suspended while responding to synchronous input ».
+
+Ces tests gardent une propriété réelle : une saisie contenant `</script>`
+refermerait la balise au milieu du JSON. React n'échappe rien dans un `<script>`,
+son contenu étant du texte brut au sens HTML.
+
+**Deux voies existaient.** Rendre les tests asynchrones aurait marché, et aurait
+mêlé l'échappement à une dépendance de requête : chaque test aurait dû simuler
+`headers()` pour vérifier une propriété qui n'a rien à voir avec lui. Le
+composant est donc coupé en deux, `BlocJsonLd` rendant et `DonneesStructurees`
+lisant le nonce.
+
+### Puis mon contrôle s'est contenté du transport du nonce, pas de sa pose
+
+Le découpage a fait apparaître `nonce={nonce}` **deux fois** : passé en
+propriété, puis posé sur la balise. Le contrôle cherchait `nonce={` n'importe où
+dans le fichier : il trouvait le passage et restait **vert** alors que la balise
+ne portait plus rien.
+
+C'est exactement le défaut à attraper, et le seul qui compte : un nonce
+transporté mais non posé laisse la CSP bloquer le bloc, et les données
+structurées disparaissent pour les moteurs **sans que rien ne change à l'écran**.
+
+**La mutation visait aussi à côté**, et les deux défauts se masquaient : une
+substitution sans `/g` retirait la première occurrence, celle qui ne protège
+rien. Le contrôle restait donc vert **à juste titre**, et la mutation l'accusait
+à tort.
+
+**C'est la quatrième fois de la journée** qu'un contrôle écrit ici se révèle
+décoratif, et à chaque fois seule la mutation l'a vu. Le motif mérite d'être
+retenu : un contrôle qui cherche un nom **n'importe où** dans un fichier se fait
+satisfaire par un commentaire, par une déclaration de type, ou par le simple
+passage d'une valeur.
+
 ## Propagation
 
 ADR-038 entre dans la table de `docs/REFERENCES.md`. Les deux scripts entrent

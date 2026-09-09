@@ -31,13 +31,20 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 4, factures et expédition | LS-5 | 5 | dépend du compte Sendcloud, LS-200 en tête |
 | 4bis, espace client et avis | LS-36 | 4 | LS-190 attend LS-58, qui attend le suivi de livraison |
 | 5, rétractation et conformité | LS-6 | 1 | LS-148, établir si le consentement aux cookies est dû |
-| 6, exploitation et ouverture | LS-7 | 8 | **LS-153 attend l'exploitante**, LS-142 et LS-175 |
+| 6, exploitation et ouverture | LS-7 | 9 | **LS-153 attend l'exploitante**, LS-142 et LS-175. LS-139 est en cours, premier volet livré |
 | 7, V1 cible | LS-8 | 3 | après ouverture, hors Go-Live |
 | Contenus | LS-22 | 11 | **attend l'exploitante**, rien n'est faisable sans elle |
 
 **159 tickets terminés sur 210**, les deux termes relevés dans Jira le
 9 septembre 2026 et jamais dérivés l'un de l'autre. Le dénominateur a bougé de
 208 à 210 dans la même journée, LS-209 et LS-210 ayant été créées en livrant.
+
+**Le contrôle nocturne est rouge pour une raison connue**, LS-210 : trois
+vulnérabilités `vitest` en dépendance de développement, jamais expédiées, que
+npm refuse de résoudre sur un bug reproduit en cinq tentatives. Tout le reste du
+nocturne passe, scénarios de bout en bout compris. Ne pas prendre ce rouge pour
+un défaut neuf, et ne pas s'y habituer non plus : c'est le risque que LS-210
+porte explicitement.
 
 **La phase 1 est close dans Jira depuis le 9 septembre**, ses 26 stories étant
 terminées : l'epic était resté En cours alors que sa porte de sortie datait du
@@ -55,9 +62,15 @@ ADR-036. Trois conteneurs, schéma complet, sauvegarde quotidienne par unité
 `systemd` avec restauration prouvée, ADR-037. Les cinq tâches planifiées
 tournent, et les médias sont servis depuis le volume.
 
-**Le déploiement est automatisé depuis LS-138** : un commit sur `main` aboutit
-sur le VPS en dix-huit secondes par le workflow « Déployer en production », et le
-retour arrière a été joué réellement. La clé SSH ne peut exécuter qu'un script,
+**Le déploiement est outillé depuis LS-138, et son déclenchement reste
+MANUEL** : le workflow « Déployer en production » se lance à la demande, avec le
+SHA complet du commit à déployer, et aboutit sur le VPS en dix-huit secondes. Le
+retour arrière a été joué réellement.
+
+**Un commit sur `main` ne déploie rien**, il publie une image. Le déclenchement
+manuel est une décision, expliquée dans `deployer.yml` : les migrations tournent
+depuis le dépôt, le garde-fou destructif exige une lecture humaine, et chaque
+déploiement recrée des conteneurs chez un produit payant qui partage la machine. La clé SSH ne peut exécuter qu'un script,
 sur un utilisateur hors du groupe `docker`.
 
 **Il reste LS-153**, la première mise en ligne : poser les clés Stripe et SMTP,
@@ -363,8 +376,10 @@ où il agit plutôt qu'à la construction.
 
 **Les six variables SMTP sont lues depuis LS-82**, `smtp.ts` refusant de
 construire son transport si l'une manque, en nommant les absentes et jamais leur
-valeur. Stripe, médias et IA restent vides tant que la phase qui les emploie n'a
-pas commencé : le code ne les lit pas encore.
+valeur. **Stripe et les médias sont lus depuis**, `stripe/index.ts` et
+`services/media.ts` : les laisser vides rend le paiement indisponible et la
+racine des médias au repli, ce qui compte pour LS-153. Seules les variables de
+l'IA ne sont lues par aucun code, la phase qui les emploie n'ayant pas commencé.
 
 | Commande | Effet |
 | --- | --- |
@@ -621,7 +636,9 @@ ne verrait que la présence d'un cookie, ni sa validité ni le rôle.
 
 Des trois mesures d'ADR-021 décidées par ADR-027, la limitation de débit est
 posée par LS-79 et la session d'un jour par LS-81. **Le journal des connexions
-reste à porter, LS-80.** La réauthentification des actions sensibles a son
+est porté par LS-80** : service, écran d'administration, hook, test de bout en
+bout et test d'intégration existent, `git ls-files | grep journal-connexion` les
+liste. La réauthentification des actions sensibles a son
 mécanisme et son contrôle, LS-81 ; le branchement des quatre familles attend que
 les actions existent, LS-89.
 
@@ -868,7 +885,8 @@ cas des deux scripts de mutation, `README.md` de garde des dossiers de `src/`.
 Ces contrôles existent parce que chacun de ces comptes a été faux au moins une
 fois, sans que rien ne le voie.
 
-**La table des nombres en lettres monte à trente**, et ce n'est pas du confort.
+**La table des nombres en lettres monte à quarante**, étendue par LS-80, et ce
+n'est pas du confort.
 Elle s'arrêtait à « dix » : au-delà, la conversion rendait une chaîne vide et la
 comparaison était **sautée**, donc verte sans avoir rien vérifié. Le seuil était
 déjà franchi à l'époque, `verifier-tests-mutation.sh` portant alors vingt-et-un
@@ -886,7 +904,9 @@ l'information utile. Le 4 août 2026, « deux hooks » était faux parce qu'un
 
 `.github/workflows/controles.yml`, LS-69. Il s'exécute sur chaque pull request
 vers `main`, et rejoue les **neuf** contrôles de `CONTRIBUTING.md` plus le
-format et `npm audit`. Le neuvième a été détaché du sixième par LS-202 : les
+format. **`npm audit` n'y est plus depuis LS-177**, il est passé au nocturne
+avec les scénarios de bout en bout et la construction de l'image, comme le dit
+la section suivante. Le neuvième a été détaché du sixième par LS-202 : les
 contrôles textuels vivaient sous le numéro `6x` alors que quatre étapes
 seulement valident le schéma.
 

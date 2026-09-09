@@ -146,6 +146,14 @@ niveau 1, garanti par la base.
 | `envoi_en_attente_actif_unique` | `statut IN ('EN_ATTENTE','ENVOI_EN_COURS')` | E5, ADR-033, première ligne de défense |
 | `adresse_defaut_unique` | `est_par_defaut` | A2, une adresse par défaut |
 | `utilisateur_administratrice_unique` | `role = 'ADMINISTRATRICE'` | E1, ADR-023 |
+| `mouvement_compense_unique` | `compense_id IS NOT NULL` | ADR-030, un mouvement ne compense qu'une fois |
+
+**Le nombre ne s'écrit plus ici**, il se mesure : `grep -c 'where: raw'
+prisma/schema.prisma`. Cette table en a listé **sept sur huit** jusqu'au
+9 septembre 2026, `mouvement_compense_unique` manquant depuis sa création par
+ADR-030. Un index absent de sa table de référence est un index que personne ne
+pense à réviser, et ce dépôt porte deux fiches sur le piège du prédicat : une
+valeur ajoutée à un enum élargit le filtre en silence.
 
 **Les deux index de la règle E5 ne font pas double emploi.** Celui de
 `journal_email` empêche deux traces d'envoi réussi ; celui d'`envoi_en_attente`
