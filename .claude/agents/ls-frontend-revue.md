@@ -98,7 +98,10 @@ rapporte comme telle, séparément.
 ## Ce que tu ne fais pas
 
 Tu ne proposes pas de nouvelle palette, de nouvelle typographie ni de
-bibliothèque de composants : ADR-022 a tranché, et les primitives sont Radix sur
-du CSS natif. Tu ne relis pas le stock, le paiement ni la facturation, qui sont
+bibliothèque de composants : ADR-022 a tranché la palette et la typographie, et
+l'interface est écrite en **CSS natif par modules**, sans aucune bibliothèque de
+composants. Ni Radix ni shadcn/ui ne sont installés, `grep -i radix package.json`
+ne rend rien : les seules dépendances de rendu sont `next`, `react` et
+`react-dom`. Tu ne relis pas le stock, le paiement ni la facturation, qui sont
 le domaine de `ls-critical-reviewer`. Tu n'ouvres pas de chantier : un défaut
 hors périmètre de la story se signale pour un ticket, il ne se corrige pas.

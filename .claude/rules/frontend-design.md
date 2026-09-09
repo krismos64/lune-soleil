@@ -197,8 +197,11 @@ suranimation. Aucun **dégradé métallique** sur un bouton, un bandeau ou un
 footer : c'est un marqueur de site généré automatiquement. Les aplats unis
 uniquement.
 
-Les primitives shadcn/ui et Radix servent pour l'accessibilité, jamais comme
-identité visuelle par défaut.
+**Aucune bibliothèque de composants n'est installée**, ni shadcn/ui ni Radix :
+l'interface est en CSS natif par modules, et l'accessibilité est portée à la main,
+rôles ARIA et régions live compris. Si l'une était introduite un jour, elle
+servirait pour l'accessibilité et jamais comme identité visuelle par défaut, ce
+que cette règle disait déjà au présent alors que rien n'était installé.
 
 Pas de faux avis, faux compteur, promotion inventée ni urgence artificielle.
 Pas de tableau dans la boutique publique.
@@ -246,6 +249,31 @@ l'URL en dur : ils ne passent jamais par une navigation réelle, donc l'absence
 totale de menu ne faisait rougir aucune assertion.
 `tests/e2e/navigation-administration.spec.ts` navigue **au clic** pour cette
 raison.
+
+**Toute navigation interne passe par `Link`, jamais par une balise `<a>`**,
+LS-110. Une balise native recharge le document entier, jette le cache de route
+de Next.js et repart d'un rendu serveur complet là où une navigation client
+suffisait. `scripts/verifier-navigation-client.sh` le garde, avec sa preuve par
+mutation.
+
+**ESLint a la règle et ne voit pas le défaut**, ce qui justifie ce contrôle de
+plus. `@next/next/no-html-link-for-pages` est active en ERREUR par
+`core-web-vitals` et reste muette : mesuré sur Next.js 16.2.12, seul `href="/"`
+la fait rougir, ni `/panier` ni `/administration/categories`. Elle ne signale que
+le seul lien que personne n'écrit par erreur.
+
+**Un rechargement VOULU se déclare**, par un marqueur `@rechargement-delibere`
+dans un commentaire au-dessus du lien, suivi de sa raison. Quatre liens du dépôt
+rechargent à dessein, tous après une invalidation de session : une navigation
+client y conserverait le cache de route, donc un en-tête rendu avec « Mon
+compte » pour une session qui n'existe plus. Les interdire ferait supprimer la
+ligne qui protège.
+
+Deux cas ne sont pas des navigations et ne sont pas signalés : un `download`,
+qui enregistre au lieu d'aller, et une ancre ou un protocole `mailto:`. Un
+`href={...}` construit à l'exécution n'est **pas jugé**, un script textuel ne
+résolvant pas une expression : leur nombre est annoncé pour qu'une hausse appelle
+une relecture.
 
 L'écran courant est annoncé par `aria-current="page"`, et **le style s'ancre sur
 cet attribut** plutôt que sur une classe : deux sources distinctes finiraient

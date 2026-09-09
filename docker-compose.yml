@@ -2,7 +2,9 @@
 #
 # Ce fichier ne decrit QUE le developpement local. La production ne s'en sert
 # pas : elle recoit son schema par ./scripts/migrate-production.sh, et sa base
-# vit chez l'hebergeur. Ne rien ajouter ici en pensant a la production.
+# est un conteneur PostgreSQL 18 sur le VPS avec volume nomme, ADR-037, decrit
+# par docker-compose.production.yml. Ne rien ajouter ici en pensant a la
+# production.
 #
 # AUCUN SECRET DANS CE FICHIER. Le depot est public. Les valeurs viennent de
 # .env, dont .env.example porte les noms et les formats. Les variables sont

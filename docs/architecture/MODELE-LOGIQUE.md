@@ -120,8 +120,11 @@ Deux conséquences pour l'implémentation :
 **Déploiement, réglé par LS-67.** Ces contraintes sont posées par la migration
 `20260731050325_contraintes_check_et_unicite_differable`, donc appliquées par
 `prisma migrate deploy` en développement, en intégration continue et en
-production. Vérifié sur une base issue des seules migrations : 25 `CHECK` sur 25
-et `condeferrable = t`, là où la même mesure donnait zéro avant la story.
+production. Vérifié sur une base issue des seules migrations : tous les `CHECK`
+présents et `condeferrable = t`, là où la même mesure donnait zéro avant la
+story. Le compte ne s'inscrit pas ici, il se mesure, `grep -c 'ADD CONSTRAINT'
+prisma/sql-manuel/001_contraintes_check.sql` : il valait 25 à LS-67 et 33 au
+9 septembre 2026.
 
 Les fichiers de `prisma/sql-manuel/` restent une source de **conception et de
 contrôle**, lue par `verifier-schema.sh`. **Ne pas les réappliquer à la main** :
@@ -129,7 +132,7 @@ une base locale rendue conforme après coup masquerait une migration incomplète
 et le défaut n'apparaîtrait qu'en production. `preparer-base-locale.sh` compare
 désormais le compte en base à ces fichiers et échoue en cas d'écart.
 
-## Les sept index partiels
+## Les index partiels
 
 Chacun traduit une règle que le récapitulatif du modèle conceptuel range au
 niveau 1, garanti par la base.
@@ -174,19 +177,26 @@ SELECT confdeltype, count(*) FROM pg_constraint WHERE contype='f'
 GROUP BY confdeltype;
 ```
 
-| Politique | Occurrences | Motif |
-|---|---|---|
-| `RESTRICT` | 18 | rien d'historique ne se supprime par effet de bord |
-| `SET NULL` | 11 | le lien disparaît, la ligne survit |
-| `CASCADE` | 3 | l'enfant n'a aucun sens sans son parent |
+| Politique | Motif |
+|---|---|
+| `RESTRICT` | rien d'historique ne se supprime par effet de bord |
+| `SET NULL` | le lien disparaît, la ligne survit |
+| `CASCADE` | l'enfant n'a aucun sens sans son parent |
 
-Trente-deux clés étrangères au total.
+**Les occurrences ne sont plus inscrites ici, elles se mesurent** :
 
-Les chiffres annoncés ici avant LS-76 étaient faux sur deux des trois lignes,
-17 et 12 au lieu de 18 et 11, pour un total de 31 au lieu de 32. Personne ne
-l'avait vu parce qu'aucun contrôle ne confrontait ces nombres à la base : c'est le
-même défaut que le compte de contraintes `CHECK`, corrigé par la commande
-ci-dessus. **Recompter plutôt que relire.**
+```bash
+grep -c 'references: \[' prisma/schema.prisma           # clés étrangères
+grep -oE 'onDelete: [A-Za-z]+' prisma/schema.prisma | sort | uniq -c
+```
+
+Ces nombres ont été faux DEUX FOIS, et la seconde était une récidive. Avant
+LS-76 le document annonçait 17 et 12 au lieu de 18 et 11 ; la correction a
+inscrit 18, 11 et 3 pour 32 au total, puis le schéma a continué de grandir et
+l'audit du 9 septembre 2026 a mesuré **20, 13 et 6 pour 39**. Le paragraphe
+concluait « Recompter plutôt que relire » : la leçon était juste, la forme
+retenue la condamnait à se périmer. Un nombre écrit à la main dans un document
+n'a aucun moyen de suivre le code.
 
 Les trois cascades portent sur `Media` vers `Produit`, `SectionProduit` vers
 `Produit`, et `AdresseCarnet` vers `Utilisateur`. La dernière est la traduction de
@@ -272,8 +282,10 @@ statistique bornant une période avant de regrouper par type.
 
 ## Vérification
 
-`prisma/sql-manuel/verifier-schema.sh` rejoue soixante-huit contrôles sur
-une base PostgreSQL 18.4 jetable. Il couvre ce que le prototype d'ADR-006
+`prisma/sql-manuel/verifier-schema.sh` rejoue ses contrôles sur une base
+PostgreSQL 18.4 jetable. Leur nombre se mesure plutôt qu'il ne se recopie, il
+n'a cessé de croître : « soixante-huit » y était écrit quand l'audit du
+9 septembre 2026 en a compté plus de quatre-vingt-dix. Il couvre ce que le prototype d'ADR-006
 vérifiait sur deux tables, et l'étend aux contraintes nées de LS-37 à LS-41, puis
 au montant des ventes externes de LS-63.
 
@@ -372,7 +384,8 @@ chemins.
 **Node 22 LTS.** Prisma 7 refuse les versions impaires : 20.19+, 22.12+ ou 24.0+
 uniquement. La machine de développement portait Node 23.9.0, incompatible. À
 fixer dans `.nvmrc`, dans `engines` du `package.json`, dans le `Dockerfile` et
-dans l'intégration continue, en phase 1.
+dans l'intégration continue. **Fait**, phase 1 close : `.nvmrc` porte 22.23.2 et
+`engine-strict=true` rend `engines` bloquant.
 
 **Prisma 7 a supprimé `url` du bloc `datasource`.** La chaîne de connexion passe
 par un fichier `prisma.config.ts` à la racine :
