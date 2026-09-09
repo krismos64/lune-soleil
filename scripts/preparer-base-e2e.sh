@@ -98,13 +98,42 @@ docker info >/dev/null 2>&1 || echec "le demon Docker ne repond pas, est-il dema
 # comparer est ce que l'exploitant a ECRIT dans `.env`, la seule chose qu'une
 # recopie sans changement de port peut rendre identique. `dotenv.parse` lit le
 # fichier sans toucher a `process.env`, donc sans subir la surcharge.
+#
+# ---------------------------------------------------------------------------
+# EN INTEGRATION CONTINUE IL N'Y A PAS DE `.env`, ET CE SCRIPT Y ECHOUAIT DONC
+# TOUJOURS. Mesure du 9 septembre 2026 : le controle nocturne echouait depuis
+# deux nuits sur « Process from config.webServer was not able to start », le
+# script s'arretant sur « DATABASE_URL_E2E absente de .env » pour un fichier que
+# la chaine ne cree jamais et n'aura jamais, invariant 9, le depot etant public.
+#
+# CE QUE CET ECHEC MASQUAIT EST PIRE QUE LUI. L'etape `npm audit` du nocturne
+# vient APRES celle-ci : sautee, elle sortait `skipped` et non `failure`. Sept
+# vulnerabilites sont entrees sans un mot, dont une CRITIQUE sur Next.js,
+# atteignable en production. L'etape porte desormais `if: always()`.
+#
+# LE FICHIER RESTE LA SOURCE QUAND IL EXISTE, l'environnement prend le relais
+# sinon. La garde ne se relache pas pour autant : les deux URL sont comparees
+# dans les deux cas, et deux valeurs au meme port sont refusees de la meme
+# facon. Ce qui disparait est la seule EXIGENCE d'un fichier, jamais le controle
+# qu'il permettait.
+#
+# CELA NE SUFFIT PAS A FAIRE TOURNER LA SUITE EN CI, et il faut le dire plutot
+# que de laisser croire le contraire : le demarrage du conteneur passe par
+# `docker compose`, qui exige lui aussi un `.env` et echoue sans lui, mesure
+# faite. Rendre le nocturne capable de jouer les scenarios de bout en bout
+# demande de demarrer la base 55433 par `docker run` comme la chaine le fait
+# deja pour 55432, ce qui depasse cette correction. En attendant, l'echec du
+# nocturne est CONNU et ne masque plus l'audit des dependances.
 # ---------------------------------------------------------------------------
 verdict=$(node -e '
 const fs = require("node:fs");
 const dotenv = require("dotenv");
-const fichier = dotenv.parse(fs.readFileSync(".env"));
-const dev = fichier.DATABASE_URL;
-const e2e = fichier.DATABASE_URL_E2E;
+const existe = fs.existsSync(".env");
+const fichier = existe ? dotenv.parse(fs.readFileSync(".env")) : {};
+// Le fichier prime quand il existe : lui seul peut porter une recopie sans
+// changement de port. Sans lui, en CI, l environnement est la seule source.
+const dev = fichier.DATABASE_URL ?? process.env.DATABASE_URL;
+const e2e = fichier.DATABASE_URL_E2E ?? process.env.DATABASE_URL_E2E;
 if (!e2e) { console.log("ABSENTE"); process.exit(0); }
 if (!dev) { console.log("DEV_ABSENTE"); process.exit(0); }
 if (dev === e2e) { console.log("IDENTIQUES"); process.exit(0); }
@@ -116,9 +145,10 @@ try {
 
 case "$verdict" in
   ABSENTE)
-    echec "DATABASE_URL_E2E absente de .env.
+    echec "DATABASE_URL_E2E absente de .env ET de l'environnement.
        Elle doit pointer la base de bout en bout, port 55433 par defaut, la
-       meme URL que DATABASE_URL au PORT pres. Voir .env.example, LS-189." ;;
+       meme URL que DATABASE_URL au PORT pres. Voir .env.example, LS-189.
+       En integration continue, la composer comme DATABASE_URL, au port pres." ;;
   DEV_ABSENTE)
     echec "DATABASE_URL absente de .env, la comparaison ne peut pas conclure." ;;
   IDENTIQUES)
