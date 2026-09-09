@@ -312,7 +312,7 @@ export default defineConfig({
     {
       name: "mobile-390",
       testIgnore:
-        /(session-(cliente|verifiee|administration)|commande|comptes-profil)\.setup\.ts|filtres-commandes-320\.spec\.ts$/,
+        /(session-(cliente|verifiee|administration)|commande|comptes-profil)\.setup\.ts|filtres-commandes-320\.spec\.ts|en-tetes-securite\.spec\.ts$/,
       dependencies: ["preparation"],
       use: {
         ...devices["Desktop Chrome"],
@@ -359,7 +359,7 @@ export default defineConfig({
        */
       name: "tablette-768",
       testIgnore:
-        /(session-(cliente|verifiee|administration)|commande|comptes-profil)\.setup\.ts|filtres-commandes-320\.spec\.ts$/,
+        /(session-(cliente|verifiee|administration)|commande|comptes-profil)\.setup\.ts|filtres-commandes-320\.spec\.ts|en-tetes-securite\.spec\.ts$/,
       dependencies: ["preparation"],
       use: {
         ...devices["Desktop Chrome"],
@@ -369,7 +369,7 @@ export default defineConfig({
     {
       name: "bureau-1280",
       testIgnore:
-        /(session-(cliente|verifiee|administration)|commande|comptes-profil)\.setup\.ts|filtres-commandes-320\.spec\.ts$/,
+        /(session-(cliente|verifiee|administration)|commande|comptes-profil)\.setup\.ts|filtres-commandes-320\.spec\.ts|en-tetes-securite\.spec\.ts$/,
       dependencies: ["preparation"],
       use: {
         ...devices["Desktop Chrome"],

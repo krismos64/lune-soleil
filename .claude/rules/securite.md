@@ -8,6 +8,7 @@ paths:
   - "src/services/journal-connexion.ts"
   - "src/app/api/auth/**/*.ts"
   - "src/app/api/interne/**/*.ts"
+  - "src/proxy.ts"
 ---
 
 # Socle technique, authentification et secrets
@@ -413,6 +414,44 @@ dans une condition d'accès.
 **Tout segment de chemin est validé par une liste d'autorisés.** Un identifiant
 ou un nom de déclinaison qui porterait `..` ou un séparateur ferait écrire hors
 du volume. Énumérer les formes de traversée revient toujours à en oublier une.
+
+## En-têtes de sécurité et CSP, ADR-038, LS-139
+
+**Cinq en-têtes, deux sources, et ce partage est délibéré.** `src/proxy.ts` pose
+la `Content-Security-Policy`, qui porte un **nonce par requête** et ne peut donc
+pas être statique. Nginx pose les quatre autres, `Strict-Transport-Security`,
+`X-Content-Type-Options`, `Referrer-Policy` et `Permissions-Policy`.
+
+**Les quatre sont chez Nginx parce qu'il les sert même quand l'application est
+tombée.** Une page 502 partirait sinon sans `nosniff`, c'est-à-dire au moment où
+le client est le plus exposé. C'est aussi pourquoi tous portent `always` : sans
+lui, `add_header` ne pose l'en-tête que sur 2xx, 204, 301, 302 et 304.
+
+**`unsafe-inline` sur `script-src` est interdit.** C'est précisément l'injection
+de script inline que la CSP existe pour bloquer : le poser rendrait la politique
+décorative, tout en la laissant parfaitement visible dans les en-têtes. Le
+défaut le plus probable d'un remaniement est de l'ajouter pour débloquer un
+script, la page remarchant aussitôt.
+
+**`unsafe-eval` ne se pose que sous condition d'environnement.** React l'emploie
+en développement pour reconstruire les piles d'erreur serveur ; ni React ni
+Next.js n'en ont besoin en production. La condition se porte sur la LIGNE qui
+pose la directive, pas ailleurs dans le fichier.
+
+**Tout script inline porte le nonce**, le bloc JSON-LD des données structurées
+compris. L'oublier est un défaut **invisible à l'oeil** : aucune page ne change,
+le navigateur bloque le bloc, et le référencement se dégrade des semaines plus
+tard sans qu'on relie les deux.
+
+**Le piège de Nginx : `add_header` dans un `location` REMPLACE le jeu hérité du
+bloc serveur**, il ne s'y ajoute pas. Un `location` qui pose un seul en-tête
+perd donc les quatre autres, en silence. Le bloc `/medias/` était dans ce cas, et
+ce sont justement des fichiers téléversés.
+
+`verifier-en-tetes-securite.sh` garde ces règles par le texte,
+`tests/e2e/en-tetes-securite.spec.ts` les mesure sur les réponses réelles. Les
+deux sont nécessaires : le premier ne peut pas voir qu'un en-tête déclaré n'est
+pas servi.
 
 ## Ce qui ne se change pas sans ADR
 

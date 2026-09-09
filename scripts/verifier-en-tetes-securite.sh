@@ -188,12 +188,25 @@ fi
 # `unsafe-eval` EST TOLÉRÉ EN DÉVELOPPEMENT SEULEMENT, React l'employant pour
 # reconstruire les piles d'erreur. Le poser sans condition l'emmènerait en
 # production, où ni React ni Next.js n'en ont besoin.
+#
+# L'ANCRAGE PORTE SUR LA LIGNE QUI POSE `unsafe-eval`, jamais sur la présence de
+# `development` ailleurs dans le fichier. La première écriture faisait la
+# seconde, et sa mutation l'a montré : retirer la condition laissait intacte la
+# ligne `NODE_ENV === "development"` qui la LIT plus bas, et le contrôle restait
+# vert sur un `unsafe-eval` désormais inconditionnel.
+#
+# Un ternaire sur la même ligne est la forme retenue ici ; toute autre forme
+# doit rendre ce contrôle rouge plutôt que vert, ce qui est le bon sens d'erreur.
 if grep -q "unsafe-eval" "$PROXY"; then
-  if grep -qE "development" "$PROXY"; then
+  pose=$(grep -nE "unsafe-eval" "$PROXY" | grep -v "^[0-9]*: *[*#]" | grep -v "'unsafe-eval'\\\`" || true)
+
+  if printf '%s' "$pose" | grep -qE "developpement \?|development.*\?"; then
     echo "  OK    'unsafe-eval' est conditionné au développement"
   else
-    echo "  ECHEC 'unsafe-eval' est posé sans condition d'environnement."
-    echo "        Il partirait en production, où il n'est pas nécessaire."
+    echo "  ECHEC 'unsafe-eval' est posé sans condition sur la même ligne."
+    echo "        Il partirait en production, où ni React ni Next.js n'en ont"
+    echo "        besoin. La condition doit être portée par la ligne qui pose"
+    echo "        la directive, pas par une lecture ailleurs dans le fichier."
     ko=1
   fi
 fi
