@@ -35,15 +35,34 @@ import { parse } from "dotenv";
  * 2026. Motif « valeur par defaut qui ment », deja en fiche sur ce depot.
  *
  * L'ABSENCE DU FICHIER EST UN CAS NOMINAL, celui de l'integration continue : le
- * workflow pose ses variables dans l'environnement, sans `.env`. `undefined`
- * est alors rendu, et la cle est OMISE du bloc `env`, ce qui laisse le
- * sous-processus heriter de la `DATABASE_URL` du workflow.
+ * workflow pose ses variables dans l'environnement, sans `.env`.
+ *
+ * ------------------------------------------------------------------
+ * L'ENVIRONNEMENT EST LU EN SECOURS, ET SANS LUI L'ISOLEMENT NE TENAIT PAS EN
+ * CI. Cette fonction ne lisait que le fichier : sans `.env` elle rendait
+ * `undefined`, la cle etait omise du bloc `env`, et la suite heritait de la
+ * `DATABASE_URL` du workflow, c'est-a-dire de la base 55432. C'est exactement
+ * le defaut que LS-189 ferme, rouvert par le seul fait de tourner en CI.
+ *
+ * IL NE SE VOYAIT PAS parce que la suite ne tournait PAS en CI : le nocturne
+ * echouait avant, faute de `DATABASE_URL_E2E` dans son environnement. Deux
+ * manques qui se masquaient l'un l'autre, et le second aurait produit un vert
+ * trompeur des que le premier aurait ete corrige seul.
+ *
+ * SUR UNE BASE VIERGE le resultat aurait ete le meme qu'aujourd'hui, aucun
+ * compte reel n'y vivant : c'est le jour ou la CI porterait une base persistante
+ * que le defaut se serait manifeste, et ce jour-la personne n'aurait cherche ici.
+ * ------------------------------------------------------------------
  */
 function baseDeBoutEnBout(): string | undefined {
   try {
-    return parse(readFileSync(".env")).DATABASE_URL_E2E || undefined;
+    return (
+      parse(readFileSync(".env")).DATABASE_URL_E2E ||
+      process.env.DATABASE_URL_E2E ||
+      undefined
+    );
   } catch {
-    return undefined;
+    return process.env.DATABASE_URL_E2E || undefined;
   }
 }
 
