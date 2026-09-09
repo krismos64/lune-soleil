@@ -69,47 +69,44 @@ export async function generateMetadata({
    * part ailleurs. A revoir si le catalogue change d'ordre de grandeur.
    */
   /*
-   * LA LECTURE EST ENVELOPPEE, ET C'EST CE QUI REND LE STATUT HONNETE, LS-139.
+   * ------------------------------------------------------------------
+   * CETTE LECTURE FIGE LE STATUT DE LA PAGE A 200 QUAND LA BASE EST MORTE,
+   * et ce n'est PAS un oubli : deux corrections ont ete essayees, mesurees sur
+   * la production, et la seconde a ete annulee. LS-139, 9 septembre 2026.
    *
-   * CE QUE LA MESURE A MONTRE, base de production reellement arretee le
-   * 9 septembre 2026, meme URL et seul l'agent changeant :
+   * LE MECANISME. Next.js 16 diffuse les metadonnees SEPAREMENT sur une page
+   * dynamique, sans bloquer le rendu de l'UI, verifie par Context7. La reponse
+   * est donc engagee avant que cette fonction ait fini, et un statut ne se
+   * change plus une fois les octets partis.
    *
-   *   navigateur ordinaire  -> 200      Twitterbot -> 500      Googlebot -> 200
+   * MESURE, base de production reellement arretee, meme URL, seul l'agent
+   * changeant :
    *
-   * NEXT.JS 16 DIFFUSE LES METADONNEES SEPAREMENT sur une page dynamique, sans
-   * bloquer le rendu de l'UI, verifie par Context7. Le flux part donc AVANT que
-   * cette fonction ait fini, et un statut ne se change plus une fois les octets
-   * partis. Le comportement est desactive pour les robots de `htmlLimitedBots`,
-   * d'ou le 500 sur Twitterbot : c'est cet ecart qui a identifie la cause.
+   *   navigateur -> 200      Twitterbot -> 500      Googlebot -> 200
    *
-   * `generateMetadata` AVALE SES ERREURS PAR AILLEURS, meme source : Next.js y
-   * attache un `.catch()` qui transforme tout rejet en valeur resolue, jamais
-   * relancee. L'echec y est donc DOUBLEMENT silencieux, et rien n'arrete la
-   * page.
+   * Le 500 de Twitterbot vient de `htmlLimitedBots` : le streaming des
+   * metadonnees y est desactive, donc la lecture bloque le rendu et son echec
+   * fixe le statut. C'est cet ecart qui a designe la cause.
    *
-   * LE REPLI ALIGNE CE CHEMIN SUR CELUI DE L'ACCUEIL, qui rend un vrai 500
-   * parce qu'il n'a AUCUN `generateMetadata` : la lecture qui compte redevient
-   * celle du corps de la page, sous la frontiere Suspense interne, et son echec
-   * fixe le statut.
+   * CE QUI A ETE ESSAYE ET ANNULE : envelopper cette lecture dans un
+   * `try/catch` avec repli sur les metadonnees par defaut. La mesure a montre
+   * l'inverse de l'effet voulu : `generateMetadata` REUSSIT alors, donc la page
+   * rend son titre et continue, et Twitterbot est passe de 500 a 200. Le seul
+   * chemin qui produisait un statut honnete disparaissait.
    *
-   * LES METADONNEES PAR DEFAUT SUFFISENT SUR UNE PAGE EN PANNE. Le canonical
-   * par filtre de LS-137 est conserve des que la base repond, et une page qui
-   * rend 500 n'a de toute façon pas vocation a etre indexee.
+   * NE PAS REESSAYER CE REPLI. La question de fond, statut honnete contre
+   * canonical par filtre de LS-137, demande un arbitrage tracé : retirer ce
+   * `generateMetadata` dynamique alignerait le catalogue sur l'accueil, qui
+   * rend un vrai 500 parce qu'il n'en a AUCUN, au prix du canonical par
+   * categorie que LS-137 a pose deliberement.
+   *
+   * CE QUI RESTE VRAI ENTRE-TEMPS : un visiteur sans JavaScript voit un
+   * chargement qui n'aboutit jamais, et une supervision qui lit le code HTTP
+   * conclut que tout va bien. `error.tsx` s'affiche apres hydratation.
+   * ------------------------------------------------------------------
    */
-  let categorie: Awaited<
-    ReturnType<typeof lireCataloguePublic>
-  >["categorieRetenue"] = null;
-
-  try {
-    ({ categorieRetenue: categorie } = await lireCataloguePublic(slugDemande));
-  } catch {
-    /*
-     * AUCUNE JOURNALISATION ICI, delibere : le corps de la page leve la MEME
-     * panne une fraction de seconde plus tard, et elle y est journalisee une
-     * fois. Tracer aux deux endroits ferait compter double une seule
-     * indisponibilite dans les journaux d'exploitation.
-     */
-  }
+  const { categorieRetenue: categorie } =
+    await lireCataloguePublic(slugDemande);
 
   const titre = categorie ? categorie.nom : "Le catalogue";
   const description = categorie
