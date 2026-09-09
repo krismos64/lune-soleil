@@ -23,19 +23,19 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 
 | Phase | Epic | Stories ouvertes | Ce qui reste |
 |---|---|---|---|
-| 0, cadrage | LS-1 | 3 | médiation (compte tiers), photographies et IP en production |
+| 0, cadrage | LS-1 | 2 | médiation (compte tiers) et photographies, toutes deux externes |
 | 1, fondations | LS-2 | 0 | close, porte de sortie constatée le 13 août 2026 |
 | 2, catalogue et médias | LS-3 | 7 | finitions d'interface et d'accessibilité, aucune bloquante |
 | 3, panier et paiement | LS-4 | 2 | LS-86 et LS-125, deux stories d'interface qui ne bloquent rien |
 | 4, factures et expédition | LS-5 | 5 | dépend du compte Sendcloud, LS-200 en tête |
 | 4bis, espace client et avis | LS-36 | 4 | LS-190 attend LS-58, qui attend le suivi de livraison |
 | 5, rétractation et conformité | LS-6 | 1 | LS-148, établir si le consentement aux cookies est dû |
-| 6, exploitation et ouverture | LS-7 | 9 | **LS-153 est le dernier verrou technique** |
+| 6, exploitation et ouverture | LS-7 | 8 | **LS-153 attend l'exploitante**, LS-142 et LS-175 |
 | 7, V1 cible | LS-8 | 3 | après ouverture, hors Go-Live |
 | Contenus | LS-22 | 11 | **attend l'exploitante**, rien n'est faisable sans elle |
 
-**152 tickets terminés sur 208**, les deux termes relevés dans Jira le
-9 septembre 2026 et jamais dérivés l'un de l'autre. 45 stories ouvertes hors
+**155 tickets terminés sur 208**, les deux termes relevés dans Jira le
+9 septembre 2026 et jamais dérivés l'un de l'autre. 43 stories ouvertes hors
 epics.
 
 Un compte écrit à la main se périme sans bruit, et **le dénominateur bouge
@@ -50,10 +50,14 @@ ADR-036. Trois conteneurs, schéma complet, sauvegarde quotidienne par unité
 `systemd` avec restauration prouvée, ADR-037. Les cinq tâches planifiées
 tournent, et les médias sont servis depuis le volume.
 
+**Le déploiement est automatisé depuis LS-138** : un commit sur `main` aboutit
+sur le VPS en dix-huit secondes par le workflow « Déployer en production », et le
+retour arrière a été joué réellement. La clé SSH ne peut exécuter qu'un script,
+sur un utilisateur hors du groupe `docker`.
+
 **Il reste LS-153**, la première mise en ligne : poser les clés Stripe et SMTP,
-et fixer l'ordre des opérations. C'est le dernier verrou technique. Les autres
-blocages ne dépendent plus du code : ils attendent l'exploitante pour les
-contenus, et un compte Sendcloud pour la livraison.
+et fixer l'ordre des opérations. Elle **attend l'exploitante**, LS-142 et LS-175
+exigeant sa présence physique. Plus rien ne dépend du code seul.
 
 `docs/deploiement/EXPLOITATION.md` porte l'exploitation courante,
 `PREPARATION-SERVEUR.md` la mise en place initiale.

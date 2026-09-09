@@ -174,14 +174,21 @@ les trois sites                          200 tout au long
 
 ## État des tickets
 
-**LS-205, LS-206, LS-207 et LS-208 sont livrées.** Les trois premières
-débloquent LS-153.
+**LS-205, LS-206, LS-207 et LS-208 sont livrées.** Les trois premières lèvent
+les blocages qu'elles portaient sur LS-153.
+
+**Correction apportée en session d** : cela ne rendait pas LS-153 réalisable
+pour autant. Elle reste bloquée par **LS-142** et **LS-175**, toutes deux sur la
+présence physique de l'exploitante, ce que la lecture de ses liens Jira a montré
+le jour même. Écrire « débloquent LS-153 » sans avoir relu ses trois liens était
+une conclusion trop rapide.
 
 **LS-152 peut maintenant fermer** : elle restait ouverte parce que la production
 n'était pas exploitable, et les trois défauts qui la bloquaient sont fermés.
 
 ## Prochaine étape
 
-**LS-153**, la première mise en ligne : les clés Stripe et SMTP à poser, l'ordre
-des opérations et le point de non-retour. C'est le dernier verrou technique avant
-l'ouverture, les autres blocages relevant de l'exploitante et du compte Sendcloud.
+**LS-153 a été ouverte puis reposée en session d**, ses conditions préalables
+n'étant pas remplies. La suite prise a été **LS-138**, la chaîne de déploiement,
+qui n'était bloquée par rien et dont le retour arrière joué était l'une des
+quatre conditions de LS-153.
