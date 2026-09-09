@@ -309,6 +309,19 @@ export default defineConfig({
         viewport: { width: 320, height: 640 },
       },
     },
+    /*
+     * DEUX FICHIERS SONT EXCLUS DES TROIS AUTRES LARGEURS, et seulement d'elles.
+     *
+     * `filtres-commandes-320.spec.ts`, LS-144, et `en-tetes-securite.spec.ts`,
+     * LS-139, fixent EUX-MEMES leur fenetre ou n'en dependent pas : les rejouer
+     * sur `mobile-390`, `tablette-768` et `bureau-1280` produirait exactement le
+     * meme resultat trois fois de plus.
+     *
+     * `mobile-320` LES GARDE, c'est la largeur de reference du projet. Motif
+     * « plafond de debit et suite e2e », en fiche : quatre largeurs quadruplent
+     * chaque appel, et un fichier qui n'apprend rien de plus a chacune coute
+     * sans rendre.
+     */
     {
       name: "mobile-390",
       testIgnore:

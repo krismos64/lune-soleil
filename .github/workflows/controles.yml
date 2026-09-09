@@ -1437,7 +1437,7 @@ jobs:
             echo "Trois contrôles ont quitté la pull request et vivent"
             echo "désormais dans \`nocturne.yml\`, rejoué chaque nuit :"
             echo
-            echo "- les **scénarios de bout en bout**, trois largeurs"
+            echo "- les **scénarios de bout en bout**, quatre largeurs"
             echo "- \`npm audit\`"
             echo "- la **construction de l'image Docker**, également refaite"
             echo "  sur \`main\` par \`publier-image.yml\`, qui vérifie"

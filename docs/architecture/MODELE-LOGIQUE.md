@@ -12,7 +12,7 @@ Traduction du modèle conceptuel en schéma physique. **Trente-six tables** et
 
 **Ces trois nombres sont mesurés et non recopiés**, `grep -c "^model"` sur le
 schéma et `pg_constraint` sur la base. Ceux de LS-13 disaient vingt-cinq tables,
-huit parcours et trente et une clés : justes à l'écriture, ils n'ont suivi
+huit parcours et trente et une clés, tous deux périmés depuis, neuf et trente-neuf au 9 septembre 2026 : justes à l'écriture, ils n'ont suivi
 aucune des stories qui ont ajouté une entité. Un compte écrit à la main se
 périme sans bruit, et celui-ci a mis cinq semaines à être relu.
 

@@ -353,7 +353,7 @@ jobs:
       - name: Preparer la base de bout en bout, port 55433
         run: ./scripts/preparer-base-e2e.sh
 
-      - name: Scenarios critiques de bout en bout, trois largeurs
+      - name: Scenarios critiques de bout en bout, quatre largeurs
         run: npm run test:e2e
 
       # Le rapport n'existe qu'en cas d'echec ; il est televerse pour que l'issue
