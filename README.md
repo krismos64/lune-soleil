@@ -763,6 +763,8 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-plafonds-corps-mutation.sh    # prouve le précédent par mutation
 ./scripts/verifier-sauvegarde-mutation.sh        # éprouve les 6 garde-fous de la sauvegarde, LS-139
 sudo ./scripts/incident-disque-plein.sh          # incident 3, sur un disque dédié, LS-139
+# Durcissement SSH : se lance SUR la machine, les valeurs effectives de sshd -T
+ssh <hôte> 'sudo bash -s' < scripts/verifier-durcissement-ssh.sh   # 9 sens, LS-139
 #
 # Déploiement, LS-138 et LS-139. Ceux-là vivent sur la MACHINE, pas dans scripts/ :
 #   deploiement/deployer.sh              bascule, retour arrière, état, purge des images
