@@ -178,6 +178,25 @@ ENV HOSTNAME=0.0.0.0
 # echouer cette ecriture a la premiere page rendue, pas au demarrage.
 RUN mkdir -p /app/.next && chown -R node:node /app
 
+# LES DEUX RACINES DE DONNEES SONT CREEES ICI, LS-152.
+#
+# Elles sont montees depuis l'hote en production, `MEDIA_RACINE` et
+# `DOCUMENTS_RACINE`. Un montage dont le point n'existe PAS dans l'image est
+# cree par Docker en `root:root` : le processus tourne en `node`, uid 1000, et
+# la premiere ecriture echouerait en EACCES.
+#
+# CE QUI REND LE DEFAUT COUTEUX EST SON INSTANT. Rien n'echoue au demarrage, le
+# controle de sante repond 200 et le controle de fumee sort en 0 : l'echec
+# surviendrait a la premiere ECRITURE DE FACTURE, donc pendant un paiement
+# reel. Meme famille que le defaut d'ecriture du cache de prerendu ci-dessus,
+# qui ne se voyait qu'a la premiere page rendue.
+#
+# Creer les points de montage DANS L'IMAGE plutot que par un `chown` sur
+# l'hote : la propriete survit alors a une recreation de volume, alors qu'un
+# geste manuel se refait a chaque fois et s'oublie une fois.
+RUN mkdir -p /var/lib/lune-soleil/medias /var/lib/lune-soleil/documents \
+    && chown -R node:node /var/lib/lune-soleil
+
 # LES TROIS COPIES, ET POURQUOI IL EN FAUT TROIS.
 #
 # `.next/standalone` porte `server.js` et les dependances tracees. Il NE PORTE
