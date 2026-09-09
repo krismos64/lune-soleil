@@ -774,6 +774,8 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-taches-planifiees-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-plafonds-corps.sh             # service, Next et Nginx s'accordent sur la taille, LS-207
 ./scripts/verifier-plafonds-corps-mutation.sh    # prouve le précédent par mutation
+./scripts/verifier-statut-base-morte.sh          # le catalogue rend 500 base morte, ADR-039, LS-211
+./scripts/verifier-statut-base-morte-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-sauvegarde-mutation.sh        # éprouve les 6 garde-fous de la sauvegarde, LS-139
 sudo ./scripts/incident-disque-plein.sh          # incident 3, sur un disque dédié, LS-139
 # Durcissement SSH : se lance SUR la machine, les valeurs effectives de sshd -T

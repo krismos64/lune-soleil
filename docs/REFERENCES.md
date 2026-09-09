@@ -205,6 +205,7 @@ documentation technique, ticket ou règle qui le contredirait.
 | ADR-036 | Hébergement sur le VPS existant, en cohabitation avec SmartPlanning | hébergement, VPS, OVH, serveur de production, port 3002, limites de ressources, cohabitation |
 | ADR-037 | Base de production en conteneur PostgreSQL 18, sauvegarde quotidienne sur l'hôte par systemd | base de production, sauvegarde, restauration, rétention, volume de la base, `migrate-production.sh` |
 | ADR-038 | En-têtes de sécurité, CSP par nonce et HSTS sans preload | en-tête de sécurité, CSP, Content-Security-Policy, nonce, HSTS, preload, `src/proxy.ts`, `Referrer-Policy`, `Permissions-Policy` |
+| ADR-039 | Statut HTTP honnête, streaming des métadonnées désactivé | statut HTTP, 500, base morte, `generateMetadata`, streaming des métadonnées, `htmlLimitedBots`, canonical par filtre, Twitterbot, supervision |
 
 Cette table se met à jour à chaque ADR créé. Un ADR absent d'ici reste
 opposable : la table est un raccourci, `docs/adr/` fait foi.

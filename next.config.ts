@@ -134,6 +134,71 @@ const nextConfig: NextConfig = {
   // arrive avec les pages réelles, elle dépend de Stripe et de l'hébergeur de
   // médias, LS-73.
   poweredByHeader: false,
+
+  /*
+   * STREAMING DES MÉTADONNÉES DÉSACTIVÉ POUR TOUS LES AGENTS. LS-211, ADR-039.
+   *
+   * LE DÉFAUT QU'IL FERME, mesuré en arrêtant réellement la base de production
+   * le 9 septembre 2026 : `/catalogue` rendait **200** avec « Chargement des
+   * pièces… » comme état final, là où l'accueil rendait un vrai 500.
+   *
+   * LA CAUSE, ✅ via Context7. Next.js 16 diffuse les métadonnées séparément sur
+   * une page dynamique, sans bloquer le rendu de l'UI : la réponse est donc
+   * ENGAGÉE avant que `generateMetadata` ait fini de lire la base, et un statut
+   * ne se change plus une fois les octets partis.
+   *
+   * L'ÉCART ENTRE AGENTS EST CE QUI A IDENTIFIÉ LA CAUSE, même URL, même
+   * instant : navigateur 200, Googlebot 200, **Twitterbot 500**. Twitterbot est
+   * dans `HTML_LIMITED_BOT_UA_RE`, où le streaming est déjà désactivé, donc la
+   * lecture y bloque le rendu et son échec fixe le statut. Ce réglage étend à
+   * tous le comportement qui produisait déjà le seul statut honnête.
+   *
+   * POURQUOI PAS LES TROIS VOIES QUE LS-211 LISTAIT. Retirer le
+   * `generateMetadata` dynamique alignerait le catalogue sur l'accueil, mais au
+   * prix du **canonical par filtre** de LS-137 : un canonical figé sur
+   * `/catalogue` dirait aux moteurs que `?categorie=colliers` EST le catalogue
+   * complet, et la page filtrée quitterait l'index en emportant les mots-clés de
+   * la catégorie. Ce réglage corrige le statut SANS rien sacrifier.
+   *
+   * L'EFFET, MESURÉ SUR DEUX BUILDS DU MÊME COMMIT, base réellement arrêtée :
+   *
+   *                       SANS le réglage      AVEC le réglage
+   *   navigateur               200                  500
+   *   Googlebot                200                  500
+   *   Twitterbot               500                  500
+   *   accueil `/`              500                  500
+   *
+   * Le catalogue rejoint l'accueil pour TOUS les agents, ce qui est exactement
+   * ce que LS-211 demandait.
+   *
+   * CE QU'IL COÛTE, MESURÉ ET NON SUPPOSÉ. La documentation annonce une
+   * dégradation du TTFB et du LCP, le rendu attendant désormais la lecture.
+   * Build de production local, base vivante, médiane de dix appels après trois
+   * de chauffe :
+   *
+   *   /catalogue                   avant 0,005 s   après 0,008 s
+   *   /catalogue?categorie=...     avant 0,003 s   après 0,007 s
+   *   /                            avant 0,006 s   après 0,007 s
+   *
+   * TROIS À QUATRE MILLISECONDES, ET CE CHIFFRE EST LOCAL : la base répond ici
+   * en moins d'une milliseconde, quand la production mesure 0,270 s de TTFB sur
+   * `/catalogue`. L'écart réel s'y noiera d'autant plus, mais il n'a pas été
+   * mesuré sur le VPS : LS-140 porte cette mesure.
+   *
+   * LA RAISON POUR LAQUELLE LE COÛT EST FAIBLE EST STRUCTURELLE : le catalogue
+   * est en `force-dynamic` et le corps de la page LIT DÉJÀ la base. Le streaming
+   * n'économisait donc pas une attente, il la masquait.
+   *
+   * SA PORTÉE EST DE DEUX PAGES, relevé et non supposé : seules `/catalogue` et
+   * `/produit/[slug]` ont un `generateMetadata`. Tout le reste du site porte des
+   * métadonnées statiques, que ce réglage ne touche pas.
+   *
+   * NE PAS LE REMPLACER PAR UN `try/catch` DANS `generateMetadata`. Essayé le
+   * 9 septembre 2026 et ANNULÉ : le repli faisait RÉUSSIR la fonction, donc la
+   * page rendait son titre et continuait, et Twitterbot passait de 500 à 200.
+   * Le seul chemin qui produisait un statut honnête disparaissait.
+   */
+  htmlLimitedBots: /.*/,
 };
 
 export default nextConfig;
