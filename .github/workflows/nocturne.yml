@@ -90,6 +90,13 @@ jobs:
           schema="${schema}sql://"
           printf 'DATABASE_URL=%s%s:%s@localhost:%s/%s?schema=public\n' \
             "$schema" "$PGUSER" "$PGPASSWORD" "$PGPORT" "$PGDATABASE" >> "$GITHUB_ENV"
+          # LA SUITE DE BOUT EN BOUT A SA PROPRE BASE, LS-189, port 55433. La
+          # variable manquait ici depuis cette story : `preparer-base-e2e.sh`
+          # s'arretait sur « DATABASE_URL_E2E absente », le serveur de test ne
+          # demarrait pas, et l'etape `npm audit` qui suit etait SAUTEE. Motif
+          # « config corrigee a moitie », deja en fiche sur ce depot.
+          printf 'DATABASE_URL_E2E=%s%s:%s@localhost:55433/%s?schema=public\n' \
+            "$schema" "$PGUSER" "$PGPASSWORD" "$PGDATABASE" >> "$GITHUB_ENV"
 
       # ----------------------------------------------------------------------
       # Authentification, LS-70.
@@ -391,8 +398,27 @@ jobs:
       # LE CODE DE SORTIE NE SUFFIT PAS A DISTINGUER LES DEUX CAS, `npm audit`
       # rendant 1 dans les deux. C'est la sortie qui tranche : le message d'erreur
       # du registre y est explicite.
+      #
+      # ----------------------------------------------------------------------
+      # `if: always()`, ET C'EST CE QUI FAIT LA DIFFERENCE ENTRE UN GARDE-FOU ET
+      # UN GARDE-FOU MUET. Sans lui, cette etape est SAUTEE des qu'une etape
+      # amont echoue, et elle sort `skipped` plutot que `failure`.
+      #
+      # MESURE DU 9 SEPTEMBRE 2026. Les scenarios de bout en bout echouaient
+      # depuis le 8 septembre, « Process from config.webServer was not able to
+      # start ». L'audit n'a donc plus tourne depuis le 7. Pendant ces deux
+      # nuits, SEPT vulnerabilites sont entrees sans un mot, dont une CRITIQUE
+      # sur Next.js, execution de code a distance non authentifiee par l'API
+      # d'optimisation d'images, atteignable en production : `/_next/image`
+      # rendait 200.
+      #
+      # Le rouge du nocturne etait bien la, et il designait la mauvaise cause :
+      # l'issue ouverte parlait des tests de bout en bout. Un echec en amont qui
+      # masque un controle de securite est pire qu'un controle absent, personne
+      # ne le cherchant.
       # ----------------------------------------------------------------------
       - name: Audit des dependances
+        if: always()
         run: |
           set +e
           sortie=$(npm audit --audit-level=low 2>&1)
