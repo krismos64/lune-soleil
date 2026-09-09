@@ -131,6 +131,31 @@ les 41 stories ouvertes se répartissent sur les 8 epics ouverts, chacun en
 portant au moins une. Les 8 tickets En cours le sont légitimement, LS-85
 comprise, dont le critère 5 exige une écoute humaine au lecteur d'écran.
 
+## Déployé en production le 9 septembre 2026
+
+La correction n'était pas livrée tant que la production tournait sur l'ancienne
+image. Elle tournait sur `763690b`, un commit **antérieur à tout le travail du
+jour**.
+
+Déployé par le workflow, jamais à la main, sur le SHA complet `1640ec6` :
+
+```
+10:28:42  Etape 1, sauvegarde prealable, sauvegarde faite
+10:28:58  conteneur sain apres 10 s
+10:29:09  Port 3002 injoignable depuis l'exterieur, conforme
+10:29:10  lune-soleil.fr             -> 200
+10:29:11  smartplanning.fr           -> 200
+10:29:12  analytics.smartplanning.fr -> 200
+```
+
+**L'image en service est vérifiée après coup** plutôt que supposée, par
+`action: etat` : `1640ec6b056fa547ffa27428a026c87a372068fb`. La production porte
+donc Next 16.3.4 et la RCE est fermée.
+
+Mesuré depuis l'extérieur ensuite : les trois sites en 200, `/api/sante` en 200,
+six pages publiques en 200, et l'API d'optimisation d'images répond toujours
+200, **corrigée et non désactivée**. SmartPlanning n'a pas été interrompu.
+
 ## Prochaine étape
 
 **LS-139**, le durcissement, dont cette session vient d'illustrer l'urgence :
