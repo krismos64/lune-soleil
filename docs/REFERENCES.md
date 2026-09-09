@@ -29,6 +29,8 @@ ligne ajoutée, et rien ne le signale.
 | `docs/PROCEDURE-DROITS-DES-PERSONNES.md` | répondre à une demande d'accès, de rectification ou d'effacement, délai d'un mois, ce qui part et ce qui reste | toute demande d'une personne sur ses données |
 | `docs/PROCEDURE-AMORCAGE-ADMINISTRATION.md` | créer le compte de l'exploitante, qui fait quoi entre elle et le développeur, passkey et codes de récupération, procédure de dernier ressort | la mise en ligne, toute question sur le compte d'administration |
 | `docs/COMPARATIF-MEDIATION.md` | le choix du médiateur de la consommation, obligation de l'article L616-1 | la souscription du médiateur, les mentions légales |
+| `docs/deploiement/EXPLOITATION.md` | démarrer et arrêter la production, migrer par relais éphémère, sauvegarder, restaurer, vérifier les limites appliquées, ce qu'il ne faut jamais faire sur la machine partagée | **toute intervention sur la production**, LS-152 |
+| `docs/deploiement/PREPARATION-SERVEUR.md` | la mise en place initiale : Nginx, DNS, certificat et son renouvellement, cohabitation avec SmartPlanning | toute modification de la configuration Nginx ou du certificat, LS-151 |
 
 **Une règle numérotée se cite par son identifiant**, S12 ou V14, jamais
 paraphrasée seule : c'est ce qui permet aux contrôles textuels de la retrouver.

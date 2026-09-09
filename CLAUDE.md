@@ -119,9 +119,9 @@ documentation technique du dépôt, Jira. **Confluence est abandonné**, arbitra
 du 7 septembre 2026, LS-9 : ne pas y écrire ni l'y chercher. Toute décision
 structurante produit un ADR, toute idée neuve entre d'abord dans Jira.
 
-**`docs/REFERENCES.md`** porte les tables d'aiguillage : documents
-d'architecture, ADR acceptés et leur domaine, fichiers de `.claude/rules/` et
-leurs chemins de déclenchement. Le lire au début d'une session qui conçoit.
+**`docs/REFERENCES.md`** porte les tables d'aiguillage, à lire au début d'une
+session qui conçoit. **`docs/deploiement/EXPLOITATION.md`** porte la production,
+qui tourne : à lire avant toute intervention sur la machine.
 
 **Une règle numérotée se cite par son identifiant**, S12 ou V14, jamais
 paraphrasée seule : c'est ce qui permet aux contrôles textuels de la retrouver.
