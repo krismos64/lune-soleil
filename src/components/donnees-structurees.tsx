@@ -18,6 +18,8 @@
  * ------------------------------------------------------------------
  */
 
+import { headers } from "next/headers";
+
 /**
  * Serialise un balisage en neutralisant toute ouverture de balise.
  *
@@ -62,11 +64,31 @@ function serialiser(balisage: Record<string, unknown>): string {
  *
  * L'objet est construit par `lib/seo.ts`, jamais ici : ce composant met en
  * page, il ne decide d'aucun contenu.
+ *
+ * ------------------------------------------------------------------
+ * LE NONCE EST INDISPENSABLE DEPUIS ADR-038, LS-139. La CSP refuse tout script
+ * inline qui n'en porte pas, et ce bloc EN EST UN : sans nonce, le navigateur
+ * le bloque et les donnees structurees disparaissent pour les moteurs.
+ *
+ * LE DEFAUT SERAIT INVISIBLE A L'OEIL. Aucune page ne change d'apparence, seule
+ * la console du navigateur le dit, et le referencement se degrade des semaines
+ * plus tard sans qu'on relie les deux. C'est pourquoi la suite de bout en bout
+ * verifie la PRESENCE du nonce et non seulement celle du bloc.
+ *
+ * `headers()` EST ASYNCHRONE EN NEXT.JS 16, d'ou le composant asynchrone. La
+ * valeur vient du proxy, qui la pose sur la requete.
+ * ------------------------------------------------------------------
  */
-export function DonneesStructurees({
+export async function DonneesStructurees({
   balisage,
 }: {
   balisage: Record<string, unknown>;
 }) {
-  return <script type="application/ld+json">{serialiser(balisage)}</script>;
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
+  return (
+    <script type="application/ld+json" nonce={nonce}>
+      {serialiser(balisage)}
+    </script>
+  );
 }
