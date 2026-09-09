@@ -174,11 +174,49 @@ while IFS= read -r page; do
 
   pages_lisant_la_base=$((pages_lisant_la_base + 1))
 
-  # LA SONDE SE CHERCHE PAR SON APPEL, et il doit être ATTENDU : un
-  # `verifierSante` importé sans être appelé, ou appelé sans `await`, ne
-  # protège rien et laisserait le contrôle vert sur le défaut qu'il vise.
-  sonde=$(grep -nE 'await[[:space:]]+[a-zA-Z]*[Ss]ante|await[[:space:]]+exigerBaseDisponible\(' "$page" \
+  # L'ANCRAGE PORTE SUR L'APPEL DANS LA FONCTION DE PAGE, jamais sur la
+  # présence de la sonde quelque part dans le fichier.
+  #
+  # LA PREMIÈRE ÉCRITURE FAISAIT LA SECONDE, ET SA MUTATION L'A MONTRÉE :
+  # retirer l'appel du corps de la page laissait intacte la ligne
+  # `await verifierSante()` qui vit DANS la fonction d'aide, désormais morte.
+  # Le contrôle restait vert sur exactement le défaut qu'il vise. Motif
+  # « contrôle satisfait par une déclaration », déjà en fiche sur ce dépôt sous
+  # la forme du nonce transporté mais non posé.
+  #
+  # On isole donc le corps de `export default ... function Page...` avant de
+  # chercher : ce qui est écrit au-dessus ne protège rien tant que personne ne
+  # l'appelle.
+  corps_page=$(awk '/export default async function/{trouve=1} trouve' "$page")
+
+  sonde=$(printf '%s' "$corps_page" \
+    | grep -nE 'await[[:space:]]+([a-zA-Z]*[Ss]ante|exigerBaseDisponible)\(' \
     | grep -vE ':[[:space:]]*(//|\*|/\*)' || true)
+
+  # L'ORDRE COMPTE AUTANT QUE LA PRÉSENCE, et l'oublier laissait un trou réel :
+  # une sonde placée APRÈS la lecture ne protège rien, la frontière ayant déjà
+  # démarré le flux, et le contrôle restait vert. Trouvé par mutation, pas à la
+  # relecture.
+  #
+  # Les deux rangs se comparent DANS LE CORPS DE LA PAGE, numérotés par le même
+  # `grep -n` sur le même texte : comparer un rang du fichier à un rang du corps
+  # comparerait deux origines différentes.
+  if [ -n "$sonde" ]; then
+    rang_sonde=$(printf '%s' "$sonde" | head -1 | cut -d: -f1)
+    rang_lecture=$(printf '%s' "$corps_page" \
+      | grep -nE 'await[[:space:]]+lireCataloguePublic\(' \
+      | grep -vE ':[[:space:]]*(//|\*|/\*)' | head -1 | cut -d: -f1)
+
+    if [ -n "$rang_lecture" ] && [ "$rang_sonde" -gt "$rang_lecture" ]; then
+      echo "ECHEC $relatif sonde la base APRÈS l'avoir lue"
+      echo "      la sonde est en ligne $rang_sonde du corps de page, la lecture"
+      echo "      en ligne $rang_lecture : le streaming a déjà démarré quand la"
+      echo "      sonde s'exécute, donc le statut reste 200. Elle doit précéder"
+      echo "      tout await de données."
+      ko=$((ko + 1))
+      continue
+    fi
+  fi
 
   if [ -z "$sonde" ]; then
     relatif_couvrant="${couvrant#"$RACINE"/}"
