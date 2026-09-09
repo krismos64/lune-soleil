@@ -34,8 +34,8 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 7, V1 cible | LS-8 | 3 | après ouverture, hors Go-Live |
 | Contenus | LS-22 | 11 | **attend l'exploitante**, rien n'est faisable sans elle |
 
-**156 tickets terminés sur 208**, les deux termes relevés dans Jira le
-9 septembre 2026 et jamais dérivés l'un de l'autre. 43 stories ouvertes hors
+**158 tickets terminés sur 208**, les deux termes relevés dans Jira le
+9 septembre 2026 et jamais dérivés l'un de l'autre. 41 stories ouvertes hors
 epics, plus neuf epics.
 
 **La phase 1 est close dans Jira depuis le 9 septembre**, ses 26 stories étant

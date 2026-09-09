@@ -163,14 +163,21 @@ exerçable.
 
 ## État des tickets
 
-**LS-110 est livrée**, ses deux points restants faits, plus deux écrans que le
+**PR #327 fusionnée sur `main` en rebase**, les deux contrôles verts, sept
+commits. `main` reste linéaire.
+
+**LS-110 est close**, ses deux points restants faits, plus deux écrans que le
 ticket n'avait pas vus.
 
 **LS-144 est close sur son constat écrit**, critère 6, sans modification
 cosmétique : le défaut supposé n'en est pas un, et la mesure le montre.
 
+**158 tickets terminés sur 208**, les deux termes relevés dans Jira après la
+fusion et jamais dérivés l'un de l'autre. 41 stories ouvertes hors epics, plus
+neuf epics. Le README et la fiche mémoire d'entrée portent ce compte.
+
 Aucun ticket créé, consigne de Christophe. Les quatre tests périmés sont
-corrigés dans la même branche et rattachés à **LS-129**, qui les avait périmés.
+corrigés dans la même branche et tracés sur **LS-129**, qui les avait périmés.
 
 ## Prochaine étape
 
