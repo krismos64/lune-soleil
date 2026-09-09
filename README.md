@@ -730,6 +730,7 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-navigation-client-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-en-tetes-securite.sh          # les cinq en-têtes de sécurité, ADR-038, LS-139
 ./scripts/verifier-en-tetes-securite-mutation.sh # prouve le précédent, chaque en-tête séparément
+./scripts/verifier-en-tetes-production.sh        # les mesure SERVIS par le domaine réel, LS-139
 ./scripts/verifier-route-echec.sh                # garde la page qui lève à dessein, LS-191
 ./scripts/verifier-route-echec-mutation.sh       # prouve le précédent par mutation
 ./scripts/verifier-fixtures-e2e.sh               # adresses de test fixes, plafonds préservés, LS-168
