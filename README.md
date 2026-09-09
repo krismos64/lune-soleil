@@ -761,12 +761,18 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-taches-planifiees-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-plafonds-corps.sh             # service, Next et Nginx s'accordent sur la taille, LS-207
 ./scripts/verifier-plafonds-corps-mutation.sh    # prouve le précédent par mutation
+./scripts/verifier-sauvegarde-mutation.sh        # éprouve les 6 garde-fous de la sauvegarde, LS-139
+sudo ./scripts/incident-disque-plein.sh          # incident 3, sur un disque dédié, LS-139
 #
-# Déploiement, LS-138. Ces deux-là vivent sur la MACHINE, pas dans scripts/ :
-#   deploiement/deployer.sh          bascule, retour arrière, état de la production
-#   deploiement/sauvegarder-base.sh  sauvegarde quotidienne, base et fichiers
+# Déploiement, LS-138 et LS-139. Ceux-là vivent sur la MACHINE, pas dans scripts/ :
+#   deploiement/deployer.sh              bascule, retour arrière, état, purge des images
+#   deploiement/sauvegarder-base.sh      sauvegarde quotidienne, base et fichiers
+#   deploiement/verifier-seuil-disque.sh alerte de seuil, unité systemd horaire
 # Le workflow « Déployer en production » les appelle par une clé SSH enfermée
 # qui ne peut exécuter QUE le premier. Voir docs/deploiement/EXPLOITATION.md.
+#
+# `deployer.sh` est installé en /usr/local/sbin/lune-soleil-deployer et NE SE MET
+# PAS À JOUR TOUT SEUL : le modifier dans le dépôt ne change rien à la machine.
 ./scripts/verifier-emetteur-facture.sh            # identité légale des factures, sans afficher les valeurs
 ./scripts/decider-suite-complete.sh              # portée de la chaîne selon le diff, LS-169
 ./scripts/verifier-decision-suite.sh             # prouve le précédent sur 24 cas, chiffre que le script imprime
