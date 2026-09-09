@@ -1,4 +1,21 @@
-# Taches planifiees, LS-72.
+# Taches planifiees, LS-72 puis LS-206.
+#
+# LES CINQ TACHES DE `TACHES` SONT ICI, ET UN CONTROLE LE VERIFIE.
+# `scripts/verifier-taches-planifiees.sh` confronte ce fichier a la table
+# `TACHES` de `src/services/tache-planifiee.ts`, dans les DEUX sens. Ajouter une
+# tache au service sans l'ajouter ici fait rougir la CI.
+#
+# CE CONTROLE EXISTE PARCE QUE CE FICHIER A PRIS DU RETARD. Le 8 septembre 2026,
+# il planifiait TROIS taches quand le service en declarait CINQ : `envoi-emails`
+# et `purge-quarantaine-medias` avaient leur service, leur verrou et leur route,
+# et RIEN ne les appelait. Un client aurait paye sans jamais recevoir sa
+# confirmation ni sa facture, pendant que /api/sante rendait 200.
+#
+# LES HORAIRES DE CE FICHIER SONT EN UTC, fuseau de la machine, ADR-036 et
+# `timedatectl`. Un lecteur francais lit spontanement une heure de cron en heure
+# de Paris : 03h17 UTC vaut 05h17 a Paris en ete et 04h17 en hiver. C'est une
+# heure creuse dans les deux cas, donc rien n'est a deplacer, mais le fuseau se
+# dit plutot qu'il ne se devine.
 #
 # Les frequences viennent de MODELE-CONCEPTUEL.md : cinq minutes pour la
 # liberation des reservations expirees, un quart d'heure pour la
@@ -23,6 +40,33 @@
 # qui verrouille des lignes pendant une sauvegarde n'aide personne. L'heure
 # creuse et le quantieme decale evitent aussi que deux taches futures se
 # donnent rendez-vous a la meme minute.
+# L'ENVOI DES EMAILS TOURNE TOUTES LES MINUTES, la plus frequente des cinq, et
+# son commentaire de service dit pourquoi : elle porte un delai VU PAR LE
+# CLIENT, celui qui separe le paiement de la confirmation dans sa boite. Les
+# quatre autres reparent un etat interne que personne ne regarde en direct.
+#
+# UNE EXECUTION A VIDE NE COUTE RIEN : la tache prend son verrou, ne trouve
+# aucun envoi en attente, et rend la main. C'est le cas nominal la plupart des
+# minutes d'une journee.
+#
+# SON VERROU DURE CINQ MINUTES pour une periode d'une minute, ce qui est
+# volontaire : elle fait des appels RESEAU dont rien ne borne la duree cote
+# serveur distant. Une instance qui travaille encore garde son verrou, et les
+# quatre executions suivantes se retirent proprement.
+* * * * * /usr/local/bin/declencher.sh envoi-emails
 */5 * * * * /usr/local/bin/declencher.sh liberation-reservations
 */15 * * * * /usr/local/bin/declencher.sh reconciliation-paiements
 17 3 * * * /usr/local/bin/declencher.sh purge-journaux
+# LA PURGE DE LA QUARANTAINE, LS-102 et ADR-007. Quotidienne comme sa voisine.
+#
+# CE QU'ELLE RAMASSE : les originaux dont le televersement a ete interrompu
+# avant traitement. Ils portent les metadonnees EXIF, position GPS du domicile
+# comprise, et pesent jusqu'a 25 Mo piece sur un disque PARTAGE avec
+# SmartPlanning depuis ADR-036. Les laisser s'accumuler garde sur le disque
+# exactement la donnee qu'ADR-007 existe pour retirer.
+#
+# A 03h41 ET NON 03h17, meme raisonnement que sa voisine pousse d'un cran : deux
+# purges a la meme minute prendraient leurs verrous ensemble et se disputeraient
+# les memes entrees-sorties. Le quantieme evite aussi 02h30 UTC, ou tourne la
+# sauvegarde de LS-152 : une purge pendant un pg_dump n'aide personne.
+41 3 * * * /usr/local/bin/declencher.sh purge-quarantaine-medias

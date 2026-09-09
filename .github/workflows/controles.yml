@@ -1062,6 +1062,37 @@ jobs:
         run: ./scripts/verifier-base-e2e-mutation.sh
 
       # ----------------------------------------------------------------------
+      # Controle 9y. Toute tache declaree est reellement declenchee, LS-206.
+      # Textuel, secondes.
+      #
+      # LE DEFAUT QU'IL FERME A EXISTE. Le 8 septembre 2026, le service
+      # declarait CINQ taches et le crontab en planifiait TROIS : `envoi-emails`
+      # et `purge-quarantaine-medias` avaient leur service, leur verrou et leur
+      # route interne, et RIEN ne les appelait. Un client aurait paye sans
+      # recevoir ni confirmation ni facture, pendant que /api/sante rendait 200
+      # et que le controle de fumee sortait en 0.
+      #
+      # AUCUN CONTROLE EXISTANT NE POUVAIT LE VOIR : les deux fichiers vivent
+      # dans des mondes separes, TypeScript d'un cote, table de cron de l'autre,
+      # et rien ne les confrontait. La cause etait une liste tenue a la main,
+      # qui a pris du retard quand LS-82 et LS-102 ont ajoute deux taches.
+      - name: 9y. Toute tache planifiee est declenchee
+        run: ./scripts/verifier-taches-planifiees.sh
+
+      # Preuve par mutation du controle precedent, LS-206. Textuel, secondes.
+      #
+      # NEUF SENS EXERCES, dont les deux qui gardent le controle CONTRE
+      # LUI-MEME : un ancrage casse doit ABANDONNER en code 2 plutot que
+      # comparer deux listes vides et les declarer concordantes.
+      #
+      # Il verifie aussi que chaque mutation MORD reellement. La premiere
+      # version du cas sur le fuseau employait `sed 's/\bUTC\b/'`, qui ne
+      # remplace rien sous le sed de BSD : la mutation ne mutait pas, et le
+      # controle etait accuse a tort d'etre aveugle.
+      - name: 9y bis. Preuve par mutation des taches planifiees
+        run: ./scripts/verifier-taches-planifiees-mutation.sh
+
+      # ----------------------------------------------------------------------
       # Controles 2 et 3. Le format entre ici parce qu'un depot ou seule une
       # partie des fichiers est formatee produit des diffs illisibles.
       # ----------------------------------------------------------------------
