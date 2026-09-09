@@ -192,13 +192,30 @@ production, à côté de `lune-soleil-pgdata`. Le fichier `docker-compose.yml` d
 dépôt ne décrit que le développement local et le dit explicitement : la
 déclaration de production relève de la phase 6.
 
+**Fait le 9 septembre 2026**, LS-152 : `docker-compose.production.yml` monte
+`/var/lib/lune-soleil/medias` dans le conteneur applicatif. La forme retenue est
+un **montage d'hôte** et non un volume nommé, pour que l'arborescence reste
+lisible et sauvegardable depuis l'hôte sans passer par Docker.
+
 **Nginx sert `/medias/`** en pointant sur le sous-dossier `public/` du volume, et
 sur lui seul. Faire pointer cet alias sur la racine du volume publierait la
 quarantaine et annulerait la décision.
 
+**Fait le 9 septembre 2026**, LS-205, et cette conséquence a coûté un arbitrage :
+`verifier-nginx.sh` interdisait depuis LS-132 toute directive `alias` ou `root`
+dans ce fichier, ce qui rendait la présente décision **inapplicable**. Le
+contrôle s'ancre désormais sur le **chemin servi** plutôt que sur la directive,
+et n'autorise que `medias/public/`. Douze mutations le gardent.
+
 **La sauvegarde doit couvrir le volume des médias en plus de la base.** Une
 sauvegarde qui ne prendrait que PostgreSQL restaurerait un catalogue dont chaque
 fiche pointe vers un fichier absent. Point à porter en phase 6.
+
+**Fait le 9 septembre 2026**, ADR-037 et LS-152 : chaque exécution de
+`deploiement/sauvegarder-base.sh` produit **deux** fichiers du même horodatage,
+le dump de la base et une archive des médias et des documents. Le script s'arrête
+si l'une des deux racines manque, plutôt que de produire une sauvegarde qui ne
+restaurerait rien d'utilisable.
 
 **Le champ `Media.chemin`** porte un chemin relatif au dossier `public/` du
 volume, jamais un chemin absolu ni une URL complète : le préfixe de service
@@ -242,9 +259,15 @@ objet répliqué, la perte du volume perd les médias. C'est le prix accepté de
 l'absence de tiers, et c'est ce qui rend la sauvegarde du volume non optionnelle
 plutôt que confortable.
 
-**L'espace disque n'est pas surveillé aujourd'hui.** 900 Ko par photographie
-reste modeste, mais un disque plein ferait échouer les traitements. La
-surveillance relève de la phase 6, avec le déploiement.
+**L'espace disque n'est toujours pas surveillé au 9 septembre 2026.** 900 Ko par
+photographie reste modeste, mais un disque plein ferait échouer les traitements.
+
+**Le risque a changé de nature depuis ADR-036** : le disque est désormais
+**partagé avec SmartPlanning**, un produit payant, et une saturation arrêterait
+les deux projets. Deux mesures l'ont réduit sans le fermer, LS-152 : les journaux
+des conteneurs sont bornés à 30 Mo par service, et la sauvegarde ne conserve que
+quatorze jeux. **Il reste à poser une alerte de seuil**, ce qui relève de LS-139,
+le durcissement du serveur. Le disque est à 13 % au 9 septembre 2026.
 
 ## Reproduire les mesures
 

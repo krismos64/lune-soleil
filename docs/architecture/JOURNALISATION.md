@@ -132,6 +132,12 @@ demanderait un ADR et une inscription au registre des traitements.
 La question se rouvrira en phase 6, avec le VPS, si le besoin apparaît. Elle ne
 tient pas au coût : Sentry a une offre gratuite.
 
+**Le VPS existe depuis le 9 septembre 2026 et la question n'a pas été rouverte**,
+délibérément : le besoin n'est pas apparu. Les journaux JSON de `docker logs`
+suffisent au diagnostic, ils sont bornés à 30 Mo par service depuis LS-152, et la
+décision d'écarter un service tiers tient toujours. La rouvrir suppose un ADR et
+une inscription au registre des traitements, pas un simple ajout de dépendance.
+
 ## Aucune dépendance externe
 
 Même arbitrage. Le besoin tient dans un formateur JSON ; une bibliothèque

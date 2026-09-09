@@ -57,13 +57,47 @@ conteneuriser, la question est tranchée.
 
 Réseau Docker privé, volumes nommés pour les données persistantes.
 
-**Deux volumes portent des données, pas un.** `lune-soleil-pgdata` pour
-PostgreSQL, et `lune-soleil-medias` pour les photographies, ADR-007. Ce second
-volume est monté sur `/var/lib/lune-soleil/medias` dans le conteneur applicatif
-et porte deux sous-dossiers, `quarantaine/` et `public/`. **Nginx ne publie que
-`public/`** : un alias posé sur la racine du volume servirait la quarantaine et
-annulerait la décision, les fichiers y étant non traités et portant encore la
-position GPS du domicile de l'exploitante.
+**Trois arborescences portent des données, pas deux.** Le volume nommé
+`lune-soleil-pgdata-prod` pour PostgreSQL, et deux montages d'hôte :
+`/var/lib/lune-soleil/medias` pour les photographies et
+`/var/lib/lune-soleil/documents` pour les factures et avoirs, ADR-007.
+
+**La séparation médias / documents n'est pas du rangement.** Les médias sont
+servis publiquement, une facture ne doit **jamais** l'être, son accès passant par
+un jeton signé, invariant 2 et LS-132 critère 6. Ne propose jamais un montage
+unique sur `/var/lib/lune-soleil`, qui remettrait les deux sous une racine
+commune.
+
+Le volume des médias porte deux sous-dossiers, `quarantaine/` et `public/`.
+**Nginx ne publie que `public/`** : un alias posé sur la racine du volume
+servirait la quarantaine et annulerait la décision, les fichiers y étant non
+traités et portant encore la position GPS du domicile de l'exploitante.
+`verifier-nginx.sh` refuse tout autre chemin depuis LS-205.
+
+## Ce qui EXISTE DÉJÀ, et qui ne se réécrit pas
+
+**La composition de production est livrée**, LS-152, et tourne depuis le
+9 septembre 2026. Ne propose pas d'en écrire une seconde : lis d'abord ce qui
+existe et propose des modifications.
+
+| Fichier | Ce qu'il porte |
+|---|---|
+| `docker-compose.production.yml` | les trois services, leurs limites, leurs volumes |
+| `deploiement/sauvegarder-base.sh` | la sauvegarde quotidienne, base **et** fichiers |
+| `deploiement/lune-soleil-sauvegarde.{service,timer}` | son déclenchement par systemd |
+| `docs/deploiement/EXPLOITATION.md` | l'exploitation courante, migrer, restaurer, vérifier |
+| `docs/deploiement/PREPARATION-SERVEUR.md` | la mise en place initiale du serveur |
+
+**La sauvegarde tourne sur l'HÔTE et non dans la composition**, ADR-037 : les
+moments où elle compte le plus sont ceux où la composition est arrêtée. Ne
+propose pas de la conteneuriser, la question est tranchée.
+
+**`deploy.resources.limits` s'applique bien hors Swarm** sur Compose v5, contre
+la croyance répandue : mesuré le 8 septembre 2026, les deux syntaxes rendent un
+`docker inspect` identique. Ce qui reste vrai est que la limite se vérifie **sur
+le conteneur** et jamais dans le fichier, un zéro signifiant « aucune limite ».
+Les deux familles ne se mélangent pas : Compose refuse `pids_limit` et
+`deploy.resources.limits.pids` ensemble.
 
 **La mesure d'audience n'est pas tranchée pour cette boutique.** LS-141 exige un
 ADR préalable sur le choix, et cet ADR n'existe pas au 8 septembre 2026. Aucun
