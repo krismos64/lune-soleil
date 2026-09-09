@@ -115,7 +115,91 @@ if [ "$segments_examines" -eq 0 ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Second sens : les trois pages d'erreur publiques existent toujours.
+# Deuxième sens : une page qui LIT LA BASE sous un `loading.tsx` doit sonder
+# la disponibilité AVANT la frontière, LS-139.
+#
+# C'EST LE JUMEAU DU SENS PRÉCÉDENT, et il vient d'un incident réel. Le
+# 9 septembre 2026, `lune-soleil-db` a été arrêtée sur la production : le
+# catalogue a répondu **200** avec « Chargement des pièces… » comme état FINAL,
+# 39 462 octets contre 45 748 au nominal, le flux se terminant sur deux
+# `E{"digest":...}` sans que le contenu n'arrive jamais.
+#
+# LE MÉCANISME EST EXACTEMENT CELUI DU 404, à la source d'erreur près : la
+# frontière du segment démarre le streaming avant que la lecture échoue, et un
+# statut ne se change plus une fois les octets partis. `error.tsx` existait,
+# était juste, et ne s'affichait qu'APRÈS hydratation JavaScript.
+#
+# CE QUE LE 200 COÛTE. Un visiteur sans JavaScript reste devant un chargement
+# perpétuel ; un moteur indexe « Chargement… » sur la page commerciale
+# principale ; une supervision qui lit le code HTTP conclut que tout va bien.
+#
+# CE SENS N'INTERDIT PAS le `loading.tsx`, contrairement au précédent : il sert
+# ici un vrai besoin, les filtres d'URL de LS-104. Il EXIGE la sonde au-dessus.
+# ---------------------------------------------------------------------------
+pages_lisant_la_base=0
+
+while IFS= read -r page; do
+  [ -n "$page" ] || continue
+
+  segment="$(dirname "$page")"
+  relatif="${segment#"$RACINE"/}"
+
+  # Une page publique qui lit le catalogue. L'ancrage porte sur l'APPEL, jamais
+  # sur la présence du nom quelque part : un import ou un commentaire qui cite
+  # la fonction ne lit rien, et le compter rendrait le contrôle rouge sur du
+  # code exemplaire. Motif « contrôle satisfait par un commentaire ».
+  lit_la_base=$(grep -nE 'await[[:space:]]+lireCataloguePublic\(' "$page" \
+    | grep -vE ':[[:space:]]*(//|\*|/\*)' || true)
+
+  [ -n "$lit_la_base" ] || continue
+
+  # Même remontée que le sens précédent : un `loading.tsx` parent couvre tout
+  # son sous-arbre, et l'oublier était un trou réel mesuré en LS-188.
+  couvrant=""
+  courant="$segment"
+  while [ -n "$courant" ] && [ "$courant" != "$APP" ]; do
+    if [ -f "$courant/loading.tsx" ]; then
+      couvrant="$courant"
+      break
+    fi
+    courant="$(dirname "$courant")"
+  done
+  if [ -z "$couvrant" ] && [ -f "$APP/loading.tsx" ]; then
+    couvrant="$APP"
+  fi
+
+  # Sans frontière au-dessus, l'erreur produit un vrai 500 toute seule : rien
+  # à exiger, et exiger la sonde ici ajouterait une requête pour rien.
+  [ -n "$couvrant" ] || continue
+
+  pages_lisant_la_base=$((pages_lisant_la_base + 1))
+
+  # LA SONDE SE CHERCHE PAR SON APPEL, et il doit être ATTENDU : un
+  # `verifierSante` importé sans être appelé, ou appelé sans `await`, ne
+  # protège rien et laisserait le contrôle vert sur le défaut qu'il vise.
+  sonde=$(grep -nE 'await[[:space:]]+[a-zA-Z]*[Ss]ante|await[[:space:]]+exigerBaseDisponible\(' "$page" \
+    | grep -vE ':[[:space:]]*(//|\*|/\*)' || true)
+
+  if [ -z "$sonde" ]; then
+    relatif_couvrant="${couvrant#"$RACINE"/}"
+    echo "ECHEC $relatif lit la base sous un loading.tsx sans sonder d'abord"
+    echo "      la frontière est posée par $relatif_couvrant/loading.tsx"
+    echo "      elle démarre le streaming avant que la lecture échoue : une base"
+    echo "      injoignable rend 200 avec l'état de chargement FIGÉ, et error.tsx"
+    echo "      ne s'affiche qu'après hydratation. Mesuré en LS-139 en arrêtant"
+    echo "      réellement la base de production."
+    echo "      Ce qui le ferme : un await sur la sonde de santé AVANT tout await"
+    echo "      de données, en tête de la fonction de page."
+    ko=$((ko + 1))
+  fi
+done <<EOF
+$(find "$APP" -name "page.tsx" 2>/dev/null | sort || true)
+EOF
+
+echo "Pages lisant la base sous une frontière : $pages_lisant_la_base"
+
+# ---------------------------------------------------------------------------
+# Troisième sens : les trois pages d'erreur publiques existent toujours.
 #
 # SANS CE SENS, LE CONTRÔLE MENTIRAIT PAR OMISSION. Il resterait vert sur un
 # dépôt d'où `not-found.tsx` aurait disparu : il ne distingue pas « aucune route
