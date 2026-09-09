@@ -28,11 +28,11 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { DonneesStructurees } from "@/components/donnees-structurees";
+import { BlocJsonLd } from "@/components/donnees-structurees";
 
 /** Rend le composant et rend le HTML servi, tel qu'un navigateur le recevrait. */
 function rendu(balisage: Record<string, unknown>): string {
-  return renderToStaticMarkup(DonneesStructurees({ balisage }));
+  return renderToStaticMarkup(BlocJsonLd({ balisage }));
 }
 
 describe("DonneesStructurees", () => {

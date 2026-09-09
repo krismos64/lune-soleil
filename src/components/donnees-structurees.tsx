@@ -86,6 +86,35 @@ export async function DonneesStructurees({
 }) {
   const nonce = (await headers()).get("x-nonce") ?? undefined;
 
+  return <BlocJsonLd balisage={balisage} nonce={nonce} />;
+}
+
+/**
+ * Le rendu pur, separe de la lecture du nonce, et ce decoupage n'est pas une
+ * coquetterie.
+ *
+ * CE QUI L'A IMPOSE. Rendre `DonneesStructurees` asynchrone a casse les cinq
+ * tests unitaires de LS-137, qui l'appellent comme une fonction pour mesurer le
+ * HTML REELLEMENT rendu : « A component suspended while responding to
+ * synchronous input ». Ces tests gardent une propriete de SECURITE, une saisie
+ * contenant `</script>` refermant la balise au milieu du JSON.
+ *
+ * DEUX VOIES EXISTAIENT. Rendre les tests asynchrones aurait marche, et aurait
+ * laisse l'echappement melange a une dependance de requete : chaque test aurait
+ * du simuler `headers()` pour verifier une propriete qui n'a rien a voir avec
+ * lui. Separer garde la cible synchrone et le test ancre sur le rendu.
+ *
+ * L'ECHAPPEMENT VIT DONC ICI, la ou il compte, et le nonce reste au-dessus.
+ */
+export function BlocJsonLd({
+  balisage,
+  nonce,
+}: {
+  balisage: Record<string, unknown>;
+  // `| undefined` EXPLICITE, `exactOptionalPropertyTypes` etant actif : sans
+  // lui, une valeur absente ne peut pas etre PASSEE, seulement omise.
+  nonce?: string | undefined;
+}) {
   return (
     <script type="application/ld+json" nonce={nonce}>
       {serialiser(balisage)}

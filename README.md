@@ -422,7 +422,7 @@ chaîne ne crée jamais, le dépôt étant public.
 Ce paragraphe affirmait l'inverse, « l'intégration continue ne s'en sert pas »,
 et c'était vrai au mauvais sens du terme : **la suite n'y tournait pas du tout**.
 Le nocturne échouait avant elle depuis le 8 septembre, et l'étape `npm audit` qui
-la suit sortait `skipped` plutôt que `failure`. Les huit parcours critiques
+la suit sortait `skipped` plutôt que `failure`. Les parcours critiques
 n'étaient rejoués par personne.
 
 La distinction entre les deux voies se fait sur la **présence des variables**, et
@@ -651,7 +651,10 @@ restent invisibles en SMTP : il faut ouvrir la boîte.
 
 Les comptes se mesurent plutôt qu'ils ne se recopient, ils bougent à chaque
 story : `ls scripts/*.sh | wc -l` pour le total, `ls scripts/*mutation*.sh | wc -l`
-pour ceux qui prouvent les autres. Ils valaient 84 et 36 le 9 septembre 2026. La
+pour ceux qui prouvent les autres. Ils valaient 86 et 37 le 9 septembre 2026 en
+fin de journée, contre 84 et 36 le matin : la ligne s'est périmée dans la journée
+même où elle a été écrite pour cesser de se périmer, ce qui est l'argument le
+plus court en faveur de la commande plutôt que du nombre. La
 liste ci-dessous n'en cite qu'une partie.
 `preparer-base-locale.sh` n'y figure pas, il s'appelle par `npm run db:preparer`
 et `db:reinitialiser`, cités plus haut.
