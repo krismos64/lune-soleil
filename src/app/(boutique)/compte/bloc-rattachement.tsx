@@ -234,6 +234,9 @@ export function BlocRattachement({
         </p>
 
         {/*
+         * @rechargement-delibere la session est invalide, un rendu serveur
+         * neuf evite un en-tete rendu pour une session qui n'existe plus.
+         *
          * LE CHEMIN DE SORTIE ACCOMPAGNE LE REFUS, jamais un message seul. Un
          * client qui lit « votre session a expiré » sur une page affichant encore
          * ses donnees n'a aucun moyen d'agir, motif de `formulaire-suppression`.

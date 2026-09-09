@@ -71,6 +71,8 @@ export default function ErreurGlobale({ reset }: { reset: () => void }) {
            * moment : un `<Link>` pourrait ne pas répondre, sur le seul écran
            * qui reste au visiteur.
            *
+           * @rechargement-delibere repartir d'un document entierement neuf.
+           *
            * Un lien HTML ordinaire provoque un rechargement complet du
            * document, ce qui est le comportement recherché pour repartir d'un
            * état sain.
