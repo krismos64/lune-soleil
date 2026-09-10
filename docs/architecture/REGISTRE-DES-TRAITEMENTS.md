@@ -214,11 +214,11 @@ empreinte, règle L5 et invariant 9.
 |---|---|
 | Finalité | recueillir et publier les avis sur les articles achetés, avec preuve d'achat |
 | Personnes concernées | clients ayant reçu une commande |
-| Catégories de données | note, commentaire, date d'expérience, lien vers la ligne de commande, réponse de l'exploitante |
+| Catégories de données | note, commentaire, date d'expérience, lien vers la ligne de commande, réponse de l'exploitante. L'**adresse email** entre dans le traitement depuis LS-61, l'invitation étant envoyée par email |
 | Tables | `Avis`, `ReponseAvis`, `InvitationAvis` |
 | Base légale | intérêt légitime, article 6.1.f, informer les acheteurs ; obligation d'information de l'article L111-7-2 du code de la consommation quant aux modalités de contrôle |
 | Conservation | **sans limite de durée** tant que l'avis reste publié, ADR-028. Aucun texte n'impose de durée ; l'article D111-10 impose en revanche de l'**annoncer** dans une rubrique accessible |
-| Destinataires | public, pour l'avis publié et sa réponse. L'identité complète de l'auteur n'est jamais affichée |
+| Destinataires | public, pour l'avis publié et sa réponse. L'identité complète de l'auteur n'est jamais affichée. **OVHcloud** reçoit l'adresse email au titre du SMTP d'envoi, ADR-008, sous-traitant déjà nommé en T2 |
 | Transfert hors UE | aucun |
 
 Un avis est ancré sur la **ligne de commande**, ce qui rend la preuve d'achat
@@ -236,6 +236,19 @@ décision de modération motivée, règle R5.
 titre qu'une durée chiffrée le serait. Une rubrique muette sur la conservation
 serait le manquement que cet article vise. La formulation à reprendre est dans
 ADR-028.
+
+**C'EST FAIT depuis LS-61**, le 10 septembre 2026 : la rubrique « Avis de
+clients » de `/informations-legales` porte les trois mentions du 2°, absence de
+contrepartie, délai maximum de publication et durée de conservation. Le délai de
+publication, que rien ne tranchait, vaut **sept jours** et vient de
+`DELAI_PUBLICATION_JOURS` dans `services/avis.ts` : c'est la même constante qui
+alimente l'email d'invitation et l'écran de dépôt, trois valeurs recopiées
+divergeant au premier changement.
+
+Les mentions du **1°** du même article vivent ailleurs, sur la fiche produit près
+de chaque avis : existence de la procédure de contrôle, date de publication, date
+de l'expérience, critère de classement. **Les deux obligations sont
+cumulatives**, porter l'une ne dispense pas de l'autre.
 
 La suppression du compte ne supprime pas les avis : `Avis.utilisateurId` est en
 `SetNull`, l'avis survit **dissocié** de son auteur, comme la commande l'est,

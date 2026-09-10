@@ -785,6 +785,25 @@ Ajouté par LS-37 le 28 juillet 2026, les avis étant passés en périmètre
 d'ouverture. Le cadre légal a été vérifié aux sources avant rédaction : articles
 L111-7-2 et D111-9 à D111-12 du Code de la consommation.
 
+**LIVRÉ EN PARTIE le 10 septembre 2026 par LS-61**, et l'écart se lit ici plutôt
+que de se découvrir à l'usage. `services/avis.ts` porte la tâche d'invitation,
+le dépôt transactionnel et la modération ; l'écran public vit sous `/avis`,
+l'écran de relecture sous `/administration/avis`, et les avis publiés s'affichent
+au bloc 11 de la fiche produit.
+
+**Quatre choses de ce parcours n'existent PAS**, et aucune n'est un oubli :
+
+| Ce qui manque | Pourquoi |
+|---|---|
+| l'étape 7, **réponse publique** de l'exploitante | l'usage n'est pas décidé, commentaire Jira du 3 septembre 2026 qui demande de ne pas construire l'écran. `ReponseAvis` existe au schéma et la fiche produit **rend** la réponse si elle existe, aucun chemin n'en crée |
+| le **renvoi** d'une invitation, et donc la révocation de l'ancien jeton | il suppose un écran de renvoi qu'aucune story ne porte. Le code de révocation existe, `revoquerJeton`, et l'écran de dépôt distingue déjà un lien remplacé d'un avis déposé : le jour où le renvoi arrive, il ne reste que le geste à câbler |
+| la **modification** d'un avis par son auteur | elle suppose un espace où l'auteur retrouve son avis. `modifieA` existe au schéma, et `publieA` est déjà protégé contre la réécriture, regle R7 |
+| l'**alerte** de délai de publication dépassé | elle demande une tâche de plus, et l'écran de relecture porte le compte des avis en attente dans la barre, ce qui rend le retard visible à chaque connexion |
+
+**Une invitation part une fois et une seule.** Un client qui perd son email ne
+peut donc pas en redemander un aujourd'hui : c'est la conséquence directe du
+renvoi manquant, et elle se paie en avis non déposés, jamais en droit perdu.
+
 ### Chemin nominal
 
 | # | Étape | Base | Vue |
