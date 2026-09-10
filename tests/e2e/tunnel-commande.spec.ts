@@ -4,10 +4,22 @@
  * AUCUNE DONNEE DU PROTOTYPE, interdit du projet. Les pieces viennent de
  * `CATALOGUE_TEST`, prefixees `TEST`.
  *
- * LE TRANSPORTEUR EST EN PANNE PENDANT TOUS CES TESTS, et ce n'est pas une
- * simulation artificielle : le compte Mondial Relay n'est pas ouvert, LS-27 et
- * LS-18, donc `fournisseurPointsRetrait` leve. C'est exactement le cas d'erreur
- * du parcours 1, et il se trouve etre l'etat reel du systeme aujourd'hui.
+ * LE TRANSPORTEUR EST EN PANNE PENDANT TOUS CES TESTS, parce que
+ * `SENDCLOUD_PUBLIC_KEY` et `SENDCLOUD_SECRET_KEY` ne sont pas posees dans
+ * l'environnement de bout en bout : `creerFournisseurSendcloud` leve alors a la
+ * construction, ce qui place le tunnel dans le cas d'erreur du parcours 1.
+ *
+ * CE COMMENTAIRE DISAIT AUTRE CHOSE JUSQU'AU 10 SEPTEMBRE 2026, et il avait
+ * cesse d'etre vrai : « le compte Mondial Relay n'est pas ouvert […] l'etat
+ * reel du systeme aujourd'hui ». Le compte existe depuis le 6 septembre, chez
+ * Sendcloud, et l'API repond. La panne exercee ici est desormais une
+ * CONFIGURATION DELIBEREE, pas une fatalite : un test qui pretend observer le
+ * monde alors qu'il observe une variable absente ment sur ce qu'il prouve.
+ *
+ * NE PAS POSER CES CLES EN BOUT EN BOUT : le cas nominal du choix d'un point de
+ * retrait appellerait alors le vrai transporteur a chaque execution de la CI,
+ * et le cas de panne, qui est le critere 6 de LS-115, cesserait d'etre couvert
+ * ici. Le cas nominal est exerce par les tests unitaires, `fetch` injecte.
  */
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";

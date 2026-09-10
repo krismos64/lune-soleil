@@ -7,7 +7,7 @@
  * verifie cote serveur, invariant 2. Un appel qui se presente comme le cron
  * n'est pas le cron.
  *
- * UNE SEULE ROUTE PARAMETREE plutot que deux fichiers jumeaux. Les deux taches
+ * UNE SEULE ROUTE PARAMETREE plutot qu'un fichier par tache. Toutes
  * partagent exactement la meme mecanique, seul le nom du verrou change :
  * dupliquer le fichier dupliquerait aussi la verification du secret, et un
  * durcissement futur risquerait de n'etre applique qu'a l'un des deux. Le nom
@@ -15,8 +15,10 @@
  * la table `TACHES`.
  *
  * CE QU'ELLE NE DECIDE PAS : aucune logique metier n'est ecrite ici, chaque
- * tache delegue a son service. LES QUATRE TACHES SONT DESORMAIS REMPLIES,
- * les deux dernieres par LS-120.
+ * tache delegue a son service. TOUTES LES TACHES DECLAREES SONT REMPLIES, et
+ * le compte n'est pas inscrit ici : il disait DEUX puis QUATRE, et vaut six
+ * depuis LS-131. `verifier-taches-planifiees.sh` confronte `TACHES` au crontab
+ * dans les deux sens, ce qui le rend mesure plutot qu'affirme.
  */
 import { engendrerCorrelationId, journaliser } from "@/lib/journal";
 import { secretCronValide } from "@/lib/secret-cron";
@@ -90,7 +92,7 @@ export async function POST(
 
   const resultat = await executerSousVerrou(tache, async () => {
     /**
-     * LES QUATRE TACHES PORTENT UN TRAVAIL depuis LS-120, `purge-journaux` en
+     * CHAQUE TACHE DECLAREE PORTE UN TRAVAIL, `purge-journaux` en
      * LS-94, `purge-quarantaine-medias` en LS-102, et les deux du paiement.
      *
      * `purge-journaux` applique les durees de conservation annoncees au

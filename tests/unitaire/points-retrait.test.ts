@@ -9,11 +9,14 @@
  * LES TESTS SONT ECRITS AVANT L'IMPLEMENTATION. Une panne de transporteur qui
  * fermerait la boutique ne se verrait qu'en production, le jour ou l'API tombe.
  *
- * AUCUN APPEL RESEAU REEL. Le compte Mondial Relay n'existe pas encore, LS-27
- * et LS-18 l'attendant de l'ouverture du compte bancaire professionnel, et
- * LS-27 interdit tout identifiant fictif ou reponse d'API inventee. Ces tests
- * exercent le contrat de l'interface et le comportement en panne, jamais le
- * fournisseur.
+ * AUCUN APPEL RESEAU REEL, et c'est un choix de conception depuis LS-200 : les
+ * fournisseurs sont INJECTES, ce qui rend ces tests deterministes et
+ * executables sans les cles. Ce commentaire disait « le compte Mondial Relay
+ * n'existe pas encore » : le compte existe depuis le 6 septembre 2026, chez
+ * Sendcloud, et l'API repond. Le motif a change, pas la regle.
+ *
+ * Ces tests exercent le contrat de l'interface et le comportement en panne,
+ * jamais le fournisseur, dont la traduction vit dans `sendcloud-fournisseur`.
  */
 import { describe, expect, it } from "vitest";
 

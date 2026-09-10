@@ -62,7 +62,7 @@ ou la loi est fausse, dans cet ordre : signaler la contradiction.
 5. **Paiement** : seul un événement serveur signé confirme un paiement, le retour
    du navigateur ne prouve rien. **L'idempotence est ancrée sur l'effet, pas sur
    l'identifiant d'événement**, qui laisse passer le croisement entre webhook et
-   réconciliation. Quatre clés d'unicité, une par effet, voir `payments.md`.
+   réconciliation. Une clé d'unicité par effet, table dans `database.md`.
 6. **Stock** : disponibilité web et quantité physique sont deux notions
    distinctes. Suspendre la vente web ne crée aucun mouvement de stock.
 7. **Validation** : toute entrée non fiable est validée côté serveur avec Zod.

@@ -1,6 +1,7 @@
 # integrations/sendcloud/
 
-Points de retrait Mondial Relay, servis par l'**API Sendcloud**.
+Points de retrait et **suivi des colis** Mondial Relay, servis par l'**API
+Sendcloud**.
 
 ## Pourquoi ce nom
 
@@ -27,8 +28,15 @@ l'API réellement appelée.
 
 | Fichier | Rôle |
 |---|---|
-| `index.ts` | le contrat, ses erreurs, la dégradation, **aucun appel réseau** |
-| `fournisseur.ts` | l'appel HTTP réel à Sendcloud |
+| `index.ts` | le contrat des points de retrait, ses erreurs, la dégradation, **aucun appel réseau** |
+| `fournisseur.ts` | l'appel HTTP réel, recherche des points de retrait, LS-200 |
+| `statuts.ts` | la correspondance des statuts de suivi, ADR-042, **aucun appel réseau** |
+| `suivi.ts` | l'appel HTTP réel, lecture du statut d'un colis, LS-131 |
+
+`statuts.ts` porte la règle la plus coûteuse du projet si elle est fausse :
+`livreA` ouvre le délai de rétractation, et l'article L221-20 le porte à douze
+mois quand l'information est incorrecte. **Deux** statuts constatent la remise,
+`Delivered` au domicile et `Shipment collected by customer` en point de retrait.
 
 `index.ts` est importable par un test ou un service sans exiger la moindre
 variable d'environnement, même découpage que `integrations/stripe`.

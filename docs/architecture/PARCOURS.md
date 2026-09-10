@@ -813,7 +813,7 @@ Base : l'invitation n'est pas créée, la tâche ne sélectionne que les command
 livrées.
 Vue : rien.
 Sans date de livraison fiable, aucune invitation ne part. La source de cette date
-est tranchée par LS-33, suivi Mondial Relay par API sur le seul événement « remis
+est tranchée par LS-33, suivi du transporteur par l'API Sendcloud, sur les deux statuts de remise et non un seul, « remis
 au destinataire », et vaut aussi pour le délai de rétractation.
 
 **Avis refusé en modération**
@@ -1190,11 +1190,10 @@ profit d'une alerte dès que le retour annoncé n'arrive pas.
 
 Elle fait courir le délai de rétractation. Le parcours 1 persiste une date de
 livraison « uniquement sur source fiable », et cette source est définie depuis le
-**28 juillet 2026, LS-33** : le suivi automatique Mondial Relay, offre Start, par
-API. Ni saisie manuelle par l'administratrice, ni repli sur la date d'expédition
+**28 juillet 2026, LS-33** : le suivi automatique du transporteur, par l'API Sendcloud, ADR-035. Ni saisie manuelle par l'administratrice, ni repli sur la date d'expédition
 seule.
 
-Seul l'événement « remis au destinataire » renseigne la date, pour les trois modes
+seule la remise au destinataire, constatée par DEUX statuts, ADR-042, renseigne la date, pour les trois modes
 d'ADR-025. « Disponible au Point Relais », « mise en distribution » et « avis de
 passage » décrivent l'acheminement et restent sans effet. La table complète vit
 dans `.claude/rules/legal.md`.
