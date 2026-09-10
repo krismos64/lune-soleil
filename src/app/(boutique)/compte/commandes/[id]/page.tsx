@@ -28,6 +28,7 @@ import { exigerSession } from "@/services/autorisation";
 import { lireMaCommande } from "@/services/espace-client-commandes";
 import { commandePeutOuvrirUneRetractation } from "@/services/retractation";
 
+import { FriseEtapes } from "./frise-etapes";
 import styles from "../../compte.module.css";
 
 export const metadata = {
@@ -216,6 +217,23 @@ export default async function PageDetailCommande({
             ))}
         </address>
       </section>
+
+      {/*
+       * LA FRISE PRECEDE LE SUIVI DETAILLE, LS-190. Elle repond a « ou en est ma
+       * commande » d'un coup d'oeil, la ou la liste qui suit porte les valeurs
+       * exactes : numero de suivi, mode execute, fraicheur. L'ordre suit celui
+       * du prototype, et l'une ne remplace pas l'autre.
+       *
+       * ELLE NE RECOIT QUE CE QUE LA PAGE A DEJA LU, aucune requete de plus :
+       * la frise DERIVE, elle ne va rien chercher.
+       */}
+      <FriseEtapes
+        commande={{
+          statut: commande.statut,
+          creeA: commande.creeA,
+          expedition: commande.expedition,
+        }}
+      />
 
       {/*
        * LE SUIVI N'APPARAIT QUE SI UN COLIS EST PARTI. Une commande en attente

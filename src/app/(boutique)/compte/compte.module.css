@@ -843,3 +843,133 @@
   background: var(--ls-surface-sand);
   color: var(--ls-text);
 }
+
+/*
+ * FRISE D'ETAPES DU DETAIL DE COMMANDE, LS-190.
+ *
+ * VERTICALE A TOUTE LARGEUR, et jamais horizontale au-dela d'un seuil. Quatre
+ * etapes dont l'une porte un libelle de transporteur en texte libre, « En
+ * attente de retrait au point de service » par exemple : une frise horizontale
+ * les tasserait en colonnes illisibles bien avant 320 px, et le repliement
+ * casserait l'alignement des pastilles avec leur trait.
+ *
+ * LE TRAIT EST PORTE PAR `::before` SUR CHAQUE ETAPE SAUF LA PREMIERE, plutot
+ * que par un fond sur la liste : un trait de conteneur depasserait sous la
+ * derniere pastille, ce que seule une hauteur calculee corrigerait.
+ */
+.frise {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.etape {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: var(--ls-space-3);
+  padding-bottom: var(--ls-space-4);
+}
+
+.etape:last-child {
+  padding-bottom: 0;
+}
+
+/*
+ * LE TRAIT PART DU BAS DE LA PASTILLE ET DESCEND JUSQU'A LA SUIVANTE.
+ *
+ * MA PREMIERE VERSION NE RELIAIT RIEN, mesuree par la revue frontend du
+ * 11 septembre 2026 : posee sur `:not(:first-child)` avec `top: -16px` et
+ * `height: 16px`, elle occupait le seul padding de l'etape PRECEDENTE et
+ * s'arretait au bord superieur de l'etape courante. Il restait 17,4 px de vide
+ * au-dessus et 5,6 px en dessous, soit trois segments detaches qui ne
+ * connectaient aucune pastille. Le commentaire decrivait un comportement que le
+ * code ne produisait pas.
+ *
+ * ELLE PORTE DESORMAIS SUR `:not(:last-child)` : le trait appartient a l'etape
+ * qui le DESCEND, ce qui le rend independant du padding de sa voisine et
+ * garantit qu'aucun ne pend sous la derniere pastille.
+ *
+ * `top` PART DU BAS REEL DE LA PASTILLE : sa marge haute, 0,35rem, plus sa
+ * hauteur de boite, `--ls-space-3`. `bottom: 0` le fait descendre jusqu'au bord
+ * de l'etape, donc jusqu'a la pastille suivante, quelle que soit la hauteur du
+ * libelle.
+ *
+ * `left` CENTRE LE TRAIT SUR L'AXE DES PASTILLES. Le centre de la pastille est
+ * a `--ls-space-3 / 2`, `box-sizing: border-box` incluant ses deux bordures
+ * dans les 12 px : il faut RETRANCHER la moitie de la largeur du trait et non
+ * l'ajouter. Ma premiere version decalait de 2 px vers la droite.
+ */
+.etape:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--ls-space-3) / 2 - 1px);
+  top: calc(0.35rem + var(--ls-space-3));
+  bottom: 0;
+  width: 2px;
+  background: var(--ls-border);
+}
+
+/*
+ * LA PASTILLE EST DECORATIVE, `aria-hidden` cote composant : l'etat est dit par
+ * du texte, jamais par la couleur seule, WCAG 1.4.1.
+ *
+ * ELLE PORTE UNE BORDURE ET NON UN SEUL FOND. Une pastille pleine de la couleur
+ * du texte disparaitrait en mode contraste eleve de Windows, qui remplace les
+ * fonds sans toucher aux bordures.
+ */
+.pastille {
+  grid-row: 1 / span 2;
+  width: var(--ls-space-3);
+  height: var(--ls-space-3);
+  margin-top: 0.35rem;
+  border-radius: 50%;
+  border: 2px solid var(--ls-primary);
+}
+
+.etapeFaite .pastille {
+  background: var(--ls-primary);
+}
+
+/*
+ * L'ETAPE EN COURS EST CREUSE ET TERRACOTTA, forme du prototype. Le jeton
+ * profond et non le clair : `--ls-accent-terracotta` donne 4,07:1 sur creme, ce
+ * qui suffirait a une BORDURE, WCAG 1.4.11 exigeant 3:1, mais le profond evite
+ * d'avoir a rejuger la paire si cette pastille recevait un jour du texte.
+ */
+.etapeEnCours .pastille {
+  border-color: var(--ls-accent-terracotta-deep);
+  background: transparent;
+}
+
+.libelleEtape {
+  font-weight: 600;
+  /*
+   * LE LIBELLE PEUT VENIR DU TRANSPORTEUR, donc d'un texte que le site ne
+   * choisit pas : il se coupe plutot que de deborder a 320 px.
+   */
+  overflow-wrap: anywhere;
+}
+
+.dateEtape {
+  grid-column: 2;
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+}
+
+/*
+ * ANNONCE VISUELLEMENT MASQUEE MAIS LUE. Elle double la pastille pour les
+ * lecteurs d'ecran : sans elle, l'etat d'une etape ne serait porte que par la
+ * couleur, ce que WCAG 1.4.1 interdit.
+ */
+.annonceEtape {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
