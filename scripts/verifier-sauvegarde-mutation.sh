@@ -126,14 +126,22 @@ CREATE TABLE t12 (id serial primary key, valeur text);
 INSERT INTO t01 (valeur) VALUES ('temoin');
 SQL
 
-MEDIAS="$BAC/medias"
+# LE DECOR REPRODUIT LA VRAIE STRUCTURE DU VOLUME, `public/` A COTE DE
+# `quarantaine/`, et ce n'est pas du detail : le garde-fou de LS-107 ne peut
+# rien prouver sur une arborescence qui ne porte pas les deux. Un decor plus
+# simple que le reel rend des mutations qui ne mordent sur rien.
+RACINE_MEDIAS="$BAC/medias"
+MEDIAS="$RACINE_MEDIAS/public"
+QUARANTAINE="$RACINE_MEDIAS/quarantaine"
 DOCUMENTS="$BAC/documents"
-mkdir -p "$MEDIAS" "$DOCUMENTS"
+mkdir -p "$MEDIAS" "$QUARANTAINE" "$DOCUMENTS"
 # Trois entrees au moins : le script note « arborescences quasi vides » sous ce
 # compte, et une note n'est pas un echec, mais autant que le temoin soit franc.
 echo "photographie" > "$MEDIAS/piece-01.txt"
 echo "declinaison" > "$MEDIAS/piece-02.txt"
 echo "facture" > "$DOCUMENTS/facture-01.txt"
+# UN ORIGINAL EN QUARANTAINE, qui ne doit JAMAIS entrer dans une archive.
+echo "original non traite, EXIF GPS" > "$QUARANTAINE/original-01.txt"
 
 FICHIER_ENV="$BAC/production.env"
 cat > "$FICHIER_ENV" <<ENV
@@ -169,7 +177,7 @@ jouer() {
     FICHIER_ENV="$FICHIER_ENV" \
     BACKUP_DIR="$REP" \
     CONTENEUR_DB="$CONTENEUR" \
-    MEDIA_RACINE="$MEDIAS" \
+    MEDIA_SAUVEGARDE="$MEDIAS" \
     DOCUMENTS_RACINE="$DOCUMENTS" \
     "$@" \
     bash "$SCRIPT" 2>&1)
@@ -333,10 +341,53 @@ jouer "base quasi vide, moins de dix objets" 1 "la base semble vide" \
 # Le scenario reel est un montage qui ne remonte pas apres un redemarrage.
 # ---------------------------------------------------------------------------
 jouer "racine des medias absente" 1 "n'existe pas" \
-  MEDIA_RACINE="$BAC/medias-absents"
+  MEDIA_SAUVEGARDE="$BAC/medias-absents"
 
 jouer "racine des documents absente" 1 "n'existe pas" \
   DOCUMENTS_RACINE="$BAC/documents-absents"
+
+# ---------------------------------------------------------------------------
+# Cas 7, LA QUARANTAINE N'ENTRE PAS DANS L'ARCHIVE. LS-107 critere 3.
+#
+# LE DEFAUT ETAIT REEL ET LIVRE : jusqu'au 10 septembre 2026 le script visait
+# `medias` entier, donc `public/` ET `quarantaine/`. Verifie sur une archive
+# reelle de production, qui portait bien les deux entrees. Les dossiers etaient
+# vides, donc rien n'a fui, et le defaut se serait manifeste a la premiere
+# photographie.
+#
+# CE QUE LA MUTATION FABRIQUE EST LA CONFIGURATION FAUTIVE ELLE-MEME, la racine
+# `medias` au lieu de `medias/public`, et non une forme commode : c'est
+# exactement ce que le script faisait, et ce qu'une surcharge d'environnement
+# pourrait refaire.
+#
+# LE GARDE-FOU LIT L'ARCHIVE PRODUITE, pas le chemin vise. Un controle qui
+# verifierait la valeur de `MEDIA_SAUVEGARDE` resterait vert devant une archive
+# fautive produite autrement.
+jouer "la quarantaine entre dans l'archive" 1 "emporte la quarantaine" \
+  MEDIA_SAUVEGARDE="$RACINE_MEDIAS"
+
+# Le pendant du cas precedent : le decor NOMINAL, qui vise `public/`, ne doit
+# porter aucune quarantaine. Sans ce sens, un garde-fou qui rougirait toujours
+# passerait pour efficace.
+CAS=$((CAS + 1))
+REP_Q=$(mktemp -d "$BAC/sansq-XXXXXX")
+env FICHIER_ENV="$FICHIER_ENV" BACKUP_DIR="$REP_Q" CONTENEUR_DB="$CONTENEUR" \
+  MEDIA_SAUVEGARDE="$MEDIAS" DOCUMENTS_RACINE="$DOCUMENTS" \
+  bash "$SCRIPT" >/dev/null 2>&1
+ARCH=$(find "$REP_Q" -maxdepth 1 -name 'fichiers-*.tar.gz' | head -1)
+if [ -z "$ARCH" ]; then
+  echo "  ECHEC decor nominal : aucune archive produite"
+  ECHECS=$((ECHECS + 1))
+elif tar tzf "$ARCH" 2>/dev/null | grep -q quarantaine; then
+  echo "  ECHEC decor nominal : la quarantaine est dans l'archive"
+  ECHECS=$((ECHECS + 1))
+elif ! tar tzf "$ARCH" 2>/dev/null | grep -q 'piece-01'; then
+  echo "  ECHEC decor nominal : les medias traites manquent a l'archive"
+  ECHECS=$((ECHECS + 1))
+else
+  echo "  OK   le decor nominal archive public/ sans la quarantaine"
+fi
+rm -rf "$REP_Q"
 
 # ---------------------------------------------------------------------------
 # Cas 7, ARCHIVE ILLISIBLE.
@@ -356,7 +407,7 @@ if [ "$(id -u)" -eq 0 ]; then
   echo "photographie" > "$INACCESSIBLE/piece.txt"
   chmod 000 "$INACCESSIBLE"
   jouer "archive des fichiers en echec, racine illisible" 1 "archive des fichiers a echoue" \
-    MEDIA_RACINE="$INACCESSIBLE"
+    MEDIA_SAUVEGARDE="$INACCESSIBLE"
   chmod 755 "$INACCESSIBLE"
 else
   echo "  NON JOUE  archive illisible : demande root, relancer avec sudo pour l'eprouver"
@@ -383,7 +434,7 @@ done
 AVANT=$(find "$REP_ROTATION" -maxdepth 1 -name 'quotidienne-*.dump' | wc -l | tr -d ' ')
 
 env FICHIER_ENV="$ENV_VIDE" BACKUP_DIR="$REP_ROTATION" CONTENEUR_DB="$CONTENEUR" \
-  MEDIA_RACINE="$MEDIAS" DOCUMENTS_RACINE="$DOCUMENTS" \
+  MEDIA_SAUVEGARDE="$MEDIAS" DOCUMENTS_RACINE="$DOCUMENTS" \
   bash "$SCRIPT" >/dev/null 2>&1
 
 APRES=$(find "$REP_ROTATION" -maxdepth 1 -name 'quotidienne-*.dump' | wc -l | tr -d ' ')
@@ -404,8 +455,8 @@ fi
 # verifie, et le temoin en fait partie.
 # ---------------------------------------------------------------------------
 echo
-if [ "$CAS" -lt 9 ]; then
-  echo "ECHEC : $CAS cas joues, au moins 9 attendus. L'ancrage du controle est casse."
+if [ "$CAS" -lt 11 ]; then
+  echo "ECHEC : $CAS cas joues, au moins 11 attendus. L'ancrage du controle est casse."
   exit 1
 fi
 
