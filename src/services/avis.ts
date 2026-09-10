@@ -32,7 +32,7 @@
  * elle existe, aucun chemin n'en cree.
  */
 import { Prisma } from "@/generated/prisma/client";
-import type { StatutAvis } from "@/generated/prisma/client";
+import type { StatutAvis, StatutSignalement } from "@/generated/prisma/client";
 
 import {
   empreinteJeton,
@@ -46,20 +46,32 @@ import type { Correlation } from "@/lib/journal";
 import { prisma } from "@/lib/prisma";
 import {
   appliquerDecision,
+  cloturerSignalement,
   ecrireAvis,
+  ecrireSignalement,
   ecrireInvitation,
   lireCommandePourAvis,
   lireInvitationsDeCommande,
   listerAvisParStatut,
   listerAvisPublies,
   listerCommandesAInviter,
+  listerSignalements,
+  lireAvisASignaler,
+  lireAvisPubliePourSignalement,
   marquerEnvoiAbouti,
 } from "@/repositories/avis";
 import type {
   AvisAModerer,
   AvisPublie,
   InvitationLue,
+  SignalementLu,
 } from "@/repositories/avis";
+import { incrementerCompteur } from "@/repositories/limitation";
+import {
+  EntreeInvalideError,
+  schemaSignalementAvis,
+  valider,
+} from "@/lib/validation";
 import { deposerEnvoi } from "@/services/envoi-email";
 import {
   consommerJeton,
@@ -851,4 +863,250 @@ export function resumerAvis(avis: AvisPublie[]): SyntheseAvis {
     nombre: avis.length,
     moyenne: Math.round((total / avis.length) * 10) / 10,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Signalement d'un doute sur l'authenticite d'un avis, LS-77.
+//
+// OBLIGATION LEGALE, article L111-7-2 du Code de la consommation, verifie a
+// Legifrance le 11 septembre 2026, version en vigueur depuis le 17 fevrier
+// 2024 : la fonctionnalite doit etre GRATUITE, ouverte aux « responsables des
+// produits ou des services faisant l'objet d'un avis », et le signalement doit
+// etre MOTIVE.
+//
+// AUCUNE AUTHENTIFICATION N'EST EXIGEE, et c'est la lecture du texte : les
+// personnes qu'il vise ne sont pas des clients de la boutique et n'ont aucun
+// compte ici. Exiger une authentification restreindrait un droit que la loi
+// ouvre.
+//
+// LE FORMULAIRE EST DONC PUBLIC, avec les trois memes couches anti-robot que
+// le contact de LS-97 : champ piege, delai minimum, plafond par adresse IP.
+// Elles ne sont pas recopiees par confort, elles sont le seul rempart d'un
+// formulaire sans session.
+//
+// UN SIGNALEMENT NE DEPUBLIE RIEN. Aucune fonction ci-dessous n'ecrit sur
+// `Avis` : une depublication automatique ferait de ce formulaire un moyen de
+// retirer les avis d'un concurrent. Si le doute conduit a un retrait, il passe
+// par `modererAvis` avec son motif, regle R5.
+// ---------------------------------------------------------------------------
+
+/**
+ * Delai minimum entre l'affichage du formulaire et sa soumission.
+ *
+ * MEME VALEUR QUE LE CONTACT, et pour la meme raison : il ne s'agit pas de
+ * mesurer un temps de reflexion, mais d'ecarter la soumission INSTANTANEE,
+ * signature d'un script qui poste sans lire la page.
+ */
+const DELAI_MINIMUM_SIGNALEMENT_MS = 3000;
+
+/**
+ * Plafond par adresse IP, et sa fenetre.
+ *
+ * PLUS BAS QUE LE CONTACT, TROIS AU LIEU DE CINQ. Signaler un avis est un geste
+ * rare : une personne qui en signale trois en une heure conteste deja tout ce
+ * qu'elle avait a contester. Un plafond genereux ici servirait surtout a noyer
+ * l'exploitante sous des signalements automatises.
+ */
+const PLAFOND_SIGNALEMENTS_PAR_IP = 3;
+const FENETRE_SIGNALEMENTS_SECONDES = 3600;
+
+/** Ce que le formulaire public de signalement transmet, avant validation. */
+export type SaisieSignalement = {
+  avisId: string;
+  qualite: string;
+  email: string;
+  motif: string;
+  /** Champ piege, invisible a l'ecran. Une personne ne le remplit jamais. */
+  piege: string;
+  /** Instant d'affichage du formulaire, en millisecondes. */
+  ouvertA: number;
+};
+
+/** Ce qu'un depot de signalement produit. */
+export type IssueSignalement =
+  | { statut: "ENREGISTRE" }
+  | { statut: "INVALIDE"; message: string }
+  | { statut: "TROP_DE_SIGNALEMENTS" }
+  /** L'avis n'existe pas, ou n'est pas publie : meme reponse dans les deux cas. */
+  | { statut: "AVIS_INTROUVABLE" };
+
+/**
+ * Enregistre un signalement de doute sur l'authenticite d'un avis.
+ *
+ * L'ORDRE DES INSTRUCTIONS EST LE MECANISME, repris de `message-contact.ts` :
+ * les trois couches anti-robot AVANT toute ecriture, la validation ensuite, le
+ * plafond APRES la validation pour ne pas compter une faute de frappe, et
+ * l'ecriture en dernier.
+ *
+ * UN AVIS NON PUBLIE EST INTROUVABLE, ET C'EST UN CHOIX D'AUTORISATION. Seuls
+ * les avis publies sont signalables : accepter un signalement sur un avis
+ * `DEPOSE` confirmerait son existence a quelqu'un qui n'a pas pu le lire, ce qui
+ * ferait de ce formulaire un oracle sur la file de moderation.
+ *
+ * LE REFUS EST UNIFORME entre « aucun avis sous cet identifiant » et « avis non
+ * publie », meme motif que l'acces par jeton : distinguer les deux revelerait
+ * qu'un avis existe.
+ */
+export async function signalerAvis({
+  saisie,
+  adresseIp,
+}: {
+  saisie: SaisieSignalement;
+  adresseIp: string | null;
+}): Promise<IssueSignalement> {
+  /*
+   * PREMIERE COUCHE, LE CHAMP PIEGE. Il rend `ENREGISTRE` et non un refus :
+   * dire « refuse » a un robot lui apprend l'existence du piege.
+   */
+  if (saisie.piege.trim() !== "") {
+    journaliser("info", "signalement ecarte, champ piege rempli", {});
+
+    return { statut: "ENREGISTRE" };
+  }
+
+  /*
+   * DEUXIEME COUCHE, LE DELAI. `ouvertA` vient du formulaire, donc il n'est pas
+   * fiable : un robot peut l'anti-dater. C'est la limite acceptee de cette
+   * couche, et c'est pourquoi elle n'est pas seule.
+   */
+  const ecoule = Date.now() - saisie.ouvertA;
+
+  if (
+    !Number.isFinite(saisie.ouvertA) ||
+    ecoule < DELAI_MINIMUM_SIGNALEMENT_MS
+  ) {
+    journaliser("info", "signalement ecarte, soumission immediate", {});
+
+    return { statut: "ENREGISTRE" };
+  }
+
+  let valide;
+
+  try {
+    valide = valider(schemaSignalementAvis, {
+      avisId: saisie.avisId,
+      qualite: saisie.qualite,
+      email: saisie.email,
+      motif: saisie.motif,
+    });
+  } catch (erreur) {
+    if (erreur instanceof EntreeInvalideError) {
+      return { statut: "INVALIDE", message: erreur.message };
+    }
+    throw erreur;
+  }
+
+  /*
+   * TROISIEME COUCHE, LE PLAFOND. Il vient APRES la validation : compter une
+   * saisie refusee fermerait la porte a quelqu'un qui corrige une faute de
+   * frappe dans son adresse.
+   */
+  if (adresseIp !== null) {
+    try {
+      const compteur = await incrementerCompteur(
+        prisma,
+        `signalement|${adresseIp}`,
+        FENETRE_SIGNALEMENTS_SECONDES,
+      );
+
+      if (compteur.compte > PLAFOND_SIGNALEMENTS_PAR_IP) {
+        return { statut: "TROP_DE_SIGNALEMENTS" };
+      }
+    } catch (erreur) {
+      /*
+       * DEFAUT OUVERT, meme choix que le contact et pour la meme raison. Une
+       * base qui tousse ne doit pas fermer un canal que la loi impose
+       * d'ouvrir. Le risque est borne par les deux couches precedentes, qui ne
+       * dependent pas de la base.
+       */
+      journaliserErreur("plafond de signalement indisponible", erreur, {});
+    }
+  }
+
+  const avis = await lireAvisPubliePourSignalement(prisma, valide.avisId);
+
+  if (avis === null) {
+    return { statut: "AVIS_INTROUVABLE" };
+  }
+
+  await ecrireSignalement(prisma, {
+    avisId: valide.avisId,
+    qualite: valide.qualite,
+    email: valide.email,
+    motif: valide.motif,
+  });
+
+  journaliser("info", "signalement d'avis enregistre", {
+    avisId: valide.avisId,
+  });
+
+  return { statut: "ENREGISTRE" };
+}
+
+/** Les signalements en attente d'examen, pour l'ecran d'administration. */
+export async function listerSignalementsAExaminer(): Promise<SignalementLu[]> {
+  return listerSignalements(prisma, ["NOUVEAU"]);
+}
+
+/** Les signalements deja traites, pour la seconde section de l'ecran. */
+export async function listerSignalementsTraites(): Promise<SignalementLu[]> {
+  return listerSignalements(prisma, ["EXAMINE", "RETENU", "ECARTE"]);
+}
+
+/** Ce qu'une cloture de signalement produit. */
+export type IssueCloture =
+  { statut: "APPLIQUEE" } | { statut: "REFUSE_INTROUVABLE" };
+
+/**
+ * Clot un signalement apres examen.
+ *
+ * ELLE NE TOUCHE PAS A L'AVIS, deliberement. Retenir un signalement ne retire
+ * pas l'avis : c'est `modererAvis` qui le fait, avec son propre motif, et les
+ * deux gestes restent distincts pour que la decision de moderation porte
+ * toujours sa justification propre, regle R5.
+ */
+export async function cloturerSignalementAvis(
+  parametres: {
+    signalementId: string;
+    statut: Extract<StatutSignalement, "EXAMINE" | "RETENU" | "ECARTE">;
+    suiteDonnee: string | null;
+  },
+  correlation?: Correlation,
+): Promise<IssueCloture> {
+  try {
+    await cloturerSignalement(prisma, {
+      signalementId: parametres.signalementId,
+      statut: parametres.statut,
+      suiteDonnee: normaliserCommentaire(parametres.suiteDonnee),
+    });
+  } catch (erreur) {
+    if (
+      erreur instanceof Prisma.PrismaClientKnownRequestError &&
+      erreur.code === "P2025"
+    ) {
+      return { statut: "REFUSE_INTROUVABLE" };
+    }
+
+    throw erreur;
+  }
+
+  journaliser(
+    "info",
+    "signalement d'avis clos",
+    { signalementId: parametres.signalementId, statut: parametres.statut },
+    correlation,
+  );
+
+  return { statut: "APPLIQUEE" };
+}
+
+/**
+ * L'avis vise par un signalement, pour le rappeler a l'ecran.
+ *
+ * SEULS LES AVIS PUBLIES REMONTENT, regle R4 et controle d'autorisation : un
+ * avis en attente de relecture ne doit pas devenir lisible par quiconque forge
+ * une URL portant son identifiant.
+ */
+export async function lireAvisPourSignalement(avisId: string) {
+  return lireAvisASignaler(prisma, avisId);
 }

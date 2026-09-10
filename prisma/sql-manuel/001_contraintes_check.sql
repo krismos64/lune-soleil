@@ -356,3 +356,44 @@ ALTER TABLE demande_retractation
   CHECK (
     (etat_piece_retournee IS NOT NULL) = (etat_constate_a IS NOT NULL)
   );
+
+-- C42, LE MOTIF N'EST JAMAIS VIDE, et ce n'est pas une regle de confort : la
+-- loi conditionne le signalement au fait qu'il soit MOTIVE. Un signalement sans
+-- motif n'est pas un signalement au sens de l'article L111-7-2.
+--
+-- La validation Zod est le controle principal, ceci la derniere ligne de
+-- defense : le formulaire est PUBLIC, donc toute entree y est non fiable.
+ALTER TABLE "signalement_avis"
+  ADD CONSTRAINT "chk_signalement_champs_non_vides"
+  CHECK (
+    length(trim(qualite)) > 0
+    AND length(trim(email)) > 0
+    AND length(trim(motif)) > 0
+  );
+
+-- C43, l'horodatage suit le statut, EQUIVALENCE et non implication, meme forme
+-- que C30 sur les messages. Un signalement examine sans date ne dirait pas
+-- quand, et une date sur un signalement NOUVEAU affirmerait un examen qui n'a
+-- pas eu lieu.
+--
+-- LES TROIS STATUTS D'ARRIVEE SONT CITES et non le seul `EXAMINE` : `RETENU` et
+-- `ECARTE` sont eux aussi des examens FAITS. Ne citer qu'`EXAMINE` laisserait
+-- passer un signalement retenu sans date, defaut que l'enum rend facile a
+-- introduire en ajoutant une valeur.
+ALTER TABLE "signalement_avis"
+  ADD CONSTRAINT "chk_signalement_horodatage_coherent"
+  CHECK (
+    (statut IN ('EXAMINE', 'RETENU', 'ECARTE')) = (examine_a IS NOT NULL)
+  );
+
+-- C44, UNE SUITE DONNEE SUPPOSE UN EXAMEN. Ecrire ce qu'on a repondu a un
+-- signalement qu'on n'a pas examine est incoherent, et l'ecran ne le permet
+-- pas : la contrainte ferme le chemin que l'ecran ne montre pas.
+--
+-- IMPLICATION ET NON EQUIVALENCE, a la difference de C43 : un examen peut
+-- parfaitement n'appeler aucune suite ecrite. Copier la forme de C43 ici
+-- rendrait la suite OBLIGATOIRE sur tout examen, piege « implication et non
+-- equivalence » deja rencontre sur ce depot.
+ALTER TABLE "signalement_avis"
+  ADD CONSTRAINT "chk_signalement_suite_apres_examen"
+  CHECK (suite_donnee IS NULL OR examine_a IS NOT NULL);

@@ -722,3 +722,56 @@ export const schemaDecisionAvis = z.strictObject({
     .max(2000, "Un motif de 2000 caractères au plus est attendu.")
     .nullable(),
 });
+
+/**
+ * Un signalement de doute sur l'authenticite d'un avis, LS-77, article
+ * L111-7-2.
+ *
+ * `avisId` Y FIGURE ET N'AUTORISE RIEN, invariant 2. Il designe l'avis conteste,
+ * et le service verifie qu'il existe ET qu'il est PUBLIE : signaler un avis
+ * jamais publie revelerait son existence a qui n'a pas pu le lire.
+ *
+ * LE MOTIF EST OBLIGATOIRE, ET C'EST LA LOI QUI L'IMPOSE, pas une preference
+ * d'ergonomie : le texte conditionne le signalement au fait qu'il soit
+ * « motive ». Un champ vide n'est donc pas un signalement au sens de l'article,
+ * et le CHECK C42 le refuse aussi en base.
+ *
+ * LA QUALITE EST UN TEXTE LIBRE ET NON UNE LISTE FERMEE. Le texte vise « les
+ * responsables des produits ou des services », formule dont l'application a une
+ * boutique artisanale n'est pas evidente : enfermer la reponse dans quatre cases
+ * ecarterait le cas que personne n'a prevu, alors que l'exploitante lit chaque
+ * signalement.
+ */
+export const schemaSignalementAvis = z.strictObject({
+  avisId: schemaIdentifiant,
+  qualite: champAdresse(150),
+  email: schemaEmailClient,
+  motif: z
+    .string()
+    .trim()
+    .min(1, "Le motif est obligatoire.")
+    .max(2000, "Un motif de 2000 caractères au plus est attendu.")
+    .refine(
+      (valeur) => /[\p{L}\p{N}]/u.test(valeur),
+      "Le motif doit comporter du texte.",
+    ),
+});
+
+/**
+ * La cloture d'un signalement par l'exploitante, LS-77.
+ *
+ * `NOUVEAU` N'Y FIGURE PAS : ce n'est pas une decision, c'est l'etat d'arrivee.
+ * L'y admettre permettrait de renvoyer un signalement en file d'attente en
+ * effaçant la date d'examen, ce que la contrainte C43 refuserait en base.
+ */
+export const schemaClotureSignalement = z.strictObject({
+  signalementId: schemaIdentifiant,
+  statut: z.enum(["EXAMINE", "RETENU", "ECARTE"], {
+    message: "Une décision de traitement valide est attendue.",
+  }),
+  suiteDonnee: z
+    .string()
+    .trim()
+    .max(2000, "Une réponse de 2000 caractères au plus est attendue.")
+    .nullable(),
+});

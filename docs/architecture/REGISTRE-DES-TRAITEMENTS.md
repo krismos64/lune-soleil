@@ -254,6 +254,35 @@ La suppression du compte ne supprime pas les avis : `Avis.utilisateurId` est en
 `SetNull`, l'avis survit **dissocié** de son auteur, comme la commande l'est,
 voir T1 et la procédure des droits des personnes.
 
+### T7bis, signalements de doute sur l'authenticité d'un avis
+
+| Champ | Valeur |
+|---|---|
+| Finalité | recevoir et traiter les signalements de doute sur l'authenticité d'un avis publié, **obligation légale** |
+| Personnes concernées | toute personne se déclarant responsable d'un produit visé par un avis, **sans compte ni authentification** |
+| Catégories de données | qualité déclarée, adresse email, motif du signalement, suite donnée, adresse IP par le compteur de plafond |
+| Tables | `SignalementAvis`, et `RateLimit` pour le plafond par adresse |
+| Base légale | **obligation légale**, article 6.1.c : l'article L111-7-2 du Code de la consommation impose de mettre à disposition cette fonctionnalité gratuite |
+| Conservation | trois ans à compter du signalement, même ancrage que T10, référentiel CNIL n° 2021-131 |
+| Destinataires | l'exploitante seule. **Aucun signalement n'est publié**, ni son motif, ni son auteur |
+| Transfert hors UE | aucun |
+
+**Aucune authentification n'est exigée, et c'est la loi qui le veut.** Le texte
+ouvre la fonctionnalité aux « responsables des produits ou des services », qui ne
+sont pas des clients de la boutique et n'ont aucun compte ici : exiger un compte
+restreindrait un droit que l'article ouvre. La qualité déclarée n'est donc jamais
+prouvée, invariant 2, et elle sert à juger, pas à autoriser.
+
+**Un signalement ne dépublie rien.** Il n'écrit aucun statut sur l'avis visé : la
+décision de modération reste un geste distinct, avec son propre motif, règle R5.
+Une dépublication automatique ferait de ce formulaire public un moyen de retirer
+les avis d'un concurrent.
+
+**Le formulaire étant public, il porte les trois couches anti-robot de T10** :
+champ piège, délai minimum, plafond par adresse IP. L'adresse IP entre donc dans
+ce traitement par le compteur, et sa conservation suit celle de `RateLimit`,
+vingt-quatre heures.
+
 ### T8, journal des connexions
 
 | Champ | Valeur |

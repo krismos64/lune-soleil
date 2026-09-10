@@ -1129,7 +1129,48 @@ erDiagram
         horodatage dernierEnvoiA "nullable, resume de confort, la preuve vit dans JournalEmail"
         entier nombreEnvois
     }
+    SIGNALEMENT_AVIS {
+        identifiant id PK
+        identifiant avisId FK
+        texte qualite "declaree, jamais prouvee, invariant 2"
+        texte email
+        texte motif "obligatoire, la loi conditionne le signalement a sa motivation"
+        enum statut "NOUVEAU EXAMINE RETENU ECARTE"
+        texte suiteDonnee "nullable, jamais publiee"
+        horodatage examineA "nullable"
+        horodatage creeA
+    }
 ```
+
+### Le signalement d'un avis, LS-77
+
+Ajouté le 11 septembre 2026. **Obligation légale**, article L111-7-2 du Code de
+la consommation, vérifié à Légifrance, version en vigueur depuis le 17 février
+2024 : « Elle met en place une fonctionnalité gratuite qui permet aux
+responsables des produits ou des services faisant l'objet d'un avis en ligne de
+lui signaler un doute sur l'authenticité de cet avis, à condition que ce
+signalement soit motivé. »
+
+**Une entité et non un message libre.** Le texte impose un signalement **motivé**
+portant sur un avis **précis** : un formulaire de contact ne garantit ni l'un ni
+l'autre, et rien ne relierait le signalement à l'avis visé au moment de le
+traiter.
+
+**Aucune clé étrangère vers `Utilisateur`**, même motif que `Message` : le texte
+vise « les responsables des produits ou des services », qui ne sont pas des
+clients de la boutique et n'ont aucun compte. Exiger une authentification
+restreindrait un droit que la loi ouvre. La qualité déclarée sert à
+l'exploitante pour juger, elle n'autorise rien.
+
+**Un signalement ne dépublie rien.** Cette entité n'écrit aucun statut sur
+l'avis : un signalement n'est pas une décision de modération, et une
+dépublication automatique ferait de ce formulaire un moyen de retirer les avis
+d'un concurrent. Si le doute conduit à un retrait, la décision passe par
+`Avis.motifDecision`, règle R5.
+
+**`RETENU` et `ECARTE` plutôt que « validé » et « refusé ».** Un signalement
+retenu ne dit pas que l'avis est faux, il dit que le doute a conduit à une
+décision de modération.
 
 ### Règles de gestion
 

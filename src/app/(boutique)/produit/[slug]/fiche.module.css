@@ -483,3 +483,28 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/*
+ * LE LIEN DE SIGNALEMENT, LS-77, article L111-7-2.
+ *
+ * IL PORTE 44 px DE ZONE TACTILE bien qu'il soit discret : la loi impose que la
+ * fonctionnalite soit accessible, et un lien de 18 px de haut ne l'est pas au
+ * doigt. La discretion se joue sur la taille de fonte, jamais sur la cible.
+ */
+.signalerAvis {
+  margin: var(--ls-space-2) 0 0;
+}
+
+.lienSignaler {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  color: var(--ls-accent-gold-deep);
+  font-size: 0.875rem;
+  text-decoration: underline;
+}
+
+.lienSignaler:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}

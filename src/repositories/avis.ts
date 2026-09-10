@@ -11,7 +11,11 @@
  * ici : il vit sur `JetonAcces.utiliseA`, regle R18, et le dupliquer creerait
  * deux sources pouvant diverger.
  */
-import type { Prisma, StatutAvis } from "@/generated/prisma/client";
+import type {
+  Prisma,
+  StatutAvis,
+  StatutSignalement,
+} from "@/generated/prisma/client";
 import type { ClientBase } from "@/repositories/stock";
 
 /**
@@ -539,4 +543,253 @@ export async function lireCommandePourAvis(
     where: { id: commandeId },
     select: { numero: true, utilisateurId: true, dissocieA: true },
   });
+}
+
+/**
+ * Ecrit un signalement d'avis, LS-77, article L111-7-2.
+ *
+ * `statut` N'EST PAS PASSE : le defaut du schema vaut `NOUVEAU`, et le poser
+ * explicitement dupliquerait un defaut qui resterait a synchroniser a la main.
+ *
+ * ELLE N'ECRIT RIEN SUR L'AVIS, et c'est la propriete la plus importante de ce
+ * fichier sur ce domaine. Un signalement n'est pas une decision de moderation :
+ * depublier automatiquement ferait de ce formulaire public un moyen de retirer
+ * les avis d'un concurrent.
+ */
+export async function ecrireSignalement(
+  client: ClientBase,
+  parametres: {
+    avisId: string;
+    qualite: string;
+    email: string;
+    motif: string;
+  },
+): Promise<{ id: string }> {
+  return client.signalementAvis.create({
+    data: {
+      avisId: parametres.avisId,
+      qualite: parametres.qualite,
+      email: parametres.email,
+      motif: parametres.motif,
+    },
+    select: { id: true },
+  });
+}
+
+/** Un signalement tel que l'ecran d'administration le presente. */
+export type SignalementLu = {
+  id: string;
+  qualite: string;
+  email: string;
+  motif: string;
+  statut: StatutSignalement;
+  suiteDonnee: string | null;
+  examineA: Date | null;
+  creeA: Date;
+  avisId: string;
+  noteAvis: number;
+  commentaireAvis: string | null;
+  statutAvis: StatutAvis;
+  libelleProduitFige: string;
+};
+
+/**
+ * Les signalements d'un statut donne, pour l'ecran d'administration.
+ *
+ * ELLE REMONTE L'AVIS VISE AVEC LE SIGNALEMENT. Juger un doute sans lire l'avis
+ * qu'il conteste est impossible, et obliger l'exploitante a ouvrir un second
+ * ecran pour cela rendrait le traitement si couteux qu'il ne se ferait pas.
+ *
+ * L'ORDRE EST CHRONOLOGIQUE CROISSANT sur `creeA` : la file se traite dans
+ * l'ordre d'arrivee, meme motif que la moderation des avis.
+ */
+export async function listerSignalements(
+  client: ClientBase,
+  statuts: StatutSignalement[],
+): Promise<SignalementLu[]> {
+  const signalements = await client.signalementAvis.findMany({
+    where: { statut: { in: statuts } },
+    select: {
+      id: true,
+      qualite: true,
+      email: true,
+      motif: true,
+      statut: true,
+      suiteDonnee: true,
+      examineA: true,
+      creeA: true,
+      avisId: true,
+      avis: {
+        select: {
+          note: true,
+          commentaire: true,
+          statut: true,
+          ligneCommande: { select: { libelleProduitFige: true } },
+        },
+      },
+    },
+    orderBy: { creeA: "asc" },
+  });
+
+  return signalements.map((ligne) => ({
+    id: ligne.id,
+    qualite: ligne.qualite,
+    email: ligne.email,
+    motif: ligne.motif,
+    statut: ligne.statut,
+    suiteDonnee: ligne.suiteDonnee,
+    examineA: ligne.examineA,
+    creeA: ligne.creeA,
+    avisId: ligne.avisId,
+    noteAvis: ligne.avis.note,
+    commentaireAvis: ligne.avis.commentaire,
+    statutAvis: ligne.avis.statut,
+    libelleProduitFige: ligne.avis.ligneCommande.libelleProduitFige,
+  }));
+}
+
+/**
+ * Clot un signalement apres examen, C43 et C44.
+ *
+ * `statut` ET `examineA` SONT ECRITS ENSEMBLE, contrainte C43 qui l'exige en
+ * EQUIVALENCE : un signalement examine sans date ne dirait pas quand, et une
+ * date sur un signalement `NOUVEAU` affirmerait un examen qui n'a pas eu lieu.
+ *
+ * `examineA` NE SE REECRIT PAS, meme motif que `publieA` sur un avis : il porte
+ * le PREMIER examen. La clause `examineA: null` le garantit sans lecture
+ * prealable, et sans elle chaque changement d'avis rajeunirait le traitement.
+ */
+export async function cloturerSignalement(
+  client: ClientBase,
+  parametres: {
+    signalementId: string;
+    statut: StatutSignalement;
+    suiteDonnee: string | null;
+    maintenant?: Date;
+  },
+): Promise<void> {
+  const maintenant = parametres.maintenant ?? new Date();
+
+  /*
+   * LES DEUX COLONNES S'ECRIVENT DANS LA MEME INSTRUCTION, ET LA CONTRAINTE
+   * C43 L'IMPOSE. Ma premiere version les separait, comme `publieA` sur un
+   * avis : le premier `update` posait `RETENU` sans date, et le CHECK, qui est
+   * une EQUIVALENCE verifiee ligne a ligne, refusait aussitot.
+   *
+   * LA CONTRAINTE A EU RAISON CONTRE MON CODE, mesure le 11 septembre 2026.
+   * C'est precisement son role : elle interdit d'affirmer un examen sans dire
+   * quand. Le motif d'un avis, lui, n'a aucun CHECK equivalent, ce qui a permis
+   * au defaut d'ecrasement d'y vivre jusqu'a la revue critique.
+   *
+   * `examineA` NE SE REECRIT PAS POUR AUTANT : il porte le PREMIER examen. La
+   * lecture prealable est ici INDISPENSABLE, la clause `examineA: null` d'un
+   * `updateMany` ne pouvant pas cohabiter avec l'ecriture du statut.
+   */
+  const existant = await client.signalementAvis.findUnique({
+    where: { id: parametres.signalementId },
+    select: { examineA: true },
+  });
+
+  if (existant === null) {
+    /*
+     * LE `P2025` QUE L'APPELANT ATTEND, leve par `update` sur une ligne
+     * absente. Le rendre ici plutot que de laisser passer un `update` qui
+     * echouerait de toute facon garde le message d'erreur de Prisma, que le
+     * service traduit deja.
+     */
+    await client.signalementAvis.update({
+      where: { id: parametres.signalementId },
+      data: { statut: parametres.statut },
+    });
+
+    return;
+  }
+
+  await client.signalementAvis.update({
+    where: { id: parametres.signalementId },
+    data: {
+      statut: parametres.statut,
+      examineA: existant.examineA ?? maintenant,
+      /*
+       * LA SUITE N'EST ECRITE QUE SI ELLE EXISTE, meme motif que
+       * `motifDecision` sur un avis : ecrire `null` effacerait celle d'un
+       * examen precedent, defaut mesure par la revue critique du 11 septembre
+       * 2026 sur la moderation.
+       */
+      ...(parametres.suiteDonnee === null
+        ? {}
+        : { suiteDonnee: parametres.suiteDonnee }),
+    },
+  });
+}
+
+/**
+ * L'avis vise par un signalement, s'il est PUBLIE.
+ *
+ * LE FILTRE SUR `PUBLIE` EST UN CONTROLE D'AUTORISATION, pas une commodite.
+ * Accepter un signalement sur un avis `DEPOSE` confirmerait son existence a
+ * quelqu'un qui n'a pas pu le lire : le formulaire deviendrait un oracle sur la
+ * file de moderation, et sur l'existence d'un avis que l'exploitante n'a pas
+ * encore relu.
+ *
+ * ELLE NE REND QUE L'IDENTIFIANT. L'appelant n'a besoin de rien d'autre :
+ * remonter la note ou le commentaire exposerait le contenu d'un avis a une
+ * fonction dont le seul travail est de dire « cet avis est signalable ».
+ */
+export async function lireAvisPubliePourSignalement(
+  client: ClientBase,
+  avisId: string,
+): Promise<{ id: string } | null> {
+  return client.avis.findFirst({
+    where: { id: avisId, statut: "PUBLIE" },
+    select: { id: true },
+  });
+}
+
+/**
+ * Un avis publie, tel que l'ecran de signalement le rappelle.
+ *
+ * ELLE REND LE CONTENU LA OU `lireAvisPubliePourSignalement` ne rend que
+ * l'identifiant, ET LA DISTINCTION EST DELIBEREE. Cette lecture sert a
+ * AFFICHER l'avis conteste, l'autre a decider s'il est signalable : donner le
+ * contenu a la seconde exposerait un avis a une fonction qui n'en a pas besoin.
+ *
+ * MEME FILTRE SUR `PUBLIE`, pour la meme raison : un avis en attente de
+ * relecture ne doit pas devenir lisible par quiconque forge une URL.
+ */
+export async function lireAvisASignaler(
+  client: ClientBase,
+  avisId: string,
+): Promise<{
+  id: string;
+  note: number;
+  commentaire: string | null;
+  publieA: Date | null;
+  experienceA: Date;
+  libelleProduitFige: string;
+} | null> {
+  const avis = await client.avis.findFirst({
+    where: { id: avisId, statut: "PUBLIE" },
+    select: {
+      id: true,
+      note: true,
+      commentaire: true,
+      publieA: true,
+      experienceA: true,
+      ligneCommande: { select: { libelleProduitFige: true } },
+    },
+  });
+
+  if (avis === null) {
+    return null;
+  }
+
+  return {
+    id: avis.id,
+    note: avis.note,
+    commentaire: avis.commentaire,
+    publieA: avis.publieA,
+    experienceA: avis.experienceA,
+    libelleProduitFige: avis.ligneCommande.libelleProduitFige,
+  };
 }

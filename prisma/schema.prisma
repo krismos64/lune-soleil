@@ -160,6 +160,20 @@ enum StatutAvis {
   RETIRE
 }
 
+// LS-77. Etat de traitement d'un signalement d'avis, article L111-7-2. Il ne
+// dit rien du CONTENU, immuable : seul cet etat change apres l'ecriture, comme
+// pour un message de contact.
+//
+// `RETENU` ET `ECARTE` PLUTOT QUE « VALIDE » ET « REFUSE » : un signalement
+// retenu ne dit pas que l'avis est faux, il dit que le doute a conduit a une
+// decision de moderation. La decision elle-meme vit sur `Avis.motifDecision`.
+enum StatutSignalement {
+  NOUVEAU
+  EXAMINE
+  RETENU
+  ECARTE
+}
+
 // LS-97. Etat de traitement d'un message de contact, du point de vue de
 // l'exploitante. Il ne dit rien du CONTENU, qui est immuable : seul cet etat
 // change apres l'ecriture.
@@ -819,25 +833,25 @@ model Avoir {
 // ---------------------------------------------------------------------------
 
 model DemandeRetractation {
-  id                       String             @id @default(uuid())
-  commandeId               String             @unique @map("commande_id")
-  statut                   StatutRetractation @default(DEPOSEE)
-  motifClient              String?            @map("motif_client")
-  motifDecision            String?            @map("motif_decision") // L2, obligatoire si REFUSEE
-  montantRembourseCentimes Int?               @map("montant_rembourse_centimes")
-  deposeeA                 DateTime           @default(now()) @map("deposee_a") @db.Timestamptz(3) // L1, conservée telle quelle
-  accuseeA                 DateTime?          @map("accusee_a") @db.Timestamptz(3)
-  retourAttenduA           DateTime?          @map("retour_attendu_a") @db.Timestamptz(3) // base du seuil d'alerte, L8
-  preuveExpeditionRetour   String?            @map("preuve_expedition_retour") // L7, article L221-24
-  preuveExpeditionA        DateTime?          @map("preuve_expedition_a") @db.Timestamptz(3) // premier des deux faits
-  recueA                   DateTime?          @map("recue_a") @db.Timestamptz(3) // L12, hors statut, déclenche le RETOUR
+  id                       String              @id @default(uuid())
+  commandeId               String              @unique @map("commande_id")
+  statut                   StatutRetractation  @default(DEPOSEE)
+  motifClient              String?             @map("motif_client")
+  motifDecision            String?             @map("motif_decision") // L2, obligatoire si REFUSEE
+  montantRembourseCentimes Int?                @map("montant_rembourse_centimes")
+  deposeeA                 DateTime            @default(now()) @map("deposee_a") @db.Timestamptz(3) // L1, conservée telle quelle
+  accuseeA                 DateTime?           @map("accusee_a") @db.Timestamptz(3)
+  retourAttenduA           DateTime?           @map("retour_attendu_a") @db.Timestamptz(3) // base du seuil d'alerte, L8
+  preuveExpeditionRetour   String?             @map("preuve_expedition_retour") // L7, article L221-24
+  preuveExpeditionA        DateTime?           @map("preuve_expedition_a") @db.Timestamptz(3) // premier des deux faits
+  recueA                   DateTime?           @map("recue_a") @db.Timestamptz(3) // L12, hors statut, déclenche le RETOUR
   // LS-173, etape 9. L'etat constate de la piece revenue, nul tant que
   // l'exploitante n'a pas tranche. C'est lui, et jamais `recueA`, qui dit si le
   // stock est reintegre : une date de reception ne renseigne pas sur l'etat.
   etatPieceRetournee       EtatPieceRetournee? @map("etat_piece_retournee")
   // Quand l'etat a ete constate. Distinct de `recueA` : le colis peut arriver un
   // jour et etre ouvert le lendemain, et c'est la DECISION qui est horodatee ici.
-  etatConstateA            DateTime?          @map("etat_constate_a") @db.Timestamptz(3)
+  etatConstateA            DateTime?           @map("etat_constate_a") @db.Timestamptz(3)
 
   commande Commande @relation(fields: [commandeId], references: [id], onDelete: Restrict)
   avoirs   Avoir[]
@@ -879,9 +893,10 @@ model Avis {
   decideA         DateTime?  @map("decide_a") @db.Timestamptz(3)
   modifieA        DateTime?  @map("modifie_a") @db.Timestamptz(3) // R10, une modification renvoie en modération
 
-  ligneCommande LigneCommande @relation(fields: [ligneCommandeId], references: [id], onDelete: Restrict)
-  utilisateur   Utilisateur?  @relation(fields: [utilisateurId], references: [id], onDelete: SetNull)
+  ligneCommande LigneCommande     @relation(fields: [ligneCommandeId], references: [id], onDelete: Restrict)
+  utilisateur   Utilisateur?      @relation(fields: [utilisateurId], references: [id], onDelete: SetNull)
   reponse       ReponseAvis?
+  signalements  SignalementAvis[]
 
   @@map("avis")
 }
@@ -898,6 +913,49 @@ model ReponseAvis {
   auteur Utilisateur @relation(fields: [auteurId], references: [id], onDelete: Restrict)
 
   @@map("reponse_avis")
+}
+
+// LS-77, article L111-7-2 : une fonctionnalite GRATUITE de signalement d'un
+// doute sur l'authenticite d'un avis, verifie a Legifrance le 11 septembre 2026,
+// version en vigueur depuis le 17 fevrier 2024.
+//
+// UNE ENTITE ET NON UN MESSAGE LIBRE, arbitrage de cette story. Le texte impose
+// que le signalement soit MOTIVE et porte sur un avis precis : un formulaire de
+// contact ne garantit ni l'un ni l'autre, et rien ne relierait le signalement a
+// l'avis vise au moment de le traiter.
+//
+// AUCUNE CLE ETRANGERE VERS `Utilisateur`, et c'est delibere, meme motif que
+// `Message` : le texte vise « les responsables des produits ou des services »,
+// qui ne sont pas des clients de la boutique et n'ont aucun compte. Exiger une
+// authentification restreindrait un droit que la loi ouvre.
+//
+// LE SIGNALEMENT NE DEPUBLIE RIEN. Il n'ecrit aucun statut sur l'avis : un
+// signalement n'est pas une decision de moderation, et une depublication
+// automatique ferait de ce formulaire un moyen de retirer les avis d'un
+// concurrent.
+model SignalementAvis {
+  id          String            @id @default(uuid())
+  avisId      String            @map("avis_id")
+  // Qualite declaree du signalant, jamais prouvee, invariant 2. Elle sert a
+  // l'exploitante pour juger, pas a autoriser.
+  qualite     String
+  email       String
+  motif       String
+  statut      StatutSignalement @default(NOUVEAU)
+  // Ce que l'exploitante repond apres examen, jamais publie.
+  suiteDonnee String?           @map("suite_donnee")
+  examineA    DateTime?         @map("examine_a") @db.Timestamptz(3)
+  creeA       DateTime          @default(now()) @map("cree_a") @db.Timestamptz(3)
+
+  // `Restrict` COMME PARTOUT SUR CE DOMAINE : un avis ne se supprime jamais,
+  // regle R6, donc cette politique ne bloque aucune suppression legitime.
+  avis Avis @relation(fields: [avisId], references: [id], onDelete: Restrict)
+
+  // La liste d'administration lit par ce chemin, les nouveaux d'abord.
+  @@index([statut, creeA], map: "signalement_statut_cree_a")
+  // Les signalements d'un avis donne, lus depuis l'ecran de moderation.
+  @@index([avisId], map: "signalement_avis_idx")
+  @@map("signalement_avis")
 }
 
 model InvitationAvis {

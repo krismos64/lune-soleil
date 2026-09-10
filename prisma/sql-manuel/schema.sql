@@ -868,6 +868,43 @@ CREATE UNIQUE INDEX "alerte_ouverte_unique" ON "alerte_critique"("type", "id_cib
 CREATE INDEX "journal_connexion_cree_a_idx" ON "journal_connexion"("cree_a");
 CREATE INDEX "journal_connexion_utilisateur_id_cree_a_idx" ON "journal_connexion"("utilisateur_id", "cree_a");
 
+-- Le signalement d'un doute sur l'authenticite d'un avis, LS-77.
+--
+-- OBLIGATION LEGALE, article L111-7-2, verifie a Legifrance le 11 septembre
+-- 2026 : « une fonctionnalite gratuite qui permet aux responsables des produits
+-- ou des services faisant l'objet d'un avis en ligne de lui signaler un doute
+-- sur l'authenticite de cet avis, a condition que ce signalement soit motive ».
+--
+-- AUCUNE CLE ETRANGERE VERS `utilisateur`, meme motif que `message` : le texte
+-- vise des personnes qui ne sont pas clientes de la boutique et n'ont aucun
+-- compte. Exiger une authentification restreindrait un droit que la loi ouvre.
+--
+-- IL NE DEPUBLIE RIEN. Cette table n'ecrit rien sur `avis` : un signalement
+-- n'est pas une decision de moderation, et une depublication automatique ferait
+-- de ce formulaire un moyen de retirer les avis d'un concurrent.
+CREATE TYPE "StatutSignalement" AS ENUM ('NOUVEAU', 'EXAMINE', 'RETENU', 'ECARTE');
+
+CREATE TABLE "signalement_avis" (
+    "id" TEXT NOT NULL,
+    "avis_id" TEXT NOT NULL,
+    -- Qualite DECLAREE, jamais prouvee, invariant 2. Elle sert a juger, pas a
+    -- autoriser.
+    "qualite" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "motif" TEXT NOT NULL,
+    "statut" "StatutSignalement" NOT NULL DEFAULT 'NOUVEAU',
+    "suite_donnee" TEXT,
+    "examine_a" TIMESTAMPTZ(3),
+    "cree_a" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "signalement_avis_pkey" PRIMARY KEY ("id")
+);
+
+-- La liste d'administration lit par ce chemin, les nouveaux d'abord.
+CREATE INDEX "signalement_statut_cree_a" ON "signalement_avis"("statut", "cree_a");
+-- Les signalements d'un avis donne, lus depuis l'ecran de moderation.
+CREATE INDEX "signalement_avis_idx" ON "signalement_avis"("avis_id");
+
 -- AddForeignKey
 ALTER TABLE "produit" ADD CONSTRAINT "produit_categorie_id_fkey" FOREIGN KEY ("categorie_id") REFERENCES "categorie"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
@@ -995,4 +1032,10 @@ ALTER TABLE "compte" ADD CONSTRAINT "compte_user_id_fkey" FOREIGN KEY ("user_id"
 
 -- AddForeignKey
 ALTER TABLE "passkey" ADD CONSTRAINT "passkey_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "utilisateur"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey, signalement d'avis, LS-77
+--
+-- `RESTRICT` COMME PARTOUT SUR CE DOMAINE : un avis ne se supprime jamais,
+-- regle R6, donc cette politique ne bloque aucune suppression legitime.
+ALTER TABLE "signalement_avis" ADD CONSTRAINT "signalement_avis_avis_id_fkey" FOREIGN KEY ("avis_id") REFERENCES "avis"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 

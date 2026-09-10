@@ -56,6 +56,8 @@ const quantite = valider(schemaQuantite, entree); // ou lève EntreeInvalideErro
 | `schemaSaisieAvis` | une note portée sur **une pièce** d'une commande, LS-61 : entier de 1 à 5, commentaire facultatif borné à 2000 caractères | une note décimale, une note hors intervalle, un champ non reconnu |
 | `schemaDepotAvis` | le dépôt complet, **une saisie par pièce notée** | un envoi vide, qui est une erreur de saisie et non un succès sans effet, ou plus de vingt pièces |
 | `schemaDecisionAvis` | une décision de modération, LS-61 : `PUBLIE`, `REFUSE` ou `RETIRE` | `DEPOSE`, qui n'est pas une décision mais l'état d'arrivée : l'admettre renverrait un avis en file d'attente sans motif |
+| `schemaSignalementAvis` | un doute sur l'authenticité d'un avis, LS-77, article L111-7-2 : qualité déclarée, adresse email, motif **obligatoire** | un motif vide ou réduit à des caractères invisibles, la loi conditionnant le signalement au fait qu'il soit motivé |
+| `schemaClotureSignalement` | la décision de l'exploitante sur un signalement : `EXAMINE`, `RETENU` ou `ECARTE` | `NOUVEAU`, qui n'est pas une décision : l'admettre effacerait la date d'examen, ce que le CHECK C43 refuse en base |
 
 Zéro est accepté sur un montant et refusé sur une quantité, et c'est la seule
 différence entre les deux schémas : zéro centime est un montant légitime, en
@@ -76,6 +78,19 @@ lisibles, l'invariant 4 interdisant de les réécrire.
 
 **`schemaAdresseFigee` existe parce qu'une adresse figée n'est pas une saisie.**
 Elle porte le `nom` du destinataire, absent du formulaire où le nom est un champ
+**`schemaSignalementAvis` exige un motif parce que la LOI l'exige**, jamais par
+préférence d'ergonomie. L'article L111-7-2 ouvre la fonctionnalité « à condition
+que ce signalement soit motivé » : un champ vide n'est donc pas un signalement au
+sens du texte. Le CHECK C42 le refuse aussi en base, le formulaire étant public
+et toute entrée non fiable.
+
+**La qualité du signalant est un texte libre et non une liste fermée.** Le texte
+vise « les responsables des produits ou des services », formule dont
+l'application à une boutique artisanale n'est pas évidente : enfermer la réponse
+dans quatre cases écarterait le cas que personne n'a prévu. Elle **n'autorise
+rien**, invariant 2 : elle est déclarée, jamais prouvée, et sert à l'exploitante
+pour juger.
+
 **`schemaSaisieAvis` porte `ligneCommandeId`, et il n'autorise rien**, LS-61. Le
 formulaire le transmet parce qu'une commande a plusieurs pièces et qu'il faut
 savoir laquelle est notée ; c'est `services/avis.ts` qui le recoupe avec les
