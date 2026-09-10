@@ -21,7 +21,7 @@
  * avant de le rendre, et chaque appel est verifie cote serveur contre la
  * session : un composant client ne protege rien, invariant 2.
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
@@ -70,6 +70,40 @@ export function GestionPasskeys({
    * lecteurs d'ecran.
    */
   const [aRetirer, setARetirer] = useState<PasskeyAffichable | null>(null);
+
+  /*
+   * LE FOCUS SE DEPLACE A LA MAIN, parce que les elements qui le portaient sont
+   * DEMONTES par le ternaire de la liste.
+   *
+   * Ouvrir la confirmation retire le bouton « Retirer » du DOM : le focus
+   * retombe alors sur `body` et la tabulation suivante repart du HAUT de la
+   * page. L'annuler fait l'inverse. C'est le motif « focus sur un element
+   * detache » deja rencontre ici, declenche cette fois par un ternaire et non
+   * par `revalidatePath`.
+   *
+   * `role="alert"` NE SUFFIT PAS : un noeud insere en portant deja ce role est
+   * annonce de facon inegale selon les moteurs, une region live devant exister
+   * AVANT que son contenu change. Deplacer le focus rend l'annonce fiable et
+   * remet la personne au clavier devant le choix qu'elle vient d'ouvrir.
+   */
+  const confirmationRef = useRef<HTMLDivElement | null>(null);
+  const boutonsRetraitRef = useRef(new Map<string, HTMLButtonElement>());
+  const retourAuRetrait = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (aRetirer) {
+      confirmationRef.current?.focus();
+      return;
+    }
+    /*
+     * AU RETOUR, LE FOCUS REVIENT SUR LE BOUTON D'ORIGINE, et seulement si
+     * l'annulation vient de la personne : apres un retrait REUSSI ce bouton
+     * n'existe plus, la ligne entiere ayant disparu.
+     */
+    const cible = retourAuRetrait.current;
+    retourAuRetrait.current = null;
+    if (cible) boutonsRetraitRef.current.get(cible)?.focus();
+  }, [aRetirer]);
 
   const enregistrer = async () => {
     setEtat("en-cours");
@@ -219,7 +253,12 @@ export function GestionPasskeys({
                      * retrait enfermerait l'exploitante avec la passkey d'un
                      * appareil vole, ce qui serait pire.
                      */
-                    <div className={styles.confirmation} role="alert">
+                    <div
+                      ref={confirmationRef}
+                      className={styles.confirmation}
+                      role="alert"
+                      tabIndex={-1}
+                    >
                       <p className={styles.questionRetrait}>
                         {passkeys.length === 1
                           ? "Retirer votre dernière passkey ? Vous devrez vous connecter par mot de passe."
@@ -237,7 +276,10 @@ export function GestionPasskeys({
                         <button
                           type="button"
                           className={styles.boutonSecondaire}
-                          onClick={() => setARetirer(null)}
+                          onClick={() => {
+                            retourAuRetrait.current = passkey.id;
+                            setARetirer(null);
+                          }}
                           disabled={etat === "en-cours"}
                         >
                           Annuler
@@ -247,6 +289,13 @@ export function GestionPasskeys({
                   ) : (
                     <button
                       type="button"
+                      ref={(element) => {
+                        if (element) {
+                          boutonsRetraitRef.current.set(passkey.id, element);
+                        } else {
+                          boutonsRetraitRef.current.delete(passkey.id);
+                        }
+                      }}
                       className={styles.boutonRetrait}
                       onClick={() => setARetirer(passkey)}
                       disabled={etat === "en-cours"}
