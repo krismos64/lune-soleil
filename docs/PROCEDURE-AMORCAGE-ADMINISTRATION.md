@@ -32,10 +32,12 @@ compte, et un écran pour le gérer serait une généralisation prématurée.
 | 2. Promotion en base | le développeur | `scripts/amorcer-compte-administration.sh` |
 | 3. Enregistrement de la passkey | **l'exploitante** | `/administration`, sur son propre appareil |
 | 4. Vérification par seconde connexion | **l'exploitante** | `/administration/connexion` |
-| 5. Codes de récupération | **l'exploitante**, en présence du développeur | imprimés, conservés hors ligne |
 
-**Trois de ces cinq étapes ne se délèguent pas.** Le mot de passe, la passkey et
-les codes de récupération n'appartiennent qu'à elle.
+**Il n'y a plus de cinquième étape**, ADR-041 ayant écarté les codes de
+récupération.
+
+**Deux de ces quatre étapes ne se délèguent pas.** Le mot de passe et la passkey
+n'appartiennent qu'à elle.
 
 ## Étape 1, l'inscription
 
@@ -98,19 +100,24 @@ Cette étape ne se délègue pas et ne s'anticipe pas.
 **Une seconde connexion par la passkey prouve qu'elle fonctionne.** Sans elle,
 l'exploitante découvrirait un enregistrement raté le jour où elle en a besoin.
 
-## Étape 5, les codes de récupération
+## Ce qu'il faut lui dire, et qui n'est pas une étape
 
-ADR-021 les nomme comme **seul recours** en cas de perte des appareils, et exige
-que « leur existence soit vérifiée avant l'ouverture, pas supposée ».
+**Elle n'a pas de codes de récupération**, ADR-041. Si elle perd ses appareils
+**et** l'accès à sa boîte email en même temps, elle appelle le développeur, qui
+rejoue la procédure de dernier ressort ci-dessous.
 
-Ils sont **imprimés et conservés hors ligne**. Leur possession par l'exploitante
-se constate, elle ne se suppose pas : le développeur la lui demande explicitement
-avant de considérer l'ouverture possible.
+Le lui dire explicitement plutôt que de la laisser supposer un recours qui
+n'existe pas : ADR-021 exigeait que l'existence des codes soit vérifiée et non
+supposée, et ce principe vaut aussi pour leur absence.
 
 ## Procédure de dernier ressort
 
-**Réservée au développeur**, après perte de tous les appareils et des codes de
-récupération.
+**Réservée au développeur**, après perte de tous les appareils **et de l'accès à
+la boîte email**.
+
+La condition d'entrée disait « et des codes de récupération » : ceux-ci
+**n'existent pas**, ADR-041 les ayant écartés. C'est ce chemin qui EST le recours,
+et non le dernier après un autre.
 
 ADR-021 la prévoit comme « une intervention manuelle en base ». Concrètement :
 
@@ -140,7 +147,7 @@ La seconde doit être **vide** sur la base de production.
 
 ## Ce qui reste à faire le jour de l'ouverture
 
-Les étapes 1, 3, 4 et 5 exigent la présence de l'exploitante et le domaine de
+Les étapes 1, 3 et 4 exigent la présence de l'exploitante et le domaine de
 production. Elles ne peuvent pas être jouées à l'avance, et c'est pourquoi cette
 procédure est écrite plutôt qu'exécutée : le jour de la bascule ne s'improvise
 pas.

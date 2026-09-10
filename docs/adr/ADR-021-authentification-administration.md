@@ -90,7 +90,7 @@ doit rester couvert.
 | Appareil tiers, iPhone en main | QR code affiché à la connexion, scanné puis validé par Face ID |
 | Appareil tiers sans son iPhone | email et mot de passe |
 | Mot de passe oublié | lien signé expirant envoyé sur son adresse |
-| Email inaccessible | codes de récupération imprimés, conservés hors ligne |
+| Email inaccessible | **intervention du développeur**, ADR-041 |
 
 Elle ne peut pas se retrouver sans accès.
 
@@ -148,16 +148,29 @@ L'enregistrement de la passkey doit se faire **avec l'exploitante**, depuis ses
 propres appareils. Il ne peut pas être préparé à sa place. À prévoir dans le
 guide d'administration et lors de la première séance de recette.
 
-Les codes de récupération sont générés à la configuration, imprimés et conservés
-hors ligne par l'exploitante. Ils ne sont ni stockés en clair ni transmis par
-email.
+**LES CODES DE RECUPERATION SONT ABANDONNES, ADR-041 du 10 septembre 2026.**
+Cette section prévoyait qu'ils soient générés à la configuration, imprimés et
+conservés hors ligne. Le recours dans ce cas est désormais l'intervention du
+développeur, décrite par la procédure de dernier ressort.
+
+Le motif est de proportion : le cas résiduel exige de perdre ses deux appareils
+ET l'accès à sa boîte email en même temps, et trois gestes déjà outillés le
+couvrent. Le risque est **accepté**, pas ignoré, et la décision est réversible.
 
 ## Risques
 
 **Panne du fournisseur d'email.** Si l'email est indisponible et que
 l'exploitante a perdu ses appareils, le lien de réinitialisation ne lui parvient
-pas. Les codes de récupération hors ligne sont la seule réponse. Leur existence
-doit être vérifiée avant l'ouverture, pas supposée.
+pas.
+
+**AMENDÉ PAR ADR-041, 10 septembre 2026.** La réponse était « les codes de
+récupération hors ligne, dont l'existence doit être vérifiée avant l'ouverture,
+pas supposée ». Elle est désormais l'**intervention du développeur**, procédure
+de dernier ressort. Rien n'est à vérifier avant l'ouverture à ce titre.
+
+**Le risque résiduel est nommé** : si le développeur devenait durablement
+injoignable au moment précis où l'exploitante perd tout, l'accès serait bloqué le
+temps de le retrouver. Accepté, et réversible.
 
 **Le mot de passe reste le maillon faible.** Un mot de passe long, la limitation
 de débit et l'alerte de connexion réduisent le risque sans l'éliminer. Le
@@ -167,6 +180,7 @@ passage en passkey seule est l'évolution qui le supprime.
 permet pas d'ouvrir une session sur un autre compte. À couvrir dans la phase
 fondations.
 
-**Perte simultanée des deux appareils et des codes.** Aucun recours automatique.
+**Perte simultanée des deux appareils et de l'accès à la boîte email**, formule
+corrigée par ADR-041, les codes n'existant pas. Aucun recours automatique.
 La procédure de dernier ressort passe par une intervention manuelle en base, à
 documenter dans le guide d'exploitation et à réserver au développeur.
