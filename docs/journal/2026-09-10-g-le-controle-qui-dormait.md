@@ -48,22 +48,35 @@ Le chiffre brut trompe : **26 sont des scripts `-mutation`**, qui prouvent les
 contrôles et n'ont pas vocation à tourner à chaque pull request.
 
 Restent **neuf contrôles réels**. Six ne peuvent pas tourner en CI, visant la
-production ou exigeant un accès SSH ou des variables absentes. **Deux sont verts
-et jouables tels quels** : `verifier-emetteur-facture.sh` et
-`verifier-graphie-marque.sh`.
+production ou exigeant un accès SSH ou des variables absentes. **Deux étaient
+verts et jouables tels quels, et sont désormais branchés** : arbitrage de
+Christophe, corriger directement plutôt que d'ouvrir des tickets.
 
-Le second est celui dont le dépôt retient qu'il laissait passer quatre défauts
-réels du dépôt malgré quatre mutations réussies. Il n'a pas été branché ici :
-cela dépasse le périmètre de LS-213, et glisser deux contrôles de plus dans une
-correction mérite un arbitrage propre.
+`verifier-graphie-marque.sh` est celui dont le dépôt retient qu'il a été prouvé
+par quatre mutations réussies **pendant qu'il laissait passer quatre défauts
+réels**, dont l'en-tête de toutes les pages publiques. Le brancher ne répare pas
+cette limite, il l'expose : un contrôle qui tourne se corrige, un contrôle qui
+dort ne se corrige jamais.
 
-## Un échec préexistant, signalé et non traité
+**La CI joue désormais 51 contrôles** au lieu de 48 ce matin.
+
+## L'échec préexistant, corrigé lui aussi
 
 `tests/e2e/navigation-administration.spec.ts:662`, « le tableau d'expédition
-porte trois colonnes comptées juste », échoue à `mobile-320`.
+porte trois colonnes comptées juste », échouait à toutes les largeurs. Vérifié
+sur `main` avant la PR : l'échec la précédait.
 
-**Vérifié sur `main` avant la PR** : l'échec la précède. Il porte sur un tableau
-d'expédition, sans rapport avec les liens touchés. Il mérite son ticket.
+**La cause n'était pas le tableau**, mais l'absence d'attente. Les trois colonnes
+vivent sous un `<Suspense>` interne, C32 : `page.goto` rend la main dès que le
+document est servi, donc AVANT que le contenu suspendu arrive. Le relevé était
+vide, d'où la comparaison d'un tableau vide aux trois titres attendus.
+
+C'est le motif « loading.tsx escamote le DOM » sous sa forme `<Suspense>`.
+
+**L'ancre est le titre de la première colonne et non un délai** : une attente en
+millisecondes passerait sur une machine rapide et échouerait sur une machine
+chargée, ce qui est pire qu'un échec franc. Prouvée nécessaire par mutation, le
+test rougit sans elle.
 
 ## Vérifications
 
@@ -72,7 +85,7 @@ npm run type-check     vert
 npm run lint           vert
 npm run format:check   vert
 npm run test           1314 passed, 85 fichiers
-49 controles           0 en echec
+51 controles           0 en echec
 verifier-navigation-client-mutation.sh   4 sur 4
 ```
 
@@ -81,9 +94,6 @@ des trois liens : une pull request qui le réintroduirait serait rejetée, ce qu
 n'était pas le cas ce matin.
 
 ## Prochaine étape
-
-Deux tickets à ouvrir selon l'arbitrage de Christophe : brancher les deux
-contrôles jouables, et l'échec de bout en bout préexistant.
 
 LS-212, les codes de récupération, reste le seul critère ouvert de l'amorçage.
 Elle demande un ADR avant tout code, le plugin `twoFactor` de Better Auth
