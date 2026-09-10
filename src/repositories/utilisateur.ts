@@ -112,6 +112,33 @@ export async function lireCompteExport(
 }
 
 /**
+ * Les passkeys d'un compte, pour l'ecran qui les gere, LS-175.
+ *
+ * NI `publicKey` NI `credentialID` NE SORTENT, et la projection est explicite
+ * plutot qu'un `select` large : ces deux colonnes sont le secret de
+ * l'authentification, et rien de ce que l'ecran affiche n'en a besoin. La regle
+ * voisine `lireCompteExport` ne sort deja que leur NOMBRE, pour la meme raison.
+ *
+ * L'ordre est le plus recent en tete : l'exploitante vient de l'enregistrer,
+ * c'est celle qu'elle cherche des yeux pour verifier que son geste a porte.
+ */
+export async function listerPasskeys(
+  client: ClientBase,
+  utilisateurId: string,
+) {
+  /*
+   * `createdAt` ET NON `creeA` : le modele `Passkey` porte les noms imposes par
+   * Better Auth, seul modele du schema dans ce cas avec ceux de la session. Le
+   * reflexe `creeA`, juste partout ailleurs, produit ici une erreur de type.
+   */
+  return client.passkey.findMany({
+    where: { userId: utilisateurId },
+    select: { id: true, name: true, createdAt: true },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+/**
  * Les quatre volets de l'export RGPD d'une personne.
  *
  * L'INSTANTANE LEGAL DE LA COMMANDE EST INCLUS : c'est bien une donnee

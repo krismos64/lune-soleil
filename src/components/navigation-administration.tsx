@@ -127,6 +127,16 @@ export const RUBRIQUES: readonly Rubrique[] = [
     compteur: "variantesStockFaible",
   },
   { chemin: "/administration/journal-connexions", libelle: "Connexions" },
+  /*
+   * LS-175 : l'ecran d'enregistrement des passkeys entre dans la barre, C33.
+   *
+   * Il n'y entre pas pour le confort. ADR-021 fait de la passkey le chemin
+   * PRINCIPAL de l'administration, et l'exploitante l'enregistre elle-meme
+   * depuis chacun de ses appareils : un ecran atteignable seulement en saisissant
+   * son URL serait un ecran qu'elle ne retrouve pas le jour ou elle change de
+   * telephone.
+   */
+  { chemin: "/administration/passkeys", libelle: "Vos passkeys" },
 ] as const;
 
 /**
