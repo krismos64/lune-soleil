@@ -35,6 +35,7 @@ import {
 import { historiserTransition } from "@/repositories/confirmation";
 import {
   creerExpedition,
+  lireCommandeAEtiqueter,
   lireExpeditionDeCommande,
   listerAExpedier,
   type CommandeAExpedier,
@@ -42,6 +43,10 @@ import {
   type SaisieExpedition,
 } from "@/repositories/expedition";
 import { TRANSITIONS_ADMINISTRATRICE } from "@/services/administration-commandes";
+import { TransporteurIndisponibleError } from "@/integrations/sendcloud/index";
+import type { ClientExpedition } from "@/integrations/sendcloud/expedition";
+import { methodeExigePointRetrait } from "@/integrations/sendcloud/methodes";
+import { journaliser, journaliserErreur } from "@/lib/journal";
 
 export type { CommandeAExpedier, ExpeditionDeclaree, SaisieExpedition };
 
@@ -318,4 +323,219 @@ class CommandeDeplaceeError extends Error {
     super("La commande a changé d'état pendant la déclaration d'expédition.");
     this.name = "CommandeDeplaceeError";
   }
+}
+
+/**
+ * Ce qu'une creation d'etiquette rend. L'ecran choisit les mots.
+ *
+ * ELLE PORTE LES MEMES REFUS QUE `declarerExpedition`, plus deux qui lui sont
+ * propres : le transporteur indisponible et l'adresse inexploitable. Les
+ * partager fait que l'ecran traite les deux gestes de la meme façon.
+ */
+export type IssueEtiquette =
+  | { statut: "CREEE"; numeroSuivi: string; identifiantColis: number }
+  | { statut: "INTROUVABLE" }
+  | { statut: "STATUT_INCOMPATIBLE"; statutActuel: StatutCommande }
+  | { statut: "DEJA_EXPEDIEE" }
+  /**
+   * Le transporteur n'a pas repondu, ou a refuse.
+   *
+   * L'ETAT EST INCONNU ET NON « rien ne s'est passe », et la nuance se paie :
+   * le colis a PEUT-ETRE ete cree chez Sendcloud avant que la reponse se perde.
+   * L'ecran doit dire de verifier chez le transporteur avant de reessayer,
+   * jamais proposer un nouveau clic comme si l'appel n'avait pas eu lieu.
+   */
+  | { statut: "TRANSPORTEUR_INDISPONIBLE" }
+  /** L'adresse figee de la commande ne porte pas ce que l'API exige. */
+  | { statut: "ADRESSE_INEXPLOITABLE"; message: string }
+  /** Le mode exige un point de retrait que la commande ne porte pas. */
+  | { statut: "POINT_RETRAIT_MANQUANT" };
+
+/**
+ * L'adresse figee, telle que `Commande.adresseLivraison` la porte.
+ *
+ * TOUS LES CHAMPS SONT OPTIONNELS, comme dans les autres lecteurs de ce
+ * `Json` : la colonne est libre, et supposer un champ present produirait un
+ * « undefined » envoye au transporteur plutot qu'un refus lisible.
+ */
+type AdresseFigee = {
+  nom?: string;
+  ligne1?: string;
+  ligne2?: string;
+  codePostal?: string;
+  ville?: string;
+  pays?: string;
+};
+
+/**
+ * Cree le colis chez le transporteur, puis declare l'expedition.
+ *
+ * L'ORDRE DES TROIS ETAPES EST LE COEUR DE CE SERVICE, et il n'est pas libre :
+ *
+ *   1. VERIFIER en base que la commande est expediable et sans expedition
+ *   2. APPELER le transporteur, ce qui DEPENSE de l'argent
+ *   3. ECRIRE l'expedition avec le numero obtenu
+ *
+ * Verifier avant de payer est la seule protection contre une etiquette achetee
+ * pour rien. L'inverse, appeler puis verifier, ferait payer un colis sur une
+ * commande annulee entre-temps, et Sendcloud ne rembourse pas.
+ *
+ * L'APPEL RESEAU VIT HORS DE TOUTE TRANSACTION, regle de `database.md` : le
+ * tenir dedans garderait un verrou de ligne pendant quinze secondes, et son
+ * echec effacerait par rollback une commande que rien ne justifie de perdre.
+ *
+ * LA FENETRE ENTRE 1 ET 3 EST ASSUMEE ET FERMEE EN BASE. Deux clics simultanes
+ * passent tous deux l'etape 1, achetent tous deux une etiquette, et le second
+ * echoue a l'etape 3 sur `commande_id` unique. C'est un colis paye en trop, pas
+ * une commande corrompue : l'inverse, un verrou applicatif, ne fermerait pas
+ * davantage la fenetre puisqu'elle vit chez le fournisseur. L'ecran desactive
+ * son bouton apres le premier clic, ce qui couvre le cas reel.
+ */
+export async function creerEtiquetteExpedition({
+  commandeId,
+  acteurId,
+  clientTransporteur,
+  client = prisma,
+}: {
+  commandeId: string;
+  acteurId: string;
+  clientTransporteur: ClientExpedition;
+  client?: typeof prisma;
+}): Promise<IssueEtiquette> {
+  const identifiant = valider(schemaIdentifiant, commandeId);
+
+  /*
+   * ETAPE 1, VERIFIER AVANT DE PAYER. Ces trois refus coutent une lecture ; les
+   * decouvrir apres l'appel couterait une etiquette.
+   */
+  const commande = await lireCommandeAEtiqueter(client, identifiant);
+
+  if (commande === null) {
+    return { statut: "INTROUVABLE" };
+  }
+
+  if (commande.expeditionExistante) {
+    return { statut: "DEJA_EXPEDIEE" };
+  }
+
+  const permises: readonly StatutCommande[] =
+    TRANSITIONS_ADMINISTRATRICE[commande.statut];
+
+  if (!permises.includes("EXPEDIEE")) {
+    return { statut: "STATUT_INCOMPATIBLE", statutActuel: commande.statut };
+  }
+
+  /*
+   * LE MODE VIENT DE LA COMMANDE, jamais d'une saisie, critere 4. C'est ce que
+   * le client a choisi et paye : le laisser choisir a l'expedition ferait
+   * partir un colis par un mode qui n'a pas ete facture.
+   */
+  const mode = commande.modeLivraison;
+
+  if (methodeExigePointRetrait(mode) && !commande.pointRelaisId) {
+    return { statut: "POINT_RETRAIT_MANQUANT" };
+  }
+
+  const figee = (commande.adresseLivraison ?? {}) as AdresseFigee;
+
+  /*
+   * L'ADRESSE EST CONTROLEE AVANT L'APPEL, et le refus nomme le champ. Sendcloud
+   * refuserait aussi, mais APRES l'aller-retour et avec un message anglais que
+   * l'exploitante ne peut pas relier a son ecran. Le champ manquant se corrige
+   * de toute façon a la main, la commande etant figee, invariant 3.
+   */
+  const manquants = [
+    figee.nom ? null : "le nom",
+    figee.ligne1 ? null : "l'adresse",
+    figee.codePostal ? null : "le code postal",
+    figee.ville ? null : "la ville",
+  ].filter((champ): champ is string => champ !== null);
+
+  if (manquants.length > 0) {
+    return {
+      statut: "ADRESSE_INEXPLOITABLE",
+      message: `L'adresse de la commande ne porte pas ${manquants.join(", ")}.`,
+    };
+  }
+
+  /*
+   * ETAPE 2, L'APPEL QUI DEPENSE. A partir d'ici, un echec peut laisser un
+   * colis cree chez le transporteur : c'est pourquoi son refus dit « verifier »
+   * et non « reessayer ».
+   */
+  let creation;
+
+  try {
+    creation = await clientTransporteur.creer({
+      reference: commande.numero,
+      mode,
+      pointRetraitId: commande.pointRelaisId,
+      adresse: {
+        nom: figee.nom!,
+        ligne1: figee.ligne1!,
+        ligne2: figee.ligne2 ?? null,
+        codePostal: figee.codePostal!,
+        ville: figee.ville!,
+        /*
+         * LE PAYS A UN REPLI, seul champ qui en porte un. ADR-025 borne la zone
+         * a la France metropolitaine, Corse comprise : une adresse figee sans
+         * pays vient d'une commande anterieure au champ, jamais d'un envoi
+         * hors zone. Les quatre autres champs n'ont aucun repli plausible.
+         */
+        pays: figee.pays ?? "FR",
+        email: commande.emailNormalise,
+        telephone: commande.telephone,
+      },
+    });
+  } catch (erreur) {
+    if (erreur instanceof TransporteurIndisponibleError) {
+      journaliserErreur("création d'étiquette refusée", erreur, {
+        commandeId: identifiant,
+      });
+      return { statut: "TRANSPORTEUR_INDISPONIBLE" };
+    }
+    throw erreur;
+  }
+
+  /*
+   * ETAPE 3, ECRIRE CE QUI A ETE PAYE. Elle reutilise `declarerExpedition`, qui
+   * porte deja la transaction, l'historisation et la garde d'unicite : ecrire
+   * ici en parallele creerait un second chemin d'ecriture, donc deux endroits
+   * ou la regle se dit.
+   */
+  const issue = await declarerExpedition({
+    commandeId: identifiant,
+    acteurId,
+    client,
+    saisie: {
+      transporteur: "Sendcloud",
+      mode,
+      numeroSuivi: creation.numeroSuivi,
+      pointRelaisId: commande.pointRelaisId,
+    },
+  });
+
+  if (issue.statut !== "EXPEDIEE") {
+    /*
+     * L'ETIQUETTE EST PAYEE ET L'ECRITURE A ECHOUE, cas rare mais reel : une
+     * declaration concurrente a gagne entre les etapes 1 et 3. Le journaliser
+     * est le seul moyen de retrouver le colis orphelin chez le transporteur,
+     * son numero n'etant nulle part en base.
+     */
+    journaliser("error", "étiquette créée mais expédition non écrite", {
+      commandeId: identifiant,
+      numeroSuivi: creation.numeroSuivi,
+      statut: issue.statut,
+    });
+
+    return issue.statut === "INVALIDE"
+      ? { statut: "ADRESSE_INEXPLOITABLE", message: issue.message }
+      : issue;
+  }
+
+  return {
+    statut: "CREEE",
+    numeroSuivi: creation.numeroSuivi,
+    identifiantColis: creation.identifiantColis,
+  };
 }

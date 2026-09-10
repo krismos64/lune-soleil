@@ -199,3 +199,55 @@ export async function enregistrerSuivi(
     },
   });
 }
+
+/**
+ * Ce que la creation d'etiquette doit savoir d'une commande, LS-218.
+ *
+ * TOUT VIENT DE LA COMMANDE ET RIEN D'UNE SAISIE, critere 1 et invariant 3 :
+ * l'adresse est celle figee au moment de l'achat, le mode celui que le client a
+ * choisi et paye. C'est ce qui supprime la ressaisie chez le transporteur, geste
+ * le plus expose a l'erreur de tout le parcours d'expedition.
+ *
+ * `expeditionExistante` EST LU DANS LA MEME REQUETE, et c'est ce qui permet de
+ * refuser AVANT de payer : decouvrir le doublon apres l'appel couterait une
+ * etiquette, que Sendcloud ne rembourse pas.
+ */
+export type CommandeAEtiqueter = {
+  numero: string;
+  statut: StatutCommande;
+  modeLivraison: ModeLivraison;
+  emailNormalise: string;
+  telephone: string | null;
+  adresseLivraison: unknown;
+  pointRelaisId: string | null;
+  /** `true` des qu'une expedition existe, `commande_id` etant unique. */
+  expeditionExistante: boolean;
+};
+
+/** Relit ce qu'il faut pour etiqueter, `null` si la commande n'existe pas. */
+export async function lireCommandeAEtiqueter(
+  client: ClientBase,
+  commandeId: string,
+): Promise<CommandeAEtiqueter | null> {
+  const commande = await client.commande.findUnique({
+    where: { id: commandeId },
+    select: {
+      numero: true,
+      statut: true,
+      modeLivraison: true,
+      emailNormalise: true,
+      telephone: true,
+      adresseLivraison: true,
+      pointRelaisId: true,
+      expedition: { select: { id: true } },
+    },
+  });
+
+  if (commande === null) {
+    return null;
+  }
+
+  const { expedition, ...reste } = commande;
+
+  return { ...reste, expeditionExistante: expedition !== null };
+}
