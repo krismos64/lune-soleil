@@ -31,7 +31,7 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 4, factures et expédition | LS-5 | 5 | dépend du compte Sendcloud, LS-200 en tête |
 | 4bis, espace client et avis | LS-36 | 4 | LS-190 attend LS-58, qui attend le suivi de livraison |
 | 5, rétractation et conformité | LS-6 | 0 | **close**, ses huit stories terminées le 10 septembre 2026 |
-| 6, exploitation et ouverture | LS-7 | 6 | **LS-153 attend l'exploitante**, LS-142 et LS-175 aussi. LS-140 et LS-107 attendent les photographies de LS-23. Restent LS-83 et LS-150 |
+| 6, exploitation et ouverture | LS-7 | 6 | **LS-153 attend l'exploitante**, LS-142 et LS-175 aussi. LS-140 et LS-107 attendent les photographies de LS-23. Reste LS-150, la visibilité dans les moteurs de réponse |
 | 7, V1 cible | LS-8 | 3 | après ouverture, hors Go-Live |
 | Contenus | LS-22 | 11 | **attend l'exploitante**, rien n'est faisable sans elle |
 
