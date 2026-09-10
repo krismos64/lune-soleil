@@ -178,7 +178,17 @@ test.beforeEach(async ({}, infos) => {
      * L'ORDRE DE SUPPRESSION SUIT CELUI DE LA COMMANDE PRINCIPALE, avec la
      * facture en plus : elle est en `RESTRICT` sur la commande, donc elle part
      * AVANT elle, et les lignes avant tout le reste.
+     *
+     * L'EXPEDITION PART EN PREMIER, LS-58, et pour la MEME raison que la
+     * facture : elle est en `RESTRICT` sur la commande. L'oublier ferait
+     * echouer la seconde execution de ce fichier, jamais la premiere, ce qui
+     * est le pire des deux cas.
      */
+    await client.query(
+      `DELETE FROM expedition WHERE commande_id IN (
+         SELECT id FROM commande WHERE numero = $1)`,
+      [numeroComplet],
+    );
     await client.query(
       `DELETE FROM facture WHERE commande_id IN (
          SELECT id FROM commande WHERE numero = $1)`,
@@ -234,6 +244,43 @@ test.beforeEach(async ({}, infos) => {
        FROM commande c WHERE c.numero = $1
 `,
       [numeroComplet, `F-TEST-190-${numeroComplet.slice(-9)}`],
+    );
+
+    /*
+     * L'EXPEDITION QUI REND LA SECTION DE SUIVI, LS-58.
+     *
+     * SANS ELLE, LA SECTION N'EXISTE A AUCUNE LARGEUR : elle ne s'affiche que
+     * si un colis est parti, et aucune des deux commandes de ce fichier n'en
+     * portait. Les quatre lignes, le signalement de suivi arrete et le
+     * rebasculement de mode n'auraient ete mesures nulle part, meme motif que
+     * `COMMANDE_FACTUREE_TEST` pour l'ecran de remboursement.
+     *
+     * SON ETAT EST CHOISI POUR RENDRE LES TROIS BRANCHES A LA FOIS :
+     *
+     *   mode POINT_RELAIS contre DOMICILE paye   le report, critere 2
+     *   synchronise il y a trois jours           le suivi arrete, critere 4
+     *   livre_a NUL malgre un statut engageant   la remise non constatee
+     *
+     * `livre_a` RESTE NUL BIEN QUE LA COMMANDE SOIT `LIVREE`, et ce n'est pas
+     * une incoherence : ce sont deux faits distincts, le statut metier que
+     * l'exploitante avance a la main et la remise que le transporteur
+     * constate. Le renseigner rendrait `fraicheurSuivi` « frais » et
+     * eteindrait le signalement que ce jeu de donnees existe pour produire.
+     *
+     * LE POINT DE RETRAIT EST RENSEIGNE parce que
+     * `chk_expedition_mode_point_relais` est une EQUIVALENCE : un mode de
+     * retrait sans point viole la contrainte, un domicile avec point aussi.
+     */
+    await client.query(
+      `INSERT INTO expedition (id, commande_id, transporteur, mode, numero_suivi,
+                               point_relais_id, statut_transporteur,
+                               expedie_a, livre_a, synchronise_a, cree_a)
+       SELECT gen_random_uuid()::text, c.id, 'Sendcloud', 'POINT_RELAIS',
+              '3STEST58000001', 'FR-TEST-9058', 'Awaiting customer pickup',
+              now() - interval '5 days', NULL, now() - interval '3 days', now()
+       FROM commande c WHERE c.numero = $1
+`,
+      [numeroComplet],
     );
   });
 });
@@ -525,4 +572,89 @@ test("aucune violation axe-core sur les deux ecrans", async ({ page }) => {
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
     .analyze();
   expect(detail.violations).toEqual([]);
+});
+
+/**
+ * LE SUIVI DE LIVRAISON DANS L'ESPACE CLIENT, LS-58.
+ *
+ * IL PORTE SUR LA SECONDE COMMANDE, seule a porter une expedition. Son etat
+ * rend les trois branches a la fois : mode reporte, suivi arrete depuis trois
+ * jours, et remise non constatee malgre un statut engageant.
+ *
+ * L'ISOLATION, CRITERE 5, N'EST PAS REDITE ICI. `lireCommandeDuClient` porte
+ * `utilisateurId` dans sa clause `where`, et les tests d'integration de
+ * `espace-client-commandes` eprouvent le refus sur la commande d'un tiers. Un
+ * colis n'ouvre aucun chemin de lecture supplementaire.
+ */
+test.describe("suivi de livraison", () => {
+  /*
+   * CRITERE 1. Le client lit ou en est son colis sans dependre d'un email,
+   * motif de l'arbitrage du 28 juillet 2026.
+   */
+  test("affiche le numero de suivi et le dernier statut connu", async ({
+    page,
+  }) => {
+    await page.goto("/compte/commandes");
+    await page.getByRole("link", { name: `Commande ${numeroComplet}` }).click();
+
+    const suivi = page
+      .locator("section")
+      .filter({ hasText: "Suivi de la livraison" });
+
+    await expect(suivi).toContainText("3STEST58000001");
+    await expect(suivi).toContainText("Awaiting customer pickup");
+  });
+
+  /*
+   * LA REMISE N'EST PAS CONSTATEE, et le client doit pouvoir le LIRE. C'est le
+   * point de depart du delai de retractation de quatorze jours, article
+   * L221-18 : une ligne absente se lirait comme un oubli d'affichage, quand ce
+   * qui est en jeu est de savoir si le delai a commence a courir.
+   *
+   * LE STATUT AFFICHE EST UN FAUX AMI, « Awaiting customer pickup » annoncant
+   * un colis disponible au relais que personne n'a retire. Le presenter comme
+   * une livraison eteindrait un droit qui n'a pas commence.
+   */
+  test("dit que la reception n'est pas constatee malgre un statut engageant", async ({
+    page,
+  }) => {
+    await page.goto("/compte/commandes");
+    await page.getByRole("link", { name: `Commande ${numeroComplet}` }).click();
+
+    const suivi = page
+      .locator("section")
+      .filter({ hasText: "Suivi de la livraison" });
+
+    await expect(suivi).toContainText("Pas encore constatée");
+  });
+
+  /*
+   * CRITERE 2. Le client rebascule de domicile vers Point Relais voyait « A
+   * domicile » sans aucun moyen d'apprendre ou son colis etait parti. La
+   * commande n'etant jamais reecrite, ADR-025, seul cet ecart peut le dire.
+   */
+  test("signale le report vers un point de retrait", async ({ page }) => {
+    await page.goto("/compte/commandes");
+    await page.getByRole("link", { name: `Commande ${numeroComplet}` }).click();
+
+    const suivi = page
+      .locator("section")
+      .filter({ hasText: "Suivi de la livraison" });
+
+    await expect(suivi).toContainText("Point relais, au lieu de À domicile");
+  });
+
+  /*
+   * CRITERE 4. Sans cette mention, un dernier statut vieux de trois jours
+   * s'affiche exactement comme un statut lu il y a dix minutes, et le client
+   * patiente devant une information qu'il croit fraiche.
+   */
+  test("signale un suivi qui n'avance plus", async ({ page }) => {
+    await page.goto("/compte/commandes");
+    await page.getByRole("link", { name: `Commande ${numeroComplet}` }).click();
+
+    await expect(
+      page.getByText("Le transporteur n'a pas donné de nouvelle information"),
+    ).toBeVisible();
+  });
 });
