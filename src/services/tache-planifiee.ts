@@ -107,6 +107,26 @@ export const TACHES = {
    * la garantie d'unicite.
    */
   "envoi-emails": { dureeVerrouSecondes: 300 },
+  /**
+   * Synchronisation du suivi de livraison, LS-131. ADR-042.
+   *
+   * ELLE TOURNE TOUTES LES HEURES, et jamais a la consultation d'une commande :
+   * LS-33 chantier 3 l'exige, et interroger le transporteur a chaque affichage
+   * multiplierait les appels par le nombre de lignes d'une liste. Le suivi d'un
+   * colis n'avance pas a la minute.
+   *
+   * VERROU D'UNE HEURE SUR UNE TACHE HORAIRE, et non deux cycles comme les
+   * taches de cinq minutes. Le motif est le meme que pour `envoi-emails` : elle
+   * fait des appels RESEAU, jusqu'a cinquante colis a huit secondes au pire,
+   * duree que rien ne borne cote serveur distant. Un verrou plus court
+   * expirerait pendant qu'elle travaille et une seconde instance reprendrait
+   * les memes expeditions.
+   *
+   * UNE INSTANCE MORTE FAIT SAUTER UN SEUL CYCLE, sans consequence : le statut
+   * lu une heure plus tard est le meme, et `synchroniseA` porte la trace du
+   * retard pour l'ecran de LS-216.
+   */
+  "suivi-livraison": { dureeVerrouSecondes: 3600 },
 } as const;
 
 export type NomTache = keyof typeof TACHES;

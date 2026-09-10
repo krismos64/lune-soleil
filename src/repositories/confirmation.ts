@@ -164,6 +164,18 @@ export async function historiserTransition(
  *
  * ELLE N'EST JAMAIS SUPPRIMEE, seulement acquittee : une alerte effacee est une
  * incoherence dont plus rien ne porte la trace.
+ *
+ * ELLE EST L'UNIQUE VOIE D'ECRITURE d'une alerte, LS-131. Un `create` direct
+ * contournerait la lecture de `alerte_ouverte_unique` : l'index leverait bien,
+ * mais l'appelant remonterait une exception au lieu de l'ignorer, et un cycle
+ * de tache s'arreterait sur un doublon qui n'est pas un incident.
+ *
+ * LA DEDUPLICATION EST PORTEE PAR LA BASE ET NON PAR CE CODE, question 5 des
+ * quinze : une lecture prealable laisserait une fenetre entre le `SELECT` et le
+ * `INSERT`, la ou l'index tranche. Elle n'existait PAS avant LS-131, alors
+ * qu'un commentaire d'`envoi-email.ts` affirmait le contraire et qu'un
+ * `try/catch` en avait la forme : la tache d'envoi tournant chaque minute, un
+ * envoi bloque produisait 1440 alertes par jour.
  */
 export async function leverAlerteCritique(
   client: ClientBase,
@@ -172,13 +184,21 @@ export async function leverAlerteCritique(
     message: string;
     typeCible: string;
     idCible: string;
+    /**
+     * Defaut `CRITIQUE`, valeur des appelants d'avant LS-131.
+     *
+     * TOUTE ALERTE N'EST PAS CRITIQUE : une livraison en echec demande un
+     * arbitrage commercial, pas une intervention immediate. Les confondre
+     * userait l'attention que les vraies urgences exigent.
+     */
+    gravite?: "AVERTISSEMENT" | "CRITIQUE";
   },
 ): Promise<void> {
   await client.alerteCritique.create({
     data: {
       type: parametres.type,
       message: parametres.message,
-      gravite: "CRITIQUE",
+      gravite: parametres.gravite ?? "CRITIQUE",
       typeCible: parametres.typeCible,
       idCible: parametres.idCible,
     },

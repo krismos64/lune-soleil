@@ -27,6 +27,7 @@ import { libererReservationsExpirees } from "@/services/liberation-reservations"
 import { purgerQuarantaine } from "@/services/media";
 import { reconcilierPaiements } from "@/services/reconciliation-paiements";
 import { purgerJournaux } from "@/services/purge-journaux";
+import { synchroniserSuivi } from "@/services/suivi-livraison";
 import {
   executerSousVerrou,
   NOMS_TACHES,
@@ -249,6 +250,32 @@ export async function POST(
       journaliser(
         "info",
         "Expedition des emails en attente terminee",
+        { tache, ...bilan },
+        correlation,
+      );
+
+      return;
+    }
+
+    if (tache === "suivi-livraison") {
+      /*
+       * ELLE NE LEVE PAS SUR UN SUIVI ILLISIBLE, meme ecart au contrat que
+       * `purge-journaux` et pour le meme motif : l'echec est porte expedition
+       * par expedition, et une expedition muette ne doit pas empecher les
+       * suivantes d'etre lues.
+       *
+       * ELLE NE LEVE PAS DAVANTAGE QUAND TOUT ECHOUE, a la difference de
+       * `purge-journaux`. Un transporteur momentanement injoignable est un
+       * incident ORDINAIRE, la ou une purge en echec signale un defaut du code
+       * ou de la base. Faire rougir l'exploitation a chaque coupure reseau
+       * userait l'attention que les vrais defauts exigent ; `synchroniseA`
+       * porte la trace du retard, et l'ecran de LS-216 la montre.
+       */
+      const bilan = await synchroniserSuivi();
+
+      journaliser(
+        "info",
+        "Synchronisation du suivi terminee",
         { tache, ...bilan },
         correlation,
       );

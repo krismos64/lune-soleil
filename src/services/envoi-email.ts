@@ -27,6 +27,7 @@ import {
 import { estReessayable, motifSansSecret } from "@/integrations/email/smtp";
 import { journaliser, journaliserErreur } from "@/lib/journal";
 import { prisma } from "@/lib/prisma";
+import { leverAlerteCritique } from "@/repositories/confirmation";
 import {
   envoisBloques,
   marquerEchoue,
@@ -312,26 +313,31 @@ async function ecrireTrace(
  * l'abandonner risquerait le silence. ADR-033 refuse de trancher a la place de
  * l'administratrice, qui dispose du renvoi manuel, regle E6.
  *
- * L'ALERTE EST IDEMPOTENTE PAR SON TYPE ET SA CIBLE : `leverAlerteCritique` de
- * LS-119 refuse un doublon sur la meme cible non acquittee, donc un cycle par
- * minute ne produit pas une alerte par minute.
+ * L'ALERTE EST IDEMPOTENTE PAR SON TYPE ET SA CIBLE, et elle l'est DEPUIS
+ * LS-131 seulement. Ce commentaire affirmait la garantie depuis LS-119, mais
+ * `alerte_critique` ne portait aucun index d'unicite : le `catch` ci-dessous
+ * attrapait une erreur que rien ne levait, et cette tache tournant chaque
+ * minute, un envoi bloque produisait 1440 alertes par jour.
+ *
+ * C'est l'index `alerte_ouverte_unique` qui la porte desormais, et l'ecriture
+ * passe par `leverAlerteCritique`, voie unique : un `create` direct
+ * fonctionnerait tout aussi bien, mais deux chemins d'ecriture rendent une
+ * regle d'unicite invisible a la relecture.
  */
 async function signalerEnvoisBloques(client: typeof prisma): Promise<number> {
   const bloques = await envoisBloques(client, DELAI_GARDE_SECONDES);
 
   for (const envoi of bloques) {
     try {
-      await client.alerteCritique.create({
-        data: {
-          type: "ENVOI_EMAIL_BLOQUE",
-          message:
-            `Envoi ${envoi.modele} bloque depuis plus de ` +
-            `${DELAI_GARDE_SECONDES / 60} minutes. Le message est peut-etre ` +
-            `parti : verifier avant tout renvoi manuel.`,
-          gravite: "AVERTISSEMENT",
-          typeCible: "EnvoiEnAttente",
-          idCible: envoi.id,
-        },
+      await leverAlerteCritique(client, {
+        type: "ENVOI_EMAIL_BLOQUE",
+        message:
+          `Envoi ${envoi.modele} bloque depuis plus de ` +
+          `${DELAI_GARDE_SECONDES / 60} minutes. Le message est peut-etre ` +
+          `parti : verifier avant tout renvoi manuel.`,
+        gravite: "AVERTISSEMENT",
+        typeCible: "EnvoiEnAttente",
+        idCible: envoi.id,
       });
     } catch (erreur) {
       // Une alerte deja levee sur la meme cible : rien a signaler de plus.
