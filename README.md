@@ -85,6 +85,12 @@ ADR-036. Trois conteneurs, schéma complet, sauvegarde quotidienne par unité
 `systemd` avec restauration prouvée, ADR-037. Les cinq tâches planifiées
 tournent, et les médias sont servis depuis le volume.
 
+**Les sauvegardes sortent du VPS depuis le 10 septembre 2026**, LS-107 :
+chiffrées en AES256 puis copiées vers **Backblaze B2**, un fournisseur différent
+d'OVH, à 03h15 UTC. Restauration prouvée de bout en bout, téléchargement,
+déchiffrement et 225 objets lus par `pg_restore`. La clé de chiffrement vit hors
+du serveur, sans quoi le dispositif ne couvrirait que la panne disque.
+
 **Le déploiement est outillé depuis LS-138, et son déclenchement reste
 MANUEL** : le workflow « Déployer en production » se lance à la demande, avec le
 SHA complet du commit à déployer, et aboutit sur le VPS en dix-huit secondes. Le
