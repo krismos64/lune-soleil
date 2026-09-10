@@ -19,8 +19,9 @@
 
 import { headers } from "next/headers";
 
+import { adresseAppelante } from "@/lib/adresse-appelante";
+
 import { journaliserErreur } from "@/lib/journal";
-import { lireProxiesDeConfiance } from "@/lib/proxies-de-confiance";
 import { deposerMessage } from "@/services/message-contact";
 
 /** Ce que l'interface recoit, jamais une exception. */
@@ -29,70 +30,6 @@ export type ResultatContact =
   | { statut: "INVALIDE"; message: string }
   | { statut: "TROP_DE_MESSAGES" }
   | { statut: "INDISPONIBLE" };
-
-/**
- * L'adresse IP de l'appelant, ou `null`.
- *
- * ELLE N'EST PAS FIABLE PARTOUT, et ce nul est un etat normal et non une panne.
- * `getIp` de Better Auth ne lit QUE des en-tetes, jamais l'adresse du socket :
- * en production elle est juste parce que Nginx ecrase `X-Forwarded-For` par
- * `$remote_addr`, LS-91, mais en developpement ou derriere un intermediaire non
- * declare elle vaut nul.
- *
- * LE SERVICE TRAITE CE NUL EN NE PLAFONNANT PAS, plutot qu'en rangeant tout le
- * monde sous une meme cle : un compteur partage par tous serait un deni de
- * service offert au premier venu.
- *
- * LA LECTURE EST FAITE ICI ET NON DANS LE SERVICE, frontiere de `app/` : lire
- * un en-tete de requete est le travail de l'adaptateur.
- */
-function adresseAppelante(enTetes: Headers): string | null {
-  /*
-   * `undefined` EST LA VALEUR NORMALE EN PRODUCTION, et non un oubli de
-   * configuration : le module explique que l'ecrasement Nginx de LS-91 rend la
-   * liste vide juste. Le repli sur un tableau vide dit « aucun proxy de
-   * confiance », ce qui est exactement cela.
-   */
-  const proxies = lireProxiesDeConfiance() ?? [];
-  const chaine = enTetes.get("x-forwarded-for");
-
-  if (chaine === null) {
-    return null;
-  }
-
-  const sauts = chaine
-    .split(",")
-    .map((saut) => saut.trim())
-    .filter((saut) => saut !== "");
-
-  /*
-   * UN SEUL SAUT : c'est la forme que produit l'ecrasement Nginx de LS-91,
-   * l'adresse publique reelle du client.
-   */
-  if (sauts.length === 1) {
-    return sauts[0] ?? null;
-  }
-
-  /*
-   * PLUSIEURS SAUTS : parcours de DROITE a GAUCHE, premier saut non declare de
-   * confiance retenu, meme regle que `getIp`. Une chaine entierement composee
-   * de proxies de confiance ne designe personne, donc `null`.
-   *
-   * L'EN-TETE EST FORGEABLE PAR L'APPELANT, et c'est pourquoi la valeur ne sert
-   * qu'a PLAFONNER un volume, jamais a autoriser quoi que ce soit,
-   * invariant 2. Au pire, un appelant qui fait varier son en-tete contourne son
-   * propre plafond, ce que les deux autres couches encadrent deja.
-   */
-  for (let rang = sauts.length - 1; rang >= 0; rang -= 1) {
-    const saut = sauts[rang];
-
-    if (saut !== undefined && !proxies.includes(saut)) {
-      return saut;
-    }
-  }
-
-  return null;
-}
 
 /**
  * Enregistre un message de contact.

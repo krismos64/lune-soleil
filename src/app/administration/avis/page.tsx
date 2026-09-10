@@ -34,9 +34,12 @@ import {
   DELAI_PUBLICATION_JOURS,
   listerAvisAModerer,
   listerAvisDecides,
+  listerSignalementsAExaminer,
+  listerSignalementsTraites,
 } from "@/services/avis";
-import type { AvisAModerer } from "@/repositories/avis";
+import type { AvisAModerer, SignalementLu } from "@/repositories/avis";
 
+import { ClotureSignalement } from "./cloture-signalement";
 import { DecisionAvis } from "./decision-avis";
 import styles from "./avis.module.css";
 
@@ -99,6 +102,16 @@ export default async function PageAvis() {
       <Suspense fallback={<ChargementAvis />}>
         <ListesAvis />
       </Suspense>
+
+      {/*
+       * LES SIGNALEMENTS ONT LEUR PROPRE FRONTIERE, LS-77. Deux `<Suspense>`
+       * plutot qu'un seul : la file de moderation, qui est le travail
+       * quotidien, ne doit pas attendre une seconde requete pour s'afficher.
+       * Les signalements sont rares.
+       */}
+      <Suspense fallback={<ChargementSignalements />}>
+        <ListesSignalements />
+      </Suspense>
     </main>
   );
 }
@@ -106,6 +119,16 @@ export default async function PageAvis() {
 /** Armature affichee pendant que les avis arrivent, LS-139. */
 function ChargementAvis() {
   return <ChargementAdministration annonce="Chargement des avis…" lignes={4} />;
+}
+
+/** Armature affichee pendant que les signalements arrivent. */
+function ChargementSignalements() {
+  return (
+    <ChargementAdministration
+      annonce="Chargement des signalements…"
+      lignes={2}
+    />
+  );
 }
 
 /**
@@ -226,6 +249,137 @@ function CarteAvis({ avis }: { avis: AvisAModerer }) {
         <p className={styles.sansCommentaire}>Note seule, sans commentaire.</p>
       ) : (
         <p className={styles.commentaire}>{avis.commentaire}</p>
+      )}
+    </>
+  );
+}
+
+/**
+ * Les signalements de doute sur l'authenticite d'un avis, LS-77.
+ *
+ * OBLIGATION LEGALE, article L111-7-2 : la fonctionnalite doit exister ET etre
+ * traitee. Un formulaire public qui deposerait dans une table que personne ne
+ * lit remplirait la lettre du texte et rien de son objet.
+ *
+ * L'AVIS VISE EST AFFICHE AVEC LE SIGNALEMENT. Juger un doute sans lire l'avis
+ * qu'il conteste est impossible, et obliger a ouvrir un second ecran rendrait le
+ * traitement si couteux qu'il ne se ferait pas.
+ */
+async function ListesSignalements() {
+  const [aExaminer, traites] = await Promise.all([
+    listerSignalementsAExaminer(),
+    listerSignalementsTraites(),
+  ]);
+
+  /*
+   * LA SECTION DISPARAIT QUAND RIEN N'EST ARRIVE. Afficher deux listes vides
+   * sous la file de moderation encombrerait l'ecran quotidien pour une
+   * fonctionnalite dont l'usage attendu est rare.
+   */
+  if (aExaminer.length === 0 && traites.length === 0) {
+    return null;
+  }
+
+  return (
+    <>
+      <section className={styles.section} aria-labelledby="titre-signalements">
+        <h2 id="titre-signalements" className={styles.titreSection}>
+          Signalements à examiner ({aExaminer.length})
+        </h2>
+
+        {aExaminer.length === 0 ? (
+          <p className={styles.vide}>
+            Aucun signalement n&apos;attend d&apos;examen.
+          </p>
+        ) : (
+          <ul className={styles.liste}>
+            {aExaminer.map((signalement) => (
+              <li key={signalement.id} className={styles.carte}>
+                <CarteSignalement signalement={signalement} />
+                <ClotureSignalement signalementId={signalement.id} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {traites.length > 0 && (
+        <section
+          className={styles.section}
+          aria-labelledby="titre-signalements-traites"
+        >
+          <h2 id="titre-signalements-traites" className={styles.titreSection}>
+            Signalements traités ({traites.length})
+          </h2>
+
+          <ul className={styles.liste}>
+            {traites.map((signalement) => (
+              <li key={signalement.id} className={styles.carte}>
+                <CarteSignalement signalement={signalement} />
+
+                {signalement.suiteDonnee !== null && (
+                  <p className={styles.motif}>
+                    <strong>Suite donnée :</strong> {signalement.suiteDonnee}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </>
+  );
+}
+
+/** Libelles des statuts de signalement, exhaustivite garantie par le type. */
+const LIBELLES_SIGNALEMENT: Record<SignalementLu["statut"], string> = {
+  NOUVEAU: "À examiner",
+  EXAMINE: "Examiné",
+  RETENU: "Doute retenu",
+  ECARTE: "Doute écarté",
+};
+
+/** Le signalement et l'avis qu'il conteste, communs aux deux listes. */
+function CarteSignalement({ signalement }: { signalement: SignalementLu }) {
+  return (
+    <>
+      <div className={styles.enTeteCarte}>
+        <span className={styles.note}>Avis {signalement.noteAvis} sur 5</span>
+        <span
+          className={`${styles.badge} ${
+            signalement.statut === "RETENU" ? "" : styles.badgePublie
+          }`}
+        >
+          {LIBELLES_SIGNALEMENT[signalement.statut]}
+        </span>
+      </div>
+
+      <p className={styles.piece}>{signalement.libelleProduitFige}</p>
+
+      <p className={styles.metadonnees}>
+        Signalé le {formaterDate(signalement.creeA)} par {signalement.email}, se
+        déclarant : {signalement.qualite}
+        {signalement.examineA !== null && (
+          <> , examiné le {formaterDate(signalement.examineA)}</>
+        )}
+        .
+      </p>
+
+      {/*
+       * LES DEUX TEXTES SONT DISTINGUES VISUELLEMENT. Le motif vient du
+       * signalant, le commentaire de l'avis conteste : les confondre ferait
+       * juger le mauvais texte.
+       */}
+      <p className={styles.motif}>
+        <strong>Motif du signalement :</strong> {signalement.motif}
+      </p>
+
+      {signalement.commentaireAvis === null ? (
+        <p className={styles.sansCommentaire}>
+          L&apos;avis visé porte une note seule, sans commentaire.
+        </p>
+      ) : (
+        <p className={styles.commentaire}>{signalement.commentaireAvis}</p>
       )}
     </>
   );

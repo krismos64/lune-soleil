@@ -760,6 +760,7 @@ ALERTE_CRITIQUE|gravite|GraviteAlerte
 JOURNAL_CONNEXION|moyen|MoyenConnexion
 JOURNAL_CONNEXION|issue|IssueConnexion
 MESSAGE|statut|StatutMessage
+SIGNALEMENT_AVIS|statut|StatutSignalement
 "
 
 # Ancré sur la racine du dépôt et non sur une suite de « .. » comptés depuis ce

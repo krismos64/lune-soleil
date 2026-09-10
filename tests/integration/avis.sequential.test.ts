@@ -42,6 +42,9 @@ let deposerAvis: typeof import("@/services/avis").deposerAvis;
 let modererAvis: typeof import("@/services/avis").modererAvis;
 let lireAvisPublies: typeof import("@/services/avis").lireAvisPublies;
 let listerAvisAModerer: typeof import("@/services/avis").listerAvisAModerer;
+let signalerAvis: typeof import("@/services/avis").signalerAvis;
+let listerSignalementsAExaminer: typeof import("@/services/avis").listerSignalementsAExaminer;
+let cloturerSignalementAvis: typeof import("@/services/avis").cloturerSignalementAvis;
 let engendrerJeton: typeof import("@/lib/jeton-acces").engendrerJeton;
 let empreinteJeton: typeof import("@/lib/jeton-acces").empreinteJeton;
 
@@ -256,6 +259,9 @@ beforeAll(async () => {
     modererAvis,
     lireAvisPublies,
     listerAvisAModerer,
+    signalerAvis,
+    listerSignalementsAExaminer,
+    cloturerSignalementAvis,
   } = await import("@/services/avis"));
   ({ engendrerJeton, empreinteJeton } = await import("@/lib/jeton-acces"));
 });
@@ -270,9 +276,11 @@ afterEach(async () => {
    * ce domaine : une table effacee trop tot ferait echouer le nettoyage et
    * polluerait les tests suivants plutot que le test courant.
    */
+  await client.query("DELETE FROM signalement_avis");
   await client.query("DELETE FROM avis");
   await client.query("DELETE FROM invitation_avis");
   await client.query("DELETE FROM jeton_acces");
+  await client.query("DELETE FROM rate_limit");
   await client.query("DELETE FROM envoi_en_attente");
   await client.query("DELETE FROM journal_email");
   await client.query("DELETE FROM expedition");
@@ -1065,5 +1073,306 @@ describe("moderation, regles R4, R5, R7 et R9", () => {
     await modererAvis({ avisId, statut: "PUBLIE", motifDecision: null });
 
     expect(await listerAvisAModerer()).toHaveLength(0);
+  });
+});
+
+describe("signalement d'un avis, LS-77, article L111-7-2", () => {
+  /**
+   * Depose un avis et le PUBLIE, seul etat ou il est signalable.
+   *
+   * LA PUBLICATION EST INDISPENSABLE : un avis `DEPOSE` est deliberement
+   * introuvable pour le formulaire de signalement, sans quoi celui-ci
+   * deviendrait un oracle sur la file de moderation.
+   */
+  async function avisPublie(): Promise<string> {
+    const { commandeId } = await commanderEtPayer();
+    await marquerLivree(commandeId);
+    await inviterApresLivraison();
+
+    const valeur = await valeurJetonDeCommande(commandeId);
+    const etat = await lireEtatDepot(valeur);
+    if (etat.statut !== "OUVERT") throw new Error("etat inattendu");
+
+    await deposerAvis(valeur, [
+      {
+        ligneCommandeId: etat.pieces[0]!.ligneCommandeId,
+        note: 5,
+        commentaire: "Un avis dont on va douter.",
+      },
+    ]);
+
+    const { rows } = await client.query<{ id: string }>(
+      `SELECT a.id FROM avis a
+       JOIN ligne_commande l ON l.id = a.ligne_commande_id
+       WHERE l.commande_id = $1`,
+      [commandeId],
+    );
+
+    await modererAvis({
+      avisId: rows[0]!.id,
+      statut: "PUBLIE",
+      motifDecision: null,
+    });
+
+    return rows[0]!.id;
+  }
+
+  /** Une saisie valide, dont le delai anti-robot est deja ecoule. */
+  function saisieValide(avisId: string) {
+    return {
+      avisId,
+      qualite: "Créatrice de la pièce concernée",
+      email: "tiers@exemple.fr",
+      motif: "Cette pièce est une de mes créations, cet avis me semble faux.",
+      piege: "",
+      ouvertA: Date.now() - 10_000,
+    };
+  }
+
+  it("enregistre un signalement motive sur un avis publie", async () => {
+    const avisId = await avisPublie();
+
+    const issue = await signalerAvis({
+      saisie: saisieValide(avisId),
+      adresseIp: "203.0.113.10",
+    });
+
+    expect(issue.statut).toBe("ENREGISTRE");
+
+    const { rows } = await client.query<{ statut: string; motif: string }>(
+      "SELECT statut, motif FROM signalement_avis WHERE avis_id = $1",
+      [avisId],
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.statut).toBe("NOUVEAU");
+  });
+
+  it("ne depublie pas l'avis signale", async () => {
+    const avisId = await avisPublie();
+
+    await signalerAvis({
+      saisie: saisieValide(avisId),
+      adresseIp: "203.0.113.11",
+    });
+
+    const { rows } = await client.query<{ statut: string }>(
+      "SELECT statut FROM avis WHERE id = $1",
+      [avisId],
+    );
+
+    /*
+     * LA PROPRIETE LA PLUS IMPORTANTE DE CETTE FONCTIONNALITE. Un signalement
+     * n'est pas une decision de moderation : depublier automatiquement ferait
+     * de ce formulaire PUBLIC un moyen de retirer les avis d'un concurrent.
+     */
+    expect(rows[0]!.statut).toBe("PUBLIE");
+  });
+
+  it("refuse un signalement sur un avis non publie, sans reveler son existence", async () => {
+    const { commandeId } = await commanderEtPayer();
+    await marquerLivree(commandeId);
+    await inviterApresLivraison();
+
+    const valeur = await valeurJetonDeCommande(commandeId);
+    const etat = await lireEtatDepot(valeur);
+    if (etat.statut !== "OUVERT") throw new Error("etat inattendu");
+
+    await deposerAvis(valeur, [
+      {
+        ligneCommandeId: etat.pieces[0]!.ligneCommandeId,
+        note: 2,
+        commentaire: null,
+      },
+    ]);
+
+    const { rows } = await client.query<{ id: string }>(
+      `SELECT a.id FROM avis a
+       JOIN ligne_commande l ON l.id = a.ligne_commande_id
+       WHERE l.commande_id = $1`,
+      [commandeId],
+    );
+
+    const issue = await signalerAvis({
+      saisie: saisieValide(rows[0]!.id),
+      adresseIp: "203.0.113.12",
+    });
+
+    /*
+     * MEME REPONSE QU'UN IDENTIFIANT INCONNU, et c'est voulu. Distinguer les
+     * deux confirmerait qu'un avis existe a quelqu'un qui n'a pas pu le lire.
+     */
+    expect(issue.statut).toBe("AVIS_INTROUVABLE");
+
+    const { rows: signalements } = await client.query(
+      "SELECT 1 FROM signalement_avis WHERE avis_id = $1",
+      [rows[0]!.id],
+    );
+
+    expect(signalements).toHaveLength(0);
+  });
+
+  it("refuse un motif vide, la loi conditionnant le signalement a sa motivation", async () => {
+    const avisId = await avisPublie();
+
+    const issue = await signalerAvis({
+      saisie: { ...saisieValide(avisId), motif: "   " },
+      adresseIp: "203.0.113.13",
+    });
+
+    expect(issue.statut).toBe("INVALIDE");
+
+    const { rows } = await client.query(
+      "SELECT 1 FROM signalement_avis WHERE avis_id = $1",
+      [avisId],
+    );
+
+    expect(rows).toHaveLength(0);
+  });
+
+  it("ecarte une soumission instantanee sans le dire au robot", async () => {
+    const avisId = await avisPublie();
+
+    const issue = await signalerAvis({
+      saisie: { ...saisieValide(avisId), ouvertA: Date.now() },
+      adresseIp: "203.0.113.14",
+    });
+
+    /*
+     * `ENREGISTRE` ET NON UN REFUS : dire « refuse » a un robot lui apprend
+     * l'existence de la couche. Rien n'est ecrit pour autant.
+     */
+    expect(issue.statut).toBe("ENREGISTRE");
+
+    const { rows } = await client.query(
+      "SELECT 1 FROM signalement_avis WHERE avis_id = $1",
+      [avisId],
+    );
+
+    expect(rows).toHaveLength(0);
+  });
+
+  it("ecarte un champ piege rempli sans le dire au robot", async () => {
+    const avisId = await avisPublie();
+
+    const issue = await signalerAvis({
+      saisie: { ...saisieValide(avisId), piege: "rempli par un script" },
+      adresseIp: "203.0.113.15",
+    });
+
+    expect(issue.statut).toBe("ENREGISTRE");
+
+    const { rows } = await client.query(
+      "SELECT 1 FROM signalement_avis WHERE avis_id = $1",
+      [avisId],
+    );
+
+    expect(rows).toHaveLength(0);
+  });
+
+  it("plafonne les signalements d'une meme adresse", async () => {
+    const avisId = await avisPublie();
+    const adresseIp = "203.0.113.16";
+
+    for (let index = 0; index < 3; index += 1) {
+      const issue = await signalerAvis({
+        saisie: saisieValide(avisId),
+        adresseIp,
+      });
+      expect(issue.statut).toBe("ENREGISTRE");
+    }
+
+    const quatrieme = await signalerAvis({
+      saisie: saisieValide(avisId),
+      adresseIp,
+    });
+
+    expect(quatrieme.statut).toBe("TROP_DE_SIGNALEMENTS");
+
+    const { rows } = await client.query<{ nombre: string }>(
+      "SELECT count(*)::text AS nombre FROM signalement_avis WHERE avis_id = $1",
+      [avisId],
+    );
+
+    expect(Number(rows[0]!.nombre)).toBe(3);
+  });
+
+  it("clot un signalement en ecrivant statut et date ensemble, C43", async () => {
+    const avisId = await avisPublie();
+
+    await signalerAvis({
+      saisie: saisieValide(avisId),
+      adresseIp: "203.0.113.17",
+    });
+
+    const enAttente = await listerSignalementsAExaminer();
+    expect(enAttente).toHaveLength(1);
+    expect(enAttente[0]!.noteAvis).toBe(5);
+
+    const issue = await cloturerSignalementAvis({
+      signalementId: enAttente[0]!.id,
+      statut: "ECARTE",
+      suiteDonnee: "Achat vérifié, l'avis est authentique.",
+    });
+
+    expect(issue.statut).toBe("APPLIQUEE");
+
+    const { rows } = await client.query<{
+      statut: string;
+      examine_a: Date | null;
+      suite_donnee: string | null;
+    }>(
+      "SELECT statut, examine_a, suite_donnee FROM signalement_avis WHERE id = $1",
+      [enAttente[0]!.id],
+    );
+
+    expect(rows[0]!.statut).toBe("ECARTE");
+    expect(rows[0]!.examine_a).not.toBeNull();
+    expect(await listerSignalementsAExaminer()).toHaveLength(0);
+  });
+
+  it("une seconde cloture n'efface pas la suite donnee ni la date", async () => {
+    const avisId = await avisPublie();
+
+    await signalerAvis({
+      saisie: saisieValide(avisId),
+      adresseIp: "203.0.113.18",
+    });
+
+    const [signalement] = await listerSignalementsAExaminer();
+
+    await cloturerSignalementAvis({
+      signalementId: signalement!.id,
+      statut: "ECARTE",
+      suiteDonnee: "Achat vérifié.",
+    });
+
+    const { rows: premiere } = await client.query<{ examine_a: Date }>(
+      "SELECT examine_a FROM signalement_avis WHERE id = $1",
+      [signalement!.id],
+    );
+
+    await cloturerSignalementAvis({
+      signalementId: signalement!.id,
+      statut: "RETENU",
+      suiteDonnee: null,
+    });
+
+    const { rows: seconde } = await client.query<{
+      examine_a: Date;
+      suite_donnee: string | null;
+    }>("SELECT examine_a, suite_donnee FROM signalement_avis WHERE id = $1", [
+      signalement!.id,
+    ]);
+
+    /*
+     * DEUX PROPRIETES ENSEMBLE, et la seconde vient du defaut mesure sur la
+     * moderation le 11 septembre 2026 : `examineA` porte le PREMIER examen, et
+     * une cloture sans suite n'efface pas celle qui existait.
+     */
+    expect(seconde[0]!.examine_a.toISOString()).toBe(
+      premiere[0]!.examine_a.toISOString(),
+    );
+    expect(seconde[0]!.suite_donnee).toBe("Achat vérifié.");
   });
 });

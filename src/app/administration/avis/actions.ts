@@ -23,9 +23,9 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
 import { journaliserErreur } from "@/lib/journal";
-import { schemaDecisionAvis } from "@/lib/validation";
+import { schemaClotureSignalement, schemaDecisionAvis } from "@/lib/validation";
 import { exigerAdministratrice } from "@/services/autorisation";
-import { modererAvis } from "@/services/avis";
+import { cloturerSignalementAvis, modererAvis } from "@/services/avis";
 
 /** Ce que l'interface recoit, jamais une exception. */
 export type ResultatModeration =
@@ -101,6 +101,67 @@ export async function appliquerModeration(
     return { statut: "SUCCES" };
   } catch (erreur) {
     journaliserErreur("Moderation d'avis indisponible", erreur);
+
+    return { statut: "INDISPONIBLE" };
+  }
+}
+
+/** Ce qu'une cloture de signalement rend a l'interface. */
+export type ResultatCloture =
+  | { statut: "SUCCES" }
+  | { statut: "SESSION_ABSENTE" }
+  | { statut: "INVALIDE" }
+  | { statut: "INTROUVABLE" }
+  | { statut: "INDISPONIBLE" };
+
+/**
+ * Clot un signalement d'avis apres examen, LS-77.
+ *
+ * ELLE NE TOUCHE PAS A L'AVIS, deliberement. Retenir un signalement ne retire
+ * pas l'avis : c'est `appliquerModeration` qui le fait, avec son propre motif,
+ * et les deux gestes restent distincts pour que la decision de moderation porte
+ * toujours sa justification propre, regle R5.
+ *
+ * LA REVALIDATION NE PORTE PAS `"layout"`, a la difference de la moderation.
+ * La barre affiche `avisAModerer`, qui compte les AVIS au statut `DEPOSE` :
+ * clore un signalement n'en change aucun. Ajouter `"layout"` par symetrie ferait
+ * recalculer neuf agregats pour rien, ce que la regle C37 demande d'eviter en
+ * raisonnant sur la donnee et jamais sur le dossier.
+ */
+export async function cloturerSignalement(
+  _precedent: ResultatCloture | null,
+  donnees: FormData,
+): Promise<ResultatCloture> {
+  const enTetes = await headers();
+
+  try {
+    await exigerAdministratrice(enTetes);
+  } catch {
+    return { statut: "SESSION_ABSENTE" };
+  }
+
+  const valide = schemaClotureSignalement.safeParse({
+    signalementId: donnees.get("signalementId"),
+    statut: donnees.get("decision"),
+    suiteDonnee: donnees.get("suite") ?? null,
+  });
+
+  if (!valide.success) {
+    return { statut: "INVALIDE" };
+  }
+
+  try {
+    const issue = await cloturerSignalementAvis(valide.data);
+
+    if (issue.statut === "REFUSE_INTROUVABLE") {
+      return { statut: "INTROUVABLE" };
+    }
+
+    revalidatePath(CHEMIN_AVIS);
+
+    return { statut: "SUCCES" };
+  } catch (erreur) {
+    journaliserErreur("Cloture de signalement indisponible", erreur);
 
     return { statut: "INDISPONIBLE" };
   }

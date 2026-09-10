@@ -24,6 +24,8 @@
  * fabrique de donnee d'exemple, et la section entiere disparait quand aucun avis
  * publie n'existe.
  */
+import Link from "next/link";
+
 import {
   DELAI_PUBLICATION_JOURS,
   lireAvisPublies,
@@ -120,6 +122,29 @@ export async function AvisProduit({ varianteIds }: { varianteIds: string[] }) {
                 <p className={styles.texteReponse}>{ligne.reponse.contenu}</p>
               </div>
             )}
+
+            {/*
+             * LE LIEN DE SIGNALEMENT, LS-77, article L111-7-2. La
+             * fonctionnalite doit etre GRATUITE et accessible : un formulaire
+             * qu'aucun lien ne designe serait atteignable seulement en
+             * saisissant son URL, ce qui ne remplit pas l'obligation.
+             *
+             * IL EST PRES DE CHAQUE AVIS ET NON EN PIED DE SECTION : le texte
+             * vise le signalement d'UN avis, et un lien unique obligerait a
+             * choisir ensuite lequel, ce qui multiplie les erreurs de cible.
+             *
+             * `prefetch` RESTE PAR DEFAUT, la fiche produit etant une route
+             * publique : la regle C40 ne vise que les routes `force-dynamic`
+             * de l'administration.
+             */}
+            <p className={styles.signalerAvis}>
+              <Link
+                href={{ pathname: "/avis/signaler", query: { avis: ligne.id } }}
+                className={styles.lienSignaler}
+              >
+                Signaler un doute sur cet avis
+              </Link>
+            </p>
           </li>
         ))}
       </ul>
