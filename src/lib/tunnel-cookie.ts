@@ -17,7 +17,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 import { MODES_AVEC_POINT_RETRAIT, exigePointRetrait } from "@/lib/livraison";
-import type { PointRetrait } from "@/integrations/mondial-relay";
+import type { PointRetrait } from "@/integrations/sendcloud";
 import type { ModeLivraison } from "@/generated/prisma/enums";
 
 /** Nom du cookie portant la saisie en cours. */

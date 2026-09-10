@@ -17,8 +17,8 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
 import { NOM_COOKIE_PANIER, decoderPanier } from "@/lib/panier-cookie";
-import { chercherPointsRetrait } from "@/integrations/mondial-relay";
-import { fournisseurPointsRetrait } from "@/integrations/mondial-relay/fournisseur";
+import { chercherPointsRetrait } from "@/integrations/sendcloud";
+import { fournisseurPointsRetrait } from "@/integrations/sendcloud/fournisseur";
 import { construireRecapitulatif } from "@/services/tunnel";
 import type { SaisieTunnel } from "@/lib/tunnel-cookie";
 import { lireSaisie } from "./actions-tunnel";

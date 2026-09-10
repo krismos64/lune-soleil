@@ -26,7 +26,7 @@ import type { SaisieTunnel } from "@/lib/tunnel-cookie";
 import type { ModeLivraison } from "@/generated/prisma/enums";
 import type { Recapitulatif } from "@/services/tunnel";
 import type { MotifIndisponible } from "@/services/panier";
-import type { ResultatPointsRetrait } from "@/integrations/mondial-relay";
+import type { ResultatPointsRetrait } from "@/integrations/sendcloud";
 import {
   enregistrerAdresse,
   enregistrerCoordonnees,

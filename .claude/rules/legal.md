@@ -3,7 +3,7 @@ paths:
   - "src/services/facture.ts"
   - "src/services/document-comptable.ts"
   - "src/integrations/pdf/**"
-  - "src/integrations/mondial-relay/**"
+  - "src/integrations/sendcloud/**"
   - "src/lib/livraison.ts"
   - "src/lib/retractation.ts"
   - "src/app/(boutique)/commande/**"
