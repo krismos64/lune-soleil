@@ -246,3 +246,60 @@ test("aucun formulaire de catalogue n'est rendu sans session", async ({
     ).toHaveCount(0);
   }
 });
+
+/**
+ * LA ROUTE QUI SERT L'ETIQUETTE, LS-218 critere 8.
+ *
+ * ELLE SE TESTE A PART DES ECRANS, et pour une raison de forme : ce n'est pas
+ * une page mais un fichier. Une page refuse par une REDIRECTION vers la
+ * connexion ; cette route rend 404, une redirection produirait un PDF corrompu,
+ * le navigateur enregistrant la page de connexion sous le nom de l'etiquette.
+ *
+ * CE QU'ELLE PROTEGE VAUT DE L'ARGENT ET DES DONNEES : une etiquette porte le
+ * nom et l'adresse du client, et sa lecture passe par les cles du transporteur.
+ */
+test("la route d'etiquette refuse un visiteur sans session", async ({
+  request,
+}) => {
+  const reponse = await request.get(
+    "/administration/expeditions/etiquette/4242",
+    { failOnStatusCode: false },
+  );
+
+  /*
+   * 404 ET NON 403, ni 302. Un 403 confirmerait que le colis existe, et une
+   * redirection livrerait une page HTML sous un nom de PDF.
+   */
+  expect(reponse.status()).toBe(404);
+
+  const corps = await reponse.text();
+
+  /*
+   * ET SURTOUT AUCUN PDF. Un `%PDF` en tete de reponse signifierait que la
+   * garde a laisse passer l'appel jusqu'au transporteur, donc que l'adresse
+   * d'un client est partie a un visiteur anonyme.
+   */
+  expect(corps).not.toContain("%PDF");
+  expect(reponse.headers()["content-type"]).not.toContain("application/pdf");
+});
+
+/**
+ * UN IDENTIFIANT DIFFORME NE DOIT PAS ATTEINDRE LE TRANSPORTEUR, invariant 7.
+ *
+ * SANS SESSION, LA GARDE DE ROLE SUFFIT DEJA : ce test vaut surtout comme
+ * regression si l'ordre des deux controles venait a s'inverser. Un segment
+ * arbitraire interpole dans une URL d'API est le defaut que la validation
+ * ferme.
+ */
+test("la route d'etiquette refuse un identifiant qui n'est pas un entier", async ({
+  request,
+}) => {
+  for (const segment of ["abc", "-1", "0", "1.5"]) {
+    const reponse = await request.get(
+      `/administration/expeditions/etiquette/${segment}`,
+      { failOnStatusCode: false },
+    );
+
+    expect(reponse.status()).toBe(404);
+  }
+});

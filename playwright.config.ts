@@ -458,6 +458,34 @@ export default defineConfig({
        */
       ...(BASE_E2E ? { DATABASE_URL: BASE_E2E } : {}),
       /*
+       * LES CLES SENDCLOUD SONT NEUTRALISEES, LS-218, ET CE N'EST PAS UNE
+       * PRUDENCE : Sendcloud n'a PAS de mode test, et chaque etiquette creee
+       * est FACTUREE, 4,10 € en point relais et 7,49 € au domicile, ADR-035.
+       *
+       * LE RISQUE ETAIT REEL ET STRUCTUREL. `webServer` herite de
+       * l'environnement du processus parent, donc du `.env` d'un poste de
+       * developpement, qui porte les cles depuis LS-200. Un test qui clique sur
+       * « Créer l'étiquette » sur une commande expediable acheterait alors un
+       * envoi a chaque execution de la suite, sans que rien ne le signale
+       * avant la facture du mois.
+       *
+       * Mesure du 10 septembre 2026 : zero colis sur les deux comptes apres la
+       * premiere execution, la garde « verifier avant de payer » du service
+       * ayant refuse avant l'appel. La chance n'est pas une protection, d'ou
+       * cette ligne.
+       *
+       * `""` ET NON UNE VALEUR FACTICE : la Server Action teste la PRESENCE des
+       * cles et sort en `INDISPONIBLE` sur une chaine vide, ce qui exerce la
+       * degradation du critere 6. Une cle inventee partirait au reseau et
+       * essuierait un 401, chemin que personne ne veut eprouver a chaque suite.
+       *
+       * ELLE VAUT AUSSI POUR LE TUNNEL, dont les tests reposent deja sur cette
+       * absence, `tunnel-commande.spec.ts` : elle etait jusqu'ici acquise par
+       * l'environnement de la CI seulement, jamais garantie en local.
+       */
+      SENDCLOUD_PUBLIC_KEY: "",
+      SENDCLOUD_SECRET_KEY: "",
+      /*
        * BETTER_AUTH_URL DOIT DESIGNER LE SERVEUR REELLEMENT SERVI, LS-70.
        *
        * Better Auth derive ses origines de confiance de `baseURL` et rejette
