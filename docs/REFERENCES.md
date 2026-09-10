@@ -209,6 +209,7 @@ documentation technique, ticket ou règle qui le contredirait.
 | ADR-039 | Statut HTTP honnête, streaming des métadonnées désactivé | statut HTTP, 500, base morte, `generateMetadata`, streaming des métadonnées, `htmlLimitedBots`, canonical par filtre, Twitterbot, supervision |
 | ADR-040 | Aucune mesure d'audience à l'ouverture | mesure d'audience, Umami, analytics, consentement, exemption CNIL, article 82, bannière cookies |
 | ADR-041 | Aucun code de récupération, le dernier recours passe par le développeur | code de récupération, backup code, perte des appareils, twoFactor, TOTP, dernier recours, amende ADR-021 |
+| ADR-042 | Correspondance des statuts Sendcloud, deux statuts livrent et les échecs alertent | statut Sendcloud, parent_status, Delivered, Shipment collected by customer, livreA, suivi de colis, livraison en échec, refusé par le destinataire, retourné à l'expéditeur |
 
 Cette table se met à jour à chaque ADR créé. Un ADR absent d'ici reste
 opposable : la table est un raccourci, `docs/adr/` fait foi.
