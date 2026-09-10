@@ -18,6 +18,7 @@
  */
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { FICHIER_SESSION } from "./chemin-session";
 import {
   TOLERANCE_DEBORDEMENT_PX,
   debordementHorizontal,
@@ -35,6 +36,55 @@ test("l'administration renvoie vers la connexion sans session", async ({
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     "Administration",
   );
+});
+
+/**
+ * L'ecran des passkeys renvoie AUSSI vers la connexion, LS-175.
+ *
+ * POURQUOI CES TESTS EN PLUS DE CELUI CI-DESSUS.
+ * `verifier-gardes-administration.sh` ne releve que les Server Actions, jamais
+ * les PAGES : mesure du 10 septembre 2026, son motif cherche
+ * `exigerAdministratrice` dans les fichiers d'actions. La garde d'une page
+ * d'administration ne repose donc sur aucun controle textuel.
+ *
+ * CET ECRAN MERITE LE SIEN parce qu'il liste des MOYENS D'ACCES. Une garde
+ * absente n'y divulguerait pas une commande ou un prix, mais les appareils par
+ * lesquels l'administration s'ouvre.
+ */
+test("l'ecran des passkeys renvoie vers la connexion sans session", async ({
+  page,
+}) => {
+  await page.goto("/administration/passkeys");
+
+  // LE POINT DECISIF EST L'URL FINALE. Verifier l'absence de la liste ne
+  // distinguerait pas un refus d'un compte sans aucune passkey enregistree,
+  // qui rend lui aussi un ecran sans element.
+  await expect(page).toHaveURL(/\/administration\/connexion$/);
+});
+
+/**
+ * LE TEST QUI COMPTE VRAIMENT, et le premier ne le remplace pas.
+ *
+ * MESURE PAR MUTATION LE 10 SEPTEMBRE 2026 : en remplacant
+ * `exigerAdministratrice` par `lireIdentite`, c'est-a-dire en n'exigeant plus
+ * qu'une session au lieu du ROLE, le test sans session reste VERT. Les deux
+ * gardes redirigent un visiteur anonyme, elles ne different que sur un client
+ * connecte.
+ *
+ * C'est exactement le defaut que l'ecran de reauthentification a corrige en
+ * relecture, LS-89 : un client inscrit sur la boutique franchissait une route
+ * d'administration avec sa propre session. Ici, il listerait les passkeys de
+ * son compte depuis `/administration`, et surtout la garde serait fausse pour
+ * la prochaine page qui recopierait ce motif.
+ */
+test.describe("une session cliente n'ouvre pas l'ecran des passkeys", () => {
+  test.use({ storageState: FICHIER_SESSION });
+
+  test("le role est exige, pas seulement une session", async ({ page }) => {
+    await page.goto("/administration/passkeys");
+
+    await expect(page).toHaveURL(/\/administration\/connexion$/);
+  });
 });
 
 test("la connexion propose la passkey en premier, le mot de passe en secours", async ({
