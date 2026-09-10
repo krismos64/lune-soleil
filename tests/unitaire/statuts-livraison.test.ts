@@ -19,6 +19,7 @@ import {
   STATUTS_ECHEC_DEFINITIF,
   estLivre,
   estEchecDefinitif,
+  estDeposeEnPointRetrait,
 } from "@/integrations/sendcloud/statuts";
 
 describe("estLivre, les deux statuts qui valent livraison", () => {
@@ -156,5 +157,45 @@ describe("les deux ensembles ne se recouvrent jamais", () => {
     );
 
     expect(communs).toEqual([]);
+  });
+});
+
+describe("estDeposeEnPointRetrait, le rebasculement", () => {
+  /*
+   * CE STATUT DIT QUE LE COLIS EST DANS UN POINT DE SERVICE, sans dire s'il y
+   * etait attendu. Definition officielle : « The parcel has been delivered to a
+   * service point and is awaiting collection by the end customer ».
+   *
+   * SUR UNE EXPEDITION `DOMICILE`, IL EST DONC LE REBASCULEMENT. Aucun autre
+   * chemin ne produit cette combinaison : un colis prevu a domicile ne se
+   * trouve dans un relais que parce que le transporteur l'y a reporte.
+   *
+   * `Delivery method changed` N'EST PAS UTILISE, et c'est delibere : sa
+   * definition officielle, « The method of delivery has been modified », ne dit
+   * ni quel mode, ni dans quel sens. Coder dessus serait une supposition.
+   */
+  it("12, Awaiting customer pickup, signale un depot en point de retrait", () => {
+    expect(estDeposeEnPointRetrait(12)).toBe(true);
+  });
+
+  it("un colis livre a domicile n'est pas un depot en point de retrait", () => {
+    expect(estDeposeEnPointRetrait(11)).toBe(false);
+  });
+
+  it("une tentative echouee n'est pas encore un depot", () => {
+    expect(estDeposeEnPointRetrait(8)).toBe(false);
+  });
+
+  /*
+   * `Delivery method changed` NE DECLENCHE RIEN, test explicite : il serait le
+   * candidat evident pour qui lit la liste des statuts, et ce test dit pourquoi
+   * il est ecarte.
+   */
+  it("62993, Delivery method changed, ne declenche aucun rebasculement", () => {
+    expect(estDeposeEnPointRetrait(62993)).toBe(false);
+  });
+
+  it("un statut inconnu ne declenche aucun rebasculement", () => {
+    expect(estDeposeEnPointRetrait(99999)).toBe(false);
   });
 });

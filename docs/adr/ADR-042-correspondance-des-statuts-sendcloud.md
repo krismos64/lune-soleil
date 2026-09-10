@@ -146,21 +146,52 @@ LS-13, aucune colonne n'est ajoutée.
 intermédiaires n'est présenté comme une livraison » se lit désormais sur la liste
 de quatre faux amis ci-dessus.
 
-## Ce qui reste ouvert
+## Décision 6 : le rebasculement se détecte, il ne s'écrit pas
 
-**Le rebasculement domicile vers Point Relais**, prévu par ADR-025 et LS-131,
-n'a **aucun statut dédié** dans la liste des 35. Le candidat le plus proche est
-`Delivery method changed`, identifiant 62993, dont la documentation ne précise
-pas s'il couvre ce cas. Il n'est donc **pas** câblé sur `Expedition.mode` : le
-faire sur une supposition écrirait un mode faux. À rouvrir sur une expédition
-réelle qui aura subi le cas, ou sur une réponse du support Sendcloud.
+**Le rebasculement domicile vers Point Relais**, prévu par ADR-025, se **détecte**
+par `Awaiting customer pickup` (12) sur une expédition dont le mode est
+`DOMICILE`. La définition officielle du statut le permet : « The parcel has been
+delivered to a service point and is awaiting collection by the end customer »
+décrit où **est** le colis, pas où il devait aller, et aucun autre chemin ne
+produit cette combinaison.
+
+**`Expedition.mode` n'est pas mis à jour pour autant**, et c'est une limite du
+fournisseur, pas un choix de conception.
+
+`chk_expedition_mode_point_relais` est une **équivalence** : un mode
+`POINT_RELAIS` exige un `pointRelaisId`. Or Sendcloud ne fournit pas
+l'identifiant du point de report. Vérifié sur la documentation officielle le
+10 septembre 2026 :
+
+| Champ | Ce qu'il porte |
+|---|---|
+| `to_service_point`, API v2 et v3 | le point **choisi à la création** de l'expédition |
+| `details.is_to_service_point`, tracking v3 | un booléen, sans identifiant ni adresse |
+| `events[]` | du texte transporteur, aucun champ structuré |
+
+**Aucun champ documenté ne porte le point relais d'un report.** Trois issues
+étaient possibles, et deux sont refusées : écrire un identifiant inventé mettrait
+une fausse adresse sur une expédition réelle, et relâcher la contrainte
+affaiblirait une règle d'ADR-025 pour un besoin d'affichage.
+
+**`estDeposeEnPointRetrait` existe donc et sert à l'affichage** : LS-216 peut
+dire à l'exploitante « déposée en point de retrait » sans que la base affirme
+quelque chose qu'elle ne peut pas garantir.
+
+**Le délai de rétractation reste exact dans ce scénario**, et c'est ce qui
+compte juridiquement : le client qui retire son colis déclenche `livreA` par le
+statut 93, au bon moment.
+
+**À rouvrir** si Sendcloud expose un jour ce point, ou si les données
+transporteur d'un colis réel s'avèrent le porter.
 
 ## Sources
 
 * `GET https://panel.sendcloud.sc/api/v2/parcels/statuses`, relevé le
   10 septembre 2026, 35 statuts
-* Documentation Sendcloud, « Retrieve tracking info », définitions des statuts,
-  consultée via Context7
+* Documentation Sendcloud, « Retrieve tracking info » et « Tracking statuses »,
+  définitions des statuts, consultées via Context7 puis sur
+  `sendcloud.dev/docs/archive/tracking/tracking-statuses`
 * Article L221-18 du Code de la consommation, délai à compter de la réception
 * Article L221-20, délai porté à douze mois si l'information est mal fournie
 * ADR-025 pour les trois modes, ADR-035 pour le passage à Sendcloud, ADR-030 pour

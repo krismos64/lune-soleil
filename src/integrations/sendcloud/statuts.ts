@@ -75,3 +75,42 @@ export function estLivre(statut: number): boolean {
 export function estEchecDefinitif(statut: number): boolean {
   return STATUTS_ECHEC_DEFINITIF.has(statut);
 }
+
+/**
+ * Le colis se trouve dans un point de service, LS-131.
+ *
+ * SUR UNE EXPEDITION `DOMICILE`, IL SIGNALE LE REBASCULEMENT d'ADR-025 : un
+ * colis prevu au domicile ne se trouve dans un relais que parce que le
+ * transporteur l'y a reporte apres une tentative infructueuse. Aucun autre
+ * chemin ne produit cette combinaison.
+ *
+ * LA DEFINITION OFFICIELLE NE PARLE PAS DU MODE PREVU, et c'est ce qui rend la
+ * deduction sure : « The parcel has been delivered to a service point and is
+ * awaiting collection by the end customer ». Elle decrit ou EST le colis, pas
+ * ou il devait aller.
+ *
+ * IL SIGNALE, IL N'ECRIT PAS `Expedition.mode`, et c'est une limite du
+ * FOURNISSEUR et non un choix. `chk_expedition_mode_point_relais` est une
+ * EQUIVALENCE : un mode `POINT_RELAIS` exige un `pointRelaisId`, que Sendcloud
+ * ne fournit pas dans ce scenario. Verifie sur la documentation officielle le
+ * 10 septembre 2026 : `to_service_point` porte le point CHOISI A LA CREATION,
+ * et aucun champ documente ne porte celui d'un report. Ecrire un identifiant
+ * invente pour satisfaire la contrainte mettrait une fausse adresse sur une
+ * expedition reelle.
+ *
+ * CE QU'IL SERT DONC : afficher « deposee en point de retrait » a l'exploitante,
+ * LS-216, sans rien ecrire que la base ne puisse garantir.
+ *
+ * `Delivery method changed`, 62993, N'EST PAS UTILISE. Sa definition officielle
+ * est « The method of delivery has been modified » : elle ne dit ni quel mode,
+ * ni dans quel sens, ni pourquoi.
+ *
+ * IL NE LIVRE PAS, et les deux notions ne se confondent jamais : le client n'a
+ * pas encore son colis, seul `estLivre` ouvre le delai de retractation.
+ */
+export function estDeposeEnPointRetrait(statut: number): boolean {
+  return statut === STATUT_ATTENTE_RETRAIT;
+}
+
+/** `Awaiting customer pickup`, le colis attend au point de service. */
+const STATUT_ATTENTE_RETRAIT = 12;
