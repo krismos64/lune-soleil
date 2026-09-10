@@ -664,6 +664,26 @@ test("le tableau d'expédition porte trois colonnes comptées juste", async ({
 }) => {
   await page.goto("/administration/expeditions");
 
+  /*
+   * L'ATTENTE EST INDISPENSABLE, et son absence faisait echouer ce test.
+   *
+   * Les trois colonnes vivent sous un `<Suspense>` interne, C32 : `page.goto`
+   * rend la main des que le DOCUMENT est servi, donc AVANT que le contenu
+   * suspendu arrive. `page.evaluate` relevait alors zero section et le test
+   * comparait un tableau vide aux trois titres attendus.
+   *
+   * C'est le motif « loading.tsx escamote le DOM » deja connu du depot, sous sa
+   * forme `<Suspense>` : le defaut est le meme, une assertion portant sur un
+   * element pas encore monte.
+   *
+   * L'ANCRE EST LE TITRE DE LA PREMIERE COLONNE et non un delai : une attente
+   * exprimee en millisecondes passerait sur une machine rapide et echouerait
+   * sur une machine chargee, ce qui est pire qu'un echec franc.
+   */
+  await expect(
+    page.getByRole("heading", { level: 2, name: "À préparer" }),
+  ).toBeVisible();
+
   const releve = await page.evaluate(() =>
     [...document.querySelectorAll("main section")].map((section) => ({
       titre: section.querySelector("h2")?.textContent?.trim() ?? "",
