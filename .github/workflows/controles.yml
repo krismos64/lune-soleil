@@ -910,6 +910,26 @@ jobs:
       - name: 9s. Chaque ecran d'administration est navigable
         run: ./scripts/verifier-navigation-administration.sh
 
+      # C40 : UN LIEN VERS UNE ROUTE `force-dynamic` DESACTIVE LE PRECHARGEMENT.
+      #
+      # `<Link>` precharge par defaut et `staleTimes.dynamic` vaut zero : la
+      # reponse prechargee d'une route dynamique est perimee des son arrivee,
+      # Next.js la jette, repart, et RECOMMENCE SANS FIN tant que le lien est a
+      # l'ecran. Toutes les routes d'administration sont `force-dynamic`.
+      #
+      # Ce n'est pas qu'une depense de rendus serveur. La navigation reelle
+      # entre en concurrence avec ce flot et perd parfois la course : mesure en
+      # LS-166, toujours bloque apres 61 secondes, deux essais sur quatre, sur
+      # une page vide sans rien qui dise quoi faire.
+      #
+      # CE CONTROLE EXISTAIT DEPUIS LE 7 SEPTEMBRE 2026 SANS ETRE BRANCHE ICI,
+      # et TROIS liens le violaient sur `main` pendant ce temps, LS-213. Un
+      # controle ecrit, prouve par mutation, et declenche par rien ne garde
+      # rien : il donne l'assurance d'une garde sans en exercer aucune. Meme
+      # motif que `verifier-actions-sensibles.sh`, qui dormait depuis LS-81.
+      - name: 9s bis. Les liens d'administration desactivent le prechargement
+        run: ./scripts/verifier-prefetch-administration.sh
+
       # ----------------------------------------------------------------------
       # Controle 9t, LS-191. La page qui LEVE a dessein reste inatteignable.
       #
