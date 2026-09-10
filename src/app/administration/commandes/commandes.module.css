@@ -548,3 +548,66 @@
   border-radius: var(--ls-radius-md);
   color: var(--ls-text);
 }
+
+/*
+ * ACHEMINEMENT DU COLIS, LS-216. Distinct de la section « Statut de la
+ * commande » voisine, qui porte les transitions de statut metier, regle S9, et
+ * qui s'appelait « Suivi » avant cette story.
+ */
+.ligneAcheminement {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--ls-space-3);
+  flex-wrap: wrap;
+}
+
+/*
+ * LA VALEUR PASSE A LA LIGNE PLUTOT QUE DE DEBORDER. Un numero de suivi
+ * Sendcloud fait une vingtaine de caracteres sans espace : a 320 px, le
+ * `space-between` seul le poussait hors de la carte. `anywhere` et non
+ * `break-word`, qui ne coupe pas un mot unique depassant sa boite.
+ */
+.valeurAcheminement {
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+/*
+ * SIGNALEMENT D'UN SUIVI BLOQUE, critere 4. C'est la valeur propre de cet
+ * ecran : `synchroniseA` est stocke pour detecter un suivi arrete, et personne
+ * ne le regarde si rien ne le montre. Un colis perdu reste a la charge de
+ * l'exploitante, article L216-2.
+ *
+ * `--ls-error` ET NON `--ls-warning`, TROISIEME FOIS SUR CE FICHIER, et la
+ * mesure est refaite plutot que recopiee : `--ls-warning` donne 4,04:1 sur
+ * blanc, 3,78:1 sur creme et 3,39:1 sur sable, sous le seuil AA de 4,5:1 dans
+ * les TROIS cas. `--ls-error` donne 5,50:1 sur sable, mesure le 10 septembre
+ * 2026. Le jeton reste legitime en BORDURE, ou seul le 3:1 de WCAG 1.4.11
+ * s'applique, C36.
+ *
+ * LE FOND EST SABLE ET LE TEXTE `--ls-error`, jamais `--ls-text-muted` qui y
+ * tomberait a 4,35:1, C31. Le sable est le fond piegeux du projet.
+ */
+.suiviBloque {
+  margin: var(--ls-space-3) 0 0;
+  padding: var(--ls-space-3);
+  border-left: 3px solid var(--ls-error);
+  background: var(--ls-surface-sand);
+  color: var(--ls-error);
+}
+
+/*
+ * REPORT VERS UN POINT DE RETRAIT, critere 5 et ADR-025. Il se signale sans
+ * rien reecrire : `Commande.modeLivraison` reste ce que le client a paye.
+ *
+ * `--ls-text` SUR SABLE, 10,83:1 mesure. Le mode execute est une information
+ * neutre et non une alerte : lui donner la couleur d'erreur ferait lire un
+ * incident la ou le colis avance normalement vers un relais.
+ */
+.reportLivraison {
+  margin: var(--ls-space-3) 0 0;
+  padding: var(--ls-space-3);
+  border-left: 3px solid var(--ls-accent-gold-deep);
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+}

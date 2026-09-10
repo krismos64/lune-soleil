@@ -158,6 +158,48 @@ export const SECONDE_COMMANDE_A_EXPEDIER_TEST = {
 } as const;
 
 /**
+ * La commande EXPEDIEE dont le suivi est SYNCHRONISE, LS-216 et LS-58.
+ *
+ * SIXIEME COMMANDE, ET LA MEME LECON QUE LES CINQ PRECEDENTES. Aucune des
+ * autres ne porte d'expedition avec `statut_transporteur` et `synchronise_a`
+ * renseignes : le bloc d'acheminement ne serait rendu a AUCUNE largeur, et le
+ * signalement de suivi bloque encore moins. Mesurer un ecran qui ne rend jamais
+ * la branche interessante ne prouve rien, motif de LS-121, LS-130 et LS-160.
+ *
+ * ELLE NE PEUT ETRE GREFFEE SUR AUCUNE AUTRE. `COMMANDE_FACTUREE_TEST` porte la
+ * demande de retractation de LS-135 et l'ecran de remboursement de LS-160 : lui
+ * declarer une expedition changerait la branche que ces deux stories mesurent.
+ * Les deux commandes `EN_PREPARATION` disparaitraient de la file d'expedition
+ * en passant `EXPEDIEE`, et `COMMANDE_TEST` est `EN_ATTENTE_PAIEMENT`, etat
+ * dans lequel aucun colis n'est jamais parti.
+ *
+ * `synchronise_a` EST VIEUX DE PLUSIEURS JOURS, DELIBEREMENT. C'est ce qui rend
+ * le signalement de suivi bloque VISIBLE a l'ecran, critere 4 de LS-216 : une
+ * date fraiche afficherait la branche nominale, celle qui ne prouve rien du
+ * signalement. Le colis n'est pas livre, `livre_a` restant nul, sans quoi
+ * `fraicheurSuivi` rendrait « frais » quelle que soit la date.
+ *
+ * SON MODE EXECUTE DIFFERE DE CELUI DE LA COMMANDE, `POINT_RELAIS` contre
+ * `DOMICILE` : c'est le rebasculement d'ADR-025, critere 5, qui n'est rendu par
+ * aucune autre donnee de test. Le point de retrait est renseigne parce que
+ * `chk_expedition_mode_point_relais` est une EQUIVALENCE portant sur les deux
+ * modes de retrait, `LOCKER` compris malgre ce que son nom laisse croire.
+ */
+export const COMMANDE_SUIVIE_TEST = {
+  categorieId: "e1a2b3c4-1216-4aaa-8888-000000000001",
+  produitId: "e1a2b3c4-1216-4bbb-8888-000000000002",
+  varianteId: "e1a2b3c4-1216-4ccc-8888-000000000003",
+  commandeId: "e1a2b3c4-1216-4ddd-8888-000000000004",
+  ligneId: "e1a2b3c4-1216-4eee-8888-000000000005",
+  paiementId: "e1a2b3c4-1216-4fff-8888-000000000006",
+  expeditionId: "e1a2b3c4-1216-4a11-8888-000000000007",
+  numero: "C-TEST-0216",
+  numeroSuivi: "3STEST216000001",
+  statutTransporteur: "Awaiting customer pickup",
+  pointRelaisId: "FR-TEST-9216",
+} as const;
+
+/**
  * Les DEUX messages de contact que la rubrique Messages affiche, LS-97.
  *
  * DEUX ET NON UN, et c'est la lecon directe de LS-130. La page rend un bloc de

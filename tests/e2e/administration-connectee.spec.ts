@@ -30,6 +30,7 @@ import { expect, test } from "@playwright/test";
 import {
   COMMANDE_A_EXPEDIER_TEST,
   COMMANDE_FACTUREE_TEST,
+  COMMANDE_SUIVIE_TEST,
   COMMANDE_TEST,
   FICHIER_SESSION,
   FICHIER_SESSION_ADMINISTRATION,
@@ -114,6 +115,22 @@ const ECRANS = [
   {
     chemin: `/administration/commandes/${COMMANDE_FACTUREE_TEST.commandeId}`,
     titre: COMMANDE_FACTUREE_TEST.numero,
+  },
+  /*
+   * LE DETAIL D'UNE COMMANDE EXPEDIEE ET SUIVIE, LS-216, et il ajoute une
+   * QUATRIEME branche que les trois precedents ne rendent pas : le bloc
+   * d'acheminement, son signalement de suivi bloque et son avertissement de
+   * rebasculement de mode. Aucune autre commande de test ne porte d'expedition
+   * synchronisee, donc aucune ne rendrait ces trois paragraphes.
+   *
+   * LE DEBORDEMENT S'Y JOUE SUR LE NUMERO DE SUIVI, quinze caracteres sans
+   * espace dans une ligne en `space-between` : a 320 px, c'est exactement la
+   * forme qui pousse hors de la carte, d'ou la mesure plutot qu'un controle a
+   * l'oeil.
+   */
+  {
+    chemin: `/administration/commandes/${COMMANDE_SUIVIE_TEST.commandeId}`,
+    titre: COMMANDE_SUIVIE_TEST.numero,
   },
   /*
    * LA FILE D'EXPEDITION, LS-130. Elle rend UN formulaire de quatre champs PAR
@@ -1063,5 +1080,123 @@ test.describe("rubrique Messages", () => {
       .click();
 
     await expect(corps).toBeVisible();
+  });
+});
+
+/**
+ * ACHEMINEMENT DU COLIS, LS-216 criteres 1 a 5 et 8.
+ *
+ * CE QUI SE JOUE ICI EST CE QU'UNE PERSONNE LIT, et aucun test d'integration ne
+ * peut le prouver : la lecture des champs est deja couverte cote service, mais
+ * rien ne disait qu'ils atteignaient l'ecran, ni qu'un faux ami du transporteur
+ * n'y etait pas presente comme une livraison.
+ *
+ * LA COMMANDE EST `COMMANDE_SUIVIE_TEST`, seule a porter une expedition
+ * synchronisee, un mode reporte et un suivi vieux de trois jours.
+ */
+test.describe("acheminement du colis, detail de commande", () => {
+  const CHEMIN = `/administration/commandes/${COMMANDE_SUIVIE_TEST.commandeId}`;
+
+  /*
+   * CRITERE 8, ET LE PLUS FACILE A PERDRE. Deux notions portaient le meme mot
+   * sur cet ecran : la section des transitions de statut metier s'appelait
+   * « Suivi », regle S9, et ne suit aucun colis. Les deux titres doivent
+   * coexister sans se confondre.
+   */
+  test("distingue l'acheminement du statut de commande", async ({ page }) => {
+    await page.goto(CHEMIN);
+
+    await expect(
+      page.getByRole("heading", { name: "Acheminement du colis" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Statut de la commande" }),
+    ).toBeVisible();
+
+    /*
+     * PLUS AUCUN TITRE « Suivi » NU. Le mot subsiste dans « Numéro de suivi »,
+     * qui est un libelle de donnee et non un titre : l'assertion porte donc sur
+     * les TITRES, seuls a structurer la page pour un lecteur d'ecran.
+     */
+    await expect(page.getByRole("heading", { name: "Suivi" })).toHaveCount(0);
+  });
+
+  /*
+   * CRITERES 1 ET 2. Le numero de suivi est ce que l'exploitante vient chercher
+   * pour repondre a « ou est mon colis » : elle le saisissait a la declaration
+   * et ne le revoyait NULLE PART avant cette story.
+   */
+  test("affiche le transporteur, le numero de suivi et le dernier statut", async ({
+    page,
+  }) => {
+    await page.goto(CHEMIN);
+
+    const acheminement = page
+      .locator("section")
+      .filter({ hasText: "Acheminement du colis" });
+
+    await expect(acheminement).toContainText("Sendcloud");
+    await expect(acheminement).toContainText(COMMANDE_SUIVIE_TEST.numeroSuivi);
+    await expect(acheminement).toContainText(
+      COMMANDE_SUIVIE_TEST.statutTransporteur,
+    );
+  });
+
+  /*
+   * CRITERE 3, ET C'EST LE PLUS COUTEUX S'IL EST FAUX. Le statut amorce est un
+   * FAUX AMI : « Awaiting customer pickup » annonce un colis disponible au
+   * relais, que personne n'a encore retire. Le presenter comme une livraison
+   * ferait croire a l'exploitante qu'un delai de retractation court, alors
+   * qu'il n'a pas commence : l'article L221-20 le porte a DOUZE MOIS quand
+   * l'information sur ce droit est incorrecte.
+   *
+   * L'ABSENCE EST DITE EXPLICITEMENT plutot que laissee vide, critere 2 : une
+   * ligne manquante se lirait comme un oubli d'affichage.
+   */
+  test("ne presente pas un colis en attente de retrait comme livre", async ({
+    page,
+  }) => {
+    await page.goto(CHEMIN);
+
+    const acheminement = page
+      .locator("section")
+      .filter({ hasText: "Acheminement du colis" });
+
+    await expect(acheminement).toContainText("Pas encore constatée");
+    await expect(acheminement).not.toContainText("Livrée le");
+  });
+
+  /*
+   * CRITERE 5, LE REBASCULEMENT SE VOIT SANS QUE RIEN NE SOIT REECRIT.
+   * `Commande.modeLivraison` reste `DOMICILE`, ce que le client a paye, et
+   * l'expedition porte `POINT_RELAIS` : c'est l'ECART qui porte l'information,
+   * ADR-025, et il n'existe aucun autre endroit ou il se lise.
+   */
+  test("signale un mode d'expedition different de celui qui a ete paye", async ({
+    page,
+  }) => {
+    await page.goto(CHEMIN);
+
+    const acheminement = page
+      .locator("section")
+      .filter({ hasText: "Acheminement du colis" });
+
+    await expect(acheminement).toContainText("Point relais");
+    await expect(acheminement).toContainText("À domicile");
+    await expect(acheminement).toContainText("La commande n'est pas modifiée");
+  });
+
+  /*
+   * CRITERE 4, LA VALEUR PROPRE DE CET ECRAN. `synchroniseA` est stocke pour
+   * detecter un suivi arrete, et personne ne le regarde si rien ne le montre :
+   * un colis perdu reste a la charge de l'exploitante, article L216-4.
+   *
+   * LE JEU DE DONNEES PORTE TROIS JOURS, verifie par l'amorce elle-meme, ce qui
+   * depasse le seuil de vingt-quatre heures.
+   */
+  test("signale un suivi qui n'avance plus", async ({ page }) => {
+    await page.goto(CHEMIN);
+
+    await expect(page.getByText("Suivi non actualisé depuis le")).toBeVisible();
   });
 });

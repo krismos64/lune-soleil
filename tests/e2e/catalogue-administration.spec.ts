@@ -50,8 +50,16 @@ const ECRANS = [
    * quelles commandes existent.
    */
   {
+    /*
+     * `Suivi` JUSQU'A LS-216, ET CE NOM ETAIT DEVENU INEXISTANT. La section a
+     * ete renommee « Statut de la commande », le mot « Suivi » designant
+     * desormais l'acheminement du colis. Une assertion d'ABSENCE portant sur un
+     * titre qui n'existe plus reste verte quoi qu'il arrive, y compris sur une
+     * fuite reelle : c'est le motif « valeurs qui coincident » du depot, ou un
+     * test de refus cesse d'exercer son refus en gardant son nom.
+     */
     chemin: "/administration/commandes/3f2504e0-4f89-41d3-9a0c-0305e82c3302",
-    titre: "Suivi",
+    titre: "Statut de la commande",
   },
 ];
 

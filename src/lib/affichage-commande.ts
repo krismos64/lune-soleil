@@ -158,3 +158,60 @@ export function formaterOrigine(origine: OrigineEcriture): string {
 export function traduireStatut(valeur: string): string {
   return LIBELLES_STATUT[valeur as keyof typeof LIBELLES_STATUT] ?? valeur;
 }
+
+/**
+ * Seuil au-dela duquel un suivi est signale comme bloque, LS-58 et LS-216.
+ *
+ * VINGT-QUATRE HEURES, ET LE CHIFFRE SE DEDUIT DU CYCLE. La tache
+ * `suivi-livraison` tourne toutes les heures, donc un suivi sain est
+ * re-synchronise au pire une heure apres le precedent. Vingt-quatre laisse
+ * passer vingt-trois cycles rates avant d'alerter : assez large pour qu'une
+ * panne breve du transporteur ne fasse pas clignoter l'ecran, assez court pour
+ * qu'un colis vraiment bloque se voie le lendemain.
+ *
+ * IL BORNE L'AGE DE `synchroniseA`, JAMAIS CELUI DE L'EXPEDITION. Une
+ * expedition partie il y a trois jours dont le suivi a ete lu il y a dix
+ * minutes est a jour : ce qui est mesure est la fraicheur de la LECTURE, pas
+ * l'anciennete du colis.
+ */
+export const SEUIL_SUIVI_BLOQUE_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Etat de fraicheur du suivi d'une expedition, LS-58 critere 4, LS-216 critere 4.
+ *
+ * TROIS ETATS ET NON DEUX, et le troisieme est celui qui compte. `jamais` dit
+ * qu'aucun statut n'a jamais ete lu, ce qui arrive normalement le jour ou le
+ * colis est remis au transporteur, et anormalement quand le numero de suivi est
+ * faux. `bloque` dit qu'une lecture a eu lieu puis s'est arretee. Les confondre
+ * ferait alerter sur toute expedition du jour meme.
+ */
+export type FraicheurSuivi = "jamais" | "bloque" | "frais";
+
+/**
+ * Depuis quand le suivi de cette expedition n'a-t-il pas ete lu ?
+ *
+ * `livreA` REND TOUJOURS `frais`, ET C'EST LA REGLE QUI EVITE UNE FAUSSE
+ * ALERTE. `listerASuivre` exclut les expeditions livrees : leur `synchroniseA`
+ * cesse donc d'avancer par construction, et sans cette garde toute commande
+ * livree serait signalee « bloquee » vingt-quatre heures plus tard. Le suivi
+ * d'un colis remis n'a plus rien a apprendre, invariant du repository.
+ *
+ * `maintenant` EST INJECTABLE pour que le test fixe l'instant plutot que de
+ * dormir : une comparaison de dates se prouve sur des valeurs choisies.
+ */
+export function fraicheurSuivi(
+  expedition: { livreA: Date | null; synchroniseA: Date | null },
+  maintenant: Date = new Date(),
+): FraicheurSuivi {
+  if (expedition.livreA !== null) {
+    return "frais";
+  }
+
+  if (expedition.synchroniseA === null) {
+    return "jamais";
+  }
+
+  const age = maintenant.getTime() - expedition.synchroniseA.getTime();
+
+  return age > SEUIL_SUIVI_BLOQUE_MS ? "bloque" : "frais";
+}
