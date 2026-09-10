@@ -29,7 +29,11 @@ import { journaliserErreur } from "@/lib/journal";
 import type { StatutCommande } from "@/generated/prisma/enums";
 import { EntreeInvalideError, schemaIdentifiant } from "@/lib/validation";
 import { exigerRole } from "@/services/autorisation";
-import { declarerExpedition } from "@/services/expedition";
+import {
+  creerEtiquetteExpedition,
+  declarerExpedition,
+} from "@/services/expedition";
+import { creerClientExpeditionSendcloud } from "@/integrations/sendcloud/expedition";
 
 /**
  * Ce que l'interface recoit, jamais une exception.
@@ -162,6 +166,133 @@ export async function expedier(
     }
 
     journaliserErreur("Déclaration d'expédition impossible", erreur, {});
+
+    return { statut: "INDISPONIBLE" };
+  }
+}
+
+/**
+ * Ce que l'interface recoit apres une creation d'etiquette, LS-218.
+ *
+ * ELLE REPREND LES REFUS DE `ResultatExpedition` et en ajoute trois qui lui
+ * sont propres. Les partager ferait perdre la nuance la plus couteuse :
+ * `TRANSPORTEUR_INDISPONIBLE` ne dit PAS « rien ne s'est passe », il dit
+ * « l'etat est inconnu », et l'ecran doit inviter a verifier chez le
+ * transporteur plutot qu'a recliquer.
+ */
+export type ResultatEtiquette =
+  /**
+   * `identifiantColis` OUVRE LE LIEN DE TELECHARGEMENT, il n'est pas
+   * decoratif : l'etiquette n'etant pas stockee, la route la relit chez le
+   * transporteur par cet identifiant. Sans lui, l'exploitante devrait
+   * rafraichir et retrouver le colis a la main.
+   */
+  | { statut: "SUCCES"; numeroSuivi: string; identifiantColis: number }
+  | { statut: "SESSION_ABSENTE" }
+  | { statut: "INVALIDE"; message: string }
+  | { statut: "INTROUVABLE" }
+  | { statut: "STATUT_INCOMPATIBLE"; statutActuel: StatutCommande }
+  | { statut: "DEJA_EXPEDIEE" }
+  /** Le transporteur n'a pas repondu : l'etat du colis chez lui est INCONNU. */
+  | { statut: "TRANSPORTEUR_INDISPONIBLE" }
+  /** L'adresse figee de la commande ne porte pas ce que l'API exige. */
+  | { statut: "ADRESSE_INEXPLOITABLE"; message: string }
+  /** Le mode exige un point de retrait que la commande ne porte pas. */
+  | { statut: "POINT_RETRAIT_MANQUANT" }
+  | { statut: "INDISPONIBLE" };
+
+/**
+ * Cree le colis chez le transporteur et son etiquette, sur geste de
+ * l'exploitante. LS-218.
+ *
+ * CETTE ACTION DEPENSE DE L'ARGENT REEL, seule du projet dans ce cas :
+ * Sendcloud n'a pas de mode test, et chaque appel abouti cree un envoi FACTURE.
+ * D'ou trois choix qui la distinguent de `expedier` :
+ *
+ *   - la garde de role est la PREMIERE instruction, comme partout, mais son
+ *     enjeu est ici financier autant que confidentiel
+ *   - aucune saisie n'est lue du formulaire hormis l'identifiant : tout vient
+ *     de la commande, critere 1, ce qui supprime la ressaisie de l'adresse
+ *   - le client transporteur est construit ICI et non injecte depuis l'ecran :
+ *     un client venu de l'interface laisserait choisir a l'appelant vers quel
+ *     serveur partir
+ *
+ * ELLE N'EST APPELEE PAR AUCUNE TACHE ni aucun webhook, deliberement. Une
+ * creation automatique acheterait une etiquette sur une commande que
+ * l'exploitante n'a pas encore preparee.
+ */
+export async function creerEtiquette(
+  formulaire: FormData,
+): Promise<ResultatEtiquette> {
+  const identite = await exigerRole(await headers());
+
+  if (identite === null) {
+    return { statut: "SESSION_ABSENTE" };
+  }
+
+  const commandeId = formulaire.get("commandeId");
+
+  if (typeof commandeId !== "string") {
+    return { statut: "INVALIDE", message: "Demande non valide." };
+  }
+
+  const commande = schemaIdentifiant.safeParse(commandeId);
+
+  if (!commande.success) {
+    return { statut: "INVALIDE", message: "Demande non valide." };
+  }
+
+  try {
+    /*
+     * LES CLES SONT LUES ICI, AU BORD, et jamais portees plus loin. Leur
+     * absence est une panne de configuration et non un refus metier : elle se
+     * journalise et rend `INDISPONIBLE`, ce qui laisse la saisie manuelle
+     * utilisable, critere 6.
+     */
+    const clePublique = process.env.SENDCLOUD_PUBLIC_KEY;
+    const cleSecrete = process.env.SENDCLOUD_SECRET_KEY;
+
+    if (!clePublique || !cleSecrete) {
+      journaliserErreur(
+        "création d'étiquette impossible, configuration Sendcloud incomplète",
+        new Error("SENDCLOUD_PUBLIC_KEY ou SENDCLOUD_SECRET_KEY absente"),
+        {},
+      );
+
+      return { statut: "INDISPONIBLE" };
+    }
+
+    const issue = await creerEtiquetteExpedition({
+      commandeId: commande.data,
+      acteurId: identite.utilisateurId,
+      clientTransporteur: creerClientExpeditionSendcloud({
+        clePublique,
+        cleSecrete,
+      }),
+    });
+
+    if (issue.statut === "CREEE") {
+      /*
+       * `"layout"` POUR LA MEME RAISON QUE `expedier`, regle C37 : la commande
+       * passe `EXPEDIEE`, ce qui deplace trois comptages de la barre.
+       */
+      revalidatePath(CHEMIN_EXPEDITIONS, "layout");
+      revalidatePath(`${CHEMIN_COMMANDES}/${commande.data}`);
+
+      return {
+        statut: "SUCCES",
+        numeroSuivi: issue.numeroSuivi,
+        identifiantColis: issue.identifiantColis,
+      };
+    }
+
+    return issue;
+  } catch (erreur) {
+    if (erreur instanceof EntreeInvalideError) {
+      return { statut: "INVALIDE", message: "Demande non valide." };
+    }
+
+    journaliserErreur("Création d'étiquette impossible", erreur, {});
 
     return { statut: "INDISPONIBLE" };
   }
