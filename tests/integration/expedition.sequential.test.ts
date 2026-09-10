@@ -26,11 +26,15 @@ import { inject } from "vitest";
 import { creerVarianteEnStock } from "../aide/donnees-test";
 import { VARIABLE_URL_TEST } from "../aide/base-ephemere";
 import type { EvenementPaiement } from "@/integrations/stripe/evenements";
+import type { ClientExpedition } from "@/integrations/sendcloud/expedition";
+import type { IssueEtiquette } from "@/services/expedition";
+import { TransporteurIndisponibleError } from "@/integrations/sendcloud/index";
 
 let client: Client;
 let passerCommande: typeof import("@/services/commande").passerCommande;
 let changerStatutCommande: typeof import("@/services/administration-commandes").changerStatutCommande;
 let declarerExpedition: typeof import("@/services/expedition").declarerExpedition;
+let creerEtiquetteExpedition: typeof import("@/services/expedition").creerEtiquetteExpedition;
 let lireExpedition: typeof import("@/services/expedition").lireExpedition;
 let listerCommandesAExpedier: typeof import("@/services/expedition").listerCommandesAExpedier;
 let traiterEvenementPaiement: typeof import("@/services/webhook-paiement").traiterEvenementPaiement;
@@ -135,8 +139,12 @@ beforeAll(async () => {
   ({ passerCommande } = await import("@/services/commande"));
   ({ changerStatutCommande } =
     await import("@/services/administration-commandes"));
-  ({ declarerExpedition, lireExpedition, listerCommandesAExpedier } =
-    await import("@/services/expedition"));
+  ({
+    declarerExpedition,
+    creerEtiquetteExpedition,
+    lireExpedition,
+    listerCommandesAExpedier,
+  } = await import("@/services/expedition"));
   ({ traiterEvenementPaiement } = await import("@/services/webhook-paiement"));
   ({ synchroniserSuivi } = await import("@/services/suivi-livraison"));
 
@@ -1120,5 +1128,279 @@ describe("synchroniserSuivi, panne du fournisseur", () => {
       [commandeId],
     );
     expect(rows[0]?.synchronise_a).toBeNull();
+  });
+});
+
+/**
+ * CREATION D'ETIQUETTE PAR L'API, LS-218.
+ *
+ * AUCUNE ETIQUETTE REELLE N'EST CREEE, et c'est une exigence, critere 7 :
+ * Sendcloud n'a PAS de mode test, chaque creation aboutie est FACTUREE. Le
+ * client transporteur est injecte, et l'implementation reelle n'est jamais
+ * jointe par ce fichier.
+ *
+ * CE QUI SE PROUVE ICI EST L'ORDRE DES TROIS ETAPES, qui est le coeur du
+ * service : verifier en base, PUIS payer, PUIS ecrire. Verifier avant de payer
+ * est la seule protection contre une etiquette achetee pour rien, et aucun test
+ * unitaire ne peut le montrer, la garde vivant en base.
+ */
+describe("creerEtiquetteExpedition", () => {
+  /** Un transporteur simule qui compte ses appels, sans reseau ni frais. */
+  function transporteurSimule(
+    numeroSuivi = "3STEST218000001",
+  ): ClientExpedition & { appels: number } {
+    const simule = {
+      appels: 0,
+      async creer() {
+        simule.appels += 1;
+        return { identifiantColis: 4242, numeroSuivi };
+      },
+      async lireEtiquette() {
+        return new ArrayBuffer(4);
+      },
+    };
+
+    return simule;
+  }
+
+  it("cree le colis et ecrit l'expedition avec le numero rendu", async () => {
+    const commandeId = await commanderEtPreparer();
+    const transporteur = transporteurSimule("3SABCD777");
+
+    const issue = await creerEtiquetteExpedition({
+      commandeId,
+      acteurId: administratriceId,
+      clientTransporteur: transporteur,
+    });
+
+    expect(issue).toEqual({
+      statut: "CREEE",
+      numeroSuivi: "3SABCD777",
+      identifiantColis: 4242,
+    });
+
+    const { rows } = await client.query<{
+      numeroSuivi: string;
+      transporteur: string;
+    }>(
+      `SELECT numero_suivi AS "numeroSuivi", transporteur
+         FROM expedition WHERE commande_id = $1`,
+      [commandeId],
+    );
+
+    expect(rows[0]).toEqual({
+      numeroSuivi: "3SABCD777",
+      transporteur: "Sendcloud",
+    });
+    expect(await lireStatut(commandeId)).toBe("EXPEDIEE");
+  });
+
+  /*
+   * L'ORDRE EST LE POINT DE LA STORY, ET CE TEST LE PROUVE. Une commande deja
+   * expediee ne doit RIEN coûter : si l'appel partait avant la garde, une
+   * etiquette serait achetee puis jetee, et Sendcloud ne rembourse pas.
+   *
+   * `appels` A ZERO EST L'ASSERTION QUI COMPTE. Verifier seulement le refus
+   * laisserait passer un service qui paie d'abord et refuse ensuite.
+   */
+  it("n'appelle PAS le transporteur sur une commande deja expediee", async () => {
+    const commandeId = await commanderEtPreparer();
+
+    await declarerExpedition({
+      commandeId,
+      saisie: SAISIE_EXPEDITION,
+      acteurId: administratriceId,
+    });
+
+    const transporteur = transporteurSimule();
+
+    const issue = await creerEtiquetteExpedition({
+      commandeId,
+      acteurId: administratriceId,
+      clientTransporteur: transporteur,
+    });
+
+    expect(issue).toEqual({ statut: "DEJA_EXPEDIEE" });
+    expect(transporteur.appels).toBe(0);
+  });
+
+  /*
+   * MEME MOTIF SUR UN STATUT INCOMPATIBLE. Une commande en attente de paiement
+   * n'a rien a expedier : payer une etiquette dessus serait une perte seche.
+   */
+  it("n'appelle PAS le transporteur sur une commande non expediable", async () => {
+    const { varianteId } = await creerVarianteEnStock(client);
+    const { commandeId } = await passerCommande({
+      lignesCookie: [{ varianteId, quantite: 1 }],
+      saisie: SAISIE_DOMICILE,
+      configuration: CONFIGURATION,
+    });
+
+    const transporteur = transporteurSimule();
+
+    const issue = await creerEtiquetteExpedition({
+      commandeId,
+      acteurId: administratriceId,
+      clientTransporteur: transporteur,
+    });
+
+    expect(issue).toMatchObject({ statut: "STATUT_INCOMPATIBLE" });
+    expect(transporteur.appels).toBe(0);
+  });
+
+  it("n'appelle PAS le transporteur sur une commande inexistante", async () => {
+    const transporteur = transporteurSimule();
+
+    const issue = await creerEtiquetteExpedition({
+      commandeId: randomUUID(),
+      acteurId: administratriceId,
+      clientTransporteur: transporteur,
+    });
+
+    expect(issue).toEqual({ statut: "INTROUVABLE" });
+    expect(transporteur.appels).toBe(0);
+  });
+
+  /*
+   * UNE PANNE DU TRANSPORTEUR N'ECRIT RIEN ET NE FAIT PAS AVANCER LA COMMANDE,
+   * critere 6 : la saisie manuelle reste utilisable, meme regle de degradation
+   * qu'ADR-025. Une commande passee `EXPEDIEE` sans expedition serait pire que
+   * l'echec lui-meme, l'exploitante la croyant partie.
+   */
+  it("laisse la commande intacte quand le transporteur est indisponible", async () => {
+    const commandeId = await commanderEtPreparer();
+
+    const enPanne: ClientExpedition = {
+      async creer() {
+        throw new TransporteurIndisponibleError("panne simulée");
+      },
+      async lireEtiquette() {
+        throw new TransporteurIndisponibleError("panne simulée");
+      },
+    };
+
+    const issue = await creerEtiquetteExpedition({
+      commandeId,
+      acteurId: administratriceId,
+      clientTransporteur: enPanne,
+    });
+
+    expect(issue).toEqual({ statut: "TRANSPORTEUR_INDISPONIBLE" });
+    expect(await lireStatut(commandeId)).toBe("EN_PREPARATION");
+
+    const { rows } = await client.query(
+      "SELECT count(*)::text AS nombre FROM expedition WHERE commande_id = $1",
+      [commandeId],
+    );
+    expect(rows[0]).toEqual({ nombre: "0" });
+  });
+
+  /*
+   * L'ADRESSE PART DE LA COMMANDE, critere 1, et c'est le gain central de la
+   * story : l'exploitante la RESSAISIT aujourd'hui chez le transporteur, et une
+   * adresse fautive produit un colis perdu dont le risque reste a sa charge.
+   */
+  it("envoie l'adresse figee de la commande, jamais une saisie", async () => {
+    const commandeId = await commanderEtPreparer();
+    let recue: unknown;
+
+    const espion: ClientExpedition = {
+      async creer(demande) {
+        recue = demande;
+        return { identifiantColis: 1, numeroSuivi: "3S1" };
+      },
+      async lireEtiquette() {
+        return new ArrayBuffer(0);
+      },
+    };
+
+    await creerEtiquetteExpedition({
+      commandeId,
+      acteurId: administratriceId,
+      clientTransporteur: espion,
+    });
+
+    expect(recue).toMatchObject({
+      mode: "DOMICILE",
+      adresse: {
+        ligne1: SAISIE_DOMICILE.adresse.ligne1,
+        codePostal: SAISIE_DOMICILE.adresse.codePostal,
+        ville: SAISIE_DOMICILE.adresse.ville,
+      },
+    });
+  });
+
+  /*
+   * LE MODE VIENT DE LA COMMANDE ET N'EST JAMAIS DEVINE, critere 4. Le laisser
+   * choisir a l'expedition ferait partir un colis par un mode qui n'a pas ete
+   * facture au client.
+   */
+  it("porte le mode et la reference de la commande", async () => {
+    const commandeId = await commanderEtPreparer();
+    let recue: { reference?: string; mode?: string } = {};
+
+    const espion: ClientExpedition = {
+      async creer(demande) {
+        recue = demande;
+        return { identifiantColis: 1, numeroSuivi: "3S1" };
+      },
+      async lireEtiquette() {
+        return new ArrayBuffer(0);
+      },
+    };
+
+    await creerEtiquetteExpedition({
+      commandeId,
+      acteurId: administratriceId,
+      clientTransporteur: espion,
+    });
+
+    const { rows } = await client.query<{ numero: string }>(
+      "SELECT numero FROM commande WHERE id = $1",
+      [commandeId],
+    );
+
+    expect(recue.reference).toBe(rows[0]!.numero);
+    expect(recue.mode).toBe("DOMICILE");
+  });
+
+  /*
+   * DEUX CLICS SIMULTANES N'ECRIVENT QU'UNE EXPEDITION, critere 5. La garde vit
+   * en base, `commande_id` etant unique : les deux passent la verification, les
+   * deux appellent le transporteur, et le second echoue a l'ecriture.
+   *
+   * CE TEST NE PRETEND PAS QUE RIEN N'EST PAYE EN TROP, et c'est important : la
+   * fenetre vit chez le fournisseur, aucun verrou applicatif ne la ferme. Ce
+   * qu'il prouve est que la BASE reste coherente, une seule expedition et un
+   * seul statut, ce qui est la garantie tenable.
+   */
+  it("deux creations concurrentes n'ecrivent qu'une expedition", async () => {
+    const commandeId = await commanderEtPreparer();
+
+    const [a, b] = await Promise.allSettled([
+      creerEtiquetteExpedition({
+        commandeId,
+        acteurId: administratriceId,
+        clientTransporteur: transporteurSimule("3SA"),
+      }),
+      creerEtiquetteExpedition({
+        commandeId,
+        acteurId: administratriceId,
+        clientTransporteur: transporteurSimule("3SB"),
+      }),
+    ]);
+
+    const issues = [a, b]
+      .filter((r) => r.status === "fulfilled")
+      .map((r) => (r as PromiseFulfilledResult<IssueEtiquette>).value.statut);
+
+    expect(issues).toContain("CREEE");
+    expect(issues.filter((s) => s === "CREEE")).toHaveLength(1);
+
+    const { rows } = await client.query(
+      "SELECT count(*)::text AS nombre FROM expedition WHERE commande_id = $1",
+      [commandeId],
+    );
+    expect(rows[0]).toEqual({ nombre: "1" });
   });
 });
