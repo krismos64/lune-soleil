@@ -617,6 +617,39 @@ describe("acheminement du colis sur le detail de commande", () => {
   });
 
   /*
+   * L'EXPEDITION SANS NUMERO DE SUIVI, cas trouve par la revue frontend le
+   * 10 septembre 2026 et qui N'ETAIT COUVERT PAR RIEN.
+   *
+   * CE N'EST PAS UN ETAT TRANSITOIRE, et c'est ce qui le rend couteux.
+   * `listerASuivre` filtre sur `numeroSuivi: { not: null }`, donc la tache
+   * horaire ne lit JAMAIS cette expedition : `synchroniseA` reste nul pour
+   * toujours, sa reception ne sera pas constatee, et ni le delai de
+   * retractation ni l'invitation a deposer un avis ne demarreront.
+   *
+   * LE NUMERO EST FACULTATIF A LA DECLARATION, choix assume du formulaire
+   * d'expedition, donc ce cas s'atteint en trois clics. La premiere version de
+   * l'ecran gardait son signalement derriere `numeroSuivi !== null`, ce qui
+   * l'eteignait exactement sur l'expedition qui en a le plus besoin.
+   */
+  it("remonte une expedition sans numero de suivi, jamais synchronisable", async () => {
+    const { commandeId } = await commanderUnePiece();
+    await confirmer(commandeId);
+
+    await poserExpedition(commandeId, {
+      numeroSuivi: null,
+      statutTransporteur: null,
+      synchroniseA: null,
+    });
+
+    const detail = await lireDetailCommande(commandeId);
+
+    expect(detail?.expedition).not.toBeNull();
+    expect(detail?.expedition?.numeroSuivi).toBeNull();
+    expect(detail?.expedition?.synchroniseA).toBeNull();
+    expect(detail?.expedition?.livreA).toBeNull();
+  });
+
+  /*
    * UNE COMMANDE SANS COLIS PARTI N'A PAS D'EXPEDITION, et l'ecran doit pouvoir
    * ne rien afficher plutot qu'un titre suivi d'une liste vide. Le cas est le
    * plus frequent de tous : toute commande en preparation est dans cet etat.

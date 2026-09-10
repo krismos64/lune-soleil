@@ -553,30 +553,51 @@
  * ACHEMINEMENT DU COLIS, LS-216. Distinct de la section « Statut de la
  * commande » voisine, qui porte les transitions de statut metier, regle S9, et
  * qui s'appelait « Suivi » avant cette story.
+ *
+ * ELLE SE COMBINE A `.detail` PLUTOT QUE DE LA RECOPIER, correction de la revue
+ * frontend. La premiere version redeclarait `space-between` et l'alignement, ce
+ * qui PERDAIT l'attenuation de `.detail dt` : « Transporteur » et « Sendcloud »
+ * s'affichaient dans la meme couleur, quand les sections Articles et Paiement
+ * juste au-dessus atenuent leur libelle. Une incoherence a l'interieur d'un
+ * meme ecran.
+ *
+ * ELLE N'AJOUTE DONC QUE LE RETOUR A LA LIGNE, que `.detail` n'a pas : ses
+ * valeurs sont des montants courts, jamais un numero de suivi de quinze
+ * caracteres sans espace.
  */
 .ligneAcheminement {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--ls-space-3);
   flex-wrap: wrap;
 }
 
 /*
  * LA VALEUR PASSE A LA LIGNE PLUTOT QUE DE DEBORDER. Un numero de suivi
- * Sendcloud fait une vingtaine de caracteres sans espace : a 320 px, le
+ * Sendcloud fait une quinzaine de caracteres sans espace : a 320 px, le
  * `space-between` seul le poussait hors de la carte. `anywhere` et non
  * `break-word`, qui ne coupe pas un mot unique depassant sa boite.
+ *
+ * `margin-left: auto` GARDE LA VALEUR A DROITE APRES RETOUR A LA LIGNE, et
+ * c'est ce que la revue frontend a signale : seule sur sa ligne, une boite
+ * flex est placee A GAUCHE par `space-between`, et le `text-align: right`
+ * herite de `.detail dd` n'agit qu'a l'INTERIEUR d'une boite dimensionnee par
+ * son contenu. Les deux ensemble tiennent l'alignement dans les deux cas.
  */
 .valeurAcheminement {
   overflow-wrap: anywhere;
-  text-align: right;
+  margin-left: auto;
 }
 
 /*
  * SIGNALEMENT D'UN SUIVI BLOQUE, critere 4. C'est la valeur propre de cet
  * ecran : `synchroniseA` est stocke pour detecter un suivi arrete, et personne
- * ne le regarde si rien ne le montre. Un colis perdu reste a la charge de
- * l'exploitante, article L216-2.
+ * ne le regarde si rien ne le montre. Un colis perdu reste a la charge du
+ * VENDEUR jusqu'a la remise, Code de la consommation.
+ *
+ * AUCUN NUMERO D'ARTICLE N'EST CITE ICI, DELIBEREMENT. La premiere version de
+ * cette story en citait deux differents pour le meme fait, L216-2 et L216-4,
+ * tous deux ecrits de memoire : le depot ne porte aucune source qui tranche, et
+ * `CLAUDE.md` interdit de decider d'une obligation juridique sans verifier aux
+ * sources. Le principe est certain, sa numerotation ne l'est pas ; motif
+ * « numerotation juridique perimee », D111-17 devenu D111-10 en juillet 2024.
  *
  * `--ls-error` ET NON `--ls-warning`, TROISIEME FOIS SUR CE FICHIER, et la
  * mesure est refaite plutot que recopiee : `--ls-warning` donne 4,04:1 sur
@@ -587,13 +608,21 @@
  *
  * LE FOND EST SABLE ET LE TEXTE `--ls-error`, jamais `--ls-text-muted` qui y
  * tomberait a 4,35:1, C31. Le sable est le fond piegeux du projet.
+ *
+ * LA GRAVITE NE SE TRANSMET PAS PAR LA COULEUR SEULE, correction de la revue
+ * frontend et principe deja applique par `.sectionDanger` de l'espace client.
+ * Ce bloc et `.reportLivraison` etaient structurellement IDENTIQUES, meme fond,
+ * meme liseré de 3 px, seule la teinte les separait : deux encadres de meme
+ * rang pour qui ne percoit pas la difference de teinte. Le liseré passe donc a
+ * 5 px et le texte en gras, deux marqueurs non chromatiques.
  */
 .suiviBloque {
   margin: var(--ls-space-3) 0 0;
   padding: var(--ls-space-3);
-  border-left: 3px solid var(--ls-error);
+  border-left: 5px solid var(--ls-error);
   background: var(--ls-surface-sand);
   color: var(--ls-error);
+  font-weight: 600;
 }
 
 /*
@@ -602,7 +631,9 @@
  *
  * `--ls-text` SUR SABLE, 10,83:1 mesure. Le mode execute est une information
  * neutre et non une alerte : lui donner la couleur d'erreur ferait lire un
- * incident la ou le colis avance normalement vers un relais.
+ * incident la ou le colis avance normalement vers un relais. Son liseré reste
+ * a 3 px et son texte en graisse normale, ce qui le distingue du signalement
+ * ci-dessus autrement que par la teinte.
  */
 .reportLivraison {
   margin: var(--ls-space-3) 0 0;

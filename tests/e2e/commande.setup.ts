@@ -28,6 +28,7 @@ import { Client } from "pg";
 import { encoderCommandeEnCours } from "@/lib/commande-cookie";
 import {
   COMMANDE_A_EXPEDIER_TEST,
+  COMMANDE_SANS_SUIVI_TEST,
   COMMANDE_SUIVIE_TEST,
   DEMANDE_RETRACTATION_TEST,
   COMMANDE_FACTUREE_TEST,
@@ -857,6 +858,122 @@ preparation(
       );
 
       /*
+       * LA COMMANDE EXPEDIEE SANS NUMERO DE SUIVI, LS-216 et LS-58. Elle rend
+       * les deux paragraphes de signalement qu'aucune autre donnee de test ne
+       * produit : le numero manquant est DEFINITIF, `listerASuivre` filtrant
+       * sur `numeroSuivi: { not: null }`.
+       */
+      await client.query(
+        `INSERT INTO categorie (id, nom, slug, ordre, cree_a)
+       VALUES ($1, 'TEST Catégorie LS217', 'test-categorie-ls217', 9217, now())
+       ON CONFLICT (id) DO NOTHING`,
+        [COMMANDE_SANS_SUIVI_TEST.categorieId],
+      );
+
+      await client.query(
+        `INSERT INTO produit (id, categorie_id, nom, slug, statut, cree_a, modifie_a)
+       VALUES ($1, $2, 'TEST Pièce sans suivi', 'test-piece-sans-suivi-ls217',
+               'BROUILLON', now(), now())
+       ON CONFLICT (id) DO NOTHING`,
+        [
+          COMMANDE_SANS_SUIVI_TEST.produitId,
+          COMMANDE_SANS_SUIVI_TEST.categorieId,
+        ],
+      );
+
+      await client.query(
+        `INSERT INTO variante (
+         id, produit_id, reference, libelle, prix_centimes,
+         quantite_physique, quantite_reservee, vente_web_activee, cree_a
+       )
+       VALUES ($1, $2, 'TEST-LS217', 'TEST Déclinaison', 3300, 1, 0, true, now())
+       ON CONFLICT (id) DO NOTHING`,
+        [
+          COMMANDE_SANS_SUIVI_TEST.varianteId,
+          COMMANDE_SANS_SUIVI_TEST.produitId,
+        ],
+      );
+
+      await client.query(
+        `INSERT INTO commande (
+         id, numero, statut, email_normalise, nom_client,
+         adresse_livraison, adresse_facturation,
+         sous_total_centimes, mode_livraison, frais_port_centimes,
+         total_centimes, montant_taxe_centimes,
+         cgv_acceptees_a, cgv_version, cree_a
+       )
+       VALUES (
+         $1, $2, 'EXPEDIEE', 'e2e-ls217@exemple.test', 'TEST Camille',
+         $3::jsonb, $3::jsonb,
+         3300, 'DOMICILE', 749,
+         4049, 0,
+         now(), 'test', now()
+       )
+       ON CONFLICT (id) DO NOTHING`,
+        [
+          COMMANDE_SANS_SUIVI_TEST.commandeId,
+          COMMANDE_SANS_SUIVI_TEST.numero,
+          JSON.stringify({
+            nom: "TEST Camille",
+            ligne1: "12 rue de Test",
+            codePostal: "29200",
+            ville: "TESTVILLE",
+            pays: "FR",
+          }),
+        ],
+      );
+
+      await client.query(
+        `INSERT INTO ligne_commande (
+         id, commande_id, variante_id, reference_figee,
+         libelle_produit_fige, libelle_variante_fige,
+         prix_fige_centimes, quantite
+       )
+       VALUES ($1, $2, $3, 'TEST-LS217', 'TEST Pièce sans suivi',
+               'TEST Déclinaison', 3300, 1)
+       ON CONFLICT (id) DO NOTHING`,
+        [
+          COMMANDE_SANS_SUIVI_TEST.ligneId,
+          COMMANDE_SANS_SUIVI_TEST.commandeId,
+          COMMANDE_SANS_SUIVI_TEST.varianteId,
+        ],
+      );
+
+      await client.query(
+        `INSERT INTO paiement (
+         id, commande_id, statut, montant_centimes,
+         montant_rembourse_centimes, identifiant_fournisseur, confirme_a, cree_a
+       )
+       VALUES ($1, $2, 'REUSSI', 4049, 0, 'cs_test_ls217', now(), now())
+       ON CONFLICT (id) DO NOTHING`,
+        [
+          COMMANDE_SANS_SUIVI_TEST.paiementId,
+          COMMANDE_SANS_SUIVI_TEST.commandeId,
+        ],
+      );
+
+      /*
+       * `numero_suivi` NUL, ET TOUT CE QUI EN DECOULE. `statut_transporteur` et
+       * `synchronise_a` restent nuls PAR CONSEQUENCE et non par choix : la
+       * tache horaire ne lira jamais cette ligne.
+       */
+      await client.query(
+        `INSERT INTO expedition (
+         id, commande_id, transporteur, mode, numero_suivi, point_relais_id,
+         statut_transporteur, expedie_a, livre_a, synchronise_a, cree_a
+       )
+       VALUES (
+         $1, $2, 'Sendcloud', 'DOMICILE', NULL, NULL,
+         NULL, now() - interval '2 days', NULL, NULL, now()
+       )
+       ON CONFLICT (id) DO NOTHING`,
+        [
+          COMMANDE_SANS_SUIVI_TEST.expeditionId,
+          COMMANDE_SANS_SUIVI_TEST.commandeId,
+        ],
+      );
+
+      /*
        * LE JEU DE DONNEES EST VERIFIE PLUTOT QUE SUPPOSE, meme motif que le
        * compte de la file plus bas. Un `ON CONFLICT DO NOTHING` qui n'ecrit
        * rien laisserait les tests d'acheminement mesurer une section absente,
@@ -894,6 +1011,34 @@ preparation(
         throw new Error(
           `Commande suivie LS-216 : suivi vieux de ${suivie[0]!.ageHeures} h, ` +
             "plus de 24 attendues. Le signalement de suivi bloque ne serait pas rendu.",
+        );
+      }
+
+      /*
+       * LA COMMANDE SANS NUMERO EST VERIFIEE AUSSI, et sur le champ qui compte :
+       * un `numero_suivi` renseigne par megarde eteindrait les deux paragraphes
+       * de signalement, et leurs tests passeraient en ne prouvant rien.
+       */
+      const { rows: sansSuivi } = await client.query<{
+        numeroSuivi: string | null;
+      }>(
+        `SELECT e.numero_suivi AS "numeroSuivi"
+           FROM commande c JOIN expedition e ON e.commande_id = c.id
+          WHERE c.id = $1`,
+        [COMMANDE_SANS_SUIVI_TEST.commandeId],
+      );
+
+      if (sansSuivi.length === 0) {
+        throw new Error(
+          "Commande sans suivi LS-216 absente : les deux paragraphes de " +
+            "signalement ne seraient rendus a aucune largeur.",
+        );
+      }
+
+      if (sansSuivi[0]!.numeroSuivi !== null) {
+        throw new Error(
+          "Commande sans suivi LS-216 : un numero de suivi est renseigne, " +
+            "le signalement ne serait pas rendu et ses tests ne prouveraient rien.",
         );
       }
 

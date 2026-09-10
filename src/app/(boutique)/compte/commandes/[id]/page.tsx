@@ -327,6 +327,32 @@ export default async function PageDetailCommande({
               situation dure, contactez la boutique.
             </p>
           )}
+
+          {/*
+           * AUCUN NUMERO DE SUIVI, ET LE CLIENT DOIT LE SAVOIR. Point tranche
+           * le 10 septembre 2026 apres la revue frontend, qui a releve que cet
+           * etat etait MUET cote client alors que chaque autre decision de cet
+           * ecran porte sa justification.
+           *
+           * CE N'EST PAS UN ETAT TRANSITOIRE. `listerASuivre` filtre sur
+           * `numeroSuivi: { not: null }`, donc une expedition sans numero n'est
+           * JAMAIS synchronisee : sa reception ne sera pas constatee
+           * automatiquement, et le delai de retractation ne demarrera pas tout
+           * seul. Un client qui l'ignore croit son delai en cours.
+           *
+           * LE TEXTE DIT CE QUE LE CLIENT PEUT FAIRE, et rien de plus : il ne
+           * peut pas corriger le numero, seule l'exploitante le peut, donc le
+           * message invite a la contacter plutot que d'exposer une mecanique
+           * interne. Il n'affirme aucun droit ni aucun delai, la page de
+           * retractation faisant autorite sur ce point.
+           */}
+          {commande.expedition.numeroSuivi === null && (
+            <p className={styles.suiviArrete}>
+              Aucun numéro de suivi n&apos;est associé à cette commande, son
+              acheminement ne peut donc pas être suivi automatiquement. Pour
+              connaître sa position, contactez la boutique.
+            </p>
+          )}
         </section>
       )}
 
