@@ -270,3 +270,55 @@ export function lienDocument(valeurJeton: string): string {
 
   return `${base.replace(/\/+$/, "")}${CHEMIN_ACCES_DOCUMENT}/${valeurJeton}`;
 }
+
+/**
+ * Duree d'un jeton d'invitation a deposer un avis, LS-61.
+ *
+ * QUATRE-VINGT-DIX JOURS, plus long que la retractation et pour une autre
+ * raison. Aucun delai legal ne borne le depot d'un avis : la contrainte est
+ * l'usage, un client qui range ses emails et revient parler d'une piece portee
+ * plusieurs semaines. Un lien mort ici ne prive d'aucun droit, il prive
+ * l'exploitante d'un avis, et le cout d'une duree longue est nul, le jeton
+ * n'ouvrant qu'un depot sur une commande deja livree.
+ *
+ * ELLE N'EST PAS UNE CONSTANTE DE SECURITE : la revocation, regle L10, traite
+ * un lien parti sur une mauvaise adresse. Attendre l'expiration reviendrait a
+ * laisser l'acces ouvert jusqu'a son terme.
+ */
+export const DUREE_JETON_AVIS_JOURS = 90;
+
+/** Date d'expiration d'un jeton d'avis, a ecrire dans `expireA`. */
+export function expirationAvis(maintenant: Date = new Date()): Date {
+  return new Date(
+    maintenant.getTime() + DUREE_JETON_AVIS_JOURS * 24 * 60 * 60 * 1000,
+  );
+}
+
+/**
+ * Chemin de la route publique de depot d'avis, LS-61.
+ *
+ * CONSTANTE PARTAGEE, meme motif que `CHEMIN_ACCES_DOCUMENT` : le jour ou la
+ * route bouge, un lien construit a la main partirait vers un 404 sans que rien
+ * ne rougisse.
+ */
+export const CHEMIN_AVIS = "/avis";
+
+/**
+ * Compose le lien de depot d'avis a transmettre au client.
+ *
+ * DEFAUT FERME SUR LA BASE, comme `lienDocument` et `lienRetractation` : un
+ * lien errone emporterait le jeton hors du domaine, ou il est lisible par qui
+ * le controle.
+ */
+export function lienAvis(valeurJeton: string): string {
+  const base = process.env.NEXT_PUBLIC_SITE_URL;
+
+  if (base === undefined || base === "") {
+    throw new Error(
+      "NEXT_PUBLIC_SITE_URL est requise pour composer un lien d'avis. " +
+        "Aucun repli : un lien errone emporterait le jeton hors du domaine.",
+    );
+  }
+
+  return `${base.replace(/\/+$/, "")}${CHEMIN_AVIS}/${valeurJeton}`;
+}

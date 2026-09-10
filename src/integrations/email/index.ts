@@ -33,7 +33,9 @@ export type ModeleEmail =
   /** LS-134, accuse de reception d'une retractation, article L221-21. */
   | "retractation-accusee"
   /** LS-172, confirmation de commande, porteuse des deux liens signes. */
-  | "commande-confirmee";
+  | "commande-confirmee"
+  /** LS-61, invitation a deposer un avis, envoyee apres livraison constatee. */
+  | "invitation-avis";
 
 export type MessageEmail = {
   destinataire: string;

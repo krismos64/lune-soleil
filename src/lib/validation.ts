@@ -646,3 +646,79 @@ export const schemaInstantaneLegal = z.strictObject({
 });
 
 export type InstantaneLegal = z.infer<typeof schemaInstantaneLegal>;
+
+/**
+ * Une note portee sur une piece d'une commande, LS-61, parcours 7.
+ *
+ * `ligneCommandeId` Y FIGURE, ET IL N'AUTORISE RIEN, invariant 2. Le formulaire
+ * le porte parce qu'une commande a plusieurs pieces et qu'il faut savoir
+ * laquelle est notee ; c'est `services/avis.ts` qui le recoupe avec les
+ * invitations de la commande du jeton. Un identifiant conforme prouve sa forme,
+ * jamais le droit d'ecrire dessus.
+ *
+ * LA NOTE EST UN ENTIER BORNE ET NON UN NOMBRE LIBRE. La contrainte CHECK de la
+ * base la borne deja entre 1 et 5 : sans ces bornes ici, une saisie hors
+ * intervalle produirait une erreur 500 la ou l'ecran doit rendre un message.
+ * `z.int()` ET NON `z.number()`, une note de 4,5 n'ayant aucun sens et la
+ * colonne etant entiere.
+ *
+ * AUCUN `z.coerce`, regle du socle : coercer « 5 » depuis une chaine laisserait
+ * passer « 5abc » sur certaines formes, et le formulaire envoie deja un nombre.
+ *
+ * LE COMMENTAIRE EST FACULTATIF, une note seule etant un avis valide. La chaine
+ * vide devient `null` dans le service plutot qu'ici : `transform` masquerait au
+ * lecteur du schema que les deux entrees existent.
+ */
+export const schemaSaisieAvis = z.strictObject({
+  ligneCommandeId: schemaIdentifiant,
+  note: z
+    .int("Une note entière est attendue.")
+    .min(1, "La note va de 1 à 5.")
+    .max(5, "La note va de 1 à 5."),
+  commentaire: z
+    .string()
+    .trim()
+    .max(2000, "Un commentaire de 2000 caractères au plus est attendu.")
+    .nullable(),
+});
+
+/**
+ * Le depot complet, une saisie par piece notee.
+ *
+ * `min(1)` REFUSE UN ENVOI VIDE plutot que de le traiter comme un succes sans
+ * effet : un formulaire soumis sans aucune note est une erreur de saisie, et le
+ * service la distingue deja du rejeu par un statut propre.
+ *
+ * `max(20)` BORNE L'ENTREE, invariant 7. Une commande de vingt pieces n'existe
+ * pas sur cette boutique, et une liste non bornee ouvrirait autant de
+ * transactions que l'appelant en demande.
+ */
+export const schemaDepotAvis = z
+  .array(schemaSaisieAvis)
+  .min(1, "Au moins une pièce doit être notée.")
+  .max(20, "Vingt pièces au plus peuvent être notées en une fois.");
+
+/**
+ * Une decision de moderation, LS-61, regles R4, R5 et R9.
+ *
+ * `PUBLIE`, `REFUSE` ET `RETIRE` SEULEMENT : `DEPOSE` n'est pas une decision,
+ * c'est l'etat d'arrivee. L'y admettre permettrait de renvoyer un avis en file
+ * d'attente sans motif, ce que la regle R5 existe pour empecher sur les deux
+ * autres transitions.
+ *
+ * LE MOTIF N'EST PAS EXIGE ICI MAIS DANS LE SERVICE, et c'est delibere : la
+ * regle R5 ne l'impose que sur `REFUSE` et `RETIRE`, condition qui depend d'un
+ * AUTRE champ. L'exprimer en Zod par un `refine` donnerait un message d'erreur
+ * portant sur l'objet entier plutot que sur le champ fautif.
+ */
+export const schemaDecisionAvis = z.strictObject({
+  avisId: schemaIdentifiant,
+  statut: z.enum(["PUBLIE", "REFUSE", "RETIRE"], {
+    message: "Une décision de modération valide est attendue.",
+  }),
+  motifDecision: z
+    .string()
+    .trim()
+    .max(2000, "Un motif de 2000 caractères au plus est attendu.")
+    .nullable(),
+});

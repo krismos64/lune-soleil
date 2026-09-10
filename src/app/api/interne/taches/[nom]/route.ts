@@ -29,6 +29,7 @@ import { libererReservationsExpirees } from "@/services/liberation-reservations"
 import { purgerQuarantaine } from "@/services/media";
 import { reconcilierPaiements } from "@/services/reconciliation-paiements";
 import { purgerJournaux } from "@/services/purge-journaux";
+import { inviterApresLivraison } from "@/services/avis";
 import { synchroniserSuivi } from "@/services/suivi-livraison";
 import {
   executerSousVerrou,
@@ -278,6 +279,28 @@ export async function POST(
       journaliser(
         "info",
         "Synchronisation du suivi terminee",
+        { tache, ...bilan },
+        correlation,
+      );
+
+      return;
+    }
+
+    if (tache === "invitation-avis") {
+      /*
+       * ELLE NE LEVE PAS SUR UNE COMMANDE EN DEFAUT, meme motif que les deux
+       * taches ci-dessus : l'echec est porte commande par commande, et une
+       * invitation impossible ne doit pas priver les suivantes de la leur.
+       *
+       * AUCUN APPEL RESEAU N'A LIEU ICI, `deposerEnvoi` n'ecrivant qu'une
+       * intention : l'envoi reel appartient a `envoi-emails`. C'est ce qui rend
+       * cette tache purement transactionnelle et son echec toujours interne.
+       */
+      const bilan = await inviterApresLivraison();
+
+      journaliser(
+        "info",
+        "Cycle d'invitation aux avis termine",
         { tache, ...bilan },
         correlation,
       );

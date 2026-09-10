@@ -90,3 +90,21 @@
 # fait sauter UN cycle, sans consequence, et `synchroniseA` porte la trace du
 # retard pour l'ecran d'administration.
 23 * * * * /usr/local/bin/declencher.sh suivi-livraison
+# L'INVITATION A DEPOSER UN AVIS, LS-61 et regle R17. Quotidienne, et c'est la
+# moins frequente des sept deliberement.
+#
+# RIEN NE PRESSE ICI. La livraison vient d'avoir lieu, et une invitation qui
+# part le lendemain matin arrive au meilleur moment : le client a eu le temps
+# de porter la piece. Une tache horaire enverrait le message pendant que le
+# colis est encore sur la table, et l'avis porterait sur l'emballage.
+#
+# ELLE DEPEND DE `suivi-livraison`, qui renseigne `Expedition.livreA`. L'ordre
+# des deux dans ce fichier n'a aucune importance, la date etant persistee : une
+# livraison constatee a 23h23 est invitee le lendemain a 07h53.
+#
+# A 07h53 UTC ET NON EN PLEINE NUIT, seule tache de ce fichier dont l'heure
+# regarde le CLIENT plutot que la charge machine. Elle ne fait qu'ecrire une
+# intention, `envoi-emails` expediant a la minute suivante : le message arrive
+# donc vers 09h53 heure de Paris en ete, dans la matinee plutot qu'a cinq
+# heures du matin. Le quantieme evite les heures rondes comme ses voisines.
+53 7 * * * /usr/local/bin/declencher.sh invitation-avis
