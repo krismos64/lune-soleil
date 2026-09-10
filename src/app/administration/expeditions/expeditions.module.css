@@ -440,6 +440,29 @@
 }
 
 /*
+ * LE BOUTON NE S'ETIRE PAS SUR LES LARGEURS HAUTES, LS-218.
+ *
+ * `align-items: start` ET NON `justify-self` SUR LE BOUTON : la regle
+ * `.bouton { justify-self: start }` de la requete media plus bas est ecrite
+ * pour une GRILLE, celle de `.formulaire`. `.etiquette` est un conteneur FLEX,
+ * ou `grid-column` et `justify-self` sont tous deux inoperants : le bouton y
+ * heritait de `stretch` et occupait toute la largeur, quand son voisin manuel
+ * se contractait a son contenu. Incoherence relevee par la revue frontend le
+ * 10 septembre 2026.
+ *
+ * L'ARGUMENT DU VOISIN VAUT AU MOINS AUTANT ICI : une cible etendue est
+ * disproportionnee pour un geste irreversible, et celui-ci DEPENSE en plus.
+ *
+ * SOUS 48rem RIEN NE CHANGE, la colonne unique rendant les deux boutons pleine
+ * largeur, ce qui est le comportement voulu au pouce.
+ */
+@media (min-width: 48rem) {
+  .etiquette {
+    align-items: start;
+  }
+}
+
+/*
  * LE LIEN DE TELECHARGEMENT, visible seulement apres la creation.
  *
  * `--ls-accent-gold-deep` SUR SABLE TOMBE A 4,23:1, REFUSE, C31 : c'est
@@ -458,7 +481,41 @@
  * `--ls-accent-gold` a 2,31:1 y passait au vert. Sa limite est documentee, « il
  * ne voit pas le fond herite », et la parade tient en une declaration.
  */
+/*
+ * L'AIDE DU BLOC ETIQUETTE, sur fond SABLE et non sur la carte blanche.
+ *
+ * ELLE NE PEUT PAS EMPRUNTER `.aide`, ET C'EST MESURE : celle-ci porte
+ * `--ls-text-muted`, qui donne 4,35:1 sur sable, SOUS le seuil AA de 4,5:1.
+ * C31, le sable est le fond piegeux du projet, et ce fichier documente deja le
+ * meme piege sur `.vide` et `.colonne`. Le commentaire de `.colonne` affirmait
+ * « aucun texte n'est pose ici sans carte » : `.etiquette` est un second fond
+ * sable qui rompait cette hypothese, releve par la revue frontend le
+ * 10 septembre 2026.
+ *
+ * `--ls-text` DONNE 10,83:1 SUR SABLE, tres au-dessus du seuil, et le mot
+ * « facturée » en gras qui en herite est le plus important du bloc.
+ *
+ * LE FOND EST REDECLARE POUR ETRE MESURE, meme motif que `.lienEtiquette` :
+ * `verifier-contraste.sh` ne voit qu'une paire colocalisee.
+ */
+.aideEtiquette {
+  margin: 0;
+  color: var(--ls-text);
+  background: var(--ls-surface-sand);
+  font-size: 0.875rem;
+}
+
 .lienEtiquette {
+  /*
+   * ZONE TACTILE DE 44 px, meme correction que `.retour` en LS-121 et
+   * `.numero`. Un `<a>` reste `display: inline`, donc haut de 25,6 px avec le
+   * `line-height` de 1,6 : sous le seuil de `frontend-design.md`, et c'est le
+   * lien qui remet le PDF d'une etiquette DEJA PAYEE. Le manquer au pouce
+   * coutait un rafraichissement. Releve par la revue frontend.
+   */
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
   color: var(--ls-primary);
   background: var(--ls-surface-sand);
   font-weight: 600;

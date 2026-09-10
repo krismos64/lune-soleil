@@ -278,6 +278,10 @@ CREATE TABLE "expedition" (
     "transporteur" TEXT NOT NULL,
     "mode" "ModeLivraison" NOT NULL,
     "numero_suivi" TEXT,
+    -- LS-218, l'identifiant du colis chez le transporteur : seul moyen de
+    -- relire son etiquette, qui n'est pas stockee. Nul sur une declaration
+    -- manuelle, qui n'a aucune etiquette a relire.
+    "identifiant_colis" INTEGER,
     "point_relais_id" TEXT,
     "statut_transporteur" TEXT,
     "expedie_a" TIMESTAMPTZ(3),

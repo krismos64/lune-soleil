@@ -142,11 +142,27 @@ export async function declarerExpedition({
   commandeId,
   saisie,
   acteurId,
+  identifiantColis = null,
   client = prisma,
 }: {
   commandeId: string;
   saisie: unknown;
   acteurId: string;
+  /**
+   * L'identifiant du colis chez le transporteur, LS-218.
+   *
+   * IL EST HORS DE `saisie`, ET CE N'EST PAS UN DETAIL DE SIGNATURE.
+   * `schemaSaisieExpedition` est un `strictObject` qui refuse tout champ
+   * inconnu, a juste titre : `saisie` porte ce qu'une PERSONNE a tape, et cette
+   * valeur-la vient du transporteur. L'y glisser faisait echouer la validation
+   * en « 1 champ non reconnu », que le service traduisait en
+   * `ADRESSE_INEXPLOITABLE` : un message faux sur une adresse parfaite, mesure
+   * le 10 septembre 2026.
+   *
+   * NUL SUR UNE DECLARATION MANUELLE, ce qui distingue les deux chemins : un
+   * colis remis en main propre n'a aucune etiquette a relire.
+   */
+  identifiantColis?: number | null;
   client?: typeof prisma;
 }): Promise<IssueExpedition> {
   /*
@@ -233,7 +249,7 @@ export async function declarerExpedition({
          */
         await creerExpedition(transaction, {
           commandeId: identifiant,
-          saisie: saisieValidee,
+          saisie: { ...saisieValidee, identifiantColis },
         });
 
         /*
@@ -444,8 +460,22 @@ export async function creerEtiquetteExpedition({
    * l'exploitante ne peut pas relier a son ecran. Le champ manquant se corrige
    * de toute façon a la main, la commande etant figee, invariant 3.
    */
+  /*
+   * LE NOM VIENT DE `nomClient` ET NON DE L'ADRESSE FIGEE, et ce n'est pas
+   * interchangeable : `passerCommande` fige une COPIE de la saisie d'adresse,
+   * qui ne porte pas de nom, celui-ci vivant sur la commande. Ma premiere
+   * version le cherchait dans l'adresse et refusait TOUTE commande en
+   * `ADRESSE_INEXPLOITABLE`, defaut revele par les tests d'integration le
+   * 10 septembre 2026.
+   *
+   * `AdresseFigee` de `repositories/commande.ts` DECLARE POURTANT `nom`, ce qui
+   * rendait l'erreur credible a la lecture : le type decrit ce que le carnet
+   * d'adresses de LS-59 y mettra, pas ce que le tunnel y met aujourd'hui.
+   */
+  const nomDestinataire = figee.nom ?? commande.nomClient;
+
   const manquants = [
-    figee.nom ? null : "le nom",
+    nomDestinataire ? null : "le nom",
     figee.ligne1 ? null : "l'adresse",
     figee.codePostal ? null : "le code postal",
     figee.ville ? null : "la ville",
@@ -471,7 +501,7 @@ export async function creerEtiquetteExpedition({
       mode,
       pointRetraitId: commande.pointRelaisId,
       adresse: {
-        nom: figee.nom!,
+        nom: nomDestinataire,
         ligne1: figee.ligne1!,
         ligne2: figee.ligne2 ?? null,
         codePostal: figee.codePostal!,
@@ -513,6 +543,16 @@ export async function creerEtiquetteExpedition({
       numeroSuivi: creation.numeroSuivi,
       pointRelaisId: commande.pointRelaisId,
     },
+    /*
+     * L'IDENTIFIANT EST PERSISTE, et c'est ce qui rend l'etiquette recuperable
+     * apres un rafraichissement. Le garder dans l'etat du composant seul rendait
+     * une etiquette PAYEE introuvable des que la page bougeait, et obligeait a
+     * retourner sur Sendcloud, ce que cette story existe pour supprimer.
+     *
+     * HORS DE `saisie`, le schema strict la refusant : elle ne vient pas d'une
+     * personne mais du transporteur.
+     */
+    identifiantColis: creation.identifiantColis,
   });
 
   if (issue.statut !== "EXPEDIEE") {
