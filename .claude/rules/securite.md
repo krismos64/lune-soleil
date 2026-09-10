@@ -309,14 +309,24 @@ finalité de T8 est la sécurité et non le fichier client, que vise ADR-021, et
 Élargir la définition d'une famille pour fermer une dette déplacerait la règle
 au lieu de la satisfaire.
 
-**Trois actions sensibles existent au 3 septembre 2026**, et cette phrase disait
-encore « la première naîtra de LS-95 », écrite au futur donc périmée sans bruit :
+**Le compte n'est plus inscrit ici, il se mesure**, et ce paragraphe s'est
+périmé DEUX fois : il disait « la première naîtra de LS-95 », écrit au futur,
+puis « trois actions existent » quand LS-135 en avait ajouté une quatrième.
+
+```bash
+grep -rn "@sensible" src/ | wc -l
+```
 
 | Action | Famille | Story |
 |---|---|---|
 | `supprimerMonCompte` | `IDENTIFIANTS` | LS-95 |
 | `demanderRemboursement` | `REMBOURSEMENT` | LS-128, sortie de la liste en LS-160 |
 | `exporterMesDonnees` | `DONNEES_CLIENTS` | LS-62 |
+| `rembourserRetractation` | `REMBOURSEMENT` | LS-135, **manquait à cette table** |
+
+`verifier-actions-sensibles.sh` confronte les marques aux gardes dans les deux
+sens : la table ci-dessus documente, elle ne fait pas foi. Le contrôle, lui,
+imprime le compte réel à chaque exécution.
 
 **`DONNEES_CLIENTS` est sortie de la liste d'attente en LS-62**, et le
 raisonnement vaut d'être connu avant d'y toucher. Un export qui livre en **un**

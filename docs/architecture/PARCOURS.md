@@ -85,7 +85,7 @@ stock à un exemplaire est le jalon technique majeur.
 | 8 | Facture | facture avec numéro attribué dans la transaction, instantané légal, PDF | facture disponible |
 | 9 | Email de confirmation | intention d'envoi dans la transaction, **une** entrée | commande payée, portant le lien de facture et le lien de rétractation |
 | 10 | Préparation | commande `EN_PREPARATION`, historique de statut | suivi |
-| 11 | Expédition | expédition avec transporteur, numéro de suivi, commande `EXPEDIEE` | email et lien de suivi |
+| 11 | Expédition | expédition avec transporteur, numéro de suivi, commande `EXPEDIEE` | suivi consultable dans l'espace client, LS-58 |
 | 12 | Livraison | commande `LIVREE` uniquement sur source fiable | suivi |
 
 **Un seul message et non deux, arbitrage du 3 septembre 2026, LS-172.** La
@@ -237,6 +237,15 @@ annulée. Une commande `DOMICILE` portant un point de retrait, ou un
 Vue : erreur technique, le client reprend le choix du mode.
 Ce cas ne doit pas survenir, la validation Zod le rejetant en amont. La
 contrainte est la dernière ligne de défense si le code échoue.
+
+**AUCUN EMAIL D'EXPÉDITION N'EXISTE**, et cette ligne en promettait un jusqu'au
+10 septembre 2026. Mesure : `integrations/email/modeles.ts` porte huit modèles,
+aucun d'expédition. Ce qui existe est le **suivi consultable**, livré par LS-58,
+et les notifications d'acheminement envoyées par le transporteur lui-même, que
+le site ne duplique pas, LS-33.
+
+Ne pas lire cette ligne comme une fonctionnalité manquante à rattraper : c'est
+une décision, les notifications étant incluses dans l'offre du transporteur.
 
 **Échec de livraison à domicile, après l'étape 11**
 Base : **rien n'est réécrit**, et ADR-042 décision 6 a corrigé ce que cette
@@ -1191,9 +1200,18 @@ Point de vigilance de l'article L221-20 : sans information correcte du
 consommateur sur son droit, le délai est prolongé de **douze mois**. Le parcours 5
 prévoit déjà la fonctionnalité en ligne exigée par l'article L221-21.
 
-**Signalement d'un retour non reçu : immédiat**, pour permettre de contacter le
-transporteur sans attendre. Le seuil d'ancienneté envisagé est abandonné au
-profit d'une alerte dès que le retour annoncé n'arrive pas.
+**Signalement d'un retour non reçu : au bout de TRENTE jours**, règle L13,
+`SEUIL_RETOUR_JAMAIS_RECU_JOURS` de `services/traitement-retractation.ts`.
+
+**CE PARAGRAPHE DISAIT « immédiat, seuil abandonné » JUSQU'AU 10 SEPTEMBRE
+2026**, et il contredisait à la fois le code et la section « Retour jamais
+reçu » de ce même document. L'appliquer alerterait sur tous les retours
+**normalement en cours** : le client dispose de quatorze jours pour renvoyer,
+article L221-23, et l'acheminement s'y ajoute. Une alerte qui se déclenche pour
+rien perd son sens à force.
+
+Le seuil part de `retourAttenduA` et jamais de `deposeeA` : compter depuis le
+dépôt ferait passer le délai de renvoi du client pour un retard du transporteur.
 
 ## D'où vient la date de réception du colis
 

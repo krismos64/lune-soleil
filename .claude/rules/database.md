@@ -282,7 +282,26 @@ UNIQUE facture (commande_id)
 UNIQUE journal_email (commande_id, modele)        WHERE statut = 'ENVOYE'
                                                     AND origine IN ('SYSTEME','RECONCILIATION')
 UNIQUE media (produit_id)                         WHERE ordre = 1
+UNIQUE alerte_critique (type, id_cible)           WHERE acquittee_a IS NULL
+                                                    NULLS NOT DISTINCT
+UNIQUE intention_remboursement (reference)
 ```
+
+**`alerte_ouverte_unique` PORTE `NULLS NOT DISTINCT`, et ce n'est pas
+décoratif** : sans lui, deux alertes de même type sans cible passeraient toutes
+les deux, PostgreSQL traitant les `NULL` comme distincts. C'est l'inverse du
+prédicat de `mouvement_compense_unique`, dont le `WHERE` ne garantit rien.
+Posée par LS-131, déployée le 10 septembre 2026.
+
+**`intention_remboursement_unique` ferme le double clic de remboursement**,
+LS-160 : la référence est engendrée une fois par rendu de page, donc deux envois
+successifs portent la MÊME clé et le second sort en « déjà demandé » sans jamais
+appeler le prestataire.
+
+**`Expedition.identifiantColis` n'est pas une clé d'unicité** mais mérite d'être
+connue ici, LS-218 : elle porte l'identifiant du colis chez le transporteur, seul
+moyen de relire son étiquette, qui n'est pas stockée. Nulle sur une déclaration
+manuelle, ce qui distingue les deux chemins.
 
 La clé du mouvement porte **la variante et pas seulement la commande**. Un panier
 à deux articles décrémente deux variantes, donc produit deux mouvements. Une
