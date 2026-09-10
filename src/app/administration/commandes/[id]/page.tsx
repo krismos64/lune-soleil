@@ -20,14 +20,17 @@ import {
   AutorisationRefuseeError,
   exigerAdministratrice,
 } from "@/services/autorisation";
+import type { DetailCommande } from "@/services/administration-commandes";
 import {
   lireDetailCommande,
   lireRemboursementPossible,
 } from "@/services/administration-commandes";
+import type { ModeLivraison } from "@/generated/prisma/enums";
 import { EntreeInvalideError } from "@/lib/validation";
 import {
   formaterDate,
   formaterOrigine,
+  fraicheurSuivi,
   LIBELLES_LIVRAISON,
   LIBELLES_PAIEMENT,
   LIBELLES_STATUT,
@@ -306,9 +309,34 @@ export default async function PageDetailCommande({
         </Suspense>
       </section>
 
-      <section className={styles.section} aria-labelledby="titre-suivi">
-        <h2 id="titre-suivi" className={styles.titreSection}>
-          Suivi
+      {/*
+       * L'ACHEMINEMENT VIENT AVANT LE STATUT METIER, et l'ordre suit la
+       * chronologie : le colis part, puis le transporteur le fait avancer,
+       * puis l'exploitante constate. LS-216.
+       */}
+      <BlocAcheminement
+        expedition={commande.expedition}
+        modeLivraison={commande.modeLivraison}
+      />
+
+      {/*
+       * « STATUT DE LA COMMANDE » ET NON « SUIVI », renomme par LS-216. Cette
+       * section porte les transitions de statut metier et leur historique,
+       * regle S9, et ne suit aucun colis. Garder le mot « Suivi » ici a cote
+       * d'une section d'acheminement ferait porter le meme mot a deux notions
+       * distinctes sur le meme ecran, ce que la story nomme explicitement.
+       *
+       * L'ANCRE `titre-suivi` DEVIENT `titre-statut-commande` : elle sert
+       * `aria-labelledby`, donc le nom annonce par un lecteur d'ecran. La
+       * laisser dire « suivi » pendant que le titre dit autre chose ferait
+       * diverger ce qui est lu de ce qui est vu.
+       */}
+      <section
+        className={styles.section}
+        aria-labelledby="titre-statut-commande"
+      >
+        <h2 id="titre-statut-commande" className={styles.titreSection}>
+          Statut de la commande
         </h2>
 
         <TransitionsCommande
@@ -396,5 +424,185 @@ async function BlocRemboursement({
       avoirs={remboursement?.avoirs ?? []}
       factureAbsente={remboursement === null}
     />
+  );
+}
+
+/**
+ * Acheminement du colis, LS-216. Ce que le transporteur en dit.
+ *
+ * IL N'ECRIT RIEN ET N'APPELLE PERSONNE, critere 6. Les quatre champs affiches
+ * viennent de la synchronisation horaire de LS-131 : interroger Sendcloud a
+ * chaque consultation multiplierait les appels par le nombre de commandes
+ * ouvertes, et ferait dependre l'affichage d'un ecran de la sante d'un tiers.
+ *
+ * IL N'Y A PAS DE BOUTON « ACTUALISER », et c'est l'arbitrage du point 5 de la
+ * story, tranche le 10 septembre 2026. LS-33 chantier 3 le mentionnait, quand
+ * la synchronisation etait pensee a la demande. Elle tourne desormais toutes
+ * les heures : le bouton ajouterait une Server Action, sa garde de role, une
+ * limitation de debit et une surface d'appel direct pour faire gagner au mieux
+ * cinquante-neuf minutes sur une donnee que personne ne lit a la seconde. Le
+ * cout est certain, le gain ne l'est pas.
+ *
+ * CE COMPOSANT EST SYNCHRONE ET NE LIT PAS LA BASE. `lireDetailCommande` a deja
+ * tout charge : ouvrir ici une seconde lecture ajouterait un aller-retour pour
+ * des champs qui vivent sur la meme ligne que le reste de l'expedition.
+ */
+function BlocAcheminement({
+  expedition,
+  modeLivraison,
+}: {
+  expedition: DetailCommande["expedition"];
+  modeLivraison: ModeLivraison;
+}) {
+  /*
+   * AUCUNE SECTION TANT QU'AUCUN COLIS N'EST PARTI. Une commande en attente de
+   * paiement n'a pas d'expedition, et un titre suivi d'une liste vide se lit
+   * comme une section cassee, releve par `ls-frontend-revue` sur cet ecran.
+   */
+  if (expedition === null) {
+    return null;
+  }
+
+  const fraicheur = fraicheurSuivi(expedition);
+
+  /*
+   * LE MODE EXECUTE NE S'AFFICHE QUE S'IL DIFFERE de celui qui a ete paye,
+   * ADR-025. Le repeter a l'identique n'apprendrait rien et ferait douter d'un
+   * ecart la ou il n'y en a pas.
+   */
+  const modeReporte = expedition.mode !== modeLivraison;
+
+  return (
+    <section className={styles.section} aria-labelledby="titre-acheminement">
+      <h2 id="titre-acheminement" className={styles.titreSection}>
+        Acheminement du colis
+      </h2>
+
+      <div className={styles.details}>
+        <div className={styles.ligneAcheminement}>
+          <span>Transporteur</span>
+          <span className={styles.valeurAcheminement}>
+            {expedition.transporteur}
+          </span>
+        </div>
+
+        {/*
+         * LE MODE EXECUTE, ET NON CELUI DE LA COMMANDE. Les deux se confondent
+         * dans le cas nominal ; c'est l'ecart qui porte l'information, signale
+         * plus bas.
+         */}
+        <div className={styles.ligneAcheminement}>
+          <span>Mode d&apos;expédition</span>
+          <span className={styles.valeurAcheminement}>
+            {LIBELLES_LIVRAISON[expedition.mode]}
+          </span>
+        </div>
+
+        {expedition.expedieA !== null && (
+          <div className={styles.ligneAcheminement}>
+            <span>Expédiée le</span>
+            <span className={styles.valeurAcheminement}>
+              {formaterDate(expedition.expedieA)}
+            </span>
+          </div>
+        )}
+
+        {/*
+         * LE NUMERO DE SUIVI EST CE QUE L'EXPLOITANTE VIENT CHERCHER. Elle le
+         * saisit dans l'ecran d'expedition et ne le revoyait NULLE PART avant
+         * cette story : repondre a « ou est mon colis » imposait d'ouvrir
+         * Sendcloud a cote.
+         */}
+        {expedition.numeroSuivi !== null && (
+          <div className={styles.ligneAcheminement}>
+            <span>Numéro de suivi</span>
+            <span className={styles.valeurAcheminement}>
+              {expedition.numeroSuivi}
+            </span>
+          </div>
+        )}
+
+        {/*
+         * LE LIBELLE DU TRANSPORTEUR, TEL QU'IL L'ECRIT. `enregistrerSuivi`
+         * stocke le libelle et non l'identifiant numerique, decision 5
+         * d'ADR-042, precisement pour que cette ligne soit lisible.
+         *
+         * IL NE DIT PAS QU'UN COLIS EST LIVRE, meme quand il en a l'air.
+         * « Awaiting customer pickup » annonce un colis disponible au relais,
+         * pas un colis remis : seul `livreA` en dessous constate la remise.
+         */}
+        {expedition.statutTransporteur !== null && (
+          <div className={styles.ligneAcheminement}>
+            <span>Dernier statut connu</span>
+            <span className={styles.valeurAcheminement}>
+              {expedition.statutTransporteur}
+            </span>
+          </div>
+        )}
+
+        {/*
+         * LA REMISE AU DESTINATAIRE, ET CE QU'ELLE DECLENCHE. Elle est ecrite
+         * par la seule table de correspondance d'ADR-042, jamais a la main, et
+         * ouvre le delai de retractation de quatorze jours, article L221-18.
+         *
+         * L'ABSENCE SE DIT EXPLICITEMENT, critere 2. Une ligne manquante se
+         * lirait comme un oubli d'affichage ; « pas encore constatee » dit que
+         * le systeme sait qu'il ne sait pas, et surtout que le delai n'a PAS
+         * commence a courir, ce que l'exploitante doit savoir pour traiter une
+         * demande de retractation.
+         */}
+        <div className={styles.ligneAcheminement}>
+          <span>Remise au destinataire</span>
+          <span className={styles.valeurAcheminement}>
+            {expedition.livreA === null
+              ? "Pas encore constatée"
+              : formaterDate(expedition.livreA)}
+          </span>
+        </div>
+      </div>
+
+      {/*
+       * LE REPORT VERS UN POINT DE RETRAIT, critere 5. Il se constate en
+       * comparant deux faits distincts : ce que le client a paye et ce que le
+       * transporteur a execute. `Commande.modeLivraison` n'est JAMAIS reecrit,
+       * ADR-025, donc cet ecart est le seul endroit ou le report se voit.
+       */}
+      {modeReporte && (
+        <p className={styles.reportLivraison}>
+          Le transporteur a exécuté ce colis en{" "}
+          <strong>{LIBELLES_LIVRAISON[expedition.mode]}</strong>, alors que la
+          commande a été payée en{" "}
+          <strong>{LIBELLES_LIVRAISON[modeLivraison]}</strong>. La commande n
+          &apos;est pas modifiée, seule l&apos;expédition porte le mode réel.
+        </p>
+      )}
+
+      {/*
+       * LE SIGNALEMENT D'UN SUIVI ARRETE, critere 4, et la valeur propre de cet
+       * ecran. `synchroniseA` est stocke pour cela : sans affichage, personne ne
+       * regarde, et un colis bloque chez le transporteur ne se decouvre qu'a la
+       * reclamation du client. Le risque est a la charge de l'exploitante
+       * jusqu'a la remise, article L216-4.
+       *
+       * DEUX MESSAGES ET NON UN, parce que les deux cas appellent des gestes
+       * differents : un suivi jamais lu evoque un numero errone saisi a la
+       * declaration, un suivi arrete evoque un colis immobilise.
+       */}
+      {fraicheur === "jamais" && expedition.numeroSuivi !== null && (
+        <p className={styles.suiviBloque}>
+          Aucun statut n&apos;a encore été lu pour ce numéro. C&apos;est normal
+          le jour du dépôt ; au-delà, vérifier que le numéro de suivi saisi est
+          bien celui du transporteur.
+        </p>
+      )}
+
+      {fraicheur === "bloque" && expedition.synchroniseA !== null && (
+        <p className={styles.suiviBloque}>
+          Suivi non actualisé depuis le {formaterDate(expedition.synchroniseA)}.
+          Le colis est peut-être immobilisé : vérifier son acheminement auprès
+          du transporteur.
+        </p>
+      )}
+    </section>
   );
 }

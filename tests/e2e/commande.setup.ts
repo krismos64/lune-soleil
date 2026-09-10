@@ -28,6 +28,7 @@ import { Client } from "pg";
 import { encoderCommandeEnCours } from "@/lib/commande-cookie";
 import {
   COMMANDE_A_EXPEDIER_TEST,
+  COMMANDE_SUIVIE_TEST,
   DEMANDE_RETRACTATION_TEST,
   COMMANDE_FACTUREE_TEST,
   COMMANDE_TEST,
@@ -726,6 +727,175 @@ preparation(
           SECONDE_COMMANDE_A_EXPEDIER_TEST.commandeId,
         ],
       );
+
+      /*
+       * LA COMMANDE EXPEDIEE AU SUIVI SYNCHRONISE, LS-216 et LS-58. Elle rend
+       * le bloc d'acheminement, son signalement de suivi bloque et son
+       * rebasculement de mode, trois branches qu'aucune autre donnee de test ne
+       * produit.
+       */
+      await client.query(
+        `INSERT INTO categorie (id, nom, slug, ordre, cree_a)
+       VALUES ($1, 'TEST Catégorie LS216', 'test-categorie-ls216', 9216, now())
+       ON CONFLICT (id) DO NOTHING`,
+        [COMMANDE_SUIVIE_TEST.categorieId],
+      );
+
+      await client.query(
+        `INSERT INTO produit (id, categorie_id, nom, slug, statut, cree_a, modifie_a)
+       VALUES ($1, $2, 'TEST Pièce suivie', 'test-piece-suivie-ls216',
+               'BROUILLON', now(), now())
+       ON CONFLICT (id) DO NOTHING`,
+        [COMMANDE_SUIVIE_TEST.produitId, COMMANDE_SUIVIE_TEST.categorieId],
+      );
+
+      await client.query(
+        `INSERT INTO variante (
+         id, produit_id, reference, libelle, prix_centimes,
+         quantite_physique, quantite_reservee, vente_web_activee, cree_a
+       )
+       VALUES ($1, $2, 'TEST-LS216', 'TEST Déclinaison', 5100, 1, 0, true, now())
+       ON CONFLICT (id) DO NOTHING`,
+        [COMMANDE_SUIVIE_TEST.varianteId, COMMANDE_SUIVIE_TEST.produitId],
+      );
+
+      /*
+       * `EXPEDIEE` ET `DOMICILE` : le colis est parti, et c'est ce que le
+       * client a paye. Le mode de l'EXPEDITION differera plus bas, ce qui est
+       * precisement le rebasculement que le critere 5 demande de rendre
+       * visible sans jamais reecrire la commande, ADR-025.
+       */
+      await client.query(
+        `INSERT INTO commande (
+         id, numero, statut, email_normalise, nom_client,
+         adresse_livraison, adresse_facturation,
+         sous_total_centimes, mode_livraison, frais_port_centimes,
+         total_centimes, montant_taxe_centimes,
+         cgv_acceptees_a, cgv_version, cree_a
+       )
+       VALUES (
+         $1, $2, 'EXPEDIEE', 'e2e-ls216@exemple.test', 'TEST Dominique',
+         $3::jsonb, $3::jsonb,
+         5100, 'DOMICILE', 749,
+         5849, 0,
+         now(), 'test', now()
+       )
+       ON CONFLICT (id) DO NOTHING`,
+        [
+          COMMANDE_SUIVIE_TEST.commandeId,
+          COMMANDE_SUIVIE_TEST.numero,
+          JSON.stringify({
+            nom: "TEST Dominique",
+            ligne1: "8 rue de Test",
+            codePostal: "35000",
+            ville: "TESTVILLE",
+            pays: "FR",
+          }),
+        ],
+      );
+
+      await client.query(
+        `INSERT INTO ligne_commande (
+         id, commande_id, variante_id, reference_figee,
+         libelle_produit_fige, libelle_variante_fige,
+         prix_fige_centimes, quantite
+       )
+       VALUES ($1, $2, $3, 'TEST-LS216', 'TEST Pièce suivie',
+               'TEST Déclinaison', 5100, 1)
+       ON CONFLICT (id) DO NOTHING`,
+        [
+          COMMANDE_SUIVIE_TEST.ligneId,
+          COMMANDE_SUIVIE_TEST.commandeId,
+          COMMANDE_SUIVIE_TEST.varianteId,
+        ],
+      );
+
+      await client.query(
+        `INSERT INTO paiement (
+         id, commande_id, statut, montant_centimes,
+         montant_rembourse_centimes, identifiant_fournisseur, confirme_a, cree_a
+       )
+       VALUES ($1, $2, 'REUSSI', 5849, 0, 'cs_test_ls216', now(), now())
+       ON CONFLICT (id) DO NOTHING`,
+        [COMMANDE_SUIVIE_TEST.paiementId, COMMANDE_SUIVIE_TEST.commandeId],
+      );
+
+      /*
+       * L'EXPEDITION DANS L'ETAT OU LA SYNCHRONISATION L'AURAIT LAISSEE.
+       *
+       * `synchronise_a` A TROIS JOURS, ce qui depasse le seuil de vingt-quatre
+       * heures : c'est ce qui rend le signalement de suivi bloque VISIBLE,
+       * critere 4. Une date relative et non figee, pour que le cas reste vrai
+       * quelle que soit la date d'execution de la suite.
+       *
+       * `livre_a` RESTE NUL, et il le doit : `fraicheurSuivi` rend « frais »
+       * des qu'il est renseigne, ce qui eteindrait le signalement que ce jeu de
+       * donnees existe pour produire.
+       *
+       * `statut_transporteur` EST UN FAUX AMI DELIBERE. « Awaiting customer
+       * pickup » annonce un colis disponible au relais, que la table d'ADR-042
+       * ne tient PAS pour une livraison : l'ecran doit afficher « Pas encore
+       * constatée » en face de la remise, critere 3.
+       */
+      await client.query(
+        `INSERT INTO expedition (
+         id, commande_id, transporteur, mode, numero_suivi, point_relais_id,
+         statut_transporteur, expedie_a, livre_a, synchronise_a, cree_a
+       )
+       VALUES (
+         $1, $2, 'Sendcloud', 'POINT_RELAIS', $3, $4,
+         $5, now() - interval '5 days', NULL, now() - interval '3 days', now()
+       )
+       ON CONFLICT (id) DO NOTHING`,
+        [
+          COMMANDE_SUIVIE_TEST.expeditionId,
+          COMMANDE_SUIVIE_TEST.commandeId,
+          COMMANDE_SUIVIE_TEST.numeroSuivi,
+          COMMANDE_SUIVIE_TEST.pointRelaisId,
+          COMMANDE_SUIVIE_TEST.statutTransporteur,
+        ],
+      );
+
+      /*
+       * LE JEU DE DONNEES EST VERIFIE PLUTOT QUE SUPPOSE, meme motif que le
+       * compte de la file plus bas. Un `ON CONFLICT DO NOTHING` qui n'ecrit
+       * rien laisserait les tests d'acheminement mesurer une section absente,
+       * donc passer en ne prouvant rien.
+       */
+      const { rows: suivie } = await client.query<{
+        modeCommande: string;
+        modeExpedition: string;
+        ageHeures: string;
+      }>(
+        `SELECT c.mode_livraison AS "modeCommande",
+                e.mode           AS "modeExpedition",
+                round(extract(epoch from (now() - e.synchronise_a)) / 3600)::text
+                                 AS "ageHeures"
+           FROM commande c JOIN expedition e ON e.commande_id = c.id
+          WHERE c.id = $1`,
+        [COMMANDE_SUIVIE_TEST.commandeId],
+      );
+
+      if (suivie.length === 0) {
+        throw new Error(
+          "Commande suivie LS-216 absente : le bloc d'acheminement ne serait " +
+            "rendu a aucune largeur, et ses tests passeraient sans rien prouver.",
+        );
+      }
+
+      if (suivie[0]!.modeCommande === suivie[0]!.modeExpedition) {
+        throw new Error(
+          "Commande suivie LS-216 : les deux modes coincident, le " +
+            "rebasculement du critere 5 ne serait pas rendu.",
+        );
+      }
+
+      if (Number(suivie[0]!.ageHeures) <= 24) {
+        throw new Error(
+          `Commande suivie LS-216 : suivi vieux de ${suivie[0]!.ageHeures} h, ` +
+            "plus de 24 attendues. Le signalement de suivi bloque ne serait pas rendu.",
+        );
+      }
 
       /*
        * LES DEUX CARTES SONT VERIFIEES ENSEMBLE, et le compte porte sur la FILE

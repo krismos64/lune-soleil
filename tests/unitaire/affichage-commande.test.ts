@@ -21,8 +21,10 @@ import {
   LIBELLES_LIVRAISON,
   LIBELLES_ORIGINE,
   LIBELLES_STATUT,
+  SEUIL_SUIVI_BLOQUE_MS,
   formaterDate,
   formaterOrigine,
+  fraicheurSuivi,
   traduireStatut,
 } from "@/lib/affichage-commande";
 
@@ -153,5 +155,112 @@ describe("formaterDate", () => {
   it("applique l'heure d'hiver", () => {
     const midiEnJanvier = new Date("2026-01-15T11:00:00.000Z");
     expect(formaterDate(midiEnJanvier)).toBe("15/01/2026 12:00");
+  });
+});
+
+/**
+ * Fraicheur du suivi, LS-58 critere 4 et LS-216 critere 4.
+ *
+ * CE QUI EST EPROUVE ICI EST UN SIGNALEMENT D'INCIDENT, pas une mise en forme.
+ * Un seuil faux ne se voit pas a l'ecran : il se voit le jour ou un colis
+ * bloque depuis trois jours s'affiche « a jour » a l'exploitante, qui ne
+ * cherche donc pas ou il est passe.
+ *
+ * L'INSTANT EST FIXE ET JAMAIS `new Date()`. Un test qui dort mesurerait
+ * l'ordonnanceur, piege deja rencontre sur le test de concurrence de ce depot.
+ */
+describe("fraicheurSuivi", () => {
+  const maintenant = new Date("2026-09-10T12:00:00.000Z");
+
+  /*
+   * AUCUNE LECTURE N'A EU LIEU, cas NORMAL le jour ou le colis est remis au
+   * transporteur : Sendcloud peut ne pas encore connaitre le numero, et
+   * `synchroniserSuivi` sort alors sans rien ecrire. Le confondre avec un suivi
+   * bloque ferait alerter sur toute expedition du jour meme.
+   */
+  it("distingue un suivi jamais lu d'un suivi bloque", () => {
+    expect(
+      fraicheurSuivi({ livreA: null, synchroniseA: null }, maintenant),
+    ).toBe("jamais");
+  });
+
+  it("tient pour frais un suivi lu il y a une heure", () => {
+    const uneHeureAvant = new Date(maintenant.getTime() - 60 * 60 * 1000);
+
+    expect(
+      fraicheurSuivi({ livreA: null, synchroniseA: uneHeureAvant }, maintenant),
+    ).toBe("frais");
+  });
+
+  it("signale un suivi lu il y a plus de vingt-quatre heures", () => {
+    const troisJoursAvant = new Date(
+      maintenant.getTime() - 3 * SEUIL_SUIVI_BLOQUE_MS,
+    );
+
+    expect(
+      fraicheurSuivi(
+        { livreA: null, synchroniseA: troisJoursAvant },
+        maintenant,
+      ),
+    ).toBe("bloque");
+  });
+
+  /*
+   * LA BORNE EXACTE EST FIGEE DANS LES DEUX SENS. Un `>=` a la place du `>`
+   * ferait basculer une expedition lue a la seconde pres, et les deux cas
+   * ci-dessous sont ce qui empeche de « simplifier » la comparaison.
+   */
+  it("ne signale pas un suivi lu exactement au seuil", () => {
+    const auSeuil = new Date(maintenant.getTime() - SEUIL_SUIVI_BLOQUE_MS);
+
+    expect(
+      fraicheurSuivi({ livreA: null, synchroniseA: auSeuil }, maintenant),
+    ).toBe("frais");
+  });
+
+  it("signale un suivi lu une milliseconde au-dela du seuil", () => {
+    const auDela = new Date(maintenant.getTime() - SEUIL_SUIVI_BLOQUE_MS - 1);
+
+    expect(
+      fraicheurSuivi({ livreA: null, synchroniseA: auDela }, maintenant),
+    ).toBe("bloque");
+  });
+
+  /*
+   * LE CAS QUI EVITE UNE FAUSSE ALERTE DE MASSE. `listerASuivre` exclut les
+   * expeditions livrees, donc leur `synchroniseA` cesse d'avancer par
+   * construction : sans cette garde, TOUTE commande livree serait signalee
+   * « bloquee » vingt-quatre heures apres sa reception, c'est-a-dire la
+   * totalite de l'historique de la boutique.
+   */
+  it("tient pour frais une expedition livree, meme synchronisee il y a un mois", () => {
+    const unMoisAvant = new Date(
+      maintenant.getTime() - 30 * SEUIL_SUIVI_BLOQUE_MS,
+    );
+
+    expect(
+      fraicheurSuivi(
+        {
+          livreA: new Date("2026-08-11T09:00:00.000Z"),
+          synchroniseA: unMoisAvant,
+        },
+        maintenant,
+      ),
+    ).toBe("frais");
+  });
+
+  /*
+   * UNE EXPEDITION LIVREE DONT LE SUIVI N'A JAMAIS ETE LU reste fraiche. Le cas
+   * parait theorique, il ne l'est pas : rien n'empeche une correction manuelle
+   * en base d'ecrire `livreA` sans `synchroniseA`. L'ordre des deux conditions
+   * dans la fonction est ce qui le decide, et ce test le fige.
+   */
+  it("tient pour fraiche une expedition livree sans aucune synchronisation", () => {
+    expect(
+      fraicheurSuivi(
+        { livreA: new Date("2026-09-09T09:00:00.000Z"), synchroniseA: null },
+        maintenant,
+      ),
+    ).toBe("frais");
   });
 });

@@ -227,6 +227,33 @@ export type DetailCommande = {
     cheminPdf: string | null;
     emiseA: Date;
   } | null;
+  /**
+   * L'acheminement du colis, LS-216. Distinct du suivi des statuts metier.
+   *
+   * CINQ CHAMPS ET NON DEUX : l'ecran doit distinguer « pas encore synchronise »
+   * de « synchronise et bloque », ce que `statutTransporteur` seul ne dit pas.
+   * `synchroniseA` porte cette distinction, et c'est la valeur propre de cet
+   * ecran, critere 4 : personne ne regarde un suivi bloque si aucun ecran ne le
+   * montre, et un colis perdu reste a la charge de l'exploitante, article
+   * L216-2.
+   *
+   * `mode` EST CELUI QUE LE TRANSPORTEUR A EXECUTE, distinct de
+   * `Commande.modeLivraison` que le client a paye, ADR-025. Les deux sont lus
+   * pour que l'ecran signale un rebasculement sans jamais reecrire la commande.
+   *
+   * `livreA` EST LU ET JAMAIS ECRIT PAR CET ECRAN. Il vient de la
+   * synchronisation de LS-131 et de nulle part ailleurs : c'est la date qui
+   * ouvre le delai de retractation, article L221-18.
+   */
+  expedition: {
+    transporteur: string;
+    mode: ModeLivraison;
+    numeroSuivi: string | null;
+    statutTransporteur: string | null;
+    expedieA: Date | null;
+    livreA: Date | null;
+    synchroniseA: Date | null;
+  } | null;
 };
 
 /**
@@ -293,6 +320,21 @@ export async function lireDetailCommande(
           numero: true,
           cheminPdf: true,
           emiseA: true,
+        },
+      },
+      /*
+       * L'ACHEMINEMENT, LS-216. Lecture seule : aucun champ de cette relation
+       * n'est ecrit par cet ecran, `livreA` venant de la tache de LS-131.
+       */
+      expedition: {
+        select: {
+          transporteur: true,
+          mode: true,
+          numeroSuivi: true,
+          statutTransporteur: true,
+          expedieA: true,
+          livreA: true,
+          synchroniseA: true,
         },
       },
     },

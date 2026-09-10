@@ -429,3 +429,204 @@ describe("changerStatutCommande", () => {
     ).rejects.toThrow();
   });
 });
+
+/**
+ * ACHEMINEMENT DU COLIS SUR LE DETAIL, LS-216.
+ *
+ * CE QUI SE PROUVE ICI EST LA LECTURE, et c'est ce dont l'ecran depend : quatre
+ * champs ecrits par la tache de LS-131 doivent remonter jusqu'au rendu. Ils
+ * n'etaient lus par AUCUN ecran d'administration avant cette story, mesure du
+ * 10 septembre 2026 : l'exploitante saisissait un numero de suivi et ne le
+ * revoyait jamais.
+ *
+ * L'EXPEDITION EST ECRITE EN SQL ET NON PAR `declarerExpedition`, DELIBEREMENT.
+ * Le service refuse d'ecrire `statutTransporteur`, `livreA` et `synchroniseA`,
+ * qui appartiennent au suivi automatique : passer par lui rendrait ces trois
+ * colonnes nulles, donc intestables. Ce que ces cas eprouvent est l'etat de la
+ * base APRES un cycle de synchronisation, pas le chemin qui l'a produit.
+ */
+describe("acheminement du colis sur le detail de commande", () => {
+  /**
+   * Ecrit une expedition dans l'etat ou la synchronisation la laisserait.
+   *
+   * `pointRelaisId` SUIT LE MODE ET N'EST PAS UN PARAMETRE LIBRE.
+   * `chk_expedition_mode_point_relais` est une EQUIVALENCE portant sur les DEUX
+   * modes de retrait, `POINT_RELAIS` ET `LOCKER` : le nom de la contrainte ne
+   * cite que le premier, ce qui laisse croire que le second en est exempt. Il
+   * ne l'est pas, mesure ici le 10 septembre 2026 sur un `INSERT` refuse.
+   *
+   * Le deduire du mode plutot que de le passer ferme le cas des deux cotes :
+   * un retrait sans point viole la contrainte, un domicile AVEC point la viole
+   * aussi.
+   */
+  async function poserExpedition(
+    commandeId: string,
+    champs: {
+      mode?: string;
+      numeroSuivi?: string | null;
+      statutTransporteur?: string | null;
+      livreA?: Date | null;
+      synchroniseA?: Date | null;
+    } = {},
+  ): Promise<void> {
+    const mode = champs.mode ?? "DOMICILE";
+    const pointRelaisId =
+      mode === "POINT_RELAIS" || mode === "LOCKER" ? "FR-12345" : null;
+
+    await client.query(
+      `INSERT INTO expedition
+         (id, commande_id, transporteur, mode, numero_suivi, point_relais_id,
+          statut_transporteur, expedie_a, livre_a, synchronise_a, cree_a)
+       VALUES ($1, $2, 'Sendcloud', $3::"ModeLivraison", $4, $5, $6, now(), $7, $8, now())`,
+      [
+        randomUUID(),
+        commandeId,
+        mode,
+        champs.numeroSuivi === undefined ? "3SABCD1234567" : champs.numeroSuivi,
+        pointRelaisId,
+        champs.statutTransporteur === undefined
+          ? null
+          : champs.statutTransporteur,
+        champs.livreA ?? null,
+        champs.synchroniseA ?? null,
+      ],
+    );
+  }
+
+  it("remonte les quatre champs du suivi jusqu'au detail", async () => {
+    const { commandeId } = await commanderUnePiece();
+    await confirmer(commandeId);
+
+    const livreA = new Date("2026-09-09T10:00:00.000Z");
+    const synchroniseA = new Date("2026-09-09T10:05:00.000Z");
+
+    await poserExpedition(commandeId, {
+      numeroSuivi: "3SABCD7654321",
+      statutTransporteur: "Delivered",
+      livreA,
+      synchroniseA,
+    });
+
+    const detail = await lireDetailCommande(commandeId);
+
+    expect(detail?.expedition).toMatchObject({
+      transporteur: "Sendcloud",
+      mode: "DOMICILE",
+      numeroSuivi: "3SABCD7654321",
+      statutTransporteur: "Delivered",
+    });
+    expect(detail?.expedition?.livreA?.toISOString()).toBe(
+      livreA.toISOString(),
+    );
+    expect(detail?.expedition?.synchroniseA?.toISOString()).toBe(
+      synchroniseA.toISOString(),
+    );
+  });
+
+  /*
+   * LE CAS QUI DISTINGUE CETTE STORY DE SON APPARENCE. Sans `synchroniseA`
+   * remonte, l'ecran ne peut pas distinguer « lu il y a dix minutes » de « plus
+   * rien depuis trois jours », et le critere 4 devient invérifiable : les deux
+   * afficheraient le meme dernier statut connu.
+   */
+  it("remonte synchroniseA meme quand le colis n'est pas livre", async () => {
+    const { commandeId } = await commanderUnePiece();
+    await confirmer(commandeId);
+
+    const synchroniseA = new Date("2026-09-01T08:00:00.000Z");
+
+    await poserExpedition(commandeId, {
+      statutTransporteur: "Awaiting customer pickup",
+      livreA: null,
+      synchroniseA,
+    });
+
+    const detail = await lireDetailCommande(commandeId);
+
+    expect(detail?.expedition?.livreA).toBeNull();
+    expect(detail?.expedition?.synchroniseA?.toISOString()).toBe(
+      synchroniseA.toISOString(),
+    );
+  });
+
+  /*
+   * CRITERE 3, ET C'EST LE PLUS COUTEUX S'IL EST FAUX. Trois statuts
+   * intermediaires annoncent un colis presque arrive sans que personne ne le
+   * detienne. Si l'un d'eux renseignait `livreA`, le delai de retractation
+   * serait annonce comme couru alors qu'il n'a pas commence, et l'article
+   * L221-20 porte le delai a DOUZE MOIS quand l'information est incorrecte.
+   *
+   * LA PREUVE PORTE SUR LA TABLE DE CORRESPONDANCE, seule a decider. Ecrire ici
+   * un `livreA` a la main prouverait que la colonne se remplit, jamais qu'un
+   * statut la remplit a tort.
+   */
+  it("ne tient aucun evenement intermediaire pour une livraison", async () => {
+    const { estLivre } = await import("@/integrations/sendcloud/statuts");
+
+    /*
+     * LES TROIS IDENTIFIANTS VIENNENT DE L'API REELLE, releves le 10 septembre
+     * 2026 et figes par `tests/unitaire/statuts-livraison.test.ts`. Les
+     * inventer aurait rendu ce test vert pour la mauvaise raison : un
+     * identifiant absent de la liste blanche ne livre pas, donc un NUMERO
+     * QUELCONQUE passe. Ce qui est eprouve ici est que les statuts REELLEMENT
+     * emis pendant l'acheminement ne livrent pas.
+     */
+    /* `Awaiting customer pickup`, le colis attend au relais. */
+    expect(estLivre(12)).toBe(false);
+    /* `Delivery attempt failed`, personne n'etait la. */
+    expect(estLivre(8)).toBe(false);
+    /* `Parcel en route`, en cours d'acheminement. */
+    expect(estLivre(91)).toBe(false);
+
+    /* LES DEUX SEULS QUI LIVRENT, ADR-042 decision 1. */
+    expect(estLivre(11)).toBe(true);
+    expect(estLivre(93)).toBe(true);
+  });
+
+  /*
+   * CRITERE 5, LE REPORT SE LIT SANS QUE RIEN NE SOIT REECRIT. `Commande.
+   * modeLivraison` reste ce que le client a choisi et paye, ADR-025 : c'est
+   * l'ECART entre les deux modes qui porte l'information, et l'ecran n'a aucun
+   * autre moyen de savoir qu'un report a eu lieu.
+   */
+  it("laisse le mode de la commande intact quand l'expedition est reportee", async () => {
+    const { commandeId } = await commanderUnePiece();
+    await confirmer(commandeId);
+
+    /*
+     * LE CAS ECRIT ICI EST CELUI D'UNE EXPEDITION CREEE VERS UN RELAIS, avec
+     * son identifiant, sur une commande payee a domicile. Il exerce l'ECART de
+     * modes, qui est ce que le critere 5 demande de rendre visible.
+     *
+     * CE N'EST PAS LE REPORT AUTOMATIQUE DE SENDCLOUD, et la nuance est
+     * documentee par ADR-042 : sur un report apres echec, le transporteur ne
+     * rend AUCUN identifiant de point, donc `Expedition.mode` ne peut pas
+     * passer a `POINT_RELAIS` sans violer `chk_expedition_mode_point_relais`.
+     * Ce report-la se lit sur le STATUT, `Awaiting customer pickup` sur une
+     * expedition `DOMICILE`, et `estDeposeEnPointRetrait` porte cette lecture.
+     */
+    await poserExpedition(commandeId, {
+      mode: "POINT_RELAIS",
+      statutTransporteur: "Awaiting customer pickup",
+    });
+
+    const detail = await lireDetailCommande(commandeId);
+
+    expect(detail?.modeLivraison).toBe("DOMICILE");
+    expect(detail?.expedition?.mode).toBe("POINT_RELAIS");
+  });
+
+  /*
+   * UNE COMMANDE SANS COLIS PARTI N'A PAS D'EXPEDITION, et l'ecran doit pouvoir
+   * ne rien afficher plutot qu'un titre suivi d'une liste vide. Le cas est le
+   * plus frequent de tous : toute commande en preparation est dans cet etat.
+   */
+  it("rend une expedition nulle tant qu'aucun colis n'est parti", async () => {
+    const { commandeId } = await commanderUnePiece();
+    await confirmer(commandeId);
+
+    const detail = await lireDetailCommande(commandeId);
+
+    expect(detail?.expedition).toBeNull();
+  });
+});
