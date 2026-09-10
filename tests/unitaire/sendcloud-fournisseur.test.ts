@@ -216,9 +216,18 @@ describe("creerFournisseurSendcloud, pannes du fournisseur", () => {
    * remonte tel quel. C'est la traduction attendue d'`integrations/`.
    */
   it("traduit un refus HTTP en TransporteurIndisponibleError", async () => {
+    /*
+     * LE CORPS DU REFUS EST UNE LISTE VALIDE, ET C'EST LE POINT DU TEST.
+     *
+     * Avec un corps d'erreur ordinaire, retirer la garde `!reponse.ok` laissait
+     * ce test VERT : la garde suivante, celle du corps qui n'est pas un
+     * tableau, levait la meme erreur et le defaut passait inapercu. Deux gardes
+     * qui se recouvrent ne se distinguent qu'en donnant au refus un corps que
+     * la seconde accepterait.
+     */
     const fournisseur = creerFournisseurSendcloud({
       ...IDENTIFIANTS,
-      fetch: fetchQuiRend({ error: "unauthorized" }, { status: 401 }),
+      fetch: fetchQuiRend([], { status: 401 }),
     });
 
     await expect(
@@ -232,6 +241,32 @@ describe("creerFournisseurSendcloud, pannes du fournisseur", () => {
       fetch: vi.fn(async () => {
         throw new Error("connexion refusée");
       }),
+    });
+
+    await expect(
+      fournisseur.rechercher({ codePostal: "64170", mode: "POINT_RELAIS" }),
+    ).rejects.toBeInstanceOf(TransporteurIndisponibleError);
+  });
+
+  /*
+   * UN CORPS QUI N'EST PAS DU JSON EST UNE PANNE, cas distinct du suivant.
+   *
+   * Une passerelle en surcharge rend une page HTML avec un statut 200 : le
+   * `json()` leve alors, et ce chemin n'avait AUCUN test avant la preuve par
+   * mutation. Sans lui, avaler l'echec de lecture et poursuivre avec une liste
+   * vide passait au vert.
+   */
+  it("traite un corps illisible comme une panne", async () => {
+    const fournisseur = creerFournisseurSendcloud({
+      ...IDENTIFIANTS,
+      fetch: vi.fn<typeof globalThis.fetch>(async () =>
+        Promise.resolve(
+          new Response("<html>maintenance</html>", {
+            status: 200,
+            headers: { "content-type": "text/html" },
+          }),
+        ),
+      ),
     });
 
     await expect(
@@ -267,7 +302,7 @@ describe("creerFournisseurSendcloud, pannes du fournisseur", () => {
   it("ne laisse fuiter aucun identifiant dans l'erreur", async () => {
     const fournisseur = creerFournisseurSendcloud({
       ...IDENTIFIANTS,
-      fetch: fetchQuiRend({ error: "unauthorized" }, { status: 401 }),
+      fetch: fetchQuiRend([], { status: 401 }),
     });
 
     const erreur = await fournisseur
