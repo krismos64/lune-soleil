@@ -7,6 +7,13 @@ paths:
   - "src/lib/livraison.ts"
   - "src/lib/retractation.ts"
   - "src/app/(boutique)/commande/**"
+  # LES COOKIES RELEVENT DE L'ARTICLE 82, ajoute par LS-148 : sans ces chemins,
+  # la regle ne se chargerait jamais en touchant un fichier qui pose un traceur,
+  # et l'analyse d'exemption resterait invisible a qui en ajoute un.
+  - "src/lib/panier-cookie.ts"
+  - "src/lib/tunnel-cookie.ts"
+  - "src/lib/commande-cookie.ts"
+  - "src/app/(boutique)/panier/**"
 ---
 
 # Délais légaux et obligations d'information
@@ -374,3 +381,78 @@ paramètre commercial à fixer.
 Les avis entrent en périmètre d'ouverture, epic LS-36.
 
 Aucun faux avis, jamais, y compris en préproduction visible.
+
+## Cookies et traceurs, article 82
+
+Vérifié aux sources officielles le **10 septembre 2026**, LS-148. ADR-040 pour la
+décision de ne poser aucune mesure d'audience.
+
+### Le régime n'est pas celui du RGPD, et la confusion est courante
+
+**Deux textes, deux obligations, deux déclencheurs.** L'obligation de
+consentement aux traceurs vient de l'**article 82 de la loi Informatique et
+Libertés**, transposition de la directive ePrivacy, et non du RGPD. Le RGPD
+n'intervient que pour définir ce qu'est un consentement valide, articles 4-11
+et 7.
+
+**Traiter des données personnelles par ailleurs ne crée aucune obligation de
+bannière.** La CNIL l'énonce : l'obligation sur les traceurs est indépendante des
+autres traitements de l'organisme. Une boutique qui collecte des adresses de
+livraison doit informer, tenir un registre et honorer les droits des personnes ;
+elle ne doit pas pour autant une bannière de consentement.
+
+Le déclencheur de l'article 82 est l'**écriture ou la lecture sur le terminal**
+du visiteur, pas la nature des données traitées ailleurs.
+
+### Ce que le site pose, relevé et non supposé
+
+Trois cookies applicatifs, plus celui de session :
+
+| Cookie | Rôle | Exemption citée par la CNIL |
+|---|---|---|
+| `ls_panier` | contenu du panier | « garder en mémoire le contenu d'un panier d'achat sur un site marchand » |
+| `ls_tunnel` | saisie du tunnel de commande | « conserver les choix utilisateurs » |
+| `ls_commande` | preuve que ce navigateur a passé la commande | « conserver les choix utilisateurs » |
+| session Better Auth | authentification | « traceurs destinés à l'authentification auprès d'un service » |
+
+Les quatre sont `httpOnly`, `sameSite: "lax"` et `secure` hors développement.
+Aucun n'est publicitaire ni analytique.
+
+**`document-v1` n'est pas un cookie**, contrairement à ce que son nom laisse
+croire : c'est une étiquette de dérivation HMAC pour les jetons d'accès aux
+documents, `src/lib/jeton-acces.ts`. Ne pas la compter parmi les traceurs.
+
+### Aucun cookie n'est posé à la simple visite
+
+Mesuré sur la production le 10 septembre 2026 :
+
+```
+GET https://lune-soleil.fr/           en-tetes seuls : aucun Set-Cookie
+GET https://lune-soleil.fr/catalogue   en-tetes seuls : aucun Set-Cookie
+```
+
+La mesure se refait par `curl` en demandant les en-têtes seuls.
+
+Ils n'apparaissent qu'à l'action de l'utilisateur, ajout au panier ou connexion,
+ce qui renforce leur caractère strictement nécessaire au **service demandé**.
+
+### Conclusion, et elle est un livrable
+
+**Aucun consentement n'est dû, aucune bannière n'est requise.** Les quatre
+traceurs figurent nommément dans la liste des exemptions publiée par la CNIL,
+sans qu'aucune analogie soit nécessaire.
+
+**L'absence d'obligation de consentement ne dispense pas d'informer** : les
+cookies employés sont décrits dans `#confidentialite` de `/informations-legales`.
+
+### Ce qui ferait tomber cette conclusion
+
+Un seul événement : l'ajout d'un traceur **non strictement nécessaire**. Une
+mesure d'audience déposant un identifiant, un service de chat, une carte
+distante, un lecteur vidéo embarqué. ADR-040 écarte la mesure d'audience ; toute
+autre addition impose de rejouer cette analyse **avant** de livrer.
+
+Sources : [CNIL, que dit la
+loi](https://www.cnil.fr/fr/cookies-et-autres-traceurs/regles/cookies/que-dit-la-loi)
+et [CNIL, mesure
+d'audience](https://www.cnil.fr/fr/cookies-et-autres-traceurs/regles/cookies-solutions-pour-les-outils-de-mesure-daudience).

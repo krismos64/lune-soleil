@@ -389,6 +389,45 @@ export default async function PageInformationsLegales() {
           factures qui s&apos;y rattachent : la loi impose de les conserver dix
           ans. Elles cessent en revanche d&apos;être liées à votre compte.
         </p>
+
+        {/*
+         * LES COOKIES, LS-148. Ce bloc est COMPLET et ne porte pas la mention
+         * `manquant` : l'analyse est faite et tranchée, `.claude/rules/legal.md`
+         * section « Cookies et traceurs, article 82 ».
+         *
+         * AUCUNE BANNIERE N'EST DUE, les quatre traceurs figurant NOMMEMENT
+         * dans la liste des exemptions publiee par la CNIL. Mais l'absence
+         * d'obligation de consentement ne dispense pas d'INFORMER, et c'est ce
+         * que ce bloc fait.
+         *
+         * LE CHIFFRE ET LES NOMS SONT CEUX DU CODE, releves et non supposes :
+         * `ls_panier`, `ls_tunnel`, `ls_commande` et le cookie de session. Les
+         * citer permet a un visiteur de les retrouver dans son navigateur.
+         *
+         * NE PAS Y AJOUTER UN TRACEUR SANS REJOUER L'ANALYSE. Une mesure
+         * d'audience, un chat, une carte distante ou un lecteur video embarque
+         * feraient tomber l'exemption et imposeraient une banniere.
+         */}
+        <h3 className={styles.titreBloc}>Cookies</h3>
+        <p className={styles.texte}>
+          Ce site ne dépose <strong>aucun cookie publicitaire</strong>, aucun
+          traceur de mesure d&apos;audience et aucun outil tiers. Rien
+          n&apos;est déposé lorsque vous vous contentez de naviguer.
+        </p>
+        <p className={styles.texte}>
+          Quatre cookies apparaissent uniquement quand vous en avez besoin.
+          L&apos;un retient le contenu de votre panier, un autre conserve votre
+          saisie pendant la commande, un troisième vous permet de retrouver une
+          commande passée depuis ce navigateur, et le dernier vous garde
+          connecté si vous avez un compte.
+        </p>
+        <p className={styles.texte}>
+          Ces quatre cookies sont <strong>strictement nécessaires</strong> au
+          service que vous demandez. À ce titre, la loi ne soumet pas leur dépôt
+          à votre consentement, et c&apos;est pourquoi aucune bannière ne vous
+          est présentée. Vous pouvez les supprimer à tout moment depuis les
+          réglages de votre navigateur, au prix de la perte de votre panier.
+        </p>
       </section>
 
       <section
