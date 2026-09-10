@@ -203,8 +203,48 @@ Le point de départ suppose de connaître la date de réception du colis. **Tran
 le 28 juillet 2026, LS-33** : elle vient du suivi automatique Mondial Relay,
 offre Start, par API.
 
-**Le piège tient en deux événements que le transporteur distingue** et qu'il ne
-faut jamais confondre :
+### La table qui fait foi est celle de Sendcloud, ADR-042
+
+**L'intégration passe par Sendcloud et non par l'API Mondial Relay**, ADR-035.
+Les statuts ci-dessous sont relevés sur l'API réelle le 10 septembre 2026,
+`GET /api/v2/parcels/statuses`, **trente-cinq statuts**. Le code raisonne sur
+les identifiants numériques, stables, et non sur les libellés.
+
+| Identifiant | Statut Sendcloud | Mode | Effet |
+|---|---|---|---|
+| **11** | `Delivered` | domicile | renseigne `livreA` |
+| **93** | `Shipment collected by customer` | relais, locker | renseigne `livreA` |
+| 12 | `Awaiting customer pickup` | relais, locker | **aucun** |
+| 8 | `Delivery attempt failed` | domicile | **aucun** |
+| 91 | `Parcel en route` | les trois | **aucun** |
+| 92 | `Driver en route` | domicile | **aucun** |
+
+**DEUX statuts renseignent `livreA`, et non un seul.** `Delivered` vise la
+remise au client à son adresse, `Shipment collected by customer` le retrait dans
+un point de service. Écrire la règle sur le seul retrait en relais laisserait
+toute livraison à domicile sans date de réception, donc sans délai de
+rétractation ouvert et sans invitation à déposer un avis.
+
+**Un statut inconnu ne livre pas**, liste blanche et jamais liste noire : les
+35 statuts d'aujourd'hui peuvent devenir 40, et un statut neuf qui livrerait par
+défaut resterait invisible jusqu'au litige.
+
+Un colis peut rester une semaine en relais avant retrait : prendre un événement
+antérieur éteindrait le droit du client avant terme.
+
+**Quatre statuts constatent qu'un colis n'arrivera pas** et lèvent une alerte à
+l'exploitante, sans écrire ni statut de commande ni mouvement de stock,
+ADR-030 : `Unable to deliver` (80), `Refused by recipient` (62991), `Returned to
+sender` (62992) et `Address invalid` (62997). `livreA` reste nul, le client
+n'ayant rien reçu.
+
+`Delivery attempt failed` n'en fait pas partie : une tentative échouée est
+suivie d'une seconde ou d'un report en relais.
+
+### La table Mondial Relay, conservée pour le raisonnement
+
+Elle décrit le transporteur, qui n'a pas changé, et documente la décision du
+28 juillet 2026. Les libellés ci-dessous ne sont **pas** ceux que l'API rend.
 
 | Événement Mondial Relay | Mode | Sens | Effet |
 |---|---|---|---|
@@ -212,10 +252,6 @@ faut jamais confondre :
 | mise en distribution | domicile | le colis part en tournée | **aucun** |
 | avis de passage | domicile | personne n'était là, rien n'est remis | **aucun** |
 | remis au destinataire | les trois | le client l'a physiquement récupéré | renseigne `livreA` |
-
-Seul le dernier fait courir le délai de rétractation et déclenche l'invitation à
-déposer un avis. Un colis peut rester une semaine en relais avant retrait :
-prendre un événement antérieur éteindrait le droit du client avant terme.
 
 **Les trois modes suivent la même règle**, ADR-025 : le déclencheur est la prise
 de possession physique par le client, jamais l'acheminement. À domicile, la mise

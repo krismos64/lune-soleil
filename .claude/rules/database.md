@@ -79,13 +79,18 @@ Règles associées :
 
 ## Verrou de tâche planifiée, LS-72
 
-Cinq tâches tournent, la table vit dans `src/services/tache-planifiee.ts` : la
-libération des réservations expirées toutes les cinq minutes, la réconciliation
-des paiements tous les quarts d'heure, l'envoi des emails, les deux purges. Sans
-verrou,
-deux instances les exécuteraient simultanément, et **pour la libération cela
-décrémenterait `quantiteReservee` deux fois** : du stock disparaîtrait sans
-qu'aucune vente ne l'explique.
+La table vit dans `src/services/tache-planifiee.ts`, et c'est elle qui fait foi :
+libération des réservations expirées toutes les cinq minutes, réconciliation des
+paiements tous les quarts d'heure, envoi des emails chaque minute, suivi de
+livraison chaque heure depuis LS-131, et les deux purges quotidiennes.
+
+**Le compte n'est pas inscrit ici**, il disait « cinq » quand LS-131 en a ajouté
+une sixième. `verifier-taches-planifiees.sh` confronte cette table au crontab
+dans les deux sens, ce qui rend le compte mesuré plutôt qu'affirmé.
+
+Sans verrou, deux instances les exécuteraient simultanément, et **pour la
+libération cela décrémenterait `quantiteReservee` deux fois** : du stock
+disparaîtrait sans qu'aucune vente ne l'explique.
 
 **La prise de verrou tient en une seule instruction**, même principe que
 l'`UPDATE` conditionnel de réservation :

@@ -85,8 +85,8 @@ peut recouvrir un périmètre qui s'élargit.
 
 `https://lune-soleil.fr` répond 200 sur le VPS partagé avec SmartPlanning,
 ADR-036. Trois conteneurs, schéma complet, sauvegarde quotidienne par unité
-`systemd` avec restauration prouvée, ADR-037. Les cinq tâches planifiées
-tournent, et les médias sont servis depuis le volume.
+`systemd` avec restauration prouvée, ADR-037. Les tâches planifiées tournent,
+toutes celles que déclare `TACHES`, et les médias sont servis depuis le volume.
 
 **Les sauvegardes sortent du VPS depuis le 10 septembre 2026**, LS-107 :
 chiffrées en AES256 puis copiées vers **Backblaze B2**, un fournisseur différent
@@ -598,10 +598,11 @@ docker compose -f docker-compose.yml -f docker-compose.cron.yml \
 tâche qui ne tourne pas se remarque, une route interne ouverte à tous ne se
 remarque pas.
 
-**Cinq tâches** sont déclarées et toutes travaillent : les quatre décrites
-ci-dessous depuis LS-120, plus `envoi-emails` qui vide la file d'attente
-d'ADR-033 chaque minute. Le compte se mesure,
-`grep -vcE '^\s*#|^\s*$' docker/cron/crontab`.
+**Toutes les tâches déclarées travaillent**, et le compte se mesure plutôt que
+de s'écrire : `grep -vcE '^\s*#|^\s*$' docker/cron/crontab`. Le chiffre disait
+« cinq » jusqu'à LS-131, qui a ajouté `suivi-livraison`, à côté des quatre
+décrites ci-dessous depuis LS-120 et d'`envoi-emails` qui vide la file
+d'attente d'ADR-033 chaque minute.
 
 `liberation-reservations`, toutes les cinq minutes : elle rend au catalogue les
 réservations échues, ce sans quoi `quantiteReservee` ne redescendait jamais et

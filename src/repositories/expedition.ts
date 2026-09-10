@@ -146,3 +146,56 @@ export async function listerAExpedier(
     },
   });
 }
+
+/**
+ * Les expeditions dont le suivi reste a lire, LS-131.
+ *
+ * CE QUI EST EXCLU, ET POURQUOI. Une expedition sans numero n'a rien a
+ * interroger, et une expedition dont `livreA` est renseigne n'a plus rien a
+ * apprendre : la date d'une reception ne change pas. Ce filtre est donc AUSSI
+ * ce qui empeche `livreA` d'etre reecrit a chaque cycle, ce qui repousserait la
+ * fin du delai de retractation indefiniment.
+ *
+ * BORNEE PAR `limite` : chaque ligne coute un appel reseau, et la tache tient
+ * son verrou pendant ce temps.
+ */
+export async function listerASuivre(
+  client: ClientBase,
+  limite: number,
+): Promise<{ id: string; numeroSuivi: string | null }[]> {
+  return client.expedition.findMany({
+    where: { livreA: null, numeroSuivi: { not: null } },
+    select: { id: true, numeroSuivi: true },
+    orderBy: { creeA: "asc" },
+    take: limite,
+  });
+}
+
+/**
+ * Enregistre le resultat d'une lecture de suivi, LS-131.
+ *
+ * `livreA` N'EST ECRIT QUE S'IL EST DEMANDE, et la requete de `listerASuivre`
+ * garantit qu'il etait nul : c'est une date legale, point de depart du delai de
+ * retractation, article L221-18.
+ *
+ * `synchroniseA` EST TOUJOURS RENSEIGNE ICI, et jamais depuis un chemin
+ * d'echec : le renseigner malgre une panne ferait passer un suivi jamais lu
+ * pour un suivi a jour.
+ */
+export async function enregistrerSuivi(
+  client: ClientBase,
+  parametres: {
+    expeditionId: string;
+    statutTransporteur: string;
+    livreA?: Date;
+  },
+): Promise<void> {
+  await client.expedition.update({
+    where: { id: parametres.expeditionId },
+    data: {
+      statutTransporteur: parametres.statutTransporteur,
+      synchroniseA: new Date(),
+      ...(parametres.livreA === undefined ? {} : { livreA: parametres.livreA }),
+    },
+  });
+}
