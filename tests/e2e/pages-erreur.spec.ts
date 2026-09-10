@@ -136,3 +136,43 @@ test("la page 404 n'expose aucun detail technique", async ({ page }) => {
     expect(html).not.toContain(fuite);
   }
 });
+
+/**
+ * `/admin` mene a la connexion de l'administration, LS-175.
+ *
+ * POURQUOI CE TEST. Une redirection de `next.config.ts` ne casse RIEN quand elle
+ * disparait : `/admin` rendrait un 404 ordinaire, et aucun autre test ne le
+ * verrait. Elle existe pour une personne unique qui l'emploie sur son signet,
+ * donc son absence se decouvrirait le jour ou elle en a besoin.
+ */
+test("/admin mene a la connexion de l'administration", async ({ page }) => {
+  await page.goto("/admin");
+
+  // L'URL FINALE EST LE POINT DECISIF. Verifier le contenu ne distinguerait pas
+  // une redirection d'une page qui rendrait le meme formulaire ailleurs.
+  await expect(page).toHaveURL(/\/administration\/connexion$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Administration",
+  );
+});
+
+/**
+ * LA REDIRECTION N'ACCORDE RIEN, invariant 2.
+ *
+ * Un raccourci qui contournerait la garde serait exactement le defaut qu'une
+ * URL courte vers une administration invite a commettre. La page de destination
+ * exige une session au role `ADMINISTRATRICE` : sans session, elle rend son
+ * ecran de connexion et rien d'autre.
+ */
+test("/admin n'ouvre aucun ecran d'administration sans session", async ({
+  page,
+}) => {
+  await page.goto("/admin");
+
+  await expect(page).toHaveURL(/\/administration\/connexion$/);
+  // Aucune rubrique de la barre d'administration n'est rendue : elle n'existe
+  // que pour une session au bon role.
+  await expect(
+    page.getByRole("link", { name: "Tableau de bord" }),
+  ).toBeHidden();
+});
