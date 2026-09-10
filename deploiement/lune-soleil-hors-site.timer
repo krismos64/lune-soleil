@@ -1,0 +1,35 @@
+# Declenchement quotidien de la copie hors site. LS-107.
+#
+# S'installe dans /etc/systemd/system/ puis :
+#   sudo systemctl enable --now lune-soleil-hors-site.timer
+
+[Unit]
+Description=Declenchement quotidien de la copie hors site Lune & Soleil
+Documentation=file:///opt/lune-soleil/deploiement/copier-sauvegarde-hors-site.sh
+
+[Timer]
+# 03h15 UTC, QUARANTE-CINQ MINUTES APRES LA SAUVEGARDE, qui part a 02h30.
+#
+# LE DECALAGE EST LE POINT. La sauvegarde prend quelques secondes aujourd'hui,
+# mais elle grossira avec le catalogue photographie de LS-23 : dump, archive,
+# chiffrement des deux et verification du dechiffrement. Quarante-cinq minutes
+# laissent une marge large sans repousser la copie hors du creux nocturne.
+#
+# IL EVITE AUSSI LES RENDEZ-VOUS DEJA PRIS sur cette machine PARTAGEE : la purge
+# des journaux du cron applicatif tourne a 03h17 UTC, la sauvegarde de
+# SmartPlanning a 03h28 et sa propre copie hors site a 04h10. Aucune collision.
+OnCalendar=*-*-* 03:15:00
+
+# RATTRAPAGE APRES UNE MACHINE ETEINTE. Sans `Persistent`, un VPS redemarre a
+# 04h00 sauterait la copie du jour en silence. Avec, systemd la lance des le
+# demarrage si l'echeance est passee, et la garde des 48 h du script refusera
+# d'envoyer une archive trop vieille.
+Persistent=true
+
+# DISPERSION SUR CINQ MINUTES, meme motif que la sauvegarde : la machine est
+# partagee, et une collision systematique vaut moins qu'une collision
+# occasionnelle.
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target
