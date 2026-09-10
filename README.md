@@ -150,7 +150,7 @@ n'a rien.
 | Documents comptables | `@react-pdf/renderer`, police embarquée, volume local, ADR-034 |
 | Tests | Vitest, React Testing Library, Playwright, axe-core |
 | Supervision | journal JSON en sortie standard, sans service tiers |
-| Mesure d'audience | Umami auto-hébergé |
+| Mesure d'audience | **aucune**, ADR-040, décision réversible |
 | Hébergement | VPS OVHcloud, Docker Compose, Nginx |
 | Intégration continue | GitHub Actions, image taguée par SHA, GHCR |
 
