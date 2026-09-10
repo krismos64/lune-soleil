@@ -157,7 +157,53 @@ export function choisirEnvoyeurEmail(
     return envoyeurJournalise;
   }
 
-  journaliser("info", "envoyeur SMTP en place", {});
+  /*
+   * ---------------------------------------------------------------------------
+   * L'ENVOI REEL EST REFUSE HORS PRODUCTION, LS-215.
+   *
+   * CE QUI L'A PRODUIT, mesure le 10 septembre 2026, quelques heures apres la
+   * correction de LS-214. Le `.env` du poste de developpement portait les
+   * identifiants SMTP DE LA BOUTIQUE. Tant que l'envoyeur de repli etait cable,
+   * rien ne partait et le piege restait masque ; des que le SMTP a ete branche,
+   * chaque execution de la suite a envoye de VRAIS emails vers les adresses de
+   * test du projet.
+   *
+   * `client@exemple.fr`, `camille.dupont@exemple.test` et les fixtures `e2e-*`
+   * designent des domaines INEXISTANTS PAR CONCEPTION : chaque message rebondit,
+   * et OVH renvoie le rejet a l'expediteur. L'exploitante a recu des dizaines de
+   * « Undelivered Mail Returned to Sender » dans sa boite.
+   *
+   * CE N'EST PAS QU'UNE GENE. Chaque execution consomme le plafond de 200
+   * messages par heure du MX Plan, ADR-008 : sur une boutique ouverte, ce
+   * plafond epuise ferait tomber les emails de commande legitimes avec lui.
+   *
+   * POURQUOI DANS LE CODE ET NON DANS `.env.example`. Vider le fichier local
+   * corrige un poste, pas un clone, ni le meme poste apres une remise en place.
+   * Une regle ecrite et non verifiee ne tient pas, motif connu de ce depot.
+   *
+   * L'AUTORISATION EST EXPLICITE ET SE POSE SCIEMMENT. Quelqu'un qui veut
+   * reellement eprouver un envoi depuis son poste pose la variable ; personne ne
+   * le fait par accident en clonant le depot.
+   * ---------------------------------------------------------------------------
+   */
+  const enProduction = env.NODE_ENV === "production";
+  const envoiAutorise = env.AUTORISER_ENVOI_EMAIL_HORS_PRODUCTION === "oui";
+
+  if (!enProduction && !envoiAutorise) {
+    journaliser(
+      "warn",
+      "envoi reel refuse hors production, envoyeur de repli en place",
+      {
+        nodeEnv: env.NODE_ENV ?? "(absent)",
+        pourAutoriser: "poser AUTORISER_ENVOI_EMAIL_HORS_PRODUCTION=oui",
+      },
+    );
+    return envoyeurJournalise;
+  }
+
+  journaliser("info", "envoyeur SMTP en place", {
+    horsProduction: !enProduction,
+  });
 
   /*
    * `env` EST TRANSMIS EXPLICITEMENT, jamais laisse relire `process.env`.
