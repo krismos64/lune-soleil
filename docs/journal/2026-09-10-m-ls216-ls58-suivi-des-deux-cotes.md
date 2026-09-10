@@ -207,15 +207,15 @@ désormais de lui-même dans ce cas.
 
 ## Ce que la production ne porte toujours pas
 
-**Inchangé depuis le journal `l`, et toujours bloquant.** Aucune clé Sendcloud
-en production, mesuré : 19 variables dans `/etc/lune-soleil/production.env`,
-zéro `SENDCLOUD_*`. La tâche horaire échouera dès sa première exécution, en
-silence, et les deux écrans livrés ici afficheront « Aucun statut n'a encore été
-lu » sur toutes les commandes.
+**Le déploiement, et lui seul désormais.** Les clés sont posées, le cron
+déclenche bien les six tâches, mais l'image applicative est antérieure à LS-131 :
+la route de la tâche n'existe pas encore côté serveur.
 
-**Poser les clés avant le prochain déploiement**, qui porte par ailleurs une
-migration, l'index `alerte_ouverte_unique`, donc passe par
-`./scripts/migrate-production.sh`.
+Ce déploiement porte une migration, l'index `alerte_ouverte_unique`, donc il
+passe par `./scripts/migrate-production.sh` puis le workflow, jamais à la main.
+
+Tant qu'il n'a pas eu lieu, aucune date de livraison n'est renseignée, donc aucun
+délai de rétractation ne démarre et aucune invitation à déposer un avis ne part.
 
 ## État des tickets
 
