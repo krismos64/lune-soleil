@@ -879,3 +879,101 @@ describe("les emails d'authentification traversent le rendu, LS-54", () => {
     expect(reinitialisation?.destinataire).toBe("oubli@exemple.fr");
   });
 });
+
+/**
+ * Lecture des passkeys d'un compte, LS-175. Zone critique : autorisation.
+ *
+ * CE QUE CES TESTS EXERCENT, et ce que les tests d'acces croise plus haut ne
+ * couvrent PAS. Ceux-la prouvent qu'une credential ne peut pas etre partagee
+ * entre deux comptes, ce qui protege la CONNEXION. Ceux-ci portent sur la
+ * LECTURE : l'ecran de gestion liste des moyens d'acces, et lister ceux
+ * d'autrui serait une divulgation, invariant 2.
+ *
+ * LE PIEGE EST CELUI DEJA PAYE DEUX FOIS ICI : sur une base ou un seul compte
+ * porte des passkeys, une lecture non filtree rend le meme resultat qu'une
+ * lecture filtree. Ces tests creent donc DEUX comptes portant chacun une
+ * passkey, sans quoi ils passeraient au vert sur un service qui ignore son
+ * argument.
+ */
+describe("lecture des passkeys d'un compte", () => {
+  let listerPasskeysDuCompte: typeof import("@/services/passkeys").listerPasskeysDuCompte;
+
+  beforeAll(async () => {
+    ({ listerPasskeysDuCompte } = await import("@/services/passkeys"));
+  });
+
+  /**
+   * WebAuthn n'etant pas jouable sous Vitest, la passkey est ecrite en base
+   * directement : ce qui est teste ici est la LECTURE et son filtrage, pas la
+   * negociation avec l'authentificateur.
+   */
+  async function poserPasskey(
+    utilisateurId: string,
+    nom: string,
+    credentialId: string,
+  ) {
+    await client.query(
+      `INSERT INTO passkey
+         (id, name, public_key, user_id, credential_id, counter,
+          device_type, backed_up, created_at)
+       VALUES (gen_random_uuid()::text, $1, 'cle-publique-de-test', $2, $3, 0,
+               'singleDevice', false, now())`,
+      [nom, utilisateurId, credentialId],
+    );
+  }
+
+  async function idDe(email: string): Promise<string> {
+    const { rows } = await client.query(
+      "SELECT id FROM utilisateur WHERE email = $1",
+      [email],
+    );
+    return rows[0].id;
+  }
+
+  it("ne rend que les passkeys du compte vise, jamais celles d'autrui", async () => {
+    await creerCompte("proprietaire@exemple.fr");
+    await creerCompte("intrus@exemple.fr");
+
+    const proprietaire = await idDe("proprietaire@exemple.fr");
+    const intrus = await idDe("intrus@exemple.fr");
+
+    await poserPasskey(proprietaire, "iPhone", "credential-proprietaire");
+    await poserPasskey(intrus, "Mac de l'intrus", "credential-intrus");
+
+    const lues = await listerPasskeysDuCompte(proprietaire);
+
+    // LES DEUX ASSERTIONS SONT NECESSAIRES. Le compte seul passerait sur une
+    // lecture qui rend la mauvaise ligne, et le nom seul passerait sur une
+    // lecture qui rend les deux.
+    expect(lues).toHaveLength(1);
+    expect(lues[0]?.nom).toBe("iPhone");
+  });
+
+  it("ne fait sortir ni la cle publique ni l'empreinte de credential", async () => {
+    await creerCompte("projection@exemple.fr");
+    const utilisateur = await idDe("projection@exemple.fr");
+    await poserPasskey(utilisateur, "iPad", "credential-projection");
+
+    const lues = await listerPasskeysDuCompte(utilisateur);
+
+    // LA PRESENCE SE VERIFIE AVANT LA PROJECTION. Sans cette ligne, une lecture
+    // qui ne rendrait RIEN ferait passer le test suivant : `Object.keys` d'un
+    // `undefined` leve, mais une liste vide rendrait la comparaison vraie sur
+    // une projection jamais exercee.
+    expect(lues).toHaveLength(1);
+    const lue = lues[0]!;
+
+    // LE SECRET D'AUTHENTIFICATION NE REMONTE PAS JUSQU'A L'ECRAN. La
+    // projection est explicite dans le depot precisement pour cela, et un
+    // `select` elargi par commodite le ferait fuiter sans qu'aucun autre test
+    // ne rougisse.
+    expect(Object.keys(lue).sort()).toEqual(["creeA", "id", "nom"]);
+  });
+
+  it("rend une liste vide sur un compte sans passkey", async () => {
+    await creerCompte("sans-passkey@exemple.fr");
+    const utilisateur = await idDe("sans-passkey@exemple.fr");
+
+    expect(await listerPasskeysDuCompte(utilisateur)).toEqual([]);
+  });
+});
