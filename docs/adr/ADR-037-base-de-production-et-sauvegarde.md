@@ -106,9 +106,17 @@ de fonctionner.
 
 ## Les risques acceptés
 
-**La sauvegarde reste sur la même machine que la base.** Une perte totale du VPS
-emporte les deux. C'est la limite connue de ce choix, et elle n'est pas fermée
-ici : une copie hors site relève de LS-107, qui porte la politique.
+**~~La sauvegarde reste sur la même machine que la base.~~ FERMÉ le 10 septembre
+2026, LS-107.** Ce risque était réel : une perte totale du VPS emportait la base
+et ses quatorze sauvegardes ensemble.
+
+Une copie quotidienne part désormais vers **Backblaze B2**, un fournisseur
+différent d'OVH, à 03h15 UTC. Les archives sont **chiffrées en AES256 avant
+envoi**, la passphrase ne quittant jamais le VPS. Restauration prouvée de bout en
+bout le jour même : téléchargement, déchiffrement, 225 objets lisibles par
+`pg_restore`.
+
+Détail dans `EXPLOITATION.md`, section « Sauvegarde hors site ».
 
 **La restauration est manuelle.** Elle demande une intervention, là où une base
 gérée offrirait un bouton. Le mode opératoire est écrit plutôt que supposé, et

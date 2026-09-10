@@ -337,6 +337,109 @@ if tar tzf "$ARCHIVE" 2>/dev/null | grep -q 'quarantaine'; then
 fi
 
 # ---------------------------------------------------------------------------
+# Chiffrement, LS-107
+#
+# CE QU'IL FERME, ET C'EST LA COPIE HORS SITE QUI L'IMPOSE. Tant que les
+# sauvegardes restaient sur une machine dont l'acces est controle, le
+# chiffrement etait discutable. Des qu'elles partent chez un tiers, il ne l'est
+# plus : le dump porte les ADRESSES et les EMAILS des clients, et Backblaze
+# chiffre au repos avec SES cles, pas les notres.
+#
+# GPG SYMETRIQUE EN AES256, meme mecanique que SmartPlanning, SP-593. La
+# passphrase est passee par un FICHIER et jamais en argument : les arguments
+# d'un processus sont lisibles dans /proc par tout utilisateur, et la machine
+# est PARTAGEE.
+#
+# LE CHIFFREMENT EST FACULTATIF ET NON BLOQUANT. Sans fichier de cle, la
+# sauvegarde reste en clair et le dit : la copie hors site, elle, refusera
+# d'envoyer un fichier non chiffre. Rendre le chiffrement obligatoire ici
+# ferait echouer toutes les sauvegardes le jour ou la cle disparait, ce qui
+# transformerait une degradation en panne.
+#
+# DEUX FICHIERS ET NON UN, contrairement a SmartPlanning : le dump ET l'archive
+# des medias, qui porte les documents comptables, donc des factures nominatives.
+# ---------------------------------------------------------------------------
+
+FICHIER_CLE="${BACKUP_KEY_FILE:-/etc/lune-soleil/backup.key}"
+
+if [ -r "$FICHIER_CLE" ]; then
+  echo "  Chiffrement"
+
+  # chiffrer <fichier> <temoin attendu en tete du clair>
+  #
+  # LE TEMOIN EST VERIFIE APRES DECHIFFREMENT, et ce n'est pas une precaution
+  # de style : un fichier chiffre qui ne se rouvre pas est un fichier PERDU, et
+  # on ne s'en apercevrait que le jour de la restauration, c'est-a-dire le pire
+  # jour.
+  #
+  # LE DECHIFFREMENT DE CONTROLE VA DANS UN FICHIER, JAMAIS DANS UN PIPE VERS
+  # `head` : celui-ci ferme le tuyau des les premiers octets lus, gpg recoit
+  # SIGPIPE et sort en code 2 alors que le dechiffrement est valide. Mesure sur
+  # SmartPlanning le 9 septembre 2026, ou le garde-fou rejetait des sauvegardes
+  # saines.
+  chiffrer() {
+    local CLAIR="$1" TEMOIN_ATTENDU="$2"
+    local CHIFFRE="$CLAIR.gpg"
+    local VERIF="$CLAIR.verif"
+
+    if ! gpg --batch --yes --quiet \
+      --symmetric --cipher-algo AES256 \
+      --passphrase-file "$FICHIER_CLE" \
+      --output "$CHIFFRE" \
+      "$CLAIR" 2>/dev/null; then
+      echo "Arret : le chiffrement de $(basename "$CLAIR") a echoue." >&2
+      rm -f "$CHIFFRE"
+      return 1
+    fi
+
+    if [ ! -s "$CHIFFRE" ]; then
+      echo "Arret : $(basename "$CHIFFRE") est vide." >&2
+      rm -f "$CHIFFRE"
+      return 1
+    fi
+
+    if ! gpg --batch --quiet --decrypt \
+      --passphrase-file "$FICHIER_CLE" \
+      --output "$VERIF" "$CHIFFRE" 2>/dev/null; then
+      echo "Arret : $(basename "$CHIFFRE") ne se dechiffre pas." >&2
+      rm -f "$CHIFFRE" "$VERIF"
+      return 1
+    fi
+
+    if [ -n "$TEMOIN_ATTENDU" ] \
+      && [ "$(head -c ${#TEMOIN_ATTENDU} "$VERIF")" != "$TEMOIN_ATTENDU" ]; then
+      echo "Arret : le contenu dechiffre de $(basename "$CHIFFRE") est inattendu." >&2
+      rm -f "$CHIFFRE" "$VERIF"
+      return 1
+    fi
+
+    rm -f "$VERIF"
+    chmod 600 "$CHIFFRE"
+    # LE CLAIR PART IMMEDIATEMENT. Le laisser vivre jusqu'a la fin du script
+    # elargirait la fenetre pendant laquelle deux copies coexistent, dont une
+    # lisible.
+    rm -f "$CLAIR"
+    return 0
+  }
+
+  # `PGDMP` est la signature d'une archive PostgreSQL au format custom.
+  chiffrer "$SAUVEGARDE" "PGDMP" || exit 1
+  # Une archive gzip commence par 0x1f 0x8b, non imprimable : le temoin est
+  # laisse vide et seul le dechiffrement est verifie.
+  chiffrer "$ARCHIVE" "" || exit 1
+
+  SAUVEGARDE="$SAUVEGARDE.gpg"
+  ARCHIVE="$ARCHIVE.gpg"
+  echo "  $(basename "$SAUVEGARDE") et $(basename "$ARCHIVE"), dechiffrement verifie"
+else
+  # DIT PLUTOT QUE TU, motif « fournisseur absent est un etat ». Une sauvegarde
+  # en clair reste une sauvegarde ; elle ne peut simplement pas partir hors
+  # site.
+  echo "  Chiffrement IGNORE : $FICHIER_CLE absent."
+  echo "  La copie hors site refusera d'envoyer des fichiers non chiffres."
+fi
+
+# ---------------------------------------------------------------------------
 # Rotation
 #
 # APRES la verification et jamais avant : une sauvegarde ratee ne doit pas
@@ -369,10 +472,42 @@ rotation() {
   echo "$supprimes"
 }
 
-NB_SUPPRIMES_DUMP=$(rotation 'quotidienne-*.dump')
-NB_SUPPRIMES_ARCH=$(rotation 'fichiers-*.tar.gz')
+# LES QUATRE MOTIFS, CHIFFRES COMPRIS, LS-107.
+#
+# Un motif `quotidienne-*.dump` ne matche PAS `quotidienne-....dump.gpg` : sans
+# les deux lignes ajoutees, les fichiers chiffres s'accumuleraient sans limite
+# pendant que la rotation annoncerait son travail sur des fichiers qui
+# n'existent plus. Le defaut serait invisible dans la sortie et se verrait au
+# disque, des semaines plus tard.
+#
+# LES QUATRE FAMILLES TOURNENT ENSEMBLE, meme profondeur : un dump conserve
+# sans son archive de medias ne restaure rien d'utilisable, ADR-007.
+# `$(( ))` EN COMMANDE ISOLEE REND 1 QUAND LE RESULTAT VAUT ZERO, et sous
+# `set -e` cela SORT DU SCRIPT. C'est le piege de cette section : la premiere
+# version ecrivait `NB=$((NB + $(rotation ...)))`, ce qui faisait echouer la
+# sauvegarde nominale des que rien n'etait a supprimer, c'est-a-dire les treize
+# premiers jours. Mesure : le temoin du script de mutation est passe de vert a
+# rouge, code 1 sans message, la sortie s'arretant apres le chiffrement.
+#
+# La forme `X=$(( ))` est sure, l'affectation portant son propre code de
+# retour ; c'est `$(( ))` employe SEUL comme commande qui pose le probleme.
+# Ici les quatre appels sont donc sommes dans une seule affectation.
+NB_SUPPRIMES_DUMP=$(( $(rotation 'quotidienne-*.dump') + $(rotation 'quotidienne-*.dump.gpg') ))
+NB_SUPPRIMES_ARCH=$(( $(rotation 'fichiers-*.tar.gz') + $(rotation 'fichiers-*.tar.gz.gpg') ))
 
-NB_CONSERVEES=$(cd "$REP_SAUVEGARDE" && ls quotidienne-*.dump 2>/dev/null | wc -l | tr -d ' ')
+# LE COMPTE SE FAIT SUR LES DEUX FORMES, la bascule vers le chiffrement laissant
+# coexister les deux pendant quatorze jours.
+#
+# `ls motif1 motif2` REND 1 DES QU'UN SEUL MOTIF NE MATCHE RIEN, meme s'il
+# liste parfaitement l'autre, et sous `set -e` l'affectation propage cet echec :
+# le script sortait en 1 apres une sauvegarde REUSSIE, sans un mot. Mesure du
+# 10 septembre 2026, le temoin du script de mutation passant de vert a rouge.
+#
+# `find` est employe a la place : il rend 0 sur zero resultat, et son `-name`
+# repete en `-o` couvre les deux formes en une seule invocation.
+NB_CONSERVEES=$(find "$REP_SAUVEGARDE" -maxdepth 1 -type f \
+  \( -name 'quotidienne-*.dump' -o -name 'quotidienne-*.dump.gpg' \) 2>/dev/null \
+  | wc -l | tr -d ' ')
 echo "  Rotation : $NB_SUPPRIMES_DUMP dump(s) et $NB_SUPPRIMES_ARCH archive(s) supprimes."
 echo "  $NB_CONSERVEES jeu(x) conserve(s) sur $RETENTION."
 

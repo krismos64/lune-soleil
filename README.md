@@ -795,6 +795,7 @@ ssh <hôte> 'sudo bash -s' < scripts/verifier-durcissement-ssh.sh   # 9 sens, LS
 #   deploiement/deployer.sh              bascule, retour arrière, état, purge des images
 #   deploiement/sauvegarder-base.sh      sauvegarde quotidienne, base et fichiers
 #   deploiement/verifier-seuil-disque.sh alerte de seuil, unité systemd horaire
+#   deploiement/copier-sauvegarde-hors-site.sh  copie chiffrée vers Backblaze B2
 # Le workflow « Déployer en production » les appelle par une clé SSH enfermée
 # qui ne peut exécuter QUE le premier. Voir docs/deploiement/EXPLOITATION.md.
 #

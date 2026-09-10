@@ -1,0 +1,49 @@
+# Copie hors site des sauvegardes chiffrees, vers Backblaze B2. LS-107.
+#
+# S'installe dans /etc/systemd/system/ et se declenche par le timer voisin.
+# Type=oneshot : le service s'execute et se termine.
+
+[Unit]
+Description=Copie hors site des sauvegardes Lune & Soleil
+Documentation=file:///opt/lune-soleil/deploiement/copier-sauvegarde-hors-site.sh
+
+# LA COPIE SUIT LA SAUVEGARDE, elle n'a rien a envoyer sans elle. `After`
+# ordonne le demarrage quand les deux sont declenchees ensemble, mais ne
+# declenche rien : c'est le timer qui s'en charge, avec un decalage horaire
+# suffisant pour que la sauvegarde ait termine.
+#
+# VOLONTAIREMENT PAS DE `Requires`. Si la sauvegarde du jour a echoue, cette
+# unite doit s'executer QUAND MEME et refuser explicitement d'envoyer une
+# archive perimee, plutot que d'etre sautee sans laisser de trace. La garde des
+# 48 h du script porte cette decision, et un service saute ne se distingue pas
+# d'un service qui n'a rien trouve a faire.
+After=network-online.target lune-soleil-sauvegarde.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+
+# ROOT est necessaire : le script lit /etc/lune-soleil/b2.conf en 0600 et les
+# archives de /var/backups/lune-soleil en 0700.
+User=root
+Group=root
+
+ExecStart=/opt/lune-soleil/deploiement/copier-sauvegarde-hors-site.sh
+
+# CINQ MINUTES suffisent tres largement pour quelques centaines de kilo-octets,
+# et resteront confortables apres LS-23, une archive de photographies pesant au
+# plus quelques centaines de mega-octets sur une liaison de VPS. Au-dela, c'est
+# que le reseau ou l'API ne repond pas : mieux vaut echouer et le signaler que
+# rester accroche jusqu'au declenchement suivant.
+TimeoutStartSec=300
+
+StandardOutput=journal
+StandardError=journal
+
+# DURCISSEMENT. Ce service lit deux repertoires et parle a une API ; il n'a
+# besoin ni d'ecrire ailleurs, ni d'obtenir de nouveaux privileges.
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
