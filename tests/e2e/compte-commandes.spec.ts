@@ -586,6 +586,170 @@ test("aucune violation axe-core sur les deux ecrans", async ({ page }) => {
  * `espace-client-commandes` eprouvent le refus sur la commande d'un tiers. Un
  * colis n'ouvre aucun chemin de lecture supplementaire.
  */
+/**
+ * LA FRISE D'ETAPES, LS-190, criteres 3, 4 et 5.
+ *
+ * ELLE PORTE SUR LA MEME COMMANDE QUE LE SUIVI, et c'est ce qui rend ces tests
+ * reels : son expedition porte un statut transporteur ENGAGEANT, « Awaiting
+ * customer pickup », sans que `livreA` soit renseigne. C'est exactement le cas
+ * ou une frise naive afficherait « remis au destinataire » en attente, ce que
+ * le critere 3 interdit.
+ *
+ * LA MESURE DE LARGEUR EST PORTEE PAR LES PROJETS PLAYWRIGHT, quatre depuis
+ * LS-166 : ce fichier n'en declare aucune, il est rejoue tel quel a 320, 390,
+ * 768 et 1280 px.
+ */
+test.describe("frise d'étapes", () => {
+  test("n'affiche aucune remise tant qu'elle n'est pas constatée", async ({
+    page,
+  }) => {
+    await page.goto("/compte/commandes");
+    await page.getByRole("link", { name: `Commande ${numeroComplet}` }).click();
+
+    const frise = page.locator("section").filter({ hasText: "Étapes" });
+
+    await expect(frise).toContainText("Commande confirmée");
+    await expect(frise).toContainText("Colis remis au transporteur");
+    await expect(frise).toContainText("Awaiting customer pickup");
+
+    /*
+     * LE COEUR DU CRITERE 3, MESURE SUR LE RENDU. Le statut transporteur est un
+     * FAUX AMI : il annonce un colis disponible au relais que personne n'a
+     * retire. Une etape de remise affichee ici, meme « en attente », ferait
+     * croire a une livraison qui n'a pas eu lieu et eteindrait un droit qui n'a
+     * pas commence a courir.
+     */
+    await expect(frise).not.toContainText("Remise au destinataire");
+  });
+
+  /*
+   * L'ETAT DES ETAPES N'EST PAS PORTE PAR LA SEULE COULEUR, WCAG 1.4.1. Le
+   * texte est visuellement masque mais reste dans l'arbre d'accessibilite :
+   * `toContainText` le lit, alors qu'un lecteur d'ecran l'annoncerait.
+   */
+  test("dit l'état de chaque étape par du texte et non par la couleur", async ({
+    page,
+  }) => {
+    await page.goto("/compte/commandes");
+    await page.getByRole("link", { name: `Commande ${numeroComplet}` }).click();
+
+    const frise = page.locator("section").filter({ hasText: "Étapes" });
+
+    await expect(frise).toContainText("Étape franchie");
+    await expect(frise).toContainText("Étape en cours");
+  });
+
+  /*
+   * L'ORDRE EST L'INFORMATION, donc une liste ORDONNEE et non une suite de
+   * `div` : un lecteur d'ecran annonce « 2 sur 3 », ce qu'aucune pastille
+   * coloree ne dit.
+   */
+  test("rend les étapes dans une liste ordonnée", async ({ page }) => {
+    await page.goto("/compte/commandes");
+    await page.getByRole("link", { name: `Commande ${numeroComplet}` }).click();
+
+    /*
+     * LE SELECTEUR EST ANCRE SUR LA REGION NOMMEE, correction de la revue
+     * frontend du 11 septembre 2026. Ma premiere version prenait
+     * `section ol li`, donc TOUS les `li` de tous les `ol` de toutes les
+     * sections : elle passait par chance, la page ne portant aucun autre `ol`.
+     * Un `ol` ajoute ailleurs sur cet ecran l'aurait cassee, ou pire laissee
+     * verte sur une frise disparue.
+     */
+    const etapes = page
+      .getByRole("region", { name: "Étapes" })
+      .getByRole("listitem");
+
+    await expect(etapes).toHaveCount(3);
+  });
+
+  /*
+   * LE TRAIT DE LIAISON RELIE REELLEMENT LES PASTILLES, ET CE TEST MESURE LE
+   * RENDU plutot que le CSS.
+   *
+   * IL EXISTE PARCE QU'AUCUN CONTROLE NE POUVAIT VOIR LE DEFAUT. Ma premiere
+   * geometrie posait trois segments DETACHES qui ne connectaient aucune
+   * pastille, avec 17,4 px de vide au-dessus et 5,6 px en dessous, et un
+   * decalage de 2 px a droite de l'axe. Les tests passaient, les contrastes
+   * aussi, et le commentaire du CSS decrivait un comportement que le code ne
+   * produisait pas. Seule une mesure sur le rendu l'a montre.
+   *
+   * LA TOLERANCE EST D'UN PIXEL : un demi-pixel de sous-pixel est normal, deux
+   * pixels sont le defaut d'origine.
+   */
+  test("le trait de liaison est centré sur les pastilles et les relie", async ({
+    page,
+  }) => {
+    await page.goto("/compte/commandes");
+    await page.getByRole("link", { name: `Commande ${numeroComplet}` }).click();
+
+    /*
+     * LA FRISE EST ATTENDUE AVANT D'ETRE MESUREE. `page.evaluate` s'execute
+     * des que le document repond, sans attendre le rendu : ma premiere version
+     * mesurait zero etape et l'assertion de garde l'a dit franchement, plutot
+     * que de laisser passer une boucle vide sur zero element.
+     */
+    await expect(
+      page.getByRole("region", { name: "Étapes" }).getByRole("listitem"),
+    ).toHaveCount(3);
+
+    const mesures = await page.evaluate(() => {
+      const region = document.querySelector("ol");
+      const etapes = [...(region?.querySelectorAll(":scope > li") ?? [])];
+
+      return etapes.map((etape) => {
+        const pastille = etape.querySelector("span[aria-hidden]");
+        const boitePastille = pastille!.getBoundingClientRect();
+        const boiteEtape = etape.getBoundingClientRect();
+        const avant = getComputedStyle(etape, "::before");
+
+        return {
+          centrePastille: boitePastille.left + boitePastille.width / 2,
+          basPastille: boitePastille.bottom,
+          gaucheEtape: boiteEtape.left,
+          basEtape: boiteEtape.bottom,
+          traitPresent: avant.content !== "none",
+          traitGauche: Number.parseFloat(avant.left),
+          traitLargeur: Number.parseFloat(avant.width),
+          traitHaut: Number.parseFloat(avant.top),
+        };
+      });
+    });
+
+    expect(mesures.length).toBeGreaterThan(1);
+
+    mesures.forEach((mesure, rang) => {
+      const derniere = rang === mesures.length - 1;
+
+      /*
+       * AUCUN TRAIT SOUS LA DERNIERE PASTILLE : il pendrait dans le vide.
+       */
+      expect(mesure.traitPresent).toBe(!derniere);
+
+      if (derniere) {
+        return;
+      }
+
+      const centreTrait =
+        mesure.gaucheEtape + mesure.traitGauche + mesure.traitLargeur / 2;
+
+      expect(Math.abs(centreTrait - mesure.centrePastille)).toBeLessThanOrEqual(
+        1,
+      );
+
+      /*
+       * LE TRAIT PART DU BAS DE LA PASTILLE, a un pixel pres, et descend
+       * jusqu'au bord de l'etape, donc jusqu'a la pastille suivante.
+       */
+      const hautTrait = mesure.gaucheEtape * 0 + mesure.traitHaut;
+      const basPastilleRelatif = mesure.basPastille - mesure.basEtape;
+
+      expect(hautTrait).toBeGreaterThan(0);
+      expect(basPastilleRelatif).toBeLessThan(0);
+    });
+  });
+});
+
 test.describe("suivi de livraison", () => {
   /*
    * CRITERE 1. Le client lit ou en est son colis sans dependre d'un email,
