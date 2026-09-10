@@ -930,6 +930,29 @@ jobs:
       - name: 9s bis. Les liens d'administration desactivent le prechargement
         run: ./scripts/verifier-prefetch-administration.sh
 
+      # DEUX CONTROLES DE PLUS, TROUVES EN CHERCHANT LE PREMIER, LS-213.
+      #
+      # Le quatrieme critere du ticket demandait de confronter les scripts du
+      # depot a `.github/workflows/` plutot que de se fier a une liste ecrite a
+      # la main. Sur 85 scripts `verifier-*`, 35 n'etaient references nulle
+      # part ; 26 sont des scripts `-mutation`, qui prouvent les controles et
+      # n'ont pas vocation a tourner par pull request.
+      #
+      # Restaient neuf controles reels. Six ne PEUVENT pas tourner ici, visant
+      # la production ou exigeant un acces SSH ou des variables absentes. Ces
+      # deux-la etaient verts et jouables tels quels, sans rien changer.
+      #
+      # `verifier-graphie-marque.sh` est celui dont le depot retient qu'il a ete
+      # prouve par quatre mutations reussies pendant qu'il laissait passer
+      # QUATRE defauts reels, dont l'en-tete de toutes les pages publiques. Le
+      # brancher ne repare pas cette limite, il l'expose : un controle qui
+      # tourne se corrige, un controle qui dort ne se corrige jamais.
+      - name: 9s ter. La graphie de la marque est uniforme
+        run: ./scripts/verifier-graphie-marque.sh
+
+      - name: 9s quater. L'emetteur des factures est coherent
+        run: ./scripts/verifier-emetteur-facture.sh
+
       # ----------------------------------------------------------------------
       # Controle 9t, LS-191. La page qui LEVE a dessein reste inatteignable.
       #
