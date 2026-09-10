@@ -27,7 +27,7 @@ ligne ajoutée, et rien ne le signale.
 | `docs/architecture/JOURNALISATION.md` | trois journaux distincts, masquage par nom de clé, erreurs réduites au nom de classe, contrôle de santé et ses quatre décisions | toute ligne de journal, la route de santé, le déploiement |
 | `docs/architecture/REGISTRE-DES-TRAITEMENTS.md` | les traitements RGPD, durées de conservation tracées à leur source, ce que le registre n'est pas. Le nombre se mesure, `grep -cE '^### T[0-9]+'`, il valait onze le 9 septembre 2026 | toute table portant une donnée personnelle, toute durée de conservation |
 | `docs/PROCEDURE-DROITS-DES-PERSONNES.md` | répondre à une demande d'accès, de rectification ou d'effacement, délai d'un mois, ce qui part et ce qui reste | toute demande d'une personne sur ses données |
-| `docs/PROCEDURE-AMORCAGE-ADMINISTRATION.md` | créer le compte de l'exploitante, qui fait quoi entre elle et le développeur, passkey et codes de récupération, procédure de dernier ressort | la mise en ligne, toute question sur le compte d'administration |
+| `docs/PROCEDURE-AMORCAGE-ADMINISTRATION.md` | créer le compte de l'exploitante, qui fait quoi entre elle et le développeur, passkey, procédure de dernier ressort | la mise en ligne, toute question sur le compte d'administration |
 | `docs/COMPARATIF-MEDIATION.md` | le choix du médiateur de la consommation, obligation de l'article L616-1 | la souscription du médiateur, les mentions légales |
 | `docs/deploiement/EXPLOITATION.md` | **déployer et revenir en arrière** par le workflow, LS-138, démarrer et arrêter, migrer par relais éphémère, sauvegarder, restaurer, vérifier les limites appliquées, ce qu'il ne faut jamais faire sur la machine partagée | **toute intervention sur la production**, LS-152 et LS-138 |
 | `deploiement/deployer.sh` et `.github/workflows/deployer.yml` | la chaîne de déploiement, LS-138 : le script vit **sur la machine** en `/usr/local/sbin/lune-soleil-deployer`, et la clé SSH ne peut exécuter que lui | toute modification du déploiement ou du retour arrière |
@@ -207,6 +207,7 @@ documentation technique, ticket ou règle qui le contredirait.
 | ADR-038 | En-têtes de sécurité, CSP par nonce et HSTS sans preload | en-tête de sécurité, CSP, Content-Security-Policy, nonce, HSTS, preload, `src/proxy.ts`, `Referrer-Policy`, `Permissions-Policy` |
 | ADR-039 | Statut HTTP honnête, streaming des métadonnées désactivé | statut HTTP, 500, base morte, `generateMetadata`, streaming des métadonnées, `htmlLimitedBots`, canonical par filtre, Twitterbot, supervision |
 | ADR-040 | Aucune mesure d'audience à l'ouverture | mesure d'audience, Umami, analytics, consentement, exemption CNIL, article 82, bannière cookies |
+| ADR-041 | Aucun code de récupération, le dernier recours passe par le développeur | code de récupération, backup code, perte des appareils, twoFactor, TOTP, dernier recours, amende ADR-021 |
 
 Cette table se met à jour à chaque ADR créé. Un ADR absent d'ici reste
 opposable : la table est un raccourci, `docs/adr/` fait foi.
