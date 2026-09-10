@@ -322,3 +322,43 @@ describe("choisirEnvoyeurEmail", () => {
     expect(envoyeur).not.toBe(envoyeurJournalise);
   });
 });
+
+/**
+ * `creerAuth` PREND-IL VRAIMENT LE BON ENVOYEUR PAR DEFAUT.
+ *
+ * ---------------------------------------------------------------------------
+ * POURQUOI CE TEST EN PLUS DES PRECEDENTS. Les tests de
+ * `choisirEnvoyeurEmail` ci-dessus eprouvent la FONCTION. Ils restent VERTS si
+ * `auth.ts` ne l'appelle pas : mesure par mutation le 10 septembre 2026, en
+ * remettant `envoyeurJournalise` comme valeur par defaut, les vingt cas
+ * passaient toujours.
+ *
+ * C'est le motif « fonction testee jamais appelee » : une fonction correcte et
+ * du code mort produisent exactement les memes tests verts. Le defaut d'origine
+ * etait precisement la, dans le CABLAGE et non dans la fonction.
+ *
+ * CE TEST LIT LE FICHIER plutot que d'appeler `creerAuth()`, qui exige une base
+ * et un secret de signature a l'evaluation du module. Un controle textuel ne
+ * remplace pas un test d'execution, mais il est ici le seul a voir la valeur
+ * par defaut d'un parametre, qu'aucun appelant n'exerce : tous les tests
+ * d'integration passent leur propre double.
+ * ---------------------------------------------------------------------------
+ */
+describe("cablage de l'envoyeur dans auth.ts", () => {
+  it("creerAuth prend choisirEnvoyeurEmail et non le repli", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const source = await readFile("src/lib/auth.ts", "utf8");
+
+    const parametre = source.match(/envoyeurEmail: EnvoyeurEmail = (\w+)/);
+
+    // LA GARDE CONTRE LE CONTROLE LUI-MEME : si la signature est reecrite
+    // autrement, ce test doit ECHOUER bruyamment plutot que rendre un OK
+    // silencieux sur un motif qui ne trouve plus rien.
+    expect(
+      parametre,
+      "la signature de creerAuth a change, ce controle ne voit plus rien",
+    ).not.toBeNull();
+
+    expect(parametre?.[1]).toBe("choisirEnvoyeurEmail");
+  });
+});
