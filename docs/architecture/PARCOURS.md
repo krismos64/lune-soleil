@@ -239,13 +239,22 @@ Ce cas ne doit pas survenir, la validation Zod le rejetant en amont. La
 contrainte est la dernière ligne de défense si le code échoue.
 
 **Échec de livraison à domicile, après l'étape 11**
-Base : `Expedition.mode` peut passer à `POINT_RELAIS` avec le point de report, et
-`Expedition.pointRelaisId` est renseigné. **La commande n'est pas réécrite** :
-`Commande.modeLivraison` reste `DOMICILE`, le client a choisi et payé ce mode,
-ce fait est acquis et figé.
-Vue : suivi indiquant le report en relais.
-C'est le motif de porter le mode sur les deux entités, ADR-025 : ce que le client
-a payé et ce que le transporteur a exécuté sont deux faits distincts.
+Base : **rien n'est réécrit**, et ADR-042 décision 6 a corrigé ce que cette
+section affirmait jusqu'au 10 septembre 2026. `Expedition.mode` ne peut **pas**
+passer à `POINT_RELAIS` sur un report automatique :
+`chk_expedition_mode_point_relais` exige alors un `pointRelaisId`, que Sendcloud
+ne fournit pas. `to_service_point` porte le point choisi **à la création**, et
+aucun champ documenté ne porte celui d'un report. Écrire un identifiant inventé
+mettrait une fausse adresse sur une expédition réelle.
+Le report se lit donc sur le **statut**, `Awaiting customer pickup` sur une
+expédition `DOMICILE`, ce que porte `estDeposeEnPointRetrait`.
+`Commande.modeLivraison` reste `DOMICILE` dans tous les cas, le client a choisi
+et payé ce mode, ce fait est acquis et figé.
+Vue : suivi indiquant le dépôt en point de retrait, LS-216 côté administration et
+LS-58 côté client.
+Un écart **déclaré à la main** entre les deux modes reste possible, l'exploitante
+saisissant l'expédition : c'est ce cas que les deux écrans signalent comme un
+report, et le motif de porter le mode sur les deux entités, ADR-025.
 
 **Prix ou produit modifié entre l'ajout au panier et la revalidation, étape 3**
 Base : aucune écriture.
