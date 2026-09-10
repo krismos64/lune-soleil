@@ -199,6 +199,43 @@ const nextConfig: NextConfig = {
    * Le seul chemin qui produisait un statut honnête disparaissait.
    */
   htmlLimitedBots: /.*/,
+
+  /*
+   * `/admin` mene a la connexion de l'administration, LS-175.
+   *
+   * POURQUOI ELLE EXISTE. `/administration/connexion` n'est liee depuis AUCUNE
+   * page du site, deliberement : l'ecran porte `noindex` et rien n'annonce
+   * l'existence d'une administration aux visiteurs. L'exploitante y accede donc
+   * par son signet, et ce raccourci lui donne un chemin court a taper le jour ou
+   * elle change d'appareil.
+   *
+   * CE QU'ELLE N'OUVRE PAS. Une redirection ne contourne aucune garde : la page
+   * de destination exige toujours une session au role `ADMINISTRATRICE`, et
+   * l'ecran de connexion refuse quiconque n'en a pas. Elle raccourcit une URL,
+   * elle n'accorde rien, invariant 2.
+   *
+   * CE QUI A ETE ECARTE, et c'est le vrai sujet de la question qui l'a produite :
+   * fusionner cet ecran avec `/compte/connexion` en detectant le role a la
+   * saisie de l'adresse. Les deux ecrans tiennent UN SEUL message d'echec pour
+   * toutes les causes, afin de ne pas confirmer l'existence d'une adresse.
+   * Adapter l'ecran au role revele que l'adresse saisie est celle de l'UNIQUE
+   * compte d'administration, ce qui est exactement le renseignement qu'un
+   * attaquant cherche. LS-54 avait deja separe ces deux ecrans pour des raisons
+   * de parcours, ADR-021 et ADR-023 les separent par leurs methodes.
+   *
+   * `permanent: false`, donc 307 et non 308 : un 308 se met en cache
+   * DEFINITIVEMENT dans le navigateur, et la destination de ce raccourci peut
+   * encore bouger. Verifie via Context7 sur Next.js 16.
+   */
+  async redirects() {
+    return [
+      {
+        source: "/admin",
+        destination: "/administration/connexion",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
