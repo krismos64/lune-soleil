@@ -310,6 +310,46 @@ const RENDUS: Record<ModeleEmail, (message: MessageEmail) => MessageRendu> = {
       ].join("\n"),
     };
   },
+
+  /**
+   * LS-61, invitation a deposer un avis apres livraison constatee.
+   *
+   * AUCUNE CONTREPARTIE N'EST PROMISE, ET C'EST UNE OBLIGATION. L'article
+   * D111-10 2° impose d'annoncer l'existence ou non d'une contrepartie : il n'y
+   * en a aucune, et un message qui suggererait une reduction contre un avis
+   * rendrait l'annonce fausse en plus de biaiser les avis recus.
+   *
+   * LE DELAI DE PUBLICATION EST ANNONCE et vient de la configuration, jamais
+   * d'un chiffre ecrit ici : le meme delai est publie dans la rubrique
+   * d'information, et deux valeurs recopiees divergeraient au premier
+   * changement.
+   *
+   * IL NE PROMET PAS LA PUBLICATION. Un avis est relu avant publication, regle
+   * R4, et peut etre refuse : ecrire « votre avis sera publie » serait faux.
+   */
+  "invitation-avis": (message) => ({
+    objet: `Votre avis sur la commande ${exiger(message, "numero")}`,
+    texte: [
+      "Bonjour,",
+      "",
+      `Votre commande ${exiger(message, "numero")} vous a été remise.`,
+      "",
+      `Pièces concernées : ${exiger(message, "pieces")}.`,
+      "",
+      "Si vous le souhaitez, vous pouvez déposer un avis sur votre achat :",
+      "",
+      exiger(message, "lien"),
+      "",
+      "Le dépôt est libre et sans contrepartie d'aucune sorte.",
+      "",
+      `Chaque avis est relu avant publication, sous ${exiger(message, "delaiPublicationJours")} jours au plus.`,
+      "Un avis peut ne pas être publié, et vous en seriez informé.",
+      "",
+      "Répondez simplement à ce message pour toute question.",
+      "",
+      SIGNATURE,
+    ].join("\n"),
+  }),
 };
 
 /**

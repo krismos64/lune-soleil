@@ -127,6 +127,27 @@ export const TACHES = {
    * retard pour l'ecran de LS-216.
    */
   "suivi-livraison": { dureeVerrouSecondes: 3600 },
+  /**
+   * Invitation a deposer un avis apres livraison, LS-61. Regle R17.
+   *
+   * ELLE TOURNE UNE FOIS PAR JOUR, et c'est deliberement la moins frequente.
+   * Rien ne presse : la livraison vient d'avoir lieu, et une invitation qui
+   * part le lendemain matin plutot que dans l'heure arrive au meilleur moment,
+   * le client ayant eu le temps de porter la piece. Une tache horaire
+   * enverrait le message pendant que le colis est encore sur la table.
+   *
+   * ELLE DEPEND DE `suivi-livraison`, qui renseigne `Expedition.livreA` : sans
+   * elle, aucune commande n'est jamais eligible et ce cycle ne trouve rien.
+   * L'ordre des deux dans le crontab n'a pas d'importance, la date etant
+   * persistee.
+   *
+   * VERROU D'UNE HEURE, comme les taches qui ecrivent beaucoup. Elle n'appelle
+   * aucun reseau, `deposerEnvoi` n'ecrivant qu'une intention, mais elle ouvre
+   * une transaction par commande : cinquante transactions au pire tiennent une
+   * duree qu'un verrou de cinq minutes couvrirait mal si la base souffre. Sur
+   * une tache quotidienne, une heure ne fait sauter aucun cycle.
+   */
+  "invitation-avis": { dureeVerrouSecondes: 3600 },
 } as const;
 
 export type NomTache = keyof typeof TACHES;
