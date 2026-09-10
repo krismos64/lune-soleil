@@ -18,7 +18,7 @@ import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 
-import { envoyeurJournalise, type EnvoyeurEmail } from "@/integrations/email";
+import { choisirEnvoyeurEmail, type EnvoyeurEmail } from "@/integrations/email";
 import { hookJournalConnexion } from "@/lib/hook-journal-connexion";
 import { rattacherSansJamaisEchouer } from "@/lib/hook-rattachement";
 import { hookRevocationSessions } from "@/lib/hook-revocation-sessions";
@@ -159,7 +159,18 @@ function domaineRelyingPartyDe(url: string): string {
  * site.
  */
 export function creerAuth(
-  envoyeurEmail: EnvoyeurEmail = envoyeurJournalise,
+  /*
+   * L'ENVOYEUR EST CHOISI SELON LA CONFIGURATION, jamais fige sur le repli.
+   *
+   * La valeur par defaut etait `envoyeurJournalise`, et `creerAuth()` est
+   * appele SANS ARGUMENT plus bas : Better Auth n'envoyait donc AUCUN email en
+   * production, mesure le 10 septembre 2026 sur une inscription reelle dont la
+   * personne n'a jamais recu le lien.
+   *
+   * `choisirEnvoyeurEmail` reste injectable pour les tests, qui passent leur
+   * propre double sans toucher a l'environnement.
+   */
+  envoyeurEmail: EnvoyeurEmail = choisirEnvoyeurEmail(),
   urlSite: string = urlBase,
   // Meme motif que `urlSite` : `enProduction` est fige a l'evaluation du
   // module, et le test qui couvre le cas reel du defaut, production servie en
