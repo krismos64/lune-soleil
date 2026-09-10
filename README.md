@@ -30,12 +30,12 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 3, panier et paiement | LS-4 | 2 | LS-86 et LS-125, deux stories d'interface qui ne bloquent rien |
 | 4, factures et expédition | LS-5 | 5 | dépend du compte Sendcloud, LS-200 en tête |
 | 4bis, espace client et avis | LS-36 | 4 | LS-190 attend LS-58, qui attend le suivi de livraison |
-| 5, rétractation et conformité | LS-6 | 1 | LS-148, établir si le consentement aux cookies est dû |
-| 6, exploitation et ouverture | LS-7 | 7 | **LS-153 attend l'exploitante**, LS-142 et LS-175 aussi. LS-140 attend les photographies de LS-23. Restent LS-83, LS-107, LS-141 et LS-150 |
+| 5, rétractation et conformité | LS-6 | 0 | **close**, ses huit stories terminées le 10 septembre 2026 |
+| 6, exploitation et ouverture | LS-7 | 6 | **LS-153 attend l'exploitante**, LS-142 et LS-175 aussi. LS-140 et LS-107 attendent les photographies de LS-23. Restent LS-83 et LS-150 |
 | 7, V1 cible | LS-8 | 3 | après ouverture, hors Go-Live |
 | Contenus | LS-22 | 11 | **attend l'exploitante**, rien n'est faisable sans elle |
 
-**162 tickets terminés sur 211**, les deux termes relevés dans Jira le
+**165 tickets terminés sur 211**, les deux termes relevés dans Jira le
 10 septembre 2026 et jamais dérivés l'un de l'autre. Le dénominateur a bougé de
 208 à 211 le 9 septembre, LS-209, LS-210 et LS-211 ayant été créées en livrant.
 
