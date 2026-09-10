@@ -20,8 +20,8 @@ import { describe, expect, it } from "vitest";
 import {
   TransporteurIndisponibleError,
   chercherPointsRetrait,
-} from "@/integrations/mondial-relay";
-import type { FournisseurPointsRetrait } from "@/integrations/mondial-relay";
+} from "@/integrations/sendcloud";
+import type { FournisseurPointsRetrait } from "@/integrations/sendcloud";
 
 /** Un point de retrait plausible, sans aucune donnee reelle de commerce. */
 const POINT_EXEMPLE = {

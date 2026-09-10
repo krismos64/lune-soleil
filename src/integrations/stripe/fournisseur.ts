@@ -9,7 +9,7 @@
  * CE FICHIER NE PORTE AUCUN APPEL RESEAU, seulement le contrat et ses erreurs,
  * pour que les tests et les services l'importent sans tirer le SDK ni exiger
  * `STRIPE_SECRET_KEY`. L'implementation reelle vit dans `index.ts`, meme
- * decoupage que `integrations/mondial-relay`.
+ * decoupage que `integrations/sendcloud`.
  */
 
 /**
