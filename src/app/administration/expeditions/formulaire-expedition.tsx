@@ -334,7 +334,7 @@ export function FormulaireExpedition({
        * un colis remis en main propre qui n'a aucune etiquette.
        */}
       <div className={styles.etiquette}>
-        <p className={styles.aide}>
+        <p className={styles.aideEtiquette}>
           L&apos;étiquette est créée chez le transporteur à partir de
           l&apos;adresse de la commande, sans ressaisie. Elle est{" "}
           <strong>facturée</strong> dès sa création.
@@ -503,7 +503,24 @@ export function FormulaireExpedition({
         className={`${styles.message} ${message?.erreur === true ? styles.messageErreur : ""}`}
         role="status"
       >
-        {enCours ? "Déclaration en cours…" : (message?.texte ?? "")}
+        {/*
+         * LES DEUX ATTENTES SONT ANNONCEES, LS-218, et la seconde manquait.
+         * Cette ligne ne consultait que `enCours` : pendant l'appel Sendcloud,
+         * qui dure plusieurs secondes, la region gardait son contenu precedent,
+         * souvent vide. Rien n'atteignait la synthese vocale entre le clic et
+         * le resultat, SUR L'ACTION LA PLUS CHERE DU PROJET.
+         *
+         * LE LIBELLE DU BOUTON NE SUFFIT PAS, et c'est le point : il change
+         * bien en « Création en cours… », mais le bouton passe `disabled` au
+         * meme instant, et un element desactive qui change de texte n'est pas
+         * annonce, ayant de surcroit perdu le focus. Releve par la revue
+         * frontend le 10 septembre 2026.
+         */}
+        {etiquetteEnCours
+          ? "Création de l'étiquette en cours…"
+          : enCours
+            ? "Déclaration en cours…"
+            : (message?.texte ?? "")}
       </p>
     </div>
   );

@@ -335,6 +335,34 @@ async function FileExpeditions() {
                               modeCommande={commande.modeLivraison}
                             />
                           ) : null}
+
+                          {/*
+                           * LE LIEN D'ETIQUETTE VIT SUR LA CARTE ET NON DANS LE
+                           * FORMULAIRE, LS-218, et cette place est le correctif
+                           * d'un defaut releve par la revue frontend.
+                           *
+                           * LE FORMULAIRE DISPARAIT DES QUE LA COMMANDE PASSE
+                           * `EXPEDIEE`, condition ci-dessus : un lien qui n'y
+                           * vivrait que dans l'etat du composant serait perdu au
+                           * premier rafraichissement, et l'etiquette PAYEE
+                           * deviendrait introuvable autrement qu'en retournant
+                           * sur Sendcloud, ce que cette story existe pour
+                           * supprimer.
+                           *
+                           * IL EST CONDITIONNE A `identifiantColis`, lu EN BASE :
+                           * il n'apparait donc que sur une expedition creee par
+                           * l'API, jamais sur une declaration manuelle qui n'a
+                           * aucune etiquette a relire.
+                           */}
+                          {commande.identifiantColis !== null ? (
+                            <a
+                              href={`/administration/expeditions/etiquette/${commande.identifiantColis}`}
+                              className={styles.lienEtiquette}
+                              download
+                            >
+                              Télécharger l&apos;étiquette (PDF)
+                            </a>
+                          ) : null}
                         </li>
                       );
                     })}

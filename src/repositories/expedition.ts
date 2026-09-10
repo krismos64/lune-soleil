@@ -25,6 +25,13 @@ export type SaisieExpedition = {
   mode: ModeLivraison;
   numeroSuivi: string | null;
   pointRelaisId: string | null;
+  /**
+   * L'identifiant du colis chez le transporteur, LS-218.
+   *
+   * NUL SUR UNE DECLARATION MANUELLE, et c'est ce qui distingue les deux
+   * chemins : un colis remis en main propre n'a aucune etiquette a relire.
+   */
+  identifiantColis?: number | null;
 };
 
 /** Une expedition telle que l'ecran la relit. */
@@ -36,6 +43,8 @@ export type ExpeditionDeclaree = {
   statutTransporteur: string | null;
   expedieA: Date | null;
   livreA: Date | null;
+  /** LS-218, present quand l'etiquette vient de l'API, nul sinon. */
+  identifiantColis: number | null;
 };
 
 /**
@@ -61,6 +70,7 @@ export async function creerExpedition(
       mode: parametres.saisie.mode,
       numeroSuivi: parametres.saisie.numeroSuivi,
       pointRelaisId: parametres.saisie.pointRelaisId,
+      identifiantColis: parametres.saisie.identifiantColis ?? null,
       expedieA: new Date(),
     },
   });
@@ -81,6 +91,7 @@ export async function lireExpeditionDeCommande(
       statutTransporteur: true,
       expedieA: true,
       livreA: true,
+      identifiantColis: true,
     },
   });
 }
@@ -95,6 +106,19 @@ export type CommandeAExpedier = {
   adresseLivraison: unknown;
   pointRelaisAdresse: unknown;
   creeA: Date;
+  /**
+   * L'identifiant du colis chez le transporteur, LS-218.
+   *
+   * IL REND L'ETIQUETTE RECUPERABLE APRES COUP, et c'est sa seule raison
+   * d'etre ici : la carte d'une commande deja expediee n'affiche plus le
+   * formulaire, donc plus le lien de telechargement de l'etat du composant.
+   * Sans cette lecture, une etiquette PAYEE devenait introuvable des le
+   * premier rafraichissement.
+   *
+   * NUL SUR UNE DECLARATION MANUELLE, ce qui est exact : il n'y a alors aucune
+   * etiquette a relire chez le transporteur.
+   */
+  identifiantColis: number | null;
   /**
    * L'etat de la commande, qui decide de SA COLONNE, LS-181.
    *
@@ -130,7 +154,7 @@ export async function listerAExpedier(
   client: ClientBase,
   limite: number,
 ): Promise<CommandeAExpedier[]> {
-  return client.commande.findMany({
+  const commandes = await client.commande.findMany({
     where: { statut: { in: ["CONFIRMEE", "EN_PREPARATION", "EXPEDIEE"] } },
     orderBy: { creeA: "asc" },
     take: limite,
@@ -143,8 +167,19 @@ export async function listerAExpedier(
       pointRelaisAdresse: true,
       creeA: true,
       statut: true,
+      expedition: { select: { identifiantColis: true } },
     },
   });
+
+  /*
+   * L'IDENTIFIANT EST APLATI ICI, LS-218 : l'ecran n'a pas a savoir qu'il vient
+   * d'une relation. Une commande sans expedition le rend nul, ce qui est exact,
+   * et une expedition declaree a la main aussi.
+   */
+  return commandes.map(({ expedition, ...reste }) => ({
+    ...reste,
+    identifiantColis: expedition?.identifiantColis ?? null,
+  }));
 }
 
 /**
@@ -214,6 +249,14 @@ export async function enregistrerSuivi(
  */
 export type CommandeAEtiqueter = {
   numero: string;
+  /**
+   * Le nom du destinataire, LS-218.
+   *
+   * IL VIT SUR LA COMMANDE ET NON DANS L'ADRESSE FIGEE, qui est une copie de la
+   * saisie du tunnel : celle-ci ne porte que la voie, le code postal, la ville
+   * et le pays. Le chercher dans l'adresse refusait toute commande.
+   */
+  nomClient: string;
   statut: StatutCommande;
   modeLivraison: ModeLivraison;
   emailNormalise: string;
@@ -233,6 +276,7 @@ export async function lireCommandeAEtiqueter(
     where: { id: commandeId },
     select: {
       numero: true,
+      nomClient: true,
       statut: true,
       modeLivraison: true,
       emailNormalise: true,

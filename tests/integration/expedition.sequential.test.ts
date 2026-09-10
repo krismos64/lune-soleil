@@ -1196,6 +1196,59 @@ describe("creerEtiquetteExpedition", () => {
   });
 
   /*
+   * L'IDENTIFIANT DE COLIS EST PERSISTE, correctif du 10 septembre 2026 releve
+   * par la revue frontend.
+   *
+   * CE QUI SE PAIE S'IL NE L'EST PAS : il ne vivait que dans l'etat du
+   * composant client, et la carte d'une commande `EXPEDIEE` ne rend plus le
+   * formulaire. Un rafraichissement, un onglet ferme ou une session reprise le
+   * lendemain rendaient une etiquette PAYEE introuvable autrement qu'en
+   * retournant sur Sendcloud, ce que cette story existe pour supprimer. Le
+   * message de succes demandait meme de rafraichir la page.
+   */
+  it("persiste l'identifiant de colis, qui rend l'etiquette relisible", async () => {
+    const commandeId = await commanderEtPreparer();
+
+    await creerEtiquetteExpedition({
+      commandeId,
+      acteurId: administratriceId,
+      clientTransporteur: transporteurSimule(),
+    });
+
+    const { rows } = await client.query<{ identifiantColis: number | null }>(
+      `SELECT identifiant_colis AS "identifiantColis"
+         FROM expedition WHERE commande_id = $1`,
+      [commandeId],
+    );
+
+    expect(rows[0]?.identifiantColis).toBe(4242);
+  });
+
+  /*
+   * UNE DECLARATION MANUELLE NE PORTE AUCUN IDENTIFIANT, et c'est ce qui
+   * distingue les deux chemins en base : le lien de telechargement s'affiche
+   * sur la presence de cette colonne, et le proposer sur un colis remis en main
+   * propre menerait a une etiquette qui n'existe pas.
+   */
+  it("laisse l'identifiant nul sur une declaration manuelle", async () => {
+    const commandeId = await commanderEtPreparer();
+
+    await declarerExpedition({
+      commandeId,
+      saisie: SAISIE_EXPEDITION,
+      acteurId: administratriceId,
+    });
+
+    const { rows } = await client.query<{ identifiantColis: number | null }>(
+      `SELECT identifiant_colis AS "identifiantColis"
+         FROM expedition WHERE commande_id = $1`,
+      [commandeId],
+    );
+
+    expect(rows[0]?.identifiantColis).toBeNull();
+  });
+
+  /*
    * L'ORDRE EST LE POINT DE LA STORY, ET CE TEST LE PROUVE. Une commande deja
    * expediee ne doit RIEN coûter : si l'appel partait avant la garde, une
    * etiquette serait achetee puis jetee, et Sendcloud ne rembourse pas.

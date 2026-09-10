@@ -689,6 +689,13 @@ model Expedition {
   // jamais réécrite dans ce cas.
   mode               ModeLivraison
   numeroSuivi        String?       @map("numero_suivi")
+  // LS-218, l'identifiant du colis chez le transporteur, seul moyen de relire
+  // son étiquette. Elle n'est PAS stockée, elle appartient au transporteur et
+  // aucune obligation de conservation ne s'y attache : c'est cet identifiant
+  // qui la rend récupérable, et il ne pèse rien. Sans lui, une étiquette payée
+  // devient irrécupérable au premier rafraîchissement, défaut relevé par la
+  // revue frontend le 10 septembre 2026.
+  identifiantColis   Int?          @map("identifiant_colis")
   pointRelaisId      String?       @map("point_relais_id")
   statutTransporteur String?       @map("statut_transporteur")
   expedieA           DateTime?     @map("expedie_a") @db.Timestamptz(3)
