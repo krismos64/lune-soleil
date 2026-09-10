@@ -1,0 +1,274 @@
+/*
+ * Rubrique Avis de l'administration, LS-61.
+ *
+ * CONCU A PARTIR DE 320 px, puis elargi. Les media queries montent, elles ne
+ * descendent jamais : ce qui est ecrit hors requete est ce que voit le plus
+ * petit ecran.
+ *
+ * DES CARTES ET NON UN TABLEAU, meme choix que les messages et les
+ * expeditions : un avis porte une note, un commentaire libre, deux dates et
+ * deux boutons de decision, ce qu'aucune grille de colonnes ne tient a 320 px.
+ *
+ * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons de `tokens.css`.
+ *
+ * LE CONTRASTE DEPEND DU FOND, C31 : `--ls-text-muted` donne 4,86:1 sur creme
+ * mais 4,35:1 sur sable, sous le seuil AA. Les blocs a fond sable emploient donc
+ * `--ls-text`, jamais le jeton attenue.
+ */
+
+.page {
+  padding: var(--ls-space-4);
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+/* ZONE TACTILE DE 44 px, meme motif que l'ecran des messages. */
+.retour {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  margin-bottom: var(--ls-space-3);
+  color: var(--ls-accent-gold-deep);
+  text-decoration: underline;
+}
+
+.titre {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-primary);
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  font-weight: 600;
+}
+
+.introduction {
+  margin: 0 0 var(--ls-space-4);
+  color: var(--ls-text-muted);
+  line-height: 1.6;
+}
+
+.section {
+  margin-bottom: var(--ls-space-6);
+}
+
+.titreSection {
+  margin: 0 0 var(--ls-space-3);
+  color: var(--ls-primary);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+/* FOND SABLE, DONC `--ls-text`, voir l'en-tete de ce fichier. */
+.vide {
+  margin: 0;
+  padding: var(--ls-space-4);
+  background: var(--ls-surface-sand);
+  border-radius: var(--ls-radius-md);
+  color: var(--ls-text);
+}
+
+.liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-4);
+}
+
+.carte {
+  padding: var(--ls-space-4);
+  background: var(--ls-surface);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+}
+
+.enTeteCarte {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--ls-space-2);
+  margin-bottom: var(--ls-space-2);
+}
+
+.note {
+  font-weight: 600;
+  color: var(--ls-primary);
+}
+
+.piece {
+  margin: 0 0 var(--ls-space-1);
+  font-weight: 600;
+}
+
+/*
+ * `--ls-text-muted` SUR `--ls-surface`, soit du blanc : 4,86:1, conforme AA.
+ * Le meme jeton sur sable donnerait 4,35:1 et serait refuse, C31.
+ */
+.metadonnees {
+  margin: 0 0 var(--ls-space-3);
+  color: var(--ls-text-muted);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.commentaire {
+  margin: 0 0 var(--ls-space-3);
+  padding: var(--ls-space-3);
+  background: var(--ls-surface-sand);
+  border-radius: var(--ls-radius-md);
+  color: var(--ls-text);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.sansCommentaire {
+  margin: 0 0 var(--ls-space-3);
+  color: var(--ls-text-muted);
+  font-style: italic;
+}
+
+.motif {
+  margin: 0;
+  color: var(--ls-text);
+  line-height: 1.6;
+}
+
+/*
+ * LE BADGE PORTE DU PETIT TEXTE, donc `--ls-accent-terracotta-deep` et jamais
+ * `--ls-accent-terracotta` : le premier donne 5,89:1 avec du blanc, le second
+ * 4,35:1, sous le seuil AA. La regle de `frontend-design.md` a deja ete
+ * franchie de bonne foi une fois sur ce motif exact.
+ */
+.badge {
+  display: inline-block;
+  padding: var(--ls-space-1) var(--ls-space-2);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-accent-terracotta-deep);
+  color: var(--ls-text-on-primary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.badgePublie {
+  background: var(--ls-primary);
+}
+
+.decisions {
+  margin-top: var(--ls-space-4);
+  padding-top: var(--ls-space-4);
+  border-top: 1px solid var(--ls-border);
+}
+
+.champ {
+  margin-bottom: var(--ls-space-3);
+}
+
+.libelle {
+  display: block;
+  margin-bottom: var(--ls-space-1);
+  font-weight: 600;
+}
+
+.aide {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-text-muted);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+/*
+ * `--ls-border-controle` ET NON `--ls-border`, regle C36. Le fond du champ vaut
+ * celui de la carte qui le porte : sa bordure est le seul indice de sa
+ * presence, et le jeton decoratif donne 1,57:1 sur blanc, sous les 3:1 que
+ * WCAG 1.4.11 exige pour la limite d'un controle.
+ */
+.zoneTexte {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--ls-space-2);
+  border: 1px solid var(--ls-border-controle);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  /* 16 px exactement : en dessous, iOS zoome a la mise au point. */
+  font-size: 1rem;
+  font-family: inherit;
+  line-height: 1.5;
+  min-height: 4.5rem;
+  resize: vertical;
+}
+
+.zoneTexte:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+/*
+ * LES BOUTONS SE REPLIENT A 320 px. Trois cibles de 44 px cote a cote font
+ * 132 px plus leurs ecarts, ce qui tient, mais leurs libelles ne tiennent pas :
+ * le repliement est la garantie, pas la marge.
+ */
+.boutons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ls-space-2);
+}
+
+.bouton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--ls-touch-target);
+  padding: 0 var(--ls-space-4);
+  border: 1px solid var(--ls-primary);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  font-size: 1rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/*
+ * LE BOUTON SECONDAIRE PORTE `--ls-border-controle`, C36 : son fond vaut celui
+ * de la carte, donc rien d'autre que sa bordure ne l'identifie comme controle.
+ */
+.boutonSecondaire {
+  border-color: var(--ls-border-controle);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+}
+
+.bouton:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+.bouton:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.erreur {
+  margin: var(--ls-space-3) 0 0;
+  padding: var(--ls-space-3);
+  border-left: 3px solid var(--ls-error);
+  color: var(--ls-text);
+  line-height: 1.6;
+}
+
+/*
+ * ANNONCE VISUELLEMENT MASQUEE MAIS LUE, C35. Elle reste dans l'arbre
+ * d'accessibilite : `display: none` la retirerait de l'annonce, ce qui viderait
+ * la region live de son objet.
+ */
+.annonce {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

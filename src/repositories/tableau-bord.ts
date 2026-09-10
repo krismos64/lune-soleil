@@ -53,6 +53,8 @@ export type ComptagesAdministration = {
   messagesNonLus: number;
   /** Demandes de retractation non encore closes. */
   retractationsEnCours: number;
+  /** Avis deposes en attente de relecture, regle R4. */
+  avisAModerer: number;
   /**
    * Encaisse du jour, en centimes, LES DEUX CANAUX REUNIS.
    *
@@ -121,6 +123,7 @@ export async function compterPourAdministration(
       expeditionsEnTransit: bigint;
       messagesNonLus: bigint;
       retractationsEnCours: bigint;
+      avisAModerer: bigint;
       encaisseDuJourCentimes: bigint | number | null;
     }[]
   >`
@@ -147,6 +150,13 @@ export async function compterPourAdministration(
       (SELECT count(*) FROM demande_retractation
         WHERE statut NOT IN ('REMBOURSEE', 'REFUSEE'))
                                                AS "retractationsEnCours",
+      -- LS-61, regle R4 : un avis est relu AVANT publication, jamais apres.
+      -- Le compte porte le seul statut DEPOSE, les trois autres etant des
+      -- decisions deja prises. Sans cette pastille, un avis attendrait sa
+      -- relecture sans que rien ne le signale, et le delai de publication
+      -- annonce au client, article D111-10 2°, se depasserait en silence.
+      (SELECT count(*) FROM avis
+        WHERE statut = 'DEPOSE')               AS "avisAModerer",
       (
         SELECT coalesce(sum(montant_centimes - montant_rembourse_centimes), 0)
         FROM paiement
@@ -186,6 +196,7 @@ export async function compterPourAdministration(
     expeditionsEnTransit: Number(ligne.expeditionsEnTransit),
     messagesNonLus: Number(ligne.messagesNonLus),
     retractationsEnCours: Number(ligne.retractationsEnCours),
+    avisAModerer: Number(ligne.avisAModerer),
     encaisseDuJourCentimes: Number(ligne.encaisseDuJourCentimes ?? 0),
   };
 }

@@ -48,6 +48,7 @@ import {
   appliquerDecision,
   ecrireAvis,
   ecrireInvitation,
+  lireCommandePourAvis,
   lireInvitationsDeCommande,
   listerAvisParStatut,
   listerAvisPublies,
@@ -402,10 +403,7 @@ export async function lireEtatDepot(
     return { statut: "INDISPONIBLE" };
   }
 
-  const commande = await prisma.commande.findUnique({
-    where: { id: resolution.commandeId },
-    select: { numero: true },
-  });
+  const commande = await lireCommandePourAvis(prisma, resolution.commandeId);
 
   if (commande === null) {
     return { statut: "INDISPONIBLE" };
@@ -627,10 +625,7 @@ class CourseJetonPerdueError extends Error {
 async function lireAuteurDeCommande(
   commandeId: string,
 ): Promise<string | null> {
-  const commande = await prisma.commande.findUnique({
-    where: { id: commandeId },
-    select: { utilisateurId: true, dissocieA: true },
-  });
+  const commande = await lireCommandePourAvis(prisma, commandeId);
 
   if (commande === null || commande.dissocieA !== null) {
     return null;

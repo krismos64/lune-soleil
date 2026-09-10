@@ -471,3 +471,31 @@ export async function listerAvisPublies(
     ];
   });
 }
+
+/**
+ * Le numero d'une commande et son proprietaire, pour l'ecran et l'auteur.
+ *
+ * ELLE VIT ICI ET NON DANS LE SERVICE, frontiere du projet : `services/` porte
+ * les cas d'usage, `repositories/` l'acces aux donnees. Le controle
+ * `verifier-regles.sh` l'a rappele en refusant un appel de modele Prisma depuis
+ * `services/avis.ts`, et il avait raison.
+ *
+ * `dissocieA` REMONTE PLUTOT QUE D'ETRE FILTRE ICI. Le service en tire deux
+ * conclusions distinctes : ne pas rattacher l'avis a un compte sans titulaire,
+ * et laisser l'ecran fonctionner malgre tout, un client parti gardant le droit
+ * de deposer l'avis d'une commande qu'il a reellement reçue. Filtrer ici
+ * confondrait les deux.
+ */
+export async function lireCommandePourAvis(
+  client: ClientBase,
+  commandeId: string,
+): Promise<{
+  numero: string;
+  utilisateurId: string | null;
+  dissocieA: Date | null;
+} | null> {
+  return client.commande.findUnique({
+    where: { id: commandeId },
+    select: { numero: true, utilisateurId: true, dissocieA: true },
+  });
+}
