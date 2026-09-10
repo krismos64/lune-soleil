@@ -91,6 +91,9 @@ INTEGRATION_STRIPE="src/integrations/stripe/index.ts"
 LIBERATION="src/services/liberation-reservations.ts"
 RECONCILIATION="src/services/reconciliation-paiements.ts"
 ADMIN_COMMANDES="src/services/administration-commandes.ts"
+# LS-58 et LS-216, le suivi de livraison et sa fraicheur.
+AFFICHAGE_COMMANDE="src/lib/affichage-commande.ts"
+DEPOT_COMMANDE="src/repositories/commande.ts"
 ENVOI_EMAIL="src/services/envoi-email.ts"
 DEPOT_ENVOI="src/repositories/envoi-email.ts"
 SMTP="src/integrations/email/smtp.ts"
@@ -116,7 +119,7 @@ DEPOT_RETRACTATION="src/repositories/retractation.ts"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -2019,6 +2022,58 @@ cas "transition rendue inconditionnelle, l'horodatage se reecrit" integration \
 mute "$TRAITEMENT_RETRACTATION" 's/    await exigerAdministratrice\(enTetes\);\n  \} catch \(erreur\) \{\n    if \(erreur instanceof AutorisationRefuseeError\) \{\n      return \{ statut: "SESSION_ABSENTE" \};\n    \}\n    throw erreur;\n  \}/    \/* mutation : garde retiree *\/\n  } catch (erreur) {\n    throw erreur;\n  }/'
 cas "garde de role retiree du traitement" integration \
   "refuse un remboursement sans aucune session"
+
+# ---------------------------------------------------------------------------
+# LS-58 et LS-216, le suivi de livraison et son signalement.
+#
+# CE QUI SE PAIE ICI N'EST PAS UN AFFICHAGE. `fraicheurSuivi` decide si
+# l'exploitante est AVERTIE qu'un colis n'avance plus : un seuil faux ne se voit
+# pas a l'ecran, il se voit le jour ou un colis bloque depuis trois jours
+# s'affiche « a jour » et que personne ne cherche ou il est passe. Le risque
+# reste a la charge de l'exploitante jusqu'a la remise, article L216-4.
+# ---------------------------------------------------------------------------
+
+# Cas 149 : LA COMPARAISON DE SEUIL PASSE DE `>` A `>=`.
+#
+# MUTATION CHOISIE POUR SA DISCRETION, et c'est le vrai risque de ce code : elle
+# ne change le verdict que sur UN instant, l'age exactement egal au seuil. Un
+# test qui n'eprouverait que « une heure » et « trois jours » resterait vert,
+# et le defaut passerait la revue. Les deux bornes exactes sont ce qui l'attrape.
+mute "$AFFICHAGE_COMMANDE" 's/  return age > SEUIL_SUIVI_BLOQUE_MS \? "bloque" : "frais";/  return age >= SEUIL_SUIVI_BLOQUE_MS ? "bloque" : "frais";/'
+cas "seuil de suivi bloque rendu inclusif" unitaire \
+  "ne signale pas un suivi lu exactement au seuil"
+
+# Cas 150 : LA GARDE SUR `livreA` EST RETIREE.
+#
+# DEFAUT LE PLUS COUTEUX DE CE MODULE, et il produit une FAUSSE ALERTE DE MASSE.
+# `listerASuivre` exclut les expeditions livrees, donc leur `synchroniseA` cesse
+# d'avancer par construction : sans cette garde, TOUTE commande livree depuis
+# plus de vingt-quatre heures est signalee « bloquee », c'est-a-dire la
+# totalite de l'historique de la boutique. Un signalement qui hurle en
+# permanence cesse d'etre lu, et le vrai colis bloque se noie avec.
+mute "$AFFICHAGE_COMMANDE" 's/  if \(expedition\.livreA !== null\) \{\n    return "frais";\n  \}\n\n//'
+cas "garde sur une expedition livree retiree" unitaire \
+  "tient pour frais une expedition livree, meme synchronisee il y a un mois"
+
+# Cas 151 : `synchroniseA` DISPARAIT DE LA LECTURE DU CLIENT.
+#
+# LE CHAMP EST LU ET NON DEDUIT, et rien d'autre ne porte cette information :
+# sans lui, l'ecran client ne peut PAS distinguer un suivi lu il y a dix minutes
+# d'un suivi arrete depuis trois jours, les deux affichant le meme dernier
+# statut connu. Le critere 4 de LS-58 devient invérifiable en silence.
+mute "$DEPOT_COMMANDE" 's/          statutTransporteur: true,\n          expedieA: true,\n          livreA: true,\n          synchroniseA: true,/          statutTransporteur: true,\n          expedieA: true,\n          livreA: true,/'
+cas "synchroniseA retire de la lecture client" integration \
+  "rend le mode, le numero de suivi, le statut et la fraicheur"
+
+# Cas 152 : L'EXPEDITION DISPARAIT DE LA LECTURE D'ADMINISTRATION.
+#
+# L'ETAT D'AVANT LS-216, remis tel quel. L'exploitante saisissait un numero de
+# suivi et ne le revoyait jamais : repondre a « ou est mon colis » imposait
+# d'ouvrir Sendcloud a cote, et rien ne disait quelles commandes etaient livrees,
+# donc lesquelles avaient demarre leur delai de retractation.
+mute "$ADMIN_COMMANDES" 's/      expedition: \{\n        select: \{\n          transporteur: true,/      expedition: {\n        select: {\n          transporteur: false as unknown as true,/'
+cas "acheminement retire de la lecture d'administration" integration \
+  "remonte les quatre champs du suivi jusqu'au detail"
 
 echo
 echo "-----------------------------------------"
