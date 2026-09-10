@@ -572,8 +572,20 @@ function BlocAcheminement({
           Le transporteur a exécuté ce colis en{" "}
           <strong>{LIBELLES_LIVRAISON[expedition.mode]}</strong>, alors que la
           commande a été payée en{" "}
-          <strong>{LIBELLES_LIVRAISON[modeLivraison]}</strong>. La commande n
-          &apos;est pas modifiée, seule l&apos;expédition porte le mode réel.
+          <strong>{LIBELLES_LIVRAISON[modeLivraison]}</strong>.{" "}
+          {/*
+           * LA PHRASE EST DANS SON PROPRE BLOC, et ce n'est pas cosmetique.
+           * Prettier avait coupe la ligne ENTRE le `n` et son `&apos;`, et JSX
+           * insere une espace a chaque coupure : le rendu portait « La commande
+           * n 'est pas modifiée », mesure a l'ecran par le test de cette story
+           * et invisible a la relecture du source.
+           *
+           * L'ENTITE EST CONSERVEE, convention du projet, `react/no-unescaped-
+           * entities` etant actif. Ce qui ferme le defaut est la longueur de la
+           * ligne, plus courte que le seuil de coupure.
+           */}
+          La commande n&apos;est pas modifiée, seule l&apos;expédition porte le
+          mode réel.
         </p>
       )}
 
