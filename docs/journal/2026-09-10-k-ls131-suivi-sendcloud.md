@@ -114,22 +114,51 @@ arrête le cycle, l'échec définitif rendu silencieux, et **l'index d'unicité
 retiré**. Cette dernière prouve que la déduplication vient de la base et non
 d'un hasard de test.
 
-## Ce qui n'est pas fait, et pourquoi
+## Le critère 3, d'abord laissé ouvert puis tranché
 
-**Le critère 3 n'est pas rempli.** Le rebasculement domicile vers Point Relais
-n'a **aucun statut correspondant** parmi les 35. Le candidat le plus proche,
-`Delivery method changed` (62993), n'est pas documenté comme couvrant ce cas.
+Il l'est resté deux heures. La recherche documentaire l'a fermé, et le détour
+mérite d'être raconté parce que ma première conclusion était fausse.
 
-Le câbler sur une supposition écrirait un mode faux sur une expédition, et
-l'adresse de retrait est figée dans la commande. À rouvrir sur une expédition
-réelle ayant subi le cas, ou sur une réponse du support Sendcloud.
+**Premier constat** : aucun des 35 statuts ne décrit le rebasculement. Le
+critère est laissé non coché plutôt que fermé à tort, et le ticket reste ouvert.
 
-Le critère est laissé **explicitement non coché**, plutôt que fermé à tort.
+**Deuxième constat, après lecture de la documentation officielle** : le
+rebasculement n'a pas besoin d'un statut dédié. `Awaiting customer pickup` (12)
+sur une expédition `DOMICILE` ne peut venir que de là, la définition officielle
+décrivant où **est** le colis, « delivered to a service point », et non où il
+devait aller. J'ai annoncé « trente minutes de travail ».
+
+**Troisième constat, en codant** : la contrainte de base est une **équivalence**.
+
+```
+CHECK ((mode IN ('POINT_RELAIS','LOCKER')) = (point_relais_id IS NOT NULL))
+```
+
+Passer le mode à `POINT_RELAIS` **exige** l'identifiant du point. Sendcloud ne
+le fournit pas : `to_service_point` porte le point **choisi à la création**,
+`details.is_to_service_point` n'est qu'un booléen, et `events[]` ne porte aucun
+champ structuré. Vérifié sur la documentation officielle et confirmé par
+Christophe sur les API v2 et v3.
+
+**La déduction suffisait pour DÉTECTER, pas pour ÉCRIRE.** Il manquait une
+donnée, pas seulement une interprétation, et cette nuance m'avait échappé.
+
+`estDeposeEnPointRetrait` est donc livré pour l'affichage, LS-216 pourra dire
+« déposée en point de retrait » sans que la base affirme ce qu'elle ne peut pas
+garantir. **Le délai de rétractation reste exact** dans ce scénario, le retrait
+effectif renseignant `livreA` par le statut 93 : ce qui manque est un détail
+d'écran, pas un point de droit.
+
+ADR-042 décision 6 trace le raisonnement et les trois champs écartés.
+
+**Deux issues ont été refusées** : écrire un identifiant inventé mettrait une
+fausse adresse sur une expédition réelle, et relâcher la contrainte
+affaiblirait ADR-025 pour un besoin d'affichage.
 
 ## État des tickets
 
-**LS-131**, tous les critères sauf le 3, qui est documenté comme non réalisable
-en l'état.
+**LS-131 est close**, les sept critères traités, le troisième avec sa limite
+documentée dans ADR-042 décision 6.
 
 **LS-217** close comme reprise dans LS-131, son constat conservé.
 
