@@ -952,7 +952,9 @@ describe("synchroniserSuivi, les echecs definitifs alertent", () => {
   it("62991, Refused by recipient, leve une alerte", async () => {
     await expedier();
 
-    await synchroniserSuivi({ client: suiviFixe(62991, "Refused by recipient") });
+    await synchroniserSuivi({
+      client: suiviFixe(62991, "Refused by recipient"),
+    });
 
     expect(await compterAlertes()).toBe(1);
   });

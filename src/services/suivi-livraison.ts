@@ -23,6 +23,7 @@ import { clientSuivi } from "@/integrations/sendcloud/suivi";
 import { journaliser, journaliserErreur } from "@/lib/journal";
 import { prisma } from "@/lib/prisma";
 import { leverAlerteCritique } from "@/repositories/confirmation";
+import { enregistrerSuivi, listerASuivre } from "@/repositories/expedition";
 
 /**
  * Type d'alerte des livraisons qui n'aboutiront pas, ADR-042 decision 3.
@@ -63,17 +64,10 @@ export async function synchroniserSuivi({
   client = clientSuivi,
 }: { client?: ClientSuivi } = {}): Promise<IssueSynchronisation> {
   /*
-   * CE QUI EST LU : une expedition partie, pas encore livree, et qui porte un
-   * numero. Sans numero il n'y a rien a interroger ; une fois `livreA`
-   * renseigne il n'y a plus rien a apprendre, la date d'une reception ne
-   * changeant pas.
+   * LA REQUETE VIT DANS `repositories/`, frontiere du projet : ce qui est lu et
+   * pourquoi ces exclusions comptent y est documente.
    */
-  const aSuivre = await prisma.expedition.findMany({
-    where: { livreA: null, numeroSuivi: { not: null } },
-    select: { id: true, numeroSuivi: true },
-    orderBy: { creeA: "asc" },
-    take: LIMITE_PAR_CYCLE,
-  });
+  const aSuivre = await listerASuivre(prisma, LIMITE_PAR_CYCLE);
 
   let echecs = 0;
   let livrees = 0;
@@ -94,23 +88,19 @@ export async function synchroniserSuivi({
 
       const livre = estLivre(suivi.statut);
 
-      await prisma.expedition.update({
-        where: { id: expedition.id },
-        data: {
-          /*
-           * LE LIBELLE ET NON L'IDENTIFIANT, decision 5 : un nombre nu est
-           * illisible sur l'ecran d'administration de LS-216, quand le code
-           * compare sur l'identifiant, stable.
-           */
-          statutTransporteur: suivi.libelle,
-          synchroniseA: new Date(),
-          /*
-           * `livreA` NE SE REECRIT JAMAIS, la requete ne selectionnant que les
-           * expeditions dont il est nul. Deplacer cette date a chaque cycle
-           * repousserait la fin du droit de retractation indefiniment.
-           */
-          ...(livre ? { livreA: new Date() } : {}),
-        },
+      /*
+       * LE LIBELLE ET NON L'IDENTIFIANT, decision 5 : un nombre nu est illisible
+       * sur l'ecran d'administration de LS-216, quand le code compare sur
+       * l'identifiant, stable.
+       *
+       * `livreA` NE SE REECRIT JAMAIS, `listerASuivre` ne rendant que les
+       * expeditions dont il est nul. Deplacer cette date a chaque cycle
+       * repousserait la fin du droit de retractation indefiniment.
+       */
+      await enregistrerSuivi(prisma, {
+        expeditionId: expedition.id,
+        statutTransporteur: suivi.libelle,
+        ...(livre ? { livreA: new Date() } : {}),
       });
 
       if (livre) {

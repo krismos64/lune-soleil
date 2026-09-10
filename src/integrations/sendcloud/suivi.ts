@@ -148,7 +148,10 @@ export function creerClientSuiviSendcloud({
  * pas. Elle borne l'attente, ce qui suffit : une tache qui traite N expeditions
  * ne doit pas tenir son verrou sur un fournisseur muet.
  */
-function avecDelaiMaximum<T>(promesse: Promise<T>, delaiMs: number): Promise<T> {
+function avecDelaiMaximum<T>(
+  promesse: Promise<T>,
+  delaiMs: number,
+): Promise<T> {
   return new Promise<T>((resoudre, rejeter) => {
     const minuterie = setTimeout(() => {
       rejeter(new TransporteurIndisponibleError("délai de suivi dépassé"));

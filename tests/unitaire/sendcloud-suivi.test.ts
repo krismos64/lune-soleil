@@ -73,7 +73,10 @@ describe("creerClientSuiviSendcloud, lecture du statut", () => {
 
   it("interroge le numero de suivi demande", async () => {
     const espion = fetchQuiRend(reponseColis({ id: 11, message: "Delivered" }));
-    const client = creerClientSuiviSendcloud({ ...IDENTIFIANTS, fetch: espion });
+    const client = creerClientSuiviSendcloud({
+      ...IDENTIFIANTS,
+      fetch: espion,
+    });
 
     await client.lireStatut("ABC123");
 
@@ -88,7 +91,10 @@ describe("creerClientSuiviSendcloud, lecture du statut", () => {
    */
   it("authentifie par en-tete et jamais par l'URL", async () => {
     const espion = fetchQuiRend(reponseColis({ id: 11, message: "Delivered" }));
-    const client = creerClientSuiviSendcloud({ ...IDENTIFIANTS, fetch: espion });
+    const client = creerClientSuiviSendcloud({
+      ...IDENTIFIANTS,
+      fetch: espion,
+    });
 
     await client.lireStatut("ABC123");
 

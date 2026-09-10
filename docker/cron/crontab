@@ -1,6 +1,8 @@
 # Taches planifiees, LS-72 puis LS-206.
 #
-# LES CINQ TACHES DE `TACHES` SONT ICI, ET UN CONTROLE LE VERIFIE.
+# TOUTES LES TACHES DE `TACHES` SONT ICI, ET UN CONTROLE LE VERIFIE.
+# Le compte n'est pas inscrit : il disait CINQ et LS-131 en a ajoute une
+# sixieme, `suivi-livraison`. C'est le controle qui compte, pas cette phrase.
 # `scripts/verifier-taches-planifiees.sh` confronte ce fichier a la table
 # `TACHES` de `src/services/tache-planifiee.ts`, dans les DEUX sens. Ajouter une
 # tache au service sans l'ajouter ici fait rougir la CI.
@@ -21,8 +23,8 @@
 # liberation des reservations expirees, un quart d'heure pour la
 # reconciliation des paiements.
 #
-# LA FREQUENCE N'EST PAS LA DUREE DU VERROU. Le verrou dure dix et quinze
-# minutes, soit deux cycles au plus : une instance morte fait donc sauter au
+# LA FREQUENCE N'EST PAS LA DUREE DU VERROU. Les verrous durent de cinq minutes
+# a une heure selon la tache, soit deux cycles au plus pour les plus frequentes : une instance morte fait donc sauter au
 # maximum deux executions, jamais toutes les suivantes.
 #
 # La sortie de chaque appel part sur la sortie standard du conteneur, donc dans
@@ -70,3 +72,21 @@
 # les memes entrees-sorties. Le quantieme evite aussi 02h30 UTC, ou tourne la
 # sauvegarde de LS-152 : une purge pendant un pg_dump n'aide personne.
 41 3 * * * /usr/local/bin/declencher.sh purge-quarantaine-medias
+# LE SUIVI DE LIVRAISON, LS-131 et ADR-042. Horaire, et jamais a la consultation
+# d'une commande : LS-33 chantier 3 l'exige, et interroger le transporteur a
+# chaque affichage multiplierait les appels par le nombre de lignes d'une liste.
+#
+# UNE FOIS PAR HEURE SUFFIT. Un colis n'avance pas a la minute, et ce que cette
+# tache renseigne est une date de RECEPTION, pas un evenement qu'un ecran
+# attend. Une heure de retard sur `livreA` ne change rien au delai de
+# retractation, qui se compte en jours ouvrables.
+#
+# A LA MINUTE 23 ET NON A L'HEURE PILE, meme raisonnement que les deux purges :
+# rien ne doit converger avec ce que la planete lance a l'heure ronde, et le
+# decalage evite le rendez-vous avec la sauvegarde de 02h30 UTC.
+#
+# SON VERROU DURE UNE HEURE, soit un cycle entier, parce qu'elle fait des appels
+# RESEAU : jusqu'a cinquante colis a huit secondes au pire. Une instance morte
+# fait sauter UN cycle, sans consequence, et `synchroniseA` porte la trace du
+# retard pour l'ecran d'administration.
+23 * * * * /usr/local/bin/declencher.sh suivi-livraison
