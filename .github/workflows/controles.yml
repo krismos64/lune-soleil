@@ -938,9 +938,17 @@ jobs:
       # part ; 26 sont des scripts `-mutation`, qui prouvent les controles et
       # n'ont pas vocation a tourner par pull request.
       #
-      # Restaient neuf controles reels. Six ne PEUVENT pas tourner ici, visant
-      # la production ou exigeant un acces SSH ou des variables absentes. Ces
-      # deux-la etaient verts et jouables tels quels, sans rien changer.
+      # Restaient neuf controles reels. SEPT ne PEUVENT pas tourner ici, visant
+      # la production ou exigeant un acces SSH ou des variables absentes.
+      #
+      # `verifier-emetteur-facture.sh` A ETE BRANCHE PUIS RETIRE le meme jour :
+      # il exige un `.env` a la racine, absent en CI, et rendait « ECHEC aucun
+      # fichier .env a la racine ». Il paraissait VERT en local pour la seule
+      # raison qu'un `.env` y existe : mesurer sur son poste et conclure sur la
+      # CI est le defaut, pas le controle. Ne pas le rebrancher sans lui donner
+      # de quoi lire sa configuration autrement.
+      #
+      # Reste celui-ci, sans aucune dependance externe.
       #
       # `verifier-graphie-marque.sh` est celui dont le depot retient qu'il a ete
       # prouve par quatre mutations reussies pendant qu'il laissait passer
@@ -949,9 +957,6 @@ jobs:
       # tourne se corrige, un controle qui dort ne se corrige jamais.
       - name: 9s ter. La graphie de la marque est uniforme
         run: ./scripts/verifier-graphie-marque.sh
-
-      - name: 9s quater. L'emetteur des factures est coherent
-        run: ./scripts/verifier-emetteur-facture.sh
 
       # ----------------------------------------------------------------------
       # Controle 9t, LS-191. La page qui LEVE a dessein reste inatteignable.

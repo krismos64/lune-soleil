@@ -47,18 +47,35 @@ Sur **85** scripts `verifier-*`, **35** ne sont référencés par aucun workflow
 Le chiffre brut trompe : **26 sont des scripts `-mutation`**, qui prouvent les
 contrôles et n'ont pas vocation à tourner à chaque pull request.
 
-Restent **neuf contrôles réels**. Six ne peuvent pas tourner en CI, visant la
-production ou exigeant un accès SSH ou des variables absentes. **Deux étaient
-verts et jouables tels quels, et sont désormais branchés** : arbitrage de
-Christophe, corriger directement plutôt que d'ouvrir des tickets.
+Restent **neuf contrôles réels**, dont **sept** ne peuvent pas tourner en CI :
+production, accès SSH, ou variables absentes. Arbitrage de Christophe, corriger
+directement plutôt que d'ouvrir des tickets.
 
-`verifier-graphie-marque.sh` est celui dont le dépôt retient qu'il a été prouvé
-par quatre mutations réussies **pendant qu'il laissait passer quatre défauts
-réels**, dont l'en-tête de toutes les pages publiques. Le brancher ne répare pas
-cette limite, il l'expose : un contrôle qui tourne se corrige, un contrôle qui
-dort ne se corrige jamais.
+**Un seul a été branché**, `verifier-graphie-marque.sh`, celui dont le dépôt
+retient qu'il a été prouvé par quatre mutations réussies **pendant qu'il laissait
+passer quatre défauts réels**, dont l'en-tête de toutes les pages publiques. Le
+brancher ne répare pas cette limite, il l'expose : un contrôle qui tourne se
+corrige, un contrôle qui dort ne se corrige jamais.
 
-**La CI joue désormais 51 contrôles** au lieu de 48 ce matin.
+## Le second a été branché puis retiré, et l'erreur est de méthode
+
+`verifier-emetteur-facture.sh` a été branché avec l'autre, puis retiré après un
+échec en CI : **il exige un `.env` à la racine**, absent chez GitHub.
+
+Il paraissait vert pour la seule raison qu'un `.env` existe sur mon poste. **J'ai
+mesuré sur ma machine et conclu sur la CI**, ce qui est exactement le défaut que
+la fiche « contrôler sur la base réelle » nomme, transposé à l'environnement.
+
+Le geste qui l'aurait vu tient en trois commandes, et il a été fait après coup :
+
+```
+mv .env .env.mise-de-cote
+graphie-marque sans .env    : 0
+emetteur-facture sans .env  : 1
+```
+
+**La CI joue donc 50 contrôles** au lieu de 48 ce matin, et la raison du retrait
+est écrite dans `controles.yml` pour qu'il ne soit pas rebranché tel quel.
 
 ## L'échec préexistant, corrigé lui aussi
 
@@ -85,7 +102,7 @@ npm run type-check     vert
 npm run lint           vert
 npm run format:check   vert
 npm run test           1314 passed, 85 fichiers
-51 controles           0 en echec
+50 controles           0 en echec
 verifier-navigation-client-mutation.sh   4 sur 4
 ```
 
