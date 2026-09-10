@@ -31,7 +31,7 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 2, catalogue et médias | LS-3 | 5 | finitions d'interface et d'accessibilité, aucune bloquante |
 | 3, panier et paiement | LS-4 | 2 | LS-86 et LS-125, deux stories d'interface qui ne bloquent rien |
 | 4, factures et expédition | LS-5 | 3 | **LS-200, LS-131 et LS-216 sont closes**, l'API Sendcloud est raccordée, le suivi tourne toutes les heures et s'affiche en administration. **LS-218 crée l'étiquette par API**, développée, son critère 10 attend un envoi réel |
-| 4bis, espace client et avis | LS-36 | 3 | **LS-58 est close**, le suivi s'affiche dans l'espace client. LS-190 et LS-61 sont débloquées |
+| 4bis, espace client et avis | LS-36 | 3 | **LS-61 est développée et fusionnée** le 11 septembre 2026 : les avis vérifiés existent, de l'invitation après livraison à l'affichage public. Elle reste ouverte, son critère 3 n'étant pas exerçable faute d'écran de renvoi. **LS-77 est développée**, le signalement d'un avis, obligation de l'article L111-7-2. Reste **LS-190**, la frise d'étapes, débloquée par LS-58 |
 | 5, rétractation et conformité | LS-6 | 0 | **close**, ses huit stories terminées le 10 septembre 2026 |
 | 6, exploitation et ouverture | LS-7 | 5 | **LS-153 et LS-142 attendent l'exploitante**. LS-140 et LS-107 attendent les photographies de LS-23. Reste LS-150, la visibilité dans les moteurs de réponse. **LS-175 est close** depuis le 10 septembre 2026, le compte d'administration existe |
 | 7, V1 cible | LS-8 | 3 | après ouverture, hors Go-Live |

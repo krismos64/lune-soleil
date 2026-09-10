@@ -50,6 +50,13 @@
   color: var(--ls-text-muted);
   font-size: 0.875rem;
   line-height: 1.5;
+  /*
+   * IL PORTE `libelleProduitFige`, cas que la regle mobile first nomme
+   * explicitement : « y compris avec un nom de produit long ». Les deux autres
+   * rendus de ce champ dans le depot portent deja ce couple, et celui-ci n'en
+   * avait repris que la moitie.
+   */
+  overflow-wrap: anywhere;
 }
 
 .commentaireVise {
@@ -63,21 +70,6 @@
    * 10 septembre 2026 sur les trois autres rendus d'avis du depot.
    */
   overflow-wrap: anywhere;
-}
-
-.information {
-  padding: var(--ls-space-4);
-  border: 1px solid var(--ls-border);
-  border-radius: var(--ls-radius-md);
-  line-height: 1.6;
-}
-
-.information p {
-  margin: 0 0 var(--ls-space-3);
-}
-
-.information p:last-child {
-  margin-bottom: 0;
 }
 
 .formulaire {

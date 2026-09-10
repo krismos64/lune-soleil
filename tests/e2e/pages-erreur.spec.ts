@@ -66,6 +66,34 @@ for (const route of ["/retractation", "/avis"] as const) {
   });
 }
 
+/*
+ * LE SIGNALEMENT D'AVIS, LS-77, article L111-7-2.
+ *
+ * ELLE DESIGNE SON AVIS PAR UN PARAMETRE DE REQUETE et non par un segment, donc
+ * les deux formes de defaut se testent : parametre absent, et identifiant qui ne
+ * resout aucun avis PUBLIE. Les deux doivent rendre 404, jamais un 200 portant
+ * un formulaire inutilisable.
+ *
+ * `notFound()` ET NON UNE PAGE DE REFUS : accepter un signalement sur un avis
+ * non publie confirmerait son existence a quelqu'un qui n'a pas pu le lire, ce
+ * qui ferait de cet ecran un oracle sur la file de moderation.
+ */
+test("/avis/signaler rend un 404 reel sans parametre", async ({ page }) => {
+  const reponse = await page.goto("/avis/signaler");
+
+  expect(reponse?.status()).toBe(404);
+});
+
+test("/avis/signaler rend un 404 reel sur un avis inconnu", async ({
+  page,
+}) => {
+  const reponse = await page.goto(
+    "/avis/signaler?avis=00000000-0000-4000-8000-000000000000",
+  );
+
+  expect(reponse?.status()).toBe(404);
+});
+
 test("une URL sans route rend un 404 reel et non un 200 habille", async ({
   page,
 }) => {
