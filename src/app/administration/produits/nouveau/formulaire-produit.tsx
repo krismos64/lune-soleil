@@ -70,7 +70,10 @@ export function FormulaireProduit({
       <p className={styles.vide}>
         Aucune catégorie n&apos;existe encore. Créez-en une avant d&apos;ajouter
         un produit :{" "}
-        <Link href="/administration/categories">gérer les catégories</Link>.
+        <Link href="/administration/categories" prefetch={false}>
+          gérer les catégories
+        </Link>
+        .
       </p>
     );
   }

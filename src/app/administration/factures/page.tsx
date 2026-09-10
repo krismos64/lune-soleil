@@ -209,6 +209,14 @@ async function VueComptable({
           {PERIODES.map((periode) => (
             <li key={periode.valeur}>
               <Link
+                /*
+                 * C40 : PAS DE PRECHARGEMENT, LS-213. `/administration/factures`
+                 * est `force-dynamic` et `staleTimes.dynamic` vaut zero : la
+                 * reponse prechargee est perimee des son arrivee, Next.js la
+                 * jette et recommence sans fin. Ces filtres sont QUATRE liens
+                 * visibles en permanence, donc quatre boucles simultanees.
+                 */
+                prefetch={false}
                 className={styles.filtre}
                 /*
                  * LE FILTRE PAR DEFAUT POINTE VERS L'URL NUE, les autres portent

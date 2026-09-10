@@ -121,7 +121,13 @@ export default async function PageEditeurProduit({
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
       <p className={styles.fil}>
-        <Link href="/administration/categories">Catalogue</Link>
+        {/*
+         * C40 : PAS DE PRECHARGEMENT, LS-213. Le fil d'Ariane est rendu sur
+         * CHAQUE fiche produit ouverte, et sa cible est `force-dynamic`.
+         */}
+        <Link href="/administration/categories" prefetch={false}>
+          Catalogue
+        </Link>
       </p>
       {/*
        * L'ORDRE DES BLOCS EST DELIBERE, arbitrage du 14 aout 2026 : informations
