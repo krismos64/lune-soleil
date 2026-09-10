@@ -301,3 +301,44 @@ test("aucune violation d'accessibilité", async ({ page }) => {
 
   expect(resultats.violations).toEqual([]);
 });
+
+/**
+ * L'INFORMATION SUR LES COOKIES, LS-148 critère 3.
+ *
+ * ------------------------------------------------------------------
+ * CE QUE CE TEST GARDE, ET CE N'EST PAS UNE FORMULATION.
+ *
+ * Aucune bannière n'est due, les quatre traceurs du site figurant nommément
+ * dans la liste des exemptions de la CNIL, `.claude/rules/legal.md` section
+ * « Cookies et traceurs, article 82 ». Mais l'absence d'obligation de
+ * consentement ne dispense pas d'INFORMER, et cette information est le
+ * livrable de la story.
+ *
+ * IL VÉRIFIE LA PRÉSENCE, PAS LE TEXTE EXACT. Une assertion sur une phrase
+ * entière rougirait à la première relecture éditoriale sans qu'aucune
+ * obligation n'ait bougé. Ce qui doit survivre est le FAIT que la page dit
+ * quels cookies existent et pourquoi aucun consentement n'est demandé.
+ * ------------------------------------------------------------------
+ */
+test("la page d'informations légales décrit les cookies employés", async ({
+  page,
+}) => {
+  await page.goto("/informations-legales");
+
+  const section = page.locator("#confidentialite");
+  await expect(section).toBeVisible();
+
+  const texte = (await section.textContent()) ?? "";
+
+  /*
+   * TROIS SENS, ET CHACUN PORTE UNE OBLIGATION DISTINCTE.
+   *
+   * Dire que des cookies existent, dire qu'aucun n'est publicitaire, et dire
+   * pourquoi aucun consentement n'est demandé. Une page qui listerait les
+   * cookies sans expliquer l'absence de bannière laisserait le visiteur devant
+   * une question sans réponse.
+   */
+  expect(texte).toMatch(/[Cc]ookie/);
+  expect(texte).toMatch(/publicitaire/);
+  expect(texte).toMatch(/strictement nécessaires?/i);
+});
