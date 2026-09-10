@@ -22,7 +22,7 @@ import { useRef, useState, useTransition } from "react";
 
 import type { ModeLivraison } from "@/generated/prisma/enums";
 import { LIBELLES_LIVRAISON, LIBELLES_STATUT } from "@/lib/affichage-commande";
-import { expedier } from "./actions";
+import { creerEtiquette, expedier } from "./actions";
 import styles from "./expeditions.module.css";
 
 /**
@@ -79,6 +79,22 @@ export function FormulaireExpedition({
   const [declaree, setDeclaree] = useState(false);
 
   /*
+   * L'ETIQUETTE A SON PROPRE ETAT D'ATTENTE, distinct de `enCours`. Les deux
+   * gestes ecrivent la MEME expedition : partager un seul drapeau ferait
+   * clignoter le formulaire manuel pendant un appel qui ne le concerne pas, et
+   * surtout laisserait le bouton d'etiquette actif pendant sa propre attente.
+   *
+   * CE DRAPEAU EST CE QUI FERME LE DOUBLE CLIC A L'ECRAN. La fenetre reelle vit
+   * chez le fournisseur, service et `commande_id` unique la bornent en base ;
+   * ici, il empeche le cas courant, deux clics d'impatience sur un appel qui
+   * dure plusieurs secondes. Chacun couterait une etiquette FACTUREE.
+   */
+  const [etiquetteEnCours, demarrerEtiquette] = useTransition();
+
+  /** L'identifiant du colis cree, qui ouvre le lien de telechargement. */
+  const [colisCree, setColisCree] = useState<number | null>(null);
+
+  /*
    * LE FOCUS DOIT ATTERRIR QUELQUE PART APRES LE GESTE, et ce point existe pour
    * cela. Au succes, `declaree` desactive le bouton QUI PORTE LE FOCUS : un
    * element desactive le perd, et le focus retombe sur `<body>`. Au clavier, la
@@ -105,6 +121,101 @@ export function FormulaireExpedition({
   const idPointRelais = `point-relais-${commandeId}`;
   const idMessage = `message-expedition-${commandeId}`;
   const idAideMode = `aide-mode-${commandeId}`;
+
+  /**
+   * Cree le colis chez le transporteur, sur geste explicite.
+   *
+   * ELLE NE LIT AUCUN CHAMP DU FORMULAIRE, critere 1 : tout vient de la
+   * commande, l'adresse comme le mode. C'est le point de la story, l'exploitante
+   * ressaisissant aujourd'hui l'adresse chez le transporteur.
+   */
+  function creerLEtiquette() {
+    const formulaire = new FormData();
+    formulaire.set("commandeId", commandeId);
+
+    demarrerEtiquette(async () => {
+      const resultat = await creerEtiquette(formulaire);
+
+      switch (resultat.statut) {
+        case "SUCCES":
+          setDeclaree(true);
+          setColisCree(resultat.identifiantColis);
+          conteneur.current?.focus();
+          setMessage({
+            texte:
+              `Étiquette créée pour la commande ${numero}, numéro de suivi ` +
+              `${resultat.numeroSuivi}. Télécharger l'étiquette ci-dessous, ` +
+              "puis rafraîchir la page.",
+            erreur: false,
+          });
+          break;
+        /*
+         * L'ETAT EST INCONNU ET NON « rien ne s'est passe », et ce message est
+         * le seul du fichier a demander une verification AILLEURS. Le colis a
+         * peut-etre ete cree chez le transporteur avant que la reponse se
+         * perde : inviter a recliquer ferait acheter une seconde etiquette.
+         */
+        case "TRANSPORTEUR_INDISPONIBLE":
+          setMessage({
+            texte:
+              "Le transporteur n'a pas répondu. Le colis a peut-être été créé " +
+              "malgré tout : vérifier sur Sendcloud avant de réessayer, sinon " +
+              "une seconde étiquette sera facturée.",
+            erreur: true,
+          });
+          break;
+        case "POINT_RETRAIT_MANQUANT":
+          setMessage({
+            texte:
+              "Cette commande est en point de retrait mais n'en porte aucun. " +
+              "Créer l'étiquette sur Sendcloud et saisir le numéro ci-dessous.",
+            erreur: true,
+          });
+          break;
+        case "ADRESSE_INEXPLOITABLE":
+          setMessage({ texte: resultat.message, erreur: true });
+          break;
+        case "DEJA_EXPEDIEE":
+          setDeclaree(true);
+          conteneur.current?.focus();
+          setMessage({
+            texte:
+              "Cette commande porte déjà une expédition, aucune étiquette n'a " +
+              "été créée ni facturée. Rafraîchir la page.",
+            erreur: true,
+          });
+          break;
+        case "STATUT_INCOMPATIBLE":
+          setDeclaree(true);
+          conteneur.current?.focus();
+          setMessage({
+            texte:
+              `Action impossible, la commande est « ${LIBELLES_STATUT[resultat.statutActuel]} ». ` +
+              "Aucune étiquette n'a été créée. Rafraîchir la page.",
+            erreur: true,
+          });
+          break;
+        case "INVALIDE":
+          setMessage({ texte: resultat.message, erreur: true });
+          break;
+        case "SESSION_ABSENTE":
+          setMessage({
+            texte: "Session expirée. Se reconnecter pour continuer.",
+            erreur: true,
+          });
+          break;
+        case "INTROUVABLE":
+          setMessage({ texte: "Cette commande n'existe plus.", erreur: true });
+          break;
+        case "INDISPONIBLE":
+          setMessage({
+            texte: "Le service est momentanément indisponible. Réessayer.",
+            erreur: true,
+          });
+          break;
+      }
+    });
+  }
 
   function envoyer(evenement: React.FormEvent<HTMLFormElement>) {
     evenement.preventDefault();
@@ -212,6 +323,53 @@ export function FormulaireExpedition({
         Déclarer une expédition est irréversible : la commande passe à «
         Expédiée » et ne revient pas en préparation. À faire une fois le colis
         réellement remis au transporteur.
+      </p>
+
+      {/*
+       * LE CHEMIN AUTOMATIQUE PRECEDE LE MANUEL, et l'ordre porte du sens : il
+       * est celui qu'on veut voir emprunte, l'autre restant disponible.
+       *
+       * LES DEUX COEXISTENT ET LE SECOND NE DISPARAIT PAS, LS-218. Trois cas le
+       * justifient : le transporteur indisponible, un envoi hors Sendcloud, et
+       * un colis remis en main propre qui n'a aucune etiquette.
+       */}
+      <div className={styles.etiquette}>
+        <p className={styles.aide}>
+          L&apos;étiquette est créée chez le transporteur à partir de
+          l&apos;adresse de la commande, sans ressaisie. Elle est{" "}
+          <strong>facturée</strong> dès sa création.
+        </p>
+
+        <button
+          type="button"
+          onClick={creerLEtiquette}
+          className={styles.bouton}
+          disabled={etiquetteEnCours || enCours || declaree}
+          aria-describedby={idMessage}
+        >
+          {etiquetteEnCours
+            ? "Création en cours…"
+            : "Créer l'étiquette et expédier"}
+        </button>
+
+        {/*
+         * LE LIEN N'APPARAIT QU'APRES LA CREATION, et il porte `download` : une
+         * etiquette s'imprime, l'ouvrir dans un onglet laisserait le nom et
+         * l'adresse du client dans l'historique du navigateur.
+         */}
+        {colisCree !== null && (
+          <a
+            href={`/administration/expeditions/etiquette/${colisCree}`}
+            className={styles.lienEtiquette}
+            download
+          >
+            Télécharger l&apos;étiquette (PDF)
+          </a>
+        )}
+      </div>
+
+      <p className={styles.aide}>
+        Ou déclarer l&apos;expédition à la main, si le colis part autrement.
       </p>
 
       <form onSubmit={envoyer} className={styles.formulaire}>
