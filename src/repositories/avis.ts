@@ -46,6 +46,17 @@ export type CommandeAInviter = {
   emailNormalise: string;
   livreA: Date;
   lignes: LigneEligible[];
+  /**
+   * `true` quand AUCUNE ligne de la commande ne porte encore d'invitation.
+   *
+   * IL DECIDE DE L'ENVOI DE L'EMAIL, et pas de la creation des invitations.
+   * Un cycle qui RATTRAPE une ligne oubliee doit creer son invitation sans
+   * renvoyer un second email : `envoi_en_attente_actif_unique` ne couvre que
+   * les statuts `EN_ATTENTE` et `ENVOI_EN_COURS`, donc une premiere invitation
+   * deja passee a `ENVOYE` ne bloque plus rien. Le client recevrait deux fois
+   * la meme sollicitation. Mesure par la revue critique du 11 septembre 2026.
+   */
+  premiereInvitation: boolean;
 };
 
 /**
@@ -98,6 +109,14 @@ export async function listerCommandesAInviter(
         },
         orderBy: { creeA: "asc" },
       },
+      /*
+       * LE COMPTE DES LIGNES DEJA INVITEES, qui distingue un premier cycle
+       * d'un rattrapage. Il ne peut pas se deduire de `lignes` ci-dessus, ce
+       * tableau etant deja filtre sur les lignes SANS invitation.
+       */
+      _count: {
+        select: { lignes: { where: { invitation: { isNot: null } } } },
+      },
     },
     orderBy: { creeA: "asc" },
     take: limite,
@@ -123,6 +142,7 @@ export async function listerCommandesAInviter(
         emailNormalise: commande.emailNormalise,
         livreA,
         lignes: commande.lignes,
+        premiereInvitation: commande._count.lignes === 0,
       },
     ];
   });
@@ -370,10 +390,31 @@ export async function appliquerDecision(
 ): Promise<void> {
   const maintenant = parametres.maintenant ?? new Date();
 
+  /*
+   * UN MOTIF ABSENT NE S'ECRIT PAS, IL EST OMIS, correction de la revue
+   * critique du 11 septembre 2026, mesuree par sonde.
+   *
+   * LE DEFAUT : `motifDecision` etait ecrit inconditionnellement, donc une
+   * REPUBLICATION, qui n'a legitimement aucun motif a porter, ecrasait par
+   * `null` le motif du RETRAIT precedent. C'etait la seule trace de la raison
+   * pour laquelle l'avis avait ete retire, et la regle R5 existe precisement
+   * pour l'exiger.
+   *
+   * L'ASYMETRIE AVEC `publieA` ETAIT LE PIEGE. Les deux colonnes sont ecrites
+   * par cette meme fonction, l'une protegee par sa clause `publieA: null` et
+   * l'autre pas : muter la clause protegee ne revele jamais l'absence de
+   * protection sur la voisine. Motif « regle a deux versants » de ce depot.
+   *
+   * UN MOTIF EXPLICITEMENT FOURNI CONTINUE D'ETRE ECRIT, y compris sur une
+   * publication : omettre la cle et ecrire `null` sont deux gestes distincts,
+   * et seul le second efface.
+   */
   const donnees: Prisma.AvisUpdateInput = {
     statut: parametres.statut,
-    motifDecision: parametres.motifDecision,
     decideA: maintenant,
+    ...(parametres.motifDecision === null
+      ? {}
+      : { motifDecision: parametres.motifDecision }),
   };
 
   await client.avis.update({

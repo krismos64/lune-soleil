@@ -201,7 +201,17 @@ async function compterAvis(commandeId: string): Promise<number> {
   return Number(rows[0]!.nombre);
 }
 
-async function lireJetonDeCommande(commandeId: string): Promise<{
+/**
+ * Le jeton PORTE PAR LE LIEN, retrouve par son empreinte.
+ *
+ * IL SE SELECTIONNE PAR EMPREINTE ET NON PAR EXPIRATION, correction de la revue
+ * critique du 11 septembre 2026. Sa premiere version prenait `ORDER BY expire_a
+ * DESC LIMIT 1` : sur une commande multi-lignes, les jetons naissent dans la
+ * MEME transaction a la milliseconde pres, donc l'ordre est indetermine et
+ * l'assertion pouvait porter sur un jeton autre que celui du lien. Le defaut
+ * etait invisible tant que tous les tests portaient sur une seule ligne.
+ */
+async function lireJetonDuLien(valeurJeton: string): Promise<{
   id: string;
   utilise_a: Date | null;
   revoque_a: Date | null;
@@ -210,12 +220,9 @@ async function lireJetonDeCommande(commandeId: string): Promise<{
     id: string;
     utilise_a: Date | null;
     revoque_a: Date | null;
-  }>(
-    `SELECT id, utilise_a, revoque_a FROM jeton_acces
-     WHERE commande_id = $1 AND portee = 'AVIS'::"PorteeJeton"
-     ORDER BY expire_a DESC LIMIT 1`,
-    [commandeId],
-  );
+  }>(`SELECT id, utilise_a, revoque_a FROM jeton_acces WHERE empreinte = $1`, [
+    empreinteJeton(valeurJeton),
+  ]);
 
   return rows[0]!;
 }
@@ -425,7 +432,7 @@ describe("depot d'un avis, criteres 2 et 6", () => {
     expect(issue).toEqual({ statut: "DEPOSE", nombre: 1 });
     expect(await compterAvis(commandeId)).toBe(1);
 
-    const jeton = await lireJetonDeCommande(commandeId);
+    const jeton = await lireJetonDuLien(valeur);
     expect(jeton.utilise_a).not.toBeNull();
 
     /*
@@ -610,6 +617,166 @@ describe("depot d'un avis, criteres 2 et 6", () => {
 
     expect(rows[0]!.statut).toBe("DEPOSE");
     expect(rows[0]!.publie_a).toBeNull();
+  });
+});
+
+describe("commande a plusieurs pieces, defauts de la revue critique", () => {
+  /**
+   * Ouvre une commande a deux pieces, livree et invitee, et rend son lien.
+   *
+   * DEUX PIECES ET NON UNE, ET C'EST TOUT L'OBJET DE CE BLOC. Les quatre
+   * defauts trouves par la revue critique du 11 septembre 2026 vivent
+   * exactement dans l'ecart entre « une piece » et « plusieurs » : les cinq
+   * mutations jouees la veille s'exerçaient toutes sur des commandes a une
+   * seule ligne, ou `retenues.length` vaut toujours le nombre total de pieces.
+   * Elles seraient toutes restees vertes sur ces quatre defauts.
+   */
+  async function commandeDeuxPiecesInvitee(): Promise<{
+    commandeId: string;
+    valeur: string;
+    lignes: string[];
+  }> {
+    const { commandeId } = await commanderEtPayer(2);
+    await marquerLivree(commandeId);
+    await inviterApresLivraison();
+
+    const valeur = await valeurJetonDeCommande(commandeId);
+    const etat = await lireEtatDepot(valeur);
+    if (etat.statut !== "OUVERT") throw new Error("etat inattendu");
+
+    return {
+      commandeId,
+      valeur,
+      lignes: etat.pieces.map((piece) => piece.ligneCommandeId),
+    };
+  }
+
+  it("laisse revenir noter la seconde piece apres un depot partiel", async () => {
+    const { commandeId, valeur, lignes } = await commandeDeuxPiecesInvitee();
+
+    const premier = await deposerAvis(valeur, [
+      { ligneCommandeId: lignes[0]!, note: 5, commentaire: null },
+    ]);
+
+    expect(premier).toEqual({ statut: "DEPOSE", nombre: 1 });
+
+    /*
+     * LE JETON N'EST PAS CONSOMME, et c'est la propriete que ce test fixe. Le
+     * defaut mesure par la revue : il l'etait, donc le client revenant deux
+     * jours plus tard lisait « un avis a deja ete depose pour cette commande »
+     * alors que sa seconde piece n'etait pas notee, et le devenait DEFINITIVEMENT
+     * innotable, aucun autre chemin d'ecriture n'existant.
+     */
+    const jeton = await lireJetonDuLien(valeur);
+    expect(jeton.utilise_a).toBeNull();
+
+    const retour = await lireEtatDepot(valeur);
+    expect(retour.statut).toBe("OUVERT");
+
+    const second = await deposerAvis(valeur, [
+      { ligneCommandeId: lignes[1]!, note: 4, commentaire: null },
+    ]);
+
+    expect(second).toEqual({ statut: "DEPOSE", nombre: 1 });
+    expect(await compterAvis(commandeId)).toBe(2);
+
+    /* LA COMMANDE ENTIEREMENT NOTEE CONSOMME ENFIN LE JETON. */
+    const apres = await lireJetonDuLien(valeur);
+    expect(apres.utilise_a).not.toBeNull();
+  });
+
+  it("consomme le jeton quand toutes les pieces sont notees d'un coup", async () => {
+    const { commandeId, valeur, lignes } = await commandeDeuxPiecesInvitee();
+
+    const issue = await deposerAvis(
+      valeur,
+      lignes.map((ligneCommandeId) => ({
+        ligneCommandeId,
+        note: 5,
+        commentaire: null,
+      })),
+    );
+
+    expect(issue).toEqual({ statut: "DEPOSE", nombre: 2 });
+    expect(await compterAvis(commandeId)).toBe(2);
+
+    const jeton = await lireJetonDuLien(valeur);
+    expect(jeton.utilise_a).not.toBeNull();
+  });
+
+  it("ne perd pas les avis sinceres d'un envoi portant une ligne repetee", async () => {
+    const { commandeId, valeur, lignes } = await commandeDeuxPiecesInvitee();
+
+    /*
+     * LE DEFAUT MESURE PAR LA REVUE : la ligne repetee faisait lever `P2002`
+     * DANS la transaction, qui etait annulee en entier. Trois saisies, deux
+     * sinceres, ZERO avis ecrit, et le client lisait « avis deja depose » sur
+     * un avis qui n'existait pas. `schemaDepotAvis` accepte vingt entrees sans
+     * contrainte d'unicite, donc rien en amont ne filtre.
+     */
+    const issue = await deposerAvis(valeur, [
+      { ligneCommandeId: lignes[0]!, note: 5, commentaire: "Avis sincère 1" },
+      { ligneCommandeId: lignes[1]!, note: 4, commentaire: "Avis sincère 2" },
+      { ligneCommandeId: lignes[0]!, note: 1, commentaire: "Doublon" },
+    ]);
+
+    expect(issue).toEqual({ statut: "DEPOSE", nombre: 2 });
+    expect(await compterAvis(commandeId)).toBe(2);
+
+    /* LA PREMIERE SAISIE L'EMPORTE, celle que l'ecran a rendue en premier. */
+    const { rows } = await client.query<{ note: number }>(
+      "SELECT note FROM avis WHERE ligne_commande_id = $1",
+      [lignes[0]!],
+    );
+
+    expect(rows[0]!.note).toBe(5);
+  });
+
+  it("ne renvoie pas d'email quand un cycle rattrape une ligne oubliee", async () => {
+    const { commandeId, lignes } = await commandeDeuxPiecesInvitee();
+
+    /*
+     * L'ETAT QUE LA REVUE A MESURE : le premier email est parti, donc sa ligne
+     * `envoi_en_attente` est passee a `ENVOYE`, et l'unicite partielle
+     * `envoi_en_attente_actif_unique` ne la voit plus. Une invitation qui
+     * manque ensuite fait rentrer la commande dans le cycle suivant.
+     */
+    await client.query(
+      `UPDATE envoi_en_attente SET statut = 'ENVOYE'::"StatutEnvoi"
+       WHERE commande_id = $1 AND modele = 'invitation-avis'`,
+      [commandeId],
+    );
+
+    await client.query(
+      "DELETE FROM invitation_avis WHERE ligne_commande_id = $1",
+      [lignes[1]!],
+    );
+
+    const issue = await inviterApresLivraison();
+
+    expect(issue.invitees).toBe(1);
+
+    const { rows } = await client.query<{ nombre: string }>(
+      `SELECT count(*)::text AS nombre FROM envoi_en_attente
+       WHERE commande_id = $1 AND modele = 'invitation-avis'`,
+      [commandeId],
+    );
+
+    /*
+     * UNE SEULE LIGNE D'ENVOI, celle deja partie. Sans la correction, le client
+     * recevait DEUX fois la meme sollicitation pour la meme commande.
+     */
+    expect(Number(rows[0]!.nombre)).toBe(1);
+
+    /* L'INVITATION MANQUANTE EST BIEN RATTRAPEE, elle. */
+    const { rows: invitations } = await client.query<{ nombre: string }>(
+      `SELECT count(*)::text AS nombre FROM invitation_avis i
+       JOIN ligne_commande l ON l.id = i.ligne_commande_id
+       WHERE l.commande_id = $1`,
+      [commandeId],
+    );
+
+    expect(Number(invitations[0]!.nombre)).toBe(2);
   });
 });
 
@@ -800,6 +967,37 @@ describe("moderation, regles R4, R5, R7 et R9", () => {
 
     expect(publies).toHaveLength(1);
     expect(publies[0]!.note).toBe(5);
+  });
+
+  it("une republication n'efface pas le motif du retrait precedent", async () => {
+    const { avisId } = await deposerUnAvis();
+
+    await modererAvis({ avisId, statut: "PUBLIE", motifDecision: null });
+    await modererAvis({
+      avisId,
+      statut: "RETIRE",
+      motifDecision: "Contenu sans rapport avec la pièce.",
+    });
+    await modererAvis({ avisId, statut: "PUBLIE", motifDecision: null });
+
+    const { rows } = await client.query<{ motif_decision: string | null }>(
+      "SELECT motif_decision FROM avis WHERE id = $1",
+      [avisId],
+    );
+
+    /*
+     * LE MOTIF SURVIT A LA REPUBLICATION, defaut mesure par la revue critique
+     * du 11 septembre 2026. Il etait ecrit inconditionnellement : une
+     * republication, qui n'a legitimement aucun motif a porter, ecrasait par
+     * `null` la SEULE trace de la raison du retrait, que la regle R5 existe
+     * pour exiger.
+     *
+     * L'ASYMETRIE AVEC `publieA` ETAIT LE PIEGE : les deux colonnes sont
+     * ecrites par la meme fonction, l'une protegee par sa clause et l'autre
+     * pas. Muter la clause protegee ne revele jamais l'absence de protection
+     * sur la voisine, motif « regle a deux versants ».
+     */
+    expect(rows[0]!.motif_decision).toBe("Contenu sans rapport avec la pièce.");
   });
 
   it("une republication garde la date de premiere publication, regle R7", async () => {

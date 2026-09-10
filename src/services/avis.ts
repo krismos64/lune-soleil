@@ -184,11 +184,25 @@ export async function inviterApresLivraison(): Promise<IssueInvitations> {
         }
 
         /*
-         * L'INTENTION D'ENVOI ENTRE DANS LA TRANSACTION, ADR-033 : une
-         * invitation ecrite dont l'email ne partirait pas laisserait un droit
-         * de deposer que personne ne connait, et la ligne bloquerait tout
-         * cycle ulterieur par son unicite.
+         * L'EMAIL NE PART QU'AU PREMIER CYCLE DE CETTE COMMANDE, correction de
+         * la revue critique du 11 septembre 2026.
+         *
+         * UN RATTRAPAGE DE LIGNE NE DOIT PAS RENVOYER UNE SOLLICITATION.
+         * `envoi_en_attente_actif_unique` ne couvre que `EN_ATTENTE` et
+         * `ENVOI_EN_COURS` : une premiere invitation deja passee a `ENVOYE` ne
+         * bloque plus rien, et le client recevrait deux fois le meme message.
+         * Le lien du premier email ouvre deja l'ecran sur TOUTE la commande,
+         * lignes rattrapees comprises, `JetonAcces.commandeId` designant la
+         * commande.
+         *
+         * L'INTENTION RESTE DANS LA TRANSACTION, ADR-033 : une invitation
+         * ecrite dont l'email ne partirait pas laisserait un droit de deposer
+         * que personne ne connait.
          */
+        if (!commande.premiereInvitation) {
+          return;
+        }
+
         await deposerEnvoi(transaction, {
           commandeId: commande.commandeId,
           destinataire: commande.emailNormalise,
@@ -214,8 +228,16 @@ export async function inviterApresLivraison(): Promise<IssueInvitations> {
        * plus tard, dans le cycle d'`expedierEnvoisEnAttente`. Le marquer ici
        * dit que l'intention est deposee, la preuve d'envoi vivant dans
        * `JournalEmail`, source unique en cas de divergence.
+       *
+       * IL SUIT LA MEME CONDITION QUE L'ENVOI, et l'oublier aurait annule la
+       * correction ci-dessus : un rattrapage ne depose aucune intention, donc
+       * ecrire `dernierEnvoiA` y ferait passer pour partie une invitation dont
+       * rien n'est parti. Le champ cesserait de distinguer ce qu'il existe pour
+       * distinguer.
        */
-      await marquerEnvoiAbouti(prisma, commande.commandeId);
+      if (commande.premiereInvitation) {
+        await marquerEnvoiAbouti(prisma, commande.commandeId);
+      }
 
       invitees += 1;
     } catch (erreur) {
@@ -492,11 +514,28 @@ export async function deposerAvis(
   );
   const retenues: { saisie: SaisieAvis; piece: InvitationLue }[] = [];
 
+  /*
+   * LES LIGNES REPETEES SONT DEDUPLIQUEES, ET C'EST UNE CORRECTION DE LA REVUE
+   * CRITIQUE DU 11 SEPTEMBRE 2026, mesuree par sonde. Sans elle, un envoi
+   * portant deux fois la meme ligne faisait lever `P2002` DANS la transaction :
+   * celle-ci etait annulee en entier, et les avis SINCERES du meme envoi
+   * partaient avec. Trois saisies, deux legitimes, zero avis ecrit, et le
+   * client recevait « avis deja depose » sur un avis qui n'existait pas.
+   *
+   * LA PREMIERE SAISIE L'EMPORTE plutot que la derniere : c'est celle que
+   * l'ecran a rendue en premier, donc celle que la personne a vue en notant.
+   */
+  const dejaRetenues = new Set<string>();
+
   for (const saisie of saisies) {
     const piece = autorisees.get(saisie.ligneCommandeId);
 
     if (piece === undefined) {
       return { statut: "REFUSE_PIECE_INCONNUE" };
+    }
+
+    if (dejaRetenues.has(saisie.ligneCommandeId)) {
+      continue;
     }
 
     /*
@@ -514,6 +553,7 @@ export async function deposerAvis(
     }
 
     retenues.push({ saisie, piece });
+    dejaRetenues.add(saisie.ligneCommandeId);
   }
 
   if (retenues.length === 0) {
@@ -544,11 +584,52 @@ export async function deposerAvis(
       }
 
       /*
-       * LA CONSOMMATION EST DANS LA TRANSACTION, point 7. Elle exige
+       * LE JETON N'EST CONSOMME QUE SI TOUTE LA COMMANDE EST NOTEE, correction
+       * de la revue critique du 11 septembre 2026, mesuree par sonde.
+       *
+       * LE DEFAUT ETAIT SUR LE CHEMIN NOMINAL, sans acteur hostile ni panne.
+       * Un client qui notait une piece sur deux et gardait l'autre pour plus
+       * tard voyait son lien CONSOMME : en revenant, l'ecran lui annonçait
+       * « un avis a deja ete depose pour cette commande », ce qui etait faux
+       * pour la seconde piece. Le jeton de cette ligne existait, valide
+       * quatre-vingt-dix jours, mais sa valeur n'avait jamais circule : il
+       * restait orphelin et la piece devenait definitivement innotable.
+       *
+       * MON COMMENTAIRE PRECEDENT ANNONÇAIT CE CAS COMME « PEU FREQUENT ». Il
+       * etait pire que cela : le retour n'etait pas seulement ferme PAR CE
+       * LIEN, il l'etait definitivement, aucun autre chemin d'ecriture
+       * n'existant.
+       *
+       * CE QUI PROTEGE DU REJEU N'EST PLUS LE JETON MAIS L'UNICITE
+       * `ligneCommandeId`, deja en place et deja eprouvee : un second depot sur
+       * une ligne notee ressort par le `continue` de la boucle ci-dessus, puis
+       * par `retenues.length === 0`. C'est aussi ce qui donne enfin un usage
+       * aux jetons des autres lignes que la regle R20 impose de creer.
+       *
+       * LA CONSOMMATION RESTE DANS LA TRANSACTION, point 7, et exige
        * `utiliseA: null` cote repository : deux requetes simultanees sur le
        * meme lien passeraient toutes deux `resoudreJeton`, qui lit avant
        * d'ecrire, et la seconde perdrait la course ici.
        */
+      const restantes = pieces.filter(
+        (piece) =>
+          piece.avisExistant === null &&
+          !retenues.some(
+            (retenue) =>
+              retenue.piece.ligneCommandeId === piece.ligneCommandeId,
+          ),
+      );
+
+      if (restantes.length > 0) {
+        /*
+         * `return` VALIDE LA TRANSACTION, il ne l'annule pas, fiche memoire
+         * « un return valide la transaction » de ce depot. C'est bien ce qu'on
+         * veut : les avis de cette passe sont ecrits, seul le jeton reste
+         * intact pour que le client revienne noter le reste.
+         */
+        return;
+      }
+
       const consomme = await consommerJeton(transaction, resolution.jetonId);
 
       if (!consomme) {
