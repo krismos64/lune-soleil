@@ -954,20 +954,36 @@ describe("lecture des passkeys d'un compte", () => {
     const utilisateur = await idDe("projection@exemple.fr");
     await poserPasskey(utilisateur, "iPad", "credential-projection");
 
-    const lues = await listerPasskeysDuCompte(utilisateur);
+    // LE DEPOT EST INTERROGE DIRECTEMENT, ET NON LE SERVICE, et c'est la
+    // correction d'un test qui ne testait rien.
+    //
+    // La premiere version appelait `listerPasskeysDuCompte` et comparait les
+    // cles de l'objet rendu. Elle passait au VERT sur une projection elargie a
+    // `publicKey`, mesure par mutation le 10 septembre 2026 : le service
+    // reconstruit son objet champ par champ, donc il ECARTE lui-meme tout ce
+    // que le depot ferait sortir en trop. Le test observait la protection du
+    // service en croyant mesurer celle du depot.
+    //
+    // C'est le motif « mutation satisfaite ailleurs » : la garde existait a
+    // deux endroits, et le test ne voyait que le second.
+    const { listerPasskeys } = await import("@/repositories/utilisateur");
+    const { prisma } = await import("@/lib/prisma");
 
-    // LA PRESENCE SE VERIFIE AVANT LA PROJECTION. Sans cette ligne, une lecture
-    // qui ne rendrait RIEN ferait passer le test suivant : `Object.keys` d'un
-    // `undefined` leve, mais une liste vide rendrait la comparaison vraie sur
-    // une projection jamais exercee.
-    expect(lues).toHaveLength(1);
-    const lue = lues[0]!;
+    const brutes = await listerPasskeys(prisma, utilisateur);
 
-    // LE SECRET D'AUTHENTIFICATION NE REMONTE PAS JUSQU'A L'ECRAN. La
-    // projection est explicite dans le depot precisement pour cela, et un
-    // `select` elargi par commodite le ferait fuiter sans qu'aucun autre test
-    // ne rougisse.
-    expect(Object.keys(lue).sort()).toEqual(["creeA", "id", "nom"]);
+    // LA PRESENCE SE VERIFIE AVANT LA PROJECTION : sur une liste vide, la
+    // comparaison de cles serait vraie sans qu'aucune projection soit exercee.
+    expect(brutes).toHaveLength(1);
+    const brute = brutes[0]!;
+
+    // LE SECRET D'AUTHENTIFICATION NE SORT PAS DE LA BASE. `publicKey` et
+    // `credentialID` sont ce qui authentifie : un `select` elargi par commodite
+    // les ferait traverser toutes les couches jusqu'au navigateur.
+    expect(Object.keys(brute).sort()).toEqual(["createdAt", "id", "name"]);
+
+    // ET LE SERVICE RENOMME VERS LE FRANCAIS DU PROJET, sans rien ajouter.
+    const [lue] = await listerPasskeysDuCompte(utilisateur);
+    expect(Object.keys(lue!).sort()).toEqual(["creeA", "id", "nom"]);
   });
 
   it("rend une liste vide sur un compte sans passkey", async () => {
