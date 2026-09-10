@@ -225,13 +225,52 @@ echo "  $TAILLE octets, $NB_OBJETS objets, integrite verifiee."
 # un volume Docker. Une lecture seule, aucun conteneur a lancer.
 # ---------------------------------------------------------------------------
 
-MEDIA_RACINE="${MEDIA_RACINE:-/var/lib/lune-soleil/medias}"
+# LA QUARANTAINE N'ENTRE PAS DANS LA SAUVEGARDE, LS-107 critere 3.
+#
+# CE QU'ELLE CONTIENT. Les originaux NON TRAITES televerses par l'exploitante,
+# qui portent encore leurs metadonnees EXIF, dont la POSITION GPS du lieu de
+# prise de vue. Une photographie de bijou prise a son domicile porte donc son
+# adresse, et ADR-007 supprime l'original des que le traitement a reussi
+# precisement pour cela.
+#
+# POURQUOI L'EMPORTER SERAIT PIRE QUE DE LA GARDER SUR LE DISQUE. Le fichier
+# vivant est supprime en quelques secondes ; une copie entree dans une archive
+# y survit QUATORZE JOURS, le temps de la retention, et se retrouve dans autant
+# de jeux qu'il y a eu de nuits. La suppression de l'original ne la rattrape
+# pas : elle ne touche que le disque.
+#
+# LA CIBLE EST DONC `medias/public`, le seul sous-dossier qui porte des
+# fichiers traites. Sauvegarder `medias` entier emportait les deux, ce que ce
+# script a fait jusqu'au 10 septembre 2026. Les dossiers etaient vides, donc
+# rien n'a fui, mais le defaut se serait manifeste a la premiere photographie.
+#
+# CE QUI EST PERDU EN NE LA SAUVEGARDANT PAS : rien d'irremplacable. Un
+# original en quarantaine attend son traitement ; s'il disparait, l'exploitante
+# le televerse a nouveau. Une declinaison de `public/`, elle, ne se refabrique
+# pas sans l'original, qui n'existe plus.
+# UNE VARIABLE DEDIEE, ET SURTOUT PAS `MEDIA_RACINE`.
+#
+# `MEDIA_RACINE` est PARTAGEE : `/etc/lune-soleil/production.env` la porte, la
+# composition Docker s'en sert comme source du montage, et `src/services/media.ts`
+# la lit pour ecrire les televersements. L'application a besoin de la RACINE,
+# puisqu'elle ecrit dans `quarantaine/` avant traitement.
+#
+# La detourner vers `public/` aurait donc casse le televersement pour proteger
+# la sauvegarde. Ce script lit `production.env` par `source`, si bien que la
+# valeur du fichier ECRASE toute valeur par defaut posee ici : la premiere
+# version de cette correction a ete rattrapee par le garde-fou en production,
+# motif « config corrigee a moitie », en fiche.
+#
+# `MEDIA_SAUVEGARDE` est donc propre a la sauvegarde, et se derive de la racine
+# quand elle n'est pas posee : le jour ou le volume demenage, une seule variable
+# bouge et celle-ci suit.
+MEDIA_SAUVEGARDE="${MEDIA_SAUVEGARDE:-${MEDIA_RACINE:-/var/lib/lune-soleil/medias}/public}"
 DOCUMENTS_RACINE="${DOCUMENTS_RACINE:-/var/lib/lune-soleil/documents}"
 ARCHIVE="$REP_SAUVEGARDE/fichiers-$HORODATAGE.tar.gz"
 
 echo "  Archive des fichiers"
 
-for RACINE in "$MEDIA_RACINE" "$DOCUMENTS_RACINE"; do
+for RACINE in "$MEDIA_SAUVEGARDE" "$DOCUMENTS_RACINE"; do
   if [ ! -d "$RACINE" ]; then
     echo "Arret : $RACINE n'existe pas, les fichiers ne sont pas sauvegardes." >&2
     echo "Le dump de la base seul restaurerait un catalogue sans fichier, ADR-007." >&2
@@ -245,7 +284,7 @@ done
 # ce que la restauration attend.
 if ! tar czf "$ARCHIVE" \
   -C / \
-  "${MEDIA_RACINE#/}" \
+  "${MEDIA_SAUVEGARDE#/}" \
   "${DOCUMENTS_RACINE#/}" 2>/dev/null; then
   echo "Arret : l'archive des fichiers a echoue." >&2
   rm -f "$SAUVEGARDE" "$ARCHIVE"
@@ -270,6 +309,31 @@ echo "  $TAILLE_ARCHIVE octets, $NB_ENTREES entrees."
 # echec appartiendra a la supervision de LS-107 quand le catalogue existera.
 if [ "$NB_ENTREES" -lt 3 ]; then
   echo "  Note : arborescences quasi vides, normal avant le premier televersement."
+fi
+
+# ---------------------------------------------------------------------------
+# AUCUNE QUARANTAINE DANS L'ARCHIVE, LS-107 critere 3.
+#
+# LE CONTROLE PORTE SUR L'ARCHIVE PRODUITE ET NON SUR LE CHEMIN VISE, et cette
+# distinction est tout le sens de ce garde-fou. `MEDIA_RACINE` est surchargeable
+# par l'environnement : une valeur remise a `medias` par un script d'appel, une
+# unite systemd ou une manipulation ferait rentrer la quarantaine sans qu'aucune
+# lecture du code ne le montre. Seule la liste de l'archive dit ce qui est
+# reellement parti.
+#
+# CE QUE LA QUARANTAINE PORTE : des originaux non traites, avec leur position
+# GPS. Une copie entree ici survit QUATORZE JOURS a la suppression du fichier
+# vivant, dans autant de jeux qu'il y a eu de nuits.
+#
+# L'ARCHIVE EST DETRUITE AVEC LE DUMP en cas d'echec : une sauvegarde partielle
+# vaudrait mieux que rien pour la disponibilite, jamais pour la confidentialite,
+# et la rotation la promouvrait au rang de derniere sauvegarde valide.
+if tar tzf "$ARCHIVE" 2>/dev/null | grep -q 'quarantaine'; then
+  echo "Arret : l'archive emporte la quarantaine, LS-107 critere 3." >&2
+  echo "Les originaux non traites y portent la position GPS de la prise de vue," >&2
+  echo "et une copie archivee survit a la suppression de l'original, ADR-007." >&2
+  rm -f "$SAUVEGARDE" "$ARCHIVE"
+  exit 1
 fi
 
 # ---------------------------------------------------------------------------
