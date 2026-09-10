@@ -30,6 +30,7 @@ import { expect, test } from "@playwright/test";
 import {
   COMMANDE_A_EXPEDIER_TEST,
   COMMANDE_FACTUREE_TEST,
+  COMMANDE_SANS_SUIVI_TEST,
   COMMANDE_SUIVIE_TEST,
   COMMANDE_TEST,
   FICHIER_SESSION,
@@ -1189,7 +1190,8 @@ test.describe("acheminement du colis, detail de commande", () => {
   /*
    * CRITERE 4, LA VALEUR PROPRE DE CET ECRAN. `synchroniseA` est stocke pour
    * detecter un suivi arrete, et personne ne le regarde si rien ne le montre :
-   * un colis perdu reste a la charge de l'exploitante, article L216-4.
+   * un colis perdu reste a la charge du vendeur jusqu'a la remise, numero
+   * d'article non cite, voir `commandes.module.css`.
    *
    * LE JEU DE DONNEES PORTE TROIS JOURS, verifie par l'amorce elle-meme, ce qui
    * depasse le seuil de vingt-quatre heures.
@@ -1198,5 +1200,57 @@ test.describe("acheminement du colis, detail de commande", () => {
     await page.goto(CHEMIN);
 
     await expect(page.getByText("Suivi non actualisé depuis le")).toBeVisible();
+  });
+});
+
+/**
+ * L'EXPEDITION SANS NUMERO DE SUIVI, LS-216, defaut trouve par la revue
+ * frontend le 10 septembre 2026.
+ *
+ * CE QUI SE JOUE EST UN DELAI LEGAL. Une expedition sans numero n'est JAMAIS
+ * synchronisee, `listerASuivre` filtrant sur `numeroSuivi: { not: null }` :
+ * sa reception ne sera pas constatee, donc ni le delai de retractation ni
+ * l'invitation a deposer un avis ne demarreront. La premiere version de l'ecran
+ * gardait son signalement derriere `numeroSuivi !== null`, ce qui l'eteignait
+ * exactement sur le cas qui en a le plus besoin.
+ */
+test.describe("expedition sans numero de suivi", () => {
+  const CHEMIN = `/administration/commandes/${COMMANDE_SANS_SUIVI_TEST.commandeId}`;
+
+  test("signale qu'aucun numero n'a ete saisi et ce que cela empeche", async ({
+    page,
+  }) => {
+    await page.goto(CHEMIN);
+
+    const acheminement = page
+      .locator("section")
+      .filter({ hasText: "Acheminement du colis" });
+
+    await expect(acheminement).toContainText(
+      "Aucun numéro de suivi n'a été saisi",
+    );
+    /*
+     * LA CONSEQUENCE EST DITE, pas seulement le fait. « Aucun numero » seul
+     * laisserait croire a un detail de saisie : ce qui compte est que la
+     * reception ne sera jamais constatee automatiquement.
+     */
+    await expect(acheminement).toContainText("délai de rétractation");
+  });
+
+  /*
+   * LA SECTION RESTE COHERENTE, et n'annonce pas une livraison qu'elle ne peut
+   * pas constater. Le colis est parti, la remise ne l'est pas.
+   */
+  test("n'annonce aucune remise sur une expedition jamais synchronisee", async ({
+    page,
+  }) => {
+    await page.goto(CHEMIN);
+
+    const acheminement = page
+      .locator("section")
+      .filter({ hasText: "Acheminement du colis" });
+
+    await expect(acheminement).toContainText("Pas encore constatée");
+    await expect(acheminement).toContainText("Expédiée le");
   });
 });

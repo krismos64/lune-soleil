@@ -234,8 +234,9 @@ export type DetailCommande = {
    * de « synchronise et bloque », ce que `statutTransporteur` seul ne dit pas.
    * `synchroniseA` porte cette distinction, et c'est la valeur propre de cet
    * ecran, critere 4 : personne ne regarde un suivi bloque si aucun ecran ne le
-   * montre, et un colis perdu reste a la charge de l'exploitante, article
-   * L216-2.
+   * montre, et un colis perdu reste a la charge du VENDEUR jusqu'a la remise,
+   * Code de la consommation. Le numero d'article n'est PAS cite tant qu'il n'a
+   * pas ete verifie aux sources, voir `commandes.module.css` pour le motif.
    *
    * `mode` EST CELUI QUE LE TRANSPORTEUR A EXECUTE, distinct de
    * `Commande.modeLivraison` que le client a paye, ADR-025. Les deux sont lus

@@ -478,12 +478,12 @@ function BlocAcheminement({
         Acheminement du colis
       </h2>
 
-      <div className={styles.details}>
-        <div className={styles.ligneAcheminement}>
-          <span>Transporteur</span>
-          <span className={styles.valeurAcheminement}>
+      <dl className={styles.details}>
+        <div className={`${styles.detail} ${styles.ligneAcheminement}`}>
+          <dt>Transporteur</dt>
+          <dd className={styles.valeurAcheminement}>
             {expedition.transporteur}
-          </span>
+          </dd>
         </div>
 
         {/*
@@ -491,19 +491,19 @@ function BlocAcheminement({
          * dans le cas nominal ; c'est l'ecart qui porte l'information, signale
          * plus bas.
          */}
-        <div className={styles.ligneAcheminement}>
-          <span>Mode d&apos;expédition</span>
-          <span className={styles.valeurAcheminement}>
+        <div className={`${styles.detail} ${styles.ligneAcheminement}`}>
+          <dt>Mode d&apos;expédition</dt>
+          <dd className={styles.valeurAcheminement}>
             {LIBELLES_LIVRAISON[expedition.mode]}
-          </span>
+          </dd>
         </div>
 
         {expedition.expedieA !== null && (
-          <div className={styles.ligneAcheminement}>
-            <span>Expédiée le</span>
-            <span className={styles.valeurAcheminement}>
+          <div className={`${styles.detail} ${styles.ligneAcheminement}`}>
+            <dt>Expédiée le</dt>
+            <dd className={styles.valeurAcheminement}>
               {formaterDate(expedition.expedieA)}
-            </span>
+            </dd>
           </div>
         )}
 
@@ -514,11 +514,11 @@ function BlocAcheminement({
          * Sendcloud a cote.
          */}
         {expedition.numeroSuivi !== null && (
-          <div className={styles.ligneAcheminement}>
-            <span>Numéro de suivi</span>
-            <span className={styles.valeurAcheminement}>
+          <div className={`${styles.detail} ${styles.ligneAcheminement}`}>
+            <dt>Numéro de suivi</dt>
+            <dd className={styles.valeurAcheminement}>
               {expedition.numeroSuivi}
-            </span>
+            </dd>
           </div>
         )}
 
@@ -532,11 +532,11 @@ function BlocAcheminement({
          * pas un colis remis : seul `livreA` en dessous constate la remise.
          */}
         {expedition.statutTransporteur !== null && (
-          <div className={styles.ligneAcheminement}>
-            <span>Dernier statut connu</span>
-            <span className={styles.valeurAcheminement}>
+          <div className={`${styles.detail} ${styles.ligneAcheminement}`}>
+            <dt>Dernier statut connu</dt>
+            <dd className={styles.valeurAcheminement}>
               {expedition.statutTransporteur}
-            </span>
+            </dd>
           </div>
         )}
 
@@ -551,15 +551,15 @@ function BlocAcheminement({
          * commence a courir, ce que l'exploitante doit savoir pour traiter une
          * demande de retractation.
          */}
-        <div className={styles.ligneAcheminement}>
-          <span>Remise au destinataire</span>
-          <span className={styles.valeurAcheminement}>
+        <div className={`${styles.detail} ${styles.ligneAcheminement}`}>
+          <dt>Remise au destinataire</dt>
+          <dd className={styles.valeurAcheminement}>
             {expedition.livreA === null
               ? "Pas encore constatée"
               : formaterDate(expedition.livreA)}
-          </span>
+          </dd>
         </div>
-      </div>
+      </dl>
 
       {/*
        * LE REPORT VERS UN POINT DE RETRAIT, critere 5. Il se constate en
@@ -593,12 +593,39 @@ function BlocAcheminement({
        * LE SIGNALEMENT D'UN SUIVI ARRETE, critere 4, et la valeur propre de cet
        * ecran. `synchroniseA` est stocke pour cela : sans affichage, personne ne
        * regarde, et un colis bloque chez le transporteur ne se decouvre qu'a la
-       * reclamation du client. Le risque est a la charge de l'exploitante
-       * jusqu'a la remise, article L216-4.
+       * reclamation du client. Le risque est a la charge du VENDEUR jusqu'a la
+       * remise, Code de la consommation, numero d'article NON cite tant qu'il
+       * n'est pas verifie aux sources, voir `commandes.module.css`.
        *
-       * DEUX MESSAGES ET NON UN, parce que les deux cas appellent des gestes
-       * differents : un suivi jamais lu evoque un numero errone saisi a la
-       * declaration, un suivi arrete evoque un colis immobilise.
+       * TROIS MESSAGES ET NON DEUX, parce que les trois cas appellent des
+       * gestes differents. Le premier est celui que la revue frontend a trouve
+       * INATTEIGNABLE dans la version initiale de cette story : la condition
+       * portait `numeroSuivi !== null`, ce qui eteignait le message exactement
+       * sur l'expedition qui en a le plus besoin.
+       *
+       * UNE EXPEDITION SANS NUMERO N'EST JAMAIS SYNCHRONISEE, et c'est
+       * DEFINITIF, pas transitoire : `listerASuivre` filtre sur
+       * `numeroSuivi: { not: null }`, donc la tache horaire ne la lit jamais et
+       * `synchroniseA` reste nul pour toujours. Le numero etant FACULTATIF a la
+       * declaration, choix assume du formulaire d'expedition, ce cas est
+       * atteignable en trois clics et l'ecran affichait jusqu'ici une section
+       * d'apparence normale sur un colis dont le site n'apprendra rien.
+       */}
+      {expedition.numeroSuivi === null && (
+        <p className={styles.suiviBloque}>
+          <strong>Aucun numéro de suivi n&apos;a été saisi.</strong> Ce colis ne
+          sera jamais synchronisé : sa réception ne pourra pas être constatée
+          automatiquement, donc ni le délai de rétractation ni l&apos;invitation
+          à déposer un avis ne démarreront. Compléter le numéro depuis la fiche
+          d&apos;expédition.
+        </p>
+      )}
+
+      {/*
+       * LE NUMERO EXISTE MAIS AUCUN STATUT N'A ENCORE ETE LU. Cas NORMAL le
+       * jour du depot, Sendcloud pouvant ne pas connaitre le numero avant son
+       * enregistrement, et anormal au-dela : le numero saisi n'est alors pas
+       * celui du transporteur.
        */}
       {fraicheur === "jamais" && expedition.numeroSuivi !== null && (
         <p className={styles.suiviBloque}>

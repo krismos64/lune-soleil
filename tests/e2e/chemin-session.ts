@@ -185,6 +185,36 @@ export const SECONDE_COMMANDE_A_EXPEDIER_TEST = {
  * `chk_expedition_mode_point_relais` est une EQUIVALENCE portant sur les deux
  * modes de retrait, `LOCKER` compris malgre ce que son nom laisse croire.
  */
+/**
+ * La commande EXPEDIEE SANS NUMERO DE SUIVI, LS-216 et LS-58.
+ *
+ * SEPTIEME COMMANDE, ET ELLE COUVRE UN DEFAUT TROUVE PAR LA REVUE FRONTEND le
+ * 10 septembre 2026. Le numero de suivi est FACULTATIF a la declaration, choix
+ * assume du formulaire d'expedition, et `listerASuivre` filtre sur
+ * `numeroSuivi: { not: null }` : une expedition sans numero n'est donc JAMAIS
+ * synchronisee. Ce n'est pas un etat transitoire, c'est definitif.
+ *
+ * CE QUE CELA COUTE SI PERSONNE NE LE DIT : la reception ne sera jamais
+ * constatee, donc ni le delai de retractation ni l'invitation a deposer un avis
+ * ne demarreront, et les deux ecrans afficheraient une section d'apparence
+ * normale. La premiere version gardait son signalement derriere
+ * `numeroSuivi !== null`, ce qui l'eteignait sur ce cas precis.
+ *
+ * ELLE JUSTIFIE SON COUT DE PREPARATION parce qu'un delai legal en depend. Les
+ * six autres commandes portent toutes un numero : sans elle, les deux
+ * paragraphes de signalement ne seraient rendus a AUCUNE largeur.
+ */
+export const COMMANDE_SANS_SUIVI_TEST = {
+  categorieId: "e1a2b3c4-1217-4aaa-8888-000000000001",
+  produitId: "e1a2b3c4-1217-4bbb-8888-000000000002",
+  varianteId: "e1a2b3c4-1217-4ccc-8888-000000000003",
+  commandeId: "e1a2b3c4-1217-4ddd-8888-000000000004",
+  ligneId: "e1a2b3c4-1217-4eee-8888-000000000005",
+  paiementId: "e1a2b3c4-1217-4fff-8888-000000000006",
+  expeditionId: "e1a2b3c4-1217-4a11-8888-000000000007",
+  numero: "C-TEST-0217",
+} as const;
+
 export const COMMANDE_SUIVIE_TEST = {
   categorieId: "e1a2b3c4-1216-4aaa-8888-000000000001",
   produitId: "e1a2b3c4-1216-4bbb-8888-000000000002",
