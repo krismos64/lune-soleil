@@ -56,14 +56,21 @@
   border-radius: var(--ls-radius-md);
 }
 
+/*
+ * UN LIBELLE LONG SE COUPE PLUTOT QUE DE DEBORDER. Le libelle FIGE vient du
+ * catalogue au moment de l'achat : un nom d'un seul tenant pousserait la carte
+ * au-dela des 320 px, cas que la regle mobile first nomme explicitement.
+ */
 .nomPiece {
   margin: 0 0 var(--ls-space-1);
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .variantePiece {
   margin: 0 0 var(--ls-space-4);
   color: var(--ls-text-muted);
+  overflow-wrap: anywhere;
 }
 
 .champ {
@@ -120,12 +127,23 @@
 }
 
 /*
- * LE BOUTON RADIO EST MASQUE VISUELLEMENT MAIS RESTE DANS L'ARBRE
- * D'ACCESSIBILITE. `display: none` ou `visibility: hidden` le retireraient de
- * la navigation au clavier et de l'annonce, ce qui rendrait la note
- * inaccessible autrement qu'a la souris.
+ * MASQUAGE VISUEL, CONTENU CONSERVE DANS L'ARBRE D'ACCESSIBILITE.
+ * `display: none` ou `visibility: hidden` retireraient l'element de la
+ * navigation au clavier et de l'annonce.
+ *
+ * ELLE PORTE UN NOM DE ROLE ET NON DE CHAMP, correction de la revue frontend du
+ * 10 septembre 2026. Elle s'appelait `.entreeNote` et servait DEJA trois choses
+ * sans rapport : l'entree radio, le complement de nom accessible « étoiles sur
+ * 5 », et la region live du bouton d'envoi. Une classe nommee d'apres l'un de
+ * ses trois usages se serait periMee au premier ajustement de l'un des deux
+ * autres, et le fichier voisin d'administration nomme deja `.annonce` la meme
+ * regle.
+ *
+ * `position: absolute` EXTRAIT L'ELEMENT DU FLUX, ce qui compte ici : le
+ * complement de nom ne doit PAS elargir le libelle de note, dont la cible
+ * tactile vient de son `min-width`.
  */
-.entreeNote {
+.masqueVisuellement {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -158,7 +176,7 @@
   cursor: pointer;
 }
 
-.entreeNote:checked + .libelleNote {
+.masqueVisuellement:checked + .libelleNote {
   background: var(--ls-primary);
   color: var(--ls-text-on-primary);
   border-color: var(--ls-primary);
@@ -170,7 +188,7 @@
  * formulaire deviendrait inutilisable au clavier tout en restant conforme a
  * l'arbre d'accessibilite.
  */
-.entreeNote:focus-visible + .libelleNote {
+.masqueVisuellement:focus-visible + .libelleNote {
   outline: 3px solid var(--ls-focus);
   outline-offset: 2px;
 }

@@ -53,6 +53,9 @@ const quantite = valider(schemaQuantite, entree); // ou lève EntreeInvalideErro
 | `schemaEmetteurFacture` | identité légale lue dans l'environnement, SIRET à quatorze chiffres | une valeur absente, un SIRET espacé ou tronqué |
 | `schemaLigneInstantane` | une ligne du document, deux libellés séparés | un total de ligne stocké, il se déduit |
 | `schemaInstantaneLegal` | contenu intégral et **versionné** de la facture, LS-126 | un document sans ligne, sans mention, ou de version inconnue |
+| `schemaSaisieAvis` | une note portée sur **une pièce** d'une commande, LS-61 : entier de 1 à 5, commentaire facultatif borné à 2000 caractères | une note décimale, une note hors intervalle, un champ non reconnu |
+| `schemaDepotAvis` | le dépôt complet, **une saisie par pièce notée** | un envoi vide, qui est une erreur de saisie et non un succès sans effet, ou plus de vingt pièces |
+| `schemaDecisionAvis` | une décision de modération, LS-61 : `PUBLIE`, `REFUSE` ou `RETIRE` | `DEPOSE`, qui n'est pas une décision mais l'état d'arrivée : l'admettre renverrait un avis en file d'attente sans motif |
 
 Zéro est accepté sur un montant et refusé sur une quantité, et c'est la seule
 différence entre les deux schémas : zéro centime est un montant légitime, en
@@ -73,6 +76,20 @@ lisibles, l'invariant 4 interdisant de les réécrire.
 
 **`schemaAdresseFigee` existe parce qu'une adresse figée n'est pas une saisie.**
 Elle porte le `nom` du destinataire, absent du formulaire où le nom est un champ
+**`schemaSaisieAvis` porte `ligneCommandeId`, et il n'autorise rien**, LS-61. Le
+formulaire le transmet parce qu'une commande a plusieurs pièces et qu'il faut
+savoir laquelle est notée ; c'est `services/avis.ts` qui le recoupe avec les
+invitations de la commande que le jeton désigne. Un identifiant conforme prouve
+sa forme, jamais le droit d'écrire dessus, invariant 2. Sans ce recoupement, un
+client déposerait un avis sur l'achat d'un tiers en changeant une valeur de champ
+caché.
+
+**`schemaDecisionAvis` n'exige pas le motif, et ce n'est pas un oubli.** La règle
+R5 ne l'impose que sur `REFUSE` et `RETIRE`, condition qui dépend d'un **autre
+champ** : l'exprimer par un `refine` produirait un message d'erreur portant sur
+l'objet entier plutôt que sur le champ fautif. L'exigence vit donc dans le
+service, où un test l'exerce.
+
 **`schemaAdresseCarnet` n'accepte ni `estParDefaut` ni `utilisateurId`**, et
 c'est une règle et non une omission. Le premier contournerait l'ordre imposé du
 point 9 des transactions critiques, deux adresses par défaut violant l'index

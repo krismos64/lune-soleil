@@ -94,6 +94,8 @@ ADMIN_COMMANDES="src/services/administration-commandes.ts"
 # LS-58 et LS-216, le suivi de livraison et sa fraicheur.
 AFFICHAGE_COMMANDE="src/lib/affichage-commande.ts"
 DEPOT_COMMANDE="src/repositories/commande.ts"
+AVIS="src/services/avis.ts"
+DEPOT_AVIS="src/repositories/avis.ts"
 ENVOI_EMAIL="src/services/envoi-email.ts"
 DEPOT_ENVOI="src/repositories/envoi-email.ts"
 SMTP="src/integrations/email/smtp.ts"
@@ -119,7 +121,7 @@ DEPOT_RETRACTATION="src/repositories/retractation.ts"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE" "$AVIS" "$DEPOT_AVIS")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -2074,6 +2076,82 @@ cas "synchroniseA retire de la lecture client" integration \
 mute "$ADMIN_COMMANDES" 's/      expedition: \{\n        select: \{\n          transporteur: true,/      expedition: {\n        select: {\n          transporteur: false as unknown as true,/'
 cas "acheminement retire de la lecture d'administration" integration \
   "remonte les quatre champs du suivi jusqu'au detail"
+
+echo
+echo "Avis verifies, LS-61, tests d'integration"
+echo
+
+# Cas 153 : L'INVITATION PART SANS LIVRAISON CONSTATEE.
+#
+# LE DEFAUT LE PLUS COUTEUX DE CETTE STORY, et il est juridique avant d'etre
+# fonctionnel. `experienceA` deviendrait la date du jour du depot au lieu de
+# celle de la remise : les articles D111-9 a D111-12 imposent une date
+# d'experience EXACTE, et une date approchee affichee pres de l'avis est une
+# information fausse. Le repli du delai de retractation, qui ESTIME une date
+# quand le transporteur se tait, n'a deliberement pas cours ici.
+#
+# ELLE RETIRE LES DEUX LIGNES DE DEFENSE ENSEMBLE, et sa premiere version ne
+# retirait que le filtre SQL : le garde-fou applicatif du `flatMap` rattrapait
+# a sa place, la mutation restait VERTE, et le script accusait un test
+# parfaitement voyant. Motif « deux lignes de defense » deja connu du depot, ou
+# le CHECK rattrapait l'UPDATE conditionnel en produisant le meme etat final.
+#
+# Le code garde bien ses deux gardes, et c'est voulu : c'est la MUTATION qui
+# etait mal choisie, jamais le code qui etait a simplifier.
+mute "$DEPOT_AVIS" 's/      expedition: \{ livreA: \{ not: null \} \},\n//'
+mute "$DEPOT_AVIS" 's/    if \(livreA === null \|\| livreA === undefined\) \{\n      return \[\];\n    \}/    if (false) {\n      return [];\n    }/'
+cas "les deux gardes de livraison retirees" integration \
+  "n'invite pas une commande dont la livraison n'est pas constatee"
+
+# Cas 154 : LE JETON N'EST PLUS CONSOMME DANS LA TRANSACTION DU DEPOT.
+#
+# POINT 7 DES TRANSACTIONS CRITIQUES, retire. Le lien redeviendrait utilisable
+# indefiniment : chaque rejeu tenterait un second avis sur la meme ligne, que
+# l'unicite `ligneCommandeId` refuserait par une erreur 500 apres avoir affiche
+# un succes au client. La mutation ne retire pas la garde applicative, elle
+# retire l'ECRITURE qui la rend vraie.
+mute "$AVIS" "s/      const consomme = await consommerJeton\(transaction, resolution.jetonId\);/      const consomme = true;\n      void consommerJeton;/"
+# LE TEST ATTENDU EST CELUI QUI ASSERTE `utiliseA`, ET NON CELUI DU REJEU.
+# Le rejeu reste vert sous cette mutation, et c'est correct : l'unicite
+# `ligneCommandeId` refuse le second avis en base, donc le COMPTE ne bouge pas.
+# Ce que la mutation ouvre reellement est ailleurs : le jeton reste utilisable,
+# et le rejeu passe d'un refus propre a une erreur rattrapee. Exiger le mauvais
+# test aurait valide une suite qui ne voit pas ce qu'elle pretend voir, motif
+# « mutation vue par le mauvais test ».
+cas "consommation du jeton retiree du depot" integration \
+  "depose l'avis et consomme le jeton dans la meme transaction"
+
+# Cas 155 : UN AVIS EST PUBLIE DES SON DEPOT.
+#
+# REGLE R4 ET ARBITRAGE DE L'EXPLOITANTE DU 3 SEPTEMBRE 2026, tous deux
+# annules. Un avis apparaitrait sur la fiche produit sans qu'aucune personne
+# ne l'ait relu, ce que l'ecran de moderation existe precisement pour empecher.
+# Le defaut serait invisible tant qu'aucun avis desagreable n'arrive.
+mute "$DEPOT_AVIS" "s/      experienceA: parametres.experienceA,/      experienceA: parametres.experienceA,\n      statut: \"PUBLIE\" as const,/"
+cas "avis publie des son depot, sans relecture" integration \
+  "depose l'avis au statut DEPOSE, jamais publie d'emblee"
+
+# Cas 156 : LA LIGNE SAISIE N'EST PLUS RECOUPEE AVEC LES INVITATIONS.
+#
+# INVARIANT 2. `ligneCommandeId` arrive du formulaire, donc d'une entree non
+# fiable : sans ce recoupement, un client depose un avis sur l'achat d'un TIERS
+# en changeant une valeur de champ cache. Le jeton reste valide, seule la cible
+# change, et rien dans la base ne s'y oppose, l'unicite portant sur la ligne et
+# non sur son proprietaire.
+mute "$AVIS" "s/    if \(piece === undefined\) \{\n      return \{ statut: \"REFUSE_PIECE_INCONNUE\" \};\n    \}/    if (piece === undefined) {\n      retenues.push({ saisie, piece: pieces[0]! });\n      continue;\n    }/"
+cas "recoupement de la ligne saisie retire" integration \
+  "refuse une ligne de commande qui n'appartient pas au jeton"
+
+# Cas 157 : `publieA` EST REECRIT A CHAQUE PUBLICATION.
+#
+# REGLE R7. La date de PREMIERE publication serait ecrasee a chaque
+# republication : un avis publie en aout, retire, puis republie en octobre
+# paraitrait dater d'octobre. Le classement chronologique est ANNONCE au public,
+# article D111-10 1°, donc l'ordre affiche cesserait de correspondre a la
+# mention qui le decrit.
+mute "$DEPOT_AVIS" "s/      where: \{ id: parametres.avisId, publieA: null \},/      where: { id: parametres.avisId },/"
+cas "publieA reecrit a chaque republication" integration \
+  "une republication garde la date de premiere publication"
 
 echo
 echo "-----------------------------------------"

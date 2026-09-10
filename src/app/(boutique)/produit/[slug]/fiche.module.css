@@ -452,6 +452,13 @@
   color: var(--ls-text);
   line-height: 1.6;
   white-space: pre-wrap;
+  /*
+   * `pre-wrap` GARDE LES SAUTS DE LIGNE, IL NE COUPE AUCUN MOT. Un avis
+   * contenant une URL collee ou un mot d'un seul tenant deborderait a 320 px :
+   * les quatre autres blocs de texte variable de ce fichier portent deja ce
+   * couple, et celui-ci n'en avait recopie que la moitie.
+   */
+  overflow-wrap: anywhere;
 }
 
 /* FOND SABLE, DONC `--ls-text` ET JAMAIS `--ls-text-muted`, C31. */
@@ -474,4 +481,5 @@
   color: var(--ls-text);
   line-height: 1.6;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }

@@ -38,6 +38,34 @@ import {
  */
 const URL_SANS_ROUTE = "/collections/anciennes-creations";
 
+/*
+ * LES DEUX ROUTES A JETON SIGNE, LS-134 et LS-61.
+ *
+ * ELLES SONT LE CAS LE PLUS EXPOSE DE LA REGLE C32 : toutes deux appellent
+ * `notFound()` sur un jeton qui ne resout rien, et toutes deux vivent sous un
+ * segment dynamique ou un `loading.tsx` pose par mégarde ferait rendre 200.
+ * Le statut est alors FAUX sans que la page change d'aspect, donc invisible a
+ * l'oeil comme en revue de diff.
+ *
+ * LA VALEUR EST SYNTAXIQUEMENT PLAUSIBLE mais non signee : elle traverse la
+ * verification de forme et echoue sur la SIGNATURE, ce qui exerce le chemin
+ * reel plutot que le rejet trivial d'une chaine vide.
+ */
+const JETON_INVALIDE = "valeur-forgee-non-signee.signature-inventee";
+
+for (const route of ["/retractation", "/avis"] as const) {
+  test(`${route} rend un 404 reel sur un jeton non signe`, async ({ page }) => {
+    const reponse = await page.goto(`${route}/${JETON_INVALIDE}`);
+
+    /*
+     * 404 ET NON 403, invariant 2 : un « acces refuse » confirmerait qu'une
+     * commande existe derriere ce jeton. Les deux routes rendent donc la meme
+     * chose a un inconnu qu'a une valeur forgee.
+     */
+    expect(reponse?.status()).toBe(404);
+  });
+}
+
 test("une URL sans route rend un 404 reel et non un 200 habille", async ({
   page,
 }) => {

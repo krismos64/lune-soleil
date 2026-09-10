@@ -115,7 +115,7 @@ export function FormulaireAvis({
         </p>
         <p>
           Un avis peut ne pas être publié, par exemple s&apos;il ne porte pas
-          sur la pièce achetée. Vous en seriez informé.
+          sur la pièce achetée. Un message vous le dirait.
         </p>
       </div>
     );
@@ -165,7 +165,7 @@ export function FormulaireAvis({
                           type="radio"
                           id={identifiant}
                           name={`note-${piece.ligneCommandeId}`}
-                          className={styles.entreeNote}
+                          className={styles.masqueVisuellement}
                           value={valeur}
                           checked={notes[piece.ligneCommandeId] === valeur}
                           onChange={() =>
@@ -180,7 +180,7 @@ export function FormulaireAvis({
                           className={styles.libelleNote}
                         >
                           {valeur}
-                          <span className={styles.entreeNote}>
+                          <span className={styles.masqueVisuellement}>
                             {valeur > 1 ? " étoiles sur 5" : " étoile sur 5"}
                           </span>
                         </label>
@@ -237,13 +237,28 @@ export function FormulaireAvis({
        * lecteur d'ecran n'entend rien entre le clic et la reponse, et rien ne
        * distingue une attente d'un echec silencieux.
        */}
-      <p aria-live="polite" className={styles.entreeNote}>
+      <p aria-live="polite" className={styles.masqueVisuellement}>
         {enCours ? "Envoi de votre avis en cours…" : ""}
+      </p>
+
+      {/*
+       * L'ETAT DESACTIVE S'EXPLIQUE AVANT D'ETRE RENCONTRE, revue frontend du
+       * 10 septembre 2026. A l'arrivee sur l'ecran aucune note n'est saisie,
+       * donc le bouton est desactive d'emblee ; un bouton desactive n'est PAS
+       * atteint par la tabulation, donc rien au clavier ne dirait quelle
+       * condition manque. L'ecran d'administration voisin traite deja son
+       * exigence de motif de cette facon.
+       */}
+      <p id="aide-envoi" className={styles.aide}>
+        {saisies.length === 0
+          ? "Choisissez une note pour pouvoir envoyer."
+          : "Vous pouvez envoyer votre avis."}
       </p>
 
       <button
         type="submit"
         className={styles.bouton}
+        aria-describedby="aide-envoi"
         disabled={enCours || saisies.length === 0}
       >
         {enCours ? "Envoi en cours…" : "Envoyer mon avis"}

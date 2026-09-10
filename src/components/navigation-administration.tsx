@@ -18,7 +18,7 @@
  * 320 px ; le prototype la veut LATERALE. Ce n'est pas qu'une affaire de gout :
  * une barre horizontale a defilement cache ses dernieres rubriques hors ecran
  * sans que rien ne le signale, defaut que LS-144 porte deja pour les filtres.
- * En colonne, les quinze entrees, neuf liens et six rubriques a venir, sont
+ * En colonne, les entrees, liens et rubriques a venir confondus, sont
  * toutes visibles d'un coup sur un ecran de bureau.
  *
  * SOUS 768 px LA COLONNE SERAIT UN MUR. Une barre laterale permanente est un
@@ -197,7 +197,14 @@ export const RUBRIQUES: readonly Rubrique[] = [
  */
 export const RUBRIQUES_A_VENIR = [
   { libelle: "Statistiques", ticket: "LS-64" },
-  { libelle: "Avis", ticket: "LS-61" },
+  /*
+   * « Avis » A QUITTE CETTE LISTE le 10 septembre 2026, LS-61 etant livree.
+   * L'entree est retiree ET NON COMMENTEE : le test de bout en bout lit les
+   * entrees REELLEMENT rendues sous « Bientot disponible » et exige zero lien
+   * sur chacune. Une rubrique qui reste ici tout en devenant un lien fait donc
+   * rougir la suite, ce qui est exactement ce qui s'est produit. Quatrieme
+   * entree a quitter cette liste apres Catalogue, Factures et Clients.
+   */
   { libelle: "Paramètres", ticket: "LS-98" },
 ] as const;
 

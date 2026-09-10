@@ -94,9 +94,11 @@
   color: var(--ls-primary);
 }
 
+/* UN LIBELLE FIGE LONG SE COUPE PLUTOT QUE DE DEBORDER, regle mobile first. */
 .piece {
   margin: 0 0 var(--ls-space-1);
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 /*
@@ -118,6 +120,11 @@
   color: var(--ls-text);
   line-height: 1.6;
   white-space: pre-wrap;
+  /*
+   * `pre-wrap` GARDE LES SAUTS DE LIGNE, IL NE COUPE AUCUN MOT. Un avis
+   * contenant une URL collee deborderait la carte a 320 px.
+   */
+  overflow-wrap: anywhere;
 }
 
 .sansCommentaire {
@@ -130,6 +137,7 @@
   margin: 0;
   color: var(--ls-text);
   line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 /*
@@ -271,4 +279,17 @@
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
+}
+
+/*
+ * ACCUSE DE SUCCES, visible ET annonce. Il n'est pas masque, contrairement a
+ * `.annonce` : une decision prise doit se lire a l'ecran, la liste se
+ * reorganisant sans autre signal que le deplacement de la carte.
+ */
+.succes {
+  margin: var(--ls-space-3) 0 0;
+  padding: var(--ls-space-3);
+  border-left: 3px solid var(--ls-success);
+  color: var(--ls-text);
+  line-height: 1.6;
 }
