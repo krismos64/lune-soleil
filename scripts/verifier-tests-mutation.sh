@@ -2153,6 +2153,59 @@ mute "$DEPOT_AVIS" "s/      where: \{ id: parametres.avisId, publieA: null \},/ 
 cas "publieA reecrit a chaque republication" integration \
   "une republication garde la date de premiere publication"
 
+# Cas 158 : LE JETON EST CONSOMME MEME QUAND UNE PIECE RESTE A NOTER.
+#
+# L'ETAT D'AVANT LA REVUE CRITIQUE DU 11 SEPTEMBRE 2026, remis tel quel. C'est
+# le seul des quatre defauts qui se produisait sur le CHEMIN NOMINAL, sans
+# acteur hostile ni panne : un client notant une piece sur deux voyait son lien
+# consomme, lisait « un avis a deja ete depose pour cette commande » en
+# revenant, et sa seconde piece devenait DEFINITIVEMENT innotable, aucun autre
+# chemin d'ecriture n'existant.
+#
+# AUCUNE DES CINQ MUTATIONS DE LA VEILLE NE POUVAIT LE VOIR : elles s'exerçaient
+# toutes sur des commandes a UNE ligne, ou `retenues.length` vaut toujours le
+# nombre total de pieces.
+mute "$AVIS" 's/      if \(restantes.length > 0\) \{/      if (false) {/'
+cas "jeton consomme malgre une piece non notee" integration \
+  "laisse revenir noter la seconde piece apres un depot partiel"
+
+# Cas 159 : LA LIGNE REPETEE N'EST PLUS DEDUPLIQUEE.
+#
+# Elle faisait lever `P2002` DANS la transaction, annulee en entier : les avis
+# SINCERES du meme envoi partaient avec, et le `catch` rendait « deja depose »
+# sur des avis qui n'existaient pas. `schemaDepotAvis` accepte vingt entrees
+# sans contrainte d'unicite, donc rien en amont ne filtre.
+mute "$AVIS" 's/    if \(dejaRetenues.has\(saisie.ligneCommandeId\)\) \{\n      continue;\n    \}\n//'
+cas "deduplication des lignes repetees retiree" integration \
+  "ne perd pas les avis sinceres d'un envoi portant une ligne repetee"
+
+# Cas 160 : LE MOTIF EST REECRIT A CHAQUE DECISION.
+#
+# Une republication, qui n'a legitimement aucun motif a porter, ecrasait par
+# `null` la SEULE trace de la raison du retrait precedent, que la regle R5
+# existe pour exiger.
+#
+# LE CAS 157 NE POUVAIT PAS LE VOIR : les deux colonnes sont ecrites par la meme
+# fonction, `publieA` protegee par sa clause et `motifDecision` non. Muter la
+# clause protegee ne revele jamais l'absence de protection sur la voisine.
+# Motif « regle a deux versants ».
+# `\.\.\.` EST ECHAPPE, le point etant un metacaractere Perl : sans cela
+# l'expression ne trouve rien et le script accuse les tests a la place de
+# lui-meme, sens d'echec INVERSE que son garde-fou existe pour attraper.
+mute "$DEPOT_AVIS" "s/    \\.\\.\\.\\(parametres.motifDecision === null\n      \\? \\{\\}\n      : \\{ motifDecision: parametres.motifDecision \\}\\),/    motifDecision: parametres.motifDecision,/"
+cas "motif reecrit a chaque decision" integration \
+  "une republication n'efface pas le motif du retrait precedent"
+
+# Cas 161 : UN RATTRAPAGE DE LIGNE RENVOIE UNE SOLLICITATION.
+#
+# `envoi_en_attente_actif_unique` ne couvre que `EN_ATTENTE` et
+# `ENVOI_EN_COURS` : une premiere invitation deja passee a `ENVOYE` ne bloque
+# plus rien, et le client recevait DEUX fois le meme message pour la meme
+# commande.
+mute "$AVIS" 's/        if \(!commande.premiereInvitation\) \{\n          return;\n        \}\n\n//'
+cas "email renvoye sur un rattrapage de ligne" integration \
+  "ne renvoie pas d'email quand un cycle rattrape une ligne oubliee"
+
 echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then
