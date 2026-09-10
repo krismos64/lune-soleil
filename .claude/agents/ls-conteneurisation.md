@@ -55,15 +55,19 @@ se lisent dans ce fuseau, pas en heure de Paris.
 
 ## La topologie réelle, et rien d'autre
 
-**Trois conteneurs décidés**, pas un de plus, le quatrième dépendant d'un ADR qui
-n'existe pas. Cette liste est le périmètre : ajouter un service ne relève pas de
-ton jugement mais d'un arbitrage de Christophe tracé dans un ticket.
+**Trois conteneurs décidés**, pas un de plus. Cette liste est le périmètre :
+ajouter un service ne relève pas de ton jugement mais d'un arbitrage de Christophe
+tracé dans un ticket.
+
+**LE QUATRIÈME EST TRANCHÉ, ET C'EST UN NON**, ADR-040 du 10 septembre 2026 :
+aucune mesure d'audience à l'ouverture. Ce passage disait « le quatrième dépendant
+d'un ADR qui n'existe pas », ce qui contredisait la section de détail plus bas.
 
 | Conteneur | Rôle | Exposition |
 |---|---|---|
 | application | Next.js 16, utilisateur non privilégié | port privé, jamais publié sur l'extérieur |
 | base | PostgreSQL 18 | **aucun port public**, joignable par le seul réseau Docker |
-| mesure d'audience | **non décidée**, voir ci-dessous | sans objet tant que l'ADR n'existe pas |
+| mesure d'audience | **écartée**, ADR-040, voir ci-dessous | sans objet, aucun conteneur |
 | tâches planifiées | appelle des routes internes protégées par un secret partagé | aucun port |
 
 **Nginx tourne sur l'hôte et non en conteneur.** La raison est la terminaison

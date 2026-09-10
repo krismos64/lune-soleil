@@ -11,8 +11,10 @@ situation de marché.
 ## État
 
 Projet en cours de développement. **La boutique tourne en production depuis le
-9 septembre 2026** mais n'est pas ouverte commercialement : il manque les clés
-de paiement et d'envoi d'email, LS-153, et les contenus de l'exploitante.
+9 septembre 2026** mais n'est pas ouverte commercialement : il manque les clés de
+**paiement**, LS-153, et les contenus de l'exploitante.
+
+Les clés d'envoi d'email **sont posées** depuis le 10 septembre 2026, LS-214.
 
 Les portes de sortie des phases 1 et 3 sont constatées, voir plus bas. Deux
 stories de la phase 0 restent ouvertes, LS-19 la médiation et LS-20 les
@@ -31,13 +33,14 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 4, factures et expédition | LS-5 | 5 | dépend du compte Sendcloud, LS-200 en tête |
 | 4bis, espace client et avis | LS-36 | 4 | LS-190 attend LS-58, qui attend le suivi de livraison |
 | 5, rétractation et conformité | LS-6 | 0 | **close**, ses huit stories terminées le 10 septembre 2026 |
-| 6, exploitation et ouverture | LS-7 | 6 | **LS-153 attend l'exploitante**, LS-142 et LS-175 aussi. LS-140 et LS-107 attendent les photographies de LS-23. Reste LS-150, la visibilité dans les moteurs de réponse |
+| 6, exploitation et ouverture | LS-7 | 5 | **LS-153 et LS-142 attendent l'exploitante**. LS-140 et LS-107 attendent les photographies de LS-23. Reste LS-150, la visibilité dans les moteurs de réponse. **LS-175 est close** depuis le 10 septembre 2026, le compte d'administration existe |
 | 7, V1 cible | LS-8 | 3 | après ouverture, hors Go-Live |
 | Contenus | LS-22 | 11 | **attend l'exploitante**, rien n'est faisable sans elle |
 
-**165 tickets terminés sur 211**, les deux termes relevés dans Jira le
-10 septembre 2026 et jamais dérivés l'un de l'autre. Le dénominateur a bougé de
-208 à 211 le 9 septembre, LS-209, LS-210 et LS-211 ayant été créées en livrant.
+**170 tickets terminés sur 215**, les deux termes relevés dans Jira le
+10 septembre 2026 **en fin de journée** et jamais dérivés l'un de l'autre. Le
+dénominateur a bougé de 211 à 215 dans la journée, LS-212 à LS-215 étant nées en
+livrant, et les quatre sont closes.
 
 **L'epic LS-7 avance : LS-139, LS-210 et LS-211 sont closes.** LS-139 a fermé
 trois trous réels que la lecture ne voyait pas : deux en-têtes de sécurité servis
@@ -668,10 +671,17 @@ posée par LS-79 et la session d'un jour par LS-81. **Le journal des connexions
 est porté par LS-80** : service, écran d'administration, hook, test de bout en
 bout et test d'intégration existent, `git ls-files | grep journal-connexion` les
 liste. La réauthentification des actions sensibles a son
-mécanisme et son contrôle, LS-81 ; le branchement des quatre familles attend que
-les actions existent, LS-89.
+mécanisme et son contrôle, LS-81, et **les quatre familles sont branchées**
+depuis le 13 août 2026, LS-89. `verifier-actions-sensibles.sh` le garde en
+intégration continue.
 
-**Les emails partent depuis LS-82**, par le SMTP OVH, ADR-008. Deux chemins
+**Les emails de commande partent depuis LS-82**, par le SMTP OVH, ADR-008.
+
+**Ceux de l'authentification ne sont partis qu'à compter du 10 septembre 2026**,
+LS-214 : `creerAuth()` prenait l'envoyeur de repli comme valeur par défaut, donc
+ni la vérification d'adresse, ni la réinitialisation de mot de passe, ni l'alerte
+de connexion à l'administration n'atteignaient personne. Le repli ne lève pas,
+règle E4, donc l'écran annonçait « email envoyé » sans que rien ne parte. Deux chemins
 selon qui attend le message, ADR-033 : ce qui découle d'une transaction métier
 passe par une **outbox** dont une tâche vide la file toutes les minutes, ce
 qu'une personne attend à l'écran part directement.
