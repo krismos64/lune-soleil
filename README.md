@@ -30,17 +30,17 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 1, fondations | LS-2 | 0 | **close**, porte de sortie constatée le 13 août 2026 |
 | 2, catalogue et médias | LS-3 | 5 | finitions d'interface et d'accessibilité, aucune bloquante |
 | 3, panier et paiement | LS-4 | 2 | LS-86 et LS-125, deux stories d'interface qui ne bloquent rien |
-| 4, factures et expédition | LS-5 | 5 | dépend du compte Sendcloud, LS-200 en tête |
+| 4, factures et expédition | LS-5 | 5 | **LS-200 close**, l'API Sendcloud est raccordée. LS-131, le suivi, est débloquée et commande le reste. LS-216 porte le suivi côté administration |
 | 4bis, espace client et avis | LS-36 | 4 | LS-190 attend LS-58, qui attend le suivi de livraison |
 | 5, rétractation et conformité | LS-6 | 0 | **close**, ses huit stories terminées le 10 septembre 2026 |
 | 6, exploitation et ouverture | LS-7 | 5 | **LS-153 et LS-142 attendent l'exploitante**. LS-140 et LS-107 attendent les photographies de LS-23. Reste LS-150, la visibilité dans les moteurs de réponse. **LS-175 est close** depuis le 10 septembre 2026, le compte d'administration existe |
 | 7, V1 cible | LS-8 | 3 | après ouverture, hors Go-Live |
 | Contenus | LS-22 | 11 | **attend l'exploitante**, rien n'est faisable sans elle |
 
-**170 tickets terminés sur 215**, les deux termes relevés dans Jira le
-10 septembre 2026 **en fin de journée** et jamais dérivés l'un de l'autre. Le
-dénominateur a bougé de 211 à 215 dans la journée, LS-212 à LS-215 étant nées en
-livrant, et les quatre sont closes.
+**171 tickets terminés sur 216**, les deux termes relevés dans Jira le
+10 septembre 2026 après LS-200 et jamais dérivés l'un de l'autre. Le
+dénominateur a bougé de 211 à 216 dans la journée : LS-212 à LS-215 sont nées en
+livrant et sont closes, LS-216 est née d'un trou de backlog et reste ouverte.
 
 **L'epic LS-7 avance : LS-139, LS-210 et LS-211 sont closes.** LS-139 a fermé
 trois trous réels que la lecture ne voyait pas : deux en-têtes de sécurité servis
