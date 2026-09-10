@@ -774,6 +774,7 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-taches-planifiees-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-plafonds-corps.sh             # service, Next et Nginx s'accordent sur la taille, LS-207
 ./scripts/verifier-plafonds-corps-mutation.sh    # prouve le précédent par mutation
+./scripts/mesurer-site-deploye.sh                # Core Web Vitals du site déployé, LS-140
 ./scripts/verifier-statut-base-morte.sh          # le catalogue rend 500 base morte, ADR-039, LS-211
 ./scripts/verifier-statut-base-morte-mutation.sh # prouve le précédent par mutation
 ./scripts/verifier-sauvegarde-mutation.sh        # éprouve les 6 garde-fous de la sauvegarde, LS-139
