@@ -407,12 +407,26 @@ dépôt citait l'ancien numéro à onze endroits jusqu'à LS-93. Un numéro d'ar
 périme seul : sur Légifrance, la mention « en vigueur du ... **au** ... » signale
 une version qui n'est plus celle en vigueur.
 
-**Les deux délais de la rubrique sont distincts, et un seul est tranché.** La
-conservation est **sans limite de durée**, ADR-028 : un avis publié reste en ligne
-tant qu'une décision de modération motivée ne le retire pas. Cette absence de
-limite **doit être publiée** au même titre qu'une durée chiffrée, une rubrique
-muette étant le manquement que l'article vise. Le délai de publication reste un
-paramètre commercial à fixer.
+**Les deux délais de la rubrique sont distincts, et les deux sont désormais
+tranchés.** La conservation est **sans limite de durée**, ADR-028 : un avis publié
+reste en ligne tant qu'une décision de modération motivée ne le retire pas. Cette
+absence de limite **doit être publiée** au même titre qu'une durée chiffrée, une
+rubrique muette étant le manquement que l'article vise.
+
+**Le délai de publication vaut sept jours**, arbitrage de LS-61 le 10 septembre
+2026, et il restait le seul paramètre non fixé. Sept plutôt que deux : l'exploitante
+relève ses avis entre deux marchés, et annoncer un délai qu'un week-end chargé
+ferait dépasser vaut moins qu'un délai tenu. **Ne pas tenir le délai annoncé est un
+manquement**, pas une négligence commerciale.
+
+**La valeur vit dans le code, jamais recopiée**, `DELAI_PUBLICATION_JOURS` de
+`services/avis.ts` : la même constante alimente la rubrique légale, l'email
+d'invitation et l'écran de dépôt. Trois valeurs recopiées divergent au premier
+changement, et c'est l'annonce publique qui deviendrait fausse.
+
+**Les deux obligations sont cumulatives.** Le 1° vit près de chaque avis, sur la
+fiche produit ; le 2° dans la rubrique dédiée de `/informations-legales`. Porter
+l'une ne dispense pas de l'autre, et les deux sont livrées par LS-61.
 
 Les avis entrent en périmètre d'ouverture, epic LS-36.
 
