@@ -25,9 +25,12 @@
  * `scripts/amorcer-production.sh`. Un ecran qui promouvrait serait exactement
  * l'invariant 2 viole.
  */
+import { Suspense } from "react";
+
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { ChargementAdministration } from "@/components/chargement-administration";
 import {
   AutorisationRefuseeError,
   exigerAdministratrice,
@@ -59,8 +62,6 @@ export default async function PagePasskeys() {
     throw erreur;
   }
 
-  const passkeys = await listerPasskeysDuCompte(identite.utilisateurId);
-
   /*
    * C34 : LA CIBLE DU LIEN D'EVITEMENT PORTE `id="contenu"` ET
    * `tabIndex={-1}`, tous deux sur la balise principale. Mesure deux fois sur
@@ -91,16 +92,41 @@ export default async function PagePasskeys() {
       </p>
 
       {/*
+       * LA LECTURE VIT SOUS UN `<Suspense>` INTERNE, ET L'AUTORISATION AU-DESSUS,
+       * C32. Un `loading.tsx` de segment enveloppe la page entiere : le
+       * streaming commencerait avant que `exigerAdministratrice` ait decide, et
+       * une redirection ne pourrait plus changer une reponse deja engagee.
+       *
        * LA LISTE EST LUE PAR LE SERVEUR et passee en props, jamais rechargee au
        * montage par un effet. La premiere version appelait `listUserPasskeys()`
        * dans un `useEffect`, ce qu'ESLint a refuse a raison : un `setState`
-       * synchrone dans un effet declenche un rendu en cascade, et l'ecran
-       * affichait « Chargement… » avant de se corriger a chaque visite.
+       * synchrone dans un effet declenche un rendu en cascade.
        *
        * Le rafraichissement apres un ajout passe par `router.refresh()`, qui
        * rejoue CE composant serveur : une seule source pour la donnee.
        */}
-      <GestionPasskeys passkeys={passkeys} />
+      <Suspense fallback={<ChargementPasskeys />}>
+        <ListePasskeys utilisateurId={identite.utilisateurId} />
+      </Suspense>
     </main>
+  );
+}
+
+async function ListePasskeys({ utilisateurId }: { utilisateurId: string }) {
+  const passkeys = await listerPasskeysDuCompte(utilisateurId);
+  return <GestionPasskeys passkeys={passkeys} />;
+}
+
+/**
+ * L'annonce se termine par un point de suspension, C35, et non par un point
+ * final : une attente EN COURS se dit ainsi, le point fermant la phrase donc
+ * l'action.
+ */
+function ChargementPasskeys() {
+  return (
+    <ChargementAdministration
+      annonce="Chargement de vos passkeys…"
+      lignes={2}
+    />
   );
 }
