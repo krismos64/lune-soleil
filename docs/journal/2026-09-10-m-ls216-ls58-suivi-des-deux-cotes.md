@@ -207,15 +207,33 @@ désormais de lui-même dans ce cas.
 
 ## Ce que la production ne porte toujours pas
 
-**Le déploiement, et lui seul désormais.** Les clés sont posées, le cron
-déclenche bien les six tâches, mais l'image applicative est antérieure à LS-131 :
-la route de la tâche n'existe pas encore côté serveur.
+**Plus rien : la production porte les deux stories et la chaîne fonctionne**,
+mesurée de bout en bout le 10 septembre 2026 à 18h53 UTC.
 
-Ce déploiement porte une migration, l'index `alerte_ouverte_unique`, donc il
-passe par `./scripts/migrate-production.sh` puis le workflow, jamais à la main.
+La migration `alerte_ouverte_unique` est appliquée, index vérifié avec son
+prédicat et son `NULLS NOT DISTINCT`, sauvegarde conservée. Elle est passée par
+`./scripts/migrate-production.sh` et le relais éphémère d'ADR-037, refermé dans
+les deux sens.
 
-Tant qu'il n'a pas eu lieu, aucune date de livraison n'est renseignée, donc aucun
-délai de rétractation ne démarre et aucune invitation à déposer un avis ne part.
+Le déploiement a basculé la production sur `1edbd55`, qui porte LS-131, LS-216 et
+LS-58.
+
+**La preuve, et c'est elle qui compte** :
+
+```
+declencher.sh suivi-livraison   ->  {"tache":"suivi-livraison","etat":"EXECUTEE"}
+journal                             "Synchronisation du suivi terminee"
+                                    traitees 0, echecs 0, livrees 0
+```
+
+Aucune `ConfigurationSendcloudIncompleteError`. Les zéros sont normaux, aucune
+expédition n'étant en cours.
+
+**Les clés répondent contre l'API réelle**, vérifié depuis le conteneur :
+`HTTP 200`, deux points de retrait autour du 64170. L'URL des points de retrait
+est `servicepoints.sendcloud.sc` et non `panel.sendcloud.sc`, distinction que
+`fournisseur.ts` documente et qu'un premier test a ignorée, rendant un 404
+trompeur.
 
 ## État des tickets
 
