@@ -101,10 +101,24 @@ existe et propose des modifications.
 | `docker-compose.production.yml` | les trois services, leurs limites, leurs volumes |
 | `deploiement/deployer.sh` | **la bascule, le retour arrière et l'état**, LS-138 |
 | `.github/workflows/deployer.yml` | ce qui l'appelle, en déclenchement **manuel** |
-| `deploiement/sauvegarder-base.sh` | la sauvegarde quotidienne, base **et** fichiers |
-| `deploiement/lune-soleil-sauvegarde.{service,timer}` | son déclenchement par systemd |
+| `deploiement/sauvegarder-base.sh` | la sauvegarde quotidienne, base **et** fichiers, **chiffrée** depuis LS-107 |
+| `deploiement/lune-soleil-sauvegarde.{service,timer}` | son déclenchement par systemd, 02h30 UTC |
+| `deploiement/copier-sauvegarde-hors-site.sh` | la copie vers **Backblaze B2**, LS-107 |
+| `deploiement/lune-soleil-hors-site.{service,timer}` | son déclenchement, 03h15 UTC |
+| `deploiement/verifier-seuil-disque.sh` | l'alerte de seuil, LS-139 |
+| `deploiement/lune-soleil-seuil-disque.{service,timer}` | son déclenchement, horaire |
 | `docs/deploiement/EXPLOITATION.md` | l'exploitation courante, déployer, migrer, restaurer, vérifier |
 | `docs/deploiement/PREPARATION-SERVEUR.md` | la mise en place initiale du serveur |
+
+**Trois timers tournent sur la machine**, et leurs horaires évitent les
+rendez-vous déjà pris par SmartPlanning : sauvegarde à 02h30, copie hors site à
+03h15, seuil disque à l'heure.
+
+**Deux secrets vivent hors de `production.env`**, qui est lu par le conteneur
+applicatif : `/etc/lune-soleil/backup.key` (passphrase GPG) et
+`/etc/lune-soleil/b2.conf` (identifiants Backblaze). Ne jamais les y déplacer,
+une clé d'écriture sur le stockage de secours n'ayant rien à faire dans un
+processus exposé au réseau.
 
 ## La chaîne de déploiement est écrite, LS-138
 
