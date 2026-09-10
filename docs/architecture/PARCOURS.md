@@ -1253,3 +1253,70 @@ du 1er expire le 15 alors que le minimum légal court jusqu'au 18. Le droit sera
 Le repli sûr est la date d'expédition **plus une marge couvrant l'acheminement**.
 À défaut de date de réception connue, retenir la date la plus tardive plausible,
 jamais la plus précoce.
+
+---
+
+## Parcours 10, signalement d'un doute sur l'authenticité d'un avis
+
+Ajouté par LS-77 le 11 septembre 2026. **Obligation légale**, article L111-7-2 du
+Code de la consommation, vérifié à Légifrance, version en vigueur depuis le
+17 février 2024.
+
+**La règle principale : un signalement ne dépublie jamais l'avis.** C'est une
+propriété du code, qu'aucune contrainte de base ne peut imposer, et c'est la plus
+importante de ce parcours : le formulaire est **public et sans authentification**,
+donc une dépublication automatique en ferait un moyen de retirer les avis d'un
+concurrent, en trois clics et sans compte.
+
+### Chemin nominal
+
+| # | Étape | Base | Vue |
+|---|---|---|---|
+| 1 | Lecture d'un avis publié | aucune écriture | fiche produit, lien près de l'avis |
+| 2 | Ouverture du formulaire | aucune écriture, l'avis visé est relu et rappelé | l'avis contesté, puis les trois champs |
+| 3 | Envoi | signalement `NOUVEAU`, compteur de plafond incrémenté | accusé de réception |
+| 4 | Examen | `EXAMINE`, `RETENU` ou `ECARTE`, `examineA` horodaté | file d'administration, sous les avis |
+| 5 | Décision de modération, **facultative et distincte** | l'avis passe à `RETIRE` avec son propre motif, règle R5 | l'avis disparaît de la fiche |
+
+**L'étape 5 n'est pas la suite automatique de l'étape 4.** Retenir un doute ne
+retire pas l'avis : les deux gestes restent séparés pour que la décision de
+modération porte toujours sa justification propre.
+
+### Cas d'erreur
+
+**Signalement sur un avis non publié**
+Base : aucune écriture.
+Vue : 404, indiscernable d'un identifiant inconnu.
+Accepter confirmerait l'existence de l'avis à quelqu'un qui n'a pas pu le lire,
+ce qui ferait de cet écran un oracle sur la file de modération.
+
+**Signalement sans motif**
+Base : aucune écriture, refus en Zod et par le CHECK C42.
+Vue : message d'erreur associé au champ.
+La loi conditionne le signalement au fait qu'il soit motivé : un champ vide n'est
+pas un signalement au sens du texte.
+
+**Envoi automatisé**
+Base : aucune écriture.
+Vue : accusé de réception, **identique au succès**.
+Les trois couches du contact : champ piège, délai minimum, plafond par adresse.
+Dire « refusé » à un robot lui apprendrait l'existence de la couche.
+
+**Plafond atteint pour une adresse**
+Base : le compteur est incrémenté, aucun signalement n'est écrit.
+Vue : « réessayez dans une heure », dit en clair.
+Ce plafond-ci **est annoncé**, contrairement au refus du piège : il concerne une
+personne réelle, qui doit comprendre pourquoi son envoi n'est pas passé.
+
+**Avis retiré entre l'affichage et l'envoi**
+Base : aucune écriture.
+Vue : « cet avis n'a pas été trouvé ».
+La page est `force-dynamic` pour cette raison : une réponse mise en cache
+continuerait de proposer un avis qui n'existe plus.
+
+**Base injoignable au moment du plafond**
+Base : le signalement est écrit, le compteur non.
+Vue : accusé de réception.
+**Défaut ouvert, et c'est délibéré**, même choix que le contact : une base qui
+tousse ne doit pas fermer un canal que la loi impose d'ouvrir. Le risque est
+borné par les deux autres couches, qui ne dépendent pas de la base.

@@ -428,6 +428,37 @@ changement, et c'est l'annonce publique qui deviendrait fausse.
 fiche produit ; le 2° dans la rubrique dédiée de `/informations-legales`. Porter
 l'une ne dispense pas de l'autre, et les deux sont livrées par LS-61.
 
+### Le signalement d'un doute, article L111-7-2, LS-77
+
+Vérifié à Légifrance le **11 septembre 2026**, version en vigueur depuis le
+17 février 2024 : « Elle met en place une fonctionnalité **gratuite** qui permet
+aux **responsables des produits ou des services** faisant l'objet d'un avis en
+ligne de lui signaler un doute sur l'authenticité de cet avis, **à condition que
+ce signalement soit motivé**. »
+
+**Trois mots portent chacun une contrainte de code**, et aucun n'est décoratif.
+
+**« Gratuite »** : aucun compte n'est exigé, et c'est la lecture retenue. Les
+personnes visées ne sont pas des clients de la boutique et n'ont aucun compte
+ici ; exiger une authentification restreindrait un droit que la loi ouvre. Le
+formulaire est donc public, avec les trois couches anti-robot du contact.
+
+**« Motivé »** : le motif est obligatoire, en Zod **et** par le CHECK C42. Un
+champ vide n'est pas un signalement au sens du texte.
+
+**« Signaler un doute »**, et rien de plus : un signalement **ne dépublie
+jamais** l'avis. Le retrait reste une décision de modération distincte, avec son
+propre motif, règle R5. Une dépublication automatique ferait de ce formulaire
+public un moyen de retirer les avis d'un concurrent.
+
+**Aucun délai de traitement n'est annoncé**, et c'est un choix : le texte n'en
+impose pas, contrairement au délai de **publication** d'un avis que l'article
+D111-10 exige d'annoncer. Annoncer un délai qu'aucune loi n'impose créerait une
+obligation de plus.
+
+**La qualité du signalant est déclarée, jamais prouvée**, invariant 2. Elle sert
+à l'exploitante pour juger, elle n'autorise rien.
+
 Les avis entrent en périmètre d'ouverture, epic LS-36.
 
 Aucun faux avis, jamais, y compris en préproduction visible.

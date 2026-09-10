@@ -2207,6 +2207,57 @@ cas "email renvoye sur un rattrapage de ligne" integration \
   "ne renvoie pas d'email quand un cycle rattrape une ligne oubliee"
 
 echo
+echo "Signalement d'avis, LS-77, tests d'integration"
+echo
+
+# Cas 162 : UN AVIS NON PUBLIE DEVIENT SIGNALABLE.
+#
+# LE FORMULAIRE DEVIENDRAIT UN ORACLE SUR LA FILE DE MODERATION. Accepter un
+# signalement sur un avis `DEPOSE` confirme son existence a quelqu'un qui n'a
+# pas pu le lire : il suffirait d'essayer des identifiants pour apprendre
+# lesquels correspondent a un avis en attente de relecture.
+#
+# LE REFUS EST UNIFORME entre « aucun avis » et « avis non publie », meme motif
+# que l'acces par jeton : distinguer les deux revelerait qu'un avis existe.
+mute "$DEPOT_AVIS" 's/    where: \{ id: avisId, statut: "PUBLIE" \},\n    select: \{ id: true \},/    where: { id: avisId },\n    select: { id: true },/'
+cas "avis non publie rendu signalable" integration \
+  "refuse un signalement sur un avis non publie, sans reveler son existence"
+
+# Cas 163 : LE SIGNALEMENT DEPUBLIE L'AVIS.
+#
+# LA PROPRIETE LA PLUS IMPORTANTE DE CETTE FONCTIONNALITE, et sa violation la
+# plus tentante : « un doute signale, on retire par precaution ». Le formulaire
+# etant PUBLIC et sans authentification, cela en ferait un moyen de retirer les
+# avis d'un concurrent, en trois clics et sans compte.
+#
+# La mutation ecrit `RETIRE` sur l'avis au moment du signalement.
+mute "$AVIS" 's/  await ecrireSignalement\(prisma, \{/  await prisma.avis.update({\n    where: { id: valide.avisId },\n    data: { statut: "RETIRE", motifDecision: "signale" },\n  });\n\n  await ecrireSignalement(prisma, {/'
+cas "signalement qui depublie l'avis vise" integration \
+  "ne depublie pas l'avis signale"
+
+# Cas 164 : LE PLAFOND PAR ADRESSE DISPARAIT.
+#
+# Le formulaire est PUBLIC et sans session : le plafond est la seule des trois
+# couches qui borne un envoi AUTOMATISE ayant lu la page. Sans lui, un script
+# noie l'exploitante sous des signalements et rend le canal que la loi impose
+# d'ouvrir inutilisable, ce qui revient a le fermer.
+mute "$AVIS" 's/      if \(compteur.compte > PLAFOND_SIGNALEMENTS_PAR_IP\) \{/      if (false) {/'
+cas "plafond de signalement par adresse retire" integration \
+  "plafonne les signalements d'une meme adresse"
+
+# Cas 165 : `examineA` EST REECRIT A CHAQUE CLOTURE.
+#
+# Il porte le PREMIER examen : le reecrire ferait rajeunir le traitement a
+# chaque changement d'avis, et l'exploitante perdrait la date reelle a laquelle
+# elle a repondu au signalant.
+#
+# LE CAS 157 NE POUVAIT PAS LE VOIR, il porte sur `publieA` d'un AVIS. Meme
+# forme de defaut sur une autre entite, motif « regle a deux versants ».
+mute "$DEPOT_AVIS" 's/      examineA: existant.examineA \?\? maintenant,/      examineA: maintenant,/'
+cas "examineA reecrit a chaque cloture" integration \
+  "une seconde cloture n'efface pas la suite donnee ni la date"
+
+echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then
   echo "  $mutations mutations, $mutations detectees"

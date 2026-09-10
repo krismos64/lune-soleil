@@ -236,11 +236,9 @@ function CarteAvis({ avis }: { avis: AvisAModerer }) {
       <p className={styles.metadonnees}>
         Commande {avis.numeroCommande}. Expérience du{" "}
         {formaterDate(avis.experienceA)}, déposé le {formaterDate(avis.deposeA)}
-        {avis.publieA !== null && (
-          <> , publié le {formaterDate(avis.publieA)}</>
-        )}
+        {avis.publieA !== null && <>, publié le {formaterDate(avis.publieA)}</>}
         {avis.modifieA !== null && (
-          <> , modifié le {formaterDate(avis.modifieA)}</>
+          <>, modifié le {formaterDate(avis.modifieA)}</>
         )}
         .
       </p>
@@ -331,6 +329,25 @@ async function ListesSignalements() {
   );
 }
 
+/**
+ * Couleur du badge par statut, exhaustivite garantie par le type.
+ *
+ * `Record<SignalementLu["statut"], string>` ET NON UN TERNAIRE, correction de la
+ * revue frontend du 11 septembre 2026. Ma premiere version repartissait QUATRE
+ * valeurs d'enum en deux classes : « à examiner » et « doute écarté », les deux
+ * extremites du traitement, portaient la meme couleur. `tsc` ne voyait rien, et
+ * c'est le motif « un enum ajoute casse l'affichage » que la table des libelles
+ * juste en dessous fermait deja. La parade etait connue, appliquee au libelle et
+ * oubliee sur la couleur.
+ */
+const CLASSES_SIGNALEMENT: Record<SignalementLu["statut"], string> = {
+  /* En attente : la couleur d'appel, comme un avis a relire. */
+  NOUVEAU: styles.badge ?? "",
+  EXAMINE: styles.badgePublie ?? "",
+  RETENU: styles.badgeRetenu ?? "",
+  ECARTE: styles.badgePublie ?? "",
+};
+
 /** Libelles des statuts de signalement, exhaustivite garantie par le type. */
 const LIBELLES_SIGNALEMENT: Record<SignalementLu["statut"], string> = {
   NOUVEAU: "À examiner",
@@ -346,9 +363,7 @@ function CarteSignalement({ signalement }: { signalement: SignalementLu }) {
       <div className={styles.enTeteCarte}>
         <span className={styles.note}>Avis {signalement.noteAvis} sur 5</span>
         <span
-          className={`${styles.badge} ${
-            signalement.statut === "RETENU" ? "" : styles.badgePublie
-          }`}
+          className={`${styles.badge} ${CLASSES_SIGNALEMENT[signalement.statut]}`}
         >
           {LIBELLES_SIGNALEMENT[signalement.statut]}
         </span>
@@ -360,7 +375,7 @@ function CarteSignalement({ signalement }: { signalement: SignalementLu }) {
         Signalé le {formaterDate(signalement.creeA)} par {signalement.email}, se
         déclarant : {signalement.qualite}
         {signalement.examineA !== null && (
-          <> , examiné le {formaterDate(signalement.examineA)}</>
+          <>, examiné le {formaterDate(signalement.examineA)}</>
         )}
         .
       </p>

@@ -110,6 +110,15 @@
   color: var(--ls-text-muted);
   font-size: 0.9375rem;
   line-height: 1.5;
+  /*
+   * `overflow-wrap` AJOUTE PAR LS-77 : ce bloc ne portait que des dates, donc
+   * son absence etait sans consequence. Il porte desormais un EMAIL et une
+   * qualite de texte libre, tous deux saisis par un signalant public. Un email
+   * long est par nature un mot d'un seul tenant sans point de coupure, et il
+   * deborde la carte a 320 px. Motif « recopier un bloc en changeant son
+   * contenu », releve par la revue frontend du 11 septembre 2026.
+   */
+  overflow-wrap: anywhere;
 }
 
 .commentaire {
@@ -158,6 +167,17 @@
 
 .badgePublie {
   background: var(--ls-primary);
+}
+
+/*
+ * LE DOUTE RETENU GARDE LA COULEUR D'ALERTE du badge par defaut, terracotta
+ * profond : c'est le seul statut qui appelle une suite, une decision de
+ * moderation sur l'avis vise. `--ls-accent-terracotta-deep` donne 5,89:1 avec
+ * du blanc, la ou `--ls-accent-terracotta` tomberait a 4,35:1, sous le seuil AA
+ * pour du petit texte.
+ */
+.badgeRetenu {
+  background: var(--ls-accent-terracotta-deep);
 }
 
 .decisions {

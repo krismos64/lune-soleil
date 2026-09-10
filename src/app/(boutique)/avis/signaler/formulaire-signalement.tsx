@@ -19,7 +19,7 @@
  * AUCUN CHAMP N'EST PRE-REMPLI DEPUIS UNE SESSION, et c'est la loi qui le veut :
  * la personne qui signale n'est pas un client de la boutique.
  */
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 import { envoyerSignalement } from "./actions";
 import styles from "./signalement.module.css";
@@ -50,6 +50,24 @@ export function FormulaireSignalement({
    * aurait deux fois le meme signalement a examiner.
    */
   const [envoye, setEnvoye] = useState(false);
+
+  const confirmation = useRef<HTMLParagraphElement>(null);
+
+  /*
+   * LE FOCUS SUIT LE REMPLACEMENT, motif « focus sur un element detache » releve
+   * par la revue frontend du 10 septembre puis du 11. Le bouton d'envoi qui
+   * portait le focus vient d'etre retire du DOM : sans cela le focus retombe sur
+   * `body`, et la tabulation suivante repart du haut de la page. Au clavier, la
+   * confirmation serait inatteignable.
+   *
+   * L'ECRAN D'ADMINISTRATION VOISIN LE TRAITAIT DEJA, celui-ci non : la meme
+   * story portait la correction d'un cote et l'oubliait de l'autre.
+   */
+  useEffect(() => {
+    if (envoye) {
+      confirmation.current?.focus();
+    }
+  }, [envoye]);
 
   function soumettre(evenement: React.FormEvent<HTMLFormElement>) {
     evenement.preventDefault();
@@ -100,7 +118,13 @@ export function FormulaireSignalement({
 
   if (envoye) {
     return (
-      <p role="status" aria-live="polite" className={styles.succes}>
+      <p
+        ref={confirmation}
+        tabIndex={-1}
+        role="status"
+        aria-live="polite"
+        className={styles.succes}
+      >
         {message?.texte}
       </p>
     );
@@ -192,11 +216,20 @@ export function FormulaireSignalement({
       </div>
 
       {/*
-       * LA REGION LIVE ANNONCE L'ETAT PENDANT L'APPEL, C35. Sans elle, un
-       * lecteur d'ecran n'entend rien entre le clic et la reponse.
+       * LA REGION LIVE EST MONTEE EN PERMANENCE, ET C'EST LA CORRECTION DE LA
+       * REVUE DU 11 SEPTEMBRE 2026. Une region inseree EN MEME TEMPS que son
+       * contenu n'est pas lue par les lecteurs d'ecran : elle doit exister,
+       * vide, avant que le texte n'y arrive. Six fichiers du depot portent
+       * cette contre-mesure et sa raison ecrite, dont le formulaire de contact
+       * dont celui-ci se reclame.
+       *
+       * ELLE PORTE L'ATTENTE ET L'ERREUR, C35. Le `role="alert"` ci-dessous
+       * reste pour l'AFFICHAGE, la region live etant masquee visuellement.
        */}
       <p aria-live="polite" className={styles.annonce}>
-        {enCours ? "Envoi de votre signalement en cours…" : ""}
+        {enCours
+          ? "Envoi de votre signalement en cours…"
+          : (message?.texte ?? "")}
       </p>
 
       <button type="submit" className={styles.bouton} disabled={enCours}>
@@ -204,9 +237,7 @@ export function FormulaireSignalement({
       </button>
 
       {message !== null && message.erreur && (
-        <p role="alert" className={styles.erreur}>
-          {message.texte}
-        </p>
+        <p className={styles.erreur}>{message.texte}</p>
       )}
     </form>
   );
