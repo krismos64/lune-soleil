@@ -1,6 +1,8 @@
 # integrations/
 
-Isolation des fournisseurs externes : Stripe, email, médias, IA.
+Isolation des fournisseurs externes. Le dossier fait foi, `ls src/integrations/`
+les liste : la recopier ici la ferait périmer, ce qui est arrivé quand `sendcloud`
+et `pdf` s'y sont ajoutés sans que cette phrase suive.
 
 Chaque intégration expose une interface pensée pour le projet, pas pour le
 fournisseur. Le reste du code ne connaît jamais le nom du prestataire.

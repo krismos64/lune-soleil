@@ -203,6 +203,15 @@ professionnel. Les identifiants réels sont une dépendance externe. Aucune rép
 d'API ne doit être inventée, aucun secret factice créé. Le domicile est conçu
 maintenant et vérifié réellement quand le compte existe.
 
+> **Ce risque est levé depuis le 6 septembre 2026**, note ajoutée le
+> 10 septembre 2026 sans réécrire la décision, qui reste ce qu'elle était.
+> Le compte a été ouvert, et **ce n'est pas un compte Mondial Relay direct** :
+> l'offre sans contrat passe par **Sendcloud**, ADR-035. Les clés existent en
+> développement depuis LS-200, l'API des points de retrait et celle du suivi
+> répondent réellement. **ADR-042** établit en outre que **deux** statuts
+> constatent la remise et non un seul, là où la section « Décision » ci-dessus
+> parle de « la remise au destinataire » au singulier.
+
 **La grille professionnelle peut différer de la grille publique.** Si le domicile
 en Corse s'avère surtaxé, l'arbitrage remonte à Christophe, voir plus haut.
 
