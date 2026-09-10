@@ -92,15 +92,25 @@ echo "Preuve par mutation de verifier-navigation-client.sh"
 echo
 
 # ---------------------------------------------------------------------------
-# 1. LE DÉFAUT D'ORIGINE DE LA STORY, sur une seule ligne.
+# 1. LE DÉFAUT D'ORIGINE DE LA STORY, le fil d'Ariane.
+#
+# LE MOTIF NE CITE PLUS LA FORME COMPLÈTE DE LA BALISE, LS-213. Il ciblait
+# `<Link href="..." >Catalogue</Link>` sur une seule ligne ; l'ajout de
+# `prefetch={false}` a réparti la balise sur trois lignes et la substitution a
+# cessé de trouver sa cible, SANS RIEN DIRE. Le script annonçait alors « non
+# détecté » et accusait le contrôle, quand c'était la mutation qui n'avait rien
+# muté. Motif « correction échouée en silence », déjà connu du dépôt.
+#
+# Il vise donc la balise ouvrante et la fermeture séparément, formes stables
+# quel que soit le nombre d'attributs.
 # ---------------------------------------------------------------------------
-perl -0pi -e 's{<Link href="/administration/categories">Catalogue</Link>}{<a href="/administration/categories">Catalogue</a>}' "$EDITEUR"
+perl -0pi -e 's{<Link href="/administration/categories" prefetch=\{false\}>\n\s+Catalogue\n\s+</Link>}{<a href="/administration/categories">Catalogue</a>}s' "$EDITEUR"
 jouer "fil d'Ariane en balise native" "page.tsx"
 
 # ---------------------------------------------------------------------------
 # 2. LA MÊME FAUTE SUR L'AUTRE ÉCRAN, forme au fil du texte.
 # ---------------------------------------------------------------------------
-perl -0pi -e 's{<Link href="/administration/categories">gérer les catégories</Link>}{<a href="/administration/categories">gérer les catégories</a>}' "$CREATION"
+perl -0pi -e 's{<Link href="/administration/categories" prefetch=\{false\}>}{<a href="/administration/categories">}s; s{gérer les catégories\n\s+</Link>}{gérer les catégories</a>}s' "$CREATION"
 jouer "renvoi vers les catégories en balise native" "formulaire-produit.tsx"
 
 # ---------------------------------------------------------------------------
@@ -111,7 +121,7 @@ jouer "renvoi vers les catégories en balise native" "formulaire-produit.tsx"
 # restant vert sur un vrai défaut. C'est la raison du `sed` sur quatre lignes
 # dans le contrôle, et cette mutation est ce qui le prouve.
 # ---------------------------------------------------------------------------
-perl -0pi -e 's{<Link href="/administration/categories">Catalogue</Link>}{<a\n          href="/administration/categories"\n        >Catalogue</a>}' "$EDITEUR"
+perl -0pi -e 's{<Link href="/administration/categories" prefetch=\{false\}>\n\s+Catalogue\n\s+</Link>}{<a\n          href="/administration/categories"\n        >Catalogue</a>}s' "$EDITEUR"
 jouer "lien interne enveloppé sur plusieurs lignes" "page.tsx"
 
 # ---------------------------------------------------------------------------
