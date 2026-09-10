@@ -177,6 +177,48 @@ légitimes avec lui.
 transporte parfois l'identifiant de connexion dans son texte : seul le code est
 conservé, invariant 9.
 
+### E12, l'envoyeur CÂBLÉ se vérifie, pas seulement l'envoyeur écrit
+
+**Une fonction correcte et du code mort produisent exactement les mêmes tests
+verts.** C'est ce qui a coûté le plus cher sur ce module.
+
+`creerAuth()` prenait `envoyeurJournalise` comme valeur **par défaut** de son
+paramètre, et `src/lib/auth.ts` l'appelle sans argument : Better Auth n'a envoyé
+**aucun** email de toute la vie du projet, ni vérification d'adresse, ni
+réinitialisation de mot de passe, ni alerte de connexion à l'administration,
+mesure du 10 septembre 2026, LS-214.
+
+**Le repli ne lève pas**, règle E4, donc l'écran annonçait « email envoyé » et la
+ligne de journal qui disait le contraire n'était lue par personne. Il a fallu
+qu'une personne réelle ne reçoive jamais son lien.
+
+**Vingt tests de `choisirEnvoyeurEmail` restaient VERTS** en remettant le défaut :
+ils éprouvaient la fonction, jamais le fait qu'elle soit appelée. Un contrôle du
+**câblage** existe désormais, prouvé sur deux mutations dont la garde contre son
+propre ancrage.
+
+**Le choix d'envoyeur se journalise dans les DEUX sens.** Un repli silencieux est
+ce qui a laissé vivre le défaut : au démarrage, l'application dit
+`envoyeur SMTP en place` ou nomme les variables manquantes.
+
+### E13, l'envoi réel est refusé hors production
+
+`choisirEnvoyeurEmail` retombe sur le repli quand `NODE_ENV` ne vaut pas
+`production`, sauf `AUTORISER_ENVOI_EMAIL_HORS_PRODUCTION=oui` posée sciemment,
+**comparaison stricte** : `true`, `1` et `OUI` n'autorisent rien.
+
+**Les adresses de test sont inexistantes par conception**, `client@exemple.fr` et
+les fixtures `e2e-*`. Un poste dont le `.env` porte les identifiants de la
+boutique envoie donc de vrais messages qui rebondissent tous, et OVH renvoie
+chaque rejet dans la boîte de l'exploitante. Mesuré le 10 septembre 2026,
+LS-215 : des dizaines de « Undelivered Mail Returned to Sender » reçus.
+
+**Ce n'est pas qu'une gêne** : chaque exécution consomme le plafond de 200
+messages par heure du MX Plan, ADR-008.
+
+**La garde se prouve dans les DEUX sens.** La retirer doit rougir, et la rendre
+systématique aussi : une garde trop zélée couperait la production en silence.
+
 ## Prisma, une seule instance
 
 Ne jamais instancier `PrismaClient` ailleurs que dans `prisma.ts`. Le client
