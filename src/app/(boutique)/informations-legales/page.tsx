@@ -30,6 +30,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { DELAI_PUBLICATION_JOURS } from "@/services/avis";
+
 import { formaterMontant } from "@/lib/montant";
 import { NOM_BOUTIQUE, openGraphDePage } from "@/lib/seo";
 import {
@@ -142,6 +144,9 @@ export default async function PageInformationsLegales() {
           </li>
           <li>
             <a href="#retractation">Rétractation</a>
+          </li>
+          <li>
+            <a href="#avis">Avis de clients</a>
           </li>
         </ul>
       </nav>
@@ -518,6 +523,79 @@ export default async function PageInformationsLegales() {
         <p className={styles.texte}>
           Pour signaler un défaut, écrivez-nous depuis la{" "}
           <Link href="/contact">page de contact</Link>.
+        </p>
+      </section>
+
+      {/*
+       * RUBRIQUE EXIGEE PAR L'ARTICLE D111-10 2°, LS-61. Le texte impose une
+       * rubrique « specifique facilement accessible » portant deux choses, et
+       * deux seulement : l'existence ou non d'une contrepartie, et les delais
+       * maximums de publication ET de conservation d'un avis.
+       *
+       * ELLE EST DISTINCTE DES MENTIONS AFFICHEES PRES DE CHAQUE AVIS, qui
+       * relevent du 1° du meme article et vivent sur la fiche produit. Les deux
+       * obligations sont cumulatives : porter l'une ne dispense pas de l'autre.
+       *
+       * LE DELAI DE CONSERVATION EST SANS LIMITE, ADR-028, ET CETTE ABSENCE SE
+       * PUBLIE. Une rubrique muette sur ce point est precisement le manquement
+       * que l'article vise : « sans limite de duree » est une reponse, le
+       * silence n'en est pas une.
+       *
+       * LE DELAI DE PUBLICATION VIENT DE `services/avis.ts`, jamais d'un chiffre
+       * ecrit ici : le meme nombre est annonce dans l'email d'invitation et sur
+       * l'ecran de depot, et trois valeurs recopiees divergeraient au premier
+       * changement.
+       */}
+      <section
+        id="avis"
+        tabIndex={-1}
+        className={styles.section}
+        aria-labelledby="titre-avis-legal"
+      >
+        <h2 id="titre-avis-legal" className={styles.titreSection}>
+          Avis de clients
+        </h2>
+
+        <h3 className={styles.titreBloc}>Comment un avis est recueilli</h3>
+        <p className={styles.texte}>
+          Un avis ne peut être déposé qu&apos;après une commande{" "}
+          <strong>réellement livrée</strong>, par un lien personnel envoyé après
+          la remise du colis. Il n&apos;existe aucun autre moyen d&apos;en
+          déposer un : c&apos;est ce qui rend ces avis vérifiés.
+        </p>
+
+        <h3 className={styles.titreBloc}>Aucune contrepartie</h3>
+        <p className={styles.texte}>
+          <strong>Aucune contrepartie</strong> d&apos;aucune sorte n&apos;est
+          accordée en échange d&apos;un avis : ni réduction, ni cadeau, ni
+          avantage sur une commande suivante.
+        </p>
+
+        <h3 className={styles.titreBloc}>Délai de publication</h3>
+        <p className={styles.texte}>
+          Chaque avis est relu avant d&apos;être publié. Cette relecture prend
+          au plus <strong>{DELAI_PUBLICATION_JOURS} jours</strong> à compter du
+          dépôt.
+        </p>
+        <p className={styles.texte}>
+          Un avis peut ne pas être publié, par exemple s&apos;il ne porte pas
+          sur la pièce achetée, s&apos;il contient des données personnelles ou
+          des propos injurieux. La personne qui l&apos;a déposé en est informée,
+          et le motif de la décision est conservé.
+        </p>
+
+        <h3 className={styles.titreBloc}>Durée de conservation</h3>
+        <p className={styles.texte}>
+          Un avis publié le reste <strong>sans limite de durée</strong>. Il
+          n&apos;est retiré que sur décision motivée, et un avis retiré
+          n&apos;est jamais supprimé : sa trace et son motif sont conservés.
+        </p>
+
+        <h3 className={styles.titreBloc}>Classement des avis</h3>
+        <p className={styles.texte}>
+          Les avis sont affichés du <strong>plus récent au plus ancien</strong>.
+          Aucun autre critère n&apos;entre dans leur ordre d&apos;affichage, et
+          aucun avis n&apos;est mis en avant.
         </p>
       </section>
     </main>

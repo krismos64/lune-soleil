@@ -388,3 +388,90 @@
   white-space: nowrap;
   border: 0;
 }
+
+/*
+ * Bloc 11, avis verifies, LS-61.
+ *
+ * LE CONTRASTE SE MESURE SUR LE FOND REELLEMENT PEINT, C31. Le corps de la
+ * fiche vit sur creme, `--ls-background`, ou `--ls-text-muted` donne 4,86:1 ;
+ * le bloc de reponse pose du sable, ou le meme jeton tomberait a 4,35:1. Ce
+ * bloc emploie donc `--ls-text`, jamais le jeton attenue.
+ */
+.syntheseAvis {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-text);
+  line-height: 1.6;
+}
+
+.mentionAvis {
+  margin: 0 0 var(--ls-space-4);
+  color: var(--ls-text-muted);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.listeAvis {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-4);
+}
+
+.avis {
+  padding-bottom: var(--ls-space-4);
+  border-bottom: 1px solid var(--ls-border);
+}
+
+.avis:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.noteAvis {
+  margin: 0 0 var(--ls-space-1);
+  color: var(--ls-primary);
+  font-weight: 600;
+}
+
+.datesAvis {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/*
+ * `white-space: pre-wrap` GARDE LES SAUTS DE LIGNE DU CLIENT sans jamais rendre
+ * de HTML : le commentaire est du texte simple, et `dangerouslySetInnerHTML` est
+ * interdit sur ce projet. Un avis ecrit en trois paragraphes reste lisible.
+ */
+.commentaireAvis {
+  margin: 0;
+  color: var(--ls-text);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+/* FOND SABLE, DONC `--ls-text` ET JAMAIS `--ls-text-muted`, C31. */
+.reponseAvis {
+  margin-top: var(--ls-space-3);
+  padding: var(--ls-space-3);
+  background: var(--ls-surface-sand);
+  border-radius: var(--ls-radius-md);
+}
+
+.auteurReponse {
+  margin: 0 0 var(--ls-space-1);
+  color: var(--ls-text);
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.texteReponse {
+  margin: 0;
+  color: var(--ls-text);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}

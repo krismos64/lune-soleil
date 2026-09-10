@@ -68,6 +68,7 @@ export type Comptages = {
   expeditionsEnTransit: number;
   messagesNonLus: number;
   retractationsEnCours: number;
+  avisAModerer: number;
 };
 
 /**
@@ -116,6 +117,21 @@ export const RUBRIQUES: readonly Rubrique[] = [
     chemin: "/administration/messages",
     libelle: "Messages",
     compteur: "messagesNonLus",
+  },
+  /*
+   * LS-61 : les avis entrent dans la barre, C33, et ils y entrent AVEC leur
+   * compteur. Un avis attend une relecture explicite, regle R4, et le delai de
+   * publication est ANNONCE au client, article D111-10 2° : un ecran sans
+   * pastille laisserait ce delai se depasser sans que rien ne le signale.
+   *
+   * IL SUIT LES MESSAGES parce que les deux relevent du meme geste, lire ce que
+   * quelqu'un a ecrit et y repondre, et precede le catalogue qui est du travail
+   * de fond.
+   */
+  {
+    chemin: "/administration/avis",
+    libelle: "Avis",
+    compteur: "avisAModerer",
   },
   { chemin: "/administration/produits", libelle: "Catalogue" },
   { chemin: "/administration/factures", libelle: "Factures et avoirs" },

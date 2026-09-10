@@ -20,6 +20,7 @@
  * s'attend, elle ne se lit pas directement.
  */
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 
 import { DonneesStructurees } from "@/components/donnees-structurees";
@@ -34,6 +35,7 @@ import { lireFichePublique } from "@/services/catalogue";
 import styles from "./fiche.module.css";
 import { Galerie } from "./galerie";
 import { SelecteurVariante } from "./selecteur-variante";
+import { AvisProduit } from "./avis-produit";
 
 /**
  * La page lit la base a chaque affichage.
@@ -333,11 +335,27 @@ export default async function PageFicheProduit({
           </section>
 
           {/*
-           * Bloc 11, avis verifies. EMPLACEMENT RESERVE, non implemente : les
-           * avis appartiennent a LS-61, epic LS-36. La place est prise
-           * maintenant pour ne pas reorganiser la page ensuite, et rien ne
-           * s'affiche tant qu'aucun avis n'existe.
+           * Bloc 11, avis verifies, LIVRE PAR LS-61.
+           *
+           * IL EST SOUS UN `<Suspense>` ET NON DANS LE FLUX PRINCIPAL : la
+           * lecture des avis est une requete de plus, et la fiche ne doit pas
+           * attendre pour afficher son prix et son bouton d'achat. Ce qui
+           * decide de l'achat est au-dessus, regle de l'ordre des blocs.
+           *
+           * AUCUN `loading.tsx` N'EST AJOUTE POUR AUTANT, regle C32 : cette
+           * route appelle `notFound()` sur un slug inconnu, et une frontiere de
+           * segment ferait rendre 200 a la place du 404. La frontiere est
+           * INTERNE, donc posee apres la decision de statut.
+           *
+           * LA SECTION DISPARAIT QUAND AUCUN AVIS N'EST PUBLIE, et le
+           * `fallback` est vide pour la meme raison : annoncer un chargement
+           * d'avis puis ne rien afficher ferait clignoter une section absente.
            */}
+          <Suspense fallback={null}>
+            <AvisProduit
+              varianteIds={fiche.variantes.map((variante) => variante.id)}
+            />
+          </Suspense>
         </div>
       </div>
     </main>
