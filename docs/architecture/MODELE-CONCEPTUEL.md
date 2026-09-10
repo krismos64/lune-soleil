@@ -1553,7 +1553,15 @@ profil autant que l'inscription.
 
 ### Pourquoi une table de verrou
 
-Deux tâches planifiées tournent : la libération des réservations expirées toutes
+**Le compte des tâches n'est plus inscrit ici**, il disait « deux » quand la
+mesure en rend six : cette section justifie `VerrouTache` sur un inventaire qui
+en sous-estimait les deux tiers, dont `suivi-livraison` qui écrit `livreA`, donc
+le point de départ du délai de rétractation.
+
+`services/tache-planifiee.ts` fait foi, et `verifier-taches-planifiees.sh` le
+confronte au crontab dans les deux sens.
+
+Historiquement, deux tâches tournaient : la libération des réservations expirées toutes
 les cinq minutes, la réconciliation des paiements toutes les quinze minutes.
 
 Sans verrou, deux instances de l'application les exécuteraient simultanément.
@@ -1916,7 +1924,16 @@ L'archivage remplace la suppression. Seules `Reservation`, `VerrouTache` et
 transitoires ; la troisième l'est parce qu'aucune commande n'en dépend, règle A4.
 
 **Suppression d'un compte**, précisé par LS-40, recensement corrigé par LS-41.
-**Huit** références pointent vers `Utilisateur`, et chacune exige sa politique
+**Le compte n'est plus inscrit ici**, il disait « huit » quand la mesure en rend
+douze, et c'est la section du droit à l'effacement : un inventaire incomplet y
+laisse croire que toutes les politiques ont été relues.
+
+```bash
+grep -cE "Utilisateur\?? +@relation" prisma/schema.prisma
+```
+
+Un test de LS-95 interroge `information_schema` et vérifie la cardinalité, ce qui
+rend ce compte **mesuré plutôt qu'affirmé**. Chaque référence exige sa politique
 explicite. Une politique oubliée vaut `RESTRICT` et bloque alors toute demande
 d'effacement ; une cascade posée par réflexe détruit un document que le projet
 conserve.

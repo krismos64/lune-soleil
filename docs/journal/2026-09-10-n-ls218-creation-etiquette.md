@@ -147,8 +147,15 @@ comptes Sendcloud.
 
 ## État des tickets
 
-**LS-218 créée puis développée**, epic LS-5, bloquée par LS-153. Neuf critères
-sur dix remplis, le dixième attendant le premier colis réel.
+**LS-218 créée, développée et FUSIONNÉE** le 10 septembre 2026 au soir, PR #379,
+les huit contrôles de CONTRIBUTING au vert. Epic LS-5, bloquée par LS-153.
+
+**Elle reste « En cours » et non close**, délibérément : neuf critères sur dix
+sont remplis, et le dixième exige un premier envoi réel dont le tarif facturé
+soit relevé. Le code est sur `main`, la story ne l'est pas encore.
+
+Le compte passe à **173 sur 208** : le dénominateur a bougé de 207 à 208 dans la
+soirée, LS-218 étant née de ce trou de backlog.
 
 ## Prochaine étape
 

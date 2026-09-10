@@ -129,12 +129,26 @@ passée, et c'est voulu. La suppression du compte emporte le carnet, en cascade.
 |---|---|
 | Finalité | remettre le colis au client et lui permettre de suivre son acheminement |
 | Personnes concernées | clients destinataires d'une commande |
-| Catégories de données | nom et adresse du destinataire transmis au transporteur, numéro de suivi, point de retrait choisi, statuts d'acheminement |
+| Catégories de données | nom, adresse, **adresse email et téléphone** du destinataire transmis au transporteur, numéro de suivi, identifiant de colis, point de retrait choisi, statuts d'acheminement |
 | Tables | `Expedition` |
 | Base légale | exécution du contrat, article 6.1.b |
 | Conservation | avec la commande qu'elle sert, voir T2 |
-| Destinataires | **Mondial Relay**, sous-traitant au sens de l'article 28, pour le nom, l'adresse et le point de retrait |
-| Transfert hors UE | aucun, ADR-025 retenant Mondial Relay Start en France métropolitaine |
+| Destinataires | **Sendcloud**, sous-traitant au sens de l'article 28, pour le nom, l'adresse, l'email, le téléphone et le point de retrait. Mondial Relay reste le TRANSPORTEUR, il n'est pas le destinataire direct |
+| Transfert hors UE | aucun, Sendcloud étant établi aux Pays-Bas et l'acheminement se faisant en France métropolitaine, ADR-025 et ADR-035 |
+
+**LE SOUS-TRAITANT EST SENDCLOUD ET NON MONDIAL RELAY**, corrigé le 10 septembre
+2026. Cette fiche nommait le transporteur là où le contrat est porté par
+l'agrégateur, ADR-035 : Mondial Relay redirige son offre sans contrat vers
+Sendcloud, qui reçoit donc les données et les transmet.
+
+**L'EMAIL ET LE TÉLÉPHONE ONT ÉTÉ AJOUTÉS**, mesurés dans le code le même jour :
+`integrations/sendcloud/expedition.ts` les envoie depuis LS-218, le transporteur
+s'en servant pour ses notifications de suivi. Ils manquaient aux catégories.
+
+**AUCUN CONTRÔLE NE POUVAIT LE VOIR.** `verifier-registre-traitements.sh`
+confronte le registre au schéma Prisma : un changement de **sous-traitant** n'est
+ni une table ni une colonne. Même angle mort structurel que les cookies, déjà
+signalé dans ce fichier, reproduit ici sur un destinataire.
 
 ### T5, facturation et obligations comptables
 

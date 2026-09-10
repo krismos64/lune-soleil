@@ -248,6 +248,7 @@ pour chaque ligne concernée ce qui a été fait.
 | la config Claude Code, skills, agents, hooks | `docs/REFERENCES.md` si l'aiguillage change, `CLAUDE.md` s'il dépasse 200 lignes |
 | **un schéma ajouté à `src/lib/validation.ts`** | la table de `VALIDATION.md`, et la règle qu'il porte si elle ne se déduit d'aucun type |
 | **un cookie portant autre chose qu'un identifiant technique** | la section « données personnelles hors base » de `REGISTRE-DES-TRAITEMENTS.md`, avec sa durée et pourquoi elle diffère |
+| **une donnée personnelle envoyée à un tiers, ou un changement de sous-traitant** | la fiche de traitement concernée de `REGISTRE-DES-TRAITEMENTS.md` : le **destinataire** ET les **catégories de données** transmises, article 30 |
 | **une étape d'un parcours, ou une obligation légale sur cette étape** | `PARCOURS.md` pour l'étape, `.claude/rules/legal.md` pour l'obligation et sa source |
 | **une story livrée ou close** | la fiche mémoire « où en est le projet », le tableau d'état du `README.md`, et les **comptes**, relevés dans Jira et jamais de mémoire |
 | **une image de marque ou un asset engendré** | rejouer `node scripts/engendrer-images-marque.mjs`, RELIRE le rendu à l'œil, et `assets/README.md` si l'écart qu'il documente est fermé. Le mode `--verifier` échoue tant que les fichiers versionnés ne correspondent pas au source |
@@ -269,6 +270,16 @@ Le registre des traitements relève d'un **angle mort structurel** :
 `verifier-registre-traitements.sh` confronte le registre au schéma Prisma, or un
 cookie n'est pas une table. Le contrôle reste vert à juste titre, et la section
 concernée porte désormais cet avertissement.
+
+**LE MÊME ANGLE MORT S'EST REPRODUIT SUR UN DESTINATAIRE**, le 10 septembre
+2026 : la fiche T4 nommait « Mondial Relay » comme sous-traitant quand ADR-035
+a fait passer le contrat par **Sendcloud**, et il lui manquait l'email et le
+téléphone que LS-218 lui transmet. Ni l'un ni l'autre n'est une table ou une
+colonne, donc aucun contrôle ne pouvait les voir.
+
+Ce document est **opposable au titre de l'article 30** : une fiche qui nomme le
+mauvais sous-traitant ou omet une catégorie de données ne se rattrape par aucun
+test. La ligne ajoutée à la table ci-dessus est la seule parade.
 
 **Un compte écrit à la main se périme sans bruit.** Le `README.md` annonçait
 « neuf stories ouvertes » six jours après que le chiffre soit devenu faux, et la
