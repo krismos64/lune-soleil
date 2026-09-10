@@ -105,9 +105,13 @@ depuis le dépôt, le garde-fou destructif exige une lecture humaine, et chaque
 déploiement recrée des conteneurs chez un produit payant qui partage la machine. La clé SSH ne peut exécuter qu'un script,
 sur un utilisateur hors du groupe `docker`.
 
-**Il reste LS-153**, la première mise en ligne : poser les clés Stripe et SMTP,
-et fixer l'ordre des opérations. Elle **attend l'exploitante**, LS-142 et LS-175
-exigeant sa présence physique. Plus rien ne dépend du code seul.
+**Il reste LS-153**, la première mise en ligne : poser les clés **Stripe** et
+fixer l'ordre des opérations. Les clés SMTP sont posées depuis le 10 septembre
+2026, LS-214.
+
+Elle **attend l'exploitante**, LS-142 exigeant sa présence physique pour la
+recette. **LS-175 est close** : le compte d'administration existe en production
+avec sa passkey, la séance a eu lieu. Plus rien ne dépend du code seul.
 
 `docs/deploiement/EXPLOITATION.md` porte l'exploitation courante,
 `PREPARATION-SERVEUR.md` la mise en place initiale.
@@ -406,9 +410,15 @@ cookie. Un build vert ne prouve donc **pas** que le service démarrera. Voir le
 commentaire de `src/lib/auth.ts`, qui explique pourquoi le garde-fou est posé là
 où il agit plutôt qu'à la construction.
 
-**Les six variables SMTP sont lues depuis LS-82**, `smtp.ts` refusant de
-construire son transport si l'une manque, en nommant les absentes et jamais leur
-valeur. **Stripe et les médias sont lus depuis**, `stripe/index.ts` et
+**Les variables SMTP sont lues depuis LS-82**, `smtp.ts` refusant de construire
+son transport si l'une manque, en nommant les absentes et jamais leur valeur.
+Elles sont **cinq**, dont **quatre exigées** : `SMTP_PORT` a un défaut de 587.
+Le document disait « six », compte périmé corrigé le 10 septembre 2026.
+
+**Les lire ne suffisait pas à les employer** : `creerAuth()` prenait l'envoyeur de
+repli par défaut jusqu'à LS-214, donc aucun email d'authentification ne partait
+malgré une configuration complète. Depuis LS-215, l'envoi réel est de plus refusé
+hors production. **Stripe et les médias sont lus depuis**, `stripe/index.ts` et
 `services/media.ts` : les laisser vides rend le paiement indisponible et la
 racine des médias au repli, ce qui compte pour LS-153. Seules les variables de
 l'IA ne sont lues par aucun code, la phase qui les emploie n'ayant pas commencé.
