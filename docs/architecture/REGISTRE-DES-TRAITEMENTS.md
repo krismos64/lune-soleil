@@ -529,6 +529,36 @@ Les trois cookies sont `httpOnly`, `sameSite: "lax"`, `secure` hors
 développement, et signés par HMAC dérivé de `BETTER_AUTH_SECRET` avec une
 étiquette distincte par usage.
 
+### Aucun consentement n'est dû pour ces cookies, LS-148
+
+Analyse tranchée le **10 septembre 2026** aux sources officielles, détail complet
+dans `.claude/rules/legal.md` section « Cookies et traceurs, article 82 ».
+
+**Le régime n'est pas celui du RGPD**, et la confusion est répandue :
+l'obligation de consentement vient de l'**article 82 de la loi Informatique et
+Libertés**, transposition de la directive ePrivacy. Le RGPD n'intervient que pour
+définir ce qu'est un consentement valide.
+
+**Traiter des données personnelles par ailleurs ne crée aucune obligation de
+bannière.** La CNIL l'énonce : l'obligation sur les traceurs est indépendante des
+autres traitements de l'organisme. Ce registre recense de nombreux traitements ;
+aucun n'impose de bannière.
+
+Les trois cookies ci-dessus et celui de session figurent **nommément** dans la
+liste des exemptions publiée par la CNIL, panier d'achat, choix utilisateurs et
+authentification. **Aucune bannière n'est donc présentée**, et l'information est
+publiée dans `#confidentialite` de `/informations-legales`.
+
+**`document-v1` n'est pas un cookie** malgré son nom : c'est une étiquette de
+dérivation HMAC pour les jetons d'accès aux documents, `src/lib/jeton-acces.ts`.
+Ne pas la compter parmi les traceurs de ce registre.
+
+**Ce qui ferait tomber cette conclusion** : l'ajout d'un traceur non strictement
+nécessaire, mesure d'audience déposant un identifiant, chat, carte distante ou
+lecteur vidéo embarqué. ADR-040 écarte la mesure d'audience ; toute autre
+addition impose de rejouer l'analyse **avant** de livrer, et de mettre à jour
+cette section, que le contrôle automatique ne voit pas.
+
 ## Mesures de sécurité
 
 Description générale au sens de l'article 30 paragraphe 1 point g.
