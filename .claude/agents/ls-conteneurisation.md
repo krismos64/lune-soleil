@@ -161,12 +161,17 @@ le conteneur** et jamais dans le fichier, un zéro signifiant « aucune limite �
 Les deux familles ne se mélangent pas : Compose refuse `pids_limit` et
 `deploy.resources.limits.pids` ensemble.
 
-**La mesure d'audience n'est pas tranchée pour cette boutique.** LS-141 exige un
-ADR préalable sur le choix, et cet ADR n'existe pas au 8 septembre 2026. Aucun
-fichier du dépôt ne mentionne Umami : celui qui tourne sur la machine appartient
-à **SmartPlanning**, pas ici. Ne pose aucun conteneur de mesure d'audience tant
-que la décision n'est pas écrite, et ne déduis pas de sa présence sur l'hôte
-qu'elle vaut pour la boutique.
+**La mesure d'audience est tranchée : il n'y en a AUCUNE**, ADR-040 du
+10 septembre 2026, LS-141 close. Ni Umami ni autre outil.
+
+**Ne pose aucun conteneur de mesure d'audience**, et ne déduis pas de la présence
+d'Umami sur l'hôte qu'elle vaut pour la boutique : celui qui tourne appartient à
+**SmartPlanning**, et sa base vit dans `smartplanning-postgres`.
+
+La décision est **réversible**, et l'analyse de conformité est conservée dans
+ADR-040 pour cette raison. Si elle change un jour, monte une **instance dédiée**
+plutôt que de partager celle de SmartPlanning : y mélanger les données de la
+boutique irait contre le principe d'étanchéité d'ADR-036.
 
 ### Ce que ce projet n'a pas
 
