@@ -1254,3 +1254,77 @@ test.describe("expedition sans numero de suivi", () => {
     await expect(acheminement).toContainText("Expédiée le");
   });
 });
+
+/**
+ * CREATION D'ETIQUETTE SUR LA FILE DE PREPARATION, LS-218.
+ *
+ * AUCUNE ETIQUETTE N'EST CREEE PAR CES TESTS, critere 7, et le jeu de donnees
+ * le garantit AUTREMENT QUE PAR PRUDENCE : `SENDCLOUD_PUBLIC_KEY` et
+ * `SENDCLOUD_SECRET_KEY` ne sont pas posees dans l'environnement de bout en
+ * bout, deliberement, ce que `tunnel-commande.spec.ts` documente deja. La
+ * Server Action sort donc en `INDISPONIBLE` avant tout appel reseau.
+ *
+ * CE QUI SE PROUVE ICI EST DONC LE RENDU ET LA DEGRADATION, jamais le chemin
+ * nominal, qui ne sera exerce qu'une fois, au premier envoi reel.
+ */
+test.describe("création d'étiquette, file de préparation", () => {
+  test("propose le geste automatique et garde la saisie manuelle", async ({
+    page,
+  }) => {
+    await page.goto("/administration/expeditions");
+
+    /*
+     * LES DEUX CHEMINS COEXISTENT, LS-218 : le bouton ne remplace pas le
+     * formulaire. Trois cas le justifient, le transporteur indisponible, un
+     * envoi hors Sendcloud, et un colis remis en main propre.
+     */
+    await expect(
+      page.getByRole("button", { name: /Créer l'étiquette/ }).first(),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Déclarer expédiée" }).first(),
+    ).toBeVisible();
+  });
+
+  /*
+   * LE COUT EST ANNONCE AVANT LE GESTE, jamais apres. Cette action est la seule
+   * du projet qui depense de l'argent reel : l'exploitante doit le lire avant
+   * de cliquer, meme regle que l'avertissement d'irreversibilite voisin.
+   */
+  test("annonce que l'étiquette est facturée avant le clic", async ({
+    page,
+  }) => {
+    await page.goto("/administration/expeditions");
+
+    await expect(page.getByText(/facturée/).first()).toBeVisible();
+  });
+
+  /*
+   * LA DEGRADATION EST MESUREE ET NON SUPPOSEE, critere 6. Sans les cles,
+   * l'action rend `INDISPONIBLE` : l'ecran doit le dire et LAISSER la saisie
+   * manuelle utilisable, ce qui est exactement la panne de fournisseur que le
+   * plan directeur demande de simuler.
+   */
+  test("laisse la saisie manuelle utilisable quand le transporteur est hors service", async ({
+    page,
+  }) => {
+    await page.goto("/administration/expeditions");
+
+    await page
+      .getByRole("button", { name: /Créer l'étiquette/ })
+      .first()
+      .click();
+
+    /*
+     * LE MESSAGE ARRIVE DANS LA REGION LIVE, et le formulaire manuel reste
+     * actif : c'est l'assertion qui compte, une degradation qui bloquerait les
+     * deux chemins fermerait l'expedition entiere.
+     */
+    await expect(
+      page.getByText(/momentanément indisponible/).first(),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Déclarer expédiée" }).first(),
+    ).toBeEnabled();
+  });
+});
