@@ -1193,6 +1193,18 @@ model AlerteCritique {
 
   acquitteePar Utilisateur? @relation(fields: [acquitteeParId], references: [id], onDelete: SetNull)
 
+  // Une seule alerte OUVERTE par type et par cible, LS-131. Le filtre est ce qui
+  // rend la contrainte juste : une alerte acquittée ne doit pas empêcher qu'une
+  // neuve soit levée si le problème resurgit.
+  //
+  // ELLE N'EXISTAIT PAS AVANT LS-131, alors que `envoi-email.ts` affirmait en
+  // commentaire qu'elle protégeait. Sa tâche tourne toutes les minutes : un
+  // envoi bloqué produisait 1440 alertes par jour, et l'écran d'alertes
+  // devenait illisible au moment précis où l'exploitante en a besoin.
+  //
+  // LE PRÉDICAT N'EMPLOIE PAS `IN`, ce qui ferait vouloir à Prisma 7 de le
+  // recréer à l'identique à chaque `migrate dev`.
+  @@unique([type, idCible], where: raw("acquittee_a IS NULL"), map: "alerte_ouverte_unique")
   @@map("alerte_critique")
 }
 

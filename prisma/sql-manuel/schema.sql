@@ -847,6 +847,17 @@ CREATE INDEX "envoi_en_attente_statut_cree_a" ON "envoi_en_attente"("statut", "c
 -- CreateIndex
 CREATE UNIQUE INDEX "verrou_tache_nom_key" ON "verrou_tache"("nom");
 
+-- CreateIndex
+-- LS-131, une seule alerte OUVERTE par type et par cible.
+--
+-- `NULLS NOT DISTINCT` EST NECESSAIRE, id_cible etant nullable : PostgreSQL
+-- tient deux NULL pour distincts par defaut, et deux alertes de meme type sans
+-- cible passeraient toutes les deux.
+--
+-- LE FILTRE laisse une alerte neuve etre levee apres acquittement, sans quoi un
+-- probleme resolu puis resurgi resterait muet.
+CREATE UNIQUE INDEX "alerte_ouverte_unique" ON "alerte_critique"("type", "id_cible") NULLS NOT DISTINCT WHERE (acquittee_a IS NULL);
+
 -- CreateIndex, LS-80. Le premier sert la purge par anteriorite, regle E14, le
 -- second l'ecran d'administration qui liste par compte du plus recent au plus
 -- ancien.
