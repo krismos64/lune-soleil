@@ -317,7 +317,17 @@ describe("choisirEnvoyeurEmail", () => {
     const { choisirEnvoyeurEmail, envoyeurJournalise } =
       await import("@/integrations/email");
 
-    const envoyeur = choisirEnvoyeurEmail(CONFIGURATION_COMPLETE);
+    /*
+     * `NODE_ENV: production` EST DEVENU NECESSAIRE ICI, LS-215. Ce cas posait
+     * `NODE_ENV: test` et attendait le SMTP : la garde d'envoi hors production
+     * le refuse desormais, a juste titre. Le TEST etait devenu faux, pas le
+     * code. Il eprouve le choix sur la CONFIGURATION, la garde d'environnement
+     * ayant ses propres cas plus bas.
+     */
+    const envoyeur = choisirEnvoyeurEmail({
+      ...CONFIGURATION_COMPLETE,
+      NODE_ENV: "production",
+    });
 
     /*
      * LES DEUX ASSERTIONS SONT NECESSAIRES, et la seconde est celle qui compte.
@@ -368,4 +378,95 @@ describe("cablage de l'envoyeur dans auth.ts", () => {
 
     expect(parametre?.[1]).toBe("choisirEnvoyeurEmail");
   });
+});
+
+/**
+ * L'ENVOI REEL EST REFUSE HORS PRODUCTION, LS-215.
+ *
+ * CE QUE CES TESTS EMPECHENT DE REVENIR. Le `.env` d'un poste de developpement
+ * peut porter les identifiants SMTP de la boutique. Sans cette garde, chaque
+ * execution de la suite envoie de VRAIS emails vers `client@exemple.fr` et les
+ * fixtures `e2e-*`, domaines inexistants par conception : chaque message
+ * rebondit et le rejet arrive dans la boite reelle de l'exploitante.
+ *
+ * Mesure du 10 septembre 2026, apres que l'exploitante a recu des dizaines de
+ * « Undelivered Mail Returned to Sender ».
+ */
+describe("garde d'envoi hors production", () => {
+  const CONFIGURATION_SMTP = {
+    SMTP_HOST: "smtp.exemple.fr",
+    SMTP_USER: "contact@exemple.fr",
+    SMTP_PASSWORD: ["valeur", "factice", "sans", "effet"].join("-"),
+    EMAIL_FROM_ADDRESS: "contact@exemple.fr",
+  };
+
+  /*
+   * CHAQUE VALEUR DE `NODE_ENV` HORS PRODUCTION EST EPROUVEE, jamais la seule
+   * « test » : une garde ecrite sur `!== "test"` au lieu de `=== "production"`
+   * laisserait passer `development`, qui est l'environnement du poste ou le
+   * defaut s'est produit.
+   */
+  for (const nodeEnv of ["test", "development", undefined] as const) {
+    it(`refuse l'envoi quand NODE_ENV vaut ${nodeEnv ?? "(absent)"}`, async () => {
+      const { choisirEnvoyeurEmail, envoyeurJournalise } =
+        await import("@/integrations/email");
+
+      const env = {
+        ...CONFIGURATION_SMTP,
+        ...(nodeEnv ? { NODE_ENV: nodeEnv } : {}),
+      } as NodeJS.ProcessEnv;
+
+      expect(choisirEnvoyeurEmail(env)).toBe(envoyeurJournalise);
+    });
+  }
+
+  /*
+   * LE SENS INVERSE EST INDISPENSABLE. Une garde qui refuserait TOUJOURS
+   * passerait les trois cas ci-dessus et casserait la production en silence,
+   * exactement le defaut de LS-214 sous une autre forme.
+   */
+  it("laisse passer l'envoi en production", async () => {
+    const { choisirEnvoyeurEmail, envoyeurJournalise } =
+      await import("@/integrations/email");
+
+    const envoyeur = choisirEnvoyeurEmail({
+      ...CONFIGURATION_SMTP,
+      NODE_ENV: "production",
+    } as NodeJS.ProcessEnv);
+
+    expect(envoyeur).not.toBe(envoyeurJournalise);
+  });
+
+  it("laisse passer hors production quand l'envoi est explicitement autorise", async () => {
+    const { choisirEnvoyeurEmail, envoyeurJournalise } =
+      await import("@/integrations/email");
+
+    const envoyeur = choisirEnvoyeurEmail({
+      ...CONFIGURATION_SMTP,
+      NODE_ENV: "development",
+      AUTORISER_ENVOI_EMAIL_HORS_PRODUCTION: "oui",
+    } as NodeJS.ProcessEnv);
+
+    expect(envoyeur).not.toBe(envoyeurJournalise);
+  });
+
+  /*
+   * UNE VALEUR APPROCHANTE NE VAUT PAS AUTORISATION. « true », « 1 » ou « OUI »
+   * ne doivent pas ouvrir l'envoi : l'autorisation se pose sciemment, et une
+   * comparaison laxiste la rendrait atteignable par un reglage d'outil.
+   */
+  for (const valeur of ["true", "1", "OUI", ""]) {
+    it(`n'autorise pas sur la valeur « ${valeur} »`, async () => {
+      const { choisirEnvoyeurEmail, envoyeurJournalise } =
+        await import("@/integrations/email");
+
+      const envoyeur = choisirEnvoyeurEmail({
+        ...CONFIGURATION_SMTP,
+        NODE_ENV: "development",
+        AUTORISER_ENVOI_EMAIL_HORS_PRODUCTION: valeur,
+      } as NodeJS.ProcessEnv);
+
+      expect(envoyeur).toBe(envoyeurJournalise);
+    });
+  }
 });
