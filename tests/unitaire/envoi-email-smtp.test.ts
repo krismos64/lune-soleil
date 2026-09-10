@@ -246,3 +246,79 @@ describe("rendreModele", () => {
     expect(rendu.objet).not.toMatch(/[–—]/);
   });
 });
+
+/**
+ * Le choix de l'envoyeur, correction du 10 septembre 2026.
+ *
+ * CE QUE CES TESTS EMPECHENT DE REVENIR. `creerAuth()` prenait
+ * `envoyeurJournalise` comme valeur par defaut, et il est appele sans argument :
+ * Better Auth employait donc le repli EN PRODUCTION, avec une configuration
+ * SMTP complete a cote. Aucun email de verification, de reinitialisation ni
+ * d'alerte de connexion ne partait.
+ *
+ * LE DEFAUT ETAIT INVISIBLE parce que le repli ne leve pas, regle E4 : l'ecran
+ * annonce « email envoye », et il a fallu qu'une personne reelle ne recoive
+ * jamais son lien pour qu'on le voie.
+ */
+describe("choisirEnvoyeurEmail", () => {
+  /*
+   * `NODE_ENV` EST PRESENT parce que le projet type `ProcessEnv` avec ce champ
+   * requis. Sa valeur est indifferente au choix d'envoyeur, seule sa presence
+   * satisfait le type.
+   */
+  const CONFIGURATION_COMPLETE = {
+    NODE_ENV: "test" as const,
+    SMTP_HOST: "smtp.exemple.fr",
+    SMTP_USER: "contact@exemple.fr",
+    SMTP_PASSWORD: "mot-de-passe-de-test",
+    EMAIL_FROM_ADDRESS: "contact@exemple.fr",
+  };
+
+  it("rend le repli quand aucune variable n'est posee", async () => {
+    const { choisirEnvoyeurEmail, envoyeurJournalise } =
+      await import("@/integrations/email");
+
+    expect(choisirEnvoyeurEmail({ NODE_ENV: "test" })).toBe(envoyeurJournalise);
+  });
+
+  /*
+   * CHAQUE VARIABLE EST EPROUVEE SEULE, jamais le seul cas « tout absent ».
+   * Une condition ecrite sur trois variables au lieu de quatre passerait le cas
+   * global et laisserait partir un envoyeur incomplet, qui echouerait au
+   * premier envoi plutot qu'au demarrage.
+   */
+  // LA BOUCLE NE PARCOURT QUE LES QUATRE VARIABLES SMTP, jamais toutes les
+  // cles de l'objet : `NODE_ENV` n'y est que pour satisfaire le type, et le
+  // retirer ne doit PAS faire choisir le repli.
+  for (const manquante of [
+    "SMTP_HOST",
+    "SMTP_USER",
+    "SMTP_PASSWORD",
+    "EMAIL_FROM_ADDRESS",
+  ] as const) {
+    it(`rend le repli quand ${manquante} manque`, async () => {
+      const { choisirEnvoyeurEmail, envoyeurJournalise } =
+        await import("@/integrations/email");
+
+      const env = { ...CONFIGURATION_COMPLETE, [manquante]: "" };
+
+      expect(choisirEnvoyeurEmail(env)).toBe(envoyeurJournalise);
+    });
+  }
+
+  it("rend un envoyeur SMTP quand les quatre variables sont posees", async () => {
+    const { choisirEnvoyeurEmail, envoyeurJournalise } =
+      await import("@/integrations/email");
+
+    const envoyeur = choisirEnvoyeurEmail(CONFIGURATION_COMPLETE);
+
+    /*
+     * LES DEUX ASSERTIONS SONT NECESSAIRES, et la seconde est celle qui compte.
+     * Verifier seulement qu'un objet est rendu passerait sur un code qui rend
+     * le repli : c'est un `EnvoyeurEmail` lui aussi. C'est la DIFFERENCE avec
+     * `envoyeurJournalise` qui prouve que le vrai chemin est pris.
+     */
+    expect(envoyeur).toBeDefined();
+    expect(envoyeur).not.toBe(envoyeurJournalise);
+  });
+});

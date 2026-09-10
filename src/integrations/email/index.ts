@@ -18,6 +18,8 @@
  */
 import { journaliser } from "@/lib/journal";
 
+import { creerEnvoyeurSmtp, lireConfigurationSmtp } from "./smtp";
+
 /** Ce que le projet sait envoyer. Un modele, pas un contenu libre. */
 export type ModeleEmail =
   | "verification-adresse"
@@ -96,3 +98,76 @@ export const envoyeurJournalise: EnvoyeurEmail = {
     });
   },
 };
+
+/**
+ * L'envoyeur du code applicatif : le SMTP reel, ou le repli si rien n'est
+ * configure.
+ *
+ * ---------------------------------------------------------------------------
+ * LE DEFAUT QUE CETTE FONCTION FERME, mesure en production le 10 septembre
+ * 2026.
+ *
+ * `creerAuth()` prenait `envoyeurJournalise` comme valeur PAR DEFAUT de son
+ * parametre, et `src/lib/auth.ts` l'appelle sans argument. Better Auth
+ * employait donc le repli EN PRODUCTION, quelle que soit la configuration
+ * SMTP : aucun email de verification, de reinitialisation de mot de passe ni
+ * d'alerte de connexion ne pouvait partir.
+ *
+ * Le defaut etait INVISIBLE parce que le repli ne leve pas, regle E4 : l'ecran
+ * annonce « email envoye » et le journal ecrit « email non envoye, envoyeur de
+ * repli en place » a une ligne que personne ne lisait. Il a fallu qu'une
+ * personne reelle n'ait jamais recu son lien pour qu'il se voie.
+ *
+ * `creerEnvoyeurSmtp` existait depuis LS-82 et n'etait appele QUE par la tache
+ * d'expedition de l'outbox : les emails de commande partaient, ceux de
+ * l'authentification non. Deux chemins, un seul cable.
+ * ---------------------------------------------------------------------------
+ *
+ * POURQUOI UN REPLI PLUTOT QU'UNE ERREUR. `lireConfigurationSmtp` LEVE quand
+ * une variable manque, et cette fonction est appelee a l'EVALUATION du module
+ * `auth.ts` : laisser l'exception remonter rendrait l'authentification entiere
+ * inutilisable sur un poste sans SMTP, developpement et tests compris. C'est la
+ * raison pour laquelle `envoyeurJournalise` existe, et elle reste valable.
+ *
+ * LE CHOIX EST JOURNALISE DANS LES DEUX SENS, et c'est le coeur de la
+ * correction : un repli SILENCIEUX est ce qui a laisse le defaut vivre. La
+ * ligne d'avertissement nomme les variables manquantes, jamais leurs valeurs,
+ * invariant 9.
+ *
+ * `import` STATIQUE ET NON DYNAMIQUE : `smtp.ts` n'a aucun effet de bord a
+ * l'evaluation, il n'ouvre de connexion qu'au premier envoi. L'importer ne
+ * coute rien sur un poste sans configuration.
+ */
+export function choisirEnvoyeurEmail(
+  env: NodeJS.ProcessEnv = process.env,
+): EnvoyeurEmail {
+  const manquantes = [
+    "SMTP_HOST",
+    "SMTP_USER",
+    "SMTP_PASSWORD",
+    "EMAIL_FROM_ADDRESS",
+  ].filter((nom) => !env[nom]);
+
+  if (manquantes.length > 0) {
+    journaliser(
+      "warn",
+      "configuration SMTP incomplete, envoyeur de repli en place, AUCUN email ne partira",
+      { variablesManquantes: manquantes.join(", ") },
+    );
+    return envoyeurJournalise;
+  }
+
+  journaliser("info", "envoyeur SMTP en place", {});
+
+  /*
+   * `env` EST TRANSMIS EXPLICITEMENT, jamais laisse relire `process.env`.
+   *
+   * `lireConfigurationSmtp` a son propre defaut sur `process.env` : sans cet
+   * argument, cette fonction verifierait un environnement et en lirait un
+   * AUTRE. Les deux coincident en production, ce qui rendait le defaut
+   * invisible, et divergent des qu'un appelant passe son propre `env` : le
+   * test a leve `ConfigurationEmailIncompleteError` sur une configuration
+   * pourtant complete.
+   */
+  return creerEnvoyeurSmtp(lireConfigurationSmtp(env));
+}
