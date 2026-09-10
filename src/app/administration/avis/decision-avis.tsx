@@ -15,7 +15,7 @@
  * geste, pas un choix a confirmer ensuite. Chacun porte son intention dans son
  * libelle, ce qu'un `select` suivi d'un bouton « Valider » perd.
  */
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 
 import { appliquerModeration } from "./actions";
 import type { ResultatModeration } from "./actions";
@@ -54,13 +54,48 @@ export function DecisionAvis({
 
   const [motif, setMotif] = useState("");
 
+  const formulaire = useRef<HTMLFormElement>(null);
+  const declencheur = useRef<HTMLButtonElement | null>(null);
+
+  /*
+   * LE BOUTON DECLENCHEUR PEUT AVOIR DISPARU, ET C'EST LE CAS NOMINAL, revue
+   * frontend du 10 septembre 2026, meme motif que la revue de LS-103. Une
+   * decision reussie revalide l'arbre serveur : l'avis quitte la liste « A
+   * relire » pour « Decisions prises », donc le `<li>` qui portait le bouton
+   * clique est demonte. `focus()` sur un noeud detache ne fait rien, et le
+   * focus retombe silencieusement sur `<body>`, au tout debut du document.
+   *
+   * `isConnected` DISTINGUE LES DEUX CAS. Le bouton survit a un refus de motif
+   * ou a une panne, ou le focus doit y revenir ; il disparait apres une
+   * decision reussie, ou le repli est le formulaire lui-meme, qui porte
+   * `tabIndex={-1}` pour cette raison et pour elle seule.
+   */
+  useEffect(() => {
+    if (resultat === null) {
+      return;
+    }
+
+    if (declencheur.current?.isConnected) {
+      declencheur.current.focus();
+    } else {
+      formulaire.current?.focus();
+    }
+
+    declencheur.current = null;
+  }, [resultat]);
+
   const motifManquant = motif.trim().length === 0;
   const refus = resultat === null ? null : messageDeRefus(resultat);
   const identifiantMotif = `motif-${avisId}`;
   const identifiantAide = `aide-motif-${avisId}`;
 
   return (
-    <form action={action} className={styles.decisions}>
+    <form
+      ref={formulaire}
+      tabIndex={-1}
+      action={action}
+      className={styles.decisions}
+    >
       <input type="hidden" name="avisId" value={avisId} />
 
       <div className={styles.champ}>
@@ -98,6 +133,9 @@ export function DecisionAvis({
             value="PUBLIE"
             className={styles.bouton}
             disabled={enCours}
+            onClick={(evenement) => {
+              declencheur.current = evenement.currentTarget;
+            }}
           >
             {enCours ? "Enregistrement…" : "Publier"}
           </button>
@@ -115,10 +153,26 @@ export function DecisionAvis({
            * decouvrir l'exigence apres avoir cliqué.
            */
           disabled={enCours || motifManquant}
+          onClick={(evenement) => {
+            declencheur.current = evenement.currentTarget;
+          }}
         >
           {dejaPublie ? "Retirer" : "Refuser"}
         </button>
       </div>
+
+      {/*
+       * L'ACCUSE DE SUCCES EXISTE, ET IL EST INDISPENSABLE AU CLAVIER. La liste
+       * se reorganise apres une decision, mais un lecteur d'ecran n'en voit
+       * rien : sans cette region, l'exploitante clique et n'entend AUCUN retour,
+       * le bouton ayant disparu. Le focus se pose sur ce formulaire, qui porte
+       * alors ce message.
+       */}
+      {resultat?.statut === "SUCCES" && (
+        <p role="status" aria-live="polite" className={styles.succes}>
+          Décision enregistrée. L&apos;avis a changé de liste.
+        </p>
+      )}
 
       {refus !== null && (
         <p role="alert" className={styles.erreur}>

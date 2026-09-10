@@ -176,6 +176,24 @@ const ECRANS = [
     chemin: "/administration/retractations",
     titre: "Rétractations",
   },
+  /*
+   * LA RUBRIQUE AVIS, LS-61. Elle est mesuree A VIDE, et c'est ce que la
+   * fixture permet : aucune commande de test n'est livree ET notee, donc les
+   * deux listes rendent leur etat vide.
+   *
+   * CE N'EST PAS UNE MESURE AU RABAIS. L'etat vide est celui que l'exploitante
+   * verra la plupart des jours, et c'est celui qu'aucune revue ne regarde : le
+   * debordement a 320 px s'y joue sur le titre et le paragraphe d'introduction,
+   * qui cite un article de loi et un delai. Les cartes densement remplies sont
+   * couvertes par les tests d'integration, qui les construisent reellement.
+   *
+   * AUCUN FAUX AVIS N'EST FABRIQUE POUR CE TEST, y compris en fixture : la
+   * regle du projet ne souffre aucune exception, preproduction comprise.
+   */
+  {
+    chemin: "/administration/avis",
+    titre: "Avis",
+  },
 ] as const;
 
 for (const ecran of ECRANS) {
