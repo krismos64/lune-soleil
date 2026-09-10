@@ -19,6 +19,7 @@ import { notFound, redirect } from "next/navigation";
 
 import {
   formaterDate,
+  fraicheurSuivi,
   LIBELLES_LIVRAISON,
   LIBELLES_STATUT,
 } from "@/lib/affichage-commande";
@@ -97,15 +98,16 @@ export default async function PageDetailCommande({
     commande.expedition.mode !== commande.modeLivraison;
 
   /*
-   * LA SECTION DE SUIVI A-T-ELLE UNE LIGNE A MONTRER. Ses quatre lignes sont
-   * toutes conditionnelles : sans ce calcul, une expedition sans date, sans
-   * numero et au mode identique affichait un titre suivi d'une liste vide.
+   * LA FRAICHEUR DU SUIVI, LS-58 critere 4. Elle vient du module d'affichage
+   * partage avec l'administration : recopier le seuil ici en ferait diverger
+   * les deux ecrans au premier ajustement, et le client verrait « a jour » ce
+   * que l'exploitante voit « bloque ».
+   *
+   * `null` QUAND AUCUN COLIS N'EST PARTI, ce qui n'est pas la meme chose qu'un
+   * suivi jamais lu : sans expedition, il n'y a rien a synchroniser.
    */
-  const suiviADireQuelqueChose =
-    modeExecuteDifferent ||
-    commande.expedition?.expedieA !== null ||
-    commande.expedition?.numeroSuivi !== null ||
-    commande.expedition?.livreA !== null;
+  const fraicheur =
+    commande.expedition === null ? null : fraicheurSuivi(commande.expedition);
 
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
@@ -216,30 +218,34 @@ export default async function PageDetailCommande({
       </section>
 
       {/*
-       * LE SUIVI N'APPARAIT QUE S'IL EXISTE. `expedieA` peut etre nul meme
-       * quand l'expedition existe, et `livreA` l'est TOUJOURS aujourd'hui :
-       * aucun chemin ne l'ecrit, c'est LS-33 qui decidera comment le site
-       * apprend qu'un colis est livre. Le champ est lu des maintenant pour que
-       * cet ecran n'ait pas a changer ce jour-la.
-       */}
-      {/*
-       * LA SECTION N'APPARAIT QUE SI ELLE A QUELQUE CHOSE A DIRE, et non des
-       * que l'expedition existe. Ses champs sont tous nullables : `expedieA` et
-       * `numeroSuivi` par le schema, `livreA` TOUJOURS aujourd'hui, aucun
-       * chemin ne l'ecrivant avant LS-33. Une expedition declaree sans date ni
-       * numero affichait un titre « Suivi » suivi d'une liste VIDE.
+       * LE SUIVI N'APPARAIT QUE SI UN COLIS EST PARTI. Une commande en attente
+       * de paiement ou en preparation n'a pas d'expedition, et un titre suivi
+       * d'une liste vide se lit comme une section cassee, releve par la revue
+       * frontend sur cet ecran.
        *
-       * LE MODE EXECUTE S'AFFICHE QUAND IL DIFFERE DE CELUI QUI A ETE PAYE,
-       * ADR-025, et c'est ce que le commentaire du repository promettait sans
-       * que le rendu le fasse. Un client rebascule de domicile vers Point
-       * Relais voyait « A domicile », sans aucun moyen d'apprendre ou son colis
-       * etait reellement parti. La commande n'etant jamais reecrite, seul cet
-       * ecart peut le dire. Les deux releves par la revue frontend.
+       * LA CONDITION S'EST SIMPLIFIEE EN LS-58. Elle testait auparavant que la
+       * section avait « quelque chose a dire », ses quatre lignes etant toutes
+       * conditionnelles. Elle en porte desormais une INCONDITIONNELLE, l'etat de
+       * la livraison, qui se dit y compris quand il est negatif : le calcul
+       * n'avait plus d'objet.
+       *
+       * `livreA` EST DESORMAIS RENSEIGNE, par la synchronisation horaire de
+       * LS-131. Ce commentaire disait le contraire jusqu'au 10 septembre 2026,
+       * « TOUJOURS nul, aucun chemin ne l'ecrivant avant LS-33 » : ADR-042 a
+       * tranche, deux statuts le renseignent, `Delivered` au domicile et
+       * `Shipment collected by customer` en point de service.
        */}
-      {commande.expedition && suiviADireQuelqueChose && (
+      {commande.expedition && (
         <section className={styles.section} aria-labelledby="titre-suivi">
-          <h2 id="titre-suivi">Suivi</h2>
+          <h2 id="titre-suivi">Suivi de la livraison</h2>
           <dl className={styles.liste}>
+            {/*
+             * LE MODE EXECUTE S'AFFICHE QUAND IL DIFFERE DE CELUI QUI A ETE
+             * PAYE, ADR-025. Un client rebascule de domicile vers Point Relais
+             * voyait « A domicile » sans aucun moyen d'apprendre ou son colis
+             * etait reellement parti : la commande n'etant jamais reecrite,
+             * seul cet ecart peut le dire. Releve par la revue frontend.
+             */}
             {modeExecuteDifferent && (
               <div className={styles.ligne}>
                 <dt>Mode d&apos;expédition</dt>
@@ -258,16 +264,69 @@ export default async function PageDetailCommande({
             {commande.expedition.numeroSuivi && (
               <div className={styles.ligne}>
                 <dt>Numéro de suivi</dt>
+                {/*
+                 * AUCUNE CLASSE PROPRE : `.ligne dd` porte deja
+                 * `overflow-wrap: anywhere`, pose pour les adresses email qui
+                 * n'ont pas de point de coupure naturel. Un numero de suivi de
+                 * quinze caracteres sans espace est exactement le meme cas, et
+                 * lui ajouter une classe dupliquerait la regle.
+                 */}
                 <dd>{commande.expedition.numeroSuivi}</dd>
               </div>
             )}
-            {commande.expedition.livreA && (
+            {/*
+             * LE LIBELLE DU TRANSPORTEUR, LS-58 critere 1. Il repond a « ou en
+             * est mon colis » sans qu'aucun email ne soit necessaire, motif de
+             * l'arbitrage du 28 juillet 2026.
+             *
+             * IL N'ANNONCE PAS UNE LIVRAISON, meme quand il en a l'air. « En
+             * attente de retrait » dit que le colis attend au relais, et la
+             * ligne suivante reste la seule a constater la remise.
+             */}
+            {commande.expedition.statutTransporteur && (
               <div className={styles.ligne}>
-                <dt>Livrée le</dt>
-                <dd>{formaterDate(commande.expedition.livreA)}</dd>
+                <dt>Dernier statut connu</dt>
+                <dd>{commande.expedition.statutTransporteur}</dd>
               </div>
             )}
+            {/*
+             * L'ETAT DE LA LIVRAISON SE DIT TOUJOURS, y compris quand elle n'a
+             * pas eu lieu. Une ligne absente se lirait comme un oubli
+             * d'affichage, quand ce qui est en jeu est le point de depart du
+             * delai de retractation de quatorze jours, article L221-18 : le
+             * client doit pouvoir lire que son delai n'a PAS commence a courir.
+             *
+             * SEULE LA REMISE AU DESTINATAIRE COMPTE, ADR-042 : ni la mise en
+             * distribution, ni l'avis de passage, ni la disponibilite au relais
+             * ne renseignent `livreA`.
+             */}
+            <div className={styles.ligne}>
+              <dt>Réception</dt>
+              <dd>
+                {commande.expedition.livreA
+                  ? formaterDate(commande.expedition.livreA)
+                  : "Pas encore constatée"}
+              </dd>
+            </div>
           </dl>
+
+          {/*
+           * LE SUIVI ARRETE SE SIGNALE PLUTOT QUE DE PASSER POUR A JOUR,
+           * critere 4. Sans cette mention, un dernier statut vieux de trois
+           * jours s'affiche exactement comme un statut lu il y a dix minutes,
+           * et le client patiente devant une information qu'il croit fraiche.
+           *
+           * LE TEXTE NE PROMET AUCUN DELAI ET N'ACCUSE PERSONNE : le site sait
+           * seulement qu'il n'a plus de nouvelles, ce qui n'etablit ni un
+           * retard ni une perte.
+           */}
+          {fraicheur === "bloque" && commande.expedition.synchroniseA && (
+            <p className={styles.suiviArrete}>
+              Le transporteur n&apos;a pas donné de nouvelle information depuis
+              le {formaterDate(commande.expedition.synchroniseA)}. Si cette
+              situation dure, contactez la boutique.
+            </p>
+          )}
         </section>
       )}
 

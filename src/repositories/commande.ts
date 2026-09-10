@@ -427,16 +427,23 @@ export type DetailCommandeDuClient = {
     quantite: number;
   }[];
   /**
-   * L'expedition, quand elle a ete declaree, LS-130.
+   * L'expedition, quand elle a ete declaree, LS-130 puis LS-58.
    *
    * `expedieA` EST NULLABLE MEME QUAND LA LIGNE EXISTE : le schema le prevoit,
    * et le type le dit plutot que de le supposer. Une assertion non nulle ici
    * aurait produit un « Invalid Date » a l'ecran le jour ou une expedition est
    * creee sans date.
    *
-   * `livreA` RESTE NUL AUJOURD'HUI, aucun chemin ne l'ecrit : c'est LS-33 qui
-   * decidera comment le site apprend qu'un colis est livre. Le champ est lu des
-   * maintenant pour que l'ecran n'ait pas a changer ce jour-la.
+   * `livreA` EST DESORMAIS ECRIT, par la synchronisation horaire de LS-131, et
+   * ce commentaire a dit le contraire jusqu'au 10 septembre 2026 : « aucun
+   * chemin ne l'ecrit, c'est LS-33 qui decidera ». ADR-042 a tranche, deux
+   * statuts le renseignent. Une affirmation au futur se perime sans bruit, et
+   * celle-ci aurait fait croire a un champ mort a qui relit ce fichier.
+   *
+   * `statutTransporteur` ET `synchroniseA` SONT LUS DEPUIS LS-58, et le second
+   * porte le critere 4 : sans lui, l'ecran ne peut pas distinguer un suivi lu
+   * il y a dix minutes d'un suivi arrete depuis trois jours, les deux affichant
+   * le meme dernier statut connu.
    *
    * `mode` EST CELUI QUE LE TRANSPORTEUR A EXECUTE, distinct de
    * `Commande.modeLivraison` que le client a paye, ADR-025. Les deux sont
@@ -446,8 +453,10 @@ export type DetailCommandeDuClient = {
   expedition: {
     mode: ModeLivraison;
     numeroSuivi: string | null;
+    statutTransporteur: string | null;
     expedieA: Date | null;
     livreA: Date | null;
+    synchroniseA: Date | null;
   } | null;
   facture: {
     id: string;
@@ -516,8 +525,10 @@ export async function lireCommandeDuClient(
         select: {
           mode: true,
           numeroSuivi: true,
+          statutTransporteur: true,
           expedieA: true,
           livreA: true,
+          synchroniseA: true,
         },
       },
       facture: {

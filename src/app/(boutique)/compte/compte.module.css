@@ -821,3 +821,25 @@
   font-size: inherit;
   font-weight: 600;
 }
+
+/*
+ * SUIVI ARRETE, LS-58 critere 4. Le transporteur ne donne plus de nouvelle
+ * information depuis plus de vingt-quatre heures.
+ *
+ * `--ls-text` SUR SABLE, 10,83:1 mesure le 10 septembre 2026, et non
+ * `--ls-text-muted` qui y tomberait a 4,35:1, sous le seuil AA. C31 : le sable
+ * est le fond piegeux du projet, seuls `--ls-text` et `--ls-primary` y tiennent.
+ *
+ * PAS DE `--ls-error` ICI, a la difference de l'ecran d'administration. Le
+ * client ne peut rien faire d'un suivi arrete sinon patienter ou ecrire : lui
+ * peindre une alerte rouge annoncerait un incident etabli, quand le site sait
+ * seulement qu'il n'a plus de nouvelles. L'exploitante, elle, a un geste a
+ * faire, d'ou le traitement distinct.
+ */
+.suiviArrete {
+  margin: var(--ls-space-3) 0 0;
+  padding: var(--ls-space-3);
+  border-left: 3px solid var(--ls-accent-gold-deep);
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+}

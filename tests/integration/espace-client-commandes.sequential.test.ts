@@ -364,3 +364,150 @@ describe("critere 4, test negatif de securite", () => {
     });
   });
 });
+
+/**
+ * LE SUIVI DE LIVRAISON DANS L'ESPACE CLIENT, LS-58.
+ *
+ * CE QUI SE PROUVE ICI EST LA REMONTEE DES CHAMPS, dont deux ne l'etaient pas
+ * avant cette story : `statutTransporteur` et `synchroniseA`. Sans le second,
+ * l'ecran ne peut pas distinguer un suivi lu il y a dix minutes d'un suivi
+ * arrete depuis trois jours, et le critere 4 devient invérifiable.
+ *
+ * L'ISOLATION, CRITERE 5, EST DEJA COUVERTE PLUS HAUT et ne se redit pas ici :
+ * `lireCommandeDuClient` porte `utilisateurId` DANS SA CLAUSE `where`, ce que
+ * « refuse le detail de la commande d'un tiers » eprouve. Un colis n'ouvre
+ * aucun chemin de lecture supplementaire.
+ */
+describe("critere 1, le suivi de livraison remonte jusqu'au detail", () => {
+  /** Ecrit une expedition dans l'etat ou la synchronisation la laisserait. */
+  async function poserExpedition(
+    commandeId: string,
+    champs: {
+      mode?: string;
+      statutTransporteur?: string | null;
+      livreA?: Date | null;
+      synchroniseA?: Date | null;
+    } = {},
+  ): Promise<void> {
+    const mode = champs.mode ?? "DOMICILE";
+
+    /*
+     * `chk_expedition_mode_point_relais` EST UNE EQUIVALENCE portant sur les
+     * DEUX modes de retrait, `LOCKER` compris malgre ce que son nom laisse
+     * croire. Mesure le 10 septembre 2026 sur un `INSERT` refuse.
+     */
+    const pointRelaisId =
+      mode === "POINT_RELAIS" || mode === "LOCKER" ? "FR-58001" : null;
+
+    await client.query(
+      `INSERT INTO expedition (
+         id, commande_id, transporteur, mode, numero_suivi, point_relais_id,
+         statut_transporteur, expedie_a, livre_a, synchronise_a, cree_a
+       )
+       VALUES (gen_random_uuid()::text, $1, 'Sendcloud', $2::"ModeLivraison",
+               '3SLS58000001', $3, $4, now(), $5, $6, now())`,
+      [
+        commandeId,
+        mode,
+        pointRelaisId,
+        champs.statutTransporteur ?? null,
+        champs.livreA ?? null,
+        champs.synchroniseA ?? null,
+      ],
+    );
+  }
+
+  it("rend le mode, le numero de suivi, le statut et la fraicheur", async () => {
+    const moi = await creerCompte(EMAIL);
+    const commande = await creerCommande("C-2026-0058", EMAIL, {
+      utilisateurId: moi,
+    });
+
+    const synchroniseA = new Date("2026-09-08T07:00:00.000Z");
+    await poserExpedition(commande, {
+      statutTransporteur: "Awaiting customer pickup",
+      synchroniseA,
+    });
+
+    const detail = await lireMaCommande(commande, moi);
+
+    expect(detail?.expedition).toMatchObject({
+      mode: "DOMICILE",
+      numeroSuivi: "3SLS58000001",
+      statutTransporteur: "Awaiting customer pickup",
+    });
+    expect(detail?.expedition?.synchroniseA?.toISOString()).toBe(
+      synchroniseA.toISOString(),
+    );
+  });
+
+  /*
+   * CRITERE 2, LE REPORT SE VOIT SANS QUE RIEN NE SOIT REECRIT. La commande
+   * reste `DOMICILE`, ce que le client a choisi et paye ; l'expedition porte le
+   * mode reellement execute, ADR-025. Le client rebascule voyait « A domicile »
+   * sans aucun moyen d'apprendre ou son colis etait parti.
+   */
+  it("laisse le mode de la commande intact quand l'expedition est reportee", async () => {
+    const moi = await creerCompte(EMAIL);
+    const commande = await creerCommande("C-2026-0059", EMAIL, {
+      utilisateurId: moi,
+    });
+
+    await poserExpedition(commande, { mode: "POINT_RELAIS" });
+
+    const detail = await lireMaCommande(commande, moi);
+
+    expect(detail?.modeLivraison).toBe("DOMICILE");
+    expect(detail?.expedition?.mode).toBe("POINT_RELAIS");
+  });
+
+  /*
+   * CRITERE 3, AUCUN APPEL AU TRANSPORTEUR A LA CONSULTATION. La preuve porte
+   * sur la SOURCE des deux champs affiches : ils sont lus en base, ecrits par
+   * la tache horaire de LS-131. Une lecture qui interrogerait Sendcloud rendrait
+   * ici la valeur de l'API et non celle de la colonne, donc une valeur
+   * DIFFERENTE de celle qui vient d'y etre ecrite.
+   *
+   * LE STATUT ECRIT EST VOLONTAIREMENT IMPOSSIBLE cote fournisseur : aucune API
+   * ne rendrait « STATUT-FIGE-EN-BASE ». S'il ressort tel quel, c'est bien la
+   * colonne qui a ete lue.
+   */
+  it("lit le statut en base et n'interroge aucun transporteur", async () => {
+    const moi = await creerCompte(EMAIL);
+    const commande = await creerCommande("C-2026-0060", EMAIL, {
+      utilisateurId: moi,
+    });
+
+    await poserExpedition(commande, {
+      statutTransporteur: "STATUT-FIGE-EN-BASE",
+      synchroniseA: new Date("2026-09-01T09:00:00.000Z"),
+    });
+
+    const detail = await lireMaCommande(commande, moi);
+
+    expect(detail?.expedition?.statutTransporteur).toBe("STATUT-FIGE-EN-BASE");
+  });
+
+  /*
+   * LA REMISE N'EST PAS CONSTATEE TANT QU'UN STATUT INTERMEDIAIRE REGNE, et
+   * c'est ce qui decide du depart du delai de retractation, article L221-18.
+   * « Awaiting customer pickup » annonce un colis disponible au relais, que la
+   * table d'ADR-042 ne tient PAS pour une livraison.
+   */
+  it("laisse la reception non constatee sur un statut intermediaire", async () => {
+    const moi = await creerCompte(EMAIL);
+    const commande = await creerCommande("C-2026-0061", EMAIL, {
+      utilisateurId: moi,
+    });
+
+    await poserExpedition(commande, {
+      statutTransporteur: "Awaiting customer pickup",
+      livreA: null,
+      synchroniseA: new Date(),
+    });
+
+    const detail = await lireMaCommande(commande, moi);
+
+    expect(detail?.expedition?.livreA).toBeNull();
+  });
+});
