@@ -161,16 +161,26 @@ export function GestionPasskeys({
     router.refresh();
   };
 
-  const formaterDate = (valeur: Date) => {
+  const formaterDate = (valeur: Date): string | null => {
     /*
+     * LA GARDE PORTE SUR LA DATE, PAS SUR LA CHAINE RENDUE.
+     *
+     * `Intl.DateTimeFormat.format` rend TOUJOURS une chaine non vide, « Invalid
+     * Date » comprise : un `date ? ... : null` sur son resultat ne protege donc
+     * de rien, et l'ecran afficherait « Ajoutée le Invalid Date ». Releve par la
+     * revue d'interface du 10 septembre 2026, la branche `null` etait morte.
+     *
      * `Europe/Paris` EXPLICITE, jamais l'heure du serveur ni celle du
      * navigateur laissee au hasard : les horodatages sont persistes en UTC et
      * convertis a l'affichage seulement, invariant 8.
      */
+    const instant = new Date(valeur);
+    if (Number.isNaN(instant.getTime())) return null;
+
     return new Intl.DateTimeFormat("fr-FR", {
       dateStyle: "long",
       timeZone: "Europe/Paris",
-    }).format(new Date(valeur));
+    }).format(instant);
   };
 
   return (
