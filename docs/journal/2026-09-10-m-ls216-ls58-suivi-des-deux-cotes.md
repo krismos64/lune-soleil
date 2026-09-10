@@ -80,6 +80,50 @@ mesurée, la relecture ne l'aurait pas vue.
 chemin ne l'écrivant avant LS-33 ». Faux depuis LS-131. Une affirmation au futur
 se périme sans bruit, motif du journal `l` de ce matin.
 
+## La revue frontend a trouvé cinq défauts, dont un sérieux
+
+`ls-frontend-revue` a été lancée après la fusion de LS-216, sur les deux écrans.
+Elle a confirmé deux points sans rien trouver, la neutralité de genre et la
+hiérarchie des titres, et relevé cinq défauts réels. Tous vérifiés avant
+correction, aucun pris au mot.
+
+**Le signalement d'un suivi jamais lu était inatteignable sur l'expédition qui
+en a le plus besoin.** La condition portait `numeroSuivi !== null`. Or le numéro
+est **facultatif** à la déclaration, choix assumé du formulaire d'expédition, et
+`listerASuivre` filtre sur `numeroSuivi: { not: null }` : une expédition sans
+numéro n'est **jamais** synchronisée, et ce n'est pas transitoire. Sa réception
+ne sera jamais constatée, donc ni le délai de rétractation ni l'invitation à
+déposer un avis ne démarrent, et l'écran affichait une section d'apparence
+normale. Un troisième message le dit maintenant, des deux côtés : côté client
+l'état était entièrement muet.
+
+**Le bloc d'acheminement était un `div` là où quatre écrans d'administration
+emploient un `dl`.** Conséquence mesurable : `.detail dt` porte l'atténuation du
+libellé, que mes `span` ne recevaient pas, donc « Transporteur » et « Sendcloud »
+s'affichaient à l'identique alors que les sections voisines distinguent les deux.
+Le bloc se combine désormais à `.detail` au lieu de la recopier.
+
+**La valeur repassait à gauche après retour à la ligne.** Seule sur sa ligne,
+une boîte flex est placée à gauche par `space-between`, et le `text-align: right`
+n'agit qu'à l'intérieur d'une boîte dimensionnée par son contenu.
+`margin-left: auto` tient l'alignement dans les deux cas.
+
+**La gravité se transmettait par la couleur seule.** Les deux paragraphes,
+alerte et information neutre, étaient structurellement identiques : même fond,
+même liseré de 3 px, seule la teinte les séparait. Le signalement passe à 5 px
+et en gras, principe que `.sectionDanger` de l'espace client appliquait déjà.
+
+**Deux articles de loi différents pour le même fait**, L216-2 et L216-4, quatre
+occurrences, tous écrits de mémoire dans la journée. Le dépôt ne porte aucune
+source qui tranche, et `CLAUDE.md` interdit de décider d'une obligation juridique
+sans vérifier aux sources : les quatre citations sont retirées, le principe reste
+énoncé sans numéro. Motif « numérotation juridique périmée », D111-17 devenu
+D111-10 en juillet 2024.
+
+**Une septième commande de test** porte le cas du numéro absent, avec son
+contrôle de cohérence : un numéro renseigné par mégarde éteindrait les deux
+paragraphes, et leurs tests passeraient sans rien prouver.
+
 ## LS-33 bloque LS-58 sans raison
 
 Le lien `Blocks` existe toujours dans Jira. La décision qu'il attend est prise :
@@ -175,7 +219,10 @@ migration, l'index `alerte_ouverte_unique`, donc passe par
 
 ## État des tickets
 
-**LS-216 terminée**, PR #376 fusionnée. Neuf critères sur neuf.
+**LS-216 terminée**, PR #376 fusionnée. Neuf critères sur neuf. Le défaut du
+signalement inatteignable a été trouvé **après** cette fusion et corrigé dans la
+PR de LS-58 : la story reste close, son critère 4 est désormais vrai dans un cas
+qu'il ne couvrait pas.
 
 **LS-58 terminée**, PR #377. Six critères sur six.
 
