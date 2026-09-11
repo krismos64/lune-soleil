@@ -1117,7 +1117,7 @@ preparation("commande livree et invitations d'avis amorcees", async () => {
     );
 
     /*
-         * `ACTIF` ET NON `BROUILLON`, seule amorce de commande dans ce cas. La
+     * `ACTIF` ET NON `BROUILLON`, seule amorce de commande dans ce cas. La
      * fiche produit doit rendre le bloc 11 avec l'avis publie et sa synthese :
      * sur un brouillon, la fiche rend 404 et rien n'est mesure.
      */
@@ -1200,7 +1200,12 @@ preparation("commande livree et invitations d'avis amorcees", async () => {
          )
          VALUES ($1, $2, $3, 'TEST-LS140', $4, 'TEST Déclinaison notée', 6200, 1)
          ON CONFLICT (id) DO NOTHING`,
-        [ligneId, COMMANDE_AVIS_TEST.commandeId, COMMANDE_AVIS_TEST.varianteId, libelle],
+        [
+          ligneId,
+          COMMANDE_AVIS_TEST.commandeId,
+          COMMANDE_AVIS_TEST.varianteId,
+          libelle,
+        ],
       );
     }
 
