@@ -83,6 +83,33 @@ Les quatre mutations couvrent le cadratin, le **demi**-cadratin (plus difficile
 à distinguer d'un trait d'union à l'œil), l'accord au féminin, et le contrôle
 gardé contre son propre ancrage cassé.
 
+## Un SECOND défaut réel, trouvé après le rebase
+
+Ajouté le 11 septembre au matin, en fusionnant un journal écrit en double sur
+cette même story.
+
+La branche a été rebasée sur `main` après la fusion de LS-64, et le contrôle a
+alors trouvé **un cadratin neuf** : l'écran de statistiques employait « — »
+comme état vide du panier moyen.
+
+C'est exactement ce pour quoi ce contrôle existe. Sans lui, le caractère serait
+entré sur `main` sans que personne ne le voie, comme celui du pied de page des
+factures avant lui. Corrigé en « Aucun », qui dit ce qu'il y a à comprendre là
+où un lecteur d'écran annonce « tiret cadratin » ou se tait selon le moteur.
+
+**Le contrôle a donc trouvé deux défauts réels le même jour**, à deux moments
+différents : un à sa première exécution, un au rebase suivant.
+
+## Un journal écrit en double, et ce que cela dit
+
+Ce fichier a existé en deux exemplaires pendant quelques heures,
+`i-ls32-redaction-francaise.md` et celui-ci, tous deux sur la lettre `i`. Le
+second a été écrit sans voir le premier, sur une branche parallèle.
+
+**Rien ne l'a signalé** : `verifier-config-claude.sh` vérifie qu'un journal daté
+existe quand du code est commité, jamais qu'il n'y en a qu'un par story. Le
+doublon a été trouvé à l'œil, en listant les journaux du jour.
+
 ## État des tickets
 
 **LS-32 traitée**, epic LS-22. L'arbitrage était appliqué, il est désormais
