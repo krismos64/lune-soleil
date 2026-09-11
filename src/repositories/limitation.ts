@@ -133,3 +133,80 @@ export async function effacerCompteur(
 ): Promise<void> {
   await client.rateLimit.deleteMany({ where: { key: cle } });
 }
+
+/**
+ * Incremente le compteur d'un COMPTE VISE et rend son compte, en UNE
+ * instruction. LS-83.
+ *
+ * POURQUOI UNE TABLE PROPRE ET NON `rate_limit`, a rebours de ce que ce module
+ * fait juste au-dessus. Le limiteur de Better Auth lance `deleteExpiredRows`,
+ * un `deleteMany` SANS AUCUN FILTRE DE CLE, des qu'il croise une de SES lignes
+ * hors fenetre. Le seuil vaut soixante secondes : toute ligne du projet plus
+ * vieille d'une minute partait avec les siennes, et la fenetre de quinze
+ * minutes annoncee par le service n'existait pas. Mesure en revue de LS-83, le
+ * compteur retombait a 1 apres soixante-et-une secondes.
+ *
+ * CE QUE CE DEFAUT COUTAIT : la mesure ne protegeait pas contre ce qu'elle
+ * vise. Une campagne repartie sur un parc de machines est lente par
+ * construction, precisement pour rester sous les seuils par IP : elle ne
+ * franchissait jamais cinq echecs en moins de soixante secondes. Seule la
+ * rafale rapide declenchait le ralentissement, cas que la limitation par IP
+ * attrape deja.
+ *
+ * MEME MECANIQUE QUE `incrementerCompteur`, et pour les memes raisons : un
+ * `SELECT` puis un `UPDATE` laisserait deux requetes concurrentes compter une
+ * seule tentative, defaut exploitable a volonte en lançant les essais en
+ * parallele. Le `CASE` porte la remise a zero de fenetre dans la meme
+ * instruction, et `now()` est l'horloge de PostgreSQL, jamais celle de Node.
+ *
+ * `derniere_a` EST UN `timestamptz` ET NON DES MILLISECONDES depuis l'epoch,
+ * a la difference de `rate_limit.last_request` : ce dernier est un `BIGINT`
+ * parce que la table appartient a Better Auth, qui y ecrit `Date.now()`. Cette
+ * table-ci appartient au projet, invariant 8.
+ */
+export async function incrementerCompteVise(
+  client: ClientPrisma,
+  cle: string,
+  fenetreSecondes: number,
+): Promise<number> {
+  const lignes = await client.$queryRaw<{ compte: number }[]>`
+    INSERT INTO compteur_compte_vise (id, cle, compte, derniere_a)
+    VALUES (gen_random_uuid()::text, ${cle}, 1, now())
+    ON CONFLICT (cle) DO UPDATE
+      SET compte = CASE
+            WHEN compteur_compte_vise.derniere_a
+                 < now() - make_interval(secs => ${fenetreSecondes}::double precision)
+            THEN 1
+            ELSE compteur_compte_vise.compte + 1
+          END,
+          derniere_a = now()
+    RETURNING compte
+  `;
+
+  const ligne = lignes[0];
+
+  if (!ligne) {
+    // Inatteignable : un `INSERT ... ON CONFLICT DO UPDATE` avec `RETURNING`
+    // rend toujours une ligne, le `DO UPDATE` etant inconditionnel. Lever
+    // plutot que de rendre un compte invente, qui accorderait une tentative.
+    throw new Error("Compteur de compte vise sans ligne retournee");
+  }
+
+  return Number(ligne.compte);
+}
+
+/**
+ * Efface le compteur d'un compte vise, apres une connexion reussie. LS-83.
+ *
+ * MEME RAISONNEMENT QU'`effacerCompteur` : sans cela, une personne qui se
+ * trompe six fois puis reussit resterait ralentie pour le reste de la fenetre,
+ * alors qu'elle vient de prouver son identite. Le seul moyen de remettre le
+ * compteur a zero est de fournir le bon mot de passe, ce que l'attaquant
+ * cherche et n'a pas.
+ */
+export async function effacerCompteVise(
+  client: ClientPrisma,
+  cle: string,
+): Promise<void> {
+  await client.compteurCompteVise.deleteMany({ where: { cle } });
+}

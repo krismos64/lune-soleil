@@ -56,7 +56,7 @@ afterAll(async () => {
 
 afterEach(async () => {
   await client.query(
-    "TRUNCATE journal_connexion, session, compte, verification, passkey, utilisateur, rate_limit CASCADE",
+    "TRUNCATE journal_connexion, session, compte, verification, passkey, utilisateur, rate_limit, compteur_compte_vise CASCADE",
   );
 });
 
@@ -83,7 +83,9 @@ async function creerCompte(email: string) {
     body: { email, password: MOT_DE_PASSE, name: "Essai" },
   });
 
-  await client.query("TRUNCATE journal_connexion, rate_limit");
+  await client.query(
+    "TRUNCATE journal_connexion, rate_limit, compteur_compte_vise",
+  );
 }
 
 /**
@@ -112,12 +114,12 @@ async function tenterConnexion(
 
 /** Lit le compteur d'un compte visé, ou `null` s'il n'y en a aucun. */
 async function lireCompteur(email: string): Promise<number | null> {
-  const { rows } = await client.query<{ count: number }>(
-    "SELECT count FROM rate_limit WHERE key = $1",
+  const { rows } = await client.query<{ compte: number }>(
+    "SELECT compte FROM compteur_compte_vise WHERE cle = $1",
     [cleAttendue(email)],
   );
 
-  return rows[0] ? Number(rows[0].count) : null;
+  return rows[0] ? Number(rows[0].compte) : null;
 }
 
 describe("ralentissement par compte visé", () => {
@@ -155,15 +157,15 @@ describe("ralentissement par compte visé", () => {
     await creerCompte(EMAIL_CIBLE);
     await tenterConnexion(EMAIL_CIBLE, "mauvais-mot-de-passe");
 
-    const { rows } = await client.query<{ key: string }>(
-      "SELECT key FROM rate_limit",
+    const { rows } = await client.query<{ cle: string }>(
+      "SELECT cle FROM compteur_compte_vise",
     );
 
     expect(rows.length).toBeGreaterThan(0);
 
-    for (const { key } of rows) {
-      expect(key).not.toContain(EMAIL_CIBLE);
-      expect(key).not.toContain("exemple.fr");
+    for (const { cle } of rows) {
+      expect(cle).not.toContain(EMAIL_CIBLE);
+      expect(cle).not.toContain("exemple.fr");
     }
   });
 
@@ -299,6 +301,72 @@ describe("ralentissement par compte visé", () => {
     expect(Date.now() - debut).toBeLessThan(300);
   });
 
+  it("garde le compte au-dela de la fenetre de Better Auth", async () => {
+    /*
+     * LE TEST QUE LA REVUE DE LS-83 A EXIGE, ET LE DEFAUT QU'IL A TROUVE.
+     *
+     * La premiere version partageait `rate_limit`, la table de Better Auth, ce
+     * que le ticket demandait : « ne pas reinventer un stockage ». Son limiteur
+     * lance `deleteExpiredRows`, un `deleteMany` SANS AUCUN FILTRE DE CLE, des
+     * qu'il croise une de SES lignes hors fenetre. Le seuil vaut soixante
+     * secondes : toute ligne du projet plus vieille d'une minute partait avec
+     * les siennes, et la fenetre de quinze minutes n'existait pas.
+     *
+     * CE QUE LE DEFAUT COUTAIT, et c'est ce qui le rend grave plutot que
+     * genant : la mesure ne protegeait pas contre ce qu'elle vise. Une campagne
+     * repartie sur un parc de machines est lente PAR CONSTRUCTION, justement
+     * pour rester sous les seuils par IP : elle ne franchit jamais cinq echecs
+     * en moins de soixante secondes. Seule la rafale rapide declenchait le
+     * ralentissement, cas que la limitation par IP attrape deja.
+     *
+     * AUCUN AUTRE TEST NE POUVAIT LE VOIR. Les six autres enchainent leurs
+     * tentatives en quelques millisecondes, donc toutes dans la fenetre de
+     * soixante secondes. Ce qui manquait etait l'ECOULEMENT DU TEMPS, et la
+     * fenetre annoncee n'etait donc verifiee nulle part.
+     *
+     * LE TEMPS EST SIMULE EN VIEILLISSANT LES LIGNES, jamais en dormant : un
+     * test qui attend soixante-et-une secondes n'est pas un test qu'on
+     * relance, et c'est la date en base que la purge regarde.
+     *
+     * LA TENTATIVE FINALE VIENT D'UNE ADRESSE DEJA VUE, et ce detail est le
+     * declencheur : `deleteExpiredRows` ne part que lorsque Better Auth
+     * rencontre une de ses propres lignes hors fenetre. Depuis une adresse
+     * neuve, la purge ne se declencherait pas et le test passerait sans rien
+     * exercer.
+     */
+    await creerCompte(EMAIL_CIBLE);
+
+    await tenterConnexion(EMAIL_CIBLE, "mauvais-mot-de-passe", "203.0.113.20");
+    await tenterConnexion(EMAIL_CIBLE, "mauvais-mot-de-passe", "203.0.113.21");
+    await tenterConnexion(EMAIL_CIBLE, "mauvais-mot-de-passe", "203.0.113.22");
+    await tenterConnexion(EMAIL_CIBLE, "mauvais-mot-de-passe", "203.0.113.23");
+
+    expect(await lireCompteur(EMAIL_CIBLE)).toBe(4);
+
+    // SOIXANTE-DIX SECONDES, au-dela du seuil de purge de Better Auth et bien
+    // en deça de la fenetre de quinze minutes du service : c'est exactement
+    // l'intervalle ou les deux se contredisaient.
+    await client.query(
+      "UPDATE rate_limit SET last_request = last_request - 70000",
+    );
+    await client.query(
+      "UPDATE compteur_compte_vise SET derniere_a = derniere_a - interval '70 seconds'",
+    );
+
+    await tenterConnexion(EMAIL_CIBLE, "mauvais-mot-de-passe", "203.0.113.20");
+
+    /*
+     * LA PURGE DE BETTER AUTH PART EN TACHE DE FOND, `runInBackground` : sans
+     * cette pause, le test lirait le compteur avant que la suppression ait eu
+     * lieu et resterait vert sur le defaut qu'il existe pour attraper.
+     */
+    await new Promise((resoudre) => setTimeout(resoudre, 200));
+
+    // CINQ ET NON UN. Un compteur retombe a 1 est la signature exacte du
+    // defaut : la ligne a ete effacee puis reinseree par la tentative.
+    expect(await lireCompteur(EMAIL_CIBLE)).toBe(5);
+  });
+
   it("ne compte pas une saisie qui n'est pas une adresse", async () => {
     /*
      * LES SAISIES INFORMES NE PARTAGENT PAS UN COMPTEUR. Sans ce filtre, les
@@ -309,8 +377,8 @@ describe("ralentissement par compte visé", () => {
      */
     await tenterConnexion("pas-une-adresse", "mauvais-mot-de-passe");
 
-    const { rows } = await client.query<{ key: string }>(
-      "SELECT key FROM rate_limit WHERE key LIKE 'compte-vise:%'",
+    const { rows } = await client.query<{ cle: string }>(
+      "SELECT cle FROM compteur_compte_vise",
     );
 
     expect(rows).toHaveLength(0);

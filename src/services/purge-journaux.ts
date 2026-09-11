@@ -138,6 +138,37 @@ export async function purgerRateLimit(
 }
 
 /**
+ * Supprime les compteurs de comptes vises au-dela de vingt-quatre heures.
+ *
+ * MEME DUREE QUE `RateLimit`, ET POUR LA MEME RAISON : ce n'est pas une trace
+ * mais un compteur de travail, dont la fenetre utile est de quinze minutes.
+ * Le garder plus longtemps conserverait, sous forme d'empreintes, la liste des
+ * comptes recemment vises sans qu'aucune finalite ne le justifie.
+ *
+ * ELLE COMPARE UNE VRAIE DATE, a la difference de `purgerRateLimit` juste
+ * au-dessus : cette table appartient au projet, `derniere_a` est un
+ * `timestamptz`, invariant 8. C'est precisement ce qui a impose une table
+ * propre, LS-83 : `RateLimit` etant videe par Better Auth sans filtre de cle,
+ * le compteur par compte n'y survivait pas soixante secondes.
+ *
+ * SANS ELLE, LA TABLE NE SERAIT PURGEE PAR PERSONNE. Elle grossit precisement
+ * sous attaque, c'est-a-dire au moment ou la base souffre deja.
+ */
+export async function purgerCompteursCompteVise(
+  maintenant: Date = new Date(),
+): Promise<number> {
+  const limite = new Date(
+    maintenant.getTime() - CONSERVATION_RATE_LIMIT_HEURES * 60 * 60 * 1000,
+  );
+
+  const { count } = await prisma.compteurCompteVise.deleteMany({
+    where: { derniereA: { lt: limite } },
+  });
+
+  return count;
+}
+
+/**
  * Duree de conservation d'une ligne d'outbox TERMINEE, en jours.
  *
  * L'ARBITRAGE QUE LS-154 DEVAIT RENDRE, et il n'est pas de meme nature que celui
@@ -332,6 +363,7 @@ const PURGES: ReadonlyArray<{
   { table: "JournalConnexion", executer: purgerJournalConnexion },
   { table: "JournalAudit", executer: purgerJournalAudit },
   { table: "RateLimit", executer: purgerRateLimit },
+  { table: "CompteurCompteVise", executer: purgerCompteursCompteVise },
   { table: "EnvoiEnAttente", executer: purgerEnvoisTermines },
   { table: "Message", executer: purgerMessages },
 ];

@@ -535,6 +535,19 @@ CREATE TABLE "rate_limit" (
 );
 
 -- CreateTable
+-- Compteur d'echecs par COMPTE VISE, LS-83. Table PROPRE et non `rate_limit` :
+-- le limiteur de Better Auth vide cette derniere sans filtre de cle au-dela de
+-- soixante secondes, et le compteur du projet n'y survivait pas.
+CREATE TABLE "compteur_compte_vise" (
+    "id" TEXT NOT NULL,
+    "cle" TEXT NOT NULL,
+    "compte" INTEGER NOT NULL,
+    "derniere_a" TIMESTAMPTZ(6) NOT NULL,
+
+    CONSTRAINT "compteur_compte_vise_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "journal_audit" (
     "id" TEXT NOT NULL,
     "acteur_id" TEXT,
@@ -831,6 +844,19 @@ CREATE UNIQUE INDEX "passkey_credential_id_unique" ON "passkey"("credential_id")
 
 -- CreateIndex
 CREATE UNIQUE INDEX "rate_limit_key_key" ON "rate_limit"("key");
+
+CREATE UNIQUE INDEX "compteur_compte_vise_cle_key" ON "compteur_compte_vise"("cle");
+
+-- L'index sur la date sert la PURGE, jamais une lecture metier : le service ne
+-- lit que par cle. Sans lui, la purge quotidienne balaierait une table qui
+-- grossit precisement sous attaque.
+CREATE INDEX "compteur_compte_vise_derniere_a_idx" ON "compteur_compte_vise"("derniere_a");
+
+ALTER TABLE "compteur_compte_vise"
+    ADD CONSTRAINT "chk_compteur_compte_vise_positif" CHECK ("compte" >= 1);
+
+ALTER TABLE "compteur_compte_vise"
+    ADD CONSTRAINT "chk_compteur_compte_vise_cle_non_vide" CHECK (length(trim("cle")) > 0);
 
 -- CreateIndex
 CREATE UNIQUE INDEX "journal_email_systeme_unique" ON "journal_email"("commande_id", "modele") WHERE (statut = 'ENVOYE' AND origine IN ('SYSTEME','RECONCILIATION'));

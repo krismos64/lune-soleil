@@ -119,6 +119,25 @@ async function ecrireLigneRateLimit(
 }
 
 /**
+ * Une ligne de compteur par compte vise, LS-83.
+ *
+ * `derniere_a` EST UNE VRAIE DATE, a la difference de `rate_limit.last_request`
+ * qui porte des millisecondes depuis l'epoch : cette table appartient au
+ * projet, invariant 8. Les deux voisinent dans ce fichier, et confondre leurs
+ * unites supprimerait tout ou rien sans qu'aucun parcours ne le montre.
+ */
+async function ecrireCompteurCompteVise(
+  derniereA: Date,
+  cle: string,
+): Promise<void> {
+  await client.query(
+    `INSERT INTO compteur_compte_vise (id, cle, compte, derniere_a)
+     VALUES (gen_random_uuid()::text, $1, 1, $2)`,
+    [cle, derniereA],
+  );
+}
+
+/**
  * Une ligne d'outbox dans l'etat demande.
  *
  * `prise_a` EST POSE SUR `ENVOI_EN_COURS` SEULEMENT, C31 n'existant pas mais la
@@ -478,20 +497,25 @@ describe("purge de Message, trois ans", () => {
   });
 });
 
-describe("purge des cinq tables ensemble", () => {
-  it("purge les cinq tables en une passe, sans toucher aux lignes recentes", async () => {
+describe("purge des six tables ensemble", () => {
+  it("purge les six tables en une passe, sans toucher aux lignes recentes", async () => {
     await ecrireLigneConnexion(ilYAJours(MAINTENANT, 213), "vieux@exemple.fr");
     await ecrireLigneConnexion(ilYAJours(MAINTENANT, 2), "recent@exemple.fr");
     await ecrireLigneAudit(ilYAJours(MAINTENANT, 213), "audit-vieux");
     await ecrireLigneAudit(ilYAJours(MAINTENANT, 2), "audit-recent");
     await ecrireLigneRateLimit(ilYAJours(MAINTENANT, 30), "vieux|/sign-in");
     await ecrireLigneRateLimit(MAINTENANT, "recent|/sign-in");
+    await ecrireCompteurCompteVise(
+      ilYAJours(MAINTENANT, 30),
+      "compte-vise:empreinte-vieille",
+    );
+    await ecrireCompteurCompteVise(MAINTENANT, "compte-vise:empreinte-recente");
     await ecrireEnvoi(ilYAJours(MAINTENANT, 400), "ENVOYE", "envoi-vieux");
     await ecrireEnvoi(ilYAJours(MAINTENANT, 2), "ENVOYE", "envoi-recent");
     /*
      * UNE LIGNE BLOQUEE ANCIENNE DANS LA PASSE COMPLETE, et non seulement dans
      * son test isole : c'est ici qu'une purge trop large se verrait, la ou
-     * cinq tables sont traitees d'affilee et ou l'attention se relache.
+     * six tables sont traitees d'affilee et ou l'attention se relache.
      */
     await ecrireEnvoi(ilYAJours(MAINTENANT, 400), "ENVOI_EN_COURS", "bloquee");
     await ecrireMessage(ilYAJours(MAINTENANT, 1500), "message-vieux");
@@ -504,6 +528,7 @@ describe("purge des cinq tables ensemble", () => {
       { table: "JournalConnexion", supprimees: 1, echec: false },
       { table: "JournalAudit", supprimees: 1, echec: false },
       { table: "RateLimit", supprimees: 1, echec: false },
+      { table: "CompteurCompteVise", supprimees: 1, echec: false },
       { table: "EnvoiEnAttente", supprimees: 1, echec: false },
       { table: "Message", supprimees: 1, echec: false },
     ]);
@@ -517,6 +542,9 @@ describe("purge des cinq tables ensemble", () => {
     ]);
     expect(await clesRestantes("rate_limit", "key")).toEqual([
       "recent|/sign-in",
+    ]);
+    expect(await clesRestantes("compteur_compte_vise", "cle")).toEqual([
+      "compte-vise:empreinte-recente",
     ]);
     /*
      * LA LIGNE BLOQUEE SURVIT A LA PASSE COMPLETE, avec la recente. C'est
@@ -596,6 +624,7 @@ describe("purge des cinq tables ensemble", () => {
     await client.query("ALTER TABLE journal_connexion RENAME TO jc_off");
     await client.query("ALTER TABLE journal_audit RENAME TO ja_off");
     await client.query("ALTER TABLE rate_limit RENAME TO rl_off");
+    await client.query("ALTER TABLE compteur_compte_vise RENAME TO ccv_off");
     await client.query("ALTER TABLE envoi_en_attente RENAME TO ea_off");
     await client.query("ALTER TABLE message RENAME TO ms_off");
 
@@ -604,15 +633,21 @@ describe("purge des cinq tables ensemble", () => {
 
       expect(resultats.every((r) => r.echec)).toBe(true);
       /*
-       * LES CINQ TABLES SONT ENUMEREES, et cette liste en dur est ce qui rend
-       * l'ajout d'une purge VISIBLE : la sixieme fera rougir ce test, donc
+       * LES SIX TABLES SONT ENUMEREES, et cette liste en dur est ce qui rend
+       * l'ajout d'une purge VISIBLE : la septieme fera rougir ce test, donc
        * personne ne l'ajoutera sans se demander si elle doit figurer au
        * registre. C'est deliberement le contraire d'une assertion souple.
+       *
+       * LE MECANISME A FONCTIONNE, LS-83 : `CompteurCompteVise` a fait rougir
+       * ce test a son ajout, et la question posee a bien ete tranchee, la
+       * table figure en T8 du registre avec la duree de vingt-quatre heures de
+       * `RateLimit`. Ne pas assouplir cette assertion.
        */
       expect(resultats.map((r) => r.table)).toEqual([
         "JournalConnexion",
         "JournalAudit",
         "RateLimit",
+        "CompteurCompteVise",
         "EnvoiEnAttente",
         "Message",
       ]);
@@ -620,6 +655,7 @@ describe("purge des cinq tables ensemble", () => {
       await client.query("ALTER TABLE jc_off RENAME TO journal_connexion");
       await client.query("ALTER TABLE ja_off RENAME TO journal_audit");
       await client.query("ALTER TABLE rl_off RENAME TO rate_limit");
+      await client.query("ALTER TABLE ccv_off RENAME TO compteur_compte_vise");
       await client.query("ALTER TABLE ea_off RENAME TO envoi_en_attente");
       await client.query("ALTER TABLE ms_off RENAME TO message");
     }

@@ -1153,6 +1153,42 @@ model RateLimit {
   @@map("rate_limit")
 }
 
+/// Compteur d'echecs par COMPTE VISE, LS-83, ADR-021 mesure 2.
+///
+/// TABLE PROPRE ET NON `rate_limit`, ET C'EST UNE CORRECTION. La premiere
+/// version partageait la table de Better Auth, ce que le ticket demandait,
+/// « ne pas reinventer un stockage ». Mesure : son limiteur lance
+/// `deleteExpiredRows`, un `deleteMany` SANS AUCUN FILTRE DE CLE, des qu'il
+/// croise une de SES lignes hors fenetre. Le seuil vaut 60 secondes, donc
+/// toute ligne du projet plus vieille d'une minute partait avec les siennes,
+/// et la fenetre de quinze minutes n'existait pas.
+///
+/// CE QUE CELA COUTAIT : la mesure ne protegeait pas contre ce qu'elle vise.
+/// Une campagne repartie est lente par construction, pour rester sous les
+/// seuils par IP : elle ne franchissait jamais cinq echecs en moins de
+/// soixante secondes. Seule la rafale rapide declenchait le ralentissement,
+/// cas que la limitation par IP attrape deja.
+///
+/// L'ALTERNATIVE ECARTEE etait de porter `rateLimit.window` a 900 secondes
+/// dans `auth.ts` pour remonter le seuil de purge. Cela marche et c'est
+/// fragile : un invariant de securite dependrait d'un reglage lointain, et
+/// le comportement de `deleteExpiredRows` appartient a une dependance qui
+/// peut changer a toute mise a jour.
+///
+/// AUCUNE ADRESSE EMAIL ICI, invariant 9. `cle` porte une empreinte SHA-256
+/// tronquee : le depot est public, et une fuite de cette table ne doit pas
+/// etre une fuite de fichier client.
+model CompteurCompteVise {
+  id           String   @id @default(uuid())
+  /// Empreinte SHA-256 de l'adresse normalisee, jamais l'adresse.
+  cle          String   @unique
+  compte       Int
+  derniereA    DateTime @map("derniere_a") @db.Timestamptz(6)
+
+  @@index([derniereA])
+  @@map("compteur_compte_vise")
+}
+
 model JournalAudit {
   id        String   @id @default(uuid())
   acteurId  String?  @map("acteur_id") // nullable, actions système

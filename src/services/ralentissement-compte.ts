@@ -35,8 +35,8 @@ import { delaiPourEchecs } from "@/lib/delai-ralentissement";
 import { journaliser, journaliserErreur } from "@/lib/journal";
 import { prisma } from "@/lib/prisma";
 import {
-  effacerCompteur,
-  incrementerCompteur,
+  effacerCompteVise,
+  incrementerCompteVise,
 } from "@/repositories/limitation";
 
 /**
@@ -50,17 +50,20 @@ import {
 const FENETRE_SECONDES = 15 * 60;
 
 /**
- * La clé du compteur, préfixée pour ne jamais heurter celles de Better Auth
- * ni celles des autres usages.
+ * La clé du compteur, préfixée pour rester lisible en exploitation.
+ *
+ * LE PRÉFIXE N'EST PLUS UNE PROTECTION DEPUIS QUE LA TABLE EST PROPRE, et il
+ * reste utile : une clé nue serait indistinguable d'un identifiant technique
+ * quand quelqu'un lit la table à la main.
  *
  * ELLE PORTE L'ADRESSE EMAIL VISÉE, normalisée, et c'est tout l'objet : le
  * compteur suit la CIBLE et non l'origine. Deux mille adresses IP visant le
  * même compte partagent donc un seul compteur.
  *
- * L'ADRESSE EST HACHÉE, invariant 9. Le dépôt est public et `rate_limit` est
- * une table ordinaire : y écrire des adresses email en clair ferait d'une fuite
- * de cette table une fuite de fichier client. L'empreinte suffit, le service
- * n'ayant jamais besoin de relire l'adresse.
+ * L'ADRESSE EST HACHÉE, invariant 9. Le dépôt est public et le compteur vit
+ * dans une table ordinaire : y écrire des adresses email en clair ferait d'une
+ * fuite de cette table une fuite de fichier client. L'empreinte suffit, le
+ * service n'ayant jamais besoin de relire l'adresse.
  */
 async function cleDe(emailNormalise: string): Promise<string> {
   const { createHash } = await import("node:crypto");
@@ -90,13 +93,13 @@ export async function compterEchecSurCompte(
   emailNormalise: string,
 ): Promise<number> {
   try {
-    const compteur = await incrementerCompteur(
+    const echecs = await incrementerCompteVise(
       prisma,
       await cleDe(emailNormalise),
       FENETRE_SECONDES,
     );
 
-    const delai = delaiPourEchecs(compteur.compte);
+    const delai = delaiPourEchecs(echecs);
 
     if (delai > 0) {
       /*
@@ -106,7 +109,7 @@ export async function compterEchecSurCompte(
        * diagnostic, et c'est le VOLUME qui signale une attaque.
        */
       journaliser("info", "ralentissement sur un compte vise", {
-        echecs: compteur.compte,
+        echecs,
         delaiMs: delai,
       });
     }
@@ -138,7 +141,7 @@ export async function oublierEchecsDuCompte(
   emailNormalise: string,
 ): Promise<void> {
   try {
-    await effacerCompteur(prisma, await cleDe(emailNormalise));
+    await effacerCompteVise(prisma, await cleDe(emailNormalise));
   } catch (erreur) {
     journaliserErreur("effacement du ralentissement impossible", erreur, {});
   }
