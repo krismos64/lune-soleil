@@ -160,9 +160,6 @@ jobs:
       # 499 venait de la grille PUBLIQUE Mondial Relay et perdait 2,50 EUR par
       # colis face au cout reel de 6,24 EUR HT. Le domicile est facture a son
       # prix coutant, 7,49 EUR TTC.
-      SHIPPING_RELAY_RATE_CENTS: "410"
-      SHIPPING_HOME_RATE_CENTS: "749"
-      SHIPPING_FREE_THRESHOLD_CENTS: "3900"
 
     steps:
       - name: Recuperer le depot
