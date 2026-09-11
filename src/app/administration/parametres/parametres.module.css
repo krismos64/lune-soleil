@@ -1,0 +1,223 @@
+/*
+ * Parametres commerciaux, LS-98. Conception a partir de 320 px.
+ *
+ * LES BORDURES DE CONTROLE EMPLOIENT `--ls-border-controle`, regle C36 : le
+ * fond du champ vaut `--ls-surface` comme celui de la carte qui le porte, donc
+ * sa bordure est le SEUL indice de sa presence. `--ls-border` donne 1,57:1 sur
+ * blanc, sous les 3:1 que WCAG 1.4.11 exige.
+ */
+
+.page {
+  padding-block: var(--ls-space-5);
+  padding-inline: var(--ls-space-4);
+  max-width: 44rem;
+  margin-inline: auto;
+}
+
+.titre {
+  font-size: 1.5rem;
+  color: var(--ls-text);
+  margin-block-end: var(--ls-space-3);
+}
+
+.introduction {
+  color: var(--ls-text);
+  line-height: 1.6;
+  margin-block-end: var(--ls-space-5);
+}
+
+/*
+ * ETAT D'ATTENTE, PAS D'ERREUR. Aucune couleur d'alerte : une base sans
+ * parametres est une anomalie d'exploitation, pas une faute de l'exploitante.
+ * Meme rendu que `.manquant` des informations legales.
+ */
+.manquant {
+  background: var(--ls-surface-sand);
+  border-inline-start: 3px solid var(--ls-primary);
+  padding: var(--ls-space-4);
+  color: var(--ls-text);
+  line-height: 1.6;
+}
+
+.formulaire {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-5);
+}
+
+.groupe {
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  padding: var(--ls-space-4);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-4);
+}
+
+/* @bordure-decorative le groupe n'est pas un controle de saisie : sa bordure
+   encadre une section, et la legende l'identifie deja. WCAG 1.4.11 ne vise que
+   la limite d'un controle que rien d'autre ne designe. */
+
+.legende {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--ls-text);
+  padding-inline: var(--ls-space-2);
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-1);
+}
+
+.libelle {
+  font-weight: 600;
+  color: var(--ls-text);
+}
+
+/*
+ * `--ls-text` ET NON `--ls-text-muted`. Le gris donne 4,86:1 sur creme et
+ * seulement 4,35:1 sur sable : la regle C31 impose de recalculer sur le fond
+ * reel, et ce texte d'aide porte une information qui change le montant
+ * facture, « laissez vide pour ne rien offrir ».
+ */
+.aide {
+  color: var(--ls-text);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.saisie {
+  border: 1px solid var(--ls-border-controle);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  padding: var(--ls-space-2) var(--ls-space-3);
+  font-size: 1rem;
+  min-height: var(--ls-touch-target);
+}
+
+.interrupteurs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-2);
+}
+
+/*
+ * LA ZONE TACTILE EST PORTEE PAR LA LIGNE ENTIERE, et non par la seule case.
+ * Une case de 16 px est sous les 44 px du projet : c'est le libelle, associe
+ * par `for`, qui rend la cible atteignable au doigt.
+ */
+.interrupteur {
+  display: flex;
+  align-items: center;
+  gap: var(--ls-space-3);
+  min-height: var(--ls-touch-target);
+}
+
+.caseACocher {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--ls-primary);
+  flex-shrink: 0;
+}
+
+.libelleCase {
+  color: var(--ls-text);
+  line-height: 1.5;
+  cursor: pointer;
+  /* La cible tactile couvre la hauteur de ligne entiere, pas le seul texte. */
+  display: flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+}
+
+/*
+ * LA REGION LIVE OCCUPE SA PLACE MEME VIDE, `min-height`. Sans elle, l'arrivee
+ * du message pousserait le bouton vers le bas au moment ou la personne vient de
+ * cliquer dessus : le pointeur se retrouve sur autre chose.
+ */
+.annonce {
+  color: var(--ls-text);
+  line-height: 1.5;
+  min-height: 1.5rem;
+}
+
+.sortie {
+  color: var(--ls-text);
+}
+
+.sortie a {
+  color: var(--ls-accent-gold-deep);
+  text-decoration: underline;
+}
+
+.bouton {
+  align-self: flex-start;
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  border: 1px solid var(--ls-primary);
+  border-radius: var(--ls-radius-md);
+  padding: var(--ls-space-3) var(--ls-space-5);
+  font-size: 1rem;
+  font-weight: 600;
+  min-height: var(--ls-touch-target);
+  cursor: pointer;
+}
+
+.bouton:hover:not(:disabled) {
+  background: var(--ls-primary-hover);
+  border-color: var(--ls-primary-hover);
+}
+
+.bouton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.horsPerimetre {
+  margin-block-start: var(--ls-space-6);
+  padding-block-start: var(--ls-space-5);
+  border-block-start: 1px solid var(--ls-border);
+}
+
+/* @bordure-decorative un filet de separation entre deux sections, jamais la
+   limite d'un controle de saisie. */
+
+.titreSection {
+  font-size: 1.125rem;
+  color: var(--ls-text);
+  margin-block-end: var(--ls-space-3);
+}
+
+.definitions {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-3);
+}
+
+.definition dt {
+  font-weight: 600;
+  color: var(--ls-text);
+}
+
+.definition dd {
+  margin: 0;
+  color: var(--ls-text);
+  line-height: 1.5;
+}
+
+@media (min-width: 48rem) {
+  .definition {
+    display: grid;
+    grid-template-columns: 16rem 1fr;
+    gap: var(--ls-space-3);
+    align-items: baseline;
+  }
+}

@@ -32,7 +32,7 @@ import type { EvenementPaiement } from "@/integrations/stripe/evenements";
 let client: Client;
 let passerCommande: typeof import("@/services/commande").passerCommande;
 let lireComptages: typeof import("@/services/tableau-bord").lireComptages;
-let SEUIL_STOCK_FAIBLE: typeof import("@/services/tableau-bord").SEUIL_STOCK_FAIBLE;
+let SEUIL_STOCK_FAIBLE_PAR_DEFAUT: typeof import("@/services/tableau-bord").SEUIL_STOCK_FAIBLE_PAR_DEFAUT;
 let traiterEvenementPaiement: typeof import("@/services/webhook-paiement").traiterEvenementPaiement;
 
 const SAISIE_DOMICILE = {
@@ -112,7 +112,7 @@ beforeAll(async () => {
   await client.connect();
 
   ({ passerCommande } = await import("@/services/commande"));
-  ({ lireComptages, SEUIL_STOCK_FAIBLE } =
+  ({ lireComptages, SEUIL_STOCK_FAIBLE_PAR_DEFAUT } =
     await import("@/services/tableau-bord"));
   ({ traiterEvenementPaiement } = await import("@/services/webhook-paiement"));
 });
@@ -222,7 +222,7 @@ describe("lireComptages, le stock", () => {
 
     const comptages = await lireComptages();
 
-    expect(SEUIL_STOCK_FAIBLE).toBe(1);
+    expect(SEUIL_STOCK_FAIBLE_PAR_DEFAUT).toBe(1);
     expect(comptages.variantesStockFaible).toBe(1);
     expect(comptages.variantesIndisponibles).toBe(0);
   });
