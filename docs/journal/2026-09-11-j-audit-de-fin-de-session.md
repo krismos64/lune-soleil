@@ -32,10 +32,14 @@ que pour le nombre. La phrase le dit désormais.
 l'ancien jeton », est tenu par le code mais **non exerçable**, aucun écran de
 renvoi d'invitation n'existant.
 
-**LS-85** est fusionnée et reste ouverte : son critère 5 demande une écoute
-humaine au lecteur d'écran, qu'aucun outil ne simule.
+**LS-85 a finalement été close** en fin de session, avec sa réserve écrite dans
+le ticket : son critère 5 demande une écoute humaine au lecteur d'écran, qu'aucun
+outil ne simule. Ce qui a été mesuré est l'**arbre d'accessibilité**, ce qui n'est
+pas la même chose : il dit ce que le lecteur d'écran a à disposition, jamais ce
+qu'il prononce. Clore en écrivant la réserve vaut mieux que laisser un ticket
+ouvert sur un geste que le code ne peut pas produire.
 
-Les fermer déclarerait vérifié ce qui ne l'a pas été.
+La fermer sans cette réserve aurait déclaré vérifié ce qui ne l'a pas été.
 
 ## Le motif de la journée, quatre fois
 
@@ -88,11 +92,22 @@ compte Jira                           175 sur 208, deux requêtes appariées
 
 ## État des tickets
 
-**Closes ce jour** : LS-77, LS-190, LS-165, LS-125.
-**Fusionnées, ouvertes sur un critère** : LS-61, LS-85.
-**En CI** : LS-109, LS-64, LS-32.
+**Closes ce jour** : LS-77, LS-190, LS-165, LS-125, LS-109, LS-85, LS-64, LS-32.
+**Fusionnée, ouverte sur un critère** : LS-61 seule.
+**En CI à la clôture** : LS-83, le ralentissement par compte visé.
+
+**Ce bloc s'était périmé dans la nuit**, et c'est le motif qu'il décrit lui-même :
+il annonçait LS-85 ouverte et trois stories « en CI » alors qu'elles étaient
+fusionnées depuis. Un journal périmé est pire qu'absent.
+
+**180 tickets terminés sur 208 hors epics**, relevés dans Jira en fin de session.
+Onze des vingt-huit ouverts attendent l'exploitante.
 
 ## Prochaine étape
 
-**LS-123**, les pages de contenu, ou **LS-98**, l'écran de paramètres
+**LS-83 a été livrée après cet audit**, et son journal propre est en
+`2026-09-11-k-ls83-ralentissement-par-compte.md` : la revue critique y a trouvé un
+défaut grave, `rate_limit` étant vidée sans filtre de clé par Better Auth.
+
+Ensuite, **LS-123** les pages de contenu, ou **LS-98** l'écran de paramètres
 commerciaux, qui demande un ADR préalable sur ce qui devient configurable.
