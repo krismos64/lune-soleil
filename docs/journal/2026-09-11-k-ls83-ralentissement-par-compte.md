@@ -163,5 +163,6 @@ d'application.
 
 ## Prochaine étape
 
-La fusion de #391 attend le contrôle vert. Rien ne reste sur le périmètre de la
+**#391 est fusionnée** sur `main`, sept commits de `ec42ae8` à `2515e02`, tous
+les contrôles verts. LS-83 est close. Rien ne reste sur le périmètre de la
 story.

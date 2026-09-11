@@ -238,8 +238,8 @@ pour chaque ligne concernée ce qui a été fait.
 
 | Si la story a touché | Alors mettre à jour |
 |---|---|
-| `prisma/schema.prisma` | `schema.sql`, les fichiers de contraintes, `verifier-schema.sh`, `MODELE-LOGIQUE.md`, `MODELE-CONCEPTUEL.md` si une règle numérotée change |
-| une règle de gestion numérotée | `MODELE-CONCEPTUEL.md`, la règle de `.claude/rules/` correspondante, et `verifier-schema.sh` qui doit l'exercer |
+| `prisma/schema.prisma` | `schema.sql`, les fichiers de contraintes, `prisma/sql-manuel/verifier-schema.sh`, `MODELE-LOGIQUE.md`, `MODELE-CONCEPTUEL.md` si une règle numérotée change |
+| une règle de gestion numérotée | `MODELE-CONCEPTUEL.md`, la règle de `.claude/rules/` correspondante, et `prisma/sql-manuel/verifier-schema.sh` qui doit l'exercer |
 | un ADR accepté | la table de `docs/REFERENCES.md`, et **ce que l'ADR périme** : descriptions de tickets, règles, documents d'architecture |
 | `src/app/` ou `src/components/` | `frontend-design.md` si l'ordre des blocs ou une source de donnée change |
 | une variable de configuration | `.env.example`, et le ticket qui porte la décision commerciale correspondante |

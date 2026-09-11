@@ -20,8 +20,9 @@ entre la règle et un ADR, l'ADR gagne, et tu signales l'écart.
 
 ### 1. Les défauts déjà survenus ici
 
-Ces trois-là sont passés en production de la documentation avant d'être trouvés.
-Les chercher en premier, ils reviennent.
+Ceux-là sont passés en production de la documentation avant d'être trouvés.
+Les chercher en premier, ils reviennent. **Le compte n'est pas écrit ici**, il
+disait « trois » quand deux motifs de plus ont été ajoutés le 11 septembre 2026.
 
 **Le seuil de texte large.** « Texte large ou gras » ne suffit pas : le seuil est
 **18,66 px en gras**, ou 24 px en graisse normale. En dessous, le rapport de
@@ -37,6 +38,20 @@ et les `switch` qui la consomment côté rendu.
 **Un champ d'état ajouté sans être porté partout.** Un drapeau ajouté au modèle
 doit entrer dans **toutes** les conditions d'accès et d'affichage, pas seulement
 celle de la story. Trois occurrences sur ce projet.
+
+**Un écran neuf que rien ne désigne**, C41 et C33. Un écran qu'aucun lien ne
+pointe est inatteignable autrement qu'en saisissant son URL, et **les tests de
+bout en bout ne le voient pas** : ils appellent `page.goto()` avec l'URL en dur.
+Huit écrans d'administration sont restés orphelins en LS-162, et
+`/compte/verification` côté boutique, dont le scénario même est « le message
+n'arrive pas ». Si la story ajoute un écran, cherche le lien qui y mène.
+
+**Une région live neuve sans nom accessible**, LS-85. Un changement annoncé par
+`role="status"` ou `aria-live` doit porter un nom quand la région est
+**autonome** : sans lui, deux régions d'une même page sont indiscernables dans
+l'arbre d'accessibilité, et `axe-core` ne le signale pas. **Une région visée par
+un `aria-describedby` n'en prend JAMAIS**, C39 : le label remplacerait le texte
+réel. Une région qui enveloppe son propre titre n'en a pas besoin non plus.
 
 ### 2. Les largeurs, et le débordement
 

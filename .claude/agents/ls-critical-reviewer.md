@@ -83,9 +83,17 @@ recalculés depuis le catalogue.
 
 ### 6. Transactions et pannes de fournisseur
 
-Vérifier que les six opérations critiques sont dans une transaction : réservation,
-traitement d'événement de paiement, attribution de numéro, remboursement avec
-avoir, vente externe avec contrôle de réservation, rattachement de commande.
+Vérifier que chaque opération critique est dans une transaction. **La liste fait
+foi dans `.claude/rules/database.md`, section « Transactions critiques », et ne
+se recopie pas ici** : elle disait « six » quand la règle en portait dix, donc
+quatre opérations n'étaient relues par personne, dont le **dépôt d'un avis** et
+la **suppression d'un compte**.
+
+Au 11 septembre 2026 elle en porte dix : création de commande, traitement
+d'événement de paiement, attribution de numéro, remboursement avec avoir, vente
+externe, rattachement de commande, dépôt d'avis, renvoi d'invitation, choix
+d'adresse par défaut, suppression de compte. **Relire la règle plutôt que cette
+phrase**, un compte recopié n'étant pas une mesure.
 
 Vérifier ce qui se passe si Stripe, l'email ou l'hébergeur de médias est
 indisponible. Un message de contact doit être persisté **avant** toute tentative

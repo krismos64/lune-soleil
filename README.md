@@ -30,7 +30,7 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 1, fondations | LS-2 | 0 | **close**, porte de sortie constatée le 13 août 2026 |
 | 2, catalogue et médias | LS-3 | 2 | LS-123 les pages de contenu et LS-145 la mesure de F-ADM-07 sur l'éditeur réel |
 | 3, panier et paiement | LS-4 | 1 | **LS-125 est close** le 11 septembre 2026, la frontière d'erreur publique. Reste LS-86, le récapitulatif avant paiement |
-| 4, factures et expédition | LS-5 | 4 | **LS-200, LS-131 et LS-216 sont closes**, l'API Sendcloud est raccordée, le suivi tourne toutes les heures et s'affiche en administration. **LS-218 crée l'étiquette par API**, développée, son critère 10 attend un envoi réel |
+| 4, factures et expédition | LS-5 | 4 | **LS-218 crée l'étiquette par API**, développée, son critère 10 attend un envoi réel. **LS-33** décide comment le site apprend qu'un colis est livré, **LS-35** porte l'e-reporting au 1er septembre 2027, **LS-98** l'écran de paramètres commerciaux. L'API Sendcloud est raccordée et le suivi tourne toutes les heures, LS-200, LS-131 et LS-216 closes |
 | 4bis, espace client et avis | LS-36 | 1 | **LS-77 et LS-190 sont closes** le 11 septembre 2026, le signalement d'un avis (article L111-7-2) et la frise d'étapes. Reste **LS-61** seule : les avis vérifiés sont livrés de l'invitation après livraison à l'affichage public, mais son critère 3 n'est pas exerçable faute d'écran de renvoi |
 | 5, rétractation et conformité | LS-6 | 0 | **close**, ses huit stories terminées le 10 septembre 2026 |
 | 6, exploitation et ouverture | LS-7 | 5 | **LS-153 et LS-142 attendent l'exploitante**. LS-140 et LS-107 attendent les photographies de LS-23. Reste LS-150, la visibilité dans les moteurs de réponse. **LS-175 est close** depuis le 10 septembre 2026, le compte d'administration existe |
@@ -144,7 +144,12 @@ donne l'état du projet plus vite que Jira.
 ### Porte de sortie de la phase 1, constatée le 13 août 2026
 
 Les quatre termes exigés par LS-2, vérifiés **sur un clone neuf** dans un
-répertoire vierge et non sur la machine de développement, LS-75 :
+répertoire vierge et non sur la machine de développement, LS-75.
+
+**Les nombres de ce tableau sont ceux CONSTATÉS le 13 août 2026**, jour de la
+porte de sortie, et ils ne se mettent pas à jour : ils attestent d'une mesure
+faite ce jour-là. Le dépôt porte 38 tables au 11 septembre 2026. Pour l'état
+courant, lancer `npm run db:verifier`, qui compte plutôt qu'il n'affirme.
 
 | Terme | Preuve |
 |---|---|
@@ -229,7 +234,9 @@ la mention de l'article 293 B. Aucune `AlerteCritique`.
 **Le document PDF suit depuis LS-129**, livrée le 1er septembre 2026 : une
 facture émise produit son fichier après le commit du webhook, et un échec de
 rendu laisse `chemin_pdf` nul en levant une alerte plutôt qu'en annulant le
-paiement. Le **téléchargement** par le client reste à écrire, LS-57 et LS-132.
+paiement. **Le téléchargement par le client est livré**, LS-57 et LS-132 closes :
+`compte/commandes/[id]/facture/route.ts` pour un client connecté, et
+`facture/[jeton]/route.ts` par lien signé expirant pour un achat sans compte.
 
 ## Documentation
 
