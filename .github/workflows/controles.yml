@@ -910,6 +910,22 @@ jobs:
       - name: 9s. Chaque ecran d'administration est navigable
         run: ./scripts/verifier-navigation-administration.sh
 
+      # LE MEME DEFAUT, COTE BOUTIQUE, LS-165. Il s'est produit deux fois sur ce
+      # projet et aucun test ne l'a signale : huit ecrans d'administration en
+      # LS-162, et `/compte/verification` trouve par la revue de LS-54, dont le
+      # scenario meme est « le message n'arrive pas », donc le retour.
+      #
+      # LA BOUTIQUE N'A PAS DE BARRE PERMANENTE et ne doit pas en avoir : ses
+      # chemins sont contextuels. Le controle cherche donc, pour chaque route
+      # servie, AU MOINS UN lien qui la designe, dans les deux sens.
+      #
+      # IL A TROUVE DEUX DEFAUTS REELS A SA PREMIERE EXECUTION, dont six
+      # occurrences de lien vers `/notre-univers`, page non livree qui rend 404,
+      # une depuis l'en-tete de TOUTES les pages publiques. Le journal du
+      # 3 septembre 2026 en annonçait trois.
+      - name: 9s quater. Chaque ecran de la boutique est atteignable
+        run: ./scripts/verifier-atteignabilite-boutique.sh
+
       # C40 : UN LIEN VERS UNE ROUTE `force-dynamic` DESACTIVE LE PRECHARGEMENT.
       #
       # `<Link>` precharge par defaut et `staleTimes.dynamic` vaut zero : la
