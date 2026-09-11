@@ -77,9 +77,20 @@ afterAll(async () => {
   await client.end();
 });
 
+/*
+ * `compteur_compte_vise` FIGURE ICI DEPUIS LS-83, et son absence a fait rougir
+ * ce fichier UNIQUEMENT en suite complete. La base d'integration est partagee :
+ * les tests de ralentissement y laissaient trois empreintes, que ce fichier
+ * comptait ensuite comme les siennes.
+ *
+ * TOUTE TABLE QU'UN TEST D'ICI ASSERTIONNE DOIT ETRE DANS CETTE LISTE. Un
+ * fichier qui passe seul et echoue en suite est le symptome exact d'un oubli
+ * a cet endroit, et le diagnostic coute cher parce que la cause est dans un
+ * AUTRE fichier.
+ */
 afterEach(async () => {
   await client.query(
-    "TRUNCATE journal_connexion, journal_audit, rate_limit, envoi_en_attente, message CASCADE",
+    "TRUNCATE journal_connexion, journal_audit, rate_limit, compteur_compte_vise, envoi_en_attente, message CASCADE",
   );
 });
 
