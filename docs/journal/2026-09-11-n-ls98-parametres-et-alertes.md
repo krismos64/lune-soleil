@@ -188,8 +188,60 @@ automatiquement.** Il était cassé depuis le renommage de la rubrique Stocks, e
 personne ne l'a vu : ni la CI ni les contrôles de CONTRIBUTING ne l'appellent.
 Le même risque pèse sur les autres scripts de mutation.
 
+## Audit de véracité demandé en fin de session
+
+Christophe a demandé de vérifier que toute la documentation dise vrai avant de
+quitter la session. Deux passes, README et `docs/`, puis `CLAUDE.md` et
+`.claude/`. **Onze affirmations périmées**, PR #402.
+
+**Aucune n'a été trouvée par les contrôles automatiques**, et c'est structurel :
+ils vérifient ce qui est mécanique, longueur d'un fichier, ADR absent d'une
+table, renvoi mort. Ils ne lisent pas une affirmation au présent.
+
+### Les trois plus graves
+
+| Fichier | Écrit | Réalité |
+|---|---|---|
+| `securite.md` | « `PARAMETRES_BOUTIQUE` reste la seule famille sans action » | les quatre sont couvertes |
+| `securite.md` | table de **quatre** actions sensibles | il y en a **cinq** |
+| `PROTOTYPE.md` | « Paramètres \| LS-98 \| à faire » | l'écran est livré |
+
+Le premier est le plus sérieux : c'est le fichier qui gouverne les gardes, et la
+règle qui **prescrit de relire** `familles-sans-action.txt` est celle qui ne
+l'avait pas été.
+
+### Trois comptes périmés le jour même où ils étaient écrits
+
+`MODELE-LOGIQUE.md` disait « 38 tables et 40 clés au 11 septembre » pour 39 et
+41, **dans le paragraphe qui existe pour dénoncer les comptes périmés**.
+`frontend-design.md` disait « quatorze rubriques » avec la mention « compte à
+relever plutôt qu'à recopier » juste à côté. Le README annonçait 388 et 482
+tests pour 634 et 918.
+
+**Les trois sont retirés plutôt que corrigés** : un compte cité en exemple
+vieillit exactement comme celui qu'il corrige.
+
+### Ce qui manquait
+
+`ParametreBoutique` absente de `database.md` et `MODELE-LOGIQUE.md`, les deux
+services neufs sans point d'entrée documentaire, ADR-035 non passé en
+« partiellement remplacé », et les variables `AI_*` encore dans `.env.example`
+alors qu'ADR-044 annule la fonction.
+
 ## Prochaine étape
 
-La PR #401 attend son contrôle vert. Restent ouvertes les stories qui dépendent
-de l'exploitante, epic LS-22, et les critères de LS-107 et LS-140 qui attendent
-les photographies de LS-23.
+**Trois tickets sont faisables** sans dépendre de l'exploitante, classés par
+valeur :
+
+| Ticket | Ce qu'il porte |
+|---|---|
+| **LS-145** | mesurer F-ADM-07 au chronomètre, cible jamais mesurée depuis LS-15 |
+| **LS-150** | arbitrer la visibilité dans les moteurs de réponse, produirait un ADR |
+| **LS-35** | e-reporting, dont la date d'imputation reste un point ouvert |
+
+**LS-33 et LS-218 sont à écarter malgré les apparences** : le premier ne garde
+que la souscription commerciale Mondial Relay, le second attend un envoi réel
+dont le tarif facturé soit relevé.
+
+Restent bloquées sur les photographies de LS-23 : LS-107 critères 4 et 6,
+LS-140 critère 1, LS-123 pour `/notre-univers`.
