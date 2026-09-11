@@ -135,7 +135,13 @@ function decalageParis(instant: Date): number {
  * vigueur a l'instant obtenu. Sans cette reprise, le 27 octobre a 2 h du matin
  * tomberait une heure a cote.
  */
-function minuitAParis(annee: number, mois: number, jour: number): Date {
+/**
+ * EXPORTEE DEPUIS LS-64, qui en a besoin pour ses propres periodes. Elle etait
+ * privee tant que ce module servait un seul ecran : le jour ou un second en a
+ * eu besoin, la partager valait mieux que de recopier le calcul de decalage,
+ * qui est la partie delicate.
+ */
+export function minuitAParis(annee: number, mois: number, jour: number): Date {
   const naif = Date.UTC(annee, mois - 1, jour, 0, 0, 0);
   const premier = new Date(naif - decalageParis(new Date(naif)) * 60_000);
 
@@ -187,4 +193,106 @@ export function bornesDePeriode(
     depuis: minuitAParis(annee, mois - 1, 1),
     jusqua: new Date(minuitAParis(annee, mois, 1).getTime() - 1),
   };
+}
+
+/**
+ * Les cinq periodes des statistiques, LS-64.
+ *
+ * ELLES NE SE CONFONDENT PAS AVEC `PERIODES` CI-DESSUS, et la distinction vaut
+ * d'etre dite : celles-la servent la comptabilite, LS-184, qui raisonne en mois
+ * clos ; celles-ci servent le pilotage, qui raisonne en « depuis le debut de ».
+ * Les fondre obligerait un ecran a afficher des choix qui n'ont pas de sens
+ * pour lui.
+ *
+ * ELLES PARTAGENT LE MEME CALCUL DE FUSEAU, `minuitAParis`, et c'est tout
+ * l'interet de les poser ici plutot que dans un second module : le decalage de
+ * Paris se calcule a un seul endroit, et un passage a l'heure d'hiver ne peut
+ * pas etre juste d'un cote et faux de l'autre.
+ */
+export const PERIODES_STATISTIQUES = [
+  { valeur: "jour", libelle: "Aujourd'hui" },
+  { valeur: "semaine", libelle: "Cette semaine" },
+  { valeur: "mois", libelle: "Ce mois-ci" },
+  { valeur: "annee", libelle: "Cette année" },
+] as const;
+
+export type ValeurPeriodeStatistique =
+  (typeof PERIODES_STATISTIQUES)[number]["valeur"];
+
+export const PERIODE_STATISTIQUE_PAR_DEFAUT: ValeurPeriodeStatistique = "mois";
+
+/** Reconnait la valeur venue de l'URL, ou rend celle par defaut. */
+export function reconnaitrePeriodeStatistique(
+  valeur: string | undefined,
+): ValeurPeriodeStatistique {
+  const trouvee = PERIODES_STATISTIQUES.find(
+    (periode) => periode.valeur === valeur,
+  );
+
+  return trouvee?.valeur ?? PERIODE_STATISTIQUE_PAR_DEFAUT;
+}
+
+/**
+ * Les deux instants qui bornent une periode statistique.
+ *
+ * LES BORNES SONT INCLUSIVE A GAUCHE, EXCLUSIVE A DROITE, a la difference de
+ * `bornesDePeriode` qui rend une borne haute inclusive. La nuance n'est pas
+ * cosmetique : le repository des statistiques filtre en `<` strict, celui de la
+ * comptabilite en `lte`. Rendre la meme forme aux deux ferait compter deux fois
+ * une vente conclue exactement a minuit, ou en perdre une.
+ *
+ * LA BORNE HAUTE EST MINUIT DU JOUR SUIVANT, jamais « maintenant » : une courbe
+ * dont le dernier point s'arrete a l'heure courante se lirait comme une chute
+ * d'activite en fin de journee.
+ *
+ * LA SEMAINE COMMENCE LE LUNDI, convention francaise et non celle de
+ * `getDay()`, ou dimanche vaut zero. Le calcul ramene donc dimanche a sept.
+ *
+ * `maintenant` EST UN PARAMETRE, jamais `new Date()` lu au fond de la
+ * fonction : c'est ce qui rend « cette semaine » testable sans attendre lundi.
+ */
+export function bornesPeriodeStatistique(
+  valeur: ValeurPeriodeStatistique,
+  maintenant: Date = new Date(),
+): { debut: Date; fin: Date } {
+  const { annee, mois, jour } = composantsAParis(maintenant);
+
+  const demain = minuitAParis(annee, mois, jour + 1);
+
+  if (valeur === "jour") {
+    return { debut: minuitAParis(annee, mois, jour), fin: demain };
+  }
+
+  if (valeur === "semaine") {
+    /*
+     * LE JOUR DE LA SEMAINE SE LIT A PARIS, jamais sur le serveur. Un
+     * conteneur en UTC un dimanche a 23 h heure francaise serait encore
+     * samedi pour `getDay()`, et la semaine commencerait un jour trop tot.
+     */
+    const nomJour = new Intl.DateTimeFormat("en-US", {
+      timeZone: FUSEAU,
+      weekday: "short",
+    }).format(maintenant);
+
+    const rangs: Record<string, number> = {
+      Mon: 0,
+      Tue: 1,
+      Wed: 2,
+      Thu: 3,
+      Fri: 4,
+      Sat: 5,
+      Sun: 6,
+    };
+
+    return {
+      debut: minuitAParis(annee, mois, jour - (rangs[nomJour] ?? 0)),
+      fin: demain,
+    };
+  }
+
+  if (valeur === "mois") {
+    return { debut: minuitAParis(annee, mois, 1), fin: demain };
+  }
+
+  return { debut: minuitAParis(annee, 1, 1), fin: demain };
 }

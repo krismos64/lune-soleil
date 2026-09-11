@@ -1,0 +1,200 @@
+/*
+ * Page Statistiques de l'administration, LS-64.
+ *
+ * CONCU A PARTIR DE 320 px, puis elargi. Les media queries montent, elles ne
+ * descendent jamais : ce qui est ecrit hors requete est ce que voit le plus
+ * petit ecran.
+ *
+ * DES CARTES ET NON UN TABLEAU, meme choix que les autres ecrans. Un tableau de
+ * chiffres a 320 px force un defilement horizontal, et le back-office adopte
+ * cartes et listes quand un tableau devient illisible sur mobile.
+ *
+ * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons de `tokens.css`.
+ *
+ * LE CONTRASTE DEPEND DU FOND, C31 : `--ls-text-muted` donne 4,86:1 sur creme
+ * mais 4,35:1 sur sable, sous le seuil AA. Les blocs a fond sable emploient donc
+ * `--ls-text`, jamais le jeton attenue.
+ */
+
+.page {
+  padding: var(--ls-space-4);
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+/* ZONE TACTILE DE 44 px, meme motif que les ecrans voisins. */
+.retour {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  margin-bottom: var(--ls-space-3);
+  color: var(--ls-accent-gold-deep);
+  text-decoration: underline;
+}
+
+.titre {
+  margin: 0 0 var(--ls-space-4);
+  color: var(--ls-primary);
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  font-weight: 600;
+}
+
+/*
+ * LES FILTRES SE REPLIENT A 320 px. Quatre cibles de 44 px cote a cote font
+ * 176 px plus leurs ecarts, ce qui tiendrait, mais leurs libelles non :
+ * « Aujourd'hui » et « Cette année » depassent largement. Le repliement est la
+ * garantie, pas la marge.
+ */
+.filtres {
+  margin-bottom: var(--ls-space-5);
+}
+
+.listeFiltres {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ls-space-2);
+}
+
+/*
+ * `--ls-border-controle` ET NON `--ls-border`, regle C36. Ces liens sont des
+ * controles de filtre : leur fond vaut celui de la page, donc leur bordure est
+ * le seul indice de leur presence, et le jeton decoratif donne 1,57:1.
+ */
+.filtre {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  padding: 0 var(--ls-space-3);
+  border: 1px solid var(--ls-border-controle);
+  border-radius: var(--ls-radius-md);
+  color: var(--ls-text);
+  text-decoration: none;
+}
+
+/*
+ * LE FILTRE COURANT S'ANCRE SUR `aria-current`, jamais sur une classe. Deux
+ * sources distinctes finiraient par designer des filtres differents, sans que
+ * rien ne rende l'ecart visible : meme regle que la barre d'administration.
+ */
+.filtre[aria-current="page"] {
+  background: var(--ls-primary);
+  border-color: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  font-weight: 600;
+}
+
+.filtre:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+.section {
+  margin-bottom: var(--ls-space-6);
+}
+
+.titreSection {
+  margin: 0 0 var(--ls-space-3);
+  color: var(--ls-primary);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+/* FOND SABLE, DONC `--ls-text`, voir l'en-tete de ce fichier. */
+.vide {
+  margin: 0;
+  padding: var(--ls-space-4);
+  background: var(--ls-surface-sand);
+  border-radius: var(--ls-radius-md);
+  color: var(--ls-text);
+  line-height: 1.6;
+}
+
+/*
+ * UNE COLONNE A 320 px, puis autant que la place le permet. `auto-fit` et
+ * `minmax` evitent une media query : la grille s'adapte a la largeur reelle
+ * plutot qu'a des seuils devines.
+ */
+.cartes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--ls-space-3);
+  margin: 0;
+}
+
+.carte {
+  padding: var(--ls-space-4);
+  background: var(--ls-surface);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+}
+
+.etiquette {
+  margin: 0 0 var(--ls-space-1);
+  color: var(--ls-text-muted);
+  font-size: 0.9375rem;
+}
+
+.valeur {
+  margin: 0;
+  color: var(--ls-primary);
+  font-size: 1.5rem;
+  font-weight: 600;
+  /*
+   * UN MONTANT LONG SE COUPE PLUTOT QUE DE DEBORDER. « 1 234 567,89 € » sur une
+   * carte de 14 rem tient, mais rien ne borne ce que l'activite produira.
+   */
+  overflow-wrap: anywhere;
+}
+
+/*
+ * LE NET NEGATIF SE DISTINGUE, MAIS JAMAIS PAR LA COULEUR SEULE, WCAG 1.4.1 :
+ * le signe moins est deja dans le montant formate, et cette classe ne fait que
+ * le renforcer. `--ls-error` donne 4,85:1 sur blanc, conforme AA.
+ */
+.valeurNegative {
+  color: var(--ls-error);
+}
+
+.precision {
+  margin: var(--ls-space-1) 0 0;
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-2);
+}
+
+.ligne {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--ls-space-2);
+  padding: var(--ls-space-3);
+  background: var(--ls-surface);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+}
+
+/*
+ * LE LIBELLE VIENT DU CATALOGUE, donc d'un texte que le site ne choisit pas :
+ * il se coupe plutot que de deborder a 320 px, cas que la regle mobile first
+ * nomme explicitement.
+ */
+.libellePiece {
+  overflow-wrap: anywhere;
+}
+
+.nombre {
+  color: var(--ls-text-muted);
+  white-space: nowrap;
+}

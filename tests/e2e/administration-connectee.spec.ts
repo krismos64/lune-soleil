@@ -194,6 +194,19 @@ const ECRANS = [
     chemin: "/administration/avis",
     titre: "Avis",
   },
+  /*
+   * LA RUBRIQUE STATISTIQUES, LS-64. Elle est mesuree sur la fixture de bout en
+   * bout, qui porte des commandes payees : l'ecran rend donc ses cartes et non
+   * son etat vide.
+   *
+   * LE DEBORDEMENT S'Y JOUE SUR LES MONTANTS ET LES FILTRES. Quatre filtres de
+   * 44 px se replient a 320 px, et une carte de 14 rem porte un montant formate
+   * dont rien ne borne la longueur : les deux se mesurent ici plutot qu'a l'oeil.
+   */
+  {
+    chemin: "/administration/statistiques",
+    titre: "Statistiques",
+  },
 ] as const;
 
 for (const ecran of ECRANS) {
