@@ -145,6 +145,43 @@ export async function marquerEchoue(
  * LE SEUIL SE COMPTE EN SECONDES ET SE PASSE EN PARAMETRE plutot que d'etre
  * fige ici : c'est une decision d'exploitation, elle appartient au service.
  */
+/**
+ * Dit si une commande porte deja une intention ACTIVE pour ce modele. LS-61.
+ *
+ * POURQUOI CETTE LECTURE EXISTE, ET C'EST UN PIEGE MESURE le 11 septembre
+ * 2026. `deposerEnvoi` attrape le P2002 d'`envoi_en_attente_actif_unique` et se
+ * tait, ce qui convient a un appelant qui depose et s'en va. Mais PostgreSQL a
+ * deja AVORTE la transaction au moment de la violation : tout ce qui precede
+ * dans la meme transaction est perdu au `COMMIT`, et Prisma ne leve rien.
+ *
+ * MESURE PAR SONDE : deux tables, une insertion valide puis un doublon avale
+ * dans la meme transaction, resultat ZERO ligne ecrite. Un appelant qui ecrit
+ * AVANT de deposer son intention croit donc avoir agi alors que rien n'a bouge,
+ * et rend un succes mensonger.
+ *
+ * L'APPELANT QUI ECRIT AVANT DOIT DONC REFUSER EN AMONT, hors transaction,
+ * plutot que de compter sur le silence de `deposerEnvoi`.
+ *
+ * LE FILTRE EST CELUI DE LA CLE, `EN_ATTENTE` et `ENVOI_EN_COURS` : une ligne
+ * `ENVOYE` n'occupe plus la cle et n'empeche aucun renvoi, ce qui est
+ * exactement le renvoi manuel de la regle E6.
+ */
+export async function intentionActiveExiste(
+  client: ClientBase,
+  parametres: { commandeId: string; modele: string },
+): Promise<boolean> {
+  const ligne = await client.envoiEnAttente.findFirst({
+    where: {
+      commandeId: parametres.commandeId,
+      modele: parametres.modele,
+      statut: { in: [StatutEnvoi.EN_ATTENTE, StatutEnvoi.ENVOI_EN_COURS] },
+    },
+    select: { id: true },
+  });
+
+  return ligne !== null;
+}
+
 export async function envoisBloques(
   client: ClientBase,
   delaiGardeSecondes: number,

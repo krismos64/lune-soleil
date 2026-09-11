@@ -45,6 +45,7 @@ let listerAvisAModerer: typeof import("@/services/avis").listerAvisAModerer;
 let signalerAvis: typeof import("@/services/avis").signalerAvis;
 let listerSignalementsAExaminer: typeof import("@/services/avis").listerSignalementsAExaminer;
 let cloturerSignalementAvis: typeof import("@/services/avis").cloturerSignalementAvis;
+let renvoyerInvitation: typeof import("@/services/avis").renvoyerInvitation;
 let engendrerJeton: typeof import("@/lib/jeton-acces").engendrerJeton;
 let empreinteJeton: typeof import("@/lib/jeton-acces").empreinteJeton;
 
@@ -178,9 +179,16 @@ async function marquerExpediee(commandeId: string): Promise<void> {
  * fait de ce test un test du parcours et non de la mecanique.
  */
 async function valeurJetonDeCommande(commandeId: string): Promise<string> {
+  /*
+   * LA PLUS RECENTE, ET CE N'EST PAS COSMETIQUE depuis le renvoi de LS-61 :
+   * une commande relancee porte DEUX intentions, l'ancienne passee a ENVOYE et
+   * la neuve. Sans `ORDER BY`, PostgreSQL rend un ordre indetermine et le test
+   * lisait l'ancien lien, donc un jeton deja revoque.
+   */
   const { rows } = await client.query<{ variables: { lien: string } }>(
     `SELECT variables FROM envoi_en_attente
-     WHERE commande_id = $1 AND modele = 'invitation-avis'`,
+     WHERE commande_id = $1 AND modele = 'invitation-avis'
+     ORDER BY cree_a DESC LIMIT 1`,
     [commandeId],
   );
 
@@ -262,6 +270,7 @@ beforeAll(async () => {
     signalerAvis,
     listerSignalementsAExaminer,
     cloturerSignalementAvis,
+    renvoyerInvitation,
   } = await import("@/services/avis"));
   ({ engendrerJeton, empreinteJeton } = await import("@/lib/jeton-acces"));
 });
@@ -291,6 +300,24 @@ afterEach(async () => {
   await client.query("DELETE FROM historique_statut");
   await client.query("DELETE FROM ligne_commande");
   await client.query("DELETE FROM commande");
+
+  /*
+   * LE COMPTEUR DE NUMEROS, ET SON ABSENCE ICI ETAIT UN TROU PREEXISTANT.
+   *
+   * La base d'integration est PARTAGEE entre fichiers. Chaque commande creee
+   * ici consomme un rang de la sequence `COMMANDE`, et `avoir.sequential`
+   * assere `A-2026-0001` et `F-2026-0001`, donc suppose un compteur VIERGE.
+   * Selon l'ordre d'execution, il obtenait `0002` et rougissait.
+   *
+   * L'ECHEC ETAIT INTERMITTENT, ce qui le rend plus couteux qu'un echec franc :
+   * il depend de l'ordre des fichiers, et le diagnostic porte sur un fichier
+   * AUTRE que celui qui rougit. Mesure le 11 septembre 2026, une execution sur
+   * deux.
+   *
+   * TOUTE TABLE QU'UN TEST CONSOMME DOIT FIGURER ICI, meme quand aucune
+   * assertion de ce fichier ne la lit.
+   */
+  await client.query("DELETE FROM compteur_numero");
 });
 
 describe("invitation apres livraison, critere 1", () => {
@@ -1374,5 +1401,297 @@ describe("signalement d'un avis, LS-77, article L111-7-2", () => {
       premiere[0]!.examine_a.toISOString(),
     );
     expect(seconde[0]!.suite_donnee).toBe("Achat vérifié.");
+  });
+});
+
+/**
+ * Le renvoi d'invitation, critère 3 de LS-61 exercé par le VRAI GESTE.
+ *
+ * CE QUE CE BLOC FERME. Le bloc « jeton revoque » ci-dessus révoque le jeton
+ * directement en base, par un `UPDATE`. Il prouve que le dépôt REFUSE un lien
+ * révoqué, jamais que quoi que ce soit sache le révoquer : le critère 3 était
+ * « tenu par le code, non exerçable », et le commentaire Jira le disait.
+ *
+ * CE QUE L'ABSENCE DE RENVOI COÛTAIT : une invitation partait UNE FOIS ET UNE
+ * SEULE. Un client qui perdait son email ne pouvait plus jamais déposer son
+ * avis, et rien ne permettait de lui en renvoyer un.
+ */
+describe("renvoi d'invitation, critere 3 par le vrai geste", () => {
+  it("revoque l'ancien jeton et en pose un neuf", async () => {
+    const { commandeId } = await commanderEtPayer();
+    await marquerLivree(commandeId);
+    await inviterApresLivraison();
+
+    const ancienne = await valeurJetonDeCommande(commandeId);
+
+    // L'INTENTION DU PREMIER ENVOI EST MARQUEE PARTIE, sans quoi le renvoi
+    // buterait sur `envoi_en_attente_actif_unique`, qui ne filtre que les
+    // statuts EN_ATTENTE et ENVOI_EN_COURS. C'est ce que fait le cycle
+    // d'expedition des emails en production.
+    await client.query(
+      `UPDATE envoi_en_attente SET statut = 'ENVOYE'
+       WHERE commande_id = $1 AND modele = 'invitation-avis'`,
+      [commandeId],
+    );
+
+    const issue = await renvoyerInvitation(commandeId);
+
+    expect(issue.statut).toBe("RENVOYEE");
+
+    // L'ANCIEN JETON EST REVOQUE, ET NON CONSOMME, regle L10 : un jeton
+    // revoque marque `utiliseA` ferait afficher « avis deja depose » a un
+    // client qui n'a rien depose.
+    const ancienJeton = await lireJetonDuLien(ancienne);
+
+    expect(ancienJeton.revoque_a).not.toBeNull();
+    expect(ancienJeton.utilise_a).toBeNull();
+
+    // LE NOUVEAU LIEN OUVRE L'ECRAN, c'est la propriete qui rend le renvoi
+    // utile : verifier la seule revocation prouverait qu'on a casse l'ancien
+    // lien sans prouver qu'on en a donne un qui marche.
+    const nouvelle = await valeurJetonDeCommande(commandeId);
+
+    expect(nouvelle).not.toBe(ancienne);
+
+    const etat = await lireEtatDepot(nouvelle);
+
+    expect(etat.statut).toBe("OUVERT");
+  });
+
+  it("regenere TOUS les jetons et pas seulement celui du lien", async () => {
+    /*
+     * LE POINT LE MOINS EVIDENT DE CETTE FONCTION. Le lien de l'email ne porte
+     * que le jeton de la PREMIERE ligne, mais les autres existent en base :
+     * n'en faire tourner qu'un les laisserait valides jusqu'a leur terme, ce
+     * que le point 8 de `database.md` interdit. Sur une boite partagee, un
+     * ancien lien deposerait un avis a la place de son destinataire.
+     */
+    const { commandeId } = await commanderEtPayer(2);
+    await marquerLivree(commandeId);
+    await inviterApresLivraison();
+
+    const { rows: avant } = await client.query<{ id: string }>(
+      `SELECT id FROM jeton_acces
+       WHERE commande_id = $1 AND portee = 'AVIS'::"PorteeJeton"
+         AND revoque_a IS NULL`,
+      [commandeId],
+    );
+
+    expect(avant.length).toBe(2);
+
+    await client.query(
+      `UPDATE envoi_en_attente SET statut = 'ENVOYE'
+       WHERE commande_id = $1 AND modele = 'invitation-avis'`,
+      [commandeId],
+    );
+
+    await renvoyerInvitation(commandeId);
+
+    const { rows: revoques } = await client.query<{ nombre: string }>(
+      `SELECT count(*)::text AS nombre FROM jeton_acces
+       WHERE commande_id = $1 AND portee = 'AVIS'::"PorteeJeton"
+         AND revoque_a IS NOT NULL`,
+      [commandeId],
+    );
+
+    // LES DEUX ANCIENS SONT REVOQUES, pas un seul.
+    expect(Number(revoques[0]!.nombre)).toBe(2);
+
+    const { rows: actifs } = await client.query<{ nombre: string }>(
+      `SELECT count(*)::text AS nombre FROM jeton_acces
+       WHERE commande_id = $1 AND portee = 'AVIS'::"PorteeJeton"
+         AND revoque_a IS NULL`,
+      [commandeId],
+    );
+
+    expect(Number(actifs[0]!.nombre)).toBe(2);
+  });
+
+  it("compte les tentatives et refuse au-dela du plafond", async () => {
+    /*
+     * LE PLAFOND BORNE UNE ERREUR DE MANIPULATION, pas une attaque : le geste
+     * est reserve a l'exploitante, authentifiee et seule. Il existe parce que
+     * chaque renvoi consomme le quota SMTP de l'offre MX Plan, ADR-008.
+     */
+    const { commandeId } = await commanderEtPayer();
+    await marquerLivree(commandeId);
+    await inviterApresLivraison();
+
+    const libererLaCle = async () =>
+      client.query(
+        `UPDATE envoi_en_attente SET statut = 'ENVOYE'
+         WHERE commande_id = $1 AND modele = 'invitation-avis'`,
+        [commandeId],
+      );
+
+    await libererLaCle();
+    const premier = await renvoyerInvitation(commandeId);
+
+    expect(premier).toEqual({ statut: "RENVOYEE", nombreEnvois: 2 });
+
+    await libererLaCle();
+    const second = await renvoyerInvitation(commandeId);
+
+    expect(second).toEqual({ statut: "RENVOYEE", nombreEnvois: 3 });
+
+    // LE TROISIEME RENVOI EST REFUSE : l'envoi initial compte pour un, donc
+    // deux renvois seulement.
+    await libererLaCle();
+    const troisieme = await renvoyerInvitation(commandeId);
+
+    expect(troisieme.statut).toBe("REFUSE_PLAFOND");
+  });
+
+  it("refuse de relancer une commande deja entierement notee", async () => {
+    /*
+     * LE CLIENT RECEVRAIT UN LIEN QUI LUI DIRAIT « avis deja depose » : une
+     * relance pour rien, et un message deroutant.
+     */
+    const { commandeId } = await commanderEtPayer();
+    await marquerLivree(commandeId);
+    await inviterApresLivraison();
+
+    const valeur = await valeurJetonDeCommande(commandeId);
+    const etat = await lireEtatDepot(valeur);
+
+    if (etat.statut !== "OUVERT") {
+      throw new Error("L'etat de depot attendu est OUVERT");
+    }
+
+    await deposerAvis(
+      valeur,
+      etat.pieces.map((piece) => ({
+        ligneCommandeId: piece.ligneCommandeId,
+        note: 5,
+        commentaire: null,
+      })),
+    );
+
+    expect(await compterAvis(commandeId)).toBe(1);
+
+    const issue = await renvoyerInvitation(commandeId);
+
+    expect(issue.statut).toBe("REFUSE_DEJA_NOTEE");
+  });
+
+  it("renseigne dernierEnvoiA, quatrieme ecriture du point 8", async () => {
+    /*
+     * ELLE N'ETAIT PROUVEE PAR AUCUN TEST, trouve en revue critique : la
+     * remplacer par un `void` laissait les 43 tests verts. Le champ distingue
+     * une invitation CREEE d'une invitation PARTIE.
+     *
+     * L'ASSERTION COMPARE A LA VALEUR D'AVANT, et non a « non nul » : le
+     * premier envoi l'a deja renseignee, donc un test qui verifierait seulement
+     * sa presence resterait vert sur une quatrieme ecriture disparue.
+     */
+    const { commandeId } = await commanderEtPayer();
+    await marquerLivree(commandeId);
+    await inviterApresLivraison();
+
+    await client.query(
+      `UPDATE envoi_en_attente SET statut = 'ENVOYE'
+       WHERE commande_id = $1 AND modele = 'invitation-avis'`,
+      [commandeId],
+    );
+
+    const lireDernierEnvoi = async (): Promise<Date | null> => {
+      const { rows } = await client.query<{ dernier_envoi_a: Date | null }>(
+        `SELECT i.dernier_envoi_a FROM invitation_avis i
+         JOIN ligne_commande l ON l.id = i.ligne_commande_id
+         WHERE l.commande_id = $1 ORDER BY i.cree_a ASC LIMIT 1`,
+        [commandeId],
+      );
+
+      return rows[0]!.dernier_envoi_a;
+    };
+
+    const avant = await lireDernierEnvoi();
+
+    expect(avant).not.toBeNull();
+
+    await renvoyerInvitation(commandeId);
+
+    const apres = await lireDernierEnvoi();
+
+    expect(apres).not.toBeNull();
+    expect(apres!.getTime()).toBeGreaterThan(avant!.getTime());
+  });
+
+  it("refuse un renvoi tant que le premier envoi n'est pas parti", async () => {
+    /*
+     * LE DEFAUT LE PLUS GRAVE TROUVE EN REVUE, et il ne se voyait pas a
+     * l'oeil. `deposerEnvoi` avale le P2002, mais PostgreSQL a deja AVORTE la
+     * transaction : les trois ecritures precedentes etaient perdues au COMMIT
+     * sans que rien ne leve, et le service rendait `RENVOYEE` sur une base
+     * INCHANGEE.
+     *
+     * L'INTENTION N'EST PAS MARQUEE ENVOYEE ICI, contrairement aux autres
+     * tests de ce bloc : c'est exactement la fenetre nominale d'une minute
+     * entre le depot de l'intention et le passage du cycle d'expedition.
+     */
+    const { commandeId } = await commanderEtPayer();
+    await marquerLivree(commandeId);
+    await inviterApresLivraison();
+
+    const avantRenvoi = await valeurJetonDeCommande(commandeId);
+
+    const issue = await renvoyerInvitation(commandeId);
+
+    expect(issue.statut).toBe("REFUSE_ENVOI_EN_COURS");
+
+    /*
+     * RIEN N'A BOUGE, et c'est l'assertion qui compte : un refus qui aurait
+     * quand meme revoque les jetons laisserait le client avec un email en
+     * partance portant un lien mort.
+     */
+    const jeton = await lireJetonDuLien(avantRenvoi);
+
+    expect(jeton.revoque_a).toBeNull();
+
+    const { rows } = await client.query<{ nombre: string }>(
+      `SELECT count(*)::text AS nombre FROM jeton_acces
+       WHERE commande_id = $1 AND portee = 'AVIS'::"PorteeJeton"`,
+      [commandeId],
+    );
+
+    expect(Number(rows[0]!.nombre)).toBe(1);
+  });
+
+  it("refuse une commande sans invitation", async () => {
+    // AUCUNE INVITATION N'EXISTE tant que la livraison n'est pas constatee :
+    // le renvoi ne doit pas en fabriquer une par la bande.
+    const { commandeId } = await commanderEtPayer();
+
+    const issue = await renvoyerInvitation(commandeId);
+
+    expect(issue.statut).toBe("REFUSE_INTROUVABLE");
+  });
+
+  it("n'ecrit aucune adresse email dans l'intention de renvoi", async () => {
+    /*
+     * INVARIANT 9, le depot est public. `destinataire` porte l'adresse par
+     * necessite, c'est la colonne qui sert a l'envoi ; les VARIABLES du modele
+     * ne doivent pas la redoubler, et le journal technique ne la voit jamais.
+     */
+    const { commandeId } = await commanderEtPayer();
+    await marquerLivree(commandeId);
+    await inviterApresLivraison();
+
+    await client.query(
+      `UPDATE envoi_en_attente SET statut = 'ENVOYE'
+       WHERE commande_id = $1 AND modele = 'invitation-avis'`,
+      [commandeId],
+    );
+
+    await renvoyerInvitation(commandeId);
+
+    const { rows } = await client.query<{ variables: Record<string, string> }>(
+      `SELECT variables FROM envoi_en_attente
+       WHERE commande_id = $1 AND modele = 'invitation-avis'
+       ORDER BY cree_a DESC LIMIT 1`,
+      [commandeId],
+    );
+
+    expect(JSON.stringify(rows[0]!.variables)).not.toContain("@");
   });
 });
