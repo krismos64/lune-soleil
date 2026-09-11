@@ -166,6 +166,17 @@ export const RUBRIQUES: readonly Rubrique[] = [
    * telephone.
    */
   { chemin: "/administration/passkeys", libelle: "Vos passkeys" },
+  /*
+   * LS-98 : « Parametres » quitte `RUBRIQUES_A_VENIR` et devient un lien,
+   * ADR-043 ayant fait passer les tarifs en base.
+   *
+   * ELLE FERME LA BARRE, comme dans le prototype : un reglage se consulte
+   * rarement, la ou les rubriques du haut portent le travail quotidien.
+   *
+   * CINQUIEME ET DERNIERE ENTREE A QUITTER LA LISTE DES RUBRIQUES A VENIR,
+   * apres Catalogue, Factures, Clients et Avis. Cette liste est desormais VIDE.
+   */
+  { chemin: "/administration/parametres", libelle: "Paramètres" },
 ] as const;
 
 /**
@@ -208,16 +219,30 @@ export const RUBRIQUES: readonly Rubrique[] = [
  * ecrites de memoire en premiere intention designaient des stories closes ou
  * hors sujet, et c'est la verification dans Jira qui l'a montre.
  */
-export const RUBRIQUES_A_VENIR = [
+export const RUBRIQUES_A_VENIR: readonly {
+  libelle: string;
+  ticket: string;
+}[] = [
   /*
-   * « Avis » A QUITTE CETTE LISTE le 10 septembre 2026, LS-61 etant livree.
-   * L'entree est retiree ET NON COMMENTEE : le test de bout en bout lit les
-   * entrees REELLEMENT rendues sous « Bientot disponible » et exige zero lien
-   * sur chacune. Une rubrique qui reste ici tout en devenant un lien fait donc
-   * rougir la suite, ce qui est exactement ce qui s'est produit. Quatrieme
-   * entree a quitter cette liste apres Catalogue, Factures et Clients.
+   * ------------------------------------------------------------------
+   * CETTE LISTE EST VIDE DEPUIS LE 11 SEPTEMBRE 2026, LS-98, et c'est la fin
+   * d'un dispositif plutot que son abandon.
+   *
+   * « Parametres » a ete la CINQUIEME et derniere entree a la quitter, apres
+   * Catalogue avec LS-183, Factures et avoirs avec LS-184, Clients avec LS-185
+   * et Avis avec LS-61. Les onze rubriques du prototype existent desormais.
+   *
+   * L'ARBITRAGE DU 4 SEPTEMBRE 2026 RESTE EN VIGUEUR : une rubrique non livree
+   * se montre INERTE plutot que de se cacher, la barre annonçant alors la
+   * structure complete de l'outil. Le jour ou une douzieme rubrique est
+   * decidee, son entree revient ici en attendant son ecran.
+   *
+   * UNE ENTREE SE RETIRE, ELLE NE SE COMMENTE PAS. Le test de bout en bout lit
+   * les entrees REELLEMENT rendues sous « Bientot disponible » et exige zero
+   * lien sur chacune : une rubrique laissee ici tout en devenant un lien fait
+   * rougir la suite, ce qui s'est produit avec Avis.
+   * ------------------------------------------------------------------
    */
-  { libelle: "Paramètres", ticket: "LS-98" },
 ] as const;
 
 /**
@@ -479,24 +504,38 @@ export function NavigationAdministration({
          * lecteur d'ecran, sans introduire de niveau de titre : c'est ce que
          * l'etiquette d'une liste dans une navigation deja nommee demande.
          */}
-        <div className={styles.aVenir}>
-          <p
-            className={styles.aVenirTitre}
-            id={`${identifiantPanneau}-a-venir`}
-          >
-            Bientôt disponible
-          </p>
-          <ul
-            className={styles.aVenirListe}
-            aria-labelledby={`${identifiantPanneau}-a-venir`}
-          >
-            {RUBRIQUES_A_VENIR.map((rubrique) => (
-              <li key={rubrique.libelle} className={styles.aVenirEntree}>
-                {rubrique.libelle}
-              </li>
-            ))}
-          </ul>
-        </div>
+        {/*
+         * LE BLOC NE SE REND PAS QUAND LA LISTE EST VIDE, LS-98.
+         *
+         * Elle l'est depuis que « Parametres » l'a quittee, et un titre
+         * « Bientot disponible » suivi de RIEN annoncerait une attente qui
+         * n'existe pas : un lecteur d'ecran entendrait une liste nommee et
+         * vide, et l'oeil un intitule orphelin.
+         *
+         * LE BLOC N'EST PAS SUPPRIME POUR AUTANT. L'arbitrage du 4 septembre
+         * 2026 reste en vigueur, et une douzieme rubrique decidee le fera
+         * reapparaitre sans qu'il faille le reecrire.
+         */}
+        {RUBRIQUES_A_VENIR.length > 0 && (
+          <div className={styles.aVenir}>
+            <p
+              className={styles.aVenirTitre}
+              id={`${identifiantPanneau}-a-venir`}
+            >
+              Bientôt disponible
+            </p>
+            <ul
+              className={styles.aVenirListe}
+              aria-labelledby={`${identifiantPanneau}-a-venir`}
+            >
+              {RUBRIQUES_A_VENIR.map((rubrique) => (
+                <li key={rubrique.libelle} className={styles.aVenirEntree}>
+                  {rubrique.libelle}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className={styles.identite}>
           <span className={styles.identiteInitiales} aria-hidden="true">

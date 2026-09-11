@@ -17,6 +17,10 @@
  * service est appele depuis des composants serveur deja gardes.
  */
 import { prisma } from "@/lib/prisma";
+import {
+  ParametresAbsentsError,
+  lireParametresBoutique,
+} from "@/services/parametres";
 import * as depot from "@/repositories/tableau-bord";
 
 export type ComptagesAdministration = depot.ComptagesAdministration;
@@ -29,12 +33,21 @@ export type ComptagesAdministration = depot.ComptagesAdministration;
  * un » est donc l'alerte utile, celle qui laisse le temps de refaire la piece
  * avant la rupture.
  *
- * CE SEUIL N'EST PAS PARAMETRABLE AUJOURD'HUI, et c'est deliberé. Le mettre en
- * base demanderait l'ecran de parametres commerciaux, qui est le sujet de
- * LS-98 : une constante nommee ici se deplace en une ligne le jour ou cet ecran
- * existe, une colonne posee trop tot devrait etre migree deux fois.
+ * IL EST PARAMETRABLE DEPUIS LE 11 SEPTEMBRE 2026, LS-98 et ADR-043. Le
+ * commentaire precedent annonçait ce jour : « une constante nommee ici se
+ * deplace en une ligne le jour ou cet ecran existe ». C'est ce qui a ete fait.
+ *
+ * LA CONSTANTE RESTE COMME VALEUR DE REPLI, et ce n'est pas une redondance.
+ * `lireComptages` est appelee par le LAYOUT, donc sur chaque navigation de
+ * l'administration : une lecture de parametres qui echoue y ferait tomber
+ * l'ecran entier, barre comprise, sur un comptage de pastille. Le repli rend la
+ * barre moins juste, jamais inutilisable.
+ *
+ * UN REPLI A 1 ET NON A ZERO : il signale trop, jamais trop peu. Un repli a
+ * zero eteindrait l'alerte de stock faible en silence, exactement le defaut que
+ * `chk_parametre_seuil_stock_positif` refuse en base.
  */
-export const SEUIL_STOCK_FAIBLE = 1;
+export const SEUIL_STOCK_FAIBLE_PAR_DEFAUT = 1;
 
 /**
  * Les comptages alimentant la barre laterale et les tuiles du tableau de bord.
@@ -43,5 +56,21 @@ export const SEUIL_STOCK_FAIBLE = 1;
  * pour la raison : la barre est rendue sur chaque navigation.
  */
 export async function lireComptages(): Promise<ComptagesAdministration> {
-  return depot.compterPourAdministration(prisma, SEUIL_STOCK_FAIBLE);
+  /*
+   * LE SEUIL VIENT DE LA BASE, ADR-043, ET SON ECHEC NE FAIT PAS TOMBER LA
+   * BARRE. Cette fonction est appelee par le layout : laisser remonter
+   * l'exception rendrait TOUTE l'administration inaccessible parce qu'une
+   * pastille ne sait pas quoi compter.
+   */
+  let seuil = SEUIL_STOCK_FAIBLE_PAR_DEFAUT;
+
+  try {
+    seuil = (await lireParametresBoutique()).seuilStockFaible;
+  } catch (erreur) {
+    if (!(erreur instanceof ParametresAbsentsError)) {
+      throw erreur;
+    }
+  }
+
+  return depot.compterPourAdministration(prisma, seuil);
 }

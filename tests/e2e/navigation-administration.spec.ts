@@ -74,6 +74,10 @@ const RUBRIQUES = [
   { libelle: "Statistiques", titre: "Statistiques" },
   { libelle: "Connexions", titre: "Journal des connexions" },
   { libelle: "Vos passkeys", titre: "Vos passkeys" },
+  /* LS-98 : « Paramètres » a quitté RUBRIQUES_A_VENIR, ADR-043. Le sens 5 du
+   * contrôle, ajouté le matin même, a refusé la rubrique tant qu'aucun test ne
+   * la cliquait : premier défaut réel qu'il attrape. */
+  { libelle: "Paramètres", titre: "Paramètres" },
 ] as const;
 
 /**
