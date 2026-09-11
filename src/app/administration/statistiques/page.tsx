@@ -262,8 +262,14 @@ async function Indicateurs({ periode }: { periode: ValeurPeriodeStatistique }) {
              */}
             <dt className={styles.etiquette}>Panier moyen web</dt>
             <dd className={styles.valeur}>
+              {/*
+               * « AUCUN » ET NON UN TIRET, arbitrage de LS-32. Le cadratin est
+               * interdit partout, et il servait ici d'etat vide : un lecteur
+               * d'ecran l'annonce « tiret cadratin » ou se tait selon le
+               * moteur, la ou le mot dit ce qu'il y a a comprendre.
+               */}
               {stats.panierMoyenWebCentimes === null
-                ? "—"
+                ? "Aucun"
                 : formaterMontant(stats.panierMoyenWebCentimes)}
             </dd>
             <dd className={styles.precision}>
