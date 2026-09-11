@@ -367,6 +367,47 @@ describe("ralentissement par compte visé", () => {
     expect(await lireCompteur(EMAIL_CIBLE)).toBe(5);
   });
 
+  it("ne gene pas un autre compte derriere la meme adresse IP", async () => {
+    /*
+     * CRITERE 3 DE LS-83, et c'est le versant qui protege les innocents. Une
+     * adresse IP partagee est le cas ORDINAIRE, pas le cas limite : un reseau
+     * d'entreprise, un operateur mobile, une borne publique. Si le compteur
+     * suivait l'origine, les echecs de quelqu'un ralentiraient son voisin.
+     *
+     * LA PROPRIETE EST STRUCTURELLE, la cle etant l'empreinte de l'adresse
+     * email et non de l'IP : c'est precisement l'inverse du mecanisme de
+     * Better Auth, qui lui compte par origine. Elle n'en a pas moins besoin
+     * d'un test, sans quoi un futur ajout de l'adresse IP a la cle, geste qui
+     * semblerait durcir la protection, passerait sans rien faire rougir.
+     */
+    await creerCompte(EMAIL_CIBLE);
+    await creerCompte("voisin@exemple.fr");
+
+    const partagee = "203.0.113.200";
+
+    for (let essai = 0; essai < 4; essai += 1) {
+      await tenterConnexion(EMAIL_CIBLE, "mauvais-mot-de-passe", partagee);
+    }
+
+    expect(await lireCompteur(EMAIL_CIBLE)).toBe(4);
+
+    // LE VOISIN PART DE ZERO malgre les quatre echecs venus de son adresse.
+    expect(await lireCompteur("voisin@exemple.fr")).toBeNull();
+
+    const debut = Date.now();
+
+    await tenterConnexion(
+      "voisin@exemple.fr",
+      "mauvais-mot-de-passe",
+      partagee,
+    );
+
+    // ET IL N'EST PAS RALENTI. Le compteur seul ne suffirait pas a le prouver :
+    // c'est le temps que la personne subit.
+    expect(Date.now() - debut).toBeLessThan(300);
+    expect(await lireCompteur("voisin@exemple.fr")).toBe(1);
+  });
+
   it("ne compte pas une saisie qui n'est pas une adresse", async () => {
     /*
      * LES SAISIES INFORMES NE PARTAGENT PAS UN COMPTEUR. Sans ce filtre, les
