@@ -31,16 +31,22 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 2, catalogue et médias | LS-3 | 5 | finitions d'interface et d'accessibilité, aucune bloquante |
 | 3, panier et paiement | LS-4 | 2 | LS-86 et LS-125, deux stories d'interface qui ne bloquent rien |
 | 4, factures et expédition | LS-5 | 3 | **LS-200, LS-131 et LS-216 sont closes**, l'API Sendcloud est raccordée, le suivi tourne toutes les heures et s'affiche en administration. **LS-218 crée l'étiquette par API**, développée, son critère 10 attend un envoi réel |
-| 4bis, espace client et avis | LS-36 | 3 | **LS-61 est développée et fusionnée** le 11 septembre 2026 : les avis vérifiés existent, de l'invitation après livraison à l'affichage public. Elle reste ouverte, son critère 3 n'étant pas exerçable faute d'écran de renvoi. **LS-77 est développée**, le signalement d'un avis, obligation de l'article L111-7-2. Reste **LS-190**, la frise d'étapes, débloquée par LS-58 |
+| 4bis, espace client et avis | LS-36 | 1 | **LS-77 et LS-190 sont closes** le 11 septembre 2026 : le signalement d'un avis, obligation de l'article L111-7-2, et la frise d'étapes du détail de commande. **LS-61 est fusionnée** et reste ouverte, son critère 3 n'étant pas exerçable faute d'écran de renvoi d'invitation |
 | 5, rétractation et conformité | LS-6 | 0 | **close**, ses huit stories terminées le 10 septembre 2026 |
 | 6, exploitation et ouverture | LS-7 | 5 | **LS-153 et LS-142 attendent l'exploitante**. LS-140 et LS-107 attendent les photographies de LS-23. Reste LS-150, la visibilité dans les moteurs de réponse. **LS-175 est close** depuis le 10 septembre 2026, le compte d'administration existe |
 | 7, V1 cible | LS-8 | 3 | après ouverture, hors Go-Live |
 | Contenus | LS-22 | 11 | **attend l'exploitante**, rien n'est faisable sans elle |
 
-**173 tickets terminés sur 208 hors epics**, les deux termes relevés dans Jira
-le 10 septembre 2026 en fin de session, et jamais dérivés l'un de l'autre. Le
-dénominateur a bougé de 207 à 208 dans la soirée : **LS-218 est née d'un trou de
-backlog** et reste ouverte, son critère 10 attendant un premier envoi réel.
+**175 tickets terminés sur 208 hors epics**, les deux termes relevés dans Jira
+le **11 septembre 2026**, et jamais dérivés l'un de l'autre. Le numérateur a
+bougé de 173 à 175 avec la clôture de LS-77 et LS-190 ; le dénominateur n'a pas
+bougé, **aucun ticket n'ayant été ouvert ce jour-là**, les anomalies trouvées
+ayant été corrigées directement.
+
+**La date du relevé se met à jour avec le compte**, et elle avait été oubliée
+une fois : le chiffre disait 175 sous une date du 10 septembre, ce qui aurait
+fait relire un compte pour un autre. Motif « un compte recopié n'est pas une
+mesure », qui vaut pour la date autant que pour le nombre.
 
 **Le compte précédent, « 173 sur 217 », appariait deux populations
 différentes** : son dénominateur comptait les epics, son numérateur non. Les
