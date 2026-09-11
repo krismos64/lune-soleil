@@ -212,10 +212,15 @@ confirmation de l'exploitante avant toute publication d'origine.
 prénom réel sur l'écran de connexion de l'administration. Sans objet dans le
 produit, qui utilisera Better Auth et une passkey, ADR-021.
 
-## Sept écarts relevés, et ce qu'ils deviennent
+## Les écarts relevés, et ce qu'ils deviennent
 
 Aucun ne remet en cause la direction visuelle. Ils sont tracés pour ne pas être
 recopiés tels quels au moment d'écrire l'interface.
+
+**Le nombre ne s'écrit plus dans ce titre**, corrigé le 11 septembre 2026 : il
+disait « Sept » le jour où le huitième était ajouté au tableau, et
+`frontend-design.md` recopiait ce chiffre. Les compter plutôt que les lire, la
+ligne d'en-tête et le séparateur mis à part.
 
 | Écart | Ce qui prime | Suite |
 |---|---|---|
@@ -226,6 +231,7 @@ recopiés tels quels au moment d'écrire l'interface.
 | L'éditeur propose cinq sections dont « Dimensions » | ADR-026 en prévoit quatre, la dimension appartient à `Variante.dimensions` | LS-87, **résolu le 14 août 2026 avec LS-100** |
 | Le gris `#7A6A5D` à 4,35:1 sur les descriptions de catégories, les libellés numérotés et les liens du pied de page, **relevé le 19 août 2026** | WCAG 2.2 AA, seuil de 4,5:1 pour du texte courant | LS-122, ou LS-84 élargie |
 | L'espace client vit sur `/espace-client`, avec un formulaire de connexion **intégré à la page**, **relevé le 2 septembre 2026** | le dépôt, qui sert `/compte` depuis LS-95 et porte deux écrans distincts depuis LS-54. Le prototype a raison sur le **principe**, un écran de connexion propre aux clients, et le chemin seul diffère | résolu par LS-54 |
+| Le contact vit en ancre `/aide#contact`, **relevé le 11 septembre 2026** | le dépôt, qui sert `/contact` en page entière depuis LS-97 : le traitement d'un message relève de la phase 4 et porte sa propre Server Action, son ralentissement et son écran d'administration. Le prototype a raison sur le **principe**, joindre la boutique depuis l'aide, et un lien de `/aide` vers `/contact` le tient | résolu par LS-97 |
 
 **L'écart sur les sections de l'éditeur** était déjà connu : la description de
 LS-76 le signalait comme « tâche et non décision, hors de cette story ». Il

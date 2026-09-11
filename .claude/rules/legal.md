@@ -537,3 +537,64 @@ Sources : [CNIL, que dit la
 loi](https://www.cnil.fr/fr/cookies-et-autres-traceurs/regles/cookies/que-dit-la-loi)
 et [CNIL, mesure
 d'audience](https://www.cnil.fr/fr/cookies-et-autres-traceurs/regles/cookies-solutions-pour-les-outils-de-mesure-daudience).
+
+## Accessibilité numérique, article 47 et directive 2019/882
+
+Vérifié aux sources le **11 septembre 2026**, LS-123. La conclusion est une
+**dispense**, ce qui la rend plus fragile qu'une obligation : un seuil franchi la
+retourne, et rien dans le code ne le signalera.
+
+### Deux textes distincts, et les deux exemptent cette boutique
+
+| Texte | Ce qu'il impose | Seuil de déclenchement |
+|---|---|---|
+| **article 47** de la loi 2005-102, décret 2019-768 | déclaration d'accessibilité, mention de conformité, schéma pluriannuel | organismes publics, et entreprises privées au-dessus de **250 M€** de chiffre d'affaires moyen en France |
+| **directive 2019/882**, applicable au commerce en ligne depuis le **28 juin 2025** | accessibilité du service de vente lui-même | exemption **microentreprise** : moins de **10 salariés** ET au plus **2 M€** de chiffre d'affaires annuel, conditions **cumulatives** |
+
+Lune & Soleil est une micro-entreprise en franchise en base de TVA, très en
+dessous des deux seuils. **Aucune déclaration d'accessibilité n'est due.**
+
+### Ce que le site publie quand même, et pourquoi le mot compte
+
+`/informations-legales#accessibilite` porte une section **volontaire**, livrée
+par LS-123. Elle décrit un engagement et les vérifications réellement conduites.
+
+**Elle n'emploie ni le terme « déclaration d'accessibilité » ni aucun taux de
+conformité**, et cette contrainte est verrouillée par deux assertions négatives
+de `tests/e2e/informations-legales.spec.ts`.
+
+La raison est le sens réglementaire de ces mentions : « déclaration
+d'accessibilité » désigne un document au contenu imposé, qui suppose un **audit
+RGAA** avec sa méthode, sa date et son échantillon. Aucun audit RGAA n'a été
+conduit sur ce site. Publier le terme, ou un pourcentage, reviendrait à
+revendiquer une conformité jamais mesurée, sur la page même que la loi destine à
+l'information exacte du consommateur.
+
+**Ce qui est affirmé est donc ce qui est mesuré** : audits automatisés WCAG 2.2
+AA sur les parcours, quatre largeurs sans débordement, contrastes calculés sur le
+fond réel, navigation clavier. Les comptes se relèvent par
+`verifier-contraste.sh` et par la suite de bout en bout, jamais dans cette page.
+
+**La limite est écrite dans la section elle-même** : les vérifications
+automatisées ne remplacent pas l'essai par une personne qui emploie réellement
+une technologie d'assistance. Une énumération sans cette phrase se lirait comme
+une garantie d'accessibilité complète.
+
+### Ce qui ferait tomber cette conclusion
+
+Deux événements, et le premier est un succès commercial :
+
+1. **franchir 10 salariés ou 2 M€ de chiffre d'affaires.** La directive
+   s'applique alors au service de vente, et le site doit être conforme, non
+   seulement le déclarer
+2. un audit RGAA réellement conduit, qui autoriserait alors, et alors seulement,
+   à publier un taux de conformité et une déclaration au sens réglementaire
+
+**Le second n'est pas une obligation mais une porte** : rien n'interdit
+d'atteindre la conformité sans y être tenu, et le travail déjà fait en couvre une
+part.
+
+Sources : [Obligally, les obligations légales d'accessibilité numérique en
+France](https://obligations-legales-accessibilite-numerique.fr/fr/comprendre/)
+et [De Gaulle Fleurance, accessibilité numérique et secteur
+privé](https://www.degaullefleurance.com/actualites/accessibilite-numerique-nouvelles-obligations-pour-le-secteur-prive/).
