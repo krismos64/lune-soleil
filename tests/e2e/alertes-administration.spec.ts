@@ -78,6 +78,16 @@ test.describe("écran connecté", () => {
       has: page.getByRole("heading", { name: /À traiter/ }),
     });
 
+    /*
+     * L'ATTENTE EST EXPLICITE, ET ELLE EST NECESSAIRE DEPUIS LE `<Suspense>`.
+     * La liste arrive APRES le rendu initial, regle C32 : `evaluateAll` sans
+     * attente mesurait l'armature de chargement, donc zero carte, et les quatre
+     * largeurs echouaient ensemble. Mesure du 11 septembre 2026.
+     */
+    await expect(
+      aTraiter.getByText(ALERTES_TEST.critique.type, { exact: true }),
+    ).toBeVisible();
+
     const types = await aTraiter
       .locator("li")
       .evaluateAll((cartes) => cartes.map((carte) => carte.textContent ?? ""));
