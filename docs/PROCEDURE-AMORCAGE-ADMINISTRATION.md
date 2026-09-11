@@ -57,8 +57,27 @@ jusqu'à la limite basse ou renoncer.
 
 ## Étape 2, la promotion
 
+**SUR LA MACHINE DE PRODUCTION, ET C'EST LE POINT LE PLUS FACILE À RATER.** Le
+script lit `DATABASE_URL` depuis le `.env` du répertoire courant : lancé depuis
+un poste de développement, il promeut le compte dans la base **locale**, sur le
+port 55432, et rend un succès parfaitement crédible.
+
+L'administration de production resterait alors inaccessible, et le défaut ne se
+verrait qu'au moment de la première connexion réelle de l'exploitante, c'est-à-
+dire le jour de l'ouverture.
+
 ```bash
+# depuis la machine de production, jamais depuis un poste de développement
+ssh <machine>
+cd /srv/lune-soleil
 ./scripts/amorcer-compte-administration.sh contact@exemple.fr
+```
+
+**Vérifier la base visée avant de lancer**, plutôt que de la supposer : la
+sortie du script nomme le compte promu, jamais la base où il l'a promu.
+
+```bash
+grep -c '^DATABASE_URL=.*:55432/' .env   # 1 = base LOCALE, ne pas lancer
 ```
 
 Le script :
