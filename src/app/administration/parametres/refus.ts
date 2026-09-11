@@ -4,10 +4,17 @@
  * ------------------------------------------------------------------
  * POURQUOI UN MODULE A PART ET NON LA SERVER ACTION.
  *
- * Un fichier `"use server"` ne peut exporter QUE des fonctions asynchrones :
+ * Un fichier de Server Actions ne peut exporter QUE des fonctions asynchrones :
  * Next.js refuse la construction avec « Server Actions must be async
  * functions ». Une fonction pure exportee depuis `actions.ts` casse donc le
  * build, mesure faite le 11 septembre 2026 plutot que supposee.
+ *
+ * LE MARQUEUR DE DIRECTIVE N'EST PAS CITE DANS CE COMMENTAIRE, et l'omission
+ * est deliberee : `verifier-gardes-administration.sh` selectionne les fichiers
+ * d'actions en le CHERCHANT, et ce fichier s'est retrouve accuse de « ne
+ * declarer aucune action exportee » a cause de la phrase qui explique pourquoi
+ * il n'en est pas un. Motif « controle satisfait par un commentaire », pris a
+ * l'envers pour la seconde fois de la journee.
  *
  * LA RENDRE `async` POUR CONTENTER LA REGLE AURAIT ETE PIRE : elle serait
  * devenue une Server Action, donc un point d'entree HTTP appelable de

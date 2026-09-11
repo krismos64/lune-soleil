@@ -64,6 +64,9 @@ const RUBRIQUES = [
    * l'ajouter ici n'est donc plus silencieux.
    */
   { libelle: "Avis", titre: "Avis" },
+  /* LS-98 : les alertes critiques deviennent consultables. Sept services en
+   * levaient depuis LS-131 et avant, et aucun écran ne les lisait. */
+  { libelle: "Alertes", titre: "Alertes" },
   /* LS-183 : « Nouveau produit » a quitte la barre pour devenir un bouton de
    * l'ecran Catalogue, qui prend sa place ici. */
   { libelle: "Catalogue", titre: "Produits" },

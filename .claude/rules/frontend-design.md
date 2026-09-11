@@ -725,6 +725,7 @@ sens, prouvé par mutation sur les quatre domaines oubliés.
 | `messages` | `messagesNonLus` |
 | `stocks` et `produits/actions-variantes` | `variantesStockFaible`, `variantesIndisponibles` |
 | `avis` | `avisAModerer`, **manquait jusqu'au 11 septembre 2026** |
+| `alertes` | `alertesOuvertes`, LS-98. Sept services levaient des alertes qu'**aucun écran ne lisait** |
 | tout remboursement | l'encaissé du jour, qui soustrait le montant remboursé |
 
 **Toute action de ces domaines n'a pas besoin de `"layout"` pour autant**, et le

@@ -28,6 +28,8 @@ import { Client } from "pg";
 import { encoderCommandeEnCours } from "@/lib/commande-cookie";
 import { engendrerJeton } from "@/lib/jeton-acces";
 import {
+  ALERTES_ACQUITTABLES,
+  ALERTES_TEST,
   COMMANDE_A_EXPEDIER_TEST,
   COMMANDE_AVIS_TEST,
   COMMANDE_SANS_SUIVI_TEST,
@@ -38,6 +40,7 @@ import {
   FICHIER_COMMANDE,
   FICHIER_JETONS_AVIS,
   SECONDE_COMMANDE_A_EXPEDIER_TEST,
+  messageAlerteAcquittable,
 } from "./chemin-session";
 
 preparation("commande en attente de paiement amorcee", async () => {
@@ -1465,6 +1468,87 @@ preparation("commande livree et invitations d'avis amorcees", async () => {
           `${compte?.aModerer ?? "0"} a relire, ${compte?.publies ?? "0"} publie(s), ` +
           `${compte?.signalements ?? "0"} signalement(s). L'ecran ` +
           "d'administration rendrait ses etats vides et ne prouverait rien.",
+      );
+    }
+  } finally {
+    await client.end();
+  }
+});
+
+/**
+ * Amorce les deux alertes critiques de la rubrique Alertes, LS-98.
+ *
+ * ELLES NE DEPENDENT D'AUCUNE COMMANDE, contrairement aux huit amorces
+ * precedentes : `AlerteCritique` ne porte aucune cle etrangere vers
+ * `Commande`, seulement un `typeCible` et un `idCible` en texte libre. C'est
+ * ce qui permet a une alerte de survivre a ce qu'elle designe.
+ *
+ * LEURS DATES SONT RELATIVES ET INVERSEES PAR RAPPORT A LEUR GRAVITE : la
+ * CRITIQUE est la plus ANCIENNE. C'est ce qui rend l'ordre mesurable, un tri
+ * par date seule les presenterait dans l'autre sens.
+ */
+preparation("alertes critiques amorcees", async () => {
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+
+  try {
+    for (const [alerte, gravite, age] of [
+      [ALERTES_TEST.critique, "CRITIQUE", "7 days"],
+      [ALERTES_TEST.avertissement, "AVERTISSEMENT", "1 hour"],
+    ] as const) {
+      await client.query(
+        `INSERT INTO alerte_critique
+           (id, type, message, gravite, type_cible, id_cible, cree_a)
+         VALUES ($1, $2, $3, $4, 'Commande', $5, now() - interval '${age}')
+         ON CONFLICT (id) DO UPDATE SET
+           acquittee_a = NULL,
+           acquittee_par_id = NULL,
+           cree_a = EXCLUDED.cree_a`,
+        [alerte.id, alerte.type, alerte.message, gravite, alerte.id],
+      );
+    }
+
+    /*
+     * `ON CONFLICT DO UPDATE` ET NON `DO NOTHING`, et la nuance est le coeur de
+     * cette amorce : la suite ACQUITTE ces alertes pour mesurer le geste, et
+     * `DO NOTHING` les laisserait acquittees a la relance suivante. La file
+     * « a traiter » serait alors vide, et tous les tests de rendu passeraient
+     * en ne mesurant rien.
+     *
+     * MEME MOTIF QUE LA RESERVATION DE LS-118, remise a trente minutes a chaque
+     * passage.
+     */
+    /*
+     * UNE ALERTE ACQUITTABLE PAR LARGEUR. Le geste d'acquittement est
+     * DESTRUCTIF, et les quatre projets tournent en parallele sur cette base :
+     * sans une alerte chacun, trois largeurs echouent sur une carte que la
+     * premiere vient de faire disparaitre.
+     *
+     * ELLES SONT REOUVERTES A CHAQUE EXECUTION, `ON CONFLICT DO UPDATE` : une
+     * alerte restee acquittee ferait mesurer un ecran sans geste possible.
+     */
+    for (const [projet, id] of Object.entries(ALERTES_ACQUITTABLES)) {
+      await client.query(
+        `INSERT INTO alerte_critique
+           (id, type, message, gravite, type_cible, id_cible, cree_a)
+         VALUES ($1, 'PDF_FACTURE_EN_ECHEC', $2, 'AVERTISSEMENT', 'Facture', $1,
+                 now() - interval '2 hours')
+         ON CONFLICT (id) DO UPDATE SET
+           acquittee_a = NULL,
+           acquittee_par_id = NULL`,
+        [id, messageAlerteAcquittable(projet)],
+      );
+    }
+
+    const { rows } = await client.query<{ nombre: string }>(
+      "SELECT count(*)::text AS nombre FROM alerte_critique WHERE acquittee_a IS NULL",
+    );
+
+    if (Number(rows[0]?.nombre) < 6) {
+      throw new Error(
+        `Alertes LS-98 incompletes : ${rows[0]?.nombre ?? "0"} ouverte(s), ` +
+          "six attendues, deux partagees et une par largeur. L'ecran rendrait " +
+          "son etat vide et ne prouverait rien.",
       );
     }
   } finally {

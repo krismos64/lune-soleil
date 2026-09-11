@@ -69,6 +69,7 @@ export type Comptages = {
   messagesNonLus: number;
   retractationsEnCours: number;
   avisAModerer: number;
+  alertesOuvertes: number;
 };
 
 /**
@@ -132,6 +133,23 @@ export const RUBRIQUES: readonly Rubrique[] = [
     chemin: "/administration/avis",
     libelle: "Avis",
     compteur: "avisAModerer",
+  },
+  /*
+   * LS-98 : les alertes critiques entrent dans la barre, C33, AVEC leur
+   * compteur.
+   *
+   * ELLES ETAIENT INVISIBLES : sept services en levent depuis LS-131 et avant,
+   * dont `DOUBLE_ENCAISSEMENT` et `MONTANT_DIVERGENT`, et aucun code ne les
+   * lisait. Un incident financier se signalait dans une table que personne ne
+   * consultait.
+   *
+   * ELLE SUIT LES AVIS ET PRECEDE LE CATALOGUE : la barre range d'abord ce qui
+   * ATTEND un geste, et une alerte ouverte en attend un plus urgent qu'un avis.
+   */
+  {
+    chemin: "/administration/alertes",
+    libelle: "Alertes",
+    compteur: "alertesOuvertes",
   },
   { chemin: "/administration/produits", libelle: "Catalogue" },
   { chemin: "/administration/factures", libelle: "Factures et avoirs" },

@@ -320,6 +320,65 @@ export const COMMANDE_AVIS_TEST = {
 export const FICHIER_JETONS_AVIS = "tests/e2e/.jetons-avis.json";
 
 /**
+ * Les DEUX alertes critiques que la rubrique Alertes affiche, LS-98.
+ *
+ * DEUX ET NON UNE, et c'est la lecon de LS-130 et LS-97 appliquee ici : l'ecran
+ * rend un formulaire d'acquittement PAR alerte, donc plusieurs regions live
+ * voisines. Avec une seule carte, une assertion sur un libelle passerait QUEL
+ * QUE SOIT l'etat des identifiants.
+ *
+ * LEURS GRAVITES DIFFERENT, `CRITIQUE` et `AVERTISSEMENT`, et leurs dates
+ * aussi : c'est ce qui rend l'ORDRE mesurable. Une critique ANCIENNE doit
+ * passer avant un avertissement RECENT, sans quoi un double encaissement
+ * s'enterrerait sous des avertissements de livraison.
+ *
+ * ELLES SONT OUVERTES TOUTES LES DEUX. L'ecran porte aussi une liste d'alertes
+ * acquittees, que le test remplit lui-meme en acquittant : la fabriquer ici
+ * ferait porter a la fixture un etat que le geste produit deja.
+ */
+export const ALERTES_TEST = {
+  critique: {
+    id: "e1a2b3c4-1098-4aaa-8888-000000000001",
+    type: "DOUBLE_ENCAISSEMENT",
+    message: "TEST Deux encaissements pour une seule commande.",
+  },
+  avertissement: {
+    id: "e1a2b3c4-1098-4bbb-8888-000000000002",
+    type: "ENVOI_EMAIL_BLOQUE",
+    message: "TEST Un envoi reste bloque depuis plus d'une heure.",
+  },
+} as const;
+
+/**
+ * UNE ALERTE ACQUITTABLE PAR LARGEUR, LS-98.
+ *
+ * ------------------------------------------------------------------
+ * LES QUATRE PROJETS TOURNENT EN PARALLELE SUR LA MEME BASE, et l'acquittement
+ * est le seul geste DESTRUCTIF de cette rubrique : trois largeurs qui
+ * acquittent la meme alerte se marchent dessus, la premiere gagne et les trois
+ * autres echouent sur une carte disparue. Mesure du 11 septembre 2026.
+ *
+ * `describe.serial` N'Y SUFFIT PAS : il ordonne les tests d'un MEME projet,
+ * jamais les projets entre eux. Le prefixe de largeur est ce qui les isole,
+ * parade deja retenue par `compte-adresses.spec.ts`.
+ *
+ * LES DEUX ALERTES CI-DESSUS RESTENT INTACTES, aucun test ne les acquittant :
+ * les mesures d'ordre et de rendu s'appuient dessus.
+ * ------------------------------------------------------------------
+ */
+export const ALERTES_ACQUITTABLES = {
+  "mobile-320": "e1a2b3c4-1098-4ccc-8888-000000000001",
+  "mobile-390": "e1a2b3c4-1098-4ccc-8888-000000000002",
+  "tablette-768": "e1a2b3c4-1098-4ccc-8888-000000000003",
+  "bureau-1280": "e1a2b3c4-1098-4ccc-8888-000000000004",
+} as const;
+
+/** Le message porte la largeur, ce qui rend chaque carte designable. */
+export function messageAlerteAcquittable(projet: string): string {
+  return `TEST Alerte acquittable de ${projet}.`;
+}
+
+/**
  * Les DEUX messages de contact que la rubrique Messages affiche, LS-97.
  *
  * DEUX ET NON UN, et c'est la lecon directe de LS-130. La page rend un bloc de
