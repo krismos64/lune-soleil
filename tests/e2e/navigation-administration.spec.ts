@@ -528,8 +528,28 @@ test("le tableau de bord ne porte aucune violation d'accessibilité", async ({
  * Factures et avoirs, puis Clients : recopier cette liste, c'est signer un
  * rendez-vous avec le meme echec.
  *
- * LA LISTE VIDE EST REFUSEE, sans quoi le jour ou toutes les rubriques seront
- * livrees, ce test passerait au vert sans rien verifier.
+ * ------------------------------------------------------------------
+ * LA LISTE EST VIDE DEPUIS LE 11 SEPTEMBRE 2026, LS-98, ET CE TEST L'AVAIT
+ * PREVU : « la liste vide est refusee, sans quoi le jour ou toutes les
+ * rubriques seront livrees, ce test passerait au vert sans rien verifier ».
+ *
+ * Ce jour est arrive. « Parametres » etait la derniere entree, et la refuser
+ * ferait desormais rougir un depot parfaitement sain.
+ *
+ * CE TEST VERIFIE DONC LES DEUX ETATS, et aucun des deux n'est un vert a vide :
+ *
+ *   liste NON vide   chaque entree est visible et AUCUNE n'est un lien
+ *   liste vide       le bloc ENTIER est absent, titre compris
+ *
+ * LE SECOND N'EST PAS UN REPLI COMPLAISANT. Un titre « Bientot disponible »
+ * suivi de rien annoncerait une attente qui n'existe pas : un lecteur d'ecran
+ * entendrait une liste nommee et vide, et l'oeil un intitule orphelin. C'est
+ * une propriete a verifier, pas une absence a tolerer.
+ *
+ * L'ETAT EXERCE EST LU SUR LE RENDU et jamais suppose : le jour ou une douzieme
+ * rubrique entre dans `RUBRIQUES_A_VENIR`, la premiere branche reprend sans
+ * que ce fichier soit touche.
+ * ------------------------------------------------------------------
  */
 test("les rubriques à venir sont annoncées sans être cliquables", async ({
   page,
@@ -542,12 +562,22 @@ test("les rubriques à venir sont annoncées sans être cliquables", async ({
   });
 
   const titre = barre.getByText("Bientôt disponible");
+  const entrees = barre.getByRole("list", { name: "Bientôt disponible" });
+  const nombre = await entrees.getByRole("listitem").count();
+
+  if (nombre === 0) {
+    /*
+     * AUCUNE RUBRIQUE EN ATTENTE : le bloc entier doit avoir disparu. Les deux
+     * assertions comptent, le titre pouvant survivre a sa liste.
+     */
+    await expect(titre).toHaveCount(0);
+    await expect(entrees).toHaveCount(0);
+    return;
+  }
+
   await expect(titre).toBeVisible();
 
-  const entrees = barre.getByRole("list", { name: "Bientôt disponible" });
   const libelles = await entrees.getByRole("listitem").allInnerTexts();
-
-  expect(libelles.length).toBeGreaterThan(0);
 
   for (const libelle of libelles.map((texte) => texte.trim())) {
     await expect(barre.getByText(libelle, { exact: true })).toBeVisible();
