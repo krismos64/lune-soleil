@@ -26,7 +26,7 @@ import { creerEnvoyeurSmtp } from "@/integrations/email/smtp";
 import { fournisseurStripe } from "@/integrations/stripe";
 import { expedierEnvoisEnAttente } from "@/services/envoi-email";
 import { libererReservationsExpirees } from "@/services/liberation-reservations";
-import { purgerQuarantaine } from "@/services/media";
+import { expirerMediasEnAttente, purgerQuarantaine } from "@/services/media";
 import { reconcilierPaiements } from "@/services/reconciliation-paiements";
 import { purgerJournaux } from "@/services/purge-journaux";
 import { inviterApresLivraison } from "@/services/avis";
@@ -166,12 +166,25 @@ export async function POST(
      * ADR-007 pour la photographie la plus lourde eprouvee.
      */
     if (tache === "purge-quarantaine-medias") {
+      /*
+       * DEUX GESTES DANS LA MEME TACHE, LS-109, ET NON UNE TACHE DE PLUS. Ils
+       * ferment le MEME incident par ses deux bouts : un televersement
+       * interrompu laisse un original sur le disque ET une ligne bloquee en
+       * `EN_ATTENTE`. Les separer ferait exister une fenetre ou l'un a agi et
+       * l'autre pas, sans qu'aucune moitie ne dise pourquoi.
+       *
+       * L'EXPIRATION PASSE EN PREMIER, et l'ordre compte peu ici mais se
+       * justifie : elle ne touche aucun fichier, donc elle ne peut pas echouer
+       * a cause du disque. Une purge en echec ne doit pas empecher la ligne
+       * d'etre corrigee.
+       */
+      const expires = await expirerMediasEnAttente();
       const supprimes = await purgerQuarantaine();
 
       journaliser(
         "info",
         "Purge de la quarantaine des medias terminee",
-        { tache, supprimes },
+        { tache, supprimes, expires },
         correlation,
       );
 

@@ -296,11 +296,71 @@ export async function reordonnerMedias(entree: unknown): Promise<void> {
 }
 
 /**
+ * Delai au-dela duquel un media reste `EN_ATTENTE` est declare en echec, LS-109.
+ *
+ * UNE HEURE, ET C'EST LA MEME VALEUR QUE LA PURGE DE QUARANTAINE, deliberement.
+ * Les deux ferment le meme incident par ses deux bouts : la purge retire
+ * l'original du disque, celle-ci corrige la ligne qui le designait. Deux seuils
+ * differents feraient exister une fenetre ou l'un a agi et l'autre pas, sans
+ * qu'aucune des deux moities ne dise pourquoi.
+ *
+ * TRES AU-DESSUS DES DEUX SECONDES que le traitement prend reellement,
+ * mesurees a ADR-007. Une heure ne ferme donc jamais un traitement en cours,
+ * meme sur une machine chargee ou une photographie de vingt-cinq megaoctets.
+ */
+export const DELAI_EXPIRATION_EN_ATTENTE_MS = 60 * 60 * 1000;
+
+/**
+ * Fait expirer les medias bloques en `EN_ATTENTE`, LS-109.
+ *
+ * POURQUOI L'EXPIRATION ET NON LA REPRISE, arbitrage de cette story. Le ticket
+ * proposait trois pistes.
+ *
+ * LA REPRISE DU TRAITEMENT a ete ecartee : elle ne vaut que tant que l'original
+ * est encore en quarantaine, donc dans la meme heure, et elle relancerait un
+ * traitement que PERSONNE N'ATTEND. L'exploitante a ferme son onglet ; retrouver
+ * une photographie publiee sans l'avoir demandee est plus deroutant qu'un echec
+ * qu'elle peut reprendre elle-meme.
+ *
+ * LE SEUL MESSAGE HONNETE a ete ecarte comme SEULE mesure : il corrige ce que
+ * l'ecran dit, il laisse la ligne mentir. Un media `EN_ATTENTE` eternel bloque
+ * aussi la publication du produit, LS-103, sans que rien ne l'explique.
+ *
+ * L'EXPIRATION FAIT LES DEUX. La ligne passe a `ECHOUE`, donc l'ecran rend le
+ * message d'echec qui dit deja « supprimez-la et televersez-la a nouveau », et
+ * la publication redevient possible une fois la ligne supprimee.
+ *
+ * ELLE NE TOUCHE AUCUN FICHIER, la purge de quarantaine s'en chargeant. Un
+ * media `EN_ATTENTE` n'a par construction AUCUN fichier sous `public/`,
+ * propriete physique d'ADR-007.
+ */
+export async function expirerMediasEnAttente(
+  maintenant: Date = new Date(),
+): Promise<number> {
+  const avant = new Date(maintenant.getTime() - DELAI_EXPIRATION_EN_ATTENTE_MS);
+
+  const expires = await depot.expirerMediasEnAttente(prisma, avant);
+
+  if (expires > 0) {
+    /*
+     * JOURNALISE SEULEMENT QUAND IL Y A QUELQUE CHOSE A DIRE. Une ligne par
+     * cycle sur zero media noierait le journal : ce cas est rare par nature,
+     * il exige qu'un televersement ait ete interrompu dans sa fenetre de deux
+     * secondes.
+     */
+    journaliser("info", "Medias en attente expires vers ECHOUE", { expires });
+  }
+
+  return expires;
+}
+
+/**
  * Purge les fichiers de quarantaine orphelins, parcours 3.
  *
- * APPELEE PAR AUCUNE TACHE AUJOURD'HUI. Le branchement sur la tache planifiee
- * relevera de LS-72, comme la purge des journaux : cette fonction existe pour
- * que le nettoyage soit possible, pas pour qu'il soit automatique.
+ * ELLE EST BRANCHEE SUR `purge-quarantaine-medias` DEPUIS LS-102, tache
+ * quotidienne. Ce commentaire disait « appelee par aucune tache aujourd'hui »
+ * et renvoyait le branchement a LS-72 : il etait perime depuis, et corrige par
+ * LS-109 le 11 septembre 2026.
  */
 export async function purgerQuarantaine(
   ageMinimalMs = 60 * 60 * 1000,
