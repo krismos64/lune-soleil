@@ -34,12 +34,12 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 4bis, espace client et avis | LS-36 | 1 | **LS-77 et LS-190 sont closes** le 11 septembre 2026, le signalement d'un avis (article L111-7-2) et la frise d'étapes. Reste **LS-61** seule : les avis vérifiés sont livrés de l'invitation après livraison à l'affichage public, mais son critère 3 n'est pas exerçable faute d'écran de renvoi |
 | 5, rétractation et conformité | LS-6 | 0 | **close**, ses huit stories terminées le 10 septembre 2026 |
 | 6, exploitation et ouverture | LS-7 | 5 | **LS-153 et LS-142 attendent l'exploitante**. LS-140 et LS-107 attendent les photographies de LS-23. Reste LS-150, la visibilité dans les moteurs de réponse. **LS-175 est close** depuis le 10 septembre 2026, le compte d'administration existe |
-| 7, V1 cible | LS-8 | 2 | LS-149 le cadrage de l'assistant IA, et LS-83 le ralentissement par compte, développée le 11 septembre 2026 |
-| Contenus | LS-22 | 11 | **attend l'exploitante**, rien n'est faisable sans elle |
+| 7, V1 cible | LS-8 | 1 | **LS-83 est close** le 11 septembre 2026, le ralentissement par compte visé. Reste LS-149, le cadrage de l'assistant IA |
+| Contenus | LS-22 | 10 | **attend l'exploitante**, rien n'est faisable sans elle. **LS-32 est close** le 11 septembre 2026, la neutralité de genre étant désormais gardée par un contrôle |
 
-**180 tickets terminés sur 208 hors epics**, les deux termes relevés dans Jira
+**182 tickets terminés sur 208 hors epics**, les deux termes relevés dans Jira
 le **11 septembre 2026 en fin de session**, et jamais dérivés l'un de l'autre.
-Le numérateur a gagné sept stories dans la nuit du 10 au 11 septembre ; le
+Le numérateur a gagné neuf stories dans la nuit du 10 au 11 septembre ; le
 dénominateur n'a pas bougé, **aucun ticket n'ayant été ouvert**, les anomalies
 trouvées ayant été corrigées directement.
 
@@ -48,7 +48,7 @@ une fois : le chiffre disait 175 sous une date du 10 septembre, ce qui aurait
 fait relire un compte pour un autre. Motif « un compte recopié n'est pas une
 mesure », qui vaut pour la date autant que pour le nombre.
 
-**Onze des vingt-huit tickets ouverts attendent l'exploitante**, epic LS-22 :
+**Dix des vingt-six tickets ouverts attendent l'exploitante**, epic LS-22 :
 photographies, textes, tarifs, contenus juridiques. Aucun code ne les débloque.
 
 **Le compte précédent, « 173 sur 217 », appariait deux populations
