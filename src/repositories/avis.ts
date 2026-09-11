@@ -182,6 +182,132 @@ export async function ecrireInvitation(
 }
 
 /**
+ * Ce qu'un renvoi d'invitation a besoin de savoir avant d'agir. LS-61.
+ *
+ * `nombreEnvois` SERT LE PLAFOND, jamais l'affichage : il compte les TENTATIVES
+ * et non les succes, la preuve d'envoi vivant dans `JournalEmail`.
+ *
+ * `avisDejaDepose` DECIDE DU REFUS. Renvoyer une invitation sur une commande
+ * entierement notee n'a aucun sens : le client recevrait un lien qui lui dirait
+ * « avis deja depose ». Le service refuse plutot que d'envoyer pour rien.
+ */
+export type InvitationARenvoyer = {
+  id: string;
+  ligneCommandeId: string;
+  jetonAccesId: string;
+  nombreEnvois: number;
+  avisDejaDepose: boolean;
+  /** Les libelles FIGES, jamais le catalogue actuel, invariant 3. */
+  libelleProduitFige: string;
+  libelleVarianteFige: string;
+};
+
+/** Ce qu'il faut de la commande pour composer l'email de renvoi. */
+export type CommandeARelancer = {
+  numero: string;
+  emailNormalise: string;
+};
+
+/**
+ * Lit les invitations d'une commande avec ce qu'il faut pour les renvoyer.
+ *
+ * ELLE EST DISTINCTE DE `lireInvitationsDeCommande`, qui sert l'ECRAN DE DEPOT
+ * et ne rend ni le jeton ni le compte d'envois. Les fusionner ferait porter a
+ * l'ecran public des champs dont il n'a aucun usage, et `jetonAccesId` n'a rien
+ * a faire dans un rendu client.
+ *
+ * L'ORDRE EST CELUI DE LA CREATION, et il compte : le lien de l'email porte le
+ * jeton de la PREMIERE ligne, `inviterApresLivraison` le pose ainsi. Un ordre
+ * different ferait partir un lien vers une autre ligne a chaque renvoi.
+ */
+export async function lireInvitationsARenvoyer(
+  client: ClientBase,
+  commandeId: string,
+): Promise<InvitationARenvoyer[]> {
+  const invitations = await client.invitationAvis.findMany({
+    where: { ligneCommande: { commandeId } },
+    select: {
+      id: true,
+      ligneCommandeId: true,
+      jetonAccesId: true,
+      nombreEnvois: true,
+      ligneCommande: {
+        select: {
+          libelleProduitFige: true,
+          libelleVarianteFige: true,
+          avis: { select: { id: true } },
+        },
+      },
+    },
+    orderBy: { creeA: "asc" },
+  });
+
+  return invitations.map((invitation) => ({
+    id: invitation.id,
+    ligneCommandeId: invitation.ligneCommandeId,
+    jetonAccesId: invitation.jetonAccesId,
+    nombreEnvois: invitation.nombreEnvois,
+    avisDejaDepose: invitation.ligneCommande.avis !== null,
+    libelleProduitFige: invitation.ligneCommande.libelleProduitFige,
+    libelleVarianteFige: invitation.ligneCommande.libelleVarianteFige,
+  }));
+}
+
+/**
+ * Lit le numero et l'adresse d'une commande, pour composer un renvoi. LS-61.
+ *
+ * `lireCommandePourAvis` NE SUFFIT PAS : elle rend `utilisateurId` et
+ * `dissocieA` pour decider d'un rattachement, jamais l'adresse. L'elargir
+ * ferait porter une adresse email a tous ses appelants, dont l'ecran public de
+ * depot qui n'en a aucun usage, invariant 9.
+ *
+ * `dissocieA` EST EXCLU, et ce n'est pas un detail : une commande dissociee
+ * appartient a un compte supprime, article 17. Lui renvoyer une invitation
+ * ecrirait a une adresse dont la personne a demande l'effacement.
+ */
+export async function lireCommandeARelancer(
+  client: ClientBase,
+  commandeId: string,
+): Promise<CommandeARelancer | null> {
+  return client.commande.findFirst({
+    where: { id: commandeId, dissocieA: null },
+    select: { numero: true, emailNormalise: true },
+  });
+}
+
+/**
+ * Fait pointer une invitation vers un jeton neuf et compte la tentative. LS-61.
+ *
+ * L'ORDRE DES ECRITURES EST IMPOSE, point 8 de `database.md`, et ce n'est pas
+ * un detail de style : le nouveau jeton doit exister AVANT cette mise a jour,
+ * sinon la cle etrangere `jetonAccesId` echoue. La revocation de l'ancien et
+ * l'insertion du neuf appartiennent au service, qui ordonne la transaction.
+ *
+ * `nombreEnvois` S'INCREMENTE ICI ET NON CHEZ L'APPELANT, pour la meme raison
+ * que `ecrireInvitation` le pose a un : le repository est le dernier point
+ * avant la base, et un appelant qui lirait puis ecrirait la valeur rouvrirait
+ * une course entre deux renvois concurrents.
+ *
+ * `dernierEnvoiA` N'EST PAS TOUCHE. Il dit qu'un envoi a ABOUTI, ce qui n'est
+ * pas encore le cas : `marquerEnvoiAbouti` s'en charge hors transaction.
+ */
+export async function rattacherJetonNeuf(
+  client: ClientBase,
+  parametres: {
+    invitationId: string;
+    jetonAccesId: string;
+  },
+): Promise<void> {
+  await client.invitationAvis.update({
+    where: { id: parametres.invitationId },
+    data: {
+      jetonAccesId: parametres.jetonAccesId,
+      nombreEnvois: { increment: 1 },
+    },
+  });
+}
+
+/**
  * Renseigne la date du dernier envoi abouti, HORS TRANSACTION.
  *
  * ELLE EST SEPAREE DE `ecrireInvitation` PARCE QU'UN ENVOI D'EMAIL NE PEUT

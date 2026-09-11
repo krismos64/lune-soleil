@@ -50,7 +50,9 @@ import {
   ecrireAvis,
   ecrireSignalement,
   ecrireInvitation,
+  lireCommandeARelancer,
   lireCommandePourAvis,
+  lireInvitationsARenvoyer,
   lireInvitationsDeCommande,
   listerAvisParStatut,
   listerAvisPublies,
@@ -59,6 +61,7 @@ import {
   lireAvisASignaler,
   lireAvisPubliePourSignalement,
   marquerEnvoiAbouti,
+  rattacherJetonNeuf,
 } from "@/repositories/avis";
 import type {
   AvisAModerer,
@@ -73,10 +76,12 @@ import {
   valider,
 } from "@/lib/validation";
 import { deposerEnvoi } from "@/services/envoi-email";
+import { intentionActiveExiste } from "@/repositories/envoi-email";
 import {
   consommerJeton,
   ecrireJeton,
   lireJetonParEmpreinte,
+  revoquerJeton,
 } from "@/repositories/jeton-acces";
 
 /**
@@ -284,6 +289,224 @@ export async function inviterApresLivraison(): Promise<IssueInvitations> {
   });
 
   return { traitees: commandes.length, invitees, echecs };
+}
+
+/**
+ * Plafond de renvois d'une invitation d'avis.
+ *
+ * TROIS TENTATIVES AU TOTAL, l'envoi initial compris : `ecrireInvitation` pose
+ * `nombreEnvois: 1` a la creation, donc deux renvois restent possibles.
+ *
+ * C'EST LE REPOSITORY QUI POSE CE 1, PAS LE DEFAUT DE LA COLONNE, qui vaut
+ * zero au schema. Une invitation ecrite par un autre chemin partirait donc de
+ * zero et obtiendrait un renvoi de plus. Un seul chemin d'ecriture existe
+ * aujourd'hui, et le dire evite de lire ce plafond comme une garantie de
+ * schema. Le plafond existe parce
+ * que chaque renvoi CONSOMME LE QUOTA SMTP de l'offre MX Plan, deux cents
+ * messages par heure, ADR-008 : une commande qu'on relancerait sans fin ferait
+ * tomber les emails legitimes avec elle.
+ *
+ * IL N'EST PAS UNE PROTECTION CONTRE UN ATTAQUANT, et le dire evite de le
+ * durcir pour de mauvaises raisons : le geste est reserve a l'exploitante, qui
+ * est authentifiee et seule. Il borne une erreur de manipulation, pas une
+ * attaque.
+ */
+const PLAFOND_ENVOIS_INVITATION = 3;
+
+/** Ce que le renvoi rend a l'ecran qui l'a demande. */
+export type IssueRenvoi =
+  | { statut: "RENVOYEE"; nombreEnvois: number }
+  | { statut: "REFUSE_INTROUVABLE" }
+  | { statut: "REFUSE_DEJA_NOTEE" }
+  | { statut: "REFUSE_PLAFOND"; plafond: number }
+  | { statut: "REFUSE_ENVOI_EN_COURS" };
+
+/**
+ * Renvoie l'invitation d'avis d'une commande, critere 3 de LS-61.
+ *
+ * CE QU'ELLE FERME. Jusqu'a cette fonction, une invitation partait UNE FOIS ET
+ * UNE SEULE : un client qui perdait son email ne pouvait plus jamais deposer
+ * son avis, et rien ne permettait de lui en renvoyer un. Cela se payait en avis
+ * non deposes.
+ *
+ * TOUS LES JETONS SONT REGENERES, PAS SEULEMENT LE PREMIER, et c'est le point
+ * le moins evident de cette fonction. Le lien de l'email ne porte que le jeton
+ * de la PREMIERE ligne, mais les autres ont ete ecrits en base au meme moment :
+ * n'en faire tourner qu'un laisserait les autres valides jusqu'a leur terme, ce
+ * que le point 8 de `database.md` interdit precisement. Sur une boite partagee,
+ * un ancien lien deposerait un avis a la place de son destinataire.
+ *
+ * L'ORDRE DES QUATRE ECRITURES EST IMPOSE, point 8 de `database.md` :
+ * revoquer l'ancien jeton, INSERER LE NOUVEAU, puis faire pointer l'invitation
+ * dessus, et compter la tentative. Inserer apres la mise a jour du pointeur
+ * ferait echouer la cle etrangere.
+ *
+ * LA REVOCATION RENSEIGNE `revoqueA` ET JAMAIS `utiliseA`, regle L10. Un jeton
+ * revoque marque consomme ferait afficher « avis deja depose » a un client qui
+ * n'a rien depose.
+ *
+ * `dernierEnvoiA` EST RENSEIGNE HORS TRANSACTION, comme a la creation : un
+ * envoi d'email n'appartient a aucune transaction PostgreSQL.
+ *
+ * L'AUTORISATION N'EST PAS ICI. Cette fonction est appelee par une Server
+ * Action d'administration qui exige le role, invariant 2 : le `commandeId`
+ * qu'elle reçoit vient d'un ecran deja garde, et un service ne lit ni session
+ * ni cookie, fichier de garde de `services/`.
+ */
+export async function renvoyerInvitation(
+  commandeId: string,
+): Promise<IssueRenvoi> {
+  const invitations = await lireInvitationsARenvoyer(prisma, commandeId);
+
+  if (invitations.length === 0) {
+    return { statut: "REFUSE_INTROUVABLE" };
+  }
+
+  /*
+   * UNE COMMANDE ENTIEREMENT NOTEE NE SE RELANCE PAS. Le client recevrait un
+   * lien qui lui dirait « avis deja depose », ce qui est une relance pour rien
+   * et un message deroutant. Le refus porte sur TOUTES les lignes : une
+   * commande dont une piece sur trois reste a noter se renvoie legitimement.
+   */
+  if (invitations.every((invitation) => invitation.avisDejaDepose)) {
+    return { statut: "REFUSE_DEJA_NOTEE" };
+  }
+
+  /*
+   * LE PLAFOND SE LIT SUR LE MAXIMUM et non sur la premiere ligne. Les
+   * invitations d'une commande sont renvoyees ensemble, donc leurs compteurs
+   * avancent de concert ; lire une seule ligne marcherait aujourd'hui et
+   * casserait le jour ou un renvoi partiel existerait.
+   */
+  const envoisDejaFaits = Math.max(
+    ...invitations.map((invitation) => invitation.nombreEnvois),
+  );
+
+  if (envoisDejaFaits >= PLAFOND_ENVOIS_INVITATION) {
+    return { statut: "REFUSE_PLAFOND", plafond: PLAFOND_ENVOIS_INVITATION };
+  }
+
+  /*
+   * UNE COMMANDE DISSOCIEE NE SE RELANCE PAS, et `lireCommandeARelancer` porte
+   * ce filtre : elle appartient a un compte supprime, article 17, et lui
+   * ecrire irait a l'adresse dont la personne a demande l'effacement.
+   */
+  const commande = await lireCommandeARelancer(prisma, commandeId);
+
+  if (commande === null) {
+    return { statut: "REFUSE_INTROUVABLE" };
+  }
+
+  // LES JETONS SONT ENGENDRES HORS TRANSACTION, meme motif qu'a la creation :
+  // c'est un calcul en memoire. Leur VALEUR n'est jamais journalisee.
+  /*
+   * LE REFUS EST EN AMONT DE LA TRANSACTION, ET C'EST UN DEFAUT MESURE.
+   *
+   * `deposerEnvoi` attrape le P2002 d'`envoi_en_attente_actif_unique` et se
+   * tait. Mais PostgreSQL a deja AVORTE la transaction au moment de la
+   * violation : les trois ecritures precedentes, revocation, insertion et
+   * rattachement, sont perdues au `COMMIT` sans que Prisma ne leve. Le service
+   * rendait alors `RENVOYEE` sur une base INCHANGEE, et `nombreEnvois` ne
+   * bougeait pas, donc le plafond ne se rapprochait meme pas.
+   *
+   * PIRE ENCORE SI LA TRANSACTION ABOUTISSAIT : l'email d'origine, encore en
+   * attente, porte l'ANCIEN jeton que ce renvoi vient de revoquer. Le client
+   * recevrait un lien « remplace » en etant invite a chercher un email plus
+   * recent qui n'existe pas.
+   *
+   * MESURE PAR SONDE le 11 septembre 2026 : une insertion valide puis un
+   * doublon avale dans la meme transaction laissent ZERO ligne ecrite.
+   *
+   * LE REFUS NE PERD RIEN : l'email d'origine part de toute façon dans la
+   * minute, avec un jeton valide. Reessayer apres son depart fonctionne.
+   */
+  if (
+    await intentionActiveExiste(prisma, {
+      commandeId,
+      modele: "invitation-avis",
+    })
+  ) {
+    return { statut: "REFUSE_ENVOI_EN_COURS" };
+  }
+
+  const jetons = invitations.map(() => engendrerJeton());
+
+  await prisma.$transaction(async (transaction) => {
+    for (const [index, invitation] of invitations.entries()) {
+      await revoquerJeton(transaction, invitation.jetonAccesId);
+
+      const { id: jetonId } = await ecrireJeton(transaction, {
+        commandeId,
+        empreinte: jetons[index]!.empreinte,
+        portee: "AVIS",
+        expireA: expirationAvis(),
+      });
+
+      await rattacherJetonNeuf(transaction, {
+        invitationId: invitation.id,
+        jetonAccesId: jetonId,
+      });
+    }
+
+    /*
+     * L'EMAIL PORTE LE JETON DE LA PREMIERE LIGNE, exactement comme a la
+     * creation : `JetonAcces.commandeId` designe la COMMANDE, donc ce lien
+     * ouvre l'ecran sur toutes les pieces.
+     *
+     * `deposerEnvoi` PASSE ICI SANS CONFLIT, et c'est le refus en amont qui le
+     * garantit, pas la chance. La cle `envoi_en_attente_actif_unique` exclut
+     * les lignes ENVOYE, donc l'invitation deja partie n'occupe plus la cle :
+     * c'est le « renvoi manuel de la regle E6 » que le schema annonce.
+     *
+     * NE PAS DEPLACER CET APPEL NI RETIRER LE REFUS EN AMONT. `deposerEnvoi`
+     * avale le P2002, et une transaction avortee par PostgreSQL perd tout ce
+     * qui la precede sans rien lever.
+     */
+    await deposerEnvoi(transaction, {
+      commandeId,
+      modele: "invitation-avis",
+      destinataire: commande.emailNormalise,
+      /*
+       * LES MEMES VARIABLES QU'A LA CREATION, et `pieces` porte les LIBELLES
+       * FIGES et non les identifiants : c'est ce que le client lit, et
+       * l'invariant 3 interdit de relire le catalogue actuel pour une commande
+       * passee.
+       */
+      variables: {
+        numero: commande.numero,
+        lien: lienAvis(jetons[0]!.valeur),
+        pieces: invitations
+          .map(
+            (invitation) =>
+              `${invitation.libelleProduitFige} (${invitation.libelleVarianteFige})`,
+          )
+          .join(", "),
+        delaiPublicationJours: String(DELAI_PUBLICATION_JOURS),
+      },
+      /*
+       * `ADMIN` ET NON `SYSTEME`, et ce choix a un effet mesurable :
+       * `journal_email_systeme_unique` filtre sur
+       * `origine IN ('SYSTEME','RECONCILIATION')`. Une origine SYSTEME ferait
+       * buter le renvoi sur la trace du premier envoi. C'est exactement le
+       * « renvoi manuel apres echec » que la regle E6 prevoit.
+       */
+      origine: "ADMIN",
+    });
+  });
+
+  await marquerEnvoiAbouti(prisma, commandeId);
+
+  /*
+   * AUCUNE ADRESSE EMAIL NI VALEUR DE JETON DANS LE JOURNAL, invariant 9. Le
+   * numero de commande suffit a retrouver le geste, et il n'identifie personne
+   * a lui seul.
+   */
+  journaliser("info", "invitation d'avis renvoyee", {
+    commandeId,
+    envois: envoisDejaFaits + 1,
+  });
+
+  return { statut: "RENVOYEE", nombreEnvois: envoisDejaFaits + 1 };
 }
 
 /** Motif interne de refus, journalise, jamais rendu a l'appelant. */

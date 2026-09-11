@@ -249,6 +249,21 @@ afterEach(async () => {
   await client.query("DELETE FROM evenement_fournisseur");
   await client.query("DELETE FROM ligne_commande");
   await client.query("DELETE FROM commande");
+
+  /*
+   * LE COMPTEUR DE NUMEROS, OUBLIE A L'ECRITURE DE LS-64 le 11 septembre 2026.
+   *
+   * La base d'integration est PARTAGEE. Chaque commande creee ici consomme un
+   * rang de la sequence, et `avoir.sequential` assere `A-2026-0001` et
+   * `F-2026-0001`, donc suppose un compteur VIERGE : selon l'ordre
+   * d'execution, il obtenait `0002` et rougissait.
+   *
+   * L'ECHEC ETAIT INTERMITTENT, une execution sur deux, ce qui le rend plus
+   * couteux qu'un echec franc : il depend de l'ordre des fichiers, et le
+   * diagnostic porte sur un fichier AUTRE que celui qui rougit. Les vingt
+   * autres fichiers qui creent des commandes le nettoyaient deja.
+   */
+  await client.query("DELETE FROM compteur_numero");
 });
 
 describe("le fuseau, critère 2", () => {
