@@ -75,12 +75,19 @@ R() { docker exec -i "$CIBLE_CT" psql -U "$CIBLE_USER" -d lunesoleil -tAq -c "$1
 # désynchroniserait du script à la première contrainte ajoutée. La table
 # d'historique de Prisma est exclue, l'effacer ferait croire à une base non
 # migrée.
+# Vide la base migrée entre deux contrôles.
+#
+# `parametre_boutique` EST PRÉSERVÉE, LS-98. Sa ligne unique vient de la
+# migration, ADR-043 : la tronquer laisserait une base « vérifiée » sans aucun
+# paramètre, donc un tarif de livraison introuvable au premier démarrage. Le
+# script rendrait alors une base plus cassée qu'avant son passage.
 vider_base_migree() {
   local tables
   tables=$(docker exec -i "$CIBLE_CT" psql -U "$CIBLE_USER" -d lunesoleil -tAq -c \
     "SELECT string_agg(format('%I', tablename), ', ')
        FROM pg_tables
-      WHERE schemaname = 'public' AND tablename <> '_prisma_migrations';" 2>/dev/null)
+      WHERE schemaname = 'public'
+        AND tablename NOT IN ('_prisma_migrations', 'parametre_boutique');" 2>/dev/null)
   [ -n "$tables" ] && docker exec -i "$CIBLE_CT" psql -U "$CIBLE_USER" -d lunesoleil -q -c \
     "TRUNCATE $tables RESTART IDENTITY CASCADE;" >/dev/null 2>&1
   return 0
@@ -206,9 +213,18 @@ if [ "$MODE" = "migree" ]; then
 
   # Base non vide : refus. Ces contrôles insèrent puis tronquent, ils
   # détruiraient un jeu de données de développement.
+  #
+  # `parametre_boutique` EST EXCLUE DU COMPTE, LS-98. Sa ligne unique est posée
+  # par la migration elle-même, ADR-043 : une base fraîchement migrée en porte
+  # donc exactement une, et la compter ferait abandonner ce script sur toute
+  # base neuve, c'est-à-dire dans le seul cas où il doit tourner.
+  #
+  # CE N'EST PAS UNE DONNÉE MÉTIER mais une donnée de RÉFÉRENCE, au même titre
+  # que le schéma : l'exclure ne masque aucun jeu de développement, une commande
+  # ou un produit restant compté comme avant.
   lignes=$(docker exec -i "$CIBLE_CT" psql -U "$CIBLE_USER" -d lunesoleil -tAq -c \
     "SELECT coalesce(sum(n_live_tup), 0) FROM pg_stat_user_tables
-      WHERE relname <> '_prisma_migrations';" 2>/dev/null)
+      WHERE relname NOT IN ('_prisma_migrations', 'parametre_boutique');" 2>/dev/null)
   case "$lignes" in
     ''|*[!0-9]*) lignes=0 ;;
   esac
@@ -1207,6 +1223,93 @@ R "INSERT INTO paiement (id,commande_id,statut,montant_centimes,cree_a)
 sortie=$(R "UPDATE paiement SET confirme_a = now() WHERE id = 'payc2';")
 verifier_rejet "date de confirmation sur un paiement ECHOUE rejetée" \
   "chk_paiement_confirmation_coherente" "$sortie"
+
+echo
+echo "Parametres commerciaux, LS-98 et ADR-043"
+
+# LA LIGNE UNIQUE EST GARANTIE PAR LA BASE, jamais par le code.
+#
+# C'est le contrôle central de cette table. Deux lignes de paramètres qui se
+# contredisent seraient lues par `findFirst`, donc l'une ou l'autre selon le
+# plan d'exécution : le tunnel facturerait un port différent d'une requête à
+# l'autre, sans qu'aucune erreur ne soit levée.
+#
+# LA LIGNE EST POSÉE ICI PLUTÔT QUE SUPPOSÉE PRÉSENTE, et ce n'est pas une
+# précaution de style. Le bloc a échoué à sa première exécution, sur « la base a
+# accepté l'écriture », parce qu'une exécution antérieure avait vidé la table :
+# un contrôle de rejet dont la cible n'existe pas ne rejette rien, et son échec
+# accuse le schéma au lieu de l'accuser lui-même.
+#
+# Motif « cible de test inexistante », déjà en fiche sur ce dépôt.
+#
+# LE MODE CONCEPTION N'A PAS DE LIGNE DU TOUT, sa base venant de `schema.sql` et
+# non des migrations : sans cet `INSERT`, les six contrôles ci-dessous seraient
+# muets dans ce mode et verts dans l'autre.
+R "INSERT INTO parametre_boutique
+     (id, tarif_relais_centimes, tarif_domicile_centimes,
+      seuil_franchise_centimes, seuil_stock_faible, email_alertes, modifie_a)
+   VALUES (true, 410, 749, 3900, 1, 'controle@exemple.invalid', now())
+   ON CONFLICT (id) DO NOTHING;" >/dev/null
+
+# LA CIBLE EXISTE VRAIMENT, vérifié et non supposé. Sans cette assertion, les
+# six contrôles suivants pourraient tous passer pour la mauvaise raison si
+# l'`INSERT` ci-dessus échouait en silence.
+verifier "la cible des contrôles de paramètres existe" "1" \
+  "$(R "SELECT count(*) FROM parametre_boutique WHERE id = true;")"
+sortie=$(R "INSERT INTO parametre_boutique
+              (id, tarif_relais_centimes, tarif_domicile_centimes,
+               seuil_stock_faible, email_alertes, modifie_a)
+            VALUES (false, 410, 749, 1, 'x@exemple.invalid', now());")
+verifier_rejet "seconde ligne de paramètres rejetée" \
+  "chk_parametre_ligne_unique" "$sortie"
+
+# LE MÊME REFUS PAR L'AUTRE CHEMIN, la clé primaire.
+#
+# Les deux contrôles ne font pas doublon : celui-ci passerait si le CHECK
+# disparaissait, et le précédent passerait si la clé primaire disparaissait.
+# C'est la vérification que les DEUX lignes de défense tiennent, motif « deux
+# lignes de défense » déjà en fiche sur ce dépôt.
+sortie=$(R "INSERT INTO parametre_boutique
+              (id, tarif_relais_centimes, tarif_domicile_centimes,
+               seuil_stock_faible, email_alertes, modifie_a)
+            VALUES (true, 410, 749, 1, 'x@exemple.invalid', now());")
+verifier_rejet "ligne de paramètres en doublon rejetée" \
+  "parametre_boutique_pkey" "$sortie"
+
+# UN TARIF NÉGATIF EST REFUSÉ, invariant 1.
+sortie=$(R "UPDATE parametre_boutique SET tarif_relais_centimes = -1 WHERE id = true;")
+verifier_rejet "tarif de livraison négatif rejeté" \
+  "chk_parametre_tarifs_positifs" "$sortie"
+
+# LE SEUIL DE STOCK FAIBLE EST STRICTEMENT POSITIF, contrairement aux tarifs.
+#
+# Un seuil à zéro n'alerterait JAMAIS, une quantité ne descendant pas sous zéro :
+# ce serait une désactivation déguisée, alors que `alerte_stock_faible` existe
+# pour cela. Deux façons de désactiver la même alerte, dont une muette, est le
+# genre d'écart qui se découvre quand l'alerte manque.
+sortie=$(R "UPDATE parametre_boutique SET seuil_stock_faible = 0 WHERE id = true;")
+verifier_rejet "seuil de stock faible nul rejeté" \
+  "chk_parametre_seuil_stock_positif" "$sortie"
+
+# L'ADRESSE D'ALERTE N'EST JAMAIS VIDE. Une chaîne vide désactiverait les cinq
+# alertes en silence, quel que soit l'état de leurs interrupteurs.
+#
+# LE CAS TESTÉ EST UN ESPACE ET NON UNE CHAÎNE VIDE : le CHECK emploie `trim`,
+# et une chaîne vide seule passerait un contrôle écrit sans `trim`. Tester la
+# forme que le code ne couvrirait pas est ce qui distingue ce contrôle d'une
+# formalité.
+sortie=$(R "UPDATE parametre_boutique SET email_alertes = '   ' WHERE id = true;")
+verifier_rejet "adresse d'alerte vide rejetée" \
+  "chk_parametre_email_alertes_non_vide" "$sortie"
+
+# LE SEUIL DE FRANCHISE ACCEPTE `NULL`, ET C'EST UN CONTRÔLE D'ACCEPTATION.
+#
+# `NULL` désactive la franchise, LS-27 l'exige. Un CHECK écrit sans le cas nul
+# refuserait cette désactivation, et le défaut ne se verrait qu'au jour où
+# l'exploitante voudrait retirer la gratuité.
+sortie=$(R "UPDATE parametre_boutique SET seuil_franchise_centimes = NULL WHERE id = true;")
+verifier_accepte "franchise désactivable par NULL" "$sortie"
+R "UPDATE parametre_boutique SET seuil_franchise_centimes = 3900 WHERE id = true;" >/dev/null
 
 echo
 echo "Complétude du SQL de référence, LS-70"
