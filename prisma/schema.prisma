@@ -1413,6 +1413,67 @@ model CompteurNumero {
 }
 
 // ---------------------------------------------------------------------------
+// Paramètres commerciaux, LS-98, ADR-043
+// ---------------------------------------------------------------------------
+//
+// UNE SEULE LIGNE, GARANTIE PAR LA BASE. `id` est un booléen contraint à `true`
+// par `chk_parametre_ligne_unique` : deux lignes deviennent impossibles, et non
+// seulement déconseillées. Une table de configuration à plusieurs lignes finit
+// par en porter deux qui se contredisent, sans que rien ne dise laquelle fait
+// foi. Même motif que la clé composée de `CompteurNumero`.
+//
+// ADR-043 REMPLACE L'ARBITRAGE DU 31 AOÛT 2026, qui plaçait les paramètres dans
+// l'environnement. Il reste en vigueur pour l'identité légale, fait
+// administratif, et tombe pour les tarifs, décision commerciale que
+// l'exploitante doit pouvoir prendre sans redéploiement.
+//
+// CE QUI N'EST PAS ICI, ET POURQUOI : le nom commercial reste `NOM_BOUTIQUE`,
+// c'est la marque ; les trois modes de livraison restent dans ADR-025, les
+// ajouter ou les retirer touche le schéma et le tunnel ; la réserve de
+// franchise sur le domicile reste dans le code, ADR-035, un paramètre qui
+// permet de violer un ADR étant un contournement et non un réglage.
+//
+// AUCUN HISTORIQUE N'EST CONSERVÉ, décision 2 d'ADR-043. `Commande.fraisPortCentimes`
+// porte déjà le montant figé à l'écriture, invariant 3 : un historique de
+// paramètres serait une seconde source de vérité pour une question à laquelle la
+// commande répond déjà.
+model ParametreBoutique {
+  // Toujours `true`, CHECK `chk_parametre_ligne_unique`. Le type booléen rend la
+  // contrainte lisible : la colonne ne peut porter que deux valeurs, une seule
+  // est permise.
+  id Boolean @id @default(true)
+
+  // Tarifs en CENTIMES ENTIERS, invariant 1. CHECK >= 0 sur les deux.
+  tarifRelaisCentimes   Int @map("tarif_relais_centimes")
+  tarifDomicileCentimes Int @map("tarif_domicile_centimes")
+
+  // `null` DÉSACTIVE la franchise, et ne vaut pas zéro : un seuil à zéro rendrait
+  // toute livraison gratuite, l'inverse exact de l'intention. CHECK >= 0.
+  seuilFranchiseCentimes Int? @map("seuil_franchise_centimes")
+
+  // Seuil d'alerte de stock faible, en pièces. CHECK > 0 : un seuil nul
+  // n'alerterait jamais, ce que les interrupteurs d'alerte expriment déjà.
+  seuilStockFaible Int @map("seuil_stock_faible")
+
+  // UN SEUL DESTINATAIRE POUR TOUTES LES ALERTES, décision 4 d'ADR-043. Un
+  // destinataire par alerte ouvrirait un envoi vers une adresse arbitraire
+  // depuis un écran d'administration, vecteur d'exfiltration et non réglage.
+  emailAlertes String @map("email_alertes")
+
+  // Les cinq interrupteurs du prototype. Booléens et non une liste : une valeur
+  // ajoutée à une liste d'énumération passerait les gardes en silence.
+  alerteCommandePayee   Boolean @default(true) @map("alerte_commande_payee")
+  alertePaiementAnnule  Boolean @default(true) @map("alerte_paiement_annule")
+  alerteStockFaible     Boolean @default(true) @map("alerte_stock_faible")
+  alerteMessageRecu     Boolean @default(true) @map("alerte_message_recu")
+  alerteAvisAModerer    Boolean @default(true) @map("alerte_avis_a_moderer")
+
+  modifieA DateTime @updatedAt @map("modifie_a") @db.Timestamptz(3)
+
+  @@map("parametre_boutique")
+}
+
+// ---------------------------------------------------------------------------
 // Message de contact, LS-97
 // ---------------------------------------------------------------------------
 //

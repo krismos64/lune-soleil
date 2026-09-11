@@ -663,6 +663,40 @@ CREATE TABLE "compteur_numero" (
     CONSTRAINT "compteur_numero_pkey" PRIMARY KEY ("type","annee")
 );
 
+-- CreateTable, LS-98, ADR-043
+--
+-- Les parametres commerciaux, en UNE SEULE LIGNE garantie par la base :
+-- `chk_parametre_ligne_unique` contraint la cle primaire a `true`, donc une
+-- seconde ligne est IMPOSSIBLE et non seulement deconseillee.
+--
+-- ADR-043 REMPLACE L'ARBITRAGE DU 31 AOUT 2026, qui placait ces valeurs dans
+-- l'environnement. Il reste en vigueur pour l'identite legale, fait
+-- administratif, et tombe pour les tarifs : une decision commerciale ne doit pas
+-- exiger un redeploiement.
+--
+-- LES CHECK VIVENT DANS `001_contraintes_check.sql`, JAMAIS ICI. Convention du
+-- depot, et le mode CONCEPTION de `verifier-schema.sh` applique les deux
+-- fichiers a la suite : une contrainte ecrite dans les deux serait posee deux
+-- fois et ferait echouer le controle.
+CREATE TABLE "parametre_boutique" (
+    "id" BOOLEAN NOT NULL DEFAULT true,
+    "tarif_relais_centimes" INTEGER NOT NULL,
+    "tarif_domicile_centimes" INTEGER NOT NULL,
+    -- NULL DESACTIVE la franchise, et ne vaut pas zero : un seuil a zero rendrait
+    -- toute livraison gratuite, l'inverse exact de l'intention.
+    "seuil_franchise_centimes" INTEGER,
+    "seuil_stock_faible" INTEGER NOT NULL,
+    "email_alertes" TEXT NOT NULL,
+    "alerte_commande_payee" BOOLEAN NOT NULL DEFAULT true,
+    "alerte_paiement_annule" BOOLEAN NOT NULL DEFAULT true,
+    "alerte_stock_faible" BOOLEAN NOT NULL DEFAULT true,
+    "alerte_message_recu" BOOLEAN NOT NULL DEFAULT true,
+    "alerte_avis_a_moderer" BOOLEAN NOT NULL DEFAULT true,
+    "modifie_a" TIMESTAMPTZ(3) NOT NULL,
+
+    CONSTRAINT "parametre_boutique_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateTable, LS-97
 --
 -- Le message de contact, persiste AVANT toute tentative d'envoi d'email. Dette

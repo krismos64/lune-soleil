@@ -416,3 +416,57 @@ ALTER TABLE "compteur_compte_vise"
 ALTER TABLE "compteur_compte_vise"
   ADD CONSTRAINT "chk_compteur_compte_vise_cle_non_vide"
   CHECK (length(trim("cle")) > 0);
+
+-- ---------------------------------------------------------------------------
+-- Parametres commerciaux, LS-98, ADR-043
+-- ---------------------------------------------------------------------------
+
+-- UNE SEULE LIGNE, ET LA BASE LA GARANTIT. `id` etant la cle primaire, la
+-- contraindre a `true` rend une seconde ligne IMPOSSIBLE plutot que deconseillee.
+--
+-- CE QUE CELA EMPECHE CONCRETEMENT : deux lignes de parametres qui se
+-- contredisent, dont la lecture par `findFirst` prendrait l'une ou l'autre selon
+-- le plan d'execution. Le tunnel facturerait alors un port different d'une
+-- requete a l'autre, sans qu'aucune erreur ne soit levee.
+ALTER TABLE "parametre_boutique"
+  ADD CONSTRAINT "chk_parametre_ligne_unique"
+  CHECK ("id" = true);
+
+-- LES TARIFS SONT DES CENTIMES ENTIERS POSITIFS OU NULS, invariant 1. Zero est
+-- permis : une boutique peut decider d'offrir un mode entierement, ce qui n'est
+-- pas la meme chose que la franchise au seuil.
+ALTER TABLE "parametre_boutique"
+  ADD CONSTRAINT "chk_parametre_tarifs_positifs"
+  CHECK ("tarif_relais_centimes" >= 0 AND "tarif_domicile_centimes" >= 0);
+
+-- LE SEUIL DE FRANCHISE EST NUL OU POSITIF, ET `NULL` N'EST PAS ZERO.
+--
+-- `NULL` desactive la franchise, zero la rendrait universelle : toute commande
+-- atteignant zero euro, donc toutes, serait livree gratuitement. La contrainte
+-- laisse passer les deux valeurs, la DISTINCTION vit dans `calculerFraisPort`,
+-- et c'est ecrit ici pour qu'un futur lecteur ne « corrige » pas ce CHECK en
+-- interdisant le zero, qui est une decision commerciale legitime.
+ALTER TABLE "parametre_boutique"
+  ADD CONSTRAINT "chk_parametre_seuil_franchise_positif"
+  CHECK ("seuil_franchise_centimes" IS NULL OR "seuil_franchise_centimes" >= 0);
+
+-- LE SEUIL DE STOCK FAIBLE EST STRICTEMENT POSITIF, contrairement aux tarifs.
+-- Un seuil a zero n'alerterait JAMAIS, puisqu'une quantite ne descend pas sous
+-- zero : ce serait une desactivation deguisee, alors que `alerte_stock_faible`
+-- existe exactement pour cela. Deux facons de desactiver la meme alerte, dont
+-- une muette, est le genre d'ecart qui se decouvre quand l'alerte manque.
+ALTER TABLE "parametre_boutique"
+  ADD CONSTRAINT "chk_parametre_seuil_stock_positif"
+  CHECK ("seuil_stock_faible" >= 1);
+
+-- L'ADRESSE D'ALERTE N'EST JAMAIS VIDE. Une chaine vide desactiverait les cinq
+-- alertes en silence, quel que soit l'etat de leurs interrupteurs : l'envoi
+-- echouerait sans destinataire, et l'ecran continuerait d'afficher « activee ».
+--
+-- LA FORME DE L'ADRESSE EST VALIDEE PAR ZOD, invariant 7, et non ici : un CHECK
+-- sur une expression reguliere d'email est un piege connu, trop strict il refuse
+-- des adresses valides, trop laxiste il ne prouve rien. La base garde le fait
+-- minimal et indiscutable, la presence.
+ALTER TABLE "parametre_boutique"
+  ADD CONSTRAINT "chk_parametre_email_alertes_non_vide"
+  CHECK (length(trim("email_alertes")) > 0);
