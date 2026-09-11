@@ -27,17 +27,32 @@
 
 set -u
 RACINE="$(cd "$(dirname "$0")/.." && pwd)"
-PAGE="$RACINE/src/app/administration/echec-rendu/page.tsx"
 ko=0
 
 # ---------------------------------------------------------------------------
-# La page peut disparaître, et ce n'est pas une erreur.
+# LES ROUTES SONT DÉCOUVERTES, JAMAIS NOMMÉES, ET C'EST LA CORRECTION DE LS-125.
+#
+# Ce script ne gardait que `administration/echec-rendu`, seule route d'échec
+# quand LS-191 l'a écrit. LS-125 en a ajouté une seconde côté boutique, et le
+# contrôle serait resté vert sur une garde inversée : il ne la regardait pas.
+#
+# C'est le motif « règle juste, portée non mesurée » de ce dépôt, où une règle
+# posée le matin était violée onze fois douze heures plus tard. Une liste écrite
+# à la main est une opinion tant qu'elle n'est pas dérivée de ce qui existe.
+#
+# LE MOTIF EST LE NOM DE DOSSIER, `echec-rendu`, qui est la convention : une
+# troisième route d'échec entrera dans ce contrôle sans qu'il soit touché.
+# ---------------------------------------------------------------------------
+PAGES=$(find "$RACINE/src/app" -path "*echec-rendu/page.tsx" 2>/dev/null | sort)
+
+# ---------------------------------------------------------------------------
+# Les pages peuvent disparaître, et ce n'est pas une erreur.
 #
 # Si une story future trouve un moyen de provoquer l'erreur sans code dédié,
-# elle supprimera ce fichier et ce script avec lui. Échouer sur son absence
-# obligerait à garder une page dont on ne veut pas.
+# elle supprimera ces fichiers et ce script avec eux. Échouer sur leur absence
+# obligerait à garder des pages dont on ne veut pas.
 # ---------------------------------------------------------------------------
-if [ ! -f "$PAGE" ]; then
+if [ -z "$PAGES" ]; then
   echo "OK aucune route d'échec dans le dépôt, rien à garder"
   exit 0
 fi
@@ -61,19 +76,26 @@ sans_commentaires() {
   perl -0777 -pe 's{/\*.*?\*/}{ my $t = $&; $t =~ s/[^\n]//g; $t }gse; s{^\s*//.*$}{}gm' "$1"
 }
 
+nb_pages=0
+
+while IFS= read -r PAGE; do
+  [ -n "$PAGE" ] || continue
+  nb_pages=$((nb_pages + 1))
+  COURTE=${PAGE#"$RACINE/"}
+
 ligne_garde=$(sans_commentaires "$PAGE" | grep -n "notFound()" | head -1 | cut -d: -f1)
 ligne_echec=$(sans_commentaires "$PAGE" | grep -n "throw new Error" | head -1 | cut -d: -f1)
 
 if [ -z "$ligne_garde" ]; then
-  echo "ECHEC la route d'échec ne porte aucun notFound()"
+  echo "ECHEC $COURTE ne porte aucun notFound()"
   echo "      sans lui elle lève en production, pour n'importe quel appelant"
   ko=$((ko + 1))
 elif [ -z "$ligne_echec" ]; then
-  echo "ECHEC la route d'échec ne lève plus"
+  echo "ECHEC $COURTE ne lève plus"
   echo "      le test de LS-191 ne traverserait plus la frontière d'erreur"
   ko=$((ko + 1))
 elif [ "$ligne_garde" -gt "$ligne_echec" ]; then
-  echo "ECHEC la route d'échec lève AVANT sa garde"
+  echo "ECHEC $COURTE lève AVANT sa garde"
   echo "      notFound() ligne $ligne_garde, throw ligne $ligne_echec"
   echo "      dans cet ordre la page lève en production, la garde n'étant"
   echo "      jamais atteinte. Remettre notFound() au-dessus du throw."
@@ -84,16 +106,21 @@ fi
 # Un `=== "0"` ou un `!== "production"` ouvrirait la route partout où la
 # variable est simplement absente, ce qui est le cas de la production.
 if ! sans_commentaires "$PAGE" | grep -q 'process.env.AUTORISER_ECHEC_RENDU !== "1"'; then
-  echo "ECHEC la garde de la route d'échec n'est plus un défaut fermé"
+  echo "ECHEC la garde de $COURTE n'est plus un défaut fermé"
   echo "      attendu : process.env.AUTORISER_ECHEC_RENDU !== \"1\""
   echo "      une garde qui teste l'inverse ouvre la route dès que la"
   echo "      variable est absente, c'est-à-dire en production"
   ko=$((ko + 1))
 fi
+done <<EOF
+$PAGES
+EOF
 
 echo
+echo "Routes d'échec gardées : $nb_pages"
+
 if [ "$ko" -eq 0 ]; then
-  echo "OK la route d'échec est gardée, notFound() ligne $ligne_garde avant throw ligne $ligne_echec"
+  echo "OK chaque route d'échec porte sa garde avant son throw"
 else
   echo "$ko problème(s) détecté(s)"
 fi
