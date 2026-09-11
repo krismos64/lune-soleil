@@ -1,5 +1,15 @@
 /**
- * La garde de la route qui echoue a dessein, LS-191.
+ * La garde des routes qui echouent a dessein, LS-191 puis LS-125.
+ *
+ * DEUX ROUTES DEPUIS LE 11 SEPTEMBRE 2026, et une seule table les couvre :
+ * `administration/echec-rendu` ouvre la frontiere d'administration, LS-191,
+ * `(boutique)/echec-rendu` celle de la boutique publique, LS-125. Elles portent
+ * la MEME garde et la MEME variable, deliberement : deux variables pour le meme
+ * usage feraient qu'un durcissement futur ne s'appliquerait qu'a l'une.
+ *
+ * LES EXERCER PAR UNE TABLE PLUTOT QUE PAR DEUX FICHIERS est ce qui garantit
+ * qu'aucune des deux ne derive : une copie se serait periMee a la premiere
+ * correction apportee a l'autre.
  *
  * ------------------------------------------------------------------
  * CE QUE CE FICHIER EMPECHE, ET POURQUOI IL EXISTE.
@@ -41,7 +51,20 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
-describe("route d'echec de rendu, sa garde", () => {
+const ROUTES = [
+  {
+    nom: "administration",
+    chemin: "@/app/administration/echec-rendu/page",
+    marqueur: /LS-191/,
+  },
+  {
+    nom: "boutique",
+    chemin: "@/app/(boutique)/echec-rendu/page",
+    marqueur: /LS-125/,
+  },
+] as const;
+
+describe.each(ROUTES)("route d'echec de rendu, $nom", (route) => {
   let valeurInitiale: string | undefined;
 
   beforeEach(() => {
@@ -70,7 +93,7 @@ describe("route d'echec de rendu, sa garde", () => {
      * `page` ET NON `module` : ESLint interdit d'assigner cette variable, dont
      * Next.js se sert pour distinguer CommonJS d'un module ES.
      */
-    const page = await import("@/app/administration/echec-rendu/page");
+    const page = await import(route.chemin);
     await (page.default as () => Promise<unknown>)();
   }
 
@@ -107,5 +130,18 @@ describe("route d'echec de rendu, sa garde", () => {
     process.env.AUTORISER_ECHEC_RENDU = "1";
 
     await expect(rendrePage()).rejects.toThrow(/Echec de rendu provoque/);
+  });
+
+  /*
+   * LE MARQUEUR DISTINGUE LES DEUX ROUTES, et il n'est pas decoratif : sans
+   * lui, `rendrePage` pourrait charger la MEME page deux fois, la table
+   * paraitrait couvrir les deux et n'en exercerait qu'une. C'est le motif
+   * « valeurs qui coincident » de ce depot, ou un test de refus avait cesse
+   * d'exercer son refus en gardant son nom.
+   */
+  it("leve le message de SA propre route", async () => {
+    process.env.AUTORISER_ECHEC_RENDU = "1";
+
+    await expect(rendrePage()).rejects.toThrow(route.marqueur);
   });
 });

@@ -76,6 +76,11 @@ ko=0
 #   /commande/confirmation   atteinte par une REDIRECTION après paiement, et
 #                            elle ne doit surtout pas être navigable : un lien
 #                            afficherait une confirmation sans commande
+#   /echec-rendu             page qui lève à dessein, LS-125, jamais navigable :
+#                            elle n'existe que pour que la suite de bout en bout
+#                            traverse la frontière d'erreur du groupe, et rend
+#                            404 hors des tests. Même exclusion que son jumeau
+#                            d'administration, LS-191
 #
 # LES ÉCRANS À SEGMENT DYNAMIQUE SONT EXCLUS PAR LEUR FORME et non par leur
 # nom : leur lien porte une valeur interpolée, `href={`/produit/${slug}`}`, que
@@ -87,6 +92,7 @@ EXCLUSIONS="
 /compte/nouveau-mot-de-passe
 /compte/reauthentification
 /commande/confirmation
+/echec-rendu
 "
 
 est_exclue() {
