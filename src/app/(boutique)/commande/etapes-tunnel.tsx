@@ -182,7 +182,19 @@ export function EtapesTunnel({
    */
   function commander(): void {
     demarrer(async () => {
-      const resultat = await passerCommandeAction();
+      /*
+       * LE PORT AFFICHE REMONTE AU SERVEUR, LS-98 et ADR-043.
+       *
+       * IL NE FIXE AUCUN MONTANT : le serveur recalcule le sien et facture
+       * celui-la. Cette valeur sert UNIQUEMENT a detecter un ecart, donc une
+       * valeur forgee ne peut que faire refuser la commande.
+       *
+       * SANS ELLE, une modification de tarif tombant entre l'affichage et le
+       * clic ferait payer un total que le client n'a jamais lu.
+       */
+      const resultat = await passerCommandeAction(
+        recapitulatif?.fraisPortCentimes,
+      );
 
       if (resultat.statut === "REFUSE") {
         const ligne = recapitulatif?.lignes.find(
@@ -199,6 +211,27 @@ export function EtapesTunnel({
 
       if (resultat.statut === "REESSAYER" || resultat.statut === "INVALIDE") {
         setErreur(messageLisible(resultat.message));
+        return;
+      }
+
+      /*
+       * LES FRAIS DE PORT ONT CHANGE PENDANT LA SESSION.
+       *
+       * AUCUNE COMMANDE N'A ETE ECRITE, la transaction ayant ete annulee : le
+       * client peut recommencer sans qu'aucune piece soit gelee.
+       *
+       * LE NOUVEAU MONTANT EST DIT, jamais seulement « les frais ont change » :
+       * un changement annonce sans sa valeur oblige a rouvrir son panier pour
+       * comprendre ce qu'on va payer.
+       *
+       * `router.refresh()` REDESSINE LE RECAPITULATIF avec le nouveau montant,
+       * sans quoi l'ecran continuerait d'afficher l'ancien a cote du message.
+       */
+      if (resultat.statut === "PORT_CHANGE") {
+        setErreur(
+          `Les frais de livraison viennent de changer et s'élèvent désormais à ${formaterMontant(resultat.fraisPortCentimes)}. Votre récapitulatif est à jour, vérifiez le total avant de commander.`,
+        );
+        router.refresh();
         return;
       }
 

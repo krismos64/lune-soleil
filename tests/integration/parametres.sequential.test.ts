@@ -26,6 +26,8 @@ import { Client } from "pg";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { inject } from "vitest";
 
+import { schemaParametresBoutique, valider } from "@/lib/validation";
+
 import { creerVarianteEnStock } from "../aide/donnees-test";
 import { VARIABLE_URL_TEST } from "../aide/base-ephemere";
 
@@ -390,6 +392,80 @@ describe("enregistrerParametres", () => {
     );
   });
 
+  /*
+   * ------------------------------------------------------------------
+   * LE MESSAGE DE REFUS EST LISIBLE, et ne porte aucun nom de cle technique.
+   *
+   * `formaterProblemes` prefixe par le chemin du champ et les messages du socle
+   * sont ecrits SANS ACCENTS : l'adaptateur affichait donc « emailAlertes : Une
+   * adresse email valide est attendue », et « Une quantite doit etre
+   * strictement positive » sur le seuil de stock.
+   *
+   * Deux manquements a la regle de redaction française, qui couvre explicitement
+   * les messages d'erreur. Releve par `ls-frontend-revue` le 11 septembre 2026.
+   *
+   * CE TEST VIT ICI ET NON EN BOUT EN BOUT, et la raison est structurelle : la
+   * session partagee de Playwright n'a aucune preuve d'identite recente, et la
+   * garde precede la validation. Toute soumission y rend
+   * `REAUTHENTIFICATION_REQUISE`, jamais `INVALIDE`.
+   * ------------------------------------------------------------------
+   */
+  it("refuse une adresse mal formee par un message lisible et accentue", async () => {
+    /*
+     * LA FONCTION DE TRADUCTION EST APPELEE, ET NON LA SERVER ACTION. Celle-ci
+     * lit `headers()`, indisponible hors d'une requete : l'appeler ici echoue
+     * sur « `headers` was called outside a request scope » sans rien dire de la
+     * traduction. Mesure faite plutot que supposee.
+     */
+    const { refusLisible } =
+      await import("@/app/administration/parametres/refus");
+
+    /*
+     * LE MESSAGE D'ENTREE EST CELUI QUE ZOD PRODUIT REELLEMENT, obtenu en
+     * validant une adresse mal formee : le recopier a la main ferait passer ce
+     * test le jour ou le format du socle change.
+     */
+    const brut = (() => {
+      try {
+        valider(schemaParametresBoutique, {
+          ...parametresValides({ emailAlertes: "pas-une-adresse" }),
+        });
+        throw new Error("la validation aurait du refuser");
+      } catch (erreur) {
+        return erreur instanceof Error ? erreur.message : "";
+      }
+    })();
+
+    // LE MESSAGE BRUT PORTE BIEN LE DEFAUT que cette story ferme.
+    expect(brut).toMatch(/emailAlertes/);
+
+    const resultat = refusLisible(brut);
+
+    /*
+     * LE CHAMP EST DESIGNE, `frontend-design.md` exigeant qu'une erreur soit
+     * associee a son champ : sur cinq champs, un message global oblige a
+     * deviner lequel est en cause.
+     */
+    expect(resultat.champ).toBe("emailAlertes");
+
+    // AUCUN NOM DE CLE TECHNIQUE, sens negatif qui est le coeur de ce test.
+    expect(resultat.message).not.toMatch(/emailAlertes|Centimes|seuilStock/);
+
+    /*
+     * AUCUN MOT MAL ACCENTUE, ce que le message du socle portait : « Une
+     * quantite doit etre strictement positive », « attendue » precede de
+     * « valide » sans accent selon les schemas.
+     *
+     * L'ASSERTION PORTE SUR L'ABSENCE ET NON SUR LA PRESENCE D'ACCENTS, mesure
+     * faite apres un premier essai errone : « Cette adresse email n'est pas
+     * valide » est un français correct qui n'en porte aucun, et exiger un accent
+     * ferait refuser une phrase juste.
+     */
+    expect(resultat.message).not.toMatch(
+      /\b(quantite|etre|refusee|attendue|valide e|donnees)\b/,
+    );
+  });
+
   it.each([
     ["un tarif décimal", { tarifRelaisCentimes: 4.1 }],
     ["un tarif négatif", { tarifRelaisCentimes: -410 }],
@@ -598,6 +674,82 @@ describe("le tarif appliqué à une commande vient de la base", () => {
     expect(apres.rows[0]?.frais).toBe(avant.rows[0]?.frais);
     expect(apres.rows[0]?.total).toBe(avant.rows[0]?.total);
     expect(apres.rows[0]?.frais).toBe(TARIF_DOMICILE);
+  });
+
+  /*
+   * ------------------------------------------------------------------
+   * LE PORT AFFICHE EST CONFRONTE AU PORT FACTURE, LS-98 et ADR-043.
+   *
+   * CE DEFAUT EST NE AVEC CETTE STORY, et il n'existait pas avant : les tarifs
+   * vivaient dans l'environnement, donc ne pouvaient pas bouger sans
+   * redeploiement, ce qui coupait de toute facon la session du client.
+   *
+   * LE SCENARIO : le client lit « Livraison 7,49 € » au recapitulatif,
+   * l'exploitante enregistre 8,99 € pendant qu'il verifie son adresse, et le
+   * clic suivant facturerait 8,99 € sur un total jamais affiche. Stripe serait
+   * appele sur ce montant.
+   *
+   * LA DETECTION EXISTANTE NE LE VOYAIT PAS : `revalider` compare le total des
+   * ARTICLES, qui exclut le port par construction.
+   *
+   * RELEVE PAR `ls-critical-reviewer` le 11 septembre 2026.
+   * ------------------------------------------------------------------
+   */
+  it("refuse la commande quand le port a change depuis l'affichage", async () => {
+    const variante = await varianteAuPrix(PRIX_SOUS_SEUIL);
+
+    // Le tarif change APRES que le client a lu son recapitulatif a 749.
+    await client.query(
+      "UPDATE parametre_boutique SET tarif_domicile_centimes = 899 WHERE id = true",
+    );
+
+    await expect(
+      passerCommande({
+        lignesCookie: [{ varianteId: variante.varianteId, quantite: 1 }],
+        saisie: saisieCommande(`ls98-${randomUUID()}@exemple.test`),
+        fraisPortPresenteCentimes: TARIF_DOMICILE,
+      }),
+    ).rejects.toThrow(/frais de port ont change/i);
+
+    /*
+     * LA TRANSACTION EST ANNULEE, ET C'EST LE POINT QUI COMPTE LE PLUS. Un
+     * `return` au lieu d'une levee validerait la transaction : la commande
+     * subsisterait avec ses reservations, gelant une piece unique pour un achat
+     * refuse. Piege « un return valide la transaction », deja en fiche.
+     */
+    const { rows: commandes } = await client.query<{ nombre: string }>(
+      "SELECT count(*)::text AS nombre FROM commande",
+    );
+    expect(Number(commandes[0]?.nombre)).toBe(0);
+
+    const { rows: reservations } = await client.query<{ nombre: string }>(
+      "SELECT count(*)::text AS nombre FROM reservation",
+    );
+    expect(Number(reservations[0]?.nombre)).toBe(0);
+
+    // LA PIECE RESTE LIBRE : `quantite_reservee` revient a zero avec le rollback.
+    const { rows: stock } = await client.query<{ reservee: number }>(
+      "SELECT quantite_reservee AS reservee FROM variante WHERE id = $1",
+      [variante.varianteId],
+    );
+    expect(stock[0]?.reservee).toBe(0);
+  });
+
+  /*
+   * LE PENDANT POSITIF, sans lequel le test precedent serait satisfait par une
+   * garde qui refuserait TOUTE commande. Motif « defaut ferme invisible au
+   * nominal », deja en fiche sur ce depot.
+   */
+  it("accepte la commande quand le port affiche correspond", async () => {
+    const variante = await varianteAuPrix(PRIX_SOUS_SEUIL);
+
+    const issue = await passerCommande({
+      lignesCookie: [{ varianteId: variante.varianteId, quantite: 1 }],
+      saisie: saisieCommande(`ls98-${randomUUID()}@exemple.test`),
+      fraisPortPresenteCentimes: TARIF_DOMICILE,
+    });
+
+    expect(issue.totalCentimes).toBe(PRIX_SOUS_SEUIL + TARIF_DOMICILE);
   });
 
   /*

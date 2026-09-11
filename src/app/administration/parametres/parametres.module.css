@@ -89,14 +89,39 @@
   line-height: 1.5;
 }
 
+/*
+ * `width: 100%` ET `font: inherit` SONT OBLIGATOIRES, et leur absence a ete
+ * relevee le 11 septembre 2026 : cet ecran etait le SEUL des douze feuilles
+ * d'administration a ne pas les poser.
+ *
+ * `font: inherit` : un `input` sans lui rend en Arial 16 px quand la page est en
+ * `system-ui`. Rien ne deborde, donc aucun controle ne rougit ; l'ecart se voit
+ * des qu'on compare deux formulaires cote a cote.
+ *
+ * `width: 100%` : sans lui, le champ retombe sur sa largeur intrinseque de vingt
+ * caracteres. Il tient aujourd'hui par l'etirement implicite du conteneur flex,
+ * donc poser un champ en ligne le casserait sans prevenir.
+ */
 .saisie {
+  width: 100%;
   border: 1px solid var(--ls-border-controle);
   border-radius: var(--ls-radius-sm);
   background: var(--ls-surface);
   color: var(--ls-text);
   padding: var(--ls-space-2) var(--ls-space-3);
+  font: inherit;
   font-size: 1rem;
   min-height: var(--ls-touch-target);
+}
+
+/*
+ * LE CHAMP EN ERREUR SE VOIT, et pas seulement par la couleur : `aria-invalid`
+ * porte l'information, la bordure ne fait que l'appuyer. `frontend-design.md`
+ * interdit qu'une information passe par la seule couleur.
+ */
+.saisie[aria-invalid="true"] {
+  border-color: var(--ls-accent-terracotta-deep);
+  border-width: 2px;
 }
 
 .interrupteurs {
@@ -144,6 +169,21 @@
  */
 .annonce {
   color: var(--ls-text);
+  line-height: 1.5;
+  min-height: 1.5rem;
+}
+
+/*
+ * LE MESSAGE D'ERREUR EMPLOIE `--ls-text` ET NON UNE COULEUR D'ALERTE.
+ *
+ * `--ls-accent-terracotta-deep` sur fond clair donne 4,07:1, sous le seuil AA
+ * de 4,5:1 pour du texte courant : il n'est conforme qu'en FOND de badge avec
+ * du texte blanc, C31. L'urgence passe donc par `role="alert"` et par la
+ * bordure du champ, jamais par la couleur du texte seule.
+ */
+.erreur {
+  color: var(--ls-text);
+  font-weight: 600;
   line-height: 1.5;
   min-height: 1.5rem;
 }

@@ -85,6 +85,41 @@ export type IssueCommande = {
 };
 
 /**
+ * Le port affiche au recapitulatif ne vaut plus celui que la base facture.
+ *
+ * ------------------------------------------------------------------
+ * CE CAS EST NE AVEC ADR-043, LS-98, et il n'existait pas avant.
+ *
+ * Les tarifs vivaient dans l'environnement : ils ne pouvaient pas bouger sans
+ * redeploiement, ce qui coupait de toute facon la session du client. Depuis
+ * qu'ils vivent en base et se reglent a chaud, une modification peut tomber
+ * ENTRE le rendu du recapitulatif et le clic sur « Commander ».
+ *
+ * SANS CETTE GARDE, Stripe serait appele sur un total que le client n'a jamais
+ * lu. `lib/livraison.ts` le nomme en en-tete : « un tarif AFFICHE qui diverge du
+ * tarif FACTURE est une information precontractuelle fausse, sanctionnee bien
+ * au-dela de l'ecart de prix ».
+ *
+ * LA DETECTION EXISTANTE NE LE VOYAIT PAS. `revalider` compare le total des
+ * ARTICLES, qui exclut le port par construction : un port qui change laisse
+ * `aChange` a faux, et la banniere de l'ecran ne s'affiche pas.
+ *
+ * RELEVE PAR `ls-critical-reviewer` LE 11 SEPTEMBRE 2026, sur cette story.
+ * ------------------------------------------------------------------
+ */
+export class FraisPortChangesError extends Error {
+  constructor(
+    readonly fraisPortPresenteCentimes: number,
+    readonly fraisPortReelCentimes: number,
+  ) {
+    super(
+      "Les frais de port ont change entre l'affichage du recapitulatif et la commande.",
+    );
+    this.name = "FraisPortChangesError";
+  }
+}
+
+/**
  * Ecrit une commande et reserve son stock, en une transaction.
  *
  * `apresReservation` EST UN CROCHET DE TEST, et il est assume comme tel. Il
@@ -95,6 +130,7 @@ export type IssueCommande = {
 export async function passerCommande({
   lignesCookie,
   saisie,
+  fraisPortPresenteCentimes,
   configuration: configurationFournie,
   client = prisma,
   apresReservation,
@@ -107,6 +143,15 @@ export async function passerCommande({
    * point de retrait etant parfaitement valide.
    */
   saisie: SaisieTunnel & { mode: ModeLivraison };
+  /**
+   * Le port lu par le client au recapitulatif, LS-98.
+   *
+   * FACULTATIF, et son absence DESACTIVE la garde : les vingt-et-un fichiers de
+   * test qui appellent ce service ne presentent aucun recapitulatif, et les
+   * obliger a fournir un montant qu'ils n'affichent nulle part ne prouverait
+   * rien. Le tunnel reel le passe toujours.
+   */
+  fraisPortPresenteCentimes?: number;
   configuration?: ConfigurationLivraison;
   client?: typeof prisma;
   apresReservation?: () => void | Promise<void>;
@@ -254,6 +299,27 @@ export async function passerCommande({
         totalArticlesCentimes: sousTotalCentimes,
         configuration,
       });
+
+      /*
+       * LE PORT AFFICHE EST CONFRONTE AU PORT CALCULE, LS-98 et ADR-043.
+       *
+       * ELLE LEVE PLUTOT QUE DE RENDRE UNE VALEUR, et c'est voulu ici : la
+       * levee ANNULE la transaction, donc aucune commande ni reservation ne
+       * subsiste. Un `return` validerait la transaction, piege deja en fiche sur
+       * ce depot, et gelerait une piece pour une commande refusee.
+       *
+       * LE CLIENT REVOIT SON RECAPITULATIF avec le nouveau montant, et decide.
+       * Facturer en silence serait le seul comportement inacceptable.
+       */
+      if (
+        fraisPortPresenteCentimes !== undefined &&
+        fraisPortPresenteCentimes !== fraisPortCentimes
+      ) {
+        throw new FraisPortChangesError(
+          fraisPortPresenteCentimes,
+          fraisPortCentimes,
+        );
+      }
 
       const adresse = {
         nom: saisie.nomClient,

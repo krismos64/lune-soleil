@@ -429,6 +429,7 @@ async function sessionsAExpirer(
 export async function passerCommandeEtDemarrerPaiement({
   lignesCookie,
   saisie,
+  fraisPortPresenteCentimes,
   fournisseur,
   configuration,
   urlBase,
@@ -436,6 +437,8 @@ export async function passerCommandeEtDemarrerPaiement({
 }: {
   lignesCookie: Parameters<typeof passerCommande>[0]["lignesCookie"];
   saisie: Parameters<typeof passerCommande>[0]["saisie"];
+  /** Le port lu par le client au recapitulatif, LS-98. Transmis tel quel. */
+  fraisPortPresenteCentimes?: number;
   fournisseur: FournisseurPaiement;
   configuration?: Parameters<typeof passerCommande>[0]["configuration"];
   urlBase?: string;
@@ -444,6 +447,9 @@ export async function passerCommandeEtDemarrerPaiement({
   const commande = await passerCommande({
     lignesCookie,
     saisie,
+    ...(fraisPortPresenteCentimes === undefined
+      ? {}
+      : { fraisPortPresenteCentimes }),
     ...(configuration === undefined ? {} : { configuration }),
     client,
   });

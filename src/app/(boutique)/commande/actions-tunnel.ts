@@ -40,6 +40,7 @@ import {
   encoderCommandeEnCours,
 } from "@/lib/commande-cookie";
 import { CommandeRefuseeError } from "@/services/commande";
+import { FraisPortChangesError } from "@/services/commande";
 import { passerCommandeEtDemarrerPaiement } from "@/services/paiement";
 import { InterblocagePersistantError } from "@/services/reservation";
 import { fournisseurStripe } from "@/integrations/stripe";
@@ -223,6 +224,14 @@ export type ResultatCommande =
   | { statut: "REFUSE"; varianteRefusee: string }
   /** Contention, pas un refus : le stock etait peut-etre la. */
   | { statut: "REESSAYER"; message: string }
+  /**
+   * Les frais de port ont change entre l'affichage et le clic, LS-98.
+   *
+   * `fraisPortCentimes` PORTE LE NOUVEAU MONTANT, pour que l'ecran le dise
+   * plutot que d'annoncer un changement sans valeur : « les frais de port ont
+   * change » laisse le client rouvrir son panier pour comprendre.
+   */
+  | { statut: "PORT_CHANGE"; fraisPortCentimes: number }
   | { statut: "INVALIDE"; message: string };
 
 /**
@@ -236,7 +245,21 @@ export type ResultatCommande =
  * dans les cookies signes : un parametre serait une entree non fiable de plus a
  * valider, et la tentation d'y passer un total. Invariants 1 et 2.
  */
-export async function passerCommandeAction(): Promise<ResultatCommande> {
+export async function passerCommandeAction(
+  /**
+   * Le port lu par le client au recapitulatif, LS-98 et ADR-043.
+   *
+   * IL VIENT DU NAVIGATEUR, ET CE N'EST PAS UNE VIOLATION DE L'INVARIANT 2. Il
+   * n'autorise rien et ne fixe aucun montant : il sert UNIQUEMENT a detecter un
+   * ECART avec le port que le serveur recalcule. Une valeur forgee ne peut que
+   * faire refuser la commande, jamais en faire passer une a un prix choisi.
+   *
+   * LE MONTANT FACTURE RESTE CELUI DU SERVEUR, `calculerFraisPort` sur la
+   * configuration lue en base : c'est le defaut que LS-114 a ferme sur le prix
+   * du panier, et il ne se rouvre pas ici.
+   */
+  fraisPortPresenteCentimes?: number,
+): Promise<ResultatCommande> {
   const magasin = await cookies();
   const lignesCookie = decoderPanier(magasin.get(NOM_COOKIE_PANIER)?.value);
   const saisie = await lireSaisie();
@@ -267,6 +290,9 @@ export async function passerCommandeAction(): Promise<ResultatCommande> {
     const { commande, paiement } = await passerCommandeEtDemarrerPaiement({
       lignesCookie,
       saisie: { ...saisie, mode: saisie.mode },
+      ...(fraisPortPresenteCentimes === undefined
+        ? {}
+        : { fraisPortPresenteCentimes }),
       fournisseur: fournisseurStripe,
     });
 
@@ -308,6 +334,21 @@ export async function passerCommandeAction(): Promise<ResultatCommande> {
   } catch (erreur) {
     if (erreur instanceof CommandeRefuseeError) {
       return { statut: "REFUSE", varianteRefusee: erreur.varianteRefusee };
+    }
+
+    /*
+     * LE PORT A CHANGE PENDANT LA SESSION, LS-98 et ADR-043.
+     *
+     * LA TRANSACTION A DEJA ETE ANNULEE par la levee : aucune commande, aucune
+     * reservation ne subsiste, et le client peut recommencer sans que rien ne
+     * soit gele. C'est pour cela que le service leve au lieu de rendre une
+     * valeur, `$transaction` validant sur un `return`.
+     */
+    if (erreur instanceof FraisPortChangesError) {
+      return {
+        statut: "PORT_CHANGE",
+        fraisPortCentimes: erreur.fraisPortReelCentimes,
+      };
     }
 
     /*
