@@ -342,3 +342,94 @@ test("la page d'informations légales décrit les cookies employés", async ({
   expect(texte).toMatch(/publicitaire/);
   expect(texte).toMatch(/strictement nécessaires?/i);
 });
+
+/**
+ * La section Accessibilite, LS-123.
+ *
+ * ------------------------------------------------------------------
+ * CE QUE CE TEST VERROUILLE, ET CE QU'IL LAISSE LIBRE.
+ *
+ * AUCUN TEXTE N'IMPOSE CETTE SECTION A CETTE BOUTIQUE, verifie aux sources le
+ * 11 septembre 2026 : l'article 47 de la loi 2005-102 vise 250 M EUR de chiffre
+ * d'affaires, et la directive 2019/882 exempte les microentreprises de moins de
+ * dix salaries et deux millions d'euros. Les deux seuils sont tres au-dessus.
+ *
+ * LE RISQUE N'EST DONC PAS L'ABSENCE, IL EST L'EXCES. Une page qui annoncerait
+ * une « declaration d'accessibilite » ou un taux de conformite RGAA
+ * revendiquerait une conformite jamais auditee, ce qui est une allegation
+ * trompeuse sur une page legale. Les deux assertions negatives ci-dessous
+ * comptent donc autant que les positives.
+ *
+ * LA FORMULATION RESTE LIBRE, motif de la section Cookies juste au-dessus : le
+ * texte se relit et se reecrit, ce qui doit survivre est le FAIT que la page
+ * dise son engagement, son moyen de signalement, et la limite de ce qui a ete
+ * verifie.
+ * ------------------------------------------------------------------
+ */
+test("la section accessibilité engage sans revendiquer de conformité auditée", async ({
+  page,
+}) => {
+  await page.goto("/informations-legales");
+
+  const section = page.locator("#accessibilite");
+  await expect(section).toBeVisible();
+
+  const texte = (await section.textContent()) ?? "";
+
+  // Le site dit ce qu'il vise, et par quel moyen on le joint si ça résiste.
+  expect(texte).toMatch(/clavier/i);
+  expect(texte).toMatch(/lecteur d[’']écran/i);
+  expect(texte).toMatch(/WCAG/);
+
+  /*
+   * LA LIMITE EST DITE. Sans cette phrase, l'énumération des vérifications
+   * automatisées se lirait comme une garantie d'accessibilité complète.
+   */
+  expect(texte).toMatch(/aucun audit RGAA/i);
+
+  /*
+   * LES DEUX SENS NEGATIFS, et ils sont le coeur de ce test.
+   *
+   * « Declaration d'accessibilite » designe un document reglementaire au
+   * contenu impose. Un pourcentage de conformite en est la mention la plus
+   * exposee : aucun audit n'ayant eu lieu, tout chiffre serait invente.
+   */
+  expect(texte).not.toMatch(/déclaration d[’']accessibilité/i);
+  expect(texte).not.toMatch(/\d+\s*%/);
+});
+
+/**
+ * LE SOMMAIRE MENE A CHAQUE SECTION, ET AUCUNE SECTION N'EST ORPHELINE.
+ *
+ * LES DEUX SENS, et le second est celui qui manquait : une section ajoutee sans
+ * son entree de sommaire reste atteignable par defilement et invisible pour qui
+ * parcourt la page par son plan. C'est exactement ce qui serait arrive a la
+ * section Accessibilite si son entree avait ete oubliee.
+ */
+test("le sommaire et les sections de la page légale se correspondent", async ({
+  page,
+}) => {
+  await page.goto("/informations-legales");
+
+  const ancresSommaire = await page
+    .locator('nav[aria-label="Sections de cette page"] a')
+    .evaluateAll((liens) =>
+      liens.map((lien) => (lien as HTMLAnchorElement).hash.slice(1)),
+    );
+
+  const sections = await page
+    .locator("main > section[id]")
+    .evaluateAll((elements) => elements.map((element) => element.id));
+
+  expect(ancresSommaire.length).toBeGreaterThan(0);
+  expect([...ancresSommaire].sort()).toEqual([...sections].sort());
+
+  /*
+   * CHAQUE CIBLE EXISTE VRAIMENT, verifie sur le rendu et non sur la liste : un
+   * sommaire coherent avec lui-meme pointerait encore vers du vide si une
+   * section perdait son `id`.
+   */
+  for (const ancre of ancresSommaire) {
+    await expect(page.locator(`#${ancre}`)).toBeVisible();
+  }
+});

@@ -14,8 +14,12 @@ La photographie et la matière portent l'identité, pas les ornements.
 et l'enchaînement des écrans d'un prototype gelé le 5 août 2026, dont les six
 états non nominaux et la table parcours vers écran. Il ne prime sur rien : en cas
 de divergence avec un ADR ou une règle d'ici, c'est le prototype qui a tort, et
-ce document liste déjà les écarts connus, **sept** au 11 septembre 2026, sa
-propre section les énumérant.
+ce document liste déjà les écarts connus, sa propre section les énumérant.
+
+**Le compte ne s'écrit plus ici**, corrigé le 11 septembre 2026 : il disait
+« sept » et le huitième a été relevé le jour même, `/contact` servi en page
+entière depuis LS-97 là où le prototype le met en ancre de `/aide`. Un nombre
+recopié d'un document à l'autre se périme deux fois plus vite qu'à sa source.
 
 ## Palette, fixée par ADR-022
 

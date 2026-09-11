@@ -148,6 +148,9 @@ export default async function PageInformationsLegales() {
           <li>
             <a href="#avis">Avis de clients</a>
           </li>
+          <li>
+            <a href="#accessibilite">Accessibilité</a>
+          </li>
         </ul>
       </nav>
 
@@ -596,6 +599,97 @@ export default async function PageInformationsLegales() {
           Les avis sont affichés du <strong>plus récent au plus ancien</strong>.
           Aucun autre critère n&apos;entre dans leur ordre d&apos;affichage, et
           aucun avis n&apos;est mis en avant.
+        </p>
+      </section>
+
+      {/*
+       * ACCESSIBILITE, LS-123. SECTION VOLONTAIRE ET NON OBLIGATOIRE, et la
+       * nuance est la raison d'etre de ce commentaire.
+       *
+       * AUCUN TEXTE N'IMPOSE CETTE PAGE A LUNE & SOLEIL, verifie aux sources le
+       * 11 septembre 2026 :
+       *
+       * | Texte | Seuil | Cette boutique |
+       * |---|---|---|
+       * | article 47 de la loi 2005-102, decret 2019-768 | 250 M EUR de CA | tres en dessous |
+       * | directive 2019/882, applicable au commerce en ligne depuis le 28 juin 2025 | exemption microentreprise, moins de 10 salaries ET 2 M EUR | les deux conditions remplies |
+       *
+       * ECRIRE « DECLARATION D'ACCESSIBILITE » SERAIT DONC FAUX. Ce terme
+       * designe un document reglementaire au contenu impose, avec taux de
+       * conformite au RGAA, audit date et schema pluriannuel. Publier ce mot
+       * sans ce contenu annoncerait une conformite qui n'a pas ete auditee.
+       *
+       * CE QUI EST ECRIT ICI EST DONC UN ENGAGEMENT, et chaque phrase porte un
+       * fait MESURE plutot qu'une intention : les contrastes et les audits
+       * automatises sont comptes par les controles du depot, jamais recopies.
+       *
+       * LE TAUX DE CONFORMITE RGAA N'EST PAS ANNONCE, deliberement : aucun
+       * audit RGAA n'a ete conduit, et un pourcentage invente serait la forme
+       * la plus exposee de l'allegation trompeuse sur une page legale.
+       */}
+      <section
+        id="accessibilite"
+        tabIndex={-1}
+        className={styles.section}
+        aria-labelledby="titre-accessibilite"
+      >
+        <h2 id="titre-accessibilite" className={styles.titreSection}>
+          Accessibilité
+        </h2>
+
+        <h3 className={styles.titreBloc}>Notre engagement</h3>
+        <p className={styles.texte}>
+          Ce site est conçu pour rester utilisable au clavier, avec une loupe ou
+          un lecteur d&apos;écran. Cet engagement est{" "}
+          <strong>volontaire</strong> : la réglementation sur
+          l&apos;accessibilité numérique vise les organismes publics et les
+          grandes entreprises, et ne s&apos;applique pas à une activité de cette
+          taille.
+        </p>
+
+        <h3 className={styles.titreBloc}>
+          Ce qui est vérifié à chaque mise à jour
+        </h3>
+        <ul className={styles.liste}>
+          <li>
+            chaque page est contrôlée automatiquement sur les critères WCAG 2.2
+            de niveau AA, et une anomalie bloque la mise en ligne
+          </li>
+          <li>
+            l&apos;affichage est mesuré à quatre largeurs d&apos;écran, à partir
+            de 320 pixels, sans défilement horizontal
+          </li>
+          <li>
+            le contraste de chaque couleur de texte est calculé sur le fond
+            réellement employé
+          </li>
+          <li>
+            un lien « Aller au contenu » ouvre chaque page, et la navigation se
+            fait entièrement au clavier
+          </li>
+        </ul>
+
+        <h3 className={styles.titreBloc}>Ce qui n&apos;a pas été fait</h3>
+        <p className={styles.texte}>
+          <strong>Aucun audit RGAA n&apos;a été conduit</strong>, et aucun taux
+          de conformité n&apos;est donc annoncé. Les vérifications décrites
+          ci-dessus sont automatisées : elles ne remplacent pas l&apos;essai par
+          une personne qui utilise réellement une technologie d&apos;assistance.
+        </p>
+
+        <h3 className={styles.titreBloc}>Signaler une difficulté</h3>
+        <p className={styles.texte}>
+          {/*
+           * AUCUNE CLASSE SUR CE LIEN, et c'est voulu : `.texte a` le style
+           * deja, comme les autres liens de cette page. Une classe `.lien`
+           * avait ete ecrite ici et n'existe pas dans le module CSS, donc elle
+           * etait inerte et le lien serait reste de la couleur par defaut.
+           */}
+          Si une page vous résiste, écrivez-nous depuis la{" "}
+          <Link href="/contact">page de contact</Link> en indiquant
+          l&apos;adresse concernée et ce qui a bloqué. Une autre façon
+          d&apos;obtenir la même information ou de passer commande vous sera
+          proposée.
         </p>
       </section>
     </main>
