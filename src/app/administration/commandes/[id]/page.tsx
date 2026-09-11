@@ -37,6 +37,8 @@ import {
   traduireStatut,
 } from "@/lib/affichage-commande";
 import { DocumentFacture } from "./document-facture";
+import { lireEtatRenvoi } from "@/services/avis";
+import { RenvoiInvitation } from "./renvoi-invitation";
 import { Remboursement } from "./remboursement";
 import { TransitionsCommande } from "./transitions";
 import styles from "../commandes.module.css";
@@ -286,6 +288,38 @@ export default async function PageDetailCommande({
         </h2>
         <DocumentFacture commandeId={commande.id} facture={commande.facture} />
       </section>
+
+      {/*
+       * L'INVITATION AUX AVIS N'APPARAIT QUE SUR UNE COMMANDE LIVREE, LS-61.
+       *
+       * AUCUNE INVITATION N'EXISTE AVANT LA LIVRAISON CONSTATEE : la tache
+       * quotidienne les cree a partir d'`Expedition.livreA`, regle R17.
+       * Afficher le bouton avant, c'est offrir un geste qui refuserait
+       * toujours, ce qui est un piege plutot qu'une information.
+       *
+       * LA CONDITION PORTE SUR `livreA` ET NON SUR UN STATUT DE COMMANDE : le
+       * fait generateur de l'invitation est la LIVRAISON REELLE, et les
+       * articles D111-9 a D111-12 imposent une date d'experience exacte.
+       */}
+      {commande.expedition?.livreA != null && (
+        <section className={styles.section} aria-labelledby="titre-invitation">
+          <h2 id="titre-invitation" className={styles.titreSection}>
+            Invitation à déposer un avis
+          </h2>
+          <Suspense
+            fallback={
+              <p className={styles.chargement} role="status">
+                Chargement de l&apos;invitation…
+              </p>
+            }
+          >
+            <BlocRenvoiInvitation
+              commandeId={commande.id}
+              destinataire={commande.emailNormalise}
+            />
+          </Suspense>
+        </section>
+      )}
 
       {/*
        * LE REMBOURSEMENT VIENT APRES LE DOCUMENT, et l'ordre suit la
@@ -643,5 +677,45 @@ function BlocAcheminement({
         </p>
       )}
     </section>
+  );
+}
+
+/**
+ * Lit l'etat de renvoi puis rend le bloc, LS-61.
+ *
+ * IL EST SOUS UN `Suspense`, meme motif que le remboursement : la lecture
+ * interroge la base, et la placer dans le corps de la page retarderait tout
+ * l'ecran pour un bloc secondaire.
+ *
+ * UNE COMMANDE LIVREE SANS INVITATION EST UN CAS NORMAL : la tache quotidienne
+ * ne l'a pas encore vue. Le dire plutot que de rendre un bloc vide evite de
+ * faire chercher une panne.
+ */
+async function BlocRenvoiInvitation({
+  commandeId,
+  destinataire,
+}: {
+  commandeId: string;
+  destinataire: string;
+}) {
+  const etat = await lireEtatRenvoi(commandeId);
+
+  if (etat === null) {
+    return (
+      <p className={styles.vide}>
+        Aucune invitation pour cette commande. Elle part automatiquement au
+        prochain passage de la tâche quotidienne.
+      </p>
+    );
+  }
+
+  return (
+    <RenvoiInvitation
+      commandeId={commandeId}
+      destinataire={destinataire}
+      envoisFaits={etat.envoisFaits}
+      plafond={etat.plafond}
+      renvoiPossible={etat.renvoiPossible}
+    />
   );
 }
