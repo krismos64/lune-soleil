@@ -106,10 +106,10 @@ interface et réponses de conversation.
 Deux axes à ne pas confondre. **Importance** : Must, Should, Could, Won't.
 **Jalon** : Go-Live, V1 cible, V1.x, Hors V1. Un Must sur Go-Live ne se repousse
 jamais. Aucune date fixée, le pilotage se fait par portes de sortie de phase.
-Deux nuances qui se perdent : l'assistant IA et l'**interface** de statistiques
-sont en V1 cible mais la **collecte** des montants est au Go-Live, une donnée non
-capturée étant perdue ; l'espace client, les avis et le carnet d'adresses sont
-dans le périmètre d'ouverture depuis le 28 juillet 2026, epic LS-36.
+Nuances qui se perdent : l'**interface** de statistiques est en V1 cible mais la
+**collecte** des montants au Go-Live, une donnée non capturée étant perdue ;
+espace client, avis et carnet d'adresses sont en périmètre d'ouverture, LS-36 ;
+**l'assistant IA est écarté par ADR-044**, aucun modèle de langage.
 
 ## Sources de vérité
 
