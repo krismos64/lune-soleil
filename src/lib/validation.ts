@@ -775,3 +775,42 @@ export const schemaClotureSignalement = z.strictObject({
     .max(2000, "Une réponse de 2000 caractères au plus est attendue.")
     .nullable(),
 });
+
+/**
+ * Les parametres commerciaux de la boutique, LS-98, ADR-043.
+ *
+ * IL VALIDE CE QUE LA BASE NE PEUT PAS DIRE. Les CHECK garantissent la
+ * positivite et la presence ; ils ne savent rien de la FORME d'une adresse
+ * email, ni de ce qui constitue un tarif plausible. Un CHECK sur une expression
+ * reguliere d'email est un piege connu, trop strict il refuse des adresses
+ * valides, trop laxiste il ne prouve rien : la base garde le fait minimal, ce
+ * schema garde la forme.
+ *
+ * AUCUN `z.coerce`, regle du socle. Un formulaire HTML rend des chaines : c'est
+ * l'adaptateur qui convertit, explicitement et en disant ce qu'il fait. Coercer
+ * ici ferait accepter « 4.10 » comme 4 centimes, exactement la confusion
+ * euros-centimes que `lireCentimes` refuse deja cote environnement.
+ *
+ * LE SEUIL DE FRANCHISE EST `nullable` ET NON `optional`, et la distinction est
+ * metier. `null` DESACTIVE la franchise, LS-27 l'exige ; absent signifierait
+ * « inchange », ce qu'une ecriture totale ne permet pas d'exprimer. Les deux se
+ * confondent a la lecture d'un formulaire et jamais dans leur effet.
+ *
+ * LE SEUIL DE STOCK FAIBLE EMPLOIE `schemaQuantite` ET NON
+ * `schemaMontantCentimes` : c'est un nombre de PIECES, et zero n'est pas une
+ * valeur legitime. Un seuil nul n'alerterait jamais, ce qui serait une
+ * desactivation deguisee alors que `alerteStockFaible` existe pour cela. La
+ * meme borne vit dans `chk_parametre_seuil_stock_positif`.
+ */
+export const schemaParametresBoutique = z.strictObject({
+  tarifRelaisCentimes: schemaMontantCentimes,
+  tarifDomicileCentimes: schemaMontantCentimes,
+  seuilFranchiseCentimes: schemaMontantCentimes.nullable(),
+  seuilStockFaible: schemaQuantite,
+  emailAlertes: schemaEmailClient,
+  alerteCommandePayee: z.boolean(),
+  alertePaiementAnnule: z.boolean(),
+  alerteStockFaible: z.boolean(),
+  alerteMessageRecu: z.boolean(),
+  alerteAvisAModerer: z.boolean(),
+});

@@ -111,6 +111,26 @@ d'un clic, sans trace ni arbitrage.
 **Un paramètre qui permet de violer une décision structurante n'est pas un
 paramètre, c'est un contournement.**
 
+## Décision 3 bis : trois valeurs de seuil, et non deux
+
+Le seuil de franchise a **trois** états, et les confondre coûte une décision
+commerciale à l'exploitante :
+
+| Valeur | Signification |
+|---|---|
+| `null` | franchise **désactivée**, le port est toujours dû |
+| `0` | livraison **toujours offerte** en relais |
+| un montant | franchise à partir de ce montant |
+
+**Cette distinction a été trouvée par un test et non pensée à l'avance.** Le
+service refusait d'abord tout seuil inférieur au tarif relais, règle saine contre
+un seuil de 2 € sur un port de 4,10 € ; elle rendait aussi le zéro inatteignable,
+donc interdisait à l'exploitante d'offrir le port, alors que la colonne l'accepte
+et que le `CHECK` l'autorise.
+
+Le refus ne vise donc que les valeurs **incohérentes entre deux**, jamais la
+gratuité assumée.
+
 ## Décision 4 : les alertes sont des interrupteurs, jamais des destinataires libres
 
 Cinq alertes, correspondant à celles du prototype : commande payée, paiement
