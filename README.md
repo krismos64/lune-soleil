@@ -1077,7 +1077,7 @@ de mutation restent dehors** : ils modifient des fichiers du dépôt en place, c
 qu'une exécution partagée ne tolère pas. Ceux qui y tournent sont ceux qui
 travaillent sur des copies dans un bac temporaire ; leur nombre se mesure,
 `grep -ohE '\./[a-z/-]+\.sh' .github/workflows/*.yml | sort -u | grep -c mutation`,
-et valait 9 sur 36 le 9 septembre 2026. Le prototype d'interblocage documente un défaut ouvert, LS-50 : le
+et valait **10 sur 41** le 11 septembre 2026, contre 9 sur 36 deux jours plus tôt : le relever plutôt que le lire. Le prototype d'interblocage documente un défaut ouvert, LS-50 : le
 brancher rendrait la chaîne rouge en permanence. `verifier-jira.sh` exige des
 identifiants que la CI n'a pas, le dépôt étant public. `controle-fumee.sh` et
 `preparer-base-locale.sh` visent un service qui tourne, pas un dépôt.
