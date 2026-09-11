@@ -596,6 +596,120 @@ describe("purge de la quarantaine", () => {
   });
 });
 
+describe("expiration des medias bloques en EN_ATTENTE, LS-109", () => {
+  /**
+   * Ecrit un media `EN_ATTENTE` age, comme un televersement interrompu en
+   * laisse.
+   *
+   * L'AGE SE POSE EN BASE ET NON PAR UNE HORLOGE SIMULEE. `expirerMediasEnAttente`
+   * accepte un `maintenant` explicite, mais l'exercer par une date d'avenir
+   * testerait le parametre plutot que la clause SQL : c'est `creeA` qui decide,
+   * et c'est lui qu'il faut vieillir.
+   *
+   * IL NE PASSE PAS PAR `televerserPhotographie`, ET C'EST VOULU : cette
+   * fonction TERMINE toujours, en `TRAITE` ou en `ECHOUE`. L'etat que ce test
+   * reproduit est precisement celui qu'elle ne peut pas laisser, son `catch`
+   * n'ayant jamais tourne.
+   */
+  async function mediaEnAttenteAge(
+    produitId: string,
+    ageMinutes: number,
+    ordre = 1,
+  ): Promise<string> {
+    /*
+     * L'ORDRE EST UN PARAMETRE, ET C'EST `media_principal_unique` QUI L'IMPOSE.
+     * Cet index partiel, filtre sur `ordre = 1`, refuse un second media
+     * principal pour le meme produit : le test qui ajoute un media a cote d'une
+     * photographie deja publiee doit donc lui donner un rang libre. La
+     * contrainte a fait son travail, mesuree le 11 septembre 2026.
+     */
+    const { rows } = await client.query<{ id: string }>(
+      `INSERT INTO media (id, produit_id, chemin, ordre, statut_traitement, cree_a)
+       VALUES (gen_random_uuid(), $1, 'quarantaine/orphelin', $3,
+               'EN_ATTENTE'::"StatutTraitementMedia",
+               now() - make_interval(mins => $2))
+       RETURNING id`,
+      [produitId, ageMinutes, ordre],
+    );
+
+    return rows[0]!.id;
+  }
+
+  async function lireStatut(mediaId: string): Promise<string> {
+    const { rows } = await client.query<{ statut_traitement: string }>(
+      "SELECT statut_traitement FROM media WHERE id = $1",
+      [mediaId],
+    );
+
+    return rows[0]!.statut_traitement;
+  }
+
+  it("fait expirer vers ECHOUE un media bloque depuis plus d'une heure", async () => {
+    const produitId = await produitDeTest();
+    const mediaId = await mediaEnAttenteAge(produitId, 90);
+
+    const expires = await medias.expirerMediasEnAttente();
+
+    expect(expires).toBe(1);
+    expect(await lireStatut(mediaId)).toBe("ECHOUE");
+  });
+
+  it("laisse intact un traitement reellement en cours", async () => {
+    const produitId = await produitDeTest();
+    const mediaId = await mediaEnAttenteAge(produitId, 2);
+
+    const expires = await medias.expirerMediasEnAttente();
+
+    /*
+     * LE SEUIL EST TRES AU-DESSUS DES DEUX SECONDES que le traitement prend,
+     * mesurees a ADR-007. Faire expirer un media de deux minutes couperait un
+     * traitement en cours sur une machine chargee, et l'exploitante verrait sa
+     * photographie echouer sans raison.
+     */
+    expect(expires).toBe(0);
+    expect(await lireStatut(mediaId)).toBe("EN_ATTENTE");
+  });
+
+  it("ne touche ni les medias traites ni ceux deja en echec", async () => {
+    const produitId = await produitDeTest();
+    const media = await medias.televerserPhotographie(
+      produitId,
+      await photographie(),
+    );
+
+    await client.query(
+      "UPDATE media SET cree_a = now() - interval '2 hours' WHERE id = $1",
+      [media.id],
+    );
+
+    const expires = await medias.expirerMediasEnAttente();
+
+    expect(expires).toBe(0);
+    expect(await lireStatut(media.id)).toBe("TRAITE");
+  });
+
+  it("ne publie ni ne supprime aucun fichier", async () => {
+    const produitId = await produitDeTest();
+    const media = await medias.televerserPhotographie(
+      produitId,
+      await photographie(),
+    );
+
+    const avant = await fichiersPublies(media.chemin);
+
+    await mediaEnAttenteAge(produitId, 90, 2);
+    await medias.expirerMediasEnAttente();
+
+    /*
+     * L'EXPIRATION EST UNE ECRITURE DE STATUT, RIEN DE PLUS. Un media
+     * `EN_ATTENTE` n'a par construction AUCUN fichier sous `public/`, propriete
+     * physique d'ADR-007 : la faire expirer ne peut donc rien publier, et elle
+     * ne doit rien supprimer non plus, la purge de quarantaine s'en chargeant.
+     */
+    expect(await fichiersPublies(media.chemin)).toHaveLength(avant.length);
+  });
+});
+
 /**
  * Le BRANCHEMENT de la purge sur la tache planifiee, LS-102 et LS-72.
  *
@@ -719,6 +833,42 @@ describe("purge branchee sur la tache planifiee", () => {
     // « EXECUTEE » sans avoir appele la purge passerait les deux lignes
     // precedentes et echouerait ici.
     expect(await fichiersEnQuarantaine()).toHaveLength(0);
+  });
+
+  /**
+   * L'EXPIRATION EST BRANCHEE SUR LA MEME TACHE, LS-109.
+   *
+   * CE QUE CE TEST PROUVE ET QUE LE PRECEDENT NE PROUVE PAS. Les tests
+   * d'expiration plus haut exercent `expirerMediasEnAttente` prise isolement :
+   * ils diraient la meme chose si AUCUNE tache ne l'appelait jamais, et c'etait
+   * l'etat du depot avant cette story. Trouver l'appel dans le fichier de la
+   * route prouverait que le texte y figure, jamais qu'il s'execute : un appel
+   * place apres un `return` satisferait un grep en laissant le trou entier.
+   *
+   * L'ASSERTION PORTE DONC SUR LA BASE, jamais sur le code de reponse.
+   */
+  it("la tache fait reellement expirer un media bloque", async () => {
+    const produitId = await produitDeTest();
+
+    const { rows: inserees } = await client.query<{ id: string }>(
+      `INSERT INTO media (id, produit_id, chemin, ordre, statut_traitement, cree_a)
+       VALUES (gen_random_uuid(), $1, 'quarantaine/orphelin', 1,
+               'EN_ATTENTE'::"StatutTraitementMedia",
+               now() - interval '2 hours')
+       RETURNING id`,
+      [produitId],
+    );
+
+    const reponse = await appeler(TACHE, SECRET);
+
+    expect(reponse.status).toBe(200);
+
+    const { rows } = await client.query<{ statut_traitement: string }>(
+      "SELECT statut_traitement FROM media WHERE id = $1",
+      [inserees[0]!.id],
+    );
+
+    expect(rows[0]!.statut_traitement).toBe("ECHOUE");
   });
 
   /**
