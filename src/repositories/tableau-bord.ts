@@ -55,6 +55,8 @@ export type ComptagesAdministration = {
   retractationsEnCours: number;
   /** Avis deposes en attente de relecture, regle R4. */
   avisAModerer: number;
+  /** Alertes critiques non acquittees, LS-98. */
+  alertesOuvertes: number;
   /**
    * Encaisse du jour, en centimes, LES DEUX CANAUX REUNIS.
    *
@@ -124,6 +126,7 @@ export async function compterPourAdministration(
       messagesNonLus: bigint;
       retractationsEnCours: bigint;
       avisAModerer: bigint;
+      alertesOuvertes: bigint;
       encaisseDuJourCentimes: bigint | number | null;
     }[]
   >`
@@ -157,6 +160,18 @@ export async function compterPourAdministration(
       -- annonce au client, article D111-10 2°, se depasserait en silence.
       (SELECT count(*) FROM avis
         WHERE statut = 'DEPOSE')               AS "avisAModerer",
+      -- LS-98 : les alertes critiques OUVERTES. Sept services en levent depuis
+      -- LS-131 et avant, dont DOUBLE_ENCAISSEMENT et MONTANT_DIVERGENT, et
+      -- AUCUN code ne les lisait : un incident financier se signalait dans une
+      -- table que personne ne consultait.
+      --
+      -- LE COMPTE PORTE LES SEULES OUVERTES, acquittee_a IS NULL. Compter les
+      -- (aucun accent grave dans ce commentaire : la requete est un template
+      --  literal, et un backtick y terminerait la chaine en plein SQL)
+      -- acquittees ferait une pastille qui ne redescend jamais, donc une
+      -- pastille qu'on cesse de regarder.
+      (SELECT count(*) FROM alerte_critique
+        WHERE acquittee_a IS NULL)             AS "alertesOuvertes",
       (
         SELECT coalesce(sum(montant_centimes - montant_rembourse_centimes), 0)
         FROM paiement
@@ -197,6 +212,7 @@ export async function compterPourAdministration(
     messagesNonLus: Number(ligne.messagesNonLus),
     retractationsEnCours: Number(ligne.retractationsEnCours),
     avisAModerer: Number(ligne.avisAModerer),
+    alertesOuvertes: Number(ligne.alertesOuvertes),
     encaisseDuJourCentimes: Number(ligne.encaisseDuJourCentimes ?? 0),
   };
 }

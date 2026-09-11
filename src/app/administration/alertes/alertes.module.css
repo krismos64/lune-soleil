@@ -1,0 +1,197 @@
+/*
+ * Alertes critiques, LS-98. Conception a partir de 320 px.
+ *
+ * LA GRAVITE NE PASSE PAS PAR LA SEULE COULEUR, `frontend-design.md`
+ * l'interdisant : le mot « Critique » ou « Avertissement » est ECRIT, la
+ * couleur ne fait que l'appuyer. Un ecran en niveaux de gris reste lisible.
+ */
+
+.page {
+  padding-block: var(--ls-space-5);
+  padding-inline: var(--ls-space-4);
+  max-width: 52rem;
+  margin-inline: auto;
+}
+
+.titre {
+  font-size: 1.5rem;
+  color: var(--ls-text);
+  margin-block-end: var(--ls-space-3);
+}
+
+.introduction {
+  color: var(--ls-text);
+  line-height: 1.6;
+  margin-block-end: var(--ls-space-5);
+}
+
+.section {
+  margin-block-end: var(--ls-space-6);
+}
+
+.titreSection {
+  font-size: 1.125rem;
+  color: var(--ls-text);
+  margin-block-end: var(--ls-space-3);
+}
+
+.vide {
+  color: var(--ls-text);
+  line-height: 1.5;
+}
+
+.liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-3);
+}
+
+.carte {
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+  padding: var(--ls-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-3);
+}
+
+/* @bordure-decorative une carte n'est pas un controle de saisie : elle groupe
+   du contenu, et son fond la distingue deja du fond de page. */
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-2);
+}
+
+.enTete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ls-space-2);
+}
+
+/*
+ * `--ls-accent-terracotta-deep` EN FOND AVEC DU TEXTE BLANC, C31 : ce jeton
+ * donne 5,89:1 dans ce sens, la ou la version claire tombe a 4,07:1 sur creme.
+ * C'est le jeton de tout badge en petit texte.
+ */
+.critique {
+  background: var(--ls-accent-terracotta-deep);
+  color: var(--ls-text-on-primary);
+  border-radius: var(--ls-radius-sm);
+  padding: var(--ls-space-1) var(--ls-space-2);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.avertissement {
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+  border-radius: var(--ls-radius-sm);
+  padding: var(--ls-space-1) var(--ls-space-2);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+/*
+ * LE TYPE TECHNIQUE EST EN CHASSE FIXE, et ce n'est pas decoratif : il se
+ * recopie dans une recherche de journaux, et une chasse proportionnelle rend
+ * les tirets bas difficiles a distinguer des espaces.
+ */
+.type {
+  font-family: ui-monospace, "SFMono-Regular", "Menlo", monospace;
+  font-size: 0.875rem;
+  color: var(--ls-text);
+}
+
+.message {
+  color: var(--ls-text);
+  line-height: 1.6;
+}
+
+.meta {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-1);
+}
+
+.metaLigne {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ls-space-2);
+}
+
+.metaLigne dt {
+  color: var(--ls-text);
+  font-weight: 600;
+}
+
+.metaLigne dd {
+  margin: 0;
+  color: var(--ls-text);
+  /*
+   * `overflow-wrap` PARCE QU'UN IDENTIFIANT NE SE COUPE PAS SEUL. Un UUID de
+   * 36 caracteres deborde a 320 px sans cette regle, et c'est exactement ce
+   * que les cartes affichent en cible.
+   */
+  overflow-wrap: anywhere;
+}
+
+.geste {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ls-space-2);
+  border-block-start: 1px solid var(--ls-border);
+  padding-block-start: var(--ls-space-3);
+}
+
+/* @bordure-decorative un filet de separation dans la carte, jamais la limite
+   d'un controle de saisie. */
+
+/*
+ * LA REGION LIVE OCCUPE SA PLACE MEME VIDE. Sans `min-height`, l'arrivee du
+ * message deplacerait le bouton au moment precis ou la personne vient de
+ * cliquer dessus.
+ */
+.annonce {
+  color: var(--ls-text);
+  line-height: 1.5;
+  min-height: 1.5rem;
+  flex: 1 1 12rem;
+}
+
+.bouton {
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  border: 1px solid var(--ls-primary);
+  border-radius: var(--ls-radius-md);
+  padding: var(--ls-space-2) var(--ls-space-4);
+  font: inherit;
+  font-weight: 600;
+  min-height: var(--ls-touch-target);
+  cursor: pointer;
+}
+
+.bouton:hover:not(:disabled) {
+  background: var(--ls-primary-hover);
+  border-color: var(--ls-primary-hover);
+}
+
+.bouton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.borne {
+  color: var(--ls-text);
+  line-height: 1.5;
+  margin-block-start: var(--ls-space-3);
+}

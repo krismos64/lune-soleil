@@ -80,6 +80,7 @@ DOMAINES=(
   "messages:messagesNonLus"
   "stocks:variantesStockFaible, variantesIndisponibles"
   "avis:avisAModerer"
+  "alertes:alertesOuvertes"
 )
 
 # GARDE DE COMPLÉTUDE : tout comptage du layout est cité par un domaine.
