@@ -25,6 +25,7 @@ import { EntreeInvalideError, schemaIdentifiant } from "@/lib/validation";
 import type { StatutCommande } from "@/generated/prisma/enums";
 import { exigerRole } from "@/services/autorisation";
 import { changerStatutCommande } from "@/services/administration-commandes";
+import { renvoyerInvitation } from "@/services/avis";
 import { rendreFacture } from "@/services/document-comptable";
 import { demanderRemboursement } from "@/services/avoir";
 import { centimesDepuisEuros } from "@/services/variante-validation";
@@ -414,4 +415,84 @@ export async function rembourser(
 
     return { statut: "INDISPONIBLE" };
   }
+}
+
+/** Ce que l'ecran de renvoi d'invitation recoit, jamais une exception. */
+export type ResultatRenvoiInvitation =
+  | { statut: "SUCCES"; nombreEnvois: number }
+  /** Aucune session d'administration, ou session sans le role. */
+  | { statut: "SESSION_ABSENTE" }
+  /** Identifiant difforme. */
+  | { statut: "INVALIDE" }
+  /** Aucune invitation : la livraison n'est pas encore constatee. */
+  | { statut: "INTROUVABLE" }
+  /** Toutes les pieces sont deja notees, relancer n'aurait aucun sens. */
+  | { statut: "DEJA_NOTEE" }
+  /** Un envoi precedent n'est pas encore parti, reessayer dans une minute. */
+  | { statut: "ENVOI_EN_COURS" }
+  /** Plafond de tentatives atteint, quota SMTP de l'offre MX Plan. */
+  | { statut: "PLAFOND"; plafond: number };
+
+/**
+ * Renvoie l'invitation d'avis d'une commande, critere 3 de LS-61.
+ *
+ * ELLE EXIGE LE ROLE, ET PAS SEULEMENT LA PAGE. Une Server Action est invocable
+ * DIRECTEMENT, sans passer par le rendu de l'ecran : proteger la page seule
+ * laisserait ce chemin ouvert. Defaut trouve en relecture de LS-89, retrouve en
+ * LS-106.
+ *
+ * CE RENVOI N'EST PAS UNE ACTION SENSIBLE au sens d'ADR-027, et aucune des
+ * quatre familles ne le couvre : ce n'est ni un identifiant, ni un
+ * remboursement, ni un parametre de boutique, et ce n'est pas un export de
+ * donnees clients. Il renvoie a une adresse DEJA connue de la commande, sans
+ * rien divulguer de neuf, et le plafond du service borne l'erreur de
+ * manipulation.
+ *
+ * CHAQUE REFUS PORTE SON PROPRE STATUT plutot qu'un echec generique : « deja
+ * notee », « envoi en cours » et « plafond » appellent trois gestes differents
+ * de l'exploitante, et les confondre lui ferait chercher une panne la ou il n'y
+ * a qu'a attendre une minute.
+ */
+export async function renvoyerInvitationAvis(
+  formulaire: FormData,
+): Promise<ResultatRenvoiInvitation> {
+  const identite = await exigerRole(await headers());
+
+  if (identite === null) {
+    return { statut: "SESSION_ABSENTE" };
+  }
+
+  const commandeId = formulaire.get("commandeId");
+
+  if (typeof commandeId !== "string") {
+    return { statut: "INVALIDE" };
+  }
+
+  const issue = await renvoyerInvitation(commandeId);
+
+  if (issue.statut === "RENVOYEE") {
+    /*
+     * PAS DE `"layout"` ICI, regle C37. Un renvoi d'invitation ne touche aucun
+     * des dix comptages de la barre : `avisAModerer` compte les avis DEPOSES,
+     * et un renvoi n'en depose aucun. Ajouter `"layout"` par symetrie ferait
+     * recalculer dix agregats sans qu'aucun puisse avoir change.
+     */
+    revalidatePath(`${CHEMIN_COMMANDES}/${commandeId}`);
+
+    return { statut: "SUCCES", nombreEnvois: issue.nombreEnvois };
+  }
+
+  if (issue.statut === "REFUSE_DEJA_NOTEE") {
+    return { statut: "DEJA_NOTEE" };
+  }
+
+  if (issue.statut === "REFUSE_ENVOI_EN_COURS") {
+    return { statut: "ENVOI_EN_COURS" };
+  }
+
+  if (issue.statut === "REFUSE_PLAFOND") {
+    return { statut: "PLAFOND", plafond: issue.plafond };
+  }
+
+  return { statut: "INTROUVABLE" };
 }

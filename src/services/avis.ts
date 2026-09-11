@@ -313,6 +313,51 @@ export async function inviterApresLivraison(): Promise<IssueInvitations> {
  */
 const PLAFOND_ENVOIS_INVITATION = 3;
 
+/**
+ * L'etat de renvoi d'une commande, LU AVANT le geste.
+ *
+ * IL EXISTE POUR QUE L'ECRAN N'OBLIGE PAS A CLIQUER POUR SAVOIR, defaut releve
+ * en revue frontend : sans lui, une exploitante qui revient le lendemain
+ * n'apprend qu'elle est au plafond qu'en consommant un clic qui echoue.
+ */
+export type EtatRenvoi = {
+  envoisFaits: number;
+  plafond: number;
+  /** `false` quand le plafond est atteint ou que tout est deja note. */
+  renvoiPossible: boolean;
+};
+
+/**
+ * Lit l'etat de renvoi d'une commande, sans rien ecrire.
+ *
+ * ELLE NE DIT PAS SI UN ENVOI EST EN COURS, et c'est deliberé : cet etat change
+ * d'une minute a l'autre au rythme du cycle d'expedition, donc l'afficher a
+ * l'ouverture de l'ecran donnerait une information deja perimee au moment du
+ * clic. Le refus `REFUSE_ENVOI_EN_COURS` le dit au bon moment, lui.
+ */
+export async function lireEtatRenvoi(
+  commandeId: string,
+): Promise<EtatRenvoi | null> {
+  const invitations = await lireInvitationsARenvoyer(prisma, commandeId);
+
+  if (invitations.length === 0) {
+    return null;
+  }
+
+  const envoisFaits = Math.max(
+    ...invitations.map((invitation) => invitation.nombreEnvois),
+  );
+  const toutesNotees = invitations.every(
+    (invitation) => invitation.avisDejaDepose,
+  );
+
+  return {
+    envoisFaits,
+    plafond: PLAFOND_ENVOIS_INVITATION,
+    renvoiPossible: !toutesNotees && envoisFaits < PLAFOND_ENVOIS_INVITATION,
+  };
+}
+
 /** Ce que le renvoi rend a l'ecran qui l'a demande. */
 export type IssueRenvoi =
   | { statut: "RENVOYEE"; nombreEnvois: number }
