@@ -177,6 +177,28 @@ conversation. Écrire « le client », jamais « la cliente », par défaut.
 Christophe a dû le signaler deux fois, les 27 et 28 juillet 2026. La règle avait
 été comprise comme portant sur l'interface seule.
 
+**`scripts/verifier-redaction-francaise.sh` garde les deux règles depuis le
+11 septembre 2026**, celle-ci et l'interdiction du tiret cadratin. Aucune n'avait
+de contrôle, et les deux s'étaient franchies : un **cadratin dans le pied de page
+de chaque facture** remise à un client, trouvé par ce contrôle à sa première
+exécution.
+
+**L'accord n'est traqué que sur les textes visibles**, `src/app` et
+`src/components`, et c'est une limite assumée : un contrôle textuel ne distingue
+pas « la route cliente », adjectif technique légitime, de « chère cliente ». Le
+motif porte donc sur les **formes qui ne peuvent désigner qu'une personne**.
+
+**Il a été resserré une fois après avoir accusé une phrase juste.** « La personne
+qui l'a déposé en est informée » accorde avec « personne », ce qui est correct :
+le motif exige désormais le sujet « vous ». Un contrôle qui accuse du texte sain
+est pire qu'une absence de contrôle, la correction évidente étant de dégrader une
+phrase qui ne demandait rien.
+
+**Le cadratin, lui, est traqué dans `src/` entier**, commentaires compris : un
+commentaire recopié dans une interface emporte son cadratin avec lui. Les
+journaux et les ADR sont hors portée, la règle étant **prospective** et un ADR
+accepté ne se réécrivant pas.
+
 Exception : « l'administratrice » et « l'exploitante » désignent une personne
 réelle et identifiée, l'accord y est correct.
 

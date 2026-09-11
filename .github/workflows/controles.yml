@@ -938,6 +938,20 @@ jobs:
       # existant ; aucun ne disait qu'une region NEUVE devait en porter un.
       - name: 9s quinquies. Les regions live du parcours portent leur nom
         run: ./scripts/verifier-regions-live-parcours.sh
+      # LES DEUX REGLES DE REDACTION FRANÇAISE, LS-32.
+      #
+      # `CLAUDE.md` les enonce comme valant PARTOUT, et aucune n'avait de
+      # controle. Les deux se sont franchies : un TIRET CADRATIN dans le pied de
+      # page de CHAQUE facture remise a un client, et des accords au feminin que
+      # Christophe a du signaler DEUX fois, les 27 et 28 juillet 2026.
+      #
+      # L'ACCORD N'EST TRAQUE QUE SUR LES TEXTES VISIBLES, limite assumee : un
+      # controle textuel ne distingue pas « la route cliente », adjectif
+      # technique legitime, de « chere cliente ». Le motif porte sur les FORMES
+      # qui ne peuvent designer qu'une personne, et il a deja ete resserre une
+      # fois apres avoir accuse une phrase parfaitement juste.
+      - name: 9s sexies. La redaction française tient ses deux regles
+        run: ./scripts/verifier-redaction-francaise.sh
 
       # C40 : UN LIEN VERS UNE ROUTE `force-dynamic` DESACTIVE LE PRECHARGEMENT.
       #

@@ -319,7 +319,14 @@ export function GabaritDocument({
           style={styles.pied}
           fixed
           render={({ pageNumber, totalPages }) =>
-            `${enTete.intitule} ${enTete.numero} — page ${pageNumber} / ${totalPages}`
+            /*
+             * DEUX-POINTS ET NON UN TIRET CADRATIN, regle de redaction du
+             * projet : le cadratin est un marqueur de texte genere, et ce pied
+             * de page est imprime sur CHAQUE page de CHAQUE facture remise a un
+             * client. Corrige par LS-32 le 11 septembre 2026, seule occurrence
+             * du depot dans une interface visible.
+             */
+            `${enTete.intitule} ${enTete.numero}, page ${pageNumber} / ${totalPages}`
           }
         />
       </Page>
