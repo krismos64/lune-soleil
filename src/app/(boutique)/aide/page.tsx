@@ -31,9 +31,10 @@ import Link from "next/link";
 import { formaterMontant } from "@/lib/montant";
 import { NOM_BOUTIQUE, openGraphDePage } from "@/lib/seo";
 import {
+  type ConfigurationLivraison,
   ConfigurationLivraisonInvalideError,
-  lireConfigurationLivraison,
 } from "@/lib/livraison";
+import { resoudreConfigurationLivraison } from "@/services/parametres";
 import styles from "./aide.module.css";
 
 export const metadata: Metadata = {
@@ -53,10 +54,10 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function PageAide() {
-  let livraison: ReturnType<typeof lireConfigurationLivraison> | null = null;
+  let livraison: ConfigurationLivraison | null = null;
 
   try {
-    livraison = lireConfigurationLivraison();
+    livraison = await resoudreConfigurationLivraison();
   } catch (erreur) {
     if (!(erreur instanceof ConfigurationLivraisonInvalideError)) {
       throw erreur;

@@ -12,9 +12,18 @@
  * monetaire, et les entrees non entieres sont refusees plutot qu'arrondies.
  *
  * LES VALEURS VIENNENT D'ADR-035 : 410 centimes en Point Relais et Locker, 749
- * a domicile, franchise a 3900 RESERVEE AUX MODES EN RELAIS. Elles sont dans
- * l'environnement et non ici, le seuil devant rester modifiable et desactivable
- * sans redeploiement du code.
+ * a domicile, franchise a 3900 RESERVEE AUX MODES EN RELAIS.
+ *
+ * ELLES VIVENT EN BASE DEPUIS ADR-043, LS-98, et non plus dans
+ * l'environnement : l'exploitante doit pouvoir changer son seuil de franchise
+ * sans redeploiement, une decision commerciale n'etant pas une intervention
+ * technique.
+ *
+ * CE FICHIER NE LIT PAS LA BASE, ET C'EST L'ARCHITECTURE. `lib/` porte des
+ * utilitaires PURS, son README l'ecrit : « une requete appartient a
+ * repositories/ ». La resolution vit donc dans `services/parametres.ts`, et ce
+ * module recoit la configuration deja resolue. Le calcul reste synchrone,
+ * testable sans base, et les tests unitaires n'ont pas bouge d'une ligne.
  *
  * LA RESERVE N'EST PAS UN PARAMETRE, elle est dans `calculerFraisPort` : aucune
  * variable d'environnement ne permet de rendre le domicile gratuit au seuil, et
@@ -72,68 +81,65 @@ export function exigePointRetrait(mode: ModeLivraison): boolean {
 }
 
 /**
- * Lit un montant en centimes depuis l'environnement.
+ * Projette une ligne de parametres vers la configuration tarifaire.
  *
- * REFUSE UN DECIMAL PLUTOT QUE DE L'ARRONDIR. « 4.10 » dans une variable qui
- * attend des centimes trahit une confusion euros/centimes : l'accepter
- * facturerait quatre centimes de port. Echouer nomme la variable fautive.
+ * ------------------------------------------------------------------
+ * POURQUOI UNE PROJECTION ET NON UNE LECTURE DIRECTE.
+ *
+ * Ce module est dans `lib/`, dont le README interdit la requete : « une requete
+ * appartient a repositories/ ». `services/parametres.ts` lit la ligne, ce
+ * module la traduit en ce dont le calcul a besoin.
+ *
+ * LE TYPE D'ENTREE EST STRUCTUREL ET NON IMPORTE de `repositories/`. Importer
+ * `ParametresLus` ici creerait une dependance de `lib/` vers `repositories/`,
+ * exactement ce que l'architecture ecarte, et `verifier-regles.sh` le verrait.
+ * Une forme minimale suffit : ce module n'a besoin que de trois champs sur
+ * onze.
+ * ------------------------------------------------------------------
  */
-function lireCentimes(nom: string, valeur: string): number {
-  if (!/^\d+$/.test(valeur)) {
-    throw new ConfigurationLivraisonInvalideError(
-      `${nom} doit etre un entier de centimes, valeur refusee.`,
-    );
-  }
-
-  return Number.parseInt(valeur, 10);
-}
-
-/**
- * Resout la configuration tarifaire depuis l'environnement.
- *
- * LE PARAMETRE EXISTE POUR LES TESTS, meme motif que `lireProxiesDeConfiance` :
- * une valeur d'environnement reassignee apres l'import d'un module fige n'a
- * aucun effet, et la seule facon de tester plusieurs configurations est de les
- * passer.
- *
- * UN TARIF MANQUANT LEVE, il ne se replie pas. Un repli a zero afficherait
- * « livraison offerte » partout, un repli sur une constante en dur
- * reintroduirait ce que `frontend-design.md` interdit.
- */
-export function lireConfigurationLivraison(
-  brut: Record<string, string | undefined> = process.env,
-): ConfigurationLivraison {
-  const relais = brut.SHIPPING_RELAY_RATE_CENTS;
-  const domicile = brut.SHIPPING_HOME_RATE_CENTS;
-
-  if (relais === undefined || relais === "") {
-    throw new ConfigurationLivraisonInvalideError(
-      "SHIPPING_RELAY_RATE_CENTS est absent, le tarif Point Relais ne peut pas etre devine.",
-    );
-  }
-
-  if (domicile === undefined || domicile === "") {
-    throw new ConfigurationLivraisonInvalideError(
-      "SHIPPING_HOME_RATE_CENTS est absent, le tarif domicile ne peut pas etre devine.",
-    );
+export function configurationDepuisParametres(parametres: {
+  tarifRelaisCentimes: number;
+  tarifDomicileCentimes: number;
+  seuilFranchiseCentimes: number | null;
+}): ConfigurationLivraison {
+  /*
+   * LES VALEURS SONT VERIFIEES ICI AUSSI, et ce n'est pas une redondance
+   * inutile. Elles viennent de la base, donc des CHECK, mais une base restauree
+   * depuis une sauvegarde anterieure aux contraintes pourrait porter n'importe
+   * quoi : ce module est la derniere barriere avant un montant facture.
+   *
+   * UN ENTIER EST EXIGE, pas seulement un nombre positif. Un flottant arriverait
+   * d'une colonne modifiee a la main, et l'invariant 1 interdit tout flottant
+   * dans un calcul monetaire.
+   */
+  for (const [nom, valeur] of [
+    ["tarifRelaisCentimes", parametres.tarifRelaisCentimes],
+    ["tarifDomicileCentimes", parametres.tarifDomicileCentimes],
+  ] as const) {
+    if (!Number.isInteger(valeur) || valeur < 0) {
+      throw new ConfigurationLivraisonInvalideError(
+        `${nom} doit etre un entier de centimes positif ou nul, valeur refusee.`,
+      );
+    }
   }
 
   /*
-   * LE SEUIL VIDE DESACTIVE LA FRANCHISE, il ne vaut pas zero. Un seuil a zero
-   * rendrait toute livraison gratuite, l'inverse exact de l'intention.
-   * `.env.example` documente « laisser vide pour desactiver », LS-27 exige que
-   * la franchise soit desactivable.
+   * `null` DESACTIVE LA FRANCHISE, il ne vaut pas zero. Un seuil a zero rendrait
+   * toute livraison gratuite, l'inverse exact de l'intention : les deux valeurs
+   * se distinguent donc explicitement plutot que par un `??`.
    */
-  const seuilBrut = brut.SHIPPING_FREE_THRESHOLD_CENTS;
-  const seuilFranchiseCentimes =
-    seuilBrut === undefined || seuilBrut === ""
-      ? null
-      : lireCentimes("SHIPPING_FREE_THRESHOLD_CENTS", seuilBrut);
+  const seuil = parametres.seuilFranchiseCentimes;
+
+  if (seuil !== null && (!Number.isInteger(seuil) || seuil < 0)) {
+    throw new ConfigurationLivraisonInvalideError(
+      "seuilFranchiseCentimes doit etre un entier de centimes positif ou nul, ou nul pour desactiver la franchise.",
+    );
+  }
 
   return {
-    relaisCentimes: lireCentimes("SHIPPING_RELAY_RATE_CENTS", relais),
-    domicileCentimes: lireCentimes("SHIPPING_HOME_RATE_CENTS", domicile),
-    seuilFranchiseCentimes,
+    relaisCentimes: parametres.tarifRelaisCentimes,
+    domicileCentimes: parametres.tarifDomicileCentimes,
+    seuilFranchiseCentimes: seuil,
   };
 }
 

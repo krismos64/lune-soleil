@@ -16,7 +16,9 @@
  * d'ergonomie du 25 aout 2026. Voir `.claude/rules/legal.md`, section
  * « Recapitulatif avant paiement et passation de commande ».
  */
-import { calculerFraisPort, lireConfigurationLivraison } from "@/lib/livraison";
+import { calculerFraisPort } from "@/lib/livraison";
+import type { ConfigurationLivraison } from "@/lib/livraison";
+import { resoudreConfigurationLivraison } from "@/services/parametres";
 import type { SaisieTunnel } from "@/lib/tunnel-cookie";
 import type { ModeLivraison } from "@/generated/prisma/enums";
 import { revalider } from "@/services/panier";
@@ -78,7 +80,7 @@ export async function construireRecapitulatif({
   lignesCookie,
   saisie,
   totalPresenteCentimes,
-  configuration = lireConfigurationLivraison(),
+  configuration: configurationFournie,
 }: {
   lignesCookie: LignePanierCookie[];
   /*
@@ -89,8 +91,20 @@ export async function construireRecapitulatif({
    */
   saisie: SaisieTunnel & { mode: ModeLivraison };
   totalPresenteCentimes?: number;
-  configuration?: ReturnType<typeof lireConfigurationLivraison>;
+  configuration?: ConfigurationLivraison;
 }): Promise<Recapitulatif> {
+  /*
+   * LA RESOLUTION EST DANS LE CORPS ET NON EN VALEUR PAR DEFAUT, ADR-043.
+   * TypeScript refuse un `await` dans un initialiseur de parametre, et c'est
+   * une bonne contrainte : elle rend visible que la lecture de la base a un
+   * cout, la ou un defaut de parametre le cachait.
+   *
+   * L'INJECTION RESTE POSSIBLE, et les tests en dependent : une configuration
+   * fournie n'interroge jamais la base.
+   */
+  const configuration =
+    configurationFournie ?? (await resoudreConfigurationLivraison());
+
   const panier = await revalider(lignesCookie, totalPresenteCentimes);
 
   const fraisPortCentimes = calculerFraisPort({

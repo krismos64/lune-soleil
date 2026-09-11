@@ -23,7 +23,9 @@
  */
 import { randomUUID } from "node:crypto";
 
-import { calculerFraisPort, lireConfigurationLivraison } from "@/lib/livraison";
+import { calculerFraisPort } from "@/lib/livraison";
+import type { ConfigurationLivraison } from "@/lib/livraison";
+import { resoudreConfigurationLivraison } from "@/services/parametres";
 import { prisma } from "@/lib/prisma";
 import type { SaisieTunnel } from "@/lib/tunnel-cookie";
 import type { LignePanierCookie } from "@/lib/panier-cookie";
@@ -93,7 +95,7 @@ export type IssueCommande = {
 export async function passerCommande({
   lignesCookie,
   saisie,
-  configuration = lireConfigurationLivraison(),
+  configuration: configurationFournie,
   client = prisma,
   apresReservation,
 }: {
@@ -105,10 +107,23 @@ export async function passerCommande({
    * point de retrait etant parfaitement valide.
    */
   saisie: SaisieTunnel & { mode: ModeLivraison };
-  configuration?: ReturnType<typeof lireConfigurationLivraison>;
+  configuration?: ConfigurationLivraison;
   client?: typeof prisma;
   apresReservation?: () => void | Promise<void>;
 }): Promise<IssueCommande> {
+  /*
+   * LA RESOLUTION EST DANS LE CORPS ET NON EN VALEUR PAR DEFAUT, ADR-043.
+   * TypeScript refuse un `await` dans un initialiseur de parametre, et la
+   * contrainte est saine : elle rend visible que la lecture de la base a un
+   * cout sur le chemin du paiement.
+   *
+   * ELLE PRECEDE LA TRANSACTION, jamais dedans : un aller-retour de plus a
+   * l'interieur tiendrait les verrous de ligne pendant sa duree, meme motif que
+   * la session de paiement creee apres le COMMIT, `database.md`.
+   */
+  const configuration =
+    configurationFournie ?? (await resoudreConfigurationLivraison());
+
   // VALIDATION AU POINT D'ENTREE DU CAS D'USAGE, socle de LS-71. Une quantite
   // nulle, negative ou decimale part sinon jusqu'a PostgreSQL et revient en
   // erreur brute, donc en page d'erreur serveur au lieu d'un refus lisible.

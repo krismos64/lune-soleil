@@ -14,7 +14,7 @@ import {
   MODES_SANS_POINT_RETRAIT,
   ConfigurationLivraisonInvalideError,
   calculerFraisPort,
-  lireConfigurationLivraison,
+  configurationDepuisParametres,
 } from "@/lib/livraison";
 
 /*
@@ -35,71 +35,119 @@ const CONFIGURATION_ADR_035 = {
   seuilFranchiseCentimes: 3900,
 };
 
-describe("lireConfigurationLivraison", () => {
-  it("lit les trois valeurs depuis l'environnement", () => {
-    const configuration = lireConfigurationLivraison({
-      SHIPPING_RELAY_RATE_CENTS: "410",
-      SHIPPING_HOME_RATE_CENTS: "749",
-      SHIPPING_FREE_THRESHOLD_CENTS: "3900",
+describe("configurationDepuisParametres", () => {
+  /*
+   * CE BLOC A REMPLACE `lireConfigurationLivraison`, ADR-043 et LS-98.
+   *
+   * L'ancienne fonction lisait TROIS VARIABLES D'ENVIRONNEMENT et les convertissait
+   * depuis des chaines. Les valeurs vivent desormais en base, donc deja typees :
+   * les cas « non numerique » et « decimal » ne peuvent plus venir d'une saisie,
+   * une colonne `INTEGER` ne les acceptant pas.
+   *
+   * LES VERIFICATIONS SONT POURTANT CONSERVEES, et ce n'est pas de la
+   * redondance : une base restauree depuis une sauvegarde ANTERIEURE aux
+   * contraintes pourrait porter n'importe quoi, et ce module est la derniere
+   * barriere avant un montant facture.
+   */
+  it("projette les trois valeurs d'ADR-035", () => {
+    const configuration = configurationDepuisParametres({
+      tarifRelaisCentimes: 410,
+      tarifDomicileCentimes: 749,
+      seuilFranchiseCentimes: 3900,
     });
 
     expect(configuration).toEqual(CONFIGURATION_ADR_035);
   });
 
   /*
-   * LE SEUIL VIDE DESACTIVE LA FRANCHISE, il ne vaut pas zero.
+   * `null` DESACTIVE LA FRANCHISE, IL NE VAUT PAS ZERO.
    *
    * La nuance decide du comportement : un seuil a zero rendrait la livraison
-   * gratuite pour TOUT panier, un seuil absent la rend payante pour tous. LS-27
-   * exige que la franchise soit desactivable, et `.env.example` documente
-   * « laisser vide pour desactiver ».
+   * gratuite pour TOUT panier, un seuil nul la rend payante pour tous. LS-27
+   * exige que la franchise soit desactivable, et ADR-043 conserve cette
+   * distinction en base, la colonne etant nullable.
    */
-  it("traite un seuil vide comme une franchise desactivee, et non comme zero", () => {
-    const configuration = lireConfigurationLivraison({
-      SHIPPING_RELAY_RATE_CENTS: "410",
-      SHIPPING_HOME_RATE_CENTS: "749",
-      SHIPPING_FREE_THRESHOLD_CENTS: "",
-    });
-
-    expect(configuration.seuilFranchiseCentimes).toBeNull();
-  });
-
-  it("traite un seuil absent comme une franchise desactivee", () => {
-    const configuration = lireConfigurationLivraison({
-      SHIPPING_RELAY_RATE_CENTS: "410",
-      SHIPPING_HOME_RATE_CENTS: "749",
+  it("traite un seuil nul comme une franchise desactivee, et non comme zero", () => {
+    const configuration = configurationDepuisParametres({
+      tarifRelaisCentimes: 410,
+      tarifDomicileCentimes: 749,
+      seuilFranchiseCentimes: null,
     });
 
     expect(configuration.seuilFranchiseCentimes).toBeNull();
   });
 
   /*
-   * UN TARIF MANQUANT EST UNE ERREUR, jamais un repli silencieux.
+   * ZERO RESTE UNE VALEUR LEGITIME ET DISTINCTE DE `null`.
+   *
+   * Ce test est le PENDANT du precedent, et il manquait a l'ancien bloc : rien
+   * ne verifiait que zero traversait la projection sans devenir `null`. Une
+   * implementation par `?? null` ou par un test de verite aurait confondu les
+   * deux, et la franchise universelle d'une operation commerciale se serait
+   * silencieusement transformee en franchise desactivee.
+   */
+  it("conserve un seuil a zero, distinct d'une franchise desactivee", () => {
+    const configuration = configurationDepuisParametres({
+      tarifRelaisCentimes: 410,
+      tarifDomicileCentimes: 749,
+      seuilFranchiseCentimes: 0,
+    });
+
+    expect(configuration.seuilFranchiseCentimes).toBe(0);
+  });
+
+  /*
+   * UN TARIF ABERRANT EST UNE ERREUR, jamais un repli silencieux.
    *
    * Un repli a zero afficherait « livraison offerte » sur tout le site, et un
    * repli sur une constante ecrite en dur reintroduirait exactement ce que
-   * `frontend-design.md` interdit. Echouer au demarrage est le seul
-   * comportement sur : le defaut se voit tout de suite.
+   * `frontend-design.md` interdit.
+   *
+   * CES VALEURS NE VIENNENT PLUS D'UNE SAISIE mais d'une base dont les CHECK
+   * les refusent : le cas teste est celui d'une base restauree avant ces
+   * contraintes, ou modifiee a la main.
    */
   it.each([
-    ["tarif relais absent", { SHIPPING_HOME_RATE_CENTS: "749" }],
-    ["tarif domicile absent", { SHIPPING_RELAY_RATE_CENTS: "410" }],
-    ["les deux absents", {}],
-  ])("refuse de demarrer quand un tarif manque : %s", (_libelle, brut) => {
-    expect(() => lireConfigurationLivraison(brut)).toThrow(
-      ConfigurationLivraisonInvalideError,
-    );
+    ["negatif", -410],
+    ["decimal", 4.1],
+  ])("refuse un tarif relais %s", (_libelle, valeur) => {
+    expect(() =>
+      configurationDepuisParametres({
+        tarifRelaisCentimes: valeur,
+        tarifDomicileCentimes: 749,
+        seuilFranchiseCentimes: 3900,
+      }),
+    ).toThrow(ConfigurationLivraisonInvalideError);
+  });
+
+  /*
+   * LE TARIF DOMICILE EST VERIFIE AUSSI, et ce cas a sa raison d'etre : une
+   * boucle qui ne parcourrait que le premier tarif laisserait passer un
+   * domicile aberrant, et aucun autre test ne le verrait. Le domicile n'entre
+   * jamais dans la franchise, donc aucun test de seuil ne l'exerce.
+   */
+  it.each([
+    ["negatif", -749],
+    ["decimal", 7.49],
+  ])("refuse un tarif domicile %s", (_libelle, valeur) => {
+    expect(() =>
+      configurationDepuisParametres({
+        tarifRelaisCentimes: 410,
+        tarifDomicileCentimes: valeur,
+        seuilFranchiseCentimes: 3900,
+      }),
+    ).toThrow(ConfigurationLivraisonInvalideError);
   });
 
   it.each([
-    ["non numerique", "quatre euros dix"],
-    ["negatif", "-410"],
-    ["decimal", "4.10"],
-  ])("refuse un tarif %s", (_libelle, valeur) => {
+    ["negatif", -3900],
+    ["decimal", 39.0001],
+  ])("refuse un seuil de franchise %s", (_libelle, valeur) => {
     expect(() =>
-      lireConfigurationLivraison({
-        SHIPPING_RELAY_RATE_CENTS: valeur,
-        SHIPPING_HOME_RATE_CENTS: "749",
+      configurationDepuisParametres({
+        tarifRelaisCentimes: 410,
+        tarifDomicileCentimes: 749,
+        seuilFranchiseCentimes: valeur,
       }),
     ).toThrow(ConfigurationLivraisonInvalideError);
   });

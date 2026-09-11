@@ -42,9 +42,10 @@ import {
 import { EmetteurNonConfigureError } from "@/services/facture";
 import { MENTION_FRANCHISE_TVA } from "@/lib/validation";
 import {
+  type ConfigurationLivraison,
   ConfigurationLivraisonInvalideError,
-  lireConfigurationLivraison,
 } from "@/lib/livraison";
+import { resoudreConfigurationLivraison } from "@/services/parametres";
 import { VERSION_CGV } from "@/services/commande";
 import styles from "./informations-legales.module.css";
 
@@ -111,10 +112,10 @@ export default async function PageInformationsLegales() {
    * rendre 500 parce qu'une variable manque. Le bloc des tarifs disparait
    * alors, plutot que d'annoncer un montant invente.
    */
-  let livraison: ReturnType<typeof lireConfigurationLivraison> | null = null;
+  let livraison: ConfigurationLivraison | null = null;
 
   try {
-    livraison = lireConfigurationLivraison();
+    livraison = await resoudreConfigurationLivraison();
   } catch (erreur) {
     if (!(erreur instanceof ConfigurationLivraisonInvalideError)) {
       throw erreur;
