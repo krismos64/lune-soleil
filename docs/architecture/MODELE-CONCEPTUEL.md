@@ -197,6 +197,25 @@ erDiagram
 | C27 | Le numéro d'un document séquentiel vient d'un compteur incrémenté dans la transaction qui crée le document, et ne décroît jamais | ADR-031, LS-117. `CHECK dernier >= 1` plus le verrou de ligne de l'`UPDATE` : une transaction annulée rend son numéro, là où une `SEQUENCE` non transactionnelle laisserait un trou à chaque refus de stock |
 | C28 | Le total d'une commande est la somme de son sous-total, de ses frais de port et de sa taxe | `CHECK`, LS-117. La redondance est voulue, une commande devant porter le montant qu'elle engage : sans contrainte, un chemin qui écrit le total sans faire suivre les composantes n'apparaîtrait qu'à la facture, immuable par l'invariant 4 |
 
+**SIX RÈGLES VIVAIENT DANS LE SQL SANS FIGURER ICI**, ajoutées le 11 septembre
+2026. La convention du projet veut qu'une règle numérotée se cite par son
+identifiant : `PARCOURS.md` citait « C30 » et `VALIDATION.md` « C42 » et « C43 »
+alors qu'aucune ne se trouvait dans ce tableau, qui s'arrêtait à C28.
+
+| # | Règle | Où elle vit |
+|---|---|---|
+| C29 | Aucun champ d'un message de contact n'est vide après retrait des espaces | `CHECK`, LS-97. Zod est le contrôle principal, celui-ci la dernière ligne de défense : un message vide occuperait la file sans rien dire |
+| C30 | Les horodatages de traitement d'un message suivent son statut, **dans les deux sens** | `CHECK`, LS-97. **Équivalence et non implication** : un message traité sans date ne dirait pas quand, une date sur un `NOUVEAU` affirmerait un traitement qui n'a pas eu lieu |
+| C41 | L'état constaté d'une pièce retournée et sa date vont ensemble | `CHECK`, LS-173. Même forme d'équivalence que C30 |
+| C42 | Le motif d'un signalement d'avis n'est **jamais vide** | `CHECK`, LS-77. La loi conditionne le signalement au fait qu'il soit **motivé**, article L111-7-2 : sans motif, ce n'en est pas un |
+| C43 | L'horodatage d'examen d'un signalement suit son statut, **dans les deux sens** | `CHECK`, LS-77. Équivalence, vérifiée ligne à ligne : écrire le statut puis la date en deux instructions la fait échouer |
+| C44 | Une suite donnée à un signalement suppose qu'il ait été examiné | `CHECK`, LS-77. **Implication et NON équivalence**, à la différence de C43 : un signalement examiné peut n'appeler aucune suite |
+
+**C41 porte deux sens dans ce dépôt**, et les confondre coûterait : la règle de
+base ci-dessus, et la règle d'interface « tout écran de la boutique est désigné
+par au moins un lien », `frontend-design.md`. Les familles de numérotation sont
+distinctes, le contexte tranche.
+
 ### Pourquoi un produit peut n'avoir aucune variante
 
 La cardinalité est `0..n`, corrigée par LS-39. Elle était `1..n`, ce qui
