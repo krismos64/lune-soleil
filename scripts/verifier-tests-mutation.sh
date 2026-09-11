@@ -2258,6 +2258,25 @@ cas "examineA reecrit a chaque cloture" integration \
   "une seconde cloture n'efface pas la suite donnee ni la date"
 
 echo
+echo "Media bloque en EN_ATTENTE, LS-109, tests d'integration"
+echo
+
+# Cas 166 : L'EXPIRATION N'EST PLUS APPELEE PAR LA TACHE.
+#
+# L'ETAT D'AVANT LS-109, remis tel quel. Un televersement interrompu dans sa
+# fenetre de deux secondes laissait la ligne `EN_ATTENTE` INDEFINIMENT : rien ne
+# la reprenait, et l'ecran disait « rechargez la page dans quelques instants »,
+# donc l'exploitante rechargeait en boucle une photo que rien ne traiterait
+# jamais. La publication du produit restait bloquee par LS-103 sans explication.
+#
+# TROUVER L'APPEL DANS LE FICHIER NE PROUVE RIEN : un appel place apres un
+# `return` satisferait un grep en laissant le trou entier. L'assertion porte sur
+# la BASE, motif « controle textuel et test d'execution ».
+mute "$ROUTE_TACHE" 's/      const expires = await expirerMediasEnAttente\(\);/      const expires = 0;\n      void expirerMediasEnAttente;/'
+cas "expiration retiree de la tache planifiee" integration \
+  "la tache fait reellement expirer un media bloque"
+
+echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then
   echo "  $mutations mutations, $mutations detectees"

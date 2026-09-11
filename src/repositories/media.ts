@@ -172,3 +172,40 @@ export async function listerMediasPublies(
     select: CHAMPS,
   });
 }
+
+/**
+ * Fait expirer vers `ECHOUE` les medias restes `EN_ATTENTE` trop longtemps.
+ *
+ * LE CAS QU'ELLE FERME, LS-109 : le traitement d'une photographie est SYNCHRONE
+ * dans la Server Action, environ deux secondes. Si l'onglet est ferme ou le
+ * processus redemarre pendant ce laps, la ligne reste `EN_ATTENTE`
+ * INDEFINIMENT : le `catch` qui ecrit `ECHOUE` ne s'execute jamais, et aucune
+ * tache ne balaie ces lignes.
+ *
+ * L'ECRAN AGGRAVAIT LA SITUATION. Le message d'`EN_ATTENTE` disait « rechargez
+ * la page dans quelques instants », donc l'exploitante rechargeait en boucle une
+ * photo que rien ne traiterait jamais.
+ *
+ * LA CLAUSE PORTE LES DEUX CONDITIONS ENSEMBLE, et `updateMany` plutot
+ * qu'`update` : plusieurs lignes peuvent expirer au meme cycle, et aucune ne
+ * doit lever si une autre a change d'etat entre-temps.
+ *
+ * ELLE NE TOUCHE AUCUN FICHIER. La purge de quarantaine s'occupe des originaux,
+ * et un media `EN_ATTENTE` n'a par construction AUCUN fichier sous `public/`,
+ * propriete physique d'ADR-007 : faire expirer son statut ne publie ni ne
+ * supprime rien.
+ */
+export async function expirerMediasEnAttente(
+  client: ClientBase,
+  avant: Date,
+): Promise<number> {
+  const { count } = await client.media.updateMany({
+    where: {
+      statutTraitement: StatutTraitementMedia.EN_ATTENTE,
+      creeA: { lt: avant },
+    },
+    data: { statutTraitement: StatutTraitementMedia.ECHOUE },
+  });
+
+  return count;
+}
