@@ -852,11 +852,6 @@ CREATE UNIQUE INDEX "compteur_compte_vise_cle_key" ON "compteur_compte_vise"("cl
 -- grossit precisement sous attaque.
 CREATE INDEX "compteur_compte_vise_derniere_a_idx" ON "compteur_compte_vise"("derniere_a");
 
-ALTER TABLE "compteur_compte_vise"
-    ADD CONSTRAINT "chk_compteur_compte_vise_positif" CHECK ("compte" >= 1);
-
-ALTER TABLE "compteur_compte_vise"
-    ADD CONSTRAINT "chk_compteur_compte_vise_cle_non_vide" CHECK (length(trim("cle")) > 0);
 
 -- CreateIndex
 CREATE UNIQUE INDEX "journal_email_systeme_unique" ON "journal_email"("commande_id", "modele") WHERE (statut = 'ENVOYE' AND origine IN ('SYSTEME','RECONCILIATION'));
