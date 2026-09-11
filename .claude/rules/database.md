@@ -82,7 +82,12 @@ Règles associées :
 La table vit dans `src/services/tache-planifiee.ts`, et c'est elle qui fait foi :
 libération des réservations expirées toutes les cinq minutes, réconciliation des
 paiements tous les quarts d'heure, envoi des emails chaque minute, suivi de
-livraison chaque heure depuis LS-131, et les deux purges quotidiennes.
+livraison chaque heure depuis LS-131, **invitation aux avis depuis LS-61**, et
+les deux purges quotidiennes.
+
+**Cette énumération était courte d'une entrée** jusqu'au 11 septembre 2026 :
+`invitation-avis` y manquait. Le compte avait bien été retiré du paragraphe
+suivant, mais une énumération incomplète est un compte déguisé.
 
 **Le compte n'est pas inscrit ici**, il disait « cinq » quand LS-131 en a ajouté
 une sixième. `verifier-taches-planifiees.sh` confronte cette table au crontab

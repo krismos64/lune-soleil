@@ -3,14 +3,20 @@
 | Champ | Valeur |
 |---|---|
 | Ticket | LS-13 |
-| Entrée | `MODELE-CONCEPTUEL.md`, **neuf** parcours, cinquante-sept cas d'erreur |
+| Entrée | `MODELE-CONCEPTUEL.md`, ses parcours et ses cas d'erreur |
 | Vérifié sur | PostgreSQL 18.4, Prisma 7.9.1, Node 22.14.0 |
 | Livrables | `prisma/schema.prisma`, `prisma/sql-manuel/` |
 
-Traduction du modèle conceptuel en schéma physique. **Trente-six tables** et
-**trente-neuf clés étrangères** au 2 septembre 2026, sept domaines.
+Traduction du modèle conceptuel en schéma physique, sept domaines.
 
-**Ces trois nombres sont mesurés et non recopiés**, `grep -c "^model"` sur le
+**AUCUN COMPTE N'EST PLUS ÉCRIT DANS CE DOCUMENT**, et c'est la conséquence de ce
+que ses propres paragraphes énoncent quatre fois. Il annonçait « trente-six
+tables et trente-neuf clés » quand le dépôt en portait **38 et 40** au
+11 septembre 2026, « neuf parcours » pour **10**, « six index partiels » pour
+**10**, et « trois cascades » pour **six**. Les commandes qui les mesurent sont
+données à chaque section : les lancer plutôt que lire un nombre.
+
+**Ces nombres se mesurent et ne se recopient pas**, `grep -c "^model"` sur le
 schéma et `pg_constraint` sur la base. Ceux de LS-13 disaient vingt-cinq tables,
 huit parcours et trente et une clés, tous deux périmés depuis, neuf et trente-neuf au 9 septembre 2026 : justes à l'écriture, ils n'ont suivi
 aucune des stories qui ont ajouté une entité. Un compte écrit à la main se
@@ -69,8 +75,9 @@ CREATE UNIQUE INDEX "utilisateur_administratrice_unique"
 ```
 
 Le SQL manuel n'est donc plus nécessaire pour ces contraintes, contrairement à ce
-qu'affirmaient ADR-023 et le modèle conceptuel avant cette story. Les six index
-partiels du modèle sont produits par `prisma migrate diff`.
+qu'affirmaient ADR-023 et le modèle conceptuel avant cette story. **Les index
+partiels du modèle** sont produits par `prisma migrate diff` ;
+`grep -c 'where: raw' prisma/schema.prisma` les compte.
 
 Prisma ne génère **pas** les contraintes `CHECK`. ADR-006 reste exact sur ce
 point. Leur source de conception est
@@ -147,11 +154,12 @@ niveau 1, garanti par la base.
 | `adresse_defaut_unique` | `est_par_defaut` | A2, une adresse par défaut |
 | `utilisateur_administratrice_unique` | `role = 'ADMINISTRATRICE'` | E1, ADR-023 |
 | `mouvement_compense_unique` | `compense_id IS NOT NULL` | ADR-030, un mouvement ne compense qu'une fois |
+| `alerte_ouverte_unique` | `acquittee_a IS NULL`, `NULLS NOT DISTINCT` | LS-131, une alerte ouverte par type et cible |
 
 **Le nombre ne s'écrit plus ici**, il se mesure : `grep -c 'where: raw'
-prisma/schema.prisma`. Cette table en a listé **sept sur huit** jusqu'au
-9 septembre 2026, `mouvement_compense_unique` manquant depuis sa création par
-ADR-030. Un index absent de sa table de référence est un index que personne ne
+prisma/schema.prisma`. **L'OMISSION S'EST PRODUITE DEUX FOIS** :
+`mouvement_compense_unique` manquait jusqu'au 9 septembre 2026 depuis sa création
+par ADR-030, et `alerte_ouverte_unique` jusqu'au 11 septembre, depuis LS-131. Un index absent de sa table de référence est un index que personne ne
 pense à réviser, et ce dépôt porte deux fiches sur le piège du prédicat : une
 valeur ajoutée à un enum élargit le filtre en silence.
 
@@ -201,14 +209,21 @@ grep -oE 'onDelete: [A-Za-z]+' prisma/schema.prisma | sort | uniq -c
 Ces nombres ont été faux DEUX FOIS, et la seconde était une récidive. Avant
 LS-76 le document annonçait 17 et 12 au lieu de 18 et 11 ; la correction a
 inscrit 18, 11 et 3 pour 32 au total, puis le schéma a continué de grandir et
-l'audit du 9 septembre 2026 a mesuré **20, 13 et 6 pour 39**. Le paragraphe
-concluait « Recompter plutôt que relire » : la leçon était juste, la forme
-retenue la condamnait à se périmer. Un nombre écrit à la main dans un document
+l'audit du 9 septembre 2026 a mesuré 20, 13 et 6 pour 39, et **le 11 septembre
+2026 : 21 Restrict, 13 SetNull, 6 Cascade, pour 40**. Le paragraphe concluait
+« Recompter plutôt que relire » : la leçon était juste, la forme retenue la
+condamnait à se périmer, et elle s'est périmée une TROISIÈME fois. Ces nombres
+ne sont gardés que comme trace de la dérive. Un nombre écrit à la main dans un document
 n'a aucun moyen de suivre le code.
 
-Les trois cascades portent sur `Media` vers `Produit`, `SectionProduit` vers
+**Les cascades MÉTIER** portent sur `Media` vers `Produit`, `SectionProduit` vers
 `Produit`, et `AdresseCarnet` vers `Utilisateur`. La dernière est la traduction de
 la règle A10.
+
+**Trois autres cascades existent, et elles appartiennent à Better Auth** :
+`Session`, `Compte` et `Passkey` vers `Utilisateur`. Ce paragraphe disait « les
+trois cascades » en les ignorant, quand le tableau plus bas dans CE MÊME fichier
+les documente. Six au total, `grep -c 'onDelete: Cascade' prisma/schema.prisma`.
 
 `SectionProduit` est en `CASCADE` et non en `RESTRICT`, contrairement à
 `Variante` : une section n'est référencée par aucune commande ni facture, elle ne

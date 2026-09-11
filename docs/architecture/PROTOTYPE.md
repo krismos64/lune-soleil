@@ -104,14 +104,14 @@ existe-t-il ? », et c'est la seconde question que cet inventaire pose.
 | Rubrique | Écran livré par | État |
 |---|---|---|
 | Tableau de bord | **LS-181** | livré, tuiles et panneau « À traiter » |
-| Statistiques | LS-64 | à faire, V1 cible, collecte au Go-Live |
+| Statistiques | LS-64 | **livré** le 11 septembre 2026, `administration/statistiques` |
 | Commandes | LS-121 | livré |
 | Catalogue | **LS-183** | livré, liste, filtres par état et badges |
 | Stocks et marchés | LS-106 | livré, LS-63 pour le montant encaissé |
 | Expéditions | LS-130, **LS-181** | livré, trois colonnes depuis LS-181 |
 | Factures et avoirs | **LS-184** | livré, liste chronologique, filtre par période |
 | Clients | **LS-185** | livré, recherche libre, écart ADR-027 assumé |
-| Avis | LS-61 | à faire |
+| Avis | LS-61 | **livré** le 11 septembre 2026, `administration/avis` |
 | Messages | LS-97 | livré |
 | Paramètres | LS-98 | à faire |
 

@@ -66,13 +66,51 @@ echo
 # entrée dit quel comptage de la barre dépend de ce domaine. Un domaine qui
 # cesserait d'être compté sort de cette liste avec sa raison.
 # ---------------------------------------------------------------------------
+#
+# ELLE S'EST ÉRODÉE UNE FOIS, le 11 septembre 2026 : `avisAModerer` est arrivé
+# avec LS-61 sans entrer ici, donc le domaine `avis` n'était gardé par personne.
+# La garde ci-dessous compare les comptages CITÉS au type réel de `lireComptages`
+# et échoue si l'un manque, ce qu'une liste écrite à la main ne peut pas faire
+# toute seule.
+# ---------------------------------------------------------------------------
 DOMAINES=(
   "commandes:commandesAPreparer, commandesPretesAExpedier, commandesEnCours"
   "expeditions:expeditionsEnTransit"
   "retractations:retractationsEnCours"
   "messages:messagesNonLus"
   "stocks:variantesStockFaible, variantesIndisponibles"
+  "avis:avisAModerer"
 )
+
+# GARDE DE COMPLÉTUDE : tout comptage du layout est cité par un domaine.
+#
+# `encaisseDuJourCentimes` est EXCLU et c'est le seul : il ne vient d'aucun
+# dossier d'actions, tout remboursement le modifie, et la règle le traite à
+# part. L'exclure par son nom plutôt que par un « sauf un » rend l'ajout d'un
+# comptage futur visible.
+TYPE_COMPTAGES=$(
+  sed -n '/^export type ComptagesAdministration/,/^};/p' "$RACINE/src/repositories/tableau-bord.ts" 2>/dev/null \
+    | grep -oE '^  [a-zA-Z]+' | tr -d ' '
+)
+
+if [ -z "$TYPE_COMPTAGES" ]; then
+  echo "  ECHEC l'ancrage est cassé : aucun comptage lu dans tableau-bord.ts"
+  echo "        Sans cette lecture, la garde de complétude ci-dessous passerait"
+  echo "        au vert sur une liste vide."
+  ko=1
+fi
+
+for comptage in $TYPE_COMPTAGES; do
+  [ "$comptage" = "encaisseDuJourCentimes" ] && continue
+
+  if ! printf '%s\n' "${DOMAINES[@]}" | grep -q "$comptage"; then
+    echo "  ECHEC le comptage « $comptage » n'est cité par AUCUN domaine"
+    echo "        Le layout le lit, donc une action qui le modifie doit passer"
+    echo "        « layout » : ajouter son domaine à DOMAINES, et la ligne"
+    echo "        correspondante à la table de C37 dans frontend-design.md."
+    ko=1
+  fi
+done
 
 for entree in "${DOMAINES[@]}"; do
   domaine="${entree%%:*}"

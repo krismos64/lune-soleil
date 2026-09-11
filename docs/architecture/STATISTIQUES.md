@@ -81,15 +81,25 @@ du mois où elle a eu lieu.
 
 ## Périodes
 
-Cinq périodes, toutes calculées dans le fuseau métier **Europe/Paris**.
+**Quatre périodes livrées**, toutes calculées dans le fuseau métier
+**Europe/Paris**, bornes inclusive à gauche et **exclusive à droite**.
 
 | Période | Borne basse | Borne haute |
 |---|---|---|
-| Aujourd'hui | minuit local du jour | maintenant |
-| Cette semaine | lundi minuit local | maintenant |
-| Ce mois | premier du mois, minuit local | maintenant |
-| Cette année | 1er janvier, minuit local | maintenant |
-| Période libre | date de début, minuit local | date de fin, minuit local du jour suivant |
+| Aujourd'hui | minuit local du jour | minuit local du jour suivant |
+| Cette semaine | lundi minuit local | lundi suivant, minuit local |
+| Ce mois | premier du mois, minuit local | premier du mois suivant, minuit local |
+| Cette année | 1er janvier, minuit local | 1er janvier suivant, minuit local |
+
+**LA BORNE HAUTE N'EST JAMAIS « MAINTENANT »**, et cette table l'a affirmé
+jusqu'au 11 septembre 2026 en contredisant `periode-comptable.ts`, qui écrit
+l'inverse dans son propre commentaire. Une courbe dont le dernier point s'arrête
+à l'heure courante se lit comme une **chute d'activité en fin de journée**.
+
+**LA PÉRIODE LIBRE N'EST PAS LIVRÉE.** Cette table en annonçait une cinquième,
+`PERIODES_STATISTIQUES` n'en porte que quatre et l'écran ne propose aucune saisie
+de dates. Elle reste à faire, et l'annoncer comme existante ferait chercher un
+défaut dans un écran qui ne la porte pas.
 
 **Le fuseau n'est pas un détail d'affichage ici.** Les horodatages sont persistés
 en UTC, invariant 8. En heure d'été, minuit à Paris vaut 22 h UTC la veille : une
@@ -217,7 +227,7 @@ Rien n'est modifié à ces décisions.
 
 **La deuxième ligne est la seule qui déplace quelque chose**, et elle ne
 contredit aucune décision fermée : la collecte d'une donnée n'est pas son
-affichage. LS-8 porte l'interface, elle reste en V1 cible.
+affichage. **l'interface est livrée par LS-64** le 11 septembre 2026, `administration/statistiques`.
 
 Le motif est qu'une donnée non capturée est définitivement perdue. Ouvrir sans le
 montant des ventes externes, puis construire les statistiques trois mois plus

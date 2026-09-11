@@ -551,8 +551,10 @@ fichiers et échoue en cas d'écart.
 
 ### Authentification client, LS-54
 
-Trois écrans publics, distincts de ceux de l'administration : `/compte/inscription`,
-`/compte/connexion` et `/compte/verification`. L'en-tête de la boutique y mène,
+Cinq écrans publics d'authentification, distincts de ceux de l'administration :
+`/compte/inscription`, `/compte/connexion`, `/compte/verification`,
+`/compte/mot-de-passe-oublie` et `/compte/nouveau-mot-de-passe`. Les trois
+premiers portent l'entrée. L'en-tête de la boutique y mène,
 « Se connecter » ou « Mon compte » selon la session.
 
 **La séparation d'avec `/administration/connexion` est le défaut que cette story
@@ -639,13 +641,15 @@ Un événement peut ne jamais arriver, et sans elle le client aurait payé sans
 commande confirmée.
 
 `purge-journaux`, une fois par jour à 03h17, LS-94 : elle applique les durées de
-conservation annoncées par `docs/architecture/REGISTRE-DES-TRAITEMENTS.md` sur
-`JournalConnexion`, `JournalAudit` et `RateLimit`. `purge-quarantaine-medias`
+conservation annoncées par `docs/architecture/REGISTRE-DES-TRAITEMENTS.md`.
+**Les tables se lisent dans `PURGES`**, jamais ici : cette phrase en nommait
+trois quand la table en portait six, `EnvoiEnAttente`, `Message` et
+`CompteurCompteVise` ayant été ajoutées depuis. `purge-quarantaine-medias`
 ramasse les originaux dont le téléversement a été interrompu, LS-102.
 
 **Une purge en échec n'empêche pas les autres.** Chaque table est isolée : un
 incident sur l'une laisserait sinon les suivantes grossir indéfiniment, ce qui
-est un incident silencieux. La tâche est déclarée en échec si l'une des trois a
+est un incident silencieux. La tâche est déclarée en échec si l'une des purges a
 échoué, pour que l'exploitation le voie plutôt qu'un 200 rassurant.
 
 ### Tests, LS-68
@@ -973,8 +977,10 @@ cas des deux scripts de mutation, `README.md` de garde des dossiers de `src/`.
 Ces contrôles existent parce que chacun de ces comptes a été faux au moins une
 fois, sans que rien ne le voie.
 
-**La table des nombres en lettres monte à quarante**, étendue par LS-80, et ce
-n'est pas du confort.
+**La table des nombres en lettres monte à soixante-dix-sept**, étendue
+plusieurs fois depuis LS-80, et ce n'est pas du confort. Le chiffre écrit ici
+a dit « quarante » jusqu'au 11 septembre 2026 : le mesurer plutôt que le lire,
+`grep -oE 'echo [0-9]+' scripts/verifier-config-claude.sh`.
 Elle s'arrêtait à « dix » : au-delà, la conversion rendait une chaîne vide et la
 comparaison était **sautée**, donc verte sans avoir rien vérifié. Le seuil était
 déjà franchi à l'époque, `verifier-tests-mutation.sh` portant alors vingt-et-un
@@ -1124,7 +1130,7 @@ tombant sous le seuil de 1024. La doublure `pg_dump` est devenue pilotable en
 taille : écrivant toujours 4096 octets, elle n'exerçait **jamais** ce seuil,
 ce qui avait laissé passer le second défaut.
 
-`verifier-tests-mutation.sh` casse **148 fois** le comportement
+`verifier-tests-mutation.sh` casse **166 fois** au 11 septembre 2026 le comportement
 testé et exige que la suite rougisse à chaque fois. Les cibles, par domaine :
 réservation et stock, authentification et autorisation, socle de validation et
 journalisation, journal des connexions, verrou de tâche planifiée, preuve

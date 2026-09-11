@@ -320,7 +320,7 @@ vide. Le rejouer après le commit et avant le push.
 **Il avertit, il ne corrige pas**, et il ne dit rien de ce qui relève du
 jugement : la pertinence d'une fiche mémoire ou la justesse d'un ADR se relisent.
 
-**Aucun des trois ne voit ce qui n'est ni un fichier ni une table.** Un cookie
+**Aucun de ces cinq contrôles ne voit ce qui n'est ni un fichier ni une table.** Un cookie
 portant des données personnelles échappe au contrôle du registre, un compte écrit
 à la main dans un README se périme sans bruit. Ces deux-là se relisent, et la
 table de propagation ci-dessus porte leur ligne.

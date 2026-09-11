@@ -64,14 +64,17 @@ tel qu'il est communiqué à l'autorité de contrôle les porte en tête.
 
 ## Les traitements
 
-Chaque traitement est rattaché aux tables qui le portent, T1 à T11 au
-9 septembre 2026. La colonne « tables » est ce que le contrôle automatique
-confronte au schéma.
+Chaque traitement est rattaché aux tables qui le portent. La colonne « tables »
+est ce que le contrôle automatique confronte au schéma.
 
-**Le nombre ne s'écrit plus en toutes lettres ici**, il se mesure,
-`grep -cE '^### T[0-9]+'` : « neuf » y est resté après l'ajout de T10 et T11, et
-le contrôle ne pouvait pas le voir, son sens 4 comparant les traitements aux
-lignes « Conservation » entre eux et jamais au nombre annoncé en prose.
+**Le nombre ne s'écrit plus ici, NI EN LETTRES NI EN CHIFFRES**, il se mesure,
+`grep -cE '^### T[0-9]+'`. La forme en lettres a été retirée après l'ajout de T10
+et T11, mais « T1 à T11 » l'a réintroduite en chiffres et s'est périmée à son
+tour avec **T7bis**, posé par LS-77 : douze traitements au 11 septembre 2026.
+
+Le contrôle ne peut pas le voir, son sens 4 comparant les traitements aux lignes
+« Conservation » entre eux et jamais au nombre annoncé en prose. Une borne écrite
+sous la forme « T1 à Tn » est un compte déguisé.
 
 ### T1, gestion des comptes clients et du compte d'administration
 
