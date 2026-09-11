@@ -261,8 +261,47 @@ CHECK   commande.total_centimes = sous_total_centimes
                                + frais_port_centimes + montant_taxe_centimes, C28
 CHECK   compteur_numero.dernier >= 1, C27
 PK      compteur_numero (type, annee)                            ADR-031
+CHECK   parametre_boutique.id = true                             ADR-043, LS-98
+CHECK   parametre_boutique.seuil_stock_faible >= 1
+CHECK   length(trim(parametre_boutique.email_alertes)) > 0
 INDEX   statut, date, utilisateur, commande, reference, expiration
 ```
+
+## Les paramètres commerciaux, une seule ligne garantie par la base
+
+ADR-043, LS-98. `parametre_boutique` porte les tarifs de livraison, le seuil de
+franchise et le seuil d'alerte de stock, que l'exploitante règle **sans
+redéploiement**. Ils vivaient dans l'environnement jusqu'au 11 septembre 2026.
+
+**UNE SEULE LIGNE, ET C'EST LA BASE QUI LE GARANTIT.** `id` est un booléen
+contraint à `true` par `chk_parametre_ligne_unique` : une seconde ligne devient
+**impossible**, pas seulement déconseillée. Deux lignes qui se contredisent
+seraient lues par `findFirst`, donc l'une ou l'autre selon le plan d'exécution,
+et le tunnel facturerait un port différent d'une requête à l'autre sans qu'aucune
+erreur ne soit levée.
+
+**LE SEUIL DE FRANCHISE A TROIS ÉTATS ET NON DEUX**, et les confondre change le
+montant facturé :
+
+| Valeur | Signification |
+|---|---|
+| `null` | franchise **désactivée**, le port est toujours dû |
+| `0` | livraison **toujours offerte** en relais |
+| un montant | franchise à partir de ce montant |
+
+Le `CHECK` autorise les trois, et la distinction vit dans `calculerFraisPort`.
+**Ne pas « corriger » ce CHECK en interdisant le zéro** : une gratuité assumée
+est une décision commerciale légitime, et le service refusait d'abord cette
+valeur, ce qu'un test d'intégration a trouvé.
+
+**AUCUN HISTORIQUE N'EST CONSERVÉ.** `Commande.fraisPortCentimes` porte déjà le
+montant figé à l'écriture, invariant 3 : un historique serait une seconde source
+de vérité pour une question à laquelle la commande répond déjà.
+
+**LE PORT AFFICHÉ EST CONFRONTÉ AU PORT FACTURÉ**, `FraisPortChangesError`. Un
+tarif modifiable à chaud peut changer ENTRE le récapitulatif et le clic : sans
+cette garde, Stripe serait appelé sur un total que le client n'a jamais lu. Elle
+**lève** et ne rend pas une valeur, la levée annulant la transaction.
 
 ## Unicités partielles, l'idempotence porte sur l'effet
 
@@ -276,7 +315,12 @@ prestataire. Son identifiant n'a jamais été vu, rien ne le rejette, il recrée
 mouvement de stock. Sur une variante à plusieurs exemplaires, aucune erreur ne se
 déclenche et le stock est faux en silence.
 
-Quatre clés, chacune sur un effet de l'étape de confirmation :
+Une clé par effet de l'étape de confirmation.
+
+**LE COMPTE NE S'ÉCRIT PLUS ICI**, corrigé le 11 septembre 2026 : il disait
+« quatre » quand le bloc en portait **sept**, les trois surnuméraires étant
+arrivées avec LS-131, LS-160 et la contrainte de média principal. Chaque clé
+ajoutée a bien été expliquée en prose dessous, seul le chapeau n'a pas suivi.
 
 ```
 UNIQUE paiement (commande_id)                    WHERE statut IN ('REUSSI',

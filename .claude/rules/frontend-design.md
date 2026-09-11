@@ -616,7 +616,7 @@ frontière de segment comprise, ✅ via Context7.
 **La règle porte sur le SOUS-ARBRE, pas sur le segment**, et sa version
 précédente disait « sur une route qui appelle `notFound()` », ce qui se lisait
 comme une contrainte de voisinage. Un `loading.tsx` couvre tout ce qui est sous
-lui, exactement comme un `error.tsx` couvre les seize écrans d'administration
+lui, exactement comme un `error.tsx` couvre TOUS les écrans d'administration
 depuis LS-191 : le fichier interdit peut être **plusieurs dossiers plus haut**
 que l'appel qu'il casse.
 
@@ -743,7 +743,12 @@ donc périmée à l'instant où elle arrive. Next.js la jette, repart, et
 **recommence sans fin** tant que le lien est à l'écran.
 
 **Toutes les routes d'administration sont `force-dynamic`**, et la barre latérale
-en désigne quatorze au 11 septembre 2026, compte à relever plutôt qu'à recopier. Mesure sur le tableau de bord au repos, journal du navigateur :
+les désigne toutes.
+
+**LE COMPTE A ÉTÉ RETIRÉ D'ICI le 11 septembre 2026**, et ce paragraphe a payé sa
+propre leçon : il disait « quatorze » en portant la mention « compte à relever
+plutôt qu'à recopier », et LS-98 en a livré deux de plus le jour même.
+`scripts/verifier-prefetch-administration.sh` l'imprime à chaque exécution. Mesure sur le tableau de bord au repos, journal du navigateur :
 chaque rubrique enchaîne `200`, `ERR_ABORTED`, puis une requête neuve avec un
 jeton `_rsc` différent. Des rendus serveur en boucle, chacun interrogeant
 PostgreSQL, pour un écran que personne ne touche.
@@ -885,9 +890,15 @@ Should, jalon Go-Live. Un composant unique, réutilisé sur les fiches produit, 
 panier et le tunnel. Les mêmes faits apparaissent aussi dans la foire aux
 questions, la page Livraison, les emails et les textes juridiques.
 
-**Aucun tarif ni seuil n'est écrit en dur dans un composant.** Tout vient d'une
-configuration centralisée, la même que celle qui sert au calcul serveur des frais
-de port. C'est la seule façon de garantir qu'un changement de seuil ne laisse pas
+**Aucun tarif ni seuil n'est écrit en dur dans un composant.** Tout vient de la
+table `ParametreBoutique`, **ADR-043**, lue par `lireParametresBoutique()` et
+projetée par `configurationDepuisParametres` : la même source que le calcul
+serveur des frais de port.
+
+**LA SOURCE A CHANGÉ LE 11 SEPTEMBRE 2026, LS-98.** Elle était les trois
+variables `SHIPPING_*`, qui ont **disparu** de `.env.example` et des workflows :
+les laisser aurait créé deux sources de vérité. L'exploitante règle désormais
+ces valeurs depuis `/administration/parametres`, sans redéploiement. C'est la seule façon de garantir qu'un changement de seuil ne laisse pas
 « offerte dès 39 € » sur la fiche produit et 45 € au panier.
 
 Un tarif affiché et un tarif facturé qui divergent constituent une information
@@ -900,7 +911,7 @@ Six éléments, sans en ajouter :
 | Fabrication | bijoux faits main en Béarn | **confirmé le 3 septembre 2026**, assemblage et finition à Artix (64) |
 | Paiement | paiement sécurisé par Stripe | |
 | Livraison | Mondial Relay, Point Relais, Locker ou domicile | ADR-025, le domicile en 4 à 6 jours contre 2 à 4 en retrait, ADR-035 |
-| Gratuité | livraison offerte dès 39 € **en Point Relais et Locker** | ADR-035, valeur issue de la configuration. **Jamais « tous modes »** : le domicile n'est pas offert, et l'annoncer sans réserve est une information précontractuelle fausse |
+| Gratuité | livraison offerte au seuil configuré, **en Point Relais et Locker** | ADR-035 et **ADR-043** : le seuil vaut 39 € à l'amorçage et l'exploitante le change **sans redéploiement** depuis `/administration/parametres`. Ne jamais le recopier dans un composant. **Jamais « tous modes »** : le domicile n'est pas offert, et l'annoncer sans réserve est une information précontractuelle fausse |
 | Rétractation | 14 jours pour changer d'avis | frais de retour à la charge du client, mention obligatoire |
 | Contact | réponse par email | |
 

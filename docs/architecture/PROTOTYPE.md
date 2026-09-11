@@ -88,8 +88,14 @@ La table ci-dessus relie les parcours à leur écran. Elle ne dit rien des écra
 que **le prototype porte sans qu'un parcours les mobilise**, et c'est par là que
 deux fonctions entières avaient échappé au suivi jusqu'au 13 août 2026.
 
-**L'administration compte onze rubriques**, navigables par état interne et non
+**Le PROTOTYPE compte onze rubriques**, navigables par état interne et non
 par URL, ce qui explique qu'aucune adresse ne les révèle.
+
+**LE DÉPÔT EN SERT SEIZE au 11 septembre 2026**, et la distinction se perdait :
+la phrase précédente disait « l'administration compte onze rubriques » au
+présent, sans dire laquelle des deux. Les onze du prototype existent toutes
+depuis LS-98 ; les cinq autres sont nées après son gel, Alertes en dernier.
+Le compte se relève, `verifier-navigation-administration.sh` l'imprime.
 
 **LA COLONNE DIT L'ÉCRAN, JAMAIS LE MÉTIER, et c'est une correction du
 4 septembre 2026.** La version précédente citait des epics et des stories de
@@ -113,7 +119,20 @@ existe-t-il ? », et c'est la seconde question que cet inventaire pose.
 | Clients | **LS-185** | livré, recherche libre, écart ADR-027 assumé |
 | Avis | LS-61 | **livré** le 11 septembre 2026, `administration/avis` |
 | Messages | LS-97 | livré |
-| Paramètres | LS-98 | à faire |
+| Paramètres | LS-98 | **livré** le 11 septembre 2026, `/administration/parametres`, ADR-043 |
+
+**L'INVENTAIRE DU PROTOTYPE EST DÉSORMAIS INTÉGRALEMENT LIVRÉ**, « Paramètres »
+ayant été la dernière ligne « à faire ».
+
+**UN ÉCRAN DEVANCE CE TABLEAU**, et il n'a jamais figuré au prototype :
+
+| Écran hors prototype | Story | État |
+|---|---|---|
+| Alertes, `/administration/alertes` | LS-98 | **livré** le 11 septembre 2026 |
+
+Sept services levaient des alertes critiques, `DOUBLE_ENCAISSEMENT` compris, et
+**aucun code ne les lisait** : le mécanisme entier existait sans écran pour le
+servir.
 
 **« Nouveau produit » n'est pas une rubrique**, ni au prototype ni dans le code
 depuis LS-183 : c'est un bouton d'action de l'écran Catalogue. Sa route existe

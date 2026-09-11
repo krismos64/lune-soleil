@@ -2039,8 +2039,18 @@ d'un avis publié suit la même logique, statut `RETIRE`.
 ## Ce qui n'est pas modélisé, et pourquoi
 
 Conformément au plan directeur, les entités restées hors périmètre d'ouverture
-attendent leur phase : assistant conversationnel, statistiques produit, liste
-d'envie.
+attendent leur phase : statistiques produit, liste d'envie.
+
+**L'ASSISTANT CONVERSATIONNEL A QUITTÉ CETTE LISTE LE 11 SEPTEMBRE 2026**, et
+non parce qu'il serait livré : **ADR-044 l'écarte du périmètre**. Il n'attend
+plus sa phase, il n'en aura pas. Ne pas le réintroduire sans un ADR qui remplace
+celui-là.
+
+**`ParametreBoutique` N'EST PAS MODÉLISÉE ICI, ET C'EST DÉLIBÉRÉ.** Ce document
+décrit les entités MÉTIER issues des parcours ; une table de configuration
+d'exploitation n'en traverse aucun. Elle vit dans `MODELE-LOGIQUE.md`, qui
+recense le schéma physique, et dans ADR-043 qui la décide. Son absence ici est
+un choix, pas un oubli.
 
 Les avis vérifiés et le carnet d'adresses figuraient dans cette liste jusqu'au
 28 juillet 2026. Ils sont passés en périmètre d'ouverture et sont désormais
