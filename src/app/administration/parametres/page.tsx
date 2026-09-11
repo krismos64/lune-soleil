@@ -23,6 +23,8 @@
  * donc ce qu'il ne fait pas, et ou la decision vit.
  * ------------------------------------------------------------------
  */
+import { Suspense } from "react";
+
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -34,6 +36,7 @@ import {
   ParametresAbsentsError,
   lireParametresBoutique,
 } from "@/services/parametres";
+import { ChargementAdministration } from "@/components/chargement-administration";
 import { FormulaireParametres } from "./formulaire-parametres";
 import styles from "./parametres.module.css";
 
@@ -63,6 +66,33 @@ export default async function PageParametres() {
     throw erreur;
   }
 
+  return (
+    <main id="contenu" tabIndex={-1} className={styles.page}>
+      <h1 className={styles.titre}>Paramètres</h1>
+
+      {/*
+       * `<Suspense>` INTERNE ET JAMAIS UN `loading.tsx`, regle C32 : celui-ci
+       * envelopperait la page entiere dans une frontiere, et une lecture de
+       * base qui echoue rendrait 200 avec un chargement fige au lieu d'un vrai
+       * 500. La garde de role reste au-dessus, la redirection devant pouvoir se
+       * decider avant tout envoi.
+       */}
+      <Suspense fallback={<ChargementParametres />}>
+        <Reglages />
+      </Suspense>
+    </main>
+  );
+}
+
+/** Armature affichee pendant que les parametres arrivent, LS-139. */
+function ChargementParametres() {
+  return (
+    <ChargementAdministration annonce="Chargement des paramètres…" lignes={4} />
+  );
+}
+
+/** Les reglages, lus en base. */
+async function Reglages() {
   /*
    * L'ABSENCE DE LIGNE NE FAIT PAS TOMBER L'ECRAN, et c'est delibere. La
    * migration l'amorce, ADR-043 : une ligne manquante signale une base
@@ -80,9 +110,7 @@ export default async function PageParametres() {
   }
 
   return (
-    <main id="contenu" tabIndex={-1} className={styles.page}>
-      <h1 className={styles.titre}>Paramètres</h1>
-
+    <>
       {parametres === null ? (
         <p className={styles.manquant}>
           Aucun paramètre n&apos;est enregistré pour cette boutique. Cela
@@ -142,6 +170,6 @@ export default async function PageParametres() {
           </section>
         </>
       )}
-    </main>
+    </>
   );
 }

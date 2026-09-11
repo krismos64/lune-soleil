@@ -293,7 +293,13 @@ export function FormulaireParametres({
        */}
       {resultat?.statut === "REAUTHENTIFICATION_REQUISE" && (
         <p className={styles.sortie}>
-          <Link href="/administration/reauthentification">
+          {/*
+           * `prefetch={false}`, regle C40 : toutes les routes d'administration
+           * sont `force-dynamic` et `staleTimes.dynamic` vaut zero, donc la
+           * reponse prechargee est perimee des son arrivee. Next.js la jette,
+           * repart, et recommence sans fin tant que le lien est a l'ecran.
+           */}
+          <Link href="/administration/reauthentification" prefetch={false}>
             Confirmer mon identité
           </Link>
         </p>
@@ -301,7 +307,9 @@ export function FormulaireParametres({
 
       {resultat?.statut === "SESSION_ABSENTE" && (
         <p className={styles.sortie}>
-          <Link href="/administration/connexion">Se reconnecter</Link>
+          <Link href="/administration/connexion" prefetch={false}>
+            Se reconnecter
+          </Link>
         </p>
       )}
 

@@ -319,12 +319,26 @@ porte déjà. Sans elle, une ligne d'échec sur compte inconnu ne dirait rien.
 |---|---|
 | Finalité | tracer les actions d'administration, l'envoi des emails, les alertes critiques, et limiter les tentatives en rafale |
 | Personnes concernées | clients destinataires d'emails, exploitante agissant dans l'administration |
-| Catégories de données | identifiant de l'acteur, adresse IP, adresse email du destinataire, modèle d'email et statut d'envoi, clé de limitation de débit contenant une adresse IP, **empreinte** d'adresse email pour le compteur par compte visé |
-| Tables | `JournalAudit`, `JournalEmail`, `AlerteCritique`, `RateLimit`, `CompteurCompteVise`, `MouvementStock`, `EnvoiEnAttente` |
+| Catégories de données | identifiant de l'acteur, adresse IP, adresse email du destinataire, modèle d'email et statut d'envoi, clé de limitation de débit contenant une adresse IP, **empreinte** d'adresse email pour le compteur par compte visé, **adresse email de réception des alertes** |
+| Tables | `JournalAudit`, `JournalEmail`, `AlerteCritique`, `RateLimit`, `CompteurCompteVise`, `MouvementStock`, `EnvoiEnAttente`, `ParametreBoutique` |
 | Base légale | intérêt légitime, article 6.1.f, sécurité et preuve du bon fonctionnement |
 | Conservation | **six mois** pour `JournalAudit`, par alignement sur la délibération CNIL n° 2021-122. **Vingt-quatre heures** pour `RateLimit` et pour `CompteurCompteVise`, arbitrage de LS-94 exposé ci-dessous. `JournalEmail` suit la commande qu'il sert, voir T2. **Trente jours** pour les lignes TERMINÉES d'`EnvoiEnAttente`, jamais pour les lignes bloquées, arbitrage de LS-154 exposé ci-dessous. Les purges sont branchées sur une tâche planifiée quotidienne depuis le 12 août 2026, LS-94, portée à **cinq tables** par LS-154 |
 | Destinataires | l'exploitante seule |
 | Transfert hors UE | aucun |
+
+**`ParametreBoutique` PORTE UNE ADRESSE EMAIL, celle qui reçoit les alertes**,
+LS-98 et ADR-043. Elle figure donc ici plutôt que dans les tables sans donnée
+personnelle, et le classement mérite d'être expliqué : la table porte surtout
+des tarifs et des interrupteurs, qui ne se rattachent à personne.
+
+**C'est la seule colonne qui l'y range**, et elle suffit : l'adresse désigne
+l'exploitante, personne physique identifiée. Le contrôle automatique a refusé le
+classement en « sans donnée personnelle » à la première exécution en intégration
+continue, sur une story qui n'avait pas relu ce document.
+
+**Elle porte aussi `acquitteeParId` par sa voisine `AlerteCritique`**, déjà
+couverte ici : acquitter une alerte trace qui l'a fait, et ces deux tables se
+lisent ensemble depuis l'écran d'alertes livré par LS-98.
 
 **`RateLimit` porte une adresse IP dans sa clé**, ADR-027 décision 1 signalant
 que le mécanisme intégré de Better Auth compte par IP et non par compte. La clé

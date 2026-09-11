@@ -20,6 +20,8 @@
  *
  * AUCUN `loading.tsx` DANS CE SEGMENT, regle C32.
  */
+import { Suspense } from "react";
+
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -32,6 +34,7 @@ import {
   type AlerteLue,
   lireAlertes,
 } from "@/services/alerte";
+import { ChargementAdministration } from "@/components/chargement-administration";
 import { CarteAlerte } from "./carte-alerte";
 import styles from "./alertes.module.css";
 
@@ -68,8 +71,6 @@ export default async function PageAlertes() {
     throw erreur;
   }
 
-  const { ouvertes, acquittees } = await lireAlertes();
-
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Alertes</h1>
@@ -80,6 +81,35 @@ export default async function PageAlertes() {
         jamais être supprimée.
       </p>
 
+      {/*
+       * `<Suspense>` INTERNE ET JAMAIS UN `loading.tsx`, regle C32 : celui-ci
+       * envelopperait la page entiere dans une frontiere, le streaming
+       * commencerait avant que le code decide, et une lecture de base qui
+       * echoue rendrait 200 avec un chargement fige au lieu d'un vrai 500.
+       *
+       * LA GARDE DE ROLE RESTE AU-DESSUS de cette frontiere : la redirection
+       * doit pouvoir se decider avant tout envoi.
+       */}
+      <Suspense fallback={<ChargementAlertes />}>
+        <ListesAlertes />
+      </Suspense>
+    </main>
+  );
+}
+
+/** Armature affichee pendant que les alertes arrivent, LS-139. */
+function ChargementAlertes() {
+  return (
+    <ChargementAdministration annonce="Chargement des alertes…" lignes={3} />
+  );
+}
+
+/** Les deux files, lues en base. */
+async function ListesAlertes() {
+  const { ouvertes, acquittees } = await lireAlertes();
+
+  return (
+    <>
       <section className={styles.section} aria-labelledby="titre-ouvertes">
         <h2 id="titre-ouvertes" className={styles.titreSection}>
           À traiter ({ouvertes.length})
@@ -134,7 +164,7 @@ export default async function PageAlertes() {
           </>
         )}
       </section>
-    </main>
+    </>
   );
 }
 
