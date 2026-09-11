@@ -224,7 +224,14 @@ async function appliquerRalentissement(
     return;
   }
 
-  const cible = emailTente.toLowerCase();
+  /*
+   * `trim` AVANT `toLowerCase`, correction de revue. Sans lui,
+   * ` cible@exemple.fr` et `cible@exemple.fr ` produisent deux empreintes de
+   * plus, donc des compteurs orphelins. Ce n'est pas un contournement, Better
+   * Auth refusant ces corps en 400 avant toute verification de mot de passe :
+   * l'effet est du bruit en base, et une ligne le referme.
+   */
+  const cible = emailTente.trim().toLowerCase();
 
   if (issue === "REUSSITE") {
     await oublierEchecsDuCompte(cible);

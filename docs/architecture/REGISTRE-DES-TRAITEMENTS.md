@@ -316,16 +316,29 @@ porte déjà. Sans elle, une ligne d'échec sur compte inconnu ne dirait rien.
 |---|---|
 | Finalité | tracer les actions d'administration, l'envoi des emails, les alertes critiques, et limiter les tentatives en rafale |
 | Personnes concernées | clients destinataires d'emails, exploitante agissant dans l'administration |
-| Catégories de données | identifiant de l'acteur, adresse IP, adresse email du destinataire, modèle d'email et statut d'envoi, clé de limitation de débit contenant une adresse IP |
-| Tables | `JournalAudit`, `JournalEmail`, `AlerteCritique`, `RateLimit`, `MouvementStock`, `EnvoiEnAttente` |
+| Catégories de données | identifiant de l'acteur, adresse IP, adresse email du destinataire, modèle d'email et statut d'envoi, clé de limitation de débit contenant une adresse IP, **empreinte** d'adresse email pour le compteur par compte visé |
+| Tables | `JournalAudit`, `JournalEmail`, `AlerteCritique`, `RateLimit`, `CompteurCompteVise`, `MouvementStock`, `EnvoiEnAttente` |
 | Base légale | intérêt légitime, article 6.1.f, sécurité et preuve du bon fonctionnement |
-| Conservation | **six mois** pour `JournalAudit`, par alignement sur la délibération CNIL n° 2021-122. **Vingt-quatre heures** pour `RateLimit`, arbitrage de LS-94 exposé ci-dessous. `JournalEmail` suit la commande qu'il sert, voir T2. **Trente jours** pour les lignes TERMINÉES d'`EnvoiEnAttente`, jamais pour les lignes bloquées, arbitrage de LS-154 exposé ci-dessous. Les purges sont branchées sur une tâche planifiée quotidienne depuis le 12 août 2026, LS-94, portée à **cinq tables** par LS-154 |
+| Conservation | **six mois** pour `JournalAudit`, par alignement sur la délibération CNIL n° 2021-122. **Vingt-quatre heures** pour `RateLimit` et pour `CompteurCompteVise`, arbitrage de LS-94 exposé ci-dessous. `JournalEmail` suit la commande qu'il sert, voir T2. **Trente jours** pour les lignes TERMINÉES d'`EnvoiEnAttente`, jamais pour les lignes bloquées, arbitrage de LS-154 exposé ci-dessous. Les purges sont branchées sur une tâche planifiée quotidienne depuis le 12 août 2026, LS-94, portée à **cinq tables** par LS-154 |
 | Destinataires | l'exploitante seule |
 | Transfert hors UE | aucun |
 
 **`RateLimit` porte une adresse IP dans sa clé**, ADR-027 décision 1 signalant
 que le mécanisme intégré de Better Auth compte par IP et non par compte. La clé
 n'est pas un identifiant opaque : elle encode la route et l'adresse.
+
+**`CompteurCompteVise` porte une EMPREINTE d'adresse email, jamais l'adresse**,
+LS-83. Sa clé est un SHA-256 tronqué à 32 caractères hexadécimaux : elle reste
+une donnée personnelle, puisqu'elle distingue les personnes et se vérifie contre
+une adresse connue, mais une fuite de cette table ne livre aucun fichier client.
+Elle figure donc ici plutôt que dans les tables sans donnée personnelle.
+
+**Pourquoi une table distincte de `RateLimit`**, et c'est une correction de revue
+plutôt qu'un choix d'origine. Le limiteur de Better Auth lance un `deleteMany`
+**sans aucun filtre de clé** dès qu'il croise une de ses propres lignes hors
+fenêtre, seuil de soixante secondes : le compteur du projet n'y survivait pas une
+minute, et sa fenêtre annoncée de quinze minutes n'existait pas. Ne pas
+« simplifier » en les refusionnant.
 
 **Pourquoi vingt-quatre heures et non six mois pour `RateLimit`**, arbitrage
 rendu par LS-94 le 12 août 2026. L'alignement sur la délibération n° 2021-122 ne
