@@ -544,17 +544,21 @@ ferme la phrase, donc l'action : « Chargement des pièces. » annonce un
 chargement terminé alors qu'il commence. Un lecteur d'écran marque d'ailleurs la
 pause différemment sur les deux formes.
 
-Le catalogue public a porté le point final de LS-104 à LS-195, **seul des quinze
-annonces de chargement du dépôt**, et c'était l'écran public. Il était pourtant
-la référence que le composant partagé cite dans son propre en-tête : la forme
-d'origine a été recopiée quatorze fois en la corrigeant au passage, sans que
-l'original le soit. **C'est l'original qui a divergé de ses copies**, ce
-qu'aucune relecture de diff ne montre.
+Le catalogue public a porté le point final de LS-104 à LS-195, **seule annonce
+de chargement du dépôt dans ce cas**, et c'était l'écran public. Il était
+pourtant la référence que le composant partagé cite dans son propre en-tête : la
+forme d'origine a été recopiée en la corrigeant au passage, sans que l'original
+le soit. **C'est l'original qui a divergé de ses copies**, ce qu'aucune relecture
+de diff ne montre.
 
-Le ticket annonçait seize annonces, le dépôt en porte **quinze** : la seizième
-occurrence était une ligne de commentaire du composant partagé. Un nombre écrit
-dans une règle et démenti par le contrôle qui l'applique se paie à la relecture
-suivante, motif « table de nombres trop courte ».
+**LE COMPTE N'EST PLUS ÉCRIT ICI, ET CE PARAGRAPHE A PAYÉ SA PROPRE LEÇON.** Il
+annonçait « quinze » le 7 septembre 2026 ; le contrôle en comptait **dix-neuf**
+le 11 septembre, les écrans ajoutés depuis ne l'ayant pas fait suivre. Un nombre
+écrit dans une règle et démenti par le contrôle qui l'applique se paie à la
+relecture suivante, motif « table de nombres trop courte ».
+
+`./scripts/verifier-ponctuation-chargement.sh` imprime le compte réel à chaque
+exécution : le lire plutôt que de le recopier.
 
 `scripts/verifier-ponctuation-chargement.sh` garde les deux points, la
 terminaison et le caractère employé.
