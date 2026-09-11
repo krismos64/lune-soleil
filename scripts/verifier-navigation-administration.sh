@@ -12,17 +12,34 @@
 # manuscrite reproduirait le motif d'un cran plus loin : l'écran suivant
 # n'entrerait pas dans la barre, et rien ne le dirait.
 #
-# IL VÉRIFIE DANS LES DEUX SENS, et le second est le seul qui attrape ce défaut.
+# IL VÉRIFIE DANS PLUSIEURS SENS, et aucun ne suffit seul. Le nombre ne s'écrit
+# pas ici, les sens étant numérotés plus bas : il valait « deux » quand le
+# script en portait quatre, et la phrase se périmait au premier sens ajouté.
 #
 #   1. toute rubrique de la barre correspond à une route qui existe
 #      -> sinon la barre promet un écran inexistant et rend un 404
 #   2. toute route d'administration est SOIT dans la barre, SOIT dans la liste
 #      des exclusions justifiées de ce script
 #      -> sinon un écran neuf reste inatteignable, le défaut d'origine
+#   3. le nom accessible de la barre est stable
+#   4. une rubrique « à venir » ne porte aucun chemin, LS-181
+#   5. toute rubrique de la barre est EXERCÉE par le test de navigation
+#      -> sinon la barre est juste et personne ne clique dessus, LS-140
 #
 # LE SENS 1 SEUL SERAIT UN DEMI-CONTRÔLE. Il resterait vert sur une barre qui
 # n'affiche que deux rubriques sur douze, c'est-à-dire sur l'état d'avant cette
 # story, où elle en affichait zéro.
+#
+# LE SENS 5 VIENT DU 11 SEPTEMBRE 2026, LS-140, et il ferme un angle mort que
+# les quatre autres laissaient entier. Les sens 1 et 2 gardent le COMPOSANT
+# contre les routes ; `navigation-administration.spec.ts` porte une SECONDE
+# liste, écrite à la main, que rien ne confrontait à la première. Cinq rubriques
+# sur quatorze y manquaient, dont Avis, Factures et Clients, pendant que ce
+# script annonçait « chaque écran d'administration est navigable ».
+#
+# LES DEUX COMPTES ÉTAIENT JUSTES PRIS SÉPARÉMENT, 14 rubriques déclarées et 9
+# exercées, et c'est ce qui rendait l'écart invisible. Motif « numérateur et
+# dénominateur appariés », déjà en fiche sur ce dépôt.
 #
 # Usage : ./scripts/verifier-navigation-administration.sh
 # Aucun prérequis, ni Docker ni base : contrôle purement textuel.
@@ -196,6 +213,94 @@ if awk '/^export const RUBRIQUES_A_VENIR[^=]*= \[/,/^\] as const;/' "$NAVIGATION
   echo "      ferait des liens vers des routes inexistantes. Livrer l'écran"
   echo "      et déplacer l'entrée dans RUBRIQUES, ou retirer le chemin."
   ko=$((ko + 1))
+fi
+
+# ---------------------------------------------------------------------------
+# Sens 5 : toute rubrique de la barre est EXERCÉE par le test de navigation,
+# LS-140.
+#
+# CE QUE LES QUATRE SENS PRÉCÉDENTS NE VOIENT PAS. Ils confrontent le COMPOSANT
+# aux routes du dépôt. `navigation-administration.spec.ts` porte une SECONDE
+# liste, `RUBRIQUES`, écrite à la main en face de la première : une rubrique
+# ajoutée au composant et oubliée dans le test n'est cliquée par personne, et
+# rien ne le disait.
+#
+# MESURÉ LE 11 SEPTEMBRE 2026 : 14 rubriques déclarées, 9 exercées. Avis,
+# Factures et avoirs, Clients, Statistiques et Vos passkeys manquaient, pendant
+# que ce script annonçait « chaque écran d'administration est navigable ».
+#
+# LA COMPARAISON PORTE SUR LES LIBELLÉS ET NON SUR LES CHEMINS, le test ne
+# connaissant que les premiers : c'est par le nom accessible qu'il clique.
+# ---------------------------------------------------------------------------
+SPEC_NAVIGATION="$RACINE/tests/e2e/navigation-administration.spec.ts"
+
+if [ ! -r "$SPEC_NAVIGATION" ]; then
+  echo "ECHEC test de navigation introuvable : $SPEC_NAVIGATION"
+  echo "      le sens 5 ne vérifie plus rien, et une rubrique non cliquée"
+  echo "      redeviendrait invisible."
+  ko=$((ko + 1))
+else
+  # L'ANCRAGE EXIGE LES DEUX-POINTS, `RUBRIQUES:` ET NON `RUBRIQUES`, et la
+  # nuance a été mesurée plutôt que supposée. `RUBRIQUES` est un PRÉFIXE de
+  # `RUBRIQUES_A_VENIR` : l'ancrage des sens 1 et 4 absorbait donc les deux
+  # tableaux, et l'extraction rendait quinze libellés au lieu de quatorze,
+  # « Paramètres » étant une rubrique NON LIVRÉE rendue inerte.
+  #
+  # LE SENS 1 Y ÉCHAPPE PAR ACCIDENT, et il faut le dire : il extrait des
+  # `chemin:`, qu'une entrée « à venir » ne porte jamais, le sens 4 l'interdisant
+  # précisément. Son ancrage est donc aussi large, sa moisson ne l'est pas.
+  # Motif « nom nu hors ancrage », déjà en fiche sur ce dépôt.
+  #
+  # LE MOTIF EXCLUT LE SUFFIXE PLUTÔT QUE D'EXIGER UNE FORME PRÉCISE.
+  # `RUBRIQUES[^_A-Z]` refuse `RUBRIQUES_A_VENIR` tout en acceptant aussi bien
+  # `RUBRIQUES: readonly Rubrique[] = [` que `RUBRIQUES = [` : exiger les
+  # deux-points aurait cassé l'ancrage au premier retrait de l'annotation, ce
+  # qui est déjà arrivé une fois à ce script en sens inverse, LS-181.
+  libelles_barre=$(awk '/^export const RUBRIQUES[^_A-Z][^=]*= \[/,/^\] as const;/' "$NAVIGATION" \
+    | grep -oE 'libelle: "[^"]+"' | sed 's/libelle: "//; s/"//' | sort -u)
+
+  if [ -z "$libelles_barre" ]; then
+    echo "ECHEC aucun libellé lu dans le tableau RUBRIQUES du composant"
+    echo "      l'ancrage du sens 5 est cassé : sans libellé, la comparaison"
+    echo "      serait vide et le contrôle vert sans rien examiner."
+    ko=$((ko + 1))
+  fi
+
+  libelles_test=$(awk '/^const RUBRIQUES[^=]*= \[/,/^\] as const;/' "$SPEC_NAVIGATION" \
+    | grep -oE 'libelle: "[^"]+"' | sed 's/libelle: "//; s/"//' | sort -u)
+
+  # L'ANCRAGE SE GARDE CONTRE LUI-MÊME. Un tableau renommé rendrait les deux
+  # listes vides, donc leur différence vide, donc le contrôle vert sur un
+  # contrôle qui n'examine plus rien.
+  if [ -z "$libelles_test" ]; then
+    echo "ECHEC aucune rubrique lue dans le tableau RUBRIQUES du test"
+    echo "      l'ancrage du sens 5 est cassé : le tableau a été renommé."
+    ko=$((ko + 1))
+  else
+    manquantes=$(comm -23 <(echo "$libelles_barre") <(echo "$libelles_test"))
+
+    if [ -n "$manquantes" ]; then
+      echo "ECHEC des rubriques de la barre ne sont cliquées par aucun test :"
+      echo "$manquantes" | sed 's/^/        /'
+      echo "      la barre peut être juste et l'écran inatteignable au clic."
+      echo "      Les ajouter au tableau RUBRIQUES de"
+      echo "      tests/e2e/navigation-administration.spec.ts, avec le titre"
+      echo "      exact du <h1> de l'écran visé."
+      ko=$((ko + 1))
+    fi
+
+    # LE SENS INVERSE COMPTE AUSSI : un libellé exercé par le test et absent de
+    # la barre signale un test qui cherche un lien qui n'existe plus, donc un
+    # échec différé au lieu d'un diagnostic immédiat.
+    fantomes=$(comm -13 <(echo "$libelles_barre") <(echo "$libelles_test"))
+
+    if [ -n "$fantomes" ]; then
+      echo "ECHEC le test navigue vers des rubriques absentes de la barre :"
+      echo "$fantomes" | sed 's/^/        /'
+      echo "      le test échouerait par expiration plutôt que par diagnostic."
+      ko=$((ko + 1))
+    fi
+  fi
 fi
 
 # `aria-current` porte l'information de l'écran courant. Sans lui, elle ne

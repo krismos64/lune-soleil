@@ -42,12 +42,38 @@ const RUBRIQUES = [
   { libelle: "Expéditions", titre: "Expéditions" },
   { libelle: "Rétractations", titre: "Rétractations" },
   { libelle: "Messages", titre: "Messages" },
+  /*
+   * LES CINQ RUBRIQUES AJOUTEES LE 11 SEPTEMBRE 2026, LS-140, et l'omission
+   * meritait d'etre comprise plutot que corrigee en silence.
+   *
+   * CETTE LISTE EST UNE SECONDE LISTE, ecrite a la main en face de celle du
+   * composant. `verifier-navigation-administration.sh` confronte les rubriques
+   * du COMPOSANT aux routes du depot, dans les deux sens, et reste vert : il ne
+   * lit pas ce fichier. Rien ne comparait donc les deux listes entre elles, et
+   * cinq rubriques manquaient ici pendant que le controle annonçait « chaque
+   * ecran est navigable ».
+   *
+   * C'EST LE MOTIF « NUMERATEUR ET DENOMINATEUR APPARIES », deja en fiche sur
+   * ce depot : deux comptes qui ne portent pas sur la meme population. Le
+   * controle compte 14 rubriques declarees, ce test en exerçait 9, et aucun des
+   * deux nombres n'etait faux pris isolement.
+   *
+   * LE CONTROLE GARDE DESORMAIS LES DEUX LISTES, sens ajoute le meme jour :
+   * une rubrique declaree dans le composant et absente d'ici fait echouer
+   * `verifier-navigation-administration.sh`. Ajouter une rubrique sans
+   * l'ajouter ici n'est donc plus silencieux.
+   */
+  { libelle: "Avis", titre: "Avis" },
   /* LS-183 : « Nouveau produit » a quitte la barre pour devenir un bouton de
    * l'ecran Catalogue, qui prend sa place ici. */
   { libelle: "Catalogue", titre: "Produits" },
+  { libelle: "Factures et avoirs", titre: "Factures et avoirs" },
+  { libelle: "Clients", titre: "Clients" },
   { libelle: "Catégories", titre: "Catégories du catalogue" },
   { libelle: "Stocks et marchés", titre: "Stocks et marchés" },
+  { libelle: "Statistiques", titre: "Statistiques" },
   { libelle: "Connexions", titre: "Journal des connexions" },
+  { libelle: "Vos passkeys", titre: "Vos passkeys" },
 ] as const;
 
 /**

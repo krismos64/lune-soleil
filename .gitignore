@@ -130,6 +130,13 @@ docs/internal/
 # rencontre sur ce projet.
 tests/e2e/.session-*.json
 
-# Cookie signe de la commande de test, LS-118. Meme raison : une valeur signee
-# avec le secret local n'a rien a faire dans un depot public.
-tests/e2e/.commande-test.json
+# Cookie signe de la commande de test, LS-118, et valeurs de jetons d'avis,
+# LS-140. Meme raison : une valeur signee avec le secret local n'a rien a faire
+# dans un depot public.
+#
+# UN MOTIF QUI COUVRE TOUT ARTEFACT DE PREPARATION, elargi le 11 septembre 2026.
+# Les deux lignes nominatives qui vivaient ici auraient laisse `.jetons-avis.json`
+# hors du filtre, exactement le defaut corrige le 2 septembre sur les sessions :
+# un artefact neuf se cree a chaque story qui amorce un etat, et chacun porte
+# une valeur signee. Elargir la source plutot qu'allonger la liste.
+tests/e2e/.*.json

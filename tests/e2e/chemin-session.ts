@@ -230,6 +230,96 @@ export const COMMANDE_SUIVIE_TEST = {
 } as const;
 
 /**
+ * La commande LIVREE qui porte les invitations a deposer un avis, LS-140.
+ *
+ * HUITIEME COMMANDE, ET ELLE NE POUVAIT ETRE GREFFEE SUR AUCUNE DES SEPT.
+ * `lireEtatDepot` exige `Expedition.livreA` renseignee, et `deposerAvis` en
+ * tire `experienceA`, article D111-10 : sans elle, l'ecran public rend
+ * « INDISPONIBLE » et le formulaire n'est mesure a AUCUNE largeur.
+ *
+ * `COMMANDE_SUIVIE_TEST` EST CELLE QU'IL NE FAUT PAS TOUCHER. Son commentaire
+ * d'amorcage le dit : `livreA` y RESTE NUL parce que `fraicheurSuivi` rend
+ * « frais » des qu'elle est renseignee, ce qui eteindrait le signalement de
+ * suivi bloque que LS-216 mesure. Lui donner une date de remise deplacerait
+ * silencieusement ce que ce jeu de donnees existe pour produire.
+ *
+ * TROIS LIGNES ET TROIS JETONS, chacun dans un etat DIFFERENT, parce que
+ * l'ecran public porte cinq branches et qu'une seule ligne n'en exerce qu'une :
+ *
+ * | Jeton | Etat en base | Branche rendue |
+ * |---|---|---|
+ * | `jetonOuvert` | ni consomme ni revoque | le FORMULAIRE, le cas nominal |
+ * | `jetonConsomme` | `utiliseA` renseignee | « un avis a deja ete depose » |
+ * | `jetonRevoque` | `revoqueA` renseignee | « ce lien a ete remplace » |
+ *
+ * LA CINQUIEME BRANCHE, `INDISPONIBLE`, N'A BESOIN D'AUCUNE DONNEE : un jeton
+ * inexistant suffit, et c'est le test negatif qui verifie le 404. Il compte
+ * autant que les quatre autres, `notFound()` sur tout refus etant ce qui
+ * empeche de reveler qu'une commande existe.
+ *
+ * DEUX DES TROIS LIGNES PORTENT DEJA UN AVIS, l'un `DEPOSE` et l'autre
+ * `PUBLIE`, et chacun sert un ecran que l'autre ne sert pas :
+ *
+ * | Avis | Ligne | Ce qu'il rend |
+ * |---|---|---|
+ * | `DEPOSE` | 2 | la file de relecture de l'administration, vide sans lui |
+ * | `PUBLIE` | 3 | le bloc 11 de la fiche produit, et la cible du signalement |
+ *
+ * IL RESTE DONC UNE SEULE PIECE A NOTER sur les trois, et c'est une propriete
+ * du code plutot qu'un choix : `dejaNotee` vaut `avisExistant !== null` sans
+ * regarder le statut, donc l'avis en attente de relecture compte autant que le
+ * publie. Le test de comptage l'ecrit explicitement pour qu'un futur lecteur ne
+ * cherche pas la cause ailleurs.
+ */
+export const COMMANDE_AVIS_TEST = {
+  categorieId: "e1a2b3c4-1140-4aaa-8888-000000000001",
+  produitId: "e1a2b3c4-1140-4bbb-8888-000000000002",
+  varianteId: "e1a2b3c4-1140-4ccc-8888-000000000003",
+  commandeId: "e1a2b3c4-1140-4ddd-8888-000000000004",
+  ligneUnId: "e1a2b3c4-1140-4eee-8888-000000000005",
+  ligneDeuxId: "e1a2b3c4-1140-4eee-8888-000000000006",
+  ligneTroisId: "e1a2b3c4-1140-4eee-8888-000000000007",
+  paiementId: "e1a2b3c4-1140-4fff-8888-000000000008",
+  expeditionId: "e1a2b3c4-1140-4a11-8888-000000000009",
+  jetonOuvertId: "e1a2b3c4-1140-4b22-8888-000000000010",
+  jetonConsommeId: "e1a2b3c4-1140-4b22-8888-000000000011",
+  jetonRevoqueId: "e1a2b3c4-1140-4b22-8888-000000000012",
+  invitationUnId: "e1a2b3c4-1140-4c33-8888-000000000013",
+  invitationDeuxId: "e1a2b3c4-1140-4c33-8888-000000000014",
+  invitationTroisId: "e1a2b3c4-1140-4c33-8888-000000000015",
+  avisDeposeId: "e1a2b3c4-1140-4d44-8888-000000000016",
+  avisPublieId: "e1a2b3c4-1140-4d44-8888-000000000017",
+  signalementId: "e1a2b3c4-1140-4e55-8888-000000000018",
+  numero: "C-TEST-0140",
+  numeroSuivi: "3STEST140000001",
+  /** Le produit est PUBLIE, sans quoi l'avis publie ne serait rendu nulle part. */
+  slug: "e2e-ls140-piece-notee",
+  /*
+   * TROIS LIBELLES DONT AUCUN N'EST PREFIXE D'UN AUTRE, et ce n'est pas un
+   * detail de confort : `getByText` de Playwright fait une correspondance par
+   * SOUS-CHAINE, donc « TEST Piece a noter » designait aussi « TEST Piece a
+   * noter aussi » et le mode strict refusait les deux. Contourner par `exact`
+   * aurait masque le chevauchement au lieu de le retirer.
+   */
+  libelleUn: "TEST Collier du matin",
+  libelleDeux: "TEST Bracelet déjà noté",
+  libelleTrois: "TEST Broche du soir",
+} as const;
+
+/**
+ * Ou vit la valeur des trois jetons d'avis, LS-140.
+ *
+ * ELLE NE PEUT PAS ETRE FIGEE comme les identifiants ci-dessus. `engendrerJeton`
+ * signe en HMAC avec `BETTER_AUTH_SECRET`, et la base ne garde que l'empreinte,
+ * regle L5 : un fichier de largeur ne peut ni fabriquer la valeur ni la relire
+ * depuis la base. Meme geste que `FICHIER_COMMANDE` pour le cookie signe.
+ *
+ * IGNORE PAR GIT. Ces valeurs ouvrent un ecran de depot, elles n'ont rien a
+ * faire dans un depot public, invariant 9.
+ */
+export const FICHIER_JETONS_AVIS = "tests/e2e/.jetons-avis.json";
+
+/**
  * Les DEUX messages de contact que la rubrique Messages affiche, LS-97.
  *
  * DEUX ET NON UN, et c'est la lecon directe de LS-130. La page rend un bloc de

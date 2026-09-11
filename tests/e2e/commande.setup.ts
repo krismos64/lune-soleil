@@ -26,14 +26,17 @@ import { test as preparation } from "@playwright/test";
 import { Client } from "pg";
 
 import { encoderCommandeEnCours } from "@/lib/commande-cookie";
+import { engendrerJeton } from "@/lib/jeton-acces";
 import {
   COMMANDE_A_EXPEDIER_TEST,
+  COMMANDE_AVIS_TEST,
   COMMANDE_SANS_SUIVI_TEST,
   COMMANDE_SUIVIE_TEST,
   DEMANDE_RETRACTATION_TEST,
   COMMANDE_FACTUREE_TEST,
   COMMANDE_TEST,
   FICHIER_COMMANDE,
+  FICHIER_JETONS_AVIS,
   SECONDE_COMMANDE_A_EXPEDIER_TEST,
 } from "./chemin-session";
 
@@ -1066,3 +1069,400 @@ preparation(
     }
   },
 );
+
+/**
+ * Amorce la commande LIVREE et ses trois invitations d'avis, LS-140.
+ *
+ * POURQUOI UNE HUITIEME COMMANDE. `lireEtatDepot` exige `Expedition.livreA`
+ * renseignee, et aucune des sept autres ne la porte. `COMMANDE_SUIVIE_TEST` est
+ * celle qu'il ne faut surtout pas reutiliser : son commentaire d'amorcage
+ * explique que `livreA` y reste nul pour garder visible le signalement de suivi
+ * bloque de LS-216, que `fraicheurSuivi` eteindrait des qu'une date de remise
+ * existe.
+ *
+ * CE QUE CETTE AMORCE REND MESURABLE, et qui ne l'etait a AUCUNE largeur :
+ *
+ * | Ecran | Branche |
+ * |---|---|
+ * | `/avis/<jeton ouvert>` | le formulaire, cas nominal |
+ * | `/avis/<jeton consomme>` | « un avis a deja ete depose » |
+ * | `/avis/<jeton revoque>` | « ce lien a ete remplace » |
+ * | `/administration/avis` | la file de relecture, et la file des signalements |
+ * | fiche produit | le bloc 11, avis publies et synthese |
+ *
+ * LE PRODUIT EST `ACTIF`, contrairement aux sept autres amorces de commande.
+ * C'est necessaire et non un oubli : un avis publie sur un produit en brouillon
+ * ne serait rendu sur aucune fiche, et le bloc 11 resterait non mesure.
+ *
+ * LA VALEUR DES JETONS PART DANS UN FICHIER, jamais en base : `engendrerJeton`
+ * signe en HMAC et la base ne garde que l'empreinte, regle L5. Meme geste que
+ * le cookie signe de LS-118.
+ */
+preparation("commande livree et invitations d'avis amorcees", async () => {
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+
+  try {
+    /*
+     * `ordre` FIXE ET RESERVE, 9140, meme motif que les amorces voisines : deux
+     * preparations concurrentes qui derivent `max(ordre) + 1` sur une base
+     * VIERGE lisent le meme maximum et violent C24 au COMMIT, l'unicite etant
+     * DEFERRABLE.
+     */
+    await client.query(
+      `INSERT INTO categorie (id, nom, slug, ordre, cree_a)
+       VALUES ($1, 'TEST Catégorie avis', 'e2e-ls140-categorie', 9140, now())
+       ON CONFLICT (id) DO NOTHING`,
+      [COMMANDE_AVIS_TEST.categorieId],
+    );
+
+    /*
+         * `ACTIF` ET NON `BROUILLON`, seule amorce de commande dans ce cas. La
+     * fiche produit doit rendre le bloc 11 avec l'avis publie et sa synthese :
+     * sur un brouillon, la fiche rend 404 et rien n'est mesure.
+     */
+    await client.query(
+      `INSERT INTO produit (id, categorie_id, nom, slug, statut, cree_a, modifie_a)
+       VALUES ($1, $2, 'TEST Pièce notée LS-140', $3, 'ACTIF', now(), now())
+       ON CONFLICT (id) DO NOTHING`,
+      [
+        COMMANDE_AVIS_TEST.produitId,
+        COMMANDE_AVIS_TEST.categorieId,
+        COMMANDE_AVIS_TEST.slug,
+      ],
+    );
+
+    await client.query(
+      `INSERT INTO variante (
+         id, produit_id, reference, libelle, prix_centimes,
+         quantite_physique, quantite_reservee, vente_web_activee, cree_a
+       )
+       VALUES ($1, $2, 'TEST-LS140', 'TEST Déclinaison notée', 6200, 3, 0, true, now())
+       ON CONFLICT (id) DO NOTHING`,
+      [COMMANDE_AVIS_TEST.varianteId, COMMANDE_AVIS_TEST.produitId],
+    );
+
+    /*
+     * TROIS LIGNES POUR UNE SEULE COMMANDE, et c'est la lecon de LS-130 et de
+     * LS-97 appliquee a cet ecran : le formulaire rend un bloc de notation PAR
+     * piece, donc plusieurs `id`, `label` et groupes de radio voisins. Avec une
+     * ligne unique, une assertion sur un libelle passerait QUEL QUE SOIT l'etat
+     * des identifiants.
+     *
+     * `total_centimes` VAUT LA SOMME DES TROIS LIGNES PLUS LE PORT, contrainte
+     * `chk_commande_coherence_total` : 3 x 6200 + 410 = 19010.
+     */
+    await client.query(
+      /*
+       * `point_relais_id` EST OBLIGATOIRE ICI, contrainte
+       * `chk_commande_mode_point_relais` : elle pose une EQUIVALENCE, pas une
+       * implication, donc un mode en relais sans point de retrait est refuse
+       * autant qu'un point de retrait en mode domicile.
+       */
+      `INSERT INTO commande (
+         id, numero, statut, email_normalise, nom_client,
+         adresse_livraison, adresse_facturation,
+         sous_total_centimes, mode_livraison, point_relais_id, frais_port_centimes,
+         total_centimes, montant_taxe_centimes,
+         cgv_acceptees_a, cgv_version, cree_a
+       )
+       VALUES (
+         $1, $2, 'LIVREE', 'e2e-ls140@exemple.test', 'TEST Camille',
+         $3::jsonb, $3::jsonb,
+         18600, 'POINT_RELAIS', 'FR-TEST-9140', 410,
+         19010, 0,
+         now(), 'test', now() - interval '20 days'
+       )
+       ON CONFLICT (id) DO NOTHING`,
+      [
+        COMMANDE_AVIS_TEST.commandeId,
+        COMMANDE_AVIS_TEST.numero,
+        JSON.stringify({
+          nom: "TEST Camille",
+          ligne1: "12 rue des Essais",
+          codePostal: "64000",
+          ville: "TESTVILLE",
+          pays: "FR",
+        }),
+      ],
+    );
+
+    for (const [ligneId, libelle] of [
+      [COMMANDE_AVIS_TEST.ligneUnId, COMMANDE_AVIS_TEST.libelleUn],
+      [COMMANDE_AVIS_TEST.ligneDeuxId, COMMANDE_AVIS_TEST.libelleDeux],
+      [COMMANDE_AVIS_TEST.ligneTroisId, COMMANDE_AVIS_TEST.libelleTrois],
+    ] as const) {
+      await client.query(
+        `INSERT INTO ligne_commande (
+           id, commande_id, variante_id, reference_figee,
+           libelle_produit_fige, libelle_variante_fige,
+           prix_fige_centimes, quantite
+         )
+         VALUES ($1, $2, $3, 'TEST-LS140', $4, 'TEST Déclinaison notée', 6200, 1)
+         ON CONFLICT (id) DO NOTHING`,
+        [ligneId, COMMANDE_AVIS_TEST.commandeId, COMMANDE_AVIS_TEST.varianteId, libelle],
+      );
+    }
+
+    await client.query(
+      `INSERT INTO paiement (
+         id, commande_id, statut, montant_centimes,
+         montant_rembourse_centimes, identifiant_fournisseur, confirme_a, cree_a
+       )
+       VALUES ($1, $2, 'REUSSI', 19010, 0, 'cs_test_ls140', now(), now())
+       ON CONFLICT (id) DO NOTHING`,
+      [COMMANDE_AVIS_TEST.paiementId, COMMANDE_AVIS_TEST.commandeId],
+    );
+
+    /*
+     * `livre_a` RENSEIGNEE, ET C'EST TOUTE LA RAISON D'ETRE DE CETTE AMORCE.
+     * Une date relative et non figee, pour que le cas reste vrai quelle que
+     * soit la date d'execution. Quinze jours : au-dela du delai d'invitation,
+     * donc coherent avec trois invitations deja parties.
+     */
+    await client.query(
+      `INSERT INTO expedition (
+         id, commande_id, transporteur, mode, numero_suivi, point_relais_id,
+         statut_transporteur, expedie_a, livre_a, synchronise_a, cree_a
+       )
+       VALUES (
+         $1, $2, 'Sendcloud', 'POINT_RELAIS', $3, 'FR-TEST-9140',
+         'Delivered', now() - interval '18 days', now() - interval '15 days',
+         now() - interval '1 hour', now() - interval '18 days'
+       )
+       ON CONFLICT (id) DO NOTHING`,
+      [
+        COMMANDE_AVIS_TEST.expeditionId,
+        COMMANDE_AVIS_TEST.commandeId,
+        COMMANDE_AVIS_TEST.numeroSuivi,
+      ],
+    );
+
+    /*
+     * LES TROIS JETONS, CHACUN DANS UN ETAT DIFFERENT.
+     *
+     * ILS SONT REENGENDRES A CHAQUE EXECUTION, `ON CONFLICT DO UPDATE` sur
+     * l'empreinte : conserves tels quels, ils seraient expires a la relance
+     * suivante et les trois branches rendraient toutes « INDISPONIBLE ». Meme
+     * motif que la reservation de LS-118, remise a trente minutes a chaque
+     * passage.
+     *
+     * `expire_a` A TRENTE JOURS pour les trois, y compris le consomme et le
+     * revoque : leur etat doit venir de `utilise_a` et `revoque_a`, JAMAIS de
+     * l'expiration. Un jeton expire rendrait la meme page qu'un jeton revoque,
+     * et les deux tests passeraient en ne prouvant qu'une seule chose.
+     */
+    const jetons = {
+      ouvert: engendrerJeton(),
+      consomme: engendrerJeton(),
+      revoque: engendrerJeton(),
+    };
+
+    for (const [id, jeton, utiliseA, revoqueA] of [
+      [COMMANDE_AVIS_TEST.jetonOuvertId, jetons.ouvert, null, null],
+      [COMMANDE_AVIS_TEST.jetonConsommeId, jetons.consomme, "now()", null],
+      [COMMANDE_AVIS_TEST.jetonRevoqueId, jetons.revoque, null, "now()"],
+    ] as const) {
+      await client.query(
+        `INSERT INTO jeton_acces (
+           id, commande_id, empreinte, portee, expire_a, utilise_a, revoque_a
+         )
+         VALUES (
+           $1, $2, $3, 'AVIS', now() + interval '30 days',
+           ${utiliseA ?? "NULL"}, ${revoqueA ?? "NULL"}
+         )
+         ON CONFLICT (id) DO UPDATE SET
+           empreinte = EXCLUDED.empreinte,
+           expire_a  = EXCLUDED.expire_a,
+           utilise_a = EXCLUDED.utilise_a,
+           revoque_a = EXCLUDED.revoque_a`,
+        [id, COMMANDE_AVIS_TEST.commandeId, jeton.empreinte],
+      );
+    }
+
+    /*
+     * UNE INVITATION PAR LIGNE, regle R16, chacune rattachee a SON jeton.
+     * `lireInvitationsDeCommande` lit par ce chemin : sans elles, l'ecran rend
+     * « INDISPONIBLE » meme avec un jeton parfaitement valide.
+     */
+    for (const [id, ligneId, jetonId] of [
+      [
+        COMMANDE_AVIS_TEST.invitationUnId,
+        COMMANDE_AVIS_TEST.ligneUnId,
+        COMMANDE_AVIS_TEST.jetonOuvertId,
+      ],
+      [
+        COMMANDE_AVIS_TEST.invitationDeuxId,
+        COMMANDE_AVIS_TEST.ligneDeuxId,
+        COMMANDE_AVIS_TEST.jetonConsommeId,
+      ],
+      [
+        COMMANDE_AVIS_TEST.invitationTroisId,
+        COMMANDE_AVIS_TEST.ligneTroisId,
+        COMMANDE_AVIS_TEST.jetonRevoqueId,
+      ],
+    ] as const) {
+      await client.query(
+        `INSERT INTO invitation_avis (
+           id, ligne_commande_id, jeton_acces_id, nombre_envois, dernier_envoi_a, cree_a
+         )
+         VALUES ($1, $2, $3, 1, now() - interval '14 days', now() - interval '14 days')
+         ON CONFLICT (id) DO UPDATE SET jeton_acces_id = EXCLUDED.jeton_acces_id`,
+        [id, ligneId, jetonId],
+      );
+    }
+
+    /*
+     * DEUX AVIS, UN `DEPOSE` ET UN `PUBLIE`, et les deux sont necessaires.
+     *
+     * LE `DEPOSE` REMPLIT LA FILE DE RELECTURE de l'administration, vide sans
+     * lui : les boutons de decision, la zone de motif et la region live ne
+     * seraient rendus a AUCUNE largeur. C'est le motif de LS-121, LS-130 et
+     * LS-160, rencontre une quatrieme fois.
+     *
+     * LE `PUBLIE` REND LE BLOC 11 de la fiche produit, avis et synthese. Un
+     * avis en attente n'y parait jamais, regle R4.
+     *
+     * `experience_a` VIENT DE LA DATE DE REMISE et non de l'horloge, article
+     * D111-10 : c'est la date de l'experience de consommation.
+     */
+    await client.query(
+      `INSERT INTO avis (
+         id, ligne_commande_id, note, commentaire, statut,
+         experience_a, depose_a
+       )
+       VALUES (
+         $1, $2, 4, 'TEST Commentaire en attente de relecture.', 'DEPOSE',
+         now() - interval '15 days', now() - interval '10 days'
+       )
+       ON CONFLICT (id) DO NOTHING`,
+      [COMMANDE_AVIS_TEST.avisDeposeId, COMMANDE_AVIS_TEST.ligneDeuxId],
+    );
+
+    await client.query(
+      `INSERT INTO avis (
+         id, ligne_commande_id, note, commentaire, statut,
+         experience_a, depose_a, publie_a, decide_a
+       )
+       VALUES (
+         $1, $2, 5, 'TEST Commentaire publié sur la fiche.', 'PUBLIE',
+         now() - interval '15 days', now() - interval '9 days',
+         now() - interval '8 days', now() - interval '8 days'
+       )
+       ON CONFLICT (id) DO NOTHING`,
+      [COMMANDE_AVIS_TEST.avisPublieId, COMMANDE_AVIS_TEST.ligneTroisId],
+    );
+
+    /*
+     * UN SIGNALEMENT `NOUVEAU` sur l'avis publie, LS-77, article L111-7-2. La
+     * file des signalements de l'administration est vide sans lui, et son
+     * formulaire de cloture avec elle.
+     *
+     * IL PORTE SUR L'AVIS PUBLIE et non sur celui en attente : c'est le seul
+     * qu'un tiers peut voir, donc le seul qu'il peut signaler.
+     */
+    await client.query(
+      `INSERT INTO signalement_avis (
+         id, avis_id, qualite, email, motif, statut, cree_a
+       )
+       VALUES (
+         $1, $2, 'Responsable du produit',
+         'e2e-ls140-signalant@exemple.test',
+         'TEST Doute sur l''authenticité de cet avis, motif de contrôle.',
+         'NOUVEAU', now() - interval '2 days'
+       )
+       ON CONFLICT (id) DO NOTHING`,
+      [COMMANDE_AVIS_TEST.signalementId, COMMANDE_AVIS_TEST.avisPublieId],
+    );
+
+    writeFileSync(
+      FICHIER_JETONS_AVIS,
+      JSON.stringify(
+        {
+          ouvert: jetons.ouvert.valeur,
+          consomme: jetons.consomme.valeur,
+          revoque: jetons.revoque.valeur,
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+
+    /*
+     * LES GARDE-FOUS, et ils portent sur ce que les tests MESURENT, jamais sur
+     * ce que l'amorce croit avoir ecrit. Un `INSERT ... ON CONFLICT DO NOTHING`
+     * qui ne fait rien laisserait la suite verte sur des ecrans vides.
+     */
+    const { rows: etatJetons } = await client.query<{
+      ouverts: string;
+      consommes: string;
+      revoques: string;
+    }>(
+      `SELECT
+         count(*) FILTER (WHERE utilise_a IS NULL AND revoque_a IS NULL)::text AS ouverts,
+         count(*) FILTER (WHERE utilise_a IS NOT NULL)::text AS consommes,
+         count(*) FILTER (WHERE revoque_a IS NOT NULL)::text AS revoques
+       FROM jeton_acces WHERE commande_id = $1 AND portee = 'AVIS'`,
+      [COMMANDE_AVIS_TEST.commandeId],
+    );
+
+    const etat = etatJetons[0];
+
+    if (
+      etat === undefined ||
+      Number(etat.ouverts) < 1 ||
+      Number(etat.consommes) < 1 ||
+      Number(etat.revoques) < 1
+    ) {
+      throw new Error(
+        "Jetons d'avis LS-140 incomplets : " +
+          `${etat?.ouverts ?? "0"} ouvert(s), ${etat?.consommes ?? "0"} consomme(s), ` +
+          `${etat?.revoques ?? "0"} revoque(s), un de chaque attendu. ` +
+          "Les trois branches de l'ecran de depot ne seraient pas exercees.",
+      );
+    }
+
+    const { rows: livraison } = await client.query<{ livreA: string | null }>(
+      `SELECT livre_a AS "livreA" FROM expedition WHERE commande_id = $1`,
+      [COMMANDE_AVIS_TEST.commandeId],
+    );
+
+    if (livraison[0]?.livreA == null) {
+      throw new Error(
+        "Expedition LS-140 sans date de remise : `lireEtatDepot` rendrait " +
+          "INDISPONIBLE sur les trois jetons, et le formulaire ne serait " +
+          "mesure a aucune largeur.",
+      );
+    }
+
+    const { rows: files } = await client.query<{
+      aModerer: string;
+      publies: string;
+      signalements: string;
+    }>(
+      `SELECT
+         (SELECT count(*)::text FROM avis WHERE statut = 'DEPOSE') AS "aModerer",
+         (SELECT count(*)::text FROM avis WHERE statut = 'PUBLIE') AS "publies",
+         (SELECT count(*)::text FROM signalement_avis WHERE statut = 'NOUVEAU') AS "signalements"`,
+    );
+
+    const compte = files[0];
+
+    if (
+      compte === undefined ||
+      Number(compte.aModerer) < 1 ||
+      Number(compte.publies) < 1 ||
+      Number(compte.signalements) < 1
+    ) {
+      throw new Error(
+        "Files d'avis LS-140 incompletes : " +
+          `${compte?.aModerer ?? "0"} a relire, ${compte?.publies ?? "0"} publie(s), ` +
+          `${compte?.signalements ?? "0"} signalement(s). L'ecran ` +
+          "d'administration rendrait ses etats vides et ne prouverait rien.",
+      );
+    }
+  } finally {
+    await client.end();
+  }
+});
