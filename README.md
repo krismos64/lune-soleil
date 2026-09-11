@@ -28,25 +28,28 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 |---|---|---|---|
 | 0, cadrage | LS-1 | 2 | médiation (compte tiers) et photographies, toutes deux externes |
 | 1, fondations | LS-2 | 0 | **close**, porte de sortie constatée le 13 août 2026 |
-| 2, catalogue et médias | LS-3 | 5 | finitions d'interface et d'accessibilité, aucune bloquante |
-| 3, panier et paiement | LS-4 | 2 | LS-86 et LS-125, deux stories d'interface qui ne bloquent rien |
-| 4, factures et expédition | LS-5 | 3 | **LS-200, LS-131 et LS-216 sont closes**, l'API Sendcloud est raccordée, le suivi tourne toutes les heures et s'affiche en administration. **LS-218 crée l'étiquette par API**, développée, son critère 10 attend un envoi réel |
-| 4bis, espace client et avis | LS-36 | 1 | **LS-77 et LS-190 sont closes** le 11 septembre 2026 : le signalement d'un avis, obligation de l'article L111-7-2, et la frise d'étapes du détail de commande. **LS-61 est fusionnée** et reste ouverte, son critère 3 n'étant pas exerçable faute d'écran de renvoi d'invitation |
+| 2, catalogue et médias | LS-3 | 2 | LS-123 les pages de contenu et LS-145 la mesure de F-ADM-07 sur l'éditeur réel |
+| 3, panier et paiement | LS-4 | 1 | **LS-125 est close** le 11 septembre 2026, la frontière d'erreur publique. Reste LS-86, le récapitulatif avant paiement |
+| 4, factures et expédition | LS-5 | 4 | **LS-200, LS-131 et LS-216 sont closes**, l'API Sendcloud est raccordée, le suivi tourne toutes les heures et s'affiche en administration. **LS-218 crée l'étiquette par API**, développée, son critère 10 attend un envoi réel |
+| 4bis, espace client et avis | LS-36 | 1 | **LS-77 et LS-190 sont closes** le 11 septembre 2026, le signalement d'un avis (article L111-7-2) et la frise d'étapes. Reste **LS-61** seule : les avis vérifiés sont livrés de l'invitation après livraison à l'affichage public, mais son critère 3 n'est pas exerçable faute d'écran de renvoi |
 | 5, rétractation et conformité | LS-6 | 0 | **close**, ses huit stories terminées le 10 septembre 2026 |
 | 6, exploitation et ouverture | LS-7 | 5 | **LS-153 et LS-142 attendent l'exploitante**. LS-140 et LS-107 attendent les photographies de LS-23. Reste LS-150, la visibilité dans les moteurs de réponse. **LS-175 est close** depuis le 10 septembre 2026, le compte d'administration existe |
-| 7, V1 cible | LS-8 | 3 | après ouverture, hors Go-Live |
+| 7, V1 cible | LS-8 | 2 | LS-149 le cadrage de l'assistant IA, et LS-83 le ralentissement par compte, développée le 11 septembre 2026 |
 | Contenus | LS-22 | 11 | **attend l'exploitante**, rien n'est faisable sans elle |
 
-**175 tickets terminés sur 208 hors epics**, les deux termes relevés dans Jira
-le **11 septembre 2026**, et jamais dérivés l'un de l'autre. Le numérateur a
-bougé de 173 à 175 avec la clôture de LS-77 et LS-190 ; le dénominateur n'a pas
-bougé, **aucun ticket n'ayant été ouvert ce jour-là**, les anomalies trouvées
-ayant été corrigées directement.
+**180 tickets terminés sur 208 hors epics**, les deux termes relevés dans Jira
+le **11 septembre 2026 en fin de session**, et jamais dérivés l'un de l'autre.
+Le numérateur a gagné sept stories dans la nuit du 10 au 11 septembre ; le
+dénominateur n'a pas bougé, **aucun ticket n'ayant été ouvert**, les anomalies
+trouvées ayant été corrigées directement.
 
 **La date du relevé se met à jour avec le compte**, et elle avait été oubliée
 une fois : le chiffre disait 175 sous une date du 10 septembre, ce qui aurait
 fait relire un compte pour un autre. Motif « un compte recopié n'est pas une
 mesure », qui vaut pour la date autant que pour le nombre.
+
+**Onze des vingt-huit tickets ouverts attendent l'exploitante**, epic LS-22 :
+photographies, textes, tarifs, contenus juridiques. Aucun code ne les débloque.
 
 **Le compte précédent, « 173 sur 217 », appariait deux populations
 différentes** : son dénominateur comptait les epics, son numérateur non. Les
