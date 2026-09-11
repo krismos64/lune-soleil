@@ -397,3 +397,22 @@ ALTER TABLE "signalement_avis"
 ALTER TABLE "signalement_avis"
   ADD CONSTRAINT "chk_signalement_suite_apres_examen"
   CHECK (suite_donnee IS NULL OR examine_a IS NOT NULL);
+
+-- ---------------------------------------------------------------------------
+-- Ralentissement par compte vise, LS-83
+-- ---------------------------------------------------------------------------
+
+-- LE COMPTE EST STRICTEMENT POSITIF. Une ligne existe parce qu'un echec a eu
+-- lieu : un compte nul ou negatif n'a aucun sens metier, et un decompte fautif
+-- accorderait des tentatives au lieu d'en retirer.
+ALTER TABLE "compteur_compte_vise"
+  ADD CONSTRAINT "chk_compteur_compte_vise_positif"
+  CHECK ("compte" >= 1);
+
+-- LA CLE N'EST JAMAIS VIDE, et surtout elle porte une EMPREINTE. Une chaine
+-- vide signifierait qu'un appelant a calcule la cle sur rien, donc que tous les
+-- comptes partageraient un compteur unique : une seule campagne de balayage
+-- ralentirait alors toute personne qui se trompe de mot de passe.
+ALTER TABLE "compteur_compte_vise"
+  ADD CONSTRAINT "chk_compteur_compte_vise_cle_non_vide"
+  CHECK (length(trim("cle")) > 0);
