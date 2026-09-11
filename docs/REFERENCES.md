@@ -213,6 +213,7 @@ documentation technique, ticket ou règle qui le contredirait.
 | ADR-040 | Aucune mesure d'audience à l'ouverture | mesure d'audience, Umami, analytics, consentement, exemption CNIL, article 82, bannière cookies |
 | ADR-041 | Aucun code de récupération, le dernier recours passe par le développeur | code de récupération, backup code, perte des appareils, twoFactor, TOTP, dernier recours, amende ADR-021 |
 | ADR-042 | Correspondance des statuts Sendcloud, deux statuts livrent et les échecs alertent | statut Sendcloud, parent_status, Delivered, Shipment collected by customer, livreA, suivi de colis, livraison en échec, refusé par le destinataire, retourné à l'expéditeur |
+| ADR-044 | Aucun assistant IA en V1, et le sujet se ferme | assistant IA, modèle de langage, LLM, service tiers, auto-hébergé, intégration IA, LS-149, remplace la mention de V1 cible de CLAUDE.md |
 | ADR-043 | Les paramètres commerciaux passent en base, et les tarifs avec eux | paramètre, ParametreBoutique, écran de paramètres, tarif modifiable, seuil de franchise, stock faible, alertes de l'administratrice, SHIPPING_RELAY_RATE_CENTS, ligne unique, remplace l'arbitrage du 31 août 2026 |
 
 Cette table se met à jour à chaque ADR créé. Un ADR absent d'ici reste
