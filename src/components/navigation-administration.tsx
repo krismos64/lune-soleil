@@ -142,6 +142,19 @@ export const RUBRIQUES: readonly Rubrique[] = [
     libelle: "Stocks et marchés",
     compteur: "variantesStockFaible",
   },
+  /*
+   * LS-64 : les statistiques entrent dans la barre, C33. Cinquieme entree a
+   * quitter `RUBRIQUES_A_VENIR` apres Catalogue, Factures, Clients et Avis.
+   *
+   * ELLE NE PORTE AUCUN COMPTEUR, et c'est delibere : la barre compte ce qui
+   * ATTEND un geste, messages non lus ou avis a relire. Un chiffre d'affaires
+   * n'attend rien, et le mettre en pastille ferait clignoter une information
+   * qui n'appelle aucune action.
+   *
+   * ELLE SUIT LE JOURNAL DES CONNEXIONS, en fin de barre : c'est une lecture
+   * occasionnelle et non le travail quotidien, dont l'ordre ouvre la liste.
+   */
+  { chemin: "/administration/statistiques", libelle: "Statistiques" },
   { chemin: "/administration/journal-connexions", libelle: "Connexions" },
   /*
    * LS-175 : l'ecran d'enregistrement des passkeys entre dans la barre, C33.
@@ -196,7 +209,6 @@ export const RUBRIQUES: readonly Rubrique[] = [
  * hors sujet, et c'est la verification dans Jira qui l'a montre.
  */
 export const RUBRIQUES_A_VENIR = [
-  { libelle: "Statistiques", ticket: "LS-64" },
   /*
    * « Avis » A QUITTE CETTE LISTE le 10 septembre 2026, LS-61 etant livree.
    * L'entree est retiree ET NON COMMENTEE : le test de bout en bout lit les
