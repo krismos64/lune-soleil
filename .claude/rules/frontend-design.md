@@ -391,15 +391,54 @@ document, Génération du document » au lieu de lire « La génération a écho
 facture reste valide et son numéro est inchangé », c'est-à-dire la seule phrase
 qui apprenait quelque chose.
 
-**Nommer une région live ne sert à rien**, et c'est la croyance qui a produit le
-défaut. `aria-label` ne change pas l'annonce d'une mise à jour de
-`role="status"` : seul le **contenu** est vocalisé. La justification écrite dans
-le fichier invoquait pourtant le besoin de distinguer deux régions `status` du
-même écran. Une règle qui énonce une chose et en prescrit une autre se franchit
-de bonne foi, et c'est ainsi que le second écran a recopié le premier.
+**`aria-label` ne change pas l'annonce d'une mise à jour de `role="status"`** :
+seul le **contenu** est vocalisé. La justification écrite dans le fichier
+invoquait pourtant le besoin de distinguer deux régions `status` du même écran,
+ce qui ne se joue pas là.
 
-**Distinguer deux régions passe par leur contenu**, jamais par leur nom : « La
-génération a échoué » se suffit quand la région voisine parle de remboursement.
+**Distinguer deux régions à l'annonce passe par leur contenu**, jamais par leur
+nom : « La génération a échoué » se suffit quand la région voisine parle de
+remboursement.
+
+**CETTE RÈGLE PORTAIT UNE PHRASE TROP LARGE, corrigée le 11 septembre 2026.**
+Elle écrivait « nommer une région live ne sert à rien », et LS-85 avait nommé
+sept régions du parcours d'achat trois semaines plus tôt, pour une raison que
+cette formulation niait. Les deux ne se contredisent pas, elles portent sur deux
+choses différentes :
+
+| Ce qui est en jeu | Le nom sert-il ? |
+|---|---|
+| l'**annonce** d'une mise à jour de contenu | **non**, seul le contenu est vocalisé |
+| la **navigation** par régions, et la lecture de l'arbre d'accessibilité | **oui**, une région anonyme s'y annonce « status » sans rien dire de plus |
+| un élément visé par `aria-describedby` | **non, et c'est nuisible** : le label remplace le texte réel, motif de cette règle |
+
+**Une région live autonome gagne donc un nom**, ce que LS-85 a mesuré sur
+l'arbre d'accessibilité du parcours réel : deux régions anonymes sur une même
+page y sont indiscernables, et `axe-core` ne le voit pas. **Une région visée par
+un `aria-describedby` n'en prend jamais**, ce que LS-161 a mesuré sur un bouton
+qui s'annonçait avec son label au lieu de la phrase utile.
+
+La spécification WAI-ARIA 1.2 reste **ambiguë** sur le premier point, vérifiée
+à la source : `status` et `alert` acceptent un nom d'auteur sans l'exiger, et
+elle ne dit pas ce qu'un lecteur d'écran en fait à la mise à jour.
+
+**Les régions live du parcours d'achat portent donc leur nom**, et
+`scripts/verifier-regions-live-parcours.sh` le garde depuis le 11 septembre
+2026. LS-85 en avait nommé sept le 1er septembre, et **rien ne les gardait** :
+les deux tests de bout en bout écrits alors verrouillent l'arbre existant, aucun
+ne disait qu'une région **neuve** devait en porter un.
+
+**La portée s'arrête au parcours d'achat**, et ce n'est pas une approximation.
+Le dépôt porte quatre-vingts régions live, dont une majorité sans nom : les
+nommer toutes serait un chantier dont le gain est incertain, la spécification
+restant ambiguë. Ce qui est **mesuré** est le parcours critique, celui dont
+cette règle exige WCAG 2.2 AA.
+
+**Une région qui enveloppe son propre titre n'a pas besoin de nom**, et lui en
+donner un serait nuisible : le titre qu'elle contient **est** ce qu'elle annonce,
+et un `aria-label` par-dessus ferait redire deux fois la même chose. Le contrôle
+reconnaît ce cas à sa **forme** et non à son chemin, un fichier pouvant porter
+les deux.
 
 `scripts/verifier-description-accessible.sh` le vérifie dans les deux sens, et
 il ne voit pas les identifiants construits à l'exécution, qu'un test de rendu

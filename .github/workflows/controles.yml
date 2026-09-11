@@ -926,6 +926,19 @@ jobs:
       - name: 9s quater. Chaque ecran de la boutique est atteignable
         run: ./scripts/verifier-atteignabilite-boutique.sh
 
+      # LES REGIONS LIVE DU PARCOURS D'ACHAT PORTENT LEUR NOM, LS-85.
+      #
+      # UNE REGION LIVE SANS NOM N'EST PAS UNE VIOLATION D'ACCESSIBILITE :
+      # `axe-core` la laisse passer, et quatre mois de tests verts ne l'avaient
+      # pas vue. Un lecteur d'ecran annonce le changement sans dire de quoi il
+      # parle, et deux regions anonymes d'une meme page sont indiscernables.
+      #
+      # LS-85 A NOMME SEPT REGIONS le 1er septembre 2026 et RIEN NE LES GARDAIT.
+      # Les deux tests de bout en bout ecrits alors verrouillent l'arbre
+      # existant ; aucun ne disait qu'une region NEUVE devait en porter un.
+      - name: 9s quinquies. Les regions live du parcours portent leur nom
+        run: ./scripts/verifier-regions-live-parcours.sh
+
       # C40 : UN LIEN VERS UNE ROUTE `force-dynamic` DESACTIVE LE PRECHARGEMENT.
       #
       # `<Link>` precharge par defaut et `staleTimes.dynamic` vaut zero : la
