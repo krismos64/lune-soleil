@@ -11,10 +11,16 @@ Traduction du modèle conceptuel en schéma physique, sept domaines.
 
 **AUCUN COMPTE N'EST PLUS ÉCRIT DANS CE DOCUMENT**, et c'est la conséquence de ce
 que ses propres paragraphes énoncent quatre fois. Il annonçait « trente-six
-tables et trente-neuf clés » quand le dépôt en portait **38 et 40** au
-11 septembre 2026, « neuf parcours » pour **10**, « six index partiels » pour
-**10**, et « trois cascades » pour **six**. Les commandes qui les mesurent sont
+tables et trente-neuf clés », « neuf parcours », « six index partiels » et
+« trois cascades », les quatre étant faux. Les commandes qui les mesurent sont
 données à chaque section : les lancer plutôt que lire un nombre.
+
+**LE PARAGRAPHE QUI DÉNONÇAIT LES COMPTES PÉRIMÉS EN PORTAIT LUI-MÊME DEUX**, et
+c'est la leçon la plus nette de ce document : il citait « 38 tables et 40 clés au
+11 septembre 2026 » pour illustrer l'erreur, et LS-98 a ajouté
+`ParametreBoutique` **le jour même**. Les valeurs de correction ont été retirées
+à leur tour le 11 septembre 2026 au soir : un compte cité en exemple vieillit
+exactement comme celui qu'il corrige.
 
 **Ces nombres se mesurent et ne se recopient pas**, `grep -c "^model"` sur le
 schéma et `pg_constraint` sur la base. Ceux de LS-13 disaient vingt-cinq tables,
@@ -268,6 +274,42 @@ ne pose pas, il n'y met qu'un index ordinaire. Une credential WebAuthn est uniqu
 par construction, rien en base ne l'imposait : deux comptes pouvaient porter la
 même, et la recherche par credential à la connexion aurait eu deux comptes à
 départager. C'est le risque d'accès croisé qu'ADR-021 demande de couvrir.
+
+## Les paramètres commerciaux, table à ligne unique, LS-98 et ADR-043
+
+`ParametreBoutique` est arrivée le 11 septembre 2026 avec la migration
+`20260911110000_parametres_boutique`. Elle porte les tarifs de livraison, le
+seuil de franchise, le seuil d'alerte de stock, l'adresse de réception des
+alertes et cinq interrupteurs.
+
+**SA CLÉ PRIMAIRE EST UN BOOLÉEN CONTRAINT À `true`**, et c'est sa seule
+particularité physique :
+
+```sql
+ALTER TABLE parametre_boutique
+  ADD CONSTRAINT chk_parametre_ligne_unique CHECK (id = true);
+```
+
+Une seconde ligne devient **impossible**, pas seulement déconseillée. Deux lignes
+contradictoires seraient lues par `findFirst`, donc l'une ou l'autre selon le
+plan d'exécution : le tunnel facturerait un port différent d'une requête à
+l'autre sans qu'aucune erreur ne soit levée.
+
+**LA MIGRATION AMORCE LA LIGNE**, avec les valeurs d'ADR-035 écrites en clair et
+non lues dans l'environnement : une migration qui en dépend produit des bases
+différentes selon la machine qui l'exécute, et l'écart ne se verrait qu'à la
+première facture.
+
+**`seuil_franchise_centimes` EST NULLABLE, ET `null` N'EST PAS ZÉRO.** Les deux
+valeurs traversent le schéma sans se confondre : `null` désactive la franchise,
+zéro l'offre à tout panier. Le `CHECK` accepte les deux, la distinction vivant
+dans `calculerFraisPort`.
+
+**DEUX GARDE-FOUS DE `verifier-schema.sh` ONT DÛ ÊTRE ADAPTÉS**, et le motif vaut
+pour toute future table amorcée par sa migration : son compte de lignes exclut
+`parametre_boutique`, sans quoi le script abandonnait sur toute base fraîchement
+migrée, et `vider_base_migree` la préserve, sans quoi il rendait une base
+« vérifiée » sans aucun tarif de livraison.
 
 ## Ce qui reste hors du schéma
 

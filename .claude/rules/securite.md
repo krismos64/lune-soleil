@@ -372,6 +372,7 @@ grep -rn "@sensible" src/ | wc -l
 | `demanderRemboursement` | `REMBOURSEMENT` | LS-128, sortie de la liste en LS-160 |
 | `exporterMesDonnees` | `DONNEES_CLIENTS` | LS-62 |
 | `rembourserRetractation` | `REMBOURSEMENT` | LS-135, **manquait à cette table** |
+| `enregistrerParametres` | `PARAMETRES_BOUTIQUE` | LS-98, **troisième fois que cette table se périme** |
 
 `verifier-actions-sensibles.sh` confronte les marques aux gardes dans les deux
 sens : la table ci-dessus documente, elle ne fait pas foi. Le contrôle, lui,
@@ -391,8 +392,20 @@ courte : c'est l'**export** qui fait basculer, jamais l'affichage d'une donnée
 personnelle à l'écran. Le journal des connexions de LS-80, la rubrique Messages
 de LS-97 et l'écran d'expédition de LS-130 restent non classés pour cette raison.
 
-**`PARAMETRES_BOUTIQUE` reste la seule famille sans action**, et sa ligne devra
-partir avec LS-98, qui porte le seuil de franco de port et les frais de livraison.
+**LES QUATRE FAMILLES SONT COUVERTES DEPUIS LE 11 SEPTEMBRE 2026**, LS-98.
+`enregistrerParametres` est la quatrième action sensible du dépôt, et
+`.claude/familles-sans-action.txt` **ne porte plus aucune dette** : il garde son
+rôle de contrat pour toute famille qui serait ajoutée au type sans action.
+
+**CE QUE CELA A CASSÉ, ET QU'IL FAUT SAVOIR.**
+`verifier-actions-sensibles-mutation.sh` empruntait `PARAMETRES_BOUTIQUE` comme
+cible de ses cas 4 et 5, qui ont besoin d'une famille **sans action** : les deux
+se sont désarmés en silence, ce que le script avait lui-même écrit en
+avertissement. Ils posent désormais leur **propre famille témoin**, aucune
+famille du dépôt n'étant plus libre.
+
+Un cas de mutation qui dépend d'une DETTE s'éteint le jour où la dette est
+payée : ne pas lui redonner une cible empruntée.
 
 **Les deux gardes vont ensemble sous `administration/`, et le sens 4 du contrôle
 le vérifie depuis LS-89.** `exigerReauthentificationRecente` répond à « l'identité

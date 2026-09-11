@@ -30,28 +30,33 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 1, fondations | LS-2 | 0 | **close**, porte de sortie constatée le 13 août 2026 |
 | 2, catalogue et médias | LS-3 | 2 | LS-123 les pages de contenu et LS-145 la mesure de F-ADM-07 sur l'éditeur réel |
 | 3, panier et paiement | LS-4 | 0 | **close** le 11 septembre 2026. LS-86 portait le dernier critère, le récapitulatif sur les trois modes de livraison |
-| 4, factures et expédition | LS-5 | 4 | **LS-218 crée l'étiquette par API**, développée, son critère 10 attend un envoi réel. **LS-33** décide comment le site apprend qu'un colis est livré, **LS-35** porte l'e-reporting au 1er septembre 2027, **LS-98** l'écran de paramètres commerciaux. L'API Sendcloud est raccordée et le suivi tourne toutes les heures, LS-200, LS-131 et LS-216 closes |
+| 4, factures et expédition | LS-5 | 3 | **LS-218 crée l'étiquette par API**, développée, son critère 10 attend un envoi réel. **LS-33** décide comment le site apprend qu'un colis est livré, **LS-35** porte l'e-reporting au 1er septembre 2027. **LS-98 est close** le 11 septembre 2026, les paramètres commerciaux vivent en base, ADR-043 |
 | 4bis, espace client et avis | LS-36 | 0 | **close** le 11 septembre 2026. LS-61 portait le dernier critère ouvert, le renvoi d'invitation : un client qui perdait son email ne pouvait plus jamais déposer son avis |
 | 5, rétractation et conformité | LS-6 | 0 | **close**, ses huit stories terminées le 10 septembre 2026 |
 | 6, exploitation et ouverture | LS-7 | 5 | **LS-153 et LS-142 attendent l'exploitante**. LS-140 et LS-107 attendent les photographies de LS-23. Reste LS-150, la visibilité dans les moteurs de réponse. **LS-175 est close** depuis le 10 septembre 2026, le compte d'administration existe |
-| 7, V1 cible | LS-8 | 1 | **LS-83 est close** le 11 septembre 2026, le ralentissement par compte visé. Reste LS-149, le cadrage de l'assistant IA |
+| 7, V1 cible | LS-8 | 0 | **close** le 11 septembre 2026. LS-149 portait le dernier critère : ADR-044 **écarte l'assistant IA** du périmètre plutôt que de le reporter |
 | Contenus | LS-22 | 10 | **attend l'exploitante**, rien n'est faisable sans elle. **LS-32 est close** le 11 septembre 2026, la neutralité de genre étant désormais gardée par un contrôle |
 
-**184 tickets terminés sur 208 hors epics**, les deux termes relevés dans Jira
-le **11 septembre 2026**, et jamais dérivés l'un de l'autre. Le numérateur a
-gagné onze stories dans la nuit du 10 au 11 septembre ; le dénominateur n'a pas
+**186 tickets terminés sur 208 hors epics**, les deux termes relevés dans Jira
+le **11 septembre 2026 au soir**, et jamais dérivés l'un de l'autre. Le
+numérateur a gagné treize stories dans la journée ; le dénominateur n'a pas
 bougé, **aucun ticket n'ayant été ouvert**, les anomalies trouvées ayant été
 corrigées directement.
 
-**Quatre phases sur huit sont désormais closes**, les phases 1, 3, 4bis et 5.
+**Cinq phases sur huit sont désormais closes**, les phases 1, 3, 4bis, 5 et 7.
 
 **La date du relevé se met à jour avec le compte**, et elle avait été oubliée
 une fois : le chiffre disait 175 sous une date du 10 septembre, ce qui aurait
 fait relire un compte pour un autre. Motif « un compte recopié n'est pas une
 mesure », qui vaut pour la date autant que pour le nombre.
 
-**Dix des vingt-quatre tickets ouverts attendent l'exploitante**, epic LS-22 :
-photographies, textes, tarifs, contenus juridiques. Aucun code ne les débloque.
+**Onze des vingt-deux tickets ouverts attendent l'exploitante** : les dix de
+l'epic LS-22, photographies, textes, tarifs et contenus juridiques, plus LS-19,
+la médiation, qui suppose une adhésion à souscrire. Aucun code ne les débloque.
+
+**Trois autres sont bloqués en cascade sur ces mêmes photographies**, LS-23 :
+LS-107 critères 4 et 6, LS-140 critère 1, et LS-123 pour `/notre-univers`.
+Elles sont techniquement prêtes.
 
 **Le compte précédent, « 173 sur 217 », appariait deux populations
 différentes** : son dénominateur comptait les epics, son numérateur non. Les
@@ -150,8 +155,9 @@ répertoire vierge et non sur la machine de développement, LS-75.
 
 **Les nombres de ce tableau sont ceux CONSTATÉS le 13 août 2026**, jour de la
 porte de sortie, et ils ne se mettent pas à jour : ils attestent d'une mesure
-faite ce jour-là. Le dépôt porte 38 tables au 11 septembre 2026. Pour l'état
-courant, lancer `npm run db:verifier`, qui compte plutôt qu'il n'affirme.
+faite ce jour-là. Le dépôt porte 39 tables au 11 septembre 2026 au soir,
+`parametre_boutique` étant arrivée avec LS-98. Pour l'état courant, lancer
+`npm run db:verifier`, qui compte plutôt qu'il n'affirme.
 
 | Terme | Preuve |
 |---|---|
@@ -189,6 +195,8 @@ n'a rien.
 | Tests | Vitest, React Testing Library, Playwright, axe-core |
 | Supervision | journal JSON en sortie standard, sans service tiers |
 | Mesure d'audience | **aucune**, ADR-040, décision réversible |
+| Assistant IA | **aucun**, ADR-044 : ni fournisseur externe, ni modèle auto-hébergé |
+| Paramètres commerciaux | tarifs et seuils **en base**, ADR-043, réglés depuis `/administration/parametres` sans redéploiement |
 | Hébergement | VPS OVHcloud, Docker Compose, Nginx |
 | Intégration continue | GitHub Actions, image taguée par SHA, GHCR |
 
@@ -390,7 +398,7 @@ migration. L'override monte `mysql2` en 3.24.2 sans toucher à Prisma, resté en
 `mysql2` arrive par `prisma` **et** `better-auth`, et ce projet tourne sur
 PostgreSQL : le paquet n'est jamais chargé à l'exécution, ce qui borne le risque
 réel sans lever l'obligation de zéro. Preuve exécutée plutôt que supposée,
-`npm audit` à zéro, `prisma generate`, 388 tests unitaires et 482 d'intégration.
+`npm audit` à zéro, `prisma generate`, et la suite entière au vert. **Le compte de tests ne s'écrit plus ici** : il disait « 388 unitaires et 482 d'intégration » quand le dépôt en portait 634 et 918 au 11 septembre 2026. `npm run test` l'imprime.
 
 ### Base de données locale
 
@@ -447,8 +455,11 @@ repli par défaut jusqu'à LS-214, donc aucun email d'authentification ne partai
 malgré une configuration complète. Depuis LS-215, l'envoi réel est de plus refusé
 hors production. **Stripe et les médias sont lus depuis**, `stripe/index.ts` et
 `services/media.ts` : les laisser vides rend le paiement indisponible et la
-racine des médias au repli, ce qui compte pour LS-153. Seules les variables de
-l'IA ne sont lues par aucun code, la phase qui les emploie n'ayant pas commencé.
+racine des médias au repli, ce qui compte pour LS-153.
+
+**LES DEUX VARIABLES DE L'IA ONT ÉTÉ RETIRÉES** le 11 septembre 2026 : elles
+n'étaient lues par aucun code, et **ADR-044 écarte l'assistant IA** du périmètre.
+La phase qui les employait n'est pas différée, elle est annulée.
 
 | Commande | Effet |
 | --- | --- |
