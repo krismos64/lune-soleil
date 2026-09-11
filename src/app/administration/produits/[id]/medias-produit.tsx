@@ -67,8 +67,21 @@ const STATUT_AFFICHE: Record<
 > = {
   EN_ATTENTE: {
     libelle: "Traitement en cours",
+    /*
+     * LE MESSAGE NOMME LA SUPPRESSION, LS-109, ET IL NE PROMET PLUS RIEN.
+     *
+     * IL DISAIT « rechargez la page dans quelques instants » alors qu'un
+     * televersement interrompu laisse la ligne `EN_ATTENTE` INDEFINIMENT : rien
+     * ne la reprend, et l'exploitante rechargeait en boucle une photo que rien
+     * ne traiterait jamais. Le bouton « Supprimer » existait sur la carte, mais
+     * aucun texte n'y renvoyait, a la difference du message d'`ECHOUE`.
+     *
+     * L'EXPIRATION HORAIRE FERME LE CAS pour de bon, la ligne passant a
+     * `ECHOUE` : ce texte couvre l'heure qui la precede, ou le traitement peut
+     * encore etre reellement en cours.
+     */
     explication:
-      "Cette photo n'est pas encore prête. Rechargez la page dans quelques instants.",
+      "Cette photo n'est pas encore prête. Si elle reste dans cet état après un rechargement, le téléversement a été interrompu : supprimez-la et recommencez.",
   },
   TRAITE: {
     libelle: "Prête",
