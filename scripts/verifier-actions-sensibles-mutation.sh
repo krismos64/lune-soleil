@@ -117,39 +117,50 @@ attendre_echec "marque @sensible sans famille"
 # Le sens 3 du contrôle. Sans lui, supprimer la dernière action d'une famille
 # laisserait le contrôle vert : zéro action à vérifier, zéro échec.
 #
-# LA CIBLE EST PASSEE DE `REMBOURSEMENT` A `PARAMETRES_BOUTIQUE` LE 1er
-# SEPTEMBRE 2026, LS-160, et le motif mérite d'être tracé : ce cas commentait la
-# ligne `REMBOURSEMENT` du fichier d'attente pour créer l'état « déclarée, ni
-# couverte ni en attente ». Depuis que `demanderRemboursement` COUVRE cette
-# famille, commenter la ligne ne produit plus cet état, il produit l'état
-# NORMAL : le contrôle reste vert à juste titre, et le cas rapportait « NON
-# DETECTE » en accusant un contrôle sain.
+# ------------------------------------------------------------------
+# LA CIBLE EST POSEE PAR CE SCRIPT DEPUIS LE 11 SEPTEMBRE 2026, LS-98, et c'est
+# la TROISIEME fois que ce cas change de cible.
 #
-# C'est le motif « cible de mutation déplacée » : la mutation n'a pas cessé
-# d'être détectée, elle a cessé d'exister. Ne pas conclure à un trou du contrôle
-# sans avoir vérifié que la mutation crée encore le défaut qu'elle prétend
-# créer. La cible doit rester une famille SANS action, sans quoi ce cas se
-# redésarmera silencieusement à la prochaine story qui en couvre une.
-sed -i '' 's/^PARAMETRES_BOUTIQUE/# PARAMETRES_BOUTIQUE/' "$ATTENTE"
+#   1er septembre 2026, LS-160   `REMBOURSEMENT` -> `PARAMETRES_BOUTIQUE`
+#   11 septembre 2026, LS-98     `PARAMETRES_BOUTIQUE` -> famille POSEE ICI
+#
+# Le commentaire precedent avertissait : « la cible doit rester une famille SANS
+# action, sans quoi ce cas se redesarmera silencieusement a la prochaine story
+# qui en couvre une ». C'est arrive, et `.claude/familles-sans-action.txt` est
+# desormais VIDE : les quatre familles declarees sont couvertes.
+#
+# EMPRUNTER UNE FAMILLE DU DEPOT EST DONC UNE IMPASSE, et pas seulement faute de
+# candidate : toute famille libre finit par etre couverte, c'est meme le but du
+# fichier d'attente. Un cas de mutation qui depend d'une DETTE s'eteint le jour
+# ou la dette est payee.
+#
+# CE CAS POSE DONC SA PROPRE FAMILLE, `FAMILLE_TEMOIN_MUTATION`, ajoutee au type
+# et jamais declaree en attente : l'etat vise, « declaree, ni couverte ni en
+# attente », est fabrique de bout en bout et ne depend plus de rien.
+# ------------------------------------------------------------------
+perl -0pi -e 's/  \| "PARAMETRES_BOUTIQUE";/  | "PARAMETRES_BOUTIQUE"\n  | "FAMILLE_TEMOIN_MUTATION";/' "$SERVICE"
 attendre_echec "famille déclarée, ni couverte ni en attente"
 
 # --- Cas 5 : ligne d'attente périmée --------------------------------------
 # Une famille couverte par une action ET listée en attente : la ligne doit
 # partir, sinon le fichier d'attente devient une décharge qui exempte à vie.
 #
-# LA CIBLE EST PASSEE DE `REMBOURSEMENT` A `PARAMETRES_BOUTIQUE` LE 1er
-# SEPTEMBRE 2026, LS-160, meme motif que le cas 4 : ce cas s'appuyait sur la
-# ligne `REMBOURSEMENT` du fichier d'attente pour creer l'etat « couverte ET
-# listee ». Cette ligne est partie quand `demanderRemboursement` a couvert la
-# famille, et le cas ne creait donc plus l'etat qu'il vise.
+# MEME CHANGEMENT DE CIBLE QUE LE CAS 4, et pour la meme raison. Ce cas
+# s'appuyait sur la ligne `PARAMETRES_BOUTIQUE` du fichier d'attente pour creer
+# l'etat « couverte ET listee » ; cette ligne est partie avec LS-98, et le cas
+# ne creait donc plus l'etat qu'il vise.
 #
-# LA CIBLE DOIT RESTER UNE FAMILLE ENCORE EN ATTENTE, sans quoi ce cas se
-# redesarmera a la prochaine story qui en couvre une. C'est le meme piege deux
-# fois dans le meme fichier.
+# LES DEUX MOITIES SONT POSEES ICI : la ligne d'attente ET l'action qui la
+# couvre. L'etat est complet sans emprunter quoi que ce soit au depot.
+echo "FAMILLE_TEMOIN_MUTATION posee par le script de mutation, jamais commitee" >> "$ATTENTE"
+perl -0pi -e 's/  \| "PARAMETRES_BOUTIQUE";/  | "PARAMETRES_BOUTIQUE"\n  | "FAMILLE_TEMOIN_MUTATION";/' "$SERVICE"
 cat > "$TEMOIN" <<'TS'
-/** @sensible PARAMETRES_BOUTIQUE */
-export async function parametresGardePourMutation(): Promise<void> {
-  await exigerReauthentificationRecente(new Headers(), "PARAMETRES_BOUTIQUE");
+/** @sensible FAMILLE_TEMOIN_MUTATION */
+export async function temoinGardePourMutation(): Promise<void> {
+  await exigerReauthentificationRecente(
+    new Headers(),
+    "FAMILLE_TEMOIN_MUTATION",
+  );
 }
 TS
 attendre_echec "ligne d'attente périmée alors que la famille est couverte"
@@ -209,7 +220,13 @@ export async function rembourserAvecSignatureEtalee(
   return { etat: "REMBOURSE" };
 }
 TS
-sed -i '' 's/^REMBOURSEMENT/# REMBOURSEMENT/' "$ATTENTE"
+# LE `sed` QUI VIVAIT ICI EST RETIRE, LS-98. Il commentait la ligne
+# `REMBOURSEMENT` du fichier d'attente, partie depuis LS-160 : il ne mordait
+# plus, et sa presence laissait croire que ce cas preparait quelque chose.
+#
+# CE CAS N'A BESOIN D'AUCUNE PREPARATION. La famille `REMBOURSEMENT` est
+# couverte par `demanderRemboursement` et absente du fichier d'attente : l'etat
+# attendu est celui du depot au repos, et le temoin seul suffit.
 attendre_succes "signature étalée par Prettier, action gardée acceptée"
 
 # --- Cas 10 : une Server Action d'administration sans garde de rôle ------

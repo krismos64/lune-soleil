@@ -34,6 +34,83 @@ let passerCommande: typeof import("@/services/commande").passerCommande;
 let lireParametresBoutique: typeof import("@/services/parametres").lireParametresBoutique;
 let enregistrerParametres: typeof import("@/services/parametres").enregistrerParametres;
 let resoudreConfigurationLivraison: typeof import("@/services/parametres").resoudreConfigurationLivraison;
+let auth: typeof import("@/lib/auth").auth;
+let enregistrerPreuveIdentite: typeof import("@/services/reauthentification").enregistrerPreuveIdentite;
+
+/**
+ * Ouvre une session ADMINISTRATRICE reelle et rend ses en-tetes.
+ *
+ * UNE SESSION REELLE ET NON UN DOUBLE, motif du fichier voisin
+ * `action-sensible-gardee.sequential.test.ts` : une garde se prouve sur le
+ * cookie que le serveur signe, jamais sur un objet fabrique par le test.
+ *
+ * LE ROLE EST POSE PAR SQL APRES INSCRIPTION. Better Auth cree un `CLIENT`, et
+ * la regle E1 n'admet qu'une administratrice : la base de test etant ephemere,
+ * la promotion ne heurte pas l'index partiel.
+ */
+async function ouvrirSessionAdministratrice(): Promise<{
+  enTetes: Headers;
+  sessionId: string;
+}> {
+  const email = `ls98-admin-${randomUUID()}@exemple.test`;
+  const motDePasse = "Mot2Passe-Test-LS98-Suffisamment-Long";
+
+  await auth.api.signUpEmail({
+    body: { email, password: motDePasse, name: "TEST Exploitante" },
+  });
+
+  await client.query(
+    "UPDATE utilisateur SET role = 'ADMINISTRATRICE' WHERE email = $1",
+    [email],
+  );
+
+  const reponse = await auth.api.signInEmail({
+    body: { email, password: motDePasse },
+    asResponse: true,
+  });
+
+  const enTetes = new Headers({ cookie: reponse.headers.get("set-cookie")! });
+  const session = await auth.api.getSession({ headers: enTetes });
+
+  if (!session?.session) {
+    throw new Error("La session d'administration de test n'a pas ete creee");
+  }
+
+  return { enTetes, sessionId: session.session.id };
+}
+
+/**
+ * Session administratrice AVEC preuve d'identite fraiche, ADR-027.
+ *
+ * ------------------------------------------------------------------
+ * ELLE EST MEMORISEE POUR LA DUREE DU TEST, et ce n'est pas une optimisation.
+ *
+ * La regle E1 n'admet qu'UNE administratrice, index partiel
+ * `utilisateur_administratrice_unique` : un `it.each` qui l'appelle a chaque
+ * cas en promeut une seconde et heurte l'index. L'echec porte alors sur la
+ * fixture au lieu du comportement teste, et son message parle d'unicite la ou
+ * le test parle de validation.
+ *
+ * MESURE ET NON SUPPOSE : le cas `it.each` de validation a rougi ainsi a sa
+ * premiere execution.
+ *
+ * LE CACHE EST VIDE PAR `afterEach`, qui tronque les comptes : chaque test
+ * repart d'une session neuve, et aucun n'herite de la preuve d'un autre.
+ * ------------------------------------------------------------------
+ */
+let sessionMemorisee: Headers | null = null;
+
+async function sessionPreuveFraiche(): Promise<Headers> {
+  if (sessionMemorisee !== null) {
+    return sessionMemorisee;
+  }
+
+  const { enTetes, sessionId } = await ouvrirSessionAdministratrice();
+  await enregistrerPreuveIdentite(sessionId);
+  sessionMemorisee = enTetes;
+
+  return enTetes;
+}
 
 const ADRESSE = {
   ligne1: "1 rue de Test",
@@ -133,6 +210,9 @@ beforeAll(async () => {
     enregistrerParametres,
     resoudreConfigurationLivraison,
   } = await import("@/services/parametres"));
+  ({ auth } = await import("@/lib/auth"));
+  ({ enregistrerPreuveIdentite } =
+    await import("@/services/reauthentification"));
 });
 
 afterAll(async () => {
@@ -147,6 +227,25 @@ afterEach(async () => {
   await client.query("DELETE FROM produit");
   await client.query("DELETE FROM categorie");
   await client.query("DELETE FROM compteur_numero");
+
+  /*
+   * LES COMPTES ET LEURS SESSIONS PARTENT A CHAQUE TEST, et c'est obligatoire
+   * ici plutot que confortable : la regle E1 n'admet qu'UNE administratrice,
+   * index partiel `utilisateur_administratrice_unique`. Deux tests qui en
+   * ouvrent chacun une heurteraient l'index, et l'echec porterait sur la
+   * fixture au lieu du comportement teste.
+   *
+   * `TRUNCATE ... CASCADE` ET NON DES `DELETE` ORDONNES : les tables
+   * d'authentification portent des cles etrangeres croisees, et l'ordre correct
+   * se perime a chaque table ajoutee par Better Auth.
+   */
+  await client.query(
+    "TRUNCATE journal_connexion, session, compte, verification, passkey, utilisateur CASCADE",
+  );
+
+  // LA SESSION MEMORISEE DESIGNE UN COMPTE QUI VIENT DE PARTIR : la garder
+  // ferait echouer le test suivant sur une session introuvable.
+  sessionMemorisee = null;
 
   /*
    * LES PARAMÈTRES SONT REMIS À LEUR VALEUR D'AMORÇAGE, jamais supprimés.
@@ -236,6 +335,7 @@ describe("resoudreConfigurationLivraison", () => {
 describe("enregistrerParametres", () => {
   it("écrit les valeurs et les relit", async () => {
     const issue = await enregistrerParametres(
+      await sessionPreuveFraiche(),
       parametresValides({ seuilStockFaible: 3, alerteStockFaible: false }),
     );
 
@@ -257,11 +357,13 @@ describe("enregistrerParametres", () => {
    */
   it("distingue une franchise désactivée d'un seuil à zéro", async () => {
     await enregistrerParametres(
+      await sessionPreuveFraiche(),
       parametresValides({ seuilFranchiseCentimes: null }),
     );
     expect((await lireParametresBoutique()).seuilFranchiseCentimes).toBeNull();
 
     await enregistrerParametres(
+      await sessionPreuveFraiche(),
       parametresValides({ seuilFranchiseCentimes: 0 }),
     );
     expect((await lireParametresBoutique()).seuilFranchiseCentimes).toBe(0);
@@ -275,6 +377,7 @@ describe("enregistrerParametres", () => {
    */
   it("refuse un seuil de franchise inférieur au tarif relais", async () => {
     const issue = await enregistrerParametres(
+      await sessionPreuveFraiche(),
       parametresValides({ seuilFranchiseCentimes: TARIF_RELAIS - 1 }),
     );
 
@@ -294,8 +397,103 @@ describe("enregistrerParametres", () => {
     ["une adresse d'alerte mal formée", { emailAlertes: "pas-une-adresse" }],
   ])("refuse %s", async (_libelle, surcharge) => {
     await expect(
-      enregistrerParametres(parametresValides(surcharge)),
+      enregistrerParametres(
+        await sessionPreuveFraiche(),
+        parametresValides(surcharge),
+      ),
     ).rejects.toThrow();
+  });
+});
+
+describe("gardes de l'action sensible, famille PARAMETRES_BOUTIQUE", () => {
+  /*
+   * ------------------------------------------------------------------
+   * LE TEST CENTRAL DE CE BLOC, celui qui rougit si la garde disparaît.
+   *
+   * La session est valide et le rôle est bon : tout est réuni pour que
+   * l'enregistrement aboutisse, SAUF la preuve d'identité récente. C'est le
+   * scénario exact d'ADR-027, l'ordinateur laissé ouvert.
+   *
+   * `PARAMETRES_BOUTIQUE` est la QUATRIÈME famille couverte du dépôt, et sa
+   * ligne d'attente annonçait précisément cette story depuis le 13 août 2026.
+   * ------------------------------------------------------------------
+   */
+  it("refuse l'enregistrement sans preuve d'identité récente", async () => {
+    const { enTetes } = await ouvrirSessionAdministratrice();
+
+    const issue = await enregistrerParametres(
+      enTetes,
+      parametresValides({ tarifDomicileCentimes: 999 }),
+    );
+
+    expect(issue.statut).toBe("REAUTHENTIFICATION_REQUISE");
+
+    /*
+     * LE REFUS NE SUFFIT PAS : une garde qui refuserait APRÈS avoir écrit
+     * rendrait le même statut. C'est la valeur inchangée qui prouve que le
+     * refus précède l'effet.
+     */
+    expect((await lireParametresBoutique()).tarifDomicileCentimes).toBe(
+      TARIF_DOMICILE,
+    );
+  });
+
+  /*
+   * SANS SESSION, LE REFUS EST D'UNE AUTRE NATURE et le code le distingue :
+   * `SESSION_ABSENTE` plutôt que `REAUTHENTIFICATION_REQUISE`. L'écran doit
+   * proposer de se reconnecter, pas de se réauthentifier.
+   */
+  it("distingue l'absence de session du manque de preuve", async () => {
+    const issue = await enregistrerParametres(
+      new Headers(),
+      parametresValides(),
+    );
+
+    expect(issue.statut).toBe("SESSION_ABSENTE");
+  });
+
+  /*
+   * UNE SESSION CLIENTE NE SUFFIT PAS, et ce test vaut son existence : il
+   * exerce la garde de RÔLE, que les deux précédents ne touchent pas. Une
+   * session authentifiée sans rôle est le seul état qui l'éprouve, motif du
+   * fichier voisin `avis-administration.spec.ts`.
+   */
+  it("refuse une session authentifiée sans le rôle", async () => {
+    const email = `ls98-client-${randomUUID()}@exemple.test`;
+    const motDePasse = "Mot2Passe-Test-LS98-Suffisamment-Long";
+
+    await auth.api.signUpEmail({
+      body: { email, password: motDePasse, name: "TEST Client" },
+    });
+
+    const reponse = await auth.api.signInEmail({
+      body: { email, password: motDePasse },
+      asResponse: true,
+    });
+
+    const enTetes = new Headers({
+      cookie: reponse.headers.get("set-cookie")!,
+    });
+
+    const issue = await enregistrerParametres(enTetes, parametresValides());
+
+    expect(issue.statut).toBe("SESSION_ABSENTE");
+  });
+
+  /*
+   * LE PENDANT POSITIF, sans lequel les trois tests précédents seraient
+   * satisfaits par une fonction qui refuse TOUT. Une garde bloquée en position
+   * fermée protège parfaitement et rend l'écran inutilisable : c'est le défaut
+   * « défaut fermé invisible au nominal », déjà en fiche sur ce dépôt.
+   */
+  it("accepte l'enregistrement après une preuve fraîche", async () => {
+    const issue = await enregistrerParametres(
+      await sessionPreuveFraiche(),
+      parametresValides({ tarifDomicileCentimes: 999 }),
+    );
+
+    expect(issue.statut).toBe("ENREGISTRE");
+    expect((await lireParametresBoutique()).tarifDomicileCentimes).toBe(999);
   });
 });
 

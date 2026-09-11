@@ -12,7 +12,10 @@
 #
 # Forme : NOM_DE_FAMILLE  puis la raison et le ticket qui la retirera.
 
-PARAMETRES_BOUTIQUE aucun ecran de parametres, hors phase 1
+# LA LISTE EST VIDE DEPUIS LE 11 SEPTEMBRE 2026, et c'est un evenement.
+# Voir la section LS-98 en bas de fichier : les QUATRE familles declarees sont
+# desormais couvertes par une action reelle. Ce fichier ne porte plus aucune
+# dette, il garde son role de contrat pour la famille qui serait ajoutee.
 
 # LA LIGNE PARAMETRES_BOUTIQUE A ETE RELUE LE 13 AOUT 2026, LS-99, et elle reste
 # vraie. La story ajoute deux ecrans d'administration, les categories du
@@ -292,3 +295,46 @@ PARAMETRES_BOUTIQUE aucun ecran de parametres, hors phase 1
 # LS-62, donc le sens 3 du controle refuserait la ligne. Cet ecran est un ecran
 # NON MARQUE, ce que le controle ne peut par construction pas voir, et c'est
 # exactement le trou que la section du 13 aout 2026 decrit plus haut.
+
+# ---------------------------------------------------------------------------
+# PARAMETRES_BOUTIQUE EST SORTIE DE CETTE LISTE LE 11 SEPTEMBRE 2026, LS-98.
+#
+# CE FICHIER L'AVAIT ANNONCE, le 13 aout 2026, mot pour mot : « ce qui rendrait
+# la ligne fausse, et qu'il faudra relire le moment venu : LS-98, parametres
+# commerciaux, porte le seuil de franco de port et les frais de livraison.
+# Ceux-la sont bien des parametres de boutique au sens de la famille, et la
+# ligne devra partir a ce moment. »
+#
+# `enregistrerParametres` dans `src/services/parametres.ts` est la QUATRIEME
+# action sensible reelle du depot. Elle porte les deux gardes dans l'ordre,
+# `exigerAdministratrice` puis `exigerReauthentificationRecente`.
+#
+# POURQUOI ELLE MERITE LA GARDE, la ou une categorie de catalogue ne la
+# meritait pas, LS-99 : un tarif modifie change le montant FACTURE a la vente
+# suivante. C'est l'effet financier direct que la famille vise, sans avoir a
+# etirer sa definition dans un sens ni dans l'autre.
+#
+# LA LISTE EST DESORMAIS VIDE, LES QUATRE FAMILLES ETANT COUVERTES :
+#
+#   IDENTIFIANTS        `supprimerMonCompte`, LS-95
+#   DONNEES_CLIENTS     `exporterMesDonnees`, LS-62
+#   REMBOURSEMENT       `demanderRemboursement`, LS-160
+#   PARAMETRES_BOUTIQUE `enregistrerParametres`, LS-98
+#
+# CE QUE CELA CHANGE POUR LE SCRIPT DE MUTATION, et il fallait le traiter dans
+# la meme story : `verifier-actions-sensibles-mutation.sh` employait
+# `PARAMETRES_BOUTIQUE` comme cible de ses cas 4 et 5, qui ont besoin d'une
+# famille SANS action. Son propre commentaire avertissait : « la cible doit
+# rester une famille sans action, sans quoi ce cas se redesarmera
+# silencieusement a la prochaine story qui en couvre une. » C'est cette story,
+# et la troisieme fois que le piege se pose sur ce fichier.
+#
+# LES DEUX CAS POSENT DESORMAIS LEUR PROPRE FAMILLE TEMOIN plutot que d'emprunter
+# une famille du depot : plus aucune n'est libre, et la prochaine qui le serait
+# se ferait couvrir a son tour. Un cas de mutation qui depend d'une dette
+# s'eteint le jour ou la dette est payee.
+#
+# CE FICHIER N'EST PAS DEVENU INUTILE. Il reste le contrat de la famille qui
+# serait ajoutee a `FamilleActionSensible` sans action pour la porter : sa ligne
+# viendrait ici avec sa raison, et le sens 3 du controle la refuserait des que
+# la premiere action existerait.

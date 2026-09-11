@@ -20,6 +20,14 @@ import {
   configurationDepuisParametres,
 } from "@/lib/livraison";
 import { prisma } from "@/lib/prisma";
+import {
+  AutorisationRefuseeError,
+  exigerAdministratrice,
+} from "@/services/autorisation";
+import {
+  ReauthentificationRequiseError,
+  exigerReauthentificationRecente,
+} from "@/services/reauthentification";
 import { valider } from "@/lib/validation";
 import { schemaParametresBoutique } from "@/lib/validation";
 import {
@@ -81,7 +89,11 @@ export type IssueEnregistrement =
    * relais, et le domicile ne doit donc jamais etre moins cher que le seuil ne
    * le laisse croire.
    */
-  | { statut: "REFUSE_SEUIL_SOUS_TARIF" };
+  | { statut: "REFUSE_SEUIL_SOUS_TARIF" }
+  /** Aucune session d'administration, ou session revoquee entre deux gardes. */
+  | { statut: "SESSION_ABSENTE" }
+  /** Preuve d'identite trop ancienne, ADR-027 : quinze minutes. */
+  | { statut: "REAUTHENTIFICATION_REQUISE" };
 
 /**
  * Enregistre les parametres apres validation.
@@ -107,11 +119,56 @@ export type IssueEnregistrement =
  * ne s'applique qu'aux modes en relais, comparer au domicile refuserait des
  * seuils parfaitement coherents.
  * ------------------------------------------------------------------
+ * DEUX GARDES, ET L'ORDRE N'EST PAS INDIFFERENT : le role d'abord.
+ *
+ * L'inverse proposerait une reauthentification a quelqu'un qui n'a de toute
+ * facon aucun droit sur cet ecran, ce qui lui apprendrait que l'ecran existe.
+ * Meme motif que `demanderRemboursement`.
+ *
+ * LA FAMILLE EST `PARAMETRES_BOUTIQUE`, et cette action est la PREMIERE a la
+ * couvrir. `.claude/familles-sans-action.txt` annonçait le cas depuis le
+ * 13 aout 2026 : « LS-98, parametres commerciaux, porte le seuil de franco de
+ * port et les frais de livraison. Ceux-la sont bien des parametres de boutique
+ * au sens de la famille, et la ligne devra partir a ce moment. »
+ *
+ * POURQUOI ELLE MERITE LA GARDE, la ou une categorie de catalogue ne la
+ * meritait pas : un tarif modifie change le montant FACTURE a la vente
+ * suivante. C'est un effet financier direct, exactement ce que la famille vise.
+ * ------------------------------------------------------------------
+ *
+ * @sensible PARAMETRES_BOUTIQUE
  */
 export async function enregistrerParametres(
+  enTetes: Headers,
   entree: unknown,
   client: ClientBase = prisma,
 ): Promise<IssueEnregistrement> {
+  try {
+    await exigerAdministratrice(enTetes);
+  } catch (erreur) {
+    if (erreur instanceof AutorisationRefuseeError) {
+      return { statut: "SESSION_ABSENTE" };
+    }
+    throw erreur;
+  }
+
+  try {
+    await exigerReauthentificationRecente(enTetes, "PARAMETRES_BOUTIQUE");
+  } catch (erreur) {
+    if (erreur instanceof ReauthentificationRequiseError) {
+      return { statut: "REAUTHENTIFICATION_REQUISE" };
+    }
+    /*
+     * `AutorisationRefuseeError` PEUT AUSSI SORTIR D'ICI, la session ayant pu
+     * etre revoquee entre les deux gardes. Elle se traduit comme plus haut :
+     * une session disparue est une session absente, pas une panne.
+     */
+    if (erreur instanceof AutorisationRefuseeError) {
+      return { statut: "SESSION_ABSENTE" };
+    }
+    throw erreur;
+  }
+
   const valide: ParametresAEcrire = valider(schemaParametresBoutique, entree);
 
   /*
