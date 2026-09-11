@@ -45,7 +45,7 @@ export type RubriqueClient = {
  * Les rubriques LIVREES, dans l'ordre du prototype.
  *
  * QUATRE ENTREES ET NON CINQ, et l'ecart avec le prototype est justifie plus
- * bas : « Mes avis » n'a pas d'ecran, LS-61 etant bloquee.
+ * bas : « Mes avis » n'a pas d'ecran DE LISTE, bien que les avis soient livres.
  *
  * « PROFIL ET DONNEES » EST UNE SEULE ENTREE DU PROTOTYPE POUR DEUX ROUTES
  * LIVREES, `/compte/profil` (LS-60) et `/compte/donnees` (LS-62). Les fondre
@@ -84,9 +84,16 @@ export const RUBRIQUES_CLIENT: readonly RubriqueClient[] = [
  * d'ecran.
  *
  * LE TICKET EST ECRIT pour que cette liste ne devienne pas un cimetiere : une
- * entree sans ticket n'a rien a faire ici. LS-61 porte les avis verifies, et
- * elle est bloquee par LS-33 et l'ouverture du compte Mondial Relay, un avis ne
- * s'invitant qu'apres une livraison constatee.
+ * entree sans ticket n'a rien a faire ici.
+ *
+ * CE COMMENTAIRE DISAIT « LS-61 EST BLOQUEE PAR LS-33 ET LE COMPTE MONDIAL
+ * RELAY », et les deux raisons sont fausses depuis le 11 septembre 2026 : LS-61
+ * est livree, l'invitation part apres une livraison REELLEMENT constatee, et le
+ * transporteur passe par Sendcloud depuis ADR-035.
+ *
+ * CE QUI MANQUE VRAIMENT est un ecran de LISTE : un client depose son avis par
+ * le lien a jeton reçu par email, `/avis/[jeton]`, et rien ne lui montre ses
+ * avis passes. C'est cet ecran-la que cette entree attend.
  */
 export const RUBRIQUES_CLIENT_A_VENIR = [
   { libelle: "Mes avis", ticket: "LS-61" },

@@ -26,7 +26,7 @@
 # EXISTE, pas qu'il parte d'un endroit précis.
 #
 # UN SEUL LIEN SUFFIT, Y COMPRIS DEPUIS UNE PAGE D'ERREUR, et c'est une limite
-# assumée mesurée à l'écriture : `/catalogue` est désigné sept fois, dont deux
+# assumée : `/catalogue` est désigné par de nombreux liens, dont deux
 # depuis `not-found.tsx` et `error.tsx`. Retirer les liens de l'en-tête et du
 # pied laisserait ce contrôle vert sur une boutique dont la vitrine ne
 # s'atteindrait plus que par une page d'erreur.

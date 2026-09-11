@@ -14,7 +14,8 @@ La photographie et la matière portent l'identité, pas les ornements.
 et l'enchaînement des écrans d'un prototype gelé le 5 août 2026, dont les six
 états non nominaux et la table parcours vers écran. Il ne prime sur rien : en cas
 de divergence avec un ADR ou une règle d'ici, c'est le prototype qui a tort, et
-ce document liste déjà les cinq écarts connus.
+ce document liste déjà les écarts connus, **sept** au 11 septembre 2026, sa
+propre section les énumérant.
 
 ## Palette, fixée par ADR-022
 
@@ -325,7 +326,7 @@ table de liens du pied `{ href: "/aide", libelle: … }`, et l'objet de route
 `href={{ pathname: "/avis/signaler", query: … }}`.
 
 **Un seul lien suffit, y compris depuis une page d'erreur**, et c'est une limite
-assumée : `/catalogue` est désigné sept fois, dont deux depuis `not-found.tsx` et
+assumée : `/catalogue` est désigné par une quinzaine de liens, dont deux depuis `not-found.tsx` et
 `error.tsx`. Resserrer la règle ferait échouer le contrôle sur `/compte/adresses`,
 légitimement atteint depuis l'écran de compte, et pousserait à inventer une barre
 que la boutique ne doit pas avoir.
@@ -451,9 +452,11 @@ les deux tests de bout en bout écrits alors verrouillent l'arbre existant, aucu
 ne disait qu'une région **neuve** devait en porter un.
 
 **La portée s'arrête au parcours d'achat**, et ce n'est pas une approximation.
-Le dépôt porte quatre-vingts régions live, dont une majorité sans nom : les
-nommer toutes serait un chantier dont le gain est incertain, la spécification
-restant ambiguë. Ce qui est **mesuré** est le parcours critique, celui dont
+Le dépôt en porte **plus de cent**, dont une majorité sans nom : les nommer
+toutes serait un chantier dont le gain est incertain, la spécification restant
+ambiguë. **Le nombre exact ne s'écrit pas ici**, il disait « quatre-vingts » le jour même
+où le dépôt en portait 112 : compter les occurrences de `role="status"` et
+`role="alert"` sous `src/` plutôt que lire un chiffre. Ce qui est **mesuré** est le parcours critique, celui dont
 cette règle exige WCAG 2.2 AA.
 
 **Une région qui enveloppe son propre titre n'a pas besoin de nom**, et lui en
@@ -701,8 +704,8 @@ La question à se poser avant d'écrire l'appel : **cette donnée est-elle lue p
 le layout ?** Si oui, `"layout"`. Ce n'est jamais `revalidatePath("/", "layout")`,
 qui purgerait le cache client entier pour un geste local.
 
-**Le layout lit NEUF comptages, et LS-201 n'en avait couvert que deux
-domaines.** Onze appels sont restés en violation jusqu'au 7 septembre 2026, sur
+**Le layout lit DIX comptages**, `avisAModerer` étant arrivé avec LS-61 sans
+entrer dans cette table ; LS-201 n'en avait couvert que deux domaines. Onze appels sont restés en violation jusqu'au 7 septembre 2026, sur
 les commandes, les expéditions, les rétractations et les variantes. La règle
 était juste, sa portée réelle n'avait jamais été mesurée : c'est le motif connu
 de ce dépôt, une règle écrite et non vérifiée ne tient pas.
@@ -717,6 +720,7 @@ sens, prouvé par mutation sur les quatre domaines oubliés.
 | `retractations` | `retractationsEnCours` |
 | `messages` | `messagesNonLus` |
 | `stocks` et `produits/actions-variantes` | `variantesStockFaible`, `variantesIndisponibles` |
+| `avis` | `avisAModerer`, **manquait jusqu'au 11 septembre 2026** |
 | tout remboursement | l'encaissé du jour, qui soustrait le montant remboursé |
 
 **Toute action de ces domaines n'a pas besoin de `"layout"` pour autant**, et le
@@ -734,7 +738,7 @@ donc périmée à l'instant où elle arrive. Next.js la jette, repart, et
 **recommence sans fin** tant que le lien est à l'écran.
 
 **Toutes les routes d'administration sont `force-dynamic`**, et la barre latérale
-en désigne onze. Mesure sur le tableau de bord au repos, journal du navigateur :
+en désigne quatorze au 11 septembre 2026, compte à relever plutôt qu'à recopier. Mesure sur le tableau de bord au repos, journal du navigateur :
 chaque rubrique enchaîne `200`, `ERR_ABORTED`, puis une requête neuve avec un
 jeton `_rsc` différent. Des rendus serveur en boucle, chacun interrogeant
 PostgreSQL, pour un écran que personne ne touche.

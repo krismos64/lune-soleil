@@ -1,6 +1,9 @@
 # Parcours critiques
 
-Séquences d'états des neuf parcours critiques du projet, cas d'erreur compris.
+Séquences d'états des parcours critiques du projet, cas d'erreur compris.
+**Le nombre ne s'écrit pas ici**, `grep -cE '^## Parcours' ` le compte : il
+disait « neuf » quand le dixième, le signalement d'un avis, était rédigé plus bas
+depuis LS-77.
 
 Ce document ne décrit aucun écran. Il décrit ce qui est **persisté** à chaque
 étape, ce que **voit la personne**, et ce qui se passe quand ça échoue. Il
@@ -23,7 +26,7 @@ Le trente-deuxième cas, l'événement de paiement tardif au parcours 1, est ven
 LS-12. Le **parcours 7**, dépôt d'un avis, est venu de LS-37 après le passage des
 avis en périmètre d'ouverture, epic LS-36.
 
-## Pourquoi neuf parcours et non cinq
+## Pourquoi autant de parcours, et non cinq
 
 Le plan directeur exige en section 4.4 que le modèle logique soit « validé sur
 les cinq scénarios critiques sans invention de champ manquant », sans jamais
