@@ -21,7 +21,11 @@ import { useActionState } from "react";
 
 import { centimesVersSaisie } from "@/lib/montant";
 import type { ParametresLus } from "@/services/parametres";
-import { type ResultatParametres, enregistrer } from "./actions";
+import {
+  type ChampParametres,
+  type ResultatParametres,
+  enregistrer,
+} from "./actions";
 import styles from "./parametres.module.css";
 
 /** Les cinq interrupteurs du prototype, avec ce que chacun declenche. */
@@ -100,6 +104,21 @@ export function FormulaireParametres({
 
   const annonce = messageDe(resultat, enCours);
 
+  /*
+   * LE CHAMP EN CAUSE, s'il y en a un. `frontend-design.md` exige qu'une erreur
+   * soit associee a son champ : sur cinq champs, un message global oblige a
+   * deviner lequel est refuse.
+   */
+  const champFautif: ChampParametres | null =
+    resultat?.statut === "INVALIDE" ? resultat.champ : null;
+
+  /** Les attributs d'erreur d'un champ, poses seulement quand il est en cause. */
+  function marqueurs(nom: ChampParametres) {
+    return champFautif === nom
+      ? { "aria-invalid": true as const, "aria-describedby": "erreur-champ" }
+      : {};
+  }
+
   return (
     <form action={action} className={styles.formulaire}>
       <fieldset className={styles.groupe}>
@@ -114,6 +133,7 @@ export function FormulaireParametres({
           </p>
           <input
             id="tarifRelais"
+            {...marqueurs("tarifRelais")}
             name="tarifRelais"
             type="text"
             inputMode="decimal"
@@ -130,6 +150,7 @@ export function FormulaireParametres({
           </label>
           <input
             id="tarifDomicile"
+            {...marqueurs("tarifDomicile")}
             name="tarifDomicile"
             type="text"
             inputMode="decimal"
@@ -155,6 +176,7 @@ export function FormulaireParametres({
           </p>
           <input
             id="seuilFranchise"
+            {...marqueurs("seuilFranchise")}
             name="seuilFranchise"
             type="text"
             inputMode="decimal"
@@ -181,6 +203,7 @@ export function FormulaireParametres({
           </p>
           <input
             id="emailAlertes"
+            {...marqueurs("emailAlertes")}
             name="emailAlertes"
             type="email"
             defaultValue={parametres.emailAlertes}
@@ -196,6 +219,7 @@ export function FormulaireParametres({
           </label>
           <input
             id="seuilStockFaible"
+            {...marqueurs("seuilStockFaible")}
             name="seuilStockFaible"
             type="number"
             min={1}
@@ -229,20 +253,55 @@ export function FormulaireParametres({
        * voisins. Elle est nommee : une region anonyme s'annonce « status » sans
        * rien dire de plus a la navigation par regions, C39.
        */}
-      <p
-        role="status"
-        aria-live="polite"
-        aria-label="État de l'enregistrement des paramètres"
-        className={styles.annonce}
-      >
-        {annonce}
-      </p>
+      {/*
+       * DEUX REGIONS ET NON UNE, et la distinction est celle de leur URGENCE.
+       *
+       * UN REFUS DE SAISIE EST UN `alert`, qui interrompt la lecture d'ecran :
+       * la personne vient d'agir et attend le verdict. Un `status` `polite`
+       * attendrait la fin de la phrase en cours, ce qui est juste pour une
+       * confirmation et trop tard pour une correction a faire.
+       *
+       * RELEVE PAR `ls-frontend-revue` le 11 septembre 2026 : l'unique region
+       * etait `polite`, donc un refus n'interrompait rien.
+       */}
+      {resultat?.statut === "INVALIDE" ? (
+        <p id="erreur-champ" role="alert" className={styles.erreur}>
+          {annonce}
+        </p>
+      ) : (
+        <p
+          role="status"
+          aria-live="polite"
+          aria-label="État de l'enregistrement des paramètres"
+          className={styles.annonce}
+        >
+          {annonce}
+        </p>
+      )}
 
+      {/*
+       * CHAQUE REFUS PORTE SA SORTIE, et les deux en ont une.
+       *
+       * LA PREMIERE VERSION N'EN DONNAIT QU'A LA REAUTHENTIFICATION, releve par
+       * `ls-frontend-revue` le 11 septembre 2026 : l'en-tete de ce fichier
+       * invoquait la leçon de LS-61, « chaque refus dit ce qui reste
+       * possible », et l'appliquait a un refus sur deux.
+       *
+       * SESSION EXPIREE, L'EXPLOITANTE RESTAIT DEVANT UN FORMULAIRE REMPLI sans
+       * chemin pour se reconnecter, et ses saisies etaient perdues si elle
+       * naviguait a la main.
+       */}
       {resultat?.statut === "REAUTHENTIFICATION_REQUISE" && (
         <p className={styles.sortie}>
           <Link href="/administration/reauthentification">
             Confirmer mon identité
           </Link>
+        </p>
+      )}
+
+      {resultat?.statut === "SESSION_ABSENTE" && (
+        <p className={styles.sortie}>
+          <Link href="/administration/connexion">Se reconnecter</Link>
         </p>
       )}
 

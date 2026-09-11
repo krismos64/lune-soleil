@@ -180,6 +180,54 @@ test.describe("écran connecté", () => {
 
   /*
    * ------------------------------------------------------------------
+   * LES CHAMPS RENDENT DANS LA POLICE DE LA PAGE, et non en Arial.
+   *
+   * CET ÉCRAN ÉTAIT LE SEUL DES DOUZE FEUILLES D'ADMINISTRATION à ne poser ni
+   * `font: inherit` ni `width: 100%` sur ses champs, relevé le 11 septembre
+   * 2026. Rien ne débordait, donc aucun contrôle ne rougissait : l'écart ne se
+   * voit qu'en comparant deux formulaires côte à côte.
+   *
+   * LA MESURE PORTE SUR LE RENDU et non sur la feuille de style : une règle
+   * écrite mais annulée par une cascade laisserait un contrôle textuel vert.
+   * ------------------------------------------------------------------
+   */
+  test("les champs héritent de la police de la page", async ({ page }) => {
+    await page.goto("/administration/parametres");
+
+    const policeChamp = await page
+      .getByLabel("Point Relais et Locker, en euros")
+      .evaluate((champ) => getComputedStyle(champ).fontFamily);
+
+    const policePage = await page
+      .locator("body")
+      .evaluate((corps) => getComputedStyle(corps).fontFamily);
+
+    expect(policeChamp).toBe(policePage);
+  });
+
+  /*
+   * ------------------------------------------------------------------
+   * LE REFUS DE SAISIE NE SE MESURE PAS ICI, ET LA RAISON EST STRUCTURELLE.
+   *
+   * La session partagée de `session-administration.setup.ts` n'a AUCUNE preuve
+   * d'identité récente, et la garde de réauthentification précède la validation
+   * dans `enregistrerParametres` : toute soumission depuis cette suite rend
+   * `REAUTHENTIFICATION_REQUISE`, jamais `INVALIDE`.
+   *
+   * ÉCRIT PUIS RETIRÉ LE 11 SEPTEMBRE 2026 : le test cherchait un `role="alert"`
+   * et trouvait une chaîne vide, ce qui accusait le code alors que l'ordre des
+   * gardes est juste. Fabriquer une preuve fraîche depuis Playwright
+   * demanderait de reproduire la réauthentification à chaque exécution, pour
+   * mesurer une chose que le service sait déjà dire.
+   *
+   * `tests/integration/parametres.sequential.test.ts` PORTE DONC CES DEUX
+   * ASSERTIONS, avec une session réelle : le message ne contient aucun nom de
+   * clé technique, et il porte ses accents.
+   * ------------------------------------------------------------------
+   */
+
+  /*
+   * ------------------------------------------------------------------
    * LA GARDE DE RÉAUTHENTIFICATION SE VOIT À L'ÉCRAN, et ce test est le seul
    * qui la mesure sur le rendu réel.
    *

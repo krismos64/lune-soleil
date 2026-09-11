@@ -61,6 +61,85 @@ afterAll(async () => {
 
 afterEach(async () => {
   await client.query("TRUNCATE message, envoi_en_attente, rate_limit CASCADE");
+
+  /*
+   * L'INTERRUPTEUR EST REMIS A SA VALEUR D'AMORCAGE, LS-98 et ADR-043. Le
+   * laisser decoche ferait passer les fichiers SUIVANTS de la base partagee sur
+   * une alerte eteinte, et leur diagnostic porterait sur un fichier autre que
+   * celui qui a change l'etat.
+   */
+  await client.query(
+    "UPDATE parametre_boutique SET alerte_message_recu = true WHERE id = true",
+  );
+});
+
+/**
+ * L'INTERRUPTEUR D'ALERTE COMMANDE REELLEMENT L'ENVOI, LS-98 et ADR-043.
+ *
+ * ------------------------------------------------------------------
+ * SANS CE TEST, `alerteMessageRecu` SERAIT UN BOUTON QUI NE COMMANDE RIEN.
+ *
+ * L'ecran de parametres l'affiche, l'exploitante le decoche, et les alertes
+ * continueraient d'arriver : un reglage qui ment sur son effet est pire qu'un
+ * reglage absent, parce qu'on cesse de chercher ailleurs.
+ *
+ * LE MESSAGE EST QUAND MEME ECRIT, et c'est le second sens de ce test. Couper
+ * l'alerte ne doit pas couper la RECEPTION : le message attend en `NOUVEAU`
+ * dans l'administration, ou l'exploitante le trouve.
+ * ------------------------------------------------------------------
+ */
+describe("interrupteur d'alerte de message", () => {
+  it("n'envoie aucune alerte quand l'interrupteur est decoche, mais garde le message", async () => {
+    await client.query(
+      "UPDATE parametre_boutique SET alerte_message_recu = false WHERE id = true",
+    );
+
+    const issue = await deposerMessage({
+      saisie: { ...SAISIE, ouvertA: ouvertIlYa(30) },
+      adresseIp: "203.0.113.99",
+    });
+
+    expect(issue.statut).toBe("ENREGISTRE");
+
+    const { rows: messages } = await client.query<{ nombre: string }>(
+      "SELECT count(*)::text AS nombre FROM message",
+    );
+    expect(Number(messages[0]?.nombre)).toBe(1);
+
+    const { rows: envois } = await client.query<{ nombre: string }>(
+      "SELECT count(*)::text AS nombre FROM envoi_en_attente",
+    );
+    expect(Number(envois[0]?.nombre)).toBe(0);
+  });
+
+  /*
+   * LE PENDANT POSITIF, sans lequel le test precedent serait satisfait par un
+   * service qui n'enverrait JAMAIS d'alerte. Motif « defaut ferme invisible au
+   * nominal », deja en fiche sur ce depot.
+   */
+  it("envoie l'alerte a l'adresse des parametres quand l'interrupteur est coche", async () => {
+    await client.query(
+      "UPDATE parametre_boutique SET alerte_message_recu = true, email_alertes = $1 WHERE id = true",
+      ["alertes-ls98@exemple.invalid"],
+    );
+
+    await deposerMessage({
+      saisie: { ...SAISIE, ouvertA: ouvertIlYa(30) },
+      adresseIp: "203.0.113.98",
+    });
+
+    const { rows } = await client.query<{ destinataire: string }>(
+      "SELECT destinataire FROM envoi_en_attente",
+    );
+
+    /*
+     * L'ADRESSE VIENT DE LA BASE ET NON DE L'ENVIRONNEMENT, et c'est le defaut
+     * que LS-98 a ferme : `.env.example` declarait `EMAIL_ADMIN_RECIPIENT` que
+     * personne ne lisait, et le code repliait sur `EMAIL_EXPEDITEUR` qui
+     * n'existait nulle part.
+     */
+    expect(rows[0]?.destinataire).toBe("alertes-ls98@exemple.invalid");
+  });
 });
 
 describe("deposerMessage", () => {

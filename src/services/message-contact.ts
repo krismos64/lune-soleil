@@ -42,6 +42,10 @@ import {
   type MessageEnListe,
 } from "@/repositories/message-contact";
 import { deposerEnvoi } from "@/services/envoi-email";
+import {
+  ParametresAbsentsError,
+  lireParametresBoutique,
+} from "@/services/parametres";
 
 export type { MessageDetaille, MessageEnListe };
 
@@ -241,6 +245,22 @@ export async function deposerMessage({
    * appel SMTP ici tiendrait la requete du visiteur pendant tout
    * l'aller-retour.
    */
+  /*
+   * LE DESTINATAIRE EST RESOLU AVANT LA TRANSACTION, jamais dedans : la lecture
+   * des parametres est un aller-retour de plus, et le tenir a l'interieur
+   * allongerait la transaction sans aucun gain.
+   */
+  const destinataire = await destinataireNotification();
+
+  /*
+   * AUCUN DESTINATAIRE, AUCUN ENVOI, et ce n'est pas un echec. L'exploitante a
+   * decoche l'alerte, ou la configuration est incomplete : le message reste en
+   * `NOUVEAU` dans l'administration, ou elle le trouvera.
+   */
+  if (destinataire === null || destinataire === "") {
+    return { statut: "ENREGISTRE" };
+  }
+
   try {
     await client.$transaction(async (transaction: Prisma.TransactionClient) => {
       await deposerEnvoi(transaction, {
@@ -250,7 +270,7 @@ export async function deposerMessage({
          * contact ne se refusent jamais l'une l'autre.
          */
         commandeId: null,
-        destinataire: destinataireNotification(),
+        destinataire,
         modele: "message-contact-recu",
         /*
          * LE CORPS N'Y ENTRE PAS, precaution 3 d'ADR-008. Les variables
@@ -278,17 +298,45 @@ export async function deposerMessage({
 /**
  * A qui part la notification.
  *
- * L'ADRESSE DE L'EXPLOITANTE, lue dans l'environnement comme l'identite de
- * l'emetteur de facture. Elle n'est PAS le destinataire du message, qui est la
- * boutique : c'est l'alerte « quelqu'un vous a ecrit ».
+ * L'ADRESSE DE L'EXPLOITANTE, LUE EN BASE DEPUIS ADR-043, LS-98. Elle n'est PAS
+ * le destinataire du message, qui est la boutique : c'est l'alerte « quelqu'un
+ * vous a ecrit ».
  *
- * LE REPLI EST L'ADRESSE DE CONTACT, presente dans toute installation servant
- * des emails : sans elle, aucun email ne partirait de toute facon.
+ * ------------------------------------------------------------------
+ * ELLE LISAIT `EMAIL_EXPEDITEUR`, VARIABLE QUI N'EXISTAIT PAS, et `.env.example`
+ * declarait `EMAIL_ADMIN_RECIPIENT`, que personne ne lisait. Trois noms pour une
+ * seule adresse, dont deux fantomes : le repli reel portait donc sur `undefined`
+ * puis sur la chaine vide, et une installation sans `FACTURE_EMAIL_CONTACT`
+ * deposait un envoi SANS DESTINATAIRE, que rien ne signalait.
+ *
+ * `null` PLUTOT QU'UNE CHAINE VIDE, et la distinction a un effet : l'appelant
+ * SAUTE l'envoi au lieu de deposer une ligne d'outbox invalide qui echouerait
+ * plus tard, hors du contexte qui l'a produite.
+ * ------------------------------------------------------------------
  */
-function destinataireNotification(): string {
-  return (
-    process.env.FACTURE_EMAIL_CONTACT ?? process.env.EMAIL_EXPEDITEUR ?? ""
-  );
+async function destinataireNotification(): Promise<string | null> {
+  try {
+    const parametres = await lireParametresBoutique();
+
+    /*
+     * L'INTERRUPTEUR EST RESPECTE, et c'est ce qui le rend reel. Sans cette
+     * ligne, `alerteMessageRecu` serait un bouton qui ne commande rien :
+     * l'exploitante le decocherait et continuerait de recevoir les alertes.
+     */
+    return parametres.alerteMessageRecu ? parametres.emailAlertes : null;
+  } catch (erreur) {
+    if (!(erreur instanceof ParametresAbsentsError)) {
+      throw erreur;
+    }
+
+    /*
+     * REPLI SUR L'ADRESSE DE CONTACT, presente dans toute installation servant
+     * des emails. Une ligne de parametres absente signale une base restauree
+     * avant la migration d'ADR-043 : perdre l'alerte en plus serait punir deux
+     * fois la meme anomalie.
+     */
+    return process.env.FACTURE_EMAIL_CONTACT ?? null;
+  }
 }
 
 /** Ce que la liste d'administration rend, LS-163. */

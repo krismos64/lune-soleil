@@ -45,7 +45,9 @@
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
+import { journaliser } from "@/lib/journal";
 import { EntreeInvalideError } from "@/lib/validation";
+import { type ChampParametres, refusLisible } from "./refus";
 import { exigerRole } from "@/services/autorisation";
 import { enregistrerParametres } from "@/services/parametres";
 import { centimesDepuisEuros } from "@/services/variante-validation";
@@ -57,12 +59,21 @@ import { centimesDepuisEuros } from "@/services/variante-validation";
  * ancienne » est une situation prevue d'ADR-027, qui se presente avec un lien
  * de reauthentification plutot qu'avec une page d'erreur.
  */
+export type { ChampParametres };
+
 export type ResultatParametres =
   | { statut: "SUCCES" }
   | { statut: "SESSION_ABSENTE" }
   | { statut: "REAUTHENTIFICATION_REQUISE" }
-  /** Entree refusee, avec le message destine au formulaire. */
-  | { statut: "INVALIDE"; message: string };
+  /**
+   * Entree refusee, avec le message et LE CHAMP concerne.
+   *
+   * `champ` PERMET DE RATTACHER L'ERREUR A SA SAISIE, `frontend-design.md`
+   * exigeant qu'une erreur soit associee a son champ. Sans lui, sur cinq
+   * champs, l'exploitante devine lequel est en cause. `null` quand le refus
+   * porte sur la coherence de l'ensemble plutot que sur une valeur.
+   */
+  | { statut: "INVALIDE"; message: string; champ: ChampParametres | null };
 
 /** Lit un champ de montant en euros et le rend en centimes, ou `null`. */
 function centimesDuChamp(donnees: FormData, nom: string): number | null {
@@ -107,6 +118,7 @@ export async function enregistrer(
       statut: "INVALIDE",
       message:
         "Un tarif doit s'écrire en euros, avec deux décimales au plus : 4,10.",
+      champ: tarifRelaisCentimes === null ? "tarifRelais" : "tarifDomicile",
     };
   }
 
@@ -125,6 +137,7 @@ export async function enregistrer(
       statut: "INVALIDE",
       message:
         "Le seuil doit s'écrire en euros, ou rester vide pour désactiver la livraison offerte.",
+      champ: "seuilFranchise",
     };
   }
 
@@ -161,6 +174,7 @@ export async function enregistrer(
         statut: "INVALIDE",
         message:
           "La livraison offerte doit démarrer au-dessus du tarif en Point Relais, ou être fixée à zéro pour l'offrir toujours.",
+        champ: "seuilFranchise",
       };
     }
 
@@ -174,7 +188,41 @@ export async function enregistrer(
     return { statut: "SUCCES" };
   } catch (erreur) {
     if (erreur instanceof EntreeInvalideError) {
-      return { statut: "INVALIDE", message: erreur.message };
+      /*
+       * ------------------------------------------------------------------
+       * LE MESSAGE DE ZOD N'EST PAS PROPAGE TEL QUEL, et le laisser passer
+       * etait un defaut releve par `ls-frontend-revue` le 11 septembre 2026.
+       *
+       * `formaterProblemes` prefixe par le CHEMIN DU CHAMP, et les messages du
+       * socle sont ecrits SANS ACCENTS :
+       *
+       *   emailAlertes : Une adresse email valide est attendue.
+       *   seuilStockFaible : Une quantite doit etre strictement positive.
+       *
+       * L'exploitante lisait donc un nom de cle technique, « quantite » et
+       * « etre » sans accents, et le mot « quantite » ne decrit meme pas un
+       * seuil d'alerte. La regle de redaction française couvre explicitement
+       * les messages d'erreur, et ce fichier ecrit par ailleurs trois messages
+       * soignes : c'est le quatrieme chemin qui avait ete oublie.
+       *
+       * LE MESSAGE BRUT RESTE JOURNALISE, jamais perdu : le diagnostic garde sa
+       * precision, seul l'affichage est reformule.
+       *
+       * L'ASSAINISSEMENT DU SOCLE DEPASSE CETTE STORY, `schemaQuantite` et ses
+       * voisins servant tout le depot. La correction locale est de ne pas
+       * propager le message brut.
+       * ------------------------------------------------------------------
+       */
+      journaliser("info", "parametres refuses a la validation", {
+        detail: erreur.message,
+      });
+
+      /*
+       * LE CHAMP EST DEDUIT DU MESSAGE BRUT, qui le prefixe. C'est la seule
+       * information utilisable de ce message : son texte, lui, part au journal
+       * et jamais a l'ecran.
+       */
+      return { statut: "INVALIDE", ...refusLisible(erreur.message) };
     }
     throw erreur;
   }
