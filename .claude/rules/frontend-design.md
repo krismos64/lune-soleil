@@ -279,6 +279,45 @@ L'écran courant est annoncé par `aria-current="page"`, et **le style s'ancre s
 cet attribut** plutôt que sur une classe : deux sources distinctes finiraient
 par désigner des rubriques différentes, sans que rien ne rende l'écart visible.
 
+### C41, tout écran de la boutique est désigné par au moins un lien
+
+**Le même défaut que C33, côté public, et il s'est produit deux fois.** Un écran
+qu'aucun lien ne désigne est inatteignable autrement qu'en saisissant son URL :
+huit écrans d'administration en LS-162, et `/compte/verification` trouvé par la
+revue de LS-54, dont le scénario même est « le message n'arrive pas », donc le
+retour.
+
+**La raison pour laquelle rien ne le voyait est la même** : les tests de bout en
+bout appellent `page.goto()` avec l'URL en dur, donc l'absence totale de chemin
+ne fait rougir aucune assertion.
+
+**La boutique n'a pas de barre permanente et ne doit pas en avoir**, à la
+différence de l'administration : ses chemins d'accès sont contextuels, un lien
+depuis l'en-tête, un depuis le panier, un depuis un email.
+`scripts/verifier-atteignabilite-boutique.sh` cherche donc, pour chaque route
+servie, **au moins un** `href` qui la désigne, et vérifie l'autre sens.
+
+**Trois formes de lien existent dans ce dépôt**, et n'en chercher qu'une était le
+défaut de la première version du contrôle : l'attribut JSX `href="/aide"`, la
+table de liens du pied `{ href: "/aide", libelle: … }`, et l'objet de route
+`href={{ pathname: "/avis/signaler", query: … }}`.
+
+**Un seul lien suffit, y compris depuis une page d'erreur**, et c'est une limite
+assumée : `/catalogue` est désigné sept fois, dont deux depuis `not-found.tsx` et
+`error.tsx`. Resserrer la règle ferait échouer le contrôle sur `/compte/adresses`,
+légitimement atteint depuis l'écran de compte, et pousserait à inventer une barre
+que la boutique ne doit pas avoir.
+
+**Les écrans atteints depuis un email figurent dans une liste d'exclusion
+motivée**, une ligne par écran : `/compte/nouveau-mot-de-passe` porte un jeton
+que seule la personne destinataire détient.
+
+**Il a trouvé deux défauts réels à sa première exécution**, dont **six
+occurrences** de lien vers `/notre-univers`, page non livrée qui rend 404, une
+depuis l'en-tête de toutes les pages publiques. Le journal du 3 septembre 2026 en
+annonçait trois. Ce lien mort est **compté et annoncé** à chaque exécution plutôt
+que passé sous silence : il attend LS-25, qui porte des contenus que seule l'exploitante détient.
+
 ### C34, tout écran porte la cible du lien d'évitement
 
 Un **lien d'évitement** est le premier élément focalisable de chaque partie du
