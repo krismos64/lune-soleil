@@ -85,6 +85,31 @@ critique. Il fait l'objet d'un ticket distinct, hors Go-Live. Retenir le
 mécanisme intégré maintenant vaut mieux que reporter toute limitation en
 attendant la version complète.
 
+### L'écart est fermé par LS-83, le 11 septembre 2026
+
+`services/ralentissement-compte.ts` ajoute un compteur par **compte visé**, dont
+la clé porte l'empreinte de l'adresse email et jamais l'adresse elle-même,
+invariant 9 : `rate_limit` est une table ordinaire d'un dépôt public.
+
+**Un ralentissement progressif, jamais un blocage.** Les cinq premiers échecs ne
+coûtent rien, le sixième une demi-seconde, et chaque suivant double jusqu'à un
+**plafond de huit secondes**. Ce plafond est la propriété qui compte : sans lui,
+échouer volontairement sur l'adresse de quelqu'un finirait par verrouiller son
+compte, ce que la décision 1 écarte nommément.
+
+**Les deux mécanismes se composent et ne se remplacent pas**, et la mesure l'a
+rendu littéral. `/sign-in/email` est plafonné à cinq requêtes par minute et par
+adresse IP : depuis une seule origine, la sixième tentative part en **429 depuis
+`onRequest`** sans jamais atteindre aucun hook, mesuré à 5 ms. Le ralentissement
+par compte n'est donc atteignable que là où la limitation par IP ne se déclenche
+pas, c'est-à-dire sur une campagne répartie. C'est exactement le cas que cette
+section décrivait comme non couvert.
+
+**Il ne révèle pas si le compte existe.** Le délai s'applique à toute adresse
+visée de façon répétée, existante ou non : sans cela, mesurer le temps de réponse
+dirait lequel de deux comptes existe, et la protection deviendrait un oracle
+d'énumération d'adresses.
+
 ## Décision 2, journal des connexions
 
 **Une table dédiée au projet**, et non une table fournie par la bibliothèque : la

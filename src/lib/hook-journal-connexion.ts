@@ -21,7 +21,7 @@
  */
 import { createAuthMiddleware, getIp } from "better-auth/api";
 
-import { lireResultat } from "@/lib/issue-connexion";
+import { type IssueTentative, lireResultat } from "@/lib/issue-connexion";
 import { retirerSessionDeVerification } from "@/lib/session-verification";
 import {
   ADRESSE_ABSENTE,
@@ -29,6 +29,10 @@ import {
   enregistrerTentativeConnexion,
   type MoyenConnexion,
 } from "@/services/journal-connexion";
+import {
+  compterEchecSurCompte,
+  oublierEchecsDuCompte,
+} from "@/services/ralentissement-compte";
 
 /**
  * Les chemins de connexion surveilles, et le moyen que chacun designe.
@@ -163,6 +167,75 @@ function emailTenteDepuisCorps(corps: unknown): string | null {
 }
 
 /**
+ * Attend la duree demandee, sans rien faire d'autre.
+ *
+ * ELLE EST ICI ET NON DANS LE SERVICE, deliberement. Le service DECIDE de la
+ * duree, ce fichier est l'adaptateur qui la subit : c'est la meme separation
+ * que partout ailleurs, et elle rend le service testable sans horloge simulee
+ * ni test qui dort huit secondes.
+ */
+function attendre(millisecondes: number): Promise<void> {
+  return new Promise((resoudre) => {
+    setTimeout(resoudre, millisecondes);
+  });
+}
+
+/**
+ * Applique le ralentissement par compte vise, LS-83. ADR-021 mesure 2.
+ *
+ * POURQUOI DANS LE HOOK `after` ET NON DANS L'ADAPTATEUR DE ROUTE, a rebours de
+ * `journaliserRefusLimitation` juste au-dessus. Les deux traitent des faits
+ * differents : un refus de cadence ne passe par AUCUN hook, il fallait donc le
+ * capter en aval ; un echec d'identifiants, lui, traverse tout le pipeline et
+ * arrive ici avec ce qu'il faut, l'issue reelle et l'adresse tentee. L'adaptateur
+ * de route, lui, ne voit qu'un corps de requete deja consomme.
+ *
+ * LE HOOK RETARDE REELLEMENT LA REPONSE. `runAfterHooks` de Better Auth 1.6
+ * attend chaque hook en serie avant de rendre la reponse, verifie via Context7
+ * le 11 septembre 2026 : un `await` ici recule donc la 401 d'autant. C'est la
+ * propriete dont depend toute la mesure, et elle n'est pas evidente : un hook
+ * dont le resultat serait ignore laisserait la reponse partir aussitot, et le
+ * ralentissement serait une ligne morte que rien ne signalerait.
+ *
+ * SUR UNE REUSSITE LE COMPTEUR EST EFFACE, jamais laisse expirer, voir
+ * `oublierEchecsDuCompte`.
+ *
+ * L'ADRESSE VIENT DU CORPS SUR UN ECHEC, et c'est le seul endroit ou elle
+ * existe : Better Auth ne dit pas quel compte a echoue, precisement pour ne pas
+ * reveler son existence. Compter sur la saisie est donc correct ET suffisant,
+ * l'attaquant devant de toute facon saisir l'adresse qu'il vise.
+ *
+ * ELLE EST NORMALISEE EN MINUSCULES, sans quoi `Anne@exemple.fr` et
+ * `anne@exemple.fr` auraient deux compteurs distincts : alterner la casse
+ * suffirait a doubler le quota, et la variation est illimitee.
+ *
+ * LA PASSKEY N'EST PAS CONCERNEE et son corps ne porte aucune adresse. Rien a
+ * ralentir : une assertion WebAuthn ne se devine pas, il n'y a pas de secret a
+ * epuiser par essais successifs.
+ */
+async function appliquerRalentissement(
+  issue: IssueTentative,
+  emailTente: string,
+): Promise<void> {
+  if (!emailTente.includes("@")) {
+    // Ni une adresse ni une cible : les marqueurs du journal passent par ici,
+    // et compter sur eux fusionnerait toutes les saisies informes en un seul
+    // compteur, qui ralentirait alors des personnes sans rapport entre elles.
+    return;
+  }
+
+  const cible = emailTente.toLowerCase();
+
+  if (issue === "REUSSITE") {
+    await oublierEchecsDuCompte(cible);
+
+    return;
+  }
+
+  await attendre(await compterEchecSurCompte(cible));
+}
+
+/**
  * Le hook `after` a brancher sur Better Auth.
  *
  * IL N'INTERROMPT RIEN ET NE MODIFIE AUCUNE REPONSE : il ne rend aucune valeur,
@@ -221,4 +294,12 @@ export const hookJournalConnexion = createAuthMiddleware(async (ctx) => {
         : null,
     agentUtilisateur: ctx.headers?.get("user-agent") ?? null,
   });
+
+  /*
+   * APRES LE JOURNAL, ET L'ORDRE EST VOULU. Le ralentissement fait ATTENDRE,
+   * le journal non : les placer dans l'autre sens retarderait l'ecriture de la
+   * trace de huit secondes, c'est-a-dire que sous une attaque en cours la
+   * table se remplirait en retard sur ce qu'elle decrit.
+   */
+  await appliquerRalentissement(resultat.issue, emailTente);
 });

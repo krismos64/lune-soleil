@@ -112,6 +112,55 @@ partirait sérialisé avec son adresse.
 en sortie standard et se perd au redémarrage du conteneur : y écrire une trace
 métier la ferait disparaître.
 
+## Ralentissement par compte visé, LS-83
+
+`services/ralentissement-compte.ts` ferme l'écart qu'ADR-027 énonçait : Better
+Auth compte par **adresse IP**, ADR-021 demandait « par identifiant de compte ».
+Les deux mécanismes **se composent**, celui de la bibliothèque reste en place.
+
+**C'est un ralentissement, jamais un blocage**, et ADR-027 écarte le blocage
+nommément : échouer volontairement sur l'adresse de quelqu'un verrouillerait son
+compte. Cinq échecs sans délai, puis un doublement depuis 500 ms jusqu'à un
+**plafond de huit secondes**. Ne pas retirer ce plafond, qui est la seule chose
+séparant la mesure d'un verrouillage : au vingtième échec, un doublement non
+borné ferait attendre des heures au vrai propriétaire.
+
+**La clé porte une empreinte SHA-256, jamais l'adresse.** `rate_limit` est une
+table ordinaire et le dépôt est public, invariant 9 : y écrire des adresses en
+clair ferait d'une fuite de cette table une fuite de fichier client.
+
+**L'adresse est normalisée en minuscules avant hachage.** Sans cela, alterner la
+casse donnerait un compteur par variante et le seuil serait sans objet.
+
+**Le délai s'applique aussi aux adresses inexistantes**, et c'est une protection :
+ne ralentir que les comptes réels ferait du temps de réponse un oracle
+d'énumération, ce que Better Auth évite déjà en ne distinguant pas « adresse
+inconnue » de « mot de passe faux ».
+
+**Défaut OUVERT en cas de panne de base**, même choix que `limitation-action.ts` :
+le service rend zéro plutôt que de ralentir ou refuser. La limitation par IP ne
+dépend pas de cette table et reste en place.
+
+**La règle de délai vit dans `lib/delai-ralentissement.ts`**, séparée du service.
+Le service tire Prisma, donc `DATABASE_URL` : un test unitaire de la progression
+arithmétique échouerait sur une machine sans base. Même motif qu'`issue-connexion.ts`.
+
+**Le ralentissement est appliqué par le hook `after`, qui ATTEND réellement.**
+`runAfterHooks` de Better Auth 1.6 attend chaque hook en série avant de rendre la
+réponse, vérifié via Context7. Un hook dont le résultat serait ignoré laisserait
+la réponse partir aussitôt, et le ralentissement serait une ligne morte que rien
+ne signalerait : la mutation `void` à la place d'`await` fait rougir cinq tests.
+
+**Un test mené depuis une seule adresse IP ne peut rien exercer de cette mesure.**
+`/sign-in/email` est plafonné à cinq requêtes par minute et par IP : la sixième
+tentative, celle qui déclenche le premier palier, part en **429 depuis
+`onRequest`** sans atteindre aucun hook, mesuré à 5 ms. Les tests varient donc
+l'adresse d'origine, ce qui est aussi le scénario réel que la story couvre.
+
+**Il vient APRÈS l'écriture du journal dans le hook**, et l'ordre est voulu :
+l'inverse retarderait la trace de huit secondes, donc sous une attaque en cours
+la table se remplirait en retard sur ce qu'elle décrit.
+
 ## Journal des connexions, LS-80
 
 `services/journal-connexion.ts` écrit une ligne par tentative, réussie comme
