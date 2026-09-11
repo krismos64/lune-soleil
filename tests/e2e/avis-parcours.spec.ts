@@ -28,10 +28,7 @@ import { readFileSync } from "node:fs";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-import {
-  COMMANDE_AVIS_TEST,
-  FICHIER_JETONS_AVIS,
-} from "./chemin-session";
+import { COMMANDE_AVIS_TEST, FICHIER_JETONS_AVIS } from "./chemin-session";
 import {
   TOLERANCE_DEBORDEMENT_PX,
   debordementHorizontal,
@@ -174,7 +171,9 @@ test("le bouton d'envoi dit ce qui manque avant d'etre actionnable", async ({
   const bouton = page.getByRole("button", { name: "Envoyer mon avis" });
 
   await expect(bouton).toBeDisabled();
-  await expect(page.getByText("Choisissez une note pour pouvoir envoyer.")).toBeVisible();
+  await expect(
+    page.getByText("Choisissez une note pour pouvoir envoyer."),
+  ).toBeVisible();
 
   /*
    * LE CLIC PORTE SUR LE LIBELLE ET NON SUR L'ENTREE, et c'est le geste reel.

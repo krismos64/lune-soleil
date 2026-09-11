@@ -19,7 +19,14 @@ cd "$RACINE" || exit 1
 CONTROLE="./scripts/verifier-navigation-administration.sh"
 NAVIGATION="src/components/navigation-administration.tsx"
 LAYOUT="src/app/administration/layout.tsx"
+SPEC_NAVIGATION="tests/e2e/navigation-administration.spec.ts"
 ECRAN_TEMOIN="src/app/administration/remises/page.tsx"
+
+# TOUT FICHIER MUTÉ ENTRE ICI, sans quoi il n'est jamais restauré : les cas 5 à
+# 7 mutent le TEST et le CONTRÔLE lui-même, que la liste d'origine ignorait.
+# Motif « mutation non restaurée », déjà en fiche sur ce dépôt, où un fichier
+# muté hors de la liste était resté modifié sur le disque.
+MUTABLES=("$NAVIGATION" "$LAYOUT" "$SPEC_NAVIGATION" "$CONTROLE")
 
 detectes=0
 total=0
@@ -31,7 +38,7 @@ SAUVEGARDE="$(mktemp -d)"
 
 sauvegarder() {
   local fichier index=0
-  for fichier in "$NAVIGATION" "$LAYOUT"; do
+  for fichier in "${MUTABLES[@]}"; do
     [ -r "$fichier" ] || { echo "ECHEC fichier illisible : $fichier"; exit 1; }
     cp "$fichier" "$SAUVEGARDE/$index"
     index=$((index + 1))
@@ -40,7 +47,7 @@ sauvegarder() {
 
 restaurer() {
   local fichier index=0
-  for fichier in "$NAVIGATION" "$LAYOUT"; do
+  for fichier in "${MUTABLES[@]}"; do
     [ -r "$SAUVEGARDE/$index" ] && cp "$SAUVEGARDE/$index" "$fichier"
     index=$((index + 1))
   done
@@ -106,7 +113,21 @@ echo
 # l'écran, et livrer la barre avant l'écran. La barre promet alors une fonction
 # et rend un 404.
 # ---------------------------------------------------------------------------
-muter "$NAVIGATION" 's{\{ chemin: "/administration/stocks", libelle: "Stocks" \},}{{ chemin: "/administration/statistiques", libelle: "Statistiques" },}'
+#
+# LA CIBLE A ÉTÉ DÉPLACÉE PAR LE DÉPÔT, corrigée le 11 septembre 2026, LS-140.
+# Elle visait `{ chemin: "/administration/stocks", libelle: "Stocks" },` sur une
+# seule ligne : la rubrique a depuis été renommée « Stocks et marchés » et son
+# entrée étalée sur quatre lignes pour accueillir un compteur. La substitution ne
+# mordait plus, et le garde-fou de `muter` sortait en ECHEC dès le cas 1.
+#
+# CE SCRIPT NE PROUVAIT DONC PLUS RIEN, et le contrôle qu'il garde n'était plus
+# éprouvé. Personne ne l'a vu : il ne tourne ni en CI ni dans les huit contrôles
+# de CONTRIBUTING. Motif « cible de mutation déplacée », déjà en fiche.
+#
+# LA NOUVELLE CIBLE EST UN CHEMIN ET NON UN LIBELLÉ, délibérément : un chemin
+# change quand la route change, ce que le sens 1 verrait de toute façon, alors
+# qu'un libellé change au premier ajustement de vocabulaire.
+muter "$NAVIGATION" 's{chemin: "/administration/statistiques"}{chemin: "/administration/remises-saisonnieres"}'
 attendre_echec "rubrique pointant vers un écran non livré"
 
 # ---------------------------------------------------------------------------
@@ -132,7 +153,15 @@ attendre_echec "écran neuf ajouté sans entrer dans la barre"
 # parfaitement cohérentes pendant que l'administration redeviendrait un
 # ensemble d'écrans sans aucun lien, c'est-à-dire l'état d'avant la story.
 # ---------------------------------------------------------------------------
-muter "$LAYOUT" 's{<NavigationAdministration />}{null}'
+#
+# SECONDE CIBLE PÉRIMÉE DE CE SCRIPT, corrigée le 11 septembre 2026 avec celle
+# du cas 1. Elle visait `<NavigationAdministration />`, forme auto-fermante sans
+# props : le composant prend depuis `comptages`, `nom` et `deconnexion`, étalés
+# sur quatre lignes. La substitution ne mordait plus.
+#
+# LE NOUVEL ANCRAGE PORTE SUR LE NOM SEUL, jamais sur la liste de props : la
+# première se périmerait au prochain prop ajouté, exactement comme celle-ci.
+muter "$LAYOUT" 's{<NavigationAdministration\b}{<NavigationAbsente}'
 attendre_echec "barre retirée du layout, les listes restant cohérentes"
 
 # ---------------------------------------------------------------------------
@@ -144,6 +173,69 @@ attendre_echec "barre retirée du layout, les listes restant cohérentes"
 # ---------------------------------------------------------------------------
 muter "$NAVIGATION" 's/aria-current=\{courante \? "page" : undefined\}/data-courante={courante}/'
 attendre_echec "aria-current retiré, l'information ne passe plus que par la couleur"
+
+# ---------------------------------------------------------------------------
+# Cas 5 : une rubrique de la barre n'est cliquée par aucun test, LS-140.
+#
+# C'EST LE DÉFAUT RÉEL TROUVÉ LE 11 SEPTEMBRE 2026, rejoué. Cinq rubriques sur
+# quatorze manquaient au tableau `RUBRIQUES` du test : Avis, Factures et avoirs,
+# Clients, Statistiques et Vos passkeys. Les quatre premiers sens restaient
+# verts, ne lisant que le composant.
+#
+# LA MUTATION PORTE SUR LE TEST ET NON SUR LE COMPOSANT, seule façon de
+# reproduire l'écart : muter la barre ferait rougir les sens 1 ou 2, et le cas
+# ne dirait rien du sens 5.
+# ---------------------------------------------------------------------------
+muter "$SPEC_NAVIGATION" 's{\{ libelle: "Avis", titre: "Avis" \},}{}'
+attendre_echec "rubrique de la barre exercée par aucun test"
+
+# ---------------------------------------------------------------------------
+# Cas 6 : le test navigue vers une rubrique qui n'est plus dans la barre.
+#
+# LE SENS INVERSE DU PRÉCÉDENT, et il vaut son cas propre : sans lui, le sens 5
+# pourrait n'être écrit que dans une direction, et un test cherchant un lien
+# retiré échouerait par expiration de trente secondes plutôt que par diagnostic.
+# ---------------------------------------------------------------------------
+muter "$SPEC_NAVIGATION" 's{\{ libelle: "Avis", titre: "Avis" \},}{{ libelle: "Remises", titre: "Remises" },}'
+attendre_echec "test naviguant vers une rubrique absente de la barre"
+
+# ---------------------------------------------------------------------------
+# Cas 7 : l'ancrage du sens 5 absorbe RUBRIQUES_A_VENIR.
+#
+# CE CAS GARDE LE CONTRÔLE CONTRE LUI-MÊME, et il rejoue une erreur commise en
+# écrivant le sens 5 : `RUBRIQUES` est un PRÉFIXE de `RUBRIQUES_A_VENIR`, donc
+# un ancrage trop large moissonne les deux tableaux et accuse « Paramètres »,
+# rubrique délibérément non livrée. Le contrôle rougissait alors sur un dépôt
+# sain, ce qui est pire qu'une absence de contrôle : la correction évidente
+# aurait été d'ajouter au test une rubrique qui ne doit pas y être.
+#
+# LA MUTATION ÉLARGIT L'ANCRAGE et attend un ÉCHEC : le contrôle doit accuser
+# « Paramètres » dès que son motif cesse d'exclure le suffixe.
+# ---------------------------------------------------------------------------
+#
+# LA CIBLE EST LA LIGNE DE CODE ET NON LE MOTIF NU. `RUBRIQUES[^_A-Z]` apparaît
+# DEUX fois dans le contrôle, une fois dans le commentaire qui l'explique et une
+# fois dans le code : une substitution globale muterait les deux, et celle du
+# commentaire ne change rien. La cible porte donc le `awk` qui l'entoure.
+# Motif « contrôle satisfait par un commentaire », pris dans l'autre sens.
+muter_ancrage_sens5() {
+  local avant
+  avant=$(cksum <"$CONTROLE")
+
+  # `RUBRIQUES[^_A-Z]` devient `RUBRIQUES[^Z]`, qui n'exclut plus le suffixe :
+  # la forme reste valide, la portée s'élargit. Seule la ligne qui porte `awk`
+  # est visée, le commentaire voisin citant le même motif sans effet.
+  perl -pi -e 's/RUBRIQUES\[\^_A-Z\]/RUBRIQUES[^Z]/ if /awk/' "$CONTROLE"
+
+  if [ "$(cksum <"$CONTROLE")" = "$avant" ]; then
+    echo "ECHEC la mutation du cas 7 n'a modifié aucun caractère de $CONTROLE"
+    echo "      l'ancrage du sens 5 a changé de forme : corriger ce script."
+    exit 1
+  fi
+}
+
+muter_ancrage_sens5
+attendre_echec "ancrage du sens 5 élargi à RUBRIQUES_A_VENIR"
 
 echo
 echo "-----------------------------------------"

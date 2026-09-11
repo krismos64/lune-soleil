@@ -66,29 +66,18 @@ test.describe("refus d'acces", () => {
 test.describe("rubrique connectee", () => {
   test.use({ storageState: FICHIER_SESSION_ADMINISTRATION });
 
-  /**
-   * LA NAVIGATION SE FAIT AU CLIC, motif de LS-162 : l'absence totale de menu
-   * d'administration n'avait fait rougir aucune assertion pendant huit stories,
-   * chaque test atteignant sa cible par `goto`.
+  /*
+   * LA NAVIGATION AU CLIC N'EST PAS MESUREE ICI, ET C'EST DELIBERE.
+   *
+   * `navigation-administration.spec.ts` exerce les QUATORZE rubriques de la
+   * barre depuis le 11 septembre 2026, Avis comprise : la refaire ici
+   * dupliquerait l'assertion et son geste d'ouverture du panneau replie.
+   *
+   * ELLE N'Y ETAIT PAS AVANT CETTE DATE, et c'est ce qui a fait ecrire ce test
+   * en double avant de le retirer : cinq rubriques sur quatorze n'etaient
+   * cliquees par aucun test. Le sens 5 de
+   * `verifier-navigation-administration.sh` garde desormais cette couverture.
    */
-  test("la rubrique Avis est atteignable depuis la navigation", async ({
-    page,
-  }) => {
-    await page.goto("/administration");
-
-    /*
-     * `exact: false`, ET C'EST NECESSAIRE : la rubrique porte un COMPTEUR
-     * d'avis a relire, C33, donc son nom accessible vaut « Avis 1 » et non
-     * « Avis ». Une correspondance exacte ne trouve rien des qu'un avis attend,
-     * c'est-a-dire dans le cas meme que ce fichier mesure.
-     */
-    await page.getByRole("link", { name: /^Avis/ }).click();
-
-    await expect(page).toHaveURL(/\/administration\/avis$/);
-    await expect(
-      page.getByRole("heading", { name: "Avis", level: 1 }),
-    ).toBeVisible();
-  });
 
   /**
    * LA FILE DE RELECTURE PORTE L'AVIS EN ATTENTE, et ses deux gestes.
