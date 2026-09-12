@@ -198,6 +198,18 @@ export default async function PageMesAvis() {
                 que de faire disparaitre le bouton sans explication. Un bouton
                 absent se lit comme un oubli du site, et le client chercherait
                 ailleurs une action qui n'existe pas.
+
+                LA PHRASE NE PRESUPPOSE AUCUN HISTORIQUE DE PUBLICATION, et sa
+                premiere version le faisait : elle disait « un avis qui n'a pas
+                ete publie ne peut plus etre modifie », ce qui est FAUX pour un
+                avis `RETIRE`. Celui-la a bien ete publie, puis depublie par
+                l'exploitante : son auteur l'a vu en ligne, et lire le contraire
+                contredit son propre souvenir. Defaut releve par
+                `ls-frontend-revue` le 12 septembre 2026.
+
+                ELLE NE REDIT PAS L'ETAT AFFICHE JUSTE AU-DESSUS. Le paragraphe
+                d'etat constate que l'avis ne parait pas ; celui-ci dit ce qui en
+                decoule pour l'action, ce qui est une autre information.
               */}
               {ligne.modifiable ? (
                 <FormulaireModification
@@ -208,7 +220,7 @@ export default async function PageMesAvis() {
                 />
               ) : (
                 <p className={styles.nonModifiable}>
-                  Un avis qui n&apos;a pas été publié ne peut plus être
+                  Un avis qui ne figure plus sur la boutique ne peut plus être
                   modifié.
                 </p>
               )}

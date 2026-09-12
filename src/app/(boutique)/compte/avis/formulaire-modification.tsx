@@ -23,6 +23,28 @@ import { modifierAvis } from "./actions";
 import type { ResultatModificationAvis } from "./actions";
 import styles from "./avis.module.css";
 
+/**
+ * Ce que le client lit apres l'action, succes compris.
+ *
+ * LE SUCCES PORTE UN MESSAGE, ET SON ABSENCE ETAIT UN DEFAUT. La premiere
+ * version refermait le bloc sans rien dire : la carte se re-rendait bien avec
+ * la nouvelle note, mais cela se lit comme un effet de bord et non comme une
+ * confirmation, et surtout **un lecteur d'ecran n'annoncait rien**, la region
+ * live restant sur chaine vide. Releve par `ls-frontend-revue` le 12 septembre
+ * 2026.
+ *
+ * LE TEXTE REDIT CE QUI SE PASSE MAINTENANT, et pas seulement « c'est
+ * enregistre » : le critere 5 a promis une relecture avant validation, et le
+ * succes est le moment ou cette promesse se realise.
+ */
+function messageDAction(resultat: ResultatModificationAvis): string | null {
+  if (resultat.statut === "FAIT") {
+    return "Modification enregistrée. Votre avis est en attente de relecture.";
+  }
+
+  return messageDeRefus(resultat);
+}
+
 /** Ce que chaque refus dit au client, en clair et sans jargon. */
 function messageDeRefus(resultat: ResultatModificationAvis): string | null {
   switch (resultat.statut) {
@@ -89,7 +111,8 @@ export function FormulaireModification({
 
   const identifiantBloc = useId();
 
-  const refus = resultat === null ? null : messageDeRefus(resultat);
+  const message = resultat === null ? null : messageDAction(resultat);
+  const enSucces = resultat?.statut === "FAIT";
 
   return (
     <div className={styles.modification}>
@@ -188,20 +211,33 @@ export function FormulaireModification({
           </button>
         </form>
 
-        {/*
-          LA REGION LIVE PORTE SON NOM, regle C39 : plusieurs cartes en rendent
-          une chacune, et deux regions anonymes d'une meme page sont
-          indiscernables dans l'arbre d'accessibilite.
-        */}
-        <p
-          role="status"
-          aria-live="polite"
-          aria-label={`État de la modification de ${produitNom}`}
-          className={refus === null ? styles.masqueVisuellement : styles.refus}
-        >
-          {refus ?? ""}
-        </p>
       </div>
+
+      {/*
+        LA REGION LIVE VIT HORS DU BLOC REPLIABLE, ET CE N'EST PAS UN DETAIL DE
+        PLACEMENT. Le succes referme le bloc : une region posee dedans passerait
+        `hidden` a l'instant meme ou elle recoit le message, donc le seul etat
+        qu'elle n'annoncerait JAMAIS serait la reussite.
+
+        ELLE PORTE SON NOM, regle C39 : plusieurs cartes en rendent une chacune,
+        et deux regions anonymes d'une meme page sont indiscernables dans l'arbre
+        d'accessibilite. Elle n'est visee par aucun `aria-describedby`, donc la
+        regle qui interdit de nommer une region decrite ne s'applique pas.
+      */}
+      <p
+        role="status"
+        aria-live="polite"
+        aria-label={`État de la modification de ${produitNom}`}
+        className={
+          message === null
+            ? styles.masqueVisuellement
+            : enSucces
+              ? styles.succes
+              : styles.refus
+        }
+      >
+        {message ?? ""}
+      </p>
     </div>
   );
 }

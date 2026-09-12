@@ -415,6 +415,18 @@ test("un avis non retenu dit POURQUOI il n'est pas modifiable, critere 6", async
   ).toHaveCount(0);
 
   await expect(carte.getByText(/ne peut plus être modifié/)).toBeVisible();
+
+  /*
+   * L'ASSERTION NEGATIVE PORTE LE DEFAUT REEL, et l'assertion ci-dessus ne le
+   * voyait pas. La premiere version disait « un avis qui n'a pas ete publie ne
+   * peut plus etre modifie », ce qui est FAUX sur un avis `RETIRE` : celui-la a
+   * bien ete publie, puis depublie. Le motif `/ne peut plus être modifié/` est
+   * present dans les DEUX versions, donc il laissait passer l'affirmation
+   * fausse, sur la fixture meme qui la traverse.
+   */
+  await expect(
+    carte.getByText(/Un avis qui n'a pas été publié ne peut plus/),
+  ).toHaveCount(0);
 });
 
 test("aucune violation axe-core sur l'ecran", async ({ page }) => {

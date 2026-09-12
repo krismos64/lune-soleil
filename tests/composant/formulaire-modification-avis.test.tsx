@@ -30,9 +30,8 @@ const modifierAvis = vi.hoisted(() => vi.fn());
 
 vi.mock("@/app/(boutique)/compte/avis/actions", () => ({ modifierAvis }));
 
-const { FormulaireModification } = await import(
-  "@/app/(boutique)/compte/avis/formulaire-modification"
-);
+const { FormulaireModification } =
+  await import("@/app/(boutique)/compte/avis/formulaire-modification");
 
 function rendre() {
   return render(
@@ -78,9 +77,7 @@ describe("FormulaireModification", () => {
   test("l'ouverture montre l'avertissement avant toute validation", async () => {
     rendre();
 
-    fireEvent.click(
-      screen.getByRole("button", { name: /Modifier cet avis/ }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: /Modifier cet avis/ }));
 
     /*
      * LE CRITERE 5 DE LS-225 EST ICI. L'ecran doit dire ce que la modification
@@ -99,16 +96,16 @@ describe("FormulaireModification", () => {
   test("la note et le commentaire portent les valeurs existantes", async () => {
     rendre();
 
-    fireEvent.click(
-      screen.getByRole("button", { name: /Modifier cet avis/ }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: /Modifier cet avis/ }));
 
     /*
      * LE FORMULAIRE PART DE CE QUI EXISTE, jamais d'un formulaire vide. Une
      * modification qui obligerait a tout ressaisir ferait perdre le texte a
      * qui veut corriger un mot.
      */
-    expect(screen.getByRole("radio", { name: /4 étoiles sur 5/ })).toBeChecked();
+    expect(
+      screen.getByRole("radio", { name: /4 étoiles sur 5/ }),
+    ).toBeChecked();
     expect(
       screen.getByRole("textbox", { name: /Votre commentaire/ }),
     ).toHaveValue("Un bracelet très fin, reçu rapidement.");
@@ -118,9 +115,7 @@ describe("FormulaireModification", () => {
     modifierAvis.mockResolvedValue({ statut: "FAIT" });
     rendre();
 
-    fireEvent.click(
-      screen.getByRole("button", { name: /Modifier cet avis/ }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: /Modifier cet avis/ }));
     fireEvent.click(
       screen.getByRole("button", { name: /Enregistrer la modification/ }),
     );
@@ -135,13 +130,38 @@ describe("FormulaireModification", () => {
     });
   });
 
+  test("un succes ANNONCE l'enregistrement, hors du bloc referme", async () => {
+    modifierAvis.mockResolvedValue({ statut: "FAIT" });
+    rendre();
+
+    fireEvent.click(screen.getByRole("button", { name: /Modifier cet avis/ }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /Enregistrer la modification/ }),
+    );
+
+    /*
+     * CE TEST FERME LE DEFAUT QUE `ls-frontend-revue` A TROUVE le 12 septembre
+     * 2026 : la premiere version refermait le bloc SANS RIEN DIRE. La carte se
+     * re-rendait avec la nouvelle note, ce qui se lit comme un effet de bord, et
+     * un lecteur d'ecran n'annoncait rien, la region live restant vide.
+     *
+     * LA REGION DOIT VIVRE HORS DU BLOC REPLIABLE, et l'assertion suivante le
+     * prouve : une region posee DEDANS passerait `hidden` a l'instant meme ou
+     * elle recoit le message, donc le seul etat qu'elle n'annoncerait jamais
+     * serait la reussite.
+     */
+    const annonce = await screen.findByText(/Modification enregistrée/);
+
+    expect(annonce).toBeVisible();
+    expect(blocEdition()).toHaveAttribute("hidden");
+    expect(blocEdition().contains(annonce)).toBe(false);
+  });
+
   test("un refus laisse le bloc ouvert et AFFICHE le motif", async () => {
     modifierAvis.mockResolvedValue({ statut: "REFUSE_NON_MODIFIABLE" });
     rendre();
 
-    fireEvent.click(
-      screen.getByRole("button", { name: /Modifier cet avis/ }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: /Modifier cet avis/ }));
     fireEvent.click(
       screen.getByRole("button", { name: /Enregistrer la modification/ }),
     );
@@ -153,9 +173,7 @@ describe("FormulaireModification", () => {
      * separe les deux versions.
      */
     await waitFor(() => {
-      expect(
-        screen.getByText(/ne peut plus être modifié/),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/ne peut plus être modifié/)).toBeInTheDocument();
     });
 
     expect(blocEdition()).not.toHaveAttribute("hidden");
@@ -165,12 +183,8 @@ describe("FormulaireModification", () => {
     modifierAvis.mockResolvedValue({ statut: "FAIT" });
     rendre();
 
-    fireEvent.click(
-      screen.getByRole("button", { name: /Modifier cet avis/ }),
-    );
-    fireEvent.click(
-      screen.getByRole("radio", { name: /2 étoiles sur 5/ }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: /Modifier cet avis/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /2 étoiles sur 5/ }));
     fireEvent.click(
       screen.getByRole("button", { name: /Enregistrer la modification/ }),
     );

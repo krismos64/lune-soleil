@@ -275,6 +275,21 @@
   color: var(--ls-error);
 }
 
+/*
+ * L'ACCUSÉ DE SUCCÈS EMPLOIE `--ls-success`, le même jeton que l'état « Publié »
+ * de la carte, mesuré sur le fond BLANC des cartes et non sur le crème de la
+ * page, règle C31.
+ *
+ * IL RESTE VISIBLE APRÈS LA FERMETURE DU BLOC, et c'est son objet : sans lui, le
+ * formulaire disparaissait sans qu'aucun mot ne dise que l'enregistrement avait
+ * eu lieu, et un lecteur d'écran n'annonçait rien du tout.
+ */
+.succes {
+  margin: var(--ls-space-3) 0 0;
+  font-size: 0.875rem;
+  color: var(--ls-success);
+}
+
 .nonModifiable {
   margin: var(--ls-space-3) 0 0;
   font-size: 0.875rem;
