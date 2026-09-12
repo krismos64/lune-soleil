@@ -479,10 +479,7 @@ describe("enregistrerParametres", () => {
      * code de retour du transporteur ne pouvant le signaler.
      */
     ["un poids au-delà de la tranche", { poidsColisGrammes: 251 }],
-    [
-      "un poids sous le minimum du transporteur",
-      { poidsColisGrammes: 14 },
-    ],
+    ["un poids sous le minimum du transporteur", { poidsColisGrammes: 14 }],
     ["un poids décimal", { poidsColisGrammes: 200.5 }],
     ["une adresse d'alerte mal formée", { emailAlertes: "pas-une-adresse" }],
   ])("refuse %s", async (_libelle, surcharge) => {
