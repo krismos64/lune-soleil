@@ -282,6 +282,20 @@ départager. C'est le risque d'accès croisé qu'ADR-021 demande de couvrir.
 seuil de franchise, le seuil d'alerte de stock, l'adresse de réception des
 alertes et cinq interrupteurs.
 
+**Le poids de colis l'a rejointe le 12 septembre 2026**, migration
+`20260912160000_poids_colis_configurable`, LS-218. Ses deux bornes viennent du
+transporteur et non d'un choix commercial, et la haute est celle qui compte :
+
+```sql
+ALTER TABLE parametre_boutique
+  ADD CONSTRAINT chk_parametre_poids_colis_borne
+  CHECK (poids_colis_grammes >= 15 AND poids_colis_grammes <= 250);
+```
+
+Un poids au-delà de la tranche d'expédition ne fait échouer **aucun** appel :
+Sendcloud crée l'étiquette et facture un rattrapage après coup, sans qu'aucun
+code de retour ne le signale. Le refus ne peut donc venir que du projet.
+
 **SA CLÉ PRIMAIRE EST UN BOOLÉEN CONTRAINT À `true`**, et c'est sa seule
 particularité physique :
 
@@ -294,6 +308,19 @@ Une seconde ligne devient **impossible**, pas seulement déconseillée. Deux lig
 contradictoires seraient lues par `findFirst`, donc l'une ou l'autre selon le
 plan d'exécution : le tunnel facturerait un port différent d'une requête à
 l'autre sans qu'aucune erreur ne soit levée.
+
+**CETTE CLÉ BOOLÉENNE INTERDIT `findUnique`, ET LE DÉFAUT A VÉCU UN JOUR.** Le
+dataloader de Prisma **compacte les `findUnique` du même tick** en un `findMany`
+portant un filtre `in`, ✅ via Context7. Le type booléen n'a pas de filtre `in` :
+deux lectures concurrentes des paramètres rejettent **toutes les deux** sur
+« Unknown argument `in` ».
+
+Le défaut est **invisible hors concurrence**, une lecture seule ne se compactant
+avec rien, et il a vécu de LS-98 au 12 septembre 2026 sans qu'aucun test ne
+l'exerce : tous les appelants lisaient les paramètres une fois par requête HTTP.
+Le premier chemin qui en a lancé deux dans le même tick, la création d'étiquette
+de LS-218, a rougi. `lireParametres` emploie donc `findFirst`, et le cas 171 de
+`verifier-tests-mutation.sh` garde ce choix.
 
 **LA MIGRATION AMORCE LA LIGNE**, avec les valeurs d'ADR-035 écrites en clair et
 non lues dans l'environnement : une migration qui en dépend produit des bases

@@ -35,6 +35,7 @@ const quantite = valider(schemaQuantite, entree); // ou lève EntreeInvalideErro
 |---|---|---|
 | `schemaMontantCentimes` | entier positif ou nul | tout décimal, négatif, `NaN`, infini, chaîne |
 | `schemaQuantite` | entier strictement positif | zéro, négatif, décimal, non fini |
+| `schemaPoidsColis` | poids déclaré au transporteur, en grammes entiers, LS-218 : **borné à 15 et 250**, les deux valeurs venant de Sendcloud | un poids au-delà de la tranche d'expédition, qui ferait acheter une étiquette de la mauvaise tranche sans qu'aucune erreur ne le signale ; un poids sous le `min_weight` du transporteur, refusé par lui après l'aller-retour |
 | `schemaIdentifiant` | UUID | toute autre forme de chaîne |
 | `schemaHorodatageUtc` | ISO 8601 avec `Z` ou décalage explicite | une date sans fuseau, un horodatage numérique |
 | `schemaAdressePostale` | adresse de France métropolitaine | clé inconnue, code postal en 97 ou 98, pays autre que `FR` |
@@ -58,7 +59,7 @@ const quantite = valider(schemaQuantite, entree); // ou lève EntreeInvalideErro
 | `schemaDecisionAvis` | une décision de modération, LS-61 : `PUBLIE`, `REFUSE` ou `RETIRE` | `DEPOSE`, qui n'est pas une décision mais l'état d'arrivée : l'admettre renverrait un avis en file d'attente sans motif |
 | `schemaSignalementAvis` | un doute sur l'authenticité d'un avis, LS-77, article L111-7-2 : qualité déclarée, adresse email, motif **obligatoire** | un motif vide ou réduit à des caractères invisibles, la loi conditionnant le signalement au fait qu'il soit motivé |
 | `schemaClotureSignalement` | la décision de l'exploitante sur un signalement : `EXAMINE`, `RETENU` ou `ECARTE` | `NOUVEAU`, qui n'est pas une décision : l'admettre effacerait la date d'examen, ce que le CHECK C43 refuse en base |
-| `schemaParametresBoutique` | les paramètres commerciaux, LS-98 et ADR-043 : deux tarifs, le seuil de franchise, le seuil de stock faible, l'adresse d'alerte et cinq interrupteurs | un seuil de stock **nul**, qui n'alerterait jamais et serait une désactivation déguisée alors que `alerteStockFaible` existe pour cela ; une adresse d'alerte mal formée, que les CHECK ne savent pas juger |
+| `schemaParametresBoutique` | les paramètres commerciaux, LS-98 et ADR-043 : deux tarifs, le seuil de franchise, le seuil de stock faible, **le poids de colis** depuis LS-218, l'adresse d'alerte et cinq interrupteurs | un seuil de stock **nul**, qui n'alerterait jamais et serait une désactivation déguisée alors que `alerteStockFaible` existe pour cela ; une adresse d'alerte mal formée, que les CHECK ne savent pas juger |
 
 Zéro est accepté sur un montant et refusé sur une quantité, et c'est la seule
 différence entre les deux schémas : zéro centime est un montant légitime, en
