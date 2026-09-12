@@ -45,6 +45,7 @@ import { useId, useRef, useState } from "react";
 
 import styles from "./navigation-administration.module.css";
 import { NOM_BOUTIQUE } from "@/lib/seo";
+import { initialesClient } from "@/lib/nom-affiche";
 
 /**
  * Ce qu'une rubrique de la barre porte.
@@ -286,39 +287,6 @@ export function estRubriqueCourante(chemin: string, rubrique: string): boolean {
   return chemin === rubrique || chemin.startsWith(`${rubrique}/`);
 }
 
-/**
- * Les initiales affichees en pied de barre, deux lettres au plus.
- *
- * LE SEPARATEUR N'EST PAS L'ESPACE, ET C'EST CE QUI COMPTE. L'entree reelle est
- * la partie locale d'une adresse email, `stacy.menendez`, qui ne contient
- * JAMAIS d'espace : une decoupe sur `\s+` rendrait toujours un seul mot, donc
- * toujours une seule lettre, et le `slice(0, 2)` n'aurait aucun effet. La
- * premiere version de cette fonction faisait exactement cela, et son commentaire
- * decrivait un cas, « SM Stacy Menendez », qui ne pouvait pas se produire.
- *
- * Motif « cible de test inexistante » : un test ecrit sur « Stacy Menendez »
- * aurait verdi sans rien prouver de l'entree que la fonction recoit vraiment.
- *
- * LES TROIS SEPARATEURS COUVRENT LES FORMES D'ADRESSE COURANTES, point, tiret
- * et souligne, plus l'espace au cas ou un vrai nom arriverait le jour ou
- * `lireIdentite` en portera un.
- */
-export function initiales(nom: string): string {
-  const mots = nom
-    .trim()
-    .split(/[\s._-]+/)
-    .filter(Boolean);
-
-  if (mots.length === 0) {
-    return "?";
-  }
-
-  return mots
-    .slice(0, 2)
-    .map((mot) => mot[0]?.toUpperCase() ?? "")
-    .join("");
-}
-
 export function NavigationAdministration({
   comptages,
   nom,
@@ -557,7 +525,7 @@ export function NavigationAdministration({
 
         <div className={styles.identite}>
           <span className={styles.identiteInitiales} aria-hidden="true">
-            {initiales(nom)}
+            {initialesClient(nom)}
           </span>
           <span className={styles.identiteTextes}>
             <span className={styles.identiteNom}>{nom}</span>

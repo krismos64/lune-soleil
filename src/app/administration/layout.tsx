@@ -37,7 +37,7 @@ import { headers } from "next/headers";
 
 import { NavigationAdministration } from "@/components/navigation-administration";
 import { lireIdentite } from "@/services/autorisation";
-import { lireComptages } from "@/services/tableau-bord";
+import { lireComptages, lireNomAffiche } from "@/services/tableau-bord";
 
 import { BoutonDeconnexion } from "./bouton-deconnexion";
 import styles from "./layout.module.css";
@@ -87,15 +87,15 @@ export default async function LayoutAdministration({
     return <>{children}</>;
   }
 
-  const comptages = await lireComptages();
-
   /*
-   * LE NOM AFFICHE EST L'EMAIL, faute de mieux aujourd'hui : `lireIdentite` ne
-   * rend pas le nom, et l'ajouter toucherait la frontiere de session pour un
-   * gain d'affichage. La partie locale suffit a identifier la personne dans une
-   * administration a compte unique.
+   * LES DEUX LECTURES EN PARALLELE, elles ne dependent pas l'une de l'autre et
+   * la barre est rendue a chaque navigation : les enchainer ajouterait un aller
+   * vers la base au chemin de tout ecran d'administration.
    */
-  const nom = identite.email.split("@")[0] ?? identite.email;
+  const [comptages, nom] = await Promise.all([
+    lireComptages(),
+    lireNomAffiche(identite.utilisateurId, identite.email),
+  ]);
 
   return (
     <div className={styles.gabarit}>

@@ -90,6 +90,27 @@ export async function lireEnteteEspaceClient(
 }
 
 /**
+ * Le seul nom du compte, pour le pied de barre de l'administration.
+ *
+ * UNE COLONNE ET PAS DEUX, a la difference de `lireEnteteEspaceClient` : la
+ * barre d'administration n'affiche aucune mention de verification, et lire
+ * `emailVerifie` pour ne rien en faire serait une colonne de trop a chaque
+ * rendu d'ecran.
+ *
+ * LE NOM PEUT ETRE VIDE, comme au compte client : l'appelant decide du repli,
+ * ce fichier ne tranche pas un affichage.
+ */
+export async function lireNomCompte(
+  client: ClientBase,
+  utilisateurId: string,
+): Promise<{ nom: string | null } | null> {
+  return client.utilisateur.findUnique({
+    where: { id: utilisateurId },
+    select: { nom: true },
+  });
+}
+
+/**
  * Le compte pour l'export RGPD : identite et nombres de moyens de connexion.
  *
  * LES VALEURS NE SORTENT PAS, seul leur nombre : `_count` compte les comptes
