@@ -197,9 +197,27 @@ la lecture des interrupteurs, ni le filtre par utilisateur des avis.
 **La modification d'un avis par son auteur** devient faisable : LS-221 livre
 l'espace que `PARCOURS.md` nommait comme son préalable. Elle demande un ticket.
 
-**LS-29 attend toujours un envoi réel**, donc un déploiement. La production est
-en retard sur `main` de toute cette session : le workflow de LS-220 l'annoncera
-dès cette nuit, et c'est son premier cas d'usage réel.
+**LS-29 devient vérifiable.** Son critère 4 exige qu'un email soit reçu dans une
+vraie boîte, et le code est désormais servi.
+
+## Déployé en production le 12 septembre 2026, troisième fois du jour
+
+`97535e7` vers `2e9cd90`, douze commits, **aucune migration** : un simple
+remplacement d'image, sans tunnel ni relais.
+
+```
+Étape 5, attente d'un conteneur sain   conteneur sain après 10 s
+Étape 6, vérification domaine public   https://lune-soleil.fr/api/sante rend 200
+Étape 8, non-régression SmartPlanning  smartplanning.fr 200, analytics 200
+Port 3002 injoignable depuis l'extérieur, conforme.
+```
+
+**Ce que ce déploiement rend visible** : les quinze emails habillés du logo,
+l'écran « Mes avis » de l'espace client, les trois alertes branchées, et les
+deux phrases retirées des textes de rétractation et d'invitation aux avis.
+
+**Le workflow de LS-220 n'aura donc rien à signaler cette nuit**, l'écart étant
+nul : son premier cas d'usage réel attendra la prochaine fusion non déployée.
 
 **L'adresse d'alertes vaut toujours `a-configurer@exemple.invalid`** en
 production. Tant qu'elle n'est pas remplacée dans l'écran Paramètres, aucune des
