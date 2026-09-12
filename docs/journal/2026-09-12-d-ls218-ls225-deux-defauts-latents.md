@@ -7,9 +7,17 @@ consigne d'enchaîner LS-218 et LS-225 et de trancher seul.
 
 | Ticket | Sujet | État |
 |---|---|---|
-| LS-218 | le poids du colis devient un réglage, critère 11 | **9 critères sur 11**, PR #417 |
+| LS-218 | le poids du colis devient un réglage, critère 11 | **10 critères sur 11**, PR #417 |
 | LS-225 | modifier son propre avis, R10 | **terminé**, PR #418 |
-| LS-226 | deux tests d'intégration instables | **créée** |
+| LS-226 | deux tests d'intégration instables | **créée**, sa cause établie |
+
+Quatre pull requests fusionnées : #417 et #418 portent le code, **#419** les
+comptes et le README, **#420** une correction du présent journal.
+
+**Ce tableau a porté « 9 critères sur 11 » à sa première écriture**, et c'était
+faux : les neuf audités **plus** le onzième livré ce jour font dix. Seul le
+critère 10 reste ouvert, celui qui exige un colis réel. Le commentaire Jira,
+lui, disait juste dès le départ, ce qui montre à quoi sert de tenir les deux.
 
 ## Deux questions posées avant le départ, deux arbitrages rendus
 
