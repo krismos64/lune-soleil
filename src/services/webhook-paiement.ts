@@ -46,6 +46,11 @@ import { rendreFactureDeCommande } from "@/services/document-comptable";
 import { emettreFacture, EmetteurNonConfigureError } from "@/services/facture";
 import type { CommandeAFacturer } from "@/services/facture";
 import { deposerEnvoi } from "@/services/envoi-email";
+import {
+  destinataireAlerte,
+  leverAlerteEtNotifier,
+} from "@/services/notification-administration";
+import { formaterMontant } from "@/lib/montant";
 import { lienDocument, lienRetractation } from "@/lib/jeton-acces";
 import {
   consommerReservationEtSortirStock,
@@ -391,7 +396,7 @@ async function confirmerPaiement(
      * chemin qui decide « ce paiement est en trop » est celui qui, s'il se
      * trompe, rend l'argent d'une commande valide.
      */
-    await leverAlerteCritique(transaction, {
+    await leverAlerteEtNotifier(transaction, {
       type: "DOUBLE_ENCAISSEMENT",
       message:
         `Second encaissement refuse sur la commande ${commande.id}, ` +
@@ -399,6 +404,16 @@ async function confirmerPaiement(
         `session ${evenement.identifiantSession}. Remboursement MANUEL requis.`,
       typeCible: "Paiement",
       idCible: encaissement.paiementId,
+      /*
+       * LA DESCRIPTION DE L'EMAIL EST SOBRE, ET CE N'EST PAS UN APPAUVRISSEMENT.
+       * Le message ci-dessus cite l'identifiant de session Stripe et le montant :
+       * utile dans une table derriere une session, hors de question dans une
+       * boite email, invariant 9. L'exploitante a besoin de savoir QU'IL FAUT Y
+       * ALLER, le detail l'attend dans l'administration.
+       */
+      descriptionEmail:
+        "Un second paiement a ete encaisse sur une commande deja payee. " +
+        "Un remboursement manuel est necessaire.",
     });
 
     return {
@@ -770,6 +785,70 @@ async function deposerConfirmationAuClient(
       numero: commande.numero,
       lienFacture: lienDocument(facture.jetonAcces),
       lienRetractation: lienRetractation(facture.jetonRetractation),
+    },
+    origine: "SYSTEME",
+  });
+
+  await notifierCommandePayee(transaction, commande);
+}
+
+/**
+ * Previent l'exploitante qu'une commande vient d'etre payee, LS-29.
+ *
+ * ELLE EST SEPAREE DE LA CONFIRMATION AU CLIENT, et pas seulement par propriete :
+ * les deux messages n'ont ni le meme destinataire, ni le meme interrupteur, ni
+ * les memes consequences en cas d'echec. Un client qui ne recoit pas sa
+ * confirmation perd ses deux liens signes ; l'exploitante qui ne recoit pas son
+ * alerte trouve la commande dans son administration.
+ *
+ * `commandeId: null` ET NON L'IDENTIFIANT DE LA COMMANDE, ce qui est
+ * contre-intuitif. `envoi_en_attente_actif_unique` porte sur
+ * `(commandeId, modele)` : passer l'identifiant serait correct ici, les deux
+ * modeles differant, mais PostgreSQL traite les `NULL` comme distincts et cette
+ * notification n'a aucun besoin d'etre dedupliquee par commande. Le nul evite
+ * qu'un rejeu legitime du webhook soit refuse par une cle dont ce message n'a
+ * que faire.
+ *
+ * L'ECHEC DE LECTURE DES PARAMETRES NE FAIT PAS TOMBER LE WEBHOOK. Ce chemin
+ * confirme un PAIEMENT : laisser remonter une exception parce qu'une pastille
+ * ne sait pas si elle doit sonner annulerait la transaction entiere, donc
+ * l'encaissement lui-meme.
+ */
+async function notifierCommandePayee(
+  transaction: Prisma.TransactionClient,
+  commande: CommandeAFacturer,
+): Promise<void> {
+  let destinataire: string | null = null;
+
+  try {
+    destinataire = await destinataireAlerte("alerteCommandePayee");
+  } catch (erreur) {
+    journaliserErreur("destinataire d'alerte de commande illisible", erreur, {
+      commande: commande.id,
+    });
+
+    return;
+  }
+
+  if (destinataire === null || destinataire === "") {
+    return;
+  }
+
+  await deposerEnvoi(transaction, {
+    commandeId: null,
+    destinataire,
+    modele: "admin-commande-payee",
+    /*
+     * LE MODE DE LIVRAISON N'Y FIGURE PAS, et c'est un arbitrage plutot qu'un
+     * oubli. `CommandeAFacturer` ne le porte pas, et l'y ajouter elargirait un
+     * type partage par le chemin de facturation au profit d'une notification :
+     * la ligne « Livraison » de la maquette est tombee pour cette raison. Le
+     * mode se lit dans l'administration, a un clic.
+     */
+    variables: {
+      numero: commande.numero,
+      montant: formaterMontant(commande.totalCentimes),
+      nombreArticles: String(commande.lignes.length),
     },
     origine: "SYSTEME",
   });

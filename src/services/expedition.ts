@@ -47,6 +47,8 @@ import { TransporteurIndisponibleError } from "@/integrations/sendcloud/index";
 import type { ClientExpedition } from "@/integrations/sendcloud/expedition";
 import { methodeExigePointRetrait } from "@/integrations/sendcloud/methodes";
 import { journaliser, journaliserErreur } from "@/lib/journal";
+import { LIBELLES_LIVRAISON } from "@/lib/affichage-commande";
+import { deposerEnvoi } from "@/services/envoi-email";
 
 export type { CommandeAExpedier, ExpeditionDeclaree, SaisieExpedition };
 
@@ -216,9 +218,22 @@ export async function declarerExpedition({
   try {
     return await client.$transaction(
       async (transaction: Prisma.TransactionClient) => {
+        /*
+         * L'ADRESSE ET LE MODE SONT LUS ICI POUR L'EMAIL D'EXPEDITION, LS-29,
+         * F-MAIL-03.
+         *
+         * `emailNormalise` VIENT DE LA COMMANDE ET NON DU COMPTE : une commande
+         * passee sans compte n'a pas d'utilisateur rattache, et le client doit
+         * etre prevenu dans les deux cas. C'est aussi l'adresse figee a l'achat,
+         * invariant 3, donc celle a laquelle la personne attend son colis.
+         */
         const commande = await transaction.commande.findUnique({
           where: { id: identifiant },
-          select: { statut: true },
+          select: {
+            statut: true,
+            emailNormalise: true,
+            modeLivraison: true,
+          },
         });
 
         if (commande === null) {
@@ -284,6 +299,35 @@ export async function declarerExpedition({
           statutNouveau: "EXPEDIEE",
           origine: "ADMIN",
           acteurId,
+        });
+
+        /*
+         * L'EMAIL PART PAR L'OUTBOX, DANS CETTE TRANSACTION, ADR-033, LS-29.
+         *
+         * `deposerEnvoi` ET JAMAIS `envoyerDirect` : la regle E de securite.md
+         * l'impose pour ce qui decoule d'une transaction. Un appel direct
+         * depuis ce bloc rouvrirait le doublon qu'ADR-033 ferme, et un echec du
+         * fournisseur annulerait une expedition deja declaree.
+         *
+         * `origine: ADMIN` PARCE QU'UNE PERSONNE DECLENCHE, a la difference des
+         * taches planifiees qui ecrivent `SYSTEME`. La meme distinction que
+         * l'historisation ci-dessus, et pour la meme raison : savoir six mois
+         * plus tard qui a agi.
+         */
+        await deposerEnvoi(transaction, {
+          commandeId: identifiant,
+          destinataire: commande.emailNormalise,
+          modele: "expedition-en-route",
+          variables: {
+            mode: LIBELLES_LIVRAISON[commande.modeLivraison],
+            /*
+             * LA CHAINE VIDE PLUTOT QUE L'ABSENCE DE CLE. Le modele lit
+             * `variables.numeroSuivi ?? ""` : une remise en main propre n'a pas
+             * de numero, et le message s'adapte plutot que de lever.
+             */
+            numeroSuivi: saisieValidee.numeroSuivi ?? "",
+          },
+          origine: "ADMIN",
         });
 
         return { statut: "EXPEDIEE" as const };

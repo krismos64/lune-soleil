@@ -51,6 +51,8 @@ import {
   exigerReauthentificationRecente,
   ReauthentificationRequiseError,
 } from "@/services/reauthentification";
+import { deposerEnvoi } from "@/services/envoi-email";
+import { formaterMontant } from "@/lib/montant";
 
 /**
  * Ce qu'une demande de remboursement produit.
@@ -439,6 +441,55 @@ async function emettreAvoirApresRemboursement(parametres: {
         montantRenduCentimes,
         montantEncaisseCentimes,
       });
+
+      /*
+       * L'EMAIL DE REMBOURSEMENT PART PAR L'OUTBOX, DANS CETTE TRANSACTION,
+       * ADR-033, LS-29, F-MAIL-04.
+       *
+       * LA LECTURE EST FAITE ICI ET NON DANS `lireFacturePourAvoir`, qui sert
+       * plusieurs chemins : y ajouter deux colonnes pour un seul appelant
+       * elargirait une lecture partagee au profit d'un besoin local.
+       *
+       * LE MESSAGE ANNONCE CE QUI EST FAIT, la regle de redaction de LS-29
+       * l'imposant : ce bloc s'execute APRES que le prestataire a accepte le
+       * remboursement, et `montantRenduCentimes` est le montant reellement
+       * rendu, jamais celui qui a ete demande.
+       */
+      const commande = await transaction.commande.findUnique({
+        where: { id: commandeId },
+        select: { numero: true, emailNormalise: true },
+      });
+
+      if (commande !== null) {
+        await deposerEnvoi(transaction, {
+          /*
+           * `null` ET NON `commandeId`, ET LE TEST L'A PROUVE. La cle
+           * `envoi_en_attente_actif_unique` porte sur `(commandeId, modele)` :
+           * passer l'identifiant faisait echouer le SECOND remboursement d'une
+           * meme commande, la violation d'unicite avortant la transaction
+           * entiere, `25P02`, donc l'avoir avec elle.
+           *
+           * UN REMBOURSEMENT PARTIEL PEUT LEGITIMEMENT SE REPETER, regle F9 et
+           * ADR-032 : un geste commercial puis une retractation, ou deux
+           * partiels qui tiennent dans le restant. Deduplicquer par commande
+           * interdisait le second, et l'exploitante aurait vu un remboursement
+           * echouer sans comprendre pourquoi. PostgreSQL traitant les `NULL`
+           * comme distincts, le nul laisse passer les deux.
+           *
+           * Mesure du 12 septembre 2026, deux tests de `remboursement-garde`
+           * rougissaient : « expected 1 to be 2 » sur le compte d'avoirs.
+           */
+          commandeId: null,
+          destinataire: commande.emailNormalise,
+          modele: "remboursement-envoye",
+          variables: {
+            numero: commande.numero,
+            montant: formaterMontant(montantRenduCentimes),
+            numeroAvoir: avoir.numero,
+          },
+          origine: "ADMIN",
+        });
+      }
 
       journaliser(
         "info",
