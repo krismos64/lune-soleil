@@ -655,6 +655,89 @@ describe("depot d'un avis, criteres 2 et 6", () => {
   });
 });
 
+describe("alerte d'avis a moderer, LS-219", () => {
+  /**
+   * L'INTERRUPTEUR `alerteAvisAModerer` COMMANDE REELLEMENT UN ENVOI.
+   *
+   * LS-219 a branche cette alerte sans qu'aucun test ne l'exerce, trou constate
+   * le 12 septembre 2026 en posant sa preuve par mutation : le branchement
+   * existait, et rien ne disait qu'il lisait le bon interrupteur.
+   *
+   * LA MESURE PORTE SUR `envoi_en_attente`, la table d'outbox, et jamais sur un
+   * envoyeur double : c'est l'ecriture en base qui prouve qu'un email PARTIRA,
+   * un double n'attestant que de l'appel d'une fonction.
+   */
+  const EMAIL_ALERTES = "alertes-avis@exemple.invalid";
+
+  /**
+   * Pose la ligne de parametres avec l'interrupteur demande.
+   *
+   * ELLE ECRIT EN SQL ET NON PAR LE SERVICE : `enregistrerParametres` exige une
+   * session administratrice et une preuve d'identite recente, gardes que
+   * `parametres.sequential.test.ts` eprouve deja. Les rejouer ici n'ajouterait
+   * rien sur le BRANCHEMENT, seul objet de ces deux cas.
+   */
+  async function poserInterrupteur(actif: boolean): Promise<void> {
+    await client.query("DELETE FROM parametre_boutique");
+    await client.query(
+      `INSERT INTO parametre_boutique (
+         id, tarif_relais_centimes, tarif_domicile_centimes,
+         seuil_franchise_centimes, seuil_stock_faible, email_alertes,
+         alerte_commande_payee, alerte_paiement_annule, alerte_stock_faible,
+         alerte_message_recu, alerte_avis_a_moderer, modifie_a
+       ) VALUES (true, 410, 749, 3900, 1, $1, false, false, false, false, $2, now())`,
+      [EMAIL_ALERTES, actif],
+    );
+  }
+
+  /** Depose un avis par le parcours reel, et rend le nombre d'alertes deposees. */
+  async function deposerEtCompterAlertes(): Promise<number> {
+    const { commandeId } = await commanderEtPayer();
+    await marquerLivree(commandeId);
+    await inviterApresLivraison();
+
+    const valeur = await valeurJetonDeCommande(commandeId);
+    const etat = await lireEtatDepot(valeur);
+
+    if (etat.statut !== "OUVERT") {
+      throw new Error(`depot ferme, statut ${etat.statut}`);
+    }
+
+    await deposerAvis(valeur, [
+      {
+        ligneCommandeId: etat.pieces[0]!.ligneCommandeId,
+        note: 4,
+        commentaire: "Un joli bracelet, conforme a la description.",
+      },
+    ]);
+
+    const { rows } = await client.query<{ n: string }>(
+      `SELECT count(*)::text AS n FROM envoi_en_attente
+       WHERE destinataire = $1 AND variables->>'type' = 'AVIS_A_MODERER'`,
+      [EMAIL_ALERTES],
+    );
+
+    return Number(rows[0]?.n ?? "0");
+  }
+
+  it("previent l'exploitante quand l'interrupteur est coche", async () => {
+    await poserInterrupteur(true);
+
+    expect(await deposerEtCompterAlertes()).toBe(1);
+  });
+
+  it("ne previent pas quand l'interrupteur est decoche", async () => {
+    /*
+     * LE CAS QUI PORTE LA GARANTIE. Un branchement qui ignore la case a cocher
+     * passerait le cas precedent sans difficulte : c'est l'ABSENCE d'envoi qui
+     * prouve que l'interrupteur est lu.
+     */
+    await poserInterrupteur(false);
+
+    expect(await deposerEtCompterAlertes()).toBe(0);
+  });
+});
+
 describe("commande a plusieurs pieces, defauts de la revue critique", () => {
   /**
    * Ouvre une commande a deux pieces, livree et invitee, et rend son lien.
