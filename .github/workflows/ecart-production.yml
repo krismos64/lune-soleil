@@ -1,0 +1,273 @@
+# Ecart entre la production et `main`, LS-220.
+#
+# POURQUOI CE WORKFLOW EXISTE. Le 12 septembre 2026, la production tournait sur
+# un commit vieux de 66 commits et 4 migrations, dont sept stories livrees. Trois
+# rubriques d'administration apparaissaient encore sous « Bientot disponible »
+# alors que leurs ecrans etaient ecrits.
+#
+# AUCUN MECANISME NE L'A SIGNALE. Ni le hook `SessionStart`, ni le controle de
+# fin de session, ni le nocturne. L'ecart s'est creuse sur une journee entiere de
+# travail, et c'est une QUESTION DE CHRISTOPHE qui l'a revele, pas un controle.
+#
+# LE DECLENCHEMENT MANUEL DU DEPLOIEMENT N'EST PAS EN CAUSE, et ce workflow ne le
+# remet pas en question. `EXPLOITATION.md` l'ecrit : les migrations tournent
+# depuis le depot, le garde-fou destructif exige une lecture humaine, et chaque
+# deploiement recree des conteneurs chez un produit payant. Sur une boutique qui
+# prend des paiements, decider du moment est une bonne chose.
+#
+# CE QUI MANQUAIT EST LE SIGNAL. Une image publiee et jamais deployee ne se
+# distingue en rien d'une image deployee : les deux existent sur GHCR, et rien
+# ne comparait le SHA en service a celui de `main`.
+#
+# POURQUOI LE NOCTURNE ET NON LE HOOK `SessionStart`. Le hook le dirait au bon
+# moment, et interrogerait le reseau A CHAQUE DEMARRAGE de session : un
+# demarrage qui attend une connexion SSH est un demarrage qu'on finit par
+# contourner. Le controle de fin de session le dirait trop tard, la journee de
+# travail etant finie. Le nocturne le dit une fois par jour sans aucun cout
+# d'interaction, et c'est le rythme qui correspond au defaut mesure, un ecart
+# qui s'installe sur une journee.
+#
+# POURQUOI PAS `/api/sante`. La route est DELIBEREMENT muette, et son en-tete
+# l'ecrit : « ce qui est public ne dit RIEN d'exploitable ». Y poser le SHA du
+# commit en service contredirait cette decision pour economiser une connexion
+# SSH que ce workflow peut faire.
+#
+# IL N'OUVRE PAS D'ISSUE SUR UN ECART ORDINAIRE. Un commit de documentation
+# fusionne il y a dix minutes n'est pas un incident : le seuil est arrete plus
+# bas, et il distingue ce qui porte une MIGRATION de ce qui n'en porte pas.
+name: Ecart entre la production et main
+
+on:
+  schedule:
+    # 3 h UTC, une heure APRES le controle nocturne : les deux ouvrent des
+    # issues, et les separer evite deux notifications dans la meme minute.
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      raison:
+        description: "Pourquoi cette verification a la demande"
+        required: false
+        default: "Verification avant ou apres un deploiement"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  comparer:
+    name: Comparer le SHA en service a main
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      # ----------------------------------------------------------------------
+      # L'HISTORIQUE COMPLET EST NECESSAIRE, `fetch-depth: 0`.
+      #
+      # Le comptage des commits d'ecart et la detection des migrations lisent
+      # l'intervalle entre le SHA en service et `main` : un clone superficiel
+      # rendrait « unknown revision » sur le premier, qui a souvent plusieurs
+      # jours.
+      # ----------------------------------------------------------------------
+      - name: Recuperer le depot
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      # ----------------------------------------------------------------------
+      # LA CLE EST ENFERMEE cote machine par `command=` dans `authorized_keys` :
+      # elle ne peut executer QUE `deployer.sh`, quoi que ce workflow envoie.
+      # `--etat` ne change rien et ne donne aucun shell, c'est precisement le
+      # mode que le script prevoit pour le diagnostic.
+      #
+      # L'EMPREINTE D'HOTE SE FIGE. `StrictHostKeyChecking=no` accepterait
+      # n'importe quel hote qui repond, donc un detournement DNS.
+      # ----------------------------------------------------------------------
+      - name: Preparer la connexion
+        env:
+          CLE: ${{ secrets.VPS_CLE_PRIVEE }}
+          EMPREINTE_HOTE: ${{ secrets.VPS_EMPREINTE_HOTE }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$CLE" > ~/.ssh/deploiement
+          chmod 600 ~/.ssh/deploiement
+          printf '%s\n' "$EMPREINTE_HOTE" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      # ----------------------------------------------------------------------
+      # LE SHA EN SERVICE VIENT DE LA MACHINE, jamais d'une supposition.
+      #
+      # `--etat` imprime « Image en service : <sha> », lu par le script de la
+      # machine dans le `IMAGE_TAG` de son fichier d'environnement : c'est le
+      # tag REELLEMENT servi, et non le dernier workflow vert.
+      #
+      # IL DIT CE QU'IL N'A PAS PU VERIFIER, critere 4. Une machine injoignable
+      # ou une sortie illisible ouvre une issue disant « je n'ai pas pu
+      # conclure », jamais un vert silencieux : c'est le mode fail-open que ce
+      # depot a deja corrige deux fois, sur `verifier-migration.sh` et sur
+      # `verifier-jira.sh`.
+      # ----------------------------------------------------------------------
+      - name: Lire le SHA en service
+        id: production
+        env:
+          HOTE: ${{ secrets.VPS_HOTE }}
+          UTILISATEUR: ${{ secrets.VPS_UTILISATEUR }}
+        run: |
+          set -uo pipefail
+
+          if [ -z "${HOTE:-}" ] || [ -z "${UTILISATEUR:-}" ]; then
+            echo "conclusion=impossible" >> "$GITHUB_OUTPUT"
+            echo "motif=les secrets de connexion ne sont pas configures" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # LE `--` EST OBLIGATOIRE. Sans lui, `ssh` lit `--etat` comme une
+          # option A LUI et rend « unknown option », code 255. Le piege a fait
+          # echouer le premier retour arriere le 9 septembre 2026.
+          sortie=$(ssh -i ~/.ssh/deploiement \
+            -o BatchMode=yes -o ConnectTimeout=15 \
+            "$UTILISATEUR@$HOTE" -- "--etat" 2>&1) || {
+            echo "conclusion=impossible" >> "$GITHUB_OUTPUT"
+            echo "motif=la machine n'a pas repondu" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
+
+          sha=$(printf '%s\n' "$sortie" \
+            | sed -n 's/^Image en service : \([0-9a-f]\{7,40\}\).*$/\1/p' \
+            | head -1)
+
+          if [ -z "$sha" ]; then
+            echo "conclusion=impossible" >> "$GITHUB_OUTPUT"
+            echo "motif=la sortie de --etat ne porte aucun SHA lisible" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "conclusion=lu" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      # ----------------------------------------------------------------------
+      # LE SEUIL, critere 3 du ticket, et il distingue DEUX gravites.
+      #
+      # UN COMMIT DE DOCUMENTATION FUSIONNE IL Y A DIX MINUTES N'EST PAS UN
+      # INCIDENT. Une migration non deployee en est un : le schema du depot et
+      # celui de la production ont diverge, et la prochaine mise en service
+      # portera une migration qui n'a jamais tourne ailleurs qu'en local.
+      #
+      # LE COMPTE DE MIGRATIONS SE MESURE SUR L'INTERVALLE, `git diff --name-only`
+      # entre le SHA en service et `main`, filtre sur `prisma/migrations/`. Le
+      # compter autrement, par exemple en listant le dossier, dirait combien il
+      # y en a EN TOUT et non combien attendent.
+      # ----------------------------------------------------------------------
+      - name: Mesurer l'ecart
+        id: ecart
+        if: steps.production.outputs.conclusion == 'lu'
+        env:
+          SHA_PRODUCTION: ${{ steps.production.outputs.sha }}
+        run: |
+          set -uo pipefail
+
+          # UN SHA INCONNU DU DEPOT N'EST PAS UN ECART DE ZERO. Il arrive apres
+          # une reecriture d'historique, ou si la production sert une image
+          # construite ailleurs : le dire est utile, le taire serait faux.
+          if ! git cat-file -e "${SHA_PRODUCTION}^{commit}" 2>/dev/null; then
+            echo "conclusion=impossible" >> "$GITHUB_OUTPUT"
+            echo "motif=le SHA en service est inconnu de ce depot" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          commits=$(git rev-list --count "${SHA_PRODUCTION}..origin/main" 2>/dev/null || echo "")
+
+          if [ -z "$commits" ]; then
+            echo "conclusion=impossible" >> "$GITHUB_OUTPUT"
+            echo "motif=l'intervalle entre le SHA en service et main est illisible" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          migrations=$(git diff --name-only "${SHA_PRODUCTION}..origin/main" \
+            -- 'prisma/migrations/*/migration.sql' 2>/dev/null | wc -l | tr -d ' ')
+
+          echo "conclusion=mesure" >> "$GITHUB_OUTPUT"
+          echo "commits=$commits" >> "$GITHUB_OUTPUT"
+          echo "migrations=$migrations" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Ecart entre la production et \`main\`"
+            echo
+            echo "| Mesure | Valeur |"
+            echo "|---|---|"
+            echo "| SHA en service | \`$SHA_PRODUCTION\` |"
+            echo "| Commits d'avance sur \`main\` | $commits |"
+            echo "| Migrations non appliquees | $migrations |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ----------------------------------------------------------------------
+      # L'ISSUE EST OUVERTE DANS DEUX CAS SEULEMENT :
+      #
+      #   1. une MIGRATION attend, quel que soit le nombre de commits
+      #   2. le controle N'A PAS PU CONCLURE, critere 4
+      #
+      # UN ECART SANS MIGRATION NE PRODUIT RIEN, et c'est le critere 3 : la
+      # mesure reste dans le resume du workflow, consultable, sans reveiller
+      # personne pour un commit de documentation.
+      #
+      # LE CORPS NE RECOPIE AUCUNE SORTIE DE COMMANDE. Les journaux sont
+      # accessibles par le lien, et la sortie de `--etat` porte le nom des
+      # conteneurs de la machine, qu'un depot PUBLIC ne doit pas afficher.
+      # ----------------------------------------------------------------------
+      - name: Signaler ce qui merite de l'etre
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LIEN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          CONCLUSION_LECTURE: ${{ steps.production.outputs.conclusion }}
+          MOTIF_LECTURE: ${{ steps.production.outputs.motif }}
+          CONCLUSION_ECART: ${{ steps.ecart.outputs.conclusion }}
+          MOTIF_ECART: ${{ steps.ecart.outputs.motif }}
+          COMMITS: ${{ steps.ecart.outputs.commits }}
+          MIGRATIONS: ${{ steps.ecart.outputs.migrations }}
+        run: |
+          set -uo pipefail
+
+          titre=""
+          corps=""
+
+          if [ "$CONCLUSION_LECTURE" != "lu" ]; then
+            titre="Ecart production, controle sans conclusion"
+            corps=$(printf 'Le controle de LS-220 n a pas pu lire le SHA en service : %s.\n\nIl DIT ce qu il n a pas pu verifier plutot que de passer au vert, motif « controle d acceptation sans base ».\n\nJournal : %s\n' \
+              "${MOTIF_LECTURE:-raison non precisee}" "$LIEN")
+          elif [ "$CONCLUSION_ECART" != "mesure" ]; then
+            titre="Ecart production, controle sans conclusion"
+            corps=$(printf 'Le SHA en service a ete lu, mais l ecart n a pas pu etre mesure : %s.\n\nJournal : %s\n' \
+              "${MOTIF_ECART:-raison non precisee}" "$LIEN")
+          elif [ "${MIGRATIONS:-0}" -gt 0 ]; then
+            titre="Une migration attend son deploiement"
+            corps=$(printf 'La production est en retard de %s commit(s) sur `main`, dont **%s migration(s)** non appliquee(s).\n\nUne migration non deployee fait diverger le schema du depot de celui de la production : la prochaine mise en service portera une migration qui n a jamais tourne ailleurs qu en local.\n\nDeployer par le workflow « Deployer en production », jamais a la main. `docs/deploiement/EXPLOITATION.md` porte la procedure.\n\nJournal : %s\n' \
+              "${COMMITS:-?}" "$MIGRATIONS" "$LIEN")
+          else
+            echo "Ecart de ${COMMITS:-0} commit(s), aucune migration : rien a signaler."
+            exit 0
+          fi
+
+          # L ETIQUETTE SE CREE AVANT D ETRE POSEE, LS-199. `gh issue create
+          # --label` echoue si elle n existe pas, et l etape entiere tombe :
+          # le garde-fou cense rendre un ecart visible serait alors lui-meme
+          # muet. Une etiquette vit dans les REGLAGES du depot, pas dans le
+          # depot, donc la creer a la main ne survit ni a un clone ni a un
+          # depot recree. `--force` rend l instruction idempotente.
+          gh label create ecart-production \
+            --description "La production est en retard sur main, LS-220" \
+            --color D93F0B --force
+
+          # UNE SEULE ISSUE OUVERTE A LA FOIS. Sans ce filtre, une semaine sans
+          # deploiement produirait sept issues identiques, et le bruit ferait
+          # ignorer la premiere.
+          existante=$(gh issue list --state open --label ecart-production \
+            --json number --jq '.[0].number' 2>/dev/null || true)
+
+          if [ -n "$existante" ]; then
+            gh issue comment "$existante" --body "$corps"
+            echo "Commentaire ajoute a l issue #$existante."
+          else
+            gh issue create --title "$titre" --body "$corps" \
+              --label ecart-production
+          fi

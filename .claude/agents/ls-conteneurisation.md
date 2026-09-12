@@ -105,6 +105,7 @@ existe et propose des modifications.
 | `docker-compose.production.yml` | les trois services, leurs limites, leurs volumes |
 | `deploiement/deployer.sh` | **la bascule, le retour arrière et l'état**, LS-138 |
 | `.github/workflows/deployer.yml` | ce qui l'appelle, en déclenchement **manuel** |
+| `.github/workflows/ecart-production.yml` | le **signal** qu'une image publiée attend son déploiement, LS-220, nocturne à 3 h UTC. Il lit le SHA en service par `deployer.sh --etat` sur la clé enfermée, et n'ouvre une issue que si une **migration** attend ou s'il n'a pas pu conclure |
 | `deploiement/sauvegarder-base.sh` | la sauvegarde quotidienne, base **et** fichiers, **chiffrée** depuis LS-107 |
 | `deploiement/lune-soleil-sauvegarde.{service,timer}` | son déclenchement par systemd, 02h30 UTC |
 | `deploiement/copier-sauvegarde-hors-site.sh` | la copie vers **Backblaze B2**, LS-107 |

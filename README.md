@@ -887,6 +887,8 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-nginx-mutation.sh             # prouve le précédent par mutation
 ./scripts/verifier-taches-planifiees.sh          # toute tâche déclarée est déclenchée, LS-206
 ./scripts/verifier-taches-planifiees-mutation.sh # prouve le précédent par mutation
+./scripts/verifier-ecart-production.sh           # la mesure d'écart production contre main, LS-220
+./scripts/verifier-ecart-production-mutation.sh  # prouve le précédent par mutation
 ./scripts/verifier-plafonds-corps.sh             # service, Next et Nginx s'accordent sur la taille, LS-207
 ./scripts/verifier-plafonds-corps-mutation.sh    # prouve le précédent par mutation
 ./scripts/mesurer-site-deploye.sh                # Core Web Vitals du site déployé, LS-140
