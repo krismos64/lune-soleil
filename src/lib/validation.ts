@@ -725,6 +725,39 @@ export const schemaDepotAvis = z
   .max(20, "Vingt pièces au plus peuvent être notées en une fois.");
 
 /**
+ * La modification d'un avis par son auteur, LS-225, regles R8 et R10.
+ *
+ * `ligneCommandeId` N'Y FIGURE PAS, ET C'EST LA DIFFERENCE AVEC LE DEPOT. Un
+ * depot cree l'avis et doit donc dire SUR QUELLE PIECE il porte ; une
+ * modification designe un avis qui existe deja, et la piece est celle a
+ * laquelle il est rattache. L'accepter ici permettrait de deplacer un avis
+ * d'une piece vers une autre, donc de faire porter une note sur un article que
+ * personne n'a note.
+ *
+ * `avisId` NE PROUVE RIEN A LUI SEUL, invariant 2. Ce schema valide sa FORME ;
+ * le droit d'ecrire dessus vient du recoupement avec la session, que le filtre
+ * du repository porte. Un schema qui laisserait croire l'inverse serait le
+ * piege que `schemaIdentifiant` decrit deja dans son propre commentaire.
+ *
+ * LES BORNES DE NOTE ET DE COMMENTAIRE SONT CELLES DU DEPOT, et elles sont
+ * recopiees plutot que partagees avec `schemaSaisieAvis`, dont elles ne
+ * different que par l'absence de la ligne. Extraire un socle commun pour deux
+ * champs rendrait plus difficile de voir ce que chaque schema accepte.
+ */
+export const schemaModificationAvis = z.strictObject({
+  avisId: schemaIdentifiant,
+  note: z
+    .int("Une note entière est attendue.")
+    .min(1, "La note va de 1 à 5.")
+    .max(5, "La note va de 1 à 5."),
+  commentaire: z
+    .string()
+    .trim()
+    .max(2000, "Un commentaire de 2000 caractères au plus est attendu.")
+    .nullable(),
+});
+
+/**
  * Une decision de moderation, LS-61, regles R4, R5 et R9.
  *
  * `PUBLIE`, `REFUSE` ET `RETIRE` SEULEMENT : `DEPOSE` n'est pas une decision,

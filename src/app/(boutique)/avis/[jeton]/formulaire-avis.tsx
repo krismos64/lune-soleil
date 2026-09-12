@@ -175,13 +175,25 @@ export function FormulaireAvis({
                             }))
                           }
                         />
+                        {/*
+                          LE CHIFFRE VISIBLE EST `aria-hidden`, ET LE TEXTE
+                          MASQUE PORTE LE NOM ENTIER. Sans cela, le nom
+                          accessible vaut « 2étoiles sur 5 » sans espace : le
+                          calcul du nom concatene les noeuds et NORMALISE les
+                          espaces de bord, donc l'espace initial du texte masque
+                          disparait. Defaut present depuis LS-61 et mesure le
+                          12 septembre 2026 par le test de composant de LS-225,
+                          sur un rendu qui paraissait juste a l'oeil.
+                        */}
                         <label
                           htmlFor={identifiant}
                           className={styles.libelleNote}
                         >
-                          {valeur}
+                          <span aria-hidden="true">{valeur}</span>
                           <span className={styles.masqueVisuellement}>
-                            {valeur > 1 ? " étoiles sur 5" : " étoile sur 5"}
+                            {valeur > 1
+                              ? `${valeur} étoiles sur 5`
+                              : `${valeur} étoile sur 5`}
                           </span>
                         </label>
                       </span>

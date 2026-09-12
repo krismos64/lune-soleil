@@ -32,6 +32,7 @@ import { redirect } from "next/navigation";
 import { exigerSession } from "@/services/autorisation";
 import { DELAI_PUBLICATION_JOURS, listerMesAvis } from "@/services/avis";
 
+import { FormulaireModification } from "./formulaire-modification";
 import styles from "./avis.module.css";
 import stylesCompte from "../compte.module.css";
 
@@ -150,6 +151,17 @@ export default async function PageMesAvis() {
               {ligne.etat === "PUBLIE" ? (
                 <p className={`${styles.etat} ${styles.publie}`}>
                   Publié le {formaterJour(ligne.publieA ?? ligne.deposeA)}
+                  {/*
+                    LA DATE DE MODIFICATION S'AJOUTE A CELLE DE PUBLICATION,
+                    jamais a sa place, regles R8 et R11. `publieA` porte la
+                    PREMIERE publication et ne bouge pas, ce que l'article
+                    D111-10 attend de la date affichee ; l'article L111-7-2
+                    impose par ailleurs de signaler les mises a jour, d'ou la
+                    seconde.
+                  */}
+                  {ligne.modifieA === null ? null : (
+                    <>, modifié le {formaterJour(ligne.modifieA)}</>
+                  )}
                 </p>
               ) : null}
 
@@ -180,6 +192,26 @@ export default async function PageMesAvis() {
                   souhaitez en savoir plus.
                 </p>
               ) : null}
+
+              {/*
+                LE CAS NON MODIFIABLE DIT POURQUOI, critere 6 de LS-225, plutot
+                que de faire disparaitre le bouton sans explication. Un bouton
+                absent se lit comme un oubli du site, et le client chercherait
+                ailleurs une action qui n'existe pas.
+              */}
+              {ligne.modifiable ? (
+                <FormulaireModification
+                  avisId={ligne.id}
+                  note={ligne.note}
+                  commentaire={ligne.commentaire}
+                  produitNom={ligne.produitNom}
+                />
+              ) : (
+                <p className={styles.nonModifiable}>
+                  Un avis qui n&apos;a pas été publié ne peut plus être
+                  modifié.
+                </p>
+              )}
             </li>
           ))}
         </ul>
