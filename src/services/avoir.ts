@@ -345,15 +345,53 @@ export async function rembourserCommande(
   const montantRendu = issue.montantCentimes;
 
   /*
-   * L'INTENTION EST MARQUEE ABOUTIE DES QUE L'ARGENT EST PARTI, avant meme
-   * l'ecriture de l'avoir. Une intention sans `aboutieA` est un appel dont
-   * personne ne sait s'il est parti ; une intention aboutie sans avoir est un
-   * document a etablir, ce que l'alerte `AVOIR_NON_EMIS` signale. Les deux
-   * etats sont distincts et se traitent differemment.
+   * L'INTENTION N'EST PLUS MARQUEE ABOUTIE ICI, LS-224, corrige le 12 septembre
+   * 2026. Elle l'est DANS la transaction qui ecrit l'avoir, voir plus bas.
+   *
+   * CE QUE L'ANCIEN ORDRE OUVRAIT. Entre ce marquage et l'ecriture de l'avoir,
+   * le montant n'etait compte par AUCUN des deux termes de la borne : ni par
+   * `montantAvoirCentimes`, l'avoir n'existant pas encore, ni par les intentions
+   * en cours, celle-ci venant de cesser d'en etre une. Une demande concurrente
+   * s'y jugeait legitime, et `chk_facture_avoir_borne` la refusait par une
+   * EXCEPTION au lieu du refus lisible `MONTANT_TROP_ELEVE`.
+   *
+   * LE COMMENTAIRE DE `reserverIntentionRemboursement` ASSUMAIT CETTE FENETRE,
+   * « son seul effet serait d'autoriser une demande concurrente que le CHECK
+   * rattraperait ». C'est exact, et c'etait le probleme : le CHECK rattrape
+   * l'argent, jamais le message. Le test de concurrence echouait quatre fois
+   * sur cinq, instabilite mesuree et non supposee.
+   *
+   * LA DISTINCTION QUE L'ANCIEN ORDRE PORTAIT RESTE VRAIE : une intention sans
+   * `aboutieA` est un appel dont personne ne sait s'il est parti. Elle est
+   * simplement etablie une instruction plus tard, dans la meme transaction que
+   * l'avoir, donc les deux naissent ensemble ou pas du tout.
    */
-  await marquerIntentionAboutie(prisma, intention.intentionId);
+
+  /*
+   * LE DESTINATAIRE EST LU HORS TRANSACTION, ET CETTE POSITION EST LE CORRECTIF.
+   *
+   * DEFAUT MESURE LE 12 SEPTEMBRE 2026 : cette lecture etait DANS la transaction
+   * d'emission, et le test de concurrence de LS-160 est passe au rouge. Une
+   * requete de plus allonge la transaction, or l'intention a deja ete marquee
+   * aboutie a la ligne precedente : elle ne reserve donc plus sa part dans la
+   * borne de `reserverIntentionRemboursement`, pendant que l'avoir n'est pas
+   * encore ecrit. La fenetre ainsi rallongee laissait une seconde demande
+   * concurrente se juger legitime, et `chk_facture_avoir_borne` la refusait par
+   * une exception au lieu du refus lisible attendu.
+   *
+   * LA LEÇON VAUT AU-DELA DE CE FICHIER : ajouter une lecture « inoffensive »
+   * dans une transaction deplace une fenetre de course que rien d'autre ne
+   * signale. Ici la donnee ne depend d'aucune ecriture de la transaction, elle
+   * n'a donc rien a y faire.
+   */
+  const destinataireClient = await prisma.commande.findUnique({
+    where: { id: commandeId },
+    select: { numero: true, emailNormalise: true },
+  });
 
   return emettreAvoirApresRemboursement({
+    destinataireClient,
+    intentionId: intention.intentionId,
     commandeId,
     facture,
     paiementId: paiement.id,
@@ -393,6 +431,21 @@ async function emettreAvoirApresRemboursement(parametres: {
   identifiantRemboursement: string;
   /** La demande de retractation a l'origine, LS-174. Absente hors retractation. */
   demandeRetractationId?: string | undefined;
+  /**
+   * A qui part l'email de remboursement, LU HORS TRANSACTION par l'appelant.
+   *
+   * `null` QUAND LA COMMANDE EST INTROUVABLE, cas qui ne devrait pas se
+   * produire ici : aucun email ne part alors, plutot que d'inventer une adresse.
+   */
+  destinataireClient: { numero: string; emailNormalise: string } | null;
+  /**
+   * L'intention a marquer aboutie DANS la transaction d'emission, LS-224.
+   *
+   * Elle reserve sa part dans la borne tant que l'avoir n'existe pas : les deux
+   * ecritures partagent donc la transaction, sans quoi une fenetre s'ouvre ou le
+   * montant n'est compte nulle part.
+   */
+  intentionId: string;
   correlation?: Correlation | undefined;
 }): Promise<IssueRemboursementCommande> {
   const {
@@ -404,11 +457,13 @@ async function emettreAvoirApresRemboursement(parametres: {
     motif,
     identifiantRemboursement,
     demandeRetractationId,
+    destinataireClient,
+    intentionId,
     correlation,
   } = parametres;
 
   try {
-    return await prisma.$transaction(async (transaction) => {
+    const issue = await prisma.$transaction(async (transaction) => {
       const { annee, rang } = await reserverNumero(transaction, "AVOIR");
       const numero = `A-${annee}-${String(rang).padStart(4, "0")}`;
 
@@ -443,53 +498,11 @@ async function emettreAvoirApresRemboursement(parametres: {
       });
 
       /*
-       * L'EMAIL DE REMBOURSEMENT PART PAR L'OUTBOX, DANS CETTE TRANSACTION,
-       * ADR-033, LS-29, F-MAIL-04.
-       *
-       * LA LECTURE EST FAITE ICI ET NON DANS `lireFacturePourAvoir`, qui sert
-       * plusieurs chemins : y ajouter deux colonnes pour un seul appelant
-       * elargirait une lecture partagee au profit d'un besoin local.
-       *
-       * LE MESSAGE ANNONCE CE QUI EST FAIT, la regle de redaction de LS-29
-       * l'imposant : ce bloc s'execute APRES que le prestataire a accepte le
-       * remboursement, et `montantRenduCentimes` est le montant reellement
-       * rendu, jamais celui qui a ete demande.
+       * L'INTENTION ABOUTIT DANS LA MEME TRANSACTION QUE L'AVOIR, LS-224.
+       * Tant que l'avoir n'est pas ecrit, elle reserve sa part dans la borne :
+       * il n'existe plus d'instant ou le montant echappe aux deux termes.
        */
-      const commande = await transaction.commande.findUnique({
-        where: { id: commandeId },
-        select: { numero: true, emailNormalise: true },
-      });
-
-      if (commande !== null) {
-        await deposerEnvoi(transaction, {
-          /*
-           * `null` ET NON `commandeId`, ET LE TEST L'A PROUVE. La cle
-           * `envoi_en_attente_actif_unique` porte sur `(commandeId, modele)` :
-           * passer l'identifiant faisait echouer le SECOND remboursement d'une
-           * meme commande, la violation d'unicite avortant la transaction
-           * entiere, `25P02`, donc l'avoir avec elle.
-           *
-           * UN REMBOURSEMENT PARTIEL PEUT LEGITIMEMENT SE REPETER, regle F9 et
-           * ADR-032 : un geste commercial puis une retractation, ou deux
-           * partiels qui tiennent dans le restant. Deduplicquer par commande
-           * interdisait le second, et l'exploitante aurait vu un remboursement
-           * echouer sans comprendre pourquoi. PostgreSQL traitant les `NULL`
-           * comme distincts, le nul laisse passer les deux.
-           *
-           * Mesure du 12 septembre 2026, deux tests de `remboursement-garde`
-           * rougissaient : « expected 1 to be 2 » sur le compte d'avoirs.
-           */
-          commandeId: null,
-          destinataire: commande.emailNormalise,
-          modele: "remboursement-envoye",
-          variables: {
-            numero: commande.numero,
-            montant: formaterMontant(montantRenduCentimes),
-            numeroAvoir: avoir.numero,
-          },
-          origine: "ADMIN",
-        });
-      }
+      await marquerIntentionAboutie(transaction, intentionId);
 
       journaliser(
         "info",
@@ -510,6 +523,57 @@ async function emettreAvoirApresRemboursement(parametres: {
         montantCentimes: avoir.montantCentimes,
       };
     });
+
+    /*
+     * L'EMAIL PART APRES LE COMMIT, ET CETTE POSITION EST LE CORRECTIF, LS-29,
+     * F-MAIL-04.
+     *
+     * DEFAUT MESURE LE 12 SEPTEMBRE 2026 : depose DANS la transaction, il
+     * faisait rougir le test de concurrence de LS-160. L'intention a deja ete
+     * marquee aboutie avant l'emission, donc elle ne reserve plus sa part dans
+     * la borne sous verrou ; toute ecriture supplementaire allonge la fenetre
+     * pendant laquelle l'avoir n'est pas encore visible, et une seconde demande
+     * concurrente s'y juge legitime. `chk_facture_avoir_borne` la refusait alors
+     * par une exception au lieu du refus lisible attendu.
+     *
+     * MEME REGLE QUE L'APPEL RESEAU, que ce service tient deja hors transaction :
+     * ce qui n'a pas besoin d'etre atomique avec l'ecriture n'y entre pas. Un
+     * email non depose est rattrapable, une fenetre de course sur l'argent ne
+     * l'est pas.
+     *
+     * SON ECHEC N'ANNULE RIEN, l'avoir etant commite : il est journalise, et
+     * l'exploitante voit le document dans l'administration.
+     */
+    if (issue.statut === "REMBOURSE" && destinataireClient !== null) {
+      try {
+        await deposerEnvoi(prisma, {
+          /*
+           * `null` ET NON `commandeId` : la cle `envoi_en_attente_actif_unique`
+           * porte sur `(commandeId, modele)`, et un remboursement partiel se
+           * repete legitimement, regle F9 et ADR-032. Deduplicquer par commande
+           * interdirait le second envoi.
+           */
+          commandeId: null,
+          destinataire: destinataireClient.emailNormalise,
+          modele: "remboursement-envoye",
+          variables: {
+            numero: destinataireClient.numero,
+            montant: formaterMontant(montantRenduCentimes),
+            numeroAvoir: issue.numeroAvoir,
+          },
+          origine: "ADMIN",
+        });
+      } catch (erreur) {
+        journaliserErreur(
+          "email de remboursement non depose",
+          erreur,
+          { commande: commandeId },
+          correlation,
+        );
+      }
+    }
+
+    return issue;
   } catch (erreur) {
     /*
      * L'ARGENT EST PARTI ET LE DOCUMENT MANQUE. C'est le pire etat de ce
