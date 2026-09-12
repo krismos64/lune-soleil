@@ -1,7 +1,15 @@
 # Archiver la mémoire quand l'index approche son plafond
 
-`verifier-config-claude.sh` renvoie ici quand `MEMORY.md` dépasse 180 lignes.
+`verifier-config-claude.sh` renvoie ici quand `MEMORY.md` approche son plafond.
 Cette page dit quoi faire, et surtout ce qu'il ne faut pas faire.
+
+**Le seuil se lit dans le script, jamais ici.** Cette page a porté « 180 lignes »
+pendant quelques heures, valeur d'une première version abandonnée le jour même :
+un seuil recopié dans un document diverge de celui qui agit.
+
+```bash
+grep -n "lignes_index. -gt" scripts/verifier-config-claude.sh
+```
 
 ## Pourquoi un plafond
 
