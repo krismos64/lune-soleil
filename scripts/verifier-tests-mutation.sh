@@ -2309,28 +2309,38 @@ echo
 echo "Interrupteurs d'alerte et filtre des avis, LS-219 et LS-221"
 echo
 
-# Cas 168 : L'INTERRUPTEUR DE STOCK FAIBLE N'EST PLUS LU.
+# Cas 168 : LE MAUVAIS INTERRUPTEUR EST LU POUR LE STOCK FAIBLE.
 #
-# L'ETAT D'AVANT LS-219, remis tel quel : `lireEmailAlertes` rend l'adresse SANS
-# consulter le booleen. La case a cocher de l'ecran des parametres redevient
-# alors un bouton qui ne commande rien, exactement le defaut que LS-219 ferme :
-# l'exploitante la decoche et continue de recevoir les alertes.
+# CE QUE LS-219 FERME : une alerte qui consulte un booleen qui n'est pas le sien.
+# L'exploitante decoche « stock faible » et continue d'etre prevenue, ou le coche
+# sans jamais l'etre, selon l'etat de l'interrupteur emprunte. Une case a cocher
+# qui commande AUTRE CHOSE qu'elle-meme est pire qu'une case morte.
 #
-# LE CAS NOMINAL NE VOIT RIEN, et c'est pourquoi ce cas existe : avec
-# l'interrupteur COCHE, les deux versions se comportent a l'identique. Seul le
-# test negatif, celui qui decoche, separe les deux.
-mute "$WEBHOOK" 's/destinataire = await destinataireAlerte\("alerteStockFaible"\);/destinataire = await lireEmailAlertes();/'
-cas "interrupteur de stock faible ignore" integration \
-  "n'envoie RIEN quand l'interrupteur est decoche"
+# LA MUTATION CHANGE L'ARGUMENT ET NON L'APPEL, et cette contrainte est reelle :
+# remplacer l'appel par `lireEmailAlertes()` ne COMPILE pas, la fonction n'etant
+# pas importee dans ce fichier. Les tests rougissaient alors sur une erreur de
+# build, ce qui ne prouve rien de la garde. Mesure du 12 septembre 2026.
+#
+# LE TEST VISE EST CELUI QUI COCHE, pas celui qui decoche : les deux
+# interrupteurs valent `false` dans le cas negatif, donc les deux versions s'y
+# comportent a l'identique. C'est le cas nominal qui separe ici.
+mute "$WEBHOOK" 's/destinataire = await destinataireAlerte\("alerteStockFaible"\);/destinataire = await destinataireAlerte("alerteCommandePayee");/'
+cas "mauvais interrupteur lu pour le stock faible" integration \
+  "previent quand la derniere piece part"
 
-# Cas 169 : L'INTERRUPTEUR D'AVIS A MODERER N'EST PLUS LU.
+# Cas 169 : LE MAUVAIS INTERRUPTEUR EST LU POUR L'AVIS A MODERER.
 #
 # MEME DEFAUT, AUTRE SERVICE, et le repeter n'est pas redondant : les deux
-# branchements ont ete ecrits separement, et rien n'oblige le second a suivre
-# le premier. Un seul cas laisserait l'autre libre de deriver.
-mute "$AVIS" 's/const destinataire = await destinataireAlerte\("alerteAvisAModerer"\);/const destinataire = await lireEmailAlertes();/'
-cas "interrupteur d'avis a moderer ignore" integration \
-  "n'envoie RIEN quand l'interrupteur est decoche"
+# branchements ont ete ecrits separement, et rien n'oblige le second a suivre le
+# premier. Un seul cas laisserait l'autre libre de deriver.
+#
+# CE CAS A REVELE UN TROU REEL en etant ecrit : AUCUN test n'exerçait cette
+# alerte. LS-219 l'avait branchee sans qu'aucune assertion ne la couvre, et la
+# mutation n'avait donc rien a faire rougir. Les deux tests de
+# `avis.sequential.test.ts` sont nes de ce constat.
+mute "$AVIS" 's/const destinataire = await destinataireAlerte\("alerteAvisAModerer"\);/const destinataire = await destinataireAlerte("alerteCommandePayee");/'
+cas "mauvais interrupteur lu pour l'avis a moderer" integration \
+  "previent l'exploitante quand l'interrupteur est coche"
 
 echo
 
