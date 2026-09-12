@@ -130,16 +130,30 @@ l'auteur a délibérément omis.
 chacun des 176 cas, soit plusieurs heures. Les six cas neufs ont été prouvés un à
 un, ce que le critère exige.
 
-## Une instabilité préexistante, mesurée et non supposée
+## Une instabilité préexistante, observée dans les deux sens
 
-La suite complète rendait un échec sur `comptabilite-administration`. Mesure
-faite `git stash` appliqué, donc sur le dépôt sain : **deux** échecs sans le
-travail en cours, **un** avec. L'instabilité préexiste et ce travail n'en ajoute
-aucune.
+Trois exécutions de la suite complète, sur trois états du dépôt :
 
-Le test lit la vue comptable **sans filtre** et attend une liste vide, ce qui
-n'est vrai que si aucun fichier voisin n'a émis de facture avant lui. La base
-d'intégration est partagée. LS-226 porte le sujet.
+```
+main avant LS-225   2 echecs   comptabilite ET action-sensible
+main avec LS-225    1 echec    comptabilite seule
+main fusionnee      1 echec    action-sensible seule
+```
+
+**La troisième est la démonstration directe** : même dépôt, même commit, et
+l'échec a changé de fichier. Aucun code n'a bougé entre la seconde et la
+troisième, seul l'ordre d'exécution a changé.
+
+**La cause est la même dans les deux cas, et elle est nommée.** Les deux
+assertions mesurent l'état **global** de la base au lieu de celui que leur propre
+fichier a produit : « aucune pièce émise » d'un côté, « exactement un
+utilisateur » de l'autre. La base d'intégration est partagée entre fichiers.
+
+Le second test porte d'ailleurs la forme saine deux lignes plus bas : il compte
+les lignes **de cet utilisateur précis**, et celle-là est juste.
+
+LS-226 porte le sujet, et son critère 1 est déjà rempli, les deux causes étant
+établies par la mesure.
 
 ## Documentation propagée
 
@@ -157,8 +171,11 @@ booléenne. `VALIDATION.md` recense les deux schémas neufs.
 **LS-218 attend LS-153** pour son critère 10, un colis réel. Rien d'autre ne la
 bloque, son code étant servi et audité.
 
-**LS-226 est faisable immédiatement** et sans dépendance : deux tests à ancrer
-sur leurs propres données plutôt que sur une base globalement vide.
+**LS-226 est faisable immédiatement** et sans dépendance, et son diagnostic est
+déjà fait : deux assertions à ancrer sur les données que leur fichier a créées
+plutôt que sur l'état global de la base. La réparation évidente, vider la table
+dans un `beforeAll`, ferait rougir les fichiers voisins, défaut rencontré en
+livrant LS-219.
 
 **LS-145 reste le candidat sans dépendance** signalé par les sessions
 précédentes : mesurer F-ADM-07 au chronomètre, cible posée en LS-15 et jamais
