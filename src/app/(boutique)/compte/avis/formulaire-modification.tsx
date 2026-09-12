@@ -189,10 +189,7 @@ export function FormulaireModification({
           </fieldset>
 
           <div className={styles.champ}>
-            <label
-              htmlFor={`commentaire-${avisId}`}
-              className={styles.libelle}
-            >
+            <label htmlFor={`commentaire-${avisId}`} className={styles.libelle}>
               Votre commentaire{" "}
               <span className={styles.facultatif}>(facultatif)</span>
             </label>
@@ -206,11 +203,14 @@ export function FormulaireModification({
             />
           </div>
 
-          <button type="submit" className={styles.boutonEnvoyer} disabled={enCours}>
+          <button
+            type="submit"
+            className={styles.boutonEnvoyer}
+            disabled={enCours}
+          >
             {enCours ? "Envoi en cours…" : "Enregistrer la modification"}
           </button>
         </form>
-
       </div>
 
       {/*

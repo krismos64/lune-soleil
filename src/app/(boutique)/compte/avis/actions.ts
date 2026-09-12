@@ -78,8 +78,7 @@ export async function modifierAvis(
    * plutot que zero qu'une coercition rendrait et qu'un `min(1)` refuserait
    * ensuite avec un message parlant de note.
    */
-  const note =
-    typeof noteBrute === "string" ? Number(noteBrute) : Number.NaN;
+  const note = typeof noteBrute === "string" ? Number(noteBrute) : Number.NaN;
 
   /*
    * UNE CHAINE VIDE DEVIENT `null`, ce qui distingue « aucun commentaire » de
