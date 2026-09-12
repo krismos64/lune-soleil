@@ -12,10 +12,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import {
-  CID_LOGO,
-  habillerEnHtml,
-} from "@/integrations/email/gabarit-html";
+import { CID_LOGO, habillerEnHtml } from "@/integrations/email/gabarit-html";
 import { rendreModele } from "@/integrations/email/modeles";
 import { NOM_BOUTIQUE } from "@/lib/seo";
 
@@ -135,7 +132,8 @@ describe("habillerEnHtml, liens", () => {
      * la rendait sensible a toute retouche du gabarit sans rien prouver de
      * plus.
      */
-    const liens = rendu.match(/href="https:\/\/lune-soleil\.fr\/jeton\/abc"/g) ?? [];
+    const liens =
+      rendu.match(/href="https:\/\/lune-soleil\.fr\/jeton\/abc"/g) ?? [];
     expect(liens.length).toBe(2);
   });
 

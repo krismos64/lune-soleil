@@ -541,7 +541,7 @@ describe("creerEnvoyeurSmtp, le message remis au transport", () => {
     expect(typeof envoi.text).toBe("string");
     expect((envoi.text as string).length).toBeGreaterThan(0);
     expect(typeof envoi.html).toBe("string");
-    expect(envoi.html as string).toContain("<html lang=\"fr\">");
+    expect(envoi.html as string).toContain('<html lang="fr">');
   });
 
   it("joint le logo en piece jointe integree, jamais en URL", async () => {
@@ -552,8 +552,7 @@ describe("creerEnvoyeurSmtp, le message remis au transport", () => {
      */
     const envoi = await envoyerUnMessage();
     const pieces = envoi.attachments as
-      | { cid?: string; contentDisposition?: string }[]
-      | undefined;
+      { cid?: string; contentDisposition?: string }[] | undefined;
 
     expect(pieces).toHaveLength(1);
     expect(pieces?.[0]?.cid).toBe(CID_LOGO);
