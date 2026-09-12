@@ -1181,6 +1181,31 @@ jobs:
         run: ./scripts/verifier-taches-planifiees-mutation.sh
 
       # ----------------------------------------------------------------------
+      # Controle 9y ter. La logique du signal d'ecart de production, LS-220.
+      # Textuel et git, secondes. Ni Docker, ni base, ni reseau.
+      #
+      # LE WORKFLOW `ecart-production.yml` NE PEUT PAS ETRE JOUE ICI : il
+      # demande la cle SSH de production. Sa LOGIQUE, elle, tient en deux
+      # commandes git, et c'est elle qui decide d'ouvrir une issue ou de se
+      # taire.
+      #
+      # LE SENS QUI COMPTE EST LE TROISIEME : un SHA inconnu du depot doit faire
+      # DIRE au controle qu'il ne peut pas conclure. Le compter comme « zero
+      # commit d'ecart » ferait annoncer une production a jour alors que
+      # personne ne sait ce qu'elle sert, mode fail-open que ce depot a deja
+      # corrige deux fois.
+      - name: 9y ter. La mesure d'ecart de production distingue ce qui compte
+        run: ./scripts/verifier-ecart-production.sh
+
+      # Preuve par mutation du controle precedent, LS-220. Textuel, secondes.
+      #
+      # ELLE A TROUVE UN TROU REEL a sa premiere execution : le controle
+      # cherchait la CHAINE `git cat-file -e`, qu'un `if false &&` insere devant
+      # laisse intacte. Le motif porte desormais sur la condition entiere.
+      - name: 9y quater. Preuve par mutation du signal d'ecart
+        run: ./scripts/verifier-ecart-production-mutation.sh
+
+      # ----------------------------------------------------------------------
       # Controle 9z. Les trois plafonds de televersement decroissent dans le
       # bon ordre, LS-207. Textuel, secondes.
       #
