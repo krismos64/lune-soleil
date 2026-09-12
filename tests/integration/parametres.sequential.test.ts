@@ -159,6 +159,7 @@ function parametresValides(surcharge: Record<string, unknown> = {}) {
     tarifDomicileCentimes: TARIF_DOMICILE,
     seuilFranchiseCentimes: SEUIL_FRANCHISE,
     seuilStockFaible: 1,
+    poidsColisGrammes: 200,
     emailAlertes: "alertes@exemple.invalid",
     alerteCommandePayee: true,
     alertePaiementAnnule: true,
@@ -470,6 +471,19 @@ describe("enregistrerParametres", () => {
     ["un tarif décimal", { tarifRelaisCentimes: 4.1 }],
     ["un tarif négatif", { tarifRelaisCentimes: -410 }],
     ["un seuil de stock nul", { seuilStockFaible: 0 }],
+    /*
+     * LES DEUX BORNES DU POIDS SONT ÉPROUVÉES, LS-218 critère 11, et la haute
+     * compte plus que la basse. Un poids au-delà de la tranche ne fait échouer
+     * AUCUN appel chez Sendcloud : l'étiquette est créée, et l'écart rattrapé
+     * par une facturation après coup. Le refus doit donc venir d'ici, aucun
+     * code de retour du transporteur ne pouvant le signaler.
+     */
+    ["un poids au-delà de la tranche", { poidsColisGrammes: 251 }],
+    [
+      "un poids sous le minimum du transporteur",
+      { poidsColisGrammes: 14 },
+    ],
+    ["un poids décimal", { poidsColisGrammes: 200.5 }],
     ["une adresse d'alerte mal formée", { emailAlertes: "pas-une-adresse" }],
   ])("refuse %s", async (_libelle, surcharge) => {
     await expect(

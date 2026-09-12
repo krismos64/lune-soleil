@@ -1291,6 +1291,26 @@ sortie=$(R "UPDATE parametre_boutique SET seuil_stock_faible = 0 WHERE id = true
 verifier_rejet "seuil de stock faible nul rejeté" \
   "chk_parametre_seuil_stock_positif" "$sortie"
 
+# LE POIDS DU COLIS EST BORNÉ PAR LA TRANCHE D'EXPÉDITION, LS-218.
+#
+# LES DEUX BORNES SONT ÉPROUVÉES, et la haute compte plus que la basse. Un
+# poids au-delà de la tranche ne fait échouer AUCUN appel : Sendcloud crée
+# l'étiquette, et rattrape l'écart en facturant un supplément après coup. Le
+# défaut serait donc invisible jusqu'à la facture, ce qu'aucun test applicatif
+# ne peut voir.
+sortie=$(R "UPDATE parametre_boutique SET poids_colis_grammes = 900 WHERE id = true;")
+verifier_rejet "poids de colis au-delà de la tranche rejeté" \
+  "chk_parametre_poids_colis_borne" "$sortie"
+
+# LA BORNE BASSE ÉPROUVÉE EST 14 ET NON 0, et la nuance est le contrôle
+# lui-même. Zéro serait rejeté par un CHECK écrit `> 0`, qui laisserait pourtant
+# passer un poids de 5 g que Sendcloud REFUSE, `min_weight` valant 0,015 kg au
+# domicile. Tester la valeur juste sous le seuil réel est ce qui distingue ce
+# contrôle d'une formalité.
+sortie=$(R "UPDATE parametre_boutique SET poids_colis_grammes = 14 WHERE id = true;")
+verifier_rejet "poids de colis sous le minimum du transporteur rejeté" \
+  "chk_parametre_poids_colis_borne" "$sortie"
+
 # L'ADRESSE D'ALERTE N'EST JAMAIS VIDE. Une chaîne vide désactiverait les cinq
 # alertes en silence, quel que soit l'état de leurs interrupteurs.
 #

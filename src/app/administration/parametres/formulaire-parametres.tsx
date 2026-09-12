@@ -230,6 +230,36 @@ export function FormulaireParametres({
           />
         </div>
 
+        <div className={styles.champ}>
+          <label htmlFor="poidsColisGrammes" className={styles.libelle}>
+            Poids déclaré au transporteur, en grammes
+          </label>
+          <input
+            id="poidsColisGrammes"
+            {...marqueurs("poidsColisGrammes")}
+            name="poidsColisGrammes"
+            type="number"
+            min={15}
+            max={250}
+            step={1}
+            defaultValue={parametres.poidsColisGrammes}
+            aria-describedby="aide-poids"
+            className={styles.saisie}
+            required
+          />
+          {/*
+            L'AIDE DIT LA CONSEQUENCE, PAS SEULEMENT LA BORNE. Un poids au-dela
+            de 250 g ferait acheter une etiquette de la mauvaise tranche, que le
+            transporteur rattrape en facturant APRES coup : rien a l'ecran ne le
+            signalerait, d'ou la phrase plutot qu'un simple « entre 15 et 250 ».
+          */}
+          <p id="aide-poids" className={styles.aide}>
+            Poids forfaitaire annoncé pour chaque colis, emballage compris. La
+            tarification du transporteur s&apos;arrête à 250 g : au-delà, un
+            supplément serait facturé après l&apos;envoi.
+          </p>
+        </div>
+
         <ul className={styles.interrupteurs}>
           {ALERTES.map((alerte) => (
             <li key={alerte.nom} className={styles.interrupteur}>

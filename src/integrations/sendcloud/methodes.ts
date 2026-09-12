@@ -17,26 +17,39 @@
 import type { ModeLivraison } from "@/generated/prisma/enums";
 
 /**
- * Poids forfaitaire d'un colis, en grammes. Arbitrage de Christophe du
- * 10 septembre 2026.
+ * Poids maximum d'un colis pour la tranche d'expedition retenue, en grammes.
  *
- * AUCUN POIDS N'EXISTE AU SCHEMA, ni sur `Produit` ni sur `Variante`, et c'est
- * un choix et non un oubli : le catalogue ne porte que des boucles d'oreilles,
- * dont les colis pesent moins de 250 g. Un champ par variante serait plus juste
- * mais demanderait une migration, une saisie a l'editeur et une story entiere,
- * pour une precision dont personne n'a besoin aujourd'hui.
+ * CE N'EST PAS LE POIDS EMPLOYE, c'est sa BORNE. Le poids reel est un reglage,
+ * `ParametreBoutique.poidsColisGrammes`, arbitrage de Christophe du
+ * 10 septembre 2026 : « configurable et non une constante, lisible et
+ * modifiable, jamais enfoui dans le code ». La premiere livraison de LS-218
+ * l'avait pose en constante ici, donc modifiable par un deploiement seulement,
+ * et ce module a ete corrige le 12 septembre 2026.
  *
- * 200 ET NON 250, ET L'ECART EST LA MARGE. La tranche la plus legere de
- * Sendcloud s'arrete a 0,251 kg : poser la valeur a sa limite ferait basculer
- * de tranche au premier emballage un peu lourd, et le transporteur facture
- * alors un rattrapage. Cinquante grammes couvrent le carton, le papier de soie
- * et l'etiquette.
+ * POURQUOI LA BORNE RESTE ICI QUAND LA VALEUR PART EN BASE. Elle n'est pas une
+ * decision commerciale : elle decoule des trois identifiants de methode
+ * ci-dessous, qui couvrent tous la tranche 0 a 0,251 kg. Le jour ou cette table
+ * change de tranche, la borne change avec elle, dans le meme fichier.
+ *
+ * 250 ET NON 251, la borne de Sendcloud etant exclusive, et pour ne pas inviter
+ * a s'y coller. La meme valeur vit dans `schemaPoidsColis` et dans
+ * `chk_parametre_poids_colis_borne`, qui la font respecter.
  *
  * CE QUI ROUVRIRA LE SUJET : une piece plus lourde au catalogue, un bracelet en
- * pierres ou un coffret. Le poids par variante deviendra alors necessaire. Ce
- * forfait doit donc rester LISIBLE et modifiable, jamais enfoui dans un appel.
+ * pierres ou un coffret. Le poids par VARIANTE deviendra alors necessaire, et
+ * un reglage unique ne suffira plus.
  */
-export const POIDS_FORFAITAIRE_GRAMMES = 200;
+export const POIDS_COLIS_MAXIMUM_GRAMMES = 250;
+
+/**
+ * Le poids employe quand la base n'en porte aucun, en grammes.
+ *
+ * IL N'EST PAS UN REPLI DE FONCTIONNEMENT. `lireParametresBoutique` leve quand
+ * la ligne manque, donc aucun chemin reel n'atteint cette valeur : elle sert de
+ * DEFAUT a la colonne, migration `20260912160000_poids_colis_configurable`, et
+ * l'ecrire ici la garde lisible a cote de la tranche qu'elle respecte.
+ */
+export const POIDS_COLIS_DEFAUT_GRAMMES = 200;
 
 /**
  * Les methodes d'expedition, par mode de livraison, pour la tranche 0-0,25 kg.

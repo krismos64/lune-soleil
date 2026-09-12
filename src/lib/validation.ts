@@ -146,6 +146,32 @@ export const schemaQuantite = z
   .min(1, "Une quantite doit etre strictement positive.");
 
 /**
+ * Poids forfaitaire d'un colis, en GRAMMES entiers, LS-218.
+ *
+ * IL A UNE BORNE HAUTE, ET C'EST CE QUI LE DISTINGUE DE `schemaQuantite`. Les
+ * trois methodes d'expedition retenues couvrent la tranche 0 a 0,251 kg,
+ * `integrations/sendcloud/methodes.ts` porte leurs identifiants : au-dela,
+ * l'etiquette achetee serait de la mauvaise tranche.
+ *
+ * LE DEFAUT NE SE VERRAIT PAS AU MOMENT DU GESTE. Sendcloud ne refuse pas un
+ * colis trop lourd pour sa methode, il cree l'etiquette et facture un
+ * rattrapage APRES coup. Aucun code de retour ne le signale, donc ni le service
+ * ni l'ecran ne peuvent l'attraper : la borne doit vivre ici et en base, avant
+ * que la valeur ne parte.
+ *
+ * LA BORNE BASSE VIENT AUSSI DU TRANSPORTEUR : `min_weight` vaut 0,015 kg au
+ * domicile et 0,011 au locker. Sous ce seuil, Sendcloud REFUSE la creation,
+ * apres l'aller-retour, donc apres que l'exploitante a cru son colis pret.
+ *
+ * 250 ET NON 251, la borne haute de Sendcloud etant exclusive. Les deux bornes
+ * vivent aussi dans `chk_parametre_poids_colis_borne`.
+ */
+export const schemaPoidsColis = z
+  .int("Un poids en grammes entiers est attendu.")
+  .min(15, "Un poids doit valoir au moins 15 g, minimum du transporteur.")
+  .max(250, "Un poids ne peut pas depasser 250 g, tranche d'expedition.");
+
+/**
  * Identifiant technique, UUID.
  *
  * VALIDER LA FORME N'AUTORISE RIEN, invariant 2. Ce schema empeche une chaine
@@ -807,6 +833,7 @@ export const schemaParametresBoutique = z.strictObject({
   tarifDomicileCentimes: schemaMontantCentimes,
   seuilFranchiseCentimes: schemaMontantCentimes.nullable(),
   seuilStockFaible: schemaQuantite,
+  poidsColisGrammes: schemaPoidsColis,
   emailAlertes: schemaEmailClient,
   alerteCommandePayee: z.boolean(),
   alertePaiementAnnule: z.boolean(),

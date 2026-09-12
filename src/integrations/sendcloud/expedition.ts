@@ -31,7 +31,7 @@
 import type { ModeLivraison } from "@/generated/prisma/enums";
 
 import { TransporteurIndisponibleError } from "./index";
-import { POIDS_FORFAITAIRE_GRAMMES, methodePour } from "./methodes";
+import { methodePour } from "./methodes";
 
 const BASE_EXPEDITION = "https://panel.sendcloud.sc/api/v2";
 
@@ -66,6 +66,20 @@ export type DemandeExpedition = {
   adresse: AdresseExpedition;
   /** L'identifiant du point de retrait choisi, exige par les deux modes de retrait. */
   pointRetraitId?: string | null;
+  /**
+   * Le poids du colis, en GRAMMES entiers, LS-218 critere 11.
+   *
+   * IL ARRIVE PAR LA DEMANDE ET N'EST PAS LU ICI, et c'est la frontiere de ce
+   * module : un fournisseur qui irait chercher un reglage en base melangerait
+   * l'acces aux donnees a la forme d'une API tierce. Le service le lit sur
+   * `ParametreBoutique` et le remet, comme il remet deja le mode.
+   *
+   * SA BORNE HAUTE VIT EN AMONT, dans `schemaPoidsColis` et dans
+   * `chk_parametre_poids_colis_borne` : la revalider ici donnerait un troisieme
+   * endroit ou la meme regle se dit, donc un troisieme a corriger le jour ou la
+   * tranche change.
+   */
+  poidsGrammes: number;
 };
 
 /** Ce que la creation rend au projet, une fois traduite. */
@@ -180,7 +194,7 @@ export function creerClientExpeditionSendcloud({
           email: demande.adresse.email,
           telephone: demande.adresse.telephone ?? "",
           order_number: demande.reference,
-          weight: (POIDS_FORFAITAIRE_GRAMMES / 1000).toFixed(3),
+          weight: (demande.poidsGrammes / 1000).toFixed(3),
           request_label: true,
           shipment: { id: methodePour(demande.mode) },
           /*

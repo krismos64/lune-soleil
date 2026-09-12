@@ -15,7 +15,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   METHODES_PAR_MODE,
-  POIDS_FORFAITAIRE_GRAMMES,
+  POIDS_COLIS_DEFAUT_GRAMMES,
+  POIDS_COLIS_MAXIMUM_GRAMMES,
   methodeExigePointRetrait,
   methodePour,
 } from "@/integrations/sendcloud/methodes";
@@ -85,20 +86,34 @@ describe("methodeExigePointRetrait", () => {
   });
 });
 
-describe("POIDS_FORFAITAIRE_GRAMMES", () => {
+describe("les bornes de poids et le defaut", () => {
+  /*
+   * CE BLOC A CHANGE DE SUJET LE 12 SEPTEMBRE 2026, LS-218 critere 11, et le
+   * changement est le coeur de la correction. Le poids EMPLOYE n'est plus une
+   * constante : il vit sur `ParametreBoutique.poidsColisGrammes`, reglable sans
+   * redeploiement, meme regle que le seuil de franco de LS-27. Ce qui reste ici
+   * est sa BORNE, qui decoule de la table des methodes et non d'un arbitrage
+   * commercial.
+   *
+   * CES TESTS GARDENT DONC LA BORNE ET NON LA VALEUR. Les faire porter sur un
+   * reglage de base n'aurait aucun sens : une valeur que l'exploitante change
+   * ne se verrouille pas par un test unitaire, elle se borne par un CHECK et un
+   * schema Zod, ce que `verifier-schema.sh` et `validation` eprouvent.
+   */
+
   /*
    * LA BORNE DE TRANCHE EST 251 g CHEZ SENDCLOUD, `max_weight` valant 0,251 kg
-   * sur les trois methodes retenues. Le forfait doit rester DANS la tranche,
-   * sans quoi la creation part sur une methode qui ne couvre pas le poids
-   * declare et le transporteur facture un rattrapage.
+   * sur les trois methodes retenues. La borne du projet doit rester DANS la
+   * tranche, sans quoi un poids accepte partirait sur une methode qui ne le
+   * couvre pas et le transporteur facturerait un rattrapage.
    */
   it("tient dans la tranche la plus legere de Sendcloud", () => {
-    expect(POIDS_FORFAITAIRE_GRAMMES).toBeLessThan(251);
+    expect(POIDS_COLIS_MAXIMUM_GRAMMES).toBeLessThan(251);
   });
 
   /*
-   * LA MARGE EST LE POINT DE L'ARBITRAGE, et ce test la garde. Christophe a
-   * annonce des colis « de moins de 250 g » ; poser le forfait A 250 laisserait
+   * LE DEFAUT GARDE SA MARGE, ET C'EST LE POINT DE L'ARBITRAGE. Christophe a
+   * annonce des colis « de moins de 250 g » ; poser le defaut A 250 laisserait
    * UN gramme avant le basculement, donc aucune marge pour le carton, le papier
    * de soie et l'etiquette. Cinquante grammes les couvrent.
    *
@@ -106,15 +121,28 @@ describe("POIDS_FORFAITAIRE_GRAMMES", () => {
    * Christophe, ce qui est exactement le raccourci a empecher.
    */
   it("garde une marge d'au moins quarante grammes sous la borne", () => {
-    expect(251 - POIDS_FORFAITAIRE_GRAMMES).toBeGreaterThanOrEqual(40);
+    expect(251 - POIDS_COLIS_DEFAUT_GRAMMES).toBeGreaterThanOrEqual(40);
   });
 
   /*
-   * IL RESTE PLAUSIBLE POUR UN COLIS REEL. Un forfait a 1 g passerait les deux
-   * tests ci-dessus en declarant un poids que Sendcloud refuse : `min_weight`
-   * vaut 0,015 kg sur la methode domicile, 0,011 sur le locker.
+   * LE DEFAUT RESTE PLAUSIBLE POUR UN COLIS REEL. Un defaut a 1 g passerait les
+   * deux tests ci-dessus en declarant un poids que Sendcloud refuse :
+   * `min_weight` vaut 0,015 kg sur la methode domicile, 0,011 sur le locker.
    */
   it("depasse le poids minimum accepte par les methodes retenues", () => {
-    expect(POIDS_FORFAITAIRE_GRAMMES).toBeGreaterThan(15);
+    expect(POIDS_COLIS_DEFAUT_GRAMMES).toBeGreaterThan(15);
+  });
+
+  /*
+   * LE DEFAUT TIENT DANS LES BORNES QUE LA BASE FAIT RESPECTER, et ce test
+   * relie les deux moities de la correction. Un defaut de colonne hors des
+   * bornes du CHECK rendrait la migration APPLICABLE mais toute ecriture
+   * suivante impossible : la ligne existante passerait, la premiere
+   * modification par l'ecran echouerait sans que rien n'ait prevenu.
+   */
+  it("le defaut de colonne respecte la borne haute du projet", () => {
+    expect(POIDS_COLIS_DEFAUT_GRAMMES).toBeLessThanOrEqual(
+      POIDS_COLIS_MAXIMUM_GRAMMES,
+    );
   });
 });

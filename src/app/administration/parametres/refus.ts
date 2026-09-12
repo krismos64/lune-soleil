@@ -39,6 +39,7 @@ export type ChampParametres =
   | "tarifDomicile"
   | "seuilFranchise"
   | "seuilStockFaible"
+  | "poidsColisGrammes"
   | "emailAlertes";
 
 /** Un refus de saisie, avec le message affichable et le champ concerne. */
@@ -60,6 +61,18 @@ const CHAMPS_ZOD = [
     nom: "seuilStockFaible" as const,
     message:
       "Le seuil d'alerte doit être un nombre entier d'exemplaires, au moins 1.",
+  },
+  {
+    cle: "poidsColisGrammes",
+    nom: "poidsColisGrammes" as const,
+    /*
+     * LE MESSAGE NOMME LES BORNES ET LEUR RAISON. « Poids invalide » laisserait
+     * chercher : l'exploitante ne peut deviner ni que 250 g est la limite d'une
+     * TRANCHE tarifaire, ni que 15 g est le minimum que le transporteur
+     * accepte. Les deux viennent de lui, aucune n'est une contrainte du site.
+     */
+    message:
+      "Le poids doit être un nombre entier de grammes, entre 15 et 250, bornes du transporteur.",
   },
   {
     cle: "tarifRelaisCentimes",

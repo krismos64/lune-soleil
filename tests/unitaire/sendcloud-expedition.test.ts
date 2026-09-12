@@ -27,11 +27,21 @@ const ADRESSE = {
   telephone: null,
 };
 
+/*
+ * LE POIDS ARRIVE PAR LA DEMANDE DEPUIS LS-218 critere 11, il n'est plus une
+ * constante du module. La valeur employee ici n'est PAS le defaut de la colonne,
+ * 200 g, et c'est deliberé : un test ecrit avec la valeur par defaut passerait
+ * a l'identique si le module se remettait a lire une constante, donc il ne
+ * prouverait pas la propagation.
+ */
+const POIDS_DEMANDE = 180;
+
 const DEMANDE_DOMICILE: DemandeExpedition = {
   reference: "C-TEST-0001",
   mode: "DOMICILE",
   adresse: ADRESSE,
   pointRetraitId: null,
+  poidsGrammes: POIDS_DEMANDE,
 };
 
 const DEMANDE_RELAIS: DemandeExpedition = {
@@ -39,6 +49,7 @@ const DEMANDE_RELAIS: DemandeExpedition = {
   mode: "POINT_RELAIS",
   adresse: ADRESSE,
   pointRetraitId: "123456",
+  poidsGrammes: POIDS_DEMANDE,
 };
 
 /** Une reponse de creation reussie, forme minimale que le module lit. */
@@ -142,14 +153,21 @@ describe("creation d'un colis", () => {
    * LE POIDS PART EN KILOGRAMMES, forme attendue par Sendcloud, quand le projet
    * raisonne en grammes. La conversion vit au bord et nulle part ailleurs : la
    * dupliquer ferait diverger les deux unites au premier ajustement.
+   *
+   * CE TEST PROUVE DEUX CHOSES DEPUIS LS-218 critere 11, et la seconde est
+   * neuve : la conversion, et le fait que le poids EMPLOYE soit celui de la
+   * demande. La valeur attendue derive de `POIDS_DEMANDE` plutot que d'etre
+   * ecrite en dur, sans quoi remettre une constante dans le module laisserait
+   * ce test vert.
    */
-  it("convertit le poids forfaitaire en kilogrammes", async () => {
+  it("convertit en kilogrammes le poids recu dans la demande", async () => {
     const appel = vi.fn().mockResolvedValue(reponseCreee());
 
     await client(appel).creer(DEMANDE_DOMICILE);
     const corps = JSON.parse(appel.mock.calls[0]![1]!.body as string);
 
-    expect(corps.parcel.weight).toBe("0.200");
+    expect(corps.parcel.weight).toBe((POIDS_DEMANDE / 1000).toFixed(3));
+    expect(corps.parcel.weight).toBe("0.180");
   });
 
   /*

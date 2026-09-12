@@ -1455,6 +1455,21 @@ model ParametreBoutique {
   // n'alerterait jamais, ce que les interrupteurs d'alerte expriment déjà.
   seuilStockFaible Int @map("seuil_stock_faible")
 
+  // Poids forfaitaire du colis, en GRAMMES entiers, LS-218. Le catalogue ne
+  // porte aucun poids, ni sur `Produit` ni sur `Variante` : ce forfait le
+  // remplace tant que les pièces sont des boucles d'oreilles.
+  //
+  // CONFIGURABLE ET NON CONSTANT, arbitrage de Christophe du 10 septembre 2026.
+  // Une valeur enfouie dans le code exigerait un déploiement le jour où une
+  // pièce plus lourde entre au catalogue.
+  //
+  // CHECK entre 15 et 250, les DEUX bornes venant du transporteur. La haute est
+  // la TRANCHE d'expédition retenue, qui s'arrête à 0,251 kg : au-delà,
+  // l'étiquette achetée serait de la mauvaise tranche et le transporteur
+  // facturerait un rattrapage. La basse est `min_weight`, 0,015 kg au domicile :
+  // sous ce seuil, Sendcloud refuse la création après l'aller-retour.
+  poidsColisGrammes Int @default(200) @map("poids_colis_grammes")
+
   // UN SEUL DESTINATAIRE POUR TOUTES LES ALERTES, décision 4 d'ADR-043. Un
   // destinataire par alerte ouvrirait un envoi vers une adresse arbitraire
   // depuis un écran d'administration, vecteur d'exfiltration et non réglage.
