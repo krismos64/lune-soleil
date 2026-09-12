@@ -32,7 +32,7 @@
  */
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { journaliser } from "@/lib/journal";
+import { journaliser, journaliserErreur } from "@/lib/journal";
 import type { Correlation } from "@/lib/journal";
 import {
   calculerEcheanceRetractation,
@@ -49,6 +49,8 @@ import {
   lireDemandeParCommande,
 } from "@/repositories/retractation";
 import { deposerEnvoi } from "@/services/envoi-email";
+import { lireEmailAlertes } from "@/services/notification-administration";
+import { formaterDate } from "@/lib/affichage-commande";
 
 /**
  * Ce qu'une commande permet, vu du client.
@@ -424,6 +426,57 @@ export async function deposerRetractation(
         },
         origine: "SYSTEME",
       });
+
+      /*
+       * LA NOTIFICATION A L'EXPLOITANTE, LS-29.
+       *
+       * ELLE EST DANS LA MEME TRANSACTION QUE L'ACCUSE AU CLIENT, et l'echec de
+       * lecture des parametres ne la fait PAS tomber : ce chemin porte un accuse
+       * de reception sur support durable, article L221-21, dont la date fait
+       * foi. Annuler la transaction parce qu'une pastille ne sait pas si elle
+       * doit sonner perdrait la demande elle-meme.
+       *
+       * `commandeId: null` PLUTOT QUE L'IDENTIFIANT : la ligne d'accuse ci-dessus
+       * occupe deja la cle `(commandeId, modele)` pour cette commande, et cette
+       * notification-ci n'a aucun besoin d'etre dedupliquee par commande.
+       */
+      /*
+       * AUCUN INTERRUPTEUR NE COUVRE LA RETRACTATION, et je n'en emprunte pas un
+       * autre. Les cinq booleens d'ADR-043 decision 4 sont commande payee,
+       * paiement annule, stock faible, message recu et avis a moderer : reutiliser
+       * `alerteCommandePayee` ici ferait qu'en la decochant l'exploitante
+       * couperait AUSSI les retractations, sans qu'aucun libelle ne le dise.
+       *
+       * ELLE PART DONC TOUJOURS, ce qui est le bon defaut pour ce message : une
+       * retractation ouvre deux delais legaux de quatorze jours, dont l'un
+       * l'engage financierement. La rendre coupable demande un sixieme
+       * interrupteur, donc un ADR, et LS-219 est le ticket ou cela se tranche.
+       */
+      let destinataireAdmin: string | null = null;
+
+      try {
+        destinataireAdmin = await lireEmailAlertes();
+      } catch (erreur) {
+        journaliserErreur(
+          "destinataire d'alerte de retractation illisible",
+          erreur,
+          { commande: acces.commandeId },
+        );
+      }
+
+      if (destinataireAdmin !== null && destinataireAdmin !== "") {
+        await deposerEnvoi(transaction, {
+          commandeId: null,
+          destinataire: destinataireAdmin,
+          modele: "admin-retractation-demandee",
+          variables: {
+            numero: commande.numero,
+            nom: commande.email,
+            date: formaterDate(new Date()),
+          },
+          origine: "SYSTEME",
+        });
+      }
 
       return demande.id;
     });

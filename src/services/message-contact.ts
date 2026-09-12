@@ -42,6 +42,7 @@ import {
   type MessageEnListe,
 } from "@/repositories/message-contact";
 import { deposerEnvoi } from "@/services/envoi-email";
+import { formaterDate } from "@/lib/affichage-commande";
 import {
   ParametresAbsentsError,
   lireParametresBoutique,
@@ -277,8 +278,42 @@ export async function deposerMessage({
          * traversent `EnvoiEnAttente`, table que T9 declare file de travail :
          * y recopier le corps le stockerait une seconde fois, avec une duree de
          * retention differente de celle du message lui-meme.
+         *
+         * L'ADRESSE, ELLE, Y ENTRE DEPUIS LE 12 SEPTEMBRE 2026, arbitrage de
+         * Christophe. Sans elle, l'exploitante devait ouvrir l'administration
+         * pour connaitre l'adresse et pouvoir repondre : sur un telephone entre
+         * deux marches, un aller-retour de trop pour une action qui tient dans
+         * le bouton « Repondre » de sa boite.
+         *
+         * LE RAISONNEMENT D'ADR-008 NE S'Y APPLIQUE PAS DE LA MEME FACON : elle
+         * est courte, deja presente dans `Message`, et son absence prive la
+         * notification de son utilite. La double conservation reste a surveiller,
+         * `REGISTRE-DES-TRAITEMENTS.md` porte cette categorie de donnee.
          */
-        variables: { nom: valide.nom, sujet: valide.sujet },
+        variables: {
+          nom: valide.nom,
+          email: valide.email,
+          sujet: valide.sujet,
+          date: formaterDate(new Date()),
+        },
+        origine: "SYSTEME",
+      });
+
+      /*
+       * L'ACCUSE AU VISITEUR, F-MAIL-06, LS-29.
+       *
+       * DANS LA MEME TRANSACTION QUE LA NOTIFICATION, donc les deux existent ou
+       * aucune : un accuse envoye sans que l'exploitante soit prevenue ferait
+       * attendre une reponse que personne ne sait devoir ecrire.
+       *
+       * AUCUN DELAI DE REPONSE N'Y FIGURE, le cahier des charges l'interdit
+       * explicitement. Une boutique tenue seule ne peut pas en garantir un.
+       */
+      await deposerEnvoi(transaction, {
+        commandeId: null,
+        destinataire: valide.email,
+        modele: "message-contact-accuse",
+        variables: { sujet: valide.sujet },
         origine: "SYSTEME",
       });
     });

@@ -187,16 +187,28 @@ describe("deposerMessage", () => {
       variables: Record<string, string>;
     }>("SELECT modele, statut, commande_id, variables FROM envoi_en_attente");
 
-    expect(envois).toHaveLength(1);
-    expect(envois[0]?.modele).toBe("message-contact-recu");
-    expect(envois[0]?.statut).toBe("EN_ATTENTE");
-
     /*
-     * `commande_id` EST NUL, et c'est ce qui rend deux notifications de contact
-     * possibles : PostgreSQL traite les `NULL` comme distincts dans un index
-     * unique, donc `envoi_en_attente_actif_unique` ne les refuse jamais.
+     * DEUX ENVOIS DEPUIS LS-29, ET NON PLUS UN SEUL. La notification part a
+     * l'exploitante, l'accuse de reception F-MAIL-06 au visiteur. Les deux sont
+     * dans la MEME transaction : un accuse envoye sans que l'exploitante soit
+     * prevenue ferait attendre une reponse que personne ne sait devoir ecrire.
      */
-    expect(envois[0]?.commande_id).toBeNull();
+    expect(envois).toHaveLength(2);
+
+    const modeles = envois.map((envoi) => envoi.modele).sort();
+    expect(modeles).toEqual(["message-contact-accuse", "message-contact-recu"]);
+
+    for (const envoi of envois) {
+      expect(envoi.statut).toBe("EN_ATTENTE");
+
+      /*
+       * `commande_id` EST NUL SUR LES DEUX, et c'est ce qui les rend possibles
+       * ensemble : `envoi_en_attente_actif_unique` porte sur
+       * `(commande_id, modele)`, et PostgreSQL traite les `NULL` comme
+       * distincts dans un index unique.
+       */
+      expect(envoi.commande_id).toBeNull();
+    }
   });
 
   it("ne recopie JAMAIS le corps du message dans les variables d'envoi", async () => {
@@ -220,10 +232,19 @@ describe("deposerMessage", () => {
      * LE RECOPIER LE STOCKERAIT UNE SECONDE FOIS, dans une table que T9 declare
      * file de travail et non trace, avec une duree de retention differente.
      */
-    expect(JSON.stringify(rows[0]?.variables)).not.toContain(secret);
-    expect(JSON.stringify(rows[0]?.variables)).not.toContain(
-      "securite sociale",
-    );
+    /*
+     * LA VERIFICATION PORTE SUR LES DEUX LIGNES, ET NON SUR LA PREMIERE. Depuis
+     * LS-29, deux envois naissent de ce depot : lire `rows[0]` seul laisserait
+     * une fuite dans l'accuse au visiteur parfaitement invisible, et l'ordre des
+     * lignes n'est garanti par aucun `ORDER BY`. Motif « le controle ne regarde
+     * pas ou le defaut peut etre ».
+     */
+    expect(rows.length).toBeGreaterThan(0);
+
+    for (const ligne of rows) {
+      expect(JSON.stringify(ligne.variables)).not.toContain(secret);
+      expect(JSON.stringify(ligne.variables)).not.toContain("securite sociale");
+    }
   });
 
   it("GARDE LE MESSAGE quand le depot de la notification echoue", async () => {

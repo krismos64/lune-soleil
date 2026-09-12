@@ -35,7 +35,28 @@ export type ModeleEmail =
   /** LS-172, confirmation de commande, porteuse des deux liens signes. */
   | "commande-confirmee"
   /** LS-61, invitation a deposer un avis, envoyee apres livraison constatee. */
-  | "invitation-avis";
+  | "invitation-avis"
+  /*
+   * LS-29, les six modeles manquants, textes valides par l'exploitante le
+   * 12 septembre 2026. `commande-confirmee`, `retractation-accusee` et
+   * `message-contact-recu` existaient deja et ont ete repris au meme moment.
+   *
+   * F-MAIL-02, LA FACTURE, N'A PAS DE MODELE ET CE N'EST PAS UN OUBLI : elle est
+   * portee par le lien signe de `commande-confirmee`, qui est permanent et
+   * personnel. Un second email ferait double emploi. Arbitrage de Christophe.
+   */
+  /** F-MAIL-03, expedition avec le suivi du transporteur. */
+  | "expedition-en-route"
+  /** F-MAIL-04, remboursement total ou partiel, avec son avoir. */
+  | "remboursement-envoye"
+  /** F-MAIL-06, accuse de reception au visiteur qui ecrit par le formulaire. */
+  | "message-contact-accuse"
+  /** Notification de l'administration, une commande vient d'etre payee. */
+  | "admin-commande-payee"
+  /** Notification de l'administration, une retractation est demandee. */
+  | "admin-retractation-demandee"
+  /** Notification de l'administration, une alerte critique est ouverte. */
+  | "admin-incident-critique";
 
 export type MessageEmail = {
   destinataire: string;
