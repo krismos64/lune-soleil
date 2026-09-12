@@ -7,15 +7,15 @@ d'enchaîner LS-219 à LS-224 sans interruption et de trancher seul.
 
 | Ticket | Sujet | État |
 |---|---|---|
-| LS-224 | preuve par mutation de l'atomicité intention/avoir | **fusionné**, PR #408, **terminé** |
-| LS-219 | trois interrupteurs d'alerte branchés | **fusionné**, PR #410, reste En cours |
-| LS-221 | écran « Mes avis » de l'espace client | **fusionné**, PR #411, reste En cours |
+| LS-224 | preuve par mutation de l'atomicité intention/avoir | **terminé**, PR #408 |
+| LS-219 | trois interrupteurs d'alerte branchés | **terminé**, PR #410 et #415 |
+| LS-221 | écran « Mes avis » de l'espace client | **terminé**, PR #411 et #415 |
 | LS-222 | gabarit HTML des quinze emails, logo, aperçus | **fusionné**, PR #409 |
 | LS-220 | signal nocturne d'écart production contre `main` | **fusionné**, PR #412 |
 | LS-223 | clé Backblaze sans `deleteFiles` | **bloqué**, commenté |
 | LS-225 | modifier son propre avis, R10 | **créée**, l'obstacle est levé |
 
-187 tickets terminés sur 214 hors epics, relevés dans Jira.
+190 tickets terminés sur 214 hors epics, relevés dans Jira en fin de session.
 
 ## Quatre questions posées avant le départ, quatre arbitrages rendus
 
@@ -190,9 +190,25 @@ description craint. Le risque réel est le grossissement du stockage distant.
 
 ## Prochaine étape
 
-**Deux critères restent ouverts et se ressemblent** : la preuve par mutation de
-LS-219 et celle de LS-221. Aucun cas de `verifier-tests-mutation.sh` n'exerce ni
-la lecture des interrupteurs, ni le filtre par utilisateur des avis.
+## Les trois mutations, faites en fin de session
+
+Les deux critères qui restaient ouverts sur LS-219 et LS-221 sont remplis, cas
+168 à 170 de `verifier-tests-mutation.sh`.
+
+**LE CAS 169 A RÉVÉLÉ UN TROU RÉEL** : aucun test n'exerçait l'alerte d'avis à
+modérer. LS-219 l'avait branchée sans qu'aucune assertion ne la couvre, donc la
+mutation n'avait rien à faire rougir. Deux tests sont nés de ce constat.
+
+**Une contrainte de forme, mesurée avant de figer les cas.** La mutation change
+l'ARGUMENT et non l'appel : remplacer l'appel par `lireEmailAlertes()` ne
+compile pas, la fonction n'étant importée dans aucun des deux fichiers. Les
+tests rougissaient alors sur une erreur de build, ce qui ne prouve rien.
+
+**Le cas 170 est le plus discret.** Le cas nominal reste VERT sous cette
+mutation, l'avis du demandeur figurant dans la liste complète : seul le test qui
+vérifie l'ABSENCE de l'avis du voisin sépare les deux versions.
+
+## Prochaine étape
 
 **La modification d'un avis par son auteur** devient faisable : LS-221 livre
 l'espace que `PARCOURS.md` nommait comme son préalable. Elle demande un ticket.

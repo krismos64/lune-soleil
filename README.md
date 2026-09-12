@@ -37,15 +37,15 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 7, V1 cible | LS-8 | 0 | **close** le 11 septembre 2026. LS-149 portait le dernier critère : ADR-044 **écarte l'assistant IA** du périmètre plutôt que de le reporter |
 | Contenus | LS-22 | 10 | **attend l'exploitante**, rien n'est faisable sans elle. **LS-32 est close** le 11 septembre 2026, la neutralité de genre étant désormais gardée par un contrôle |
 
-**187 tickets terminés sur 214 hors epics**, les deux termes relevés dans Jira
+**190 tickets terminés sur 214 hors epics**, les deux termes relevés dans Jira
 le **12 septembre 2026 en fin de journée**, et jamais dérivés l'un de l'autre.
 
 **Le dénominateur a gagné six tickets en deux jours**, LS-219 à LS-225 : les
 anomalies trouvées ne sont plus corrigées au fil de l'eau mais ticketées, ce que
 le motif « dette annoncée hors outil » a imposé. Le numérateur, lui, n'a gagné
-qu'une story : **cinq tickets livrés ce jour restent En cours** sur un critère
-chacun, le plus souvent une preuve par mutation ou un envoi réel qui attend un
-déploiement.
+que quatre stories : sur les cinq livrées ce jour, **LS-222 seule reste En
+cours**, ses deux critères demandant d'observer de vrais envois dans plusieurs
+clients de messagerie.
 
 **Cinq phases sur huit sont désormais closes**, les phases 1, 3, 4bis, 5 et 7.
 
