@@ -96,6 +96,7 @@ AFFICHAGE_COMMANDE="src/lib/affichage-commande.ts"
 DEPOT_COMMANDE="src/repositories/commande.ts"
 AVIS="src/services/avis.ts"
 DEPOT_AVIS="src/repositories/avis.ts"
+SERVICE_AVOIR="src/services/avoir.ts"
 ENVOI_EMAIL="src/services/envoi-email.ts"
 DEPOT_ENVOI="src/repositories/envoi-email.ts"
 SMTP="src/integrations/email/smtp.ts"
@@ -121,7 +122,7 @@ DEPOT_RETRACTATION="src/repositories/retractation.ts"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE" "$AVIS" "$DEPOT_AVIS")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE" "$AVIS" "$DEPOT_AVIS" "$SERVICE_AVOIR")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -2275,6 +2276,34 @@ echo
 mute "$ROUTE_TACHE" 's/      const expires = await expirerMediasEnAttente\(\);/      const expires = 0;\n      void expirerMediasEnAttente;/'
 cas "expiration retiree de la tache planifiee" integration \
   "la tache fait reellement expirer un media bloque"
+
+echo
+echo "Intention de remboursement et son avoir, LS-224, tests d'integration"
+echo
+
+# Cas 167 : L'INTENTION EST MARQUEE ABOUTIE HORS DE LA TRANSACTION DE L'AVOIR.
+#
+# L'ETAT D'AVANT LS-224, remis tel quel. Entre le marquage et l'ecriture de
+# l'avoir, le montant n'etait compte par AUCUN des deux termes de la borne de
+# `reserverIntentionRemboursement` : ni par `montantAvoirCentimes`, l'avoir
+# n'existant pas encore, ni par les intentions en cours, celle-ci venant d'en
+# sortir. Le commentaire du code DECRIVAIT cette fenetre et l'assumait pendant
+# des semaines.
+#
+# LA CONCURRENCE NE SAIT PAS MESURER CELA, et quatre tentatives l'ont etabli le
+# 12 septembre 2026 : delai fixe, barriere sur le premier appel, attente de
+# `aboutie_a` en base. Aucune ne rougissait de facon fiable, entre zero et trois
+# fois sur cinq selon la charge. Le verrou `FOR UPDATE` serialise les demandes
+# AVANT la fenetre, qui dure le temps d'un aller vers PostgreSQL.
+#
+# LE TEST VISE MESURE L'ATOMICITE, PAS LA COURSE : si la transaction de l'avoir
+# echoue, l'intention ne doit pas rester marquee aboutie. Sous mutation le
+# marquage est commite avant, donc il survit a l'echec et le montant quitte
+# definitivement le calcul du restant. Cinq rouges sur cinq, contre un tirage.
+mute "$SERVICE_AVOIR" 's/  try \{\n    const issue = await prisma\.\$transaction\(async \(transaction\) => \{/  try {\n    await marquerIntentionAboutie(prisma, intentionId);\n    const issue = await prisma.\$transaction(async (transaction) => {/'
+mute "$SERVICE_AVOIR" 's/      await marquerIntentionAboutie\(transaction, intentionId\);\n//'
+cas "intention marquee aboutie hors de la transaction de l'avoir" integration \
+  "ne laisse pas une intention aboutie sans son avoir"
 
 echo
 echo "-----------------------------------------"

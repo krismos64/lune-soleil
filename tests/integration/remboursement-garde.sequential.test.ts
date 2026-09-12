@@ -632,4 +632,110 @@ describe("demanderRemboursement, reference de demande", () => {
     expect(await compterAvoirs(factureId)).toBe(1);
     expect(await cumulRembourse(commandeId)).toBe(2000);
   });
+
+  /**
+   * L'INTENTION ET SON AVOIR VIVENT DANS LA MEME TRANSACTION, LS-224.
+   *
+   * CE TEST NE COURT PAS APRES UNE COURSE, ET C'EST DELIBERE. Quatre versions
+   * successives ont tente de mesurer la fenetre par la concurrence, le
+   * 12 septembre 2026 : delai fixe dans le double de fournisseur, barriere sur
+   * le premier appel, attente de `aboutie_a` en base. Aucune ne rougissait de
+   * facon fiable sous mutation, entre zero et trois fois sur cinq selon la
+   * charge, et la plus prometteuse etait AVEUGLE pour une raison etrangere au
+   * sujet : son attente ne filtrait pas sur la facture et voyait l'intention
+   * d'un test precedent, la base etant partagee entre fichiers.
+   *
+   * POURQUOI LA COURSE EST INMESURABLE ICI. La fenetre dure le temps d'un aller
+   * simple vers PostgreSQL, et le verrou `FOR UPDATE` de
+   * `reserverIntentionRemboursement` serialise les demandes AVANT elle : sonde
+   * posee sur le calcul du restant, les reservations concurrentes lisent
+   * `enCours` a 0, 2000 puis 4000, chacune voyant la part des precedentes. Un
+   * test qui s'y glisse depend de l'ordonnancement, donc du tirage, motif « un
+   * test instable ne se mesure pas une fois ».
+   *
+   * CE QUE CELUI-CI MESURE A LA PLACE, ET QUI NE DEPEND D'AUCUN TIMING :
+   * l'ATOMICITE des deux ecritures. Si la transaction de l'avoir echoue,
+   * l'intention ne doit pas rester marquee aboutie, les deux naissant ensemble
+   * ou pas du tout. Sous mutation, le marquage est commite AVANT la transaction :
+   * il survit a son echec, et le montant quitte definitivement le calcul du
+   * restant sans qu'aucun avoir ne l'y remplace. La facture devient
+   * irremboursable a hauteur de ce montant, en silence.
+   */
+  it("ne laisse pas une intention aboutie sans son avoir quand la transaction echoue", async () => {
+    const { commandeId, factureId } = await commanderEtConfirmer();
+    const enTetes = await sessionAdministratricePreuveFraiche();
+
+    /*
+     * LA BORNE EST SATUREE PENDANT L'APPEL AU PRESTATAIRE, et cet instant est le
+     * seul qui convienne.
+     *
+     * TROP TOT, la borne sous verrou de `reserverIntentionRemboursement` refuse
+     * la demande en amont : aucun appel ne part, l'ecriture d'avoir n'est jamais
+     * tentee, et le chemin d'echec reste inexplore. Mesure faite, `appels` vide.
+     *
+     * PENDANT L'APPEL, la reservation est deja faite et l'argent part
+     * reellement ; c'est l'ECRITURE qui violera `chk_facture_avoir_borne`, dans
+     * la transaction. Aucune course n'intervient, l'etat se produit a tous les
+     * coups.
+     *
+     * LE COMPTEUR EST PORTE A SON PLAFOND, AUCUN AVOIR N'EST INSERE. Une
+     * premiere version inserait une ligne d'avoir : la contrainte portant sur
+     * `montant_avoir_centimes` de la facture et non sur la somme des lignes,
+     * elle ne se declenchait pas et la demande aboutissait normalement.
+     */
+    const fournisseur = fournisseurDouble(async (demande) => {
+      await client.query(
+        "UPDATE facture SET montant_avoir_centimes = montant_total_centimes WHERE id = $1",
+        [factureId],
+      );
+
+      return {
+        issue: "REMBOURSE" as const,
+        identifiantRemboursement: `re_test_${randomUUID().slice(0, 8)}`,
+        montantCentimes: demande.montantCentimes,
+      };
+    });
+
+    /*
+     * LE SERVICE RELANCE L'EXCEPTION, ET C'EST DELIBERE : l'argent est parti
+     * sans document comptable, etat que l'appelant doit connaitre. Il journalise
+     * et leve une alerte `AVOIR_NON_EMIS` avant de relancer.
+     *
+     * ATTENDRE UNE VALEUR DE RETOUR ICI SERAIT FAUX, et la premiere version de
+     * ce test le faisait : elle rougissait sur le code CORRECT, en accusant le
+     * service de ce qui est son comportement voulu.
+     */
+    await expect(
+      demanderRemboursement(enTetes, {
+        commandeId,
+        montantCentimes: 2000,
+        motif: "Demande dont l'ecriture d'avoir echouera",
+        fournisseur,
+        referenceDemande: randomUUID(),
+      }),
+    ).rejects.toThrow();
+
+    /*
+     * LE CHEMIN D'ECHEC A BIEN ETE EMPRUNTE, sans quoi l'assertion suivante
+     * serait vraie pour la mauvaise raison : une demande refusee en amont ne
+     * laisserait aucune intention, et le test passerait sans rien prouver.
+     */
+    expect(fournisseur.appels).toHaveLength(1);
+
+    /*
+     * L'ASSERTION QUI PORTE LE CORRECTIF. Aucune intention de cette facture ne
+     * doit etre marquee aboutie : la transaction qui l'aurait marquee a echoue,
+     * et le marquage vit dedans.
+     *
+     * SOUS MUTATION, marquage hors transaction, ce compte vaut 1 : l'intention a
+     * ete commitee aboutie avant l'echec, et ses 2000 centimes ont quitte le
+     * calcul du restant sans avoir pour les y remplacer.
+     */
+    const { rows } = await client.query<{ n: number }>(
+      "SELECT count(*)::int AS n FROM intention_remboursement WHERE facture_id = $1 AND aboutie_a IS NOT NULL",
+      [factureId],
+    );
+
+    expect(rows[0]?.n ?? 0).toBe(0);
+  });
 });
