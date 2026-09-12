@@ -26,6 +26,8 @@ import {
   type MessageEmail,
 } from "./index";
 import { rendreModele } from "./modeles";
+import { CID_LOGO, habillerEnHtml } from "./gabarit-html";
+import { lireLogoEmail } from "./logo";
 
 /**
  * Configuration de connexion, lue une fois.
@@ -184,11 +186,56 @@ export function creerEnvoyeurSmtp(
       const rendu = rendreModele(message);
 
       try {
+        /*
+         * LE LOGO EST LU A CHAQUE ENVOI, ET LA LECTURE EST MISE EN CACHE par
+         * `lireLogoEmail`. Il rend `null` si le fichier manque : l'envoi part
+         * alors SANS piece jointe et sans lever, un message remis sans son
+         * en-tete valant mieux qu'une confirmation de commande perdue pour un
+         * fichier absent. Le HTML porte alors une image morte, que son `alt`
+         * remplace par le nom de la boutique.
+         */
+        const logo = lireLogoEmail();
+
         await transport.sendMail({
           from: config.expediteur,
           to: message.destinataire,
           subject: rendu.objet,
           text: rendu.texte,
+          /*
+           * LES DEUX VERSIONS PARTENT ENSEMBLE, critere 1 de LS-222, et le
+           * TEXTE RESTE OBLIGATOIRE : nodemailer construit un
+           * `multipart/alternative`, le client choisit. Un message sans version
+           * texte est penalise par les filtres anti-indesirables, et certains
+           * clients ne rendent que celle-la.
+           *
+           * LE HTML EST DERIVE DU TEXTE, jamais redige a cote : `modeles.ts`
+           * reste la source unique des mots, valides par l'exploitante.
+           */
+          html: habillerEnHtml({ objet: rendu.objet, texte: rendu.texte }),
+          /*
+           * LE LOGO VOYAGE DANS LE MESSAGE, reference par `cid:`, critere 3 et
+           * ADR-040. Aucune requete reseau n'est emise a l'ouverture, donc
+           * aucun email ne trace sa lecture ; une URL vers un serveur du projet
+           * serait un pixel espion, que la mesure soit voulue ou non.
+           *
+           * `contentDisposition: "inline"` EST POSE EXPLICITEMENT. Nodemailer le
+           * deduit d'un `cid` sur une image, mais l'ecrire evite qu'une montee
+           * de version change ce defaut sans bruit : en `attachment`, le logo
+           * s'afficherait comme piece jointe sous chaque message.
+           */
+          ...(logo === null
+            ? {}
+            : {
+                attachments: [
+                  {
+                    filename: "lune-soleil.png",
+                    content: logo,
+                    cid: CID_LOGO,
+                    contentType: "image/png",
+                    contentDisposition: "inline" as const,
+                  },
+                ],
+              }),
           /*
            * ENCODAGE DECLARE EXPLICITEMENT, et ce n'est pas redondant avec le
            * defaut de nodemailer, qui gere deja l'UTF-8.

@@ -602,6 +602,20 @@ const RENDUS: Record<ModeleEmail, (message: MessageEmail) => MessageRendu> = {
  * une valeur au type sans ecrire son rendu ne compile pas. C'est le meme piege
  * que celui des enums d'affichage, ou une valeur ajoutee passe en silence.
  */
+/**
+ * Les modeles reellement rendus, releves sur la table et jamais recopies.
+ *
+ * POURQUOI CETTE EXPORTATION EXISTE. `ModeleEmail` est un TYPE : il disparait a
+ * l'execution, donc rien ne peut l'enumerer. Un script d'apercu qui listerait
+ * les modeles a la main se periemerait au premier ajout, et personne ne le
+ * verrait : le dossier engendre serait simplement incomplet.
+ *
+ * ELLE VIENT DE `RENDUS`, la table qui rend, ce qui la rend exacte par
+ * construction. Le compte de modeles a deja ete ecrit faux deux fois le jour
+ * meme de LS-29 : il se mesure, il ne s'additionne pas de memoire.
+ */
+export const MODELES_RENDUS = Object.keys(RENDUS) as ModeleEmail[];
+
 export function rendreModele(message: MessageEmail): MessageRendu {
   return RENDUS[message.modele](message);
 }
