@@ -800,7 +800,7 @@ au bloc 11 de la fiche produit.
 |---|---|
 | l'étape 7, **réponse publique** de l'exploitante | l'usage n'est pas décidé, commentaire Jira du 3 septembre 2026 qui demande de ne pas construire l'écran. `ReponseAvis` existe au schéma et la fiche produit **rend** la réponse si elle existe, aucun chemin n'en crée |
 | le **renvoi** d'une invitation, et donc la révocation de l'ancien jeton | il suppose un écran de renvoi qu'aucune story ne porte. Le code de révocation existe, `revoquerJeton`, et l'écran de dépôt distingue déjà un lien remplacé d'un avis déposé : le jour où le renvoi arrive, il ne reste que le geste à câbler |
-| la **modification** d'un avis par son auteur | elle suppose un espace où l'auteur retrouve son avis. `modifieA` existe au schéma, et `publieA` est déjà protégé contre la réécriture, regle R7 |
+| la **modification** d'un avis par son auteur | **son obstacle est levé depuis LS-221**, 12 septembre 2026 : l'espace où l'auteur retrouve son avis existe, `/compte/avis`. `modifieA` existe au schéma, `publieA` est déjà protégé contre la réécriture, regle R7, et **rien n'écrit `modifieA`** aujourd'hui. LS-225 porte le sujet |
 | l'**alerte** de délai de publication dépassé | elle demande une tâche de plus, et l'écran de relecture porte le compte des avis en attente dans la barre, ce qui rend le retard visible à chaque connexion |
 
 **Une invitation part une fois et une seule.** Un client qui perd son email ne
