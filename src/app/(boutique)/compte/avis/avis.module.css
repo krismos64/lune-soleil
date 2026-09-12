@@ -1,0 +1,105 @@
+/*
+ * « Mes avis », LS-221.
+ *
+ * MOBILE FIRST, conçu à 320 px : aucune largeur fixe, aucun tableau. Des cartes
+ * empilées se lisent sans défilement horizontal, contrairement à une grille de
+ * colonnes produit, note, état et date.
+ *
+ * AUCUN TABLEAU, `frontend-design.md` l'interdit dans la boutique publique. Une
+ * liste d'avis en est un candidat tentant, chaque ligne portant quatre champs.
+ *
+ * LES COULEURS D'ÉTAT VIENNENT DES JETONS MESURÉS d'ADR-022. `--ls-warning` et
+ * `--ls-success` portent ici du TEXTE et non un aplat : leurs rapports sont
+ * mesurés dans `tokens.css` sur le fond crème, et `--ls-accent-gold` en est
+ * exclu, décoratif à 2,31:1.
+ */
+
+.avis {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-4);
+}
+
+.carte {
+  padding: var(--ls-space-4);
+  border: 1px solid var(--ls-surface-sand);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface);
+}
+
+.produit {
+  margin: 0 0 var(--ls-space-1);
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+
+/*
+ * LE LIBELLÉ DE VARIANTE PASSE À LA LIGNE, et ne suit pas le nom du produit sur
+ * la même ligne. À 320 px, « Bracelet en argent martelé » suivi de « Taille M »
+ * dépasserait, et un `nowrap` provoquerait le débordement horizontal que le
+ * cas 11 ter du script de mutation garde.
+ */
+.variante {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: normal;
+  color: var(--ls-text-muted);
+}
+
+.commande {
+  margin: 0 0 var(--ls-space-3);
+  font-size: 0.875rem;
+  color: var(--ls-text-muted);
+}
+
+.note {
+  margin: 0 0 var(--ls-space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--ls-space-2);
+}
+
+.etoiles {
+  color: var(--ls-accent-gold-deep);
+  font-size: 1.1rem;
+  letter-spacing: 0.1em;
+}
+
+.noteTexte {
+  font-size: 0.875rem;
+  color: var(--ls-text-muted);
+}
+
+.commentaire {
+  margin: 0 0 var(--ls-space-3);
+  /*
+   * LE TEXTE DU CLIENT PEUT PORTER DES RETOURS À LA LIGNE, qu'il a saisis. Les
+   * écraser rendrait un pavé illisible là où il avait structuré son propos.
+   */
+  white-space: pre-wrap;
+  /*
+   * UN MOT TRÈS LONG NE DOIT PAS DÉBORDER. Le commentaire est du texte libre :
+   * une URL collée ou un mot sans espace pousserait la carte au-delà de 320 px.
+   */
+  overflow-wrap: anywhere;
+}
+
+.etat {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.publie {
+  color: var(--ls-success);
+}
+
+.attente {
+  color: var(--ls-warning);
+}
+
+.nonRetenu {
+  color: var(--ls-text-muted);
+}

@@ -16,6 +16,20 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /*
+   * `next dev` N'ECRIT PLUS DANS `CLAUDE.md`, LS-221.
+   *
+   * Next.js 16 y ajoute un bloc `nextjs-agent-rules` a chaque demarrage, et ce
+   * bloc porte un TIRET CADRATIN, que la regle de redaction du projet interdit
+   * partout. Il reapparait a chaque `npm run dev` : le retirer a la main laisse
+   * une modification non commitee qui revient, et le commiter ferait entrer un
+   * cadratin dans le fichier le plus lu du depot.
+   *
+   * `CLAUDE.md` PORTE DEJA CE QU'IL FAUT SAVOIR de Next.js 16, et la consigne
+   * de consulter Context7 avant toute API recente.
+   */
+  agentRules: false,
+
+  /*
    * Sortie autonome, LS-74.
    *
    * `next build` produit alors `.next/standalone`, un dossier qui porte son

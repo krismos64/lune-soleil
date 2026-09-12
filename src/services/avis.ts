@@ -59,6 +59,7 @@ import {
   listerAvisParStatut,
   listerAvisPublies,
   listerCommandesAInviter,
+  listerAvisDeLUtilisateur,
   listerSignalements,
   lireAvisASignaler,
   lireAvisPubliePourSignalement,
@@ -1032,6 +1033,70 @@ async function notifierAvisAModerer(
       avisEcrits: nombre,
     });
   }
+}
+
+/** Un avis tel que son auteur le voit, LS-221. */
+export type AvisAffiche = {
+  id: string;
+  note: number;
+  commentaire: string | null;
+  /**
+   * L'etat lisible par son auteur, et non le statut brut.
+   *
+   * `RETIRE` ET `REFUSE` SONT FONDUS EN `NON_RETENU`, deliberement. La
+   * distinction interesse la moderation, pas l'auteur : les deux signifient
+   * pour lui que son texte ne paraitra pas, et nommer le retrait apres
+   * publication ferait comprendre que l'avis a ete depublie, information
+   * exacte mais qui appelle une explication que l'ecran ne peut pas donner.
+   */
+  etat: "EN_ATTENTE" | "PUBLIE" | "NON_RETENU";
+  produitNom: string;
+  varianteLibelle: string;
+  numeroCommande: string;
+  experienceA: Date;
+  deposeA: Date;
+  publieA: Date | null;
+};
+
+/**
+ * Les avis du client connecte, LS-221.
+ *
+ * L'IDENTITE VIENT DE L'APPELANT, QUI LA TIENT DE LA SESSION, invariant 2.
+ * Aucun identifiant d'URL ni de formulaire n'atteint cette fonction, et c'est
+ * ce qui empeche de lire les avis d'autrui. L'ecran appelle `exigerSession`
+ * avant tout rendu.
+ *
+ * LE MOTIF DE REFUS N'EST JAMAIS RENDU, et c'est un choix de securite autant
+ * que de ton. `motifDecision` est ecrit par l'exploitante pour elle-meme,
+ * regle R5 : le publier a l'auteur exposerait la moderation, et un motif
+ * redige en interne se lit mal quand il s'adresse soudain a quelqu'un.
+ *
+ * AUCUN AVIS D'UN COMPTE SUPPRIME NE REMONTE ICI, `utilisateurId` passant a
+ * `null` a la dissociation : la fonction ne peut donc rien rendre pour un
+ * compte qui n'existe plus, ce qui est le comportement voulu.
+ */
+export async function listerMesAvis(
+  utilisateurId: string,
+): Promise<AvisAffiche[]> {
+  const avis = await listerAvisDeLUtilisateur(prisma, utilisateurId);
+
+  return avis.map((ligne) => ({
+    id: ligne.id,
+    note: ligne.note,
+    commentaire: ligne.commentaire,
+    etat:
+      ligne.statut === "PUBLIE"
+        ? ("PUBLIE" as const)
+        : ligne.statut === "DEPOSE"
+          ? ("EN_ATTENTE" as const)
+          : ("NON_RETENU" as const),
+    produitNom: ligne.produitNom,
+    varianteLibelle: ligne.varianteLibelle,
+    numeroCommande: ligne.numeroCommande,
+    experienceA: ligne.experienceA,
+    deposeA: ligne.deposeA,
+    publieA: ligne.publieA,
+  }));
 }
 
 /** Course perdue sur la consommation du jeton, annule la transaction. */
