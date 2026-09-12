@@ -174,22 +174,75 @@ part une fois et une seule » tombait avec la première.
 `decideA`. `MODELE-LOGIQUE.md` porte les bornes du poids et le piège de la clé
 booléenne. `VALIDATION.md` recense les deux schémas neufs.
 
+## Déployé en production le 13 septembre 2026, migration comprise
+
+`2e9cd90` vers `e28cb4fe`, **dix-sept commits et une migration**, demandé par
+Christophe en fin de session.
+
+**LE GARDE-FOU DU DÉPLOIEMENT A REFUSÉ LA PREMIÈRE TENTATIVE, ET IL AVAIT
+RAISON.** Lancé sans migrer d'abord, il s'est arrêté à l'étape 3 :
+
+```
+migrations attendues 20, appliquées 19
+ARRÊT : jouer ./scripts/migrate-production.sh AVANT ce déploiement.
+La production n'a pas été touchée.
+```
+
+L'ordre n'est pas libre : la migration précède la bascule, sans quoi le code neuf
+lirait une colonne absente. C'est une porte, pas un avertissement.
+
+**La migration est passée par le relais éphémère**, `EXPLOITATION.md` le décrit :
+socat sur la machine, tunnel SSH depuis le poste, `DATABASE_URL` composée à la
+volée depuis `/etc/lune-soleil/production.env` et **effacée après**. La base
+n'expose aucun port, par conception.
+
+**`BACKUP_DIR` s'est surchargé, deuxième fois du projet.** Sa valeur par défaut,
+`/var/backups/lune-soleil`, est un chemin de la MACHINE, et le script tourne
+depuis le poste : la sauvegarde part dans `~/sauvegardes-lune-soleil/`, à côté de
+celles du 10 et du 12 septembre. Le journal du matin l'avait déjà rencontré.
+
+**Garde-fou 1 satisfait sans confirmation** : « 1 migration analysée, aucune
+instruction destructive ». Un `ADD COLUMN` et un `ADD CONSTRAINT` passent seuls,
+c'est exactement ce que la distinction sert à trancher.
+
+### Ce qui est vérifié sur la base réelle, et non déduit
+
+```
+poids_colis_grammes   integer, defaut 200
+chk_parametre_poids_colis_borne   CHECK (>= 15 AND <= 250)
+valeur de la ligne unique         200
+UPDATE ... = 900                  ERROR violates check constraint
+dump pre-migration                pg_restore --list le lit, integrite OK
+```
+
+**La contrainte a été éprouvée en production**, pas seulement constatée : un
+`UPDATE` à 900 g est refusé. Une contrainte présente au catalogue et jamais
+exercée n'est pas une garantie.
+
+### Le déploiement lui-même
+
+```
+Étape 5, attente d'un conteneur sain   conteneur sain après 10 s
+Étape 6, vérification domaine public   https://lune-soleil.fr/api/sante rend 200
+Étape 8, non-régression SmartPlanning  smartplanning.fr 200, analytics 200
+Port 3002 injoignable depuis l'extérieur, conforme.
+Image en service : e28cb4fe3f0c95802c5f15f100771d3d827afeba
+```
+
+Pages contrôlées après bascule : accueil, catalogue, aide et informations
+légales en 200, `/compte/avis` en 307 vers la connexion, ce qui est le
+comportement attendu sans session.
+
+**Ce que ce déploiement rend visible** : la modification d'un avis par son
+auteur, le poids de colis réglable depuis l'écran Paramètres, et les deux
+corrections d'accessibilité, le nom des boutons de note et l'accusé de succès.
+
 ## Prochaine étape
 
-**RIEN DE CETTE SESSION N'EST DÉPLOYÉ**, et c'est la première chose à faire. La
-production tourne sur `2e9cd90`, dernier déploiement du 12 septembre à 14h34
-UTC, quand la première fusion de cette session date de 17h07. `main` a **dix-sept
-commits d'avance**, et l'un d'eux porte une **migration**,
-`20260912160000_poids_colis_configurable` : ce n'est pas un simple remplacement
-d'image.
-
-Le geste passe par le workflow « Déployer en production », jamais à la main, et
-la migration par `./scripts/migrate-production.sh`.
-
-**Ce paragraphe a d'abord écrit « son code étant servi »**, ce qui était faux au
-moment même où je l'écrivais : le code était **fusionné**, pas servi. C'est le
-motif [[lune-soleil-construire-nest-pas-servir]], commis dans le document censé
-le prévenir.
+**Ce paragraphe a d'abord écrit « son code étant servi »** alors que le code
+était seulement **fusionné**. C'est le motif
+[[lune-soleil-construire-nest-pas-servir]], commis dans le document censé le
+prévenir. Il est maintenant servi, ce qui est autre chose.
 
 **LS-218 attend LS-153** pour son critère 10, un colis réel. Rien d'autre ne la
 bloque, son code étant fusionné et audité.
