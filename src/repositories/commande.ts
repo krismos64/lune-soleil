@@ -605,3 +605,30 @@ export async function lireAvoirDuClient(
     select: { numero: true, cheminPdf: true },
   });
 }
+
+/** A qui adresser un email portant sur une commande, et sous quel numero. */
+export type DestinataireCommande = {
+  numero: string;
+  emailNormalise: string;
+};
+
+/**
+ * L'adresse et le numero d'une commande, pour un email, LS-29.
+ *
+ * `emailNormalise` VIENT DE LA COMMANDE ET NON DU COMPTE : une commande passee
+ * sans compte n'a pas d'utilisateur rattache, et le client doit etre prevenu
+ * dans les deux cas. C'est aussi l'adresse figee a l'achat, invariant 3.
+ *
+ * ELLE REND `null` SUR UNE COMMANDE INTROUVABLE plutot que de lever : l'appelant
+ * saute alors l'envoi, ce qui vaut mieux que de faire echouer un remboursement
+ * deja parti parce qu'un email n'a pas de destinataire.
+ */
+export async function lireDestinataireCommande(
+  client: ClientBase,
+  commandeId: string,
+): Promise<DestinataireCommande | null> {
+  return client.commande.findUnique({
+    where: { id: commandeId },
+    select: { numero: true, emailNormalise: true },
+  });
+}
