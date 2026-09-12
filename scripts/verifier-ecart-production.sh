@@ -44,14 +44,31 @@ ko=0
 # cloné avec sa référence distante ; sur un poste où `origin` n'a pas été
 # récupéré, la locale suffit et le contrôle reste jouable.
 # ---------------------------------------------------------------------------
+# LA REFERENCE EST RECUPEREE SI ELLE MANQUE, et ce cas est le NOMINAL en
+# intégration continue : `actions/checkout` clone par défaut un seul commit,
+# sans branche `main` ni `origin/main`. Le contrôle a rougi dessus à sa première
+# exécution en CI, en disant correctement qu'il ne pouvait pas conclure.
+#
+# LA RECUPERATION EST SILENCIEUSE ET SANS CONSEQUENCE si elle échoue : le cas
+# suivant le dira. Alourdir le clone de tout le dépôt pour ce seul contrôle
+# coûterait à chaque pull request.
+if ! git rev-parse --verify --quiet origin/main >/dev/null   && ! git rev-parse --verify --quiet main >/dev/null; then
+  git fetch --quiet --depth=200 origin main 2>/dev/null || true
+fi
+
 if git rev-parse --verify --quiet origin/main >/dev/null; then
   REFERENCE="origin/main"
+elif git rev-parse --verify --quiet FETCH_HEAD >/dev/null; then
+  # `FETCH_HEAD` EST LA REFERENCE APRES UN `git fetch` QUI NE POSE PAS DE
+  # BRANCHE LOCALE. Sans ce cas, la récupération ci-dessus réussirait sans que
+  # rien ne la lise.
+  REFERENCE="FETCH_HEAD"
 elif git rev-parse --verify --quiet main >/dev/null; then
   REFERENCE="main"
 else
-  echo "ECHEC ni origin/main ni main ne sont lisibles."
-  echo "      Le contrôle ne peut rien mesurer : il le DIT plutôt que de"
-  echo "      rendre un vert sur une comparaison qui n'a pas eu lieu."
+  echo "ECHEC ni origin/main ni main ne sont lisibles, et la récupération a"
+  echo "      échoué. Le contrôle ne peut rien mesurer : il le DIT plutôt que"
+  echo "      de rendre un vert sur une comparaison qui n'a pas eu lieu."
   exit 1
 fi
 
