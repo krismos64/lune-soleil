@@ -92,6 +92,18 @@ l'adresse de livraison d'une commande passée est un fait historique, pas une
 donnée à jour. Une erreur d'adresse sur une commande en cours se traite
 commercialement, en modifiant l'expédition, pas en réécrivant la commande.
 
+**Un avis se rectifie par son auteur**, depuis `/compte/avis`, LS-225 : une
+demande portant sur le texte ou la note d'un avis se répond en indiquant ce
+chemin, comme pour le nom et l'adresse email.
+
+Deux limites à signaler dans la réponse, l'une et l'autre légitimes. La
+modification **renvoie l'avis en relecture**, règle R10, donc il disparaît de la
+fiche produit le temps de la modération : c'est le contrepoids d'un texte
+publiable, pas un refus déguisé. Un avis **écarté** par la modération n'est plus
+modifiable, sans quoi le refus deviendrait une invitation à recommencer ; une
+demande portant sur un tel avis relève alors de l'effacement, article 17, ou
+d'un échange avec l'exploitante.
+
 ## Article 17, droit à l'effacement
 
 **Le client le fait lui-même**, depuis `/compte`, sans passer par l'exploitante.

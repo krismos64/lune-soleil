@@ -18,14 +18,14 @@ ligne ajoutée, et rien ne le signale.
 
 | Fichier | Ce qu'il porte | À lire avant |
 |---|---|---|
-| `docs/architecture/PARCOURS.md` | les parcours critiques et leurs cas d'erreur, contrat d'entrée du modèle. Le nombre se mesure, `grep -cE '^## Parcours'`, il valait neuf le 9 septembre 2026 | toute fonctionnalité |
+| `docs/architecture/PARCOURS.md` | les parcours critiques et leurs cas d'erreur, contrat d'entrée du modèle. Le nombre se mesure, `grep -cE '^## Parcours'`, il valait **dix** le 12 septembre 2026 | toute fonctionnalité |
 | `docs/architecture/MODELE-CONCEPTUEL.md` | entités, règles de gestion numérotées (C, S, V, F, L, R, E, A), décisions A à I | schéma, service, migration |
 | `docs/architecture/MODELE-LOGIQUE.md` | traduction physique, index partiels, politiques de suppression, dettes de phase 1 | Prisma, migration |
 | `docs/architecture/STATISTIQUES.md` | indicateurs, périodes en `Europe/Paris`, règles de calcul | statistiques, e-reporting, tout agrégat de montant |
 | `docs/architecture/PROTOTYPE.md` | intention visuelle du prototype gelé, six états non nominaux, table parcours vers écran, cinq écarts connus | toute interface, publique ou administration |
 | `docs/architecture/VALIDATION.md` | socle Zod, où valider et pourquoi à deux endroits, convention d'erreur des adaptateurs, trois pièges de Zod 4 | toute Server Action, gestionnaire de route ou service qui reçoit une entrée |
 | `docs/architecture/JOURNALISATION.md` | trois journaux distincts, masquage par nom de clé, erreurs réduites au nom de classe, contrôle de santé et ses quatre décisions | toute ligne de journal, la route de santé, le déploiement |
-| `docs/architecture/REGISTRE-DES-TRAITEMENTS.md` | les traitements RGPD, durées de conservation tracées à leur source, ce que le registre n'est pas. Le nombre se mesure, `grep -cE '^### T[0-9]+'`, il valait onze le 9 septembre 2026 | toute table portant une donnée personnelle, toute durée de conservation |
+| `docs/architecture/REGISTRE-DES-TRAITEMENTS.md` | les traitements RGPD, durées de conservation tracées à leur source, ce que le registre n'est pas. Le nombre se mesure, `grep -cE '^### T[0-9]+'`, il valait **douze** le 12 septembre 2026 | toute table portant une donnée personnelle, toute durée de conservation |
 | `docs/PROCEDURE-DROITS-DES-PERSONNES.md` | répondre à une demande d'accès, de rectification ou d'effacement, délai d'un mois, ce qui part et ce qui reste | toute demande d'une personne sur ses données |
 | `docs/PROCEDURE-AMORCAGE-ADMINISTRATION.md` | créer le compte de l'exploitante, qui fait quoi entre elle et le développeur, passkey, procédure de dernier ressort | la mise en ligne, toute question sur le compte d'administration |
 | `docs/COMPARATIF-MEDIATION.md` | le choix du médiateur de la consommation, obligation de l'article L616-1 | la souscription du médiateur, les mentions légales |

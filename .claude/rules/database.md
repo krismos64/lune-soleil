@@ -424,16 +424,24 @@ Ces opérations exigent une transaction, sans exception :
    d'email ne pouvant pas y appartenir
 9. Choix d'une adresse par défaut dans le carnet : retirer le drapeau de
    l'ancienne **avant** de le poser sur la nouvelle
-10. Suppression d'un compte : marquer `Commande.dissocieA` sur ses commandes
+10. **Modification d'un avis par son auteur**, LS-225 : l'écriture de l'avis et
+    le dépôt de l'alerte de modération, ensemble. Hors transaction, une alerte
+    partirait pour une modification non écrite, ou une modification resterait
+    sans alerte. **L'autorisation vit dans le `where` de l'`updateMany`**, qui
+    filtre sur `utilisateurId` et sur les statuts permis : elle ferme du même
+    coup la fenêtre entre la lecture et l'écriture, où une décision de
+    modération peut tomber
+11. Suppression d'un compte : marquer `Commande.dissocieA` sur ses commandes
     **avant** de supprimer le compte, puis laisser les politiques de clé
     étrangère traiter les **onze** autres références qui en portent une,
     `ReponseAvis.auteurId` étant en `RESTRICT` assumé. Livré par LS-95,
     `services/suppression-compte.ts`
 
 Les points 7 à 9 viennent du périmètre ajouté par LS-37, avis et carnet
-d'adresses. Le point 10 vient de LS-41.
+d'adresses ; le point 10 de LS-225, qui l'a complété le 12 septembre 2026. Le
+point 11 vient de LS-41.
 
-**Le compte du point 10 disait « six » jusqu'au 13 août 2026.** Il était juste
+**Le compte du point 11 disait « six » jusqu'au 13 août 2026.** Il était juste
 quand LS-41 l'a écrit, et les tables ajoutées depuis ne l'ont pas fait suivre :
 il y en a **douze au total**, mesurées sur la base et non recomptées de mémoire.
 Un test de LS-95 interroge `information_schema` et vérifie la cardinalité, ce qui
