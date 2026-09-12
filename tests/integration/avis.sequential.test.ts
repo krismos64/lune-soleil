@@ -1958,12 +1958,14 @@ describe("modification d'un avis par son auteur, LS-225, regles R8, R10 et R11",
 
     /* L'auteur legitime, lui, peut toujours. */
     expect(
-      (await modifierMonAvis({
-        avisId,
-        utilisateurId,
-        note: 4,
-        commentaire: null,
-      })).statut,
+      (
+        await modifierMonAvis({
+          avisId,
+          utilisateurId,
+          note: 4,
+          commentaire: null,
+        })
+      ).statut,
     ).toBe("MODIFIE");
   });
 
