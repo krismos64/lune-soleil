@@ -2397,6 +2397,60 @@ cas "poids du colis remis en constante dans l'appel" unitaire \
   "convertit en kilogrammes le poids recu dans la demande"
 
 echo
+
+# Cas 173 : LE FILTRE PAR AUTEUR DISPARAIT DE LA MODIFICATION D'AVIS.
+#
+# L'INVARIANT 2, ET LE PLUS GRAVE DES QUATRE CAS DE LS-225. Sans ce filtre,
+# n'importe quel client connecte reecrit l'avis de n'importe qui : il suffit d'un
+# identifiant, que le formulaire porte en clair.
+#
+# LE CAS NOMINAL RESTE VERT. « Je modifie mon avis » est vrai dans les deux
+# versions, l'auteur figurant parmi ceux que le filtre elargi accepte : seul le
+# test qui fait AGIR UN TIERS separe les deux, et c'est lui que ce cas exige.
+mute "$DEPOT_AVIS" 's/      id: parametres.avisId,\n      utilisateurId: parametres.utilisateurId,\n      statut: \{ in: \["PUBLIE", "DEPOSE"\] \},/      id: parametres.avisId,\n      statut: { in: ["PUBLIE", "DEPOSE"] },/'
+cas "filtre par auteur retire de la modification d'avis" integration \
+  "un tiers ne peut pas modifier l'avis d'autrui, invariant 2"
+
+echo
+
+# Cas 174 : `publieA` EST REECRIT A LA MODIFICATION, regle R11 violee.
+#
+# LA DATE AFFICHEE AU VISITEUR MENTIRAIT. `publieA` porte la PREMIERE
+# publication, ce que l'article D111-10 attend : la reecrire ferait paraitre un
+# avis ancien comme neuf a chaque correction de son auteur.
+#
+# LA MUTATION AJOUTE UNE LIGNE PLUTOT QUE D'EN RETIRER UNE, et c'est ce que la
+# regle R11 rend possible : la protection n'est PAS une garde, c'est l'ABSENCE
+# de la colonne dans les donnees ecrites. Un defaut par omission ne se mute
+# qu'en ajoutant ce que l'auteur a delibere de ne pas ecrire.
+mute "$DEPOT_AVIS" 's/      statut: "DEPOSE",\n      modifieA: maintenant,/      statut: "DEPOSE",\n      modifieA: maintenant,\n      publieA: maintenant,/'
+cas "publieA reecrit a la modification d'avis" integration \
+  "modifieA est horodate et publieA n'est PAS reecrit, regles R8 et R11"
+
+echo
+
+# Cas 175 : LE RETOUR EN MODERATION DISPARAIT, regle R10 violee.
+#
+# UN TEXTE MODIFIE RESTERAIT EN LIGNE SANS RELECTURE. C'est le coeur de R10 :
+# l'exploitante a valide une version, pas celles qui la suivent, et un avis
+# vise pourrait etre reecrit en n'importe quoi une fois publie.
+mute "$DEPOT_AVIS" 's/      statut: "DEPOSE",\n      modifieA: maintenant,/      modifieA: maintenant,/'
+cas "retour en moderation retire de la modification d'avis" integration \
+  "une modification renvoie en moderation et retire l'avis de la fiche, regle R10"
+
+echo
+
+# Cas 176 : UN AVIS ECARTE REDEVIENT MODIFIABLE.
+#
+# L'ARBITRAGE DE LS-225, et sa mutation dit pourquoi il existe. Admettre
+# `REFUSE` et `RETIRE` ouvre une boucle de nouvelles tentatives sur un texte que
+# l'exploitante a ecarte, chacune la ramenant dans sa file de moderation : le
+# refus deviendrait une invitation a recommencer.
+mute "$DEPOT_AVIS" 's/      statut: \{ in: \["PUBLIE", "DEPOSE"\] \},/      statut: { in: ["PUBLIE", "DEPOSE", "RETIRE", "REFUSE"] },/'
+cas "avis ecarte rendu modifiable a nouveau" integration \
+  "un avis retire n'est plus modifiable, et son auteur le voit"
+
+echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then
   echo "  $mutations mutations, $mutations detectees"
