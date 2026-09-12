@@ -1294,6 +1294,26 @@ reviendrait à publier un contenu que son auteur ne veut plus.
 celle de l'avis d'origine, ce qui est conforme à l'article D111-10. L'article
 L111-7-2 impose par ailleurs de signaler les mises à jour, d'où `modifieA`.
 
+`decideA` **repasse à `null`** à la modification, LS-225. L'avis attend une
+décision neuve : garder la date de la précédente ferait mesurer le délai de
+publication annoncé sur une décision qui ne porte plus sur ce texte, donc un
+délai faux et faux dans le sens flatteur.
+
+**Ce que LS-225 a tranché le 12 septembre 2026**, le modèle laissant ces deux
+points ouverts :
+
+| Question | Arbitrage |
+|---|---|
+| quels statuts sont modifiables | `PUBLIE` et `DEPOSE`. Un avis `REFUSE` ou `RETIRE` ne l'est pas : le permettre ouvrirait une boucle de nouvelles tentatives sur un texte que l'exploitante a écarté, chacune la ramenant dans sa file |
+| combien de fois | **aucune limite**, arbitrage de Christophe. Chaque passage renvoyant en modération, l'effet réel est borné : un texte modifié n'est plus visible tant qu'il n'est pas relu, donc la republication reste sous contrôle à chaque fois |
+
+**L'autorisation vit dans le filtre de l'écriture**, jamais dans une garde lue
+puis écrite : `modifierAvisDeLAuteur` recoupe l'identifiant de l'avis, celui de
+l'auteur et les statuts permis dans un même `where`. Un avis d'autrui ne
+correspond à aucune ligne, donc rien n'est écrit, invariant 2. Ce filtre ferme
+aussi la fenêtre entre la lecture et l'écriture, où une décision de modération
+peut tomber.
+
 La même question se pose pour `ReponseAvis.modifieeA`, sans le même enjeu :
 l'auteur de la réponse est l'administratrice, aucune relecture ne s'impose.
 
