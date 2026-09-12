@@ -140,3 +140,11 @@ tests/e2e/.session-*.json
 # un artefact neuf se cree a chaque story qui amorce un etat, et chacun porte
 # une valeur signee. Elargir la source plutot qu'allonger la liste.
 tests/e2e/.*.json
+
+# Apercus d'email engendres par `npm run apercus-emails`, LS-222.
+#
+# ILS NE SONT PAS VERSIONNES, et c'est delibere : ce sont quinze fichiers
+# derives du code, que la commande reconstruit en une seconde. Les commiter
+# ferait entrer dans le depot des fichiers qui se perimeraient a chaque retouche
+# d'un texte, sans qu'aucun controle ne le signale.
+/apercus-emails/

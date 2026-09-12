@@ -42,6 +42,8 @@ import {
   signatureJetonValide,
 } from "@/lib/jeton-acces";
 import { journaliser, journaliserErreur } from "@/lib/journal";
+import { destinataireAlerte } from "@/services/notification-administration";
+import { formaterDate } from "@/lib/affichage-commande";
 import type { Correlation } from "@/lib/journal";
 import { prisma } from "@/lib/prisma";
 import {
@@ -864,6 +866,15 @@ export async function deposerAvis(
       }
 
       /*
+       * L'EXPLOITANTE EST PREVENUE QU'UN AVIS ATTEND SA RELECTURE, LS-219.
+       * L'appel est APRES la boucle et non dedans : un client qui note trois
+       * pieces d'une meme commande depose trois avis, et trois emails pour un
+       * seul passage en moderation seraient du bruit. Un message porte le
+       * compte.
+       */
+      await notifierAvisAModerer(transaction, retenues.length);
+
+      /*
        * LE JETON N'EST CONSOMME QUE SI TOUTE LA COMMANDE EST NOTEE, correction
        * de la revue critique du 11 septembre 2026, mesuree par sonde.
        *
@@ -963,6 +974,64 @@ export async function deposerAvis(
   });
 
   return { statut: "DEPOSE", nombre: retenues.length };
+}
+
+/**
+ * Previent l'exploitante qu'un ou plusieurs avis attendent sa moderation,
+ * LS-219.
+ *
+ * ELLE LIT L'INTERRUPTEUR `alerteAvisAModerer`, ce qui le rend reel : sans
+ * cette lecture, la case a cocher de l'ecran des parametres serait un bouton
+ * qui ne commande rien, motif repris de `destinataireNotification` dans
+ * `services/message-contact.ts`.
+ *
+ * ELLE NE FAIT JAMAIS ECHOUER LE DEPOT. Un avis ecrit sans email se lit dans
+ * l'ecran de moderation ; un depot annule parce qu'une notification n'a pas pu
+ * partir ferait perdre au client un texte qu'il a redige, regle E4.
+ *
+ * LE DELAI DE PUBLICATION N'EST PAS RAPPELE ICI. Il appartient au client, a qui
+ * l'invitation l'annonce : l'exploitante, elle, a besoin de savoir qu'il y a
+ * quelque chose a relire, pas d'un compte a rebours.
+ */
+async function notifierAvisAModerer(
+  transaction: Prisma.TransactionClient,
+  nombre: number,
+): Promise<void> {
+  if (nombre === 0) {
+    return;
+  }
+
+  try {
+    const destinataire = await destinataireAlerte("alerteAvisAModerer");
+
+    if (destinataire === null || destinataire === "") {
+      return;
+    }
+
+    await deposerEnvoi(transaction, {
+      /*
+       * `commandeId: null` COMME LES AUTRES NOTIFICATIONS D'ADMINISTRATION : la
+       * cle `(commandeId, modele)` empecherait tout second avis depose sur une
+       * commande dont une piece a deja ete notee.
+       */
+      commandeId: null,
+      destinataire,
+      modele: "admin-incident-critique",
+      variables: {
+        type: "AVIS_A_MODERER",
+        date: formaterDate(new Date()),
+        description:
+          nombre === 1
+            ? "Un avis vient d'etre depose et attend votre relecture."
+            : `${nombre} avis viennent d'etre deposes et attendent votre relecture.`,
+      },
+      origine: "SYSTEME",
+    });
+  } catch (erreur) {
+    journaliserErreur("alerte d'avis a moderer non deposee", erreur, {
+      avisEcrits: nombre,
+    });
+  }
 }
 
 /** Course perdue sur la consommation du jeton, annule la transaction. */

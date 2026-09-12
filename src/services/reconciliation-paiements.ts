@@ -30,6 +30,9 @@ import {
 } from "@/integrations/stripe/fournisseur";
 import type { EvenementPaiement } from "@/integrations/stripe/evenements";
 import { historiserTransition } from "@/repositories/confirmation";
+import { destinataireAlerte } from "@/services/notification-administration";
+import { deposerEnvoi } from "@/services/envoi-email";
+import { formaterDate } from "@/lib/affichage-commande";
 import { traiterEvenementPaiement } from "@/services/webhook-paiement";
 
 /**
@@ -275,5 +278,77 @@ async function annulerCommande(
       statutNouveau: "ANNULEE",
       origine: "RECONCILIATION",
     });
+
+    await notifierPaiementAnnule(transaction, commandeId);
   });
+}
+
+/**
+ * Previent l'exploitante qu'une commande est morte faute de paiement, LS-219.
+ *
+ * C'EST LE SEUL CHEMIN D'ANNULATION DU DEPOT, et c'est pourquoi l'alerte vit
+ * ici plutot que chez les deux appelants. Le webhook ne connait aucun evenement
+ * d'annulation : `TypeEvenementPaiement` ne porte que `PAIEMENT_REUSSI` et
+ * `PAIEMENT_REMBOURSE`. Une commande abandonnee au tunnel n'est donc annulee
+ * que par cette reconciliation, constat de LS-219.
+ *
+ * ELLE LIT L'INTERRUPTEUR `alertePaiementAnnule`, ce qui le rend reel : sans
+ * cette lecture, la case a cocher de l'ecran des parametres serait un bouton
+ * qui ne commande rien.
+ *
+ * ELLE EST DANS LA TRANSACTION, contrairement au depot d'email du remboursement
+ * qui part apres le commit. La difference tient a ce qui est en jeu : ici
+ * aucune fenetre de course sur de l'argent n'existe, l'annulation etant une
+ * simple transition de statut, et le depot dans la transaction garantit qu'une
+ * commande annulee et un email annonce vont ensemble ou pas du tout.
+ *
+ * SON ECHEC N'ANNULE PAS LA TRANSITION. Une commande doit pouvoir mourir meme
+ * si personne ne peut en etre prevenu : l'echec est journalise, et l'annulation
+ * se lit dans l'administration.
+ */
+async function notifierPaiementAnnule(
+  transaction: Prisma.TransactionClient,
+  commandeId: string,
+): Promise<void> {
+  try {
+    const destinataire = await destinataireAlerte("alertePaiementAnnule");
+
+    if (destinataire === null || destinataire === "") {
+      return;
+    }
+
+    /*
+     * LE NUMERO EST LU POUR QUE LE MESSAGE SOIT ACTIONNABLE, l'identifiant
+     * technique n'etant retrouvable qu'en fouillant l'administration.
+     */
+    const commande = await transaction.commande.findUnique({
+      where: { id: commandeId },
+      select: { numero: true },
+    });
+
+    await deposerEnvoi(transaction, {
+      /*
+       * `commandeId: null` COMME LES AUTRES NOTIFICATIONS D'ADMINISTRATION, la
+       * cle `(commandeId, modele)` n'ayant aucun sens ici : une commande n'est
+       * annulee qu'une fois, mais la dedupliquer par commande empecherait toute
+       * autre notification du meme modele sur elle.
+       */
+      commandeId: null,
+      destinataire,
+      modele: "admin-incident-critique",
+      variables: {
+        type: "PAIEMENT_ABANDONNE",
+        date: formaterDate(new Date()),
+        description:
+          `La commande ${commande?.numero ?? commandeId} a ete annulee : ` +
+          "le paiement n'a jamais abouti et le delai est passe. " +
+          "Les pieces reservees sont rendues au catalogue.",
+      },
+      origine: "SYSTEME",
+    });
+  } catch (erreur) {
+    journaliserErreur("alerte de paiement annule non deposee", erreur, {
+      commande: commandeId,
+    });
+  }
 }
