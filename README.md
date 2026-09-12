@@ -30,22 +30,23 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 1, fondations | LS-2 | 0 | **close**, porte de sortie constatée le 13 août 2026 |
 | 2, catalogue et médias | LS-3 | 2 | LS-123 les pages de contenu et LS-145 la mesure de F-ADM-07 sur l'éditeur réel |
 | 3, panier et paiement | LS-4 | 0 | **close** le 11 septembre 2026. LS-86 portait le dernier critère, le récapitulatif sur les trois modes de livraison |
-| 4, factures et expédition | LS-5 | 3 | **LS-218 crée l'étiquette par API**, développée, son critère 10 attend un envoi réel. **LS-33** décide comment le site apprend qu'un colis est livré, **LS-35** porte l'e-reporting au 1er septembre 2027. **LS-98 est close** le 11 septembre 2026, les paramètres commerciaux vivent en base, ADR-043 |
-| 4bis, espace client et avis | LS-36 | 0 | **close** le 11 septembre 2026. LS-61 portait le dernier critère ouvert, le renvoi d'invitation : un client qui perdait son email ne pouvait plus jamais déposer son avis |
+| 4, factures et expédition | LS-5 | 4 | **LS-218 crée l'étiquette par API**, et son poids est un réglage depuis le 12 septembre 2026 : seul son critère 10 reste ouvert, il attend un colis réel donc LS-153. **LS-33** décide comment le site apprend qu'un colis est livré, **LS-35** porte l'e-reporting au 1er septembre 2027, et **LS-222** attend d'observer de vrais envois dans plusieurs clients de messagerie. **LS-98 est close** le 11 septembre 2026, les paramètres commerciaux vivent en base, ADR-043 |
+| 4bis, espace client et avis | LS-36 | 0 | **close**, et rouverte deux fois depuis : LS-221 a livré « Mes avis » puis **LS-225 la modification d'un avis par son auteur**, le 12 septembre 2026. Une phase close ne l'est que des tickets connus le jour où on la ferme |
 | 5, rétractation et conformité | LS-6 | 0 | **close**, ses huit stories terminées le 10 septembre 2026 |
-| 6, exploitation et ouverture | LS-7 | 5 | **LS-153 et LS-142 attendent l'exploitante**. LS-140 et LS-107 attendent les photographies de LS-23. Reste LS-150, la visibilité dans les moteurs de réponse. **LS-175 est close** depuis le 10 septembre 2026, le compte d'administration existe |
+| 6, exploitation et ouverture | LS-7 | 7 | **LS-153 et LS-142 attendent l'exploitante**. LS-140 et LS-107 attendent les photographies de LS-23. Restent LS-150, la visibilité dans les moteurs de réponse, **LS-223**, la clé Backblaze qui exige la console du fournisseur, et **LS-226**, deux tests d'intégration qui rougissent selon leur ordre d'exécution |
 | 7, V1 cible | LS-8 | 0 | **close** le 11 septembre 2026. LS-149 portait le dernier critère : ADR-044 **écarte l'assistant IA** du périmètre plutôt que de le reporter |
 | Contenus | LS-22 | 10 | **attend l'exploitante**, rien n'est faisable sans elle. **LS-32 est close** le 11 septembre 2026, la neutralité de genre étant désormais gardée par un contrôle |
 
-**190 tickets terminés sur 214 hors epics**, les deux termes relevés dans Jira
-le **12 septembre 2026 en fin de journée**, et jamais dérivés l'un de l'autre.
+**191 tickets terminés sur 216 hors epics**, les deux termes relevés dans Jira
+le **12 septembre 2026 au soir**, et jamais dérivés l'un de l'autre.
 
-**Le dénominateur a gagné six tickets en deux jours**, LS-219 à LS-225 : les
+**Le dénominateur a gagné huit tickets en deux jours**, LS-219 à LS-226 : les
 anomalies trouvées ne sont plus corrigées au fil de l'eau mais ticketées, ce que
-le motif « dette annoncée hors outil » a imposé. Le numérateur, lui, n'a gagné
-que quatre stories : sur les cinq livrées ce jour, **LS-222 seule reste En
-cours**, ses deux critères demandant d'observer de vrais envois dans plusieurs
-clients de messagerie.
+le motif « dette annoncée hors outil » a imposé. Le numérateur, lui, a gagné cinq
+stories. **Deux restent En cours et pour deux raisons différentes** : LS-222
+attend d'observer de vrais envois dans plusieurs clients de messagerie, et
+**LS-218 attend un colis réel**, son dernier critère exigeant un achat facturé et
+donc LS-153.
 
 **Cinq phases sur huit sont désormais closes**, les phases 1, 3, 4bis, 5 et 7.
 
@@ -54,7 +55,7 @@ une fois : le chiffre disait 175 sous une date du 10 septembre, ce qui aurait
 fait relire un compte pour un autre. Motif « un compte recopié n'est pas une
 mesure », qui vaut pour la date autant que pour le nombre.
 
-**Onze des vingt-deux tickets ouverts attendent l'exploitante** : les dix de
+**Onze des vingt-cinq tickets ouverts attendent l'exploitante** : les dix de
 l'epic LS-22, photographies, textes, tarifs et contenus juridiques, plus LS-19,
 la médiation, qui suppose une adhésion à souscrire. Aucun code ne les débloque.
 
@@ -719,8 +720,18 @@ certains états dépendent d'une donnée **globalement** absente. Les deux état
 vides « aucune catégorie » s'affichent quand la table entière est vide, ce que la
 fixture de bout en bout ne peut pas produire puisqu'elle insère toujours une
 catégorie ; et vider la table en cours de suite ferait voir cet état aux
-travailleurs voisins, la base étant partagée. Il ne remplace pas la mesure de
-bout en bout, qui reste la seule à voir une mise en page réelle.
+travailleurs voisins, la base étant partagée.
+
+**Il porte aussi ce qui se mesure sur l'ARBRE D'ACCESSIBILITÉ**, LS-225 : le nom
+accessible d'un contrôle, l'annonce d'une région live, le comportement d'un bloc
+repliable après une action. Ces cas ne dépendent d'aucune largeur et demandent un
+compte, une commande et une livraison en bout en bout, donc quatre fois leur
+prix. C'est ainsi qu'un nom accessible collé, « 2étoiles sur 5 », a été trouvé sur
+un écran qui paraissait juste à l'œil depuis LS-61.
+
+Il ne remplace pas la mesure de bout en bout, qui reste la seule à voir une
+**mise en page** réelle : jsdom ne calcule aucune largeur, donc ni débordement ni
+zone tactile ne s'y mesurent.
 
 Les tests d'intégration créent une base **éphémère** au nom unique, y appliquent
 `prisma migrate deploy`, puis la détruisent. La base de développement n'est
