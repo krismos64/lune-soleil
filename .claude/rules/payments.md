@@ -14,6 +14,8 @@ paths:
   - "src/repositories/confirmation.ts"
   - "src/repositories/commande.ts"
   - "src/repositories/facture.ts"
+  - "src/services/avoir.ts"
+  - "src/repositories/avoir.ts"
   - "src/app/(boutique)/commande/**"
 ---
 
@@ -177,6 +179,43 @@ L'événement reste persisté, il ne doit pas être rejoué indéfiniment.
 bord du prestataire. **Ne pas appeler de remboursement automatique**, y compris
 si cela paraît plus serviable : le chemin qui décide « ce paiement est en trop »
 est celui qui, s'il se trompe, rend l'argent d'une commande valide.
+
+## Remboursement, l'intention et son avoir
+
+**Une intention de remboursement réserve sa part du restant tant que son avoir
+n'existe pas.** La borne de `reserverIntentionRemboursement` soustrait deux
+termes du total de la facture : les avoirs déjà écrits, `montantAvoirCentimes`,
+et les intentions **non abouties**. Une intention aboutie est censée être dans le
+premier terme, son avoir ayant été écrit.
+
+**Le marquage d'aboutissement vit DANS la transaction qui écrit l'avoir**,
+LS-224, et l'y laisser n'est pas un détail de style. Marqué avant, le montant
+quitte le second terme sans être entré dans le premier : pendant cet intervalle
+il n'est compté **nulle part**, une demande concurrente s'y juge légitime, et
+`chk_facture_avoir_borne` la refuse par une **exception** au lieu du refus
+lisible `MONTANT_TROP_ELEVE`. L'exploitante lit « erreur serveur » là où elle
+devrait lire que le montant dépasse le restant.
+
+**Le `CHECK` rattrape l'argent, jamais le message.** C'est la raison pour
+laquelle une fenêtre « que la contrainte rattraperait » n'est pas acceptable :
+la contrainte tient l'invariant comptable et laisse l'écran inutilisable. Le
+commentaire du code a assumé cette fenêtre pendant des semaines sur ce
+fondement exact.
+
+**Ce qui n'a pas besoin d'être atomique avec l'écriture n'entre pas dans la
+transaction**, et la règle vaut dans les deux sens. L'appel au prestataire et le
+dépôt d'email restent **dehors** : un email non déposé se rattrape, une fenêtre
+de course sur l'argent non. Le marquage d'intention, lui, est **dedans** : il
+porte une part du calcul du restant, donc il doit naître avec l'avoir ou pas du
+tout.
+
+**Ce défaut ne se mesure pas par la concurrence**, et quatre tentatives l'ont
+établi. Le verrou `FOR UPDATE` sérialise les demandes **avant** la fenêtre, qui
+ne dure que le temps d'un aller vers PostgreSQL : un test de course y dépend de
+l'ordonnancement, entre zéro et trois rouges sur cinq selon la charge. Le
+contrôle mesure l'**atomicité** à la place : si la transaction de l'avoir échoue,
+aucune intention ne doit rester marquée aboutie. Cinq rouges sur cinq, cas 167 de
+`verifier-tests-mutation.sh`.
 
 ## Documents comptables
 
