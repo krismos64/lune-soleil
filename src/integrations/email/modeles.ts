@@ -1,21 +1,26 @@
 /**
  * Rendu des messages, LS-82.
  *
- * CE FICHIER NE PORTE PAS LES TEXTES DEFINITIFS, ET C'EST VOLONTAIRE. Les six
- * textes F-MAIL-01 a F-MAIL-06 appartiennent a LS-29, ne sont pas ecrits, et
- * doivent etre valides par l'exploitante : ces emails sont la voix de sa marque.
- * Les ecrire ici les ferait entrer en production sans relecture, et personne ne
- * saurait ensuite qu'ils n'ont jamais ete valides.
+ * CE FICHIER PORTE LES TEXTES DEFINITIFS DEPUIS LS-29, 12 septembre 2026. Son
+ * en-tete disait l'inverse jusque-la, « les six textes F-MAIL-01 a F-MAIL-06
+ * [...] ne sont pas ecrits » : c'etait vrai, et la phrase a survecu a ce qu'elle
+ * decrivait.
  *
- * CE QU'IL PORTE : les trois messages que LS-70 attend deja pour
- * l'authentification, dans une forme fonctionnelle et sobre. Ils partent d'un
- * mecanisme, pas d'une intention editoriale, et un texte de service se relit
- * moins qu'une confirmation de commande.
+ * LE TON VIENT DE L'EXPLOITANTE, recueilli en seance : signature « L'atelier
+ * Lune-soleil », vouvoiement, « article » et jamais « bijou », « nous » et
+ * jamais « je ». Trace dans `docs/prive/REPONSES-EXPLOITANTE.md`, hors depot.
+ * Ne pas reecrire un texte sans connaitre ces consignes, un test les fige.
  *
- * LE FORMAT EST DU TEXTE BRUT, sans HTML. Un message d'authentification n'a
- * aucun besoin de mise en forme, et le texte brut traverse mieux les filtres
- * anti-indesirables au demarrage d'un domaine, quand aucune reputation n'est
- * encore etablie.
+ * F-MAIL-02, LA FACTURE, N'A PAS DE MODELE ET CE N'EST PAS UN OUBLI : elle est
+ * portee par le lien signe de `commande-confirmee`, permanent et personnel.
+ *
+ * LE COMPTE DE MODELES NE S'ECRIT PAS ICI, il se mesure sur le type
+ * `ModeleEmail`. Il a deja ete ecrit faux deux fois le jour meme de LS-29.
+ *
+ * LE FORMAT EST DU TEXTE BRUT, sans HTML. Le texte brut traverse mieux les
+ * filtres anti-indesirables au demarrage d'un domaine, quand aucune reputation
+ * n'est encore etablie. **LS-222 porte la mise en forme**, et le texte devra y
+ * rester en repli : un message sans version texte est penalise par les filtres.
  *
  * AUCUN DELAI NI ENGAGEMENT N'EST INVENTE ici, regle de redaction de LS-29 : la
  * duree de validite annoncee vient de la configuration reelle du jeton, passee

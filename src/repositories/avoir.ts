@@ -352,10 +352,23 @@ export async function reserverIntentionRemboursement(
        * Elle seule doit reserver sa part, et elle cesse de le faire des qu'elle
        * est liberee, `libererIntentionNonAboutie` la supprimant.
        *
-       * LA FENETRE ENTRE `marquerIntentionAboutie` ET L'ECRITURE DE L'AVOIR est
-       * assumee : le montant y est compte par aucun des deux termes. Elle est
-       * bornee a une transaction locale, sans appel reseau, et son seul effet
-       * serait d'autoriser une demande concurrente que le `CHECK` rattraperait.
+       * IL N'Y A PLUS DE FENETRE ENTRE `marquerIntentionAboutie` ET L'ECRITURE
+       * DE L'AVOIR, LS-224, corrige le 12 septembre 2026 : les deux vivent
+       * desormais dans LA MEME transaction, `services/avoir.ts`.
+       *
+       * CE COMMENTAIRE DISAIT L'INVERSE, ET C'EST POURQUOI IL EST REECRIT PLUTOT
+       * QUE SUPPRIME. Il assumait la fenetre, « son seul effet serait
+       * d'autoriser une demande concurrente que le CHECK rattraperait ».
+       * L'affirmation etait exacte et la conclusion fausse :
+       * `chk_facture_avoir_borne` rattrape l'ARGENT, jamais le MESSAGE.
+       * L'exploitante lisait une erreur serveur la ou elle devait lire « le
+       * montant depasse le restant », et le test de concurrence de LS-160
+       * echouait QUATRE FOIS SUR CINQ.
+       *
+       * NE PAS REOUVRIR CETTE FENETRE en deplacant le marquage hors de la
+       * transaction de l'avoir : le montant y serait de nouveau compte par
+       * aucun des deux termes, et l'instabilite reviendrait sans qu'aucun type
+       * ni chemin nominal ne la signale.
        */
       const enCours = await transaction.intentionRemboursement.aggregate({
         where: { factureId: parametres.factureId, aboutieA: null },

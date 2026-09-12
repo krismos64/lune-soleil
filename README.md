@@ -743,9 +743,18 @@ qu'une personne attend à l'écran part directement.
 blocage n'est plus l'envoi mais le parcours autour, écran d'attente et renvoi du
 lien, porté par LS-54.
 
-**Les six textes F-MAIL-01 à F-MAIL-06 restent dus par LS-29.** Seuls les trois
-messages d'authentification ont un rendu ; les textes de la marque demandent la
-validation de l'exploitante.
+**Les textes de LS-29 sont écrits depuis le 12 septembre 2026**, ton validé par
+l'exploitante. F-MAIL-02, la facture, n'a volontairement pas de modèle : elle est
+portée par le lien signé de la confirmation de commande.
+
+**LS-29 reste ouverte sur son critère 4**, aucun de ces messages n'ayant jamais
+été reçu dans une vraie boîte. Le compte de modèles se mesure plutôt qu'il ne se
+recopie, il a déjà été écrit faux deux fois :
+
+```bash
+sed -n '/export type ModeleEmail/,/;$/p' src/integrations/email/index.ts \
+  | grep -coE '"[a-z-]+"'
+```
 
 **L'arrivée d'un message ne se vérifie qu'à la main**, et `npm run email:reel`
 sert à cela. Il vit sous sa propre configuration Vitest, que rien n'importe :
