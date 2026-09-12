@@ -28,7 +28,10 @@ import {
   PrestatairePaiementIndisponibleError,
   type FournisseurPaiement,
 } from "@/integrations/stripe/fournisseur";
-import { reserverNumero } from "@/repositories/commande";
+import {
+  lireDestinataireCommande,
+  reserverNumero,
+} from "@/repositories/commande";
 import {
   ecrireAvoir,
   libererIntentionNonAboutie,
@@ -384,10 +387,7 @@ export async function rembourserCommande(
    * signale. Ici la donnee ne depend d'aucune ecriture de la transaction, elle
    * n'a donc rien a y faire.
    */
-  const destinataireClient = await prisma.commande.findUnique({
-    where: { id: commandeId },
-    select: { numero: true, emailNormalise: true },
-  });
+  const destinataireClient = await lireDestinataireCommande(prisma, commandeId);
 
   return emettreAvoirApresRemboursement({
     destinataireClient,
