@@ -145,6 +145,16 @@ export async function enregistrer(
   const seuilStockFaible =
     typeof seuilStockBrut === "string" ? Number(seuilStockBrut) : Number.NaN;
 
+  /*
+   * LE POIDS EST LU COMME LE SEUIL DE STOCK, en entier et sans coercition : un
+   * champ vide donne `NaN`, que Zod refuse avec son message, plutot que zero
+   * qu'il accepterait a tort. Meme motif que `centimesDepuisEuros` pour les
+   * montants, la coercition silencieuse etant le piege de ce formulaire.
+   */
+  const poidsBrut = donnees.get("poidsColisGrammes");
+  const poidsColisGrammes =
+    typeof poidsBrut === "string" ? Number(poidsBrut) : Number.NaN;
+
   const emailBrut = donnees.get("emailAlertes");
 
   try {
@@ -153,6 +163,7 @@ export async function enregistrer(
       tarifDomicileCentimes,
       seuilFranchiseCentimes,
       seuilStockFaible,
+      poidsColisGrammes,
       emailAlertes: typeof emailBrut === "string" ? emailBrut.trim() : "",
       alerteCommandePayee: interrupteur(donnees, "alerteCommandePayee"),
       alertePaiementAnnule: interrupteur(donnees, "alertePaiementAnnule"),

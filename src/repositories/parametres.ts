@@ -41,6 +41,8 @@ export type ParametresLus = {
   /** `null` DESACTIVE la franchise, et ne vaut pas zero. */
   seuilFranchiseCentimes: number | null;
   seuilStockFaible: number;
+  /** Poids forfaitaire du colis, en GRAMMES entiers, LS-218. */
+  poidsColisGrammes: number;
   emailAlertes: string;
   alerteCommandePayee: boolean;
   alertePaiementAnnule: boolean;
@@ -67,14 +69,37 @@ export type ParametresAEcrire = Omit<ParametresLus, "modifieA">;
  * service, qui seul sait si l'appelant peut s'en passer. Les pages publiques
  * masquent leur bloc de tarifs, l'ecran de parametres propose l'amorcage.
  *
- * `findUnique` ET NON `findFirst` : la ligne est designee par sa cle primaire,
- * et `findFirst` sur une table a ligne unique donnerait le meme resultat en
- * laissant croire qu'un ordre existe.
+ * `findFirst` ET NON `findUnique`, contrairement a ce que ce commentaire
+ * prescrivait jusqu'au 12 septembre 2026 : le dataloader compacte les
+ * `findUnique` concurrents en un filtre `in` que la cle booleenne refuse. Le
+ * motif complet est ecrit dans le corps de la fonction.
  */
 export async function lireParametres(
   client: ClientBase,
 ): Promise<ParametresLus | null> {
-  const ligne = await client.parametreBoutique.findUnique({
+  /*
+   * `findFirst` ET NON `findUnique`, ET CE N'EST PAS UN DETAIL DE STYLE.
+   *
+   * LE DEFAUT, mesure le 12 septembre 2026 en livrant LS-218. Le dataloader de
+   * Prisma COMPACTE les `findUnique` du meme tick en un seul `findMany`, ✅ via
+   * Context7 : plusieurs lectures deviennent `where: { id: { in: [...] } }`.
+   * Or `id` est un `Boolean` ici, et le filtre `in` n'existe pas sur ce type :
+   * la requete compactee echoue avec « Unknown argument `in` », et les DEUX
+   * appels concurrents rejettent.
+   *
+   * CE QUI LE RENDAIT INVISIBLE. Une lecture seule ne se compacte avec rien et
+   * passe. Tous les appelants d'avant LS-218 lisaient les parametres une fois
+   * par requete HTTP ; le premier chemin qui en lance deux dans le meme tick est
+   * le test de concurrence de la creation d'etiquette, ou les deux ont rejete
+   * ensemble. Le defaut vivait donc ici depuis LS-98 sans qu'aucun test ne
+   * l'exerce.
+   *
+   * `findFirst` N'EST PAS COMPACTE et rend la meme ligne : la table n'en porte
+   * qu'une, `chk_parametre_ligne_unique` le garantit en base. L'argument
+   * « `findFirst` laisserait croire qu'un ordre existe », qui justifiait
+   * `findUnique` ici, ne pese rien face a une lecture qui echoue.
+   */
+  const ligne = await client.parametreBoutique.findFirst({
     where: { id: IDENTIFIANT_LIGNE },
   });
 
@@ -92,6 +117,7 @@ export async function lireParametres(
     tarifDomicileCentimes: ligne.tarifDomicileCentimes,
     seuilFranchiseCentimes: ligne.seuilFranchiseCentimes,
     seuilStockFaible: ligne.seuilStockFaible,
+    poidsColisGrammes: ligne.poidsColisGrammes,
     emailAlertes: ligne.emailAlertes,
     alerteCommandePayee: ligne.alerteCommandePayee,
     alertePaiementAnnule: ligne.alertePaiementAnnule,
@@ -130,6 +156,7 @@ export async function ecrireParametres(
     tarifDomicileCentimes: ligne.tarifDomicileCentimes,
     seuilFranchiseCentimes: ligne.seuilFranchiseCentimes,
     seuilStockFaible: ligne.seuilStockFaible,
+    poidsColisGrammes: ligne.poidsColisGrammes,
     emailAlertes: ligne.emailAlertes,
     alerteCommandePayee: ligne.alerteCommandePayee,
     alertePaiementAnnule: ligne.alertePaiementAnnule,

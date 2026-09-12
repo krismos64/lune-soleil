@@ -686,6 +686,9 @@ CREATE TABLE "parametre_boutique" (
     -- toute livraison gratuite, l'inverse exact de l'intention.
     "seuil_franchise_centimes" INTEGER,
     "seuil_stock_faible" INTEGER NOT NULL,
+    -- Poids forfaitaire du colis en GRAMMES, LS-218. Configurable et non
+    -- constant : le CHECK le borne a la tranche d'expedition retenue.
+    "poids_colis_grammes" INTEGER NOT NULL DEFAULT 200,
     "email_alertes" TEXT NOT NULL,
     "alerte_commande_payee" BOOLEAN NOT NULL DEFAULT true,
     "alerte_paiement_annule" BOOLEAN NOT NULL DEFAULT true,

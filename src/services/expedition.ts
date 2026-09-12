@@ -46,6 +46,7 @@ import { TRANSITIONS_ADMINISTRATRICE } from "@/services/administration-commandes
 import { TransporteurIndisponibleError } from "@/integrations/sendcloud/index";
 import type { ClientExpedition } from "@/integrations/sendcloud/expedition";
 import { methodeExigePointRetrait } from "@/integrations/sendcloud/methodes";
+import { lireParametresBoutique } from "@/services/parametres";
 import { journaliser, journaliserErreur } from "@/lib/journal";
 import { LIBELLES_LIVRAISON } from "@/lib/affichage-commande";
 import { deposerEnvoi } from "@/services/envoi-email";
@@ -533,6 +534,19 @@ export async function creerEtiquetteExpedition({
   }
 
   /*
+   * LE POIDS EST UN REGLAGE ET NON UNE CONSTANTE, LS-218 critere 11. Il est lu
+   * ICI, dans la couche metier, et remis au fournisseur comme le mode : un
+   * module d'integration qui irait lire `ParametreBoutique` lui-meme
+   * melangerait l'acces aux donnees a la forme d'une API tierce.
+   *
+   * IL EST LU AVANT L'APPEL ET NON APRES, et l'ordre n'est pas libre : sa
+   * lecture peut lever `ParametresAbsentsError` sur une base non migree, et
+   * decouvrir cette panne APRES l'appel aurait fait payer une etiquette que
+   * rien n'ecrit ensuite. Meme raison que les trois refus ci-dessus.
+   */
+  const { poidsColisGrammes: poidsGrammes } = await lireParametresBoutique();
+
+  /*
    * ETAPE 2, L'APPEL QUI DEPENSE. A partir d'ici, un echec peut laisser un
    * colis cree chez le transporteur : c'est pourquoi son refus dit « verifier »
    * et non « reessayer ».
@@ -544,6 +558,7 @@ export async function creerEtiquetteExpedition({
       reference: commande.numero,
       mode,
       pointRetraitId: commande.pointRelaisId,
+      poidsGrammes,
       adresse: {
         nom: nomDestinataire,
         ligne1: figee.ligne1!,

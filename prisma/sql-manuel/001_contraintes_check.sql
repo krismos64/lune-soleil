@@ -467,6 +467,22 @@ ALTER TABLE "parametre_boutique"
 -- sur une expression reguliere d'email est un piege connu, trop strict il refuse
 -- des adresses valides, trop laxiste il ne prouve rien. La base garde le fait
 -- minimal et indiscutable, la presence.
+-- LE POIDS DU COLIS EST BORNE PAR LA TRANCHE D'EXPEDITION, LS-218. Les trois
+-- methodes retenues dans `methodes.ts` couvrent 0 a 0,251 kg : une valeur
+-- au-dela ferait acheter une etiquette de la mauvaise tranche, que le
+-- transporteur rattrape en facturant un supplement APRES coup, donc sans qu'un
+-- refus visible ne se produise au moment du geste.
+--
+-- 250 ET NON 251, pour ne pas inviter a se coller a la borne exclusive de
+-- Sendcloud.
+--
+-- LA BORNE BASSE VIENT AUSSI DU TRANSPORTEUR, et non d'une evidence : les
+-- methodes retenues portent un `min_weight` de 0,015 kg au domicile et 0,011 au
+-- locker. Sous ce seuil, Sendcloud REFUSE la creation, apres l'aller-retour.
+ALTER TABLE "parametre_boutique"
+  ADD CONSTRAINT "chk_parametre_poids_colis_borne"
+  CHECK ("poids_colis_grammes" >= 15 AND "poids_colis_grammes" <= 250);
+
 ALTER TABLE "parametre_boutique"
   ADD CONSTRAINT "chk_parametre_email_alertes_non_vide"
   CHECK (length(trim("email_alertes")) > 0);
