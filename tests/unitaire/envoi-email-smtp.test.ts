@@ -14,10 +14,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   ConfigurationEmailIncompleteError,
+  creerEnvoyeurSmtp,
   estReessayable,
   lireConfigurationSmtp,
   motifSansSecret,
 } from "@/integrations/email/smtp";
+import { CID_LOGO } from "@/integrations/email/gabarit-html";
 import { rendreModele } from "@/integrations/email/modeles";
 
 /** Erreur nodemailer simulee : seul `code` est lu par le classement. */
@@ -469,4 +471,103 @@ describe("garde d'envoi hors production", () => {
       expect(envoyeur).toBe(envoyeurJournalise);
     });
   }
+});
+
+/**
+ * LE MESSAGE REELLEMENT REMIS AU TRANSPORT, LS-222.
+ *
+ * CE QUE CE BLOC EPROUVE, ET QUE `gabarit-email-html.test.ts` NE PEUT PAS :
+ * celui-la mesure la fonction qui habille, celui-ci mesure ce qui PART. Un
+ * gabarit parfait branche sur rien donnerait exactement les memes tests verts,
+ * motif « une fonction correcte et du code mort produisent les memes tests »,
+ * qui a coute LS-214 sur ce meme module.
+ *
+ * LE TRANSPORT EST INJECTE, second parametre de `creerEnvoyeurSmtp`. Aucun
+ * serveur n'est monte : ce qui est mesure est l'objet passe a `sendMail`.
+ */
+describe("creerEnvoyeurSmtp, le message remis au transport", () => {
+  /** Transport double : il retient l'objet recu et ne parle a personne. */
+  function transportDouble(): {
+    transport: Parameters<typeof creerEnvoyeurSmtp>[1];
+    envois: Record<string, unknown>[];
+  } {
+    const envois: Record<string, unknown>[] = [];
+
+    return {
+      envois,
+      transport: {
+        async sendMail(options: Record<string, unknown>) {
+          envois.push(options);
+          return {};
+        },
+      } as unknown as Parameters<typeof creerEnvoyeurSmtp>[1],
+    };
+  }
+
+  const CONFIGURATION = {
+    hote: "smtp.exemple.invalid",
+    port: 587,
+    utilisateur: "compte",
+    motDePasse: "secret-de-test",
+    expediteur: "boutique@exemple.invalid",
+  };
+
+  async function envoyerUnMessage(): Promise<Record<string, unknown>> {
+    const { transport, envois } = transportDouble();
+
+    await creerEnvoyeurSmtp(CONFIGURATION, transport).envoyer({
+      modele: "verification-adresse",
+      destinataire: "client@exemple.invalid",
+      variables: { lien: "https://lune-soleil.fr/verifier/jeton" },
+    });
+
+    const envoi = envois[0];
+
+    if (envoi === undefined) {
+      throw new Error("aucun message remis au transport");
+    }
+
+    return envoi;
+  }
+
+  it("remet les DEUX versions, texte et HTML, critere 1", async () => {
+    /*
+     * LE TEXTE RESTE OBLIGATOIRE, et c'est le sens du critere 1 : un message
+     * sans version texte est penalise par les filtres anti-indesirables, et
+     * certains clients ne rendent que celle-la. Retirer `text` doit rougir.
+     */
+    const envoi = await envoyerUnMessage();
+
+    expect(typeof envoi.text).toBe("string");
+    expect((envoi.text as string).length).toBeGreaterThan(0);
+    expect(typeof envoi.html).toBe("string");
+    expect(envoi.html as string).toContain("<html lang=\"fr\">");
+  });
+
+  it("joint le logo en piece jointe integree, jamais en URL", async () => {
+    /*
+     * CRITERE 3 ET ADR-040. La piece jointe porte le meme `cid` que le `src` du
+     * gabarit : les deux doivent s'accorder, et une valeur ecrite des deux
+     * cotes casserait l'affichage sans casser aucun test.
+     */
+    const envoi = await envoyerUnMessage();
+    const pieces = envoi.attachments as
+      | { cid?: string; contentDisposition?: string }[]
+      | undefined;
+
+    expect(pieces).toHaveLength(1);
+    expect(pieces?.[0]?.cid).toBe(CID_LOGO);
+    expect(pieces?.[0]?.contentDisposition).toBe("inline");
+    expect(envoi.html as string).toContain(`cid:${CID_LOGO}`);
+  });
+
+  it("n'emet aucune requete vers un serveur du projet depuis le HTML", async () => {
+    /*
+     * LA GARDE QUI PORTE ADR-040 SUR LE MESSAGE REEL. Un pixel espion se
+     * reconnait a une balise image pointant une URL : aucune ne doit exister.
+     */
+    const envoi = await envoyerUnMessage();
+
+    expect(envoi.html as string).not.toMatch(/<img[^>]+src="https?:/);
+  });
 });

@@ -665,6 +665,34 @@ incident sur l'une laisserait sinon les suivantes grossir indéfiniment, ce qui
 est un incident silencieux. La tâche est déclarée en échec si l'une des purges a
 échoué, pour que l'exploitation le voie plutôt qu'un 200 rassurant.
 
+### Aperçu des emails, LS-222
+
+Les quinze messages de la boutique se regardent sans lancer l'application ni la
+base. La commande écrit un fichier HTML par message, plus une page d'accueil qui
+les liste.
+
+```bash
+npm run apercus-emails       # écrit apercus-emails/, quinze messages et l'index
+open apercus-emails/index.html   # ou glisser le fichier dans un navigateur
+```
+
+**Le dossier n'est pas versionné**, `.gitignore` l'écarte : ce sont des fichiers
+dérivés du code, reconstruits en une seconde. Le dossier entier s'envoie tel quel
+à l'exploitante, qui n'a qu'à ouvrir `index.html`.
+
+**Les données sont fictives et le disent** : « Camille Dupont », des numéros de
+commande inventés, et des domaines en `.invalid`, que la RFC 2606 réserve et qui
+ne peuvent pas exister. Un aperçu qui porterait une vraie adresse finirait
+recopié.
+
+**Le logo y est en base64, alors que les vrais emails le portent en pièce jointe
+`cid:`.** Un navigateur ne sait pas résoudre un `cid:` dans un fichier isolé :
+sans cette substitution, les quinze aperçus montreraient une image cassée. C'est
+une transformation d'affichage, elle ne touche ni le gabarit ni l'envoi.
+
+**Un modèle ajouté au code sans exemple dans le script fait échouer la
+commande**, plutôt que de produire un dossier incomplet en silence.
+
 ### Tests, LS-68
 
 ```bash
