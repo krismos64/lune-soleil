@@ -17,11 +17,13 @@
  * service est appele depuis des composants serveur deja gardes.
  */
 import { prisma } from "@/lib/prisma";
+import { nomAffichable } from "@/lib/nom-affiche";
 import {
   ParametresAbsentsError,
   lireParametresBoutique,
 } from "@/services/parametres";
 import * as depot from "@/repositories/tableau-bord";
+import * as depotUtilisateur from "@/repositories/utilisateur";
 
 export type ComptagesAdministration = depot.ComptagesAdministration;
 
@@ -73,4 +75,29 @@ export async function lireComptages(): Promise<ComptagesAdministration> {
   }
 
   return depot.compterPourAdministration(prisma, seuil);
+}
+
+/**
+ * Le nom affiche en pied de barre de l'administration.
+ *
+ * LE NOM DU COMPTE PLUTOT QUE L'ADRESSE. La barre affichait la partie locale
+ * de l'email, ce qui donnait « contact » : la boite de la boutique identifie
+ * une fonction, pas la personne qui est derriere l'ecran.
+ *
+ * `nomAffichable` PORTE DEJA LE REPLI et ses cas limites, dont un nom reduit a
+ * `"..."` que `trim` seul laisserait passer. Le reecrire ici ferait diverger
+ * deux definitions du meme affichage, celle de l'espace client et celle-ci.
+ *
+ * LE NOM N'EST PAS DANS LA SESSION, ET CE N'EST PAS UN OUBLI :
+ * `IdentiteAppelant` exclut deliberement les champs d'affichage pour qu'aucun
+ * d'eux ne se retrouve a fonder une autorisation. La vue relit, comme le fait
+ * deja l'espace client.
+ */
+export async function lireNomAffiche(
+  utilisateurId: string,
+  email: string,
+): Promise<string> {
+  const compte = await depotUtilisateur.lireNomCompte(prisma, utilisateurId);
+
+  return nomAffichable(compte?.nom ?? null, email);
 }
