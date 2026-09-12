@@ -152,6 +152,32 @@ tous les controles du workflow       0 en echec
 CI PR #405                           verte
 ```
 
+## Déployé en production le 12 septembre 2026
+
+`e07534a` vers `97535e7`, sept commits, **aucune migration** : un simple
+remplacement d'image, sans tunnel ni relais.
+
+```
+Étape 1, sauvegarde préalable          sauvegarde faite
+Étape 3, contrôle du schéma            migrations attendues 19, appliquées 19
+Étape 5, attente d'un conteneur sain   conteneur sain après 10 s
+Étape 6, vérification domaine public   https://lune-soleil.fr/api/sante rend 200
+Étape 8, non-régression SmartPlanning  smartplanning.fr 200, analytics 200
+Port 3002 injoignable depuis l'extérieur, conforme.
+```
+
+**Ce que ce déploiement rend visible** : la barre d'administration affiche
+« Stacy » au lieu de « contact », et les quinze modèles d'email portent leurs
+textes définitifs.
+
+**Le conteneur `cron` tourne depuis 40 heures et n'a pas été recréé.** C'est le
+défaut connu depuis le 10 septembre : il est construit sur l'hôte, le workflow ne
+le reconstruit jamais. Aucune tâche planifiée n'a été ajoutée par ces sept
+commits, donc sans conséquence ici.
+
+**LS-29 devient vérifiable.** Son critère 4 exige qu'un email soit reçu dans une
+vraie boîte : c'est maintenant possible, le code étant servi.
+
 ## Prochaine étape
 
 **LS-145** reste le meilleur candidat sans dépendance : mesurer F-ADM-07 au
