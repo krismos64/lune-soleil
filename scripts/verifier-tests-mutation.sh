@@ -2306,6 +2306,49 @@ cas "intention marquee aboutie hors de la transaction de l'avoir" integration \
   "ne laisse pas une intention aboutie sans son avoir"
 
 echo
+echo "Interrupteurs d'alerte et filtre des avis, LS-219 et LS-221"
+echo
+
+# Cas 168 : L'INTERRUPTEUR DE STOCK FAIBLE N'EST PLUS LU.
+#
+# L'ETAT D'AVANT LS-219, remis tel quel : `lireEmailAlertes` rend l'adresse SANS
+# consulter le booleen. La case a cocher de l'ecran des parametres redevient
+# alors un bouton qui ne commande rien, exactement le defaut que LS-219 ferme :
+# l'exploitante la decoche et continue de recevoir les alertes.
+#
+# LE CAS NOMINAL NE VOIT RIEN, et c'est pourquoi ce cas existe : avec
+# l'interrupteur COCHE, les deux versions se comportent a l'identique. Seul le
+# test negatif, celui qui decoche, separe les deux.
+mute "$WEBHOOK" 's/destinataire = await destinataireAlerte\("alerteStockFaible"\);/destinataire = await lireEmailAlertes();/'
+cas "interrupteur de stock faible ignore" integration \
+  "n'envoie RIEN quand l'interrupteur est decoche"
+
+# Cas 169 : L'INTERRUPTEUR D'AVIS A MODERER N'EST PLUS LU.
+#
+# MEME DEFAUT, AUTRE SERVICE, et le repeter n'est pas redondant : les deux
+# branchements ont ete ecrits separement, et rien n'oblige le second a suivre
+# le premier. Un seul cas laisserait l'autre libre de deriver.
+mute "$AVIS" 's/const destinataire = await destinataireAlerte\("alerteAvisAModerer"\);/const destinataire = await lireEmailAlertes();/'
+cas "interrupteur d'avis a moderer ignore" integration \
+  "n'envoie RIEN quand l'interrupteur est decoche"
+
+echo
+
+# Cas 170 : LE FILTRE PAR UTILISATEUR DISPARAIT DE LA LISTE DES AVIS.
+#
+# L'INVARIANT 2, ET C'EST LE PLUS GRAVE DE CE FICHIER. Sans ce `where`, l'ecran
+# « Mes avis » rend les avis de TOUS les clients : un acheteur lirait ceux des
+# autres, avec la note et le commentaire qu'ils ont ecrits.
+#
+# LE CAS NOMINAL RESTE VERT SOUS CETTE MUTATION. « Je vois mes avis » est vrai
+# dans les deux versions, l'avis du demandeur figurant dans la liste complete :
+# seul le test qui verifie l'ABSENCE de l'avis du voisin separe les deux, et
+# c'est lui que ce cas exige.
+mute "$DEPOT_AVIS" 's/    where: \{ utilisateurId \},\n    select: \{\n      id: true,\n      note: true,/    select: {\n      id: true,\n      note: true,/'
+cas "filtre par utilisateur retire de la liste des avis" integration \
+  "ne rend QUE les avis du compte demande"
+
+echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then
   echo "  $mutations mutations, $mutations detectees"
