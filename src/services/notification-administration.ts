@@ -69,6 +69,31 @@ export async function destinataireAlerte(
 }
 
 /**
+ * Le seuil de stock faible configure, ou `null` si rien n'est lisible, LS-219.
+ *
+ * LE SEUIL VIT EN BASE DEPUIS LS-98, `ParametreBoutique.seuilStockFaible`, et
+ * l'exploitante le regle depuis l'ecran des parametres. L'ecrire en dur ici
+ * rendrait ce champ decoratif, c'est-a-dire exactement le defaut que LS-219
+ * existe pour fermer : un reglage qui ne commande rien.
+ *
+ * LE REPLI EST `null` ET NON UNE VALEUR, ce qui fait SAUTER l'alerte. Choisir
+ * un seuil par defaut ferait partir des emails sur une configuration que
+ * personne n'a validee, et l'exploitante ne pourrait pas les rattacher a un
+ * reglage qu'elle n'a jamais vu.
+ */
+export async function seuilStockFaible(): Promise<number | null> {
+  try {
+    return (await lireParametresBoutique()).seuilStockFaible;
+  } catch (erreur) {
+    if (!(erreur instanceof ParametresAbsentsError)) {
+      throw erreur;
+    }
+
+    return null;
+  }
+}
+
+/**
  * L'adresse d'alerte, SANS interrupteur.
  *
  * POUR LES NOTIFICATIONS QU'AUCUN DES CINQ BOOLEENS NE COUVRE, la retractation

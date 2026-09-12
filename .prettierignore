@@ -19,3 +19,6 @@ prisma/migrations/
 coverage/
 playwright-report/
 test-results/
+
+# Apercus d'email engendres, LS-222 : fichiers derives, jamais edites a la main.
+/apercus-emails/

@@ -34,8 +34,18 @@ import type { ClientBase } from "@/repositories/stock";
 export async function consommerReservationEtSortirStock(
   client: ClientBase,
   parametres: { commandeId: string; varianteId: string; quantite: number },
-): Promise<{ sortiePhysique: number }> {
-  const lignes = await client.$queryRaw<{ sortie: number }[]>`
+): Promise<{ sortiePhysique: number; restantPhysique: number }> {
+  /*
+   * LE RESTANT EST RENDU EN PLUS DE LA SORTIE, LS-219, et les deux ne se
+   * deduisent pas l'un de l'autre : la sortie dit combien de pieces sont
+   * parties, le restant combien il en reste. C'est le second qui declenche
+   * l'alerte de stock faible, la variante venant de tomber a zero.
+   *
+   * IL EST LU DANS LA MEME INSTRUCTION, jamais par une seconde requete : le
+   * verrou `FOR UPDATE` est deja pris ici, et relire apres coup donnerait une
+   * valeur qu'une autre vente a pu changer entre-temps.
+   */
+  const lignes = await client.$queryRaw<{ sortie: number; restant: number }[]>`
     WITH avant AS (
       SELECT quantite_physique, quantite_reservee
       FROM variante
@@ -66,12 +76,24 @@ export async function consommerReservationEtSortirStock(
       WHERE id = ${parametres.varianteId}
       RETURNING quantite_physique
     )
-    SELECT (
-      (SELECT quantite_physique FROM avant) - (SELECT quantite_physique FROM maj)
-    )::int AS sortie
+    SELECT
+      (
+        (SELECT quantite_physique FROM avant) - (SELECT quantite_physique FROM maj)
+      )::int AS sortie,
+      (SELECT quantite_physique FROM maj)::int AS restant
   `;
 
-  return { sortiePhysique: lignes[0]?.sortie ?? 0 };
+  /*
+   * LE REPLI DU RESTANT EST `-1` ET NON ZERO, ce qui parait contre-intuitif.
+   * Zero signifierait « la variante est en rupture » et ferait partir une
+   * alerte sur une requete qui n'a rien rendu, c'est-a-dire sur une variante
+   * introuvable. Une valeur negative ne franchit aucun seuil et reste
+   * silencieuse, ce qui est le bon defaut pour une mesure absente.
+   */
+  return {
+    sortiePhysique: lignes[0]?.sortie ?? 0,
+    restantPhysique: lignes[0]?.restant ?? -1,
+  };
 }
 
 /**

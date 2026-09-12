@@ -48,9 +48,11 @@ import type { CommandeAFacturer } from "@/services/facture";
 import { deposerEnvoi } from "@/services/envoi-email";
 import {
   destinataireAlerte,
+  seuilStockFaible,
   leverAlerteEtNotifier,
 } from "@/services/notification-administration";
 import { formaterMontant } from "@/lib/montant";
+import { formaterDate } from "@/lib/affichage-commande";
 import { lienDocument, lienRetractation } from "@/lib/jeton-acces";
 import {
   consommerReservationEtSortirStock,
@@ -512,14 +514,12 @@ async function confirmerPaiement(
       origine,
     });
 
-    const { sortiePhysique } = await consommerReservationEtSortirStock(
-      transaction,
-      {
+    const { sortiePhysique, restantPhysique } =
+      await consommerReservationEtSortirStock(transaction, {
         commandeId: commande.id,
         varianteId: ligne.varianteId,
         quantite: ligne.quantite,
-      },
-    );
+      });
 
     /*
      * ARBITRAGE DU 27 AOUT 2026 : CONFIRMER ET ALERTER. Le stock n'a pas pu
@@ -538,6 +538,29 @@ async function confirmerPaiement(
           `La piece est peut-etre revendue, verifier avant expedition.`,
         typeCible: "Variante",
         idCible: ligne.varianteId,
+      });
+    }
+
+    /*
+     * L'ALERTE DE STOCK FAIBLE COMPARE AU SEUIL CONFIGURE, LS-219, jamais a une
+     * valeur ecrite ici. `ParametreBoutique.seuilStockFaible` vit en base depuis
+     * LS-98 et l'exploitante le regle : coder le seuil en dur rendrait ce champ
+     * decoratif, c'est-a-dire exactement le defaut que LS-219 ferme.
+     *
+     * `sortiePhysique > 0` ETABLIT QU'UNE PIECE VIENT DE PARTIR. Sans cette
+     * garde, un rejeu qui ne sort rien du stock declencherait quand meme une
+     * alerte, le restant etant deja sous le seuil.
+     *
+     * UNE VARIANTE A ZERO NE REPASSE JAMAIS ICI, n'ayant plus de stock a sortir :
+     * c'est ce qui evite la repetition, et non une comparaison sur l'etat
+     * d'avant. Sur une variante a plusieurs exemplaires sous le seuil, chaque
+     * vente est une information neuve, le restant diminuant a chaque fois.
+     */
+    if (sortiePhysique > 0) {
+      await notifierStockFaible(transaction, {
+        varianteId: ligne.varianteId,
+        commandeId: commande.id,
+        restantPhysique,
       });
     }
   }
@@ -849,6 +872,140 @@ async function notifierCommandePayee(
       numero: commande.numero,
       montant: formaterMontant(commande.totalCentimes),
       nombreArticles: String(commande.lignes.length),
+    },
+    origine: "SYSTEME",
+  });
+}
+
+/**
+ * Previent l'exploitante qu'une variante vient de passer sous le seuil, LS-219.
+ *
+ * ELLE LIT DEUX REGLAGES, ET LES DEUX COMPTENT. L'interrupteur
+ * `alerteStockFaible` dit s'il faut prevenir, `seuilStockFaible` dit a partir de
+ * quand : sans la premiere lecture, la case a cocher de l'ecran des parametres
+ * serait un bouton qui ne commande rien ; sans la seconde, le champ de seuil
+ * serait un reglage decoratif. Les deux defauts sont celui que LS-219 ferme.
+ *
+ * ELLE ALERTE SUR LE FRANCHISSEMENT, jamais sur l'etat. Une variante deja sous
+ * le seuil ne redeclenche pas a chaque vente : le bruit ferait decocher
+ * l'interrupteur, ce qui couperait aussi les alertes utiles.
+ *
+ * ELLE NE FAIT JAMAIS ECHOUER LE WEBHOOK. Ce chemin confirme un PAIEMENT :
+ * laisser remonter une exception parce qu'une pastille ne sait pas si elle doit
+ * sonner annulerait la transaction entiere, donc l'encaissement lui-meme. Meme
+ * raison que pour `notifierCommandePayee`, plus haut.
+ *
+ * LE MODELE EST `admin-incident-critique`, ET IL N'Y A PAS DE MODELE DEDIE. Un
+ * stock bas est une information d'exploitation : le modele generique porte un
+ * type, une date et une description, ce qui suffit exactement. Un seizieme
+ * modele demanderait une validation de l'exploitante pour un message qu'elle
+ * lira comme une ligne de son tableau de bord.
+ *
+ * AUCUNE ALERTE CRITIQUE N'EST LEVEE EN BASE, contrairement au stock
+ * insuffisant plus haut. Une rupture est un etat NORMAL du commerce : la porter
+ * dans `AlerteCritique` remplirait l'ecran d'acquittements a chaque piece unique
+ * vendue, c'est-a-dire presque chaque vente.
+ */
+async function notifierStockFaible(
+  transaction: Prisma.TransactionClient,
+  parametres: {
+    varianteId: string;
+    commandeId: string;
+    restantPhysique: number;
+  },
+): Promise<void> {
+  let destinataire: string | null = null;
+  let seuil: number | null = null;
+
+  try {
+    /*
+     * LES DEUX LECTURES SONT SEQUENTIELLES, JAMAIS UN `Promise.all`. Les deux
+     * fonctions passent par le client Prisma principal, et ce code s'execute
+     * DANS une transaction interactive : deux requetes concurrentes y font
+     * lever `PrismaClientValidationError`, mesure faite le 12 septembre 2026.
+     * L'erreur etait avalee par ce `catch`, donc aucune alerte ne partait et
+     * rien ne disait pourquoi.
+     */
+    destinataire = await destinataireAlerte("alerteStockFaible");
+    seuil = await seuilStockFaible();
+  } catch (erreur) {
+    journaliserErreur("reglages d'alerte de stock illisibles", erreur, {
+      commande: parametres.commandeId,
+    });
+
+    return;
+  }
+
+  if (destinataire === null || destinataire === "" || seuil === null) {
+    return;
+  }
+
+  /*
+   * LE SEUIL EST UN PLANCHER INCLUSIF : « seuil a 1 » veut dire « previens-moi
+   * quand il ne reste qu'une piece ou moins ».
+   *
+   * LA CONDITION DE FRANCHISSEMENT A ETE ABANDONNEE, et la mesure l'a impose.
+   * Exiger que le stock d'AVANT soit au-dessus du seuil ne partait jamais sur
+   * une piece unique, le cas le plus frequent de cette boutique : avec un stock
+   * de 1 et un seuil de 1, la variante est DEJA au seuil avant la vente, et la
+   * notion de franchissement ne s'y applique pas.
+   *
+   * CE QUI EVITE LA REPETITION N'EST DONC PAS CETTE CONDITION MAIS LE STOCK
+   * LUI-MEME : une variante a zero ne peut plus sortir de stock, donc ne
+   * repasse jamais ici. Le seul cas repetable est une variante a plusieurs
+   * exemplaires sous le seuil, ou chaque vente est une information neuve,
+   * le restant diminuant a chaque fois.
+   */
+  if (parametres.restantPhysique > seuil) {
+    return;
+  }
+
+  /*
+   * LA REFERENCE DE LA VARIANTE EST LUE POUR QUE LE MESSAGE SOIT ACTIONNABLE.
+   * Un email portant un identifiant technique obligerait l'exploitante a le
+   * chercher dans l'administration pour savoir de quelle piece il s'agit.
+   *
+   * SON ECHEC NE COUPE PAS L'ENVOI : sans reference, le message part avec
+   * l'identifiant, ce qui reste mieux que pas de message du tout.
+   */
+  let libelle = parametres.varianteId;
+
+  try {
+    const variante = await transaction.variante.findUnique({
+      where: { id: parametres.varianteId },
+      select: { reference: true, produit: { select: { nom: true } } },
+    });
+
+    if (variante !== null) {
+      libelle = `${variante.produit.nom}, reference ${variante.reference}`;
+    }
+  } catch (erreur) {
+    journaliserErreur("reference de variante illisible", erreur, {
+      commande: parametres.commandeId,
+    });
+  }
+
+  const description =
+    parametres.restantPhysique === 0
+      ? `La derniere piece de « ${libelle} » vient d'etre vendue. ` +
+        "Le stock est a zero, la fiche n'est plus achetable en ligne."
+      : `Il ne reste que ${parametres.restantPhysique} piece(s) de ` +
+        `« ${libelle} », sous votre seuil d'alerte de ${seuil}.`;
+
+  await deposerEnvoi(transaction, {
+    /*
+     * `commandeId: null` COMME LES AUTRES NOTIFICATIONS D'ADMINISTRATION. La
+     * cle `(commandeId, modele)` dedupliquerait deux ruptures distinctes
+     * survenues sur la meme commande, un panier a deux pieces uniques : le
+     * second email ne partirait jamais.
+     */
+    commandeId: null,
+    destinataire,
+    modele: "admin-incident-critique",
+    variables: {
+      type: "STOCK_FAIBLE",
+      date: formaterDate(new Date()),
+      description,
     },
     origine: "SYSTEME",
   });
