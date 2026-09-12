@@ -643,6 +643,80 @@ export async function listerAvisPublies(
   });
 }
 
+/** Un avis tel que son auteur le voit dans son espace client, LS-221. */
+export type AvisDuClient = {
+  id: string;
+  note: number;
+  commentaire: string | null;
+  statut: "DEPOSE" | "PUBLIE" | "REFUSE" | "RETIRE";
+  experienceA: Date;
+  deposeA: Date;
+  publieA: Date | null;
+  produitNom: string;
+  varianteLibelle: string;
+  numeroCommande: string;
+};
+
+/**
+ * Les avis deposes par un utilisateur, LS-221.
+ *
+ * LE FILTRE PORTE SUR `utilisateurId` ET RIEN D'AUTRE, invariant 2. L'identite
+ * vient de la session cote service : aucun identifiant d'URL ni de formulaire
+ * n'entre ici, et c'est ce qui empeche de lire les avis d'autrui.
+ *
+ * LES QUATRE STATUTS REMONTENT, y compris `REFUSE` et `RETIRE`. C'est un choix
+ * d'affichage que le service et l'ecran assument : son auteur a le droit de
+ * savoir ce qu'il a ecrit et ou cela en est, alors que R4 n'interdit la
+ * visibilite qu'au PUBLIC. Filtrer ici priverait le service de la decision.
+ *
+ * LE PRODUIT ET LA VARIANTE VIENNENT DE L'INSTANTANE DE LA LIGNE, jamais du
+ * catalogue actuel, invariant 3 : un produit renomme ou retire ne doit pas
+ * changer ce que le client lit de son propre avis.
+ */
+export async function listerAvisDeLUtilisateur(
+  client: ClientBase,
+  utilisateurId: string,
+): Promise<AvisDuClient[]> {
+  const avis = await client.avis.findMany({
+    where: { utilisateurId },
+    select: {
+      id: true,
+      note: true,
+      commentaire: true,
+      statut: true,
+      experienceA: true,
+      deposeA: true,
+      publieA: true,
+      ligneCommande: {
+        select: {
+          libelleProduitFige: true,
+          libelleVarianteFige: true,
+          commande: { select: { numero: true } },
+        },
+      },
+    },
+    /*
+     * LE PLUS RECENT D'ABORD, sur la date de DEPOT et non de publication : un
+     * avis en attente n'a pas de `publieA`, et trier dessus le releguerait en
+     * fin de liste alors que c'est celui dont le client attend des nouvelles.
+     */
+    orderBy: { deposeA: "desc" },
+  });
+
+  return avis.map((ligne) => ({
+    id: ligne.id,
+    note: ligne.note,
+    commentaire: ligne.commentaire,
+    statut: ligne.statut,
+    experienceA: ligne.experienceA,
+    deposeA: ligne.deposeA,
+    publieA: ligne.publieA,
+    produitNom: ligne.ligneCommande.libelleProduitFige,
+    varianteLibelle: ligne.ligneCommande.libelleVarianteFige,
+    numeroCommande: ligne.ligneCommande.commande.numero,
+  }));
+}
+
 /**
  * Le numero d'une commande et son proprietaire, pour l'ecran et l'auteur.
  *

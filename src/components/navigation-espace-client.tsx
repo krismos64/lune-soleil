@@ -44,8 +44,10 @@ export type RubriqueClient = {
 /**
  * Les rubriques LIVREES, dans l'ordre du prototype.
  *
- * QUATRE ENTREES ET NON CINQ, et l'ecart avec le prototype est justifie plus
- * bas : « Mes avis » n'a pas d'ecran DE LISTE, bien que les avis soient livres.
+ * LES CINQ DU PROTOTYPE SONT LA DEPUIS LS-221, « Mes avis » ayant reçu son
+ * ecran de liste le 12 septembre 2026. Le compte ne s'ecrit plus dans ce
+ * commentaire, il se lit sur le tableau : il annonçait « quatre entrees et non
+ * cinq » et se serait perime a cette livraison.
  *
  * « PROFIL ET DONNEES » EST UNE SEULE ENTREE DU PROTOTYPE POUR DEUX ROUTES
  * LIVREES, `/compte/profil` (LS-60) et `/compte/donnees` (LS-62). Les fondre
@@ -66,6 +68,7 @@ export const RUBRIQUES_CLIENT: readonly RubriqueClient[] = [
   { chemin: "/compte", libelle: "Vue d'ensemble" },
   { chemin: "/compte/commandes", libelle: "Mes commandes" },
   { chemin: "/compte/adresses", libelle: "Mes adresses" },
+  { chemin: "/compte/avis", libelle: "Mes avis" },
   { chemin: "/compte/profil", libelle: "Mon profil" },
   { chemin: "/compte/donnees", libelle: "Mes données" },
 ] as const;
@@ -73,31 +76,30 @@ export const RUBRIQUES_CLIENT: readonly RubriqueClient[] = [
 /**
  * Les rubriques du prototype QUE LE CODE NE PORTE PAS ENCORE.
  *
- * MEME MOTIF QUE L'ADMINISTRATION, arbitrage de Christophe du 4 septembre 2026
- * repris ici : les montrer inertes plutot que les cacher. La barre annonce
- * alors la structure complete de l'espace, et le client sait que ses avis
- * viendront la, au lieu de croire que la fonction n'existe pas.
+ * ELLE EST VIDE DEPUIS LS-221, et le tableau reste plutot que d'etre supprime :
+ * le mecanisme d'affichage inerte a servi trois fois, et le supprimer
+ * obligerait a le reecrire a la prochaine rubrique annoncee avant d'exister.
+ *
+ * MEME MOTIF QUE L'ADMINISTRATION, arbitrage de Christophe du 4 septembre 2026 :
+ * montrer une rubrique a venir inerte plutot que la cacher. La barre annonce
+ * alors la structure complete de l'espace, et le client sait ou la fonction
+ * apparaitra au lieu de croire qu'elle n'existe pas.
  *
  * CE NE SONT PAS DES LIENS, et c'est la seule chose qui compte pour la
  * correction. Un `<span>` sans `href` ne peut pas rendre un 404, ne prend pas
  * le focus au clavier et n'est pas annonce comme un lien par un lecteur
  * d'ecran.
  *
- * LE TICKET EST ECRIT pour que cette liste ne devienne pas un cimetiere : une
- * entree sans ticket n'a rien a faire ici.
- *
- * CE COMMENTAIRE DISAIT « LS-61 EST BLOQUEE PAR LS-33 ET LE COMPTE MONDIAL
- * RELAY », et les deux raisons sont fausses depuis le 11 septembre 2026 : LS-61
- * est livree, l'invitation part apres une livraison REELLEMENT constatee, et le
- * transporteur passe par Sendcloud depuis ADR-035.
- *
- * CE QUI MANQUE VRAIMENT est un ecran de LISTE : un client depose son avis par
- * le lien a jeton reçu par email, `/avis/[jeton]`, et rien ne lui montre ses
- * avis passes. C'est cet ecran-la que cette entree attend.
+ * LE TICKET EST OBLIGATOIRE pour que cette liste ne devienne pas un cimetiere.
+ * L'entree « Mes avis » y a vecu en pointant LS-61, close depuis le
+ * 11 septembre 2026 : elle attendait donc un ticket qui ne viendrait jamais, et
+ * c'est ce qui a motive LS-221. Verifier que le ticket cite est OUVERT avant
+ * d'ajouter une entree ici.
  */
-export const RUBRIQUES_CLIENT_A_VENIR = [
-  { libelle: "Mes avis", ticket: "LS-61" },
-] as const;
+export const RUBRIQUES_CLIENT_A_VENIR: readonly {
+  libelle: string;
+  ticket: string;
+}[] = [] as const;
 
 /**
  * L'ecran courant, deduit du chemin.
@@ -286,24 +288,36 @@ export function NavigationEspaceClient({
          * `aria-labelledby` GARDE L'ANNONCE : la liste reste nommee pour un
          * lecteur d'ecran, sans introduire de niveau de titre.
          */}
-        <div className={styles.aVenir}>
-          <p
-            className={styles.aVenirTitre}
-            id={`${identifiantPanneau}-a-venir`}
-          >
-            Bientôt disponible
-          </p>
-          <ul
-            className={styles.aVenirListe}
-            aria-labelledby={`${identifiantPanneau}-a-venir`}
-          >
-            {RUBRIQUES_CLIENT_A_VENIR.map((rubrique) => (
-              <li key={rubrique.libelle} className={styles.aVenirEntree}>
-                {rubrique.libelle}
-              </li>
-            ))}
-          </ul>
-        </div>
+        {/*
+         * LE BLOC ENTIER DISPARAIT QUAND LA LISTE EST VIDE, LS-221. Sans cette
+         * garde, « Bientôt disponible » resterait affiche au-dessus d'une liste
+         * sans aucune entree : un titre qui n'annonce rien, et un lecteur
+         * d'ecran qui annonce une liste de zero element.
+         *
+         * LE CAS EST DEVENU REEL le 12 septembre 2026, « Mes avis » etant la
+         * derniere rubrique a venir de l'espace client. Il ne l'etait pas quand
+         * ce bloc a ete ecrit, et rien ne l'aurait signale.
+         */}
+        {RUBRIQUES_CLIENT_A_VENIR.length === 0 ? null : (
+          <div className={styles.aVenir}>
+            <p
+              className={styles.aVenirTitre}
+              id={`${identifiantPanneau}-a-venir`}
+            >
+              Bientôt disponible
+            </p>
+            <ul
+              className={styles.aVenirListe}
+              aria-labelledby={`${identifiantPanneau}-a-venir`}
+            >
+              {RUBRIQUES_CLIENT_A_VENIR.map((rubrique) => (
+                <li key={rubrique.libelle} className={styles.aVenirEntree}>
+                  {rubrique.libelle}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/*
          * LA DECONNEXION N'EST PAS ICI, elle vit dans la ligne au-dessus du

@@ -285,6 +285,21 @@ export default async function PageCompte({
             </p>
           </li>
 
+          {/*
+            LE RACCOURCI EXISTE POUR CHAQUE RUBRIQUE, LS-221, et son absence
+            n'est pas qu'un manque de confort : `verifier-atteignabilite-boutique.sh`
+            exige au moins un lien vers chaque route servie, et il a rougi quand
+            « Mes avis » n'etait desservie que par la barre de navigation.
+          */}
+          <li className={styles.raccourci}>
+            <Link href="/compte/avis" className={styles.raccourciLien}>
+              Voir mes avis
+            </Link>
+            <p className={styles.raccourciTexte}>
+              Les avis que vous avez déposés sur vos achats.
+            </p>
+          </li>
+
           <li className={styles.raccourci}>
             <Link href="/compte/profil" className={styles.raccourciLien}>
               Gérer mes informations
