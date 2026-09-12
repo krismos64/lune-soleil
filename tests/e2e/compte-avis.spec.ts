@@ -322,6 +322,101 @@ test("la rubrique « Mes avis » est un lien, plus une entree inerte", async ({
   await expect(page).toHaveURL(/\/compte\/avis$/);
 });
 
+test("le bloc de modification s'ouvre, avertit, et ne deborde pas, LS-225", async ({
+  page,
+}) => {
+  await avecBase(async (client) => {
+    await ecrireAvisPublie(client, marque);
+  });
+
+  await page.goto("/compte/avis");
+
+  const carte = page.locator("li", {
+    has: page.getByRole("heading", {
+      name: new RegExp(`Bracelet-tresse-en-argent-massif-${marque}`),
+    }),
+  });
+
+  const bouton = carte.getByRole("button", { name: /Modifier cet avis/ });
+
+  await expect(bouton).toBeVisible();
+
+  /*
+   * LA ZONE TACTILE SE MESURE SUR LE RENDU, jamais dans le CSS : une
+   * `min-height` annulee par un parent ne se voit qu'ici. Chaque carte porte un
+   * de ces boutons, donc plusieurs se suivent verticalement et une cible courte
+   * ferait viser celui de la carte voisine au pouce.
+   */
+  const boite = await bouton.boundingBox();
+
+  expect(boite?.height ?? 0).toBeGreaterThanOrEqual(44);
+
+  await bouton.click();
+
+  /*
+   * LE CRITERE 5 EST MESURE SUR LE RENDU REEL. L'avertissement doit etre VISIBLE
+   * avant toute validation : le tester dans le DOM seul laisserait passer un
+   * bloc affiche sous le bouton d'envoi, donc lu apres coup.
+   */
+  await expect(
+    carte.getByText(/relu avant d'être publié à nouveau/),
+  ).toBeVisible();
+
+  await expect(
+    carte.getByRole("button", { name: /Enregistrer la modification/ }),
+  ).toBeVisible();
+
+  /*
+   * LE DEBORDEMENT EST MESURE BLOC OUVERT, et c'est le cas qui compte : cinq
+   * boutons de note de 44 px plus leurs ecarts depassent la largeur utile a
+   * 320 px, et seul le retour a la ligne de `.notes` l'evite.
+   */
+  expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+    TOLERANCE_DEBORDEMENT_PX,
+  );
+});
+
+test("un avis non retenu dit POURQUOI il n'est pas modifiable, critere 6", async ({
+  page,
+}) => {
+  await avecBase(async (client) => {
+    await ecrireAvisPublie(client, marque);
+
+    /*
+     * L'AVIS PASSE EN `RETIRE`, l'etat qu'un client peut reellement rencontrer.
+     * Le motif est exige par la regle R5 sur ce statut, et son absence ferait
+     * echouer l'ecriture pour une raison etrangere a ce test.
+     */
+    await client.query(
+      `UPDATE avis SET statut = 'RETIRE', motif_decision = 'Hors sujet.',
+         decide_a = now()
+       WHERE ligne_commande_id IN (
+         SELECT id FROM ligne_commande WHERE reference_figee = $1
+       )`,
+      [`REF-${marque}`],
+    );
+  });
+
+  await page.goto("/compte/avis");
+
+  const carte = page.locator("li", {
+    has: page.getByRole("heading", {
+      name: new RegExp(`Bracelet-tresse-en-argent-massif-${marque}`),
+    }),
+  });
+
+  /*
+   * LES DEUX ASSERTIONS SONT NECESSAIRES, ET LA SECONDE PORTE LE CRITERE. Un
+   * ecran qui cacherait simplement le bouton passerait la premiere : c'est la
+   * PHRASE qui distingue une regle expliquee d'un oubli du site.
+   */
+  await expect(
+    carte.getByRole("button", { name: /Modifier cet avis/ }),
+  ).toHaveCount(0);
+
+  await expect(carte.getByText(/ne peut plus être modifié/)).toBeVisible();
+});
+
 test("aucune violation axe-core sur l'ecran", async ({ page }) => {
   await avecBase(async (client) => {
     await ecrireAvisPublie(client, marque);
@@ -334,4 +429,28 @@ test("aucune violation axe-core sur l'ecran", async ({ page }) => {
     .analyze();
 
   expect(resultat.violations).toEqual([]);
+
+  /*
+   * LE BLOC DE MODIFICATION EST MESURE OUVERT, LS-225, et c'est une seconde
+   * analyse et non un raffinement. `axe-core` n'examine que ce qui est RENDU :
+   * un bloc `hidden` est hors de sa portee, donc ses cinq boutons de note, son
+   * textarea et sa region live ne sont jamais juges par la passe ci-dessus.
+   *
+   * C'EST LA OU VIVENT TOUS LES CONTROLES NEUFS de cet ecran. Ne mesurer que
+   * l'etat replie ferait passer la page pour conforme en n'ayant regarde que sa
+   * partie inchangee.
+   */
+  const bouton = page
+    .getByRole("button", { name: /Modifier cet avis/ })
+    .first();
+
+  if (await bouton.isVisible()) {
+    await bouton.click();
+
+    const ouvert = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+
+    expect(ouvert.violations).toEqual([]);
+  }
 });
