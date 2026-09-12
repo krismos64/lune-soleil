@@ -96,8 +96,7 @@ interface et réponses de conversation.
 - Modifier le périmètre du cahier des charges. Un arbitrage explicite de
   Christophe le modifie en revanche, et se trace dans un ticket
 - Décider d'une obligation juridique. Les textes de loi se vérifient aux sources
-- Lire une clé privée ou un certificat. Le `.env`, lui, est lisible depuis le
-  7 septembre 2026, arbitrage de Christophe
+- Lire une clé privée ou un certificat. Le `.env`, lui, est lisible
 - Modifier une commande ou une facture réelle
 - Introduire les données du prototype (noms, prix, stocks) comme données réelles
 
@@ -105,11 +104,11 @@ interface et réponses de conversation.
 
 Deux axes à ne pas confondre. **Importance** : Must, Should, Could, Won't.
 **Jalon** : Go-Live, V1 cible, V1.x, Hors V1. Un Must sur Go-Live ne se repousse
-jamais. Aucune date fixée, le pilotage se fait par portes de sortie de phase.
-Nuances qui se perdent : l'**interface** de statistiques est en V1 cible mais la
-**collecte** des montants au Go-Live, une donnée non capturée étant perdue ;
-espace client, avis et carnet d'adresses sont en périmètre d'ouverture, LS-36 ;
-**l'assistant IA est écarté par ADR-044**, aucun modèle de langage.
+jamais. Aucune date fixée, pilotage par portes de sortie de phase. Nuances qui se
+perdent : l'**interface** de statistiques est en V1 cible mais la **collecte** des
+montants au Go-Live, une donnée non capturée étant perdue ; espace client, avis et
+carnet d'adresses en périmètre d'ouverture, LS-36 ; **l'assistant IA est écarté
+par ADR-044**, aucun modèle de langage.
 
 ## Sources de vérité
 
@@ -121,13 +120,16 @@ structurante produit un ADR, toute idée neuve entre d'abord dans Jira.
 
 **`docs/REFERENCES.md`** porte les tables d'aiguillage, à lire au début d'une
 session qui conçoit. **`docs/deploiement/EXPLOITATION.md`** porte la production,
-qui tourne : à lire avant toute intervention sur la machine.
+qui tourne : à lire avant toute intervention sur la machine. **`memory/archive/`**
+porte les fiches retirées de l'index, motif clos ou sans récidive : plus chargées
+au démarrage, **y chercher par `grep -rl` avant de croire un piège inconnu**, et
+remonter dans l'index celle qui ressert.
 
 **Une règle numérotée se cite par son identifiant**, S12 ou V14, jamais
 paraphrasée seule : c'est ce qui permet aux contrôles textuels de la retrouver.
 
-`docs/journal/` porte l'avancement réel, une page par session. **Lire la plus
-récente en début de session** donne l'état du projet plus vite que Jira.
+`docs/journal/` porte l'avancement réel, une page par session : **lire la plus
+récente** donne l'état du projet plus vite que Jira.
 
 YOU MUST lire les **commentaires** d'un ticket Jira avant sa description, champ
 `comment` demandé explicitement, il ne revient pas par défaut. **Le plus récent
@@ -143,17 +145,16 @@ de Christophe. Une valeur lue entre dans l'historique de session : une clé
 exposée se **révoque**, l'effacer ne suffit pas. Clés privées et certificats
 restent bloqués. **Lire n'est pas exposer** : une valeur en **argument** de
 commande est lisible par tout `ps`, le hook la refuse toujours ; laisser le
-processus lire le fichier. Préférer `./scripts/verifier-environnement.sh` à la
-lecture quand les deux répondent, deux secrets au même préfixe étant
-indiscernables à l'œil.
+processus lire le fichier. Préférer `./scripts/verifier-environnement.sh` quand
+les deux répondent, deux secrets au même préfixe se confondant à l'œil.
 
 **Accès opérationnels** : `ssh`, `docker`, `stripe`, `gh`, `psql` avec les accès
 configurés, sans jamais lire les identifiants sous-jacents.
 
 **Production** : autonome, mais **toujours par l'outil prévu**. Migrer via
-`./scripts/migrate-production.sh` et jamais `prisma migrate deploy` ; déployer
-par le workflow « Déployer en production » et jamais à la main. Un garde-fou qui
-ne peut pas conclure bloque, `database.md` et `EXPLOITATION.md` les détaillent.
+`./scripts/migrate-production.sh` et jamais `prisma migrate deploy` ; déployer par
+le workflow « Déployer en production », jamais à la main. Un garde-fou qui ne peut
+pas conclure bloque, `database.md` et `EXPLOITATION.md` les détaillent.
 
 ## Agents
 
@@ -164,11 +165,11 @@ interface. **Ne pas invoquer `docker-devops`, `security-auditor` ni
 
 ## Conduite du travail
 
-Tout travail suit le skill `story`, exploration sans ticket comprise : il porte
-le contrôle avant zone critique et la clôture de la traçabilité ; le skill `adr`
-écrit une décision structurante. Des hooks les appuient sur cinq événements,
-table dans `docs/REFERENCES.md` : état injecté au démarrage, secrets bloqués à la
-lecture, `verifier-regles.sh` rejoué, traçabilité contrôlée en fin de session.
+Tout travail suit le skill `story`, exploration sans ticket comprise : il porte le
+contrôle avant zone critique et la clôture de la traçabilité ; le skill `adr` écrit
+une décision structurante. Cinq hooks les appuient, table dans `docs/REFERENCES.md` :
+état injecté au démarrage, secrets bloqués, `verifier-regles.sh` rejoué, traçabilité
+contrôlée en fin de session.
 
 YOU MUST clore tout travail significatif sur les **quatre canaux**, et dire
 explicitement ce qui a été mis à jour :
@@ -188,13 +189,12 @@ qu'absent.
 
 Types, lint et tests concernés au vert, critères d'acceptation vérifiés, rendu
 contrôlé à 320 px si la story touche l'interface. Pour une zone critique s'y
-ajoutent un test négatif de sécurité, un test de concurrence ou d'idempotence, et
-la simulation d'une panne de fournisseur, et `ls-frontend-revue` sur l'interface.
+ajoutent un test négatif de sécurité, un test de concurrence ou d'idempotence, la
+simulation d'une panne de fournisseur, et `ls-frontend-revue` sur l'interface.
 
-**Montrer la preuve**, sortie de commande et résultat. Un contrôle qui n'a
-jamais échoué sur le défaut qu'il prétend attraper n'est pas un contrôle : le
-prouver par mutation, `./scripts/verifier-tests-mutation.sh` rejouant la suite.
+**Montrer la preuve**, sortie de commande et résultat. Un contrôle qui n'a jamais
+échoué sur le défaut qu'il prétend attraper n'est pas un contrôle : le prouver par
+mutation, `./scripts/verifier-tests-mutation.sh` rejouant la suite.
 
-**Consulter Context7** avant d'utiliser une API de Next.js 16, React 19, Prisma 7,
-Better Auth 1.6 ou Stripe, ces versions étant plus récentes que ma connaissance.
-Signaler quand Context7 a été utilisé.
+**Consulter Context7** avant une API de Next.js 16, React 19, Prisma 7, Better
+Auth 1.6 ou Stripe, plus récentes que ma connaissance. Signaler son usage.

@@ -224,11 +224,49 @@ et ce qui ne l'a pas été.
 |---|---|---|
 | **Dépôt** | toujours | code, ADR si décision structurante, script si prototype, **commité, poussé et fusionné** |
 | **Journal** | fin de session significative | ce qui est fait, ce qui a dérapé et pourquoi, prochaine étape, état des tickets |
-| **Mémoire** | découverte non dérivable du code | contrainte technique, piège, décision et son pourquoi |
+| **Mémoire** | rarement, voir le critère ci-dessous | ce qui changera une décision future, jamais un incident clos |
 | **Jira** | toujours | commentaire avec l'état réel de chaque critère, le commit, ce qui reste |
 
 Commit avec un message descriptif référençant le ticket. Jamais de
 `Co-Authored-By` dans ce projet.
+
+### Écrire une fiche mémoire est l'exception, pas le réflexe
+
+**L'index est plafonné à 200 lignes par le produit, et le dépassement est
+silencieux** : au-delà, les fiches suivantes cessent d'être chargées sans aucun
+message. Mesuré le 12 septembre 2026, l'index avait atteint **454 lignes**, et
+315 fiches ont dû partir en archive. Le rythme mesuré, **18 à 34 fiches par jour**
+de travail dense, consomme le plafond en une semaine.
+
+Chaque fiche écrite prend donc la place d'une autre. Ce n'est pas un carnet, c'est
+un budget.
+
+**Trois questions, dans cet ordre. Une seule réponse « non » interdit la fiche.**
+
+1. **Le piège s'est-il présenté DEUX fois ?** Une première occurrence est un
+   incident, pas un motif. Elle va au journal et au commentaire Jira, qui sont
+   faits pour ça et ne coûtent rien au démarrage.
+2. **Se rejouera-t-il sur une story SANS RAPPORT avec celle-ci ?** Si la leçon
+   ne vaut que pour le ticket en cours, elle vit dans le code, son commentaire,
+   ou le journal.
+3. **Aucun contrôle ne peut-il le fermer ?** Si le piège est mécaniquement
+   détectable, **écrire le contrôle et non la fiche**. Un contrôle s'exécute,
+   une fiche espère être lue. Quand le contrôle existe, il EST la trace.
+
+**Ce qui mérite une fiche** : une décision ou un arbitrage en vigueur, une
+contrainte d'outil non évidente et durable, un piège ouvert qu'aucun contrôle ne
+ferme, une règle de conduite permanente.
+
+**Ce qui n'en mérite pas**, et qui formait l'essentiel des 315 fiches archivées :
+l'incident daté déjà corrigé, une variable, un chemin, une version d'outil, un
+compte ouvert, un cas particulier d'un motif général déjà en fiche, un état à une
+date.
+
+**Préférer enrichir une fiche existante** plutôt qu'en créer une voisine. Une
+quatrième forme ajoutée à « mesures fausses » vaut mieux qu'une quatrième fiche :
+elle se rappelle avec les trois autres, et ne coûte aucune ligne d'index.
+
+`docs/memory-archivage.md` porte la procédure de tri quand l'alerte tombe.
 
 ### Ce que le travail propage, à parcourir avant de clore
 
@@ -380,7 +418,8 @@ Quatre questions à se poser, systématiquement :
   origin/main..HEAD` répondent en deux secondes. Une sortie non vide signifie que
   rien n'est livré.
 - Le journal reflète-t-il l'état réel du projet ?
-- Une découverte de cette session mériterait-elle d'être en mémoire ?
+- Une découverte passe-t-elle les **trois questions** de la fiche mémoire ? Le
+  défaut est de ne rien écrire : la question n'invite pas à trouver une raison.
 - Jira dit-il la vérité sur l'avancement ?
 
 Si la réponse est non à l'une des quatre, y remédier avant de conclure.
