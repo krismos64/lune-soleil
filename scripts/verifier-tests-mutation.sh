@@ -110,6 +110,8 @@ ACCES_DOCUMENT="src/services/acces-document.ts"
 JETON_ACCES="src/lib/jeton-acces.ts"
 TRAITEMENT_RETRACTATION="src/services/traitement-retractation.ts"
 DEPOT_RETRACTATION="src/repositories/retractation.ts"
+DEPOT_PARAMETRES="src/repositories/parametres.ts"
+SENDCLOUD_EXPEDITION="src/integrations/sendcloud/expedition.ts"
 
 # TOUT FICHIER MUTE DOIT FIGURER ICI, sans quoi il n'est ni sauvegarde ni
 # restaure et la mutation RESTE SUR LE DISQUE apres l'execution.
@@ -122,7 +124,7 @@ DEPOT_RETRACTATION="src/repositories/retractation.ts"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE" "$AVIS" "$DEPOT_AVIS" "$SERVICE_AVOIR")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE" "$AVIS" "$DEPOT_AVIS" "$SERVICE_AVOIR" "$DEPOT_PARAMETRES" "$SENDCLOUD_EXPEDITION")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -2357,6 +2359,42 @@ echo
 mute "$DEPOT_AVIS" 's/    where: \{ utilisateurId \},\n    select: \{\n      id: true,\n      note: true,/    select: {\n      id: true,\n      note: true,/'
 cas "filtre par utilisateur retire de la liste des avis" integration \
   "ne rend QUE les avis du compte demande"
+
+echo
+
+# Cas 171 : LA LECTURE DES PARAMETRES REDEVIENT UN `findUnique`.
+#
+# LE DEFAUT QUE CE CAS REMET, mesure le 12 septembre 2026 en livrant LS-218. Le
+# dataloader de Prisma COMPACTE les `findUnique` du meme tick en un `findMany`
+# portant un filtre `in`. La cle de `parametre_boutique` etant un `Boolean`, ce
+# filtre n'existe pas sur son type : deux lectures concurrentes rejettent TOUTES
+# LES DEUX sur « Unknown argument `in` ».
+#
+# IL EST INVISIBLE HORS CONCURRENCE, et c'est ce qui l'a laisse vivre depuis
+# LS-98. Une lecture seule ne se compacte avec rien : les 44 autres tests du
+# fichier d'expedition restent VERTS sous cette mutation, et seul le test de
+# concurrence separe les deux versions. C'est exactement la forme que ce depot
+# connait le mieux, un chemin nominal qui ne peut pas montrer le defaut.
+mute "$DEPOT_PARAMETRES" 's/  const ligne = await client.parametreBoutique.findFirst\(\{/  const ligne = await client.parametreBoutique.findUnique({/'
+cas "lecture des parametres remise en findUnique compactable" integration \
+  "deux creations concurrentes n'ecrivent qu'une expedition"
+
+echo
+
+# Cas 172 : LE POIDS REDEVIENT UNE CONSTANTE DANS L'APPEL AU TRANSPORTEUR.
+#
+# LE CRITERE 11 DE LS-218, et la mutation porte sur l'EFFET et non sur le nom.
+# Remettre une valeur en dur dans le corps envoye a Sendcloud annule le reglage :
+# l'exploitante changerait le poids a l'ecran sans que le colis declare change,
+# et RIEN a l'ecran ne le dirait, la valeur affichee etant bien celle de la base.
+#
+# LA VALEUR CHOISIE N'EST PAS 200, ET C'EST LE POINT. Muter vers le defaut de la
+# colonne laisserait le test VERT, sa fixture demandant 180 g : une mutation qui
+# fabrique la valeur attendue ne prouve rien. Elle vaut donc 200, ce que le
+# reglage n'envoie jamais quand la demande en porte un autre.
+mute "$SENDCLOUD_EXPEDITION" 's/          weight: \(demande.poidsGrammes \/ 1000\).toFixed\(3\),/          weight: (200 \/ 1000).toFixed(3),/'
+cas "poids du colis remis en constante dans l'appel" unitaire \
+  "convertit en kilogrammes le poids recu dans la demande"
 
 echo
 echo "-----------------------------------------"
