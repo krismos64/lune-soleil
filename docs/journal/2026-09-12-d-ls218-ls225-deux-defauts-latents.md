@@ -176,8 +176,23 @@ booléenne. `VALIDATION.md` recense les deux schémas neufs.
 
 ## Prochaine étape
 
+**RIEN DE CETTE SESSION N'EST DÉPLOYÉ**, et c'est la première chose à faire. La
+production tourne sur `2e9cd90`, dernier déploiement du 12 septembre à 14h34
+UTC, quand la première fusion de cette session date de 17h07. `main` a **dix-sept
+commits d'avance**, et l'un d'eux porte une **migration**,
+`20260912160000_poids_colis_configurable` : ce n'est pas un simple remplacement
+d'image.
+
+Le geste passe par le workflow « Déployer en production », jamais à la main, et
+la migration par `./scripts/migrate-production.sh`.
+
+**Ce paragraphe a d'abord écrit « son code étant servi »**, ce qui était faux au
+moment même où je l'écrivais : le code était **fusionné**, pas servi. C'est le
+motif [[lune-soleil-construire-nest-pas-servir]], commis dans le document censé
+le prévenir.
+
 **LS-218 attend LS-153** pour son critère 10, un colis réel. Rien d'autre ne la
-bloque, son code étant servi et audité.
+bloque, son code étant fusionné et audité.
 
 **LS-226 est faisable immédiatement** et sans dépendance, et son diagnostic est
 déjà fait : deux assertions à ancrer sur les données que leur fichier a créées
