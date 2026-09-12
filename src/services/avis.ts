@@ -64,6 +64,7 @@ import {
   lireAvisASignaler,
   lireAvisPubliePourSignalement,
   marquerEnvoiAbouti,
+  modifierAvisDeLAuteur,
   rattacherJetonNeuf,
 } from "@/repositories/avis";
 import type {
@@ -75,6 +76,7 @@ import type {
 import { incrementerCompteur } from "@/repositories/limitation";
 import {
   EntreeInvalideError,
+  schemaModificationAvis,
   schemaSignalementAvis,
   valider,
 } from "@/lib/validation";
@@ -997,6 +999,16 @@ export async function deposerAvis(
 async function notifierAvisAModerer(
   transaction: Prisma.TransactionClient,
   nombre: number,
+  /*
+   * LA DESCRIPTION EST INJECTABLE DEPUIS LS-225, et ce n'est pas une
+   * generalisation gratuite. Une MODIFICATION n'est pas un depot : annoncer « un
+   * avis vient d'etre depose » sur un texte deja publie ferait chercher
+   * l'exploitante dans les nouveautes, alors que la ligne est ancienne et que
+   * l'enjeu est de COMPARER avec la version qu'elle avait acceptee.
+   *
+   * LE REPLI GARDE LE TEXTE DU DEPOT, donc aucun appelant existant ne change.
+   */
+  description?: string,
 ): Promise<void> {
   if (nombre === 0) {
     return;
@@ -1022,9 +1034,10 @@ async function notifierAvisAModerer(
         type: "AVIS_A_MODERER",
         date: formaterDate(new Date()),
         description:
-          nombre === 1
+          description ??
+          (nombre === 1
             ? "Un avis vient d'etre depose et attend votre relecture."
-            : `${nombre} avis viennent d'etre deposes et attendent votre relecture.`,
+            : `${nombre} avis viennent d'etre deposes et attendent votre relecture.`),
       },
       origine: "SYSTEME",
     });
@@ -1050,6 +1063,22 @@ export type AvisAffiche = {
    * exacte mais qui appelle une explication que l'ecran ne peut pas donner.
    */
   etat: "EN_ATTENTE" | "PUBLIE" | "NON_RETENU";
+  /**
+   * L'auteur peut-il encore modifier cet avis, LS-225.
+   *
+   * DERIVEE COTE SERVEUR ET NON CALCULEE A L'ECRAN, comme toute disponibilite
+   * de ce projet : l'ecran rend ce que le serveur decide. Elle suit EXACTEMENT
+   * le filtre de `modifierAvisDeLAuteur`, et les deux doivent bouger ensemble :
+   * une carte qui offre un bouton refuse ensuite par le service serait pire
+   * qu'un bouton absent.
+   *
+   * UN AVIS NON RETENU N'EST PAS MODIFIABLE, arbitrage de LS-225. Le permettre
+   * ouvrirait une boucle de nouvelles tentatives sur un texte que
+   * l'exploitante a ecarte, chacune la ramenant dans sa file de moderation.
+   */
+  modifiable: boolean;
+  /** La date de la derniere modification par l'auteur, `null` s'il n'y en a pas. */
+  modifieA: Date | null;
   produitNom: string;
   varianteLibelle: string;
   numeroCommande: string;
@@ -1090,6 +1119,14 @@ export async function listerMesAvis(
         : ligne.statut === "DEPOSE"
           ? ("EN_ATTENTE" as const)
           : ("NON_RETENU" as const),
+    /*
+     * LES DEUX STATUTS SONT REPETES PLUTOT QUE DERIVES DE `etat`, et la
+     * repetition est voulue. `etat` fond `REFUSE` et `RETIRE` pour l'affichage ;
+     * la modifiabilite porte sur le statut REEL, et les deriver l'une de
+     * l'autre ferait dependre une regle metier d'un choix de presentation.
+     */
+    modifiable: ligne.statut === "PUBLIE" || ligne.statut === "DEPOSE",
+    modifieA: ligne.modifieA,
     produitNom: ligne.produitNom,
     varianteLibelle: ligne.varianteLibelle,
     numeroCommande: ligne.numeroCommande,
@@ -1223,6 +1260,105 @@ export async function modererAvis(
   );
 
   return { statut: "APPLIQUEE" };
+}
+
+/** Ce qu'une modification d'avis produit, LS-225. */
+export type IssueModification =
+  | { statut: "MODIFIE" }
+  /**
+   * L'avis n'existe pas, n'appartient pas au demandeur, ou n'est plus
+   * modifiable.
+   *
+   * LES TROIS CAS SONT FONDUS, ET C'EST UNE DECISION DE SECURITE. Les
+   * distinguer apprendrait a un appelant qu'un identifiant EXISTE mais
+   * appartient a quelqu'un d'autre, ce qu'un sondage d'identifiants cherche
+   * precisement a savoir, invariant 2. L'ecran n'en a pas besoin : il ne
+   * propose le formulaire que sur les avis qu'il vient de lire pour ce compte,
+   * et son message dit la REGLE plutot que le cas rencontre.
+   */
+  | { statut: "REFUSE_INTROUVABLE" };
+
+/**
+ * Modifie un avis dont le demandeur est l'auteur, LS-225, regles R8, R10, R11.
+ *
+ * `utilisateurId` VIENT DE LA SESSION ET DE NULLE PART AILLEURS, invariant 2 et
+ * regle R13. L'appelant est la Server Action, qui le tient de `exigerSession` :
+ * aucun identifiant d'auteur ne circule par le formulaire, et `avisId` seul n'y
+ * autorise rien, le repository recoupant les deux dans son filtre.
+ *
+ * ELLE EST TRANSACTIONNELLE, A LA DIFFERENCE DE `modererAvis`, et l'ecart tient
+ * a l'outbox. `deposerEnvoi` ecrit une SECONDE entite : hors transaction, une
+ * alerte partirait pour une modification qui n'a pas ete ecrite, ou une
+ * modification resterait sans alerte. ADR-033 range l'envoi dans la meme
+ * transaction que le fait qui le declenche, et c'est ce que `deposerAvis` fait
+ * deja.
+ *
+ * AUCUNE LIMITE AU NOMBRE DE MODIFICATIONS, arbitrage de Christophe du
+ * 12 septembre 2026. Chaque passage renvoie en moderation, ce qui borne l'effet
+ * reel : un texte modifie n'est plus visible tant que l'exploitante ne l'a pas
+ * relu, donc la republication reste sous son controle a chaque fois.
+ */
+export async function modifierMonAvis(
+  parametres: {
+    avisId: string;
+    utilisateurId: string;
+    note: number;
+    commentaire: string | null;
+  },
+  correlation?: Correlation,
+): Promise<IssueModification> {
+  const saisie = valider(schemaModificationAvis, {
+    avisId: parametres.avisId,
+    note: parametres.note,
+    commentaire: parametres.commentaire,
+  });
+
+  const modifies = await prisma.$transaction(async (transaction) => {
+    const { modifies: compte } = await modifierAvisDeLAuteur(transaction, {
+      avisId: saisie.avisId,
+      utilisateurId: parametres.utilisateurId,
+      note: saisie.note,
+      commentaire: normaliserCommentaire(saisie.commentaire),
+    });
+
+    if (compte === 0) {
+      return 0;
+    }
+
+    await notifierAvisAModerer(
+      transaction,
+      compte,
+      "Un avis publie vient d'etre modifie par son auteur et attend votre relecture.",
+    );
+
+    return compte;
+  });
+
+  if (modifies === 0) {
+    /*
+     * LE JOURNAL NOMME L'AVIS ET NON LE MOTIF EXACT DU REFUS : le service ne le
+     * connait pas lui-meme, son filtre n'ayant simplement rien trouve. C'est
+     * assez pour diagnostiquer, et cela evite une seconde lecture dont le seul
+     * but serait d'expliquer un echec.
+     */
+    journaliser(
+      "info",
+      "modification d'avis refusee",
+      { avisId: saisie.avisId },
+      correlation,
+    );
+
+    return { statut: "REFUSE_INTROUVABLE" };
+  }
+
+  journaliser(
+    "info",
+    "avis modifie par son auteur",
+    { avisId: saisie.avisId },
+    correlation,
+  );
+
+  return { statut: "MODIFIE" };
 }
 
 /**

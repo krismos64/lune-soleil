@@ -103,3 +103,192 @@
 .nonRetenu {
   color: var(--ls-text-muted);
 }
+
+/* ---------------------------------------------------------------------------
+ * Modification d'un avis par son auteur, LS-225.
+ * ------------------------------------------------------------------------- */
+
+.modification {
+  margin-top: var(--ls-space-3);
+}
+
+/*
+ * LE BOUTON EST SECONDAIRE, et son fond ne l'identifie donc pas : sa bordure
+ * est le seul indice de sa présence, d'où `--ls-border-controle` et non
+ * `--ls-border`, règle C36. Le jeton décoratif donne 1,57:1 sur blanc, sous les
+ * 3:1 que WCAG 1.4.11 exige d'une limite de contrôle.
+ *
+ * 44 px DANS LES DEUX DIMENSIONS. Chaque carte en porte un, donc plusieurs se
+ * suivent verticalement : une cible plus courte ferait viser le bouton de la
+ * carte voisine au pouce.
+ */
+.boutonModifier {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  padding: 0 var(--ls-space-3);
+  border: 1px solid var(--ls-border-controle);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+  color: var(--ls-primary);
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+
+.boutonModifier:hover {
+  border-color: var(--ls-primary);
+}
+
+.blocEdition {
+  margin-top: var(--ls-space-3);
+  padding-top: var(--ls-space-3);
+  border-top: 1px solid var(--ls-surface-sand);
+}
+
+/*
+ * L'AVERTISSEMENT EST DU TEXTE COURANT ET NON UN ENCART COLORÉ. Il annonce une
+ * conséquence normale, pas une erreur : un fond d'alerte ferait hésiter avant
+ * un geste légitime, et `--ls-warning` est réservé à ce qui appelle une
+ * vigilance réelle.
+ */
+.avertissement {
+  margin: 0 0 var(--ls-space-3);
+  font-size: 0.875rem;
+  color: var(--ls-text-muted);
+}
+
+.champ {
+  margin: 0 0 var(--ls-space-3);
+  padding: 0;
+  border: 0;
+}
+
+.legende {
+  padding: 0;
+  margin-bottom: var(--ls-space-2);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.libelle {
+  display: block;
+  margin-bottom: var(--ls-space-2);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.facultatif {
+  font-weight: normal;
+  color: var(--ls-text-muted);
+}
+
+.notes {
+  display: flex;
+  /*
+   * LES CINQ BOUTONS PASSENT À LA LIGNE SI BESOIN. À 320 px, cinq cibles de
+   * 44 px plus leurs écarts dépassent la largeur utile : sans `wrap`, la
+   * rangée déborderait horizontalement.
+   */
+  flex-wrap: wrap;
+  gap: var(--ls-space-2);
+}
+
+.noteChoix {
+  display: inline-flex;
+}
+
+/*
+ * MÊME FORME QU'AU DÉPÔT, et la duplication est assumée : les deux écrans
+ * vivent dans des dossiers distincts, et un module CSS ne se partage pas sans
+ * créer une dépendance entre un écran public et l'espace client.
+ */
+.libelleNote {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--ls-touch-target);
+  min-height: var(--ls-touch-target);
+  padding: 0 var(--ls-space-2);
+  border: 1px solid var(--ls-border-controle);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.masqueVisuellement:checked + .libelleNote {
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  border-color: var(--ls-primary);
+}
+
+/*
+ * LE CONTOUR DE FOCUS EST PORTÉ PAR LE LIBELLÉ, l'entrée étant masquée. Sans
+ * cette règle, aucun indicateur visible ne suivrait la tabulation.
+ */
+.masqueVisuellement:focus-visible + .libelleNote {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+.saisie {
+  width: 100%;
+  padding: var(--ls-space-2);
+  border: 1px solid var(--ls-border-controle);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  font: inherit;
+  /*
+   * `vertical` ET NON `both` : un redimensionnement horizontal ferait sortir le
+   * champ de la carte à 320 px.
+   */
+  resize: vertical;
+}
+
+.boutonEnvoyer {
+  min-height: var(--ls-touch-target);
+  padding: 0 var(--ls-space-4);
+  border: 1px solid var(--ls-primary);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+
+/*
+ * WCAG 1.4.11 ÉCARTE LES COMPOSANTS INACTIFS, donc la bordure d'un bouton
+ * désactivé n'a pas de seuil à tenir. Le curseur et l'opacité disent l'état
+ * sans reposer sur la seule couleur.
+ * @bordure-decorative bouton désactivé, hors critère 1.4.11
+ */
+.boutonEnvoyer:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.refus {
+  margin: var(--ls-space-3) 0 0;
+  font-size: 0.875rem;
+  color: var(--ls-error);
+}
+
+.nonModifiable {
+  margin: var(--ls-space-3) 0 0;
+  font-size: 0.875rem;
+  color: var(--ls-text-muted);
+}
+
+.masqueVisuellement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

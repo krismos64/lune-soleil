@@ -46,6 +46,8 @@ let signalerAvis: typeof import("@/services/avis").signalerAvis;
 let listerSignalementsAExaminer: typeof import("@/services/avis").listerSignalementsAExaminer;
 let cloturerSignalementAvis: typeof import("@/services/avis").cloturerSignalementAvis;
 let renvoyerInvitation: typeof import("@/services/avis").renvoyerInvitation;
+let modifierMonAvis: typeof import("@/services/avis").modifierMonAvis;
+let listerMesAvis: typeof import("@/services/avis").listerMesAvis;
 let engendrerJeton: typeof import("@/lib/jeton-acces").engendrerJeton;
 let empreinteJeton: typeof import("@/lib/jeton-acces").empreinteJeton;
 
@@ -271,6 +273,8 @@ beforeAll(async () => {
     listerSignalementsAExaminer,
     cloturerSignalementAvis,
     renvoyerInvitation,
+    modifierMonAvis,
+    listerMesAvis,
   } = await import("@/services/avis"));
   ({ engendrerJeton, empreinteJeton } = await import("@/lib/jeton-acces"));
 });
@@ -1776,5 +1780,307 @@ describe("renvoi d'invitation, critere 3 par le vrai geste", () => {
     );
 
     expect(JSON.stringify(rows[0]!.variables)).not.toContain("@");
+  });
+});
+
+describe("modification d'un avis par son auteur, LS-225, regles R8, R10 et R11", () => {
+  /**
+   * Depose un avis RATTACHE A UN COMPTE, puis le publie.
+   *
+   * LE RATTACHEMENT EST INDISPENSABLE ICI, contrairement aux autres blocs de ce
+   * fichier. Le depot par jeton laisse `utilisateurId` a `null` quand la
+   * commande n'appartient a personne : un avis sans auteur n'est modifiable par
+   * personne, et le filtre de `modifierAvisDeLAuteur` le refuserait pour la
+   * bonne raison, ce qui masquerait ce que ces tests veulent mesurer.
+   */
+  async function avisPublieDUnCompte(): Promise<{
+    avisId: string;
+    utilisateurId: string;
+    varianteId: string;
+  }> {
+    const utilisateurId = randomUUID();
+
+    await client.query(
+      `INSERT INTO utilisateur (id, email, email_verifie, nom, role, cree_a, mis_a_jour_a)
+       VALUES ($1, $2, true, 'TEST Camille Dupont', 'CLIENT', now(), now())`,
+      [utilisateurId, `client-modif-${utilisateurId.slice(0, 8)}@exemple.fr`],
+    );
+
+    const { commandeId, varianteIds } = await commanderEtPayer();
+
+    await client.query(
+      "UPDATE commande SET utilisateur_id = $1 WHERE id = $2",
+      [utilisateurId, commandeId],
+    );
+
+    await marquerLivree(commandeId);
+    await inviterApresLivraison();
+
+    const valeur = await valeurJetonDeCommande(commandeId);
+    const etat = await lireEtatDepot(valeur);
+    if (etat.statut !== "OUVERT") throw new Error("etat inattendu");
+
+    await deposerAvis(valeur, [
+      {
+        ligneCommandeId: etat.pieces[0]!.ligneCommandeId,
+        note: 5,
+        commentaire: "Un bracelet tres fin, recu rapidement.",
+      },
+    ]);
+
+    const { rows } = await client.query<{ id: string }>(
+      `SELECT a.id FROM avis a
+       JOIN ligne_commande l ON l.id = a.ligne_commande_id
+       WHERE l.commande_id = $1`,
+      [commandeId],
+    );
+
+    const avisId = rows[0]!.id;
+
+    await modererAvis({ avisId, statut: "PUBLIE", motifDecision: null });
+
+    return { avisId, utilisateurId, varianteId: varianteIds[0]! };
+  }
+
+  /** L'etat brut de l'avis, lu en base et non par le service. */
+  async function lireAvis(avisId: string): Promise<{
+    statut: string;
+    note: number;
+    commentaire: string | null;
+    publie_a: Date | null;
+    modifie_a: Date | null;
+    decide_a: Date | null;
+  }> {
+    const { rows } = await client.query(
+      "SELECT statut, note, commentaire, publie_a, modifie_a, decide_a FROM avis WHERE id = $1",
+      [avisId],
+    );
+
+    return rows[0]!;
+  }
+
+  it("une modification renvoie en moderation et retire l'avis de la fiche, regle R10", async () => {
+    const { avisId, utilisateurId, varianteId } = await avisPublieDUnCompte();
+
+    /*
+     * L'AVIS EST BIEN VISIBLE AVANT, et ce prealable n'est pas decoratif : sans
+     * lui, un test ou la fiche ne rend RIEN des le depart passerait pour une
+     * preuve que la modification l'a retire.
+     */
+    expect(await lireAvisPublies([varianteId])).toHaveLength(1);
+
+    const issue = await modifierMonAvis({
+      avisId,
+      utilisateurId,
+      note: 3,
+      commentaire: "Apres deux semaines, le fermoir se detend un peu.",
+    });
+
+    expect(issue.statut).toBe("MODIFIE");
+
+    const apres = await lireAvis(avisId);
+
+    expect(apres.statut).toBe("DEPOSE");
+    expect(apres.note).toBe(3);
+    expect(apres.commentaire).toBe(
+      "Apres deux semaines, le fermoir se detend un peu.",
+    );
+
+    /* LA FICHE PRODUIT NE LE REND PLUS, le temps de la relecture. */
+    expect(await lireAvisPublies([varianteId])).toHaveLength(0);
+  });
+
+  it("modifieA est horodate et publieA n'est PAS reecrit, regles R8 et R11", async () => {
+    const { avisId, utilisateurId } = await avisPublieDUnCompte();
+
+    const avant = await lireAvis(avisId);
+
+    expect(avant.publie_a).not.toBeNull();
+    expect(avant.modifie_a).toBeNull();
+
+    await modifierMonAvis({
+      avisId,
+      utilisateurId,
+      note: 4,
+      commentaire: null,
+    });
+
+    const apres = await lireAvis(avisId);
+
+    /*
+     * `publieA` PORTE LA PREMIERE PUBLICATION ET NE BOUGE PAS, regle R11. La
+     * comparaison est faite sur l'INSTANT et non sur la presence : une
+     * reecriture rendrait une date toujours non nulle, donc une assertion
+     * `not.toBeNull()` resterait verte sur le defaut exact que ce test vise.
+     */
+    expect(apres.publie_a?.getTime()).toBe(avant.publie_a?.getTime());
+    expect(apres.modifie_a).not.toBeNull();
+
+    /*
+     * `decideA` EST REMIS A NULL, l'avis attendant une decision neuve. Le
+     * laisser ferait mesurer le delai de l'article D111-10 sur la decision
+     * PRECEDENTE, donc un delai faux et faux dans le sens flatteur.
+     */
+    expect(apres.decide_a).toBeNull();
+  });
+
+  it("un tiers ne peut pas modifier l'avis d'autrui, invariant 2", async () => {
+    const { avisId, utilisateurId } = await avisPublieDUnCompte();
+    const intrus = randomUUID();
+
+    await client.query(
+      `INSERT INTO utilisateur (id, email, email_verifie, nom, role, cree_a, mis_a_jour_a)
+       VALUES ($1, $2, true, 'TEST Intrus', 'CLIENT', now(), now())`,
+      [intrus, `intrus-${intrus.slice(0, 8)}@exemple.fr`],
+    );
+
+    const avant = await lireAvis(avisId);
+
+    const issue = await modifierMonAvis({
+      avisId,
+      utilisateurId: intrus,
+      note: 1,
+      commentaire: "Texte ecrit par quelqu'un d'autre.",
+    });
+
+    expect(issue.statut).toBe("REFUSE_INTROUVABLE");
+
+    /*
+     * RIEN N'A BOUGE EN BASE, et c'est la seconde moitie du test. Un service qui
+     * ecrirait PUIS refuserait passerait la seule assertion de statut de retour :
+     * le defaut ne se verrait qu'a la lecture suivante, par le vrai auteur.
+     */
+    const apres = await lireAvis(avisId);
+
+    expect(apres.note).toBe(avant.note);
+    expect(apres.commentaire).toBe(avant.commentaire);
+    expect(apres.statut).toBe("PUBLIE");
+
+    /* L'auteur legitime, lui, peut toujours. */
+    expect(
+      (await modifierMonAvis({
+        avisId,
+        utilisateurId,
+        note: 4,
+        commentaire: null,
+      })).statut,
+    ).toBe("MODIFIE");
+  });
+
+  it("un avis retire n'est plus modifiable, et son auteur le voit", async () => {
+    const { avisId, utilisateurId } = await avisPublieDUnCompte();
+
+    await modererAvis({
+      avisId,
+      statut: "RETIRE",
+      motifDecision: "Hors sujet, parle de la livraison et non du bijou.",
+    });
+
+    const issue = await modifierMonAvis({
+      avisId,
+      utilisateurId,
+      note: 5,
+      commentaire: "Nouvelle tentative apres le retrait.",
+    });
+
+    expect(issue.statut).toBe("REFUSE_INTROUVABLE");
+
+    /*
+     * L'ECRAN LE SAIT AUSSI, et les deux doivent s'accorder : une carte qui
+     * offrirait un bouton que le service refuse serait pire qu'un bouton
+     * absent. `modifiable` suit exactement le filtre du repository.
+     */
+    const mesAvis = await listerMesAvis(utilisateurId);
+    const carte = mesAvis.find((ligne) => ligne.id === avisId);
+
+    expect(carte?.modifiable).toBe(false);
+    expect(carte?.etat).toBe("NON_RETENU");
+  });
+
+  it("un avis en attente est modifiable avant relecture", async () => {
+    const { avisId, utilisateurId } = await avisPublieDUnCompte();
+
+    /* Premiere modification : l'avis repasse en attente. */
+    await modifierMonAvis({
+      avisId,
+      utilisateurId,
+      note: 3,
+      commentaire: "Premiere correction.",
+    });
+
+    expect((await lireAvis(avisId)).statut).toBe("DEPOSE");
+
+    /*
+     * SECONDE MODIFICATION SANS RELECTURE INTERMEDIAIRE, arbitrage de
+     * Christophe du 12 septembre 2026 : aucune limite au nombre de
+     * modifications. Ce test rougirait si une garde « une seule fois » etait
+     * ajoutee, par exemple en refusant un avis dont `modifieA` est deja pose.
+     */
+    const seconde = await modifierMonAvis({
+      avisId,
+      utilisateurId,
+      note: 2,
+      commentaire: "Seconde correction, avant toute relecture.",
+    });
+
+    expect(seconde.statut).toBe("MODIFIE");
+    expect((await lireAvis(avisId)).commentaire).toBe(
+      "Seconde correction, avant toute relecture.",
+    );
+  });
+
+  it("une modification depose une alerte de moderation, et son texte dit MODIFIE", async () => {
+    /*
+     * L'INTERRUPTEUR EST POSE EXPLICITEMENT, ET CE N'EST PAS UNE PRECAUTION
+     * THEORIQUE. Le bloc « alerte d'avis a moderer » ci-dessus laisse
+     * `alerte_avis_a_moderer` a `false`, son dernier cas mesurant precisement
+     * l'ABSENCE d'envoi : sans cette ligne, ce test mesure un interrupteur
+     * eteint et echoue pour une raison etrangere a son sujet.
+     *
+     * LA LIGNE EST RESTAUREE A LA FIN, la base etant PARTAGEE entre fichiers
+     * d'integration. La laisser modifiee ferait rougir les tests qui lisent les
+     * tarifs, defaut evite de justesse en livrant LS-219.
+     */
+    const origine = await client.query(
+      "SELECT * FROM parametre_boutique WHERE id = true",
+    );
+
+    await client.query(
+      "UPDATE parametre_boutique SET alerte_avis_a_moderer = true, email_alertes = $1 WHERE id = true",
+      ["alertes-modif@exemple.invalid"],
+    );
+
+    const { avisId, utilisateurId } = await avisPublieDUnCompte();
+
+    await client.query(
+      "DELETE FROM envoi_en_attente WHERE modele = 'admin-incident-critique'",
+    );
+
+    await modifierMonAvis({
+      avisId,
+      utilisateurId,
+      note: 2,
+      commentaire: null,
+    });
+
+    const { rows } = await client.query<{ variables: unknown }>(
+      "SELECT variables FROM envoi_en_attente WHERE modele = 'admin-incident-critique' ORDER BY cree_a DESC LIMIT 1",
+    );
+
+    /*
+     * LE TEXTE DISTINGUE UNE MODIFICATION D'UN DEPOT. Annoncer « un avis vient
+     * d'etre depose » sur un texte deja publie ferait chercher l'exploitante
+     * dans ses nouveautes, alors que la ligne est ancienne et que l'enjeu est
+     * de COMPARER avec la version qu'elle avait acceptee, critere 4.
+     */
+    expect(JSON.stringify(rows[0]!.variables)).toContain("modifie");
+
+    await client.query(
+      "UPDATE parametre_boutique SET alerte_avis_a_moderer = $1, email_alertes = $2 WHERE id = true",
+      [
+        origine.rows[0]?.alerte_avis_a_moderer ?? false,
+        origine.rows[0]?.email_alertes ?? "a-configurer@exemple.invalid",
+      ],
+    );
   });
 });

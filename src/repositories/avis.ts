@@ -566,6 +566,75 @@ export async function appliquerDecision(
   }
 }
 
+/**
+ * Modifie l'avis de son auteur, LS-225, regles R8, R10 et R11.
+ *
+ * L'AUTORISATION VIT DANS LE `where`, ET C'EST LE COEUR DE CETTE FONCTION. Le
+ * filtre porte `utilisateurId` en plus de `id` : un avis qui n'appartient pas
+ * au demandeur ne correspond a aucune ligne, donc rien n'est ecrit et le compte
+ * rendu vaut zero. Invariant 2, exprime par la requete plutot que par une garde
+ * applicative qu'un chemin futur pourrait contourner.
+ *
+ * `updateMany` ET NON `update`, pour cette raison exactement. `update` designe
+ * une ligne par sa cle et leve `P2025` si le reste du filtre echoue : il ne
+ * SAIT PAS exprimer « cette ligne, et seulement si elle est a cette personne ».
+ * Le compte rendu de `updateMany` distingue les deux cas sans exception.
+ *
+ * LES STATUTS MODIFIABLES SONT DANS LE FILTRE, arbitrage de LS-225. `PUBLIE` et
+ * `DEPOSE` seulement : un avis ecarte par l'exploitante n'est pas modifiable,
+ * sans quoi son auteur pourrait le representer indefiniment jusqu'a le faire
+ * passer. Les mettre ICI plutot qu'en garde lue-puis-ecrite ferme la fenetre
+ * entre la lecture et l'ecriture, ou une decision de moderation peut tomber.
+ *
+ * `publieA` N'EST PAS DANS LES DONNEES ECRITES, regle R11, et son absence est
+ * la regle elle-meme : la date de PREMIERE publication survit a la
+ * modification, ce que l'article D111-10 attend de la date affichee au
+ * visiteur. `appliquerDecision` la reposera le jour de la republication, sa
+ * clause `publieA: null` la laissant intacte.
+ */
+export async function modifierAvisDeLAuteur(
+  client: ClientBase,
+  parametres: {
+    avisId: string;
+    utilisateurId: string;
+    note: number;
+    commentaire: string | null;
+    maintenant?: Date;
+  },
+): Promise<{ modifies: number }> {
+  const maintenant = parametres.maintenant ?? new Date();
+
+  const { count } = await client.avis.updateMany({
+    where: {
+      id: parametres.avisId,
+      utilisateurId: parametres.utilisateurId,
+      statut: { in: ["PUBLIE", "DEPOSE"] },
+    },
+    data: {
+      note: parametres.note,
+      commentaire: parametres.commentaire,
+      /*
+       * LE RETOUR EN MODERATION EST ECRIT ICI ET NON DEDUIT AILLEURS, regle
+       * R10 : un avis modifie disparait de la fiche produit tant qu'il n'est
+       * pas relu, `listerAvisPublies` ne rendant que le statut `PUBLIE`.
+       */
+      statut: "DEPOSE",
+      modifieA: maintenant,
+      /*
+       * `decideA` EST REMIS A NULL, et c'est ce qui distingue un avis en
+       * attente d'une DECISION d'un avis deja juge. Le laisser garderait la
+       * date de la decision precedente sur un texte que personne n'a encore
+       * relu, et `decideA` sert precisement a mesurer le delai annonce par
+       * l'article D111-10 : un delai calcule sur l'ancienne decision serait
+       * faux, et faux dans le sens flatteur.
+       */
+      decideA: null,
+    },
+  });
+
+  return { modifies: count };
+}
+
 /** Un avis publie, tel que la fiche produit l'affiche. */
 export type AvisPublie = {
   id: string;
@@ -652,6 +721,8 @@ export type AvisDuClient = {
   experienceA: Date;
   deposeA: Date;
   publieA: Date | null;
+  /** La derniere modification par l'auteur, LS-225, regle R8. */
+  modifieA: Date | null;
   produitNom: string;
   varianteLibelle: string;
   numeroCommande: string;
@@ -687,6 +758,7 @@ export async function listerAvisDeLUtilisateur(
       experienceA: true,
       deposeA: true,
       publieA: true,
+      modifieA: true,
       ligneCommande: {
         select: {
           libelleProduitFige: true,
@@ -711,6 +783,7 @@ export async function listerAvisDeLUtilisateur(
     experienceA: ligne.experienceA,
     deposeA: ligne.deposeA,
     publieA: ligne.publieA,
+    modifieA: ligne.modifieA,
     produitNom: ligne.ligneCommande.libelleProduitFige,
     varianteLibelle: ligne.ligneCommande.libelleVarianteFige,
     numeroCommande: ligne.ligneCommande.commande.numero,
