@@ -127,6 +127,52 @@ fi
 
 MEM="${CLAUDE_MEMORY_DIR:-$HOME/.claude/projects/-Users-chris-Documents-sites-lune-soleil/memory}"
 
+# ---------------------------------------------------------------------------
+# L'INDEX EST PLAFONNÉ PAR LE PRODUIT, ET LE DÉPASSEMENT EST SILENCIEUX.
+# ---------------------------------------------------------------------------
+#
+# Claude Code lit MEMORY.md au démarrage dans la limite de 200 LIGNES et 25 Ko.
+# Au-delà, tout ce qui suit est SIMPLEMENT IGNORÉ : les dernières fiches de
+# l'index cessent d'exister sans qu'aucun message ne le dise, et une mémoire
+# que l'on croit chargée ne l'est plus qu'à moitié.
+#
+# Mesuré le 12 septembre 2026 : l'index avait atteint 454 lignes et 67 Ko,
+# soit près du triple du plafond. Les entrées passé la 200e étaient invisibles
+# depuis des semaines. Le tri qui a suivi a sorti 256 fiches vers `archive/`.
+#
+# DEUX SEUILS PLUTÔT QU'UN. Le plafond avertit quand le mal est fait ; le seuil
+# d'alerte laisse le temps d'archiver avant de perdre quoi que ce soit.
+#
+# LE SEUIL EST CALÉ SUR LE RYTHME MESURÉ, PAS SUR UNE MARGE DE CONFORT. Entre le
+# 5 et le 11 septembre 2026, ce projet a produit de 18 à 34 fiches PAR JOUR de
+# travail dense. Une alerte à 180 lignes ne laisserait que vingt lignes, donc
+# moins d'une journée : elle sonnerait en permanence, et une alerte permanente
+# ne s'entend plus. À 150, la marge couvre deux bonnes journées, ce qui laisse
+# le temps de trier sans que le tri devienne une interruption quotidienne.
+#
+# CE CONTRÔLE NE CHOISIT PAS CE QUI PART. Décider qu'un motif est clos, qu'une
+# fiche en double une autre ou qu'un piège ne se rejouera plus demande de LIRE :
+# aucune règle mécanique ne le fait sans se tromper. Il mesure, il alerte, et le
+# tri reste un geste de session, guidé par `memory-archivage.md`.
+if [ -f "$MEM/MEMORY.md" ]; then
+  lignes_index=$(grep -c "" "$MEM/MEMORY.md")
+  octets_index=$(wc -c < "$MEM/MEMORY.md" | tr -d ' ')
+
+  if [ "$lignes_index" -gt 200 ]; then
+    anomalies+=("MEMORY.md fait $lignes_index lignes, au-delà des 200 lues au démarrage : les fiches suivantes sont DÉJÀ invisibles, archiver selon docs/memory-archivage.md")
+  elif [ "$lignes_index" -gt 150 ]; then
+    anomalies+=("MEMORY.md approche le plafond, $lignes_index lignes sur 200 : archiver avant d'y arriver, docs/memory-archivage.md")
+  fi
+
+  if [ "$octets_index" -gt 25000 ]; then
+    anomalies+=("MEMORY.md fait $octets_index octets, au-delà des 25 Ko lus au démarrage : raccourcir les accroches ou archiver")
+  fi
+fi
+
+# LE GLOB NE DESCEND PAS DANS `archive/`, ET C'EST VOULU. Une fiche archivee
+# n'a PAS a figurer dans l'index : l'y remettre annulerait l'archivage, l'index
+# etant plafonne a 200 lignes et 25 Ko par le produit. Ce qui suit vaut donc
+# pour les fiches de la racine, celles qui sont rappelees a chaque session.
 if [ -d "$MEM" ] && [ -f "$MEM/MEMORY.md" ]; then
   for f in "$MEM"/*.md; do
     nom=$(basename "$f")
@@ -135,9 +181,14 @@ if [ -d "$MEM" ] && [ -f "$MEM/MEMORY.md" ]; then
       || anomalies+=("fiche mémoire '$nom' absente de MEMORY.md, donc jamais rappelée")
   done
 
+  # UN LIEN VERS UNE FICHE ARCHIVEE RESTE VALIDE. `archive/` porte les fiches
+  # retirees de l'index, motif clos ou sans recidive : elles existent toujours
+  # et se lisent par `grep`, seul leur rappel automatique a cesse. Ne chercher
+  # qu'a la racine ferait rougir ce controle sur CHAQUE renvoi vers l'archive,
+  # et la reponse serait alors de reecrire des liens justes.
   while read -r cible; do
     [ -n "$cible" ] || continue
-    [ -f "$MEM/$cible.md" ] \
+    [ -f "$MEM/$cible.md" ] || [ -f "$MEM/archive/$cible.md" ] \
       || anomalies+=("lien mémoire [[$cible]] ne correspond à aucune fiche")
   done < <(grep -oh '\[\[[a-z0-9-]*\]\]' "$MEM"/*.md 2>/dev/null | tr -d '[]' | sort -u)
 fi
@@ -204,10 +255,15 @@ permanents=(CLAUDE.md docs/REFERENCES.md .claude/rules/*.md .claude/skills/*/SKI
 #
 # `MEMORY.md` est exclu, c'est un index de titres où le motif produirait du bruit
 # sans rien apprendre.
+# `archive/` EST HORS DE CETTE VERIFICATION, et c'est sa raison d'etre. Le motif
+# cherche ici est l'etat date, « au 8 septembre X n'existe pas encore » : c'est
+# precisement ce qui fait archiver une fiche. La garder sous ce controle ferait
+# rougir presque chaque fiche archivee pour la qualite qui l'a fait sortir, et
+# une fiche archivee n'est plus rappelee, donc n'affirme plus rien avec autorite.
 if [ -d "$MEM" ]; then
   while IFS= read -r fiche; do
     permanents+=("$fiche")
-  done < <(find "$MEM" -name '*.md' ! -name 'MEMORY.md' 2>/dev/null)
+  done < <(find "$MEM" -maxdepth 1 -name '*.md' ! -name 'MEMORY.md' 2>/dev/null)
 fi
 
 # Une ligne qui CITE un état transitoire pour l'interdire n'en est pas un. Le
@@ -771,6 +827,122 @@ if [ -d .claude/rules ] && git rev-parse --git-dir >/dev/null 2>&1; then
         || anomalies+=("$regle : le motif paths '$motif' ne matche aucun fichier suivi, la règle ne se charge pas là où elle croit protéger")
     done < <(sed -n '/^paths:/,/^---$/p' "$regle" | grep -E '^\s*-' || true)
   done
+fi
+
+
+# ---------------------------------------------------------------------------
+# 16. Les documents vivants ne citent pas un chemin de code disparu
+# ---------------------------------------------------------------------------
+#
+# LE DEFAUT QUE LES QUINZE AUTRES NE VOIENT PAS. Ils verifient des structures :
+# un fichier existe, un compte correspond, un renvoi de CLAUDE.md ou de
+# REFERENCES.md pointe quelque part. Aucun ne lit ce qu'un document AFFIRME.
+#
+# Or l'audit du 11 septembre 2026 a trouve ONZE affirmations perimees qu'aucun
+# controle n'avait vues, et le journal l'ecrit : « ils verifient ce qui est
+# mecanique [...] ils ne lisent pas une affirmation au present ».
+#
+# CE QUI SUIT N'EST PAS UNE LECTURE DE SENS, et ne pretend pas l'etre. Il attrape
+# la seule part MECANIQUE de cette famille : un document qui cite un chemin de
+# code entre accents graves, alors que ce chemin n'existe plus. C'est ce qui
+# arrive quand un fichier est renomme ou deplace sans que la documentation suive.
+#
+# Mesure du 12 septembre 2026 : deux cas reels, `VALIDATION.md` citant
+# `src/app/panier/actions.ts` et `CONTRIBUTING.md` citant `src/lib/md-parser.ts`,
+# tous deux disparus depuis des semaines sans que rien ne le dise.
+#
+# LES JOURNAUX SONT EXCLUS, ET CE N'EST PAS UN CONFORT. `docs/journal/` date un
+# etat PASSE : une page du 19 aout qui cite `src/app/panier/` decrit ce qui
+# existait ce jour-la, et le corriger falsifierait l'archive. Dix-sept renvois y
+# sont morts, tous legitimes.
+#
+# LES CHEMINS ENTRE ACCENTS GRAVES SEULEMENT. Une mention en prose, « le panier
+# est dans src/app », n'est pas une reference verifiable : l'accent grave est ce
+# qui distingue un chemin cite d'une phrase qui parle d'un dossier.
+if command -v git >/dev/null 2>&1 && git rev-parse --git-dir >/dev/null 2>&1; then
+  while IFS= read -r doc; do
+    [ -f "$doc" ] || continue
+    while IFS= read -r chemin; do
+      [ -n "$chemin" ] || continue
+      [ -e "$chemin" ] && continue
+
+      # UN DOCUMENT QUI PARLE D'UNE SUPPRESSION CITE FORCEMENT CE QUI A DISPARU,
+      # et c'est le contraire d'un oubli. Mesure du 12 septembre 2026 : les deux
+      # SEULS cas du depot sont de cette nature. `VALIDATION.md` ecrit « Il
+      # remplace src/app/panier/actions.ts, supprime par LS-117 », et
+      # CONTRIBUTING.md cite `src/lib/md-parser.ts` comme cas d'un test de
+      # mutation, un chemin fabrique pour eprouver un ancrage.
+      #
+      # Sans cette exemption, le controle accuserait les documents qui font
+      # PRECISEMENT le travail de tracer une disparition. Le mot declencheur se
+      # cherche sur la LIGNE, seul endroit ou l'intention est lisible.
+      # DEUX LIGNES AVANT ET APRES, PAS LA SEULE LIGNE. Les documents du depot
+      # sont enveloppes a 80 colonnes : le mot qui porte l'intention tombe une
+      # ligne plus haut aussi souvent que sur celle du chemin. CONTRIBUTING.md
+      # en est le cas, « trois mutations ont ete jouees » vivant deux lignes
+      # avant le chemin qu'il explique. Motif deja en fiche, « motif de
+      # recherche et retour a la ligne ».
+      ligne=$(grep -m1 -F -B 2 -A 2 "$chemin" "$doc" 2>/dev/null | tr '\n' ' ')
+      case "$ligne" in
+        *supprim*|*remplac*|*disparu*|*retir*|*mutation*|*ancien*|*n\'existe*) continue ;;
+      esac
+
+      anomalies+=("$doc cite \`$chemin\`, qui n'existe plus : renommage ou suppression non propage")
+    done < <(grep -ohE '`(src|scripts|prisma|tests|deploiement)/[A-Za-z0-9._/-]+`' "$doc" 2>/dev/null \
+      | tr -d '`' | sed 's:/$::' | sort -u)
+  done < <(git ls-files 'docs/*.md' '.claude/*.md' '.claude/**/*.md' README.md CONTRIBUTING.md CLAUDE.md 2>/dev/null \
+    | grep -v '^docs/journal/')
+fi
+
+
+# ---------------------------------------------------------------------------
+# 17. Les affirmations d'exclusivité des documents permanents, à relire
+# ---------------------------------------------------------------------------
+#
+# CE CONTROLE NE JUGE PAS, IL ATTIRE L'OEIL. Il ne peut pas savoir si « X est la
+# seule famille sans action » est encore vrai : ca demande de compter les
+# familles. Il liste les endroits ou cette question se pose, et le reste est une
+# relecture.
+#
+# POURQUOI CETTE FAMILLE ET PAS UNE AUTRE. Le 11 septembre 2026, un audit manuel
+# a trouve onze affirmations perimees qu'aucun des seize autres controles ne
+# voyait. La plus grave etait dans le fichier qui gouverne les gardes :
+# `securite.md` annoncait « `PARAMETRES_BOUTIQUE` reste la seule famille sans
+# action » alors que les quatre etaient couvertes. Une exclusivite se perime des
+# qu'un second element rejoint la categorie, et rien dans le texte ne bouge.
+#
+# LE MOTIF EST RESSERRE, ET LA MESURE L'IMPOSE. « la seule » et « le seul »
+# apparaissent 166 fois dans les documents permanents : une liste brute ne serait
+# jamais lue. La quasi-totalite sont des explications de conception stables,
+# « `P2002` est le seul rempart », « c'est le seul moyen d'ecrire a la boutique ».
+# Celles-la ne se periment pas, elles decrivent une mecanique.
+#
+# Ce qui se perime est l'exclusivite portant sur une CATEGORIE DENOMBRABLE dont
+# le contenu grandit : une famille, une exception, une table, un fichier. D'ou
+# l'exclusion des tournures suivies de « facon », « moyen », « raison », qui
+# designent une modalite et non un membre d'un ensemble.
+#
+# LES JOURNAUX SONT EXCLUS pour la meme raison qu'au controle 16 : ils datent un
+# etat passe, et l'exclusivite y etait vraie le jour ou elle a ete ecrite.
+#
+# EN MODE PAR DEFAUT SEULEMENT. Ce controle rend une liste a relire, pas un
+# defaut : le faire echouer la CI ferait rougir une pull request sur des phrases
+# peut-etre justes. `--strict` l'ignore donc, a la difference des seize autres.
+if [ "$STRICT" -eq 0 ] && command -v git >/dev/null 2>&1 && git rev-parse --git-dir >/dev/null 2>&1; then
+  exclusivites=$(git ls-files 'docs/*.md' '.claude/*.md' '.claude/**/*.md' README.md CONTRIBUTING.md CLAUDE.md 2>/dev/null \
+    | grep -v '^docs/journal/' \
+    | xargs grep -nHE '\b(reste|demeure|restent) (la seule|le seul|les seuls|les seules)\b' 2>/dev/null \
+    | grep -viE 'seule (facon|façon|maniere|manière|voie|chose|raison)|seul (moyen|geste|endroit|champ|rempart|but)' \
+    | head -12)
+
+  if [ -n "$exclusivites" ]; then
+    n_excl=$(printf '%s\n' "$exclusivites" | grep -c '')
+    anomalies+=("$n_excl affirmation(s) d'exclusivité à relire : une exclusivité se périme dès qu'un second élément rejoint la catégorie, sans qu'aucun mot ne change")
+    while IFS= read -r ligne; do
+      [ -n "$ligne" ] || continue
+      anomalies+=("  exclusivité : $(printf '%s' "$ligne" | cut -c1-150)")
+    done <<< "$exclusivites"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
