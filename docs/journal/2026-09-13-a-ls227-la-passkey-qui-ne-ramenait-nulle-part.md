@@ -1,7 +1,7 @@
-# 13 septembre 2026, le déploiement, puis un défaut trouvé par l'usage réel
+# 13 septembre 2026, le déploiement, un défaut de l'usage réel, et la suite enfin verte
 
-Session courte, en deux temps : déployer ce que la veille avait fusionné, puis
-corriger ce que Christophe a rencontré en s'en servant.
+Session en trois temps : déployer ce que la veille avait fusionné, corriger ce que
+Christophe a rencontré en s'en servant, puis fermer l'instabilité des tests.
 
 ## Ce qui est livré
 
@@ -9,6 +9,7 @@ corriger ce que Christophe a rencontré en s'en servant.
 |---|---|---|
 | déploiement | `2e9cd90` vers `e28cb4fe`, migration comprise | **fait** |
 | LS-227 | la réauthentification ne ramenait nulle part | **terminé**, PR #424 |
+| LS-226 | deux tests mesuraient l'état global de la base | **terminé**, PR #426 |
 
 ## Le déploiement, et le garde-fou qui a refusé
 
@@ -116,10 +117,65 @@ Port 3002 injoignable depuis l'extérieur, conforme.
 actifs. Les alertes partent réellement, ce qui n'était pas le cas depuis
 l'amorçage d'ADR-043.
 
-## Prochaine étape
+## LS-226, la sonde qui a tranché
 
-**LS-226 reste faisable immédiatement**, son diagnostic est fait : deux
-assertions à ancrer sur les données que leur fichier a créées. Elle s'est
-manifestée à nouveau pendant cette session, sur `comptabilite-administration`.
+Deux tests passaient **lancés seuls** et rougissaient en suite complète. Le même
+commit rendait deux résultats différents à quelques minutes d'intervalle, et
+l'échec changeait même de fichier.
+
+**La mesure a remplacé la déduction.** Trois hypothèses ont été essayées et
+abandonnées : les deux fichiers soupçonnés de polluer ne suffisaient pas à
+reproduire l'échec, et une comparaison par `git stash` s'est révélée invalide,
+le travail ayant déjà été commité en `wip`.
+
+Ce qui a tranché est une **sonde écrite sur disque** pendant une exécution
+complète, la sortie console étant avalée par Vitest :
+
+```
+comptabilite : factures=8 utilisateurs=0
+```
+
+**Huit factures d'autres fichiers** étaient présentes au moment où le test
+comptable lisait « aucune pièce émise ». Il ne pouvait passer que par chance.
+
+### Les deux corrections
+
+La lecture comptable est bornée par `depuis`, qui porte sur `emiseA` : aucune
+pièce antérieure n'entre, quel qu'en soit l'auteur. **Aucun code applicatif
+ajouté**, la fonction acceptait déjà une période.
+
+Le compteur d'utilisateurs est filtré sur l'identifiant. **Le premier cas portait
+déjà la bonne assertion deux lignes plus bas** : la version globale n'ajoutait
+rien, elle apportait seulement la fragilité.
+
+### Ce qui est conservé, et pourquoi
+
+**Le `TRUNCATE` des deux fichiers reste.** Il protège les VOISINS de ce que ces
+fichiers écrivent ; il ne pouvait rien contre ce qui les PRÉCÈDE, et c'est la
+moitié qui manquait. Un `TRUNCATE` en `beforeAll` a été écarté : il emporterait
+les données d'un voisin en cours de suite, défaut rencontré en livrant LS-219.
+
+### La limite de la preuve, dite plutôt que tue
+
+Le cas 180 est inscrit : retirer la fenêtre fait rougir le test **en suite
+complète**, et lui seul. Lancé isolément le fichier passe, ce qui est exactement
+ce qui a fait prendre l'échec pour un aléa pendant deux jours.
+
+**Le second test n'a pas de cas inscrit.** Son défaut est **latent** dans l'ordre
+actuel, aucun voisin ne laissant de compte avant lui aujourd'hui : la mutation
+reste verte. Il a été prouvé en **fabriquant** la pollution, compteur ciblé cinq
+verts contre compteur global un rouge. Inscrire ce cas ferait tester
+l'échafaudage plutôt que le dépôt.
+
+### La suite complète est verte
+
+```
+integration, trois executions   947 verts a chaque fois
+suite complete                  1702 sur 1702
+```
+
+Première exécution intégralement verte depuis deux jours.
+
+## Prochaine étape
 
 **LS-218 attend LS-153** pour son critère 10, un colis réel.
