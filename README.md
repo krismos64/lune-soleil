@@ -33,20 +33,20 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 4, factures et expédition | LS-5 | 4 | **LS-218 crée l'étiquette par API**, et son poids est un réglage depuis le 12 septembre 2026 : seul son critère 10 reste ouvert, il attend un colis réel donc LS-153. **LS-33** décide comment le site apprend qu'un colis est livré, **LS-35** porte l'e-reporting au 1er septembre 2027, et **LS-222** attend d'observer de vrais envois dans plusieurs clients de messagerie. **LS-98 est close** le 11 septembre 2026, les paramètres commerciaux vivent en base, ADR-043 |
 | 4bis, espace client et avis | LS-36 | 0 | **close**, et rouverte deux fois depuis : LS-221 a livré « Mes avis » puis **LS-225 la modification d'un avis par son auteur**, le 12 septembre 2026. Une phase close ne l'est que des tickets connus le jour où on la ferme |
 | 5, rétractation et conformité | LS-6 | 0 | **close**, ses huit stories terminées le 10 septembre 2026 |
-| 6, exploitation et ouverture | LS-7 | 6 | **LS-153 et LS-142 attendent l'exploitante**. LS-140 et LS-107 attendent les photographies de LS-23. Restent LS-150, la visibilité dans les moteurs de réponse, **LS-223**, la clé Backblaze, **quatre critères sur six fermés** le 13 septembre 2026, rétention distante posée et masquage substitué à la suppression ; restent trois gestes en console du fournisseur. **LS-226 et LS-227 sont closes** le 13 septembre 2026, l'instabilité des tests et le cul-de-sac de la réauthentification |
+| 6, exploitation et ouverture | LS-7 | 5 | **LS-153 et LS-142 attendent l'exploitante**. LS-140 et LS-107 attendent les photographies de LS-23. Reste LS-150, la visibilité dans les moteurs de réponse. **LS-223, LS-226 et LS-227 sont closes** le 13 septembre 2026 : la clé Backblaze durcie, l'instabilité des tests et le cul-de-sac de la réauthentification |
 | 7, V1 cible | LS-8 | 0 | **close** le 11 septembre 2026. LS-149 portait le dernier critère : ADR-044 **écarte l'assistant IA** du périmètre plutôt que de le reporter |
 | Contenus | LS-22 | 10 | **attend l'exploitante**, rien n'est faisable sans elle. **LS-32 est close** le 11 septembre 2026, la neutralité de genre étant désormais gardée par un contrôle |
 
-**193 tickets terminés sur 217 hors epics**, les deux termes relevés dans Jira
+**194 tickets terminés sur 217 hors epics**, les deux termes relevés dans Jira
 le **13 septembre 2026**, et jamais dérivés l'un de l'autre.
 
 **Le dénominateur a gagné neuf tickets en trois jours**, LS-219 à LS-227 : les
 anomalies trouvées ne sont plus corrigées au fil de l'eau mais ticketées, ce que
-le motif « dette annoncée hors outil » a imposé. Le numérateur, lui, a gagné cinq
-stories. **Deux restent En cours et pour deux raisons différentes** : LS-222
-attend d'observer de vrais envois dans plusieurs clients de messagerie, et
-**LS-218 attend un colis réel**, son dernier critère exigeant un achat facturé et
-donc LS-153.
+le motif « dette annoncée hors outil » a imposé. Le numérateur, lui, a gagné six
+stories, LS-223 comprise. **Deux restent En cours et pour deux raisons
+différentes** : LS-222 attend d'observer de vrais envois dans plusieurs clients
+de messagerie, et **LS-218 attend un colis réel**, son dernier critère exigeant
+un achat facturé et donc LS-153.
 
 **Cinq phases sur huit sont désormais closes**, les phases 1, 3, 4bis, 5 et 7.
 
@@ -55,7 +55,7 @@ une fois : le chiffre disait 175 sous une date du 10 septembre, ce qui aurait
 fait relire un compte pour un autre. Motif « un compte recopié n'est pas une
 mesure », qui vaut pour la date autant que pour le nombre.
 
-**Onze des vingt-quatre tickets ouverts attendent l'exploitante** : les dix de
+**Onze des vingt-trois tickets ouverts attendent l'exploitante** : les dix de
 l'epic LS-22, photographies, textes, tarifs et contenus juridiques, plus LS-19,
 la médiation, qui suppose une adhésion à souscrire. Aucun code ne les débloque.
 

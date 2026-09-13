@@ -168,5 +168,11 @@ remontera d'un jeu par nuit.
 **LS-223 reste en cours**, quatre critères sur six fermés. Il ne rouvrira aucune
 question technique : la bascule est préparée, éprouvée et documentée.
 
+> **Fermé le jour même.** Christophe s'est connecté à Backblaze dans la session
+> suivante, la clé durcie est en service et l'ancienne révoquée. Le contrôle
+> écrit ici s'est révélé **faux** au moment de servir, sa cible inexistante étant
+> rejetée sur sa forme avant tout examen des droits. Voir le journal
+> `2026-09-13-c`.
+
 Les deux autres tickets en cours attendent toujours un geste physique, LS-222
 l'observation d'emails réels et LS-218 un colis réel.
