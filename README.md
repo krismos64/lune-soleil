@@ -43,8 +43,11 @@ le **13 septembre 2026**, et jamais dérivés l'un de l'autre.
 **Le dénominateur a gagné neuf tickets en trois jours**, LS-219 à LS-227 : les
 anomalies trouvées ne sont plus corrigées au fil de l'eau mais ticketées, ce que
 le motif « dette annoncée hors outil » a imposé. Le numérateur, lui, a gagné six
-stories, LS-222 et LS-223 comprises. **UNE SEULE reste En cours** : LS-218 attend
-un colis réel, son dernier critère exigeant un achat facturé et donc LS-153.
+stories, LS-222 et LS-223 comprises. **HUIT tickets sont En cours**, relevés dans
+Jira, et **un seul dépend encore du code** : LS-218 attend un colis réel, son
+dernier critère exigeant un achat facturé et donc LS-153. Les sept autres,
+LS-19, LS-28, LS-29, LS-107, LS-123, LS-140 et LS-170, attendent l'exploitante
+ou une démarche externe.
 
 **Cinq phases sur huit sont désormais closes**, les phases 1, 3, 4bis, 5 et 7.
 
