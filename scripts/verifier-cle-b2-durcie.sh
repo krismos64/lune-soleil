@@ -13,10 +13,24 @@
 # pas ce qu'il APPLIQUE. Un controle qui se contente de la declaration n'a jamais
 # vu le refus qu'il pretend garantir. Le sens 3 exerce l'appel et exige un echec.
 #
-# IL NE DETRUIT RIEN MEME S'IL ECHOUE. La cible du test est un fichier
-# INEXISTANT : si le durcissement avait ete manque et que la suppression passait,
-# elle ne porterait sur aucune sauvegarde reelle. Un test negatif ne doit pas
-# pouvoir devenir destructeur le jour ou il revele le defaut.
+# IL NE SE LANCE QU'APRES LE DURCISSEMENT, ET C'EST UNE CONTRAINTE, PAS UN
+# DETAIL. La cible du sens 3 est un fichier REEL, avec son vrai `fileId` : un
+# identifiant fabrique ferait repondre « Bad file ID » avant tout examen des
+# droits, et le controle serait aveugle (voir le sens 3 plus bas).
+#
+# La contrepartie est qu'il DETRUIT VRAIMENT si la cle porte encore
+# `deleteFiles`. L'API Backblaze n'offre aucun dry run pour
+# `b2_delete_file_version` : il n'existe pas de facon d'exercer le refus sans
+# exercer la suppression.
+#
+# Mesure du 13 septembre 2026, sur l'autre projet (SP-597) : lance contre une
+# cle NON encore durcie pour prouver par mutation qu'il rougissait bien, ce
+# controle a supprime deux versions d'archives avant de conclure. La cible etait
+# bien choisie, le verdict etait juste, et il a fait exactement ce qu'il servait
+# a empecher. Les archives ont ete renvoyees depuis les copies locales.
+#
+# Donc : durcir d'abord, prouver ensuite. Une preuve par mutation ne vaut que si
+# l'echec est reversible.
 #
 # Usage : sudo ./verifier-cle-b2-durcie.sh
 # Sortie : 0 si les trois sens passent, 1 sinon.
@@ -91,10 +105,14 @@ done
 # jamais posee. Le controle passait donc a cote de ce qu'il pretendait verifier,
 # mesure le 13 septembre 2026 en durcissant la cle.
 #
-# VISER UN FICHIER REEL NE RISQUE RIEN ICI, et c'est tout l'objet du sens : si
-# la cle est bien durcie, Backblaze REFUSE. Le seul cas ou la suppression
-# aboutirait est celui ou le durcissement a ete manque, et le controle le dit
-# alors en echec. Le compartiment garde par ailleurs trente jours de versions.
+# VISER UN FICHIER REEL NE RISQUE RIEN UNE FOIS LA CLE DURCIE : Backblaze
+# REFUSE, et rien n'est touche. Le seul cas ou la suppression aboutit est celui
+# ou le durcissement a ete manque, et elle detruit alors pour de bon. Le
+# compartiment garde trente jours de versions, ce qui limite la perte sans
+# l'annuler.
+#
+# D'ou la contrainte d'ordonnancement rappelee en tete de fichier : ce controle
+# se lance APRES la bascule, jamais avant.
 #
 # Les refus possibles ne valent pas la meme chose :
 #   401 unauthorized   la cle n'a pas le droit, C'EST CE QU'ON VEUT
