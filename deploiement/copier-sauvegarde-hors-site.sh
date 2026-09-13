@@ -29,10 +29,16 @@
 # n'est installe sur le VPS : `curl`, `jq`, `gpg` et `sha1sum` y sont deja,
 # verifie le 10 septembre 2026.
 #
-# RETENTION IDENTIQUE AU LOCAL, quatorze jeux, ADR-037. Une copie hors site qui
+# RETENTION A DEUX ETAGES DEPUIS LS-223. Le script masque au-dela de quatorze
+# jeux, comme en local, ADR-037 ; la regle de cycle de vie du bucket efface
+# reellement trente jours apres le masquage. Une copie hors site qui
 # s'accumulerait sans fin depasserait les 10 Go gratuits une fois le catalogue
 # photographie, et conserver sans limite des donnees personnelles de clients
 # contredirait la minimisation du RGPD.
+#
+# CE SCRIPT NE SUPPRIME PLUS RIEN CHEZ BACKBLAZE, et c'est le durcissement de
+# LS-223 : la cle applicative ne porte plus `deleteFiles`, donc un serveur
+# compromis ne peut pas detruire l'historique distant.
 #
 # Usage : ./copier-sauvegarde-hors-site.sh
 # Sortie : 0 si l'envoi est fait ET verifie, 1 sinon.
@@ -325,25 +331,44 @@ verifier $ENVOI_ARCH || exit 1
 # ELLE NE FAIT PAS ECHOUER LE SCRIPT : la copie du jour est faite et verifiee,
 # c'est ce qui compte. Un echec de menage se signale sans annuler le travail
 # utile.
+#
+# ELLE MASQUE, ELLE NE SUPPRIME PAS, LS-223. `b2_hide_file` pose un marqueur qui
+# retire le fichier de `b2_list_file_names` sans detruire la version. La regle de
+# cycle de vie du bucket, `daysFromHidingToDeleting` a 30, efface reellement
+# trente jours plus tard, ET ELLE S'APPLIQUE MEME SERVEUR ETEINT.
+#
+# C'EST CE QUI PERMET DE RETIRER `deleteFiles` DE LA CLE. Un serveur compromis
+# ne peut plus qu'avancer la date de masquage : les versions restent chez
+# Backblaze pendant trente jours, hors de portee d'un rancongiciel qui a pris la
+# machine. `b2_hide_file` n'exige que `writeFiles`, verifie a la documentation
+# Backblaze le 13 septembre 2026.
+#
+# LA RETENTION LOCALE NE BOUGE PAS, quatorze jeux, ADR-037 : elle protege de
+# l'erreur d'exploitation, le distant protege de l'attaque, deux menaces de
+# durees differentes.
 # ---------------------------------------------------------------------------
 
 LIMITE_MS=$(( ($(date +%s) - RETENTION * 86400) * 1000 ))
 SUPPRIMES=0
 ECHECS_MENAGE=0
 
-while read -r ancien_nom ancien_id; do
+# `--fail` EST INDISPENSABLE ICI, ET SON ABSENCE A FAILLI PASSER. Sans lui, curl
+# sort en 0 sur un `401 unauthorized` de Backblaze : un refus de la cle serait
+# compte comme un menage reussi, et le durcissement de LS-223 deviendrait
+# invisible au moment precis ou il faudrait le voir.
+while read -r ancien_nom; do
   [ -z "$ancien_nom" ] && continue
-  if curl -sS --max-time 30 -X POST \
+  if curl -sS --fail --max-time 30 -X POST \
     -H "Authorization: $JETON" \
     -H "Content-Type: application/json" \
-    -d "$(jq -nc --arg n "$ancien_nom" --arg i "$ancien_id" '{fileName: $n, fileId: $i}')" \
-    "$API_URL/b2api/v4/b2_delete_file_version" >/dev/null 2>&1; then
+    -d "$(jq -nc --arg b "$BUCKET_ID" --arg n "$ancien_nom" '{bucketId: $b, fileName: $n}')" \
+    "$API_URL/b2api/v4/b2_hide_file" >/dev/null 2>&1; then
     SUPPRIMES=$(( SUPPRIMES + 1 ))
   else
     ECHECS_MENAGE=$(( ECHECS_MENAGE + 1 ))
   fi
 done < <(echo "$REPONSE_LISTE" | jq -r --argjson lim "$LIMITE_MS" \
-  '.files[]? | select(.uploadTimestamp < $lim) | "\(.fileName) \(.fileId)"')
+  '.files[]? | select(.uploadTimestamp < $lim) | .fileName')
 
 # LE COMPTE SE RELIT, IL NE SE CALCULE PAS. Deduire « ce qu'il y avait, moins ce
 # qu'on a supprime, plus ce qu'on a envoye » suppose que la liste lue apres
@@ -354,9 +379,9 @@ REPONSE_FINALE=$(curl -sS --max-time 30 \
 
 CONSERVES=$(echo "$REPONSE_FINALE" | jq -r '[.files[]? | select(.fileName | startswith("quotidienne-"))] | length' 2>/dev/null || echo "?")
 
-echo "  Rotation distante : $SUPPRIMES supprime(s), $CONSERVES jeu(x) conserve(s) sur $RETENTION."
+echo "  Rotation distante : $SUPPRIMES masque(s), $CONSERVES jeu(x) conserve(s) sur $RETENTION."
 if [ "$ECHECS_MENAGE" -gt 0 ]; then
-  echo "  Note : $ECHECS_MENAGE suppression(s) distante(s) en echec, a surveiller."
+  echo "  Note : $ECHECS_MENAGE masquage(s) distant(s) en echec, a surveiller."
 fi
 
 echo "Termine, $(date -u +%Y-%m-%dT%H:%M:%SZ)"
