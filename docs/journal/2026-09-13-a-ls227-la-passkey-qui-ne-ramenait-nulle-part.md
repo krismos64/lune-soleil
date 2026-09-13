@@ -204,6 +204,10 @@ du code : LS-222 demande d'**observer** de vrais emails dans trois clients de
 messagerie, LS-218 d'expédier un **colis réel**, ce qui ferme aussi le critère 1
 de LS-27.
 
+> **Ils sont trois depuis la session suivante du même jour.** LS-223 est passé en
+> cours, quatre de ses six critères fermés, et attend trois gestes en console
+> Backblaze. Voir le journal `2026-09-13-b`.
+
 **Les vingt-deux autres tickets ouverts dépendent de l'exploitante**, dont les
 dix de l'epic LS-22 : photographies, textes, contenus juridiques.
 
