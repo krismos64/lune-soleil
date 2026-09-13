@@ -108,9 +108,9 @@ terminées : l'epic était resté En cours alors que sa porte de sortie datait d
 13 août, sa dernière story ouverte étant LS-96.
 
 Un compte écrit à la main se périme sans bruit, et **le dénominateur bouge
-autant que le numérateur** : il est passé de 180 à 208 depuis le 5 septembre,
-chaque story livrée en créant parfois d'autres. Un pourcentage qui progresse
-peut recouvrir un périmètre qui s'élargit.
+autant que le numérateur** : il est passé de 180 à 217 entre le 5 et le
+13 septembre 2026, chaque story livrée en créant parfois d'autres. Un
+pourcentage qui progresse peut recouvrir un périmètre qui s'élargit.
 
 ### La boutique tourne en production depuis le 9 septembre 2026
 
@@ -261,7 +261,7 @@ paiement. **Le téléchargement par le client est livré**, LS-57 et LS-132 clos
 | Décisions d'architecture | `docs/adr/` |
 | Architecture technique | `docs/architecture/` |
 | Journal de bord | `docs/journal/` |
-| Rapports de recette | `docs/recettes/` |
+| Rapports de recette | `docs/recettes/`, **vide, il attend la recette de LS-142** |
 | Guides de déploiement et d'exploitation | `docs/` |
 | Backlog et statut du travail | Jira, projet LS |
 

@@ -186,6 +186,31 @@ Trois messages de test en statut `NOUVEAU` dans l'administration, et trois
 notifications reçues par l'exploitante. Ni commande ni facture, supprimables
 sans contrainte.
 
+## Relecture de cohérence, fin de session
+
+Une relecture croisée de `CLAUDE.md`, `README.md`, `REFERENCES.md`,
+`EXPLOITATION.md`, des agents, des skills et des hooks a rendu quatre signalements.
+**Deux étaient réels, un était faux, un est une marge à surveiller.**
+
+**Le dénominateur se contredisait dans le même fichier.** `README.md` annonçait
+217 tickets ligne 40 et « passé de 180 à 208 » ligne 111, un relevé du
+5 septembre jamais mis à jour. Exactement le motif que ce fichier énonce vingt
+lignes plus haut, « un compte recopié n'est pas une mesure ».
+
+**`docs/recettes/` était annoncé sans l'être.** Le dossier ne porte qu'un
+`.gitkeep` : la table documentaire envoyait chercher des rapports inexistants.
+L'entrée dit désormais qu'il attend la recette de LS-142.
+
+**Le signalement faux mérite d'être écrit.** La relecture a conclu que
+`memory/archive/` n'existait pas et que `CLAUDE.md` renvoyait vers un chemin
+mort. **La mémoire vit hors du dépôt**, dans
+`~/.claude/projects/<projet>/memory/`, et son archive porte 314 fiches. Chercher
+dans le dépôt ne pouvait rien trouver. Le renvoi de `CLAUDE.md` est juste.
+
+**`CLAUDE.md` fait 200 lignes pile**, et `verifier-config-claude.sh` alerte
+au-delà de 200 : le contrôle passe aujourd'hui, **la prochaine ligne ajoutée le
+fera rougir**. Rien à corriger, une marge à connaître avant d'y écrire.
+
 ## Prochaine étape
 
 **LS-222 et LS-223 sont terminés.** Le compte passe à 195 sur 217 hors epics,
