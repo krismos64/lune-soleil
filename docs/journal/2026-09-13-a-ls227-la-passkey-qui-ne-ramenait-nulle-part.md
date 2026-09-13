@@ -176,6 +176,36 @@ suite complete                  1702 sur 1702
 
 Première exécution intégralement verte depuis deux jours.
 
+## L'état de LS-222, vérifié sans la faire avancer
+
+Arbitrage de Christophe : l'observation sur boîtes réelles se fera plus tard. Le
+diagnostic est consigné au ticket pour ne pas être à refaire.
+
+**Rien ne bloque techniquement**, mesuré sur la machine : l'envoyeur réel est
+actif, aucune trace de repli sur vingt-quatre heures, les quatre variables SMTP
+sont posées, et la tâche d'envoi tourne chaque minute en trouvant la file vide.
+
+**La production n'a jamais envoyé que DEUX emails**, tous deux du 10 septembre,
+donc **avant** le gabarit HTML déployé le 12. Les critères 2 et 6 n'ont, à ce
+jour, rien à observer : il faut d'abord qu'un geste du site déclenche un envoi.
+
+L'un des deux avait échoué sur `EENVELOPE`, une adresse refusée par le serveur :
+c'était l'ancienne adresse d'alertes invalide, corrigée depuis. Ce n'est pas un
+défaut ouvert.
+
 ## Prochaine étape
 
-**LS-218 attend LS-153** pour son critère 10, un colis réel.
+**Tout le code est déployé**, `6ceb5061`. L'écart restant entre `main` et la
+production ne contient **aucun fichier de `src/` ni de `prisma/`** : des tests,
+un script de mutation et de la documentation. Aucun déploiement n'est dû.
+
+**Les deux seuls tickets en cours attendent un geste physique**, aucun ne dépend
+du code : LS-222 demande d'**observer** de vrais emails dans trois clients de
+messagerie, LS-218 d'expédier un **colis réel**, ce qui ferme aussi le critère 1
+de LS-27.
+
+**Les vingt-deux autres tickets ouverts dépendent de l'exploitante**, dont les
+dix de l'epic LS-22 : photographies, textes, contenus juridiques.
+
+**La suite de tests est intégralement verte**, 1702 sur 1702, depuis LS-226. Un
+échec y est désormais un signal plutôt qu'un bruit de fond.
