@@ -162,11 +162,60 @@ rien du format, et j'ai pris l'une pour l'autre.
 format:check`, jamais une variante resserrée sur les fichiers qu'on croit avoir
 touchés.
 
+## La relecture de fin de session a trouvé la cause profonde
+
+Christophe a demandé un contrôle de cohérence avant de quitter. Trois défauts
+réels, dont un qui explique tout le reste.
+
+**La règle n'existait pas.** `frontend-design.md` porte toutes les conventions
+d'interface et ne disait **rien** du gabarit de titre. LS-180 et LS-181 l'avaient
+livré dans du code, jamais dans une règle : rien ne disait à la story suivante
+qu'elle devait l'employer, et sept écrans s'en sont écartés de bonne foi. **C42**
+la pose désormais.
+
+C'est le motif connu du dépôt, poussé d'un cran : une règle écrite et non
+vérifiée ne tient pas, et **une règle jamais écrite ne tient encore moins**.
+
+**Le tableau des phases du README ne comptait pas LS-228**, sa somme donnait 22
+pour 23 ouverts. Le contrôle recommandé par la fiche d'entrée a servi.
+
+**La fiche mémoire d'entrée portait deux affirmations fausses**, « 193 sur 217 »
+et surtout « LA PRODUCTION EST À JOUR ». La seconde aurait trompé la prochaine
+session, qui aurait cru LS-228 visible en ligne.
+
+## Le déploiement, et le garde-fou qui a refusé le premier essai
+
+**Production à jour sur `89c83df`**, déployée à 18h40, 22 commits résorbés, sans
+migration.
+
+**Le premier essai a échoué**, et c'est instructif : le déploiement a été
+déclenché pendant que `publier-image.yml` tournait encore.
+
+```
+l'image ghcr.io/krismos64/lune-soleil:89c83df... n'existe pas. Publier d'abord.
+```
+
+Le workflow vérifie l'image **avant** toute bascule, précisément pour cela : la
+production est restée intacte sur `6ceb506`, sans interruption ni retour arrière.
+
+**« Fusionné sur `main` » n'égale pas « image disponible ».** Entre les deux il y
+a environ trois minutes. La fiche de la chaîne de déploiement décrivait ses trois
+étapes sans dire qu'il faut attendre entre elles ; elle le dit maintenant.
+
+**Vérifié sur la production réelle**, police calculée et non statut de workflow :
+
+```
+/administration/parametres    system-ui 24px  ->  Iowan Old Style 44px
+/administration/stocks        system-ui 36px  ->  Iowan Old Style 44px
+/administration/statistiques  system-ui 36px  ->  Iowan Old Style 44px
+/compte/avis                  system-ui 32px  ->  Iowan Old Style 36px
+```
+
 ## Prochaine étape
 
-**La PR #433 est fusionnée sur `main`** en rebase, le 13 septembre 2026 à 16h21
-UTC, branche supprimée, les huit contrôles verts. Le premier volet de LS-228 est
-livré, le second attend LS-153.
+**Les PR #433, #434 et #435 sont fusionnées** sur `main` en rebase, les huit
+contrôles verts à chaque fois. Le premier volet de LS-228 est livré **et
+déployé**, le second attend LS-153.
 
 Comptes relevés dans Jira, jamais déduits : **195 terminés sur 218 hors epics**,
 **23 ouverts**, dont **9 En cours**. LS-228 est le 218e et reste en cours, son
