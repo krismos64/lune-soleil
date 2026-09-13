@@ -37,8 +37,6 @@
 .titre {
   margin: 0 0 var(--ls-space-2);
   color: var(--ls-primary);
-  font-size: clamp(1.5rem, 5vw, 2.25rem);
-  font-weight: 600;
 }
 
 .introduction {

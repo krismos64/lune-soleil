@@ -57,10 +57,6 @@
 .titre {
   margin: 0;
   color: var(--ls-text);
-  font-family: var(--ls-police-titre);
-  font-size: clamp(1.75rem, 6vw, 2.75rem);
-  font-weight: 500;
-  line-height: 1.1;
 }
 
 /*

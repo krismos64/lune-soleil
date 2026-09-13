@@ -604,16 +604,6 @@
  */
 .titre {
   margin-top: 0;
-  font-family: var(--ls-police-titre);
-  font-size: clamp(1.5rem, 1.1rem + 2vw, 2.25rem);
-  font-weight: 400;
-  line-height: 1.2;
-  /*
-   * UN TITRE PEUT PORTER UN NUMERO DE COMMANDE SANS ESPACE DE COUPURE, et le
-   * detail de commande en affiche un : « Commande LS-2026-000042 » deborde
-   * sinon a 320 px. Meme motif que LS-171, applique au titre.
-   */
-  overflow-wrap: anywhere;
 }
 
 /*

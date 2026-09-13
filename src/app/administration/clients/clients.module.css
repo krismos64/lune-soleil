@@ -48,10 +48,6 @@
   margin: 0 0 var(--ls-space-3);
   background: var(--ls-background);
   color: var(--ls-primary);
-  font-family: var(--ls-police-titre);
-  font-size: clamp(1.5rem, 5vw, 2.25rem);
-  font-weight: 400;
-  line-height: 1.2;
 }
 
 /* `--ls-text-muted` sur `--ls-background` : 4,86:1, AA, de justesse. */
