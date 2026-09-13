@@ -473,6 +473,44 @@ les deux.
 il ne voit pas les identifiants construits à l'exécution, qu'un test de rendu
 resterait seul à couvrir.
 
+### C42, le titre d'un écran privé se pose dans le layout, jamais par écran
+
+Le contraste entre le **serif de titre** et le sans-serif de texte porte le
+caractère de la marque bien plus que la couleur, ce qu'ADR-022 et le jeton
+`--ls-police-titre` de `tokens.css` établissent déjà.
+
+**La règle vit sur `.colonne h1` dans les deux layouts**, celui de
+l'administration et celui de l'espace client, et tout écran en hérite. Une
+échelle par espace, et une seule.
+
+**Elle cible `h1` et non une classe**, et cette nuance est le coeur de la règle :
+une classe doit être posée pour agir, donc **oubliée pour ne pas agir**. Quatre
+écrans d'administration portaient un `h1` nu, sans aucune classe, et une règle
+ancrée sur `.titre` ne les aurait jamais couverts. Même raisonnement que C36, où
+un contrôle est reconnu par ce qu'il **est**.
+
+**Un module d'écran ne repose ni `font-family` ni `font-size` sur son titre.**
+Une règle locale l'emporte par spécificité, donc une seule recopie suffit à
+rouvrir le défaut sur cet écran.
+
+**LS-180 ET LS-181 AVAIENT LIVRÉ CE GABARIT, ET IL NE S'EST PAS PROPAGÉ.** Rien
+ne le vérifiait : mesuré sur la production le 13 septembre 2026 par
+`getComputedStyle`, **sept titres sur quatorze rendaient en `system-ui`**, avec
+trois échelles concurrentes de 24, 36 et 44 px. Les écrans fautifs étaient
+presque tous postérieurs aux deux stories, écrits en recopiant un voisin
+antérieur au jeton. Motif connu de ce dépôt, une règle écrite et non vérifiée ne
+tient pas.
+
+`tokens.css` prévenait pourtant qu'un jeton déclaré et jamais employé est
+invisible à `verifier-contraste.sh`, qui ne mesure que les paires colocalisées :
+le même angle mort valait pour la police, et personne ne l'avait tiré.
+
+`scripts/verifier-gabarit-titre.sh` garde la règle dans trois sens, et
+`tests/e2e/gabarit-titre-ls228.spec.ts` mesure la police **réellement calculée**
+sur vingt-deux écrans aux quatre largeurs. Un script lit des règles, il ne rend
+pas une page : les deux moitiés sont nécessaires, et c'est l'écart entre elles
+qui avait laissé le défaut vivre dix-neuf jours.
+
 ### C38, tout champ de mot de passe client porte sa bascule de lisibilité
 
 ADR-023 impose **seize caractères minimum**, contre l'usage courant de huit.
