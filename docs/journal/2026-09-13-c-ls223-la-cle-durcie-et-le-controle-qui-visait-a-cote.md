@@ -1,4 +1,4 @@
-# 13 septembre 2026, la bascule faite au navigateur, et le contrôle qui visait à côté
+# 13 septembre 2026, la bascule au navigateur, le contrôle qui visait à côté, et les premiers emails HTML
 
 Troisième session du jour. Christophe s'est connecté à Backblaze, les trois
 gestes bloquants ont été faits, et **LS-223 est terminé**, ses six critères
@@ -125,3 +125,72 @@ projet**, donc hors du périmètre de ce ticket et laissé tel quel.
 
 **LS-223 est terminé.** Les deux tickets restants attendent toujours un geste
 physique, LS-222 l'observation d'emails réels et LS-218 un colis réel.
+
+# LS-222 fermé dans la foulée, les premiers emails HTML de la production
+
+Même session, après la clôture de LS-223. Le ticket attendait depuis le
+12 septembre une observation sur boîtes réelles, et cinq de ses sept critères
+étaient déjà faits.
+
+## Ce qui bloquait n'était pas technique
+
+**Rien n'avait déclenché d'envoi depuis le déploiement du gabarit.** La
+production n'avait jamais émis que deux emails, tous deux du 10 septembre, donc
+en texte brut. Les critères 2 et 6 n'avaient littéralement rien à observer.
+
+Trois soumissions du formulaire de contact ont suffi, une par adresse, sujet
+« Test technique LS-222 » pour que l'exploitante ne les prenne pas pour de
+vraies demandes.
+
+```
+c.mostefaoui@yahoo.fr      ENVOYE  1 tentative  14:44
+kayouw641@gmail.com        ENVOYE  1 tentative  14:46
+contact@smartplanning.fr   ENVOYE  1 tentative  14:47
+```
+
+## Le résultat qui comptait, la délivrabilité
+
+```
+Yahoo    boite de reception
+Gmail    boite de reception
+OVH      boite de reception
+```
+
+**Trois fournisseurs sur trois en réception.** C'était le risque explicite du
+critère 6 : le passage du texte seul au `multipart/alternative` peut modifier le
+classement anti-indésirable. Il ne l'a pas dégradé.
+
+Le rendu a été jugé « parfait » sur les trois clients, dont un sur mobile.
+
+## Un faux diagnostic, et ce qui l'a produit
+
+Après le premier envoi, `journal_email` ne montrait rien de neuf. J'en ai conclu
+à un défaut et j'ai remonté une piste entière : sortie précoce de
+`message-contact.ts` faute de destinataire d'alerte, cache de paramètres,
+divergence entre le code lu et l'image déployée. Trois hypothèses, toutes
+fausses.
+
+**L'envoi avait parfaitement fonctionné depuis le début.** `journal_email` n'est
+pas la file d'attente : l'outbox est `envoi_en_attente`, et elle portait les
+quatre lignes attendues. La mesure visait la mauvaise table.
+
+**Le signal était là et je ne l'ai pas lu** : le message de contact ÉTAIT
+enregistré en base, et aucune trace d'erreur n'apparaissait dans les logs alors
+que le code journalise explicitement « notification de message de contact non
+deposee ». Un défaut de dépôt aurait laissé cette trace. Son absence disait que
+le dépôt avait eu lieu.
+
+Même famille que le motif « mesures fausses » : la sortie était plausible, une
+table vide ressemblant à un envoi manquant.
+
+## Ce qui reste en base
+
+Trois messages de test en statut `NOUVEAU` dans l'administration, et trois
+notifications reçues par l'exploitante. Ni commande ni facture, supprimables
+sans contrainte.
+
+## Prochaine étape
+
+**LS-222 et LS-223 sont terminés.** Le compte passe à 195 sur 217 hors epics,
+22 ouverts. **Un seul ticket reste En cours**, LS-218, qui attend un colis réel
+donc LS-153.
