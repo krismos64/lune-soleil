@@ -37,17 +37,19 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 7, V1 cible | LS-8 | 0 | **close** le 11 septembre 2026. LS-149 portait le dernier critère : ADR-044 **écarte l'assistant IA** du périmètre plutôt que de le reporter |
 | Contenus | LS-22 | 10 | **attend l'exploitante**, rien n'est faisable sans elle. **LS-32 est close** le 11 septembre 2026, la neutralité de genre étant désormais gardée par un contrôle |
 
-**195 tickets terminés sur 217 hors epics**, les deux termes relevés dans Jira
+**195 tickets terminés sur 218 hors epics**, les deux termes relevés dans Jira
 le **13 septembre 2026**, et jamais dérivés l'un de l'autre.
 
 **Le dénominateur a gagné neuf tickets en trois jours**, LS-219 à LS-227 : les
 anomalies trouvées ne sont plus corrigées au fil de l'eau mais ticketées, ce que
 le motif « dette annoncée hors outil » a imposé. Le numérateur, lui, a gagné six
-stories, LS-222 et LS-223 comprises. **HUIT tickets sont En cours**, relevés dans
-Jira, et **un seul dépend encore du code** : LS-218 attend un colis réel, son
-dernier critère exigeant un achat facturé et donc LS-153. Les sept autres,
-LS-19, LS-28, LS-29, LS-107, LS-123, LS-140 et LS-170, attendent l'exploitante
-ou une démarche externe.
+stories, LS-222 et LS-223 comprises. **NEUF tickets sont En cours**, relevés dans
+Jira, et **deux dépendent encore du code** : LS-218 attend un colis réel, son
+dernier critère exigeant un achat facturé et donc LS-153 ; **LS-228** a livré son
+gabarit de titre et garde son second volet, les blocs d'état des deux vues
+d'ensemble, que des comptes sans commande ni adresse ne permettent pas de
+vérifier. Les sept autres, LS-19, LS-28, LS-29, LS-107, LS-123, LS-140 et
+LS-170, attendent l'exploitante ou une démarche externe.
 
 **Cinq phases sur huit sont désormais closes**, les phases 1, 3, 4bis, 5 et 7.
 
@@ -56,7 +58,7 @@ une fois : le chiffre disait 175 sous une date du 10 septembre, ce qui aurait
 fait relire un compte pour un autre. Motif « un compte recopié n'est pas une
 mesure », qui vaut pour la date autant que pour le nombre.
 
-**Onze des vingt-deux tickets ouverts attendent l'exploitante** : les dix de
+**Onze des vingt-trois tickets ouverts attendent l'exploitante** : les dix de
 l'epic LS-22, photographies, textes, tarifs et contenus juridiques, plus LS-19,
 la médiation, qui suppose une adhésion à souscrire. Aucun code ne les débloque.
 
@@ -843,6 +845,7 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-contraste.sh                  # contraste WCAG des paires couleur et fond, LS-84
 ./scripts/verifier-contraste-mutation.sh         # prouve le précédent par mutation
 ./scripts/verifier-bordure-controle.sh           # bordure d'un contrôle au seuil de 3:1, C36, LS-108
+./scripts/verifier-gabarit-titre.sh              # le titre des espaces privés se pose dans le layout, LS-228
 ./scripts/verifier-bordure-controle-mutation.sh  # prouve le précédent par mutation
 ./scripts/verifier-loading-et-404.sh             # aucun loading.tsx ne masque un 404, LS-146
 ./scripts/verifier-loading-et-404-mutation.sh    # prouve le précédent par mutation
