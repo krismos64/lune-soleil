@@ -112,6 +112,7 @@ TRAITEMENT_RETRACTATION="src/services/traitement-retractation.ts"
 DEPOT_RETRACTATION="src/repositories/retractation.ts"
 DEPOT_PARAMETRES="src/repositories/parametres.ts"
 DESTINATIONS_REAUTH="src/app/administration/reauthentification/destinations.ts"
+TEST_COMPTABILITE="tests/integration/comptabilite-administration.sequential.test.ts"
 SENDCLOUD_EXPEDITION="src/integrations/sendcloud/expedition.ts"
 
 # TOUT FICHIER MUTE DOIT FIGURER ICI, sans quoi il n'est ni sauvegarde ni
@@ -125,7 +126,7 @@ SENDCLOUD_EXPEDITION="src/integrations/sendcloud/expedition.ts"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE" "$AVIS" "$DEPOT_AVIS" "$SERVICE_AVOIR" "$DEPOT_PARAMETRES" "$SENDCLOUD_EXPEDITION" "$DESTINATIONS_REAUTH")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE" "$AVIS" "$DEPOT_AVIS" "$SERVICE_AVOIR" "$DEPOT_PARAMETRES" "$SENDCLOUD_EXPEDITION" "$DESTINATIONS_REAUTH" "$TEST_COMPTABILITE")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -2492,6 +2493,26 @@ echo
 mute "$DESTINATIONS_REAUTH" 's#  parametres: "/administration/parametres",#  parametres: "https://exemple-malveillant.fr",#'
 cas "destination de la table remplacee par une URL absolue" unitaire \
   "parametres designe un chemin interne absolu"
+
+echo
+
+# Cas 180 : LA LECTURE COMPTABLE PERD SA FENETRE, LS-226.
+#
+# CE CAS MUTE UN TEST ET NON DU CODE APPLICATIF, seul de ce fichier dans ce cas,
+# et c'est justifie : ce que LS-226 corrige EST une assertion. Le defaut ne vit
+# pas dans `src/`, il vit dans ce qu'un test croit mesurer.
+#
+# LE DEFAUT REMIS. Sans `depuis`, `lireVueComptable()` lit TOUTE la base et non
+# ce que ce fichier a emis. La base d'integration est PARTAGEE entre fichiers
+# `.sequential` : mesure le 13 septembre 2026 par sonde, HUIT factures d'autres
+# fichiers sont presentes au moment ou ce test s'execute.
+#
+# IL NE ROUGIT QU'EN SUITE COMPLETE, et c'est le coeur du motif. Lance seul, le
+# fichier passe : c'est precisement ce qui a fait croire pendant deux jours que
+# l'echec etait un aleas plutot qu'un defaut.
+mute "$TEST_COMPTABILITE" 's/    const depuis = new Date\(\);\n\n    const vue = await lireVueComptable\(\{ depuis \}\);/    const vue = await lireVueComptable();/'
+cas "lecture comptable privee de sa fenetre de periode" integration \
+  "rend une liste vide quand aucune piece n'a ete emise"
 
 echo
 echo "-----------------------------------------"
