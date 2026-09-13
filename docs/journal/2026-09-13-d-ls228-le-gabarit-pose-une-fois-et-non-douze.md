@@ -164,7 +164,8 @@ touchés.
 
 ## Prochaine étape
 
-**La PR #433 est ouverte**, contrôles en cours. Le premier volet de LS-228 est
+**La PR #433 est fusionnée sur `main`** en rebase, le 13 septembre 2026 à 16h21
+UTC, branche supprimée, les huit contrôles verts. Le premier volet de LS-228 est
 livré, le second attend LS-153.
 
 Comptes relevés dans Jira, jamais déduits : **195 terminés sur 218 hors epics**,
