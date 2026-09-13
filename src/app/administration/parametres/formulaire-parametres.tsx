@@ -329,7 +329,10 @@ export function FormulaireParametres({
            * reponse prechargee est perimee des son arrivee. Next.js la jette,
            * repart, et recommence sans fin tant que le lien est a l'ecran.
            */}
-          <Link href="/administration/reauthentification" prefetch={false}>
+          <Link
+            href="/administration/reauthentification?retour=parametres"
+            prefetch={false}
+          >
             Confirmer mon identité
           </Link>
         </p>

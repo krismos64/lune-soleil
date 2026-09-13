@@ -176,7 +176,7 @@ function messageRemboursement(resultat: ResultatRemboursement): MessageAffiche {
         texte: "Confirmez votre identité pour rembourser.",
         erreur: true,
         lien: {
-          chemin: "/administration/reauthentification",
+          chemin: "/administration/reauthentification?retour=retractations",
           libelle: "Confirmer mon identité",
         },
       };

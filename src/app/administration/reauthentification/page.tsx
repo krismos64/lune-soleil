@@ -35,6 +35,7 @@ import {
 } from "@/services/autorisation";
 import { FENETRE_REAUTHENTIFICATION_MS } from "@/services/preuve-identite";
 
+import { DESTINATIONS, MOTIFS, lireDestination } from "./destinations";
 import { FormulaireReauthentification } from "./formulaire-reauthentification";
 import styles from "./reauthentification.module.css";
 
@@ -51,7 +52,11 @@ export const dynamic = "force-dynamic";
 
 const FENETRE_MINUTES = Math.round(FENETRE_REAUTHENTIFICATION_MS / 60_000);
 
-export default async function PageReauthentification() {
+export default async function PageReauthentification({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   let identite;
 
   try {
@@ -67,14 +72,20 @@ export default async function PageReauthentification() {
     throw erreur;
   }
 
+  const parametres = await searchParams;
+  const destination = lireDestination(parametres.retour);
+
   return (
     <main className={styles.page}>
       <h1>Confirmer votre identité</h1>
       <p className={styles.introduction}>
-        Cette action touche des données sensibles. Confirmez votre identité pour
-        continuer ; la confirmation reste valable {FENETRE_MINUTES} minutes.
+        Confirmez votre identité {MOTIFS[destination]} ; la confirmation reste
+        valable {FENETRE_MINUTES} minutes.
       </p>
-      <FormulaireReauthentification email={identite.email} />
+      <FormulaireReauthentification
+        email={identite.email}
+        destination={DESTINATIONS[destination]}
+      />
     </main>
   );
 }

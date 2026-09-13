@@ -29,7 +29,21 @@ import styles from "./reauthentification.module.css";
 
 type EtatSoumission = "repos" | "en-cours" | "erreur" | "etablie";
 
-export function FormulaireReauthentification({ email }: { email: string }) {
+export function FormulaireReauthentification({
+  email,
+  destination,
+}: {
+  email: string;
+  /**
+   * Ou ramener apres une confirmation reussie, LS-227.
+   *
+   * ELLE ARRIVE RESOLUE PAR LA PAGE, jamais lue ici : la page la choisit dans
+   * une table de cles, ce qui interdit qu'un chemin arbitraire atteigne ce
+   * composant. Le typer `string` ne l'affaiblit pas, aucun appelant ne pouvant
+   * le rendre depuis l'exterieur.
+   */
+  destination: string;
+}) {
   const [etat, setEtat] = useState<EtatSoumission>("repos");
   const [messageErreur, setMessageErreur] = useState<string | null>(null);
   const [motDePasseVisible, setMotDePasseVisible] = useState(false);
@@ -49,6 +63,21 @@ export function FormulaireReauthentification({ email }: { email: string }) {
       case "ETABLIE":
         setEtat("etablie");
         setMessageErreur(null);
+        /*
+         * RETOUR AUTOMATIQUE VERS LE GESTE INTERROMPU, LS-227. Sans lui,
+         * l'ecran annonçait « vous pouvez poursuivre votre action » et ne
+         * ramenait NULLE PART : le 13 septembre 2026, une configuration
+         * d'adresse d'alertes a ete perdue ainsi, l'exploitante concluant que
+         * l'enregistrement ne marchait pas alors que sa preuve etait valide.
+         *
+         * `window.location.assign` ET NON `router.push` : la fraicheur de la
+         * preuve vient d'etre ecrite en BASE, et les ecrans d'administration
+         * sont en `force-dynamic`. Une navigation cote client pourrait servir
+         * un rendu deja en memoire, donc l'ecran d'AVANT la preuve, et la garde
+         * refuserait une seconde fois. Une navigation complete relit la
+         * session. Meme choix que le formulaire client.
+         */
+        window.location.assign(destination);
         return;
 
       case "SESSION_ABSENTE":
@@ -139,8 +168,33 @@ export function FormulaireReauthentification({ email }: { email: string }) {
   if (etat === "etablie") {
     return (
       <div className={styles.conteneur}>
+        {/*
+          LE MESSAGE ANNONCE LE RETOUR, il ne dit plus « poursuivre votre
+          action » sans dire comment. Cette formulation a coute une
+          configuration perdue le 13 septembre 2026 : elle se lit comme une fin
+          de parcours alors qu'il en restait la moitie.
+
+          IL RESTE AFFICHE PENDANT LA REDIRECTION, qui n'est pas instantanee :
+          `window.location.assign` recharge une page `force-dynamic`. Un ecran
+          muet pendant ce temps ferait cliquer une seconde fois.
+        */}
         <p className={styles.succes} role="status">
-          Identité confirmée. Vous pouvez poursuivre votre action.
+          Identité confirmée. Retour à votre action en cours…
+        </p>
+
+        {/*
+          LE LIEN DE SECOURS EXISTE POUR LE CAS OU LA REDIRECTION NE PART PAS,
+          et ce n'est pas theorique : un navigateur peut la retenir, et sans lui
+          l'ecran redeviendrait le cul-de-sac que cette story ferme. Il pointe la
+          MEME destination, deja resolue par la page.
+
+          `<a>` ET NON `Link`, seule exception assumee de cet ecran :
+          @rechargement-delibere la preuve vient d'etre ecrite en base, et une
+          navigation client servirait un rendu anterieur, donc l'ecran d'avant la
+          preuve, dont la garde refuserait a nouveau.
+        */}
+        <p className={styles.aide}>
+          <a href={destination}>Revenir maintenant</a>
         </p>
       </div>
     );

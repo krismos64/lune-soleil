@@ -295,7 +295,10 @@ export function Remboursement({
           <p className={styles.aide}>
             Un remboursement exige une identité prouvée depuis moins de quinze
             minutes.{" "}
-            <Link href="/administration/reauthentification" prefetch={false}>
+            <Link
+              href="/administration/reauthentification?retour=commandes"
+              prefetch={false}
+            >
               Confirmer son identité
             </Link>{" "}
             avant de saisir, la navigation effaçant le montant et le motif.
