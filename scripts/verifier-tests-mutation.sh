@@ -111,6 +111,7 @@ JETON_ACCES="src/lib/jeton-acces.ts"
 TRAITEMENT_RETRACTATION="src/services/traitement-retractation.ts"
 DEPOT_RETRACTATION="src/repositories/retractation.ts"
 DEPOT_PARAMETRES="src/repositories/parametres.ts"
+DESTINATIONS_REAUTH="src/app/administration/reauthentification/destinations.ts"
 SENDCLOUD_EXPEDITION="src/integrations/sendcloud/expedition.ts"
 
 # TOUT FICHIER MUTE DOIT FIGURER ICI, sans quoi il n'est ni sauvegarde ni
@@ -124,7 +125,7 @@ SENDCLOUD_EXPEDITION="src/integrations/sendcloud/expedition.ts"
 # un script annoncant « 27 mutations, 27 detectees ».
 #
 # Le garde-fou plus bas confronte cette liste aux fichiers reellement mutes.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE" "$AVIS" "$DEPOT_AVIS" "$SERVICE_AVOIR" "$DEPOT_PARAMETRES" "$SENDCLOUD_EXPEDITION")
+MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE" "$AVIS" "$DEPOT_AVIS" "$SERVICE_AVOIR" "$DEPOT_PARAMETRES" "$SENDCLOUD_EXPEDITION" "$DESTINATIONS_REAUTH")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -2449,6 +2450,48 @@ echo
 mute "$DEPOT_AVIS" 's/      statut: \{ in: \["PUBLIE", "DEPOSE"\] \},/      statut: { in: ["PUBLIE", "DEPOSE", "RETIRE", "REFUSE"] },/'
 cas "avis ecarte rendu modifiable a nouveau" integration \
   "un avis retire n'est plus modifiable, et son auteur le voit"
+
+echo
+
+# Cas 177 : LE FILTRE PAR CLE DEVIENT UN FILTRE PAR PREFIXE `/`.
+#
+# LA REDIRECTION OUVERTE, ET C'EST LE RACCOURCI QU'ON ECRIT DE BONNE FOI.
+# « Le chemin commence par une barre, donc il est interne » est faux :
+# `//exemple.fr` est une URL absolue de SCHEMA RELATIF, que le navigateur suit
+# vers l'exterieur. Un lien partant de notre domaine, donc avec sa confiance,
+# ramenerait ailleurs APRES une saisie de mot de passe ou une passkey.
+#
+# SEPT TESTS ROUGISSENT sous cette mutation, dont les deux formes de schema
+# relatif. Le cas nominal, lui, reste vert : une cle connue commence bien par
+# une lettre et non par une barre, donc elle serait REFUSEE, ce qui casse aussi
+# l'usage legitime. La mutation est donc visible des deux cotes.
+mute "$DESTINATIONS_REAUTH" 's/  if \(typeof valeur === "string" && valeur in DESTINATIONS\) \{/  if (typeof valeur === "string" && valeur.startsWith("\/")) {/'
+cas "filtre par cle remplace par un prefixe dans la reauthentification" unitaire \
+  "refuse un schema relatif et retombe sur le defaut"
+
+echo
+
+# Cas 178 : LE PARAMETRE REPETE N'EST PLUS RAMENE A SON PREMIER ELEMENT.
+#
+# `?retour=a&retour=b` ARRIVE EN TABLEAU, et un tableau tombe dans le `in` ou il
+# est faux SANS QUE LE DEFAUT SE VOIE : la destination legitime est ignoree et
+# l'exploitante renvoyee au tableau de bord sans raison apparente. Ce n'est pas
+# une faille, c'est un defaut muet, la forme que ce depot rate le plus souvent.
+mute "$DESTINATIONS_REAUTH" 's/  const valeur = Array.isArray\(brut\) \? brut\[0\] : brut;/  const valeur = brut;/'
+cas "parametre repete non ramene a son premier element" unitaire \
+  "retient le premier element d'un parametre repete"
+
+echo
+
+# Cas 179 : UNE DESTINATION DE LA TABLE DEVIENT UNE URL ABSOLUE.
+#
+# LA GARDE NE VAUT QUE SI LES VALEURS QU'ELLE REND SONT SURES, et ce cas garde
+# la table contre son propre auteur. `lireDestination` peut etre parfaite : une
+# entree ajoutee un jour avec une URL complete contournerait toute la protection
+# en amont, la cle etant alors reconnue et la valeur hostile.
+mute "$DESTINATIONS_REAUTH" 's#  parametres: "/administration/parametres",#  parametres: "https://exemple-malveillant.fr",#'
+cas "destination de la table remplacee par une URL absolue" unitaire \
+  "parametres designe un chemin interne absolu"
 
 echo
 echo "-----------------------------------------"
