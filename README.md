@@ -33,7 +33,7 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 4, factures et expédition | LS-5 | 4 | **LS-218 crée l'étiquette par API**, et son poids est un réglage depuis le 12 septembre 2026 : seul son critère 10 reste ouvert, il attend un colis réel donc LS-153. **LS-33** décide comment le site apprend qu'un colis est livré, **LS-35** porte l'e-reporting au 1er septembre 2027, et **LS-222** attend d'observer de vrais envois dans plusieurs clients de messagerie. **LS-98 est close** le 11 septembre 2026, les paramètres commerciaux vivent en base, ADR-043 |
 | 4bis, espace client et avis | LS-36 | 0 | **close**, et rouverte deux fois depuis : LS-221 a livré « Mes avis » puis **LS-225 la modification d'un avis par son auteur**, le 12 septembre 2026. Une phase close ne l'est que des tickets connus le jour où on la ferme |
 | 5, rétractation et conformité | LS-6 | 0 | **close**, ses huit stories terminées le 10 septembre 2026 |
-| 6, exploitation et ouverture | LS-7 | 6 | **LS-153 et LS-142 attendent l'exploitante**. LS-140 et LS-107 attendent les photographies de LS-23. Restent LS-150, la visibilité dans les moteurs de réponse, **LS-223**, la clé Backblaze qui exige la console du fournisseur. **LS-226 et LS-227 sont closes** le 13 septembre 2026, l'instabilité des tests et le cul-de-sac de la réauthentification |
+| 6, exploitation et ouverture | LS-7 | 6 | **LS-153 et LS-142 attendent l'exploitante**. LS-140 et LS-107 attendent les photographies de LS-23. Restent LS-150, la visibilité dans les moteurs de réponse, **LS-223**, la clé Backblaze, **quatre critères sur six fermés** le 13 septembre 2026, rétention distante posée et masquage substitué à la suppression ; restent trois gestes en console du fournisseur. **LS-226 et LS-227 sont closes** le 13 septembre 2026, l'instabilité des tests et le cul-de-sac de la réauthentification |
 | 7, V1 cible | LS-8 | 0 | **close** le 11 septembre 2026. LS-149 portait le dernier critère : ADR-044 **écarte l'assistant IA** du périmètre plutôt que de le reporter |
 | Contenus | LS-22 | 10 | **attend l'exploitante**, rien n'est faisable sans elle. **LS-32 est close** le 11 septembre 2026, la neutralité de genre étant désormais gardée par un contrôle |
 
@@ -858,6 +858,8 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-environnement.sh --exemple-seul       # le seul sens jouable en CI, sans .env
 ./scripts/verifier-environnement-mutation.sh             # prouve le précédent par mutation, bac à sable
 ./scripts/verifier-hook-secret-argument.sh               # le hook refuse un secret passé en argument, LS-156
+./scripts/verifier-cle-b2-durcie.sh                      # la clé Backblaze sans deleteFiles, sur le VPS, LS-223
+#   quatre sens, dont une suppression réelle exigeant un refus ; cible inexistante
 ./scripts/engendrer-medias-test.mjs                      # les déclinaisons des photos de test, avant le build e2e, LS-187
 ./scripts/engendrer-images-marque.mjs                    # favicon, manifeste et image de partage, LS-147
 #   `--verifier` échoue tant que les fichiers versionnés ne correspondent pas au source
