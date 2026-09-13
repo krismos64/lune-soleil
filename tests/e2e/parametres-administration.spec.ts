@@ -257,4 +257,53 @@ test.describe("écran connecté", () => {
       page.getByRole("link", { name: "Confirmer mon identité" }),
     ).toBeVisible();
   });
+
+  /*
+   * ------------------------------------------------------------------
+   * LE LIEN MENE QUELQUE PART, ET LA PAGE D'ARRIVEE SAIT D'OU IL VIENT. LS-227.
+   *
+   * CE QUE LE TEST PRECEDENT NE POUVAIT PAS VOIR. Il s'arrete a « le lien est
+   * visible », ce qui etait vrai le 13 septembre 2026 pendant que le parcours
+   * etait un CUL-DE-SAC : la page d'arrivee ne ramenait nulle part, et une
+   * configuration d'adresse d'alertes a ete perdue ainsi en production.
+   *
+   * UN LIEN VISIBLE N'EST PAS UN CHEMIN DE SORTIE. C'est la moitie de la
+   * garantie, et c'est celle qui se teste le plus facilement.
+   * ------------------------------------------------------------------
+   */
+  test("le chemin de sortie ramene au geste interrompu, LS-227", async ({
+    page,
+  }) => {
+    await page.goto("/administration/parametres");
+
+    await page.getByRole("button", { name: "Enregistrer" }).click();
+
+    await page.getByRole("link", { name: "Confirmer mon identité" }).click();
+
+    /*
+     * LA DESTINATION VOYAGE PAR UNE CLE, jamais par un chemin : c'est ce qui
+     * ferme la redirection ouverte, et l'URL le montre.
+     */
+    await expect(page).toHaveURL(
+      /\/administration\/reauthentification\?retour=parametres$/,
+    );
+
+    /*
+     * L'ECRAN DIT POURQUOI IL DEMANDE, critere 3. « Confirmez votre identite »
+     * sans motif se lit comme une panne ou un piege, et c'est ce qui fait
+     * abandonner une action legitime en chemin.
+     */
+    await expect(
+      page.getByText(/avant de modifier les paramètres de la boutique/),
+    ).toBeVisible();
+
+    /*
+     * LE DEBORDEMENT EST MESURE SUR CET ECRAN AUSSI, critere 7 : l'exploitante
+     * travaille au smartphone, et cette page porte desormais un lien de secours
+     * de plus.
+     */
+    expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+      TOLERANCE_DEBORDEMENT_PX,
+    );
+  });
 });
