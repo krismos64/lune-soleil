@@ -138,6 +138,30 @@ Chrome était par ailleurs positionnée de 970 à 1970 px sur un écran large de
 Christophe a ouvert les deux espaces lui-même, et la mesure a pu se faire à
 1400 px. À retenir pour toute session de contrôle visuel.
 
+## La CI a rougi sur mon propre contrôle, trop étroit
+
+**Premier passage en échec, étape « 3b. Format ».** Deux lignes vides
+consécutives dans `controles.yml`, laissées en déplaçant l'étape de CI.
+
+La cause n'est pas l'étourderie, c'est la **portée de ma vérification** :
+
+```
+ce que j'ai lance   npx prettier --check "src/**/*.css" "tests/e2e/*.ts"   vert
+ce que la CI lance  prettier --check .                                     rouge
+```
+
+Mon contrôle était plus étroit que celui qui juge, donc il est resté vert sur un
+fichier que je venais de modifier. C'est le motif que le dépôt documente déjà,
+« un contrôle dont la portée est plus étroite que la règle qu'il énonce ment par
+omission », et je l'ai reproduit dans la session qui en écrivait un autre.
+
+**Valider le YAML m'a donné une fausse assurance.** La validité syntaxique ne dit
+rien du format, et j'ai pris l'une pour l'autre.
+
+**Le geste à retenir** : lancer la commande **du workflow**, `npm run
+format:check`, jamais une variante resserrée sur les fichiers qu'on croit avoir
+touchés.
+
 ## Prochaine étape
 
 **La PR #433 est ouverte**, contrôles en cours. Le premier volet de LS-228 est
