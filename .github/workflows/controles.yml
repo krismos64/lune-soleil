@@ -693,7 +693,6 @@ jobs:
       - name: 9g. Bordure des controles de saisie, seuil de 3:1
         run: ./scripts/verifier-bordure-controle.sh
 
-
       # Textuel, aucune base ni conteneur requis.
       #
       # CE QU'IL GARDE : qu'aucun `loading.tsx` ne soit pose sur une route qui
