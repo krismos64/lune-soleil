@@ -44,6 +44,34 @@
   min-width: 0;
 }
 
+/*
+ * LE GABARIT DE TITRE, LS-228. Le jeton et l'echelle sont poses UNE FOIS sur la
+ * colonne, et tout `h1` rendu dessous en herite, quel que soit l'ecran.
+ *
+ * POURQUOI ICI PLUTOT QUE DANS CHAQUE MODULE. LS-181 avait pose le serif ecran
+ * par ecran, et la regle ne s'est pas propagee : les ecrans ecrits ensuite ont
+ * recopie un voisin ANTERIEUR au jeton. Mesure sur la production du 13 septembre
+ * 2026, sept titres sur quatorze rendaient en `system-ui`, et trois echelles
+ * cohabitaient, 24, 36 et 44 px. Une regle recopiee douze fois diverge ; une
+ * regle heritee ne le peut pas.
+ *
+ * ELLE CIBLE `h1` ET NON UNE CLASSE. Une classe doit etre posee pour agir, donc
+ * oubliee pour ne pas agir : quatre ecrans portaient deja un `h1` nu, sans
+ * aucune classe. L'element, lui, est toujours la. C'est le meme choix que
+ * `verifier-bordure-controle.sh`, qui reconnait un controle par ce qu'il EST et
+ * non par le nom qu'on lui a donne.
+ *
+ * `clamp` REPREND LES BORNES DU TABLEAU DE BORD, seule echelle du depot dont le
+ * rendu a ete mesure a 320 px par LS-181. La borne basse tient a 320 px, la
+ * haute est la taille du prototype.
+ */
+.colonne h1 {
+  font-family: var(--ls-police-titre);
+  font-size: clamp(1.75rem, 6vw, 2.75rem);
+  font-weight: 500;
+  line-height: 1.1;
+}
+
 /* ---------------------------------------------------------------- le bandeau */
 
 /*

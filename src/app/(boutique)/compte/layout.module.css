@@ -52,3 +52,31 @@
   flex: 1;
   min-width: 0;
 }
+
+/*
+ * LE GABARIT DE TITRE, LS-228. Pendant exact de la regle du layout de
+ * l'administration : le jeton et l'echelle sont poses UNE FOIS, tout `h1` rendu
+ * sous la colonne en herite.
+ *
+ * CE QUI L'A RENDUE NECESSAIRE ICI. LS-180 avait pose le serif sur `.titre`, une
+ * classe que chaque ecran doit penser a poser. « Mes avis », ecrit apres elle
+ * par LS-221, ne la portait pas : son titre rendait en `system-ui` a 32 px quand
+ * ses cinq voisins rendaient en serif a 36 px. Une classe oubliee ne se voit
+ * pas, un element herite toujours.
+ *
+ * LES BORNES SONT CELLES DE `.titre` DANS `compte.module.css`, dont le rendu a
+ * ete mesure a 320 px par LS-180 : la borne basse est ce qui tient a 320 px avec
+ * « Mes donnees personnelles », la haute est la taille du prototype.
+ *
+ * `overflow-wrap` SUIT LE TITRE. Le detail de commande affiche « Commande
+ * LS-2026-000042 », une chaine sans espace de coupure qui deborde a 320 px sans
+ * lui. Le laisser sur la seule classe `.titre` le perdrait sur un ecran qui
+ * oublie la classe, soit exactement le defaut que cette regle ferme.
+ */
+.colonne h1 {
+  font-family: var(--ls-police-titre);
+  font-size: clamp(1.5rem, 1.1rem + 2vw, 2.25rem);
+  font-weight: 400;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}

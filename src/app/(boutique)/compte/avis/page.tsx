@@ -100,7 +100,19 @@ export default async function PageMesAvis() {
      * l'ecran rendait correctement et n'avait aucune cible d'evitement.
      */
     <main id="contenu" tabIndex={-1} className={stylesCompte.page}>
-      <h1>Mes avis</h1>
+      {/*
+       * LE SUR-TITRE DE RUBRIQUE, LS-228. Il manquait ici quand ses cinq voisins
+       * le portaient : cet ecran a ete ecrit par LS-221, apres LS-180 qui avait
+       * pose la forme. Meme motif que le titre, une convention qui ne se verifie
+       * pas ne se propage pas aux ecrans suivants.
+       *
+       * `aria-hidden` ET UN `p`, forme de LS-180 : ce n'est pas un titre au sens
+       * du document, et lu a voix haute il redirait le `h1` juste dessous.
+       */}
+      <p className={stylesCompte.surTitre} aria-hidden="true">
+        Achats vérifiés
+      </p>
+      <h1 className={stylesCompte.titre}>Mes avis</h1>
 
       {avis.length === 0 ? (
         /*
