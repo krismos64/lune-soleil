@@ -25,7 +25,10 @@
  */
 import { expect, test } from "@playwright/test";
 
-import { FICHIER_SESSION, FICHIER_SESSION_ADMINISTRATION } from "./chemin-session";
+import {
+  FICHIER_SESSION,
+  FICHIER_SESSION_ADMINISTRATION,
+} from "./chemin-session";
 import {
   TOLERANCE_DEBORDEMENT_PX,
   debordementHorizontal,

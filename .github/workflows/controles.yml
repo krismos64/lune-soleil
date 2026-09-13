@@ -693,6 +693,7 @@ jobs:
       - name: 9g. Bordure des controles de saisie, seuil de 3:1
         run: ./scripts/verifier-bordure-controle.sh
 
+
       # Textuel, aucune base ni conteneur requis.
       #
       # CE QU'IL GARDE : qu'aucun `loading.tsx` ne soit pose sur une route qui
@@ -1296,6 +1297,25 @@ jobs:
       # Controles 2 et 3. Le format entre ici parce qu'un depot ou seule une
       # partie des fichiers est formatee produit des diffs illisibles.
       # ----------------------------------------------------------------------
+
+      # Textuel, aucune base ni conteneur requis.
+      #
+      # CE QU'IL GARDE : que le gabarit de titre des deux espaces prives soit
+      # pose UNE FOIS dans le layout, et qu'aucun ecran ne le repose, LS-228.
+      #
+      # POURQUOI IL EXISTE. LS-180 et LS-181 avaient pose le serif ecran par
+      # ecran ; rien ne verifiait la convention, et elle ne s'est pas propagee.
+      # Mesure sur la production du 13 septembre 2026, SEPT titres sur quatorze
+      # rendaient en `system-ui`, avec trois echelles concurrentes. Les ecrans
+      # fautifs etaient presque tous posterieurs aux deux stories.
+      #
+      # IL NE REMPLACE PAS `gabarit-titre-ls228.spec.ts`, qui mesure la police
+      # REELLEMENT calculee sur les vingt-deux ecrans aux quatre largeurs. Un
+      # script textuel lit des regles, il ne rend pas une page : motif
+      # « controle textuel et test d'execution », les deux moities sont
+      # necessaires.
+      - name: 9z septies. Gabarit de titre des espaces prives
+        run: ./scripts/verifier-gabarit-titre.sh
       - name: 2. Analyse statique
         run: npm run lint
 
