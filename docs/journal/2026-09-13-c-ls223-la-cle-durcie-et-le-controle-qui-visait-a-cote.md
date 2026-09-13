@@ -121,18 +121,15 @@ La clé `smartplanning-vps` porte elle aussi `deleteFiles` sur
 `smartplanning-backups`, vu sur la même page de console. **Même défaut, autre
 projet**, donc hors du périmètre de ce ticket et laissé tel quel.
 
-## Prochaine étape
+**LS-223 est terminé**, ses six critères fermés.
 
-**LS-223 est terminé.** Les deux tickets restants attendent toujours un geste
-physique, LS-222 l'observation d'emails réels et LS-218 un colis réel.
-
-# LS-222 fermé dans la foulée, les premiers emails HTML de la production
+## LS-222 fermé dans la foulée, les premiers emails HTML de la production
 
 Même session, après la clôture de LS-223. Le ticket attendait depuis le
 12 septembre une observation sur boîtes réelles, et cinq de ses sept critères
 étaient déjà faits.
 
-## Ce qui bloquait n'était pas technique
+### Ce qui bloquait n'était pas technique
 
 **Rien n'avait déclenché d'envoi depuis le déploiement du gabarit.** La
 production n'avait jamais émis que deux emails, tous deux du 10 septembre, donc
@@ -148,7 +145,7 @@ kayouw641@gmail.com        ENVOYE  1 tentative  14:46
 contact@smartplanning.fr   ENVOYE  1 tentative  14:47
 ```
 
-## Le résultat qui comptait, la délivrabilité
+### Le résultat qui comptait, la délivrabilité
 
 ```
 Yahoo    boite de reception
@@ -162,7 +159,7 @@ classement anti-indésirable. Il ne l'a pas dégradé.
 
 Le rendu a été jugé « parfait » sur les trois clients, dont un sur mobile.
 
-## Un faux diagnostic, et ce qui l'a produit
+### Un faux diagnostic, et ce qui l'a produit
 
 Après le premier envoi, `journal_email` ne montrait rien de neuf. J'en ai conclu
 à un défaut et j'ai remonté une piste entière : sortie précoce de
@@ -183,7 +180,7 @@ le dépôt avait eu lieu.
 Même famille que le motif « mesures fausses » : la sortie était plausible, une
 table vide ressemblant à un envoi manquant.
 
-## Ce qui reste en base
+### Ce qui reste en base
 
 Trois messages de test en statut `NOUVEAU` dans l'administration, et trois
 notifications reçues par l'exploitante. Ni commande ni facture, supprimables
@@ -192,5 +189,10 @@ sans contrainte.
 ## Prochaine étape
 
 **LS-222 et LS-223 sont terminés.** Le compte passe à 195 sur 217 hors epics,
-22 ouverts. **Un seul ticket reste En cours**, LS-218, qui attend un colis réel
-donc LS-153.
+22 ouverts. **Huit tickets sont En cours**, mais **un seul dépend du code** :
+LS-218, qui attend un colis réel donc LS-153. Les sept autres attendent
+l'exploitante ou une démarche externe.
+
+**J'avais écrit « un seul en cours » avant de le relever dans Jira**, en
+confondant « ce qui dépend du code » et le statut réel. Le compte se mesure, il
+ne se déduit pas d'un raisonnement.
