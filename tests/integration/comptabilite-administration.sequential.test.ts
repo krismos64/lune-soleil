@@ -216,8 +216,37 @@ afterEach(async () => {
 });
 
 describe("lireVueComptable", () => {
+  /*
+   * ------------------------------------------------------------------
+   * CE CAS EST BORNE A UNE FENETRE, ET C'ETAIT LE DEFAUT DE LS-226.
+   *
+   * Sa premiere version lisait la vue SANS AUCUN FILTRE et attendait une liste
+   * vide, ce qui mesure « aucune facture n'existe dans TOUTE la base a cet
+   * instant » et non « ce fichier n'en a emis aucune ». La base est partagee
+   * entre fichiers `.sequential`, et deux voisins laissent des factures
+   * derriere eux, `acces-document` et `suppression-compte` : le test passait
+   * ou rougissait selon l'ORDRE d'execution, que Vitest ne garantit pas.
+   *
+   * Mesure le 12 septembre 2026 : le meme commit a rendu deux resultats
+   * differents a quelques minutes d'intervalle, l'echec changeant meme de
+   * fichier. Un test instable finit par etre ignore, et le jour ou il signale
+   * un vrai defaut, personne ne le croit.
+   *
+   * LA FENETRE COMMENCE APRES LES VOISINS. `depuis` porte sur `emiseA` : toute
+   * piece emise avant l'entree dans ce test en est exclue, quel qu'en soit
+   * l'auteur. Le `afterEach` de ce fichier reste utile, il protege les VOISINS
+   * de ce que celui-ci ecrit, mais il ne pouvait rien contre ce qui le precede.
+   *
+   * POURQUOI PAS UN `TRUNCATE` EN `beforeAll` : il emporterait les donnees d'un
+   * voisin en cours de suite, defaut exactement rencontre en livrant LS-219 sur
+   * la ligne de parametres. Un test se protege de son voisinage, il ne le
+   * detruit pas.
+   * ------------------------------------------------------------------
+   */
   it("rend une liste vide quand aucune piece n'a ete emise", async () => {
-    const vue = await lireVueComptable();
+    const depuis = new Date();
+
+    const vue = await lireVueComptable({ depuis });
 
     expect(vue.pieces).toEqual([]);
     expect(vue.nombreFactures).toBe(0);

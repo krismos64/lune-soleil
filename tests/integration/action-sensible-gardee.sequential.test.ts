@@ -103,9 +103,37 @@ async function ouvrirSessionClient(
   };
 }
 
-async function compterUtilisateurs(): Promise<number> {
+/**
+ * Le compte de CE test existe-t-il encore, un ou zero.
+ *
+ * ------------------------------------------------------------------
+ * IL PORTE UN IDENTIFIANT DEPUIS LS-226, ET C'EST LA CORRECTION.
+ *
+ * Sa version precedente comptait TOUS les utilisateurs de la base et attendait
+ * exactement un. La base etant partagee entre fichiers `.sequential`, tout
+ * voisin laissant un compte derriere lui faisait rougir ces quatre assertions :
+ * le fichier passait seul, et echouait selon l'ORDRE d'execution, que Vitest ne
+ * garantit pas.
+ *
+ * Mesure le 12 septembre 2026 : le meme commit a rendu deux resultats
+ * differents a quelques minutes d'intervalle, l'echec changeant meme de
+ * fichier entre deux executions.
+ *
+ * CE QUE LA MESURE GLOBALE N'AJOUTAIT PAS. Le premier cas portait DEJA la
+ * bonne assertion deux lignes plus bas, en comptant les lignes de cet
+ * utilisateur precis : la version globale ne prouvait rien de plus, elle
+ * apportait seulement la fragilite. Les trois autres cas ne l'avaient pas et
+ * la recoivent ici.
+ *
+ * LE `afterEach` DE CE FICHIER RESTE UTILE, il protege les VOISINS de ce que
+ * celui-ci ecrit. Il ne pouvait rien contre ce qui le PRECEDE, et c'est
+ * exactement la moitie qui manquait.
+ * ------------------------------------------------------------------
+ */
+async function compterCeCompte(utilisateurId: string): Promise<number> {
   const { rows } = await client.query(
-    "SELECT count(*)::int AS n FROM utilisateur",
+    "SELECT count(*)::int AS n FROM utilisateur WHERE id = $1",
+    [utilisateurId],
   );
   return rows[0].n as number;
 }
@@ -128,12 +156,7 @@ describe("supprimerMonCompte, famille IDENTIFIANTS", () => {
     // L'ERREUR NE SUFFIT PAS : une garde qui leverait apres avoir supprime
     // produirait la meme exception. C'est la survie du compte qui prouve que
     // le refus precede l'effet.
-    expect(await compterUtilisateurs()).toBe(1);
-    const { rows } = await client.query(
-      "SELECT count(*)::int AS n FROM utilisateur WHERE id = $1",
-      [utilisateurId],
-    );
-    expect(rows[0].n).toBe(1);
+    expect(await compterCeCompte(utilisateurId)).toBe(1);
   });
 
   /**
@@ -142,14 +165,14 @@ describe("supprimerMonCompte, famille IDENTIFIANTS", () => {
    * parfaitement et rend le droit a l'effacement inexerçable, article 17.
    */
   it("accepte la suppression apres une preuve fraiche", async () => {
-    const { enTetes, sessionId } = await ouvrirSessionClient();
+    const { enTetes, sessionId, utilisateurId } = await ouvrirSessionClient();
 
     await enregistrerPreuveIdentite(sessionId);
 
     const resultat = await supprimerMonCompte(enTetes);
 
     expect(resultat.etat).toBe("SUPPRIME");
-    expect(await compterUtilisateurs()).toBe(0);
+    expect(await compterCeCompte(utilisateurId)).toBe(0);
   });
 
   /**
@@ -161,7 +184,7 @@ describe("supprimerMonCompte, famille IDENTIFIANTS", () => {
    * point d'entree.
    */
   it("refuse une preuve depassant la fenetre de validite", async () => {
-    const { enTetes, sessionId } = await ouvrirSessionClient();
+    const { enTetes, sessionId, utilisateurId } = await ouvrirSessionClient();
 
     const troisSecondesDeTrop = new Date(
       Date.now() - FENETRE_REAUTHENTIFICATION_MS - 3_000,
@@ -171,7 +194,7 @@ describe("supprimerMonCompte, famille IDENTIFIANTS", () => {
     await expect(supprimerMonCompte(enTetes)).rejects.toBeInstanceOf(
       ReauthentificationRequiseError,
     );
-    expect(await compterUtilisateurs()).toBe(1);
+    expect(await compterCeCompte(utilisateurId)).toBe(1);
   });
 
   /**
@@ -201,7 +224,7 @@ describe("supprimerMonCompte, famille IDENTIFIANTS", () => {
     await expect(supprimerMonCompte(enTetesSeconde)).rejects.toBeInstanceOf(
       ReauthentificationRequiseError,
     );
-    expect(await compterUtilisateurs()).toBe(1);
+    expect(await compterCeCompte(premiere.utilisateurId)).toBe(1);
   });
 
   /**
