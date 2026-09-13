@@ -99,10 +99,24 @@ de persister un brouillon, donc de décider où et combien de temps. Le retour
 automatique supprime l'essentiel du coût : l'exploitante retrouve son écran sans
 chercher son chemin.
 
-## Prochaine étape
+## Déployé dans la foulée, `6ceb5061`
 
-**Déployer LS-227**, la correction n'étant utile qu'en production, là où le
-défaut a été rencontré. Aucune migration cette fois, simple remplacement d'image.
+Aucune migration, simple remplacement d'image, la correction n'étant utile qu'en
+production, là où le défaut a été rencontré.
+
+```
+Étape 5, attente d'un conteneur sain   conteneur sain après 10 s
+Étape 6, vérification domaine public   /api/sante rend 200
+Étape 8, non-régression SmartPlanning  smartplanning.fr 200, analytics 200
+Port 3002 injoignable depuis l'extérieur, conforme.
+```
+
+**L'adresse d'alertes est configurée**, vérifié en base à 08h47 : le marqueur
+`a-configurer@exemple.invalid` n'y est plus, et les cinq interrupteurs sont
+actifs. Les alertes partent réellement, ce qui n'était pas le cas depuis
+l'amorçage d'ADR-043.
+
+## Prochaine étape
 
 **LS-226 reste faisable immédiatement**, son diagnostic est fait : deux
 assertions à ancrer sur les données que leur fichier a créées. Elle s'est
