@@ -84,34 +84,61 @@ done
 # --------------------------------------------------------------------------
 # Sens 3 : une suppression reelle est refusee
 #
-# CIBLE INEXISTANTE, VOIR L'EN-TETE. Les deux refus possibles se distinguent et
-# ne valent pas la meme chose :
-#   401 unauthorized     la cle n'a pas le droit, C'EST CE QU'ON VEUT
-#   400 file_not_present la cle A le droit, le fichier n'existe pas, DEFAUT
+# LA CIBLE EST UN FICHIER REEL, ET LA PREMIERE VERSION DE CE CONTROLE VISAIT UN
+# FICHIER INEXISTANT, CE QUI NE PROUVAIT RIEN. Backblaze valide la FORME du
+# `fileId` avant d'examiner les droits : un identifiant fabrique rend
+# « Bad file ID », code `bad_request`, et la question de l'autorisation n'est
+# jamais posee. Le controle passait donc a cote de ce qu'il pretendait verifier,
+# mesure le 13 septembre 2026 en durcissant la cle.
+#
+# VISER UN FICHIER REEL NE RISQUE RIEN ICI, et c'est tout l'objet du sens : si
+# la cle est bien durcie, Backblaze REFUSE. Le seul cas ou la suppression
+# aboutirait est celui ou le durcissement a ete manque, et le controle le dit
+# alors en echec. Le compartiment garde par ailleurs trente jours de versions.
+#
+# Les refus possibles ne valent pas la meme chose :
+#   401 unauthorized   la cle n'a pas le droit, C'EST CE QU'ON VEUT
+#   400 bad_request    la forme est refusee avant les droits, on ne sait RIEN
 # --------------------------------------------------------------------------
-INEXISTANT="ls223-cible-de-test-qui-n-existe-pas.gpg"
-CORPS=$(curl -sS --max-time 30 -X POST \
+CIBLE=$(curl -sS --max-time 30 \
   -H "Authorization: $JETON" \
-  -H "Content-Type: application/json" \
-  -d "$(jq -nc --arg n "$INEXISTANT" --arg i "4_zdummy_ls223" '{fileName: $n, fileId: $i}')" \
-  "$API_URL/b2api/v4/b2_delete_file_version" 2>/dev/null || echo '{}')
+  "$API_URL/b2api/v4/b2_list_file_versions?bucketId=$BUCKET_ID&maxFileCount=1" 2>/dev/null \
+  | jq -r '.files[0] | "\(.fileName)\t\(.fileId)"')
 
-CODE=$(echo "$CORPS" | jq -r '.code // "aucun"')
+CIBLE_NOM="${CIBLE%%$'\t'*}"
+CIBLE_ID="${CIBLE##*$'\t'}"
 
-case "$CODE" in
-  unauthorized|access_denied)
-    echo "  OK : suppression refusee par Backblaze, code $CODE."
-    ;;
-  aucun)
-    echo "  ECHEC : la suppression n'a PAS ete refusee, la cle peut detruire." >&2
-    ECHECS=$(( ECHECS + 1 ))
-    ;;
-  *)
-    echo "  ECHEC : refus pour la mauvaise raison, code $CODE." >&2
-    echo "    Un refus 'file_not_present' signifie que la cle AURAIT pu supprimer." >&2
-    ECHECS=$(( ECHECS + 1 ))
-    ;;
-esac
+if [ -z "$CIBLE_NOM" ] || [ "$CIBLE_NOM" = "null" ]; then
+  # GARDE DU CONTROLE CONTRE LUI-MEME. Sans fichier a viser, le sens 3 ne peut
+  # pas conclure : le dire plutot que de rendre un OK silencieux.
+  echo "  ECHEC : aucun fichier dans le compartiment, le refus n'a pas pu etre exerce." >&2
+  ECHECS=$(( ECHECS + 1 ))
+else
+  CORPS=$(curl -sS --max-time 30 -X POST \
+    -H "Authorization: $JETON" \
+    -H "Content-Type: application/json" \
+    -d "$(jq -nc --arg n "$CIBLE_NOM" --arg i "$CIBLE_ID" '{fileName: $n, fileId: $i}')" \
+    "$API_URL/b2api/v4/b2_delete_file_version" 2>/dev/null || echo '{}')
+
+  CODE=$(echo "$CORPS" | jq -r '.code // "aucun"')
+
+  case "$CODE" in
+    unauthorized|access_denied)
+      echo "  OK : suppression refusee par Backblaze, code $CODE."
+      ;;
+    aucun)
+      echo "  ECHEC : la suppression a REUSSI, la cle peut detruire l'historique." >&2
+      echo "    Fichier supprime : $CIBLE_NOM, recuperable trente jours." >&2
+      ECHECS=$(( ECHECS + 1 ))
+      ;;
+    *)
+      echo "  ECHEC : refus pour la mauvaise raison, code $CODE." >&2
+      echo "    Seul 'unauthorized' prouve le durcissement ; ici les droits" >&2
+      echo "    n'ont meme pas ete examines." >&2
+      ECHECS=$(( ECHECS + 1 ))
+      ;;
+  esac
+fi
 
 # --------------------------------------------------------------------------
 # Sens 4 : la regle de retention existe cote Backblaze
