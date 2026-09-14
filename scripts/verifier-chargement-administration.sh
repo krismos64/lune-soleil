@@ -91,6 +91,17 @@ declare -a FORMES_PROPRES=(
   # un contenu qui n'arrive pas. Même raison que la réauthentification, sur un
   # écran dont l'attente, elle, n'est pas nulle.
   "produits/nouveau"
+  # LES DEUX ÉCRANS DE DÉTAIL, inscrits ici par LS-230 quand le troisième sens
+  # s'est remis à voir quelque chose. Leur `<Suspense>` n'enveloppe pas la page
+  # mais une lecture SECONDAIRE : le remboursement pour la commande, les
+  # variantes pour le produit. Le numéro, le statut, les articles et l'adresse
+  # s'affichent sans l'attendre.
+  #
+  # Une armature de lignes empilées y annoncerait donc une liste qui ne vient
+  # pas, sur un écran déjà peuplé. Leur en-tête porte le raisonnement complet,
+  # dont l'interdiction de déplacer leur `notFound()` sous la frontière.
+  "commandes/[id]"
+  "produits/[id]"
 )
 
 ecrans_examines=0
@@ -231,6 +242,18 @@ $(find "$ADMIN" -name "page.tsx" 2>/dev/null | sort || true)
 EOF
 
 # ---------------------------------------------------------------------------
+# LA SOURCE DE CE SENS EST LA PAGE, PLUS LE `loading.tsx`, LS-230.
+#
+# Sa version précédente parcourait `find "$ADMIN" -name "loading.tsx"`. C32 les
+# a TOUS fait retirer, le compte ci-dessus le dit lui-même, « 0 avec
+# loading.tsx, 19 avec <Suspense> interne » : la boucle tournait donc à vide et
+# ce sens était muet depuis. Mesuré le 14 septembre 2026, remplacer le composant
+# partagé par une armature locale laissait le contrôle VERT.
+#
+# Les écrans à vérifier sont ceux qui rendent un `<Suspense>`, c'est-à-dire la
+# forme que C32 impose aujourd'hui.
+ecrans_a_verifier=$(grep -rl "<Suspense" "$ADMIN" --include="page.tsx" 2>/dev/null | sort || true)
+
 # Troisième sens : le composant partagé existe, et les écrans ordinaires
 # s'appuient dessus.
 #
@@ -262,14 +285,14 @@ else
     [ "$dispense" -eq 1 ] && continue
 
     if ! grep -q 'ChargementAdministration' "$fichier"; then
-      echo "ECHEC $relatif/loading.tsx n'emploie pas ChargementAdministration"
+      echo "ECHEC $relatif n'emploie pas ChargementAdministration"
       echo "      et ne figure pas dans les formes propres documentées en tête"
       echo "      de ce script. Soit il reprend le composant partagé, soit sa"
       echo "      raison de s'en écarter s'écrit dans FORMES_PROPRES."
       ko=$((ko + 1))
     fi
   done <<EOF
-$(find "$ADMIN" -name "loading.tsx" 2>/dev/null | sort || true)
+$ecrans_a_verifier
 EOF
 fi
 
