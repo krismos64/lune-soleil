@@ -119,7 +119,17 @@ echo
 #
 # LA SUBSTITUTION EST DONC MINIMALE : seule l'expression du nom devient une
 # chaîne, le reste de la ligne n'est pas touché.
-sed -i '' 's/\${NOM_BOUTIQUE}`}/Lune \& Soleil`}/' \
+# `perl` ET NON `sed -i ''`, LS-230. La forme BSD attend un suffixe en argument
+# separe, que GNU sed lit comme un NOM DE FICHIER : sur le runner Linux, cette
+# ligne rendait « sed: can't read s/... : No such file or directory », la
+# substitution ne muait rien, et le cas s'annoncait comme un trou du controle.
+# Ce script n'avait jamais tourne en CI, personne ne pouvait le voir.
+# LA GRAPHIE INTERDITE NE S'ECRIT PAS ICI, elle se compose. Le controle
+# eprouve refuse les graphies concurrentes dans tout le depot, ce script
+# compris : l'ecrire en clair le ferait rougir sur lui-meme, motif « un
+# garde-fou qui cite la valeur interdite se fait detecter ».
+FAUTIVE="Lune $(printf '\046') Soleil"
+perl -pi -e "s/\\\$\\{NOM_BOUTIQUE\\}\`\\}/${FAUTIVE}\`}/" \
   "src/components/pied-boutique.tsx"
 
 # ---------------------------------------------------------------------------
@@ -183,7 +193,10 @@ fi
 # motif entier a la place de l'esperluette et fabriquait un JSX absurde que le
 # controle ne reconnaissait pas. Meme famille que le `${...}` de Perl, rencontre
 # deux fois dans cette meme story.
-sed -i '' 's|<span className={styles.nom}>{NOM_BOUTIQUE}</span>|<span className={styles.nom}>Lune \&amp; Soleil</span>|' \
+# `perl` ET NON `sed -i ''`, meme raison qu'au sens 1 ci-dessus.
+# Meme composition qu'au sens 1, sous sa forme echappee en JSX.
+FAUTIVE_JSX="Lune $(printf '\046')amp; Soleil"
+perl -pi -e "s|<span className=\\{styles\\.nom\\}>\\{NOM_BOUTIQUE\\}</span>|<span className={styles.nom}>${FAUTIVE_JSX}</span>|" \
   "src/components/en-tete-boutique.tsx"
 
 if grep -q 'amp; Soleil' "src/components/en-tete-boutique.tsx"; then
