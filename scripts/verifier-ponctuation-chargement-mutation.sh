@@ -147,8 +147,11 @@ jouer "une annonce est reformulée sans le mot Chargement" \
 # peut interpréter.
 # ---------------------------------------------------------------------------
 perl -0pi -e 's/ annonce="Chargement des alertes…"//' src/app/administration/alertes/page.tsx
+# LE MOTIF ATTENDU EST CELUI DU SENS 3, LS-230, et non l'ancien message de
+# l'inventaire. Le sens 3 part de l'APPEL et non du texte : c'est lui qui
+# attrape ce cas, quand l'inventaire se contentait de compter un état de moins.
 jouer "une annonce disparaît de son composant de chargement" \
-      "ne porte aucune annonce de chargement"
+      "sans annonce"
 
 echo
 echo "Cas joués : $cas, réussis : $reussites, en échec : $echecs"
