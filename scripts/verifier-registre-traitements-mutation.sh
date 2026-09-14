@@ -29,7 +29,28 @@ total=0
 restaurer() {
   git checkout "$SCHEMA" "$REGISTRE" 2>/dev/null
 }
-trap restaurer EXIT INT TERM
+# UNE INTERRUPTION DOIT SORTIR, PAS SEULEMENT RESTAURER, LS-230.
+#
+# `trap ... INT TERM` ne fait PAS quitter bash : il execute le gestionnaire,
+# puis REPREND le script ou il en etait. Une preuve interrompue restaurait donc
+# ses fichiers, puis muait le cas suivant, et le suivant, jusqu'a mourir sur une
+# mutation en cours. Mesure le 14 septembre 2026 : le fichier etait sain pendant
+# tout le nettoyage, et mute apres.
+#
+# Ce qui a ete laisse ainsi n'etait pas anodin : `src/lib/auth.ts` sans sa garde
+# `input: false`, celle qui empeche un client de se declarer ADMINISTRATRICE, et
+# la purge du journal des connexions avec son `lt` inverse en `gt`.
+#
+# `EXIT` garde le nettoyage de la sortie normale ; `INT TERM` restaure PUIS
+# sort, ce qui empeche toute mutation ulterieure.
+trap restaurer EXIT
+trap 'interrompre_mutation' INT TERM
+interrompre_mutation() {
+  restaurer
+  echo >&2
+  echo "INTERROMPU : les fichiers ont ete restaures." >&2
+  exit 130
+}
 
 # Vérifie que la mutation a bien modifié le fichier avant de juger le contrôle.
 #
