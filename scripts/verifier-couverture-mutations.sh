@@ -166,6 +166,62 @@ fi
 
 echo
 
+# --------------------------------------------------------------- sens 4
+
+echo "3. Chaque preuve vérifie qu'elle a bien muté quelque chose"
+
+# UNE MUTATION QUI NE MUTE PLUS ANNONCE SON SUCCÈS DE LA MÊME VOIX QU'UNE
+# MUTATION DÉTECTÉE, LS-230.
+#
+# C'est le piège le plus coûteux de ce dépôt, et il s'est présenté trois fois le
+# 14 septembre 2026 :
+#
+#   - deux preuves mutaient des `loading.tsx` que C32 avait fait retirer, leurs
+#     cas passaient donc au vert sans rien changer
+#   - une troisième élargissait un ancrage sur `RUBRIQUES_A_VENIR`, vide depuis
+#     LS-98 : son `cksum` voyait bien le fichier changer, et l'effet restait nul
+#
+# Le dernier cas dit la limite : vérifier que le FICHIER change ne suffit pas,
+# il faut que le changement porte. Aucun script ne peut le prouver à la place de
+# la preuve elle-même, qui seule sait ce qu'elle vise.
+#
+# CE QUI EST VÉRIFIÉ ICI EST LE MINIMUM MÉCANIQUEMENT VÉRIFIABLE : qu'une preuve
+# porte un garde-fou, sous une forme ou une autre. Vingt sur quarante-trois n'en
+# avaient aucun, et rien ne les distinguait des vingt-trois qui en portaient.
+sans_garde=0
+avec_garde=0
+
+while IFS= read -r preuve; do
+  [ -n "$preuve" ] || continue
+
+  # LE MOTIF COUVRE LES FORMES RÉELLEMENT ÉCRITES, accents compris ou non.
+  #
+  # Une première version cherchait « n'a modifié aucun », avec l'accent :
+  # `verifier-plafonds-corps-mutation.sh` écrit « n'a modifie aucun fichier »
+  # sans accent, et `verifier-loading-et-404-mutation.sh` garde sa cible par
+  # « fichier illisible ». Toutes deux passaient pour dépourvues de garde-fou.
+  # L'ancrage trop étroit, dans le contrôle même qui traque ce défaut.
+  if grep -qiE "cksum|md5sum|md5 -q|introuvable|illisible|inchang|identique|aucun fichier|n.a (modifi|rien|chang)" \
+    "scripts/$preuve" 2>/dev/null; then
+    avec_garde=$((avec_garde + 1))
+  else
+    echo "   ÉCHEC $preuve ne vérifie jamais qu'elle a muté quelque chose."
+    echo "         Une mutation qui ne mute plus annonce son succès de la même"
+    echo "         voix qu'une mutation détectée : comparer le fichier avant et"
+    echo "         après, ou refuser une cible absente."
+    defauts=$((defauts + 1))
+    sans_garde=$((sans_garde + 1))
+  fi
+done <<EOF
+$preuves
+EOF
+
+if [ "$sans_garde" -eq 0 ]; then
+  echo "   OK   $avec_garde preuves vérifient que leur mutation porte"
+fi
+
+echo
+
 # --------------------------------------------------------------- verdict
 
 if [ "$defauts" -gt 0 ]; then
