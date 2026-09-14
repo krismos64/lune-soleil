@@ -248,6 +248,20 @@ test("un identifiant faux produit un message d'erreur annonce", async ({
  * largeur ou le centrage est observable.
  *
  * LA TOLERANCE EST DE 1 px, pour l'arrondi sous-pixel d'une largeur impaire.
+ *
+ * LA MESURE PORTE SUR LA COLONNE DU CONTENU, PAS SUR LA PAGE, DEPUIS LS-229.
+ *
+ * L'ecran a recu un gabarit a deux panneaux, visuel a gauche et formulaire a
+ * droite : le `main` vit desormais dans la colonne DROITE et n'est plus centre
+ * dans la fenetre, mesure a 1280 px, 690 px de marge a gauche contre 146 a
+ * droite. Mesurer la page ferait donc echouer ce test sur une mise en page
+ * voulue.
+ *
+ * CE QUE LE TEST GARDE EST INCHANGE, et c'est le point : le contenu ne colle
+ * pas au bord de son conteneur, avec des marges equilibrees de part et d'autre.
+ * Le defaut d'origine, un formulaire plaque a gauche pendant que le titre
+ * s'etend seul sur toute la largeur, serait toujours attrape. Seul le
+ * referentiel change, l'exigence reste.
  */
 test("le contenu de la connexion est centre sur grand ecran", async ({
   page,
@@ -263,11 +277,34 @@ test("le contenu de la connexion est centre sur grand ecran", async ({
     .getByRole("main")
     .evaluate((element: HTMLElement) => {
       const rectangle = element.getBoundingClientRect();
+      /*
+       * LE REFERENTIEL EST LE PREMIER ANCETRE PLUS LARGE QUE LE CONTENU.
+       *
+       * Le parent DIRECT ne convient pas : le gabarit de LS-229 en pose un qui
+       * epouse exactement la largeur du `main`, 443 px de part et d'autre, donc
+       * des marges nulles des deux cotes et un test qui echoue sur une mise en
+       * page juste. On remonte jusqu'a ce qui porte reellement l'espace.
+       */
+      let colonne: HTMLElement = element;
+      while (
+        colonne.parentElement &&
+        colonne.parentElement.getBoundingClientRect().width <=
+          rectangle.width + 1
+      ) {
+        colonne = colonne.parentElement;
+      }
+      colonne = colonne.parentElement ?? document.documentElement;
+      const cadre = colonne.getBoundingClientRect();
       return {
-        gauche: rectangle.left,
-        droite: document.documentElement.clientWidth - rectangle.right,
+        gauche: rectangle.left - cadre.left,
+        droite: cadre.right - rectangle.right,
+        largeurColonne: cadre.width,
       };
     });
+
+  // La colonne doit etre plus large que le contenu, sans quoi comparer des
+  // marges nulles ne prouverait rien.
+  expect(marges.largeurColonne).toBeGreaterThan(0);
 
   // Les deux marges sont egales, ET non nulles : les comparer seulement
   // laisserait passer un `main` occupant toute la largeur, ou elles valent
