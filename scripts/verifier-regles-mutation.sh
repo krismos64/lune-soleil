@@ -66,8 +66,29 @@ restaurer() {
 DEJA_NETTOYE=0
 nettoyer() {
   [ "$DEJA_NETTOYE" -eq 1 ] && return
-  restaurer
   DEJA_NETTOYE=1
+
+  # LA RESTAURATION PAR COPIE EST TENTEE D'ABORD, `git checkout` EN FILET.
+  #
+  # `$TMP` vit sous `$TMPDIR`, que macOS peut purger : les copies de sauvegarde
+  # disparaissent alors, les `cp` de `restaurer` echouent en silence, et les
+  # fichiers MUTES restent dans le depot. Mesure le 14 septembre 2026, le trap
+  # se declenchait bien, `deja=0`, et ne trouvait plus rien a copier.
+  #
+  # Ce qui a ete laisse ainsi n'etait pas anodin : `src/lib/auth.ts` sans sa
+  # garde `input: false`, celle qui empeche un client de se declarer
+  # ADMINISTRATRICE, et la purge du journal des connexions avec son `lt` inverse
+  # en `gt`, qui aurait efface les lignes recentes en gardant les perimees.
+  #
+  # `git checkout` ne depend d'aucun fichier temporaire. Il ne couvre que les
+  # fichiers SUIVIS, ce qui est le cas de tous ceux mutes ici, et les temoins
+  # non suivis sont retires separement par `restaurer`.
+  restaurer
+  for fichier in "$DB" "$ML" "$MC" "$SEC" "$SOCLE"; do
+    [ -n "${fichier:-}" ] || continue
+    git -C "$RACINE" checkout -- "$fichier" 2>/dev/null || true
+  done
+
   rm -rf "$TMP"
 }
 trap nettoyer EXIT INT TERM
