@@ -60,7 +60,20 @@ verifier() {
     return
   fi
 
-  if ! grep -qF "$motif" "$fichier"; then
+  # LES COMMENTAIRES NE COMPTENT PAS, motif « contrôle satisfait par un
+  # commentaire » déjà en fiche sur ce dépôt.
+  #
+  # `src/lib/auth.ts` cite `input: false` DEUX fois en commentaire avant la
+  # ligne qui le pose, et `MODELE-LOGIQUE.md` cite son prédicat dans une phrase
+  # explicative. Un `grep` nu restait donc vert quand la mutation retournait la
+  # valeur réelle : mesuré le 14 septembre 2026, `input: true` passait sans
+  # alerte, sur la garde même qui empêche un client de se déclarer
+  # ADMINISTRATRICE.
+  #
+  # Les lignes ouvertes par `*`, `//` ou `#` sont écartées. Les tableaux
+  # Markdown, qui portent les prédicats des documents d'architecture, commencent
+  # par `|` et restent examinés.
+  if ! grep -vE "^[[:space:]]*(\*|//|#)" "$fichier" | grep -qF "$motif"; then
     echo "  ÉCHEC $fichier ne porte plus « $motif »."
     echo "        $sens"
     echo "        Une preuve par mutation a-t-elle été interrompue ?"
