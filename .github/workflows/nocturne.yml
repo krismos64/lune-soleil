@@ -437,6 +437,39 @@ jobs:
       # masque un controle de securite est pire qu'un controle absent, personne
       # ne le cherchant.
       # ----------------------------------------------------------------------
+      # ----------------------------------------------------------------------
+      # LES SIX PREUVES PAR MUTATION LOURDES, LS-230.
+      #
+      # POURQUOI AU NOCTURNE ET NON PAR PR. Elles pesent 969 s a elles quatre,
+      # mesurees le 14 septembre 2026, sur une CI par PR qui en dure environ
+      # neuf cents quand le code change. LS-177 avait deja deplace le bout en
+      # bout, `npm audit` et l'image ici pour la meme raison : les ajouter par PR
+      # doublerait cette duree pour eprouver des controles qui, eux, tournent
+      # deja a chaque fois.
+      #
+      #   verifier-tests           456 s  relance toute la suite d'integration
+      #   verifier-reintegration-stock 415 s  zone critique, base peuplee
+      #   verifier-etats-non-nominaux   67 s  la plus lourde des textuelles
+      #   verifier-config-claude        31 s  coherence de configuration
+      #   verifier-regles               39 s  schema, regles et couverture des paths
+      #
+      # `verifier-sauvegarde` les rejoint : elle lance un conteneur PostgreSQL,
+      # que le nocturne a deja sous la main. `docs/PREUVES-PAR-MUTATION.md`
+      # porte le tri complet et le motif de chaque ecart.
+      #
+      # `if: always()` COMME LES ETAPES VOISINES : un echec en amont qui masque
+      # une preuve est pire qu'une preuve absente, personne ne la cherchant.
+      # ----------------------------------------------------------------------
+      - name: Preuves par mutation lourdes
+        if: always()
+        run: |
+          ./scripts/verifier-config-claude-mutation.sh
+          ./scripts/verifier-etats-non-nominaux-mutation.sh
+          ./scripts/verifier-reintegration-stock-mutation.sh
+          ./scripts/verifier-sauvegarde-mutation.sh
+          ./scripts/verifier-tests-mutation.sh
+          ./scripts/verifier-regles-mutation.sh
+
       - name: Audit des dependances
         if: always()
         run: |

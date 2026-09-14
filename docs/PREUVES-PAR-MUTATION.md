@@ -46,38 +46,46 @@ ne pouvait pas produire son effet, et s'annonçait comme un trou du contrôle.
 
 ## Les preuves écartées, et leur raison
 
-Une preuve n'entre pas en intégration continue quand elle exige une machine, un
-service ou une durée que la CI par PR ne peut pas porter. **L'écart s'écrit ici
-avec son motif** : une exemption sans raison est un interrupteur, pas une
-décision.
+**Aucune, au 14 septembre 2026.** Les quarante-trois preuves du dépôt tournent,
+vingt-deux par PR et vingt et une au nocturne.
 
-### Écartées pour un environnement absent de la CI par PR
+Cette section reste ouverte : une preuve peut légitimement ne pas pouvoir entrer
+en intégration continue, et l'écart s'écrira ici avec son motif. Une exemption
+sans raison est un interrupteur, pas une décision, et
+`scripts/verifier-couverture-mutations.sh` refuse une ligne qui nomme une preuve
+sans rien dire.
 
-| Preuve | Durée | Motif |
+**La dispense ne se lit que dans cette section**, jamais ailleurs dans le
+document. Une première version du contrôle cherchait le nom dans tout le
+registre : les cinq preuves réparées plus haut, citées dans leur tableau
+historique, passaient alors pour écartées. Un récit n'est pas une décision.
+
+## Comment les quarante-trois se répartissent
+
+**Vingt-deux par PR**, `controles.yml`, étape « 9z octies » plus les étapes
+nommées : **63 s** au total pour les rapides, sur une CI qui en dure environ neuf
+cents quand le code change.
+
+**Vingt et une au nocturne**, `nocturne.yml`, dont les six lourdes qui pèsent
+**1008 s** à elles seules :
+
+| Preuve | Durée mesurée | Ce qui la rend lourde |
 |---|---|---|
-| `verifier-sauvegarde-mutation.sh` | 5 s | **lance un conteneur PostgreSQL** et y crée des bases, quatre appels à `docker` et `psql` dans son corps. Elle éprouve la restauration d'une sauvegarde, ce qui n'a de sens que sur une vraie base : le nocturne, qui en dispose déjà, la porte mieux |
+| `verifier-tests-mutation.sh` | 456 s | relance toute la suite d'intégration |
+| `verifier-reintegration-stock-mutation.sh` | 415 s | zone critique, base peuplée |
+| `verifier-etats-non-nominaux-mutation.sh` | 67 s | la plus lourde des textuelles |
+| `verifier-regles-mutation.sh` | 39 s | schéma, règles et couverture des `paths` |
+| `verifier-config-claude-mutation.sh` | 31 s | cohérence de configuration |
+| `verifier-sauvegarde-mutation.sh` | 5 s | lance un conteneur PostgreSQL, que le nocturne a déjà |
 
-**CE CLASSEMENT A ÉTÉ MESURÉ, ET IL A CORRIGÉ UNE SUPPOSITION.** Un premier tri
-par `grep` de mots-clés rangeait ici `verifier-nginx`, `verifier-environnement`
-et `verifier-migration`, toutes trois citant `docker` ou `psql`. Exécutées, elles
-passent en moins de 5 s sans rien lancer : les mentions vivaient dans leurs
-commentaires. Elles entrent donc en CI par PR comme les autres textuelles.
+LS-177 avait déjà déplacé le bout en bout, `npm audit` et l'image au nocturne
+pour tenir la durée par PR. Les y rejoindre suit le même arbitrage.
 
-Un besoin d'environnement se mesure en exécutant la preuve, jamais en lisant son
-texte.
-
-### Écartées pour leur durée
-
-| Preuve | Durée mesurée | Motif |
-|---|---|---|
-| `verifier-reintegration-stock-mutation.sh` | 415 s | près de sept minutes sur une CI qui en dure quinze. Elle éprouve une zone critique et doit tourner, mais au nocturne |
-| `verifier-etats-non-nominaux-mutation.sh` | 67 s | la plus lourde des textuelles, à elle seule la moitié du budget des vingt autres |
-| `verifier-config-claude-mutation.sh` | 31 s | éprouve la cohérence de configuration, qu'un contrôle du même nom rejoue déjà par PR |
-
-LS-177 a déjà déplacé le bout en bout, `npm audit` et l'image au nocturne pour
-tenir la durée par PR. Ajouter ces trois-là referait le même problème : à elles
-seules elles pèsent **513 s**, quand les dix-sept autres textuelles coûtent
-**42 s** ensemble.
+**UN BESOIN D'ENVIRONNEMENT SE MESURE EN EXÉCUTANT LA PREUVE**, jamais en lisant
+son texte. Un premier tri par `grep` de mots-clés rangeait `verifier-nginx`,
+`verifier-environnement` et `verifier-migration` parmi les preuves à
+environnement, toutes trois citant `docker` ou `psql`. Exécutées, elles passent
+en moins de 5 s sans rien lancer : les mentions vivaient dans leurs commentaires.
 
 ## Ce que ce document ne dit pas
 
