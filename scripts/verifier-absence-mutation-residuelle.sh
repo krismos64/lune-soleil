@@ -128,6 +128,12 @@ verifier "src/services/journal-connexion.ts" "creeA: { lt:" \
 verifier "src/repositories/stock.ts" "AND vente_web_activee = true" \
   "Sans elle, une variante hors vente web reste réservable, invariant 6."
 
+verifier "tests/aide/reservation-sql.ts" "quantite_physique - c.q" \
+  "La conversion en vente ne décrémenterait plus le stock physique."
+
+verifier "tests/aide/reservation-sql.ts" "quantite_reservee - e.q" \
+  "Une réservation expirée ne libérerait plus la quantité réservée."
+
 verifier "docs/architecture/MODELE-LOGIQUE.md" "role = 'ADMINISTRATRICE'" \
   "Le document décrirait l'index E1 à l'envers de la réalité."
 
