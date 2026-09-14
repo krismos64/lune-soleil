@@ -49,8 +49,8 @@ export const SQL_RESERVER = `
     UPDATE variante
     SET quantite_reservee = quantite_reservee + $3
     WHERE id = $1
-      AND archivee_a IS NULL
       AND vente_web_activee = true
+      AND quantite_physique - quantite_reservee >= $3
     RETURNING id
   )
   INSERT INTO reservation (id, variante_id, commande_id, quantite, expire_a, cree_a)
