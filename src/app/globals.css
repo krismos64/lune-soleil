@@ -63,25 +63,32 @@ h1,
 h2,
 h3 {
   font-family: var(--ls-police-titre);
-  font-weight: 500;
   line-height: 1.2;
   /* Un titre long ne deborde pas a 320 px, meme sans espace pour couper. */
   overflow-wrap: anywhere;
 }
 
 /*
- * L'ECHELLE DU TITRE D'ECRAN EST POSEE ICI, ET NON PAR ECRAN.
+ * L'ECHELLE ET LA GRAISSE DU TITRE D'ECRAN SE POSENT ICI, ET SUR `h1` SEUL.
  *
  * Meme borne que le layout d'administration, `clamp(1.75rem, 6vw, 2.75rem)` :
  * les ecrans sans session sont des portes d'entree des deux espaces, et leur
  * donner une echelle propre ferait une troisieme regle a maintenir.
  *
- * `h1` SEUL, ET NON `h2`/`h3` : un module d'ecran gere ses sous-titres selon sa
- * densite, et une echelle globale les figerait tous. Le titre d'ecran, lui, est
- * unique par page et se pose une fois.
+ * POURQUOI `h2` ET `h3` N'Y SONT PAS, taille ET graisse. Un module d'ecran
+ * regle ses sous-titres selon sa densite, et les figer d'en haut ferait une
+ * regle plus large que son objet. La premiere version posait `font-weight: 500`
+ * sur les trois niveaux : relu le 14 septembre 2026, cela changeait NEUF blocs
+ * hors du perimetre de la story, dont trois qui ne fixaient aucune taille et
+ * passaient d'un gras par defaut du navigateur a un serif 500. Une regle
+ * globale qui deborde de son objet est le defaut meme que LS-229 corrige,
+ * a l'envers.
+ *
+ * Le titre d'ecran, lui, est unique par page et se pose une fois.
  */
 h1 {
   font-size: clamp(1.75rem, 6vw, 2.75rem);
+  font-weight: 500;
 }
 
 /* Focus visible, jamais supprimé sans remplacement. */

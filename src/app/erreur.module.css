@@ -49,13 +49,24 @@
   text-transform: uppercase;
 }
 
+/*
+ * NI POLICE NI GRAISSE ICI, LS-229 : `globals.css` les porte pour tout `h1`.
+ *
+ * Ce module vit sous `src/app/` directement, donc ni le sens 2 ni le sens 4 de
+ * `verifier-gabarit-titre.sh` ne l'examinaient, et son `font-weight: 600` a
+ * survecu au passage des huit modules publics en 500. Les pages d'erreur
+ * rendaient leur titre plus gras que le reste du site, sur les ecrans qu'un
+ * visiteur atteint quand quelque chose va mal.
+ *
+ * `global-error.tsx` est le cas a part : il n'importe PAS `globals.css`, la
+ * regle globale ne l'atteint donc pas, et son rendu se verifie a part.
+ */
 .titre {
   margin: 0;
   background: var(--ls-background);
   color: var(--ls-primary);
   /* `clamp` plutot qu'une media query : la taille suit la largeur en continu. */
   font-size: clamp(1.75rem, 6vw, 2.5rem);
-  font-weight: 600;
   letter-spacing: 0.02em;
 }
 

@@ -41,9 +41,29 @@
   max-width: 34ch;
 }
 
+/*
+ * ETIQUETTE DE COLONNE, PAS TITRE DE LECTURE : ELLE RESTE EN SANS-SERIF.
+ *
+ * `globals.css` pose le serif sur tout `h2`, LS-229. Ces trois libellés en
+ * sont l'exception assumee : un serif a 12 px, en capitales et avec 0,08em
+ * d'interlettrage, est la combinaison la moins lisible du jeu, et elle
+ * apparaitrait sur TOUTES les pages publiques. Mesure le 14 septembre 2026,
+ * « Decouvrir », « Besoin d'aide » et « Informations » rendaient ainsi.
+ *
+ * La police est donc REPOSEE ICI, a dessein et contre l'habitude de C43 : la
+ * regle globale vise les titres qui se lisent, pas les etiquettes qui se
+ * reperent.
+ *
+ * `inherit` ET NON UNE PILE RECOPIEE, ni un second jeton. `tokens.css` dit
+ * pourquoi il n'existe pas de jeton de police de corps : le sans-serif est pose
+ * une fois sur `body` et herite partout, un second jeton disant la meme chose
+ * se desynchroniserait du premier. `inherit` remonte a ce `body`, donc cette
+ * exception suit toute evolution de la police de corps sans la recopier.
+ */
 .titreColonne {
   margin: 0 0 var(--ls-space-3);
   color: var(--ls-text);
+  font-family: inherit;
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.08em;

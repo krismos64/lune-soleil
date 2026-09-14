@@ -201,8 +201,19 @@ fi
 # La TAILLE reste admise chez eux, à la différence des espaces privés : une page
 # de contenu et une fiche produit n'ont pas la même densité, et le sens 2 garde
 # déjà l'uniformité là où elle est voulue.
-modules_publics=$(find "src/app/(boutique)" -name "*.module.css" \
-  -not -path "*/compte/*" 2>/dev/null | sort)
+# `src/app` A LA RACINE EST DANS LE PERIMETRE, et son oubli avait coute.
+# `erreur.module.css` y vit seul, sert quatre ecrans d'erreur, et n'etait
+# examine NI par le sens 2, qui cherche dans `administration/` et `compte/`, NI
+# par ce sens 4 quand il ne regardait que `(boutique)`. Son `font-weight: 600`
+# avait survecu au passage des huit modules publics en 500 : les pages d'erreur
+# rendaient leur titre plus gras que tout le reste, sans qu'aucun controle ne le
+# voie. Releve a la relecture du 14 septembre 2026, jamais par un script.
+modules_publics=$(
+  {
+    find "src/app/(boutique)" -name "*.module.css" -not -path "*/compte/*"
+    find src/app -maxdepth 1 -name "*.module.css"
+  } 2>/dev/null | sort -u
+)
 
 nb_publics=$(printf '%s\n' "$modules_publics" | grep -c . || true)
 
