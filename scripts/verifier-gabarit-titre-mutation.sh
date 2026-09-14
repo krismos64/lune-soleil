@@ -108,7 +108,14 @@ perl -0pi -e 's/(^h1,\nh2,\nh3 \{\n)  font-family: var\(--ls-police-titre\);\n/$
 eprouver 5 "la règle globale existe mais n'emploie plus le jeton"
 
 # --- cas 6 : l'échelle du titre d'écran disparaît, LS-229
-perl -0pi -e 's/^h1 \{\n  font-size: clamp\([^)]*\);\n\}\n//ms' "$GLOBAL"
+#
+# La mutation retire la SEULE ligne `font-size`, et laisse le bloc debout avec
+# ce qu'il porte d'autre. Une premiere version supprimait le bloc entier en
+# supposant qu'il ne contenait que la taille : le jour ou la graisse l'a
+# rejoint, elle ne correspondait plus a rien et le cas passait au vert sans
+# rien muter. Une mutation qui ne mute plus ne prouve plus, et elle le dit
+# d'une voix identique a celle du succes.
+perl -0pi -e 's/(^h1 \{\n(?:[^}]*\n)??)  font-size: clamp\([^)]*\);\n/$1/ms' "$GLOBAL"
 eprouver 6 "l'échelle du titre d'écran disparaît"
 
 # --- cas 7 : un module PUBLIC repose une police sur son titre, LS-229
