@@ -29,6 +29,61 @@ body {
   line-height: 1.6;
 }
 
+/*
+ * LE GABARIT DE TITRE EST GLOBAL, LS-229, ET C'EST LE SEUL ANCRAGE QUI TIENNE.
+ *
+ * C42 posait la regle sur `.colonne h1` dans les deux layouts d'espace
+ * connecte. Deux familles d'ecrans lui echappaient, et pour des raisons
+ * distinctes :
+ *
+ *   - LES PAGES PUBLIQUES n'ont aucun layout ou l'accrocher.
+ *     `(boutique)/layout.tsx` rend un fragment, sans element enveloppant :
+ *     ajouter un conteneur casserait le lien d'evitement de LS-122, ce que ce
+ *     fichier documente longuement
+ *   - LES ECRANS ATTEINTS SANS SESSION, connexion et inscription, vivent
+ *     pourtant SOUS les dossiers couverts. `compte/layout.tsx` sort avant le
+ *     gabarit quand il n'y a pas d'identite, `return <>{children}</>` : la
+ *     classe `.colonne` n'est jamais rendue, donc la regle ne s'applique pas
+ *
+ * Mesure le 14 septembre 2026 sur la production par `getComputedStyle` : TOUS
+ * les titres publics rendaient en `system-ui`, avec quatre echelles
+ * concurrentes de 32, 36, 40 et 56 px.
+ *
+ * UN ANCRAGE SUR L'ELEMENT ET NON SUR UNE CLASSE, comme C42 : une classe doit
+ * etre posee pour agir, donc oubliee pour ne pas agir. `administration/
+ * connexion` porte un `h1` nu, et une regle sur `.titre` ne l'aurait jamais
+ * couvert.
+ *
+ * LA SPECIFICITE EST VOLONTAIREMENT LA PLUS FAIBLE POSSIBLE, un simple
+ * selecteur d'element : les deux layouts d'espace connecte gardent leur echelle
+ * propre, `.colonne h1` l'emportant sans effort. Une echelle par espace, et le
+ * public herite de celle-ci.
+ */
+h1,
+h2,
+h3 {
+  font-family: var(--ls-police-titre);
+  font-weight: 500;
+  line-height: 1.2;
+  /* Un titre long ne deborde pas a 320 px, meme sans espace pour couper. */
+  overflow-wrap: anywhere;
+}
+
+/*
+ * L'ECHELLE DU TITRE D'ECRAN EST POSEE ICI, ET NON PAR ECRAN.
+ *
+ * Meme borne que le layout d'administration, `clamp(1.75rem, 6vw, 2.75rem)` :
+ * les ecrans sans session sont des portes d'entree des deux espaces, et leur
+ * donner une echelle propre ferait une troisieme regle a maintenir.
+ *
+ * `h1` SEUL, ET NON `h2`/`h3` : un module d'ecran gere ses sous-titres selon sa
+ * densite, et une echelle globale les figerait tous. Le titre d'ecran, lui, est
+ * unique par page et se pose une fois.
+ */
+h1 {
+  font-size: clamp(1.75rem, 6vw, 2.75rem);
+}
+
 /* Focus visible, jamais supprimé sans remplacement. */
 :focus-visible {
   outline: 3px solid var(--ls-focus);

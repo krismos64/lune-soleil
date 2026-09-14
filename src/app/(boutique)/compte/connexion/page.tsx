@@ -25,6 +25,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { PanneauAuthentification } from "@/components/panneau-authentification";
 import { lireIdentite } from "@/services/autorisation";
 
 import { FormulaireConnexionClient } from "./formulaire-connexion-client";
@@ -46,17 +47,20 @@ export default async function PageConnexionClient() {
   }
 
   return (
-    <main id="contenu" tabIndex={-1} className={styles.page}>
-      <h1 className={styles.titre}>Se connecter</h1>
+    <PanneauAuthentification>
+      <main id="contenu" tabIndex={-1} className={styles.pageGabarit}>
+        <p className={styles.accroche}>Bon retour</p>
+        <h1 className={styles.titre}>Se connecter</h1>
 
-      <FormulaireConnexionClient />
+        <FormulaireConnexionClient />
 
-      <p className={styles.bascule}>
-        Pas encore de compte ?{" "}
-        <Link href="/compte/inscription" className={styles.lien}>
-          En créer un
-        </Link>
-      </p>
-    </main>
+        <p className={styles.bascule}>
+          Pas encore de compte ?{" "}
+          <Link href="/compte/inscription" className={styles.lien}>
+            En créer un
+          </Link>
+        </p>
+      </main>
+    </PanneauAuthentification>
   );
 }

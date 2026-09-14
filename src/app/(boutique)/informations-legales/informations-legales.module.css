@@ -27,7 +27,6 @@
   margin: 0 0 var(--ls-space-4);
   color: var(--ls-primary);
   font-size: clamp(1.5rem, 5vw, 2.25rem);
-  font-weight: 600;
 }
 
 /* FOND SABLE, DONC `--ls-primary` SUR LES LIENS, jamais le doré. */

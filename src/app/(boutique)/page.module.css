@@ -52,7 +52,6 @@
   color: var(--ls-text);
   /* Fluide : lisible a 320 px, sans plafonner sur grand ecran. */
   font-size: clamp(2rem, 7vw, 3.5rem);
-  font-weight: 600;
   line-height: 1.1;
   letter-spacing: -0.01em;
   text-wrap: balance;

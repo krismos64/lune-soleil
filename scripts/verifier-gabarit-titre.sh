@@ -1,6 +1,9 @@
 #!/bin/bash
-# Vérifie que le titre de chaque écran des deux espaces privés hérite du gabarit
-# de LS-180 et LS-181, jeton `--ls-police-titre` et une seule échelle, LS-228.
+# Vérifie que le titre de chaque écran hérite du gabarit de LS-180 et LS-181,
+# jeton `--ls-police-titre` et une seule échelle par espace, LS-228 et LS-229.
+#
+# Il couvre les deux espaces privés, sens 1 et 2, ET le périmètre que ces deux
+# sens n'atteignent pas, sens 4 : pages publiques et écrans sans session.
 #
 # POURQUOI CE CONTRÔLE EXISTE. Les deux stories de rendu ont posé le serif écran
 # par écran, sur une classe `.titre` que chaque page devait penser à employer.
@@ -27,6 +30,24 @@
 #      -> un ancrage cassé rendrait un OK silencieux, motif déjà payé sur ce
 #         dépôt avec `verifier-navigation-administration.sh`, dont l'`awk` ne
 #         trouvait plus son tableau après une annotation de type
+#   4. `globals.css` pose la règle qui couvre ce qu'aucun layout n'atteint,
+#      LS-229
+#      -> les pages publiques n'ont aucun layout où l'accrocher, et les écrans
+#         atteints SANS session sortent du leur avant le gabarit
+#
+# POURQUOI UN QUATRIÈME SENS, LS-229. Les sens 1 et 2 gardent les deux espaces
+# privés et les gardent bien. Ils sont restés VERTS pendant que 100 % des titres
+# publics rendaient en `system-ui`, mesuré sur la production le 14 septembre
+# 2026 avec quatre échelles concurrentes, 32, 36, 40 et 56 px : leur périmètre
+# ne le couvrait pas, et C42 ne le revendiquait pas non plus.
+#
+# DEUX FAMILLES ÉCHAPPAIENT, POUR DES RAISONS DISTINCTES. Les pages publiques
+# n'ont aucun layout à module CSS, `(boutique)/layout.tsx` rendant un fragment
+# sans conteneur. Les écrans de connexion et d'inscription vivent pourtant SOUS
+# les dossiers couverts, mais `compte/layout.tsx` sort avant le gabarit quand il
+# n'y a pas d'identité : `.colonne` n'est jamais rendu, donc `.colonne h1` ne
+# s'applique pas. Un chemin couvert par une règle ne suffit pas à conclure qu'un
+# écran l'est, la garde s'évalue à l'exécution.
 #
 # LE SENS 2 EST CELUI QUI ATTRAPE LA RÉCIDIVE. Le sens 1 constate que le gabarit
 # existe ; il resterait vert le jour où un écran neuf repose sa propre taille.
@@ -50,10 +71,11 @@ cd "$(dirname "$0")/.." || exit 1
 
 LAYOUT_ADMIN="src/app/administration/layout.module.css"
 LAYOUT_COMPTE="src/app/(boutique)/compte/layout.module.css"
+GLOBAL="src/app/globals.css"
 
 defauts=0
 
-echo "Gabarit de titre des espaces privés, LS-228"
+echo "Gabarit de titre, espaces privés et périmètre public, LS-228 et LS-229"
 echo
 
 # --------------------------------------------------------------- sens 1
@@ -136,6 +158,74 @@ done <<< "$modules"
 
 if [ "$defauts" -eq 0 ]; then
   echo "   OK   $nb_modules modules examinés, aucun ne repose son titre"
+fi
+
+echo
+
+# --------------------------------------------------------------- sens 4
+
+echo "4. La règle globale couvre ce qu'aucun layout n'atteint, LS-229"
+
+if [ ! -f "$GLOBAL" ]; then
+  echo "   ÉCHEC : $GLOBAL est introuvable."
+  echo "   L'ancrage de ce sens est cassé, il ne prouve plus rien."
+  exit 1
+fi
+
+# Le bloc de titre global. `awk` s'arrête à la première accolade fermante, donc
+# il isole bien la règle et non tout le fichier.
+bloc_global=$(awk '/^h1,/,/\}/' "$GLOBAL")
+
+if [ -z "$bloc_global" ]; then
+  echo "   ÉCHEC : $GLOBAL ne pose aucune règle de titre sur l'élément."
+  echo "   Sans elle, tout titre public et tout écran sans session retombe en"
+  echo "   police système, défaut mesuré sur la production le 14 septembre 2026."
+  defauts=$((defauts + 1))
+elif ! printf '%s' "$bloc_global" | grep -q -- "--ls-police-titre"; then
+  echo "   ÉCHEC : la règle de titre de $GLOBAL n'emploie pas --ls-police-titre."
+  defauts=$((defauts + 1))
+else
+  echo "   OK   $GLOBAL pose la règle héritée sur l'élément"
+fi
+
+# L'échelle du titre d'écran, pour les écrans que ni l'un ni l'autre layout ne
+# couvre. Sans elle, un `h1` nu prend la taille par défaut du navigateur.
+if ! awk '/^h1 \{/,/\}/' "$GLOBAL" | grep -q "font-size"; then
+  echo "   ÉCHEC : $GLOBAL ne fixe aucune échelle de titre d'écran."
+  defauts=$((defauts + 1))
+else
+  echo "   OK   l'échelle du titre d'écran y est posée"
+fi
+
+# Les modules publics ne doivent pas la neutraliser en reposant une police.
+# La TAILLE reste admise chez eux, à la différence des espaces privés : une page
+# de contenu et une fiche produit n'ont pas la même densité, et le sens 2 garde
+# déjà l'uniformité là où elle est voulue.
+modules_publics=$(find "src/app/(boutique)" -name "*.module.css" \
+  -not -path "*/compte/*" 2>/dev/null | sort)
+
+nb_publics=$(printf '%s\n' "$modules_publics" | grep -c . || true)
+
+if [ "$nb_publics" -eq 0 ]; then
+  echo "   ÉCHEC : aucun module public trouvé."
+  echo "   L'ancrage de ce sens est cassé, il ne prouve plus rien."
+  exit 1
+fi
+
+fautifs=0
+while IFS= read -r module; do
+  [ -z "$module" ] && continue
+  bloc=$(awk '/^\.titre[ ,{]/,/\}/' "$module")
+  [ -z "$bloc" ] && continue
+  if printf '%s' "$bloc" | grep -q "font-family"; then
+    echo "   ÉCHEC : ${module#src/app/} repose font-family sur son titre."
+    defauts=$((defauts + 1))
+    fautifs=$((fautifs + 1))
+  fi
+done <<< "$modules_publics"
+
+if [ "$fautifs" -eq 0 ]; then
+  echo "   OK   $nb_publics modules publics examinés, aucun ne repose sa police"
 fi
 
 echo

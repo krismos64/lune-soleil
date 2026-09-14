@@ -23,8 +23,45 @@
   margin: 0 auto;
 }
 
+/*
+ * VARIANTE POUR LES ECRANS A PANNEAU, LS-229, connexion et inscription.
+ *
+ * Elle ne repose NI largeur NI marge automatique : `.contenu` du gabarit porte
+ * deja les 44ch et le centrage. Les redeclarer ici donnerait deux bornes
+ * concurrentes sur le meme texte, et un padding qui s'ajoute a celui de la
+ * colonne du gabarit.
+ *
+ * Les cinq autres ecrans du fichier gardent `.page` : reauthentification,
+ * verification, mot de passe oublie et nouveau mot de passe sont des etapes de
+ * parcours, pas des portes d'entree.
+ */
+.pageGabarit {
+  padding: 0;
+}
+
+/*
+ * NI POLICE NI GRAISSE ICI, LS-229 : le gabarit global de `globals.css` les
+ * porte, et une declaration locale l'emporterait par specificite. Ces ecrans
+ * sont atteints SANS SESSION, donc `compte/layout.tsx` sort avant son gabarit
+ * et `.colonne h1` ne s'applique jamais : le global est leur seule couverture.
+ */
 .titre {
   margin-top: 0;
+}
+
+/*
+ * ACCROCHE AU-DESSUS DU TITRE, reprise du prototype, « Bon retour ».
+ *
+ * `--ls-accent-gold-deep` et non `--ls-accent-terracotta` : le premier est
+ * mesure a 4,72:1 sur creme et admis en texte, le second ne l'est pas.
+ */
+.accroche {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-accent-gold-deep);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .introduction {

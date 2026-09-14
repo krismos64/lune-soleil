@@ -1,0 +1,146 @@
+/*
+ * Gabarit a deux panneaux des ecrans d'authentification, LS-229.
+ *
+ * MOBILE FIRST, ET LE PANNEAU N'APPARAIT PAS A 320 px. La colonne par defaut
+ * est unique : le visuel n'entre qu'a partir de 768 px, ou la largeur le rend
+ * utile. Sous ce seuil il est retire du flux.
+ *
+ * LE VISUEL EST DECORATIF ET LE DIT. Il ne porte aucune information que le
+ * formulaire ne porte pas : son `alt` est vide et il est `aria-hidden`, sans
+ * quoi un lecteur d'ecran annoncerait une photographie de bijoux avant le champ
+ * d'email, sur un ecran dont l'objet est de se connecter.
+ */
+
+.gabarit {
+  display: grid;
+  /*
+   * UNE SEULE COLONNE PAR DEFAUT, celle du formulaire. Le panneau n'entre qu'au
+   * point de bascule ci-dessous.
+   */
+  grid-template-columns: 1fr;
+}
+
+/*
+ * LE PANNEAU A UNE HAUTEUR MINIMALE PROPRE, ET NON LA HAUTEUR DE LA FENETRE.
+ *
+ * Deux tentatives ont ete mesurees et rejetees le 14 septembre 2026 :
+ *
+ *   - `min-height: 100%` est IGNORE. Un pourcentage se resout contre la hauteur
+ *     du parent, qui n'en declare aucune. Le panneau s'arretait a 490 px dans
+ *     une fenetre de 784 sur `/administration/connexion`, formulaire court
+ *   - `min-height: 100dvh` corrige l'administration, qui rend ce gabarit seul,
+ *     et CASSE l'espace client, qui l'insere entre un en-tete et un pied : le
+ *     document montait a 1219 px dans une fenetre de 745, soit 474 px de
+ *     defilement sur une page qui tient a l'ecran
+ *
+ * Deduire la hauteur de l'en-tete supposerait de la connaitre. Or
+ * `en-tete-boutique.module.css` refuse toute hauteur fixe, a dessein, « jamais
+ * une hauteur fixe : le texte doit pouvoir grandir » : la valeur se perimerait
+ * des qu'une police est agrandie, et le defaut serait un panneau tronque.
+ *
+ * UNE HAUTEUR MINIMALE EN `rem` NE DEPEND NI DE LA FENETRE NI DU VOISINAGE.
+ * Elle suit la taille de police choisie par le lecteur, donne au panneau une
+ * presence suffisante quand le formulaire est court, et ne force aucun
+ * defilement quand il y a un pied de page. Un formulaire plus haut l'etire, la
+ * borne etant un minimum.
+ */
+@media (min-width: 768px) {
+  .gabarit {
+    min-height: 34rem;
+  }
+}
+
+/*
+ * LE FORMULAIRE GARDE SA COLONNE ETROITE, 44ch, heritee de LS-54 : un
+ * formulaire se lit en colonne etroite, et l'elargir parce que l'ecran est
+ * large degraderait la lecture. Le panneau prend la place restante, il ne prend
+ * pas la place du texte.
+ */
+.colonneFormulaire {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--ls-space-5) var(--ls-space-4);
+}
+
+.contenu {
+  width: 100%;
+  max-width: 44ch;
+  margin: 0 auto;
+}
+
+/*
+ * LE PANNEAU EST RETIRE DU FLUX SOUS 768 px.
+ *
+ * `display: none` et non une largeur nulle : une colonne de grille a 0 px
+ * garderait sa gouttiere et son image continuerait de compter dans la hauteur.
+ *
+ * L'image reste dans le balisage, le composant etant rendu sur le serveur sans
+ * connaitre la largeur du client. Elle n'est donc pas gratuite sur telephone,
+ * et le commentaire du composant dit pourquoi `sizes` ne tente plus de la
+ * rendre gratuite : deux tentatives ont delave le panneau sur grand ecran.
+ */
+.panneau {
+  display: none;
+  position: relative;
+  overflow: hidden;
+  background: var(--ls-surface-sand);
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  /*
+   * `cover` ET NON `contain` : le panneau est une surface d'ambiance, une bande
+   * de fond vide de chaque cote romprait l'aplat. Le recadrage est acceptable
+   * parce que l'image ne porte aucune information a lire.
+   */
+  object-fit: cover;
+  /*
+   * LE CADRAGE VISE LA DROITE DE L'IMAGE, ET CE N'EST PAS UN GOUT.
+   *
+   * `accueil-hero.jpg` est cadre pour l'accueil, ou il s'affiche en large : ses
+   * bijoux occupent la moitie DROITE et la moitie gauche est un aplat de lin
+   * uni, qui laisse respirer le titre pose par-dessus. Recadre au centre sur
+   * une colonne etroite, le panneau ne montrait que ce lin : mesure le
+   * 14 septembre 2026 sur le rendu local, il ressemblait a une image manquante.
+   *
+   * A REVOIR SI L'IMAGE CHANGE. Une photographie de LS-23 cadree autrement
+   * rendrait cette valeur fausse, et le defaut serait le meme : un aplat vide
+   * sans erreur ni avertissement.
+   */
+  object-position: 72% center;
+}
+
+@media (min-width: 768px) {
+  .panneau {
+    display: block;
+  }
+
+  .gabarit {
+    /*
+     * LE VISUEL A GAUCHE, LE FORMULAIRE A DROITE, comme le prototype.
+     *
+     * DEUX COLONNES EGALES ET NON UN RATIO : mesure sur le prototype le
+     * 14 septembre 2026, 918,75 px de chaque cote sur 1838 de large.
+     */
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .colonneFormulaire {
+    padding: var(--ls-space-8) var(--ls-space-6);
+  }
+}
+
+/*
+ * AU-DELA DE 1280 px LE FORMULAIRE NE SUIT PLUS L'ELARGISSEMENT.
+ *
+ * Sans ce palier, la colonne de droite continue de grandir et le formulaire,
+ * borne a 44ch, se retrouve perdu au milieu d'un vide croissant. Le visuel
+ * absorbe le surplus, ce qui est son role.
+ */
+@media (min-width: 1280px) {
+  .gabarit {
+    grid-template-columns: 1fr minmax(0, 46rem);
+  }
+}
