@@ -1308,13 +1308,34 @@ jobs:
       # rendaient en `system-ui`, avec trois echelles concurrentes. Les ecrans
       # fautifs etaient presque tous posterieurs aux deux stories.
       #
-      # IL NE REMPLACE PAS `gabarit-titre-ls228.spec.ts`, qui mesure la police
-      # REELLEMENT calculee sur les vingt-deux ecrans aux quatre largeurs. Un
-      # script textuel lit des regles, il ne rend pas une page : motif
-      # « controle textuel et test d'execution », les deux moities sont
+      # IL COUVRE AUSSI LE PERIMETRE PUBLIC DEPUIS LS-229, sens 4 : les pages
+      # publiques, qu'aucun layout ne pouvait atteindre, et les ecrans sans
+      # session, dont le layout sort AVANT de rendre `.colonne`. Mesure sur la
+      # production du 14 septembre 2026, la TOTALITE des titres publics rendait
+      # en `system-ui` pendant que les sens 1 et 2 restaient verts a juste titre.
+      #
+      # IL NE REMPLACE NI `gabarit-titre-ls228.spec.ts` NI
+      # `gabarit-titre-public-ls229.spec.ts`, qui mesurent la police REELLEMENT
+      # calculee. Un script textuel lit des regles, il ne rend pas une page :
+      # motif « controle textuel et test d'execution », les deux moities sont
       # necessaires.
-      - name: 9z septies. Gabarit de titre des espaces prives
+      - name: 9z septies. Gabarit de titre, espaces prives et perimetre public
         run: ./scripts/verifier-gabarit-titre.sh
+
+      # Preuve par mutation du controle precedent, LS-228 et LS-229. Textuel,
+      # secondes, aucune base requise.
+      #
+      # ELLE MANQUAIT, et ce n'etait pas un choix : LS-228 avait ecrit le script
+      # de mutation sans l'ajouter ici, quand d'autres preuves y figurent. Un
+      # controle non eprouve par la CI se perime en silence, et le cas s'est
+      # produit des LS-229 : la mutation 6 avait cesse de muter apres qu'une
+      # declaration eut rejoint le bloc qu'elle visait, et elle annoncait son
+      # succes de la meme voix qu'une mutation detectee.
+      #
+      # LE SCRIPT REFUSE UN DEPOT SALE, il restaure par `git checkout`. En
+      # integration continue l'arbre est propre par construction.
+      - name: 9z septies bis. Preuve par mutation du gabarit de titre
+        run: ./scripts/verifier-gabarit-titre-mutation.sh
       - name: 2. Analyse statique
         run: npm run lint
 
