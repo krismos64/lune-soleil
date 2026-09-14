@@ -18,7 +18,7 @@
 # correct, il n'est simplement pas atteint. Ce qui se vérifie ici est donc qu'une
 # RÈGLE HÉRITÉE existe, et que rien ne la neutralise en aval.
 #
-# CE QU'IL VÉRIFIE, DANS LES TROIS SENS.
+# CE QU'IL VÉRIFIE, DANS LES QUATRE SENS.
 #
 #   1. chacun des deux layouts pose la règle héritée sur `h1`
 #      -> sans elle, chaque écran redevient libre de son titre, et l'on retombe

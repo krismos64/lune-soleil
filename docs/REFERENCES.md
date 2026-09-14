@@ -31,6 +31,7 @@ ligne ajoutée, et rien ne le signale.
 | `docs/SEANCE-AMORCAGE-EXPLOITANTE.md` | le **conducteur de la séance** elle-même, geste par geste et dans l'ordre, avec ce qui se vérifie après chacun. Le document précédent porte le raisonnement, celui-ci les gestes | le jour de la séance d'amorçage, à suivre pas à pas pendant qu'elle a lieu |
 | `docs/COMPARATIF-MEDIATION.md` | le choix du médiateur de la consommation, obligation de l'article L616-1 | la souscription du médiateur, les mentions légales |
 | `docs/deploiement/EXPLOITATION.md` | **déployer et revenir en arrière** par le workflow, LS-138, démarrer et arrêter, migrer par relais éphémère, sauvegarder, restaurer, vérifier les limites appliquées, ce qu'il ne faut jamais faire sur la machine partagée | **toute intervention sur la production**, LS-152 et LS-138 |
+| `docs/PREUVES-PAR-MUTATION.md` | **la couverture des preuves par mutation**, LS-230 : où chaque preuve tourne, et le motif écrit de celle qui ne tourne pas. Le compte se mesure et ne se lit pas, `ls scripts/*-mutation.sh | wc -l` valait **44** le 15 septembre 2026, **38 par PR et 6 au nocturne**. Une exemption sans motif est un interrupteur, pas une décision | écrire ou modifier une preuve par mutation, ajouter une étape de CI |
 | `docs/memory-archivage.md` | **trier la mémoire** quand l'index approche son plafond : ce qui sort, ce qui reste, la procédure en six étapes, et les deux pièges de l'accroche tronquée et des liens vers l'archive | quand `verifier-config-claude.sh` signale que `MEMORY.md` approche les 200 lignes |
 | `deploiement/deployer.sh` et `.github/workflows/deployer.yml` | la chaîne de déploiement, LS-138 : le script vit **sur la machine** en `/usr/local/sbin/lune-soleil-deployer`, et la clé SSH ne peut exécuter que lui | toute modification du déploiement ou du retour arrière |
 | `docs/deploiement/PREPARATION-SERVEUR.md` | la mise en place initiale : Nginx, DNS, certificat et son renouvellement, cohabitation avec SmartPlanning | toute modification de la configuration Nginx ou du certificat, LS-151 |
@@ -239,7 +240,7 @@ exacte, la valeur du délai, le jeton de couleur. Chacun porte un frontmatter
 | `payments.md` | `src/integrations/stripe/**` et `pdf/**`, webhooks, les services et repositories de paiement, commande, facture et tunnel |
 | `legal.md` | facturation et rendu PDF, tunnel de commande, Mondial Relay, tarifs de livraison |
 | `frontend-design.md` | `src/app/**`, `src/components/**`, styles |
-| `securite.md` | `src/lib/**`, `src/integrations/email/**`, `src/services/autorisation.ts`, `src/services/reauthentification.ts` |
+| `securite.md` | `src/lib/**`, `src/integrations/email/**`, `src/services/autorisation.ts`, `src/services/reauthentification.ts`, `src/instrumentation.ts` depuis LS-229 |
 
 Une session qui conçoit sur un domaine sans toucher aux chemins de sa règle doit
 la lire explicitement. Chaque motif `paths` doit matcher au moins un fichier
