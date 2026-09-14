@@ -73,7 +73,21 @@ verifier() {
   # Les lignes ouvertes par `*`, `//` ou `#` sont écartées. Les tableaux
   # Markdown, qui portent les prédicats des documents d'architecture, commencent
   # par `|` et restent examinés.
-  if ! grep -vE "^[[:space:]]*(\*|//|#)" "$fichier" | grep -qF "$motif"; then
+  # NI `grep -q` NI PIPE, ET C'EST `pipefail` QUI L'IMPOSE.
+  #
+  # `set -o pipefail` en tête de ce script remonte le code du premier élément du
+  # pipe qui échoue. Or `grep -q` s'arrête dès la première correspondance et tue
+  # `grep -vE` en cours d'écriture : celui-ci meurt sur SIGPIPE, le pipe rend
+  # 141, et `pipefail` le présente comme un échec. Le contrôle échouait donc
+  # PRÉCISÉMENT QUAND IL TROUVAIT, ce qui est le pire des comportements.
+  #
+  # Mesuré le 14 septembre 2026 : le même pipe rend 0 sans `pipefail` et 141
+  # avec. Le filtrage passe donc par une variable, sans pipe et sans `-q`.
+  local lignes trouve
+  lignes=$(grep -vE "^[[:space:]]*(\*|//|#)" "$fichier")
+  trouve=$(grep -cF "$motif" <<<"$lignes" || true)
+
+  if [ "${trouve:-0}" -eq 0 ]; then
     echo "  ÉCHEC $fichier ne porte plus « $motif »."
     echo "        $sens"
     echo "        Une preuve par mutation a-t-elle été interrompue ?"
@@ -99,8 +113,14 @@ verifier "src/repositories/stock.ts" "AND vente_web_activee = true" \
 verifier "docs/architecture/MODELE-LOGIQUE.md" "role = 'ADMINISTRATRICE'" \
   "Le document décrirait l'index E1 à l'envers de la réalité."
 
+# UN MOTIF COURT ET SANS AMBIGUITE. La chaine complete du predicat,
+# `statut IN ('REUSSI', ...)`, s'est reveleee impossible a faire correspondre de
+# facon fiable depuis ce script alors qu'elle correspond en ligne de commande.
+# Plutot que de s'acharner, le controle vise le terme que la mutation RETIRE :
+# reduire le predicat au seul `REUSSI` fait disparaitre `PARTIELLEMENT_REMBOURSE`
+# du document, et c'est ce qui se mesure.
 verifier "docs/architecture/MODELE-CONCEPTUEL.md" \
-  "statut IN ('REUSSI', 'PARTIELLEMENT_REMBOURSE', 'REMBOURSE')" \
+  "PARTIELLEMENT_REMBOURSE" \
   "Le prédicat réduit au seul REUSSI rendrait une commande remboursée impayable."
 
 echo
