@@ -218,33 +218,42 @@ attendre_echec "test naviguant vers une rubrique absente de la barre"
 # fois dans le code : une substitution globale muterait les deux, et celle du
 # commentaire ne change rien. La cible porte donc le `awk` qui l'entoure.
 # Motif « contrôle satisfait par un commentaire », pris dans l'autre sens.
-# LA LISTE EST PEUPLÉE AVANT D'ÉLARGIR L'ANCRAGE, LS-230.
+# LA MUTATION REND LA DÉCLARATION MONOLIGNE AVANT D'ÉLARGIR L'ANCRAGE, LS-230.
+#
+# DEUX RAISONS SE CUMULAIENT, et la première masquait la seconde.
 #
 # `RUBRIQUES_A_VENIR` EST VIDE depuis le 11 septembre 2026, LS-98 : « Paramètres »
 # a été la cinquième et dernière entrée à la quitter. Élargir l'ancrage à une
-# liste vide ne change alors RIEN d'observable, le contrôle reste vert à juste
-# titre, et le cas s'annonçait comme un trou du contrôle quand il n'était qu'une
-# mutation sans effet.
+# liste vide ne changeait donc rien d'observable.
 #
-# Mesuré le 14 septembre 2026 : le `cksum` voyait bien le fichier changer, donc
-# le garde-fou de mutation morte ne pouvait pas le voir. Une mutation peut muter
-# ET ne rien prouver, motif « mutation sans effet observable » pris un cran plus
-# loin.
+# Et une fois la liste peuplée, l'élargissement restait SANS EFFET : l'ancrage
+# du sens 5 exige `= [` sur la MÊME ligne que le nom, or la déclaration de
+# `RUBRIQUES_A_VENIR` est multiligne, son type occupant quatre lignes. Passer
+# `[^_A-Z]` à `[^Z]` ne pouvait donc pas la faire entrer, quelle que soit la
+# largeur du motif.
 #
-# La mutation ajoute donc une entrée à la liste avant d'élargir l'ancrage : le
-# contrôle doit alors accuser cette entrée, que son motif cesse d'exclure.
+# La mutation reproduit les deux conditions réelles : une entrée dans la liste,
+# ET une déclaration monoligne, forme qu'un refactoring rendrait sans y penser.
+# Le contrôle doit alors accuser « Journal », que son motif cesse d'exclure.
+#
+# Mesuré le 14 septembre 2026 : sans ces deux conditions, le cas s'annonçait
+# comme un trou du contrôle quand il n'était qu'une mutation sans effet. Le
+# `cksum` voyait le fichier changer, donc le garde-fou de mutation morte ne
+# pouvait pas le voir. Une mutation peut muter ET ne rien prouver.
 muter_ancrage_sens5() {
   local avant avant_nav
+
   avant=$(cksum <"$CONTROLE")
   avant_nav=$(cksum <"$NAVIGATION")
 
-  # Une rubrique à venir, la forme exacte que reprendrait une douzième rubrique
-  # décidée : l'en-tête de `RUBRIQUES_A_VENIR` décrit ce retour.
-  perl -0pi -e 's/(RUBRIQUES_A_VENIR.*?\Q}[] = [\E\n)/$1  { libelle: "Journal", ticket: "LS-999" },\n/s' "$NAVIGATION"
+  # La déclaration devient monoligne, et reçoit une entrée. C'est la forme
+  # qu'aurait une douzième rubrique décidée, sur un fichier dont le type aurait
+  # été replié.
+  perl -0pi -e 's/export const RUBRIQUES_A_VENIR.*?\Q}[] = [\E\n/export const RUBRIQUES_A_VENIR: readonly { libelle: string; ticket: string }[] = [\n  { libelle: "Journal", ticket: "LS-999" },\n/s' "$NAVIGATION"
 
   if [ "$(cksum <"$NAVIGATION")" = "$avant_nav" ]; then
-    echo "ECHEC la mutation du cas 7 n'a rien ajouté à RUBRIQUES_A_VENIR"
-    echo "      la forme de la liste a changé : corriger ce script."
+    echo "ECHEC la mutation du cas 7 n'a pas replié RUBRIQUES_A_VENIR"
+    echo "      la forme de la déclaration a changé : corriger ce script."
     exit 1
   fi
 
