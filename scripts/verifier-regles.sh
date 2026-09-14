@@ -345,11 +345,23 @@ nb_dossiers=0
 if [ -d "$RACINE/src" ]; then
   # Tous les `paths` déclarés, dépouillés de leurs guillemets et de leur glob.
   # Seul le préfixe de dossier compte : `src/lib/**/*.ts` couvre `src/lib`.
+  # SEULS LES `paths` QUI VISENT DU TYPESCRIPT COMPTENT, LS-230.
+  #
+  # Le nettoyage du glob perd l'extension : `"src/**/*.css"`, déclaré par
+  # `frontend-design.md`, devenait `src` tout court. Ce dossier couvrait alors
+  # TOUS les autres comme parent, et ce sens ne pouvait plus rougir sur aucune
+  # mutation. Mesuré le 14 septembre 2026 : retirer le `paths` de `src/lib`
+  # laissait le contrôle annoncer « 83 dossiers, tous couverts ».
+  #
+  # Un `paths` en `*.css` ne fait charger aucune règle à qui édite un `.ts` du
+  # même dossier : le filtre garde donc ce qui vise `.ts`, `.tsx`, ou un chemin
+  # sans extension du tout.
   chemins_regles="$(mktemp)"
   for f in "$REGLES"/*.md; do
     [ -e "$f" ] || continue
     sed -n '1,/^---$/p' "$f" \
       | grep -oE '"[^"]+"' | tr -d '"' \
+      | grep -vE '\.(css|md|json|ya?ml|sh|sql|prisma)$' \
       | sed -E 's#/\*.*$##; s#/$##'
   done | sort -u > "$chemins_regles"
 
@@ -370,7 +382,23 @@ if [ -d "$RACINE/src" ]; then
     # `integrations/medias.ts` à la racine, ce fichier n'entrerait dans le
     # `paths` d'aucune règle, et c'est précisément le trou de LS-88. La
     # tolérance s'arrête donc là où un fichier réel apparaît.
-    propres=$(find "$dossier" -maxdepth 1 \( -name '*.ts' -o -name '*.tsx' \) | wc -l | tr -d ' ')
+    # LES FICHIERS NOMMÉS UN À UN COMPTENT COMME COUVERTS, LS-230.
+    #
+    # `propres` comptait TOUT fichier TypeScript à la racine du dossier, y
+    # compris ceux qu'un `paths` désigne nommément. `src/` porte ainsi
+    # `proxy.ts` et `instrumentation.ts`, tous deux listés dans `securite.md` :
+    # le dossier était compté non vide, la tolérance « descendant » ne
+    # s'appliquait pas, et il s'annonçait découvert alors que chacun de ses
+    # fichiers l'est.
+    #
+    # Ne restent donc comptés que les fichiers qu'AUCUN `paths` ne nomme : ce
+    # sont eux, et eux seuls, qui feraient éditer du code sans charger de règle.
+    propres=0
+    while IFS= read -r fichier; do
+      [ -n "$fichier" ] || continue
+      chemin_rel=${fichier#"$RACINE"/}
+      grep -qxF "$chemin_rel" "$chemins_regles" || propres=$((propres+1))
+    done < <(find "$dossier" -maxdepth 1 \( -name '*.ts' -o -name '*.tsx' \))
 
     if ! awk -v d="$rel" -v vide="$propres" '
       {

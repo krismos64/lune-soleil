@@ -9,6 +9,7 @@ paths:
   - "src/app/api/auth/**/*.ts"
   - "src/app/api/interne/**/*.ts"
   - "src/proxy.ts"
+  - "src/instrumentation.ts"
 ---
 
 # Socle technique, authentification et secrets
