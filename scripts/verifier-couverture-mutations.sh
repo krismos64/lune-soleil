@@ -201,7 +201,11 @@ while IFS= read -r preuve; do
   # sans accent, et `verifier-loading-et-404-mutation.sh` garde sa cible par
   # « fichier illisible ». Toutes deux passaient pour dépourvues de garde-fou.
   # L'ancrage trop étroit, dans le contrôle même qui traque ce défaut.
-  if grep -qiE "cksum|md5sum|md5 -q|introuvable|illisible|inchang|identique|aucun fichier|n.a (modifi|rien|chang)" \
+  #
+  # `git ls-files --error-unmatch` compte aussi : `verifier-graphie-marque` s'en
+  # sert pour refuser une cible que git ne suit pas, ce qui garantit qu'elle
+  # existe. La forme diffère, le sens est le même.
+  if grep -qiE "cksum|md5sum|md5 -q|introuvable|illisible|inchang|identique|aucun fichier|n.a (modifi|rien|chang)|git ls-files --error-unmatch" \
     "scripts/$preuve" 2>/dev/null; then
     avec_garde=$((avec_garde + 1))
   else

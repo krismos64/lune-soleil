@@ -20,6 +20,19 @@ set -uo pipefail
 RACINE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCRIPT="$RACINE/scripts/migrate-production.sh"
 
+# LA CIBLE DOIT EXISTER AVANT DE MUTER, LS-230.
+#
+# Une mutation dont le fichier a disparu ne mute RIEN : le contrôle reste vert,
+# et le cas s'annonce comme un trou du contrôle alors que c'est la preuve qui
+# est morte. Deux preuves de ce dépôt mutaient des `loading.tsx` retirés par
+# C32, et personne ne l'a su tant qu'elles ne tournaient nulle part.
+if [ ! -r "$SCRIPT" ]; then
+  echo "ECHEC cible introuvable : $SCRIPT"
+  echo "      le chemin a change : cette preuve ne muterait rien, et son vert"
+  echo "      ressemblerait a un succes."
+  exit 1
+fi
+
 BAC=$(mktemp -d)
 # UNE INTERRUPTION DOIT SORTIR, PAS SEULEMENT RESTAURER, LS-230.
 #

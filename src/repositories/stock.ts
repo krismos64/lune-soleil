@@ -49,7 +49,7 @@ export const SQL_RESERVER = `
     UPDATE variante
     SET quantite_reservee = quantite_reservee + $3
     WHERE id = $1
-      AND vente_web_activee = true
+      AND archivee_a IS NULL
       AND quantite_physique - quantite_reservee >= $3
     RETURNING id
   )
