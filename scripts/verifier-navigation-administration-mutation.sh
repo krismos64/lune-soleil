@@ -240,7 +240,7 @@ muter_ancrage_sens5() {
 
   # Une rubrique à venir, la forme exacte que reprendrait une douzième rubrique
   # décidée : l'en-tête de `RUBRIQUES_A_VENIR` décrit ce retour.
-  perl -0pi -e 's/(\}\[\] = \[\n)/$1  { libelle: "Journal", ticket: "LS-999" },\n/' "$NAVIGATION"
+  perl -0pi -e 's/(RUBRIQUES_A_VENIR.*?\Q}[] = [\E\n)/$1  { libelle: "Journal", ticket: "LS-999" },\n/s' "$NAVIGATION"
 
   if [ "$(cksum <"$NAVIGATION")" = "$avant_nav" ]; then
     echo "ECHEC la mutation du cas 7 n'a rien ajouté à RUBRIQUES_A_VENIR"

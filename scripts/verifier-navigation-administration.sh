@@ -206,7 +206,19 @@ fi
 # serait attrapée par le sens 1 ; une entrée à qui l'on ajoute un `chemin` sur
 # place ne le serait par rien.
 # ---------------------------------------------------------------------------
-if awk '/^export const RUBRIQUES_A_VENIR[^=]*= \[/,/^\] as const;/' "$NAVIGATION" \
+# L'ANCRAGE PART DU NOM ET S'ARRÊTE À LA FERMETURE, LS-230.
+#
+# Sa version précédente exigeait `RUBRIQUES_A_VENIR[^=]*= [` sur UNE ligne. La
+# déclaration est multiligne, son type occupant quatre lignes avant le `= [` :
+# l'`awk` ne matchait donc jamais, et ce sens ne lisait rien. Mesuré le
+# 14 septembre 2026 en peuplant la liste, il restait muet.
+#
+# L'ancrage démarre au nom seul et court jusqu'à la fermeture, ce qui absorbe
+# toute forme d'annotation de type. Motif « ancrage trop étroit », en fiche.
+#
+# PAS DE `\b` : `awk` ne connaît pas ce délimiteur de mot et le motif rendrait
+# ZÉRO ligne, donc un sens muet de plus. Mesuré : 0 ligne avec, 25 sans.
+if awk '/^export const RUBRIQUES_A_VENIR/,/^\] as const;/' "$NAVIGATION" \
   | grep -q 'chemin:'; then
   echo "ECHEC une rubrique « à venir » porte un chemin"
   echo "      ces entrées désignent des écrans NON LIVRÉS : un chemin en"
