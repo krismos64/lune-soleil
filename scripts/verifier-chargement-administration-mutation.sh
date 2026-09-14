@@ -23,12 +23,20 @@ cd "$RACINE" || exit 1
 CONTROLE="./scripts/verifier-chargement-administration.sh"
 ADMIN="src/app/administration"
 
-# LS-188 A RETIRÉ `commandes/loading.tsx` EN COURS DE ROUTE, son segment
-# couvrant `commandes/[id]` qui appelle `notFound()`. La cible est donc un
-# écran de liste dont AUCUN descendant n'appelle `notFound()`.
-LOADING_LISTE="$ADMIN/factures/loading.tsx"
+# LA CIBLE DU CAS 1 EST UN `<Suspense>`, PLUS UN `loading.tsx`, LS-230.
+#
+# La version précédente supprimait `factures/loading.tsx` pour simuler l'oubli
+# d'un écran. Ce fichier n'existe plus, ni lui ni aucun autre : C32 les a tous
+# fait retirer, et le contrôle compte aujourd'hui « 0 avec loading.tsx, 19 avec
+# <Suspense> interne ». Le script s'arrêtait donc sur son propre garde-fou de
+# présence, sans jamais muter, motif « contrôle de mutation mort ».
+#
+# La forme exacte de l'oubli est désormais un écran de liste qui perd son
+# `<Suspense>`, et `factures` reste le bon choix : aucun de ses descendants
+# n'appelle `notFound()`, à la différence de `commandes/[id]`.
+PAGE_LISTE="$ADMIN/factures/page.tsx"
 PAGE_DETAIL="$ADMIN/produits/[id]/page.tsx"
-LOADING_CLIENTS="$ADMIN/clients/loading.tsx"
+PAGE_CLIENTS="$ADMIN/clients/page.tsx"
 PARTAGE="src/components/chargement-administration.tsx"
 
 detectes=0
@@ -42,9 +50,9 @@ SAUVEGARDE="$(mktemp -d)"
 mkdir -p "$SAUVEGARDE/copies"
 
 declare -a MUTABLES=(
-  "$LOADING_LISTE"
+  "$PAGE_LISTE"
   "$PAGE_DETAIL"
-  "$LOADING_CLIENTS"
+  "$PAGE_CLIENTS"
   "$PARTAGE"
 )
 
@@ -106,12 +114,12 @@ echo
 # ---------------------------------------------------------------------------
 # CAS 1 : un écran perd son état de chargement.
 #
-# C'est le défaut d'origine, celui que quinze écrans portaient. Le fichier est
-# retiré, pas vidé : c'est la forme exacte que prendrait l'oubli du seizième
-# écran, qui n'écrirait simplement jamais le sien.
+# C'est le défaut d'origine, celui que quinze écrans portaient. Le `<Suspense>`
+# et son fallback sont retirés d'un bloc : c'est la forme exacte que prendrait
+# l'oubli d'un écran neuf, qui n'en écrirait simplement jamais.
 # ---------------------------------------------------------------------------
-rm -f "$LOADING_LISTE"
-essayer "un écran en force-dynamic perd son loading.tsx"
+perl -0777 -i -pe 's{<Suspense fallback=\{<\w+ */>\}>(.*?)</Suspense>}{$1}s' "$PAGE_LISTE"
+essayer "un écran en force-dynamic perd son état de chargement"
 
 # ---------------------------------------------------------------------------
 # CAS 2 : un écran à `notFound()` TROQUE son `<Suspense>` contre un
@@ -165,7 +173,7 @@ essayer "l'écran de détail perd son <Suspense> interne"
 # l'import, donc le nom, donc un contrôle vert sur un fichier cassé : motif
 # « mutation sans effet observable », en fiche.
 # ---------------------------------------------------------------------------
-perl -0777 -i -pe 's/ChargementAdministration/ArmatureLocale/g' "$LOADING_CLIENTS"
+perl -0777 -i -pe 's/ChargementAdministration/ArmatureLocale/g' "$PAGE_CLIENTS"
 essayer "un écran réécrit son armature au lieu du composant partagé"
 
 # ---------------------------------------------------------------------------
