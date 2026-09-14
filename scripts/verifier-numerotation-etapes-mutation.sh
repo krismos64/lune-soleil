@@ -56,7 +56,7 @@ TEMOIN=".github/workflows/temoin-mutation-ls202.yml"
 }
 
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"; rm -f "$TEMOIN"' EXIT
+trap 'rm -rf "$TMP"; rm -f "$TEMOIN"' EXIT INT TERM
 cp "$CIBLE" "$TMP/controles.yml"
 
 restaurer() {

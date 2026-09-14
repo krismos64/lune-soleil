@@ -40,7 +40,7 @@ for f in "${MUTABLES[@]}"; do
 done
 
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
+trap 'rm -rf "$TMP"' EXIT INT TERM
 
 cle() { printf '%s' "$1" | tr '/[]' '___'; }
 for f in "${MUTABLES[@]}"; do cp "$f" "$TMP/$(cle "$f")"; done

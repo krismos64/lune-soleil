@@ -43,7 +43,7 @@ nettoyer() {
 
 [ -r "$NOT_FOUND" ] || { echo "ECHEC fichier illisible : $NOT_FOUND"; exit 1; }
 cp "$NOT_FOUND" "$SAUVEGARDE/not-found"
-trap nettoyer EXIT
+trap nettoyer EXIT INT TERM
 
 # Appelé SANS pipe vers grep : le pipe renverrait le code de grep et non celui
 # du contrôle, ce qui avait fait passer sept mutations pour « non détectées » à

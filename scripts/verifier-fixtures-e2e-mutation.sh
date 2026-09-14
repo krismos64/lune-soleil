@@ -45,7 +45,7 @@ echo "État de référence : contrôle vert."
 restaurer() {
   git checkout -- "$CIBLE"
 }
-trap restaurer EXIT
+trap restaurer EXIT INT TERM
 
 # ---------------------------------------------------------------------------
 # MUTATION 1 : l'adresse redevient horodatée, le défaut historique exact.

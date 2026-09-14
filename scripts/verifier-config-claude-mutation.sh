@@ -39,7 +39,7 @@ nettoyer() {
   git checkout -- CLAUDE.md docs/REFERENCES.md README.md .claude/settings.json \
     .claude/rules/payments.md 2>/dev/null || true
 }
-trap nettoyer EXIT
+trap nettoyer EXIT INT TERM
 
 total=0
 detectees=0

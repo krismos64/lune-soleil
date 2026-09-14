@@ -36,7 +36,7 @@ restaurer() {
   git checkout HEAD -- "${MUTABLES[@]}" 2>/dev/null
 }
 
-trap restaurer EXIT
+trap restaurer EXIT INT TERM
 
 # L'ARBRE DOIT ETRE PROPRE SUR LES FICHIERS MUTABLES, et le script refuse de
 # tourner sinon. C'est la seconde moitie de la lecon ci-dessus : restaurer

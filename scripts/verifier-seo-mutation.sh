@@ -39,7 +39,7 @@ MUTABLES=(
 restaurer() {
   git checkout -- "${MUTABLES[@]}" 2>/dev/null || true
 }
-trap restaurer EXIT
+trap restaurer EXIT INT TERM
 
 # L'arbre doit être propre sur les fichiers mutés, sans quoi la restauration
 # écraserait du travail non commité. Motif « travail non commité perdu ».

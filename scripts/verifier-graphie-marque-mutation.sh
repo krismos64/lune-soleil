@@ -58,7 +58,7 @@ fi
 restaurer() {
   git checkout -- "${MUTABLES[@]}" "$CONTROLE" 2>/dev/null
 }
-trap restaurer EXIT
+trap restaurer EXIT INT TERM
 
 if ! $CONTROLE >/dev/null 2>&1; then
   echo "ÉCHEC : le contrôle est déjà rouge avant toute mutation."

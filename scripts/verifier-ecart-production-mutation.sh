@@ -39,7 +39,7 @@ cp "$WORKFLOW" "$SAUVEGARDE"
 
 restaurer() { cp "$SAUVEGARDE" "$WORKFLOW"; }
 nettoyer() { restaurer; rm -rf "$TMP"; }
-trap nettoyer EXIT
+trap nettoyer EXIT INT TERM
 
 echecs=0
 mutations=0

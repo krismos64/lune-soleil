@@ -34,7 +34,7 @@ nettoyer() {
     docker rmi -f "$t" >/dev/null 2>&1
   done
 }
-trap nettoyer EXIT
+trap nettoyer EXIT INT TERM
 
 command -v docker >/dev/null 2>&1 || {
   echo "ABANDON : docker est introuvable."

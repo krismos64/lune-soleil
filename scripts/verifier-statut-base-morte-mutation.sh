@@ -20,7 +20,7 @@ RACINE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONTROLE="$RACINE/scripts/verifier-statut-base-morte.sh"
 
 BAC=$(mktemp -d)
-trap 'rm -rf "$BAC"' EXIT
+trap 'rm -rf "$BAC"' EXIT INT TERM
 
 ECHECS=0
 CAS=0

@@ -30,7 +30,7 @@ set -uo pipefail
 RACINE="$(cd "$(dirname "$0")/.." && pwd)"
 
 BAC="$(mktemp -d "${TMPDIR:-/tmp}/ls156-XXXXXX")"
-trap 'rm -rf "$BAC"' EXIT
+trap 'rm -rf "$BAC"' EXIT INT TERM
 
 mkdir -p "$BAC/scripts"
 cp "$RACINE/scripts/$SCRIPT_CIBLE" "$BAC/scripts/"
@@ -310,7 +310,7 @@ FAUX_SECRET="${pre_s}${pre_k}_test_$(printf 'Z%.0s' {1..24})"
 # montre. Verifie avant d'ecrire ce cas plutot que suppose.
 perl -e 'sleep 30' -- --api-key "$FAUX_SECRET" &
 PID_TEMOIN=$!
-trap 'kill "$PID_TEMOIN" 2>/dev/null; rm -rf "$BAC"' EXIT
+trap 'kill "$PID_TEMOIN" 2>/dev/null; rm -rf "$BAC"' EXIT INT TERM
 
 # Laisser `ps` voir le processus avant de mesurer. Sans cette attente, le cas
 # echouerait par intermittence sur une machine chargee, et l'echec ressemblerait
@@ -325,7 +325,7 @@ jouer "un processus porte un secret en ligne de commande" \
 
 kill "$PID_TEMOIN" 2>/dev/null
 wait "$PID_TEMOIN" 2>/dev/null
-trap 'rm -rf "$BAC"' EXIT
+trap 'rm -rf "$BAC"' EXIT INT TERM
 
 # ---------------------------------------------------------------------------
 # Verdict
