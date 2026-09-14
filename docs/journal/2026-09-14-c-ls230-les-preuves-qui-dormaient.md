@@ -112,9 +112,37 @@ La suite d'intégration échoue de façon variable. Mesuré sur `main` : **21 é
 contre 1 ou 2 sur cette branche, et les mêmes tests passent isolément. La base
 éphémère est partagée, motif déjà en fiche. Sans rapport avec ce ticket.
 
+## Trois échecs de CI, et ce qu'ils ont appris
+
+La CI a rougi trois fois, et chaque fois sur un défaut que seule elle pouvait
+voir. C'est la meilleure justification du ticket.
+
+**`sed -i ''`**, syntaxe BSD, échouait sur le runner Linux : la substitution ne
+mutait rien. Cette preuve n'avait jamais tourné en CI.
+
+**Une variable héritée masquait la mutation** : la CI écrit `DATABASE_URL` dans
+l'environnement, et le contrôle lisant `process.env` y trouvait une URL valide au
+lieu de celle mutée dans le bac à sable. En local la variable n'existe pas, donc
+le cas passait.
+
+**`stock.ts` était muté dans `HEAD`** alors que mon fichier de travail était sain.
+Deux commits avaient ré-emporté une mutation déjà restaurée : je vérifiais mon
+fichier, pas ce que je poussais. Le contrôle d'absence de mutation résiduelle a
+rougi dessus depuis la CI.
+
+**Le geste à retenir** : vérifier `HEAD` sur un export isolé, `git archive HEAD |
+tar -x -C`, et non le répertoire de travail. Les deux diffèrent précisément quand
+ça compte.
+
 ## Prochaine étape
 
-PR #440 ouverte, 27 commits. Aucun code source modifié hors le rattachement
-d'`instrumentation.ts` à `securite.md`.
+**PR #440 fusionnée** sur `main` en rebase, SHA `e503edf`, 31 commits, huit
+contrôles verts en 13 min 52. Les quatre nouvelles étapes vérifiées une à une
+dans le détail du job.
 
-Comptes relevés dans Jira, jamais déduits : à mesurer à la clôture.
+**LS-231 créé** : la suite d'intégration échoue de façon variable, 21 tests sur
+`main` et jamais les mêmes, sur la zone la plus critique du projet. Mesuré
+pendant cette session, sans rapport avec elle, et non traité ici.
+
+Comptes relevés dans Jira après clôture, jamais déduits : **197 terminés sur 221
+hors epics**, **24 ouverts**. LS-230 en sort, LS-231 y entre.
