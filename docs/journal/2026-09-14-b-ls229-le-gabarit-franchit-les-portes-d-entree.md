@@ -168,8 +168,20 @@ connexion l'affiche désormais en grand : l'enjeu d'allégation trompeuse porté
 
 ## Prochaine étape
 
-PR #438 ouverte. LS-218, expédition Sendcloud, reste le chantier de code ouvert
-qui ne dépend d'aucune réponse de l'exploitante.
+**PR #438 fusionnée** sur `main` en rebase, SHA `ad6b51a`, les huit contrôles au
+vert en 15 min 41. Vérifié dans le détail du job et non déduit du vert global :
+l'étape « 9z septies bis », la preuve par mutation ajoutée cette session, s'est
+bien exécutée.
 
-Comptes relevés dans Jira, jamais déduits : **195 terminés sur 219 hors epics**,
-**24 ouverts**, dont **10 En cours** depuis que LS-229 y est passée.
+**LS-229 est close.** LS-218, expédition Sendcloud, reste le chantier de code
+ouvert qui ne dépend d'aucune réponse de l'exploitante. **LS-230** attend, le
+chantier des preuves par mutation dormantes.
+
+Un point reste à arbitrer par Christophe, signalé dans le ticket plutôt que
+tranché : les pages publiques gardent trois échelles de titre selon leur densité,
+quand C42 écrit « une échelle par espace, et une seule ». Le resserrer changerait
+le rendu de huit pages.
+
+Comptes relevés dans Jira après clôture, jamais déduits : **196 terminés sur 220
+hors epics**, **24 ouverts**, dont **9 En cours**. Le nombre d'ouverts n'a pas
+bougé, LS-229 en sortant et LS-230 y entrant.
