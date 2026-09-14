@@ -63,8 +63,8 @@ historique, passaient alors pour écartées. Un récit n'est pas une décision.
 ## Comment les quarante-trois se répartissent
 
 **Vingt-deux par PR**, `controles.yml`, étape « 9z octies » plus les étapes
-nommées : **63 s** au total pour les rapides, sur une CI qui en dure environ neuf
-cents quand le code change.
+nommées : **82 s** mesurées en les enchaînant, sur une CI qui en dure environ
+neuf cents quand le code change.
 
 **Vingt et une au nocturne**, `nocturne.yml`, dont les six lourdes qui pèsent
 **1008 s** à elles seules :

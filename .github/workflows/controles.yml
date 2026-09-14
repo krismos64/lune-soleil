@@ -1349,7 +1349,7 @@ jobs:
       # ne protege rien : elle se perime en silence, et son vert ressemble a un
       # succes.
       #
-      # DUREE MESUREE : 63 s pour les vingt-deux, sur une CI qui en dure
+      # DUREE MESUREE : 82 s pour les vingt-deux enchainees, sur une CI qui en dure
       # environ neuf cents quand le code change. Les trois plus lourdes, 513 s a
       # elles seules, sont au nocturne : `docs/PREUVES-PAR-MUTATION.md` porte le
       # tri et le motif de chaque ecart.
