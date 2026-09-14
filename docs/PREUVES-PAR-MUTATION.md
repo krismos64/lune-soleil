@@ -11,7 +11,7 @@ sa raison.
 
 ## Ce que l'inventaire de LS-230 a trouvé
 
-Mesuré le 14 septembre 2026 : le dépôt portait **quarante-trois preuves**,
+Mesuré le 14 septembre 2026 : le dépôt portait **quarante-trois preuves**, quarante-quatre depuis,
 l'intégration continue en rejouait **quinze**. Sur les vingt-huit dormantes,
 **cinq étaient cassées** sans que personne ne le sache, et chacune autrement.
 
@@ -46,8 +46,8 @@ ne pouvait pas produire son effet, et s'annonçait comme un trou du contrôle.
 
 ## Les preuves écartées, et leur raison
 
-**Aucune, au 14 septembre 2026.** Les quarante-trois preuves du dépôt tournent,
-vingt-deux par PR et vingt et une au nocturne.
+**Aucune, au 15 septembre 2026.** Les **quarante-quatre** preuves du dépôt
+tournent, **trente-huit par PR et six au nocturne**.
 
 Cette section reste ouverte : une preuve peut légitimement ne pas pouvoir entrer
 en intégration continue, et l'écart s'écrira ici avec son motif. Une exemption
@@ -60,14 +60,27 @@ document. Une première version du contrôle cherchait le nom dans tout le
 registre : les cinq preuves réparées plus haut, citées dans leur tableau
 historique, passaient alors pour écartées. Un récit n'est pas une décision.
 
-## Comment les quarante-trois se répartissent
+## Comment les quarante-quatre se répartissent
 
-**Vingt-deux par PR**, `controles.yml`, étape « 9z octies » plus les étapes
-nommées : **82 s** mesurées en les enchaînant, sur une CI qui en dure environ
-neuf cents quand le code change.
+**Trente-huit par PR**, `controles.yml` : **vingt-deux** groupées dans l'étape
+« 9z octies », qui pèsent **82 s** mesurées en les enchaînant, et **seize** en
+étapes nommées, chacune posée par la story qui l'a écrite. Sur une CI qui dure
+environ neuf cents secondes quand le code change.
 
-**Vingt et une au nocturne**, `nocturne.yml`, dont les six lourdes qui pèsent
-**1008 s** à elles seules :
+LE COMPTE SE MESURE, IL NE SE LIT PAS DANS UNE SEULE ÉTAPE :
+
+```
+grep -oE 'verifier-[a-z0-9-]+-mutation\.sh' .github/workflows/controles.yml | sort -u | wc -l
+```
+
+Une première version de ce document annonçait « vingt-deux par PR », le chiffre
+de la seule étape groupée, en oubliant les seize nommées. Le motif est en
+mémoire, « compter ne vérifie pas le contenu » : un nombre écrit en toutes
+lettres n'est ancré par rien, et `verifier-couverture-mutations.sh` lit des noms
+de fichiers, jamais un récit.
+
+**Six au nocturne**, `nocturne.yml`, les six lourdes qui pèsent **1013 s** à
+elles seules :
 
 | Preuve | Durée mesurée | Ce qui la rend lourde |
 |---|---|---|

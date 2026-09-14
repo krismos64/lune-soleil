@@ -94,8 +94,10 @@ qu'une preuve ne vérifie pas avoir muté.
 
 **`docs/PREUVES-PAR-MUTATION.md`**, la source unique du tri.
 
-**Les 44 preuves tournent** : 22 par PR, 82 s mesurées, et 22 au nocturne dont
-six lourdes qui pèsent 1008 s à elles seules.
+**Les 44 preuves tournent** : 38 par PR et 6 au nocturne. Le partage a d'abord
+été écrit « 22 par PR et 22 au nocturne », le chiffre de la seule étape groupée,
+en oubliant les seize étapes nommées. Corrigé le 15 septembre 2026, et le compte
+se mesure désormais par `grep` sur les workflows plutôt qu'à la main.
 
 ## Une mesure qui a corrigé une supposition
 
