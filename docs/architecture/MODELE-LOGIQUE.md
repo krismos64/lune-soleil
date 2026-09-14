@@ -158,7 +158,7 @@ niveau 1, garanti par la base.
 | `journal_email_systeme_unique` | `statut = 'ENVOYE' AND origine IN ('SYSTEME','RECONCILIATION')` | E5, décision D |
 | `envoi_en_attente_actif_unique` | `statut IN ('EN_ATTENTE','ENVOI_EN_COURS')` | E5, ADR-033, première ligne de défense |
 | `adresse_defaut_unique` | `est_par_defaut` | A2, une adresse par défaut |
-| `utilisateur_administratrice_unique` | `role = 'CLIENT'` | E1, ADR-023 |
+| `utilisateur_administratrice_unique` | `role = 'ADMINISTRATRICE'` | E1, ADR-023 |
 | `mouvement_compense_unique` | `compense_id IS NOT NULL` | ADR-030, un mouvement ne compense qu'une fois |
 | `alerte_ouverte_unique` | `acquittee_a IS NULL`, `NULLS NOT DISTINCT` | LS-131, une alerte ouverte par type et cible |
 
