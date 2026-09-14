@@ -17,6 +17,19 @@
 #   cas 3   le layout perd sa règle héritée, ce qui rouvre le défaut sur
 #           TOUS les écrans d'un coup
 #
+# LES CAS 5 À 7 ÉPROUVENT LE SENS 4, AJOUTÉ PAR LS-229. Ils gardent le périmètre
+# qu'aucun layout n'atteint, pages publiques et écrans sans session, et leurs
+# formes viennent de l'état mesuré sur la production le 14 septembre 2026 :
+#
+#   cas 5   la règle globale garde sa forme mais perd son jeton, exactement
+#           l'état d'avant LS-229 où le jeton existait sans être atteint
+#   cas 6   l'échelle du titre d'écran disparaît, et un `h1` nu retombe à la
+#           taille par défaut du navigateur ; `administration/connexion` en
+#           porte un
+#   cas 7   un module PUBLIC repose une police sur son titre, récidive de
+#           LS-228 transposée : une seule recopie rouvre le défaut par
+#           spécificité
+#
 # LE CAS 4 GARDE LE CONTRÔLE CONTRE LUI-MÊME. Un ancrage cassé le rendrait
 # silencieusement vert, motif payé sur ce dépôt avec
 # `verifier-navigation-administration.sh` dont l'`awk` ne trouvait plus son
@@ -32,6 +45,8 @@ cd "$(dirname "$0")/.." || exit 1
 CONTROLE="./scripts/verifier-gabarit-titre.sh"
 LAYOUT_ADMIN="src/app/administration/layout.module.css"
 CIBLE="src/app/administration/messages/messages.module.css"
+GLOBAL="src/app/globals.css"
+CIBLE_PUBLIQUE="src/app/(boutique)/catalogue/catalogue.module.css"
 
 echec=0
 
@@ -43,7 +58,7 @@ if ! git diff --quiet || ! git diff --cached --quiet; then
 fi
 
 restaurer() {
-  git checkout -- "$LAYOUT_ADMIN" "$CIBLE" 2>/dev/null
+  git checkout -- "$LAYOUT_ADMIN" "$CIBLE" "$GLOBAL" "$CIBLE_PUBLIQUE" 2>/dev/null
 }
 trap restaurer EXIT
 
@@ -88,6 +103,18 @@ eprouver 3 "le layout d'administration perd sa règle héritée"
 perl -0pi -e 's/(\.colonne h1 \{[^}]*?)  font-family: var\(--ls-police-titre\);\n/$1/ms' "$LAYOUT_ADMIN"
 eprouver 4 "la règle héritée existe mais n'emploie plus le jeton"
 
+# --- cas 5 : la règle globale garde sa forme mais perd son jeton, LS-229
+perl -0pi -e 's/(^h1,\nh2,\nh3 \{\n)  font-family: var\(--ls-police-titre\);\n/$1/ms' "$GLOBAL"
+eprouver 5 "la règle globale existe mais n'emploie plus le jeton"
+
+# --- cas 6 : l'échelle du titre d'écran disparaît, LS-229
+perl -0pi -e 's/^h1 \{\n  font-size: clamp\([^)]*\);\n\}\n//ms' "$GLOBAL"
+eprouver 6 "l'échelle du titre d'écran disparaît"
+
+# --- cas 7 : un module PUBLIC repose une police sur son titre, LS-229
+perl -0pi -e 's/(^\.titre \{\n)/$1  font-family: Georgia, serif;\n/ms' "$CIBLE_PUBLIQUE"
+eprouver 7 "un module public repose font-family sur son titre"
+
 echo
 
 if [ "$echec" -gt 0 ]; then
@@ -96,4 +123,4 @@ if [ "$echec" -gt 0 ]; then
   exit 1
 fi
 
-echo "OK : les quatre mutations sont détectées, le contrôle tient."
+echo "OK : les sept mutations sont détectées, le contrôle tient."
