@@ -1381,6 +1381,22 @@ jobs:
           ./scripts/verifier-ponctuation-chargement-mutation.sh
           ./scripts/verifier-chargement-administration-mutation.sh
           ./scripts/verifier-registre-traitements-mutation.sh
+
+      # ----------------------------------------------------------------------
+
+      # LA COUVERTURE DES PREUVES, ET SA PROPRE PREUVE, LS-230.
+      #
+      # Le contrôle refuse qu'une preuve par mutation ne tourne nulle part :
+      # c'est lui qui empêche le retour de l'état du 14 septembre 2026, où
+      # vingt-huit dormaient et six étaient cassées sans que personne ne le
+      # sache. Sa preuve le garde à son tour, dont un cas sur le faux positif
+      # qu'a produit sa première version.
+      # ----------------------------------------------------------------------
+      - name: 9z nonies. Couverture des preuves par mutation
+        run: ./scripts/verifier-couverture-mutations.sh
+
+      - name: 9z nonies bis. Preuve par mutation de la couverture
+        run: ./scripts/verifier-couverture-mutations-mutation.sh
       - name: 2. Analyse statique
         run: npm run lint
 
