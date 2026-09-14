@@ -1392,6 +1392,22 @@ jobs:
       # sache. Sa preuve le garde à son tour, dont un cas sur le faux positif
       # qu'a produit sa première version.
       # ----------------------------------------------------------------------
+      # ----------------------------------------------------------------------
+
+      # AUCUNE MUTATION NE DOIT RESTER DANS LE DEPOT, LS-230.
+      #
+      # Une preuve par mutation abime volontairement le depot, puis restaure.
+      # Interrompue, elle laisse le defaut en place, indiscernable d'une
+      # modification voulue. QUATRE ont ete trouvees ainsi le 14 septembre 2026,
+      # dont deux deja commitees : la garde de role de `auth.ts`, celle de
+      # `autorisation.ts`, la purge du journal des connexions inversee, et
+      # `vente_web_activee` retiree de la reservation de stock.
+      #
+      # Cette etape est en TETE des preuves : si une mutation traine, tout ce qui
+      # suit mesure un depot abime.
+      - name: 9z nonies A. Absence de mutation residuelle
+        run: ./scripts/verifier-absence-mutation-residuelle.sh
+
       - name: 9z nonies. Couverture des preuves par mutation
         run: ./scripts/verifier-couverture-mutations.sh
 
