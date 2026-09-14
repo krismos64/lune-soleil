@@ -158,12 +158,38 @@ ENVIRONNEMENT
 # LE MESSAGE ATTENDU EST VERIFIE, pas seulement le code de sortie. Un script qui
 # rougirait pour une AUTRE raison passerait un test qui ne regarde que le code.
 # Motif « mutation vue par le mauvais test ».
+# LES CLES QUE LE BAC DECLARE, relevees au PREMIER cas puis memorisees.
+#
+# Elles ne peuvent pas l'etre plus tot, le bac n'etant peuple qu'au premier
+# `poser_env_sain`. Et pas non plus a chaque cas : le cas 6 SUPPRIME le `.env`,
+# une relecture y rendrait une liste vide et l'environnement herite reviendrait.
+CLES_A_PURGER=""
+
 jouer() {
   local intitule="$1" motif_attendu="$2"
   cas=$((cas + 1))
 
+  # L'ENVIRONNEMENT HERITE EST PURGE DES VARIABLES QUE LE BAC DECLARE, LS-230.
+  #
+  # Le controle lit `process.env[nom]`, jamais le `.env` directement : une
+  # variable deja posee dans l'environnement MASQUE donc la valeur mutee du bac.
+  #
+  # Mesure le 14 septembre 2026 : la CI ecrit `DATABASE_URL` dans `$GITHUB_ENV`,
+  # le cas 2 mutait cette cle en `mysql://` dans le bac, et le controle lisait
+  # l'URL valide du runner. Il restait vert, et le cas s'annoncait comme un trou
+  # du controle. En local la variable n'existe pas, le cas passait : la preuve
+  # ne pouvait echouer QUE la ou elle tourne pour de bon.
+  # LA LISTE EST FIGEE AU DEPART, PAS RELUE A CHAQUE CAS. Le cas 6 SUPPRIME le
+  # `.env` du bac : la relire y rendrait une liste vide, l'environnement herite
+  # reviendrait, et ce cas-la echouerait a son tour.
   local sortie code
-  sortie=$(cd "$BAC" && ./scripts/"$SCRIPT_CIBLE" 2>&1)
+
+  if [ -z "$CLES_A_PURGER" ] && [ -r "$BAC/.env" ]; then
+    CLES_A_PURGER=$(grep -oE '^[A-Z_][A-Z0-9_]*=' "$BAC/.env" | tr -d '=' | tr '\n' ' ')
+  fi
+
+  # shellcheck disable=SC2086
+  sortie=$(cd "$BAC" && env $(printf -- '-u %s ' $CLES_A_PURGER) ./scripts/"$SCRIPT_CIBLE" 2>&1)
   code=$?
 
   if [ "$code" -eq 0 ]; then
