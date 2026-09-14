@@ -16,8 +16,8 @@ cd "$RACINE" || exit 1
 # commité. Motif « checkout restaure depuis l'index », qui a coûté quatre
 # fichiers le 6 septembre 2026.
 MUTABLES=(
-  "src/app/(boutique)/catalogue/loading.tsx"
-  "src/app/administration/stocks/loading.tsx"
+  "src/app/(boutique)/catalogue/armature-catalogue.tsx"
+  "src/app/administration/alertes/page.tsx"
   "src/app/administration/page.tsx"
 )
 
@@ -87,7 +87,7 @@ echo
 # Cas 1 : le point final revient sur le catalogue public.
 # C'est l'état exact d'avant LS-195, celui que le ticket a relevé.
 # ---------------------------------------------------------------------------
-perl -0pi -e 's/Chargement des pièces…/Chargement des pièces./' "src/app/(boutique)/catalogue/loading.tsx"
+perl -0pi -e 's/Chargement des pièces…/Chargement des pièces./' "src/app/(boutique)/catalogue/armature-catalogue.tsx"
 jouer "le point final revient sur l'écran public" \
       "ne se termine pas par un point de suspension"
 
@@ -98,7 +98,7 @@ jouer "le point final revient sur l'écran public" \
 # l'écran. Sans lui le contrôle se satisferait de « ... », qui ne s'entend pas
 # pareil et ne se cherche pas pareil.
 # ---------------------------------------------------------------------------
-perl -0pi -e 's/Chargement des stocks…/Chargement des stocks.../' src/app/administration/stocks/loading.tsx
+perl -0pi -e 's/Chargement des alertes…/Chargement des alertes.../' src/app/administration/alertes/page.tsx
 jouer "trois points successifs au lieu du caractère …" \
       "emploie trois points au lieu du caractère"
 
@@ -110,7 +110,7 @@ jouer "trois points successifs au lieu du caractère …" \
 # l'autre des deux formes que le dépôt emploie : un contrôle qui ne verrait
 # qu'une forme resterait vert sur quatorze annonces.
 # ---------------------------------------------------------------------------
-perl -0pi -e 's/annonce="Chargement des stocks…"/annonce="Chargement des stocks."/' src/app/administration/stocks/loading.tsx
+perl -0pi -e 's/annonce="Chargement des alertes…"/annonce="Chargement des alertes."/' src/app/administration/alertes/page.tsx
 jouer "une annonce en propriété perd sa ponctuation" \
       "ne se termine pas par un point de suspension"
 
@@ -134,7 +134,7 @@ jouer "une annonce sous <Suspense> interne perd sa ponctuation" \
 # compte passe de 15 à 14, en silence et en vert. Mesuré par la revue
 # d'interface du 6 septembre 2026, avant que le dénominateur existe.
 # ---------------------------------------------------------------------------
-perl -0pi -e 's/annonce="Chargement des stocks…"/annonce="Les stocks se chargent…"/' src/app/administration/stocks/loading.tsx
+perl -0pi -e 's/annonce="Chargement des alertes…"/annonce="Les alertes se chargent…"/' src/app/administration/alertes/page.tsx
 jouer "une annonce est reformulée sans le mot Chargement" \
       "ne porte aucune annonce de chargement"
 
@@ -146,8 +146,8 @@ jouer "une annonce est reformulée sans le mot Chargement" \
 # `loading.tsx` qui affiche une armature muette, ce qu'aucun lecteur d'écran ne
 # peut interpréter.
 # ---------------------------------------------------------------------------
-perl -0pi -e 's/\s*annonce="Chargement des stocks…"\n//' src/app/administration/stocks/loading.tsx
-jouer "une annonce disparaît d'un loading.tsx" \
+perl -0pi -e 's/ annonce="Chargement des alertes…"//' src/app/administration/alertes/page.tsx
+jouer "une annonce disparaît de son composant de chargement" \
       "ne porte aucune annonce de chargement"
 
 echo
