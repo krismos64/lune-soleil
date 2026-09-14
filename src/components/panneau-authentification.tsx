@@ -18,19 +18,25 @@ import styles from "./panneau-authentification.module.css";
  * sans basculer en composant client et mesurer la fenetre, ce qui coute plus
  * cher que le gain.
  *
- * `sizes` DECLARE 50vw SANS CLAUSE MOBILE, ET CE DETAIL A ETE MESURE DEUX FOIS.
+ * `sizes` RESTE A `50vw`, ET LE COUT SUR TELEPHONE EST ASSUME, PAS IGNORE.
  *
- * Deux versions ont voulu economiser le telechargement sur telephone, ou le
- * panneau est masque : `(min-width: 768px) 50vw, 0px`, puis `, 1px`. Les deux
- * ont donne le meme defaut sur grand ecran, mesure le 14 septembre 2026 : le
- * navigateur retenait la source la plus petite du jeu, 607 px de large, et
- * l'etirait sur 734 px d'affichage. Le panneau rendait un aplat delave qui
- * ressemblait a une image manquante.
+ * Mesure le 14 septembre 2026 : a 320 px en DPR 2, le navigateur telecharge
+ * 9,7 ko, source 384w, pour un panneau que le CSS masque. A 1280 px il prend
+ * 41,9 ko en 640w, qui eux servent.
  *
- * LA CLAUSE MOBILE NE VAUT PAS CE RISQUE. `sizes` est une indication donnee
- * AVANT la mise en page, et le navigateur reste libre de garder une source deja
- * choisie : l'economie n'est jamais garantie, alors que le delavage, lui, se
- * voit sur l'ecran le plus visible du parcours.
+ * DEUX ESSAIS ONT VOULU SUPPRIMER CES 9,7 ko ET ONT CASSE LE RENDU :
+ * `(min-width: 768px) 50vw, 0px`, puis `, 1px`. Tous deux demandaient la source
+ * la plus PETITE du jeu, que le navigateur gardait ensuite sur grand ecran, ou
+ * le panneau rendait alors un aplat delave.
+ *
+ * Aucune valeur intermediaire ne fait mieux : a 320 px, `50vw` vaut deja 160 px
+ * CSS, soit 320 px en DPR 2, et le navigateur retient donc deja la plus petite
+ * source utile du jeu. Descendre plus bas ne gagne rien sans rouvrir le
+ * delavage. Supprimer vraiment ce cout demanderait de ne pas rendre le noeud,
+ * donc un composant client qui mesure la fenetre : plus cher que 9,7 ko.
+ *
+ * `100vw` SERAIT FAUX ICI, a la difference du hero de l'accueil qui le declare :
+ * cette image y est VISIBLE en pleine largeur sur telephone, la sienne non.
  *
  * `priority` ET NON LE CHARGEMENT DIFFERE PAR DEFAUT. Le panneau occupe la
  * moitie de l'ecran des l'ouverture : `loading="lazy"`, que `next/image` pose
