@@ -24,6 +24,22 @@ cd "$RACINE" || exit 1
 CONTROLE="./scripts/verifier-navigation-client.sh"
 EDITEUR="src/app/administration/produits/[id]/page.tsx"
 CREATION="src/app/administration/produits/nouveau/formulaire-produit.tsx"
+
+# LA CIBLE DOIT EXISTER AVANT DE MUTER, LS-230.
+#
+# Une mutation dont le fichier a disparu ne mute RIEN : le contrôle reste vert,
+# et le cas s'annonce comme un trou du contrôle alors que c'est la preuve qui est
+# morte. Deux preuves de ce dépôt mutaient des `loading.tsx` retirés par C32, et
+# personne ne l'a su tant qu'elles ne tournaient nulle part.
+for _cible in "$EDITEUR" "$CREATION"; do
+  if ! git ls-files --error-unmatch "$_cible" >/dev/null 2>&1; then
+    echo "ECHEC cible introuvable ou non suivie par git : $_cible"
+    echo "      le chemin a change : cette preuve ne muterait rien, et son vert"
+    echo "      ressemblerait a un succes."
+    exit 1
+  fi
+done
+
 DEROGATION="src/app/global-error.tsx"
 
 detectes=0
