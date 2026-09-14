@@ -197,7 +197,27 @@ mute() {
     exit 1
   fi
 }
-nettoyer() { restaurer; rm -rf "$TMP"; }
+# LE NETTOYAGE NE SE DESARME QU'UNE FOIS, LS-230.
+#
+# `trap ... EXIT INT TERM` declenche DEUX fois sur un signal : une fois pour
+# `INT` ou `TERM`, une fois pour l'`EXIT` qui suit. La premiere passe effacait
+# `$TMP`, donc la seconde ne trouvait plus les copies et ses `cp` echouaient en
+# silence, laissant les fichiers MUTES dans le depot.
+#
+# Mesure le 14 septembre 2026 : interrompre cette preuve laissait deux regles de
+# `.claude/rules/` et le modele conceptuel mutes. Le meme motif avait laisse
+# `src/lib/auth.ts` sans sa garde `input: false`, celle qui empeche un client de
+# se declarer ADMINISTRATRICE, et la purge du journal des connexions inversee.
+#
+# Le drapeau rend donc le nettoyage idempotent : la restauration passe d'abord,
+# et `$TMP` ne disparait qu'au tout dernier declenchement.
+DEJA_NETTOYE=0
+nettoyer() {
+  [ "$DEJA_NETTOYE" -eq 1 ] && return
+  restaurer
+  DEJA_NETTOYE=1
+  rm -rf "$TMP"
+}
 trap nettoyer EXIT INT TERM
 
 echecs=0

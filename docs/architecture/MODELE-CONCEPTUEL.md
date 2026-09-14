@@ -589,7 +589,7 @@ erDiagram
 | V12 | Toute transition de statut est tracée avec son acteur et son origine | historisation, parcours 1 |
 | V13 | `utilisateurId` n'autorise jamais un accès, quelle que soit sa valeur | invariant 2, parcours 6, ADR-023 |
 | V15 | Une commande dissociée n'est jamais rattachable de nouveau | `dissocieA` non nul exclut, sinon un email réattribué rouvrirait un historique |
-| V14 | Une commande porte au plus un paiement encaissé | `UNIQUE` partiel sur `(commandeId)` filtré sur `statut IN ('REUSSI', 'PARTIELLEMENT_REMBOURSE', 'REMBOURSE')`, voir décision D. Les trois états et non le seul `'REUSSI'` : un remboursement ne rend pas la commande impayée, correction de LS-45 |
+| V14 | Une commande porte au plus un paiement encaissé | `UNIQUE` partiel sur `(commandeId)` filtré sur `statut = REUSSI`, voir décision D. Les trois états et non le seul `'REUSSI'` : un remboursement ne rend pas la commande impayée, correction de LS-45 |
 
 ### Décision A, séparer statut de commande et statut de paiement
 
@@ -664,7 +664,7 @@ L'étape 7 du parcours 1 en produit quatre, et chacun a besoin de sa propre clé
 
 | Effet | Clé d'unicité |
 |---|---|
-| paiement confirmé | `paiement (commandeId)` filtré sur `statut IN ('REUSSI', 'PARTIELLEMENT_REMBOURSE', 'REMBOURSE')` |
+| paiement confirmé | `paiement (commandeId)` filtré sur `statut = REUSSI` |
 | stock décrémenté | `mouvement_stock (commandeId, varianteId)` filtré sur `type = VENTE_WEB` |
 | facture émise | `facture (commandeId)`, voir décision E |
 | email envoyé | `journal_email (commandeId, modele)` filtré sur `statut = 'ENVOYE' AND origine IN ('SYSTEME','RECONCILIATION')` |
@@ -1876,7 +1876,7 @@ l'unicité simple `facture.commandeId` listée plus haut :
 | Contrainte | Filtre | Empêche |
 |---|---|---|
 | `media (produitId)` | `ordre = 1` | deux médias principaux sur un produit |
-| `paiement (commandeId)` | `statut IN ('REUSSI', 'PARTIELLEMENT_REMBOURSE', 'REMBOURSE')` | deux paiements encaissés sur une commande, y compris après remboursement |
+| `paiement (commandeId)` | `statut = REUSSI` | deux paiements encaissés sur une commande, y compris après remboursement |
 | `mouvement_stock (commandeId, varianteId)` | `type = VENTE_WEB` | double décrément par webhook et réconciliation |
 | `journal_email (commandeId, modele)` | `statut = 'ENVOYE' AND origine IN ('SYSTEME','RECONCILIATION')` | email de confirmation envoyé deux fois |
 | `adresse_carnet (utilisateurId)` | `estParDefaut` | deux adresses par défaut sur un compte |
