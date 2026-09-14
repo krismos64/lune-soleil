@@ -124,6 +124,33 @@ Contraste des trois accroches mesuré sur le fond réel, **4,72:1** pour un seui
 de 4,5:1 : 13 px en graisse 600 n'est pas du grand texte, le seuil applicable
 n'est pas 3:1.
 
+## La preuve par mutation ne tournait nulle part
+
+Dernier constat, et il dépasse cette story. `verifier-gabarit-titre-mutation.sh`
+existait depuis LS-228 et **ne figurait pas dans le workflow**, quand d'autres
+preuves par mutation y ont leur étape.
+
+Ce n'était pas un choix : rien ne le motivait dans les commentaires. Et le coût
+s'est payé dans la même journée, la mutation 6 ayant cessé de muter sans que rien
+ne le signale.
+
+**Un contrôle non éprouvé par l'intégration continue se périme en silence**, au
+même titre qu'une règle écrite et non vérifiée. L'étape « 9z septies bis » le
+rejoue désormais.
+
+**Le compte a montré que le cas n'est pas isolé** : le dépôt porte **43 scripts
+de preuve par mutation, la CI en rejoue 13**. Vingt-huit dorment, dont quatre qui
+éprouvent un contrôle tournant bien à chaque PR, `verifier-graphie-marque`,
+`verifier-contraste`, `verifier-lien-evitement` et `verifier-regles`.
+
+**LS-230** porte ce chantier. Il n'a pas été traité ici : toutes ces preuves n'ont
+pas vocation à entrer en CI, plusieurs touchant une machine absente de
+l'intégration continue, et le tri demande un arbitrage qui dépasse cette story.
+
+Son intitulé disait aussi « espaces privés », alors que le contrôle couvre le
+public depuis le sens 4. Un intitulé faux dans un workflow se lit comme une
+portée, et personne ne rouvre le script pour vérifier.
+
 ## Ce qui reste ouvert
 
 **Les cartes du catalogue et de la fiche produit** ne peuvent pas être jugées :
