@@ -161,7 +161,6 @@
   margin: 0;
   color: var(--ls-primary);
   font-size: clamp(1.5rem, 5vw, 2.25rem);
-  font-weight: 600;
   letter-spacing: 0.02em;
   /*
    * UN NOM LONG SE COUPE PLUTOT QUE DE DEBORDER. Sans cela, un nom d'un seul

@@ -15,7 +15,6 @@
   margin: 0 0 var(--ls-space-5);
   color: var(--ls-text);
   font-size: clamp(1.5rem, 5vw, 2.25rem);
-  font-weight: 600;
   text-wrap: balance;
 }
 

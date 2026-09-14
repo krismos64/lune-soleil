@@ -11,6 +11,8 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { PanneauAuthentification } from "@/components/panneau-authentification";
+
 import styles from "./connexion.module.css";
 import { FormulaireConnexion } from "./formulaire-connexion";
 import { lireIdentite } from "@/services/autorisation";
@@ -31,12 +33,15 @@ export default async function PageConnexionAdministration() {
   }
 
   return (
-    <main className={styles.page}>
-      <h1>Administration</h1>
-      <p className={styles.introduction}>
-        Connexion réservée à l&apos;exploitante de la boutique.
-      </p>
-      <FormulaireConnexion />
-    </main>
+    <PanneauAuthentification>
+      <main className={styles.pageGabarit}>
+        <p className={styles.accroche}>Espace réservé</p>
+        <h1>Administration</h1>
+        <p className={styles.introduction}>
+          Connexion réservée à l&apos;exploitante de la boutique.
+        </p>
+        <FormulaireConnexion />
+      </main>
+    </PanneauAuthentification>
   );
 }

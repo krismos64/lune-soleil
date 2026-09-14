@@ -15,6 +15,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { PanneauAuthentification } from "@/components/panneau-authentification";
 import { lireIdentite } from "@/services/autorisation";
 
 import { FormulaireInscription } from "./formulaire-inscription";
@@ -49,31 +50,35 @@ export default async function PageInscription() {
   }
 
   return (
-    <main id="contenu" tabIndex={-1} className={styles.page}>
-      <h1 className={styles.titre}>Créer un compte</h1>
+    <PanneauAuthentification>
+      <main id="contenu" tabIndex={-1} className={styles.pageGabarit}>
+        <p className={styles.accroche}>Bienvenue</p>
+        <h1 className={styles.titre}>Créer un compte</h1>
 
-      <p className={styles.introduction}>
-        Un compte permet de suivre ses commandes, de retrouver ses factures et
-        d&apos;enregistrer ses adresses de livraison.
-      </p>
+        <p className={styles.introduction}>
+          Un compte permet de suivre ses commandes, de retrouver ses factures et
+          d&apos;enregistrer ses adresses de livraison.
+        </p>
 
-      {/*
-       * DIT AVANT LE FORMULAIRE, pas apres : l'achat sans compte reste le
-       * parcours de premier rang, LS-56. Quelqu'un qui croit devoir creer un
-       * compte pour commander abandonne au lieu de revenir en arriere.
-       */}
-      <p className={styles.introduction}>
-        La création d&apos;un compte n&apos;est pas obligatoire pour commander.
-      </p>
+        {/*
+         * DIT AVANT LE FORMULAIRE, pas apres : l'achat sans compte reste le
+         * parcours de premier rang, LS-56. Quelqu'un qui croit devoir creer un
+         * compte pour commander abandonne au lieu de revenir en arriere.
+         */}
+        <p className={styles.introduction}>
+          La création d&apos;un compte n&apos;est pas obligatoire pour
+          commander.
+        </p>
 
-      <FormulaireInscription />
+        <FormulaireInscription />
 
-      <p className={styles.bascule}>
-        Vous avez déjà un compte ?{" "}
-        <Link href="/compte/connexion" className={styles.lien}>
-          Se connecter
-        </Link>
-      </p>
-    </main>
+        <p className={styles.bascule}>
+          Vous avez déjà un compte ?{" "}
+          <Link href="/compte/connexion" className={styles.lien}>
+            Se connecter
+          </Link>
+        </p>
+      </main>
+    </PanneauAuthentification>
   );
 }

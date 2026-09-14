@@ -23,3 +23,24 @@
 .introduction {
   color: var(--ls-text-muted);
 }
+
+/*
+ * VARIANTE A PANNEAU, LS-229. Ni largeur ni marge : `.contenu` du gabarit les
+ * porte. `.page` reste pour qui n'a pas de panneau.
+ */
+.pageGabarit {
+  padding: 0;
+}
+
+/*
+ * ACCROCHE AU-DESSUS DU TITRE, meme motif que l'espace client.
+ * `--ls-accent-gold-deep` est le seul or admis en texte, ADR-022.
+ */
+.accroche {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-accent-gold-deep);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
