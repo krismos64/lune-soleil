@@ -1336,6 +1336,51 @@ jobs:
       # integration continue l'arbre est propre par construction.
       - name: 9z septies bis. Preuve par mutation du gabarit de titre
         run: ./scripts/verifier-gabarit-titre-mutation.sh
+
+      # ----------------------------------------------------------------------
+
+      # LES VINGT-DEUX PREUVES RAPIDES, LS-230. Textuelles, aucune base ni
+      # conteneur requis.
+      #
+      # POURQUOI ELLES ENTRENT ICI. Le depot portait QUARANTE-TROIS preuves par
+      # mutation, la CI en rejouait QUINZE. Sur les vingt-huit dormantes, SIX
+      # etaient cassees sans que personne ne le sache, et deux cachaient un trou
+      # reel dans le controle qu'elles eprouvent. Une preuve qui ne tourne pas
+      # ne protege rien : elle se perime en silence, et son vert ressemble a un
+      # succes.
+      #
+      # DUREE MESUREE : 63 s pour les vingt-deux, sur une CI qui en dure
+      # environ neuf cents quand le code change. Les trois plus lourdes, 513 s a
+      # elles seules, sont au nocturne : `docs/PREUVES-PAR-MUTATION.md` porte le
+      # tri et le motif de chaque ecart.
+      #
+      # ELLES S'ARRETENT A LA PREMIERE ROUGE, `set -e` implicite d'une etape
+      # `run` multiligne : la preuve qui echoue est la derniere nommee dans le
+      # journal.
+      - name: 9z octies. Preuves par mutation, les vingt-deux rapides
+        run: |
+          ./scripts/verifier-statut-base-morte-mutation.sh
+          ./scripts/verifier-palette-secours-mutation.sh
+          ./scripts/verifier-contraste-mutation.sh
+          ./scripts/verifier-bascule-mot-de-passe-mutation.sh
+          ./scripts/verifier-nginx-mutation.sh
+          ./scripts/verifier-bordure-controle-mutation.sh
+          ./scripts/verifier-mentions-retractation-mutation.sh
+          ./scripts/verifier-prefetch-administration-mutation.sh
+          ./scripts/verifier-migration-mutation.sh
+          ./scripts/verifier-loading-et-404-mutation.sh
+          ./scripts/verifier-graphie-marque-mutation.sh
+          ./scripts/verifier-seo-mutation.sh
+          ./scripts/verifier-environnement-mutation.sh
+          ./scripts/verifier-rendu-texte-simple-mutation.sh
+          ./scripts/verifier-lien-evitement-mutation.sh
+          ./scripts/verifier-actions-sensibles-mutation.sh
+          ./scripts/verifier-atteignabilite-boutique-mutation.sh
+          ./scripts/verifier-redaction-francaise-mutation.sh
+          ./scripts/verifier-navigation-administration-mutation.sh
+          ./scripts/verifier-ponctuation-chargement-mutation.sh
+          ./scripts/verifier-chargement-administration-mutation.sh
+          ./scripts/verifier-registre-traitements-mutation.sh
       - name: 2. Analyse statique
         run: npm run lint
 

@@ -89,10 +89,16 @@ while IFS= read -r preuve; do
     continue
   fi
 
-  # Écartée : la ligne du registre doit porter le nom ET un motif après le
-  # séparateur. Une ligne qui nomme la preuve sans rien dire est un
-  # interrupteur, et c'est précisément ce que le sens 2 refuse.
-  ligne=$(grep -F "$preuve" "$REGISTRE" 2>/dev/null | head -1)
+  # LA DISPENSE SE LIT DANS LA SECTION DES ÉCARTÉES, PAS AILLEURS.
+  #
+  # Une première version cherchait le nom dans TOUT le registre : les cinq
+  # preuves que LS-230 a réparées, citées dans son tableau historique, passaient
+  # alors pour écartées alors qu'elles devaient entrer en CI. Un récit n'est pas
+  # une décision, et une mention n'est pas une dispense.
+  #
+  # La recherche se borne donc à ce qui suit « ## Les preuves écartées ».
+  zone_ecartees=$(sed -n '/^## Les preuves écartées/,$p' "$REGISTRE")
+  ligne=$(printf '%s\n' "$zone_ecartees" | grep -F "$preuve" | head -1)
 
   if [ -z "$ligne" ]; then
     echo "   ÉCHEC $preuve n'est ni rejouée ni écartée."
