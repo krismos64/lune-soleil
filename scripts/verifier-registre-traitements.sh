@@ -94,8 +94,23 @@ fi
 # Dans les traitements, la ligne `| Tables | ... |` du tableau fait foi. Dans
 # la zone hors périmètre, les lignes d'énumération, à l'exclusion des
 # paragraphes explicatifs qui suivent.
+# UNE LIGNE QUI SE DÉCLARE SANS TABLE PROPRE N'EN RANGE AUCUNE, LS-230.
+#
+# T10 écrit « | Tables | aucune propre. Le traitement **consulte**
+# `Utilisateur`, `AdresseCarnet`, `Commande` et `JournalConnexion`, couvertes
+# par T1, T2, T3 et T8 | ». Ces quatre noms étaient comptés comme rangés ICI,
+# alors qu'ils ne le sont qu'ailleurs.
+#
+# Conséquence mesurée le 14 septembre 2026 : retirer `JournalConnexion` du
+# traitement qui le range VRAIMENT, T8, laissait le contrôle vert, la mention
+# de T10 prenant le relais. Une table pouvait donc sortir du registre sans que
+# rien ne le voie, sur un document opposable au titre de l'article 30.
+#
+# Les lignes qui annoncent « aucune propre » sont donc écartées de la moisson :
+# elles renvoient à d'autres traitements, elles ne rangent rien.
 cites_traitements=$(printf '%s\n' "$zone_traitements" \
   | grep -E '^\|[[:space:]]*Tables[[:space:]]*\|' \
+  | grep -viE 'aucune propre' \
   | grep -oE '`[A-Z][A-Za-z0-9_]+`' | tr -d '`' | sort -u)
 
 cites_hors=$(printf '%s\n' "$zone_hors" \
