@@ -200,6 +200,68 @@ done <<EOF
 $etats
 EOF
 
+# ----------------------------------------------------------------------------
+# TROISIÈME SENS, L'APPEL QUI PERD SON ANNONCE, LS-230.
+#
+# Les deux sens ci-dessus partent des fichiers qui portent DÉJÀ une annonce :
+# `grep -rlE 'annonce=|Chargement '`. Un composant de chargement qui perd la
+# sienne sort donc simplement de l'inventaire, et le contrôle reste vert en
+# comptant un état de moins.
+#
+# Mesuré le 14 septembre 2026 : retirer `annonce="Chargement des alertes…"` de
+# `administration/alertes/page.tsx` fait passer le compte de 22 à 21 sans
+# aucune alerte. L'armature s'affiche alors muette, ce qu'aucun lecteur d'écran
+# ne peut annoncer, et c'est précisément le défaut que C35 vise.
+#
+# CE SENS PART DE L'APPEL, PAS DU TEXTE. Tout emploi de `<ChargementAdministration`
+# doit porter une `annonce`, qu'il l'ait déjà ou non : c'est ce renversement qui
+# ferme le trou.
+COMPOSANT="ChargementAdministration"
+
+# L'APPEL SE LIT ENTIER, PAS LIGNE PAR LIGNE, et c'est le coeur de ce sens.
+#
+# Cinq appels du dépôt tiennent sur plusieurs lignes, l'annonce venant APRÈS le
+# nom du composant :
+#
+#     <ChargementAdministration
+#       annonce="Chargement des rétractations…"
+#       lignes={4}
+#     />
+#
+# Un `grep` ligne par ligne les désignait tous les cinq comme fautifs, mesuré le
+# 14 septembre 2026 : ancrage trop étroit, motif déjà en fiche. `perl` lit donc
+# du nom du composant jusqu'à sa fermeture, quel que soit le nombre de lignes.
+appels=$(for f in $(grep -rl "<$COMPOSANT" "$SRC/app" "$SRC/components" 2>/dev/null \
+  | grep -v "$COMPOSANT.module"); do
+  perl -0ne 'while (/<ChargementAdministration\b.*?\/>/gs) {
+    my $bloc = $&; $bloc =~ s/\s+/ /g;
+    print "$ARGV\t$bloc\n";
+  }' "$f"
+done)
+
+nb_appels=$(printf '%s\n' "$appels" | grep -c . || true)
+
+if [ "$nb_appels" -eq 0 ]; then
+  echo "ECHEC aucun appel de <$COMPOSANT> trouvé"
+  echo "      l'ancrage de ce sens est cassé : le composant a été renommé ou"
+  echo "      retiré. Un contrôle qui n'examine rien ne prouve rien."
+  ko=$((ko + 1))
+else
+  while IFS= read -r appel; do
+    [ -n "$appel" ] || continue
+    if ! printf '%s' "$appel" | grep -q "annonce="; then
+      echo "ECHEC ${appel%%	*} appelle <$COMPOSANT> sans annonce"
+      echo "      l'armature s'affiche alors muette : un lecteur d'écran"
+      echo "      n'apprend pas que la page travaille. C35."
+      ko=$((ko + 1))
+    fi
+  done <<EOF2
+$appels
+EOF2
+fi
+
+echo "Appels de <$COMPOSANT> examinés   : $nb_appels"
+
 echo "Annonces de chargement examinées : $nb"
 echo "États de chargement inventoriés   : $nb_etats"
 
