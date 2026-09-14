@@ -511,6 +511,55 @@ sur vingt-deux écrans aux quatre largeurs. Un script lit des règles, il ne ren
 pas une page : les deux moitiés sont nécessaires, et c'est l'écart entre elles
 qui avait laissé le défaut vivre dix-neuf jours.
 
+### C43, la police de titre se pose globalement, C42 ne couvrant pas tout
+
+**C42 s'intitule « le titre d'un écran privé », et cet intitulé était exact.** Sa
+règle vit sur `.colonne h1` dans les deux layouts d'espace connecté, et rien
+d'autre. Mesuré sur la production le 14 septembre 2026 par `getComputedStyle` :
+**la totalité des titres publics rendait en `system-ui`**, avec quatre échelles
+concurrentes de 32, 36, 40 et 56 px, pendant que `verifier-gabarit-titre.sh`
+restait vert à juste titre.
+
+**Deux familles échappaient, pour des raisons distinctes, et la seconde est la
+plus retorse.**
+
+Les **pages publiques** n'ont aucun layout où accrocher la règle :
+`(boutique)/layout.tsx` rend un fragment sans élément enveloppant, et ce choix
+est délibéré, un conteneur y cassait le lien d'évitement de LS-122.
+
+Les **écrans atteints sans session**, connexion et inscription, vivent pourtant
+SOUS les dossiers que C42 couvre. Mais `compte/layout.tsx` sort avant le gabarit
+quand il n'y a pas d'identité, `return <>{children}</>` : la classe `.colonne`
+n'est jamais rendue, donc `.colonne h1` ne s'applique pas. **Un chemin couvert
+par une règle ne suffit pas à conclure qu'un écran l'est**, la garde s'évalue à
+l'exécution et un layout qui sort tôt la retire sans bruit.
+
+**La règle vit donc dans `src/app/globals.css`**, sur `h1, h2, h3` pour la police
+et sur `h1` pour l'échelle du titre d'écran. C'est le seul ancrage qu'aucune
+sortie anticipée ne contourne.
+
+**SA SPÉCIFICITÉ EST VOLONTAIREMENT LA PLUS FAIBLE POSSIBLE**, un simple
+sélecteur d'élément. Les deux layouts privés gardent leur échelle propre,
+`.colonne h1` l'emportant sans effort, et les modules publics gardent la leur,
+une classe l'emportant sur un élément. Une échelle par espace, et le reste
+hérite du global.
+
+**L'échelle globale ne porte que `h1`**, jamais `h2` ni `h3` : un module d'écran
+règle ses sous-titres selon sa densité, et les figer tous d'en haut ferait une
+règle plus large que son objet.
+
+**Un module public ne repose pas `font-family` sur son titre**, même raison que
+C42 : une seule recopie rouvre le défaut sur cet écran par spécificité. Sa
+`font-size`, elle, reste admise, une page de contenu et une fiche produit n'ayant
+pas la même densité.
+
+`scripts/verifier-gabarit-titre.sh` garde ce périmètre dans son **sens 4**, et
+`tests/e2e/gabarit-titre-public-ls229.spec.ts` mesure la police **réellement
+calculée** sur neuf écrans aux quatre largeurs, débordement compris dans la même
+assertion. La preuve par mutation porte **sept cas**, dont trois pour ce sens, et
+le contrôle étendu a été rejoué sur le dépôt d'avant la correction : il y désigne
+les deux défauts réels, ce qu'aucune mutation seule ne prouvait.
+
 ### C38, tout champ de mot de passe client porte sa bascule de lisibilité
 
 ADR-023 impose **seize caractères minimum**, contre l'usage courant de huit.
