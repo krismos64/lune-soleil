@@ -33,11 +33,11 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 4, factures et expédition | LS-5 | 3 | **LS-218 crée l'étiquette par API**, et son poids est un réglage depuis le 12 septembre 2026 : seul son critère 10 reste ouvert, il attend un colis réel donc LS-153. **LS-33** décide comment le site apprend qu'un colis est livré, **LS-35** porte l'e-reporting au 1er septembre 2027, **LS-222 est close** le 13 septembre 2026, les emails HTML observés sur Yahoo, Gmail et OVH, les trois en boîte de réception. **LS-98 est close** le 11 septembre 2026, les paramètres commerciaux vivent en base, ADR-043 |
 | 4bis, espace client et avis | LS-36 | 0 | **close**, et rouverte deux fois depuis : LS-221 a livré « Mes avis » puis **LS-225 la modification d'un avis par son auteur**, le 12 septembre 2026. Une phase close ne l'est que des tickets connus le jour où on la ferme |
 | 5, rétractation et conformité | LS-6 | 0 | **close**, ses huit stories terminées le 10 septembre 2026 |
-| 6, exploitation et ouverture | LS-7 | 6 | **LS-153 et LS-142 attendent l'exploitante**. LS-140 et LS-107 attendent les photographies de LS-23. Reste LS-150, la visibilité dans les moteurs de réponse. **LS-228** a livré son gabarit de titre le 13 septembre 2026, sept titres sur quatorze rendaient en police système ; son second volet, les blocs d'état des deux vues d'ensemble, attend LS-153 faute de données sur les comptes de production. **LS-223, LS-226 et LS-227 sont closes** le 13 septembre 2026 : la clé Backblaze durcie, l'instabilité des tests et le cul-de-sac de la réauthentification |
+| 6, exploitation et ouverture | LS-7 | 7 | **LS-153 et LS-142 attendent l'exploitante**. LS-140 et LS-107 attendent les photographies de LS-23. Reste LS-150, la visibilité dans les moteurs de réponse. **LS-228** a livré son gabarit de titre le 13 septembre 2026, sept titres sur quatorze rendaient en police système ; son second volet, les blocs d'état des deux vues d'ensemble, attend LS-153 faute de données sur les comptes de production. **LS-229** ouvre le 14 septembre 2026 le pendant public de ce défaut : aucun titre des pages publiques ni des écrans de connexion n'emploie le jeton de police, C42 ne couvrant que les écrans privés. **LS-223, LS-226 et LS-227 sont closes** le 13 septembre 2026 : la clé Backblaze durcie, l'instabilité des tests et le cul-de-sac de la réauthentification |
 | 7, V1 cible | LS-8 | 0 | **close** le 11 septembre 2026. LS-149 portait le dernier critère : ADR-044 **écarte l'assistant IA** du périmètre plutôt que de le reporter |
 | Contenus | LS-22 | 10 | **attend l'exploitante**, rien n'est faisable sans elle. **LS-32 est close** le 11 septembre 2026, la neutralité de genre étant désormais gardée par un contrôle |
 
-**195 tickets terminés sur 218 hors epics**, les deux termes relevés dans Jira
+**195 tickets terminés sur 219 hors epics**, les deux termes relevés dans Jira
 le **13 septembre 2026**, et jamais dérivés l'un de l'autre.
 
 **Le dénominateur a gagné neuf tickets en trois jours**, LS-219 à LS-227 : les
@@ -58,7 +58,7 @@ une fois : le chiffre disait 175 sous une date du 10 septembre, ce qui aurait
 fait relire un compte pour un autre. Motif « un compte recopié n'est pas une
 mesure », qui vaut pour la date autant que pour le nombre.
 
-**Onze des vingt-trois tickets ouverts attendent l'exploitante** : les dix de
+**Onze des vingt-quatre tickets ouverts attendent l'exploitante** : les dix de
 l'epic LS-22, photographies, textes, tarifs et contenus juridiques, plus LS-19,
 la médiation, qui suppose une adhésion à souscrire. Aucun code ne les débloque.
 
