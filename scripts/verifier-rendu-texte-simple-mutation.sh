@@ -80,7 +80,7 @@ nettoyer() {
 }
 
 sauvegarder
-trap nettoyer EXIT
+trap nettoyer EXIT INT TERM
 
 # Joue un cas : la mutation est déjà faite par l'appelant, lance le contrôle,
 # exige un échec.

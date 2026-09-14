@@ -51,7 +51,7 @@ restaurer() {
   # chemin non suivi ferait echouer la restauration entiere. Motif en fiche.
   git checkout -- "${MUTABLES[@]}" 2>/dev/null || true
 }
-trap restaurer EXIT
+trap restaurer EXIT INT TERM
 
 reussies=0
 total=0

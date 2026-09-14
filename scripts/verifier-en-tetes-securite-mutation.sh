@@ -50,7 +50,7 @@ nettoyer() {
   restaurer
   rm -rf "$SAUVEGARDE"
 }
-trap nettoyer EXIT
+trap nettoyer EXIT INT TERM
 
 sauver
 

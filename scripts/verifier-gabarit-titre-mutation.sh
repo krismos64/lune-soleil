@@ -60,7 +60,7 @@ fi
 restaurer() {
   git checkout -- "$LAYOUT_ADMIN" "$CIBLE" "$GLOBAL" "$CIBLE_PUBLIQUE" 2>/dev/null
 }
-trap restaurer EXIT
+trap restaurer EXIT INT TERM
 
 # Le contrôle doit être vert AVANT toute mutation, sans quoi les rouges qui
 # suivent ne prouveraient rien.

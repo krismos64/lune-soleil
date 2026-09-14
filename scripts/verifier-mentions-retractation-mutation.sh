@@ -36,7 +36,7 @@ MUTABLES=(
 restaurer() {
   git checkout -- "${MUTABLES[@]}" 2>/dev/null || true
 }
-trap restaurer EXIT
+trap restaurer EXIT INT TERM
 
 if ! git diff --quiet -- "${MUTABLES[@]}"; then
   echo "ECHEC des modifications non commitées portent sur les fichiers à muter."

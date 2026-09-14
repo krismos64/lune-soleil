@@ -25,7 +25,7 @@ restaurer() {
   git checkout HEAD -- "${MUTABLES[@]}" 2>/dev/null
 }
 
-trap restaurer EXIT
+trap restaurer EXIT INT TERM
 
 # L'ARBRE DOIT ÊTRE PROPRE SUR CES FICHIERS. Restaurer depuis `HEAD` rend
 # déterministe CE QUI revient, mais écraserait quand même un travail non

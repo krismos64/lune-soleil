@@ -45,7 +45,7 @@ restaurer() {
   cp "$TMP/env.origine" "$ENVEX"
 }
 nettoyer() { restaurer; rm -rf "$TMP"; }
-trap nettoyer EXIT
+trap nettoyer EXIT INT TERM
 
 echecs=0
 mutations=0

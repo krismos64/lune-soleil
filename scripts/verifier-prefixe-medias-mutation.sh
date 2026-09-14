@@ -39,7 +39,7 @@ for f in "${MUTABLES[@]}"; do
 done
 
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
+trap 'rm -rf "$TMP"' EXIT INT TERM
 for f in "${MUTABLES[@]}"; do cp "$f" "$TMP/$(basename "$f")"; done
 restaurer() {
   for f in "${MUTABLES[@]}"; do cp "$TMP/$(basename "$f")" "$f"; done

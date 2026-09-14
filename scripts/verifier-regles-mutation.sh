@@ -50,7 +50,7 @@ restaurer() {
   rm -f "${RACINE:?}/$FICHIER_TEMOIN_SERVICE"
 }
 nettoyer() { restaurer; rm -rf "$TMP"; }
-trap nettoyer EXIT
+trap nettoyer EXIT INT TERM
 
 echecs=0
 total=0

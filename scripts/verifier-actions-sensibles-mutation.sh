@@ -36,7 +36,7 @@ restaurer() {
   git checkout "$SERVICE" "$ATTENTE" "$ACTIONS" 2>/dev/null
   rm -f "$TEMOIN"
 }
-trap restaurer EXIT
+trap restaurer EXIT INT TERM
 
 # Joue un cas : applique la mutation déjà faite par l'appelant, lance le
 # contrôle, exige un échec.

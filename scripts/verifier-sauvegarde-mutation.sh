@@ -67,7 +67,7 @@ nettoyer() {
   docker rm -f "$CONTENEUR" >/dev/null 2>&1 || true
   rm -rf "$BAC"
 }
-trap nettoyer EXIT
+trap nettoyer EXIT INT TERM
 
 ECHECS=0
 CAS=0

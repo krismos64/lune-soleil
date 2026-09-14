@@ -29,7 +29,7 @@ total=0
 restaurer() {
   git checkout "$SCHEMA" "$REGISTRE" 2>/dev/null
 }
-trap restaurer EXIT
+trap restaurer EXIT INT TERM
 
 # Vérifie que la mutation a bien modifié le fichier avant de juger le contrôle.
 #

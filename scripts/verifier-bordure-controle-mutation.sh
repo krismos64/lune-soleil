@@ -78,7 +78,7 @@ nettoyer() {
 }
 
 sauvegarder
-trap nettoyer EXIT
+trap nettoyer EXIT INT TERM
 
 # `$CONTROLE` est appelé SANS pipe vers grep : le pipe renverrait le code de
 # grep et non celui du contrôle, ce qui avait fait passer sept mutations pour

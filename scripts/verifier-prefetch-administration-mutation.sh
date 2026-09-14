@@ -47,7 +47,7 @@ done
 restaurer() {
   git checkout -- "${MUTABLES[@]}" "$CONTROLE" 2>/dev/null
 }
-trap restaurer EXIT
+trap restaurer EXIT INT TERM
 
 # ---------------------------------------------------------------------------
 # LE CONTRÔLE DOIT ÊTRE VERT AVANT DE COMMENCER, sans quoi chaque « échec
