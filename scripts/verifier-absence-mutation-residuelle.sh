@@ -83,9 +83,27 @@ verifier() {
   #
   # Mesuré le 14 septembre 2026 : le même pipe rend 0 sans `pipefail` et 141
   # avec. Le filtrage passe donc par une variable, sans pipe et sans `-q`.
-  local lignes trouve
+  local lignes trouve code
   lignes=$(grep -vE "^[[:space:]]*(\*|//|#)" "$fichier")
-  trouve=$(grep -cF "$motif" <<<"$lignes" || true)
+
+  # LE CODE DE `grep` SE DISTINGUE DE SON COMPTE, et la nuance est un garde-fou.
+  #
+  # `grep -c` rend 1 quand il ne trouve rien, et 2 ou plus sur une ERREUR. Un
+  # `|| true` nu avalait les deux : le compte devenait une chaîne vide, que
+  # `${trouve:-0}` transformait en zéro, donc en « ne porte plus le motif ».
+  # Le contrôle aurait accusé une mutation là où son propre appel avait échoué,
+  # ce qui envoie chercher au mauvais endroit.
+  set +e
+  trouve=$(grep -cF "$motif" <<<"$lignes")
+  code=$?
+  set -e
+
+  if [ "$code" -gt 1 ]; then
+    echo "  ÉCHEC la recherche a échoué sur $fichier, code $code."
+    echo "        Ce n'est PAS une mutation : le contrôle lui-même est en panne."
+    defauts=$((defauts + 1))
+    return
+  fi
 
   if [ "${trouve:-0}" -eq 0 ]; then
     echo "  ÉCHEC $fichier ne porte plus « $motif »."
