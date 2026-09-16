@@ -158,8 +158,14 @@ cas() {
   # Les lignes en echec seulement, marquees × par Vitest. Chercher le motif
   # dans toute la sortie confondrait un test en echec avec le meme test passe
   # au vert quelques lignes plus haut.
+  #
+  # LE MARQUEUR DOIT OUVRIR LA LIGNE, LS-233. Ce script ne lance que Vitest,
+  # qui n'imprime pas la barre de progression de Playwright : le defaut n'est
+  # donc PAS actif ici. L'ancre est posee par prevention, le jour ou un cas de
+  # bout en bout rejoindrait ce fichier, et pour que les trois scripts de
+  # mutation portent le meme filtre plutot que trois variantes.
   local lignes_echec
-  lignes_echec=$(grep -E '×' "$TMP/sortie.txt" || true)
+  lignes_echec=$(grep -E '^[[:space:]]*×[[:space:]]' "$TMP/sortie.txt" || true)
 
   if printf '%s' "$lignes_echec" | grep -qF "$motif_attendu"; then
     echo "  OK    $nom -> detecte par le test attendu"
