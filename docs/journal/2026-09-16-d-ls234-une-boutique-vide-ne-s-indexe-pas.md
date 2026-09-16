@@ -108,20 +108,44 @@ verifier-tests-non-ignores.sh         toute la suite s'execute
 verifier-redaction-francaise.sh       166 fichiers, aucun cadratin
 ```
 
+## Déployé, et le critère 5 fermé sur pièce
+
+PR 448 fusionnée puis déployée sur `97032c4d`, run 35110472389, **sans
+migration**, l'écart de neuf commits n'en portant aucune.
+
+Mesuré sur la production après bascule, et non sur le statut du workflow :
+
+```
+$ curl -s https://lune-soleil.fr/robots.txt
+User-Agent: *
+Disallow: /
+
+$ curl -s https://lune-soleil.fr/robots.txt | grep -ci sitemap
+0
+```
+
+**Le même fichier rendait `Allow: /` une heure plus tôt.** La bascule est donc
+prouvée de bout en bout, du test unitaire jusqu'au fichier servi.
+
+Le site reste accessible, seule l'exploration est découragée : `/`, `/catalogue`
+et `/aide` rendent 200, et les trois sites du VPS répondent.
+
 ## Traçabilité
 
-**Dépôt** : branche `fix/LS-234-fermer-indexation-catalogue-vide`.
+**Dépôt** : PR 448 fusionnée en rebase, `0a3fbcd` et `97032c4`, puis déployée.
 
-**Jira** : LS-234 créé, rattaché à LS-7, passé En cours.
+**Jira** : LS-234 créé, rattaché à LS-7, commenté deux fois et passé
+**Terminé**, ses sept critères remplis.
 
 **Mémoire** : rien d'écrit. Les trois questions ne passent pas, le piège ne
 s'étant présenté qu'une fois et le test le fermant mécaniquement.
 
-## Prochaine étape
+## Ce que ce ticket laisse à LS-153
 
-**Le critère 5 reste ouvert** : le comportement doit être vérifié **sur la
-production** après déploiement, en interrogeant `robots.txt`, et non sur le
-statut du workflow. Il faudra donc déployer, puis mesurer.
+Son **critère 4** est tenu par construction. Son **critère 6** reste entier :
+LS-153 vérifie et consigne la date d'ouverture, elle ne la déclenche plus.
+
+## Prochaine étape
 
 **Le nocturne de 7h** tranche LS-232 et LS-233.
 
