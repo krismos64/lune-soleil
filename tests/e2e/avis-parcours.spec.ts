@@ -188,7 +188,32 @@ test("le bouton d'envoi dit ce qui manque avant d'etre actionnable", async ({
    */
   const entree = page.getByRole("radio", { name: "4 étoiles sur 5" }).first();
 
-  await page.getByText("4 étoiles sur 5").first().click();
+  /*
+   * LE CLIC PORTE SUR LE `<label>`, ET NON SUR LE TEXTE, LS-232.
+   *
+   * `getByText("4 étoiles sur 5")` designait le `<span>` MASQUE qui porte le nom
+   * accessible, `clip-path: inset(50%)` sur 1 px. Playwright le tient pour
+   * visible, l'arbre d'accessibilite le conservant, puis refuse de cliquer :
+   *
+   * ```
+   * - element is visible, enabled and stable
+   * - scrolling into view if needed
+   * - done scrolling
+   * - element is outside of the viewport
+   * - retrying click action
+   * ```
+   *
+   * La boucle durait les 30 s du timeout, sur les quatre largeurs. Le composant
+   * est correct : ce span repare le nom accessible « 2étoiles sur 5 » sans
+   * espace, mesure par LS-225. C'est le LIBELLE qui porte la cible tactile de
+   * 44 px, donc le geste reel, et son nom accessible vaut celui du span.
+   *
+   * NI `getByLabel` NI `getByRole("radio")` NE CONVIENNENT ICI : les deux
+   * designent l'entree, elle aussi masquee, et rejoueraient la meme boucle.
+   * Le `<label>` se vise par le `for` qui le relie a cette entree.
+   */
+  const identifiantEntree = await entree.getAttribute("id");
+  await page.locator(`label[for="${identifiantEntree}"]`).click();
 
   await expect(entree).toBeChecked();
   await expect(bouton).toBeEnabled();
