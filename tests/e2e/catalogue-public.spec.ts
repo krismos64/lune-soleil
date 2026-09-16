@@ -137,13 +137,34 @@ test("le filtre retenu porte aria-current", async ({ page }) => {
    */
   const barre = page.getByRole("navigation", { name: "Filtrer par catégorie" });
 
+  /*
+   * `exact: true`, ET C'EST LE SECOND TOUR DU MEME PIEGE, LS-232.
+   *
+   * L'ancrage dans la barre, decrit juste au-dessus, a ecarte les cartes mais
+   * pas la correspondance par SOUS-CHAINE : `getByRole` retient tout nom qui
+   * CONTIENT le texte donne, et « TEST Catégorie A » est un prefixe de « TEST
+   * Catégorie avis ». Cette derniere est entree dans la barre le jour ou
+   * l'amorce de LS-140 a publie sa piece, et le test a rougi sur un code juste.
+   *
+   * ```
+   * 1) <a aria-current="page" href="...categorie=e2e-ls104-categorie-a">TEST Catégorie A</a>
+   * 2) <a href="...categorie=e2e-ls140-categorie">TEST Catégorie avis</a>
+   * ```
+   *
+   * Le message parlait de « 2 elements » pour « Catégorie A », ce qui se lit au
+   * premier regard comme un DOUBLON en base. Il n'y en a jamais eu : les onze
+   * categories de la base de bout en bout portent onze noms distincts.
+   */
   await expect(
-    barre.getByRole("link", { name: CATALOGUE_TEST.categorieA.nom }),
+    barre.getByRole("link", {
+      name: CATALOGUE_TEST.categorieA.nom,
+      exact: true,
+    }),
   ).toHaveAttribute("aria-current", "page");
 
   // Et « Tout voir » ne le porte plus.
   await expect(
-    barre.getByRole("link", { name: "Tout voir" }),
+    barre.getByRole("link", { name: "Tout voir", exact: true }),
   ).not.toHaveAttribute("aria-current", "page");
 });
 
@@ -178,13 +199,39 @@ test("les nouveautes sortent en tete", async ({ page }) => {
 
   const noms = await page.locator("ul li h2").allTextContents();
 
-  // Les trois pieces publiees, de la plus recente a la plus ancienne :
-  // 10 aout, 1er aout, 1er juillet.
-  expect(noms).toEqual([
-    CATALOGUE_TEST.dernierePiece.nom,
-    CATALOGUE_TEST.enStock.nom,
-    CATALOGUE_TEST.epuise.nom,
-  ]);
+  /*
+   * L'ORDRE RELATIF DES TROIS PIECES, ET NON LA LISTE ENTIERE, LS-232.
+   *
+   * Cette assertion etait un `toEqual` sur toute la liste, et elle est devenue
+   * rouge le jour ou une amorce VOISINE a publie une quatrieme piece : celle de
+   * LS-140, semee en `ACTIF` par `commande.setup.ts` pour que sa FICHE rende.
+   * Le catalogue ne filtre que sur `statut = 'ACTIF'`, donc elle y entre, et
+   * c'est correct : le defaut etait dans la mesure, pas dans le code servi.
+   *
+   * LA BASE DE BOUT EN BOUT EST PARTAGEE par les seize fichiers, et le projet
+   * porte deja cette lecon sur la base ephemere d'integration : une assertion
+   * globale y mesure le voisinage autant que son sujet. Toute amorce future qui
+   * publie une piece aurait re-casse la version precedente.
+   *
+   * Ce que le tri par nouveautes affirme reellement est un ORDRE, celui des
+   * trois dates figees : 10 aout, 1er aout, 1er juillet. Il se verifie sur les
+   * rangs des trois pieces, sans rien dire de ce qui les entoure.
+   */
+  const rang = (nom: string) => noms.indexOf(nom);
+
+  // Les trois pieces sont bien au catalogue : `indexOf` rendrait -1 sinon, et
+  // -1 < 0 < 1 satisfait un ordre croissant sans rien prouver.
+  expect(rang(CATALOGUE_TEST.dernierePiece.nom)).toBeGreaterThanOrEqual(0);
+  expect(rang(CATALOGUE_TEST.enStock.nom)).toBeGreaterThanOrEqual(0);
+  expect(rang(CATALOGUE_TEST.epuise.nom)).toBeGreaterThanOrEqual(0);
+
+  // La plus recente devance la suivante, qui devance la plus ancienne.
+  expect(rang(CATALOGUE_TEST.dernierePiece.nom)).toBeLessThan(
+    rang(CATALOGUE_TEST.enStock.nom),
+  );
+  expect(rang(CATALOGUE_TEST.enStock.nom)).toBeLessThan(
+    rang(CATALOGUE_TEST.epuise.nom),
+  );
 });
 
 test("le catalogue ne deborde pas horizontalement", async ({ page }) => {
