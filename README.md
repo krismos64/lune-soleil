@@ -14,6 +14,12 @@ Projet en cours de développement. **La boutique tourne en production depuis le
 9 septembre 2026** mais n'est pas ouverte commercialement : il manque les clés de
 **paiement**, LS-153, et les contenus de l'exploitante.
 
+**Le site est donc en ligne ET fermé à l'indexation**, depuis LS-234 le
+16 septembre 2026 : `robots.txt` rend `Disallow: /` tant qu'aucune pièce n'est
+publiée, et se rouvrira **seul** à la première. Aucun interrupteur à poser, l'état
+se déduisant du catalogue. Les deux notions ne se confondent pas, et ce que
+LS-153 appelle « première mise en ligne » est l'ouverture **commerciale**.
+
 Les clés d'envoi d'email **sont posées** depuis le 10 septembre 2026, LS-214.
 
 Les portes de sortie des phases 1 et 3 sont constatées, voir plus bas. Deux
@@ -33,23 +39,33 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 4, factures et expédition | LS-5 | 3 | **LS-218 crée l'étiquette par API**, et son poids est un réglage depuis le 12 septembre 2026 : seul son critère 10 reste ouvert, il attend un colis réel donc LS-153. **LS-33** décide comment le site apprend qu'un colis est livré, **LS-35** porte l'e-reporting au 1er septembre 2027, **LS-222 est close** le 13 septembre 2026, les emails HTML observés sur Yahoo, Gmail et OVH, les trois en boîte de réception. **LS-98 est close** le 11 septembre 2026, les paramètres commerciaux vivent en base, ADR-043 |
 | 4bis, espace client et avis | LS-36 | 0 | **close**, et rouverte deux fois depuis : LS-221 a livré « Mes avis » puis **LS-225 la modification d'un avis par son auteur**, le 12 septembre 2026. Une phase close ne l'est que des tickets connus le jour où on la ferme |
 | 5, rétractation et conformité | LS-6 | 0 | **close**, ses huit stories terminées le 10 septembre 2026 |
-| 6, exploitation et ouverture | LS-7 | 7 | **LS-153 et LS-142 attendent l'exploitante**. LS-140 et LS-107 attendent les photographies de LS-23. Reste LS-150, la visibilité dans les moteurs de réponse. **LS-228** a livré son gabarit de titre le 13 septembre 2026, sept titres sur quatorze rendaient en police système ; son second volet, les blocs d'état des deux vues d'ensemble, attend LS-153 faute de données sur les comptes de production. **LS-229** a livré le pendant public le 14 septembre 2026 : aucun titre des pages publiques ni des écrans de connexion n'employait le jeton, C42 ne couvrant que les écrans privés. La règle vit désormais dans `globals.css`, hors d'atteinte des sorties anticipées de layout, **C43** l'énonce, et les trois portes d'entrée reçoivent le gabarit à deux panneaux du prototype. **LS-230 est close** le 14 septembre 2026 : les 44 preuves par mutation tournent désormais, 38 par PR et 6 au nocturne. Six étaient cassées et cachaient cinq trous réels, et cinq mutations traînaient dans le dépôt, dont la garde d'accès à l'administration. **LS-231** porte l'instabilité de la suite d'intégration : remesurée le 15 septembre 2026, **un échec sur six exécutions** sur `tableau-bord`, et non les 21 annoncés d'abord, chiffre fabriqué par une preuve par mutation restée active en arrière-plan. **LS-223, LS-226 et LS-227 sont closes** le 13 septembre 2026 : la clé Backblaze durcie, l'instabilité des tests et le cul-de-sac de la réauthentification |
+| 6, exploitation et ouverture | LS-7 | 9 | **LS-153 et LS-142 attendent l'exploitante**. LS-140 et LS-107 attendent les photographies de LS-23. Reste LS-150, la visibilité dans les moteurs de réponse. **LS-228** a livré son gabarit de titre le 13 septembre 2026, sept titres sur quatorze rendaient en police système ; son second volet, les blocs d'état des deux vues d'ensemble, attend LS-153 faute de données sur les comptes de production. **LS-229** a livré le pendant public le 14 septembre 2026 : aucun titre des pages publiques ni des écrans de connexion n'employait le jeton, C42 ne couvrant que les écrans privés. La règle vit désormais dans `globals.css`, hors d'atteinte des sorties anticipées de layout, **C43** l'énonce, et les trois portes d'entrée reçoivent le gabarit à deux panneaux du prototype. **LS-230 est close** le 14 septembre 2026 : les 44 preuves par mutation tournent désormais, 38 par PR et 6 au nocturne. Six étaient cassées et cachaient cinq trous réels, et cinq mutations traînaient dans le dépôt, dont la garde d'accès à l'administration. **LS-231 est close sans correction** le 16 septembre 2026 : un échec sur six exécutions sur `tableau-bord`, jamais observé en CI, défaut connu et accepté. **LS-232 et LS-233** sont corrigées et fusionnées le 16 septembre et attendent le nocturne : douze échecs de bout en bout aux causes déterministes, et trois scripts de mutation qui imprimaient la barre de progression de Playwright au lieu du test en échec. **LS-234 est close** le 16 septembre, `robots.txt` déduit son état du catalogue. **LS-223, LS-226 et LS-227 sont closes** le 13 septembre 2026 : la clé Backblaze durcie, l'instabilité des tests et le cul-de-sac de la réauthentification |
 | 7, V1 cible | LS-8 | 0 | **close** le 11 septembre 2026. LS-149 portait le dernier critère : ADR-044 **écarte l'assistant IA** du périmètre plutôt que de le reporter |
-| Contenus | LS-22 | 10 | **attend l'exploitante**, rien n'est faisable sans elle. **LS-32 est close** le 11 septembre 2026, la neutralité de genre étant désormais gardée par un contrôle |
+| Contenus | LS-22 | 9 | **attend l'exploitante**, rien n'est faisable sans elle. **LS-32 est close** le 11 septembre 2026, la neutralité de genre étant désormais gardée par un contrôle |
 
-**197 tickets terminés sur 221 hors epics**, les deux termes relevés dans Jira
-le **13 septembre 2026**, et jamais dérivés l'un de l'autre.
+**199 tickets terminés sur 224 hors epics**, les deux termes relevés dans Jira
+le **16 septembre 2026**, et jamais dérivés l'un de l'autre.
 
-**Le dénominateur a gagné neuf tickets en trois jours**, LS-219 à LS-227 : les
+**Le dénominateur a gagné trois tickets le 16 septembre**, LS-232 à LS-234 : les
 anomalies trouvées ne sont plus corrigées au fil de l'eau mais ticketées, ce que
-le motif « dette annoncée hors outil » a imposé. Le numérateur, lui, a gagné six
-stories, LS-222 et LS-223 comprises. **NEUF tickets sont En cours**, relevés dans
-Jira, et **deux dépendent encore du code** : LS-218 attend un colis réel, son
-dernier critère exigeant un achat facturé et donc LS-153 ; **LS-228** a livré son
-gabarit de titre et garde son second volet, les blocs d'état des deux vues
-d'ensemble, que des comptes sans commande ni adresse ne permettent pas de
-vérifier. Les sept autres, LS-19, LS-28, LS-29, LS-107, LS-123, LS-140 et
-LS-170, attendent l'exploitante ou une démarche externe.
+le motif « dette annoncée hors outil » a imposé. **ONZE tickets sont En cours**,
+relevés dans Jira, et **quatre dépendent encore du code** :
+
+* **LS-232** et **LS-233**, corrigées et fusionnées le 16 septembre, attendent le
+  contrôle nocturne pour leur dernier critère
+* **LS-218** attend un colis réel, son dernier critère exigeant un achat facturé
+  et donc LS-153. Son code est écrit, audité et **déployé** depuis le 13 septembre
+* **LS-228** a livré son gabarit de titre et garde son second volet, les blocs
+  d'état des deux vues d'ensemble, que des comptes sans commande ni adresse ne
+  permettent pas de vérifier
+
+Les sept autres, LS-19, LS-28, LS-29, LS-107, LS-123, LS-140 et LS-170, attendent
+l'exploitante ou une démarche externe.
+
+**LS-231 a été close sans correction** le 16 septembre, arbitrage de Christophe :
+`tableau-bord.sequential.test.ts` échoue une fois sur six dans la suite
+d'intégration complète, jamais seul, jamais observé en CI. Le défaut est connu et
+accepté, le test n'est ni supprimé ni ignoré.
 
 **Cinq phases sur huit sont désormais closes**, les phases 1, 3, 4bis, 5 et 7.
 
@@ -58,7 +74,7 @@ une fois : le chiffre disait 175 sous une date du 10 septembre, ce qui aurait
 fait relire un compte pour un autre. Motif « un compte recopié n'est pas une
 mesure », qui vaut pour la date autant que pour le nombre.
 
-**Onze des vingt-quatre tickets ouverts attendent l'exploitante** : les dix de
+**Dix des vingt-cinq tickets ouverts attendent l'exploitante** : les neuf de
 l'epic LS-22, photographies, textes, tarifs et contenus juridiques, plus LS-19,
 la médiation, qui suppose une adhésion à souscrire. Aucun code ne les débloque.
 
