@@ -99,11 +99,38 @@ hors table par exemple, l'ancienne forme nomme la cause aussi bien. Sur un
 contrôle témoin rouge puis vert, elle affiche « cohérente » sous le mot ECHEC,
 mot pour mot ce que la CI a imprimé.
 
+## La cause dormait en archive depuis cinq jours
+
+Ce journal a d'abord affirmé que la divergence restait inexpliquée. **C'est faux,
+et la correction vaut mieux que le constat.**
+
+La PR 444 a été relancée sans aucun changement : **elle est passée au vert**.
+Même commit, deux verdicts opposés, donc une divergence transitoire et non un
+défaut de contenu.
+
+`grep -rl` dans `memory/archive/`, ce que le CLAUDE.md demande avant de croire un
+piège inconnu, a rendu une fiche du **11 septembre** :
+`controle-config-faux-positif-transitoire`. Elle décrit exactement ce symptôme et
+en donne la cause probable.
+
+`verifier-config-claude.sh` lit le dépôt par **trois `git ls-files`**, dont un
+nu, ligne 795. Une opération git concurrente lui fait rendre une liste partielle
+ou vide, sans erreur : le contrôle conclut sur un dépôt qu'il voit mal. Mesuré ce
+jour-là sur ce poste, deux signalements `paths` sur des fichiers parfaitement
+suivis, pendant que tournaient des rebases.
+
+**LS-204 déclarait cette cause non identifiée**, le 8 septembre. La fiche a été
+écrite trois jours après, puis archivée, donc plus chargée au démarrage. Deux
+sessions ont cherché en ayant la réponse à portée.
+
+La leçon n'est pas sur le contrôle : **un commentaire de code qui dit « cause non
+identifiée » date du jour où il a été écrit.** La fiche qui l'explique peut avoir
+été écrite après. La fiche est remontée dans l'index et enrichie du cas CI.
+
 ## Ce qui n'est pas corrigé, et qu'il faut dire
 
-**La divergence entre deux exécutions reste inexpliquée.** Ce qui est fermé est
-l'impossibilité de la diagnostiquer : un prochain rouge nommera sa cause au lieu
-d'afficher un succès.
+**L'opération git concurrente exacte, côté runner, reste inconnue.** Ce qui est
+établi est le mécanisme et le geste : relancer avant de chercher.
 
 **L'écart CI/local sur l'état vide des déclinaisons reste ouvert lui aussi.** Le
 script rend 6 sur 6 en local, quand le nocturne rapportait 5 sur 6.
@@ -119,9 +146,15 @@ nocturne tranchera, LS-232 étant corrigé.
 
 **Jira** : LS-233 créé ce matin, à commenter après fusion.
 
-**Mémoire** : rien d'écrit. La leçon « mutation vue par le mauvais test » est
-déjà en fiche, et c'est elle qui a permis de lire le symptôme correctement dès la
-première minute.
+**Mémoire** : aucune fiche neuve. `controle-config-faux-positif-transitoire` est
+**remontée de l'archive** dans l'index, et enrichie du cas d'intégration
+continue : le piège s'est présenté deux fois, il se rejouera sur une story sans
+rapport, et aucun contrôle ne peut le fermer. Les trois questions passent, mais
+une fiche existante couvrait déjà le motif : l'enrichir ne coûte aucune ligne
+d'index de plus.
+
+La leçon « mutation vue par le mauvais test » est déjà en fiche elle aussi, et
+c'est elle qui a permis de lire le symptôme correctement dès la première minute.
 
 ## Prochaine étape
 
