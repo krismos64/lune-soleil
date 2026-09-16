@@ -30,6 +30,30 @@
 # 6 executions du script complet dans un clone superficiel, et le controle lance
 # pendant que le temoin du cas 4 existe.
 #
+# ---------------------------------------------------------------------------
+# LA CAUSE PROBABLE EST CONNUE DEPUIS LE 11 SEPTEMBRE 2026, LS-233, et ce
+# paragraphe est reste faux trois jours de plus faute d'avoir cherche ou il
+# fallait.
+#
+# `verifier-config-claude.sh` LIT LE DEPOT PAR TROIS `git ls-files`, dont un nu.
+# Une operation git concurrente lui fait rendre une liste PARTIELLE OU VIDE,
+# sans aucune erreur : le controle conclut alors sur un depot qu'il voit mal.
+#
+# Le motif a ete mesure le 11 septembre sur ce poste, deux signalements `paths`
+# sur des fichiers parfaitement suivis, pendant que tournaient des rebases et
+# des `prisma generate`. Une relance rendait 0 les deux fois. La fiche memoire
+# qui le porte etait partie en ARCHIVE entre-temps, donc plus chargee au
+# demarrage : d'ou une cause declaree « non identifiee » ici alors qu'elle etait
+# ecrite ailleurs.
+#
+# CE QUI L'A CONFIRME EN CI, le 16 septembre : la PR 444, purement documentaire
+# elle aussi, a rougi puis est passee VERTE par simple `gh run rerun --failed`,
+# sans le moindre changement. Meme commit, deux verdicts opposes.
+#
+# Ce qui reste reellement ouvert est l'operation git concurrente EXACTE cote
+# runner. Devant un rouge d'ici : RELANCER d'abord, chercher ensuite.
+# ---------------------------------------------------------------------------
+#
 # CE QUI EST CORRIGE est le seul defaut ETABLI : le rapport lancait le controle
 # DEUX fois, et pouvait donc decrire une execution en concluant sur une autre.
 # C'est ce qui rendait le diagnostic impossible, la sortie affichant
