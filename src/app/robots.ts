@@ -19,6 +19,7 @@ import type { MetadataRoute } from "next";
 
 import { CHEMIN_ACCES_DOCUMENT, CHEMIN_RETRACTATION } from "@/lib/jeton-acces";
 import { absolutise } from "@/lib/seo";
+import { lireCataloguePublic } from "@/services/catalogue";
 
 /**
  * LE FICHIER EST ENGENDRE A CHAQUE REQUETE.
@@ -31,7 +32,51 @@ import { absolutise } from "@/lib/seo";
  */
 export const dynamic = "force-dynamic";
 
-export default function robots(): MetadataRoute.Robots {
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  /*
+   * -------------------------------------------------------------------------
+   * UNE BOUTIQUE SANS PIECE NE S'INDEXE PAS, LS-234.
+   *
+   * Mesure du 16 septembre 2026 sur `lune-soleil.fr` : le site rendait
+   * `Allow: /` avec un catalogue VIDE, servant « Le catalogue s'etoffe, les
+   * premieres pieces arrivent bientot » a tout moteur qui passait.
+   *
+   * LS-153 pose cette regle en critere 4, mais elle est la story du JOUR de
+   * l'ouverture : sa fermeture arriverait apres des semaines d'indexation de
+   * cette page d'attente. Ce qui coute n'est pas la page, qui est propre, c'est
+   * sa PERSISTANCE dans un index longtemps apres que le catalogue s'est rempli.
+   *
+   * L'ETAT SE DEDUIT DU CATALOGUE, IL NE SE REGLE PAS, arbitrage de Christophe
+   * du 16 septembre 2026. Un booleen en base ou une variable d'environnement
+   * auraient marche, au prix d'un geste a poser le jour J : un geste a poser est
+   * un geste qu'on oublie, et le site serait alors reste ferme APRES l'ouverture
+   * reelle, defaut silencieux et plus couteux que celui-ci.
+   *
+   * CE QUE CE CHOIX COUTE, et il faut le dire : LS-153 veut une ouverture
+   * « volontaire et verifiee, avec la date consignee ». Elle devient ici
+   * IMPLICITE, declenchee par la premiere piece publiee. LS-153 garde son
+   * critere 6 : elle verifie et consigne, elle ne declenche plus.
+   *
+   * LA MEME LECTURE QUE `sitemap.ts`, qui appelle deja `lireCataloguePublic()`
+   * pour la meme donnee. Un second chemin de lecture pourrait diverger du
+   * premier, et deux fichiers de referencement se contrediraient.
+   * -------------------------------------------------------------------------
+   */
+  const { produits } = await lireCataloguePublic();
+
+  if (produits.length === 0) {
+    return {
+      /*
+       * AUCUN `sitemap` ICI, ET C'EST DELIBERE. L'annoncer reviendrait a
+       * pointer cinq URL statiques vers un site qu'on vient d'interdire en
+       * entier : un moteur lit les deux signaux et le second contredit le
+       * premier. Le sitemap redevient annonce des que le catalogue porte une
+       * piece, en meme temps que l'autorisation.
+       */
+      rules: { userAgent: "*", disallow: "/" },
+    };
+  }
+
   return {
     rules: {
       userAgent: "*",
