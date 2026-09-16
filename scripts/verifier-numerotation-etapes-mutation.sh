@@ -37,6 +37,15 @@
 #
 # SI LE CAS 5 ROUGIT A NOUVEAU, sa sortie est desormais celle de l'execution qui
 # a reellement echoue, avec son code : elle nommera la cause.
+#
+# CETTE PROMESSE ETAIT FAUSSE POUR UN TROISIEME APPEL, LS-233, ET LE MEME
+# SYMPTOME EST REVENU LE 16 SEPTEMBRE 2026. LS-204 avait corrige les deux
+# appels des cas de mutation et laisse celui du TEST DE REFERENCE, qui gardait
+# la forme a deux executions. C'est lui qui a rougi sur la PR 444, purement
+# documentaire elle aussi, en affichant « cohérente » sous le mot ECHEC.
+#
+# Les trois appels sont desormais alignes. LA DIVERGENCE ENTRE DEUX EXECUTIONS
+# RESTE INEXPLIQUEE : ce qui est ferme est l'impossibilite de la diagnostiquer.
 # ---------------------------------------------------------------------------
 #
 # Usage : ./scripts/verifier-numerotation-etapes-mutation.sh
@@ -87,9 +96,53 @@ restaurer() {
 
 # L'ETAT DE REFERENCE DOIT ETRE VERT, sans quoi tout « rouge » observe ensuite
 # ne prouverait rien : il pourrait venir d'une anomalie preexistante.
-if ! "$CONTROLE" --strict >/dev/null 2>&1; then
+#
+# ---------------------------------------------------------------------------
+# UNE SEULE EXECUTION, ET C'EST LE TROISIEME APPEL QUE LS-204 AVAIT OUBLIE.
+#
+# Les deux appels des cas de mutation ont ete corriges le 8 septembre 2026,
+# commentaire plus bas. CELUI-CI EST RESTE A L'ANCIENNE FORME : un appel pour
+# le code de sortie, un second pour l'affichage. L'en-tete du script annoncait
+# pourtant que le rapport nommerait desormais la cause.
+#
+# MESURE DU 16 SEPTEMBRE 2026, en CI sur une pull request purement
+# documentaire, PR 444, exactement le cas que LS-204 decrivait comme non
+# reproductible :
+#
+#   etape 9a     ./scripts/verifier-config-claude.sh --strict
+#                  configuration Claude Code cohérente
+#   etape 9a bis ECHEC l'état de référence est déjà rouge
+#                  configuration Claude Code cohérente
+#
+# La meme commande, verte une seconde plus tot dans l'etape voisine, verte a
+# nouveau au second appel de celle-ci, et declaree rouge entre les deux. La
+# sortie affichee ne pouvait pas nommer la cause : elle venait d'une AUTRE
+# execution que celle qui avait echoue.
+#
+# CE QUE CETTE CORRECTION APPORTE, et ce qu'elle n'apporte pas : la sortie
+# montree est desormais celle qui a reellement echoue, avec son code. La cause
+# de la divergence entre deux executions reste ouverte, LS-233, mais un
+# prochain rouge la nommera au lieu d'afficher un succes.
+#
+# ELLE NE CHANGE RIEN QUAND LES DEUX EXECUTIONS S'ACCORDENT, et c'est ce qui a
+# rendu le defaut si long a voir : sur un rouge STABLE, un ADR hors table par
+# exemple, l'ancienne forme nommait la cause aussi bien. Verifie le
+# 16 septembre 2026 en rejouant les deux formes cote a cote.
+#
+# L'ECART N'APPARAIT QUE SUR UNE DIVERGENCE, mesure le meme jour sur un
+# controle temoin rouge puis vert :
+#
+#   ancienne forme    ECHEC ... / « configuration Claude Code cohérente »
+#   nouvelle forme    ECHEC ... / code 1 / la cause reelle, nommee
+#
+# La premiere ligne est mot pour mot ce que la CI a imprime sur la PR 444.
+# ---------------------------------------------------------------------------
+sortie_reference="$("$CONTROLE" --strict 2>&1)" && code_reference=0 || code_reference=$?
+
+if [ "$code_reference" -ne 0 ]; then
   echo "ECHEC l'état de référence est déjà rouge, la mutation ne prouverait rien"
-  "$CONTROLE" --strict
+  echo "      code de sortie : $code_reference"
+  printf '%s\n' "$sortie_reference" | sed 's/^/      /'
   exit 1
 fi
 echo "État de référence vert."

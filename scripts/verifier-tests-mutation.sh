@@ -320,8 +320,15 @@ cas() {
   # Les lignes en echec seulement, marquees × par Vitest et ✘ par Playwright.
   # Chercher le motif dans toute la sortie confondrait un test en echec avec le
   # meme test passe au vert quelques lignes plus haut.
+  #
+  # LE MARQUEUR DOIT OUVRIR LA LIGNE, LS-233. Playwright imprime une barre de
+  # progression, `········×F`, ou chaque test echoue ajoute un `×` : un motif
+  # nu la retient comme une ligne d'echec, et elle sort AVANT le recapitulatif,
+  # donc le `head -3` ne montre qu'elle. Une suite de points ne nomme aucun
+  # test, et ce script en affiche meme quand il conclut OK.
+  # `verifier-etats-non-nominaux-mutation.sh` porte les quatre formes mesurees.
   local lignes_echec
-  lignes_echec=$(grep -E '(×|✘)' "$TMP/sortie.txt")
+  lignes_echec=$(grep -E '^[[:space:]]*(×|✘)[[:space:]]' "$TMP/sortie.txt" || true)
 
   if printf '%s' "$lignes_echec" | grep -qF "$motif_attendu"; then
     echo "  OK    $nom -> detecte par le test attendu"

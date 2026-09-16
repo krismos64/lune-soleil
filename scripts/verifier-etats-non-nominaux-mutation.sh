@@ -186,8 +186,40 @@ cas() {
   # Les lignes en echec seulement, marquees × par Vitest et ✘ par Playwright.
   # Chercher le motif dans toute la sortie confondrait un test en echec avec le
   # meme test passe au vert quelques lignes plus haut.
+  #
+  # ---------------------------------------------------------------------------
+  # LE MARQUEUR DOIT OUVRIR LA LIGNE, LS-233, ET LA VERSION PRECEDENTE NE
+  # L'EXIGEAIT PAS.
+  #
+  # Playwright imprime une BARRE DE PROGRESSION ou chaque test echoue ajoute un
+  # `×`. Un `grep -E '(×|✘)'` nu la retient au meme titre qu'une ligne d'echec,
+  # et elle sort AVANT le recapitulatif : le `head -3` plus bas ne montrait
+  # qu'elle.
+  #
+  # CE QUE LE RAPPORT DONNAIT, au nocturne des 15 et 16 septembre 2026 :
+  #
+  #   RATE  l'etat vide des declinaisons change de texte
+  #           echecs reels :
+  #             ········×F
+  #
+  # Une suite de points ne nomme aucun test. Le script concluait juste, « pas
+  # sur le test attendu », et rendait son propre diagnostic impossible : rien
+  # ne permettait de distinguer un TROU DE COUVERTURE d'une mutation vue par un
+  # test voisin qu'il aurait suffi de declarer.
+  #
+  # LES QUATRE FORMES, confrontees le 16 septembre a la sortie reelle des deux
+  # lanceurs. Seules les deux premieres sont des echecs :
+  #
+  #   ✘   9 [mobile-320] › fichier.spec.ts:58:7 › le nom du test      Playwright
+  #    × tests/unite/exemple.test.ts > un cas qui echoue              Vitest
+  #   ········×F                                                      barre
+  #     ·×F                                                           barre
+  #
+  # L'ancre `^[[:space:]]*` les separe : un marqueur de progression est TOUJOURS
+  # precede d'au moins un point, jamais d'espaces seuls.
+  # ---------------------------------------------------------------------------
   local lignes_echec
-  lignes_echec=$(grep -E '(×|✘)' "$TMP/sortie.txt" || true)
+  lignes_echec=$(grep -E '^[[:space:]]*(×|✘)[[:space:]]' "$TMP/sortie.txt" || true)
 
   if printf '%s' "$lignes_echec" | grep -qF "$motif_attendu"; then
     echo "  OK    $nom -> detecte par le test attendu"
