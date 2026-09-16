@@ -113,13 +113,17 @@ progression** de Playwright, que son `grep -E '(×|✘)'` capte au même titre
 qu'une ligne nommant un test. Un rapport qui ne nomme rien ne permet pas de
 conclure, et c'est ce qui a coûté le plus de temps ici.
 
-Sujet distinct de LS-232, non traité dans cette PR.
+Sujet distinct de LS-232, non traité dans cette PR : il est porté par **LS-233**,
+avec la piste non vérifiée que la CI joue les quatre largeurs quand la mesure
+locale n'en jouait qu'une.
 
 ## Traçabilité
 
-**Dépôt** : PR 443, branche `fix/LS-232-echecs-bout-en-bout-nocturne`. Rouge au
-premier passage sur `verifier-config-claude.sh`, précisément parce que cette page
-de journal n'existait pas encore. Le contrôle a fait son travail.
+**Dépôt** : PR 443 **fusionnée sur `main`** en rebase, branche supprimée,
+`c026e90` et `85fd9c0`. Rouge au premier passage sur
+`verifier-config-claude.sh`, précisément parce que cette page de journal
+n'existait pas encore. Le contrôle a fait son travail, et cette page est la
+raison pour laquelle le second passage est vert.
 
 **Jira** : LS-232 créé, rattaché à LS-7, passé En cours, commenté avec l'état
 réel des sept critères dont un écarté et argumenté.
@@ -133,11 +137,13 @@ relevant de l'incident daté.
 **Le critère 5 de LS-232 ne se vérifie qu'au prochain nocturne**, vers 7h du
 matin. Le ticket reste En cours jusque-là.
 
-**L'étape des mutations lourdes** reste rouge et non expliquée. Le défaut de
-rapport du script est réel et mérite son ticket.
+**L'étape des mutations lourdes** reste rouge, et son défaut de rapport est
+désormais porté par **LS-233**. Elle rougira encore au prochain nocturne, rien
+n'ayant été corrigé de ce côté.
 
 **LS-218**, l'expédition Sendcloud, reste le chantier de code prioritaire sans
 dépendance externe.
 
-Comptes non relevés dans Jira à cette heure, la session ayant porté sur un seul
-ticket neuf : ceux du 15 septembre valent, plus LS-232 ouvert.
+Comptes relevés dans Jira, jamais déduits : **197 terminés sur 223 hors epics**,
+**26 ouverts**, dont **11 En cours**. Deux tickets de plus qu'hier, LS-232 et
+LS-233, tous deux ouverts par cette session.
