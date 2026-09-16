@@ -142,9 +142,14 @@ nocturne tranchera, LS-232 étant corrigé.
 
 ## Traçabilité
 
-**Dépôt** : branche `fix/LS-233-rapport-de-mutation-nomme-le-test`, `688f78b`.
+**Dépôt** : PR 445 **fusionnée sur `main`** en rebase, branche supprimée,
+`3975fee`, `0aa53a1` et `7897cde`. Elle était `BEHIND` après la fusion de la
+PR 444, ce qui empêchait les huit contrôles de démarrer : un rebase sur `main`
+les a lancés, et ils sont verts.
 
-**Jira** : LS-233 créé ce matin, à commenter après fusion.
+**Jira** : LS-233 créé ce matin, passé En cours, commenté trois fois : l'état des
+cinq critères, la mesure de la relance verte, et les SHA réels après fusion. Il
+**reste En cours**, ses critères 4 et 5 ne pouvant pas se vérifier aujourd'hui.
 
 **Mémoire** : aucune fiche neuve. `controle-config-faux-positif-transitoire` est
 **remontée de l'archive** dans l'index, et enrichie du cas d'intégration
