@@ -230,6 +230,47 @@ quatre-vingts : en local il rejoue la suite d'intégration à chaque cas, sans l
 cache chaud du runner. Son verdict n'était pas nécessaire, le correctif du step
 étant prouvé sur banc d'essai. Les trois autres scripts masqués sont verts.
 
+## LS-29, une question de Christophe et deux écarts de traçabilité
+
+« LS-29 est fait non ? » En vérifiant, deux choses ressortaient.
+
+**La relecture finale par l'exploitante était faite**, Christophe l'a confirmé :
+les dix textes définitifs et le rendu HTML, après le 13 septembre. Le commentaire
+du 12 septembre bornait explicitement la validation précédente au seul ton, « pas
+les dix textes dans leur version définitive, dont ceux écrits après son départ ».
+Cette dette est levée, et rien ne l'avait enregistré.
+
+**Le critère 4 avait changé de motif sans que personne le note.** Il demande un
+email reçu dans une vraie boîte, sur au moins deux fournisseurs. Le README
+affirmait encore « aucun de ces messages n'ayant jamais été reçu dans une vraie
+boîte », ce qui était faux depuis le 13 septembre 14h47 :
+
+```
+c.mostefaoui@yahoo.fr   14:44   Yahoo   boite de reception
+kayouw641@gmail.com     14:46   Gmail   boite de reception
+contact@smartplanning   14:47   OVH     boite de reception
+```
+
+Trois fournisseurs sur trois, la condition « au moins deux » est dépassée. Mais
+une soumission de contact ne dépose que **deux modèles sur dix**,
+`message-contact.ts` lignes 275 et 315. Les huit autres n'ont jamais été envoyés
+en réel, faute d'événement réel.
+
+Le même README affirmait par ailleurs, ligne 39, que LS-222 avait observé les
+emails « sur Yahoo, Gmail et OVH, les trois en boîte de réception ». **Les deux
+phrases se contredisaient** à quelques centaines de lignes d'écart.
+
+## Pourquoi le script d'envoi réel ne comble pas le trou
+
+`npm run email:reel` porte son modèle **en dur**, `alerte-connexion-administration`
+en ligne 83, qui n'est aucun des dix. Le motif est écrit dans le code : c'est le
+seul modèle sans lien, un lien de vérification pointerait vers un jeton
+inexistant. Le destinataire est paramétrable, le modèle non.
+
+Les huit modèles restants dépendent donc d'un achat réel, donc de LS-153, ou
+d'un élargissement du script qui sortirait du périmètre écrit de LS-29. Posé en
+arbitrage dans le ticket plutôt que tranché seul.
+
 ## Prochaine étape
 
 Le nocturne du 18 tranche : c'est lui qui prouve le correctif du filtre dans les
