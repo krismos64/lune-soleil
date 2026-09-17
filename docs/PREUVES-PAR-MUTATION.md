@@ -79,8 +79,9 @@ mémoire, « compter ne vérifie pas le contenu » : un nombre écrit en toutes
 lettres n'est ancré par rien, et `verifier-couverture-mutations.sh` lit des noms
 de fichiers, jamais un récit.
 
-**Six au nocturne**, `nocturne.yml`, les six lourdes qui pèsent **1013 s** à
-elles seules :
+**Six au nocturne**, `nocturne.yml`, les six lourdes. Leurs durées **s'additionnent
+à 1013 s**, et c'est une somme de mesures isolées, jamais un temps de step
+observé : la distinction compte, voir plus bas.
 
 | Preuve | Durée mesurée | Ce qui la rend lourde |
 |---|---|---|
@@ -94,6 +95,27 @@ elles seules :
 LS-177 avait déjà déplacé le bout en bout, `npm audit` et l'image au nocturne
 pour tenir la durée par PR. Les y rejoindre suit le même arbitrage.
 
+**AUCUNE DURÉE DE STEP À SIX N'A JAMAIS ÉTÉ OBSERVÉE**, et les deux premières
+lignes du tableau sont les moins sûres. Le step groupait les six dans un seul
+`run`, donc sous `bash -e` : **le premier échec coupait tout**, et les suivants
+ne tournaient pas. Mesuré le 17 septembre 2026 sur trois nocturnes consécutifs,
+`verifier-etats-non-nominaux` échouant en deuxième position :
+
+```
+15, 16 et 17 septembre    2 scripts sur 6 executes, environ 98 s consommees
+```
+
+`verifier-reintegration-stock`, `verifier-sauvegarde`, `verifier-tests` et
+`verifier-regles` n'ont donc **rien prouvé du 14 au 17 septembre**. Ils étaient
+verts, vérifié en local le 17 : ils ne prouvaient simplement plus rien, ce qui
+équivaut à un garde-fou absent. Le step boucle désormais sur les six et retient
+le premier code non nul, donc chacun rend son verdict et le step reste rouge dès
+qu'un échoue.
+
+Les 456 s et 415 s datent du 14 septembre et n'ont pas été réattestées depuis.
+Celle de `verifier-tests` est en outre sous-estimée, le script étant passé de
+166 à 180 cas. Le premier temps réel à six sera celui du nocturne du 18.
+
 **UN BESOIN D'ENVIRONNEMENT SE MESURE EN EXÉCUTANT LA PREUVE**, jamais en lisant
 son texte. Un premier tri par `grep` de mots-clés rangeait `verifier-nginx`,
 `verifier-environnement` et `verifier-migration` parmi les preuves à
@@ -102,9 +124,18 @@ en moins de 5 s sans rien lancer : les mentions vivaient dans leurs commentaires
 
 ## Ce que ce document ne dit pas
 
-Il dit **où** chaque preuve tourne, jamais qu'elle prouve encore quelque chose.
-`verifier-couverture-mutations.sh` lit des noms de fichiers, il ne les exécute
-pas : c'est la preuve elle-même, une fois rejouée, qui répond de son contenu.
+Il dit **où** chaque preuve est déclarée, et il y a **deux trous distincts**
+derrière ce mot.
+
+Une preuve déclarée peut ne rien prouver : `verifier-couverture-mutations.sh` lit
+des noms de fichiers, il ne les exécute pas, et c'est la preuve elle-même, une
+fois rejouée, qui répond de son contenu.
+
+Une preuve déclarée peut aussi **ne pas s'exécuter du tout**, ce que le 17
+septembre 2026 a montré : quatre des six du nocturne étaient masquées par un
+`bash -e`. Trouver ce second trou demande de **compter les bilans** dans le
+rapport, six scripts qui n'en impriment que deux étant le signe. Un nom présent
+dans un workflow ne garantit ni l'un ni l'autre.
 
 Les cinq réparations de LS-230 le rappellent : toutes étaient citées nulle part
 et se sont périmées en silence.

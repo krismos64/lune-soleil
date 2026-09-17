@@ -19,8 +19,8 @@ npm run db:verifier    # les contrôles du modèle sur cette base, exige Docker
 ```
 
 Liste complète dans `README.md`. La CI rejoue presque tout par PR : bout en bout,
-`npm audit` et image sont au **nocturne** depuis LS-177, un défaut de ces trois-là
-entre donc sur `main` sans bloquer. `npm audit` doit rester à **zéro**, à mesurer.
+`npm audit`, image et les **six preuves lourdes** sont au nocturne, un défaut de
+ceux-là entre sur `main` sans bloquer. `npm audit` doit rester à **zéro**, à mesurer.
 Une migration se **crée** à la main, `npx prisma migrate dev --name sujet`.
 
 **Trois bases, jamais confondues** : développement sur 55432, bout en bout sur
@@ -193,8 +193,8 @@ ajoutent un test négatif de sécurité, un test de concurrence ou d'idempotence
 simulation d'une panne de fournisseur, et `ls-frontend-revue` sur l'interface.
 
 **Montrer la preuve**, sortie de commande et résultat. Un contrôle qui n'a jamais
-échoué sur le défaut qu'il prétend attraper n'est pas un contrôle : le prouver par
-mutation, `./scripts/verifier-tests-mutation.sh` rejouant la suite.
+échoué sur le défaut qu'il prétend attraper, ou qui ne tourne pas, n'est pas un
+contrôle : le prouver par mutation, une liste d'échecs vide n'étant pas un verdict.
 
 **Consulter Context7** avant une API de Next.js 16, React 19, Prisma 7, Better
 Auth 1.6 ou Stripe, plus récentes que ma connaissance. Signaler son usage.

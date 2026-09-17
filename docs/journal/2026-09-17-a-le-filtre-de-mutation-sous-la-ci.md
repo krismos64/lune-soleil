@@ -126,8 +126,116 @@ Signalé plutôt que contourné : lever la protection pour ce correctif aurait
 désactivé le contrôle vert sur le dépôt entier. Passé par la PR 451, chemin
 normal, fusionnée en rebase.
 
+## Un second défaut, trouvé en creusant le rouge
+
+Le nocturne était rouge **six nuits d'affilée**, pas une. En regardant les cinq
+précédentes, deux causes distinctes apparaissent.
+
+Du 12 au 15 septembre, c'est « Scénarios critiques de bout en bout » qui
+échouait : douze tests sur 2155, dont un `strict mode violation` sur un lien
+dupliqué dans la navigation par catégorie. Ces douze sont verts depuis le 16,
+corrigés par les stories de la journée. Vérifié que rien n'a été escamoté :
+2143 + 12 = 2155 passés, et 70 ignorés dans les deux relevés, donc aucun test
+retiré ni mis en `skip`.
+
+Le vrai problème est ailleurs, et il est structurel.
+
+## Quatre preuves par mutation n'ont pas tourné depuis trois nuits
+
+Le step « Preuves par mutation lourdes » lance six scripts à la suite dans un
+seul `run`. GitHub l'exécute sous `bash -e` : **le premier script en échec coupe
+le step**, et les suivants ne tournent pas.
+
+`verifier-etats-non-nominaux-mutation.sh` est en deuxième position. Il échouait
+les 15, 16 et 17. Donc `verifier-reintegration-stock`, `verifier-sauvegarde`,
+`verifier-tests` et `verifier-regles` n'ont rien prouvé depuis le 14, dont la
+preuve de la suite d'intégration entière et celle d'une zone critique.
+
+Le rapport nommait bien un échec. Rien ne permettait de voir que quatre preuves
+manquaient derrière lui : un garde-fou qui ne tourne pas ne se signale pas.
+
+Le step boucle désormais sur les six, retient le premier code non nul et sort
+avec lui. Chaque script rend son verdict, et le step reste rouge dès que l'un
+échoue. Éprouvé sur banc d'essai aux trois cas : tout vert sort en 0, un échec
+propage son code sans masquer les suivants, deux échecs retiennent le premier.
+
+## Ce que les quatre scripts masqués cachaient
+
+Rien, et c'est la bonne nouvelle. Lancés localement :
+
+```
+verifier-regles-mutation             15 mutations, 15 detectees
+verifier-sauvegarde-mutation         11 cas joues, 0 echec
+verifier-reintegration-stock-mutation 8 mutation(s) detectee(s) sur 8
+```
+
+Ils étaient verts. Ils ne prouvaient simplement plus rien, ce qui est le même
+résultat qu'un garde-fou absent.
+
+## Un troisième défaut, trouvé en auditant la documentation
+
+Christophe a demandé de vérifier que tout était à jour avant de quitter la
+session. L'audit a trouvé un contrôle aveugle, ce qui est plus grave que les
+écarts de rédaction qu'il cherchait.
+
+`README.md` annonçait **166 mutations** pour `verifier-tests-mutation.sh`, qui en
+porte **180**. Or `verifier-config-claude.sh` recompte ce nombre exprès, depuis
+août, parce que ce compte s'était déjà périmé trois fois. Il était vert.
+
+La cause est dans `compte_annonce` : elle ne lit que les nombres **écrits en
+lettres**, via une liste qui s'arrête à quatre-vingt-dix-neuf. Passé cent, le
+README écrit en chiffres, la capture rend une chaîne vide et la comparaison n'a
+tout simplement pas lieu. Le contrôle ne pouvait pas échouer sur le défaut qu'il
+prétendait attraper.
+
+Corrigé : les lettres d'abord, le chiffre arabe en repli. **Prouvé dans le bon
+ordre**, le contrôle d'abord, le README ensuite :
+
+```
+avant correction du README    README.md annonce 166 mutations, le script en porte 180
+apres                          configuration Claude Code coherente
+```
+
+## Ce que la revue documentaire a corrigé
+
+- `README.md` : le compte 166 vers 180, et le statut de LS-232 et LS-233, qui
+  disaient encore « attendent le nocturne » alors qu'il a tranché
+- les comptes de tickets, relevés dans Jira et non dérivés : **200 terminés sur
+  224**, **10 En cours** et non onze, LS-232 ayant été clos ce jour
+- `docs/PREUVES-PAR-MUTATION.md` : le 1013 s présenté comme mesuré alors qu'il
+  est une somme, l'absence de toute mention du masquage, et la limite du document
+  qui ne distinguait pas « ne prouve rien » de « ne s'exécute pas »
+- `CLAUDE.md` : les six preuves lourdes manquaient à la liste de ce qui entre sur
+  `main` sans bloquer, et la règle sur les contrôles ignorait le cas « ou qui ne
+  tourne pas ». Le fichier est à sa limite de 200 lignes, donc la place a été
+  reprise sur le passage voisin plutôt qu'ajoutée
+- `.claude/skills/story/SKILL.md` : deux règles ajoutées, la liste d'échecs vide
+  qui n'est pas un verdict, et la mesure d'un filtre dans les deux modes
+- `docs/REFERENCES.md` : « où chaque preuve tourne » devient « est déclarée », et
+  grouper plusieurs scripts dans un step entre dans la colonne « à lire avant »
+- `docs/deploiement/EXPLOITATION.md` : le renvoi « cas 115 » cité désormais par
+  son libellé, son rang se décalant, et « 9 cas » corrigé en 11
+- `.github/workflows/nocturne.yml` : « 969 s à elles quatre » pour six scripts
+
+## Ce que je n'ai pas touché
+
+`controles.yml` groupe **vingt-deux** scripts de la même façon, mais le
+comportement y est documenté et assumé : « elles s'arrêtent à la première
+rouge ». Sur une PR l'auteur corrige et relance, donc rien ne reste masqué ;
+au nocturne personne ne relance. Élargir ce step demanderait un arbitrage de
+Christophe, il est signalé plutôt que modifié.
+
+`verifier-tests-mutation.sh` a été **interrompu** après cinq cas sur cent
+quatre-vingts : en local il rejoue la suite d'intégration à chaque cas, sans le
+cache chaud du runner. Son verdict n'était pas nécessaire, le correctif du step
+étant prouvé sur banc d'essai. Les trois autres scripts masqués sont verts.
+
 ## Prochaine étape
 
-Le nocturne du 18 tranche : c'est lui qui prouve le correctif dans les conditions
-où le défaut est apparu. La preuve locale ne couvre pas le reporter `github`, que
-seule la CI active.
+Le nocturne du 18 tranche : c'est lui qui prouve le correctif du filtre dans les
+conditions où le défaut est apparu. La preuve locale ne couvre pas le reporter
+`github`, que seule la CI active.
+
+Il prouve aussi le second correctif, par une propriété observable : le rapport
+doit porter **six** bilans de mutation, là où les trois derniers n'en portaient
+que deux.
