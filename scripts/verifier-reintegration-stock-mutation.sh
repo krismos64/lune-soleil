@@ -159,13 +159,24 @@ cas() {
   # dans toute la sortie confondrait un test en echec avec le meme test passe
   # au vert quelques lignes plus haut.
   #
-  # LE MARQUEUR DOIT OUVRIR LA LIGNE, LS-233. Ce script ne lance que Vitest,
-  # qui n'imprime pas la barre de progression de Playwright : le defaut n'est
-  # donc PAS actif ici. L'ancre est posee par prevention, le jour ou un cas de
-  # bout en bout rejoindrait ce fichier, et pour que les trois scripts de
-  # mutation portent le meme filtre plutot que trois variantes.
+  # LE MARQUEUR DOIT OUVRIR LA LIGNE, LS-233, ET NE SUFFIT PAS SEUL.
+  #
+  # Ce script ne lance que Vitest, donc la barre de progression de Playwright ne
+  # l'atteint pas. LS-233 en avait conclu que le format ne bougeait pas ici, et
+  # c'etait faux : Vitest ajoute son reporter `github-actions` des que
+  # `GITHUB_ACTIONS` est pose, et n'imprime alors AUCUNE ligne `× nom`, juste
+  # une annotation `::error ...,title=<nom du test>::`. Le filtre ancre seul ne
+  # retenait donc rien sur le runner.
+  #
+  # `verifier-etats-non-nominaux-mutation.sh` porte les quatre formes mesurees
+  # le 17 septembre 2026 et la raison du decodage de `%2C`. La forme Playwright
+  # est retenue ici aussi pour que les trois scripts portent le meme filtre, le
+  # jour ou un cas de bout en bout rejoindrait ce fichier.
   local lignes_echec
-  lignes_echec=$(grep -E '^[[:space:]]*×[[:space:]]' "$TMP/sortie.txt" || true)
+  lignes_echec=$(
+    grep -E '^[[:space:]]*(×|✘)[[:space:]]|^[[:space:]]*[0-9]+\)[[:space:]]|^::error ' \
+      "$TMP/sortie.txt" | sed 's/%2C/,/g' || true
+  )
 
   if printf '%s' "$lignes_echec" | grep -qF "$motif_attendu"; then
     echo "  OK    $nom -> detecte par le test attendu"
