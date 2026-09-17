@@ -188,38 +188,43 @@ cas() {
   # meme test passe au vert quelques lignes plus haut.
   #
   # ---------------------------------------------------------------------------
-  # LE MARQUEUR DOIT OUVRIR LA LIGNE, LS-233, ET LA VERSION PRECEDENTE NE
-  # L'EXIGEAIT PAS.
+  # LES DEUX LANCEURS CHANGENT DE FORMAT EN INTEGRATION CONTINUE, LS-233 NE
+  # L'AVAIT PAS MESURE.
   #
-  # Playwright imprime une BARRE DE PROGRESSION ou chaque test echoue ajoute un
-  # `×`. Un `grep -E '(×|✘)'` nu la retient au meme titre qu'une ligne d'echec,
-  # et elle sort AVANT le recapitulatif : le `head -3` plus bas ne montrait
-  # qu'elle.
+  # Playwright porte `reporter: process.env.CI ? "github" : "list"`, et Vitest
+  # ajoute son reporter `github-actions` des que `GITHUB_ACTIONS` est pose. Sur
+  # le runner, AUCUN des deux n'imprime de ligne `× nom` ou `✘ nom` : ils
+  # emettent une annotation `::error ...,title=<nom du test>::`.
   #
-  # CE QUE LE RAPPORT DONNAIT, au nocturne des 15 et 16 septembre 2026 :
+  # LE FILTRE ANCRE DE LS-233 NE POUVAIT DONC RIEN RETENIR EN CI, et c'est ce
+  # qu'a donne le nocturne du 17 septembre 2026 : six cas sur six en RATE, avec
+  # une liste d'echecs reels VIDE. Avant ce filtre, le grep nu retenait la barre
+  # de progression, ce qui faisait passer deux cas pour OK sur une suite de
+  # points ne nommant aucun test : le rouge etait faux dans un sens, puis dans
+  # l'autre.
   #
-  #   RATE  l'etat vide des declinaisons change de texte
-  #           echecs reels :
-  #             ········×F
+  # LES QUATRE FORMES, MESUREES le 17 septembre sur les deux lanceurs dans les
+  # deux modes, et non deduites :
   #
-  # Une suite de points ne nomme aucun test. Le script concluait juste, « pas
-  # sur le test attendu », et rendait son propre diagnostic impossible : rien
-  # ne permettait de distinguer un TROU DE COUVERTURE d'une mutation vue par un
-  # test voisin qu'il aurait suffi de declarer.
+  #   ✘   9 [mobile-320] › fichier.spec.ts:58:7 › le nom du test   Playwright list
+  #     1) [mobile-320] › fichier.spec.ts:3:5 › le nom du test     Playwright github
+  #    × un cas qui echoue                                         Vitest local
+  #   ::error file=...,title=[composant] ... > le nom du test,...  Vitest github
   #
-  # LES QUATRE FORMES, confrontees le 16 septembre a la sortie reelle des deux
-  # lanceurs. Seules les deux premieres sont des echecs :
+  # Et la forme a NE PAS retenir, celle qui a trompe LS-233 :
   #
-  #   ✘   9 [mobile-320] › fichier.spec.ts:58:7 › le nom du test      Playwright
-  #    × tests/unite/exemple.test.ts > un cas qui echoue              Vitest
-  #   ········×F                                                      barre
-  #     ·×F                                                           barre
+  #   ········×F                                                   barre Playwright
   #
-  # L'ancre `^[[:space:]]*` les separe : un marqueur de progression est TOUJOURS
-  # precede d'au moins un point, jamais d'espaces seuls.
+  # `%2C` EST DECODE, ET C'EST NECESSAIRE : Vitest encode la virgule du nom de
+  # test dans `title=`, donc un motif attendu qui en porte une, « sans aucune
+  # categorie, l'ecran dit quoi faire et ou », ne se retrouverait pas sans ce
+  # decodage. Playwright, lui, ne l'encode pas dans sa ligne numerotee.
   # ---------------------------------------------------------------------------
   local lignes_echec
-  lignes_echec=$(grep -E '^[[:space:]]*(×|✘)[[:space:]]' "$TMP/sortie.txt" || true)
+  lignes_echec=$(
+    grep -E '^[[:space:]]*(×|✘)[[:space:]]|^[[:space:]]*[0-9]+\)[[:space:]]|^::error ' \
+      "$TMP/sortie.txt" | sed 's/%2C/,/g' || true
+  )
 
   if printf '%s' "$lignes_echec" | grep -qF "$motif_attendu"; then
     echo "  OK    $nom -> detecte par le test attendu"
@@ -227,7 +232,21 @@ cas() {
     echo "  RATE  $nom -> echec constate, mais PAS sur le test attendu"
     echo "          attendu : $motif_attendu"
     echo "          echecs reels :"
-    printf '%s\n' "$lignes_echec" | head -3 | sed 's/^ *//' | sed 's/^/            /'
+    # UNE LISTE VIDE EST UN DIAGNOSTIC MANQUANT, PAS UN VERDICT, LS-233 l'a
+    # montre : six cas en RATE avec « echecs reels : » suivi de rien, et rien
+    # dans le rapport ne permettait de dire si le test etait aveugle ou si le
+    # FILTRE l'etait. Il a fallu deux heures et le format des reporters pour
+    # trancher, alors que quinze lignes de sortie brute auraient suffi.
+    #
+    # Le filtre ne retient rien signifie que la sortie n'a AUCUNE des quatre
+    # formes connues : la fin brute est alors ce qui nomme la vraie cause.
+    if [ -z "$lignes_echec" ]; then
+      echo "            (aucune ligne d'echec reconnue : le filtre ou le lanceur)"
+      echo "          fin brute de la sortie :"
+      tail -15 "$TMP/sortie.txt" | sed 's/^/            /'
+    else
+      printf '%s\n' "$lignes_echec" | head -3 | sed 's/^ *//' | sed 's/^/            /'
+    fi
     echecs=$((echecs + 1))
   fi
   restaurer

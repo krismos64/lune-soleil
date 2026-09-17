@@ -326,9 +326,19 @@ cas() {
   # nu la retient comme une ligne d'echec, et elle sort AVANT le recapitulatif,
   # donc le `head -3` ne montre qu'elle. Une suite de points ne nomme aucun
   # test, et ce script en affiche meme quand il conclut OK.
-  # `verifier-etats-non-nominaux-mutation.sh` porte les quatre formes mesurees.
+  #
+  # LES DEUX LANCEURS CHANGENT DE FORMAT EN INTEGRATION CONTINUE, et ce filtre
+  # doit donc retenir QUATRE formes et non deux : Playwright passe au reporter
+  # `github` sous CI, Vitest ajoute `github-actions`, et aucun des deux n'y
+  # imprime alors de ligne `× nom`. Le filtre ancre seul ne retenait rien sur le
+  # runner, ce qu'a montre le nocturne du 17 septembre 2026.
+  # `verifier-etats-non-nominaux-mutation.sh` porte les quatre formes mesurees
+  # et la raison du decodage de `%2C`.
   local lignes_echec
-  lignes_echec=$(grep -E '^[[:space:]]*(×|✘)[[:space:]]' "$TMP/sortie.txt" || true)
+  lignes_echec=$(
+    grep -E '^[[:space:]]*(×|✘)[[:space:]]|^[[:space:]]*[0-9]+\)[[:space:]]|^::error ' \
+      "$TMP/sortie.txt" | sed 's/%2C/,/g' || true
+  )
 
   if printf '%s' "$lignes_echec" | grep -qF "$motif_attendu"; then
     echo "  OK    $nom -> detecte par le test attendu"
