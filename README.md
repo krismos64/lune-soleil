@@ -61,8 +61,10 @@ relevés dans Jira, et **quatre dépendent encore du code** :
   d'état des deux vues d'ensemble, que des comptes sans commande ni adresse ne
   permettent pas de vérifier
 
-Les sept autres, LS-19, LS-28, LS-29, LS-107, LS-123, LS-140 et LS-170, attendent
-l'exploitante ou une démarche externe.
+Les six autres, LS-19, LS-28, LS-107, LS-123, LS-140 et LS-170, attendent
+l'exploitante ou une démarche externe. **LS-29 ne l'attend plus**, ses textes
+étant validés le 17 septembre 2026 : son critère 4 dépend désormais d'événements
+réels, donc de LS-153.
 
 **LS-231 a été close sans correction** le 16 septembre, arbitrage de Christophe :
 `tableau-bord.sequential.test.ts` échoue une fois sur six dans la suite
@@ -807,12 +809,17 @@ qu'une personne attend à l'écran part directement.
 blocage n'est plus l'envoi mais le parcours autour, écran d'attente et renvoi du
 lien, porté par LS-54.
 
-**Les textes de LS-29 sont écrits depuis le 12 septembre 2026**, ton validé par
-l'exploitante. F-MAIL-02, la facture, n'a volontairement pas de modèle : elle est
+**Les textes de LS-29 sont écrits depuis le 12 septembre 2026**, et **validés par
+l'exploitante le 17 septembre**, les dix textes définitifs et le rendu HTML. F-MAIL-02, la facture, n'a volontairement pas de modèle : elle est
 portée par le lien signé de la confirmation de commande.
 
-**LS-29 reste ouverte sur son critère 4**, aucun de ces messages n'ayant jamais
-été reçu dans une vraie boîte. Le compte de modèles se mesure plutôt qu'il ne se
+**LS-29 reste ouverte sur son critère 4**, mais pas sur son motif d'origine : le
+13 septembre 2026, une soumission du formulaire a été reçue **en boîte de
+réception sur Yahoo, Gmail et OVH**, trois fournisseurs sur trois. Cela ne couvre
+que `message-contact-recu` et `message-contact-accuse`, les **huit autres
+modèles n'ayant jamais été envoyés en réel** faute d'événement réel, commande
+payée, expédition, remboursement ou rétractation. Les textes, eux, sont **validés
+par l'exploitante** le 17 septembre, rendu HTML compris. Le compte de modèles se mesure plutôt qu'il ne se
 recopie, il a déjà été écrit faux deux fois :
 
 ```bash
