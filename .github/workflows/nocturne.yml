@@ -440,18 +440,25 @@ jobs:
       # ----------------------------------------------------------------------
       # LES SIX PREUVES PAR MUTATION LOURDES, LS-230.
       #
-      # POURQUOI AU NOCTURNE ET NON PAR PR. Elles pesent 969 s a elles quatre,
-      # mesurees le 14 septembre 2026, sur une CI par PR qui en dure environ
-      # neuf cents quand le code change. LS-177 avait deja deplace le bout en
-      # bout, `npm audit` et l'image ici pour la meme raison : les ajouter par PR
-      # doublerait cette duree pour eprouver des controles qui, eux, tournent
-      # deja a chaque fois.
+      # POURQUOI AU NOCTURNE ET NON PAR PR. Elles pesent environ 1013 s, SOMME
+      # de mesures individuelles du 14 septembre 2026 et non duree de step
+      # observee, sur une CI par PR qui en dure environ neuf cents quand le code
+      # change. LS-177 avait deja deplace le bout en bout, `npm audit` et l'image
+      # ici pour la meme raison : les ajouter par PR doublerait cette duree pour
+      # eprouver des controles qui, eux, tournent deja a chaque fois.
       #
       #   verifier-tests           456 s  relance toute la suite d'integration
       #   verifier-reintegration-stock 415 s  zone critique, base peuplee
       #   verifier-etats-non-nominaux   67 s  la plus lourde des textuelles
-      #   verifier-config-claude        31 s  coherence de configuration
       #   verifier-regles               39 s  schema, regles et couverture des paths
+      #   verifier-config-claude        31 s  coherence de configuration
+      #   verifier-sauvegarde            5 s  conteneur PostgreSQL jetable
+      #
+      # AUCUNE DUREE DE STEP A SIX N'A JAMAIS ETE OBSERVEE, et c'est le point :
+      # le step s'arretait en deuxieme position depuis le 14 septembre, donc les
+      # nocturnes des 15, 16 et 17 n'ont consomme qu'environ 98 s. Le premier
+      # temps reel a six sera celui du nocturne du 18. Les 456 s et 415 s sont
+      # d'ailleurs sous-estimees, `verifier-tests` etant passe de 166 a 180 cas.
       #
       # `verifier-sauvegarde` les rejoint : elle lance un conteneur PostgreSQL,
       # que le nocturne a deja sous la main. `docs/PREUVES-PAR-MUTATION.md`
@@ -460,15 +467,45 @@ jobs:
       # `if: always()` COMME LES ETAPES VOISINES : un echec en amont qui masque
       # une preuve est pire qu'une preuve absente, personne ne la cherchant.
       # ----------------------------------------------------------------------
+      # LES SIX RENDENT CHACUN LEUR VERDICT, ET UN ECHEC N'EN MASQUE PLUS CINQ.
+      #
+      # Le step tourne sous `bash -e` : le premier script en echec coupait tout,
+      # et les suivants ne tournaient PAS. Mesure du 17 septembre 2026 sur les
+      # nocturnes des 15, 16 et 17 : seuls les DEUX PREMIERS scripts sur six ont
+      # tourne trois nuits d'affilee, `verifier-etats-non-nominaux` echouant en
+      # deuxieme position. Les quatre suivants n'ont donc rien prouve depuis le
+      # 14, dont `verifier-tests` qui rejoue toute la suite d'integration et
+      # `verifier-reintegration-stock` qui couvre une zone critique.
+      #
+      # Un garde-fou qui ne tourne pas est pire qu'un garde-fou absent : le
+      # rapport nommait bien un echec, personne ne pouvait voir que quatre
+      # preuves manquaient derriere. Meme motif que « garde-fou jamais exerce ».
+      #
+      # LA BOUCLE RETIENT LE PREMIER CODE NON NUL et continue, puis sort avec
+      # lui. Le step reste donc rouge des qu'un script echoue, et le rapport
+      # porte les six verdicts.
       - name: Preuves par mutation lourdes
         if: always()
         run: |
-          ./scripts/verifier-config-claude-mutation.sh
-          ./scripts/verifier-etats-non-nominaux-mutation.sh
-          ./scripts/verifier-reintegration-stock-mutation.sh
-          ./scripts/verifier-sauvegarde-mutation.sh
-          ./scripts/verifier-tests-mutation.sh
-          ./scripts/verifier-regles-mutation.sh
+          echec=0
+          for script in \
+            ./scripts/verifier-config-claude-mutation.sh \
+            ./scripts/verifier-etats-non-nominaux-mutation.sh \
+            ./scripts/verifier-reintegration-stock-mutation.sh \
+            ./scripts/verifier-sauvegarde-mutation.sh \
+            ./scripts/verifier-tests-mutation.sh \
+            ./scripts/verifier-regles-mutation.sh; do
+            echo "::group::$script"
+            if "$script"; then
+              echo "::endgroup::"
+            else
+              code=$?
+              echo "::endgroup::"
+              echo "::error::$script a echoue, code $code."
+              [ "$echec" -eq 0 ] && echec=$code
+            fi
+          done
+          exit "$echec"
 
       - name: Audit des dependances
         if: always()

@@ -196,7 +196,7 @@ la forme littérale `Lune & Soleil`, quand les défauts existants étaient en JS
 dépôt d'avant la correction** et confronter le nombre de fichiers désignés à
 ceux trouvés à la main. Douze contre huit se voit immédiatement.
 
-Trois règles qui en découlent :
+Cinq règles qui en découlent :
 
 - **choisir les mutations sur les formes réellement présentes** dans le dépôt,
   jamais sur celle qui est la plus commode à écrire dans un `sed`
@@ -206,6 +206,16 @@ Trois règles qui en découlent :
 - **commiter avant de lancer une preuve par mutation.** Ces scripts restaurent
   par `git checkout` et effacent tout travail non commité, ce qui s'est produit
   deux fois sur ce dépôt
+- **un rapport `RATE` dont la liste d'échecs est vide n'est pas un verdict**,
+  c'est un diagnostic manquant : le filtre peut être aveugle autant que le test.
+  Faire imprimer la sortie brute plutôt que de conclure. Le 17 septembre 2026,
+  six cas en RATE avec une liste vide ont coûté deux heures de diagnostic pour
+  un défaut que quinze lignes de trace auraient nommé tout de suite
+- **mesurer un filtre de sortie dans les deux modes, local ET intégration
+  continue.** Playwright passe au reporter `github` sous CI et Vitest ajoute
+  `github-actions` : aucun des deux n'y imprime de ligne `× nom`, et Vitest
+  encode la virgule en `%2C`. Un filtre calé sur la seule sortie locale ne
+  retient rien sur le runner, sans que rien le signale
 
 **Trois pièges d'écriture reviennent** dans ces scripts, tous rencontrés
 plusieurs fois : Perl interprète `${...}` dans le remplacement, `sed` traite un

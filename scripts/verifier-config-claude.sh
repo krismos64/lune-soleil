@@ -482,11 +482,29 @@ NOMBRES_EN_LETTRES='trente-et-une|trente-et-un|trente-quatre|trente-trois|trente
 # `**vingt-et-une** fois`, et les astérisques collées au chiffre font échouer la
 # limite de mot `\b`. Ce défaut a déjà rendu un contrôle vert devant un compte
 # faux, il est noté plus bas sur le compte des mutations de configuration.
+# UN COMPTE EN CHIFFRES DOIT ETRE LU AUSSI, ET NE L'ETAIT PAS.
+#
+# `NOMBRES_EN_LETTRES` s'arrete a quatre-vingt-dix-neuf : passe cent, le README
+# ecrit « **166 fois** en chiffres, `mot` restait donc vide et la comparaison
+# n'avait tout simplement pas lieu. Le controle rendait vert sans rien comparer.
+#
+# MESURE DU 17 SEPTEMBRE 2026 : le README annoncait 166 mutations quand
+# `verifier-tests-mutation.sh` en portait 180, et ce controle etait vert. C'est
+# le motif « garde-fou jamais exerce » : un contrele qui ne peut pas echouer sur
+# le defaut qu'il pretend attraper n'est pas un controle.
+#
+# Les deux ecritures sont desormais lues, les lettres d'abord pour ne rien
+# changer aux comptes existants, le chiffre arabe en repli.
 compte_annonce() {
-  local texte="$1" nom="$2" mot
+  local texte="$1" nom="$2" mot chiffre
   texte=$(echo "$texte" | tr -d '*')
   mot=$(echo "$texte" | grep -oiE "\b($NOMBRES_EN_LETTRES) $nom\b" | head -1 | awk '{print $1}')
-  [ -n "$mot" ] && chiffre_en_lettres "$mot"
+  if [ -n "$mot" ]; then
+    chiffre_en_lettres "$mot"
+    return
+  fi
+  chiffre=$(echo "$texte" | grep -oE "\b[0-9]+ $nom\b" | head -1 | awk '{print $1}')
+  [ -n "$chiffre" ] && echo "$chiffre"
 }
 
 if [ -f README.md ] && command -v node >/dev/null 2>&1; then
