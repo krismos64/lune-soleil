@@ -70,25 +70,37 @@ historique, passaient alors pour écartées. Un récit n'est pas une décision.
 
 **Trente-sept par PR**, `controles.yml` : **vingt-deux** groupées dans l'étape
 « 9z octies », qui pèsent **82 s** mesurées en les enchaînant, et **quinze** en
-étapes nommées, chacune posée par la story qui l'a écrite. La décomposition
-annonçait seize, donc trente-huit au total : recomptée le 17 septembre 2026. Sur une CI qui dure
+étapes nommées, chacune posée par la story qui l'a écrite. Sur une CI qui dure
 environ neuf cents secondes quand le code change.
 
-LE COMPTE SE MESURE, IL NE SE LIT PAS DANS UNE SEULE ÉTAPE :
+La décomposition annonçait **seize** nommées, donc trente-huit au total :
+recomptée à quinze le 17 septembre 2026.
+
+LE COMPTE SE MESURE, IL NE SE LIT PAS DANS UNE SEULE ÉTAPE, et **il ne se
+compte pas non plus par un motif nu** :
 
 ```
-grep -oE 'verifier-[a-z0-9-]+-mutation\.sh' .github/workflows/controles.yml | sort -u | wc -l
+grep -hE "^[[:space:]]*(-[[:space:]]+)?(run:[[:space:]]+)?\./scripts/verifier-[a-z0-9-]+-mutation\.sh([[:space:]]|[;&|]|$)" \
+  .github/workflows/controles.yml | grep -oE "verifier-[a-z0-9-]+-mutation\.sh" | sort -u | wc -l
 ```
+
+**L'ancrage sur le début de ligne est ce qui rend 37 et non 38.** Un
+`grep -oE 'verifier-...'` nu retient la mention de
+`verifier-image-docker-mutation.sh` dans un **commentaire** de `controles.yml`,
+qui n'exécute rien. C'est le défaut exact que
+`verifier-couverture-mutations.sh` portait jusqu'au 17 septembre 2026, et une
+commande de comptage fausse dans le document qui proclame de mesurer serait pire
+qu'aucune commande.
 
 Une première version de ce document annonçait « vingt-deux par PR », le chiffre
-de la seule étape groupée, en oubliant les seize nommées. Le motif est en
+de la seule étape groupée, en oubliant les quinze nommées. Le motif est en
 mémoire, « compter ne vérifie pas le contenu » : un nombre écrit en toutes
 lettres n'est ancré par rien, et `verifier-couverture-mutations.sh` lit des noms
 de fichiers, jamais un récit.
 
-**Six au nocturne**, `nocturne.yml`, les six lourdes. Leurs durées **s'additionnent
-à 1013 s**, et c'est une somme de mesures isolées, jamais un temps de step
-observé : la distinction compte, voir plus bas.
+**Sept au nocturne**, `nocturne.yml`. Leurs durées **s'additionnent à 1024 s**,
+et c'est une somme de mesures isolées, jamais un temps de step observé : la
+distinction compte, voir plus bas.
 
 | Preuve | Durée mesurée | Ce qui la rend lourde |
 |---|---|---|
@@ -97,13 +109,20 @@ observé : la distinction compte, voir plus bas.
 | `verifier-etats-non-nominaux-mutation.sh` | 67 s | la plus lourde des textuelles |
 | `verifier-regles-mutation.sh` | 39 s | schéma, règles et couverture des `paths` |
 | `verifier-config-claude-mutation.sh` | 31 s | cohérence de configuration |
+| `verifier-image-docker-mutation.sh` | 11 s | construit sept images, mesuré le 17 septembre 2026 |
 | `verifier-sauvegarde-mutation.sh` | 5 s | lance un conteneur PostgreSQL, que le nocturne a déjà |
+
+**La dernière n'est pas ici pour son poids, mais pour Docker.** À 11 s elle
+tiendrait sans peine dans une CI par PR ; elle y manquerait son objet, `docker
+build` ne tournant que dans `nocturne.yml`, vérifié par
+`grep -nE "^[[:space:]]*(run:[[:space:]]+)?docker build" .github/workflows/*.yml`.
 
 LS-177 avait déjà déplacé le bout en bout, `npm audit` et l'image au nocturne
 pour tenir la durée par PR. Les y rejoindre suit le même arbitrage.
 
-**AUCUNE DURÉE DE STEP À SIX N'A JAMAIS ÉTÉ OBSERVÉE**, et les deux premières
-lignes du tableau sont les moins sûres. Le step groupait les six dans un seul
+**AUCUNE DURÉE DE STEP COMPLET N'A JAMAIS ÉTÉ OBSERVÉE**, et les deux premières
+lignes du tableau sont les moins sûres. Le step groupait alors six preuves, la
+septième n'ayant rejoint le nocturne que le 17 septembre, dans un seul
 `run`, donc sous `bash -e` : **le premier échec coupait tout**, et les suivants
 ne tournaient pas. Mesuré le 17 septembre 2026 sur trois nocturnes consécutifs,
 `verifier-etats-non-nominaux` échouant en deuxième position :
@@ -117,11 +136,13 @@ ne tournaient pas. Mesuré le 17 septembre 2026 sur trois nocturnes consécutifs
 verts, vérifié en local le 17 : ils ne prouvaient simplement plus rien, ce qui
 équivaut à un garde-fou absent. Le step boucle désormais sur les six et retient
 le premier code non nul, donc chacun rend son verdict et le step reste rouge dès
-qu'un échoue.
+qu'un échoue. `verifier-image-docker-mutation` a son propre step, donc sept
+bilans doivent paraître au rapport.
 
 Les 456 s et 415 s datent du 14 septembre et n'ont pas été réattestées depuis.
 Celle de `verifier-tests` est en outre sous-estimée, le script étant passé de
-166 à 180 cas. Le premier temps réel à six sera celui du nocturne du 18.
+166 à 180 cas. Le premier temps réel du step complet sera celui du nocturne du
+18 septembre.
 
 **UN BESOIN D'ENVIRONNEMENT SE MESURE EN EXÉCUTANT LA PREUVE**, jamais en lisant
 son texte. Un premier tri par `grep` de mots-clés rangeait `verifier-nginx`,
