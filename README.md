@@ -809,18 +809,18 @@ qu'une personne attend à l'écran part directement.
 blocage n'est plus l'envoi mais le parcours autour, écran d'attente et renvoi du
 lien, porté par LS-54.
 
-**Les textes de LS-29 sont écrits depuis le 12 septembre 2026**, et **validés par
-l'exploitante le 17 septembre**, les dix textes définitifs et le rendu HTML. F-MAIL-02, la facture, n'a volontairement pas de modèle : elle est
-portée par le lien signé de la confirmation de commande.
+**Les textes de LS-29 sont écrits depuis le 12 septembre 2026**, et **validés
+par l'exploitante le 17 septembre**, les dix textes définitifs et le rendu HTML.
+F-MAIL-02, la facture, n'a volontairement pas de modèle : elle est portée par le
+lien signé de la confirmation de commande.
 
 **LS-29 reste ouverte sur son critère 4**, mais pas sur son motif d'origine : le
 13 septembre 2026, une soumission du formulaire a été reçue **en boîte de
 réception sur Yahoo, Gmail et OVH**, trois fournisseurs sur trois. Cela ne couvre
 que `message-contact-recu` et `message-contact-accuse`, les **huit autres
 modèles n'ayant jamais été envoyés en réel** faute d'événement réel, commande
-payée, expédition, remboursement ou rétractation. Les textes, eux, sont **validés
-par l'exploitante** le 17 septembre, rendu HTML compris. Le compte de modèles se mesure plutôt qu'il ne se
-recopie, il a déjà été écrit faux deux fois :
+payée, expédition, remboursement ou rétractation. Le compte de modèles se mesure
+plutôt qu'il ne se recopie, il a déjà été écrit faux deux fois :
 
 ```bash
 sed -n '/export type ModeleEmail/,/;$/p' src/integrations/email/index.ts \

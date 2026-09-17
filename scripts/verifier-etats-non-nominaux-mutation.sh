@@ -191,10 +191,14 @@ cas() {
   # LES DEUX LANCEURS CHANGENT DE FORMAT EN INTEGRATION CONTINUE, LS-233 NE
   # L'AVAIT PAS MESURE.
   #
-  # Playwright porte `reporter: process.env.CI ? "github" : "list"`, et Vitest
-  # ajoute son reporter `github-actions` des que `GITHUB_ACTIONS` est pose. Sur
-  # le runner, AUCUN des deux n'imprime de ligne `× nom` ou `✘ nom` : ils
-  # emettent une annotation `::error ...,title=<nom du test>::`.
+  # Playwright porte `reporter: process.env.CI ? "github" : "list"`, et il PERD
+  # sa ligne `✘ nom` sous `github` : il n'emet plus qu'un `1) ...` et une
+  # annotation `::error ...,title=<nom du test>::`.
+  #
+  # VITEST, LUI, AJOUTE SANS REMPLACER. `resolved.reporters.push(...)` dans sa
+  # source : son reporter par defaut reste, donc sa ligne `× nom` subsiste. Seul
+  # Playwright disparait du filtre ancre, et c'est deja suffisant pour que trois
+  # cas sur six echouent.
   #
   # LE FILTRE ANCRE DE LS-233 NE POUVAIT DONC RIEN RETENIR EN CI, et c'est ce
   # qu'a donne le nocturne du 17 septembre 2026 : six cas sur six en RATE, avec
@@ -235,8 +239,8 @@ cas() {
     # UNE LISTE VIDE EST UN DIAGNOSTIC MANQUANT, PAS UN VERDICT, LS-233 l'a
     # montre : six cas en RATE avec « echecs reels : » suivi de rien, et rien
     # dans le rapport ne permettait de dire si le test etait aveugle ou si le
-    # FILTRE l'etait. Il a fallu deux heures et le format des reporters pour
-    # trancher, alors que quinze lignes de sortie brute auraient suffi.
+    # FILTRE l'etait. Il a fallu rejouer les deux lanceurs dans les deux modes
+    # pour trancher, alors que quinze lignes de sortie brute auraient suffi.
     #
     # Le filtre ne retient rien signifie que la sortie n'a AUCUNE des quatre
     # formes connues : la fin brute est alors ce qui nomme la vraie cause.

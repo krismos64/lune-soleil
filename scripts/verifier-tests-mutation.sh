@@ -327,11 +327,12 @@ cas() {
   # donc le `head -3` ne montre qu'elle. Une suite de points ne nomme aucun
   # test, et ce script en affiche meme quand il conclut OK.
   #
-  # LES DEUX LANCEURS CHANGENT DE FORMAT EN INTEGRATION CONTINUE, et ce filtre
-  # doit donc retenir QUATRE formes et non deux : Playwright passe au reporter
-  # `github` sous CI, Vitest ajoute `github-actions`, et aucun des deux n'y
-  # imprime alors de ligne `× nom`. Le filtre ancre seul ne retenait rien sur le
-  # runner, ce qu'a montre le nocturne du 17 septembre 2026.
+  # LES LANCEURS CHANGENT DE FORMAT EN INTEGRATION CONTINUE, et ce filtre doit
+  # donc retenir QUATRE formes et non deux. Playwright passe au reporter `github`
+  # sous CI et y PERD sa ligne `✘ nom`. Vitest, lui, AJOUTE `github-actions` sans
+  # remplacer son defaut, `resolved.reporters.push(...)` dans sa source : sa
+  # ligne `× nom` subsiste. Le filtre ancre seul ne retenait donc rien de
+  # Playwright sur le runner, ce qu'a montre le nocturne du 17 septembre 2026.
   # `verifier-etats-non-nominaux-mutation.sh` porte les quatre formes mesurees
   # et la raison du decodage de `%2C`.
   local lignes_echec

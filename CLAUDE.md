@@ -19,7 +19,7 @@ npm run db:verifier    # les contrôles du modèle sur cette base, exige Docker
 ```
 
 Liste complète dans `README.md`. La CI rejoue presque tout par PR : bout en bout,
-`npm audit`, image et les **six preuves lourdes** sont au nocturne, un défaut de
+`npm audit`, image et les **sept preuves lourdes** sont au nocturne, un défaut de
 ceux-là entre sur `main` sans bloquer. `npm audit` doit rester à **zéro**, à mesurer.
 Une migration se **crée** à la main, `npx prisma migrate dev --name sujet`.
 
@@ -167,7 +167,7 @@ interface. **Ne pas invoquer `docker-devops`, `security-auditor` ni
 
 Tout travail suit le skill `story`, exploration sans ticket comprise : il porte le
 contrôle avant zone critique et la clôture de la traçabilité ; le skill `adr` écrit
-une décision structurante. Cinq hooks les appuient, table dans `docs/REFERENCES.md` :
+une décision structurante. Cinq **événements** de hook les appuient, table dans `docs/REFERENCES.md` :
 état injecté au démarrage, secrets bloqués, `verifier-regles.sh` rejoué, traçabilité
 contrôlée en fin de session.
 

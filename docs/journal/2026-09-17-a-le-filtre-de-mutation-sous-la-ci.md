@@ -325,6 +325,61 @@ trente-sept. C'est ce seize qui produisait le total de trente-huit, et il était
 faux avant cette session. La répartition réelle est désormais **37 par PR et 7 au
 nocturne**, corrigée dans les quatre endroits qui l'annonçaient.
 
+## Une passe d'audit sur mes propres corrections, et elle trouve
+
+Trois erreurs introduites par mes passes précédentes, plus une affirmation fausse
+recopiée dans trois fichiers.
+
+**J'avais écrit que Vitest n'imprime plus sa ligne `× nom` en CI.** C'est faux, et
+ma propre mesure du matin disait l'inverse. Vérifié dans la source de Vitest,
+`resolved.reporters.push(["github-actions", {}])` : le reporter s'**ajoute** au
+défaut, il ne le remplace pas. Seul Playwright perd sa ligne `✘ nom` sous
+`github`. Corrigé dans le skill `story` et dans les deux scripts qui le
+recopiaient.
+
+C'est une faute sérieuse : le commentaire justifiait mal un filtre par ailleurs
+correct, donc la prochaine session aurait raisonné sur une fausse prémisse.
+
+**La commande de comptage du document rendait 38 quand le texte disait 37.** Et
+pour la raison même que la session venait de corriger : `grep -oE 'verifier-...'`
+nu compte la mention en commentaire de `controles.yml`. Le document qui proclame
+« LE COMPTE SE MESURE, IL NE SE LIT PAS » donnait donc une commande fausse. Elle
+porte désormais le même ancrage que le contrôle.
+
+**« Deux heures de diagnostic » n'était mesuré nulle part.** Retiré des deux
+endroits où je l'avais écrit. Dans un projet dont la règle est de mesurer, une
+durée inventée pour appuyer un récit est exactement ce qu'il ne faut pas laisser.
+
+## Le reste de la passe
+
+- `CLAUDE.md` disait encore « six preuves lourdes », sept depuis l'ajout du jour
+- le tableau des durées n'avait pas sa septième ligne : `verifier-image-docker`
+  mesurée à **11 s**, 9 mutations sur 9
+- « Six au nocturne » subsistait à trois endroits du document
+- la décomposition gardait « seize nommées » deux lignes sous la correction à
+  quinze
+- `CLAUDE.md` écrivait « cinq hooks » là où `REFERENCES.md` exige de nommer ce
+  qu'on compte : cinq **événements**, huit commandes, six scripts
+- le README écrivait la validation de l'exploitante **deux fois** à dix lignes
+  d'écart, et deux enveloppements de ligne étaient cassés par mes insertions
+- `EXPLOITATION.md` annonçait « 11 cas » pour un script qui en joue 12 sous root
+
+## Un arbitrage revu sur mesure
+
+J'avais placé `verifier-image-docker-mutation` au nocturne « parce qu'elle
+construit sept images ». Mesurée, elle prend **11 s** : le poids n'était pas le
+motif. J'ai vérifié qui construit réellement une image, hors commentaires :
+
+```
+grep -nE "^[[:space:]]*(run:[[:space:]]+)?docker build" .github/workflows/*.yml
+  nocturne.yml:376
+```
+
+Le nocturne est le **seul** workflow à le faire, donc c'est bien le seul endroit
+où cette preuve a un objet. Le placement tient, sa justification a changé. Mon
+premier comptage avait d'ailleurs trouvé « 1 » dans `controles.yml` en comptant
+un commentaire, le défaut du jour pour la quatrième fois.
+
 ## Prochaine étape
 
 Le nocturne du 18 tranche : c'est lui qui prouve le correctif du filtre dans les
@@ -332,5 +387,5 @@ conditions où le défaut est apparu. La preuve locale ne couvre pas le reporter
 `github`, que seule la CI active.
 
 Il prouve aussi le second correctif, par une propriété observable : le rapport
-doit porter **six** bilans de mutation, là où les trois derniers n'en portaient
-que deux.
+doit porter **sept** bilans de mutation, les six du step groupé plus celui de
+l'image Docker, là où les trois derniers n'en portaient que deux.

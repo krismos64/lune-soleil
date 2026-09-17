@@ -209,13 +209,17 @@ Cinq règles qui en découlent :
 - **un rapport `RATE` dont la liste d'échecs est vide n'est pas un verdict**,
   c'est un diagnostic manquant : le filtre peut être aveugle autant que le test.
   Faire imprimer la sortie brute plutôt que de conclure. Le 17 septembre 2026,
-  six cas en RATE avec une liste vide ont coûté deux heures de diagnostic pour
-  un défaut que quinze lignes de trace auraient nommé tout de suite
+  six cas en RATE avec une liste vide ont imposé de rejouer les deux lanceurs
+  dans les deux modes, pour un défaut que quinze lignes de trace auraient nommé
+  tout de suite
 - **mesurer un filtre de sortie dans les deux modes, local ET intégration
-  continue.** Playwright passe au reporter `github` sous CI et Vitest ajoute
-  `github-actions` : aucun des deux n'y imprime de ligne `× nom`, et Vitest
-  encode la virgule en `%2C`. Un filtre calé sur la seule sortie locale ne
-  retient rien sur le runner, sans que rien le signale
+  continue.** Playwright passe au reporter `github` sous CI et **perd sa ligne
+  `✘ nom`**, n'émettant plus qu'un `1) ...` et une annotation `::error`. Vitest
+  **ajoute** `github-actions` sans remplacer son reporter par défaut, vérifié
+  dans sa source, `resolved.reporters.push(...)` : sa ligne `× nom` subsiste,
+  mais l'annotation encode la virgule en `%2C`. Un filtre calé sur la seule
+  sortie locale ne retient donc rien de Playwright sur le runner, sans que rien
+  le signale
 
 **Trois pièges d'écriture reviennent** dans ces scripts, tous rencontrés
 plusieurs fois : Perl interprète `${...}` dans le remplacement, `sed` traite un
