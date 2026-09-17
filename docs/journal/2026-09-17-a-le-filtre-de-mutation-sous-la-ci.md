@@ -380,6 +380,23 @@ où cette preuve a un objet. Le placement tient, sa justification a changé. Mon
 premier comptage avait d'ailleurs trouvé « 1 » dans `controles.yml` en comptant
 un commentaire, le défaut du jour pour la quatrième fois.
 
+## La colonne du tableau des phases ne sommait pas
+
+Dernier écart de la passe, relevé epic par epic dans Jira plutôt que déduit :
+
+```
+LS-7   annonce 9   mesure 7    LS-232 et LS-234 closes
+LS-22  annonce 9   mesure 10
+```
+
+La colonne sommait à **25** quand le relevé global donne **24** non terminés.
+Les deux erreurs se compensaient presque, ce qui les rendait invisibles à la
+somme approximative. Corrigées, la colonne retombe sur 24, le même nombre que le
+relevé indépendant, et 224 − 24 = 200 terminés.
+
+Les trois autres lignes non nulles, LS-1, LS-3 et LS-5, sont justes à 2, 2 et 3,
+vérifiées par une requête groupée qui rend bien sept.
+
 ## Prochaine étape
 
 Le nocturne du 18 tranche : c'est lui qui prouve le correctif du filtre dans les
