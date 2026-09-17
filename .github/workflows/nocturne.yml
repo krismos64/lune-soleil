@@ -378,6 +378,27 @@ jobs:
       - name: Controles de securite de l'image
         run: ./scripts/verifier-image-docker.sh lune-soleil:verification
 
+      # LA PREUVE DU CONTROLE CI-DESSUS, ET ELLE NE TOURNAIT NULLE PART.
+      #
+      # `verifier-image-docker-mutation.sh` existait depuis LS-74 sans etre
+      # lance par aucun workflow. Il n'apparaissait que dans un COMMENTAIRE de
+      # `controles.yml`, lequel affirmait justement que « sa preuve par mutation
+      # vit toujours » dans ce fichier : elle vivait sur le disque, pas en CI.
+      #
+      # `verifier-couverture-mutations.sh` ne l'a pas vu, son ancrage cherchant
+      # le nom n'importe ou dans les workflows, commentaires compris. Corrige le
+      # 17 septembre 2026, en meme temps que ce trou.
+      #
+      # ICI PLUTOT QUE PAR PR : le script construit SEPT images Docker, et le
+      # nocturne a deja Docker et une image sous la main. Meme motif que
+      # `verifier-sauvegarde-mutation`.
+      #
+      # `if: always()` COMME SES VOISINES : une preuve masquee par un echec en
+      # amont est pire qu'une preuve absente, personne ne la cherchant.
+      - name: Preuve par mutation des controles de l'image
+        if: always()
+        run: ./scripts/verifier-image-docker-mutation.sh
+
       # ----------------------------------------------------------------------
       # Hors des huit : l'absence de vulnerabilite connue.
       #
