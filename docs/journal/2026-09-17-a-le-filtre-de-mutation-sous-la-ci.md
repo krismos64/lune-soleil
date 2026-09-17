@@ -271,6 +271,60 @@ Les huit modèles restants dépendent donc d'un achat réel, donc de LS-153, ou
 d'un élargissement du script qui sortirait du périmètre écrit de LS-29. Posé en
 arbitrage dans le ticket plutôt que tranché seul.
 
+## Un quatrième défaut, et c'est le même motif une troisième fois
+
+Dernière vérification avant de clore : recompter les nombres que la
+documentation annonce. Un écart sortait, **38 preuves par PR annoncées contre 37
+lancées**.
+
+La cause n'est pas une faute de frappe. `verifier-image-docker-mutation.sh`
+existe depuis LS-74 et **n'est lancé par aucun workflow**. Il n'apparaissait que
+dans un commentaire de `controles.yml`, lequel affirmait justement que « sa
+preuve par mutation vit toujours dans
+`scripts/verifier-image-docker-mutation.sh` » : elle vivait sur le disque, pas en
+intégration continue.
+
+**Le contrôle censé garantir exactement ça était faux.**
+`verifier-couverture-mutations.sh` annonçait « 44 preuves : 44 rejouées, 0
+écartées ». Son ancrage cherchait le nom **n'importe où** dans les workflows,
+commentaires compris. Prouvé en retirant la seule ligne de commentaire : le
+contrôle crie, sans que rien change à ce qui s'exécute.
+
+C'est la troisième fois dans la même session qu'un garde-fou ne garde rien, après
+le step masquant et le contrôle aveugle aux chiffres.
+
+## Ce qui a été corrigé
+
+L'ancrage exige désormais une **ligne de commande** : le nom en début de ligne,
+précédé au plus d'un `- ` de liste YAML ou d'un `run:`, suivi d'un espace, d'un
+séparateur shell ou d'une fin de ligne. Un `#` avant le nom disqualifie la ligne.
+
+Écrire ce motif a demandé trois passes, chacune mesurée plutôt que supposée :
+`\\|` devenait `\|` en bash et cassait l'alternation ; la forme `run: ./scripts/...`
+sur une seule ligne était rejetée ; et la dernière ligne de la boucle du nocturne
+finit par `; do`, donc le caractère suivant le nom est un `;`.
+
+Prouvé par **deux mutations**, dont celle qui échappait à l'ancien contrôle :
+
+```
+step neutralise en echo         ECHEC, l'orpheline est nommee
+appel transforme en commentaire ECHEC, l'orpheline est nommee
+etat restaure                   44 preuves : 44 rejouees
+```
+
+La preuve orpheline a rejoint le **nocturne**, où son contrôle
+`verifier-image-docker.sh` tourne déjà et où Docker est sous la main. Elle
+construit sept images, ce qui l'exclut d'une CI par PR. Même motif que
+`verifier-sauvegarde-mutation`.
+
+## Un compte faux depuis plus longtemps
+
+La décomposition de `PREUVES-PAR-MUTATION.md` annonçait « vingt-deux groupées et
+**seize** en étapes nommées ». Recompté : vingt-deux et **quinze**, soit
+trente-sept. C'est ce seize qui produisait le total de trente-huit, et il était
+faux avant cette session. La répartition réelle est désormais **37 par PR et 7 au
+nocturne**, corrigée dans les quatre endroits qui l'annonçaient.
+
 ## Prochaine étape
 
 Le nocturne du 18 tranche : c'est lui qui prouve le correctif du filtre dans les

@@ -46,8 +46,14 @@ ne pouvait pas produire son effet, et s'annonçait comme un trou du contrôle.
 
 ## Les preuves écartées, et leur raison
 
-**Aucune, au 15 septembre 2026.** Les **quarante-quatre** preuves du dépôt
-tournent, **trente-huit par PR et six au nocturne**.
+**Aucune, au 17 septembre 2026.** Les **quarante-quatre** preuves du dépôt
+tournent, **trente-sept par PR et sept au nocturne**.
+
+`verifier-image-docker-mutation.sh` a rejoint le nocturne le 17 septembre. Elle
+existait depuis LS-74 **sans être lancée par aucun workflow**, et n'apparaissait
+que dans un commentaire de `controles.yml` affirmant que « sa preuve par mutation
+vit toujours » dans ce fichier. Le contrôle de couverture ne l'a pas vue, son
+ancrage acceptant une mention en commentaire comme un appel.
 
 Cette section reste ouverte : une preuve peut légitimement ne pas pouvoir entrer
 en intégration continue, et l'écart s'écrira ici avec son motif. Une exemption
@@ -62,9 +68,10 @@ historique, passaient alors pour écartées. Un récit n'est pas une décision.
 
 ## Comment les quarante-quatre se répartissent
 
-**Trente-huit par PR**, `controles.yml` : **vingt-deux** groupées dans l'étape
-« 9z octies », qui pèsent **82 s** mesurées en les enchaînant, et **seize** en
-étapes nommées, chacune posée par la story qui l'a écrite. Sur une CI qui dure
+**Trente-sept par PR**, `controles.yml` : **vingt-deux** groupées dans l'étape
+« 9z octies », qui pèsent **82 s** mesurées en les enchaînant, et **quinze** en
+étapes nommées, chacune posée par la story qui l'a écrite. La décomposition
+annonçait seize, donc trente-huit au total : recomptée le 17 septembre 2026. Sur une CI qui dure
 environ neuf cents secondes quand le code change.
 
 LE COMPTE SE MESURE, IL NE SE LIT PAS DANS UNE SEULE ÉTAPE :

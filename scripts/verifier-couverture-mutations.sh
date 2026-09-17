@@ -84,7 +84,23 @@ orphelines=0
 while IFS= read -r preuve; do
   [ -n "$preuve" ] || continue
 
-  if grep -rqF "$preuve" "$WORKFLOWS" 2>/dev/null; then
+  # UNE MENTION N'EST PAS UN APPEL, ET CE CONTROLE LES CONFONDAIT.
+  #
+  # `grep -rqF` cherchait le nom N'IMPORTE OU dans les workflows, commentaires
+  # compris. `verifier-image-docker-mutation.sh` n'est lance par aucun workflow :
+  # il n'y figure que dans un COMMENTAIRE de `controles.yml`, qui affirme que
+  # « sa preuve par mutation vit toujours » dans ce fichier. Le controle comptait
+  # donc 44 preuves rejouees sur 44, alors que 43 le sont.
+  #
+  # MESURE DU 17 SEPTEMBRE 2026 : retirer cette seule ligne de commentaire fait
+  # crier le controle, sans rien changer a ce qui s'execute. Un controle dont le
+  # verdict depend d'un commentaire ne mesure pas ce qu'il pretend.
+  #
+  # L'ANCRAGE EXIGE UNE LIGNE DE COMMANDE : le nom en debut de ligne, precede
+  # seulement d'espaces et d'un `./scripts/` ou d'un `- ` de liste YAML. Un `#`
+  # avant le nom disqualifie la ligne.
+  if grep -rhE "^[[:space:]]*(-[[:space:]]+)?(run:[[:space:]]+)?\.?/?scripts/$preuve([[:space:]]|[;&|]|$)" \
+       "$WORKFLOWS" 2>/dev/null | grep -qv '^[[:space:]]*#'; then
     rejouees=$((rejouees + 1))
     continue
   fi
