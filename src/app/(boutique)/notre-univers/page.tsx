@@ -486,7 +486,7 @@ export default function PageNotreUnivers() {
           Chaque pièce n&apos;existe qu&apos;une fois
         </h2>
 
-        <p className={styles.texte}>
+        <p className={styles.texteSortie}>
           Vous savez maintenant comment elles naissent. Les créations du moment
           sont dans la boutique, et chacune est la seule de son espèce.
         </p>
