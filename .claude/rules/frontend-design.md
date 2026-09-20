@@ -1015,10 +1015,16 @@ finition ont lieu à **Artix**, en Pyrénées-Atlantiques, et toutes les étapes
 font au même endroit. La formule « faits main en Béarn » est donc exacte, Artix
 appartenant au Béarn.
 
-**Ce qui reste interdit** : la formule du prototype, « Modelé, assemblé et fini à
-la main à Artix ». Le verbe « modelé » a été inventé par un générateur et décrit
-un geste qui n'a pas été confirmé, l'exploitante ayant validé l'assemblage et la
-finition, jamais le modelage. Écrire « assemblés et finis à la main à Artix ».
+**LE MODELAGE EST CONFIRMÉ DEPUIS LE 20 SEPTEMBRE 2026**, LS-25 : l'exploitante
+modèle la pâte polymère elle-même. Le verbe « modelé » avait été inventé par un
+générateur et l'interdit tenait à cette seule origine, jamais à un démenti. Il
+est levé, et `/notre-univers` l'emploie.
+
+**Ce qui reste interdit**, en revanche : toute formule au pluriel ou nommant une
+seconde personne. **L'exploitante exerce seule**, confirmé le même jour, et son
+**prénom ne paraît pas sur le site**, à sa demande. Écrire « les créatrices »,
+« les deux sœurs » ou un « nous » de marque décrirait une entreprise qui
+n'existe pas. Les textes publics sont à la première personne du singulier.
 
 ## Paillettes
 
