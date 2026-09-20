@@ -133,3 +133,47 @@
   color: var(--ls-accent-gold-deep);
   text-decoration: underline;
 }
+
+/*
+ * LES ILLUSTRATIONS, LS-25.
+ *
+ * `height: auto` ACCOMPAGNE `width: 100%`, et son absence deformerait l'image :
+ * `next/image` pose les dimensions intrinseques en attribut, et une largeur
+ * fluide sans hauteur libre les ecrase.
+ *
+ * AUCUNE HAUTEUR FIXE, AUCUN `object-fit` : le ratio d'origine est conserve,
+ * 16/10 pour les paysages et 1:1 pour les carrees, ce qui evite un recadrage
+ * automatique qui couperait les mains ou le bijou.
+ */
+.illustration {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0 0 var(--ls-space-3);
+  border-radius: var(--ls-radius-md);
+}
+
+/*
+ * LES CARREES SONT BORNEES, sans quoi elles occuperaient les 48 rem de la
+ * colonne de lecture sur grand ecran : un detail d'oreille affiche en 768 px de
+ * cote ecrase le texte qu'il illustre.
+ */
+.illustrationCarree {
+  display: block;
+  width: 100%;
+  max-width: 24rem;
+  height: auto;
+  margin: 0 0 var(--ls-space-3);
+  border-radius: var(--ls-radius-md);
+}
+
+/*
+ * LA LEGENDE EST SUR FOND CREME, donc `--ls-text-muted` y donne 4,86:1 et
+ * respecte AA. Sur sable elle tomberait a 4,35:1, C31.
+ */
+.legende {
+  margin: calc(var(--ls-space-3) * -1) 0 var(--ls-space-3);
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}

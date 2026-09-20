@@ -45,8 +45,29 @@
  * ete confirme. La liste des matieres dit de quoi sont faits les bijoux, jamais
  * d'ou viennent les composants.
  * ---------------------------------------------------------------------------
+ * LES CINQ PHOTOGRAPHIES MONTRENT LE TRAVAIL, JAMAIS UNE OFFRE, arbitrage de
+ * Christophe du 20 septembre 2026.
+ *
+ * Elles portent des pieces qui ne sont PAS au catalogue, un serpent jaune et des
+ * creoles corail notamment. Ce sont des creations reelles de l'exploitante,
+ * confirme le meme jour, vendues sur les marches ou deja parties.
+ *
+ * LA DISTINCTION EST CELLE QUI SEPARE CETTE PAGE D'UNE PAGE DE VENTE : aucun
+ * prix, aucun bouton panier, aucune reference. Le visiteur y voit un atelier au
+ * travail, pas un catalogue. Une photographie de PRODUIT presentant une piece
+ * inexistante serait une allegation trompeuse, LS-22, et c'est pour ce motif que
+ * `accueil-hero.jpg` doit etre remplace avant l'ouverture.
+ *
+ * ELLES NE PASSENT PAS PAR LA CHAINE DE TRAITEMENT DES MEDIAS, ADR-007 : c'est
+ * de l'habillage versionne, et le retrait des metadonnees n'y est donc PAS
+ * automatique. Les cinq ont ete nettoyees a la conversion, `sharp` sans
+ * `keepExif()`, puis verifiees octet par octet le 20 septembre 2026 : aucun
+ * segment EXIF, GPS, XMP ni ICC, aucun APP residuel. Toute image ajoutee ici
+ * repasse par cette verification, `public/habillage/README.md` la porte.
+ * ---------------------------------------------------------------------------
  */
 import type { Metadata } from "next";
+import Image from "next/image";
 
 import { NOM_BOUTIQUE, openGraphDePage } from "@/lib/seo";
 import styles from "./notre-univers.module.css";
@@ -94,6 +115,21 @@ export default function PageNotreUnivers() {
           Mon histoire
         </h2>
 
+        {/*
+         * `priority` SUR CETTE SEULE IMAGE : elle est la plus haute de la page
+         * et entre dans le plus grand rendu de contenu. Le poser sur les cinq
+         * ferait concourir les telechargements et retarderait celle-ci.
+         */}
+        <Image
+          src="/habillage/univers-modelage.jpg"
+          alt="Deux mains façonnent une fleur en pâte polymère violette sur un plan de travail en bois, entourées de feuilles d'or, de paillettes bleues et d'un outil à bille"
+          className={styles.illustration}
+          width={1586}
+          height={992}
+          priority
+          sizes="(min-width: 48rem) 48rem, 100vw"
+        />
+
         <p className={styles.texte}>
           J&apos;ai toujours créé des bijoux. D&apos;abord pour moi, simplement
           parce que j&apos;aimais porter des pièces qui n&apos;existaient nulle
@@ -126,6 +162,18 @@ export default function PageNotreUnivers() {
           naît, du premier geste à l&apos;emballage.
         </p>
 
+        <Image
+          src="/habillage/univers-atelier.jpg"
+          alt="Un plan de travail près d'une fenêtre : pains de pâte polymère colorés, bijoux en cours de séchage, casier de crochets et de fermoirs, rouleau et scalpel"
+          className={styles.illustration}
+          width={1586}
+          height={992}
+          sizes="(min-width: 48rem) 48rem, 100vw"
+        />
+        <p className={styles.legende}>
+          Mon plan de travail, un jour de modelage.
+        </p>
+
         <h3 className={styles.titreSection}>Des pièces uniques</h3>
 
         <p className={styles.texte}>
@@ -147,6 +195,20 @@ export default function PageNotreUnivers() {
           . Pas un modèle approchant, pas une illustration : votre bijou.
         </p>
 
+        {/*
+         * LA PHOTO PORTEE DONNE L'ECHELLE, ce qu'une prise a plat ne fait
+         * jamais : la taille reelle d'une boucle est la question qui revient le
+         * plus souvent avant un achat.
+         */}
+        <Image
+          src="/habillage/univers-porte.jpg"
+          alt="Une boucle d'oreille en forme de fleur violette pailletée portée à l'oreille, vue de profil"
+          className={styles.illustrationCarree}
+          width={1000}
+          height={1000}
+          sizes="(min-width: 48rem) 24rem, 100vw"
+        />
+
         <h3 className={styles.titreSection}>Ce à quoi je tiens</h3>
 
         <p className={styles.texte}>
@@ -158,6 +220,15 @@ export default function PageNotreUnivers() {
           Je soigne aussi les colis. Recevoir un bijou doit être un moment
           agréable, pas juste l&apos;ouverture d&apos;un carton.
         </p>
+
+        <Image
+          src="/habillage/univers-emballage.jpg"
+          alt="Une paire de boucles d'oreilles en forme de serpent jaune pailleté, présentée sur une carte de papier écru dans une pochette transparente"
+          className={styles.illustrationCarree}
+          width={1000}
+          height={1000}
+          sizes="(min-width: 48rem) 24rem, 100vw"
+        />
       </section>
 
       <section
@@ -169,6 +240,15 @@ export default function PageNotreUnivers() {
         <h2 id="titre-matieres" className={styles.titreSection}>
           Les matières
         </h2>
+
+        <Image
+          src="/habillage/univers-matieres.jpg"
+          alt="Vue de dessus des matières : pains de pâte polymère violets, beiges et bleus, crochets et dormeuses en acier, flacon de vernis, paillettes bleues et feuilles d'or"
+          className={styles.illustration}
+          width={1586}
+          height={992}
+          sizes="(min-width: 48rem) 48rem, 100vw"
+        />
 
         <p className={styles.texte}>
           Tous mes bijoux partent des mêmes matières. Ce qui change d&apos;une
