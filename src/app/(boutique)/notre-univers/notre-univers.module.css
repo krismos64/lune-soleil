@@ -767,6 +767,25 @@
   text-align: center;
 }
 
+/*
+ * LE PARAGRAPHE DE LA SORTIE A SA PROPRE CLASSE, et non `.texte`.
+ *
+ * `.texte` porte `max-width: 34rem` et `text-align: justify`, tailles pour des
+ * blocs alignes a gauche : dans une section centree, la borne de largeur se
+ * calait a gauche et le texte restait colle au bord pendant que le titre et le
+ * bouton se centraient. Vu a l'ecran le 20 septembre 2026.
+ *
+ * `margin auto` RECENTRE LA BORNE, et le texte reste centre plutot que
+ * justifie : justifier trois lignes centrees n'a aucun sens, les bords n'etant
+ * pas alignes.
+ */
+.texteSortie {
+  margin: 0 auto var(--ls-space-4);
+  max-width: 34rem;
+  color: var(--ls-text);
+  line-height: 1.6;
+}
+
 .titreSortie {
   margin: 0 0 var(--ls-space-3);
   color: var(--ls-primary);
