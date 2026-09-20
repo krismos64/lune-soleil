@@ -41,14 +41,14 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 5, rétractation et conformité | LS-6 | 0 | **close**, ses huit stories terminées le 10 septembre 2026 |
 | 6, exploitation et ouverture | LS-7 | 7 | **LS-153 et LS-142 attendent l'exploitante**. LS-140 et LS-107 attendent les photographies de LS-23. Reste LS-150, la visibilité dans les moteurs de réponse. **LS-228** a livré son gabarit de titre le 13 septembre 2026, sept titres sur quatorze rendaient en police système ; son second volet, les blocs d'état des deux vues d'ensemble, attend LS-153 faute de données sur les comptes de production. **LS-229** a livré le pendant public le 14 septembre 2026 : aucun titre des pages publiques ni des écrans de connexion n'employait le jeton, C42 ne couvrant que les écrans privés. La règle vit désormais dans `globals.css`, hors d'atteinte des sorties anticipées de layout, **C43** l'énonce, et les trois portes d'entrée reçoivent le gabarit à deux panneaux du prototype. **LS-230 est close** le 14 septembre 2026 : les 44 preuves par mutation tournent désormais, 37 par PR et 7 au nocturne. Six étaient cassées et cachaient cinq trous réels, et cinq mutations traînaient dans le dépôt, dont la garde d'accès à l'administration. **LS-231 est close sans correction** le 16 septembre 2026 : un échec sur six exécutions sur `tableau-bord`, jamais observé en CI, défaut connu et accepté. **LS-232 est close** le 17 septembre 2026 : le nocturne du 17 a rendu l'étape de bout en bout verte, 2155 tests passés contre douze échecs le 15, sans qu'aucun test disparaisse ni soit ignoré. **LS-233 a reçu un second correctif** le 17 septembre, son premier ayant régressé : le filtre ancré sur `× ` et `✘ ` ne retenait plus rien sous les reporters de CI, Playwright passant à `github` et Vitest encodant la virgule en `%2C`. Le filtre lit désormais les quatre formes mesurées dans les deux modes. Le même diagnostic a montré que le step groupant six preuves sous `bash -e` en masquait quatre depuis le 14 septembre. **LS-234 est close** le 16 septembre, `robots.txt` déduit son état du catalogue. **LS-223, LS-226 et LS-227 sont closes** le 13 septembre 2026 : la clé Backblaze durcie, l'instabilité des tests et le cul-de-sac de la réauthentification. **LS-235 est en cours** le 20 septembre 2026 : le nocturne a été annulé les 18, 19 et 20 sans qu'aucune alerte ne parte, une étape sans borne locale consommant le plafond du job et l'étape d'alerte étant sautée avec les autres. Borne locale posée et prouvée, plafond porté à 75 min sur budget mesuré, `npm audit` remonté hors d'atteinte, et l'alerte déplacée dans `veilleur-nocturne.yml` : **une étape interne ne peut pas signaler le dépassement du plafond de son propre job** |
 | 7, V1 cible | LS-8 | 0 | **close** le 11 septembre 2026. LS-149 portait le dernier critère : ADR-044 **écarte l'assistant IA** du périmètre plutôt que de le reporter |
-| Contenus | LS-22 | 10 | **attend l'exploitante**, rien n'est faisable sans elle. **LS-32 est close** le 11 septembre 2026, la neutralité de genre étant désormais gardée par un contrôle |
+| Contenus | LS-22 | 10 | **attend l'exploitante**, rien n'est faisable sans elle. **LS-32 est close** le 11 septembre 2026, la neutralité de genre étant désormais gardée par un contrôle. **LS-25 a livré ses textes** le 20 septembre 2026, récoltés auprès d'elle et validés par elle : `/notre-univers` est déployée, et elle a révélé que l'exploitante **exerce seule** quand tout le cadrage parlait de deux créatrices. Le ticket reste ouvert sur le visuel de hero de l'accueil, qui montre des pièces n'ayant jamais existé |
 
-**201 tickets terminés sur 225 hors epics**, les deux termes relevés dans Jira
-le **20 septembre 2026**, et jamais dérivés l'un de l'autre : 24 tickets non
-terminés relevés séparément, et 225 − 24 retombe bien sur 201. LS-235 est le
-ticket ajouté depuis le relevé du 17, **LS-20 celui qui s'est fermé** le
-20 septembre, le premier article réel attestant que le lot de photographies a
-démarré.
+**201 tickets terminés sur 226 hors epics**, les deux termes relevés dans Jira
+le **20 septembre 2026** en fin de journée, et jamais dérivés l'un de l'autre :
+25 tickets non terminés relevés séparément, et 226 − 25 retombe bien sur 201.
+**LS-235 et LS-236** sont les tickets ajoutés depuis le relevé du 17, **LS-20**
+celui qui s'est fermé, le premier article réel attestant que le lot de
+photographies a démarré.
 
 **Le dénominateur a gagné trois tickets le 16 septembre**, LS-232 à LS-234 : les
 anomalies trouvées ne sont plus corrigées au fil de l'eau mais ticketées, ce que
@@ -86,16 +86,17 @@ une fois : le chiffre disait 175 sous une date du 10 septembre, ce qui aurait
 fait relire un compte pour un autre. Motif « un compte recopié n'est pas une
 mesure », qui vaut pour la date autant que pour le nombre.
 
-**Onze des vingt-quatre tickets ouverts attendent l'exploitante** : les dix de
+**Onze des vingt-cinq tickets ouverts attendent l'exploitante** : les dix de
 l'epic LS-22, photographies, textes, tarifs et contenus juridiques, plus LS-19,
 la médiation, qui suppose une adhésion à souscrire. Aucun code ne les débloque.
 Comptes relevés dans Jira le 20 septembre 2026, `parent = LS-22 AND status !=
 "Terminé"` en rendant dix : la formule précédente en annonçait neuf, et cet écart
 ne venait pas de la clôture de LS-20, qui appartient à l'epic LS-1.
 
-**Trois autres sont bloqués en cascade sur ces mêmes photographies**, LS-23 :
-LS-107 critères 4 et 6, LS-140 critère 1, et LS-123 pour `/notre-univers`.
-Elles sont techniquement prêtes. Un **premier article réel** est en ligne depuis
+**Deux autres sont bloqués en cascade sur ces mêmes photographies**, LS-23 :
+LS-107 critères 4 et 6, et LS-140 critère 1. Elles sont techniquement prêtes.
+**LS-123 ne l'est plus** : `/notre-univers` est livrée et déployée le
+20 septembre 2026, son critère 1 se ferme et les sept liens morts avec. Un **premier article réel** est en ligne depuis
 le 20 septembre 2026, « boucles d'oreilles Étoile filante » : il ne les débloque
 pas, toutes trois demandant un catalogue fourni, mais il rend **LS-145
 mesurable**, son chronométrage exigeant un téléversement réel avec le traitement

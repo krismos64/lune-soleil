@@ -134,3 +134,42 @@ déjà arrêtés dans `frontend-design.md`, avec deux pièges nommés dans le ti
 
 **Le visuel de hero de l'accueil reste à remplacer** avant l'ouverture
 commerciale. Il montre des pièces qui n'ont jamais existé.
+
+## Fusionné et déployé le soir même
+
+PR 461 fusionnée en rebase après un premier échec sur `format:check`, seul des
+quatre contrôles rapides que je n'avais pas rejoué en local : les retouches
+successives du JSX, posées par script, avaient désaligné l'indentation.
+
+Déploiement du SHA `f07a48ac271c` par le workflow, action `deployer`.
+
+```
+migrations attendues 20, appliquées 20
+conteneur sain après 10 s
+/api/sante      200
+/notre-univers  200   <- rendait 404 avant
+```
+
+### La peur des données effacées, et ce qui l'a levée
+
+Christophe a demandé si le déploiement risquait d'effacer les articles que
+l'exploitante avait archivés. La réponse tenait en trois mesures :
+
+```
+lune-soleil-app   Up 41 minutes (healthy)   <- recree par le deploiement
+lune-soleil-db    Up 10 days (healthy)      <- JAMAIS touche
+lune-soleil-cron  Up 10 days
+```
+
+Le script fait `up -d --no-deps app` : seul le conteneur applicatif est recréé,
+et son commentaire le dit, « le service `db` garde ses données ». Aucune
+migration n'attendait entre le commit servi et la cible.
+
+**Le catalogue est pourtant apparu vide après le déploiement**, et la fiche de
+l'Étoile filante en 404. Ce n'était pas une perte : l'exploitante avait archivé
+ses articles dans la journée. `catalogue.ts` le dit, « un archivé reste donc
+RETROUVABLE, ce qui compte : invisible, un produit archivé par erreur se
+retrouve ». Le `robots.txt` repassé en `Disallow` suit la même logique, LS-234.
+
+La leçon vaut d'être notée : **un catalogue vide n'est pas une base vide**, et
+les deux se ressemblent depuis l'extérieur.
