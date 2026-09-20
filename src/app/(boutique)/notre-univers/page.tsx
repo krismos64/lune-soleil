@@ -268,9 +268,19 @@ export default function PageNotreUnivers() {
         {/* INVERSE : l'emballage passe a gauche. */}
         <div className={`${styles.blocAlterne} ${styles.blocAlterneInverse}`}>
           <div className={styles.blocTexte}>
+            {/*
+             * PHRASE RACCOURCIE LE 20 SEPTEMBRE 2026. Elle enumerait « une
+             * taille, une couleur, un delai », ce qui diluait l'invitation
+             * avant d'y arriver : l'enumeration classe les motifs d'ecrire au
+             * lieu d'inviter a le faire.
+             *
+             * PAS DE GRAS ICI, contre les trois autres passages accentues de la
+             * page. Ceux-la sont des AFFIRMATIONS qui appuient la vente ;
+             * celle-ci est une INVITATION A AGIR, et une invitation se sert du
+             * bouton qui suit, pas d'une graisse qui lui ferait concurrence.
+             */}
             <p className={styles.texte}>
-              Une question sur une taille, une couleur, un délai ? Écrivez-moi,
-              je réponds moi-même.
+              Une question ? Écrivez-moi, je réponds moi-même.
             </p>
 
 
