@@ -56,6 +56,20 @@ jobs:
       - name: Ouvrir ou commenter l'issue de veille
         env:
           GH_TOKEN: ${{ github.token }}
+          # `GH_REPO` EST OBLIGATOIRE ICI, et son absence a fait echouer la
+          # premiere version, execution 35512451076 du 20 septembre 2026 :
+          #
+          #   failed to run git: fatal: not a git repository
+          #
+          # `gh` deduit le depot du repertoire git courant. Ce job ne fait aucun
+          # `checkout`, n'ayant rien a lire dans le depot pour ecrire une issue :
+          # il n'y a donc PAS de repertoire git, et les trois commandes `gh`
+          # echouent avant d'avoir rien tente. Le declenchement etait bon, les
+          # variables aussi, `VERDICT` valait bien `cancelled`.
+          #
+          # Ajouter un `checkout` marcherait et couterait une copie du depot
+          # pour rien. Nommer le depot est plus direct et dit ce qui manquait.
+          GH_REPO: ${{ github.repository }}
           # Ces valeurs viennent d'un evenement GitHub et sont passees par
           # `env`, jamais interpolees dans le corps du script : une expression
           # `${{ }}` ecrite au milieu d'un `run` serait remplacee AVANT que bash
