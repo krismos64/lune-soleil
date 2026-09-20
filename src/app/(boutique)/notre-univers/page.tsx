@@ -155,6 +155,23 @@ export default function PageNotreUnivers() {
           lancée.
         </p>
 
+        {/*
+         * L'ORIGINE DU NOM, choisie par l'exploitante le 20 septembre 2026.
+         *
+         * UNE PHRASE ET NON UN PARAGRAPHE : c'est un detail qui attache, pas un
+         * chapitre. Un encadre dedié en ferait une legende de marque, registre
+         * que le reste de la page evite.
+         *
+         * ELLE N'AFFIRME RIEN D'INVERIFIABLE, et c'est ce qui l'a fait retenir
+         * parmi dix propositions : elle dit un gout, jamais une origine
+         * geographique ni une anecdote fondatrice qu'il faudrait pouvoir
+         * prouver.
+         */}
+        <p className={styles.texte}>
+          Un bijou pour les jours calmes, un autre pour ceux qui brillent. Je
+          n&apos;ai jamais su choisir.
+        </p>
+
         <p className={styles.texte}>
           Aujourd&apos;hui je fais tout : je modèle, je photographie, je réponds
           aux messages, je prépare les colis, je tiens le stand sur les marchés.
