@@ -640,7 +640,7 @@ jobs:
       # ----------------------------------------------------------------------
       - name: Preuves par mutation lourdes
         if: always()
-        timeout-minutes: 45
+        timeout-minutes: 1
         run: |
           echec=0
           for script in \
