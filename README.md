@@ -39,13 +39,14 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 4, factures et expédition | LS-5 | 3 | **LS-218 crée l'étiquette par API**, et son poids est un réglage depuis le 12 septembre 2026 : seul son critère 10 reste ouvert, il attend un colis réel donc LS-153. **LS-33** décide comment le site apprend qu'un colis est livré, **LS-35** porte l'e-reporting au 1er septembre 2027, **LS-222 est close** le 13 septembre 2026, les emails HTML observés sur Yahoo, Gmail et OVH, les trois en boîte de réception. **LS-98 est close** le 11 septembre 2026, les paramètres commerciaux vivent en base, ADR-043 |
 | 4bis, espace client et avis | LS-36 | 0 | **close**, et rouverte deux fois depuis : LS-221 a livré « Mes avis » puis **LS-225 la modification d'un avis par son auteur**, le 12 septembre 2026. Une phase close ne l'est que des tickets connus le jour où on la ferme |
 | 5, rétractation et conformité | LS-6 | 0 | **close**, ses huit stories terminées le 10 septembre 2026 |
-| 6, exploitation et ouverture | LS-7 | 7 | **LS-153 et LS-142 attendent l'exploitante**. LS-140 et LS-107 attendent les photographies de LS-23. Reste LS-150, la visibilité dans les moteurs de réponse. **LS-228** a livré son gabarit de titre le 13 septembre 2026, sept titres sur quatorze rendaient en police système ; son second volet, les blocs d'état des deux vues d'ensemble, attend LS-153 faute de données sur les comptes de production. **LS-229** a livré le pendant public le 14 septembre 2026 : aucun titre des pages publiques ni des écrans de connexion n'employait le jeton, C42 ne couvrant que les écrans privés. La règle vit désormais dans `globals.css`, hors d'atteinte des sorties anticipées de layout, **C43** l'énonce, et les trois portes d'entrée reçoivent le gabarit à deux panneaux du prototype. **LS-230 est close** le 14 septembre 2026 : les 44 preuves par mutation tournent désormais, 37 par PR et 7 au nocturne. Six étaient cassées et cachaient cinq trous réels, et cinq mutations traînaient dans le dépôt, dont la garde d'accès à l'administration. **LS-231 est close sans correction** le 16 septembre 2026 : un échec sur six exécutions sur `tableau-bord`, jamais observé en CI, défaut connu et accepté. **LS-232 est close** le 17 septembre 2026 : le nocturne du 17 a rendu l'étape de bout en bout verte, 2155 tests passés contre douze échecs le 15, sans qu'aucun test disparaisse ni soit ignoré. **LS-233 a reçu un second correctif** le 17 septembre, son premier ayant régressé : le filtre ancré sur `× ` et `✘ ` ne retenait plus rien sous les reporters de CI, Playwright passant à `github` et Vitest encodant la virgule en `%2C`. Le filtre lit désormais les quatre formes mesurées dans les deux modes. Le même diagnostic a montré que le step groupant six preuves sous `bash -e` en masquait quatre depuis le 14 septembre. **LS-234 est close** le 16 septembre, `robots.txt` déduit son état du catalogue. **LS-223, LS-226 et LS-227 sont closes** le 13 septembre 2026 : la clé Backblaze durcie, l'instabilité des tests et le cul-de-sac de la réauthentification |
+| 6, exploitation et ouverture | LS-7 | 7 | **LS-153 et LS-142 attendent l'exploitante**. LS-140 et LS-107 attendent les photographies de LS-23. Reste LS-150, la visibilité dans les moteurs de réponse. **LS-228** a livré son gabarit de titre le 13 septembre 2026, sept titres sur quatorze rendaient en police système ; son second volet, les blocs d'état des deux vues d'ensemble, attend LS-153 faute de données sur les comptes de production. **LS-229** a livré le pendant public le 14 septembre 2026 : aucun titre des pages publiques ni des écrans de connexion n'employait le jeton, C42 ne couvrant que les écrans privés. La règle vit désormais dans `globals.css`, hors d'atteinte des sorties anticipées de layout, **C43** l'énonce, et les trois portes d'entrée reçoivent le gabarit à deux panneaux du prototype. **LS-230 est close** le 14 septembre 2026 : les 44 preuves par mutation tournent désormais, 37 par PR et 7 au nocturne. Six étaient cassées et cachaient cinq trous réels, et cinq mutations traînaient dans le dépôt, dont la garde d'accès à l'administration. **LS-231 est close sans correction** le 16 septembre 2026 : un échec sur six exécutions sur `tableau-bord`, jamais observé en CI, défaut connu et accepté. **LS-232 est close** le 17 septembre 2026 : le nocturne du 17 a rendu l'étape de bout en bout verte, 2155 tests passés contre douze échecs le 15, sans qu'aucun test disparaisse ni soit ignoré. **LS-233 a reçu un second correctif** le 17 septembre, son premier ayant régressé : le filtre ancré sur `× ` et `✘ ` ne retenait plus rien sous les reporters de CI, Playwright passant à `github` et Vitest encodant la virgule en `%2C`. Le filtre lit désormais les quatre formes mesurées dans les deux modes. Le même diagnostic a montré que le step groupant six preuves sous `bash -e` en masquait quatre depuis le 14 septembre. **LS-234 est close** le 16 septembre, `robots.txt` déduit son état du catalogue. **LS-223, LS-226 et LS-227 sont closes** le 13 septembre 2026 : la clé Backblaze durcie, l'instabilité des tests et le cul-de-sac de la réauthentification. **LS-235 est en cours** le 20 septembre 2026 : le nocturne a été annulé les 18, 19 et 20 sans qu'aucune alerte ne parte, une étape sans borne locale consommant le plafond du job et l'étape d'alerte étant sautée avec les autres. Borne locale posée et prouvée, plafond porté à 75 min sur budget mesuré, `npm audit` remonté hors d'atteinte, et l'alerte déplacée dans `veilleur-nocturne.yml` : **une étape interne ne peut pas signaler le dépassement du plafond de son propre job** |
 | 7, V1 cible | LS-8 | 0 | **close** le 11 septembre 2026. LS-149 portait le dernier critère : ADR-044 **écarte l'assistant IA** du périmètre plutôt que de le reporter |
 | Contenus | LS-22 | 10 | **attend l'exploitante**, rien n'est faisable sans elle. **LS-32 est close** le 11 septembre 2026, la neutralité de genre étant désormais gardée par un contrôle |
 
-**200 tickets terminés sur 224 hors epics**, les deux termes relevés dans Jira
-le **17 septembre 2026**, et jamais dérivés l'un de l'autre : 24 tickets non
-terminés relevés séparément, et 224 − 24 retombe bien sur 200.
+**200 tickets terminés sur 225 hors epics**, les deux termes relevés dans Jira
+le **20 septembre 2026**, et jamais dérivés l'un de l'autre : 25 tickets non
+terminés relevés séparément, dont **11 En cours**, et 225 − 25 retombe bien sur
+200. LS-235 est le ticket ajouté depuis le relevé du 17.
 
 **Le dénominateur a gagné trois tickets le 16 septembre**, LS-232 à LS-234 : les
 anomalies trouvées ne sont plus corrigées au fil de l'eau mais ticketées, ce que
@@ -53,8 +54,13 @@ le motif « dette annoncée hors outil » a imposé. **DIX tickets sont En cours
 relevés dans Jira, et **quatre dépendent encore du code** :
 
 * **LS-233** a reçu un second correctif le 17 septembre, son premier ayant régressé
-  sous les reporters de CI, et attend le nocturne du 18 pour son dernier critère.
+  sous les reporters de CI. Son dernier critère attend toujours un nocturne vert :
+  **les nuits des 18, 19 et 20 ont été annulées**, motif de LS-235, et son
+  correctif est précisément ce qui a révélé le coût réel du step.
   **LS-232 est close** le 17 septembre, le nocturne ayant rendu son étape verte
+* **LS-235 est en cours** le 20 septembre 2026 : le nocturne annulé trois nuits
+  sans alerte, six critères sur sept prouvés, le septième attendant le premier
+  nocturne complet
 * **LS-218** attend un colis réel, son dernier critère exigeant un achat facturé
   et donc LS-153. Son code est écrit, audité et **déployé** depuis le 13 septembre
 * **LS-228** a livré son gabarit de titre et garde son second volet, les blocs
@@ -1141,9 +1147,10 @@ l'arbitrage tenable : l'achat de bout en bout sur une pièce unique vit dans
 Playwright. Les tests d'intégration ne bougent pas, réservation et concurrence
 comprises.
 
-Le contrôle nocturne **ouvre une issue** en cas d'échec plutôt que de rougir dans
-un onglet que personne ne consulte, et il **ne bloque aucune fusion** : son rouge
-signifie « un défaut est entré hier », pas « ne pas fusionner ».
+Le contrôle nocturne fait **ouvrir une issue** par `veilleur-nocturne.yml`, en
+cas d'échec **comme d'annulation**, plutôt que de rougir dans un onglet que
+personne ne consulte. Il **ne bloque aucune fusion** : son rouge signifie « un
+défaut est entré hier », pas « ne pas fusionner ».
 
 **À reconsidérer avant le Go-Live**, LS-153, quand un défaut d'interface
 commencera à coûter des ventes.
@@ -1184,9 +1191,10 @@ La chaîne démarre son propre conteneur `lune-soleil-db` par `docker run`, sans
 passer par `docker-compose.yml` qui exige un `.env` absent en intégration
 continue. Le nom est celui qu'attend le mode `--base-migree`.
 
-**Quatre autres workflows** accompagnent `controles.yml`, tous séparés pour la
+**Six autres workflows** accompagnent `controles.yml`, tous séparés pour la
 même raison : un rouge qui signifie parfois « ne pas fusionner » et parfois « à
-relire » est un rouge que l'on apprend à ignorer.
+relire » est un rouge que l'on apprend à ignorer. Le compte se mesure,
+`ls .github/workflows/*.yml | wc -l` moins celui-ci.
 
 `derive-documentation.yml` rejoue `verifier-config-claude.sh` et
 `verifier-protection-branche.sh` **chaque lundi matin**, et ouvre une issue
@@ -1194,8 +1202,15 @@ relire » est un rouge que l'on apprend à ignorer.
 un réglage de protection a changé. Il porte `administration: read`, portée que
 `controles.yml` n'a pas et ne doit pas avoir.
 
-`nocturne.yml` rejoue **chaque nuit** ce que LS-177 a sorti des pull requests, et
-ouvre une issue étiquetée `controle-nocturne`.
+`nocturne.yml` rejoue **chaque nuit** ce que LS-177 a sorti des pull requests.
+
+`veilleur-nocturne.yml` ouvre l'issue étiquetée `controle-nocturne` quand celui-ci
+n'aboutit pas. **Il est séparé parce qu'une étape interne ne peut pas signaler un
+dépassement du plafond de son propre job**, LS-235 : le runner s'arrête et toutes
+les étapes restantes sont sautées, `always()` compris. Le nocturne a été annulé
+trois nuits sans un mot avant que ce workflow n'existe. Déclenché par
+`workflow_run`, il tourne dans son propre job et lit `conclusion`, `cancelled`
+compris.
 
 `publier-image.yml` construit, vérifie et publie l'image sur `main` après chaque
 fusion.
@@ -1207,7 +1222,13 @@ chaque déploiement recrée des conteneurs sur une machine que partage un produi
 payant. Il n'envoie qu'un identifiant de commit validé à une clé SSH **enfermée**
 qui ne peut exécuter que `deploiement/deployer.sh`.
 
-Les quatre se déclenchent aussi à la main depuis l'onglet Actions.
+`ecart-production.yml` compare **chaque nuit** le commit servi en production à
+`main`, et signale un écart qui porte une migration. Il tourne à 3 h UTC, après
+le nocturne.
+
+Tous se déclenchent aussi à la main depuis l'onglet Actions, sauf
+`veilleur-nocturne.yml` : `workflow_run` est son seul déclencheur, il n'a de sens
+qu'à la suite d'un nocturne.
 
 Il a été prouvé par quinze mutations, toutes détectées. Le compte se mesure,
 `grep -cE '^\s*mutation "' scripts/verifier-config-claude-mutation.sh`, il grandit

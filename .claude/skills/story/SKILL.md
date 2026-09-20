@@ -226,6 +226,35 @@ plusieurs fois : Perl interprète `${...}` dans le remplacement, `sed` traite un
 `&` nu comme la chaîne trouvée entière, et un garde-fou qui cite la valeur
 interdite se fait détecter par le contrôle qu'il éprouve.
 
+### Une correction de garde-fou s'éprouve sur le mode de défaillance visé
+
+**Pas sur un raisonnement, même juste.** LS-235 l'a payé trois fois dans une
+seule story, le 20 septembre 2026, sur un contrôle nocturne annulé trois nuits
+sans qu'aucune alerte ne parte :
+
+1. élargir la condition de `failure()` à `failure() || cancelled()` paraissait
+   évident. **Quand un job dépasse son `timeout-minutes`, le runner s'arrête et
+   TOUTES les étapes restantes sont sautées**, `always()` compris : la nouvelle
+   condition ne changeait rien
+2. `${{ cancelled() }}` dans un bloc `env:` fait refuser le workflow **entier**,
+   `HTTP 422: Unrecognized function`. Les fonctions de statut ne valent que dans
+   un `if:`, et la correction aurait supprimé le nocturne au lieu de le réparer
+3. le workflow séparé se déclenchait enfin, et `gh` échouait sur `not a git
+   repository` : il déduit le dépôt du répertoire courant, et un job sans
+   `checkout` n'en a pas. `GH_REPO` le fournit
+
+Chaque correction paraissait évidente, et **chaque fois seule la mesure a
+tranché**. Sans elles, le ticket aurait été clos sur un garde-fou muet, soit le
+défaut de départ.
+
+**Le geste** : provoquer réellement la défaillance visée, en abaissant une borne
+ou un plafond, et vérifier que l'alerte part. Un déclenchement n'est pas une
+preuve, l'étape peut se lancer et mourir avant d'avoir rien écrit.
+
+**Ce qui n'est prouvable qu'après fusion se prouve après fusion**, et le ticket
+reste ouvert jusque-là : un `workflow_run` ne se déclenche que depuis la branche
+par défaut.
+
 ## 6. Clôturer la traçabilité, sur les quatre canaux
 
 **Cette étape n'est pas optionnelle, y compris pour un travail exploratoire.**
