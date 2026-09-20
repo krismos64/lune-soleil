@@ -271,74 +271,83 @@ export default function PageNotreUnivers() {
         </div>
       </section>
 
+      {/*
+       * LA SEULE ZONE SOMBRE DE LA PAGE, et elle est deliberement unique.
+       *
+       * Le rendu precedent donnait le MEME POIDS a six sections : des cartes
+       * beiges arrondies enchainees au meme rythme, ou rien ne se detachait.
+       * Cette bande est le moment memorable, et le reste de la page se tait
+       * autour d'elle.
+       *
+       * LE MOTIF EXISTE DEJA, `page.module.css` de l'accueil : fond
+       * `--ls-primary`, texte blanc a 8,93:1, AAA. Je le reprends au lieu d'en
+       * inventer un second, deux zones sombres construites differemment se
+       * liraient comme deux systemes.
+       *
+       * LE SURTITRE EST EN SABLE ET NON EN DORE : `--ls-accent-gold` mesure
+       * 3,61:1 sur ce fond, sous le seuil AA. `--ls-surface-sand` donne 7,49:1
+       * en gardant une nuance chaude, distincte du blanc du titre.
+       */}
       <section
         id="matieres"
         tabIndex={-1}
-        className={styles.section}
+        className={styles.bandeMatieres}
         aria-labelledby="titre-matieres"
       >
-        <h2 id="titre-matieres" className={styles.titreSection}>
-          Les matières
-        </h2>
+        <div className={styles.bandeContenu}>
+          <div className={styles.bandeTexte}>
+            <h2 id="titre-matieres" className={styles.titreBande}>
+              Les matières
+            </h2>
 
-        <p className={styles.introMatieres}>
-          Tous mes bijoux partent des mêmes matières. Ce qui change d&apos;une
-          pièce à l&apos;autre, ce sont les couleurs et les formes.
-        </p>
+            <p className={styles.introBande}>
+              Tous mes bijoux partent des mêmes matières. Ce qui change d&apos;une
+              pièce à l&apos;autre, ce sont les couleurs et les formes.
+            </p>
 
-        <Image
-          src="/habillage/univers-matieres.jpg"
-          alt="Vue de dessus des matières : pains de pâte polymère violets, beiges et bleus, crochets et dormeuses en acier, flacon de vernis, paillettes bleues et feuilles d'or"
-          className={styles.illustration}
-          width={1586}
-          height={992}
-          sizes="(min-width: 80rem) 76rem, 100vw"
-        />
+            <dl className={styles.matieres}>
+              <div className={styles.matiere}>
+                <dt className={styles.titreMatiere}>La pâte polymère</dt>
+                <dd className={styles.texteMatiere}>
+                  Elle donne le corps du bijou. Je la modèle à la main, puis elle
+                  durcit à la cuisson. Une matière légère, ce qui compte pour des
+                  boucles portées toute la journée.
+                </dd>
+              </div>
+              <div className={styles.matiere}>
+                <dt className={styles.titreMatiere}>L&apos;acier inoxydable</dt>
+                <dd className={styles.texteMatiere}>
+                  Pour tout ce qui touche la peau : crochets, fermoirs, attaches,
+                  contours des bagues. Il libère très peu de nickel, ce qui le
+                  rend bien toléré par la plupart des peaux sensibles.
+                </dd>
+              </div>
+              <div className={styles.matiere}>
+                <dt className={styles.titreMatiere}>Le vernis brillant</dt>
+                <dd className={styles.texteMatiere}>
+                  Il protège la surface et donne sa profondeur à la couleur.
+                </dd>
+              </div>
+              <div className={styles.matiere}>
+                <dt className={styles.titreMatiere}>
+                  Les paillettes et les feuilles d&apos;or
+                </dt>
+                <dd className={styles.texteMatiere}>
+                  Sur certaines pièces, pour les reflets.
+                </dd>
+              </div>
+            </dl>
+          </div>
 
-        {/*
-         * LES QUATRE MATIERES EN CARTES, et non en liste a puces.
-         *
-         * La liste laissait le texte decroche sous l'image, en colonne etroite.
-         * Chaque matiere est une unite de meme nature : les cartes le montrent
-         * et se comparent d'un coup d'oeil.
-         *
-         * LA COULEUR DE BORDURE EVOQUE LA MATIERE, elle ne la code pas : le nom
-         * est toujours ecrit. Une information portee par la seule couleur
-         * echappe a qui ne la distingue pas, WCAG 1.4.1.
-         */}
-        <ul className={styles.matieres}>
-          <li className={`${styles.matiere} ${styles.matierePate}`}>
-            <h3 className={styles.titreMatiere}>La pâte polymère</h3>
-            <p className={styles.texteMatiere}>
-              Elle donne le corps du bijou. Je la modèle à la main, puis elle
-              durcit à la cuisson. C&apos;est une matière légère, ce qui compte
-              pour des boucles d&apos;oreilles portées toute la journée.
-            </p>
-          </li>
-          <li className={`${styles.matiere} ${styles.matiereAcier}`}>
-            <h3 className={styles.titreMatiere}>L&apos;acier inoxydable</h3>
-            <p className={styles.texteMatiere}>
-              Pour tout ce qui touche la peau : crochets, fermoirs, attaches, et
-              les contours des bagues. C&apos;est un choix délibéré. L&apos;acier
-              inoxydable libère très peu de nickel, ce qui le rend bien toléré
-              par la plupart des peaux sensibles.
-            </p>
-          </li>
-          <li className={`${styles.matiere} ${styles.matiereVernis}`}>
-            <h3 className={styles.titreMatiere}>Le vernis brillant</h3>
-            <p className={styles.texteMatiere}>
-              Il protège la surface et donne sa profondeur à la couleur.
-            </p>
-          </li>
-          <li className={`${styles.matiere} ${styles.matiereOr}`}>
-            <h3 className={styles.titreMatiere}>
-              Les paillettes et les feuilles d&apos;or
-            </h3>
-            <p className={styles.texteMatiere}>
-              Sur certaines pièces, pour les reflets.
-            </p>
-          </li>
-        </ul>
+          <Image
+            src="/habillage/univers-matieres.jpg"
+            alt="Vue de dessus des matières : pains de pâte polymère violets, beiges et bleus, crochets et dormeuses en acier, flacon de vernis, paillettes bleues et feuilles d'or"
+            className={styles.imageBande}
+            width={1586}
+            height={992}
+            sizes="(min-width: 60rem) 30rem, 100vw"
+          />
+        </div>
       </section>
 
       <section

@@ -156,84 +156,6 @@
 }
 
 /*
- * ---------------------------------------------------------------------------
- * L'APPARITION AU DEFILEMENT, LS-25.
- *
- * PREMIERE ANIMATION DU SITE, et elle est volontairement discrete :
- * `frontend-design.md` interdit la suranimation, et un site de bijoux artisanaux
- * n'a rien d'une demonstration technique. Huit pixels de montee, rien d'autre.
- * Aucune opacite, voir plus bas, aucune rotation, aucun rebond, aucun
- * glissement lateral.
- *
- * `animation-timeline: view()` FAIT CELA SANS UNE LIGNE DE JAVASCRIPT. Le
- * navigateur lie l'avancement de l'animation a l'entree de l'element dans la
- * fenetre. Les navigateurs qui l'ignorent affichent le contenu normalement,
- * puisque l'etat final de l'animation est aussi l'etat par defaut : aucune
- * degradation, et surtout AUCUN CONTENU INVISIBLE en cas de non-support.
- *
- * C'EST CE DERNIER POINT QUI A ECARTE LA SOLUTION EN JAVASCRIPT. Un
- * `IntersectionObserver` demande de poser `opacity: 0` au depart, donc de
- * masquer le texte jusqu'a ce qu'un script s'execute : un script casse, un
- * chargement lent ou un navigateur sans JavaScript laisserait une page blanche.
- * Le contenu d'une page editoriale ne depend jamais d'un script.
- *
- * `prefers-reduced-motion` SUPPRIME L'ANIMATION ENTIEREMENT, exigence
- * d'accessibilite du projet et non une option.
- * ---------------------------------------------------------------------------
- */
-/*
- * AUCUNE OPACITE DANS CETTE ANIMATION, ET C'EST UNE MESURE QUI L'A IMPOSE.
- *
- * La premiere version montait de `opacity: 0` a `1`. `axe-core` a rougi sur les
- * deux largeurs, le 20 septembre 2026 :
- *
- *   contraste 3,47:1 au lieu de 4,5:1
- *   premier plan #8c837d, fond #fbf7f0
- *
- * `#8c837d` n'est AUCUN jeton du projet : c'est `--ls-text` compose avec le
- * fond creme a une opacite d'environ 0,6, capture en pleine animation.
- *
- * CE N'ETAIT PAS UN ARTEFACT DE MESURE. Pendant toute la transition, le texte
- * etait reellement sous le seuil AA : qui lit vite, ou qui defile lentement,
- * rencontre bel et bien ce contraste. Un texte ne s'affiche jamais a opacite
- * partielle, et la regle vaut au-dela de cette page.
- *
- * LE DEPLACEMENT SEUL SUFFIT. Huit pixels de montee donnent le meme effet de
- * surgissement sans jamais toucher a la lisibilite.
- */
-@keyframes apparition {
-  from {
-    transform: translateY(8px);
-  }
-  to {
-    transform: none;
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .blocAlterne,
-  .matiere,
-  .conseil,
-  .phraseNom,
-  .sortie {
-    /*
-     * `--ls-duration-base` ET NON UNE VALEUR LIBRE : 220 ms est la duree du
-     * projet, et `tokens.css` la passe deja a 0 ms sous mouvement reduit. La
-     * media query ci-dessus est donc une seconde ligne de defense, pas la
-     * seule.
-     */
-    animation: apparition var(--ls-duration-base) var(--ls-easing) both;
-    animation-timeline: view();
-    /*
-     * L'ANIMATION S'ACHEVE AVANT LE MILIEU DE L'ECRAN, et se fige ensuite :
-     * sans cette plage, elle se rejouerait a l'envers en remontant, ce qui
-     * donne le mal de coeur sur une page longue.
-     */
-    animation-range: entry 0% cover 30%;
-  }
-}
-
-/*
  * LA PHRASE SUR L'ORIGINE DU NOM, centree entre deux blocs alternes.
  *
  * ELLE N'APPARTIENT A AUCUN BLOC, et l'aligner a gauche comme un paragraphe
@@ -348,100 +270,164 @@
 }
 
 /*
- * L'INTRODUCTION DES MATIERES, centree au-dessus de l'image pleine largeur.
+ * ---------------------------------------------------------------------------
+ * LA BANDE DES MATIERES, SEULE ZONE SOMBRE ET SEUL MOMENT ANIME DE LA PAGE.
+ *
+ * LE RENDU PRECEDENT DONNAIT LE MEME POIDS A SIX SECTIONS : des cartes beiges
+ * arrondies enchainees au meme rythme, une apparition sur chacune et un survol
+ * sur chaque carte. Tout se valait, donc rien ne se detachait.
+ *
+ * L'AUDACE SE DEPENSE ICI ET NULLE PART AILLEURS. Le reste de la page se tait
+ * autour de cette bande : plus de cartes a l'entretien, plus d'animation
+ * dispersee, plus de survol sur des elements qui ne menent nulle part.
+ *
+ * LE MOTIF VIENT DE L'ACCUEIL, `page.module.css`, ou le bloc editorial est deja
+ * « la seule zone sombre de la page » : fond `--ls-primary`, texte blanc a
+ * 8,93:1, AAA. Le reprendre plutot qu'en inventer un second evite deux systemes
+ * sombres construits differemment.
+ *
+ * ELLE DEBORDE LA COLONNE, `100vw` recentre par marges negatives : une bande
+ * qui s'arrete aux bords du texte n'est plus une rupture, c'est une carte de
+ * plus. `--ls-content-max` borne le CONTENU a l'interieur.
+ * ---------------------------------------------------------------------------
  */
-.introMatieres {
-  margin: 0 auto var(--ls-space-4);
+.bandeMatieres {
+  margin: var(--ls-space-7) calc(50% - 50vw);
+  padding: var(--ls-space-7) var(--ls-space-4);
+  width: 100vw;
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+}
+
+.bandeMatieres:focus-visible {
+  outline: 3px solid var(--ls-text-on-primary);
+  outline-offset: calc(var(--ls-space-2) * -1);
+}
+
+.bandeContenu {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--ls-space-5);
+  align-items: center;
+  max-width: var(--ls-content-max);
+  margin: 0 auto;
+}
+
+@media (min-width: 60rem) {
+  .bandeContenu {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--ls-space-6);
+  }
+}
+
+.bandeTexte {
   max-width: 34rem;
-  color: var(--ls-text);
-  line-height: 1.6;
-  text-align: center;
 }
 
 /*
- * LES QUATRE MATIERES EN CARTES.
- *
- * `auto-fit` A PARTIR DE 18rem : deux par ligne sur tablette, quatre sur grand
- * ecran, une seule a 320 px. Aucune media query, la grille s'en charge.
+ * PAS DE FILET SOUS CE TITRE, contre `.titreSection` : sur un aplat sombre, une
+ * bordure claire ajouterait une ligne la ou le fond suffit a separer.
+ */
+.titreBande {
+  margin: 0 0 var(--ls-space-3);
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-weight: 600;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+/*
+ * `--ls-surface-sand` ET NON LE DORE, mesure reprise de l'accueil :
+ * `--ls-accent-gold` donne 3,61:1 sur ce fond, sous le seuil AA de 4,5:1. Le
+ * sable mesure 7,49:1 et garde une nuance chaude, distincte du blanc du titre.
+ */
+.introBande {
+  margin: 0 0 var(--ls-space-5);
+  color: var(--ls-surface-sand);
+  font-size: 1.0625rem;
+  line-height: 1.7;
+}
+
+/*
+ * UNE LISTE DE DEFINITIONS ET NON DES CARTES : chaque matiere est un terme et sa
+ * description, ce que `dl` dit au lecteur d'ecran. Les cartes precedentes
+ * n'apportaient qu'un fond de plus.
  */
 .matieres {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
-  gap: var(--ls-space-4);
-  list-style: none;
-  margin: var(--ls-space-4) 0;
+  margin: 0;
   padding: 0;
-  align-items: start;
 }
 
 /*
- * LA BORDURE GAUCHE EVOQUE LA MATIERE, ELLE NE LA CODE PAS. Le nom de chaque
- * matiere est ecrit dans son titre : une information portee par la seule
- * couleur echappe a qui ne la distingue pas, WCAG 1.4.1.
- *
- * APLATS UNIS, AUCUN DEGRADE : `frontend-design.md` interdit le degrade
- * metallique, marqueur de site engendre automatiquement.
+ * LE FILET GAUCHE EVOQUE LA MATIERE, IL NE LA CODE PAS : le nom est toujours
+ * ecrit. Une information portee par la seule couleur echappe a qui ne la
+ * distingue pas, WCAG 1.4.1. Sur ce fond sombre il est purement decoratif,
+ * aucune regle de contraste ne s'y applique.
  */
 .matiere {
-  padding: var(--ls-space-4);
-  background: var(--ls-surface-sand);
-  border-left: 4px solid var(--ls-primary);
-  border-radius: var(--ls-radius-md);
+  padding-left: var(--ls-space-4);
+  border-left: 3px solid var(--ls-accent-gold);
 }
 
-.matierePate {
-  border-left-color: var(--ls-primary);
-}
-
-.matiereAcier {
-  border-left-color: var(--ls-text-muted);
-}
-
-.matiereVernis {
-  border-left-color: var(--ls-accent-terracotta);
-}
-
-/*
- * LE DORE EN BORDURE ET JAMAIS EN TEXTE : `--ls-accent-gold` plafonne a 2,31:1,
- * interdit pour tout texte. En filet decoratif il ne porte aucun sens.
- */
-.matiereOr {
-  border-left-color: var(--ls-accent-gold);
-}
-
-/*
- * LE SURVOL EPAISSIT LE FILET, il ne souleve pas la carte.
- *
- * Une ombre portee et un `translateY` au survol sont le motif d'une carte
- * CLIQUABLE : ces quatre-la ne menent nulle part, et le suggerer ferait chercher
- * un lien qui n'existe pas. L'epaississement marque le survol sans rien
- * promettre.
- *
- * AUCUN EFFET AU TOUCHER : `@media (hover: hover)` l'ecarte des ecrans tactiles,
- * ou l'etat de survol reste colle apres le doigt.
- */
-@media (hover: hover) {
-  .matiere {
-    transition: border-left-width var(--ls-duration-fast) var(--ls-easing);
-  }
-
-  .matiere:hover {
-    border-left-width: 8px;
-  }
+.matiere + .matiere {
+  margin-top: var(--ls-space-4);
 }
 
 .titreMatiere {
-  margin: 0 0 var(--ls-space-2);
-  color: var(--ls-primary);
-  font-size: 1.0625rem;
+  margin: 0 0 var(--ls-space-1);
   font-weight: 600;
 }
 
-/* Fond sable : `--ls-text`, le jeton attenue y tomberait a 4,35:1, C31. */
+/*
+ * `--ls-surface-sand` PLUTOT QUE DU BLANC PUR sur les descriptions : le contraste
+ * reste a 7,49:1, et la nuance distingue la description de son terme sans
+ * changer de taille ni de graisse.
+ */
 .texteMatiere {
   margin: 0;
-  color: var(--ls-text);
-  line-height: 1.6;
+  color: var(--ls-surface-sand);
+  line-height: 1.7;
+}
+
+/*
+ * L'IMAGE DEBORDE LEGEREMENT VERS LE BAS a partir de 60rem, seule liberte prise
+ * avec la grille : elle donne a la bande une assise moins rectangulaire sans
+ * rien casser en dessous, le conteneur restant en `overflow` visible.
+ */
+.imageBande {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--ls-radius-md);
+}
+
+/*
+ * L'UNIQUE ANIMATION DE LA PAGE, et elle porte sur CETTE bande seulement.
+ *
+ * Une apparition sur chaque section est le defaut genere : scattered effects.
+ * Un seul moment orchestre marque l'entree dans la zone sombre, et le reste de
+ * la page ne bouge pas.
+ *
+ * AUCUNE OPACITE, MESURE DU 20 SEPTEMBRE 2026 : la premiere version animait
+ * `opacity` et `axe-core` a rougi a 3,47:1, `--ls-text` compose avec le fond a
+ * mi-parcours. Le texte etait reellement sous le seuil AA pendant la
+ * transition. Le deplacement seul ne touche jamais a la lisibilite.
+ */
+@keyframes entreeBande {
+  from {
+    transform: translateY(12px);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bandeContenu {
+    animation: entreeBande var(--ls-duration-base) var(--ls-easing) both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 25%;
+  }
 }
 
 /*
@@ -466,17 +452,16 @@
  * FOND SABLE, DONC `--ls-text` ET NON LE JETON ATTENUE, C31 : `--ls-text-muted`
  * y tombe a 4,35:1, sous le seuil AA.
  */
+/*
+ * PLUS DE FOND NI DE CARTE, LA REGLE CHANEL APPLIQUEE : la bande sombre est
+ * desormais le seul accent de la page, et trois cartes beiges juste en dessous
+ * lui reprenaient son effet. Un filet suffit a separer trois conseils courts.
+ */
 .conseil {
-  padding: var(--ls-space-4);
-  background: var(--ls-surface-sand);
-  border-radius: var(--ls-radius-md);
+  padding-left: var(--ls-space-4);
+  border-left: 2px solid var(--ls-border);
 }
 
-/*
- * PAS DE BORDURE SOUS CE TITRE, contre `.titreSection` : dans une carte au fond
- * colore, un filet ajouterait une seconde ligne de separation a quelques pixels
- * du bord de la carte.
- */
 .titreConseil {
   margin: 0 0 var(--ls-space-2);
   color: var(--ls-primary);
