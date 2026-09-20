@@ -87,7 +87,7 @@ jobs:
     # 75 = 16 prealables + 10 d'attente + 45 pour l'etape bornee, plus une marge.
     # A REMESURER des que le premier nocturne complet aura donne un temps de step
     # reel : ce chiffre est dimensionne sur une etape qui n'a jamais fini.
-    timeout-minutes: 12
+    timeout-minutes: 75
 
     env:
       PGUSER: lunesoleil
@@ -663,103 +663,27 @@ jobs:
           exit "$echec"
 
       # ----------------------------------------------------------------------
-      # L'ISSUE, ET POURQUOI ELLE EST LA CONDITION DE TOUT LE RESTE.
+      # L'ALERTE N'EST PLUS ICI, ET C'EST UNE MESURE QUI L'A DEPLACEE, LS-235.
       #
-      # Sans elle, deplacer ces controles reviendrait a les supprimer : personne
-      # ne consulte l'onglet Actions d'un workflow planifie. Une condition large
-      # plutot qu'une condition sur une etape precise, pour qu'un echec de
-      # PREPARATION soit signale aussi : une base qui ne demarre pas laisse les
-      # tests non executes, ce qui ressemble a du vert sans en etre.
+      # Une etape interne NE PEUT PAS signaler un depassement du plafond du job.
+      # Prouve par l'execution 35509819331 du 20 septembre 2026, plafond abaisse
+      # a 12 minutes pour forcer l'annulation :
       #
-      # LE CORPS NE RECOPIE AUCUNE SORTIE DE COMMANDE : les journaux sont
-      # accessibles par le lien, et une sortie de test peut porter des valeurs
-      # que le depot public ne doit pas afficher.
+      #   20 cancelled  Scenarios critiques de bout en bout
+      #   26 skipped    Ouvrir une issue en cas d'echec ou d'annulation
+      #
+      # L'etape portait pourtant `if: failure() || cancelled()`. Quand le job
+      # depasse son plafond, le runner s'arrete et TOUTES les etapes restantes
+      # sont SAUTEES, quelle que soit leur condition. Aucune n'a la main.
+      #
+      # CETTE MESURE A INVALIDE UNE PREMIERE CORRECTION. Elargir la condition de
+      # `failure()` a `failure() || cancelled()` paraissait suffire, et n'aurait
+      # RIEN change aux trois nuits muettes des 18, 19 et 20 septembre. Une
+      # alerte non eprouvee sur le mode de defaillance qu'elle vise ne le couvre
+      # pas, motif « garde-fou jamais exerce ».
+      #
+      # L'ALERTE VIT DONC DANS `veilleur-nocturne.yml`, un workflow separe
+      # declenche par `workflow_run` a la fin de celui-ci. Il tourne dans SON
+      # propre job, hors d'atteinte de ce plafond, et lit
+      # `github.event.workflow_run.conclusion`, qui vaut `cancelled` dans ce cas.
       # ----------------------------------------------------------------------
-      # `failure() || cancelled()` ET NON `failure()` SEUL, LS-235.
-      #
-      # TROIS NUITS MUETTES L'ONT ETABLI, les 18, 19 et 20 septembre 2026 : le
-      # job a ete ANNULE par son `timeout-minutes`, et une annulation n'est pas
-      # un echec. `failure()` est faux dans ce cas, donc cette etape n'a pas
-      # tourne, donc aucune issue n'a ete ouverte ni commentee. L'issue 346 le
-      # montre sans ambiguite, elle recevait un commentaire chaque nuit du 11 au
-      # 17 septembre puis plus rien ces trois nuits la.
-      #
-      # C'EST LE MEME DEFAUT DE FOND QUE LS-199, sur un autre declencheur : le
-      # mecanisme cense rendre une defaillance visible etait lui-meme invisible.
-      # Une etiquette absente alors, une condition trop etroite ici.
-      #
-      # `cancelled()` couvre le depassement de plafond ET l'annulation manuelle.
-      # La seconde produira une issue de plus, ce qui est le prix a payer : une
-      # annulation manuelle se referme d'un geste, une nuit muette ne se voit
-      # jamais. Le corps distingue les deux cas, le diagnostic n'etant pas le
-      # meme.
-      #
-      # `!cancelled()` que recommande la documentation de GitHub ne convient PAS
-      # ici : il est l'inverse de ce qu'il faut, cette etape devant justement
-      # s'executer SUR une annulation.
-      - name: Ouvrir une issue en cas d'echec ou d'annulation
-        if: failure() || cancelled()
-        env:
-          GH_TOKEN: ${{ github.token }}
-          LIEN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          # `job.status` ET NON `cancelled()`, LS-235. Les fonctions de statut ne
-          # sont acceptees que dans un `if:` : ecrite dans `env`, la forme
-          # `${{ cancelled() }}` fait refuser le workflow ENTIER par l'API, sur
-          # « Unrecognized function: 'cancelled' ». Mesure du 20 septembre 2026,
-          # HTTP 422 au declenchement. Le workflow n'aurait plus tourne du tout.
-          ETAT_JOB: ${{ job.status }}
-        run: |
-          # L'ETIQUETTE SE CREE AVANT D'ETRE POSEE, LS-199.
-          #
-          # CETTE ETAPE A ECHOUE DEUX NUITS SANS QUE PERSONNE NE LE VOIE, sur
-          # `could not add label: 'controle-nocturne' not found` : l'etiquette
-          # n'avait jamais ete creee dans le depot. Le garde-fou cense rendre
-          # visible un echec nocturne etait donc lui-meme muet depuis LS-177,
-          # et c'est ce qui a laisse deux nuits rouges passer inapercues.
-          #
-          # `--force` rend l'instruction idempotente : elle cree l'etiquette la
-          # premiere fois et ne change rien ensuite. Un depot clone repart ainsi
-          # sans geste manuel, ce qu'une etiquette creee a la main ne garantit
-          # pas.
-          gh label create controle-nocturne \
-            --description "Echec du controle nocturne, LS-177" \
-            --color B60205 --force
-
-          # UNE SEULE ISSUE OUVERTE A LA FOIS. Sans ce filtre, une semaine
-          # d'echecs produirait sept issues identiques, et le bruit ferait
-          # ignorer la premiere.
-          existante=$(gh issue list --state open --label controle-nocturne \
-            --json number --jq '.[0].number' 2>/dev/null || true)
-
-          # DEUX DIAGNOSTICS OPPOSES, DONC DEUX CORPS, LS-235.
-          #
-          # Un echec dit qu'un controle a rendu un verdict rouge. Une annulation
-          # dit que des controles n'ont PAS RENDU DE VERDICT DU TOUT, ce qui ne
-          # se soigne pas de la meme facon : chercher un defaut dans le code
-          # apres un depassement de plafond, c'est chercher ce qui n'y est pas.
-          #
-          # L'annulation est en outre plus grave qu'elle n'en a l'air : les
-          # etapes qui suivent celle qui a consomme le plafond ne tournent pas,
-          # `npm audit` compris. Le corps le dit plutot que de laisser le
-          # lecteur le deduire.
-          #
-          # L'ETIQUETTE RESTE LA MEME, donc la deduplication vaut pour les deux
-          # cas : une seule issue ouverte a la fois, et le corps dit lequel des
-          # deux s'est produit. Deux etiquettes produiraient deux fils ouverts
-          # en parallele pour un meme controle, ce qui est exactement le bruit
-          # que le filtre existe pour eviter.
-          if [ "$ETAT_JOB" = "cancelled" ]; then
-            titre="Controle nocturne annule avant son terme"
-            corps=$(printf 'Le controle nocturne a ete ANNULE, il n a pas echoue.\n\nLa cause la plus probable est le depassement du `timeout-minutes` du job. Le temps d attente avant que le runner ne prenne le job compte dans ce plafond, un job peut donc etre annule au dela de la duree cumulee de ses etapes.\n\nJournal complet : %s\n\nCE QUI COMPTE ICI EST CE QUI N A PAS TOURNE. Les etapes placees apres celle qui a consomme le plafond ne se sont PAS executees, `npm audit` compris. Leur silence ne vaut pas un vert : aucune ne s est prononcee.\n\nLe geste : ouvrir le journal, reperer l etape sans heure de fin, et comparer sa duree a sa borne locale. Une etape sans borne locale consomme tout ce qui reste du plafond du job, motif de LS-106, LS-124 et LS-235.\n\nUne annulation manuelle produit aussi cette issue, et se referme alors d un geste.\n' "$LIEN")
-          else
-            titre="Controle nocturne en echec"
-            corps=$(printf 'Le controle nocturne a echoue.\n\nCes controles ne tournent plus sur les pull requests depuis LS-177 : les scenarios de bout en bout, `npm audit` et la construction de l image. Un echec ici signifie qu un defaut est entre sur `main`, pas qu une fusion est a bloquer.\n\nJournal complet : %s\n\nCe qui a pu echouer :\n\n- un defaut d interface, debordement, lien mort, etat non nominal\n- une vulnerabilite publiee depuis hier, `npm audit`\n- une image qui ne se construit plus\n\nLe jalon metier, lui, est verifie a chaque pull request : il vit dans les tests d integration.\n' "$LIEN")
-          fi
-
-          if [ -n "$existante" ]; then
-            gh issue comment "$existante" --body "$corps"
-            echo "Commentaire ajoute a l issue #$existante."
-          else
-            gh issue create --title "$titre" --body "$corps" \
-              --label controle-nocturne
-          fi
