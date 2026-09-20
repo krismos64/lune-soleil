@@ -87,7 +87,7 @@ jobs:
     # 75 = 16 prealables + 10 d'attente + 45 pour l'etape bornee, plus une marge.
     # A REMESURER des que le premier nocturne complet aura donne un temps de step
     # reel : ce chiffre est dimensionne sur une etape qui n'a jamais fini.
-    timeout-minutes: 75
+    timeout-minutes: 12
 
     env:
       PGUSER: lunesoleil
@@ -640,7 +640,7 @@ jobs:
       # ----------------------------------------------------------------------
       - name: Preuves par mutation lourdes
         if: always()
-        timeout-minutes: 1
+        timeout-minutes: 45
         run: |
           echec=0
           for script in \
