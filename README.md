@@ -43,10 +43,12 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 7, V1 cible | LS-8 | 0 | **close** le 11 septembre 2026. LS-149 portait le dernier critère : ADR-044 **écarte l'assistant IA** du périmètre plutôt que de le reporter |
 | Contenus | LS-22 | 10 | **attend l'exploitante**, rien n'est faisable sans elle. **LS-32 est close** le 11 septembre 2026, la neutralité de genre étant désormais gardée par un contrôle |
 
-**200 tickets terminés sur 225 hors epics**, les deux termes relevés dans Jira
-le **20 septembre 2026**, et jamais dérivés l'un de l'autre : 25 tickets non
-terminés relevés séparément, dont **11 En cours**, et 225 − 25 retombe bien sur
-200. LS-235 est le ticket ajouté depuis le relevé du 17.
+**201 tickets terminés sur 225 hors epics**, les deux termes relevés dans Jira
+le **20 septembre 2026**, et jamais dérivés l'un de l'autre : 24 tickets non
+terminés relevés séparément, et 225 − 24 retombe bien sur 201. LS-235 est le
+ticket ajouté depuis le relevé du 17, **LS-20 celui qui s'est fermé** le
+20 septembre, le premier article réel attestant que le lot de photographies a
+démarré.
 
 **Le dénominateur a gagné trois tickets le 16 septembre**, LS-232 à LS-234 : les
 anomalies trouvées ne sont plus corrigées au fil de l'eau mais ticketées, ce que
@@ -84,13 +86,20 @@ une fois : le chiffre disait 175 sous une date du 10 septembre, ce qui aurait
 fait relire un compte pour un autre. Motif « un compte recopié n'est pas une
 mesure », qui vaut pour la date autant que pour le nombre.
 
-**Dix des vingt-cinq tickets ouverts attendent l'exploitante** : les neuf de
+**Onze des vingt-quatre tickets ouverts attendent l'exploitante** : les dix de
 l'epic LS-22, photographies, textes, tarifs et contenus juridiques, plus LS-19,
 la médiation, qui suppose une adhésion à souscrire. Aucun code ne les débloque.
+Comptes relevés dans Jira le 20 septembre 2026, `parent = LS-22 AND status !=
+"Terminé"` en rendant dix : la formule précédente en annonçait neuf, et cet écart
+ne venait pas de la clôture de LS-20, qui appartient à l'epic LS-1.
 
 **Trois autres sont bloqués en cascade sur ces mêmes photographies**, LS-23 :
 LS-107 critères 4 et 6, LS-140 critère 1, et LS-123 pour `/notre-univers`.
-Elles sont techniquement prêtes.
+Elles sont techniquement prêtes. Un **premier article réel** est en ligne depuis
+le 20 septembre 2026, « boucles d'oreilles Étoile filante » : il ne les débloque
+pas, toutes trois demandant un catalogue fourni, mais il rend **LS-145
+mesurable**, son chronométrage exigeant un téléversement réel avec le traitement
+des déclinaisons.
 
 **Le compte précédent, « 173 sur 217 », appariait deux populations
 différentes** : son dénominateur comptait les epics, son numérateur non. Les
