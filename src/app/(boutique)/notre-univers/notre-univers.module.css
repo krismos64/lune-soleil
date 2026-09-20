@@ -717,6 +717,44 @@
 }
 
 /*
+ * L'ENCADRE ET LA PHOTOGRAPHIE COTE A COTE a partir de 48rem.
+ *
+ * Seul, l'encadre laissait un vide sur toute la moitie droite de la section :
+ * elle etait la seule de la page sans image, ce qui se voyait d'autant plus que
+ * les trois gestes au-dessus occupent la largeur entiere.
+ *
+ * `align-items: start` : sans lui, l'encadre s'etirerait a la hauteur de la
+ * photographie, carree et donc plus haute que ses quatre lignes de texte.
+ */
+.finEntretien {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--ls-space-4);
+  align-items: start;
+}
+
+@media (min-width: 48rem) {
+  .finEntretien {
+    grid-template-columns: 1fr auto;
+    gap: var(--ls-space-5);
+  }
+}
+
+/*
+ * BORNEE A 20rem, plus petite que les carrees du recit : cette photographie
+ * illustre un geste deja decrit par trois paragraphes, elle ne porte pas
+ * l'argument. L'afficher aussi grand que la boucle portee lui donnerait un poids
+ * qu'elle n'a pas.
+ */
+.imageEntretien {
+  display: block;
+  width: 100%;
+  max-width: 20rem;
+  height: auto;
+  border-radius: var(--ls-radius-md);
+}
+
+/*
  * LES INTERDITS, ET POURQUOI ILS SONT A PART.
  *
  * `--ls-error` EST ECARTE : ces produits ne signalent aucune erreur, et un
@@ -726,7 +764,6 @@
  */
 .interdits {
   padding: var(--ls-space-4);
-  max-width: 34rem;
   background: var(--ls-surface-sand);
   border-left: 4px solid var(--ls-accent-terracotta-deep);
   border-radius: var(--ls-radius-sm);

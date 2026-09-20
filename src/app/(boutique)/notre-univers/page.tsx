@@ -464,21 +464,37 @@ export default function PageNotreUnivers() {
         </ol>
 
         {/*
-         * LES TROIS INTERDITS SONT REGROUPES, et c'est le seul endroit de la
-         * page ou une information est repetee : ils figuraient deja dans les
-         * gestes ci-dessus. Un produit qui dissout le vernis se retient mieux
-         * en liste courte qu'au milieu d'un paragraphe.
+         * L'ENCADRE ET LA PHOTOGRAPHIE COTE A COTE, l'encadre occupant la
+         * colonne de gauche : seul il laissait un vide sur toute la moitie
+         * droite de la section, releve a l'ecran le 20 septembre 2026.
          */}
-        <div className={styles.interdits}>
-          <h3 className={styles.titreInterdits}>À ne jamais employer</h3>
-          <ul className={styles.listeInterdits}>
-            <li>L&apos;alcool</li>
-            <li>L&apos;acétone</li>
-            <li>Les nettoyants pour bijoux</li>
-          </ul>
-          <p className={styles.texteInterdits}>
-            Ces trois-là dissolvent le vernis.
-          </p>
+        <div className={styles.finEntretien}>
+          {/*
+           * LES TROIS INTERDITS SONT REGROUPES, et c'est le seul endroit de la
+           * page ou une information est repetee : ils figuraient deja dans les
+           * gestes ci-dessus. Un produit qui dissout le vernis se retient mieux
+           * en liste courte qu'au milieu d'un paragraphe.
+           */}
+          <div className={styles.interdits}>
+            <h3 className={styles.titreInterdits}>À ne jamais employer</h3>
+            <ul className={styles.listeInterdits}>
+              <li>L&apos;alcool</li>
+              <li>L&apos;acétone</li>
+              <li>Les nettoyants pour bijoux</li>
+            </ul>
+            <p className={styles.texteInterdits}>
+              Ces trois-là dissolvent le vernis.
+            </p>
+          </div>
+
+          <Image
+            src="/habillage/univers-nettoyage.jpg"
+            alt="Deux mains essuient une boucle d'oreille en forme de fleur violette avec un chiffon doux, la seconde boucle posée à côté sur un plan de travail en bois"
+            className={styles.imageEntretien}
+            width={1000}
+            height={1000}
+            sizes="(min-width: 48rem) 24rem, 100vw"
+          />
         </div>
       </section>
 

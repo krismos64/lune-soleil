@@ -32,7 +32,7 @@ declarees dans `src/app/(boutique)/page.tsx`.
 
 Aucune metadonnee EXIF, ICC ni XMP dans le fichier actuel, verifie.
 
-## Les cinq visuels de `/notre-univers`, LS-25
+## Les six visuels de `/notre-univers`, LS-25
 
 Ajoutes le 20 septembre 2026, photographies **reelles** fournies par
 l'exploitante.
@@ -44,6 +44,7 @@ l'exploitante.
 | `univers-matieres.jpg` | 16/10 | ouverture de « Les matieres » |
 | `univers-porte.jpg` | 1:1 | « Des pieces uniques », donne l'echelle |
 | `univers-emballage.jpg` | 1:1 | « Ce a quoi je tiens », le soin du colis |
+| `univers-nettoyage.jpg` | 1:1 | « L'entretien », a droite de l'encadre des interdits |
 
 **ELLES MONTRENT LE TRAVAIL, JAMAIS UNE OFFRE**, arbitrage de Christophe du
 20 septembre 2026. Certaines portent des pieces absentes du catalogue, un
@@ -69,8 +70,14 @@ univers-atelier.jpg     AUCUNE metadonnee   segments APP : aucun hors JFIF
 univers-emballage.jpg   AUCUNE metadonnee   segments APP : aucun hors JFIF
 univers-matieres.jpg    AUCUNE metadonnee   segments APP : aucun hors JFIF
 univers-modelage.jpg    AUCUNE metadonnee   segments APP : aucun hors JFIF
+univers-nettoyage.jpg   AUCUNE metadonnee   segments APP : aucun hors JFIF
 univers-porte.jpg       AUCUNE metadonnee   segments APP : aucun hors JFIF
 ```
+
+**LE RISQUE N'EST PAS THEORIQUE**, et la sixieme image l'a prouve le 20 septembre
+2026 : `nettoyage.png` portait un bloc **GPS**, la seule des six dans ce cas. Les
+cinq premieres n'avaient que du XMP. Sans cette conversion, la position aurait
+ete servie publiquement.
 
 Toute image ajoutee ici repasse par cette verification. Une photographie de
 smartphone porte par defaut la position du domicile de l'exploitante.
