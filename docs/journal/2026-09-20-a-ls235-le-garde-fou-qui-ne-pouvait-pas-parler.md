@@ -155,10 +155,41 @@ Première mesure de l'audit depuis trois nuits, et il est à zéro.
 
 ## Ce qui reste ouvert
 
-**Le veilleur n'est pas prouvé.** GitHub ne déclenche un `workflow_run` que
-depuis la définition présente sur la branche par défaut : il ne garde rien tant
-que la PR n'est pas fusionnée, et sa preuve doit se faire **après** fusion, en
-forçant un nocturne annulé. Le critère 5 de LS-235 reste donc ouvert.
+**Le veilleur est prouvé, après fusion et en deux tentatives.** GitHub ne
+déclenche un `workflow_run` que depuis la définition présente sur la branche par
+défaut : sa preuve ne pouvait pas précéder la fusion de la PR 456.
+
+**La première tentative a trouvé une troisième forme du même défaut.** Exécution
+35512451076, sur un nocturne réellement annulé : le veilleur s'est bien
+déclenché, et il a échoué.
+
+```
+VERDICT: cancelled
+failed to run git: fatal: not a git repository
+```
+
+`gh` déduit le dépôt du répertoire git courant. Ce job ne fait aucun `checkout`,
+n'ayant rien à lire pour écrire une issue : il n'y avait donc pas de dépôt git,
+et les trois commandes `gh` échouaient avant d'avoir rien tenté. Le déclenchement
+et la condition étaient justes, `VERDICT` valait bien `cancelled`. Corrigé par
+`GH_REPO`, PR 457.
+
+**Trois fois le même motif dans une seule story** : une condition trop étroite,
+une étape sautée sur dépassement de plafond, un `gh` sans dépôt. Chaque
+correction paraissait évidente, et chaque fois seule la mesure a tranché. Sans
+cette preuve post-fusion, le critère 5 aurait été déclaré rempli sur un veilleur
+muet, soit le défaut de départ.
+
+**Seconde tentative, nocturne 35513367167 :**
+
+```
+NOCTURNE:  cancelled
+VEILLEUR:  success
+issue 346 : commentaire a 13:40:51, reference 12:08:35
+```
+
+Le corps choisi est celui du cas annulation, « a ete ANNULE, il n a pas echoue ».
+Critère 5 fermé.
 
 **Les 45 minutes de borne sont une borne supérieure, pas une mesure.** Elles sont
 posées au-dessus du plus grand temps observé sur une étape qui n'a jamais fini. À
