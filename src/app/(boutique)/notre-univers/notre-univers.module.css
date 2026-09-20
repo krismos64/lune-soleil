@@ -620,12 +620,18 @@
  * engendrees.
  * ---------------------------------------------------------------------------
  */
+/*
+ * PAS DE BORNE A 34rem ICI, contre les paragraphes de recit : cette phrase est
+ * une introduction courte, et la brider la faisait casser sur « precautions »
+ * alors que la section occupe toute la largeur. Elle tient sur une ligne des
+ * 48rem, et `text-wrap: balance` repartit les mots si elle doit passer a deux.
+ */
 .introEntretien {
   margin: 0 0 var(--ls-space-5);
-  max-width: 34rem;
   color: var(--ls-text);
   font-size: 1.0625rem;
   line-height: 1.6;
+  text-wrap: balance;
 }
 
 .gestes {
