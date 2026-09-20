@@ -68,6 +68,7 @@
  */
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 
 import { NOM_BOUTIQUE, openGraphDePage } from "@/lib/seo";
 import styles from "./notre-univers.module.css";
@@ -323,6 +324,37 @@ export default function PageNotreUnivers() {
           Dans leur pochette ou une boîte, à l&apos;abri du soleil direct. Rangés
           à part les uns des autres, ils ne se rayent pas.
         </p>
+      </section>
+
+      {/*
+       * LA SORTIE VERS LE CATALOGUE, relevee le 20 septembre 2026 en comparant
+       * cette page a celle d'un concurrent du meme bassin.
+       *
+       * ELLE MANQUAIT : la page se terminait sur le rangement, et qui la lisait
+       * jusqu'au bout n'avait nulle part ou aller. Une page editoriale sans
+       * sortie renvoie son lecteur au bouton precedent de son navigateur.
+       *
+       * LE LIBELLE EST CELUI DE L'ACCUEIL, « Decouvrir les creations », a
+       * dessein : deux formulations differentes pour la meme destination font
+       * hesiter, et l'accueil est la page ou il a ete eprouve.
+       *
+       * AUCUNE PROMESSE AJOUTEE ICI. La phrase reprend ce que la page a deja
+       * etabli, l'unicite et le fait main, sans annoncer un delai, un prix ni
+       * une disponibilite que le catalogue seul connait.
+       */}
+      <section className={styles.sortie} aria-labelledby="titre-sortie">
+        <h2 id="titre-sortie" className={styles.titreSortie}>
+          Chaque pièce n&apos;existe qu&apos;une fois
+        </h2>
+
+        <p className={styles.texte}>
+          Vous savez maintenant comment elles naissent. Les créations du moment
+          sont dans la boutique, et chacune est la seule de son espèce.
+        </p>
+
+        <Link href="/catalogue" className={styles.actionCatalogue}>
+          Découvrir les créations
+        </Link>
       </section>
     </main>
   );

@@ -177,3 +177,54 @@
   font-size: 0.875rem;
   line-height: 1.5;
 }
+
+/*
+ * LA SORTIE VERS LE CATALOGUE.
+ *
+ * FOND SABLE, DONC PAS DE JETON ATTENUE : `--ls-text-muted` y tombe a 4,35:1,
+ * C31. Le texte reste en `--ls-text`.
+ *
+ * ELLE N'EST PAS DANS LE SOMMAIRE, et c'est voulu : le sommaire liste les trois
+ * sections de lecture, `#histoire`, `#matieres` et `#entretien`. Ajouter une
+ * quatrieme entree pour un appel a l'action ferait passer une sortie pour un
+ * chapitre. Le test de coherence des ancres compare les deux listes, cette
+ * section n'a donc pas d'`id`.
+ */
+.sortie {
+  margin-bottom: var(--ls-space-5);
+  padding: var(--ls-space-4);
+  background: var(--ls-surface-sand);
+  border-radius: var(--ls-radius-md);
+  text-align: center;
+}
+
+.titreSortie {
+  margin: 0 0 var(--ls-space-3);
+  color: var(--ls-primary);
+  font-size: 1.375rem;
+  font-weight: 600;
+}
+
+/*
+ * LE MEME BOUTON QUE L'ACCUEIL, jetons compris : une action principale qui
+ * change d'aspect d'une page a l'autre se lit comme une action differente.
+ * Cible tactile de 44 px, jamais une hauteur fixe.
+ */
+.actionCatalogue {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-3) var(--ls-space-5);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  border-radius: var(--ls-radius-sm);
+  text-decoration: none;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  transition: background var(--ls-duration-fast) var(--ls-easing);
+}
+
+.actionCatalogue:hover {
+  background: var(--ls-primary-hover);
+}
