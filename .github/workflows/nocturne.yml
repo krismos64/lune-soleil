@@ -56,9 +56,38 @@ jobs:
   nocturne:
     name: Scenarios de bout en bout, audit et image
     runs-on: ubuntu-latest
-    # Meme borne que `controles.yml` et pour la meme raison : elle evite qu'une
-    # etape bloquee consomme une heure, sans contraindre une execution normale.
-    timeout-minutes: 45
+    # Elle evite qu'une etape bloquee consomme une heure, sans contraindre une
+    # execution normale.
+    #
+    # PORTEE DE 45 A 75 MINUTES SUR MESURE, LS-235, et ce geste ne serait PAS
+    # legitime seul : `controles.yml` enseigne que « deux occurrences du meme
+    # defaut appellent une borne locale, pas un plafond global plus haut », apres
+    # LS-106 et LS-124. Relever le plafond sans borne locale avait alors retarde
+    # le symptome sans le nommer.
+    #
+    # LES DEUX GESTES SONT POSES ENSEMBLE ICI, et ils repondent a deux problemes
+    # distincts que les trois nuits annulees des 18, 19 et 20 septembre 2026 ont
+    # separes :
+    #
+    #   la borne locale rend le depassement LISIBLE     -> etape des preuves lourdes
+    #   le plafond du job rend le travail POSSIBLE      -> ici
+    #
+    # Le budget mesure la nuit du 20 ne laissait que 19 min aux preuves lourdes,
+    # qui en demandent plus de 40 :
+    #
+    #   16 min  etapes prealables, dont 13 min 27 de bout en bout
+    #   10 min  attente avant que le runner ne prenne le job, COMPTEE DANS LE PLAFOND
+    #   19 min  reste pour une etape qui en demande plus de 40
+    #
+    # Une borne locale seule aurait donc fait echouer proprement cette etape
+    # CHAQUE NUIT sans jamais la laisser aboutir : le diagnostic aurait ete
+    # lisible et les six preuves n'auraient toujours rien prouve, ce qui est le
+    # defaut que LS-233 venait de fermer.
+    #
+    # 75 = 16 prealables + 10 d'attente + 45 pour l'etape bornee, plus une marge.
+    # A REMESURER des que le premier nocturne complet aura donne un temps de step
+    # reel : ce chiffre est dimensionne sur une etape qui n'a jamais fini.
+    timeout-minutes: 75
 
     env:
       PGUSER: lunesoleil
@@ -231,6 +260,62 @@ jobs:
         # dependance ajoute un `postinstall` couteux, defaut qui a demande huit
         # mesures pour etre identifie en LS-178.
         run: npm ci --foreground-scripts
+
+      # ----------------------------------------------------------------------
+      # L'AUDIT TOURNE ICI, ET PLUS EN AVANT-DERNIERE POSITION, LS-235.
+      #
+      # IL N'A PAS TOURNE TROIS NUITS D'AFFILEE, les 18, 19 et 20 septembre
+      # 2026. Il etait alors l'avant-derniere etape, derriere les preuves par
+      # mutation lourdes : celles-ci ont consomme le plafond du job les trois
+      # nuits, le job a ete annule, et les etapes suivantes n'ont jamais
+      # demarre. `CLAUDE.md` exige un audit a zero, a mesurer ; trois nuits sans
+      # mesure ne valent pas trois nuits a zero.
+      #
+      # RIEN NE JUSTIFIAIT CETTE POSITION : l'audit ne depend que de
+      # `node_modules`, pose par l'etape precedente. Il ne lit ni la base, ni
+      # l'image, ni un resultat de test. Place ici, aucune etape lourde ne peut
+      # plus l'empecher de se prononcer.
+      #
+      # IL COUTE MOINS D'UNE SECONDE, mesure sur le nocturne du 17 septembre :
+      # `07:21:15 -> 07:21:15`. Le remonter ne retarde donc rien.
+      #
+      # `if: always()` RESTE, et ne suffisait pas : cette condition couvre
+      # l'echec d'une etape amont, pas la fin du runner sur depassement de
+      # plafond. Les trois nuits annulees l'etablissent, l'etape portait deja
+      # `always()` et n'a pas demarre. La position est la vraie garantie.
+      # ----------------------------------------------------------------------
+      - name: Audit des dependances
+        if: always()
+        run: |
+          set +e
+          sortie=$(npm audit --audit-level=low 2>&1)
+          code=$?
+          set -e
+
+          printf '%s\n' "$sortie"
+
+          if [ "$code" -eq 0 ]; then
+            echo "Aucune vulnerabilite connue."
+            exit 0
+          fi
+
+          # LE MOTIF VISE L'INDISPONIBILITE, PAS UN NIVEAU DE GRAVITE. « audit
+          # endpoint returned an error » est le message que npm emet quand le
+          # service ne repond pas ; un rapport de vulnerabilite ne le contient
+          # jamais, il liste des paquets et des severites.
+          if printf '%s' "$sortie" | grep -q "audit endpoint returned an error"; then
+            echo "::warning::Le registre npm n'a pas repondu, l'audit n'a rien mesure."
+            echo ""
+            echo "CE N'EST PAS UNE VULNERABILITE : l'audit n'a pas pu s'executer."
+            echo "Le depot n'a pas ete declare sain pour autant, il n'a pas ete"
+            echo "verifie du tout. Rejouer cette etape quand le registre repond,"
+            echo "et ne jamais fusionner en supposant que l'absence de reponse"
+            echo "vaut absence de vulnerabilite."
+            exit 0
+          fi
+
+          echo "::error::Vulnerabilite connue dans les dependances."
+          exit 1
 
       - name: Engendrer le client Prisma
         run: npx prisma generate
@@ -475,11 +560,26 @@ jobs:
       #   verifier-config-claude        31 s  coherence de configuration
       #   verifier-sauvegarde            5 s  conteneur PostgreSQL jetable
       #
-      # AUCUNE DUREE DE STEP A SIX N'A JAMAIS ETE OBSERVEE, et c'est le point :
-      # le step s'arretait en deuxieme position depuis le 14 septembre, donc les
-      # nocturnes des 15, 16 et 17 n'ont consomme qu'environ 98 s. Le premier
-      # temps reel a six sera celui du nocturne du 18. Les 456 s et 415 s sont
-      # d'ailleurs sous-estimees, `verifier-tests` etant passe de 166 a 180 cas.
+      # LE TEMPS REEL A SIX EST TOMBE, ET IL DEPASSE LE PLAFOND, LS-235.
+      #
+      # Ce bloc annoncait « le premier temps reel a six sera celui du nocturne
+      # du 18 ». Mesure sur les trois nocturnes des 18, 19 et 20 septembre 2026 :
+      #
+      #   etape coupee apres 38 a 40 min SANS AVOIR FINI, les trois nuits
+      #
+      # La somme de 1013 s, soit 16 min 53, etait donc SOUS-ESTIMEE D'UN FACTEUR
+      # DEUX AU MOINS. Deux causes se cumulent : les mesures du 14 septembre
+      # n'ont jamais ete reattestees, et le step s'arretait alors en deuxieme
+      # position, donc les nocturnes des 15, 16 et 17 n'ont consomme qu'environ
+      # 98 s. Aucune de ces trois nuits ne mesurait les six.
+      #
+      # Mesure locale du 20 septembre, qui confirme l'ordre de grandeur :
+      # `verifier-etats-non-nominaux` prend 200 s la ou le tableau en annonce 67.
+      #
+      # LE JOB DURE 55 MIN POUR UN PLAFOND DE 45, les trois nuits. L'ecart est le
+      # temps d'attente avant que le runner ne prenne le job, qui compte dans le
+      # plafond : le budget reel d'une etape est donc INFERIEUR a ce que le
+      # plafond laisse croire, et se mesure plutot qu'il ne se deduit.
       #
       # `verifier-sauvegarde` les rejoint : elle lance un conteneur PostgreSQL,
       # que le nocturne a deja sous la main. `docs/PREUVES-PAR-MUTATION.md`
@@ -505,8 +605,42 @@ jobs:
       # LA BOUCLE RETIENT LE PREMIER CODE NON NUL et continue, puis sort avec
       # lui. Le step reste donc rouge des qu'un script echoue, et le rapport
       # porte les six verdicts.
+      # ----------------------------------------------------------------------
+      # LA BORNE LOCALE, ET POURQUOI ELLE MANQUAIT, LS-235.
+      #
+      # SANS ELLE CETTE ETAPE A ANNULE LE JOB TROIS NUITS, les 18, 19 et 20
+      # septembre 2026. Elle consommait tout ce qui restait du plafond, puis le
+      # runner s'arretait : le job sortait en `cancelled`, et les etapes
+      # suivantes ne demarraient JAMAIS. `npm audit` en faisait partie.
+      #
+      # UNE ANNULATION NE NOMME AUCUNE CAUSE. Le journal montrait une etape sans
+      # heure de fin et rien d'autre : ni quel script, ni quel cas de mutation.
+      # La borne fait echouer l'etape en la DESIGNANT, et laisse tourner ce qui
+      # suit. Elle ne corrige pas la lenteur, elle la rend lisible.
+      #
+      # C'EST LA TROISIEME OCCURRENCE DU MEME DEFAUT sur ce depot, apres LS-106
+      # et LS-124, et la premiere fois hors de `controles.yml`. Ce fichier porte
+      # la lecon depuis LS-124 : « deux occurrences du meme defaut appellent une
+      # borne locale, pas un plafond global plus haut ». Elle n'avait jamais ete
+      # portee ici.
+      #
+      # 45 MINUTES, SUR MESURE ET NON SUR ESTIMATION. L'etape a ete coupee apres
+      # 38, 38 et 40 minutes les trois nuits SANS AVOIR FINI : son cout reel est
+      # donc superieur a 40 min et reste inconnu. La borne est posee au-dessus du
+      # plus grand temps observe, de quoi la laisser aboutir une premiere fois et
+      # livrer enfin un temps de step complet.
+      #
+      # A RESSERRER des ce temps connu, `docs/PREUVES-PAR-MUTATION.md` portant la
+      # regle du double du pire cas nominal. Une borne large protege moins bien
+      # qu'une borne juste, et celle-ci est volontairement large faute de mesure.
+      #
+      # BORNE A PROUVER PAR ABAISSEMENT, protocole de LS-124 critere 5 : reduite
+      # temporairement, l'etape doit sortir en `failure` et les etapes suivantes
+      # doivent s'executer. Une borne jamais franchie ne prouve rien.
+      # ----------------------------------------------------------------------
       - name: Preuves par mutation lourdes
         if: always()
+        timeout-minutes: 45
         run: |
           echec=0
           for script in \
@@ -528,44 +662,11 @@ jobs:
           done
           exit "$echec"
 
-      - name: Audit des dependances
-        if: always()
-        run: |
-          set +e
-          sortie=$(npm audit --audit-level=low 2>&1)
-          code=$?
-          set -e
-
-          printf '%s\n' "$sortie"
-
-          if [ "$code" -eq 0 ]; then
-            echo "Aucune vulnerabilite connue."
-            exit 0
-          fi
-
-          # LE MOTIF VISE L'INDISPONIBILITE, PAS UN NIVEAU DE GRAVITE. « audit
-          # endpoint returned an error » est le message que npm emet quand le
-          # service ne repond pas ; un rapport de vulnerabilite ne le contient
-          # jamais, il liste des paquets et des severites.
-          if printf '%s' "$sortie" | grep -q "audit endpoint returned an error"; then
-            echo "::warning::Le registre npm n'a pas repondu, l'audit n'a rien mesure."
-            echo ""
-            echo "CE N'EST PAS UNE VULNERABILITE : l'audit n'a pas pu s'executer."
-            echo "Le depot n'a pas ete declare sain pour autant, il n'a pas ete"
-            echo "verifie du tout. Rejouer cette etape quand le registre repond,"
-            echo "et ne jamais fusionner en supposant que l'absence de reponse"
-            echo "vaut absence de vulnerabilite."
-            exit 0
-          fi
-
-          echo "::error::Vulnerabilite connue dans les dependances."
-          exit 1
-
       # ----------------------------------------------------------------------
       # L'ISSUE, ET POURQUOI ELLE EST LA CONDITION DE TOUT LE RESTE.
       #
       # Sans elle, deplacer ces controles reviendrait a les supprimer : personne
-      # ne consulte l'onglet Actions d'un workflow planifie. `if: failure()`
+      # ne consulte l'onglet Actions d'un workflow planifie. Une condition large
       # plutot qu'une condition sur une etape precise, pour qu'un echec de
       # PREPARATION soit signale aussi : une base qui ne demarre pas laisse les
       # tests non executes, ce qui ressemble a du vert sans en etre.
@@ -574,14 +675,35 @@ jobs:
       # accessibles par le lien, et une sortie de test peut porter des valeurs
       # que le depot public ne doit pas afficher.
       # ----------------------------------------------------------------------
-      - name: Ouvrir une issue en cas d'echec
-        if: failure()
+      # `failure() || cancelled()` ET NON `failure()` SEUL, LS-235.
+      #
+      # TROIS NUITS MUETTES L'ONT ETABLI, les 18, 19 et 20 septembre 2026 : le
+      # job a ete ANNULE par son `timeout-minutes`, et une annulation n'est pas
+      # un echec. `failure()` est faux dans ce cas, donc cette etape n'a pas
+      # tourne, donc aucune issue n'a ete ouverte ni commentee. L'issue 346 le
+      # montre sans ambiguite, elle recevait un commentaire chaque nuit du 11 au
+      # 17 septembre puis plus rien ces trois nuits la.
+      #
+      # C'EST LE MEME DEFAUT DE FOND QUE LS-199, sur un autre declencheur : le
+      # mecanisme cense rendre une defaillance visible etait lui-meme invisible.
+      # Une etiquette absente alors, une condition trop etroite ici.
+      #
+      # `cancelled()` couvre le depassement de plafond ET l'annulation manuelle.
+      # La seconde produira une issue de plus, ce qui est le prix a payer : une
+      # annulation manuelle se referme d'un geste, une nuit muette ne se voit
+      # jamais. Le corps distingue les deux cas, le diagnostic n'etant pas le
+      # meme.
+      #
+      # `!cancelled()` que recommande la documentation de GitHub ne convient PAS
+      # ici : il est l'inverse de ce qu'il faut, cette etape devant justement
+      # s'executer SUR une annulation.
+      - name: Ouvrir une issue en cas d'echec ou d'annulation
+        if: failure() || cancelled()
         env:
           GH_TOKEN: ${{ github.token }}
           LIEN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ANNULE: ${{ cancelled() }}
         run: |
-          titre="Controle nocturne en echec"
-
           # L'ETIQUETTE SE CREE AVANT D'ETRE POSEE, LS-199.
           #
           # CETTE ETAPE A ECHOUE DEUX NUITS SANS QUE PERSONNE NE LE VOIE, sur
@@ -604,7 +726,30 @@ jobs:
           existante=$(gh issue list --state open --label controle-nocturne \
             --json number --jq '.[0].number' 2>/dev/null || true)
 
-          corps=$(printf 'Le controle nocturne a echoue.\n\nCes controles ne tournent plus sur les pull requests depuis LS-177 : les scenarios de bout en bout, `npm audit` et la construction de l image. Un echec ici signifie qu un defaut est entre sur `main`, pas qu une fusion est a bloquer.\n\nJournal complet : %s\n\nCe qui a pu echouer :\n\n- un defaut d interface, debordement, lien mort, etat non nominal\n- une vulnerabilite publiee depuis hier, `npm audit`\n- une image qui ne se construit plus\n\nLe jalon metier, lui, est verifie a chaque pull request : il vit dans les tests d integration.\n' "$LIEN")
+          # DEUX DIAGNOSTICS OPPOSES, DONC DEUX CORPS, LS-235.
+          #
+          # Un echec dit qu'un controle a rendu un verdict rouge. Une annulation
+          # dit que des controles n'ont PAS RENDU DE VERDICT DU TOUT, ce qui ne
+          # se soigne pas de la meme facon : chercher un defaut dans le code
+          # apres un depassement de plafond, c'est chercher ce qui n'y est pas.
+          #
+          # L'annulation est en outre plus grave qu'elle n'en a l'air : les
+          # etapes qui suivent celle qui a consomme le plafond ne tournent pas,
+          # `npm audit` compris. Le corps le dit plutot que de laisser le
+          # lecteur le deduire.
+          #
+          # L'ETIQUETTE RESTE LA MEME, donc la deduplication vaut pour les deux
+          # cas : une seule issue ouverte a la fois, et le corps dit lequel des
+          # deux s'est produit. Deux etiquettes produiraient deux fils ouverts
+          # en parallele pour un meme controle, ce qui est exactement le bruit
+          # que le filtre existe pour eviter.
+          if [ "$ANNULE" = "true" ]; then
+            titre="Controle nocturne annule avant son terme"
+            corps=$(printf 'Le controle nocturne a ete ANNULE, il n a pas echoue.\n\nLa cause la plus probable est le depassement du `timeout-minutes` du job. Le temps d attente avant que le runner ne prenne le job compte dans ce plafond, un job peut donc etre annule au dela de la duree cumulee de ses etapes.\n\nJournal complet : %s\n\nCE QUI COMPTE ICI EST CE QUI N A PAS TOURNE. Les etapes placees apres celle qui a consomme le plafond ne se sont PAS executees, `npm audit` compris. Leur silence ne vaut pas un vert : aucune ne s est prononcee.\n\nLe geste : ouvrir le journal, reperer l etape sans heure de fin, et comparer sa duree a sa borne locale. Une etape sans borne locale consomme tout ce qui reste du plafond du job, motif de LS-106, LS-124 et LS-235.\n\nUne annulation manuelle produit aussi cette issue, et se referme alors d un geste.\n' "$LIEN")
+          else
+            titre="Controle nocturne en echec"
+            corps=$(printf 'Le controle nocturne a echoue.\n\nCes controles ne tournent plus sur les pull requests depuis LS-177 : les scenarios de bout en bout, `npm audit` et la construction de l image. Un echec ici signifie qu un defaut est entre sur `main`, pas qu une fusion est a bloquer.\n\nJournal complet : %s\n\nCe qui a pu echouer :\n\n- un defaut d interface, debordement, lien mort, etat non nominal\n- une vulnerabilite publiee depuis hier, `npm audit`\n- une image qui ne se construit plus\n\nLe jalon metier, lui, est verifie a chaque pull request : il vit dans les tests d integration.\n' "$LIEN")
+          fi
 
           if [ -n "$existante" ]; then
             gh issue comment "$existante" --body "$corps"
