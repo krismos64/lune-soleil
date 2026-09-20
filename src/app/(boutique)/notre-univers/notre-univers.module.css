@@ -121,12 +121,21 @@
  * s'etirerait sur 1280 px.
  */
 /*
- * TEXTE JUSTIFIE, ARBITRAGE DE CHRISTOPHE DU 20 SEPTEMBRE 2026.
+ * TEXTE JUSTIFIE A PARTIR DE 768 px SEULEMENT, arbitrage de Christophe du
+ * 20 septembre 2026, corrige le meme jour apres mesure.
+ *
+ * LA JUSTIFICATION ETAIT D'ABORD POSEE PARTOUT. Le rendu a 320 px l'a
+ * invalidee : meme avec la cesure, une colonne de 288 px ouvre des espaces deux
+ * a trois fois plus larges que la normale, « la question sui-vante etait
+ * toujours la meme : est-ce que je pouvais en faire pour elles » ecartelant ses
+ * mots sur trois lignes. Capture a l'ecran avant correction.
+ *
+ * Elle reste sur tablette et ordinateur, ou la colonne de 34 rem laisse assez
+ * de place pour repartir le depassement.
  *
  * `hyphens: auto` L'ACCOMPAGNE ET N'EST PAS FACULTATIF. Justifier sans cesure
- * ouvre des « rivieres » de blanc dans une colonne de 34 rem, et le francais
- * les aggrave avec ses mots longs : « Pyrenees-Atlantiques » seul sur une ligne
- * etire les deux precedentes. La cesure repartit le depassement.
+ * ouvre des « rivieres » de blanc, et le francais les aggrave avec ses mots
+ * longs : « Pyrenees-Atlantiques » seul sur une ligne etire les precedentes.
  *
  * `lang="fr"` EST POSE SUR `<html>`, condition pour que le navigateur applique
  * les regles de cesure francaises et non anglaises.
@@ -136,8 +145,13 @@
   max-width: 34rem;
   color: var(--ls-text);
   line-height: 1.6;
-  text-align: justify;
-  hyphens: auto;
+}
+
+@media (min-width: 768px) {
+  .texte {
+    text-align: justify;
+    hyphens: auto;
+  }
 }
 
 /*
