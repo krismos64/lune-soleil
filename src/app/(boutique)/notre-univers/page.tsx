@@ -283,7 +283,6 @@ export default function PageNotreUnivers() {
               Une question ? Écrivez-moi, je réponds moi-même.
             </p>
 
-
             <p className={styles.texte}>
               Je soigne aussi les colis. Recevoir un bijou doit être un moment
               agréable, pas juste l&apos;ouverture d&apos;un carton.
@@ -345,25 +344,26 @@ export default function PageNotreUnivers() {
             </h2>
 
             <p className={styles.introBande}>
-              Tous mes bijoux partent des mêmes matières. Ce qui change d&apos;une
-              pièce à l&apos;autre, ce sont les couleurs et les formes.
+              Tous mes bijoux partent des mêmes matières. Ce qui change
+              d&apos;une pièce à l&apos;autre, ce sont les couleurs et les
+              formes.
             </p>
 
             <dl className={styles.matieres}>
               <div className={styles.matiere}>
                 <dt className={styles.titreMatiere}>La pâte polymère</dt>
                 <dd className={styles.texteMatiere}>
-                  Elle donne le corps du bijou. Je la modèle à la main, puis elle
-                  durcit à la cuisson. Une matière légère, ce qui compte pour des
-                  boucles portées toute la journée.
+                  Elle donne le corps du bijou. Je la modèle à la main, puis
+                  elle durcit à la cuisson. Une matière légère, ce qui compte
+                  pour des boucles portées toute la journée.
                 </dd>
               </div>
               <div className={styles.matiere}>
                 <dt className={styles.titreMatiere}>L&apos;acier inoxydable</dt>
                 <dd className={styles.texteMatiere}>
-                  Pour tout ce qui touche la peau : crochets, fermoirs, attaches,
-                  contours des bagues. Il libère très peu de nickel, ce qui le
-                  rend bien toléré par la plupart des peaux sensibles.
+                  Pour tout ce qui touche la peau : crochets, fermoirs,
+                  attaches, contours des bagues. Il libère très peu de nickel,
+                  ce qui le rend bien toléré par la plupart des peaux sensibles.
                 </dd>
               </div>
               <div className={styles.matiere}>
