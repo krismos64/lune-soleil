@@ -478,52 +478,144 @@
 }
 
 /*
- * LES TROIS CONSEILS D'ENTRETIEN, cote a cote a partir de 768 px.
+ * ---------------------------------------------------------------------------
+ * L'ENTRETIEN EN TROIS GESTES, refonte du 20 septembre 2026.
  *
- * `auto-fit` ET NON TROIS COLONNES FIXES : entre 768 et 1024 px, trois colonnes
- * rendraient chaque conseil trop etroit pour sa phrase. La grille place ce qui
- * tient et replie le reste.
+ * LA VERSION PRECEDENTE ETAIT UN TABLEAU ADMINISTRATIF : trois colonnes de
+ * texte gris, seule section sans image, a la fin d'une page qui raconte une
+ * histoire. Elle se lisait comme une notice glissee sous la porte.
  *
- * `align-items: start` : sans lui, les trois cartes prendraient la hauteur de la
- * plus longue et l'espace vide se verrait sous les deux autres.
+ * LE CONTENU EST UNE SEQUENCE, et c'est ce qui autorise la numerotation : on
+ * met le bijou, on le porte, on le range. Numeroter des rubriques qui ne
+ * s'enchainent pas serait un ornement, et le defaut le plus courant des pages
+ * engendrees.
+ * ---------------------------------------------------------------------------
  */
-.conseils {
+.introEntretien {
+  margin: 0 0 var(--ls-space-5);
+  max-width: 34rem;
+  color: var(--ls-text);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+}
+
+.gestes {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
-  gap: var(--ls-space-4);
+  grid-template-columns: 1fr;
+  gap: var(--ls-space-5);
+  list-style: none;
+  margin: 0 0 var(--ls-space-5);
+  padding: 0;
+  counter-reset: none;
+}
+
+@media (min-width: 48rem) {
+  .gestes {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--ls-space-4);
+  }
+}
+
+/*
+ * LE NUMERO ET SON TEXTE SUR UNE LIGNE A 320 px, empiles au-dessus a partir de
+ * 48rem : en colonne etroite, un chiffre seul au-dessus de son titre gaspille
+ * une ligne entiere.
+ */
+.geste {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--ls-space-3);
   align-items: start;
-  margin-bottom: var(--ls-space-4);
+}
+
+@media (min-width: 48rem) {
+  /*
+   * `grid-template-rows` ALIGNE LES TROIS COLONNES ENTRE ELLES : sans lui,
+   * chaque geste calait sa propre hauteur de titre, et les trois paragraphes
+   * partaient a des hauteurs differentes. `subgrid` n'est pas employe, son
+   * support restant partiel sur les navigateurs cibles.
+   */
+  .geste {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    gap: var(--ls-space-3);
+    align-content: start;
+  }
 }
 
 /*
- * FOND SABLE, DONC `--ls-text` ET NON LE JETON ATTENUE, C31 : `--ls-text-muted`
- * y tombe a 4,35:1, sous le seuil AA.
+ * LA PASTILLE REPREND LE BRONZE DE LA BANDE, seul rappel de cette couleur hors
+ * de la zone sombre : blanc sur `--ls-primary` mesure 8,93:1, AAA.
+ *
+ * `aria-hidden` DANS LE JSX : l'ordre est porte par `ol`, et faire lire le
+ * chiffre donnerait « un un avant de les mettre ».
  */
-/*
- * PLUS DE FOND NI DE CARTE, LA REGLE CHANEL APPLIQUEE : la bande sombre est
- * desormais le seul accent de la page, et trois cartes beiges juste en dessous
- * lui reprenaient son effet. Un filet suffit a separer trois conseils courts.
- */
-.conseil {
-  padding-left: var(--ls-space-4);
-  border-left: 2px solid var(--ls-border);
+.numeroGeste {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  font-family: var(--ls-police-titre);
+  font-size: 1.0625rem;
+  line-height: 1;
 }
 
-.titreConseil {
+.titreGeste {
   margin: 0 0 var(--ls-space-2);
   color: var(--ls-primary);
   font-size: 1.0625rem;
   font-weight: 600;
 }
 
-.texteConseil {
-  margin: 0 0 var(--ls-space-2);
+/*
+ * PAS DE JUSTIFICATION ICI, contre `.texte` : trois colonnes de 16rem justifiees
+ * ouvriraient des trous que la cesure ne rattrape pas.
+ */
+.texteGeste {
+  margin: 0;
   color: var(--ls-text);
   line-height: 1.6;
 }
 
-.texteConseil:last-child {
-  margin-bottom: 0;
+/*
+ * LES INTERDITS, ET POURQUOI ILS SONT A PART.
+ *
+ * `--ls-error` EST ECARTE : ces produits ne signalent aucune erreur, et un
+ * encadre rouge sur une page de marque inquieterait sans motif. La terracotta
+ * foncee marque l'attention en restant dans la palette chaude, et elle mesure
+ * 5,89:1 avec du blanc, AA.
+ */
+.interdits {
+  padding: var(--ls-space-4);
+  max-width: 34rem;
+  background: var(--ls-surface-sand);
+  border-left: 4px solid var(--ls-accent-terracotta-deep);
+  border-radius: var(--ls-radius-sm);
+}
+
+.titreInterdits {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-accent-terracotta-deep);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.listeInterdits {
+  margin: 0 0 var(--ls-space-2);
+  padding-left: var(--ls-space-4);
+  color: var(--ls-text);
+  line-height: 1.7;
+}
+
+/* Fond sable : `--ls-text`, le jeton attenue y tombe a 4,35:1, C31. */
+.texteInterdits {
+  margin: 0;
+  color: var(--ls-text);
+  line-height: 1.6;
 }
 
 /*

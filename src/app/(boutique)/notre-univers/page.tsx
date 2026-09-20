@@ -360,48 +360,81 @@ export default function PageNotreUnivers() {
           L&apos;entretien
         </h2>
 
-        <p className={styles.texte}>
+        <p className={styles.introEntretien}>
           Un bijou en pâte polymère dure des années si on prend deux ou trois
           précautions.
         </p>
 
         {/*
-         * TROIS CONSEILS COTE A COTE A PARTIR DE 768 px, empiles en dessous.
+         * TROIS MOMENTS DANS L'ORDRE OU ILS ARRIVENT, et non trois rubriques.
          *
-         * Ils sont de meme nature et de meme longueur : les enchainer
-         * verticalement sur un grand ecran donnait une colonne etroite et
-         * monotone, alors qu'ils se comparent d'un coup d'oeil.
+         * LA NUMEROTATION EST LEGITIME PARCE QUE LE CONTENU EST UNE SEQUENCE :
+         * on met le bijou, on le porte, on le range. Numeroter des rubriques qui
+         * ne s'enchainent pas serait un ornement, et le defaut le plus courant
+         * des pages engendrees.
+         *
+         * LE CHIFFRE EST `aria-hidden` : l'ordre est deja porte par `ol`, et le
+         * faire lire donnerait « un un avant de les mettre ».
          */}
-        <div className={styles.conseils}>
-          <div className={styles.conseil}>
-            <h3 className={styles.titreConseil}>À éviter</h3>
-            <p className={styles.texteConseil}>
-              Le parfum, la laque, la crème et les produits ménagers : ils
-              ternissent les couleurs et attaquent le vernis. Mettez vos bijoux
-              en dernier, après la coiffure et le parfum. Retirez-les avant la
-              douche, la piscine et le coucher.
-            </p>
-          </div>
+        <ol className={styles.gestes}>
+          <li className={styles.geste}>
+            <span className={styles.numeroGeste} aria-hidden="true">
+              1
+            </span>
+            <div>
+              <h3 className={styles.titreGeste}>Avant de les mettre</h3>
+              <p className={styles.texteGeste}>
+                Coiffez-vous, parfumez-vous, mettez votre crème. Le bijou vient
+                en dernier : le parfum, la laque et les produits ménagers
+                ternissent les couleurs et attaquent le vernis.
+              </p>
+            </div>
+          </li>
 
-          <div className={styles.conseil}>
-            <h3 className={styles.titreConseil}>Pour nettoyer</h3>
-            <p className={styles.texteConseil}>
-              Un chiffon doux, à peine humide. Si besoin, une goutte de liquide
-              vaisselle dans de l&apos;eau tiède, puis séchez aussitôt.
-            </p>
-            <p className={styles.texteConseil}>
-              Jamais d&apos;alcool, d&apos;acétone ni de nettoyant pour bijoux :
-              ces produits dissolvent le vernis.
-            </p>
-          </div>
+          <li className={styles.geste}>
+            <span className={styles.numeroGeste} aria-hidden="true">
+              2
+            </span>
+            <div>
+              <h3 className={styles.titreGeste}>Après les avoir portés</h3>
+              <p className={styles.texteGeste}>
+                Un chiffon doux, à peine humide, suffit. Si besoin, une goutte
+                de liquide vaisselle dans de l&apos;eau tiède, puis séchez
+                aussitôt.
+              </p>
+            </div>
+          </li>
 
-          <div className={styles.conseil}>
-            <h3 className={styles.titreConseil}>Pour ranger</h3>
-            <p className={styles.texteConseil}>
-              Dans leur pochette ou une boîte, à l&apos;abri du soleil direct.
-              Rangés à part les uns des autres, ils ne se rayent pas.
-            </p>
-          </div>
+          <li className={styles.geste}>
+            <span className={styles.numeroGeste} aria-hidden="true">
+              3
+            </span>
+            <div>
+              <h3 className={styles.titreGeste}>Pour les ranger</h3>
+              <p className={styles.texteGeste}>
+                Dans leur pochette ou une boîte, à l&apos;abri du soleil direct.
+                Rangés à part les uns des autres, ils ne se rayent pas.
+              </p>
+            </div>
+          </li>
+        </ol>
+
+        {/*
+         * LES TROIS INTERDITS SONT REGROUPES, et c'est le seul endroit de la
+         * page ou une information est repetee : ils figuraient deja dans les
+         * gestes ci-dessus. Un produit qui dissout le vernis se retient mieux
+         * en liste courte qu'au milieu d'un paragraphe.
+         */}
+        <div className={styles.interdits}>
+          <h3 className={styles.titreInterdits}>À ne jamais employer</h3>
+          <ul className={styles.listeInterdits}>
+            <li>L&apos;alcool</li>
+            <li>L&apos;acétone</li>
+            <li>Les nettoyants pour bijoux</li>
+          </ul>
+          <p className={styles.texteInterdits}>
+            Ces trois-là dissolvent le vernis.
+          </p>
         </div>
       </section>
 
