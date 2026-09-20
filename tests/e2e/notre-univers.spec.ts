@@ -176,6 +176,26 @@ test("la page offre une sortie vers le catalogue", async ({ page }) => {
   await expect(page).toHaveURL(/\/catalogue/);
 });
 
+/**
+ * « ECRIVEZ-MOI » MENE QUELQUE PART.
+ *
+ * La phrase invitait a ecrire sans donner aucun moyen de le faire, releve le
+ * 20 septembre 2026. Ce test garde le chemin plutot que la presence du bouton :
+ * un lien visible ne prouve pas qu'il aboutit.
+ */
+test("l'invitation à écrire mène au formulaire de contact", async ({
+  page,
+}) => {
+  await page.goto("/notre-univers");
+
+  await page
+    .getByRole("main")
+    .getByRole("link", { name: "Écrire un message" })
+    .click();
+
+  await expect(page).toHaveURL(/\/contact/);
+});
+
 test("la page ne déborde pas horizontalement", async ({ page }) => {
   await page.goto("/notre-univers");
 

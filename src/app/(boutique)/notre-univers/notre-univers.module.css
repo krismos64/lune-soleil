@@ -401,6 +401,51 @@
 }
 
 /*
+ * L'ACTION VERS LE CONTACT, SECONDAIRE.
+ *
+ * CONTOUR ET NON APLAT : « Decouvrir les creations » ferme la page et porte
+ * deja le bronze plein. Deux boutons pleins sur une meme page se disputent le
+ * regard.
+ *
+ * `--ls-primary` SUR LE TEXTE ET LA BORDURE : 8,36:1 sur creme et 7,49:1 sur
+ * sable, conformes AAA sur les deux fonds que cette section peut porter. La
+ * bordure depasse largement les 3:1 exiges d'un contour de controle, WCAG
+ * 1.4.11.
+ *
+ * Cible tactile de 44 px, jamais une hauteur fixe.
+ */
+.actionContact {
+  /*
+   * `margin-top` PARCE QUE `.blocTexte > :last-child` ANNULE la marge basse du
+   * paragraphe qui precede : sans elle, le bouton colle au texte.
+   */
+  margin-top: var(--ls-space-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-3) var(--ls-space-5);
+  border: 1px solid var(--ls-primary);
+  border-radius: var(--ls-radius-sm);
+  color: var(--ls-primary);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    background var(--ls-duration-fast) var(--ls-easing),
+    color var(--ls-duration-fast) var(--ls-easing);
+}
+
+/*
+ * LE SURVOL INVERSE LE CONTRASTE, blanc sur bronze a 8,93:1 : un simple
+ * changement de teinte de texte se verrait a peine sur un bouton a contour.
+ */
+.actionContact:hover {
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+}
+
+/*
  * ---------------------------------------------------------------------------
  * LA BANDE DES MATIERES, SEULE ZONE SOMBRE ET SEUL MOMENT ANIME DE LA PAGE.
  *

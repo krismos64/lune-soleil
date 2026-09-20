@@ -266,10 +266,25 @@ export default function PageNotreUnivers() {
               je réponds moi-même.
             </p>
 
+
             <p className={styles.texte}>
               Je soigne aussi les colis. Recevoir un bijou doit être un moment
               agréable, pas juste l&apos;ouverture d&apos;un carton.
             </p>
+            {/*
+             * ACTION SECONDAIRE ET NON PRINCIPALE : « Decouvrir les creations »
+             * ferme la page et porte deja l'aplat bronze. Deux boutons pleins
+             * sur une meme page se disputent le regard, et celui-ci arrive en
+             * cours de lecture, pas au terme du parcours.
+             *
+             * LE LIBELLE DIT CE QUI SE PASSE AU CLIC, « Ecrire », et reprend le
+             * verbe de la phrase qui precede. La page cible s'intitule « Nous
+             * ecrire » ; le singulier est garde ici, l'exploitante exercant
+             * seule.
+             */}
+            <Link href="/contact" className={styles.actionContact}>
+              Écrire un message
+            </Link>
           </div>
 
           <Image
