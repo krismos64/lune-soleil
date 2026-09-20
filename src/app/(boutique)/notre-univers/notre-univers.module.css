@@ -66,8 +66,34 @@
   text-decoration: underline;
 }
 
+/*
+ * ---------------------------------------------------------------------------
+ * FONDS ALTERNES PAR SECTION, arbitrage de Christophe du 20 septembre 2026.
+ *
+ * LE RISQUE EST NOMME PLUTOT QUE TU : cette alternance rapproche la page du
+ * motif « identical cards » que la bande bronze venait d'ecarter, et elle
+ * affaiblit mecaniquement le contraste de cette bande, qui n'est plus la seule
+ * zone peinte. L'arbitrage est trace, pas subi.
+ *
+ * DEUX FONDS PEINTS, ET AUCUN NOUVEAU JETON : sable et blanc existent deja dans
+ * `tokens.css`. La section des pieces uniques garde le fond de page, sans quoi
+ * les quatre zones peintes d'affilee ne laisseraient plus aucun repos a l'oeil.
+ *
+ * LE PIEGE DU SABLE EST DANS LA SECTION SUIVANTE.
+ * ---------------------------------------------------------------------------
+ */
 .section {
   margin-bottom: var(--ls-space-5);
+  padding: var(--ls-space-5) var(--ls-space-4);
+  border-radius: var(--ls-radius-md);
+}
+
+.sectionSable {
+  background: var(--ls-surface-sand);
+}
+
+.sectionBlanche {
+  background: var(--ls-surface);
 }
 
 /*
@@ -94,11 +120,24 @@
  * `--ls-content-max` : sans cette borne, un paragraphe hors bloc alterne
  * s'etirerait sur 1280 px.
  */
+/*
+ * TEXTE JUSTIFIE, ARBITRAGE DE CHRISTOPHE DU 20 SEPTEMBRE 2026.
+ *
+ * `hyphens: auto` L'ACCOMPAGNE ET N'EST PAS FACULTATIF. Justifier sans cesure
+ * ouvre des « rivieres » de blanc dans une colonne de 34 rem, et le francais
+ * les aggrave avec ses mots longs : « Pyrenees-Atlantiques » seul sur une ligne
+ * etire les deux precedentes. La cesure repartit le depassement.
+ *
+ * `lang="fr"` EST POSE SUR `<html>`, condition pour que le navigateur applique
+ * les regles de cesure francaises et non anglaises.
+ */
 .texte {
   margin: 0 0 var(--ls-space-3);
   max-width: 34rem;
   color: var(--ls-text);
   line-height: 1.6;
+  text-align: justify;
+  hyphens: auto;
 }
 
 /*
@@ -259,12 +298,20 @@
 }
 
 /*
- * LA LEGENDE EST SUR FOND CREME, donc `--ls-text-muted` y donne 4,86:1 et
- * respecte AA. Sur sable elle tomberait a 4,35:1, C31.
+ * LA LEGENDE, ET LE PIEGE QUE LES FONDS ALTERNES ONT OUVERT.
+ *
+ * `--ls-text-muted` donne 4,86:1 sur creme et 5,19:1 sur blanc, conformes AA.
+ * SUR SABLE IL TOMBE A 4,35:1, sous le seuil de 4,5:1. C'est le piege que la
+ * regle C31 nomme : un rapport annonce a cote d'un jeton ne vaut que pour UN
+ * fond, et ce jeton a une paire sur deux fautive.
+ *
+ * La legende vit dans « Mon histoire », section passee en sable le 20 septembre
+ * 2026 : elle serait devenue non conforme sans cette regle. `--ls-text` y donne
+ * 10,83:1, et la taille reduite suffit a distinguer la legende du corps.
  */
 .legende {
   margin: calc(var(--ls-space-3) * -1) 0 var(--ls-space-3);
-  color: var(--ls-text-muted);
+  color: var(--ls-text);
   font-size: 0.875rem;
   line-height: 1.5;
 }

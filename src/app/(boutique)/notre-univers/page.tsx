@@ -109,7 +109,7 @@ export default function PageNotreUnivers() {
       <section
         id="histoire"
         tabIndex={-1}
-        className={styles.section}
+        className={`${styles.section} ${styles.sectionSable}`}
         aria-labelledby="titre-histoire"
       >
         <h2 id="titre-histoire" className={styles.titreSection}>
@@ -353,7 +353,7 @@ export default function PageNotreUnivers() {
       <section
         id="entretien"
         tabIndex={-1}
-        className={styles.section}
+        className={`${styles.section} ${styles.sectionBlanche}`}
         aria-labelledby="titre-entretien"
       >
         <h2 id="titre-entretien" className={styles.titreSection}>
