@@ -702,7 +702,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           LIEN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          ANNULE: ${{ cancelled() }}
+          # `job.status` ET NON `cancelled()`, LS-235. Les fonctions de statut ne
+          # sont acceptees que dans un `if:` : ecrite dans `env`, la forme
+          # `${{ cancelled() }}` fait refuser le workflow ENTIER par l'API, sur
+          # « Unrecognized function: 'cancelled' ». Mesure du 20 septembre 2026,
+          # HTTP 422 au declenchement. Le workflow n'aurait plus tourne du tout.
+          ETAT_JOB: ${{ job.status }}
         run: |
           # L'ETIQUETTE SE CREE AVANT D'ETRE POSEE, LS-199.
           #
@@ -743,7 +748,7 @@ jobs:
           # deux s'est produit. Deux etiquettes produiraient deux fils ouverts
           # en parallele pour un meme controle, ce qui est exactement le bruit
           # que le filtre existe pour eviter.
-          if [ "$ANNULE" = "true" ]; then
+          if [ "$ETAT_JOB" = "cancelled" ]; then
             titre="Controle nocturne annule avant son terme"
             corps=$(printf 'Le controle nocturne a ete ANNULE, il n a pas echoue.\n\nLa cause la plus probable est le depassement du `timeout-minutes` du job. Le temps d attente avant que le runner ne prenne le job compte dans ce plafond, un job peut donc etre annule au dela de la duree cumulee de ses etapes.\n\nJournal complet : %s\n\nCE QUI COMPTE ICI EST CE QUI N A PAS TOURNE. Les etapes placees apres celle qui a consomme le plafond ne se sont PAS executees, `npm audit` compris. Leur silence ne vaut pas un vert : aucune ne s est prononcee.\n\nLe geste : ouvrir le journal, reperer l etape sans heure de fin, et comparer sa duree a sa borne locale. Une etape sans borne locale consomme tout ce qui reste du plafond du job, motif de LS-106, LS-124 et LS-235.\n\nUne annulation manuelle produit aussi cette issue, et se referme alors d un geste.\n' "$LIEN")
           else
