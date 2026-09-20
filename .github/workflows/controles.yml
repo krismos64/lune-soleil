@@ -917,11 +917,29 @@ jobs:
       # servie, AU MOINS UN lien qui la designe, dans les deux sens.
       #
       # IL A TROUVE DEUX DEFAUTS REELS A SA PREMIERE EXECUTION, dont six
-      # occurrences de lien vers `/notre-univers`, page non livree qui rend 404,
-      # une depuis l'en-tete de TOUTES les pages publiques. Le journal du
-      # 3 septembre 2026 en annonçait trois.
+      # occurrences de lien vers `/notre-univers`, page non livree qui rendait
+      # 404, une depuis l'en-tete de TOUTES les pages publiques.
+      #
+      # CETTE PAGE EST LIVREE DEPUIS LE 20 SEPTEMBRE 2026, LS-25, et l'exemption
+      # qui la sortait du controle est tombee avec elle : elle aurait laisse ces
+      # sept liens hors surveillance. Le controle juge desormais vingt liens au
+      # lieu de dix-neuf.
       - name: 9s quater. Chaque ecran de la boutique est atteignable
         run: ./scripts/verifier-atteignabilite-boutique.sh
+
+      # LES IMAGES D'HABILLAGE NE PASSENT PAS PAR LA CHAINE D'ADR-007, LS-25.
+      #
+      # Les photographies de produits sont traitees par
+      # `src/integrations/medias/traitement.ts`, qui retire l'EXIF. Celles de
+      # `public/habillage/` sont versionnees a la main : le nettoyage est a la
+      # charge de qui les ajoute, et rien ne le verifiait.
+      #
+      # LE RISQUE S'EST MATERIALISE. Sur six photographies fournies le
+      # 20 septembre 2026, cinq portaient du XMP et la sixieme un bloc GPS.
+      # Sans conversion, la position du domicile de l'exploitante aurait ete
+      # servie publiquement.
+      - name: 9s quinquies. Aucune metadonnee sur les images d'habillage
+        run: ./scripts/verifier-metadonnees-habillage.sh
 
       # LES REGIONS LIVE DU PARCOURS D'ACHAT PORTENT LEUR NOM, LS-85.
       #
