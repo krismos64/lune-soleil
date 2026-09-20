@@ -16,9 +16,21 @@
  * evolueront separement.
  */
 
+/*
+ * LA PAGE S'ELARGIT AU-DELA DE LA COLONNE DE LECTURE, LS-25.
+ *
+ * Elle etait bornee a 48 rem comme `/aide`, et le rendu a ete juge trop
+ * monotone sur ordinateur le 20 septembre 2026 : une colonne etroite au milieu
+ * d'un grand ecran, ou tout s'empile dans le meme ordre.
+ *
+ * `--ls-content-max` vaut 1280 px, meme borne que l'accueil. LA MESURE DE
+ * LECTURE RESTE BORNEE pour autant : ce sont les blocs de TEXTE qui gardent
+ * 34 rem, jamais la page. Une ligne de 1280 px de large est illisible, le
+ * probleme que la borne de 48 rem reglait et qu'il ne faut pas reintroduire.
+ */
 .page {
   padding: var(--ls-space-4);
-  max-width: 48rem;
+  max-width: var(--ls-content-max);
   margin: 0 auto;
 }
 
@@ -77,8 +89,14 @@
   font-weight: 600;
 }
 
+/*
+ * `max-width` SUR LE TEXTE ET NON SUR LA PAGE, depuis l'elargissement a
+ * `--ls-content-max` : sans cette borne, un paragraphe hors bloc alterne
+ * s'etirerait sur 1280 px.
+ */
 .texte {
   margin: 0 0 var(--ls-space-3);
+  max-width: 34rem;
   color: var(--ls-text);
   line-height: 1.6;
 }
@@ -91,6 +109,7 @@
   margin: 0 0 var(--ls-space-3);
   padding-left: var(--ls-space-3);
   border-left: 3px solid var(--ls-accent-gold-deep);
+  max-width: 34rem;
   color: var(--ls-text);
   font-style: italic;
   line-height: 1.6;
@@ -99,6 +118,7 @@
 .liste {
   margin: 0 0 var(--ls-space-3);
   padding-left: var(--ls-space-4);
+  max-width: 34rem;
   color: var(--ls-text);
   line-height: 1.6;
 }
@@ -125,6 +145,7 @@
   background: var(--ls-surface-sand);
   border-left: 4px solid var(--ls-primary);
   border-radius: var(--ls-radius-sm);
+  max-width: 34rem;
   color: var(--ls-text);
   line-height: 1.6;
 }
@@ -132,6 +153,154 @@
 .texte a {
   color: var(--ls-accent-gold-deep);
   text-decoration: underline;
+}
+
+/*
+ * ---------------------------------------------------------------------------
+ * L'APPARITION AU DEFILEMENT, LS-25.
+ *
+ * PREMIERE ANIMATION DU SITE, et elle est volontairement discrete :
+ * `frontend-design.md` interdit la suranimation, et un site de bijoux artisanaux
+ * n'a rien d'une demonstration technique. Huit pixels de montee, rien d'autre.
+ * Aucune opacite, voir plus bas, aucune rotation, aucun rebond, aucun
+ * glissement lateral.
+ *
+ * `animation-timeline: view()` FAIT CELA SANS UNE LIGNE DE JAVASCRIPT. Le
+ * navigateur lie l'avancement de l'animation a l'entree de l'element dans la
+ * fenetre. Les navigateurs qui l'ignorent affichent le contenu normalement,
+ * puisque l'etat final de l'animation est aussi l'etat par defaut : aucune
+ * degradation, et surtout AUCUN CONTENU INVISIBLE en cas de non-support.
+ *
+ * C'EST CE DERNIER POINT QUI A ECARTE LA SOLUTION EN JAVASCRIPT. Un
+ * `IntersectionObserver` demande de poser `opacity: 0` au depart, donc de
+ * masquer le texte jusqu'a ce qu'un script s'execute : un script casse, un
+ * chargement lent ou un navigateur sans JavaScript laisserait une page blanche.
+ * Le contenu d'une page editoriale ne depend jamais d'un script.
+ *
+ * `prefers-reduced-motion` SUPPRIME L'ANIMATION ENTIEREMENT, exigence
+ * d'accessibilite du projet et non une option.
+ * ---------------------------------------------------------------------------
+ */
+/*
+ * AUCUNE OPACITE DANS CETTE ANIMATION, ET C'EST UNE MESURE QUI L'A IMPOSE.
+ *
+ * La premiere version montait de `opacity: 0` a `1`. `axe-core` a rougi sur les
+ * deux largeurs, le 20 septembre 2026 :
+ *
+ *   contraste 3,47:1 au lieu de 4,5:1
+ *   premier plan #8c837d, fond #fbf7f0
+ *
+ * `#8c837d` n'est AUCUN jeton du projet : c'est `--ls-text` compose avec le
+ * fond creme a une opacite d'environ 0,6, capture en pleine animation.
+ *
+ * CE N'ETAIT PAS UN ARTEFACT DE MESURE. Pendant toute la transition, le texte
+ * etait reellement sous le seuil AA : qui lit vite, ou qui defile lentement,
+ * rencontre bel et bien ce contraste. Un texte ne s'affiche jamais a opacite
+ * partielle, et la regle vaut au-dela de cette page.
+ *
+ * LE DEPLACEMENT SEUL SUFFIT. Huit pixels de montee donnent le meme effet de
+ * surgissement sans jamais toucher a la lisibilite.
+ */
+@keyframes apparition {
+  from {
+    transform: translateY(8px);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .blocAlterne,
+  .matiere,
+  .conseil,
+  .phraseNom,
+  .sortie {
+    /*
+     * `--ls-duration-base` ET NON UNE VALEUR LIBRE : 220 ms est la duree du
+     * projet, et `tokens.css` la passe deja a 0 ms sous mouvement reduit. La
+     * media query ci-dessus est donc une seconde ligne de defense, pas la
+     * seule.
+     */
+    animation: apparition var(--ls-duration-base) var(--ls-easing) both;
+    animation-timeline: view();
+    /*
+     * L'ANIMATION S'ACHEVE AVANT LE MILIEU DE L'ECRAN, et se fige ensuite :
+     * sans cette plage, elle se rejouerait a l'envers en remontant, ce qui
+     * donne le mal de coeur sur une page longue.
+     */
+    animation-range: entry 0% cover 30%;
+  }
+}
+
+/*
+ * LA PHRASE SUR L'ORIGINE DU NOM, centree entre deux blocs alternes.
+ *
+ * ELLE N'APPARTIENT A AUCUN BLOC, et l'aligner a gauche comme un paragraphe
+ * ordinaire la faisait paraitre orpheline : centree et respiree, elle marque
+ * une pause dans le recit plutot qu'une phrase oubliee.
+ *
+ * PAS D'ITALIQUE NI DE GUILLEMETS : ce n'est pas une citation rapportee, contre
+ * `.citation` qui porte la question d'une cliente.
+ */
+.phraseNom {
+  margin: var(--ls-space-5) auto;
+  max-width: 34rem;
+  color: var(--ls-primary);
+  font-size: 1.125rem;
+  line-height: 1.6;
+  text-align: center;
+}
+
+/*
+ * LE BLOC ALTERNE, texte d'un cote et image de l'autre, LS-25.
+ *
+ * EMPILE PAR DEFAUT, EN COLONNES A PARTIR DE 768 px : c'est le motif du hero de
+ * l'accueil, `1fr` puis `1fr 1fr`, et non un second systeme parallele.
+ *
+ * L'ALTERNANCE N'EXISTE PAS SOUS 768 px, et ce n'est pas un defaut : a 320 px
+ * deux colonnes rendraient le texte illisible et l'image minuscule. L'ordre
+ * d'empilement y est toujours le meme, image puis texte, ce qui donne un rythme
+ * previsible au doigt.
+ */
+.blocAlterne {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--ls-space-4);
+  align-items: center;
+  margin-bottom: var(--ls-space-5);
+}
+
+@media (min-width: 768px) {
+  .blocAlterne {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--ls-space-6);
+  }
+
+  /*
+   * L'INVERSION PASSE PAR `order` ET NON PAR L'ORDRE DU JSX.
+   *
+   * L'ORDRE DU DOCUMENT RESTE TEXTE PUIS IMAGE dans les deux sens, ce qui est
+   * l'essentiel : un lecteur d'ecran et une navigation au clavier suivent
+   * l'ordre du DOM, jamais la position visuelle. Inverser en JSX donnerait la
+   * meme image a l'oeil et un recit desordonne a l'oreille.
+   */
+  .blocAlterneInverse > .blocTexte {
+    order: 2;
+  }
+}
+
+/*
+ * LA MESURE DE LECTURE EST PORTEE PAR LE TEXTE, jamais par la page : 34 rem
+ * tiennent environ 70 caracteres, la borne au-dela de laquelle l'oeil perd le
+ * debut de la ligne suivante.
+ */
+.blocTexte {
+  max-width: 34rem;
+}
+
+.blocTexte > :last-child {
+  margin-bottom: 0;
 }
 
 /*
@@ -176,6 +345,153 @@
   color: var(--ls-text-muted);
   font-size: 0.875rem;
   line-height: 1.5;
+}
+
+/*
+ * L'INTRODUCTION DES MATIERES, centree au-dessus de l'image pleine largeur.
+ */
+.introMatieres {
+  margin: 0 auto var(--ls-space-4);
+  max-width: 34rem;
+  color: var(--ls-text);
+  line-height: 1.6;
+  text-align: center;
+}
+
+/*
+ * LES QUATRE MATIERES EN CARTES.
+ *
+ * `auto-fit` A PARTIR DE 18rem : deux par ligne sur tablette, quatre sur grand
+ * ecran, une seule a 320 px. Aucune media query, la grille s'en charge.
+ */
+.matieres {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: var(--ls-space-4);
+  list-style: none;
+  margin: var(--ls-space-4) 0;
+  padding: 0;
+  align-items: start;
+}
+
+/*
+ * LA BORDURE GAUCHE EVOQUE LA MATIERE, ELLE NE LA CODE PAS. Le nom de chaque
+ * matiere est ecrit dans son titre : une information portee par la seule
+ * couleur echappe a qui ne la distingue pas, WCAG 1.4.1.
+ *
+ * APLATS UNIS, AUCUN DEGRADE : `frontend-design.md` interdit le degrade
+ * metallique, marqueur de site engendre automatiquement.
+ */
+.matiere {
+  padding: var(--ls-space-4);
+  background: var(--ls-surface-sand);
+  border-left: 4px solid var(--ls-primary);
+  border-radius: var(--ls-radius-md);
+}
+
+.matierePate {
+  border-left-color: var(--ls-primary);
+}
+
+.matiereAcier {
+  border-left-color: var(--ls-text-muted);
+}
+
+.matiereVernis {
+  border-left-color: var(--ls-accent-terracotta);
+}
+
+/*
+ * LE DORE EN BORDURE ET JAMAIS EN TEXTE : `--ls-accent-gold` plafonne a 2,31:1,
+ * interdit pour tout texte. En filet decoratif il ne porte aucun sens.
+ */
+.matiereOr {
+  border-left-color: var(--ls-accent-gold);
+}
+
+/*
+ * LE SURVOL EPAISSIT LE FILET, il ne souleve pas la carte.
+ *
+ * Une ombre portee et un `translateY` au survol sont le motif d'une carte
+ * CLIQUABLE : ces quatre-la ne menent nulle part, et le suggerer ferait chercher
+ * un lien qui n'existe pas. L'epaississement marque le survol sans rien
+ * promettre.
+ *
+ * AUCUN EFFET AU TOUCHER : `@media (hover: hover)` l'ecarte des ecrans tactiles,
+ * ou l'etat de survol reste colle apres le doigt.
+ */
+@media (hover: hover) {
+  .matiere {
+    transition: border-left-width var(--ls-duration-fast) var(--ls-easing);
+  }
+
+  .matiere:hover {
+    border-left-width: 8px;
+  }
+}
+
+.titreMatiere {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-primary);
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+/* Fond sable : `--ls-text`, le jeton attenue y tomberait a 4,35:1, C31. */
+.texteMatiere {
+  margin: 0;
+  color: var(--ls-text);
+  line-height: 1.6;
+}
+
+/*
+ * LES TROIS CONSEILS D'ENTRETIEN, cote a cote a partir de 768 px.
+ *
+ * `auto-fit` ET NON TROIS COLONNES FIXES : entre 768 et 1024 px, trois colonnes
+ * rendraient chaque conseil trop etroit pour sa phrase. La grille place ce qui
+ * tient et replie le reste.
+ *
+ * `align-items: start` : sans lui, les trois cartes prendraient la hauteur de la
+ * plus longue et l'espace vide se verrait sous les deux autres.
+ */
+.conseils {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: var(--ls-space-4);
+  align-items: start;
+  margin-bottom: var(--ls-space-4);
+}
+
+/*
+ * FOND SABLE, DONC `--ls-text` ET NON LE JETON ATTENUE, C31 : `--ls-text-muted`
+ * y tombe a 4,35:1, sous le seuil AA.
+ */
+.conseil {
+  padding: var(--ls-space-4);
+  background: var(--ls-surface-sand);
+  border-radius: var(--ls-radius-md);
+}
+
+/*
+ * PAS DE BORDURE SOUS CE TITRE, contre `.titreSection` : dans une carte au fond
+ * colore, un filet ajouterait une seconde ligne de separation a quelques pixels
+ * du bord de la carte.
+ */
+.titreConseil {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-primary);
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.texteConseil {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-text);
+  line-height: 1.6;
+}
+
+.texteConseil:last-child {
+  margin-bottom: 0;
 }
 
 /*

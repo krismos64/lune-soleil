@@ -116,44 +116,48 @@ export default function PageNotreUnivers() {
           Mon histoire
         </h2>
 
-        {/*
-         * `priority` SUR CETTE SEULE IMAGE : elle est la plus haute de la page
-         * et entre dans le plus grand rendu de contenu. Le poser sur les cinq
-         * ferait concourir les telechargements et retarderait celle-ci.
-         */}
-        <Image
-          src="/habillage/univers-modelage.jpg"
-          alt="Deux mains façonnent une fleur en pâte polymère violette sur un plan de travail en bois, entourées de feuilles d'or, de paillettes bleues et d'un outil à bille"
-          className={styles.illustration}
-          width={1586}
-          height={992}
-          priority
-          sizes="(min-width: 48rem) 48rem, 100vw"
-        />
+        <div className={styles.blocAlterne}>
+          <div className={styles.blocTexte}>
+            <p className={styles.texte}>
+              J&apos;ai toujours créé des bijoux. D&apos;abord pour moi,
+              simplement parce que j&apos;aimais porter des pièces qui
+              n&apos;existaient nulle part ailleurs.
+            </p>
 
-        <p className={styles.texte}>
-          J&apos;ai toujours créé des bijoux. D&apos;abord pour moi, simplement
-          parce que j&apos;aimais porter des pièces qui n&apos;existaient nulle
-          part ailleurs.
-        </p>
+            <p className={styles.texte}>Puis les compliments sont venus.</p>
 
-        <p className={styles.texte}>Puis les compliments sont venus.</p>
+            <p className={styles.citation}>
+              Elles viennent d&apos;où, ces boucles d&apos;oreilles ?
+            </p>
 
-        <p className={styles.citation}>
-          Elles viennent d&apos;où, ces boucles d&apos;oreilles ?
-        </p>
+            <p className={styles.texte}>
+              Quand je répondais que je les avais faites moi-même, la question
+              suivante était toujours la même : est-ce que je pouvais en faire
+              pour elles.
+            </p>
 
-        <p className={styles.texte}>
-          Quand je répondais que je les avais faites moi-même, la question
-          suivante était toujours la même : est-ce que je pouvais en faire pour
-          elles.
-        </p>
+            <p className={styles.texte}>
+              Ça a duré des années. L&apos;idée d&apos;en faire une activité me
+              trottait dans la tête sans que je saute le pas. En 2026, je me
+              suis lancée.
+            </p>
+          </div>
 
-        <p className={styles.texte}>
-          Ça a duré des années. L&apos;idée d&apos;en faire une activité me
-          trottait dans la tête sans que je saute le pas. En 2026, je me suis
-          lancée.
-        </p>
+          {/*
+           * `priority` SUR CETTE SEULE IMAGE : elle est la plus haute de la
+           * page et entre dans le plus grand rendu de contenu. Le poser sur les
+           * cinq ferait concourir les telechargements et retarderait celle-ci.
+           */}
+          <Image
+            src="/habillage/univers-modelage.jpg"
+            alt="Deux mains façonnent une fleur en pâte polymère violette sur un plan de travail en bois, entourées de feuilles d'or, de paillettes bleues et d'un outil à bille"
+            className={styles.illustration}
+            width={1586}
+            height={992}
+            priority
+            sizes="(min-width: 48rem) 40rem, 100vw"
+          />
+        </div>
 
         {/*
          * L'ORIGINE DU NOM, choisie par l'exploitante le 20 septembre 2026.
@@ -167,86 +171,104 @@ export default function PageNotreUnivers() {
          * geographique ni une anecdote fondatrice qu'il faudrait pouvoir
          * prouver.
          */}
-        <p className={styles.texte}>
+        <p className={styles.phraseNom}>
           Un bijou pour les jours calmes, un autre pour ceux qui brillent. Je
           n&apos;ai jamais su choisir.
         </p>
 
-        <p className={styles.texte}>
-          Aujourd&apos;hui je fais tout : je modèle, je photographie, je réponds
-          aux messages, je prépare les colis, je tiens le stand sur les marchés.
-          Mon atelier est à Artix, dans les Pyrénées-Atlantiques. C&apos;est une
-          petite pièce qui m&apos;est réservée, et c&apos;est là que chaque pièce
-          naît, du premier geste à l&apos;emballage.
-        </p>
+        {/* INVERSE : l'image passe a gauche a partir de 768 px, l'ordre du DOM
+         * restant texte puis image. */}
+        <div className={`${styles.blocAlterne} ${styles.blocAlterneInverse}`}>
+          <div className={styles.blocTexte}>
+            <p className={styles.texte}>
+              Aujourd&apos;hui je fais tout : je modèle, je photographie, je
+              réponds aux messages, je prépare les colis, je tiens le stand sur
+              les marchés. Mon atelier est à Artix, dans les
+              Pyrénées-Atlantiques. C&apos;est une petite pièce qui m&apos;est
+              réservée, et c&apos;est là que chaque pièce naît, du premier geste
+              à l&apos;emballage.
+            </p>
+          </div>
 
-        <Image
-          src="/habillage/univers-atelier.jpg"
-          alt="Un plan de travail près d'une fenêtre : pains de pâte polymère colorés, bijoux en cours de séchage, casier de crochets et de fermoirs, rouleau et scalpel"
-          className={styles.illustration}
-          width={1586}
-          height={992}
-          sizes="(min-width: 48rem) 48rem, 100vw"
-        />
-        <p className={styles.legende}>
-          Mon plan de travail, un jour de modelage.
-        </p>
+          <div>
+            <Image
+              src="/habillage/univers-atelier.jpg"
+              alt="Un plan de travail près d'une fenêtre : pains de pâte polymère colorés, bijoux en cours de séchage, casier de crochets et de fermoirs, rouleau et scalpel"
+              className={styles.illustration}
+              width={1586}
+              height={992}
+              sizes="(min-width: 48rem) 40rem, 100vw"
+            />
+            <p className={styles.legende}>
+              Mon plan de travail, un jour de modelage.
+            </p>
+          </div>
+        </div>
 
         <h3 className={styles.titreSection}>Des pièces uniques</h3>
 
-        <p className={styles.texte}>
-          Mes idées viennent souvent d&apos;une tenue. Une couleur que je vois,
-          une matière, et l&apos;envie d&apos;un bijou qui irait avec.
-        </p>
+        <div className={styles.blocAlterne}>
+          <div className={styles.blocTexte}>
+            <p className={styles.texte}>
+              Mes idées viennent souvent d&apos;une tenue. Une couleur que je
+              vois, une matière, et l&apos;envie d&apos;un bijou qui irait avec.
+            </p>
 
-        <p className={styles.texte}>
-          <strong>Chaque pièce est unique.</strong> Certaines se ressemblent,
-          mais aucune n&apos;est identique : le modelage à la main crée toujours
-          de petites différences, et je les assume.
-        </p>
+            <p className={styles.texte}>
+              <strong>Chaque pièce est unique.</strong> Certaines se
+              ressemblent, mais aucune n&apos;est identique : le modelage à la
+              main crée toujours de petites différences, et je les assume.
+            </p>
 
-        <p className={styles.texte}>
-          C&apos;est un choix, pas une limite. Ça veut dire que{" "}
-          <strong>
-            la photo que vous voyez est celle du bijou que vous recevrez
-          </strong>
-          . Pas un modèle approchant, pas une illustration : votre bijou.
-        </p>
+            <p className={styles.texte}>
+              C&apos;est un choix, pas une limite. Ça veut dire que{" "}
+              <strong>
+                la photo que vous voyez est celle du bijou que vous recevrez
+              </strong>
+              . Pas un modèle approchant, pas une illustration : votre bijou.
+            </p>
+          </div>
 
-        {/*
-         * LA PHOTO PORTEE DONNE L'ECHELLE, ce qu'une prise a plat ne fait
-         * jamais : la taille reelle d'une boucle est la question qui revient le
-         * plus souvent avant un achat.
-         */}
-        <Image
-          src="/habillage/univers-porte.jpg"
-          alt="Une boucle d'oreille en forme de fleur violette pailletée portée à l'oreille, vue de profil"
-          className={styles.illustrationCarree}
-          width={1000}
-          height={1000}
-          sizes="(min-width: 48rem) 24rem, 100vw"
-        />
+          {/*
+           * LA PHOTO PORTEE DONNE L'ECHELLE, ce qu'une prise a plat ne fait
+           * jamais : la taille reelle d'une boucle est la question qui revient
+           * le plus souvent avant un achat.
+           */}
+          <Image
+            src="/habillage/univers-porte.jpg"
+            alt="Une boucle d'oreille en forme de fleur violette pailletée portée à l'oreille, vue de profil"
+            className={styles.illustrationCarree}
+            width={1000}
+            height={1000}
+            sizes="(min-width: 48rem) 24rem, 100vw"
+          />
+        </div>
 
         <h3 className={styles.titreSection}>Ce à quoi je tiens</h3>
 
-        <p className={styles.texte}>
-          Une question sur une taille, une couleur, un délai ? Écrivez-moi, je
-          réponds moi-même.
-        </p>
+        {/* INVERSE : l'emballage passe a gauche. */}
+        <div className={`${styles.blocAlterne} ${styles.blocAlterneInverse}`}>
+          <div className={styles.blocTexte}>
+            <p className={styles.texte}>
+              Une question sur une taille, une couleur, un délai ? Écrivez-moi,
+              je réponds moi-même.
+            </p>
 
-        <p className={styles.texte}>
-          Je soigne aussi les colis. Recevoir un bijou doit être un moment
-          agréable, pas juste l&apos;ouverture d&apos;un carton.
-        </p>
+            <p className={styles.texte}>
+              Je soigne aussi les colis. Recevoir un bijou doit être un moment
+              agréable, pas juste l&apos;ouverture d&apos;un carton.
+            </p>
+          </div>
 
-        <Image
-          src="/habillage/univers-emballage.jpg"
-          alt="Une paire de boucles d'oreilles en forme de serpent jaune pailleté, présentée sur une carte de papier écru dans une pochette transparente"
-          className={styles.illustrationCarree}
-          width={1000}
-          height={1000}
-          sizes="(min-width: 48rem) 24rem, 100vw"
-        />
+          <Image
+            src="/habillage/univers-emballage.jpg"
+            alt="Une paire de boucles d'oreilles en forme de serpent jaune pailleté, présentée sur une carte de papier écru dans une pochette transparente"
+            className={styles.illustrationCarree}
+            width={1000}
+            height={1000}
+            sizes="(min-width: 48rem) 24rem, 100vw"
+          />
+        </div>
       </section>
 
       <section
@@ -259,42 +281,62 @@ export default function PageNotreUnivers() {
           Les matières
         </h2>
 
+        <p className={styles.introMatieres}>
+          Tous mes bijoux partent des mêmes matières. Ce qui change d&apos;une
+          pièce à l&apos;autre, ce sont les couleurs et les formes.
+        </p>
+
         <Image
           src="/habillage/univers-matieres.jpg"
           alt="Vue de dessus des matières : pains de pâte polymère violets, beiges et bleus, crochets et dormeuses en acier, flacon de vernis, paillettes bleues et feuilles d'or"
           className={styles.illustration}
           width={1586}
           height={992}
-          sizes="(min-width: 48rem) 48rem, 100vw"
+          sizes="(min-width: 80rem) 76rem, 100vw"
         />
 
-        <p className={styles.texte}>
-          Tous mes bijoux partent des mêmes matières. Ce qui change d&apos;une
-          pièce à l&apos;autre, ce sont les couleurs et les formes.
-        </p>
-
-        <ul className={styles.liste}>
-          <li>
-            <strong>La pâte polymère</strong> donne le corps du bijou. Je la
-            modèle à la main, puis elle durcit à la cuisson. C&apos;est une
-            matière légère, ce qui compte pour des boucles d&apos;oreilles
-            portées toute la journée.
+        {/*
+         * LES QUATRE MATIERES EN CARTES, et non en liste a puces.
+         *
+         * La liste laissait le texte decroche sous l'image, en colonne etroite.
+         * Chaque matiere est une unite de meme nature : les cartes le montrent
+         * et se comparent d'un coup d'oeil.
+         *
+         * LA COULEUR DE BORDURE EVOQUE LA MATIERE, elle ne la code pas : le nom
+         * est toujours ecrit. Une information portee par la seule couleur
+         * echappe a qui ne la distingue pas, WCAG 1.4.1.
+         */}
+        <ul className={styles.matieres}>
+          <li className={`${styles.matiere} ${styles.matierePate}`}>
+            <h3 className={styles.titreMatiere}>La pâte polymère</h3>
+            <p className={styles.texteMatiere}>
+              Elle donne le corps du bijou. Je la modèle à la main, puis elle
+              durcit à la cuisson. C&apos;est une matière légère, ce qui compte
+              pour des boucles d&apos;oreilles portées toute la journée.
+            </p>
           </li>
-          <li>
-            <strong>L&apos;acier inoxydable</strong> pour tout ce qui touche la
-            peau : crochets, fermoirs, attaches, et les contours des bagues.
-            C&apos;est un choix délibéré. L&apos;acier inoxydable libère très peu
-            de nickel, ce qui le rend bien toléré par la plupart des peaux
-            sensibles.
+          <li className={`${styles.matiere} ${styles.matiereAcier}`}>
+            <h3 className={styles.titreMatiere}>L&apos;acier inoxydable</h3>
+            <p className={styles.texteMatiere}>
+              Pour tout ce qui touche la peau : crochets, fermoirs, attaches, et
+              les contours des bagues. C&apos;est un choix délibéré. L&apos;acier
+              inoxydable libère très peu de nickel, ce qui le rend bien toléré
+              par la plupart des peaux sensibles.
+            </p>
           </li>
-          <li>
-            <strong>Le vernis brillant</strong> protège la surface et donne sa
-            profondeur à la couleur.
+          <li className={`${styles.matiere} ${styles.matiereVernis}`}>
+            <h3 className={styles.titreMatiere}>Le vernis brillant</h3>
+            <p className={styles.texteMatiere}>
+              Il protège la surface et donne sa profondeur à la couleur.
+            </p>
           </li>
-          <li>
-            <strong>Les paillettes</strong>, et{" "}
-            <strong>les feuilles d&apos;or</strong> sur certaines pièces, pour
-            les reflets.
+          <li className={`${styles.matiere} ${styles.matiereOr}`}>
+            <h3 className={styles.titreMatiere}>
+              Les paillettes et les feuilles d&apos;or
+            </h3>
+            <p className={styles.texteMatiere}>
+              Sur certaines pièces, pour les reflets.
+            </p>
           </li>
         </ul>
       </section>
@@ -314,33 +356,44 @@ export default function PageNotreUnivers() {
           précautions.
         </p>
 
-        <h3 className={styles.titreSection}>À éviter</h3>
+        {/*
+         * TROIS CONSEILS COTE A COTE A PARTIR DE 768 px, empiles en dessous.
+         *
+         * Ils sont de meme nature et de meme longueur : les enchainer
+         * verticalement sur un grand ecran donnait une colonne etroite et
+         * monotone, alors qu'ils se comparent d'un coup d'oeil.
+         */}
+        <div className={styles.conseils}>
+          <div className={styles.conseil}>
+            <h3 className={styles.titreConseil}>À éviter</h3>
+            <p className={styles.texteConseil}>
+              Le parfum, la laque, la crème et les produits ménagers : ils
+              ternissent les couleurs et attaquent le vernis. Mettez vos bijoux
+              en dernier, après la coiffure et le parfum. Retirez-les avant la
+              douche, la piscine et le coucher.
+            </p>
+          </div>
 
-        <p className={styles.precaution}>
-          Le parfum, la laque, la crème et les produits ménagers : ils
-          ternissent les couleurs et attaquent le vernis. Mettez vos bijoux en
-          dernier, après la coiffure et le parfum. Retirez-les avant la douche,
-          la piscine et le coucher.
-        </p>
+          <div className={styles.conseil}>
+            <h3 className={styles.titreConseil}>Pour nettoyer</h3>
+            <p className={styles.texteConseil}>
+              Un chiffon doux, à peine humide. Si besoin, une goutte de liquide
+              vaisselle dans de l&apos;eau tiède, puis séchez aussitôt.
+            </p>
+            <p className={styles.texteConseil}>
+              Jamais d&apos;alcool, d&apos;acétone ni de nettoyant pour bijoux :
+              ces produits dissolvent le vernis.
+            </p>
+          </div>
 
-        <h3 className={styles.titreSection}>Pour nettoyer</h3>
-
-        <p className={styles.texte}>
-          Un chiffon doux, à peine humide. Si besoin, une goutte de liquide
-          vaisselle dans de l&apos;eau tiède, puis séchez aussitôt.
-        </p>
-
-        <p className={styles.precaution}>
-          Jamais d&apos;alcool, d&apos;acétone ni de nettoyant pour bijoux : ces
-          produits dissolvent le vernis.
-        </p>
-
-        <h3 className={styles.titreSection}>Pour ranger</h3>
-
-        <p className={styles.texte}>
-          Dans leur pochette ou une boîte, à l&apos;abri du soleil direct. Rangés
-          à part les uns des autres, ils ne se rayent pas.
-        </p>
+          <div className={styles.conseil}>
+            <h3 className={styles.titreConseil}>Pour ranger</h3>
+            <p className={styles.texteConseil}>
+              Dans leur pochette ou une boîte, à l&apos;abri du soleil direct.
+              Rangés à part les uns des autres, ils ne se rayent pas.
+            </p>
+          </div>
+        </div>
       </section>
 
       {/*
