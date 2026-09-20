@@ -195,22 +195,84 @@
 }
 
 /*
- * LA PHRASE SUR L'ORIGINE DU NOM, centree entre deux blocs alternes.
+ * ---------------------------------------------------------------------------
+ * LA CITATION SUR L'ORIGINE DU NOM.
  *
  * ELLE N'APPARTIENT A AUCUN BLOC, et l'aligner a gauche comme un paragraphe
- * ordinaire la faisait paraitre orpheline : centree et respiree, elle marque
- * une pause dans le recit plutot qu'une phrase oubliee.
+ * ordinaire la faisait paraitre orpheline. Centree, respiree et encadree de
+ * deux filets, elle marque une pause dans le recit.
  *
- * PAS D'ITALIQUE NI DE GUILLEMETS : ce n'est pas une citation rapportee, contre
- * `.citation` qui porte la question d'une cliente.
+ * LES GUILLEMETS SONT DESSINES EN CSS, donc absents du texte copie et du
+ * contenu lu par une synthese vocale : un guillemet ouvrant seul, annonce
+ * comme tel, n'apporte rien a l'oreille. La balise `blockquote` porte deja
+ * l'information que c'est une parole rapportee.
+ *
+ * LE GUILLEMET EST DECORATIF, DONC `--ls-accent-gold` Y EST ADMIS : il plafonne
+ * a 2,31:1 et serait interdit pour du texte, mais il ne porte ici aucun sens et
+ * sa disparition ne retirerait rien.
+ * ---------------------------------------------------------------------------
  */
-.phraseNom {
-  margin: var(--ls-space-5) auto;
-  max-width: 34rem;
-  color: var(--ls-primary);
-  font-size: 1.125rem;
-  line-height: 1.6;
+.citationNom {
+  margin: var(--ls-space-6) auto;
+  padding: var(--ls-space-4) 0;
+  max-width: 38rem;
+  border-top: 1px solid var(--ls-border);
+  border-bottom: 1px solid var(--ls-border);
   text-align: center;
+}
+
+.citationNomTexte {
+  position: relative;
+  margin: 0;
+  /*
+   * L'ESPACE DOIT PASSER LA HAUTEUR DU GUILLEMET, 2rem : avec `--ls-space-4`,
+   * 16 px, le caractere retombait SUR la premiere ligne et se superposait au
+   * texte. Mesure a l'ecran le 20 septembre 2026.
+   */
+  padding-top: var(--ls-space-6);
+  color: var(--ls-primary);
+  font-family: var(--ls-police-titre);
+  font-size: clamp(1.125rem, 3vw, 1.5rem);
+  line-height: 1.5;
+  text-wrap: balance;
+}
+
+/*
+ * LE GUILLEMET FRANCAIS, `«`, et non le guillemet anglais : la page est en
+ * francais et le reste de la typographie le suit.
+ */
+.citationNomTexte::before {
+  content: "«";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--ls-accent-gold);
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.citationNomTexte p {
+  margin: 0;
+}
+
+/*
+ * LA LEGENDE RATTACHE LA PHRASE AU NOM, et c'est elle qui fait le lien que le
+ * lecteur ne ferait pas seul.
+ *
+ * `--ls-text` ET NON LE JETON ATTENUE, C31 : cette citation vit dans « Mon
+ * histoire », section peinte en SABLE depuis le 20 septembre 2026, ou
+ * `--ls-text-muted` tombe a 4,35:1, sous le seuil AA de 4,5:1. Il aurait passe
+ * sur creme, a 4,86:1, et le premier jet l'employait sur la foi de ce chiffre
+ * la : un rapport annonce a cote d'un jeton ne vaut que pour UN fond.
+ *
+ * La taille reduite suffit a distinguer la legende de la citation.
+ */
+.citationNomLegende {
+  margin: var(--ls-space-3) 0 0;
+  color: var(--ls-text);
+  font-size: 0.9375rem;
+  line-height: 1.5;
 }
 
 /*

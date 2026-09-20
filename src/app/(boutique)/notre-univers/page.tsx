@@ -162,19 +162,31 @@ export default function PageNotreUnivers() {
         {/*
          * L'ORIGINE DU NOM, choisie par l'exploitante le 20 septembre 2026.
          *
-         * UNE PHRASE ET NON UN PARAGRAPHE : c'est un detail qui attache, pas un
-         * chapitre. Un encadre dedié en ferait une legende de marque, registre
-         * que le reste de la page evite.
-         *
          * ELLE N'AFFIRME RIEN D'INVERIFIABLE, et c'est ce qui l'a fait retenir
          * parmi dix propositions : elle dit un gout, jamais une origine
          * geographique ni une anecdote fondatrice qu'il faudrait pouvoir
          * prouver.
+         *
+         * LE NOM SE DERIVE DE `NOM_BOUTIQUE` ET NE S'ECRIT PAS EN DUR, garde de
+         * `verifier-graphie-marque.sh`, LS-193 : deux graphies concurrentes ont
+         * deja coexiste sur ce depot, et le controle existe pour qu'un prochain
+         * changement n'en rouvre pas une troisieme.
+         *
+         * `blockquote` ET NON UN PARAGRAPHE : c'est une parole rapportee de
+         * l'exploitante, et la balise le dit au lecteur d'ecran. Les guillemets
+         * sont dessines en CSS, `::before`, donc absents du texte copie.
          */}
-        <p className={styles.phraseNom}>
-          Un bijou pour les jours calmes, un autre pour ceux qui brillent. Je
-          n&apos;ai jamais su choisir.
-        </p>
+        <figure className={styles.citationNom}>
+          <blockquote className={styles.citationNomTexte}>
+            <p>
+              Un bijou pour les jours calmes, un autre pour ceux qui brillent.
+              Je n&apos;ai jamais su choisir.
+            </p>
+          </blockquote>
+          <figcaption className={styles.citationNomLegende}>
+            C&apos;est de là que vient le nom {NOM_BOUTIQUE}.
+          </figcaption>
+        </figure>
 
         {/* INVERSE : l'image passe a gauche a partir de 768 px, l'ordre du DOM
          * restant texte puis image. */}
