@@ -1,0 +1,74 @@
+# BANC D'ESSAI JETABLE, LS-235. Ne pas fusionner.
+#
+# QUESTION POSEE : sur un job coupe par son `timeout-minutes`, quelles etapes
+# s'executent selon leur condition ?
+#
+# Le defaut mesure sur trois nocturnes dit qu'une etape en `if: failure()` ne
+# tourne PAS, et que `if: always()` ne suffit pas non plus. Ce banc l'etablit sur
+# une execution reelle plutot que sur une lecture de documentation.
+#
+# CAS 1, le job depasse son plafond : une etape sature la borne, et les quatre
+# conditions suivantes disent laquelle se prononce.
+name: Banc conditions LS-235
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  depassement:
+    name: Le job depasse son plafond
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Une etape qui sature le plafond du job
+        run: |
+          echo "Cette etape dure plus longtemps que le plafond du job."
+          sleep 300
+
+      - name: Temoin always
+        if: always()
+        run: echo "TEMOIN always() s'est execute"
+
+      - name: Temoin failure
+        if: failure()
+        run: echo "TEMOIN failure() s'est execute"
+
+      - name: Temoin cancelled
+        if: cancelled()
+        run: echo "TEMOIN cancelled() s'est execute"
+
+      - name: Temoin failure ou cancelled
+        if: failure() || cancelled()
+        run: echo "TEMOIN failure-ou-cancelled s'est execute"
+
+  borne_locale:
+    name: Une borne locale coupe l'etape, pas le job
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Une etape bornee localement qui depasse SA borne
+        timeout-minutes: 1
+        run: |
+          echo "Borne locale a 1 min, cette etape en demande 5."
+          sleep 300
+
+      - name: Temoin always
+        if: always()
+        run: echo "TEMOIN always() s'est execute"
+
+      - name: Temoin failure
+        if: failure()
+        run: echo "TEMOIN failure() s'est execute"
+
+      - name: Temoin cancelled
+        if: cancelled()
+        run: echo "TEMOIN cancelled() s'est execute"
+
+      - name: Temoin failure ou cancelled
+        if: failure() || cancelled()
+        run: echo "TEMOIN failure-ou-cancelled s'est execute"
