@@ -735,16 +735,26 @@
 
 @media (min-width: 48rem) {
   .finEntretien {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 1fr 20rem;
     gap: var(--ls-space-5);
   }
 }
 
 /*
- * BORNEE A 20rem, plus petite que les carrees du recit : cette photographie
- * illustre un geste deja decrit par trois paragraphes, elle ne porte pas
- * l'argument. L'afficher aussi grand que la boucle portee lui donnerait un poids
- * qu'elle n'a pas.
+ * ELLE S'ALIGNE SUR LA HAUTEUR DE L'ENCADRE, et c'est la seule image de la page
+ * a etre recadree.
+ *
+ * Carree et en `height: auto`, elle descendait bien plus bas que l'encadre des
+ * interdits et cassait l'alignement du bas de section. `align-self: stretch`
+ * lui donne la hauteur de sa rangee, `object-fit: cover` remplit sans deformer.
+ *
+ * `object-position: center` GARDE LE GESTE : le sujet, les deux mains et le
+ * chiffon, est au centre de l'image. Un recadrage par le haut couperait les
+ * doigts, par le bas la seconde boucle posee sur le plan de travail.
+ *
+ * LE RECADRAGE N'EST ADMIS QUE PARCE QUE CETTE IMAGE ILLUSTRE. Les autres
+ * gardent leur ratio d'origine : sur une photographie de piece, un cadrage
+ * automatique couperait le bijou que le texte decrit.
  */
 .imageEntretien {
   display: block;
@@ -752,6 +762,24 @@
   max-width: 20rem;
   height: auto;
   border-radius: var(--ls-radius-md);
+}
+
+@media (min-width: 48rem) {
+  .imageEntretien {
+    /*
+     * `max-height` ET NON `height: 100%` : etirer l'image sur sa rangee etirait
+     * l'ENCADRE en retour, `align-items: stretch` valant pour les deux colonnes,
+     * et le vide se retrouvait sous la liste des interdits. Mesure a l'ecran le
+     * 20 septembre 2026, les deux essais captures.
+     *
+     * 12rem approche la hauteur de l'encadre a cette largeur sans la lier : les
+     * deux blocs se terminent a peu pres ensemble, et une liste d'interdits qui
+     * s'allongerait un jour ne deformerait pas la photographie.
+     */
+    max-height: 12rem;
+    object-fit: cover;
+    object-position: center;
+  }
 }
 
 /*
