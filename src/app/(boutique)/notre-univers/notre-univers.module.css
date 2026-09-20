@@ -230,6 +230,7 @@
    * texte. Mesure a l'ecran le 20 septembre 2026.
    */
   padding-top: var(--ls-space-6);
+  padding-bottom: var(--ls-space-6);
   color: var(--ls-primary);
   font-family: var(--ls-police-titre);
   font-size: clamp(1.125rem, 3vw, 1.5rem);
@@ -238,18 +239,33 @@
 }
 
 /*
- * LE GUILLEMET FRANCAIS, `«`, et non le guillemet anglais : la page est en
- * francais et le reste de la typographie le suit.
+ * LES DEUX GUILLEMETS FRANCAIS, ouvrant ET fermant.
+ *
+ * Le premier jet n'en posait qu'un, en haut : une citation ouverte et jamais
+ * refermee, ce qui se voit immediatement. Ils encadrent desormais le texte,
+ * l'un au-dessus et l'autre en dessous.
+ *
+ * `«` ET `»` ET NON LES GUILLEMETS ANGLAIS : la page est en francais et le
+ * reste de la typographie le suit.
  */
-.citationNomTexte::before {
-  content: "«";
+.citationNomTexte::before,
+.citationNomTexte::after {
   position: absolute;
-  top: 0;
   left: 50%;
   transform: translateX(-50%);
   color: var(--ls-accent-gold);
   font-size: 2rem;
   line-height: 1;
+}
+
+.citationNomTexte::before {
+  content: "«";
+  top: 0;
+}
+
+.citationNomTexte::after {
+  content: "»";
+  bottom: 0;
 }
 
 .citationNomTexte p {
@@ -271,7 +287,13 @@
 .citationNomLegende {
   margin: var(--ls-space-3) 0 0;
   color: var(--ls-text);
-  font-size: 0.9375rem;
+  /*
+   * MEME POLICE QUE LA CITATION : en sans-serif, la legende se lisait comme un
+   * element d'interface pose sous une citation, et non comme sa suite. Elle
+   * s'en distingue par la taille et la couleur, ce qui suffit.
+   */
+  font-family: var(--ls-police-titre);
+  font-size: 1rem;
   line-height: 1.5;
 }
 
