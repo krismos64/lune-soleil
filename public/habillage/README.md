@@ -31,3 +31,46 @@ ratio 16/10 sont conserves ; sinon, ajuster `aspect-ratio` et les dimensions
 declarees dans `src/app/(boutique)/page.tsx`.
 
 Aucune metadonnee EXIF, ICC ni XMP dans le fichier actuel, verifie.
+
+## Les cinq visuels de `/notre-univers`, LS-25
+
+Ajoutes le 20 septembre 2026, photographies **reelles** fournies par
+l'exploitante.
+
+| Fichier | Ratio | Ou il parait |
+|---|---|---|
+| `univers-modelage.jpg` | 16/10 | en-tete de « Mon histoire », seul a porter `priority` |
+| `univers-atelier.jpg` | 16/10 | apres le paragraphe sur l'atelier d'Artix |
+| `univers-matieres.jpg` | 16/10 | ouverture de « Les matieres » |
+| `univers-porte.jpg` | 1:1 | « Des pieces uniques », donne l'echelle |
+| `univers-emballage.jpg` | 1:1 | « Ce a quoi je tiens », le soin du colis |
+
+**ELLES MONTRENT LE TRAVAIL, JAMAIS UNE OFFRE**, arbitrage de Christophe du
+20 septembre 2026. Certaines portent des pieces absentes du catalogue, un
+serpent jaune et des creoles corail : ce sont des creations reelles de
+l'exploitante, vendues sur les marches ou deja parties.
+
+La distinction est celle qui separe `/notre-univers` d'une page de vente : aucun
+prix, aucun bouton panier, aucune reference. C'est ce qui la distingue du cas
+d'`accueil-hero.jpg` ci-dessus, dont les pieces n'ont **jamais existe**.
+
+## Le retrait des metadonnees n'est PAS automatique ici
+
+**C'est le piege de ce dossier**, et il merite d'etre relu avant tout ajout. Les
+photographies de produits passent par la chaine d'ADR-007, qui retire l'EXIF :
+celles-ci n'y passent pas, elles sont versionnees a la main.
+
+Les cinq ont ete converties par `sharp` sans `keepExif()`, l'absence d'appel
+etant ce qui protege, puis **verifiees octet par octet** : aucun segment EXIF,
+GPS, XMP ni ICC, aucun APP residuel. Les sources PNG portaient toutes du XMP.
+
+```
+univers-atelier.jpg     AUCUNE metadonnee   segments APP : aucun hors JFIF
+univers-emballage.jpg   AUCUNE metadonnee   segments APP : aucun hors JFIF
+univers-matieres.jpg    AUCUNE metadonnee   segments APP : aucun hors JFIF
+univers-modelage.jpg    AUCUNE metadonnee   segments APP : aucun hors JFIF
+univers-porte.jpg       AUCUNE metadonnee   segments APP : aucun hors JFIF
+```
+
+Toute image ajoutee ici repasse par cette verification. Une photographie de
+smartphone porte par defaut la position du domicile de l'exploitante.
