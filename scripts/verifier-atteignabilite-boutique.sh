@@ -211,7 +211,6 @@ liens=$(grep -rhoE '(href|pathname)(=|: )"/[^"?#]*' "$SOURCES" 2>/dev/null \
 
 nb_liens=$(printf '%s\n' "$liens" | grep -c .)
 nb_liens_juges=0
-nb_morts_connus=0
 
 while IFS= read -r lien; do
   [ -n "$lien" ] || continue
@@ -229,33 +228,18 @@ while IFS= read -r lien; do
   esac
 
   # ---------------------------------------------------------------------------
-  # LES LIENS MORTS CONNUS ET TRACÉS, avec le ticket qui les fermera.
+  # AUCUN LIEN MORT TOLÉRÉ, ET L'EXEMPTION QUI EXISTAIT ICI A ÉTÉ RETIRÉE.
   #
-  # ILS NE SONT PAS EXCUSÉS, ILS SONT COMPTÉS. Le contrôle les annonce à chaque
-  # exécution plutôt que de les taire : un lien mort reste un lien mort, et
-  # `/notre-univers` est désigné SEPT fois, dont une depuis l'en-tête de TOUTES
-  # les pages publiques. Le journal du 3 septembre 2026 en annonçait trois.
+  # `/notre-univers` y figurait depuis LS-122 : la page n'existait pas, sept
+  # liens la désignaient, dont un depuis l'en-tête de TOUTES les pages
+  # publiques. Le contrôle les comptait et les annonçait plutôt que de les
+  # taire, en attendant LS-25.
   #
-  # LA LISTE EST FERMÉE ET LE CONTRÔLE ÉCHOUE SI ELLE GROSSIT : un lien mort
-  # neuf n'entre pas ici sans décision. C'est la différence entre une dette
-  # tracée et une exemption, motif « dette annoncée hors outil » de ce dépôt.
-  #
-  # `/notre-univers` attend LS-25 : elle porte l'histoire de la marque et les
-  # matières, que seule l'exploitante détient. Aucune ligne de code ne la
-  # débloque.
+  # LA PAGE EST LIVRÉE LE 20 SEPTEMBRE 2026, et l'exemption est tombée avec
+  # elle. La garder aurait laissé ces sept liens HORS du contrôle
+  # d'atteignabilité : une exemption qui survit à son motif ne protège plus
+  # rien, elle masque. Motif « élargir la source plutôt qu'exempter ».
   # ---------------------------------------------------------------------------
-  case "$lien" in
-    /notre-univers)
-      # LE COMPTE PORTE SUR LES OCCURRENCES, jamais sur les URL distinctes.
-      # `liens` est dédoublonné par `sort -u`, donc l'incrémenter ici aurait
-      # annoncé « 1 lien mort » là où le dépôt en porte sept. Un contrôle qui
-      # sous-estime ce qu'il trouve est pire qu'une absence de contrôle.
-      nb_morts_connus=$(grep -rcE '(href|pathname)(=|: )"/notre-univers' \
-        "$SOURCES" 2>/dev/null | awk -F: '{ total += $2 } END { print total+0 }')
-      continue
-      ;;
-  esac
-
   nb_liens_juges=$((nb_liens_juges + 1))
 
   if ! printf '%s\n' "$routes_servies" | grep -qxF "$lien"; then
@@ -275,14 +259,6 @@ echo "Liens internes jugés            : $nb_liens_juges sur $nb_liens relevés"
 # LE LIEN MORT CONNU EST ANNONCÉ, JAMAIS TU. Le compte se mesure à chaque
 # exécution : le journal du 3 septembre 2026 en annonçait trois, le contrôle en
 # a trouvé sept. Un nombre écrit à la main se périme, celui-ci non.
-if [ "$nb_morts_connus" -gt 0 ]; then
-  echo
-  echo "ATTENTION $nb_morts_connus occurrence(s) de lien vers /notre-univers,"
-  echo "          page non livrée"
-  echo "          elle attend LS-25, l'histoire de la marque et les matières"
-  echo "          que seule l'exploitante détient. Ces liens rendent 404"
-  echo "          aujourd'hui, dont un depuis l'en-tête de TOUTES les pages."
-fi
 
 # ---------------------------------------------------------------------------
 # Garde-fou : le contrôle doit avoir examiné quelque chose.
