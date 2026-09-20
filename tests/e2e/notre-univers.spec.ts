@@ -155,6 +155,27 @@ test("la page ne promet aucune absence d'allergie", async ({ page }) => {
   expect(texte).toMatch(/libère très peu de nickel/i);
 });
 
+/**
+ * LA PAGE OFFRE UNE SORTIE VERS LE CATALOGUE.
+ *
+ * Elle n'en avait aucune, relevé le 20 septembre 2026 : le lecteur arrivé au
+ * bout n'avait que le bouton précédent de son navigateur. Une page éditoriale
+ * sans sortie laisse partir qui vient d'être convaincu.
+ *
+ * LE CLIC EST JOUE, jamais une simple présence d'attribut `href` : un lien
+ * visible ne prouve pas qu'un chemin existe, motif deja paye sur ce depot.
+ */
+test("la page offre une sortie vers le catalogue", async ({ page }) => {
+  await page.goto("/notre-univers");
+
+  await page
+    .getByRole("main")
+    .getByRole("link", { name: "Découvrir les créations" })
+    .click();
+
+  await expect(page).toHaveURL(/\/catalogue/);
+});
+
 test("la page ne déborde pas horizontalement", async ({ page }) => {
   await page.goto("/notre-univers");
 
