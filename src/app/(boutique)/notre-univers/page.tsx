@@ -192,10 +192,17 @@ export default function PageNotreUnivers() {
          * restant texte puis image. */}
         <div className={`${styles.blocAlterne} ${styles.blocAlterneInverse}`}>
           <div className={styles.blocTexte}>
+            {/*
+             * LE TROISIEME ET DERNIER PASSAGE EN GRAS DE LA PAGE.
+             *
+             * Les deux autres portent les promesses commerciales, l'unicite et
+             * la photo fidele. Celui-ci porte la promesse artisanale : tout est
+             * fait par une seule personne. Un quatrieme diluerait les trois.
+             */}
             <p className={styles.texte}>
-              Aujourd&apos;hui je fais tout : je modèle, je photographie, je
-              réponds aux messages, je prépare les colis, je tiens le stand sur
-              les marchés. Mon atelier est à Artix, dans les
+              <strong>Aujourd&apos;hui je fais tout</strong> : je modèle, je
+              photographie, je réponds aux messages, je prépare les colis, je
+              tiens le stand sur les marchés. Mon atelier est à Artix, dans les
               Pyrénées-Atlantiques. C&apos;est une petite pièce qui m&apos;est
               réservée, et c&apos;est là que chaque pièce naît, du premier geste
               à l&apos;emballage.
