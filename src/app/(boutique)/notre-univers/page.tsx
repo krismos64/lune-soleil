@@ -1,0 +1,249 @@
+/**
+ * Page « Notre univers », LS-123 : histoire de la marque, matieres et entretien.
+ *
+ * TROIS LIENS Y MENAIENT ET RENDAIENT 404, verifie en production le 20 septembre
+ * 2026 : deux depuis l'accueil, `page.tsx` lignes 94 et 261, et « Notre
+ * histoire » au pied de page. Le critere 1 de LS-123 exige qu'aucun lien du pied
+ * ne soit mort.
+ *
+ * ELLE ARRIVE APRES `/aide`, ET CE N'ETAIT PAS UN CHOIX D'ORDRE. Le commentaire
+ * de la page soeur le disait : « l'ecrire reviendrait a inventer ». Ce qu'elle
+ * porte n'existait dans aucun document, seule l'exploitante le detenait. LS-25
+ * a recolte ces textes aupres d'elle le 20 septembre 2026.
+ *
+ * UNE PAGE A ANCRES ET NON TROIS PAGES, arbitrage de Christophe du 20 septembre
+ * 2026. LS-25 annonce trois pages, le prototype les reunit sous `/notre-univers`
+ * avec `#matieres` et `#entretien` : l'ecart etait trace depuis le 19 aout et
+ * n'avait jamais ete arbitre.
+ *
+ * ---------------------------------------------------------------------------
+ * CE QUE CE TEXTE N'AFFIRME PAS, ET POURQUOI CHAQUE OMISSION EST DELIBEREE.
+ *
+ * AUCUN PRENOM, AUCUNE SECONDE PERSONNE. L'exploitante exerce seule et demande
+ * que son prenom reste hors du site. Le recit est donc a la premiere personne du
+ * singulier. Toute reecriture au « nous », ou nommant une seconde creatrice,
+ * decrirait une entreprise qui n'existe pas.
+ *
+ * « HYPOALLERGENIQUE » EST ECARTE. L'acier inoxydable libere tres peu de nickel,
+ * ce qui n'est pas l'absence d'allergie : une etude relevee le 20 septembre 2026
+ * mesure encore environ 2 % de reactions sur l'acier 316L. Promettre l'absence
+ * d'allergie a qui reagirait quand meme serait une allegation trompeuse. La
+ * formulation retenue dit le fait, « libere tres peu de nickel », et sa portee,
+ * « bien tolere par la plupart des peaux sensibles ».
+ *
+ * LA NUANCE D'ACIER N'EST PAS CITEE. L'exploitante ne la connait pas, et 316L
+ * n'est donc pas ecrit : une specification technique inventee se retournerait
+ * contre elle. Si elle l'obtient de son fournisseur, elle pourra l'ajouter.
+ *
+ * « MODELE » EST EMPLOYE, ET IL NE L'ETAIT PAS. `frontend-design.md` l'interdit
+ * depuis le 3 septembre 2026, le verbe ayant ete invente par un generateur et
+ * jamais confirme. L'exploitante l'a confirme le 20 septembre 2026 : elle modele
+ * la pate elle-meme. L'interdit tombe sur cette confirmation, et la regle est
+ * mise a jour dans le meme commit.
+ *
+ * AUCUN DELAI, AUCUN PRIX, AUCUNE PROVENANCE DE MATIERE. Rien de tout cela n'a
+ * ete confirme. La liste des matieres dit de quoi sont faits les bijoux, jamais
+ * d'ou viennent les composants.
+ * ---------------------------------------------------------------------------
+ */
+import type { Metadata } from "next";
+
+import { NOM_BOUTIQUE, openGraphDePage } from "@/lib/seo";
+import styles from "./notre-univers.module.css";
+
+export const metadata: Metadata = {
+  title: "Notre univers",
+  description: `L'histoire de ${NOM_BOUTIQUE}, les matières des bijoux et les conseils pour en prendre soin. Bijoux faits main en Béarn, chaque pièce est unique.`,
+  // LS-137, page publique indexable : canonical explicite.
+  alternates: { canonical: "/notre-univers" },
+  openGraph: openGraphDePage({
+    titre: "Notre univers",
+    description:
+      "L'histoire de la marque, les matières des bijoux et les conseils pour en prendre soin.",
+    chemin: "/notre-univers",
+  }),
+};
+
+export default function PageNotreUnivers() {
+  return (
+    /* `id="contenu"` : cible du lien d'evitement, voir la page soeur. */
+    <main id="contenu" tabIndex={-1} className={styles.page}>
+      <h1 className={styles.titre}>Notre univers</h1>
+
+      <nav className={styles.sommaire} aria-label="Sections de cette page">
+        <ul className={styles.listeSommaire}>
+          <li>
+            <a href="#histoire">Mon histoire</a>
+          </li>
+          <li>
+            <a href="#matieres">Les matières</a>
+          </li>
+          <li>
+            <a href="#entretien">L&apos;entretien</a>
+          </li>
+        </ul>
+      </nav>
+
+      <section
+        id="histoire"
+        tabIndex={-1}
+        className={styles.section}
+        aria-labelledby="titre-histoire"
+      >
+        <h2 id="titre-histoire" className={styles.titreSection}>
+          Mon histoire
+        </h2>
+
+        <p className={styles.texte}>
+          J&apos;ai toujours créé des bijoux. D&apos;abord pour moi, simplement
+          parce que j&apos;aimais porter des pièces qui n&apos;existaient nulle
+          part ailleurs.
+        </p>
+
+        <p className={styles.texte}>Puis les compliments sont venus.</p>
+
+        <p className={styles.citation}>
+          Elles viennent d&apos;où, ces boucles d&apos;oreilles ?
+        </p>
+
+        <p className={styles.texte}>
+          Quand je répondais que je les avais faites moi-même, la question
+          suivante était toujours la même : est-ce que je pouvais en faire pour
+          elles.
+        </p>
+
+        <p className={styles.texte}>
+          Ça a duré des années. L&apos;idée d&apos;en faire une activité me
+          trottait dans la tête sans que je saute le pas. En 2026, je me suis
+          lancée.
+        </p>
+
+        <p className={styles.texte}>
+          Aujourd&apos;hui je fais tout : je modèle, je photographie, je réponds
+          aux messages, je prépare les colis, je tiens le stand sur les marchés.
+          Mon atelier est à Artix, dans les Pyrénées-Atlantiques. C&apos;est une
+          petite pièce qui m&apos;est réservée, et c&apos;est là que chaque pièce
+          naît, du premier geste à l&apos;emballage.
+        </p>
+
+        <h3 className={styles.titreSection}>Des pièces uniques</h3>
+
+        <p className={styles.texte}>
+          Mes idées viennent souvent d&apos;une tenue. Une couleur que je vois,
+          une matière, et l&apos;envie d&apos;un bijou qui irait avec.
+        </p>
+
+        <p className={styles.texte}>
+          <strong>Chaque pièce est unique.</strong> Certaines se ressemblent,
+          mais aucune n&apos;est identique : le modelage à la main crée toujours
+          de petites différences, et je les assume.
+        </p>
+
+        <p className={styles.texte}>
+          C&apos;est un choix, pas une limite. Ça veut dire que{" "}
+          <strong>
+            la photo que vous voyez est celle du bijou que vous recevrez
+          </strong>
+          . Pas un modèle approchant, pas une illustration : votre bijou.
+        </p>
+
+        <h3 className={styles.titreSection}>Ce à quoi je tiens</h3>
+
+        <p className={styles.texte}>
+          Une question sur une taille, une couleur, un délai ? Écrivez-moi, je
+          réponds moi-même.
+        </p>
+
+        <p className={styles.texte}>
+          Je soigne aussi les colis. Recevoir un bijou doit être un moment
+          agréable, pas juste l&apos;ouverture d&apos;un carton.
+        </p>
+      </section>
+
+      <section
+        id="matieres"
+        tabIndex={-1}
+        className={styles.section}
+        aria-labelledby="titre-matieres"
+      >
+        <h2 id="titre-matieres" className={styles.titreSection}>
+          Les matières
+        </h2>
+
+        <p className={styles.texte}>
+          Tous mes bijoux partent des mêmes matières. Ce qui change d&apos;une
+          pièce à l&apos;autre, ce sont les couleurs et les formes.
+        </p>
+
+        <ul className={styles.liste}>
+          <li>
+            <strong>La pâte polymère</strong> donne le corps du bijou. Je la
+            modèle à la main, puis elle durcit à la cuisson. C&apos;est une
+            matière légère, ce qui compte pour des boucles d&apos;oreilles
+            portées toute la journée.
+          </li>
+          <li>
+            <strong>L&apos;acier inoxydable</strong> pour tout ce qui touche la
+            peau : crochets, fermoirs, attaches, et les contours des bagues.
+            C&apos;est un choix délibéré. L&apos;acier inoxydable libère très peu
+            de nickel, ce qui le rend bien toléré par la plupart des peaux
+            sensibles.
+          </li>
+          <li>
+            <strong>Le vernis brillant</strong> protège la surface et donne sa
+            profondeur à la couleur.
+          </li>
+          <li>
+            <strong>Les paillettes</strong>, et{" "}
+            <strong>les feuilles d&apos;or</strong> sur certaines pièces, pour
+            les reflets.
+          </li>
+        </ul>
+      </section>
+
+      <section
+        id="entretien"
+        tabIndex={-1}
+        className={styles.section}
+        aria-labelledby="titre-entretien"
+      >
+        <h2 id="titre-entretien" className={styles.titreSection}>
+          L&apos;entretien
+        </h2>
+
+        <p className={styles.texte}>
+          Un bijou en pâte polymère dure des années si on prend deux ou trois
+          précautions.
+        </p>
+
+        <h3 className={styles.titreSection}>À éviter</h3>
+
+        <p className={styles.precaution}>
+          Le parfum, la laque, la crème et les produits ménagers : ils
+          ternissent les couleurs et attaquent le vernis. Mettez vos bijoux en
+          dernier, après la coiffure et le parfum. Retirez-les avant la douche,
+          la piscine et le coucher.
+        </p>
+
+        <h3 className={styles.titreSection}>Pour nettoyer</h3>
+
+        <p className={styles.texte}>
+          Un chiffon doux, à peine humide. Si besoin, une goutte de liquide
+          vaisselle dans de l&apos;eau tiède, puis séchez aussitôt.
+        </p>
+
+        <p className={styles.precaution}>
+          Jamais d&apos;alcool, d&apos;acétone ni de nettoyant pour bijoux : ces
+          produits dissolvent le vernis.
+        </p>
+
+        <h3 className={styles.titreSection}>Pour ranger</h3>
+
+        <p className={styles.texte}>
+          Dans leur pochette ou une boîte, à l&apos;abri du soleil direct. Rangés
+          à part les uns des autres, ils ne se rayent pas.
+        </p>
+      </section>
+    </main>
+  );
+}
