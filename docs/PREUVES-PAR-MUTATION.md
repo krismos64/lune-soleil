@@ -98,19 +98,29 @@ mémoire, « compter ne vérifie pas le contenu » : un nombre écrit en toutes
 lettres n'est ancré par rien, et `verifier-couverture-mutations.sh` lit des noms
 de fichiers, jamais un récit.
 
-**Sept au nocturne**, `nocturne.yml`. Leurs durées **s'additionnent à 1024 s**,
-et c'est une somme de mesures isolées, jamais un temps de step observé : la
-distinction compte, voir plus bas.
+**Sept au nocturne**, `nocturne.yml`. Leurs durées du 14 septembre
+s'additionnaient à 1024 s, somme de mesures isolées et jamais un temps de step
+observé. **Cette somme s'est révélée fausse d'un facteur deux au moins**, et elle
+a coûté trois nocturnes annulés : voir plus bas, LS-235.
 
-| Preuve | Durée mesurée | Ce qui la rend lourde |
-|---|---|---|
-| `verifier-tests-mutation.sh` | 456 s | relance toute la suite d'intégration |
-| `verifier-reintegration-stock-mutation.sh` | 415 s | zone critique, base peuplée |
-| `verifier-etats-non-nominaux-mutation.sh` | 67 s | la plus lourde des textuelles |
-| `verifier-regles-mutation.sh` | 39 s | schéma, règles et couverture des `paths` |
-| `verifier-config-claude-mutation.sh` | 31 s | cohérence de configuration |
-| `verifier-image-docker-mutation.sh` | 11 s | construit sept images, mesuré le 17 septembre 2026 |
-| `verifier-sauvegarde-mutation.sh` | 5 s | lance un conteneur PostgreSQL, que le nocturne a déjà |
+| Preuve | 14 septembre | 20 septembre | Ce qui la rend lourde |
+|---|---|---|---|
+| `verifier-tests-mutation.sh` | 456 s | à mesurer | relance toute la suite d'intégration |
+| `verifier-reintegration-stock-mutation.sh` | 415 s | **447 s** | zone critique, base peuplée |
+| `verifier-etats-non-nominaux-mutation.sh` | 67 s | **200 s** | la plus lourde des textuelles |
+| `verifier-regles-mutation.sh` | 39 s | à mesurer | schéma, règles et couverture des `paths` |
+| `verifier-config-claude-mutation.sh` | 31 s | **34 s** | cohérence de configuration |
+| `verifier-image-docker-mutation.sh` | 11 s | non remesurée | construit sept images, mesuré le 17 septembre 2026 |
+| `verifier-sauvegarde-mutation.sh` | 5 s | **5 s** | lance un conteneur PostgreSQL, que le nocturne a déjà |
+
+**LA COLONNE DU 14 SEPTEMBRE ÉTAIT FAUSSE PAR DÉFAUT**, remesuré le 20 septembre
+2026 sur ce poste, LS-235. `verifier-etats-non-nominaux` prend **trois fois** le
+temps annoncé. Deux chiffres seulement se confirment, et ce sont les deux plus
+courts.
+
+Une durée de ce tableau se **remesure** avant d'être reprise pour dimensionner
+quoi que ce soit : celles du 14 septembre ont servi à calculer un budget qui a
+annulé trois nocturnes.
 
 **La dernière n'est pas ici pour son poids, mais pour Docker.** À 11 s elle
 tiendrait sans peine dans une CI par PR ; elle y manquerait son objet, `docker
@@ -139,10 +149,63 @@ le premier code non nul, donc chacun rend son verdict et le step reste rouge dè
 qu'un échoue. `verifier-image-docker-mutation` a son propre step, donc sept
 bilans doivent paraître au rapport.
 
-Les 456 s et 415 s datent du 14 septembre et n'ont pas été réattestées depuis.
-Celle de `verifier-tests` est en outre sous-estimée, le script étant passé de
-166 à 180 cas. Le premier temps réel du step complet sera celui du nocturne du
-18 septembre.
+## Le temps réel du step est tombé, et il a annulé trois nocturnes
+
+Ce document annonçait « le premier temps réel du step complet sera celui du
+nocturne du 18 septembre ». Il est tombé les 18, 19 et 20, et voici ce qu'il dit,
+LS-235 :
+
+```
+etape coupee apres 38, 38 et 40 min SANS AVOIR FINI, les trois nuits
+```
+
+La somme de 1024 s, soit 17 minutes, **sous-estimait d'un facteur deux au
+moins**. Le coût réel du step reste inconnu à ce jour : aucune des trois nuits ne
+l'a laissé aboutir.
+
+**Le job sortait en `cancelled`, et une annulation n'est pas un échec.** L'étape
+qui ouvre l'issue d'alerte portait `if: failure()` : elle ne s'est pas exécutée,
+et les trois nuits sont passées sans un mot. `npm audit`, placé derrière, n'a pas
+tourné non plus.
+
+### Ce que LS-235 a changé
+
+| Geste | Ce qu'il règle |
+|---|---|
+| borne locale de 45 min sur le step | le dépassement **se nomme** au lieu d'annuler le job |
+| plafond du job de 45 à 75 min | le step a de quoi **aboutir**, 19 min ne suffisaient pas |
+| alerte en `failure() \|\| cancelled()` | une annulation **se voit** |
+| `npm audit` remonté juste après l'installation | plus aucune étape lourde ne peut **l'empêcher de se prononcer** |
+
+**Une borne locale seule n'aurait pas suffi**, et c'est la nuance qui compte : le
+budget mesuré ne laissait que 19 minutes à un step qui en demande plus de 40. Le
+step aurait échoué proprement chaque nuit sans jamais prouver quoi que ce soit,
+ce qui est exactement le défaut que LS-233 venait de fermer.
+
+**Le geste de LS-124 reste juste pour autant.** Il condamne de *remplacer* une
+borne locale absente par un plafond plus haut ; ici les deux sont posés ensemble,
+et chacun répond à un problème distinct.
+
+### La borne est prouvée
+
+Protocole de LS-124 critère 5, exécution 35508969905 du 20 septembre 2026, borne
+abaissée à une minute :
+
+```
+##[error]The action 'Preuves par mutation lourdes' has timed out after 1 minutes.
+
+25  failure  Preuves par mutation lourdes
+26  success  Ouvrir une issue en cas d'echec ou d'annulation
+```
+
+L'étape se nomme, le job sort en `failure` et non en `cancelled`, et l'étape
+suivante s'exécute. `npm audit` s'était prononcé dix-sept minutes plus tôt,
+`found 0 vulnerabilities`.
+
+**À resserrer dès qu'un nocturne complet aura donné un temps de step réel.** Les
+45 minutes sont posées au-dessus du plus grand temps observé sur une étape qui
+n'a jamais fini, donc au-dessus d'une borne inférieure, et non sur le double du
+pire cas nominal que ce document exige ailleurs.
 
 **UN BESOIN D'ENVIRONNEMENT SE MESURE EN EXÉCUTANT LA PREUVE**, jamais en lisant
 son texte. Un premier tri par `grep` de mots-clés rangeait `verifier-nginx`,
