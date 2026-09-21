@@ -103,15 +103,25 @@ s'additionnaient à 1024 s, somme de mesures isolées et jamais un temps de step
 observé. **Cette somme s'est révélée fausse d'un facteur deux au moins**, et elle
 a coûté trois nocturnes annulés : voir plus bas, LS-235.
 
-| Preuve | 14 septembre | 20 septembre | Ce qui la rend lourde |
-|---|---|---|---|
-| `verifier-tests-mutation.sh` | 456 s | à mesurer | relance toute la suite d'intégration |
-| `verifier-reintegration-stock-mutation.sh` | 415 s | **447 s** | zone critique, base peuplée |
-| `verifier-etats-non-nominaux-mutation.sh` | 67 s | **200 s** | la plus lourde des textuelles |
-| `verifier-regles-mutation.sh` | 39 s | à mesurer | schéma, règles et couverture des `paths` |
-| `verifier-config-claude-mutation.sh` | 31 s | **34 s** | cohérence de configuration |
-| `verifier-image-docker-mutation.sh` | 11 s | non remesurée | construit sept images, mesuré le 17 septembre 2026 |
-| `verifier-sauvegarde-mutation.sh` | 5 s | **5 s** | lance un conteneur PostgreSQL, que le nocturne a déjà |
+| Preuve | 14 septembre | 20 septembre | 21 septembre, runner | Ce qui la rend lourde |
+|---|---|---|---|---|
+| `verifier-tests-mutation.sh` | 456 s | à mesurer | **coupée à 1834 s** | relançait toute la suite d'intégration |
+| `verifier-reintegration-stock-mutation.sh` | 415 s | **447 s** | **716 s** | zone critique, base peuplée |
+| `verifier-etats-non-nominaux-mutation.sh` | 67 s | **200 s** | **144 s** | la plus lourde des textuelles |
+| `verifier-regles-mutation.sh` | 39 s | à mesurer | non atteinte | schéma, règles et couverture des `paths` |
+| `verifier-config-claude-mutation.sh` | 31 s | **34 s** | **14 s** | cohérence de configuration |
+| `verifier-image-docker-mutation.sh` | 11 s | non remesurée | hors du step | construit sept images, mesuré le 17 septembre 2026 |
+| `verifier-sauvegarde-mutation.sh` | 5 s | **5 s** | **5 s** | lance un conteneur PostgreSQL, que le nocturne a déjà |
+
+**LA TROISIÈME COLONNE EST LA PREMIÈRE MESURÉE SUR LE RUNNER**, nocturne
+35573380388 du 21 septembre 2026, et elle contredit les deux autres dans les deux
+sens : `reintegration-stock` y coûte **716 s contre 447** mesurées en local,
+quand `etats-non-nominaux` y tombe à **144 s contre 200**. Une durée locale ne
+prédit donc pas une durée de runner, ni par excès ni par défaut.
+
+Les **quatre** scripts qui ont abouti totalisent **879 s**, soit 14 min 39.
+`verifier-tests-mutation.sh` a ensuite consommé les 1834 s restantes sans finir,
+et `verifier-regles-mutation.sh` n'a jamais démarré.
 
 **LA COLONNE DU 14 SEPTEMBRE ÉTAIT FAUSSE PAR DÉFAUT**, remesuré le 20 septembre
 2026 sur ce poste, LS-235. `verifier-etats-non-nominaux` prend **trois fois** le
@@ -201,6 +211,57 @@ abaissée à une minute :
 L'étape se nomme, le job sort en `failure` et non en `cancelled`, et l'étape
 suivante s'exécute. `npm audit` s'était prononcé dix-sept minutes plus tôt,
 `found 0 vulnerabilities`.
+
+### La borne a parlé, et ce qu'elle a dit n'était pas le plafond
+
+Nocturne **35573380388**, 21 septembre 2026, premier à tourner avec la borne.
+Elle a coupé, et **c'est une réussite** : au lieu de trois nuits muettes, l'étape
+s'est nommée.
+
+```
+25  failure  Preuves par mutation lourdes
+##[error] The action 'Preuves par mutation lourdes' has timed out after 45 minutes
+```
+
+Ce qu'elle a rendu visible change le diagnostic. `verifier-tests-mutation.sh` a
+traité **un seul cas sur 180** en 30 minutes :
+
+```
+08:02:41  demarrage du script
+08:15:14  les deux suites de reference sont vertes
+08:27:24  1er cas de mutation detecte     <- 12 min pour UN cas
+08:33:15  borne atteinte
+```
+
+**Le coût était la cause, pas le dimensionnement.** Chacun des 147 cas
+d'intégration relançait la suite entière, mesurée à **419 s** pour 60 fichiers et
+947 tests le 21 septembre 2026 sur le poste de développement :
+
+```
+147 cas x 419 s  =  61 593 s  =  17 h 06
+```
+
+Aucun plafond n'absorbe dix-sept heures. Relever la borne aurait reproduit le
+défaut de LS-124, un plafond plus haut à la place d'une correction.
+
+**Le troisième argument de `cas` nommait déjà le test qui doit rougir**, donc le
+fichier qui le porte. Le script ne lance plus que celui-là, et le budget tombe à
+**2377 s mesurées**, 39 minutes en local. Facteur 26.
+
+Deux effets de bord sont apparus en construisant cette résolution, et ce sont des
+défauts réels, du motif « garde-fou jamais exercé » :
+
+- **deux motifs attendus ne désignaient aucun test** et ne pouvaient donc rendre
+  que `RATE`. La purge annonce « six tables » depuis qu'elle en couvre six, le
+  test de rétractation « 749 » depuis ADR-035 : les deux motifs étaient restés à
+  « trois » et « 499 »
+- **deux autres nomment un `it.each`**, dont le `%s` n'existe qu'en sortie et
+  jamais dans le source
+
+**Une durée locale ne prédit pas une durée de runner**, dans les deux sens :
+`reintegration-stock` coûte 716 s sur le runner contre 447 en local, quand
+`etats-non-nominaux` y tombe à 144 s contre 200. La borne se resserre donc sur
+une mesure de runner, pas sur celle de ce poste.
 
 **À resserrer dès qu'un nocturne complet aura donné un temps de step réel.** Les
 45 minutes sont posées au-dessus du plus grand temps observé sur une étape qui
