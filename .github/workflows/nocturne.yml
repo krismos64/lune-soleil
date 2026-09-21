@@ -630,6 +630,26 @@ jobs:
       # plus grand temps observe, de quoi la laisser aboutir une premiere fois et
       # livrer enfin un temps de step complet.
       #
+      # ELLE A PARLE LE 21 SEPTEMBRE, ET CE N'ETAIT PAS LE PLAFOND, LS-235.
+      #
+      # Nocturne 35573380388, premier a tourner avec cette borne. Elle a coupe,
+      # et c'est sa reussite : l'etape s'est NOMMEE au lieu d'annuler le job en
+      # silence. Ce qu'elle a rendu visible a change le diagnostic.
+      #
+      # `verifier-tests-mutation.sh` avait traite UN SEUL CAS SUR 180 en 30
+      # minutes. Chacun de ses 147 cas d'integration relancait la suite ENTIERE,
+      # 419 s pour 60 fichiers et 947 tests :
+      #
+      #   147 x 419 s = 61 593 s = 17 h 06
+      #
+      # Aucun plafond n'absorbe dix-sept heures. Relever la borne aurait refait
+      # le defaut de LS-124, un plafond plus haut a la place d'une correction.
+      # Le script cible desormais le fichier qui porte la garantie, budget
+      # mesure a 2377 s en local. La borne reste a 45 min tant qu'un nocturne
+      # complet n'a pas donne le temps de step reel sur le RUNNER, qui ne se
+      # deduit pas du local : `reintegration-stock` y coute 716 s contre 447 ici,
+      # quand `etats-non-nominaux` y tombe a 144 s contre 200.
+      #
       # A RESSERRER des ce temps connu, `docs/PREUVES-PAR-MUTATION.md` portant la
       # regle du double du pire cas nominal. Une borne large protege moins bien
       # qu'une borne juste, et celle-ci est volontairement large faute de mesure.
