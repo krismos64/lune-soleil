@@ -264,6 +264,12 @@ interrompre_mutation() {
 echecs=0
 mutations=0
 
+# INITIALISE POUR `set -u`, LS-235. Le controle prealable de verdeur appelle les
+# suites avant tout cas, donc avant que `cas` n'ait publie un motif. Vide, la
+# resolution ne trouve aucun porteur et retombe sur la suite entiere, ce qui est
+# exactement ce que ce controle doit mesurer.
+MOTIF_COURANT=""
+
 # ---------------------------------------------------------------------------
 # Controle prealable : la suite doit etre VERTE avant toute mutation.
 #
@@ -310,6 +316,12 @@ cas() {
   local nom="$1" commande="$2" motif_attendu="$3"
   mutations=$((mutations + 1))
 
+  # LE MOTIF EST PUBLIE AVANT L'APPEL, LS-235. `integration` et `unitaire` le
+  # lisent pour ne lancer que le fichier qui porte la garantie. Il est GLOBAL et
+  # non local : les fonctions sont appelees par `$commande`, hors de cette
+  # portee.
+  MOTIF_COURANT="$motif_attendu"
+
   if $commande >"$TMP/sortie.txt" 2>&1; then
     echo "  RATE  $nom -> NON detecte, le test est aveugle"
     echecs=$((echecs + 1))
@@ -354,9 +366,95 @@ cas() {
   restaurer
 }
 
-integration() { npm run test:integration; }
+# ---------------------------------------------------------------------------
+# LES SUITES SE LANCENT SUR LE FICHIER QUI PORTE LA GARANTIE, LS-235.
+#
+# MOTIF. Chacune de ces trois fonctions relancait la suite ENTIERE, et 147 des
+# 180 cas visent l'integration. Mesure du 21 septembre 2026 sur cette machine :
+#
+#   npm run test:integration                 419 s, 60 fichiers, 947 tests
+#   un seul fichier d'integration cible      1,5 s
+#
+#   147 cas x 419 s = 17 h 06 pour la seule integration
+#
+# Le nocturne 35573380388 n'a donc traite QU'UN SEUL CAS en 45 minutes avant
+# que sa borne locale ne le coupe. Aucun relevement de plafond ne rattrape un
+# facteur 287 : le cout etait la cause, pas le dimensionnement.
+#
+# CE QUI REND LE CIBLAGE SUR : le troisieme argument de `cas` nomme deja le test
+# qui doit rougir. Le fichier qui le porte se deduit donc du motif, sans table
+# a maintenir en parallele, qui se serait perimee au premier renommage.
+#
+# TOUS LES FICHIERS PORTEURS SONT RETENUS, jamais le premier. Deux tests
+# distincts peuvent porter un nom dont l'un est prefixe de l'autre, et c'est le
+# cas ici : « sert exactement un acheteur sur vingt simultanes » vit dans
+# `jalon-piece-unique`, quand `reservation` porte le meme nom suivi de « , sans
+# aucune violation ». Retenir un seul fichier lancerait le mauvais et conclurait
+# « le test est aveugle » sur un test parfaitement voyant, en accusant un
+# innocent comme l'avaient fait les trois premiers cas avant LS-70.
+#
+# LE REPLI EST LA SUITE ENTIERE, jamais un saut. Si le motif ne resout aucun
+# fichier, le cas tourne comme avant : lent, mais probant. Un ciblage qui
+# n'ignore rien en silence ne peut pas transformer un defaut en vert.
+# ---------------------------------------------------------------------------
+fichiers_porteurs() {
+  local repertoire="$1" motif="$2"
+  local trouves
+  trouves=$(grep -rlF "$motif" "$repertoire" 2>/dev/null || true)
+
+  if [ -n "$trouves" ]; then
+    printf '%s\n' "$trouves"
+    return
+  fi
+
+  # UN NOM DE `it.each` N'EXISTE PAS DANS LE SOURCE, LS-235.
+  #
+  # Vitest remplace `%s` par le libelle du jeu de donnees a l'execution : le
+  # motif attendu est juste en SORTIE et introuvable par `grep` dans le fichier.
+  # Deux cas sont dans ce cas, la garde de reauthentification et la table de ses
+  # destinations.
+  #
+  # LA PLUS LONGUE SUITE DE MOTS EST CHERCHEE, sans expression codee en dur : le
+  # motif est raccourci par la gauche, mot a mot, jusqu'a designer un fichier.
+  # Un nom parametre « refuse %s et retombe sur le defaut » finit par tomber sur
+  # « et retombe sur le defaut », qui existe litteralement dans le source.
+  #
+  # LA RECHERCHE S'ARRETE A QUATRE MOTS. En dessous, un fragment comme « sur le
+  # defaut » designerait la moitie du fichier et ne prouverait plus rien : mieux
+  # vaut retomber sur la suite entiere, lente mais juste.
+  local reste="$motif"
+  while [ "$(printf '%s' "$reste" | wc -w | tr -d ' ')" -gt 4 ]; do
+    reste="${reste#* }"
+    trouves=$(grep -rlF "$reste" "$repertoire" 2>/dev/null || true)
+    if [ -n "$trouves" ]; then
+      printf '%s\n' "$trouves"
+      return
+    fi
+  done
+}
+
+lancer_cible() {
+  local projet="$1" repertoire="$2" motif="$3"
+  local porteurs
+  porteurs=$(fichiers_porteurs "$repertoire" "$motif")
+
+  if [ -z "$porteurs" ]; then
+    # Aucun fichier ne porte ce nom de test. Le cas tourne sur la suite
+    # entiere, et le verdict RATE qui suivra dira que le motif est orphelin.
+    npm run "test:$projet"
+    return
+  fi
+
+  # shellcheck disable=SC2086
+  npx vitest run --project "$projet" $porteurs
+}
+
+integration() { lancer_cible integration tests/integration "$MOTIF_COURANT"; }
+unitaire() { lancer_cible unitaire tests/unitaire "$MOTIF_COURANT"; }
+
+# LE BOUT EN BOUT N'EST PAS CIBLE. Playwright ne partage ni le lanceur ni la
+# convention de projet de Vitest, et ses dix cas ne pesent pas dans le budget.
 e2e() { npm run test:e2e; }
-unitaire() { npm run test:unitaire; }
 
 echo "Primitive SQL de reservation, tests d'integration"
 echo
@@ -873,7 +971,7 @@ cas "un echec de purge interrompt les purges suivantes" integration \
 # fictive pour cette table, exactement l'etat que LS-94 corrige.
 mute "$PURGE_JOURNAUX" 's/  \{ table: "RateLimit", executer: purgerRateLimit \},\n//'
 cas "table retiree de la liste des purges" integration \
-  "purge les trois tables en une passe"
+  "purge les six tables en une passe"
 
 echo
 echo "Resolution de l'adresse client, LS-91"
@@ -2080,7 +2178,7 @@ cas "EXPEDITION_PROUVEE rendu obligatoire avant remboursement" integration \
 # domicile la voit, ce qui prouve que les deux tarifs devaient etre exerces.
 mute "$TRAITEMENT_RETRACTATION" 's/    fraisPortCentimes: montants\.fraisPortCentimes,/    fraisPortCentimes: Math.min(montants.fraisPortCentimes, 410),/'
 cas "frais de port plafonnes au tarif relais" integration \
-  "rembourse 499 de frais de port a domicile, sans plafonner au tarif relais"
+  "rembourse 749 de frais de port a domicile, sans plafonner au tarif relais"
 
 # Cas 146 : LA RECEPTION POSE UN STATUT, ce que LS-41 a supprime.
 #
