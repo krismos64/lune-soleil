@@ -357,10 +357,21 @@ cas() {
     echo "  OK    $nom -> detecte par le test attendu"
     printf '%s\n' "$lignes_echec" | head -3 | sed 's/^ *//' | sed 's/^/          /'
   else
+    # LA BRANCHE RATE IMPRIME TOUT, LS-235. C'est ici que le diagnostic compte,
+    # et le `head -3` l'amputait exactement au mauvais endroit : le 21 septembre
+    # 2026, le cas 12 a rendu RATE en ne montrant que trois ecrans
+    # d'administration, quand la question etait de savoir si les six tests
+    # PUBLICS portant le motif avaient rougi. `$TMP` etant efface a la
+    # restauration, la sortie brute n'etait plus consultable apres coup, et le
+    # verdict restait indiagnosticable.
+    #
+    # Motif en memoire, « une liste vide n'est pas un verdict » : une liste
+    # tronquee ne l'est pas davantage. La branche OK garde son `head -3`, la
+    # troncature y etant sans consequence.
     echo "  RATE  $nom -> echec constate, mais PAS sur le test attendu"
     echo "          attendu : $motif_attendu"
-    echo "          echecs reels :"
-    printf '%s\n' "$lignes_echec" | head -3 | sed 's/^ *//' | sed 's/^/            /'
+    echo "          echecs reels, TOUS ceux retenus par le filtre :"
+    printf '%s\n' "$lignes_echec" | sed 's/^ *//' | sed 's/^/            /'
     echecs=$((echecs + 1))
   fi
   restaurer
@@ -1617,7 +1628,21 @@ cas "filtre de statut retire du catalogue public" integration \
 # Cas 92 : LA RESERVATION IGNOREE dans le calcul de disponibilite. Le catalogue
 # annonce alors « en stock » une piece deja engagee dans un paiement en cours,
 # et deux clients se voient promettre le meme bijou.
-mute "$DEPOT_CATALOGUE" 's/sum\(greatest\(v.quantite_physique - v.quantite_reservee, 0\)\)/sum(greatest(v.quantite_physique, 0))/'
+# L'EXPRESSION VISAIT UNE FORME QUI N'EXISTE PAS, LS-235. Elle cherchait
+# `sum(greatest(...))` d'un seul tenant, quand le code etale `sum(` et
+# `greatest(` sur deux lignes avec un `CASE WHEN` entre les deux. La mutation
+# ne modifiait donc AUCUN caractere, et le garde-fou de LS-70 l'a dit :
+#
+#   ECHEC la mutation n'a modifie aucun caractere de src/repositories/catalogue.ts
+#
+# Trouve le 21 septembre 2026, au premier passage du script qui soit alle
+# jusqu'a ce cas : le nocturne mourait au cas 1 sur 180, et rien ne pouvait
+# le signaler tant que le budget n'etait pas corrige.
+#
+# LA SOUSTRACTION SEULE EST MUTEE, ce qui suffit et vaut mieux : elle est la
+# garantie, et elle apparait DEUX fois dans le fichier, la vitrine et la fiche.
+# Les deux tombent ensemble.
+mute "$DEPOT_CATALOGUE" 's/greatest\(v\.quantite_physique - v\.quantite_reservee, 0\)/greatest(v.quantite_physique, 0)/g'
 cas "reservations ignorees dans la disponibilite" integration \
   "deduit les reservations actives"
 
