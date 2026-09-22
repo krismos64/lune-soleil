@@ -32,27 +32,28 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 
 | Phase | Epic | Stories ouvertes | Ce qui reste |
 |---|---|---|---|
-| 0, cadrage | LS-1 | 2 | médiation (compte tiers) et photographies, toutes deux externes |
+| 0, cadrage | LS-1 | 1 | LS-19, la médiation : compte tiers, démarche externe. **LS-20 s'est fermée** le 20 septembre 2026, le premier article réel attestant que le lot de photographies a démarré |
 | 1, fondations | LS-2 | 0 | **close**, porte de sortie constatée le 13 août 2026 |
 | 2, catalogue et médias | LS-3 | 2 | LS-123 les pages de contenu et LS-145 la mesure de F-ADM-07 sur l'éditeur réel |
 | 3, panier et paiement | LS-4 | 0 | **close** le 11 septembre 2026. LS-86 portait le dernier critère, le récapitulatif sur les trois modes de livraison |
 | 4, factures et expédition | LS-5 | 3 | **LS-218 crée l'étiquette par API**, et son poids est un réglage depuis le 12 septembre 2026 : seul son critère 10 reste ouvert, il attend un colis réel donc LS-153. **LS-33** décide comment le site apprend qu'un colis est livré, **LS-35** porte l'e-reporting au 1er septembre 2027, **LS-222 est close** le 13 septembre 2026, les emails HTML observés sur Yahoo, Gmail et OVH, les trois en boîte de réception. **LS-98 est close** le 11 septembre 2026, les paramètres commerciaux vivent en base, ADR-043 |
 | 4bis, espace client et avis | LS-36 | 0 | **close**, et rouverte deux fois depuis : LS-221 a livré « Mes avis » puis **LS-225 la modification d'un avis par son auteur**, le 12 septembre 2026. Une phase close ne l'est que des tickets connus le jour où on la ferme |
 | 5, rétractation et conformité | LS-6 | 0 | **close**, ses huit stories terminées le 10 septembre 2026 |
-| 6, exploitation et ouverture | LS-7 | 7 | **LS-153 et LS-142 attendent l'exploitante**. LS-140 et LS-107 attendent les photographies de LS-23. Reste LS-150, la visibilité dans les moteurs de réponse. **LS-228** a livré son gabarit de titre le 13 septembre 2026, sept titres sur quatorze rendaient en police système ; son second volet, les blocs d'état des deux vues d'ensemble, attend LS-153 faute de données sur les comptes de production. **LS-229** a livré le pendant public le 14 septembre 2026 : aucun titre des pages publiques ni des écrans de connexion n'employait le jeton, C42 ne couvrant que les écrans privés. La règle vit désormais dans `globals.css`, hors d'atteinte des sorties anticipées de layout, **C43** l'énonce, et les trois portes d'entrée reçoivent le gabarit à deux panneaux du prototype. **LS-230 est close** le 14 septembre 2026 : les 44 preuves par mutation tournent désormais, 37 par PR et 7 au nocturne. Six étaient cassées et cachaient cinq trous réels, et cinq mutations traînaient dans le dépôt, dont la garde d'accès à l'administration. **LS-231 est close sans correction** le 16 septembre 2026 : un échec sur six exécutions sur `tableau-bord`, jamais observé en CI, défaut connu et accepté. **LS-232 est close** le 17 septembre 2026 : le nocturne du 17 a rendu l'étape de bout en bout verte, 2155 tests passés contre douze échecs le 15, sans qu'aucun test disparaisse ni soit ignoré. **LS-233 a reçu un second correctif** le 17 septembre, son premier ayant régressé : le filtre ancré sur `× ` et `✘ ` ne retenait plus rien sous les reporters de CI, Playwright passant à `github` et Vitest encodant la virgule en `%2C`. Le filtre lit désormais les quatre formes mesurées dans les deux modes. Le même diagnostic a montré que le step groupant six preuves sous `bash -e` en masquait quatre depuis le 14 septembre. **LS-234 est close** le 16 septembre, `robots.txt` déduit son état du catalogue. **LS-223, LS-226 et LS-227 sont closes** le 13 septembre 2026 : la clé Backblaze durcie, l'instabilité des tests et le cul-de-sac de la réauthentification. **LS-235 est en cours** le 20 septembre 2026 : le nocturne a été annulé les 18, 19 et 20 sans qu'aucune alerte ne parte, une étape sans borne locale consommant le plafond du job et l'étape d'alerte étant sautée avec les autres. Borne locale posée et prouvée, plafond porté à 75 min sur budget mesuré, `npm audit` remonté hors d'atteinte, et l'alerte déplacée dans `veilleur-nocturne.yml` : **une étape interne ne peut pas signaler le dépassement du plafond de son propre job** |
+| 6, exploitation et ouverture | LS-7 | 10 | **LS-153 et LS-142 attendent l'exploitante**. LS-140 et LS-107 attendent les photographies de LS-23. Reste LS-150, la visibilité dans les moteurs de réponse. **LS-228** a livré son gabarit de titre le 13 septembre 2026, sept titres sur quatorze rendaient en police système ; son second volet, les blocs d'état des deux vues d'ensemble, attend LS-153 faute de données sur les comptes de production. **LS-229** a livré le pendant public le 14 septembre 2026 : aucun titre des pages publiques ni des écrans de connexion n'employait le jeton, C42 ne couvrant que les écrans privés. La règle vit désormais dans `globals.css`, hors d'atteinte des sorties anticipées de layout, **C43** l'énonce, et les trois portes d'entrée reçoivent le gabarit à deux panneaux du prototype. **LS-230 est close** le 14 septembre 2026 : les 44 preuves par mutation tournent désormais, 37 par PR et 7 au nocturne. Six étaient cassées et cachaient cinq trous réels, et cinq mutations traînaient dans le dépôt, dont la garde d'accès à l'administration. **LS-231 est close sans correction** le 16 septembre 2026 : un échec sur six exécutions sur `tableau-bord`, jamais observé en CI, défaut connu et accepté. **LS-232 est close** le 17 septembre 2026 : le nocturne du 17 a rendu l'étape de bout en bout verte, 2155 tests passés contre douze échecs le 15, sans qu'aucun test disparaisse ni soit ignoré. **LS-233 a reçu un second correctif** le 17 septembre, son premier ayant régressé : le filtre ancré sur `× ` et `✘ ` ne retenait plus rien sous les reporters de CI, Playwright passant à `github` et Vitest encodant la virgule en `%2C`. Le filtre lit désormais les quatre formes mesurées dans les deux modes. Le même diagnostic a montré que le step groupant six preuves sous `bash -e` en masquait quatre depuis le 14 septembre. **LS-234 est close** le 16 septembre, `robots.txt` déduit son état du catalogue. **LS-223, LS-226 et LS-227 sont closes** le 13 septembre 2026 : la clé Backblaze durcie, l'instabilité des tests et le cul-de-sac de la réauthentification. **LS-235 est en cours** le 22 septembre 2026 : le nocturne annulé trois nuits sans alerte, borne locale posée et prouvée, plafond porté à 75 min, `npm audit` remonté hors d'atteinte, et l'alerte déplacée dans `veilleur-nocturne.yml`, **une étape interne ne pouvant pas signaler le dépassement du plafond de son propre job**. Le nocturne du 21 a été le premier à tourner avec la borne : **elle a coupé, et c'est sa réussite**, l'étape s'est nommée. Ce qu'elle a montré a déplacé le diagnostic, **le coût était la cause et non le plafond** : chacun des 147 cas d'intégration relançait la suite entière, 419 s pour 947 tests, soit 17 h 06. Le script cible désormais le fichier qui porte la garantie, 2377 s mesurées, et **cinq défauts préexistants** sont tombés au premier passage allant au-delà du cas 1. Le septième critère attend un nocturne complet au vert : le budget est prouvé, pas le passage. **LS-237** en est sorti, un faux négatif intermittent du cas 12 |
 | 7, V1 cible | LS-8 | 0 | **close** le 11 septembre 2026. LS-149 portait le dernier critère : ADR-044 **écarte l'assistant IA** du périmètre plutôt que de le reporter |
-| Contenus | LS-22 | 10 | **attend l'exploitante**, rien n'est faisable sans elle. **LS-32 est close** le 11 septembre 2026, la neutralité de genre étant désormais gardée par un contrôle. **LS-25 a livré ses textes** le 20 septembre 2026, récoltés auprès d'elle et validés par elle : `/notre-univers` est déployée, et elle a révélé que l'exploitante **exerce seule** quand tout le cadrage parlait de deux créatrices. Le ticket reste ouvert sur le visuel de hero de l'accueil, qui montre des pièces n'ayant jamais existé |
+| Contenus | LS-22 | 9 | **attend l'exploitante**, rien n'est faisable sans elle. **LS-32 est close** le 11 septembre 2026, la neutralité de genre étant désormais gardée par un contrôle. **LS-25 a livré ses textes** le 20 septembre 2026, récoltés auprès d'elle et validés par elle : `/notre-univers` est déployée, et elle a révélé que l'exploitante **exerce seule** quand tout le cadrage parlait de deux créatrices. Le ticket reste ouvert sur le visuel de hero de l'accueil, qui montre des pièces n'ayant jamais existé |
 
-**201 tickets terminés sur 226 hors epics**, les deux termes relevés dans Jira
-le **20 septembre 2026** en fin de journée, et jamais dérivés l'un de l'autre :
-25 tickets non terminés relevés séparément, et 226 − 25 retombe bien sur 201.
-**LS-235 et LS-236** sont les tickets ajoutés depuis le relevé du 17, **LS-20**
-celui qui s'est fermé, le premier article réel attestant que le lot de
-photographies a démarré.
+**201 tickets terminés sur 227 hors epics**, les deux termes relevés dans Jira
+le **22 septembre 2026** au matin, et jamais dérivés l'un de l'autre :
+26 tickets non terminés relevés séparément, et 227 − 26 retombe bien sur 201.
+**LS-237** est le ticket ajouté depuis le relevé du 20, un faux négatif
+intermittent de la preuve par mutation trouvé pendant LS-235. Le numérateur n'a
+donc pas bougé : la session du 21 au 22 a fusionné six commits sans fermer
+aucun ticket.
 
 **Le dénominateur a gagné trois tickets le 16 septembre**, LS-232 à LS-234 : les
 anomalies trouvées ne sont plus corrigées au fil de l'eau mais ticketées, ce que
-le motif « dette annoncée hors outil » a imposé. **DIX tickets sont En cours**,
+le motif « dette annoncée hors outil » a imposé. **ONZE tickets sont En cours**,
 relevés dans Jira, et **quatre dépendent encore du code** :
 
 * **LS-233** a reçu un second correctif le 17 septembre, son premier ayant régressé
@@ -60,14 +61,28 @@ relevés dans Jira, et **quatre dépendent encore du code** :
   **les nuits des 18, 19 et 20 ont été annulées**, motif de LS-235, et son
   correctif est précisément ce qui a révélé le coût réel du step.
   **LS-232 est close** le 17 septembre, le nocturne ayant rendu son étape verte
-* **LS-235 est en cours** le 20 septembre 2026 : le nocturne annulé trois nuits
-  sans alerte, six critères sur sept prouvés, le septième attendant le premier
-  nocturne complet
+* **LS-235 est en cours** le 22 septembre 2026, six critères sur sept prouvés.
+  Le nocturne du 21 a été le premier à tourner avec la borne locale : **elle a
+  coupé, et c'est sa réussite**, l'étape s'est nommée au lieu d'annuler le job.
+  Ce qu'elle a rendu visible a déplacé le diagnostic, **le coût était la cause et
+  non le plafond** : chacun des 147 cas d'intégration relançait la suite entière,
+  419 s pour 947 tests, soit 17 h 06 pour un seul script. Le script cible
+  désormais le fichier qui porte la garantie, budget mesuré à 2377 s. **Cinq
+  défauts préexistants** ont été trouvés au premier passage allant au-delà du
+  cas 1, dont une mutation qui ne modifiait aucun caractère alors qu'elle garde
+  la réservation ignorée dans le calcul de disponibilité. Le septième critère
+  attend toujours un nocturne complet au vert : le budget est prouvé, pas le
+  passage
 * **LS-218** attend un colis réel, son dernier critère exigeant un achat facturé
   et donc LS-153. Son code est écrit, audité et **déployé** depuis le 13 septembre
 * **LS-228** a livré son gabarit de titre et garde son second volet, les blocs
   d'état des deux vues d'ensemble, que des comptes sans commande ni adresse ne
   permettent pas de vérifier
+
+**LS-237** est ouvert depuis le 22 septembre 2026, un faux négatif intermittent
+de la preuve par mutation : le cas 12 rend `RATE` en exécution complète et `OK`
+rejoué seul, accusant un test parfaitement voyant. La cause n'est pas expliquée,
+et le ticket le dit plutôt que d'avancer une hypothèse.
 
 Les six autres, LS-19, LS-28, LS-107, LS-123, LS-140 et LS-170, attendent
 l'exploitante ou une démarche externe. **LS-29 ne l'attend plus**, ses textes
