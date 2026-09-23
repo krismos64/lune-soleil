@@ -1179,11 +1179,11 @@ model RateLimit {
 /// tronquee : le depot est public, et une fuite de cette table ne doit pas
 /// etre une fuite de fichier client.
 model CompteurCompteVise {
-  id           String   @id @default(uuid())
+  id        String   @id @default(uuid())
   /// Empreinte SHA-256 de l'adresse normalisee, jamais l'adresse.
-  cle          String   @unique
-  compte       Int
-  derniereA    DateTime @map("derniere_a") @db.Timestamptz(6)
+  cle       String   @unique
+  compte    Int
+  derniereA DateTime @map("derniere_a") @db.Timestamptz(6)
 
   @@index([derniereA])
   @@map("compteur_compte_vise")
@@ -1477,11 +1477,11 @@ model ParametreBoutique {
 
   // Les cinq interrupteurs du prototype. Booléens et non une liste : une valeur
   // ajoutée à une liste d'énumération passerait les gardes en silence.
-  alerteCommandePayee   Boolean @default(true) @map("alerte_commande_payee")
-  alertePaiementAnnule  Boolean @default(true) @map("alerte_paiement_annule")
-  alerteStockFaible     Boolean @default(true) @map("alerte_stock_faible")
-  alerteMessageRecu     Boolean @default(true) @map("alerte_message_recu")
-  alerteAvisAModerer    Boolean @default(true) @map("alerte_avis_a_moderer")
+  alerteCommandePayee  Boolean @default(true) @map("alerte_commande_payee")
+  alertePaiementAnnule Boolean @default(true) @map("alerte_paiement_annule")
+  alerteStockFaible    Boolean @default(true) @map("alerte_stock_faible")
+  alerteMessageRecu    Boolean @default(true) @map("alerte_message_recu")
+  alerteAvisAModerer   Boolean @default(true) @map("alerte_avis_a_moderer")
 
   modifieA DateTime @updatedAt @map("modifie_a") @db.Timestamptz(3)
 
@@ -1519,12 +1519,18 @@ model Message {
   sujet String
   corps String
 
-  statut  StatutMessage @default(NOUVEAU)
+  statut   StatutMessage @default(NOUVEAU)
   // Horodatage du passage a LU, qui distingue « pas encore ouvert » de « ouvert
   // et laisse de cote ». Sans lui, revenir a NOUVEAU effacerait l'information.
-  luA     DateTime?     @map("lu_a") @db.Timestamptz(3)
-  traiteA DateTime?     @map("traite_a") @db.Timestamptz(3)
-  creeA   DateTime      @default(now()) @map("cree_a") @db.Timestamptz(3)
+  luA      DateTime?     @map("lu_a") @db.Timestamptz(3)
+  traiteA  DateTime?     @map("traite_a") @db.Timestamptz(3)
+  // LS-243. Un message archive sort de la liste par defaut, des comptes et de
+  // la pastille, SANS etre efface : rien ne se supprime en base de production,
+  // arbitrage LS-246. Independant du statut, un message traite pouvant etre
+  // archive ou non. La purge de retention a trois ans reste le seul chemin
+  // d'effacement, archive ou pas.
+  archiveA DateTime?     @map("archive_a") @db.Timestamptz(3)
+  creeA    DateTime      @default(now()) @map("cree_a") @db.Timestamptz(3)
 
   // La liste d'administration lit par ce chemin, les nouveaux d'abord.
   @@index([statut, creeA], map: "message_statut_cree_a")

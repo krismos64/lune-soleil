@@ -79,9 +79,15 @@ export async function listerMessagesEnBase(
    * ceux que le plafond de cent cachait.
    */
   statut?: StatutMessage,
+  /** LS-243 : `true` lit les SEULS archives, `false` les seuls non archives. */
+  archives = false,
 ): Promise<MessageEnListe[]> {
   return client.message.findMany({
-    ...(statut === undefined ? {} : { where: { statut } }),
+    where: {
+      ...(statut === undefined ? {} : { statut }),
+      // LS-243 : les archives ne se lisent que sur demande explicite.
+      archiveA: archives ? { not: null } : null,
+    },
     orderBy: { creeA: "desc" },
     take: limite,
     select: {
@@ -120,6 +126,7 @@ export async function listerMessagesEnBase(
 export async function compterMessagesEnBase(client: ClientBase): Promise<{
   total: number;
   nouveaux: number;
+  archives: number;
 }> {
   /*
    * ------------------------------------------------------------------
@@ -142,9 +149,17 @@ export async function compterMessagesEnBase(client: ClientBase): Promise<{
    * viennent du meme instant sans qu'aucun groupe ne soit materialise.
    * ------------------------------------------------------------------
    */
-  const [ligne] = await client.$queryRaw<{ total: bigint; nouveaux: bigint }[]>`
-    SELECT count(*) AS total,
-           count(*) FILTER (WHERE statut = 'NOUVEAU') AS nouveaux
+  /*
+   * LS-243 : `total` ET `nouveaux` NE PORTENT QUE SUR LES NON ARCHIVES, la
+   * pile a traiter. `archives` dit ce que la vue par defaut masque.
+   */
+  const [ligne] = await client.$queryRaw<
+    { total: bigint; nouveaux: bigint; archives: bigint }[]
+  >`
+    SELECT count(*) FILTER (WHERE archive_a IS NULL) AS total,
+           count(*) FILTER (WHERE statut = 'NOUVEAU' AND archive_a IS NULL)
+             AS nouveaux,
+           count(*) FILTER (WHERE archive_a IS NOT NULL) AS archives
     FROM message
   `;
 
@@ -156,6 +171,7 @@ export async function compterMessagesEnBase(client: ClientBase): Promise<{
   return {
     total: Number(ligne?.total ?? 0),
     nouveaux: Number(ligne?.nouveaux ?? 0),
+    archives: Number(ligne?.archives ?? 0),
   };
 }
 
@@ -214,4 +230,36 @@ export async function changerStatutEnBase(
       traiteA: statut === "TRAITE" ? maintenant : null,
     },
   });
+}
+
+/**
+ * Archive ou desarchive une selection de messages, LS-243.
+ *
+ * `updateMany` FILTRE PAR IDENTIFIANT ET PAR ETAT : archiver ne touche que les
+ * non archives, ce qui conserve la date du PREMIER archivage sur un double
+ * envoi, et desarchiver que les archives. Le nombre rendu est celui des lignes
+ * reellement changees, jamais celui des identifiants recus.
+ *
+ * AUCUN `delete` ICI, arbitrage LS-246 : la purge de retention reste le seul
+ * chemin d'effacement d'un message.
+ */
+export async function archiverEnBase(
+  client: ClientBase,
+  parametres: {
+    messageIds: readonly string[];
+    archiver: boolean;
+    maintenant: Date;
+  },
+): Promise<number> {
+  const { messageIds, archiver, maintenant } = parametres;
+
+  const { count } = await client.message.updateMany({
+    where: {
+      id: { in: [...messageIds] },
+      archiveA: archiver ? null : { not: null },
+    },
+    data: { archiveA: archiver ? maintenant : null },
+  });
+
+  return count;
 }

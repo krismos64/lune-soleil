@@ -467,6 +467,20 @@ export const schemaNumeroPage = z
   .transform(Number);
 
 /**
+ * Selection de messages a archiver ou desarchiver, LS-243.
+ *
+ * LA BORNE HAUTE EST CELLE DE LA LISTE AFFICHEE, cent messages : une selection
+ * ne peut pas porter plus que ce que l'ecran montre, et une requete forgee de
+ * dix mille identifiants ne traverse pas la pile. Les doublons sont retires,
+ * un double envoi du meme identifiant ne comptant qu'une fois.
+ */
+export const schemaSelectionMessages = z
+  .array(schemaIdentifiant)
+  .min(1, "Aucun message sélectionné.")
+  .max(100, "Une sélection porte au plus 100 messages.")
+  .transform((identifiants) => [...new Set(identifiants)]);
+
+/**
  * Message de contact, LS-97. Entree PUBLIQUE, donc non fiable par definition.
  *
  * LE CORPS EST BORNE A 4000 CARACTERES, invariant 7. Sans borne, un envoi

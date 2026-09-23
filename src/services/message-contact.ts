@@ -29,10 +29,12 @@ import {
   EntreeInvalideError,
   schemaIdentifiant,
   schemaSaisieMessage,
+  schemaSelectionMessages,
   valider,
 } from "@/lib/validation";
 import { incrementerCompteur } from "@/repositories/limitation";
 import {
+  archiverEnBase,
   changerStatutEnBase,
   creerMessage,
   compterMessagesEnBase,
@@ -383,6 +385,8 @@ export type ListeMessages = {
   total: number;
   /** Les non-lus, comptes de meme sur l'ensemble. */
   nouveaux: number;
+  /** LS-243 : les archives, que la vue par defaut masque. */
+  archives: number;
 };
 
 /**
@@ -411,9 +415,11 @@ export type ListeMessages = {
 export async function listerMessages(
   client: typeof prisma = prisma,
   statut?: StatutMessage,
+  /** LS-243 : `true` lit les seuls archives. */
+  archives = false,
 ): Promise<ListeMessages> {
   const [lus, comptes] = await Promise.all([
-    listerMessagesEnBase(client, LIMITE_LISTE + 1, statut),
+    listerMessagesEnBase(client, LIMITE_LISTE + 1, statut, archives),
     compterMessagesEnBase(client),
   ]);
 
@@ -422,7 +428,43 @@ export async function listerMessages(
     tronquee: lus.length > LIMITE_LISTE,
     total: comptes.total,
     nouveaux: comptes.nouveaux,
+    archives: comptes.archives,
   };
+}
+
+/**
+ * Archive ou desarchive une selection de messages, LS-243.
+ *
+ * RELEVE PAR L'EXPLOITANTE EN RECETTE : elle voulait supprimer ses messages,
+ * par selection ou tous d'un coup. Arbitrage de Christophe du 23 septembre
+ * 2026 : ils s'ARCHIVENT. Rien ne s'efface, et la reserve juridique qui pesait
+ * sur la suppression tombe avec elle : un message peut porter une declaration
+ * de retractation, dont la preuve reste en base.
+ *
+ * L'AUTORISATION N'EST PAS FAITE ICI, invariant 2 : l'action appelle
+ * `exigerRole` avant. Les identifiants viennent d'un formulaire, donc d'une
+ * entree non fiable, et ne designent que des messages : aucun n'appartient a
+ * un client, l'administratrice les voit tous.
+ *
+ * REND LE NOMBRE DE MESSAGES REELLEMENT CHANGES, pas celui des identifiants
+ * recus : un message deja archive ou inconnu n'est pas compte.
+ */
+export async function archiverMessages({
+  messageIds,
+  archiver,
+  client = prisma,
+}: {
+  messageIds: unknown;
+  archiver: boolean;
+  client?: typeof prisma;
+}): Promise<number> {
+  const identifiants = valider(schemaSelectionMessages, messageIds);
+
+  return archiverEnBase(client, {
+    messageIds: identifiants,
+    archiver,
+    maintenant: new Date(),
+  });
 }
 
 /** Le detail d'un message, corps compris. */

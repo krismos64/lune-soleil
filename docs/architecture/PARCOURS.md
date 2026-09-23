@@ -1104,6 +1104,7 @@ quasi-totalité des visiteurs.
 | 6 | Envoi de la notification | tâche planifiée existante, `JournalEmail` écrit | l'exploitante reçoit l'alerte |
 | 7 | Lecture | `statut` à `LU`, `luA` horodaté **une seule fois** | le message s'ouvre dans l'administration |
 | 8 | Traitement | `statut` à `TRAITE`, `traiteA` horodaté, `luA` conservé | le message quitte la file des nouveaux |
+| 9 | Archivage, facultatif, LS-243 | `archiveA` horodaté, statut inchangé, **rien n'est effacé** | le message quitte la liste par défaut et la pastille, le filtre « Archivés » le retrouve |
 
 **Les étapes 4 et 5 sont deux transactions distinctes**, et c'est tout l'objet de
 ce parcours. Les fondre ferait perdre le message quand l'outbox est

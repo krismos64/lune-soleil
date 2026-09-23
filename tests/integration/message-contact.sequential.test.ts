@@ -686,3 +686,125 @@ describe("listerMessages au-dela du plafond", () => {
     expect(liste.messages).toHaveLength(3);
   });
 });
+
+/*
+ * LS-243 : l'exploitante voulait supprimer ses messages, ils s'ARCHIVENT.
+ * Arbitrage de Christophe du 23 septembre 2026, rien ne s'efface en base de
+ * production. Chaque cas verifie donc aussi que les lignes existent toujours.
+ */
+describe("archiverMessages, LS-243", () => {
+  async function poser(sujet: string, statut = "NOUVEAU"): Promise<string> {
+    const { rows } = await client.query<{ id: string }>(
+      `INSERT INTO message (id, nom, email, sujet, corps, statut, lu_a, traite_a, cree_a)
+       VALUES (gen_random_uuid(), 'Camille', 'camille@exemple.fr', $1, 'Bonjour', $2::"StatutMessage",
+               CASE WHEN $2 = 'NOUVEAU' THEN NULL ELSE now() END,
+               CASE WHEN $2 = 'TRAITE' THEN now() ELSE NULL END, now())
+       RETURNING id`,
+      [sujet, statut],
+    );
+    return rows[0]!.id;
+  }
+
+  async function nombreEnBase(): Promise<number> {
+    const { rows } = await client.query<{ n: string }>(
+      "SELECT count(*) AS n FROM message",
+    );
+    return Number(rows[0]!.n);
+  }
+
+  it("archive la selection seule, et n'efface aucune ligne", async () => {
+    const premier = await poser("Premier");
+    const second = await poser("Second");
+    await poser("Troisieme");
+
+    const { archiverMessages } = await import("@/services/message-contact");
+    const nombre = await archiverMessages({
+      messageIds: [premier, second],
+      archiver: true,
+    });
+
+    expect(nombre).toBe(2);
+    expect(await nombreEnBase()).toBe(3);
+
+    const vue = await listerMessages();
+    expect(vue.messages.map((message) => message.sujet)).toEqual(["Troisieme"]);
+    expect(vue.total).toBe(1);
+    expect(vue.nouveaux).toBe(1);
+    expect(vue.archives).toBe(2);
+
+    const archives = await listerMessages(undefined, undefined, true);
+    expect(archives.messages.map((message) => message.sujet).sort()).toEqual([
+      "Premier",
+      "Second",
+    ]);
+  });
+
+  it("garde la date du premier archivage sur un second envoi", async () => {
+    const id = await poser("Double envoi");
+    const { archiverMessages } = await import("@/services/message-contact");
+
+    await archiverMessages({ messageIds: [id], archiver: true });
+    const { rows: avant } = await client.query(
+      "SELECT archive_a FROM message WHERE id = $1",
+      [id],
+    );
+
+    expect(await archiverMessages({ messageIds: [id], archiver: true })).toBe(
+      0,
+    );
+
+    const { rows: apres } = await client.query(
+      "SELECT archive_a FROM message WHERE id = $1",
+      [id],
+    );
+    expect(apres[0].archive_a).toEqual(avant[0].archive_a);
+  });
+
+  it("desarchive, et le message revient dans la liste", async () => {
+    const id = await poser("Retour", "TRAITE");
+    const { archiverMessages } = await import("@/services/message-contact");
+
+    await archiverMessages({ messageIds: [id], archiver: true });
+    expect(await archiverMessages({ messageIds: [id], archiver: false })).toBe(
+      1,
+    );
+
+    const vue = await listerMessages();
+    expect(vue.messages.map((message) => message.sujet)).toEqual(["Retour"]);
+    // Le statut n'a pas bouge : archiver est independant du traitement.
+    expect(vue.messages[0]?.statut).toBe("TRAITE");
+  });
+
+  /*
+   * LA PASTILLE DE LA BARRE NE COMPTE PLUS UN NON-LU ARCHIVE. Sans ce filtre,
+   * archiver ses derniers messages laissait la barre annoncer « 1 » sur un
+   * ecran vide, defaut deja paye une fois par LS-201.
+   */
+  it("retire un non-lu archive de la pastille de la barre", async () => {
+    const id = await poser("Non lu archive");
+    const { lireComptages } = await import("@/services/tableau-bord");
+    const { archiverMessages } = await import("@/services/message-contact");
+
+    expect((await lireComptages()).messagesNonLus).toBe(1);
+    await archiverMessages({ messageIds: [id], archiver: true });
+    expect((await lireComptages()).messagesNonLus).toBe(0);
+  });
+
+  it("refuse une selection vide, difforme ou trop longue sans rien ecrire", async () => {
+    const id = await poser("Intact");
+    const { archiverMessages } = await import("@/services/message-contact");
+    const trop = Array.from({ length: 101 }, () => crypto.randomUUID());
+
+    for (const messageIds of [[], ["pas-un-uuid"], trop, "texte"]) {
+      await expect(
+        archiverMessages({ messageIds, archiver: true }),
+      ).rejects.toThrow();
+    }
+
+    const { rows } = await client.query(
+      "SELECT archive_a FROM message WHERE id = $1",
+      [id],
+    );
+    expect(rows[0].archive_a).toBeNull();
+  });
+});

@@ -1,0 +1,16 @@
+-- Archivage des messages de contact. LS-243.
+--
+-- L'EXPLOITANTE VOULAIT SUPPRIMER SES MESSAGES, en recette le 23 septembre
+-- 2026. Arbitrage de Christophe le meme jour, LS-246 puis LS-243 : rien ne se
+-- supprime en base de production, un message s'ARCHIVE. Il sort de la liste
+-- par defaut, des comptes et de la pastille de la barre, et reste en base
+-- jusqu'a la purge de retention a trois ans, seul chemin d'effacement.
+--
+-- UNE DATE ET NON UNE VALEUR DE `StatutMessage` : archiver est independant du
+-- traitement. Un message traite peut etre archive ou non, et en faire un
+-- quatrieme statut obligerait a choisir entre « traite » et « archive ».
+--
+-- MIGRATION ADDITIVE, NULLABLE ET SANS DEFAUT : PostgreSQL ajoute la colonne
+-- sans reecrire la table, et aucune ligne existante n'est touchee. Tous les
+-- messages en production restent non archives, donc visibles comme avant.
+ALTER TABLE "message" ADD COLUMN "archive_a" TIMESTAMPTZ(3);
