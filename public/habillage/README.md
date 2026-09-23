@@ -15,9 +15,12 @@ ADR-007, sont televersees par l'administration et passent par la chaine de
 traitement qui retire les metadonnees EXIF. Mettre une photo de bijou vendable
 ici la sortirait de ce circuit, et notamment du retrait de la geolocalisation.
 
-## accueil-hero.jpg, bannière de l'accueil
+## accueil-banniere.jpg, bannière de l'accueil
 
-**Remplacé le 23 septembre 2026** par une bannière fournie par Christophe,
+**Ajoutée le 23 septembre 2026**, bannière fournie par Christophe, sous un
+**nouveau nom** : l'ancien `accueil-hero.jpg` restait servi par le cache de
+l'optimiseur d'images aux largeurs déjà demandées, mesuré à 320 px. Un nom neuf
+évite toute version périmée, navigateur et cache intermédiaire compris.
 1680 x 639, soit 2,63:1. Elle remplace le visuel engendré du 19 août, qui
 montrait des bijoux jamais existés.
 
@@ -42,7 +45,7 @@ l'exploitante.
 |---|---|---|
 | `univers-modelage.jpg` | 16/10 | en-tete de « Mon histoire », seul a porter `priority` |
 | `univers-atelier.jpg` | 16/10 | apres le paragraphe sur l'atelier d'Artix |
-| `univers-matieres.jpg` | 16/10 | ouverture de « Les matieres », **remplacée le 23 septembre 2026** : vernis changé, métadonnées retirées |
+| `univers-matieres-vernis.jpg` | 16/10 | ouverture de « Les matieres », **remplace `univers-matieres.jpg` le 23 septembre 2026** : vernis changé, métadonnées retirées, nouveau nom pour la même raison de cache |
 | `univers-porte.jpg` | 1:1 | « Des pieces uniques », donne l'echelle |
 | `univers-emballage.jpg` | 1:1 | « Ce a quoi je tiens », le soin du colis |
 | `univers-nettoyage.jpg` | 1:1 | « L'entretien », a droite de l'encadre des interdits |
@@ -54,7 +57,7 @@ l'exploitante, vendues sur les marches ou deja parties.
 
 La distinction est celle qui separe `/notre-univers` d'une page de vente : aucun
 prix, aucun bouton panier, aucune reference. C'est ce qui la distingue du cas
-d'`accueil-hero.jpg` ci-dessus, dont les pieces n'ont **jamais existe**.
+de l'ancien `accueil-hero.jpg`, retiré le 23 septembre 2026, dont les pieces n'avaient **jamais existe**.
 
 ## Le retrait des metadonnees n'est PAS automatique ici
 
@@ -69,7 +72,7 @@ GPS, XMP ni ICC, aucun APP residuel. Les sources PNG portaient toutes du XMP.
 ```
 univers-atelier.jpg     AUCUNE metadonnee   segments APP : aucun hors JFIF
 univers-emballage.jpg   AUCUNE metadonnee   segments APP : aucun hors JFIF
-univers-matieres.jpg    AUCUNE metadonnee   segments APP : aucun hors JFIF
+univers-matieres-vernis.jpg AUCUNE metadonnee   segments APP : aucun hors JFIF
 univers-modelage.jpg    AUCUNE metadonnee   segments APP : aucun hors JFIF
 univers-nettoyage.jpg   AUCUNE metadonnee   segments APP : aucun hors JFIF
 univers-porte.jpg       AUCUNE metadonnee   segments APP : aucun hors JFIF
