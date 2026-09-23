@@ -375,6 +375,11 @@ test("la photo s'agrandit au clavier et se referme en rendant le focus", async (
   const reponse = await page.request.get(source ?? "");
   expect(reponse.status()).toBe(200);
 
+  // Le zoom dans la fenetre, pour le telephone : un bouton a bascule.
+  const zoomer = fenetre.getByRole("button", { name: "Zoomer" });
+  await zoomer.click();
+  await expect(zoomer).toHaveAttribute("aria-pressed", "true");
+
   await page.keyboard.press("Escape");
   await expect(fenetre).toBeHidden();
   await expect(agrandir).toBeFocused();

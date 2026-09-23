@@ -40,6 +40,8 @@ export function Galerie({
    */
   const [survol, setSurvol] = useState<{ x: number; y: number } | null>(null);
   const agrandie = useRef<HTMLDialogElement>(null);
+  const boutonAgrandir = useRef<HTMLButtonElement>(null);
+  const [zoomee, setZoomee] = useState(false);
 
   const affichee = photos[indexAffiche] ?? photos[0];
 
@@ -69,6 +71,7 @@ export function Galerie({
        * dans le CSS : un calque qui agrandit la zone sous le pointeur.
        */}
       <button
+        ref={boutonAgrandir}
         type="button"
         className={styles.boutonAgrandir}
         aria-label={
@@ -130,6 +133,15 @@ export function Galerie({
         className={styles.agrandie}
         aria-label={`Photo agrandie de ${nomProduit}`}
         /*
+         * LE FOCUS EST RENDU EXPLICITEMENT AU BOUTON : Safari ne donne pas le
+         * focus a un bouton clique, et le `<dialog>` le rendrait alors a
+         * `body`. Releve par `ls-frontend-revue`.
+         */
+        onClose={() => {
+          setZoomee(false);
+          boutonAgrandir.current?.focus();
+        }}
+        /*
          * UN CLIC SUR LE FOND FERME, comme Echap : sur un `<dialog>` modal, un
          * clic hors du contenu vise l'element lui-meme.
          */
@@ -139,13 +151,23 @@ export function Galerie({
           }
         }}
       >
-        <button
-          type="button"
-          className={styles.fermerAgrandie}
-          onClick={() => agrandie.current?.close()}
-        >
-          Fermer
-        </button>
+        <div className={styles.actionsAgrandie}>
+          <button
+            type="button"
+            className={styles.fermerAgrandie}
+            aria-pressed={zoomee}
+            onClick={() => setZoomee((etat) => !etat)}
+          >
+            Zoomer
+          </button>
+          <button
+            type="button"
+            className={styles.fermerAgrandie}
+            onClick={() => agrandie.current?.close()}
+          >
+            Fermer
+          </button>
+        </div>
         <picture>
           <source
             type="image/avif"
@@ -158,7 +180,7 @@ export function Galerie({
           <img
             src={urlMedia(affichee.chemin, "1280.jpeg")}
             alt={affichee.texteAlternatif ?? ""}
-            className={styles.imageAgrandie}
+            className={`${styles.imageAgrandie} ${zoomee ? styles.zoomee : ""}`}
             loading="lazy"
             decoding="async"
           />
