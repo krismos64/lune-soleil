@@ -80,7 +80,7 @@ export type Rubrique = {
 export const GROUPES = [
   { cle: "ensemble", titre: "Vue d'ensemble" },
   { cle: "ventes", titre: "Ventes" },
-  { cle: "clients", titre: "Clients" },
+  { cle: "clients", titre: "Relation client" },
   { cle: "catalogue", titre: "Catalogue" },
   { cle: "reglages", titre: "Réglages" },
 ] as const;
@@ -111,9 +111,10 @@ export type Comptages = {
  * une retractation precede son avoir. Les rubriques d'un meme groupe sont
  * CONTIGUES dans ce tableau, et l'ordre de tabulation est celui du tableau.
  *
- * « CATALOGUE » EST DEVENU « PRODUITS » : le groupe porte desormais le nom
- * « Catalogue », et deux libelles identiques l'un sous l'autre ne disent rien.
- * L'ecran atteint porte deja le titre « Produits ».
+ * DEUX LIBELLES IDENTIQUES L'UN SOUS L'AUTRE NE DISENT RIEN. « Catalogue » est
+ * donc devenu « Produits », titre deja porte par l'ecran atteint, et le groupe
+ * des messages, avis et clients s'appelle « Relation client » et non
+ * « Clients », defaut releve par `ls-frontend-revue`.
  *
  * LES COMPTEURS NE COMPTENT QUE CE QUI ATTEND UN GESTE. Statistiques n'en porte
  * aucun, un chiffre d'affaires n'attendant rien, LS-64. Les avis en portent un,

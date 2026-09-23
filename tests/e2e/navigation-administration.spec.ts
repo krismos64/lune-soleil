@@ -62,9 +62,9 @@ const RUBRIQUES = [
     titre: "Factures et avoirs",
     groupe: "Ventes",
   },
-  { libelle: "Messages", titre: "Messages", groupe: "Clients" },
-  { libelle: "Avis", titre: "Avis", groupe: "Clients" },
-  { libelle: "Clients", titre: "Clients", groupe: "Clients" },
+  { libelle: "Messages", titre: "Messages", groupe: "Relation client" },
+  { libelle: "Avis", titre: "Avis", groupe: "Relation client" },
+  { libelle: "Clients", titre: "Clients", groupe: "Relation client" },
   /* LS-245 : « Catalogue » devient « Produits », le groupe portant ce nom. */
   { libelle: "Produits", titre: "Produits", groupe: "Catalogue" },
   {
