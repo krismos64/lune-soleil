@@ -15,6 +15,7 @@ import Link from "next/link";
 
 import { srcSetMedia, urlVignette } from "@/integrations/medias/urls";
 import type { EtatDisponibilite, ProduitCatalogue } from "@/services/catalogue";
+import { AjoutRapide } from "./ajout-rapide";
 import styles from "./catalogue.module.css";
 
 /**
@@ -118,6 +119,19 @@ export function CarteProduit({ produit }: { produit: ProduitCatalogue }) {
           </p>
         </div>
       </Link>
+
+      {/*
+       * LS-240 : HORS DU LIEN, un bouton ne pouvant pas vivre dans un `<a>`.
+       * Absent pour un produit a plusieurs variantes, dont la fiche porte le
+       * choix de la declinaison.
+       */}
+      {produit.varianteUniqueId !== null ? (
+        <AjoutRapide
+          varianteId={produit.varianteUniqueId}
+          nomProduit={produit.nom}
+          epuise={produit.disponibilite === "EPUISE"}
+        />
+      ) : null}
     </li>
   );
 }

@@ -305,3 +305,45 @@
 .ardoiseTexteCourt {
   width: 40%;
 }
+
+/* ------------------------------------------- l'ajout depuis la carte, LS-240 */
+
+/*
+ * MEMES COULEURS QUE LE BOUTON DE LA FICHE, `.ajouter`, deja mesurees : le
+ * visiteur reconnait le geste d'un ecran a l'autre. Pleine largeur de la carte,
+ * donc une cible tactile large a 320 px sans calcul.
+ */
+.ajoutRapide {
+  padding: 0 var(--ls-space-4) var(--ls-space-4);
+}
+
+.boutonAjoutRapide {
+  width: 100%;
+  min-height: 44px;
+  padding: var(--ls-space-2) var(--ls-space-3);
+  border: none;
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.boutonAjoutRapide:hover:not(:disabled) {
+  background: var(--ls-primary-hover);
+}
+
+/* Epuise : fond neutre et texte courant, 10,83:1, comme `.ajouter`. */
+.boutonAjoutRapide:disabled {
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+  cursor: not-allowed;
+}
+
+.annonceAjoutRapide {
+  min-height: 1.25em;
+  margin: var(--ls-space-2) 0 0;
+  color: var(--ls-text-muted);
+  font-size: 0.8125rem;
+}
