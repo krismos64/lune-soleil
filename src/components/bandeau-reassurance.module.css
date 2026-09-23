@@ -1,0 +1,72 @@
+/*
+ * Bandeau de réassurance, LS-236.
+ *
+ * EMPILÉ À 320 PX, puis deux colonnes, puis trois : six éléments côte à côte
+ * seraient illisibles sous 1280 px. Les filets viennent du fond de la liste
+ * visible entre les cases, ce qui reste juste quel que soit le nombre de
+ * colonnes, là où des bordures par élément se décalent au passage à la ligne.
+ */
+.bandeau {
+  background: var(--ls-surface);
+  border-block: 1px solid var(--ls-border);
+}
+
+.liste {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1px;
+  max-width: var(--ls-content-max);
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+  background: var(--ls-border);
+}
+
+@media (min-width: 560px) {
+  .liste {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .liste {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.element {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-1);
+  padding: var(--ls-space-5) var(--ls-space-4);
+  background: var(--ls-surface);
+}
+
+.titre {
+  color: var(--ls-text);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/*
+ * `--ls-text-muted` sur `--ls-surface` blanc : 5,19:1, conforme AA. Cette
+ * paire serait à 4,35:1 sur le fond sable, où elle est donc proscrite.
+ */
+.detail {
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* Lien en ligne dans une phrase, doré profond, comme les autres liens. */
+.lien {
+  display: inline-block;
+  min-height: 24px;
+  color: var(--ls-accent-gold-deep);
+  text-decoration: underline;
+}
+
+.lien:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}

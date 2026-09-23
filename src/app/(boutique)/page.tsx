@@ -15,6 +15,8 @@ import { DonneesStructurees } from "@/components/donnees-structurees";
 import { jsonLdOrganisation, NOM_BOUTIQUE, openGraphDePage } from "@/lib/seo";
 import { lireCataloguePublic } from "@/services/catalogue";
 import { CarteProduit } from "./catalogue/carte-produit";
+import { BandeauReassurance } from "@/components/bandeau-reassurance";
+import { lireSeuilFranchise } from "@/services/parametres";
 import styles from "./page.module.css";
 
 /**
@@ -55,7 +57,10 @@ export default async function PageAccueil() {
    * references, ne justifie pas un `LIMIT`, et `frontend-design.md` interdit
    * d'introduire un plafond que le schema ne porte pas.
    */
-  const { produits, categories } = await lireCataloguePublic();
+  const [{ produits, categories }, seuilFranchise] = await Promise.all([
+    lireCataloguePublic(),
+    lireSeuilFranchise(),
+  ]);
   const misEnAvant = produits.slice(0, NOMBRE_MIS_EN_AVANT);
 
   /*
@@ -131,44 +136,13 @@ export default async function PageAccueil() {
       </section>
 
       {/*
-       * BANDEAU DE REASSURANCE, `frontend-design.md`.
-       *
-       * TROIS ELEMENTS ET NON QUATRE. Le prototype affiche « Livraison offerte
-       * des 39 EUR », la regle l'INTERDIT en dur : le seuil doit venir de la
-       * configuration centralisee qui sert aussi au calcul serveur des frais de
-       * port. Cette configuration n'existe pas encore, elle appartient a LS-27
-       * et LS-115. Ecrire 39 ici creerait exactement la divergence que la regle
-       * previent, « offerte des 39 » sur l'accueil et un autre seuil au panier,
-       * ce qui est une information precontractuelle fausse.
-       *
-       * LA RETRACTATION NE S'ANNONCE JAMAIS SEULE : la mention des frais de
-       * retour a la charge du client l'accompagne partout, sous peine du delai
-       * de douze mois de l'article L221-20.
-       *
-       * AUCUNE MENTION D'ORIGINE GEOGRAPHIQUE, non confirmee par l'exploitante.
+       * BANDEAU DE REASSURANCE, LS-236 : les six elements de
+       * `frontend-design.md`, dans un composant partage avec `/notre-univers`.
+       * Il remplace le bandeau a trois elements, qui taisait la gratuite
+       * faute de configuration et l'origine faute de confirmation : les deux
+       * sont acquises, ADR-043 et le 3 septembre 2026.
        */}
-      <section className={styles.reassurance} aria-label="Nos engagements">
-        <ul className={styles.listeReassurance}>
-          <li className={styles.elementReassurance}>
-            <span className={styles.titreReassurance}>Fait main</span>
-            <span className={styles.detailReassurance}>
-              Petites séries préparées avec soin
-            </span>
-          </li>
-          <li className={styles.elementReassurance}>
-            <span className={styles.titreReassurance}>Paiement sécurisé</span>
-            <span className={styles.detailReassurance}>
-              Par carte, via Stripe
-            </span>
-          </li>
-          <li className={styles.elementReassurance}>
-            <span className={styles.titreReassurance}>14 jours</span>
-            <span className={styles.detailReassurance}>
-              Pour changer d&apos;avis, frais de retour à votre charge
-            </span>
-          </li>
-        </ul>
-      </section>
+      <BandeauReassurance seuilFranchiseCentimes={seuilFranchise} />
 
       {/*
        * DERNIERES CREATIONS.

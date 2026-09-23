@@ -72,6 +72,8 @@ import Link from "next/link";
 
 import { NOM_BOUTIQUE, openGraphDePage } from "@/lib/seo";
 import styles from "./notre-univers.module.css";
+import { BandeauReassurance } from "@/components/bandeau-reassurance";
+import { lireSeuilFranchise } from "@/services/parametres";
 
 export const metadata: Metadata = {
   title: "Notre univers",
@@ -86,7 +88,17 @@ export const metadata: Metadata = {
   }),
 };
 
-export default function PageNotreUnivers() {
+/**
+ * LS-236 : LA PAGE LIT DESORMAIS LE SEUIL DE LIVRAISON OFFERTE, pour son
+ * bandeau de reassurance. Statique, elle serait precalculee au build, ou la
+ * base n'existe pas, ou figerait un seuil que l'exploitante change sans
+ * redeploiement, ADR-043. Meme regle que l'accueil et le catalogue.
+ */
+export const dynamic = "force-dynamic";
+
+export default async function PageNotreUnivers() {
+  const seuilFranchise = await lireSeuilFranchise();
+
   return (
     /* `id="contenu"` : cible du lien d'evitement, voir la page soeur. */
     <main id="contenu" tabIndex={-1} className={styles.page}>
@@ -514,6 +526,12 @@ export default function PageNotreUnivers() {
        * etabli, l'unicite et le fait main, sans annoncer un delai, un prix ni
        * une disponibilite que le catalogue seul connait.
        */}
+      {/*
+       * LS-236 : la page se terminait sans reassurance, alors qu'elle est lue
+       * par qui hesite encore a commander a une boutique inconnue.
+       */}
+      <BandeauReassurance seuilFranchiseCentimes={seuilFranchise} />
+
       <section className={styles.sortie} aria-labelledby="titre-sortie">
         <h2 id="titre-sortie" className={styles.titreSortie}>
           Chaque pièce n&apos;existe qu&apos;une fois
