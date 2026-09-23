@@ -81,7 +81,7 @@ test("une action groupée refuse ce qu'elle ne peut pas faire, et dit pourquoi",
   await cocher();
   await page.getByRole("button", { name: "Publier (2)" }).click();
 
-  const bilan = page.getByRole("status").filter({ hasText: "refusés" });
+  const bilan = page.getByRole("status", { name: "Bilan de la sélection" });
   await expect(bilan).toContainText("Aucun produit n'a changé.");
   await expect(bilan).toContainText(`${premier!.nom} : aucune déclinaison`);
   await expect(bilan).toContainText(`${second!.nom} : aucune déclinaison`);

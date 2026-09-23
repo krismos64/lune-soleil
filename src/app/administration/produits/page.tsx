@@ -279,6 +279,21 @@ async function ListeProduits({
         </p>
       ) : null}
 
+      {/*
+       * LS-242 : publier ou archiver plusieurs produits d'un geste. Les cases
+       * des cartes se rattachent a ce formulaire par `form`.
+       *
+       * LA BARRE RESTE MONTEE QUAND LA LISTE SE VIDE, releve par
+       * `ls-frontend-revue` : archiver les derniers produits d'une vue la
+       * demontait, avec le bilan des refus et le focus. Seul un catalogue
+       * vide de tout produit s'en passe.
+       */}
+      {produits.length > 0 ||
+      archivesMasques > 0 ||
+      filtreActif.valeur !== "TOUS" ? (
+        <SelectionProduits />
+      ) : null}
+
       {produits.length === 0 ? (
         /*
          * L'ETAT VIDE DIT POURQUOI, et il differe selon le filtre : « aucun
@@ -298,11 +313,6 @@ async function ListeProduits({
         </p>
       ) : (
         <>
-          {/*
-           * LS-242 : publier ou archiver plusieurs produits d'un geste. Les
-           * cases des cartes se rattachent a ce formulaire par `form`.
-           */}
-          <SelectionProduits />
           <ul className={styles.liste}>
             {produits.map((produit) => {
               const badge = BADGES[produit.statut];

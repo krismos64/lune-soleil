@@ -15,7 +15,7 @@
  * de chaque produit, et le nombre coche est dans le libelle des boutons.
  */
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 import type { MotifNonPubliable, RefusGroupe } from "@/services/catalogue";
 import { appliquerSelectionProduits } from "./actions-selection";
@@ -47,6 +47,7 @@ export function SelectionProduits() {
   const [enCours, demarrer] = useTransition();
   const [coches, setCoches] = useState(0);
   const [total, setTotal] = useState(0);
+  const zoneBilan = useRef<HTMLDivElement>(null);
   const [bilan, setBilan] = useState<{
     texte: string;
     refus: RefusGroupe[];
@@ -71,8 +72,15 @@ export function SelectionProduits() {
     recompter();
     document.addEventListener("change", recompter);
 
-    return () => document.removeEventListener("change", recompter);
-  });
+    // Les cases retirees par un rafraichissement n'emettent aucun `change`.
+    const observateur = new MutationObserver(recompter);
+    observateur.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      document.removeEventListener("change", recompter);
+      observateur.disconnect();
+    };
+  }, []);
 
   return (
     <form
@@ -89,6 +97,9 @@ export function SelectionProduits() {
         setBilan(null);
         demarrer(async () => {
           const resultat = await appliquerSelectionProduits(formulaire);
+
+          // Le bouton desactive a perdu le focus : il va au bilan.
+          zoneBilan.current?.focus();
 
           switch (resultat.statut) {
             case "SUCCES": {
@@ -125,6 +136,8 @@ export function SelectionProduits() {
                 refus: [],
                 erreur: true,
               });
+              // La liste doit refleter ce qui a ete traite avant la panne.
+              routeur.refresh();
               break;
           }
         });
@@ -164,7 +177,13 @@ export function SelectionProduits() {
         </button>
       </div>
 
-      <div className={styles.bilanSelection} role="status">
+      <div
+        ref={zoneBilan}
+        tabIndex={-1}
+        className={styles.bilanSelection}
+        role="status"
+        aria-label="Bilan de la sélection"
+      >
         {enCours ? (
           <p>Enregistrement en cours…</p>
         ) : bilan ? (
