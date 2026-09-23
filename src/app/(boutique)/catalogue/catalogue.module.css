@@ -359,8 +359,9 @@
 /* ------------------------------------------------ la pagination, LS-241 */
 
 /*
- * A 320 PX LES TROIS ELEMENTS PASSENT A LA LIGNE plutot que de deborder ; la
- * position reste au centre. Liens de 44 px de haut, cible tactile.
+ * A 320 PX LES TROIS ELEMENTS PASSENT A LA LIGNE plutot que de deborder : le
+ * lien suivant peut se retrouver seul sur une seconde ligne, centre. Liens de
+ * 44 px de haut, cible tactile.
  */
 .pagination {
   display: flex;

@@ -29,6 +29,7 @@ import {
 } from "@/services/catalogue";
 import { ArmatureCatalogue } from "./armature-catalogue";
 import { CarteProduit } from "./carte-produit";
+import { FocusPagination } from "./focus-pagination";
 import styles from "./catalogue.module.css";
 
 /**
@@ -298,6 +299,7 @@ async function ContenuCatalogue({
        */}
       {pagination && pagination.pages > 1 ? (
         <nav className={styles.pagination} aria-label="Pagination du catalogue">
+          <FocusPagination />
           {pagination.page > 1 ? (
             <Link
               href={cheminCatalogue({
