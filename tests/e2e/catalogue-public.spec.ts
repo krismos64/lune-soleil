@@ -528,3 +528,41 @@ test("toute URL de média servie par le catalogue rend 200", async ({
     expect(reponse.status(), `${url} doit etre servi`).toBe(200);
   }
 });
+
+/*
+ * LS-241 : LA PAGINATION NE DOIT FABRIQUER AUCUNE PAGE INDEXABLE VIDE.
+ *
+ * LE STATUT EST LU SUR LA REPONSE, pas sur le texte affiche : un `notFound()`
+ * appele apres le debut du streaming afficherait la page 404 en rendant 200,
+ * et seul le code HTTP distingue les deux. Le jeu de donnees tient en une page,
+ * donc `?page=2` est deja hors borne.
+ */
+test("une page de catalogue invalide ou hors borne rend un vrai 404", async ({
+  page,
+}) => {
+  for (const requete of [
+    "?page=2",
+    "?page=999",
+    "?page=abc",
+    "?page=0",
+    "?page=02",
+  ]) {
+    const reponse = await page.goto(`/catalogue${requete}`);
+    expect(reponse?.status(), requete).toBe(404);
+  }
+});
+
+test("la premiere page ne porte ni page=1 ni navigation inutile", async ({
+  page,
+}) => {
+  const reponse = await page.goto("/catalogue?page=1");
+  expect(reponse?.status()).toBe(200);
+
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    /\/catalogue$/,
+  );
+  await expect(
+    page.getByRole("navigation", { name: "Pagination du catalogue" }),
+  ).toHaveCount(0);
+});

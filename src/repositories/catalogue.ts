@@ -351,7 +351,15 @@ export type ProduitCatalogue = {
  */
 export async function listerProduitsPublies(
   client: ClientBase,
-  filtre: { categorieId?: string } = {},
+  filtre: {
+    categorieId?: string;
+    /**
+     * LS-241 : une page du catalogue. Absente, tout est rendu, ce qu'attendent
+     * le sitemap, `robots.ts` et l'accueil. `LIMIT` et `OFFSET` sont
+     * parametres, jamais concatenes.
+     */
+    page?: { limite: number; decalage: number };
+  } = {},
 ): Promise<ProduitCatalogue[]> {
   /*
    * LE FILTRE DE CATEGORIE EST PARAMETRE, JAMAIS CONCATENE. Il vient d'une URL
@@ -405,7 +413,12 @@ export async function listerProduitsPublies(
     ${conditionCategorie}
     GROUP BY p.id, p.nom, p.slug, p.categorie_id, c.nom, p.publie_a,
              m.chemin, m.texte_alternatif
-    ORDER BY p.publie_a DESC NULLS LAST, p.nom ASC
+    ORDER BY p.publie_a DESC NULLS LAST, p.nom ASC, p.id ASC
+    ${
+      filtre.page
+        ? Prisma.sql`LIMIT ${filtre.page.limite} OFFSET ${filtre.page.decalage}`
+        : Prisma.empty
+    }
   `;
 
   /*
@@ -419,6 +432,36 @@ export async function listerProduitsPublies(
     prixMinimumCentimes: Number(ligne.prixMinimumCentimes),
     quantiteDisponible: Number(ligne.quantiteDisponible),
   }));
+}
+
+/**
+ * Nombre de produits du catalogue public, LS-241.
+ *
+ * LA MEME POPULATION QUE `listerProduitsPublies`, et c'est tout l'enjeu : un
+ * produit `ACTIF` sans variante vivante n'y est pas, sa jointure l'ecartant.
+ * Compter tous les `ACTIF` annoncerait une page de plus qu'il n'en existe, et
+ * son lien menerait a un 404.
+ */
+export async function compterProduitsPublies(
+  client: ClientBase,
+  filtre: { categorieId?: string } = {},
+): Promise<number> {
+  const conditionCategorie = filtre.categorieId
+    ? Prisma.sql`AND p.categorie_id = ${filtre.categorieId}`
+    : Prisma.empty;
+
+  const [ligne] = await client.$queryRaw<{ total: bigint }[]>`
+    SELECT count(*) AS total
+    FROM produit p
+    WHERE p.statut = 'ACTIF'
+      AND EXISTS (
+        SELECT 1 FROM variante v
+        WHERE v.produit_id = p.id AND v.archivee_a IS NULL
+      )
+    ${conditionCategorie}
+  `;
+
+  return Number(ligne?.total ?? 0);
 }
 
 /**

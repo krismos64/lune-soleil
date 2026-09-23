@@ -355,3 +355,43 @@
   color: var(--ls-text-muted);
   font-size: 0.8125rem;
 }
+
+/* ------------------------------------------------ la pagination, LS-241 */
+
+/*
+ * A 320 PX LES TROIS ELEMENTS PASSENT A LA LIGNE plutot que de deborder ; la
+ * position reste au centre. Liens de 44 px de haut, cible tactile.
+ */
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ls-space-3);
+  align-items: center;
+  justify-content: center;
+  margin: var(--ls-space-6) 0 0;
+}
+
+.lienPagination {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--ls-space-4);
+  border: 1px solid var(--ls-border-controle);
+  border-radius: var(--ls-radius-sm);
+  color: var(--ls-text);
+  text-decoration: none;
+}
+
+.lienPagination:hover {
+  border-color: var(--ls-primary);
+}
+
+.lienPagination:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+.positionPagination {
+  color: var(--ls-text-muted);
+  font-size: 0.9375rem;
+}

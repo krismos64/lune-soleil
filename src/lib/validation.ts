@@ -454,6 +454,19 @@ export const schemaSaisieExpedition = z
   });
 
 /**
+ * Numero de page du catalogue public, lu dans l'URL, LS-241.
+ *
+ * UNE CHAINE DE CHIFFRES SANS ZERO DE TETE : `?page=02` et `?page=2` ne doivent
+ * pas etre deux URL indexables du meme contenu. Quatre chiffres au plus, bien
+ * au-dela d'un catalogue de quarante pieces, pour qu'un nombre absurde ne
+ * traverse pas la pile.
+ */
+export const schemaNumeroPage = z
+  .string()
+  .regex(/^[1-9][0-9]{0,3}$/, "Un numéro de page valide est attendu.")
+  .transform(Number);
+
+/**
  * Message de contact, LS-97. Entree PUBLIQUE, donc non fiable par definition.
  *
  * LE CORPS EST BORNE A 4000 CARACTERES, invariant 7. Sans borne, un envoi

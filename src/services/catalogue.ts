@@ -622,7 +622,41 @@ export type Catalogue = {
    * laquelle, defaut releve en revue.
    */
   categorieRetenue: { id: string; nom: string; slug: string } | null;
+  /**
+   * LS-241 : la page servie, quand l'appelant en demande une. `null` quand le
+   * catalogue est rendu entier, cas du sitemap, de `robots.ts` et de l'accueil.
+   */
+  pagination: PaginationCatalogue | null;
 };
+
+/** Nombre de pieces par page du catalogue public, LS-241. */
+export const PIECES_PAR_PAGE = 12;
+
+/**
+ * La position dans le catalogue pagine, LS-241.
+ *
+ * `total` EST LE NOMBRE DE PIECES DE TOUT LE FILTRE, pas de la page : c'est lui
+ * que la phrase de compte annonce, « 25 pièces », et non les douze affichees.
+ */
+export type PaginationCatalogue = {
+  page: number;
+  pages: number;
+  total: number;
+};
+
+/**
+ * La page demandee n'existe pas, LS-241 : au-dela de la derniere.
+ *
+ * L'ECRAN EN FAIT UN 404, et c'est delibere. Une page vide servie en 200 serait
+ * indexable, et un robot qui suit `?page=999` indexerait du vide. La premiere
+ * page d'un catalogue vide existe, elle, et porte son etat vide.
+ */
+export class PageCatalogueInexistanteError extends Error {
+  constructor() {
+    super("Page de catalogue inexistante");
+    this.name = "PageCatalogueInexistanteError";
+  }
+}
 
 /**
  * Le catalogue public, LS-104.
@@ -657,6 +691,8 @@ export type Catalogue = {
  */
 export async function lireCataloguePublic(
   slugCategorie?: string,
+  /** LS-241 : numero de page, a partir de 1, deja valide par l'appelant. */
+  page?: number,
 ): Promise<Catalogue> {
   const categories = await depot.listerCategoriesPubliees(prisma);
 
@@ -670,10 +706,36 @@ export async function lireCataloguePublic(
    * `{ categorieId?: string }`, et la distinction est utile ici, « aucun filtre »
    * et « filtre sur rien » n'ayant pas le meme sens pour la requete.
    */
-  const lignes = await depot.listerProduitsPublies(
-    prisma,
-    categorieRetenue ? { categorieId: categorieRetenue.id } : {},
-  );
+  const filtre = categorieRetenue ? { categorieId: categorieRetenue.id } : {};
+
+  /*
+   * LS-241 : LE COMPTE D'ABORD, pour refuser une page hors borne avant de lire
+   * la moindre ligne.
+   */
+  let pagination: PaginationCatalogue | null = null;
+
+  if (page !== undefined) {
+    const total = await depot.compterProduitsPublies(prisma, filtre);
+    const pages = Math.max(1, Math.ceil(total / PIECES_PAR_PAGE));
+
+    if (page > pages) {
+      throw new PageCatalogueInexistanteError();
+    }
+
+    pagination = { page, pages, total };
+  }
+
+  const lignes = await depot.listerProduitsPublies(prisma, {
+    ...filtre,
+    ...(page === undefined
+      ? {}
+      : {
+          page: {
+            limite: PIECES_PAR_PAGE,
+            decalage: (page - 1) * PIECES_PAR_PAGE,
+          },
+        }),
+  });
 
   return {
     produits: lignes.map((ligne) => ({
@@ -691,7 +753,39 @@ export async function lireCataloguePublic(
     })),
     categories,
     categorieRetenue,
+    pagination,
   };
+}
+
+/**
+ * La page demandee du catalogue existe-t-elle, LS-241.
+ *
+ * APPELEE AVANT LA FRONTIERE SUSPENSE de la page, pour qu'une page hors borne
+ * rende un VRAI 404 : une fois le streaming engage, Next.js ne peut plus
+ * changer le statut, verifie via Context7. Une lecture de comptage, sans
+ * charger une seule carte.
+ *
+ * LA CATEGORIE SE RESOUT COMME DANS `lireCataloguePublic`, slug inconnu
+ * compris : il retombe sur le catalogue entier, et les deux fonctions doivent
+ * compter la meme population.
+ */
+export async function pageCatalogueExiste(
+  slugCategorie: string | undefined,
+  page: number,
+): Promise<boolean> {
+  if (page === 1) {
+    return true;
+  }
+
+  const categorieRetenue = slugCategorie
+    ? await depot.lireCategorieParSlug(prisma, slugCategorie)
+    : null;
+  const total = await depot.compterProduitsPublies(
+    prisma,
+    categorieRetenue ? { categorieId: categorieRetenue.id } : {},
+  );
+
+  return page <= Math.ceil(total / PIECES_PAR_PAGE);
 }
 
 /** Une variante telle que la fiche publique l'expose, LS-105. */
