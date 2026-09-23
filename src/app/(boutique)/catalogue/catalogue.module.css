@@ -114,6 +114,13 @@
 }
 
 .carte {
+  /*
+   * EN COLONNE depuis LS-240 : le lien prend la hauteur libre, ce qui pose le
+   * bouton d'ajout en bas de chaque carte d'une meme rangee, quel que soit le
+   * nombre de lignes du nom.
+   */
+  display: flex;
+  flex-direction: column;
   background: var(--ls-surface);
   border: 1px solid var(--ls-border);
   border-radius: var(--ls-radius-md);
@@ -127,6 +134,7 @@
  */
 .lienCarte {
   display: block;
+  flex: 1 1 auto;
   color: inherit;
   text-decoration: none;
 }

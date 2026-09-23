@@ -171,6 +171,9 @@ export function SelecteurVariante({
         disabled={epuisee || enCours}
         aria-disabled={epuisee || enCours}
         onClick={() => {
+          // LS-240 : vider avant l'appel, sans quoi un second ajout reussi
+          // reecrit la meme phrase et le lecteur d'ecran se tait.
+          setMessage("");
           demarrer(async () => {
             const issue = await ajouterAuPanier(choisie.id, 1);
 
