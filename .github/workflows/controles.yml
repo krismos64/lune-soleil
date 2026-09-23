@@ -907,6 +907,16 @@ jobs:
       - name: 9s. Chaque ecran d'administration est navigable
         run: ./scripts/verifier-navigation-administration.sh
 
+      # CE QU'IL GARDE : aucun `echo|printf | grep -q` nouveau dans un script
+      # sous `pipefail`, LS-237. `grep -q` ferme le tube a la premiere
+      # correspondance, le producteur recoit SIGPIPE, et le pipeline echoue
+      # alors que le motif a ete trouve. Intermittent par nature : 17 faux
+      # negatifs sur 200 mesures, et le « faux positif transitoire » de
+      # `verifier-config-claude.sh` en venait. Les restes sont listes et ne
+      # peuvent que baisser, LS-250.
+      - name: 9s septies. Aucun tube vers grep -q nouveau sous pipefail
+        run: ./scripts/verifier-grep-q-pipefail.sh
+
       # LE MEME DEFAUT, COTE BOUTIQUE, LS-165. Il s'est produit deux fois sur ce
       # projet et aucun test ne l'a signale : huit ecrans d'administration en
       # LS-162, et `/compte/verification` trouve par la revue de LS-54, dont le
@@ -1367,7 +1377,8 @@ jobs:
       # ne protege rien : elle se perime en silence, et son vert ressemble a un
       # succes.
       #
-      # DUREE MESUREE : 82 s pour les vingt-deux enchainees, sur une CI qui en dure
+      # DUREE MESUREE : 82 s pour les vingt-deux enchainees avant LS-237, qui en
+      # ajoute une vingt-troisieme de quelques secondes, sur une CI qui en dure
       # environ neuf cents quand le code change. Les trois plus lourdes, 513 s a
       # elles seules, sont au nocturne : `docs/PREUVES-PAR-MUTATION.md` porte le
       # tri et le motif de chaque ecart.
@@ -1375,7 +1386,7 @@ jobs:
       # ELLES S'ARRETENT A LA PREMIERE ROUGE, `set -e` implicite d'une etape
       # `run` multiligne : la preuve qui echoue est la derniere nommee dans le
       # journal.
-      - name: 9z octies. Preuves par mutation, les vingt-deux rapides
+      - name: 9z octies. Preuves par mutation, les vingt-trois rapides
         run: |
           ./scripts/verifier-statut-base-morte-mutation.sh
           ./scripts/verifier-palette-secours-mutation.sh
@@ -1399,6 +1410,7 @@ jobs:
           ./scripts/verifier-ponctuation-chargement-mutation.sh
           ./scripts/verifier-chargement-administration-mutation.sh
           ./scripts/verifier-registre-traitements-mutation.sh
+          ./scripts/verifier-grep-q-pipefail-mutation.sh
 
       # ----------------------------------------------------------------------
 

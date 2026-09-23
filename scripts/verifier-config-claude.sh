@@ -295,7 +295,7 @@ for f in "${permanents[@]}"; do
     # ne subsiste pas hors citation, la ligne parle de la formulation au lieu de
     # l'employer.
     hors_citation=$(echo "$texte" | sed 's/«[^»]*»//g')
-    echo "$hors_citation" | grep -qiE "$motifs" || continue
+    grep -qiE "$motifs" <<<"$hors_citation" || continue
     anomalies+=("état transitoire possible, $f:$ligne : $(echo "$texte" | sed 's/^ *//' | cut -c1-70)")
   done < <(grep -niE "$motifs" "$f" 2>/dev/null || true)
 done
@@ -333,10 +333,10 @@ if [ -f CLAUDE.md ] && [ -f .claude/settings.json ] && command -v node >/dev/nul
   aplati=$(tr '\n' ' ' < CLAUDE.md | tr -s ' ')
 
   annonce=""
-  echo "$aplati" | grep -qiE "\bun hook l('|’)appuie" && annonce=1
-  echo "$aplati" | grep -qiE "\bdeux hooks" && annonce=2
-  echo "$aplati" | grep -qiE "\btrois hooks" && annonce=3
-  echo "$aplati" | grep -qiE "\bquatre hooks" && annonce=4
+  grep -qiE "\bun hook l('|’)appuie" <<<"$aplati" && annonce=1
+  grep -qiE "\bdeux hooks" <<<"$aplati" && annonce=2
+  grep -qiE "\btrois hooks" <<<"$aplati" && annonce=3
+  grep -qiE "\bquatre hooks" <<<"$aplati" && annonce=4
 
   if [ -n "$reel" ] && [ -n "$annonce" ] && [ "$reel" != "$annonce" ]; then
     anomalies+=("CLAUDE.md annonce $annonce hooks, .claude/settings.json en déclare $reel")
@@ -836,7 +836,13 @@ if [ -d .claude/rules ] && git rev-parse --git-dir >/dev/null 2>&1; then
 
       trouve=0
       for v in "${variantes[@]}"; do
-        if echo "$fichiers_suivis" | grep -qE "$(glob_vers_regex "$v")"; then
+        # HERE-STRING ET NON `echo | grep -q`, LS-237 : sous `pipefail`, le
+        # SIGPIPE d'`echo` sur une longue liste de fichiers faisait echouer un
+        # motif pourtant trouve. C'etait le « faux positif transitoire » de ce
+        # controle, « motif paths ne matche aucun fichier suivi », qui
+        # disparaissait a la relance : mesure le 23 septembre 2026 sur
+        # `src/services/tunnel.ts`, suivi et signale absent.
+        if grep -qE "$(glob_vers_regex "$v")" <<<"$fichiers_suivis"; then
           trouve=1
           break
         fi
