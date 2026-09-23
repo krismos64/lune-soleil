@@ -175,6 +175,22 @@ test("la page d'aide n'annonce la livraison offerte qu'en Point Relais et Locker
   expect(texte).not.toMatch(/tous (les )?modes/i);
 });
 
+/*
+ * LS-249 : LE MEME DEFAUT VIVAIT DANS LES CONDITIONS GENERALES, ou il engage
+ * contractuellement la boutique. La page entiere est lue : la clause peut
+ * changer de section sans que la garde se perde.
+ */
+test("les conditions générales n'annoncent la livraison offerte qu'en Point Relais et Locker", async ({
+  page,
+}) => {
+  await page.goto("/informations-legales");
+
+  const texte = (await page.getByRole("main").textContent()) ?? "";
+
+  expect(texte).toMatch(/offerte en Point Relais et Locker/);
+  expect(texte).not.toMatch(/quel que soit le mode/i);
+});
+
 test("la page d'aide ne déborde pas horizontalement", async ({ page }) => {
   await page.goto("/aide");
 
