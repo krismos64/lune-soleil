@@ -2,9 +2,13 @@
  * Bandeau de réassurance, LS-236.
  *
  * EMPILÉ À 320 PX, puis deux colonnes, puis trois : six éléments côte à côte
- * seraient illisibles sous 1280 px. Les filets viennent du fond de la liste
- * visible entre les cases, ce qui reste juste quel que soit le nombre de
- * colonnes, là où des bordures par élément se décalent au passage à la ligne.
+ * seraient illisibles sous 1280 px.
+ *
+ * LES FILETS SONT DES OMBRES À DROITE ET EN BAS DE CHAQUE CASE, rognées au bord
+ * de la liste. Une première version les tirait du fond de la liste visible
+ * entre les cases : franchise désactivée, cinq éléments, la case vide prenait
+ * la couleur du fond et formait un pavé beige, relevé par `ls-frontend-revue`.
+ * Ici une case vide reste vide.
  */
 .bandeau {
   background: var(--ls-surface);
@@ -14,12 +18,11 @@
 .liste {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1px;
   max-width: var(--ls-content-max);
   margin: 0 auto;
   padding: 0;
+  overflow: hidden;
   list-style: none;
-  background: var(--ls-border);
 }
 
 @media (min-width: 560px) {
@@ -39,7 +42,9 @@
   flex-direction: column;
   gap: var(--ls-space-1);
   padding: var(--ls-space-5) var(--ls-space-4);
-  background: var(--ls-surface);
+  box-shadow:
+    1px 0 0 var(--ls-border),
+    0 1px 0 var(--ls-border);
 }
 
 .titre {
@@ -58,10 +63,14 @@
   line-height: 1.5;
 }
 
-/* Lien en ligne dans une phrase, doré profond, comme les autres liens. */
+/*
+ * Seul dans sa ligne, donc SANS l'exception « lien en ligne » : cible tactile
+ * pleine, relevé par `ls-frontend-revue`. Doré profond, 5,0:1 sur blanc.
+ */
 .lien {
-  display: inline-block;
-  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
   color: var(--ls-accent-gold-deep);
   text-decoration: underline;
 }
