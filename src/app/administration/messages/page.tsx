@@ -344,7 +344,9 @@ async function ListeMessages({
                * LS-243 : la case se rattache au formulaire de la barre par
                * l'attribut `form`, la carte portant deja ses propres boutons.
                * Son nom accessible porte le sujet : « Sélectionner » seul
-               * serait indiscernable d'une carte a l'autre.
+               * serait indiscernable d'une carte a l'autre. `aria-label` et non
+               * un texte masque, qui doublerait le sujet dans le DOM et rendrait
+               * ambigue toute recherche du sujet par son texte.
                */}
               <label className={styles.caseSelection}>
                 <input
@@ -352,10 +354,8 @@ async function ListeMessages({
                   name="messageId"
                   value={message.id}
                   form={FORMULAIRE_SELECTION}
+                  aria-label={`Sélectionner le message « ${message.sujet} »`}
                 />
-                <span className={styles.invisible}>
-                  Sélectionner le message « {message.sujet} »
-                </span>
               </label>
 
               <h2 className={styles.sujet}>{message.sujet}</h2>

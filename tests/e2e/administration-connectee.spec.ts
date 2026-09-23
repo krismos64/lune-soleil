@@ -1074,14 +1074,14 @@ test.describe("rubrique Messages", () => {
      * barre : le test recevait alors zero et echouait sur un ecran parfaitement
      * correct. Motif « loading.tsx escamote le DOM », deja en fiche.
      *
-     * L'ASSERTION SUR LE COMPTE EXACT REMPLACE `toBeGreaterThan(0)` : quatre
-     * filtres sont attendus, et un nombre plancher aurait laissé passer une
-     * barre amputee.
+     * L'ASSERTION SUR LE COMPTE EXACT REMPLACE `toBeGreaterThan(0)` : cinq
+     * filtres sont attendus depuis « Archivés », LS-243, et un nombre plancher
+     * aurait laissé passer une barre amputee.
      */
     await expect(barre).toBeVisible();
 
     const liens = barre.getByRole("link");
-    await expect(liens).toHaveCount(4);
+    await expect(liens).toHaveCount(5);
 
     const nombre = await liens.count();
 
