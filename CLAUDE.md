@@ -97,7 +97,7 @@ interface et réponses de conversation.
   Christophe le modifie en revanche, et se trace dans un ticket
 - Décider d'une obligation juridique. Les textes de loi se vérifient aux sources
 - Lire une clé privée ou un certificat. Le `.env`, lui, est lisible
-- Modifier une commande ou une facture réelle
+- Modifier une commande ou une facture réelle, ou supprimer en production : archiver, LS-246
 - Introduire les données du prototype (noms, prix, stocks) comme données réelles
 
 ## Priorisation
