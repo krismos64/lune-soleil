@@ -37,50 +37,53 @@ test.use({ storageState: FICHIER_SESSION_ADMINISTRATION });
  * son libelle l'annonce.
  */
 const RUBRIQUES = [
-  { libelle: "Tableau de bord", titre: "Tableau de bord" },
-  { libelle: "Commandes", titre: "Commandes" },
-  { libelle: "Expéditions", titre: "Expéditions" },
-  { libelle: "Rétractations", titre: "Rétractations" },
-  { libelle: "Messages", titre: "Messages" },
   /*
-   * LES CINQ RUBRIQUES AJOUTEES LE 11 SEPTEMBRE 2026, LS-140, et l'omission
-   * meritait d'etre comprise plutot que corrigee en silence.
+   * L'ORDRE EST CELUI DE LS-245, cinq groupes arretes le 23 septembre 2026.
+   * Le test de tabulation compare cet ordre a celui du rendu : ranger une
+   * rubrique hors de son groupe le fait echouer.
    *
    * CETTE LISTE EST UNE SECONDE LISTE, ecrite a la main en face de celle du
-   * composant. `verifier-navigation-administration.sh` confronte les rubriques
-   * du COMPOSANT aux routes du depot, dans les deux sens, et reste vert : il ne
-   * lit pas ce fichier. Rien ne comparait donc les deux listes entre elles, et
-   * cinq rubriques manquaient ici pendant que le controle annonçait « chaque
-   * ecran est navigable ».
-   *
-   * C'EST LE MOTIF « NUMERATEUR ET DENOMINATEUR APPARIES », deja en fiche sur
-   * ce depot : deux comptes qui ne portent pas sur la meme population. Le
-   * controle compte 14 rubriques declarees, ce test en exerçait 9, et aucun des
-   * deux nombres n'etait faux pris isolement.
-   *
-   * LE CONTROLE GARDE DESORMAIS LES DEUX LISTES, sens ajoute le meme jour :
-   * une rubrique declaree dans le composant et absente d'ici fait echouer
-   * `verifier-navigation-administration.sh`. Ajouter une rubrique sans
-   * l'ajouter ici n'est donc plus silencieux.
+   * composant, et `verifier-navigation-administration.sh` confronte les deux
+   * depuis LS-140 : une rubrique declaree dans le composant et absente d'ici
+   * fait echouer le controle.
    */
-  { libelle: "Avis", titre: "Avis" },
-  /* LS-98 : les alertes critiques deviennent consultables. Sept services en
-   * levaient depuis LS-131 et avant, et aucun écran ne les lisait. */
-  { libelle: "Alertes", titre: "Alertes" },
-  /* LS-183 : « Nouveau produit » a quitte la barre pour devenir un bouton de
-   * l'ecran Catalogue, qui prend sa place ici. */
-  { libelle: "Catalogue", titre: "Produits" },
-  { libelle: "Factures et avoirs", titre: "Factures et avoirs" },
-  { libelle: "Clients", titre: "Clients" },
-  { libelle: "Catégories", titre: "Catégories du catalogue" },
-  { libelle: "Stocks et marchés", titre: "Stocks et marchés" },
-  { libelle: "Statistiques", titre: "Statistiques" },
-  { libelle: "Connexions", titre: "Journal des connexions" },
-  { libelle: "Vos passkeys", titre: "Vos passkeys" },
-  /* LS-98 : « Paramètres » a quitté RUBRIQUES_A_VENIR, ADR-043. Le sens 5 du
-   * contrôle, ajouté le matin même, a refusé la rubrique tant qu'aucun test ne
-   * la cliquait : premier défaut réel qu'il attrape. */
-  { libelle: "Paramètres", titre: "Paramètres" },
+  {
+    libelle: "Tableau de bord",
+    titre: "Tableau de bord",
+    groupe: "Vue d'ensemble",
+  },
+  { libelle: "Alertes", titre: "Alertes", groupe: "Vue d'ensemble" },
+  { libelle: "Statistiques", titre: "Statistiques", groupe: "Vue d'ensemble" },
+  { libelle: "Commandes", titre: "Commandes", groupe: "Ventes" },
+  { libelle: "Expéditions", titre: "Expéditions", groupe: "Ventes" },
+  { libelle: "Rétractations", titre: "Rétractations", groupe: "Ventes" },
+  {
+    libelle: "Factures et avoirs",
+    titre: "Factures et avoirs",
+    groupe: "Ventes",
+  },
+  { libelle: "Messages", titre: "Messages", groupe: "Clients" },
+  { libelle: "Avis", titre: "Avis", groupe: "Clients" },
+  { libelle: "Clients", titre: "Clients", groupe: "Clients" },
+  /* LS-245 : « Catalogue » devient « Produits », le groupe portant ce nom. */
+  { libelle: "Produits", titre: "Produits", groupe: "Catalogue" },
+  {
+    libelle: "Catégories",
+    titre: "Catégories du catalogue",
+    groupe: "Catalogue",
+  },
+  {
+    libelle: "Stocks et marchés",
+    titre: "Stocks et marchés",
+    groupe: "Catalogue",
+  },
+  { libelle: "Paramètres", titre: "Paramètres", groupe: "Réglages" },
+  { libelle: "Vos passkeys", titre: "Vos passkeys", groupe: "Réglages" },
+  {
+    libelle: "Connexions",
+    titre: "Journal des connexions",
+    groupe: "Réglages",
+  },
 ] as const;
 
 /**
@@ -295,6 +298,38 @@ test("les rubriques se parcourent au clavier dans l'ordre", async ({
   }
 
   expect(rencontres).toEqual(libelles);
+});
+
+/*
+ * LS-245 : CHAQUE GROUPE EST UNE LISTE NOMMEE PAR SON TITRE. Un titre pose a
+ * cote d'une liste sans `aria-labelledby` se verrait a l'oeil et resterait muet
+ * pour un lecteur d'ecran ; ce test lit l'arbre d'accessibilite, pas le DOM.
+ */
+test("les rubriques sont rangées dans des listes nommées par leur groupe", async ({
+  page,
+}) => {
+  await page.goto("/administration");
+  await ouvrirLaBarreSiRepliee(page);
+
+  const barre = page.getByRole("navigation", {
+    name: "Sections de l'administration",
+  });
+  const groupes = [...new Set(RUBRIQUES.map((rubrique) => rubrique.groupe))];
+
+  for (const groupe of groupes) {
+    const liste = barre.getByRole("list", { name: groupe, exact: true });
+    const attendues = RUBRIQUES.filter(
+      (rubrique) => rubrique.groupe === groupe,
+    ).map((rubrique) => rubrique.libelle);
+
+    await expect(liste.getByRole("link")).toHaveCount(attendues.length);
+
+    for (const [rang, libelle] of attendues.entries()) {
+      await expect(liste.getByRole("link").nth(rang)).toHaveText(
+        new RegExp(`^${libelle}`),
+      );
+    }
+  }
 });
 
 test("la barre ne porte aucune violation d'accessibilité", async ({ page }) => {
@@ -826,7 +861,7 @@ test("un produit s'ouvre au clic depuis le catalogue, sans saisir d'identifiant"
 
   await page
     .getByRole("navigation", { name: "Sections de l'administration" })
-    .getByRole("link", { name: /^Catalogue/ })
+    .getByRole("link", { name: /^Produits/ })
     .click();
 
   await expect(

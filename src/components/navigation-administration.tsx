@@ -59,8 +59,33 @@ import { initialesClient } from "@/lib/nom-affiche";
 export type Rubrique = {
   chemin: string;
   libelle: string;
+  groupe: CleGroupe;
   compteur?: keyof Comptages;
 };
+
+/**
+ * Les groupes de la barre, dans l'ordre d'affichage, LS-245.
+ *
+ * RELEVE PAR L'EXPLOITANTE EN RECETTE, le 23 septembre 2026 : seize entrees en
+ * une seule colonne, rangees par l'ordre de sa journee, ne se retrouvaient pas
+ * a l'oeil. Categories et Catalogue etaient separees par Factures et Clients.
+ * Christophe a delegue l'ordre et demande un regroupement par theme, arrete en
+ * commentaire de LS-245.
+ *
+ * LE TITRE D'UN GROUPE N'EST PAS UN LIEN. C'est un `<p>` qui nomme sa liste par
+ * `aria-labelledby`, le motif deja employe pour les rubriques a venir : un
+ * lecteur d'ecran annonce « Ventes, liste, 4 elements », et la tabulation ne
+ * s'y arrete pas.
+ */
+export const GROUPES = [
+  { cle: "ensemble", titre: "Vue d'ensemble" },
+  { cle: "ventes", titre: "Ventes" },
+  { cle: "clients", titre: "Clients" },
+  { cle: "catalogue", titre: "Catalogue" },
+  { cle: "reglages", titre: "Réglages" },
+] as const;
+
+export type CleGroupe = (typeof GROUPES)[number]["cle"];
 
 /** Les comptages que la barre sait afficher, sous-ensemble de ceux du service. */
 export type Comptages = {
@@ -74,128 +99,118 @@ export type Comptages = {
 };
 
 /**
- * Les rubriques LIVREES, dans l'ordre du travail quotidien.
+ * Les rubriques LIVREES, rangees par groupe, LS-245.
  *
- * L'ORDRE SUIT LA JOURNEE DE L'EXPLOITANTE : ce qui arrive en premier est ce
- * qu'elle regarde en premier. Les commandes payees ouvrent la liste, les
- * expeditions suivent parce qu'elles en decoulent, les messages viennent
- * ensuite. Le catalogue et les stocks sont du travail de fond, le journal des
- * connexions une verification occasionnelle.
+ * L'ORDRE DES GROUPES VA DU PLUS URGENT AU PLUS RARE. La vue d'ensemble ouvre la
+ * barre : les alertes y sont, parce qu'une alerte ouverte signale un incident de
+ * paiement, le geste le plus urgent de l'outil. Les ventes suivent, puis ce que
+ * les clients ecrivent, puis le catalogue, travail de fond. Les reglages ferment
+ * la barre, comme dans le prototype : ils se consultent rarement.
+ *
+ * DANS UN GROUPE, L'ORDRE SUIT LE FLUX : une commande precede son expedition,
+ * une retractation precede son avoir. Les rubriques d'un meme groupe sont
+ * CONTIGUES dans ce tableau, et l'ordre de tabulation est celui du tableau.
+ *
+ * « CATALOGUE » EST DEVENU « PRODUITS » : le groupe porte desormais le nom
+ * « Catalogue », et deux libelles identiques l'un sous l'autre ne disent rien.
+ * L'ecran atteint porte deja le titre « Produits ».
+ *
+ * LES COMPTEURS NE COMPTENT QUE CE QUI ATTEND UN GESTE. Statistiques n'en porte
+ * aucun, un chiffre d'affaires n'attendant rien, LS-64. Les avis en portent un,
+ * le delai de publication etant annonce au client, article D111-10 2°, LS-61.
  *
  * QUATRE ROUTES SONT DELIBEREMENT ABSENTES, et le controle le sait :
  *
  *   /administration/connexion             on n'y est pas connecte
  *   /administration/reauthentification    on y arrive par une action, jamais par choix
- *   /administration/produits/nouveau      bouton d'action de l'ecran Catalogue
+ *   /administration/produits/nouveau      bouton d'action de l'ecran Produits, LS-183
  *   /administration/commandes/[id]        et /produits/[id], ecrans de detail
  *
- * Un ecran de detail n'a pas de place dans une navigation : son URL contient un
- * identifiant, et il s'atteint depuis sa liste.
- *
- * `/administration/produits/nouveau` A QUITTE LA BARRE EN LS-183, arbitrage de
- * Christophe : c'est la forme du prototype, et creer un produit se fait depuis
- * l'ecran qui les liste. La route existe toujours et reste atteignable, par le
- * bouton du catalogue : elle figure donc dans les EXCLUSIONS du controle
- * d'atteignabilite, avec cette raison ecrite.
+ * « VOS PASSKEYS » EST DANS LA BARRE POUR UNE RAISON DE SECURITE, LS-175 :
+ * ADR-021 fait de la passkey le chemin principal de l'administration, et un
+ * ecran atteignable seulement par son URL ne se retrouve pas le jour ou
+ * l'exploitante change de telephone.
  */
 export const RUBRIQUES: readonly Rubrique[] = [
-  { chemin: "/administration", libelle: "Tableau de bord" },
+  { chemin: "/administration", libelle: "Tableau de bord", groupe: "ensemble" },
+  {
+    chemin: "/administration/alertes",
+    libelle: "Alertes",
+    groupe: "ensemble",
+    compteur: "alertesOuvertes",
+  },
+  {
+    chemin: "/administration/statistiques",
+    libelle: "Statistiques",
+    groupe: "ensemble",
+  },
   {
     chemin: "/administration/commandes",
     libelle: "Commandes",
+    groupe: "ventes",
     compteur: "commandesEnCours",
   },
   {
     chemin: "/administration/expeditions",
     libelle: "Expéditions",
+    groupe: "ventes",
     compteur: "expeditionsEnTransit",
   },
   {
     chemin: "/administration/retractations",
     libelle: "Rétractations",
+    groupe: "ventes",
     compteur: "retractationsEnCours",
+  },
+  {
+    chemin: "/administration/factures",
+    libelle: "Factures et avoirs",
+    groupe: "ventes",
   },
   {
     chemin: "/administration/messages",
     libelle: "Messages",
+    groupe: "clients",
     compteur: "messagesNonLus",
   },
-  /*
-   * LS-61 : les avis entrent dans la barre, C33, et ils y entrent AVEC leur
-   * compteur. Un avis attend une relecture explicite, regle R4, et le delai de
-   * publication est ANNONCE au client, article D111-10 2° : un ecran sans
-   * pastille laisserait ce delai se depasser sans que rien ne le signale.
-   *
-   * IL SUIT LES MESSAGES parce que les deux relevent du meme geste, lire ce que
-   * quelqu'un a ecrit et y repondre, et precede le catalogue qui est du travail
-   * de fond.
-   */
   {
     chemin: "/administration/avis",
     libelle: "Avis",
+    groupe: "clients",
     compteur: "avisAModerer",
   },
-  /*
-   * LS-98 : les alertes critiques entrent dans la barre, C33, AVEC leur
-   * compteur.
-   *
-   * ELLES ETAIENT INVISIBLES : sept services en levent depuis LS-131 et avant,
-   * dont `DOUBLE_ENCAISSEMENT` et `MONTANT_DIVERGENT`, et aucun code ne les
-   * lisait. Un incident financier se signalait dans une table que personne ne
-   * consultait.
-   *
-   * ELLE SUIT LES AVIS ET PRECEDE LE CATALOGUE : la barre range d'abord ce qui
-   * ATTEND un geste, et une alerte ouverte en attend un plus urgent qu'un avis.
-   */
+  { chemin: "/administration/clients", libelle: "Clients", groupe: "clients" },
   {
-    chemin: "/administration/alertes",
-    libelle: "Alertes",
-    compteur: "alertesOuvertes",
+    chemin: "/administration/produits",
+    libelle: "Produits",
+    groupe: "catalogue",
   },
-  { chemin: "/administration/produits", libelle: "Catalogue" },
-  { chemin: "/administration/factures", libelle: "Factures et avoirs" },
-  { chemin: "/administration/clients", libelle: "Clients" },
-  { chemin: "/administration/categories", libelle: "Catégories" },
+  {
+    chemin: "/administration/categories",
+    libelle: "Catégories",
+    groupe: "catalogue",
+  },
   {
     chemin: "/administration/stocks",
     libelle: "Stocks et marchés",
+    groupe: "catalogue",
     compteur: "variantesStockFaible",
   },
-  /*
-   * LS-64 : les statistiques entrent dans la barre, C33. Cinquieme entree a
-   * quitter `RUBRIQUES_A_VENIR` apres Catalogue, Factures, Clients et Avis.
-   *
-   * ELLE NE PORTE AUCUN COMPTEUR, et c'est delibere : la barre compte ce qui
-   * ATTEND un geste, messages non lus ou avis a relire. Un chiffre d'affaires
-   * n'attend rien, et le mettre en pastille ferait clignoter une information
-   * qui n'appelle aucune action.
-   *
-   * ELLE SUIT LE JOURNAL DES CONNEXIONS, en fin de barre : c'est une lecture
-   * occasionnelle et non le travail quotidien, dont l'ordre ouvre la liste.
-   */
-  { chemin: "/administration/statistiques", libelle: "Statistiques" },
-  { chemin: "/administration/journal-connexions", libelle: "Connexions" },
-  /*
-   * LS-175 : l'ecran d'enregistrement des passkeys entre dans la barre, C33.
-   *
-   * Il n'y entre pas pour le confort. ADR-021 fait de la passkey le chemin
-   * PRINCIPAL de l'administration, et l'exploitante l'enregistre elle-meme
-   * depuis chacun de ses appareils : un ecran atteignable seulement en saisissant
-   * son URL serait un ecran qu'elle ne retrouve pas le jour ou elle change de
-   * telephone.
-   */
-  { chemin: "/administration/passkeys", libelle: "Vos passkeys" },
-  /*
-   * LS-98 : « Parametres » quitte `RUBRIQUES_A_VENIR` et devient un lien,
-   * ADR-043 ayant fait passer les tarifs en base.
-   *
-   * ELLE FERME LA BARRE, comme dans le prototype : un reglage se consulte
-   * rarement, la ou les rubriques du haut portent le travail quotidien.
-   *
-   * CINQUIEME ET DERNIERE ENTREE A QUITTER LA LISTE DES RUBRIQUES A VENIR,
-   * apres Catalogue, Factures, Clients et Avis. Cette liste est desormais VIDE.
-   */
-  { chemin: "/administration/parametres", libelle: "Paramètres" },
+  {
+    chemin: "/administration/parametres",
+    libelle: "Paramètres",
+    groupe: "reglages",
+  },
+  {
+    chemin: "/administration/passkeys",
+    libelle: "Vos passkeys",
+    groupe: "reglages",
+  },
+  {
+    chemin: "/administration/journal-connexions",
+    libelle: "Connexions",
+    groupe: "reglages",
+  },
 ] as const;
 
 /**
@@ -376,96 +391,119 @@ export function NavigationAdministration({
           <span className={styles.enseigneRole}>Administration</span>
         </div>
 
-        <ul className={styles.liste}>
-          {RUBRIQUES.map((rubrique) => {
-            const courante = estRubriqueCourante(chemin, rubrique.chemin);
-            const valeur = rubrique.compteur
-              ? comptages[rubrique.compteur]
-              : undefined;
+        {/*
+         * UN GROUPE, UNE LISTE NOMMEE, LS-245. Le filtre relit `RUBRIQUES` a
+         * chaque groupe : seize entrees, le cout est nul, et le tableau plat
+         * reste la seule source que lisent le controle d'atteignabilite et ses
+         * mutations.
+         */}
+        {GROUPES.map((groupe) => (
+          <div key={groupe.cle} className={styles.groupe}>
+            <p
+              id={`${identifiantPanneau}-${groupe.cle}`}
+              className={styles.groupeTitre}
+            >
+              {groupe.titre}
+            </p>
+            <ul
+              className={styles.liste}
+              aria-labelledby={`${identifiantPanneau}-${groupe.cle}`}
+            >
+              {RUBRIQUES.filter(
+                (rubrique) => rubrique.groupe === groupe.cle,
+              ).map((rubrique) => {
+                const courante = estRubriqueCourante(chemin, rubrique.chemin);
+                const valeur = rubrique.compteur
+                  ? comptages[rubrique.compteur]
+                  : undefined;
 
-            return (
-              <li key={rubrique.chemin}>
-                <Link
-                  href={rubrique.chemin}
-                  className={styles.lien}
-                  /*
-                   * ------------------------------------------------------------
-                   * AUCUN PRECHARGEMENT, LS-166, ET C'EST UNE BOUCLE QU'IL FERME.
-                   *
-                   * LES ONZE RUBRIQUES SONT TOUTES `force-dynamic`, et
-                   * `staleTimes.dynamic` vaut ZERO par defaut, verifie via
-                   * Context7 : une reponse prechargee est donc perimee a
-                   * l'instant ou elle arrive. Next.js la jette et repart, sans
-                   * fin, tant que la barre est a l'ecran.
-                   *
-                   * MESURE DU 7 SEPTEMBRE 2026, journal du navigateur sur le
-                   * tableau de bord : chaque rubrique enchaine `200` puis
-                   * `ERR_ABORTED` puis une requete neuve, avec un jeton `_rsc`
-                   * different a chaque tour. Onze rendus serveur en boucle,
-                   * chacun interrogeant PostgreSQL, pour un ecran au repos.
-                   *
-                   * CE QUE CELA CASSAIT. La navigation reelle entre en
-                   * concurrence avec ce deluge et perd parfois la course : l'URL
-                   * change, le `<main>` n'arrive JAMAIS. Mesure : bloque encore
-                   * apres 61 secondes, deux essais sur quatre. Ni la page ni son
-                   * `loading.tsx` ne sont rendus, la personne reste devant une
-                   * coquille vide.
-                   *
-                   * ON NE PERD AUCUNE VITESSE : avec `staleTimes.dynamic` a
-                   * zero, ce prechargement ne servait deja aucune navigation, il
-                   * ne faisait que reserver le serveur.
-                   * ------------------------------------------------------------
-                   */
-                  prefetch={false}
-                  /*
-                   * `aria-current="page"` PORTE L'INFORMATION, la couleur et le
-                   * filet vertical ne font que l'appuyer : `frontend-design.md`
-                   * interdit qu'une information passe par la seule couleur.
-                   */
-                  aria-current={courante ? "page" : undefined}
-                  onClick={fermer}
-                >
-                  <span className={styles.lienLibelle}>{rubrique.libelle}</span>
-
-                  {/*
-                   * UNE PASTILLE A ZERO NE S'AFFICHE PAS. « 0 messages » n'est
-                   * pas une information, c'est du bruit sur neuf lignes : la
-                   * pastille doit vouloir dire « il y a quelque chose ici ».
-                   *
-                   * LE NOMBRE EST DOUBLE D'UN TEXTE POUR LES LECTEURS D'ECRAN.
-                   * Lu seul, « Commandes 4 » est ambigu : quatre quoi ? Le
-                   * `aria-hidden` sur le chiffre et le texte masque a cote
-                   * donnent « Commandes, 4 en attente » a l'oreille, sans
-                   * changer ce que l'oeil voit.
-                   */}
-                  {valeur !== undefined && valeur > 0 ? (
-                    <>
-                      <span className={styles.pastille} aria-hidden="true">
-                        {valeur}
-                      </span>
-                      {/*
-                       * L'ESPACE AVANT LA VIRGULE EST INDISPENSABLE, et il a
-                       * ete trouve par le test clavier : sans lui le nom
-                       * accessible vaut « Commandes3, 3 en attente », le
-                       * chiffre colle au libelle. Les noeuds de texte JSX se
-                       * concatenent sans separateur, et `aria-hidden` retire
-                       * l'element de l'arbre SANS ajouter de frontiere de mot.
+                return (
+                  <li key={rubrique.chemin}>
+                    <Link
+                      href={rubrique.chemin}
+                      className={styles.lien}
+                      /*
+                       * ------------------------------------------------------------
+                       * AUCUN PRECHARGEMENT, LS-166, ET C'EST UNE BOUCLE QU'IL FERME.
                        *
-                       * Une virgule seule ne suffit pas : c'est le « 3 » de la
-                       * pastille, pourtant masque, qui colle au libelle dans
-                       * le calcul du nom accessible.
-                       */}
-                      <span className={styles.invisible}>
-                        {" "}
-                        ({valeur} en attente)
+                       * LES ONZE RUBRIQUES SONT TOUTES `force-dynamic`, et
+                       * `staleTimes.dynamic` vaut ZERO par defaut, verifie via
+                       * Context7 : une reponse prechargee est donc perimee a
+                       * l'instant ou elle arrive. Next.js la jette et repart, sans
+                       * fin, tant que la barre est a l'ecran.
+                       *
+                       * MESURE DU 7 SEPTEMBRE 2026, journal du navigateur sur le
+                       * tableau de bord : chaque rubrique enchaine `200` puis
+                       * `ERR_ABORTED` puis une requete neuve, avec un jeton `_rsc`
+                       * different a chaque tour. Onze rendus serveur en boucle,
+                       * chacun interrogeant PostgreSQL, pour un ecran au repos.
+                       *
+                       * CE QUE CELA CASSAIT. La navigation reelle entre en
+                       * concurrence avec ce deluge et perd parfois la course : l'URL
+                       * change, le `<main>` n'arrive JAMAIS. Mesure : bloque encore
+                       * apres 61 secondes, deux essais sur quatre. Ni la page ni son
+                       * `loading.tsx` ne sont rendus, la personne reste devant une
+                       * coquille vide.
+                       *
+                       * ON NE PERD AUCUNE VITESSE : avec `staleTimes.dynamic` a
+                       * zero, ce prechargement ne servait deja aucune navigation, il
+                       * ne faisait que reserver le serveur.
+                       * ------------------------------------------------------------
+                       */
+                      prefetch={false}
+                      /*
+                       * `aria-current="page"` PORTE L'INFORMATION, la couleur et le
+                       * filet vertical ne font que l'appuyer : `frontend-design.md`
+                       * interdit qu'une information passe par la seule couleur.
+                       */
+                      aria-current={courante ? "page" : undefined}
+                      onClick={fermer}
+                    >
+                      <span className={styles.lienLibelle}>
+                        {rubrique.libelle}
                       </span>
-                    </>
-                  ) : null}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+
+                      {/*
+                       * UNE PASTILLE A ZERO NE S'AFFICHE PAS. « 0 messages » n'est
+                       * pas une information, c'est du bruit sur neuf lignes : la
+                       * pastille doit vouloir dire « il y a quelque chose ici ».
+                       *
+                       * LE NOMBRE EST DOUBLE D'UN TEXTE POUR LES LECTEURS D'ECRAN.
+                       * Lu seul, « Commandes 4 » est ambigu : quatre quoi ? Le
+                       * `aria-hidden` sur le chiffre et le texte masque a cote
+                       * donnent « Commandes, 4 en attente » a l'oreille, sans
+                       * changer ce que l'oeil voit.
+                       */}
+                      {valeur !== undefined && valeur > 0 ? (
+                        <>
+                          <span className={styles.pastille} aria-hidden="true">
+                            {valeur}
+                          </span>
+                          {/*
+                           * L'ESPACE AVANT LA VIRGULE EST INDISPENSABLE, et il a
+                           * ete trouve par le test clavier : sans lui le nom
+                           * accessible vaut « Commandes3, 3 en attente », le
+                           * chiffre colle au libelle. Les noeuds de texte JSX se
+                           * concatenent sans separateur, et `aria-hidden` retire
+                           * l'element de l'arbre SANS ajouter de frontiere de mot.
+                           *
+                           * Une virgule seule ne suffit pas : c'est le « 3 » de la
+                           * pastille, pourtant masque, qui colle au libelle dans
+                           * le calcul du nom accessible.
+                           */}
+                          <span className={styles.invisible}>
+                            {" "}
+                            ({valeur} en attente)
+                          </span>
+                        </>
+                      ) : null}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
 
         {/*
          * LES RUBRIQUES A VENIR, hors de la liste navigable.
