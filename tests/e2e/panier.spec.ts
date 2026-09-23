@@ -129,6 +129,43 @@ test("changer la quantite met le total a jour", async ({ page }) => {
   await expect(page.getByText(enEuros(prix * 2)).first()).toBeVisible();
 });
 
+/*
+ * LS-238, RELEVE PAR L'EXPLOITANTE EN RECETTE. Un second ajout d'une piece
+ * unique repondait « Ajouté au panier. » et le compteur passait a deux, puis la
+ * page du panier ramenait la quantite a un sans explication.
+ *
+ * LE COMPTEUR EST LA PREUVE que le cookie n'a pas change : il somme les
+ * quantites du cookie, sans lire la base. Un refus seulement affiche, avec un
+ * cookie tout de meme ecrit, le ferait passer a deux.
+ */
+test("un second ajout d'une piece unique est refuse, avec sa raison", async ({
+  page,
+}) => {
+  await page.goto(`/produit/${CATALOGUE_TEST.dernierePiece.slug}`);
+
+  const bouton = page.getByRole("button", { name: "Ajouter au panier" });
+  await bouton.click();
+  await expect(annonceAjout(page)).toHaveText("Ajouté au panier.");
+
+  await bouton.click();
+  await expect(annonceAjout(page)).toHaveText(
+    "Cette pièce est déjà dans votre panier, il n'en reste qu'un exemplaire.",
+  );
+
+  await page.goto("/panier");
+  await expect(
+    page.getByRole("link", { name: /Votre panier, 1 pièce/ }),
+  ).toBeVisible();
+
+  /*
+   * LE SELECTEUR NE PROPOSE QUE CE QUI EST DISPONIBLE. Il proposait 1 a 20 sur
+   * une piece unique, invitant un choix que le serveur refuse ensuite.
+   */
+  await expect(
+    page.getByRole("combobox", { name: /Quantité pour/ }).locator("option"),
+  ).toHaveCount(1);
+});
+
 test("retirer une ligne vide le panier", async ({ page }) => {
   await page.goto(CHEMIN_FICHE);
   await page.getByRole("button", { name: "Ajouter au panier" }).click();

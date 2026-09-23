@@ -14,8 +14,12 @@
  *
  * AUCUNE DE CES ACTIONS NE TOUCHE LE STOCK. Ajouter au panier n'immobilise
  * rien : la reservation a lieu a l'etape 4 du parcours 1, dans la transaction
- * de LS-117. Un panier de dix exemplaires d'une piece unique est donc accepte
- * ici, et refuse a la reservation.
+ * de LS-117.
+ *
+ * ELLES LISENT POURTANT LE DISPONIBLE, depuis LS-238. Une quantite qui le
+ * depasse est refusee au moment du geste, avec sa raison, plutot qu'acceptee
+ * puis ramenee en silence sur la page du panier. La regle vit dans le service,
+ * `verifierQuantiteDemandee`, l'action se contente de l'appeler.
  */
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
@@ -30,30 +34,35 @@ import {
   DUREE_COOKIE_SECONDES,
   LIGNES_MAXIMUM,
   NOM_COOKIE_PANIER,
+  QUANTITE_MAXIMALE_PAR_LIGNE,
   decoderPanier,
   encoderPanier,
   type LignePanierCookie,
 } from "@/lib/panier-cookie";
+import { verifierQuantiteDemandee } from "@/services/panier";
 
 /** Ce que l'interface recoit, jamais une exception. */
 export type ResultatPanier =
   | { statut: "OK"; nombreArticles: number }
   | { statut: "INVALIDE"; message: string }
-  | { statut: "PLEIN"; message: string };
+  | { statut: "PLEIN"; message: string }
+  | { statut: "STOCK_INSUFFISANT"; message: string };
 
 /**
  * Quantite acceptee sur une ligne.
  *
  * LE PLAFOND N'EST PAS UNE REGLE DE STOCK. Il borne une entree non fiable pour
  * qu'un nombre absurde ne traverse pas la pile, la disponibilite reelle etant
- * verifiee par la revalidation puis par la reservation. Vingt suffit largement
- * a un bijou fait main.
+ * verifiee par `verifierQuantiteDemandee` puis par la reservation.
  */
 const schemaQuantitePanier = z
   .number()
   .int("Une quantite entiere est attendue.")
   .min(1, "La quantite minimale est de 1.")
-  .max(20, "La quantite maximale par ligne est de 20.");
+  .max(
+    QUANTITE_MAXIMALE_PAR_LIGNE,
+    `La quantite maximale par ligne est de ${QUANTITE_MAXIMALE_PAR_LIGNE}.`,
+  );
 
 /** Lit le panier du cookie. Rend un panier vide sur tout cookie douteux. */
 async function lirePanier(): Promise<LignePanierCookie[]> {
@@ -138,6 +147,22 @@ export async function ajouterAuPanier(
     };
   }
 
+  /*
+   * LE STOCK SE LIT SUR LE CUMUL, et non sur l'increment, LS-238 : une piece
+   * unique deja au panier ne doit pas accepter un second ajout d'un exemplaire.
+   * Le cookie reste inchange en cas de refus.
+   */
+  const dejaAuPanier = existante?.quantite ?? 0;
+  const verdict = await verifierQuantiteDemandee(
+    varianteId,
+    dejaAuPanier + quantite,
+    dejaAuPanier,
+  );
+
+  if (!verdict.accepte) {
+    return { statut: "STOCK_INSUFFISANT", message: verdict.message };
+  }
+
   if (existante === undefined) {
     lignes.push({ varianteId, quantite });
   } else {
@@ -145,7 +170,10 @@ export async function ajouterAuPanier(
      * LE PLAFOND S'APPLIQUE AU CUMUL et non a chaque ajout. Sans ce
      * `Math.min`, vingt ajouts successifs de vingt donneraient quatre cents.
      */
-    existante.quantite = Math.min(existante.quantite + quantite, 20);
+    existante.quantite = Math.min(
+      existante.quantite + quantite,
+      QUANTITE_MAXIMALE_PAR_LIGNE,
+    );
   }
 
   await ecrirePanier(lignes);
@@ -191,6 +219,17 @@ export async function changerQuantite(
   const ligne = lignes.find((candidate) => candidate.varianteId === varianteId);
 
   if (ligne !== undefined) {
+    /*
+     * LA BORNE DU SELECTEUR NE PROTEGE RIEN, invariant 7 : une requete forgee
+     * peut demander vingt exemplaires d'une piece unique. Le serveur relit le
+     * disponible, LS-238.
+     */
+    const verdict = await verifierQuantiteDemandee(varianteId, quantite, 0);
+
+    if (!verdict.accepte) {
+      return { statut: "STOCK_INSUFFISANT", message: verdict.message };
+    }
+
     ligne.quantite = quantite;
     await ecrirePanier(lignes);
     revalidatePath("/", "layout");

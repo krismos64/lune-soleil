@@ -10,12 +10,16 @@
  * regle de `payments.md`. Les calculs se font en centimes entiers.
  *
  * IL NE TOUCHE AUCUN STOCK. Ajouter au panier n'immobilise rien : la
- * reservation a lieu a l'etape 4, dans la transaction de LS-117. Un panier de
- * dix exemplaires d'une piece unique est donc legitime a ce stade, il sera
- * refuse a la reservation.
+ * reservation a lieu a l'etape 4, dans la transaction de LS-117. Depuis LS-238,
+ * `verifierQuantiteDemandee` refuse l'ajout d'une quantite superieure au
+ * disponible, mais c'est un confort de lecture et non une garantie : la piece
+ * peut partir entre l'ajout et le paiement, et la revalidation le signale.
  */
 import { prisma } from "@/lib/prisma";
-import type { LignePanierCookie } from "@/lib/panier-cookie";
+import {
+  QUANTITE_MAXIMALE_PAR_LIGNE,
+  type LignePanierCookie,
+} from "@/lib/panier-cookie";
 import * as depot from "@/repositories/panier";
 
 /** Pourquoi une ligne ne peut pas etre commandee telle quelle. */
@@ -34,6 +38,12 @@ export type LignePanierRevalidee = {
   quantite: number;
   /** Quantite demandee par le cookie, si elle a du etre reduite. */
   quantiteDemandee: number;
+  /**
+   * Plus grande quantite que le selecteur peut proposer, LS-238 : le
+   * disponible, borne par `QUANTITE_MAXIMALE_PAR_LIGNE`. Zero sur une ligne
+   * qu'on ne peut pas commander.
+   */
+  quantiteMaximale: number;
   prixUnitaireCentimes: number;
   totalLigneCentimes: number;
   motif: MotifIndisponible | null;
@@ -103,6 +113,7 @@ export async function revalider(
         mediaTexteAlternatif: null,
         quantite: 0,
         quantiteDemandee: ligneCookie.quantite,
+        quantiteMaximale: 0,
         prixUnitaireCentimes: 0,
         totalLigneCentimes: 0,
         motif: "VARIANTE_INTROUVABLE",
@@ -136,6 +147,9 @@ export async function revalider(
       mediaTexteAlternatif: variante.mediaTexteAlternatif,
       quantite,
       quantiteDemandee: ligneCookie.quantite,
+      quantiteMaximale: variante.vendable
+        ? Math.min(variante.quantiteDisponible, QUANTITE_MAXIMALE_PAR_LIGNE)
+        : 0,
       prixUnitaireCentimes: variante.prixCentimes,
       totalLigneCentimes,
       motif,
@@ -189,4 +203,69 @@ function motifDeLaLigne(
  */
 export function compterArticles(lignes: LignePanierCookie[]): number {
   return lignes.reduce((total, ligne) => total + ligne.quantite, 0);
+}
+
+/** Verdict sur une quantite demandee pour une variante, LS-238. */
+export type VerdictQuantite =
+  { accepte: true } | { accepte: false; message: string };
+
+/**
+ * Dit si le panier peut porter `quantiteTotale` exemplaires d'une variante.
+ *
+ * LS-238, RELEVE PAR L'EXPLOITANTE EN RECETTE. Ajouter une seconde fois une
+ * piece unique repondait « Ajouté au panier. », puis la page du panier
+ * ramenait la quantite a un sans que le visiteur comprenne pourquoi. Le refus
+ * arrive desormais AU MOMENT DU GESTE, avec la raison.
+ *
+ * CE N'EST PAS UNE GARANTIE DE STOCK, et rien ici ne la remplace. La lecture
+ * precede l'ecriture du cookie sans verrou : deux visiteurs peuvent tous deux
+ * mettre la derniere piece au panier. C'est voulu, un panier n'immobilise
+ * rien ; la reservation atomique de LS-117 tranche au paiement.
+ *
+ * `quantiteTotale` EST LE CUMUL VISE, pas l'increment : l'appelant ajoute ce
+ * que le panier porte deja. `dejaAuPanier` ne sert qu'a formuler le message.
+ */
+export async function verifierQuantiteDemandee(
+  varianteId: string,
+  quantiteTotale: number,
+  dejaAuPanier: number,
+): Promise<VerdictQuantite> {
+  const [variante] = await depot.lireVariantesDuPanier(prisma, [varianteId]);
+
+  if (variante === undefined || !variante.vendable) {
+    return { accepte: false, message: "Cette pièce n'est plus disponible." };
+  }
+
+  const disponible = variante.quantiteDisponible;
+
+  if (disponible === 0) {
+    return { accepte: false, message: "Cette pièce est épuisée." };
+  }
+
+  if (quantiteTotale <= disponible) {
+    return { accepte: true };
+  }
+
+  return {
+    accepte: false,
+    message: messageStockInsuffisant(disponible, dejaAuPanier),
+  };
+}
+
+function messageStockInsuffisant(
+  disponible: number,
+  dejaAuPanier: number,
+): string {
+  const reste =
+    disponible === 1
+      ? "il n'en reste qu'un exemplaire"
+      : `il n'en reste que ${disponible} exemplaires`;
+
+  if (dejaAuPanier > 0) {
+    return dejaAuPanier >= disponible
+      ? `Cette pièce est déjà dans votre panier, ${reste}.`
+      : `Votre panier en contient déjà ${dejaAuPanier}, ${reste}.`;
+  }
+
+  return `Quantité indisponible, ${reste}.`;
 }
