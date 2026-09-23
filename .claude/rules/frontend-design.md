@@ -264,6 +264,12 @@ s'affiche que pour une session au rôle `ADMINISTRATRICE` : la cacher n'est pas
 une protection, les pages restant gardées une par une, mais l'afficher
 divulguerait la structure de l'administration.
 
+**Les rubriques sont rangées en cinq groupes titrés** depuis LS-245 : Vue
+d'ensemble, Ventes, Relation client, Catalogue, Réglages. Une rubrique ajoutée
+choisit son groupe, champ `groupe` de `RUBRIQUES`, et **deux libellés
+identiques ne se suivent jamais** : c'est pourquoi le groupe Catalogue porte la
+rubrique « Produits » et le groupe des messages s'appelle « Relation client ».
+
 **Un écran ajouté entre dans la barre, ou son absence s'écrit.**
 `scripts/verifier-navigation-administration.sh` confronte les rubriques aux
 routes du dépôt **dans les deux sens** : une rubrique sans route est un lien

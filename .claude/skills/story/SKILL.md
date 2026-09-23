@@ -78,8 +78,14 @@ formulations qui l'imposent : « dépend de », « bloquante pour », « bloque 
 « avant LS-xx ». Une phrase dans une description n'existe pour aucun outil.
 
 ```
-createIssueLink  type: "Blocks"  outwardIssue: <le bloqueur>  inwardIssue: <le bloqué>
+createIssueLink  type: "Blocks"  inwardIssue: <le bloqueur>  outwardIssue: <le bloqué>
 ```
+
+**C'est l'inverse de ce que ce skill écrivait jusqu'au 23 septembre 2026**,
+mesuré trois fois par l'outil MCP : `inwardIssue: LS-238, outwardIssue: LS-240`
+a produit « LS-240 is blocked by LS-238 ». Le message « Issue link created »
+réussit dans les deux sens : relire le lien obtenu après chaque création,
+fiche mémoire « Sens des liens Jira ».
 
 Les paramètres sont des **chaînes simples**, `"Blocks"` et `"LS-66"`. Passer des
 objets échoue avec un message trompeur parlant de ticket introuvable.

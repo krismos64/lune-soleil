@@ -78,7 +78,7 @@ stock à un exemplaire est le jalon technique majeur.
 | # | Étape | Base | Vue |
 |---|---|---|---|
 | 1 | Consultation du catalogue | rien | produits actifs, disponibilité dérivée |
-| 2 | Ajout au panier | ligne de panier, éphémère | panier mis à jour, compteur |
+| 2 | Ajout au panier, depuis la fiche ou la carte d'une pièce à une variante, LS-240 | ligne de panier, éphémère | panier mis à jour, compteur ; **refus nommé** si le cumul dépasse le disponible, LS-238, sans rien réserver |
 | 3 | Revalidation serveur | rien | totaux recalculés depuis le serveur |
 | 3b | Choix du mode de livraison | rien | trois modes, frais de port recalculés côté serveur, point de retrait choisi si `POINT_RELAIS` ou `LOCKER` |
 | 4 | Commande et réservation, **une seule transaction** | commande `EN_ATTENTE_PAIEMENT`, lignes historisées, **mode de livraison, point de retrait et frais de port figés**, acceptation CGV horodatée, `quantiteReservee` incrémentée, réservations avec expiration à 30 min et `commandeId` renseigné | passage au paiement |
