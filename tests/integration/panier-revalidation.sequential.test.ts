@@ -280,3 +280,100 @@ describe("ce que l'ecran rend d'une ligne incommandable, LS-114", () => {
     expect(resultat.totalArticlesCentimes).toBe(0);
   });
 });
+
+/*
+ * LS-238, RELEVE PAR L'EXPLOITANTE EN RECETTE : un second ajout d'une piece
+ * unique repondait « Ajouté au panier. ». Ces cas exercent le service que les
+ * deux actions du panier appellent avant d'ecrire le cookie.
+ */
+describe("la quantite demandee ne depasse jamais le disponible, LS-238", () => {
+  it("refuse un second exemplaire d'une piece unique deja au panier", async () => {
+    const varianteId = await creerVariante("Boucles uniques", {
+      quantitePhysique: 1,
+    });
+
+    const verdict = await panier.verifierQuantiteDemandee(varianteId, 2, 1);
+
+    expect(verdict).toEqual({
+      accepte: false,
+      message:
+        "Cette pièce est déjà dans votre panier, il n'en reste qu'un exemplaire.",
+    });
+  });
+
+  it("accepte le premier exemplaire d'une piece unique", async () => {
+    const varianteId = await creerVariante("Bague unique", {
+      quantitePhysique: 1,
+    });
+
+    expect(await panier.verifierQuantiteDemandee(varianteId, 1, 0)).toEqual({
+      accepte: true,
+    });
+  });
+
+  it("accepte exactement le disponible et refuse un de plus", async () => {
+    const varianteId = await creerVariante("Collier trois", {
+      quantitePhysique: 3,
+    });
+
+    expect(await panier.verifierQuantiteDemandee(varianteId, 3, 0)).toEqual({
+      accepte: true,
+    });
+    expect(await panier.verifierQuantiteDemandee(varianteId, 4, 0)).toEqual({
+      accepte: false,
+      message: "Quantité indisponible, il n'en reste que 3 exemplaires.",
+    });
+  });
+
+  /*
+   * LE DISPONIBLE DEDUIT LES RESERVATIONS, et non la seule quantite physique.
+   * Une piece engagee dans un paiement en cours ne doit pas etre proposee.
+   */
+  it("deduit les reservations actives du disponible", async () => {
+    const varianteId = await creerVariante("Bracelet reserve", {
+      quantitePhysique: 2,
+      quantiteReservee: 1,
+    });
+
+    expect(await panier.verifierQuantiteDemandee(varianteId, 2, 0)).toEqual({
+      accepte: false,
+      message: "Quantité indisponible, il n'en reste qu'un exemplaire.",
+    });
+  });
+
+  it("refuse une piece epuisee, archivee, ou inconnue", async () => {
+    const epuisee = await creerVariante("Epuisee", { quantitePhysique: 0 });
+    const archivee = await creerVariante("Archivee", {
+      statutProduit: "ARCHIVE",
+    });
+
+    expect(await panier.verifierQuantiteDemandee(epuisee, 1, 0)).toEqual({
+      accepte: false,
+      message: "Cette pièce est épuisée.",
+    });
+    expect(await panier.verifierQuantiteDemandee(archivee, 1, 0)).toEqual({
+      accepte: false,
+      message: "Cette pièce n'est plus disponible.",
+    });
+    expect(await panier.verifierQuantiteDemandee(randomUUID(), 1, 0)).toEqual({
+      accepte: false,
+      message: "Cette pièce n'est plus disponible.",
+    });
+  });
+
+  it("borne le selecteur de quantite au disponible", async () => {
+    const unique = await creerVariante("Unique", { quantitePhysique: 1 });
+    const abondante = await creerVariante("Abondante", {
+      quantitePhysique: 40,
+    });
+
+    const resultat = await panier.revalider([
+      { varianteId: unique, quantite: 1 },
+      { varianteId: abondante, quantite: 1 },
+    ]);
+
+    expect(resultat.lignes.map((ligne) => ligne.quantiteMaximale)).toEqual([
+      1, 20,
+    ]);
+  });
+});

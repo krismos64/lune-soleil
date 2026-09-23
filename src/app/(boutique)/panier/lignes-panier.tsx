@@ -161,13 +161,25 @@ export function LignesPanier({ lignes }: { lignes: LignePanierRevalidee[] }) {
                       });
                     }}
                   >
-                    {Array.from({ length: 20 }, (_, index) => index + 1).map(
-                      (valeur) => (
-                        <option key={valeur} value={valeur}>
-                          {valeur}
-                        </option>
-                      ),
-                    )}
+                    {/*
+                     * BORNE AU DISPONIBLE, LS-238 : proposer 20 sur une piece
+                     * unique invitait un choix que le serveur refuse ensuite.
+                     * `Math.max` garde la quantite courante selectionnable si
+                     * le stock a baisse depuis l'ajout.
+                     */}
+                    {Array.from(
+                      {
+                        length: Math.max(
+                          ligne.quantiteMaximale,
+                          ligne.quantite,
+                        ),
+                      },
+                      (_, index) => index + 1,
+                    ).map((valeur) => (
+                      <option key={valeur} value={valeur}>
+                        {valeur}
+                      </option>
+                    ))}
                   </select>
                 </label>
               ) : (

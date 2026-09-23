@@ -41,6 +41,17 @@ export const DUREE_COOKIE_SECONDES = 30 * 24 * 60 * 60;
  */
 export const LIGNES_MAXIMUM = 50;
 
+/**
+ * Quantite maximale sur une ligne.
+ *
+ * CE N'EST PAS UNE REGLE DE STOCK. Elle borne une entree non fiable pour qu'un
+ * nombre absurde ne traverse pas la pile. La disponibilite reelle, souvent un
+ * seul exemplaire, est verifiee par le service du panier depuis LS-238, puis par
+ * la reservation. Partagee ici parce que l'action, le service et le selecteur
+ * de quantite doivent porter la meme borne.
+ */
+export const QUANTITE_MAXIMALE_PAR_LIGNE = 20;
+
 /** Une ligne telle que le cookie la porte : jamais de prix, jamais de nom. */
 export type LignePanierCookie = {
   varianteId: string;
