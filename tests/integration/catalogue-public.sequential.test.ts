@@ -538,3 +538,48 @@ describe("ce dont l'accueil depend, LS-122", () => {
     ]);
   });
 });
+
+/*
+ * LS-240 : la carte n'ajoute au panier que pour un produit a UNE variante
+ * vivante. Une variante archivee ne compte pas : elle ne se vend plus, le
+ * produit n'offre donc plus de choix.
+ */
+describe("varianteUniqueId, LS-240", () => {
+  it("rend la variante d'un produit qui n'en a qu'une", async () => {
+    const produitId = await creerProduit("Unique");
+    const { rows } = await client.query<{ id: string }>(
+      "SELECT id FROM variante WHERE produit_id = $1",
+      [produitId],
+    );
+
+    const { produits } = await catalogue.lireCataloguePublic();
+
+    expect(produits.find((p) => p.id === produitId)?.varianteUniqueId).toBe(
+      rows[0]!.id,
+    );
+  });
+
+  it("rend null pour un produit a deux variantes vivantes, pas pour une archivee", async () => {
+    const double = await creerProduit("Deux tailles");
+    const avecArchive = await creerProduit("Une vivante");
+
+    for (const [produitId, archivee] of [
+      [double, null],
+      [avecArchive, new Date()],
+    ] as const) {
+      await client.query(
+        `INSERT INTO variante (id, produit_id, reference, libelle, prix_centimes,
+           quantite_physique, quantite_reservee, vente_web_activee, archivee_a, cree_a)
+         VALUES ($1, $2, $3, 'Seconde', 5000, 2, 0, true, $4, now())`,
+        [randomUUID(), produitId, `REF2-${produitId.slice(0, 8)}`, archivee],
+      );
+    }
+
+    const { produits } = await catalogue.lireCataloguePublic();
+
+    expect(produits.find((p) => p.id === double)?.varianteUniqueId).toBeNull();
+    expect(
+      produits.find((p) => p.id === avecArchive)?.varianteUniqueId,
+    ).not.toBeNull();
+  });
+});

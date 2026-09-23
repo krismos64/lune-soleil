@@ -288,6 +288,12 @@ export type ProduitCatalogue = {
   publieA: Date | null;
   prixMinimumCentimes: number;
   quantiteDisponible: number;
+  /**
+   * L'identifiant de la variante quand le produit n'en a QU'UNE vivante, sinon
+   * `null`. LS-240 : seul ce cas permet l'ajout au panier depuis la carte, sans
+   * choisir de declinaison.
+   */
+  varianteUniqueId: string | null;
   mediaChemin: string | null;
   mediaTexteAlternatif: string | null;
 };
@@ -366,6 +372,7 @@ export async function listerProduitsPublies(
       publieA: Date | null;
       prixMinimumCentimes: bigint | number;
       quantiteDisponible: bigint | number;
+      varianteUniqueId: string | null;
       mediaChemin: string | null;
       mediaTexteAlternatif: string | null;
     }[]
@@ -384,6 +391,9 @@ export async function listerProduitsPublies(
              ELSE 0
         END
       )                        AS "quantiteDisponible",
+      -- LS-240 : une seule variante vivante, donc aucun choix a faire.
+      CASE WHEN count(*) = 1 THEN min(v.id) END
+                               AS "varianteUniqueId",
       m.chemin                 AS "mediaChemin",
       m.texte_alternatif       AS "mediaTexteAlternatif"
     FROM produit p

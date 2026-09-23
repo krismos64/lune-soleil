@@ -166,6 +166,43 @@ test("un second ajout d'une piece unique est refuse, avec sa raison", async ({
   ).toHaveCount(1);
 });
 
+/*
+ * LS-240, DEMANDE DE L'EXPLOITANTE EN RECETTE : ajouter sans ouvrir la fiche.
+ *
+ * LA PIECE EN STOCK PORTE DEUX VARIANTES dans le jeu de donnees, la seconde
+ * etant posee par la preparation de la fiche produit : elle ne doit donc PAS
+ * avoir de bouton, le choix de la declinaison se faisant sur la fiche. C'est le
+ * cas negatif, et il est gratuit ici.
+ *
+ * LE SECOND CLIC PROUVE QU'AUCUN SECOND CHEMIN D'AJOUT n'a ete ecrit : c'est le
+ * refus de LS-238 qui repond, la meme action servant la carte et la fiche.
+ */
+test("la carte ajoute une piece unique sans ouvrir sa fiche", async ({
+  page,
+}) => {
+  await page.goto("/catalogue");
+
+  const nom = CATALOGUE_TEST.dernierePiece.nom;
+  await page.getByRole("button", { name: `Ajouter ${nom} au panier` }).click();
+  await expect(
+    page.getByRole("status", { name: `Ajout de ${nom}` }),
+  ).toHaveText("Ajouté au panier.");
+  await expect(page).toHaveURL(/\/catalogue$/);
+
+  await page.getByRole("button", { name: `Ajouter ${nom} au panier` }).click();
+  await expect(
+    page.getByRole("status", { name: `Ajout de ${nom}` }),
+  ).toHaveText(
+    "Cette pièce est déjà dans votre panier, il n'en reste qu'un exemplaire.",
+  );
+
+  await expect(
+    page.getByRole("button", {
+      name: `Ajouter ${CATALOGUE_TEST.enStock.nom} au panier`,
+    }),
+  ).toHaveCount(0);
+});
+
 test("retirer une ligne vide le panier", async ({ page }) => {
   await page.goto(CHEMIN_FICHE);
   await page.getByRole("button", { name: "Ajouter au panier" }).click();

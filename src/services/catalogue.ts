@@ -589,6 +589,11 @@ export type ProduitCatalogue = {
   categorieNom: string;
   prixCentimes: number;
   disponibilite: EtatDisponibilite;
+  /**
+   * LS-240 : la variante a ajouter depuis la carte, `null` quand le produit en
+   * a plusieurs. Le choix d'une declinaison se fait alors sur la fiche.
+   */
+  varianteUniqueId: string | null;
   mediaChemin: string | null;
   mediaTexteAlternatif: string | null;
   /**
@@ -679,6 +684,7 @@ export async function lireCataloguePublic(
       categorieNom: ligne.categorieNom,
       prixCentimes: ligne.prixMinimumCentimes,
       disponibilite: etatDisponibilite(ligne.quantiteDisponible),
+      varianteUniqueId: ligne.varianteUniqueId,
       mediaChemin: ligne.mediaChemin,
       mediaTexteAlternatif: ligne.mediaTexteAlternatif,
       publieA: ligne.publieA,
