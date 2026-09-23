@@ -434,3 +434,69 @@ describe("C19, archiver la derniere variante archive le produit", () => {
     expect(rows[0].n).toBe(0);
   });
 });
+
+/*
+ * LS-242, DEMANDE DE L'EXPLOITANTE EN RECETTE : publier ou archiver plusieurs
+ * produits d'un geste. Le risque est une action groupee qui contournerait les
+ * gardes du geste unitaire ; ces cas en exercent une, C1.
+ */
+describe("publierOuArchiverProduits, LS-242", () => {
+  it("publie les produits conformes et nomme celui qui ne l'est pas", async () => {
+    const conforme = await produitDeTest();
+    await varianteSur(conforme);
+    await photoPubliableSur(conforme);
+    const sansVariante = await produitDeTest();
+    await photoPubliableSur(sansVariante);
+
+    const bilan = await catalogue.publierOuArchiverProduits({
+      produitIds: [conforme, sansVariante],
+      operation: "publier",
+    });
+
+    expect(bilan.reussis).toBe(1);
+    expect(bilan.refus).toHaveLength(1);
+    expect(bilan.refus[0]).toMatchObject({
+      id: sansVariante,
+      raison: "NON_PUBLIABLE",
+      motifs: ["AUCUNE_VARIANTE"],
+    });
+    expect(bilan.refus[0]?.nom).toMatch(/^Pièce /);
+
+    // La garde a tenu : le produit sans variante est reste en brouillon.
+    expect((await produitEnBase(conforme)).statut).toBe("ACTIF");
+    expect((await produitEnBase(sansVariante)).statut).toBe("BROUILLON");
+  });
+
+  it("archive une selection, et dit ce qui l'etait deja", async () => {
+    const premier = await produitDeTest();
+    const second = await produitDeTest();
+    await catalogue.archiverProduit(second);
+
+    const bilan = await catalogue.publierOuArchiverProduits({
+      produitIds: [premier, second, premier],
+      operation: "archiver",
+    });
+
+    // Le doublon est retire : `premier` n'est archive qu'une fois.
+    expect(bilan.reussis).toBe(1);
+    expect(bilan.refus.map((refus) => refus.raison)).toEqual([
+      "DEJA_DANS_CET_ETAT",
+    ]);
+    expect((await produitEnBase(premier)).statut).toBe("ARCHIVE");
+  });
+
+  it("refuse une selection vide ou difforme sans rien ecrire", async () => {
+    const intact = await produitDeTest();
+
+    for (const produitIds of [[], ["pas-un-uuid"], "texte"]) {
+      await expect(
+        catalogue.publierOuArchiverProduits({
+          produitIds,
+          operation: "archiver",
+        }),
+      ).rejects.toThrow();
+    }
+
+    expect((await produitEnBase(intact)).statut).toBe("BROUILLON");
+  });
+});

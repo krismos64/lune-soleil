@@ -170,6 +170,17 @@ export async function ecrireInformationsProduit(
   return client.produit.update({ where: { id }, data: donnees });
 }
 
+/** Les noms d'une liste de produits, pour nommer un refus, LS-242. */
+export async function lireNomsProduits(
+  client: ClientBase,
+  ids: readonly string[],
+): Promise<{ id: string; nom: string }[]> {
+  return client.produit.findMany({
+    where: { id: { in: [...ids] } },
+    select: { id: true, nom: true },
+  });
+}
+
 /**
  * Etat de publication d'un produit, LS-103.
  *

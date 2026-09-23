@@ -326,3 +326,78 @@
   color: var(--ls-accent-gold-deep);
   text-decoration: underline;
 }
+
+/* ------------------------------------------- la selection, LS-242 */
+
+.selection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ls-space-2) var(--ls-space-4);
+  align-items: center;
+  margin: 0 0 var(--ls-space-4);
+}
+
+.actionsSelection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ls-space-2);
+}
+
+/* Zone tactile de 44 px, la case native en faisant 13. */
+.toutCocher,
+.caseSelection {
+  display: inline-flex;
+  gap: var(--ls-space-2);
+  align-items: center;
+  min-width: var(--ls-touch-target);
+  min-height: var(--ls-touch-target);
+  cursor: pointer;
+}
+
+.toutCocher input,
+.caseSelection input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--ls-primary);
+}
+
+.boutonSelection {
+  min-height: 44px;
+  padding: 0 var(--ls-space-4);
+  border: 1px solid var(--ls-border-controle);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+
+.boutonSelection:disabled {
+  color: var(--ls-text-muted);
+  cursor: not-allowed;
+}
+
+.boutonSelection:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+.bilanSelection {
+  flex-basis: 100%;
+  color: var(--ls-text);
+  font-size: 0.9375rem;
+}
+
+.bilanSelection p {
+  margin: 0;
+}
+
+.bilanErreur {
+  color: var(--ls-error);
+}
+
+.listeRefus {
+  margin: var(--ls-space-1) 0 0;
+  padding-left: var(--ls-space-4);
+}

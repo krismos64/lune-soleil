@@ -18,7 +18,7 @@
 import { Prisma } from "@/generated/prisma/client";
 import type { StatutProduit } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
-import { valider } from "@/lib/validation";
+import { schemaSelectionProduits, valider } from "@/lib/validation";
 import * as depot from "@/repositories/catalogue";
 import * as depotMedias from "@/repositories/media";
 import * as depotSections from "@/repositories/sections-produit";
@@ -547,6 +547,86 @@ export async function archiverProduit(produitId: string): Promise<void> {
     // `publieA` N'EST PAS EFFACE : il porte la date de PREMIERE publication,
     // un fait historique que l'archivage ne dement pas.
   });
+}
+
+/** Pourquoi un produit d'une selection n'a pas change d'etat, LS-242. */
+export type RefusGroupe = {
+  id: string;
+  nom: string;
+  raison: "NON_PUBLIABLE" | "DEJA_DANS_CET_ETAT" | "INTROUVABLE";
+  motifs: MotifNonPubliable[];
+};
+
+/** Le bilan d'une action groupee : ce qui a change, ce qui a ete refuse. */
+export type BilanGroupe = { reussis: number; refus: RefusGroupe[] };
+
+/**
+ * Publie ou archive une selection de produits, LS-242.
+ *
+ * DEMANDE DE L'EXPLOITANTE EN RECETTE : tout archiver ou tout publier d'un
+ * coup, pour aller plus vite.
+ *
+ * UNE ACTION GROUPEE NE CONTOURNE AUCUNE GARDE. Chaque produit passe par
+ * `publierProduit` ou `archiverProduit`, exactement le chemin du geste
+ * unitaire, et jamais par un `updateMany` sur le statut, qui publierait un
+ * produit sans photo ni declinaison. Une selection de dix peut donc en publier
+ * huit : le bilan nomme les deux autres et dit pourquoi, il n'annonce jamais
+ * « dix publiés ».
+ *
+ * UNE TRANSACTION PAR PRODUIT, pas une pour la selection : un refus n'annule
+ * pas les publications voisines, qui sont chacune legitimes.
+ *
+ * L'AUTORISATION N'EST PAS FAITE ICI, invariant 2 : l'action appelle
+ * `exigerRole` avant.
+ */
+export async function publierOuArchiverProduits({
+  produitIds,
+  operation,
+}: {
+  produitIds: unknown;
+  operation: "publier" | "archiver";
+}): Promise<BilanGroupe> {
+  const identifiants = valider(schemaSelectionProduits, produitIds);
+  const refus: Omit<RefusGroupe, "nom">[] = [];
+  let reussis = 0;
+
+  for (const id of identifiants) {
+    try {
+      await (operation === "publier"
+        ? publierProduit(id)
+        : archiverProduit(id));
+      reussis += 1;
+    } catch (erreur) {
+      if (erreur instanceof ProduitNonPubliableError) {
+        refus.push({ id, raison: "NON_PUBLIABLE", motifs: erreur.motifs });
+      } else if (erreur instanceof TransitionProduitInvalideError) {
+        refus.push({ id, raison: "DEJA_DANS_CET_ETAT", motifs: [] });
+      } else if (erreur instanceof ProduitIntrouvableError) {
+        refus.push({ id, raison: "INTROUVABLE", motifs: [] });
+      } else {
+        // Une panne arrete la selection ; ce qui est fait reste fait, chaque
+        // produit ayant sa transaction.
+        throw erreur;
+      }
+    }
+  }
+
+  const noms = new Map(
+    (
+      await depot.lireNomsProduits(
+        prisma,
+        refus.map((ligne) => ligne.id),
+      )
+    ).map((ligne) => [ligne.id, ligne.nom]),
+  );
+
+  return {
+    reussis,
+    refus: refus.map((ligne) => ({
+      ...ligne,
+      nom: noms.get(ligne.id) ?? "Produit inconnu",
+    })),
+  };
 }
 
 /**
