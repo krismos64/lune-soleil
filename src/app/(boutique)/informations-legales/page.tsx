@@ -318,9 +318,15 @@ export default async function PageInformationsLegales() {
              */}
             {livraison.seuilFranchiseCentimes === null ? null : (
               <li>
-                Livraison offerte à partir de{" "}
+                {/*
+                 * LS-249 : en Point Relais et Locker seulement, comme le
+                 * calcul facture, ADR-035. « Quel que soit le mode » faisait
+                 * promettre par les conditions generales une gratuite du
+                 * domicile que la commande ne donne jamais.
+                 */}
+                Livraison offerte en Point Relais et Locker à partir de{" "}
                 {formaterMontant(livraison.seuilFranchiseCentimes)}{" "}
-                d&apos;achat, quel que soit le mode
+                d&apos;achat. La livraison à domicile reste payante.
               </li>
             )}
           </ul>
