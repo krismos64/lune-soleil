@@ -9,22 +9,21 @@
 
 .hero {
   display: grid;
-  /* Une colonne a 320 px, deux quand la place existe. */
   grid-template-columns: 1fr;
   align-items: center;
   background: var(--ls-background);
 }
 
-@media (min-width: 768px) {
-  .hero {
-    grid-template-columns: 1fr 1fr;
-  }
-}
+/*
+ * UNE SEULE COLONNE A TOUTES LES LARGEURS depuis le 23 septembre 2026 : la
+ * banniere, 2,63:1 et porteuse de son propre texte, est illisible dans une
+ * demi-colonne. Elle passe en tete sur toute la largeur, le texte dessous.
+ */
 
 .heroTexte {
   padding: var(--ls-space-7) var(--ls-space-4);
   max-width: var(--ls-content-max);
-  justify-self: end;
+  justify-self: center;
   width: 100%;
 }
 
@@ -121,7 +120,12 @@
 }
 
 .heroVisuel {
-  /* L'ordre visuel suit l'ordre du document : le texte d'abord a 320 px. */
+  /*
+   * EN TETE, par `order` et non par le DOM : le titre de la page reste le
+   * premier contenu lu par un lecteur d'ecran, la banniere n'etant que son
+   * illustration.
+   */
+  order: -1;
   width: 100%;
 }
 
@@ -135,12 +139,11 @@
   width: 100%;
   height: auto;
   /*
-   * 16/10, LE RATIO REEL DU FICHIER. Imposer 4/3 rognerait en haut et en bas
-   * avec `object-fit: cover`, et couperait le pendentif qui est le sujet.
-   * A revoir si LS-23 livre une photographie d'un autre format.
+   * 1680/639, LE RATIO REEL DE LA BANNIERE, et `contain` : le texte incruste
+   * ne doit jamais etre rogne. A revoir si l'image change de format.
    */
-  aspect-ratio: 16 / 10;
-  object-fit: cover;
+  aspect-ratio: 1680 / 639;
+  object-fit: contain;
 }
 
 /* ---------- Sections communes ---------- */

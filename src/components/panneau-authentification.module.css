@@ -97,19 +97,12 @@
    */
   object-fit: cover;
   /*
-   * LE CADRAGE VISE LA DROITE DE L'IMAGE, ET CE N'EST PAS UN GOUT.
-   *
-   * `accueil-hero.jpg` est cadre pour l'accueil, ou il s'affiche en large : ses
-   * bijoux occupent la moitie DROITE et la moitie gauche est un aplat de lin
-   * uni, qui laisse respirer le titre pose par-dessus. Recadre au centre sur
-   * une colonne etroite, le panneau ne montrait que ce lin : mesure le
-   * 14 septembre 2026 sur le rendu local, il ressemblait a une image manquante.
-   *
-   * A REVOIR SI L'IMAGE CHANGE. Une photographie de LS-23 cadree autrement
-   * rendrait cette valeur fausse, et le defaut serait le meme : un aplat vide
-   * sans erreur ni avertissement.
+   * CADRAGE CENTRE : la photographie de l'atelier porte ses pieces au milieu.
+   * L'ancien visuel imposait 72 %, ses bijoux occupant la moitie droite ; A
+   * REVOIR SI L'IMAGE CHANGE, un aplat vide ne produisant ni erreur ni
+   * avertissement.
    */
-  object-position: 72% center;
+  object-position: center;
 }
 
 @media (min-width: 768px) {

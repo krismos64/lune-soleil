@@ -15,22 +15,23 @@ ADR-007, sont televersees par l'administration et passent par la chaine de
 traitement qui retire les metadonnees EXIF. Mettre une photo de bijou vendable
 ici la sortirait de ce circuit, et notamment du retrait de la geolocalisation.
 
-## accueil-hero.jpg, a remplacer avant l'ouverture
+## accueil-hero.jpg, bannière de l'accueil
 
-**Visuel d'habillage engendre, non contractuel.** Il montre des bijoux qui ne
-sont PAS au catalogue.
+**Remplacé le 23 septembre 2026** par une bannière fournie par Christophe,
+1680 x 639, soit 2,63:1. Elle remplace le visuel engendré du 19 août, qui
+montrait des bijoux jamais existés.
 
-Le garder a la mise en ligne ferait passer des pieces inexistantes pour des
-creations de la boutique : LS-22 l'interdit, et ce serait une allegation
-commerciale trompeuse au meme titre qu'un faux avis.
+**ELLE PORTE SON PROPRE TEXTE** : nom de la boutique, slogan et trois
+arguments. D'où deux conséquences dans le code : pleine largeur et
+`object-fit: contain` pour ne jamais le rogner, et un texte alternatif qui
+reprend tout ce texte. Un texte dans une image n'est lisible ni par un lecteur
+d'écran ni zoomé, critère WCAG 1.4.5 : une version sans texte incrusté serait
+préférable.
 
-Arbitrage de Christophe du 19 aout 2026 : conserve pendant le developpement,
-**remplace avant l'ouverture** par une photographie reelle de LS-23. Le
-remplacement ne demande aucune modification de code si le nom de fichier et le
-ratio 16/10 sont conserves ; sinon, ajuster `aspect-ratio` et les dimensions
-declarees dans `src/app/(boutique)/page.tsx`.
+**La graphie de l'image est « Lune-Soleil »**, celle du site `Lune-soleil`,
+`NOM_BOUTIQUE` : écart signalé à Christophe, non corrigeable dans le code.
 
-Aucune metadonnee EXIF, ICC ni XMP dans le fichier actuel, verifie.
+Métadonnées EXIF, ICC et XMP retirées à la conversion par `sharp`, vérifié.
 
 ## Les six visuels de `/notre-univers`, LS-25
 
@@ -41,7 +42,7 @@ l'exploitante.
 |---|---|---|
 | `univers-modelage.jpg` | 16/10 | en-tete de « Mon histoire », seul a porter `priority` |
 | `univers-atelier.jpg` | 16/10 | apres le paragraphe sur l'atelier d'Artix |
-| `univers-matieres.jpg` | 16/10 | ouverture de « Les matieres » |
+| `univers-matieres.jpg` | 16/10 | ouverture de « Les matieres », **remplacée le 23 septembre 2026** : vernis changé, métadonnées retirées |
 | `univers-porte.jpg` | 1:1 | « Des pieces uniques », donne l'echelle |
 | `univers-emballage.jpg` | 1:1 | « Ce a quoi je tiens », le soin du colis |
 | `univers-nettoyage.jpg` | 1:1 | « L'entretien », a droite de l'encadre des interdits |
