@@ -348,3 +348,34 @@ test("une fiche sans photographie occupe toute la largeur", async ({
   // A 2 px pres, pour l'arrondi sous-pixel d'une largeur impaire.
   expect(Math.abs(mesures.achat - mesures.corps)).toBeLessThanOrEqual(2);
 });
+
+/*
+ * LS-244, DEMANDE DE L'EXPLOITANTE EN RECETTE : voir le detail d'un bijou.
+ *
+ * LE PARCOURS EST CELUI DU CLAVIER, qui est aussi celui du doigt : un bouton
+ * ouvre la photo en grand, Echap ferme, et le focus revient au bouton. La loupe
+ * au survol, confort de souris, n'est pas exercee ici.
+ *
+ * L'IMAGE AGRANDIE DOIT ETRE SERVIE, pas seulement referencee : son code de
+ * statut est lu, lecon de LS-198 ou cinq URL de media pointaient dans le vide.
+ */
+test("la photo s'agrandit au clavier et se referme en rendant le focus", async ({
+  page,
+}) => {
+  await page.goto(`/produit/${CATALOGUE_TEST.enStock.slug}`);
+
+  const agrandir = page.getByRole("button", { name: /^Agrandir la photo/ });
+  await agrandir.focus();
+  await page.keyboard.press("Enter");
+
+  const fenetre = page.getByRole("dialog", { name: /Photo agrandie de/ });
+  await expect(fenetre).toBeVisible();
+
+  const source = await fenetre.locator("img").getAttribute("src");
+  const reponse = await page.request.get(source ?? "");
+  expect(reponse.status()).toBe(200);
+
+  await page.keyboard.press("Escape");
+  await expect(fenetre).toBeHidden();
+  await expect(agrandir).toBeFocused();
+});
