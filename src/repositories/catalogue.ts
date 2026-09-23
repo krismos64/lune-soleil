@@ -603,6 +603,19 @@ export type ProduitAdministration = {
 };
 
 /**
+ * Nombre de produits portant un statut, LS-247.
+ *
+ * Sert a DIRE ce que la vue par defaut de l'administration masque : une liste
+ * qui cache sans le dire refait le defaut de LS-163.
+ */
+export async function compterProduitsParStatut(
+  client: ClientBase,
+  statut: StatutProduit,
+): Promise<number> {
+  return client.produit.count({ where: { statut } });
+}
+
+/**
  * Tous les produits, pour l'ecran d'administration, LS-183.
  *
  * ELLE NE REMPLACE PAS `listerProduitsPublies`, ET LES DEUX DOIVENT COEXISTER.

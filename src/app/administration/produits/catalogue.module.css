@@ -315,3 +315,14 @@
 .badgeArchive {
   background: var(--ls-text);
 }
+
+/*
+ * LS-247. Lien EN LIGNE dans une phrase, donc exempte de la taille de cible
+ * minimale (WCAG 2.5.8, exception « inline »). Dore profond et non
+ * `--ls-accent-gold`, interdit pour tout texte, comme les autres liens de
+ * l'administration.
+ */
+.lienArchives {
+  color: var(--ls-accent-gold-deep);
+  text-decoration: underline;
+}

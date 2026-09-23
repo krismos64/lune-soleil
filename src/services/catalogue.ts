@@ -117,6 +117,20 @@ export type ProduitAdministration = depot.ProduitAdministration;
 export const STATUTS_VIVANTS = ["BROUILLON", "ACTIF"] as const;
 
 /**
+ * Nombre de produits archives, LS-247.
+ *
+ * LA VUE PAR DEFAUT LES MASQUE DEPUIS LS-183, et l'exploitante, en recette,
+ * voulait les supprimer pour desencombrer sa liste. Rien ne se supprime en base
+ * de production, arbitrage LS-246 : l'ecran annonce donc combien il en masque,
+ * avec le lien pour les voir, plutot que de les faire oublier.
+ *
+ * L'AUTORISATION N'EST PAS FAITE ICI, comme `listerProduitsAdministration`.
+ */
+export async function compterProduitsArchives(): Promise<number> {
+  return depot.compterProduitsParStatut(prisma, "ARCHIVE");
+}
+
+/**
  * Les produits de l'ecran d'administration, LS-183.
  *
  * `statuts` NON PRECISE VAUT « LE CATALOGUE VIVANT », jamais « tout » : le cas
