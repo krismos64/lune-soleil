@@ -133,7 +133,7 @@ export default async function PageAccueil() {
            * lisible autrement que par l'oeil.
            */}
           <Image
-            src="/habillage/accueil-hero.jpg"
+            src="/habillage/accueil-banniere.jpg"
             alt={`Bannière ${NOM_BOUTIQUE}, un croissant de lune et un soleil dorés : « Bijoux faits main avec amour », « L'harmonie du Soleil et de la Lune, créée pour vous », fait main en France, matériaux sélectionnés, pièces uniques et authentiques`}
             className={styles.image}
             width={1680}

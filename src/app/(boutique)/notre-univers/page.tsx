@@ -396,7 +396,7 @@ export default async function PageNotreUnivers() {
           </div>
 
           <Image
-            src="/habillage/univers-matieres.jpg"
+            src="/habillage/univers-matieres-vernis.jpg"
             alt="Vue de dessus des matières : pains de pâte polymère violets, lilas, beiges, terracotta et bleus, crochets et dormeuses en acier, flacon de vernis brillant, paillettes bleues et feuilles d'or"
             className={styles.imageBande}
             width={1586}
