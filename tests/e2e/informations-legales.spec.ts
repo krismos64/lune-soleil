@@ -157,6 +157,24 @@ test("la page d'aide affiche les trois modes et leurs tarifs", async ({
   expect(texte).toMatch(/7,49/);
 });
 
+/*
+ * LS-249 : LA GRATUITE N'EST JAMAIS ANNONCEE POUR LE DOMICILE. La page disait
+ * « quel que soit le mode choisi » quand `calculerFraisPort` facture le
+ * domicile au-dela du seuil, ADR-035 : information precontractuelle fausse,
+ * en production du 13 au 23 septembre 2026.
+ */
+test("la page d'aide n'annonce la livraison offerte qu'en Point Relais et Locker", async ({
+  page,
+}) => {
+  await page.goto("/aide#livraison");
+
+  const texte = (await page.locator("#livraison").textContent()) ?? "";
+
+  expect(texte).toMatch(/offerte en Point Relais et Locker/);
+  expect(texte).not.toMatch(/quel que soit le mode/i);
+  expect(texte).not.toMatch(/tous (les )?modes/i);
+});
+
 test("la page d'aide ne déborde pas horizontalement", async ({ page }) => {
   await page.goto("/aide");
 

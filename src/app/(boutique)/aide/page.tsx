@@ -116,9 +116,16 @@ export default async function PageAide() {
             </li>
             {livraison.seuilFranchiseCentimes === null ? null : (
               <li>
-                <strong>Livraison offerte</strong> à partir de{" "}
-                {formaterMontant(livraison.seuilFranchiseCentimes)}{" "}
-                d&apos;achat, quel que soit le mode choisi
+                {/*
+                 * LS-249 : EN POINT RELAIS ET LOCKER SEULEMENT, comme le calcul
+                 * facture, `calculerFraisPort` et ADR-035. La phrase disait
+                 * « quel que soit le mode choisi » : le domicile, jamais
+                 * offert, etait annonce gratuit, information precontractuelle
+                 * fausse.
+                 */}
+                <strong>Livraison offerte en Point Relais et Locker</strong> à
+                partir de {formaterMontant(livraison.seuilFranchiseCentimes)}{" "}
+                d&apos;achat. La livraison à domicile reste payante.
               </li>
             )}
           </ul>
