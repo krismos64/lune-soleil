@@ -77,3 +77,19 @@ revient à la liste.
 1. Déployer, puis faire rejouer la recette à l'exploitante sur les neuf points
 2. LS-239 : son navigateur et son geste
 3. Mesurer la suite de bout en bout au nocturne, les PR ne la rejouant pas
+
+## Relecture de cohérence, en fin de journée
+
+Demandée par Christophe. Les six contrôles automatiques sortent en 0. Relecture
+à la main de ce qu'aucun contrôle ne voit :
+
+- **le skill `story` écrivait le sens des liens `Blocks` à l'envers** : corrigé,
+  `inwardIssue` porte le bloqueur, mesuré trois fois par l'outil MCP
+- `REFERENCES.md`, `PARCOURS.md` et C33 de `frontend-design.md` ne disaient ni
+  le refus au-delà du disponible, ni l'archivage des messages, ni les groupes
+  de la barre d'administration : propagés
+- `CLAUDE.md` porte l'interdit de suppression en production, LS-246, sans
+  dépasser ses 200 lignes
+
+Reste signalé et non traité : l'index mémoire est à 151 lignes sur 200, un tri
+selon `docs/memory-archivage.md` sera à faire avant le plafond.
