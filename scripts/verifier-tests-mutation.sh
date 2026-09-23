@@ -363,7 +363,15 @@ cas() {
       "$TMP/sortie.txt" | sed 's/%2C/,/g' || true
   )
 
-  if printf '%s' "$lignes_echec" | grep -qF "$motif_attendu"; then
+  # UNE HERE-STRING ET NON `printf | grep -q`, LS-237. Sous `pipefail`,
+  # `grep -q` quitte a la premiere correspondance et ferme le tube ; si
+  # `printf` ecrit encore, il recoit SIGPIPE et sort en 141, et le pipeline
+  # entier echoue ALORS QUE LE MOTIF A ETE TROUVE. Mesure du 23 septembre 2026
+  # sur 536 lignes : 17 faux negatifs sur 200 essais avec le tube, 0 avec la
+  # here-string. C'est le RATE intermittent du cas 12, qui accusait un test
+  # parfaitement voyant. `verifier-grep-q-pipefail.sh` interdit desormais la
+  # forme dans tout script sous `pipefail`.
+  if grep -qF "$motif_attendu" <<<"$lignes_echec"; then
     echo "  OK    $nom -> detecte par le test attendu"
     printf '%s\n' "$lignes_echec" | head -3 | sed 's/^ *//' | sed 's/^/          /'
   else

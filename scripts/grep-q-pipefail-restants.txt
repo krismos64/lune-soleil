@@ -1,0 +1,27 @@
+# Occurrences restantes de `echo|printf | grep -q` sous pipefail, LS-237.
+# Une ligne par fichier : chemin, nombre. La liste ne peut que baisser, LS-250.
+scripts/amorcer-production.sh 1
+scripts/decider-suite-complete.sh 1
+scripts/migrate-production.sh 1
+scripts/verifier-atteignabilite-boutique-mutation.sh 1
+scripts/verifier-cle-b2-durcie.sh 2
+scripts/verifier-comptes-production.sh 1
+scripts/verifier-config-claude-mutation.sh 1
+scripts/verifier-couverture-mutations-mutation.sh 1
+scripts/verifier-en-tetes-production.sh 2
+scripts/verifier-en-tetes-securite-mutation.sh 2
+scripts/verifier-en-tetes-securite.sh 4
+scripts/verifier-environnement-mutation.sh 1
+scripts/verifier-gabarit-titre.sh 6
+scripts/verifier-gardes-administration-mutation.sh 2
+scripts/verifier-grep-q-pipefail.sh 2
+scripts/verifier-image-docker-mutation.sh 1
+scripts/verifier-image-docker.sh 1
+scripts/verifier-nginx.sh 3
+scripts/verifier-protection-branche.sh 1
+scripts/verifier-redaction-francaise-mutation.sh 1
+scripts/verifier-sauvegarde-mutation.sh 1
+scripts/verifier-statut-base-morte-mutation.sh 1
+scripts/verifier-statut-base-morte.sh 1
+scripts/verifier-taches-planifiees.sh 2
+scripts/verifier-verdict-audit.sh 1

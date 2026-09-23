@@ -11,7 +11,7 @@ sa raison.
 
 ## Ce que l'inventaire de LS-230 a trouvé
 
-Mesuré le 14 septembre 2026 : le dépôt portait **quarante-trois preuves**, quarante-quatre depuis,
+Mesuré le 14 septembre 2026 : le dépôt portait **quarante-trois preuves**, quarante-cinq au 23 septembre 2026,
 l'intégration continue en rejouait **quinze**. Sur les vingt-huit dormantes,
 **cinq étaient cassées** sans que personne ne le sache, et chacune autrement.
 
@@ -46,8 +46,9 @@ ne pouvait pas produire son effet, et s'annonçait comme un trou du contrôle.
 
 ## Les preuves écartées, et leur raison
 
-**Aucune, au 17 septembre 2026.** Les **quarante-quatre** preuves du dépôt
-tournent, **trente-sept par PR et sept au nocturne**.
+**Aucune, au 23 septembre 2026.** Les **quarante-cinq** preuves du dépôt
+tournent, **trente-huit par PR et sept au nocturne**, comptes relevés par les
+commandes ci-dessous et non recopiés.
 
 `verifier-image-docker-mutation.sh` a rejoint le nocturne le 17 septembre. Elle
 existait depuis LS-74 **sans être lancée par aucun workflow**, et n'apparaissait
@@ -66,10 +67,11 @@ document. Une première version du contrôle cherchait le nom dans tout le
 registre : les cinq preuves réparées plus haut, citées dans leur tableau
 historique, passaient alors pour écartées. Un récit n'est pas une décision.
 
-## Comment les quarante-quatre se répartissent
+## Comment les quarante-cinq se répartissent
 
-**Trente-sept par PR**, `controles.yml` : **vingt-deux** groupées dans l'étape
-« 9z octies », qui pèsent **82 s** mesurées en les enchaînant, et **quinze** en
+**Trente-huit par PR**, `controles.yml` : **vingt-trois** groupées dans l'étape
+« 9z octies », qui pèsent **82 s** mesurées en les enchaînant avant l'ajout de
+`verifier-grep-q-pipefail-mutation.sh` par LS-237, et **quinze** en
 étapes nommées, chacune posée par la story qui l'a écrite. Sur une CI qui dure
 environ neuf cents secondes quand le code change.
 
@@ -84,7 +86,7 @@ grep -hE "^[[:space:]]*(-[[:space:]]+)?(run:[[:space:]]+)?\./scripts/verifier-[a
   .github/workflows/controles.yml | grep -oE "verifier-[a-z0-9-]+-mutation\.sh" | sort -u | wc -l
 ```
 
-**L'ancrage sur le début de ligne est ce qui rend 37 et non 38.** Un
+**L'ancrage sur le début de ligne est ce qui rend 38 et non 39.** Un
 `grep -oE 'verifier-...'` nu retient la mention de
 `verifier-image-docker-mutation.sh` dans un **commentaire** de `controles.yml`,
 qui n'exécute rien. C'est le défaut exact que
