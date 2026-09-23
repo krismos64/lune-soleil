@@ -18,7 +18,7 @@
  * produite : c'est le defaut de LS-102, une chaine construite a l'execution
  * confrontee a rien.
  */
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { srcSetMedia, urlMedia, urlVignette } from "@/integrations/medias/urls";
 import type { PhotoFiche } from "@/services/catalogue";
@@ -32,6 +32,14 @@ export function Galerie({
   nomProduit: string;
 }) {
   const [indexAffiche, setIndexAffiche] = useState(0);
+  /*
+   * LS-244, LA LOUPE. `survol` porte la position du pointeur en pourcentage de
+   * l'image, `null` hors survol. L'image 1920 ne se charge qu'au premier
+   * survol : elle pese plusieurs centaines de kilo-octets, et la plupart des
+   * visites ne zoomeront jamais.
+   */
+  const [survol, setSurvol] = useState<{ x: number; y: number } | null>(null);
+  const agrandie = useRef<HTMLDialogElement>(null);
 
   const affichee = photos[indexAffiche] ?? photos[0];
 
@@ -48,32 +56,114 @@ export function Galerie({
 
   return (
     <div className={styles.galerie}>
-      <picture>
-        <source
-          type="image/avif"
-          srcSet={srcSetMedia(affichee.chemin, "avif")}
-          sizes={tailles}
-        />
-        <source
-          type="image/webp"
-          srcSet={srcSetMedia(affichee.chemin, "webp")}
-          sizes={tailles}
-        />
-        {/*
-         * `alt` VIDE PLUTOT QUE LE NOM DU PRODUIT quand le texte alternatif
-         * manque. Le nom est deja le titre de la page, juste a cote : le
-         * repeter ferait entendre deux fois la meme chose sans rien decrire de
-         * l'image.
-         */}
-        <img
-          src={urlVignette(affichee.chemin)}
-          alt={affichee.texteAlternatif ?? ""}
-          className={styles.imagePrincipale}
-          width={640}
-          height={640}
-          decoding="async"
-        />
-      </picture>
+      {/*
+       * LS-244, DEMANDE DE L'EXPLOITANTE EN RECETTE : voir le detail d'un bijou.
+       *
+       * L'IMAGE EST UN BOUTON QUI OUVRE LA PHOTO EN GRAND, et non un simple
+       * survol : le survol n'existe pas au doigt, et la majorite des visites
+       * vient du telephone, invariant 10. Au clavier, Entree ouvre, Echap
+       * ferme ; le `<dialog>` natif rend le reste de la page inerte et rend le
+       * focus au bouton a la fermeture.
+       *
+       * LA LOUPE AU SURVOL S'AJOUTE SUR ORDINATEUR SEULEMENT, `pointer: fine`
+       * dans le CSS : un calque qui agrandit la zone sous le pointeur.
+       */}
+      <button
+        type="button"
+        className={styles.boutonAgrandir}
+        aria-label={
+          affichee.texteAlternatif
+            ? `Agrandir la photo : ${affichee.texteAlternatif}`
+            : `Agrandir la photo de ${nomProduit}`
+        }
+        onClick={() => agrandie.current?.showModal()}
+        onPointerMove={(evenement) => {
+          if (evenement.pointerType !== "mouse") return;
+          const cadre = evenement.currentTarget.getBoundingClientRect();
+          setSurvol({
+            x: ((evenement.clientX - cadre.left) / cadre.width) * 100,
+            y: ((evenement.clientY - cadre.top) / cadre.height) * 100,
+          });
+        }}
+        onPointerLeave={() => setSurvol(null)}
+      >
+        <picture>
+          <source
+            type="image/avif"
+            srcSet={srcSetMedia(affichee.chemin, "avif")}
+            sizes={tailles}
+          />
+          <source
+            type="image/webp"
+            srcSet={srcSetMedia(affichee.chemin, "webp")}
+            sizes={tailles}
+          />
+          {/*
+           * `alt` VIDE PLUTOT QUE LE NOM DU PRODUIT quand le texte alternatif
+           * manque. Le nom est deja le titre de la page, juste a cote : le
+           * repeter ferait entendre deux fois la meme chose sans rien decrire de
+           * l'image.
+           */}
+          <img
+            src={urlVignette(affichee.chemin)}
+            alt={affichee.texteAlternatif ?? ""}
+            className={styles.imagePrincipale}
+            width={640}
+            height={640}
+            decoding="async"
+          />
+        </picture>
+        {survol ? (
+          <span
+            className={styles.loupe}
+            aria-hidden="true"
+            style={{
+              backgroundImage: `url(${urlMedia(affichee.chemin, "1920.webp")})`,
+              backgroundPosition: `${survol.x}% ${survol.y}%`,
+            }}
+          />
+        ) : null}
+      </button>
+
+      <dialog
+        ref={agrandie}
+        className={styles.agrandie}
+        aria-label={`Photo agrandie de ${nomProduit}`}
+        /*
+         * UN CLIC SUR LE FOND FERME, comme Echap : sur un `<dialog>` modal, un
+         * clic hors du contenu vise l'element lui-meme.
+         */
+        onClick={(evenement) => {
+          if (evenement.target === evenement.currentTarget) {
+            evenement.currentTarget.close();
+          }
+        }}
+      >
+        <button
+          type="button"
+          className={styles.fermerAgrandie}
+          onClick={() => agrandie.current?.close()}
+        >
+          Fermer
+        </button>
+        <picture>
+          <source
+            type="image/avif"
+            srcSet={urlMedia(affichee.chemin, "1920.avif")}
+          />
+          <source
+            type="image/webp"
+            srcSet={urlMedia(affichee.chemin, "1920.webp")}
+          />
+          <img
+            src={urlMedia(affichee.chemin, "1280.jpeg")}
+            alt={affichee.texteAlternatif ?? ""}
+            className={styles.imageAgrandie}
+            loading="lazy"
+            decoding="async"
+          />
+        </picture>
+      </dialog>
 
       {/*
        * LES VIGNETTES N'APPARAISSENT QU'A PARTIR DE DEUX PHOTOGRAPHIES. Une
