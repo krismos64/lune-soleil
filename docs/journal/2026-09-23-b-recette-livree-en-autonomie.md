@@ -18,8 +18,9 @@ ce soir après lecture de ce journal.
 | LS-243 | messages archivés par sélection, jamais effacés | #472 |
 | LS-242 | publier ou archiver plusieurs produits d'un geste | #475 |
 
-Neuf tickets clos sur les dix de la recette, plus LS-248 ouvert en chemin. Seul
-LS-239 reste ouvert, faute de reproduction.
+Neuf tickets livrés sur les dix de la recette, plus LS-248 ouvert en chemin.
+LS-239 est **clos sans correction** en fin de journée, arbitrage de Christophe :
+non reproduit, et son besoin réduit par LS-240 et LS-241.
 
 **Suite de bout en bout complète sur l'état final** : 2227 passés, 70 ignorés,
 0 échec. Vitest : 1710 passés, deux passes consécutives.
@@ -58,12 +59,12 @@ une borne de temps, a été refusée par `ls-critical-reviewer` : Prisma 7
 horodate `cree_a` côté Node, la base côté conteneur. Remplacée par une
 différence d'ensembles.
 
-## LS-239 non reproduit
+## LS-239 non reproduit, puis clos
 
 Le retour en bas de page n'a pas été reproduit sous Chromium : le retour arrière
 restaure la position au pixel près, un lien mène en haut. Mesures en commentaire
-du ticket. Il faut savoir sur quel appareil et par quel geste l'exploitante
-revient à la liste.
+du ticket. Christophe l'a clos sans correction en fin de journée, « vraiment pas
+grave ».
 
 ## Pour le déploiement de ce soir
 
@@ -75,7 +76,7 @@ revient à la liste.
 ## Prochaine étape
 
 1. Déployer, puis faire rejouer la recette à l'exploitante sur les neuf points
-2. LS-239 : son navigateur et son geste
+2. Rouvrir LS-239 seulement si l'exploitante revoit le défaut, avec son navigateur et son geste
 3. Mesurer la suite de bout en bout au nocturne, les PR ne la rejouant pas
 
 ## Relecture de cohérence, en fin de journée
