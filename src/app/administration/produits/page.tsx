@@ -37,6 +37,10 @@ import {
 import { urlMedia } from "@/integrations/medias/urls";
 import { formaterMontant } from "@/lib/montant";
 
+import {
+  FORMULAIRE_SELECTION_PRODUITS,
+  SelectionProduits,
+} from "./selection-produits";
 import styles from "./catalogue.module.css";
 
 export const metadata = {
@@ -293,114 +297,135 @@ async function ListeProduits({
               : "Le catalogue est vide. Créez un premier produit pour commencer."}
         </p>
       ) : (
-        <ul className={styles.liste}>
-          {produits.map((produit) => {
-            const badge = BADGES[produit.statut];
+        <>
+          {/*
+           * LS-242 : publier ou archiver plusieurs produits d'un geste. Les
+           * cases des cartes se rattachent a ce formulaire par `form`.
+           */}
+          <SelectionProduits />
+          <ul className={styles.liste}>
+            {produits.map((produit) => {
+              const badge = BADGES[produit.statut];
 
-            return (
-              <li key={produit.id} className={styles.carte}>
-                {/*
-                 * LA VIGNETTE EST DECORATIVE ICI, `alt` vide et `aria-hidden` :
-                 * le lien voisin porte deja le nom du produit, et faire lire le
-                 * texte alternatif donnerait deux fois la meme information.
-                 * C'est l'inverse de la boutique, ou l'image EST le contenu.
-                 */}
-                <div className={styles.cadreImage} aria-hidden="true">
-                  {produit.mediaChemin ? (
-                    /*
-                     * AUCUN `width` NI `height`, ET C'EST DELIBERE, lecon deja
-                     * apprise sur l'ecran des medias : le traitement ne
-                     * contraint QUE la largeur, `resize({ width })`, la hauteur
-                     * suivant le ratio de la source. Declarer 320 par 320
-                     * affirmerait un carre que le fichier ne respecte pas, et
-                     * produirait un decalage de mise en page au chargement de
-                     * chaque vignette, sur une liste qui en empile autant qu'il
-                     * y a de produits.
-                     *
-                     * LA PLACE EST RESERVEE PAR LE CSS : `.cadreImage` fixe
-                     * 64 par 64 et `object-fit: cover` recadre, ce qui stabilise
-                     * la carte sans rien affirmer du ratio reel.
-                     *
-                     * LE JPEG SEUL, SANS `<picture>` A TROIS SOURCES, et c'est
-                     * delibere. Un `<img src>` ne negocie aucun format : servir
-                     * l'AVIF directement casserait l'image pour qui ne le
-                     * supporte pas. Le `<picture>` du catalogue public existe
-                     * parce que le poids y compte vraiment, sur des images
-                     * pleine largeur ; ici quarante vignettes de 64 px pesent
-                     * moins que le gain de complexite. Ne pas « harmoniser »
-                     * avec la boutique sans mesurer ce que cela coute.
-                     */
-                    // eslint-disable-next-line @next/next/no-img-element -- fichiers servis par Nginx depuis un volume, hors de la portee de l'optimiseur de Next.js
-                    <img
-                      src={urlMedia(produit.mediaChemin, "320.jpeg")}
-                      alt=""
-                      className={styles.image}
-                      loading="lazy"
-                      decoding="async"
+              return (
+                <li key={produit.id} className={styles.carte}>
+                  {/*
+                   * LS-242 : `aria-label` et non un texte masque, qui doublerait
+                   * le nom dans le DOM et rendrait ambigue toute recherche du
+                   * produit par son texte, defaut deja paye en LS-243.
+                   */}
+                  <label className={styles.caseSelection}>
+                    <input
+                      type="checkbox"
+                      name="produitId"
+                      value={produit.id}
+                      form={FORMULAIRE_SELECTION_PRODUITS}
+                      aria-label={`Sélectionner ${produit.nom}`}
                     />
-                  ) : (
-                    <span className={styles.imageAbsente} />
-                  )}
-                </div>
-
-                <div className={styles.corps}>
-                  <p className={styles.categorie}>{produit.categorieNom}</p>
-
+                  </label>
                   {/*
-                   * LE LIEN PORTE LE NOM, ce qui en fait le nom accessible :
-                   * une liste de liens « Modifier » serait indiscernable a
-                   * l'oreille. Le geste est le meme, l'annonce est juste.
+                   * LA VIGNETTE EST DECORATIVE ICI, `alt` vide et `aria-hidden` :
+                   * le lien voisin porte deja le nom du produit, et faire lire le
+                   * texte alternatif donnerait deux fois la meme information.
+                   * C'est l'inverse de la boutique, ou l'image EST le contenu.
                    */}
-                  <h2 className={styles.nom}>
-                    <Link
-                      href={`/administration/produits/${produit.id}`}
-                      className={styles.lien}
-                      prefetch={false}
-                    >
-                      {produit.nom}
-                    </Link>
-                  </h2>
+                  <div className={styles.cadreImage} aria-hidden="true">
+                    {produit.mediaChemin ? (
+                      /*
+                       * AUCUN `width` NI `height`, ET C'EST DELIBERE, lecon deja
+                       * apprise sur l'ecran des medias : le traitement ne
+                       * contraint QUE la largeur, `resize({ width })`, la hauteur
+                       * suivant le ratio de la source. Declarer 320 par 320
+                       * affirmerait un carre que le fichier ne respecte pas, et
+                       * produirait un decalage de mise en page au chargement de
+                       * chaque vignette, sur une liste qui en empile autant qu'il
+                       * y a de produits.
+                       *
+                       * LA PLACE EST RESERVEE PAR LE CSS : `.cadreImage` fixe
+                       * 64 par 64 et `object-fit: cover` recadre, ce qui stabilise
+                       * la carte sans rien affirmer du ratio reel.
+                       *
+                       * LE JPEG SEUL, SANS `<picture>` A TROIS SOURCES, et c'est
+                       * delibere. Un `<img src>` ne negocie aucun format : servir
+                       * l'AVIF directement casserait l'image pour qui ne le
+                       * supporte pas. Le `<picture>` du catalogue public existe
+                       * parce que le poids y compte vraiment, sur des images
+                       * pleine largeur ; ici quarante vignettes de 64 px pesent
+                       * moins que le gain de complexite. Ne pas « harmoniser »
+                       * avec la boutique sans mesurer ce que cela coute.
+                       */
+                      // eslint-disable-next-line @next/next/no-img-element -- fichiers servis par Nginx depuis un volume, hors de la portee de l'optimiseur de Next.js
+                      <img
+                        src={urlMedia(produit.mediaChemin, "320.jpeg")}
+                        alt=""
+                        className={styles.image}
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    ) : (
+                      <span className={styles.imageAbsente} />
+                    )}
+                  </div>
 
-                  <p className={styles.prix}>
+                  <div className={styles.corps}>
+                    <p className={styles.categorie}>{produit.categorieNom}</p>
+
                     {/*
-                     * PAS DE PRIX N'EST PAS UN PRIX DE ZERO. Un produit vient
-                     * de naitre sans variante, `creerProduit` n'en ecrivant
-                     * aucune : afficher « 0,00 € » annoncerait un prix decide.
+                     * LE LIEN PORTE LE NOM, ce qui en fait le nom accessible :
+                     * une liste de liens « Modifier » serait indiscernable a
+                     * l'oreille. Le geste est le meme, l'annonce est juste.
                      */}
-                    {produit.prixMinimumCentimes === null
-                      ? "Aucun prix"
-                      : formaterMontant(produit.prixMinimumCentimes)}
-                  </p>
+                    <h2 className={styles.nom}>
+                      <Link
+                        href={`/administration/produits/${produit.id}`}
+                        className={styles.lien}
+                        prefetch={false}
+                      >
+                        {produit.nom}
+                      </Link>
+                    </h2>
+
+                    <p className={styles.prix}>
+                      {/*
+                       * PAS DE PRIX N'EST PAS UN PRIX DE ZERO. Un produit vient
+                       * de naitre sans variante, `creerProduit` n'en ecrivant
+                       * aucune : afficher « 0,00 € » annoncerait un prix decide.
+                       */}
+                      {produit.prixMinimumCentimes === null
+                        ? "Aucun prix"
+                        : formaterMontant(produit.prixMinimumCentimes)}
+                    </p>
+
+                    {/*
+                     * LE NOMBRE DE VARIANTES DIT CE QUI MANQUE. Zero variante est
+                     * la raison la plus frequente pour laquelle un brouillon
+                     * n'est pas publiable, et le voir ici evite d'ouvrir la fiche
+                     * pour le decouvrir.
+                     */}
+                    <p className={styles.variantes}>
+                      {produit.variantesVivantes === 0
+                        ? "Aucune déclinaison"
+                        : `${produit.variantesVivantes} ${
+                            produit.variantesVivantes > 1
+                              ? "déclinaisons"
+                              : "déclinaison"
+                          }`}
+                    </p>
+                  </div>
 
                   {/*
-                   * LE NOMBRE DE VARIANTES DIT CE QUI MANQUE. Zero variante est
-                   * la raison la plus frequente pour laquelle un brouillon
-                   * n'est pas publiable, et le voir ici evite d'ouvrir la fiche
-                   * pour le decouvrir.
+                   * LE BADGE PORTE SON SENS DANS SON TEXTE, jamais dans sa seule
+                   * couleur : « Publié », « Brouillon », « Archivé » se lisent en
+                   * vision monochrome comme a l'oreille.
                    */}
-                  <p className={styles.variantes}>
-                    {produit.variantesVivantes === 0
-                      ? "Aucune déclinaison"
-                      : `${produit.variantesVivantes} ${
-                          produit.variantesVivantes > 1
-                            ? "déclinaisons"
-                            : "déclinaison"
-                        }`}
-                  </p>
-                </div>
-
-                {/*
-                 * LE BADGE PORTE SON SENS DANS SON TEXTE, jamais dans sa seule
-                 * couleur : « Publié », « Brouillon », « Archivé » se lisent en
-                 * vision monochrome comme a l'oreille.
-                 */}
-                <span className={`${styles.badge} ${styles[badge.classe]}`}>
-                  {badge.libelle}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
+                  <span className={`${styles.badge} ${styles[badge.classe]}`}>
+                    {badge.libelle}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
     </>
   );

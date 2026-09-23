@@ -481,6 +481,19 @@ export const schemaSelectionMessages = z
   .transform((identifiants) => [...new Set(identifiants)]);
 
 /**
+ * Selection de produits a publier ou archiver d'un geste, LS-242.
+ *
+ * CENT AU PLUS : une selection ne porte pas plus que ce qu'un ecran montre, et
+ * une requete forgee ne fait pas tourner cent mille transactions. Doublons
+ * retires, un produit ne se publie qu'une fois par geste.
+ */
+export const schemaSelectionProduits = z
+  .array(schemaIdentifiant)
+  .min(1, "Aucun produit sélectionné.")
+  .max(100, "Une sélection porte au plus 100 produits.")
+  .transform((identifiants) => [...new Set(identifiants)]);
+
+/**
  * Message de contact, LS-97. Entree PUBLIQUE, donc non fiable par definition.
  *
  * LE CORPS EST BORNE A 4000 CARACTERES, invariant 7. Sans borne, un envoi
