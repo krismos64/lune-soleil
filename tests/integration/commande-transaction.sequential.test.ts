@@ -98,18 +98,20 @@ describe("concurrence sur la derniere piece", () => {
     });
 
     /*
-     * LS-248 : L'INSTANT DE DEPART BORNE LE CONSTAT. Les fichiers d'integration
-     * tournent en serie sur la meme base, et le nettoyage de chacun n'a lieu
-     * qu'APRES ses tests : les commandes laissees par les fichiers precedents
-     * sont encore la. Compter toute la table a rendu 11 au lieu de 1.
+     * LS-248 : LES COMMANDES DEJA PRESENTES SONT RELEVEES AVANT. Les fichiers
+     * d'integration tournent en serie sur la meme base, et le nettoyage de
+     * chacun n'a lieu qu'APRES ses tests : compter toute la table a rendu 11
+     * au lieu de 1.
      *
-     * L'HORLOGE DE LA BASE ET NON CELLE DE NODE, comme `anneePostgres` : les
-     * commandes sont horodatees par `now()` cote base.
+     * UNE DIFFERENCE D'ENSEMBLES ET NON UNE BORNE DE TEMPS, correction de
+     * `ls-critical-reviewer` : Prisma 7 horodate `cree_a` cote Node, la base
+     * cote conteneur, et un ecart d'horloge entre les deux rendait la borne
+     * aveugle ou fausse.
      */
-    const { rows: instant } = await client.query<{ depart: Date }>(
-      "SELECT now() AS depart",
+    const { rows: avant } = await client.query<{ id: string }>(
+      "SELECT id FROM commande",
     );
-    const depart = instant[0]!.depart;
+    const dejaLa = new Set(avant.map((ligne) => ligne.id));
 
     const commander = () =>
       passerCommande({
@@ -148,19 +150,14 @@ describe("concurrence sur la derniere piece", () => {
     expect(reservations).toHaveLength(1);
     expect(reservations[0].commande_id).toBe(gagnante.value.commandeId);
 
-    /*
-     * UNE SEULE COMMANDE SUBSISTE : le refus a annule la sienne entierement.
-     *
-     * BORNEE PAR L'INSTANT ET NON PAR LA VARIANTE, LS-248 : filtrer par les
-     * lignes de commande laisserait passer une commande perdante orpheline,
-     * sans ligne, precisement le defaut que cette assertion doit voir.
-     */
-    const { rows: commandes } = await client.query(
-      "SELECT id FROM commande WHERE cree_a >= $1",
-      [depart],
+    // UNE SEULE COMMANDE SUBSISTE : le refus a annule la sienne entierement,
+    // orpheline sans ligne comprise.
+    const { rows: apres } = await client.query<{ id: string }>(
+      "SELECT id FROM commande",
     );
+    const commandes = apres.filter((ligne) => !dejaLa.has(ligne.id));
     expect(commandes).toHaveLength(1);
-    expect(commandes[0].id).toBe(gagnante.value.commandeId);
+    expect(commandes[0]?.id).toBe(gagnante.value.commandeId);
 
     // LE STOCK N'EST JAMAIS NEGATIF, et la survente n'a pas eu lieu.
     const { rows: variantes } = await client.query(
