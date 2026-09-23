@@ -97,6 +97,20 @@ describe("concurrence sur la derniere piece", () => {
       quantitePhysique: 1,
     });
 
+    /*
+     * LS-248 : L'INSTANT DE DEPART BORNE LE CONSTAT. Les fichiers d'integration
+     * tournent en serie sur la meme base, et le nettoyage de chacun n'a lieu
+     * qu'APRES ses tests : les commandes laissees par les fichiers precedents
+     * sont encore la. Compter toute la table a rendu 11 au lieu de 1.
+     *
+     * L'HORLOGE DE LA BASE ET NON CELLE DE NODE, comme `anneePostgres` : les
+     * commandes sont horodatees par `now()` cote base.
+     */
+    const { rows: instant } = await client.query<{ depart: Date }>(
+      "SELECT now() AS depart",
+    );
+    const depart = instant[0]!.depart;
+
     const commander = () =>
       passerCommande({
         lignesCookie: [{ varianteId, quantite: 1 }],
@@ -128,13 +142,23 @@ describe("concurrence sur la derniere piece", () => {
     }>;
 
     const { rows: reservations } = await client.query(
-      "SELECT commande_id FROM reservation",
+      "SELECT commande_id FROM reservation WHERE variante_id = $1",
+      [varianteId],
     );
     expect(reservations).toHaveLength(1);
     expect(reservations[0].commande_id).toBe(gagnante.value.commandeId);
 
-    // UNE SEULE COMMANDE SUBSISTE : le refus a annule la sienne entierement.
-    const { rows: commandes } = await client.query("SELECT id FROM commande");
+    /*
+     * UNE SEULE COMMANDE SUBSISTE : le refus a annule la sienne entierement.
+     *
+     * BORNEE PAR L'INSTANT ET NON PAR LA VARIANTE, LS-248 : filtrer par les
+     * lignes de commande laisserait passer une commande perdante orpheline,
+     * sans ligne, precisement le defaut que cette assertion doit voir.
+     */
+    const { rows: commandes } = await client.query(
+      "SELECT id FROM commande WHERE cree_a >= $1",
+      [depart],
+    );
     expect(commandes).toHaveLength(1);
     expect(commandes[0].id).toBe(gagnante.value.commandeId);
 
