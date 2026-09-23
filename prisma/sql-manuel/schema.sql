@@ -719,6 +719,7 @@ CREATE TABLE "message" (
     "statut" "StatutMessage" NOT NULL DEFAULT 'NOUVEAU',
     "lu_a" TIMESTAMPTZ(3),
     "traite_a" TIMESTAMPTZ(3),
+    "archive_a" TIMESTAMPTZ(3),
     "cree_a" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "message_pkey" PRIMARY KEY ("id")

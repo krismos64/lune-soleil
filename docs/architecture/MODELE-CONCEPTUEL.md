@@ -1532,6 +1532,7 @@ erDiagram
         enum statut "NOUVEAU LU TRAITE"
         horodatage luA "nullable"
         horodatage traiteA "nullable"
+        horodatage archiveA "nullable"
         horodatage creeA
     }
     JOURNAL_CONNEXION {

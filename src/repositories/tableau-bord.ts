@@ -148,8 +148,10 @@ export async function compterPourAdministration(
                                                AS "variantesIndisponibles",
       (SELECT count(*) FROM commande
         WHERE statut = 'EXPEDIEE')             AS "expeditionsEnTransit",
+      -- LS-243 : un message archive ne fait plus partie de la pile a traiter.
       (SELECT count(*) FROM message
-        WHERE statut = 'NOUVEAU')              AS "messagesNonLus",
+        WHERE statut = 'NOUVEAU'
+          AND archive_a IS NULL)               AS "messagesNonLus",
       (SELECT count(*) FROM demande_retractation
         WHERE statut NOT IN ('REMBOURSEE', 'REFUSEE'))
                                                AS "retractationsEnCours",

@@ -24,7 +24,10 @@ import type { StatutMessage } from "@/generated/prisma/enums";
 import { journaliserErreur } from "@/lib/journal";
 import { EntreeInvalideError } from "@/lib/validation";
 import { exigerRole } from "@/services/autorisation";
-import { changerStatutMessage } from "@/services/message-contact";
+import {
+  archiverMessages,
+  changerStatutMessage,
+} from "@/services/message-contact";
 
 /** Ce que l'interface recoit, jamais une exception. */
 export type ResultatStatutMessage =
@@ -137,6 +140,58 @@ export async function changerStatut(
     }
 
     journaliserErreur("changement de statut de message impossible", erreur, {});
+
+    return { statut: "INDISPONIBLE" };
+  }
+}
+
+/** Ce que la barre de selection recoit, LS-243. */
+export type ResultatArchivage =
+  | { statut: "SUCCES"; nombre: number }
+  | { statut: "SESSION_ABSENTE" }
+  | { statut: "INVALIDE" }
+  | { statut: "INDISPONIBLE" };
+
+/**
+ * Archive ou desarchive les messages coches, LS-243.
+ *
+ * ADAPTATEUR D'ENTREE : il lit la session, extrait les champs du formulaire et
+ * delegue. La validation des identifiants vit dans le service, invariant 7.
+ *
+ * `mode` INCONNU EST UNE ENTREE INVALIDE, jamais un archivage par defaut : un
+ * formulaire forge ne doit pas pouvoir choisir le sens du geste par omission.
+ */
+export async function archiverSelection(
+  formulaire: FormData,
+): Promise<ResultatArchivage> {
+  const identite = await exigerRole(await headers());
+
+  if (identite === null) {
+    return { statut: "SESSION_ABSENTE" };
+  }
+
+  const mode = formulaire.get("mode");
+
+  if (mode !== "archiver" && mode !== "desarchiver") {
+    return { statut: "INVALIDE" };
+  }
+
+  try {
+    const nombre = await archiverMessages({
+      messageIds: formulaire.getAll("messageId"),
+      archiver: mode === "archiver",
+    });
+
+    // `"layout"` pour la pastille, meme raison que `changerStatut`, LS-201.
+    revalidatePath(CHEMIN_MESSAGES, "layout");
+
+    return { statut: "SUCCES", nombre };
+  } catch (erreur) {
+    if (erreur instanceof EntreeInvalideError) {
+      return { statut: "INVALIDE" };
+    }
+
+    journaliserErreur("archivage de messages impossible", erreur, {});
 
     return { statut: "INDISPONIBLE" };
   }

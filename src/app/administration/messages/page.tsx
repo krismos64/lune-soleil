@@ -40,6 +40,7 @@ import type { StatutMessage } from "@/generated/prisma/enums";
 import { LIMITE_LISTE, listerMessages } from "@/services/message-contact";
 import { formaterDate } from "@/lib/affichage-commande";
 import { ClassementMessage } from "./classement-message";
+import { FORMULAIRE_SELECTION, SelectionMessages } from "./selection-messages";
 import { ChargementAdministration } from "@/components/chargement-administration";
 import styles from "./messages.module.css";
 
@@ -88,11 +89,19 @@ const LIBELLES: Record<StatutMessage, string> = {
  * un statut : la table decide de ce qui s'affiche ET de ce qui est accepte, donc
  * l'ecran et le service ne peuvent pas diverger.
  */
-const FILTRES: { valeur: StatutMessage | "TOUS"; libelle: string }[] = [
+const FILTRES: {
+  valeur: StatutMessage | "TOUS" | "ARCHIVES";
+  libelle: string;
+}[] = [
   { valeur: "TOUS", libelle: "Tous" },
   { valeur: "NOUVEAU", libelle: "Nouveaux" },
   { valeur: "LU", libelle: "Lus" },
   { valeur: "TRAITE", libelle: "Traités" },
+  /*
+   * LS-243 : les archives sont une vue a part, tous statuts confondus. Les
+   * quatre autres filtres ne montrent que les messages non archives.
+   */
+  { valeur: "ARCHIVES", libelle: "Archivés" },
 ];
 
 export default async function PageMessages({
@@ -176,10 +185,15 @@ async function ListeMessages({
 }: {
   filtreActif: (typeof FILTRES)[number];
 }) {
-  const { messages, tronquee, total, nouveaux } = await listerMessages(
-    undefined,
-    filtreActif.valeur === "TOUS" ? undefined : filtreActif.valeur,
-  );
+  const vueArchives = filtreActif.valeur === "ARCHIVES";
+  const { messages, tronquee, total, nouveaux, archives } =
+    await listerMessages(
+      undefined,
+      filtreActif.valeur === "TOUS" || filtreActif.valeur === "ARCHIVES"
+        ? undefined
+        : filtreActif.valeur,
+      vueArchives,
+    );
 
   return (
     <>
@@ -193,6 +207,13 @@ async function ListeMessages({
         {total === 0
           ? "Aucun message reçu."
           : `${total} message${total > 1 ? "s" : ""}, dont ${nouveaux} non lu${nouveaux > 1 ? "s" : ""}.`}
+        {/*
+         * LS-243 : les archives sont hors du compte, et la phrase le dit pour
+         * qu'un message archive ne paraisse pas perdu.
+         */}
+        {archives > 0
+          ? ` ${archives} archivé${archives > 1 ? "s" : ""}, hors de ce compte.`
+          : null}
       </p>
 
       {/*
@@ -262,6 +283,10 @@ async function ListeMessages({
         </p>
       ) : null}
 
+      {messages.length > 0 ? (
+        <SelectionMessages mode={vueArchives ? "desarchiver" : "archiver"} />
+      ) : null}
+
       {messages.length === 0 ? (
         /*
          * L'ETAT VIDE DIT POURQUOI ET NON SEULEMENT QU'IL EST VIDE, meme regle
@@ -314,6 +339,24 @@ async function ListeMessages({
                   {formaterDate(message.creeA)}
                 </span>
               </div>
+
+              {/*
+               * LS-243 : la case se rattache au formulaire de la barre par
+               * l'attribut `form`, la carte portant deja ses propres boutons.
+               * Son nom accessible porte le sujet : « Sélectionner » seul
+               * serait indiscernable d'une carte a l'autre.
+               */}
+              <label className={styles.caseSelection}>
+                <input
+                  type="checkbox"
+                  name="messageId"
+                  value={message.id}
+                  form={FORMULAIRE_SELECTION}
+                />
+                <span className={styles.invisible}>
+                  Sélectionner le message « {message.sujet} »
+                </span>
+              </label>
 
               <h2 className={styles.sujet}>{message.sujet}</h2>
 
