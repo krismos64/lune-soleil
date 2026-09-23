@@ -86,3 +86,12 @@ petit, et la graphie « Lune-Soleil » de l'image contre `Lune-soleil` du site.
 1. Déployer, puis recette de l'exploitante
 2. LS-252 pour que la preuve complète aille au bout, puis LS-250
 3. LS-251 si le bandeau doit aussi paraître sur la fiche produit
+
+## Vérification finale, avant de quitter
+
+`deployer.sh --etat` par le workflow : **image en service `0a4fca29`**. Le
+contrôle d'écart ne relève qu'un commit de documentation après elle. Dix
+contrôles du dépôt en sortie 0. Deux manques de propagation corrigés : le README
+ne listait pas `verifier-grep-q-pipefail.sh`, et `frontend-design.md` ne nommait
+pas `BandeauReassurance`. Restent signalés, préexistants : l'index mémoire à
+151 lignes sur 200, et une formule d'exclusivité à la ligne 788 du README.
