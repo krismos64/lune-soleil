@@ -58,7 +58,24 @@ fichiers neufs**.
 - le nom de la boutique écrit en dur dans un texte alternatif, attrapé par
   `verifier-graphie-marque.sh`
 
-## Pour le déploiement
+## Déployé le 23 septembre 2026 au soir
+
+**Migration** par `migrate-production.sh`, relais et tunnel comme `EXPLOITATION.md`
+le décrit : 21 migrations appliquées, la dernière `20260923080000_message_archivage`,
+sauvegarde prise avant dans `~/sauvegardes-lune-soleil/`. Relais arrêté et
+tunnel fermé ensuite.
+
+**Déploiement** du commit `0a4fca29` par le workflow, toutes étapes vertes :
+bascule, port 3002 fermé depuis Internet, trois sites à 200. Contrôle par le
+domaine public : pages publiques à 200, `?page=abc` et `?page=999` en 404, `/aide`
+et les CGV sans « quel que soit le mode », bannière, photo des matières et
+bandeau servis.
+
+**Un piège de la migration**, documenté dans `EXPLOITATION.md` : l'extraction de
+l'URL coupait le mot de passe au premier `@`, et le script ne disait
+qu'« injoignable ». Deux essais perdus, aucune écriture en base.
+
+## Rappel d'avant le déploiement
 
 Rien de neuf côté base : la seule migration reste `message.archive_a` du matin.
 À vérifier à l'œil : la bannière à 320 px, dont le texte incrusté devient très
