@@ -55,8 +55,8 @@
  * LA DISTINCTION EST CELLE QUI SEPARE CETTE PAGE D'UNE PAGE DE VENTE : aucun
  * prix, aucun bouton panier, aucune reference. Le visiteur y voit un atelier au
  * travail, pas un catalogue. Une photographie de PRODUIT presentant une piece
- * inexistante serait une allegation trompeuse, LS-22, et c'est pour ce motif que
- * `accueil-hero.jpg` doit etre remplace avant l'ouverture.
+ * inexistante serait une allegation trompeuse, LS-22, motif pour lequel l'ancien
+ * visuel engendre de l'accueil a ete remplace le 23 septembre 2026.
  *
  * ELLES NE PASSENT PAS PAR LA CHAINE DE TRAITEMENT DES MEDIAS, ADR-007 : c'est
  * de l'habillage versionne, et le retrait des metadonnees n'y est donc PAS
@@ -397,7 +397,7 @@ export default async function PageNotreUnivers() {
 
           <Image
             src="/habillage/univers-matieres.jpg"
-            alt="Vue de dessus des matières : pains de pâte polymère violets, beiges et bleus, crochets et dormeuses en acier, flacon de vernis, paillettes bleues et feuilles d'or"
+            alt="Vue de dessus des matières : pains de pâte polymère violets, lilas, beiges, terracotta et bleus, crochets et dormeuses en acier, flacon de vernis brillant, paillettes bleues et feuilles d'or"
             className={styles.imageBande}
             width={1586}
             height={992}

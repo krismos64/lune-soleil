@@ -48,13 +48,11 @@ import styles from "./panneau-authentification.module.css";
  * information que le formulaire ne porte pas, et l'annoncer retarderait l'acces
  * au premier champ.
  *
- * ATTENTION, `accueil-hero.jpg` EST UN VISUEL ENGENDRE, NON CONTRACTUEL. Il
- * montre des bijoux absents du catalogue. `public/habillage/README.md` porte
- * l'arbitrage du 19 aout 2026 : conserve pendant le developpement, REMPLACE
- * AVANT L'OUVERTURE par une photographie reelle de LS-23, faute de quoi il ferait
- * passer des pieces inexistantes pour des creations de la boutique. Le
- * remplacement ne demande aucune modification ici si le nom de fichier est
- * conserve.
+ * LA PHOTOGRAPHIE DE L'ATELIER, et non plus `accueil-hero.jpg`, depuis le
+ * 23 septembre 2026. L'accueil porte desormais une banniere a texte incruste,
+ * 2,63:1, qu'une colonne etroite recadrerait en coupant ce texte. L'atelier est
+ * une photographie reelle de `/notre-univers`, sans texte, et ses pieces sont
+ * au centre : le recadrage `cover` n'y perd rien d'essentiel.
  */
 export function PanneauAuthentification({
   children,
@@ -65,7 +63,7 @@ export function PanneauAuthentification({
     <div className={styles.gabarit}>
       <div className={styles.panneau} aria-hidden="true">
         <Image
-          src="/habillage/accueil-hero.jpg"
+          src="/habillage/univers-atelier.jpg"
           alt=""
           className={styles.image}
           width={1586}

@@ -123,14 +123,23 @@ export default async function PageAccueil() {
          * en ligne.
          */}
         <div className={styles.heroVisuel}>
+          {/*
+           * BANNIERE FOURNIE PAR CHRISTOPHE LE 23 SEPTEMBRE 2026, au format
+           * natif 1680 x 639, soit 2,63:1. Elle porte son propre texte, nom de
+           * la boutique, slogan et trois arguments : la rogner la couperait,
+           * d'ou le ratio reel et une pleine largeur, `page.module.css`.
+           *
+           * LE TEXTE ALTERNATIF REPREND TOUT LE TEXTE DE L'IMAGE, qui n'est
+           * lisible autrement que par l'oeil.
+           */}
           <Image
             src="/habillage/accueil-hero.jpg"
-            alt="Un pendentif lune et soleil en laiton doré et des boucles d'oreilles à perles claires, posés sur un tissu de lin écru"
+            alt="Bannière Lune-soleil, un croissant de lune et un soleil dorés : « Bijoux faits main avec amour », « L'harmonie du Soleil et de la Lune, créée pour vous », fait main en France, matériaux sélectionnés, pièces uniques et authentiques"
             className={styles.image}
-            width={1586}
-            height={992}
+            width={1680}
+            height={639}
             priority
-            sizes="(min-width: 768px) 50vw, 100vw"
+            sizes="100vw"
           />
         </div>
       </section>
