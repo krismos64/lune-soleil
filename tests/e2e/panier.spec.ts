@@ -183,13 +183,13 @@ test("la carte ajoute une piece unique sans ouvrir sa fiche", async ({
   await page.goto("/catalogue");
 
   const nom = CATALOGUE_TEST.dernierePiece.nom;
-  await page.getByRole("button", { name: `Ajouter ${nom} au panier` }).click();
+  await page.getByRole("button", { name: `Ajouter au panier, ${nom}` }).click();
   await expect(
     page.getByRole("status", { name: `Ajout de ${nom}` }),
   ).toHaveText("Ajouté au panier.");
   await expect(page).toHaveURL(/\/catalogue$/);
 
-  await page.getByRole("button", { name: `Ajouter ${nom} au panier` }).click();
+  await page.getByRole("button", { name: `Ajouter au panier, ${nom}` }).click();
   await expect(
     page.getByRole("status", { name: `Ajout de ${nom}` }),
   ).toHaveText(
@@ -198,7 +198,7 @@ test("la carte ajoute une piece unique sans ouvrir sa fiche", async ({
 
   await expect(
     page.getByRole("button", {
-      name: `Ajouter ${CATALOGUE_TEST.enStock.nom} au panier`,
+      name: `Ajouter au panier, ${CATALOGUE_TEST.enStock.nom}`,
     }),
   ).toHaveCount(0);
 });

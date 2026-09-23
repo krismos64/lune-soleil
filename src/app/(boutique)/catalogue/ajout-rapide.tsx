@@ -45,11 +45,22 @@ export function AjoutRapide({
          * LE NOM ACCESSIBLE PORTE LE PRODUIT : dix boutons « Ajouter au
          * panier » sur une grille seraient indiscernables pour un lecteur
          * d'ecran qui liste les boutons de la page.
+         *
+         * IL COMMENCE PAR LE TEXTE VISIBLE, WCAG 2.5.3 releve par
+         * `ls-frontend-revue` : qui pilote a la voix dit « Ajouter au panier »,
+         * et un nom « Ajouter Bague Lune au panier » ne le contient pas d'un
+         * seul tenant.
          */
         aria-label={
-          epuise ? `${nomProduit}, épuisé` : `Ajouter ${nomProduit} au panier`
+          epuise ? `Épuisé, ${nomProduit}` : `Ajouter au panier, ${nomProduit}`
         }
         onClick={() => {
+          /*
+           * LA REGION EST VIDEE AVANT L'APPEL : un second ajout reussi
+           * reecrirait la meme phrase, le DOM ne changerait pas, et le lecteur
+           * d'ecran se tairait. Releve par `ls-frontend-revue`.
+           */
+          setMessage("");
           demarrer(async () => {
             const issue = await ajouterAuPanier(varianteId, 1);
             setMessage(
