@@ -204,9 +204,15 @@ async function ListeMessages({
        * `messages.length` aurait dit « 100 » pour toujours.
        */}
       <p className={styles.introduction}>
-        {total === 0
+        {/*
+         * LS-243 : `total` EXCLUT LES ARCHIVES. « Aucun message reçu » serait
+         * faux quand tout est archive, releve par `ls-frontend-revue`.
+         */}
+        {total === 0 && archives === 0
           ? "Aucun message reçu."
-          : `${total} message${total > 1 ? "s" : ""}, dont ${nouveaux} non lu${nouveaux > 1 ? "s" : ""}.`}
+          : total === 0
+            ? "Aucun message en cours."
+            : `${total} message${total > 1 ? "s" : ""}, dont ${nouveaux} non lu${nouveaux > 1 ? "s" : ""}.`}
         {/*
          * LS-243 : les archives sont hors du compte, et la phrase le dit pour
          * qu'un message archive ne paraisse pas perdu.
@@ -283,7 +289,13 @@ async function ListeMessages({
         </p>
       ) : null}
 
-      {messages.length > 0 ? (
+      {/*
+       * LA BARRE RESTE MONTEE QUAND LA LISTE SE VIDE, releve par
+       * `ls-frontend-revue` : archiver les derniers messages la demontait, et
+       * l'annonce du resultat disparaissait avec le focus. Seule une boite
+       * vide de tout message s'en passe.
+       */}
+      {total + archives > 0 ? (
         <SelectionMessages mode={vueArchives ? "desarchiver" : "archiver"} />
       ) : null}
 
@@ -310,9 +322,9 @@ async function ListeMessages({
            * total GENERAL, jamais celui du filtre, et deux nombres coexistent a
            * l'ecran. Le dire evite de lire l'un pour l'autre.
            */}
-          {total === 0
+          {total === 0 && archives === 0
             ? "Les demandes envoyées par le formulaire de contact du site arrivent ici. Elles sont conservées même si l'email de notification n'est pas parti."
-            : `Aucun message dans « ${filtreActif.libelle} ». La boîte en compte ${total} message${total > 1 ? "s" : ""} tous statuts confondus.`}
+            : `Aucun message dans « ${filtreActif.libelle} ». La boîte en compte ${total} en cours et ${archives} archivé${archives > 1 ? "s" : ""}.`}
         </p>
       ) : (
         <ul className={styles.listeMessages}>
