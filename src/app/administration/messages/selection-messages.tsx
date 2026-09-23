@@ -18,7 +18,7 @@
  * dans le libelle du bouton, ce qui dit avant le clic ce que le clic fera.
  */
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 import { archiverSelection } from "./actions";
 import styles from "./messages.module.css";
@@ -36,6 +36,7 @@ export function SelectionMessages({
   const [enCours, demarrer] = useTransition();
   const [coches, setCoches] = useState(0);
   const [total, setTotal] = useState(0);
+  const bilan = useRef<HTMLDivElement>(null);
   const [annonce, setAnnonce] = useState<{
     texte: string;
     erreur: boolean;
@@ -64,8 +65,19 @@ export function SelectionMessages({
     recompter();
     document.addEventListener("change", recompter);
 
-    return () => document.removeEventListener("change", recompter);
-  });
+    /*
+     * LES CASES RETIREES PAR UN RAFRAICHISSEMENT n'emettent aucun `change` :
+     * sans cet observateur, le bouton annoncait encore « (2) » apres que les
+     * deux messages archives avaient quitte la liste.
+     */
+    const observateur = new MutationObserver(recompter);
+    observateur.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      document.removeEventListener("change", recompter);
+      observateur.disconnect();
+    };
+  }, []);
 
   const toutCoche = total > 0 && coches === total;
   const verbe = mode === "archiver" ? "Archiver" : "Désarchiver";
@@ -81,6 +93,13 @@ export function SelectionMessages({
 
         demarrer(async () => {
           const resultat = await archiverSelection(formulaire);
+
+          /*
+           * LE FOCUS VA AU BILAN, releve par `ls-frontend-revue` : le bouton
+           * desactive pendant l'envoi a perdu le focus, qui retombait sur
+           * `body`. Meme parade que `classement-message.tsx`.
+           */
+          bilan.current?.focus();
 
           switch (resultat.statut) {
             case "SUCCES":
@@ -140,12 +159,17 @@ export function SelectionMessages({
         {verbe} la sélection ({coches})
       </button>
 
-      <p
-        className={`${styles.message} ${annonce?.erreur === true ? styles.messageErreur : ""}`}
-        role="status"
-      >
-        {enCours ? "Enregistrement en cours…" : (annonce?.texte ?? "")}
-      </p>
+      <div ref={bilan} tabIndex={-1} className={styles.message}>
+        <p
+          className={
+            annonce?.erreur === true ? styles.messageErreur : undefined
+          }
+          role="status"
+          aria-label="Bilan de la sélection"
+        >
+          {enCours ? "Enregistrement en cours…" : (annonce?.texte ?? "")}
+        </p>
+      </div>
     </form>
   );
 }

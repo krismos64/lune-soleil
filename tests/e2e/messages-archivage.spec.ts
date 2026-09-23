@@ -77,6 +77,18 @@ test("archiver deux messages cochés les retire de la liste, le filtre les retro
   await expect(page.getByText(premier)).toHaveCount(0);
   await expect(page.getByText(second)).toHaveCount(0);
 
+  /*
+   * LE FOCUS EST SUR LE BILAN et le compteur est revenu a zero, deux defauts
+   * releves par `ls-frontend-revue` : les cases retirees du DOM n'emettent
+   * aucun `change`.
+   */
+  await expect(
+    page.getByRole("status", { name: "Bilan de la sélection" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Archiver la sélection (0)" }),
+  ).toBeDisabled();
+
   await page
     .getByRole("navigation", { name: "Filtrer par statut" })
     .getByRole("link", { name: "Archivés" })
