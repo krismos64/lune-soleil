@@ -14,7 +14,9 @@ describe("BandeauReassurance", () => {
   test("affiche les six éléments, la gratuité au seuil reçu", () => {
     render(<BandeauReassurance seuilFranchiseCentimes={5500} />);
 
-    const bandeau = screen.getByRole("region", { name: "Engagements de la boutique" });
+    const bandeau = screen.getByRole("region", {
+      name: "Engagements de la boutique",
+    });
     expect(within(bandeau).getAllByRole("listitem")).toHaveLength(6);
     expect(bandeau.textContent).toMatch(/Livraison offerte dès 55,00\s€/);
   });
@@ -35,14 +37,17 @@ describe("BandeauReassurance", () => {
     render(<BandeauReassurance seuilFranchiseCentimes={3900} />);
 
     expect(
-      screen.getByRole("region", { name: "Engagements de la boutique" }).textContent,
+      screen.getByRole("region", { name: "Engagements de la boutique" })
+        .textContent,
     ).toMatch(/14 jours pour changer d.avis\s*Frais de retour à votre charge/);
   });
 
   test("se tait sur la gratuité quand il n'y a pas de seuil", () => {
     render(<BandeauReassurance seuilFranchiseCentimes={null} />);
 
-    const bandeau = screen.getByRole("region", { name: "Engagements de la boutique" });
+    const bandeau = screen.getByRole("region", {
+      name: "Engagements de la boutique",
+    });
     expect(within(bandeau).getAllByRole("listitem")).toHaveLength(5);
     expect(bandeau.textContent).not.toMatch(/offerte/);
   });
