@@ -42,7 +42,9 @@ for (const chemin of ["/", "/notre-univers"]) {
     const seuil = await seuilEnBase();
     await page.goto(chemin);
 
-    const bandeau = page.getByRole("region", { name: "Engagements de la boutique" });
+    const bandeau = page.getByRole("region", {
+      name: "Engagements de la boutique",
+    });
     await expect(bandeau).toBeVisible();
 
     const texte = ((await bandeau.textContent()) ?? "").replace(/\s/g, " ");
