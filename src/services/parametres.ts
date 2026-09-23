@@ -234,3 +234,26 @@ export async function resoudreConfigurationLivraison(
 
   return configurationDepuisParametres(parametres);
 }
+
+/**
+ * Le seuil de livraison offerte, pour le bandeau de réassurance, LS-236.
+ *
+ * `null` QUAND IL N'Y A RIEN À ANNONCER : franchise désactivée, ou
+ * configuration illisible. Le bandeau se tait alors plutôt que d'annoncer une
+ * gratuité qui n'existe pas, et la page qui le porte reste servie : un bandeau
+ * n'a pas à faire tomber l'accueil. Une autre erreur, base injoignable
+ * comprise, remonte telle quelle.
+ */
+export async function lireSeuilFranchise(
+  client: ClientBase = prisma,
+): Promise<number | null> {
+  try {
+    return (await resoudreConfigurationLivraison(client))
+      .seuilFranchiseCentimes;
+  } catch (erreur) {
+    if (erreur instanceof ConfigurationLivraisonInvalideError) {
+      return null;
+    }
+    throw erreur;
+  }
+}

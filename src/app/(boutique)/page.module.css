@@ -143,58 +143,6 @@
   object-fit: cover;
 }
 
-/* ---------- Reassurance ---------- */
-
-.reassurance {
-  background: var(--ls-surface);
-  border-block: 1px solid var(--ls-border);
-}
-
-.listeReassurance {
-  max-width: var(--ls-content-max);
-  margin: 0 auto;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
-}
-
-.elementReassurance {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ls-space-1);
-  padding: var(--ls-space-5) var(--ls-space-4);
-  border-top: 1px solid var(--ls-border);
-}
-
-/* Les separateurs verticaux n'apparaissent qu'une fois les colonnes cote a cote. */
-@media (min-width: 768px) {
-  .elementReassurance {
-    border-top: 0;
-    border-left: 1px solid var(--ls-border);
-  }
-
-  .elementReassurance:first-child {
-    border-left: 0;
-  }
-}
-
-.titreReassurance {
-  color: var(--ls-text);
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-/*
- * `--ls-text-muted` sur `--ls-surface` blanc : 5,19:1, conforme AA.
- * Cette paire serait a 4,35:1 sur le fond sable, ou elle est donc proscrite.
- */
-.detailReassurance {
-  color: var(--ls-text-muted);
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
-
 /* ---------- Sections communes ---------- */
 
 .section {
