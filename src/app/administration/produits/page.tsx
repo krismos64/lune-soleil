@@ -30,6 +30,7 @@ import {
   exigerAdministratrice,
 } from "@/services/autorisation";
 import {
+  compterProduitsArchives,
   listerProduitsAdministration,
   STATUTS_VIVANTS,
 } from "@/services/catalogue";
@@ -234,7 +235,15 @@ async function ListeProduits({
 }: {
   filtreActif: (typeof FILTRES)[number];
 }) {
-  const produits = await listerProduitsAdministration(filtreActif.statuts);
+  /*
+   * LE COMPTE DES ARCHIVES N'EST LU QUE SUR LA VUE PAR DEFAUT, LS-247 : c'est la
+   * seule qui les masque sans que le filtre le dise. « Tous » ne montre pas
+   * tout, et la phrase qui suit la liste le rattrape.
+   */
+  const [produits, archivesMasques] = await Promise.all([
+    listerProduitsAdministration(filtreActif.statuts),
+    filtreActif.valeur === "TOUS" ? compterProduitsArchives() : 0,
+  ]);
 
   return (
     <>
@@ -251,16 +260,37 @@ async function ListeProduits({
         </p>
       ) : null}
 
+      {archivesMasques > 0 ? (
+        <p className={styles.introduction}>
+          {archivesMasques > 1
+            ? `${archivesMasques} produits archivés sont masqués de cette vue.`
+            : "1 produit archivé est masqué de cette vue."}{" "}
+          <Link
+            href="/administration/produits?statut=ARCHIVE"
+            className={styles.lienArchives}
+            prefetch={false}
+          >
+            Voir les archivés
+          </Link>
+        </p>
+      ) : null}
+
       {produits.length === 0 ? (
         /*
          * L'ETAT VIDE DIT POURQUOI, et il differe selon le filtre : « aucun
          * archive » est une bonne nouvelle, « aucun produit » sur une boutique
          * qui demarre est une invitation a en creer un.
+         *
+         * « LE CATALOGUE EST VIDE » SERAIT FAUX avec des archives masquees,
+         * LS-247 : la phrase ci-dessus les annonce, celle-ci ne dit que ce que
+         * la vue contient.
          */
         <p className={styles.vide}>
-          {filtreActif.valeur === "TOUS"
-            ? "Le catalogue est vide. Créez un premier produit pour commencer."
-            : "Aucun produit ne correspond à ce filtre."}
+          {filtreActif.valeur !== "TOUS"
+            ? "Aucun produit ne correspond à ce filtre."
+            : archivesMasques > 0
+              ? "Aucun produit publié ni brouillon."
+              : "Le catalogue est vide. Créez un premier produit pour commencer."}
         </p>
       ) : (
         <ul className={styles.liste}>

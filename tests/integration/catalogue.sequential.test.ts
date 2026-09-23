@@ -373,6 +373,32 @@ describe("lecture des categories", () => {
  * LS-183, la liste du catalogue pour l'administration.
  * ========================================================================== */
 
+/*
+ * LS-247 : la vue par defaut masque les archives, et l'ecran dit combien. Le
+ * compte doit ne porter QUE les archives : un brouillon compte a tort ferait
+ * annoncer un masquage qui n'a pas lieu.
+ */
+describe("compterProduitsArchives, LS-247", () => {
+  it("compte les archives et eux seuls", async () => {
+    const categorie = await catalogue.creerCategorie({ nom: "Comptage" });
+    const avant = await catalogue.compterProduitsArchives();
+
+    const archive = await catalogue.creerProduit({
+      nom: "Pièce archivée",
+      categorieId: categorie.id,
+    });
+    await catalogue.creerProduit({
+      nom: "Pièce en brouillon",
+      categorieId: categorie.id,
+    });
+    await client.query("UPDATE produit SET statut = 'ARCHIVE' WHERE id = $1", [
+      archive.id,
+    ]);
+
+    expect(await catalogue.compterProduitsArchives()).toBe(avant + 1);
+  });
+});
+
 describe("listerProduitsAdministration", () => {
   /**
    * LE TEST QUI JUSTIFIE LA STORY, et le piege qu'elle evite.
