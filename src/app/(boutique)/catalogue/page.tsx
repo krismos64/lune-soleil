@@ -18,9 +18,15 @@ import { Suspense } from "react";
 
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { openGraphDePage } from "@/lib/seo";
-import { lireCataloguePublic } from "@/services/catalogue";
+import { cheminCatalogue, lireNumeroPage } from "@/lib/url-catalogue";
+import {
+  lireCataloguePublic,
+  PageCatalogueInexistanteError,
+  pageCatalogueExiste,
+} from "@/services/catalogue";
 import { ArmatureCatalogue } from "./armature-catalogue";
 import { CarteProduit } from "./carte-produit";
 import styles from "./catalogue.module.css";
@@ -108,13 +114,20 @@ export async function generateMetadata({
   const { categorieRetenue: categorie } =
     await lireCataloguePublic(slugDemande);
 
-  const titre = categorie ? categorie.nom : "Le catalogue";
+  /*
+   * LS-241 : CHAQUE PAGE PORTE SA PROPRE CANONICAL, jamais celle de la page 1,
+   * et un titre distinct. Pointer la page 2 vers la page 1 dirait aux moteurs
+   * que les pieces de la page 2 n'existent pas ; deux titres identiques
+   * seraient signales en doublon. Un numero invalide retombe sur 1 ici, le
+   * corps de la page en faisant un 404.
+   */
+  const page = lireNumeroPage(parametres.page) ?? 1;
+  const base = categorie ? categorie.nom : "Le catalogue";
+  const titre = page > 1 ? `${base}, page ${page}` : base;
   const description = categorie
     ? `${categorie.nom} : bijoux artisanaux faits main, créés à l'unité.`
     : "Bijoux artisanaux faits main, créés à l'unité. Chaque pièce est unique.";
-  const chemin = categorie
-    ? `/catalogue?categorie=${categorie.slug}`
-    : "/catalogue";
+  const chemin = cheminCatalogue({ categorie: categorie?.slug, page });
 
   return {
     title: titre,
@@ -148,11 +161,29 @@ export const dynamic = "force-dynamic";
  */
 async function ContenuCatalogue({
   slugCategorie,
+  page,
 }: {
   slugCategorie: string | undefined;
+  page: number;
 }) {
-  const { produits, categories, categorieRetenue } =
-    await lireCataloguePublic(slugCategorie);
+  /*
+   * LS-241 : LA PAGE A ETE VERIFIEE AVANT LA FRONTIERE, et ce rattrapage ne sert
+   * qu'a la course ou une piece est retiree entre les deux lectures. Il rend
+   * alors un 404 « doux », servi en 200 avec `noindex` par Next.js.
+   */
+  let catalogue: Awaited<ReturnType<typeof lireCataloguePublic>>;
+
+  try {
+    catalogue = await lireCataloguePublic(slugCategorie, page);
+  } catch (erreur) {
+    if (erreur instanceof PageCatalogueInexistanteError) {
+      notFound();
+    }
+    throw erreur;
+  }
+
+  const { produits, categories, categorieRetenue, pagination } = catalogue;
+  const total = pagination?.total ?? produits.length;
 
   /*
    * LE NOM VIENT DU SERVICE, ET NON D'UNE RECHERCHE DANS `categories`. La
@@ -179,7 +210,7 @@ async function ContenuCatalogue({
           <ul className={styles.listeFiltres}>
             <li>
               <Link
-                href="/catalogue"
+                href={cheminCatalogue({})}
                 className={styles.filtre}
                 aria-current={categorieRetenue === null ? "page" : undefined}
               >
@@ -189,7 +220,7 @@ async function ContenuCatalogue({
             {categories.map((categorie) => (
               <li key={categorie.id}>
                 <Link
-                  href={`/catalogue?categorie=${categorie.slug}`}
+                  href={cheminCatalogue({ categorie: categorie.slug })}
                   className={styles.filtre}
                   aria-current={
                     categorieRetenue?.slug === categorie.slug
@@ -215,8 +246,12 @@ async function ContenuCatalogue({
           ? nomCategorieRetenue
             ? `Aucune pièce dans ${nomCategorieRetenue}.`
             : "Aucune pièce à afficher."
-          : `${produits.length} ${produits.length === 1 ? "pièce" : "pièces"}${
+          : `${total} ${total === 1 ? "pièce" : "pièces"}${
               nomCategorieRetenue ? ` dans ${nomCategorieRetenue}` : ""
+            }${
+              pagination && pagination.pages > 1
+                ? `, page ${pagination.page} sur ${pagination.pages}`
+                : ""
             }.`}
       </p>
 
@@ -255,6 +290,43 @@ async function ContenuCatalogue({
           ))}
         </ul>
       )}
+
+      {/*
+       * LS-241 : DES LIENS ET NON DES BOUTONS, pour que les moteurs suivent les
+       * pages et que le retour du navigateur fonctionne. Absente sur une page
+       * unique, ou elle n'aurait rien a proposer.
+       */}
+      {pagination && pagination.pages > 1 ? (
+        <nav className={styles.pagination} aria-label="Pagination du catalogue">
+          {pagination.page > 1 ? (
+            <Link
+              href={cheminCatalogue({
+                categorie: categorieRetenue?.slug,
+                page: pagination.page - 1,
+              })}
+              className={styles.lienPagination}
+              rel="prev"
+            >
+              Page précédente
+            </Link>
+          ) : null}
+          <span className={styles.positionPagination}>
+            Page {pagination.page} sur {pagination.pages}
+          </span>
+          {pagination.page < pagination.pages ? (
+            <Link
+              href={cheminCatalogue({
+                categorie: categorieRetenue?.slug,
+                page: pagination.page + 1,
+              })}
+              className={styles.lienPagination}
+              rel="next"
+            >
+              Page suivante
+            </Link>
+          ) : null}
+        </nav>
+      ) : null}
     </>
   );
 }
@@ -285,6 +357,19 @@ export default async function PageCatalogue({
   const brut = parametres.categorie;
   const slugCategorie = Array.isArray(brut) ? brut[0] : brut;
 
+  /*
+   * LS-241 : LE NUMERO DE PAGE SE VERIFIE ICI, AVANT LA FRONTIERE SUSPENSE.
+   * Une fois le streaming engage, le statut est fige a 200, verifie via
+   * Context7 : `?page=999` doit rendre un vrai 404, sans quoi un robot
+   * indexerait des pages vides. Seule une page au-dela de la premiere coute une
+   * lecture, un comptage.
+   */
+  const page = lireNumeroPage(parametres.page);
+
+  if (page === null || !(await pageCatalogueExiste(slugCategorie, page))) {
+    notFound();
+  }
+
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Le catalogue</h1>
@@ -293,7 +378,7 @@ export default async function PageCatalogue({
       </p>
 
       <Suspense fallback={<ArmatureCatalogue />}>
-        <ContenuCatalogue slugCategorie={slugCategorie} />
+        <ContenuCatalogue slugCategorie={slugCategorie} page={page} />
       </Suspense>
     </main>
   );

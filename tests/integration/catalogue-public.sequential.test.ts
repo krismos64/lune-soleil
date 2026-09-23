@@ -583,3 +583,55 @@ describe("varianteUniqueId, LS-240", () => {
     ).not.toBeNull();
   });
 });
+
+/*
+ * LS-241 : le catalogue public se pagine par douze. Le compte doit porter la
+ * MEME population que la liste, sans quoi une page annoncee menerait a un 404.
+ */
+describe("pagination du catalogue public, LS-241", () => {
+  it("decoupe par douze et compte tout le filtre", async () => {
+    const categorieId = await creerCategorie("Paginee");
+    for (let rang = 0; rang < 13; rang += 1) {
+      await creerProduit(`Piece ${String(rang).padStart(2, "0")}`, {
+        categorieId,
+        publieA: new Date(Date.UTC(2026, 0, 1 + rang)),
+      });
+    }
+    // Un ACTIF sans variante vivante n'est ni liste ni compte.
+    await creerProduit("Sans variante vivante", {
+      categorieId,
+      varianteArchivee: true,
+    });
+
+    const premiere = await catalogue.lireCataloguePublic("paginee", 1);
+    const seconde = await catalogue.lireCataloguePublic("paginee", 2);
+
+    expect(premiere.produits).toHaveLength(12);
+    expect(premiere.pagination).toEqual({ page: 1, pages: 2, total: 13 });
+    expect(seconde.produits).toHaveLength(1);
+    // La plus ancienne publication ferme la derniere page.
+    expect(seconde.produits[0]?.nom).toBe("Piece 00");
+
+    const identifiants = new Set(
+      [...premiere.produits, ...seconde.produits].map((p) => p.id),
+    );
+    expect(identifiants.size).toBe(13);
+  });
+
+  it("refuse une page au-dela de la derniere, et la dit inexistante", async () => {
+    await creerProduit("Seule");
+
+    await expect(catalogue.lireCataloguePublic(undefined, 2)).rejects.toThrow(
+      catalogue.PageCatalogueInexistanteError,
+    );
+    expect(await catalogue.pageCatalogueExiste(undefined, 1)).toBe(true);
+    expect(await catalogue.pageCatalogueExiste(undefined, 2)).toBe(false);
+  });
+
+  it("garde la premiere page d'un catalogue vide, pour son etat vide", async () => {
+    const vide = await catalogue.lireCataloguePublic(undefined, 1);
+
+    expect(vide.produits).toHaveLength(0);
+    expect(vide.pagination).toEqual({ page: 1, pages: 1, total: 0 });
+  });
+});

@@ -48,6 +48,7 @@ const quantite = valider(schemaQuantite, entree); // ou lève EntreeInvalideErro
 | `schemaChoixLivraison` | mode et point liés par une **équivalence** | un `DOMICILE` porteur d'un point autant qu'un `POINT_RELAIS` sans point |
 | `schemaSaisieExpedition` | transporteur, mode **exécuté**, numéro de suivi facultatif, point lié par la même **équivalence** | un mode de retrait sans point, un domicile qui en porte un, un numéro de suivi au-delà de 64 caractères |
 | `schemaSaisieMessage` | message de contact **public**, corps borné à 4000 caractères | un corps réduit à des caractères invisibles, un sujet vide, une adresse non valide |
+| `schemaNumeroPage` | numéro de page du catalogue public lu dans l'URL, LS-241 | `0`, `02`, `abc`, `-1`, `1.5`, plus de quatre chiffres |
 | `schemaCoordonnees` | nom, email, téléphone facultatif | composé des trois précédents |
 | `schemaAdresseFigee` | adresse **recopiée par une commande**, avec le `nom` du destinataire | relire une adresse figée avec `schemaAdressePostale`, qui refuse ce `nom` |
 | `schemaAdresseCarnet` | adresse du **carnet client**, LS-59 : étend `schemaAdressePostale` avec `libelle`, `nomComplet` et `telephone` | y ajouter `estParDefaut`, qui contournerait l'ordre imposé de la bascule, ou `utilisateurId`, qui vient de la session |
