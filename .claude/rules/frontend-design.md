@@ -997,6 +997,13 @@ ces valeurs depuis `/administration/parametres`, sans redéploiement. C'est la s
 Un tarif affiché et un tarif facturé qui divergent constituent une information
 précontractuelle fausse, sanctionnée bien au-delà de l'écart de prix.
 
+**Le composant qui les porte est `BandeauReassurance`**,
+`src/components/bandeau-reassurance.tsx`, LS-236 : posé sur l'accueil et
+`/notre-univers`, il reçoit le seuil par `lireSeuilFranchise` et se tait sur la
+gratuité quand la franchise est désactivée. Sa pose sur la fiche, le panier et
+le tunnel est LS-251. Toute nouvelle surface le réutilise, jamais une seconde
+formulation des mêmes allégations.
+
 Six éléments, sans en ajouter :
 
 | Élément | Formulation | Réserve |
