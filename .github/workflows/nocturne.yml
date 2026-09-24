@@ -84,12 +84,12 @@ jobs:
     # lisible et les six preuves n'auraient toujours rien prouve, ce qui est le
     # defaut que LS-233 venait de fermer.
     #
-    # 180 = 16 prealables + 10 d'attente + 150 pour l'etape bornee, plus une
-    # marge, LS-252. L'ancien 75 laissait 45 minutes a une etape qui en demande
-    # environ deux heures sur le runner, voir le commentaire de l'etape.
-    # A REMESURER des le premier nocturne complet, qui imprime la duree de
-    # chaque cas : ce chiffre est dimensionne sur une extrapolation locale.
-    timeout-minutes: 180
+    # 200 = 17 prealables mesures + 165 pour l'etape bornee + une marge pour
+    # l'attente avant prise du job, qui compte dans ce plafond, LS-235.
+    # MESURE DU 24 SEPTEMBRE 2026, nocturne 36039763238 : job complet en
+    # 1 h 40, etape des preuves en 1 h 22. Dimensionne sur cette mesure et non
+    # plus sur une extrapolation locale.
+    timeout-minutes: 200
 
     env:
       PGUSER: lunesoleil
@@ -683,9 +683,14 @@ jobs:
       # cas par cas, au double du pire cas nominal comme le veut
       # `docs/PREUVES-PAR-MUTATION.md`.
       # ----------------------------------------------------------------------
+      # 165 MINUTES, LE DOUBLE DU PIRE CAS MESURE, LS-235. Le nocturne
+      # 36039763238 du 24 septembre 2026, le premier ou chaque cas ne lance
+      # que son test attendu, a mis l'etape a 1 h 22 : 82 min, doublees et
+      # arrondies. Les 150 min precedentes ne laissaient que 1,83 fois ce temps.
+      # Avant le filtre par nom, la meme etape prenait 2 h 05.
       - name: Preuves par mutation lourdes
         if: always()
-        timeout-minutes: 150
+        timeout-minutes: 165
         run: |
           echec=0
           for script in \
