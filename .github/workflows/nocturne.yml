@@ -84,10 +84,12 @@ jobs:
     # lisible et les six preuves n'auraient toujours rien prouve, ce qui est le
     # defaut que LS-233 venait de fermer.
     #
-    # 75 = 16 prealables + 10 d'attente + 45 pour l'etape bornee, plus une marge.
-    # A REMESURER des que le premier nocturne complet aura donne un temps de step
-    # reel : ce chiffre est dimensionne sur une etape qui n'a jamais fini.
-    timeout-minutes: 75
+    # 180 = 16 prealables + 10 d'attente + 150 pour l'etape bornee, plus une
+    # marge, LS-252. L'ancien 75 laissait 45 minutes a une etape qui en demande
+    # environ deux heures sur le runner, voir le commentaire de l'etape.
+    # A REMESURER des le premier nocturne complet, qui imprime la duree de
+    # chaque cas : ce chiffre est dimensionne sur une extrapolation locale.
+    timeout-minutes: 180
 
     env:
       PGUSER: lunesoleil
@@ -658,9 +660,32 @@ jobs:
       # temporairement, l'etape doit sortir en `failure` et les etapes suivantes
       # doivent s'executer. Une borne jamais franchie ne prouve rien.
       # ----------------------------------------------------------------------
+      # ----------------------------------------------------------------------
+      # 150 MINUTES, ET POURQUOI LA BORNE MONTE CETTE FOIS, LS-252.
+      #
+      # LS-124 condamne un plafond plus haut A LA PLACE d'une correction de
+      # cout. Les corrections ont ete faites d'abord : les dix cas de bout en
+      # bout rejouaient chacun la suite entiere, 13,6 min sur le runner le
+      # 23 septembre 2026, et ne lancent plus que leur fichier porteur. Ce qui
+      # reste est le cout reel de 180 mutations.
+      #
+      # PREMIERE EXECUTION COMPLETE, le 24 septembre 2026 sur le poste de
+      # developpement : 180 mutations en 3507 s, 58 min, plus un cas rendu a la
+      # suite d'integration entiere, environ 7 min. Le runner coute 1,5 a 1,8
+      # fois le poste sur les suites de reference, 12 min 37 contre 7 : environ
+      # 100 a 115 min pour ce script, plus 15 min pour les cinq autres.
+      #
+      # LE NOCTURNE N'A PERSONNE QUI L'ATTEND, et le depot est public, donc ses
+      # minutes sont gratuites. Arbitrage de Christophe le 24 septembre 2026 :
+      # une duree plus longue la nuit ne pose pas de probleme.
+      #
+      # A RESSERRER sur la mesure du runner, que le script imprime desormais
+      # cas par cas, au double du pire cas nominal comme le veut
+      # `docs/PREUVES-PAR-MUTATION.md`.
+      # ----------------------------------------------------------------------
       - name: Preuves par mutation lourdes
         if: always()
-        timeout-minutes: 45
+        timeout-minutes: 150
         run: |
           echec=0
           for script in \
