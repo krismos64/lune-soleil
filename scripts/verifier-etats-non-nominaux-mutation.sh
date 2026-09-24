@@ -226,8 +226,10 @@ cas() {
   # ---------------------------------------------------------------------------
   local lignes_echec
   lignes_echec=$(
-    grep -E '^[[:space:]]*(×|✘)[[:space:]]|^[[:space:]]*[0-9]+\)[[:space:]]|^::error ' \
-      "$TMP/sortie.txt" |
+    # Codes couleur retires avant le filtre, LS-252 : sur le runner, la ligne
+    # `×` commence par une sequence ANSI. Detail dans `verifier-tests-mutation.sh`.
+    perl -pe 's/\e\[[0-9;]*[A-Za-z]//g' "$TMP/sortie.txt" |
+      grep -E '^[[:space:]]*(×|✘)[[:space:]]|^[[:space:]]*[0-9]+\)[[:space:]]|^::error ' |
       # Tous les encodages d'annotation GitHub, `%25` en dernier, LS-252 : un
       # motif portant « : » rendait RATE sur le runner, lu en `%3A`. Detail
       # dans `verifier-tests-mutation.sh`.
