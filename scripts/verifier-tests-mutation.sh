@@ -279,6 +279,7 @@ mutations=0
 # resolution ne trouve aucun porteur et retombe sur la suite entiere, ce qui est
 # exactement ce que ce controle doit mesurer.
 MOTIF_COURANT=""
+PORTEUR_IMPOSE=""
 
 # ---------------------------------------------------------------------------
 # Controle prealable : la suite doit etre VERTE avant toute mutation.
@@ -325,6 +326,24 @@ echo
 cas() {
   local nom="$1" commande="$2" motif_attendu="$3"
   mutations=$((mutations + 1))
+
+  # LE QUATRIEME ARGUMENT IMPOSE LE FICHIER PORTEUR, LS-252. Il ne sert que
+  # lorsque le motif est trop generique pour designer un fichier : « ne deborde
+  # pas horizontalement » en designe vingt-cinq, quand le test vise est nomme
+  # par un gabarit `${ecran.chemin} ...` introuvable dans le source. Sans lui le
+  # cas rejouait la moitie de la suite de bout en bout, et le verdict acceptait
+  # le debordement de n'importe lequel de ces ecrans.
+  #
+  # UN PORTEUR IMPOSE QUI NE PORTE PLUS LE MOTIF ARRETE TOUT, comme une mutation
+  # qui ne mute rien : un renommage de fichier ou de test ferait sinon tourner
+  # un fichier etranger a la garantie, et conclure sur lui.
+  PORTEUR_IMPOSE="${4:-}"
+  if [ -n "$PORTEUR_IMPOSE" ] && ! grep -qF "$motif_attendu" "$PORTEUR_IMPOSE" 2>/dev/null; then
+    echo "  ECHEC le porteur impose $PORTEUR_IMPOSE ne contient plus le motif"
+    echo "        attendu : $motif_attendu"
+    echo "        Le test a ete renomme ou deplace : corriger le script, pas les tests."
+    exit 1
+  fi
 
   # LE MOTIF EST PUBLIE AVANT L'APPEL, LS-235. `integration` et `unitaire` le
   # lisent pour ne lancer que le fichier qui porte la garantie. Il est GLOBAL et
@@ -465,7 +484,8 @@ fichiers_porteurs() {
 lancer_cible() {
   local projet="$1" repertoire="$2" motif="$3"
   local porteurs
-  porteurs=$(fichiers_porteurs "$repertoire" "$motif")
+  porteurs="$PORTEUR_IMPOSE"
+  [ -z "$porteurs" ] && porteurs=$(fichiers_porteurs "$repertoire" "$motif")
 
   if [ -z "$porteurs" ]; then
     # Aucun fichier ne porte ce nom de test. Le cas tourne sur la suite
@@ -481,9 +501,39 @@ lancer_cible() {
 integration() { lancer_cible integration tests/integration "$MOTIF_COURANT"; }
 unitaire() { lancer_cible unitaire tests/unitaire "$MOTIF_COURANT"; }
 
-# LE BOUT EN BOUT N'EST PAS CIBLE. Playwright ne partage ni le lanceur ni la
-# convention de projet de Vitest, et ses dix cas ne pesent pas dans le budget.
-e2e() { npm run test:e2e; }
+# LE BOUT EN BOUT EST CIBLE LUI AUSSI, LS-252. Ce commentaire affirmait
+# jusque-la que ses dix cas « ne pesent pas dans le budget », et c'etait faux :
+# chacun rejouait la suite entiere, 13,6 minutes sur le runner le 23 septembre
+# 2026. Le premier cas de bout en bout y a pris 11 minutes a lui seul, et la
+# borne de 45 minutes a coupe le script avant le deuxieme, deux nuits de suite.
+# Dix cas representaient donc plus de deux heures, quand tout le reste du
+# script tient dans la borne.
+#
+# LES PREPARATIONS TOURNENT TOUJOURS. Un fichier passe en argument filtre les
+# projets de rendu, pas le projet `preparation` dont ils dependent : mesure par
+# `--list` sur `page-accueil.spec.ts`, les huit preparations et les vingt
+# tests du fichier, rien d'autre. Les sessions et les comptes dont les tests
+# ont besoin existent donc comme dans la suite entiere.
+#
+# SEULS LES `.spec.ts` SONT RETENUS : un motif cite dans une aide ou une
+# preparation ne designe aucun test a lancer. Sans porteur, repli sur la suite
+# entiere, lent mais probant, comme pour Vitest.
+e2e() {
+  local porteurs
+  if [ -n "$PORTEUR_IMPOSE" ]; then
+    porteurs="$PORTEUR_IMPOSE"
+  else
+    porteurs=$(fichiers_porteurs tests/e2e "$MOTIF_COURANT" | grep -E '\.spec\.ts$' || true)
+  fi
+
+  if [ -z "$porteurs" ]; then
+    npm run test:e2e
+    return
+  fi
+
+  # shellcheck disable=SC2086
+  npx playwright test $porteurs
+}
 
 echo "Primitive SQL de reservation, tests d'integration"
 echo
@@ -1558,7 +1608,7 @@ echo
 # mangeait 40 px. La mutation le reintroduit en tete de l'editeur.
 mute "$PAGE_EDITEUR" 's/      <PublicationProduit/      <div style={{ width: "800px" }} \/>\n      <PublicationProduit/'
 cas "debordement horizontal introduit dans l'editeur de fiche" e2e \
-  "ne deborde pas horizontalement"
+  "ne deborde pas horizontalement" tests/e2e/administration-connectee.spec.ts
 
 # Cas 85 : l'ORDRE des blocs. La publication passe SOUS les informations
 # generales, ce que le rendu accepte sans broncher et qu'aucun type ne signale.
@@ -1591,7 +1641,7 @@ cas "bloc de publication descendu sous les informations generales" e2e \
 mute "$PAGE_EDITEUR" 's/  exigerAdministratrice,\n\} from "@\/services\/autorisation";/  exigerAdministratrice,\n  exigerSession,\n} from "@\/services\/autorisation";/'
 mute "$PAGE_EDITEUR" 's/    await exigerAdministratrice\(enTetes\);/    await exigerSession(enTetes);/'
 cas "editeur garde par exigerSession au lieu du role" e2e \
-  "refuse un visiteur sans session"
+  "refuse un visiteur sans session" tests/e2e/catalogue-administration.spec.ts
 
 
 # ---------------------------------------------------------------------------
@@ -1724,8 +1774,16 @@ cas "vente web desactivee fait disparaitre du catalogue" integration \
 # exactement ce defaut : l'appel au prestataire passe dans `apresReservation`,
 # donc DANS la transaction de `passerCommande`. Sur la panne simulee du
 # critere 4, la commande disparait, et le test qui exige sa survie rougit.
+#
+# L'EXPRESSION N'ENUMERE PLUS LES ARGUMENTS DE L'APPEL, LS-252. Elle recopiait
+# les quatre arguments d'alors, et LS-98 en a ajoute un cinquieme le 11 septembre
+# 2026, `fraisPortPresenteCentimes` : la substitution ne trouvait plus rien et
+# le garde-fou de `mute` arretait le script ici, emportant tous les cas suivants.
+# Aucune execution n'etait encore allee aussi loin, le defaut dormait donc
+# depuis LS-98. Le crochet s'insere desormais apres `client,`, derniere ligne de
+# l'appel, quels que soient les arguments qui la precedent.
 # ---------------------------------------------------------------------------
-mute "$PAIEMENT" 's/  const commande = await passerCommande\(\{\n    lignesCookie,\n    saisie,\n    \.\.\.\(configuration === undefined \? \{\} : \{ configuration \}\),\n    client,\n  \}\);/  const commande = await passerCommande({\n    lignesCookie,\n    saisie,\n    ...(configuration === undefined ? {} : { configuration }),\n    client,\n    apresReservation: async () => {\n      await fournisseur.creerSession({\n        commandeId: "dans-la-transaction",\n        numeroCommande: "-",\n        emailClient: "-",\n        lignes: [],\n        expireA: new Date(),\n        cleIdempotence: "-",\n        urlRetour: "-",\n        urlAbandon: "-",\n      });\n    },\n  });/'
+mute "$PAIEMENT" 's/(  const commande = await passerCommande\(\{\n(?: {4}[^\n]*\n)*?)    client,\n  \}\);/$1    client,\n    apresReservation: async () => {\n      await fournisseur.creerSession({\n        commandeId: "dans-la-transaction",\n        numeroCommande: "-",\n        emailClient: "-",\n        lignes: [],\n        expireA: new Date(),\n        cleIdempotence: "-",\n        urlRetour: "-",\n        urlAbandon: "-",\n      });\n    },\n  });/'
 cas "creation de session deplacee dans la transaction" integration \
   "laisse la commande EN_ATTENTE_PAIEMENT avec ses reservations sur une panne du prestataire"
 
