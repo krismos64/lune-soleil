@@ -230,9 +230,23 @@
  * produit long pousserait la carte en debordement horizontal. Motif de LS-171,
  * un libelle sans espace debordant de 43 px.
  */
+/*
+ * UNE BASE DE 8rem ET NON `flex: 1`, LS-253. `flex: 1` part d'une base nulle :
+ * le corps ne forcait jamais le retour a la ligne et se contentait du reste.
+ * La case de selection de LS-242 a pris 56 px a ce reste, et a 320 px, sous
+ * DejaVu Sans, police du runner Linux, il ne restait qu'environ 43 px :
+ * « CATEGORIE » et « declinaison » debordaient du corps de 35 px. Mesure du
+ * 24 septembre 2026, nocturne 35967594574, puis reproduite dans l'image
+ * Playwright avec `fonts-dejavu-core`. Sur macOS la meme page passait.
+ *
+ * Avec une base, c'est le badge qui passe a la ligne quand la place manque,
+ * et le texte garde de quoi se lire. `break-word` ne coupe un mot que s'il ne
+ * tient sur aucune ligne, une categorie d'un seul tenant par exemple.
+ */
 .corps {
-  flex: 1;
+  flex: 1 1 8rem;
   min-width: 0;
+  overflow-wrap: break-word;
 }
 
 /* `--ls-text-muted` sur `--ls-surface` : 5,19:1, AA. */
