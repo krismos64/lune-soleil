@@ -960,6 +960,8 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-graphie-marque-mutation.sh         # prouve le précédent par mutation
 ./scripts/verifier-grep-q-pipefail.sh                 # aucun tube vers grep -q nouveau sous pipefail, SIGPIPE, LS-237
 ./scripts/verifier-grep-q-pipefail-mutation.sh        # prouve le précédent par mutation, quatre cas
+./scripts/verifier-mutations-a-sec.sh                 # chaque expression mute modifie encore son fichier, LS-254
+./scripts/verifier-mutations-a-sec-mutation.sh        # prouve le précédent par mutation, six cas
 ./scripts/verifier-prefixe-medias.sh                  # NEXT_PUBLIC_MEDIA_PREFIXE atteint le bundle construit, LS-197
 ./scripts/verifier-prefixe-medias-mutation.sh         # prouve verifier-prefixe-medias.sh par mutation
 ./scripts/verifier-registre-traitements.sh       # registre RGPD confronté au schéma
