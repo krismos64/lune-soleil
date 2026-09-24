@@ -78,7 +78,11 @@ test("les blocs d'achat se suivent dans l'ordre impose", async ({ page }) => {
    * d'ordre le jour ou le libelle change, sans qu'aucun ordre n'ait bouge.
    */
   await relever("6-panier", page.getByRole("button", { name: MOTIF_ACHAT }));
-  await relever("7-livraison", page.getByText(/Livraison par Mondial Relay/));
+  // Le bloc 7 est vise par sa region depuis LS-251, et non par un libelle.
+  await relever(
+    "7-livraison",
+    page.getByRole("region", { name: "Informations de livraison" }),
+  );
   await relever(
     "8-dimensions",
     page.getByRole("heading", { name: "Dimensions" }),
