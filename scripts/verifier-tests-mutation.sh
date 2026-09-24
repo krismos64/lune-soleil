@@ -506,7 +506,6 @@ lancer_cible() {
 }
 
 integration() { lancer_cible integration tests/integration "$MOTIF_COURANT"; }
-integration_complete() { npm run test:integration; }
 unitaire() { lancer_cible unitaire tests/unitaire "$MOTIF_COURANT"; }
 
 # LE BOUT EN BOUT EST CIBLE LUI AUSSI, LS-252. Ce commentaire affirmait
@@ -2812,17 +2811,18 @@ echo
 # `.sequential` : mesure le 13 septembre 2026 par sonde, HUIT factures d'autres
 # fichiers sont presentes au moment ou ce test s'execute.
 #
-# IL NE ROUGIT QU'EN SUITE COMPLETE, et c'est le coeur du motif. Lance seul, le
-# fichier passe : c'est precisement ce qui a fait croire pendant deux jours que
+# IL NE ROUGISSAIT QU'EN SUITE COMPLETE, et encore selon l'ordre du jour. Lance
+# seul, le fichier passait : c'est ce qui a fait croire pendant deux jours que
 # l'echec etait un aleas plutot qu'un defaut.
 #
-# CE CAS SEUL TOURNE SUR LA SUITE ENTIERE, LS-252. Le ciblage de LS-235 ne
-# lancait que le fichier porteur, ou aucune facture etrangere n'existe : le cas
-# rendait « NON detecte » par construction, le 24 septembre 2026. La condition
-# de detection EST la presence des autres fichiers, elle ne se cible pas.
+# LE TEST EMET DESORMAIS SA PROPRE PIECE AVANT LA FENETRE, LS-252. Le cas a
+# rendu « NON detecte » le 24 septembre 2026, en fichier seul par le ciblage
+# de LS-235, puis en suite entiere, ou l'ordre du jour n'avait place aucune
+# facture etrangere avant lui. Une detection qui depend de l'ordre des fichiers
+# n'en est pas une : la piece anterieure la rend certaine, fichier seul.
 mute "$TEST_COMPTABILITE" 's/    const depuis = new Date\(\);\n\n    const vue = await lireVueComptable\(\{ depuis \}\);/    const vue = await lireVueComptable();/'
-cas "lecture comptable privee de sa fenetre de periode" integration_complete \
-  "rend une liste vide quand aucune piece n'a ete emise"
+cas "lecture comptable privee de sa fenetre de periode" integration \
+  "rend une liste vide quand aucune piece n'a ete emise dans la periode"
 
 echo
 echo "-----------------------------------------"

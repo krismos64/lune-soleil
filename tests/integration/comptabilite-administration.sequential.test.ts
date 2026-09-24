@@ -241,9 +241,21 @@ describe("lireVueComptable", () => {
    * voisin en cours de suite, defaut exactement rencontre en livrant LS-219 sur
    * la ligne de parametres. Un test se protege de son voisinage, il ne le
    * detruit pas.
+   *
+   * LE TEST EMET SA PROPRE PIECE AVANT LA FENETRE, LS-252. Sans elle, sa
+   * garantie dependait de l'ordre : une lecture privee de sa fenetre ne
+   * rougissait que si un voisin avait laisse une facture, et la preuve par
+   * mutation, cas 180, l'a rendue « NON detectee » deux fois le 24 septembre
+   * 2026, en fichier seul puis en suite entiere. La piece anterieure rend la
+   * fenetre indispensable ici meme, quel que soit le voisinage.
    * ------------------------------------------------------------------
    */
-  it("rend une liste vide quand aucune piece n'a ete emise", async () => {
+  it("rend une liste vide quand aucune piece n'a ete emise dans la periode", async () => {
+    await commanderEtFacturer();
+
+    // `emiseA` est rempli cote Node a la milliseconde : sans cet ecart, la
+    // piece anterieure et le debut de la fenetre peuvent partager la meme.
+    await new Promise((resoudre) => setTimeout(resoudre, 5));
     const depuis = new Date();
 
     const vue = await lireVueComptable({ depuis });
