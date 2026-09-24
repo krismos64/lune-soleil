@@ -107,7 +107,7 @@ a coûté trois nocturnes annulés : voir plus bas, LS-235.
 
 | Preuve | 14 septembre | 20 septembre | 21 septembre, runner | Ce qui la rend lourde |
 |---|---|---|---|---|
-| `verifier-tests-mutation.sh` | 456 s | à mesurer | **coupée à 1834 s** | relançait toute la suite d'intégration |
+| `verifier-tests-mutation.sh` | 456 s | **3507 s le 24**, première exécution complète | **coupée à 1834 s** | 180 cas, dont dix de bout en bout qui reconstruisent l'application |
 | `verifier-reintegration-stock-mutation.sh` | 415 s | **447 s** | **716 s** | zone critique, base peuplée |
 | `verifier-etats-non-nominaux-mutation.sh` | 67 s | **200 s** | **144 s** | la plus lourde des textuelles |
 | `verifier-regles-mutation.sh` | 39 s | à mesurer | non atteinte | schéma, règles et couverture des `paths` |
@@ -269,6 +269,51 @@ une mesure de runner, pas sur celle de ce poste.
 45 minutes sont posées au-dessus du plus grand temps observé sur une étape qui
 n'a jamais fini, donc au-dessus d'une borne inférieure, et non sur le double du
 pire cas nominal que ce document exige ailleurs.
+
+### La première exécution complète, et ce qu'elle a coûté d'aller au bout
+
+LS-252, le 24 septembre 2026. `verifier-tests-mutation.sh` n'était **jamais allé
+au bout** : arrêté au cas 93 le 22, au cas 98 le 23, coupé par la borne au
+premier cas de bout en bout les nuits des 22 et 23. Les « 2377 s mesurées »
+ci-dessus venaient de ces exécutions interrompues, et ne formaient donc pas un
+budget.
+
+**Les nuits des 22 et 23 avaient une cause que le ciblage de LS-235 avait
+laissée** : les dix cas de bout en bout rejouaient chacun la suite Playwright
+entière. Sur le runner, le premier a pris 11 minutes à lui seul, la suite en
+dure 13,6, et le commentaire du script affirmait que ces cas « ne pèsent pas dans
+le budget ». Ils ne lancent plus que leur fichier porteur ; les préparations
+tournent toujours, mesuré par `--list`.
+
+Aller au bout a exigé **six corrections**, toutes du motif « garde-fou jamais
+exercé », aucune visible tant que le script mourait avant :
+
+| Cas | Défaut | Depuis |
+|---|---|---|
+| 96 | l'expression énumérait les arguments de `passerCommande` d'avant `fraisPortPresenteCentimes` | LS-98, 11 septembre |
+| 134 | la garde de l'émetteur non configuré avait été retournée par la revue critique | LS-126, 31 août |
+| vignette | l'accueil levait sous mutation, Playwright attendait `/` 180 s puis s'arrêtait sans lancer un test : liste d'échecs vide | la disponibilité lue sur `/` |
+| 148 | deux autres gardes masquaient l'absence de celle-ci ; ce qui tombait était un **oracle** sans test | la garde d'`avoir.ts` |
+| 180 | la détection dépendait de l'ordre des fichiers, « NON détecté » en fichier seul **et** en suite entière | LS-226 |
+| éditeur, débordement et garde | un motif générique désignait vingt-cinq et trois fichiers, le porteur est désormais imposé | LS-111 |
+
+**Le contrôle à sec aurait vu les deux premiers en quelques secondes**, en
+appliquant chaque expression à son fichier sans lancer de test : 188 expressions,
+une seule périmée restait après la première. Ils se sont révélés après 29 et
+30 minutes d'exécution.
+
+**Deux défauts réels, et non de script** : le cas 148 a fait écrire le test
+« ne révèle pas l'état de la demande à un compte CLIENT », qui rougit sous
+mutation sur `statutActuel: "DEPOSEE"` ; le cas 180 a rendu déterministe un test
+qui ne tenait qu'à son voisinage.
+
+**Le budget en découle, et la borne monte cette fois.** 3507 s en local, 58 min,
+contre 12 min 37 et 7 min pour les suites de référence, soit un runner 1,5 à
+1,8 fois plus lent : environ 100 à 115 min pour ce seul script. La borne de
+l'étape passe à 150 min et le plafond du job à 180, **après** la correction du
+coût et non à sa place, ce que LS-124 exige. Arbitrage de Christophe le même
+jour : une durée plus longue la nuit ne pose pas de problème. Le script imprime
+désormais la durée de chaque cas, sur laquelle les deux se resserreront.
 
 **UN BESOIN D'ENVIRONNEMENT SE MESURE EN EXÉCUTANT LA PREUVE**, jamais en lisant
 son texte. Un premier tri par `grep` de mots-clés rangeait `verifier-nginx`,
