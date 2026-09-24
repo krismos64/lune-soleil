@@ -139,7 +139,19 @@ echo
 
 mute() {
   local fichier="$1" expression="$2"
+  local avant
+  avant=$(cksum <"$fichier")
   perl -0777 -i -pe "$expression" "$fichier"
+
+  # LA GARDE QUI MANQUAIT A CE SCRIPT, LS-254. Une expression que le code a
+  # depassee ne mutait aucun caractere, la suite restait verte, et le cas
+  # concluait « le test est aveugle » sur un test parfaitement voyant. Les
+  # autres scripts de mutation la portent depuis LS-70.
+  if [ "$(cksum <"$fichier")" = "$avant" ]; then
+    echo "  ECHEC la mutation n'a modifie aucun caractere de $fichier"
+    echo "        L'expression ne correspond plus au code : corriger le script."
+    exit 1
+  fi
 }
 
 cas() {
