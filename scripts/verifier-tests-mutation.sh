@@ -280,6 +280,7 @@ mutations=0
 # exactement ce que ce controle doit mesurer.
 MOTIF_COURANT=""
 PORTEUR_IMPOSE=""
+FILTRE_PAR_NOM=0
 
 # ---------------------------------------------------------------------------
 # Controle prealable : la suite doit etre VERTE avant toute mutation.
@@ -338,6 +339,7 @@ cas() {
   # qui ne mute rien : un renommage de fichier ou de test ferait sinon tourner
   # un fichier etranger a la garantie, et conclure sur lui.
   PORTEUR_IMPOSE="${4:-}"
+  FILTRE_PAR_NOM=0
   if [ -n "$PORTEUR_IMPOSE" ] && ! grep -qF "$motif_attendu" "$PORTEUR_IMPOSE" 2>/dev/null; then
     echo "  ECHEC le porteur impose $PORTEUR_IMPOSE ne contient plus le motif"
     echo "        attendu : $motif_attendu"
@@ -415,6 +417,21 @@ cas() {
   # forme dans tout script sous `pipefail`.
   duree=$((SECONDS - debut))
   if grep -qF "$motif_attendu" <<<"$lignes_echec"; then
+    # LE TEMOIN SANS MUTATION, LS-235 : isole par son nom, le test attendu doit
+    # passer sur le code d'origine, sans quoi son echec sous mutation ne
+    # prouvait rien. Voir `lancer_cible`.
+    if [ "$FILTRE_PAR_NOM" -eq 1 ]; then
+      restaurer
+      if ! $commande >"$TMP/temoin.txt" 2>&1; then
+        echo "  RATE  $nom -> le test attendu echoue aussi SANS mutation, isole par son nom (${duree} s)"
+        echo "          attendu : $motif_attendu"
+        echo "          les 20 dernieres lignes du temoin :"
+        tail -20 "$TMP/temoin.txt" | perl -pe 's/\e\[[0-9;]*[A-Za-z]//g' | sed 's/^/            | /'
+        echecs=$((echecs + 1))
+        return
+      fi
+      duree=$((SECONDS - debut))
+    fi
     echo "  OK    $nom -> detecte par le test attendu (${duree} s)"
     printf '%s\n' "$lignes_echec" | head -3 | sed 's/^ *//' | sed 's/^/          /'
   else
@@ -527,8 +544,22 @@ lancer_cible() {
     return
   fi
 
+  # LE SEUL TEST ATTENDU TOURNE, ET NON SON FICHIER ENTIER, LS-235. Mesure du
+  # nocturne 36011272260, le 24 septembre 2026 : seize cas visent
+  # `avis.sequential.test.ts`, cinquante-trois tests relances en entier a chaque
+  # cas, 104 s chacun sur le runner, 28 minutes au total pour une mediane de
+  # 9 s. `-t` filtre par nom, en expression reguliere, d'ou l'echappement.
+  #
+  # UN TEST ISOLE PEUT ECHOUER SANS LA MUTATION, s'il dependait de l'etat laisse
+  # par ses voisins, et sa detection ne prouverait alors rien. `cas` le rejoue
+  # donc sans mutation quand ce filtre a joue, et refuse de conclure s'il
+  # echoue : `FILTRE_PAR_NOM` le lui signale.
+  local filtre
+  filtre=$(printf '%s' "$motif" | sed -e 's/[][\\.*^$?+(){}|/]/\\&/g')
+  FILTRE_PAR_NOM=1
+
   # shellcheck disable=SC2086
-  npx vitest run --project "$projet" $porteurs
+  npx vitest run --project "$projet" $porteurs -t "$filtre"
 }
 
 integration() { lancer_cible integration tests/integration "$MOTIF_COURANT"; }
