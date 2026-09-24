@@ -352,6 +352,10 @@ sans mutation** quand le filtre a joué, et refuse de conclure s'il échoue.
 Prouvé en cassant exprès le test du cas 2 : `RATE ... le test attendu echoue
 aussi SANS mutation`, avec l'assertion en cause.
 
+**Mesuré sur le runner ensuite, nocturne 36039763238** : étape en **1 h 22**
+contre 2 h 05, job en 1 h 40, `180 mutations, 180 detectees`. La borne de
+l'étape passe à **165 min**, le double de ce temps, et le plafond du job à 200.
+
 ### Le contrôle à sec, LS-254
 
 Les trois expressions périmées de ce jour se sont révélées après une trentaine

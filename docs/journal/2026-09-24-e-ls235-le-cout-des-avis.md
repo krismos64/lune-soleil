@@ -50,3 +50,13 @@ réelle de l'étape sur le runner avec le filtre par nom, attendue autour de
 
 1. Le nocturne suivant, lancé à la main après fusion, pour mesurer
 2. LS-250, les 41 `grep -q` restants sous `pipefail`
+
+## Mesuré sur le runner, LS-235 close
+
+Nocturne **36039763238**, lancé à la main après la PR 494 : vert, bout en bout
+2255 passés, `180 mutations, 180 detectees`. **Étape en 1 h 22 contre 2 h 05**,
+job en 1 h 40, somme des cas 3096 s contre 5768, témoin compris.
+
+La borne de 150 min ne laissait que 1,83 fois ce temps : elle passe à **165**,
+le double de 82 min, et le plafond du job à **200**. Dimensionnées sur une mesure
+de runner, pour la première fois depuis l'ouverture de LS-235.
