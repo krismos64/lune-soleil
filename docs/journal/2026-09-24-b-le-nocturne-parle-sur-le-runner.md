@@ -51,6 +51,18 @@ Aucun ne se reproduisait en local. Trois causes distinctes :
   dernières lignes de la sortie brute quand la liste est vide : le prochain
   nocturne dira la cause
 
+## Les deux listes vides avaient une cause, mesurée le soir
+
+Nocturne 35992694899, lancé à la main après les PR 489 et 490 : bout en bout
+**2243 passés**, LS-253 vert sur le runner, étape des preuves en **2 h 04**, et
+`180 mutations, 2 NON detectees`. La sortie brute que la branche RATE imprime
+désormais a donné la cause : **Vitest colore sa sortie sur le runner**, et la
+ligne du test attendu y commence par `ESC[31m ... ×`. L'ancre ne la voyait pas.
+L'hypothèse avait été écartée le matin faute de la reproduire ici, ce qui était
+une conclusion trop rapide sur une absence. Les codes sont retirés par `perl`
+avant le filtre, dans les trois scripts ; sur les 40 lignes réelles du runner,
+ancien filtre RATE, nouveau OK.
+
 ## Ce qui a dérapé
 
 - une URL de base passée **en argument** de `psql`, ce que `CLAUDE.md` proscrit :
