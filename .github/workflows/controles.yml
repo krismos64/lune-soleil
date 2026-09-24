@@ -917,6 +917,17 @@ jobs:
       - name: 9s septies. Aucun tube vers grep -q nouveau sous pipefail
         run: ./scripts/verifier-grep-q-pipefail.sh
 
+      # CE QU'IL GARDE : chaque expression `mute` des preuves par mutation
+      # modifie encore son fichier, LS-254. Les preuves lourdes ne tournent
+      # qu'au nocturne, et une expression que le code a depassee n'y etait vue
+      # qu'au moment ou l'execution l'atteignait : le 24 septembre 2026, trois
+      # l'ont ete apres une trentaine de minutes chacune, dont deux perimees
+      # depuis LS-98 et LS-126. Ici, en quelques centiemes de seconde, sans
+      # lancer un seul test. Rejoue sur le depot d'avant la correction, il
+      # designe exactement ces deux-la.
+      - name: 9s octies. Chaque expression de mutation modifie encore son fichier
+        run: ./scripts/verifier-mutations-a-sec.sh
+
       # LE MEME DEFAUT, COTE BOUTIQUE, LS-165. Il s'est produit deux fois sur ce
       # projet et aucun test ne l'a signale : huit ecrans d'administration en
       # LS-162, et `/compte/verification` trouve par la revue de LS-54, dont le
@@ -1411,6 +1422,7 @@ jobs:
           ./scripts/verifier-chargement-administration-mutation.sh
           ./scripts/verifier-registre-traitements-mutation.sh
           ./scripts/verifier-grep-q-pipefail-mutation.sh
+          ./scripts/verifier-mutations-a-sec-mutation.sh
 
       # ----------------------------------------------------------------------
 
