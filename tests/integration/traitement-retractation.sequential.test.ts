@@ -962,6 +962,38 @@ describe("test negatif de securite, la garde vit dans le service", () => {
     expect(fournisseur.appels).toHaveLength(0);
   });
 
+  /*
+   * LA GARDE DE ROLE PRECEDE LA LECTURE, ET SEUL CE TEST LE PROUVE, LS-252.
+   *
+   * Le test precedent reste vert sans la garde de ce service : `avoir.ts` porte
+   * la sienne, et refuse le CLIENT avant tout remboursement. Mesure du
+   * 24 septembre 2026 par la preuve par mutation, cas 148. Aucun argent ne
+   * sortirait, mais le CLIENT recevrait un refus metier qui NOMME l'etat reel
+   * de la demande, `STATUT_INCOMPATIBLE` avec `statutActuel: "DEPOSEE"` : un
+   * oracle sur une demande qui n'est pas la sienne.
+   *
+   * La demande est laissee `DEPOSEE`, donc non remboursable, pour que le refus
+   * metier existe : sur une demande remboursable, la garde d'`avoir.ts`
+   * masquerait de nouveau l'absence de celle-ci.
+   */
+  it("ne revele pas l'etat de la demande a un compte CLIENT", async () => {
+    const { enTetes, sessionId } = await ouvrirSession(EMAIL_CLIENT, "CLIENT");
+    await enregistrerPreuveIdentite(sessionId);
+
+    const { demandeId, totalCentimes } = await commanderEtDeposer();
+    const fournisseur = fournisseurQuiRembourse();
+
+    const issue = await rembourserRetractation(enTetes, {
+      demandeId,
+      montantCentimes: totalCentimes,
+      fournisseur,
+      referenceDemande: randomUUID(),
+    });
+
+    expect(issue).toEqual({ statut: "SESSION_ABSENTE" });
+    expect(fournisseur.appels).toHaveLength(0);
+  });
+
   it("refuse un remboursement sans preuve d'identite recente", async () => {
     const { enTetes } = await ouvrirSession(
       EMAIL_ADMINISTRATRICE,

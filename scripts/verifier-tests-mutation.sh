@@ -2320,16 +2320,20 @@ cas "transition rendue inconditionnelle, l'horodatage se reecrit" integration \
 # demande, deliberement : lire avant de garder en fait un ORACLE, ou un appelant
 # sans session distingue une demande `DEPOSEE` d'une `REMBOURSEE`.
 #
-# LE TEST ATTENDU EST CELUI DU CLIENT, ET NON CELUI SANS SESSION, LS-252. La
-# garde de reauthentification qui suit rend elle aussi `SESSION_ABSENTE` quand
-# aucune session n'existe : sous mutation, l'appel sans session etait refuse par
-# la seconde garde, et le test « sans aucune session » restait vert. Le cas
-# rendait « NON detecte, le test est aveugle » sur une garantie bien couverte.
-# Seul un compte CLIENT muni d'une preuve d'identite fraiche franchit la seconde
-# garde, donc seul son test separe les deux. Motif « deux lignes de defense ».
+# LE TEST ATTENDU A CHANGE, LS-252, et le cas rendait « NON detecte » le
+# 24 septembre 2026. DEUX AUTRES GARDES masquaient l'absence de celle-ci :
+#
+#   sans session       la reauthentification qui suit rend `SESSION_ABSENTE`
+#   CLIENT reauthentifie  `demanderRemboursement`, dans `avoir.ts`, a sa propre
+#                         garde de role et refuse avant tout remboursement
+#
+# Aucun argent ne sortait donc, et les deux tests existants restaient verts. Ce
+# qui tombait est l'ORACLE que ce cas vise : un CLIENT reauthentifie face a une
+# demande non remboursable recevait `STATUT_INCOMPATIBLE` et son `statutActuel`.
+# Un test l'exige desormais. Motif « deux lignes de defense ».
 mute "$TRAITEMENT_RETRACTATION" 's/    await exigerAdministratrice\(enTetes\);\n  \} catch \(erreur\) \{\n    if \(erreur instanceof AutorisationRefuseeError\) \{\n      return \{ statut: "SESSION_ABSENTE" \};\n    \}\n    throw erreur;\n  \}/    \/* mutation : garde retiree *\/\n  } catch (erreur) {\n    throw erreur;\n  }/'
 cas "garde de role retiree du traitement" integration \
-  "refuse un remboursement demande par un compte CLIENT"
+  "ne revele pas l'etat de la demande a un compte CLIENT"
 
 # ---------------------------------------------------------------------------
 # LS-58 et LS-216, le suivi de livraison et son signalement.
