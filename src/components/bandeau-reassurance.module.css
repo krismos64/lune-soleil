@@ -4,6 +4,13 @@
  * EMPILÉ À 320 PX, puis deux colonnes, puis trois : six éléments côte à côte
  * seraient illisibles sous 1280 px.
  *
+ * LE DÉCOUPAGE SUIT LA LARGEUR DU BANDEAU, ET NON CELLE DE L'ÉCRAN, LS-251.
+ * Sur la fiche, il vit dans la colonne d'achat : avec des `@media`, il passait
+ * à trois colonnes dès 1024 px d'écran dans 548 px de colonne, et la troisième
+ * case restait vide. Relevé par `ls-frontend-revue`. Une `container query` se
+ * règle sur la place réellement offerte ; pleine largeur, sur l'accueil, elle
+ * donne le même découpage qu'avant.
+ *
  * LES FILETS SONT DES OMBRES À DROITE ET EN BAS DE CHAQUE CASE, rognées au bord
  * de la liste. Une première version les tirait du fond de la liste visible
  * entre les cases : franchise désactivée, cinq éléments, la case vide prenait
@@ -11,6 +18,7 @@
  * Ici une case vide reste vide.
  */
 .bandeau {
+  container-type: inline-size;
   background: var(--ls-surface);
   border-block: 1px solid var(--ls-border);
 }
@@ -25,13 +33,13 @@
   list-style: none;
 }
 
-@media (min-width: 560px) {
+@container (min-width: 560px) {
   .liste {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (min-width: 1024px) {
+@container (min-width: 1024px) {
   .liste {
     grid-template-columns: repeat(3, 1fr);
   }

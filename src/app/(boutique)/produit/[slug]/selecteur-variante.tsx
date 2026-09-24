@@ -24,6 +24,7 @@
  */
 import { formaterMontant } from "@/lib/montant";
 import { useState, useTransition } from "react";
+import type { ReactNode } from "react";
 
 import type { EtatDisponibilite, VarianteFiche } from "@/services/catalogue";
 import { ajouterAuPanier } from "@/app/(boutique)/panier/actions-panier";
@@ -50,8 +51,11 @@ const CLASSE_DISPONIBILITE: Record<EtatDisponibilite, string> = {
 
 export function SelecteurVariante({
   variantes,
+  blocLivraison,
 }: {
   variantes: VarianteFiche[];
+  /** Bloc 7, rendu par la page serveur, LS-251. */
+  blocLivraison: ReactNode;
 }) {
   /*
    * LA PREMIERE VARIANTE EST RETENUE AU DEPART, et non la premiere DISPONIBLE.
@@ -201,26 +205,16 @@ export function SelecteurVariante({
       </p>
 
       {/*
-       * Bloc 7, informations de livraison.
+       * Bloc 7, informations de livraison, LS-251.
        *
        * AUCUN TARIF NI SEUIL N'EST ECRIT ICI. `frontend-design.md` l'interdit
        * nommement : ils viennent de la configuration centralisee, la meme qui
-       * sert au calcul serveur des frais de port. Un seuil recopie ici
-       * afficherait « offerte des 39 € » quand le panier en facturerait 45, ce
-       * qui constitue une information precontractuelle fausse.
-       *
-       * LE COMPOSANT DE REASSURANCE EST `Should`, jalon Go-Live, et n'existe pas
-       * encore. En attendant, la seule mention des MODES de livraison, qui sont
-       * fixes par ADR-025 et ne dependent d'aucun tarif.
-       *
-       * AUCUN RENVOI VERS UNE PAGE LIVRAISON : elle n'existe pas plus que la
-       * page de retractation, et un lien vers une route absente rendrait 404 sur
-       * la page ou le client decide d'acheter. Le composant de reassurance
-       * portera les deux le moment venu.
+       * sert au calcul serveur des frais de port. Le bloc est le bandeau de
+       * reassurance, rendu par la page avec le seuil lu dans cette
+       * configuration : jamais une seconde formulation des memes allegations.
+       * Il remplace la ligne ecrite ici en attendant qu'il existe.
        */}
-      <p className={styles.livraison}>
-        Livraison par Mondial Relay, en Point Relais, Locker ou à domicile.
-      </p>
+      {blocLivraison}
 
       {/*
        * Bloc 8, dimensions. ELLES APPARTIENNENT A LA VARIANTE et non au
