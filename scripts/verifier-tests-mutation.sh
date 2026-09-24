@@ -2165,7 +2165,14 @@ cas "mention de franchise en base retiree" integration \
 # acte comme un etat. L'argent est encaisse et la commande ne se confirme plus :
 # le prestataire rejoue indefiniment un evenement qui ne peut pas aboutir tant
 # que personne n'a renseigne les variables. Meme arbitrage que le stock epuise.
-mute "$WEBHOOK" 's/    if \(!\(erreur instanceof EmetteurNonConfigureError\)\) \{\n      throw erreur;\n    \}/    throw erreur;\n    if (false) {}/'
+#
+# LA GARDE A ETE RETOURNEE PAR LA REVUE CRITIQUE DU 31 AOUT 2026, LS-126 : le
+# `if (!(... instanceof ...)) { throw }` est devenu un `if (... instanceof ...)`
+# qui alerte puis rend la main, suivi du rattrapage des instantanes. L'ancienne
+# expression ne trouvait plus rien depuis, et aucune execution n'etait allee
+# assez loin pour le voir, LS-252. La mutation neutralise la condition : l'erreur
+# de l'emetteur tombe alors dans le chemin commun et fait echouer la transaction.
+mute "$WEBHOOK" 's/    if \(erreur instanceof EmetteurNonConfigureError\) \{/    if (false) {/'
 cas "emetteur non configure redevenu bloquant" integration \
   "confirme la commande et alerte sans emettre quand l'emetteur manque"
 # Cas 135 : LA GARDE SUR COMMANDE ANNULEE DISPARAIT. Le webhook retarde arrive
