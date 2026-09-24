@@ -351,8 +351,14 @@ cas() {
   # portee.
   MOTIF_COURANT="$motif_attendu"
 
+  # LA DUREE DE CHAQUE CAS EST IMPRIMEE, LS-252. Le budget du nocturne se
+  # dimensionnait sur des sommes et des extrapolations, et une execution
+  # complete de 58 minutes ne disait pas quels cas la portaient. La borne se
+  # resserre sur une mesure par cas lue dans le journal du runner.
+  local debut=$SECONDS duree
   if $commande >"$TMP/sortie.txt" 2>&1; then
-    echo "  RATE  $nom -> NON detecte, le test est aveugle"
+    duree=$((SECONDS - debut))
+    echo "  RATE  $nom -> NON detecte, le test est aveugle (${duree} s)"
     echecs=$((echecs + 1))
     restaurer
     return
@@ -390,8 +396,9 @@ cas() {
   # here-string. C'est le RATE intermittent du cas 12, qui accusait un test
   # parfaitement voyant. `verifier-grep-q-pipefail.sh` interdit desormais la
   # forme dans tout script sous `pipefail`.
+  duree=$((SECONDS - debut))
   if grep -qF "$motif_attendu" <<<"$lignes_echec"; then
-    echo "  OK    $nom -> detecte par le test attendu"
+    echo "  OK    $nom -> detecte par le test attendu (${duree} s)"
     printf '%s\n' "$lignes_echec" | head -3 | sed 's/^ *//' | sed 's/^/          /'
   else
     # LA BRANCHE RATE IMPRIME TOUT, LS-235. C'est ici que le diagnostic compte,
@@ -405,7 +412,7 @@ cas() {
     # Motif en memoire, « une liste vide n'est pas un verdict » : une liste
     # tronquee ne l'est pas davantage. La branche OK garde son `head -3`, la
     # troncature y etant sans consequence.
-    echo "  RATE  $nom -> echec constate, mais PAS sur le test attendu"
+    echo "  RATE  $nom -> echec constate, mais PAS sur le test attendu (${duree} s)"
     echo "          attendu : $motif_attendu"
     echo "          echecs reels, TOUS ceux retenus par le filtre :"
     printf '%s\n' "$lignes_echec" | sed 's/^ *//' | sed 's/^/            /'
@@ -499,6 +506,7 @@ lancer_cible() {
 }
 
 integration() { lancer_cible integration tests/integration "$MOTIF_COURANT"; }
+integration_complete() { npm run test:integration; }
 unitaire() { lancer_cible unitaire tests/unitaire "$MOTIF_COURANT"; }
 
 # LE BOUT EN BOUT EST CIBLE LUI AUSSI, LS-252. Ce commentaire affirmait
@@ -2311,9 +2319,17 @@ cas "transition rendue inconditionnelle, l'horodatage se reecrit" integration \
 # 3 septembre 2026. Les refus metier de ce service nomment l'etat REEL de la
 # demande, deliberement : lire avant de garder en fait un ORACLE, ou un appelant
 # sans session distingue une demande `DEPOSEE` d'une `REMBOURSEE`.
+#
+# LE TEST ATTENDU EST CELUI DU CLIENT, ET NON CELUI SANS SESSION, LS-252. La
+# garde de reauthentification qui suit rend elle aussi `SESSION_ABSENTE` quand
+# aucune session n'existe : sous mutation, l'appel sans session etait refuse par
+# la seconde garde, et le test « sans aucune session » restait vert. Le cas
+# rendait « NON detecte, le test est aveugle » sur une garantie bien couverte.
+# Seul un compte CLIENT muni d'une preuve d'identite fraiche franchit la seconde
+# garde, donc seul son test separe les deux. Motif « deux lignes de defense ».
 mute "$TRAITEMENT_RETRACTATION" 's/    await exigerAdministratrice\(enTetes\);\n  \} catch \(erreur\) \{\n    if \(erreur instanceof AutorisationRefuseeError\) \{\n      return \{ statut: "SESSION_ABSENTE" \};\n    \}\n    throw erreur;\n  \}/    \/* mutation : garde retiree *\/\n  } catch (erreur) {\n    throw erreur;\n  }/'
 cas "garde de role retiree du traitement" integration \
-  "refuse un remboursement sans aucune session"
+  "refuse un remboursement demande par un compte CLIENT"
 
 # ---------------------------------------------------------------------------
 # LS-58 et LS-216, le suivi de livraison et son signalement.
@@ -2795,8 +2811,13 @@ echo
 # IL NE ROUGIT QU'EN SUITE COMPLETE, et c'est le coeur du motif. Lance seul, le
 # fichier passe : c'est precisement ce qui a fait croire pendant deux jours que
 # l'echec etait un aleas plutot qu'un defaut.
+#
+# CE CAS SEUL TOURNE SUR LA SUITE ENTIERE, LS-252. Le ciblage de LS-235 ne
+# lancait que le fichier porteur, ou aucune facture etrangere n'existe : le cas
+# rendait « NON detecte » par construction, le 24 septembre 2026. La condition
+# de detection EST la presence des autres fichiers, elle ne se cible pas.
 mute "$TEST_COMPTABILITE" 's/    const depuis = new Date\(\);\n\n    const vue = await lireVueComptable\(\{ depuis \}\);/    const vue = await lireVueComptable();/'
-cas "lecture comptable privee de sa fenetre de periode" integration \
+cas "lecture comptable privee de sa fenetre de periode" integration_complete \
   "rend une liste vide quand aucune piece n'a ete emise"
 
 echo
