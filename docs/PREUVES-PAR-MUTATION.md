@@ -11,7 +11,7 @@ sa raison.
 
 ## Ce que l'inventaire de LS-230 a trouvé
 
-Mesuré le 14 septembre 2026 : le dépôt portait **quarante-trois preuves**, quarante-cinq au 23 septembre 2026,
+Mesuré le 14 septembre 2026 : le dépôt portait **quarante-trois preuves**, quarante-cinq au 23 septembre 2026, quarante-six au 24,
 l'intégration continue en rejouait **quinze**. Sur les vingt-huit dormantes,
 **cinq étaient cassées** sans que personne ne le sache, et chacune autrement.
 
@@ -46,8 +46,8 @@ ne pouvait pas produire son effet, et s'annonçait comme un trou du contrôle.
 
 ## Les preuves écartées, et leur raison
 
-**Aucune, au 23 septembre 2026.** Les **quarante-cinq** preuves du dépôt
-tournent, **trente-huit par PR et sept au nocturne**, comptes relevés par les
+**Aucune, au 24 septembre 2026.** Les **quarante-six** preuves du dépôt
+tournent, **trente-neuf par PR et sept au nocturne**, comptes relevés par les
 commandes ci-dessous et non recopiés.
 
 `verifier-image-docker-mutation.sh` a rejoint le nocturne le 17 septembre. Elle
@@ -67,11 +67,12 @@ document. Une première version du contrôle cherchait le nom dans tout le
 registre : les cinq preuves réparées plus haut, citées dans leur tableau
 historique, passaient alors pour écartées. Un récit n'est pas une décision.
 
-## Comment les quarante-cinq se répartissent
+## Comment les quarante-six se répartissent
 
-**Trente-huit par PR**, `controles.yml` : **vingt-trois** groupées dans l'étape
+**Trente-neuf par PR**, `controles.yml` : **vingt-quatre** groupées dans l'étape
 « 9z octies », qui pèsent **82 s** mesurées en les enchaînant avant l'ajout de
-`verifier-grep-q-pipefail-mutation.sh` par LS-237, et **quinze** en
+`verifier-grep-q-pipefail-mutation.sh` par LS-237 et de
+`verifier-mutations-a-sec-mutation.sh` par LS-254, et **quinze** en
 étapes nommées, chacune posée par la story qui l'a écrite. Sur une CI qui dure
 environ neuf cents secondes quand le code change.
 
@@ -331,6 +332,32 @@ rendu cinq RATE que ce poste ne produisait pas :
 
 **Une preuve verte sur ce poste ne dit rien du runner**, et c'est le troisième
 écart de ce genre sur ce document, après les durées et les reporters.
+
+### Le contrôle à sec, LS-254
+
+Les trois expressions périmées de ce jour se sont révélées après une trentaine
+de minutes chacune, au moment où l'exécution les atteignait.
+`verifier-mutations-a-sec.sh` applique **chaque expression `mute` à son fichier,
+en mémoire et sans lancer de test**, à chaque PR : 215 expressions dans six
+scripts, en quelques centièmes de seconde, le 24 septembre 2026. Il découvre
+lui-même tout script qui définit `mute()`, lit la signature des fonctions qui
+l'appellent, et repart du fichier d'origine après chaque `cas`, comme le vrai
+script.
+
+**Rejoué sur le dépôt d'avant les corrections, `d08e14d`, il désigne exactement
+les deux expressions** qui ont coûté deux nocturnes, `paiement.ts` et
+`webhook-paiement.ts`.
+
+**Ce qu'il ne voit pas** : une expression qui mute bien son fichier mais rate son
+test, ce que seule la preuve réelle mesure, et les mutations écrites autrement
+qu'avec `mute`, `perl -pi` direct dans `verifier-regles-mutation.sh` et
+`verifier-config-claude-mutation.sh`.
+
+**Sa première version portait deux défauts, trouvés en l'exécutant** : sans
+remise à zéro après `cas`, les mutations s'accumulaient et onze expressions
+saines passaient pour périmées ; une fonction écrite sur une ligne faisait
+sauter le reste d'un script, qui rendait zéro appel. La garde « zéro appel » a
+attrapé le second, sa preuve par mutation garde le premier.
 
 **UN BESOIN D'ENVIRONNEMENT SE MESURE EN EXÉCUTANT LA PREUVE**, jamais en lisant
 son texte. Un premier tri par `grep` de mots-clés rangeait `verifier-nginx`,
