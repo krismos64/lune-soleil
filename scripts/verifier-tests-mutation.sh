@@ -393,8 +393,15 @@ cas() {
   # `%253A` litteral deviendrait `:` au lieu de `%3A`.
   local lignes_echec
   lignes_echec=$(
-    grep -E '^[[:space:]]*(×|✘)[[:space:]]|^[[:space:]]*[0-9]+\)[[:space:]]|^::error ' \
-      "$TMP/sortie.txt" |
+    # LES CODES COULEUR SONT RETIRES AVANT LE FILTRE, LS-252. Sur le runner,
+    # Vitest colore sa sortie : la ligne du test en echec y commence par
+    # `ESC[31m     ESC[31m×`, et l'ancre `^[[:space:]]*×` ne la voit pas. Mesure
+    # du 24 septembre 2026, nocturne 35992694899, par la sortie brute que la
+    # branche RATE imprime desormais : les deux derniers RATE portaient leur
+    # test attendu, colore. Ce poste ne colore pas, d'ou l'ecart. `perl` et non
+    # `sed`, dont la version macOS ne connait pas `\x1b`.
+    perl -pe 's/\e\[[0-9;]*[A-Za-z]//g' "$TMP/sortie.txt" |
+      grep -E '^[[:space:]]*(×|✘)[[:space:]]|^[[:space:]]*[0-9]+\)[[:space:]]|^::error ' |
       sed -e 's/%2C/,/g' -e 's/%3A/:/g' -e 's/%0A/ /g' -e 's/%0D//g' -e 's/%25/%/g' || true
   )
 
@@ -433,7 +440,7 @@ cas() {
     # sortie, `$TMP` etant efface a la restauration, rien ne restait a lire.
     if [ -z "$lignes_echec" ]; then
       echo "          liste vide, les 40 dernieres lignes de la sortie brute :"
-      tail -40 "$TMP/sortie.txt" | sed 's/^/            | /'
+      tail -40 "$TMP/sortie.txt" | perl -pe 's/\e\[[0-9;]*[A-Za-z]//g' | sed 's/^/            | /'
     fi
     echecs=$((echecs + 1))
   fi
