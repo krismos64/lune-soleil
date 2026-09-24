@@ -175,7 +175,11 @@ cas() {
   local lignes_echec
   lignes_echec=$(
     grep -E '^[[:space:]]*(×|✘)[[:space:]]|^[[:space:]]*[0-9]+\)[[:space:]]|^::error ' \
-      "$TMP/sortie.txt" | sed 's/%2C/,/g' || true
+      "$TMP/sortie.txt" |
+      # Tous les encodages d'annotation GitHub, `%25` en dernier, LS-252 : un
+      # motif portant « : » rendait RATE sur le runner, lu en `%3A`. Detail
+      # dans `verifier-tests-mutation.sh`.
+      sed -e 's/%2C/,/g' -e 's/%3A/:/g' -e 's/%0A/ /g' -e 's/%0D//g' -e 's/%25/%/g' || true
   )
 
   if printf '%s' "$lignes_echec" | grep -qF "$motif_attendu"; then
