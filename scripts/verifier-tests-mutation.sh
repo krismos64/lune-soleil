@@ -382,10 +382,20 @@ cas() {
   # Playwright sur le runner, ce qu'a montre le nocturne du 17 septembre 2026.
   # `verifier-etats-non-nominaux-mutation.sh` porte les quatre formes mesurees
   # et la raison du decodage de `%2C`.
+  #
+  # TOUS LES ENCODAGES D'ANNOTATION SONT DECODES, ET NON LE SEUL `%2C`, LS-252.
+  # GitHub encode dans les proprietes d'une annotation `%`, `\r`, `\n`, `:` et
+  # `,`. Le nocturne du 24 septembre 2026 a rendu RATE sur trois cas dont le
+  # motif porte « : », « serialise deux demarrages concurrents : une seule
+  # session creee » en tete : le titre de l'annotation le portait en `%3A`, et
+  # seule l'annotation nommait le test sur le runner. Reproduit en local sous
+  # `CI=true GITHUB_ACTIONS=true`. `%25` se decode en DERNIER, sans quoi un
+  # `%253A` litteral deviendrait `:` au lieu de `%3A`.
   local lignes_echec
   lignes_echec=$(
     grep -E '^[[:space:]]*(×|✘)[[:space:]]|^[[:space:]]*[0-9]+\)[[:space:]]|^::error ' \
-      "$TMP/sortie.txt" | sed 's/%2C/,/g' || true
+      "$TMP/sortie.txt" |
+      sed -e 's/%2C/,/g' -e 's/%3A/:/g' -e 's/%0A/ /g' -e 's/%0D//g' -e 's/%25/%/g' || true
   )
 
   # UNE HERE-STRING ET NON `printf | grep -q`, LS-237. Sous `pipefail`,
@@ -416,6 +426,15 @@ cas() {
     echo "          attendu : $motif_attendu"
     echo "          echecs reels, TOUS ceux retenus par le filtre :"
     printf '%s\n' "$lignes_echec" | sed 's/^ *//' | sed 's/^/            /'
+
+    # UNE LISTE VIDE IMPRIME LA SORTIE BRUTE, LS-252. Le nocturne du
+    # 24 septembre 2026 a rendu deux RATE a liste vide, que ni la ligne `×`, ni
+    # l'annotation n'expliquaient, et que ce poste ne reproduit pas : sans la
+    # sortie, `$TMP` etant efface a la restauration, rien ne restait a lire.
+    if [ -z "$lignes_echec" ]; then
+      echo "          liste vide, les 40 dernieres lignes de la sortie brute :"
+      tail -40 "$TMP/sortie.txt" | sed 's/^/            | /'
+    fi
     echecs=$((echecs + 1))
   fi
   restaurer
