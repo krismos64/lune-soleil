@@ -333,6 +333,25 @@ rendu cinq RATE que ce poste ne produisait pas :
 **Une preuve verte sur ce poste ne dit rien du runner**, et c'est le troisième
 écart de ce genre sur ce document, après les durées et les reporters.
 
+### Le premier nocturne vert, et le coût qu'il a montré
+
+Nocturne **36011272260**, 24 septembre 2026 : `180 mutations, 180 detectees`,
+étape en **2 h 05** pour une borne de 150 min, soit une marge de 20 %, sous le
+double exigé plus haut. La durée par cas, désormais imprimée, a désigné la
+cause : médiane **9 s**, mais **seize cas à 104 s**, qui relançaient chacun les
+cinquante-trois tests de `avis.sequential.test.ts`.
+
+**Chaque cas ne lance plus que le test attendu**, filtré par son nom, `-t`.
+Arbitrage de Christophe : réduire le coût plutôt que relever la borne. Mesuré
+en local sur l'exécution complète : **3507 s avant, 1902 s après**, médiane
+4 s, et `180 mutations, 180 detectees`.
+
+**Un test isolé peut échouer sans la mutation** s'il dépendait de l'état laissé
+par ses voisins, et sa détection ne prouverait alors rien. Le script le **rejoue
+sans mutation** quand le filtre a joué, et refuse de conclure s'il échoue.
+Prouvé en cassant exprès le test du cas 2 : `RATE ... le test attendu echoue
+aussi SANS mutation`, avec l'assertion en cause.
+
 ### Le contrôle à sec, LS-254
 
 Les trois expressions périmées de ce jour se sont révélées après une trentaine
