@@ -51,4 +51,56 @@ describe("BandeauReassurance", () => {
     expect(within(bandeau).getAllByRole("listitem")).toHaveLength(5);
     expect(bandeau.textContent).not.toMatch(/offerte/);
   });
+
+  /*
+   * LS-251, UN SOUS-ENSEMBLE PAR ECRAN. Le texte reste celui du bandeau
+   * entier : ces tests verifient qu'un ecran choisit ses elements sans en
+   * reformuler aucun.
+   */
+  test("ne rend que les éléments demandés, dans l'ordre du bandeau entier", () => {
+    render(
+      <BandeauReassurance
+        seuilFranchiseCentimes={3900}
+        elements={["gratuite", "livraison"]}
+        nom="Informations de livraison"
+      />,
+    );
+
+    const bandeau = screen.getByRole("region", {
+      name: "Informations de livraison",
+    });
+    const elements = within(bandeau).getAllByRole("listitem");
+    expect(elements).toHaveLength(2);
+    expect(elements[0]!.textContent).toMatch(/^Livraison Mondial Relay/);
+    expect(elements[1]!.textContent).toMatch(/^Livraison offerte dès 39,00\s€/);
+    expect(bandeau.textContent).not.toMatch(/Faits main|Stripe|14 jours/);
+  });
+
+  test("garde la réserve des frais de retour dans un sous-ensemble", () => {
+    render(
+      <BandeauReassurance
+        seuilFranchiseCentimes={null}
+        elements={["paiement", "retractation", "contact"]}
+      />,
+    );
+
+    const bandeau = screen.getByRole("region", {
+      name: "Engagements de la boutique",
+    });
+    expect(within(bandeau).getAllByRole("listitem")).toHaveLength(3);
+    expect(bandeau.textContent).toMatch(
+      /14 jours pour changer d.avis\s*Frais de retour à votre charge/,
+    );
+  });
+
+  test("ne rend aucune région quand aucun élément ne reste à afficher", () => {
+    const { container } = render(
+      <BandeauReassurance
+        seuilFranchiseCentimes={null}
+        elements={["gratuite"]}
+      />,
+    );
+
+    expect(container.innerHTML).toBe("");
+  });
 });
