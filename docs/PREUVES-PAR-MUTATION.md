@@ -315,6 +315,23 @@ coût et non à sa place, ce que LS-124 exige. Arbitrage de Christophe le même
 jour : une durée plus longue la nuit ne pose pas de problème. Le script imprime
 désormais la durée de chaque cas, sur laquelle les deux se resserreront.
 
+**Le runner l'a confirmé le lendemain, nocturne 35967594574** : l'étape est
+allée au bout en **2 h 05**, et six preuves ont rendu leur verdict. Il a aussi
+rendu cinq RATE que ce poste ne produisait pas :
+
+- **trois motifs portant « : »** : sur le runner, seule l'annotation `::error`
+  nomme le test, et GitHub y encode `:` en `%3A`. Les filtres ne décodaient que
+  `%2C`, dans trois scripts. Ils décodent désormais `%2C`, `%3A`, `%0A`, `%0D`
+  et `%25`, ce dernier en dernier
+- **le cas 112** produisait du SQL invalide, puis, corrigé, restait vert sur un
+  test que la garde `quantite_reservee >= ...` protégeait déjà. Il est porté
+  par un test de double vente, écrit pour lui
+- **deux listes vides** non reproduites : la branche RATE imprime la sortie
+  brute dans ce cas
+
+**Une preuve verte sur ce poste ne dit rien du runner**, et c'est le troisième
+écart de ce genre sur ce document, après les durées et les reporters.
+
 **UN BESOIN D'ENVIRONNEMENT SE MESURE EN EXÉCUTANT LA PREUVE**, jamais en lisant
 son texte. Un premier tri par `grep` de mots-clés rangeait `verifier-nginx`,
 `verifier-environnement` et `verifier-migration` parmi les preuves à
