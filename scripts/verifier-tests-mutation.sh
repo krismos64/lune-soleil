@@ -1988,7 +1988,15 @@ cas "verrou de serialisation du rattachement retire" integration \
 # Elle rendrait `quantiteReservee` a CHAQUE cycle sur la meme reservation, du
 # stock apparaissant sans qu'aucun achat ne l'explique, jusqu'a heurter
 # `chk_variante_reservee_positif`.
-mute "$LIBERATION" 's/      DELETE FROM reservation\n      WHERE id IN \(SELECT id FROM cibles\)/      SELECT id, variante_id, quantite FROM reservation\n      WHERE id IN (SELECT id FROM cibles)/'
+#
+# LA MUTATION PRODUISAIT DU SQL INVALIDE, LS-252. Le verrou de `verrous` a
+# ajoute une condition apres le `WHERE`, et l'expression ne remplacait que les
+# deux premieres lignes : il restait un `RETURNING` derriere un `SELECT`, et le
+# nocturne du 24 septembre 2026 a lu `syntax error at or near "RETURNING"`. Le
+# test rougissait sur un plantage, sans rien prouver de l'idempotence. Le bloc
+# est desormais remplace en entier par un `SELECT` valide, qui rend les memes
+# lignes sans les supprimer.
+mute "$LIBERATION" 's/      DELETE FROM reservation\n      WHERE id IN \(SELECT id FROM cibles\)\n        AND \(SELECT count\(\*\) FROM verrous\) >= 0\n      RETURNING id, variante_id, quantite/      SELECT id, variante_id, quantite FROM reservation\n      WHERE id IN (SELECT id FROM cibles)\n        AND (SELECT count(*) FROM verrous) >= 0/'
 cas "liberation sans suppression, idempotence perdue" integration \
   "est idempotente : deux executions ne decrementent pas deux fois"
 
