@@ -407,7 +407,21 @@ export default defineConfig({
      * doit pas trouver la base absente.
      */
     command: `./scripts/preparer-base-e2e.sh && node scripts/engendrer-medias-test.mjs && npm run build && npx next start --port ${PORT}`,
-    url: URL_BASE,
+    /*
+     * LA DISPONIBILITE SE LIT SUR LA ROUTE DE SANTE, ET NON SUR L'ACCUEIL, LS-252.
+     *
+     * Attendre `/` faisait dependre le DEMARRAGE de toute la suite du rendu
+     * d'une seule page. Mesure du 24 septembre 2026 : une vignette mal nommee
+     * fait lever l'accueil, Playwright attend alors ses 180 secondes puis
+     * s'arrete sur « Timed out waiting from config.webServer », sans lancer un
+     * seul test. Le defaut devient un delai d'attente anonyme au lieu de faire
+     * rougir les tests qui le nomment, et la preuve par mutation lisait une
+     * liste d'echecs vide.
+     *
+     * `/api/sante` repond des que le serveur ecoute et que la base repond, ce
+     * que « pret » veut dire. Un accueil casse est l'affaire de ses tests.
+     */
+    url: `${URL_BASE}/api/sante`,
     reuseExistingServer: !process.env.CI,
     // Une construction Next.js complete depasse largement le delai par defaut.
     timeout: 180_000,
