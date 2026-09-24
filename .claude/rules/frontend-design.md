@@ -1000,9 +1000,22 @@ précontractuelle fausse, sanctionnée bien au-delà de l'écart de prix.
 **Le composant qui les porte est `BandeauReassurance`**,
 `src/components/bandeau-reassurance.tsx`, LS-236 : posé sur l'accueil et
 `/notre-univers`, il reçoit le seuil par `lireSeuilFranchise` et se tait sur la
-gratuité quand la franchise est désactivée. Sa pose sur la fiche, le panier et
-le tunnel est LS-251. Toute nouvelle surface le réutilise, jamais une seconde
-formulation des mêmes allégations.
+gratuité quand la franchise est désactivée. Toute nouvelle surface le réutilise,
+jamais une seconde formulation des mêmes allégations.
+
+**Chaque écran porte un sous-ensemble, par `elements`**, LS-251, arbitrage du
+24 septembre 2026. Le texte reste dans le composant, l'ordre rendu est toujours
+le sien :
+
+| Écran | Éléments | Nom de la région |
+|---|---|---|
+| accueil, `/notre-univers`, panier | les six | Engagements de la boutique |
+| fiche produit, bloc 7 | livraison, gratuité | Informations de livraison |
+| tunnel | paiement, rétractation, contact | Engagements de la boutique |
+
+**Le bandeau entier ne va jamais dans une zone d'achat** : à 320 px il empile
+près de 500 px. Au panier, il suit les actions et ne s'intercale jamais entre le
+total et « Passer la commande ».
 
 Six éléments, sans en ajouter :
 
