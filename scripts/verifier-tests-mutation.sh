@@ -1997,8 +1997,14 @@ cas "verrou de serialisation du rattachement retire" integration \
 # est desormais remplace en entier par un `SELECT` valide, qui rend les memes
 # lignes sans les supprimer.
 mute "$LIBERATION" 's/      DELETE FROM reservation\n      WHERE id IN \(SELECT id FROM cibles\)\n        AND \(SELECT count\(\*\) FROM verrous\) >= 0\n      RETURNING id, variante_id, quantite/      SELECT id, variante_id, quantite FROM reservation\n      WHERE id IN (SELECT id FROM cibles)\n        AND (SELECT count(*) FROM verrous) >= 0/'
+#
+# LE TEST ATTENDU A CHANGE, LS-252. Une fois le SQL valide, celui
+# d'idempotence est reste VERT : la garde `quantite_reservee >= ...` empeche la
+# seconde passe de descendre sous zero. Le defaut ne se voit qu'avec un second
+# acheteur de la meme piece, dont la reservation est liberee par la ligne echue
+# qui a survecu : la double vente. Un test l'exige desormais.
 cas "liberation sans suppression, idempotence perdue" integration \
-  "est idempotente : deux executions ne decrementent pas deux fois"
+  "ne libere pas la reservation d'un nouvel acheteur de la meme piece"
 
 # Cas 113 : LA LIBERATION NE COMPARE PLUS A L'EXPIRATION. Elle rendrait au
 # catalogue des reservations ENCORE VIVES : le client, devant sa page de

@@ -255,6 +255,40 @@ describe("libererReservationsExpirees", () => {
     expect(await lireStock(varianteId)).toEqual({ physique: 1, reservee: 1 });
   });
 
+  /*
+   * LA SUPPRESSION DE LA LIGNE PROTEGE LE CLIENT SUIVANT, LS-252.
+   *
+   * Le test d'idempotence ci-dessous reste vert quand la liberation cesse de
+   * supprimer la reservation : la garde `quantite_reservee >= ...` empeche la
+   * seconde passe de descendre sous zero, et `reservee` finit bien a 0. Mesure
+   * du 24 septembre 2026 par la preuve par mutation, cas 112.
+   *
+   * Le danger n'apparait qu'avec un SECOND acheteur. La ligne echue survit, la
+   * piece est reservee de nouveau, et la passe suivante decremente une
+   * deuxieme fois pour l'ancienne ligne : elle libere la reservation du nouvel
+   * acheteur, et la piece redevient vendable a un troisieme. C'est la double
+   * vente que le jalon interdit.
+   */
+  it("ne libere pas la reservation d'un nouvel acheteur de la meme piece", async () => {
+    const { varianteId } = await commanderUnePiece({
+      reservationExpiree: true,
+    });
+
+    await libererReservationsExpirees();
+
+    const seconde = await passerCommande({
+      lignesCookie: [{ varianteId, quantite: 1 }],
+      saisie: SAISIE_DOMICILE,
+      configuration: CONFIGURATION,
+    });
+    expect(await lireStock(varianteId)).toEqual({ physique: 1, reservee: 1 });
+
+    await libererReservationsExpirees();
+
+    expect(await lireStock(varianteId)).toEqual({ physique: 1, reservee: 1 });
+    expect(await compterReservations(seconde.commandeId)).toBe(1);
+  });
+
   it("est idempotente : deux executions ne decrementent pas deux fois", async () => {
     const { varianteId } = await commanderUnePiece({
       reservationExpiree: true,
