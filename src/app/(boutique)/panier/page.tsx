@@ -11,9 +11,11 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 
+import { BandeauReassurance } from "@/components/bandeau-reassurance";
 import { formaterMontant } from "@/lib/montant";
 import { NOM_COOKIE_PANIER, decoderPanier } from "@/lib/panier-cookie";
 import { revalider } from "@/services/panier";
+import { lireSeuilFranchise } from "@/services/parametres";
 import { LignesPanier } from "./lignes-panier";
 import styles from "./panier.module.css";
 
@@ -35,7 +37,10 @@ export const dynamic = "force-dynamic";
 export default async function PagePanier() {
   const magasin = await cookies();
   const lignesCookie = decoderPanier(magasin.get(NOM_COOKIE_PANIER)?.value);
-  const panier = await revalider(lignesCookie);
+  const [panier, seuilFranchise] = await Promise.all([
+    revalider(lignesCookie),
+    lireSeuilFranchise(),
+  ]);
 
   if (panier.lignes.length === 0) {
     /*
@@ -107,6 +112,16 @@ export default async function PagePanier() {
       <Link href="/catalogue" className={styles.actionSecondaire}>
         Continuer mes achats
       </Link>
+
+      {/*
+       * LE BANDEAU ENTIER, APRES LES ACTIONS ET NON AVANT, LS-251. Entre le
+       * total et « Passer la commande », ses six elements repousseraient le
+       * bouton principal de pres de 500 px hors de l'ecran a 320 px. Le panier
+       * vide ne le porte pas : il n'y a rien a rassurer avant un choix.
+       */}
+      <div className={styles.reassurance}>
+        <BandeauReassurance seuilFranchiseCentimes={seuilFranchise} />
+      </div>
     </main>
   );
 }

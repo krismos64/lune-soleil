@@ -22,6 +22,7 @@ import { fournisseurPointsRetrait } from "@/integrations/sendcloud/fournisseur";
 import { construireRecapitulatif } from "@/services/tunnel";
 import type { SaisieTunnel } from "@/lib/tunnel-cookie";
 import { lireSaisie } from "./actions-tunnel";
+import { BandeauReassurance } from "@/components/bandeau-reassurance";
 import { EtapesTunnel } from "./etapes-tunnel";
 import styles from "./commande.module.css";
 
@@ -191,6 +192,21 @@ export default async function PageCommande({
       <Link href="/panier" className={styles.retourPanier}>
         Revenir au panier
       </Link>
+
+      {/*
+       * TROIS ELEMENTS DANS LE TUNNEL, LS-251 : paiement, retractation et
+       * contact, ce qui rassure au moment de payer. La livraison et sa
+       * gratuite sont deja chiffrees par l'etape de livraison et le
+       * recapitulatif, calcules sur la meme configuration : les redire ici
+       * doublerait l'information sur un ecran deja dense. Aucun seuil n'est
+       * donc lu, `null` taisant la gratuite de toute facon absente de la liste.
+       */}
+      <div className={styles.reassurance}>
+        <BandeauReassurance
+          seuilFranchiseCentimes={null}
+          elements={["paiement", "retractation", "contact"]}
+        />
+      </div>
     </main>
   );
 }

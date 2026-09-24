@@ -450,3 +450,12 @@
   outline: 2px solid var(--ls-focus);
   outline-offset: 2px;
 }
+
+/*
+ * Le bandeau de reassurance se detache du dernier lien, LS-251 : sans marge,
+ * son filet superieur touchait le bas d'une cible tactile de 44 px. Releve par
+ * `ls-frontend-revue`.
+ */
+.reassurance {
+  margin-top: var(--ls-space-6);
+}

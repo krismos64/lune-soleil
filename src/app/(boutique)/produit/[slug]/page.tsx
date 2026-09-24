@@ -31,7 +31,9 @@ import {
   jsonLdProduit,
   openGraphDePage,
 } from "@/lib/seo";
+import { BandeauReassurance } from "@/components/bandeau-reassurance";
 import { lireFichePublique } from "@/services/catalogue";
+import { lireSeuilFranchise } from "@/services/parametres";
 import styles from "./fiche.module.css";
 import { Galerie } from "./galerie";
 import { SelecteurVariante } from "./selecteur-variante";
@@ -165,7 +167,10 @@ export default async function PageFicheProduit({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const fiche = await lireFichePublique(slug);
+  const [fiche, seuilFranchise] = await Promise.all([
+    lireFichePublique(slug),
+    lireSeuilFranchise(),
+  ]);
 
   /*
    * `notFound()` SUR UN BROUILLON COMME SUR UN SLUG INCONNU. Le service rend
@@ -272,7 +277,24 @@ export default async function PageFicheProduit({
             )}
 
           {/* Blocs 3 a 8 : ils dependent tous de la declinaison choisie. */}
-          <SelecteurVariante variantes={fiche.variantes} />
+          {/*
+           * LE BLOC 7 EST RENDU ICI ET TRANSMIS AU SELECTEUR, LS-251. Le
+           * selecteur est un composant client, et le bandeau un composant
+           * serveur qui recoit le seuil lu dans la configuration : le passer en
+           * prop le garde serveur sans rien envoyer de plus au navigateur. Deux
+           * elements seulement dans la zone d'achat, livraison et gratuite, le
+           * bandeau entier y empilant pres de 500 px a 320 px.
+           */}
+          <SelecteurVariante
+            variantes={fiche.variantes}
+            blocLivraison={
+              <BandeauReassurance
+                seuilFranchiseCentimes={seuilFranchise}
+                elements={["livraison", "gratuite"]}
+                nom="Informations de livraison"
+              />
+            }
+          />
         </div>
 
         <div className={styles.editorial}>
