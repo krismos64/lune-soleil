@@ -59,3 +59,34 @@ la garde témoin qui l'attrape.
 
 **LS-250** : critères 1, 2 et 3 faits, avec les trois exceptions de rejeu
 écrites ci-dessus.
+
+## Vérification de fin de session
+
+Demandée par Christophe avant de quitter.
+
+- **Production** : image en service `6a22bcba`, action `etat` du workflow. Les
+  neuf commits arrivés sur `main` depuis ne touchent que des scripts, la CI et
+  la documentation, `git diff --stat 6a22bcba..origin/main` vide sur `src`,
+  `prisma`, `package.json`, `Dockerfile` et la configuration de déploiement :
+  **rien à redéployer**. Pages publiques et `/api/sante` à 200
+- **Onze contrôles de cohérence à 0**, dont configuration, règles, propagation,
+  registre, rédaction, couverture des preuves et contrôle à sec
+- **LS-233 close**, ses critères 4 et 5 remplis par les nocturnes du 24 : l'écart
+  CI/local tenait aux formats des reporters de CI
+- **README remis d'aplomb** : 224 tickets terminés sur 244, 20 ouverts, 9 En
+  cours, phase 6 à 6 ouverts et contenus à 10, relevés dans Jira le 25 au matin
+- **`PREUVES-PAR-MUTATION.md`** porte en tête de section les bornes en vigueur,
+  165 et 200 min, les valeurs antérieures restant pour l'histoire
+
+**Restent signalés, antérieurs à cette session** : l'index mémoire à 151 lignes
+sur 200, qui rend `verifier-config-claude.sh --strict` rouge en local ; une
+formule d'exclusivité au README ; deux avertissements shellcheck ; deux
+dépendances textuelles sans lien Jira sur LS-58 et LS-68, tickets clos.
+
+## Prochaine étape
+
+1. Archiver une partie de l'index mémoire, `docs/memory-archivage.md`, avant le
+   plafond de 200 lignes
+2. Borne locale sur l'étape « 9z octies » de la CI des PR, vingt-quatre preuves
+   sous `bash -e` sans borne, arbitrage de Christophe attendu depuis le 20
+3. Le reste du backlog attend l'exploitante ou l'ouverture commerciale, LS-153

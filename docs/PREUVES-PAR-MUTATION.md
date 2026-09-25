@@ -164,6 +164,12 @@ bilans doivent paraître au rapport.
 
 ## Le temps réel du step est tombé, et il a annulé trois nocturnes
 
+**ÉTAT EN VIGUEUR, le 25 septembre 2026** : borne de l'étape à **165 min**,
+plafond du job à **200 min**, mesure de référence **1 h 22** pour l'étape,
+nocturne 36039763238. Les valeurs de 45, 75, 150 et 180 min citées dans cette
+section sont celles des étapes successives du diagnostic, conservées pour
+l'histoire ; aucune n'est plus en vigueur.
+
 Ce document annonçait « le premier temps réel du step complet sera celui du
 nocturne du 18 septembre ». Il est tombé les 18, 19 et 20, et voici ce qu'il dit,
 LS-235 :
@@ -185,8 +191,8 @@ tourné non plus.
 
 | Geste | Ce qu'il règle |
 |---|---|
-| borne locale de 45 min sur le step | le dépassement **se nomme** au lieu d'annuler le job |
-| plafond du job de 45 à 75 min | le step a de quoi **aboutir**, 19 min ne suffisaient pas |
+| borne locale de 45 min sur le step, 165 depuis le 24 septembre | le dépassement **se nomme** au lieu d'annuler le job |
+| plafond du job de 45 à 75 min, 200 depuis le 24 septembre | le step a de quoi **aboutir**, 19 min ne suffisaient pas |
 | alerte en `failure() \|\| cancelled()` | une annulation **se voit** |
 | `npm audit` remonté juste après l'installation | plus aucune étape lourde ne peut **l'empêcher de se prononcer** |
 
@@ -266,7 +272,8 @@ défauts réels, du motif « garde-fou jamais exercé » :
 `etats-non-nominaux` y tombe à 144 s contre 200. La borne se resserre donc sur
 une mesure de runner, pas sur celle de ce poste.
 
-**À resserrer dès qu'un nocturne complet aura donné un temps de step réel.** Les
+**À resserrer dès qu'un nocturne complet aura donné un temps de step réel**,
+ce qui est fait depuis le 24 septembre, voir l'état en vigueur en tête. Les
 45 minutes sont posées au-dessus du plus grand temps observé sur une étape qui
 n'a jamais fini, donc au-dessus d'une borne inférieure, et non sur le double du
 pire cas nominal que ce document exige ailleurs.
