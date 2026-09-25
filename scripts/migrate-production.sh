@@ -97,7 +97,7 @@ for CHEMIN in "$REP_MIGRATIONS"/*/; do
   NOM=$(basename "$CHEMIN")
   # grep -Fxq : correspondance exacte de ligne, litterale. Sans -x, la migration
   # « 001_init » serait consideree appliquee des que « 001_init_bis » l'est.
-  if printf '%s\n' "$APPLIQUEES" | grep -Fxq "$NOM"; then
+  if grep -Fxq "$NOM" <<<"$APPLIQUEES"; then
     continue
   fi
   FICHIER="$CHEMIN/migration.sql"

@@ -13,8 +13,8 @@ cd "$RACINE" || exit 1
 
 CONTROLE="./scripts/verifier-grep-q-pipefail.sh"
 CORRIGE="scripts/verifier-tests-mutation.sh"
-LISTE="scripts/amorcer-production.sh"
-MUTABLES=("$CONTROLE" "$CORRIGE" "$LISTE")
+ANCIEN_RESTE="scripts/amorcer-production.sh"
+MUTABLES=("$CONTROLE" "$CORRIGE" "$ANCIEN_RESTE")
 
 # LE TUBE EST UNE VARIABLE, ET C'EST UNE CONTRAINTE DU CONTROLE EPROUVE : ecrite
 # d'un seul tenant, la forme interdite fait signaler CE script par le controle,
@@ -89,9 +89,10 @@ attendre_succes() {
 muter "$CORRIGE" 's{if grep -qF "\$motif_attendu" <<<"\$lignes_echec"; then}{if printf "%s" "\$lignes_echec" '"$T"' grep -qF "\$motif_attendu"; then}'
 attendre_echec "tube de printf vers grep -qF reintroduit dans $CORRIGE"
 
-# Cas 2 : un fichier deja liste gagne une occurrence, la liste ne doit que baisser.
-muter "$LISTE" 's{\z}{\nif echo "\$x" '"$T"' grep -q "y"; then :; fi\n}'
-attendre_echec "occurrence ajoutee a un fichier deja liste"
+# Cas 2 : un ancien reste, converti par LS-250, regagne une occurrence. La liste
+# qui en admettait une a disparu : aucune n'est plus admise nulle part.
+muter "$ANCIEN_RESTE" 's{\z}{\nif echo "\$x" '"$T"' grep -q "y"; then :; fi\n}'
+attendre_echec "occurrence reintroduite dans un ancien reste"
 
 # Cas 3 : l'ancrage casse, plus aucun script examine, le controle doit le dire.
 muter "$CONTROLE" 's{set -\[a-z\]\*o pipefail\|set -o pipefail}{set -ZZZ pipefail}'

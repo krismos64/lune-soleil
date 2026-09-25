@@ -109,7 +109,7 @@ mutation() {
   local nom="$1" motif="$2" sortie
   total=$((total+1))
   sortie=$("$CONTROLE" 2>&1 || true)
-  if echo "$sortie" | grep -qi "$motif"; then
+  if grep -qi "$motif" <<<"$sortie"; then
     echo "  OK    $nom"
     detectees=$((detectees+1))
   else

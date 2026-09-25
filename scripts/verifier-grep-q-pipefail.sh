@@ -12,26 +12,27 @@
 #
 #   grep -q "motif" <<<"$variable"
 #
-# LES RESTES SONT LISTES, PAS EXEMPTES POUR TOUJOURS. `grep-q-pipefail-restants.txt`
-# porte, par fichier, le nombre d'occurrences au 23 septembre 2026. Un fichier
-# absent de la liste ou qui en compte PLUS fait echouer ce controle ; un
-# fichier qui en compte MOINS est signale, pour que la liste baisse avec lui.
-# LS-250 porte la conversion des restes.
+# PLUS AUCUN RESTE ADMIS DEPUIS LS-250, le 25 septembre 2026. Une liste portait
+# les 41 occurrences d'origine, fichier par fichier, et ne pouvait que baisser :
+# toutes sont converties, la liste a disparu avec elles, et toute occurrence fait
+# desormais echouer ce controle. Rien ne peut « revenir dans la liste », il n'y
+# en a plus.
 set -uo pipefail
 
 RACINE="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$RACINE" || exit 1
 
-RESTANTS="scripts/grep-q-pipefail-restants.txt"
+# LE TEMOIN, QUI REMPLACE LA GARDE DE LA LISTE. Celle-ci exigeait que chaque
+# fichier liste ait ete examine, et c'est ce qui attrapait un ancrage casse : la
+# preuve a montre qu'un motif `pipefail` casse laissait ce seul script a lire,
+# qui restait vert. Sans liste, un script connu pour porter `pipefail` doit
+# avoir ete examine, sans quoi l'ancrage est casse.
+TEMOIN="scripts/verifier-tests-mutation.sh"
 MOTIF='(printf|echo)[^|]*\|[[:space:]]*grep[[:space:]]+-[a-zA-Z]*q'
 
 ko=0
 examines=0
 vus=""
-
-nombre_autorise() {
-  awk -v f="$1" '$1 == f { print $2 }' "$RESTANTS"
-}
 
 for fichier in scripts/*.sh .claude/scripts/*.sh; do
   [ -r "$fichier" ] || continue
@@ -44,36 +45,26 @@ for fichier in scripts/*.sh .claude/scripts/*.sh; do
   # les comptait, et les deux scripts corriges par LS-237 entraient dans la
   # liste des restes a cause de leur propre explication.
   compte=$(grep -vE '^[[:space:]]*#' "$fichier" | grep -cE "$MOTIF")
-  autorise=$(nombre_autorise "$fichier")
-  autorise=${autorise:-0}
 
-  if [ "$compte" -gt "$autorise" ]; then
-    echo "ECHEC $fichier : $compte \`echo|printf | grep -q\` sous pipefail, $autorise admis"
+  if [ "$compte" -gt 0 ]; then
+    echo "ECHEC $fichier : $compte tube(s) vers grep -q sous pipefail"
     grep -nE "$MOTIF" "$fichier" | grep -vE '^[0-9]+:[[:space:]]*#' | sed 's/^/      /'
     echo "      ecrire \`grep -q motif <<<\"\$variable\"\`, SIGPIPE rend le tube intermittent"
     ko=$((ko + 1))
-  elif [ "$compte" -lt "$autorise" ]; then
-    echo "A BAISSER $RESTANTS : $fichier compte $compte, la liste en admet $autorise"
   fi
 done
 
-# LE CONTROLE SE GARDE CONTRE LUI-MEME : TOUT FICHIER LISTE DOIT AVOIR ETE LU.
-# Un ancrage casse ne rend pas forcement zero fichier examine : mesure par la
-# preuve, la chaine mutee figure dans CE script, qui s'examinait alors seul et
-# restait vert. Exiger que chaque fichier de la liste ait ete examine attrape
-# l'ancrage casse comme la liste perimee, un fichier renomme ou supprime.
-while read -r liste _; do
-  [ -z "$liste" ] && continue
-  case "$liste" in \#*) continue ;; esac
-  if ! grep -qxF "$liste" <<<"$vus"; then
-    echo "ECHEC $RESTANTS nomme $liste, que ce controle n'a pas examine"
-    echo "      ancrage pipefail casse, ou fichier renomme : corriger l'un ou la liste"
-    ko=$((ko + 1))
-  fi
-done <"$RESTANTS"
+# LE CONTROLE SE GARDE CONTRE LUI-MEME. Un ancrage casse ne rend pas forcement
+# zero fichier examine : la chaine mutee figure dans CE script, qui s'examinait
+# alors seul et restait vert. Le temoin doit donc avoir ete lu.
+if ! grep -qxF "$TEMOIN" <<<"$vus"; then
+  echo "ECHEC $TEMOIN, qui porte pipefail, n'a pas ete examine"
+  echo "      ancrage pipefail casse, ou temoin renomme : corriger l'un ou l'autre"
+  ko=$((ko + 1))
+fi
 
 if [ "$ko" -gt 0 ]; then
   exit 1
 fi
 
-echo "OK aucun nouveau \`echo|printf | grep -q\` sous pipefail, $examines scripts examines"
+echo "OK aucun tube vers grep -q sous pipefail, $examines scripts examines"

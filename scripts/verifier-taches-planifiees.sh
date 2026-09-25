@@ -104,14 +104,14 @@ NB_PLANIFIEES=$(printf '%s\n' "$PLANIFIEES" | wc -l | tr -d ' ')
 
 while IFS= read -r tache; do
   [ -n "$tache" ] || continue
-  if ! printf '%s\n' "$PLANIFIEES" | grep -Fxq "$tache"; then
+  if ! grep -Fxq "$tache" <<<"$PLANIFIEES"; then
     anomalies+=("la tache '$tache' est declaree dans TACHES mais AUCUNE ligne du crontab ne la declenche : elle ne tournera jamais")
   fi
 done <<< "$DECLAREES"
 
 while IFS= read -r tache; do
   [ -n "$tache" ] || continue
-  if ! printf '%s\n' "$DECLAREES" | grep -Fxq "$tache"; then
+  if ! grep -Fxq "$tache" <<<"$DECLAREES"; then
     anomalies+=("la tache '$tache' est planifiee dans le crontab mais absente de TACHES : la route interne la refusera a chaque echeance")
   fi
 done <<< "$PLANIFIEES"

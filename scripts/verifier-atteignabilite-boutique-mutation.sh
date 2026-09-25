@@ -141,7 +141,7 @@ sortie=$(BOUTIQUE_INEXISTANTE=1 bash -c '
   [ -d "$BOUTIQUE" ] || { echo "ECHEC dossier de la boutique introuvable"; exit 1; }
 ' 2>&1)
 
-if printf '%s' "$sortie" | grep -q "ECHEC"; then
+if grep -q "ECHEC" <<<"$sortie"; then
   echo "  OK    ancrage cassé -> détecté"
   printf '%s\n' "$sortie" | head -1 | sed 's/^/          /'
 else

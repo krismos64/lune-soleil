@@ -208,7 +208,7 @@ jouer() {
 
   if [ "$OBTENU" -ne "$ATTENDU" ]; then
     VERDICT="ECHEC code $OBTENU attendu $ATTENDU"
-  elif [ -n "$MOTIF" ] && ! printf '%s' "$SORTIE" | grep -q "$MOTIF"; then
+  elif [ -n "$MOTIF" ] && ! grep -q "$MOTIF" <<<"$SORTIE"; then
     # LE CODE DE SORTIE NE SUFFIT PAS. Un script peut rendre 1 pour une raison
     # qui n'est pas celle qu'on croit eprouver, et le cas passerait au vert en
     # prouvant autre chose. Le motif ancre le cas sur SA cause.

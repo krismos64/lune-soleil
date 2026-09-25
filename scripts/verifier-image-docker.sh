@@ -144,7 +144,7 @@ fi
 # controle de sante, qui cite legitimement une URL interne.
 historique=$(docker history --no-trunc --format '{{.CreatedBy}}' "$IMAGE" 2>/dev/null \
   | grep -v "HEALTHCHECK" || true)
-if echo "$historique" | grep -qiE "(SECRET|PASSWORD|TOKEN|API_KEY)=[^\"' ]"; then
+if grep -qiE "(SECRET|PASSWORD|TOKEN|API_KEY)=[^\"' ]" <<<"$historique"; then
   echouer "une valeur sensible apparait dans l'historique de construction"
 else
   ok "aucune valeur sensible dans l'historique de construction"

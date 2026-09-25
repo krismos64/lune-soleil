@@ -91,7 +91,7 @@ eprouver() {
   # LE MESSAGE EST VÉRIFIÉ, pas seulement le code. Un contrôle qui rougirait
   # pour une autre raison passerait un test qui ne regarde que le code de
   # sortie. Motif « mutation vue par le mauvais test ».
-  if ! printf '%s' "$sortie" | grep -qF "$motif_attendu"; then
+  if ! grep -qF "$motif_attendu" <<<"$sortie"; then
     echo "   ÉCHEC cas $cas, $intitule"
     echo "         le contrôle a rougi, mais PAS sur le défaut visé."
     echo "         attendu : $motif_attendu"

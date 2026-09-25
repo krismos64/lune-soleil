@@ -233,6 +233,6 @@ case "$ACTION" in
       || echec "l'acces a la base a echoue : $resultat"
 
     echo "$resultat"
-    printf '%s' "$resultat" | grep -q '^OK ' || exit 1
+    grep -q '^OK ' <<<"$resultat" || exit 1
     ;;
 esac

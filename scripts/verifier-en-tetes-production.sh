@@ -89,7 +89,7 @@ for chemin in "${CHEMINS[@]}"; do
     # `grep -i` sur le NOM SUIVI DE DEUX-POINTS, jamais sur le nom seul : une
     # valeur d'en-tête peut contenir le nom d'un autre, et un motif nu s'y
     # ferait satisfaire. Le motif « nom nu hors ancrage » est déjà en fiche.
-    if ! printf '%s' "$reponse" | grep -qiE "^$entete:"; then
+    if ! grep -qiE "^$entete:" <<<"$reponse"; then
       manquants="$manquants $entete"
     fi
   done
@@ -118,7 +118,7 @@ if [ -z "$csp1" ]; then
 else
   echo "  OK    la politique est servie"
 
-  if printf '%s' "$csp1" | grep -q "'unsafe-inline'.*script-src\|script-src[^;]*'unsafe-inline'"; then
+  if grep -q "'unsafe-inline'.*script-src\|script-src[^;]*'unsafe-inline'" <<<"$csp1"; then
     echo "  ECHEC script-src porte 'unsafe-inline' en production."
     echo "        C'est précisément l'injection de script inline que la CSP"
     echo "        existe pour bloquer, ADR-038."

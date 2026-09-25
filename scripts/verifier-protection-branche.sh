@@ -163,7 +163,7 @@ else
     signaler "la protection de main n'exige AUCUN contrôle.
 
   Une pull request est donc fusionnable sans qu'aucun contrôle ne soit vert."
-  elif ! printf '%s\n' "$requis" | grep -qxF "$nom_declare"; then
+  elif ! grep -qxF "$nom_declare" <<<"$requis"; then
     signaler "le contrôle requis ne porte pas le nom du job.
 
   Exigé par la protection : $(printf '%s' "$requis" | tr '\n' ' ')

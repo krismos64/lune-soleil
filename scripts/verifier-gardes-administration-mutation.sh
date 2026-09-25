@@ -152,7 +152,7 @@ cas() {
     return
   fi
 
-  if printf '%s' "$sortie" | grep -qF "l'action \`$fonction\`"; then
+  if grep -qF "l'action \`$fonction\`" <<<"$sortie"; then
     echo "  OK    $nom -> détecté, l'action est nommée"
   else
     echo "  RATE  $nom -> échec constaté, mais l'action n'est PAS nommée"
@@ -221,7 +221,7 @@ cas_affectation() {
     return
   fi
 
-  if printf '%s' "$sortie" | grep -qF "l'action \`$fonction\`"; then
+  if grep -qF "l'action \`$fonction\`" <<<"$sortie"; then
     echo "  OK    $nom -> détecté, l'action est nommée"
   else
     echo "  RATE  $nom -> échec constaté, mais l'action n'est PAS nommée"

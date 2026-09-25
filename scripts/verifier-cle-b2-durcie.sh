@@ -72,7 +72,7 @@ ECHECS=0
 # --------------------------------------------------------------------------
 # Sens 1 : deleteFiles est absente
 # --------------------------------------------------------------------------
-if echo "$CAPACITES" | grep -qx "deleteFiles"; then
+if grep -qx "deleteFiles" <<<"$CAPACITES"; then
   echo "  ECHEC : la cle porte encore deleteFiles, un serveur compromis peut detruire l'historique." >&2
   ECHECS=$(( ECHECS + 1 ))
 else
@@ -87,7 +87,7 @@ fi
 # qu'elle ferme.
 # --------------------------------------------------------------------------
 for REQUISE in writeFiles listFiles; do
-  if echo "$CAPACITES" | grep -qx "$REQUISE"; then
+  if grep -qx "$REQUISE" <<<"$CAPACITES"; then
     echo "  OK : $REQUISE presente."
   else
     echo "  ECHEC : $REQUISE absente, la copie nocturne ne peut plus fonctionner." >&2

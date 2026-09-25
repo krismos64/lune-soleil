@@ -49,5 +49,5 @@ resultat=$(EMAIL_ATTENDU="$EMAIL_ATTENDU" node scripts/lib/verifier-comptes-prod
 }
 
 echo "$resultat"
-printf '%s' "$resultat" | grep -q '^OK ' && exit 0
+grep -q '^OK ' <<<"$resultat" && exit 0
 exit 1

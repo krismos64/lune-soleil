@@ -100,13 +100,13 @@ for layout in "$LAYOUT_ADMIN" "$LAYOUT_COMPTE"; do
     continue
   fi
 
-  if ! printf '%s' "$bloc" | grep -q -- "--ls-police-titre"; then
+  if ! grep -q -- "--ls-police-titre" <<<"$bloc"; then
     echo "   ÉCHEC : la règle « h1 » de $layout n'emploie pas --ls-police-titre."
     defauts=$((defauts + 1))
     continue
   fi
 
-  if ! printf '%s' "$bloc" | grep -q "font-size"; then
+  if ! grep -q "font-size" <<<"$bloc"; then
     echo "   ÉCHEC : la règle « h1 » de $layout ne fixe aucune échelle."
     defauts=$((defauts + 1))
     continue
@@ -145,8 +145,8 @@ while IFS= read -r module; do
   [ -z "$bloc" ] && continue
 
   fautes=""
-  printf '%s' "$bloc" | grep -q "font-family" && fautes="font-family"
-  if printf '%s' "$bloc" | grep -q "font-size"; then
+  grep -q "font-family" <<<"$bloc" && fautes="font-family"
+  if grep -q "font-size" <<<"$bloc"; then
     fautes="${fautes:+$fautes et }font-size"
   fi
 
@@ -181,7 +181,7 @@ if [ -z "$bloc_global" ]; then
   echo "   Sans elle, tout titre public et tout écran sans session retombe en"
   echo "   police système, défaut mesuré sur la production le 14 septembre 2026."
   defauts=$((defauts + 1))
-elif ! printf '%s' "$bloc_global" | grep -q -- "--ls-police-titre"; then
+elif ! grep -q -- "--ls-police-titre" <<<"$bloc_global"; then
   echo "   ÉCHEC : la règle de titre de $GLOBAL n'emploie pas --ls-police-titre."
   defauts=$((defauts + 1))
 else
@@ -228,7 +228,7 @@ while IFS= read -r module; do
   [ -z "$module" ] && continue
   bloc=$(awk '/^\.titre[ ,{]/,/\}/' "$module")
   [ -z "$bloc" ] && continue
-  if printf '%s' "$bloc" | grep -q "font-family"; then
+  if grep -q "font-family" <<<"$bloc"; then
     echo "   ÉCHEC : ${module#src/app/} repose font-family sur son titre."
     defauts=$((defauts + 1))
     fautifs=$((fautifs + 1))
