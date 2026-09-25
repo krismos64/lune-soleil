@@ -61,9 +61,9 @@ ligne_xff=$(printf '%s\n' "$directives" \
 
 if [ -z "$ligne_xff" ]; then
   anomalies+=("aucune directive active 'proxy_set_header X-Forwarded-For' : Better Auth ne recevrait aucune adresse")
-elif printf '%s' "$ligne_xff" | grep -q 'proxy_add_x_forwarded_for'; then
+elif grep -q 'proxy_add_x_forwarded_for' <<<"$ligne_xff"; then
   anomalies+=("X-Forwarded-For est CONCATENE par \$proxy_add_x_forwarded_for. Le client controle alors la partie gauche de la chaine et peut se rendre invisible au journal en envoyant un jeton non analysable. Employer \$remote_addr, qui ecrase.")
-elif ! printf '%s' "$ligne_xff" | grep -q '\$remote_addr'; then
+elif ! grep -q '\$remote_addr' <<<"$ligne_xff"; then
   anomalies+=("X-Forwarded-For n'est pas pose a partir de \$remote_addr : la valeur retenue ne serait pas l'adresse de la connexion TCP")
 fi
 
@@ -74,7 +74,7 @@ fi
 # Le secret partage protege deja cette route, invariant 2, et c'est LUI qui
 # protege. Refuser ici retire une surface sans rien couter, et l'oubli de ce
 # bloc ne produit aucun symptome visible.
-if ! printf '%s\n' "$directives" | grep -qE 'location\s+/api/interne/'; then
+if ! grep -qE 'location\s+/api/interne/' <<<"$directives"; then
   anomalies+=("aucun bloc 'location /api/interne/' : la route interne des taches planifiees serait joignable depuis l'exterieur")
 fi
 

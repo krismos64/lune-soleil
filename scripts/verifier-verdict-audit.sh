@@ -63,7 +63,7 @@ verdict() {
     return
   fi
 
-  if printf '%s' "$sortie" | grep -q "$MOTIF"; then
+  if grep -q "$MOTIF" <<<"$sortie"; then
     echo "panne"
     return
   fi

@@ -111,7 +111,7 @@ jouer() {
     return
   fi
 
-  if ! printf '%s' "$sortie" | grep -q "$attendu"; then
+  if ! grep -q "$attendu" <<<"$sortie"; then
     echo "MAUVAISE CAUSE  $titre"
     echo "                rouge, mais sans nommer : $attendu"
     restaurer
@@ -209,7 +209,7 @@ sortie=$("$CONTROLE" 2>&1)
 code=$?
 mv "$PROXY.absent" "$PROXY"
 
-if [ "$code" -ne 0 ] && printf '%s' "$sortie" | grep -q "introuvable"; then
+if [ "$code" -ne 0 ] && grep -q "introuvable" <<<"$sortie"; then
   echo "detecte  proxy absent, le contrôle refuse de conclure"
   detectes=$((detectes + 1))
 else

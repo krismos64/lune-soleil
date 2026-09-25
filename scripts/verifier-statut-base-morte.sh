@@ -116,7 +116,7 @@ fi
 SENS=$((SENS + 1))
 if [ -r "$CATALOGUE" ]; then
   CORPS=$(awk '/^export async function generateMetadata/,/^}/' "$CATALOGUE")
-  if printf '%s' "$CORPS" | grep -qE '^\s*(} )?catch\s*\(' ; then
+  if grep -qE '^\s*(} )?catch\s*\(' <<<"$CORPS" ; then
     echo "  ECHEC un catch est revenu dans generateMetadata du catalogue"
     echo "        Il ferait REUSSIR la fonction et rendrait 200 base morte."
     ECHECS=$((ECHECS + 1))

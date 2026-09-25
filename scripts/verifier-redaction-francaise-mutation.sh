@@ -121,7 +121,7 @@ sortie=$(bash -c '
   if [ "$nb" -eq 0 ]; then echo "ECHEC aucun fichier d interface trouve"; fi
 ' 2>&1)
 
-if printf '%s' "$sortie" | grep -q "ECHEC"; then
+if grep -q "ECHEC" <<<"$sortie"; then
   echo "  OK    ancrage cassé -> détecté"
 else
   echo "  RATE  ancrage cassé -> NON détecté"

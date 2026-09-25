@@ -95,7 +95,7 @@ attendre() {
     echo "  ECHEC $DESC : code $OBTENU, attendu $ATTENDU"
     printf '%s\n' "$SORTIE" | sed 's/^/        | /'
     ECHECS=$((ECHECS + 1))
-  elif [ -n "$MOTIF" ] && ! printf '%s' "$SORTIE" | grep -q "$MOTIF"; then
+  elif [ -n "$MOTIF" ] && ! grep -q "$MOTIF" <<<"$SORTIE"; then
     # LE CODE DE SORTIE NE SUFFIT PAS : un controle peut rougir pour une raison
     # qui n'est pas celle qu'on croit eprouver.
     echo "  ECHEC $DESC : code correct mais le motif '$MOTIF' est absent"

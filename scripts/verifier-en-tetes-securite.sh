@@ -65,7 +65,7 @@ for entete in \
   # `always` OU L'EN-TETE NE PART PAS SUR UNE ERREUR. Sans lui, `add_header` ne
   # pose l'en-tête que sur 2xx, 204, 301, 302 et 304 : une page 500 partirait
   # sans protection, ce qui est exactement le moment où elle sert.
-  if ! printf '%s' "$ligne" | grep -q "always"; then
+  if ! grep -q "always" <<<"$ligne"; then
     echo "  ECHEC $entete est déclaré sans \`always\`."
     echo "        Il ne partirait pas sur une réponse d'erreur, c'est-à-dire"
     echo "        au moment où le client est le plus exposé."
@@ -107,7 +107,7 @@ for debut in $blocs; do
   nom=$(printf '%s' "$corps" | head -1 | sed 's/^\s*//; s/\s*{.*//')
 
   # Un bloc sans `add_header` hérite du jeu complet : rien à vérifier.
-  printf '%s' "$corps" | grep -qE "^\s*add_header" || continue
+  grep -qE "^\s*add_header" <<<"$corps" || continue
   nb_examines=$((nb_examines + 1))
 
   manquants=""
@@ -116,7 +116,7 @@ for debut in $blocs; do
     "X-Content-Type-Options" \
     "Referrer-Policy" \
     "Permissions-Policy"; do
-    printf '%s' "$corps" | grep -qE "^\s*add_header\s+$entete" ||
+    grep -qE "^\s*add_header\s+$entete" <<<"$corps" ||
       manquants="$manquants $entete"
   done
 
@@ -200,7 +200,7 @@ fi
 if grep -q "unsafe-eval" "$PROXY"; then
   pose=$(grep -nE "unsafe-eval" "$PROXY" | grep -v "^[0-9]*: *[*#]" | grep -v "'unsafe-eval'\\\`" || true)
 
-  if printf '%s' "$pose" | grep -qE "developpement \?|development.*\?"; then
+  if grep -qE "developpement \?|development.*\?" <<<"$pose"; then
     echo "  OK    'unsafe-eval' est conditionné au développement"
   else
     echo "  ECHEC 'unsafe-eval' est posé sans condition sur la même ligne."

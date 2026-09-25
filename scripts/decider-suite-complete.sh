@@ -72,7 +72,7 @@ exempte() {
   local chemin="$1"
 
   for motif in "${EXEMPTES[@]}"; do
-    if printf '%s' "$chemin" | grep -qE "$motif"; then
+    if grep -qE "$motif" <<<"$chemin"; then
       return 0
     fi
   done

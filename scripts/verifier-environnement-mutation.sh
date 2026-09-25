@@ -199,7 +199,7 @@ jouer() {
     return
   fi
 
-  if ! printf '%s' "$sortie" | grep -qF "$motif_attendu"; then
+  if ! grep -qF "$motif_attendu" <<<"$sortie"; then
     echo "ECHEC cas $cas, $intitule"
     echo "      le controle a rougi, mais PAS sur le defaut vise."
     echo "      attendu : $motif_attendu"
