@@ -907,14 +907,14 @@ jobs:
       - name: 9s. Chaque ecran d'administration est navigable
         run: ./scripts/verifier-navigation-administration.sh
 
-      # CE QU'IL GARDE : aucun `echo|printf | grep -q` nouveau dans un script
-      # sous `pipefail`, LS-237. `grep -q` ferme le tube a la premiere
+      # CE QU'IL GARDE : aucun tube de `echo` ou `printf` vers `grep -q` dans un
+      # script sous `pipefail`, LS-237. `grep -q` ferme le tube a la premiere
       # correspondance, le producteur recoit SIGPIPE, et le pipeline echoue
       # alors que le motif a ete trouve. Intermittent par nature : 17 faux
       # negatifs sur 200 mesures, et le « faux positif transitoire » de
-      # `verifier-config-claude.sh` en venait. Les restes sont listes et ne
-      # peuvent que baisser, LS-250.
-      - name: 9s septies. Aucun tube vers grep -q nouveau sous pipefail
+      # `verifier-config-claude.sh` en venait. LS-250 a converti les 41
+      # derniers le 25 septembre 2026 : aucun n'est plus admis.
+      - name: 9s septies. Aucun tube vers grep -q sous pipefail
         run: ./scripts/verifier-grep-q-pipefail.sh
 
       # CE QU'IL GARDE : chaque expression `mute` des preuves par mutation
