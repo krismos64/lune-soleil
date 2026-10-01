@@ -1520,6 +1520,13 @@ jobs:
       - name: 3sexies. Panne du registre et vulnerabilite sont distinguees
         run: ./scripts/verifier-verdict-audit.sh
 
+      # LS-256. L'audit du nocturne differe son echec pour ne plus faire sauter
+      # le reste du job, et le controle precedent exige l'etape qui le rend en
+      # fin de course. Cette preuve le fait rougir sur chaque moitie defaite.
+      # Textuel, secondes.
+      - name: 3septies. Preuve par mutation de l'echec differe de l'audit
+        run: ./scripts/verifier-verdict-audit-mutation.sh
+
       # ----------------------------------------------------------------------
       # Controle 4, tests unitaires. Sans base, rapides, ils cadrent les erreurs
       # de manipulation d'URL de connexion.

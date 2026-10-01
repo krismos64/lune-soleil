@@ -982,6 +982,7 @@ ssh <hôte> 'sudo bash -s' < scripts/verifier-durcissement-ssh.sh   # 9 sens, LS
 ./scripts/verifier-decision-suite.sh             # prouve le précédent sur 24 cas, chiffre que le script imprime
 ./scripts/verifier-protection-branche.sh         # réglages de main dont la chaîne dépend, LS-176
 ./scripts/verifier-verdict-audit.sh              # panne du registre npm contre vulnérabilité, LS-176
+./scripts/verifier-verdict-audit-mutation.sh     # prouve le précédent par mutation, échec différé, LS-256
 ./scripts/verifier-jira.sh                       # epics et dépendances du backlog, local
 ./scripts/controle-fumee.sh                      # santé du service déployé, LS-73
 ./docs/prototypes/reservation-test.sh            # concurrence sur la pièce unique, exige Docker
