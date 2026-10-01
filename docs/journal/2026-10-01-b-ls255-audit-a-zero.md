@@ -50,11 +50,15 @@ session. La règle est coupée sur ces sept fichiers seulement, dans
 - `npm run test:e2e` : 2255 réussis, 70 ignorés, zéro échec, comptes identiques au dernier nocturne vert du 28 septembre
 - `./scripts/verifier-regles.sh` : règles conformes au schéma
 
+## Déploiement
+
+Déployé le soir même par le workflow « Déployer en production », run
+36910853098 : bascule de `6a22bcba` vers `a6eb981`, `/api/sante` rend 200. Le
+workflow « Écart entre la production et main », relancé à la main juste après,
+mesure 0 commit et aucune migration.
+
 ## Ce qui reste
 
-- **Déployer**, par le workflow « Déployer en production », une fois
-  `publier-image.yml` terminé : tant que ce n'est pas fait, la production sert
-  encore Next 16.3.4.
 - **Les preuves par mutation lourdes** échouent sur les mêmes nuits, cause
   distincte : le serveur web de Playwright ne démarre pas dans
   `verifier-etats-non-nominaux-mutation.sh`, et
@@ -64,10 +68,10 @@ session. La règle est coupée sur ces sept fichiers seulement, dans
 
 ## Prochaine étape
 
-Déployer LS-255, puis diagnostiquer les deux preuves par mutation du nocturne.
+Vérifier l'étape d'audit sur le nocturne du 2 octobre, puis diagnostiquer les deux preuves par mutation du nocturne.
 L'archivage de l'index mémoire et la borne « 9z octies » attendent toujours un
 arbitrage.
 
 ## État des tickets
 
-LS-255 en cours : code fusionné attendu, déploiement et nocturne vert restent.
+LS-255 en cours : fusionnée et déployée, seul le nocturne vert sur l'audit reste à constater.
