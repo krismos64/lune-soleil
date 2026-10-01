@@ -96,7 +96,7 @@ interface et réponses de conversation.
 - Modifier le périmètre du cahier des charges. Un arbitrage explicite de
   Christophe le modifie en revanche, et se trace dans un ticket
 - Décider d'une obligation juridique. Les textes de loi se vérifient aux sources
-- Lire une clé privée ou un certificat. Le `.env`, lui, est lisible
+- Lire une clé privée ou un certificat, ou lire et modifier un `.env` (local ou production)
 - Modifier une commande ou une facture réelle, ou supprimer en production : archiver, LS-246
 - Introduire les données du prototype (noms, prix, stocks) comme données réelles
 
@@ -140,13 +140,13 @@ l'emporte**, et l'écart se signale plutôt que de se résoudre en silence.
 **Travailler sans demander de validation à chaque commande.** Faire un point à
 chaque étape significative, et proposer la suite plutôt que de l'enchaîner.
 
-**Secrets** : `.env` lisible et modifiable depuis le 7 septembre 2026, arbitrage
-de Christophe. Une valeur lue entre dans l'historique de session : une clé
-exposée se **révoque**, l'effacer ne suffit pas. Clés privées et certificats
-restent bloqués. **Lire n'est pas exposer** : une valeur en **argument** de
-commande est lisible par tout `ps`, le hook la refuse toujours ; laisser le
-processus lire le fichier. Préférer `./scripts/verifier-environnement.sh` quand
-les deux répondent, deux secrets au même préfixe se confondant à l'œil.
+**Secrets** : les `.env`, local et production, remplis à la main par Christophe,
+ne sont ni lisibles ni modifiables par Claude (1er octobre 2026, remplace le
+7 septembre) : `deny` global dans `~/.claude/settings.json`, simple consigne en
+production. Une clé exposée se **révoque**. Clés privées et certificats bloqués ;
+une valeur en **argument** de commande, lisible par `ps`, refusée par le hook.
+Diagnostic sans lecture : `./scripts/verifier-environnement.sh`, verdict par
+variable sans valeur imprimée.
 
 **Accès opérationnels** : `ssh`, `docker`, `stripe`, `gh`, `psql` avec les accès
 configurés, sans jamais lire les identifiants sous-jacents.
