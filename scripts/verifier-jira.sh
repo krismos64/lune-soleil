@@ -72,13 +72,21 @@ fi
 reponse="$(mktemp)"
 trap 'rm -f "$reponse"' EXIT
 
-code="$(curl -sS -o "$reponse" -w '%{http_code}' \
-  -u "$JIRA_USER_EMAIL:$JIRA_API_TOKEN" \
+# Les identifiants passent à curl par l'entrée standard (-K -), jamais en
+# argument : un argument de commande est lisible par tout `ps` de la machine.
+# printf est une commande interne de bash, elle ne crée aucun processus visible.
+# Guillemets et barres obliques inverses échappés pour la syntaxe de config curl.
+identifiants="$JIRA_USER_EMAIL:$JIRA_API_TOKEN"
+identifiants="${identifiants//\\/\\\\}"
+identifiants="${identifiants//\"/\\\"}"
+
+code="$(printf 'user = "%s"\n' "$identifiants" | curl -sS -K - -o "$reponse" -w '%{http_code}' \
   -H "Accept: application/json" \
   --get "$JIRA_BASE_URL/rest/api/3/search/jql" \
   --data-urlencode "jql=project = $PROJET AND issuetype != Epic ORDER BY key ASC" \
   --data-urlencode "fields=summary,description,parent,issuelinks,status" \
   --data-urlencode "maxResults=200" 2>/dev/null)"
+unset identifiants
 
 if [ "$code" != "200" ]; then
   echo "ECHEC appel Jira, code HTTP $code"
