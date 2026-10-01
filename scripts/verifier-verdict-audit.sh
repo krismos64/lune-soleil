@@ -166,6 +166,50 @@ if ! grep -qF -- "--audit-level=low" "$WORKFLOW"; then
   ko=$((ko + 1))
 fi
 
+# ---------------------------------------------------------------------------
+# UN ÉCHEC DIFFÉRÉ DOIT RESTER UN ÉCHEC, LS-256.
+#
+# L'étape d'audit porte `continue-on-error` pour ne plus faire sauter le reste
+# du nocturne. Ce relâchement n'est sûr que si une étape de fin de job relit
+# `steps.audit.outcome` et sort en échec : la retirer, ou retirer son
+# `exit 1`, ferait passer toute vulnérabilité au vert sans un mot.
+# ---------------------------------------------------------------------------
+
+# Rend le bloc d'une étape, de sa ligne `- name:` à la suivante.
+# $1 nom exact de l'étape
+bloc_etape() {
+  awk -v nom="- name: $1" '
+    index($0, nom) && $0 ~ /^ *- name: / { dedans = 1; print; next }
+    dedans && /^ *- name: / { exit }
+    dedans { print }
+  ' "$WORKFLOW"
+}
+
+bloc_audit=$(bloc_etape "Audit des dependances")
+bloc_verdict=$(bloc_etape "Verdict de l'audit des dependances")
+
+verifies=$((verifies + 1))
+
+if [ -z "$bloc_audit" ]; then
+  echo "ECHEC l'étape « Audit des dependances » est introuvable dans le workflow."
+  ko=$((ko + 1))
+elif grep -q "continue-on-error: true" <<<"$bloc_audit"; then
+  if ! grep -q "id: audit" <<<"$bloc_audit"; then
+    echo "ECHEC l'étape d'audit diffère son échec sans porter « id: audit »."
+    echo "      Son verdict ne peut plus être relu en fin de job."
+    ko=$((ko + 1))
+  elif [ -z "$bloc_verdict" ] ||
+    ! grep -q "if: always()" <<<"$bloc_verdict" ||
+    ! grep -qF "steps.audit.outcome" <<<"$bloc_verdict" ||
+    ! grep -q "exit 1" <<<"$bloc_verdict"; then
+    echo "ECHEC l'audit diffère son échec, et aucune étape de fin ne le rend."
+    echo "      Attendu : « Verdict de l'audit des dependances », en if: always(),"
+    echo "      relisant steps.audit.outcome et sortant en exit 1."
+    echo "      Sans elle, une vulnérabilité laisse le nocturne au vert."
+    ko=$((ko + 1))
+  fi
+fi
+
 echo "Cas de verdict d'audit vérifiés : $verifies"
 
 if [ "$ko" -gt 0 ]; then

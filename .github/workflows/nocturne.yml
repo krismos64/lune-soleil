@@ -285,9 +285,24 @@ jobs:
       # l'echec d'une etape amont, pas la fin du runner sur depassement de
       # plafond. Les trois nuits annulees l'etablissent, l'etape portait deja
       # `always()` et n'a pas demarre. La position est la vraie garantie.
+      #
+      # `continue-on-error` EN CONTREPARTIE DE CETTE POSITION, LS-256. Placee
+      # ici, l'etape faisait sauter TOUT ce qui la suit quand elle echouait :
+      # base, construction, bout en bout, image. Mesure les 29 et 30 septembre
+      # et le 1er octobre 2026, nocturne 36834645143 : un avis publie dans la
+      # nuit a eteint le reste du controle trois nuits, et les preuves lourdes,
+      # en `always()`, ont tourne sur un decor vide et accuse `ECONNREFUSED`.
+      # Le commit etait le meme que la veille, verte.
+      #
+      # L'ECHEC N'EST PAS AVALE POUR AUTANT. L'etape garde son verdict dans
+      # `steps.audit.outcome`, et « Verdict de l'audit des dependances », en
+      # fin de job, rend le job rouge. `verifier-verdict-audit.sh` exige les
+      # deux moities : sans la seconde, une vulnerabilite passerait au vert.
       # ----------------------------------------------------------------------
       - name: Audit des dependances
+        id: audit
         if: always()
+        continue-on-error: true
         run: |
           set +e
           sortie=$(npm audit --audit-level=low 2>&1)
@@ -711,6 +726,23 @@ jobs:
             fi
           done
           exit "$echec"
+
+      # LA SECONDE MOITIE DE L'AUDIT, LS-256. L'etape « Audit des dependances »
+      # porte `continue-on-error` pour ne plus faire sauter le reste du job ;
+      # c'est ici que son echec rend le job rouge, une fois tout le reste
+      # execute. Un depassement de plafond sauterait cette etape, mais le job
+      # serait alors `cancelled` et le veilleur le signale, l'annotation
+      # d'erreur de l'audit restant visible plus haut.
+      - name: Verdict de l'audit des dependances
+        if: always()
+        env:
+          RESULTAT_AUDIT: ${{ steps.audit.outcome }}
+        run: |
+          if [ "$RESULTAT_AUDIT" != "success" ]; then
+            echo "::error::Audit des dependances en echec, resultat « $RESULTAT_AUDIT » : voir l'etape « Audit des dependances »."
+            exit 1
+          fi
+          echo "Audit des dependances : aucune vulnerabilite."
 
       # ----------------------------------------------------------------------
       # L'ALERTE N'EST PLUS ICI, ET C'EST UNE MESURE QUI L'A DEPLACEE, LS-235.
