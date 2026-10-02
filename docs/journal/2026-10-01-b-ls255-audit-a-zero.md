@@ -59,16 +59,17 @@ mesure 0 commit et aucune migration.
 
 ## Ce qui reste
 
-- **Les preuves par mutation lourdes** échouent sur les mêmes nuits, cause
-  distincte : le serveur web de Playwright ne démarre pas dans
-  `verifier-etats-non-nominaux-mutation.sh`, et
-  `verifier-reintegration-stock-mutation.sh` trouve la suite rouge avant
-  mutation. Non diagnostiqué, l'issue #498 reste donc ouverte.
-- La PR #501, `verifier-jira.sh`, verte et non fusionnée.
+- **Les preuves par mutation lourdes ne portaient pas de défaut propre**,
+  contrairement à ce que cette page affirmait d'abord. L'échec de l'audit avait
+  fait sauter toute la préparation du job (base, construction, navigateur), et
+  ces preuves, en `if: always()`, ont tourné sur un décor vide. Diagnostic et
+  correction de la structure dans `2026-10-01-c`, LS-256.
+- La PR #501, `verifier-jira.sh`, fusionnée le soir même après rebase.
 
 ## Prochaine étape
 
-Vérifier l'étape d'audit sur le nocturne du 2 octobre, puis diagnostiquer les deux preuves par mutation du nocturne.
+Vérifier le nocturne du 2 octobre, entièrement vert attendu, issue #498
+comprise. Suite dans `2026-10-01-c`.
 L'archivage de l'index mémoire et la borne « 9z octies » attendent toujours un
 arbitrage.
 
