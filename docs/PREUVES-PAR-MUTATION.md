@@ -11,7 +11,7 @@ sa raison.
 
 ## Ce que l'inventaire de LS-230 a trouvé
 
-Mesuré le 14 septembre 2026 : le dépôt portait **quarante-trois preuves**, quarante-cinq au 23 septembre 2026, quarante-six au 24,
+Mesuré le 14 septembre 2026 : le dépôt portait **quarante-trois preuves**, quarante-cinq au 23 septembre 2026, quarante-six au 24, quarante-sept au 1er octobre,
 l'intégration continue en rejouait **quinze**. Sur les vingt-huit dormantes,
 **cinq étaient cassées** sans que personne ne le sache, et chacune autrement.
 
@@ -46,8 +46,8 @@ ne pouvait pas produire son effet, et s'annonçait comme un trou du contrôle.
 
 ## Les preuves écartées, et leur raison
 
-**Aucune, au 24 septembre 2026.** Les **quarante-six** preuves du dépôt
-tournent, **trente-neuf par PR et sept au nocturne**, comptes relevés par les
+**Aucune, au 1er octobre 2026.** Les **quarante-sept** preuves du dépôt
+tournent, **quarante par PR et sept au nocturne**, comptes relevés par les
 commandes ci-dessous et non recopiés.
 
 `verifier-image-docker-mutation.sh` a rejoint le nocturne le 17 septembre. Elle
@@ -67,13 +67,13 @@ document. Une première version du contrôle cherchait le nom dans tout le
 registre : les cinq preuves réparées plus haut, citées dans leur tableau
 historique, passaient alors pour écartées. Un récit n'est pas une décision.
 
-## Comment les quarante-six se répartissent
+## Comment les quarante-sept se répartissent
 
-**Trente-neuf par PR**, `controles.yml` : **vingt-quatre** groupées dans l'étape
+**Quarante par PR**, `controles.yml` : **vingt-quatre** groupées dans l'étape
 « 9z octies », qui pèsent **82 s** mesurées en les enchaînant avant l'ajout de
 `verifier-grep-q-pipefail-mutation.sh` par LS-237 et de
-`verifier-mutations-a-sec-mutation.sh` par LS-254, et **quinze** en
-étapes nommées, chacune posée par la story qui l'a écrite. Sur une CI qui dure
+`verifier-mutations-a-sec-mutation.sh` par LS-254, et **seize** en
+étapes nommées, la seizième étant `verifier-verdict-audit-mutation.sh`, LS-256, chacune posée par la story qui l'a écrite. Sur une CI qui dure
 environ neuf cents secondes quand le code change.
 
 La décomposition annonçait **seize** nommées, donc trente-huit au total :
