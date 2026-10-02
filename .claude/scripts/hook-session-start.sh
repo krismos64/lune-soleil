@@ -59,6 +59,64 @@ if git rev-parse --verify HEAD >/dev/null 2>&1; then
 fi
 
 # ---------------------------------------------------------------------------
+# 1bis. Alertes ouvertes par les workflows, LS-257
+#
+# POURQUOI. Trois workflows ouvrent une issue pour être vus : le veilleur du
+# nocturne, l'écart de production et la dérive documentaire. L'issue #498 est
+# restée ouverte du 29 septembre au 1er octobre 2026, trois nuits de rouge, et
+# aucune session ne l'a lue : le journal n'en disait rien, et une alerte qui
+# attend qu'on vienne la chercher n'alerte personne.
+#
+# UNE SEULE REQUÊTE, filtrée par jq. `gh issue list --label a --label b`
+# demande les DEUX étiquettes à la fois, pas l'une ou l'autre.
+#
+# BORNÉE À QUELQUES SECONDES par `perl alarm`, macOS n'ayant pas `timeout`. Un
+# réseau absent ou lent ne doit jamais retenir le démarrage. Le délai tue le
+# GROUPE de processus et pas seulement `gh` : un descendant survivant garderait
+# le tube ouvert, et `$(...)` attendrait sa fin malgré la borne.
+#
+# UN ÉCHEC SE DIT. Ne rien écrire quand `gh` ne répond pas se lirait comme
+# « aucune alerte », ce qui est précisément l'information fausse que ce hook
+# s'interdit. `LS_HOOK_GH` et `LS_HOOK_GH_DELAI` servent au test,
+# `scripts/verifier-hook-alertes.sh`, qui simule `gh`.
+# ---------------------------------------------------------------------------
+ETIQUETTES_ALERTE='["controle-nocturne","ecart-production","derive-documentation"]'
+gh_cmd="${LS_HOOK_GH:-gh}"
+delai="${LS_HOOK_GH_DELAI:-5}"
+
+if ! command -v "${gh_cmd}" >/dev/null 2>&1; then
+    lignes+=("")
+    lignes+=("ALERTES NON VÉRIFIÉES : gh est absent, les issues d'alerte n'ont pas été lues.")
+elif ! issues=$(perl -e '
+        my $delai = shift;
+        my $pid = fork() // exit 127;
+        if ($pid == 0) { setpgrp(0, 0); exec @ARGV or exit 127 }
+        $SIG{ALRM} = sub { kill "KILL", -$pid; exit 124 };
+        alarm $delai;
+        waitpid($pid, 0);
+        exit($? >> 8 || ($? & 127 ? 125 : 0));
+    ' "${delai}" \
+        "${gh_cmd}" issue list --state open --limit 100 \
+        --json number,title,createdAt,labels 2>/dev/null); then
+    lignes+=("")
+    lignes+=("ALERTES NON VÉRIFIÉES : gh n'a pas répondu en ${delai} s ou a échoué,")
+    lignes+=("les issues d'alerte n'ont pas été lues. À vérifier : gh issue list.")
+elif ! alertes=$(jq -r --argjson etiquettes "${ETIQUETTES_ALERTE}" '
+        [ .[]
+          | . as $issue
+          | ([ .labels[].name ] | map(select(. as $n | $etiquettes | index($n)))) as $e
+          | select($e | length > 0)
+          | "  #\($issue.number) \($issue.title), ouverte le \($issue.createdAt[0:10]) (\($e | join(", ")))" ]
+        | .[]' <<<"${issues}" 2>/dev/null); then
+    lignes+=("")
+    lignes+=("ALERTES NON VÉRIFIÉES : la réponse de gh est illisible.")
+elif [ -n "${alertes}" ]; then
+    lignes+=("")
+    lignes+=("ALERTE : issue(s) ouverte(s) par un workflow de surveillance, à traiter avant tout :")
+    lignes+=("${alertes}")
+fi
+
+# ---------------------------------------------------------------------------
 # 2. Journal le plus récent
 #
 # Le tri est lexicographique sur un nom de fichier commençant par AAAA-MM-JJ,
