@@ -905,6 +905,8 @@ et `db:reinitialiser`, cités plus haut.
 ./scripts/verifier-environnement.sh --exemple-seul       # le seul sens jouable en CI, sans .env
 ./scripts/verifier-environnement-mutation.sh             # prouve le précédent par mutation, bac à sable
 ./scripts/verifier-hook-secret-argument.sh               # le hook refuse un secret passé en argument, LS-156
+./scripts/verifier-hook-alertes.sh                # le démarrage de session montre les alertes ouvertes, LS-257
+./scripts/verifier-hook-alertes-mutation.sh       # prouve le précédent par mutation
 ./scripts/verifier-cle-b2-durcie.sh                      # la clé Backblaze sans deleteFiles, sur le VPS, LS-223
 #   quatre sens, dont une suppression réelle exigeant un refus ; cible inexistante
 ./scripts/engendrer-medias-test.mjs                      # les déclinaisons des photos de test, avant le build e2e, LS-187
