@@ -815,6 +815,18 @@ jobs:
       - name: 9n. Le hook refuse un secret passe en argument
         run: ./scripts/verifier-hook-secret-argument.sh
 
+      # LS-257. Le hook de demarrage injecte les issues ouvertes par les
+      # workflows de surveillance, et DIT quand il n'a pas pu les lire : #498 est
+      # restee ouverte trois nuits sans qu'aucune session ne la voie. `gh` est
+      # simule, aucun reseau requis. Six cas, quelques secondes ; la preuve,
+      # une trentaine de secondes, dont le cas d'un descendant qui tiendrait le
+      # tube ouvert malgre la borne.
+      - name: 9n bis. Le demarrage de session montre les alertes ouvertes
+        run: ./scripts/verifier-hook-alertes.sh
+
+      - name: 9n ter. Preuve par mutation des alertes au demarrage
+        run: ./scripts/verifier-hook-alertes-mutation.sh
+
       # Textuel, aucune base ni conteneur requis.
       #
       # CE QU'IL GARDE : le generateur des medias de test, LS-187. Il recopie
