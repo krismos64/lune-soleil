@@ -1539,6 +1539,17 @@ jobs:
       - name: 3septies. Preuve par mutation de l'echec differe de l'audit
         run: ./scripts/verifier-verdict-audit-mutation.sh
 
+      # LS-258. Un avis sans version corrigee s'exempte par son identifiant,
+      # son paquet et une date limite. Ce controle joue le vrai filtre sur des
+      # rapports fabriques, sa preuve le fait rougir sur chaque regle relachee.
+      # La date du fichier versionne n'est PAS jugee ici, elle echoit : le
+      # nocturne la juge. Node seul, secondes.
+      - name: 3octies. L'exemption d'audit reste etroite et datee
+        run: ./scripts/verifier-filtre-audit.sh
+
+      - name: 3nonies. Preuve par mutation de l'exemption d'audit
+        run: ./scripts/verifier-filtre-audit-mutation.sh
+
       # ----------------------------------------------------------------------
       # Controle 4, tests unitaires. Sans base, rapides, ils cadrent les erreurs
       # de manipulation d'URL de connexion.

@@ -1,0 +1,10 @@
+[
+  {
+    "avis": "GHSA-vfj7-8cjw-p6xm",
+    "paquet": "braces",
+    "ticket": "LS-258",
+    "ajoute_le": "2026-10-03",
+    "jusqu_au": "2026-10-17",
+    "motif": "Aucune version corrigée publiée. Chaîne de lint seulement, eslint-config-next vers braces, absente de l'image de production, mesuré le 3 octobre 2026."
+  }
+]
