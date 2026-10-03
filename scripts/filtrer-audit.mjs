@@ -145,9 +145,7 @@ const valides = exemptions.filter((e) => {
 });
 
 function exempte(via) {
-  return valides.find(
-    (e) => e.url === via.url && e.paquet === via.name,
-  );
+  return valides.find((e) => e.url === via.url && e.paquet === via.name);
 }
 
 // Point fixe : un paquet est couvert quand chacune de ses causes l'est. Un
@@ -170,7 +168,8 @@ while (progres) {
       couverts.add(paquet);
       progres = true;
       for (const cause of causes) {
-        const exemption = typeof cause === "string" ? undefined : exempte(cause);
+        const exemption =
+          typeof cause === "string" ? undefined : exempte(cause);
         if (exemption) utilisees.add(exemption.avis);
       }
     }
