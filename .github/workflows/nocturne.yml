@@ -331,6 +331,17 @@ jobs:
             exit 0
           fi
 
+          # LS-258. Un avis sans version corrigee peut etre exempte, par son
+          # identifiant et jusqu'a une date, dans `scripts/audit-exemptions.json`.
+          # Le filtre ne laisse passer que si CHAQUE paquet signale remonte a
+          # un avis exempte et non echu ; tout le reste, illisible compris,
+          # garde l'echec. L'annotation laisse l'exemption visible chaque nuit.
+          npm audit --json >"$RUNNER_TEMP/audit.json" 2>/dev/null || true
+          if node scripts/filtrer-audit.mjs scripts/audit-exemptions.json <"$RUNNER_TEMP/audit.json"; then
+            echo "::warning::Vulnerabilites toutes couvertes par une exemption datee, voir scripts/audit-exemptions.json."
+            exit 0
+          fi
+
           echo "::error::Vulnerabilite connue dans les dependances."
           exit 1
 

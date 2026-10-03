@@ -20,8 +20,8 @@ npm run db:verifier    # les contrôles du modèle sur cette base, exige Docker
 
 Liste complète dans `README.md`. La CI rejoue presque tout par PR : bout en bout,
 `npm audit`, image et les **sept preuves lourdes** sont au nocturne, un défaut de
-ceux-là entre sur `main` sans bloquer. `npm audit` doit rester à **zéro**, à mesurer.
-Une migration se **crée** à la main, `npx prisma migrate dev --name sujet`.
+ceux-là entre sur `main` sans bloquer. `npm audit` à **zéro** mesuré, sauf avis daté
+de `audit-exemptions.json`, LS-258. Migration **créée** à la main, `prisma migrate dev`.
 
 **Trois bases, jamais confondues** : développement sur 55432, bout en bout sur
 55433, et celle qu'un test d'intégration crée. Ne jamais pointer les deux
