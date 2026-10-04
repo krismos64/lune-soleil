@@ -195,3 +195,57 @@ export async function compterReservationsActives(
   `;
   return Number(lignes[0]?.n ?? 0);
 }
+
+/** Une variante en vente, vue par le récapitulatif du prix en masse, LS-265. */
+export type VariantePourPrix = {
+  id: string;
+  produitNom: string;
+  libelle: string;
+  prixCentimes: number;
+};
+
+/**
+ * Les variantes EN VENTE des produits choisis, LS-265 : une variante archivée
+ * n'est plus proposée, son prix n'a plus d'effet et ne change pas.
+ */
+export async function listerVariantesEnVenteDesProduits(
+  client: ClientBase,
+  produitIds: string[],
+): Promise<VariantePourPrix[]> {
+  const lignes = await client.variante.findMany({
+    where: { produitId: { in: produitIds }, archiveeA: null },
+    orderBy: [{ produit: { nom: "asc" } }, { creeA: "asc" }],
+    select: {
+      id: true,
+      libelle: true,
+      prixCentimes: true,
+      produit: { select: { nom: true } },
+    },
+  });
+
+  return lignes.map(({ produit, ...ligne }) => ({
+    ...ligne,
+    produitNom: produit.nom,
+  }));
+}
+
+/**
+ * Fixe le même prix à toutes les variantes en vente des produits choisis,
+ * LS-265.
+ *
+ * UNE SEULE INSTRUCTION, DONC ATOMIQUE : toutes les variantes ou aucune, sans
+ * transaction à ouvrir. Les lignes de commande portent leur prix figé,
+ * invariant 3 : aucune commande ni facture n'en dépend.
+ */
+export async function fixerPrixVariantesDesProduits(
+  client: ClientBase,
+  produitIds: string[],
+  prixCentimes: number,
+): Promise<number> {
+  const { count } = await client.variante.updateMany({
+    where: { produitId: { in: produitIds }, archiveeA: null },
+    data: { prixCentimes },
+  });
+
+  return count;
+}
