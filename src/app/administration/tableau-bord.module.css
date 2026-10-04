@@ -288,3 +288,21 @@
   width: 75%;
   height: 0.75rem;
 }
+
+/*
+ * RAPPEL DU THÈME SAISONNIER, ADR-046. Fond sable, donc `--ls-text` et
+ * `--ls-primary` seulement, C31. La bordure gauche est décorative, le texte
+ * porte l'information.
+ */
+.rappelTheme {
+  margin: 0 0 var(--ls-space-5);
+  padding: var(--ls-space-3) var(--ls-space-4);
+  border-left: 3px solid var(--ls-accent-gold-deep);
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+}
+
+.lienRappel {
+  color: var(--ls-primary);
+  text-decoration: underline;
+}

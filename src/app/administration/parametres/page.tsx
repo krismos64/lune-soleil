@@ -37,6 +37,8 @@ import {
   lireParametresBoutique,
 } from "@/services/parametres";
 import { ChargementAdministration } from "@/components/chargement-administration";
+import { lireThemeSaisonnier } from "@/services/theme-saisonnier";
+import { ChoixTheme } from "./choix-theme";
 import { FormulaireParametres } from "./formulaire-parametres";
 import styles from "./parametres.module.css";
 
@@ -100,6 +102,7 @@ async function Reglages() {
    * moyen de comprendre, alors que le message nomme la cause.
    */
   let parametres = null;
+  const theme = await lireThemeSaisonnier();
 
   try {
     parametres = await lireParametresBoutique();
@@ -126,6 +129,8 @@ async function Reglages() {
           </p>
 
           <FormulaireParametres parametres={parametres} />
+
+          <ChoixTheme actif={theme} />
 
           <section
             className={styles.horsPerimetre}
