@@ -6,11 +6,22 @@
  * la plus tardive s'achève avant dix secondes, WCAG 2.2.2.
  */
 
+/*
+ * SUR MOBILE, L'EMBLÈME RESTE SOUS 15 REM : au-dessus du titre, il ne doit pas
+ * le repousser hors du premier écran. Mesuré à 320 x 640 avec 78vw, le titre
+ * commençait au bas de l'écran.
+ */
 .cadre {
   position: relative;
-  width: min(78vw, 22.5rem);
+  width: min(58vw, 15rem);
   aspect-ratio: 1;
   margin-inline: auto;
+}
+
+@media (min-width: 768px) {
+  .cadre {
+    width: min(48vw, 22.5rem);
+  }
 }
 
 @media (min-width: 1024px) {
