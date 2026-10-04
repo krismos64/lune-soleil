@@ -118,12 +118,40 @@
   opacity: var(--etoiles, 0);
 }
 
-.etoiles i {
+/*
+ * VINGT ÉTOILES EN UN SEUL ÉLÉMENT : un point de 2 px et ses ombres portées
+ * aux positions fixes. Vingt éléments à style en ligne s'écrivaient deux fois
+ * dans la page, mesuré en LS-260.
+ */
+.etoiles::before {
+  content: "";
   position: absolute;
+  top: 0;
+  left: 0;
   width: 2px;
   height: 2px;
   border-radius: 50%;
-  background: var(--ls-texte-nuit);
+  box-shadow:
+    8vw 12vh 0 var(--ls-texte-nuit),
+    17vw 34vh 0 var(--ls-texte-nuit),
+    23vw 8vh 0 var(--ls-texte-nuit),
+    31vw 52vh 0 var(--ls-texte-nuit),
+    38vw 21vh 0 var(--ls-texte-nuit),
+    44vw 63vh 0 var(--ls-texte-nuit),
+    52vw 14vh 0 var(--ls-texte-nuit),
+    57vw 41vh 0 var(--ls-texte-nuit),
+    63vw 27vh 0 var(--ls-texte-nuit),
+    69vw 58vh 0 var(--ls-texte-nuit),
+    74vw 9vh 0 var(--ls-texte-nuit),
+    81vw 36vh 0 var(--ls-texte-nuit),
+    86vw 19vh 0 var(--ls-texte-nuit),
+    92vw 48vh 0 var(--ls-texte-nuit),
+    12vw 61vh 0 var(--ls-texte-nuit),
+    27vw 44vh 0 var(--ls-texte-nuit),
+    48vw 30vh 0 var(--ls-texte-nuit),
+    66vw 5vh 0 var(--ls-texte-nuit),
+    78vw 66vh 0 var(--ls-texte-nuit),
+    95vw 26vh 0 var(--ls-texte-nuit);
 }
 
 .astre {
