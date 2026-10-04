@@ -44,10 +44,10 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 7, V1 cible | LS-8 | 0 | **close** le 11 septembre 2026. LS-149 portait le dernier critère : ADR-044 **écarte l'assistant IA** du périmètre plutôt que de le reporter |
 | Contenus | LS-22 | 10 | **LS-264 est close** le 4 octobre 2026 : « Notre univers », un « nous » de marque, devient **« L'atelier »** à l'adresse `/atelier`, l'ancienne redirigeant en 301, arbitrage de Christophe. **attend l'exploitante**, rien n'est faisable sans elle. **LS-32 est close** le 11 septembre 2026, la neutralité de genre étant désormais gardée par un contrôle. **LS-25 a livré ses textes** le 20 septembre 2026, récoltés auprès d'elle et validés par elle : `/notre-univers` est déployée, et elle a révélé que l'exploitante **exerce seule** quand tout le cadrage parlait de deux créatrices. Le visuel d'accueil, qui montrait des pièces n'ayant jamais existé, est **remplacé le 23 septembre 2026** par une bannière fournie par Christophe |
 
-**230 tickets terminés sur 258 hors epics**, les deux termes relevés dans Jira
-le **4 octobre 2026** après la clôture de LS-263, et jamais dérivés l'un de
-l'autre : 28 tickets non terminés relevés séparément, 10 En cours et 18 À
-faire, et 258 − 28 retombe bien sur 230. **La recette de l'exploitante du 23 septembre** a ouvert
+**231 tickets terminés sur 258 hors epics**, les deux termes relevés dans Jira
+le **4 octobre 2026** après la clôture de LS-264, et jamais dérivés l'un de
+l'autre : 27 tickets non terminés relevés séparément, 10 En cours et 17 À
+faire, et 258 − 27 retombe bien sur 231. **La recette de l'exploitante du 23 septembre** a ouvert
 LS-238 à LS-248, tous clos le jour même.
 
 **Le chantier du nocturne est clos le 24 septembre 2026** : LS-233, LS-235,
