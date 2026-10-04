@@ -372,6 +372,22 @@ vente annulée continue de compter.
 Un index `mouvement_periode_idx` sur `(creeA, type)` accompagne le champ, toute
 statistique bornant une période avant de regrouper par type.
 
+## Le thème saisonnier, LS-267 et ADR-046
+
+Migration `20261004190000_theme_saisonnier`, additive :
+`parametre_boutique.theme_saisonnier`, texte, défaut `AUCUN`.
+
+```sql
+ALTER TABLE parametre_boutique
+  ADD CONSTRAINT chk_parametre_theme_connu
+  CHECK (theme_saisonnier IN ('AUCUN', 'NOEL'));
+```
+
+**Texte borné et non type énuméré** : `verifier-schema.sh` exige que chaque
+énumération figure au modèle conceptuel, dont cette table de configuration
+est exclue à dessein. La liste est la même que `THEMES_SAISONNIERS` de
+`src/lib/theme-saisonnier.ts` ; un thème ajouté change les deux ensemble.
+
 ## Le retrait de l'espace d'administration, LS-266
 
 Migration `20261004150000_produit_retrait`, additive : `produit.retire_a`,
