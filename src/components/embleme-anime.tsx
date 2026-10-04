@@ -75,7 +75,6 @@ export function EmblemeAnime({ saison }: { saison?: "noel" | undefined } = {}) {
   return (
     <div className={styles.cadre} aria-hidden="true" data-borne="">
       <div className={styles.halo} />
-      {saison === "noel" ? <NeigeEmbleme /> : null}
       <svg
         className={styles.embleme}
         viewBox="30 30 1140 1140"
@@ -184,6 +183,8 @@ export function EmblemeAnime({ saison }: { saison?: "noel" | undefined } = {}) {
             : null}
         </g>
       </svg>
+      {/* Après le dessin : la neige passe devant l'emblème, revue de LS-267. */}
+      {saison === "noel" ? <NeigeEmbleme /> : null}
     </div>
   );
 }

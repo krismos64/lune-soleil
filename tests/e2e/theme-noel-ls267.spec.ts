@@ -32,6 +32,18 @@ test.describe("aperçu de l'administratrice", () => {
     await page.goto(ACCUEIL_NOEL);
     await expect(page.locator("main")).toHaveAttribute("data-theme", "noel");
     await expect(page.getByText("Fêtes de fin d'année")).toBeVisible();
+    // L'administratrice sait qu'elle regarde un aperçu, pas le thème appliqué.
+    await expect(
+      page.getByRole("status", { name: "Aperçu du thème" }),
+    ).toContainText("il n'est pas appliqué");
+    // Aucun débordement horizontal, 320 px compris.
+    expect(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth,
+      ),
+    ).toBeLessThanOrEqual(0);
     await expect(
       page.getByRole("heading", {
         level: 1,
@@ -139,7 +151,7 @@ test.describe("aperçu de l'administratrice", () => {
     // c'est le retour au thème par défaut, sans toucher l'état partagé.
     await page.getByRole("button", { name: "Appliquer ce thème" }).click();
     await expect(
-      page.getByRole("status").filter({ hasText: "Habillage" }),
+      page.getByRole("status", { name: "État du thème saisonnier" }),
     ).toContainText("Habillage ordinaire rétabli");
   });
 });
@@ -148,6 +160,9 @@ test.describe("visiteur", () => {
   test("un lien d'aperçu ne change rien pour un visiteur", async ({ page }) => {
     await page.goto(ACCUEIL_NOEL);
     await expect(page.locator("main")).not.toHaveAttribute("data-theme", /.+/);
+    await expect(
+      page.getByRole("status", { name: "Aperçu du thème" }),
+    ).toHaveCount(0);
     await expect(page.getByText("Fêtes de fin d'année")).toHaveCount(0);
     await page.goto(CATALOGUE_NOEL);
     await expect(page.getByText("Chacun peut devenir un cadeau.")).toHaveCount(

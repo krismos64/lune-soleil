@@ -32,7 +32,10 @@ import {
   exigerAdministratrice,
 } from "@/services/autorisation";
 import { lireComptages } from "@/services/tableau-bord";
-import { lireThemeSaisonnier } from "@/services/theme-saisonnier";
+import {
+  LIBELLES_THEMES,
+  lireThemeSaisonnier,
+} from "@/services/theme-saisonnier";
 import { formaterMontant } from "@/lib/montant";
 
 import styles from "./tableau-bord.module.css";
@@ -135,9 +138,11 @@ export default async function PageAdministration() {
         Les actions à traiter sont regroupées avant les indicateurs.
       </p>
 
-      {theme === "NOEL" ? (
+      {theme !== "AUCUN" ? (
         <p className={styles.rappelTheme}>
-          Le thème de Noël est actif sur l&apos;accueil et le catalogue.{" "}
+          {LIBELLES_THEMES[theme].charAt(0).toUpperCase() +
+            LIBELLES_THEMES[theme].slice(1)}{" "}
+          est actif sur l&apos;accueil et le catalogue.{" "}
           <Link
             href="/administration/parametres"
             className={styles.lienRappel}

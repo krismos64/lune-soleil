@@ -18,6 +18,7 @@ import { jsonLdOrganisation, NOM_BOUTIQUE, openGraphDePage } from "@/lib/seo";
 import { lireCataloguePublic } from "@/services/catalogue";
 import { CarteProduit } from "./catalogue/carte-produit";
 import { BandeauReassurance } from "@/components/bandeau-reassurance";
+import { BandeauApercuTheme } from "@/components/bandeau-apercu-theme";
 import { EmblemeAnime } from "@/components/embleme-anime";
 import { PoussiereOr } from "@/components/poussiere-or";
 import { ReactionPointeur } from "@/components/reaction-pointeur";
@@ -85,11 +86,12 @@ export default async function PageAccueil({
    * d'introduire un plafond que le schema ne porte pas.
    */
   const parametres = await searchParams;
-  const [{ produits, categories }, seuilFranchise, theme] = await Promise.all([
-    lireCataloguePublic(),
-    lireSeuilFranchise(),
-    themeDeLaPage(parametres[PARAMETRE_APERCU_THEME]),
-  ]);
+  const [{ produits, categories }, seuilFranchise, { theme, enApercu }] =
+    await Promise.all([
+      lireCataloguePublic(),
+      lireSeuilFranchise(),
+      themeDeLaPage(parametres[PARAMETRE_APERCU_THEME]),
+    ]);
   const noel = theme === "NOEL";
   const misEnAvant = produits.slice(0, NOMBRE_MIS_EN_AVANT);
 
@@ -105,6 +107,7 @@ export default async function PageAccueil({
    */
   return (
     <main id="contenu" tabIndex={-1} data-theme={attributTheme(theme)}>
+      {enApercu ? <BandeauApercuTheme theme={theme} /> : null}
       {/*
        * LS-137. `Organization` est posée ICI SEULEMENT, et non sur chaque page :
        * les moteurs rattachent l'organisation au domaine, la répéter partout

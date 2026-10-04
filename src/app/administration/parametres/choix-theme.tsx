@@ -11,7 +11,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 
-import type { ThemeSaisonnier } from "@/services/theme-saisonnier";
+import { LIBELLES_THEMES, type ThemeSaisonnier } from "@/lib/theme-saisonnier";
 
 import { choisirTheme, type ResultatTheme } from "./actions-theme";
 import styles from "./parametres.module.css";
@@ -34,10 +34,8 @@ const THEMES: readonly {
   },
 ];
 
-const NOMS: Record<ThemeSaisonnier, string> = {
-  AUCUN: "aucun thème",
-  NOEL: "le thème de Noël",
-};
+const majuscule = (texte: string): string =>
+  texte.charAt(0).toUpperCase() + texte.slice(1);
 
 function messageDe(resultat: ResultatTheme | null): string {
   switch (resultat?.statut) {
@@ -46,7 +44,7 @@ function messageDe(resultat: ResultatTheme | null): string {
     case "SUCCES":
       return resultat.theme === "AUCUN"
         ? "Habillage ordinaire rétabli sur l'accueil et le catalogue."
-        : "Le thème de Noël est appliqué à l'accueil et au catalogue.";
+        : `${majuscule(LIBELLES_THEMES[resultat.theme])} est appliqué à l'accueil et au catalogue.`;
     case "SESSION_ABSENTE":
       return "Votre session a expiré. Reconnectez-vous pour continuer.";
     case "INVALIDE":
@@ -66,13 +64,18 @@ export function ChoixTheme({ actif }: { actif: ThemeSaisonnier }) {
   const applique = resultat?.statut === "SUCCES" ? resultat.theme : actif;
 
   return (
-    <form action={action} className={styles.formulaire}>
+    <form
+      action={action}
+      className={styles.formulaire}
+      id="theme-saisonnier"
+      tabIndex={-1}
+    >
       <fieldset className={styles.groupe} aria-describedby="theme-actif">
         <legend className={styles.legende}>Thème saisonnier</legend>
         <p id="theme-actif" className={styles.aide}>
-          Thème actif : <strong>{NOMS[applique]}</strong>. Un thème habille
-          l&apos;accueil et le catalogue seulement, et aucun texte n&apos;est à
-          saisir.
+          Thème actif : <strong>{LIBELLES_THEMES[applique]}</strong>. Un thème
+          habille l&apos;accueil et le catalogue seulement, et aucun texte
+          n&apos;est à saisir.
         </p>
 
         <ul className={styles.interrupteurs}>
@@ -106,27 +109,37 @@ export function ChoixTheme({ actif }: { actif: ThemeSaisonnier }) {
         </ul>
 
         <p className={styles.aide}>
-          Aperçu avant d&apos;appliquer, réservé à votre session :{" "}
-          <Link
-            href="/?apercu-theme=NOEL"
-            className={styles.lienApercu}
-            prefetch={false}
-          >
-            l&apos;accueil
-          </Link>{" "}
-          et{" "}
-          <Link
-            href="/catalogue?apercu-theme=NOEL"
-            className={styles.lienApercu}
-            prefetch={false}
-          >
-            le catalogue
-          </Link>{" "}
-          en thème de Noël.
+          Aperçu avant d&apos;appliquer, réservé à votre session :
         </p>
+        <ul className={styles.apercus}>
+          {THEMES.filter((theme) => theme.valeur !== "AUCUN").map((theme) => (
+            <li key={theme.valeur}>
+              {theme.libelle} :{" "}
+              <Link
+                href={`/?apercu-theme=${theme.valeur}`}
+                className={styles.lienApercu}
+                prefetch={false}
+              >
+                l&apos;accueil
+              </Link>{" "}
+              et{" "}
+              <Link
+                href={`/catalogue?apercu-theme=${theme.valeur}`}
+                className={styles.lienApercu}
+                prefetch={false}
+              >
+                le catalogue
+              </Link>
+            </li>
+          ))}
+        </ul>
       </fieldset>
 
-      <p role="status" className={styles.sortie}>
+      <p
+        role="status"
+        aria-label="État du thème saisonnier"
+        className={styles.sortie}
+      >
         {enCours ? "Application du thème…" : messageDe(resultat)}
       </p>
 

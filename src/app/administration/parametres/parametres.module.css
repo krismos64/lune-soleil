@@ -271,3 +271,20 @@
 .descriptionTheme {
   margin: 0;
 }
+
+.apercus {
+  margin: 0;
+  padding-left: var(--ls-space-4);
+  color: var(--ls-text);
+}
+
+/* Le thème actif, en tête de l'écran, ADR-046 section Risques. */
+.themeActif {
+  margin: 0 0 var(--ls-space-4);
+  color: var(--ls-text);
+}
+
+.themeActif a {
+  color: var(--ls-primary);
+  text-decoration: underline;
+}
