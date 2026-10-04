@@ -102,9 +102,12 @@ poussière d'or.
   cache à purger. L'action de l'administration revalide quand même `/` et
   `/catalogue`, pour que la règle tienne le jour où une page deviendrait
   statique.
-- **Aucun décalage de mise en page** : les décors sont en position absolue, et
-  le ruban est rendu par le serveur dès le premier octet, jamais inséré après
-  coup.
+- **Aucun décalage de mise en page** : la neige est en position absolue dans
+  le cadre de l'emblème ; le ruban et la guirlande du catalogue sont rendus par
+  le serveur dès le premier octet, jamais insérés après coup. **Précision du
+  4 octobre 2026, revue de LS-267** : la guirlande est dans le flux, au-dessus
+  du titre, faute de marge où la poser en position absolue sans chevaucher ce
+  titre ; elle ne décale rien après l'affichage.
 
 ### 6. Programmation
 

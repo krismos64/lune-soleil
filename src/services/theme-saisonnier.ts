@@ -10,20 +10,22 @@
  * L'AUTORISATION N'EST PAS FAITE ICI, invariant 2 : l'action d'administration
  * appelle `exigerRole` avant `choisirThemeSaisonnier`.
  */
-import { z } from "zod";
-
 import { journaliser } from "@/lib/journal";
 import { prisma } from "@/lib/prisma";
 import { valider } from "@/lib/validation";
 import * as depot from "@/repositories/parametres";
 import { ParametresAbsentsError } from "@/services/parametres";
 
-/** Les thèmes écrits dans le code. Même liste que `chk_parametre_theme_connu`. */
-export const THEMES_SAISONNIERS = ["AUCUN", "NOEL"] as const;
-
-export type ThemeSaisonnier = (typeof THEMES_SAISONNIERS)[number];
-
-export const schemaThemeSaisonnier = z.enum(THEMES_SAISONNIERS);
+export {
+  LIBELLES_THEMES,
+  schemaThemeSaisonnier,
+  THEMES_SAISONNIERS,
+  type ThemeSaisonnier,
+} from "@/lib/theme-saisonnier";
+import {
+  schemaThemeSaisonnier,
+  type ThemeSaisonnier,
+} from "@/lib/theme-saisonnier";
 
 /**
  * Le thème actif, `AUCUN` par défaut.

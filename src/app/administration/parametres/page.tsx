@@ -37,7 +37,10 @@ import {
   lireParametresBoutique,
 } from "@/services/parametres";
 import { ChargementAdministration } from "@/components/chargement-administration";
-import { lireThemeSaisonnier } from "@/services/theme-saisonnier";
+import {
+  LIBELLES_THEMES,
+  lireThemeSaisonnier,
+} from "@/services/theme-saisonnier";
 import { ChoixTheme } from "./choix-theme";
 import { FormulaireParametres } from "./formulaire-parametres";
 import styles from "./parametres.module.css";
@@ -122,6 +125,11 @@ async function Reglages() {
         </p>
       ) : (
         <>
+          <p className={styles.themeActif}>
+            Thème saisonnier actif : <strong>{LIBELLES_THEMES[theme]}</strong>.{" "}
+            <a href="#theme-saisonnier">Le changer</a>
+          </p>
+
           <p className={styles.introduction}>
             Ces valeurs s&apos;appliquent aux commandes <strong>à venir</strong>
             . Une commande déjà passée garde le tarif qu&apos;elle portait, et

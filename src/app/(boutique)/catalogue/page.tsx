@@ -32,6 +32,7 @@ import { ArmatureCatalogue } from "./armature-catalogue";
 import { CarteProduit } from "./carte-produit";
 import { FocusPagination } from "./focus-pagination";
 import styles from "./catalogue.module.css";
+import { BandeauApercuTheme } from "@/components/bandeau-apercu-theme";
 import { GuirlandeEtoiles } from "@/components/guirlande-etoiles";
 import {
   attributTheme,
@@ -343,11 +344,12 @@ async function ContenuCatalogue({
 /**
  * La coque, rendue AU-DESSUS de toute frontiere Suspense.
  *
- * ELLE NE LIT QUE CE QUI NE PEUT PAS LEVER, et c'est ce qui rend son statut
- * honnete : le theme saisonnier, ADR-046, retombe sur l'habillage ordinaire en
- * cas d'echec. Elle se rend donc entierement avant que `ContenuCatalogue`
- * suspende, et une base injoignable fait lever SOUS une frontiere deja
- * etablie, ou `error.tsx` prend le relais.
+ * SANS APERÇU, ELLE NE LIT QUE CE QUI NE PEUT PAS LEVER, et c'est ce qui rend
+ * son statut honnête : le thème saisonnier, ADR-046, retombe sur l'habillage
+ * ordinaire en cas d'échec. Elle se rend donc entièrement avant que
+ * `ContenuCatalogue` suspende, et une base injoignable fait lever SOUS une
+ * frontière déjà établie, où `error.tsx` prend le relais. Un aperçu lit en
+ * plus la session, qui peut lever ici : un vrai 500, statut honnête lui aussi.
  *
  * `searchParams` EST ATTENDU ICI, ce qui est sans effet sur le statut : c'est
  * une promesse du framework, resolue sans acces reseau ni base.
@@ -382,11 +384,14 @@ export default async function PageCatalogue({
   }
 
   /*
-   * LE THÈME SAISONNIER, ADR-046. Sa lecture ne lève jamais : un thème
-   * illisible rend l'habillage ordinaire, et la frontière ci-dessous garde
-   * seule la lecture du catalogue, comme avant.
+   * LE THÈME SAISONNIER, ADR-046. Sans aperçu, sa lecture ne lève jamais :
+   * un thème illisible rend l'habillage ordinaire. Avec un aperçu, la
+   * lecture de session peut lever ici, et la page répond un vrai 500, statut
+   * honnête au sens de C32.
    */
-  const theme = await themeDeLaPage(parametres[PARAMETRE_APERCU_THEME]);
+  const { theme, enApercu } = await themeDeLaPage(
+    parametres[PARAMETRE_APERCU_THEME],
+  );
   const noel = theme === "NOEL";
 
   return (
@@ -396,6 +401,7 @@ export default async function PageCatalogue({
       className={styles.page}
       data-theme={attributTheme(theme)}
     >
+      {enApercu ? <BandeauApercuTheme theme={theme} /> : null}
       {noel ? <GuirlandeEtoiles /> : null}
       <h1 className={styles.titre}>Le catalogue</h1>
       <p className={styles.accroche}>

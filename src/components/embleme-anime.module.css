@@ -190,7 +190,8 @@
  * THÈME DE NOËL, ADR-046 : baies de houx et neige. Baies en rouge houx, décor
  * pur. La neige ne sort pas du cadre de l'emblème, `overflow: hidden`, donc ne
  * passe jamais sur le titre ni sur un bouton ; chaque flocon tombe une fois et
- * fond, le plus tardif s'éteint à 4,6 s.
+ * fond, le plus tardif s'éteint à 4,2 s : 1200 ms de retard et 3000 ms de
+ * chute.
  */
 .baie {
   fill: var(--ls-noel-rouge);
@@ -323,7 +324,7 @@
   }
   100% {
     opacity: 0;
-    transform: translate(var(--derive, 0), 30rem);
+    transform: translate(var(--derive, 0), 22rem);
   }
 }
 

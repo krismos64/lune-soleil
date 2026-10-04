@@ -20,20 +20,30 @@ import {
 /** Nom du paramètre d'aperçu, partagé avec l'écran des paramètres. */
 export const PARAMETRE_APERCU_THEME = "apercu-theme";
 
+/**
+ * `enApercu` dit à l'administratrice qu'elle regarde un aperçu et non le
+ * thème appliqué, revue de LS-267 : sans lui, rien ne distinguait les deux.
+ *
+ * AVEC UN APERÇU, LA LECTURE DE SESSION PEUT LEVER, au-dessus de toute
+ * frontière Suspense : la page répond alors un vrai 500, statut honnête, C32.
+ * Sans aperçu, rien ici ne lève.
+ */
 export async function themeDeLaPage(
   apercu: string | string[] | undefined,
-): Promise<ThemeSaisonnier> {
+): Promise<{ theme: ThemeSaisonnier; enApercu: boolean }> {
   const actif = await lireThemeSaisonnier();
   if (apercu === undefined) {
-    return actif;
+    return { theme: actif, enApercu: false };
   }
 
   const identite = await lireIdentite(await headers());
-  return themeAAfficher({
+  const estAdministratrice = identite?.role === "ADMINISTRATRICE";
+  const theme = themeAAfficher({
     actif,
     apercu: Array.isArray(apercu) ? apercu[0] : apercu,
-    estAdministratrice: identite?.role === "ADMINISTRATRICE",
+    estAdministratrice,
   });
+  return { theme, enApercu: estAdministratrice && theme !== actif };
 }
 
 /** La valeur de `data-theme`, absente sans thème : rien ne change alors. */
