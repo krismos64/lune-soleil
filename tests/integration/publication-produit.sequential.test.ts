@@ -558,9 +558,9 @@ describe("retrait de l'espace d'administration, LS-266 et C45", () => {
     await varianteSur(publie);
     await photoPubliableSur(publie);
     await catalogue.publierProduit(publie);
-    await expect(catalogue.retirerProduitDeLEspace(publie)).rejects.toMatchObject(
-      { name: "TransitionProduitInvalideError" },
-    );
+    await expect(
+      catalogue.retirerProduitDeLEspace(publie),
+    ).rejects.toMatchObject({ name: "TransitionProduitInvalideError" });
 
     const { rows } = await client.query(
       "SELECT count(*)::int AS n FROM produit WHERE retire_a IS NOT NULL",
@@ -630,8 +630,10 @@ describe("retrait de l'espace d'administration, LS-266 et C45", () => {
           .includes(varianteId),
         indisponibles: comptages.variantesIndisponibles,
         stockFaible: comptages.variantesStockFaible,
-        invendues: (await statistiques.lireStatistiques("mois"))
-          .variantesInvendues.map((v) => v.varianteId)
+        invendues: (
+          await statistiques.lireStatistiques("mois")
+        ).variantesInvendues
+          .map((v) => v.varianteId)
           .includes(varianteId),
         categorie: (await catalogue.listerCategories()).find(
           (c) => c.id === categorieId,
@@ -674,9 +676,13 @@ describe("retrait de l'espace d'administration, LS-266 et C45", () => {
     expect(apres.stockFaible).toBe(avant.stockFaible - 1);
 
     // La catégorie reste occupée, C26, et le refus le dit.
-    await expect(catalogue.supprimerCategorie(categorieId)).rejects.toMatchObject(
-      { name: "CategorieNonVideError", nombreProduits: 1, nombreRetires: 1 },
-    );
+    await expect(
+      catalogue.supprimerCategorie(categorieId),
+    ).rejects.toMatchObject({
+      name: "CategorieNonVideError",
+      nombreProduits: 1,
+      nombreRetires: 1,
+    });
   });
 
   /**
