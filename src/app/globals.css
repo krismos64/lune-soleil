@@ -176,22 +176,51 @@ html[data-menu-ouvert] {
 }
 
 /*
- * RÉACTION DES BOUTONS DE LA BOUTIQUE, LS-263, ADR-045 : la seule animation
- * des pages d'action, un léger enfoncement à l'appui. Une pression n'est pas
- * une saisie : rien ne bouge pendant qu'on tape, et le bloc de paiement,
- * servi dans un cadre de Stripe, n'est pas touché.
+ * MICRO-INTERACTIONS DE LA BOUTIQUE, LS-263, ADR-045 : un léger enfoncement à
+ * l'appui des boutons, et l'apparition douce des messages d'état. Une
+ * pression n'est pas une saisie : rien ne bouge pendant qu'on tape.
+ *
+ * LES DEUX BOUTONS DE PAIEMENT NE BOUGENT PAS, ADR-045 point 7, marqués
+ * `data-paiement` : « Commander avec obligation de paiement » et « Payer ». Le
+ * paiement passe par une redirection vers Stripe Checkout, aucun cadre de
+ * Stripe n'est servi ici, et ce sont donc ces boutons qui forment l'élément
+ * de paiement du site. Revue de LS-263 : la première version les enfonçait,
+ * et son commentaire invoquait un cadre qui n'existe pas.
+ *
+ * `data-appui` OUVRE LA RÉACTION À UN LIEN HABILLÉ EN BOUTON, comme « Passer
+ * la commande » du panier.
  *
  * AUCUNE `transition` N'EST POSÉE ICI : la spécificité de ce sélecteur
  * remplacerait celle de chaque bouton, qui perdrait ses transitions de
- * couleur au survol. L'enfoncement est instantané, le temps de l'appui.
+ * couleur au survol. L'enfoncement est instantané, le temps de l'appui. Un
+ * bouton positionné par `transform` sauterait pendant l'appui : aucun ne
+ * l'est aujourd'hui, à vérifier avant d'en écrire un.
  *
  * LIMITÉE À LA BOUTIQUE par son en-tête, seule à porter une navigation nommée
  * « Navigation principale » : l'administration reste inchangée, ce que
  * `page-accueil.spec.ts` garantit déjà pour ce repère.
+ *
+ * LES MESSAGES D'ÉTAT partent d'une opacité de 0,4 et jamais de zéro : un
+ * message déjà présent au premier rendu reste lisible pendant ses 220 ms.
  */
 @media (prefers-reduced-motion: no-preference) {
   :root:has(header nav[aria-label="Navigation principale"])
-    :is(button, input[type="submit"]):not(:disabled):active {
+    :is(button, input[type="submit"], [data-appui]):not(:disabled):not(
+      [data-paiement]
+    ):active {
     transform: translateY(1px) scale(0.98);
+  }
+
+  :root:has(header nav[aria-label="Navigation principale"])
+    main
+    :is([role="alert"], [role="status"]:not(:empty)) {
+    animation: message-etat 220ms var(--ls-easing-sortie);
+  }
+}
+
+@keyframes message-etat {
+  from {
+    opacity: 0.4;
+    transform: translateY(4px);
   }
 }

@@ -113,31 +113,37 @@
  * transitions sobres, aucun décor animé. Toutes déclenchées par un geste, en
  * `transform` et `opacity`, et absentes en mouvement réduit.
  *
- * Le fondu de la galerie part de 0,4 et non de zéro : une photo de produit
- * n'est jamais invisible, même un instant.
+ * Le fondu de la galerie, joué par `galerie.tsx` à l'arrivée de la photo,
+ * part de 0,4 et non de zéro : une photo de produit n'est jamais invisible.
  */
 @media (prefers-reduced-motion: no-preference) {
-  .fondu {
-    animation: fondu 320ms var(--ls-easing-sortie);
-  }
-
   .vignette {
     transition: transform var(--ls-duration-base) var(--ls-easing);
-  }
-
-  .vignette:hover {
-    transform: translateY(-2px);
   }
 
   .agrandie[open] {
     animation: ouverture 240ms var(--ls-easing-sortie);
   }
+
+  /* Le fond s'ouvre avec le dialogue, sans éclair sombre, revue de LS-263. */
+  .agrandie[open]::backdrop {
+    animation: fond 240ms var(--ls-easing-sortie);
+  }
 }
 
-@keyframes fondu {
+/*
+ * LE SOULÈVEMENT AU SURVOL EST RÉSERVÉ À LA SOURIS : sur écran tactile,
+ * `:hover` reste collé à la vignette touchée, qui restait décalée.
+ */
+@media (prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine) {
+  .vignette:hover {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes fond {
   from {
-    opacity: 0.4;
-    transform: scale(0.985);
+    opacity: 0;
   }
 }
 
@@ -161,6 +167,12 @@
   list-style: none;
   overflow-x: auto;
   scrollbar-width: thin;
+  /*
+   * DE LA PLACE POUR LE SOULÈVEMENT AU SURVOL : `overflow-x: auto` rogne aussi
+   * en hauteur, et les 2 px montés emportaient la bordure de la vignette
+   * active, revue de LS-263.
+   */
+  padding-block: 4px;
 }
 
 .vignette {

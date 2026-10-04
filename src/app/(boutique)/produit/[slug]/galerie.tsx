@@ -20,6 +20,8 @@
  */
 import { useRef, useState } from "react";
 
+import { useMouvementAutorise } from "@/components/use-mouvement-autorise";
+
 import { srcSetMedia, urlMedia, urlVignette } from "@/integrations/medias/urls";
 import type { PhotoFiche } from "@/services/catalogue";
 import styles from "./fiche.module.css";
@@ -43,10 +45,15 @@ export function Galerie({
   const boutonAgrandir = useRef<HTMLButtonElement>(null);
   const [zoomee, setZoomee] = useState(false);
   /*
-   * LE FONDU NE JOUE QU'AU CHANGEMENT DE PHOTO, LS-263 : la première photo
-   * s'affiche comme avant, sans attendre aucune animation, ADR-045 point 5.
+   * LE FONDU NE JOUE QU'AU CHANGEMENT DE PHOTO, ET À SON ARRIVÉE, LS-263. La
+   * première photo s'affiche comme avant, sans animation, ADR-045 point 5.
+   * L'`<img>` n'est pas remontée : le navigateur garde l'ancienne photo tant
+   * que la nouvelle charge, puis le fondu part de l'événement `load`. Un
+   * `key` sur l'image, première version, la vidait pendant le chargement et
+   * animait un carré vide, revue de LS-263.
    */
-  const [aChange, setAChange] = useState(false);
+  const aChange = useRef(false);
+  const mouvement = useMouvementAutorise();
 
   const affichee = photos[indexAffiche] ?? photos[0];
 
@@ -113,10 +120,19 @@ export function Galerie({
            * l'image.
            */}
           <img
-            key={affichee.chemin}
             src={urlVignette(affichee.chemin)}
             alt={affichee.texteAlternatif ?? ""}
-            className={`${styles.imagePrincipale} ${aChange ? styles.fondu : ""}`}
+            className={styles.imagePrincipale}
+            onLoad={(evenement) => {
+              if (!aChange.current || !mouvement) return;
+              evenement.currentTarget.animate(
+                [
+                  { opacity: 0.4, transform: "scale(0.985)" },
+                  { opacity: 1, transform: "none" },
+                ],
+                { duration: 320, easing: "cubic-bezier(0.16, 1, 0.3, 1)" },
+              );
+            }}
             width={640}
             height={640}
             decoding="async"
@@ -223,7 +239,7 @@ export function Galerie({
                   className={`${styles.vignette} ${active ? styles.vignetteActive : ""}`}
                   onClick={() => {
                     setIndexAffiche(index);
-                    setAChange(true);
+                    aChange.current = true;
                   }}
                   aria-label={
                     photo.texteAlternatif

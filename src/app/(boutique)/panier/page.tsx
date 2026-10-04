@@ -105,7 +105,7 @@ export default async function PagePanier() {
        * jusqu'a la livraison du tunnel, comme les liens de fiche produit entre
        * LS-104 et LS-105.
        */}
-      <Link href="/commande" className={styles.actionPrincipale}>
+      <Link href="/commande" className={styles.actionPrincipale} data-appui="">
         Passer la commande
       </Link>
 
