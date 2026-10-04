@@ -17,7 +17,6 @@ import { DonneesStructurees } from "@/components/donnees-structurees";
 import { jsonLdOrganisation, NOM_BOUTIQUE, openGraphDePage } from "@/lib/seo";
 import { lireCataloguePublic } from "@/services/catalogue";
 import { CarteProduit } from "./catalogue/carte-produit";
-import { AnimationsBornees } from "@/components/animations-bornees";
 import { BandeauReassurance } from "@/components/bandeau-reassurance";
 import { EmblemeAnime } from "@/components/embleme-anime";
 import { PoussiereOr } from "@/components/poussiere-or";
@@ -313,7 +312,6 @@ export default async function PageAccueil() {
         </div>
       </section>
 
-      <AnimationsBornees />
       <ReactionPointeur />
     </main>
   );

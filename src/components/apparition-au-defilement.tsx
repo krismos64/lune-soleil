@@ -17,9 +17,10 @@
  * sans quoi les blocs d'une page atteinte par un lien ne seraient jamais
  * observés, revue de LS-261.
  *
- * RÉSERVÉ AUX BLOCS SECONDAIRES, ADR-045 point 5 : un titre, une accroche, un
- * bouton d'action ou une carte de produit ne partent jamais d'une opacité
- * nulle, et ne portent donc jamais `data-apparition`.
+ * ADR-045 POINT 5 : un titre, une accroche, un bouton d'action ou une carte
+ * de produit ne partent jamais d'une opacité nulle. Ils ne portent pas
+ * `data-apparition`, ou alors avec `data-apparition-mode="glisse"`, qui les
+ * fait arriver par un glissement seul, LS-262 : c'est le cas des cartes.
  */
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";

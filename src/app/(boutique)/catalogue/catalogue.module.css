@@ -166,17 +166,33 @@
 /*
  * ARRIVÉE ÉCHELONNÉE DES CARTES, LS-262 : un glissement seul, jamais un
  * fondu, une carte de produit ne partant jamais d'une opacité nulle, ADR-045
- * point 5. Le retard suit la position dans une rangée de quatre au plus.
+ * point 5. Le retard suit la position dans une rangée de quatre au plus, sur
+ * l'accueil comme au catalogue : le sélecteur ne dépend pas de la grille.
+ *
+ * LA TRANSITION DE `.carte` ÉCRASAIT LE RETARD, revue de LS-262 : même
+ * spécificité que `[data-apparition="vu"]` et déclarée après lui, son
+ * raccourci remettait `transition-delay` à zéro. La règle ci-dessous, plus
+ * précise, rend le retard ; le survol l'annule pour que l'inclinaison reste
+ * immédiate.
  */
-.grille > .carte:nth-child(4n + 2) {
+.carte[data-apparition="vu"] {
+  transition: transform 900ms var(--ls-easing-sortie)
+    var(--delai-apparition, 0ms);
+}
+
+.carte[data-apparition="vu"]:hover {
+  transition: transform 500ms var(--ls-easing-sortie);
+}
+
+.carte:nth-child(4n + 2) {
   --delai-apparition: 80ms;
 }
 
-.grille > .carte:nth-child(4n + 3) {
+.carte:nth-child(4n + 3) {
   --delai-apparition: 160ms;
 }
 
-.grille > .carte:nth-child(4n) {
+.carte:nth-child(4n) {
   --delai-apparition: 240ms;
 }
 

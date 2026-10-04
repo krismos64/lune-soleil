@@ -66,7 +66,8 @@
 /* ---------- Lune ---------- */
 
 .croissant {
-  fill: var(--ls-or-clair);
+  /* Or moyen, et non clair : sur le sable de la sortie, le clair disparaissait. */
+  fill: var(--ls-or-moyen);
   opacity: 0;
   transform-box: fill-box;
   transform-origin: center;

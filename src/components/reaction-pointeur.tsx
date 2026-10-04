@@ -60,6 +60,18 @@ export function ReactionPointeur() {
       if (carteActive) carteActive.style.transform = "";
       carteActive = null;
     };
+    /*
+     * `pointerout` DÉLÉGUÉ, qui remonte l'arbre : il signale qu'on quitte la
+     * carte, y compris quand une molette la fait défiler sous un pointeur
+     * immobile ou que le pointeur sort de la fenêtre, `relatedTarget` nul.
+     */
+    const surSortie = (evenement: PointerEvent) => {
+      if (
+        carteActive &&
+        !carteActive.contains(evenement.relatedTarget as Node | null)
+      )
+        relacher();
+    };
     const surCarte = (evenement: PointerEvent) => {
       const carte = (evenement.target as Element | null)?.closest<HTMLElement>(
         "[data-inclinaison] > li",
@@ -75,14 +87,14 @@ export function ReactionPointeur() {
 
     window.addEventListener("pointermove", surDeplacement, { passive: true });
     document.addEventListener("pointermove", surCarte, { passive: true });
-    document.addEventListener("pointerleave", relacher);
+    document.addEventListener("pointerout", surSortie);
 
     return () => {
       window.removeEventListener("pointermove", surDeplacement);
       window.cancelAnimationFrame(image);
       for (const calque of calques) calque.style.transform = "";
       document.removeEventListener("pointermove", surCarte);
-      document.removeEventListener("pointerleave", relacher);
+      document.removeEventListener("pointerout", surSortie);
       relacher();
     };
   }, [mouvement]);

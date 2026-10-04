@@ -17,10 +17,16 @@
  *
  * Ressortir puis revenir dans l'écran rouvre une fenêtre de cinq secondes.
  *
+ * MONTÉ DANS LE LAYOUT DE LA BOUTIQUE DEPUIS LS-262, et rejoué à chaque
+ * changement de chemin : sur une page qui ne le montait pas, `data-borne`
+ * restait vide et la lune de Notre univers jouait au chargement, hors de
+ * l'écran, revue de LS-262.
+ *
  * SANS SCRIPT, L'ATTRIBUT RESTE VIDE : les animations finies, toutes sous cinq
  * secondes, jouent une fois, et le bandeau défilant, dont l'animation
  * n'existe que sous un état posé ici, reste immobile.
  */
+import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
 import { useMouvementAutorise } from "./use-mouvement-autorise";
@@ -30,6 +36,7 @@ export const DUREE_MAX_MS = 5_000;
 
 export function AnimationsBornees() {
   const mouvement = useMouvementAutorise();
+  const chemin = usePathname();
 
   useEffect(() => {
     if (!mouvement) return;
@@ -73,7 +80,7 @@ export function AnimationsBornees() {
       minuteries.clear();
       cibles.forEach((cible) => cible.setAttribute("data-borne", ""));
     };
-  }, [mouvement]);
+  }, [mouvement, chemin]);
 
   return null;
 }
