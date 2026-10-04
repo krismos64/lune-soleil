@@ -35,30 +35,6 @@ type Rgb = readonly [number, number, number];
 /** Les quatre étapes du ciel, du haut vers le bas de la scène. */
 const ETAPES = ["aube", "jour", "crepuscule", "nuit"] as const;
 
-/** Positions fixes des étoiles, en pourcentage : aucun tirage au hasard. */
-const ETOILES = [
-  [8, 12],
-  [17, 34],
-  [23, 8],
-  [31, 52],
-  [38, 21],
-  [44, 63],
-  [52, 14],
-  [57, 41],
-  [63, 27],
-  [69, 58],
-  [74, 9],
-  [81, 36],
-  [86, 19],
-  [92, 48],
-  [12, 61],
-  [27, 44],
-  [48, 30],
-  [66, 5],
-  [78, 66],
-  [95, 26],
-] as const;
-
 function lireCouleur(styleRacine: CSSStyleDeclaration, jeton: string): Rgb {
   const hex = styleRacine.getPropertyValue(jeton).trim().replace("#", "");
   return [0, 2, 4].map((i) =>
@@ -195,11 +171,7 @@ export function SceneCycle({
   return (
     <section ref={section} className={styles.cycle} aria-label={titre}>
       <div ref={scene} className={styles.scene}>
-        <div className={styles.etoiles} aria-hidden="true">
-          {ETOILES.map(([x, y]) => (
-            <i key={`${x}-${y}`} style={{ left: `${x}%`, top: `${y}%` }} />
-          ))}
-        </div>
+        <div className={styles.etoiles} aria-hidden="true" />
         <div
           ref={soleil}
           className={`${styles.astre} ${styles.soleil}`}

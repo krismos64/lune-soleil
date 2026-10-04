@@ -9,10 +9,106 @@
 
 .grain {
   position: absolute;
+  width: 2px;
+  height: 2px;
   border-radius: 50%;
   background: var(--ls-or-moyen);
   opacity: 0;
   animation: monte 4s ease-in-out 2;
+}
+
+/* Positions fixes, aucun tirage au hasard, règle des paillettes. */
+.grain:nth-child(1) {
+  left: 6%;
+  top: 72%;
+  width: 3px;
+  height: 3px;
+  animation-delay: 0ms;
+}
+.grain:nth-child(2) {
+  left: 12%;
+  top: 38%;
+  animation-delay: 400ms;
+}
+.grain:nth-child(3) {
+  left: 19%;
+  top: 85%;
+  animation-delay: 900ms;
+}
+.grain:nth-child(4) {
+  left: 24%;
+  top: 22%;
+  width: 3px;
+  height: 3px;
+  animation-delay: 300ms;
+}
+.grain:nth-child(5) {
+  left: 31%;
+  top: 64%;
+  animation-delay: 1200ms;
+}
+.grain:nth-child(6) {
+  left: 38%;
+  top: 12%;
+  animation-delay: 600ms;
+}
+.grain:nth-child(7) {
+  left: 44%;
+  top: 48%;
+  width: 3px;
+  height: 3px;
+  animation-delay: 1000ms;
+}
+.grain:nth-child(8) {
+  left: 51%;
+  top: 80%;
+  animation-delay: 200ms;
+}
+.grain:nth-child(9) {
+  left: 57%;
+  top: 30%;
+  animation-delay: 1400ms;
+}
+.grain:nth-child(10) {
+  left: 63%;
+  top: 66%;
+  width: 3px;
+  height: 3px;
+  animation-delay: 500ms;
+}
+.grain:nth-child(11) {
+  left: 69%;
+  top: 18%;
+  animation-delay: 800ms;
+}
+.grain:nth-child(12) {
+  left: 74%;
+  top: 55%;
+  animation-delay: 1300ms;
+}
+.grain:nth-child(13) {
+  left: 80%;
+  top: 88%;
+  width: 3px;
+  height: 3px;
+  animation-delay: 100ms;
+}
+.grain:nth-child(14) {
+  left: 86%;
+  top: 34%;
+  animation-delay: 700ms;
+}
+.grain:nth-child(15) {
+  left: 91%;
+  top: 70%;
+  animation-delay: 1100ms;
+}
+.grain:nth-child(16) {
+  left: 96%;
+  top: 16%;
+  width: 3px;
+  height: 3px;
+  animation-delay: 1500ms;
 }
 
 @keyframes monte {
