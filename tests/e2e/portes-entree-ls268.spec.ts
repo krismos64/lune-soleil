@@ -105,6 +105,18 @@ test.describe("mouvement autorisé", () => {
         ).toBe(0);
       }
 
+      // ET SUR TOUTE LA PAGE : une animation posée hors de tout élément
+      // borné ne serait jamais mise en pause, et la boucle ci-dessus ne la
+      // verrait pas.
+      expect(
+        await page.evaluate(
+          () =>
+            document
+              .getAnimations()
+              .filter((animation) => animation.playState === "running").length,
+        ),
+      ).toBe(0);
+
       // Aucun débordement horizontal.
       expect(
         await page.evaluate(
