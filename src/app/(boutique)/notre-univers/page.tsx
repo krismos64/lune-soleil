@@ -72,6 +72,7 @@ import Link from "next/link";
 
 import { NOM_BOUTIQUE, openGraphDePage } from "@/lib/seo";
 import styles from "./notre-univers.module.css";
+import { AstreDecor } from "@/components/astre-decor";
 import { BandeauReassurance } from "@/components/bandeau-reassurance";
 import { lireSeuilFranchise } from "@/services/parametres";
 
@@ -102,6 +103,12 @@ export default async function PageNotreUnivers() {
   return (
     /* `id="contenu"` : cible du lien d'evitement, voir la page soeur. */
     <main id="contenu" tabIndex={-1} className={styles.page}>
+      {/*
+       * LE FIL DU JOUR, LS-262 : un soleil se lève au-dessus du titre, une lune
+       * accompagne la sortie. Décor muet ; le titre reste visible et à sa
+       * place au premier rendu, ADR-045 point 5.
+       */}
+      <AstreDecor variante="lever" />
       <h1 className={styles.titre}>Notre univers</h1>
 
       <nav className={styles.sommaire} aria-label="Sections de cette page">
@@ -161,6 +168,7 @@ export default async function PageNotreUnivers() {
            * cinq ferait concourir les telechargements et retarderait celle-ci.
            */}
           <Image
+            data-apparition=""
             src="/habillage/univers-modelage.jpg"
             alt="Deux mains façonnent une fleur en pâte polymère violette sur un plan de travail en bois, entourées de feuilles d'or, de paillettes bleues et d'un outil à bille"
             className={styles.illustration}
@@ -188,7 +196,7 @@ export default async function PageNotreUnivers() {
          * l'exploitante, et la balise le dit au lecteur d'ecran. Les guillemets
          * sont dessines en CSS, `::before`, donc absents du texte copie.
          */}
-        <figure className={styles.citationNom}>
+        <figure className={styles.citationNom} data-apparition="">
           <blockquote className={styles.citationNomTexte}>
             <p>
               Un bijou pour les jours calmes, un autre pour ceux qui brillent.
@@ -223,6 +231,7 @@ export default async function PageNotreUnivers() {
 
           <div>
             <Image
+              data-apparition=""
               src="/habillage/univers-atelier.jpg"
               alt="Un plan de travail près d'une fenêtre : pains de pâte polymère colorés, bijoux en cours de séchage, casier de crochets et de fermoirs, rouleau et scalpel"
               className={styles.illustration}
@@ -266,6 +275,7 @@ export default async function PageNotreUnivers() {
            * le plus souvent avant un achat.
            */}
           <Image
+            data-apparition=""
             src="/habillage/univers-porte.jpg"
             alt="Une boucle d'oreille en forme de fleur violette pailletée portée à l'oreille, vue de profil"
             className={styles.illustrationCarree}
@@ -316,6 +326,7 @@ export default async function PageNotreUnivers() {
           </div>
 
           <Image
+            data-apparition=""
             src="/habillage/univers-emballage.jpg"
             alt="Une paire de boucles d'oreilles en forme de serpent jaune pailleté, présentée sur une carte de papier écru dans une pochette transparente"
             className={styles.illustrationCarree}
@@ -362,7 +373,11 @@ export default async function PageNotreUnivers() {
             </p>
 
             <dl className={styles.matieres}>
-              <div className={styles.matiere}>
+              <div
+                className={styles.matiere}
+                data-apparition=""
+                data-apparition-mode="glisse"
+              >
                 <dt className={styles.titreMatiere}>La pâte polymère</dt>
                 <dd className={styles.texteMatiere}>
                   Elle donne le corps du bijou. Je la modèle à la main, puis
@@ -370,7 +385,11 @@ export default async function PageNotreUnivers() {
                   pour des boucles portées toute la journée.
                 </dd>
               </div>
-              <div className={styles.matiere}>
+              <div
+                className={styles.matiere}
+                data-apparition=""
+                data-apparition-mode="glisse"
+              >
                 <dt className={styles.titreMatiere}>L&apos;acier inoxydable</dt>
                 <dd className={styles.texteMatiere}>
                   Pour tout ce qui touche la peau : crochets, fermoirs,
@@ -378,13 +397,21 @@ export default async function PageNotreUnivers() {
                   ce qui le rend bien toléré par la plupart des peaux sensibles.
                 </dd>
               </div>
-              <div className={styles.matiere}>
+              <div
+                className={styles.matiere}
+                data-apparition=""
+                data-apparition-mode="glisse"
+              >
                 <dt className={styles.titreMatiere}>Le vernis brillant</dt>
                 <dd className={styles.texteMatiere}>
                   Il protège la surface et donne sa profondeur à la couleur.
                 </dd>
               </div>
-              <div className={styles.matiere}>
+              <div
+                className={styles.matiere}
+                data-apparition=""
+                data-apparition-mode="glisse"
+              >
                 <dt className={styles.titreMatiere}>
                   Les paillettes et les feuilles d&apos;or
                 </dt>
@@ -396,6 +423,7 @@ export default async function PageNotreUnivers() {
           </div>
 
           <Image
+            data-apparition=""
             src="/habillage/univers-matieres-vernis.jpg"
             alt="Vue de dessus des matières : pains de pâte polymère violets, lilas, beiges, terracotta et bleus, crochets et dormeuses en acier, flacon de vernis brillant, paillettes bleues et feuilles d'or"
             className={styles.imageBande}
@@ -433,7 +461,11 @@ export default async function PageNotreUnivers() {
          * faire lire donnerait « un un avant de les mettre ».
          */}
         <ol className={styles.gestes}>
-          <li className={styles.geste}>
+          <li
+            className={styles.geste}
+            data-apparition=""
+            data-apparition-mode="glisse"
+          >
             <span className={styles.numeroGeste} aria-hidden="true">
               1
             </span>
@@ -447,7 +479,11 @@ export default async function PageNotreUnivers() {
             </div>
           </li>
 
-          <li className={styles.geste}>
+          <li
+            className={styles.geste}
+            data-apparition=""
+            data-apparition-mode="glisse"
+          >
             <span className={styles.numeroGeste} aria-hidden="true">
               2
             </span>
@@ -461,7 +497,11 @@ export default async function PageNotreUnivers() {
             </div>
           </li>
 
-          <li className={styles.geste}>
+          <li
+            className={styles.geste}
+            data-apparition=""
+            data-apparition-mode="glisse"
+          >
             <span className={styles.numeroGeste} aria-hidden="true">
               3
             </span>
@@ -500,6 +540,7 @@ export default async function PageNotreUnivers() {
           </div>
 
           <Image
+            data-apparition=""
             src="/habillage/univers-nettoyage.jpg"
             alt="Deux mains essuient une boucle d'oreille en forme de fleur violette avec un chiffon doux, la seconde boucle posée à côté sur un plan de travail en bois"
             className={styles.imageEntretien}
@@ -533,6 +574,7 @@ export default async function PageNotreUnivers() {
       <BandeauReassurance seuilFranchiseCentimes={seuilFranchise} />
 
       <section className={styles.sortie} aria-labelledby="titre-sortie">
+        <AstreDecor variante="lune" />
         <h2 id="titre-sortie" className={styles.titreSortie}>
           Chaque pièce n&apos;existe qu&apos;une fois
         </h2>
