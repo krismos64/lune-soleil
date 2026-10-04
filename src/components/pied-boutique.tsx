@@ -71,7 +71,12 @@ const COLONNES = [
 export function PiedBoutique() {
   return (
     <footer className={styles.pied}>
-      <div className={styles.contenu}>
+      {/*
+       * APPARITION AU DÉFILEMENT, LS-261 : le pied de page est un bloc
+       * secondaire, ADR-045 point 5. Sans script ou en mouvement réduit, il
+       * est visible d'emblée.
+       */}
+      <div className={styles.contenu} data-apparition="">
         <div className={styles.marque}>
           <p className={styles.nom}>{NOM_BOUTIQUE}</p>
           {/*
