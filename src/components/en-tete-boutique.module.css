@@ -1,5 +1,6 @@
 /*
- * En-tete de la boutique, LS-122. Conception a partir de 320 px.
+ * En-tete de la boutique, LS-122, menu mobile et pictogrammes de LS-261.
+ * Conception a partir de 320 px.
  *
  * AUCUNE VALEUR HEXADECIMALE ICI, uniquement les jetons d'ADR-022.
  */
@@ -96,10 +97,22 @@
    * marque, sans script ni etat a gerer. Un menu hamburger imposerait un
    * composant client pour trois liens.
    */
-  flex-wrap: wrap;
-  gap: var(--ls-space-3) var(--ls-space-5);
-  align-items: baseline;
+  flex-wrap: nowrap;
+  gap: var(--ls-space-2);
+  align-items: center;
   justify-content: space-between;
+}
+
+/*
+ * SOUS 768 PX, LA BARRE TIENT SUR UNE LIGNE : marque, compte, panier, menu.
+ * Mesuré à 320 px avec les quatre en texte, il fallait environ 370 px pour 288
+ * disponibles, d'où les pictogrammes sous 480 px et le libellé du menu masqué
+ * sous 360 px, `menu-mobile.module.css`.
+ */
+@media (min-width: 768px) {
+  .barre {
+    gap: var(--ls-space-3) var(--ls-space-5);
+  }
 }
 
 .marque {
@@ -128,9 +141,30 @@
   text-transform: uppercase;
 }
 
+/*
+ * LA NAVIGATION EN LIGNE N'EXISTE QU'À PARTIR DE 768 PX. En deçà, `MenuMobile`
+ * porte les mêmes liens, sans script grâce à `<details>`. Une seule des deux
+ * est donc dans l'arbre d'accessibilité à une largeur donnée, et toutes deux
+ * portent le nom « Navigation principale ».
+ */
 .navigation {
-  /* La navigation prend toute la largeur restante et passe dessous si besoin. */
+  display: none;
   flex: 1 1 auto;
+}
+
+/* La marque prend la place restante sous 768 px, et pousse les actions à droite. */
+.marque {
+  margin-right: auto;
+}
+
+@media (min-width: 768px) {
+  .navigation {
+    display: block;
+  }
+
+  .marque {
+    margin-right: 0;
+  }
 }
 
 .liste {
@@ -240,4 +274,42 @@
   font-size: 0.75rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+/*
+ * PICTOGRAMMES DU COMPTE ET DU PANIER, LS-261. Décor : le nom accessible reste
+ * le texte, masqué visuellement sous 480 px et jamais retiré de l'arbre.
+ */
+.picto {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (max-width: 479px) {
+  .compte,
+  .panier {
+    min-width: var(--ls-touch-target);
+    justify-content: center;
+  }
+
+  .texteEtroit {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+@media (min-width: 480px) {
+  .picto {
+    display: none;
+  }
 }
