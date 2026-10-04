@@ -50,7 +50,7 @@ const SECTIONS = [
   { ancre: "entretien", titre: "L'entretien" },
 ] as const;
 
-test("le lien « Notre histoire » du pied de page atteint une page réelle", async ({
+test("le lien « Mon histoire » du pied de page atteint une page réelle", async ({
   page,
 }) => {
   await page.goto("/");
@@ -62,18 +62,18 @@ test("le lien « Notre histoire » du pied de page atteint une page réelle", as
    */
   await page
     .getByRole("contentinfo")
-    .getByRole("link", { name: "Notre histoire" })
+    .getByRole("link", { name: "Mon histoire" })
     .click();
 
-  await expect(page).toHaveURL(/\/notre-univers/);
+  await expect(page).toHaveURL(/\/atelier/);
 
   await expect(
-    page.getByRole("heading", { name: "Notre univers", level: 1 }),
+    page.getByRole("heading", { name: "L'atelier", level: 1 }),
   ).toBeVisible();
 });
 
 test("les trois sections sont rendues et nommées", async ({ page }) => {
-  await page.goto("/notre-univers");
+  await page.goto("/atelier");
 
   for (const section of SECTIONS) {
     await expect(
@@ -90,7 +90,7 @@ test("les trois sections sont rendues et nommées", async ({ page }) => {
 test("chaque ancre du sommaire atteint une section réelle", async ({
   page,
 }) => {
-  await page.goto("/notre-univers");
+  await page.goto("/atelier");
 
   const ancresSommaire = await page
     .locator("nav a[href^='#']")
@@ -120,7 +120,7 @@ test("chaque ancre du sommaire atteint une section réelle", async ({
 test("la page ne nomme personne et ne parle jamais au pluriel", async ({
   page,
 }) => {
-  await page.goto("/notre-univers");
+  await page.goto("/atelier");
 
   const texte = (await page.getByRole("main").textContent()) ?? "";
 
@@ -143,7 +143,7 @@ test("la page ne nomme personne et ne parle jamais au pluriel", async ({
  * empeche qu'un enrichissement ulterieur les reintroduise.
  */
 test("la page ne promet aucune absence d'allergie", async ({ page }) => {
-  await page.goto("/notre-univers");
+  await page.goto("/atelier");
 
   const texte = (await page.getByRole("main").textContent()) ?? "";
 
@@ -166,7 +166,7 @@ test("la page ne promet aucune absence d'allergie", async ({ page }) => {
  * visible ne prouve pas qu'un chemin existe, motif deja paye sur ce depot.
  */
 test("la page offre une sortie vers le catalogue", async ({ page }) => {
-  await page.goto("/notre-univers");
+  await page.goto("/atelier");
 
   await page
     .getByRole("main")
@@ -186,7 +186,7 @@ test("la page offre une sortie vers le catalogue", async ({ page }) => {
 test("l'invitation à écrire mène au formulaire de contact", async ({
   page,
 }) => {
-  await page.goto("/notre-univers");
+  await page.goto("/atelier");
 
   await page
     .getByRole("main")
@@ -197,7 +197,7 @@ test("l'invitation à écrire mène au formulaire de contact", async ({
 });
 
 test("la page ne déborde pas horizontalement", async ({ page }) => {
-  await page.goto("/notre-univers");
+  await page.goto("/atelier");
 
   expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
     TOLERANCE_DEBORDEMENT_PX,
@@ -205,11 +205,21 @@ test("la page ne déborde pas horizontalement", async ({ page }) => {
 });
 
 test("aucune violation d'accessibilité sur la page", async ({ page }) => {
-  await page.goto("/notre-univers");
+  await page.goto("/atelier");
 
   const resultats = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
     .analyze();
 
   expect(resultats.violations).toEqual([]);
+});
+
+/**
+ * LS-264 : L'ANCIENNE ADRESSE REDIRIGE DÉFINITIVEMENT, en 301 comme l'a
+ * demandé Christophe, et non en 308. Elle est indexée et a pu être partagée.
+ */
+test("/notre-univers redirige en 301 vers /atelier", async ({ request }) => {
+  const reponse = await request.get("/notre-univers", { maxRedirects: 0 });
+  expect(reponse.status()).toBe(301);
+  expect(reponse.headers()["location"]).toMatch(/\/atelier$/);
 });

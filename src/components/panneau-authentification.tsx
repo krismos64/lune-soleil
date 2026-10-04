@@ -51,7 +51,7 @@ import styles from "./panneau-authentification.module.css";
  * LA PHOTOGRAPHIE DE L'ATELIER, et non plus `accueil-hero.jpg`, depuis le
  * 23 septembre 2026. L'accueil porte desormais une banniere a texte incruste,
  * 2,63:1, qu'une colonne etroite recadrerait en coupant ce texte. L'atelier est
- * une photographie reelle de `/notre-univers`, sans texte, et ses pieces sont
+ * une photographie reelle de `/atelier`, sans texte, et ses pieces sont
  * au centre : le recadrage `cover` n'y perd rien d'essentiel.
  */
 export function PanneauAuthentification({

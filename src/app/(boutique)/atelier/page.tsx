@@ -71,21 +71,21 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { NOM_BOUTIQUE, openGraphDePage } from "@/lib/seo";
-import styles from "./notre-univers.module.css";
+import styles from "./atelier.module.css";
 import { AstreDecor } from "@/components/astre-decor";
 import { BandeauReassurance } from "@/components/bandeau-reassurance";
 import { lireSeuilFranchise } from "@/services/parametres";
 
 export const metadata: Metadata = {
-  title: "Notre univers",
+  title: "L'atelier",
   description: `L'histoire de ${NOM_BOUTIQUE}, les matières des bijoux et les conseils pour en prendre soin. Bijoux faits main en Béarn, chaque pièce est unique.`,
   // LS-137, page publique indexable : canonical explicite.
-  alternates: { canonical: "/notre-univers" },
+  alternates: { canonical: "/atelier" },
   openGraph: openGraphDePage({
-    titre: "Notre univers",
+    titre: "L'atelier",
     description:
       "L'histoire de la marque, les matières des bijoux et les conseils pour en prendre soin.",
-    chemin: "/notre-univers",
+    chemin: "/atelier",
   }),
 };
 
@@ -109,7 +109,13 @@ export default async function PageNotreUnivers() {
        * place au premier rendu, ADR-045 point 5.
        */}
       <AstreDecor variante="lever" />
-      <h1 className={styles.titre}>Notre univers</h1>
+      {/*
+       * « L'ATELIER » ET NON « NOTRE UNIVERS », LS-264, arbitrage de
+       * Christophe du 4 octobre 2026 : l'exploitante exerce seule, aucun
+       * « nous » de marque. Adresse `/atelier`, `/notre-univers` y redirige en
+       * 301, `next.config.ts`.
+       */}
+      <h1 className={styles.titre}>L&apos;atelier</h1>
 
       <nav className={styles.sommaire} aria-label="Sections de cette page">
         <ul className={styles.listeSommaire}>

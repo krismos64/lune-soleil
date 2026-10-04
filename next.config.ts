@@ -248,6 +248,19 @@ const nextConfig: NextConfig = {
         destination: "/administration/connexion",
         permanent: false,
       },
+      /*
+       * LS-264, arbitrage de Christophe du 4 octobre 2026 : « Notre univers »
+       * devient « L'atelier », à l'adresse `/atelier`. L'ancienne adresse est
+       * indexée et partagée : elle redirige DÉFINITIVEMENT, en 301 comme
+       * demandé, et non en 308 que `permanent: true` produirait, `statusCode`
+       * vérifié dans les types de Next.js 16.3.8. Les ancres suivent, le
+       * navigateur les reportant sur la destination.
+       */
+      {
+        source: "/notre-univers",
+        destination: "/atelier",
+        statusCode: 301,
+      },
     ];
   },
 };
