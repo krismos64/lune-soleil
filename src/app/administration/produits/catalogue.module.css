@@ -397,6 +397,21 @@
   outline-offset: 2px;
 }
 
+/*
+ * CONFIRMATION DU RETRAIT, LS-266. Distincte de la ligne d'introduction en
+ * texte secondaire qui la suit, relevé par `ls-frontend-revue` : couleur de
+ * succès et bordure. `--ls-success` sur `--ls-surface` : 6,15:1.
+ */
+.annonceRetrait {
+  margin: 0 0 var(--ls-space-3);
+  padding: var(--ls-space-3) var(--ls-space-4);
+  border: 1px solid var(--ls-success);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface);
+  color: var(--ls-success);
+  overflow-wrap: anywhere;
+}
+
 .bilanSelection {
   flex-basis: 100%;
   color: var(--ls-text);

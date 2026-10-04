@@ -568,6 +568,22 @@ describe("retrait de l'espace d'administration, LS-266 et C45", () => {
     expect(rows[0].n).toBe(0);
   });
 
+  it("créer un produit au nom d'un retiré le dit, plutôt qu'un conflit muet", async () => {
+    const { produitId } = await archiveEpuise();
+    await catalogue.retirerProduitDeLEspace(produitId);
+    const { rows } = await client.query(
+      "SELECT nom, categorie_id FROM produit WHERE id = $1",
+      [produitId],
+    );
+
+    await expect(
+      catalogue.creerProduit({
+        nom: rows[0].nom,
+        categorieId: rows[0].categorie_id,
+      }),
+    ).rejects.toMatchObject({ name: "SlugDejaPrisError", parUnRetire: true });
+  });
+
   it("un produit retiré est introuvable, et ne se republie pas", async () => {
     const { produitId } = await archiveEpuise();
     await catalogue.retirerProduitDeLEspace(produitId);
@@ -620,6 +636,9 @@ describe("retrait de l'espace d'administration, LS-266 et C45", () => {
         categorie: (await catalogue.listerCategories()).find(
           (c) => c.id === categorieId,
         )?.nombreProduits,
+        categorieRetires: (await catalogue.listerCategories()).find(
+          (c) => c.id === categorieId,
+        )?.nombreRetires,
         prix: (
           await prix.previsualiserPrixProduits({
             produitIds: [produitId],
@@ -635,6 +654,7 @@ describe("retrait de l'espace d'administration, LS-266 et C45", () => {
       stock: true,
       invendues: true,
       categorie: 1,
+      categorieRetires: 0,
       prix: 1,
     });
 
@@ -646,6 +666,7 @@ describe("retrait de l'espace d'administration, LS-266 et C45", () => {
       stock: false,
       invendues: false,
       categorie: 0,
+      categorieRetires: 1,
       prix: 0,
     });
     expect(apres.nombreArchives).toBe(avant.nombreArchives - 1);
@@ -672,10 +693,21 @@ describe("retrait de l'espace d'administration, LS-266 et C45", () => {
         [varianteId],
       );
 
-      await Promise.allSettled([
+      const issues = await Promise.allSettled([
         catalogue.publierProduit(produitId),
         catalogue.retirerProduitDeLEspace(produitId),
       ]);
+
+      // LE PERDANT EST UN REFUS NOMMÉ, jamais une violation de C45 rendue en
+      // panne : relevé par `ls-critical-reviewer`.
+      for (const issue of issues) {
+        if (issue.status === "rejected") {
+          expect([
+            "ProduitIntrouvableError",
+            "TransitionProduitInvalideError",
+          ]).toContain((issue.reason as Error).name);
+        }
+      }
 
       const { rows } = await client.query(
         "SELECT statut, retire_a FROM produit WHERE id = $1",

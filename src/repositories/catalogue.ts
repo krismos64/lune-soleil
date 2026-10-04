@@ -25,6 +25,9 @@ export type CategorieAvecCompte = {
   slug: string;
   ordre: number;
   nombreProduits: number;
+  /** Produits retirés de l'espace, LS-266 : invisibles, mais ils occupent la
+   *  catégorie et en bloquent la suppression, C26. */
+  nombreRetires: number;
 };
 
 /**
@@ -46,12 +49,22 @@ export type CategorieAvecCompte = {
 export async function listerCategories(
   client: ClientBase,
 ): Promise<CategorieAvecCompte[]> {
-  const lignes = await client.categorie.findMany({
-    orderBy: { ordre: "asc" },
-    include: {
-      _count: { select: { produits: { where: { retireA: null } } } },
-    },
-  });
+  const [lignes, retires] = await Promise.all([
+    client.categorie.findMany({
+      orderBy: { ordre: "asc" },
+      include: {
+        _count: { select: { produits: { where: { retireA: null } } } },
+      },
+    }),
+    client.produit.groupBy({
+      by: ["categorieId"],
+      where: { retireA: { not: null } },
+      _count: { _all: true },
+    }),
+  ]);
+  const retiresParCategorie = new Map(
+    retires.map((ligne) => [ligne.categorieId, ligne._count._all]),
+  );
 
   return lignes.map((ligne) => ({
     id: ligne.id,
@@ -59,6 +72,7 @@ export async function listerCategories(
     slug: ligne.slug,
     ordre: ligne.ordre,
     nombreProduits: ligne._count.produits,
+    nombreRetires: retiresParCategorie.get(ligne.id) ?? 0,
   }));
 }
 
@@ -322,6 +336,37 @@ export async function ecrireStatutProduit(
   },
 ) {
   return client.produit.update({ where: { id }, data: donnees });
+}
+
+/**
+ * Publie un produit encore dans l'espace d'administration, LS-266.
+ *
+ * `retireA: null` DANS LE `WHERE` : un retrait valide entre la lecture de la
+ * publication et cette ecriture laisse zero ligne touchee, que le service
+ * traduit en refus nomme. C45 reste le filet en base.
+ */
+export async function publierProduitDansLEspace(
+  client: ClientBase,
+  id: string,
+  donnees: { statut: "ACTIF"; publieA?: Date; archiveA: null },
+): Promise<number> {
+  const { count } = await client.produit.updateMany({
+    where: { id, retireA: null },
+    data: donnees,
+  });
+  return count;
+}
+
+/** Vrai si le slug appartient a un produit retire de l'espace, LS-266. */
+export async function slugPorteParUnRetire(
+  client: ClientBase,
+  slug: string,
+): Promise<boolean> {
+  const produit = await client.produit.findUnique({
+    where: { slug },
+    select: { retireA: true },
+  });
+  return produit?.retireA != null;
 }
 
 /**

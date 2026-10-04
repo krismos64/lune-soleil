@@ -41,6 +41,7 @@ import {
   FORMULAIRE_SELECTION_PRODUITS,
   SelectionProduits,
 } from "./selection-produits";
+import { AnnonceRetrait } from "./annonce-retrait";
 import styles from "./catalogue.module.css";
 
 export const metadata = {
@@ -199,14 +200,9 @@ export default async function PageCatalogue({
        * LS-266 : la fiche retirée n'existe plus pour l'administration, son
        * action renvoie ici. Le message confirme le geste et redit qu'il n'a
        * rien effacé. Un paramètre d'URL plutôt qu'un état : la redirection
-       * vient du serveur.
+       * vient du serveur, et le composant l'efface aussitôt affiché.
        */}
-      {parametres.retrait === "1" ? (
-        <p className={styles.introduction} role="status">
-          Fiche retirée de votre espace. Elle n&apos;est pas effacée, seul le
-          développeur pourra la récupérer.
-        </p>
-      ) : null}
+      {parametres.retrait === "1" ? <AnnonceRetrait /> : null}
 
       <Suspense fallback={<ChargementProduits />}>
         <ListeProduits filtreActif={filtreActif} />

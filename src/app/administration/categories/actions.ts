@@ -50,7 +50,7 @@ export type ResultatAction =
   /** Entree refusee, avec le message destine au champ concerne. */
   | { statut: "INVALIDE"; message: string }
   /** Le nom conduit a une adresse deja utilisee, C3. */
-  | { statut: "SLUG_DEJA_PRIS" }
+  | { statut: "SLUG_DEJA_PRIS"; parUnRetire?: boolean }
   | { statut: "INTROUVABLE" }
   /** C26, la categorie porte des produits. Le nombre sert le message. */
   | {
@@ -77,7 +77,7 @@ function traduireErreur(erreur: unknown, operation: string): ResultatAction {
     return { statut: "INVALIDE", message: erreur.message };
   }
   if (erreur instanceof SlugDejaPrisError) {
-    return { statut: "SLUG_DEJA_PRIS" };
+    return { statut: "SLUG_DEJA_PRIS", parUnRetire: erreur.parUnRetire };
   }
   if (erreur instanceof CategorieIntrouvableError) {
     return { statut: "INTROUVABLE" };
