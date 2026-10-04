@@ -226,15 +226,18 @@ uniquement.
 
 **ADR-045 amende ce paragraphe** sur trois points, et le reste demeure :
 
-- le **dégradé de ciel** est permis dans deux décors seulement, la scène du
-  matin à la nuit et le fond du menu mobile plein écran, avec les teintes
-  nocturnes de `tokens.css`. Jamais sur un contrôle, une carte, un bandeau ou
-  une surface d'interface ;
+- le **dégradé de ciel** est permis dans quatre décors seulement, la scène
+  du matin à la nuit, le fond du menu mobile plein écran, et depuis
+  l'amendement du 4 octobre 2026, LS-268, le panneau des portes d'entrée de la
+  boutique et l'en-tête du contact, avec les teintes de ciel de `tokens.css`.
+  Jamais sur un contrôle, une carte, un bandeau ou une surface d'interface ;
 - le **texte doré en dégradé** est permis sur des mots de titre si **chaque
   arrêt de couleur** atteint 3:1 sur son fond, mesuré et non estimé ;
 - la **suranimation** se définit par le tableau d'intensité d'ADR-045 : riche
   sur les pages vitrines, retenue sur la fiche produit, micro-interactions
-  seulement sur les pages d'action, rien sur l'administration.
+  seulement sur les pages d'action, rien sur l'administration. Les portes
+  d'entrée de la boutique et le contact portent un décor animé et un
+  formulaire immobile, amendement de LS-268.
 
 ## Animation des pages publiques, ADR-045
 
