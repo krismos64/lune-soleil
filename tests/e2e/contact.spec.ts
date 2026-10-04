@@ -27,7 +27,7 @@ test("la page de contact s'affiche sans session", async ({ page }) => {
 
   await expect(page).toHaveURL(/\/contact$/);
   await expect(
-    page.getByRole("heading", { name: "Nous écrire", level: 1 }),
+    page.getByRole("heading", { name: "Écrire à l'atelier", level: 1 }),
   ).toBeVisible();
 
   /*
@@ -116,7 +116,7 @@ test("le compteur de caractères n'est pas annoncé à chaque frappe", async ({
 test("la page de contact ne déborde pas horizontalement", async ({ page }) => {
   await page.goto("/contact");
   await expect(
-    page.getByRole("heading", { name: "Nous écrire", level: 1 }),
+    page.getByRole("heading", { name: "Écrire à l'atelier", level: 1 }),
   ).toBeVisible();
 
   expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
@@ -150,7 +150,7 @@ test("la page de contact ne porte aucune violation d'accessibilité", async ({
 }) => {
   await page.goto("/contact");
   await expect(
-    page.getByRole("heading", { name: "Nous écrire", level: 1 }),
+    page.getByRole("heading", { name: "Écrire à l'atelier", level: 1 }),
   ).toBeVisible();
 
   const resultat = await new AxeBuilder({ page })
@@ -175,6 +175,6 @@ test("le lien Contact du pied de page mène au formulaire", async ({ page }) => 
 
   await expect(page).toHaveURL(/\/contact$/);
   await expect(
-    page.getByRole("heading", { name: "Nous écrire", level: 1 }),
+    page.getByRole("heading", { name: "Écrire à l'atelier", level: 1 }),
   ).toBeVisible();
 });

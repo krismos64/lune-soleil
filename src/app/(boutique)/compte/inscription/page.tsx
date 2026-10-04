@@ -50,7 +50,7 @@ export default async function PageInscription() {
   }
 
   return (
-    <PanneauAuthentification>
+    <PanneauAuthentification decor="aube">
       <main id="contenu" tabIndex={-1} className={styles.pageGabarit}>
         <p className={styles.accroche}>Bienvenue</p>
         <h1 className={styles.titre}>Créer un compte</h1>

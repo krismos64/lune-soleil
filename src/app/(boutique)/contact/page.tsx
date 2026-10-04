@@ -19,6 +19,7 @@
  * le temps reellement passe. Le meme piege que la reference de demande de
  * LS-160, sous une autre forme.
  */
+import Link from "next/link";
 import { connection } from "next/server";
 
 import { openGraphDePage } from "@/lib/seo";
@@ -28,13 +29,13 @@ import { FormulaireContact } from "./formulaire-contact";
 import styles from "./contact.module.css";
 
 export const metadata = {
-  title: "Nous écrire",
+  title: "Écrire à l'atelier",
   description:
     "Une question sur un bijou, une commande ou une création sur mesure : écrivez à l'atelier, la réponse arrive sous quelques jours.",
   // LS-137, page publique indexable : canonical explicite.
   alternates: { canonical: "/contact" },
   openGraph: openGraphDePage({
-    titre: "Nous écrire",
+    titre: "Écrire à l'atelier",
     description:
       "Une question sur un bijou, une commande ou une création sur mesure.",
     chemin: "/contact",
@@ -83,28 +84,111 @@ export default async function PageContact() {
 
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
-      <h1 className={styles.titre}>Nous écrire</h1>
-
-      <p className={styles.introduction}>
-        Une question sur un bijou, une commande en cours ou une envie de
-        création sur mesure : ce formulaire arrive directement à l&apos;atelier.
-      </p>
-
       {/*
-       * LE DELAI DE REPONSE EST ANNONCE, et ce n'est pas une politesse : sans
-       * lui, une personne sans reponse le lendemain ecrit une seconde fois,
-       * puis une troisieme. L'annoncer reduit le volume autant qu'il rassure.
+       * L'EN-TÊTE ANIMÉ, LS-268, amendement d'ADR-045 : une enveloppe se trace
+       * puis se scelle d'une lune. Le titre et l'introduction sont visibles
+       * au premier rendu, sans script et en mouvement réduit ; seul le dessin
+       * s'anime, borné à cinq secondes par `data-borne`.
        *
-       * IL RESTE VAGUE VOLONTAIREMENT, « quelques jours » : l'atelier est tenu
-       * par une personne seule qui tient aussi des marches, et un engagement
-       * chiffre qu'elle ne pourrait pas tenir serait pire que pas d'engagement.
+       * « ÉCRIRE À L'ATELIER » ET NON « NOUS ÉCRIRE », arbitrage de
+       * Christophe du 4 octobre 2026 : un « nous » de marque décrirait une
+       * entreprise que l'exploitante, qui exerce seule, n'est pas, LS-264.
        */}
-      <p className={styles.delai}>
-        L&apos;atelier répond sous quelques jours. Pour une commande en cours,
-        indiquez son numéro : la réponse ira plus vite.
-      </p>
+      <section className={styles.tete} data-borne="">
+        <svg className={styles.lettre} viewBox="0 0 120 84" aria-hidden="true">
+          <path
+            className={styles.trait}
+            pathLength={1}
+            d="M8 20 H112 V78 H8 Z"
+          />
+          <path
+            className={`${styles.trait} ${styles.traitSecond}`}
+            pathLength={1}
+            d="M8 78 L48 46 M112 78 L72 46"
+          />
+          <path className={styles.rabat} d="M8 20 L60 56 L112 20" />
+          <g className={styles.sceau}>
+            <circle cx="60" cy="56" r="11" />
+            <path d="M63 49 C57 48 53 53 54 57 C55 62 60 64 64 62 C60 62 58 59 58 56 C58 53 60 50 63 49Z" />
+          </g>
+        </svg>
+        <h1 className={styles.titre}>Écrire à l&apos;atelier</h1>
+        <p className={styles.introduction}>
+          Une question sur un bijou, une commande en cours ou une envie de
+          création sur mesure : ce formulaire arrive directement à
+          l&apos;atelier.
+        </p>
+      </section>
 
-      <FormulaireContact ouvertA={ouvertA} />
+      <div className={styles.corps}>
+        <section
+          className={styles.carteFormulaire}
+          aria-labelledby="titre-message"
+        >
+          <h2 className={styles.sousTitre} id="titre-message">
+            Votre message
+          </h2>
+          <FormulaireContact ouvertA={ouvertA} />
+        </section>
+
+        {/*
+         * AVANT D'ÉCRIRE : le délai de réponse, puis deux chemins qui
+         * répondent souvent sans attendre. Les encarts glissent sans jamais
+         * disparaître, ADR-045 point 5.
+         *
+         * LE DÉLAI RESTE VAGUE VOLONTAIREMENT, « quelques jours » : l'atelier
+         * est tenu par une personne seule qui tient aussi des marchés, et un
+         * engagement chiffré qu'elle ne pourrait pas tenir serait pire que pas
+         * d'engagement. L'annoncer évite qu'une personne sans réponse le
+         * lendemain écrive une seconde fois.
+         */}
+        <aside
+          className={styles.cote}
+          aria-label="Avant d'écrire"
+          data-borne=""
+        >
+          <div className={styles.repere}>
+            <svg viewBox="0 0 44 44" aria-hidden="true">
+              <circle cx="22" cy="22" r="16" />
+              <path d="M22 12v10l7 4" />
+            </svg>
+            <div>
+              <p className={styles.repereTitre}>Réponse sous quelques jours</p>
+              <p className={styles.repereTexte}>
+                Pour une commande en cours, indiquez son numéro : la réponse ira
+                plus vite.
+              </p>
+            </div>
+          </div>
+          <Link href="/aide" className={styles.repere}>
+            <svg viewBox="0 0 44 44" aria-hidden="true">
+              <path d="M6 14h22v16H6zM28 20h6l4 5v5H28z" />
+              <circle cx="13" cy="32" r="3" />
+              <circle cx="33" cy="32" r="3" />
+            </svg>
+            <div>
+              <p className={styles.repereTitre}>Livraison et aide</p>
+              <p className={styles.repereTexte}>
+                Délais, retours et questions fréquentes : la réponse y est
+                souvent déjà.
+              </p>
+            </div>
+          </Link>
+          <Link href="/compte" className={styles.repere} prefetch={false}>
+            <svg viewBox="0 0 44 44" aria-hidden="true">
+              <circle cx="22" cy="16" r="6" />
+              <path d="M10 36c2-7 6-10 12-10s10 3 12 10" />
+            </svg>
+            <div>
+              <p className={styles.repereTitre}>Votre espace client</p>
+              <p className={styles.repereTexte}>
+                Suivre une commande ou retrouver une facture sans attendre de
+                réponse.
+              </p>
+            </div>
+          </Link>
+        </aside>
+      </div>
     </main>
   );
 }

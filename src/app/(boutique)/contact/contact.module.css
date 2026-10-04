@@ -8,22 +8,257 @@
  * sous le seuil AA. Les blocs a fond sable emploient donc `--ls-text`.
  */
 
+/*
+ * LA PAGE N'A PLUS DE LARGEUR BORNÉE, LS-268 : l'en-tête animé va d'un bord à
+ * l'autre, et c'est `.corps` qui borne le formulaire et les encarts. La page
+ * d'erreur, qui garde l'ancienne mise en forme, reçoit ses marges par
+ * `.page > .titre` et `.page > .delai` plus bas.
+ */
 .page {
+  padding-bottom: var(--ls-space-7);
+}
+
+.page > .titre,
+.page > .delai {
   max-width: var(--ls-content-max);
-  margin: 0 auto;
-  padding: var(--ls-space-6) var(--ls-space-4) var(--ls-space-7);
+  margin-inline: auto;
+  padding-inline: var(--ls-space-4);
+}
+
+.page > .titre {
+  padding-top: var(--ls-space-6);
 }
 
 .titre {
   margin: 0 0 var(--ls-space-3);
-  color: var(--ls-primary);
-  font-size: clamp(1.75rem, 6vw, 2.5rem);
+  color: var(--ls-primary-hover);
+  font-size: clamp(2.125rem, 9vw, 3.5rem);
 }
 
 .introduction {
-  margin: 0 0 var(--ls-space-3);
+  max-width: 46ch;
+  margin: 0 auto;
   color: var(--ls-text);
   font-size: 1.0625rem;
+}
+
+/* ---------------------------------------------------------- en-tête, LS-268 */
+
+/*
+ * LE DÉGRADÉ D'AUBE, PERMIS ICI PAR L'AMENDEMENT D'ADR-045 : l'en-tête du
+ * contact est l'un des quatre décors autorisés. `--ls-primary-hover` et
+ * `--ls-text` y tiennent au-delà de 10:1 sur toute la hauteur, l'arrêt le plus
+ * sombre étant `--ls-ciel-aube-haut`.
+ */
+.tete {
+  padding: var(--ls-space-6) var(--ls-space-4) var(--ls-space-5);
+  text-align: center;
+  background:
+    radial-gradient(
+      80% 90% at 50% 120%,
+      color-mix(in srgb, var(--ls-or-pale) 45%, transparent),
+      transparent 70%
+    ),
+    linear-gradient(180deg, var(--ls-ciel-aube-haut), var(--ls-background));
+}
+
+.lettre {
+  display: block;
+  width: 7.5rem;
+  height: 5.25rem;
+  margin: 0 auto var(--ls-space-3);
+  overflow: visible;
+  fill: none;
+  stroke: var(--ls-accent-gold-deep);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+
+.sceau {
+  stroke: none;
+}
+
+.sceau circle {
+  fill: var(--ls-or-moyen);
+}
+
+.sceau path {
+  fill: var(--ls-texte-nuit);
+}
+
+/* ------------------------------------------------- formulaire et encarts */
+
+.corps {
+  display: grid;
+  gap: var(--ls-space-5);
+  max-width: var(--ls-content-max);
+  margin: 0 auto;
+  padding: var(--ls-space-5) var(--ls-space-4) 0;
+}
+
+/*
+ * UNE CARTE BLANCHE, IMMOBILE : rien ne bouge pendant une saisie, ADR-045.
+ * Sa bordure est décorative, le fond blanc sur crème identifiant déjà la
+ * carte, et aucun contrôle ne la porte.
+ */
+.carteFormulaire {
+  padding: var(--ls-space-5) var(--ls-space-4);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-lg);
+  background: var(--ls-surface);
+}
+
+.sousTitre {
+  margin: 0 0 var(--ls-space-4);
+  color: var(--ls-primary-hover);
+  font-size: 1.5rem;
+}
+
+.cote {
+  display: grid;
+  gap: var(--ls-space-3);
+  align-content: start;
+}
+
+/*
+ * FOND SABLE, DONC `--ls-text` ET `--ls-primary-hover` SEULEMENT, C31 : le
+ * sable est le fond piégeux du projet.
+ */
+.repere {
+  display: grid;
+  grid-template-columns: 2.75rem 1fr;
+  gap: var(--ls-space-3);
+  align-items: start;
+  padding: var(--ls-space-4);
+  border-radius: var(--ls-radius-lg);
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+  text-decoration: none;
+}
+
+.repere svg {
+  width: 2.75rem;
+  height: 2.75rem;
+  fill: none;
+  stroke: var(--ls-primary);
+  stroke-width: 1.5;
+}
+
+.repereTitre {
+  margin: 0;
+  color: var(--ls-primary-hover);
+  font-family: var(--ls-police-titre);
+  font-size: 1.25rem;
+  line-height: 1.25;
+}
+
+.repereTexte {
+  margin: var(--ls-space-1) 0 0;
+  font-size: 0.9375rem;
+}
+
+a.repere:hover .repereTitre {
+  text-decoration: underline;
+}
+
+a.repere:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 3px;
+}
+
+@media (min-width: 768px) {
+  .tete {
+    padding: var(--ls-space-8) var(--ls-space-6) var(--ls-space-6);
+  }
+
+  .carteFormulaire {
+    padding: var(--ls-space-6);
+  }
+}
+
+@media (min-width: 1024px) {
+  .corps {
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+    gap: var(--ls-space-6);
+    padding-top: var(--ls-space-7);
+  }
+}
+
+/*
+ * L'ANIMATION, EN MOUVEMENT AUTORISÉ SEULEMENT, toutes finies et sous cinq
+ * secondes. Le titre et l'introduction ne bougent pas ; les encarts glissent
+ * sans disparaître ; seul le dessin de l'enveloppe part d'un état masqué, et
+ * c'est un décor.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .trait {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: dessine 1600ms var(--ls-easing-sortie) forwards;
+  }
+
+  .traitSecond {
+    animation-delay: 400ms;
+  }
+
+  .rabat {
+    transform-box: fill-box;
+    transform-origin: center top;
+    animation: rabat 1200ms var(--ls-easing-sortie) 1200ms both;
+  }
+
+  .sceau {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: sceau 700ms var(--ls-easing-sortie) 2100ms both;
+  }
+
+  .repere {
+    animation: glisse 800ms var(--ls-easing-sortie) both;
+  }
+
+  .repere:nth-child(2) {
+    animation-delay: 120ms;
+  }
+
+  .repere:nth-child(3) {
+    animation-delay: 240ms;
+  }
+}
+
+@keyframes dessine {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes rabat {
+  from {
+    transform: scaleY(-1);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes sceau {
+  from {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes glisse {
+  from {
+    transform: translateY(14px);
+  }
+  to {
+    transform: none;
+  }
 }
 
 /*

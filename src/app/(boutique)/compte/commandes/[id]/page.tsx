@@ -538,12 +538,12 @@ export default async function PageDetailCommande({
         <div className={styles.groupeActions}>
           <h3 className={styles.titreGroupe}>Nous contacter</h3>
           <p className={styles.texte}>
-            Indiquez le numéro {commande.numero} dans votre message, nous
-            retrouverons votre commande.
+            Indiquez le numéro {commande.numero} dans votre message :
+            l&apos;atelier retrouvera votre commande.
           </p>
           <p className={styles.texte}>
             <Link href="/contact" className={styles.lien}>
-              Nous écrire
+              Écrire à l&apos;atelier
             </Link>
           </p>
         </div>
