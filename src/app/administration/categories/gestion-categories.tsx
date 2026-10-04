@@ -58,10 +58,18 @@ function messageDe(resultat: ResultatAction): string | null {
       return "Une catégorie porte déjà une adresse identique. Choisissez un autre nom.";
     case "INTROUVABLE":
       return "Cette catégorie n'existe plus. Actualisez la page.";
-    case "CATEGORIE_NON_VIDE":
-      return `Suppression impossible : ${resultat.nombreProduits} produit${
-        resultat.nombreProduits > 1 ? "s y sont rattachés" : " y est rattaché"
-      }. Déplacez-${resultat.nombreProduits > 1 ? "les" : "le"} d'abord vers une autre catégorie.`;
+    case "CATEGORIE_NON_VIDE": {
+      // LS-266 : les produits retirés de l'espace occupent la catégorie sans
+      // paraître nulle part. Le refus le dit, sans quoi il contredirait une
+      // catégorie affichée vide.
+      const visibles = resultat.nombreProduits - resultat.nombreRetires;
+      if (visibles === 0) {
+        return "Suppression impossible : cette catégorie porte encore des articles retirés de votre espace. Seul le développeur peut les déplacer.";
+      }
+      return `Suppression impossible : ${visibles} produit${
+        visibles > 1 ? "s y sont rattachés" : " y est rattaché"
+      }. Déplacez-${visibles > 1 ? "les" : "le"} d'abord vers une autre catégorie.`;
+    }
     case "ORDRE_INCOMPLET":
       return "L'ordre a changé entre-temps. Actualisez la page avant de recommencer.";
     case "INDISPONIBLE":

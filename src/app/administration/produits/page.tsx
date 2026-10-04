@@ -115,7 +115,7 @@ const BADGES: Record<StatutProduit, { libelle: string; classe: string }> = {
 export default async function PageCatalogue({
   searchParams,
 }: {
-  searchParams: Promise<{ statut?: string }>;
+  searchParams: Promise<{ statut?: string; retrait?: string }>;
 }) {
   try {
     await exigerAdministratrice(await headers());
@@ -194,6 +194,19 @@ export default async function PageCatalogue({
           })}
         </ul>
       </nav>
+
+      {/*
+       * LS-266 : la fiche retirée n'existe plus pour l'administration, son
+       * action renvoie ici. Le message confirme le geste et redit qu'il n'a
+       * rien effacé. Un paramètre d'URL plutôt qu'un état : la redirection
+       * vient du serveur.
+       */}
+      {parametres.retrait === "1" ? (
+        <p className={styles.introduction} role="status">
+          Fiche retirée de votre espace. Elle n&apos;est pas effacée, seul le
+          développeur pourra la récupérer.
+        </p>
+      ) : null}
 
       <Suspense fallback={<ChargementProduits />}>
         <ListeProduits filtreActif={filtreActif} />

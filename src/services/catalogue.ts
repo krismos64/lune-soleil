@@ -55,7 +55,15 @@ export class CategorieIntrouvableError extends Error {
  * l'administratrice sachant alors quoi faire.
  */
 export class CategorieNonVideError extends Error {
-  constructor(readonly nombreProduits: number) {
+  /**
+   * `nombreRetires`, LS-266 : les produits retires de l'espace, que l'ecran
+   * ne montre plus mais qui occupent la categorie. Ils sont INCLUS dans
+   * `nombreProduits`.
+   */
+  constructor(
+    readonly nombreProduits: number,
+    readonly nombreRetires = 0,
+  ) {
     super(`Cette categorie porte ${nombreProduits} produit(s).`);
     this.name = "CategorieNonVideError";
   }
@@ -255,7 +263,10 @@ export async function supprimerCategorie(id: string): Promise<void> {
   const nombreProduits = await depot.compterProduits(prisma, id);
 
   if (nombreProduits > 0) {
-    throw new CategorieNonVideError(nombreProduits);
+    throw new CategorieNonVideError(
+      nombreProduits,
+      await depot.compterProduitsRetires(prisma, id),
+    );
   }
 
   try {
@@ -264,7 +275,10 @@ export async function supprimerCategorie(id: string): Promise<void> {
     if (estErreurPrisma(erreur, "P2003")) {
       // La course decrite plus haut : un produit est apparu entre-temps. Le
       // compte est relu pour que le message reste exact.
-      throw new CategorieNonVideError(await depot.compterProduits(prisma, id));
+      throw new CategorieNonVideError(
+        await depot.compterProduits(prisma, id),
+        await depot.compterProduitsRetires(prisma, id),
+      );
     }
     if (estErreurPrisma(erreur, "P2025")) {
       throw new CategorieIntrouvableError();
@@ -491,7 +505,10 @@ export async function motifsNonPubliable(
 export async function publierProduit(produitId: string): Promise<void> {
   await prisma.$transaction(async (tx) => {
     const produit = await depot.lireEtatPublication(tx, produitId);
-    if (!produit) {
+    // LS-266, UN PRODUIT RETIRE DE L'ESPACE EST INTROUVABLE pour
+    // l'administration, et C45 refuserait de toute facon de le republier : le
+    // refus vient ici avec son sens, plutot qu'en violation de contrainte.
+    if (!produit || produit.retireA !== null) {
       // UN `throw` ET NON UN `return`, dans `$transaction` seule une exception
       // annule : un refus par retour validerait les ecritures deja faites.
       throw new ProduitIntrouvableError();
@@ -547,6 +564,35 @@ export async function archiverProduit(produitId: string): Promise<void> {
     // `publieA` N'EST PAS EFFACE : il porte la date de PREMIERE publication,
     // un fait historique que l'archivage ne dement pas.
   });
+}
+
+/**
+ * Retire un produit ARCHIVE de l'espace d'administration, LS-266.
+ *
+ * CE N'EST PAS UNE SUPPRESSION, LS-246 : le produit reste en base avec ses
+ * variantes, ses medias et tout ce qui le reference. Il n'apparait plus dans
+ * aucun ecran ni compteur de l'administration, et ne paraissait deja plus dans
+ * la boutique. Seul le developpeur le recupere, `EXPLOITATION.md`.
+ *
+ * L'ECRITURE EST CONDITIONNELLE ET PRECEDE LA LECTURE : la base tranche seule
+ * entre deux gestes concurrents, et la lecture ne sert qu'a nommer le refus.
+ * Un produit deja retire est introuvable, comme pour tout autre geste.
+ *
+ * L'AUTORISATION N'EST PAS FAITE ICI, invariant 2 : l'action appelle
+ * `exigerRole` avant.
+ */
+export async function retirerProduitDeLEspace(
+  produitId: string,
+): Promise<void> {
+  if ((await depot.retirerProduitDeLEspace(prisma, produitId)) === 1) {
+    return;
+  }
+
+  const produit = await depot.lireEtatPublication(prisma, produitId);
+  if (!produit || produit.retireA !== null) {
+    throw new ProduitIntrouvableError();
+  }
+  throw new TransitionProduitInvalideError(produit.statut, "ARCHIVE");
 }
 
 /** Pourquoi un produit d'une selection n'a pas change d'etat, LS-242. */

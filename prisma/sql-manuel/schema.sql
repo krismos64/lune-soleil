@@ -96,6 +96,8 @@ CREATE TABLE "produit" (
     "statut" "StatutProduit" NOT NULL DEFAULT 'BROUILLON',
     "publie_a" TIMESTAMPTZ(3),
     "archive_a" TIMESTAMPTZ(3),
+    -- LS-266, retrait de l'espace d'administration, C45.
+    "retire_a" TIMESTAMPTZ(3),
     "cree_a" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "modifie_a" TIMESTAMPTZ(3) NOT NULL,
 

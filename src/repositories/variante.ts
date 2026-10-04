@@ -213,7 +213,12 @@ export async function listerVariantesEnVenteDesProduits(
   produitIds: string[],
 ): Promise<VariantePourPrix[]> {
   const lignes = await client.variante.findMany({
-    where: { produitId: { in: produitIds }, archiveeA: null },
+    // LS-266 : un produit retiré de l'espace n'est plus proposé.
+    where: {
+      produitId: { in: produitIds },
+      archiveeA: null,
+      produit: { retireA: null },
+    },
     orderBy: [{ produit: { nom: "asc" } }, { creeA: "asc" }],
     select: {
       id: true,
@@ -248,6 +253,7 @@ export async function fixerPrixVariantesMontrees(
       id: { in: varianteIds },
       produitId: { in: produitIds },
       archiveeA: null,
+      produit: { retireA: null },
     },
     data: { prixCentimes },
   });

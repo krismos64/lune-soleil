@@ -23,6 +23,7 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 import { journaliser } from "@/lib/journal";
 import { EntreeInvalideError } from "@/lib/validation";
@@ -32,6 +33,7 @@ import {
   TransitionProduitInvalideError,
   archiverProduit,
   publierProduit,
+  retirerProduitDeLEspace,
   type MotifNonPubliable,
 } from "@/services/catalogue";
 import { exigerRole } from "@/services/autorisation";
@@ -160,4 +162,40 @@ export async function archiverProduitAction(
   } catch (erreur) {
     return traduireErreur(erreur, "archiverProduit");
   }
+}
+
+/**
+ * Retire un produit archive de l'espace d'administration, LS-266.
+ *
+ * AUCUNE LIGNE N'EST SUPPRIMEE, LS-246 : le service pose une date. La
+ * confirmation de l'ecran le dit, avec la phrase exigee par le ticket.
+ *
+ * `"layout"`, C37 : les comptages de stock de la barre excluent desormais les
+ * variantes de ce produit. La portee reste la liste des produits, comme les
+ * actions de stock gardent la leur.
+ *
+ * LA FICHE N'EXISTE PLUS pour l'administration apres le retrait, et la
+ * revalider rendrait un 404 sous les yeux de l'exploitante : l'action la
+ * renvoie vers les archives, qui annoncent le retrait. `redirect` leve une
+ * exception que Next.js intercepte, il vit donc HORS du `try`.
+ */
+export async function retirerProduitAction(
+  produitId: unknown,
+): Promise<ResultatPublication> {
+  if (!(await exigerRole(await headers()))) {
+    return { statut: "SESSION_ABSENTE" };
+  }
+
+  if (typeof produitId !== "string") {
+    return { statut: "INVALIDE", message: "Produit inconnu." };
+  }
+
+  try {
+    await retirerProduitDeLEspace(produitId);
+  } catch (erreur) {
+    return traduireErreur(erreur, "retirerProduitDeLEspace");
+  }
+
+  revalidatePath("/administration/produits", "layout");
+  redirect("/administration/produits?statut=ARCHIVE&retrait=1");
 }
