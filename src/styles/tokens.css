@@ -102,6 +102,40 @@
   --ls-admin-pastille: #ead9c0;
 
   /*
+   * OR DE L'EMBLEME ANIME, ADR-045, LS-260. Les quatre arrets du degrade du
+   * logo vectoriel. SEULS LES DEUX PREMIERS PORTENT DU TEXTE, et seulement en
+   * titre, seuil de 3:1 du grand texte, mesure sur --ls-background :
+   *
+   *   --ls-or-sombre  ->  5,51:1
+   *   --ls-or-moyen   ->  4,15:1
+   *   --ls-or-clair   ->  decor seulement, 1,8:1 environ
+   *   --ls-or-pale    ->  decor seulement, 1,4:1 environ
+   */
+  --ls-or-sombre: #8b5a12;
+  --ls-or-moyen: #a46c17;
+  --ls-or-clair: #e0b657;
+  --ls-or-pale: #f0cf7a;
+
+  /*
+   * CIEL DE LA SCENE DU MATIN A LA NUIT, ADR-045 : un degrade permis dans ce
+   * decor et le fond du menu mobile, jamais sur une surface d'interface. Le
+   * script de la scene LIT CES JETONS au lieu de recopier leurs valeurs, et
+   * choisit la couleur du texte par contraste calcule a chaque etape.
+   *
+   * Texte sombre --ls-primary-hover : 9,34:1 sur l'aube, 10,89:1 sur le jour.
+   * Texte clair --ls-texte-nuit : 5,62:1 sur le crepuscule, 16,37:1 la nuit.
+   */
+  --ls-ciel-aube-haut: #fbe3c4;
+  --ls-ciel-aube-bas: #f7d6b0;
+  --ls-ciel-jour-haut: #fff6e4;
+  --ls-ciel-jour-bas: #faeacd;
+  --ls-ciel-crepuscule-haut: #7e525c;
+  --ls-ciel-crepuscule-bas: #e89664;
+  --ls-ciel-nuit-haut: #140f1c;
+  --ls-ciel-nuit-bas: #2c203a;
+  --ls-texte-nuit: #faeed4;
+
+  /*
    * AUCUN JETON DE BADGE N'EST DECLARE ICI, ET C'EST DELIBERE. LS-181 en avait
    * ajoute trois familles avant de constater que l'ecran des commandes porte
    * DEJA ses badges, mesures et conformes, dans `commandes.module.css`. Deux
@@ -156,6 +190,12 @@
   --ls-duration-fast: 120ms;
   --ls-duration-base: 220ms;
   --ls-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  /*
+   * ENCHAINEMENTS DECORATIFS, ADR-045. Une sortie lente qui freine en douceur,
+   * et une borne : aucune animation automatique ne dure au-dela, WCAG 2.2.2.
+   */
+  --ls-easing-sortie: cubic-bezier(0.16, 1, 0.3, 1);
+  --ls-duree-dessin: 1800ms;
 
   /* Mise en page */
   --ls-content-max: 1280px;

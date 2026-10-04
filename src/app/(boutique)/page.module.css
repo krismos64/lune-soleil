@@ -1,5 +1,6 @@
 /*
- * Page d'accueil, LS-122. Conception a partir de 320 px.
+ * Page d'accueil, LS-122, animée par LS-260 selon ADR-045. Conception a partir
+ * de 320 px.
  *
  * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons d'ADR-022. Aucune largeur
  * fixe : chaque bloc se replie avant de deborder.
@@ -8,28 +9,47 @@
 /* ---------- Hero ---------- */
 
 .hero {
-  display: grid;
-  grid-template-columns: 1fr;
-  align-items: center;
+  position: relative;
+  overflow: hidden;
   background: var(--ls-background);
 }
 
 /*
- * UNE SEULE COLONNE A TOUTES LES LARGEURS depuis le 23 septembre 2026 : la
- * banniere, 2,63:1 et porteuse de son propre texte, est illisible dans une
- * demi-colonne. Elle passe en tete sur toute la largeur, le texte dessous.
+ * UNE COLONNE JUSQU'A 1024 PX, l'emblème au-dessus du texte ; deux colonnes
+ * au-delà, le texte à gauche. L'ordre du DOM garde le titre avant l'emblème,
+ * qui est `aria-hidden` : un lecteur d'écran commence par le titre.
  */
-
-.heroTexte {
-  padding: var(--ls-space-7) var(--ls-space-4);
+.heroGrille {
+  position: relative;
+  display: grid;
+  gap: var(--ls-space-6);
+  align-items: center;
   max-width: var(--ls-content-max);
-  justify-self: center;
-  width: 100%;
+  margin: 0 auto;
+  padding: var(--ls-space-6) var(--ls-space-4) var(--ls-space-7);
 }
 
-@media (min-width: 768px) {
-  .heroTexte {
+.heroGrille > :last-child {
+  order: -1;
+}
+
+.heroTexte {
+  text-align: center;
+}
+
+@media (min-width: 1024px) {
+  .heroGrille {
+    grid-template-columns: 1.05fr 1fr;
+    gap: var(--ls-space-7);
     padding: var(--ls-space-8) var(--ls-space-6);
+  }
+
+  .heroGrille > :last-child {
+    order: 0;
+  }
+
+  .heroTexte {
+    text-align: left;
   }
 }
 
@@ -62,13 +82,59 @@
   font-size: clamp(1rem, 2.5vw, 1.125rem);
   line-height: 1.6;
   max-width: 46ch;
+  margin-inline: auto;
+}
+
+@media (min-width: 1024px) {
+  .accroche {
+    margin-inline: 0;
+  }
+}
+
+/*
+ * MOTS DORÉS DU TITRE, ADR-045 : deux arrêts seulement, `--ls-or-sombre`
+ * 5,51:1 et `--ls-or-moyen` 4,15:1 sur `--ls-background`, au-dessus du seuil
+ * de 3:1 du grand texte. Le reflet glisse deux fois puis s'arrête, et le texte
+ * reste lisible à chaque instant puisque chaque teinte l'est.
+ */
+.motDore {
+  background: linear-gradient(
+    100deg,
+    var(--ls-or-sombre),
+    var(--ls-or-moyen) 50%,
+    var(--ls-or-sombre)
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: reflet 3s linear 1200ms 2;
+}
+
+@keyframes reflet {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motDore {
+    animation: none;
+  }
 }
 
 .actions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: var(--ls-space-3) var(--ls-space-5);
   align-items: center;
+}
+
+@media (min-width: 1024px) {
+  .actions {
+    justify-content: flex-start;
+  }
 }
 
 .actionPrincipale,
@@ -117,33 +183,6 @@
 .actionSecondaire:focus-visible {
   outline: 2px solid var(--ls-focus);
   outline-offset: 2px;
-}
-
-.heroVisuel {
-  /*
-   * EN TETE, par `order` et non par le DOM : le titre de la page reste le
-   * premier contenu lu par un lecteur d'ecran, la banniere n'etant que son
-   * illustration.
-   */
-  order: -1;
-  width: 100%;
-}
-
-/*
- * `aspect-ratio` ET `object-fit` PLUTOT QU'UNE HAUTEUR FIXE : le cadre garde
- * ses proportions a toutes les largeurs, et l'image ne se deforme jamais.
- * Les dimensions sur la balise reservent la place et evitent le decalage.
- */
-.image {
-  display: block;
-  width: 100%;
-  height: auto;
-  /*
-   * 1680/639, LE RATIO REEL DE LA BANNIERE, et `contain` : le texte incruste
-   * ne doit jamais etre rogne. A revoir si l'image change de format.
-   */
-  aspect-ratio: 1680 / 639;
-  object-fit: contain;
 }
 
 /* ---------- Sections communes ---------- */
@@ -221,6 +260,101 @@
   gap: var(--ls-space-5) var(--ls-space-4);
 }
 
+/*
+ * INCLINAISON ET REFLET AU SURVOL, LS-260. `ReactionPointeur` incline la carte
+ * sous la souris, ordinateur seulement ; le reflet ne passe qu'au survol, une
+ * fois, et jamais seul : une interaction le déclenche, WCAG 2.2.2 ne
+ * s'applique pas. `pointer-events: none`, il ne gêne aucun clic.
+ */
+.grille > li {
+  position: relative;
+  transition: transform 500ms var(--ls-easing-sortie);
+}
+
+.grille > li::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 35%,
+    color-mix(in srgb, var(--ls-surface) 45%, transparent) 50%,
+    transparent 65%
+  );
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .grille > li:hover::after {
+    opacity: 1;
+    transform: translateX(100%);
+    transition: transform 800ms var(--ls-easing-sortie);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grille > li,
+  .grille > li::after {
+    transition: none;
+  }
+
+  .grille > li:hover::after {
+    opacity: 0;
+  }
+}
+
+/* ---------- Bandeau défilant ---------- */
+
+/*
+ * L'ANIMATION N'EXISTE QUE SOUS `data-borne="joue"`, ADR-045 point 4 : sans
+ * script, ou hors de sa fenêtre de dix secondes, la piste reste immobile.
+ * Texte `--ls-primary` sur sable, 7,49:1.
+ */
+.defilant {
+  overflow: hidden;
+  padding: var(--ls-space-4) 0;
+  background: var(--ls-surface-sand);
+  color: var(--ls-primary);
+  border-block: 1px solid var(--ls-border);
+}
+
+.piste {
+  display: flex;
+  gap: var(--ls-space-7);
+  width: max-content;
+  font-family: var(--ls-police-titre);
+  font-size: 1.25rem;
+  white-space: nowrap;
+}
+
+.piste span::before {
+  content: "✦";
+  margin-right: var(--ls-space-7);
+  color: var(--ls-or-moyen);
+  font-size: 0.875rem;
+  vertical-align: middle;
+}
+
+.defilant[data-borne="joue"] .piste,
+.defilant[data-borne="fin"] .piste,
+.defilant[data-borne="attente"] .piste {
+  animation: glisse 32s linear infinite;
+}
+
+@keyframes glisse {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .piste {
+    animation: none !important;
+  }
+}
+
 /* ---------- Categories ---------- */
 
 /*
@@ -285,7 +419,7 @@
   font-weight: 500;
 }
 
-/* ---------- Bloc editorial ---------- */
+/* ---------- Bloc editorial, devenu le sceau de LS-260 ---------- */
 
 /*
  * FOND PRIMAIRE, TEXTE BLANC : 8,93:1 d'apres `tokens.css`, conforme AAA.
@@ -296,10 +430,89 @@
   color: var(--ls-text-on-primary);
 }
 
-.editorialTexte {
+.sceau {
+  display: grid;
+  gap: var(--ls-space-6);
+  align-items: center;
   max-width: var(--ls-content-max);
   margin: 0 auto;
   padding: var(--ls-space-7) var(--ls-space-4);
+}
+
+@media (min-width: 768px) {
+  .sceau {
+    grid-template-columns: auto 1fr;
+    gap: var(--ls-space-7);
+  }
+}
+
+/*
+ * LE LOGO FLOTTE ET UN REFLET LE TRAVERSE, deux passages puis l'arrêt,
+ * ADR-045 point 4. `data-borne` le suspend hors de l'écran.
+ */
+.sceauImage {
+  position: relative;
+  width: min(64vw, 18.75rem);
+  aspect-ratio: 1;
+  margin-inline: auto;
+  border-radius: 50%;
+  overflow: hidden;
+  animation: flotte 6s ease-in-out 1500ms;
+}
+
+.sceauImage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    120deg,
+    transparent 40%,
+    color-mix(in srgb, var(--ls-surface) 55%, transparent) 50%,
+    transparent 60%
+  );
+  transform: translateX(-100%);
+  animation: lustre 4s ease-in-out 1s 2;
+}
+
+.logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes flotte {
+  50% {
+    transform: translateY(-10px) rotate(1deg);
+  }
+}
+
+@keyframes lustre {
+  45%,
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sceauImage,
+  .sceauImage::after {
+    animation: none;
+  }
+
+  .sceauImage::after {
+    display: none;
+  }
+}
+
+.editorialTexte {
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .editorialTexte {
+    text-align: left;
+  }
 }
 
 /*

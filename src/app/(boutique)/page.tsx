@@ -1,8 +1,10 @@
 /**
  * Page d'accueil publique, LS-122.
  *
- * COMPOSANT SERVEUR PUR. Aucun `"use client"` : la page n'a aucune interaction,
- * tout y est lien ou texte.
+ * COMPOSANT SERVEUR. Textes, liens et données sont rendus ici ; les effets
+ * animés de LS-260 vivent dans de petits composants client qui ne produisent
+ * aucun texte, ADR-045 point 2. La page reste lisible et complète sans
+ * script et en mouvement réduit.
  *
  * ELLE LIT LA BASE A CHAQUE AFFICHAGE, pour la meme raison que le catalogue de
  * LS-104 : la disponibilite change a chaque reservation, et une mise en cache
@@ -15,7 +17,13 @@ import { DonneesStructurees } from "@/components/donnees-structurees";
 import { jsonLdOrganisation, NOM_BOUTIQUE, openGraphDePage } from "@/lib/seo";
 import { lireCataloguePublic } from "@/services/catalogue";
 import { CarteProduit } from "./catalogue/carte-produit";
+import { AnimationsBornees } from "@/components/animations-bornees";
+import { ApparitionAuDefilement } from "@/components/apparition-au-defilement";
 import { BandeauReassurance } from "@/components/bandeau-reassurance";
+import { EmblemeAnime } from "@/components/embleme-anime";
+import { PoussiereOr } from "@/components/poussiere-or";
+import { ReactionPointeur } from "@/components/reaction-pointeur";
+import { SceneCycle } from "@/components/scene-cycle";
 import { lireSeuilFranchise } from "@/services/parametres";
 import styles from "./page.module.css";
 
@@ -45,6 +53,18 @@ export const dynamic = "force-dynamic";
 
 /** Nombre de créations mises en avant sur l'accueil. */
 const NOMBRE_MIS_EN_AVANT = 4;
+
+/**
+ * Mentions du bandeau défilant, LS-260 : des faits déjà affirmés ailleurs sur
+ * le site, aucun argument neuf.
+ */
+const MENTIONS_DEFILANTES = [
+  "Fait main",
+  "À l'unité",
+  "Petites séries",
+  "Livraison en France métropolitaine",
+  "Corse comprise",
+] as const;
 
 export default async function PageAccueil() {
   /*
@@ -82,65 +102,46 @@ export default async function PageAccueil() {
        */}
       <DonneesStructurees balisage={jsonLdOrganisation()} />
 
+      {/*
+       * HÉROS ANIMÉ, LS-260, maquette validée le 4 octobre 2026.
+       *
+       * LE TEXTE EST VISIBLE AU PREMIER RENDU, ADR-045 point 5 : titre,
+       * accroche et boutons ne partent d'aucune opacité nulle, et le titre
+       * reste le plus grand élément peint, donc le LCP. Seuls l'emblème et la
+       * poussière d'or s'animent.
+       *
+       * LA BANNIÈRE DU 23 SEPTEMBRE 2026 N'EST PLUS ICI, arbitrage de
+       * Christophe du 4 octobre : l'emblème la remplace. Le fichier reste dans
+       * `public/habillage/`.
+       *
+       * LES DEUX MOTS DORÉS n'emploient que les arrêts `--ls-or-sombre` et
+       * `--ls-or-moyen`, 5,51:1 et 4,15:1 sur le fond, au-dessus du seuil de
+       * 3:1 du grand texte, ADR-045.
+       */}
       <section className={styles.hero}>
-        <div className={styles.heroTexte}>
-          <p className={styles.surtitre}>Bijoux faits main</p>
-          <h1 className={styles.titre}>
-            La lumière d&apos;un bijou, le geste d&apos;une main.
-          </h1>
-          <p className={styles.accroche}>
-            Des pièces délicates en petite série, pensées pour accompagner le
-            quotidien sans jamais se ressembler tout à fait.
-          </p>
-          <div className={styles.actions}>
-            <Link href="/catalogue" className={styles.actionPrincipale}>
-              Découvrir les créations
-            </Link>
-            <Link href="/notre-univers" className={styles.actionSecondaire}>
-              Entrer dans l&apos;atelier
-            </Link>
+        <PoussiereOr />
+        <div className={styles.heroGrille}>
+          <div className={styles.heroTexte}>
+            <p className={styles.surtitre}>Bijoux faits main</p>
+            <h1 className={styles.titre}>
+              La <span className={styles.motDore}>lumière</span> d&apos;un
+              bijou, le <span className={styles.motDore}>geste</span> d&apos;une
+              main.
+            </h1>
+            <p className={styles.accroche}>
+              Des pièces délicates en petite série, pensées pour accompagner le
+              quotidien sans jamais se ressembler tout à fait.
+            </p>
+            <div className={styles.actions}>
+              <Link href="/catalogue" className={styles.actionPrincipale}>
+                Découvrir les créations
+              </Link>
+              <Link href="/notre-univers" className={styles.actionSecondaire}>
+                Entrer dans l&apos;atelier
+              </Link>
+            </div>
           </div>
-        </div>
-
-        {/*
-         * LE VISUEL PORTE UN CONTENU, DONC UN `alt` DECRIT. Il montre des
-         * bijoux : le rendre `aria-hidden` priverait de l'ambiance du hero qui
-         * que ce soit ne voyant pas l'image. Le texte alternatif decrit la
-         * scene et la matiere, jamais un produit du catalogue, ces pieces n'en
-         * etant pas.
-         *
-         * `next/image` ICI, CONTRAIREMENT AUX PHOTOS DE PRODUITS. Ce fichier
-         * vit dans `public/` et passe donc par l'optimiseur de Next.js. Les
-         * medias d'ADR-007 sont servis par Nginx depuis un volume, hors de sa
-         * portee, et emploient `<img>` avec leurs declinaisons pre-generees.
-         *
-         * VISUEL D'HABILLAGE A REMPLACER AVANT L'OUVERTURE, LS-23. Il montre
-         * des bijoux qui ne sont PAS au catalogue : les laisser a l'ouverture
-         * ferait passer des pieces inexistantes pour des creations de la
-         * boutique, ce que LS-22 interdit et ce qui serait une allegation
-         * commerciale trompeuse. Arbitrage de Christophe du 19 aout 2026 :
-         * on le garde le temps du developpement, on le remplace avant la mise
-         * en ligne.
-         */}
-        <div className={styles.heroVisuel}>
-          {/*
-           * BANNIERE FOURNIE PAR CHRISTOPHE LE 23 SEPTEMBRE 2026, au format
-           * natif 1680 x 639, soit 2,63:1. Elle porte son propre texte, nom de
-           * la boutique, slogan et trois arguments : la rogner la couperait,
-           * d'ou le ratio reel et une pleine largeur, `page.module.css`.
-           *
-           * LE TEXTE ALTERNATIF REPREND TOUT LE TEXTE DE L'IMAGE, qui n'est
-           * lisible autrement que par l'oeil.
-           */}
-          <Image
-            src="/habillage/accueil-banniere.jpg"
-            alt={`Bannière ${NOM_BOUTIQUE}, un croissant de lune et un soleil dorés : « Bijoux faits main avec amour », « L'harmonie du Soleil et de la Lune, créée pour vous », fait main en France, matériaux sélectionnés, pièces uniques et authentiques`}
-            className={styles.image}
-            width={1680}
-            height={639}
-            priority
-            sizes="100vw"
-          />
+          <EmblemeAnime />
         </div>
       </section>
 
@@ -178,13 +179,39 @@ export default async function PageAccueil() {
             </Link>
           </div>
 
-          <ul className={styles.grille}>
+          <ul className={styles.grille} data-inclinaison="">
             {misEnAvant.map((produit) => (
               <CarteProduit key={produit.id} produit={produit} />
             ))}
           </ul>
         </section>
       )}
+
+      {/*
+       * SCÈNE DU MATIN À LA NUIT, LS-260. Les trois phrases sont rendues ici ;
+       * `SceneCycle` ne fait que les montrer une à une au défilement. Elles ne
+       * disent rien qui ne soit établi : fait main, à l'unité ou en petite
+       * série, la même allégation que l'accroche et les métadonnées.
+       */}
+      <SceneCycle titre="Du matin à la nuit">
+        <div data-phrase="">
+          <h2>Au matin, une idée.</h2>
+          <p>Une forme, une couleur, un souvenir à porter.</p>
+        </div>
+        <div data-phrase="">
+          <h2>En plein jour, le geste.</h2>
+          <p>
+            Chaque pièce est façonnée à la main, à l&apos;unité ou en petite
+            série.
+          </p>
+        </div>
+        <div data-phrase="">
+          <h2>À la nuit, l&apos;éclat.</h2>
+          <p>
+            Un bijou qui garde un peu de lumière, quelle que soit l&apos;heure.
+          </p>
+        </div>
+      </SceneCycle>
 
       {/*
        * ENTREE PAR CATEGORIE.
@@ -224,28 +251,65 @@ export default async function PageAccueil() {
       )}
 
       {/*
-       * BLOC EDITORIAL.
+       * BANDEAU DÉFILANT, LS-260. Décor : `aria-hidden`, chaque mention
+       * figurant déjà ailleurs dans la page en texte lisible. Son animation
+       * n'existe que sous `data-borne="joue"`, donc dix secondes au plus par
+       * entrée dans l'écran, et aucune sans script, ADR-045 point 4. La suite
+       * est écrite deux fois pour que la boucle se raccorde sans saut.
+       */}
+      <div className={styles.defilant} aria-hidden="true" data-borne="">
+        <div className={styles.piste}>
+          {[0, 1].map((tour) =>
+            MENTIONS_DEFILANTES.map((mention) => (
+              <span key={`${tour}-${mention}`}>{mention}</span>
+            )),
+          )}
+        </div>
+      </div>
+
+      {/*
+       * SCEAU, LS-260 : le logo réel et le texte éditorial conservé, arbitrage
+       * de Christophe du 4 octobre 2026.
        *
        * LE TEXTE NE DIT NI LE LIEU NI LE NOMBRE DE CREATRICES. Le recit appartient
        * a LS-25, valide par l'exploitante, et une allegation d'origine non
        * confirmee serait une pratique commerciale trompeuse. Ce bloc annonce la
        * page sans raconter a sa place.
+       *
+       * LE LOGO PORTE UN `alt` QUI REPREND SON TEXTE, nom et mention : un texte
+       * dans une image n'est lisible autrement que par l'oeil.
        */}
       <section className={styles.editorial}>
-        <div className={styles.editorialTexte}>
-          <p className={styles.surtitreEditorial}>L&apos;atelier</p>
-          <h2 className={styles.titreEditorial}>
-            Créer peu, créer avec intention.
-          </h2>
-          <p className={styles.texteEditorial}>
-            Chaque bijou commence par une association de formes et de matières,
-            travaillée à la main et produite en petite quantité.
-          </p>
-          <Link href="/notre-univers" className={styles.actionEditorial}>
-            Découvrir notre univers
-          </Link>
+        <div className={styles.sceau}>
+          <div className={styles.sceauImage} data-apparition="" data-borne="">
+            <Image
+              src="/habillage/logo-sceau.jpg"
+              alt={`Logo ${NOM_BOUTIQUE}, une lune et un soleil dorés, mention « bijoux faits main »`}
+              width={720}
+              height={720}
+              sizes="(min-width: 768px) 300px, 64vw"
+              className={styles.logo}
+            />
+          </div>
+          <div className={styles.editorialTexte} data-apparition="">
+            <p className={styles.surtitreEditorial}>L&apos;atelier</p>
+            <h2 className={styles.titreEditorial}>
+              Créer peu, créer avec intention.
+            </h2>
+            <p className={styles.texteEditorial}>
+              Chaque bijou commence par une association de formes et de
+              matières, travaillée à la main et produite en petite quantité.
+            </p>
+            <Link href="/notre-univers" className={styles.actionEditorial}>
+              Découvrir notre univers
+            </Link>
+          </div>
         </div>
       </section>
+
+      <AnimationsBornees />
+      <ApparitionAuDefilement />
+      <ReactionPointeur />
     </main>
   );
 }
