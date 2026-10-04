@@ -58,8 +58,8 @@ limite courte, plutôt qu'un `--omit=dev` qui masquerait les prochains avis.
 
 ## Ce qui reste
 
-- Fusionner la PR, puis constater le nocturne suivant au vert, qui fermera
-  l'issue #498.
+- Fusionné le 3 octobre, PR #506. Le nocturne du 4 est vert et a permis
+  de fermer l'issue #498, voir `2026-10-04-a`.
 - **Au 17 octobre 2026**, ou dès qu'une version corrigée de `braces` sort :
   mettre à jour et retirer l'exemption. Sinon le nocturne repasse au rouge
   de lui-même, en nommant l'exemption échue.
