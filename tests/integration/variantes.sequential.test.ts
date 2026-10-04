@@ -712,15 +712,20 @@ describe("prix appliqué à une sélection de produits", () => {
     );
     await variantes.archiverVariante({ id: archivee.id });
 
-    const recapitulatif = await variantes.previsualiserPrixProduits({
+    const { lignes, prixCentimes } = await variantes.previsualiserPrixProduits({
       produitIds: [produit],
+      prixEuros: "12,50",
     });
 
-    expect(recapitulatif).toHaveLength(1);
-    expect(recapitulatif[0]).toMatchObject({
-      libelle: "Courtes",
-      prixCentimes: 1999,
-    });
-    expect(recapitulatif[0]!.produitNom).toMatch(/^Boucles /);
+    expect(prixCentimes).toBe(1250);
+    expect(lignes).toHaveLength(1);
+    expect(lignes[0]).toMatchObject({ libelle: "Courtes", prixCentimes: 1999 });
+    expect(lignes[0]!.produitNom).toMatch(/^Boucles /);
+    // Le récapitulatif ne modifie rien.
+    const { rows } = await client.query<{ prix_centimes: number }>(
+      "SELECT prix_centimes FROM variante WHERE produit_id = $1 AND archivee_a IS NULL",
+      [produit],
+    );
+    expect(rows.map((ligne) => ligne.prix_centimes)).toEqual([1999]);
   });
 });
