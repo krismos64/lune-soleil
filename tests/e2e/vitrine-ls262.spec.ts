@@ -11,15 +11,15 @@ import { expect, test } from "@playwright/test";
 test.describe("en mouvement normal", () => {
   test.use({ contextOptions: { reducedMotion: "no-preference" } });
 
-  test("Notre univers ouvre sur un soleil levant et ferme sur une lune", async ({
+  test("L'atelier ouvre sur un soleil levant et ferme sur une lune", async ({
     page,
   }) => {
-    await page.goto("/notre-univers");
+    await page.goto("/atelier");
     // Décor muet : il ne s'annonce pas, et le titre reste le premier contenu.
     const decors = page.locator("main [aria-hidden='true'][data-borne]");
     await expect(decors).toHaveCount(2);
     await expect(
-      page.getByRole("heading", { level: 1, name: "Notre univers" }),
+      page.getByRole("heading", { level: 1, name: "L'atelier" }),
     ).toBeVisible();
   });
 
@@ -30,7 +30,7 @@ test.describe("en mouvement normal", () => {
      * REVUE DE LS-262 : sans `AnimationsBornees` sur la page, la lune jouait
      * au chargement, hors de l'écran, et le visiteur la trouvait déjà figée.
      */
-    await page.goto("/notre-univers");
+    await page.goto("/atelier");
     const lune = page.locator("main [aria-hidden='true'][data-borne]").last();
     await expect(lune).toHaveAttribute("data-borne", "attente");
 
@@ -57,7 +57,7 @@ test.describe("en mouvement normal", () => {
   });
 
   test("une image hors de l'écran apparaît à son arrivée", async ({ page }) => {
-    await page.goto("/notre-univers");
+    await page.goto("/atelier");
     const derniere = page.locator("main img[data-apparition]").last();
     await expect(derniere).toHaveAttribute("data-apparition", "attente");
 
@@ -68,7 +68,7 @@ test.describe("en mouvement normal", () => {
   test("un texte en glissement reste lisible avant son arrivée", async ({
     page,
   }) => {
-    await page.goto("/notre-univers");
+    await page.goto("/atelier");
     const geste = page.locator("[data-apparition-mode='glisse']").last();
     await expect(geste).toHaveAttribute("data-apparition", "attente");
     // Glissement seul : l'opacité ne descend jamais à zéro, ADR-045 point 5.
@@ -79,6 +79,6 @@ test.describe("en mouvement normal", () => {
 test("en mouvement réduit, aucun bloc n'attend son apparition", async ({
   page,
 }) => {
-  await page.goto("/notre-univers");
+  await page.goto("/atelier");
   await expect(page.locator("[data-apparition='attente']")).toHaveCount(0);
 });

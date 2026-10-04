@@ -1038,7 +1038,7 @@ précontractuelle fausse, sanctionnée bien au-delà de l'écart de prix.
 
 **Le composant qui les porte est `BandeauReassurance`**,
 `src/components/bandeau-reassurance.tsx`, LS-236 : posé sur l'accueil et
-`/notre-univers`, il reçoit le seuil par `lireSeuilFranchise` et se tait sur la
+`/atelier`, il reçoit le seuil par `lireSeuilFranchise` et se tait sur la
 gratuité quand la franchise est désactivée. Toute nouvelle surface le réutilise,
 jamais une seconde formulation des mêmes allégations.
 
@@ -1048,7 +1048,7 @@ le sien :
 
 | Écran | Éléments | Nom de la région |
 |---|---|---|
-| accueil, `/notre-univers`, panier | les six | Engagements de la boutique |
+| accueil, `/atelier`, panier | les six | Engagements de la boutique |
 | fiche produit, bloc 7 | livraison, gratuité | Informations de livraison |
 | tunnel | paiement, rétractation, contact | Engagements de la boutique |
 
@@ -1083,7 +1083,7 @@ appartenant au Béarn.
 **LE MODELAGE EST CONFIRMÉ DEPUIS LE 20 SEPTEMBRE 2026**, LS-25 : l'exploitante
 modèle la pâte polymère elle-même. Le verbe « modelé » avait été inventé par un
 générateur et l'interdit tenait à cette seule origine, jamais à un démenti. Il
-est levé, et `/notre-univers` l'emploie.
+est levé, et `/atelier` l'emploie.
 
 **Ce qui reste interdit**, en revanche : toute formule au pluriel ou nommant une
 seconde personne. **L'exploitante exerce seule**, confirmé le même jour, et son

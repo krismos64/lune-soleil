@@ -43,8 +43,8 @@ const ENTREES = [
     description: "Toutes les pièces disponibles",
   },
   {
-    href: "/notre-univers",
-    libelle: "Notre univers",
+    href: "/atelier",
+    libelle: "L'atelier",
     description: "L'histoire, les matériaux, l'entretien",
   },
   {

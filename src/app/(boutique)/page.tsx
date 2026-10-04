@@ -134,7 +134,7 @@ export default async function PageAccueil() {
               <Link href="/catalogue" className={styles.actionPrincipale}>
                 Découvrir les créations
               </Link>
-              <Link href="/notre-univers" className={styles.actionSecondaire}>
+              <Link href="/atelier" className={styles.actionSecondaire}>
                 Entrer dans l&apos;atelier
               </Link>
             </div>
@@ -305,8 +305,8 @@ export default async function PageAccueil() {
               Chaque bijou commence par une association de formes et de
               matières, travaillée à la main et produite en petite quantité.
             </p>
-            <Link href="/notre-univers" className={styles.actionEditorial}>
-              Découvrir notre univers
+            <Link href="/atelier" className={styles.actionEditorial}>
+              Découvrir l&apos;atelier
             </Link>
           </div>
         </div>

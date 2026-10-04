@@ -30,9 +30,9 @@ const COLONNES = [
     titre: "Découvrir",
     liens: [
       { href: "/catalogue", libelle: "Toutes les créations" },
-      { href: "/notre-univers", libelle: "Notre histoire" },
-      { href: "/notre-univers#matieres", libelle: "Matériaux" },
-      { href: "/notre-univers#entretien", libelle: "Entretien" },
+      { href: "/atelier#histoire", libelle: "Mon histoire" },
+      { href: "/atelier#matieres", libelle: "Matériaux" },
+      { href: "/atelier#entretien", libelle: "Entretien" },
     ],
   },
   {

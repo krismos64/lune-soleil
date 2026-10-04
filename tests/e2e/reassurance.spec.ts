@@ -36,7 +36,7 @@ const euros = (centimes: number) =>
     .format(centimes / 100)
     .replace(/\s/g, " ");
 
-for (const chemin of ["/", "/notre-univers"]) {
+for (const chemin of ["/", "/atelier"]) {
   test(`${chemin} porte le bandeau, au seuil configuré, sans débordement`, async ({
     page,
   }) => {

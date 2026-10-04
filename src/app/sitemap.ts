@@ -55,6 +55,7 @@ export const dynamic = "force-dynamic";
 const PAGES_FIXES = [
   { chemin: "/", priorite: 1 },
   { chemin: "/catalogue", priorite: 0.9 },
+  { chemin: "/atelier", priorite: 0.6 },
   { chemin: "/aide", priorite: 0.5 },
   { chemin: "/contact", priorite: 0.5 },
   { chemin: "/informations-legales", priorite: 0.3 },
