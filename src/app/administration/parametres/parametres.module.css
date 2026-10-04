@@ -266,3 +266,8 @@
   color: var(--ls-primary);
   text-decoration: underline;
 }
+
+/* Description sous le libellé d'un thème, sans marge héritée du paragraphe. */
+.descriptionTheme {
+  margin: 0;
+}

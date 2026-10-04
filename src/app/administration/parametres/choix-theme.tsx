@@ -70,8 +70,9 @@ export function ChoixTheme({ actif }: { actif: ThemeSaisonnier }) {
       <fieldset className={styles.groupe} aria-describedby="theme-actif">
         <legend className={styles.legende}>Thème saisonnier</legend>
         <p id="theme-actif" className={styles.aide}>
-          Actif : <strong>{NOMS[applique]}</strong>. Il habille l&apos;accueil
-          et le catalogue seulement ; aucun texte n&apos;est à saisir.
+          Thème actif : <strong>{NOMS[applique]}</strong>. Un thème habille
+          l&apos;accueil et le catalogue seulement, et aucun texte n&apos;est à
+          saisir.
         </p>
 
         <ul className={styles.interrupteurs}>
@@ -86,16 +87,20 @@ export function ChoixTheme({ actif }: { actif: ThemeSaisonnier }) {
                 className={styles.caseACocher}
                 aria-describedby={`theme-${theme.valeur}-aide`}
               />
-              <label
-                htmlFor={`theme-${theme.valeur}`}
-                className={styles.libelleCase}
-              >
-                {theme.libelle}
-                <span id={`theme-${theme.valeur}-aide`} className={styles.aide}>
-                  {" "}
+              <div>
+                <label
+                  htmlFor={`theme-${theme.valeur}`}
+                  className={styles.libelleCase}
+                >
+                  {theme.libelle}
+                </label>
+                <p
+                  id={`theme-${theme.valeur}-aide`}
+                  className={`${styles.aide} ${styles.descriptionTheme}`}
+                >
                   {theme.description}
-                </span>
-              </label>
+                </p>
+              </div>
             </li>
           ))}
         </ul>
