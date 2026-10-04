@@ -2,7 +2,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Statut | Proposé |
+| Statut | Accepté |
 | Date | 4 octobre 2026 |
 | Décideur | Christophe Mostefaoui |
 | Amende | `.claude/rules/frontend-design.md`, sections « Interdits visuels » et « Paillettes » |
