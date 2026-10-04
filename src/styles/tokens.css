@@ -103,8 +103,10 @@
 
   /*
    * OR DE L'EMBLÈME ANIMÉ, ADR-045, LS-260. Les quatre arrêts du dégradé du
-   * logo vectoriel. SEULS LES DEUX PREMIERS PORTENT DU TEXTE, et seulement en
-   * titre, seuil de 3:1 du grand texte, mesuré sur --ls-background :
+   * logo vectoriel. SUR FOND CLAIR, SEULS LES DEUX PREMIERS PORTENT DU TEXTE,
+   * et seulement en titre, seuil de 3:1 du grand texte, mesuré sur
+   * --ls-background. SUR LA NUIT, --ls-or-pale porte du texte de toute taille,
+   * 12,48:1 sur --ls-ciel-nuit-haut et 10,12:1 sur --ls-ciel-nuit-bas, LS-261 :
    *
    *   --ls-or-sombre  ->  5,51:1
    *   --ls-or-moyen   ->  4,15:1

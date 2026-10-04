@@ -93,11 +93,12 @@
   padding: var(--ls-space-3) var(--ls-space-4);
   display: flex;
   /*
-   * `wrap` PLUTOT QU'UN MENU DEROULANT : a 320 px la navigation passe sous la
-   * marque, sans script ni etat a gerer. Un menu hamburger imposerait un
-   * composant client pour trois liens.
+   * DEPUIS LS-261, sous 768 px, la navigation vit dans `MenuMobile` et la
+   * barre tient sur une ligne, compte et panier en pictogrammes. `wrap`
+   * reste permis pour un seul cas : le menu ouvert sans script, qui passe à
+   * la ligne sous la barre, `menu-mobile.module.css`.
    */
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: var(--ls-space-2);
   align-items: center;
   justify-content: space-between;

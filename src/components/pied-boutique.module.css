@@ -40,9 +40,9 @@
 }
 
 /*
- * `--ls-text` ET NON `--ls-text-muted` : le fond est sable `#f2eadf`, ou le gris
- * secondaire tombe a 4,35:1, sous le seuil AA. Sur creme il donnerait 4,86:1.
- * C'est la paire couleur et fond qui compte, jamais la couleur seule, LS-84.
+ * `--ls-texte-nuit` SUR LA NUIT, 16,37:1, depuis LS-261. Avant, le fond était
+ * sable et le texte `--ls-text`. C'est la paire couleur et fond qui compte,
+ * jamais la couleur seule, LS-84.
  */
 .description {
   margin: 0;

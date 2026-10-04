@@ -95,6 +95,12 @@ export async function EnTeteBoutique() {
    */
   const identite = await lireIdentite(await headers());
 
+  /* Le même nom dans la barre et dans le menu, WCAG 3.2.4, revue de LS-261. */
+  const nomPanier =
+    articles > 0
+      ? `Votre panier, ${articles} ${articles > 1 ? "pièces" : "pièce"}`
+      : "Votre panier, vide";
+
   return (
     <header className={styles.entete}>
       {/*
@@ -164,15 +170,7 @@ export async function EnTeteBoutique() {
           </span>
         </Link>
 
-        <Link
-          href="/panier"
-          className={styles.panier}
-          aria-label={
-            articles > 0
-              ? `Votre panier, ${articles} ${articles > 1 ? "pièces" : "pièce"}`
-              : "Votre panier, vide"
-          }
-        >
+        <Link href="/panier" className={styles.panier} aria-label={nomPanier}>
           <svg
             className={styles.picto}
             viewBox="0 0 24 24"
@@ -199,6 +197,7 @@ export async function EnTeteBoutique() {
             libelle: identite ? "Mon compte" : "Se connecter",
           }}
           articles={articles}
+          nomPanier={nomPanier}
           nomBoutique={NOM_BOUTIQUE}
         />
       </div>
