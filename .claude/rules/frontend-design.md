@@ -224,6 +224,38 @@ suranimation. Aucun **dégradé métallique** sur un bouton, un bandeau ou un
 footer : c'est un marqueur de site généré automatiquement. Les aplats unis
 uniquement.
 
+**ADR-045 amende ce paragraphe** sur trois points, et le reste demeure :
+
+- le **dégradé de ciel** est permis dans deux décors seulement, la scène du
+  matin à la nuit et le fond du menu mobile plein écran, avec les teintes
+  nocturnes de `tokens.css`. Jamais sur un contrôle, une carte, un bandeau ou
+  une surface d'interface ;
+- le **texte doré en dégradé** est permis sur des mots de titre si **chaque
+  arrêt de couleur** atteint 3:1 sur son fond, mesuré et non estimé ;
+- la **suranimation** se définit par le tableau d'intensité d'ADR-045 : riche
+  sur les pages vitrines, retenue sur la fiche produit, micro-interactions
+  seulement sur les pages d'action, rien sur l'administration.
+
+## Animation des pages publiques, ADR-045
+
+Les règles qui s'appliquent à toute animation d'une page publique :
+
+- **aucune bibliothèque d'animation** : CSS, et un composant client par
+  comportement, qui retire ses écouteurs au démontage ;
+- **contenu principal visible au premier rendu** : titre, accroche, boutons et
+  cartes ne partent jamais d'une opacité nulle, pour ne pas retarder le LCP ;
+- **sans JavaScript, tout est visible** : un masquage initial ne s'applique
+  que sous une classe posée par le script ;
+- **mouvement réduit** : page complète et immobile, aucun script d'animation ;
+- **aucune boucle sans fin** : une animation automatique de plus de cinq
+  secondes s'arrête d'elle-même au plus tard dix secondes après son entrée
+  dans l'écran, WCAG 2.2.2, sans bouton de pause (arbitrage du 4 octobre
+  2026) ;
+- seules `transform` et `opacity` s'animent, et rien ne tourne hors de
+  l'écran ;
+- rien ne bouge dans le tunnel de commande pendant une saisie ni autour d'un
+  élément de paiement.
+
 **Aucune bibliothèque de composants n'est installée**, ni shadcn/ui ni Radix :
 l'interface est en CSS natif par modules, et l'accessibilité est portée à la main,
 rôles ARIA et régions live compris. Si l'une était introduite un jour, elle
@@ -1057,3 +1089,6 @@ n'existe pas. Les textes publics sont à la première personne du singulier.
 Could, jalon V1 cible. CSS déterministe, pas de bibliothèque, `aria-hidden`,
 `pointer-events: none`, supprimé en mouvement réduit, jamais par-dessus un bijou
 ou un contrôle. Ne bloque jamais l'ouverture.
+
+La **poussière d'or** du héros d'accueil en est une forme, ADR-045 : positions
+fixes et non tirées au hasard, pas de canvas.
