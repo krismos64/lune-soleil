@@ -17,6 +17,11 @@ import {
   publierOuArchiverProduits,
   type BilanGroupe,
 } from "@/services/catalogue";
+import {
+  appliquerPrixProduits,
+  previsualiserPrixProduits,
+  type VariantePourPrix,
+} from "@/services/variante";
 
 export type ResultatSelectionProduits =
   | ({ statut: "SUCCES" } & BilanGroupe)
@@ -59,6 +64,76 @@ export async function appliquerSelectionProduits(
 
     journaliserErreur("action groupee sur les produits impossible", erreur, {});
 
+    return { statut: "INDISPONIBLE" };
+  }
+}
+
+/**
+ * Un même prix pour plusieurs articles, LS-265 : récapitulatif puis
+ * application, deux actions distinctes. Le récapitulatif ne modifie rien.
+ *
+ * ADAPTATEURS D'ENTRÉE comme la publication groupée : session, champs,
+ * délégation. La règle, toutes les variantes en vente et un prix non nul en
+ * centimes entiers, vit dans `services/variante.ts`.
+ */
+export type ResultatPrixSelection =
+  | {
+      statut: "RECAPITULATIF";
+      lignes: VariantePourPrix[];
+      prixCentimes: number;
+    }
+  | { statut: "APPLIQUE"; variantes: number; prixCentimes: number }
+  | { statut: "SESSION_ABSENTE" }
+  | { statut: "INVALIDE" }
+  | { statut: "INDISPONIBLE" };
+
+export async function previsualiserPrixSelection(
+  formulaire: FormData,
+): Promise<ResultatPrixSelection> {
+  if (!(await exigerRole(await headers()))) {
+    return { statut: "SESSION_ABSENTE" };
+  }
+
+  try {
+    const recapitulatif = await previsualiserPrixProduits({
+      produitIds: formulaire.getAll("produitId"),
+      prixEuros: formulaire.get("prixEuros"),
+    });
+    return { statut: "RECAPITULATIF", ...recapitulatif };
+  } catch (erreur) {
+    if (erreur instanceof EntreeInvalideError) {
+      return { statut: "INVALIDE" };
+    }
+    journaliserErreur("recapitulatif de prix impossible", erreur, {});
+    return { statut: "INDISPONIBLE" };
+  }
+}
+
+export async function appliquerPrixSelection(
+  formulaire: FormData,
+): Promise<ResultatPrixSelection> {
+  if (!(await exigerRole(await headers()))) {
+    return { statut: "SESSION_ABSENTE" };
+  }
+
+  try {
+    const bilan = await appliquerPrixProduits({
+      produitIds: formulaire.getAll("produitId"),
+      prixEuros: formulaire.get("prixEuros"),
+    });
+
+    /*
+     * LA PAGE SEULE, ET NON `"layout"` : la barre ne compte ni ne montre aucun
+     * prix, C37 demande de raisonner sur la donnée lue et non sur le dossier.
+     */
+    revalidatePath("/administration/produits");
+
+    return { statut: "APPLIQUE", ...bilan };
+  } catch (erreur) {
+    if (erreur instanceof EntreeInvalideError) {
+      return { statut: "INVALIDE" };
+    }
+    journaliserErreur("prix groupe impossible", erreur, {});
     return { statut: "INDISPONIBLE" };
   }
 }

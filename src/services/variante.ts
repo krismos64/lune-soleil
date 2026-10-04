@@ -32,6 +32,7 @@ import {
 } from "@/services/variante-validation";
 
 export type Variante = depot.Variante;
+export type VariantePourPrix = depot.VariantePourPrix;
 
 /**
  * C2, la reference est deja portee par une variante.
@@ -320,11 +321,20 @@ export async function archiverVariante(entree: unknown): Promise<void> {
  */
 export async function previsualiserPrixProduits({
   produitIds,
+  prixEuros,
 }: {
   produitIds: unknown;
-}): Promise<depot.VariantePourPrix[]> {
+  prixEuros: unknown;
+}): Promise<{ lignes: depot.VariantePourPrix[]; prixCentimes: number }> {
   const identifiants = valider(schemaSelectionProduits, produitIds);
-  return depot.listerVariantesEnVenteDesProduits(prisma, identifiants);
+  // Le prix est validé dès le récapitulatif : un « 0 » ou une virgule
+  // oubliée s'arrêtent avant que l'exploitante ait à confirmer.
+  const { prixCentimes } = valider(schemaPrixEnMasse, { prixEuros });
+  const lignes = await depot.listerVariantesEnVenteDesProduits(
+    prisma,
+    identifiants,
+  );
+  return { lignes, prixCentimes };
 }
 
 /**

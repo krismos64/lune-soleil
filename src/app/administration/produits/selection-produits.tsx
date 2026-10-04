@@ -18,7 +18,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import type { MotifNonPubliable, RefusGroupe } from "@/services/catalogue";
-import { appliquerSelectionProduits } from "./actions-selection";
+import { formaterMontant } from "@/lib/montant";
+import type { VariantePourPrix } from "@/services/variante";
+import {
+  appliquerPrixSelection,
+  appliquerSelectionProduits,
+  previsualiserPrixSelection,
+} from "./actions-selection";
 import styles from "./catalogue.module.css";
 
 export const FORMULAIRE_SELECTION_PRODUITS = "selection-produits";
@@ -42,12 +48,35 @@ function raison(refus: RefusGroupe): string {
   }
 }
 
+/** Message d'échec du prix en masse, LS-265. */
+function messagePrix(statut: string): string {
+  switch (statut) {
+    case "INVALIDE":
+      return "Saisir un prix en euros supérieur à zéro, par exemple 24,90, et cocher au moins un produit.";
+    case "SESSION_ABSENTE":
+      return "Session expirée. Se reconnecter pour continuer.";
+    default:
+      return "Le service est momentanément indisponible. Aucun prix n'a été modifié, réessayer dans un instant.";
+  }
+}
+
 export function SelectionProduits() {
   const routeur = useRouter();
   const [enCours, demarrer] = useTransition();
   const [coches, setCoches] = useState(0);
   const [total, setTotal] = useState(0);
   const zoneBilan = useRef<HTMLDivElement>(null);
+  const zoneRecapitulatif = useRef<HTMLElement>(null);
+  /*
+   * LE RÉCAPITULATIF DU PRIX EN MASSE, LS-265 : la sélection et le prix tels
+   * qu'ils ont été soumis, pour que la confirmation applique exactement ce
+   * qui a été montré, même si une case change entre-temps.
+   */
+  const [recapitulatif, setRecapitulatif] = useState<{
+    lignes: VariantePourPrix[];
+    prixCentimes: number;
+    formulaire: FormData;
+  } | null>(null);
   const [bilan, setBilan] = useState<{
     texte: string;
     refus: RefusGroupe[];
@@ -95,6 +124,30 @@ export function SelectionProduits() {
         formulaire.set("operation", operation);
 
         setBilan(null);
+        setRecapitulatif(null);
+
+        if (operation === "prix") {
+          demarrer(async () => {
+            const resultat = await previsualiserPrixSelection(formulaire);
+            if (resultat.statut === "RECAPITULATIF") {
+              setRecapitulatif({
+                lignes: resultat.lignes,
+                prixCentimes: resultat.prixCentimes,
+                formulaire,
+              });
+              requestAnimationFrame(() => zoneRecapitulatif.current?.focus());
+              return;
+            }
+            zoneBilan.current?.focus();
+            setBilan({
+              texte: messagePrix(resultat.statut),
+              refus: [],
+              erreur: true,
+            });
+          });
+          return;
+        }
+
         demarrer(async () => {
           const resultat = await appliquerSelectionProduits(formulaire);
 
@@ -176,6 +229,107 @@ export function SelectionProduits() {
           Archiver ({coches})
         </button>
       </div>
+
+      {/*
+       * UN MÊME PRIX POUR LA SÉLECTION, LS-265. Le bouton ne modifie rien : il
+       * ouvre un récapitulatif, variante par variante, qu'il faut confirmer.
+       */}
+      <div className={styles.prixSelection}>
+        <label className={styles.champPrix}>
+          <span>Prix pour la sélection, en euros</span>
+          <input
+            name="prixEuros"
+            inputMode="decimal"
+            autoComplete="off"
+            placeholder="24,90"
+            disabled={enCours}
+          />
+        </label>
+        <button
+          type="submit"
+          value="prix"
+          className={styles.boutonSelection}
+          disabled={coches === 0 || enCours}
+        >
+          Appliquer ce prix ({coches})
+        </button>
+      </div>
+
+      {recapitulatif ? (
+        <section
+          ref={zoneRecapitulatif}
+          tabIndex={-1}
+          className={styles.recapitulatifPrix}
+          aria-labelledby="titre-recapitulatif-prix"
+        >
+          <h2
+            id="titre-recapitulatif-prix"
+            className={styles.titreRecapitulatif}
+          >
+            {recapitulatif.lignes.length === 0
+              ? "Aucune déclinaison en vente dans la sélection."
+              : `Passer ${recapitulatif.lignes.length} déclinaison${recapitulatif.lignes.length > 1 ? "s" : ""} à ${formaterMontant(recapitulatif.prixCentimes)} ?`}
+          </h2>
+          {recapitulatif.lignes.length > 0 ? (
+            <>
+              <p>
+                L&apos;ancien prix n&apos;est pas conservé : vérifier la liste
+                avant de confirmer.
+              </p>
+              <ul className={styles.listeRecapitulatif}>
+                {recapitulatif.lignes.map((ligne) => (
+                  <li key={ligne.id}>
+                    {ligne.produitNom}, {ligne.libelle} :{" "}
+                    {formaterMontant(ligne.prixCentimes)} devient{" "}
+                    {formaterMontant(recapitulatif.prixCentimes)}
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+          <div className={styles.actionsSelection}>
+            {recapitulatif.lignes.length > 0 ? (
+              <button
+                type="button"
+                className={styles.boutonSelection}
+                disabled={enCours}
+                onClick={() => {
+                  const { formulaire } = recapitulatif;
+                  demarrer(async () => {
+                    const resultat = await appliquerPrixSelection(formulaire);
+                    setRecapitulatif(null);
+                    zoneBilan.current?.focus();
+                    if (resultat.statut === "APPLIQUE") {
+                      setBilan({
+                        texte: `${resultat.variantes} déclinaison${resultat.variantes > 1 ? "s" : ""} à ${formaterMontant(resultat.prixCentimes)}.`,
+                        refus: [],
+                        erreur: false,
+                      });
+                      routeur.refresh();
+                      return;
+                    }
+                    setBilan({
+                      texte: messagePrix(resultat.statut),
+                      refus: [],
+                      erreur: true,
+                    });
+                  });
+                }}
+              >
+                Confirmer le prix
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className={styles.boutonSelection}
+              disabled={enCours}
+              onClick={() => setRecapitulatif(null)}
+            >
+              Annuler
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       <div
         ref={zoneBilan}
