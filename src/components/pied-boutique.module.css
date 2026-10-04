@@ -1,11 +1,21 @@
 /*
  * Pied de page de la boutique, LS-122. Conception a partir de 320 px.
+ *
+ * FOND DE NUIT DEPUIS LS-261, la maquette validée le 4 octobre 2026 : un aplat
+ * `--ls-ciel-nuit-haut`, sans dégradé. Contrastes mesurés sur ce fond :
+ *
+ *   --ls-texte-nuit                  16,37:1   liens, description, mentions
+ *   --ls-or-pale                     12,48:1   nom de la boutique, étiquettes
+ *   --ls-texte-nuit à 75 %            9,40:1   mentions du bas
+ *
+ * LE CONTOUR DE FOCUS EST CLAIR : `--ls-focus`, brun, n'y donne que 1,46:1 et
+ * serait invisible, WCAG 2.4.7.
  */
 
 .pied {
   margin-top: var(--ls-space-8);
-  background: var(--ls-surface-sand);
-  border-top: 1px solid var(--ls-border);
+  background: var(--ls-ciel-nuit-haut);
+  color: var(--ls-texte-nuit);
 }
 
 .contenu {
@@ -23,9 +33,10 @@
 
 .nom {
   margin: 0 0 var(--ls-space-2);
-  color: var(--ls-primary);
-  font-size: 1.125rem;
-  font-weight: 600;
+  color: var(--ls-or-pale);
+  font-family: var(--ls-police-titre);
+  font-size: 1.5rem;
+  font-weight: 400;
 }
 
 /*
@@ -35,7 +46,7 @@
  */
 .description {
   margin: 0;
-  color: var(--ls-text);
+  color: var(--ls-texte-nuit);
   font-size: 0.875rem;
   line-height: 1.6;
   max-width: 34ch;
@@ -62,7 +73,7 @@
  */
 .titreColonne {
   margin: 0 0 var(--ls-space-3);
-  color: var(--ls-text);
+  color: var(--ls-or-pale);
   font-family: inherit;
   font-size: 0.75rem;
   font-weight: 600;
@@ -86,18 +97,18 @@
    * se toucher sur un ecran tactile.
    */
   min-height: var(--ls-touch-target);
-  color: var(--ls-text);
+  color: var(--ls-texte-nuit);
   text-decoration: none;
   font-size: 0.875rem;
 }
 
 .lien:hover {
-  color: var(--ls-primary);
+  color: var(--ls-or-pale);
   text-decoration: underline;
 }
 
 .lien:focus-visible {
-  outline: 2px solid var(--ls-focus);
+  outline: 2px solid var(--ls-texte-nuit);
   outline-offset: 2px;
 }
 
@@ -105,7 +116,8 @@
   max-width: var(--ls-content-max);
   margin: 0 auto;
   padding: var(--ls-space-4);
-  border-top: 1px solid var(--ls-border);
+  border-top: 1px solid
+    color-mix(in srgb, var(--ls-texte-nuit) 18%, transparent);
   display: flex;
   flex-wrap: wrap;
   gap: var(--ls-space-2) var(--ls-space-5);
@@ -114,6 +126,6 @@
 
 .mention {
   margin: 0;
-  color: var(--ls-text);
+  color: color-mix(in srgb, var(--ls-texte-nuit) 75%, var(--ls-ciel-nuit-haut));
   font-size: 0.8125rem;
 }

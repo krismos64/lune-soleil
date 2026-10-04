@@ -26,6 +26,7 @@
  * Une cible non focalisable est le piege classique du lien d'evitement : il
  * parait fonctionner, la page bouge, et il ne remplit pas son role.
  */
+import { ApparitionAuDefilement } from "@/components/apparition-au-defilement";
 import { EnTeteBoutique } from "@/components/en-tete-boutique";
 import { PiedBoutique } from "@/components/pied-boutique";
 
@@ -37,6 +38,12 @@ export default function LayoutBoutique({
       <EnTeteBoutique />
       {children}
       <PiedBoutique />
+      {/*
+       * APPARITION AU DÉFILEMENT, LS-261 : posée ici une fois pour toutes les
+       * pages publiques, elle anime tout bloc marqué `data-apparition`. Elle
+       * ne rend rien et ne masque rien sans script ni en mouvement réduit.
+       */}
+      <ApparitionAuDefilement />
     </>
   );
 }
