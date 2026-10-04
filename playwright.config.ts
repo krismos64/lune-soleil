@@ -200,6 +200,15 @@ export default defineConfig({
   use: {
     baseURL: URL_BASE,
     trace: "on-first-retry",
+    /*
+     * MOUVEMENT REDUIT PAR DEFAUT, ADR-045 point 8, LS-260. Un clic sur un
+     * element encore en deplacement produit un echec intermittent, et la page
+     * est complete et immobile dans ce mode. Un test qui verifie une animation
+     * le dit lui-meme par `test.use({ contextOptions: { reducedMotion:
+     * "no-preference" } })`. L'option vit sous `contextOptions` dans cette
+     * version de Playwright, et non a la racine de `use`.
+     */
+    contextOptions: { reducedMotion: "reduce" },
   },
 
   projects: [
