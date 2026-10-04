@@ -20,6 +20,20 @@ attendu : sa condition `workflow_run.conclusion != 'success'` le réserve aux
 
 LS-258 porte le constat du critère 6 en commentaire.
 
+**Revue de cohérence avant fin de session.** Les cinq contrôles de
+propagation sortent en 0. `verifier-jira.sh --strict` relève deux dépendances
+textuelles sans lien, LS-58 vers LS-33 et LS-68 vers LS-50, sur des tickets
+clos : rien à faire. Le `README.md` était en retard d'un ticket : phase 6
+annoncée à 6 stories ouvertes pour 7 mesurées, LS-258 absente, et des comptes
+du 25 septembre. Remesurés dans Jira : 225 terminés sur 248 hors epics,
+23 ouverts dont 10 En cours et 13 À faire.
+
+**Production mesurée** par le workflow « Ecart entre la production et main »
+relancé à la main (run 37192477477) : `a6eb981`, du 1er octobre, à 11
+commits de `main`, aucune migration. Aucun de ces commits ne touche `src/`,
+`prisma/`, les dépendances ni l'image : la production sert le même code
+applicatif que `main`. Le site répond 200.
+
 ## Ce qui a dérapé
 
 Rien.
