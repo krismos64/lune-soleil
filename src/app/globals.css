@@ -157,3 +157,11 @@ svg {
     transform 900ms var(--ls-easing-sortie);
   transition-delay: var(--delai-apparition, 0ms);
 }
+
+/*
+ * MENU MOBILE OUVERT, LS-261 : la page derrière ne défile plus. Le script pose
+ * l'attribut ; sans script, le panneau couvre l'écran et défile seul.
+ */
+html[data-menu-ouvert] {
+  overflow: hidden;
+}

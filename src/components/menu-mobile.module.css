@@ -1,0 +1,380 @@
+/*
+ * Menu mobile plein écran, LS-261, ADR-045.
+ *
+ * SOUS 768 PX SEULEMENT. Le fond est l'un des deux décors où ADR-045 permet le
+ * dégradé de ciel, entre `--ls-ciel-nuit-haut` et `--ls-ciel-nuit-bas`. Sans
+ * l'orange du crépuscule de la maquette : l'or pâle y tombait à 4,28:1.
+ *
+ * Contrastes mesurés sur les deux teintes de nuit, la plus claire étant la plus
+ * exigeante, `--ls-ciel-nuit-bas` :
+ *
+ *   --ls-texte-nuit  13,27:1   libellés, raccourcis, bouton
+ *   --ls-or-pale     10,12:1   numéros, surtitre
+ *   description      `--ls-texte-nuit` à 80 % sur la nuit, au-dessus de 9:1
+ */
+
+.menu {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .menu {
+    display: none;
+  }
+}
+
+/* ---------- Bouton ---------- */
+
+.bouton {
+  position: relative;
+  z-index: 41;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ls-space-2);
+  min-height: var(--ls-touch-target);
+  padding: 0 var(--ls-space-3);
+  border: 1px solid var(--ls-border-controle);
+  border-radius: 999px;
+  color: var(--ls-text);
+  background: var(--ls-surface);
+  font-size: 0.9375rem;
+  cursor: pointer;
+  list-style: none;
+  transition:
+    color var(--ls-duration-base) var(--ls-easing),
+    background var(--ls-duration-base) var(--ls-easing);
+}
+
+.bouton::-webkit-details-marker {
+  display: none;
+}
+
+.bouton:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+/*
+ * OUVERT, LE BOUTON PASSE SUR LA NUIT : texte `--ls-texte-nuit` sur
+ * `--ls-ciel-nuit-haut`, 16,37:1, et contour de focus clair pour rester
+ * visible sur le fond sombre.
+ */
+.menu[open] .bouton {
+  color: var(--ls-texte-nuit);
+  background: var(--ls-ciel-nuit-haut);
+  border-color: var(--ls-texte-nuit);
+}
+
+.menu[open] .bouton:focus-visible {
+  outline-color: var(--ls-texte-nuit);
+}
+
+/*
+ * SOUS 360 PX, LE LIBELLÉ SE MASQUE VISUELLEMENT et reste le nom accessible :
+ * la barre n'a pas la place de le montrer à côté du compte et du panier.
+ */
+@media (max-width: 359px) {
+  .bouton {
+    min-width: var(--ls-touch-target);
+    justify-content: center;
+    padding: 0;
+  }
+
+  .texteBouton {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* Deux traits qui se croisent en X à l'ouverture. */
+.burger {
+  position: relative;
+  width: 18px;
+  height: 10px;
+}
+
+.burger::before,
+.burger::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  border-radius: 2px;
+  background: currentColor;
+  transition: transform 500ms var(--ls-easing-sortie);
+}
+
+.burger::before {
+  top: 0;
+}
+
+.burger::after {
+  top: 8.5px;
+}
+
+.menu[open] .burger::before {
+  transform: translateY(4.25px) rotate(45deg);
+}
+
+.menu[open] .burger::after {
+  transform: translateY(-4.25px) rotate(-45deg);
+}
+
+/* ---------- Panneau ---------- */
+
+.panneau {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 5.5rem var(--ls-space-5) var(--ls-space-6);
+  color: var(--ls-texte-nuit);
+  background: linear-gradient(
+    180deg,
+    var(--ls-ciel-nuit-bas) 0%,
+    var(--ls-ciel-nuit-haut) 100%
+  );
+}
+
+/*
+ * L'OUVERTURE EN CERCLE N'EXISTE QU'AVEC LE SCRIPT ET LE MOUVEMENT AUTORISÉ,
+ * `data-anime`. Sans lui, le panneau s'affiche entier dès que `<details>`
+ * s'ouvre : un masquage qui attendrait un script laisserait la navigation
+ * invisible à qui n'en a pas.
+ */
+.menu[data-anime] .panneau {
+  clip-path: circle(0 at calc(100% - 3.5rem) 2rem);
+  transition: clip-path 700ms var(--ls-easing-sortie);
+}
+
+.menu[data-anime][data-etat="ouvert"] .panneau {
+  clip-path: circle(150% at calc(100% - 3.5rem) 2rem);
+}
+
+/*
+ * VINGT ÉTOILES FIXES EN UN ÉLÉMENT, comme la scène de l'accueil. Elles ne
+ * scintillent pas : un panneau qu'on garde ouvert ne doit rien faire tourner
+ * au-delà de cinq secondes, WCAG 2.2.2.
+ */
+.etoiles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.etoiles::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  box-shadow:
+    8vw 12vh 0 var(--ls-texte-nuit),
+    17vw 34vh 0 var(--ls-texte-nuit),
+    23vw 8vh 0 var(--ls-texte-nuit),
+    31vw 52vh 0 var(--ls-texte-nuit),
+    44vw 63vh 0 var(--ls-texte-nuit),
+    52vw 14vh 0 var(--ls-texte-nuit),
+    63vw 27vh 0 var(--ls-texte-nuit),
+    69vw 88vh 0 var(--ls-texte-nuit),
+    74vw 9vh 0 var(--ls-texte-nuit),
+    86vw 19vh 0 var(--ls-texte-nuit),
+    92vw 48vh 0 var(--ls-texte-nuit),
+    12vw 81vh 0 var(--ls-texte-nuit),
+    27vw 94vh 0 var(--ls-texte-nuit),
+    48vw 30vh 0 var(--ls-texte-nuit),
+    78vw 66vh 0 var(--ls-texte-nuit),
+    95vw 76vh 0 var(--ls-texte-nuit);
+  opacity: 0.7;
+}
+
+.surtitre {
+  position: relative;
+  margin: 0 0 var(--ls-space-4);
+  color: var(--ls-or-pale);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.liens {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * @bordure-decorative le filet sépare deux entrées de la liste, il ne borde
+ * aucun contrôle : chaque lien est identifié par son libellé en
+ * `--ls-texte-nuit`, 13,27:1 au moins.
+ */
+.liens li {
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--ls-texte-nuit) 18%, transparent);
+}
+
+.lien {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px var(--ls-space-4);
+  align-items: baseline;
+  min-height: 4.5rem;
+  padding: var(--ls-space-3) 0;
+  color: var(--ls-texte-nuit);
+  text-decoration: none;
+}
+
+/* Les entrées arrivent l'une après l'autre, une transition et non une boucle. */
+.menu[data-anime] .lien {
+  opacity: 0;
+  transform: translateY(1.5rem);
+  transition:
+    opacity 600ms ease,
+    transform 700ms var(--ls-easing-sortie);
+}
+
+.menu[data-anime][data-etat="ouvert"] .lien {
+  opacity: 1;
+  transform: none;
+  transition-delay: calc(250ms + var(--rang) * 80ms);
+}
+
+.lien:focus-visible {
+  outline: 3px solid var(--ls-texte-nuit);
+  outline-offset: 2px;
+  border-radius: var(--ls-radius-sm);
+}
+
+.numero {
+  grid-row: span 2;
+  color: var(--ls-or-pale);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  font-variant-numeric: tabular-nums;
+}
+
+.libelle {
+  font-family: var(--ls-police-titre);
+  font-size: clamp(1.625rem, 8vw, 2rem);
+  line-height: 1.15;
+}
+
+.lien:hover .libelle {
+  color: var(--ls-or-pale);
+}
+
+.description {
+  grid-column: 2;
+  font-size: 0.875rem;
+  color: color-mix(in srgb, var(--ls-texte-nuit) 80%, transparent);
+}
+
+/* ---------- Raccourcis et décor ---------- */
+
+.raccourcis {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--ls-space-3);
+  margin-top: var(--ls-space-6);
+}
+
+/*
+ * @bordure-decorative le libellé en `--ls-texte-nuit`, 13,27:1, identifie le
+ * lien ; le contour clair n'en est que l'écrin.
+ */
+.raccourci {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--ls-touch-target);
+  border: 1px solid color-mix(in srgb, var(--ls-texte-nuit) 40%, transparent);
+  border-radius: 999px;
+  color: var(--ls-texte-nuit);
+  text-decoration: none;
+  font-size: 0.9375rem;
+}
+
+.raccourci:focus-visible {
+  outline: 3px solid var(--ls-texte-nuit);
+  outline-offset: 2px;
+}
+
+.astres {
+  position: relative;
+  width: 8.5rem;
+  margin: auto auto 0;
+  padding-top: var(--ls-space-6);
+}
+
+.lune,
+.soleil {
+  fill: var(--ls-or-clair);
+}
+
+.rayons {
+  fill: none;
+  stroke: var(--ls-or-clair);
+  stroke-width: 2;
+  stroke-linecap: round;
+  transform-origin: 96px 46px;
+}
+
+/* Un huitième de tour à l'ouverture, une fois, sous cinq secondes. */
+.menu[data-anime][data-etat="ouvert"] .rayons {
+  animation: tourne 3s var(--ls-easing-sortie) 400ms forwards;
+}
+
+@keyframes tourne {
+  to {
+    transform: rotate(45deg);
+  }
+}
+
+.nom {
+  position: relative;
+  margin: var(--ls-space-3) 0 0;
+  text-align: center;
+  font-family: var(--ls-police-titre);
+  font-size: 1.125rem;
+  color: var(--ls-texte-nuit);
+}
+
+@media (max-height: 640px) {
+  .panneau {
+    padding-top: 4.5rem;
+  }
+
+  .lien {
+    min-height: 3.75rem;
+  }
+
+  .libelle {
+    font-size: 1.5rem;
+  }
+
+  .astres {
+    width: 6rem;
+    padding-top: var(--ls-space-4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .burger::before,
+  .burger::after,
+  .bouton {
+    transition: none;
+  }
+}

@@ -1,10 +1,16 @@
 /**
  * En-tete de la boutique publique, LS-122.
  *
- * COMPOSANT SERVEUR. La navigation est une liste de liens : rien n'y est
- * interactif, donc aucun JavaScript n'est envoye pour l'afficher. Le menu
- * deroulant mobile est ecarte volontairement, quatre entrees tenant a 320 px
- * sur deux lignes.
+ * COMPOSANT SERVEUR. Sous 768 px, la navigation passe dans `MenuMobile`, le
+ * menu plein écran de LS-261 validé avec la maquette d'accueil du 4 octobre
+ * 2026 ; au-delà, elle reste une liste de liens en ligne, sans script. Le
+ * premier choix, quatre entrées sur deux lignes à 320 px sans menu, est
+ * remplacé par cet arbitrage. Le menu repose sur `<details>` et marche donc
+ * sans JavaScript.
+ *
+ * LE COMPTE ET LE PANIER RESTENT DANS LA BARRE À TOUTES LES LARGEURS : ce sont
+ * des actions, pas de la navigation. Sous 480 px ils deviennent des
+ * pictogrammes, leur texte restant le nom accessible.
  *
  * IL VIT DANS LE LAYOUT DU GROUPE `(boutique)` ET NON DANS LE LAYOUT RACINE.
  * Le layout racine couvre aussi `/administration`, qui ne doit afficher ni cet
@@ -19,6 +25,7 @@ import { compterArticles } from "@/services/panier";
 import { lireIdentite } from "@/services/autorisation";
 import styles from "./en-tete-boutique.module.css";
 import { NOM_BOUTIQUE } from "@/lib/seo";
+import { MenuMobile } from "./menu-mobile";
 
 /**
  * Les entrees de navigation, dans l'ordre du prototype.
@@ -30,9 +37,34 @@ import { NOM_BOUTIQUE } from "@/lib/seo";
  * entre LS-104 et LS-105.
  */
 const ENTREES = [
-  { href: "/catalogue", libelle: "Les créations" },
-  { href: "/notre-univers", libelle: "Notre univers" },
-  { href: "/aide", libelle: "Livraison et aide" },
+  {
+    href: "/catalogue",
+    libelle: "Les créations",
+    description: "Toutes les pièces disponibles",
+  },
+  {
+    href: "/notre-univers",
+    libelle: "Notre univers",
+    description: "L'histoire, les matériaux, l'entretien",
+  },
+  {
+    href: "/aide",
+    libelle: "Livraison et aide",
+    description: "Livraison, retours et questions fréquentes",
+  },
+] as const;
+
+/**
+ * LE MENU MOBILE PORTE UNE ENTRÉE DE PLUS, le contact, comme la maquette
+ * validée : sur un écran de téléphone, le pied de page qui le propose est loin.
+ */
+const ENTREES_MENU = [
+  ...ENTREES,
+  {
+    href: "/contact",
+    libelle: "Contact",
+    description: "Une question sur une pièce ou une commande",
+  },
 ] as const;
 
 export async function EnTeteBoutique() {
@@ -118,7 +150,18 @@ export async function EnTeteBoutique() {
           href={identite ? "/compte" : "/compte/connexion"}
           className={styles.compte}
         >
-          {identite ? "Mon compte" : "Se connecter"}
+          <svg
+            className={styles.picto}
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" />
+          </svg>
+          <span className={styles.texteEtroit}>
+            {identite ? "Mon compte" : "Se connecter"}
+          </span>
         </Link>
 
         <Link
@@ -130,13 +173,34 @@ export async function EnTeteBoutique() {
               : "Votre panier, vide"
           }
         >
-          <span aria-hidden="true">Panier</span>
+          <svg
+            className={styles.picto}
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path d="M6 8h12l-1 12H7L6 8Z" />
+            <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+          </svg>
+          <span className={styles.texteEtroit} aria-hidden="true">
+            Panier
+          </span>
           {articles > 0 && (
             <span className={styles.compteur} aria-hidden="true">
               {articles}
             </span>
           )}
         </Link>
+
+        <MenuMobile
+          entrees={ENTREES_MENU}
+          compte={{
+            href: identite ? "/compte" : "/compte/connexion",
+            libelle: identite ? "Mon compte" : "Se connecter",
+          }}
+          articles={articles}
+          nomBoutique={NOM_BOUTIQUE}
+        />
       </div>
     </header>
   );
