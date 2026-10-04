@@ -8,22 +8,47 @@
  * navigateur gère seul l'état et l'annonce « développé » ou « réduit ». Le
  * script ajoute ce que le HTML seul ne sait pas faire :
  *
- *   - l'ouverture en cercle depuis le bouton, en mouvement autorisé seulement
+ *   - l'ouverture en cercle depuis le bouton, en mouvement autorisé seulement,
+ *     par un disque agrandi en `transform` : ADR-045 n'autorise ni `clip-path`
+ *     ni aucune propriété qui repeint tout l'écran à chaque image
  *   - le focus posé sur le premier lien, puis enfermé dans le menu
  *   - Échap qui ferme et rend le focus au bouton
- *   - la page derrière rendue `inert` et non défilable
+ *   - la page derrière ET le reste de l'en-tête rendus `inert`, la page non
+ *     défilable : un lecteur d'écran ne lit plus ce que le panneau recouvre
+ *   - la fermeture au clic sur un lien, y compris vers la page déjà affichée
  *   - la fermeture à chaque changement de page, l'en-tête survivant aux
  *     navigations client
  *
  * SOUS 768 PX SEULEMENT. Au-delà, la navigation en ligne de l'en-tête suffit et
  * le menu est masqué par le CSS ; un passage en largeur le referme.
  *
+ * SANS SCRIPT, LE PANNEAU EST DANS LE FLUX, sous la barre, et non en plein
+ * écran : rien n'y rendrait la page inerte, et le focus passerait sous un
+ * panneau opaque, WCAG 2.4.11. `data-pret`, posé au montage, active le plein
+ * écran.
+ *
+ * LE LIBELLÉ RESTE « MENU », ouvert ou fermé : l'état développé ou réduit est
+ * annoncé par `<summary>` lui-même, et un libellé « Fermer » doublait
+ * l'information, revue de LS-261.
+ *
+ * DEUX NOMS ÉVITÉS, ET POUR UNE RAISON MESURÉE. Le menu vit dans l'en-tête de
+ * toutes les pages : sa classe ne finit pas par `__panneau`, que
+ * `gabarit-titre-public-ls229.spec.ts` cherche pour les portes d'entrée, et sa
+ * liste est un `<ul>`, la frise des commandes étant mesurée sur le premier
+ * `<ol>` du document. Les numéros sont un décor `aria-hidden`.
+ *
  * LES LIENS ARRIVENT DU SERVEUR en props, avec leur libellé exact : ce
  * composant n'invente ni destination ni texte.
  */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import styles from "./menu-mobile.module.css";
 import { useMouvementAutorise } from "./use-mouvement-autorise";
@@ -41,17 +66,26 @@ export function MenuMobile({
   entrees,
   compte,
   articles,
+  nomPanier,
   nomBoutique,
 }: {
   entrees: readonly EntreeMenu[];
   compte: { href: string; libelle: string };
   articles: number;
+  /** Le nom accessible du panier de la barre, repris tel quel, WCAG 3.2.4. */
+  nomPanier: string;
   nomBoutique: string;
 }) {
   const details = useRef<HTMLDetailsElement>(null);
   const bouton = useRef<HTMLElement>(null);
   const panneau = useRef<HTMLDivElement>(null);
   const [ouvert, setOuvert] = useState(false);
+  /* Faux au rendu serveur, vrai après hydratation : le script est là. */
+  const pret = useSyncExternalStore(
+    abonnementVide,
+    () => true,
+    () => false,
+  );
   const mouvement = useMouvementAutorise();
   const chemin = usePathname();
 
@@ -61,10 +95,7 @@ export function MenuMobile({
       if (!element) return;
       setOuvert(ouvrir);
 
-      const horsMenu = [
-        ...document.querySelectorAll<HTMLElement>("main, footer"),
-      ];
-      horsMenu.forEach((noeud) => {
+      horsDuMenu(element).forEach((noeud) => {
         noeud.inert = ouvrir;
       });
       document.documentElement.toggleAttribute("data-menu-ouvert", ouvrir);
@@ -142,35 +173,45 @@ export function MenuMobile({
   }, [appliquer]);
 
   /* Démonter le composant ne laisse jamais la page inerte. */
-  useEffect(
-    () => () => {
-      document
-        .querySelectorAll<HTMLElement>("main, footer")
-        .forEach((noeud) => {
+  useEffect(() => {
+    const element = details.current;
+    return () => {
+      if (element)
+        horsDuMenu(element).forEach((noeud) => {
           noeud.inert = false;
         });
       document.documentElement.removeAttribute("data-menu-ouvert");
-    },
-    [],
-  );
+    };
+  }, []);
+
+  /*
+   * UN CLIC SUR UN LIEN DU PANNEAU REFERME LE MENU, même vers la page déjà
+   * affichée : le chemin ne changeant pas, l'effet sur `chemin` ne suffisait
+   * pas, et le menu restait ouvert sur une page inerte.
+   */
+  const surClicPanneau = (evenement: React.MouseEvent) => {
+    if ((evenement.target as HTMLElement).closest("a")) appliquer(false);
+  };
 
   return (
     <details
       ref={details}
       className={styles.menu}
-      data-anime={mouvement ? "" : undefined}
+      data-pret={pret ? "" : undefined}
+      data-anime={pret && mouvement ? "" : undefined}
     >
       <summary ref={bouton} className={styles.bouton} onClick={surClic}>
         <span className={styles.burger} aria-hidden="true" />
-        <span className={styles.texteBouton}>{ouvert ? "Fermer" : "Menu"}</span>
+        <span className={styles.texteBouton}>Menu</span>
       </summary>
 
-      <div ref={panneau} className={styles.panneau}>
+      <div ref={panneau} className={styles.couverture} onClick={surClicPanneau}>
+        <div className={styles.disque} aria-hidden="true" />
         <div className={styles.etoiles} aria-hidden="true" />
         <p className={styles.surtitre}>Bijoux faits main</p>
 
         <nav aria-label="Navigation principale">
-          <ol className={styles.liens}>
+          <ul className={styles.liens}>
             {entrees.map((entree, rang) => (
               <li
                 key={entree.href}
@@ -187,14 +228,18 @@ export function MenuMobile({
                 </Link>
               </li>
             ))}
-          </ol>
+          </ul>
         </nav>
 
         <div className={styles.raccourcis}>
           <Link href={compte.href} className={styles.raccourci}>
             {compte.libelle}
           </Link>
-          <Link href="/panier" className={styles.raccourci}>
+          <Link
+            href="/panier"
+            className={styles.raccourci}
+            aria-label={nomPanier}
+          >
             {articles > 0 ? `Panier, ${articles}` : "Panier"}
           </Link>
         </div>
@@ -218,4 +263,24 @@ export function MenuMobile({
       </div>
     </details>
   );
+}
+
+/**
+ * Ce que le panneau recouvre : la page, le pied, et tout ce qui dans l'en-tête
+ * ne contient pas le menu, lien d'évitement, marque, compte et panier compris.
+ */
+function horsDuMenu(menu: HTMLElement): HTMLElement[] {
+  const enTete = menu.closest("header");
+  const voisins = enTete
+    ? [...enTete.querySelectorAll<HTMLElement>(":scope > *, :scope > * > *")]
+    : [];
+  return [
+    ...document.querySelectorAll<HTMLElement>("main, footer"),
+    ...voisins.filter((noeud) => !noeud.contains(menu)),
+  ];
+}
+
+/** Aucun abonnement : la valeur ne change qu'entre serveur et client. */
+function abonnementVide(): () => void {
+  return () => {};
 }

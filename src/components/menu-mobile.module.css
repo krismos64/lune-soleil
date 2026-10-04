@@ -6,7 +6,8 @@
  * l'orange du crépuscule de la maquette : l'or pâle y tombait à 4,28:1.
  *
  * Contrastes mesurés sur les deux teintes de nuit, la plus claire étant la plus
- * exigeante, `--ls-ciel-nuit-bas` :
+ * exigeante, `--ls-ciel-nuit-bas`, et valables aussi sur le disque animé,
+ * `--ls-ciel-nuit-haut`, plus sombre :
  *
  *   --ls-texte-nuit  13,27:1   libellés, raccourcis, bouton
  *   --ls-or-pale     10,12:1   numéros, surtitre
@@ -40,9 +41,6 @@
   font-size: 0.9375rem;
   cursor: pointer;
   list-style: none;
-  transition:
-    color var(--ls-duration-base) var(--ls-easing),
-    background var(--ls-duration-base) var(--ls-easing);
 }
 
 .bouton::-webkit-details-marker {
@@ -128,14 +126,24 @@
 
 /* ---------- Panneau ---------- */
 
-.panneau {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  overflow-y: auto;
+/*
+ * SANS SCRIPT, LE PANNEAU EST DANS LE FLUX, sous la barre : rien ne rendrait la
+ * page inerte, et en plein écran le focus passerait sous lui, WCAG 2.4.11. Le
+ * `<details>` ouvert prend alors toute la largeur de la barre, qui passe à la
+ * ligne.
+ */
+.menu[open]:not([data-pret]) {
+  flex-basis: 100%;
+  order: 10;
+}
+
+.couverture {
+  position: relative;
   display: flex;
   flex-direction: column;
-  padding: 5.5rem var(--ls-space-5) var(--ls-space-6);
+  margin-top: var(--ls-space-3);
+  padding: var(--ls-space-5);
+  border-radius: var(--ls-radius-lg);
   color: var(--ls-texte-nuit);
   background: linear-gradient(
     180deg,
@@ -144,19 +152,58 @@
   );
 }
 
-/*
- * L'OUVERTURE EN CERCLE N'EXISTE QU'AVEC LE SCRIPT ET LE MOUVEMENT AUTORISÉ,
- * `data-anime`. Sans lui, le panneau s'affiche entier dès que `<details>`
- * s'ouvre : un masquage qui attendrait un script laisserait la navigation
- * invisible à qui n'en a pas.
- */
-.menu[data-anime] .panneau {
-  clip-path: circle(0 at calc(100% - 3.5rem) 2rem);
-  transition: clip-path 700ms var(--ls-easing-sortie);
+/* Avec le script, plein écran au-dessus de la page rendue inerte. */
+.menu[data-pret] .couverture {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  overflow-y: auto;
+  margin: 0;
+  padding: 5.5rem var(--ls-space-5) var(--ls-space-6);
+  border-radius: 0;
 }
 
-.menu[data-anime][data-etat="ouvert"] .panneau {
-  clip-path: circle(150% at calc(100% - 3.5rem) 2rem);
+/*
+ * OUVERTURE EN CERCLE PAR UN DISQUE AGRANDI EN `transform`, ADR-045 : le
+ * premier jet animait `clip-path`, qui repeint tout l'écran à chaque image et
+ * qu'ADR-045 n'autorise pas, revue de LS-261. Le disque, centré sur le bouton
+ * et assez grand pour couvrir l'écran, porte le ciel ; le panneau devient
+ * transparent et son contenu arrive en `opacity`.
+ */
+.disque {
+  display: none;
+}
+
+.menu[data-anime] .couverture {
+  background: transparent;
+}
+
+.menu[data-anime] .disque {
+  display: block;
+  position: fixed;
+  z-index: -1;
+  top: calc(2rem - 150vmax);
+  left: calc(100% - 3.5rem - 150vmax);
+  width: 300vmax;
+  height: 300vmax;
+  border-radius: 50%;
+  background: var(--ls-ciel-nuit-haut);
+  transform: scale(0);
+  transition: transform 700ms var(--ls-easing-sortie);
+  pointer-events: none;
+}
+
+.menu[data-anime][data-etat="ouvert"] .disque {
+  transform: scale(1);
+}
+
+.menu[data-anime] .couverture > :not(.disque) {
+  opacity: 0;
+  transition: opacity 400ms ease 150ms;
+}
+
+.menu[data-anime][data-etat="ouvert"] .couverture > :not(.disque) {
+  opacity: 1;
 }
 
 /*
@@ -165,9 +212,14 @@
  * au-delà de cinq secondes, WCAG 2.2.2.
  */
 .etoiles {
+  display: none;
   position: absolute;
   inset: 0;
   pointer-events: none;
+}
+
+.menu[data-pret] .etoiles {
+  display: block;
 }
 
 .etoiles::before {
@@ -353,7 +405,7 @@
 }
 
 @media (max-height: 640px) {
-  .panneau {
+  .couverture {
     padding-top: 4.5rem;
   }
 
@@ -373,8 +425,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .burger::before,
-  .burger::after,
-  .bouton {
+  .burger::after {
     transition: none;
   }
 }

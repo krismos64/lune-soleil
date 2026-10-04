@@ -30,7 +30,8 @@ test.describe("en mouvement normal", () => {
 
     await bouton(page).click();
     await expect(page.locator("header details")).toHaveAttribute("open", "");
-    await expect(bouton(page)).toHaveText("Fermer");
+    // Le libellé reste « Menu » : l'état développé est porté par `<summary>`.
+    await expect(bouton(page)).toHaveText("Menu");
 
     // Le focus va sur le premier lien, la page derrière devient inerte.
     const premier = navigation(page).getByRole("link", {
@@ -39,6 +40,17 @@ test.describe("en mouvement normal", () => {
     await expect(premier).toBeFocused();
     expect(
       await page.locator("main").evaluate((m) => (m as HTMLElement).inert),
+    ).toBe(true);
+    /*
+     * LE RESTE DE L'EN-TÊTE EST INERTE AUSSI, revue de LS-261 : sans quoi un
+     * lecteur d'écran lisait la marque, le compte et le panier que le panneau
+     * recouvre.
+     */
+    expect(
+      await page
+        .locator('header a[href="/"]')
+        .first()
+        .evaluate((lien) => (lien as HTMLElement).inert),
     ).toBe(true);
 
     /*
@@ -75,6 +87,32 @@ test.describe("en mouvement normal", () => {
       .click();
 
     await expect(page).toHaveURL(/\/aide$/);
+    await expect(page.locator("header details")).not.toHaveAttribute(
+      "open",
+      "",
+      { timeout: 2_000 },
+    );
+    expect(
+      await page.locator("main").evaluate((m) => (m as HTMLElement).inert),
+    ).toBe(false);
+  });
+
+  test("un lien vers la page affichée referme aussi le menu", async ({
+    page,
+  }) => {
+    test.skip(!estMobile(page), "le menu n'existe que sous 768 px");
+    /*
+     * LE CHEMIN NE CHANGE PAS, revue de LS-261 : seule la fermeture au clic
+     * referme alors le menu, la fermeture au changement de page n'ayant rien
+     * à voir.
+     */
+    await page.goto("/catalogue");
+
+    await bouton(page).click();
+    await navigation(page)
+      .getByRole("link", { name: /Les créations/ })
+      .click();
+
     await expect(page.locator("header details")).not.toHaveAttribute(
       "open",
       "",
