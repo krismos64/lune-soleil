@@ -1,0 +1,741 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lune-soleil, maquette d'accueil animée</title>
+<style>
+:root {
+  --fond: #fbf7f0;
+  --sable: #f2eadf;
+  --bordure: #d9cdba;
+  --texte: #3b2f2a;
+  --texte-doux: #7a6a5d;
+  --primaire: #5f4519;
+  --primaire-survol: #4a2a0b;
+  --or: #c4a052;
+  --or-profond: #8a6a22;
+  --terracotta: #b4643e;
+  --nuit: #241a2e;
+  --nuit-profonde: #140f1c;
+  --police-titre: "Iowan Old Style", "Palatino Linotype", Palatino, Baskerville, Georgia, "Times New Roman", serif;
+  --ease-sortie: cubic-bezier(0.16, 1, 0.3, 1);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: auto; }
+html.anime { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--fond);
+  color: var(--texte);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+h1, h2, h3 { font-family: var(--police-titre); font-weight: 400; line-height: 1.15; margin: 0; }
+a { color: inherit; }
+
+/* Bandeau de maquette */
+.maquette {
+  position: fixed; inset: auto 0 0 0; z-index: 50;
+  background: var(--nuit-profonde); color: #f3e6cc;
+  font-size: 12px; text-align: center; padding: 6px 16px;
+  letter-spacing: .04em;
+}
+
+/* En-tête */
+.entete {
+  position: fixed; inset: 0 0 auto 0; z-index: 40;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  transition: background .4s, box-shadow .4s, color .4s;
+}
+.entete.defile { background: rgba(251, 247, 240, .9); backdrop-filter: blur(10px); box-shadow: 0 1px 0 var(--bordure); }
+.marque { font-family: var(--police-titre); font-size: 22px; text-decoration: none; color: var(--primaire); }
+.nav { display: none; gap: 28px; font-size: 15px; }
+.nav a { text-decoration: none; position: relative; }
+.nav a::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -4px; height: 1px;
+  background: var(--or); transform: scaleX(0); transform-origin: left;
+  transition: transform .35s var(--ease-sortie);
+}
+.nav a:hover::after, .nav a:focus-visible::after { transform: scaleX(1); }
+.compte { display: none; min-height: 44px; align-items: center; padding: 0 8px; text-decoration: none; font-size: 15px; color: var(--primaire); }
+.compte:focus-visible { outline: 2px solid var(--primaire-survol); outline-offset: 3px; }
+@media (min-width: 768px) { .compte { display: inline-flex; } }
+.panier {
+  min-width: 44px; min-height: 44px; display: grid; place-items: center;
+  border-radius: 50%; color: var(--primaire);
+}
+.outils { display: flex; align-items: center; gap: 4px; }
+.menu-bouton {
+  position: relative; z-index: 2; min-height: 44px; display: inline-flex; align-items: center; gap: 10px;
+  padding: 0 14px 0 12px; border: 1px solid var(--bordure); border-radius: 999px;
+  background: rgba(255, 255, 255, .35); color: var(--primaire); font: inherit; font-size: 15px; cursor: pointer;
+  transition: color .4s, border-color .4s, background .4s;
+}
+.menu-bouton:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.burger { position: relative; width: 18px; height: 10px; }
+.burger::before, .burger::after {
+  content: ""; position: absolute; left: 0; right: 0; height: 1.5px; border-radius: 2px; background: currentColor;
+  transition: transform .5s var(--ease-sortie), top .5s var(--ease-sortie), width .5s var(--ease-sortie);
+}
+.burger::before { top: 0; }
+.burger::after { top: 8.5px; width: 12px; }
+.menu-ouvert .burger::before { top: 4.25px; transform: rotate(45deg); }
+.menu-ouvert .burger::after { top: 4.25px; width: 18px; transform: rotate(-45deg); }
+.menu-ouvert .entete { background: transparent; box-shadow: none; backdrop-filter: none; }
+.menu-ouvert .entete .marque, .menu-ouvert .entete .panier { color: #f3e2bd; }
+.menu-ouvert .menu-bouton { color: #f3e2bd; border-color: rgba(243, 226, 189, .4); background: rgba(255, 255, 255, .06); }
+.menu-ouvert body { overflow: hidden; }
+
+.menu-mobile {
+  position: fixed; inset: 0; z-index: 39; overflow-y: auto;
+  display: flex; flex-direction: column; padding: 96px 24px 32px;
+  color: #f3e2bd;
+  background:
+    radial-gradient(120% 60% at 85% 0%, rgba(232, 150, 100, .35), transparent 60%),
+    linear-gradient(180deg, #3a2638 0%, #241a2e 45%, #140f1c 100%);
+  clip-path: circle(0 at calc(100% - 64px) 34px);
+  visibility: hidden;
+  transition: clip-path .8s var(--ease-sortie), visibility 0s linear .8s;
+}
+.menu-ouvert .menu-mobile { clip-path: circle(150% at calc(100% - 64px) 34px); visibility: visible; transition: clip-path .8s var(--ease-sortie), visibility 0s; }
+.menu-etoiles { position: absolute; inset: 0; pointer-events: none; }
+.menu-etoiles i { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: #fff6dc; animation: scintille 3s ease-in-out infinite; }
+.menu-surtitre { position: relative; margin: 0 0 18px; font-size: 12px; letter-spacing: .28em; text-transform: uppercase; color: var(--or); }
+.menu-liens { position: relative; list-style: none; margin: 0; padding: 0; counter-reset: lien; }
+.menu-liens li { border-bottom: 1px solid rgba(243, 226, 189, .14); }
+.menu-liens a {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 4px 16px;
+  min-height: 72px; padding: 12px 0; text-decoration: none;
+  opacity: 0; transform: translateY(24px);
+  transition: opacity .6s ease, transform .7s var(--ease-sortie);
+}
+.menu-ouvert .menu-liens a { opacity: 1; transform: none; transition-delay: calc(.25s + var(--i) * 80ms); }
+.menu-liens a::before {
+  counter-increment: lien; content: "0" counter(lien);
+  grid-row: span 2; align-self: start; padding-top: 10px;
+  font-size: 12px; letter-spacing: .1em; color: var(--or);
+}
+.menu-liens strong { font-family: var(--police-titre); font-weight: 400; font-size: 32px; line-height: 1.1; color: #fbefd4; transition: color .3s; }
+.menu-liens small { grid-column: 2; font-size: 14px; color: rgba(243, 226, 189, .7); }
+.menu-liens .fleche { grid-row: 1 / span 2; grid-column: 3; width: 20px; height: 20px; color: var(--or); transition: transform .4s var(--ease-sortie); }
+.menu-liens a:hover strong, .menu-liens a:focus-visible strong { color: var(--or); }
+.menu-liens a:hover .fleche, .menu-liens a:focus-visible .fleche { transform: translateX(6px); }
+.menu-liens a:focus-visible { outline: 2px solid var(--or); outline-offset: 4px; border-radius: 6px; }
+.menu-raccourcis { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 28px; opacity: 0; transition: opacity .6s ease; }
+.menu-ouvert .menu-raccourcis { opacity: 1; transition-delay: .65s; }
+.menu-raccourcis a {
+  display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px;
+  border: 1px solid rgba(243, 226, 189, .3); border-radius: 999px; text-decoration: none; font-size: 15px;
+  background: rgba(255, 255, 255, .04);
+}
+.menu-raccourcis a:focus-visible { outline: 2px solid var(--or); outline-offset: 3px; }
+.menu-astres { position: relative; margin: auto auto 0; padding-top: 32px; width: 150px; opacity: 0; transform: translateY(20px); transition: opacity .8s ease, transform .9s var(--ease-sortie); }
+.menu-ouvert .menu-astres { opacity: 1; transform: none; transition-delay: .7s; }
+.menu-astres .rayons-menu { transform-origin: 96px 46px; animation: tourne 40s linear infinite; }
+@media (max-height: 700px) {
+  .menu-mobile { padding-top: 80px; }
+  .menu-liens a { min-height: 60px; padding: 8px 0; }
+  .menu-liens strong { font-size: 26px; }
+  .menu-raccourcis { margin-top: 18px; }
+  .menu-astres { width: 110px; padding-top: 18px; }
+}
+.menu-pied { position: relative; margin: 12px 0 0; text-align: center; font-family: var(--police-titre); font-size: 18px; color: rgba(243, 226, 189, .8); }
+@media (min-width: 768px) { .nav { display: flex; } .entete { padding: 16px 32px; } .menu-bouton, .menu-mobile { display: none !important; } }
+
+/* Héros */
+.heros {
+  position: relative; min-height: 100svh;
+  display: grid; align-items: center;
+  padding: 88px 16px 56px;
+  background:
+    radial-gradient(120% 80% at 70% 30%, #fffaf1 0%, #f7ead6 45%, #efdcc0 100%);
+  overflow: hidden;
+}
+#poussiere { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.heros-grille {
+  position: relative; display: grid; gap: 28px; width: 100%;
+  max-width: 1280px; margin: 0 auto;
+}
+.embleme-cadre { width: min(78vw, 360px); margin: 0 auto; aspect-ratio: 1; position: relative; }
+.embleme { width: 100%; height: 100%; overflow: visible; }
+.halo {
+  position: absolute; inset: 12%; border-radius: 50%;
+  background: radial-gradient(circle, rgba(240, 207, 122, .55) 0%, rgba(240, 207, 122, 0) 70%);
+  filter: blur(8px); animation: respire 6s ease-in-out infinite;
+}
+@keyframes respire { 50% { transform: scale(1.12); opacity: .7; } }
+
+.heros-texte { text-align: center; }
+.surtitre {
+  margin: 0 0 12px; font-size: 13px; letter-spacing: .28em; text-transform: uppercase;
+  color: var(--or-profond);
+}
+.titre { font-size: clamp(34px, 9vw, 64px); color: var(--primaire-survol); }
+.titre .mot { display: inline-block; overflow: hidden; vertical-align: bottom; padding-bottom: .08em; }
+.titre .mot > span { display: inline-block; transform: translateY(110%); animation: monte .9s var(--ease-sortie) forwards; }
+.titre .or { background: linear-gradient(100deg, #8b5a12, #e0b657 40%, #a46c17 60%, #f0cf7a); -webkit-background-clip: text; background-clip: text; color: transparent; background-size: 200% 100%; animation: monte .9s var(--ease-sortie) forwards, reflet 5s linear 2s infinite; }
+@keyframes monte { to { transform: translateY(0); } }
+@keyframes reflet { to { background-position: -200% 0; } }
+.accroche { max-width: 34ch; margin: 18px auto 0; color: var(--texte-doux); font-size: 17px; opacity: 0; animation: apparait 1s ease 1.6s forwards; }
+@keyframes apparait { to { opacity: 1; } }
+.actions { display: flex; flex-direction: column; gap: 12px; margin-top: 28px; opacity: 0; animation: apparait 1s ease 1.9s forwards; }
+.bouton {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 48px; padding: 0 26px; border-radius: 999px; text-decoration: none;
+  font-size: 16px; position: relative; overflow: hidden;
+  transition: transform .3s var(--ease-sortie), box-shadow .3s;
+}
+.bouton-principal { background: var(--primaire); color: #fff; box-shadow: 0 8px 24px -10px rgba(74, 42, 11, .6); }
+.bouton-principal::before {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 233, 180, .45) 50%, transparent 70%);
+  transform: translateX(-120%); transition: transform .8s var(--ease-sortie);
+}
+.bouton-principal:hover::before { transform: translateX(120%); }
+.bouton-secondaire { border: 1px solid var(--or-profond); color: var(--primaire); background: rgba(255, 255, 255, .4); }
+.bouton:hover { transform: translateY(-2px); }
+.bouton:focus-visible, .panier:focus-visible, .nav a:focus-visible { outline: 2px solid var(--primaire-survol); outline-offset: 3px; }
+
+.indice-defilement {
+  position: absolute; left: 50%; bottom: 44px; transform: translateX(-50%);
+  width: 22px; height: 36px; border: 1px solid var(--or-profond); border-radius: 12px;
+  opacity: 0; animation: apparait 1s ease 2.6s forwards;
+}
+.indice-defilement::after {
+  content: ""; position: absolute; left: 50%; top: 7px; width: 3px; height: 7px; margin-left: -1.5px;
+  border-radius: 2px; background: var(--or-profond); animation: goutte 1.8s ease-in-out infinite;
+}
+@keyframes goutte { 60% { transform: translateY(12px); opacity: 0; } 100% { opacity: 0; } }
+
+@media (max-width: 767px) { .indice-defilement { display: none; } }
+@media (min-width: 768px) {
+  .actions { flex-direction: row; justify-content: center; }
+}
+@media (min-width: 1024px) {
+  .heros { padding: 96px 48px 64px; }
+  .heros-grille { grid-template-columns: 1.05fr 1fr; align-items: center; gap: 48px; }
+  .heros-texte { text-align: left; order: -1; }
+  .accroche { margin-left: 0; }
+  .actions { justify-content: flex-start; }
+  .embleme-cadre { width: min(42vw, 540px); }
+}
+
+/* Chorégraphie de l'emblème */
+.trait { stroke-dasharray: var(--l, 1200); stroke-dashoffset: var(--l, 1200); animation: dessine 1.8s var(--ease-sortie) forwards; }
+@keyframes dessine { to { stroke-dashoffset: 0; } }
+.anneau { --l: 3600; animation-duration: 2.4s; }
+.lune { opacity: 0; transform-box: fill-box; transform-origin: 70% 50%; animation: lune-entre 1.6s var(--ease-sortie) .5s forwards; }
+@keyframes lune-entre { from { opacity: 0; transform: translateX(-60px) rotate(-35deg); } to { opacity: 1; transform: none; } }
+.soleil-coeur { opacity: 0; transform-box: fill-box; transform-origin: center; animation: soleil-entre 1.4s var(--ease-sortie) .8s forwards; }
+@keyframes soleil-entre { from { opacity: 0; transform: scale(.2); } to { opacity: 1; transform: scale(1); } }
+.rayons { transform-origin: 690px 455px; animation: tourne 60s linear 4s infinite; }
+.rayons path { --l: 160; animation-delay: calc(1.1s + var(--i) * 60ms); }
+@keyframes tourne { to { transform: rotate(360deg); } }
+.etoile { opacity: 0; transform-box: fill-box; transform-origin: center; animation: scintille 3.2s ease-in-out infinite; animation-delay: calc(1.6s + var(--i) * .7s); }
+@keyframes scintille { 0%, 100% { opacity: .25; transform: scale(.6); } 50% { opacity: 1; transform: scale(1.15); } }
+.branche { --l: 260; animation-delay: 1.4s; }
+.feuille { opacity: 0; transform-box: fill-box; transform-origin: bottom; animation: pousse .8s var(--ease-sortie) forwards; animation-delay: calc(1.9s + var(--i) * 90ms); }
+@keyframes pousse { from { opacity: 0; transform: scale(0); } to { opacity: .8; transform: scale(1); } }
+.motif { --l: 220; animation-delay: 1.7s; }
+.calque { transition: transform .9s var(--ease-sortie); }
+
+/* Défilement du jour à la nuit */
+.cycle { position: relative; }
+.anime .cycle { height: 260vh; }
+.cycle-scene {
+  position: relative; min-height: 100svh; padding: 96px 0; overflow: hidden;
+  display: grid; place-items: center; text-align: center;
+  background: linear-gradient(180deg, var(--ciel-haut, #fbe3c4), var(--ciel-bas, #f7d6b0));
+  color: var(--cycle-texte, var(--primaire-survol));
+}
+.astre { display: none; }
+.anime .astre { display: block; }
+.anime .astre { position: absolute; left: 50%; top: 50%; width: 120px; height: 120px; margin: -60px 0 0 -60px; will-change: transform; }
+@media (max-width: 767px) { .astre { top: 24%; width: 76px; height: 76px; margin: -38px 0 0 -38px; } }
+.astre-soleil { border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff3c9, #e8b955 45%, #a46c17 100%); box-shadow: 0 0 80px 30px rgba(240, 190, 90, .45); }
+.astre-lune svg { width: 100%; height: 100%; filter: drop-shadow(0 0 30px rgba(250, 230, 180, .5)); }
+.ciel-etoiles { position: absolute; inset: 0; opacity: var(--etoiles, 0); }
+.ciel-etoiles i { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: #fff6dc; animation: scintille 3s ease-in-out infinite; }
+.horizon { position: absolute; left: -10%; right: -10%; bottom: -8vh; height: 30vh; border-radius: 50% 50% 0 0; background: var(--sol, #e6caa3); transition: none; }
+.phrases { position: relative; z-index: 2; width: 100%; max-width: 760px; padding: 0 16px; display: grid; gap: 48px; }
+.anime .cycle-scene { position: sticky; top: 0; height: 100svh; padding: 0; }
+.anime .phrases { display: block; height: 60vh; }
+.phrase { padding: 0 16px; }
+.anime .phrase { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); opacity: 0; transition: opacity .6s, transform .6s var(--ease-sortie); }
+.anime .phrase.active { opacity: 1; transform: translateY(-50%) scale(1); }
+.phrase h2 { text-shadow: 0 1px 18px var(--voile, transparent); font-size: clamp(30px, 8vw, 58px); }
+.phrase p { margin: 12px auto 0; max-width: 36ch; font-size: 17px; opacity: .85; }
+
+/* Sections génériques */
+.section { padding: 80px 16px; max-width: 1280px; margin: 0 auto; }
+.section-titre { text-align: center; margin-bottom: 40px; }
+.section-titre h2 { font-size: clamp(30px, 7vw, 46px); color: var(--primaire-survol); }
+.section-titre p { color: var(--texte-doux); margin: 10px auto 0; max-width: 46ch; }
+.filet { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 0 auto 14px; color: var(--or); }
+.filet::before, .filet::after { content: ""; width: 48px; height: 1px; background: currentColor; }
+
+.anime .revele { opacity: 0; transform: translateY(28px); transition: opacity .9s ease, transform .9s var(--ease-sortie); transition-delay: var(--d, 0s); }
+.anime .revele.vu { opacity: 1; transform: none; }
+
+.promesses { display: grid; gap: 16px; }
+.promesse {
+  background: #fff; border: 1px solid var(--bordure); border-radius: 16px; padding: 28px 24px;
+  text-align: center; position: relative; overflow: hidden;
+}
+.promesse svg { width: 56px; height: 56px; color: var(--or-profond); }
+.anime .promesse svg .trace { stroke-dasharray: 200; stroke-dashoffset: 200; transition: stroke-dashoffset 1.6s var(--ease-sortie) .3s; }
+.anime .promesse.vu svg .trace { stroke-dashoffset: 0; }
+.promesse h3 { font-size: 22px; margin-top: 14px; color: var(--primaire-survol); }
+.promesse p { margin: 8px 0 0; color: var(--texte-doux); font-size: 15px; }
+@media (min-width: 768px) { .promesses { grid-template-columns: repeat(3, 1fr); gap: 24px; } }
+
+.creations { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.carte { perspective: 900px; text-decoration: none; }
+.carte-interieur { transition: transform .5s var(--ease-sortie); transform-style: preserve-3d; }
+.carte-visuel {
+  aspect-ratio: 4 / 5; border-radius: 14px; position: relative; overflow: hidden;
+  background: linear-gradient(160deg, #f6ead7, #e9d4b3);
+  display: grid; place-items: center; text-align: center;
+}
+.carte-visuel::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 245, 215, .7) 50%, transparent 65%);
+  transform: translateX(-100%); animation: lustre 4.5s ease-in-out infinite; animation-delay: var(--d, 0s);
+}
+@keyframes lustre { 40%, 100% { transform: translateX(100%); } }
+.carte-visuel svg { width: 46%; color: var(--or-profond); opacity: .8; }
+.carte-etiquette { position: absolute; bottom: 10px; left: 10px; right: 10px; font-size: 11px; color: var(--texte-doux); }
+.carte h3 { font-size: 18px; margin-top: 10px; color: var(--primaire-survol); }
+.carte p { margin: 2px 0 0; font-size: 14px; color: var(--texte-doux); }
+@media (min-width: 768px) { .creations { grid-template-columns: repeat(4, 1fr); gap: 24px; } }
+
+.defilant { overflow: hidden; border-block: 1px solid var(--bordure); background: var(--sable); padding: 14px 0; }
+.defilant-piste { display: flex; gap: 48px; width: max-content; animation: glisse 32s linear infinite; font-family: var(--police-titre); font-size: 20px; color: var(--primaire); white-space: nowrap; }
+.defilant-piste span::before { content: "✦"; color: var(--or); margin-right: 48px; font-size: 14px; vertical-align: middle; }
+@keyframes glisse { to { transform: translateX(-50%); } }
+
+.sceau { text-align: center; padding: 96px 16px; background: radial-gradient(90% 70% at 50% 40%, #fffaf1, var(--fond)); }
+.sceau-image { width: min(64vw, 300px); aspect-ratio: 1; margin: 0 auto; border-radius: 50%; position: relative; overflow: hidden; box-shadow: 0 30px 60px -30px rgba(74, 42, 11, .5); animation: flotte 7s ease-in-out infinite; }
+.sceau-image img { width: 100%; height: 100%; display: block; }
+.sceau-image::after { content: ""; position: absolute; inset: 0; background: linear-gradient(120deg, transparent 40%, rgba(255, 250, 230, .65) 50%, transparent 60%); transform: translateX(-100%); animation: lustre 6s ease-in-out 1s infinite; }
+@keyframes flotte { 50% { transform: translateY(-10px) rotate(1deg); } }
+.sceau h2 { font-size: clamp(28px, 6.5vw, 44px); margin: 36px auto 0; max-width: 20ch; color: var(--primaire-survol); }
+.sceau .bouton { margin-top: 28px; }
+
+.pied { background: var(--nuit-profonde); color: #d9c9ad; padding: 48px 16px 72px; text-align: center; font-size: 14px; }
+.pied .marque { color: #f0cf7a; font-size: 26px; display: inline-block; }
+.pied-grille { max-width: 1280px; margin: 0 auto; display: grid; gap: 32px; text-align: left; }
+.pied-marque p { margin: 4px 0 0; }
+.pied h2 { font-size: 13px; letter-spacing: .2em; text-transform: uppercase; color: var(--or); font-family: inherit; margin-bottom: 10px; }
+.pied ul { list-style: none; margin: 0; padding: 0; }
+.pied li a { display: inline-flex; min-height: 40px; align-items: center; text-decoration: none; color: #e9dcc2; }
+.pied li a:hover, .pied li a:focus-visible { color: #f0cf7a; }
+.pied a:focus-visible { outline: 2px solid var(--or); outline-offset: 3px; }
+.pied-mention { margin: 32px 0 0; color: #b9a98d; }
+@media (min-width: 768px) { .pied-grille { grid-template-columns: 1.2fr repeat(3, 1fr); } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0s !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: 0s !important; }
+  .trait { stroke-dashoffset: 0; }
+  .titre .mot > span { transform: none; }
+  .revele { opacity: 1; transform: none; }
+  .defilant-piste { animation: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="maquette" role="note">Maquette de validation, hors projet. Aucun produit ni prix réel.</div>
+
+<header class="entete" id="entete">
+  <a class="marque" href="https://lune-soleil.fr/">Lune-soleil</a>
+  <nav class="nav" aria-label="Navigation principale">
+    <a href="https://lune-soleil.fr/catalogue">Les créations</a>
+    <a href="https://lune-soleil.fr/notre-univers">Notre univers</a>
+    <a href="https://lune-soleil.fr/aide">Livraison et aide</a>
+  </nav>
+  <div class="outils">
+  <button class="menu-bouton" type="button" aria-expanded="false" aria-controls="menu-mobile"><span class="burger" aria-hidden="true"></span><span class="menu-libelle">Menu</span></button>
+  <a class="compte" href="https://lune-soleil.fr/compte/connexion">Se connecter</a>
+  <a class="panier" href="https://lune-soleil.fr/panier" aria-label="Votre panier, vide">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 8h12l-1 12H7L6 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+  </a>
+  </div>
+</header>
+
+<nav class="menu-mobile" id="menu-mobile" aria-label="Navigation principale">
+  <div class="menu-etoiles" aria-hidden="true"></div>
+  <p class="menu-surtitre">Bijoux faits main</p>
+  <ul class="menu-liens">
+    <li><a href="https://lune-soleil.fr/catalogue" style="--i:0"><strong>Les créations</strong><small>Toutes les pièces disponibles</small><svg class="fleche" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></a></li>
+    <li><a href="https://lune-soleil.fr/notre-univers" style="--i:1"><strong>Notre univers</strong><small>L'histoire, les matériaux, l'entretien</small><svg class="fleche" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></a></li>
+    <li><a href="https://lune-soleil.fr/aide" style="--i:2"><strong>Livraison et aide</strong><small>Livraison, retours et questions fréquentes</small><svg class="fleche" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></a></li>
+    <li><a href="https://lune-soleil.fr/contact" style="--i:3"><strong>Contact</strong><small>Une question sur une pièce ou une commande</small><svg class="fleche" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></a></li>
+  </ul>
+  <div class="menu-raccourcis">
+    <a href="https://lune-soleil.fr/compte/connexion"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Se connecter</a>
+    <a href="https://lune-soleil.fr/panier"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 8h12l-1 12H7L6 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>Panier</a>
+  </div>
+  <svg class="menu-astres" viewBox="0 0 150 90" aria-hidden="true">
+    <defs><linearGradient id="or-menu" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8b5a12"/><stop offset=".4" stop-color="#e0b657"/><stop offset="1" stop-color="#f0cf7a"/></linearGradient></defs>
+    <path d="M58 12 C34 8 18 28 22 50 C26 72 48 82 68 72 C48 74 34 60 35 44 C36 28 46 16 58 12Z" fill="url(#or-menu)"/>
+    <g class="rayons-menu" stroke="url(#or-menu)" stroke-width="2" stroke-linecap="round" fill="none">
+      <path d="M96 20v-10"/><path d="M96 72v10"/><path d="M70 46h-10"/><path d="M122 46h10"/>
+      <path d="M78 28l-7-7"/><path d="M114 28l7-7"/><path d="M78 64l-7 7"/><path d="M114 64l7 7"/>
+    </g>
+    <circle cx="96" cy="46" r="17" fill="url(#or-menu)"/>
+  </svg>
+  <p class="menu-pied">Lune-soleil</p>
+</nav>
+
+<main>
+  <section class="heros" aria-labelledby="titre-heros">
+    <canvas id="poussiere" aria-hidden="true"></canvas>
+    <div class="heros-grille">
+      <div class="embleme-cadre" aria-hidden="true">
+        <div class="halo"></div>
+        <svg class="embleme" viewBox="30 30 1140 1140">
+          <defs>
+            <linearGradient id="or" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8b5a12"/><stop offset=".35" stop-color="#e0b657"/><stop offset=".7" stop-color="#a46c17"/><stop offset="1" stop-color="#f0cf7a"/></linearGradient>
+            <radialGradient id="or-soleil" cx="40%" cy="35%" r="70%"><stop stop-color="#fff3c9"/><stop offset=".45" stop-color="#e8b955"/><stop offset="1" stop-color="#9c6418"/></radialGradient>
+          </defs>
+          <g class="calque" data-profondeur="6">
+            <circle class="trait anneau" cx="600" cy="600" r="560" fill="none" stroke="url(#or)" stroke-width="2"/>
+          </g>
+          <g class="calque" data-profondeur="14">
+            <g class="lune">
+              <path d="M535 257 C365 230 265 365 292 505 C318 640 452 702 570 635 C438 650 351 560 356 449 C360 348 431 279 535 257Z" fill="url(#or)" stroke="#9c681c" stroke-width="2"/>
+            </g>
+          </g>
+          <g class="calque" data-profondeur="22">
+            <g class="rayons" fill="none" stroke="url(#or)" stroke-width="8" stroke-linecap="round">
+              <path class="trait" style="--i:0" d="M690 346 C678 321 703 302 691 273"/><path class="trait" style="--i:1" d="M736 356 C742 329 772 326 780 298"/>
+              <path class="trait" style="--i:2" d="M773 386 C792 366 817 379 837 357"/><path class="trait" style="--i:3" d="M794 430 C820 420 837 444 866 433"/>
+              <path class="trait" style="--i:4" d="M795 478 C822 487 823 516 852 525"/><path class="trait" style="--i:5" d="M774 520 C794 540 779 565 800 585"/>
+              <path class="trait" style="--i:6" d="M736 548 C743 575 717 589 724 617"/><path class="trait" style="--i:7" d="M690 561 C679 587 699 608 686 636"/>
+              <path class="trait" style="--i:8" d="M644 549 C635 576 605 578 597 606"/><path class="trait" style="--i:9" d="M606 520 C585 539 560 524 539 546"/>
+              <path class="trait" style="--i:10" d="M585 478 C558 486 543 461 514 472"/><path class="trait" style="--i:11" d="M586 431 C558 423 558 393 529 385"/>
+              <path class="trait" style="--i:12" d="M606 389 C585 369 600 344 579 323"/><path class="trait" style="--i:13" d="M644 359 C636 333 661 316 653 288"/>
+            </g>
+            <circle class="soleil-coeur" cx="690" cy="455" r="86" fill="url(#or-soleil)" stroke="#a66e1d" stroke-width="2"/>
+          </g>
+          <g class="calque" data-profondeur="30" fill="url(#or)">
+            <path class="etoile" style="--i:0" d="M600 153 l6 25 25 6-25 6-6 25-6-25-25-6 25-6z"/>
+            <path class="etoile" style="--i:1" d="M600 697 l5 21 21 5-21 5-5 21-5-21-21-5 21-5z"/>
+            <path class="etoile" style="--i:2" d="M847 655 l4 17 17 4-17 4-4 17-4-17-17-4 17-4z"/>
+            <path class="etoile" style="--i:3" d="M250 450 l4 16 16 4-16 4-4 16-4-16-16-4 16-4z"/>
+            <circle class="etoile" style="--i:4" cx="952" cy="392" r="5"/>
+            <circle class="etoile" style="--i:5" cx="742" cy="242" r="4"/>
+          </g>
+          <g class="calque" data-profondeur="10">
+            <path class="trait branche" fill="none" stroke="#b58a4d" stroke-width="2.4" stroke-linecap="round" d="M330 1000 C250 950 205 875 195 780"/>
+            <path class="trait branche" fill="none" stroke="#b58a4d" stroke-width="2.4" stroke-linecap="round" d="M870 1000 C950 950 995 875 1005 780"/>
+            <g fill="#c5a16a">
+              <ellipse class="feuille" style="--i:0" cx="215" cy="830" rx="8" ry="23" transform="rotate(-35 215 830)"/>
+              <ellipse class="feuille" style="--i:1" cx="240" cy="880" rx="8" ry="23" transform="rotate(-48 240 880)"/>
+              <ellipse class="feuille" style="--i:2" cx="280" cy="935" rx="8" ry="23" transform="rotate(-55 280 935)"/>
+              <ellipse class="feuille" style="--i:0" cx="985" cy="830" rx="8" ry="23" transform="rotate(35 985 830)"/>
+              <ellipse class="feuille" style="--i:1" cx="960" cy="880" rx="8" ry="23" transform="rotate(48 960 880)"/>
+              <ellipse class="feuille" style="--i:2" cx="920" cy="935" rx="8" ry="23" transform="rotate(55 920 935)"/>
+            </g>
+          </g>
+        </svg>
+      </div>
+
+      <div class="heros-texte">
+        <p class="surtitre">Bijoux faits main</p>
+        <h1 class="titre" id="titre-heros" aria-label="La lumière d'un bijou, le geste d'une main.">
+          <span aria-hidden="true">
+            <span class="mot"><span style="animation-delay:.9s">La</span></span>
+            <span class="mot"><span class="or" style="animation-delay:1s">lumière</span></span>
+            <span class="mot"><span style="animation-delay:1.1s">d'un</span></span>
+            <span class="mot"><span style="animation-delay:1.2s">bijou,</span></span>
+            <span class="mot"><span style="animation-delay:1.3s">le</span></span>
+            <span class="mot"><span class="or" style="animation-delay:1.4s">geste</span></span>
+            <span class="mot"><span style="animation-delay:1.5s">d'une</span></span>
+            <span class="mot"><span style="animation-delay:1.6s">main.</span></span>
+          </span>
+        </h1>
+        <p class="accroche">Des pièces délicates en petite série, pensées pour accompagner le quotidien sans jamais se ressembler tout à fait.</p>
+        <div class="actions">
+          <a class="bouton bouton-principal" href="https://lune-soleil.fr/catalogue">Découvrir les créations</a>
+          <a class="bouton bouton-secondaire" href="https://lune-soleil.fr/notre-univers">Entrer dans l'atelier</a>
+        </div>
+      </div>
+    </div>
+    <div class="indice-defilement" aria-hidden="true"></div>
+  </section>
+
+  <section class="section" id="creations" aria-labelledby="titre-creations">
+    <div class="section-titre revele">
+      <div class="filet" aria-hidden="true">✦</div>
+      <h2 id="titre-creations">Les dernières créations</h2>
+      <p>Les quatre pièces les plus récentes du catalogue prendront place ici, chacune menant à sa fiche.</p>
+    </div>
+    <div class="creations">
+      <a class="carte revele" href="https://lune-soleil.fr/catalogue" style="--d:0s"><div class="carte-interieur"><div class="carte-visuel" style="--d:0s"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="32" cy="38" r="14"/><path d="M32 24V10m-6 4 6-4 6 4"/></svg><span class="carte-etiquette">Emplacement photo</span></div></div><h3>Collier</h3><p>Nom de la pièce</p></a>
+      <a class="carte revele" href="https://lune-soleil.fr/catalogue" style="--d:.1s"><div class="carte-interieur"><div class="carte-visuel" style="--d:.6s"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="22" cy="36" r="8"/><circle cx="42" cy="36" r="8"/><path d="M22 28v-8m20 8v-8"/></svg><span class="carte-etiquette">Emplacement photo</span></div></div><h3>Boucles d'oreilles</h3><p>Nom de la pièce</p></a>
+      <a class="carte revele" href="https://lune-soleil.fr/catalogue" style="--d:.2s"><div class="carte-interieur"><div class="carte-visuel" style="--d:1.2s"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.4"><ellipse cx="32" cy="34" rx="20" ry="12"/><path d="m32 22 4-8h-8z"/></svg><span class="carte-etiquette">Emplacement photo</span></div></div><h3>Bague</h3><p>Nom de la pièce</p></a>
+      <a class="carte revele" href="https://lune-soleil.fr/catalogue" style="--d:.3s"><div class="carte-interieur"><div class="carte-visuel" style="--d:1.8s"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 32c8 10 40 10 48 0"/><circle cx="20" cy="38" r="3"/><circle cx="32" cy="40" r="3"/><circle cx="44" cy="38" r="3"/></svg><span class="carte-etiquette">Emplacement photo</span></div></div><h3>Bracelet</h3><p>Nom de la pièce</p></a>
+    </div>
+  </section>
+
+  <section class="cycle" id="cycle" aria-label="Du jour à la nuit">
+    <div class="cycle-scene" id="scene">
+      <div class="ciel-etoiles" id="etoiles" aria-hidden="true"></div>
+      <div class="astre astre-soleil" id="soleil" aria-hidden="true"></div>
+      <div class="astre astre-lune" id="lune" aria-hidden="true">
+        <svg viewBox="0 0 100 100"><path d="M62 8 C30 4 10 30 14 56 C18 82 46 96 70 84 C46 86 30 68 31 47 C32 28 44 13 62 8Z" fill="#f4e2b4"/></svg>
+      </div>
+      <div class="horizon" id="horizon" aria-hidden="true"></div>
+      <div class="phrases">
+        <div class="phrase" data-index="0"><h2>Au matin, une idée.</h2><p>Une forme, une couleur, un souvenir à porter.</p></div>
+        <div class="phrase" data-index="1"><h2>En plein jour, le geste.</h2><p>Chaque pièce est façonnée à la main, à l'unité ou en petite série.</p></div>
+        <div class="phrase" data-index="2"><h2>À la nuit, l'éclat.</h2><p>Un bijou qui garde un peu de lumière, quelle que soit l'heure.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="defilant" aria-hidden="true">
+    <div class="defilant-piste">
+      <span>Fait main</span><span>À l'unité</span><span>Petites séries</span><span>Livraison en France métropolitaine</span><span>Corse comprise</span>
+      <span>Fait main</span><span>À l'unité</span><span>Petites séries</span><span>Livraison en France métropolitaine</span><span>Corse comprise</span>
+    </div>
+  </div>
+
+
+  <section class="section" id="promesses" aria-labelledby="titre-promesses">
+    <div class="section-titre revele">
+      <div class="filet" aria-hidden="true">✦</div>
+      <h2 id="titre-promesses">Ce qui ne change pas</h2>
+    </div>
+    <div class="promesses">
+      <article class="promesse revele" style="--d:0s">
+        <svg viewBox="0 0 56 56" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path class="trace" d="M14 40c4-10 8-16 14-20 4-3 9-4 12-2s2 7-2 10c-5 4-12 5-18 4m8 8c6 1 12-1 16-5"/></svg>
+        <h3>Fait main</h3>
+        <p>Chaque bijou est réalisé à la main, pièce par pièce.</p>
+      </article>
+      <article class="promesse revele" style="--d:.15s">
+        <svg viewBox="0 0 56 56" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path class="trace" d="M28 8l5 13 14 1-11 9 4 14-12-8-12 8 4-14-11-9 14-1z"/></svg>
+        <h3>Créés à l'unité</h3>
+        <p>Ou en petite série, jamais à la chaîne.</p>
+      </article>
+      <article class="promesse revele" style="--d:.3s">
+        <svg viewBox="0 0 56 56" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="trace" d="M8 18l20-8 20 8v20l-20 8-20-8zM8 18l20 8 20-8M28 26v20"/></svg>
+        <h3>Livré chez vous</h3>
+        <p>En France métropolitaine, Corse comprise.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="sceau" id="atelier" aria-labelledby="titre-sceau">
+    <div class="sceau-image revele"><img src="logo.jpg" alt="Logo Lune-soleil, une lune et un soleil dorés, bijoux faits main" width="640" height="640"></div>
+    <h2 class="revele" id="titre-sceau" style="--d:.15s">Une part de jour, une part de nuit, dans chaque pièce.</h2>
+    <a class="bouton bouton-principal revele" href="https://lune-soleil.fr/notre-univers" style="--d:.3s">Entrer dans l'atelier</a>
+  </section>
+</main>
+
+<footer class="pied">
+  <div class="pied-grille">
+    <div class="pied-marque"><a class="marque" href="https://lune-soleil.fr/">Lune-soleil</a><p>Bijoux faits main</p></div>
+    <nav aria-label="Découvrir"><h2>Découvrir</h2><ul><li><a href="https://lune-soleil.fr/catalogue">Toutes les créations</a></li><li><a href="https://lune-soleil.fr/notre-univers">Notre histoire</a></li><li><a href="https://lune-soleil.fr/notre-univers#matieres">Matériaux</a></li><li><a href="https://lune-soleil.fr/notre-univers#entretien">Entretien</a></li></ul></nav>
+    <nav aria-label="Besoin d'aide"><h2>Besoin d'aide</h2><ul><li><a href="https://lune-soleil.fr/aide">Livraison et retours</a></li><li><a href="https://lune-soleil.fr/aide#faq">Questions fréquentes</a></li><li><a href="https://lune-soleil.fr/contact">Contact</a></li></ul></nav>
+    <nav aria-label="Informations"><h2>Informations</h2><ul><li><a href="https://lune-soleil.fr/informations-legales#mentions">Mentions légales</a></li><li><a href="https://lune-soleil.fr/informations-legales#cgv">Conditions de vente</a></li><li><a href="https://lune-soleil.fr/informations-legales#confidentialite">Confidentialité</a></li><li><a href="https://lune-soleil.fr/informations-legales#retractation">Rétractation</a></li></ul></nav>
+  </div>
+  <p class="pied-mention">France métropolitaine, Corse comprise</p>
+</footer>
+
+<script>
+(() => {
+  const racine = document.documentElement;
+  const requete = matchMedia("(prefers-reduced-motion: reduce)");
+  // Un changement de préférence pendant la visite recharge la page dans le bon mode.
+  requete.addEventListener("change", () => location.reload());
+  const calme = requete.matches;
+
+  // En-tête et menu mobile, utiles dans tous les modes
+  const entete = document.getElementById("entete");
+  const surDefilement = () => entete.classList.toggle("defile", scrollY > 20);
+  addEventListener("scroll", surDefilement, { passive: true });
+  surDefilement();
+  const boutonMenu = entete.querySelector(".menu-bouton");
+  const libelleMenu = boutonMenu.querySelector(".menu-libelle");
+  const menu = document.getElementById("menu-mobile");
+  const horsMenu = [document.querySelector("main"), document.querySelector("footer")];
+  const etoilesMenu = menu.querySelector(".menu-etoiles");
+  for (let i = 0; i < 40; i++) {
+    const e = document.createElement("i");
+    e.style.left = Math.random() * 100 + "%";
+    e.style.top = Math.random() * 100 + "%";
+    e.style.animationDelay = (Math.random() * 3).toFixed(2) + "s";
+    etoilesMenu.appendChild(e);
+  }
+  // Fermé, le menu sort de l'arbre d'accessibilité et du parcours de tabulation.
+  menu.inert = true;
+  const ouvrirMenu = (ouvrir) => {
+    racine.classList.toggle("menu-ouvert", ouvrir);
+    menu.inert = !ouvrir;
+    horsMenu.forEach((el) => { if (el) el.inert = ouvrir; });
+    boutonMenu.setAttribute("aria-expanded", String(ouvrir));
+    libelleMenu.textContent = ouvrir ? "Fermer" : "Menu";
+    if (ouvrir) setTimeout(() => menu.querySelector(".menu-liens a").focus({ preventScroll: true }), 300);
+  };
+  boutonMenu.addEventListener("click", () => ouvrirMenu(!racine.classList.contains("menu-ouvert")));
+  menu.addEventListener("click", (e) => { if (e.target.closest("a")) ouvrirMenu(false); });
+  addEventListener("keydown", (e) => {
+    if (!racine.classList.contains("menu-ouvert")) return;
+    if (e.key === "Escape") { ouvrirMenu(false); boutonMenu.focus(); return; }
+    if (e.key !== "Tab") return;
+    // Le focus boucle entre le bouton et les liens du menu.
+    const cibles = [boutonMenu, ...menu.querySelectorAll("a")];
+    e.preventDefault();
+    const i = cibles.indexOf(document.activeElement);
+    const n = cibles.length;
+    cibles[(i + (e.shiftKey ? -1 : 1) + n) % n].focus();
+  });
+  matchMedia("(min-width: 768px)").addEventListener("change", (m) => { if (m.matches) ouvrirMenu(false); });
+
+  // Sans mouvement : le contenu reste en flux statique, rien d'autre ne s'installe.
+  if (calme) return;
+  racine.classList.add("anime");
+
+  // Apparition au défilement
+  const observateur = new IntersectionObserver((entrees) => {
+    for (const e of entrees) if (e.isIntersecting) { e.target.classList.add("vu"); observateur.unobserve(e.target); }
+  }, { threshold: 0.2 });
+  document.querySelectorAll(".revele").forEach((el) => observateur.observe(el));
+
+  // Longueurs réelles des tracés, pour un dessin exact
+  document.querySelectorAll(".embleme .trait").forEach((p) => {
+    if (p.getTotalLength) p.style.setProperty("--l", Math.ceil(p.getTotalLength()) + 2);
+  });
+
+  // Ciel étoilé de la scène du cycle
+  const ciel = document.getElementById("etoiles");
+  for (let i = 0; i < 70; i++) {
+    const s = document.createElement("i");
+    s.style.left = Math.random() * 100 + "%";
+    s.style.top = Math.random() * 70 + "%";
+    s.style.animationDelay = (Math.random() * 3).toFixed(2) + "s";
+    ciel.appendChild(s);
+  }
+
+  // Contraste : luminance relative WCAG, pour choisir le texte le plus lisible sur le ciel réel
+  const lin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+  const lum = ([r, g, b]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const SOMBRE = [74, 42, 11], CLAIR = [250, 238, 212];
+
+  // Cycle du jour à la nuit piloté par le défilement
+  const cycle = document.getElementById("cycle");
+  const scene = document.getElementById("scene");
+  const soleil = document.getElementById("soleil");
+  const lune = document.getElementById("lune");
+  const phrases = [...document.querySelectorAll(".phrase")];
+  const melange = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
+  const rgb = (c) => `rgb(${c.join(",")})`;
+  const paliers = [
+    { haut: [251, 227, 196], bas: [247, 214, 176], sol: [230, 202, 163] },
+    { haut: [255, 246, 228], bas: [250, 234, 205], sol: [226, 205, 170] },
+    { haut: [126, 82, 92], bas: [232, 150, 100], sol: [110, 72, 60] },
+    { haut: [20, 15, 28], bas: [44, 32, 58], sol: [30, 22, 38] },
+  ];
+  function cycleRendu() {
+    const r = cycle.getBoundingClientRect();
+    const t = Math.min(1, Math.max(0, -r.top / (r.height - innerHeight)));
+    const pos = t * (paliers.length - 1);
+    const i = Math.min(paliers.length - 2, Math.floor(pos));
+    const f = pos - i;
+    const a = paliers[i], b = paliers[i + 1];
+    const haut = melange(a.haut, b.haut, f), bas = melange(a.bas, b.bas, f);
+    scene.style.setProperty("--ciel-haut", rgb(haut));
+    scene.style.setProperty("--ciel-bas", rgb(bas));
+    scene.style.setProperty("--sol", rgb(melange(a.sol, b.sol, f)));
+    scene.style.setProperty("--etoiles", Math.max(0, (t - 0.6) / 0.4).toFixed(3));
+    // Couleur du ciel derrière le texte, au milieu de la scène
+    const fond = melange(haut, bas, 0.5);
+    const clair = ratio(CLAIR, fond) > ratio(SOMBRE, fond);
+    scene.style.setProperty("--cycle-texte", rgb(clair ? CLAIR : SOMBRE));
+    scene.style.setProperty("--voile", clair ? "rgba(20, 12, 24, .55)" : "rgba(255, 246, 228, .7)");
+    const w = Math.min(innerWidth, 1200) * 0.42, h = innerHeight * 0.36;
+    const as = Math.PI * (0.15 + t * 0.95);
+    soleil.style.transform = `translate(${-Math.cos(as) * w}px, ${-Math.sin(as) * h + h * 0.4}px)`;
+    soleil.style.opacity = Math.max(0, 1 - Math.max(0, t - 0.7) * 4);
+    const al = Math.PI * (-0.1 + Math.max(0, t - 0.45) * 1.6);
+    lune.style.transform = `translate(${-Math.cos(al) * w}px, ${-Math.sin(al) * h + h * 0.5}px) rotate(${t * 30}deg)`;
+    lune.style.opacity = Math.min(1, Math.max(0, (t - 0.45) * 4));
+    const actif = t < 0.33 ? 0 : t < 0.66 ? 1 : 2;
+    phrases.forEach((p, k) => {
+      p.classList.toggle("active", k === actif);
+      p.setAttribute("aria-hidden", String(k !== actif));
+    });
+  }
+  let attente = false;
+  addEventListener("scroll", () => { if (!attente) { attente = true; requestAnimationFrame(() => { cycleRendu(); attente = false; }); } }, { passive: true });
+  addEventListener("resize", cycleRendu);
+  cycleRendu();
+
+  // Parallaxe de l'emblème au pointeur et inclinaison des cartes, ordinateur seulement
+  if (matchMedia("(hover: hover) and (pointer: fine)").matches) {
+    const calques = document.querySelectorAll(".calque");
+    addEventListener("pointermove", (e) => {
+      const x = e.clientX / innerWidth - 0.5, y = e.clientY / innerHeight - 0.5;
+      calques.forEach((c) => {
+        const p = +c.dataset.profondeur;
+        c.style.transform = `translate(${x * p}px, ${y * p}px)`;
+      });
+    }, { passive: true });
+    document.querySelectorAll(".carte").forEach((carte) => {
+      const interieur = carte.querySelector(".carte-interieur");
+      carte.addEventListener("pointermove", (e) => {
+        const r = carte.getBoundingClientRect();
+        const x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
+        interieur.style.transform = `rotateY(${x * 10}deg) rotateX(${-y * 10}deg) translateZ(0)`;
+      });
+      carte.addEventListener("pointerleave", () => { interieur.style.transform = ""; });
+    });
+  }
+
+  // Poussière d'or du héros : la boucle ne tourne que lorsqu'elle est visible
+  const toile = document.getElementById("poussiere");
+  const ctx = toile.getContext("2d");
+  let grains = [], visible = true, demande = 0;
+  function dimensionner() {
+    const d = Math.min(devicePixelRatio || 1, 2);
+    toile.width = toile.offsetWidth * d; toile.height = toile.offsetHeight * d;
+    ctx.setTransform(d, 0, 0, d, 0, 0);
+    const n = innerWidth < 768 ? 28 : 60;
+    grains = Array.from({ length: n }, () => ({
+      x: Math.random() * toile.offsetWidth, y: Math.random() * toile.offsetHeight,
+      r: Math.random() * 1.8 + 0.4, v: Math.random() * 0.25 + 0.05,
+      o: Math.random() * Math.PI * 2,
+    }));
+  }
+  function boucle(temps) {
+    ctx.clearRect(0, 0, toile.offsetWidth, toile.offsetHeight);
+    for (const g of grains) {
+      g.y -= g.v; g.x += Math.sin(temps / 2000 + g.o) * 0.15;
+      if (g.y < -5) { g.y = toile.offsetHeight + 5; g.x = Math.random() * toile.offsetWidth; }
+      const a = 0.35 + Math.sin(temps / 700 + g.o) * 0.3;
+      ctx.beginPath(); ctx.arc(g.x, g.y, g.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(196, 150, 60, ${a.toFixed(2)})`; ctx.fill();
+    }
+    demande = requestAnimationFrame(boucle);
+  }
+  function piloter() {
+    const doitTourner = visible && !document.hidden;
+    if (doitTourner && !demande) demande = requestAnimationFrame(boucle);
+    if (!doitTourner && demande) { cancelAnimationFrame(demande); demande = 0; }
+  }
+  new IntersectionObserver(([e]) => { visible = e.isIntersecting; piloter(); }).observe(toile);
+  document.addEventListener("visibilitychange", piloter);
+  addEventListener("resize", dimensionner);
+  dimensionner();
+  piloter();
+})();
+</script>
+</body>
+</html>

@@ -15,7 +15,17 @@ ADR-007, sont televersees par l'administration et passent par la chaine de
 traitement qui retire les metadonnees EXIF. Mettre une photo de bijou vendable
 ici la sortirait de ce circuit, et notamment du retrait de la geolocalisation.
 
+## logo-sceau.jpg, logo du sceau de l'accueil
+
+**Ajouté le 4 octobre 2026**, LS-260 : le logo fourni par Christophe dans sa
+version la plus lumineuse, ramené à 720 x 720 et **réécrit sans métadonnées**,
+le fichier d'origine portant un bloc EXIF. Il illustre la dernière section de
+l'accueil, sous un texte alternatif qui reprend le nom et la mention du logo.
+
 ## accueil-banniere.jpg, bannière de l'accueil
+
+**Retirée de l'accueil le 4 octobre 2026**, arbitrage de Christophe, LS-260 :
+l'emblème animé la remplace. Le fichier reste versionné, réutilisable ailleurs.
 
 **Ajoutée le 23 septembre 2026**, bannière fournie par Christophe, sous un
 **nouveau nom** : l'ancien `accueil-hero.jpg` restait servi par le cache de
