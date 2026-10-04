@@ -486,3 +486,11 @@ ALTER TABLE "parametre_boutique"
 ALTER TABLE "parametre_boutique"
   ADD CONSTRAINT "chk_parametre_email_alertes_non_vide"
   CHECK (length(trim("email_alertes")) > 0);
+
+-- C45, UN PRODUIT RETIRE DE L'ESPACE D'ADMINISTRATION EST ARCHIVE, LS-266.
+-- Implication et non equivalence : un archive peut rester dans l'espace. Sans
+-- elle, republier un produit retire le mettrait en vente pendant qu'aucun
+-- ecran de l'administration ne le montre plus.
+ALTER TABLE "produit"
+  ADD CONSTRAINT "chk_produit_retrait_archive"
+  CHECK ("retire_a" IS NULL OR "statut" = 'ARCHIVE');

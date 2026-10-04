@@ -13,6 +13,9 @@
  * 2. ARCHIVER NE DETRUIT NI COMMANDE NI STOCK, C11 et invariant 6. La
  *    confirmation le dit, parce que « retirer du catalogue » se lit facilement
  *    comme « effacer ».
+ * 3. RETIRER DE L'ESPACE N'EFFACE RIEN NON PLUS, LS-266 : la fiche archivee
+ *    disparait de l'administration et reste en base. Le libelle ne dit jamais
+ *    « supprimer », et la confirmation nomme le seul chemin de retour.
  */
 
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -20,6 +23,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import {
   archiverProduitAction,
   publierProduitAction,
+  retirerProduitAction,
   type ResultatPublication,
 } from "./actions-publication";
 import styles from "./editeur.module.css";
@@ -125,7 +129,10 @@ export function PublicationProduit({
   const [erreur, setErreur] = useState<string | null>(null);
   const [succes, setSucces] = useState<string | null>(null);
   const [refuses, setRefuses] = useState<MotifAffiche[] | null>(null);
-  const [aArchiver, setAArchiver] = useState(false);
+  /** La confirmation ouverte : archiver, ou retirer de l'espace, LS-266. */
+  const [confirmation, setConfirmation] = useState<
+    "archiver" | "retirer" | null
+  >(null);
 
   /*
    * LE FOCUS ENTRE DANS LE PANNEAU A SON OUVERTURE, et revient au bouton qui
@@ -138,7 +145,7 @@ export function PublicationProduit({
   const carte = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (aArchiver) {
+    if (confirmation) {
       panneau.current?.focus();
       return;
     }
@@ -162,7 +169,7 @@ export function PublicationProduit({
       carte.current?.focus();
     }
     declencheur.current = null;
-  }, [aArchiver]);
+  }, [confirmation]);
 
   const etat = ETAT_AFFICHE[statut];
 
@@ -318,15 +325,92 @@ export function PublicationProduit({
               disabled={enCours}
               onClick={(evenement) => {
                 declencheur.current = evenement.currentTarget;
-                setAArchiver(true);
+                setConfirmation("archiver");
               }}
             >
               Archiver la fiche
             </button>
           )}
+
+          {/*
+           * LS-266, SUR UNE FICHE ARCHIVEE SEULEMENT. Une fiche publiee ou en
+           * brouillon s'archive d'abord : le retrait n'est jamais le premier
+           * geste, et C45 le refuserait en base.
+           */}
+          {statut === "ARCHIVE" && (
+            <button
+              type="button"
+              className={styles.boutonDanger}
+              disabled={enCours}
+              onClick={(evenement) => {
+                declencheur.current = evenement.currentTarget;
+                setConfirmation("retirer");
+              }}
+            >
+              Retirer de mon espace
+            </button>
+          )}
         </div>
 
-        {aArchiver && (
+        {confirmation === "retirer" && (
+          <div
+            className={styles.confirmation}
+            role="alertdialog"
+            aria-labelledby="confirmation-retrait-titre"
+            aria-describedby="confirmation-retrait-texte"
+            ref={panneau}
+            tabIndex={-1}
+            onKeyDown={(evenement) => {
+              if (evenement.key === "Escape") {
+                setConfirmation(null);
+              }
+            }}
+          >
+            <h3
+              className={styles.confirmationTitre}
+              id="confirmation-retrait-titre"
+            >
+              Retirer cette fiche de votre espace ?
+            </h3>
+            {/*
+             * LA PHRASE « SEUL LE DEVELOPPEUR POURRA LA RECUPERER » EST EXIGEE
+             * PAR LE TICKET : elle dit a la fois que rien n'est efface et que
+             * le retour ne se fait plus depuis cet ecran.
+             */}
+            <p
+              className={styles.confirmationTexte}
+              id="confirmation-retrait-texte"
+            >
+              La fiche disparaît de votre espace : listes, stocks, statistiques
+              et compteurs. Elle n&apos;est pas effacée, et les commandes,
+              factures et avis qui la citent ne changent pas. Seul le
+              développeur pourra la récupérer.
+            </p>
+            <div className={styles.actions}>
+              <button
+                type="button"
+                className={styles.boutonDanger}
+                disabled={enCours}
+                onClick={() =>
+                  // Le succès redirige vers les archives, qui l'annoncent.
+                  jouer(() => retirerProduitAction(produitId), "")
+                }
+              >
+                Retirer de mon espace
+              </button>
+              <button
+                type="button"
+                className={styles.boutonSecondaire}
+                disabled={enCours}
+                onClick={() => setConfirmation(null)}
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        )}
+
+        {confirmation === "archiver" && (
           <div
             className={styles.confirmation}
             role="alertdialog"
@@ -336,7 +420,7 @@ export function PublicationProduit({
             tabIndex={-1}
             onKeyDown={(evenement) => {
               if (evenement.key === "Escape") {
-                setAArchiver(false);
+                setConfirmation(null);
               }
             }}
           >
@@ -369,7 +453,7 @@ export function PublicationProduit({
                   jouer(
                     () => archiverProduitAction(produitId),
                     "Fiche archivée.",
-                    () => setAArchiver(false),
+                    () => setConfirmation(null),
                   )
                 }
               >
@@ -379,7 +463,7 @@ export function PublicationProduit({
                 type="button"
                 className={styles.boutonSecondaire}
                 disabled={enCours}
-                onClick={() => setAArchiver(false)}
+                onClick={() => setConfirmation(null)}
               >
                 Annuler
               </button>

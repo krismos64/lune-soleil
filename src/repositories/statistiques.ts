@@ -378,6 +378,8 @@ export async function lireVariantesInvendues(
       FROM variante va
       JOIN produit pr ON pr.id = va.produit_id
      WHERE va.archivee_a IS NULL
+       -- LS-266, un produit retiré de l'espace d'administration n'y paraît plus.
+       AND pr.retire_a IS NULL
        AND NOT EXISTS (
              SELECT 1
                FROM ligne_commande l

@@ -139,11 +139,19 @@ export async function compterPourAdministration(
         WHERE statut IN ('CONFIRMEE', 'EN_PREPARATION'))
                                                AS "commandesEnCours",
       (SELECT count(*) FROM variante
+        -- LS-266, la variante d'un produit retiré de l'espace n'est plus
+        -- comptée : la pastille désignerait une pièce qu'aucun écran ne montre.
         WHERE archivee_a IS NULL
+          AND NOT EXISTS (SELECT 1 FROM produit pr
+                           WHERE pr.id = variante.produit_id
+                             AND pr.retire_a IS NOT NULL)
           AND greatest(quantite_physique - quantite_reservee, 0) <= ${seuilStockFaible})
                                                AS "variantesStockFaible",
       (SELECT count(*) FROM variante
         WHERE archivee_a IS NULL
+          AND NOT EXISTS (SELECT 1 FROM produit pr
+                           WHERE pr.id = variante.produit_id
+                             AND pr.retire_a IS NOT NULL)
           AND greatest(quantite_physique - quantite_reservee, 0) = 0)
                                                AS "variantesIndisponibles",
       (SELECT count(*) FROM commande

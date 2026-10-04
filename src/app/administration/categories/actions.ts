@@ -53,7 +53,11 @@ export type ResultatAction =
   | { statut: "SLUG_DEJA_PRIS" }
   | { statut: "INTROUVABLE" }
   /** C26, la categorie porte des produits. Le nombre sert le message. */
-  | { statut: "CATEGORIE_NON_VIDE"; nombreProduits: number }
+  | {
+      statut: "CATEGORIE_NON_VIDE";
+      nombreProduits: number;
+      nombreRetires: number;
+    }
   /** L'ordre transmis ne couvre pas toutes les categories. */
   | { statut: "ORDRE_INCOMPLET" }
   | { statut: "INDISPONIBLE" };
@@ -82,6 +86,7 @@ function traduireErreur(erreur: unknown, operation: string): ResultatAction {
     return {
       statut: "CATEGORIE_NON_VIDE",
       nombreProduits: erreur.nombreProduits,
+      nombreRetires: erreur.nombreRetires,
     };
   }
   if (erreur instanceof OrdreIncompletError) {

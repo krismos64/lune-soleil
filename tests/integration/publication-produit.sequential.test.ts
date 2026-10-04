@@ -500,3 +500,189 @@ describe("publierOuArchiverProduits, LS-242", () => {
     expect((await produitEnBase(intact)).statut).toBe("BROUILLON");
   });
 });
+
+describe("retrait de l'espace d'administration, LS-266 et C45", () => {
+  /** Un produit publié puis archivé, à une variante épuisée : il pèse dans
+   *  tous les compteurs de stock, ce qui rend son retrait mesurable. */
+  async function archiveEpuise(): Promise<{
+    produitId: string;
+    varianteId: string;
+  }> {
+    const produitId = await produitDeTest();
+    const varianteId = await varianteSur(produitId);
+    await photoPubliableSur(produitId);
+    await catalogue.publierProduit(produitId);
+    await catalogue.archiverProduit(produitId);
+    await client.query(
+      "UPDATE variante SET quantite_physique = 0 WHERE id = $1",
+      [varianteId],
+    );
+    return { produitId, varianteId };
+  }
+
+  it("retire un archivé sans rien supprimer ni toucher aux commandes", async () => {
+    const { produitId, varianteId } = await archiveEpuise();
+    const ligneId = await commandeAvecLigne(varianteId, "REF-RETRAIT", 1999);
+    const { rows: avant } = await client.query(
+      "SELECT * FROM ligne_commande WHERE id = $1",
+      [ligneId],
+    );
+
+    await catalogue.retirerProduitDeLEspace(produitId);
+
+    const { rows } = await client.query(
+      "SELECT statut, retire_a FROM produit WHERE id = $1",
+      [produitId],
+    );
+    expect(rows[0].statut).toBe("ARCHIVE");
+    expect(rows[0].retire_a).toBeInstanceOf(Date);
+    const { rowCount } = await client.query(
+      "SELECT 1 FROM variante WHERE id = $1",
+      [varianteId],
+    );
+    expect(rowCount).toBe(1);
+    const { rows: apres } = await client.query(
+      "SELECT * FROM ligne_commande WHERE id = $1",
+      [ligneId],
+    );
+    expect(apres[0]).toEqual(avant[0]);
+  });
+
+  it("refuse de retirer un produit publié ou en brouillon", async () => {
+    const brouillon = await produitDeTest();
+    await expect(
+      catalogue.retirerProduitDeLEspace(brouillon),
+    ).rejects.toMatchObject({ name: "TransitionProduitInvalideError" });
+
+    const publie = await produitDeTest();
+    await varianteSur(publie);
+    await photoPubliableSur(publie);
+    await catalogue.publierProduit(publie);
+    await expect(catalogue.retirerProduitDeLEspace(publie)).rejects.toMatchObject(
+      { name: "TransitionProduitInvalideError" },
+    );
+
+    const { rows } = await client.query(
+      "SELECT count(*)::int AS n FROM produit WHERE retire_a IS NOT NULL",
+    );
+    expect(rows[0].n).toBe(0);
+  });
+
+  it("un produit retiré est introuvable, et ne se republie pas", async () => {
+    const { produitId } = await archiveEpuise();
+    await catalogue.retirerProduitDeLEspace(produitId);
+
+    expect(await catalogue.lireProduit(produitId)).toBeNull();
+    await expect(
+      catalogue.retirerProduitDeLEspace(produitId),
+    ).rejects.toMatchObject({ name: "ProduitIntrouvableError" });
+    await expect(catalogue.publierProduit(produitId)).rejects.toMatchObject({
+      name: "ProduitIntrouvableError",
+    });
+
+    // C45 tient même si le service se trompe.
+    await expect(
+      client.query("UPDATE produit SET statut = 'ACTIF' WHERE id = $1", [
+        produitId,
+      ]),
+    ).rejects.toThrow(/chk_produit_retrait_archive/);
+  });
+
+  it("disparaît des listes et des compteurs de l'administration", async () => {
+    const { tableauBord, stock, statistiques, prix } = {
+      tableauBord: await import("@/services/tableau-bord"),
+      stock: await import("@/services/stock-multicanal"),
+      statistiques: await import("@/services/statistiques"),
+      prix: variantes,
+    };
+    const { produitId, varianteId } = await archiveEpuise();
+    const { rows } = await client.query(
+      "SELECT categorie_id FROM produit WHERE id = $1",
+      [produitId],
+    );
+    const categorieId = rows[0].categorie_id as string;
+
+    async function releve() {
+      const comptages = await tableauBord.lireComptages();
+      return {
+        archives: (await catalogue.listerProduitsAdministration(["ARCHIVE"]))
+          .map((p) => p.id)
+          .includes(produitId),
+        nombreArchives: await catalogue.compterProduitsArchives(),
+        stock: (await stock.lireEtatStock())
+          .map((v) => v.varianteId)
+          .includes(varianteId),
+        indisponibles: comptages.variantesIndisponibles,
+        stockFaible: comptages.variantesStockFaible,
+        invendues: (await statistiques.lireStatistiques("mois"))
+          .variantesInvendues.map((v) => v.varianteId)
+          .includes(varianteId),
+        categorie: (await catalogue.listerCategories()).find(
+          (c) => c.id === categorieId,
+        )?.nombreProduits,
+        prix: (
+          await prix.previsualiserPrixProduits({
+            produitIds: [produitId],
+            prixEuros: "10",
+          })
+        ).lignes.length,
+      };
+    }
+
+    const avant = await releve();
+    expect(avant).toMatchObject({
+      archives: true,
+      stock: true,
+      invendues: true,
+      categorie: 1,
+      prix: 1,
+    });
+
+    await catalogue.retirerProduitDeLEspace(produitId);
+    const apres = await releve();
+
+    expect(apres).toMatchObject({
+      archives: false,
+      stock: false,
+      invendues: false,
+      categorie: 0,
+      prix: 0,
+    });
+    expect(apres.nombreArchives).toBe(avant.nombreArchives - 1);
+    expect(apres.indisponibles).toBe(avant.indisponibles - 1);
+    expect(apres.stockFaible).toBe(avant.stockFaible - 1);
+
+    // La catégorie reste occupée, C26, et le refus le dit.
+    await expect(catalogue.supprimerCategorie(categorieId)).rejects.toMatchObject(
+      { name: "CategorieNonVideError", nombreProduits: 1, nombreRetires: 1 },
+    );
+  });
+
+  /**
+   * LA COURSE QUE C45 FERME : une republication qui croise le retrait. Sans la
+   * contrainte, la publication relit « ARCHIVE », le retrait pose sa date, et
+   * la publication écrit « ACTIF » : un produit en vente qu'aucun écran de
+   * l'administration ne montre plus.
+   */
+  it("une republication qui croise le retrait ne laisse jamais un produit actif retiré", async () => {
+    for (let essai = 0; essai < 8; essai += 1) {
+      const { produitId, varianteId } = await archiveEpuise();
+      await client.query(
+        "UPDATE variante SET quantite_physique = 2 WHERE id = $1",
+        [varianteId],
+      );
+
+      await Promise.allSettled([
+        catalogue.publierProduit(produitId),
+        catalogue.retirerProduitDeLEspace(produitId),
+      ]);
+
+      const { rows } = await client.query(
+        "SELECT statut, retire_a FROM produit WHERE id = $1",
+        [produitId],
+      );
+      const etat = rows[0] as { statut: string; retire_a: Date | null };
+      expect(etat.retire_a === null || etat.statut === "ARCHIVE").toBe(true);
+    }
+  });
+});

@@ -1332,6 +1332,31 @@ verifier_accepte "franchise désactivable par NULL" "$sortie"
 R "UPDATE parametre_boutique SET seuil_franchise_centimes = 3900 WHERE id = true;" >/dev/null
 
 echo
+echo "Retrait de l'espace d'administration, C45, LS-266"
+
+# UN PRODUIT RETIRÉ EST ARCHIVÉ. Le cas rejeté est la REPUBLICATION d'un
+# produit retiré, celui qui mettrait en vente une pièce qu'aucun écran de
+# l'administration ne montre plus. Le produit du jeu d'essai est ACTIF :
+# poser la date seule doit échouer aussi.
+sortie=$(R "UPDATE produit SET retire_a = now() WHERE id = 'prod';")
+verifier_rejet "produit actif retiré rejeté" \
+  "chk_produit_retrait_archive" "$sortie"
+
+# IMPLICATION ET NON ÉQUIVALENCE : un archivé peut rester dans l'espace, et un
+# archivé peut en être retiré. Les deux sont des contrôles d'acceptation, sans
+# quoi un CHECK écrit en équivalence passerait ce script.
+sortie=$(R "UPDATE produit SET statut = 'ARCHIVE', archive_a = now() WHERE id = 'prod';")
+verifier_accepte "produit archivé resté dans l'espace" "$sortie"
+sortie=$(R "UPDATE produit SET retire_a = now() WHERE id = 'prod';")
+verifier_accepte "produit archivé retiré de l'espace" "$sortie"
+
+sortie=$(R "UPDATE produit SET statut = 'ACTIF', archive_a = NULL WHERE id = 'prod';")
+verifier_rejet "produit retiré republié rejeté" \
+  "chk_produit_retrait_archive" "$sortie"
+
+R "UPDATE produit SET retire_a = NULL, statut = 'ACTIF', archive_a = NULL WHERE id = 'prod';" >/dev/null
+
+echo
 echo "Complétude du SQL de référence, LS-70"
 
 # Le SQL de conception connaît-il toutes les tables de la base ?

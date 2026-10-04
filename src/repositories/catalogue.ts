@@ -35,16 +35,22 @@ export type CategorieAvecCompte = {
  * laisserait PostgreSQL rendre les lignes dans l'ordre du plan d'execution, qui
  * change avec le volume.
  *
- * LE COMPTE N'EST PAS FILTRE. Un produit archive occupe toujours sa categorie
- * du point de vue de la cle etrangere : l'exclure ferait annoncer « categorie
- * vide » sur une categorie que la base refuse de supprimer, C26.
+ * LE COMPTE N'EST PAS FILTRE SUR LE STATUT. Un produit archive occupe toujours
+ * sa categorie du point de vue de la cle etrangere : l'exclure ferait annoncer
+ * « categorie vide » sur une categorie que la base refuse de supprimer, C26.
+ *
+ * LS-266, UN PRODUIT RETIRE DE L'ESPACE N'EST PLUS COMPTE ICI, l'ecran ne
+ * devant plus le montrer nulle part. Il occupe pourtant la categorie : le
+ * refus de suppression le dit, `compterProduitsRetires`.
  */
 export async function listerCategories(
   client: ClientBase,
 ): Promise<CategorieAvecCompte[]> {
   const lignes = await client.categorie.findMany({
     orderBy: { ordre: "asc" },
-    include: { _count: { select: { produits: true } } },
+    include: {
+      _count: { select: { produits: { where: { retireA: null } } } },
+    },
   });
 
   return lignes.map((ligne) => ({
@@ -106,6 +112,41 @@ export async function compterProduits(
 }
 
 /**
+ * Produits d'une categorie retires de l'espace d'administration, LS-266.
+ *
+ * Ils bloquent la suppression, C26, sans qu'aucun ecran ne les montre : le
+ * refus doit le dire, sans quoi « categorie non vide » contredirait une liste
+ * vide.
+ */
+export async function compterProduitsRetires(
+  client: ClientBase,
+  categorieId: string,
+): Promise<number> {
+  return client.produit.count({
+    where: { categorieId, retireA: { not: null } },
+  });
+}
+
+/**
+ * Retire un produit ARCHIVE de l'espace d'administration, LS-266.
+ *
+ * UNE SEULE INSTRUCTION CONDITIONNELLE, donc sans fenetre entre lecture et
+ * ecriture : seul un produit archive et pas encore retire est touche. Rend le
+ * nombre de lignes modifiees, zero ou un, que le service interprete. Aucune
+ * ligne n'est supprimee, LS-246 ; C45 garde la condition en base.
+ */
+export async function retirerProduitDeLEspace(
+  client: ClientBase,
+  id: string,
+): Promise<number> {
+  const { count } = await client.produit.updateMany({
+    where: { id, statut: "ARCHIVE", retireA: null },
+    data: { retireA: new Date() },
+  });
+  return count;
+}
+
+/**
  * Ecrit le rang d'une categorie, en SQL brut.
  *
  * POURQUOI `$executeRaw` ICI. Cette instruction s'execute au milieu d'une
@@ -137,8 +178,10 @@ export async function creerProduit(
 
 /** Un produit et ses informations generales, pour l'ecran d'edition. */
 export async function lireProduit(client: ClientBase, id: string) {
-  return client.produit.findUnique({
-    where: { id },
+  // LS-266, UN PRODUIT RETIRÉ EST INTROUVABLE pour l'administration : son
+  // écran de détail rend 404, même par son adresse directe.
+  return client.produit.findFirst({
+    where: { id, retireA: null },
     select: {
       id: true,
       nom: true,
@@ -192,7 +235,13 @@ export async function lireNomsProduits(
 export async function lireEtatPublication(client: ClientBase, id: string) {
   return client.produit.findUnique({
     where: { id },
-    select: { id: true, statut: true, publieA: true, archiveA: true },
+    select: {
+      id: true,
+      statut: true,
+      publieA: true,
+      archiveA: true,
+      retireA: true,
+    },
   });
 }
 
@@ -676,7 +725,8 @@ export async function compterProduitsParStatut(
   client: ClientBase,
   statut: StatutProduit,
 ): Promise<number> {
-  return client.produit.count({ where: { statut } });
+  // LS-266 : un produit retiré de l'espace n'est plus compté.
+  return client.produit.count({ where: { statut, retireA: null } });
 }
 
 /**
@@ -748,7 +798,7 @@ export async function listerProduitsAdministration(
    */
   const conditionStatut =
     filtre.statuts && filtre.statuts.length > 0
-      ? Prisma.sql`WHERE p.statut = ANY(${Prisma.sql`ARRAY[${Prisma.join(
+      ? Prisma.sql`AND p.statut = ANY(${Prisma.sql`ARRAY[${Prisma.join(
           filtre.statuts.map((statut) => Prisma.sql`${statut}`),
         )}]::"StatutProduit"[]`})`
       : Prisma.empty;
@@ -781,6 +831,8 @@ export async function listerProduitsAdministration(
     LEFT JOIN variante v ON v.produit_id = p.id AND v.archivee_a IS NULL
     LEFT JOIN media m ON m.produit_id = p.id AND m.ordre = 1
       AND m.statut_traitement = 'TRAITE'
+    -- LS-266, UN PRODUIT RETIRÉ N'APPARAÎT DANS AUCUN ONGLET, Archivés compris.
+    WHERE p.retire_a IS NULL
     ${conditionStatut}
     GROUP BY p.id, p.nom, c.nom, p.statut, p.publie_a, p.modifie_a, m.chemin
     ORDER BY p.modifie_a DESC

@@ -303,6 +303,12 @@ model Produit {
   // l'antériorité affichée et le tri des nouveautés.
   publieA           DateTime?     @map("publie_a") @db.Timestamptz(3)
   archiveA          DateTime?     @map("archive_a") @db.Timestamptz(3)
+  // LS-266, retrait de l'espace d'administration. Un produit ARCHIVÉ que
+  // l'exploitante a retiré n'apparaît plus dans aucun écran ni compteur de
+  // l'administration, et reste en base : rien ne se supprime en production,
+  // LS-246. Seul le développeur le récupère, en remettant cette date à NULL,
+  // procédure dans `EXPLOITATION.md`. C45 : un produit retiré est archivé.
+  retireA           DateTime?     @map("retire_a") @db.Timestamptz(3)
   creeA             DateTime      @default(now()) @map("cree_a") @db.Timestamptz(3)
   modifieA          DateTime      @updatedAt @map("modifie_a") @db.Timestamptz(3)
 

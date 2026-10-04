@@ -297,6 +297,8 @@ export async function listerEtatStock(
     FROM variante v
     JOIN produit p ON p.id = v.produit_id
     WHERE v.archivee_a IS NULL
+      -- LS-266, un produit retiré de l'espace d'administration n'y paraît plus.
+      AND p.retire_a IS NULL
     ORDER BY p.nom ASC, v.libelle ASC
   `;
 
