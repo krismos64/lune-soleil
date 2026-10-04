@@ -410,7 +410,8 @@ que seule la personne destinataire détient.
 occurrences** de lien vers `/notre-univers`, page non livrée qui rend 404, une
 depuis l'en-tête de toutes les pages publiques. Le journal du 3 septembre 2026 en
 annonçait trois. Ce lien mort est **compté et annoncé** à chaque exécution plutôt
-que passé sous silence : il attend LS-25, qui porte des contenus que seule l'exploitante détient.
+que passé sous silence. **Ce lien mort est fermé** : la page est livrée le
+20 septembre 2026, LS-25, et s'appelle `/atelier` depuis LS-264.
 
 ### C34, tout écran porte la cible du lien d'évitement
 

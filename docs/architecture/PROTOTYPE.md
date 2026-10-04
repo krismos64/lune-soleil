@@ -174,7 +174,7 @@ l'absence a fait croire pendant deux semaines que l'accueil n'était pas conçu.
 | Page | Ce qu'elle porte | Story qui l'écrit |
 |---|---|---|
 | `/` | hero, réassurance, dernières créations, entrée par catégorie, bloc éditorial | **LS-122** |
-| `/notre-univers` | histoire, `#matieres`, `#entretien` | **LS-123**, contenus en LS-25 |
+| `/notre-univers`, devenue `/atelier` le 4 octobre 2026, LS-264 | histoire, `#matieres`, `#entretien` | **LS-123**, contenus en LS-25 |
 | `/aide` | livraison, `#faq`, `#contact` | **LS-123**, contenus en LS-26 et LS-27 |
 | `/informations-legales` | `#mentions`, `#cgv`, `#confidentialite`, `#retractation`, `#accessibilite` | **LS-123**, contenus en LS-28 |
 
