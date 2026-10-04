@@ -94,6 +94,7 @@ describe("etat vide de l'ecran Categories", () => {
             slug: "colliers",
             ordre: 1,
             nombreProduits: 0,
+            nombreRetires: 0,
           },
         ]}
       />,

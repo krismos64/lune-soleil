@@ -32,7 +32,11 @@ function messageDe(resultat: ResultatAction): string | null {
     case "INVALIDE":
       return resultat.message;
     case "SLUG_DEJA_PRIS":
-      return "Un produit porte déjà une adresse identique. Choisissez un autre nom.";
+      // LS-266 : un produit retiré de l'espace garde son adresse, et aucun
+      // onglet ne le montre. Le dire évite de chercher une fiche invisible.
+      return resultat.parUnRetire
+        ? "Un produit retiré de votre espace porte déjà ce nom. Choisissez un autre nom, ou demandez au développeur de le récupérer."
+        : "Un produit porte déjà une adresse identique. Choisissez un autre nom.";
     case "INTROUVABLE":
       return "Cette catégorie n'existe plus. Actualisez la page pour voir la liste à jour.";
     case "CATEGORIE_NON_VIDE":

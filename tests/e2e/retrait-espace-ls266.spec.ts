@@ -95,11 +95,24 @@ test("retirer un archivé le fait disparaître de l'espace sans l'effacer", asyn
   await expect(dialogue).toHaveAccessibleDescription(
     /Seul le développeur pourra la récupérer\./,
   );
+  // Aucun débordement horizontal, confirmation ouverte, 320 px compris.
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth -
+        document.documentElement.clientWidth,
+    ),
+  ).toBeLessThanOrEqual(0);
   await dialogue.getByRole("button", { name: "Retirer de mon espace" }).click();
 
-  await expect(page).toHaveURL(/statut=ARCHIVE&retrait=1/);
-  await expect(page.getByRole("status").filter({ hasText: "Fiche retirée" }))
-    .toContainText("seul le développeur pourra la récupérer");
+  // Le paramètre de confirmation est effacé de l'adresse, le message reste
+  // et reçoit le focus.
+  await expect(page).toHaveURL(/statut=ARCHIVE$/);
+  const annonce = page
+    .getByRole("status")
+    .filter({ hasText: "Produit retiré" });
+  await expect(annonce).toContainText("seul le développeur pourra le récupérer");
+  await expect(annonce).toBeFocused();
   await expect(page.getByRole("link", { name: archivee.nom })).toHaveCount(0);
 
   // La ligne existe toujours, datée.
@@ -123,6 +136,12 @@ test("annuler ne retire rien et rend le focus au bouton", async ({
     .getByRole("button", { name: "Annuler" })
     .click();
 
+  await expect(page.getByRole("alertdialog")).toHaveCount(0);
+  await expect(bouton).toBeFocused();
+
+  // Échap ferme aussi, sans rien retirer.
+  await bouton.click();
+  await page.keyboard.press("Escape");
   await expect(page.getByRole("alertdialog")).toHaveCount(0);
   await expect(bouton).toBeFocused();
   expect(await dateDeRetrait(archivee.id)).toBeNull();

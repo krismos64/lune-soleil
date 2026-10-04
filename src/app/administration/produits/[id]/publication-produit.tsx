@@ -381,10 +381,10 @@ export function PublicationProduit({
               className={styles.confirmationTexte}
               id="confirmation-retrait-texte"
             >
-              La fiche disparaît de votre espace : listes, stocks, statistiques
-              et compteurs. Elle n&apos;est pas effacée, et les commandes,
-              factures et avis qui la citent ne changent pas. Seul le
-              développeur pourra la récupérer.
+              La fiche disparaît de votre espace : listes, stocks et compteurs.
+              Elle n&apos;est pas effacée : les commandes, factures et avis qui
+              la citent ne changent pas, et ses ventes passées restent dans vos
+              statistiques. Seul le développeur pourra la récupérer.
             </p>
             <div className={styles.actions}>
               <button

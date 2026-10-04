@@ -37,6 +37,7 @@ export type CategorieAffichee = {
   slug: string;
   ordre: number;
   nombreProduits: number;
+  nombreRetires: number;
 };
 
 /**
@@ -64,7 +65,7 @@ function messageDe(resultat: ResultatAction): string | null {
       // catégorie affichée vide.
       const visibles = resultat.nombreProduits - resultat.nombreRetires;
       if (visibles === 0) {
-        return "Suppression impossible : cette catégorie porte encore des articles retirés de votre espace. Seul le développeur peut les déplacer.";
+        return "Suppression impossible : cette catégorie porte encore des produits retirés de votre espace. Seul le développeur peut les déplacer.";
       }
       return `Suppression impossible : ${visibles} produit${
         visibles > 1 ? "s y sont rattachés" : " y est rattaché"
@@ -288,6 +289,16 @@ export function GestionCategories({
                         : `${categorie.nombreProduits} produit${
                             categorie.nombreProduits > 1 ? "s" : ""
                           }`}
+                      {/*
+                       * LS-266 : les produits retirés de l'espace occupent la
+                       * catégorie, C26. Le dire ici explique le bouton
+                       * désactivé AVANT le geste, et non après un refus.
+                       */}
+                      {categorie.nombreRetires > 0
+                        ? `, ${categorie.nombreRetires} retiré${
+                            categorie.nombreRetires > 1 ? "s" : ""
+                          } de votre espace`
+                        : ""}
                     </span>
                   </div>
                   <p className={styles.slug}>/{categorie.slug}</p>
@@ -336,7 +347,10 @@ export function GestionCategories({
                         le critere 2 demande. La protection reelle reste cote
                         serveur : ce `disabled` est une courtoisie, pas une garde.
                       */
-                      disabled={enCours || categorie.nombreProduits > 0}
+                      disabled={
+                        enCours ||
+                        categorie.nombreProduits + categorie.nombreRetires > 0
+                      }
                       aria-label={`Supprimer ${categorie.nom}`}
                       /*
                         LA RAISON EST ANNONCEE, pas seulement survolable. Un
@@ -346,12 +360,12 @@ export function GestionCategories({
                         personne entend « Supprimer Colliers, 3 produits ».
                       */
                       aria-describedby={
-                        categorie.nombreProduits > 0
+                        categorie.nombreProduits + categorie.nombreRetires > 0
                           ? `compte-${categorie.id}`
                           : undefined
                       }
                       title={
-                        categorie.nombreProduits > 0
+                        categorie.nombreProduits + categorie.nombreRetires > 0
                           ? "Cette catégorie porte des produits, elle ne peut pas être supprimée."
                           : undefined
                       }

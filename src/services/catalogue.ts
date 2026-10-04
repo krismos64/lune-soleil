@@ -33,7 +33,15 @@ import { lignesDesSectionsParDefaut } from "@/services/sections-produit";
 
 /** Le slug derive du nom est deja porte par une autre ligne, C3. */
 export class SlugDejaPrisError extends Error {
-  constructor(readonly slug: string) {
+  /**
+   * `parUnRetire`, LS-266 : le slug appartient a un produit retire de
+   * l'espace, que l'exploitante ne peut retrouver dans aucun onglet. Le
+   * message doit le dire, sans quoi elle cherche une fiche invisible.
+   */
+  constructor(
+    readonly slug: string,
+    readonly parUnRetire = false,
+  ) {
     super(`Le slug ${slug} est deja utilise.`);
     this.name = "SlugDejaPrisError";
   }
@@ -336,7 +344,10 @@ export async function creerProduit(entree: unknown): Promise<Produit> {
       throw new CategorieIntrouvableError();
     }
     if (estErreurPrisma(erreur, "P2002")) {
-      throw new SlugDejaPrisError(slug);
+      throw new SlugDejaPrisError(
+        slug,
+        await depot.slugPorteParUnRetire(prisma, slug),
+      );
     }
     throw erreur;
   }
@@ -523,7 +534,10 @@ export async function publierProduit(produitId: string): Promise<void> {
       throw new ProduitNonPubliableError(motifs);
     }
 
-    await depot.ecrireStatutProduit(tx, produitId, {
+    // LS-266, ECRITURE CONDITIONNELLE, relevé par `ls-critical-reviewer` : un
+    // retrait valide entre la lecture et cette ecriture ne touche aucune
+    // ligne, et le refus se nomme au lieu de buter sur C45 en panne.
+    const ecrits = await depot.publierProduitDansLEspace(tx, produitId, {
       statut: "ACTIF",
       // Premiere publication seulement, voir ci-dessus.
       ...(produit.publieA === null ? { publieA: new Date() } : {}),
@@ -533,6 +547,9 @@ export async function publierProduit(produitId: string): Promise<void> {
       // l'autre selon ce qu'elle filtre.
       archiveA: null,
     });
+    if (ecrits === 0) {
+      throw new ProduitIntrouvableError();
+    }
   });
 }
 
