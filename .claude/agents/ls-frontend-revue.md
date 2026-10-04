@@ -99,6 +99,29 @@ signales une Server Action de `administration/` dont le corps ne porte pas
 `exigerAdministratrice`. Le contrôle textuel existe, il ne remplace pas ta
 lecture : une garde placée après l'effet le satisfait.
 
+### 7. Les animations et les thèmes, ADR-045 et ADR-046
+
+Toute animation d'une page publique suit ADR-045 et la section « Animation
+des pages publiques » de `frontend-design.md` :
+- contenu principal visible au premier rendu, sans script et en mouvement
+  réduit ;
+- arrêt au plus tard cinq secondes après l'entrée dans l'écran, par
+  `data-borne` ;
+- `transform`, `opacity` et `stroke-dashoffset` seulement ;
+- rien qui bouge dans un formulaire pendant une saisie ;
+- l'intensité selon le type de page, dont les portes d'entrée et le contact
+  amendés par LS-268.
+
+Un thème saisonnier suit ADR-046 :
+- un jeu fermé écrit dans le code, sur l'accueil et le catalogue seulement ;
+- aucun texte saisi, aucune promesse de prix, de date ni de livraison ;
+- des jetons mesurés sur crème, sable et blanc ;
+- des décors jamais posés sur un texte, un contrôle ou un bijou.
+
+Tu vérifies que le test du mode animé contrôle **chaque** élément borné, et
+la page entière, pas seulement le premier : la revue de LS-268 a trouvé ce
+trou.
+
 ## Comment tu travailles
 
 Tu lis les fichiers touchés par la story, pas tout le dépôt. `git diff main...`
