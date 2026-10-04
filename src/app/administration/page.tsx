@@ -32,6 +32,7 @@ import {
   exigerAdministratrice,
 } from "@/services/autorisation";
 import { lireComptages } from "@/services/tableau-bord";
+import { lireThemeSaisonnier } from "@/services/theme-saisonnier";
 import { formaterMontant } from "@/lib/montant";
 
 import styles from "./tableau-bord.module.css";
@@ -119,6 +120,13 @@ export default async function PageAdministration() {
   /*
    * L'EN-TETE EST RENDU TOUT DE SUITE, les comptages sous `<Suspense>`.
    */
+  /*
+   * LE THÈME SAISONNIER ACTIF EST RAPPELÉ ICI, ADR-046 : un thème de Noël
+   * oublié en février se voit à la première ouverture. Sa lecture ne lève
+   * jamais, elle peut donc précéder la frontière.
+   */
+  const theme = await lireThemeSaisonnier();
+
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
       <p className={styles.surtitre}>{dateDuJour()}</p>
@@ -126,6 +134,19 @@ export default async function PageAdministration() {
       <p className={styles.introduction}>
         Les actions à traiter sont regroupées avant les indicateurs.
       </p>
+
+      {theme === "NOEL" ? (
+        <p className={styles.rappelTheme}>
+          Le thème de Noël est actif sur l&apos;accueil et le catalogue.{" "}
+          <Link
+            href="/administration/parametres"
+            className={styles.lienRappel}
+            prefetch={false}
+          >
+            Changer de thème
+          </Link>
+        </p>
+      ) : null}
 
       <Suspense fallback={<ChargementIndicateurs />}>
         <IndicateursTableauBord />

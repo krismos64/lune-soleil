@@ -71,9 +71,7 @@ const rang = (i: number): CSSProperties => ({ "--rang": i }) as CSSProperties;
  * dont `--ls-feuillage` change la couleur, et une neige qui tombe une fois
  * DANS LE CADRE de l'emblème, jamais par-dessus un texte ni un contrôle.
  */
-export function EmblemeAnime({
-  saison,
-}: { saison?: "noel" | undefined } = {}) {
+export function EmblemeAnime({ saison }: { saison?: "noel" | undefined } = {}) {
   return (
     <div className={styles.cadre} aria-hidden="true" data-borne="">
       <div className={styles.halo} />

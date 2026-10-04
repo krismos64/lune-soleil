@@ -260,3 +260,9 @@
     align-items: baseline;
   }
 }
+
+/* Liens d'aperçu du thème saisonnier, ADR-046 : soulignés, couleur d'action. */
+.lienApercu {
+  color: var(--ls-primary);
+  text-decoration: underline;
+}
