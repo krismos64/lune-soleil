@@ -23,6 +23,39 @@ test.describe("en mouvement normal", () => {
     ).toBeVisible();
   });
 
+  test("la lune de la sortie attend son arrivée à l'écran", async ({
+    page,
+  }) => {
+    /*
+     * REVUE DE LS-262 : sans `AnimationsBornees` sur la page, la lune jouait
+     * au chargement, hors de l'écran, et le visiteur la trouvait déjà figée.
+     */
+    await page.goto("/notre-univers");
+    const lune = page.locator("main [aria-hidden='true'][data-borne]").last();
+    await expect(lune).toHaveAttribute("data-borne", "attente");
+
+    await lune.scrollIntoViewIfNeeded();
+    await expect(lune).toHaveAttribute("data-borne", "joue");
+  });
+
+  test("le retard d'une carte n'est pas écrasé par sa transition", async ({
+    page,
+  }) => {
+    /*
+     * LA CASCADE EST VÉRIFIÉE, ET NON LE DÉFILEMENT : la deuxième carte est
+     * déjà visible à 1280 px et n'attendrait jamais. On lui pose l'état « vu »
+     * puis on lit le retard calculé. Revue de LS-262 : la transition de
+     * `.carte` remettait ce retard à zéro.
+     */
+    await page.goto("/catalogue");
+    const deuxieme = page.locator("main ul[data-inclinaison] > li").nth(1);
+    const retard = await deuxieme.evaluate((carte) => {
+      carte.setAttribute("data-apparition", "vu");
+      return getComputedStyle(carte).transitionDelay;
+    });
+    expect(retard).toBe("0.08s");
+  });
+
   test("une image hors de l'écran apparaît à son arrivée", async ({ page }) => {
     await page.goto("/notre-univers");
     const derniere = page.locator("main img[data-apparition]").last();

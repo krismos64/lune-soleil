@@ -26,6 +26,7 @@
  * Une cible non focalisable est le piege classique du lien d'evitement : il
  * parait fonctionner, la page bouge, et il ne remplit pas son role.
  */
+import { AnimationsBornees } from "@/components/animations-bornees";
 import { ApparitionAuDefilement } from "@/components/apparition-au-defilement";
 import { EnTeteBoutique } from "@/components/en-tete-boutique";
 import { PiedBoutique } from "@/components/pied-boutique";
@@ -44,6 +45,12 @@ export default function LayoutBoutique({
        * ne rend rien et ne masque rien sans script ni en mouvement réduit.
        */}
       <ApparitionAuDefilement />
+      {/*
+       * BORNAGE DES ANIMATIONS, ADR-045 point 4, LS-262 : tout décor marqué
+       * `data-borne`, sur n'importe quelle page publique, ne joue qu'à l'écran
+       * et cinq secondes au plus.
+       */}
+      <AnimationsBornees />
     </>
   );
 }

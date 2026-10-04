@@ -196,7 +196,11 @@ export default async function PageNotreUnivers() {
          * l'exploitante, et la balise le dit au lecteur d'ecran. Les guillemets
          * sont dessines en CSS, `::before`, donc absents du texte copie.
          */}
-        <figure className={styles.citationNom} data-apparition="">
+        <figure
+          className={styles.citationNom}
+          data-apparition=""
+          data-apparition-mode="glisse"
+        >
           <blockquote className={styles.citationNomTexte}>
             <p>
               Un bijou pour les jours calmes, un autre pour ceux qui brillent.

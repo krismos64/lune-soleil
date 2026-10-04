@@ -260,8 +260,9 @@
 
 /*
  * INCLINAISON ET REFLET AU SURVOL : depuis LS-262 ils vivent dans
- * `catalogue.module.css`, sur la carte elle-même, partagée avec le catalogue.
- * `data-inclinaison` sur la liste suffit à les activer ici.
+ * `catalogue.module.css`, sur la carte elle-même, partagée avec le catalogue :
+ * reflet et transition s'appliquent à toute carte. `data-inclinaison` sur la
+ * liste active en plus l'inclinaison par `ReactionPointeur`.
  */
 
 /* ---------- Bandeau défilant ---------- */
