@@ -31,12 +31,11 @@ export default function ErreurContact({
 }) {
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
-      <h1 className={styles.titre}>Nous écrire</h1>
+      <h1 className={styles.titre}>Écrire à l&apos;atelier</h1>
 
       <div className={styles.delai} role="alert">
         <p>
-          Le formulaire n&apos;a pas pu être affiché. Le problème vient de notre
-          côté.
+          Le formulaire n&apos;a pas pu être affiché. Le problème vient du site.
         </p>
         <p>
           En attendant, écrivez directement à{" "}

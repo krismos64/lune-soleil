@@ -137,3 +137,355 @@
     grid-template-columns: 1fr minmax(0, 46rem);
   }
 }
+
+/* ======================================================================
+ * DÉCORS ANIMÉS DES PORTES D'ENTRÉE, LS-268, amendement d'ADR-045.
+ *
+ * MOBILE D'ABORD : sous 768 px le décor est un BANDEAU au-dessus du
+ * formulaire, arbitrage de Christophe du 4 octobre 2026. Le panneau de
+ * l'administration, lui, reste masqué sous ce seuil : la règle `.panneau`
+ * plus haut s'applique toujours à lui.
+ *
+ * SEULES `transform`, `opacity` ET `stroke-dashoffset` S'ANIMENT, toutes les
+ * animations sont finies et s'achèvent avant cinq secondes. Le formulaire, à
+ * côté, ne porte aucune animation.
+ * ====================================================================== */
+.decor {
+  display: grid;
+  place-items: center;
+  isolation: isolate;
+  min-height: 11.5rem;
+  padding: var(--ls-space-5) var(--ls-space-4);
+  text-align: center;
+}
+
+/*
+ * LE DÉGRADÉ DE CIEL, PERMIS ICI PAR L'AMENDEMENT D'ADR-045. Sous l'image de
+ * nuit, il est le repli de chargement : un aplat clair laisserait un instant
+ * la phrase claire illisible.
+ */
+.nuit {
+  color: var(--ls-texte-nuit);
+  background: linear-gradient(
+    180deg,
+    var(--ls-ciel-nuit-bas) 0%,
+    var(--ls-ciel-nuit-haut) 100%
+  );
+}
+
+.aube {
+  color: var(--ls-primary-hover);
+  background:
+    radial-gradient(
+      90% 60% at 50% 100%,
+      color-mix(in srgb, var(--ls-or-pale) 55%, transparent),
+      transparent 70%
+    ),
+    linear-gradient(180deg, var(--ls-ciel-aube-haut), var(--ls-background));
+}
+
+.ciel {
+  z-index: -1;
+  object-fit: cover;
+  /* La lueur dorée de l'image est en haut à droite, loin de la phrase. */
+  object-position: center;
+}
+
+.decorContenu {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: var(--ls-space-2);
+}
+
+.astre {
+  width: 5.25rem;
+  height: 5.25rem;
+  overflow: visible;
+}
+
+.phrase {
+  margin: 0;
+  max-width: 18ch;
+  font-family: var(--ls-police-titre);
+  font-size: 1.375rem;
+  line-height: 1.2;
+}
+
+/* Masquée dans le bandeau mobile, où elle repousserait le formulaire. */
+.sous {
+  display: none;
+  margin: 0;
+  max-width: 30ch;
+  font-size: 0.9375rem;
+}
+
+/*
+ * CONTRASTES MESURÉS : --ls-texte-nuit sur --ls-ciel-nuit-bas 14,9:1, et
+ * l'image reste sombre sous la phrase ; --ls-primary-hover et --ls-text sur
+ * --ls-ciel-aube-haut au-delà de 10:1.
+ */
+.nuit .sous {
+  color: var(--ls-texte-nuit);
+}
+
+.aube .sous {
+  color: var(--ls-text);
+}
+
+/* Poussière d'or : huit éclats aux positions fixes, aucun n'est tiré au hasard. */
+.poussiere {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.poussiere i {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--ls-or-pale);
+  opacity: 0.7;
+}
+
+.aube .poussiere i {
+  background: var(--ls-accent-gold);
+}
+
+.poussiere i:nth-child(1) {
+  left: 12%;
+  top: 22%;
+}
+.poussiere i:nth-child(2) {
+  left: 28%;
+  top: 70%;
+}
+.poussiere i:nth-child(3) {
+  left: 46%;
+  top: 14%;
+}
+.poussiere i:nth-child(4) {
+  left: 64%;
+  top: 80%;
+}
+.poussiere i:nth-child(5) {
+  left: 78%;
+  top: 30%;
+}
+.poussiere i:nth-child(6) {
+  left: 88%;
+  top: 62%;
+}
+.poussiere i:nth-child(7) {
+  left: 8%;
+  top: 86%;
+}
+.poussiere i:nth-child(8) {
+  left: 56%;
+  top: 46%;
+}
+
+.trait {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.orbite {
+  opacity: 0.7;
+}
+
+.etoile {
+  fill: var(--ls-or-pale);
+}
+
+.rayon {
+  fill: none;
+  stroke: var(--ls-or-moyen);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+@media (min-width: 768px) {
+  .gabaritDecor .decor {
+    min-height: auto;
+    padding: var(--ls-space-8) var(--ls-space-6);
+  }
+
+  .astre {
+    width: 12.5rem;
+    height: 12.5rem;
+  }
+
+  .phrase {
+    font-size: 2.375rem;
+  }
+
+  .sous {
+    display: block;
+  }
+
+  .decorContenu {
+    gap: var(--ls-space-4);
+  }
+}
+
+@media (min-width: 1280px) {
+  .astre {
+    width: 15rem;
+    height: 15rem;
+  }
+
+  .phrase {
+    font-size: 2.75rem;
+  }
+}
+
+/*
+ * LE BANDEAU MOBILE : la règle `.panneau { display: none }` plus haut vaut pour
+ * l'administration ; le décor l'emporte par sa spécificité.
+ */
+.gabaritDecor .decor {
+  display: grid;
+}
+
+/*
+ * L'ANIMATION, EN MOUVEMENT AUTORISÉ SEULEMENT. Sans elle, en mouvement réduit,
+ * le décor est complet et immobile. Sans script, ces animations finies jouent
+ * une fois et s'arrêtent d'elles-mêmes, `data-borne` restant vide.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .trait {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: dessine 1600ms var(--ls-easing-sortie) forwards;
+  }
+
+  .orbite {
+    animation-delay: 300ms;
+  }
+
+  .lune {
+    transform-box: fill-box;
+    transform-origin: 70% 50%;
+    animation: lune-entre 1400ms var(--ls-easing-sortie) 300ms both;
+  }
+
+  .soleil {
+    transform-box: fill-box;
+    transform-origin: center bottom;
+    animation: soleil-leve 1600ms var(--ls-easing-sortie) 200ms both;
+  }
+
+  .rayon {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: rayon 1000ms var(--ls-easing-sortie) both;
+    animation-delay: calc(900ms + var(--rang) * 70ms);
+  }
+
+  .etoile {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: scintille 1600ms ease-in-out 2 both;
+    animation-delay: calc(800ms + var(--rang) * 250ms);
+  }
+
+  .poussiere i {
+    animation: flotte 2400ms ease-in-out both;
+  }
+
+  .poussiere i:nth-child(2n) {
+    animation-delay: 300ms;
+  }
+
+  .poussiere i:nth-child(3n) {
+    animation-delay: 600ms;
+  }
+
+  /* La phrase glisse sans jamais disparaître, ADR-045 point 5. */
+  .phrase,
+  .sous {
+    animation: glisse 1000ms var(--ls-easing-sortie) both;
+  }
+
+  .sous {
+    animation-delay: 350ms;
+  }
+}
+
+@keyframes dessine {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes lune-entre {
+  from {
+    opacity: 0;
+    transform: translateX(-30%) rotate(-30deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes soleil-leve {
+  from {
+    opacity: 0;
+    transform: translateY(40%) scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes rayon {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes scintille {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.7);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes flotte {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  60% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0.7;
+    transform: none;
+  }
+}
+
+@keyframes glisse {
+  from {
+    transform: translateY(14px);
+  }
+  to {
+    transform: none;
+  }
+}

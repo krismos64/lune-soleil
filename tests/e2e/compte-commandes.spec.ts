@@ -437,7 +437,7 @@ test("le panneau Documents et actions porte son fond mesure et le contact", asyn
    */
   await expect(panneau).toContainText(numero);
   await expect(
-    panneau.getByRole("link", { name: "Nous écrire" }),
+    panneau.getByRole("link", { name: "Écrire à l'atelier" }),
   ).toBeVisible();
 });
 
@@ -474,7 +474,7 @@ test("le panneau entier rend ses trois groupes et leur separateur", async ({
     panneau.getByRole("link", { name: "Déclarer ma rétractation" }),
   ).toBeVisible();
   await expect(
-    panneau.getByRole("link", { name: "Nous écrire" }),
+    panneau.getByRole("link", { name: "Écrire à l'atelier" }),
   ).toBeVisible();
 
   /*
