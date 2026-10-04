@@ -164,7 +164,8 @@
   will-change: transform;
 }
 
-@media (max-width: 767px) {
+/* Jusqu'à 1023 px, les astres passent au-dessus du texte et non à travers. */
+@media (max-width: 1023px) {
   .astre {
     top: 24%;
     width: 4.75rem;
