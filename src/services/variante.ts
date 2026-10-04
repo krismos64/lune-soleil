@@ -21,13 +21,14 @@
  */
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { valider } from "@/lib/validation";
+import { schemaSelectionProduits, valider } from "@/lib/validation";
 import * as depotCatalogue from "@/repositories/catalogue";
 import * as depot from "@/repositories/variante";
 import {
   schemaArchivageVariante,
   schemaCreationVariante,
   schemaModificationVariante,
+  schemaPrixEnMasse,
 } from "@/services/variante-validation";
 
 export type Variante = depot.Variante;
@@ -308,4 +309,48 @@ export async function archiverVariante(entree: unknown): Promise<void> {
     }
     throw erreur;
   }
+}
+
+/**
+ * Récapitulatif avant d'appliquer un même prix à plusieurs articles, LS-265 :
+ * chaque variante en vente des produits choisis, avec son prix actuel.
+ *
+ * C'EST LA SEULE PROTECTION CONTRE UNE ERREUR DE SAISIE, aucune trace de
+ * l'ancien prix n'étant gardée, arbitrage de Christophe du 4 octobre 2026.
+ */
+export async function previsualiserPrixProduits({
+  produitIds,
+}: {
+  produitIds: unknown;
+}): Promise<depot.VariantePourPrix[]> {
+  const identifiants = valider(schemaSelectionProduits, produitIds);
+  return depot.listerVariantesEnVenteDesProduits(prisma, identifiants);
+}
+
+/**
+ * Applique un même prix à toutes les variantes en vente des produits choisis,
+ * LS-265, arbitrage du 4 octobre 2026 : toutes les variantes d'un article,
+ * jamais une partie.
+ *
+ * Le prix arrive en euros saisis et repart en centimes entiers, invariant 1.
+ * Rend le nombre de variantes modifiées, qui peut différer du récapitulatif
+ * si une variante a été ajoutée ou archivée entre-temps.
+ */
+export async function appliquerPrixProduits({
+  produitIds,
+  prixEuros,
+}: {
+  produitIds: unknown;
+  prixEuros: unknown;
+}): Promise<{ variantes: number; prixCentimes: number }> {
+  const identifiants = valider(schemaSelectionProduits, produitIds);
+  const { prixCentimes } = valider(schemaPrixEnMasse, { prixEuros });
+
+  const variantes = await depot.fixerPrixVariantesDesProduits(
+    prisma,
+    identifiants,
+    prixCentimes,
+  );
+
+  return { variantes, prixCentimes };
 }

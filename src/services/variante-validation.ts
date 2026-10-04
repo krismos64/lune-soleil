@@ -255,3 +255,22 @@ export const schemaModificationVariante = z
 export const schemaArchivageVariante = z.strictObject({
   id: schemaIdentifiant,
 });
+
+/**
+ * Prix appliqué à toute une sélection de produits, LS-265.
+ *
+ * LA MÊME RÈGLE QUE LE PRIX UNITAIRE, `schemaPrixEuros` : euros saisis,
+ * centimes entiers rendus, plafond contre la virgule oubliée.
+ *
+ * UN PRIX NUL EST REFUSÉ EN MASSE, et seulement ici. Christophe a écarté toute
+ * trace de l'ancien prix, arbitrage du 4 octobre 2026 : une saisie de « 0 »
+ * appliquée à tout le catalogue ne se rattraperait qu'à la main, variante par
+ * variante. Le prix unitaire garde la règle de la base, `prix_centimes >= 0`.
+ */
+export const schemaPrixEnMasse = z
+  .strictObject({ prixEuros: schemaPrixEuros })
+  .refine(
+    ({ prixEuros }) => prixEuros > 0,
+    "Un prix nul ne s'applique pas à plusieurs articles à la fois.",
+  )
+  .transform(({ prixEuros }) => ({ prixCentimes: prixEuros }));

@@ -615,3 +615,112 @@ describe("lecture des variantes d'un produit", () => {
     expect(await variantes.listerVariantes(produitId)).toEqual([]);
   });
 });
+
+/**
+ * Un même prix pour plusieurs articles, LS-265.
+ *
+ * Arbitrage de Christophe du 4 octobre 2026 : toutes les variantes en vente
+ * des articles choisis prennent le prix, et aucune trace de l'ancien n'est
+ * gardée. Un prix nul est refusé en masse.
+ */
+describe("prix appliqué à une sélection de produits", () => {
+  async function prixDe(varianteId: string): Promise<number> {
+    const { rows } = await client.query<{ prix_centimes: number }>(
+      "SELECT prix_centimes FROM variante WHERE id = $1",
+      [varianteId],
+    );
+    return rows[0]!.prix_centimes;
+  }
+
+  it("fixe le prix en centimes entiers sur toutes les variantes en vente", async () => {
+    const premier = await produitDeTest("Collier");
+    const second = await produitDeTest("Bague");
+    const a = await variantes.creerVariante(entree(premier));
+    const b = await variantes.creerVariante(
+      entree(premier, { prixEuros: "42" }),
+    );
+    const c = await variantes.creerVariante(entree(second));
+
+    const bilan = await variantes.appliquerPrixProduits({
+      produitIds: [premier, second],
+      prixEuros: "24,90",
+    });
+
+    expect(bilan).toEqual({ variantes: 3, prixCentimes: 2490 });
+    for (const variante of [a, b, c]) {
+      expect(await prixDe(variante.id)).toBe(2490);
+    }
+  });
+
+  it("ne touche ni une variante archivée ni un produit hors sélection", async () => {
+    const choisi = await produitDeTest();
+    const autre = await produitDeTest();
+    const archivee = await variantes.creerVariante(entree(choisi));
+    await variantes.archiverVariante({ id: archivee.id });
+    const enVente = await variantes.creerVariante(entree(choisi));
+    const horsSelection = await variantes.creerVariante(entree(autre));
+
+    const bilan = await variantes.appliquerPrixProduits({
+      produitIds: [choisi],
+      prixEuros: "10",
+    });
+
+    expect(bilan.variantes).toBe(1);
+    expect(await prixDe(enVente.id)).toBe(1000);
+    expect(await prixDe(archivee.id)).toBe(1999);
+    expect(await prixDe(horsSelection.id)).toBe(1999);
+  });
+
+  it("laisse intactes les lignes de commande, invariant 3", async () => {
+    const produit = await produitDeTest();
+    const variante = await variantes.creerVariante(entree(produit));
+    await commandeAvecLigne(variante.id, variante.reference, 1999);
+
+    await variantes.appliquerPrixProduits({
+      produitIds: [produit],
+      prixEuros: "5",
+    });
+
+    const { rows } = await client.query<{ prix_fige_centimes: number }>(
+      "SELECT prix_fige_centimes FROM ligne_commande WHERE variante_id = $1",
+      [variante.id],
+    );
+    expect(rows.map((ligne) => ligne.prix_fige_centimes)).toEqual([1999]);
+  });
+
+  it("refuse un prix nul, un montant illisible et une sélection vide", async () => {
+    const produit = await produitDeTest();
+    const variante = await variantes.creerVariante(entree(produit));
+
+    for (const prixEuros of ["0", "0,00", "douze", "19,999"]) {
+      await expect(
+        variantes.appliquerPrixProduits({ produitIds: [produit], prixEuros }),
+      ).rejects.toThrow();
+    }
+    await expect(
+      variantes.appliquerPrixProduits({ produitIds: [], prixEuros: "10" }),
+    ).rejects.toThrow();
+
+    expect(await prixDe(variante.id)).toBe(1999);
+  });
+
+  it("récapitule les variantes en vente avec leur prix actuel", async () => {
+    const produit = await produitDeTest("Boucles");
+    await variantes.creerVariante(entree(produit, { libelle: "Courtes" }));
+    const archivee = await variantes.creerVariante(
+      entree(produit, { libelle: "Longues" }),
+    );
+    await variantes.archiverVariante({ id: archivee.id });
+
+    const recapitulatif = await variantes.previsualiserPrixProduits({
+      produitIds: [produit],
+    });
+
+    expect(recapitulatif).toHaveLength(1);
+    expect(recapitulatif[0]).toMatchObject({
+      libelle: "Courtes",
+      prixCentimes: 1999,
+    });
+    expect(recapitulatif[0]!.produitNom).toMatch(/^Boucles /);
+  });
+});
