@@ -15,8 +15,8 @@
 }
 
 /*
- * UNE COLONNE JUSQU'A 1024 PX, l'emblème au-dessus du texte ; deux colonnes
- * au-delà, le texte à gauche. L'ordre du DOM garde le titre avant l'emblème,
+ * UNE COLONNE JUSQU'À 1023 PX, l'emblème au-dessus du texte ; deux colonnes
+ * à partir de 1024, le texte à gauche. L'ordre du DOM garde le titre avant l'emblème,
  * qui est `aria-hidden` : un lecteur d'écran commence par le titre.
  */
 .heroGrille {
@@ -94,8 +94,9 @@
 /*
  * MOTS DORÉS DU TITRE, ADR-045 : deux arrêts seulement, `--ls-or-sombre`
  * 5,51:1 et `--ls-or-moyen` 4,15:1 sur `--ls-background`, au-dessus du seuil
- * de 3:1 du grand texte. Le reflet glisse deux fois puis s'arrête, et le texte
- * reste lisible à chaque instant puisque chaque teinte l'est.
+ * de 3:1 du grand texte. AUCUN REFLET ANIMÉ : il animait `background-position`
+ * et repeignait le titre, élément du LCP, pendant six secondes, hors de
+ * `transform` et `opacity` que la règle autorise. Revue de LS-260.
  */
 .motDore {
   background: linear-gradient(
@@ -104,22 +105,19 @@
     var(--ls-or-moyen) 50%,
     var(--ls-or-sombre)
   );
-  background-size: 200% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: reflet 3s linear 1200ms 2;
 }
 
-@keyframes reflet {
-  to {
-    background-position: -200% 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
+/*
+ * À L'IMPRESSION, sans l'option « graphiques d'arrière-plan », un texte
+ * détouré sur un fond non imprimé disparaîtrait du titre.
+ */
+@media print {
   .motDore {
-    animation: none;
+    background: none;
+    color: var(--ls-or-sombre);
   }
 }
 
@@ -308,8 +306,8 @@
 /* ---------- Bandeau défilant ---------- */
 
 /*
- * L'ANIMATION N'EXISTE QUE SOUS `data-borne="joue"`, ADR-045 point 4 : sans
- * script, ou hors de sa fenêtre de dix secondes, la piste reste immobile.
+ * L'ANIMATION N'EXISTE QU'UNE FOIS LE SCRIPT ACTIF, ADR-045 point 4 : sans
+ * script, ou hors de sa fenêtre de cinq secondes, la piste reste immobile.
  * Texte `--ls-primary` sur sable, 7,49:1.
  */
 .defilant {
@@ -447,8 +445,8 @@
 }
 
 /*
- * LE LOGO FLOTTE ET UN REFLET LE TRAVERSE, deux passages puis l'arrêt,
- * ADR-045 point 4. `data-borne` le suspend hors de l'écran.
+ * LE LOGO FLOTTE ET UN REFLET LE TRAVERSE, un passage puis l'arrêt, moins de
+ * cinq secondes, ADR-045 point 4. `data-borne` le suspend hors de l'écran.
  */
 .sceauImage {
   position: relative;
@@ -457,7 +455,7 @@
   margin-inline: auto;
   border-radius: 50%;
   overflow: hidden;
-  animation: flotte 6s ease-in-out 1500ms;
+  animation: flotte 3200ms ease-in-out 600ms;
 }
 
 .sceauImage::after {
@@ -472,7 +470,7 @@
     transparent 60%
   );
   transform: translateX(-100%);
-  animation: lustre 4s ease-in-out 1s 2;
+  animation: lustre 3s ease-in-out 800ms 1;
 }
 
 .logo {

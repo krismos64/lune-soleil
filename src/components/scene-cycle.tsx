@@ -16,12 +16,22 @@
  *
  * LE CIEL LIT LES JETONS `--ls-ciel-*` au lieu d'en recopier les valeurs, et
  * LA COULEUR DU TEXTE EST CHOISIE PAR CONTRASTE CALCULÉ à chaque étape, entre
- * `--ls-primary-hover` et `--ls-texte-nuit`, sur la teinte réelle au milieu de
- * la scène. Un seuil fixe sur la progression laissait le texte sombre sur un
- * crépuscule déjà foncé, défaut relevé sur la maquette.
+ * `--ls-primary-hover` et `--ls-texte-nuit`, sur toute la bande où se pose le
+ * texte, de 30 à 70 % de la hauteur, et non sur un seul point.
  *
- * LA PHRASE MASQUÉE PORTE `aria-hidden` : un lecteur d'écran lit l'état
- * affiché, et non trois phrases dont deux sont transparentes.
+ * AUCUNE PHRASE PENDANT LE PASSAGE AU CRÉPUSCULE, et c'est une contrainte
+ * mathématique. Un ciel qui passe continûment du clair au foncé croise une
+ * teinte où ni le texte sombre ni le texte clair n'atteint 4,5:1 : au mieux
+ * 3,37:1 avec ces deux couleurs. Calculé sur les jetons au pas de 0,001, le
+ * texte tient 4,5:1 sur toute la bande pour t < 0,570 et t > 0,774. Les
+ * fenêtres de `FENETRES` se posent dans ces intervalles avec une marge, et
+ * une garde refuse en plus d'afficher une phrase sous le seuil si un jeton
+ * changeait. Revue de LS-260.
+ *
+ * LES PHRASES MASQUÉES RESTENT DANS L'ARBRE D'ACCESSIBILITÉ. Un lecteur
+ * d'écran en curseur virtuel ne fait pas défiler la fenêtre : `aria-hidden`
+ * sur les phrases hors fenêtre les lui retirait purement, ce que la première
+ * version faisait. Seule l'opacité porte la bascule.
  *
  * RIEN N'EST AUTOMATIQUE : le mouvement suit le défilement, WCAG 2.2.2 ne
  * s'applique pas, et le calcul ne tourne qu'au défilement, une fois par image.
@@ -29,11 +39,25 @@
 import { useEffect, useRef, type ReactNode } from "react";
 
 import styles from "./scene-cycle.module.css";
+import { useMouvementAutorise } from "./use-mouvement-autorise";
 
 type Rgb = readonly [number, number, number];
 
 /** Les quatre étapes du ciel, du haut vers le bas de la scène. */
 const ETAPES = ["aube", "jour", "crepuscule", "nuit"] as const;
+
+/** Fenêtres de progression de chaque phrase, hors du passage au crépuscule. */
+const FENETRES = [
+  [0, 0.25],
+  [0.3, 0.55],
+  [0.8, 1],
+] as const;
+
+/** Seuil WCAG 2.2 AA du texte courant, les phrases `p` faisant 17 px. */
+const SEUIL_CONTRASTE = 4.5;
+
+/** Points de la bande où se pose le texte, en part de la hauteur de scène. */
+const BANDE_TEXTE = [0.3, 0.4, 0.5, 0.6, 0.7] as const;
 
 function lireCouleur(styleRacine: CSSStyleDeclaration, jeton: string): Rgb {
   const hex = styleRacine.getPropertyValue(jeton).trim().replace("#", "");
@@ -76,11 +100,12 @@ export function SceneCycle({
   const soleil = useRef<HTMLDivElement>(null);
   const lune = useRef<HTMLDivElement>(null);
 
+  const mouvement = useMouvementAutorise();
+
   useEffect(() => {
     const racine = section.current;
     const decor = scene.current;
-    if (!racine || !decor) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!racine || !decor || !mouvement) return;
 
     const style = getComputedStyle(document.documentElement);
     const ciel = ETAPES.map((etape) => ({
@@ -108,9 +133,14 @@ export function SceneCycle({
       if (!depart || !arrivee) return;
       const haut = melanger(depart.haut, arrivee.haut, f);
       const bas = melanger(depart.bas, arrivee.bas, f);
-      const milieu = melanger(haut, bas, 0.5);
-      const texteClair =
-        rapportContraste(clair, milieu) > rapportContraste(sombre, milieu);
+      const bande = BANDE_TEXTE.map((part) => melanger(haut, bas, part));
+      const pire = (texte: Rgb) =>
+        Math.min(...bande.map((fond) => rapportContraste(texte, fond)));
+      const contrasteClair = pire(clair);
+      const contrasteSombre = pire(sombre);
+      const texteClair = contrasteClair > contrasteSombre;
+      const lisible =
+        Math.max(contrasteClair, contrasteSombre) >= SEUIL_CONTRASTE;
 
       decor.style.setProperty("--ciel-haut", rgb(haut));
       decor.style.setProperty("--ciel-bas", rgb(bas));
@@ -140,11 +170,14 @@ export function SceneCycle({
         );
       }
 
-      const active = t < 0.33 ? 0 : t < 0.66 ? 1 : 2;
       phrases.forEach((phrase, k) => {
-        const visible = k === Math.min(active, phrases.length - 1);
+        const fenetre = FENETRES[k];
+        const visible =
+          lisible &&
+          fenetre !== undefined &&
+          t >= fenetre[0] &&
+          t <= fenetre[1];
         phrase.dataset.active = String(visible);
-        phrase.setAttribute("aria-hidden", String(!visible));
       });
     };
 
@@ -161,12 +194,16 @@ export function SceneCycle({
       window.removeEventListener("resize", demander);
       window.cancelAnimationFrame(image);
       delete racine.dataset.mode;
-      for (const phrase of phrases) {
-        delete phrase.dataset.active;
-        phrase.removeAttribute("aria-hidden");
-      }
+      for (const phrase of phrases) delete phrase.dataset.active;
+      for (const propriete of [
+        "--ciel-haut",
+        "--ciel-bas",
+        "--cycle-texte",
+        "--etoiles",
+      ])
+        decor.style.removeProperty(propriete);
     };
-  }, []);
+  }, [mouvement]);
 
   return (
     <section ref={section} className={styles.cycle} aria-label={titre}>

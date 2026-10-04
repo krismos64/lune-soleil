@@ -4,7 +4,7 @@
  * UNE FORME DE PAILLETTES, `frontend-design.md` et ADR-045 : CSS déterministe,
  * positions FIXES et non tirées au hasard, aucun canvas, `aria-hidden`,
  * `pointer-events: none`, supprimée en mouvement réduit. Les grains montent et
- * s'éteignent en deux passages, moins de dix secondes en tout.
+ * s'éteignent en un passage, moins de cinq secondes en tout, WCAG 2.2.2.
  *
  * COMPOSANT SERVEUR, aucun script.
  */

@@ -102,14 +102,14 @@
   --ls-admin-pastille: #ead9c0;
 
   /*
-   * OR DE L'EMBLEME ANIME, ADR-045, LS-260. Les quatre arrets du degrade du
+   * OR DE L'EMBLÈME ANIMÉ, ADR-045, LS-260. Les quatre arrêts du dégradé du
    * logo vectoriel. SEULS LES DEUX PREMIERS PORTENT DU TEXTE, et seulement en
-   * titre, seuil de 3:1 du grand texte, mesure sur --ls-background :
+   * titre, seuil de 3:1 du grand texte, mesuré sur --ls-background :
    *
    *   --ls-or-sombre  ->  5,51:1
    *   --ls-or-moyen   ->  4,15:1
-   *   --ls-or-clair   ->  decor seulement, 1,8:1 environ
-   *   --ls-or-pale    ->  decor seulement, 1,4:1 environ
+   *   --ls-or-clair   ->  décor seulement, 1,8:1 environ
+   *   --ls-or-pale    ->  décor seulement, 1,4:1 environ
    */
   --ls-or-sombre: #8b5a12;
   --ls-or-moyen: #a46c17;
@@ -117,13 +117,16 @@
   --ls-or-pale: #f0cf7a;
 
   /*
-   * CIEL DE LA SCENE DU MATIN A LA NUIT, ADR-045 : un degrade permis dans ce
-   * decor et le fond du menu mobile, jamais sur une surface d'interface. Le
-   * script de la scene LIT CES JETONS au lieu de recopier leurs valeurs, et
-   * choisit la couleur du texte par contraste calcule a chaque etape.
+   * CIEL DE LA SCÈNE DU MATIN À LA NUIT, ADR-045 : un dégradé permis dans ce
+   * décor et le fond du menu mobile, jamais sur une surface d'interface. Le
+   * script de la scène LIT CES JETONS au lieu de recopier leurs valeurs.
    *
-   * Texte sombre --ls-primary-hover : 9,34:1 sur l'aube, 10,89:1 sur le jour.
-   * Texte clair --ls-texte-nuit : 5,62:1 sur le crepuscule, 16,37:1 la nuit.
+   * CE QUI SE MESURE EST LA BANDE OÙ SE POSE LE TEXTE, de 30 à 70 % de la
+   * hauteur, et non un arrêt du dégradé (C31). Calculé au pas de 0,001 sur la
+   * progression : --ls-primary-hover ou --ls-texte-nuit y tient 4,5:1 pour
+   * t < 0,570 et t > 0,774. Entre les deux, aucun texte ne le peut, au mieux
+   * 3,37:1 : `scene-cycle.tsx` n'affiche aucune phrase dans cet intervalle.
+   * Changer une de ces valeurs oblige à refaire ce calcul.
    */
   --ls-ciel-aube-haut: #fbe3c4;
   --ls-ciel-aube-bas: #f7d6b0;
@@ -191,8 +194,9 @@
   --ls-duration-base: 220ms;
   --ls-easing: cubic-bezier(0.4, 0, 0.2, 1);
   /*
-   * ENCHAINEMENTS DECORATIFS, ADR-045. Une sortie lente qui freine en douceur,
-   * et une borne : aucune animation automatique ne dure au-dela, WCAG 2.2.2.
+   * ENCHAÎNEMENTS DÉCORATIFS, ADR-045 : une sortie lente qui freine en douceur,
+   * et la durée de dessin d'un tracé. Aucune animation automatique ne dépasse
+   * cinq secondes, WCAG 2.2.2.
    */
   --ls-easing-sortie: cubic-bezier(0.16, 1, 0.3, 1);
   --ls-duree-dessin: 1800ms;
@@ -207,5 +211,6 @@
   :root {
     --ls-duration-fast: 0ms;
     --ls-duration-base: 0ms;
+    --ls-duree-dessin: 0ms;
   }
 }

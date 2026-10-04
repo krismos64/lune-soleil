@@ -191,3 +191,37 @@
   height: 100%;
   fill: var(--ls-or-pale);
 }
+
+/*
+ * FILET DE SÉCURITÉ, ADR-045 point 3 : si la préférence bascule en mouvement
+ * réduit avant que le script ait retiré `data-mode`, la scène redevient un
+ * bloc statique lisible.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .cycle[data-mode="anime"] {
+    height: auto;
+  }
+
+  .cycle[data-mode="anime"] .scene {
+    position: relative;
+    height: auto;
+    padding: var(--ls-space-8) 0;
+  }
+
+  .cycle[data-mode="anime"] .phrases {
+    display: grid;
+    height: auto;
+  }
+
+  .cycle[data-mode="anime"] [data-phrase] {
+    position: static;
+    transform: none;
+    opacity: 1;
+    transition: none;
+  }
+
+  .cycle[data-mode="anime"] .etoiles,
+  .cycle[data-mode="anime"] .astre {
+    display: none;
+  }
+}
