@@ -14,11 +14,12 @@ Projet en cours de développement. **La boutique tourne en production depuis le
 9 septembre 2026** mais n'est pas ouverte commercialement : il manque les clés de
 **paiement**, LS-153, et les contenus de l'exploitante.
 
-**Le site est donc en ligne ET fermé à l'indexation**, depuis LS-234 le
-16 septembre 2026 : `robots.txt` rend `Disallow: /` tant qu'aucune pièce n'est
-publiée, et se rouvrira **seul** à la première. Aucun interrupteur à poser, l'état
-se déduisant du catalogue. Les deux notions ne se confondent pas, et ce que
-LS-153 appelle « première mise en ligne » est l'ouverture **commerciale**.
+**Le catalogue porte des pièces réelles et le site est ouvert à
+l'indexation**, relevé le 4 octobre 2026 : `robots.txt` s'est rouvert **seul** à
+la première pièce publiée, comme LS-234 le prévoit, l'état se déduisant du
+catalogue sans interrupteur. Le compte de pièces se lit sur `/catalogue`, il ne
+s'écrit pas ici. Ce que LS-153 appelle « première mise en ligne » reste
+l'ouverture **commerciale**, distincte de la mise en ligne technique.
 
 Les clés d'envoi d'email **sont posées** depuis le 10 septembre 2026, LS-214.
 

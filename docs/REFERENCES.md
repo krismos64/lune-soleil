@@ -225,6 +225,7 @@ documentation technique, ticket ou règle qui le contredirait.
 | ADR-042 | Correspondance des statuts Sendcloud, deux statuts livrent et les échecs alertent | statut Sendcloud, parent_status, Delivered, Shipment collected by customer, livreA, suivi de colis, livraison en échec, refusé par le destinataire, retourné à l'expéditeur |
 | ADR-044 | Aucun assistant IA en V1, et le sujet se ferme | assistant IA, modèle de langage, LLM, service tiers, auto-hébergé, intégration IA, LS-149, remplace la mention de V1 cible de CLAUDE.md |
 | ADR-043 | Les paramètres commerciaux passent en base, et les tarifs avec eux | paramètre, ParametreBoutique, écran de paramètres, tarif modifiable, seuil de franchise, stock faible, alertes de l'administratrice, SHIPPING_RELAY_RATE_CENTS, ligne unique, remplace l'arbitrage du 31 août 2026 |
+| ADR-045 | Politique d'animation des pages publiques : aucune bibliothèque, contenu visible au premier rendu, arrêt des boucles, intensité par type de page | animation, motion design, transition, `prefers-reduced-motion`, keyframes, menu mobile, accueil, dégradé, paillettes, Playwright `reducedMotion`, LCP |
 
 Cette table se met à jour à chaque ADR créé. Un ADR absent d'ici reste
 opposable : la table est un raccourci, `docs/adr/` fait foi.
