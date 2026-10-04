@@ -15,6 +15,14 @@ ADR-007, sont televersees par l'administration et passent par la chaine de
 traitement qui retire les metadonnees EXIF. Mettre une photo de bijou vendable
 ici la sortirait de ce circuit, et notamment du retrait de la geolocalisation.
 
+## porte-ciel-nuit.jpg, ciel de la connexion
+
+**Ajouté le 4 octobre 2026**, LS-268 : décor du panneau de connexion de la
+boutique, et de son bandeau sous 768 px. **Image générée par Codex** : ciel
+de nuit à l'aquarelle, **aucun bijou, aucun objet, aucun texte**, une pièce
+inexistante montrée comme une création étant une allégation trompeuse.
+Réécrite par `sharp` en 1024 x 1536, **sans métadonnées**, environ 100 ko.
+
 ## logo-sceau.jpg, logo du sceau de l'accueil
 
 **Ajouté le 4 octobre 2026**, LS-260 : le logo fourni par Christophe dans sa

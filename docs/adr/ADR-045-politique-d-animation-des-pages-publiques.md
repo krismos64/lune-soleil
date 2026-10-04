@@ -26,6 +26,36 @@ change.
 Relevé par `ls-frontend-revue` avant la fusion de LS-260, sur le code qui
 appliquait la version fautive.
 
+## Amendement du 4 octobre 2026, portes d'entrée et contact, LS-268
+
+**Arbitrage de Christophe sur maquette**, critiquée par Codex. Le point 7
+classait la connexion, l'inscription et le contact parmi les pages d'action,
+limitées aux micro-interactions. Ils reçoivent désormais un **décor animé**,
+et **le formulaire reste immobile** : rien ne bouge pendant une saisie.
+
+- **Le dégradé de ciel s'étend à deux décors de plus**, soit quatre en tout :
+  la scène du matin à la nuit, le fond du menu mobile, **le panneau des portes
+  d'entrée de la boutique** et **l'en-tête du contact**. Il reste interdit sur
+  un contrôle, une carte, un bandeau ou une surface d'interface.
+- **Connexion** : ciel de nuit, image générée par Codex (aquarelle, aucun
+  bijou, aucun texte, métadonnées retirées), lune tracée, étoiles, poussière
+  d'or. **Inscription** : aube, soleil levant, rayons et orbite tracés.
+  **Contact** : enveloppe tracée, rabat posé, sceau en lune, et trois encarts
+  « avant d'écrire » qui glissent sans disparaître.
+- **Sous 768 px, le décor devient un bandeau** au-dessus du formulaire, image
+  comprise, environ 100 ko : le panneau masqué de LS-229 laissait le mobile
+  sans identité.
+- **L'administration n'est pas concernée** : son écran de connexion garde la
+  photographie immobile de l'atelier, le point 7 n'y anime rien.
+- Les autres règles tiennent sans changement : titre, introduction et
+  formulaire visibles au premier rendu, sans script et en mouvement réduit ;
+  arrêt avant cinq secondes par `data-borne` ; `transform`, `opacity` et
+  `stroke-dashoffset` seulement.
+
+Contrastes calculés : `--ls-texte-nuit` donne 13,27:1 sur
+`--ls-ciel-nuit-bas` et 16,37:1 sur `--ls-ciel-nuit-haut` ;
+`--ls-primary-hover` et `--ls-text` dépassent 10:1 sur `--ls-ciel-aube-haut`.
+
 ## Contexte
 
 Le 4 octobre 2026, Christophe a validé une maquette d'accueil animée et décidé
@@ -123,7 +153,8 @@ par un repli qui ne dépend pas du script.
 |---|---|---|
 | Vitrine | accueil, notre univers, catalogue | scènes, tracés, parallaxe, reflets, apparitions |
 | Produit | fiche produit | transitions de galerie, apparitions discrètes, aucun décor animé |
-| Action | panier, commande, compte, contact, aide, pages légales | micro-interactions seulement : réaction d'un bouton, passage d'un état à l'autre |
+| Action | panier, commande, compte, aide, pages légales | micro-interactions seulement : réaction d'un bouton, passage d'un état à l'autre |
+| Portes d'entrée, amendement LS-268 | connexion et inscription de la boutique, contact | décor animé, formulaire immobile |
 | Administration | tous les écrans | aucun changement |
 
 Dans le tunnel de commande, rien ne bouge pendant une saisie ni autour d'un

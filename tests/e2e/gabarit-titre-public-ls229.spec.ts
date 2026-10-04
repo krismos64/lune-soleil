@@ -128,32 +128,53 @@ test.describe("Gabarit de titre, portes d'entree sans session", () => {
 });
 
 /**
- * LE PANNEAU N'EXISTE PAS SOUS 768 px, ET CE SENS COMPTE AUTANT QUE L'AUTRE.
+ * LE PANNEAU DE L'ADMINISTRATION N'EXISTE PAS SOUS 768 px, ET CE SENS COMPTE
+ * AUTANT QUE L'AUTRE.
  *
- * Un panneau qui resterait affiche a 320 px ecraserait le formulaire a une
- * colonne inutilisable. Le test mesure donc les DEUX cotes de la bascule, 767
- * et 768, plutot qu'une seule largeur commode.
+ * Un panneau latéral qui resterait affiché à 320 px écraserait le formulaire à
+ * une colonne inutilisable. Le test mesure donc les DEUX côtés de la bascule,
+ * 767 et 768, plutôt qu'une seule largeur commode.
+ *
+ * LES PORTES DE LA BOUTIQUE ONT CHANGÉ DE RÈGLE LE 4 OCTOBRE 2026, LS-268 :
+ * sous 768 px leur décor devient un BANDEAU au-dessus du formulaire, arbitrage
+ * de Christophe. Le test vérifie alors l'autre propriété qui compte : le
+ * bandeau est AU-DESSUS du formulaire, jamais à côté.
  */
 test.describe("Panneau visuel des portes d'entree", () => {
   for (const chemin of PORTES_ENTREE) {
-    test(`le panneau de ${chemin} n'apparait qu'au-dela de 768px`, async ({
+    const boutique = !chemin.startsWith("/administration");
+
+    test(`le panneau de ${chemin} suit sa règle de part et d'autre de 768px`, async ({
       page,
     }) => {
       await page.goto(chemin);
 
       /*
-       * LE SUFFIXE `__panneau` EST EXACT, ET C'EST INDISPENSABLE. Cinq classes
-       * du module partagent le prefixe `panneau-authentification`, dont
-       * `gabarit`, qui reste VISIBLE a 767 px. Un selecteur large suivi d'un
-       * `.first()` aurait donc rendu ce test vert pour la mauvaise raison.
+       * `__panneau` ET NON LE SEUL PRÉFIXE DU MODULE : plusieurs classes le
+       * partagent, dont `gabarit`, qui reste VISIBLE à 767 px. Un sélecteur
+       * large suivi d'un `.first()` rendrait ce test vert pour la mauvaise
+       * raison. CONTENU ET NON SUFFIXE depuis LS-268 : le décor porte aussi
+       * sa classe de variante, `__nuit` ou `__aube`, après `__panneau`.
        */
-      const panneau = page.locator('[class$="__panneau"]').first();
+      const panneau = page.locator('[class*="__panneau"]').first();
 
       await page.setViewportSize({ width: 767, height: 800 });
-      await expect(
-        panneau,
-        `le panneau de ${chemin} doit etre absent a 767px`,
-      ).toBeHidden();
+      if (boutique) {
+        await expect(panneau).toBeVisible();
+        const boitePanneau = await panneau.boundingBox();
+        const boiteTitre = await page
+          .getByRole("heading", { level: 1 })
+          .boundingBox();
+        expect(boitePanneau && boiteTitre).toBeTruthy();
+        expect(boitePanneau!.y + boitePanneau!.height).toBeLessThanOrEqual(
+          boiteTitre!.y,
+        );
+      } else {
+        await expect(
+          panneau,
+          `le panneau de ${chemin} doit etre absent a 767px`,
+        ).toBeHidden();
+      }
 
       await page.setViewportSize({ width: 768, height: 800 });
       await expect(

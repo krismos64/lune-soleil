@@ -126,7 +126,7 @@ export default async function PageContact() {
           aria-labelledby="titre-message"
         >
           <h2 className={styles.sousTitre} id="titre-message">
-            Votre message
+            Votre demande
           </h2>
           <FormulaireContact ouvertA={ouvertA} />
         </section>
