@@ -24,7 +24,8 @@ recopié d'un document à l'autre se périme deux fois plus vite qu'à sa source
 ## Palette, fixée par ADR-022
 
 Utiliser les jetons de `src/styles/tokens.css`, jamais une valeur hexadécimale en
-dur.
+dur. **ADR-046 y ajoute les jetons des thèmes saisonniers**, sous
+`[data-theme="…"]`, section « Thèmes saisonniers » plus bas.
 
 | Jeton | Valeur | Usage |
 |---|---|---|
@@ -274,6 +275,24 @@ que cette règle disait déjà au présent alors que rien n'était installé.
 
 Pas de faux avis, faux compteur, promotion inventée ni urgence artificielle.
 Pas de tableau dans la boutique publique.
+
+## Thèmes saisonniers, ADR-046
+
+Un thème est un **jeu fermé** écrit dans le code : jetons d'accent sous
+`[data-theme="…"]` dans `tokens.css`, décors, et deux ou trois phrases
+d'accroche. L'exploitante choisit le thème actif, elle ne saisit **aucun
+texte** : un champ libre laisserait passer une promotion ou un délai inventés.
+
+- **Deux pages seulement**, l'accueil et le catalogue, l'attribut étant posé
+  sur leur `<main>`. Jamais l'en-tête, le pied, le tunnel, le compte ni
+  l'administration.
+- **Ce qui ne change jamais** : le `h1`, les métadonnées, le texte courant, les
+  boutons, le focus, les prix, les photographies des bijoux.
+- **Chaque jeton de thème est une paire mesurée** sur crème, sable et blanc,
+  C31 ; `verifier-contraste.sh` mesure sous chaque thème.
+- **Les décors suivent ADR-045** : bornés à cinq secondes, absents en
+  mouvement réduit, jamais par-dessus un texte, un contrôle ou un bijou.
+- **Aucune phrase ne parle de livraison, de date ou de prix.**
 
 ## Mobile first
 

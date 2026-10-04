@@ -226,6 +226,7 @@ documentation technique, ticket ou règle qui le contredirait.
 | ADR-044 | Aucun assistant IA en V1, et le sujet se ferme | assistant IA, modèle de langage, LLM, service tiers, auto-hébergé, intégration IA, LS-149, remplace la mention de V1 cible de CLAUDE.md |
 | ADR-043 | Les paramètres commerciaux passent en base, et les tarifs avec eux | paramètre, ParametreBoutique, écran de paramètres, tarif modifiable, seuil de franchise, stock faible, alertes de l'administratrice, SHIPPING_RELAY_RATE_CENTS, ligne unique, remplace l'arbitrage du 31 août 2026 |
 | ADR-045 | Politique d'animation des pages publiques : aucune bibliothèque, contenu visible au premier rendu, arrêt des boucles, intensité par type de page | animation, motion design, transition, `prefers-reduced-motion`, keyframes, menu mobile, accueil, dégradé, paillettes, Playwright `reducedMotion`, LCP |
+| ADR-046 | Thèmes saisonniers activables par l'exploitante : jeu fermé de jetons, décors et textes écrits dans le code, thème actif en base, accueil et catalogue seulement, activation manuelle | thème, Noël, saison, `data-theme`, `ParametreBoutique`, `tokens.css`, neige, guirlande, accroche saisonnière, `verifier-contraste.sh` |
 
 Cette table se met à jour à chaque ADR créé. Un ADR absent d'ici reste
 opposable : la table est un raccourci, `docs/adr/` fait foi.
