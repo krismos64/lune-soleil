@@ -17,6 +17,11 @@
 
 /* ---------- Lever ---------- */
 
+/* Le soleil levant s'aligne sur le titre qu'il précède, aligné à gauche. */
+.lever {
+  margin-inline: 0 auto;
+}
+
 .soleilLevant {
   transform-box: view-box;
   transform: translateY(26px);
