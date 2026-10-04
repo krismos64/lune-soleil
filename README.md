@@ -35,7 +35,7 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 |---|---|---|---|
 | 0, cadrage | LS-1 | 1 | LS-19, la médiation : compte tiers, démarche externe. **LS-20 s'est fermée** le 20 septembre 2026, le premier article réel attestant que le lot de photographies a démarré |
 | 1, fondations | LS-2 | 0 | **close**, porte de sortie constatée le 13 août 2026 |
-| 2, catalogue et médias | LS-3 | 3 | LS-123 les pages de contenu et LS-145 la mesure de F-ADM-07 sur l'éditeur réel. Demandes du 4 octobre 2026 : **LS-265 est close**, un même prix appliqué à plusieurs articles après un récapitulatif déclinaison par déclinaison ; reste **LS-266**, retirer un article archivé de l'espace de l'exploitante sans le supprimer de la base |
+| 2, catalogue et médias | LS-3 | 2 | LS-123 les pages de contenu et LS-145 la mesure de F-ADM-07 sur l'éditeur réel. Demandes du 4 octobre 2026 : **LS-265 est close**, un même prix appliqué à plusieurs articles après un récapitulatif déclinaison par déclinaison ; **LS-266 est close**, un article archivé se retire de l'espace de l'exploitante sans quitter la base, contrainte C45, récupération par le développeur dans `EXPLOITATION.md` |
 | 3, panier et paiement | LS-4 | 0 | **close** le 11 septembre 2026. LS-86 portait le dernier critère, le récapitulatif sur les trois modes de livraison |
 | 4, factures et expédition | LS-5 | 3 | **LS-218 crée l'étiquette par API**, et son poids est un réglage depuis le 12 septembre 2026 : seul son critère 10 reste ouvert, il attend un colis réel donc LS-153. **LS-33** décide comment le site apprend qu'un colis est livré, **LS-35** porte l'e-reporting au 1er septembre 2027, **LS-222 est close** le 13 septembre 2026, les emails HTML observés sur Yahoo, Gmail et OVH, les trois en boîte de réception. **LS-98 est close** le 11 septembre 2026, les paramètres commerciaux vivent en base, ADR-043 |
 | 4bis, espace client et avis | LS-36 | 0 | **close**, et rouverte deux fois depuis : LS-221 a livré « Mes avis » puis **LS-225 la modification d'un avis par son auteur**, le 12 septembre 2026. Une phase close ne l'est que des tickets connus le jour où on la ferme |
@@ -44,10 +44,10 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 7, V1 cible | LS-8 | 0 | **close** le 11 septembre 2026. LS-149 portait le dernier critère : ADR-044 **écarte l'assistant IA** du périmètre plutôt que de le reporter |
 | Contenus | LS-22 | 10 | **LS-264 est close** le 4 octobre 2026 : « Notre univers », un « nous » de marque, devient **« L'atelier »** à l'adresse `/atelier`, l'ancienne redirigeant en 301, arbitrage de Christophe. **attend l'exploitante**, rien n'est faisable sans elle. **LS-32 est close** le 11 septembre 2026, la neutralité de genre étant désormais gardée par un contrôle. **LS-25 a livré ses textes** le 20 septembre 2026, récoltés auprès d'elle et validés par elle : `/notre-univers` est déployée, et elle a révélé que l'exploitante **exerce seule** quand tout le cadrage parlait de deux créatrices. Le visuel d'accueil, qui montrait des pièces n'ayant jamais existé, est **remplacé le 23 septembre 2026** par une bannière fournie par Christophe |
 
-**232 tickets terminés sur 259 hors epics**, les deux termes relevés dans Jira
-le **4 octobre 2026** après la clôture de LS-265, et jamais dérivés l'un de
-l'autre : 27 tickets non terminés relevés séparément, 10 En cours et 17 À
-faire, et 259 − 27 retombe bien sur 232. **La recette de l'exploitante du 23 septembre** a ouvert
+**233 tickets terminés sur 259 hors epics**, les deux termes relevés dans Jira
+le **4 octobre 2026** après la clôture de LS-266, et jamais dérivés l'un de
+l'autre : 26 tickets non terminés relevés séparément, 10 En cours et 16 À
+faire, et 259 − 26 retombe bien sur 233. **La recette de l'exploitante du 23 septembre** a ouvert
 LS-238 à LS-248, tous clos le jour même.
 
 **Le chantier du nocturne est clos le 24 septembre 2026** : LS-233, LS-235,
