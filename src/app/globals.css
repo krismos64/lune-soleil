@@ -174,3 +174,24 @@ svg {
 html[data-menu-ouvert] {
   overflow: hidden;
 }
+
+/*
+ * RÉACTION DES BOUTONS DE LA BOUTIQUE, LS-263, ADR-045 : la seule animation
+ * des pages d'action, un léger enfoncement à l'appui. Une pression n'est pas
+ * une saisie : rien ne bouge pendant qu'on tape, et le bloc de paiement,
+ * servi dans un cadre de Stripe, n'est pas touché.
+ *
+ * AUCUNE `transition` N'EST POSÉE ICI : la spécificité de ce sélecteur
+ * remplacerait celle de chaque bouton, qui perdrait ses transitions de
+ * couleur au survol. L'enfoncement est instantané, le temps de l'appui.
+ *
+ * LIMITÉE À LA BOUTIQUE par son en-tête, seule à porter une navigation nommée
+ * « Navigation principale » : l'administration reste inchangée, ce que
+ * `page-accueil.spec.ts` garantit déjà pour ce repère.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  :root:has(header nav[aria-label="Navigation principale"])
+    :is(button, input[type="submit"]):not(:disabled):active {
+    transform: translateY(1px) scale(0.98);
+  }
+}

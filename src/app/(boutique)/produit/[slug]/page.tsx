@@ -312,7 +312,12 @@ export default async function PageFicheProduit({
            * controle du depot le verifie sur tout `src/`.
            */}
           {fiche.sections.map((section) => (
-            <section key={section.id} className={styles.section}>
+            <section
+              key={section.id}
+              className={styles.section}
+              data-apparition=""
+              data-apparition-mode="glisse"
+            >
               <h2 className={styles.titreSection}>{section.titre}</h2>
               <p className={styles.texteSection}>{section.contenu}</p>
             </section>
@@ -342,7 +347,11 @@ export default async function PageFicheProduit({
            * `legal.md` et l'article L221-23. Renvoyer sans les afficher exposerait
            * au delai de douze mois de l'article L221-20.
            */}
-          <section className={styles.legal}>
+          <section
+            className={styles.legal}
+            data-apparition=""
+            data-apparition-mode="glisse"
+          >
             <h2 className={styles.titreSection}>Retours et rétractation</h2>
             <p className={styles.texteSection}>
               14 jours pour changer d&apos;avis à compter de la réception, frais

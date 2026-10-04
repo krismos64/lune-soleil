@@ -109,6 +109,46 @@
 }
 
 /*
+ * TRANSITIONS RETENUES DE LA FICHE, LS-263, ADR-045 : la fiche reçoit des
+ * transitions sobres, aucun décor animé. Toutes déclenchées par un geste, en
+ * `transform` et `opacity`, et absentes en mouvement réduit.
+ *
+ * Le fondu de la galerie part de 0,4 et non de zéro : une photo de produit
+ * n'est jamais invisible, même un instant.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .fondu {
+    animation: fondu 320ms var(--ls-easing-sortie);
+  }
+
+  .vignette {
+    transition: transform var(--ls-duration-base) var(--ls-easing);
+  }
+
+  .vignette:hover {
+    transform: translateY(-2px);
+  }
+
+  .agrandie[open] {
+    animation: ouverture 240ms var(--ls-easing-sortie);
+  }
+}
+
+@keyframes fondu {
+  from {
+    opacity: 0.4;
+    transform: scale(0.985);
+  }
+}
+
+@keyframes ouverture {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+/*
  * LES VIGNETTES DEFILENT HORIZONTALEMENT plutot que de retrecir. A 320 px,
  * quatre vignettes cote a cote feraient 60 px chacune, sous la zone tactile de
  * 44 px une fois les ecarts retires.

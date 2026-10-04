@@ -42,6 +42,11 @@ export function Galerie({
   const agrandie = useRef<HTMLDialogElement>(null);
   const boutonAgrandir = useRef<HTMLButtonElement>(null);
   const [zoomee, setZoomee] = useState(false);
+  /*
+   * LE FONDU NE JOUE QU'AU CHANGEMENT DE PHOTO, LS-263 : la première photo
+   * s'affiche comme avant, sans attendre aucune animation, ADR-045 point 5.
+   */
+  const [aChange, setAChange] = useState(false);
 
   const affichee = photos[indexAffiche] ?? photos[0];
 
@@ -108,9 +113,10 @@ export function Galerie({
            * l'image.
            */}
           <img
+            key={affichee.chemin}
             src={urlVignette(affichee.chemin)}
             alt={affichee.texteAlternatif ?? ""}
-            className={styles.imagePrincipale}
+            className={`${styles.imagePrincipale} ${aChange ? styles.fondu : ""}`}
             width={640}
             height={640}
             decoding="async"
@@ -215,7 +221,10 @@ export function Galerie({
                 <button
                   type="button"
                   className={`${styles.vignette} ${active ? styles.vignetteActive : ""}`}
-                  onClick={() => setIndexAffiche(index)}
+                  onClick={() => {
+                    setIndexAffiche(index);
+                    setAChange(true);
+                  }}
                   aria-label={
                     photo.texteAlternatif
                       ? `Voir la photo ${index + 1} de ${nomProduit} : ${photo.texteAlternatif}`
