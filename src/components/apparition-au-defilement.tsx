@@ -12,16 +12,23 @@
  * mouvement réduit, y compris activé en cours de visite, rien ne s'installe et
  * tout bloc encore en attente redevient visible.
  *
+ * ELLE VIT DANS LE LAYOUT DE LA BOUTIQUE DEPUIS LS-261, qui survit aux
+ * navigations client : l'effet se rejoue donc à chaque changement de chemin,
+ * sans quoi les blocs d'une page atteinte par un lien ne seraient jamais
+ * observés, revue de LS-261.
+ *
  * RÉSERVÉ AUX BLOCS SECONDAIRES, ADR-045 point 5 : un titre, une accroche, un
  * bouton d'action ou une carte de produit ne partent jamais d'une opacité
  * nulle, et ne portent donc jamais `data-apparition`.
  */
+import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
 import { useMouvementAutorise } from "./use-mouvement-autorise";
 
 export function ApparitionAuDefilement() {
   const mouvement = useMouvementAutorise();
+  const chemin = usePathname();
 
   useEffect(() => {
     if (!mouvement) return;
@@ -50,7 +57,7 @@ export function ApparitionAuDefilement() {
       observateur.disconnect();
       cibles.forEach((cible) => cible.setAttribute("data-apparition", ""));
     };
-  }, [mouvement]);
+  }, [mouvement, chemin]);
 
   return null;
 }
