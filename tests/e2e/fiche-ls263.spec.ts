@@ -54,8 +54,13 @@ test.describe("réaction d'appui", () => {
 
   test("un bouton de la boutique s'enfonce à l'appui", async ({ page }) => {
     await page.goto(CHEMIN_FICHE);
-    const vignette = page.getByRole("button", { name: /Voir la photo 2/ });
-    expect(await transformationPendantAppui(page, vignette)).not.toBe("none");
+    /*
+     * LE BOUTON D'AGRANDISSEMENT ET NON UNE VIGNETTE : la vignette se soulève
+     * déjà au survol, sa transformation n'est jamais « none », et le test
+     * passait sans la règle d'appui. Mutation qui l'a montré, LS-263.
+     */
+    const agrandir = page.getByRole("button", { name: /^Agrandir la photo/ });
+    expect(await transformationPendantAppui(page, agrandir)).not.toBe("none");
   });
 
   test("un bouton de l'administration ne bouge pas", async ({ page }) => {
