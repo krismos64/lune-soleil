@@ -372,6 +372,27 @@ vente annulée continue de compter.
 Un index `mouvement_periode_idx` sur `(creeA, type)` accompagne le champ, toute
 statistique bornant une période avant de regrouper par type.
 
+## Le retrait de l'espace d'administration, LS-266
+
+Migration `20261004150000_produit_retrait`, additive : `produit.retire_a`,
+nullable et sans défaut, puis la contrainte C45.
+
+```sql
+ALTER TABLE produit
+  ADD CONSTRAINT chk_produit_retrait_archive
+  CHECK (retire_a IS NULL OR statut = 'ARCHIVE');
+```
+
+**Un produit retiré n'est filtré que côté administration** : listes, fiche,
+compteurs de la barre, stocks, statistiques des invendus, prix en masse,
+compte des catégories. La boutique ne le montrait déjà plus, un retiré étant
+archivé. **L'historique ne filtre rien** : commandes, factures et avis
+portent des copies figées, et le journal des mouvements comme le palmarès
+des ventes restent des faits passés.
+
+**Il occupe toujours sa catégorie**, C26 : la clé étrangère ne distingue pas
+un retiré, et le refus de suppression le dit.
+
 ## Vérification
 
 `prisma/sql-manuel/verifier-schema.sh` rejoue ses contrôles sur une base

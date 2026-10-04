@@ -210,6 +210,7 @@ alors qu'aucune ne se trouvait dans ce tableau, qui s'arrêtait à C28.
 | C42 | Le motif d'un signalement d'avis n'est **jamais vide** | `CHECK`, LS-77. La loi conditionne le signalement au fait qu'il soit **motivé**, article L111-7-2 : sans motif, ce n'en est pas un |
 | C43 | L'horodatage d'examen d'un signalement suit son statut, **dans les deux sens** | `CHECK`, LS-77. Équivalence, vérifiée ligne à ligne : écrire le statut puis la date en deux instructions la fait échouer |
 | C44 | Une suite donnée à un signalement suppose qu'il ait été examiné | `CHECK`, LS-77. **Implication et NON équivalence**, à la différence de C43 : un signalement examiné peut n'appeler aucune suite |
+| C45 | Un produit retiré de l'espace d'administration est archivé | `CHECK`, LS-266. **Implication et non équivalence** : un archivé peut rester dans l'espace. Sans elle, republier un produit retiré le mettrait en vente pendant qu'aucun écran de l'administration ne le montre plus. Rien ne se supprime, LS-246 : seul le développeur remet `retireA` à `NULL`, `EXPLOITATION.md` |
 
 **C41 porte deux sens dans ce dépôt**, et les confondre coûterait : la règle de
 base ci-dessus, et la règle d'interface « tout écran de la boutique est désigné
