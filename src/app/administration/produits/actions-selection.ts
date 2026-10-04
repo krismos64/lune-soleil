@@ -20,6 +20,7 @@ import {
 import {
   appliquerPrixProduits,
   previsualiserPrixProduits,
+  RecapitulatifPrixPerimeError,
   type VariantePourPrix,
 } from "@/services/variante";
 
@@ -84,6 +85,7 @@ export type ResultatPrixSelection =
     }
   | { statut: "APPLIQUE"; variantes: number; prixCentimes: number }
   | { statut: "SESSION_ABSENTE" }
+  | { statut: "PERIME" }
   | { statut: "INVALIDE" }
   | { statut: "INDISPONIBLE" };
 
@@ -119,6 +121,7 @@ export async function appliquerPrixSelection(
   try {
     const bilan = await appliquerPrixProduits({
       produitIds: formulaire.getAll("produitId"),
+      varianteIds: formulaire.getAll("varianteId"),
       prixEuros: formulaire.get("prixEuros"),
     });
 
@@ -130,6 +133,9 @@ export async function appliquerPrixSelection(
 
     return { statut: "APPLIQUE", ...bilan };
   } catch (erreur) {
+    if (erreur instanceof RecapitulatifPrixPerimeError) {
+      return { statut: "PERIME" };
+    }
     if (erreur instanceof EntreeInvalideError) {
       return { statut: "INVALIDE" };
     }

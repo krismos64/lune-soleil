@@ -274,3 +274,14 @@ export const schemaPrixEnMasse = z
     "Un prix nul ne s'applique pas à plusieurs articles à la fois.",
   )
   .transform(({ prixEuros }) => ({ prixCentimes: prixEuros }));
+
+/**
+ * Les déclinaisons montrées par le récapitulatif du prix en masse, LS-265.
+ * La confirmation n'applique le prix qu'à elles : une déclinaison créée entre
+ * le récapitulatif et la confirmation n'a pas été vue, revue critique.
+ */
+export const schemaVariantesMontrees = z
+  .array(schemaIdentifiant)
+  .min(1, "Aucune déclinaison à modifier.")
+  .max(2000, "Le récapitulatif porte trop de déclinaisons.")
+  .transform((identifiants) => [...new Set(identifiants)]);
