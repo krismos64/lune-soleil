@@ -152,6 +152,18 @@
   );
 }
 
+/*
+ * FERMÉ, LE PANNEAU N'EXISTE PAS DANS LA MISE EN PAGE. Chrome masque le
+ * contenu d'un `<details>` fermé sans lui retirer sa boîte : avant
+ * l'hydratation, le panneau dans le flux restait posé à droite du bouton, hors
+ * de l'écran, et la fiche produit débordait de 120 px une fois sur trois,
+ * mesuré en LS-261. Pendant la fermeture animée, `open` reste posé jusqu'à la
+ * fin du disque, donc rien n'est coupé.
+ */
+.menu:not([open]) .couverture {
+  display: none;
+}
+
 /* Avec le script, plein écran au-dessus de la page rendue inerte. */
 .menu[data-pret] .couverture {
   position: fixed;
