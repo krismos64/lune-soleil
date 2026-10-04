@@ -227,6 +227,17 @@ attendre_echec "seuil chiffré du texte large retiré de frontend-design.md"
 muter "$REGLE" 's/4,5:1/le seuil AA/g'
 attendre_echec "seuil AA de 4,5:1 retiré de frontend-design.md"
 
+# ---------------------------------------------------------------------------
+# Cas 7 : un jeton de thème saisonnier éclairci, ADR-046.
+#
+# LE VERT SAPIN N'EST EMPLOYÉ DANS AUCUNE PAIRE `color` ET `background` : il
+# ne colore que le feuillage de l'emblème, par alias. Seule la mesure des
+# jetons de thème sur les trois fonds peut le voir, et c'est elle que ce cas
+# exerce. Un thème s'active d'un clic, sans qu'aucune story relise ses jetons.
+# ---------------------------------------------------------------------------
+muter "$JETONS" 's/--ls-noel-vert: #2f5a43;/--ls-noel-vert: #9fc2ae;/'
+attendre_echec "jeton de thème saisonnier éclairci, mesuré sur les trois fonds"
+
 echo
 echo "-----------------------------------------"
 if [ "$detectes" -eq "$total" ]; then
