@@ -822,6 +822,7 @@ function Recapitulatif({
         disabled={enCours}
         onClick={onCommander}
         className={styles.payer}
+        data-paiement=""
       >
         {enCours ? "Enregistrement…" : "Commander avec obligation de paiement"}
       </button>

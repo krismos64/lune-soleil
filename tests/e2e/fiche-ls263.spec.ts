@@ -14,17 +14,40 @@ const IMAGE_PRINCIPALE = "button[aria-label^='Agrandir'] img";
 test.describe("en mouvement normal", () => {
   test.use({ contextOptions: { reducedMotion: "no-preference" } });
 
-  test("la première photo s'affiche sans fondu, la suivante avec", async ({
+  test("la photo suivante entre en fondu sans que l'image soit remontée", async ({
     page,
   }) => {
+    /*
+     * LE FONDU PASSE PAR `Element.animate`, espionné ici : la première photo
+     * ne l'appelle pas, la suivante l'appelle à son arrivée. L'image doit
+     * rester LE MÊME élément, revue de LS-263 : un `key` la remontait et la
+     * vidait pendant le chargement.
+     */
+    await page.addInitScript(() => {
+      const origine = Element.prototype.animate;
+      (window as unknown as { fondus: number }).fondus = 0;
+      Element.prototype.animate = function (...args) {
+        if (this.tagName === "IMG")
+          (window as unknown as { fondus: number }).fondus += 1;
+        return origine.apply(this, args);
+      };
+    });
     await page.goto(CHEMIN_FICHE);
     const principale = page.locator(IMAGE_PRINCIPALE);
-
-    // ADR-045 point 5 : la photo du produit n'attend aucune animation.
-    await expect(principale).not.toHaveClass(/fondu/);
+    await principale.evaluate((img) => img.setAttribute("data-temoin", ""));
+    expect(
+      await page.evaluate(
+        () => (window as unknown as { fondus: number }).fondus,
+      ),
+    ).toBe(0);
 
     await page.getByRole("button", { name: /Voir la photo 2/ }).click();
-    await expect(principale).toHaveClass(/fondu/);
+    await expect
+      .poll(() =>
+        page.evaluate(() => (window as unknown as { fondus: number }).fondus),
+      )
+      .toBe(1);
+    await expect(principale).toHaveAttribute("data-temoin", "");
   });
 });
 
@@ -61,6 +84,39 @@ test.describe("réaction d'appui", () => {
      */
     const agrandir = page.getByRole("button", { name: /^Agrandir la photo/ });
     expect(await transformationPendantAppui(page, agrandir)).not.toBe("none");
+  });
+
+  test("un bouton de paiement ne bouge jamais", async ({ page }) => {
+    /*
+     * ADR-045 point 7, revue de LS-263 : « Commander avec obligation de
+     * paiement » et « Payer » portent `data-paiement`. Un bouton marqué de la
+     * même façon dans une page de la boutique ne doit pas s'enfoncer.
+     */
+    await page.goto(CHEMIN_FICHE);
+    await page.locator("main").evaluate((main) => {
+      const bouton = document.createElement("button");
+      bouton.type = "button";
+      bouton.dataset.paiement = "";
+      bouton.textContent = "Payer";
+      bouton.id = "temoin-paiement";
+      main.prepend(bouton);
+    });
+    const bouton = page.locator("#temoin-paiement");
+    expect(await transformationPendantAppui(page, bouton)).toBe("none");
+  });
+
+  test("un message d'alerte apparaît en douceur", async ({ page }) => {
+    await page.goto(CHEMIN_FICHE);
+    const animations = await page.locator("main").evaluate((main) => {
+      const alerte = document.createElement("p");
+      alerte.setAttribute("role", "alert");
+      alerte.textContent = "Message de test";
+      main.prepend(alerte);
+      return alerte
+        .getAnimations()
+        .map((a) => (a as CSSAnimation).animationName);
+    });
+    expect(animations).toContain("message-etat");
   });
 
   test("un bouton de l'administration ne bouge pas", async ({ page }) => {

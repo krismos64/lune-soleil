@@ -54,6 +54,7 @@ export function BoutonPayer({ libelle }: { libelle: string }) {
         disabled={enCours}
         onClick={payer}
         className={styles.payer}
+        data-paiement=""
       >
         {enCours ? "Redirection vers le paiement…" : libelle}
       </button>
