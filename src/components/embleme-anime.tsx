@@ -66,10 +66,18 @@ const arret = (jeton: string): CSSProperties => ({
 });
 const rang = (i: number): CSSProperties => ({ "--rang": i }) as CSSProperties;
 
-export function EmblemeAnime() {
+/**
+ * `saison`, ADR-046 : le thème de Noël ajoute des baies de houx au feuillage,
+ * dont `--ls-feuillage` change la couleur, et une neige qui tombe une fois
+ * DANS LE CADRE de l'emblème, jamais par-dessus un texte ni un contrôle.
+ */
+export function EmblemeAnime({
+  saison,
+}: { saison?: "noel" | undefined } = {}) {
   return (
     <div className={styles.cadre} aria-hidden="true" data-borne="">
       <div className={styles.halo} />
+      {saison === "noel" ? <NeigeEmbleme /> : null}
       <svg
         className={styles.embleme}
         viewBox="30 30 1140 1140"
@@ -164,8 +172,48 @@ export function EmblemeAnime() {
               transform={`rotate(${angle} ${cx} ${cy})`}
             />
           ))}
+          {saison === "noel"
+            ? BAIES.map(({ cx, cy, r }, i) => (
+                <circle
+                  key={`${cx}-${cy}`}
+                  className={styles.baie}
+                  style={rang(i % 3)}
+                  cx={cx}
+                  cy={cy}
+                  r={r}
+                />
+              ))
+            : null}
         </g>
       </svg>
+    </div>
+  );
+}
+
+/** Baies de houx, trois de chaque côté, au pied du feuillage. */
+const BAIES = [
+  { cx: 262, cy: 905, r: 9 },
+  { cx: 278, cy: 915, r: 9 },
+  { cx: 266, cy: 922, r: 8 },
+  { cx: 938, cy: 905, r: 9 },
+  { cx: 922, cy: 915, r: 9 },
+  { cx: 934, cy: 922, r: 8 },
+] as const;
+
+/** Nombre de flocons. Positions, tailles et chutes vivent dans le module CSS. */
+const NOMBRE_FLOCONS = 18;
+
+/**
+ * Neige de Noël : chaque flocon tombe UNE fois et fond, moins de cinq secondes,
+ * ADR-045. Positions fixes par `nth-child`, aucun tirage au hasard, absente en
+ * mouvement réduit.
+ */
+function NeigeEmbleme() {
+  return (
+    <div className={styles.neige}>
+      {Array.from({ length: NOMBRE_FLOCONS }, (_, i) => (
+        <span key={i} className={styles.flocon} />
+      ))}
     </div>
   );
 }

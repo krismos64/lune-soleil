@@ -1489,6 +1489,13 @@ model ParametreBoutique {
   alerteMessageRecu    Boolean @default(true) @map("alerte_message_recu")
   alerteAvisAModerer   Boolean @default(true) @map("alerte_avis_a_moderer")
 
+  // Thème saisonnier actif sur l'accueil et le catalogue, ADR-046, LS-267.
+  // TEXTE BORNÉ PAR `chk_parametre_theme_connu` et non un enum PostgreSQL :
+  // `verifier-schema.sh` exige que chaque enum figure au modèle conceptuel,
+  // dont cette table de configuration est exclue à dessein. Zod borne aussi
+  // la valeur côté serveur, `services/theme-saisonnier.ts`.
+  themeSaisonnier String @default("AUCUN") @map("theme_saisonnier")
+
   modifieA DateTime @updatedAt @map("modifie_a") @db.Timestamptz(3)
 
   @@map("parametre_boutique")
