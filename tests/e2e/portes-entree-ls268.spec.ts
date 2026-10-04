@@ -81,11 +81,29 @@ test.describe("mouvement autorisé", () => {
       await page.locator("main form input:visible").first().fill("saisie");
       expect(await animationsDesControles(page)).toBe(0);
 
-      // Au plus cinq secondes plus tard, tout est arrêté.
-      await expect(decor).toHaveAttribute("data-borne", "fin", {
-        timeout: 7_000,
-      });
-      expect(await animationsSous(page, "[data-borne]")).toBe(0);
+      // Au plus cinq secondes plus tard, tout est arrêté. CHAQUE élément
+      // borné est amené dans l'écran puis vérifié, revue de LS-268 : le
+      // contact en porte deux, et le second était sous la ligne de flottaison
+      // à 320 px, donc en pause et compté zéro sans avoir joué.
+      const bornes = page.locator("[data-borne]");
+      const nombre = await bornes.count();
+      for (let rang = 0; rang < nombre; rang += 1) {
+        const borne = bornes.nth(rang);
+        await borne.scrollIntoViewIfNeeded();
+        await expect(borne).toHaveAttribute("data-borne", /joue|fin/);
+        await expect(borne).toHaveAttribute("data-borne", "fin", {
+          timeout: 7_000,
+        });
+        expect(
+          await borne.evaluate(
+            (element) =>
+              element
+                .getAnimations({ subtree: true })
+                .filter((animation) => animation.playState === "running")
+                .length,
+          ),
+        ).toBe(0);
+      }
 
       // Aucun débordement horizontal.
       expect(

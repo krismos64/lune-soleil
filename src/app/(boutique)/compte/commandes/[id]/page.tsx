@@ -536,7 +536,7 @@ export default async function PageDetailCommande({
          * qui n'annonce qu'une attente.
          */}
         <div className={styles.groupeActions}>
-          <h3 className={styles.titreGroupe}>Nous contacter</h3>
+          <h3 className={styles.titreGroupe}>Contacter l&apos;atelier</h3>
           <p className={styles.texte}>
             Indiquez le numéro {commande.numero} dans votre message :
             l&apos;atelier retrouvera votre commande.

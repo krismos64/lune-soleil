@@ -49,7 +49,7 @@ export default async function PageConnexionClient() {
   return (
     <PanneauAuthentification decor="nuit">
       <main id="contenu" tabIndex={-1} className={styles.pageGabarit}>
-        <p className={styles.accroche}>Bon retour</p>
+        <p className={styles.accroche}>Espace client</p>
         <h1 className={styles.titre}>Se connecter</h1>
 
         <FormulaireConnexionClient />
