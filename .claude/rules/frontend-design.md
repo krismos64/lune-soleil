@@ -247,12 +247,19 @@ Les règles qui s'appliquent à toute animation d'une page publique :
 - **sans JavaScript, tout est visible** : un masquage initial ne s'applique
   que sous une classe posée par le script ;
 - **mouvement réduit** : page complète et immobile, aucun script d'animation ;
-- **aucune boucle sans fin** : une animation automatique de plus de cinq
-  secondes s'arrête d'elle-même au plus tard dix secondes après son entrée
-  dans l'écran, WCAG 2.2.2, sans bouton de pause (arbitrage du 4 octobre
-  2026) ;
-- seules `transform` et `opacity` s'animent, et rien ne tourne hors de
-  l'écran ;
+- **aucune boucle sans fin** : une animation automatique s'arrête d'elle-même
+  **au plus tard cinq secondes** après son entrée dans l'écran, WCAG 2.2.2,
+  sans bouton de pause (arbitrage du 4 octobre 2026). La borne de dix secondes
+  écrite d'abord ici n'était pas conforme, correction d'ADR-045 ;
+- seules `transform`, `opacity` et, pour dessiner un tracé,
+  `stroke-dashoffset` s'animent, et rien ne tourne hors de l'écran ;
+- **une phrase posée sur un fond qui change** ne s'affiche que là où son
+  contraste tient 4,5:1 sur toute la bande qu'elle occupe, calculé et non
+  estimé. Un fond qui passe continûment du clair au foncé croise une teinte où
+  aucun texte n'y parvient ;
+- **`aria-hidden` ne sert jamais à masquer un texte hors de sa fenêtre
+  d'animation** : un lecteur d'écran ne fait pas défiler la page, il perdrait
+  le texte. L'opacité seule porte la bascule ;
 - rien ne bouge dans le tunnel de commande pendant une saisie ni autour d'un
   élément de paiement.
 

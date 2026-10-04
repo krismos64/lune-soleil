@@ -201,12 +201,12 @@ export default defineConfig({
     baseURL: URL_BASE,
     trace: "on-first-retry",
     /*
-     * MOUVEMENT REDUIT PAR DEFAUT, ADR-045 point 8, LS-260. Un clic sur un
-     * element encore en deplacement produit un echec intermittent, et la page
-     * est complete et immobile dans ce mode. Un test qui verifie une animation
-     * le dit lui-meme par `test.use({ contextOptions: { reducedMotion:
-     * "no-preference" } })`. L'option vit sous `contextOptions` dans cette
-     * version de Playwright, et non a la racine de `use`.
+     * MOUVEMENT RÉDUIT PAR DÉFAUT, ADR-045 point 8, LS-260. Un clic sur un
+     * élément encore en déplacement produit un échec intermittent, et la page
+     * est complète et immobile dans ce mode. Un test qui vérifie une animation
+     * le dit lui-même par `test.use({ contextOptions: { reducedMotion:
+     * "no-preference" } })`, comme `accueil-animation-ls260.spec.ts`. L'option
+     * vit sous `contextOptions` dans cette version de Playwright.
      */
     contextOptions: { reducedMotion: "reduce" },
   },

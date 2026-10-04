@@ -16,14 +16,18 @@
  */
 import { useEffect } from "react";
 
+import { useMouvementAutorise } from "./use-mouvement-autorise";
+
 /** Inclinaison maximale d'une carte, en degrés. */
 const INCLINAISON_MAX = 8;
 
 export function ReactionPointeur() {
+  const mouvement = useMouvementAutorise();
+
   useEffect(() => {
-    const souris = window.matchMedia("(hover: hover) and (pointer: fine)");
-    const calme = window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (!souris.matches || calme.matches) return;
+    if (!mouvement) return;
+    if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches)
+      return;
 
     const calques = [
       ...document.querySelectorAll<HTMLElement | SVGElement>(
@@ -75,7 +79,7 @@ export function ReactionPointeur() {
         carte.style.transform = "";
       }
     };
-  }, []);
+  }, [mouvement]);
 
   return null;
 }

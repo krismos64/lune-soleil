@@ -3,33 +3,36 @@
 /**
  * Bornage des animations automatiques, ADR-045 point 4, WCAG 2.2.2. LS-260.
  *
- * Aucun bouton de pause, arbitrage de Christophe du 4 octobre 2026 : une
- * animation qui dure s'arrête donc d'elle-même. Tout élément marqué
- * `data-borne` passe par trois états, et `globals.css` suspend ses animations
- * hors de `joue` :
+ * Aucun bouton de pause, arbitrage de Christophe du 4 octobre 2026. WCAG 2.2.2
+ * n'en dispense que si le mouvement s'arrête EN CINQ SECONDES AU PLUS : tout
+ * élément marqué `data-borne` passe donc par trois états, et `globals.css`
+ * suspend ses animations hors de `joue` :
  *
  *   attente  hors de l'écran, rien ne tourne
  *   joue     entré dans l'écran, au plus `DUREE_MAX_MS`
  *   fin      la durée est écoulée, l'animation reste figée où elle est
  *
- * Ressortir puis revenir dans l'écran rouvre une fenêtre : le visiteur qui
- * revient voit à nouveau le mouvement, jamais plus de dix secondes d'affilée.
+ * LA PREMIÈRE VERSION BORNAIT À DIX SECONDES, et la revue de LS-260 l'a
+ * relevé : c'était lire la norme à moitié. ADR-045 porte la correction.
  *
- * SANS SCRIPT, L'ATTRIBUT RESTE VIDE et aucune règle de suspension ne
- * s'applique : les animations finies de l'emblème jouent une fois, et le
- * bandeau défilant, dont l'animation n'existe que sous `joue`, reste immobile.
+ * Ressortir puis revenir dans l'écran rouvre une fenêtre de cinq secondes.
  *
- * EN MOUVEMENT RÉDUIT, RIEN NE S'INSTALLE : le CSS a déjà retiré les
- * animations, et un observateur ne servirait à rien.
+ * SANS SCRIPT, L'ATTRIBUT RESTE VIDE : les animations finies, toutes sous cinq
+ * secondes, jouent une fois, et le bandeau défilant, dont l'animation
+ * n'existe que sous un état posé ici, reste immobile.
  */
 import { useEffect } from "react";
 
-/** Au plus dix secondes de mouvement par entrée dans l'écran. */
-export const DUREE_MAX_MS = 10_000;
+import { useMouvementAutorise } from "./use-mouvement-autorise";
+
+/** Au plus cinq secondes de mouvement par entrée dans l'écran, WCAG 2.2.2. */
+export const DUREE_MAX_MS = 5_000;
 
 export function AnimationsBornees() {
+  const mouvement = useMouvementAutorise();
+
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!mouvement) return;
 
     const minuteries = new Map<Element, number>();
 
@@ -70,7 +73,7 @@ export function AnimationsBornees() {
       minuteries.clear();
       cibles.forEach((cible) => cible.setAttribute("data-borne", ""));
     };
-  }, []);
+  }, [mouvement]);
 
   return null;
 }

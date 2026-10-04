@@ -1,4 +1,4 @@
-/* Poussière d'or, LS-260. Deux passages de 4 s, retard au plus 1,5 s. */
+/* Poussière d'or, LS-260. Un passage de 3,2 s, retard au plus 1,5 s : 4,7 s. */
 
 .poussiere {
   position: absolute;
@@ -14,7 +14,7 @@
   border-radius: 50%;
   background: var(--ls-or-moyen);
   opacity: 0;
-  animation: monte 4s ease-in-out 2;
+  animation: monte 3.2s ease-in-out 1;
 }
 
 /* Positions fixes, aucun tirage au hasard, règle des paillettes. */

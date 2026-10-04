@@ -118,7 +118,7 @@ export default async function PageAccueil() {
        * `--ls-or-moyen`, 5,51:1 et 4,15:1 sur le fond, au-dessus du seuil de
        * 3:1 du grand texte, ADR-045.
        */}
-      <section className={styles.hero}>
+      <section className={styles.hero} data-borne="">
         <PoussiereOr />
         <div className={styles.heroGrille}>
           <div className={styles.heroTexte}>
@@ -253,7 +253,7 @@ export default async function PageAccueil() {
       {/*
        * BANDEAU DÉFILANT, LS-260. Décor : `aria-hidden`, chaque mention
        * figurant déjà ailleurs dans la page en texte lisible. Son animation
-       * n'existe que sous `data-borne="joue"`, donc dix secondes au plus par
+       * n'existe qu'une fois le script actif, cinq secondes au plus par
        * entrée dans l'écran, et aucune sans script, ADR-045 point 4. La suite
        * est écrite deux fois pour que la boucle se raccorde sans saut.
        */}
@@ -281,17 +281,24 @@ export default async function PageAccueil() {
        */}
       <section className={styles.editorial}>
         <div className={styles.sceau}>
-          <div className={styles.sceauImage} data-apparition="" data-borne="">
-            <Image
-              src="/habillage/logo-sceau.jpg"
-              alt={`Logo ${NOM_BOUTIQUE}, une lune et un soleil dorés, mention « bijoux faits main »`}
-              width={720}
-              height={720}
-              sizes="(min-width: 768px) 300px, 64vw"
-              className={styles.logo}
-            />
+          {/*
+           * L'APPARITION ET LE FLOTTEMENT SUR DEUX ÉLÉMENTS : tous deux animent
+           * `transform`, et sur le même élément l'un masquait l'autre. Le
+           * texte et son bouton n'apparaissent pas en fondu, ADR-045 point 5.
+           */}
+          <div data-apparition="">
+            <div className={styles.sceauImage} data-borne="">
+              <Image
+                src="/habillage/logo-sceau.jpg"
+                alt={`Logo ${NOM_BOUTIQUE}, une lune et un soleil dorés, mention « bijoux faits main »`}
+                width={720}
+                height={720}
+                sizes="(min-width: 768px) 300px, 64vw"
+                className={styles.logo}
+              />
+            </div>
           </div>
-          <div className={styles.editorialTexte} data-apparition="">
+          <div className={styles.editorialTexte}>
             <p className={styles.surtitreEditorial}>L&apos;atelier</p>
             <h2 className={styles.titreEditorial}>
               Créer peu, créer avec intention.

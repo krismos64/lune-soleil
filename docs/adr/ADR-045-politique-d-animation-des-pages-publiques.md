@@ -8,6 +8,24 @@
 | Amende | `.claude/rules/frontend-design.md`, sections « Interdits visuels » et « Paillettes » |
 | Ticket | LS-259 |
 
+## Correction du 4 octobre 2026, revue de LS-260
+
+**Le point 4 citait WCAG 2.2.2 à moitié.** Le critère ne dispense d'un moyen
+d'arrêt qu'une animation qui s'arrête **en cinq secondes au plus**. La borne de
+dix secondes écrite ci-dessous n'était donc pas conforme, sans bouton de pause.
+L'arbitrage de Christophe, pas de bouton de pause, tient : c'est la borne qui
+change.
+
+- Toute animation automatique s'arrête **au plus tard cinq secondes** après son
+  entrée dans l'écran, et chaque animation finie dure moins de cinq secondes,
+  retard compris. `DUREE_MAX_MS` vaut 5 000.
+- Les propriétés animables sont `transform`, `opacity` et, pour le dessin d'un
+  tracé, `stroke-dashoffset`. Le reflet des mots dorés du titre, qui animait
+  `background-position` sur l'élément du LCP, n'est pas porté.
+
+Relevé par `ls-frontend-revue` avant la fusion de LS-260, sur le code qui
+appliquait la version fautive.
+
 ## Contexte
 
 Le 4 octobre 2026, Christophe a validé une maquette d'accueil animée et décidé
@@ -80,7 +98,7 @@ changement de préférence pendant la visite est pris en compte.
 Arbitrage de Christophe le 4 octobre 2026 : **pas de bouton de pause visible**.
 WCAG 2.2.2 est donc tenu par l'arrêt : toute animation automatique qui dure
 plus de cinq secondes **s'arrête d'elle-même**, au plus tard dix secondes après
-son entrée dans l'écran, et ne reprend qu'au retour dans l'écran. Une animation
+(**cinq secondes depuis la correction ci-dessus**) son entrée dans l'écran, et ne reprend qu'au retour dans l'écran. Une animation
 hors de l'écran ne consomme rien. Les reflets, scintillements et la rotation
 des rayons suivent cette règle, le bandeau défilant aussi.
 

@@ -9,17 +9,22 @@
  * image après avoir été peint, ce que la maquette faisait au chargement.
  *
  * SANS SCRIPT, L'ATTRIBUT RESTE VIDE et `globals.css` ne masque rien. En
- * mouvement réduit, rien ne s'installe.
+ * mouvement réduit, y compris activé en cours de visite, rien ne s'installe et
+ * tout bloc encore en attente redevient visible.
  *
- * RÉSERVÉ AUX BLOCS SECONDAIRES, ADR-045 point 5 : un titre de page, une
- * accroche, un bouton d'action ou une carte de produit ne partent jamais d'une
- * opacité nulle.
+ * RÉSERVÉ AUX BLOCS SECONDAIRES, ADR-045 point 5 : un titre, une accroche, un
+ * bouton d'action ou une carte de produit ne partent jamais d'une opacité
+ * nulle, et ne portent donc jamais `data-apparition`.
  */
 import { useEffect } from "react";
 
+import { useMouvementAutorise } from "./use-mouvement-autorise";
+
 export function ApparitionAuDefilement() {
+  const mouvement = useMouvementAutorise();
+
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!mouvement) return;
 
     const observateur = new IntersectionObserver(
       (entrees) => {
@@ -45,7 +50,7 @@ export function ApparitionAuDefilement() {
       observateur.disconnect();
       cibles.forEach((cible) => cible.setAttribute("data-apparition", ""));
     };
-  }, []);
+  }, [mouvement]);
 
   return null;
 }

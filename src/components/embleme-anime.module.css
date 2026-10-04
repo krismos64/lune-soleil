@@ -3,7 +3,8 @@
  *
  * SEULES `transform`, `opacity` ET `stroke-dashoffset` S'ANIMENT : aucune
  * propriété qui recalcule la mise en page. Toutes les animations sont FINIES,
- * la plus tardive s'achève avant dix secondes, WCAG 2.2.2.
+ * la plus tardive s'achève avant cinq secondes, WCAG 2.2.2 : la première
+ * version allait jusqu'à 9,8 secondes, revue de LS-260.
  */
 
 /*
@@ -40,7 +41,7 @@
     color-mix(in srgb, var(--ls-or-pale) 55%, transparent) 0%,
     transparent 70%
   );
-  animation: respire 5s ease-in-out 2;
+  animation: respire 4.5s ease-in-out 1;
 }
 
 .embleme {
@@ -81,7 +82,7 @@
 
 .rayons {
   transform-origin: 690px 455px;
-  animation: tourne 6s var(--ls-easing-sortie) 3800ms forwards;
+  animation: tourne 2600ms var(--ls-easing-sortie) 2200ms forwards;
 }
 
 .rayon {
@@ -105,8 +106,8 @@
   opacity: 0.25;
   transform-box: fill-box;
   transform-origin: center;
-  animation: scintille 3.2s ease-in-out 2;
-  animation-delay: calc(1600ms + var(--rang) * 150ms);
+  animation: scintille 2.4s ease-in-out 1;
+  animation-delay: calc(1400ms + var(--rang) * 100ms);
 }
 
 .branche {
@@ -152,10 +153,10 @@
   }
 }
 
-/* Un quart de tour qui freine, et non une rotation sans fin. */
+/* Un huitième de tour qui freine, et non une rotation sans fin. */
 @keyframes tourne {
   to {
-    transform: rotate(40deg);
+    transform: rotate(25deg);
   }
 }
 
