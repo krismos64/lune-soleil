@@ -1,0 +1,66 @@
+/*
+ * Guirlande du thème de Noël, ADR-046. Seules `opacity`, `transform` et
+ * `stroke-dashoffset` s'animent ; l'étoile la plus tardive s'allume à 3,6 s.
+ */
+.cadre {
+  max-width: 40rem;
+  margin: 0 auto var(--ls-space-2);
+}
+
+.guirlande {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.fil {
+  fill: none;
+  stroke: var(--ls-accent-gold-deep);
+  stroke-width: 1.4;
+}
+
+.etoile line {
+  stroke: var(--ls-accent-gold-deep);
+  stroke-width: 1;
+}
+
+.etoile path {
+  fill: var(--ls-accent-gold);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .fil {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: dessine 1800ms var(--ls-easing-sortie) forwards;
+  }
+
+  .etoile {
+    transform-box: fill-box;
+    transform-origin: center top;
+    animation: allume 1400ms ease-in-out both;
+    animation-delay: calc(1000ms + var(--rang) * 150ms);
+  }
+}
+
+@keyframes dessine {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes allume {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}

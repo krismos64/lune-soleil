@@ -208,6 +208,27 @@
   --ls-touch-target: 44px;
 }
 
+/*
+ * THÈMES SAISONNIERS, ADR-046. Posés sur le `<main>` de l'accueil et du
+ * catalogue seulement, jamais sur la racine : l'en-tête, le pied, le tunnel et
+ * l'administration n'en héritent pas.
+ *
+ * CHAQUE JETON EST UNE PAIRE MESURÉE sur les trois fonds, C31 :
+ *
+ *   --ls-noel-rouge  #8E2A22  crème 7,85:1  sable 7,03:1  blanc 8,39:1
+ *   --ls-noel-vert   #2F5A43  crème 7,38:1  sable 6,61:1  blanc 7,88:1
+ *
+ * `--ls-accent-saison` et `--ls-feuillage` sont les deux seuls points
+ * d'entrée des composants : sans thème, ils ne sont pas définis, et chaque
+ * composant retombe sur sa couleur ordinaire par la valeur de repli de `var()`.
+ */
+[data-theme="noel"] {
+  --ls-noel-rouge: #8e2a22;
+  --ls-noel-vert: #2f5a43;
+  --ls-accent-saison: var(--ls-noel-rouge);
+  --ls-feuillage: var(--ls-noel-vert);
+}
+
 /* Respect systematique de la preference de mouvement reduit */
 @media (prefers-reduced-motion: reduce) {
   :root {

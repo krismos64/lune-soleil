@@ -1331,6 +1331,17 @@ sortie=$(R "UPDATE parametre_boutique SET seuil_franchise_centimes = NULL WHERE 
 verifier_accepte "franchise désactivable par NULL" "$sortie"
 R "UPDATE parametre_boutique SET seuil_franchise_centimes = 3900 WHERE id = true;" >/dev/null
 
+# LE THÈME SAISONNIER EST UN THÈME CONNU, ADR-046. Le cas rejeté est une
+# valeur proche d'une vraie, la casse changée : un CHECK écrit sans sensibilité
+# à la casse la laisserait passer, et `data-theme="noel"` ne correspond qu'à
+# la valeur exacte. Le cas accepté est le thème de Noël lui-même.
+sortie=$(R "UPDATE parametre_boutique SET theme_saisonnier = 'Noel' WHERE id = true;")
+verifier_rejet "thème saisonnier inconnu rejeté" \
+  "chk_parametre_theme_connu" "$sortie"
+sortie=$(R "UPDATE parametre_boutique SET theme_saisonnier = 'NOEL' WHERE id = true;")
+verifier_accepte "thème de Noël accepté" "$sortie"
+R "UPDATE parametre_boutique SET theme_saisonnier = 'AUCUN' WHERE id = true;" >/dev/null
+
 echo
 echo "Retrait de l'espace d'administration, C45, LS-266"
 

@@ -116,8 +116,9 @@
   animation-delay: 1400ms;
 }
 
+/* `--ls-feuillage` : le vert sapin du thème de Noël, ADR-046, l'or sinon. */
 .feuille {
-  fill: var(--ls-or-clair);
+  fill: var(--ls-feuillage, var(--ls-or-clair));
   opacity: 0;
   transform-box: fill-box;
   transform-origin: bottom;
@@ -185,6 +186,83 @@
   }
 }
 
+/*
+ * THÈME DE NOËL, ADR-046 : baies de houx et neige. Baies en rouge houx, décor
+ * pur. La neige ne sort pas du cadre de l'emblème, `overflow: hidden`, donc ne
+ * passe jamais sur le titre ni sur un bouton ; chaque flocon tombe une fois et
+ * fond, le plus tardif s'éteint à 4,6 s.
+ */
+.baie {
+  fill: var(--ls-noel-rouge);
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pousse 600ms var(--ls-easing-sortie) forwards;
+  animation-delay: calc(2300ms + var(--rang) * 80ms);
+}
+
+.neige {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.flocon {
+  position: absolute;
+  top: -4%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ls-surface);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--ls-or-sombre) 45%, transparent),
+    0 1px 3px color-mix(in srgb, var(--ls-or-sombre) 30%, transparent);
+  opacity: 0;
+  animation: tombe 3000ms cubic-bezier(0.3, 0.1, 0.5, 1) both;
+}
+
+.flocon:nth-child(3n) { width: 5px; height: 5px; }
+.flocon:nth-child(4n) { width: 9px; height: 9px; }
+.flocon:nth-child(1) { left: 14%; animation-delay: 0ms; }
+.flocon:nth-child(2) { left: 22%; animation-delay: 600ms; }
+.flocon:nth-child(3) { left: 30%; animation-delay: 200ms; }
+.flocon:nth-child(4) { left: 38%; animation-delay: 900ms; }
+.flocon:nth-child(5) { left: 46%; animation-delay: 400ms; }
+.flocon:nth-child(6) { left: 54%; animation-delay: 1100ms; }
+.flocon:nth-child(7) { left: 62%; animation-delay: 100ms; }
+.flocon:nth-child(8) { left: 70%; animation-delay: 700ms; }
+.flocon:nth-child(9) { left: 78%; animation-delay: 300ms; }
+.flocon:nth-child(10) { left: 86%; animation-delay: 1000ms; }
+.flocon:nth-child(11) { left: 18%; animation-delay: 1200ms; }
+.flocon:nth-child(12) { left: 34%; animation-delay: 500ms; }
+.flocon:nth-child(13) { left: 50%; animation-delay: 800ms; }
+.flocon:nth-child(14) { left: 66%; animation-delay: 1200ms; }
+.flocon:nth-child(15) { left: 82%; animation-delay: 600ms; }
+.flocon:nth-child(16) { left: 26%; animation-delay: 1000ms; }
+.flocon:nth-child(17) { left: 58%; animation-delay: 300ms; }
+.flocon:nth-child(18) { left: 74%; animation-delay: 1100ms; }
+.flocon:nth-child(odd) { --derive: 14px; }
+.flocon:nth-child(even) { --derive: -12px; }
+
+@keyframes tombe {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  15% {
+    opacity: 0.95;
+  }
+  80% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--derive, 0), 30rem);
+  }
+}
+
 /* Mouvement réduit : l'emblème est complet et immobile dès le premier rendu. */
 @media (prefers-reduced-motion: reduce) {
   .halo,
@@ -193,8 +271,17 @@
   .rayons,
   .soleil,
   .etoile,
-  .feuille {
+  .feuille,
+  .baie {
     animation: none;
+  }
+
+  .neige {
+    display: none;
+  }
+
+  .baie {
+    opacity: 1;
   }
 
   .trait {

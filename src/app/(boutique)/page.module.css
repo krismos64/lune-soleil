@@ -59,7 +59,8 @@
  */
 .surtitre {
   margin: 0 0 var(--ls-space-3);
-  color: var(--ls-accent-gold-deep);
+  /* `--ls-accent-saison`, ADR-046 : rouge houx sous le thème de Noël. */
+  color: var(--ls-accent-saison, var(--ls-accent-gold-deep));
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.12em;
@@ -202,7 +203,7 @@
 
 .surtitreSection {
   margin: 0 0 var(--ls-space-2);
-  color: var(--ls-accent-gold-deep);
+  color: var(--ls-accent-saison, var(--ls-accent-gold-deep));
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.12em;
@@ -553,4 +554,31 @@
  */
 .sectionCategories .surtitreSection {
   color: var(--ls-primary);
+}
+
+/*
+ * RUBAN DU THÈME DE NOËL, ADR-046. Rendu par le serveur dès le premier
+ * octet, jamais inséré après coup : il ne décale rien. Rouge houx sur blanc,
+ * 8,39:1. Sa bordure est décorative, le texte et le fond l'identifient.
+ */
+.ruban {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ls-space-2);
+  margin: 0 0 var(--ls-space-3);
+  padding: var(--ls-space-1) var(--ls-space-3);
+  border: 1px solid var(--ls-border);
+  border-radius: 999px;
+  background: var(--ls-surface);
+  color: var(--ls-noel-rouge);
+  font-size: 0.875rem;
+}
+
+.ruban svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
 }

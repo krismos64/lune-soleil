@@ -166,3 +166,40 @@ export async function ecrireParametres(
     modifieA: ligne.modifieA,
   };
 }
+
+/**
+ * Le thème saisonnier enregistré, ou `null` sans ligne de paramètres, ADR-046.
+ *
+ * `findFirst` POUR LA MÊME RAISON QUE `lireParametres` : l'accueil peut lire
+ * le seuil de franchise et le thème dans le même tick, et deux `findUnique`
+ * compactés échoueraient sur la clé booléenne. Valeur brute, sans jugement :
+ * le service la confronte à la liste des thèmes connus.
+ */
+export async function lireThemeSaisonnier(
+  client: ClientBase,
+): Promise<string | null> {
+  const ligne = await client.parametreBoutique.findFirst({
+    where: { id: IDENTIFIANT_LIGNE },
+    select: { themeSaisonnier: true },
+  });
+  return ligne?.themeSaisonnier ?? null;
+}
+
+/**
+ * Écrit le thème saisonnier, et lui seul, ADR-046.
+ *
+ * `updateMany` ET NON `upsert` : sans ligne de paramètres, il n'y a rien à
+ * habiller, et l'amorçage appartient à l'écran des paramètres, qui écrit les
+ * tarifs. Rend le nombre de lignes écrites, zéro ou un ; `chk_parametre_theme_connu`
+ * garde la valeur en base.
+ */
+export async function ecrireThemeSaisonnier(
+  client: ClientBase,
+  theme: string,
+): Promise<number> {
+  const { count } = await client.parametreBoutique.updateMany({
+    where: { id: IDENTIFIANT_LIGNE },
+    data: { themeSaisonnier: theme },
+  });
+  return count;
+}

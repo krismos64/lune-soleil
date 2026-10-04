@@ -24,6 +24,11 @@ import { ReactionPointeur } from "@/components/reaction-pointeur";
 import { SceneCycle } from "@/components/scene-cycle";
 import { lireSeuilFranchise } from "@/services/parametres";
 import styles from "./page.module.css";
+import {
+  attributTheme,
+  PARAMETRE_APERCU_THEME,
+  themeDeLaPage,
+} from "./theme-de-la-page";
 
 /**
  * LS-137. Le titre est ABSOLU et non modelé.
@@ -64,7 +69,11 @@ const MENTIONS_DEFILANTES = [
   "Corse comprise",
 ] as const;
 
-export default async function PageAccueil() {
+export default async function PageAccueil({
+  searchParams,
+}: {
+  searchParams: Promise<{ [cle: string]: string | string[] | undefined }>;
+}) {
   /*
    * LE MEME SERVICE QUE LE CATALOGUE, sans filtre. `listerProduitsPublies` trie
    * deja par `publie_a DESC NULLS LAST`, ce que le critere 3 demande : refaire
@@ -75,10 +84,13 @@ export default async function PageAccueil() {
    * references, ne justifie pas un `LIMIT`, et `frontend-design.md` interdit
    * d'introduire un plafond que le schema ne porte pas.
    */
-  const [{ produits, categories }, seuilFranchise] = await Promise.all([
+  const parametres = await searchParams;
+  const [{ produits, categories }, seuilFranchise, theme] = await Promise.all([
     lireCataloguePublic(),
     lireSeuilFranchise(),
+    themeDeLaPage(parametres[PARAMETRE_APERCU_THEME]),
   ]);
+  const noel = theme === "NOEL";
   const misEnAvant = produits.slice(0, NOMBRE_MIS_EN_AVANT);
 
   /*
@@ -92,7 +104,7 @@ export default async function PageAccueil() {
    * attribut sur leur propre `main`.
    */
   return (
-    <main id="contenu" tabIndex={-1}>
+    <main id="contenu" tabIndex={-1} data-theme={attributTheme(theme)}>
       {/*
        * LS-137. `Organization` est posée ICI SEULEMENT, et non sur chaque page :
        * les moteurs rattachent l'organisation au domaine, la répéter partout
@@ -120,6 +132,18 @@ export default async function PageAccueil() {
         <PoussiereOr />
         <div className={styles.heroGrille}>
           <div className={styles.heroTexte}>
+            {/*
+             * THÈME DE NOËL, ADR-046 : un ruban et une accroche écrits ici,
+             * jamais saisis. Aucun ne parle de prix, de date ni de livraison.
+             */}
+            {noel ? (
+              <p className={styles.ruban}>
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M10 2v16M3 6l14 8M17 6 3 14" />
+                </svg>
+                Fêtes de fin d&apos;année
+              </p>
+            ) : null}
             <p className={styles.surtitre}>Bijoux faits main</p>
             <h1 className={styles.titre}>
               La <span className={styles.motDore}>lumière</span> d&apos;un
@@ -127,8 +151,9 @@ export default async function PageAccueil() {
               main.
             </h1>
             <p className={styles.accroche}>
-              Des pièces délicates en petite série, pensées pour accompagner le
-              quotidien sans jamais se ressembler tout à fait.
+              {noel
+                ? "Une pièce faite main, choisie pour quelqu'un : rien ne se ressemble tout à fait, et c'est ce qui fait le cadeau."
+                : "Des pièces délicates en petite série, pensées pour accompagner le quotidien sans jamais se ressembler tout à fait."}
             </p>
             <div className={styles.actions}>
               <Link href="/catalogue" className={styles.actionPrincipale}>
@@ -139,7 +164,7 @@ export default async function PageAccueil() {
               </Link>
             </div>
           </div>
-          <EmblemeAnime />
+          <EmblemeAnime saison={noel ? "noel" : undefined} />
         </div>
       </section>
 
@@ -170,7 +195,9 @@ export default async function PageAccueil() {
           <div className={styles.enteteSection}>
             <div>
               <p className={styles.surtitreSection}>Nouveautés</p>
-              <h2 className={styles.titreSection}>Les dernières créations</h2>
+              <h2 className={styles.titreSection}>
+                {noel ? "À offrir, ou à garder" : "Les dernières créations"}
+              </h2>
             </div>
             <Link href="/catalogue" className={styles.lienSection}>
               Voir toute la collection

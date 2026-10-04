@@ -697,6 +697,8 @@ CREATE TABLE "parametre_boutique" (
     "alerte_stock_faible" BOOLEAN NOT NULL DEFAULT true,
     "alerte_message_recu" BOOLEAN NOT NULL DEFAULT true,
     "alerte_avis_a_moderer" BOOLEAN NOT NULL DEFAULT true,
+    -- ADR-046, LS-267 : thème saisonnier actif, chk_parametre_theme_connu.
+    "theme_saisonnier" TEXT NOT NULL DEFAULT 'AUCUN',
     "modifie_a" TIMESTAMPTZ(3) NOT NULL,
 
     CONSTRAINT "parametre_boutique_pkey" PRIMARY KEY ("id")

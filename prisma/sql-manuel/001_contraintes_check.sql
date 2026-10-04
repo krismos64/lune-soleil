@@ -494,3 +494,10 @@ ALTER TABLE "parametre_boutique"
 ALTER TABLE "produit"
   ADD CONSTRAINT "chk_produit_retrait_archive"
   CHECK ("retire_a" IS NULL OR "statut" = 'ARCHIVE');
+
+-- LE THÈME SAISONNIER EST L'UN DES THÈMES ÉCRITS DANS LE CODE, ADR-046,
+-- LS-267. Un thème inconnu poserait un `data-theme` qu'aucun jeton ne
+-- définit : la page s'afficherait sans thème, sans erreur ni avertissement.
+ALTER TABLE "parametre_boutique"
+  ADD CONSTRAINT "chk_parametre_theme_connu"
+  CHECK ("theme_saisonnier" IN ('AUCUN', 'NOEL'));

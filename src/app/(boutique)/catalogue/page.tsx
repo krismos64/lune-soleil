@@ -32,6 +32,12 @@ import { ArmatureCatalogue } from "./armature-catalogue";
 import { CarteProduit } from "./carte-produit";
 import { FocusPagination } from "./focus-pagination";
 import styles from "./catalogue.module.css";
+import { GuirlandeEtoiles } from "@/components/guirlande-etoiles";
+import {
+  attributTheme,
+  PARAMETRE_APERCU_THEME,
+  themeDeLaPage,
+} from "../theme-de-la-page";
 
 /**
  * LS-137. `generateMetadata` ET NON UN OBJET FIGE, parce que le filtre vit dans
@@ -337,9 +343,11 @@ async function ContenuCatalogue({
 /**
  * La coque, rendue AU-DESSUS de toute frontiere Suspense.
  *
- * ELLE NE LIT RIEN, et c'est ce qui rend son statut honnete : elle se rend
- * entierement avant que `ContenuCatalogue` suspende, donc une base injoignable
- * fait lever SOUS une frontiere deja etablie et `error.tsx` prend le relais.
+ * ELLE NE LIT QUE CE QUI NE PEUT PAS LEVER, et c'est ce qui rend son statut
+ * honnete : le theme saisonnier, ADR-046, retombe sur l'habillage ordinaire en
+ * cas d'echec. Elle se rend donc entierement avant que `ContenuCatalogue`
+ * suspende, et une base injoignable fait lever SOUS une frontiere deja
+ * etablie, ou `error.tsx` prend le relais.
  *
  * `searchParams` EST ATTENDU ICI, ce qui est sans effet sur le statut : c'est
  * une promesse du framework, resolue sans acces reseau ni base.
@@ -373,11 +381,26 @@ export default async function PageCatalogue({
     notFound();
   }
 
+  /*
+   * LE THÈME SAISONNIER, ADR-046. Sa lecture ne lève jamais : un thème
+   * illisible rend l'habillage ordinaire, et la frontière ci-dessous garde
+   * seule la lecture du catalogue, comme avant.
+   */
+  const theme = await themeDeLaPage(parametres[PARAMETRE_APERCU_THEME]);
+  const noel = theme === "NOEL";
+
   return (
-    <main id="contenu" tabIndex={-1} className={styles.page}>
+    <main
+      id="contenu"
+      tabIndex={-1}
+      className={styles.page}
+      data-theme={attributTheme(theme)}
+    >
+      {noel ? <GuirlandeEtoiles /> : null}
       <h1 className={styles.titre}>Le catalogue</h1>
       <p className={styles.accroche}>
         Chaque bijou est fait main et créé à l&apos;unité.
+        {noel ? " Chacun peut devenir un cadeau." : null}
       </p>
 
       <Suspense fallback={<ArmatureCatalogue />}>
