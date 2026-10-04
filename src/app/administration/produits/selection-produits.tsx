@@ -119,6 +119,15 @@ export function SelectionProduits() {
     }
   }, [recapitulatif]);
 
+  /*
+   * LE FOCUS VA AU CHAMP EN ERREUR UNE FOIS L'ENVOI TERMINÉ : pendant l'envoi le
+   * champ est désactivé, et un élément désactivé refuse le focus, mesuré par
+   * le test de LS-265.
+   */
+  useEffect(() => {
+    if (erreurPrix && !enCours) champPrix.current?.focus();
+  }, [erreurPrix, enCours]);
+
   useEffect(() => {
     function recompter() {
       const toutes = cases();
@@ -171,7 +180,6 @@ export function SelectionProduits() {
               // L'erreur est celle du champ : elle s'y rattache, et le focus
               // y retourne pour corriger.
               setErreurPrix(messagePrix(resultat.statut));
-              champPrix.current?.focus();
               return;
             }
             zoneBilan.current?.focus();
