@@ -12,6 +12,10 @@ import styles from "./panneau-authentification.module.css";
  * d'un grand visuel ferait ressembler une confirmation d'identite a une page
  * d'accueil.
  *
+ * LS-268 : CE QUI SUIT VAUT POUR LE DECOR PAR DEFAUT, CELUI DE
+ * L'ADMINISTRATION. Les decors `nuit` et `aube` de la boutique restent visibles
+ * en bandeau sous 768 px, voir plus bas.
+ *
  * LE PANNEAU EST RETIRE DU FLUX SOUS 768 px PAR `display: none`, ET L'IMAGE
  * RESTE DANS LE BALISAGE. Le composant etant rendu sur le serveur, il ne connait
  * pas la largeur du client : il n'existe aucun moyen de ne pas emettre le noeud

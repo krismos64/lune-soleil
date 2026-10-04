@@ -1,9 +1,10 @@
 /*
  * Gabarit a deux panneaux des ecrans d'authentification, LS-229.
  *
- * MOBILE FIRST, ET LE PANNEAU N'APPARAIT PAS A 320 px. La colonne par defaut
- * est unique : le visuel n'entre qu'a partir de 768 px, ou la largeur le rend
- * utile. Sous ce seuil il est retire du flux.
+ * MOBILE FIRST. La colonne par defaut est unique. Le panneau de
+ * l'ADMINISTRATION n'entre qu'a partir de 768 px ; les decors des portes de la
+ * boutique deviennent sous ce seuil un bandeau au-dessus du formulaire,
+ * LS-268, section dediee en fin de fichier.
  *
  * LE VISUEL EST DECORATIF ET LE DIT. Il ne porte aucune information que le
  * formulaire ne porte pas : son `alt` est vide et il est `aria-hidden`, sans

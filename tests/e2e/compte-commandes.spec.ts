@@ -495,7 +495,7 @@ test("le panneau entier rend ses trois groupes et leur separateur", async ({
     panneau.getByRole("heading", { level: 3, name: "Me rétracter" }),
   ).toBeVisible();
   await expect(
-    panneau.getByRole("heading", { level: 3, name: "Nous contacter" }),
+    panneau.getByRole("heading", { level: 3, name: "Contacter l'atelier" }),
   ).toBeVisible();
 
   /*

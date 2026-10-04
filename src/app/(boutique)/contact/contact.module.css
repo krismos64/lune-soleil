@@ -12,14 +12,16 @@
  * LA PAGE N'A PLUS DE LARGEUR BORNÉE, LS-268 : l'en-tête animé va d'un bord à
  * l'autre, et c'est `.corps` qui borne le formulaire et les encarts. La page
  * d'erreur, qui garde l'ancienne mise en forme, reçoit ses marges par
- * `.page > .titre` et `.page > .delai` plus bas.
+ * `.page > .titre`, `.page > .delai` et `.page > .formulaire` : la revue de
+ * LS-268 a trouvé ses deux actions collées au bord gauche.
  */
 .page {
   padding-bottom: var(--ls-space-7);
 }
 
 .page > .titre,
-.page > .delai {
+.page > .delai,
+.page > .formulaire {
   max-width: var(--ls-content-max);
   margin-inline: auto;
   padding-inline: var(--ls-space-4);
