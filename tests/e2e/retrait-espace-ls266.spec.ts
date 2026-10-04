@@ -65,7 +65,12 @@ test.beforeEach(async ({}, infos) => {
       `INSERT INTO produit (id, categorie_id, nom, slug, statut, cree_a, modifie_a)
        VALUES ($1, $2, $3, $4, 'BROUILLON', now(), now())
        ON CONFLICT (id) DO NOTHING`,
-      [brouillon.id, CATALOGUE_TEST.categorieB.id, brouillon.nom, brouillon.slug],
+      [
+        brouillon.id,
+        CATALOGUE_TEST.categorieB.id,
+        brouillon.nom,
+        brouillon.slug,
+      ],
     );
   });
 });
@@ -111,7 +116,9 @@ test("retirer un archivé le fait disparaître de l'espace sans l'effacer", asyn
   const annonce = page
     .getByRole("status")
     .filter({ hasText: "Produit retiré" });
-  await expect(annonce).toContainText("seul le développeur pourra le récupérer");
+  await expect(annonce).toContainText(
+    "seul le développeur pourra le récupérer",
+  );
   await expect(annonce).toBeFocused();
   await expect(page.getByRole("link", { name: archivee.nom })).toHaveCount(0);
 
