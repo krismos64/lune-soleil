@@ -130,6 +130,19 @@ for (const m of sansCommentaires(fs.readFileSync(cheminJetons, "utf8"))
   jetons.set(m[1], m[2]);
 }
 
+/*
+ * ALIAS, ADR-046 : un thème saisonnier redéfinit un point d'entrée par un
+ * autre jeton, `--ls-accent-saison: var(--ls-noel-rouge)`. Sans résolution,
+ * l'alias n'aurait aucune couleur et toute paire qui l'emploie serait
+ * ignorée en silence, le défaut que l'ancrage plus bas existe pour empêcher.
+ */
+const texteJetons = sansCommentaires(fs.readFileSync(cheminJetons, "utf8"));
+for (const m of texteJetons.matchAll(
+  /(--ls-[a-z0-9-]+):\s*var\((--ls-[a-z0-9-]+)\)\s*;/g,
+)) {
+  if (!jetons.has(m[1]) && jetons.has(m[2])) jetons.set(m[1], jetons.get(m[2]));
+}
+
 if (jetons.size === 0) {
   console.log("ECHEC aucun jeton de couleur lu dans tokens.css :");
   console.log("      l'ancrage du contrôle est cassé, il ne mesure plus rien.");
@@ -200,27 +213,65 @@ for (const fichier of modules.sort()) {
      * qui ne portent aucun texte. Sans lui, une bordure décorative serait
      * mesurée comme du texte et le contrôle accuserait du code correct.
      */
-    const c = corps.match(/(?<!-)\bcolor:\s*var\((--ls-[a-z0-9-]+)\)/);
-    const f = corps.match(/\bbackground(?:-color)?:\s*var\((--ls-[a-z0-9-]+)\)/);
+    /*
+     * `var(--a, var(--b))`, ADR-046 : la valeur sous un thème ET la valeur de
+     * repli sont toutes deux peintes un jour. Les deux sont mesurées.
+     */
+    const FORME = "var\\((--ls-[a-z0-9-]+)(?:,\\s*var\\((--ls-[a-z0-9-]+)\\))?\\)";
+    const c = corps.match(new RegExp("(?<!-)\\bcolor:\\s*" + FORME));
+    const f = corps.match(new RegExp("\\bbackground(?:-color)?:\\s*" + FORME));
     if (!c || !f) continue;
 
-    const texte = jetons.get(c[1]);
-    const fond = jetons.get(f[1]);
-    if (!texte || !fond) continue;
+    for (const avant of [c[1], c[2]].filter(Boolean)) {
+      for (const arriere of [f[1], f[2]].filter(Boolean)) {
+        const texte = jetons.get(avant);
+        const fond = jetons.get(arriere);
+        if (!texte || !fond) continue;
 
-    paires += 1;
-    const seuil = seuilDe(corps);
-    const mesure = rapport(texte, fond);
+        paires += 1;
+        const seuil = seuilDe(corps);
+        const mesure = rapport(texte, fond);
 
-    if (mesure < seuil) {
-      echecs.push({
-        fichier: path.relative(path.dirname(source), fichier),
-        selecteur,
-        avant: c[1],
-        arriere: f[1],
-        mesure,
-        seuil,
-      });
+        if (mesure < seuil) {
+          echecs.push({
+            fichier: path.relative(path.dirname(source), fichier),
+            selecteur,
+            avant,
+            arriere,
+            mesure,
+            seuil,
+          });
+        }
+      }
+    }
+  }
+}
+
+/*
+ * LES JETONS D'UN THÈME SAISONNIER, ADR-046 : chacun tient 4,5:1 sur les
+ * trois fonds du projet, C31, qu'il soit employé aujourd'hui sur l'un d'eux
+ * ou non. Un thème est un jeu fermé que l'exploitante active d'un clic : un
+ * jeton défaillant passerait en production sans qu'aucune story le relise.
+ */
+const FONDS = ["--ls-background", "--ls-surface", "--ls-surface-sand"];
+let jetonsDeTheme = 0;
+for (const bloc of texteJetons.matchAll(/\[data-theme="([a-z]+)"\]\s*\{([^}]*)\}/g)) {
+  for (const m of bloc[2].matchAll(/(--ls-[a-z0-9-]+):/g)) {
+    const couleur = jetons.get(m[1]);
+    if (!couleur) continue;
+    jetonsDeTheme += 1;
+    for (const fond of FONDS) {
+      const mesure = rapport(couleur, jetons.get(fond));
+      if (mesure < 4.5) {
+        echecs.push({
+          fichier: `styles/tokens.css, thème ${bloc[1]}`,
+          selecteur: m[1],
+          avant: m[1],
+          arriere: fond,
+          mesure,
+          seuil: 4.5,
+        });
+      }
     }
   }
 }
@@ -237,6 +288,7 @@ for (const e of echecs) {
 
 console.log(`Fichiers de style examinés : ${fichiersExamines}`);
 console.log(`Paires couleur et fond mesurées : ${paires}`);
+console.log(`Jetons de thème saisonnier mesurés sur trois fonds : ${jetonsDeTheme}`);
 
 /*
  * L'ANCRAGE SE PROUVE, DEUX FOIS. Zéro fichier examiné signifie que le contrôle
