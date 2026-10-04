@@ -1,0 +1,164 @@
+/*
+ * Scène du matin à la nuit, LS-260, ADR-045.
+ *
+ * Le dégradé de ciel est l'un des deux décors où ADR-045 le permet. Par
+ * défaut, sans script ou en mouvement réduit, la scène est un bloc statique
+ * sur le ciel du matin : texte `--ls-primary-hover`, 9,34:1 sur l'aube.
+ */
+
+.cycle {
+  position: relative;
+}
+
+.scene {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  padding: var(--ls-space-8) 0;
+  text-align: center;
+  color: var(--cycle-texte, var(--ls-primary-hover));
+  background: linear-gradient(
+    180deg,
+    var(--ciel-haut, var(--ls-ciel-aube-haut)),
+    var(--ciel-bas, var(--ls-ciel-aube-bas))
+  );
+}
+
+.phrases {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 47.5rem;
+  padding-inline: var(--ls-space-4);
+  display: grid;
+  gap: var(--ls-space-7);
+}
+
+/* Les phrases portent `data-phrase`, rendues par la page. */
+.phrases h2 {
+  margin: 0;
+  font-size: clamp(1.875rem, 8vw, 3.625rem);
+  line-height: 1.15;
+  color: inherit;
+}
+
+.phrases p {
+  margin: var(--ls-space-3) auto 0;
+  max-width: 36ch;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: inherit;
+}
+
+.etoiles,
+.astre,
+.horizon {
+  pointer-events: none;
+}
+
+.etoiles,
+.astre {
+  display: none;
+}
+
+.horizon {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  bottom: -8vh;
+  height: 30vh;
+  border-radius: 50% 50% 0 0;
+  background: color-mix(
+    in srgb,
+    var(--ciel-bas, var(--ls-ciel-aube-bas)) 80%,
+    var(--ls-text)
+  );
+}
+
+/* ---------- Mode animé, posé par le script ---------- */
+
+.cycle[data-mode="anime"] {
+  height: 260vh;
+}
+
+.cycle[data-mode="anime"] .scene {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  padding: 0;
+}
+
+.cycle[data-mode="anime"] .phrases {
+  display: block;
+  height: 60vh;
+}
+
+.cycle[data-mode="anime"] [data-phrase] {
+  position: absolute;
+  inset: 50% 0 auto;
+  padding-inline: var(--ls-space-4);
+  transform: translateY(-50%);
+  opacity: 0;
+  transition: opacity 600ms ease;
+}
+
+.cycle[data-mode="anime"] [data-phrase][data-active="true"] {
+  opacity: 1;
+}
+
+.cycle[data-mode="anime"] .etoiles,
+.cycle[data-mode="anime"] .astre {
+  display: block;
+}
+
+.etoiles {
+  position: absolute;
+  inset: 0;
+  opacity: var(--etoiles, 0);
+}
+
+.etoiles i {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: var(--ls-texte-nuit);
+}
+
+.astre {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 7.5rem;
+  height: 7.5rem;
+  margin: -3.75rem 0 0 -3.75rem;
+  will-change: transform;
+}
+
+@media (max-width: 767px) {
+  .astre {
+    top: 24%;
+    width: 4.75rem;
+    height: 4.75rem;
+    margin: -2.375rem 0 0 -2.375rem;
+  }
+}
+
+.soleil {
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 40% 35%,
+    var(--ls-or-pale),
+    var(--ls-or-clair) 45%,
+    var(--ls-or-moyen) 100%
+  );
+  box-shadow: 0 0 80px 30px
+    color-mix(in srgb, var(--ls-or-clair) 45%, transparent);
+}
+
+.lune svg {
+  width: 100%;
+  height: 100%;
+  fill: var(--ls-or-pale);
+}

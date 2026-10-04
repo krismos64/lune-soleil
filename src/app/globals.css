@@ -121,3 +121,39 @@ svg {
   max-width: 100%;
   height: auto;
 }
+
+/*
+ * BORNAGE DES ANIMATIONS AUTOMATIQUES, ADR-045 point 4, WCAG 2.2.2.
+ *
+ * `AnimationsBornees` fait passer tout élément marqué `data-borne` par trois
+ * états. Hors de `joue`, ses animations et celles de ses descendants sont
+ * suspendues : hors de l'écran, ou après dix secondes de mouvement. L'attribut
+ * VIDE, état sans script, ne suspend rien : les animations finies jouent une
+ * fois, et ce qui serait sans fin ne s'anime que sous `joue`.
+ */
+[data-borne="attente"],
+[data-borne="attente"] *,
+[data-borne="fin"],
+[data-borne="fin"] * {
+  animation-play-state: paused !important;
+}
+
+/*
+ * APPARITION AU DÉFILEMENT, ADR-045 points 5 et 6. Seul un bloc passé à
+ * `attente` par `ApparitionAuDefilement`, donc hors de l'écran au montage et
+ * script actif, est masqué. Sans script, l'attribut reste vide et tout est
+ * visible.
+ */
+[data-apparition="attente"] {
+  opacity: 0;
+  transform: translateY(1.75rem);
+}
+
+[data-apparition="vu"] {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 900ms ease,
+    transform 900ms var(--ls-easing-sortie);
+  transition-delay: var(--delai-apparition, 0ms);
+}

@@ -1,0 +1,204 @@
+/*
+ * Emblème animé, LS-260, ADR-045.
+ *
+ * SEULES `transform`, `opacity` ET `stroke-dashoffset` S'ANIMENT : aucune
+ * propriété qui recalcule la mise en page. Toutes les animations sont FINIES,
+ * la plus tardive s'achève avant dix secondes, WCAG 2.2.2.
+ */
+
+.cadre {
+  position: relative;
+  width: min(78vw, 22.5rem);
+  aspect-ratio: 1;
+  margin-inline: auto;
+}
+
+@media (min-width: 1024px) {
+  .cadre {
+    width: min(42vw, 33.75rem);
+  }
+}
+
+/* Halo doré derrière le soleil, décor pur. */
+.halo {
+  position: absolute;
+  inset: 12%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--ls-or-pale) 55%, transparent) 0%,
+    transparent 70%
+  );
+  animation: respire 5s ease-in-out 2;
+}
+
+.embleme {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.calque {
+  transition: transform 900ms var(--ls-easing-sortie);
+}
+
+/* Tracés dessinés progressivement, longueur normalisée par `pathLength`. */
+.trait {
+  fill: none;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: dessine var(--ls-duree-dessin) var(--ls-easing-sortie) forwards;
+}
+
+.anneau {
+  stroke: url(#embleme-or);
+  stroke-width: 2;
+  animation-duration: 2400ms;
+}
+
+.lune {
+  fill: url(#embleme-or);
+  stroke: var(--ls-or-sombre);
+  stroke-width: 2;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: 70% 50%;
+  animation: lune-entre 1600ms var(--ls-easing-sortie) 500ms forwards;
+}
+
+.rayons {
+  transform-origin: 690px 455px;
+  animation: tourne 6s var(--ls-easing-sortie) 3800ms forwards;
+}
+
+.rayon {
+  stroke: url(#embleme-or);
+  stroke-width: 8;
+  animation-delay: calc(1100ms + var(--rang) * 60ms);
+}
+
+.soleil {
+  fill: url(#embleme-soleil);
+  stroke: var(--ls-or-sombre);
+  stroke-width: 2;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: soleil-entre 1400ms var(--ls-easing-sortie) 800ms forwards;
+}
+
+.etoile {
+  fill: url(#embleme-or);
+  opacity: 0.25;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: scintille 3.2s ease-in-out 2;
+  animation-delay: calc(1600ms + var(--rang) * 150ms);
+}
+
+.branche {
+  stroke: var(--ls-or-moyen);
+  stroke-width: 2.4;
+  animation-delay: 1400ms;
+}
+
+.feuille {
+  fill: var(--ls-or-clair);
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: pousse 800ms var(--ls-easing-sortie) forwards;
+  animation-delay: calc(1900ms + var(--rang) * 90ms);
+}
+
+@keyframes dessine {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes lune-entre {
+  from {
+    opacity: 0;
+    transform: translateX(-60px) rotate(-35deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes soleil-entre {
+  from {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Un quart de tour qui freine, et non une rotation sans fin. */
+@keyframes tourne {
+  to {
+    transform: rotate(40deg);
+  }
+}
+
+@keyframes scintille {
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes pousse {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+  to {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+}
+
+@keyframes respire {
+  50% {
+    transform: scale(1.12);
+    opacity: 0.7;
+  }
+}
+
+/* Mouvement réduit : l'emblème est complet et immobile dès le premier rendu. */
+@media (prefers-reduced-motion: reduce) {
+  .halo,
+  .trait,
+  .lune,
+  .rayons,
+  .soleil,
+  .etoile,
+  .feuille {
+    animation: none;
+  }
+
+  .trait {
+    stroke-dashoffset: 0;
+  }
+
+  .lune,
+  .soleil {
+    opacity: 1;
+  }
+
+  .feuille {
+    opacity: 0.8;
+  }
+
+  .calque {
+    transition: none;
+  }
+}

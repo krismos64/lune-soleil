@@ -1,0 +1,32 @@
+/* Poussière d'or, LS-260. Deux passages de 4 s, retard au plus 1,5 s. */
+
+.poussiere {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.grain {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--ls-or-moyen);
+  opacity: 0;
+  animation: monte 4s ease-in-out 2;
+}
+
+@keyframes monte {
+  20% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-3.5rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .poussiere {
+    display: none;
+  }
+}
