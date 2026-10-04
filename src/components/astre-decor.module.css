@@ -1,0 +1,127 @@
+/*
+ * Décor d'astre, LS-262, ADR-045. Seules `transform`, `opacity` et
+ * `stroke-dashoffset` s'animent, la plus longue animation finit à 3,6 s.
+ */
+
+.decor {
+  width: min(11rem, 50vw);
+  margin-inline: auto;
+}
+
+.decor svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* ---------- Lever ---------- */
+
+.soleilLevant {
+  transform-box: view-box;
+  transform: translateY(26px);
+  opacity: 0;
+  animation: monte 2400ms var(--ls-easing-sortie) 200ms forwards;
+}
+
+.disque {
+  fill: var(--ls-or-clair);
+}
+
+.rayons {
+  fill: none;
+  stroke: var(--ls-or-moyen);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: dessine 1200ms var(--ls-easing-sortie) 2400ms forwards;
+}
+
+.horizon {
+  fill: none;
+  stroke: var(--ls-or-moyen);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: dessine 1400ms var(--ls-easing-sortie) forwards;
+}
+
+/*
+ * L'HORIZON CACHE LE BAS DU SOLEIL : un masque fixe coupe le dessin juste
+ * sous la ligne, et le soleil monte derrière lui. Le masque ne s'anime pas,
+ * seul le soleil bouge, en `transform`.
+ */
+.lever svg {
+  -webkit-mask: linear-gradient(#000 0 86%, transparent 86%);
+  mask: linear-gradient(#000 0 86%, transparent 86%);
+}
+
+/* ---------- Lune ---------- */
+
+.croissant {
+  fill: var(--ls-or-clair);
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: rotate(-20deg) scale(0.85);
+  animation: lune 1800ms var(--ls-easing-sortie) 200ms forwards;
+}
+
+.etoile {
+  fill: var(--ls-or-moyen);
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: brille 1600ms ease-out forwards;
+}
+
+@keyframes monte {
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@keyframes dessine {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes lune {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes brille {
+  50% {
+    opacity: 1;
+    transform: scale(1.3);
+  }
+  to {
+    opacity: 0.8;
+    transform: none;
+  }
+}
+
+/* Mouvement réduit : le décor est complet et immobile. */
+@media (prefers-reduced-motion: reduce) {
+  .soleilLevant,
+  .rayons,
+  .horizon,
+  .croissant,
+  .etoile {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    stroke-dashoffset: 0;
+  }
+
+  .etoile {
+    opacity: 0.8;
+  }
+}

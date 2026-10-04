@@ -27,6 +27,7 @@ import {
   PageCatalogueInexistanteError,
   pageCatalogueExiste,
 } from "@/services/catalogue";
+import { ReactionPointeur } from "@/components/reaction-pointeur";
 import { ArmatureCatalogue } from "./armature-catalogue";
 import { CarteProduit } from "./carte-produit";
 import { FocusPagination } from "./focus-pagination";
@@ -285,7 +286,7 @@ async function ContenuCatalogue({
           )}
         </div>
       ) : (
-        <ul className={styles.grille}>
+        <ul className={styles.grille} data-inclinaison="">
           {produits.map((produit) => (
             <CarteProduit key={produit.id} produit={produit} />
           ))}
@@ -382,6 +383,9 @@ export default async function PageCatalogue({
       <Suspense fallback={<ArmatureCatalogue />}>
         <ContenuCatalogue slugCategorie={slugCategorie} page={page} />
       </Suspense>
+
+      {/* Inclinaison des cartes au survol, ordinateur seulement, LS-262. */}
+      <ReactionPointeur />
     </main>
   );
 }

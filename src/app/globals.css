@@ -149,6 +149,15 @@ svg {
   transform: translateY(1.75rem);
 }
 
+/*
+ * MODE GLISSEMENT, LS-262 : un contenu qui ne doit jamais partir d'une opacité
+ * nulle, une carte de produit ou un texte de page, arrive par un léger
+ * glissement seul, ADR-045 point 5.
+ */
+[data-apparition="attente"][data-apparition-mode="glisse"] {
+  opacity: 1;
+}
+
 [data-apparition="vu"] {
   opacity: 1;
   transform: none;

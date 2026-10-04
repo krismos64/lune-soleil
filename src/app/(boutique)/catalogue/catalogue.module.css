@@ -128,6 +128,70 @@
 }
 
 /*
+ * INCLINAISON ET REFLET AU SURVOL, LS-260 puis LS-262 : posés sur la carte et
+ * non sur la grille d'une page, pour servir l'accueil et le catalogue sans
+ * second jeu de règles. `ReactionPointeur` incline la carte sous la souris,
+ * ordinateur seulement ; le reflet ne passe qu'au survol, une fois. Une
+ * interaction le déclenche, WCAG 2.2.2 ne s'applique pas. `pointer-events:
+ * none`, il ne gêne aucun clic.
+ */
+.carte {
+  position: relative;
+  transition: transform 500ms var(--ls-easing-sortie);
+}
+
+.carte::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 35%,
+    color-mix(in srgb, var(--ls-surface) 45%, transparent) 50%,
+    transparent 65%
+  );
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .carte:hover::after {
+    opacity: 1;
+    transform: translateX(100%);
+    transition: transform 800ms var(--ls-easing-sortie);
+  }
+}
+
+/*
+ * ARRIVÉE ÉCHELONNÉE DES CARTES, LS-262 : un glissement seul, jamais un
+ * fondu, une carte de produit ne partant jamais d'une opacité nulle, ADR-045
+ * point 5. Le retard suit la position dans une rangée de quatre au plus.
+ */
+.grille > .carte:nth-child(4n + 2) {
+  --delai-apparition: 80ms;
+}
+
+.grille > .carte:nth-child(4n + 3) {
+  --delai-apparition: 160ms;
+}
+
+.grille > .carte:nth-child(4n) {
+  --delai-apparition: 240ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .carte,
+  .carte::after {
+    transition: none;
+  }
+
+  .carte:hover::after {
+    opacity: 0;
+  }
+}
+
+/*
  * TOUTE LA CARTE EST CLIQUABLE, un seul lien qui enveloppe image et texte.
  * Deux liens vers la meme fiche, l'un sur l'image l'autre sur le nom, feraient
  * entendre la destination deux fois a qui navigue au clavier.

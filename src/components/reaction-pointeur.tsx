@@ -49,35 +49,41 @@ export function ReactionPointeur() {
       });
     };
 
-    const cartes = [
-      ...document.querySelectorAll<HTMLElement>("[data-inclinaison] > li"),
-    ];
+    /*
+     * LES CARTES PAR DÉLÉGATION, LS-262 : un filtre ou un changement de page du
+     * catalogue remplace les cartes sans démonter ce composant. Écouter le
+     * document suit donc toujours les cartes affichées, là où une liste
+     * relevée au montage aurait gardé des éléments disparus.
+     */
+    let carteActive: HTMLElement | null = null;
+    const relacher = () => {
+      if (carteActive) carteActive.style.transform = "";
+      carteActive = null;
+    };
     const surCarte = (evenement: PointerEvent) => {
-      const carte = evenement.currentTarget as HTMLElement;
+      const carte = (evenement.target as Element | null)?.closest<HTMLElement>(
+        "[data-inclinaison] > li",
+      );
+      if (carte !== carteActive) relacher();
+      if (!carte) return;
+      carteActive = carte;
       const boite = carte.getBoundingClientRect();
       const x = (evenement.clientX - boite.left) / boite.width - 0.5;
       const y = (evenement.clientY - boite.top) / boite.height - 0.5;
       carte.style.transform = `perspective(900px) rotateY(${x * INCLINAISON_MAX}deg) rotateX(${-y * INCLINAISON_MAX}deg)`;
     };
-    const quitterCarte = (evenement: PointerEvent) => {
-      (evenement.currentTarget as HTMLElement).style.transform = "";
-    };
 
     window.addEventListener("pointermove", surDeplacement, { passive: true });
-    for (const carte of cartes) {
-      carte.addEventListener("pointermove", surCarte);
-      carte.addEventListener("pointerleave", quitterCarte);
-    }
+    document.addEventListener("pointermove", surCarte, { passive: true });
+    document.addEventListener("pointerleave", relacher);
 
     return () => {
       window.removeEventListener("pointermove", surDeplacement);
       window.cancelAnimationFrame(image);
       for (const calque of calques) calque.style.transform = "";
-      for (const carte of cartes) {
-        carte.removeEventListener("pointermove", surCarte);
-        carte.removeEventListener("pointerleave", quitterCarte);
-        carte.style.transform = "";
-      }
+      document.removeEventListener("pointermove", surCarte);
+      document.removeEventListener("pointerleave", relacher);
+      relacher();
     };
   }, [mouvement]);
 

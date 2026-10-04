@@ -50,7 +50,16 @@ export function CarteProduit({ produit }: { produit: ProduitCatalogue }) {
   const disponibilite = LIBELLE_DISPONIBILITE[produit.disponibilite];
 
   return (
-    <li className={styles.carte}>
+    /*
+     * `data-apparition` EN MODE GLISSEMENT, LS-262 : une carte hors de l'écran
+     * au chargement arrive par un léger glissement, sans jamais partir d'une
+     * opacité nulle, ADR-045 point 5.
+     */
+    <li
+      className={styles.carte}
+      data-apparition=""
+      data-apparition-mode="glisse"
+    >
       {/*
        * LA ROUTE `/produit/[slug]` N'EXISTE PAS ENCORE, elle appartient a
        * LS-105 que cette story bloque. Ces liens rendent donc une 404 jusqu'a sa
