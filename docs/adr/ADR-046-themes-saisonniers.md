@@ -41,9 +41,13 @@ d'autre.** Six points tranchés.
 
 ### 1. Mécanisme
 
-- Une colonne `theme_saisonnier` dans `ParametreBoutique`, d'un type énuméré
-  `ThemeSaisonnier` à deux valeurs, `AUCUN` et `NOEL`, défaut `AUCUN`.
-  Migration additive, créée à la main, passée par `migrate-production.sh`.
+- Une colonne `theme_saisonnier` dans `ParametreBoutique`, **texte borné par
+  une contrainte `CHECK`** à deux valeurs, `AUCUN` et `NOEL`, défaut `AUCUN`.
+  **Pas un type énuméré PostgreSQL** : `verifier-schema.sh` exige que chaque
+  énumération figure au modèle conceptuel, dont `ParametreBoutique` est exclue
+  à dessein, la table étant de configuration et non métier. Le `CHECK` donne
+  la même garantie en base, Zod la donne côté serveur. Migration additive,
+  créée à la main, passée par `migrate-production.sh`.
 - Le thème actif est lu côté serveur par le service des paramètres, comme le
   seuil de franchise, et posé en attribut `data-theme` sur le `<main>` des deux
   pages concernées. **Pas sur `<html>`** : le layout racine lirait alors la
@@ -132,9 +136,10 @@ invariant 2. Un paramètre d'URL ne change jamais le thème d'un visiteur.
 
 ## Conséquences
 
-- Migration additive : énumération `ThemeSaisonnier` et colonne
-  `theme_saisonnier` sur `parametre_boutique`, défaut `AUCUN`. `schema.sql`,
-  `MODELE-LOGIQUE.md` et `verifier-schema.sh` suivent.
+- Migration additive : colonne `theme_saisonnier` sur `parametre_boutique`,
+  défaut `AUCUN`, et contrainte `chk_parametre_theme_connu`. `schema.sql`,
+  `001_contraintes_check.sql`, `MODELE-LOGIQUE.md` et `verifier-schema.sh`
+  suivent.
 - `tokens.css` reçoit le bloc `[data-theme="noel"]` ; `verifier-contraste.sh`
   apprend à mesurer sous chaque thème.
 - `frontend-design.md` reçoit une section « Thèmes saisonniers, ADR-046 » :
