@@ -624,6 +624,19 @@ describe("lecture des variantes d'un produit", () => {
  * gardée. Un prix nul est refusé en masse.
  */
 describe("prix appliqué à une sélection de produits", () => {
+  /** Récapitulatif puis confirmation, comme l'écran : montré, puis appliqué. */
+  async function recapituleEtApplique(produitIds: string[], prixEuros: string) {
+    const { lignes } = await variantes.previsualiserPrixProduits({
+      produitIds,
+      prixEuros,
+    });
+    return variantes.appliquerPrixProduits({
+      produitIds,
+      varianteIds: lignes.map((ligne) => ligne.id),
+      prixEuros,
+    });
+  }
+
   async function prixDe(varianteId: string): Promise<number> {
     const { rows } = await client.query<{ prix_centimes: number }>(
       "SELECT prix_centimes FROM variante WHERE id = $1",
@@ -641,10 +654,7 @@ describe("prix appliqué à une sélection de produits", () => {
     );
     const c = await variantes.creerVariante(entree(second));
 
-    const bilan = await variantes.appliquerPrixProduits({
-      produitIds: [premier, second],
-      prixEuros: "24,90",
-    });
+    const bilan = await recapituleEtApplique([premier, second], "24,90");
 
     expect(bilan).toEqual({ variantes: 3, prixCentimes: 2490 });
     for (const variante of [a, b, c]) {
@@ -660,10 +670,7 @@ describe("prix appliqué à une sélection de produits", () => {
     const enVente = await variantes.creerVariante(entree(choisi));
     const horsSelection = await variantes.creerVariante(entree(autre));
 
-    const bilan = await variantes.appliquerPrixProduits({
-      produitIds: [choisi],
-      prixEuros: "10",
-    });
+    const bilan = await recapituleEtApplique([choisi], "10");
 
     expect(bilan.variantes).toBe(1);
     expect(await prixDe(enVente.id)).toBe(1000);
@@ -676,10 +683,7 @@ describe("prix appliqué à une sélection de produits", () => {
     const variante = await variantes.creerVariante(entree(produit));
     await commandeAvecLigne(variante.id, variante.reference, 1999);
 
-    await variantes.appliquerPrixProduits({
-      produitIds: [produit],
-      prixEuros: "5",
-    });
+    await recapituleEtApplique([produit], "5");
 
     const { rows } = await client.query<{ prix_fige_centimes: number }>(
       "SELECT prix_fige_centimes FROM ligne_commande WHERE variante_id = $1",
@@ -694,11 +698,19 @@ describe("prix appliqué à une sélection de produits", () => {
 
     for (const prixEuros of ["0", "0,00", "douze", "19,999"]) {
       await expect(
-        variantes.appliquerPrixProduits({ produitIds: [produit], prixEuros }),
+        variantes.appliquerPrixProduits({
+          produitIds: [produit],
+          varianteIds: [variante.id],
+          prixEuros,
+        }),
       ).rejects.toThrow();
     }
     await expect(
-      variantes.appliquerPrixProduits({ produitIds: [], prixEuros: "10" }),
+      variantes.appliquerPrixProduits({
+        produitIds: [],
+        varianteIds: [variante.id],
+        prixEuros: "10",
+      }),
     ).rejects.toThrow();
 
     expect(await prixDe(variante.id)).toBe(1999);
@@ -727,5 +739,46 @@ describe("prix appliqué à une sélection de produits", () => {
       [produit],
     );
     expect(rows.map((ligne) => ligne.prix_centimes)).toEqual([1999]);
+  });
+
+  it("n'applique le prix qu'aux déclinaisons montrées par le récapitulatif", async () => {
+    const produit = await produitDeTest();
+    const montree = await variantes.creerVariante(entree(produit));
+    const { lignes } = await variantes.previsualiserPrixProduits({
+      produitIds: [produit],
+      prixEuros: "30",
+    });
+    // Créée entre le récapitulatif et la confirmation, jamais montrée.
+    const ajoutee = await variantes.creerVariante(entree(produit));
+
+    const bilan = await variantes.appliquerPrixProduits({
+      produitIds: [produit],
+      varianteIds: lignes.map((ligne) => ligne.id),
+      prixEuros: "30",
+    });
+
+    expect(bilan.variantes).toBe(1);
+    expect(await prixDe(montree.id)).toBe(3000);
+    expect(await prixDe(ajoutee.id)).toBe(1999);
+  });
+
+  it("annule tout si une déclinaison montrée a été archivée depuis", async () => {
+    const produit = await produitDeTest();
+    const a = await variantes.creerVariante(entree(produit));
+    const b = await variantes.creerVariante(entree(produit));
+    const { lignes } = await variantes.previsualiserPrixProduits({
+      produitIds: [produit],
+      prixEuros: "30",
+    });
+    await variantes.archiverVariante({ id: b.id });
+
+    await expect(
+      variantes.appliquerPrixProduits({
+        produitIds: [produit],
+        varianteIds: lignes.map((ligne) => ligne.id),
+        prixEuros: "30",
+      }),
+    ).rejects.toThrow(variantes.RecapitulatifPrixPerimeError);
+    expect(await prixDe(a.id)).toBe(1999);
   });
 });

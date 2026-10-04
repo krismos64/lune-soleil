@@ -52,9 +52,11 @@ function raison(refus: RefusGroupe): string {
 function messagePrix(statut: string): string {
   switch (statut) {
     case "INVALIDE":
-      return "Saisir un prix en euros supérieur à zéro, par exemple 24,90, et cocher au moins un produit.";
+      return "Saisir un prix en euros supérieur à zéro, par exemple 24,90, et cocher entre un et cent produits.";
     case "SESSION_ABSENTE":
       return "Session expirée. Se reconnecter pour continuer.";
+    case "PERIME":
+      return "Une déclinaison a changé depuis le récapitulatif. Aucun prix n'a été modifié : relancer « Appliquer ce prix ».";
     default:
       return "Le service est momentanément indisponible. Aucun prix n'a été modifié, réessayer dans un instant.";
   }
@@ -67,6 +69,18 @@ export function SelectionProduits() {
   const [total, setTotal] = useState(0);
   const zoneBilan = useRef<HTMLDivElement>(null);
   const zoneRecapitulatif = useRef<HTMLElement>(null);
+  const champPrix = useRef<HTMLInputElement>(null);
+  const boutonPrix = useRef<HTMLButtonElement>(null);
+  /*
+   * CE QUE L'ATTENTE ANNONCE, revue de LS-265 : un récapitulatif ne modifie
+   * rien, l'écran ne doit donc pas dire « Enregistrement » pendant qu'il se
+   * prépare.
+   */
+  const [attente, setAttente] = useState("Enregistrement en cours…");
+  /* Erreur de saisie du prix, reliée au champ et non au seul bilan. */
+  const [erreurPrix, setErreurPrix] = useState<string | null>(null);
+  /* Après « Annuler », le focus revient au champ prix, jamais à `body`. */
+  const retourAuChamp = useRef(false);
   /*
    * LE RÉCAPITULATIF DU PRIX EN MASSE, LS-265 : la sélection et le prix tels
    * qu'ils ont été soumis, pour que la confirmation applique exactement ce
@@ -90,6 +104,20 @@ export function SelectionProduits() {
       ),
     );
   }
+
+  /*
+   * LE FOCUS SUIT LE RÉCAPITULATIF APRÈS SON MONTAGE, et non dans un
+   * `requestAnimationFrame` posé après un `await`, qui pouvait passer avant la
+   * section et perdre le focus sans bruit.
+   */
+  useEffect(() => {
+    if (recapitulatif) {
+      zoneRecapitulatif.current?.focus();
+    } else if (retourAuChamp.current) {
+      retourAuChamp.current = false;
+      champPrix.current?.focus();
+    }
+  }, [recapitulatif]);
 
   useEffect(() => {
     function recompter() {
@@ -125,8 +153,10 @@ export function SelectionProduits() {
 
         setBilan(null);
         setRecapitulatif(null);
+        setErreurPrix(null);
 
         if (operation === "prix") {
+          setAttente("Préparation du récapitulatif…");
           demarrer(async () => {
             const resultat = await previsualiserPrixSelection(formulaire);
             if (resultat.statut === "RECAPITULATIF") {
@@ -135,7 +165,13 @@ export function SelectionProduits() {
                 prixCentimes: resultat.prixCentimes,
                 formulaire,
               });
-              requestAnimationFrame(() => zoneRecapitulatif.current?.focus());
+              return;
+            }
+            if (resultat.statut === "INVALIDE") {
+              // L'erreur est celle du champ : elle s'y rattache, et le focus
+              // y retourne pour corriger.
+              setErreurPrix(messagePrix(resultat.statut));
+              champPrix.current?.focus();
               return;
             }
             zoneBilan.current?.focus();
@@ -148,6 +184,7 @@ export function SelectionProduits() {
           return;
         }
 
+        setAttente("Enregistrement en cours…");
         demarrer(async () => {
           const resultat = await appliquerSelectionProduits(formulaire);
 
@@ -237,15 +274,33 @@ export function SelectionProduits() {
       <div className={styles.prixSelection}>
         <label className={styles.champPrix}>
           <span>Prix pour la sélection, en euros</span>
+          {/*
+           * ENTRÉE SOUMET PAR « APPLIQUER CE PRIX », revue de LS-265. Sans
+           * cela, le navigateur soumet par le premier bouton du formulaire,
+           * « Publier », et la touche Entrée publiait la sélection sur la
+           * boutique sans aucun récapitulatif.
+           */}
           <input
+            ref={champPrix}
             name="prixEuros"
             inputMode="decimal"
+            enterKeyHint="go"
             autoComplete="off"
             placeholder="24,90"
             disabled={enCours}
+            aria-invalid={erreurPrix ? true : undefined}
+            aria-describedby={erreurPrix ? "erreur-prix-selection" : undefined}
+            onKeyDown={(evenement) => {
+              if (evenement.key !== "Enter") return;
+              evenement.preventDefault();
+              if (boutonPrix.current && !boutonPrix.current.disabled) {
+                evenement.currentTarget.form?.requestSubmit(boutonPrix.current);
+              }
+            }}
           />
         </label>
         <button
+          ref={boutonPrix}
           type="submit"
           value="prix"
           className={styles.boutonSelection}
@@ -253,6 +308,11 @@ export function SelectionProduits() {
         >
           Appliquer ce prix ({coches})
         </button>
+        {erreurPrix ? (
+          <p id="erreur-prix-selection" className={styles.bilanErreur}>
+            {erreurPrix}
+          </p>
+        ) : null}
       </div>
 
       {recapitulatif ? (
@@ -268,7 +328,7 @@ export function SelectionProduits() {
           >
             {recapitulatif.lignes.length === 0
               ? "Aucune déclinaison en vente dans la sélection."
-              : `Passer ${recapitulatif.lignes.length} déclinaison${recapitulatif.lignes.length > 1 ? "s" : ""} à ${formaterMontant(recapitulatif.prixCentimes)} ?`}
+              : `Passer ${recapitulatif.lignes.length} déclinaison${recapitulatif.lignes.length > 1 ? "s" : ""} à ${formaterMontant(recapitulatif.prixCentimes)}\u202F?`}
           </h2>
           {recapitulatif.lignes.length > 0 ? (
             <>
@@ -279,7 +339,8 @@ export function SelectionProduits() {
               <ul className={styles.listeRecapitulatif}>
                 {recapitulatif.lignes.map((ligne) => (
                   <li key={ligne.id}>
-                    {ligne.produitNom}, {ligne.libelle} :{" "}
+                    {ligne.produitNom}, {ligne.libelle}
+                    {"\u202F: "}
                     {formaterMontant(ligne.prixCentimes)} devient{" "}
                     {formaterMontant(recapitulatif.prixCentimes)}
                   </li>
@@ -294,14 +355,28 @@ export function SelectionProduits() {
                 className={styles.boutonSelection}
                 disabled={enCours}
                 onClick={() => {
-                  const { formulaire } = recapitulatif;
+                  /*
+                   * LES DÉCLINAISONS MONTRÉES PARTENT AVEC LA CONFIRMATION :
+                   * le prix ne s'applique qu'à elles, revue critique de LS-265.
+                   */
+                  const montrees = recapitulatif.lignes.length;
+                  const formulaire = new FormData();
+                  for (const [cle, valeur] of recapitulatif.formulaire)
+                    formulaire.append(cle, valeur);
+                  for (const ligne of recapitulatif.lignes)
+                    formulaire.append("varianteId", ligne.id);
+                  setAttente("Enregistrement en cours…");
                   demarrer(async () => {
                     const resultat = await appliquerPrixSelection(formulaire);
                     setRecapitulatif(null);
                     zoneBilan.current?.focus();
                     if (resultat.statut === "APPLIQUE") {
+                      const nombre = resultat.variantes;
                       setBilan({
-                        texte: `${resultat.variantes} déclinaison${resultat.variantes > 1 ? "s" : ""} à ${formaterMontant(resultat.prixCentimes)}.`,
+                        texte:
+                          nombre === 0
+                            ? "Aucun prix n'a changé."
+                            : `Prix de ${formaterMontant(resultat.prixCentimes)} appliqué à ${nombre} déclinaison${nombre > 1 ? "s" : ""}${nombre === montrees ? "." : `, sur ${montrees} montrées.`}`,
                         refus: [],
                         erreur: false,
                       });
@@ -323,7 +398,10 @@ export function SelectionProduits() {
               type="button"
               className={styles.boutonSelection}
               disabled={enCours}
-              onClick={() => setRecapitulatif(null)}
+              onClick={() => {
+                retourAuChamp.current = true;
+                setRecapitulatif(null);
+              }}
             >
               Annuler
             </button>
@@ -339,7 +417,7 @@ export function SelectionProduits() {
         aria-label="Bilan de la sélection"
       >
         {enCours ? (
-          <p>Enregistrement en cours…</p>
+          <p>{attente}</p>
         ) : bilan ? (
           <>
             <p className={bilan.erreur ? styles.bilanErreur : undefined}>

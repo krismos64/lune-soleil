@@ -107,7 +107,7 @@ test("un prix confirmé s'applique à toutes les déclinaisons choisies", async 
     .click();
   await expect(
     page.getByRole("status", { name: "Bilan de la sélection" }),
-  ).toContainText("3 déclinaisons à 24,90");
+  ).toContainText("appliqué à 3 déclinaisons");
 
   const apres = await avecBase((client) =>
     client.query<{ prix_centimes: number }>(
@@ -132,9 +132,11 @@ test("un prix nul est refusé avant tout récapitulatif", async ({
   await page.getByLabel("Prix pour la sélection, en euros").fill("0");
   await page.getByRole("button", { name: /^Appliquer ce prix/ }).click();
 
-  await expect(
-    page.getByRole("status", { name: "Bilan de la sélection" }),
-  ).toContainText("supérieur à zéro");
+  // L'erreur est rattachée au champ, qui reprend le focus pour la corriger.
+  const champ = page.getByLabel("Prix pour la sélection, en euros");
+  await expect(champ).toHaveAttribute("aria-invalid", "true");
+  await expect(champ).toHaveAccessibleDescription(/supérieur à zéro/);
+  await expect(champ).toBeFocused();
   await expect(
     page.getByRole("button", { name: "Confirmer le prix" }),
   ).toHaveCount(0);
@@ -153,6 +155,11 @@ test("annuler le récapitulatif ne modifie aucun prix", async ({
   await page.getByRole("button", { name: /^Appliquer ce prix/ }).click();
   await page.getByRole("button", { name: "Annuler" }).click();
 
+  // Le focus revient au champ, jamais en haut du document.
+  await expect(
+    page.getByLabel("Prix pour la sélection, en euros"),
+  ).toBeFocused();
+
   await expect(
     page.getByRole("button", { name: "Confirmer le prix" }),
   ).toHaveCount(0);
@@ -163,4 +170,34 @@ test("annuler le récapitulatif ne modifie aucun prix", async ({
     ),
   );
   expect(lignes.rows.map((ligne) => ligne.prix_centimes)).toEqual([1999, 1999]);
+});
+
+test("Entrée dans le champ prix ouvre le récapitulatif sans rien publier", async ({
+  page,
+}, infos) => {
+  /*
+   * DÉFAUT GRAVE RELEVÉ PAR LA REVUE DE LS-265 : sans interception, Entrée
+   * soumettait par le premier bouton du formulaire, « Publier », et publiait
+   * la sélection sur la boutique.
+   */
+  const [premier] = pieces(infos.project.name);
+  await page.goto(ECRAN);
+
+  await page
+    .getByRole("checkbox", { name: `Sélectionner ${premier!.nom}` })
+    .check();
+  const champ = page.getByLabel("Prix pour la sélection, en euros");
+  await champ.fill("15");
+  await champ.press("Enter");
+
+  await expect(
+    page.getByRole("region", { name: /Passer 2 déclinaisons à 15,00/ }),
+  ).toBeVisible();
+  const { rows } = await avecBase((client) =>
+    client.query<{ statut: string }>(
+      "SELECT statut FROM produit WHERE id = $1",
+      [premier!.id],
+    ),
+  );
+  expect(rows[0]!.statut).toBe("ARCHIVE");
 });

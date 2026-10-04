@@ -230,20 +230,25 @@ export async function listerVariantesEnVenteDesProduits(
 }
 
 /**
- * Fixe le même prix à toutes les variantes en vente des produits choisis,
- * LS-265.
+ * Fixe le même prix aux variantes MONTRÉES par le récapitulatif, LS-265,
+ * pourvu qu'elles appartiennent encore aux produits choisis et soient en vente.
  *
- * UNE SEULE INSTRUCTION, DONC ATOMIQUE : toutes les variantes ou aucune, sans
- * transaction à ouvrir. Les lignes de commande portent leur prix figé,
- * invariant 3 : aucune commande ni facture n'en dépend.
+ * UNE SEULE INSTRUCTION, DONC ATOMIQUE. Rend le nombre modifié : le service le
+ * confronte au nombre montré, dans la même transaction. Les lignes de commande
+ * portent leur prix figé, invariant 3 : aucune commande ni facture n'en dépend.
  */
-export async function fixerPrixVariantesDesProduits(
+export async function fixerPrixVariantesMontrees(
   client: ClientBase,
   produitIds: string[],
+  varianteIds: string[],
   prixCentimes: number,
 ): Promise<number> {
   const { count } = await client.variante.updateMany({
-    where: { produitId: { in: produitIds }, archiveeA: null },
+    where: {
+      id: { in: varianteIds },
+      produitId: { in: produitIds },
+      archiveeA: null,
+    },
     data: { prixCentimes },
   });
 

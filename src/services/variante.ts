@@ -29,6 +29,7 @@ import {
   schemaCreationVariante,
   schemaModificationVariante,
   schemaPrixEnMasse,
+  schemaVariantesMontrees,
 } from "@/services/variante-validation";
 
 export type Variante = depot.Variante;
@@ -43,6 +44,17 @@ export type VariantePourPrix = depot.VariantePourPrix;
  * le catalogue quelle piece la porte, y compris parmi les variantes archivees
  * qui l'occupent toujours, C14.
  */
+/**
+ * Le récapitulatif du prix en masse ne correspond plus à la base, LS-265 : une
+ * déclinaison montrée a été archivée ou déplacée. Rien n'est modifié.
+ */
+export class RecapitulatifPrixPerimeError extends Error {
+  constructor() {
+    super("Le récapitulatif ne correspond plus au catalogue.");
+    this.name = "RecapitulatifPrixPerimeError";
+  }
+}
+
 export class ReferenceDejaPriseError extends Error {
   constructor(
     readonly reference: string,
@@ -348,19 +360,36 @@ export async function previsualiserPrixProduits({
  */
 export async function appliquerPrixProduits({
   produitIds,
+  varianteIds,
   prixEuros,
 }: {
   produitIds: unknown;
+  varianteIds: unknown;
   prixEuros: unknown;
 }): Promise<{ variantes: number; prixCentimes: number }> {
   const identifiants = valider(schemaSelectionProduits, produitIds);
+  const montrees = valider(schemaVariantesMontrees, varianteIds);
   const { prixCentimes } = valider(schemaPrixEnMasse, { prixEuros });
 
-  const variantes = await depot.fixerPrixVariantesDesProduits(
-    prisma,
-    identifiants,
-    prixCentimes,
-  );
+  /*
+   * LA CONFIRMATION N'APPLIQUE QUE CE QUI A ÉTÉ MONTRÉ, revue critique de
+   * LS-265. Si une déclinaison montrée a été archivée ou déplacée entre-temps,
+   * le compte diffère : la transaction est annulée, aucun prix ne change, et
+   * l'exploitante refait le récapitulatif. Une déclinaison créée depuis n'est
+   * jamais touchée, son identifiant n'étant pas dans la liste.
+   */
+  const variantes = await prisma.$transaction(async (tx) => {
+    const modifiees = await depot.fixerPrixVariantesMontrees(
+      tx,
+      identifiants,
+      montrees,
+      prixCentimes,
+    );
+    if (modifiees !== montrees.length) {
+      throw new RecapitulatifPrixPerimeError();
+    }
+    return modifiees;
+  });
 
   return { variantes, prixCentimes };
 }
