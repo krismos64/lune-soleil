@@ -40,4 +40,4 @@ LS-270, en zone critique (réservation). LS-258 : l'exemption `braces` échoit l
 
 ## État des tickets
 
-LS-269 close après fusion. LS-270 à faire. LS-258 en cours.
+LS-269 close, fusionnée par la PR #523, non déployée. LS-270 à faire. LS-258 en cours. Comptes relevés dans Jira : 236 terminés sur 260 hors epics, 10 En cours et 14 À faire.
