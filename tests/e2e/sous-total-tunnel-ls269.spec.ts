@@ -59,6 +59,17 @@ async function poserPrix(varianteId: string, prixCentimes: number) {
   );
 }
 
+async function lireReservee(varianteId: string): Promise<number> {
+  const { rows } = await avecBase((client) =>
+    client.query<{ reservee: number }>(
+      "SELECT quantite_reservee AS reservee FROM variante WHERE id = $1",
+      [varianteId],
+    ),
+  );
+
+  return rows[0]?.reservee ?? Number.NaN;
+}
+
 /** Mène le tunnel jusqu'au récapitulatif, au domicile. */
 async function allerAuRecapitulatif(page: Page) {
   await page.goto("/commande");
@@ -130,6 +141,13 @@ test("un prix revu pendant le recapitulatif est annonce et rien n'est commande",
   await allerAuRecapitulatif(page);
   await expect(ligneSousTotal(page)).toContainText("24,90");
 
+  /*
+   * LA RÉSERVATION EST RELEVÉE AVANT LE CLIC, et non supposée nulle : une
+   * exécution antérieure, une preuve par mutation par exemple, a pu laisser
+   * une commande sur cette pièce, et sa réservation vit trente minutes.
+   */
+  const reserveeAvant = await lireReservee(varianteId);
+
   // L'exploitante revoit le prix APRÈS que le client a lu son récapitulatif.
   await poserPrix(varianteId, PRIX_REVISE);
 
@@ -153,15 +171,9 @@ test("un prix revu pendant le recapitulatif est annonce et rien n'est commande",
   await expect(ligneSousTotal(page)).toContainText("34,90");
 
   /*
-   * AUCUNE RÉSERVATION SUR LA PIÈCE : la transaction a été annulée. C'est
-   * l'identité de la variante qui est vérifiée, pas un compte global de la
+   * AUCUNE RÉSERVATION NOUVELLE SUR LA PIÈCE : la transaction a été annulée.
+   * C'est la variante de ce test qui est mesurée, pas un compte global de la
    * table, partagée avec les fichiers voisins.
    */
-  const { rows } = await avecBase((client) =>
-    client.query<{ reservee: number }>(
-      "SELECT quantite_reservee AS reservee FROM variante WHERE id = $1",
-      [varianteId],
-    ),
-  );
-  expect(rows[0]?.reservee).toBe(0);
+  expect(await lireReservee(varianteId)).toBe(reserveeAvant);
 });
