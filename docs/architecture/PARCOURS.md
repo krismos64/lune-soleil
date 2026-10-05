@@ -198,6 +198,19 @@ transaction entière est annulée, y compris la commande et ses lignes déjà
 Vue : « cette pièce vient d'être vendue », message métier et non erreur technique.
 Le panier est conservé, la ligne concernée signalée.
 
+**Montant changé entre le récapitulatif et le clic, étape 4**
+Base : aucune écriture. Le récapitulatif transmet le sous-total des articles
+(LS-269) et les frais de port (LS-98) qu'il affiche ; `passerCommande` les
+confronte aux montants figés sous verrou et lève sur tout écart, ce qui annule
+la transaction entière. Ces montants ne servent qu'à détecter l'écart, le serveur
+facture toujours les siens.
+Vue : le nouveau montant est dit, « le montant de vos pièces » ou « les frais de
+livraison », et le récapitulatif est réaffiché à jour avant un nouveau clic.
+La confrontation vient **après** la réservation : le récapitulatif ramène une
+quantité au disponible quand la commande réserve celle du panier, donc une pièce
+manquante fait aussi diverger les montants. Le refus de stock garde ainsi la
+priorité et nomme la pièce à retirer.
+
 **Panne pendant l'étape 4**
 Base : aucune écriture, la transaction n'a jamais été validée. Ni commande, ni
 réservation, ni quantité réservée incrémentée.
