@@ -20,6 +20,8 @@ Suite de `2026-10-04-l`.
   largeurs. Trois mutations les font rougir : garde neutralisée, gardes
   replacées avant la réservation, écran qui ne transmet plus le sous-total.
 - `PARCOURS.md` : nouveau cas d'erreur « montant changé » à l'étape 4.
+- `.claude/rules/database.md` : la garde du sous-total et l'ordre après la
+  réservation rejoignent celle du port.
 
 ## Ce qui a dérapé
 
