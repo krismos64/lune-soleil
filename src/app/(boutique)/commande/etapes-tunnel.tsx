@@ -194,6 +194,12 @@ export function EtapesTunnel({
        */
       const resultat = await passerCommandeAction(
         recapitulatif?.fraisPortCentimes,
+        /*
+         * LE SOUS-TOTAL AFFICHE REMONTE AUSSI, LS-269, meme mecanique : une
+         * revision de prix tombant entre l'affichage et le clic ferait sinon
+         * commander a un montant que la page n'a jamais montre.
+         */
+        recapitulatif?.totalArticlesCentimes,
       );
 
       if (resultat.statut === "REFUSE") {
@@ -227,6 +233,20 @@ export function EtapesTunnel({
        * `router.refresh()` REDESSINE LE RECAPITULATIF avec le nouveau montant,
        * sans quoi l'ecran continuerait d'afficher l'ancien a cote du message.
        */
+      /*
+       * LE SOUS-TOTAL DES PIECES A CHANGE, LS-269. Meme traitement que le
+       * port ci-dessous : aucune commande ecrite, montant dit, recapitulatif
+       * redessine. « Le montant » et non « le prix » : un exemplaire revenu en
+       * stock change aussi le sous-total sans qu'aucun prix ait bouge.
+       */
+      if (resultat.statut === "SOUS_TOTAL_CHANGE") {
+        setErreur(
+          `Le montant de vos pièces vient de changer et s'élève désormais à ${formaterMontant(resultat.sousTotalCentimes)}. Votre récapitulatif est à jour, vérifiez le total avant de commander.`,
+        );
+        router.refresh();
+        return;
+      }
+
       if (resultat.statut === "PORT_CHANGE") {
         setErreur(
           `Les frais de livraison viennent de changer et s'élèvent désormais à ${formaterMontant(resultat.fraisPortCentimes)}. Votre récapitulatif est à jour, vérifiez le total avant de commander.`,

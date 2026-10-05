@@ -120,6 +120,35 @@ export class FraisPortChangesError extends Error {
 }
 
 /**
+ * Le sous-total des articles affiche au recapitulatif differe de celui que la
+ * commande fige, LS-269.
+ *
+ * LE PENDANT DE `FraisPortChangesError` POUR LES ARTICLES. Le prix est fige
+ * sous `FOR UPDATE` et Stripe recoit ce prix fige : paiement, facture et
+ * prestataire restaient coherents entre eux. Ce qui manquait, c'est l'ecran.
+ * Une revision de prix, unitaire ou en masse depuis LS-265, tombant entre le
+ * rendu du recapitulatif et le clic faisait commander a un montant que la page
+ * du site n'avait jamais affiche.
+ *
+ * LE NOM DIT « SOUS-TOTAL » ET NON « PRIX » : une quantite peut aussi faire
+ * diverger les deux montants, quand un exemplaire revient en stock entre
+ * l'affichage, qui ramenait la ligne au disponible, et le clic.
+ *
+ * RELEVE PAR `ls-critical-reviewer` sur LS-265, le 4 octobre 2026.
+ */
+export class SousTotalChangeError extends Error {
+  constructor(
+    readonly sousTotalPresenteCentimes: number,
+    readonly sousTotalReelCentimes: number,
+  ) {
+    super(
+      "Le sous-total des articles a change entre l'affichage du recapitulatif et la commande.",
+    );
+    this.name = "SousTotalChangeError";
+  }
+}
+
+/**
  * Ecrit une commande et reserve son stock, en une transaction.
  *
  * `apresReservation` EST UN CROCHET DE TEST, et il est assume comme tel. Il
@@ -131,6 +160,7 @@ export async function passerCommande({
   lignesCookie,
   saisie,
   fraisPortPresenteCentimes,
+  sousTotalPresenteCentimes,
   configuration: configurationFournie,
   client = prisma,
   apresReservation,
@@ -152,6 +182,13 @@ export async function passerCommande({
    * rien. Le tunnel reel le passe toujours.
    */
   fraisPortPresenteCentimes?: number;
+  /**
+   * Le sous-total des articles lu par le client au recapitulatif, LS-269.
+   *
+   * FACULTATIF POUR LE MEME MOTIF que le port : les tests qui appellent ce
+   * service ne presentent aucun recapitulatif. Le tunnel reel le passe.
+   */
+  sousTotalPresenteCentimes?: number;
   configuration?: ConfigurationLivraison;
   client?: typeof prisma;
   apresReservation?: () => void | Promise<void>;
@@ -300,27 +337,6 @@ export async function passerCommande({
         configuration,
       });
 
-      /*
-       * LE PORT AFFICHE EST CONFRONTE AU PORT CALCULE, LS-98 et ADR-043.
-       *
-       * ELLE LEVE PLUTOT QUE DE RENDRE UNE VALEUR, et c'est voulu ici : la
-       * levee ANNULE la transaction, donc aucune commande ni reservation ne
-       * subsiste. Un `return` validerait la transaction, piege deja en fiche sur
-       * ce depot, et gelerait une piece pour une commande refusee.
-       *
-       * LE CLIENT REVOIT SON RECAPITULATIF avec le nouveau montant, et decide.
-       * Facturer en silence serait le seul comportement inacceptable.
-       */
-      if (
-        fraisPortPresenteCentimes !== undefined &&
-        fraisPortPresenteCentimes !== fraisPortCentimes
-      ) {
-        throw new FraisPortChangesError(
-          fraisPortPresenteCentimes,
-          fraisPortCentimes,
-        );
-      }
-
       const adresse = {
         nom: saisie.nomClient,
         ligne1: saisie.adresse.ligne1,
@@ -378,6 +394,51 @@ export async function passerCommande({
         if (!servie) {
           throw new CommandeRefuseeError(ligne.varianteId);
         }
+      }
+
+      /*
+       * LES MONTANTS AFFICHES SONT CONFRONTES AUX MONTANTS FIGES, LS-98 pour
+       * le port, LS-269 pour les articles.
+       *
+       * APRES LA RESERVATION ET NON AVANT, LS-269. Le recapitulatif ramene la
+       * quantite au disponible quand la commande reserve celle du cookie : sur
+       * une piece manquante, les deux montants divergent sans qu'aucun prix ait
+       * bouge. Placee avant, la garde annoncait « les frais de port ont change »
+       * a un client dont la piece venait d'etre vendue, sans lui dire laquelle
+       * retirer. Ici, le refus de stock a deja leve et garde la priorite. Les
+       * verrous de ligne sont pris depuis `lireDonneesAFiger` : attendre la
+       * reservation ne les prolonge que de quelques instructions.
+       *
+       * ELLES LEVENT PLUTOT QUE DE RENDRE UNE VALEUR : la levee ANNULE la
+       * transaction, commande, lignes et reservations comprises. Un `return`
+       * validerait la transaction, piege deja en fiche sur ce depot, et
+       * gelerait une piece pour une commande refusee.
+       *
+       * LE SOUS-TOTAL D'ABORD : un sous-total qui change peut deplacer le port
+       * de part et d'autre du seuil de franchise, et c'est alors le prix des
+       * pieces qu'il faut annoncer, la cause et non sa consequence.
+       *
+       * LE CLIENT REVOIT SON RECAPITULATIF avec le nouveau montant, et decide.
+       * Facturer en silence serait le seul comportement inacceptable.
+       */
+      if (
+        sousTotalPresenteCentimes !== undefined &&
+        sousTotalPresenteCentimes !== sousTotalCentimes
+      ) {
+        throw new SousTotalChangeError(
+          sousTotalPresenteCentimes,
+          sousTotalCentimes,
+        );
+      }
+
+      if (
+        fraisPortPresenteCentimes !== undefined &&
+        fraisPortPresenteCentimes !== fraisPortCentimes
+      ) {
+        throw new FraisPortChangesError(
+          fraisPortPresenteCentimes,
+          fraisPortCentimes,
+        );
       }
 
       await apresReservation?.();
