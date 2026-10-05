@@ -24,6 +24,7 @@ import {
   schemaAdressePostale,
   schemaChoixLivraison,
   schemaCoordonnees,
+  schemaMontantCentimes,
   valider,
 } from "@/lib/validation";
 import {
@@ -39,8 +40,11 @@ import {
   NOM_COOKIE_COMMANDE,
   encoderCommandeEnCours,
 } from "@/lib/commande-cookie";
-import { CommandeRefuseeError } from "@/services/commande";
-import { FraisPortChangesError } from "@/services/commande";
+import {
+  CommandeRefuseeError,
+  FraisPortChangesError,
+  SousTotalChangeError,
+} from "@/services/commande";
 import { passerCommandeEtDemarrerPaiement } from "@/services/paiement";
 import { InterblocagePersistantError } from "@/services/reservation";
 import { fournisseurStripe } from "@/integrations/stripe";
@@ -232,6 +236,11 @@ export type ResultatCommande =
    * change » laisse le client rouvrir son panier pour comprendre.
    */
   | { statut: "PORT_CHANGE"; fraisPortCentimes: number }
+  /**
+   * Le sous-total des articles a change entre l'affichage et le clic, LS-269.
+   * Meme principe que le port : le nouveau montant est rendu pour etre dit.
+   */
+  | { statut: "SOUS_TOTAL_CHANGE"; sousTotalCentimes: number }
   | { statut: "INVALIDE"; message: string };
 
 /**
@@ -241,9 +250,15 @@ export type ResultatCommande =
  * `services/commande.ts`, efface la saisie, et traduit le refus en resultat.
  * Aucun montant ni identifiant ne vient du corps de la requete.
  *
- * AUCUN ARGUMENT, ET C'EST UNE GARANTIE. Tout ce dont la commande a besoin est
- * dans les cookies signes : un parametre serait une entree non fiable de plus a
- * valider, et la tentation d'y passer un total. Invariants 1 et 2.
+ * AUCUN ARGUMENT NE FIXE UN MONTANT, ET C'EST UNE GARANTIE. Tout ce dont la
+ * commande a besoin est dans les cookies signes. Les deux montants presentes,
+ * port depuis LS-98 et sous-total depuis LS-269, ne servent qu'a detecter un
+ * ecart avec ce que le serveur recalcule. Invariants 1 et 2.
+ *
+ * ILS SONT `unknown` ET VALIDES PAR ZOD, invariant 7, comme les etapes 1 a 3 :
+ * le type TypeScript ne survit pas au passage par le reseau. Jusqu'a LS-269 le
+ * port etait type `number` sans validation, et une chaine forgee atteignait la
+ * comparaison du service.
  */
 export async function passerCommandeAction(
   /**
@@ -258,8 +273,43 @@ export async function passerCommandeAction(
    * configuration lue en base : c'est le defaut que LS-114 a ferme sur le prix
    * du panier, et il ne se rouvre pas ici.
    */
-  fraisPortPresenteCentimes?: number,
+  fraisPortPresenteEntree?: unknown,
+  /**
+   * Le sous-total des articles lu au recapitulatif, LS-269. Meme statut que le
+   * port : il ne sert qu'a detecter un ecart, le montant facture reste celui
+   * que le serveur fige sous verrou.
+   */
+  sousTotalPresenteEntree?: unknown,
 ): Promise<ResultatCommande> {
+  let fraisPortPresenteCentimes: number | undefined;
+  let sousTotalPresenteCentimes: number | undefined;
+
+  try {
+    fraisPortPresenteCentimes = valider(
+      schemaMontantCentimes.optional(),
+      fraisPortPresenteEntree,
+    );
+    sousTotalPresenteCentimes = valider(
+      schemaMontantCentimes.optional(),
+      sousTotalPresenteEntree,
+    );
+  } catch (erreur) {
+    /*
+     * UN MESSAGE NEUTRE ET NON `details` : l'ecran envoie toujours des entiers,
+     * une valeur mal formee ne peut venir que d'un appel forge ou d'un ecran
+     * perime. Recharger rend un recapitulatif a jour dans les deux cas.
+     */
+    if (erreur instanceof EntreeInvalideError) {
+      return {
+        statut: "INVALIDE",
+        message:
+          "Votre récapitulatif n'a pas pu être vérifié. Rechargez la page avant de commander.",
+      };
+    }
+
+    throw erreur;
+  }
+
   const magasin = await cookies();
   const lignesCookie = decoderPanier(magasin.get(NOM_COOKIE_PANIER)?.value);
   const saisie = await lireSaisie();
@@ -293,6 +343,9 @@ export async function passerCommandeAction(
       ...(fraisPortPresenteCentimes === undefined
         ? {}
         : { fraisPortPresenteCentimes }),
+      ...(sousTotalPresenteCentimes === undefined
+        ? {}
+        : { sousTotalPresenteCentimes }),
       fournisseur: fournisseurStripe,
     });
 
@@ -344,6 +397,13 @@ export async function passerCommandeAction(
      * soit gele. C'est pour cela que le service leve au lieu de rendre une
      * valeur, `$transaction` validant sur un `return`.
      */
+    if (erreur instanceof SousTotalChangeError) {
+      return {
+        statut: "SOUS_TOTAL_CHANGE",
+        sousTotalCentimes: erreur.sousTotalReelCentimes,
+      };
+    }
+
     if (erreur instanceof FraisPortChangesError) {
       return {
         statut: "PORT_CHANGE",

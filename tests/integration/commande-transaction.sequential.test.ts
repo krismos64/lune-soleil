@@ -29,6 +29,7 @@ let client: Client;
 let pool: Pool;
 let passerCommande: typeof import("@/services/commande").passerCommande;
 let CommandeRefuseeError: typeof import("@/services/commande").CommandeRefuseeError;
+let SousTotalChangeError: typeof import("@/services/commande").SousTotalChangeError;
 
 /** Saisie minimale d'un client, mode DOMICILE, aucun point de retrait. */
 const SAISIE_DOMICILE = {
@@ -63,7 +64,7 @@ beforeAll(async () => {
   await client.connect();
   pool = new Pool({ connectionString: url, max: 5 });
 
-  ({ passerCommande, CommandeRefuseeError } =
+  ({ passerCommande, CommandeRefuseeError, SousTotalChangeError } =
     await import("@/services/commande"));
 });
 
@@ -750,6 +751,127 @@ describe("panne au milieu de la transaction", () => {
     const commande = await lireCommande(issue.commandeId);
     expect(commande).not.toBeNull();
     expect(commande.statut).toBe("EN_ATTENTE_PAIEMENT");
+  });
+});
+
+describe("sous-total presente, LS-269", () => {
+  /*
+   * LE SCENARIO DU TICKET : le recapitulatif a affiche un sous-total, la
+   * piece change de prix avant le clic. `creerVarianteEnStock` fige le prix a
+   * 4900 : le client avait lu 2490, l'ancien prix.
+   *
+   * LA TRANSACTION DOIT ETRE ANNULEE, c'est le point qui compte : une garde
+   * qui rendrait une valeur au lieu de lever validerait la commande et gelerait
+   * la piece pour un achat refuse.
+   */
+  it("refuse la commande quand le prix a change depuis l'affichage", async () => {
+    const { varianteId } = await creerVarianteEnStock(client);
+
+    const erreur = await passerCommande({
+      lignesCookie: [{ varianteId, quantite: 1 }],
+      saisie: SAISIE_DOMICILE,
+      sousTotalPresenteCentimes: 2490,
+      configuration: CONFIGURATION,
+    }).catch((cause: unknown) => cause);
+
+    expect(erreur).toBeInstanceOf(SousTotalChangeError);
+    expect(
+      (erreur as InstanceType<typeof SousTotalChangeError>)
+        .sousTotalReelCentimes,
+    ).toBe(4900);
+
+    const { rows: commandes } = await client.query("SELECT id FROM commande");
+    const { rows: reservations } = await client.query(
+      "SELECT id FROM reservation",
+    );
+    const { rows: stock } = await client.query(
+      "SELECT quantite_reservee FROM variante WHERE id = $1",
+      [varianteId],
+    );
+
+    expect(commandes).toHaveLength(0);
+    expect(reservations).toHaveLength(0);
+    expect(stock[0].quantite_reservee).toBe(0);
+  });
+
+  /*
+   * LE PENDANT POSITIF : sans lui, une garde qui refuserait toute commande
+   * satisferait le test precedent. Motif « defaut ferme invisible au nominal ».
+   */
+  it("accepte la commande quand le sous-total affiche correspond", async () => {
+    const { varianteId } = await creerVarianteEnStock(client);
+
+    const issue = await passerCommande({
+      lignesCookie: [{ varianteId, quantite: 1 }],
+      saisie: SAISIE_DOMICILE,
+      sousTotalPresenteCentimes: 4900,
+      configuration: CONFIGURATION,
+    });
+
+    expect((await lireCommande(issue.commandeId)).sous_total_centimes).toBe(
+      4900,
+    );
+  });
+
+  /*
+   * LE REFUS DE STOCK PRIME SUR L'ECART DE MONTANT, et c'est un ordre voulu.
+   *
+   * LE RECAPITULATIF RAMENE LA QUANTITE AU DISPONIBLE, `revalider`, quand la
+   * commande reserve la quantite du cookie. Deux exemplaires demandes sur un
+   * seul en stock : l'ecran a affiche 4900, la commande totaliserait 9800. Une
+   * garde placee avant la reservation annoncerait « le montant a change » sur
+   * une piece qui manque, et le client ne saurait pas laquelle retirer.
+   */
+  it("nomme la piece manquante plutot qu'un ecart de sous-total", async () => {
+    const { varianteId } = await creerVarianteEnStock(client, {
+      quantitePhysique: 1,
+    });
+
+    const erreur = await passerCommande({
+      lignesCookie: [{ varianteId, quantite: 2 }],
+      saisie: SAISIE_DOMICILE,
+      sousTotalPresenteCentimes: 4900,
+      configuration: CONFIGURATION,
+    }).catch((cause: unknown) => cause);
+
+    expect(erreur).toBeInstanceOf(CommandeRefuseeError);
+  });
+
+  /*
+   * LE MEME ORDRE POUR LE PORT, LS-98, dont la garde precedait la reservation.
+   *
+   * En relais, deux exemplaires a 2000 sur un seul en stock : l'ecran a lu un
+   * sous-total de 2000 sous le seuil, donc 410 de port ; la commande, sur 4000,
+   * passerait la franchise a 0. L'ancien ordre levait l'erreur de PORT.
+   */
+  it("nomme la piece manquante plutot qu'un ecart de port", async () => {
+    const { varianteId } = await creerVarianteEnStock(client, {
+      quantitePhysique: 1,
+    });
+    await client.query(
+      "UPDATE variante SET prix_centimes = 2000 WHERE id = $1",
+      [varianteId],
+    );
+
+    const erreur = await passerCommande({
+      lignesCookie: [{ varianteId, quantite: 2 }],
+      saisie: {
+        ...SAISIE_DOMICILE,
+        mode: "POINT_RELAIS" as const,
+        pointRetrait: {
+          identifiant: "TEST-REL-269",
+          nom: "TEST Relais LS-269",
+          ligne1: "5 place de Test",
+          codePostal: "75002",
+          ville: "TESTVILLE",
+        },
+      },
+      sousTotalPresenteCentimes: 2000,
+      fraisPortPresenteCentimes: 410,
+      configuration: CONFIGURATION,
+    }).catch((cause: unknown) => cause);
+
+    expect(erreur).toBeInstanceOf(CommandeRefuseeError);
   });
 });
 

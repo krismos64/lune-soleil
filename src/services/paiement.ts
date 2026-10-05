@@ -430,6 +430,7 @@ export async function passerCommandeEtDemarrerPaiement({
   lignesCookie,
   saisie,
   fraisPortPresenteCentimes,
+  sousTotalPresenteCentimes,
   fournisseur,
   configuration,
   urlBase,
@@ -439,6 +440,8 @@ export async function passerCommandeEtDemarrerPaiement({
   saisie: Parameters<typeof passerCommande>[0]["saisie"];
   /** Le port lu par le client au recapitulatif, LS-98. Transmis tel quel. */
   fraisPortPresenteCentimes?: number;
+  /** Le sous-total des articles lu au recapitulatif, LS-269. Transmis tel quel. */
+  sousTotalPresenteCentimes?: number;
   fournisseur: FournisseurPaiement;
   configuration?: Parameters<typeof passerCommande>[0]["configuration"];
   urlBase?: string;
@@ -450,6 +453,9 @@ export async function passerCommandeEtDemarrerPaiement({
     ...(fraisPortPresenteCentimes === undefined
       ? {}
       : { fraisPortPresenteCentimes }),
+    ...(sousTotalPresenteCentimes === undefined
+      ? {}
+      : { sousTotalPresenteCentimes }),
     ...(configuration === undefined ? {} : { configuration }),
     client,
   });
