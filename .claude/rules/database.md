@@ -303,6 +303,14 @@ tarif modifiable à chaud peut changer ENTRE le récapitulatif et le clic : sans
 cette garde, Stripe serait appelé sur un total que le client n'a jamais lu. Elle
 **lève** et ne rend pas une valeur, la levée annulant la transaction.
 
+**LE SOUS-TOTAL AFFICHÉ L'EST AUSSI**, `SousTotalChangeError`, LS-269 : une
+révision de prix, unitaire ou en masse, pose le même problème que le tarif. Le
+sous-total se confronte avant le port, car c'est lui qui peut déplacer le port de
+part et d'autre du seuil de franchise. **Les deux gardes viennent APRÈS la
+réservation** : le récapitulatif ramène une quantité au disponible quand la
+commande réserve celle du panier, et une pièce manquante doit lever
+`CommandeRefuseeError`, qui la nomme, plutôt qu'un écart de montant.
+
 ## Unicités partielles, l'idempotence porte sur l'effet
 
 **L'unicité de l'identifiant d'événement Stripe ne suffit pas.** Elle protège du
