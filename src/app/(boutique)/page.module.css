@@ -582,3 +582,190 @@
   stroke-width: 1.4;
   stroke-linecap: round;
 }
+
+/*
+ * ================= THÈMES DE NOËL, LS-277 =================
+ * D'après la maquette validée, `docs/prototypes/themes-noel/`, et ADR-046
+ * amendé. `NOEL_1` garde texte et boutons ; `NOEL_2` passe le héros, la bande
+ * défilante et le sceau au rouge, texte en blanc. Jetons seulement.
+ */
+
+/* Noël 1 : le héros passe du crème au blanc neige, nuancé de rouge. */
+:global([data-theme="noel_1"]) .hero {
+  background: radial-gradient(
+    120% 80% at 70% 30%,
+    var(--ls-surface) 0%,
+    color-mix(in srgb, var(--ls-noel-rouge) 4%, var(--ls-surface)) 50%,
+    color-mix(in srgb, var(--ls-noel-rouge) 9%, var(--ls-surface)) 100%
+  );
+}
+
+/*
+ * Noël 2 : héros rouge. Le point le plus clair du dégradé,
+ * `--ls-noel-fond-clair`, est du côté de l'emblème ; le blanc y tient
+ * 5,24:1, mesuré par `verifier-contraste.sh`. Le papier cadeau en filigrane
+ * reste à 5 % : à 7 %, ses motifs blancs ramenaient le blanc à 4,66:1.
+ */
+:global([data-theme="noel_2"]) .hero {
+  background: radial-gradient(
+    90% 80% at 72% 35%,
+    var(--ls-noel-fond-clair) 0%,
+    var(--ls-noel-fond-vif) 35%,
+    var(--ls-noel-fond-rouge) 65%,
+    var(--ls-noel-fond-nuit) 100%
+  );
+}
+
+:global([data-theme="noel_2"]) .hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("/habillage/papier-cadeau.jpg") 0 0 / 170.5px 142px;
+  opacity: 0.05;
+  pointer-events: none;
+}
+
+:global([data-theme="noel_2"]) .surtitre,
+:global([data-theme="noel_2"]) .titre,
+:global([data-theme="noel_2"]) .accroche {
+  color: var(--ls-noel-texte-sur-rouge);
+}
+
+/* L'or ne sert qu'aux mots dorés du titre, grand texte : 3,47:1 au pire. */
+:global([data-theme="noel_2"]) .motDore {
+  background-image: linear-gradient(
+    100deg,
+    var(--ls-noel-titre-sur-rouge),
+    var(--ls-noel-texte-sur-rouge) 50%,
+    var(--ls-noel-titre-sur-rouge)
+  );
+}
+
+:global([data-theme="noel_2"]) .ruban {
+  border-color: var(--ls-noel-texte-sur-rouge);
+}
+
+:global([data-theme="noel_2"]) .actionPrincipale {
+  background: var(--ls-noel-texte-sur-rouge);
+  color: var(--ls-noel-rouge);
+}
+
+:global([data-theme="noel_2"]) .actionPrincipale:hover {
+  background: color-mix(in srgb, var(--ls-noel-rouge) 8%, var(--ls-surface));
+}
+
+:global([data-theme="noel_2"]) .actionSecondaire {
+  color: var(--ls-noel-texte-sur-rouge);
+  border-bottom-color: var(--ls-noel-texte-sur-rouge);
+}
+
+:global([data-theme="noel_2"]) .hero .actionPrincipale:focus-visible,
+:global([data-theme="noel_2"]) .hero .actionSecondaire:focus-visible {
+  outline-color: var(--ls-noel-texte-sur-rouge);
+}
+
+/* Bande sucre d'orge au pied du héros, dans le cadre coupé du héros. */
+.sucreHeros {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 1;
+}
+
+/* Paquet au ruban, section « À offrir, ou à garder ». */
+.paquet {
+  position: relative;
+  width: min(56vw, 13.75rem);
+  aspect-ratio: 1;
+  margin: 0 auto var(--ls-space-6);
+}
+
+.paquetImage {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 24px 48px -24px
+    color-mix(in srgb, var(--ls-noel-rouge) 55%, transparent);
+}
+
+.paquetRuban {
+  position: absolute;
+  inset: -6%;
+  width: 112%;
+  height: 112%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.paquetPoints {
+  fill: none;
+  stroke: var(--ls-noel-rouge);
+  stroke-width: 0.8;
+  stroke-dasharray: 0.5 3.5;
+  stroke-linecap: round;
+  opacity: 0.7;
+}
+
+.paquetTour {
+  fill: none;
+  stroke: var(--ls-noel-rouge);
+  stroke-width: 1.6;
+}
+
+/* Bande défilante : flocons pour séparateurs, et rouge sous Noël 2. */
+:global([data-theme^="noel"]) .piste span::before {
+  content: "❄";
+  color: var(--ls-noel-rouge);
+}
+
+:global([data-theme="noel_2"]) .defilant {
+  background: var(--ls-noel-fond-rouge);
+  color: var(--ls-noel-texte-sur-rouge);
+  border-color: var(--ls-noel-fond-nuit);
+}
+
+:global([data-theme="noel_2"]) .piste span::before {
+  color: var(--ls-noel-texte-sur-rouge);
+}
+
+/* Sceau : fond rouge sous Noël 2, le texte y est déjà blanc. */
+:global([data-theme="noel_2"]) .editorial {
+  background: radial-gradient(
+    90% 70% at 50% 40%,
+    var(--ls-noel-fond-vif),
+    var(--ls-noel-fond-nuit)
+  );
+}
+
+:global([data-theme="noel_2"]) .actionEditorial:hover {
+  color: var(--ls-noel-rouge);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .paquetImage {
+    animation: pose 1200ms var(--ls-easing-sortie) both;
+  }
+
+  .paquetTour {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: trace-ruban 2200ms var(--ls-easing-sortie) 400ms forwards;
+  }
+}
+
+@keyframes pose {
+  from {
+    opacity: 0;
+    transform: scale(0.86) rotate(-4deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes trace-ruban {
+  to {
+    stroke-dashoffset: 0;
+  }
+}

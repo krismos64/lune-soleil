@@ -1,0 +1,85 @@
+/*
+ * Guirlande des thèmes de Noël, LS-277. Rouge sur blanc sous `NOEL_1`, inversée
+ * sous `NOEL_2` où elle est posée sur le bandeau rouge. Jetons seulement.
+ */
+.cadre {
+  max-width: 40rem;
+  margin: 0 0 var(--ls-space-2);
+}
+
+.guirlande {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.fil {
+  fill: none;
+  stroke: var(--ls-noel-rouge, var(--ls-accent-gold-deep));
+  stroke-width: 1.4;
+}
+
+.bouleRouge line,
+.bouleBlanche line {
+  stroke: var(--ls-noel-rouge, var(--ls-accent-gold-deep));
+  stroke-width: 1;
+}
+
+.bouleRouge circle {
+  fill: var(--ls-noel-rouge, var(--ls-accent-gold-deep));
+}
+
+.bouleBlanche circle {
+  fill: var(--ls-surface);
+  stroke: var(--ls-noel-rouge, var(--ls-accent-gold-deep));
+  stroke-width: 1.4;
+}
+
+:global([data-theme="noel_2"]) .fil,
+:global([data-theme="noel_2"]) .bouleRouge line,
+:global([data-theme="noel_2"]) .bouleBlanche line {
+  stroke: var(--ls-noel-texte-sur-rouge);
+}
+
+:global([data-theme="noel_2"]) .bouleRouge circle {
+  fill: var(--ls-noel-texte-sur-rouge);
+}
+
+:global([data-theme="noel_2"]) .bouleBlanche circle {
+  fill: var(--ls-noel-fond-rouge);
+  stroke: var(--ls-noel-texte-sur-rouge);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .fil {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: dessine 1800ms var(--ls-easing-sortie) forwards;
+  }
+
+  .bouleRouge,
+  .bouleBlanche {
+    transform-box: fill-box;
+    transform-origin: center top;
+    animation: accroche 700ms var(--ls-easing-sortie) both;
+    animation-delay: calc(900ms + var(--rang) * 110ms);
+  }
+}
+
+@keyframes dessine {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes accroche {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.3);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

@@ -33,7 +33,17 @@ import { CarteProduit } from "./carte-produit";
 import { FocusPagination } from "./focus-pagination";
 import styles from "./catalogue.module.css";
 import { BandeauApercuTheme } from "@/components/bandeau-apercu-theme";
-import { GuirlandeEtoiles } from "@/components/guirlande-etoiles";
+import { BoutonPauseAnimations } from "@/components/bouton-pause-animations";
+import {
+  BandePapierCadeau,
+  BandeSucreOrge,
+  BoulesSuspendues,
+  FloconIcone,
+  MargesNeigeuses,
+  NeigeContinue,
+} from "@/components/decor-noel";
+import { GuirlandeBoules } from "@/components/guirlande-boules";
+import { estThemeDeNoel } from "@/lib/theme-saisonnier";
 import {
   attributTheme,
   PARAMETRE_APERCU_THEME,
@@ -171,9 +181,11 @@ export const dynamic = "force-dynamic";
 async function ContenuCatalogue({
   slugCategorie,
   page,
+  noel,
 }: {
   slugCategorie: string | undefined;
   page: number;
+  noel: boolean;
 }) {
   /*
    * LS-241 : LA PAGE A ETE VERIFIEE AVANT LA FRONTIERE, et ce rattrapage ne sert
@@ -223,6 +235,7 @@ async function ContenuCatalogue({
                 className={styles.filtre}
                 aria-current={categorieRetenue === null ? "page" : undefined}
               >
+                {noel ? <FloconIcone className={styles.floconFiltre} /> : null}
                 Tout voir
               </Link>
             </li>
@@ -237,6 +250,9 @@ async function ContenuCatalogue({
                       : undefined
                   }
                 >
+                  {noel ? (
+                    <FloconIcone className={styles.floconFiltre} />
+                  ) : null}
                   {categorie.nom}
                 </Link>
               </li>
@@ -295,7 +311,7 @@ async function ContenuCatalogue({
       ) : (
         <ul className={styles.grille} data-inclinaison="">
           {produits.map((produit) => (
-            <CarteProduit key={produit.id} produit={produit} />
+            <CarteProduit key={produit.id} produit={produit} noel={noel} />
           ))}
         </ul>
       )}
@@ -392,7 +408,7 @@ export default async function PageCatalogue({
   const { theme, enApercu } = await themeDeLaPage(
     parametres[PARAMETRE_APERCU_THEME],
   );
-  const noel = theme === "NOEL";
+  const noel = estThemeDeNoel(theme);
 
   return (
     <main
@@ -402,19 +418,59 @@ export default async function PageCatalogue({
       data-theme={attributTheme(theme)}
     >
       {enApercu ? <BandeauApercuTheme theme={theme} /> : null}
-      {noel ? <GuirlandeEtoiles /> : null}
-      <h1 className={styles.titre}>Le catalogue</h1>
-      <p className={styles.accroche}>
-        Chaque bijou est fait main et créé à l&apos;unité.
-        {noel ? " Chacun peut devenir un cadeau." : null}
-      </p>
+      {noel ? (
+        /*
+         * LE BANDEAU DE NOËL, LS-277 : le titre et l'accroche restent les
+         * mêmes et dans le flux, rendus par le serveur ; seul le décor
+         * s'ajoute, dans une zone à part qui ne chevauche jamais le texte.
+         * À la largeur du contenu et non en `100vw`, qui compte la barre de
+         * défilement et ferait déborder la page.
+         */
+        <div className={styles.bandeauNoel}>
+          <div className={styles.decorBandeau} aria-hidden="true" data-borne="">
+            <NeigeContinue />
+            <BoulesSuspendues zone="bandeau" />
+          </div>
+          <div className={styles.texteBandeau}>
+            <GuirlandeBoules />
+            <p className={styles.rubanNoel}>
+              <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                <path d="M10 2v16M3 6l14 8M17 6 3 14" />
+              </svg>
+              Fêtes de fin d&apos;année
+            </p>
+            <h1 className={styles.titre}>Le catalogue</h1>
+            <p className={styles.accroche}>
+              Chaque bijou est fait main et créé à l&apos;unité. Chacun peut
+              devenir un cadeau.
+            </p>
+          </div>
+          <BandeSucreOrge className={styles.sucreBandeau} />
+        </div>
+      ) : (
+        <>
+          <h1 className={styles.titre}>Le catalogue</h1>
+          <p className={styles.accroche}>
+            Chaque bijou est fait main et créé à l&apos;unité.
+          </p>
+        </>
+      )}
+      {noel ? <BandePapierCadeau /> : null}
 
-      <Suspense fallback={<ArmatureCatalogue />}>
-        <ContenuCatalogue slugCategorie={slugCategorie} page={page} />
-      </Suspense>
+      <div className={noel ? styles.zoneGrilleNoel : undefined}>
+        {noel ? <MargesNeigeuses /> : null}
+        <Suspense fallback={<ArmatureCatalogue />}>
+          <ContenuCatalogue
+            slugCategorie={slugCategorie}
+            page={page}
+            noel={noel}
+          />
+        </Suspense>
+      </div>
 
       {/* Inclinaison des cartes au survol, ordinateur seulement, LS-262. */}
       <ReactionPointeur />
+      {noel ? <BoutonPauseAnimations /> : null}
     </main>
   );
 }

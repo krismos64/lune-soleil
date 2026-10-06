@@ -14,8 +14,21 @@
 
 .pied {
   margin-top: var(--ls-space-8);
-  background: var(--ls-ciel-nuit-haut);
+  /* `--ls-pied-fond-saison` : rouge très sombre sous `NOEL_2`, LS-277. */
+  background: var(--ls-pied-fond-saison, var(--ls-ciel-nuit-haut));
   color: var(--ls-texte-nuit);
+}
+
+/* Bande sucre d'orge des thèmes de Noël, absente hors thème, LS-277. */
+.pied::before {
+  content: "";
+  display: var(--ls-pied-sucre-affiche, none);
+  height: 12px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--ls-pied-sucre-saison) 0 10px,
+    var(--ls-surface) 10px 20px
+  );
 }
 
 .contenu {

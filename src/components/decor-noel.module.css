@@ -1,0 +1,398 @@
+/*
+ * Décors des thèmes de Noël, LS-277. Jetons seulement, aucune valeur
+ * hexadécimale. Sous `NOEL_2`, le décor posé sur le bandeau rouge s'inverse.
+ *
+ * Seules `transform`, `opacity` et `background-position` d'une bande décorative
+ * s'animent ; en mouvement réduit, rien ne bouge et la neige disparaît.
+ */
+
+/* ---------- Boules suspendues ---------- */
+
+.boules {
+  position: absolute;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Dans le cadre de l'emblème de l'accueil : les fils partent sous l'en-tête. */
+.boulesEmbleme {
+  inset: -5% -6% auto;
+  height: 46%;
+}
+
+/* Dans la zone décor du bandeau du catalogue. */
+.boulesBandeau {
+  inset: 0 0 auto;
+  height: 100%;
+}
+
+.boule {
+  position: absolute;
+  top: 0;
+  left: var(--x);
+}
+
+.balance {
+  transform-origin: top center;
+}
+
+.fil {
+  width: 1px;
+  height: var(--longueur);
+  margin: 0 auto;
+  background: color-mix(in srgb, var(--ls-noel-rouge) 55%, transparent);
+}
+
+.corps {
+  position: relative;
+  width: var(--taille);
+  height: var(--taille);
+  margin-left: calc(var(--taille) / -2 + 0.5px);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 34% 30%,
+    var(--ls-surface) 0 7%,
+    color-mix(in srgb, var(--ls-noel-rouge) 70%, var(--ls-surface)) 20%,
+    var(--ls-noel-rouge) 58%,
+    color-mix(in srgb, var(--ls-noel-rouge) 60%, var(--ls-text)) 100%
+  );
+  box-shadow: 0 8px 16px -8px
+    color-mix(in srgb, var(--ls-noel-rouge) 70%, transparent);
+}
+
+/* Attache dorée. */
+.corps::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -5px;
+  width: 10px;
+  height: 7px;
+  margin-left: -5px;
+  border-radius: 2px 2px 1px 1px;
+  background: linear-gradient(
+    90deg,
+    var(--ls-or-moyen),
+    var(--ls-or-pale),
+    var(--ls-or-moyen)
+  );
+}
+
+.bouleBlanche .corps {
+  background:
+    radial-gradient(
+      circle at 34% 30%,
+      var(--ls-surface) 0 10%,
+      transparent 30%
+    ),
+    linear-gradient(
+      transparent 42%,
+      var(--ls-noel-rouge) 42% 50%,
+      transparent 50% 58%,
+      var(--ls-noel-rouge) 58% 64%,
+      transparent 64%
+    ),
+    radial-gradient(
+      circle at 40% 35%,
+      var(--ls-surface),
+      var(--ls-background) 55%,
+      var(--ls-border) 100%
+    );
+}
+
+:global([data-theme="noel_2"]) .fil {
+  background: color-mix(
+    in srgb,
+    var(--ls-noel-texte-sur-rouge) 70%,
+    transparent
+  );
+}
+
+/* Sous 1024 px, l'emblème est au-dessus du texte : fils et boules raccourcis. */
+@media (max-width: 1023px) {
+  .boulesEmbleme {
+    inset: -2% 0 auto;
+  }
+
+  .fil {
+    height: calc(var(--longueur) * 0.5);
+  }
+
+  .corps {
+    transform: scale(0.72);
+    transform-origin: top center;
+  }
+}
+
+/* ---------- Neige continue ---------- */
+
+.neige {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.flocon {
+  position: absolute;
+  top: -10px;
+  left: var(--gauche);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ls-surface);
+  box-shadow: 0 0 0 1px
+    color-mix(in srgb, var(--ls-noel-rouge) 35%, transparent);
+  opacity: 0;
+}
+
+.flocon:nth-child(3n) {
+  width: 4px;
+  height: 4px;
+}
+
+.flocon:nth-child(4n) {
+  width: 8px;
+  height: 8px;
+}
+
+:global([data-theme="noel_2"]) .flocon {
+  box-shadow: none;
+}
+
+/* ---------- Marges neigeuses du catalogue ---------- */
+
+.marges {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.marge {
+  display: none;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: calc((100vw - 72rem) / 2 - 8px);
+  overflow: hidden;
+}
+
+.margeGauche {
+  right: 100%;
+}
+
+.margeDroite {
+  left: 100%;
+}
+
+@media (min-width: 1240px) {
+  .marge {
+    display: block;
+  }
+}
+
+.floconMarge {
+  position: absolute;
+  top: -10px;
+  left: var(--gauche);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ls-surface);
+  box-shadow: 0 0 0 1px
+    color-mix(in srgb, var(--ls-noel-rouge) 30%, transparent);
+  opacity: 0;
+}
+
+/* ---------- Bandes ---------- */
+
+/*
+ * LES BANDES GLISSENT PAR `transform`, ADR-045 : un pseudo-élément plus large
+ * que la bande d'une période exacte de son motif se déplace d'une période, et
+ * la bande paraît glisser sans saut. Animer `background-position` est exclu.
+ */
+.sucreOrge,
+.papierCadeau {
+  position: relative;
+  overflow: hidden;
+}
+
+.sucreOrge {
+  height: 12px;
+}
+
+.sucreOrge::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(100% + 28.29px);
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--ls-noel-rouge) 0 10px,
+    var(--ls-surface) 10px 20px
+  );
+}
+
+/* La tuile fait 341 x 284 px, affichée à moitié : une période de 170,5 px. */
+.papierCadeau {
+  height: 44px;
+  box-shadow: inset 0 -1px 0
+    color-mix(in srgb, var(--ls-noel-rouge) 40%, transparent);
+}
+
+.papierCadeau::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(100% + 170.5px);
+  background: url("/habillage/papier-cadeau.jpg") 0 0 / 170.5px 142px;
+}
+
+@media (min-width: 768px) {
+  .papierCadeau {
+    height: 56px;
+  }
+}
+
+/* ---------- Mouvement ---------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  .boule {
+    animation: descend 1100ms var(--ls-easing-sortie) both;
+    animation-delay: calc(300ms + var(--rang) * 120ms);
+  }
+
+  /*
+   * Deux animations : le balancement amorti d'entrée, puis le bercement
+   * continu. La seconde n'a pas de remplissage arrière : avant son départ,
+   * la première tient la boule à l'aplomb, sans saut.
+   */
+  .balance {
+    animation:
+      balance 3200ms cubic-bezier(0.36, 0, 0.3, 1) both,
+      berce 6s ease-in-out infinite;
+    animation-delay:
+      calc(1000ms + var(--rang) * 120ms), calc(4200ms + var(--rang) * 120ms);
+  }
+
+  .flocon {
+    animation: tombe var(--duree) linear var(--retard) infinite;
+  }
+
+  .floconMarge {
+    animation: tombe-long var(--duree) linear var(--retard) infinite;
+  }
+
+  .sucreOrge::before {
+    animation: glisse-sucre 1s linear 4;
+  }
+
+  .papierCadeau::before {
+    animation: glisse-papier 4s ease-out both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .neige,
+  .marges {
+    display: none;
+  }
+}
+
+@keyframes descend {
+  from {
+    opacity: 0;
+    transform: translateY(-120%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes balance {
+  0% {
+    transform: rotate(var(--amplitude));
+  }
+  22% {
+    transform: rotate(calc(var(--amplitude) * -0.7));
+  }
+  44% {
+    transform: rotate(calc(var(--amplitude) * 0.45));
+  }
+  66% {
+    transform: rotate(calc(var(--amplitude) * -0.22));
+  }
+  85% {
+    transform: rotate(calc(var(--amplitude) * 0.08));
+  }
+  100% {
+    transform: rotate(0);
+  }
+}
+
+@keyframes berce {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  25% {
+    transform: rotate(2.5deg);
+  }
+  75% {
+    transform: rotate(-2.5deg);
+  }
+}
+
+@keyframes tombe {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  12% {
+    opacity: 0.95;
+  }
+  85% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--derive), 240px);
+  }
+}
+
+@keyframes tombe-long {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  8% {
+    opacity: 0.9;
+  }
+  92% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--derive), 1400px);
+  }
+}
+
+/* La période horizontale des rayures à 45 degrés est de 20 x racine de 2. */
+@keyframes glisse-sucre {
+  from {
+    transform: translateX(-28.29px);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes glisse-papier {
+  from {
+    transform: translateX(-170.5px);
+  }
+  to {
+    transform: none;
+  }
+}

@@ -476,3 +476,543 @@
   color: var(--ls-text-muted);
   font-size: 0.9375rem;
 }
+
+/*
+ * ================= THÈMES DE NOËL, LS-277 =================
+ * D'après la maquette validée, `docs/prototypes/themes-noel/creations.html`,
+ * et ADR-046 amendé. Le décor vit dans le bandeau, dans le CADRE des cartes et
+ * dans les boutons : jamais sur une photographie, jamais sur un contrôle. Le
+ * contenu des cartes et la couleur des prix ne changent pas. Jetons seulement.
+ */
+
+/* ---------- Bandeau de tête ---------- */
+
+.bandeauNoel {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: var(--ls-space-2);
+  margin: 0 0 var(--ls-space-3);
+  padding: var(--ls-space-5) var(--ls-space-4) var(--ls-space-6);
+  border-radius: var(--ls-radius-md);
+  background: radial-gradient(
+    120% 90% at 80% 20%,
+    var(--ls-surface) 0%,
+    color-mix(in srgb, var(--ls-noel-rouge) 4%, var(--ls-surface)) 55%,
+    color-mix(in srgb, var(--ls-noel-rouge) 9%, var(--ls-surface)) 100%
+  );
+}
+
+/* La zone décor précède le texte sur téléphone, le suit à droite au-delà. */
+.decorBandeau {
+  position: relative;
+  height: 9.5rem;
+  pointer-events: none;
+}
+
+.texteBandeau {
+  position: relative;
+  z-index: 1;
+}
+
+@media (min-width: 900px) {
+  .bandeauNoel {
+    grid-template-columns: 1fr 22rem;
+    align-items: end;
+    padding: var(--ls-space-6) var(--ls-space-6) var(--ls-space-7);
+  }
+
+  .decorBandeau {
+    order: 2;
+    height: 14rem;
+  }
+}
+
+.bandeauNoel .accroche {
+  margin-bottom: 0;
+}
+
+.rubanNoel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ls-space-2);
+  margin: 0 0 var(--ls-space-3);
+  padding: var(--ls-space-1) var(--ls-space-3);
+  border: 1px solid color-mix(in srgb, var(--ls-noel-rouge) 30%, var(--ls-surface));
+  border-radius: 999px;
+  background: var(--ls-surface);
+  color: var(--ls-noel-rouge);
+  font-size: 0.875rem;
+}
+
+.rubanNoel svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+
+.sucreBandeau {
+  position: absolute;
+  inset: auto 0 0;
+}
+
+/* Le papier cadeau suit la largeur du contenu, coins arrondis. */
+.bandeauNoel + div {
+  border-radius: var(--ls-radius-sm);
+  margin-bottom: var(--ls-space-5);
+}
+
+/* ---------- Filtres, compte, pagination ---------- */
+
+.floconFiltre {
+  width: 0.75rem;
+  height: 0.75rem;
+  flex: none;
+  color: var(--ls-noel-rouge);
+  transition: transform 600ms var(--ls-easing-sortie);
+}
+
+:global([data-theme^="noel"]) .filtre {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ls-space-2);
+}
+
+.filtre:hover .floconFiltre {
+  transform: rotate(180deg);
+}
+
+.filtre[aria-current="page"] .floconFiltre {
+  color: var(--ls-text-on-primary);
+}
+
+/* Ruban rayé sous le filtre actif, sous le contrôle et non dessus. */
+:global([data-theme^="noel"]) .filtre[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  left: var(--ls-space-2);
+  right: var(--ls-space-2);
+  bottom: -7px;
+  height: 4px;
+  border-radius: 2px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--ls-noel-rouge) 0 5px,
+    var(--ls-surface) 5px 10px
+  );
+}
+
+:global([data-theme^="noel"]) .compte::before {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: var(--ls-space-2);
+  border-radius: 50%;
+  vertical-align: -1px;
+  background: radial-gradient(
+    circle at 35% 30%,
+    var(--ls-surface) 0 12%,
+    var(--ls-noel-rouge) 70%
+  );
+}
+
+/* La pagination en étiquette cadeau : un œillet, un angle arrondi. */
+:global([data-theme^="noel"]) .lienPagination {
+  position: relative;
+  padding-left: calc(var(--ls-space-4) + 14px);
+  border-radius: var(--ls-radius-sm) 22px 22px var(--ls-radius-sm);
+  transform-origin: 8px 50%;
+}
+
+:global([data-theme^="noel"]) .lienPagination::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  margin-top: -3.5px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ls-noel-rouge);
+}
+
+/* ---------- Grille et neige des marges ---------- */
+
+.zoneGrilleNoel {
+  position: relative;
+}
+
+/* ---------- Cartes : un paquet cadeau autour de la photographie ---------- */
+
+.carteNoel {
+  padding: 10px;
+}
+
+.carteNoel .cadreImage {
+  border-radius: var(--ls-radius-sm);
+  overflow: hidden;
+}
+
+.decorCarte {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.lisere {
+  position: absolute;
+  inset: 4px;
+  width: calc(100% - 8px);
+  height: calc(100% - 8px);
+  overflow: visible;
+}
+
+.lisere rect {
+  fill: none;
+  stroke: var(--ls-noel-rouge);
+  stroke-width: 1;
+  opacity: 0.55;
+}
+
+.floconCoin {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  color: var(--ls-noel-rouge);
+  transition: transform 600ms var(--ls-easing-sortie);
+}
+
+.hautGauche {
+  left: 0;
+  top: 0;
+}
+
+.hautDroite {
+  right: 0;
+  top: 0;
+}
+
+.basGauche {
+  left: 0;
+  bottom: 0;
+}
+
+.basDroite {
+  right: 0;
+  bottom: 0;
+}
+
+.carteNoel .corpsCarte {
+  position: relative;
+  padding-top: calc(var(--ls-space-4) + 22px);
+}
+
+/* Le ruban court sous la photographie, le nœud en son milieu. */
+/*
+ * TOUT RESTE SOUS LA PHOTOGRAPHIE. Le nœud est un enfant du ruban : son `top`
+ * se compte depuis le ruban. Ruban à 9 px et nœud à -9 px le posent à 0 du
+ * haut du corps, sans rien sur la photographie, ADR-046. Un premier jet, ruban
+ * à 8 px, mordait d'un pixel sur la photographie ; un test le garde.
+ */
+.rubanCarte {
+  position: absolute;
+  left: -10px;
+  right: -10px;
+  top: 9px;
+  height: 4px;
+  background: var(--ls-noel-rouge);
+}
+
+.noeudCarte {
+  position: absolute;
+  left: 50%;
+  top: -9px;
+  width: 34px;
+  height: 22px;
+  margin-left: -17px;
+  color: var(--ls-noel-rouge);
+  transform-origin: 50% 70%;
+}
+
+.carteNoel:hover {
+  box-shadow: 0 22px 44px -26px
+    color-mix(in srgb, var(--ls-noel-rouge) 45%, transparent);
+}
+
+/* Bouton d'achat : petit paquet, et gerbe de flocons au clic. */
+.boutonAjoutRapide {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ls-space-2);
+}
+
+.paquetBouton {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.gerbe {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.eclat {
+  position: absolute;
+  left: -4px;
+  top: -4px;
+  width: 8px;
+  height: 8px;
+  color: var(--ls-noel-rouge);
+  opacity: 0;
+}
+
+.eclat:nth-child(even) {
+  color: var(--ls-or-moyen);
+}
+
+.eclat svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------- Noël 2 : bandeau rouge, cadre rouge, bouton blanc ---------- */
+
+:global([data-theme="noel_2"]) .bandeauNoel {
+  background: radial-gradient(
+    90% 90% at 82% 25%,
+    var(--ls-noel-fond-clair) 0%,
+    var(--ls-noel-fond-vif) 35%,
+    var(--ls-noel-fond-rouge) 65%,
+    var(--ls-noel-fond-nuit) 100%
+  );
+}
+
+:global([data-theme="noel_2"]) .bandeauNoel .titre,
+:global([data-theme="noel_2"]) .bandeauNoel .accroche {
+  color: var(--ls-noel-texte-sur-rouge);
+}
+
+:global([data-theme="noel_2"]) .rubanNoel {
+  border-color: var(--ls-noel-texte-sur-rouge);
+}
+
+:global([data-theme="noel_2"]) .filtre[aria-current="page"] {
+  background: var(--ls-noel-rouge);
+  border-color: var(--ls-noel-rouge);
+}
+
+:global([data-theme="noel_2"]) .filtre:hover {
+  border-color: var(--ls-noel-rouge);
+}
+
+:global([data-theme="noel_2"]) .carteNoel {
+  background: var(--ls-noel-rouge);
+  border-color: var(--ls-noel-fond-nuit);
+}
+
+:global([data-theme="noel_2"]) .lisere rect {
+  stroke: var(--ls-noel-texte-sur-rouge);
+  stroke-dasharray: 4 4;
+  opacity: 0.8;
+}
+
+:global([data-theme="noel_2"]) .floconCoin {
+  color: var(--ls-noel-texte-sur-rouge);
+}
+
+:global([data-theme="noel_2"]) .carteNoel .corpsCarte {
+  background: var(--ls-surface);
+  border-radius: 0 0 var(--ls-radius-sm) var(--ls-radius-sm);
+}
+
+:global([data-theme="noel_2"]) .rubanCarte {
+  left: 0;
+  right: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--ls-noel-rouge) 0 10px,
+    var(--ls-surface) 10px 14px
+  );
+}
+
+:global([data-theme="noel_2"]) .carteNoel .ajoutRapide {
+  padding: var(--ls-space-3) 0 0;
+}
+
+:global([data-theme="noel_2"]) .carteNoel .boutonAjoutRapide:not(:disabled) {
+  background: var(--ls-noel-texte-sur-rouge);
+  color: var(--ls-noel-rouge);
+}
+
+:global([data-theme="noel_2"])
+  .carteNoel
+  .boutonAjoutRapide:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ls-noel-rouge) 10%, var(--ls-surface));
+}
+
+:global([data-theme="noel_2"]) .carteNoel .boutonAjoutRapide:focus-visible {
+  outline: 2px solid var(--ls-noel-texte-sur-rouge);
+  outline-offset: 2px;
+}
+
+/* Sur le cadre rouge, l'annonce passe en blanc : le gris y serait illisible. */
+:global([data-theme="noel_2"]) .carteNoel .annonceAjoutRapide {
+  color: var(--ls-noel-texte-sur-rouge);
+}
+
+/* ---------- Mouvement : à l'entrée de la carte, au survol, au clic ---------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  .lisere rect {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: trace 1400ms var(--ls-easing-sortie) 100ms forwards;
+  }
+
+  :global([data-theme="noel_2"]) .lisere rect {
+    animation: none;
+    stroke-dasharray: 4 4;
+    stroke-dashoffset: 0;
+  }
+
+  .rubanCarte {
+    transform: scaleX(0);
+    transform-origin: center;
+    animation: deroule 800ms var(--ls-easing-sortie) 500ms forwards;
+  }
+
+  .noeudCarte {
+    transform: scale(0) rotate(-30deg);
+    animation: noue 700ms cubic-bezier(0.34, 1.56, 0.64, 1) 900ms forwards;
+  }
+
+  .floconCoin {
+    transform: scale(0);
+    animation: pousse-coin 500ms var(--ls-easing-sortie) 1100ms forwards;
+  }
+
+  /*
+   * LE DÉCOR ATTEND QUE LA CARTE ENTRE DANS L'ÉCRAN : sous `attente`, posé par
+   * `ApparitionAuDefilement`, ses animations restent suspendues. La carte
+   * elle-même est visible dès le premier rendu, ADR-045 point 5.
+   */
+  .carteNoel[data-apparition="attente"] .decorCarte *,
+  .carteNoel[data-apparition="attente"] .rubanCarte,
+  .carteNoel[data-apparition="attente"] .noeudCarte {
+    animation-play-state: paused;
+  }
+
+  .carteNoel:hover .noeudCarte {
+    animation: fretille 700ms ease-in-out;
+    transform: none;
+  }
+
+  .carteNoel:hover .floconCoin {
+    transform: rotate(120deg) scale(1.25);
+  }
+
+  .boutonAjoutRapide:hover:not(:disabled) .paquetBouton {
+    animation: saute 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .eclat {
+    animation: eclate 800ms var(--ls-easing-sortie) forwards;
+  }
+
+  :global([data-theme^="noel"]) .lienPagination:hover {
+    animation: etiquette 900ms ease-in-out;
+  }
+
+  :global([data-theme^="noel"]) .filtre[aria-current="page"]::after {
+    transform-origin: left;
+    animation: deroule 900ms var(--ls-easing-sortie) 600ms both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gerbe {
+    display: none;
+  }
+}
+
+@keyframes trace {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes deroule {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes noue {
+  to {
+    transform: none;
+  }
+}
+
+@keyframes pousse-coin {
+  to {
+    transform: none;
+  }
+}
+
+@keyframes fretille {
+  0%,
+  100% {
+    transform: none;
+  }
+  25% {
+    transform: rotate(-12deg) scale(1.08);
+  }
+  60% {
+    transform: rotate(9deg) scale(1.05);
+  }
+}
+
+@keyframes saute {
+  40% {
+    transform: translateY(-5px) rotate(-8deg);
+  }
+  70% {
+    transform: translateY(1px);
+  }
+}
+
+@keyframes eclate {
+  from {
+    opacity: 1;
+    transform: translate(0, 0) scale(0.4);
+  }
+  to {
+    opacity: 0;
+    transform: translate(var(--gx), var(--gy)) scale(1) rotate(160deg);
+  }
+}
+
+@keyframes etiquette {
+  30% {
+    transform: rotate(-4deg);
+  }
+  65% {
+    transform: rotate(2deg);
+  }
+}

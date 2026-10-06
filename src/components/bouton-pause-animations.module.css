@@ -1,0 +1,64 @@
+/*
+ * Bouton de pause des thèmes de Noël, LS-277. Rouge sur blanc sous `NOEL_1`,
+ * blanc sur rouge sous `NOEL_2`. Discret : 32 px et 80 % d'opacité, plein au
+ * survol et au focus. La cible tactile atteint 44 px par un pseudo-élément.
+ */
+.bouton {
+  position: fixed;
+  right: var(--ls-space-4);
+  bottom: var(--ls-space-4);
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--ls-noel-rouge) 45%, transparent);
+  border-radius: 50%;
+  background: var(--ls-surface);
+  color: var(--ls-noel-rouge);
+  box-shadow: 0 4px 14px -6px
+    color-mix(in srgb, var(--ls-noel-rouge) 60%, transparent);
+  opacity: 0.8;
+  cursor: pointer;
+  transition: opacity var(--ls-duration-base) ease;
+}
+
+.bouton::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+}
+
+.bouton:hover,
+.bouton:focus-visible {
+  opacity: 1;
+}
+
+.bouton:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 3px;
+}
+
+.bouton svg {
+  width: 12px;
+  height: 12px;
+}
+
+:global([data-theme="noel_2"]) .bouton {
+  border-color: var(--ls-noel-texte-sur-rouge);
+  background: var(--ls-noel-fond-rouge);
+  color: var(--ls-noel-texte-sur-rouge);
+}
+
+:global([data-theme="noel_2"]) .bouton:focus-visible {
+  outline-color: var(--ls-noel-fond-nuit);
+}
+
+@media (min-width: 768px) {
+  .bouton {
+    right: var(--ls-space-5);
+    bottom: var(--ls-space-5);
+  }
+}

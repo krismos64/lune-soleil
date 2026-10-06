@@ -251,6 +251,22 @@
   --ls-noel-titre-sur-rouge: #f0cf7a;
 }
 
+/*
+ * LE PIED DE PAGE SOUS LES THÈMES DE NOËL, LS-277. Il vit dans le layout, hors
+ * du `<main>` qui porte `data-theme` : les jetons ci-dessus ne lui descendent
+ * pas. `:has()` les lui donne pour les deux pages concernées seulement. Le
+ * texte du pied, `--ls-texte-nuit`, tient 14,73:1 sur `#3D080C`, l'or 11,23:1.
+ */
+:root:has(main[data-theme="noel_1"]),
+:root:has(main[data-theme="noel_2"]) {
+  --ls-pied-sucre-saison: #9b1b1e;
+  --ls-pied-sucre-affiche: block;
+}
+
+:root:has(main[data-theme="noel_2"]) {
+  --ls-pied-fond-saison: #3d080c;
+}
+
 /* Respect systematique de la preference de mouvement reduit */
 @media (prefers-reduced-motion: reduce) {
   :root {
