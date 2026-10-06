@@ -115,10 +115,14 @@ des pages publiques » de `frontend-design.md` :
 - l'intensité selon le type de page, dont les portes d'entrée et le contact
   amendés par LS-268.
 
-Un thème saisonnier suit ADR-046 :
+Un thème saisonnier suit ADR-046, amendé par LS-277 pour `NOEL_1` et
+`NOEL_2` :
 - un jeu fermé écrit dans le code, sur l'accueil et le catalogue seulement ;
 - aucun texte saisi, aucune promesse de prix, de date ni de livraison ;
-- des jetons mesurés sur crème, sable et blanc ;
+- des accents mesurés sur crème, sable et blanc, et des textes `*-sur-rouge`
+  mesurés sur chaque fond rouge, tout petit texte sur le rouge en blanc pur ;
+- un contraste posé sur un dégradé ou un filigrane se mesure sur les pixels,
+  `verifier-contraste.sh` ne lisant pas un `color-mix` dans un dégradé ;
 - des décors jamais posés sur un texte, un contrôle ou un bijou.
 
 Tu vérifies que le test du mode animé contrôle **chaque** élément borné, et

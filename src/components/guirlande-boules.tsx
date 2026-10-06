@@ -1,9 +1,10 @@
 /**
- * Guirlande d'étoiles du thème de Noël, page des créations, ADR-046.
+ * Guirlande de boules des thèmes de Noël, page des créations, ADR-046 amendé
+ * par LS-277. Elle remplace la guirlande d'étoiles de LS-267.
  *
  * AU-DESSUS DU TITRE, JAMAIS SUR UN BIJOU : décor pur, `aria-hidden`. Le fil
- * se trace, puis les neuf étoiles suspendues s'allument une fois ; tout est
- * fini avant cinq secondes, et immobile en mouvement réduit, ADR-045.
+ * se trace, puis les neuf boules rouges et blanches s'accrochent une fois ;
+ * tout est fini avant cinq secondes, et immobile en mouvement réduit, ADR-045.
  *
  * COMPOSANT SERVEUR. Les positions sont calculées ici, une fois, sur la
  * courbe du fil : deux arcs de Bézier quadratiques, le second reflétant le
