@@ -139,6 +139,30 @@ svg {
 }
 
 /*
+ * MOUVEMENT CONTINU DES THÈMES DE NOËL, ADR-045 amendé par LS-277. Un décor
+ * marqué `data-continu` (neige, rayons du soleil, bercement des boules)
+ * continue après la borne de cinq secondes. À l'état `fin` SEULEMENT : hors de
+ * l'écran, `attente`, il reste suspendu et ne consomme rien. Plus spécifique
+ * que la règle ci-dessus, il l'emporte entre deux `!important`.
+ */
+[data-borne="fin"] [data-continu],
+[data-borne="fin"] [data-continu] *,
+[data-borne="fin"][data-continu] {
+  animation-play-state: running !important;
+}
+
+/*
+ * LE BOUTON DE PAUSE FIGE TOUT, décors bornés compris, WCAG 2.2.2. Posée par
+ * `BoutonPauseAnimations`, la classe l'emporte sur l'exemption ci-dessus par
+ * sa spécificité, `(0,2,1)` contre `(0,2,0)`.
+ */
+:root.pause-animations main *,
+:root.pause-animations main *::before,
+:root.pause-animations main *::after {
+  animation-play-state: paused !important;
+}
+
+/*
  * APPARITION AU DÉFILEMENT, ADR-045 points 5 et 6. Seul un bloc passé à
  * `attente` par `ApparitionAuDefilement`, donc hors de l'écran au montage et
  * script actif, est masqué. Sans script, l'attribut reste vide et tout est

@@ -15,6 +15,7 @@ import Link from "next/link";
 
 import { srcSetMedia, urlVignette } from "@/integrations/medias/urls";
 import type { EtatDisponibilite, ProduitCatalogue } from "@/services/catalogue";
+import { FloconIcone, NoeudIcone } from "@/components/decor-noel";
 import { AjoutRapide } from "./ajout-rapide";
 import styles from "./catalogue.module.css";
 
@@ -46,7 +47,19 @@ const CLASSE_DISPONIBILITE: Record<EtatDisponibilite, string> = {
   EPUISE: styles.badgeEpuise!,
 };
 
-export function CarteProduit({ produit }: { produit: ProduitCatalogue }) {
+/**
+ * `noel` : thèmes `NOEL_1` et `NOEL_2`, LS-277. La carte devient un paquet
+ * cadeau : liseré qui se trace, flocons dans les coins du cadre, ruban et nœud
+ * SOUS la photographie. Rien n'est posé sur la photographie ni sur le bouton,
+ * ADR-046 ; le contenu de la carte ne change pas.
+ */
+export function CarteProduit({
+  produit,
+  noel = false,
+}: {
+  produit: ProduitCatalogue;
+  noel?: boolean;
+}) {
   const disponibilite = LIBELLE_DISPONIBILITE[produit.disponibilite];
 
   return (
@@ -56,10 +69,11 @@ export function CarteProduit({ produit }: { produit: ProduitCatalogue }) {
      * opacité nulle, ADR-045 point 5.
      */
     <li
-      className={styles.carte}
+      className={`${styles.carte} ${noel ? styles.carteNoel : ""}`}
       data-apparition=""
       data-apparition-mode="glisse"
     >
+      {noel ? <DecorCarteNoel /> : null}
       {/*
        * LA ROUTE `/produit/[slug]` N'EXISTE PAS ENCORE, elle appartient a
        * LS-105 que cette story bloque. Ces liens rendent donc une 404 jusqu'a sa
@@ -120,6 +134,11 @@ export function CarteProduit({ produit }: { produit: ProduitCatalogue }) {
         </div>
 
         <div className={styles.corpsCarte}>
+          {noel ? (
+            <span className={styles.rubanCarte} aria-hidden="true">
+              <NoeudIcone className={styles.noeudCarte} />
+            </span>
+          ) : null}
           <h2 className={styles.nomProduit}>{produit.nom}</h2>
           <p className={styles.categorie}>{produit.categorieNom}</p>
           <p className={styles.prix}>{formaterMontant(produit.prixCentimes)}</p>
@@ -139,8 +158,25 @@ export function CarteProduit({ produit }: { produit: ProduitCatalogue }) {
           varianteId={produit.varianteUniqueId}
           nomProduit={produit.nom}
           epuise={produit.disponibilite === "EPUISE"}
+          noel={noel}
         />
       ) : null}
     </li>
+  );
+}
+
+const COINS = ["hautGauche", "hautDroite", "basGauche", "basDroite"] as const;
+
+/** Liseré et flocons du cadre, dans la marge de la carte, hors photographie. */
+function DecorCarteNoel() {
+  return (
+    <span className={styles.decorCarte} aria-hidden="true">
+      <svg className={styles.lisere} focusable="false">
+        <rect x="0.5" y="0.5" width="99%" height="99%" rx="6" pathLength={1} />
+      </svg>
+      {COINS.map((coin) => (
+        <FloconIcone key={coin} className={`${styles.floconCoin} ${styles[coin]}`} />
+      ))}
+    </span>
   );
 }

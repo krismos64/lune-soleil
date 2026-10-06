@@ -19,10 +19,13 @@ import { lireCataloguePublic } from "@/services/catalogue";
 import { CarteProduit } from "./catalogue/carte-produit";
 import { BandeauReassurance } from "@/components/bandeau-reassurance";
 import { BandeauApercuTheme } from "@/components/bandeau-apercu-theme";
+import { BoutonPauseAnimations } from "@/components/bouton-pause-animations";
+import { BandePapierCadeau, BandeSucreOrge } from "@/components/decor-noel";
 import { EmblemeAnime } from "@/components/embleme-anime";
 import { PoussiereOr } from "@/components/poussiere-or";
 import { ReactionPointeur } from "@/components/reaction-pointeur";
 import { SceneCycle } from "@/components/scene-cycle";
+import { estThemeDeNoel } from "@/lib/theme-saisonnier";
 import { lireSeuilFranchise } from "@/services/parametres";
 import styles from "./page.module.css";
 import {
@@ -92,7 +95,7 @@ export default async function PageAccueil({
       lireSeuilFranchise(),
       themeDeLaPage(parametres[PARAMETRE_APERCU_THEME]),
     ]);
-  const noel = theme === "NOEL";
+  const noel = estThemeDeNoel(theme);
   const misEnAvant = produits.slice(0, NOMBRE_MIS_EN_AVANT);
 
   /*
@@ -167,9 +170,12 @@ export default async function PageAccueil({
               </Link>
             </div>
           </div>
-          <EmblemeAnime saison={noel ? "noel" : undefined} />
+          <EmblemeAnime noel={noel} />
         </div>
+        {noel ? <BandeSucreOrge className={styles.sucreHeros} /> : null}
       </section>
+
+      {noel ? <BandePapierCadeau /> : null}
 
       {/*
        * BANDEAU DE REASSURANCE, LS-236 : les six elements de
@@ -195,6 +201,34 @@ export default async function PageAccueil({
        */}
       {misEnAvant.length > 0 && (
         <section className={styles.section}>
+          {/*
+           * LE PAQUET AU RUBAN, thèmes de Noël, LS-277 : image générée sans
+           * bijou ni texte, décor `aria-hidden`. Il ne montre aucune pièce,
+           * pour ne rien laisser croire sur le catalogue.
+           */}
+          {noel ? (
+            <div className={styles.paquet} aria-hidden="true" data-borne="">
+              <Image
+                src="/habillage/paquet-ruban.jpg"
+                alt=""
+                width={720}
+                height={720}
+                sizes="(min-width: 768px) 220px, 56vw"
+                className={styles.paquetImage}
+              />
+              <svg className={styles.paquetRuban} viewBox="0 0 100 100">
+                <circle className={styles.paquetPoints} cx="50" cy="50" r="49" />
+                <circle
+                  className={styles.paquetTour}
+                  cx="50"
+                  cy="50"
+                  r="46.5"
+                  pathLength={1}
+                  transform="rotate(-90 50 50)"
+                />
+              </svg>
+            </div>
+          ) : null}
           <div className={styles.enteteSection}>
             <div>
               <p className={styles.surtitreSection}>Nouveautés</p>
@@ -209,7 +243,7 @@ export default async function PageAccueil({
 
           <ul className={styles.grille} data-inclinaison="">
             {misEnAvant.map((produit) => (
-              <CarteProduit key={produit.id} produit={produit} />
+              <CarteProduit key={produit.id} produit={produit} noel={noel} />
             ))}
           </ul>
         </section>
@@ -343,6 +377,7 @@ export default async function PageAccueil({
       </section>
 
       <ReactionPointeur />
+      {noel ? <BoutonPauseAnimations /> : null}
     </main>
   );
 }

@@ -27,10 +27,16 @@ const THEMES: readonly {
     description: "L'habillage ordinaire de la boutique.",
   },
   {
-    valeur: "NOEL",
-    libelle: "Noël",
+    valeur: "NOEL_1",
+    libelle: "Noël 1 (sobre)",
     description:
-      "Ruban « Fêtes de fin d'année », houx et neige sur l'accueil, guirlande sur le catalogue.",
+      "Fond blanc neige et accents rouges : boules suspendues, neige, rubans et papier cadeau. Textes et boutons gardent leurs couleurs.",
+  },
+  {
+    valeur: "NOEL_2",
+    libelle: "Noël 2 (franc)",
+    description:
+      "Bandeaux rouges à texte blanc, cartes encadrées de rouge, mêmes décors que Noël 1.",
   },
 ];
 

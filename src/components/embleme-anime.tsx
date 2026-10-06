@@ -23,6 +23,7 @@
  */
 import type { CSSProperties } from "react";
 
+import { BoulesSuspendues, NeigeContinue } from "./decor-noel";
 import styles from "./embleme-anime.module.css";
 
 /** Les quatorze rayons du soleil, repris du logo vectoriel. */
@@ -71,7 +72,12 @@ const rang = (i: number): CSSProperties => ({ "--rang": i }) as CSSProperties;
  * dont `--ls-feuillage` change la couleur, et une neige qui tombe une fois
  * DANS LE CADRE de l'emblème, jamais par-dessus un texte ni un contrôle.
  */
-export function EmblemeAnime({ saison }: { saison?: "noel" | undefined } = {}) {
+/**
+ * `noel` : thèmes `NOEL_1` et `NOEL_2`, LS-277. Baies de houx, boules
+ * suspendues, neige continue et rotation lente des rayons, ces trois derniers
+ * en mouvement continu sous bouton de pause, ADR-045 amendé.
+ */
+export function EmblemeAnime({ noel = false }: { noel?: boolean } = {}) {
   return (
     <div className={styles.cadre} aria-hidden="true" data-borne="">
       <div className={styles.halo} />
@@ -112,7 +118,10 @@ export function EmblemeAnime({ saison }: { saison?: "noel" | undefined } = {}) {
         </g>
 
         <g className={styles.calque} data-profondeur="22">
-          <g className={styles.rayons}>
+          <g
+            className={`${styles.rayons} ${noel ? styles.rayonsContinus : ""}`}
+            data-continu={noel ? "" : undefined}
+          >
             {RAYONS.map((d, i) => (
               <path
                 key={d}
@@ -169,7 +178,7 @@ export function EmblemeAnime({ saison }: { saison?: "noel" | undefined } = {}) {
               transform={`rotate(${angle} ${cx} ${cy})`}
             />
           ))}
-          {saison === "noel"
+          {noel
             ? BAIES.map(({ cx, cy, r }, i) => (
                 <circle
                   key={`${cx}-${cy}`}
@@ -184,7 +193,12 @@ export function EmblemeAnime({ saison }: { saison?: "noel" | undefined } = {}) {
         </g>
       </svg>
       {/* Après le dessin : la neige passe devant l'emblème, revue de LS-267. */}
-      {saison === "noel" ? <NeigeEmbleme /> : null}
+      {noel ? (
+        <div className={styles.neige}>
+          <NeigeContinue nombre={18} />
+        </div>
+      ) : null}
+      {noel ? <BoulesSuspendues zone="embleme" /> : null}
     </div>
   );
 }
@@ -198,21 +212,3 @@ const BAIES = [
   { cx: 922, cy: 915, r: 9 },
   { cx: 934, cy: 922, r: 8 },
 ] as const;
-
-/** Nombre de flocons. Positions, tailles et chutes vivent dans le module CSS. */
-const NOMBRE_FLOCONS = 18;
-
-/**
- * Neige de Noël : chaque flocon tombe UNE fois et fond, moins de cinq secondes,
- * ADR-045. Positions fixes par `nth-child`, aucun tirage au hasard, absente en
- * mouvement réduit.
- */
-function NeigeEmbleme() {
-  return (
-    <div className={styles.neige}>
-      {Array.from({ length: NOMBRE_FLOCONS }, (_, i) => (
-        <span key={i} className={styles.flocon} />
-      ))}
-    </div>
-  );
-}

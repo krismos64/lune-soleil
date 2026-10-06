@@ -6,6 +6,8 @@
  * Chaque test remet `AUCUN` : la base éphémère est partagée par les fichiers
  * séquentiels.
  */
+import { readFileSync } from "node:fs";
+
 import { Client } from "pg";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { inject } from "vitest";
@@ -38,17 +40,58 @@ describe("thème saisonnier, ADR-046", () => {
     expect(await service.lireThemeSaisonnier()).toBe("AUCUN");
   });
 
-  it("enregistre le thème de Noël, et le relit", async () => {
-    expect(await service.choisirThemeSaisonnier("NOEL")).toBe("NOEL");
-    expect(await service.lireThemeSaisonnier()).toBe("NOEL");
-    const { rows } = await client.query(
-      "SELECT theme_saisonnier FROM parametre_boutique",
+  it("enregistre chacun des deux thèmes de Noël, et le relit, LS-277", async () => {
+    for (const theme of ["NOEL_1", "NOEL_2"] as const) {
+      expect(await service.choisirThemeSaisonnier(theme)).toBe(theme);
+      expect(await service.lireThemeSaisonnier()).toBe(theme);
+      const { rows } = await client.query(
+        "SELECT theme_saisonnier FROM parametre_boutique",
+      );
+      expect(rows).toEqual([{ theme_saisonnier: theme }]);
+    }
+  });
+
+  /*
+   * LA MIGRATION DE LS-277 EST EXÉCUTÉE TELLE QU'ÉCRITE, sur l'état qu'elle
+   * rencontrera : l'ancienne contrainte et `NOEL` choisi. Son ordre est
+   * imposé, la conversion entre le retrait et la nouvelle contrainte ; un
+   * ordre inversé échouerait ici, et non en production.
+   */
+  it("la migration convertit un NOEL choisi en NOEL_1, sans activer de thème", async () => {
+    const sql = readFileSync(
+      "prisma/migrations/20261006200000_themes_noel/migration.sql",
+      "utf8",
     );
-    expect(rows).toEqual([{ theme_saisonnier: "NOEL" }]);
+    await client.query(
+      "ALTER TABLE parametre_boutique DROP CONSTRAINT chk_parametre_theme_connu",
+    );
+    await client.query(
+      `ALTER TABLE parametre_boutique ADD CONSTRAINT chk_parametre_theme_connu
+         CHECK (theme_saisonnier IN ('AUCUN', 'NOEL'))`,
+    );
+    try {
+      await client.query(
+        "UPDATE parametre_boutique SET theme_saisonnier = 'NOEL' WHERE id = true",
+      );
+      await client.query(sql);
+      const { rows } = await client.query(
+        "SELECT theme_saisonnier FROM parametre_boutique",
+      );
+      expect(rows).toEqual([{ theme_saisonnier: "NOEL_1" }]);
+      await expect(
+        client.query(
+          "UPDATE parametre_boutique SET theme_saisonnier = 'NOEL' WHERE id = true",
+        ),
+      ).rejects.toMatchObject({ constraint: "chk_parametre_theme_connu" });
+    } finally {
+      await client.query(
+        "UPDATE parametre_boutique SET theme_saisonnier = 'AUCUN' WHERE id = true",
+      );
+    }
   });
 
   it("refuse un thème que le code n'écrit pas, sans rien changer", async () => {
-    for (const entree of ["Noel", "PAQUES", "", null, 42]) {
+    for (const entree of ["NOEL", "noel_1", "Noel", "PAQUES", "", null, 42]) {
       await expect(
         service.choisirThemeSaisonnier(entree),
       ).rejects.toMatchObject({ name: "EntreeInvalideError" });
@@ -73,7 +116,7 @@ describe("thème saisonnier, ADR-046", () => {
       );
       await client.query(
         `ALTER TABLE parametre_boutique ADD CONSTRAINT chk_parametre_theme_connu
-           CHECK (theme_saisonnier IN ('AUCUN', 'NOEL'))`,
+           CHECK (theme_saisonnier IN ('AUCUN', 'NOEL_1', 'NOEL_2'))`,
       );
     }
   });
@@ -84,7 +127,7 @@ describe("thème saisonnier, ADR-046", () => {
     expect(
       themeAAfficher({
         actif: "AUCUN",
-        apercu: "NOEL",
+        apercu: "NOEL_2",
         estAdministratrice: false,
       }),
     ).toBe("AUCUN");
@@ -92,13 +135,13 @@ describe("thème saisonnier, ADR-046", () => {
     expect(
       themeAAfficher({
         actif: "AUCUN",
-        apercu: "NOEL",
+        apercu: "NOEL_2",
         estAdministratrice: true,
       }),
-    ).toBe("NOEL");
+    ).toBe("NOEL_2");
     expect(
       themeAAfficher({
-        actif: "NOEL",
+        actif: "NOEL_1",
         apercu: "AUCUN",
         estAdministratrice: true,
       }),
@@ -106,17 +149,17 @@ describe("thème saisonnier, ADR-046", () => {
     // Aperçu inconnu ou absent : le thème actif, jamais une erreur.
     expect(
       themeAAfficher({
-        actif: "NOEL",
-        apercu: "noel",
+        actif: "NOEL_1",
+        apercu: "NOEL",
         estAdministratrice: true,
       }),
-    ).toBe("NOEL");
+    ).toBe("NOEL_1");
     expect(
       themeAAfficher({
-        actif: "NOEL",
+        actif: "NOEL_1",
         apercu: undefined,
         estAdministratrice: true,
       }),
-    ).toBe("NOEL");
+    ).toBe("NOEL_1");
   });
 });

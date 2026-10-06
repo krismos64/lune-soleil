@@ -11,7 +11,7 @@
  */
 import type { CSSProperties } from "react";
 
-import styles from "./guirlande-etoiles.module.css";
+import styles from "./guirlande-boules.module.css";
 
 const FIL = "M10 10 Q160 52 320 22 T630 10";
 
@@ -41,18 +41,26 @@ const POINTS = Array.from({ length: 9 }, (_, i) => {
 
 const rang = (i: number): CSSProperties => ({ "--rang": i }) as CSSProperties;
 
-export function GuirlandeEtoiles() {
+/**
+ * Guirlande de boules rouges et blanches au-dessus du titre du catalogue,
+ * thèmes `NOEL_1` et `NOEL_2`, LS-277. Elle remplace la guirlande d'étoiles
+ * dorées de LS-267. Le fil se trace puis les boules s'accrochent une à une,
+ * moins de cinq secondes en tout, ADR-045 ; dans le flux, au-dessus du titre,
+ * sans chevauchement ni décalage après l'affichage, ADR-046 section 5.
+ */
+export function GuirlandeBoules() {
   return (
     <div className={styles.cadre} aria-hidden="true" data-borne="">
       <svg className={styles.guirlande} viewBox="0 0 640 56" focusable="false">
         <path className={styles.fil} d={FIL} pathLength={1} />
         {POINTS.map(({ x, y }, i) => (
-          <g key={x} className={styles.etoile} style={rang(i)}>
+          <g
+            key={x}
+            className={i % 2 === 0 ? styles.bouleRouge : styles.bouleBlanche}
+            style={rang(i)}
+          >
             <line x1={x} y1={y} x2={x} y2={y + 8} />
-            <path
-              transform={`translate(${x} ${y + 14})`}
-              d="M0 -7 l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"
-            />
+            <circle cx={x} cy={y + 15} r="6.5" />
           </g>
         ))}
       </svg>
