@@ -325,7 +325,9 @@ for (const bloc of texteJetons.matchAll(/\[data-theme="([a-z0-9_]+)"\]\s*\{([^}]
  * blocs reconnus laisserait passer le cas où l'expression n'en reconnaît plus
  * AUCUN : zéro bloc lu, zéro échec, « OK ».
  */
-const blocsEcrits = (texteJetons.match(/\[data-theme=/g) ?? []).length;
+// En début de ligne seulement : `:root:has(main[data-theme=…])` n'est pas un
+// bloc de jetons de thème, il colore le pied de page hors du `<main>`.
+const blocsEcrits = (texteJetons.match(/^\[data-theme=/gm) ?? []).length;
 if (blocsDeTheme !== blocsEcrits || (blocsEcrits > 0 && jetonsDeTheme === 0)) {
   console.log(`ECHEC ${blocsEcrits} bloc(s) de thème écrits, ${blocsDeTheme} lu(s), ${jetonsDeTheme} jeton(s) mesuré(s) :`);
   console.log("      l'extraction ne lit plus tous les thèmes, leur contrôle est muet.");
