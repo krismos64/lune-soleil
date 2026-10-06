@@ -198,6 +198,14 @@ transaction entière est annulée, y compris la commande et ses lignes déjà
 Vue : « cette pièce vient d'être vendue », message métier et non erreur technique.
 Le panier est conservé, la ligne concernée signalée.
 
+**Pièce retirée du catalogue entre le panier et le clic, étape 4**
+Base : aucune écriture. Archiver un produit n'écrit que son statut, la variante
+reste intacte : la réservation exige donc aussi un produit `ACTIF` (LS-270), et
+son refus annule la transaction entière comme un refus de stock.
+Vue : la ligne est signalée « retirée de la vente » et ne compte plus dans le
+total ; au clic, le refus nomme la pièce à retirer. Une pièce d'un produit
+archivé reste vendable en main propre, invariant 6.
+
 **Montant changé entre le récapitulatif et le clic, étape 4**
 Base : aucune écriture. Le récapitulatif transmet le sous-total des articles
 (LS-269) et les frais de port (LS-98) qu'il affiche ; `passerCommande` les
