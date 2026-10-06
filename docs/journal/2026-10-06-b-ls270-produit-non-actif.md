@@ -37,12 +37,18 @@ Suite de `2026-10-06-a`.
 
 ## Prochaine étape
 
-Fusionner LS-270 puis la clore. LS-273 attend un échec capturé ou plusieurs
-nocturnes verts. LS-258 : l'exemption `braces` échoit le 17 octobre. LS-269
-et LS-270 ne sont pas déployées.
+LS-273 attend un échec capturé ou plusieurs nocturnes verts. LS-258 :
+l'exemption `braces` échoit le 17 octobre.
+
+## Déploiement
+
+LS-269 et LS-270 **déployées le 6 octobre 2026 au soir** par le workflow
+« Déployer en production », run 37501817528, image `4ae86ac`, toutes étapes
+vertes, sans migration. Mesure par « Écart entre la production et main » :
+0 commit, aucune migration.
 
 ## État des tickets
 
-LS-270 fusionnée à la clôture de cette PR. LS-271 et LS-272 closes. LS-273 et
+LS-270 close, PR #529, déployée. LS-271 et LS-272 closes. LS-273 et
 LS-258 en cours. Comptes relevés dans Jira avant la clôture de LS-270 : 238
 terminés sur 263 hors epics, 11 En cours et 14 À faire.
