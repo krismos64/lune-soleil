@@ -8,6 +8,79 @@
 | Amende | ADR-022 (palette publique), ADR-045 (politique d'animation) |
 | Ticket | LS-267 |
 
+## Amendement du 6 octobre 2026, deux thèmes de Noël, LS-277
+
+**Arbitrage de Christophe sur maquette**, `docs/prototypes/themes-noel/`,
+validée le 6 octobre 2026 pour l'accueil et la page des créations. Le thème
+`NOEL` de LS-267, jamais activé en production, est **écarté** : deux thèmes
+en rouge et blanc le remplacent. Les sections 1 à 4 changent comme suit, le
+reste de l'ADR tient.
+
+**Section 1, mécanisme.** La contrainte `chk_parametre_theme_connu` passe de
+`AUCUN`, `NOEL` à **`AUCUN`, `NOEL_1`, `NOEL_2`**. Une valeur `NOEL` présente
+au moment de la migration devient `NOEL_1`, le thème le plus proche ; aucune
+migration n'active un thème. Remplacer une contrainte `CHECK` passe par un
+`DROP CONSTRAINT` : `migrate-production.sh` la classera destructive et
+demandera `--confirm-destructive`, ce qui est attendu. Attributs posés sur le
+`<main>` : `data-theme="noel_1"` et `data-theme="noel_2"`.
+
+**Section 2, périmètre visuel, par thème.**
+
+- **`NOEL_1`, sobre**, reste dans la table de la section 2 sans exception :
+  fond blanc neige, accents rouges, décors. Texte, titres, boutons, focus et
+  prix gardent leurs couleurs.
+- **`NOEL_2`, franc**, est l'exception, limitée à ce qui suit :
+  - **le bandeau de tête** de l'accueil et des créations passe sur fond rouge ;
+    son titre `h1`, son texte et ses boutons y passent en blanc, ou en blanc à
+    texte rouge pour un bouton plein. **Le texte du titre ne change pas**,
+    seule sa couleur ;
+  - le **filtre actif** du catalogue passe au rouge ;
+  - les **cartes produit** reçoivent un cadre rouge piqué de blanc autour de
+    leur contenu, et le bouton « Ajouter au panier » devient blanc à texte
+    rouge. **Le contenu des cartes ne change pas** : photographie, nom,
+    catégorie, prix, disponibilité, et le prix garde sa couleur ;
+  - la bande défilante, le sceau et le pied de page de ces deux pages passent
+    au rouge.
+- **Commun aux deux** : rien n'est posé sur une photographie de bijou ; le
+  focus reste visible et contrasté sur chaque fond ; l'en-tête du site, le
+  tunnel, le compte et l'administration ne changent pas.
+
+**Section 2, décors.** Ils remplacent ceux de `NOEL` : boules suspendues,
+bandes sucre d'orge, bande de papier cadeau, paquet au ruban, guirlande
+rouge et blanche, neige ; et sur les cartes, liseré, ruban et nœud sous la
+photographie, flocons dans les coins du cadre. Deux images générées par Codex
+le 6 octobre 2026, sans bijou ni texte, métadonnées retirées : le papier cadeau
+et le paquet au ruban.
+
+**Section 3, contrastes, calculés le 6 octobre 2026.**
+
+| Paire | Ratio au pire |
+|---|---|
+| `NOEL_1` rouge `#9B1B1E` sur crème, sable, blanc, fond `#FFFDFA` | 6,85:1 (sable) |
+| `NOEL_1` vert sapin `#2F5A43` sur crème, blanc, fond | 7,38:1 |
+| `NOEL_2` blanc sur le dégradé rouge, zone la plus claire `#BB4348` | 5,24:1 |
+| `NOEL_2` or pâle `#F0CF7A`, mots du titre seulement, grand texte | 3,47:1 |
+| `NOEL_2` rouge `#9B1B1E` sur bouton blanc | 8,17:1 |
+| `NOEL_2` texte du pied `#E9DCC2` sur `#3D080C` | 12,50:1 |
+
+**Tout petit texte sur le rouge est blanc pur.** Le surtitre rose pâle de la
+maquette, `#FFE3DC`, tombe à 4,31:1 sur la zone la plus claire : il n'est pas
+porté. L'or ne sert qu'aux mots dorés du titre, au-dessus du seuil de 3:1 du
+grand texte.
+
+**Section 4, animations.** Elles suivent ADR-045, **amendé le même jour** par
+LS-277 : neige, rayons et boules bougent en continu sous les deux thèmes, avec
+un bouton de pause ; tout le reste est borné à cinq secondes. « La neige tombe
+une fois puis fond » ne vaut plus pour ces thèmes.
+
+**Écarté : garder `NOEL` et lui ajouter un second thème.** L'ancien thème ne
+plaît pas à Christophe, et le garder laisserait trois habillages de Noël à
+maintenir et à tester pour un usage de quelques semaines.
+
+**Écarté : `NOEL_2` dans le cadre actuel de la section 2.** Un fond rouge
+porteur impose du blanc sur le titre, le texte et les boutons pour tenir les
+contrastes : sans exception à la section 2, le thème franc est impossible.
+
 ## Contexte
 
 Demande de Christophe du 4 octobre 2026 : l'exploitante active depuis

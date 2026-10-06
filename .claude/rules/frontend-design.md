@@ -254,7 +254,10 @@ Les règles qui s'appliquent à toute animation d'une page publique :
 - **aucune boucle sans fin** : une animation automatique s'arrête d'elle-même
   **au plus tard cinq secondes** après son entrée dans l'écran, WCAG 2.2.2,
   sans bouton de pause (arbitrage du 4 octobre 2026). La borne de dix secondes
-  écrite d'abord ici n'était pas conforme, correction d'ADR-045 ;
+  écrite d'abord ici n'était pas conforme, correction d'ADR-045. **Seule
+  exception, les thèmes de Noël** (amendement LS-277 d'ADR-045) : neige,
+  rayons du soleil et boules y bougent en continu, avec un bouton de pause
+  visible qui fige toute la page, absent en mouvement réduit ;
 - seules `transform`, `opacity` et, pour dessiner un tracé,
   `stroke-dashoffset` s'animent, et rien ne tourne hors de l'écran ;
 - **une phrase posée sur un fond qui change** ne s'affiche que là où son
@@ -287,11 +290,17 @@ texte** : un champ libre laisserait passer une promotion ou un délai inventés.
   sur leur `<main>`. Jamais l'en-tête, le pied, le tunnel, le compte ni
   l'administration.
 - **Ce qui ne change jamais** : le `h1`, les métadonnées, le texte courant, les
-  boutons, le focus, les prix, les photographies des bijoux.
+  boutons, le focus, les prix, les photographies des bijoux. **Exception
+  bornée, `NOEL_2`** (amendement LS-277 d'ADR-045 et d'ADR-046) : bandeau de
+  tête en rouge avec titre, texte et boutons en blanc, filtre actif rouge,
+  cadre rouge des cartes et bouton d'achat blanc à texte rouge. Le texte du
+  `h1`, le contenu des cartes et la couleur des prix ne changent toujours pas.
+  **Tout petit texte sur le rouge est blanc pur**, mesuré à 5,24:1 au pire.
 - **Chaque jeton de thème est une paire mesurée** sur crème, sable et blanc,
   C31 ; `verifier-contraste.sh` mesure sous chaque thème.
-- **Les décors suivent ADR-045** : bornés à cinq secondes, absents en
-  mouvement réduit, jamais par-dessus un texte, un contrôle ou un bijou.
+- **Les décors suivent ADR-045** : bornés à cinq secondes, sauf les décors
+  continus des thèmes de Noël sous bouton de pause, absents en mouvement
+  réduit, jamais par-dessus un texte, un contrôle ou un bijou.
 - **Aucune phrase ne parle de livraison, de date ou de prix.**
 
 ## Mobile first

@@ -26,6 +26,51 @@ change.
 Relevé par `ls-frontend-revue` avant la fusion de LS-260, sur le code qui
 appliquait la version fautive.
 
+## Amendement du 6 octobre 2026, mouvement continu des thèmes de Noël, LS-277
+
+**Arbitrage de Christophe sur maquette**, `docs/prototypes/themes-noel/`,
+validée le 6 octobre 2026 : sous les deux thèmes de Noël d'ADR-046, certains
+décors bougent **en continu**. Le point 4 change pour eux seulement, et
+WCAG 2.2.2 est alors tenu par un **moyen de mise en pause** au lieu de
+l'arrêt.
+
+- **Décors permis en mouvement continu**, et eux seuls : la neige de la zone de
+  l'emblème et du bandeau des créations, la rotation lente des rayons du
+  soleil (un tour en 60 s), le bercement des boules suspendues (2,5 degrés,
+  cycle de 6 s), la neige des marges de la grille des créations sur grand
+  écran. Tout autre mouvement reste borné à cinq secondes, sous les thèmes
+  comme hors thème.
+- **Un bouton de pause visible** sur chaque page qui porte un décor continu,
+  `<button>` avec `aria-pressed` et un nom accessible qui dit l'action,
+  « Mettre en pause les animations » puis « Relancer les animations ». Il est
+  **flottant** quand des décors continus existent hors de l'écran initial, pour
+  rester atteignable là où quelque chose bouge. Discret, 32 px de diamètre,
+  mais une cible de 44 px. Le choix vaut pour toute la visite.
+- **La pause fige tout** ce qui bouge sur la page, décors bornés compris, sans
+  le retirer. Une animation hors de l'écran ou dans un onglet caché ne consomme
+  rien, comme avant.
+- **En mouvement réduit, aucun décor ne bouge** et le bouton n'apparaît pas :
+  il n'y a rien à mettre en pause. Le point 3 tient sans changement.
+- **Jamais de mouvement sur un texte, une photographie de bijou ou un
+  contrôle**, continu ou non : neige et boules vivent dans des zones de décor
+  qui ne chevauchent ni le titre, ni les cartes, ni un bouton.
+- **Le point 5 tient** : la maquette fait apparaître les cartes du catalogue
+  en fondu, ce qui n'est **pas porté**. Les cartes sont visibles au premier
+  rendu ; seul leur décor de thème (liseré, ruban, nœud, flocons des coins)
+  s'anime à l'entrée, au survol et au clic.
+- Les propriétés animables restent `transform`, `opacity` et
+  `stroke-dashoffset`. Aucun canvas.
+
+**Pourquoi pas partout.** Hors des thèmes de Noël, l'arbitrage du 4 octobre,
+pas de bouton de pause, reste en vigueur : le site ordinaire n'a aucun décor
+qui gagne à tourner sans fin. Le mouvement continu est un trait saisonnier,
+actif quelques semaines par an.
+
+**Écarté : un mouvement continu sans pause, en comptant sur
+`prefers-reduced-motion`.** Ce réglage n'est connu que d'une partie des
+personnes gênées par le mouvement, l'alternative déjà écartée plus bas pour la
+même raison.
+
 ## Amendement du 4 octobre 2026, portes d'entrée et contact, LS-268
 
 **Arbitrage de Christophe sur maquette**, critiquée par Codex. Le point 7
@@ -124,6 +169,9 @@ deviennent un flux statique lisible, les tracés sont dessinés d'emblée. Un
 changement de préférence pendant la visite est pris en compte.
 
 ### 4. Aucune boucle sans fin, sans bouton de pause
+
+**Exception sous les thèmes de Noël**, amendement de LS-277 en tête de cet
+ADR : des décors listés y bougent en continu, avec un bouton de pause.
 
 Arbitrage de Christophe le 4 octobre 2026 : **pas de bouton de pause visible**.
 WCAG 2.2.2 est donc tenu par l'arrêt : toute animation automatique qui dure
