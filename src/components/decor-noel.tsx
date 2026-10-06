@@ -183,7 +183,11 @@ export function MargesNeigeuses() {
 }
 
 /** Bande sucre d'orge, qui glisse deux fois puis s'arrête. */
-export function BandeSucreOrge({ className }: { className?: string | undefined }) {
+export function BandeSucreOrge({
+  className,
+}: {
+  className?: string | undefined;
+}) {
   return (
     <div
       className={`${styles.sucreOrge} ${className ?? ""}`}

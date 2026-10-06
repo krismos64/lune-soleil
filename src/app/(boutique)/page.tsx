@@ -217,7 +217,12 @@ export default async function PageAccueil({
                 className={styles.paquetImage}
               />
               <svg className={styles.paquetRuban} viewBox="0 0 100 100">
-                <circle className={styles.paquetPoints} cx="50" cy="50" r="49" />
+                <circle
+                  className={styles.paquetPoints}
+                  cx="50"
+                  cy="50"
+                  r="49"
+                />
                 <circle
                   className={styles.paquetTour}
                   cx="50"

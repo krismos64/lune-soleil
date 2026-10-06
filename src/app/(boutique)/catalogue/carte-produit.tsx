@@ -175,7 +175,10 @@ function DecorCarteNoel() {
         <rect x="0.5" y="0.5" width="99%" height="99%" rx="6" pathLength={1} />
       </svg>
       {COINS.map((coin) => (
-        <FloconIcone key={coin} className={`${styles.floconCoin} ${styles[coin]}`} />
+        <FloconIcone
+          key={coin}
+          className={`${styles.floconCoin} ${styles[coin]}`}
+        />
       ))}
     </span>
   );

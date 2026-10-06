@@ -543,7 +543,8 @@
   gap: var(--ls-space-2);
   margin: 0 0 var(--ls-space-3);
   padding: var(--ls-space-1) var(--ls-space-3);
-  border: 1px solid color-mix(in srgb, var(--ls-noel-rouge) 30%, var(--ls-surface));
+  border: 1px solid
+    color-mix(in srgb, var(--ls-noel-rouge) 30%, var(--ls-surface));
   border-radius: 999px;
   background: var(--ls-surface);
   color: var(--ls-noel-rouge);
@@ -924,7 +925,6 @@
   }
 }
 
-
 @keyframes trace {
   to {
     stroke-dashoffset: 0;
@@ -973,5 +973,3 @@
     transform: translateY(1px);
   }
 }
-
-
