@@ -270,8 +270,24 @@ let jetonsDeTheme = 0;
 let blocsDeTheme = 0;
 for (const bloc of texteJetons.matchAll(/\[data-theme="([a-z0-9_]+)"\]\s*\{([^}]*)\}/g)) {
   blocsDeTheme += 1;
+  /*
+   * LES VALEURS SE RÉSOLVENT DANS LE BLOC, et non dans la table commune. Deux
+   * thèmes définissent les mêmes noms, `--ls-noel-vert` par exemple : dans la
+   * table commune, le dernier bloc écrase le premier, et un jeton cassé dans
+   * `noel_1` était mesuré avec la valeur saine de `noel_2`. Prouvé par la
+   * mutation du cas 7, restée verte avant ce correctif.
+   */
+  const local = new Map();
+  for (const m of bloc[2].matchAll(/(--ls-[a-z0-9-]+):\s*(#[0-9a-fA-F]{3,8})\s*;/g)) {
+    local.set(m[1], m[2]);
+  }
+  for (const m of bloc[2].matchAll(/(--ls-[a-z0-9-]+):\s*var\((--ls-[a-z0-9-]+)\)\s*;/g)) {
+    const cible = local.get(m[2]) ?? jetons.get(m[2]);
+    if (cible) local.set(m[1], cible);
+  }
+  const valeur = (nom) => local.get(nom) ?? jetons.get(nom);
   const noms = [...bloc[2].matchAll(/(--ls-[a-z0-9-]+):/g)].map((m) => m[1]);
-  const fondsDuBloc = noms.filter((n) => /-fond-/.test(n) && jetons.get(n));
+  const fondsDuBloc = noms.filter((n) => /-fond-/.test(n) && valeur(n));
   const echec = (nom, fond, mesure, seuil) =>
     echecs.push({
       fichier: `styles/tokens.css, thème ${bloc[1]}`,
@@ -282,7 +298,7 @@ for (const bloc of texteJetons.matchAll(/\[data-theme="([a-z0-9_]+)"\]\s*\{([^}]
       seuil,
     });
   for (const nom of noms) {
-    const couleur = jetons.get(nom);
+    const couleur = valeur(nom);
     if (!couleur || /-fond-/.test(nom)) continue;
     jetonsDeTheme += 1;
     if (/-sur-rouge$/.test(nom)) {
@@ -292,13 +308,13 @@ for (const bloc of texteJetons.matchAll(/\[data-theme="([a-z0-9_]+)"\]\s*\{([^}]
       }
       const seuil = /-titre-sur-rouge$/.test(nom) ? 3.0 : 4.5;
       for (const fond of fondsDuBloc) {
-        const mesure = rapport(couleur, jetons.get(fond));
+        const mesure = rapport(couleur, valeur(fond));
         if (mesure < seuil) echec(nom, fond, mesure, seuil);
       }
       continue;
     }
     for (const fond of FONDS) {
-      const mesure = rapport(couleur, jetons.get(fond));
+      const mesure = rapport(couleur, valeur(fond));
       if (mesure < 4.5) echec(nom, fond, mesure, 4.5);
     }
   }
