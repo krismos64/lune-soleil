@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="fr" data-theme="noel">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lune-soleil, maquette des créations en Noël</title>
+<style>
+/* Maquette hors projet, 6 octobre 2026. Page des créations dans les deux thèmes de Noël :
+   « noel » (Noël 1, sobre, dans le cadre d'ADR-046) et « noel-franc » (Noël 2, amendement d'ADR-046).
+   Données : les douze premières pièces réellement en ligne. Règle tenue dans les deux thèmes :
+   aucun décor n'est posé sur une photographie de bijou, et le contenu des cartes ne change pas. */
+:root {
+  --fond: #fffdfa; --surface: #fff; --sable: #f2eadf; --bordure: #e5d8c6; --bordure-controle: #8c7a66;
+  --texte: #3b2f2a; --texte-doux: #6f5f52; --primaire: #5f4519; --primaire-survol: #4a2a0b;
+  --terracotta: #9a4a26; --or: #c4a052;
+  --rouge-houx: #9b1b1e; --rouge-nuit: #5e0d12; --rouge-clair: #b0242a;
+  --police-titre: "Iowan Old Style", "Palatino Linotype", Palatino, Baskerville, Georgia, serif;
+  --ease-sortie: cubic-bezier(0.16, 1, 0.3, 1);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fond); color: var(--texte); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.6; overflow-x: hidden; }
+h1, h2 { font-family: var(--police-titre); font-weight: 400; line-height: 1.15; margin: 0; }
+a { color: inherit; }
+
+/* En-tête du site, inchangé par le thème */
+.entete { position: relative; z-index: 5; display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: #fff; border-bottom: 1px solid var(--bordure); }
+.marque { font-family: var(--police-titre); font-size: 22px; text-decoration: none; color: var(--primaire); }
+.nav { display: none; gap: 24px; font-size: 15px; }
+.nav a { text-decoration: none; }
+.nav a[aria-current] { color: var(--rouge-houx); }
+.panier { min-width: 44px; min-height: 44px; display: grid; place-items: center; color: var(--primaire); }
+@media (min-width: 768px) { .nav { display: flex; } .entete { padding: 16px 32px; } }
+
+/* ---------- Bandeau de tête de la page ---------- */
+.bandeau { position: relative; overflow: hidden; padding: 28px 16px 40px; background: radial-gradient(120% 90% at 80% 20%, #fff 0%, #fbf5f1 55%, #f3e6e0 100%); }
+.bandeau-grille { position: relative; max-width: 72rem; margin: 0 auto; display: grid; gap: 8px; }
+.decor { position: relative; height: 150px; pointer-events: none; }
+.texte-tete { position: relative; z-index: 2; }
+@media (min-width: 900px) {
+  .bandeau { padding: 40px 32px 56px; }
+  .bandeau-grille { grid-template-columns: 1fr 380px; align-items: end; }
+  .decor { order: 2; height: 230px; }
+}
+.guirlande { display: block; width: 100%; max-width: 560px; height: 54px; margin: 0 0 6px -6px; overflow: visible; }
+.guirlande .fil { fill: none; stroke: var(--rouge-houx); stroke-width: 1.4; }
+.guirlande .attache { stroke: var(--rouge-houx); stroke-width: 1; }
+.guirlande .rouge { fill: var(--rouge-houx); }
+.guirlande .blanche { fill: #fff; stroke: var(--rouge-houx); stroke-width: 1.4; }
+.ruban { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 12px; padding: 5px 14px; border-radius: 999px; background: #fff; border: 1px solid #e3b9b2; color: var(--rouge-houx); font-size: 14px; }
+.ruban svg { width: 16px; height: 16px; }
+.titre { font-size: clamp(34px, 8vw, 54px); color: var(--primaire); letter-spacing: .01em; }
+.titre .mot { display: inline-block; overflow: hidden; vertical-align: bottom; padding-bottom: .08em; }
+.titre .mot > span { display: inline-block; }
+.accroche { margin: 10px 0 0; max-width: 46ch; color: var(--texte-doux); }
+
+/* Boules suspendues et neige : zone décor seulement, jamais sur le titre ni un contrôle. */
+.boule { position: absolute; top: 0; left: var(--x); }
+.boule-balance { transform-origin: top center; }
+.boule-fil { width: 1px; height: var(--h); margin: 0 auto; background: rgba(155, 27, 30, .55); }
+.boule-corps { position: relative; width: var(--t); height: var(--t); margin-left: calc(var(--t) / -2 + .5px); border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #fff 0 7%, #e6574f 20%, var(--rouge-houx) 58%, var(--rouge-nuit) 100%); box-shadow: 0 8px 16px -8px rgba(94, 13, 18, .7); }
+.boule-corps::before { content: ""; position: absolute; left: 50%; top: -5px; width: 10px; height: 7px; margin-left: -5px; border-radius: 2px 2px 1px 1px; background: linear-gradient(90deg, #a46c17, #f0cf7a, #a46c17); }
+.boule.blanche .boule-corps { background: radial-gradient(circle at 34% 30%, #fff 0 10%, transparent 30%),
+  linear-gradient(transparent 42%, var(--rouge-houx) 42% 50%, transparent 50% 58%, var(--rouge-houx) 58% 64%, transparent 64%),
+  radial-gradient(circle at 40% 35%, #fff, #f1ece6 55%, #d6cec4 100%); }
+.etoile-decor { position: absolute; color: var(--or); }
+.neige { position: absolute; inset: 0; overflow: hidden; }
+.neige i { position: absolute; top: -10px; width: 6px; height: 6px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1px rgba(150, 118, 92, .45); }
+.neige i:nth-child(3n) { width: 4px; height: 4px; }
+
+/* Bandes : sucre d'orge et papier cadeau généré */
+.sucre-orge { height: 12px; background: repeating-linear-gradient(-45deg, var(--rouge-houx) 0 10px, #fff 10px 20px); }
+.bandeau .sucre-orge { position: absolute; left: 0; right: 0; bottom: 0; }
+.papier-bande { height: 44px; background: url("papier-cadeau.jpg") center / 220px; box-shadow: inset 0 -1px 0 rgba(94, 13, 18, .3); }
+
+/* Bouton de pause, discret */
+.pause { position: absolute; right: 16px; bottom: 24px; z-index: 3; width: 32px; height: 32px; padding: 0; border-radius: 50%; cursor: pointer;
+  border: 1px solid rgba(155, 27, 30, .35); background: rgba(255, 255, 255, .7); color: var(--rouge-houx); opacity: .75; transition: opacity .3s; display: none; }
+.anime .pause { display: block; }
+.pause::before { content: ""; position: absolute; inset: -6px; border-radius: 50%; }
+.pause:hover, .pause:focus-visible { opacity: 1; }
+.pause:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.pause svg { width: 12px; height: 12px; display: block; margin: auto; }
+.pause .lecture, .pause[aria-pressed="true"] .barres { display: none; }
+.pause[aria-pressed="true"] .lecture { display: block; }
+@media (min-width: 900px) { .pause { right: 32px; } }
+
+/* ---------- Contenu : filtres, compte, grille, pagination ---------- */
+.contenu { max-width: 72rem; margin: 0 auto; padding: 28px 16px 72px; }
+.filtres ul { display: flex; gap: 8px; margin: 0 0 16px; padding: 0 0 8px; list-style: none; overflow-x: auto; scroll-snap-type: x proximity; }
+.filtre { display: block; padding: 12px 16px; border: 1px solid var(--bordure-controle); border-radius: 6px; background: var(--surface); color: var(--texte); text-decoration: none; white-space: nowrap; scroll-snap-align: start; transition: border-color .2s, transform .3s var(--ease-sortie); }
+.filtre:hover { border-color: var(--primaire); transform: translateY(-1px); }
+.filtre[aria-current="page"] { background: var(--primaire); border-color: var(--primaire); color: #fff; }
+.filtre:focus-visible { outline: 2px solid var(--primaire-survol); outline-offset: 3px; }
+.compte { margin: 0 0 16px; color: var(--texte-doux); font-size: 15px; }
+.grille { display: grid; grid-template-columns: 1fr; gap: 16px; margin: 0; padding: 0; list-style: none; }
+@media (min-width: 600px) { .grille { grid-template-columns: repeat(2, 1fr); gap: 20px; } }
+@media (min-width: 1024px) { .grille { grid-template-columns: repeat(3, 1fr); gap: 24px; } }
+.carte { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--bordure); border-radius: 8px; overflow: hidden; transition: box-shadow .35s, transform .35s var(--ease-sortie); }
+.carte:hover { box-shadow: 0 18px 40px -26px rgba(74, 42, 11, .45); transform: translateY(-3px); }
+.lien { display: block; text-decoration: none; flex: 1; }
+.lien:focus-visible { outline: 2px solid var(--primaire-survol); outline-offset: -2px; }
+.cadre-image { aspect-ratio: 1; background: #fff; }
+.cadre-image img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.corps { padding: 16px 16px 8px; }
+.corps h2 { font-size: 18px; color: var(--texte); font-weight: 600; }
+.categorie { margin: 4px 0 0; font-size: 14px; color: var(--texte-doux); }
+.prix { margin: 14px 0 0; font-weight: 600; font-size: 18px; color: var(--primaire); }
+.dispo { display: inline-block; margin: 10px 0 0; padding: 3px 12px; border-radius: 3px; background: var(--terracotta); color: #fff; font-size: 13px; font-weight: 600; }
+.ajout { margin: 12px 16px 16px; min-height: 44px; border: 0; border-radius: 4px; background: var(--primaire); color: #fff; font: inherit; font-weight: 600; cursor: pointer; transition: background .25s, transform .2s; }
+.ajout:hover { background: var(--primaire-survol); }
+.ajout:active { transform: scale(.98); }
+.ajout:focus-visible { outline: 2px solid var(--primaire-survol); outline-offset: 3px; }
+.pagination { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 40px; }
+.pagination a { min-height: 44px; display: inline-flex; align-items: center; padding: 0 18px; border: 1px solid var(--bordure-controle); border-radius: 6px; text-decoration: none; }
+.pied { background: #140f1c; color: #e9dcc2; padding: 40px 16px 72px; text-align: center; font-size: 14px; }
+.pied .marque { color: #f0cf7a; }
+
+/* ---------- Mouvement (ADR-045, avec le mouvement continu proposé) ---------- */
+.anime .titre .mot > span { transform: translateY(110%); animation: monte .9s var(--ease-sortie) forwards; animation-delay: calc(.2s + var(--i) * .08s); }
+@keyframes monte { to { transform: none; } }
+.anime .accroche, .anime .ruban { opacity: 0; animation: apparait .8s ease .7s forwards; }
+@keyframes apparait { to { opacity: 1; } }
+.anime .guirlande .fil { stroke-dasharray: 1; stroke-dashoffset: 1; animation: dessine 1.6s var(--ease-sortie) forwards; }
+@keyframes dessine { to { stroke-dashoffset: 0; } }
+.anime .guirlande .boule-g { animation: brille .7s var(--ease-sortie) both; transform-box: fill-box; transform-origin: top center; animation-delay: calc(.7s + var(--i) * .1s); }
+@keyframes brille { from { opacity: 0; transform: scale(.3) translateY(-6px); } to { opacity: 1; transform: none; } }
+.anime .boule { animation: descend 1.1s var(--ease-sortie) both; animation-delay: calc(.3s + var(--i) * .12s); }
+.anime .boule-balance { animation: balance 3.2s cubic-bezier(.36, 0, .3, 1) both, berce 6s ease-in-out infinite; animation-delay: calc(1s + var(--i) * .12s), calc(4.2s + var(--i) * .12s); }
+@keyframes descend { from { transform: translateY(-140%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes balance { 0% { transform: rotate(var(--a)); } 22% { transform: rotate(calc(var(--a) * -.7)); } 44% { transform: rotate(calc(var(--a) * .45)); } 66% { transform: rotate(calc(var(--a) * -.22)); } 85% { transform: rotate(calc(var(--a) * .08)); } 100% { transform: rotate(0); } }
+@keyframes berce { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(2.5deg); } 75% { transform: rotate(-2.5deg); } }
+.anime .neige i { animation: tombe var(--t) linear var(--d) infinite; }
+@keyframes tombe { 0% { opacity: 0; transform: translate(0, 0); } 12% { opacity: .95; } 85% { opacity: .9; } 100% { opacity: 0; transform: translate(var(--x), 240px); } }
+.anime .etoile-decor { animation: scintille 3s ease-in-out infinite; animation-delay: var(--d); }
+@keyframes scintille { 0%, 100% { opacity: .3; transform: scale(.7); } 50% { opacity: 1; transform: scale(1.1); } }
+.anime .sucre-orge { animation: sucre 2s linear 2; }
+@keyframes sucre { to { background-position: 56.57px 0; } }
+.anime .papier-bande { animation: papier 4s ease-out both; }
+@keyframes papier { from { background-position: -220px center; } to { background-position: 0 center; } }
+.anime .carte { opacity: 0; transform: translateY(24px); }
+.anime .carte.vu { opacity: 1; transform: none; transition: opacity .7s ease, transform .8s var(--ease-sortie), box-shadow .35s; transition-delay: calc(var(--rang, 0) * 80ms); }
+.anime .carte.vu:hover { transform: translateY(-3px); transition-delay: 0s; }
+.pause-animations *, .pause-animations *::before, .pause-animations *::after { animation-play-state: paused !important; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .neige { display: none; }
+}
+
+/* ---------- Noël 2, « franc » : bandeau rouge, texte blanc, bouton d'achat rouge ---------- */
+[data-theme="noel-franc"] .bandeau { background: radial-gradient(90% 80% at 80% 20%, rgba(255, 255, 255, .14), transparent 60%), radial-gradient(120% 100% at 75% 25%, var(--rouge-clair) 0%, var(--rouge-houx) 50%, var(--rouge-nuit) 100%); }
+[data-theme="noel-franc"] .bandeau::before { content: ""; position: absolute; inset: 0; background: url("papier-cadeau.jpg") center / 200px; opacity: .07; }
+[data-theme="noel-franc"] .titre { color: #fff; }
+[data-theme="noel-franc"] .accroche { color: rgba(255, 255, 255, .92); }
+[data-theme="noel-franc"] .ruban { border-color: #fff; }
+[data-theme="noel-franc"] .guirlande .fil, [data-theme="noel-franc"] .guirlande .attache { stroke: #fff; }
+[data-theme="noel-franc"] .guirlande .rouge { fill: #fff; }
+[data-theme="noel-franc"] .guirlande .blanche { fill: var(--rouge-houx); stroke: #fff; }
+[data-theme="noel-franc"] .boule-fil { background: rgba(255, 255, 255, .7); }
+[data-theme="noel-franc"] .neige i { box-shadow: none; }
+[data-theme="noel-franc"] .pause { border-color: rgba(255, 255, 255, .5); background: rgba(255, 255, 255, .12); color: #fff; }
+[data-theme="noel-franc"] .filtre[aria-current="page"] { background: var(--rouge-houx); border-color: var(--rouge-houx); }
+[data-theme="noel-franc"] .filtre:hover { border-color: var(--rouge-houx); }
+[data-theme="noel-franc"] .ajout { background: var(--rouge-houx); }
+[data-theme="noel-franc"] .ajout:hover { background: var(--rouge-nuit); }
+[data-theme="noel-franc"] .nav a[aria-current] { color: var(--rouge-houx); }
+[data-theme="noel-franc"] .pied { background: #3d080c; }
+
+/* =================== CARTES, BOUTONS ET PAGE DÉCORÉS (v2) ===================
+   Règle tenue : rien sur une photographie de bijou ni sur un contrôle. Le décor vit dans le
+   cadre de la carte (la marge de 10 px autour de la photo), sous la photo, et dans les boutons.
+   Le mouvement des cartes est déclenché (entrée, survol, clic) ; seule la neige des marges est
+   continue, et le bouton de pause, flottant, la fige. */
+
+/* Cadre cadeau : la carte gagne une marge, un liseré rouge qui se trace, un ruban et un nœud. */
+.carte { position: relative; padding: 10px; overflow: visible; }
+.carte .cadre-image { border-radius: 4px; overflow: hidden; }
+.liseré { position: absolute; inset: 4px; width: calc(100% - 8px); height: calc(100% - 8px); pointer-events: none; overflow: visible; }
+.liseré rect { fill: none; stroke: var(--rouge-houx); stroke-width: 1; opacity: .55; }
+.flocon-coin { position: absolute; width: 10px; height: 10px; color: var(--rouge-houx); pointer-events: none; transition: transform .6s var(--ease-sortie); }
+.flocon-coin svg { width: 100%; height: 100%; display: block; }
+.flocon-coin.hg { left: 0; top: 0; } .flocon-coin.hd { right: 0; top: 0; }
+.flocon-coin.bg { left: 0; bottom: 0; } .flocon-coin.bd { right: 0; bottom: 0; }
+.corps { position: relative; padding-top: 28px; flex: 1; }
+.lien { display: flex; flex-direction: column; }
+.ruban-carte { position: absolute; left: -10px; right: -10px; top: 8px; height: 4px; background: var(--rouge-houx); transform-origin: center; }
+.noeud { position: absolute; left: 50%; top: 0; width: 34px; height: 22px; margin-left: -17px; color: var(--rouge-houx); transform-origin: 50% 70%; }
+.noeud svg { width: 100%; height: 100%; display: block; overflow: visible; }
+
+/* Entrée : le liseré se trace, le ruban se déroule depuis le centre, le nœud se noue. */
+.anime .carte .liseré rect { stroke-dasharray: 1; stroke-dashoffset: 1; }
+.anime .carte.vu .liseré rect { animation: dessine 1.4s var(--ease-sortie) forwards; animation-delay: calc(var(--rang, 0) * 80ms + .1s); }
+.anime .carte .ruban-carte { transform: scaleX(0); }
+.anime .carte.vu .ruban-carte { animation: deroule .8s var(--ease-sortie) forwards; animation-delay: calc(var(--rang, 0) * 80ms + .5s); }
+@keyframes deroule { to { transform: scaleX(1); } }
+.anime .carte .noeud { transform: scale(0) rotate(-30deg); }
+.anime .carte.vu .noeud { animation: noue .7s cubic-bezier(.34, 1.56, .64, 1) forwards; animation-delay: calc(var(--rang, 0) * 80ms + .9s); }
+@keyframes noue { to { transform: none; } }
+.anime .carte .flocon-coin { transform: scale(0); }
+.anime .carte.vu .flocon-coin { animation: pousse-coin .5s var(--ease-sortie) forwards; animation-delay: calc(var(--rang, 0) * 80ms + 1.1s); }
+@keyframes pousse-coin { to { transform: none; } }
+
+/* Survol : la carte se soulève, le nœud frétille, les flocons des coins tournent. */
+.carte:hover { box-shadow: 0 22px 44px -26px rgba(155, 27, 30, .45); }
+.anime .carte.vu:hover .noeud { animation: fretille .7s ease-in-out; }
+@keyframes fretille { 0%, 100% { transform: none; } 25% { transform: rotate(-12deg) scale(1.08); } 60% { transform: rotate(9deg) scale(1.05); } }
+.anime .carte.vu:hover .flocon-coin { transform: rotate(120deg) scale(1.25); }
+
+/* Bouton d'achat : petit paquet qui saute au survol, gerbe de flocons au clic. */
+.ajout { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 10px; margin: 10px 6px 6px; overflow: visible; }
+.ajout .icone { width: 18px; height: 18px; flex: none; }
+.anime .ajout:hover .icone { animation: saute .6s cubic-bezier(.34, 1.56, .64, 1); }
+@keyframes saute { 40% { transform: translateY(-5px) rotate(-8deg); } 70% { transform: translateY(1px); } }
+.gerbe { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; }
+.gerbe i { position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; color: var(--rouge-houx); }
+.gerbe i svg { width: 100%; height: 100%; display: block; }
+.gerbe i { animation: eclate .8s var(--ease-sortie) forwards; }
+@keyframes eclate { from { opacity: 1; transform: translate(0, 0) scale(.4); } to { opacity: 0; transform: translate(var(--gx), var(--gy)) scale(1) rotate(160deg); } }
+.ajout.fait .texte-ajout::after { content: " ✓"; }
+
+/* Filtres : flocon qui tourne au survol, ruban rayé sous le filtre actif. */
+.filtre { position: relative; display: inline-flex; align-items: center; gap: 8px; }
+.filtre .flocon-filtre { width: 12px; height: 12px; color: var(--rouge-houx); transition: transform .6s var(--ease-sortie); }
+.filtre:hover .flocon-filtre { transform: rotate(180deg); }
+.filtre[aria-current="page"] .flocon-filtre { color: #fff; }
+.filtre[aria-current="page"]::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: -7px; height: 4px; border-radius: 2px;
+  background: repeating-linear-gradient(-45deg, var(--rouge-houx) 0 5px, #fff 5px 10px); box-shadow: 0 0 0 1px rgba(155, 27, 30, .25); }
+.anime .filtre[aria-current="page"]::after { transform-origin: left; animation: deroule .9s var(--ease-sortie) .6s both; transform: scaleX(0); }
+
+/* Compte précédé d'une petite boule ; pagination en étiquette cadeau qui se balance. */
+.compte::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 8px; border-radius: 50%; vertical-align: -1px;
+  background: radial-gradient(circle at 35% 30%, #fff 0 12%, #e6574f 30%, var(--rouge-houx) 70%); }
+.pagination a { position: relative; padding-left: 30px; border-radius: 6px 22px 22px 6px; transform-origin: 8px 50%; }
+.pagination a::before { content: ""; position: absolute; left: 12px; top: 50%; width: 7px; height: 7px; margin-top: -3.5px; border-radius: 50%; border: 1.5px solid var(--rouge-houx); }
+.anime .pagination a:hover { animation: etiquette .9s ease-in-out; }
+@keyframes etiquette { 30% { transform: rotate(-4deg); } 65% { transform: rotate(2deg); } }
+
+/* Neige des marges, grand écran seulement, jamais sur la grille. */
+.contenu { position: relative; }
+.marge-neige { display: none; position: absolute; top: 0; bottom: 0; width: calc((100vw - 72rem) / 2 - 8px); overflow: hidden; pointer-events: none; }
+.marge-neige.gauche { right: 100%; } .marge-neige.droite { left: 100%; }
+@media (min-width: 1240px) { .marge-neige { display: block; } }
+.marge-neige i { position: absolute; top: -10px; width: 5px; height: 5px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1px rgba(155, 27, 30, .25); }
+.anime .marge-neige i { animation: tombe-long var(--t) linear var(--d) infinite; }
+@keyframes tombe-long { 0% { opacity: 0; transform: translate(0, 0); } 8% { opacity: .9; } 92% { opacity: .9; } 100% { opacity: 0; transform: translate(var(--x), 1400px); } }
+
+/* Le bouton de pause devient flottant : atteignable partout où quelque chose bouge. */
+.pause { position: fixed; right: 16px; bottom: 60px; z-index: 40; box-shadow: 0 4px 14px -6px rgba(94, 13, 18, .5); }
+@media (min-width: 900px) { .pause { right: 24px; } }
+
+/* Noël 2, franc : cadre rouge piqué de blanc, bouton rayé au survol. */
+[data-theme="noel-franc"] .carte { background: var(--rouge-houx); border-color: var(--rouge-nuit); }
+[data-theme="noel-franc"] .liseré rect { stroke: #fff; opacity: .8; stroke-dasharray: 4 4; }
+.anime[data-theme="noel-franc"] .carte .liseré rect { stroke-dasharray: 1; }
+.anime[data-theme="noel-franc"] .carte.dessine-fini .liseré rect { stroke-dasharray: 4 4; stroke-dashoffset: 0; animation: none; }
+[data-theme="noel-franc"] .flocon-coin { color: #fff; }
+[data-theme="noel-franc"] .corps { background: #fff; margin: 0; border-radius: 0 0 4px 4px; padding-left: 14px; padding-right: 14px; padding-bottom: 14px; }
+[data-theme="noel-franc"] .ruban-carte { background: repeating-linear-gradient(90deg, var(--rouge-houx) 0 10px, #fff 10px 14px); left: 0; right: 0; }
+[data-theme="noel-franc"] .ajout { overflow: hidden; background: #fff; color: var(--rouge-houx); }
+[data-theme="noel-franc"] .ajout:hover { background: #fff; }
+[data-theme="noel-franc"] .ajout:focus-visible { outline-color: #fff; }
+[data-theme="noel-franc"] .ajout::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(-45deg, rgba(155, 27, 30, .12) 0 8px, transparent 8px 16px); transform: translateX(-100%); transition: transform .7s var(--ease-sortie); }
+[data-theme="noel-franc"] .ajout:hover::after { transform: translateX(0); }
+.gerbe i:nth-child(even) { color: #c4a052; }
+[data-theme="noel-franc"] .filtre .flocon-filtre { color: var(--rouge-houx); }
+[data-theme="noel-franc"] .filtre[aria-current="page"] .flocon-filtre { color: #fff; }
+[data-theme="noel-franc"] .marge-neige i { box-shadow: 0 0 0 1px rgba(155, 27, 30, .35); }
+[data-theme="noel-franc"] .contenu { background: none; }
+[data-theme="noel-franc"] main { background: linear-gradient(180deg, #fff 0, #fbf1ef 100%); }
+[data-theme="noel-franc"] .pause { background: var(--rouge-houx); border-color: #fff; color: #fff; opacity: .85; }
+[data-theme="noel"] .pause { background: #fff; }
+
+/* Barre de maquette */
+.maquette { position: fixed; inset: auto 0 0 0; z-index: 50; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; padding: 6px 16px; background: #140f1c; color: #f3e6cc; font-size: 12px; letter-spacing: .04em; }
+.maquette button, .maquette a { min-height: 32px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(243, 230, 204, .35); background: transparent; color: inherit; font: inherit; cursor: pointer; text-decoration: none; }
+.maquette button[aria-pressed="true"] { background: #f3e6cc; color: #140f1c; }
+</style>
+</head>
+<body>
+<div class="maquette" role="toolbar" aria-label="Maquette">Maquette des créations, hors projet. Thème : <button type="button" data-theme-choix="noel" aria-pressed="true">Noël 1, sobre</button><button type="button" data-theme-choix="noel-franc" aria-pressed="false">Noël 2, franc</button><button type="button" id="rejouer">Rejouer</button><a href="index.html">Voir l'accueil</a></div>
+
+<header class="entete">
+  <a class="marque" href="https://lune-soleil.fr/">Lune-soleil</a>
+  <nav class="nav" aria-label="Navigation principale"><a href="#" aria-current="page">Les créations</a><a href="https://lune-soleil.fr/atelier">L'atelier</a><a href="https://lune-soleil.fr/aide">Livraison et aide</a><a href="https://lune-soleil.fr/compte/connexion">Se connecter</a></nav>
+  <a class="panier" href="https://lune-soleil.fr/panier" aria-label="Votre panier, vide"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 8h12l-1 12H7L6 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></a>
+</header>
+
+<main id="contenu">
+  <section class="bandeau" aria-labelledby="titre-page">
+    <div class="bandeau-grille">
+      <div class="decor" aria-hidden="true">
+        <div class="neige"></div>
+        <div class="boules"></div>
+        <span class="etoile-decor" style="left:8%;top:62%;--d:.4s">✦</span>
+        <span class="etoile-decor" style="left:88%;top:70%;--d:1.4s">✦</span>
+        <span class="etoile-decor" style="left:46%;top:84%;--d:2.2s">✦</span>
+      </div>
+      <div class="texte-tete">
+        <svg class="guirlande" viewBox="0 0 560 54" aria-hidden="true"><path class="fil" pathLength="1" d="M8 8 Q140 50 280 20 T552 8"/><g class="perles"></g></svg>
+        <p class="ruban"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2v16M3 6l14 8M17 6 3 14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>Fêtes de fin d'année</p>
+        <h1 class="titre" id="titre-page" aria-label="Le catalogue"><span aria-hidden="true"><span class="mot"><span style="--i:0">Le</span></span> <span class="mot"><span style="--i:1">catalogue</span></span></span></h1>
+        <p class="accroche">Chaque bijou est fait main et créé à l'unité. Chacun peut devenir un cadeau.</p>
+      </div>
+    </div>
+    <button class="pause" type="button" aria-pressed="false" aria-label="Mettre en pause les animations" title="Mettre en pause les animations"><svg class="barres" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 2v8M9 2v8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><svg class="lecture" viewBox="0 0 12 12" aria-hidden="true"><path d="M3.5 2 10 6l-6.5 4z" fill="currentColor"/></svg></button>
+    <div class="sucre-orge" aria-hidden="true"></div>
+  </section>
+  <div class="papier-bande" aria-hidden="true"></div>
+
+  <div class="contenu">
+    <nav class="filtres" aria-label="Filtrer par catégorie">
+      <ul>
+        <li><a class="filtre" href="#" aria-current="page">Tout voir</a></li>
+        <li><a class="filtre" href="#">Boucles d'oreilles</a></li>
+        <li><a class="filtre" href="#">Bagues</a></li>
+        <li><a class="filtre" href="#">Boucles d'oreilles collection Noël</a></li>
+      </ul>
+    </nav>
+    <p class="compte" role="status">50 pièces, page 1 sur 5.</p>
+    <ul class="grille">
+      <li class="carte" style="--i:0"><a class="lien" href="https://lune-soleil.fr/produit/boucles-d-oreilles-sapin-enchante"><div class="cadre-image"><img src="https://lune-soleil.fr/medias/b9c42178-6f4d-47f5-9244-a6b3ecef241f/640.avif" srcset="https://lune-soleil.fr/medias/b9c42178-6f4d-47f5-9244-a6b3ecef241f/320.avif 320w, https://lune-soleil.fr/medias/b9c42178-6f4d-47f5-9244-a6b3ecef241f/640.avif 640w" sizes="(min-width: 1024px) 340px, (min-width: 600px) 45vw, 90vw" alt="Boucles d’oreilles « Sapin Enchanté »" width="640" height="640" loading="eager"></div><div class="corps"><h2>Boucles d’oreilles « Sapin Enchanté »</h2><p class="categorie">Boucles d'oreilles collection Noël</p><p class="prix">12,00 €</p><p class="dispo">Dernière pièce</p></div></a><button class="ajout" type="button">Ajouter au panier</button></li>
+      <li class="carte" style="--i:1"><a class="lien" href="https://lune-soleil.fr/produit/boucles-d-oreilles-neige-d-hiver"><div class="cadre-image"><img src="https://lune-soleil.fr/medias/de7dabfe-124b-48e7-bcc1-9a7b8bd78475/640.avif" srcset="https://lune-soleil.fr/medias/de7dabfe-124b-48e7-bcc1-9a7b8bd78475/320.avif 320w, https://lune-soleil.fr/medias/de7dabfe-124b-48e7-bcc1-9a7b8bd78475/640.avif 640w" sizes="(min-width: 1024px) 340px, (min-width: 600px) 45vw, 90vw" alt="Boucles d’oreilles « Neige d’Hiver »" width="640" height="640" loading="eager"></div><div class="corps"><h2>Boucles d’oreilles « Neige d’Hiver »</h2><p class="categorie">Boucles d'oreilles collection Noël</p><p class="prix">12,00 €</p><p class="dispo">Dernière pièce</p></div></a><button class="ajout" type="button">Ajouter au panier</button></li>
+      <li class="carte" style="--i:2"><a class="lien" href="https://lune-soleil.fr/produit/boucles-d-oreilles-marshmallow-smile"><div class="cadre-image"><img src="https://lune-soleil.fr/medias/70d8c2e1-c845-48d8-8f4d-f5f11d213916/640.avif" srcset="https://lune-soleil.fr/medias/70d8c2e1-c845-48d8-8f4d-f5f11d213916/320.avif 320w, https://lune-soleil.fr/medias/70d8c2e1-c845-48d8-8f4d-f5f11d213916/640.avif 640w" sizes="(min-width: 1024px) 340px, (min-width: 600px) 45vw, 90vw" alt="Boucles d’oreilles « Marshmallow Smile »" width="640" height="640" loading="eager"></div><div class="corps"><h2>Boucles d’oreilles « Marshmallow Smile »</h2><p class="categorie">Boucles d'oreilles collection Noël</p><p class="prix">12,00 €</p><p class="dispo">Dernière pièce</p></div></a><button class="ajout" type="button">Ajouter au panier</button></li>
+      <li class="carte" style="--i:3"><a class="lien" href="https://lune-soleil.fr/produit/boucles-d-oreilles-pain-d-epices"><div class="cadre-image"><img src="https://lune-soleil.fr/medias/c348b66d-009e-4029-96f7-532dc114e199/640.avif" srcset="https://lune-soleil.fr/medias/c348b66d-009e-4029-96f7-532dc114e199/320.avif 320w, https://lune-soleil.fr/medias/c348b66d-009e-4029-96f7-532dc114e199/640.avif 640w" sizes="(min-width: 1024px) 340px, (min-width: 600px) 45vw, 90vw" alt="Boucles d’oreilles « Pain d’Épices »" width="640" height="640" loading="lazy"></div><div class="corps"><h2>Boucles d’oreilles « Pain d’Épices »</h2><p class="categorie">Boucles d'oreilles collection Noël</p><p class="prix">12,00 €</p><p class="dispo">Dernière pièce</p></div></a><button class="ajout" type="button">Ajouter au panier</button></li>
+      <li class="carte" style="--i:4"><a class="lien" href="https://lune-soleil.fr/produit/boucles-d-oreilles-nova-candy"><div class="cadre-image"><img src="https://lune-soleil.fr/medias/724d8455-5b61-40cc-82d1-b6145edffc21/640.avif" srcset="https://lune-soleil.fr/medias/724d8455-5b61-40cc-82d1-b6145edffc21/320.avif 320w, https://lune-soleil.fr/medias/724d8455-5b61-40cc-82d1-b6145edffc21/640.avif 640w" sizes="(min-width: 1024px) 340px, (min-width: 600px) 45vw, 90vw" alt="Boucles d’oreilles « Nova Candy »" width="640" height="640" loading="lazy"></div><div class="corps"><h2>Boucles d’oreilles « Nova Candy »</h2><p class="categorie">Boucles d'oreilles</p><p class="prix">12,00 €</p><p class="dispo">Dernière pièce</p></div></a><button class="ajout" type="button">Ajouter au panier</button></li>
+      <li class="carte" style="--i:5"><a class="lien" href="https://lune-soleil.fr/produit/boucles-d-oreilles-pepite"><div class="cadre-image"><img src="https://lune-soleil.fr/medias/afbd17f8-5922-493d-a340-7709f061df05/640.avif" srcset="https://lune-soleil.fr/medias/afbd17f8-5922-493d-a340-7709f061df05/320.avif 320w, https://lune-soleil.fr/medias/afbd17f8-5922-493d-a340-7709f061df05/640.avif 640w" sizes="(min-width: 1024px) 340px, (min-width: 600px) 45vw, 90vw" alt="Boucles d’oreilles « Pépite »" width="640" height="640" loading="lazy"></div><div class="corps"><h2>Boucles d’oreilles « Pépite »</h2><p class="categorie">Boucles d'oreilles</p><p class="prix">12,00 €</p><p class="dispo">Dernière pièce</p></div></a><button class="ajout" type="button">Ajouter au panier</button></li>
+      <li class="carte" style="--i:6"><a class="lien" href="https://lune-soleil.fr/produit/boucles-d-oreilles-neon-flora"><div class="cadre-image"><img src="https://lune-soleil.fr/medias/66851ac0-797d-4203-8d01-aca38562a2f3/640.avif" srcset="https://lune-soleil.fr/medias/66851ac0-797d-4203-8d01-aca38562a2f3/320.avif 320w, https://lune-soleil.fr/medias/66851ac0-797d-4203-8d01-aca38562a2f3/640.avif 640w" sizes="(min-width: 1024px) 340px, (min-width: 600px) 45vw, 90vw" alt="Boucles d’oreilles « Néon Flora »" width="640" height="640" loading="lazy"></div><div class="corps"><h2>Boucles d’oreilles « Néon Flora »</h2><p class="categorie">Boucles d'oreilles</p><p class="prix">12,00 €</p><p class="dispo">Dernière pièce</p></div></a><button class="ajout" type="button">Ajouter au panier</button></li>
+      <li class="carte" style="--i:7"><a class="lien" href="https://lune-soleil.fr/produit/boucles-d-oreilles-sunkiss"><div class="cadre-image"><img src="https://lune-soleil.fr/medias/243741c3-a24c-4a12-9b5a-668eed8e053c/640.avif" srcset="https://lune-soleil.fr/medias/243741c3-a24c-4a12-9b5a-668eed8e053c/320.avif 320w, https://lune-soleil.fr/medias/243741c3-a24c-4a12-9b5a-668eed8e053c/640.avif 640w" sizes="(min-width: 1024px) 340px, (min-width: 600px) 45vw, 90vw" alt="Boucles d’oreilles « Sunkiss »" width="640" height="640" loading="lazy"></div><div class="corps"><h2>Boucles d’oreilles « Sunkiss »</h2><p class="categorie">Boucles d'oreilles</p><p class="prix">12,00 €</p><p class="dispo">Dernière pièce</p></div></a><button class="ajout" type="button">Ajouter au panier</button></li>
+      <li class="carte" style="--i:8"><a class="lien" href="https://lune-soleil.fr/produit/boucles-d-oreilles-golden-sunset"><div class="cadre-image"><img src="https://lune-soleil.fr/medias/d756b7a4-d505-4c3b-a950-110879a16db1/640.avif" srcset="https://lune-soleil.fr/medias/d756b7a4-d505-4c3b-a950-110879a16db1/320.avif 320w, https://lune-soleil.fr/medias/d756b7a4-d505-4c3b-a950-110879a16db1/640.avif 640w" sizes="(min-width: 1024px) 340px, (min-width: 600px) 45vw, 90vw" alt="Boucles d’oreilles « Golden Sunset »" width="640" height="640" loading="lazy"></div><div class="corps"><h2>Boucles d’oreilles « Golden Sunset »</h2><p class="categorie">Boucles d'oreilles</p><p class="prix">12,00 €</p><p class="dispo">Dernière pièce</p></div></a><button class="ajout" type="button">Ajouter au panier</button></li>
+      <li class="carte" style="--i:9"><a class="lien" href="https://lune-soleil.fr/produit/boucles-d-oreilles-jardin-d-aube"><div class="cadre-image"><img src="https://lune-soleil.fr/medias/a3e52805-0cee-4360-98d7-63f64e45841d/640.avif" srcset="https://lune-soleil.fr/medias/a3e52805-0cee-4360-98d7-63f64e45841d/320.avif 320w, https://lune-soleil.fr/medias/a3e52805-0cee-4360-98d7-63f64e45841d/640.avif 640w" sizes="(min-width: 1024px) 340px, (min-width: 600px) 45vw, 90vw" alt="Boucles d’oreilles « Jardin d’Aube »" width="640" height="640" loading="lazy"></div><div class="corps"><h2>Boucles d’oreilles « Jardin d’Aube »</h2><p class="categorie">Boucles d'oreilles</p><p class="prix">12,00 €</p><p class="dispo">Dernière pièce</p></div></a><button class="ajout" type="button">Ajouter au panier</button></li>
+      <li class="carte" style="--i:10"><a class="lien" href="https://lune-soleil.fr/produit/boucles-d-oreilles-cosmic-confetti"><div class="cadre-image"><img src="https://lune-soleil.fr/medias/6f64118b-265e-4b42-882c-923e326eabc4/640.avif" srcset="https://lune-soleil.fr/medias/6f64118b-265e-4b42-882c-923e326eabc4/320.avif 320w, https://lune-soleil.fr/medias/6f64118b-265e-4b42-882c-923e326eabc4/640.avif 640w" sizes="(min-width: 1024px) 340px, (min-width: 600px) 45vw, 90vw" alt="Boucles d’oreilles « Cosmic Confetti »" width="640" height="640" loading="lazy"></div><div class="corps"><h2>Boucles d’oreilles « Cosmic Confetti »</h2><p class="categorie">Boucles d'oreilles</p><p class="prix">12,00 €</p><p class="dispo">Dernière pièce</p></div></a><button class="ajout" type="button">Ajouter au panier</button></li>
+      <li class="carte" style="--i:11"><a class="lien" href="https://lune-soleil.fr/produit/boucles-d-oreilles-candy-bloom"><div class="cadre-image"><img src="https://lune-soleil.fr/medias/3282d95b-a009-4066-87c9-9c907d1f6924/640.avif" srcset="https://lune-soleil.fr/medias/3282d95b-a009-4066-87c9-9c907d1f6924/320.avif 320w, https://lune-soleil.fr/medias/3282d95b-a009-4066-87c9-9c907d1f6924/640.avif 640w" sizes="(min-width: 1024px) 340px, (min-width: 600px) 45vw, 90vw" alt="Boucles d’oreilles « Coralia »" width="640" height="640" loading="lazy"></div><div class="corps"><h2>Boucles d’oreilles « Coralia »</h2><p class="categorie">Boucles d'oreilles</p><p class="prix">12,00 €</p><p class="dispo">Dernière pièce</p></div></a><button class="ajout" type="button">Ajouter au panier</button></li>
+    </ul>
+    <nav class="pagination" aria-label="Pagination du catalogue"><span>Page 1 sur 5</span><a href="#">Page suivante</a></nav>
+  </div>
+</main>
+<footer class="pied"><a class="marque" href="https://lune-soleil.fr/">Lune-soleil</a><p>France métropolitaine, Corse comprise</p></footer>
+
+<script>
+(() => {
+  const racine = document.documentElement;
+  const choix = document.querySelectorAll("[data-theme-choix]");
+  const appliquer = (v) => {
+    racine.dataset.theme = v;
+    choix.forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.themeChoix === v)));
+    try { sessionStorage.setItem("maquette-theme", v); } catch {}
+  };
+  let memorise = "noel";
+  try { const m = sessionStorage.getItem("maquette-theme"); if (m === "noel" || m === "noel-franc") memorise = m; } catch {}
+  appliquer(memorise);
+  choix.forEach((b) => b.addEventListener("click", () => appliquer(b.dataset.themeChoix)));
+  document.getElementById("rejouer").addEventListener("click", () => location.reload());
+
+  // Perles de la guirlande, rouges et blanches en alternance, le long du fil.
+  const ns = "http://www.w3.org/2000/svg";
+  const fil = document.querySelector(".guirlande .fil");
+  const perles = document.querySelector(".guirlande .perles");
+  const longueur = fil.getTotalLength();
+  for (let i = 0; i < 9; i++) {
+    const pt = fil.getPointAtLength(longueur * (0.07 + i * 0.107));
+    const g = document.createElementNS(ns, "g");
+    g.setAttribute("class", "boule-g"); g.setAttribute("style", "--i:" + i);
+    g.innerHTML = `<line class="attache" x1="${pt.x}" y1="${pt.y}" x2="${pt.x}" y2="${pt.y + 8}"/><circle class="${i % 2 ? "blanche" : "rouge"}" cx="${pt.x}" cy="${pt.y + 14}" r="6"/>`;
+    perles.appendChild(g);
+  }
+
+  // Boules de la zone décor.
+  const boules = document.querySelector(".boules");
+  [[10, 58, 26, 13, 0], [28, 104, 36, -11, 1], [48, 70, 30, 9, 0], [68, 118, 40, -13, 0], [86, 80, 28, 12, 1]].forEach(([x, h, t, a, b], i) => {
+    boules.insertAdjacentHTML("beforeend", `<div class="boule${b ? " blanche" : ""}" style="--i:${i};--x:${x}%"><div class="boule-balance" style="--a:${a}deg"><div class="boule-fil" style="--h:${h}px"></div><div class="boule-corps" style="--t:${t}px"></div></div></div>`);
+  });
+  // Flocons de la zone décor, positions fixes et tirées une fois.
+  const neige = document.querySelector(".neige");
+  for (let i = 0; i < 22; i++) {
+    neige.insertAdjacentHTML("beforeend", `<i style="left:${(i * 37) % 100}%;--d:${(i * 0.31) % 3.4}s;--t:${3.2 + (i % 5) * 0.4}s;--x:${((i * 7) % 24) - 12}px"></i>`);
+  }
+
+  // ---- v2 : décor des cartes, des filtres et des boutons, injecté une fois ----
+  const FLOCON = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" aria-hidden="true"><path d="M6 1v10M1.7 3.5l8.6 5M1.7 8.5l8.6-5M4.6 1.8 6 3.2 7.4 1.8M4.6 10.2 6 8.8l1.4 1.4"/></svg>';
+  const NOEUD = '<svg viewBox="0 0 34 22" aria-hidden="true"><path d="M17 11C11 1 3 2 3 8s8 5 14 3c6 2 14 3 14-3S23 1 17 11Z" fill="currentColor"/><path d="M15 12l-5 9 4-1 2 2 1-9M19 12l5 9-4-1-2 2-1-9" fill="currentColor" opacity=".85"/><circle cx="17" cy="11" r="3" fill="#fff" opacity=".35"/></svg>';
+  const PAQUET = '<svg class="icone" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="7" width="13" height="9" rx="1"/><path d="M1.5 4.5h15V7h-15zM9 4.5V16M9 4.5C7 1 4 2 5.2 4.5M9 4.5C11 1 14 2 12.8 4.5"/></svg>';
+  document.querySelectorAll(".carte").forEach((carte) => {
+    carte.insertAdjacentHTML("afterbegin", '<svg class="liseré" aria-hidden="true"><rect x=".5" y=".5" width="calc(100% - 1px)" height="calc(100% - 1px)" rx="6" pathLength="1"/></svg>' +
+      ["hg", "hd", "bg", "bd"].map((c) => `<span class="flocon-coin ${c}" aria-hidden="true">${FLOCON}</span>`).join(""));
+    const rect = carte.querySelector(".liseré rect");
+    rect.setAttribute("width", "99%"); rect.setAttribute("height", "99%");
+    carte.querySelector(".corps").insertAdjacentHTML("afterbegin", `<span class="ruban-carte" aria-hidden="true"></span><span class="noeud" aria-hidden="true">${NOEUD}</span>`);
+    const bouton = carte.querySelector(".ajout");
+    if (bouton) {
+      bouton.innerHTML = PAQUET + '<span class="texte-ajout">Ajouter au panier</span>';
+      bouton.addEventListener("click", () => {
+        if (!racine.classList.contains("anime")) return;
+        const gerbe = document.createElement("span"); gerbe.className = "gerbe"; gerbe.setAttribute("aria-hidden", "true");
+        for (let k = 0; k < 10; k++) {
+          const ang = (k / 10) * Math.PI * 2, r = 46 + (k % 3) * 14;
+          gerbe.insertAdjacentHTML("beforeend", `<i style="--gx:${Math.cos(ang) * r}px;--gy:${Math.sin(ang) * r * .6}px">${FLOCON}</i>`);
+        }
+        bouton.appendChild(gerbe); bouton.classList.add("fait");
+        setTimeout(() => { gerbe.remove(); bouton.classList.remove("fait"); }, 1400);
+      });
+    }
+    carte.addEventListener("animationend", (e) => { if (e.target.tagName === "rect") carte.classList.add("dessine-fini"); });
+  });
+  document.querySelectorAll(".filtre").forEach((f) => f.insertAdjacentHTML("afterbegin", `<span class="flocon-filtre" aria-hidden="true">${FLOCON}</span>`));
+  const contenu = document.querySelector(".contenu");
+  ["gauche", "droite"].forEach((cote, c) => {
+    const m = document.createElement("div"); m.className = "marge-neige " + cote; m.setAttribute("aria-hidden", "true");
+    for (let i = 0; i < 14; i++) m.insertAdjacentHTML("beforeend", `<i style="left:${(i * 41 + c * 17) % 90}%;--d:${((i * 0.83) % 9).toFixed(2)}s;--t:${9 + (i % 4) * 2}s;--x:${((i * 5) % 20) - 10}px"></i>`);
+    contenu.appendChild(m);
+  });
+
+  const calme = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (calme) return;
+  racine.classList.add("anime");
+
+  // Apparition des cartes au défilement, en cascade par rangée.
+  const observateur = new IntersectionObserver((entrees) => {
+    let rang = 0;
+    for (const e of entrees) if (e.isIntersecting) { e.target.style.setProperty("--rang", rang++); e.target.classList.add("vu"); observateur.unobserve(e.target); }
+  }, { threshold: 0.15 });
+  document.querySelectorAll(".carte").forEach((c) => observateur.observe(c));
+
+  // Pause des animations continues, WCAG 2.2.2, mémorisée pour la visite.
+  const pause = document.querySelector(".pause");
+  const appliquerPause = (oui) => {
+    racine.classList.toggle("pause-animations", oui);
+    pause.setAttribute("aria-pressed", String(oui));
+    const l = oui ? "Relancer les animations" : "Mettre en pause les animations";
+    pause.setAttribute("aria-label", l); pause.title = l;
+    try { sessionStorage.setItem("maquette-pause", oui ? "1" : "0"); } catch {}
+  };
+  let enPause = false;
+  try { enPause = sessionStorage.getItem("maquette-pause") === "1"; } catch {}
+  appliquerPause(enPause);
+  pause.addEventListener("click", () => appliquerPause(!racine.classList.contains("pause-animations")));
+})();
+</script>
+</body>
+</html>
