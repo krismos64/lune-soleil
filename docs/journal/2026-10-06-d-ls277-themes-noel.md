@@ -36,10 +36,10 @@ Suite de `2026-10-06-c`.
 
 ## Prochaine étape
 
-Christophe lance `/adr` pour amender ADR-046 (Noël 2, deux thèmes) et ADR-045
-(mouvement continu avec pause). LS-277 ne démarre qu'après.
+Les deux amendements sont acceptés le même soir, PR #535, et LS-277 démarre :
+journal `2026-10-06-e`.
 
 ## État des tickets
 
-LS-277 à faire, bloquée par les deux amendements. LS-274 en cours jusqu'au
+LS-277 débloquée par les amendements, puis en cours. LS-274 en cours jusqu'au
 nocturne vert. LS-273 et LS-258 en cours. LS-275, LS-276 et LS-278 à faire.

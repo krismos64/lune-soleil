@@ -162,10 +162,22 @@
 
 /* ---------- Marges neigeuses du catalogue ---------- */
 
+/*
+ * MASQUÉES SOUS 1240 PX, le conteneur compris : présent mais vide, il couvrait
+ * toute la hauteur de la grille et l'observateur des bornes l'attendait en
+ * vain. Au-delà, chaque marge occupe l'espace libre de part et d'autre.
+ */
 .marges {
+  display: none;
   position: absolute;
   inset: 0;
   pointer-events: none;
+}
+
+@media (min-width: 1240px) {
+  .marges {
+    display: block;
+  }
 }
 
 .marge {
@@ -274,12 +286,23 @@
     animation-delay: calc(300ms + var(--rang) * 120ms);
   }
 
+  .balance {
+    animation: balance 3200ms cubic-bezier(0.36, 0, 0.3, 1) both;
+    animation-delay: calc(1000ms + var(--rang) * 120ms);
+  }
+
   /*
-   * Deux animations : le balancement amorti d'entrée, puis le bercement
-   * continu. La seconde n'a pas de remplissage arrière : avant son départ,
+   * LE MOUVEMENT CONTINU N'EXISTE QUE SOUS UN ÉTAT POSÉ PAR LE SCRIPT, `joue`
+   * ou `fin`, comme la bande défilante. Sans script, le bouton de pause, client,
+   * n'existe pas : rien ne doit alors tourner sans fin, WCAG 2.2.2. Relevé par
+   * `ls-frontend-revue`, la neige et les boules tournaient sans script.
+   *
+   * Deux animations pour la boule : le balancement amorti d'entrée, puis le
+   * bercement. La seconde n'a pas de remplissage arrière : avant son départ,
    * la première tient la boule à l'aplomb, sans saut.
    */
-  .balance {
+  :global([data-borne="joue"]) .balance,
+  :global([data-borne="fin"]) .balance {
     animation:
       balance 3200ms cubic-bezier(0.36, 0, 0.3, 1) both,
       berce 6s ease-in-out infinite;
@@ -287,11 +310,13 @@
       calc(1000ms + var(--rang) * 120ms), calc(4200ms + var(--rang) * 120ms);
   }
 
-  .flocon {
+  :global([data-borne="joue"]) .flocon,
+  :global([data-borne="fin"]) .flocon {
     animation: tombe var(--duree) linear var(--retard) infinite;
   }
 
-  .floconMarge {
+  :global([data-borne="joue"]) .floconMarge,
+  :global([data-borne="fin"]) .floconMarge {
     animation: tombe-long var(--duree) linear var(--retard) infinite;
   }
 

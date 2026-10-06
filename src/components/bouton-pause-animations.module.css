@@ -36,9 +36,16 @@
   opacity: 1;
 }
 
+/*
+ * DOUBLE ANNEAU, blanc puis brun : le bouton flotte sur n'importe quel fond,
+ * crème, rouge ou pied sombre, et un anneau d'une seule couleur y devenait
+ * invisible, 1,25:1 sur le pied de Noël 2, relevé par `ls-frontend-revue`.
+ * L'un des deux tient toujours, WCAG 2.4.7.
+ */
 .bouton:focus-visible {
-  outline: 2px solid var(--ls-focus);
-  outline-offset: 3px;
+  outline: 2px solid var(--ls-surface);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 5px var(--ls-focus);
 }
 
 .bouton svg {
@@ -50,10 +57,6 @@
   border-color: var(--ls-noel-texte-sur-rouge);
   background: var(--ls-noel-fond-rouge);
   color: var(--ls-noel-texte-sur-rouge);
-}
-
-:global([data-theme="noel_2"]) .bouton:focus-visible {
-  outline-color: var(--ls-noel-fond-nuit);
 }
 
 @media (min-width: 768px) {
