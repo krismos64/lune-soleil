@@ -81,14 +81,35 @@ par un test :
   comme l'écrivait ADR-046. Le seuil de 3:1 est tenu ; la valeur est
   corrigée dans l'ADR.
 
+## Fusion, migration et déploiement
+
+- PR #536 fusionnée, `56a308c`. Un premier passage de la CI a échoué au
+  formatage Prettier, et cet échec masquait un défaut latent de
+  `verifier-ecart-production.sh`. Le script cherchait la dernière migration
+  dans l'historique de la branche, puis mesurait l'écart contre `main` : toute
+  PR porteuse d'une migration le faisait échouer. Le défaut est corrigé dans
+  la PR. Rejoués en local, les 69 scripts de `controles.yml` passent, sauf
+  `verifier-config-claude --strict` et sa mutation, qui échouent aussi sur
+  `main` en local à cause de la mémoire du poste, absente en CI.
+- **Arbitrage de Christophe** : les micro-interactions propres aux contrôles,
+  le flocon d'un filtre et le paquet d'un bouton, sont conservées.
+- **Migration sur autorisation explicite de Christophe.** Un premier passage
+  sans confirmation a arrêté le script sur la seule instruction attendue,
+  `DROP CONSTRAINT "chk_parametre_theme_connu"`. Le second passage, avec
+  `--confirm-destructive`, a appliqué la migration : 24 migrations. La
+  sauvegarde préalable est restée sur le poste. Le relevé de production est
+  identique avant et après : thème `AUCUN`, 50 pièces publiées et 1 archivée,
+  50 variantes, 54 photos, 3 catégories, 0 commande. Tunnel et relais fermés.
+- **Déployé**, run 37533408410. L'écart avec `main` vaut 0 commit et
+  0 migration. Le visiteur voit l'habillage ordinaire : aucun thème n'est
+  activé.
+
 ## Prochaine étape
 
-PR, puis déploiement. **La migration passe par `migrate-production.sh` avec
-`--confirm-destructive`, sur autorisation explicite de Christophe.** Aucun
-thème n'est activé par le déploiement : Christophe choisit Noël 1 ou Noël 2
-dans Paramètres, le moment venu.
+Christophe active Noël 1 ou Noël 2 dans Paramètres le moment venu. Le
+nocturne de la nuit doit fermer LS-274 et l'issue #525.
 
 ## État des tickets
 
-LS-277 en cours jusqu'à la fusion et au déploiement. LS-274 en cours jusqu'au
+LS-277 close, déployée. LS-274 en cours jusqu'au
 nocturne vert. LS-273 et LS-258 en cours. LS-275, LS-276 et LS-278 à faire.
