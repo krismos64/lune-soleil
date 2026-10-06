@@ -233,7 +233,13 @@
   );
 }
 
-/* La tuile fait 341 x 284 px, affichée à moitié : une période de 170,5 px. */
+/*
+ * La tuile fait 341 x 284 px, affichée à moitié : une période de 170,5 px en
+ * largeur, 142 px en hauteur. La bande, plus basse que la tuile, est CENTRÉE
+ * sur la rangée de nœuds et de flocons, à 35 px du haut de la tuile affichée :
+ * calée en haut, elle coupait la rangée d'étoiles et laissait une encoche
+ * claire au début de chaque tuile.
+ */
 .papierCadeau {
   height: 44px;
   box-shadow: inset 0 -1px 0
@@ -245,7 +251,13 @@
   position: absolute;
   inset: 0 auto 0 0;
   width: calc(100% + 170.5px);
-  background: url("/habillage/papier-cadeau.jpg") 0 0 / 170.5px 142px;
+  background: url("/habillage/papier-cadeau.jpg") 0 -13px / 170.5px 142px;
+}
+
+@media (min-width: 768px) {
+  .papierCadeau::before {
+    background-position: 0 -7px;
+  }
 }
 
 @media (min-width: 768px) {

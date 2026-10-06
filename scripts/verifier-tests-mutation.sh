@@ -40,6 +40,8 @@ cd "$RACINE" || exit 1
 SQL="tests/aide/reservation-sql.ts"
 STOCK="src/repositories/stock.ts"
 DEPOT_PANIER="src/repositories/panier.ts"
+GLOBALS_CSS="src/app/globals.css"
+CATALOGUE_CSS="src/app/(boutique)/catalogue/catalogue.module.css"
 # LA PAGE D'ACCUEIL A DEMENAGE EN LS-122, groupe de routes `(boutique)`. Le
 # chemin d'origine n'existait plus, et le garde-fou de lisibilite arretait le
 # script AVANT la premiere mutation : il rendait 1 sans en avoir joue une seule.
@@ -137,7 +139,7 @@ SENDCLOUD_EXPEDITION="src/integrations/sendcloud/expedition.ts"
 #
 # Le defaut datait du jour ou le cas 121 a ete ecrit, et rien ne pouvait le
 # signaler : le nocturne mourait au cas 1 sur 180 depuis trois nuits.
-MUTABLES=("$SQL" "$STOCK" "$DEPOT_PANIER" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE" "$AVIS" "$DEPOT_AVIS" "$SERVICE_AVOIR" "$DEPOT_PARAMETRES" "$SENDCLOUD_EXPEDITION" "$DESTINATIONS_REAUTH" "$TEST_COMPTABILITE" "$URLS_MEDIAS")
+MUTABLES=("$SQL" "$STOCK" "$DEPOT_PANIER" "$GLOBALS_CSS" "$CATALOGUE_CSS" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE" "$AVIS" "$DEPOT_AVIS" "$SERVICE_AVOIR" "$DEPOT_PARAMETRES" "$SENDCLOUD_EXPEDITION" "$DESTINATIONS_REAUTH" "$TEST_COMPTABILITE" "$URLS_MEDIAS")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -767,6 +769,31 @@ cas "debordement vers la gauche introduit dans la page" e2e \
 mute "$PAGE" 's/<p className=\{styles\.texteEditorial\}>/<p className={styles.texteEditorial} style={{ whiteSpace: "nowrap" }}>/'
 cas "debordement par le texte, white-space nowrap" e2e \
   "la page ne deborde pas horizontalement"
+
+# ---------------------------------------------------------------------------
+# Cas 11 quater : la pause des thèmes de Noël ne fige plus rien, LS-277.
+#
+# WCAG 2.2.2 : sous les thèmes de Noël, neige, rayons et boules bougent en
+# continu, ADR-045 amendé, et seul le bouton de pause les arrête. Sans la règle
+# de `globals.css`, le bouton change d'état et rien ne s'arrête.
+mute "$GLOBALS_CSS" 's/:root\.pause-animations main \*,\n:root\.pause-animations main \*::before,\n:root\.pause-animations main \*::after \{\n  animation-play-state: paused !important;\n\}//'
+cas "bouton de pause des themes de Noel sans effet" e2e \
+  "le bouton de pause fige tout"
+
+# Cas 11 quinquies : les décors continus figés à cinq secondes comme les
+# autres, LS-277. L'exemption `data-continu` retirée, la neige s'arrête : le
+# défaut est l'inverse du précédent, le mouvement que l'amendement autorise
+# n'existe plus, et le test qui le mesure doit le voir.
+mute "$GLOBALS_CSS" 's/\[data-borne="fin"\] \[data-continu\],\n\[data-borne="fin"\] \[data-continu\] \*,\n\[data-borne="fin"\]\[data-continu\] \{\n  animation-play-state: running !important;\n\}//'
+cas "exemption des decors continus retiree" e2e \
+  "seuls les décors continus durent"
+
+# Cas 11 sexies : le nœud de la carte posé sur la photographie, LS-277.
+# ADR-046 interdit tout décor sur une photographie de bijou ; le premier jet
+# du nœud mordait d'un pixel sur l'image.
+mute "$CATALOGUE_CSS" 's/(\.noeudCarte \{\n  position: absolute;\n  left: 50%;\n)  top: -9px;/$1  top: -20px;/'
+cas "noeud de la carte pose sur la photographie" e2e \
+  "décor hors des photographies"
 
 # Cas 12 : violation d'accessibilite. Un document sans langue declaree est lu
 # avec la prononciation par defaut du lecteur d'ecran.
