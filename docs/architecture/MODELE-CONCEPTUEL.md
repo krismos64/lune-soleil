@@ -277,11 +277,21 @@ WHERE id = :variante
   AND archivee_a IS NULL
   AND vente_web_activee = true
   AND quantite_physique - quantite_reservee >= :qte
+  AND EXISTS (SELECT 1 FROM produit p
+              WHERE p.id = variante.produit_id AND p.statut = 'ACTIF')
 ```
 
 Sans cela, un client ayant la fiche ouverte au moment de l'archivage peut encore
 réserver et payer une pièce retirée du catalogue. Une lecture préalable ne suffit
 pas : entre la lecture et l'écriture, l'archivage peut survenir.
+
+**Le statut du produit entre dans la même instruction**, LS-270. Archiver un
+**produit** n'écrit que `produit.statut`, ses variantes restent intactes : sans
+cette condition, un panier ouvert avant l'archivage commandait la pièce. Le
+produit n'est pas verrouillé, pour ne pas ajouter de ressource à l'ordre global
+des verrous ; un archivage validé pendant la transaction n'est pas vu, et la
+commande passe comme si elle l'avait précédé. Le disponible affiché au panier
+porte la même condition.
 
 **Le stock physique d'une variante archivée existe toujours.** Trois exemplaires
 archivés restent trois pièces réelles, vendables sur un marché. Le mouvement
