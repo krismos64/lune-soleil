@@ -408,8 +408,14 @@ cas "le message de refus perd ses motifs" e2e_un \
 #
 # UN PANNEAU MODAL DONT ON NE SORT QU'A LA SOURIS PIEGE qui navigue au clavier.
 # L'attribut existait depuis LS-103, aucun test ne l'exercait.
+#
+# L'EXPRESSION S'ANCRE SUR LE PANNEAU D'ARCHIVAGE, issue #525. LS-266 a ajoute
+# avant lui le panneau de retrait, porteur du meme gestionnaire : sans ancrage,
+# la premiere occurrence mutee etait celle du retrait, que ce test n'ouvre
+# jamais, et le cas concluait « test aveugle » sur un test voyant. Le retrait a
+# son propre test d'Echap, `retrait-espace-ls266.spec.ts`.
 # ---------------------------------------------------------------------------
-mute "$PUBLICATION" 's/if \(evenement\.key === "Escape"\) \{/if (false) {/'
+mute "$PUBLICATION" 's/(confirmation === "archiver" &&.*?)if \(evenement\.key === "Escape"\) \{/${1}if (false) {/s'
 cas "Echap ne ferme plus le panneau d'archivage" e2e_un \
   "le panneau d'archivage s'ouvre, se ferme par Echap et ne deborde pas" \
   "le panneau d'archivage s'ouvre, se ferme par Echap et ne deborde pas"

@@ -698,9 +698,18 @@ echo
 echo "Interface, tests de bout en bout"
 echo
 
-# Cas 11 : debordement horizontal a DROITE. Invisible a 1280 px, visible a 320 et
-# 390 px, ce qui justifie les trois largeurs de playwright.config.ts.
-mute "$PAGE" 's/<h1 className=\{styles\.titre\}>/<h1 className={styles.titre} style={{ width: "800px" }}>/'
+# Cas 11 : debordement horizontal a DROITE. Detecte sur trois des quatre largeurs
+# le 6 octobre 2026, ce qui justifie de ne pas tester en 1280 px seulement.
+#
+# LES TROIS CAS VISENT LA SECTION EDITORIALE ET NON LE HEROS, issue #525. LS-260
+# a pose `overflow: hidden` sur `.hero`, a bon droit : les feuilles animees de
+# l'embleme sortent de l'ecran, jusqu'a 400 px a 1280, mesure du 6 octobre 2026.
+# Un titre trop large y est COUPE, sans barre de defilement, et la mesure
+# l'ignore donc a raison. Les mutations du heros ne fabriquaient plus le defaut
+# qu'elles pretendaient fabriquer, et ont rendu RATE au nocturne du 5 octobre.
+# La section editoriale est rendue meme catalogue vide, et aucun ancetre ne la
+# coupe.
+mute "$PAGE" 's/<h2 className=\{styles\.titreEditorial\}>/<h2 className={styles.titreEditorial} style={{ width: "800px" }}>/'
 cas "debordement horizontal introduit dans la page" e2e \
   "la page ne deborde pas horizontalement"
 
@@ -714,9 +723,11 @@ cas "debordement horizontal introduit dans la page" e2e \
 # produit pourtant la MEME barre de defilement et le meme geste lateral pour
 # lire.
 #
-# IL EST DETECTE AUX TROIS LARGEURS, contrairement au cas 11 : un depassement a
-# gauche ne depend pas de la largeur de la fenetre, il sort par zero.
-mute "$PAGE" 's/<h1 className=\{styles\.titre\}>/<h1 className={styles.titre} style={{ position: "relative", left: "-200px" }}>/'
+# DETECTE A 320 ET 390 PX SEULEMENT, mesure du 6 octobre 2026 : a partir de
+# 768 px la colonne editoriale commence a plus de 200 px du bord, et le titre
+# decale reste dans la fenetre. Le depassement a gauche depend donc de la
+# position de l'element, pas de la largeur de la fenetre.
+mute "$PAGE" 's/<h2 className=\{styles\.titreEditorial\}>/<h2 className={styles.titreEditorial} style={{ position: "relative", left: "-200px" }}>/'
 cas "debordement vers la gauche introduit dans la page" e2e \
   "la page ne deborde pas horizontalement"
 
@@ -734,10 +745,10 @@ cas "debordement vers la gauche introduit dans la page" e2e \
 # parmi les motifs a chercher a 320 px : la mesure censee les attraper leur etait
 # aveugle.
 #
-# DETECTE A 320 PX SEULEMENT, et c'est correct : a 390 px l'accroche tient sur
-# une ligne, donc elle ne deborde pas. Une mutation detectee aux trois largeurs
-# signalerait ici une mesure trop grossiere.
-mute "$PAGE" 's/<p className=\{styles\.accroche\}>/<p className={styles.accroche} style={{ whiteSpace: "nowrap" }}>/'
+# Le texte editorial remplace l'accroche du heros, coupee par `.hero` depuis
+# LS-260, issue #525. Il fait plus de cent vingt caracteres et deborde donc en
+# une ligne aux quatre largeurs.
+mute "$PAGE" 's/<p className=\{styles\.texteEditorial\}>/<p className={styles.texteEditorial} style={{ whiteSpace: "nowrap" }}>/'
 cas "debordement par le texte, white-space nowrap" e2e \
   "la page ne deborde pas horizontalement"
 
