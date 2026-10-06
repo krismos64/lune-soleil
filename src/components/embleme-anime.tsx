@@ -68,11 +68,10 @@ const arret = (jeton: string): CSSProperties => ({
 const rang = (i: number): CSSProperties => ({ "--rang": i }) as CSSProperties;
 
 /**
- * `saison`, ADR-046 : le thème de Noël ajoute des baies de houx au feuillage,
- * dont `--ls-feuillage` change la couleur, et une neige qui tombe une fois
- * DANS LE CADRE de l'emblème, jamais par-dessus un texte ni un contrôle.
- */
-/**
+ * Le feuillage prend la couleur de `--ls-feuillage` sous un thème, ADR-046 ;
+ * la neige reste DANS LE CADRE de l'emblème, jamais par-dessus un texte ni un
+ * contrôle.
+ *
  * `noel` : thèmes `NOEL_1` et `NOEL_2`, LS-277. Baies de houx, boules
  * suspendues, neige continue et rotation lente des rayons, ces trois derniers
  * en mouvement continu sous bouton de pause, ADR-045 amendé.
