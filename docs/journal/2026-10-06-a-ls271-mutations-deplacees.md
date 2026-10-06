@@ -41,12 +41,26 @@ ne voit pas un contenu tronqué par un ancêtre en `overflow: hidden`.
 `overflow-wrap: anywhere` limite le risque pour le texte courant. Écrit dans
 LS-271.
 
+## Nocturne n°55 et LS-272
+
+- Le nocturne n°55 a tourné sur `c7decbd` : preuves lourdes vertes,
+  `180 mutations, 180 detectees`, d'où la clôture de LS-271.
+- Il reste rouge sur l'audit : GHSA-68fv-2mgg-jv7q, gravité haute, publié
+  dans la nuit sur `source-map-js` 1.2.1, seul paquet non exempté. **LS-272** :
+  la 1.2.2 tient dans les plages déclarées par `postcss`, `css-tree` et
+  `magicast`. `npm update source-map-js` ne modifie que le verrou.
+- Preuve : le filtre d'audit du nocturne, rejoué sur `main`, sort
+  « NON EXEMPTE source-map-js ». Avec la correction, 5 paquets signalés, tous
+  couverts par l'exemption `braces`, code 0. Types, lint et build au vert ;
+  1760 tests sur 1760.
+
 ## Prochaine étape
 
-Vérifier le nocturne qui suit la fusion, puis fermer #525 et LS-271. Ensuite
-LS-270, en zone critique. LS-258 : l'exemption `braces` échoit le 17 octobre.
+Lancer le nocturne à la main après la fusion de LS-272, puis fermer #525 et
+LS-272. Ensuite LS-270, en zone critique. LS-258 : l'exemption `braces`
+échoit le 17 octobre.
 
 ## État des tickets
 
-LS-271 en cours, jusqu'au nocturne vert. LS-270 à faire. LS-258 en cours.
-LS-269 fusionnée, non déployée.
+LS-271 close. LS-272 en cours, jusqu'au nocturne vert. LS-270 à faire. LS-258
+en cours. LS-269 fusionnée, non déployée.
