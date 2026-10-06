@@ -8,7 +8,7 @@
 import { z } from "zod";
 
 /** Les thèmes écrits dans le code. Même liste que `chk_parametre_theme_connu`. */
-export const THEMES_SAISONNIERS = ["AUCUN", "NOEL"] as const;
+export const THEMES_SAISONNIERS = ["AUCUN", "NOEL_1", "NOEL_2"] as const;
 
 export type ThemeSaisonnier = (typeof THEMES_SAISONNIERS)[number];
 
@@ -21,5 +21,6 @@ export const schemaThemeSaisonnier = z.enum(THEMES_SAISONNIERS);
  */
 export const LIBELLES_THEMES: Record<ThemeSaisonnier, string> = {
   AUCUN: "aucun thème",
-  NOEL: "le thème de Noël",
+  NOEL_1: "Noël 1, sobre",
+  NOEL_2: "Noël 2, franc",
 };

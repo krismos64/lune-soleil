@@ -209,24 +209,46 @@
 }
 
 /*
- * THÈMES SAISONNIERS, ADR-046. Posés sur le `<main>` de l'accueil et du
- * catalogue seulement, jamais sur la racine : l'en-tête, le pied, le tunnel et
- * l'administration n'en héritent pas.
+ * THÈMES SAISONNIERS, ADR-046 amendé par LS-277. Posés sur le `<main>` de
+ * l'accueil et du catalogue seulement, jamais sur la racine : l'en-tête, le
+ * tunnel et l'administration n'en héritent pas.
  *
- * CHAQUE JETON EST UNE PAIRE MESURÉE sur les trois fonds, C31 :
+ * TROIS CLASSES DE JETONS, que `verifier-contraste.sh` distingue par leur nom :
  *
- *   --ls-noel-rouge  #8E2A22  crème 7,85:1  sable 7,03:1  blanc 8,39:1
- *   --ls-noel-vert   #2F5A43  crème 7,38:1  sable 6,61:1  blanc 7,88:1
+ * - les ACCENTS, peints sur les fonds clairs, tiennent 4,5:1 sur crème, sable
+ *   et blanc, C31 :
+ *     --ls-noel-rouge  #9B1B1E  crème 7,65:1  sable 6,85:1  blanc 8,17:1
+ *     --ls-noel-vert   #2F5A43  crème 7,38:1  sable 6,61:1  blanc 7,88:1
+ * - les FONDS de `NOEL_2`, `--ls-noel-fond-*`, sont des surfaces et ne
+ *   portent pas de texte d'eux-mêmes ;
+ * - les TEXTES SUR ROUGE, `*-sur-rouge`, tiennent 4,5:1 sur CHAQUE fond du
+ *   bloc, et 3:1 pour le grand texte `*-titre-sur-rouge`. `--ls-noel-fond-clair`
+ *   est le point le plus clair réellement peint par le dégradé du bandeau :
+ *     blanc sur fond-clair #BB4348        5,24:1
+ *     or #F0CF7A sur fond-clair, titre     3,47:1
  *
- * `--ls-accent-saison` et `--ls-feuillage` sont les deux seuls points
- * d'entrée des composants : sans thème, ils ne sont pas définis, et chaque
- * composant retombe sur sa couleur ordinaire par la valeur de repli de `var()`.
+ * `--ls-accent-saison` et `--ls-feuillage` restent les points d'entrée des
+ * composants : sans thème, ils ne sont pas définis, et chaque composant
+ * retombe sur sa couleur ordinaire par la valeur de repli de `var()`.
  */
-[data-theme="noel"] {
-  --ls-noel-rouge: #8e2a22;
+[data-theme="noel_1"] {
+  --ls-noel-rouge: #9b1b1e;
   --ls-noel-vert: #2f5a43;
   --ls-accent-saison: var(--ls-noel-rouge);
   --ls-feuillage: var(--ls-noel-vert);
+}
+
+[data-theme="noel_2"] {
+  --ls-noel-rouge: #9b1b1e;
+  --ls-noel-vert: #2f5a43;
+  --ls-accent-saison: var(--ls-noel-rouge);
+  --ls-feuillage: var(--ls-noel-vert);
+  --ls-noel-fond-rouge: #9b1b1e;
+  --ls-noel-fond-clair: #bb4348;
+  --ls-noel-fond-vif: #b0242a;
+  --ls-noel-fond-nuit: #5e0d12;
+  --ls-noel-texte-sur-rouge: #ffffff;
+  --ls-noel-titre-sur-rouge: #f0cf7a;
 }
 
 /* Respect systematique de la preference de mouvement reduit */

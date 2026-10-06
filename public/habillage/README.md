@@ -23,6 +23,23 @@ de nuit à l'aquarelle, **aucun bijou, aucun objet, aucun texte**, une pièce
 inexistante montrée comme une création étant une allégation trompeuse.
 Réécrite par `sharp` en 1024 x 1536, **sans métadonnées**, environ 100 ko.
 
+## papier-cadeau.jpg et paquet-ruban.jpg, thèmes de Noël
+
+**Ajoutés le 6 octobre 2026**, LS-277 : décors des thèmes `NOEL_1` et
+`NOEL_2`, ADR-046 amendé. **Images générées par Codex**, **aucun bijou,
+aucun texte**, réécrites sans métadonnées : seul le segment JFIF subsiste,
+vérifié octet par octet.
+
+- `papier-cadeau.jpg`, 341 x 284 : **une tuile d'une période exacte** du
+  motif rouge et blanc (nœuds, flocons, étoiles), découpée par
+  autocorrélation dans une image de 1024 px. Elle se raccorde par
+  construction, ce que la première génération ne faisait pas. Répétée en
+  `background`, jamais posée sur une photographie de bijou.
+- `paquet-ruban.jpg`, 720 x 720 : un paquet rouge au nœud de satin blanc sous
+  la neige, médaillon de la section « À offrir, ou à garder » de l'accueil,
+  décor `aria-hidden` sans texte alternatif. **Il ne montre aucune pièce**,
+  pour ne rien laisser croire sur le catalogue.
+
 ## logo-sceau.jpg, logo du sceau de l'accueil
 
 **Ajouté le 4 octobre 2026**, LS-260 : le logo fourni par Christophe dans sa

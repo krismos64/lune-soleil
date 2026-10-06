@@ -380,8 +380,13 @@ Migration `20261004190000_theme_saisonnier`, additive :
 ```sql
 ALTER TABLE parametre_boutique
   ADD CONSTRAINT chk_parametre_theme_connu
-  CHECK (theme_saisonnier IN ('AUCUN', 'NOEL'));
+  CHECK (theme_saisonnier IN ('AUCUN', 'NOEL_1', 'NOEL_2'));
 ```
+
+**LS-277, migration `20261006200000_themes_noel`** : `NOEL` est remplacé par
+`NOEL_1`, sobre, et `NOEL_2`, franc. La contrainte est retirée puis reposée,
+une valeur `NOEL` devenant `NOEL_1` entre les deux ; aucun thème n'est
+activé.
 
 **Texte borné et non type énuméré** : `verifier-schema.sh` exige que chaque
 énumération figure au modèle conceptuel, dont cette table de configuration

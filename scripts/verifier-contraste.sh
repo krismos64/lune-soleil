@@ -248,32 +248,72 @@ for (const fichier of modules.sort()) {
 }
 
 /*
- * LES JETONS D'UN THÈME SAISONNIER, ADR-046 : chacun tient 4,5:1 sur les
- * trois fonds du projet, C31, qu'il soit employé aujourd'hui sur l'un d'eux
- * ou non. Un thème est un jeu fermé que l'exploitante active d'un clic : un
- * jeton défaillant passerait en production sans qu'aucune story le relise.
+ * LES JETONS D'UN THÈME SAISONNIER, ADR-046 amendé par LS-277. Trois classes,
+ * reconnues à leur nom :
+ *
+ * - un ACCENT tient 4,5:1 sur les trois fonds clairs du projet, C31, qu'il
+ *   soit employé aujourd'hui sur l'un d'eux ou non ;
+ * - un FOND, `--ls-noel-fond-*`, est une surface : il n'est pas mesuré comme
+ *   un texte, mais sert de fond aux textes de la classe suivante ;
+ * - un TEXTE SUR ROUGE, `*-sur-rouge`, tient 4,5:1 sur CHAQUE fond de son bloc,
+ *   3:1 s'il est réservé au grand texte, `*-titre-sur-rouge`.
+ *
+ * Un thème est un jeu fermé que l'exploitante active d'un clic : un jeton
+ * défaillant passerait en production sans qu'aucune story le relise.
+ *
+ * L'EXPRESSION LIT `noel_1` ET `noel_2`. Elle n'acceptait que des lettres
+ * jusqu'à LS-277 : les deux thèmes n'auraient plus été mesurés du tout, sans
+ * un mot, d'où le garde plus bas.
  */
 const FONDS = ["--ls-background", "--ls-surface", "--ls-surface-sand"];
 let jetonsDeTheme = 0;
-for (const bloc of texteJetons.matchAll(/\[data-theme="([a-z]+)"\]\s*\{([^}]*)\}/g)) {
-  for (const m of bloc[2].matchAll(/(--ls-[a-z0-9-]+):/g)) {
-    const couleur = jetons.get(m[1]);
-    if (!couleur) continue;
+let blocsDeTheme = 0;
+for (const bloc of texteJetons.matchAll(/\[data-theme="([a-z0-9_]+)"\]\s*\{([^}]*)\}/g)) {
+  blocsDeTheme += 1;
+  const noms = [...bloc[2].matchAll(/(--ls-[a-z0-9-]+):/g)].map((m) => m[1]);
+  const fondsDuBloc = noms.filter((n) => /-fond-/.test(n) && jetons.get(n));
+  const echec = (nom, fond, mesure, seuil) =>
+    echecs.push({
+      fichier: `styles/tokens.css, thème ${bloc[1]}`,
+      selecteur: nom,
+      avant: nom,
+      arriere: fond,
+      mesure,
+      seuil,
+    });
+  for (const nom of noms) {
+    const couleur = jetons.get(nom);
+    if (!couleur || /-fond-/.test(nom)) continue;
     jetonsDeTheme += 1;
+    if (/-sur-rouge$/.test(nom)) {
+      if (fondsDuBloc.length === 0) {
+        echec(nom, "aucun fond --ls-noel-fond-* dans ce bloc", 0, 4.5);
+        continue;
+      }
+      const seuil = /-titre-sur-rouge$/.test(nom) ? 3.0 : 4.5;
+      for (const fond of fondsDuBloc) {
+        const mesure = rapport(couleur, jetons.get(fond));
+        if (mesure < seuil) echec(nom, fond, mesure, seuil);
+      }
+      continue;
+    }
     for (const fond of FONDS) {
       const mesure = rapport(couleur, jetons.get(fond));
-      if (mesure < 4.5) {
-        echecs.push({
-          fichier: `styles/tokens.css, thème ${bloc[1]}`,
-          selecteur: m[1],
-          avant: m[1],
-          arriere: fond,
-          mesure,
-          seuil: 4.5,
-        });
-      }
+      if (mesure < 4.5) echec(nom, fond, mesure, 4.5);
     }
   }
+}
+
+/*
+ * LE GARDE COMPTE CE QUI EST ÉCRIT, ET NON CE QUI EST LU. Compter les seuls
+ * blocs reconnus laisserait passer le cas où l'expression n'en reconnaît plus
+ * AUCUN : zéro bloc lu, zéro échec, « OK ».
+ */
+const blocsEcrits = (texteJetons.match(/\[data-theme=/g) ?? []).length;
+if (blocsDeTheme !== blocsEcrits || (blocsEcrits > 0 && jetonsDeTheme === 0)) {
+  console.log(`ECHEC ${blocsEcrits} bloc(s) de thème écrits, ${blocsDeTheme} lu(s), ${jetonsDeTheme} jeton(s) mesuré(s) :`);
+  console.log("      l'extraction ne lit plus tous les thèmes, leur contrôle est muet.");
+  process.exit(1);
 }
 
 for (const e of echecs) {
@@ -288,7 +328,7 @@ for (const e of echecs) {
 
 console.log(`Fichiers de style examinés : ${fichiersExamines}`);
 console.log(`Paires couleur et fond mesurées : ${paires}`);
-console.log(`Jetons de thème saisonnier mesurés sur trois fonds : ${jetonsDeTheme}`);
+console.log(`Blocs de thème lus : ${blocsDeTheme}, jetons de thème mesurés : ${jetonsDeTheme}`);
 
 /*
  * L'ANCRAGE SE PROUVE, DEUX FOIS. Zéro fichier examiné signifie que le contrôle
