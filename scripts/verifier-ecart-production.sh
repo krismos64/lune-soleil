@@ -130,7 +130,13 @@ fi
 # L'ÉCART EST RÉEL ET NON FABRIQUÉ, exigence du critère 3 du ticket : le SHA
 # retenu est celui qui précède une migration réellement commitée dans ce dépôt.
 # ---------------------------------------------------------------------------
-sha_avant_migration=$(git log --format=%H --diff-filter=A \
+#
+# LA MIGRATION SE CHERCHE DANS L'HISTORIQUE DE LA RÉFÉRENCE, et non dans celui
+# de la branche courante, LS-277. Sur une branche qui apporte sa propre
+# migration, `git log` sans référence retenait ce commit, absent de `main` :
+# l'intervalle mesuré contre la référence ne la contenait pas, et le contrôle
+# échouait sur toute PR porteuse d'une migration.
+sha_avant_migration=$(git log "$REFERENCE" --format=%H --diff-filter=A \
   -- 'prisma/migrations/*/migration.sql' 2>/dev/null | head -1)
 
 if [ -n "$sha_avant_migration" ]; then
