@@ -163,7 +163,9 @@ test.describe("aperçu de l'administratrice", () => {
       .first()
       .boundingBox();
     expect(bandeau && bande && texte && decor).toBeTruthy();
-    expect(Math.abs(bande!.y + bande!.height - (bandeau!.y + bandeau!.height))).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(bande!.y + bande!.height - (bandeau!.y + bandeau!.height)),
+    ).toBeLessThanOrEqual(1);
     expect(Math.abs(bande!.width - bandeau!.width)).toBeLessThanOrEqual(1);
     // La zone décor est au-dessus du texte, ou à sa droite : jamais dessous.
     expect(decor!.y).toBeLessThan(texte!.y + texte!.height);
@@ -251,9 +253,7 @@ test.describe("aperçu de l'administratrice", () => {
   test.describe("mouvement autorisé", () => {
     test.use({ contextOptions: { reducedMotion: "no-preference" } });
 
-    test("la neige reste dans l'emblème", async ({
-      page,
-    }) => {
+    test("la neige reste dans l'emblème", async ({ page }) => {
       await page.goto(accueil("NOEL_1"));
       const cadre = page.locator('[class*="__cadre"][data-borne]').first();
       await expect(cadre).toHaveAttribute("data-borne", "joue");
@@ -262,13 +262,15 @@ test.describe("aperçu de l'administratrice", () => {
       // sur le titre ni sur un bouton.
       await page.waitForTimeout(1500);
       const boiteCadre = await cadre.boundingBox();
-      const neige = await cadre.locator('[class*="__neige"]').first().boundingBox();
+      const neige = await cadre
+        .locator('[class*="__neige"]')
+        .first()
+        .boundingBox();
       expect(boiteCadre && neige).toBeTruthy();
       expect(neige!.x).toBeGreaterThanOrEqual(boiteCadre!.x - 1);
       expect(neige!.x + neige!.width).toBeLessThanOrEqual(
         boiteCadre!.x + boiteCadre!.width + 1,
       );
-
     });
 
     /*
@@ -365,8 +367,14 @@ test.describe("aperçu de l'administratrice", () => {
     ).toBeVisible();
     const liensAccueil = groupe.getByRole("link", { name: "l'accueil" });
     await expect(liensAccueil).toHaveCount(2);
-    await expect(liensAccueil.nth(0)).toHaveAttribute("href", accueil("NOEL_1"));
-    await expect(liensAccueil.nth(1)).toHaveAttribute("href", accueil("NOEL_2"));
+    await expect(liensAccueil.nth(0)).toHaveAttribute(
+      "href",
+      accueil("NOEL_1"),
+    );
+    await expect(liensAccueil.nth(1)).toHaveAttribute(
+      "href",
+      accueil("NOEL_2"),
+    );
 
     // Réappliquer « aucun thème » ne change rien d'autre que le message :
     // c'est le retour au thème par défaut, sans toucher l'état partagé.
