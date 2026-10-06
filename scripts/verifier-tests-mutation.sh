@@ -39,6 +39,7 @@ cd "$RACINE" || exit 1
 
 SQL="tests/aide/reservation-sql.ts"
 STOCK="src/repositories/stock.ts"
+DEPOT_PANIER="src/repositories/panier.ts"
 # LA PAGE D'ACCUEIL A DEMENAGE EN LS-122, groupe de routes `(boutique)`. Le
 # chemin d'origine n'existait plus, et le garde-fou de lisibilite arretait le
 # script AVANT la premiere mutation : il rendait 1 sans en avoir joue une seule.
@@ -136,7 +137,7 @@ SENDCLOUD_EXPEDITION="src/integrations/sendcloud/expedition.ts"
 #
 # Le defaut datait du jour ou le cas 121 a ete ecrit, et rien ne pouvait le
 # signaler : le nocturne mourait au cas 1 sur 180 depuis trois nuits.
-MUTABLES=("$SQL" "$STOCK" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE" "$AVIS" "$DEPOT_AVIS" "$SERVICE_AVOIR" "$DEPOT_PARAMETRES" "$SENDCLOUD_EXPEDITION" "$DESTINATIONS_REAUTH" "$TEST_COMPTABILITE" "$URLS_MEDIAS")
+MUTABLES=("$SQL" "$STOCK" "$DEPOT_PANIER" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE" "$AVIS" "$DEPOT_AVIS" "$SERVICE_AVOIR" "$DEPOT_PARAMETRES" "$SENDCLOUD_EXPEDITION" "$DESTINATIONS_REAUTH" "$TEST_COMPTABILITE" "$URLS_MEDIAS")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -633,6 +634,21 @@ cas "condition archivee_a retiree" integration \
 mute "$STOCK" 's/\n      AND vente_web_activee = true//'
 cas "condition vente_web_activee retiree" integration \
   "refuse la reservation quand la vente web est desactivee"
+
+# Cas 3 bis : le produit archive redevient commandable, LS-270. L'archivage
+# n'ecrit que `produit.statut`, la variante reste intacte : seule cette
+# condition refusait la piece. Le test attendu archive le produit APRES la
+# creation de la variante, comme la boutique.
+mute "$STOCK" 's/\n      AND EXISTS \(\n        SELECT 1 FROM produit p\n        WHERE p\.id = variante\.produit_id AND p\.statut = .ACTIF.\n      \)//'
+cas "condition de statut du produit retiree de la reservation" integration \
+  "refuse un produit passe en ARCHIVE, sans rien ecrire"
+
+# Cas 3 ter : le panier compte de nouveau un produit archive, LS-270. La
+# ligne garderait sa quantite et son prix dans le total presente, sous le
+# message « retiree de la vente ».
+mute "$DEPOT_PANIER" 's/\n                AND p\.statut = .ACTIF.//'
+cas "statut du produit ignore par le disponible du panier" integration \
+  "ne compte un produit archive ni en quantite ni dans le total"
 
 # Cas 4 : la tache de liberation supprime les lignes expirees sans rendre le
 # stock. La piece resterait bloquee pour toujours.

@@ -36,6 +36,11 @@ export type VariantePanier = {
  * critere 7 exige au contraire de la SIGNALER sur sa ligne, sans faire echouer
  * tout le panier. C'est l'ecran qui decide quoi en dire, pas cette requete.
  *
+ * LE DISPONIBLE SUIT LE STATUT DU PRODUIT, LS-270, comme `vendable`. Il ne
+ * lisait que la variante : une piece dont le produit etait archive gardait sa
+ * quantite et son prix dans le total, sous le message « retiree de la vente »,
+ * et la commande partait. `SQL_RESERVER` porte la meme condition.
+ *
  * LA VARIANTE ARCHIVEE EST LUE ELLE AUSSI. Une variante disparait rarement, elle
  * s'archive : l'exclure ici rendrait le panier silencieusement plus court apres
  * un archivage, exactement le defaut que le critere 7 previent.
@@ -71,6 +76,7 @@ export async function lireVariantesDuPanier(
       v.libelle,
       v.prix_centimes      AS "prixCentimes",
       CASE WHEN v.vente_web_activee AND v.archivee_a IS NULL
+                AND p.statut = 'ACTIF'
            THEN greatest(v.quantite_physique - v.quantite_reservee, 0)
            ELSE 0
       END                  AS "quantiteDisponible",
