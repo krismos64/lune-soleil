@@ -104,7 +104,19 @@ export default defineConfig({
   // integration continue.
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  reporter: process.env.CI ? "github" : "list",
+  /*
+   * LE RAPPORT HTML S'AJOUTE EN CI, LS-273. Avec `github` seul, aucun dossier
+   * `playwright-report/` n'etait ecrit : l'etape « Rapport Playwright en cas
+   * d'echec » des deux workflows concluait « No files were found » et passait
+   * au vert. Depuis le 31 juillet 2026, aucun echec de bout en bout n'avait
+   * laisse de trace exploitable. Le 6 octobre, soixante delais depasses sur
+   * `/administration/connexion` n'ont pu etre diagnostiques faute de trace.
+   *
+   * LA SORTIE STANDARD NE CHANGE PAS, verifie dans la source de Playwright
+   * 1.62 : sous `CI`, le reporter HTML se tait a la sortie. Les scripts de
+   * mutation, qui filtrent cette sortie, ne voient aucune ligne de plus.
+   */
+  reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
 
   /*
    * LE DELAI D'ASSERTION, LS-201, et pourquoi il ne suffisait pas.

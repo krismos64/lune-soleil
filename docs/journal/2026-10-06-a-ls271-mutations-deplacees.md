@@ -54,13 +54,29 @@ LS-271.
   couverts par l'exemption `braces`, code 0. Types, lint et build au vert ;
   1760 tests sur 1760.
 
+## Nocturne lancé à la main et LS-273
+
+- Run 37469871570 sur `fde4fe1` : audit vert (LS-272 close), mutations à 180
+  sur 180, mais **60 échecs de bout en bout**, tous des délais dépassés de
+  `page.goto` en attente de `load`. Tous mènent à `/administration/connexion`
+  en 1280 px. Aux autres largeurs, seul le test qui passe en 1280 échoue.
+  Aucune défaillance d'autorisation.
+- Vert en local (140 tests) et au n°55 du matin. En 1280, la page ne demande
+  qu'une image, `univers-atelier.jpg` en `w=640`, que la production sert en
+  0,3 s. L'hypothèse d'une optimisation d'image bloquée n'est pas prouvée.
+- **Le diagnostic était impossible** : en CI, le reporter était `github`
+  seul, sans dossier `playwright-report/`. L'étape de rapport concluait « No
+  files were found » et passait au vert, depuis le 31 juillet. LS-273 ajoute
+  le reporter HTML en CI. Prouvé sous `CI=1` : rapport et trace écrits, aucune
+  ligne de sortie en plus, donc aucun effet sur les filtres des mutations.
+
 ## Prochaine étape
 
-Lancer le nocturne à la main après la fusion de LS-272, puis fermer #525 et
-LS-272. Ensuite LS-270, en zone critique. LS-258 : l'exemption `braces`
-échoit le 17 octobre.
+LS-273 : relancer le nocturne et lire la trace au prochain échec, puis
+fermer #525 sur un vert. Ensuite LS-270, en zone critique. LS-258 :
+l'exemption `braces` échoit le 17 octobre.
 
 ## État des tickets
 
-LS-271 close. LS-272 en cours, jusqu'au nocturne vert. LS-270 à faire. LS-258
-en cours. LS-269 fusionnée, non déployée.
+LS-271 et LS-272 closes. LS-273 en cours. LS-270 à faire. LS-258 en cours.
+LS-269 fusionnée, non déployée.
