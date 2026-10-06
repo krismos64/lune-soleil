@@ -23,12 +23,20 @@ WHERE id = :variante
   AND archivee_a IS NULL
   AND vente_web_activee = true
   AND quantite_physique - quantite_reservee >= :qte
+  AND EXISTS (SELECT 1 FROM produit p
+              WHERE p.id = variante.produit_id AND p.statut = 'ACTIF')
 RETURNING id;
 ```
 
 `archivee_a IS NULL` fait partie de la condition, pas d'une lecture préalable.
 Entre une lecture et l'écriture, l'archivage peut survenir : un client ayant la
 fiche ouverte réserverait alors une pièce retirée du catalogue.
+
+**Le statut du produit aussi**, LS-270 : archiver un produit n'écrit que
+`produit.statut`, et un panier existant commandait sinon la pièce. Le produit
+n'est **pas verrouillé**, pour ne rien ajouter à l'ordre compteur puis
+variantes. Cette condition ne vaut que pour le web : la vente externe d'une
+pièce d'un produit archivé reste permise, invariant 6.
 
 Aucune ligne retournée signifie un refus métier explicite, présenté sans jargon
 technique au client.
