@@ -215,7 +215,9 @@
  * après le huitième de tour d'entrée, un tour lent en 60 s, sans fin, sous le
  * bouton de pause. Hors thème, le huitième de tour reste la règle.
  */
-.rayonsContinus {
+/* Sous un état posé par le script seulement : sans script, pas de pause. */
+:global([data-borne="joue"]) .rayonsContinus,
+:global([data-borne="fin"]) .rayonsContinus {
   animation:
     tourne 2600ms var(--ls-easing-sortie) 2200ms forwards,
     tourne-sans-fin 60s linear 4800ms infinite;

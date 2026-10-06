@@ -18,27 +18,20 @@
  * COMPOSANT CLIENT MINIMAL, le reste de la carte restant serveur : seul le
  * bouton a besoin d'un etat.
  */
-import { useState, useTransition, type CSSProperties } from "react";
+import { useState, useTransition } from "react";
 
-import { FloconIcone, PaquetIcone } from "@/components/decor-noel";
+import { PaquetIcone } from "@/components/decor-noel";
 
 import { ajouterAuPanier } from "../panier/actions-panier";
 import styles from "./catalogue.module.css";
 
 /*
- * `noel`, LS-277 : un petit paquet précède le libellé, et un clic réussi fait
- * éclater une gerbe de flocons autour du bouton, décor `aria-hidden` qui
- * s'efface en 0,8 s. L'annonce reste le seul retour pour un lecteur d'écran.
+ * `noel`, LS-277 : un petit paquet précède le libellé et saute au clic
+ * réussi. Pas de gerbe de flocons : la maquette en faisait éclater une sur le
+ * prix et le badge, décor posé sur un texte qu'ADR-045 amendé interdit,
+ * relevé par `ls-frontend-revue`. L'annonce reste le seul retour pour un
+ * lecteur d'écran. Absent d'un bouton « Épuisé » : rien n'y est à offrir.
  */
-const GERBE = Array.from({ length: 10 }, (_, k) => {
-  const angle = (k / 10) * Math.PI * 2;
-  const rayon = 46 + (k % 3) * 14;
-  return {
-    x: Math.round(Math.cos(angle) * rayon),
-    y: Math.round(Math.sin(angle) * rayon * 0.6),
-  };
-});
-
 export function AjoutRapide({
   varianteId,
   nomProduit,
@@ -52,7 +45,7 @@ export function AjoutRapide({
 }) {
   const [enCours, demarrer] = useTransition();
   const [message, setMessage] = useState("");
-  const [gerbe, setGerbe] = useState(0);
+  const [ajouts, setAjouts] = useState(0);
 
   return (
     <div className={styles.ajoutRapide}>
@@ -86,26 +79,18 @@ export function AjoutRapide({
               issue.statut === "OK" ? "Ajouté au panier." : issue.message,
             );
             if (noel && issue.statut === "OK") {
-              setGerbe((n) => n + 1);
+              setAjouts((n) => n + 1);
             }
           });
         }}
       >
-        {noel ? <PaquetIcone className={styles.paquetBouton} /> : null}
-        {epuise ? "Épuisé" : "Ajouter au panier"}
-        {gerbe > 0 ? (
-          <span key={gerbe} className={styles.gerbe} aria-hidden="true">
-            {GERBE.map(({ x, y }) => (
-              <span
-                key={`${x}-${y}`}
-                className={styles.eclat}
-                style={{ "--gx": `${x}px`, "--gy": `${y}px` } as CSSProperties}
-              >
-                <FloconIcone />
-              </span>
-            ))}
-          </span>
+        {noel && !epuise ? (
+          <PaquetIcone
+            key={ajouts}
+            className={`${styles.paquetBouton} ${ajouts > 0 ? styles.paquetAjoute : ""}`}
+          />
         ) : null}
+        {epuise ? "Épuisé" : "Ajouter au panier"}
       </button>
 
       {/*

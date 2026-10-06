@@ -665,7 +665,7 @@
 }
 
 /* Bande sucre d'orge au pied du héros, dans le cadre coupé du héros. */
-.sucreHeros {
+.hero .sucreHeros {
   position: absolute;
   inset: auto 0 0;
   z-index: 1;
@@ -692,6 +692,8 @@
   position: absolute;
   inset: -6%;
   width: 112%;
+  /* La règle globale `svg { max-width: 100% }` le rabotait et le décentrait. */
+  max-width: none;
   height: 112%;
   overflow: visible;
   pointer-events: none;

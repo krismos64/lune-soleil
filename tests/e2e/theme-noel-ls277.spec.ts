@@ -124,17 +124,65 @@ test.describe("aperçu de l'administratrice", () => {
     test(`${valeur} : en mouvement réduit, rien ne bouge et pas de bouton de pause`, async ({
       page,
     }) => {
-      await page.goto(accueil(valeur));
-      await expect(page.getByText("Fêtes de fin d'année")).toBeVisible();
-      expect((await animations(page)).enCours).toBe(0);
-      await expect(
-        page.getByRole("button", { name: /animations/ }),
-      ).toHaveCount(0);
-      const flocons = page.locator('[class*="__flocon"]');
-      expect(await flocons.count()).toBeGreaterThan(0);
-      await expect(flocons.first()).toBeHidden();
+      for (const chemin of [accueil(valeur), catalogue(valeur)]) {
+        await page.goto(chemin);
+        await expect(page.getByText("Fêtes de fin d'année")).toBeVisible();
+        expect((await animations(page)).enCours, chemin).toBe(0);
+        await expect(
+          page.getByRole("button", { name: /animations/ }),
+        ).toHaveCount(0);
+        const flocons = page.locator('[class*="__flocon"]');
+        expect(await flocons.count()).toBeGreaterThan(0);
+        await expect(flocons.first()).toBeHidden();
+      }
     });
   }
+
+  /*
+   * LA BANDE SUCRE D'ORGE BORDE LE BAS DU BANDEAU, sur toute sa largeur, et la
+   * zone décor ne passe jamais sous le texte. Le premier jet cassait la grille
+   * de 900 à 1280 px, la bande devenant une case, relevé par
+   * `ls-frontend-revue`.
+   */
+  test("le bandeau du catalogue garde sa disposition", async ({ page }) => {
+    await page.goto(catalogue("NOEL_1"));
+    const bandeau = await page
+      .locator('[class*="bandeauNoel"]')
+      .first()
+      .boundingBox();
+    const bande = await page
+      .locator('[class*="bandeauNoel"] [class*="sucreOrge"]')
+      .first()
+      .boundingBox();
+    const texte = await page
+      .locator('[class*="texteBandeau"]')
+      .first()
+      .boundingBox();
+    const decor = await page
+      .locator('[class*="decorBandeau"]')
+      .first()
+      .boundingBox();
+    expect(bandeau && bande && texte && decor).toBeTruthy();
+    expect(Math.abs(bande!.y + bande!.height - (bandeau!.y + bandeau!.height))).toBeLessThanOrEqual(1);
+    expect(Math.abs(bande!.width - bandeau!.width)).toBeLessThanOrEqual(1);
+    // La zone décor est au-dessus du texte, ou à sa droite : jamais dessous.
+    expect(decor!.y).toBeLessThan(texte!.y + texte!.height);
+  });
+
+  test("le ruban du paquet est centré sur son image", async ({ page }) => {
+    await page.goto(accueil("NOEL_1"));
+    const image = await page
+      .locator('[class*="paquetImage"]')
+      .first()
+      .boundingBox();
+    const ruban = await page
+      .locator('[class*="paquetRuban"]')
+      .first()
+      .boundingBox();
+    expect(image && ruban).toBeTruthy();
+    const centre = (b: { x: number; width: number }) => b.x + b.width / 2;
+    expect(Math.abs(centre(ruban!) - centre(image!))).toBeLessThanOrEqual(1);
+  });
 
   test("NOEL_2 : titre et accroche en blanc sur le bandeau rouge", async ({
     page,
@@ -162,19 +210,40 @@ test.describe("aperçu de l'administratrice", () => {
     expect(titre).toBe(titreOrdinaire);
   });
 
-  test("sans script, les deux thèmes sont complets", async ({ browser }) => {
+  /*
+   * SANS SCRIPT, LE BOUTON DE PAUSE N'EXISTE PAS : rien ne doit donc tourner
+   * sans fin, WCAG 2.2.2. Le premier jet laissait neige, boules et rayons
+   * tourner, relevé par `ls-frontend-revue`. Mesuré en mouvement autorisé, le
+   * seul où une animation peut exister.
+   */
+  test("sans script, les thèmes sont complets et rien ne tourne sans fin", async ({
+    browser,
+  }) => {
     const contexte = await browser.newContext({
       javaScriptEnabled: false,
       storageState: FICHIER_SESSION_ADMINISTRATION,
+      reducedMotion: "no-preference",
     });
     const page = await contexte.newPage();
+    const sansFin = async () => {
+      const cdp = await contexte.newCDPSession(page);
+      await cdp.send("Runtime.enable");
+      const { result } = await cdp.send("Runtime.evaluate", {
+        expression: `document.getAnimations().filter((a) => a.playState === "running" && a.effect && a.effect.getTiming().iterations === Infinity).length`,
+        returnByValue: true,
+      });
+      await cdp.detach();
+      return result.value as number;
+    };
     for (const { valeur } of THEMES) {
       await page.goto(accueil(valeur));
       await expect(page.getByText("Fêtes de fin d'année")).toBeVisible();
+      expect(await sansFin(), `accueil ${valeur}`).toBe(0);
       await page.goto(catalogue(valeur));
       await expect(
         page.getByText("Chacun peut devenir un cadeau."),
       ).toBeVisible();
+      expect(await sansFin(), `catalogue ${valeur}`).toBe(0);
     }
     await contexte.close();
   });
@@ -182,7 +251,7 @@ test.describe("aperçu de l'administratrice", () => {
   test.describe("mouvement autorisé", () => {
     test.use({ contextOptions: { reducedMotion: "no-preference" } });
 
-    test("la neige reste dans l'emblème, seuls les décors continus durent", async ({
+    test("la neige reste dans l'emblème", async ({
       page,
     }) => {
       await page.goto(accueil("NOEL_1"));
@@ -200,15 +269,49 @@ test.describe("aperçu de l'administratrice", () => {
         boiteCadre!.x + boiteCadre!.width + 1,
       );
 
-      // Passé la borne de cinq secondes, seuls les décors `data-continu`
-      // tournent encore, ADR-045 amendé.
-      await expect(cadre).toHaveAttribute("data-borne", "fin", {
-        timeout: 7_000,
-      });
-      const etat = await animations(page);
-      expect(etat.enCours).toBeGreaterThan(0);
-      expect(etat.horsContinu).toBe(0);
     });
+
+    /*
+     * CHAQUE ÉLÉMENT BORNÉ, SUR LES DEUX PAGES, et pas le premier seulement :
+     * le test de LS-268 n'en visait qu'un, trou relevé deux fois. Passé la
+     * borne, seuls les décors `data-continu` tournent encore, ADR-045 amendé.
+     */
+    for (const chemin of [accueil("NOEL_1"), catalogue("NOEL_2")]) {
+      test(`${chemin} : passé la borne, seuls les décors continus durent`, async ({
+        page,
+      }) => {
+        // Jusqu'à cinq secondes par élément borné hors de l'écran.
+        test.setTimeout(90_000);
+        await page.goto(chemin);
+        await page
+          .locator('[class*="__flocon"]')
+          .first()
+          .waitFor({ state: "attached" });
+        const bornes = page.locator("main [data-borne]");
+        const nombre = await bornes.count();
+        expect(nombre).toBeGreaterThan(2);
+        for (let rang = 0; rang < nombre; rang += 1) {
+          const borne = bornes.nth(rang);
+          // Un décor masqué à cette largeur, la neige des marges sous
+          // 1240 px, n'entre jamais dans l'écran : il n'a rien à borner.
+          if (!(await borne.isVisible())) continue;
+          await borne.scrollIntoViewIfNeeded();
+          await expect(borne).toHaveAttribute("data-borne", "fin", {
+            timeout: 7_000,
+          });
+        }
+        // De retour en haut, l'observateur repasse la zone à `joue` : le
+        // mouvement continu reprend, la mesure attend qu'il ait repris.
+        await bornes.first().scrollIntoViewIfNeeded();
+        await expect
+          .poll(async () => (await animations(page)).enCours)
+          .toBeGreaterThan(0);
+        await expect(bornes.first()).toHaveAttribute("data-borne", "fin", {
+          timeout: 7_000,
+        });
+        expect((await animations(page)).horsContinu).toBe(0);
+      });
+    }
 
     for (const { valeur } of THEMES) {
       test(`${valeur} : le bouton de pause fige tout, sur les deux pages`, async ({

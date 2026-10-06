@@ -495,11 +495,16 @@
   margin: 0 0 var(--ls-space-3);
   padding: var(--ls-space-5) var(--ls-space-4) var(--ls-space-6);
   border-radius: var(--ls-radius-md);
+  /*
+   * 5 % DE ROUGE AU PLUS : l'accroche, `--ls-text-muted`, tombait à 4,42:1 sur
+   * 9 %, mesurée par `ls-frontend-revue`. À 5 %, elle tient 4,76:1 au pire.
+   * `verifier-contraste.sh` ne lit pas un `color-mix` dans un dégradé.
+   */
   background: radial-gradient(
     120% 90% at 80% 20%,
     var(--ls-surface) 0%,
-    color-mix(in srgb, var(--ls-noel-rouge) 4%, var(--ls-surface)) 55%,
-    color-mix(in srgb, var(--ls-noel-rouge) 9%, var(--ls-surface)) 100%
+    color-mix(in srgb, var(--ls-noel-rouge) 2%, var(--ls-surface)) 55%,
+    color-mix(in srgb, var(--ls-noel-rouge) 5%, var(--ls-surface)) 100%
   );
 }
 
@@ -554,7 +559,13 @@
   stroke-linecap: round;
 }
 
-.sucreBandeau {
+/*
+ * DEUX CLASSES, et non une : `.sucreOrge` du composant pose `position:
+ * relative` avec la même spécificité, et l'ordre de chargement tranchait. La
+ * bande devenait une case de la grille de 900 à 1280 px, relevé par
+ * `ls-frontend-revue`.
+ */
+.bandeauNoel .sucreBandeau {
   position: absolute;
   inset: auto 0 0;
 }
@@ -572,7 +583,6 @@
   height: 0.75rem;
   flex: none;
   color: var(--ls-noel-rouge);
-  transition: transform 600ms var(--ls-easing-sortie);
 }
 
 :global([data-theme^="noel"]) .filtre {
@@ -580,10 +590,6 @@
   display: inline-flex;
   align-items: center;
   gap: var(--ls-space-2);
-}
-
-.filtre:hover .floconFiltre {
-  transform: rotate(180deg);
 }
 
 .filtre[aria-current="page"] .floconFiltre {
@@ -744,7 +750,7 @@
     color-mix(in srgb, var(--ls-noel-rouge) 45%, transparent);
 }
 
-/* Bouton d'achat : petit paquet, et gerbe de flocons au clic. */
+/* Bouton d'achat : un petit paquet, qui saute au clic réussi. */
 .boutonAjoutRapide {
   position: relative;
   display: inline-flex;
@@ -757,35 +763,6 @@
   width: 18px;
   height: 18px;
   flex: none;
-}
-
-.gerbe {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 0;
-  height: 0;
-  pointer-events: none;
-}
-
-.eclat {
-  position: absolute;
-  left: -4px;
-  top: -4px;
-  width: 8px;
-  height: 8px;
-  color: var(--ls-noel-rouge);
-  opacity: 0;
-}
-
-.eclat:nth-child(even) {
-  color: var(--ls-or-moyen);
-}
-
-.eclat svg {
-  display: block;
-  width: 100%;
-  height: 100%;
 }
 
 /* ---------- Noël 2 : bandeau rouge, cadre rouge, bouton blanc ---------- */
@@ -928,12 +905,17 @@
     animation: saute 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
-  .eclat {
-    animation: eclate 800ms var(--ls-easing-sortie) forwards;
+  .paquetAjoute {
+    animation: saute 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
-  :global([data-theme^="noel"]) .lienPagination:hover {
-    animation: etiquette 900ms ease-in-out;
+  /* Le flocon du filtre tourne au survol, mouvement réduit exclu. */
+  .floconFiltre {
+    transition: transform 600ms var(--ls-easing-sortie);
+  }
+
+  .filtre:hover .floconFiltre {
+    transform: rotate(180deg);
   }
 
   :global([data-theme^="noel"]) .filtre[aria-current="page"]::after {
@@ -942,11 +924,6 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .gerbe {
-    display: none;
-  }
-}
 
 @keyframes trace {
   to {
@@ -997,22 +974,4 @@
   }
 }
 
-@keyframes eclate {
-  from {
-    opacity: 1;
-    transform: translate(0, 0) scale(0.4);
-  }
-  to {
-    opacity: 0;
-    transform: translate(var(--gx), var(--gy)) scale(1) rotate(160deg);
-  }
-}
 
-@keyframes etiquette {
-  30% {
-    transform: rotate(-4deg);
-  }
-  65% {
-    transform: rotate(2deg);
-  }
-}
