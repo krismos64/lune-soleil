@@ -645,6 +645,98 @@ describe("refus de stock, aucune ecriture partielle", () => {
   });
 });
 
+/*
+ * LS-270 : UN PRODUIT RETIRE DE LA VENTE APRES LA MISE AU PANIER.
+ *
+ * L'archivage n'ecrit que `produit.statut` : la variante garde
+ * `vente_web_activee = true` et `archivee_a IS NULL`, les deux seules
+ * conditions que la reservation verifiait. La commande etait ecrite, la piece
+ * reservee, la session de paiement creee pour un produit retire du catalogue.
+ *
+ * LE STATUT EST CHANGE APRES LA CREATION, comme dans la boutique : la piece est
+ * entree au panier quand le produit etait `ACTIF`.
+ */
+describe("produit retire de la vente, LS-270", () => {
+  for (const statut of ["ARCHIVE", "BROUILLON"] as const) {
+    it(`refuse un produit passe en ${statut}, sans rien ecrire`, async () => {
+      const { varianteId, produitId } = await creerVarianteEnStock(client, {
+        quantitePhysique: 1,
+      });
+      await client.query(
+        'UPDATE produit SET statut = $2::"StatutProduit" WHERE id = $1',
+        [produitId, statut],
+      );
+
+      const erreur = await passerCommande({
+        lignesCookie: [{ varianteId, quantite: 1 }],
+        saisie: SAISIE_DOMICILE,
+        configuration: CONFIGURATION,
+      }).catch((cause: unknown) => cause);
+
+      // LE REFUS NOMME LA PIECE, comme un refus de stock : l'ecran signale la
+      // ligne a retirer plutot qu'une erreur generique.
+      expect(erreur).toBeInstanceOf(CommandeRefuseeError);
+      expect(
+        (erreur as InstanceType<typeof CommandeRefuseeError>).varianteRefusee,
+      ).toBe(varianteId);
+
+      const { rows: commandes } = await client.query("SELECT id FROM commande");
+      const { rows: reservations } = await client.query(
+        "SELECT id FROM reservation",
+      );
+      const { rows: variante } = await client.query(
+        "SELECT quantite_reservee, vente_web_activee FROM variante WHERE id = $1",
+        [varianteId],
+      );
+
+      expect(commandes).toHaveLength(0);
+      expect(reservations).toHaveLength(0);
+      expect(variante[0].quantite_reservee).toBe(0);
+      // AUCUNE ECRITURE SUR LA VARIANTE, invariant 6 : le refus web ne touche
+      // ni a la vente en main propre ni au drapeau de vente en ligne.
+      expect(variante[0].vente_web_activee).toBe(true);
+    });
+  }
+
+  it("nomme la piece retiree et n'immobilise pas l'autre ligne", async () => {
+    const couple = await creerCoupleOrdonne();
+    const { rows } = await client.query(
+      "SELECT produit_id FROM variante WHERE id = $1",
+      [couple.epuisee],
+    );
+    // La piece « epuisee » du couple est remise en stock puis son produit
+    // archive : seul le statut du produit la rend incommandable.
+    await client.query(
+      "UPDATE variante SET quantite_physique = 1 WHERE id = $1",
+      [couple.epuisee],
+    );
+    await client.query(
+      "UPDATE produit SET statut = 'ARCHIVE', archive_a = now() WHERE id = $1",
+      [rows[0].produit_id],
+    );
+
+    const erreur = await passerCommande({
+      lignesCookie: [
+        { varianteId: couple.disponible, quantite: 1 },
+        { varianteId: couple.epuisee, quantite: 1 },
+      ],
+      saisie: SAISIE_DOMICILE,
+      configuration: CONFIGURATION,
+    }).catch((cause: unknown) => cause);
+
+    expect(erreur).toBeInstanceOf(CommandeRefuseeError);
+    expect(
+      (erreur as InstanceType<typeof CommandeRefuseeError>).varianteRefusee,
+    ).toBe(couple.epuisee);
+
+    const { rows: disponible } = await client.query(
+      "SELECT quantite_reservee FROM variante WHERE id = $1",
+      [couple.disponible],
+    );
+    expect(disponible[0].quantite_reservee).toBe(0);
+  });
+});
+
 describe("panne au milieu de la transaction", () => {
   /*
    * LE CRITERE 9, et la cible de la mutation du critere 11.

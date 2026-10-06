@@ -29,7 +29,7 @@ export type ClientBase = Prisma.TransactionClient;
  * Reservation atomique d'une variante : verification de disponibilite et
  * ecriture en UNE seule instruction, sans verrou explicite ni lecture prealable.
  *
- * LES QUATRE CONDITIONS DU `WHERE` SONT SOLIDAIRES.
+ * LES CONDITIONS DU `WHERE` SONT SOLIDAIRES.
  *
  * - `id = $1` designe la variante.
  * - `archivee_a IS NULL` : l'archivage peut survenir entre une lecture et
@@ -40,6 +40,21 @@ export type ClientBase = Prisma.TransactionClient;
  *   presente mais retiree de la vente en ligne le temps du stand.
  * - `quantite_physique - quantite_reservee >= $3` : le coeur de la strategie.
  *   C'est cette ligne que la preuve par mutation de LS-68 retire.
+ * - le produit est `ACTIF`, LS-270. L'archivage d'un produit n'ecrit que
+ *   `produit.statut` : la variante garde `vente_web_activee` et aucun
+ *   `archivee_a`, et un panier existant commandait alors une piece retiree du
+ *   catalogue. Meme motif que `archivee_a` : la condition vit dans le `WHERE`.
+ *
+ * LE PRODUIT N'EST PAS VERROUILLE, et c'est voulu. Le prendre en `FOR SHARE`
+ * ajouterait une ressource a l'ordre global, compteur puis variantes, que tous
+ * les chemins devraient respecter. Un archivage valide pendant la transaction
+ * n'est pas vu : la commande passe comme si elle avait precede l'archivage de
+ * quelques millisecondes, ce qu'elle a fait. Rien ne se fige du statut, et
+ * l'archivage ne touche ni au stock ni aux commandes passees, C11.
+ *
+ * LA VENTE EXTERNE NE PASSE PAS PAR ICI. Une piece d'un produit archive reste
+ * vendable en main propre, invariant 6 : cette condition ne vaut que pour le
+ * web.
  *
  * Le parametre $2 porte la commande : `Reservation.commandeId` est OBLIGATOIRE
  * depuis ADR-024, une reservation sans commande n'existe pas en base.
@@ -52,6 +67,10 @@ export const SQL_RESERVER = `
       AND archivee_a IS NULL
       AND vente_web_activee = true
       AND quantite_physique - quantite_reservee >= $3
+      AND EXISTS (
+        SELECT 1 FROM produit p
+        WHERE p.id = variante.produit_id AND p.statut = 'ACTIF'
+      )
     RETURNING id
   )
   INSERT INTO reservation (id, variante_id, commande_id, quantite, expire_a, cree_a)

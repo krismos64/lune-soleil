@@ -191,6 +191,44 @@ describe("lignes qui ne peuvent plus etre commandees, critere 7", () => {
     expect(resultat.aChange).toBe(true);
   });
 
+  /*
+   * LS-270 : LE PRODUIT ARCHIVE, VARIANTE INTACTE. L'archivage ne touche que
+   * `produit.statut` : la variante garde `vente_web_activee` et aucun
+   * `archivee_a`. Le disponible ne lisait que la variante, la ligne gardait
+   * donc sa quantite et son prix dans le total, sous le message « retiree de
+   * la vente ». Le recapitulatif de l'etape 4 transmettait ce total, et la
+   * commande partait.
+   */
+  it("ne compte un produit archive ni en quantite ni dans le total", async () => {
+    const vivante = await creerVariante("Vivante", { prixCentimes: 1000 });
+    const retiree = await creerVariante("Produit archive", {
+      prixCentimes: 2000,
+      statutProduit: "ARCHIVE",
+    });
+
+    const resultat = await panier.revalider([
+      { varianteId: vivante, quantite: 1 },
+      { varianteId: retiree, quantite: 1 },
+    ]);
+
+    expect(resultat.lignes[1]?.motif).toBe("PLUS_VENDABLE");
+    expect(resultat.lignes[1]?.quantite).toBe(0);
+    expect(resultat.totalArticlesCentimes).toBe(1000);
+    expect(resultat.nombreArticles).toBe(1);
+  });
+
+  it("ne compte un produit en brouillon ni en quantite ni dans le total", async () => {
+    const varianteId = await creerVariante("Brouillon", {
+      prixCentimes: 2000,
+      statutProduit: "BROUILLON",
+    });
+
+    const resultat = await panier.revalider([{ varianteId, quantite: 1 }]);
+
+    expect(resultat.lignes[0]?.quantite).toBe(0);
+    expect(resultat.totalArticlesCentimes).toBe(0);
+  });
+
   it("annonce EPUISE et non PLUS_VENDABLE sur une piece deja reservee", async () => {
     const varianteId = await creerVariante("Derniere", {
       quantitePhysique: 1,
