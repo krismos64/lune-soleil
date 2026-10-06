@@ -10,18 +10,22 @@ page à l'autre.
 - `creations.html` : la page des créations.
 
 **Référence de rendu, pas source de vérité.** Là où elle diffère d'un ADR,
-l'ADR l'emporte. Deux de ses choix attendent un amendement, à lancer par
-Christophe :
+l'ADR l'emporte. Deux de ses choix ont demandé un amendement, tracé le
+6 octobre 2026 en tête de chaque ADR :
 
 - **Noël 2** change le fond, le titre, le texte et les boutons du bandeau,
-  ce que la section 2 d'ADR-046 interdit aujourd'hui ;
+  ce que la section 2 d'ADR-046 interdisait avant l'amendement ;
 - le **mouvement continu** des flocons, du soleil, des boules et de la neige des
-  marges, avec un bouton de pause, dépasse la borne de cinq secondes du point 4
-  d'ADR-045.
+  marges, avec un bouton de pause, dépassait la borne de cinq secondes du
+  point 4 d'ADR-045.
 
 Écarts acceptés qui ne se reportent pas dans le site :
 
 - le titre se révèle mot à mot : le site l'affiche au premier rendu ;
+- les cartes du catalogue apparaissent en fondu : le site les affiche au
+  premier rendu, seul leur décor s'anime (ADR-045, point 5) ;
+- le surtitre rose pâle de Noël 2, `#ffe3dc`, tombe à 4,31:1 : le site écrit
+  tout petit texte sur le rouge en blanc pur ;
 - la poussière d'or de l'accueil est un canvas : le site la rend en CSS ;
 - au clic, « Ajouter au panier » montre une coche de démonstration, sans rien
   ajouter.

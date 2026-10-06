@@ -106,7 +106,10 @@ des pages publiques » de `frontend-design.md` :
 - contenu principal visible au premier rendu, sans script et en mouvement
   réduit ;
 - arrêt au plus tard cinq secondes après l'entrée dans l'écran, par
-  `data-borne` ;
+  `data-borne`, sauf les décors continus des thèmes de Noël (amendement
+  LS-277 d'ADR-045) : bouton de pause visible, nommé, qui fige toute la page,
+  absent en mouvement réduit, et rien qui bouge sur un texte, une photographie
+  ou un contrôle ;
 - `transform`, `opacity` et `stroke-dashoffset` seulement ;
 - rien qui bouge dans un formulaire pendant une saisie ;
 - l'intensité selon le type de page, dont les portes d'entrée et le contact
