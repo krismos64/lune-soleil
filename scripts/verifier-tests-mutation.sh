@@ -42,6 +42,7 @@ STOCK="src/repositories/stock.ts"
 DEPOT_PANIER="src/repositories/panier.ts"
 GLOBALS_CSS="src/app/globals.css"
 CATALOGUE_CSS="src/app/(boutique)/catalogue/catalogue.module.css"
+DECOR_NOEL_CSS="src/components/decor-noel.module.css"
 # LA PAGE D'ACCUEIL A DEMENAGE EN LS-122, groupe de routes `(boutique)`. Le
 # chemin d'origine n'existait plus, et le garde-fou de lisibilite arretait le
 # script AVANT la premiere mutation : il rendait 1 sans en avoir joue une seule.
@@ -139,7 +140,7 @@ SENDCLOUD_EXPEDITION="src/integrations/sendcloud/expedition.ts"
 #
 # Le defaut datait du jour ou le cas 121 a ete ecrit, et rien ne pouvait le
 # signaler : le nocturne mourait au cas 1 sur 180 depuis trois nuits.
-MUTABLES=("$SQL" "$STOCK" "$DEPOT_PANIER" "$GLOBALS_CSS" "$CATALOGUE_CSS" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE" "$AVIS" "$DEPOT_AVIS" "$SERVICE_AVOIR" "$DEPOT_PARAMETRES" "$SENDCLOUD_EXPEDITION" "$DESTINATIONS_REAUTH" "$TEST_COMPTABILITE" "$URLS_MEDIAS")
+MUTABLES=("$SQL" "$STOCK" "$DEPOT_PANIER" "$GLOBALS_CSS" "$CATALOGUE_CSS" "$DECOR_NOEL_CSS" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE" "$AVIS" "$DEPOT_AVIS" "$SERVICE_AVOIR" "$DEPOT_PARAMETRES" "$SENDCLOUD_EXPEDITION" "$DESTINATIONS_REAUTH" "$TEST_COMPTABILITE" "$URLS_MEDIAS")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -794,6 +795,19 @@ cas "exemption des decors continus retiree" e2e \
 mute "$CATALOGUE_CSS" 's/(\.noeudCarte \{\n  position: absolute;\n  left: 50%;\n)  top: -9px;/$1  top: -20px;/'
 cas "noeud de la carte pose sur la photographie" e2e \
   "décor hors des photographies"
+
+# Cas 11 septies : la neige des thèmes de Noël sans condition d'état, LS-277.
+# Sans script, le bouton de pause n'existe pas : un mouvement sans fin y
+# viole WCAG 2.2.2. Le premier jet l'avait, relevé par `ls-frontend-revue`.
+mute "$DECOR_NOEL_CSS" 's/  :global\(\[data-borne="joue"\]\) \.flocon,\n  :global\(\[data-borne="fin"\]\) \.flocon \{/  .flocon {/'
+cas "neige des themes de Noel sans script et sans fin" e2e \
+  "rien ne tourne sans fin"
+
+# Cas 11 octies : la bande sucre d'orge redevient une case de la grille du
+# bandeau, LS-277, la spécificité égale laissant l'ordre de chargement trancher.
+mute "$CATALOGUE_CSS" 's/\.bandeauNoel \.sucreBandeau \{/.sucreBandeau {/'
+cas "bande sucre d'orge dans la grille du bandeau" e2e \
+  "garde sa disposition"
 
 # Cas 12 : violation d'accessibilite. Un document sans langue declaree est lu
 # avec la prononciation par defaut du lecteur d'ecran.

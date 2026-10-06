@@ -63,6 +63,12 @@ et le paquet au ruban.
 | `NOEL_2` rouge `#9B1B1E` sur bouton blanc | 8,17:1 |
 | `NOEL_2` texte du pied `#E9DCC2` sur `#3D080C` | 12,50:1 |
 
+**Correction du 6 octobre 2026, revue d'interface de LS-277** : le héros de
+`NOEL_2` porte le papier cadeau en filigrane à 5 %, qui éclaircit le fond
+sous ses motifs. Mesuré sur les pixels réels, l'or des mots du titre y tombe à
+**3,19:1** et le blanc à **5,17:1**, au-dessus de leurs seuils ; le tableau
+ci-dessus, calculé sans le filigrane, les surestimait.
+
 **Tout petit texte sur le rouge est blanc pur.** Le surtitre rose pâle de la
 maquette, `#FFE3DC`, tombe à 4,31:1 sur la zone la plus claire : il n'est pas
 porté. L'or ne sert qu'aux mots dorés du titre, au-dessus du seuil de 3:1 du
