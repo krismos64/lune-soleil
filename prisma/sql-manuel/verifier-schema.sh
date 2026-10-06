@@ -1331,15 +1331,21 @@ sortie=$(R "UPDATE parametre_boutique SET seuil_franchise_centimes = NULL WHERE 
 verifier_accepte "franchise désactivable par NULL" "$sortie"
 R "UPDATE parametre_boutique SET seuil_franchise_centimes = 3900 WHERE id = true;" >/dev/null
 
-# LE THÈME SAISONNIER EST UN THÈME CONNU, ADR-046. Le cas rejeté est une
-# valeur proche d'une vraie, la casse changée : un CHECK écrit sans sensibilité
-# à la casse la laisserait passer, et `data-theme="noel"` ne correspond qu'à
-# la valeur exacte. Le cas accepté est le thème de Noël lui-même.
-sortie=$(R "UPDATE parametre_boutique SET theme_saisonnier = 'Noel' WHERE id = true;")
+# LE THÈME SAISONNIER EST UN THÈME CONNU, ADR-046 amendé par LS-277. Deux cas
+# rejetés : une valeur proche d'une vraie, la casse changée, qu'un CHECK écrit
+# sans sensibilité à la casse laisserait passer, et l'ancien thème `NOEL`,
+# écarté, qu'une contrainte non remplacée laisserait passer. Les deux thèmes
+# de Noël sont acceptés.
+sortie=$(R "UPDATE parametre_boutique SET theme_saisonnier = 'noel_1' WHERE id = true;")
 verifier_rejet "thème saisonnier inconnu rejeté" \
   "chk_parametre_theme_connu" "$sortie"
 sortie=$(R "UPDATE parametre_boutique SET theme_saisonnier = 'NOEL' WHERE id = true;")
-verifier_accepte "thème de Noël accepté" "$sortie"
+verifier_rejet "ancien thème de Noël rejeté" \
+  "chk_parametre_theme_connu" "$sortie"
+sortie=$(R "UPDATE parametre_boutique SET theme_saisonnier = 'NOEL_1' WHERE id = true;")
+verifier_accepte "thème Noël 1 accepté" "$sortie"
+sortie=$(R "UPDATE parametre_boutique SET theme_saisonnier = 'NOEL_2' WHERE id = true;")
+verifier_accepte "thème Noël 2 accepté" "$sortie"
 R "UPDATE parametre_boutique SET theme_saisonnier = 'AUCUN' WHERE id = true;" >/dev/null
 
 echo

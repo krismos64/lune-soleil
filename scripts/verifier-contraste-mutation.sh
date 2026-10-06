@@ -238,6 +238,32 @@ attendre_echec "seuil AA de 4,5:1 retiré de frontend-design.md"
 muter "$JETONS" 's/--ls-noel-vert: #2f5a43;/--ls-noel-vert: #9fc2ae;/'
 attendre_echec "jeton de thème saisonnier éclairci, mesuré sur les trois fonds"
 
+# ---------------------------------------------------------------------------
+# Cas 8 : le texte sur rouge de NOEL_2 éclairci, LS-277.
+#
+# LA VALEUR EST CELLE DE LA MAQUETTE VALIDÉE, le surtitre rose pâle `#ffe3dc` :
+# 4,31:1 sur le point le plus clair du dégradé, sous 4,5:1. Elle est la forme
+# réelle du défaut, celle qu'un portage fidèle à la maquette aurait écrite.
+# ---------------------------------------------------------------------------
+muter "$JETONS" 's/--ls-noel-texte-sur-rouge: #ffffff;/--ls-noel-texte-sur-rouge: #ffe3dc;/'
+attendre_echec "texte sur rouge de NOEL_2 au rose pâle de la maquette"
+
+# ---------------------------------------------------------------------------
+# Cas 9 : l'or du titre sur rouge sous 3:1, LS-277. Le grand texte a son
+# propre seuil : le cas prouve qu'il est appliqué, et non oublié.
+# ---------------------------------------------------------------------------
+muter "$JETONS" 's/--ls-noel-titre-sur-rouge: #f0cf7a;/--ls-noel-titre-sur-rouge: #d98a8d;/'
+attendre_echec "or du titre sur rouge sous 3:1"
+
+# ---------------------------------------------------------------------------
+# Cas 10 : un nom de thème que l'expression ne lit pas, LS-277.
+#
+# LE DÉFAUT D'ORIGINE : l'expression n'acceptait que des lettres, et
+# `noel_1` lui aurait échappé sans un mot. Un tiret reproduit le cas.
+# ---------------------------------------------------------------------------
+muter "$JETONS" 's/\[data-theme="noel_2"\]/[data-theme="noel-2"]/'
+attendre_echec "bloc de thème illisible par l'expression"
+
 echo
 echo "-----------------------------------------"
 if [ "$detectes" -eq "$total" ]; then
