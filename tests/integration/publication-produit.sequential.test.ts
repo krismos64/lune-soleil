@@ -724,3 +724,75 @@ describe("retrait de l'espace d'administration, LS-266 et C45", () => {
     }
   });
 });
+
+/**
+ * Retrait groupé depuis la liste des archivés, LS-279. Chaque produit passe
+ * par le geste unitaire de LS-266 : un groupe ne contourne pas C45.
+ */
+describe("retirerProduitsDeLEspace, LS-279", () => {
+  it("retire les archivés, nomme celui qui ne l'est pas, sans rien supprimer", async () => {
+    const premier = await produitDeTest();
+    await catalogue.archiverProduit(premier);
+    const second = await produitDeTest();
+    await catalogue.archiverProduit(second);
+    const brouillon = await produitDeTest();
+
+    const bilan = await catalogue.retirerProduitsDeLEspace({
+      produitIds: [premier, brouillon, second, premier],
+    });
+
+    // Le doublon est retiré de la sélection : `premier` compte une fois.
+    expect(bilan.reussis).toBe(2);
+    expect(bilan.refus).toHaveLength(1);
+    expect(bilan.refus[0]).toMatchObject({
+      id: brouillon,
+      raison: "NON_ARCHIVE",
+    });
+    expect(bilan.refus[0]?.nom).toMatch(/^Pièce /);
+
+    const { rows } = await client.query(
+      "SELECT id, statut, retire_a FROM produit WHERE id = ANY($1::text[])",
+      [[premier, second, brouillon]],
+    );
+    expect(rows).toHaveLength(3);
+    const parId = new Map(rows.map((ligne) => [ligne.id, ligne]));
+    expect(parId.get(premier)?.retire_a).toBeInstanceOf(Date);
+    expect(parId.get(second)?.retire_a).toBeInstanceOf(Date);
+    expect(parId.get(brouillon)?.retire_a).toBeNull();
+    expect(parId.get(brouillon)?.statut).toBe("BROUILLON");
+  });
+
+  it("dit qu'un produit déjà retiré ou inconnu est introuvable", async () => {
+    const retire = await produitDeTest();
+    await catalogue.archiverProduit(retire);
+    await catalogue.retirerProduitDeLEspace(retire);
+    const inconnu = randomUUID();
+
+    const bilan = await catalogue.retirerProduitsDeLEspace({
+      produitIds: [retire, inconnu],
+    });
+
+    expect(bilan.reussis).toBe(0);
+    expect(bilan.refus.map((refus) => refus.raison)).toEqual([
+      "INTROUVABLE",
+      "INTROUVABLE",
+    ]);
+  });
+
+  it("refuse une sélection vide ou difforme sans rien écrire", async () => {
+    const intact = await produitDeTest();
+    await catalogue.archiverProduit(intact);
+
+    for (const produitIds of [[], ["pas-un-uuid"], "texte"]) {
+      await expect(
+        catalogue.retirerProduitsDeLEspace({ produitIds }),
+      ).rejects.toThrow();
+    }
+
+    const { rows } = await client.query(
+      "SELECT retire_a FROM produit WHERE id = $1",
+      [intact],
+    );
+    expect(rows[0].retire_a).toBeNull();
+  });
+});

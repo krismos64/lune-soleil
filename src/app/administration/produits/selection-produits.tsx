@@ -13,6 +13,10 @@
  *
  * PAS DE CONFIRMATION : publier et archiver sont reversibles depuis la fiche
  * de chaque produit, et le nombre coche est dans le libelle des boutons.
+ *
+ * LE RETRAIT EN A UNE, LS-279 : seul le developpeur le defait. Il n'existe que
+ * dans la vue des archives, la seule ou il peut reussir, et la confirmation
+ * nomme chaque article avant que rien ne parte.
  */
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -43,6 +47,8 @@ function raison(refus: RefusGroupe): string {
       return refus.motifs.map((motif) => MOTIF_COURT[motif]).join(", ");
     case "DEJA_DANS_CET_ETAT":
       return "déjà dans cet état";
+    case "NON_ARCHIVE":
+      return "n'est plus archivé, republié entre-temps";
     case "INTROUVABLE":
       return "n'existe plus";
   }
@@ -62,7 +68,19 @@ function messagePrix(statut: string): string {
   }
 }
 
-export function SelectionProduits() {
+/** Le participe du bilan, accordé sur « produit ». */
+const PARTICIPE: Record<string, [string, string]> = {
+  publier: ["publié", "publiés"],
+  archiver: ["archivé", "archivés"],
+  retirer: ["retiré de votre espace", "retirés de votre espace"],
+};
+
+export function SelectionProduits({
+  vueArchives = false,
+}: {
+  /** Vrai sur l'onglet Archivés, le seul qui propose le retrait, LS-279. */
+  vueArchives?: boolean;
+}) {
   const routeur = useRouter();
   const [enCours, demarrer] = useTransition();
   const [coches, setCoches] = useState(0);
@@ -71,6 +89,19 @@ export function SelectionProduits() {
   const zoneRecapitulatif = useRef<HTMLElement>(null);
   const champPrix = useRef<HTMLInputElement>(null);
   const boutonPrix = useRef<HTMLButtonElement>(null);
+  const boutonRetrait = useRef<HTMLButtonElement>(null);
+  const zoneRetrait = useRef<HTMLElement>(null);
+  /*
+   * LA CONFIRMATION DU RETRAIT, LS-279 : les noms et le formulaire tels que
+   * cochés au clic. Confirmer envoie exactement ce qui a été nommé, même si
+   * une case change entre-temps, comme le récapitulatif du prix.
+   */
+  const [retrait, setRetrait] = useState<{
+    noms: string[];
+    formulaire: FormData;
+  } | null>(null);
+  /* Après « Annuler », le focus revient au bouton de retrait. */
+  const retourAuRetrait = useRef(false);
   /*
    * CE QUE L'ATTENTE ANNONCE, revue de LS-265 : un récapitulatif ne modifie
    * rien, l'écran ne doit donc pas dire « Enregistrement » pendant qu'il se
@@ -111,6 +142,15 @@ export function SelectionProduits() {
    * section et perdre le focus sans bruit.
    */
   useEffect(() => {
+    if (retrait) {
+      zoneRetrait.current?.focus();
+    } else if (retourAuRetrait.current) {
+      retourAuRetrait.current = false;
+      boutonRetrait.current?.focus();
+    }
+  }, [retrait]);
+
+  useEffect(() => {
     if (recapitulatif) {
       zoneRecapitulatif.current?.focus();
     } else if (retourAuChamp.current) {
@@ -148,6 +188,62 @@ export function SelectionProduits() {
     };
   }, []);
 
+  /**
+   * Publier, archiver ou retirer la sélection, puis dire le bilan.
+   *
+   * LE FORMULAIRE EST UN INSTANTANÉ : pour le retrait, celui de la
+   * confirmation, et non les cases telles qu'elles sont au moment du clic.
+   */
+  function envoyer(formulaire: FormData, operation: string) {
+    setAttente("Enregistrement en cours…");
+    demarrer(async () => {
+      const resultat = await appliquerSelectionProduits(formulaire);
+
+      // Le bouton desactive a perdu le focus : il va au bilan.
+      zoneBilan.current?.focus();
+
+      switch (resultat.statut) {
+        case "SUCCES": {
+          const [un, plusieurs] = PARTICIPE[operation] ?? ["traité", "traités"];
+          setBilan({
+            texte:
+              resultat.reussis === 0
+                ? "Aucun produit n'a changé."
+                : `${resultat.reussis} produit${resultat.reussis > 1 ? "s" : ""} ${resultat.reussis > 1 ? plusieurs : un}.`,
+            refus: resultat.refus,
+            erreur: false,
+          });
+          routeur.refresh();
+          break;
+        }
+        case "INVALIDE":
+          setBilan({
+            texte: "Cocher au moins un produit, cent au plus.",
+            refus: [],
+            erreur: true,
+          });
+          break;
+        case "SESSION_ABSENTE":
+          setBilan({
+            texte: "Session expirée. Se reconnecter pour continuer.",
+            refus: [],
+            erreur: true,
+          });
+          break;
+        case "INDISPONIBLE":
+          setBilan({
+            texte:
+              "Le service est momentanément indisponible. Une partie de la sélection a pu être traitée : vérifier la liste avant de réessayer.",
+            refus: [],
+            erreur: true,
+          });
+          // La liste doit refleter ce qui a ete traite avant la panne.
+          routeur.refresh();
+          break;
+      }
+    });
+  }
+
   return (
     <form
       id={FORMULAIRE_SELECTION_PRODUITS}
@@ -162,7 +258,19 @@ export function SelectionProduits() {
 
         setBilan(null);
         setRecapitulatif(null);
+        setRetrait(null);
         setErreurPrix(null);
+
+        if (operation === "retirer") {
+          // Rien ne part avant la confirmation, qui nomme chaque article.
+          setRetrait({
+            noms: cases()
+              .filter((element) => element.checked)
+              .map((element) => element.dataset.nom ?? element.value),
+            formulaire,
+          });
+          return;
+        }
 
         if (operation === "prix") {
           setAttente("Préparation du récapitulatif…");
@@ -192,96 +300,75 @@ export function SelectionProduits() {
           return;
         }
 
-        setAttente("Enregistrement en cours…");
-        demarrer(async () => {
-          const resultat = await appliquerSelectionProduits(formulaire);
-
-          // Le bouton desactive a perdu le focus : il va au bilan.
-          zoneBilan.current?.focus();
-
-          switch (resultat.statut) {
-            case "SUCCES": {
-              const participe = operation === "publier" ? "publié" : "archivé";
-              setBilan({
-                texte:
-                  resultat.reussis === 0
-                    ? "Aucun produit n'a changé."
-                    : `${resultat.reussis} produit${resultat.reussis > 1 ? "s" : ""} ${participe}${resultat.reussis > 1 ? "s" : ""}.`,
-                refus: resultat.refus,
-                erreur: false,
-              });
-              routeur.refresh();
-              break;
-            }
-            case "INVALIDE":
-              setBilan({
-                texte: "Cocher au moins un produit, cent au plus.",
-                refus: [],
-                erreur: true,
-              });
-              break;
-            case "SESSION_ABSENTE":
-              setBilan({
-                texte: "Session expirée. Se reconnecter pour continuer.",
-                refus: [],
-                erreur: true,
-              });
-              break;
-            case "INDISPONIBLE":
-              setBilan({
-                texte:
-                  "Le service est momentanément indisponible. Une partie de la sélection a pu être traitée : vérifier la liste avant de réessayer.",
-                refus: [],
-                erreur: true,
-              });
-              // La liste doit refleter ce qui a ete traite avant la panne.
-              routeur.refresh();
-              break;
-          }
-        });
+        envoyer(formulaire, operation);
       }}
     >
-      <label className={styles.toutCocher}>
-        <input
-          type="checkbox"
-          checked={total > 0 && coches === total}
-          disabled={total === 0 || enCours}
-          onChange={(evenement) => {
-            for (const element of cases()) {
-              element.checked = evenement.target.checked;
-            }
-            setCoches(evenement.target.checked ? total : 0);
-          }}
-        />
-        Tout sélectionner
-      </label>
+      {/*
+       * DEUX LIGNES ET NON UNE, LS-279 : les gestes de statut sur la première,
+       * le prix sur la seconde. Sur une seule ligne, le libellé du prix, plus
+       * large que son champ, poussait « Appliquer ce prix » à l'écart et plus
+       * bas que ses voisins.
+       */}
+      <div className={styles.ligneSelection}>
+        <label className={styles.toutCocher}>
+          <input
+            type="checkbox"
+            checked={total > 0 && coches === total}
+            disabled={total === 0 || enCours}
+            onChange={(evenement) => {
+              for (const element of cases()) {
+                element.checked = evenement.target.checked;
+              }
+              setCoches(evenement.target.checked ? total : 0);
+            }}
+          />
+          Tout sélectionner
+        </label>
 
-      <div className={styles.actionsSelection}>
-        <button
-          type="submit"
-          value="publier"
-          className={styles.boutonSelection}
-          disabled={coches === 0 || enCours}
-        >
-          Publier ({coches})
-        </button>
-        <button
-          type="submit"
-          value="archiver"
-          className={styles.boutonSelection}
-          disabled={coches === 0 || enCours}
-        >
-          Archiver ({coches})
-        </button>
+        <div className={styles.actionsSelection}>
+          <button
+            type="submit"
+            value="publier"
+            className={styles.boutonSelection}
+            disabled={coches === 0 || enCours}
+          >
+            Publier ({coches})
+          </button>
+          <button
+            type="submit"
+            value="archiver"
+            className={styles.boutonSelection}
+            disabled={coches === 0 || enCours}
+          >
+            Archiver ({coches})
+          </button>
+          {vueArchives ? (
+            <button
+              ref={boutonRetrait}
+              type="submit"
+              value="retirer"
+              className={`${styles.boutonSelection} ${styles.boutonRetrait}`}
+              disabled={coches === 0 || enCours}
+            >
+              Retirer de mon espace ({coches})
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {/*
        * UN MÊME PRIX POUR LA SÉLECTION, LS-265. Le bouton ne modifie rien : il
        * ouvre un récapitulatif, variante par variante, qu'il faut confirmer.
+       *
+       * LE LIBELLÉ AU-DESSUS, LE CHAMP ET SON BOUTON CÔTE À CÔTE, LS-279 : le
+       * libellé est relié par `htmlFor` et n'enveloppe plus le champ, sans quoi
+       * le bouton ne pouvait pas s'aligner sur lui.
        */}
       <div className={styles.prixSelection}>
-        <label className={styles.champPrix}>
-          <span>Prix pour la sélection, en euros</span>
+        <label htmlFor="prix-selection" className={styles.libellePrix}>
+          Prix pour la sélection, en euros
+        </label>
+        <div className={styles.lignePrix}>
           {/*
            * ENTRÉE SOUMET PAR « APPLIQUER CE PRIX », revue de LS-265. Sans
            * cela, le navigateur soumet par le premier bouton du formulaire,
@@ -290,7 +377,9 @@ export function SelectionProduits() {
            */}
           <input
             ref={champPrix}
+            id="prix-selection"
             name="prixEuros"
+            className={styles.champPrix}
             inputMode="decimal"
             enterKeyHint="go"
             autoComplete="off"
@@ -306,22 +395,94 @@ export function SelectionProduits() {
               }
             }}
           />
-        </label>
-        <button
-          ref={boutonPrix}
-          type="submit"
-          value="prix"
-          className={styles.boutonSelection}
-          disabled={coches === 0 || enCours}
-        >
-          Appliquer ce prix ({coches})
-        </button>
+          <button
+            ref={boutonPrix}
+            type="submit"
+            value="prix"
+            className={styles.boutonSelection}
+            disabled={coches === 0 || enCours}
+          >
+            Appliquer ce prix ({coches})
+          </button>
+        </div>
         {erreurPrix ? (
           <p id="erreur-prix-selection" className={styles.bilanErreur}>
             {erreurPrix}
           </p>
         ) : null}
       </div>
+
+      {retrait ? (
+        <section
+          ref={zoneRetrait}
+          tabIndex={-1}
+          className={styles.confirmationRetrait}
+          role="alertdialog"
+          aria-labelledby="titre-confirmation-retrait"
+          aria-describedby="texte-confirmation-retrait"
+          onKeyDown={(evenement) => {
+            if (evenement.key === "Escape") {
+              retourAuRetrait.current = true;
+              setRetrait(null);
+            }
+          }}
+        >
+          <h2
+            id="titre-confirmation-retrait"
+            className={styles.titreRecapitulatif}
+          >
+            {retrait.noms.length > 1
+              ? `Retirer ces ${retrait.noms.length} articles de votre espace\u202F?`
+              : "Retirer cet article de votre espace\u202F?"}
+          </h2>
+          <ul className={styles.listeRecapitulatif}>
+            {retrait.noms.map((nom, rang) => (
+              <li key={rang}>{nom}</li>
+            ))}
+          </ul>
+          {/*
+           * LA PHRASE DE LS-266, au pluriel quand il le faut : rien n'est
+           * effacé, et le retour ne se fait plus depuis cet écran.
+           */}
+          <p id="texte-confirmation-retrait">
+            {retrait.noms.length > 1 ? "Ils disparaissent" : "Il disparaît"} de
+            votre espace : listes, stocks et compteurs.{" "}
+            {retrait.noms.length > 1
+              ? "Ils ne sont pas effacés"
+              : "Il n'est pas effacé"}{" "}
+            : les commandes, factures et avis qui{" "}
+            {retrait.noms.length > 1 ? "les citent" : "le citent"} ne changent
+            pas, et les ventes passées restent dans vos statistiques. Seul le
+            développeur pourra{" "}
+            {retrait.noms.length > 1 ? "les récupérer" : "le récupérer"}.
+          </p>
+          <div className={styles.actionsSelection}>
+            <button
+              type="button"
+              className={`${styles.boutonSelection} ${styles.boutonRetrait}`}
+              disabled={enCours}
+              onClick={() => {
+                const { formulaire } = retrait;
+                setRetrait(null);
+                envoyer(formulaire, "retirer");
+              }}
+            >
+              Confirmer le retrait
+            </button>
+            <button
+              type="button"
+              className={styles.boutonSelection}
+              disabled={enCours}
+              onClick={() => {
+                retourAuRetrait.current = true;
+                setRetrait(null);
+              }}
+            >
+              Annuler
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       {recapitulatif ? (
         <section
