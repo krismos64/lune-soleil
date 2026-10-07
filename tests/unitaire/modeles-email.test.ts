@@ -232,3 +232,29 @@ describe("une variable absente est refusee", () => {
     expect(rendu.texte).not.toContain("Numéro de suivi");
   });
 });
+
+/*
+ * L'ACCUSÉ DE RÉTRACTATION SUIT L221-23 ET L221-24, LS-287, version en vigueur
+ * lue sur Légifrance le 7 octobre 2026. Le remboursement peut attendre le
+ * PREMIER de deux faits, la réception du colis ou la preuve de son expédition :
+ * n'annoncer que le premier ferait attendre un client qui a déjà prouvé son
+ * envoi. Et aucune condition d'état ne s'ajoute à la loi, qui n'engage le
+ * client que pour une dépréciation due à des manipulations au-delà de l'examen.
+ */
+describe("l'accusé de rétractation, LS-287", () => {
+  const texte = () =>
+    rendreModele({
+      destinataire: "client@exemple.test",
+      modele: "retractation-accusee",
+      variables: { numero: "LS-2026-0001", jourLimite: "26 septembre 2026" },
+    }).texte.replace(/\s+/g, " ");
+
+  it("annonce les deux faits qui déclenchent le remboursement", () => {
+    expect(texte()).toMatch(/colis parvient à l'atelier/);
+    expect(texte()).toMatch(/preuve de son expédition/);
+  });
+
+  it("ne pose aucune condition d'état que la loi ne pose pas", () => {
+    expect(texte()).not.toMatch(/état d'origine|remise en vente/i);
+  });
+});

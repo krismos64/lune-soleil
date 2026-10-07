@@ -36,6 +36,7 @@ viennent du texte, pas d'une appréciation.
 | Remboursement par le professionnel | 14 jours après information | L221-24 |
 | Report du remboursement | jusqu'au **premier** de deux faits, récupération du bien **ou** preuve de son expédition par le consommateur | L221-24 |
 | Frais de retour | à la charge du client, **seulement s'il en a été informé avant la commande** | L221-5 et L221-23 |
+| État du bien retourné | le client ne répond que d'une dépréciation due à des manipulations **au-delà** de celles nécessaires pour établir la nature, les caractéristiques et le bon fonctionnement ; **aucune condition de remise en vente**, LS-287 | L221-23 alinéa 3 |
 | Frais de livraison initiaux | remboursés, **au tarif réellement payé** quel que soit le mode | L221-24 |
 
 ### Les frais de livraison initiaux se remboursent en entier

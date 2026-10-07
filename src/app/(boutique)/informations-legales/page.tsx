@@ -282,6 +282,17 @@ export default async function PageInformationsLegales() {
             ) : (
               <>
                 <h3 className={styles.titreBloc}>Éditeur du site</h3>
+                {/*
+                 * « L'ATELIER » EST DEFINI ICI, LS-287 : les sections de
+                 * retractation, de garantie et de mediation designent le vendeur
+                 * par ce mot depuis LS-286, et une page legale ne laisse pas un
+                 * terme sans referent.
+                 */}
+                <p className={styles.texte}>
+                  Dans ces pages, « l&apos;atelier » désigne{" "}
+                  {identite.raisonSociale}, éditeur de ce site et vendeur des
+                  bijoux.
+                </p>
                 <dl className={styles.definitions}>
                   <div className={styles.definition}>
                     <dt>Dénomination</dt>
@@ -637,8 +648,26 @@ export default async function PageInformationsLegales() {
              * L221-20 porte le delai a douze mois.
              */}
             <p className={styles.texte}>
-              Les frais de retour sont à votre charge. Le bijou doit revenir à
-              l&apos;atelier dans un état permettant sa remise en vente.
+              Les frais de retour sont à votre charge.
+            </p>
+
+            <h3 className={styles.titreBloc}>État du bijou retourné</h3>
+            {/*
+             * L221-23, ALINEA 3, VERSION EN VIGUEUR DEPUIS LE 28 MAI 2022, lue
+             * sur Legifrance le 7 octobre 2026, LS-287 : la responsabilite du
+             * consommateur n'est engagee qu'en cas de depreciation due a des
+             * manipulations AUTRES que celles necessaires pour etablir la nature,
+             * les caracteristiques et le bon fonctionnement du bien. La phrase
+             * precedente, « dans un etat permettant sa remise en vente », posait
+             * une condition que la loi ne pose pas : elle pouvait se lire comme
+             * une condition d'exercice du droit de retractation.
+             */}
+            <p className={styles.texte}>
+              Vous pouvez examiner le bijou comme vous le feriez en boutique.
+              Votre responsabilité n&apos;est engagée qu&apos;en cas de
+              dépréciation résultant de manipulations autres que celles
+              nécessaires pour établir sa nature, ses caractéristiques et son
+              bon fonctionnement.
             </p>
 
             <h3 className={styles.titreBloc}>
