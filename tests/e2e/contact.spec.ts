@@ -178,3 +178,28 @@ test("le lien Contact du pied de page mène au formulaire", async ({ page }) => 
     page.getByRole("heading", { name: "Écrire à l'atelier", level: 1 }),
   ).toBeVisible();
 });
+
+/**
+ * AUCUNE CRÉATION SUR MESURE N'EST ANNONCÉE, LS-284. L'atelier n'en fait pas,
+ * arbitrage de Christophe du 7 octobre 2026 : la page, sa description et son
+ * aperçu de partage la proposaient. Lus ensemble, pour qu'une réintroduction
+ * dans l'un des trois se voie.
+ */
+test("le contact n'annonce aucune création sur mesure", async ({ page }) => {
+  await page.goto("/contact");
+
+  const texte = (await page.getByRole("main").textContent()) ?? "";
+  const description =
+    (await page.locator('meta[name="description"]').getAttribute("content")) ??
+    "";
+  const partage =
+    (await page
+      .locator('meta[property="og:description"]')
+      .getAttribute("content")) ?? "";
+
+  for (const contenu of [texte, description, partage]) {
+    expect(contenu).not.toMatch(/sur[ -]mesure/i);
+  }
+  expect(description.length).toBeGreaterThan(0);
+  expect(partage.length).toBeGreaterThan(0);
+});

@@ -31,13 +31,12 @@ import styles from "./contact.module.css";
 export const metadata = {
   title: "Écrire à l'atelier",
   description:
-    "Une question sur un bijou, une commande ou une création sur mesure : écrivez à l'atelier, la réponse arrive sous quelques jours.",
+    "Une question sur un bijou ou sur une commande : écrivez à l'atelier, la réponse arrive sous quelques jours.",
   // LS-137, page publique indexable : canonical explicite.
   alternates: { canonical: "/contact" },
   openGraph: openGraphDePage({
     titre: "Écrire à l'atelier",
-    description:
-      "Une question sur un bijou, une commande ou une création sur mesure.",
+    description: "Une question sur un bijou ou sur une commande.",
     chemin: "/contact",
   }),
 };
@@ -113,10 +112,15 @@ export default async function PageContact() {
           </g>
         </svg>
         <h1 className={styles.titre}>Écrire à l&apos;atelier</h1>
+        {/*
+         * AUCUNE CRÉATION SUR MESURE N'EST PROPOSÉE, arbitrage de Christophe
+         * du 7 octobre 2026, LS-284 : l'annoncer ferait arriver des demandes
+         * que l'atelier n'accepte pas, et serait une pratique commerciale
+         * trompeuse, articles L121-2 et suivants.
+         */}
         <p className={styles.introduction}>
-          Une question sur un bijou, une commande en cours ou une envie de
-          création sur mesure : ce formulaire arrive directement à
-          l&apos;atelier.
+          Une question sur un bijou ou sur une commande en cours : ce formulaire
+          arrive directement à l&apos;atelier.
         </p>
       </section>
 

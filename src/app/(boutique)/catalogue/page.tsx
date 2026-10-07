@@ -489,8 +489,8 @@ export default async function PageCatalogue({
 
       {/*
        * BANDE DE NUIT, LS-283 : une sortie pour qui n'a pas trouvé sa pièce.
-       * Elle ne promet aucun service, « création sur mesure » écarté faute
-       * d'offre confirmée, critique de Codex. Hors thème de Noël seulement :
+       * Elle ne promet aucun service : l'atelier ne fait pas de création sur
+       * mesure, arbitrage de Christophe du 7 octobre 2026, LS-284. Hors thème de Noël seulement :
        * l'habillage de LS-277 reste tel qu'il a été validé.
        */}
       {noel ? null : (
