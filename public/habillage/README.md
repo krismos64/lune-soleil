@@ -15,6 +15,19 @@ ADR-007, sont televersees par l'administration et passent par la chaine de
 traitement qui retire les metadonnees EXIF. Mettre une photo de bijou vendable
 ici la sortirait de ce circuit, et notamment du retrait de la geolocalisation.
 
+## aide-colis-aube.jpg et aide-nuit-colline.jpg, page d'aide
+
+**Ajoutés le 7 octobre 2026**, LS-280 : décors de la page Livraison et aide,
+ADR-045 amendé. **Images générées par Codex**, aquarelles **sans bijou ni
+texte**, réécrites par `sharp` **sans métadonnées**.
+
+- `aide-colis-aube.jpg`, 1200 x 800, environ 78 ko : un colis kraft au ruban
+  bronze sous la lune et le soleil, recadré en médaillon dans l'en-tête. Il
+  n'évoque aucun emballage réel : le type d'emballage attend LS-26.
+- `aide-nuit-colline.jpg`, 1600 x 900, environ 81 ko : ciel de nuit sur des
+  collines, fond de la section des questions fréquentes, sous un voile qui
+  garde le texte lisible.
+
 ## porte-ciel-nuit.jpg, ciel de la connexion
 
 **Ajouté le 4 octobre 2026**, LS-268 : décor du panneau de connexion de la
