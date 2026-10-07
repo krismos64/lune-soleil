@@ -84,8 +84,9 @@ export function FormulaireRetractationJeton({
           réception vous parvient par email.
         </p>
         <p>
-          Renvoyez votre bijou dans les 14 jours qui suivent cette demande. Les
-          frais de retour sont à votre charge.
+          Renvoyez votre bijou dans les 14 jours qui suivent cette demande, à
+          l&apos;adresse indiquée dans l&apos;accusé de réception. Les frais de
+          retour sont à votre charge.
         </p>
         <p>
           Dès que le colis parvient à l&apos;atelier, ou dès que vous lui

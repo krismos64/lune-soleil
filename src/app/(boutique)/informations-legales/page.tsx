@@ -645,7 +645,8 @@ export default async function PageInformationsLegales() {
             <p className={styles.texte}>
               Une fois votre décision déclarée, vous disposez de{" "}
               <strong>quatorze jours</strong> pour renvoyer le bijou à
-              l&apos;atelier.
+              l&apos;atelier, à l&apos;adresse indiquée sous « Éditeur du site »
+              et rappelée dans l&apos;accusé de réception de votre demande.
             </p>
 
             <h3 className={styles.titreBloc}>Frais de retour</h3>

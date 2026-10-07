@@ -36,6 +36,53 @@ import {
 
 test.use({ storageState: FICHIER_SESSION_ADMINISTRATION });
 
+/*
+ * ------------------------------------------------------------------
+ * UN VERROU CONSULTATIF GARDE LA DEMANDE PARTAGEE, LS-288.
+ *
+ * Le groupe LS-174, plus bas, fait passer cette demande en `REMBOURSEE` le
+ * temps de ses tests, puis la rend. Les projets de largeur tournent en
+ * PARALLELE sur deux ou trois workers : pendant ce temps, un test d'une autre
+ * largeur lisait une demande remboursee et ne trouvait plus « Rembourser ».
+ * Mesure du 7 octobre 2026 : deux echecs sur trois passages de la serie, le
+ * test passant toujours isole. Le defaut datait de LS-174.
+ *
+ * Les tests qui LISENT l'etat `RETOUR_ATTENDU` prennent le verrou en mode
+ * partage ; le groupe LS-174 le prend en mode exclusif de son `beforeAll` a son
+ * `afterAll`. Un lecteur attend donc la restauration au lieu de lire un etat
+ * transitoire, et les lecteurs ne s'attendent pas entre eux.
+ *
+ * LE GROUPE LS-174 NE PREND PAS LE VERROU PARTAGE : il tient deja l'exclusif sur
+ * une autre connexion, et se bloquerait lui-meme.
+ * ------------------------------------------------------------------
+ */
+const VERROU_DEMANDE_PARTAGEE = 288_174;
+const TITRE_GROUPE_AVOIR = "le numéro d'avoir survit au rechargement, LS-174";
+
+let lecteurDemandePartagee: Client | null = null;
+
+test.beforeEach(async ({}, infos) => {
+  if (infos.titlePath.includes(TITRE_GROUPE_AVOIR)) return;
+
+  lecteurDemandePartagee = new Client({
+    connectionString: process.env.DATABASE_URL,
+  });
+  await lecteurDemandePartagee.connect();
+  await lecteurDemandePartagee.query("SELECT pg_advisory_lock_shared($1)", [
+    VERROU_DEMANDE_PARTAGEE,
+  ]);
+});
+
+test.afterEach(async () => {
+  if (lecteurDemandePartagee === null) return;
+
+  await lecteurDemandePartagee.query("SELECT pg_advisory_unlock_shared($1)", [
+    VERROU_DEMANDE_PARTAGEE,
+  ]);
+  await lecteurDemandePartagee.end();
+  lecteurDemandePartagee = null;
+});
+
 /**
  * La carte de LA demande amorcee, jamais « la premiere de la liste ».
  *
@@ -116,7 +163,24 @@ test("les gestes de traitement sont tous atteignables", async ({ page }) => {
     carte.getByRole("button", { name: "Enregistrer la preuve" }),
   ).toBeVisible();
 
+  /*
+   * LE JOUR OU LE CLIENT A FOURNI LA PREUVE, LS-288 : L221-24 alinéa 2 retient
+   * cette date et non celle de la saisie. Aujourd'hui à Paris par défaut, et
+   * jamais au-delà.
+   */
+  const aujourdhui = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Paris",
+  }).format(new Date());
+  const jour = carte.getByLabel("Reçu du client le");
+  await expect(jour).toHaveValue(aujourdhui);
+  await expect(jour).toHaveAttribute("max", aujourdhui);
+
   await expect(carte.getByRole("button", { name: "Rembourser" })).toBeVisible();
+
+  // Le rappel de L221-23 alinéa 3 accompagne le montant, LS-288.
+  await expect(
+    carte.getByText(/manipulations au-delà de l.examen du bijou/),
+  ).toBeVisible();
 
   /*
    * LE REFUS EST REPLIE, jamais offert au meme rang que le remboursement : le
@@ -382,8 +446,17 @@ async function avecClient<T>(
  * que pendant ces quatre tests, et le `afterAll` le rend ensuite.
  * ------------------------------------------------------------------
  */
-test.describe("le numéro d'avoir survit au rechargement, LS-174", () => {
+test.describe(TITRE_GROUPE_AVOIR, () => {
+  /** La connexion qui tient le verrou exclusif, du `beforeAll` à l'`afterAll`. */
+  let ecrivain: Client | null = null;
+
   test.beforeAll(async () => {
+    ecrivain = new Client({ connectionString: process.env.DATABASE_URL });
+    await ecrivain.connect();
+    await ecrivain.query("SELECT pg_advisory_lock($1)", [
+      VERROU_DEMANDE_PARTAGEE,
+    ]);
+
     await avecClient(async (client) => {
       /*
        * UNE SEULE DEMANDE, ET C'EST LE SCHEMA QUI L'IMPOSE.
@@ -455,6 +528,15 @@ test.describe("le numéro d'avoir survit au rechargement, LS-174", () => {
         [DEMANDE_RETRACTATION_TEST.demandeId],
       );
     });
+
+    /* Le verrou ne se rend qu'une fois l'état partagé restauré. */
+    if (ecrivain !== null) {
+      await ecrivain.query("SELECT pg_advisory_unlock($1)", [
+        VERROU_DEMANDE_PARTAGEE,
+      ]);
+      await ecrivain.end();
+      ecrivain = null;
+    }
   });
 
   /**

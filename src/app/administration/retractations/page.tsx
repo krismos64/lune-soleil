@@ -23,8 +23,9 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
 
-import { formaterDate } from "@/lib/affichage-commande";
+import { formaterDate, formaterJour } from "@/lib/affichage-commande";
 import { formaterMontant } from "@/lib/montant";
+import { jourCivilParisien } from "@/lib/retractation";
 import {
   AutorisationRefuseeError,
   exigerAdministratrice,
@@ -141,6 +142,11 @@ async function ListeDemandes() {
    * distinctes sont deux intentions distinctes, et les faire partager une
    * reference ferait avaler la seconde par l'idempotence du prestataire.
    */
+  /*
+   * AUJOURD'HUI A PARIS, borne haute du champ de date de la preuve, LS-288. Le
+   * service refait la verification : ce `max` n'est qu'un confort de saisie.
+   */
+  const aujourdhui = jourCivilParisien(new Date());
   const references = new Map(
     demandes.map((demande) => [demande.id, randomUUID()]),
   );
@@ -245,8 +251,8 @@ async function ListeDemandes() {
                     {demande.preuveExpeditionA === null
                       ? "Non fournie"
                       : demande.preuveExpeditionRetour === null
-                        ? `Fournie le ${formaterDate(demande.preuveExpeditionA)}`
-                        : `${demande.preuveExpeditionRetour}, le ${formaterDate(demande.preuveExpeditionA)}`}
+                        ? `Fournie le ${formaterJour(demande.preuveExpeditionA)}`
+                        : `${demande.preuveExpeditionRetour}, fournie le ${formaterJour(demande.preuveExpeditionA)}`}
                   </dd>
                 </div>
                 <div className={styles.fait}>
@@ -401,6 +407,8 @@ async function ListeDemandes() {
                 colisRecu={demande.recueA !== null}
                 preuveFournie={demande.preuveExpeditionA !== null}
                 etatPieceConstate={demande.etatPieceRetournee !== null}
+                jourDepot={jourCivilParisien(demande.deposeeA)}
+                jourDuJour={aujourdhui}
                 montantDuCentimes={demande.totalCentimes}
                 referenceDemande={references.get(demande.id) ?? ""}
               />

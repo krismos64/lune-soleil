@@ -111,6 +111,18 @@ export function formaterDate(date: Date): string {
 }
 
 /**
+ * Le jour seul, sans l'heure, LS-288. Pour une date saisie comme un jour, la
+ * preuve d'expedition en tete : `formaterDate` y afficherait « 00:00 », une
+ * heure que personne n'a donnee.
+ */
+export function formaterJour(date: Date): string {
+  return new Intl.DateTimeFormat("fr-FR", {
+    dateStyle: "short",
+    timeZone: "Europe/Paris",
+  }).format(date);
+}
+
+/**
  * Libelle d'une origine d'ecriture, regle S9.
  *
  * `Record<OrigineEcriture, string>` ET NON un `switch` a `default`, corrige par

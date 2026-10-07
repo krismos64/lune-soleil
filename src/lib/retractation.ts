@@ -31,6 +31,8 @@
  */
 
 /** Duree legale, article L221-18. */
+import { minuitAParis } from "@/lib/periode-comptable";
+
 export const DUREE_RETRACTATION_JOURS = 14;
 
 /**
@@ -88,8 +90,13 @@ const FORMATEUR_JOUR_PARIS = new Intl.DateTimeFormat("en-CA", {
   day: "2-digit",
 });
 
-/** Le jour civil parisien auquel un instant appartient. */
-function jourCivilParisien(instant: Date): JourCivil {
+/**
+ * Le jour civil parisien auquel un instant appartient.
+ *
+ * EXPORTEE DEPUIS LS-288 : l'ecran des retractations borne le champ de date de
+ * la preuve avec les memes jours que `instantDePreuveFournie` verifie.
+ */
+export function jourCivilParisien(instant: Date): JourCivil {
   return FORMATEUR_JOUR_PARIS.format(instant);
 }
 
@@ -339,4 +346,68 @@ export function calculerEcheanceRetractation(
     finInclusive: debutDuJourSuivantEnUtc(jourLimite),
     jourReception: jourDepart,
   };
+}
+
+/**
+ * Jour de preuve refusé : mal formé, inexistant, à venir ou antérieur au dépôt.
+ * Le message ne porte que le motif, la saisie étant affichée par l'écran.
+ */
+export class JourDePreuveInvalideError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "JourDePreuveInvalideError";
+  }
+}
+
+/**
+ * L'instant à retenir pour une preuve d'expédition fournie le jour civil
+ * `jour`, LS-288.
+ *
+ * L221-24 ALINÉA 2 RETIENT LA DATE OÙ LE CONSOMMATEUR FOURNIT LA PREUVE. Le
+ * service écrivait l'instant de la SAISIE, ce qui reculait le point de départ
+ * du remboursement de tout le temps passé avant que l'exploitante recopie le
+ * numéro : la date exacte compte dans un litige.
+ *
+ * LE JOUR EST STOCKÉ À MINUIT HEURE DE PARIS, en UTC, invariant 8 : la preuve
+ * arrive par un email dont seul le jour se lit sans ambiguïté.
+ *
+ * DEUX BORNES, toutes deux en jours parisiens et inclusives. Pas de jour à
+ * venir, une preuve ne se fournit pas demain. Pas de jour antérieur au dépôt :
+ * avant la demande, il n'y avait aucun remboursement à débloquer.
+ */
+export function instantDePreuveFournie(
+  jour: string,
+  bornes: { deposeeA: Date; maintenant: Date },
+): Date {
+  const parties = /^(\d{4})-(\d{2})-(\d{2})$/.exec(jour);
+  if (parties === null) {
+    throw new JourDePreuveInvalideError("Date de la preuve mal formée.");
+  }
+
+  const annee = Number(parties[1]);
+  const mois = Number(parties[2]);
+  const quantieme = Number(parties[3]);
+  const calendrier = new Date(Date.UTC(annee, mois - 1, quantieme));
+
+  // Un 30 février passe le motif et devient le 2 mars : on le refuse.
+  if (
+    versJourCivil(annee, mois, quantieme) !==
+    calendrier.toISOString().slice(0, 10)
+  ) {
+    throw new JourDePreuveInvalideError("Cette date n'existe pas.");
+  }
+
+  if (jour > jourCivilParisien(bornes.maintenant)) {
+    throw new JourDePreuveInvalideError(
+      "La date de la preuve ne peut pas être dans le futur.",
+    );
+  }
+
+  if (jour < jourCivilParisien(bornes.deposeeA)) {
+    throw new JourDePreuveInvalideError(
+      "La date de la preuve ne peut pas précéder la demande de rétractation.",
+    );
+  }
+
+  return minuitAParis(annee, mois, quantieme);
 }

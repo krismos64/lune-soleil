@@ -250,6 +250,8 @@ export function TraitementDemande({
   colisRecu,
   preuveFournie,
   etatPieceConstate,
+  jourDepot,
+  jourDuJour,
   montantDuCentimes,
   referenceDemande,
 }: {
@@ -264,6 +266,10 @@ export function TraitementDemande({
    * etant immuable, le geste ne se propose qu'une fois.
    */
   etatPieceConstate: boolean;
+  /** Jour du dépôt à Paris, `AAAA-MM-JJ` : borne basse du jour de preuve. */
+  jourDepot: string;
+  /** Aujourd'hui à Paris, `AAAA-MM-JJ` : borne haute et valeur par défaut. */
+  jourDuJour: string;
   montantDuCentimes: number;
   referenceDemande: string;
 }) {
@@ -280,6 +286,13 @@ export function TraitementDemande({
     centimesVersSaisie(montantDuCentimes),
   );
   const [preuve, setPreuve] = useState("");
+  /*
+   * LE JOUR OU LE CLIENT A FOURNI LA PREUVE, aujourd'hui par defaut, LS-288 :
+   * L221-24 alinea 2 retient cette date, pas celle de la saisie. L'exploitante
+   * le recule quand elle recopie un numero recu par email quelques jours plus
+   * tot.
+   */
+  const [fournieLe, setFournieLe] = useState(jourDuJour);
   const [motifRefus, setMotifRefus] = useState("");
   const [motifEtat, setMotifEtat] = useState("");
   /*
@@ -357,7 +370,11 @@ export function TraitementDemande({
         </button>
       ) : null}
 
-      {statut === "RETOUR_ATTENDU" ? (
+      {/*
+       * LA PREUVE S'ENREGISTRE DES LE DEPOT, LS-288 : une preuve recue avant
+       * l'ouverture de l'attente du retour exigeait deux gestes.
+       */}
+      {ouvreLeRetour || statut === "RETOUR_ATTENDU" ? (
         <div className={styles.groupe}>
           <label className={styles.libelle} htmlFor={`preuve-${demandeId}`}>
             Numéro de suivi fourni par le client
@@ -375,12 +392,31 @@ export function TraitementDemande({
              */
             autoComplete="off"
           />
+          <label className={styles.libelle} htmlFor={`fournie-${demandeId}`}>
+            Reçu du client le
+          </label>
+          <input
+            id={`fournie-${demandeId}`}
+            type="date"
+            className={styles.champ}
+            value={fournieLe}
+            min={jourDepot}
+            max={jourDuJour}
+            onChange={(evenement) => setFournieLe(evenement.target.value)}
+            aria-describedby={`aide-fournie-${demandeId}`}
+          />
+          <p id={`aide-fournie-${demandeId}`} className={styles.aide}>
+            Le jour où le client vous a transmis la preuve, pas celui de la
+            saisie : c&apos;est lui qui rend le remboursement exigible.
+          </p>
           <button
             type="button"
             className={styles.bouton}
             disabled={enCours || preuve.trim().length === 0}
             onClick={() =>
-              lancer(() => declarerPreuveExpedition(formulaireDe({ preuve })))
+              lancer(() =>
+                declarerPreuveExpedition(formulaireDe({ preuve, fournieLe })),
+              )
             }
           >
             {enCours ? "Enregistrement de la preuve…" : "Enregistrer la preuve"}
@@ -524,7 +560,10 @@ export function TraitementDemande({
           <p id={`aide-montant-${demandeId}`} className={styles.aide}>
             Total payé, frais de port compris :{" "}
             {formaterMontant(montantDuCentimes)}. Les frais de livraison
-            initiaux se remboursent en entier.
+            initiaux se remboursent en entier. Une retenue n&apos;est possible
+            que pour une dépréciation due à des manipulations au-delà de
+            l&apos;examen du bijou, article L221-23 : l&apos;examiner comme en
+            boutique n&apos;en est pas une.
           </p>
           <button
             type="button"
