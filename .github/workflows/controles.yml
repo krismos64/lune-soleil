@@ -1256,6 +1256,18 @@ jobs:
       - name: 9y quater. Preuve par mutation du signal d'ecart
         run: ./scripts/verifier-ecart-production-mutation.sh
 
+      # Controle 9y quinquies, LS-289. L'action `--recreer` du script de
+      # deploiement, executee avec un faux `docker` : elle recree `app` seule,
+      # sans tirer d'image ni ecrire l'historique, et echoue en le disant. Le
+      # deploiement normal y est rejoue aussi, ses fonctions de sante etant
+      # desormais partagees. Aucun reseau, quelques secondes.
+      - name: 9y quinquies. L'action de recreation du deploiement
+        run: ./scripts/verifier-deployer-recreer.sh
+
+      # Preuve par mutation du controle precedent, sur des COPIES du script.
+      - name: 9y sexies. Preuve par mutation de la recreation
+        run: ./scripts/verifier-deployer-recreer-mutation.sh
+
       # ----------------------------------------------------------------------
       # Controle 9z. Les trois plafonds de televersement decroissent dans le
       # bon ordre, LS-207. Textuel, secondes.
