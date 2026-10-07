@@ -75,14 +75,27 @@ de mesurer l'écart horizontal.
 Point laissé à l'œil de Christophe : à 320 px, « Appliquer ce prix » passe
 sous le champ. Le côte à côte ne tient qu'à partir de 390 px.
 
+## Fusion et déploiement
+
+- PR #539 fusionnée en rebase : `1f1b0be`, `47966a1` et `89fc238`.
+- **Incident de mon fait** : un `git add -A` a embarqué dans la branche la
+  maquette de LS-280, qu'une autre session préparait dans le même dossier,
+  dont deux PNG de 2 Mo. Cette session l'a signalé avant la fusion. La
+  branche a été réécrite sans ces fichiers (`reset --soft`, `restore
+  --staged`, commits par chemins explicites, `--force-with-lease`) : `main`
+  n'en contient aucun, et les fichiers de travail sont restés intacts. Tant
+  qu'un dossier est partagé, on n'ajoute que par chemin explicite.
+- **Déployée sur décision de Christophe**, run 37572863629, image `89fc238`,
+  sans migration. Le workflow d'écart mesure 0 commit et 0 migration. Le
+  catalogue, l'accueil et la connexion de l'administration répondent 200.
+
 ## Prochaine étape
 
-Fusionner, puis déployer sur décision de Christophe. Il n'y a aucune
-migration. Ensuite, LS-278 : confirmer un archivage massif et alerter sur la
+LS-278 : confirmer un archivage massif et alerter sur la
 chute du nombre de pièces publiées. Le verdict du nocturne doit fermer LS-274
 et l'issue #525.
 
 ## État des tickets
 
-LS-279 close à la fusion, non déployée. LS-278, LS-273, LS-275 et LS-276
+LS-279 close et déployée. LS-278, LS-273, LS-275 et LS-276
 ouvertes. LS-274 et LS-258 en cours.
