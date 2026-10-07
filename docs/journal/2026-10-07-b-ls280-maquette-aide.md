@@ -1,4 +1,4 @@
-# 7 octobre 2026 : LS-280, maquette de la page Livraison et aide
+# 7 octobre 2026 : LS-280, la page Livraison et aide en motion design
 
 ## Ce qui a été fait
 
@@ -19,6 +19,23 @@
 - **Codex a critiqué deux fois** : la page actuelle, puis la maquette. Retenu
   et écarté détaillés dans le README de la maquette.
 
+- **Maquette validée par Christophe** le même matin. ADR-045 reçoit son
+  amendement (l'aide passe de « micro-interactions » à « décor animé à
+  l'entrée de chaque section, contenu immobile »), propagé à
+  `frontend-design.md` et à la table de `REFERENCES.md`.
+- **Portage** dans `src/app/(boutique)/aide/` : composant serveur, aucun
+  composant client propre, mouvement tout en CSS borné par `data-borne`.
+  Tarifs et seuil lus en configuration, message si elle est invalide. Les
+  deux aquarelles entrent dans `public/habillage/`, documentées.
+- **Vérifié** : types, lint, Prettier ; Vitest complet 1766 sur 1766 ;
+  Playwright 400 sur 400 sur six specs (aide, informations légales, portes
+  d'entrée, contact, référencement, gabarit de titre), sur un build refait ;
+  `verifier-regles`, `contraste`, `metadonnees-habillage`,
+  `atteignabilite-boutique`, `propagation-docs`, `tests-non-ignores` verts.
+  Rendu contrôlé à 320 et 1280 px. LCP de référence en production avant
+  déploiement : 1067 ms, CLS 0, performance 100, accessibilité 100.
+- **Revue `ls-frontend-revue`** : six défauts, tous corrigés (voir plus bas).
+
 ## Dérives
 
 - J'avais écrit « emballé à la main » dans une étape du parcours : le type
@@ -34,13 +51,34 @@
   « page de contact » du bloc FAQ s'affiche en bleu navigateur ; le contact
   annonce des « délais » sur une page qui n'en publie aucun.
 
+- **Le bouton « Déclarer une rétractation » de la maquette menait à une
+  404** : `/retractation` n'existe pas, seule `/retractation/[jeton]`, lien
+  signé de l'email. `verifier-atteignabilite-boutique.sh` l'a vu. Il devient
+  « Mes commandes », et la puce reprend mot pour mot les pages légales.
+- **Le trait du chemin du colis était un `::after`**, que
+  `[data-borne="attente"] *` n'atteint pas : il se dessinait hors de l'écran.
+  Le test e2e l'a vu au premier passage ; je l'avais d'abord assoupli en
+  excluant les pseudo-éléments, ce qui masquait le défaut. La revue l'a
+  relevé : le trait devient un élément, le test garde sa sévérité. **Les
+  autres pages bornées ont le même angle mort**, ticket ouvert.
+- **Les étoiles de décor de la FAQ couvraient deux lettres à 320 px**, vues à
+  l'écran : masquées sous 768 px, tenues au tiers droit au-delà.
+- **Worktree et Docker Compose** : depuis `../lune-soleil-ls280`, Compose
+  déduit un autre nom de projet et tente de recréer `lune-soleil-db-e2e`.
+  `COMPOSE_PROJECT_NAME=lune-soleil` le corrige. Le `.env` y est un lien
+  symbolique posé par Christophe.
+- **Un contrôle visuel a d'abord montré l'ancienne page** : Chrome servait sa
+  feuille de style en cache. Le build était à jour, vérifié sur les noms de
+  fichiers servis par `curl`.
+
 ## Prochaine étape
 
-Christophe valide ou corrige la maquette. Ensuite : amendement d'ADR-045,
-portage dans `src/app/(boutique)/aide/` avec tarifs lus en configuration,
-LCP et CLS mesurés avant et après, revue `ls-frontend-revue`.
+PR, CI verte, fusion en rebase, puis déploiement par le workflow « Déployer en
+production » sur accord de Christophe, et mesure du LCP de `/aide` en
+production par `scripts/mesurer-site-deploye.sh`, à confronter aux 1067 ms
+d'avant. LS-280 se clôt sur cette mesure.
 
 ## État des tickets
 
-LS-280 en cours, maquette livrée, à valider. LS-279 suivie par une autre
-session.
+LS-280 en cours, critères 1 à 6 remplis, le 7 attend le déploiement. LS-279
+close et déployée par l'autre session.
