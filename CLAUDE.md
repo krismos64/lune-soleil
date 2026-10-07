@@ -152,10 +152,9 @@ variable sans valeur imprimée.
 configurés, sans jamais lire les identifiants sous-jacents.
 
 **Production** : autonome, mais **toujours par l'outil prévu**. Migrer via
-`./scripts/migrate-production.sh` et jamais `prisma migrate deploy` ; déployer par
-le workflow « Déployer en production », jamais à la main, y compris pour relire
-une variable changée, action `recreer`. Un garde-fou qui ne peut
-pas conclure bloque, `database.md` et `EXPLOITATION.md` les détaillent.
+`./scripts/migrate-production.sh`, jamais `prisma migrate deploy` ; déployer, et
+relire une variable changée (action `recreer`), par le workflow « Déployer en
+production ». Garde-fou sans conclusion : il bloque, `database.md`, `EXPLOITATION.md`.
 
 ## Agents
 
