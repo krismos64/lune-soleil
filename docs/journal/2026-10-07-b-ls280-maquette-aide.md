@@ -71,14 +71,13 @@
   feuille de style en cache. Le build était à jour, vérifié sur les noms de
   fichiers servis par `curl`.
 
-## Prochaine étape
+## Déploiement
 
-PR, CI verte, fusion en rebase, puis déploiement par le workflow « Déployer en
-production » sur accord de Christophe, et mesure du LCP de `/aide` en
-production par `scripts/mesurer-site-deploye.sh`, à confronter aux 1067 ms
-d'avant. LS-280 se clôt sur cette mesure.
+Déployée le 7 octobre 2026, run 37577331404, image `b44153c`, sans migration.
+LCP de `/aide` en production sur trois passages : 936, 1064 et 916 ms, contre
+1067 ms avant ; CLS 0. LS-280 close. Suite de la session : `2026-10-07-c`.
 
 ## État des tickets
 
-LS-280 en cours, critères 1 à 6 remplis, le 7 attend le déploiement. LS-279
-close et déployée par l'autre session.
+LS-280 close et déployée. LS-281 ouverte. LS-279 close et déployée par
+l'autre session.
