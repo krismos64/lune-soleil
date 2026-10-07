@@ -47,6 +47,18 @@ type ConfigurationSmtp = {
   utilisateur: string;
   motDePasse: string;
   expediteur: string;
+  /**
+   * L'adresse de contact publiée, en `Reply-To`, LS-287. Facultative.
+   *
+   * LES MODELES DISENT « REPONDEZ A CE MESSAGE », et l'accuse de retractation y
+   * fait passer la preuve d'expedition du retour, fait qui rend le
+   * remboursement exigible, article L221-24. Rien ne garantit que
+   * `EMAIL_FROM_ADDRESS` soit une boite relevee ; la reponse part donc vers
+   * l'adresse des mentions legales, `FACTURE_EMAIL_CONTACT`, celle que
+   * l'exploitante lit, ADR-008. Absente, l'en-tete n'est pas pose et la reponse
+   * revient a l'expediteur, comme avant.
+   */
+  repondreA: string | null;
 };
 
 /**
@@ -98,6 +110,7 @@ export function lireConfigurationSmtp(
     utilisateur: requises.SMTP_USER as string,
     motDePasse: requises.SMTP_PASSWORD as string,
     expediteur: requises.EMAIL_FROM_ADDRESS as string,
+    repondreA: env.FACTURE_EMAIL_CONTACT?.trim() || null,
   };
 }
 
@@ -198,6 +211,7 @@ export function creerEnvoyeurSmtp(
 
         await transport.sendMail({
           from: config.expediteur,
+          ...(config.repondreA === null ? {} : { replyTo: config.repondreA }),
           to: message.destinataire,
           subject: rendu.objet,
           text: rendu.texte,
