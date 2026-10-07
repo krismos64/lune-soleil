@@ -169,8 +169,12 @@ export default async function PageContact() {
             <div>
               <p className={styles.repereTitre}>Livraison et aide</p>
               <p className={styles.repereTexte}>
-                Délais, retours et questions fréquentes : la réponse y est
-                souvent déjà.
+                {/*
+                 * LS-280 : « Délais » annonçait une information que l'aide ne
+                 * publie pas, questions 38 à 42 sans réponse.
+                 */}
+                Modes de livraison, tarifs et retours : la réponse y est souvent
+                déjà.
               </p>
             </div>
           </Link>

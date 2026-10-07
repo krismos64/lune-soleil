@@ -8,6 +8,37 @@
 | Amende | `.claude/rules/frontend-design.md`, sections « Interdits visuels » et « Paillettes » |
 | Ticket | LS-259 |
 
+## Amendement du 7 octobre 2026, page Livraison et aide, LS-280
+
+**Arbitrage de Christophe sur maquette**, `docs/prototypes/aide-animee/`,
+critiquée par Codex et validée le 7 octobre 2026. Le point 7 classait l'aide
+parmi les pages d'action, micro-interactions seulement. Elle reçoit désormais
+un **décor animé à l'entrée de chaque section**, et son contenu reste
+immobile : titres, textes, tarifs, liens et boutons ne bougent pas et ne
+partent d'aucune opacité nulle.
+
+- **Ce qui s'anime**, une fois par entrée dans l'écran, borné par
+  `data-borne` : l'anneau, les astres et la poussière d'or autour de
+  l'aquarelle de l'en-tête ; le tracé des icônes des modes de livraison et des
+  deux cas de retour ; le trait qui relie les quatre étapes du chemin du colis,
+  et le colis qui le parcourt ; les quatorze lunes du cadran de rétractation ;
+  les étoiles du ciel de la section des questions fréquentes.
+- **Le dégradé de ciel s'étend à deux décors de plus**, six en tout : l'aube
+  de l'en-tête de l'aide et la nuit de sa section des questions fréquentes. Il
+  reste interdit sur un contrôle, une carte, un bandeau ou une surface
+  d'interface.
+- **Deux images générées par Codex**, aquarelles sans bijou ni texte, sans
+  métadonnées : un colis au ruban sous la lune et le soleil, un ciel de nuit
+  sur des collines.
+- Les autres règles tiennent sans changement : arrêt avant cinq secondes,
+  `transform`, `opacity` et `stroke-dashoffset` seulement, page complète et
+  immobile en mouvement réduit et sans script.
+
+**Pourquoi l'aide et pas les autres pages d'action.** Elle ne porte aucun
+formulaire ni aucune saisie : c'est une page de lecture, plus proche de la
+vitrine que du tunnel. Le panier, la commande, le compte et les pages légales
+restent aux micro-interactions.
+
 ## Correction du 4 octobre 2026, revue de LS-260
 
 **Le point 4 citait WCAG 2.2.2 à moitié.** Le critère ne dispense d'un moyen
@@ -201,7 +232,8 @@ par un repli qui ne dépend pas du script.
 |---|---|---|
 | Vitrine | accueil, notre univers, catalogue | scènes, tracés, parallaxe, reflets, apparitions |
 | Produit | fiche produit | transitions de galerie, apparitions discrètes, aucun décor animé |
-| Action | panier, commande, compte, aide, pages légales | micro-interactions seulement : réaction d'un bouton, passage d'un état à l'autre |
+| Action | panier, commande, compte, pages légales | micro-interactions seulement : réaction d'un bouton, passage d'un état à l'autre |
+| Aide, amendement LS-280 | livraison, retours et questions fréquentes | décor animé à l'entrée de chaque section, contenu immobile |
 | Portes d'entrée, amendement LS-268 | connexion et inscription de la boutique, contact | décor animé, formulaire immobile |
 | Administration | tous les écrans | aucun changement |
 
