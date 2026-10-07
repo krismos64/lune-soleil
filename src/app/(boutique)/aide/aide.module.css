@@ -1,114 +1,1179 @@
 /*
- * Page d'aide, LS-123 : livraison, retours et foire aux questions.
+ * Page d'aide, LS-123, refondue par LS-280 : maquette
+ * `docs/prototypes/aide-animee/` validée le 7 octobre 2026, amendement
+ * d'ADR-045.
  *
- * CONCU A PARTIR DE 320 px, puis elargi. Les media queries montent, elles ne
+ * CONÇU À PARTIR DE 320 px, puis élargi. Les media queries montent, elles ne
  * descendent jamais.
  *
- * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons de `tokens.css`.
+ * AUCUNE VALEUR HEXADÉCIMALE, uniquement les jetons de `tokens.css`. Les
+ * transparences des voiles et des ombres sont des `rgba` d'un jeton recopié
+ * en composantes, faute de `color-mix` partout où le site est servi.
  *
- * LE CONTRASTE DEPEND DU FOND, C31 : `--ls-text-muted` donne 4,86:1 sur creme
- * mais 4,35:1 sur sable, et `--ls-accent-gold-deep` y tombe a 4,23:1. Sur sable,
- * employer `--ls-text` ou `--ls-primary`, releve mesure porte par LS-105.
+ * LE CONTRASTE DEPEND DU FOND, C31. Sur sable, `--ls-text` ou `--ls-primary`,
+ * jamais `--ls-text-muted` (4,35:1). Les mesures de chaque paire sont portées
+ * à côté de la règle qui la pose.
  *
- * LES CONVENTIONS SONT CELLES DE `informations-legales.module.css`, page soeur
- * livree le meme jour : meme mesure de lecture bornee, meme traitement du focus
- * d'ancre, meme bloc d'attente. Les deux ne partagent pas de fichier, un module
- * CSS commun creant un couplage entre deux pages qui evolueront separement.
+ * LE MOUVEMENT EST TOUT ENTIER DANS LE BLOC `prefers-reduced-motion:
+ * no-preference` en fin de fichier : hors de lui, le décor est dessiné et
+ * immobile. `data-borne` le suspend hors de l'écran et après cinq secondes.
  */
 
 .page {
-  padding: var(--ls-space-4);
-  max-width: 48rem;
+  overflow-x: clip;
+}
+
+.enveloppe {
+  max-width: 74rem;
+  margin: 0 auto;
+}
+
+/* Texte réservé aux lecteurs d'écran : la virgule entre surtitre et titre. */
+.cache {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.surtitre {
+  display: block;
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-or-sombre);
+  /* La pile du texte courant : le surtitre vit dans un titre en serif. */
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+/* ---------- En-tête d'aube ---------- */
+
+/*
+ * DÉGRADÉ DE CIEL, amendement LS-280. Le texte se pose sur sa moitié claire :
+ * `--ls-primary-hover` y dépasse 10:1, `--ls-or-sombre` 4,73:1 sur
+ * `--ls-ciel-aube-haut`, le point le plus sombre du fond.
+ */
+.heros {
+  padding: var(--ls-space-5) var(--ls-space-4) var(--ls-space-7);
+  background:
+    radial-gradient(
+      90% 70% at 80% 20%,
+      var(--ls-ciel-jour-haut) 0%,
+      transparent 60%
+    ),
+    linear-gradient(
+      180deg,
+      var(--ls-ciel-aube-haut) 0%,
+      var(--ls-ciel-jour-haut) 55%,
+      var(--ls-background) 100%
+    );
+}
+
+.herosGrille {
+  display: grid;
+  gap: var(--ls-space-5);
+  max-width: 74rem;
   margin: 0 auto;
 }
 
 .titre {
-  margin: 0 0 var(--ls-space-4);
-  color: var(--ls-primary);
-  font-size: clamp(1.5rem, 5vw, 2.25rem);
-}
-
-/* FOND SABLE, DONC `--ls-primary` SUR LES LIENS, jamais le doré. */
-.sommaire {
-  margin-bottom: var(--ls-space-5);
-  padding: var(--ls-space-3);
-  background: var(--ls-surface-sand);
-  border-radius: var(--ls-radius-md);
-}
-
-.listeSommaire {
-  list-style: none;
   margin: 0;
+  color: var(--ls-primary-hover);
+  font-family: var(--ls-police-titre);
+  font-size: clamp(2rem, 8.5vw, 3.75rem);
+  font-weight: 400;
+  line-height: 1.12;
+}
+
+.dore {
+  color: var(--ls-or-sombre);
+  font-style: italic;
+}
+
+.accroche {
+  max-width: 46ch;
+  margin: var(--ls-space-3) 0 0;
+  color: var(--ls-text);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+}
+
+/* Le sommaire en trois portes, cibles de 64 px. */
+.portes {
+  display: grid;
+  gap: var(--ls-space-2);
+  margin: var(--ls-space-5) 0 0;
   padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--ls-space-2) var(--ls-space-4);
+  list-style: none;
 }
 
-/* ZONE TACTILE DE 44 px sur chaque lien du sommaire. */
-.listeSommaire a {
-  display: inline-flex;
+.portes a {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr auto;
   align-items: center;
-  min-height: var(--ls-touch-target);
-  color: var(--ls-primary);
-  text-decoration: underline;
+  gap: var(--ls-space-3);
+  min-height: 4rem;
+  padding: var(--ls-space-2) var(--ls-space-3);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-lg);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  text-decoration: none;
 }
 
-.section {
-  margin-bottom: var(--ls-space-5);
+.portes a:hover {
+  border-color: var(--ls-accent-gold);
+}
+
+.portes a:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 3px;
+}
+
+.portes svg {
+  width: 2.5rem;
+  height: 2.5rem;
+  fill: none;
+  stroke: var(--ls-or-sombre);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.portes strong {
+  display: block;
+  color: var(--ls-primary-hover);
+  font-family: var(--ls-police-titre);
+  font-size: 1.1875rem;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+/* `--ls-text` sur blanc, 12,7:1 : le jeton atténué y suffirait, pas sur sable. */
+.portes small {
+  display: block;
+  font-size: 0.875rem;
+  line-height: 1.35;
+}
+
+.fleche {
+  width: 1.125rem;
+  height: 1.125rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
 }
 
 /*
- * LE FOCUS DE L'ANCRE EST VISIBLE, et il doit l'etre : `tabIndex={-1}` rend la
- * section focusable pour que le clavier suive le saut, mais un focus invisible
- * laisserait la personne sans repere apres le clic.
+ * LE DÉCOR. Sous 768 px il devient un médaillon de 160 px au-dessus du titre,
+ * pour ne pas repousser le contenu, risque relevé par Codex sur la maquette.
  */
-.section:focus-visible {
-  outline: 3px solid var(--ls-primary);
-  outline-offset: var(--ls-space-2);
+.decor {
+  position: relative;
+  order: -1;
+  width: min(50vw, 10rem);
+  aspect-ratio: 1;
+  margin: 0 auto;
+}
+
+.decorImage {
+  position: absolute;
+  inset: 9%;
+  overflow: hidden;
+  border-radius: 50%;
+  box-shadow: 0 24px 50px -28px rgba(74, 42, 11, 0.55);
+}
+
+.decorImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 76% 62%;
+}
+
+.decorTraces {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.anneau {
+  fill: none;
+  stroke: url(#aide-or);
+  stroke-width: 1.6;
+  stroke-dasharray: 1;
+}
+
+.anneauPointille {
+  fill: none;
+  stroke: var(--ls-accent-gold);
+  stroke-width: 0.8;
+  stroke-dasharray: 2 7;
+  opacity: 0.7;
+}
+
+.rayons {
+  fill: none;
+  stroke: url(#aide-or);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.astres {
+  fill: url(#aide-or);
+}
+
+/* Poussière d'or : positions fixes, règle des paillettes de frontend-design. */
+.poussiere span {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--ls-or-clair);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.poussiere span:nth-child(1) {
+  top: 20%;
+  left: 12%;
+}
+.poussiere span:nth-child(2) {
+  top: 44%;
+  left: 88%;
+}
+.poussiere span:nth-child(3) {
+  top: 88%;
+  left: 76%;
+}
+.poussiere span:nth-child(4) {
+  top: 64%;
+  left: 6%;
+}
+.poussiere span:nth-child(5) {
+  top: 2%;
+  left: 52%;
+}
+.poussiere span:nth-child(6) {
+  top: 12%;
+  left: 95%;
+}
+
+/* Tracé d'icône : dessiné d'emblée, animé seulement en mouvement autorisé. */
+.trait {
+  fill: none;
+  stroke-dasharray: 1;
+}
+
+/* ---------- Sections ---------- */
+
+.section {
+  padding: var(--ls-space-7) var(--ls-space-4);
+}
+
+/*
+ * LE FOCUS DE L'ANCRE EST VISIBLE : `tabIndex={-1}` rend la section focusable
+ * pour que le clavier suive le saut, un focus invisible laisserait la personne
+ * sans repère après le clic.
+ */
+.section:focus-visible,
+.faq:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: -6px;
+}
+
+.enteteSection {
+  max-width: 60ch;
+  margin-bottom: var(--ls-space-5);
 }
 
 .titreSection {
-  margin: 0 0 var(--ls-space-3);
-  padding-bottom: var(--ls-space-2);
-  border-bottom: 1px solid var(--ls-border);
-  color: var(--ls-primary);
-  font-size: 1.375rem;
-  font-weight: 600;
+  margin: 0;
+  color: var(--ls-primary-hover);
+  font-family: var(--ls-police-titre);
+  font-size: clamp(1.75rem, 6.5vw, 2.75rem);
+  font-weight: 400;
+  line-height: 1.15;
 }
 
 .texte {
-  margin: 0 0 var(--ls-space-3);
+  margin: var(--ls-space-3) 0 0;
   color: var(--ls-text);
   line-height: 1.6;
 }
 
-.liste {
-  margin: 0 0 var(--ls-space-3);
-  padding-left: var(--ls-space-4);
+/* Trois modes, comparables d'un coup d'œil. */
+.modes {
+  display: grid;
+  gap: var(--ls-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mode {
+  display: grid;
+  grid-template-columns: 3.5rem 1fr;
+  align-items: start;
+  gap: var(--ls-space-1) var(--ls-space-4);
+  padding: var(--ls-space-5);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-lg);
+  background: var(--ls-surface);
+}
+
+.modeIcone {
+  display: grid;
+  grid-row: span 4;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: var(--ls-surface-sand);
+}
+
+.modeIcone svg {
+  width: 2.125rem;
+  height: 2.125rem;
+  stroke: var(--ls-or-sombre);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.modeTitre {
+  margin: 0;
+  color: var(--ls-primary-hover);
+  font-family: var(--ls-police-titre);
+  font-size: 1.375rem;
+  font-weight: 400;
+}
+
+.prix {
+  margin: 0;
+  color: var(--ls-price);
+  font-family: var(--ls-police-titre);
+  font-size: 1.875rem;
+  line-height: 1.1;
+}
+
+.modeTexte {
+  margin: 0;
   color: var(--ls-text);
-  line-height: 1.6;
+  font-size: 0.9375rem;
+}
+
+/* `--ls-primary-hover` sur sable : 10,8:1. */
+.pastille {
+  justify-self: start;
+  margin: var(--ls-space-2) 0 0;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--ls-surface-sand);
+  color: var(--ls-primary-hover);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+/* La franchise, à part des modes. Blanc sur `--ls-primary` : 8,93:1. */
+.franchise {
+  display: grid;
+  grid-template-columns: 2.75rem 1fr;
+  align-items: center;
+  gap: var(--ls-space-3);
+  margin-top: var(--ls-space-5);
+  padding: var(--ls-space-5);
+  border-radius: var(--ls-radius-lg);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+}
+
+.franchise svg {
+  width: 2.75rem;
+  height: 2.75rem;
+  stroke: var(--ls-or-pale);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+
+.franchise p {
+  margin: 0;
+}
+
+.franchise strong {
+  display: block;
+  font-family: var(--ls-police-titre);
+  font-size: 1.3125rem;
+  font-weight: 400;
+  line-height: 1.25;
 }
 
 /*
- * CE QUI N'EST PAS ENCORE PUBLIE SE VOIT, sans crier. Le fond sable distingue
- * l'information a venir du texte publie, et `--ls-text` y reste lisible la ou le
- * jeton attenue tomberait a 4,35:1.
- *
- * AUCUNE COULEUR D'ALERTE : une section en attente de contenu n'est pas une
- * erreur, et un bandeau rouge inquieterait un acheteur sans motif.
+ * CE QUI N'EST PAS ENCORE PUBLIÉ OU PAS DISPONIBLE SE VOIT, sans crier : fond
+ * sable, `--ls-text` lisible, aucune couleur d'alerte.
  */
 .attente {
-  margin: 0 0 var(--ls-space-3);
+  margin: 0;
   padding: var(--ls-space-3);
-  background: var(--ls-surface-sand);
   border-left: 4px solid var(--ls-primary);
   border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface-sand);
   color: var(--ls-text);
   line-height: 1.6;
 }
 
-.texte a {
+/* Le lien du bloc d'attente était bleu navigateur, défaut relevé par LS-280. */
+.attente a {
+  color: var(--ls-primary);
+  text-decoration: underline;
+}
+
+/* Le chemin du colis. */
+.parcours {
+  margin-top: var(--ls-space-7);
+}
+
+.parcoursTitre {
+  margin: 0 0 var(--ls-space-4);
+  color: var(--ls-primary-hover);
+  font-family: var(--ls-police-titre);
+  font-size: 1.5rem;
+  font-weight: 400;
+}
+
+.piste {
+  position: relative;
+}
+
+.etapes {
+  display: grid;
+  gap: var(--ls-space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.etape {
+  position: relative;
+  display: grid;
+  grid-template-columns: 2.75rem 1fr;
+  align-content: start;
+  align-items: start;
+  gap: var(--ls-space-3);
+}
+
+/*
+ * LE TRAIT VERS L'ÉTAPE SUIVANTE est le `::after` de chaque étape, sauf la
+ * dernière : il part du bas du jalon et rejoint le suivant, quelle que soit la
+ * hauteur du texte. Vertical sous 768 px, horizontal au-delà.
+ */
+.etape:not(:last-child)::after {
+  position: absolute;
+  top: 2.75rem;
+  left: calc(1.375rem - 1px);
+  width: 2px;
+  height: calc(100% - 2.75rem + var(--ls-space-5));
+  background: var(--ls-accent-gold);
+  transform-origin: top;
+  content: "";
+}
+
+.jalon {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid var(--ls-accent-gold);
+  border-radius: 50%;
+  background: var(--ls-background);
+  color: var(--ls-or-sombre);
+  font-family: var(--ls-police-titre);
+  font-size: 1.125rem;
+}
+
+.etapeTitre {
+  margin: 0;
+  padding-top: var(--ls-space-2);
+  color: var(--ls-primary-hover);
+  font-family: var(--ls-police-titre);
+  font-size: 1.25rem;
+  line-height: 1.3;
+}
+
+.etapeTexte {
+  margin: 2px 0 0;
+  color: var(--ls-text);
+  font-size: 0.9375rem;
+}
+
+/*
+ * Le colis voyageur n'existe qu'en ligne, à partir de 768 px, et en mouvement
+ * autorisé : immobile, il ne serait qu'un pictogramme invisible.
+ */
+.voyage {
+  display: none;
+}
+
+.noteAttente {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ls-space-2);
+  max-width: 70ch;
+  margin: var(--ls-space-5) 0 0;
+  padding: var(--ls-space-3);
+  border: 1px dashed var(--ls-border-controle);
+  border-radius: var(--ls-radius-md);
+  color: var(--ls-text);
+  font-size: 0.9375rem;
+}
+
+.noteAttente svg {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 2px;
+  fill: none;
+  stroke: var(--ls-primary);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+/* ---------- Retours, fond sable ---------- */
+
+.retours {
+  background: var(--ls-surface-sand);
+}
+
+.retoursGrille {
+  display: grid;
+  gap: var(--ls-space-6);
+}
+
+.cadran {
+  position: relative;
+  width: min(78vw, 18.75rem);
+  aspect-ratio: 1;
+  margin: 0 auto;
+}
+
+.cadran svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.cadranAnneau {
+  fill: none;
+  stroke: var(--ls-accent-gold);
+  stroke-width: 1;
+  stroke-dasharray: 1;
+}
+
+.phaseFond {
+  fill: var(--ls-surface-sand);
+  stroke: var(--ls-or-moyen);
+  stroke-width: 1;
+}
+
+.phaseLumiere {
+  fill: var(--ls-accent-gold);
+}
+
+.phasePleine {
+  fill: var(--ls-or-clair);
+}
+
+.cadranTexte {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  margin: 0;
+  color: var(--ls-primary-hover);
+  font-size: 0.9375rem;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.cadranTexte span:last-child {
+  max-width: 15ch;
+  margin: var(--ls-space-1) auto 0;
+}
+
+/* `--ls-or-sombre` sur sable, grand texte : 4,93:1, seuil de 3:1. */
+.quatorze {
+  color: var(--ls-or-sombre);
+  font-family: var(--ls-police-titre);
+  font-size: clamp(4.5rem, 22vw, 6.5rem);
+  line-height: 0.9;
+}
+
+.cas {
+  display: grid;
+  gap: var(--ls-space-4);
+}
+
+.carteCas {
+  padding: var(--ls-space-5);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-lg);
+  background: var(--ls-surface);
+}
+
+.casTitre {
+  display: flex;
+  align-items: center;
+  gap: var(--ls-space-3);
+  margin: 0;
+  color: var(--ls-primary-hover);
+  font-family: var(--ls-police-titre);
+  font-size: 1.5rem;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.casTitre svg {
+  flex: none;
+  width: 2.125rem;
+  height: 2.125rem;
+  stroke: var(--ls-or-sombre);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.puces {
+  display: grid;
+  gap: var(--ls-space-2);
+  margin: var(--ls-space-4) 0 var(--ls-space-5);
+  padding: 0;
+  color: var(--ls-text);
+  list-style: none;
+}
+
+.puces li {
+  position: relative;
+  padding-left: 1.375rem;
+}
+
+.puces li::before {
+  position: absolute;
+  top: 0.62em;
+  left: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ls-accent-gold);
+  content: "";
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ls-space-2) var(--ls-space-5);
+}
+
+.boutonPrincipal,
+.boutonSecondaire,
+.boutonNuit {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ls-space-2);
+  min-height: 3rem;
+  padding: 0 var(--ls-space-5);
+  border-radius: 999px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.boutonPrincipal {
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+}
+
+.boutonPrincipal:hover {
+  background: var(--ls-primary-hover);
+}
+
+.boutonSecondaire {
+  border: 1px solid var(--ls-border-controle);
+  background: var(--ls-surface);
+  color: var(--ls-primary);
+}
+
+.lien {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
   color: var(--ls-accent-gold-deep);
   text-decoration: underline;
+}
+
+.boutonPrincipal:focus-visible,
+.boutonSecondaire:focus-visible,
+.lien:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 3px;
+}
+
+/* ---------- Questions fréquentes, ciel de nuit ---------- */
+
+/*
+ * DÉGRADÉ DE CIEL, amendement LS-280. `--ls-texte-nuit` sur
+ * `--ls-ciel-nuit-haut` : 16,37:1, et 13,27:1 sur `--ls-ciel-nuit-bas`. Le
+ * voile garde la moitié gauche, où se pose le texte, plus sombre que la
+ * teinte la plus claire de l'aquarelle.
+ */
+.faq {
+  position: relative;
+  overflow: hidden;
+  padding: var(--ls-space-8) var(--ls-space-4);
+  background: linear-gradient(
+    180deg,
+    var(--ls-ciel-nuit-haut),
+    var(--ls-ciel-nuit-bas)
+  );
+  color: var(--ls-texte-nuit);
+}
+
+.faqImage {
+  position: absolute;
+  inset: 0;
+}
+
+.faqImage img {
+  object-fit: cover;
+  object-position: 70% 40%;
+}
+
+.faqImage::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(20, 15, 28, 0.92) 0%,
+    rgba(20, 15, 28, 0.78) 55%,
+    rgba(20, 15, 28, 0.3) 100%
+  );
+  content: "";
+}
+
+.faq .enveloppe {
+  position: relative;
+}
+
+.etoiles span {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--ls-texte-nuit);
+}
+
+.etoiles span:nth-child(1) {
+  top: 18%;
+  left: 8%;
+}
+.etoiles span:nth-child(2) {
+  top: 72%;
+  left: 22%;
+}
+.etoiles span:nth-child(3) {
+  top: 12%;
+  left: 41%;
+}
+.etoiles span:nth-child(4) {
+  top: 30%;
+  left: 58%;
+}
+.etoiles span:nth-child(5) {
+  top: 46%;
+  left: 34%;
+}
+.etoiles span:nth-child(6) {
+  top: 40%;
+  left: 14%;
+}
+
+/* `--ls-or-pale` sur la nuit : 12,48:1, texte de toute taille, LS-261. */
+.surtitreNuit {
+  display: block;
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-or-pale);
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.titreFaq {
+  max-width: 18ch;
+  margin: 0;
+  color: var(--ls-texte-nuit);
+  font-family: var(--ls-police-titre);
+  font-size: clamp(1.75rem, 6.5vw, 2.75rem);
+  font-weight: 400;
+  line-height: 1.15;
+}
+
+.texteFaq {
+  max-width: 52ch;
+  margin: var(--ls-space-4) 0 var(--ls-space-5);
+  line-height: 1.6;
+}
+
+/* `--ls-ciel-nuit-haut` sur `--ls-or-pale` : 12,48:1. */
+.boutonNuit {
+  background: var(--ls-or-pale);
+  color: var(--ls-ciel-nuit-haut);
+}
+
+.boutonNuit:hover {
+  background: var(--ls-texte-nuit);
+}
+
+.boutonNuit:focus-visible {
+  outline: 3px solid var(--ls-or-pale);
+  outline-offset: 3px;
+}
+
+/* ---------- Largeurs ---------- */
+
+@media (min-width: 640px) {
+  .portes {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .portes a {
+    grid-template-columns: 2.5rem 1fr;
+  }
+
+  .portes .fleche {
+    display: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .heros {
+    padding: var(--ls-space-8) var(--ls-space-6);
+  }
+
+  .herosGrille {
+    grid-template-columns: 1.15fr 0.85fr;
+    align-items: center;
+    gap: var(--ls-space-7);
+  }
+
+  .decor {
+    order: 0;
+    width: min(36vw, 25rem);
+  }
+
+  .section {
+    padding: var(--ls-space-8) var(--ls-space-6);
+  }
+
+  .faq {
+    padding: var(--ls-space-8) var(--ls-space-6);
+  }
+
+  .modes {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--ls-space-5);
+  }
+
+  .mode {
+    grid-template-columns: 1fr;
+    padding: var(--ls-space-6) var(--ls-space-5);
+  }
+
+  .modeIcone {
+    grid-row: auto;
+    width: 4rem;
+    height: 4rem;
+    margin-bottom: var(--ls-space-2);
+  }
+
+  .etapes {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .etape {
+    grid-template-columns: 1fr;
+  }
+
+  /* Horizontal : du bord droit du jalon au jalon suivant, gouttière comprise. */
+  .etape:not(:last-child)::after {
+    top: calc(1.375rem - 1px);
+    left: 2.75rem;
+    width: calc(100% - 2.75rem + var(--ls-space-5));
+    height: 2px;
+    transform-origin: left;
+  }
+
+  /*
+   * LA PISTE DU COLIS va du centre du premier jalon au centre du dernier :
+   * trois colonnes et trois gouttières, soit 75 % de la largeur plus les trois
+   * quarts d'une gouttière. Le colis est à son bord gauche, et la piste glisse
+   * de toute sa largeur.
+   */
+  .voyage {
+    position: absolute;
+    top: calc(1.375rem - 0.875rem);
+    left: 1.375rem;
+    width: calc(75% + 0.75 * var(--ls-space-5));
+    height: 1.75rem;
+    pointer-events: none;
+  }
+
+  .voyage svg {
+    position: absolute;
+    top: 0;
+    left: -0.875rem;
+    width: 1.75rem;
+    height: 1.75rem;
+    fill: var(--ls-background);
+    stroke: var(--ls-or-sombre);
+    stroke-width: 2;
+    stroke-linejoin: round;
+    opacity: 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .retoursGrille {
+    grid-template-columns: 21.25rem 1fr;
+    align-items: center;
+    gap: var(--ls-space-7);
+  }
+
+  .cas {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .cadran {
+    width: 21.25rem;
+  }
+}
+
+@media (min-width: 768px) and (prefers-reduced-motion: no-preference) {
+  .voyage {
+    display: block;
+  }
+}
+
+/* ---------- Mouvement, ADR-045 amendé par LS-280 ---------- */
+
+/*
+ * TOUT EST FINI ET SOUS CINQ SECONDES, retard compris. La plus longue
+ * séquence est le colis voyageur : 600 ms de retard et 3 400 ms de course.
+ * Seuls `transform`, `opacity` et `stroke-dashoffset` s'animent. `both`
+ * maintient l'état de départ pendant le retard, et `data-borne="attente"`
+ * le fige hors de l'écran : un décor ne joue qu'une fois vu.
+ *
+ * Sans script, l'attribut reste vide : chaque animation joue une fois au
+ * chargement et finit dessinée.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .anneau {
+    animation: dessine 2400ms var(--ls-easing-sortie) both;
+  }
+
+  .trait {
+    animation: dessine 1600ms var(--ls-easing-sortie) both;
+    animation-delay: calc(300ms + var(--i, 0) * 120ms);
+  }
+
+  .rayons .trait {
+    animation-delay: calc(900ms + var(--i, 0) * 100ms);
+  }
+
+  .rayons {
+    transform-origin: 200px 200px;
+    animation: rayonne 4200ms var(--ls-easing-sortie) 300ms both;
+  }
+
+  .eclat {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation:
+      eclot 900ms var(--ls-easing-sortie) both,
+      scintille 1600ms ease-in-out 1;
+    animation-delay:
+      calc(700ms + var(--i, 0) * 250ms), calc(1600ms + var(--i, 0) * 250ms);
+  }
+
+  .poussiere span {
+    animation: eclot 900ms ease both;
+  }
+
+  .poussiere span:nth-child(even) {
+    animation-delay: 600ms;
+  }
+
+  .etape:not(:last-child)::after {
+    animation: etire 800ms var(--ls-easing-sortie) both;
+    animation-delay: calc(500ms + var(--i, 0) * 850ms);
+  }
+
+  .jalon {
+    animation: allume 700ms var(--ls-easing-sortie) both;
+    animation-delay: calc(400ms + var(--i, 0) * 850ms);
+  }
+
+  .voyage {
+    animation: voyage 3400ms var(--ls-easing-sortie) 600ms both;
+  }
+
+  .voyage svg {
+    animation: apparait-disparait 3400ms linear 600ms both;
+  }
+
+  .cadranAnneau {
+    animation: dessine 2000ms var(--ls-easing-sortie) both;
+  }
+
+  .phase {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: eclot 600ms var(--ls-easing-sortie) both;
+    animation-delay: calc(200ms + var(--i, 0) * 160ms);
+  }
+
+  .etoiles span {
+    animation:
+      eclot 800ms ease both,
+      scintille 1800ms ease-in-out 1;
+    animation-delay:
+      calc(200ms + var(--i, 0) * 220ms), calc(1000ms + var(--i, 0) * 220ms);
+  }
+
+  .portes a,
+  .boutonPrincipal,
+  .boutonSecondaire,
+  .boutonNuit {
+    transition: transform var(--ls-duration-base) var(--ls-easing-sortie);
+  }
+
+  .portes a:hover {
+    transform: translateY(-2px);
+  }
+
+  .fleche {
+    transition: transform 350ms var(--ls-easing-sortie);
+  }
+
+  .portes a:hover .fleche,
+  .portes a:focus-visible .fleche {
+    transform: translateY(3px);
+  }
+
+  .actions a:hover .fleche,
+  .actions a:focus-visible .fleche,
+  .boutonNuit:hover .fleche,
+  .boutonNuit:focus-visible .fleche {
+    transform: translateX(4px);
+  }
+
+  .modeIcone {
+    transition: transform 400ms var(--ls-easing-sortie);
+  }
+
+  .mode:hover .modeIcone {
+    transform: rotate(-6deg) scale(1.05);
+  }
+}
+
+@keyframes dessine {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes rayonne {
+  from {
+    transform: rotate(-30deg);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes eclot {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes scintille {
+  50% {
+    opacity: 0.4;
+    transform: scale(0.75);
+  }
+}
+
+@keyframes etire {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes allume {
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+@keyframes voyage {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes apparait-disparait {
+  0% {
+    opacity: 0;
+  }
+  10%,
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }
