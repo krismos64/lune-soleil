@@ -1271,7 +1271,7 @@ tombant sous le seuil de 1024. La doublure `pg_dump` est devenue pilotable en
 taille : écrivant toujours 4096 octets, elle n'exerçait **jamais** ce seuil,
 ce qui avait laissé passer le second défaut.
 
-`verifier-tests-mutation.sh` casse **187 fois** au 6 octobre 2026 le comportement
+`verifier-tests-mutation.sh` casse **188 fois** au 7 octobre 2026 le comportement
 testé et exige que la suite rougisse à chaque fois. Les cibles, par domaine :
 réservation et stock, authentification et autorisation, socle de validation et
 journalisation, journal des connexions, verrou de tâche planifiée, preuve
