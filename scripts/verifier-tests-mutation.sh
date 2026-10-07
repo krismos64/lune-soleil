@@ -785,7 +785,9 @@ cas "bouton de pause des themes de Noel sans effet" e2e \
 # autres, LS-277. L'exemption `data-continu` retirée, la neige s'arrête : le
 # défaut est l'inverse du précédent, le mouvement que l'amendement autorise
 # n'existe plus, et le test qui le mesure doit le voir.
-mute "$GLOBALS_CSS" 's/\[data-borne="fin"\] \[data-continu\],\n\[data-borne="fin"\] \[data-continu\] \*,\n\[data-borne="fin"\]\[data-continu\] \{\n  animation-play-state: running !important;\n\}//'
+# Le bloc nomme les pseudo-éléments depuis LS-281 : l'expression le cite en
+# entier, ses neuf sélecteurs compris, faute de quoi elle ne retire plus rien.
+mute "$GLOBALS_CSS" 's/\[data-borne="fin"\] \[data-continu\],\n\[data-borne="fin"\] \[data-continu\]::before,\n\[data-borne="fin"\] \[data-continu\]::after,\n\[data-borne="fin"\] \[data-continu\] \*,\n\[data-borne="fin"\] \[data-continu\] \*::before,\n\[data-borne="fin"\] \[data-continu\] \*::after,\n\[data-borne="fin"\]\[data-continu\],\n\[data-borne="fin"\]\[data-continu\]::before,\n\[data-borne="fin"\]\[data-continu\]::after \{\n  animation-play-state: running !important;\n\}//'
 cas "exemption des decors continus retiree" e2e \
   "seuls les décors continus durent"
 
@@ -808,6 +810,14 @@ cas "neige des themes de Noel sans script et sans fin" e2e \
 mute "$CATALOGUE_CSS" 's/\.bandeauNoel \.sucreBandeau \{/.sucreBandeau {/'
 cas "bande sucre d'orge dans la grille du bandeau" e2e \
   "garde sa disposition"
+
+# Cas 11 nonies : la suspension de `data-borne` n'atteint plus le `::after`
+# de l'élément borné, LS-281. Le reflet du sceau de l'accueil est le
+# `::after` de l'élément qui porte `data-borne` : il rejoue alors hors de
+# l'écran. Retirer la ligne des descendants ne le toucherait pas.
+mute "$GLOBALS_CSS" 's/\[data-borne="attente"\]::after,\n//'
+cas "pseudo-elements des decors bornes non suspendus" e2e \
+  "le reflet du sceau de l'accueil est suspendu"
 
 # Cas 12 : violation d'accessibilite. Un document sans langue declaree est lu
 # avec la prononciation par defaut du lecteur d'ecran.
