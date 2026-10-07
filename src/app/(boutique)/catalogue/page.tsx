@@ -416,7 +416,7 @@ export default async function PageCatalogue({
     <main
       id="contenu"
       tabIndex={-1}
-      className={styles.page}
+      className={noel ? styles.page : `${styles.page} ${styles.ordinaire}`}
       data-theme={attributTheme(theme)}
     >
       {enApercu ? <BandeauApercuTheme theme={theme} /> : null}
@@ -466,6 +466,7 @@ export default async function PageCatalogue({
             <MedaillonAube
               image="/habillage/catalogue-ecrin-aube.jpg"
               cadrage="74% 62%"
+              taille="(min-width: 768px) 200px, 88px"
             />
           </div>
           <p className={styles.accroche}>

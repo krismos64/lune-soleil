@@ -186,6 +186,7 @@ export default async function PageAide() {
             <MedaillonAube
               image="/habillage/aide-colis-aube.jpg"
               cadrage="76% 62%"
+              taille="(min-width: 768px) 330px, 160px"
             />
           </div>
         </div>

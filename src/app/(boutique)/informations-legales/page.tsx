@@ -190,13 +190,15 @@ export default async function PageInformationsLegales() {
             <p className={styles.surtitre}>Le cadre de vos achats</p>
             <h1 className={styles.titre}>Informations légales</h1>
             <p className={styles.introduction}>
-              Qui édite ce site, les conditions de vente, l&apos;usage de vos
-              données et votre droit de rétractation, réunis sur une page.
+              Les rubriques qui encadrent vos achats : l&apos;éditeur du site,
+              les conditions de vente, vos données, la rétractation, les avis et
+              l&apos;accessibilité.
             </p>
           </div>
           <div className={styles.medaillon}>
             <MedaillonAube
               image="/habillage/legales-lettre-aube.jpg"
+              taille="240px"
               cadrage="68% 62%"
             />
           </div>

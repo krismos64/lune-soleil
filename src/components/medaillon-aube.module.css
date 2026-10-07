@@ -107,6 +107,17 @@
   left: 95%;
 }
 
+/*
+ * LA POUSSIÈRE D'OR DISPARAÎT EN MOUVEMENT RÉDUIT, règle des paillettes de
+ * `frontend-design.md` et ADR-045 : relevé par la revue de LS-282, elle restait
+ * affichée, immobile, sur trois pages.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .poussiere {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .anneau {
     animation: dessine 2400ms var(--ls-easing-sortie) both;
