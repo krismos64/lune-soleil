@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lune-soleil, maquette de la page Livraison et aide</title>
+<style>
+/*
+ * Maquette LS-280, page Livraison et aide.
+ *
+ * Couleurs reprises de src/styles/tokens.css, sans valeur nouvelle hors des
+ * teintes d'aquarelle des images. Les règles d'ADR-045 sont tenues dès la
+ * maquette, pour qu'aucun écart ne reste à ne pas porter :
+ *  - tout texte, tarif et lien est visible au premier rendu, sans script ;
+ *  - seuls transform, opacity et stroke-dashoffset s'animent ;
+ *  - chaque animation automatique se termine avant cinq secondes ;
+ *  - en mouvement réduit, la page est complète et immobile.
+ */
+:root {
+  --fond: #fbf7f0;
+  --surface: #ffffff;
+  --sable: #f2eadf;
+  --bordure: #d9cdba;
+  --bordure-controle: #95836a;
+  --texte: #3b2f2a;
+  --texte-doux: #7a6a5d;
+  --primaire: #5f4519;
+  --primaire-survol: #4a2a0b;
+  --or: #c4a052;
+  --or-profond: #8a6a22;
+  --or-sombre: #8b5a12;
+  --or-moyen: #a46c17;
+  --or-clair: #e0b657;
+  --or-pale: #f0cf7a;
+  --terracotta-profond: #9c4f2b;
+  --aube-haut: #fbe3c4;
+  --aube-bas: #f7d6b0;
+  --nuit-haut: #140f1c;
+  --nuit-bas: #2c203a;
+  --texte-nuit: #faeed4;
+  --police-titre: "Iowan Old Style", "Palatino Linotype", Palatino, Baskerville, Georgia, "Times New Roman", serif;
+  --sortie: cubic-bezier(0.16, 1, 0.3, 1);
+  --dessin: 1800ms;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--fond); color: var(--texte);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.6; overflow-x: hidden;
+}
+h1, h2, h3 { font-family: var(--police-titre); font-weight: 400; line-height: 1.15; margin: 0; }
+a { color: inherit; }
+img { display: block; max-width: 100%; }
+:focus-visible { outline: 3px solid var(--primaire-survol); outline-offset: 3px; }
+
+/* ---------- Barre de maquette ---------- */
+.maquette {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 14px;
+  padding: 6px 12px; background: var(--nuit-haut); color: var(--texte-nuit); font-size: 12px;
+}
+.maquette button {
+  min-height: 44px; padding: 0 14px; border-radius: 999px; cursor: pointer;
+  border: 1px solid rgba(250, 238, 212, .4); background: transparent; color: inherit; font: inherit;
+}
+.maquette button[aria-pressed="true"] { background: var(--texte-nuit); color: var(--nuit-haut); }
+
+/* ---------- En-tête du site, tel qu'en production ---------- */
+.entete {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--bordure);
+}
+.marque { text-decoration: none; color: var(--primaire); display: grid; }
+.marque strong { font-size: 20px; }
+.marque small { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--texte-doux); }
+.nav { display: none; gap: 28px; font-size: 15px; }
+.nav a { text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
+.nav a[aria-current] { color: var(--primaire); box-shadow: inset 0 -2px 0 var(--or); }
+.menu { min-height: 44px; padding: 0 14px; border: 1px solid var(--bordure-controle); border-radius: 999px; background: none; color: var(--primaire); font: inherit; }
+@media (min-width: 900px) { .nav { display: flex; } .menu { display: none; } .entete { padding: 14px 32px; } }
+
+/* ---------- Héros ---------- */
+.heros {
+  position: relative; overflow: hidden;
+  padding: 24px 16px 40px;
+  background:
+    radial-gradient(90% 70% at 80% 20%, #fff6e4 0%, transparent 60%),
+    linear-gradient(180deg, var(--aube-haut) 0%, #fdf0dd 55%, var(--fond) 100%);
+}
+.heros-grille { position: relative; max-width: 1180px; margin: 0 auto; display: grid; gap: 20px; }
+.heros-texte { position: relative; z-index: 1; }
+.surtitre {
+  margin: 0 0 10px; font-size: 12px; font-weight: 600; letter-spacing: .24em; text-transform: uppercase;
+  color: var(--or-sombre);
+}
+.titre { font-size: clamp(32px, 8.5vw, 60px); color: var(--primaire-survol); }
+.titre .dore { color: var(--or-sombre); font-style: italic; }
+.accroche { margin: 14px 0 0; max-width: 46ch; font-size: 17px; }
+
+/* Le décor : aquarelle cerclée, anneau tracé, rayons, étoiles et poussière d'or */
+.decor { position: relative; width: min(50vw, 190px); aspect-ratio: 1; margin: 4px auto 0; }
+.decor-image {
+  position: absolute; inset: 9%; border-radius: 50%; overflow: hidden;
+  box-shadow: 0 24px 50px -28px rgba(74, 42, 11, .55);
+}
+.decor-image img { width: 100%; height: 100%; object-fit: cover; object-position: 76% 62%; }
+.decor svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.poussiere i {
+  position: absolute; width: 3px; height: 3px; border-radius: 50%;
+  background: var(--or-clair); opacity: .7; pointer-events: none;
+}
+
+@media (min-width: 768px) {
+  .heros { padding: 56px 32px 64px; }
+  .heros-grille { grid-template-columns: 1.15fr .85fr; align-items: center; gap: 40px; }
+  .decor { width: min(36vw, 400px); order: 2; }
+}
+@media (max-width: 767px) {
+  .decor { order: -1; }
+}
+
+/* Sommaire en trois portes */
+.portes { list-style: none; margin: 24px 0 0; padding: 0; display: grid; gap: 10px; }
+.portes a {
+  display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 12px;
+  min-height: 64px; padding: 10px 14px; border-radius: 14px; text-decoration: none;
+  background: rgba(255, 255, 255, .72); border: 1px solid var(--bordure);
+  transition: transform .3s var(--sortie);
+}
+.portes a:hover { transform: translateY(-2px); box-shadow: 0 10px 24px -16px rgba(74, 42, 11, .5); border-color: var(--or); }
+.portes svg { width: 40px; height: 40px; color: var(--or-sombre); }
+.portes strong { display: block; font-family: var(--police-titre); font-weight: 400; font-size: 19px; color: var(--primaire-survol); line-height: 1.2; }
+.portes small { display: block; color: var(--texte); font-size: 14px; line-height: 1.35; }
+.fleche { width: 18px; height: 18px; color: var(--primaire); transition: transform .35s var(--sortie); }
+.portes a:hover .fleche, .portes a:focus-visible .fleche { transform: translateY(3px); }
+@media (min-width: 640px) { .portes { grid-template-columns: repeat(3, 1fr); } .portes a { grid-template-columns: 40px 1fr; } .portes .fleche { display: none; } }
+
+/* ---------- Sections ---------- */
+.section { padding: 56px 16px; scroll-margin-top: 8px; }
+.section:focus-visible { outline-offset: -6px; }
+.enveloppe { max-width: 1180px; margin: 0 auto; }
+.entete-section { max-width: 60ch; margin-bottom: 28px; }
+.entete-section h2 { font-size: clamp(28px, 6.5vw, 44px); color: var(--primaire-survol); }
+.entete-section p { margin: 10px 0 0; }
+.filet { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.filet svg { width: 72px; height: 10px; color: var(--or); }
+
+/* Trois modes */
+.modes { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.mode {
+  position: relative; display: grid; grid-template-columns: 56px 1fr; gap: 4px 16px; align-items: start;
+  padding: 20px; background: var(--surface); border: 1px solid var(--bordure); border-radius: 16px;
+}
+.mode-icone { grid-row: span 3; width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: var(--sable); color: var(--or-sombre); }
+.mode-icone svg { width: 34px; height: 34px; }
+.mode h3 { font-size: 22px; color: var(--primaire-survol); }
+.mode .prix { font-family: var(--police-titre); font-size: 30px; line-height: 1.1; color: var(--primaire); }
+.mode p { margin: 0; font-size: 15px; }
+.pastille {
+  justify-self: start; grid-column: 2; margin-top: 8px; padding: 3px 10px; border-radius: 999px;
+  background: var(--sable); color: var(--primaire-survol); font-size: 13px; font-weight: 600;
+}
+@media (min-width: 768px) {
+  .modes { grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .mode { grid-template-columns: 1fr; padding: 28px 24px; text-align: left; }
+  .mode-icone { grid-row: auto; width: 64px; height: 64px; margin-bottom: 10px; }
+  .pastille { grid-column: 1; }
+}
+
+/* Franchise, à part des modes */
+.franchise {
+  position: relative; overflow: hidden; margin-top: 20px; padding: 20px;
+  display: grid; grid-template-columns: 44px 1fr; gap: 14px; align-items: center;
+  background: var(--primaire); color: #fff; border-radius: 16px;
+}
+.franchise svg { width: 44px; height: 44px; color: var(--or-pale); }
+.franchise p { margin: 0; }
+.franchise strong { font-family: var(--police-titre); font-weight: 400; font-size: 21px; display: block; line-height: 1.25; }
+
+/* Parcours du colis */
+.parcours { margin-top: 44px; }
+.parcours h3 { font-size: 24px; color: var(--primaire-survol); margin-bottom: 18px; }
+.etapes { position: relative; list-style: none; margin: 0; padding: 0; display: grid; gap: 22px; counter-reset: etape; }
+.etapes-trace { position: absolute; left: 0; top: 0; width: 2px; height: 2px; overflow: visible; color: var(--or); }
+.etape { position: relative; display: grid; grid-template-columns: 44px 1fr; gap: 14px; align-items: start; align-content: start; }
+.etape-point {
+  position: relative; z-index: 1; width: 44px; height: 44px; border-radius: 50%;
+  display: grid; place-items: center; background: var(--fond); border: 1px solid var(--or);
+  font-family: var(--police-titre); font-size: 18px; color: var(--or-sombre);
+}
+.etape strong { display: block; font-family: var(--police-titre); font-weight: 400; font-size: 20px; color: var(--primaire-survol); line-height: 1.3; padding-top: 8px; }
+.etape p { margin: 2px 0 0; font-size: 15px; }
+.colis-voyageur { display: none; }
+@media (min-width: 768px) {
+  .etapes { grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .etape { grid-template-columns: 1fr; }
+  .etape strong { padding-top: 6px; }
+}
+.note-attente {
+  display: flex; gap: 10px; align-items: flex-start; margin: 26px 0 0; padding: 12px 14px;
+  border: 1px dashed var(--bordure-controle); border-radius: 12px; font-size: 15px; max-width: 70ch;
+}
+.note-attente svg { flex: none; width: 20px; height: 20px; margin-top: 2px; color: var(--primaire); }
+
+/* ---------- Retours ---------- */
+.retours { background: var(--sable); }
+.retours-grille { display: grid; gap: 28px; }
+.quatorze { position: relative; width: min(78vw, 300px); aspect-ratio: 1; margin: 0 auto; }
+.quatorze svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.quatorze-texte { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.quatorze-texte b { font-family: var(--police-titre); font-weight: 400; font-size: clamp(72px, 22vw, 104px); line-height: .9; color: var(--or-sombre); }
+.quatorze-texte span { font-size: 15px; max-width: 15ch; margin: 6px auto 0; color: var(--primaire-survol); line-height: 1.35; }
+.cas { display: grid; gap: 16px; }
+.carte-cas { padding: 24px 20px; background: var(--surface); border-radius: 16px; border: 1px solid var(--bordure); }
+.carte-cas h3 { font-size: 24px; color: var(--primaire-survol); display: flex; align-items: center; gap: 12px; }
+.carte-cas h3 svg { flex: none; width: 34px; height: 34px; color: var(--or-sombre); }
+.carte-cas ul { margin: 14px 0 18px; padding: 0; list-style: none; display: grid; gap: 8px; }
+.carte-cas li { position: relative; padding-left: 22px; font-size: 15.5px; }
+.carte-cas li::before { content: ""; position: absolute; left: 2px; top: .62em; width: 8px; height: 8px; border-radius: 50%; background: var(--or); }
+.actions { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.bouton {
+  display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 22px;
+  border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 15.5px;
+  transition: transform .3s var(--sortie);
+}
+.bouton:active { transform: scale(.97); }
+.bouton-principal { background: var(--primaire); color: #fff; }
+.bouton-principal:hover { background: var(--primaire-survol); }
+.bouton-secondaire { border: 1px solid var(--bordure-controle); color: var(--primaire); background: var(--surface); }
+.bouton .fleche { color: currentColor; }
+.bouton:hover .fleche, .bouton:focus-visible .fleche { transform: translateX(4px); }
+.lien { color: var(--or-profond); min-height: 44px; display: inline-flex; align-items: center; }
+@media (min-width: 900px) {
+  .retours-grille { grid-template-columns: 340px 1fr; align-items: center; gap: 48px; }
+  .cas { grid-template-columns: 1fr 1fr; }
+  .quatorze { width: 340px; }
+}
+
+/* ---------- Questions fréquentes, ciel de nuit ---------- */
+.faq {
+  position: relative; overflow: hidden; color: var(--texte-nuit);
+  background: linear-gradient(180deg, var(--nuit-haut), var(--nuit-bas));
+  padding: 64px 16px 72px;
+}
+.faq-image { position: absolute; inset: 0; }
+.faq-image img { width: 100%; height: 100%; object-fit: cover; object-position: 70% 40%; }
+.faq-image::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(20, 15, 28, .92) 0%, rgba(20, 15, 28, .7) 55%, rgba(20, 15, 28, .25) 100%); }
+.faq .enveloppe { position: relative; }
+.faq .surtitre { color: var(--or-pale); }
+.faq h2 { font-size: clamp(28px, 6.5vw, 44px); color: var(--texte-nuit); max-width: 18ch; }
+.faq p { max-width: 52ch; margin: 14px 0 24px; }
+.bouton-nuit { background: var(--or-pale); color: var(--nuit-haut); }
+.bouton-nuit:hover { background: var(--texte-nuit); }
+.faq :focus-visible { outline-color: var(--or-pale); }
+.etoiles-faq i { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #fff6dc; }
+
+/* ---------- Pied ---------- */
+.pied { background: var(--nuit-haut); color: #d9c9ad; padding: 40px 16px 128px; font-size: 14px; }
+.pied-grille { max-width: 1180px; margin: 0 auto; display: grid; gap: 28px; }
+.pied .nom { font-family: var(--police-titre); color: var(--or-pale); font-size: 24px; }
+.pied h2 { font-family: inherit; font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--or-pale); margin-bottom: 8px; }
+.pied ul { list-style: none; margin: 0; padding: 0; }
+.pied li a { display: inline-flex; min-height: 40px; align-items: center; text-decoration: none; color: #e9dcc2; }
+@media (min-width: 768px) { .pied-grille { grid-template-columns: 1.3fr repeat(3, 1fr); } }
+
+/* ===================================================================
+ * MOUVEMENT. Rien ne se masque sans la classe .anime, posée par le
+ * script. Sans script ou en mouvement réduit, tout est dessiné et visible.
+ * Seul le DÉCOR part d'un état caché ; aucun texte, tarif ou lien.
+ * =================================================================== */
+.trace { stroke-dasharray: var(--l, 1000); stroke-dashoffset: 0; }
+.anime .trace { stroke-dashoffset: var(--l, 1000); }
+.anime .joue .trace { animation: dessine var(--dessin) var(--sortie) forwards; animation-delay: var(--retard, 0s); }
+@keyframes dessine { to { stroke-dashoffset: 0; } }
+
+.anime .eclat { opacity: 0; transform: scale(.4); }
+.anime .joue .eclat { animation: eclot .9s var(--sortie) forwards, scintille 1.6s ease-in-out 1; animation-delay: var(--retard, 0s), calc(var(--retard, 0s) + .9s); }
+@keyframes eclot { to { opacity: 1; transform: scale(1); } }
+@keyframes scintille { 50% { opacity: .35; transform: scale(.75); } }
+
+.anime .decor-image { opacity: 0; transform: scale(.92); }
+.anime .joue .decor-image { animation: eclot 1.2s var(--sortie) .2s forwards; }
+.anime .joue .rayons { transform-origin: 50% 50%; animation: tourne 4.2s var(--sortie) .3s; }
+@keyframes tourne { from { transform: rotate(-30deg); } to { transform: rotate(0); } }
+
+/* Le colis glisse le long du parcours, une fois, puis s'arrête. */
+.anime .colis-voyageur { display: block; position: absolute; z-index: 2; width: 28px; height: 28px; color: var(--or-sombre); opacity: 0; }
+.anime .joue .colis-voyageur { animation: voyage-vertical 3.4s var(--sortie) .6s forwards; }
+@keyframes voyage-vertical {
+  0% { opacity: 0; transform: translateY(0); }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(var(--course, 300px)); }
+}
+@media (min-width: 768px) {
+  .anime .joue .colis-voyageur { animation-name: voyage-horizontal; }
+  @keyframes voyage-horizontal {
+    0% { opacity: 0; transform: translateX(0); }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { opacity: 0; transform: translateX(var(--course, 600px)); }
+  }
+}
+
+.anime .joue .etape-point { animation: allume .7s var(--sortie) forwards; animation-delay: calc(.6s + var(--i) * .85s); }
+@keyframes allume { 50% { transform: scale(1.12); } 100% { transform: scale(1); } }
+
+/* Les quatorze lunes du cadran apparaissent l'une après l'autre. */
+.anime .phase { opacity: 0; transform: scale(.3); transform-box: fill-box; transform-origin: center; }
+.anime .joue .phase { animation: eclot .6s var(--sortie) forwards; animation-delay: calc(.2s + var(--i) * .16s); }
+
+/* Icônes des modes et des cas : leur tracé se dessine à l'entrée. */
+.anime .mode-icone, .anime .carte-cas h3 svg { transition: transform .4s var(--sortie); }
+.mode:hover .mode-icone { transform: rotate(-6deg) scale(1.05); }
+
+.anime .etoiles-faq i { opacity: 0; }
+.anime .joue .etoiles-faq i { animation: eclot .8s ease forwards, scintille 1.8s ease-in-out 1; animation-delay: var(--retard), calc(var(--retard) + .8s); }
+
+/* Mouvement réduit : rien ne bouge, tout est là. Le bouton de la barre
+ * de maquette force ce mode pour le prévisualiser. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; transform: none !important; }
+  html { scroll-behavior: auto; }
+  .poussiere { display: none; }
+}
+.reduit { scroll-behavior: auto; }
+.reduit *, .reduit *::before, .reduit *::after { animation: none !important; transition: none !important; transform: none !important; }
+.reduit .poussiere { display: none; }
+</style>
+</head>
+<body>
+
+<div class="maquette" role="note">
+  <span>Maquette LS-280, à valider. Tarifs relevés sur le site le 7 octobre 2026, lus en configuration au portage.</span>
+  <button type="button" id="rejouer">Rejouer les animations</button>
+  <button type="button" id="reduire" aria-pressed="false">Mouvement réduit</button>
+</div>
+
+<header class="entete">
+  <a class="marque" href="https://lune-soleil.fr/"><strong>Lune-soleil</strong><small>Bijoux faits main</small></a>
+  <nav class="nav" aria-label="Navigation principale">
+    <a href="https://lune-soleil.fr/catalogue">Les créations</a>
+    <a href="https://lune-soleil.fr/atelier">L'atelier</a>
+    <a href="#contenu" aria-current="page">Livraison et aide</a>
+    <a href="https://lune-soleil.fr/compte/connexion">Se connecter</a>
+    <a href="https://lune-soleil.fr/panier">Panier</a>
+  </nav>
+  <button class="menu" type="button" title="Menu du site, non reproduit dans la maquette">Menu</button>
+</header>
+
+<main id="contenu" tabindex="-1">
+
+  <!-- ================= HÉROS ================= -->
+  <section class="heros" data-scene>
+    <div class="heros-grille">
+      <div class="heros-texte">
+        <p class="surtitre">Livraison et aide</p>
+        <h1 class="titre">Votre bijou, de l'atelier <span class="dore">jusqu'à vous.</span></h1>
+        <p class="accroche">Trois façons de recevoir votre commande en France métropolitaine, Corse comprise, et quatorze jours après réception pour changer d'avis.</p>
+
+        <nav aria-label="Sections de cette page">
+          <ul class="portes">
+            <li><a href="#livraison">
+              <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M6 14 20 7l14 7v14l-14 7-14-7Z"/><path d="m6 14 14 7 14-7M20 21v14M13 10.5l14 7"/></svg>
+              <span><strong>Livraison</strong><small>Modes et tarifs</small></span>
+              <svg class="fleche" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M10 4v12m-5-5 5 5 5-5"/></svg>
+            </a></li>
+            <li><a href="#retours">
+              <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M30 14a11 11 0 1 0 1.5 9"/><path d="M31 7v7h-7"/></svg>
+              <span><strong>Retours</strong><small>Changer d'avis, un défaut</small></span>
+              <svg class="fleche" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M10 4v12m-5-5 5 5 5-5"/></svg>
+            </a></li>
+            <li><a href="#faq">
+              <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M7 9h26v17H18l-7 6v-6H7Z"/><path d="M17 15a3 3 0 1 1 4 2.8c-.7.3-1 .8-1 1.5M20 22.5v.1" stroke-linecap="round"/></svg>
+              <span><strong>Questions</strong><small>Les réponses fréquentes</small></span>
+              <svg class="fleche" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M10 4v12m-5-5 5 5 5-5"/></svg>
+            </a></li>
+          </ul>
+        </nav>
+      </div>
+
+      <div class="decor" aria-hidden="true">
+        <div class="decor-image"><img src="colis-aube.jpg" alt="" width="1200" height="800"></div>
+        <svg viewBox="0 0 400 400">
+          <defs>
+            <linearGradient id="or" x1="0" y1="0" x2="1" y2="1">
+              <stop stop-color="#8b5a12"/><stop offset=".4" stop-color="#e0b657"/><stop offset=".7" stop-color="#a46c17"/><stop offset="1" stop-color="#f0cf7a"/>
+            </linearGradient>
+          </defs>
+          <circle class="trace" style="--l:1200" cx="200" cy="200" r="190" fill="none" stroke="url(#or)" stroke-width="1.6" transform="rotate(-100 200 200)"/>
+          <circle class="trace" style="--l:1100;--retard:.5s" cx="200" cy="200" r="174" fill="none" stroke="#c4a052" stroke-width=".8" stroke-dasharray="2 7" opacity=".7"/>
+          <g class="rayons" stroke="url(#or)" stroke-width="3" stroke-linecap="round" fill="none">
+            <path class="trace" style="--l:40;--retard:.9s" d="M200 -6v-18"/>
+            <path class="trace" style="--l:40;--retard:1s" d="M398 200h18"/>
+            <path class="trace" style="--l:40;--retard:1.1s" d="M200 398v18"/>
+            <path class="trace" style="--l:40;--retard:1.2s" d="M2 200h-18"/>
+          </g>
+          <g fill="url(#or)">
+            <path class="eclat" style="--retard:1.3s" d="M352 70l5 18 18 5-18 5-5 18-5-18-18-5 18-5z"/>
+            <path class="eclat" style="--retard:1.6s" d="M40 300l4 13 13 4-13 4-4 13-4-13-13-4 13-4z"/>
+            <path class="eclat" style="--retard:1.5s" d="M330 340l3 10 10 3-10 3-3 10-3-10-10-3 10-3z"/>
+            <circle class="eclat" style="--retard:1.7s" cx="60" cy="86" r="4"/>
+          </g>
+          <!-- Croissant de lune posé sur l'anneau -->
+          <path class="eclat" style="--retard:.7s" d="M86 52c-22-2-36 18-30 38 5 17 24 25 40 17-15-1-25-13-24-27 1-13 6-23 14-28z" fill="url(#or)"/>
+        </svg>
+        <div class="poussiere">
+          <i style="left:12%;top:20%"></i><i style="left:88%;top:44%"></i><i style="left:76%;top:88%"></i>
+          <i style="left:6%;top:64%"></i><i style="left:52%;top:2%"></i><i style="left:95%;top:12%"></i>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= LIVRAISON ================= -->
+  <section class="section" id="livraison" tabindex="-1" aria-labelledby="titre-livraison" data-scene>
+    <div class="enveloppe">
+      <div class="entete-section">
+        <div class="filet" aria-hidden="true"><svg viewBox="0 0 72 10"><path class="trace" style="--l:80" d="M0 5h30M42 5h30" stroke="currentColor"/><path d="M36 1l1.5 3.5L41 5l-3.5 1.5L36 9l-1.5-2.5L31 5l3.5-.5z" fill="currentColor"/></svg></div>
+        <p class="surtitre">Livraison</p>
+        <h2 id="titre-livraison">Choisir où recevoir votre colis</h2>
+        <p>Les commandes sont expédiées en France métropolitaine, Corse comprise, par Mondial Relay. Le mode se choisit au moment de la commande.</p>
+      </div>
+
+      <ul class="modes">
+        <li class="mode">
+          <span class="mode-icone" aria-hidden="true"><svg viewBox="0 0 34 34" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path class="trace" style="--l:140" d="M5 13h24l-2-6H7Z M7 13v15h20V13"/><path class="trace" style="--l:60;--retard:.4s" d="M14 28v-8h6v8M5 13c0 2 2 3 4 3s4-1 4-3c0 2 2 3 4 3s4-1 4-3c0 2 2 3 4 3s4-1 4-3"/></svg></span>
+          <h3>Point Relais</h3>
+          <p class="prix">4,10 €</p>
+          <p>À retirer dans un commerce partenaire.</p>
+          <span class="pastille">Offerte dès 39,00 €</span>
+        </li>
+        <li class="mode">
+          <span class="mode-icone" aria-hidden="true"><svg viewBox="0 0 34 34" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path class="trace" style="--l:110" d="M6 5h22v24H6Z"/><path class="trace" style="--l:90;--retard:.4s" d="M17 5v24M6 13h22M6 21h22M14 9h-2m10 0h-2m-6 8h-2m10 0h-2m-6 8h-2"/></svg></span>
+          <h3>Locker</h3>
+          <p class="prix">4,10 €</p>
+          <p>Une consigne accessible en libre-service.</p>
+          <span class="pastille">Offerte dès 39,00 €</span>
+        </li>
+        <li class="mode">
+          <span class="mode-icone" aria-hidden="true"><svg viewBox="0 0 34 34" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path class="trace" style="--l:110" d="M4 16 17 5l13 11M8 13v16h18V13"/><path class="trace" style="--l:40;--retard:.4s" d="M14 29v-8h6v8"/></svg></span>
+          <h3>À domicile</h3>
+          <p class="prix">7,49 €</p>
+          <p>Remis à votre adresse.</p>
+        </li>
+      </ul>
+
+      <div class="franchise">
+        <svg viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true">
+          <path class="trace" style="--l:120" d="M7 18h30v20H7Z M5 12h34v6H5Z"/>
+          <path class="trace" style="--l:110;--retard:.5s" d="M22 12v26M22 12c-3-6-11-7-10-2 1 3 7 2 10 2 3 0 9 1 10-2 1-5-7-4-10 2"/>
+        </svg>
+        <p><strong>Livraison offerte en Point Relais et Locker dès 39,00 € d'achat.</strong> La livraison à domicile reste payante.</p>
+      </div>
+
+      <div class="parcours">
+        <h3>Le chemin de votre colis</h3>
+        <ol class="etapes" id="etapes">
+          <svg class="etapes-trace" preserveAspectRatio="none" aria-hidden="true"><line class="trace" id="ligne-parcours" x1="0" y1="0" x2="0" y2="0" stroke="currentColor" stroke-width="2" stroke-dasharray="4 6"/></svg>
+          <svg class="colis-voyageur" viewBox="0 0 40 40" fill="#fbf7f0" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M6 14 20 7l14 7v14l-14 7-14-7Z"/><path d="m6 14 14 7 14-7M20 21v14"/></svg>
+          <li class="etape" style="--i:0"><span class="etape-point" aria-hidden="true">1</span><div><strong>Vous commandez</strong><p>Le mode de livraison se choisit au panier.</p></div></li>
+          <li class="etape" style="--i:1"><span class="etape-point" aria-hidden="true">2</span><div><strong>L'atelier prépare</strong><p>Votre commande est préparée pour l'expédition.</p></div></li>
+          <li class="etape" style="--i:2"><span class="etape-point" aria-hidden="true">3</span><div><strong>Mondial Relay achemine</strong><p>Le transporteur vous informe directement de l'avancement.</p></div></li>
+          <li class="etape" style="--i:3"><span class="etape-point" aria-hidden="true">4</span><div><strong>Vous recevez</strong><p>En Point Relais, en Locker ou chez vous.</p></div></li>
+        </ol>
+      </div>
+
+      <p class="note-attente">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 5v5l3 2"/></svg>
+        <span>Le délai de préparation avant expédition sera précisé ici avant l'ouverture de la boutique.</span>
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= RETOURS ================= -->
+  <section class="section retours" id="retours" tabindex="-1" aria-labelledby="titre-retours" data-scene>
+    <div class="enveloppe">
+      <div class="entete-section">
+        <div class="filet" aria-hidden="true"><svg viewBox="0 0 72 10"><path class="trace" style="--l:80" d="M0 5h30M42 5h30" stroke="currentColor"/><path d="M36 1l1.5 3.5L41 5l-3.5 1.5L36 9l-1.5-2.5L31 5l3.5-.5z" fill="currentColor"/></svg></div>
+        <p class="surtitre">Retours</p>
+        <h2 id="titre-retours">Changer d'avis, ou signaler un défaut</h2>
+      </div>
+
+      <div class="retours-grille">
+        <div class="quatorze">
+          <svg viewBox="0 0 300 300" aria-hidden="true" id="cadran"></svg>
+          <p class="quatorze-texte"><b>14</b><span>jours pour changer d'avis, dès la réception</span></p>
+        </div>
+
+        <div class="cas">
+          <article class="carte-cas">
+            <h3><svg viewBox="0 0 34 34" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path class="trace" style="--l:80" d="M26 11a10 10 0 1 0 1.5 8"/><path class="trace" style="--l:20;--retard:.6s" d="M27 5v6h-6"/></svg>Vous changez d'avis</h3>
+            <ul>
+              <li><strong>Quatorze jours</strong> à compter de la réception, sans avoir à vous justifier.</li>
+              <li>Les frais de retour sont à votre charge.</li>
+              <li>Nous remboursons la totalité de la commande, frais de livraison initiaux compris.</li>
+              <li>Un formulaire en ligne, avec ou sans compte.</li>
+            </ul>
+            <div class="actions">
+              <a class="bouton bouton-principal" href="https://lune-soleil.fr/retractation">Déclarer une rétractation <svg class="fleche" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></a>
+              <a class="lien" href="https://lune-soleil.fr/informations-legales#retractation">Détail du droit de rétractation</a>
+            </div>
+          </article>
+
+          <article class="carte-cas">
+            <h3><svg viewBox="0 0 34 34" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path class="trace" style="--l:100" d="M17 4 6 8v8c0 7 5 12 11 14 6-2 11-7 11-14V8Z"/><path class="trace" style="--l:20;--retard:.6s" d="m12 17 4 4 7-8"/></svg>Le bijou présente un défaut</h3>
+            <ul>
+              <li>Ce n'est pas un changement d'avis : la <strong>garantie légale de conformité</strong> vous couvre pendant deux ans.</li>
+              <li>Les frais de retour sont alors à notre charge.</li>
+            </ul>
+            <div class="actions">
+              <a class="bouton bouton-secondaire" href="https://lune-soleil.fr/contact">Écrire à l'atelier <svg class="fleche" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></a>
+            </div>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= QUESTIONS FRÉQUENTES ================= -->
+  <section class="faq" id="faq" tabindex="-1" aria-labelledby="titre-faq" data-scene>
+    <div class="faq-image" aria-hidden="true"><img src="nuit-colline.jpg" alt="" width="1536" height="864" loading="lazy"></div>
+    <div class="etoiles-faq" aria-hidden="true">
+      <i style="left:8%;top:18%;--retard:.2s"></i><i style="left:22%;top:72%;--retard:.6s"></i><i style="left:41%;top:12%;--retard:1s"></i>
+      <i style="left:58%;top:30%;--retard:.4s"></i><i style="left:34%;top:46%;--retard:1.3s"></i><i style="left:14%;top:40%;--retard:.9s"></i>
+    </div>
+    <div class="enveloppe">
+      <p class="surtitre">Questions fréquentes</p>
+      <h2 id="titre-faq">Les réponses se préparent à l'atelier.</h2>
+      <p>Les réponses aux questions les plus fréquentes, sur l'entretien des bijoux et les délais, seront publiées ici avant l'ouverture. En attendant, écrivez-nous : chaque message arrive directement à l'atelier.</p>
+      <a class="bouton bouton-nuit" href="https://lune-soleil.fr/contact">Poser une question <svg class="fleche" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></a>
+    </div>
+  </section>
+</main>
+
+<footer class="pied">
+  <div class="pied-grille">
+    <div><p class="nom">Lune-soleil</p><p>Des bijoux faits main, en petite série, avec une attention portée aux matières et aux détails.</p></div>
+    <div><h2>Découvrir</h2><ul><li><a href="https://lune-soleil.fr/catalogue">Toutes les créations</a></li><li><a href="https://lune-soleil.fr/atelier">L'atelier</a></li></ul></div>
+    <div><h2>Besoin d'aide</h2><ul><li><a href="#livraison">Livraison et retours</a></li><li><a href="#faq">Questions fréquentes</a></li><li><a href="https://lune-soleil.fr/contact">Contact</a></li></ul></div>
+    <div><h2>Informations</h2><ul><li><a href="https://lune-soleil.fr/informations-legales">Mentions légales</a></li><li><a href="https://lune-soleil.fr/informations-legales#retractation">Rétractation</a></li></ul></div>
+  </div>
+</footer>
+
+<script>
+/*
+ * Un seul script, sans dépendance. Il pose .anime, puis joue chaque scène
+ * UNE fois à son entrée dans l'écran. Rien ne boucle : la plus longue
+ * séquence, la rotation des rayons, se termine à 4,5 s après l'entrée.
+ */
+(function () {
+  var racine = document.documentElement;
+  var reduit = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  /* Les quatorze phases du cadran, du croissant à la pleine lune et retour. */
+  var cadran = document.getElementById("cadran");
+  var ns = "http://www.w3.org/2000/svg";
+  var anneau = document.createElementNS(ns, "circle");
+  anneau.setAttribute("cx", 150); anneau.setAttribute("cy", 150); anneau.setAttribute("r", 128);
+  anneau.setAttribute("fill", "none"); anneau.setAttribute("stroke", "#c4a052"); anneau.setAttribute("stroke-width", "1");
+  anneau.setAttribute("class", "trace"); anneau.style.setProperty("--l", 810);
+  cadran.appendChild(anneau);
+  for (var i = 0; i < 14; i++) {
+    var a = (-90 + i * (360 / 14)) * Math.PI / 180;
+    var x = 150 + 128 * Math.cos(a), y = 150 + 128 * Math.sin(a);
+    var g = document.createElementNS(ns, "g");
+    g.setAttribute("class", "phase"); g.style.setProperty("--i", i);
+    var fond = document.createElementNS(ns, "circle");
+    fond.setAttribute("cx", x); fond.setAttribute("cy", y); fond.setAttribute("r", 9);
+    fond.setAttribute("fill", "#f2eadf"); fond.setAttribute("stroke", "#a46c17"); fond.setAttribute("stroke-width", "1");
+    g.appendChild(fond);
+    /* Part éclairée : croît jusqu'à la septième phase, puis décroît. */
+    var t = i < 7 ? (i + 1) / 7 : (14 - i) / 7;
+    var r = 9, dx = r * (1 - 2 * t);
+    var p = document.createElementNS(ns, "path");
+    var bord = i < 7 ? 1 : 0;
+    p.setAttribute("d", "M" + x + " " + (y - r) + " A" + r + " " + r + " 0 0 " + bord + " " + x + " " + (y + r) +
+      " A" + Math.abs(dx) + " " + r + " 0 0 " + ((dx > 0) === (bord === 1) ? 0 : 1) + " " + x + " " + (y - r) + "Z");
+    p.setAttribute("fill", i === 6 ? "#e0b657" : "#c4a052");
+    g.appendChild(p);
+    cadran.appendChild(g);
+  }
+
+  /* La ligne relie le centre du premier jalon à celui du dernier, mesurés. */
+  function mesurerParcours() {
+    var ol = document.getElementById("etapes");
+    var svg = ol.querySelector(".etapes-trace");
+    var ligne = document.getElementById("ligne-parcours");
+    var points = ol.querySelectorAll(".etape-point");
+    var o = ol.getBoundingClientRect();
+    var a = points[0].getBoundingClientRect(), z = points[points.length - 1].getBoundingClientRect();
+    var ax = a.left + a.width / 2 - o.left, ay = a.top + a.height / 2 - o.top;
+    var zx = z.left + z.width / 2 - o.left, zy = z.top + z.height / 2 - o.top;
+    var horizontal = Math.abs(zx - ax) > Math.abs(zy - ay);
+    var long = Math.ceil(horizontal ? zx - ax : zy - ay);
+    svg.style.left = (horizontal ? ax : ax - 1) + "px";
+    svg.style.top = (horizontal ? ay - 1 : ay) + "px";
+    svg.style.width = (horizontal ? long : 2) + "px";
+    svg.style.height = (horizontal ? 2 : long) + "px";
+    svg.setAttribute("viewBox", "0 0 " + (horizontal ? long : 2) + " " + (horizontal ? 2 : long));
+    ligne.setAttribute("x1", horizontal ? 0 : 1); ligne.setAttribute("y1", horizontal ? 1 : 0);
+    ligne.setAttribute("x2", horizontal ? long : 1); ligne.setAttribute("y2", horizontal ? 1 : long);
+    ligne.style.setProperty("--l", long);
+    var c = ol.querySelector(".colis-voyageur");
+    c.style.left = (ax - 14) + "px"; c.style.top = (ay - 14) + "px";
+    ol.style.setProperty("--course", long + "px");
+  }
+
+  var io = null;
+  function demarrer() {
+    if (reduit.matches || racine.classList.contains("reduit")) { racine.classList.remove("anime"); return; }
+    racine.classList.add("anime");
+    if (io) io.disconnect();
+    io = new IntersectionObserver(function (entrees) {
+      entrees.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("joue"); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.25 });
+    document.querySelectorAll("[data-scene]").forEach(function (s) { s.classList.remove("joue"); io.observe(s); });
+  }
+
+  mesurerParcours();
+  window.addEventListener("resize", mesurerParcours);
+  reduit.addEventListener("change", demarrer);
+  demarrer();
+
+  document.getElementById("rejouer").addEventListener("click", function () {
+    document.querySelectorAll("[data-scene]").forEach(function (s) { s.classList.remove("joue"); });
+    void document.body.offsetWidth;
+    demarrer();
+  });
+  var bouton = document.getElementById("reduire");
+  bouton.addEventListener("click", function () {
+    var actif = racine.classList.toggle("reduit");
+    bouton.setAttribute("aria-pressed", String(actif));
+    demarrer();
+  });
+})();
+</script>
+</body>
+</html>
