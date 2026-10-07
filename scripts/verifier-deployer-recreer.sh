@@ -6,16 +6,20 @@
 # aucun conteneur : ce qui est mesuré est ce que le script DEMANDE à Docker, et
 # c'est exactement ce qui compte sur une machine partagée avec SmartPlanning.
 #
-# QUATRE SENS :
-#   1. la recréation nominale demande `up -d --no-deps --force-recreate app`,
-#      et réussit ;
+# LES SENS :
+#   1. la recréation nominale demande `up -d --no-deps --force-recreate app
+#      cron`, et réussit. `cron` lit le même fichier, revue de LS-289 ;
 #   2. elle ne tire aucune image, ne construit rien, et n'écrit ni l'historique
 #      ni le fichier d'environnement ;
 #   3. un conteneur qui ne devient pas sain la fait échouer, en le disant ;
 #   4. un domaine qui ne rend pas 200 la fait échouer aussi ;
 #   5. le DÉPLOIEMENT normal d'un nouveau SHA va toujours au bout : LS-289 a
 #      sorti l'attente de santé et la vérification par le domaine en fonctions
-#      partagées, et ce chemin-là est celui de chaque mise en production.
+#      partagées, et ce chemin-là est celui de chaque mise en production ;
+#   6. un IMAGE_TAG qui diffère de l'image servie est refusé SANS AUCUN
+#      geste : changer d'image passe par le déploiement normal ;
+#   7. une composition qui diffère de celle du dépôt est refusée ;
+#   8. un argument qui n'est pas un nombre de migrations est refusé.
 #
 # Usage : ./scripts/verifier-deployer-recreer.sh [chemin-du-script]
 # Le chemin est un paramètre pour que la preuve par mutation vise une copie.
@@ -37,7 +41,11 @@ cat > "$BAC/bin/docker" <<'FAUX'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$APPELS_DOCKER"
 case "$1" in
-  inspect) printf '%s\n' "$SANTE_SIMULEE" ;;
+  inspect)
+    case "$*" in
+      *Config.Image*) printf '%s\n' "$IMAGE_SIMULEE" ;;
+      *) printf '%s\n' "$SANTE_SIMULEE" ;;
+    esac ;;
   # Le compte des migrations appliquées, lu par l'étape 3 du déploiement.
   exec) printf '5\n' ;;
   run) printf '%s' "$CODE_SIMULE" ;;
@@ -56,8 +64,13 @@ mkdir -p "$BAC/racine/deploiement" "$BAC/sauvegardes"
 printf '#!/bin/sh\nexit 0\n' > "$BAC/racine/deploiement/sauvegarder-base.sh"
 chmod +x "$BAC/racine/deploiement/sauvegarder-base.sh"
 
+TAG_SERVI=$(printf 'a%.0s' $(seq 1 40))
+
 lancer() {
-  local sante="$1" code="$2" argument="${3:---recreer}"
+  local sante="$1" code="$2"
+  shift 2
+  [ $# -gt 0 ] || set -- --recreer
+  local image="${IMAGE_FORCEE:-ghcr.io/krismos64/lune-soleil:$TAG_SERVI}"
   printf 'IMAGE_TAG=%s\nPOSTGRES_USER=u\nPOSTGRES_DB=d\n' "$(printf 'a%.0s' $(seq 1 40))" > "$BAC/env"
   printf '2026-10-01T00:00:00Z %s\n' "$(printf 'b%.0s' $(seq 1 40))" > "$BAC/historique"
   : > "$BAC/appels"
@@ -66,10 +79,11 @@ lancer() {
 
   PATH="$BAC/bin:$PATH" \
     APPELS_DOCKER="$BAC/appels" SANTE_SIMULEE="$sante" CODE_SIMULE="$code" \
+    IMAGE_SIMULEE="$image" \
     RACINE_DEPLOIEMENT="$BAC/racine" FICHIER_ENV="$BAC/env" \
     HISTORIQUE_DEPLOIEMENT="$BAC/historique" DELAI_SANTE=10 \
     BACKUP_DIR="$BAC/sauvegardes" \
-    bash "$SCRIPT" "$argument" > "$BAC/sortie" 2>&1
+    bash "$SCRIPT" "$@" > "$BAC/sortie" 2>&1
 }
 
 # --- Sens 1 et 2 : la recréation nominale ---------------------------------
@@ -82,15 +96,18 @@ if [ "$CODE_SORTIE" -ne 0 ]; then
   ko=$((ko + 1))
 fi
 
-if ! grep -qE '^compose .* up -d --no-deps --force-recreate app$' "$BAC/appels"; then
-  echo "ECHEC la recréation ne demande pas « up -d --no-deps --force-recreate app »"
+if ! grep -qE '^compose .* up -d --no-deps --force-recreate app cron$' "$BAC/appels"; then
+  echo "ECHEC la recréation ne demande pas « up -d --no-deps --force-recreate app cron »"
   sed 's/^/      /' "$BAC/appels"
   ko=$((ko + 1))
 fi
 
-if grep -qE '(^pull |--build| rmi |prune)' "$BAC/appels"; then
+# LE MOTIF COUVRE `rmi` EN DÉBUT DE LIGNE ET `--pull`, revue de LS-289 : le
+# faux docker journalise ses arguments sans le mot `docker`, donc « rmi … »
+# commence la ligne, et ` rmi ` précédé d'une espace ne le voyait jamais.
+if grep -qE '(^pull | pull |--pull|--build|^rmi | rmi |prune)' "$BAC/appels"; then
   echo "ECHEC la recréation tire, construit ou purge une image"
-  grep -E '(^pull |--build| rmi |prune)' "$BAC/appels" | sed 's/^/      /'
+  grep -E '(^pull | pull |--pull|--build|^rmi | rmi |prune)' "$BAC/appels" | sed 's/^/      /'
   ko=$((ko + 1))
 fi
 
@@ -122,6 +139,31 @@ if [ $? -eq 0 ]; then
   ko=$((ko + 1))
 fi
 
+# --- Sens 6 : un IMAGE_TAG qui diffère de l'image servie -------------------
+IMAGE_FORCEE="ghcr.io/krismos64/lune-soleil:$(printf 'd%.0s' $(seq 1 40))" \
+  lancer healthy 200
+if [ $? -eq 0 ]; then
+  echo "ECHEC un IMAGE_TAG divergent laisse la recréation basculer l'image"
+  ko=$((ko + 1))
+elif grep -q '^compose ' "$BAC/appels"; then
+  echo "ECHEC un IMAGE_TAG divergent est refusé APRÈS un geste sur les conteneurs"
+  ko=$((ko + 1))
+fi
+
+# --- Sens 7 : une composition qui diffère de celle du dépôt ----------------
+lancer healthy 200 --recreer 0 "$(printf 'e%.0s' $(seq 1 64))"
+if [ $? -eq 0 ] || grep -q '^compose ' "$BAC/appels"; then
+  echo "ECHEC une composition divergente laisse la recréation agir"
+  ko=$((ko + 1))
+fi
+
+# --- Sens 8 : un argument qui n'est pas un nombre de migrations ------------
+lancer healthy 200 --recreer foo
+if [ $? -eq 0 ] || grep -q '^compose ' "$BAC/appels"; then
+  echo "ECHEC « --recreer foo » est accepté"
+  ko=$((ko + 1))
+fi
+
 # --- Sens 5 : le déploiement normal d'un nouveau SHA va au bout -----------
 NOUVEAU=$(printf 'c%.0s' $(seq 1 40))
 lancer healthy 200 "$NOUVEAU"
@@ -137,7 +179,7 @@ fi
 echo
 echo "-----------------------------------------"
 if [ "$ko" -eq 0 ]; then
-  echo "  OK --recreer recrée app seule, sans image ni historique, et échoue en le disant"
+  echo "  OK --recreer recrée app et cron sur l'image servie, sans image ni historique, et échoue en le disant"
 else
   echo "  $ko anomalie(s) sur --recreer"
 fi

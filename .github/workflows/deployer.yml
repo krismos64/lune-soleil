@@ -195,7 +195,10 @@ jobs:
             deployer)       COMMANDE="$SHA $MIGRATIONS $EMPREINTE" ;;
             retour-arriere) COMMANDE="--retour-arriere" ;;
             etat)           COMMANDE="--etat" ;;
-            recreer)        COMMANDE="--recreer" ;;
+            # L'empreinte suit, comme au déploiement : la recréation applique
+            # la composition de la machine, qui porte les limites protégeant
+            # SmartPlanning. Le `0` occupe la place du nombre de migrations.
+            recreer)        COMMANDE="--recreer 0 $EMPREINTE" ;;
             *) echo "::error::action inconnue"; exit 1 ;;
           esac
 
