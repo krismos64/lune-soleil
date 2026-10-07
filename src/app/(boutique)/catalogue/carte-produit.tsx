@@ -56,9 +56,15 @@ const CLASSE_DISPONIBILITE: Record<EtatDisponibilite, string> = {
 export function CarteProduit({
   produit,
   noel = false,
+  prioritaire = false,
 }: {
   produit: ProduitCatalogue;
   noel?: boolean;
+  /**
+   * Photo chargée sans différé et en priorité haute, LS-285 : la première
+   * carte du catalogue est dans le premier écran et porte le LCP.
+   */
+  prioritaire?: boolean;
 }) {
   const disponibilite = LIBELLE_DISPONIBILITE[produit.disponibilite];
 
@@ -114,7 +120,15 @@ export function CarteProduit({
                 src={urlVignette(produit.mediaChemin)}
                 alt={produit.mediaTexteAlternatif ?? ""}
                 className={styles.image}
-                loading="lazy"
+                /*
+                 * DIFFÉRÉ SAUF POUR LA CARTE PRIORITAIRE, LS-285. Une photo du
+                 * premier écran en `lazy` n'est demandée qu'après la mise en
+                 * page : mesuré en mobile ralenti, la première photographie
+                 * du catalogue, élément du LCP, arrivait 1,5 s après le titre.
+                 * Les autres cartes restent différées, hors de l'écran.
+                 */
+                loading={prioritaire ? "eager" : "lazy"}
+                fetchPriority={prioritaire ? "high" : undefined}
                 decoding="async"
                 width={640}
                 height={640}
