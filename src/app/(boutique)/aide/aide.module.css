@@ -209,7 +209,7 @@
  * LA SECTION DES QUESTIONS COUVRE DEUX FONDS, la nuit en tête et le blanc
  * dessous : aucune couleur unique n'y tient. Un anneau double, tracé À
  * L'INTÉRIEUR, or pâle dehors (12,48:1 sur la nuit) et `--ls-focus` dedans
- * (13,6:1 sur le blanc). Tracé dehors, il était coupé sur les côtés par
+ * (12,91:1 sur le blanc). Tracé dehors, il était coupé sur les côtés par
  * `overflow-x: clip` et poussé hors de l'écran en haut par le saut d'ancre.
  * Le pseudo-élément passe au-dessus du fond de la bande de nuit, qu'un
  * `box-shadow` de la section aurait laissé dessous.
@@ -935,7 +935,7 @@
  * UN GROUPE PAR THÈME, des filets entre les questions : la carte par question
  * donnait au corps de la FAQ l'allure d'un centre d'assistance, critique de
  * Codex retenue. Le groupe est blanc sur le fond crème de la page ; `--ls-text`
- * y tient 12,7:1, `--ls-primary-hover` 13,6:1 et le lien
+ * y tient 12,92:1, `--ls-primary-hover` 12,91:1 et le lien
  * `--ls-accent-gold-deep` 5,04:1.
  */
 .faqCorps {

@@ -6,7 +6,7 @@
 # exécution, un cadratin dans le pied de page de chaque facture : c'est
 # encourageant, et ce n'est pas une preuve qu'il rougira la prochaine fois.
 #
-# SEPT MUTATIONS, DONT TROIS QUI GARDENT LE CONTRÔLE CONTRE LUI-MÊME. Un
+# NEUF MUTATIONS, DONT TROIS QUI GARDENT LE CONTRÔLE CONTRE LUI-MÊME. Un
 # ancrage cassé rendrait un OK silencieux, défaut que ce dépôt a déjà rencontré,
 # et un motif trop large accuserait du texte sain, ce que ce contrôle a fait à
 # sa première écriture.
@@ -23,8 +23,9 @@ cd "$RACINE" || exit 1
 CONTROLE="./scripts/verifier-redaction-francaise.sh"
 CIBLE="src/components/pied-boutique.tsx"
 EMAIL="src/integrations/email/modeles.ts"
+FACTURE="src/integrations/pdf/gabarit-document.tsx"
 
-MUTABLES=("$CIBLE" "$EMAIL")
+MUTABLES=("$CIBLE" "$EMAIL" "$FACTURE")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -122,6 +123,19 @@ cas "« nous » de marque dans un libellé visible"
 # écrans laisserait passer l'accusé de réception qui portait le défaut.
 mute "$EMAIL" 's{Votre message est bien arrivé à l.atelier, qui}{Votre message est bien arrivé, nous}'
 cas "« nous » de marque dans un email"
+
+# Cas 8 : LE MÊME DÉFAUT EN MAJUSCULES, relevé par `ls-frontend-revue`.
+#
+# La première version ne cherchait que `[Nn]ous` : un libellé en capitales
+# passait.
+mute "$CIBLE" 's{Besoin d.aide}{NOUS ÉCRIRE}'
+cas "« NOUS » en majuscules dans un libellé visible"
+
+# Cas 9 : UN « NOUS » SUR LA FACTURE PDF, document remis au client.
+#
+# `src/integrations/pdf` manquait à la portée de la première version.
+mute "$FACTURE" 's{<Text style=\{styles\.colDesignation\}>Désignation</Text>}{<Text style={styles.colDesignation}>Nos articles</Text>}'
+cas "« nous » de marque sur la facture"
 
 # Cas 7 : UN « NOUS » EN COMMENTAIRE NE DOIT PAS ROUGIR.
 #

@@ -51,8 +51,8 @@ export default function ErreurGlobale({ reset }: { reset: () => void }) {
          * AUCUN ACCORD AU FEMININ, `frontend-design.md`.
          */}
         <p className={styles.texteRacine}>
-          Une erreur inattendue empêche l&apos;affichage du site. Toutes les
-          excuses de l&apos;atelier pour la gêne occasionnée.
+          Une erreur inattendue empêche l&apos;affichage du site. L&apos;atelier
+          vous prie d&apos;excuser la gêne occasionnée.
         </p>
 
         <button type="button" onClick={reset} className={styles.actionRacine}>
