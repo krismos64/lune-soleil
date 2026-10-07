@@ -628,8 +628,8 @@ export default async function PageAide() {
               Ce qu&apos;il faut savoir avant de commander
             </h2>
             <p className={styles.texteFaq}>
-              Livraison, paiement, retours et entretien. Une autre question ?
-              L&apos;atelier répond sous 24 heures au maximum.
+              Livraison, paiement, retours et entretien. Une autre
+              question&nbsp;? L&apos;atelier répond sous 24 heures au maximum.
             </p>
             <Link href="/contact" className={styles.boutonNuit}>
               Poser une question <Fleche vers="droite" />

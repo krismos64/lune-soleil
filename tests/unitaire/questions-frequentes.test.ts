@@ -74,12 +74,12 @@ describe("questionsFrequentes, LS-26", () => {
   it("n'invente aucun délai d'expédition ni de livraison", () => {
     const contenu = texte(questionsFrequentes(CONFIGURATION));
 
-    expect(contenu).not.toMatch(
-      /(exp[ée]di|livr|achemin|re[çc]ev)[^.]{0,80}\b(sous|en|d'ici) \d+ ?(heures?|h|jours?)/i,
-    );
     // Le seul délai chiffré est celui de la réponse aux messages, donné par
-    // l'exploitante.
-    expect(contenu.match(/\d+ heures/g)).toEqual(["24 heures"]);
+    // l'exploitante : tout autre nombre d'heures ou de jours fait rougir, quel
+    // que soit le verbe qui l'introduit.
+    expect(contenu.match(/\b\d+ ?(heures?|h|jours?)\b/gi)).toEqual([
+      "24 heures",
+    ]);
   });
 
   it("renvoie les retours vers la rétractation en ligne", () => {

@@ -10,7 +10,8 @@
  * | Fait | Source |
  * |---|---|
  * | modes, tarifs, gratuité | configuration, `resoudreConfigurationLivraison`, ADR-035 et ADR-043 |
- * | Corse comprise, suivi Mondial Relay | page d'aide et bandeau de réassurance |
+ * | Corse comprise | page d'aide et bandeau de réassurance |
+ * | suivi du colis | email d'expédition F-MAIL-03, `modeles.ts`, et espace client |
  * | commande sans compte, aucun minimum | décisions commerciales du 28 juillet 2026, LS-27 |
  * | paiement par carte, Stripe | bandeau de réassurance |
  * | rétractation, garantie | pages légales, LS-134 et LS-28 |
@@ -92,7 +93,7 @@ export function questionsFrequentes(
       id: "faq-suivi",
       question: "Comment suivre mon colis\u00a0?",
       reponse:
-        "Mondial Relay vous informe directement de l'avancement de votre colis.",
+        "Un email vous prévient quand le colis quitte l'atelier, avec son numéro de suivi. Avec un compte, le suivi se retrouve aussi dans le détail de la commande.",
     },
   );
 
@@ -148,7 +149,7 @@ export function questionsFrequentes(
           id: "faq-entretien",
           question: "Comment entretenir mon bijou\u00a0?",
           reponse:
-            "Mettez-le en dernier, après le parfum, la laque et la crème, qui ternissent les couleurs et attaquent le vernis. Un chiffon doux, à peine humide, suffit à le nettoyer. Rangez-le à l'abri du soleil direct, à part des autres bijoux. L'alcool, l'acétone et les nettoyants pour bijoux dissolvent le vernis : à éviter.",
+            "Mettez-le en dernier, après la coiffure, le parfum et la crème : le parfum, la laque et les produits ménagers ternissent les couleurs et attaquent le vernis. Un chiffon doux, à peine humide, suffit à le nettoyer. Rangez-le à l'abri du soleil direct, à part des autres bijoux. L'alcool, l'acétone et les nettoyants pour bijoux dissolvent le vernis : à éviter.",
           lien: {
             href: "/atelier#entretien",
             libelle: "Les conseils d'entretien en détail",

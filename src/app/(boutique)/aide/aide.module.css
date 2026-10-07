@@ -206,12 +206,31 @@
 }
 
 /*
- * Le contour de la section part à l'extérieur, sur le fond crème de la page :
- * `--ls-focus` y tient 13,6:1. Sur la nuit, il tombait à 1,46:1.
+ * LA SECTION DES QUESTIONS COUVRE DEUX FONDS, la nuit en tête et le blanc
+ * dessous : aucune couleur unique n'y tient. Un anneau double, tracé À
+ * L'INTÉRIEUR, or pâle dehors (12,48:1 sur la nuit) et `--ls-focus` dedans
+ * (13,6:1 sur le blanc). Tracé dehors, il était coupé sur les côtés par
+ * `overflow-x: clip` et poussé hors de l'écran en haut par le saut d'ancre.
+ * Le pseudo-élément passe au-dessus du fond de la bande de nuit, qu'un
+ * `box-shadow` de la section aurait laissé dessous.
  */
+.faq {
+  position: relative;
+}
+
 .faq:focus-visible {
-  outline: 3px solid var(--ls-focus);
-  outline-offset: 4px;
+  outline: none;
+}
+
+.faq:focus-visible::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  z-index: 2;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 3px var(--ls-or-pale),
+    inset 0 0 0 3px var(--ls-focus);
 }
 
 .enteteSection {
