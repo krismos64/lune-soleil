@@ -1627,8 +1627,28 @@ cas "SVG et PDF acceptes au traitement" unitaire \
 # faisait du second du code non eprouve sur un chemin de securite. Le test ajoute
 # est le seul qui les distingue.
 mute "$TRAITEMENT" 's/  if \(metadonnees\.format && FORMATS_REFUSES\.has\(metadonnees\.format\)\) \{\n    throw new FormatRefuseError\(metadonnees\.format\);\n  \}/  \/\/ second filet retire/'
+#
+# DEPUIS LS-276, LE SVG NE SE DÉCODE PLUS, ses chargeurs étant bloqués : le
+# test du SVG hors de la fenêtre passe par le refus de libvips et resterait
+# vert sous cette mutation. Le test attendu lève le blocage le temps de
+# vérifier ce filet, qui reste la défense si le blocage manquait.
 cas "second filet de refus de format retire" unitaire \
-  "refuse un SVG dont la balise est hors de la fenetre de signature"
+  "le second filet refuse un SVG décodé quand le blocage manque"
+
+# ---------------------------------------------------------------------------
+# Cas 75 bis : les chargeurs SVG et PDF de libvips ne sont plus bloqués au
+# chargement du traitement, LS-276. Un SVG précédé de plus de 1024 octets
+# franchit la signature et librsvg le décode, chemin de GHSA-wq5f-xc86-pv6w.
+mute "$TRAITEMENT" 's/\nbloquerChargeursRisques\(\);\n/\n/'
+cas "chargeurs SVG et PDF de libvips non bloques" unitaire \
+  "aucun SVG n'atteint librsvg"
+
+# Cas 75 ter : le SVG refusé par libvips n'est plus reconnu, LS-276. La
+# protection tient, le blocage restant posé, mais le message dit « pas une
+# image » au lieu de nommer le format refusé.
+mute "$TRAITEMENT" 's/    if \(contientUnSvg\(octets\)\) \{\n      throw new FormatRefuseError\("svg"\);\n    \}\n//'
+cas "SVG refuse par libvips sans message de format" unitaire \
+  "refuse un SVG décalé ou compressé avec le message de format refusé"
 
 # ---------------------------------------------------------------------------
 # Cas 76 : la garde de traversee de chemin est retiree du stockage.
