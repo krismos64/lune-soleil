@@ -624,8 +624,7 @@
 }
 
 .boutonPrincipal,
-.boutonSecondaire,
-.boutonNuit {
+.boutonSecondaire {
   display: inline-flex;
   align-items: center;
   gap: var(--ls-space-2);
@@ -798,21 +797,6 @@
   line-height: 1.6;
 }
 
-/* `--ls-ciel-nuit-haut` sur `--ls-or-pale` : 12,48:1. */
-.boutonNuit {
-  background: var(--ls-or-pale);
-  color: var(--ls-ciel-nuit-haut);
-}
-
-.boutonNuit:hover {
-  background: var(--ls-texte-nuit);
-}
-
-.boutonNuit:focus-visible {
-  outline: 3px solid var(--ls-or-pale);
-  outline-offset: 3px;
-}
-
 /* ---------- Largeurs ---------- */
 
 @media (min-width: 640px) {
@@ -945,18 +929,61 @@
   }
 }
 
-/* ---------- Questions fréquentes, LS-26 ---------- */
+/* ---------- Questions fréquentes, le carnet de l'atelier ---------- */
 
+/*
+ * UN GROUPE PAR THÈME, des filets entre les questions : la carte par question
+ * donnait au corps de la FAQ l'allure d'un centre d'assistance, critique de
+ * Codex retenue. Le groupe est blanc sur le fond crème de la page ; `--ls-text`
+ * y tient 12,7:1, `--ls-primary-hover` 13,6:1 et le lien
+ * `--ls-accent-gold-deep` 5,04:1.
+ */
 .faqCorps {
   padding: var(--ls-space-6) var(--ls-space-4) var(--ls-space-7);
 }
 
-.theme + .theme {
-  margin-top: var(--ls-space-6);
+.carnetImage {
+  display: none;
+}
+
+.carnetPages {
+  display: grid;
+  gap: var(--ls-space-5);
+  min-width: 0;
+}
+
+.theme {
+  padding: var(--ls-space-4) var(--ls-space-4) var(--ls-space-2);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+}
+
+.themeEntete {
+  display: flex;
+  align-items: center;
+  gap: var(--ls-space-3);
+  margin-bottom: var(--ls-space-2);
+}
+
+.themeDessin {
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.themeDessin svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: var(--ls-or-sombre);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .themeTitre {
-  margin: 0 0 var(--ls-space-3);
+  margin: 0;
   color: var(--ls-primary-hover);
   font-size: 1.375rem;
   font-weight: 500;
@@ -964,21 +991,11 @@
 
 .questions {
   display: grid;
-  gap: var(--ls-space-2);
 }
 
-/*
- * UNE QUESTION EST UN `<details>` NATIF, sur blanc : `--ls-text` y tient
- * 12,7:1 et `--ls-accent-gold-deep`, pour le lien, 5,04:1.
- */
-.question {
-  border: 1px solid var(--ls-border);
-  border-radius: var(--ls-radius-md);
-  background: var(--ls-surface);
-}
-
-.question[open] {
-  border-color: var(--ls-accent-gold);
+/* Un filet entre deux questions, aucun cadre autour de chacune. */
+.question + .question {
+  border-top: 1px solid var(--ls-border);
 }
 
 /* Cible de 48 px au moins, la question entière est cliquable. */
@@ -988,7 +1005,7 @@
   justify-content: space-between;
   gap: var(--ls-space-3);
   min-height: 3rem;
-  padding: var(--ls-space-2) var(--ls-space-4);
+  padding: var(--ls-space-3) 0;
   color: var(--ls-primary-hover);
   font-family: var(--ls-police-titre);
   font-size: 1.125rem;
@@ -1004,7 +1021,7 @@
 .questionIntitule:focus-visible {
   outline: 3px solid var(--ls-focus);
   outline-offset: 2px;
-  border-radius: var(--ls-radius-md);
+  border-radius: var(--ls-radius-sm);
 }
 
 .chevron {
@@ -1023,7 +1040,7 @@
 }
 
 .reponse {
-  padding: 0 var(--ls-space-4) var(--ls-space-4);
+  padding: 0 0 var(--ls-space-4);
   color: var(--ls-text);
   line-height: 1.6;
 }
@@ -1037,23 +1054,56 @@
   margin-top: var(--ls-space-1);
 }
 
+/* L'invitation à écrire, après les réponses. Texte sur crème : 12,1:1. */
+.faqContact {
+  display: grid;
+  justify-items: start;
+  gap: var(--ls-space-3);
+  padding-top: var(--ls-space-2);
+  color: var(--ls-text);
+}
+
+.faqContact p {
+  margin: 0;
+  max-width: 48ch;
+  line-height: 1.6;
+}
+
 @media (min-width: 768px) {
   .faqCorps {
     padding: var(--ls-space-7) var(--ls-space-6) var(--ls-space-8);
   }
+
+  .theme {
+    padding: var(--ls-space-5) var(--ls-space-6) var(--ls-space-3);
+  }
 }
 
+/*
+ * À PARTIR DE 1024 PX, l'aquarelle de la table d'atelier occupe la marge et
+ * suit la lecture, immobile. Elle est absente en dessous : à 320 px, la
+ * largeur va aux questions.
+ */
 @media (min-width: 1024px) {
-  /* Le titre du thème à gauche, ses questions à droite. */
-  .theme {
+  .carnet {
     display: grid;
-    grid-template-columns: 14rem minmax(0, 1fr);
-    gap: var(--ls-space-6);
+    grid-template-columns: 18rem minmax(0, 1fr);
+    gap: var(--ls-space-7);
     align-items: start;
   }
 
-  .themeTitre {
-    padding-top: var(--ls-space-2);
+  .carnetImage {
+    display: block;
+    position: sticky;
+    top: var(--ls-space-6);
+    overflow: hidden;
+    border-radius: var(--ls-radius-lg);
+  }
+
+  .carnetImage img {
+    display: block;
+    width: 100%;
+    height: auto;
   }
 }
 
@@ -1121,8 +1171,7 @@
 
   .portes a,
   .boutonPrincipal,
-  .boutonSecondaire,
-  .boutonNuit {
+  .boutonSecondaire {
     transition: transform var(--ls-duration-base) var(--ls-easing-sortie);
   }
 
@@ -1141,8 +1190,8 @@
 
   .actions a:hover .fleche,
   .actions a:focus-visible .fleche,
-  .boutonNuit:hover .fleche,
-  .boutonNuit:focus-visible .fleche {
+  .faqContact a:hover .fleche,
+  .faqContact a:focus-visible .fleche {
     transform: translateX(4px);
   }
 

@@ -118,3 +118,44 @@ test("le focus de la section des questions se voit dans l'écran", async ({
     contentType: "image/png",
   });
 });
+
+/*
+ * LE CARNET DE L'ATELIER, refonte du 7 octobre 2026. Trois propriétés :
+ * chaque thème porte son dessin, l'invitation à écrire vient APRÈS la
+ * dernière réponse (la placer avant faisait passer le contact devant ce que
+ * la personne cherchait), et l'aquarelle ne prend aucune place sous 1024 px.
+ */
+test("la FAQ se lit comme un carnet, l'invitation à écrire en dernier", async ({
+  page,
+}) => {
+  await page.goto("/aide");
+
+  const themes = page.locator("#faq section");
+  const nombre = await themes.count();
+  expect(nombre).toBeGreaterThanOrEqual(4);
+  for (let rang = 0; rang < nombre; rang += 1) {
+    const theme = themes.nth(rang);
+    await expect(theme.locator("h3")).toHaveCount(1);
+    await expect(theme.locator("[data-borne] svg path")).not.toHaveCount(0);
+  }
+
+  const ordre = await page.locator("#faq").evaluate((section) => {
+    const derniere = [...section.querySelectorAll("details")].at(-1);
+    const invitation = section.querySelector(
+      'a[href="/contact"]:not(details a)',
+    );
+    return derniere && invitation
+      ? derniere.compareDocumentPosition(invitation) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+      : 0;
+  });
+  expect(ordre).not.toBe(0);
+
+  const largeur = page.viewportSize()?.width ?? 0;
+  const image = page.locator("#faq img[src*='aide-table-atelier']");
+  if (largeur < 1024) {
+    await expect(image).toBeHidden();
+  } else {
+    await expect(image).toBeVisible();
+  }
+});

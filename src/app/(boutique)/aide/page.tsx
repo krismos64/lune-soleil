@@ -235,7 +235,7 @@ export default async function PageAide() {
              */
             <p className={styles.attente}>
               Les tarifs de livraison ne peuvent pas être affichés pour le
-              moment. Écrivez à l'atelier depuis la{" "}
+              moment. Écrivez à l&apos;atelier depuis la{" "}
               <Link href="/contact">page de contact</Link> si vous avez besoin
               de les connaître avant de commander.
             </p>
@@ -514,7 +514,7 @@ export default async function PageAide() {
                   </li>
                   <li>Les frais de retour sont à votre charge.</li>
                   <li>
-                    L'atelier vous rembourse la totalité de votre commande,
+                    L&apos;atelier vous rembourse la totalité de votre commande,
                     frais de livraison initiaux compris.
                   </li>
                   <li>
@@ -570,7 +570,8 @@ export default async function PageAide() {
                     pendant deux ans.
                   </li>
                   <li>
-                    Les frais de retour sont alors à la charge de l'atelier.
+                    Les frais de retour sont alors à la charge de
+                    l&apos;atelier.
                   </li>
                 </ul>
                 <div className={styles.actions}>
@@ -630,53 +631,147 @@ export default async function PageAide() {
               Ce qu&apos;il faut savoir avant de commander
             </h2>
             <p className={styles.texteFaq}>
-              Livraison, paiement, retours et entretien. Une autre
-              question&nbsp;? L&apos;atelier répond sous 24 heures au maximum.
+              Livraison, paiement, retours et entretien, en réponses courtes.
             </p>
-            <Link href="/contact" className={styles.boutonNuit}>
-              Poser une question <Fleche vers="droite" />
-            </Link>
           </div>
         </div>
 
+        {/*
+         * LE CARNET DE L'ATELIER, piste retenue après la critique de Codex :
+         * un groupe par thème, des filets entre les questions au lieu d'une
+         * carte chacune, et un petit dessin tracé à l'entrée du thème. Le
+         * texte ne bouge pas, seul le dessin s'anime, borné par `data-borne`.
+         * L'invitation à écrire vient APRÈS les réponses : la placer avant
+         * faisait passer le contact devant ce que la personne cherchait.
+         */}
         <div className={styles.faqCorps}>
-          <div className={styles.enveloppe}>
-            {themes.map((theme) => (
-              <div key={theme.titre} className={styles.theme}>
-                <h3 className={styles.themeTitre}>{theme.titre}</h3>
-                <div className={styles.questions}>
-                  {theme.questions.map((entree) => (
-                    <details
-                      key={entree.id}
-                      id={entree.id}
-                      className={styles.question}
-                    >
-                      <summary className={styles.questionIntitule}>
-                        <span>{entree.question}</span>
-                        <svg
-                          className={styles.chevron}
-                          viewBox="0 0 20 20"
-                          aria-hidden="true"
+          <div className={`${styles.enveloppe} ${styles.carnet}`}>
+            <div className={styles.carnetImage} aria-hidden="true">
+              <Image
+                src="/habillage/aide-table-atelier.jpg"
+                alt=""
+                width={900}
+                height={900}
+                sizes="(min-width: 1024px) 18rem, 1px"
+              />
+            </div>
+            <div className={styles.carnetPages}>
+              {themes.map((theme) => {
+                const titreId = `theme-${theme.titre
+                  .normalize("NFD")
+                  .replace(/[\u0300-\u036f]/g, "")
+                  .toLowerCase()
+                  .replace(/[^a-z]+/g, "-")}`;
+                return (
+                  <section
+                    key={theme.titre}
+                    className={styles.theme}
+                    aria-labelledby={titreId}
+                  >
+                    <div className={styles.themeEntete}>
+                      <DessinTheme titre={theme.titre} />
+                      <h3 id={titreId} className={styles.themeTitre}>
+                        {theme.titre}
+                      </h3>
+                    </div>
+                    <div className={styles.questions}>
+                      {theme.questions.map((entree) => (
+                        <details
+                          key={entree.id}
+                          id={entree.id}
+                          className={styles.question}
                         >
-                          <path d="m5 8 5 5 5-5" />
-                        </svg>
-                      </summary>
-                      <div className={styles.reponse}>
-                        <p>{entree.reponse}</p>
-                        {entree.lien ? (
-                          <Link href={entree.lien.href} className={styles.lien}>
-                            {entree.lien.libelle}
-                          </Link>
-                        ) : null}
-                      </div>
-                    </details>
-                  ))}
-                </div>
+                          <summary className={styles.questionIntitule}>
+                            <span>{entree.question}</span>
+                            <svg
+                              className={styles.chevron}
+                              viewBox="0 0 20 20"
+                              aria-hidden="true"
+                            >
+                              <path d="m5 8 5 5 5-5" />
+                            </svg>
+                          </summary>
+                          <div className={styles.reponse}>
+                            <p>{entree.reponse}</p>
+                            {entree.lien ? (
+                              <Link
+                                href={entree.lien.href}
+                                className={styles.lien}
+                              >
+                                {entree.lien.libelle}
+                              </Link>
+                            ) : null}
+                          </div>
+                        </details>
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
+              <div className={styles.faqContact}>
+                <p>
+                  Une autre question&nbsp;? L&apos;atelier répond sous 24 heures
+                  au maximum.
+                </p>
+                <Link href="/contact" className={styles.boutonPrincipal}>
+                  Poser une question <Fleche vers="droite" />
+                </Link>
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </section>
     </main>
+  );
+}
+
+/*
+ * UN DESSIN PAR THÈME, tracé une fois à l'entrée dans l'écran par
+ * `stroke-dashoffset`, comme les icônes des modes de livraison. Décor seul,
+ * `aria-hidden` : le titre du thème porte le sens. Un thème sans dessin connu
+ * n'en reçoit aucun plutôt qu'un dessin faux.
+ */
+const DESSINS: Record<string, string[]> = {
+  // Un chemin qui serpente jusqu'à une étoile.
+  Livraison: [
+    "M5 33c6 0 8-6 13-6s7-7 13-9",
+    "M31 9l1.6 3.4 3.6.5-2.6 2.5.6 3.6-3.2-1.7-3.2 1.7.6-3.6-2.6-2.5 3.6-.5Z",
+  ],
+  // Un soleil, son disque puis ses rayons.
+  "Commande et paiement": [
+    "M20 13a7 7 0 1 0 0 14a7 7 0 1 0 0-14Z",
+    "M20 4v4M20 32v4M4 20h4M32 20h4M8.7 8.7l2.8 2.8M28.5 28.5l2.8 2.8M8.7 31.3l2.8-2.8M28.5 11.5l2.8-2.8",
+  ],
+  // Un croissant de lune et une flèche qui revient.
+  Retours: [
+    "M24 6a14 14 0 1 0 10 22A11 11 0 0 1 24 6Z",
+    "M6 34h12M6 34l4-4M6 34l4 4",
+  ],
+  // Une goutte et une étincelle.
+  Entretien: [
+    "M17 6c5 7 9 12 9 17a9 9 0 0 1-18 0c0-5 4-10 9-17Z",
+    "M31 6v8M27 10h8",
+  ],
+  // Une enveloppe, son pli puis son rabat.
+  Contact: ["M5 11h30v20H5Z", "M5 11l15 12 15-12"],
+};
+
+function DessinTheme({ titre }: { titre: string }) {
+  const traces = DESSINS[titre];
+  if (!traces) return null;
+  return (
+    <span className={styles.themeDessin} aria-hidden="true" data-borne="">
+      <svg viewBox="0 0 40 40">
+        {traces.map((d, i) => (
+          <path
+            key={d}
+            className={styles.trait}
+            style={rang(i)}
+            pathLength={1}
+            d={d}
+          />
+        ))}
+      </svg>
+    </span>
   );
 }
