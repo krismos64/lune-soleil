@@ -1127,7 +1127,17 @@ est levé, et `/atelier` l'emploie.
 seconde personne. **L'exploitante exerce seule**, confirmé le même jour, et son
 **prénom ne paraît pas sur le site**, à sa demande. Écrire « les créatrices »,
 « les deux sœurs » ou un « nous » de marque décrirait une entreprise qui
-n'existe pas. Les textes publics sont à la première personne du singulier.
+n'existe pas.
+
+**Les textes publics parlent de « l'atelier », à la troisième personne**,
+arbitrage de Christophe du 7 octobre 2026, LS-286 : « Écrivez à l'atelier »,
+« L'atelier vous rembourse », emails compris. La règle disait jusque-là « à la
+première personne du singulier », et une cinquantaine de phrases portaient
+pourtant un « nous ». **Seul le récit de `/atelier` garde le « je »**, voix de
+l'exploitante dans un texte validé avec elle en LS-25.
+`scripts/verifier-redaction-francaise.sh`, sens 3, refuse tout « nous »,
+« notre » ou « nos » hors commentaire dans la boutique, les composants et les
+emails.
 
 ## Paillettes
 

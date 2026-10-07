@@ -8,6 +8,26 @@
 | Amende | `.claude/rules/frontend-design.md`, sections « Interdits visuels » et « Paillettes » |
 | Ticket | LS-259 |
 
+## Amendement du 7 octobre 2026, questions fréquentes en carnet, LS-26
+
+**Demande de Christophe**, piste choisie sur la critique de Codex, sans
+maquette. La section des questions fréquentes de l'aide passe d'une carte par
+question à un groupe par thème, des filets séparant les questions.
+
+- **Ce qui s'anime en plus**, une fois par entrée dans l'écran, borné par
+  `data-borne` : un petit dessin par thème (chemin et étoile, soleil,
+  croissant, goutte, enveloppe), tracé par `stroke-dashoffset`. Les questions,
+  les réponses et l'invitation à écrire restent immobiles.
+- **Une troisième image générée par Codex**, aquarelle d'une table d'atelier à
+  l'aube, sans bijou, texte ni personne, sans métadonnées. Elle occupe la marge
+  à partir de 1024 px et n'est pas rendue en dessous.
+- **Aucun nouveau dégradé de ciel** : les neuf décors de l'amendement LS-282
+  restent la liste.
+
+Le test d'animation de l'aide attend chaque décor jusqu'à son état `fin`, cinq
+secondes chacun : son délai passe à 120 secondes, les décors ne se voyant pas
+ensemble à 320 px.
+
 ## Amendement du 7 octobre 2026, informations légales et catalogue, LS-282 et LS-283
 
 **Décidé en autonomie sur l'autorisation explicite de Christophe** du
