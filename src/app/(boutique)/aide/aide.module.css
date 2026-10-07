@@ -88,9 +88,7 @@
 .titre {
   margin: 0;
   color: var(--ls-primary-hover);
-  font-family: var(--ls-police-titre);
   font-size: clamp(2rem, 8.5vw, 3.75rem);
-  font-weight: 400;
   line-height: 1.12;
 }
 
@@ -306,7 +304,6 @@
 .titreSection {
   margin: 0;
   color: var(--ls-primary-hover);
-  font-family: var(--ls-police-titre);
   font-size: clamp(1.75rem, 6.5vw, 2.75rem);
   font-weight: 400;
   line-height: 1.15;
@@ -359,7 +356,6 @@
 .modeTitre {
   margin: 0;
   color: var(--ls-primary-hover);
-  font-family: var(--ls-police-titre);
   font-size: 1.375rem;
   font-weight: 400;
 }
@@ -451,7 +447,6 @@
 .parcoursTitre {
   margin: 0 0 var(--ls-space-4);
   color: var(--ls-primary-hover);
-  font-family: var(--ls-police-titre);
   font-size: 1.5rem;
   font-weight: 400;
 }
@@ -644,7 +639,6 @@
   gap: var(--ls-space-3);
   margin: 0;
   color: var(--ls-primary-hover);
-  font-family: var(--ls-police-titre);
   font-size: 1.5rem;
   font-weight: 400;
   line-height: 1.2;
@@ -846,7 +840,6 @@
   max-width: 18ch;
   margin: 0;
   color: var(--ls-texte-nuit);
-  font-family: var(--ls-police-titre);
   font-size: clamp(1.75rem, 6.5vw, 2.75rem);
   font-weight: 400;
   line-height: 1.15;
