@@ -1181,8 +1181,14 @@
     padding: var(--ls-space-6) var(--ls-space-7);
   }
 
+  /* Titre et accroche se rejoignent au milieu du médaillon. */
+  .teteTexte {
+    align-self: end;
+  }
+
   .tete .accroche {
     grid-column: 1;
+    align-self: start;
   }
 
   .medaillon {
