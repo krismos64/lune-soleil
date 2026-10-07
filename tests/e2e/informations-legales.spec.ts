@@ -271,6 +271,17 @@ test("les mentions obligatoires du droit de rétractation sont présentes", asyn
   expect(texteSection).toMatch(/frais de retour sont à votre charge/i);
 
   /*
+   * L'ÉTAT DU BIJOU RETOURNÉ, article L221-23 alinéa 3, LS-287 : seule une
+   * dépréciation due à des manipulations au-delà de l'examen engage le client.
+   * « Un état permettant sa remise en vente » posait une condition que la loi
+   * ne pose pas, et se lisait comme une condition d'exercice du droit.
+   */
+  expect(texteSection).toMatch(
+    /manipulations autres que celles\s+nécessaires pour établir sa nature/i,
+  );
+  expect(texteSection).not.toMatch(/remise en vente|état d.origine/i);
+
+  /*
    * LA GARANTIE LEGALE DE CONFORMITE, article L217-3, DISTINGUEE de la
    * retractation : deux ans, et frais de retour a la charge du vendeur. Les
    * confondre est une source classique de litige, et facturer le retour sur un
