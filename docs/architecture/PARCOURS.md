@@ -585,14 +585,18 @@ consommation. Son absence prolonge le délai de rétractation de douze mois.
 | 3 | Déclaration | rien encore | formulaire, motif facultatif |
 | 4 | Confirmation non ambiguë | demande de rétractation `DEPOSEE` | récapitulatif |
 | 5 | Accusé de réception | demande `ACCUSEE`, journal d'envoi, horodatage conservé | email sur support durable |
-| 6 | Attente du retour | demande `RETOUR_ATTENDU` | instructions de retour |
-| 7a | Preuve d'expédition fournie | demande `EXPEDITION_PROUVEE`, `preuveExpeditionA` horodaté | accusé, remboursement annoncé |
+| 6 | Attente du retour | demande `RETOUR_ATTENDU` | instructions de retour, **adresse de retour** dans l'accusé, ou invitation à la demander en réponse quand l'identité légale manque, LS-288 |
+| 7a | Preuve d'expédition fournie | demande `EXPEDITION_PROUVEE` **dès le dépôt**, `preuveExpeditionA` au **jour où le client l'a fournie**, saisi par l'exploitante, audité au `JournalAudit`, LS-288 | accusé, remboursement annoncé |
 | 7b | Réception du colis | `recueA` horodaté, **sans changement de statut** | confirmation |
 | 8 | Remboursement | demande `REMBOURSEMENT_EN_COURS` puis `REMBOURSEE`, avoir si nécessaire | remboursement |
 | 9 | Réintégration de stock | constat de l'état réel de la pièce par l'administratrice, avec motif : `REMISE_EN_VENTE` écrit un mouvement `RETOUR`, `PERTE_CONSTATEE` n'en écrit aucun. `recueA` n'est **pas** exigé, une pièce jamais revenue se déclarant perdue, règle L13 | stock à jour |
 
 **Les étapes 7a et 7b sont deux faits indépendants, pas une séquence.** Le
-remboursement est dû au **premier des deux** qui survient, article L221-24.
+remboursement est dû **dans les quatorze jours suivant l'information de la
+décision**, article L221-24 alinéa 1, et l'atelier peut seulement le
+**différer jusqu'au premier des deux faits**, alinéa 2. Ce document écrivait
+« dû au premier des deux », formule qui, sur la page légale, faisait partir un
+nouveau délai de quatorze jours de ce fait : corrigé par LS-287.
 
 L'étape 7b n'a pas de statut, corrigé par LS-41 : la réception peut arriver avant
 le remboursement, pendant, ou trois semaines après, et un statut `RECUE` obligerait
@@ -603,6 +607,11 @@ l'étape 9.
 Une demande peut donc être `REMBOURSEE` avec un colis toujours en transit, ou
 jamais arrivé. Le second cas produit une alerte, règle L13 : la pièce est sortie
 du stock sans y revenir.
+
+**L'étape 7a peut précéder l'étape 6**, LS-288 : une preuve reçue avant que
+l'exploitante ait ouvert l'attente du retour s'enregistre depuis `DEPOSEE` ou
+`ACCUSEE`, et `retourAttenduA` est alors posé, base de l'alerte L8. Le jour
+saisi est borné entre celui du dépôt et aujourd'hui, à Paris.
 
 **L'étape 7a n'est pas obligatoire.** Une demande passe de `RETOUR_ATTENDU`
 directement à `REMBOURSEMENT_EN_COURS` dès que `recueA` est renseigné, sans jamais
@@ -646,9 +655,19 @@ n'étant survenu.
 **Colis jamais reçu, mais preuve d'expédition fournie**
 Base : demande `EXPEDITION_PROUVEE`, le remboursement suit son cours.
 Vue : remboursement annoncé, indépendamment de l'arrivée du colis.
-Le délai court depuis la preuve, article L221-24. Un colis perdu chez le
-transporteur ne suspend pas le remboursement : le litige se traite avec le
-transporteur, pas en retenant une somme due.
+La preuve lève la faculté de différer, article L221-24 alinéa 2 : le
+remboursement est dû au plus tard à la date la plus tardive entre quatorze jours
+après la décision et la preuve. Un colis perdu chez le transporteur ne suspend
+pas le remboursement : le litige se traite avec le transporteur, pas en
+retenant une somme due.
+
+**Refus demandé pendant un remboursement en cours**, LS-288
+Base : le refus prend le verrou de facture du remboursement et renonce sur une
+intention en vol ou un avoir rattaché, `REMBOURSEMENT_ENGAGE`. Le remboursement
+relit le statut après sa réservation, et une alerte critique part si sa
+transition finale échoue.
+Vue : « un remboursement est en cours ou déjà fait sur cette demande ».
+Sans cette garde, deux onglets rendaient l'argent sur une demande « refusée ».
 
 **Colis toujours pas reçu après le remboursement**
 Base : demande `REMBOURSEE`, `recueA` nul, **aucun mouvement de stock**, alerte
