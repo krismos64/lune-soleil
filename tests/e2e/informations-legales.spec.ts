@@ -114,16 +114,18 @@ test("la page d'aide n'invente aucun délai d'expédition", async ({ page }) => 
   const texte = (await page.getByRole("main").textContent()) ?? "";
 
   /*
-   * AUCUN DÉLAI CHIFFRÉ, HORS LES DEUX PHRASES ADMISES. Depuis LS-26, la page
-   * annonce la réponse aux messages sous 24 heures, délai donné par
-   * l'exploitante : ces deux phrases sont retirées mot pour mot avant le test,
-   * et tout autre nombre d'heures ou de jours le fait rougir. Un motif bâti sur
-   * des verbes laissait passer « votre colis part sous 48 heures », revue de
-   * LS-26.
+   * AUCUN DÉLAI CHIFFRÉ, HORS LES PHRASES ADMISES, retirées mot pour mot avant
+   * le test : la réponse aux messages sous 24 heures, délai donné par
+   * l'exploitante (LS-26, présente aussi dans le balisage `FAQPage`, d'où
+   * `replaceAll`), et le compteur légal de rétractation, « 14 » et « jours »
+   * accolés par le rendu. Tout autre nombre d'heures ou de jours fait rougir :
+   * un motif bâti sur des verbes laissait passer « votre colis part sous
+   * 48 heures », revue de LS-26.
    */
   const sansDelaisAdmis = texte
-    .replace("répond sous 24 heures au maximum", "")
-    .replace("Sous 24 heures au maximum. Pour une commande en cours", "");
+    .replaceAll("répond sous 24 heures au maximum", "")
+    .replaceAll("Sous 24 heures au maximum. Pour une commande en cours", "")
+    .replaceAll("14jours pour changer d'avis, dès la réception", "");
   expect(sansDelaisAdmis).not.toMatch(/\b\d+ ?(heures?|h|jours?)\b/i);
   expect(texte).toMatch(/délai de préparation.*sera précisé/i);
 });
