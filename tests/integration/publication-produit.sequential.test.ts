@@ -762,7 +762,7 @@ describe("retirerProduitsDeLEspace, LS-279", () => {
     expect(parId.get(brouillon)?.statut).toBe("BROUILLON");
   });
 
-  it("dit qu'un produit déjà retiré ou inconnu est introuvable", async () => {
+  it("distingue un produit déjà retiré d'un produit inconnu", async () => {
     const retire = await produitDeTest();
     await catalogue.archiverProduit(retire);
     await catalogue.retirerProduitDeLEspace(retire);
@@ -773,8 +773,10 @@ describe("retirerProduitsDeLEspace, LS-279", () => {
     });
 
     expect(bilan.reussis).toBe(0);
+    // Déjà retiré, deux onglets ouverts : jamais « n'existe plus », la
+    // confirmation ayant promis que rien n'est effacé.
     expect(bilan.refus.map((refus) => refus.raison)).toEqual([
-      "INTROUVABLE",
+      "DEJA_RETIRE",
       "INTROUVABLE",
     ]);
   });

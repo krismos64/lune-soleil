@@ -129,6 +129,8 @@ test("retirer deux archivés nomme chacun, puis les fait disparaître sans les e
 
   const bilan = page.getByRole("status", { name: "Bilan de la sélection" });
   await expect(bilan).toContainText("2 produits retirés de votre espace.");
+  // Le dialogue démonté, le focus va au bilan et jamais à `body`.
+  await expect(bilan).toBeFocused();
   for (const piece of pieces) {
     await expect(page.getByRole("link", { name: piece.nom })).toHaveCount(0);
   }
@@ -137,6 +139,39 @@ test("retirer deux archivés nomme chacun, puis les fait disparaître sans les e
   for (const date of await datesDeRetrait(pieces.map((piece) => piece.id))) {
     expect(date).toBeInstanceOf(Date);
   }
+});
+
+/*
+ * DEUX ONGLETS OUVERTS : l'article est retiré ailleurs pendant que la
+ * confirmation est affichée. Le bilan dit « déjà retiré », jamais « n'existe
+ * plus », qui contredirait la promesse que rien n'est effacé.
+ */
+test("un article retiré entre-temps est nommé, sans rien d'autre de changé", async ({
+  page,
+}, infos) => {
+  const [piece] = archives(infos.project.name);
+  await page.goto(ARCHIVES);
+  await page
+    .getByRole("checkbox", { name: `Sélectionner ${piece!.nom}` })
+    .check();
+  await page.getByRole("button", { name: "Retirer de mon espace (1)" }).click();
+
+  await avecBase((client) =>
+    client.query("UPDATE produit SET retire_a = now() WHERE id = $1", [
+      piece!.id,
+    ]),
+  );
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Confirmer le retrait" })
+    .click();
+
+  const bilan = page.getByRole("status", { name: "Bilan de la sélection" });
+  await expect(bilan).toContainText("Aucun produit n'a changé.");
+  await expect(bilan).toContainText(
+    `${piece!.nom} : déjà retiré de votre espace`,
+  );
+  await expect(bilan).not.toContainText("n'existe plus");
 });
 
 test("annuler ou Échap ne retire rien et rend le focus au bouton", async ({
