@@ -416,8 +416,12 @@ export type DemandeEnListe = {
  *
  * L'ORDRE EST INVERSE DE CELUI DES MESSAGES, ET C'EST DELIBERE. Une demande de
  * retractation porte un DELAI LEGAL : le remboursement est du dans les
- * quatorze jours du fait declencheur, article L221-24. La plus ancienne est
- * donc la plus urgente, quand un message recent est le plus interessant.
+ * quatorze jours suivant l'information de la decision, article L221-24 alinea
+ * 1, et ne peut etre differe que jusqu'au PREMIER de deux faits, reception du
+ * bien ou preuve de son expedition, alinea 2. Ce commentaire disait « quatorze
+ * jours du fait declencheur » jusqu'a LS-287, ce qui allongeait le delai. La
+ * plus ancienne est donc la plus urgente, quand un message recent est le plus
+ * interessant.
  *
  * `limite + 1` EST LU POUR SAVOIR S'IL EN RESTE, motif de LS-163 : une liste
  * qui plafonne sans le dire fait afficher un compte FAUX, et l'exploitante

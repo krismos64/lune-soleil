@@ -619,11 +619,20 @@ export default async function PageInformationsLegales() {
               <strong>frais de livraison initiaux compris</strong>, au tarif que
               vous avez réellement payé.
             </p>
+            {/*
+             * L221-24, VERSION EN VIGUEUR DEPUIS LE 1ER JUILLET 2016, lue sur
+             * Legifrance le 7 octobre 2026, LS-287. L'alinea 1 fixe quatorze
+             * jours A COMPTER DE L'INFORMATION de la decision ; l'alinea 2 permet
+             * seulement de DIFFERER jusqu'au premier de deux faits. La phrase
+             * precedente faisait partir quatorze jours de ce premier fait, et
+             * promettait ainsi jusqu'a quatorze jours de plus que la loi.
+             */}
             <p className={styles.texte}>
-              Le remboursement intervient au plus tard quatorze jours après le
-              premier de ces deux événements : la réception de votre retour, ou
-              la preuve de son expédition transmise à l&apos;atelier. Un numéro
-              de suivi suffit.
+              Le remboursement intervient au plus tard quatorze jours après que
+              l&apos;atelier a été informé de votre décision. L&apos;atelier
+              peut toutefois attendre d&apos;avoir reçu le bijou, ou une preuve
+              de son expédition si elle arrive avant : un numéro de suivi
+              suffit.
             </p>
 
             <h3 className={styles.titreBloc}>Délai pour renvoyer le bijou</h3>

@@ -116,6 +116,20 @@ describe("lireConfigurationSmtp", () => {
     expect(config.expediteur).toBe("contact@exemple.invalid");
   });
 
+  it("lit l'adresse de contact publiee pour le Reply-To, LS-287", () => {
+    expect(
+      lireConfigurationSmtp({
+        ...COMPLET,
+        FACTURE_EMAIL_CONTACT: " contact@exemple.invalid ",
+      }).repondreA,
+    ).toBe("contact@exemple.invalid");
+    expect(lireConfigurationSmtp(COMPLET).repondreA).toBeNull();
+    expect(
+      lireConfigurationSmtp({ ...COMPLET, FACTURE_EMAIL_CONTACT: "  " })
+        .repondreA,
+    ).toBeNull();
+  });
+
   it("retient 587 quand le port est absent", () => {
     const sansPort = { ...COMPLET };
     delete sansPort.SMTP_PORT;
@@ -510,12 +524,15 @@ describe("creerEnvoyeurSmtp, le message remis au transport", () => {
     utilisateur: "compte",
     motDePasse: "secret-de-test",
     expediteur: "boutique@exemple.invalid",
+    repondreA: "contact@exemple.invalid" as string | null,
   };
 
-  async function envoyerUnMessage(): Promise<Record<string, unknown>> {
+  async function envoyerUnMessage(
+    configuration = CONFIGURATION,
+  ): Promise<Record<string, unknown>> {
     const { transport, envois } = transportDouble();
 
-    await creerEnvoyeurSmtp(CONFIGURATION, transport).envoyer({
+    await creerEnvoyeurSmtp(configuration, transport).envoyer({
       modele: "verification-adresse",
       destinataire: "client@exemple.invalid",
       variables: { lien: "https://lune-soleil.fr/verifier/jeton" },
@@ -529,6 +546,26 @@ describe("creerEnvoyeurSmtp, le message remis au transport", () => {
 
     return envoi;
   }
+
+  /*
+   * LA REPONSE VA A L'ADRESSE DE CONTACT PUBLIEE, LS-287. L'accuse de
+   * retractation fait passer la preuve d'expedition du retour par une reponse
+   * a l'email, et cette preuve rend le remboursement exigible, L221-24 : une
+   * reponse perdue dans une boite non relevee ferait courir le delai sans que
+   * personne le sache.
+   */
+  it("pose le Reply-To sur l'adresse de contact publiee", async () => {
+    const envoi = await envoyerUnMessage();
+
+    expect(envoi.replyTo).toBe("contact@exemple.invalid");
+    expect(envoi.from).toBe("boutique@exemple.invalid");
+  });
+
+  it("ne pose aucun Reply-To quand l'adresse de contact manque", async () => {
+    const envoi = await envoyerUnMessage({ ...CONFIGURATION, repondreA: null });
+
+    expect(envoi).not.toHaveProperty("replyTo");
+  });
 
   it("remet les DEUX versions, texte et HTML, critere 1", async () => {
     /*

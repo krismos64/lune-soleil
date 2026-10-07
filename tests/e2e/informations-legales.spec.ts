@@ -282,6 +282,17 @@ test("les mentions obligatoires du droit de rétractation sont présentes", asyn
   expect(texteSection).not.toMatch(/remise en vente|état d.origine/i);
 
   /*
+   * LE DÉLAI DE REMBOURSEMENT PART DE L'INFORMATION DE LA DÉCISION, L221-24
+   * alinéa 1, LS-287. Le premier des deux faits ne fait que permettre de
+   * différer, alinéa 2 : faire partir quatorze jours de ce fait promettait
+   * jusqu'à quatorze jours de plus que la loi.
+   */
+  expect(texteSection).toMatch(
+    /quatorze jours après que l.atelier a été informé de votre décision/i,
+  );
+  expect(texteSection).not.toMatch(/quatorze jours après le premier/i);
+
+  /*
    * LA GARANTIE LEGALE DE CONFORMITE, article L217-3, DISTINGUEE de la
    * retractation : deux ans, et frais de retour a la charge du vendeur. Les
    * confondre est une source classique de litige, et facturer le retour sur un
