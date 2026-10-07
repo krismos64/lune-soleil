@@ -113,7 +113,15 @@ test("la page d'aide n'invente aucun délai d'expédition", async ({ page }) => 
 
   const texte = (await page.getByRole("main").textContent()) ?? "";
 
-  expect(texte).not.toMatch(/sous \d+ ?(heures?|h|jours?)/i);
+  /*
+   * UN DÉLAI ATTACHÉ À L'EXPÉDITION OU À LA LIVRAISON, et non tout délai :
+   * depuis LS-26, la page annonce la réponse aux messages « sous 24 heures »,
+   * délai donné par l'exploitante et légitime. Le motif d'origine, `sous N
+   * heures` partout, l'aurait refusé ; il ne vise plus que ce qu'il protège.
+   */
+  expect(texte).not.toMatch(
+    /(exp[ée]di|livr|achemin|pr[ée]par)[^.]{0,80}\b(sous|en|d'ici) \d+ ?(heures?|h|jours?)/i,
+  );
   expect(texte).toMatch(/délai de préparation.*sera précisé/i);
 });
 

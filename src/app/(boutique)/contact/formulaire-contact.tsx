@@ -62,7 +62,7 @@ export function FormulaireContact({ ouvertA }: { ouvertA: number }) {
           setEnvoye(true);
           setMessage({
             texte:
-              "Message bien reçu. L'atelier vous répond sous quelques jours, " +
+              "Message bien reçu. L'atelier vous répond sous 24 heures, " +
               "à l'adresse que vous avez indiquée.",
             erreur: false,
           });

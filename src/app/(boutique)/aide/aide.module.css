@@ -205,10 +205,13 @@
   outline-offset: -6px;
 }
 
-/* Sur la nuit, `--ls-focus` tombe à 1,46:1 : l'or pâle y donne 12,48:1. */
+/*
+ * Le contour de la section part à l'extérieur, sur le fond crème de la page :
+ * `--ls-focus` y tient 13,6:1. Sur la nuit, il tombait à 1,46:1.
+ */
 .faq:focus-visible {
-  outline: 3px solid var(--ls-or-pale);
-  outline-offset: -6px;
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 4px;
 }
 
 .enteteSection {
@@ -652,7 +655,7 @@
  * voile garde la moitié gauche, où se pose le texte, plus sombre que la
  * teinte la plus claire de l'aquarelle.
  */
-.faq {
+.faqNuit {
   position: relative;
   overflow: hidden;
   padding: var(--ls-space-8) var(--ls-space-4);
@@ -693,7 +696,7 @@
   }
 }
 
-.faq .enveloppe {
+.faqNuit .enveloppe {
   position: relative;
 }
 
@@ -827,7 +830,7 @@
     padding: var(--ls-space-8) var(--ls-space-6);
   }
 
-  .faq {
+  .faqNuit {
     padding: var(--ls-space-8) var(--ls-space-6);
   }
 
@@ -920,6 +923,125 @@
 @media (min-width: 1024px) {
   .etoiles {
     display: block;
+  }
+}
+
+/* ---------- Questions fréquentes, LS-26 ---------- */
+
+.faqCorps {
+  padding: var(--ls-space-6) var(--ls-space-4) var(--ls-space-7);
+}
+
+.theme + .theme {
+  margin-top: var(--ls-space-6);
+}
+
+.themeTitre {
+  margin: 0 0 var(--ls-space-3);
+  color: var(--ls-primary-hover);
+  font-size: 1.375rem;
+  font-weight: 500;
+}
+
+.questions {
+  display: grid;
+  gap: var(--ls-space-2);
+}
+
+/*
+ * UNE QUESTION EST UN `<details>` NATIF, sur blanc : `--ls-text` y tient
+ * 12,7:1 et `--ls-accent-gold-deep`, pour le lien, 5,04:1.
+ */
+.question {
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+}
+
+.question[open] {
+  border-color: var(--ls-accent-gold);
+}
+
+/* Cible de 48 px au moins, la question entière est cliquable. */
+.questionIntitule {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ls-space-3);
+  min-height: 3rem;
+  padding: var(--ls-space-2) var(--ls-space-4);
+  color: var(--ls-primary-hover);
+  font-family: var(--ls-police-titre);
+  font-size: 1.125rem;
+  line-height: 1.3;
+  cursor: pointer;
+  list-style: none;
+}
+
+.questionIntitule::-webkit-details-marker {
+  display: none;
+}
+
+.questionIntitule:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+  border-radius: var(--ls-radius-md);
+}
+
+.chevron {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: var(--ls-or-sombre);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.question[open] .chevron {
+  transform: rotate(180deg);
+}
+
+.reponse {
+  padding: 0 var(--ls-space-4) var(--ls-space-4);
+  color: var(--ls-text);
+  line-height: 1.6;
+}
+
+.reponse p {
+  margin: 0;
+  max-width: 68ch;
+}
+
+.reponse .lien {
+  margin-top: var(--ls-space-1);
+}
+
+@media (min-width: 768px) {
+  .faqCorps {
+    padding: var(--ls-space-7) var(--ls-space-6) var(--ls-space-8);
+  }
+}
+
+@media (min-width: 1024px) {
+  /* Le titre du thème à gauche, ses questions à droite. */
+  .theme {
+    display: grid;
+    grid-template-columns: 14rem minmax(0, 1fr);
+    gap: var(--ls-space-6);
+    align-items: start;
+  }
+
+  .themeTitre {
+    padding-top: var(--ls-space-2);
+  }
+}
+
+/* Micro-interaction d'ADR-045 : le chevron tourne, rien d'autre ne bouge. */
+@media (prefers-reduced-motion: no-preference) {
+  .chevron {
+    transition: transform var(--ls-duration-base) var(--ls-easing-sortie);
   }
 }
 
