@@ -7,9 +7,14 @@
  * decrivait.
  *
  * LE TON VIENT DE L'EXPLOITANTE, recueilli en seance : signature « L'atelier
- * Lune-soleil », vouvoiement, « article » et jamais « bijou », « nous » et
- * jamais « je ». Trace dans `docs/prive/REPONSES-EXPLOITANTE.md`, hors depot.
- * Ne pas reecrire un texte sans connaitre ces consignes, un test les fige.
+ * Lune-soleil », vouvoiement, « article » et jamais « bijou », et jamais
+ * « je ». Trace dans `docs/prive/REPONSES-EXPLOITANTE.md`, hors depot. Ne pas
+ * reecrire un texte sans connaitre ces consignes, un test les fige.
+ *
+ * LE « NOUS » DE LA SEANCE EST REMPLACE PAR « L'ATELIER », arbitrage de
+ * Christophe du 7 octobre 2026, LS-286 : l'exploitante exerce seule, et un
+ * « nous » decrit une entreprise qui n'existe pas. La consigne « jamais je »
+ * tient toujours, « l'atelier » la respecte.
  *
  * F-MAIL-02, LA FACTURE, N'A PAS DE MODELE ET CE N'EST PAS UN OUBLI : elle est
  * portee par le lien signe de `commande-confirmee`, permanent et personnel.
@@ -346,7 +351,7 @@ const RENDUS: Record<ModeleEmail, (message: MessageEmail) => MessageRendu> = {
         "",
         "Les frais de retour sont à votre charge.",
         "",
-        "Dès que votre colis parvient à l'atelier, il procède au remboursement.",
+        "Dès que votre colis lui parvient, l'atelier procède au remboursement.",
         "",
         "Répondez simplement à ce message pour toute question.",
         "",

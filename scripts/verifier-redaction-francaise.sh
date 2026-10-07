@@ -139,8 +139,14 @@ echo "Fichiers d'interface examinés : $nb_fichiers"
 # cinquantaine de phrases, pages légales et emails compris, faute de contrôle.
 #
 # LA PORTÉE EST CE QUE LIT UN CLIENT : les écrans de la boutique, les
-# composants, les pages d'erreur de la racine et les emails. L'administration
-# est exclue, ses textes s'adressent à l'exploitante.
+# composants, les pages d'erreur et le layout de la racine, les emails, les
+# factures PDF, les métadonnées et les mentions de rétractation. Les quatre
+# derniers manquaient à la première version, relevé par `ls-frontend-revue`.
+# L'administration est exclue, ses textes s'adressent à l'exploitante.
+#
+# LIMITE CONNUE : une ligne qui COMMENCE par un commentaire est retirée
+# entière, donc un texte posé après `{/* … */}` sur la même ligne échappe au
+# motif. Prettier ne produit pas cette forme dans ce dépôt.
 #
 # LES COMMENTAIRES SONT RETIRÉS AVANT LA RECHERCHE, comme au sens 2 : ils
 # emploient légitimement « nous » pour parler de l'équipe de développement.
@@ -152,7 +158,7 @@ while IFS= read -r fichier; do
   nb_publics=$((nb_publics + 1))
 
   trouve=$(perl -pe 's{^\s*(?://|\*|/\*|\{/\*).*$}{}' "$fichier" \
-    | grep -nwE "[Nn]ous|[Nn]otre|[Nn]os" 2>/dev/null || true)
+    | grep -nwiE "nous|notre|nos" 2>/dev/null || true)
 
   if [ -n "$trouve" ]; then
     court=${fichier#"$RACINE"/}
@@ -164,8 +170,10 @@ while IFS= read -r fichier; do
   fi
 done <<EOF
 $(find "$RACINE/src/app/(boutique)" "$RACINE/src/components" \
-    "$RACINE/src/integrations/email" \
+    "$RACINE/src/integrations/email" "$RACINE/src/integrations/pdf" \
     "$RACINE/src/app/global-error.tsx" "$RACINE/src/app/not-found.tsx" \
+    "$RACINE/src/app/layout.tsx" "$RACINE/src/lib/seo.ts" \
+    "$RACINE/src/lib/mentions-retractation.ts" \
     \( -name "*.tsx" -o -name "*.ts" \) ! -name "*.test.*" 2>/dev/null | sort)
 EOF
 

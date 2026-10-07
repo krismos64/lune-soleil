@@ -114,7 +114,7 @@ export default async function PageRetractation({
             <Link href="/contact" className={styles.lien}>
               Contact
             </Link>
-            , elle sera examinée.
+            , votre situation sera examinée.
           </p>
         </div>
         {retour}

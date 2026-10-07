@@ -16,7 +16,8 @@
  *
  * LES TEXTES SONT CEUX VALIDES PAR L'EXPLOITANTE le 12 septembre 2026 :
  * signature « L'atelier Lune-soleil », vouvoiement, « article » et jamais
- * « bijou », « nous » et jamais « je ».
+ * « bijou », et jamais « je ». Le « nous » validé ce jour-là est devenu
+ * « l'atelier », arbitrage de Christophe du 7 octobre 2026, LS-286.
  */
 import { describe, expect, it } from "vitest";
 
