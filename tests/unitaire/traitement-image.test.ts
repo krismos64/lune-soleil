@@ -17,8 +17,12 @@
  * AUCUNE BASE NI DOCKER : le traitement est une fonction pure de bout en bout,
  * elle recoit des octets et rend des octets.
  */
+import { gzipSync } from "node:zlib";
+
 import { describe, expect, it } from "vitest";
 import sharp from "sharp";
+
+import { CHARGEURS_BLOQUES } from "@/integrations/medias/chargeurs-bloques";
 
 import {
   FichierNonImageError,
@@ -369,6 +373,39 @@ describe("refus des fichiers qui ne sont pas des photographies", () => {
   });
 
   /**
+   * AUCUN SVG N'ATTEINT LIBRSVG, LS-276. Les chargeurs SVG et PDF de libvips
+   * sont bloqués dès le chargement de `traitement.ts` : un SVG que la
+   * signature des 1024 premiers octets n'a pas vu est refusé par libvips
+   * SANS ÊTRE DÉCODÉ, chemin de GHSA-wq5f-xc86-pv6w. Ce test interroge `sharp`
+   * directement : c'est le blocage qu'il prouve, non le message.
+   *
+   * CES DEUX TESTS PRÉCÈDENT CELUI DU SECOND FILET, qui lève puis repose le
+   * blocage : placés après, ils trouveraient le blocage reposé par lui, et une
+   * mutation qui le retire du module resterait verte.
+   */
+  it("aucun SVG n'atteint librsvg, même hors de la fenêtre de signature", async () => {
+    const bourrage = `<!--${"x".repeat(1200)}-->`;
+    const svg = Buffer.from(
+      `${bourrage}\n<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>`,
+    );
+
+    await expect(sharp(svg).metadata()).rejects.toThrow();
+  });
+
+  it("refuse un SVG décalé ou compressé avec le message de format refusé", async () => {
+    const bourrage = `<!--${"x".repeat(2000)}-->`;
+    const svg = Buffer.from(
+      `<?xml version="1.0"?>${bourrage}<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>`,
+    );
+
+    for (const fichier of [svg, gzipSync(svg)]) {
+      const refus = traiterPhotographie(fichier);
+      await expect(refus).rejects.toThrow(FormatRefuseError);
+      await expect(refus).rejects.toThrow("Le format svg");
+    }
+  });
+
+  /**
    * LE SECOND FILET, ET LE CAS QUI LE JUSTIFIE.
    *
    * Le refus par signature n'inspecte que les 1024 PREMIERS OCTETS, pour ne pas
@@ -394,6 +431,32 @@ describe("refus des fichiers qui ne sont pas des photographies", () => {
     );
 
     await expect(traiterPhotographie(svg)).rejects.toThrow(FormatRefuseError);
+  });
+
+  /**
+   * LE SECOND FILET, ÉPROUVÉ SANS LE BLOCAGE, LS-276.
+   *
+   * Depuis que les chargeurs SVG sont bloqués, un SVG ne se décode plus et ce
+   * filet ne se déclenche plus en conditions normales : le test ci-dessus passe
+   * par le refus de libvips. Il reste la défense si le blocage manquait, et un
+   * filet que rien n'exerce se périme sans bruit, cas 75 du nocturne. Le
+   * blocage est donc levé le temps de ce test, puis reposé quoi qu'il arrive.
+   */
+  it("le second filet refuse un SVG décodé quand le blocage manque", async () => {
+    const bourrage = `<!--${"x".repeat(1200)}-->`;
+    const svg = Buffer.from(
+      `${bourrage}\n<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>`,
+    );
+
+    sharp.unblock({ operation: [...CHARGEURS_BLOQUES] });
+    try {
+      // Sans blocage, libvips décode bien le document : c'est ce qui rend ce
+      // filet nécessaire.
+      expect((await sharp(svg).metadata()).format).toBe("svg");
+      await expect(traiterPhotographie(svg)).rejects.toThrow(FormatRefuseError);
+    } finally {
+      sharp.block({ operation: [...CHARGEURS_BLOQUES] });
+    }
   });
 
   it("refuse un PDF", async () => {

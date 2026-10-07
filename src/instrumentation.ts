@@ -34,6 +34,21 @@
  */
 import { journaliserErreur } from "@/lib/journal";
 
+/**
+ * Appelée une fois au démarrage du serveur, avant la première requête,
+ * documentation embarquée de Next.js 16. LS-276 : les chargeurs SVG et PDF de
+ * libvips y sont bloqués pour tout le processus, ce qui couvre l'optimiseur de
+ * `next/image` autant que le téléversement. Import dynamique et runtime Node
+ * seulement : `sharp` est un binaire natif que l'Edge ne charge pas.
+ */
+export async function register(): Promise<void> {
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    const { bloquerChargeursRisques } =
+      await import("@/integrations/medias/chargeurs-bloques");
+    bloquerChargeursRisques();
+  }
+}
+
 export async function onRequestError(
   erreur: unknown,
   requete: { path: string; method: string },
