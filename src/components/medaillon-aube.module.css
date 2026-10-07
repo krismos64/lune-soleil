@@ -1,0 +1,178 @@
+/*
+ * Médaillon d'aube, LS-280, partagé par LS-282 et LS-283. ADR-045 amendé.
+ *
+ * SA TAILLE VIENT DE LA PAGE : il occupe la largeur de son conteneur, carré.
+ * Chaque page borne ce conteneur selon sa densité, l'aide large, le catalogue
+ * court pour ne pas repousser les bijoux.
+ *
+ * AUCUNE VALEUR HEXADÉCIMALE. L'ombre reprend `--ls-primary-hover` en
+ * composantes, faute de `color-mix` partout où le site est servi.
+ *
+ * LE MOUVEMENT EST TOUT ENTIER DANS LE BLOC `prefers-reduced-motion:
+ * no-preference` : hors de lui, le décor est dessiné et immobile. Le plus long
+ * enchaînement, la rotation des rayons, finit à 4,5 s, retard compris.
+ */
+
+.medaillon {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+.image {
+  position: absolute;
+  inset: 9%;
+  overflow: hidden;
+  border-radius: 50%;
+  box-shadow: 0 24px 50px -28px rgba(74, 42, 11, 0.55);
+}
+
+.image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.traces {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.anneau {
+  fill: none;
+  stroke: url(#medaillon-or);
+  stroke-width: 1.6;
+  stroke-dasharray: 1;
+}
+
+.anneauPointille {
+  fill: none;
+  stroke: var(--ls-accent-gold);
+  stroke-width: 0.8;
+  stroke-dasharray: 2 7;
+  opacity: 0.7;
+}
+
+.rayons {
+  fill: none;
+  stroke: url(#medaillon-or);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.trait {
+  stroke-dasharray: 1;
+}
+
+.astres {
+  fill: url(#medaillon-or);
+}
+
+/* Poussière d'or : positions fixes, règle des paillettes de frontend-design. */
+.poussiere span {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--ls-or-clair);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.poussiere span:nth-child(1) {
+  top: 20%;
+  left: 12%;
+}
+.poussiere span:nth-child(2) {
+  top: 44%;
+  left: 88%;
+}
+.poussiere span:nth-child(3) {
+  top: 88%;
+  left: 76%;
+}
+.poussiere span:nth-child(4) {
+  top: 64%;
+  left: 6%;
+}
+.poussiere span:nth-child(5) {
+  top: 2%;
+  left: 52%;
+}
+.poussiere span:nth-child(6) {
+  top: 12%;
+  left: 95%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .anneau {
+    animation: dessine 2400ms var(--ls-easing-sortie) both;
+  }
+
+  .trait {
+    animation: dessine 1600ms var(--ls-easing-sortie) both;
+    animation-delay: calc(900ms + var(--i, 0) * 100ms);
+  }
+
+  .rayons {
+    transform-origin: 200px 200px;
+    animation: rayonne 4200ms var(--ls-easing-sortie) 300ms both;
+  }
+
+  .eclat {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation:
+      eclot 900ms var(--ls-easing-sortie) both,
+      scintille 1600ms ease-in-out 1;
+    animation-delay:
+      calc(700ms + var(--i, 0) * 250ms), calc(1600ms + var(--i, 0) * 250ms);
+  }
+
+  .poussiere span {
+    animation: eclot 900ms ease both;
+  }
+
+  .poussiere span:nth-child(even) {
+    animation-delay: 600ms;
+  }
+}
+
+@keyframes dessine {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes rayonne {
+  from {
+    transform: rotate(-30deg);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes eclot {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes scintille {
+  50% {
+    opacity: 0.4;
+    transform: scale(0.75);
+  }
+}

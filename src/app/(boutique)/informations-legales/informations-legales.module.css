@@ -15,48 +15,150 @@
  * est bornee a 68 caracteres environ : une ligne de texte juridique qui traverse
  * un ecran de 1280 px se relit mal, et personne ne relit deux fois des mentions
  * legales.
+ *
+ * REFONDUE PAR LS-282, amendement d'ADR-045 : en-tête d'aube avec médaillon,
+ * sommaire latéral compact, sections en panneaux, icône tracée à l'entrée de
+ * chaque titre de section. LE CORPS DU TEXTE NE BOUGE JAMAIS ; ses règles
+ * (`.texte`, `.liste`, `.manquant`, `.definitions`) sont celles d'avant.
+ * Les panneaux sont blancs : `--ls-text-muted` y donne 5,19:1, et
+ * `--ls-accent-gold-deep` 5,04:1.
  */
 
 .page {
-  padding: var(--ls-space-4);
-  max-width: 48rem;
+  overflow-x: clip;
+}
+
+/*
+ * LA POLICE DU TITRE VIENT DU GABARIT GLOBAL, C43 : seule la taille et la
+ * couleur sont posées ici.
+ */
+.titre {
+  margin: 0;
+  color: var(--ls-primary-hover);
+  font-size: clamp(2rem, 7vw, 3.25rem);
+  line-height: 1.12;
+}
+
+/*
+ * DÉGRADÉ DE CIEL, amendement LS-282. `--ls-or-sombre` y tient 4,73:1 au
+ * point le plus sombre, `--ls-ciel-aube-haut`, et `--ls-text` 10,39:1.
+ */
+.tete {
+  padding: var(--ls-space-6) var(--ls-space-4) var(--ls-space-6);
+  background:
+    radial-gradient(
+      90% 70% at 80% 20%,
+      var(--ls-ciel-jour-haut) 0%,
+      transparent 60%
+    ),
+    linear-gradient(
+      180deg,
+      var(--ls-ciel-aube-haut) 0%,
+      var(--ls-ciel-jour-haut) 60%,
+      var(--ls-background) 100%
+    );
+}
+
+.teteGrille {
+  display: grid;
+  align-items: center;
+  gap: var(--ls-space-5);
+  max-width: 72rem;
   margin: 0 auto;
 }
 
-.titre {
-  margin: 0 0 var(--ls-space-4);
-  color: var(--ls-primary);
-  font-size: clamp(1.5rem, 5vw, 2.25rem);
+.surtitre {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-or-sombre);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.introduction {
+  max-width: 48ch;
+  margin: var(--ls-space-3) 0 0;
+  color: var(--ls-text);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+}
+
+/* Sous 768 px, le médaillon céderait la place aux rubriques : il n'existe pas. */
+.medaillon {
+  display: none;
+}
+
+.corps {
+  display: grid;
+  gap: var(--ls-space-5);
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: var(--ls-space-5) var(--ls-space-4) var(--ls-space-7);
+}
+
+.contenu {
+  display: grid;
+  gap: var(--ls-space-5);
+  min-width: 0;
+  max-width: 48rem;
 }
 
 /* FOND SABLE, DONC `--ls-primary` SUR LES LIENS, jamais le doré. */
 .sommaire {
-  margin-bottom: var(--ls-space-5);
-  padding: var(--ls-space-3);
-  background: var(--ls-surface-sand);
-  border-radius: var(--ls-radius-md);
+  padding: var(--ls-space-2);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-lg);
+  background: var(--ls-surface);
 }
 
 .listeSommaire {
-  list-style: none;
+  display: grid;
+  gap: 2px;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--ls-space-2) var(--ls-space-4);
+  list-style: none;
 }
 
 /* ZONE TACTILE DE 44 px sur chaque lien du sommaire. */
 .listeSommaire a {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  gap: var(--ls-space-3);
   min-height: var(--ls-touch-target);
+  padding: 0 var(--ls-space-3);
+  border-radius: var(--ls-radius-md);
   color: var(--ls-primary);
   text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.listeSommaire a:hover {
+  background: var(--ls-surface-sand);
+}
+
+.listeSommaire a:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+.iconeSommaire {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  fill: none;
+  stroke: var(--ls-or-sombre);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .section {
-  margin-bottom: var(--ls-space-5);
+  padding: var(--ls-space-5) var(--ls-space-4);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-lg);
+  background: var(--ls-surface);
+  scroll-margin-top: var(--ls-space-4);
 }
 
 /*
@@ -70,12 +172,35 @@
 }
 
 .titreSection {
-  margin: 0 0 var(--ls-space-3);
-  padding-bottom: var(--ls-space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--ls-space-3);
+  margin: 0 0 var(--ls-space-4);
+  padding-bottom: var(--ls-space-3);
   border-bottom: 1px solid var(--ls-border);
-  color: var(--ls-primary);
-  font-size: 1.375rem;
-  font-weight: 600;
+  color: var(--ls-primary-hover);
+  font-size: clamp(1.375rem, 4.5vw, 1.75rem);
+  font-weight: 500;
+}
+
+.iconeTitre {
+  flex: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0.375rem;
+  border-radius: 50%;
+  background: var(--ls-surface-sand);
+  fill: none;
+  stroke: var(--ls-or-sombre);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  overflow: visible;
+}
+
+/* Tracé dessiné d'emblée, animé seulement en mouvement autorisé. */
+.trait {
+  stroke-dasharray: 1;
 }
 
 .titreBloc {
@@ -170,5 +295,67 @@
 
   .definition dt {
     margin: 0;
+  }
+}
+
+@media (min-width: 768px) {
+  .tete {
+    padding: var(--ls-space-7) var(--ls-space-6);
+  }
+
+  .teteGrille {
+    grid-template-columns: 1fr 15rem;
+  }
+
+  .medaillon {
+    display: block;
+  }
+
+  .corps {
+    padding: var(--ls-space-6) var(--ls-space-6) var(--ls-space-8);
+  }
+
+  .section {
+    padding: var(--ls-space-6);
+  }
+}
+
+/*
+ * LE SOMMAIRE DEVIENT UNE COLONNE COLLANTE quand la mesure de lecture tient à
+ * côté de lui, critique de Codex : avant 1100 px, deux colonnes comprimeraient
+ * le texte. Il tient dans la hauteur de l'écran, six lignes de 44 px.
+ */
+@media (min-width: 1100px) {
+  .corps {
+    grid-template-columns: 15rem minmax(0, 48rem);
+    justify-content: center;
+    gap: var(--ls-space-7);
+  }
+
+  .sommaire {
+    position: sticky;
+    top: var(--ls-space-5);
+    align-self: start;
+  }
+}
+
+/*
+ * LE MOUVEMENT, ADR-045 amendé par LS-282 : seul le tracé de l'icône de
+ * chaque titre de section se dessine, à l'entrée du titre dans l'écran, en
+ * 1,9 s au plus. Le texte, le sommaire et les panneaux ne bougent pas.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .trait {
+    animation: dessine 1400ms var(--ls-easing-sortie) both;
+    animation-delay: calc(150ms + var(--i, 0) * 350ms);
+  }
+}
+
+@keyframes dessine {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
   }
 }
