@@ -56,6 +56,14 @@ test.describe("mouvement autorisé", () => {
   test("chaque décor s'anime à son entrée puis s'arrête, le contenu jamais", async ({
     page,
   }) => {
+    /*
+     * CINQ SECONDES PAR DÉCOR, PAR CONSTRUCTION : `fin` tombe `DUREE_MAX_MS`
+     * après l'entrée dans l'écran, et la boucle attend chacun. À 320 px les
+     * décors ne se voient pas ensemble, et les dessins des thèmes de la FAQ
+     * (carnet du 7 octobre 2026) ont porté leur nombre au-delà de ce que les
+     * 30 secondes par défaut contiennent.
+     */
+    test.setTimeout(120_000);
     await page.goto("/aide");
 
     // Le titre est là et opaque dès l'arrivée, ADR-045 point 5.

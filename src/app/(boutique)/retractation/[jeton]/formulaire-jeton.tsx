@@ -88,8 +88,9 @@ export function FormulaireRetractationJeton({
           frais de retour sont à votre charge.
         </p>
         <p>
-          Dès que le colis parvient à l'atelier, ou dès que vous lui transmettez
-          une preuve de son expédition, l'atelier procède au remboursement.
+          Dès que le colis parvient à l&apos;atelier, ou dès que vous lui
+          transmettez une preuve de son expédition, l&apos;atelier procède au
+          remboursement.
         </p>
       </div>
     );
@@ -114,7 +115,7 @@ export function FormulaireRetractationJeton({
         </label>
         <p id="motif-aide" className={styles.aide}>
           Vous n&apos;avez pas à vous justifier. Ce champ aide simplement
-          l'atelier à progresser.
+          l&apos;atelier à progresser.
         </p>
         <textarea
           id="motif"

@@ -449,9 +449,9 @@ export default async function PageInformationsLegales() {
             ) : (
               <>
                 <p className={styles.texte}>
-                  En cas de litige non résolu directement avec l'atelier, vous
-                  pouvez recourir gratuitement au médiateur de la consommation
-                  suivant :
+                  En cas de litige non résolu directement avec l&apos;atelier,
+                  vous pouvez recourir gratuitement au médiateur de la
+                  consommation suivant :
                 </p>
                 <dl className={styles.definitions}>
                   <div className={styles.definition}>
