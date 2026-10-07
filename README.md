@@ -46,8 +46,8 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 
 **250 tickets terminés sur 277 hors epics**, les deux termes relevés dans Jira
 le **7 octobre 2026**, LS-274, LS-276, LS-280 à LS-286 closes, et jamais
-dérivés l'un de l'autre : 26 tickets non terminés relevés séparément, 11 En
-cours et 15 À faire, et 275 − 26 retombe bien sur 249. **La recette de l'exploitante du 23 septembre** a ouvert
+dérivés l'un de l'autre : 27 tickets non terminés relevés séparément, 12 En
+cours et 15 À faire, et 277 − 27 retombe bien sur 250. **La recette de l'exploitante du 23 septembre** a ouvert
 LS-238 à LS-248, tous clos le jour même.
 
 **Le chantier du nocturne est clos le 24 septembre 2026** : LS-233, LS-235,
