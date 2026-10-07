@@ -1038,6 +1038,12 @@ professionnel « peut différer le remboursement jusqu'à récupération des bie
 **ou** jusqu'à ce que le consommateur ait fourni une preuve de l'expédition de
 ces biens, **la date retenue étant celle du premier de ces faits** ».
 
+**Le premier fait lève une faculté de différer, il ne fait partir aucun délai**,
+précision de LS-287. L'alinéa 1 fixe le remboursement au plus tard quatorze
+jours après l'information de la décision ; le premier des deux faits ne permet
+que d'attendre jusqu'à lui. Le compter comme point de départ d'un nouveau délai
+de quatorze jours promettait jusqu'à quatorze jours de plus que la loi.
+
 Le modèle posait l'inverse, un remboursement conditionné à la seule réception.
 
 Le scénario que cela produisait est banal. Le client renvoie le colis le 3 et
