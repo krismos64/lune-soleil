@@ -398,6 +398,11 @@ export async function rembourser(
       return { statut: "REFUSE_PRESTATAIRE" };
     }
 
+    // Un remboursement commercial ne passe aucun `avantAppel` : issue absente.
+    if (issue.statut === "ANNULE_AVANT_APPEL") {
+      return { statut: "INDISPONIBLE" };
+    }
+
     return issue;
   } catch (erreur) {
     /*

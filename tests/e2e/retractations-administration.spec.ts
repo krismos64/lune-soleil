@@ -76,11 +76,21 @@ test.beforeEach(async ({}, infos) => {
 test.afterEach(async () => {
   if (lecteurDemandePartagee === null) return;
 
-  await lecteurDemandePartagee.query("SELECT pg_advisory_unlock_shared($1)", [
-    VERROU_DEMANDE_PARTAGEE,
-  ]);
-  await lecteurDemandePartagee.end();
+  const lecteur = lecteurDemandePartagee;
   lecteurDemandePartagee = null;
+
+  /*
+   * `end()` DANS UN `finally` : fermer la connexion rend le verrou de toute
+   * facon, meme si le deverrouillage explicite leve. Sans lui, un echec ici
+   * laisserait un verrou tenu jusqu'a la fin du worker.
+   */
+  try {
+    await lecteur.query("SELECT pg_advisory_unlock_shared($1)", [
+      VERROU_DEMANDE_PARTAGEE,
+    ]);
+  } finally {
+    await lecteur.end();
+  }
 });
 
 /**
@@ -505,37 +515,49 @@ test.describe(TITRE_GROUPE_AVOIR, () => {
   });
 
   test.afterAll(async () => {
-    await avecClient(async (client) => {
-      /*
-       * L'AVOIR PART AVANT LE STATUT : la cle etrangere est en `SetNull`, donc
-       * l'ordre inverse laisserait un avoir orphelin que l'ecran des factures
-       * compterait.
-       */
-      await client.query(`DELETE FROM avoir WHERE id = $1`, [
-        DEMANDE_AVEC_AVOIR.avoirId,
-      ]);
+    /*
+     * LE VERROU SE REND DANS UN `finally`, revue de LS-288 : si la restauration
+     * levait, un verrou exclusif tenu jusqu'a la fin du worker bloquerait les
+     * tests des autres largeurs, qui echoueraient en cascade sous leur propre
+     * nom plutot que sous celui de la vraie cause.
+     */
+    try {
+      await avecClient(async (client) => {
+        /*
+         * L'AVOIR PART AVANT LE STATUT : la cle etrangere est en `SetNull`, donc
+         * l'ordre inverse laisserait un avoir orphelin que l'ecran des factures
+         * compterait.
+         */
+        await client.query(`DELETE FROM avoir WHERE id = $1`, [
+          DEMANDE_AVEC_AVOIR.avoirId,
+        ]);
 
-      /*
-       * LA DEMANDE PARTAGEE RETROUVE SON ETAT, `RETOUR_ATTENDU` avec son colis
-       * recu : c'est celui dont les quatre tests ci-dessus dependent, et le
-       * laisser `REMBOURSEE` les ferait echouer a l'execution suivante.
-       */
-      await client.query(
-        `UPDATE demande_retractation
+        /*
+         * LA DEMANDE PARTAGEE RETROUVE SON ETAT, `RETOUR_ATTENDU` avec son colis
+         * recu : c'est celui dont les quatre tests ci-dessus dependent, et le
+         * laisser `REMBOURSEE` les ferait echouer a l'execution suivante.
+         */
+        await client.query(
+          `UPDATE demande_retractation
        SET statut = 'RETOUR_ATTENDU'::"StatutRetractation",
            montant_rembourse_centimes = NULL
        WHERE id = $1`,
-        [DEMANDE_RETRACTATION_TEST.demandeId],
-      );
-    });
-
-    /* Le verrou ne se rend qu'une fois l'état partagé restauré. */
-    if (ecrivain !== null) {
-      await ecrivain.query("SELECT pg_advisory_unlock($1)", [
-        VERROU_DEMANDE_PARTAGEE,
-      ]);
-      await ecrivain.end();
+          [DEMANDE_RETRACTATION_TEST.demandeId],
+        );
+      });
+    } finally {
+      /* Le verrou ne se rend qu'une fois l'état partagé restauré, ou abandonné. */
+      const connexion = ecrivain;
       ecrivain = null;
+      if (connexion !== null) {
+        try {
+          await connexion.query("SELECT pg_advisory_unlock($1)", [
+            VERROU_DEMANDE_PARTAGEE,
+          ]);
+        } finally {
+          await connexion.end();
+        }
+      }
     }
   });
 

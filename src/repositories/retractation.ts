@@ -504,3 +504,41 @@ export async function listerDemandes(
     totalCentimes: demande.commande.totalCentimes,
   }));
 }
+
+/**
+ * Verrouille la facture de la commande et dit si un remboursement est en vol
+ * ou deja fait pour cette demande, revue de LS-288.
+ *
+ * LE MEME VERROU QUE LA RESERVATION D'UN REMBOURSEMENT, `FOR UPDATE` sur la
+ * ligne de facture, `reserverIntentionRemboursement`. Le refus d'une
+ * retractation le prend avant d'ecrire `REFUSEE` : une intention reservee est
+ * un appel au prestataire parti ou sur le point de partir, et refuser par-dessus
+ * laissait l'argent rendu sur une demande « refusee ».
+ *
+ * A APPELER DANS UNE TRANSACTION, celle qui ecrit ensuite le refus : hors
+ * transaction, le verrou tomberait aussitot pris.
+ */
+export async function remboursementEngageSousVerrou(
+  transaction: ClientBase,
+  parametres: { commandeId: string; demandeId: string },
+): Promise<boolean> {
+  const [facture] = await transaction.$queryRaw<{ id: string }[]>`
+    SELECT id FROM facture WHERE commande_id = ${parametres.commandeId}
+    FOR UPDATE
+  `;
+
+  if (facture === undefined) {
+    return false;
+  }
+
+  // SUCCESSIVES ET NON `Promise.all` : deux requetes concurrentes sur le meme
+  // client de transaction levent, fiche « Promise.all, deux formes opposees ».
+  const enVol = await transaction.intentionRemboursement.count({
+    where: { factureId: facture.id, aboutieA: null },
+  });
+  const avoirs = await transaction.avoir.count({
+    where: { demandeRetractationId: parametres.demandeId },
+  });
+
+  return enVol > 0 || avoirs > 0;
+}
