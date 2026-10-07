@@ -23,8 +23,9 @@
 #   deployer.sh <sha-de-40-caracteres>
 #   deployer.sh --retour-arriere            revient à l'image précédente
 #   deployer.sh --etat                      affiche l'état sans rien changer
-#   deployer.sh --recreer                   recrée l'application sur l'image en
-#                                           service, pour relire l'environnement
+#   deployer.sh --recreer 0 <empreinte>     recrée l'application et le cron sur
+#                                           l'image en service, pour relire
+#                                           l'environnement
 
 set -euo pipefail
 
@@ -173,40 +174,68 @@ if [ "$ARGUMENT" = "--etat" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# --recreer : recrée `app` SUR L'IMAGE EN SERVICE, pour relire l'environnement.
-# LS-289.
+# --recreer : recrée `app` ET `cron` SUR L'IMAGE EN SERVICE, pour relire
+# l'environnement. LS-289.
 #
 # CE QU'ELLE FERME. Ni `docker restart` ni `compose up -d` ne relisent
-# `$FICHIER_ENV` : le conteneur garde l'environnement figé à sa création, et
+# `$FICHIER_ENV` : un conteneur garde l'environnement figé à sa création, et
 # Compose ne compare pas le CONTENU du fichier. Redéployer le SHA en service
 # sort plus haut en « rien à faire ». Une variable changée exigeait donc de
 # sortir de l'outil prévu pour taper `--force-recreate` à la main, ce qui s'est
 # produit le 7 octobre 2026 en publiant l'identité légale.
 #
+# `cron` EST RECRÉÉ AVEC `app`, revue de LS-289 : il lit le même fichier, et
+# `CRON_SHARED_SECRET` doit être identique des deux côtés. Un secret révoqué
+# relu par `app` seule ferait refuser chaque appel du cron, libération des
+# réservations et réconciliation des paiements comprises, pendant que la santé
+# resterait verte. Aucun `--build` : l'image `lune-soleil-cron:local` existe
+# sur la machine, Compose la réutilise.
+#
 # CE QU'ELLE NE FAIT PAS : tirer une image, contrôler le schéma, écrire
 # l'historique ou purger. L'image ne change pas, donc il n'y a ni migration
-# nouvelle ni version à inscrire, et une ligne d'historique ferait viser au
-# retour arrière l'image même qui tourne. `--no-deps` laisse la base intacte,
-# et aucun `--build`, pour la raison écrite sur `composer`.
+# nouvelle ni version à inscrire. `--no-deps` laisse la base intacte.
+#
+# DEUX GARDES AVANT TOUT GESTE, revue de LS-289 :
+#   - l'IMAGE_TAG du fichier doit être l'image que le conteneur sert. Le fichier
+#     est celui qu'on vient d'éditer à la main : un tag modifié par erreur
+#     ferait basculer la production sans sauvegarde, sans contrôle du schéma ni
+#     historique. Changer d'image passe par le déploiement normal ;
+#   - la composition de la machine doit être celle du dépôt, comme au
+#     déploiement : elle porte les limites qui protègent SmartPlanning.
 #
 # AUCUN RETOUR ARRIÈRE AUTOMATIQUE, et c'est le seul écart avec le déploiement :
 # l'image est la même, c'est l'ENVIRONNEMENT qui a changé, et ce script n'en
-# garde aucune version antérieure. Un échec se dit, avec la piste à suivre.
+# garde aucune version antérieure. Compose supprime l'ancien conteneur : un
+# échec laisse le site arrêté jusqu'à la restauration du fichier, d'où la copie
+# datée qu'EXPLOITATION.md demande avant toute modification.
 # ---------------------------------------------------------------------------
 
 if [ "$ARGUMENT" = "--recreer" ]; then
   SHA_EN_SERVICE=$(tag_courant)
   [ -n "$SHA_EN_SERVICE" ] || echouer "IMAGE_TAG absent de $FICHIER_ENV, rien à recréer."
 
-  journaliser "RECRÉATION de l'application sur l'image en service $SHA_EN_SERVICE"
+  IMAGE_SERVIE=$(docker inspect lune-soleil-app --format '{{.Config.Image}}' 2>/dev/null || true)
+  if [ "$IMAGE_SERVIE" != "$IMAGE_DEPOT:$SHA_EN_SERVICE" ]; then
+    echouer "IMAGE_TAG vaut $SHA_EN_SERVICE dans $FICHIER_ENV, mais le conteneur sert '${IMAGE_SERVIE:-aucune image}'. Changer d'image passe par le déploiement normal, avec sauvegarde et contrôle du schéma. Rien n'a été touché."
+  fi
 
-  if ! composer up -d --no-deps --force-recreate app >/dev/null 2>&1; then
-    echouer "la recréation a échoué. L'image n'a pas changé : revoir la dernière modification de $FICHIER_ENV."
+  if [ -n "${EMPREINTE_COMPOSE:-}" ]; then
+    EMPREINTE_MACHINE=$(sha256sum "$COMPOSE" | cut -d' ' -f1)
+    if [ "$EMPREINTE_MACHINE" != "$EMPREINTE_COMPOSE" ]; then
+      echouer "la composition de la machine diffère de celle du dépôt. Les limites de ressources protègent SmartPlanning : recopier docker-compose.production.yml. Rien n'a été touché."
+    fi
+    journaliser "  composition identique au dépôt"
+  fi
+
+  journaliser "RECRÉATION de l'application et du cron sur l'image en service $SHA_EN_SERVICE"
+
+  if ! composer up -d --no-deps --force-recreate app cron >/dev/null 2>&1; then
+    echouer "la recréation a échoué. L'image n'a pas changé : revoir la dernière modification de $FICHIER_ENV, et restaurer sa copie datée."
   fi
 
   journaliser "  attente d'un conteneur sain, $DELAI_SANTE s au maximum"
   if ! attendre_conteneur_sain; then
-    echouer "le conteneur recréé est '$ETAT' après $ECOULE s. L'image n'a pas changé : revoir la dernière modification de $FICHIER_ENV."
+    echouer "le conteneur recréé est '$ETAT' après $ECOULE s. L'image n'a pas changé : revoir la dernière modification de $FICHIER_ENV, et restaurer sa copie datée."
   fi
   journaliser "  conteneur sain après $ECOULE s"
 

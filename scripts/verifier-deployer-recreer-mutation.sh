@@ -5,7 +5,7 @@
 # dépôt : rien n'est à restaurer, donc rien ne peut être perdu, à la
 # différence des preuves qui mutent en place et restaurent par `git checkout`.
 #
-# SEPT MUTATIONS, une par sens du contrôle, plus une GARDE : le contrôle doit
+# UNE MUTATION PAR SENS du contrôle, plus une GARDE : le contrôle doit
 # échouer sur le script d'avant LS-289, qui n'a pas l'action.
 #
 # CHAQUE MUTATION EST VÉRIFIÉE EFFECTIVE avant d'être jugée : une expression
@@ -42,7 +42,7 @@ cas() {
   perl -0pi -e "$expression" "$BAC/mute.sh"
 
   if cmp -s "$SOURCE" "$BAC/mute.sh"; then
-    echo "  RATE  $nom -> la mutation ne modifie rien, l'expression est périmée"
+    echo "  RATE  $nom -> la mutation n'a rien modifié, l'expression est périmée"
     echecs=$((echecs + 1))
     return
   fi
@@ -64,7 +64,7 @@ cas() {
 }
 
 cas "--force-recreate retiré" \
-  's/up -d --no-deps --force-recreate app >\/dev\/null 2>&1; then\n    echouer "la recréation/up -d --no-deps app >\/dev\/null 2>&1; then\n    echouer "la recréation/' \
+  's/up -d --no-deps --force-recreate app cron >\/dev\/null/up -d --no-deps app cron >\/dev\/null/' \
   "ne demande pas"
 
 cas "historique écrit à la recréation" \
@@ -86,6 +86,18 @@ cas "domaine non vérifié à la recréation" \
 cas "santé cassée au déploiement seulement" \
   's/if ! attendre_conteneur_sain; then\n  journaliser "  état/if true; then\n  journaliser "  état/' \
   "ne va plus au bout"
+
+cas "cron oublié à la recréation" \
+  's/up -d --no-deps --force-recreate app cron >\/dev\/null/up -d --no-deps --force-recreate app >\/dev\/null/' \
+  "ne demande pas"
+
+cas "garde de l'image servie retirée" \
+  's/  if \[ "\$IMAGE_SERVIE" != "\$IMAGE_DEPOT:\$SHA_EN_SERVICE" \]; then/  if false; then/' \
+  "IMAGE_TAG divergent"
+
+cas "empreinte de la composition ignorée à la recréation" \
+  's/      echouer "la composition de la machine diffère de celle du dépôt\. Les limites de ressources protègent SmartPlanning : recopier docker-compose\.production\.yml\. Rien n.a été touché\."/      true/' \
+  "composition divergente"
 
 cas "fichier d'environnement réécrit à la recréation" \
   's/(  journaliser "RECRÉATION de)/  printf "X=1\\n" >> "\$FICHIER_ENV"\n$1/' \

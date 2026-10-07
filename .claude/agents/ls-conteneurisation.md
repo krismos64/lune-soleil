@@ -103,7 +103,7 @@ existe et propose des modifications.
 | Fichier | Ce qu'il porte |
 |---|---|
 | `docker-compose.production.yml` | les trois services, leurs limites, leurs volumes |
-| `deploiement/deployer.sh` | **la bascule, le retour arrière et l'état**, LS-138, et **la recréation sur l'image en service** pour relire l'environnement, LS-289, éprouvée par `scripts/verifier-deployer-recreer.sh` |
+| `deploiement/deployer.sh` | **la bascule, le retour arrière et l'état**, LS-138, et **la recréation de `app` et `cron` sur l'image en service** pour relire l'environnement, LS-289, éprouvée par `scripts/verifier-deployer-recreer.sh` |
 | `.github/workflows/deployer.yml` | ce qui l'appelle, en déclenchement **manuel** |
 | `.github/workflows/ecart-production.yml` | le **signal** qu'une image publiée attend son déploiement, LS-220, nocturne à 3 h UTC. Il lit le SHA en service par `deployer.sh --etat` sur la clé enfermée, et n'ouvre une issue que si une **migration** attend ou s'il n'a pas pu conclure |
 | `deploiement/sauvegarder-base.sh` | la sauvegarde quotidienne, base **et** fichiers, **chiffrée** depuis LS-107 |
