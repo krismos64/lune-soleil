@@ -14,8 +14,8 @@
  * PAS DE CONFIRMATION : publier et archiver sont reversibles depuis la fiche
  * de chaque produit, et le nombre coche est dans le libelle des boutons.
  *
- * LE RETRAIT EN A UNE, LS-279 : seul le developpeur le defait. Il n'existe que
- * dans la vue des archives, la seule ou il peut reussir, et la confirmation
+ * LE RETRAIT EN A UNE, LS-279 : seul le développeur le défait. Il n'existe que
+ * dans la vue des archivés, la seule où il peut réussir, et la confirmation
  * nomme chaque article avant que rien ne parte.
  */
 import { useRouter } from "next/navigation";
@@ -49,6 +49,8 @@ function raison(refus: RefusGroupe): string {
       return "déjà dans cet état";
     case "NON_ARCHIVE":
       return "n'est plus archivé, republié entre-temps";
+    case "DEJA_RETIRE":
+      return "déjà retiré de votre espace";
     case "INTROUVABLE":
       return "n'existe plus";
   }

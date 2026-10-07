@@ -617,7 +617,11 @@ export type RefusGroupe = {
   id: string;
   nom: string;
   raison:
-    "NON_PUBLIABLE" | "DEJA_DANS_CET_ETAT" | "NON_ARCHIVE" | "INTROUVABLE";
+    | "NON_PUBLIABLE"
+    | "DEJA_DANS_CET_ETAT"
+    | "NON_ARCHIVE"
+    | "DEJA_RETIRE"
+    | "INTROUVABLE";
   motifs: MotifNonPubliable[];
 };
 
@@ -658,12 +662,26 @@ export async function publierOuArchiverProduits({
 }
 
 /**
- * Retire une selection d'archives de l'espace d'administration, LS-279.
+ * Un produit déjà retiré, distingué d'un produit inconnu pour le bilan
+ * groupé, LS-279 : dire « n'existe plus » contredirait la confirmation, qui
+ * promet que rien n'est effacé.
+ */
+class ProduitDejaRetireError extends Error {
+  constructor() {
+    super("Produit déjà retiré de l'espace d'administration.");
+    this.name = "ProduitDejaRetireError";
+  }
+}
+
+/**
+ * Retire une sélection d'archivés de l'espace d'administration, LS-279.
  *
- * LE GESTE UNITAIRE DE LS-266 POUR CHAQUE PRODUIT : ecriture conditionnelle,
- * C45 en base. Une transition refusee veut dire ici que le produit n'est plus
- * archive, republie depuis un autre onglet : le bilan le nomme ainsi, et non
- * « deja dans cet etat », qui serait faux.
+ * LE GESTE UNITAIRE DE LS-266 POUR CHAQUE PRODUIT : écriture conditionnelle,
+ * C45 en base. Une transition refusée veut dire ici que le produit n'est plus
+ * archivé, republié depuis un autre onglet : le bilan le nomme ainsi, et non
+ * « déjà dans cet état », qui serait faux. Un produit introuvable est relu
+ * pour distinguer « déjà retiré », deux onglets ouverts, d'un identifiant
+ * inconnu.
  *
  * L'AUTORISATION N'EST PAS FAITE ICI, invariant 2 : l'action appelle
  * `exigerRole` avant.
@@ -675,17 +693,29 @@ export async function retirerProduitsDeLEspace({
 }): Promise<BilanGroupe> {
   return appliquerAChaqueProduit(
     produitIds,
-    retirerProduitDeLEspace,
+    async (produitId) => {
+      try {
+        await retirerProduitDeLEspace(produitId);
+      } catch (erreur) {
+        if (
+          erreur instanceof ProduitIntrouvableError &&
+          (await depot.lireEtatPublication(prisma, produitId))?.retireA != null
+        ) {
+          throw new ProduitDejaRetireError();
+        }
+        throw erreur;
+      }
+    },
     "NON_ARCHIVE",
   );
 }
 
 /**
- * La boucle commune aux actions groupees, LS-242 puis LS-279.
+ * La boucle commune aux actions groupées, LS-242 puis LS-279.
  *
- * UNE TRANSACTION PAR PRODUIT, pas une pour la selection : un refus n'annule
- * pas les gestes voisins, qui sont chacun legitimes. `refusTransition` nomme
- * ce que veut dire une transition refusee pour CE geste.
+ * UNE TRANSACTION PAR PRODUIT, pas une pour la sélection : un refus n'annule
+ * pas les gestes voisins, qui sont chacun légitimes. `refusTransition` nomme
+ * ce que veut dire une transition refusée pour CE geste.
  */
 async function appliquerAChaqueProduit(
   produitIds: unknown,
@@ -705,6 +735,8 @@ async function appliquerAChaqueProduit(
         refus.push({ id, raison: "NON_PUBLIABLE", motifs: erreur.motifs });
       } else if (erreur instanceof TransitionProduitInvalideError) {
         refus.push({ id, raison: refusTransition, motifs: [] });
+      } else if (erreur instanceof ProduitDejaRetireError) {
+        refus.push({ id, raison: "DEJA_RETIRE", motifs: [] });
       } else if (erreur instanceof ProduitIntrouvableError) {
         refus.push({ id, raison: "INTROUVABLE", motifs: [] });
       } else {
