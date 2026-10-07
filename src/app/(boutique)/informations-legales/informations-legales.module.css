@@ -63,7 +63,8 @@
   display: grid;
   align-items: center;
   gap: var(--ls-space-5);
-  max-width: 72rem;
+  /* Sommaire 15rem, gouttière 3rem et texte 48rem : les deux bords coïncident. */
+  max-width: 66rem;
   margin: 0 auto;
 }
 
@@ -92,8 +93,11 @@
 .corps {
   display: grid;
   gap: var(--ls-space-5);
-  max-width: 72rem;
+  /* Sommaire 15rem, gouttière 3rem et texte 48rem : les deux bords coïncident. */
+  max-width: 66rem;
   margin: 0 auto;
+  /* Le padding s'ajoute à la largeur, comme celui de l'en-tête. */
+  box-sizing: content-box;
   padding: var(--ls-space-5) var(--ls-space-4) var(--ls-space-7);
 }
 
