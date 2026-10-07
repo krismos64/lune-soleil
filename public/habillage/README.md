@@ -15,6 +15,15 @@ ADR-007, sont televersees par l'administration et passent par la chaine de
 traitement qui retire les metadonnees EXIF. Mettre une photo de bijou vendable
 ici la sortirait de ce circuit, et notamment du retrait de la geolocalisation.
 
+## aide-table-atelier.jpg, carnet des questions fréquentes
+
+**Ajouté le 7 octobre 2026**, LS-26 : aquarelle de la marge du carnet des
+questions fréquentes de l'aide, ADR-045 amendé. **Image générée par Codex**,
+rognée de sa marge de papier et réécrite par `sharp` en 900 x 900, **sans
+métadonnées** (ni EXIF, ni XMP, ni ICC), 120 ko. Une table d'atelier à l'aube,
+une feuille vierge, un pinceau et une coupelle de pigments : **aucun bijou,
+aucun texte, aucune personne**. Rendue à partir de 1024 px seulement.
+
 ## legales-lettre-aube.jpg et catalogue-ecrin-aube.jpg, médaillons
 
 **Ajoutés le 7 octobre 2026**, LS-282 et LS-283 : aquarelles des médaillons
