@@ -2993,6 +2993,28 @@ mute "$TEST_COMPTABILITE" 's/    const depuis = new Date\(\);\n\n    const vue =
 cas "lecture comptable privee de sa fenetre de periode" integration \
   "rend une liste vide quand aucune piece n'a ete emise dans la periode"
 
+
+# Cas LS-288, la course entre remboursement et refus d'une retractation.
+#
+# Pendant l'appel au prestataire, la demande restait refusable : deux onglets
+# rendaient l'argent sur une demande « refusee ». Trois defenses distinctes,
+# un cas chacune, plus la trace d'audit de la preuve d'expedition.
+mute "$TRAITEMENT_RETRACTATION" 's/    if \(\n      await remboursementEngageSousVerrou\(/    if (\n      false \&\& await remboursementEngageSousVerrou(/'
+cas "refus d'une retractation sans le verrou de facture" integration \
+  "refuse le refus tant qu'un remboursement est en vol"
+
+mute "$SERVICE_AVOIR" 's/if \(avantAppel !== undefined && !\(await avantAppel\(\)\)\)/if (false)/'
+cas "remboursement sans controle avant l'appel au prestataire" integration \
+  "renonce avant l'appel si la demande a ete refusee entre-temps"
+
+mute "$TRAITEMENT_RETRACTATION" 's/  if \(!appliquee\) \{\n    await leverAlerteCritique/  if (false) {\n    await leverAlerteCritique/'
+cas "transition finale de remboursement ignoree sans alerte" integration \
+  "alerte si la demande quitte les statuts remboursables pendant l'appel"
+
+mute "$TRAITEMENT_RETRACTATION" 's/    if \(transition\.appliquee\) \{\n      await ecrireAudit/    if (false) {\n      await ecrireAudit/'
+cas "saisie de preuve d'expedition non auditee" integration \
+  "enregistre une preuve des le depot, au jour fourni, et ouvre l'attente du retour"
+
 echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then

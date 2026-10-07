@@ -44,10 +44,10 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 7, V1 cible | LS-8 | 0 | **close** le 11 septembre 2026. LS-149 portait le dernier critère : ADR-044 **écarte l'assistant IA** du périmètre plutôt que de le reporter |
 | Contenus | LS-22 | 10 | **LS-284 est close** le 7 octobre 2026 : pas de création sur mesure, arbitrage de Christophe, la mention sort du contact. **LS-264 est close** le 4 octobre 2026 : « Notre univers », un « nous » de marque, devient **« L'atelier »** à l'adresse `/atelier`, l'ancienne redirigeant en 301, arbitrage de Christophe. **attend l'exploitante**, rien n'est faisable sans elle. **LS-32 est close** le 11 septembre 2026, la neutralité de genre étant désormais gardée par un contrôle. **LS-25 a livré ses textes** le 20 septembre 2026, récoltés auprès d'elle et validés par elle : `/notre-univers`, devenue `/atelier`, est déployée, et elle a révélé que l'exploitante **exerce seule** quand tout le cadrage parlait de deux créatrices. Le visuel d'accueil, qui montrait des pièces n'ayant jamais existé, est **remplacé le 23 septembre 2026** par une bannière fournie par Christophe |
 
-**251 tickets terminés sur 278 hors epics**, les deux termes relevés dans Jira
-le **7 octobre 2026**, LS-274, LS-276, LS-280 à LS-287 closes, et jamais
-dérivés l'un de l'autre : 27 tickets non terminés relevés séparément, 12 En
-cours et 15 À faire, et 278 − 27 retombe bien sur 251. **La recette de l'exploitante du 23 septembre** a ouvert
+**252 tickets terminés sur 278 hors epics**, les deux termes relevés dans Jira
+le **7 octobre 2026**, LS-274, LS-276, LS-280 à LS-288 closes, et jamais
+dérivés l'un de l'autre : 26 tickets non terminés relevés séparément, 12 En
+cours et 14 À faire, et 278 − 26 retombe bien sur 252. **La recette de l'exploitante du 23 septembre** a ouvert
 LS-238 à LS-248, tous clos le jour même.
 
 **Le chantier du nocturne est clos le 24 septembre 2026** : LS-233, LS-235,
@@ -1271,7 +1271,7 @@ tombant sous le seuil de 1024. La doublure `pg_dump` est devenue pilotable en
 taille : écrivant toujours 4096 octets, elle n'exerçait **jamais** ce seuil,
 ce qui avait laissé passer le second défaut.
 
-`verifier-tests-mutation.sh` casse **190 fois** au 7 octobre 2026 le comportement
+`verifier-tests-mutation.sh` casse **194 fois** au 7 octobre 2026 le comportement
 testé et exige que la suite rougisse à chaque fois. Les cibles, par domaine :
 réservation et stock, authentification et autorisation, socle de validation et
 journalisation, journal des connexions, verrou de tâche planifiée, preuve
