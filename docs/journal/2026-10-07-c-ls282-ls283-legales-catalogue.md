@@ -50,13 +50,27 @@ Suite de `2026-10-07-b`.
   des cartes s'est vérifiée par des captures prises sur la base de bout en
   bout, test jetable non commité.
 
+## Fusion et déploiement
+
+- PR #542, CI verte en 17 min 30, fusionnée en rebase, `837f610`. Déployée
+  par le workflow, run 37582213780, sans migration.
+- **Texte légal servi en production avant et après, mêmes données** : 1077
+  mots identiques.
+- **LCP en production, trois passages** : informations légales 992, 960 et
+  1067 ms contre 926, 1069 et 912 avant ; catalogue 2057, 1928 et 2040 ms
+  contre 1816, 2201 et 1855 avant. Plages confondues, CLS 0, sous les
+  seuils. L'élément du LCP du catalogue reste la photographie de bijou ;
+  l'aquarelle du médaillon, visible à l'arrivée, passe en
+  `fetchPriority="low"` dans la PR de clôture pour ne plus lui disputer la
+  bande passante.
+- Constaté hors périmètre : en mobile, la première photographie du catalogue
+  charge sa variante de 1280 px, noté sur LS-283 pour LS-140.
+
 ## Prochaine étape
 
-PR, fusion, déploiement, mesure du LCP des deux pages en production, et
-comparaison du texte légal servi avant et après sur les mêmes données.
+Mesurer le catalogue après le déploiement de la priorité basse du médaillon,
+et publier le résultat sur LS-283. LS-284 attend la réponse de l'exploitante.
 
 ## État des tickets
 
-LS-282 et LS-283 en cours jusqu'à la mesure en production. LS-284 ouverte
-sous LS-22 : confirmer ou retirer l'offre de création sur mesure du contact.
-LS-281 ouverte.
+LS-280, LS-282 et LS-283 closes et déployées. LS-281 et LS-284 ouvertes.

@@ -50,6 +50,12 @@ export function MedaillonAube({
           width={1200}
           height={800}
           sizes={taille}
+          /*
+           * PRIORITÉ BASSE : un décor ne doit pas disputer la bande passante à
+           * la photographie de bijou, élément du LCP du catalogue, mesuré le
+           * 7 octobre 2026 après le déploiement de LS-283.
+           */
+          fetchPriority="low"
           style={{ objectPosition: cadrage }}
         />
       </div>
