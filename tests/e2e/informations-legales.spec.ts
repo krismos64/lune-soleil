@@ -451,8 +451,13 @@ test("le sommaire et les sections de la page légale se correspondent", async ({
       liens.map((lien) => (lien as HTMLAnchorElement).hash.slice(1)),
     );
 
+  /*
+   * `main section[id]` ET NON `main > section[id]` : depuis LS-282 les sections
+   * vivent dans la colonne de contenu, à côté du sommaire. L'en-tête d'aube est
+   * une section sans `id`, il n'entre pas dans la comparaison.
+   */
   const sections = await page
-    .locator("main > section[id]")
+    .locator("main section[id]")
     .evaluateAll((elements) => elements.map((element) => element.id));
 
   expect(ancresSommaire.length).toBeGreaterThan(0);
