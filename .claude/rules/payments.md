@@ -217,6 +217,23 @@ contrôle mesure l'**atomicité** à la place : si la transaction de l'avoir éc
 aucune intention ne doit rester marquée aboutie. Cinq rouges sur cinq, cas 167 de
 `verifier-tests-mutation.sh`.
 
+### Le refus d'une rétractation prend le verrou du remboursement, LS-288
+
+**Une demande reste refusable pendant l'appel au prestataire** : son statut ne
+passe à `REMBOURSEE` qu'au retour de l'argent. Deux onglets, « Rembourser » dans
+l'un et « Refuser » dans l'autre, rendaient l'argent sur une demande
+« refusée ». Trois défenses, chacune prouvée par mutation :
+
+- `refuserRetractation` prend le **verrou `FOR UPDATE` de la facture**, celui de
+  `reserverIntentionRemboursement`, et renonce sur une intention non aboutie ou
+  un avoir déjà rattaché à la demande, `REMBOURSEMENT_ENGAGE` ;
+- `rembourserCommande` accepte un contrôle `avantAppel`, joué **après** la
+  réservation et **avant** l'appel : la rétractation y relit son statut, et un
+  refus libère l'intention sans rien rembourser ;
+- le résultat de la transition finale vers `REMBOURSEE` **est lu** : s'il ne
+  s'applique pas, une `AlerteCritique` `REMBOURSEMENT_SUR_DEMANDE_CLOSE` part,
+  une course inconnue devant se voir.
+
 ## Documents comptables
 
 Une facture est **immuable**. Jamais modifiée, jamais supprimée, y compris pour
