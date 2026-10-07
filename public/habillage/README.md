@@ -15,6 +15,22 @@ ADR-007, sont televersees par l'administration et passent par la chaine de
 traitement qui retire les metadonnees EXIF. Mettre une photo de bijou vendable
 ici la sortirait de ce circuit, et notamment du retrait de la geolocalisation.
 
+## legales-lettre-aube.jpg et catalogue-ecrin-aube.jpg, médaillons
+
+**Ajoutés le 7 octobre 2026**, LS-282 et LS-283 : aquarelles des médaillons
+d'aube des informations légales et du catalogue, composant `MedaillonAube`.
+**Images générées par Codex**, réécrites par `sharp` en 1200 x 675, **sans
+métadonnées**, 72 et 86 ko.
+
+- `legales-lettre-aube.jpg` : une lettre pliée aux pages blanches, scellée
+  d'un cachet de cire au croissant. **Aucune écriture**, une fausse clause
+  lisible sur une page légale serait trompeuse.
+- `catalogue-ecrin-aube.jpg` : un écrin ouvert et **vide**, parmi des pétales
+  séchés. Il ne montre aucune pièce, pour ne rien laisser croire sur le
+  catalogue.
+
+`aide-nuit-colline.jpg` sert aussi la bande de nuit du catalogue.
+
 ## aide-colis-aube.jpg et aide-nuit-colline.jpg, page d'aide
 
 **Ajoutés le 7 octobre 2026**, LS-280 : décors de la page Livraison et aide,

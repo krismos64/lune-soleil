@@ -8,6 +8,53 @@
 | Amende | `.claude/rules/frontend-design.md`, sections « Interdits visuels » et « Paillettes » |
 | Ticket | LS-259 |
 
+## Amendement du 7 octobre 2026, informations légales et catalogue, LS-282 et LS-283
+
+**Décidé en autonomie sur l'autorisation explicite de Christophe** du
+7 octobre 2026, qui a demandé la refonte des deux pages « dans le même
+style » que l'aide, sans maquette, et autorisé la modification des ADR. La
+critique de Codex a été prise avant de coder ; ce qui en a été retenu est dit
+ci-dessous.
+
+**Les pages légales passent de « micro-interactions » à « icônes de section
+tracées, texte immobile ».** Le motif d'origine, une animation qui gêne la
+lecture, tient toujours : rien ne bouge dans le corps du texte, ni dans le
+sommaire. Seuls s'animent, une fois à leur entrée dans l'écran et bornés par
+`data-borne` :
+
+- le médaillon d'aube de l'en-tête, composant `MedaillonAube` partagé avec
+  l'aide et le catalogue, **absent sous 768 px** pour que les rubriques
+  arrivent avant tout décor ;
+- le tracé de l'icône posée devant chaque titre de section, 1,9 s au plus.
+
+Le sommaire devient une colonne collante à partir de 1100 px seulement : en
+deçà, deux colonnes comprimeraient la mesure de lecture. **Aucun mot juridique
+ne change**, vérifié sur le texte rendu avant et après.
+
+**Le catalogue, page vitrine, garde son intensité** et reçoit un en-tête
+d'aube court, médaillon à côté du titre, et une bande de nuit finale qui mène
+au contact. Les cartes de produit ne changent pas. **Hors thème de Noël
+seulement** : sous `NOEL_1` et `NOEL_2`, l'habillage d'ADR-046 reste celui qui
+a été validé. La bande ne promet aucun service : « création sur mesure » a
+été écarté, faute d'offre confirmée.
+
+**Le dégradé de ciel s'étend à trois décors de plus**, neuf en tout : les
+en-têtes d'aube des informations légales et du catalogue, et la bande de nuit
+du catalogue. Le médaillon n'en porte pas, son dégradé est l'or du logo. Il
+reste interdit sur un contrôle, une carte, un bandeau ou une surface
+d'interface.
+
+**L'amendement LS-280 ci-dessous disait que les pages légales restaient aux
+micro-interactions** : celui-ci le remplace sur ce point.
+
+Les autres règles tiennent : arrêt avant cinq secondes, `transform`,
+`opacity` et `stroke-dashoffset` seulement, page complète et immobile en
+mouvement réduit et sans script.
+
+**Écarté, critique de Codex** : le défilement animé vers les ancres, les
+sections juridiques repliables, un sommaire qui suit la lecture en déplaçant
+ses liens, et une bande de nuit avant la grille du catalogue.
+
 ## Amendement du 7 octobre 2026, page Livraison et aide, LS-280
 
 **Arbitrage de Christophe sur maquette**, `docs/prototypes/aide-animee/`,
@@ -232,7 +279,8 @@ par un repli qui ne dépend pas du script.
 |---|---|---|
 | Vitrine | accueil, notre univers, catalogue | scènes, tracés, parallaxe, reflets, apparitions |
 | Produit | fiche produit | transitions de galerie, apparitions discrètes, aucun décor animé |
-| Action | panier, commande, compte, pages légales | micro-interactions seulement : réaction d'un bouton, passage d'un état à l'autre |
+| Action | panier, commande, compte | micro-interactions seulement : réaction d'un bouton, passage d'un état à l'autre |
+| Pages légales, amendement LS-282 | informations légales | médaillon d'en-tête et icônes de section tracées à leur entrée, texte et sommaire immobiles |
 | Aide, amendement LS-280 | livraison, retours et questions fréquentes | décor animé à l'entrée de chaque section, contenu immobile |
 | Portes d'entrée, amendement LS-268 | connexion et inscription de la boutique, contact | décor animé, formulaire immobile |
 | Administration | tous les écrans | aucun changement |
