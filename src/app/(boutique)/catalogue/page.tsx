@@ -14,9 +14,10 @@
  * references, l'exclut, et `frontend-design.md` interdit d'introduire un plafond
  * que le schema ne porte pas.
  */
-import { Suspense } from "react";
+import { Suspense, type CSSProperties } from "react";
 
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -27,6 +28,7 @@ import {
   PageCatalogueInexistanteError,
   pageCatalogueExiste,
 } from "@/services/catalogue";
+import { MedaillonAube } from "@/components/medaillon-aube";
 import { ReactionPointeur } from "@/components/reaction-pointeur";
 import { ArmatureCatalogue } from "./armature-catalogue";
 import { CarteProduit } from "./carte-produit";
@@ -448,12 +450,28 @@ export default async function PageCatalogue({
           <BandeSucreOrge className={styles.sucreBandeau} />
         </div>
       ) : (
-        <>
-          <h1 className={styles.titre}>Le catalogue</h1>
+        /*
+         * EN-TÊTE D'AUBE, LS-283, amendement d'ADR-045. Plus court que celui
+         * de l'aide, critique de Codex : le catalogue doit montrer les
+         * bijoux, le médaillon reste à côté du titre et ne repousse pas la
+         * grille. Titre et accroche inchangés, rendus par le serveur et
+         * immobiles.
+         */
+        <section className={styles.tete}>
+          <div className={styles.teteTexte}>
+            <p className={styles.surtitre}>Les créations</p>
+            <h1 className={styles.titre}>Le catalogue</h1>
+          </div>
+          <div className={styles.medaillon}>
+            <MedaillonAube
+              image="/habillage/catalogue-ecrin-aube.jpg"
+              cadrage="74% 62%"
+            />
+          </div>
           <p className={styles.accroche}>
             Chaque bijou est fait main et créé à l&apos;unité.
           </p>
-        </>
+        </section>
       )}
       {noel ? <BandePapierCadeau /> : null}
 
@@ -467,6 +485,45 @@ export default async function PageCatalogue({
           />
         </Suspense>
       </div>
+
+      {/*
+       * BANDE DE NUIT, LS-283 : une sortie pour qui n'a pas trouvé sa pièce.
+       * Elle ne promet aucun service, « création sur mesure » écarté faute
+       * d'offre confirmée, critique de Codex. Hors thème de Noël seulement :
+       * l'habillage de LS-277 reste tel qu'il a été validé.
+       */}
+      {noel ? null : (
+        <section className={styles.nuit} aria-labelledby="titre-nuit">
+          <div className={styles.nuitImage} aria-hidden="true">
+            <Image
+              src="/habillage/aide-nuit-colline.jpg"
+              alt=""
+              fill
+              sizes="(min-width: 1152px) 1152px, 100vw"
+            />
+          </div>
+          <div className={styles.nuitEtoiles} aria-hidden="true" data-borne="">
+            {Array.from({ length: 5 }, (_, i) => (
+              <span key={i} style={{ "--i": i } as CSSProperties} />
+            ))}
+          </div>
+          <div className={styles.nuitTexte}>
+            <h2 id="titre-nuit" className={styles.nuitTitre}>
+              Une question sur une pièce ?
+            </h2>
+            <p className={styles.nuitAccroche}>
+              Une matière, une taille, une commande en cours : écrivez à
+              l&apos;atelier, chaque message y arrive directement.
+            </p>
+            <Link href="/contact" className={styles.nuitBouton}>
+              Écrire à l&apos;atelier
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M4 10h12m-5-5 5 5-5 5" />
+              </svg>
+            </Link>
+          </div>
+        </section>
+      )}
 
       {/* Inclinaison des cartes au survol, ordinateur seulement, LS-262. */}
       <ReactionPointeur />
