@@ -24,7 +24,11 @@
  * des octets : c'est ce qui rend ses tests executables sans Docker, et ce qui
  * permet de le rejouer sur une photographie reelle sans rien ecrire.
  */
+import { gunzipSync } from "node:zlib";
+
 import sharp from "sharp";
+
+import { bloquerChargeursRisques } from "./chargeurs-bloques";
 
 import {
   FORMATS_PAR_LARGEUR,
@@ -100,6 +104,46 @@ export type ResultatTraitement = {
  */
 const FORMATS_REFUSES = new Set(["svg", "pdf"]);
 
+/*
+ * LES CHARGEURS SVG ET PDF SONT BLOQUÉS DÈS LE CHARGEMENT DE CE MODULE, LS-276,
+ * en plus du blocage posé au démarrage du serveur : les scripts et les tests
+ * qui traitent des photographies ne passent pas par `instrumentation.ts`.
+ */
+bloquerChargeursRisques();
+
+/** Taille maximale décompressée pour reconnaître un SVG compressé. */
+const LIMITE_GZIP_OCTETS = 1024 * 1024;
+
+/**
+ * Reconnaît un SVG n'importe où dans le fichier, ou dans un gzip, LS-276.
+ *
+ * N'EST APPELÉE QU'APRÈS UN REFUS DE LIBVIPS, pour nommer le format dans le
+ * message : les chargeurs SVG étant bloqués, `sharp` refuse un SVG que la
+ * signature des 1024 premiers octets n'a pas vu, et ce refus dirait sinon
+ * « pas une image exploitable ». Le contrôle ne protège rien de plus, la
+ * protection est le blocage ; il rend le bon message.
+ *
+ * LE GZIP EST DÉCOMPRESSÉ PAR NODE ET BORNÉ À 1 Mo, jamais par libvips : une
+ * archive qui dépasse la borne n'est pas inspectée plus loin, et le fichier
+ * reste refusé comme non exploitable.
+ */
+function contientUnSvg(octets: Buffer): boolean {
+  if (octets.toString("latin1").toLowerCase().includes("<svg")) {
+    return true;
+  }
+  if (octets.length >= 2 && octets[0] === 0x1f && octets[1] === 0x8b) {
+    try {
+      const decompresse = gunzipSync(octets, {
+        maxOutputLength: LIMITE_GZIP_OCTETS,
+      });
+      return decompresse.toString("latin1").toLowerCase().includes("<svg");
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
 /**
  * Refuse un SVG ou un PDF sur ses OCTETS, avant tout decodage.
  *
@@ -161,6 +205,13 @@ export async function traiterPhotographie(
     // L'ERREUR DE LIBVIPS N'EST PAS PROPAGEE. Elle porte des details
     // d'implementation qu'un ecran ne saurait pas presenter, et le seul fait
     // utile est que le fichier n'est pas exploitable.
+    //
+    // SAUF UN SVG QUE LA SIGNATURE N'A PAS VU, LS-276 : son chargeur est
+    // bloqué, libvips le refuse sans l'avoir analysé, et le message doit dire
+    // pourquoi plutôt que « pas une image ».
+    if (contientUnSvg(octets)) {
+      throw new FormatRefuseError("svg");
+    }
     throw new FichierNonImageError();
   }
 
