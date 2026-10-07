@@ -114,7 +114,7 @@ export default async function PageSignalerAvis({
       <p className={styles.introduction}>
         Un signalement n&apos;entraîne pas le retrait automatique de l&apos;avis
         : il est examiné, et la décision qui suit est motivée. Pour toute autre
-        demande, écrivez-nous depuis la{" "}
+        demande, écrivez à l&apos;atelier depuis la{" "}
         <Link href="/contact" className={styles.lien}>
           page Contact
         </Link>

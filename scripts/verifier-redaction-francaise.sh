@@ -131,6 +131,53 @@ EOF
 echo "Fichiers d'interface examinés : $nb_fichiers"
 
 # ---------------------------------------------------------------------------
+# Sens 3 : aucun « nous » de marque dans un texte public, LS-286.
+#
+# L'EXPLOITANTE EXERCE SEULE, et un « nous » décrit une entreprise qui n'existe
+# pas. Arbitrage de Christophe du 7 octobre 2026 : les textes publics parlent
+# de « l'atelier », à la troisième personne. Le défaut s'était glissé sur une
+# cinquantaine de phrases, pages légales et emails compris, faute de contrôle.
+#
+# LA PORTÉE EST CE QUE LIT UN CLIENT : les écrans de la boutique, les
+# composants, les pages d'erreur de la racine et les emails. L'administration
+# est exclue, ses textes s'adressent à l'exploitante.
+#
+# LES COMMENTAIRES SONT RETIRÉS AVANT LA RECHERCHE, comme au sens 2 : ils
+# emploient légitimement « nous » pour parler de l'équipe de développement.
+# ---------------------------------------------------------------------------
+nb_publics=0
+
+while IFS= read -r fichier; do
+  [ -n "$fichier" ] || continue
+  nb_publics=$((nb_publics + 1))
+
+  trouve=$(perl -pe 's{^\s*(?://|\*|/\*|\{/\*).*$}{}' "$fichier" \
+    | grep -nwE "[Nn]ous|[Nn]otre|[Nn]os" 2>/dev/null || true)
+
+  if [ -n "$trouve" ]; then
+    court=${fichier#"$RACINE"/}
+    echo "ECHEC « nous » de marque dans $court"
+    printf '%s\n' "$trouve" | head -3 | sed 's/^/      /'
+    echo "      L'exploitante exerce seule : écrire « l'atelier », à la"
+    echo "      troisième personne, arbitrage du 7 octobre 2026, LS-286."
+    ko=$((ko + 1))
+  fi
+done <<EOF
+$(find "$RACINE/src/app/(boutique)" "$RACINE/src/components" \
+    "$RACINE/src/integrations/email" \
+    "$RACINE/src/app/global-error.tsx" "$RACINE/src/app/not-found.tsx" \
+    \( -name "*.tsx" -o -name "*.ts" \) ! -name "*.test.*" 2>/dev/null | sort)
+EOF
+
+echo "Fichiers publics examinés pour le « nous » : $nb_publics"
+
+if [ "$nb_publics" -eq 0 ]; then
+  echo "ECHEC aucun fichier public trouvé pour le « nous » de marque"
+  echo "      l'ancrage du sens 3 est cassé."
+  ko=$((ko + 1))
+fi
+
+# ---------------------------------------------------------------------------
 # Garde-fou : le contrôle doit avoir examiné quelque chose.
 #
 # SANS LUI, UN ANCRAGE CASSÉ RENDRAIT UN OK SILENCIEUX. Le `find` pourrait
@@ -147,7 +194,7 @@ fi
 echo
 echo "-----------------------------------------"
 if [ "$ko" -eq 0 ]; then
-  echo "  OK aucun cadratin, aucun accord au féminin sur un client"
+  echo "  OK aucun cadratin, aucun accord au féminin, aucun « nous » de marque"
 else
   echo "  $ko anomalie(s) de rédaction"
 fi

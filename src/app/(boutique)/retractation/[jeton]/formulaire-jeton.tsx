@@ -25,13 +25,13 @@ import styles from "../../compte/commandes/[id]/retractation/retractation.module
 function messageDeRefus(resultat: ResultatRetractationJeton): string | null {
   switch (resultat.statut) {
     case "REFUSE_HORS_DELAI":
-      return `Le délai de rétractation de cette commande s'est terminé le ${resultat.jourLimite}. Vous pouvez nous écrire depuis la page Contact, nous regarderons votre situation.`;
+      return `Le délai de rétractation de cette commande s'est terminé le ${resultat.jourLimite}. Vous pouvez écrire à l'atelier depuis la page Contact, votre situation sera examinée.`;
     case "REFUSE_DEJA_DEPOSEE":
       return "Une demande de rétractation existe déjà pour cette commande. Vous avez reçu un accusé de réception par email.";
     case "REFUSE_ETAT_COMMANDE":
-      return "Cette commande ne peut pas faire l'objet d'une rétractation. Écrivez-nous depuis la page Contact si cela vous semble être une erreur.";
+      return "Cette commande ne peut pas faire l'objet d'une rétractation. Écrivez à l'atelier depuis la page Contact si cela vous semble être une erreur.";
     case "REFUSE_ACCES":
-      return "Ce lien n'est plus valable. Écrivez-nous depuis la page Contact, nous vous aiderons.";
+      return "Ce lien n'est plus valable. Écrivez à l'atelier depuis la page Contact pour obtenir de l'aide.";
     case "INDISPONIBLE":
       return "La demande n'a pas pu être enregistrée. Réessayez dans un instant, rien n'a été perdu.";
     default:
@@ -88,8 +88,8 @@ export function FormulaireRetractationJeton({
           frais de retour sont à votre charge.
         </p>
         <p>
-          Dès que le colis nous parvient, ou dès que vous nous transmettez une
-          preuve de son expédition, nous procédons au remboursement.
+          Dès que le colis parvient à l'atelier, ou dès que vous lui transmettez
+          une preuve de son expédition, l'atelier procède au remboursement.
         </p>
       </div>
     );
@@ -113,8 +113,8 @@ export function FormulaireRetractationJeton({
           Motif <span className={styles.facultatif}>(facultatif)</span>
         </label>
         <p id="motif-aide" className={styles.aide}>
-          Vous n&apos;avez pas à vous justifier. Ce champ nous aide simplement à
-          progresser.
+          Vous n&apos;avez pas à vous justifier. Ce champ aide simplement
+          l'atelier à progresser.
         </p>
         <textarea
           id="motif"

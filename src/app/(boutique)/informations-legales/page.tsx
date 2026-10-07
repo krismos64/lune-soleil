@@ -449,9 +449,9 @@ export default async function PageInformationsLegales() {
             ) : (
               <>
                 <p className={styles.texte}>
-                  En cas de litige non résolu directement avec nous, vous pouvez
-                  recourir gratuitement au médiateur de la consommation suivant
-                  :
+                  En cas de litige non résolu directement avec l'atelier, vous
+                  pouvez recourir gratuitement au médiateur de la consommation
+                  suivant :
                 </p>
                 <dl className={styles.definitions}>
                   <div className={styles.definition}>
@@ -478,7 +478,7 @@ export default async function PageInformationsLegales() {
                 <p className={styles.texte}>
                   Le recours à la médiation est gratuit pour vous et suppose
                   d&apos;avoir tenté au préalable de résoudre le litige avec
-                  nous.
+                  l&apos;atelier.
                 </p>
               </>
             )}
@@ -604,20 +604,18 @@ export default async function PageInformationsLegales() {
 
             <h3 className={styles.titreBloc}>Remboursement</h3>
             <p className={styles.texte}>
-              Nous vous remboursons la totalité de votre commande,{" "}
+              L&apos;atelier vous rembourse la totalité de votre commande,{" "}
               <strong>frais de livraison initiaux compris</strong>, au tarif que
               vous avez réellement payé.
             </p>
             <p className={styles.texte}>
               Le remboursement intervient au plus tard quatorze jours après le
               premier de ces deux événements : la réception de votre retour, ou
-              la preuve que vous nous avez transmise de son expédition. Un
-              numéro de suivi suffit.
+              la preuve de son expédition transmise à l&apos;atelier. Un numéro
+              de suivi suffit.
             </p>
 
-            <h3 className={styles.titreBloc}>
-              Délai pour nous renvoyer le bijou
-            </h3>
+            <h3 className={styles.titreBloc}>Délai pour renvoyer le bijou</h3>
             {/*
              * SECOND DELAI DE QUATORZE JOURS, article L221-23, et il conditionne le
              * remboursement du client. Il manquait : la page detaillait le delai
@@ -626,7 +624,8 @@ export default async function PageInformationsLegales() {
              */}
             <p className={styles.texte}>
               Une fois votre décision déclarée, vous disposez de{" "}
-              <strong>quatorze jours</strong> pour nous renvoyer le bijou.
+              <strong>quatorze jours</strong> pour renvoyer le bijou à
+              l&apos;atelier.
             </p>
 
             <h3 className={styles.titreBloc}>Frais de retour</h3>
@@ -638,8 +637,8 @@ export default async function PageInformationsLegales() {
              * L221-20 porte le delai a douze mois.
              */}
             <p className={styles.texte}>
-              Les frais de retour sont à votre charge. Le bijou doit nous
-              revenir dans un état permettant sa remise en vente.
+              Les frais de retour sont à votre charge. Le bijou doit revenir à
+              l&apos;atelier dans un état permettant sa remise en vente.
             </p>
 
             <h3 className={styles.titreBloc}>
@@ -651,11 +650,11 @@ export default async function PageInformationsLegales() {
               <strong>garantie légale de conformité</strong>, qui vous couvre
               pendant <strong>deux ans à compter de la remise</strong> du bijou
               si celui-ci présente un défaut. Dans ce dernier cas, les frais de
-              retour sont à notre charge, et cette garantie ne peut pas être
-              écartée.
+              retour sont à la charge de l&apos;atelier, et cette garantie ne
+              peut pas être écartée.
             </p>
             <p className={styles.texte}>
-              Pour signaler un défaut, écrivez-nous depuis la{" "}
+              Pour signaler un défaut, écrivez à l&apos;atelier depuis la{" "}
               <Link href="/contact">page de contact</Link>.
             </p>
           </section>
@@ -779,7 +778,9 @@ export default async function PageInformationsLegales() {
               Accessibilité
             </h2>
 
-            <h3 className={styles.titreBloc}>Notre engagement</h3>
+            <h3 className={styles.titreBloc}>
+              L&apos;engagement de l&apos;atelier
+            </h3>
             <p className={styles.texte}>
               Ce site est conçu pour rester utilisable au clavier, avec une
               loupe ou un lecteur d&apos;écran. Cet engagement est{" "}
@@ -828,7 +829,7 @@ export default async function PageInformationsLegales() {
                * avait ete ecrite ici et n'existe pas dans le module CSS, donc elle
                * etait inerte et le lien serait reste de la couleur par defaut.
                */}
-              Si une page vous résiste, écrivez-nous depuis la{" "}
+              Si une page vous résiste, écrivez à l&apos;atelier depuis la{" "}
               <Link href="/contact">page de contact</Link> en indiquant
               l&apos;adresse concernée et ce qui a bloqué. Une autre façon
               d&apos;obtenir la même information ou de passer commande vous sera

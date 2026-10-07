@@ -36,8 +36,7 @@ export default function ErreurCatalogue({
 
       <div className={styles.etatVide} role="alert">
         <p className={styles.texteVide}>
-          Le catalogue n&apos;a pas pu être affiché. Le problème vient de notre
-          côté.
+          Le catalogue n&apos;a pas pu être affiché. Le problème vient du site.
         </p>
         <button type="button" onClick={reset} className={styles.actionVide}>
           Réessayer

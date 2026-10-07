@@ -60,7 +60,7 @@ export default async function PageRetractationParJeton({
 
   const aide = (
     <p>
-      Une question ? Écrivez-nous depuis la page{" "}
+      Une question&nbsp;? Écrivez à l'atelier depuis la page{" "}
       <Link href="/contact" className={styles.lien}>
         Contact
       </Link>

@@ -288,8 +288,8 @@ const RENDUS: Record<ModeleEmail, (message: MessageEmail) => MessageRendu> = {
     texte: [
       "Bonjour,",
       "",
-      "Merci pour votre commande. Votre paiement est bien reçu, et nous",
-      "préparons votre article avec soin.",
+      "Merci pour votre commande. Votre paiement est bien reçu, et l'atelier",
+      "prépare votre article avec soin.",
       "",
       "Votre facture :",
       "",
@@ -332,7 +332,7 @@ const RENDUS: Record<ModeleEmail, (message: MessageEmail) => MessageRendu> = {
       texte: [
         "Bonjour,",
         "",
-        `Nous avons bien reçu votre demande de rétractation pour la commande ${exiger(message, "numero")}.`,
+        `L'atelier a bien reçu votre demande de rétractation pour la commande ${exiger(message, "numero")}.`,
         "Ce message en accuse réception.",
         "",
         jourLimite.length > 0
@@ -346,7 +346,7 @@ const RENDUS: Record<ModeleEmail, (message: MessageEmail) => MessageRendu> = {
         "",
         "Les frais de retour sont à votre charge.",
         "",
-        "Dès que votre colis nous parvient, nous procédons au remboursement.",
+        "Dès que votre colis parvient à l'atelier, il procède au remboursement.",
         "",
         "Répondez simplement à ce message pour toute question.",
         "",
@@ -512,8 +512,8 @@ const RENDUS: Record<ModeleEmail, (message: MessageEmail) => MessageRendu> = {
     texte: [
       "Bonjour,",
       "",
-      "Votre message est bien arrivé à l'atelier. Nous vous répondons sous",
-      "24 heures.",
+      "Votre message est bien arrivé à l'atelier, qui vous répond sous",
+      "24 heures au maximum.",
       "",
       "Votre message :",
       `Sujet : ${exiger(message, "sujet")}`,

@@ -47,7 +47,7 @@ function messageDeRefus(resultat: ResultatDepotAvis): string | null {
     case "REFUSE_SANS_LIVRAISON":
       return "La livraison de cette commande n'est pas encore constatée. Réessayez une fois le colis reçu.";
     case "REFUSE_ACCES":
-      return "Ce lien n'est plus valable. Écrivez-nous depuis la page Contact, nous vous aiderons.";
+      return "Ce lien n'est plus valable. Écrivez à l'atelier depuis la page Contact pour obtenir de l'aide.";
     case "INDISPONIBLE":
       return "Votre avis n'a pas pu être enregistré. Réessayez dans un instant, rien n'a été perdu.";
     default:
@@ -110,8 +110,9 @@ export function FormulaireAvis({
             : "Votre avis est enregistré"}
         </h2>
         <p>
-          Merci d&apos;avoir pris le temps de nous écrire. Chaque avis est relu
-          avant publication, sous {delaiPublicationJours} jours au plus.
+          Merci d&apos;avoir pris le temps d&apos;écrire à l&apos;atelier.
+          Chaque avis est relu avant publication, sous {delaiPublicationJours}{" "}
+          jours au plus.
         </p>
         <p>
           Un avis peut ne pas être publié, par exemple s&apos;il ne porte pas

@@ -6,7 +6,7 @@
 # exécution, un cadratin dans le pied de page de chaque facture : c'est
 # encourageant, et ce n'est pas une preuve qu'il rougira la prochaine fois.
 #
-# QUATRE MUTATIONS, DONT DEUX QUI GARDENT LE CONTRÔLE CONTRE LUI-MÊME. Un
+# SEPT MUTATIONS, DONT TROIS QUI GARDENT LE CONTRÔLE CONTRE LUI-MÊME. Un
 # ancrage cassé rendrait un OK silencieux, défaut que ce dépôt a déjà rencontré,
 # et un motif trop large accuserait du texte sain, ce que ce contrôle a fait à
 # sa première écriture.
@@ -22,8 +22,9 @@ cd "$RACINE" || exit 1
 
 CONTROLE="./scripts/verifier-redaction-francaise.sh"
 CIBLE="src/components/pied-boutique.tsx"
+EMAIL="src/integrations/email/modeles.ts"
 
-MUTABLES=("$CIBLE")
+MUTABLES=("$CIBLE" "$EMAIL")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -106,6 +107,35 @@ cas "demi-cadratin dans un libellé visible"
 # commercial, pas seulement rédactionnel.
 mute "$CIBLE" 's{Besoin d.aide}{Vous serez livrée}'
 cas "accord au féminin sur le lecteur"
+
+# Cas 5 : UN « NOUS » DE MARQUE DANS UN TEXTE VISIBLE, LS-286.
+#
+# L'exploitante exerce seule. La forme visée est celle qui s'était répandue sur
+# dix-sept fichiers, « Écrivez-nous », et le trait d'union ne doit pas la
+# cacher au motif.
+mute "$CIBLE" 's{Besoin d.aide}{Écrivez-nous}'
+cas "« nous » de marque dans un libellé visible"
+
+# Cas 6 : LE MÊME DÉFAUT DANS UN EMAIL, hors de `src/app` et `src/components`.
+#
+# Les emails étaient hors de la portée du sens 2 : un ancrage limité aux
+# écrans laisserait passer l'accusé de réception qui portait le défaut.
+mute "$EMAIL" 's{Votre message est bien arrivé à l.atelier, qui}{Votre message est bien arrivé, nous}'
+cas "« nous » de marque dans un email"
+
+# Cas 7 : UN « NOUS » EN COMMENTAIRE NE DOIT PAS ROUGIR.
+#
+# Le garde contre le faux positif : les commentaires emploient légitimement
+# « nous ». Un contrôle qui les accuserait pousserait à les réécrire pour rien.
+mutations=$((mutations + 1))
+mute "$CIBLE" 's{\A}{// nous gardons ce commentaire\n}'
+if $CONTROLE >/tmp/redaction-mutation.txt 2>&1; then
+  echo "  OK    « nous » en commentaire -> accepté, aucun faux positif"
+else
+  echo "  RATE  « nous » en commentaire -> accusé à tort"
+  echecs=$((echecs + 1))
+fi
+restaurer
 
 # Cas 4 : LE CONTRÔLE GARDÉ CONTRE SON PROPRE ANCRAGE.
 #
