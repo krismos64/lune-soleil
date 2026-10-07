@@ -671,7 +671,7 @@ export default async function PageInformationsLegales() {
             </p>
 
             <h3 className={styles.titreBloc}>
-              Rétractation, garantie et retour : trois choses différentes
+              Rétractation, garantie et retour&nbsp;: trois choses différentes
             </h3>
             <p className={styles.texte}>
               Le droit de rétractation ci-dessus vous permet de changer
