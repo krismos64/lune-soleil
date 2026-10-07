@@ -566,3 +566,37 @@ test("la premiere page ne porte ni page=1 ni navigation inutile", async ({
     page.getByRole("navigation", { name: "Pagination du catalogue" }),
   ).toHaveCount(0);
 });
+
+/**
+ * LA PREMIÈRE PHOTOGRAPHIE N'EST PAS DIFFÉRÉE, LS-285. Elle est l'élément du
+ * LCP du catalogue : en `lazy`, le navigateur ne la demandait qu'après la mise
+ * en page. La base de test ne porte qu'une pièce photographiée, et pas en
+ * première position : c'est elle qui doit être prioritaire, et non la
+ * première carte. Le choix du rang est couvert en unitaire,
+ * `photo-prioritaire.test.ts`.
+ */
+test("la première photographie du catalogue est chargée en priorité", async ({
+  page,
+}) => {
+  await page.goto("/catalogue");
+
+  const photo = page.locator("main ul[data-inclinaison] picture img").first();
+  await expect(photo).toBeAttached();
+  await expect(photo).toHaveAttribute("loading", "eager");
+  await expect(photo).toHaveAttribute("fetchpriority", "high");
+});
+
+test("les cartes de l'accueil restent toutes différées", async ({ page }) => {
+  await page.goto("/");
+
+  const photos = page.locator("main ul[data-inclinaison] picture img");
+  await expect(photos.first()).toBeAttached();
+  for (const valeur of await photos.evaluateAll((images) =>
+    images.map((image) => [
+      image.getAttribute("loading"),
+      image.getAttribute("fetchpriority"),
+    ]),
+  )) {
+    expect(valeur).toEqual(["lazy", null]);
+  }
+});

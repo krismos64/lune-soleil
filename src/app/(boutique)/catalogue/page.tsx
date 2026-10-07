@@ -22,6 +22,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { openGraphDePage } from "@/lib/seo";
+import { rangPhotoPrioritaire } from "@/lib/photo-prioritaire";
 import { cheminCatalogue, lireNumeroPage } from "@/lib/url-catalogue";
 import {
   lireCataloguePublic,
@@ -217,6 +218,7 @@ async function ContenuCatalogue({
    * laquelle.
    */
   const nomCategorieRetenue = categorieRetenue?.nom;
+  const rangPrioritaire = rangPhotoPrioritaire(produits);
 
   return (
     <>
@@ -312,8 +314,17 @@ async function ContenuCatalogue({
         </div>
       ) : (
         <ul className={styles.grille} data-inclinaison="">
-          {produits.map((produit) => (
-            <CarteProduit key={produit.id} produit={produit} noel={noel} />
+          {produits.map((produit, rang) => (
+            /*
+             * LA PREMIÈRE CARTE AVEC PHOTO EST PRIORITAIRE, LS-285 : sa photo
+             * est l'élément du LCP du catalogue, à 320 px comme à 1280.
+             */
+            <CarteProduit
+              key={produit.id}
+              produit={produit}
+              noel={noel}
+              prioritaire={rang === rangPrioritaire}
+            />
           ))}
         </ul>
       )}
