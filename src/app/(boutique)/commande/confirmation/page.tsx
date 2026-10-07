@@ -104,7 +104,7 @@ function SansCommande({ numeroUrl }: { numeroUrl: string | undefined }) {
       <p className={styles.aide}>
         Le détail de la commande n&apos;est consultable que depuis le navigateur
         qui l&apos;a passée, pendant l&apos;heure qui suit. Pour toute question,
-        écrivez-nous en indiquant votre numéro de commande.
+        écrivez à l&apos;atelier en indiquant votre numéro de commande.
       </p>
 
       <Link href="/catalogue" className={styles.retourPanier}>
@@ -177,10 +177,10 @@ function EtatCommande({
           Commande : <strong>{etat.numero}</strong>
         </p>
         <p className={styles.aide}>
-          Nous vérifions votre paiement auprès de notre prestataire. Votre
-          retour sur cette page ne vaut pas confirmation : celle-ci vient de
-          cette vérification, dans quelques instants. Inutile de payer à nouveau
-          ni de relancer la page.
+          Votre paiement est en cours de vérification auprès du prestataire.
+          Votre retour sur cette page ne vaut pas confirmation : celle-ci vient
+          de cette vérification, dans quelques instants. Inutile de payer à
+          nouveau ni de relancer la page.
         </p>
         <Link href="/catalogue" className={styles.retourPanier}>
           Retourner au catalogue

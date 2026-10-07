@@ -79,8 +79,9 @@ export default async function PageRetractation({
             commande.
           </p>
           <p>
-            Un accusé de réception vous a été adressé par email. Écrivez-nous
-            depuis la page Contact si vous avez une question sur son avancement.
+            Un accusé de réception vous a été adressé par email. Écrivez à
+            l&apos;atelier depuis la page Contact si vous avez une question sur
+            son avancement.
           </p>
         </div>
         {retour}
@@ -108,12 +109,12 @@ export default async function PageRetractation({
             commande, article L221-18 du Code de la consommation.
           </p>
           <p>
-            Si votre situation vous semble particulière, écrivez-nous depuis la
-            page{" "}
+            Si votre situation vous semble particulière, écrivez à
+            l&apos;atelier depuis la page{" "}
             <Link href="/contact" className={styles.lien}>
               Contact
             </Link>
-            , nous la regarderons.
+            , elle sera examinée.
           </p>
         </div>
         {retour}

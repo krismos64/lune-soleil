@@ -127,9 +127,9 @@ export default async function PageMesAvis() {
             Vous n&apos;avez pas encore déposé d&apos;avis.
           </p>
           <p className={stylesCompte.texte}>
-            Après la livraison d&apos;une commande, nous vous envoyons un lien
-            par email pour donner votre avis sur les articles reçus. Vos avis
-            apparaîtront ensuite sur cette page.
+            Après la livraison d&apos;une commande, l&apos;atelier vous envoie
+            un lien par email pour donner votre avis sur les articles reçus. Vos
+            avis apparaîtront ensuite sur cette page.
           </p>
           <p className={stylesCompte.texte}>
             <Link href="/compte/commandes">Voir mes commandes</Link>
@@ -200,8 +200,8 @@ export default async function PageMesAvis() {
                  * accuse, « n'a pas ete publie » constate.
                  */
                 <p className={`${styles.etat} ${styles.nonRetenu}`}>
-                  Cet avis n&apos;a pas été publié. Écrivez-nous si vous
-                  souhaitez en savoir plus.
+                  Cet avis n&apos;a pas été publié. Écrivez à l&apos;atelier si
+                  vous souhaitez en savoir plus.
                 </p>
               ) : null}
 

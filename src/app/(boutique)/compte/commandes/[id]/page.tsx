@@ -430,7 +430,7 @@ export default async function PageDetailCommande({
               ) : (
                 <p className={styles.texte}>
                   Le document de cette facture est momentanément indisponible.
-                  Contactez-nous pour en recevoir une copie.
+                  Écrivez à l&apos;atelier pour en recevoir une copie.
                 </p>
               )}
 

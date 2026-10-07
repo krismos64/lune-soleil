@@ -68,8 +68,8 @@ export default function ErreurBoutique({
        * cherche ce qu'il a mal fait.
        */}
       <p className={styles.texte}>
-        Le problème vient de notre côté, pas de votre navigation. Votre panier
-        est conservé.
+        Le problème vient du site, pas de votre navigation. Votre panier est
+        conservé.
       </p>
 
       <div className={styles.sorties}>

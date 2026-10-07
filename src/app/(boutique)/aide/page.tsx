@@ -235,7 +235,7 @@ export default async function PageAide() {
              */
             <p className={styles.attente}>
               Les tarifs de livraison ne peuvent pas être affichés pour le
-              moment. Écrivez-nous depuis la{" "}
+              moment. Écrivez à l'atelier depuis la{" "}
               <Link href="/contact">page de contact</Link> si vous avez besoin
               de les connaître avant de commander.
             </p>
@@ -514,8 +514,8 @@ export default async function PageAide() {
                   </li>
                   <li>Les frais de retour sont à votre charge.</li>
                   <li>
-                    Nous vous remboursons la totalité de votre commande, frais
-                    de livraison initiaux compris.
+                    L'atelier vous rembourse la totalité de votre commande,
+                    frais de livraison initiaux compris.
                   </li>
                   <li>
                     Un formulaire en ligne, depuis votre espace client, ou par
@@ -569,7 +569,9 @@ export default async function PageAide() {
                     <strong>garantie légale de conformité</strong> vous couvre
                     pendant deux ans.
                   </li>
-                  <li>Les frais de retour sont alors à notre charge.</li>
+                  <li>
+                    Les frais de retour sont alors à la charge de l'atelier.
+                  </li>
                 </ul>
                 <div className={styles.actions}>
                   <Link href="/contact" className={styles.boutonSecondaire}>

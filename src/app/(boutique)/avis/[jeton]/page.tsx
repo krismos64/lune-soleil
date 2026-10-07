@@ -57,7 +57,7 @@ export default async function PageDepotAvis({
 
   const aide = (
     <p>
-      Une question ? Écrivez-nous depuis la page{" "}
+      Une question&nbsp;? Écrivez à l&apos;atelier depuis la page{" "}
       <Link href="/contact" className={styles.lien}>
         Contact
       </Link>
@@ -134,7 +134,7 @@ export default async function PageDepotAvis({
 
       <p className={styles.introduction}>
         Votre commande {etat.numeroCommande} vous a été remise. Si vous le
-        souhaitez, dites-nous ce que vous pensez de votre achat.
+        souhaitez, dites à l&apos;atelier ce que vous pensez de votre achat.
       </p>
 
       <FormulaireAvis

@@ -35,8 +35,7 @@ export default function ErreurFiche({
           Pièce momentanément indisponible
         </h1>
         <p className={styles.texteSection}>
-          Cette pièce n&apos;a pas pu être affichée. Le problème vient de notre
-          côté.
+          Cette pièce n&apos;a pas pu être affichée. Le problème vient du site.
         </p>
         <button type="button" onClick={reset} className={styles.ajouter}>
           Réessayer
