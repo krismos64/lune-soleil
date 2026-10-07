@@ -41,12 +41,22 @@ Suite de `2026-10-07-c`.
 - `verifier-config-claude --strict` et `verifier-numerotation-etapes-mutation`
   restent rouges en local, mémoire du poste, comme sur `main`.
 
+## Fusion, déploiement et nocturne
+
+- PR #545, CI verte en 14 min 33, fusionnée en rebase, `4652d00`. Déployée,
+  run 37606666148, sans migration ; la règle `[data-borne=attente]:after` est
+  présente dans la feuille servie par lune-soleil.fr. LS-281 close.
+- **Contrôle nocturne entièrement vert**, run 37591165584 sur `97f4459`,
+  vérifié étape par étape : audit, bout en bout aux quatre largeurs, image
+  Docker, preuves par mutation lourdes. LS-274 close, issue #525 fermée.
+
 ## Prochaine étape
 
-Le contrôle nocturne lancé sur `main` à 10 h 02 décide de LS-274 et de
-l'issue #525.
+LS-284 attend la réponse de l'exploitante. Sur le catalogue en mobile, la
+première photographie charge sa variante de 1280 px : à mesurer avec LS-140
+avant d'y toucher.
 
 ## État des tickets
 
-LS-281 en cours jusqu'à la fusion. LS-284 attend l'exploitante. LS-274 en
-cours jusqu'au nocturne vert.
+LS-274, LS-280 à LS-283 closes et déployées. LS-284 ouverte. 246 tickets
+terminés sur 274, relevés dans Jira.
