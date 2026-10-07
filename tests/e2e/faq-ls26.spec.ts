@@ -80,3 +80,41 @@ test("les tarifs de la FAQ sont ceux de la section Livraison", async ({
     expect(reponse).toContain(montant.trim());
   }
 });
+
+/*
+ * LE FOCUS DE LA SECTION RESTE VISIBLE APRÈS LE SAUT, revue de LS-26. Tracé à
+ * l'extérieur, il était coupé sur les côtés par `overflow-x: clip` et poussé
+ * hors de l'écran en haut. L'anneau double est tracé à l'intérieur : ses deux
+ * couleurs tiennent l'une sur la nuit, l'autre sur le blanc.
+ */
+test("le focus de la section des questions se voit dans l'écran", async ({
+  page,
+}, testInfo) => {
+  await page.goto("/aide");
+  const section = page.locator("#faq");
+  await section.focus();
+  await expect(section).toBeFocused();
+
+  const anneau = await section.evaluate((element) => {
+    const style = getComputedStyle(element, "::after");
+    const boite = element.getBoundingClientRect();
+    return {
+      ombre: style.boxShadow,
+      gauche: boite.left + parseFloat(style.left),
+      droite: boite.right - parseFloat(style.right),
+      largeurVue: document.documentElement.clientWidth,
+    };
+  });
+
+  expect(anneau.ombre).toMatch(/inset/);
+  expect(anneau.ombre.split("rgb").length - 1).toBe(2);
+  // L'anneau extérieur fait 3 px : il doit tenir dans la largeur visible.
+  expect(anneau.gauche - 3).toBeGreaterThanOrEqual(0);
+  expect(anneau.droite + 3).toBeLessThanOrEqual(anneau.largeurVue);
+
+  await section.scrollIntoViewIfNeeded();
+  await testInfo.attach("focus-faq", {
+    body: await page.screenshot(),
+    contentType: "image/png",
+  });
+});
