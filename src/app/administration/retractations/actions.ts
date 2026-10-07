@@ -227,8 +227,19 @@ export async function declarerPreuveExpedition(
     };
   }
 
+  /*
+   * LE JOUR OU LE CLIENT A FOURNI LA PREUVE, LS-288. Une chaine `AAAA-MM-JJ`
+   * venue du champ `date` : sa forme et ses bornes sont verifiees par le
+   * service, `instantDePreuveFournie`, jamais ici seulement.
+   */
+  const jourFourni = String(donnees.get("fournieLe") ?? "").trim();
+
   try {
-    const issue = await enregistrerPreuveExpedition(demandeId, preuve);
+    const issue = await enregistrerPreuveExpedition(
+      demandeId,
+      preuve,
+      jourFourni,
+    );
 
     if (issue.statut === "APPLIQUEE") {
       revalidatePath(CHEMIN_RETRACTATIONS);
@@ -251,6 +262,10 @@ export async function declarerPreuveExpedition(
         statut: "STATUT_INCOMPATIBLE",
         statutActuel: issue.statutActuel,
       };
+    }
+
+    if (issue.statut === "JOUR_INVALIDE") {
+      return { statut: "INVALIDE", message: issue.message };
     }
 
     return { statut: "INDISPONIBLE" };

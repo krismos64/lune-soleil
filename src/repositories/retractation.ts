@@ -130,6 +130,10 @@ export type DemandePourTraitement = {
   id: string;
   commandeId: string;
   statut: string;
+  /** LS-288 : borne basse du jour de preuve saisi. */
+  deposeeA: Date;
+  /** LS-288 : posé par la preuve quand il manque, base de l'alerte L8. */
+  retourAttenduA: Date | null;
   recueA: Date | null;
   preuveExpeditionA: Date | null;
   montantRembourseCentimes: number | null;
@@ -162,6 +166,8 @@ export async function lireDemandePourTraitement(
       id: true,
       commandeId: true,
       statut: true,
+      deposeeA: true,
+      retourAttenduA: true,
       recueA: true,
       preuveExpeditionA: true,
       montantRembourseCentimes: true,

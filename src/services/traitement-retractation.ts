@@ -32,6 +32,10 @@
 import { Prisma } from "@/generated/prisma/client";
 import type { EtatPieceRetournee } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
+import {
+  instantDePreuveFournie,
+  JourDePreuveInvalideError,
+} from "@/lib/retractation";
 import { journaliser } from "@/lib/journal";
 import type { Correlation } from "@/lib/journal";
 import type { FournisseurPaiement } from "@/integrations/stripe/fournisseur";
@@ -108,7 +112,12 @@ export type IssueTransition =
    */
   | { statut: "STATUT_INCOMPATIBLE"; statutActuel: string }
   /** Un refus exige son motif, regle L2. */
-  | { statut: "MOTIF_REQUIS" };
+  | { statut: "MOTIF_REQUIS" }
+  /**
+   * Jour de preuve refusé, LS-288 : à venir, antérieur au dépôt ou mal formé.
+   * Le message dit lequel, sans recopier la saisie.
+   */
+  | { statut: "JOUR_INVALIDE"; message: string };
 
 /** Ce que l'horodatage de la reception rend. */
 export type IssueReception =
@@ -218,6 +227,16 @@ export async function ouvrirAttenteRetour(
 /**
  * Enregistre la preuve d'expedition fournie par le client, etape 7a.
  *
+ * LE JOUR EST CELUI OU LE CLIENT A FOURNI LA PREUVE, saisi par l'exploitante,
+ * LS-288 : L221-24 alinea 2 retient cette date, et `new Date()` a la saisie la
+ * reculait de tout le delai de recopie. `instantDePreuveFournie` le borne entre
+ * le depot et aujourd'hui.
+ *
+ * ACCEPTEE DES LE DEPOT, et non plus seulement en `RETOUR_ATTENDU`, LS-288 : une
+ * preuve recue avant que l'exploitante ait ouvert l'attente du retour exigeait
+ * deux gestes. `retourAttenduA` est alors pose au passage s'il manque, faute de
+ * quoi la demande sortirait du seuil d'alerte des retours jamais recus, L8.
+ *
  * LA PREUVE EST DECLARATIVE, ET CELA NE CHANGE RIEN A L'OBLIGATION. Un numero
  * de suivi fourni par le client suffit a faire courir le remboursement,
  * l'exploitante n'ayant pas a le verifier aupres du transporteur avant de
@@ -230,6 +249,7 @@ export async function ouvrirAttenteRetour(
 export async function enregistrerPreuveExpedition(
   demandeId: string,
   preuve: string,
+  jourFourni: string,
   correlation?: Correlation,
 ): Promise<IssueTransition> {
   const demande = await lireDemandePourTraitement(prisma, demandeId);
@@ -238,13 +258,29 @@ export async function enregistrerPreuveExpedition(
     return { statut: "INTROUVABLE" };
   }
 
+  const maintenant = new Date();
+  let fournieA: Date;
+
+  try {
+    fournieA = instantDePreuveFournie(jourFourni, {
+      deposeeA: demande.deposeeA,
+      maintenant,
+    });
+  } catch (erreur) {
+    if (erreur instanceof JourDePreuveInvalideError) {
+      return { statut: "JOUR_INVALIDE", message: erreur.message };
+    }
+    throw erreur;
+  }
+
   const { appliquee } = await appliquerTransition(prisma, {
     demandeId,
-    statutsAdmis: ["RETOUR_ATTENDU"],
+    statutsAdmis: ["DEPOSEE", "ACCUSEE", "RETOUR_ATTENDU"],
     statutCible: "EXPEDITION_PROUVEE",
     champs: {
       preuveExpeditionRetour: preuve,
-      preuveExpeditionA: new Date(),
+      preuveExpeditionA: fournieA,
+      retourAttenduA: demande.retourAttenduA ?? maintenant,
     },
   });
 

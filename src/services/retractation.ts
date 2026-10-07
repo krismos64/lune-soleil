@@ -49,6 +49,7 @@ import {
   lireDemandeParCommande,
 } from "@/repositories/retractation";
 import { deposerEnvoi } from "@/services/envoi-email";
+import { EmetteurNonConfigureError, lireEmetteur } from "@/services/facture";
 import { lireEmailAlertes } from "@/services/notification-administration";
 import { formaterDate } from "@/lib/affichage-commande";
 
@@ -423,6 +424,7 @@ export async function deposerRetractation(
           // LE MOTIF NE PART PAS DANS L'EMAIL, il n'apporte rien au client qui
           // vient de l'ecrire et alourdirait une trace deja persistee.
           jourLimite: echeance?.jourLimite ?? "",
+          adresseRetour: adresseDeRetour(),
         },
         origine: "SYSTEME",
       });
@@ -534,4 +536,23 @@ function normaliserMotif(motif: string | null): string | null {
   }
 
   return propre.slice(0, MOTIF_LONGUEUR_MAX);
+}
+
+/**
+ * L'adresse ou renvoyer le bijou, ou une chaine vide, LS-288.
+ *
+ * ELLE NE LEVE JAMAIS. Ce chemin porte l'accuse de reception sur support
+ * durable, article L221-21, dont la date fait foi : une identite legale non
+ * configuree ne doit pas faire tomber la demande. Le modele dit alors au client
+ * de demander l'adresse en reponse.
+ */
+function adresseDeRetour(): string {
+  try {
+    return lireEmetteur().adresse;
+  } catch (erreur) {
+    if (erreur instanceof EmetteurNonConfigureError) {
+      return "";
+    }
+    throw erreur;
+  }
 }

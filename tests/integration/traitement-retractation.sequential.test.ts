@@ -34,6 +34,7 @@ import { Client } from "pg";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { inject } from "vitest";
 
+import { jourCivilParisien } from "@/lib/retractation";
 import { creerVarianteEnStock } from "../aide/donnees-test";
 import { VARIABLE_URL_TEST } from "../aide/base-ephemere";
 import type {
@@ -281,13 +282,15 @@ async function lireDemande(demandeId: string): Promise<{
   statut: string;
   recue_a: Date | null;
   preuve_expedition_a: Date | null;
+  retour_attendu_a: Date | null;
   montant_rembourse_centimes: number | null;
   motif_decision: string | null;
   etat_piece_retournee: string | null;
   etat_constate_a: Date | null;
 }> {
   const { rows } = await client.query(
-    `SELECT statut, recue_a, preuve_expedition_a, montant_rembourse_centimes,
+    `SELECT statut, recue_a, preuve_expedition_a, retour_attendu_a,
+            montant_rembourse_centimes,
             motif_decision, etat_piece_retournee, etat_constate_a
      FROM demande_retractation WHERE id = $1`,
     [demandeId],
@@ -432,7 +435,11 @@ describe("le remboursement est du au premier des deux faits, L221-24", () => {
     const fournisseur = fournisseurQuiRembourse();
 
     await ouvrirAttenteRetour(demandeId);
-    await enregistrerPreuveExpedition(demandeId, "1Z-TEST-SUIVI");
+    await enregistrerPreuveExpedition(
+      demandeId,
+      "1Z-TEST-SUIVI",
+      jourCivilParisien(new Date()),
+    );
 
     const issue = await rembourserRetractation(enTetes, {
       demandeId,
@@ -581,7 +588,11 @@ describe("la reception se constate hors statut, regle L12", () => {
     const fournisseur = fournisseurQuiRembourse();
 
     await ouvrirAttenteRetour(demandeId);
-    await enregistrerPreuveExpedition(demandeId, "1Z-TEST-SUIVI");
+    await enregistrerPreuveExpedition(
+      demandeId,
+      "1Z-TEST-SUIVI",
+      jourCivilParisien(new Date()),
+    );
     await rembourserRetractation(enTetes, {
       demandeId,
       montantCentimes: totalCentimes,
@@ -826,7 +837,11 @@ describe("le colis jamais revenu produit une alerte, regle L13", () => {
     const fournisseur = fournisseurQuiRembourse();
 
     await ouvrirAttenteRetour(demandeId);
-    await enregistrerPreuveExpedition(demandeId, "1Z-TEST-SUIVI");
+    await enregistrerPreuveExpedition(
+      demandeId,
+      "1Z-TEST-SUIVI",
+      jourCivilParisien(new Date()),
+    );
     await rembourserRetractation(enTetes, {
       demandeId,
       montantCentimes: totalCentimes,
@@ -1019,14 +1034,61 @@ describe("test negatif de securite, la garde vit dans le service", () => {
 });
 
 describe("les transitions sont conditionnees a l'etat lu", () => {
-  it("refuse une preuve d'expedition sur une demande non en attente de retour", async () => {
+  /*
+   * LS-288. LA PREUVE S'ENREGISTRE DES LE DEPOT, sans exiger l'ouverture de
+   * l'attente du retour, et elle porte le JOUR OU LE CLIENT L'A FOURNIE, pas
+   * l'instant de la saisie : L221-24 alinea 2 retient cette date.
+   */
+  it("enregistre une preuve des le depot, au jour fourni, et ouvre l'attente du retour", async () => {
     const { demandeId } = await commanderEtDeposer();
+    const aujourdhui = jourCivilParisien(new Date());
 
-    const issue = await enregistrerPreuveExpedition(demandeId, "1Z-TEST");
+    const issue = await enregistrerPreuveExpedition(
+      demandeId,
+      "1Z-TEST",
+      aujourdhui,
+    );
+
+    expect(issue.statut).toBe("APPLIQUEE");
+    const demande = await lireDemande(demandeId);
+    expect(demande.statut).toBe("EXPEDITION_PROUVEE");
+    // Minuit a Paris du jour fourni : le jour civil se relit a l'identique.
+    expect(jourCivilParisien(demande.preuve_expedition_a!)).toBe(aujourdhui);
+    expect(demande.preuve_expedition_a!.getTime() % (60 * 60 * 1000)).toBe(0);
+    // Sans `retourAttenduA`, la demande sortirait du seuil d'alerte L8.
+    expect(demande.retour_attendu_a).not.toBeNull();
+  });
+
+  it("refuse un jour de preuve a venir, sans rien ecrire", async () => {
+    const { demandeId } = await commanderEtDeposer();
+    const demain = jourCivilParisien(new Date(Date.now() + 36 * 3600 * 1000));
+
+    const issue = await enregistrerPreuveExpedition(
+      demandeId,
+      "1Z-TEST",
+      demain,
+    );
+
+    expect(issue.statut).toBe("JOUR_INVALIDE");
+    const demande = await lireDemande(demandeId);
+    expect(demande.statut).toBe("DEPOSEE");
+    expect(demande.preuve_expedition_a).toBeNull();
+  });
+
+  it("refuse une seconde preuve sur une expedition deja prouvee", async () => {
+    const { demandeId } = await commanderEtDeposer();
+    const aujourdhui = jourCivilParisien(new Date());
+    await enregistrerPreuveExpedition(demandeId, "1Z-PREMIER", aujourdhui);
+
+    const issue = await enregistrerPreuveExpedition(
+      demandeId,
+      "1Z-SECOND",
+      aujourdhui,
+    );
 
     expect(issue.statut).toBe("STATUT_INCOMPATIBLE");
     if (issue.statut === "STATUT_INCOMPATIBLE") {
-      expect(issue.statutActuel).toBe("DEPOSEE");
+      expect(issue.statutActuel).toBe("EXPEDITION_PROUVEE");
     }
   });
 

@@ -258,3 +258,34 @@ describe("l'accusé de rétractation, LS-287", () => {
     expect(texte()).not.toMatch(/état d'origine|remise en vente/i);
   });
 });
+
+/*
+ * L'ADRESSE DE RETOUR, LS-288. « Renvoyez votre article » sans dire où laissait
+ * le client deduire l'adresse du siège. Absente de la configuration, le client
+ * est invité à la demander en réponse, jamais laissé sans rien.
+ */
+describe("l'accusé de rétractation donne l'adresse de retour, LS-288", () => {
+  const rendre = (adresseRetour?: string) =>
+    rendreModele({
+      destinataire: "client@exemple.test",
+      modele: "retractation-accusee",
+      variables: {
+        numero: "LS-2026-0001",
+        jourLimite: "26 septembre 2026",
+        ...(adresseRetour === undefined ? {} : { adresseRetour }),
+      },
+    }).texte;
+
+  it("écrit l'adresse quand l'identité légale la porte", () => {
+    expect(rendre("4 rue de l'Exemple, 64170 Artix")).toContain(
+      "Adresse de retour : 4 rue de l'Exemple, 64170 Artix",
+    );
+  });
+
+  it("invite à la demander en réponse quand elle manque", () => {
+    expect(rendre("")).toContain(
+      "Répondez à ce message pour obtenir l'adresse de retour.",
+    );
+    expect(rendre()).not.toContain("Adresse de retour :");
+  });
+});

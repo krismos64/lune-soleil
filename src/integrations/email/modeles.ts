@@ -331,6 +331,13 @@ const RENDUS: Record<ModeleEmail, (message: MessageEmail) => MessageRendu> = {
 
   "retractation-accusee": (message) => {
     const jourLimite = message.variables.jourLimite ?? "";
+    /*
+     * L'ADRESSE DE RETOUR, LS-288 : « renvoyez votre article » sans dire ou
+     * laissait le client deduire l'adresse du siege. Elle vient de l'identite
+     * legale ; absente, le client la demande en reponse, et le `Reply-To` de
+     * LS-287 fait arriver sa question a l'exploitante.
+     */
+    const adresseRetour = message.variables.adresseRetour ?? "";
 
     return {
       objet: `Votre rétractation a bien été reçue, commande ${exiger(message, "numero")}`,
@@ -348,6 +355,10 @@ const RENDUS: Record<ModeleEmail, (message: MessageEmail) => MessageRendu> = {
         "",
         "Renvoyez votre article dans les 14 jours qui suivent cette demande,",
         "bien protégé, si possible dans son emballage.",
+        "",
+        adresseRetour.length > 0
+          ? `Adresse de retour : ${adresseRetour}`
+          : "Répondez à ce message pour obtenir l'adresse de retour.",
         "",
         "Les frais de retour sont à votre charge.",
         "",
