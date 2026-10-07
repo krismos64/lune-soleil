@@ -616,7 +616,8 @@ export async function retirerProduitDeLEspace(
 export type RefusGroupe = {
   id: string;
   nom: string;
-  raison: "NON_PUBLIABLE" | "DEJA_DANS_CET_ETAT" | "INTROUVABLE";
+  raison:
+    "NON_PUBLIABLE" | "DEJA_DANS_CET_ETAT" | "NON_ARCHIVE" | "INTROUVABLE";
   motifs: MotifNonPubliable[];
 };
 
@@ -649,21 +650,61 @@ export async function publierOuArchiverProduits({
   produitIds: unknown;
   operation: "publier" | "archiver";
 }): Promise<BilanGroupe> {
+  return appliquerAChaqueProduit(
+    produitIds,
+    operation === "publier" ? publierProduit : archiverProduit,
+    "DEJA_DANS_CET_ETAT",
+  );
+}
+
+/**
+ * Retire une selection d'archives de l'espace d'administration, LS-279.
+ *
+ * LE GESTE UNITAIRE DE LS-266 POUR CHAQUE PRODUIT : ecriture conditionnelle,
+ * C45 en base. Une transition refusee veut dire ici que le produit n'est plus
+ * archive, republie depuis un autre onglet : le bilan le nomme ainsi, et non
+ * « deja dans cet etat », qui serait faux.
+ *
+ * L'AUTORISATION N'EST PAS FAITE ICI, invariant 2 : l'action appelle
+ * `exigerRole` avant.
+ */
+export async function retirerProduitsDeLEspace({
+  produitIds,
+}: {
+  produitIds: unknown;
+}): Promise<BilanGroupe> {
+  return appliquerAChaqueProduit(
+    produitIds,
+    retirerProduitDeLEspace,
+    "NON_ARCHIVE",
+  );
+}
+
+/**
+ * La boucle commune aux actions groupees, LS-242 puis LS-279.
+ *
+ * UNE TRANSACTION PAR PRODUIT, pas une pour la selection : un refus n'annule
+ * pas les gestes voisins, qui sont chacun legitimes. `refusTransition` nomme
+ * ce que veut dire une transition refusee pour CE geste.
+ */
+async function appliquerAChaqueProduit(
+  produitIds: unknown,
+  geste: (produitId: string) => Promise<void>,
+  refusTransition: "DEJA_DANS_CET_ETAT" | "NON_ARCHIVE",
+): Promise<BilanGroupe> {
   const identifiants = valider(schemaSelectionProduits, produitIds);
   const refus: Omit<RefusGroupe, "nom">[] = [];
   let reussis = 0;
 
   for (const id of identifiants) {
     try {
-      await (operation === "publier"
-        ? publierProduit(id)
-        : archiverProduit(id));
+      await geste(id);
       reussis += 1;
     } catch (erreur) {
       if (erreur instanceof ProduitNonPubliableError) {
         refus.push({ id, raison: "NON_PUBLIABLE", motifs: erreur.motifs });
       } else if (erreur instanceof TransitionProduitInvalideError) {
-        refus.push({ id, raison: "DEJA_DANS_CET_ETAT", motifs: [] });
+        refus.push({ id, raison: refusTransition, motifs: [] });
       } else if (erreur instanceof ProduitIntrouvableError) {
         refus.push({ id, raison: "INTROUVABLE", motifs: [] });
       } else {

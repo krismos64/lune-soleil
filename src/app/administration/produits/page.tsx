@@ -300,7 +300,7 @@ async function ListeProduits({
       {produits.length > 0 ||
       archivesMasques > 0 ||
       filtreActif.valeur !== "TOUS" ? (
-        <SelectionProduits />
+        <SelectionProduits vueArchives={filtreActif.valeur === "ARCHIVE"} />
       ) : null}
 
       {produits.length === 0 ? (
@@ -340,6 +340,8 @@ async function ListeProduits({
                       value={produit.id}
                       form={FORMULAIRE_SELECTION_PRODUITS}
                       aria-label={`Sélectionner ${produit.nom}`}
+                      /* LS-279 : la confirmation du retrait nomme les articles. */
+                      data-nom={produit.nom}
                     />
                   </label>
                   {/*

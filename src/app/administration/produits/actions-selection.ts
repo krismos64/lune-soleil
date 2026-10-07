@@ -1,7 +1,7 @@
 "use server";
 
 /**
- * Publier ou archiver une selection de produits, LS-242.
+ * Publier, archiver ou retirer une selection de produits, LS-242 et LS-279.
  *
  * ADAPTATEUR D'ENTREE : session, champs du formulaire, delegation. La regle,
  * passer chaque produit par le chemin unitaire et ses gardes, vit dans le
@@ -15,6 +15,7 @@ import { EntreeInvalideError } from "@/lib/validation";
 import { exigerRole } from "@/services/autorisation";
 import {
   publierOuArchiverProduits,
+  retirerProduitsDeLEspace,
   type BilanGroupe,
 } from "@/services/catalogue";
 import {
@@ -44,15 +45,20 @@ export async function appliquerSelectionProduits(
    */
   const operation = formulaire.get("operation");
 
-  if (operation !== "publier" && operation !== "archiver") {
+  if (
+    operation !== "publier" &&
+    operation !== "archiver" &&
+    operation !== "retirer"
+  ) {
     return { statut: "INVALIDE" };
   }
 
   try {
-    const bilan = await publierOuArchiverProduits({
-      produitIds: formulaire.getAll("produitId"),
-      operation,
-    });
+    const produitIds = formulaire.getAll("produitId");
+    const bilan =
+      operation === "retirer"
+        ? await retirerProduitsDeLEspace({ produitIds })
+        : await publierOuArchiverProduits({ produitIds, operation });
 
     // `"layout"` : les pastilles de la barre lisent le catalogue.
     revalidatePath("/administration/produits", "layout");

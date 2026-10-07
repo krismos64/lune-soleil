@@ -343,12 +343,22 @@
 
 /* ------------------------------------------- la selection, LS-242 */
 
+/*
+ * LA BARRE EN LIGNES EMPILÉES, LS-279 : gestes de statut, puis prix, puis
+ * confirmation et bilan. Chaque ligne aligne ses contrôles sur 44 px.
+ */
 .selection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-3);
+  margin: 0 0 var(--ls-space-4);
+}
+
+.ligneSelection {
   display: flex;
   flex-wrap: wrap;
   gap: var(--ls-space-2) var(--ls-space-4);
   align-items: center;
-  margin: 0 0 var(--ls-space-4);
 }
 
 .actionsSelection {
@@ -398,6 +408,34 @@
 }
 
 /*
+ * LE RETRAIT EN COULEUR D'ERREUR, comme sur la fiche, LS-266 : seul le
+ * développeur le défait. `--ls-error` sur `--ls-surface`, contraste mesuré
+ * par `verifier-contraste.sh`.
+ */
+.boutonRetrait:not(:disabled) {
+  border-color: var(--ls-error);
+  color: var(--ls-error);
+}
+
+/*
+ * @bordure-decorative le cadre regroupe la confirmation, il ne borde aucun
+ * contrôle : ses boutons portent leur propre bordure.
+ */
+.confirmationRetrait {
+  padding: var(--ls-space-4);
+  border: 1px solid var(--ls-error);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  overflow-wrap: anywhere;
+}
+
+.confirmationRetrait p {
+  margin: 0 0 var(--ls-space-3);
+  max-width: 65ch;
+}
+
+/*
  * CONFIRMATION DU RETRAIT, LS-266. Distincte de la ligne d'introduction en
  * texte secondaire qui la suit, relevé par `ls-frontend-revue` : couleur de
  * succès et bordure. `--ls-success` sur `--ls-surface` : 6,15:1.
@@ -437,20 +475,23 @@
  */
 .prixSelection {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--ls-space-2);
-  align-items: flex-end;
-}
-
-.champPrix {
-  display: flex;
   flex-direction: column;
   gap: var(--ls-space-1);
+}
+
+.libellePrix {
   color: var(--ls-text);
   font-size: 0.875rem;
 }
 
-.champPrix input {
+.lignePrix {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ls-space-2);
+  align-items: center;
+}
+
+.champPrix {
   min-height: 44px;
   width: 9rem;
   padding: 0 var(--ls-space-3);
