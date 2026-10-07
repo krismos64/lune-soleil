@@ -10,7 +10,7 @@
  * transparences des voiles et des ombres sont des `rgba` d'un jeton recopié
  * en composantes, faute de `color-mix` partout où le site est servi.
  *
- * LE CONTRASTE DEPEND DU FOND, C31. Sur sable, `--ls-text` ou `--ls-primary`,
+ * LE CONTRASTE DÉPEND DU FOND, C31. Sur sable, `--ls-text` ou `--ls-primary`,
  * jamais `--ls-text-muted` (4,35:1). Les mesures de chaque paire sont portées
  * à côté de la règle qui la pose.
  *
@@ -287,9 +287,14 @@
  * pour que le clavier suive le saut, un focus invisible laisserait la personne
  * sans repère après le clic.
  */
-.section:focus-visible,
-.faq:focus-visible {
+.section:focus-visible {
   outline: 3px solid var(--ls-focus);
+  outline-offset: -6px;
+}
+
+/* Sur la nuit, `--ls-focus` tombe à 1,46:1 : l'or pâle y donne 12,48:1. */
+.faq:focus-visible {
+  outline: 3px solid var(--ls-or-pale);
   outline-offset: -6px;
 }
 
@@ -473,11 +478,11 @@
 }
 
 /*
- * LE TRAIT VERS L'ÉTAPE SUIVANTE est le `::after` de chaque étape, sauf la
- * dernière : il part du bas du jalon et rejoint le suivant, quelle que soit la
+ * LE TRAIT VERS L'ÉTAPE SUIVANTE est un élément de décor de chaque étape, sauf
+ * la dernière, et non un `::after` que `data-borne` ne suspendrait pas : il part du bas du jalon et rejoint le suivant, quelle que soit la
  * hauteur du texte. Vertical sous 768 px, horizontal au-delà.
  */
-.etape:not(:last-child)::after {
+.liaison {
   position: absolute;
   top: 2.75rem;
   left: calc(1.375rem - 1px);
@@ -485,7 +490,6 @@
   height: calc(100% - 2.75rem + var(--ls-space-5));
   background: var(--ls-accent-gold);
   transform-origin: top;
-  content: "";
 }
 
 .jalon {
@@ -777,6 +781,17 @@
   position: relative;
 }
 
+.etoiles {
+  display: none;
+}
+
+/*
+ * LES ÉTOILES DE DÉCOR NE PASSENT JAMAIS SUR LE TEXTE, ADR-045 : sous 768 px
+ * le texte occupe toute la largeur, elles n'existent donc pas, l'aquarelle
+ * porte les siennes. Au-delà, elles restent dans le tiers droit, à côté d'un
+ * texte borné à 52 caractères. Premier portage : elles couvraient deux lettres
+ * à 320 px, vu à l'écran.
+ */
 .etoiles span {
   position: absolute;
   width: 3px;
@@ -787,27 +802,27 @@
 
 .etoiles span:nth-child(1) {
   top: 18%;
-  left: 8%;
+  left: 70%;
 }
 .etoiles span:nth-child(2) {
   top: 72%;
-  left: 22%;
+  left: 78%;
 }
 .etoiles span:nth-child(3) {
   top: 12%;
-  left: 41%;
+  left: 86%;
 }
 .etoiles span:nth-child(4) {
-  top: 30%;
-  left: 58%;
+  top: 34%;
+  left: 92%;
 }
 .etoiles span:nth-child(5) {
-  top: 46%;
-  left: 34%;
+  top: 52%;
+  left: 74%;
 }
 .etoiles span:nth-child(6) {
-  top: 40%;
-  left: 14%;
+  top: 42%;
+  left: 64%;
 }
 
 /* `--ls-or-pale` sur la nuit : 12,48:1, texte de toute taille, LS-261. */
@@ -898,6 +913,10 @@
     padding: var(--ls-space-8) var(--ls-space-6);
   }
 
+  .etoiles {
+    display: block;
+  }
+
   .modes {
     grid-template-columns: repeat(3, 1fr);
     gap: var(--ls-space-5);
@@ -924,7 +943,7 @@
   }
 
   /* Horizontal : du bord droit du jalon au jalon suivant, gouttière comprise. */
-  .etape:not(:last-child)::after {
+  .liaison {
     top: calc(1.375rem - 1px);
     left: 2.75rem;
     width: calc(100% - 2.75rem + var(--ls-space-5));
@@ -1032,7 +1051,7 @@
     animation-delay: 600ms;
   }
 
-  .etape:not(:last-child)::after {
+  .liaison {
     animation: etire 800ms var(--ls-easing-sortie) both;
     animation-delay: calc(500ms + var(--i, 0) * 850ms);
   }

@@ -9,24 +9,24 @@
  * boutons) ne bouge jamais et ne part d'aucune opacité nulle : seul le décor
  * s'anime, ADR-045 point 5.
  *
- * DEUX DES TROIS LIENS DU PIED DE PAGE Y MENENT, `/aide` et `/aide#faq`. Les
+ * DEUX DES TROIS LIENS DU PIED DE PAGE Y MÈNENT, `/aide` et `/aide#faq`. Les
  * ancres `#livraison`, `#retours` et `#faq` sont conservées, et chaque `h2`
  * commence par le mot que les tests du pied cherchent.
  *
  * LES TARIFS VIENNENT DE `resoudreConfigurationLivraison`, JAMAIS D'UN TEXTE EN
- * DUR. Un seuil de gratuite annonce ici et different au panier serait une
- * information precontractuelle FAUSSE, sanctionnee bien au-dela de l'ecart de
+ * DUR. Un seuil de gratuité annoncé ici et différent au panier serait une
+ * information précontractuelle FAUSSE, sanctionnée bien au-delà de l'écart de
  * prix. Configuration invalide : la page le dit au lieu de se taire.
  *
- * LES DELAIS D'EXPEDITION NE SONT PAS ANNONCES, et leur absence est deliberee :
- * l'exploitante n'a pas repondu aux questions 38 a 42 de la fiche, LS-26.
- * Ecrire « expedition sous 24 heures » sans pouvoir le tenir serait une pratique
+ * LES DÉLAIS D'EXPÉDITION NE SONT PAS ANNONCÉS, et leur absence est délibérée :
+ * l'exploitante n'a pas répondu aux questions 38 à 42 de la fiche, LS-26.
+ * Écrire « expédition sous 24 heures » sans pouvoir le tenir serait une pratique
  * commerciale trompeuse, articles L121-2 et suivants. Le type d'emballage
- * releve des memes questions : aucune etape du chemin du colis ne le decrit.
+ * relève des mêmes questions : aucune étape du chemin du colis ne le décrit.
  *
- * LA FOIRE AUX QUESTIONS EST VIDE POUR LA MEME RAISON. Sa section existe parce
+ * LA FOIRE AUX QUESTIONS EST VIDE POUR LA MÊME RAISON. Sa section existe parce
  * que le pied de page la cite par une ancre, et une ancre absente retombe en
- * haut de page sans lever d'erreur, piege nomme par LS-123.
+ * haut de page sans lever d'erreur, piège nommé par LS-123.
  */
 import type { Metadata } from "next";
 import Image from "next/image";
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
   }),
 };
 
-/** Les tarifs se lisent a chaque affichage, jamais au chargement du module. */
+/** Les tarifs se lisent à chaque affichage, jamais au chargement du module. */
 export const dynamic = "force-dynamic";
 
 /** Un arrêt de dégradé SVG lu dans un jeton, jamais une valeur en dur. */
@@ -119,7 +119,7 @@ export default async function PageAide() {
       : formaterMontant(livraison.seuilFranchiseCentimes);
 
   return (
-    /* `id="contenu"` : cible du lien d'evitement, voir la page soeur. */
+    /* `id="contenu"` : cible du lien d'évitement, voir la page sœur. */
     <main id="contenu" tabIndex={-1} className={styles.page}>
       {/*
        * EN-TÊTE D'AUBE, dégradé de ciel permis par l'amendement LS-280.
@@ -315,9 +315,9 @@ export default async function PageAide() {
             /*
              * CONFIGURATION INVALIDE : la page le dit. Un silence laisserait
              * croire qu'aucun tarif n'existe, et un montant de repli serait une
-             * information precontractuelle fausse.
+             * information précontractuelle fausse.
              */
-            <p className={styles.attente} role="status">
+            <p className={styles.attente}>
               Les tarifs de livraison ne peuvent pas être affichés pour le
               moment. Écrivez-nous depuis la{" "}
               <Link href="/contact">page de contact</Link> si vous avez besoin
@@ -406,8 +406,8 @@ export default async function PageAide() {
 
               {/*
                * LS-249 : EN POINT RELAIS ET LOCKER SEULEMENT, comme le calcul
-               * facture, `calculerFraisPort` et ADR-035. Le domicile, jamais
-               * offert, a deja ete annonce gratuit sur cette page.
+               * facturé, `calculerFraisPort` et ADR-035. Le domicile, jamais
+               * offert, a déjà été annoncé gratuit sur cette page.
                */}
               {franchise === null ? null : (
                 <div className={styles.franchise} data-borne="">
@@ -441,8 +441,10 @@ export default async function PageAide() {
             {/*
              * AUCUNE ÉTAPE NE PORTE DE DURÉE, questions 38 à 42 sans réponse.
              * Le trait entre deux jalons et le colis qui le parcourt sont des
-             * décors : le trait est le `::after` de chaque étape, le colis un
-             * élément `aria-hidden` qui ne passe sur aucun texte.
+             * décors `aria-hidden` qui ne passent sur aucun texte. Le trait
+             * est un ÉLÉMENT et non un `::after` : `[data-borne="attente"] *`
+             * n'atteint pas un pseudo-élément, qui se dessinait donc hors de
+             * l'écran, revue de LS-280.
              */}
             <div className={styles.piste} data-borne="">
               <ol className={styles.etapes}>
@@ -450,6 +452,7 @@ export default async function PageAide() {
                   <span className={styles.jalon} aria-hidden="true">
                     1
                   </span>
+                  <span className={styles.liaison} aria-hidden="true" />
                   <div>
                     <p className={styles.etapeTitre}>Vous commandez</p>
                     <p className={styles.etapeTexte}>
@@ -461,6 +464,7 @@ export default async function PageAide() {
                   <span className={styles.jalon} aria-hidden="true">
                     2
                   </span>
+                  <span className={styles.liaison} aria-hidden="true" />
                   <div>
                     <p className={styles.etapeTitre}>L&apos;atelier prépare</p>
                     <p className={styles.etapeTexte}>
@@ -472,6 +476,7 @@ export default async function PageAide() {
                   <span className={styles.jalon} aria-hidden="true">
                     3
                   </span>
+                  <span className={styles.liaison} aria-hidden="true" />
                   <div>
                     <p className={styles.etapeTitre}>Mondial Relay achemine</p>
                     <p className={styles.etapeTexte}>
@@ -502,9 +507,9 @@ export default async function PageAide() {
           </div>
 
           {/*
-           * AUCUN DELAI D'EXPEDITION N'EST ANNONCE, et c'est ce paragraphe qui le
-           * dit plutot que de laisser un silence. Les questions 38 a 42 de la
-           * fiche exploitante sont sans reponse.
+           * AUCUN DÉLAI D'EXPÉDITION N'EST ANNONCÉ, et c'est ce paragraphe qui le
+           * dit plutôt que de laisser un silence. Les questions 38 à 42 de la
+           * fiche exploitante sont sans réponse.
            */}
           <p className={styles.noteAttente}>
             <svg viewBox="0 0 20 20" aria-hidden="true">
@@ -665,9 +670,9 @@ export default async function PageAide() {
        * CIEL DE NUIT, dégradé permis par l'amendement LS-280.
        *
        * LA SECTION EXISTE VIDE PARCE QUE LE PIED DE PAGE LA CITE PAR UNE
-       * ANCRE. Son contenu appartient a LS-26, qui attend les reponses de
-       * l'exploitante sur l'entretien des bijoux et les delais : aucune
-       * question n'est inventee pour la remplir.
+       * ANCRE. Son contenu appartient à LS-26, qui attend les réponses de
+       * l'exploitante sur l'entretien des bijoux et les délais : aucune
+       * question n'est inventée pour la remplir.
        */}
       <section
         id="faq"
@@ -693,7 +698,7 @@ export default async function PageAide() {
             <span className={styles.surtitreNuit}>
               Questions fréquentes<span className={styles.cache}>, </span>
             </span>
-            Les réponses se préparent à l&apos;atelier.
+            Les réponses se préparent à l&apos;atelier
           </h2>
           <p className={styles.texteFaq}>
             Les réponses aux questions les plus fréquentes, sur l&apos;entretien
