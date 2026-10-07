@@ -1051,6 +1051,14 @@ D'où `preuveExpeditionRetour` et `preuveExpeditionA`, et le statut
 `REMBOURSEMENT_EN_COURS`. Le remboursement part alors sans attendre l'arrivée du
 colis, et c'est le cas que la loi impose de couvrir.
 
+**Depuis LS-288, la preuve s'enregistre dès le dépôt**, depuis `DEPOSEE` ou
+`ACCUSEE` comme depuis `RETOUR_ATTENDU`, et `retourAttenduA` est alors posé
+s'il manque, faute de quoi la demande sortirait du seuil d'alerte L8.
+**`preuveExpeditionA` porte le jour où le client a fourni la preuve**, saisi
+par l'exploitante et stocké à minuit heure de Paris, et non l'instant de la
+saisie : L221-24 alinéa 2 retient cette date. Le jour est borné entre celui du
+dépôt et aujourd'hui.
+
 **`EXPEDITION_PROUVEE` n'est pas un passage obligé.** L'autre fait de l'article
 L221-24 est la réception, qui se constate par `recueA` sans changer le statut,
 règle L12. Une demande passe donc légitimement de `RETOUR_ATTENDU` à
