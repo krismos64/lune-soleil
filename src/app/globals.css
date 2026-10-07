@@ -130,11 +130,24 @@ svg {
  * suspendues : hors de l'écran, ou après cinq secondes de mouvement. L'attribut
  * VIDE, état sans script, ne suspend rien : les animations finies jouent une
  * fois, et ce qui serait sans fin ne s'anime que sous `joue`.
+ *
+ * LES PSEUDO-ÉLÉMENTS SONT NOMMÉS, LS-281 : `*` ne les atteint pas, et
+ * `animation-play-state` ne s'hérite pas. Le reflet du sceau de l'accueil, un
+ * `::after`, jouait au chargement hors de l'écran et avait fini avant que le
+ * visiteur y arrive.
  */
 [data-borne="attente"],
+[data-borne="attente"]::before,
+[data-borne="attente"]::after,
 [data-borne="attente"] *,
+[data-borne="attente"] *::before,
+[data-borne="attente"] *::after,
 [data-borne="fin"],
-[data-borne="fin"] * {
+[data-borne="fin"]::before,
+[data-borne="fin"]::after,
+[data-borne="fin"] *,
+[data-borne="fin"] *::before,
+[data-borne="fin"] *::after {
   animation-play-state: paused !important;
 }
 
@@ -146,8 +159,14 @@ svg {
  * que la règle ci-dessus, il l'emporte entre deux `!important`.
  */
 [data-borne="fin"] [data-continu],
+[data-borne="fin"] [data-continu]::before,
+[data-borne="fin"] [data-continu]::after,
 [data-borne="fin"] [data-continu] *,
-[data-borne="fin"][data-continu] {
+[data-borne="fin"] [data-continu] *::before,
+[data-borne="fin"] [data-continu] *::after,
+[data-borne="fin"][data-continu],
+[data-borne="fin"][data-continu]::before,
+[data-borne="fin"][data-continu]::after {
   animation-play-state: running !important;
 }
 
