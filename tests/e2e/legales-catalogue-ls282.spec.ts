@@ -110,7 +110,16 @@ test.describe("mouvement autorisé", () => {
           await borne.evaluate((element) =>
             element
               .getAnimations({ subtree: true })
-              .filter((animation) => animation.playState !== "finished")
+              /*
+               * LE TEMPS ÉCOULÉ ET NON `playState` : sous `fin`, la règle
+               * globale pose `animation-play-state: paused`, et une animation
+               * déjà terminée signale alors `paused`, son temps bloqué à la
+               * fin. Mesuré au premier passage de ce contrôle.
+               */
+              .filter((animation) => {
+                const fin = animation.effect?.getComputedTiming().endTime;
+                return Number(animation.currentTime) < Number(fin) - 1;
+              })
               .map((animation) => (animation as CSSAnimation).animationName),
           ),
         ).toEqual([]);
