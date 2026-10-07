@@ -239,6 +239,7 @@ export async function declarerPreuveExpedition(
       demandeId,
       preuve,
       jourFourni,
+      identite.utilisateurId,
     );
 
     if (issue.statut === "APPLIQUEE") {
@@ -473,7 +474,28 @@ export async function refuser(donnees: FormData): Promise<ResultatTransition> {
       };
     }
 
-    return { statut: "INDISPONIBLE" };
+    // Revue de LS-288 : un remboursement en vol ou deja fait interdit le refus.
+    if (issue.statut === "REMBOURSEMENT_ENGAGE") {
+      return {
+        statut: "INVALIDE",
+        message:
+          "Un remboursement est en cours ou déjà fait sur cette demande : elle ne peut plus être refusée. Rechargez la page.",
+      };
+    }
+
+    // Le refus ne saisit aucun jour : cette issue ne peut pas sortir d'ici.
+    if (issue.statut === "JOUR_INVALIDE") {
+      return { statut: "INDISPONIBLE" };
+    }
+
+    /*
+     * EXHAUSTIF POUR DE BON, revue de LS-288. Le commentaire ci-dessus disait
+     * qu'une issue ajoutee au service ferait echouer la compilation ; c'etait
+     * faux, un `return` final l'avalait en « indisponible ». L'affectation a
+     * `never` rend la promesse vraie.
+     */
+    const nonTraitee: never = issue;
+    return nonTraitee;
   } catch (erreur) {
     journaliserErreur("Refus de retractation impossible", erreur, {});
     return { statut: "INDISPONIBLE" };
@@ -573,6 +595,11 @@ export async function rembourser(
         numeroAvoir: issue.numeroAvoir,
         montantCentimes: issue.montantCentimes,
       };
+    }
+
+    // Le service convertit deja cette issue en `STATUT_INCOMPATIBLE`.
+    if (issue.statut === "ANNULE_AVANT_APPEL") {
+      return { statut: "INDISPONIBLE" };
     }
 
     return issue;

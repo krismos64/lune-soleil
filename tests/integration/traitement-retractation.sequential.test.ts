@@ -56,6 +56,7 @@ let ouvrirAttenteRetour: typeof import("@/services/traitement-retractation").ouv
 let enregistrerPreuveExpedition: typeof import("@/services/traitement-retractation").enregistrerPreuveExpedition;
 let constaterReception: typeof import("@/services/traitement-retractation").constaterReception;
 let rembourserRetractation: typeof import("@/services/traitement-retractation").rembourserRetractation;
+let rembourserCommande: typeof import("@/services/avoir").rembourserCommande;
 let refuserRetractation: typeof import("@/services/traitement-retractation").refuserRetractation;
 let lireMontantDu: typeof import("@/services/traitement-retractation").lireMontantDu;
 let alerterRetoursJamaisRecus: typeof import("@/services/traitement-retractation").alerterRetoursJamaisRecus;
@@ -206,6 +207,24 @@ async function sessionAdministratrice(): Promise<Headers> {
   );
   await enregistrerPreuveIdentite(sessionId);
   return enTetes;
+}
+
+/** L'identifiant de l'administratrice, auteur des saisies auditees, LS-288. */
+async function idAdministratrice(): Promise<string> {
+  const lire = async () =>
+    (
+      await client.query("SELECT id FROM utilisateur WHERE email = $1", [
+        EMAIL_ADMINISTRATRICE,
+      ])
+    ).rows[0]?.id as string | undefined;
+
+  // Le compte n'est cree que s'il manque : Better Auth refuse un second
+  // `signUpEmail` sur la meme adresse.
+  const existant = await lire();
+  if (existant !== undefined) return existant;
+
+  await sessionAdministratrice();
+  return (await lire())!;
 }
 
 /**
@@ -359,6 +378,7 @@ beforeAll(async () => {
     SEUIL_RETOUR_JAMAIS_RECU_JOURS,
     constaterEtatPiece,
   } = await import("@/services/traitement-retractation"));
+  ({ rembourserCommande } = await import("@/services/avoir"));
 });
 
 /*
@@ -439,6 +459,7 @@ describe("le remboursement est du au premier des deux faits, L221-24", () => {
       demandeId,
       "1Z-TEST-SUIVI",
       jourCivilParisien(new Date()),
+      await idAdministratrice(),
     );
 
     const issue = await rembourserRetractation(enTetes, {
@@ -592,6 +613,7 @@ describe("la reception se constate hors statut, regle L12", () => {
       demandeId,
       "1Z-TEST-SUIVI",
       jourCivilParisien(new Date()),
+      await idAdministratrice(),
     );
     await rembourserRetractation(enTetes, {
       demandeId,
@@ -841,6 +863,7 @@ describe("le colis jamais revenu produit une alerte, regle L13", () => {
       demandeId,
       "1Z-TEST-SUIVI",
       jourCivilParisien(new Date()),
+      await idAdministratrice(),
     );
     await rembourserRetractation(enTetes, {
       demandeId,
@@ -1047,6 +1070,7 @@ describe("les transitions sont conditionnees a l'etat lu", () => {
       demandeId,
       "1Z-TEST",
       aujourdhui,
+      await idAdministratrice(),
     );
 
     expect(issue.statut).toBe("APPLIQUEE");
@@ -1057,6 +1081,22 @@ describe("les transitions sont conditionnees a l'etat lu", () => {
     expect(demande.preuve_expedition_a!.getTime() % (60 * 60 * 1000)).toBe(0);
     // Sans `retourAttenduA`, la demande sortirait du seuil d'alerte L8.
     expect(demande.retour_attendu_a).not.toBeNull();
+
+    /*
+     * LA SAISIE EST AUDITEE, revue de LS-288 : le jour declare et le jour de
+     * saisie, l'auteur, et l'instant reel par `cree_a`.
+     */
+    const { rows: audits } = await client.query(
+      `SELECT acteur_id, detail FROM journal_audit
+       WHERE action = 'PREUVE_EXPEDITION_RETOUR' AND id_cible = $1`,
+      [demandeId],
+    );
+    expect(audits).toHaveLength(1);
+    expect(audits[0].acteur_id).toBe(await idAdministratrice());
+    expect(audits[0].detail).toEqual({
+      jourFourni: aujourdhui,
+      jourDeSaisie: aujourdhui,
+    });
   });
 
   it("refuse un jour de preuve a venir, sans rien ecrire", async () => {
@@ -1067,23 +1107,35 @@ describe("les transitions sont conditionnees a l'etat lu", () => {
       demandeId,
       "1Z-TEST",
       demain,
+      await idAdministratrice(),
     );
 
     expect(issue.statut).toBe("JOUR_INVALIDE");
     const demande = await lireDemande(demandeId);
     expect(demande.statut).toBe("DEPOSEE");
     expect(demande.preuve_expedition_a).toBeNull();
+    const { rows: audits } = await client.query(
+      "SELECT 1 FROM journal_audit WHERE id_cible = $1",
+      [demandeId],
+    );
+    expect(audits).toHaveLength(0);
   });
 
   it("refuse une seconde preuve sur une expedition deja prouvee", async () => {
     const { demandeId } = await commanderEtDeposer();
     const aujourdhui = jourCivilParisien(new Date());
-    await enregistrerPreuveExpedition(demandeId, "1Z-PREMIER", aujourdhui);
+    await enregistrerPreuveExpedition(
+      demandeId,
+      "1Z-PREMIER",
+      aujourdhui,
+      await idAdministratrice(),
+    );
 
     const issue = await enregistrerPreuveExpedition(
       demandeId,
       "1Z-SECOND",
       aujourdhui,
+      await idAdministratrice(),
     );
 
     expect(issue.statut).toBe("STATUT_INCOMPATIBLE");
@@ -1731,5 +1783,108 @@ describe("l'etat de la piece retournee decide de la reintegration, LS-173", () =
     });
 
     expect(issue.statut).toBe("INTROUVABLE");
+  });
+});
+
+/*
+ * ------------------------------------------------------------------
+ * LA COURSE ENTRE REMBOURSEMENT ET REFUS, revue de LS-288.
+ *
+ * Le statut ne passe a `REMBOURSEE` qu'apres le retour du prestataire : pendant
+ * l'appel, la demande restait refusable. Deux onglets suffisaient a rendre
+ * l'argent sur une demande « refusee ». Trois defenses, une par test.
+ * ------------------------------------------------------------------
+ */
+describe("le refus et le remboursement ne se croisent pas, revue de LS-288", () => {
+  /** La facture de la commande, pour poser une intention comme le ferait un appel en vol. */
+  async function factureDe(commandeId: string): Promise<string> {
+    const { rows } = await client.query(
+      "SELECT id FROM facture WHERE commande_id = $1",
+      [commandeId],
+    );
+    return rows[0]!.id as string;
+  }
+
+  it("refuse le refus tant qu'un remboursement est en vol", async () => {
+    const { commandeId, demandeId } = await commanderEtDeposer();
+    await ouvrirAttenteRetour(demandeId);
+
+    // Une intention non aboutie : un appel au prestataire parti ou sur le depart.
+    await client.query(
+      `INSERT INTO intention_remboursement
+         (id, facture_id, cle_idempotence, montant_centimes)
+       VALUES ($1, $2, $3, 100)`,
+      [randomUUID(), await factureDe(commandeId), `test:${randomUUID()}`],
+    );
+
+    const issue = await refuserRetractation(demandeId, "Motif quelconque");
+
+    expect(issue.statut).toBe("REMBOURSEMENT_ENGAGE");
+    expect((await lireDemande(demandeId)).statut).toBe("RETOUR_ATTENDU");
+  });
+
+  it("renonce avant l'appel si la demande a ete refusee entre-temps", async () => {
+    const { commandeId, totalCentimes } = await commanderEtDeposer();
+    const fournisseur = fournisseurQuiRembourse();
+
+    const issue = await rembourserCommande(
+      {
+        commandeId,
+        montantCentimes: totalCentimes,
+        motif: "Retractation, article L221-18",
+        fournisseur,
+        referenceDemande: randomUUID(),
+        avantAppel: async () => false,
+      },
+      undefined,
+    );
+
+    expect(issue.statut).toBe("ANNULE_AVANT_APPEL");
+    expect(fournisseur.appels).toHaveLength(0);
+    // L'intention est liberee : elle ne reserve plus sa part du restant.
+    const { rows } = await client.query(
+      "SELECT 1 FROM intention_remboursement WHERE facture_id = $1",
+      [await factureDe(commandeId)],
+    );
+    expect(rows).toHaveLength(0);
+  });
+
+  it("alerte si la demande quitte les statuts remboursables pendant l'appel", async () => {
+    const enTetes = await sessionAdministratrice();
+    const { demandeId, totalCentimes } = await commanderEtDeposer();
+    await ouvrirAttenteRetour(demandeId);
+    await constaterReception(demandeId);
+
+    /*
+     * LE PRESTATAIRE CHANGE L'ETAT PENDANT SON APPEL, par SQL direct : c'est
+     * la course inconnue que les deux autres defenses ne couvriraient pas.
+     */
+    const fournisseur = fournisseurDouble(async (demande) => {
+      await client.query(
+        `UPDATE demande_retractation SET statut = 'REFUSEE'::"StatutRetractation",
+           motif_decision = 'course' WHERE id = $1`,
+        [demandeId],
+      );
+      return {
+        issue: "REMBOURSE",
+        identifiantRemboursement: `re_test_${randomUUID().slice(0, 8)}`,
+        montantCentimes: demande.montantCentimes,
+      };
+    });
+
+    const issue = await rembourserRetractation(enTetes, {
+      demandeId,
+      montantCentimes: totalCentimes,
+      fournisseur,
+      referenceDemande: randomUUID(),
+    });
+
+    expect(issue.statut).toBe("REMBOURSE");
+    const { rows } = await client.query(
+      `SELECT 1 FROM alerte_critique
+       WHERE type = 'REMBOURSEMENT_SUR_DEMANDE_CLOSE' AND id_cible = $1`,
+      [demandeId],
+    );
+    expect(rows).toHaveLength(1);
   });
 });

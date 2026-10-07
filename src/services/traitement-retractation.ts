@@ -34,6 +34,7 @@ import type { EtatPieceRetournee } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import {
   instantDePreuveFournie,
+  jourCivilParisien,
   JourDePreuveInvalideError,
 } from "@/lib/retractation";
 import { journaliser } from "@/lib/journal";
@@ -46,12 +47,14 @@ import {
   lireDemandePourTraitement,
   lireMontantRemboursable,
   listerDemandes,
+  remboursementEngageSousVerrou,
   listerRetoursJamaisRecus,
   type DemandeEnListe,
 } from "@/repositories/retractation";
 import { leverAlerteCritique } from "@/repositories/confirmation";
 import {
   creerMouvement,
+  ecrireAudit,
   incrementerStockPhysique,
 } from "@/repositories/mouvement-stock";
 import {
@@ -77,6 +80,9 @@ import {
  * RETIRER `RETOUR_ATTENDU` DE CETTE LISTE EST LA FAUTE QUE LA STORY NOMME : le
  * retour sans numero de suivi ne se rembourserait plus jamais.
  */
+/** Les statuts d'ou part un refus : avant toute preuve d'expedition. */
+const STATUTS_REFUSABLES = ["DEPOSEE", "ACCUSEE", "RETOUR_ATTENDU"] as const;
+
 const STATUTS_REMBOURSABLES = ["RETOUR_ATTENDU", "EXPEDITION_PROUVEE"] as const;
 
 /**
@@ -117,7 +123,12 @@ export type IssueTransition =
    * Jour de preuve refusé, LS-288 : à venir, antérieur au dépôt ou mal formé.
    * Le message dit lequel, sans recopier la saisie.
    */
-  | { statut: "JOUR_INVALIDE"; message: string };
+  | { statut: "JOUR_INVALIDE"; message: string }
+  /**
+   * Un remboursement est en vol ou deja fait sur cette demande : le refus est
+   * impossible, revue de LS-288. L'ecran le dit, l'exploitante recharge.
+   */
+  | { statut: "REMBOURSEMENT_ENGAGE" };
 
 /** Ce que l'horodatage de la reception rend. */
 export type IssueReception =
@@ -250,6 +261,7 @@ export async function enregistrerPreuveExpedition(
   demandeId: string,
   preuve: string,
   jourFourni: string,
+  acteurId: string,
   correlation?: Correlation,
 ): Promise<IssueTransition> {
   const demande = await lireDemandePourTraitement(prisma, demandeId);
@@ -273,15 +285,36 @@ export async function enregistrerPreuveExpedition(
     throw erreur;
   }
 
-  const { appliquee } = await appliquerTransition(prisma, {
-    demandeId,
-    statutsAdmis: ["DEPOSEE", "ACCUSEE", "RETOUR_ATTENDU"],
-    statutCible: "EXPEDITION_PROUVEE",
-    champs: {
-      preuveExpeditionRetour: preuve,
-      preuveExpeditionA: fournieA,
-      retourAttenduA: demande.retourAttenduA ?? maintenant,
-    },
+  /*
+   * LA SAISIE EST TRACEE AU JOURNAL D'AUDIT, DANS LA MEME TRANSACTION, revue de
+   * LS-288. `preuveExpeditionA` porte desormais un jour DECLARE : sans trace,
+   * ni une date reculee par erreur ni une date avancee expres ne se verraient
+   * dans un litige. L'audit garde l'auteur, l'instant reel de la saisie
+   * (`creeA`) et le jour declare ; il n'est ecrit que si la transition l'est.
+   */
+  const appliquee = await prisma.$transaction(async (transaction) => {
+    const transition = await appliquerTransition(transaction, {
+      demandeId,
+      statutsAdmis: ["DEPOSEE", "ACCUSEE", "RETOUR_ATTENDU"],
+      statutCible: "EXPEDITION_PROUVEE",
+      champs: {
+        preuveExpeditionRetour: preuve,
+        preuveExpeditionA: fournieA,
+        retourAttenduA: demande.retourAttenduA ?? maintenant,
+      },
+    });
+
+    if (transition.appliquee) {
+      await ecrireAudit(transaction, {
+        acteurId,
+        action: "PREUVE_EXPEDITION_RETOUR",
+        typeCible: "DemandeRetractation",
+        idCible: demandeId,
+        detail: { jourFourni, jourDeSaisie: jourCivilParisien(maintenant) },
+      });
+    }
+
+    return transition.appliquee;
   });
 
   if (!appliquee) {
@@ -527,9 +560,36 @@ export async function rembourserRetractation(
        * il vient d'emettre, et lui seul.
        */
       demandeRetractationId: parametres.demandeId,
+      /*
+       * LE STATUT EST RELU APRES LA RESERVATION, revue de LS-288. Un refus
+       * concurrent a pu passer entre la premiere lecture et la reservation ;
+       * apres elle, le refus voit l'intention sous le meme verrou de facture
+       * et renonce. Relire ici ferme donc les deux sens de la course.
+       */
+      avantAppel: async () => {
+        const actuelle = await lireDemandePourTraitement(
+          prisma,
+          parametres.demandeId,
+        );
+        return (
+          actuelle !== null &&
+          STATUTS_REMBOURSABLES.includes(actuelle.statut as never)
+        );
+      },
     },
     correlation,
   );
+
+  if (issue.statut === "ANNULE_AVANT_APPEL") {
+    const actuelle = await lireDemandePourTraitement(
+      prisma,
+      parametres.demandeId,
+    );
+    return {
+      statut: "STATUT_INCOMPATIBLE",
+      statutActuel: actuelle?.statut ?? "INCONNU",
+    };
+  }
 
   if (issue.statut !== "REMBOURSE") {
     return issue;
@@ -540,12 +600,32 @@ export async function rembourserRetractation(
    * que le PRESTATAIRE A RENDU, jamais ce qui a ete demande : c'est l'argent
    * reellement sorti qui fait foi, meme regle que le montant de l'avoir.
    */
-  await appliquerTransition(prisma, {
+  const { appliquee } = await appliquerTransition(prisma, {
     demandeId: parametres.demandeId,
     statutsAdmis: STATUTS_REMBOURSABLES,
     statutCible: "REMBOURSEE",
     champs: { montantRembourseCentimes: issue.montantCentimes },
   });
+
+  /*
+   * DERNIERE DEFENSE, revue de LS-288 : le resultat etait ignore. Si la
+   * transition ne s'applique pas, l'argent est parti et l'avoir emis sur une
+   * demande qui a quitte les statuts remboursables. Le verrou de facture et la
+   * relecture d'avant l'appel ferment la course connue ; une course inconnue
+   * doit se voir, jamais se taire.
+   */
+  if (!appliquee) {
+    await leverAlerteCritique(prisma, {
+      type: "REMBOURSEMENT_SUR_DEMANDE_CLOSE",
+      message:
+        `La retractation ${parametres.demandeId} a ete remboursee ` +
+        `(avoir ${issue.numeroAvoir}) mais son statut n'a pas pu passer a ` +
+        `REMBOURSEE : la demande avait change d'etat pendant l'appel au ` +
+        `prestataire. Verifier la demande et l'avoir.`,
+      typeCible: "DemandeRetractation",
+      idCible: parametres.demandeId,
+    });
+  }
 
   journaliser(
     "info",
@@ -911,15 +991,50 @@ export async function refuserRetractation(
   /*
    * UNE DEMANDE DEJA REMBOURSEE NE SE REFUSE PLUS. L'argent est parti : la
    * refuser produirait un document qui contredit un versement reel.
+   *
+   * NI UNE DEMANDE DONT LE REMBOURSEMENT EST EN VOL, revue de LS-288. Le statut
+   * ne passe a `REMBOURSEE` qu'APRES le retour du prestataire : pendant l'appel,
+   * la demande reste `RETOUR_ATTENDU`, donc refusable. Deux onglets suffisaient
+   * a rendre l'argent sur une demande « refusee ». Le refus prend donc le
+   * verrou de facture que prend la reservation du remboursement, et renonce
+   * s'il trouve une intention en vol ou un avoir deja rattache.
    */
-  const { appliquee } = await appliquerTransition(prisma, {
-    demandeId,
-    statutsAdmis: ["DEPOSEE", "ACCUSEE", "RETOUR_ATTENDU"],
-    statutCible: "REFUSEE",
-    champs: { motifDecision: motif },
+  /*
+   * LE STATUT LU D'ABORD : une demande deja remboursee ou close se dit par son
+   * etat, message plus parlant que « remboursement engage ». La transition
+   * conditionnelle ci-dessous reste la garde, cette lecture n'est qu'un message.
+   */
+  if (!STATUTS_REFUSABLES.includes(demande.statut as never)) {
+    return { statut: "STATUT_INCOMPATIBLE", statutActuel: demande.statut };
+  }
+
+  const issue = await prisma.$transaction(async (transaction) => {
+    if (
+      await remboursementEngageSousVerrou(transaction, {
+        commandeId: demande.commandeId,
+        demandeId,
+      })
+    ) {
+      return "REMBOURSEMENT_ENGAGE" as const;
+    }
+
+    const { appliquee } = await appliquerTransition(transaction, {
+      demandeId,
+      statutsAdmis: STATUTS_REFUSABLES,
+      statutCible: "REFUSEE",
+      champs: { motifDecision: motif },
+    });
+
+    return appliquee
+      ? ("APPLIQUEE" as const)
+      : ("STATUT_INCOMPATIBLE" as const);
   });
 
-  if (!appliquee) {
+  if (issue === "REMBOURSEMENT_ENGAGE") {
+    return { statut: "REMBOURSEMENT_ENGAGE" };
+  }
+
+  if (issue === "STATUT_INCOMPATIBLE") {
     return { statut: "STATUT_INCOMPATIBLE", statutActuel: demande.statut };
   }
 

@@ -645,8 +645,15 @@ export default async function PageInformationsLegales() {
             <p className={styles.texte}>
               Une fois votre décision déclarée, vous disposez de{" "}
               <strong>quatorze jours</strong> pour renvoyer le bijou à
-              l&apos;atelier, à l&apos;adresse indiquée sous « Éditeur du site »
-              et rappelée dans l&apos;accusé de réception de votre demande.
+              l&apos;atelier,{" "}
+              {/*
+               * LE RENVOI NE VISE QUE CE QUI EST AFFICHE, revue de LS-288 : sans
+               * identite, la rubrique « Editeur du site » n'existe pas, et la
+               * consigne reprend celle de l'accuse de reception.
+               */}
+              {identite === null
+                ? "dont l'adresse vous est communiquée sur simple réponse à l'accusé de réception de votre demande."
+                : "à l'adresse indiquée sous « Éditeur du site » et rappelée dans l'accusé de réception de votre demande."}
             </p>
 
             <h3 className={styles.titreBloc}>Frais de retour</h3>

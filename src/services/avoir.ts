@@ -91,7 +91,12 @@ export type IssueRemboursementCommande =
    * Rendre « refuse » pousserait a relancer, et la relance partirait avec un
    * cumul different donc une cle differente : un SECOND remboursement reel.
    */
-  | { statut: "DEJA_DEMANDE" };
+  | { statut: "DEJA_DEMANDE" }
+  /**
+   * Le controle `avantAppel` de l'appelant a renonce, l'intention etant deja
+   * reservee : elle est liberee et aucun appel ne part. Revue de LS-288.
+   */
+  | { statut: "ANNULE_AVANT_APPEL" };
 
 /**
  * Rembourse tout ou partie d'une commande et emet l'avoir correspondant.
@@ -139,6 +144,13 @@ export async function rembourserCommande(
      * numero du document reste lisible apres rechargement de la page.
      */
     demandeRetractationId?: string | undefined;
+    /**
+     * Revue de LS-288. Rejoue APRES la reservation de l'intention et AVANT
+     * l'appel au prestataire : rendre `false` renonce sans rien rembourser.
+     * La retractation y relit son statut, qu'un refus concurrent a pu changer
+     * entre sa premiere lecture et la reservation.
+     */
+    avantAppel?: (() => Promise<boolean>) | undefined;
   },
   correlation?: Correlation,
 ): Promise<IssueRemboursementCommande> {
@@ -149,6 +161,7 @@ export async function rembourserCommande(
     fournisseur,
     referenceDemande,
     demandeRetractationId,
+    avantAppel,
   } = parametres;
 
   const paiement = await lirePaiementEncaisse(prisma, commandeId);
@@ -267,6 +280,24 @@ export async function rembourserCommande(
     );
 
     return { statut: "DEJA_DEMANDE" };
+  }
+
+  /*
+   * LE DERNIER MOT DE L'APPELANT, revue de LS-288, place ICI ET NULLE PART
+   * AILLEURS. Avant la reservation, un refus concurrent pourrait encore se
+   * glisser entre le controle et l'appel ; apres elle, l'intention est commitee
+   * et le refus, qui prend le meme verrou de facture, la voit et renonce. Un
+   * controle qui echoue libere l'intention : rien n'est parti.
+   */
+  if (avantAppel !== undefined && !(await avantAppel())) {
+    await libererIntentionNonAboutie(prisma, intention.intentionId);
+    journaliser(
+      "warn",
+      "Remboursement annule avant l'appel au prestataire",
+      { commande: commandeId, montantCentimes },
+      correlation,
+    );
+    return { statut: "ANNULE_AVANT_APPEL" };
   }
 
   let issue: Awaited<ReturnType<FournisseurPaiement["rembourser"]>>;
@@ -699,6 +730,13 @@ export async function demanderRemboursement(
      * `rembourserCommande`. Absente pour un remboursement commercial.
      */
     demandeRetractationId?: string | undefined;
+    /**
+     * Revue de LS-288. Rejoue APRES la reservation de l'intention et AVANT
+     * l'appel au prestataire : rendre `false` renonce sans rien rembourser.
+     * La retractation y relit son statut, qu'un refus concurrent a pu changer
+     * entre sa premiere lecture et la reservation.
+     */
+    avantAppel?: (() => Promise<boolean>) | undefined;
   },
   correlation?: Correlation,
 ): Promise<IssueDemandeRemboursement> {
