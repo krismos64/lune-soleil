@@ -45,6 +45,11 @@ on:
           - deployer
           - retour-arriere
           - etat
+          # LS-289 : recrée l'application sur l'image EN SERVICE pour relire
+          # `/etc/lune-soleil/production.env`, après un changement de variable.
+          # Le SHA saisi est alors validé mais ignoré : c'est l'image en service
+          # que le script recrée.
+          - recreer
 
 # UN DÉPLOIEMENT À LA FOIS, et `cancel-in-progress` volontairement absent : un
 # déploiement interrompu à mi-chemin est pire qu'un déploiement en attente. Même
@@ -190,6 +195,7 @@ jobs:
             deployer)       COMMANDE="$SHA $MIGRATIONS $EMPREINTE" ;;
             retour-arriere) COMMANDE="--retour-arriere" ;;
             etat)           COMMANDE="--etat" ;;
+            recreer)        COMMANDE="--recreer" ;;
             *) echo "::error::action inconnue"; exit 1 ;;
           esac
 

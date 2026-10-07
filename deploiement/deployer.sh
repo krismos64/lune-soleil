@@ -23,6 +23,8 @@
 #   deployer.sh <sha-de-40-caracteres>
 #   deployer.sh --retour-arriere            revient à l'image précédente
 #   deployer.sh --etat                      affiche l'état sans rien changer
+#   deployer.sh --recreer                   recrée l'application sur l'image en
+#                                           service, pour relire l'environnement
 
 set -euo pipefail
 
@@ -64,7 +66,7 @@ echouer() {
 # ---------------------------------------------------------------------------
 
 ENTREE="${*:-${SSH_ORIGINAL_COMMAND:-}}"
-[ -n "$ENTREE" ] || echouer "aucun argument. Usage : deployer.sh <sha|--retour-arriere|--etat> [nombre-de-migrations]"
+[ -n "$ENTREE" ] || echouer "aucun argument. Usage : deployer.sh <sha|--retour-arriere|--etat|--recreer> [nombre-de-migrations]"
 
 # DEUX MOTS AU PLUS, ET CHACUN VALIDÉ SÉPARÉMENT.
 #
@@ -131,6 +133,29 @@ tag_courant() {
   grep '^IMAGE_TAG=' "$FICHIER_ENV" | head -1 | cut -d= -f2
 }
 
+# Attend que le conteneur soit SAIN, et non seulement démarré : un conteneur
+# « Up » dont l'application ne répond pas sert des 502. Rend 0 si sain, et
+# laisse dans ETAT et ECOULE ce qui a été observé.
+attendre_conteneur_sain() {
+  ECOULE=0
+  ETAT=inconnu
+  while [ "$ECOULE" -lt "$DELAI_SANTE" ]; do
+    ETAT=$(docker inspect lune-soleil-app --format '{{.State.Health.Status}}' 2>/dev/null || echo inconnu)
+    [ "$ETAT" = "healthy" ] && return 0
+    sleep 5
+    ECOULE=$((ECOULE + 5))
+  done
+  return 1
+}
+
+# Le code de `/api/sante` PAR LE DOMAINE et non en direct : passer par Nginx et
+# TLS prouve ce que voit un client, 127.0.0.1:3002 ne prouverait que le
+# conteneur.
+code_sante_public() {
+  docker run --rm --network host curlimages/curl:8.11.1 \
+    -s -o /dev/null -w '%{http_code}' --max-time 15 https://lune-soleil.fr/api/sante 2>/dev/null || echo 000
+}
+
 # ---------------------------------------------------------------------------
 # --etat : ne change RIEN. Sert au diagnostic et à la vérification d'après
 # déploiement, sans donner de shell.
@@ -144,6 +169,51 @@ if [ "$ARGUMENT" = "--etat" ]; then
   echo
   echo "Cinq derniers déploiements :"
   tail -5 "$HISTORIQUE" | sed 's/^/  /' || true
+  exit 0
+fi
+
+# ---------------------------------------------------------------------------
+# --recreer : recrée `app` SUR L'IMAGE EN SERVICE, pour relire l'environnement.
+# LS-289.
+#
+# CE QU'ELLE FERME. Ni `docker restart` ni `compose up -d` ne relisent
+# `$FICHIER_ENV` : le conteneur garde l'environnement figé à sa création, et
+# Compose ne compare pas le CONTENU du fichier. Redéployer le SHA en service
+# sort plus haut en « rien à faire ». Une variable changée exigeait donc de
+# sortir de l'outil prévu pour taper `--force-recreate` à la main, ce qui s'est
+# produit le 7 octobre 2026 en publiant l'identité légale.
+#
+# CE QU'ELLE NE FAIT PAS : tirer une image, contrôler le schéma, écrire
+# l'historique ou purger. L'image ne change pas, donc il n'y a ni migration
+# nouvelle ni version à inscrire, et une ligne d'historique ferait viser au
+# retour arrière l'image même qui tourne. `--no-deps` laisse la base intacte,
+# et aucun `--build`, pour la raison écrite sur `composer`.
+#
+# AUCUN RETOUR ARRIÈRE AUTOMATIQUE, et c'est le seul écart avec le déploiement :
+# l'image est la même, c'est l'ENVIRONNEMENT qui a changé, et ce script n'en
+# garde aucune version antérieure. Un échec se dit, avec la piste à suivre.
+# ---------------------------------------------------------------------------
+
+if [ "$ARGUMENT" = "--recreer" ]; then
+  SHA_EN_SERVICE=$(tag_courant)
+  [ -n "$SHA_EN_SERVICE" ] || echouer "IMAGE_TAG absent de $FICHIER_ENV, rien à recréer."
+
+  journaliser "RECRÉATION de l'application sur l'image en service $SHA_EN_SERVICE"
+
+  if ! composer up -d --no-deps --force-recreate app >/dev/null 2>&1; then
+    echouer "la recréation a échoué. L'image n'a pas changé : revoir la dernière modification de $FICHIER_ENV."
+  fi
+
+  journaliser "  attente d'un conteneur sain, $DELAI_SANTE s au maximum"
+  if ! attendre_conteneur_sain; then
+    echouer "le conteneur recréé est '$ETAT' après $ECOULE s. L'image n'a pas changé : revoir la dernière modification de $FICHIER_ENV."
+  fi
+  journaliser "  conteneur sain après $ECOULE s"
+
+  CODE=$(code_sante_public)
+  [ "$CODE" = "200" ] || echouer "/api/sante rend $CODE par le domaine après la recréation."
+  journaliser "  https://lune-soleil.fr/api/sante rend 200"
+  journaliser "Recréation terminée, environnement relu sur $SHA_EN_SERVICE"
   exit 0
 fi
 
@@ -343,15 +413,8 @@ fi
 # ---------------------------------------------------------------------------
 
 journaliser "Étape 5, attente d'un conteneur sain, $DELAI_SANTE s au maximum"
-ECOULE=0
-while [ "$ECOULE" -lt "$DELAI_SANTE" ]; do
-  ETAT=$(docker inspect lune-soleil-app --format '{{.State.Health.Status}}' 2>/dev/null || echo inconnu)
-  [ "$ETAT" = "healthy" ] && break
-  sleep 5
-  ECOULE=$((ECOULE + 5))
-done
 
-if [ "$ETAT" != "healthy" ]; then
+if ! attendre_conteneur_sain; then
   journaliser "  état '$ETAT' après $ECOULE s, retour à $SHA_PRECEDENT"
   sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=$SHA_PRECEDENT|" "$FICHIER_ENV"
   composer up -d --no-deps app >/dev/null 2>&1 || true
@@ -369,8 +432,7 @@ journaliser "  conteneur sain après $ECOULE s"
 # ---------------------------------------------------------------------------
 
 journaliser "Étape 6, vérification par le domaine public"
-CODE=$(docker run --rm --network host curlimages/curl:8.11.1 \
-  -s -o /dev/null -w '%{http_code}' --max-time 15 https://lune-soleil.fr/api/sante 2>/dev/null || echo 000)
+CODE=$(code_sante_public)
 
 if [ "$CODE" != "200" ]; then
   journaliser "  /api/sante rend $CODE par le domaine, retour à $SHA_PRECEDENT"
