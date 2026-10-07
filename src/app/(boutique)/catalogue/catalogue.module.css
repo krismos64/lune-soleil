@@ -973,3 +973,260 @@
     transform: translateY(1px);
   }
 }
+
+/*
+ * ================= EN-TÊTE D'AUBE ET BANDE DE NUIT, LS-283 =================
+ * Amendement d'ADR-045 du 7 octobre 2026. Hors thème de Noël seulement : la
+ * page n'y porte pas d'attribut `data-theme`, et les règles de filtres et de
+ * pagination ci-dessous sont limitées à `.page:not([data-theme])` pour laisser
+ * l'habillage de LS-277 tel qu'il a été validé.
+ *
+ * L'EN-TÊTE EST UNE CARTE À LA LARGEUR DU CONTENU, et non une bande en
+ * `100vw`, qui compterait la barre de défilement et ferait déborder la page.
+ */
+
+/*
+ * DÉGRADÉ DE CIEL. Le texte s'y pose en `--ls-primary-hover` (10,38:1 au
+ * point le plus sombre, `--ls-ciel-aube-haut`), `--ls-text` (10,39:1) et
+ * `--ls-or-sombre` pour le surtitre (4,73:1). `--ls-text-muted` n'y est
+ * jamais employé : il y tomberait sous 4,5:1.
+ */
+.tete {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 5.5rem;
+  align-items: center;
+  gap: var(--ls-space-3) var(--ls-space-4);
+  margin: 0 0 var(--ls-space-5);
+  padding: var(--ls-space-5) var(--ls-space-4);
+  border-radius: var(--ls-radius-lg);
+  background:
+    radial-gradient(
+      90% 80% at 85% 15%,
+      var(--ls-ciel-jour-haut) 0%,
+      transparent 60%
+    ),
+    linear-gradient(
+      160deg,
+      var(--ls-ciel-aube-haut) 0%,
+      var(--ls-ciel-jour-haut) 70%
+    );
+}
+
+.surtitre {
+  margin: 0 0 var(--ls-space-1);
+  color: var(--ls-or-sombre);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.tete .titre {
+  margin: 0;
+  color: var(--ls-primary-hover);
+  font-size: clamp(2rem, 7vw, 3.25rem);
+  letter-spacing: 0;
+}
+
+.tete .accroche {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--ls-text);
+  font-size: 1.0625rem;
+}
+
+.medaillon {
+  width: 100%;
+}
+
+/* Pastilles arrondies, hors Noël. L'aplat du filtre actif reste. */
+.page:not([data-theme]) .filtre,
+.page:not([data-theme]) .lienPagination {
+  border-radius: 999px;
+}
+
+.page:not([data-theme]) .filtre:hover,
+.page:not([data-theme]) .lienPagination:hover {
+  border-color: var(--ls-accent-gold-deep);
+}
+
+/* ---------- Bande de nuit ---------- */
+
+/*
+ * `--ls-texte-nuit` sur `--ls-ciel-nuit-haut` : 16,37:1, et 13,27:1 sur
+ * `--ls-ciel-nuit-bas`. Le voile garde la moitié gauche, où se pose le texte,
+ * plus sombre que la teinte la plus claire de l'aquarelle.
+ */
+.nuit {
+  position: relative;
+  overflow: hidden;
+  margin: var(--ls-space-7) 0 0;
+  padding: var(--ls-space-7) var(--ls-space-5);
+  border-radius: var(--ls-radius-lg);
+  background: linear-gradient(
+    180deg,
+    var(--ls-ciel-nuit-haut),
+    var(--ls-ciel-nuit-bas)
+  );
+  color: var(--ls-texte-nuit);
+}
+
+.nuitImage {
+  position: absolute;
+  inset: 0;
+}
+
+.nuitImage img {
+  object-fit: cover;
+  object-position: 75% 40%;
+}
+
+.nuitImage::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(20, 15, 28, 0.92) 0%,
+    rgba(20, 15, 28, 0.78) 55%,
+    rgba(20, 15, 28, 0.3) 100%
+  );
+  content: "";
+}
+
+/* Étoiles de décor : jamais sur le texte, donc absentes sous 768 px. */
+.nuitEtoiles {
+  display: none;
+}
+
+.nuitEtoiles span {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--ls-texte-nuit);
+}
+
+.nuitEtoiles span:nth-child(1) {
+  top: 22%;
+  left: 68%;
+}
+.nuitEtoiles span:nth-child(2) {
+  top: 64%;
+  left: 76%;
+}
+.nuitEtoiles span:nth-child(3) {
+  top: 14%;
+  left: 86%;
+}
+.nuitEtoiles span:nth-child(4) {
+  top: 40%;
+  left: 93%;
+}
+.nuitEtoiles span:nth-child(5) {
+  top: 78%;
+  left: 88%;
+}
+
+.nuitTexte {
+  position: relative;
+  max-width: 34rem;
+}
+
+.nuitTitre {
+  margin: 0;
+  color: var(--ls-texte-nuit);
+  font-size: clamp(1.75rem, 6vw, 2.5rem);
+  font-weight: 400;
+}
+
+.nuitAccroche {
+  margin: var(--ls-space-3) 0 var(--ls-space-5);
+  line-height: 1.6;
+}
+
+/* `--ls-ciel-nuit-haut` sur `--ls-or-pale` : 12,48:1. */
+.nuitBouton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ls-space-2);
+  min-height: 3rem;
+  padding: 0 var(--ls-space-5);
+  border-radius: 999px;
+  background: var(--ls-or-pale);
+  color: var(--ls-ciel-nuit-haut);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.nuitBouton:hover {
+  background: var(--ls-texte-nuit);
+}
+
+.nuitBouton:focus-visible {
+  outline: 3px solid var(--ls-or-pale);
+  outline-offset: 3px;
+}
+
+.nuitBouton svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+}
+
+@media (min-width: 768px) {
+  .tete {
+    grid-template-columns: minmax(0, 1fr) 12.5rem;
+    padding: var(--ls-space-6) var(--ls-space-7);
+  }
+
+  .tete .accroche {
+    grid-column: 1;
+  }
+
+  .medaillon {
+    grid-row: 1 / span 2;
+    grid-column: 2;
+  }
+
+  .nuit {
+    padding: var(--ls-space-8) var(--ls-space-7);
+  }
+
+  .nuitEtoiles {
+    display: block;
+  }
+}
+
+/*
+ * LE MOUVEMENT, ADR-045 amendé par LS-283 : le médaillon porte le sien, les
+ * étoiles de la bande de nuit éclosent à son entrée, 2 s au plus, bornées par
+ * `data-borne`. Les flèches réagissent au survol. Le texte ne bouge pas.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .nuitEtoiles span {
+    animation: eclot-etoile 900ms ease both;
+    animation-delay: calc(200ms + var(--i, 0) * 220ms);
+  }
+
+  .nuitBouton svg {
+    transition: transform 350ms var(--ls-easing-sortie);
+  }
+
+  .nuitBouton:hover svg,
+  .nuitBouton:focus-visible svg {
+    transform: translateX(4px);
+  }
+}
+
+@keyframes eclot-etoile {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
