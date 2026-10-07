@@ -520,6 +520,19 @@ expose. L'override de `package.json` corrige quatre CVE de libvips : ne pas lui
 donner un document à analyser. Le refus ne porte ni sur l'extension ni sur le
 type MIME annoncé, que l'appelant peut mentir.
 
+**La signature ne lit que 1024 octets, et les chargeurs SVG et PDF de libvips
+sont donc bloqués pour tout le processus**, LS-276. Mesuré le 7 octobre 2026 sur
+`sharp` 0.35.5 : un SVG précédé d'un long commentaire franchissait la signature
+et `librsvg` le décodait avant que le contrôle d'après coup ne le refuse,
+chemin de GHSA-wq5f-xc86-pv6w. `sharp.block` est posé par
+`integrations/medias/chargeurs-bloques.ts`, appelé depuis `register()` dans
+`instrumentation.ts`, avant la première requête, ce qui couvre l'optimiseur de
+`next/image`, et au chargement de `traitement.ts` pour les scripts et les
+tests. **Ne pas retirer l'un des deux appels** : le premier seul laisserait les
+tests sans blocage, le second seul laisserait `next/image` décoder un SVG
+avant tout téléversement. Les trois couches, signature, blocage, filet d'après
+décodage, ont chacune leur test et leur cas de mutation au nocturne.
+
 **Un média non traité n'est pas à un endroit servable.** Le volume porte deux
 dossiers, `quarantaine/` et `public/`, et le déplacement de l'un à l'autre est le
 seul geste qui publie. C8 est ainsi une propriété physique : ADR-007 a écarté le

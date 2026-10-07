@@ -32,7 +32,7 @@
  * traitement d'une autre exception, et masquerait la premiere. Le `try` couvre
  * donc tout, y compris la lecture des champs de `request`.
  */
-import { journaliserErreur } from "@/lib/journal";
+import { journaliser, journaliserErreur } from "@/lib/journal";
 
 /**
  * Appelée une fois au démarrage du serveur, avant la première requête,
@@ -43,9 +43,14 @@ import { journaliserErreur } from "@/lib/journal";
  */
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME === "nodejs") {
-    const { bloquerChargeursRisques } =
+    const { bloquerChargeursRisques, CHARGEURS_BLOQUES } =
       await import("@/integrations/medias/chargeurs-bloques");
     bloquerChargeursRisques();
+    // UNE LIGNE AU DÉMARRAGE, pour que le blocage se constate dans les
+    // journaux du conteneur et non sur la seule foi du code.
+    journaliser("info", "chargeurs libvips bloques", {
+      operations: CHARGEURS_BLOQUES.join(","),
+    });
   }
 }
 
