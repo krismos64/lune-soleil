@@ -114,14 +114,17 @@ test("la page d'aide n'invente aucun délai d'expédition", async ({ page }) => 
   const texte = (await page.getByRole("main").textContent()) ?? "";
 
   /*
-   * UN DÉLAI ATTACHÉ À L'EXPÉDITION OU À LA LIVRAISON, et non tout délai :
-   * depuis LS-26, la page annonce la réponse aux messages « sous 24 heures »,
-   * délai donné par l'exploitante et légitime. Le motif d'origine, `sous N
-   * heures` partout, l'aurait refusé ; il ne vise plus que ce qu'il protège.
+   * AUCUN DÉLAI CHIFFRÉ, HORS LES DEUX PHRASES ADMISES. Depuis LS-26, la page
+   * annonce la réponse aux messages sous 24 heures, délai donné par
+   * l'exploitante : ces deux phrases sont retirées mot pour mot avant le test,
+   * et tout autre nombre d'heures ou de jours le fait rougir. Un motif bâti sur
+   * des verbes laissait passer « votre colis part sous 48 heures », revue de
+   * LS-26.
    */
-  expect(texte).not.toMatch(
-    /(exp[ée]di|livr|achemin|pr[ée]par)[^.]{0,80}\b(sous|en|d'ici) \d+ ?(heures?|h|jours?)/i,
-  );
+  const sansDelaisAdmis = texte
+    .replace("répond sous 24 heures au maximum", "")
+    .replace("Sous 24 heures au maximum. Pour une commande en cours", "");
+  expect(sansDelaisAdmis).not.toMatch(/\b\d+ ?(heures?|h|jours?)\b/i);
   expect(texte).toMatch(/délai de préparation.*sera précisé/i);
 });
 
