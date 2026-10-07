@@ -24,24 +24,31 @@
  * commerciale trompeuse, articles L121-2 et suivants. Le type d'emballage
  * relève des mêmes questions : aucune étape du chemin du colis ne le décrit.
  *
- * LA FOIRE AUX QUESTIONS EST VIDE POUR LA MÊME RAISON. Sa section existe parce
- * que le pied de page la cite par une ancre, et une ancre absente retombe en
- * haut de page sans lever d'erreur, piège nommé par LS-123.
+ * LA FOIRE AUX QUESTIONS, LS-26, ne reprend que des faits établis, et le
+ * délai d'expédition n'y figure pas pour la même raison. Le pied de page la
+ * cite par l'ancre `#faq`, qui doit rester : une ancre absente retombe en haut
+ * de page sans lever d'erreur, piège nommé par LS-123.
  */
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 
+import { DonneesStructurees } from "@/components/donnees-structurees";
 import { MedaillonAube } from "@/components/medaillon-aube";
 import { formaterMontant } from "@/lib/montant";
-import { NOM_BOUTIQUE, openGraphDePage } from "@/lib/seo";
+import {
+  jsonLdQuestionsFrequentes,
+  NOM_BOUTIQUE,
+  openGraphDePage,
+} from "@/lib/seo";
 import {
   type ConfigurationLivraison,
   ConfigurationLivraisonInvalideError,
 } from "@/lib/livraison";
 import { resoudreConfigurationLivraison } from "@/services/parametres";
 import styles from "./aide.module.css";
+import { questionsFrequentes } from "./questions-frequentes";
 
 export const metadata: Metadata = {
   title: "Livraison, retours et questions fréquentes",
@@ -109,6 +116,7 @@ export default async function PageAide() {
     }
   }
 
+  const themes = questionsFrequentes(livraison);
   const franchise =
     livraison?.seuilFranchiseCentimes == null
       ? null
@@ -575,12 +583,17 @@ export default async function PageAide() {
       </section>
 
       {/*
-       * CIEL DE NUIT, dégradé permis par l'amendement LS-280.
+       * QUESTIONS FRÉQUENTES, LS-26. Le ciel de nuit, dégradé permis par
+       * l'amendement LS-280, porte le titre et la sortie vers le contact ; les
+       * questions viennent dessous, sur fond clair, pour être lues.
        *
-       * LA SECTION EXISTE VIDE PARCE QUE LE PIED DE PAGE LA CITE PAR UNE
-       * ANCRE. Son contenu appartient à LS-26, qui attend les réponses de
-       * l'exploitante sur l'entretien des bijoux et les délais : aucune
-       * question n'est inventée pour la remplir.
+       * DES `<details>` NATIFS : ouverts et fermés sans script, au clavier, et
+       * annoncés comme tels par un lecteur d'écran. Le seul mouvement est la
+       * rotation du chevron, micro-interaction d'ADR-045.
+       *
+       * LE TEXTE ET LE BALISAGE `FAQPage` VIENNENT DE LA MÊME SOURCE,
+       * `questionsFrequentes` : aucune réponse balisée ne peut différer de la
+       * réponse affichée.
        */}
       <section
         id="faq"
@@ -588,35 +601,78 @@ export default async function PageAide() {
         className={styles.faq}
         aria-labelledby="titre-faq"
       >
-        <div className={styles.faqImage} aria-hidden="true">
-          <Image
-            src="/habillage/aide-nuit-colline.jpg"
-            alt=""
-            fill
-            sizes="100vw"
-          />
+        <DonneesStructurees
+          balisage={jsonLdQuestionsFrequentes(
+            themes.flatMap((theme) => theme.questions),
+          )}
+        />
+        <div className={styles.faqNuit}>
+          <div className={styles.faqImage} aria-hidden="true">
+            <Image
+              src="/habillage/aide-nuit-colline.jpg"
+              alt=""
+              fill
+              sizes="100vw"
+            />
+          </div>
+          <div className={styles.etoiles} aria-hidden="true" data-borne="">
+            {Array.from({ length: 6 }, (_, i) => (
+              <span key={i} style={rang(i)} />
+            ))}
+          </div>
+          <div className={styles.enveloppe}>
+            <h2 id="titre-faq" className={styles.titreFaq}>
+              <span className={styles.surtitreNuit}>
+                Questions fréquentes<span className={styles.cache}>, </span>
+              </span>
+              Ce qu&apos;il faut savoir avant de commander
+            </h2>
+            <p className={styles.texteFaq}>
+              Livraison, paiement, retours et entretien. Une autre question ?
+              L&apos;atelier répond sous 24 heures au maximum.
+            </p>
+            <Link href="/contact" className={styles.boutonNuit}>
+              Poser une question <Fleche vers="droite" />
+            </Link>
+          </div>
         </div>
-        <div className={styles.etoiles} aria-hidden="true" data-borne="">
-          {Array.from({ length: 6 }, (_, i) => (
-            <span key={i} style={rang(i)} />
-          ))}
-        </div>
-        <div className={styles.enveloppe}>
-          <h2 id="titre-faq" className={styles.titreFaq}>
-            <span className={styles.surtitreNuit}>
-              Questions fréquentes<span className={styles.cache}>, </span>
-            </span>
-            Les réponses se préparent à l&apos;atelier
-          </h2>
-          <p className={styles.texteFaq}>
-            Les réponses aux questions les plus fréquentes, sur l&apos;entretien
-            des bijoux et les délais, seront publiées ici avant
-            l&apos;ouverture. En attendant, écrivez-nous : chaque message arrive
-            directement à l&apos;atelier.
-          </p>
-          <Link href="/contact" className={styles.boutonNuit}>
-            Poser une question <Fleche vers="droite" />
-          </Link>
+
+        <div className={styles.faqCorps}>
+          <div className={styles.enveloppe}>
+            {themes.map((theme) => (
+              <div key={theme.titre} className={styles.theme}>
+                <h3 className={styles.themeTitre}>{theme.titre}</h3>
+                <div className={styles.questions}>
+                  {theme.questions.map((entree) => (
+                    <details
+                      key={entree.id}
+                      id={entree.id}
+                      className={styles.question}
+                    >
+                      <summary className={styles.questionIntitule}>
+                        <span>{entree.question}</span>
+                        <svg
+                          className={styles.chevron}
+                          viewBox="0 0 20 20"
+                          aria-hidden="true"
+                        >
+                          <path d="m5 8 5 5 5-5" />
+                        </svg>
+                      </summary>
+                      <div className={styles.reponse}>
+                        <p>{entree.reponse}</p>
+                        {entree.lien ? (
+                          <Link href={entree.lien.href} className={styles.lien}>
+                            {entree.lien.libelle}
+                          </Link>
+                        ) : null}
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     </main>

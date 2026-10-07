@@ -149,7 +149,7 @@ test.describe("mouvement réduit", () => {
 test("le contact mène aux réponses qui n'attendent pas", async ({ page }) => {
   await page.goto("/contact");
   const encarts = page.getByRole("complementary", { name: "Avant d'écrire" });
-  await expect(encarts).toContainText("Réponse sous quelques jours");
+  await expect(encarts).toContainText("Réponse sous 24 heures");
   await encarts.getByRole("link", { name: /Livraison et aide/ }).click();
   await expect(page).toHaveURL(/\/aide$/);
 });

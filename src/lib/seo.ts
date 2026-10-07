@@ -319,6 +319,28 @@ export function jsonLdFilAriane(
 }
 
 /**
+ * Le JSON-LD `FAQPage`, LS-26.
+ *
+ * LE TEXTE EST CELUI DE LA PAGE, MOT POUR MOT : l'appelant passe les mêmes
+ * questions que celles qu'il affiche. Une réponse balisée qui diffère de la
+ * réponse visible est une donnée structurée trompeuse, que les moteurs
+ * sanctionnent et que les moteurs de réponse reprendraient telle quelle.
+ */
+export function jsonLdQuestionsFrequentes(
+  questions: readonly { question: string; reponse: string }[],
+): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: questions.map((entree) => ({
+      "@type": "Question",
+      name: entree.question,
+      acceptedAnswer: { "@type": "Answer", text: entree.reponse },
+    })),
+  };
+}
+
+/**
  * Ce qu'une fiche produit transmet au balisage.
  *
  * AUCUNE QUANTITE DANS CE TYPE, et c'est la garde principale de la story. Il n'y

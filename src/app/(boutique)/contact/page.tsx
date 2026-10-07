@@ -31,7 +31,7 @@ import styles from "./contact.module.css";
 export const metadata = {
   title: "Écrire à l'atelier",
   description:
-    "Une question sur un bijou ou sur une commande : écrivez à l'atelier, la réponse arrive sous quelques jours.",
+    "Une question sur un bijou ou sur une commande : écrivez à l'atelier, la réponse arrive sous 24 heures.",
   // LS-137, page publique indexable : canonical explicite.
   alternates: { canonical: "/contact" },
   openGraph: openGraphDePage({
@@ -140,11 +140,12 @@ export default async function PageContact() {
          * répondent souvent sans attendre. Les encarts glissent sans jamais
          * disparaître, ADR-045 point 5.
          *
-         * LE DÉLAI RESTE VAGUE VOLONTAIREMENT, « quelques jours » : l'atelier
-         * est tenu par une personne seule qui tient aussi des marchés, et un
-         * engagement chiffré qu'elle ne pourrait pas tenir serait pire que pas
-         * d'engagement. L'annoncer évite qu'une personne sans réponse le
-         * lendemain écrive une seconde fois.
+         * LE DÉLAI EST CELUI QUE L'EXPLOITANTE A DONNÉ, 24 heures au maximum,
+         * réponse du 3 septembre 2026. Il était resté vague ici, « quelques
+         * jours », quand l'accusé de réception disait déjà 24 heures :
+         * arbitrage de Christophe du 7 octobre 2026, LS-26, un seul délai
+         * partout. L'annoncer évite qu'une personne sans réponse le lendemain
+         * écrive une seconde fois.
          */}
         <aside
           className={styles.cote}
@@ -157,7 +158,7 @@ export default async function PageContact() {
               <path d="M22 12v10l7 4" />
             </svg>
             <div>
-              <p className={styles.repereTitre}>Réponse sous quelques jours</p>
+              <p className={styles.repereTitre}>Réponse sous 24 heures</p>
               <p className={styles.repereTexte}>
                 Pour une commande en cours, indiquez son numéro : la réponse ira
                 plus vite.
