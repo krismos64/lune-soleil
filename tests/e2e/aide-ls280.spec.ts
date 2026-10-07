@@ -82,8 +82,13 @@ test.describe("mouvement autorisé", () => {
 
     for (let rang = 0; rang < nombre; rang += 1) {
       const borne = bornes.nth(rang);
-      // Les étoiles de la FAQ n'existent qu'à partir de 768 px.
-      if (!(await borne.isVisible())) continue;
+      /*
+       * Les étoiles de la FAQ n'existent qu'à partir de 1024 px.
+       * `checkVisibility` et non `isVisible` : leur conteneur sans hauteur
+       * passait pour invisible à toutes les largeurs, revue de LS-283.
+       */
+      if (!(await borne.evaluate((element) => element.checkVisibility())))
+        continue;
       await borne.scrollIntoViewIfNeeded();
       await expect(borne).toHaveAttribute("data-borne", /joue|fin/);
 
@@ -93,6 +98,20 @@ test.describe("mouvement autorisé", () => {
       await expect(borne).toHaveAttribute("data-borne", "fin", {
         timeout: 7_000,
       });
+      /*
+       * À L'ÉTAT `fin`, CHAQUE ANIMATION EST TERMINÉE, et non figée : `fin`
+       * suspend ce qui tourne encore, et une animation de 8 s y resterait
+       * gelée à mi-course sans qu'un compte des animations en cours le voie,
+       * revue de LS-283. ADR-045 exige qu'elles finissent en cinq secondes.
+       */
+      expect(
+        await borne.evaluate((element) =>
+          element
+            .getAnimations({ subtree: true })
+            .filter((animation) => animation.playState !== "finished")
+            .map((animation) => (animation as CSSAnimation).animationName),
+        ),
+      ).toEqual([]);
       expect(
         await borne.evaluate(
           (element) =>

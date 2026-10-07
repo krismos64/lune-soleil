@@ -977,9 +977,10 @@
 /*
  * ================= EN-TÊTE D'AUBE ET BANDE DE NUIT, LS-283 =================
  * Amendement d'ADR-045 du 7 octobre 2026. Hors thème de Noël seulement : la
- * page n'y porte pas d'attribut `data-theme`, et les règles de filtres et de
- * pagination ci-dessous sont limitées à `.page:not([data-theme])` pour laisser
- * l'habillage de LS-277 tel qu'il a été validé.
+ * page porte alors la classe `.ordinaire`, posée depuis `estThemeDeNoel` comme
+ * l'en-tête et la bande : UN SEUL CRITÈRE, revue de LS-283, un thème futur non
+ * festif ne recevrait pas l'un sans l'autre. L'habillage de LS-277 reste tel
+ * qu'il a été validé.
  *
  * L'EN-TÊTE EST UNE CARTE À LA LARGEUR DU CONTENU, et non une bande en
  * `100vw`, qui compterait la barre de défilement et ferait déborder la page.
@@ -1040,13 +1041,13 @@
 }
 
 /* Pastilles arrondies, hors Noël. L'aplat du filtre actif reste. */
-.page:not([data-theme]) .filtre,
-.page:not([data-theme]) .lienPagination {
+.ordinaire .filtre,
+.ordinaire .lienPagination {
   border-radius: 999px;
 }
 
-.page:not([data-theme]) .filtre:hover,
-.page:not([data-theme]) .lienPagination:hover {
+.ordinaire .filtre:hover,
+.ordinaire .lienPagination:hover {
   border-color: var(--ls-accent-gold-deep);
 }
 
@@ -1084,18 +1085,35 @@
 .nuitImage::after {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    90deg,
-    rgba(20, 15, 28, 0.92) 0%,
-    rgba(20, 15, 28, 0.78) 55%,
-    rgba(20, 15, 28, 0.3) 100%
-  );
+  /*
+   * UNIFORME SOUS 768 px : le texte y occupe toute la largeur, et un voile
+   * dégressif le laissait sur l'aquarelle claire, revue de LS-283.
+   */
+  background: rgba(20, 15, 28, 0.85);
   content: "";
 }
 
-/* Étoiles de décor : jamais sur le texte, donc absentes sous 768 px. */
+@media (min-width: 768px) {
+  .nuitImage::after {
+    background: linear-gradient(
+      90deg,
+      rgba(20, 15, 28, 0.92) 0%,
+      rgba(20, 15, 28, 0.78) 55%,
+      rgba(20, 15, 28, 0.3) 100%
+    );
+  }
+}
+
+/*
+ * Étoiles de décor : jamais sur le texte. Absentes sous 1024 px, où le titre
+ * peut atteindre leur colonne, revue de LS-283. Le conteneur couvre la bande,
+ * sans quoi sa hauteur nulle le rendrait invisible aux tests.
+ */
 .nuitEtoiles {
+  position: absolute;
+  inset: 0;
   display: none;
+  pointer-events: none;
 }
 
 .nuitEtoiles span {
@@ -1199,7 +1217,9 @@
   .nuit {
     padding: var(--ls-space-8) var(--ls-space-7);
   }
+}
 
+@media (min-width: 1024px) {
   .nuitEtoiles {
     display: block;
   }

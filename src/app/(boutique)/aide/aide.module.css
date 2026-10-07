@@ -677,13 +677,20 @@
 .faqImage::after {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    90deg,
-    rgba(20, 15, 28, 0.92) 0%,
-    rgba(20, 15, 28, 0.78) 55%,
-    rgba(20, 15, 28, 0.3) 100%
-  );
+  /* Uniforme sous 768 px, où le texte couvre toute la largeur, revue de LS-283. */
+  background: rgba(20, 15, 28, 0.85);
   content: "";
+}
+
+@media (min-width: 768px) {
+  .faqImage::after {
+    background: linear-gradient(
+      90deg,
+      rgba(20, 15, 28, 0.92) 0%,
+      rgba(20, 15, 28, 0.78) 55%,
+      rgba(20, 15, 28, 0.3) 100%
+    );
+  }
 }
 
 .faq .enveloppe {
@@ -691,11 +698,14 @@
 }
 
 .etoiles {
+  position: absolute;
+  inset: 0;
   display: none;
+  pointer-events: none;
 }
 
 /*
- * LES ÉTOILES DE DÉCOR NE PASSENT JAMAIS SUR LE TEXTE, ADR-045 : sous 768 px
+ * LES ÉTOILES DE DÉCOR NE PASSENT JAMAIS SUR LE TEXTE, ADR-045 : sous 1024 px
  * le texte occupe toute la largeur, elles n'existent donc pas, l'aquarelle
  * porte les siennes. Au-delà, elles restent dans le tiers droit, à côté d'un
  * texte borné à 52 caractères. Premier portage : elles couvraient deux lettres
@@ -821,10 +831,6 @@
     padding: var(--ls-space-8) var(--ls-space-6);
   }
 
-  .etoiles {
-    display: block;
-  }
-
   .modes {
     grid-template-columns: repeat(3, 1fr);
     gap: var(--ls-space-5);
@@ -906,6 +912,13 @@
 
 @media (min-width: 768px) and (prefers-reduced-motion: no-preference) {
   .voyage {
+    display: block;
+  }
+}
+
+/* Étoiles de la FAQ à partir de 1024 px seulement, jamais sur le texte. */
+@media (min-width: 1024px) {
+  .etoiles {
     display: block;
   }
 }

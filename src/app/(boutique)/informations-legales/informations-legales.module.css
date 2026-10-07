@@ -108,7 +108,10 @@
   max-width: 48rem;
 }
 
-/* FOND SABLE, DONC `--ls-primary` SUR LES LIENS, jamais le doré. */
+/*
+ * FOND BLANC DEPUIS LS-282 : `--ls-primary` sur les liens, 8,93:1, et le
+ * survol sable, 7,65:1. Jamais le doré, qui tombe à 4,23:1 sur sable.
+ */
 .sommaire {
   padding: var(--ls-space-2);
   border: 1px solid var(--ls-border);

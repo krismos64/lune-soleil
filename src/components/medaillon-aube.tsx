@@ -32,11 +32,14 @@ const rang = (i: number): CSSProperties => ({ "--i": i }) as CSSProperties;
 export function MedaillonAube({
   image,
   cadrage = "50% 50%",
+  taille,
 }: {
   /** Chemin public de l'aquarelle, 3:2, dans `public/habillage/`. */
   image: string;
   /** `object-position` du recadrage dans le cercle. */
   cadrage?: string;
+  /** `sizes` de l'image : la largeur réelle du médaillon dans la page. */
+  taille: string;
 }) {
   return (
     <div className={styles.medaillon} aria-hidden="true" data-borne="">
@@ -46,7 +49,7 @@ export function MedaillonAube({
           alt=""
           width={1200}
           height={800}
-          sizes="(min-width: 768px) 330px, 160px"
+          sizes={taille}
           style={{ objectPosition: cadrage }}
         />
       </div>
