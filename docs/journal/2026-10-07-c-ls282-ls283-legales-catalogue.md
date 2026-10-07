@@ -66,10 +66,16 @@ Suite de `2026-10-07-b`.
 - Constaté hors périmètre : en mobile, la première photographie du catalogue
   charge sa variante de 1280 px, noté sur LS-283 pour LS-140.
 
+- **Priorité basse déployée**, PR #543, `dcc3df1`, run 37585065081. Six
+  passages : catalogue 1934, 2120, 2284, puis 1925, 1817 et 1929 ms. Sur les
+  mêmes passages, l'aide inchangée a varié de 1064 à 1372 ms : le réseau
+  domine l'écart, aucune régression ni aucun gain n'est établi à cette
+  précision. Résultats publiés sur LS-282 et LS-283.
+
 ## Prochaine étape
 
-Mesurer le catalogue après le déploiement de la priorité basse du médaillon,
-et publier le résultat sur LS-283. LS-284 attend la réponse de l'exploitante.
+LS-284 attend la réponse de l'exploitante. LS-281 reste à traiter :
+`data-borne` ne suspend pas les animations des pseudo-éléments.
 
 ## État des tickets
 
