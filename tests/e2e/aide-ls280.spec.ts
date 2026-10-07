@@ -30,6 +30,12 @@ async function animationsEnCours(page: Page): Promise<number> {
  * Animations portées par le CONTENU : tout élément animé qui n'est pas sous
  * un décor `aria-hidden`. Les transitions de survol n'y figurent pas, la
  * souris de Playwright ne survolant rien ici.
+ *
+ * UNE ANIMATION DE PSEUDO-ÉLÉMENT Y EST RENVOYÉE PAR SON HÔTE, et c'est
+ * voulu : `[data-borne="attente"] *` n'atteint pas un `::before` ni un
+ * `::after`, qui jouerait donc hors de l'écran. Le trait du chemin du colis
+ * en était un au premier passage, revue de LS-280 : ce test l'a vu, et la
+ * correction est dans la page, pas ici.
  */
 async function animationsDuContenu(page: Page): Promise<string[]> {
   return page.evaluate(() =>
@@ -76,6 +82,8 @@ test.describe("mouvement autorisé", () => {
 
     for (let rang = 0; rang < nombre; rang += 1) {
       const borne = bornes.nth(rang);
+      // Les étoiles de la FAQ n'existent qu'à partir de 768 px.
+      if (!(await borne.isVisible())) continue;
       await borne.scrollIntoViewIfNeeded();
       await expect(borne).toHaveAttribute("data-borne", /joue|fin/);
 
