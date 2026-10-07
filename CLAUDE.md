@@ -153,7 +153,8 @@ configurés, sans jamais lire les identifiants sous-jacents.
 
 **Production** : autonome, mais **toujours par l'outil prévu**. Migrer via
 `./scripts/migrate-production.sh` et jamais `prisma migrate deploy` ; déployer par
-le workflow « Déployer en production », jamais à la main. Un garde-fou qui ne peut
+le workflow « Déployer en production », jamais à la main, y compris pour relire
+une variable changée, action `recreer`. Un garde-fou qui ne peut
 pas conclure bloque, `database.md` et `EXPLOITATION.md` les détaillent.
 
 ## Agents
