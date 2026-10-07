@@ -27,6 +27,11 @@
 import type { ConfigurationLivraison } from "@/lib/livraison";
 import { formaterMontant } from "@/lib/montant";
 
+/*
+ * UNE ESPACE INSÉCABLE PRÉCÈDE LE POINT D'INTERROGATION, `\u00a0`, règle
+ * typographique française : à 320 px, une espace ordinaire laissait le « ? »
+ * seul en début de ligne. Elle part aussi dans le balisage, identique.
+ */
 export type QuestionFrequente = {
   /** Ancre stable, `#faq-…`, pour qu'une réponse puisse être citée. */
   id: string;
@@ -57,13 +62,13 @@ export function questionsFrequentes(
 
     questionsLivraison.push({
       id: "faq-modes-livraison",
-      question: "Quels modes de livraison proposez-vous, et à quel prix ?",
+      question: "Quels modes de livraison proposez-vous, et à quel prix\u00a0?",
       reponse: `Trois modes, au choix au moment de la commande : Point Relais à ${relais}, Locker à ${relais} et livraison à domicile à ${domicile}. Les colis partent avec Mondial Relay.`,
     });
 
     questionsLivraison.push({
       id: "faq-livraison-offerte",
-      question: "La livraison peut-elle être offerte ?",
+      question: "La livraison peut-elle être offerte\u00a0?",
       /*
        * LS-249 : EN POINT RELAIS ET LOCKER SEULEMENT. Le domicile n'est jamais
        * offert, et l'avoir annoncé gratuit a déjà été une information
@@ -79,13 +84,13 @@ export function questionsFrequentes(
   questionsLivraison.push(
     {
       id: "faq-corse",
-      question: "Livrez-vous en Corse ?",
+      question: "Livrez-vous en Corse\u00a0?",
       reponse:
         "Oui. Les commandes sont livrées dans toute la France métropolitaine, Corse comprise.",
     },
     {
       id: "faq-suivi",
-      question: "Comment suivre mon colis ?",
+      question: "Comment suivre mon colis\u00a0?",
       reponse:
         "Mondial Relay vous informe directement de l'avancement de votre colis.",
     },
@@ -98,18 +103,18 @@ export function questionsFrequentes(
       questions: [
         {
           id: "faq-compte",
-          question: "Faut-il créer un compte pour commander ?",
+          question: "Faut-il créer un compte pour commander\u00a0?",
           reponse:
             "Non, la commande se passe sans compte. Un compte vous permet en plus de retrouver toutes vos commandes au même endroit.",
         },
         {
           id: "faq-paiement",
-          question: "Comment payer ?",
+          question: "Comment payer\u00a0?",
           reponse: "Par carte bancaire, avec un paiement sécurisé par Stripe.",
         },
         {
           id: "faq-minimum",
-          question: "Y a-t-il un montant minimum de commande ?",
+          question: "Y a-t-il un montant minimum de commande\u00a0?",
           reponse: "Non, aucun.",
         },
       ],
@@ -119,7 +124,7 @@ export function questionsFrequentes(
       questions: [
         {
           id: "faq-changer-avis",
-          question: "Puis-je changer d'avis après réception ?",
+          question: "Puis-je changer d'avis après réception\u00a0?",
           reponse:
             "Oui, pendant quatorze jours à compter de la réception, sans avoir à vous justifier. Le formulaire de rétractation est en ligne, dans votre espace client ou par le lien personnel reçu avec la confirmation de commande. Les frais de retour sont à votre charge, et la totalité de la commande vous est remboursée, frais de livraison initiaux compris.",
           lien: {
@@ -129,7 +134,7 @@ export function questionsFrequentes(
         },
         {
           id: "faq-defaut",
-          question: "Mon bijou présente un défaut, que faire ?",
+          question: "Mon bijou présente un défaut, que faire\u00a0?",
           reponse:
             "Ce n'est pas un changement d'avis : la garantie légale de conformité vous couvre pendant deux ans à compter de la remise du bijou, et les frais de retour ne sont alors pas à votre charge. Écrivez à l'atelier en décrivant le défaut.",
           lien: { href: "/contact", libelle: "Écrire à l'atelier" },
@@ -141,7 +146,7 @@ export function questionsFrequentes(
       questions: [
         {
           id: "faq-entretien",
-          question: "Comment entretenir mon bijou ?",
+          question: "Comment entretenir mon bijou\u00a0?",
           reponse:
             "Mettez-le en dernier, après le parfum, la laque et la crème, qui ternissent les couleurs et attaquent le vernis. Un chiffon doux, à peine humide, suffit à le nettoyer. Rangez-le à l'abri du soleil direct, à part des autres bijoux. L'alcool, l'acétone et les nettoyants pour bijoux dissolvent le vernis : à éviter.",
           lien: {
@@ -151,7 +156,7 @@ export function questionsFrequentes(
         },
         {
           id: "faq-peau-sensible",
-          question: "Les bijoux conviennent-ils aux peaux sensibles ?",
+          question: "Les bijoux conviennent-ils aux peaux sensibles\u00a0?",
           reponse:
             "Tout ce qui touche la peau, crochets, fermoirs, attaches et contours des bagues, est en acier inoxydable. Il libère très peu de nickel, ce qui le rend bien toléré par la plupart des peaux sensibles.",
           lien: { href: "/atelier#matieres", libelle: "Les matières" },
@@ -163,7 +168,7 @@ export function questionsFrequentes(
       questions: [
         {
           id: "faq-delai-reponse",
-          question: "Sous quel délai l'atelier répond-il aux messages ?",
+          question: "Sous quel délai l'atelier répond-il aux messages\u00a0?",
           reponse:
             "Sous 24 heures au maximum. Pour une commande en cours, indiquez son numéro : la réponse ira plus vite.",
           lien: { href: "/contact", libelle: "Écrire à l'atelier" },
