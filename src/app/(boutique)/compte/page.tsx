@@ -34,9 +34,12 @@ import { redirect } from "next/navigation";
 
 import Link from "next/link";
 
+import { formaterDate, LIBELLES_STATUT } from "@/lib/affichage-commande";
+import { formaterMontant } from "@/lib/montant";
 import { prisma } from "@/lib/prisma";
 import { lireEtatVerification } from "@/repositories/utilisateur";
 import { exigerSession } from "@/services/autorisation";
+import { lireVueEnsemble } from "@/services/espace-client";
 import { consulterCommandesRattachables } from "@/services/rattachement-commandes";
 import { FENETRE_REAUTHENTIFICATION_MS } from "@/services/reauthentification";
 
@@ -150,6 +153,9 @@ export default async function PageCompte({
   const nombreEligibles =
     rattachables.etat === "ELIGIBLES" ? rattachables.commandes.length : 0;
 
+  // LS-228 critère 6 : l'état du compte, lu pour la session et pour elle seule.
+  const vue = await lireVueEnsemble(identite.utilisateurId);
+
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
       {/*
@@ -179,6 +185,75 @@ export default async function PageCompte({
           se feront avec {identite.email}.
         </p>
       )}
+
+      {/*
+       * L'ÉTAT AVANT LE SOMMAIRE, LS-228 : la vue d'ensemble montre où en est
+       * le compte, et non seulement où aller. Trois comptages puis la dernière
+       * commande ; un compte neuf voit des zéros et une invitation, jamais un
+       * bloc vide sans phrase, critère 7.
+       */}
+      <section className={styles.section} aria-labelledby="titre-activite">
+        <h2 id="titre-activite">Mon activité</h2>
+        <ul className={styles.comptages}>
+          <li className={styles.comptage}>
+            <span className={styles.comptageValeur}>{vue.nombreCommandes}</span>
+            <span className={styles.comptageLibelle}>
+              {vue.nombreCommandes > 1 ? "commandes" : "commande"}
+            </span>
+          </li>
+          <li className={styles.comptage}>
+            <span className={styles.comptageValeur}>{vue.nombreAdresses}</span>
+            <span className={styles.comptageLibelle}>
+              {vue.nombreAdresses > 1
+                ? "adresses enregistrées"
+                : "adresse enregistrée"}
+            </span>
+          </li>
+          <li className={styles.comptage}>
+            <span className={styles.comptageValeur}>{vue.nombreAvis}</span>
+            <span className={styles.comptageLibelle}>
+              {vue.nombreAvis > 1 ? "avis déposés" : "avis déposé"}
+            </span>
+          </li>
+        </ul>
+
+        {vue.derniereCommande ? (
+          <div className={styles.carteCommande}>
+            <h3 className={styles.comptageLibelle}>Dernière commande</h3>
+            {/*
+             * LE LIEN PORTE LE NUMÉRO, comme dans « Mes commandes » : un
+             * intitulé distinct pour qui parcourt les liens au lecteur d'écran.
+             */}
+            <Link
+              href={`/compte/commandes/${vue.derniereCommande.id}`}
+              className={styles.raccourciLien}
+            >
+              Commande {vue.derniereCommande.numero}
+            </Link>
+            <dl className={styles.liste}>
+              <div className={styles.ligne}>
+                <dt>Date</dt>
+                <dd>{formaterDate(vue.derniereCommande.creeA)}</dd>
+              </div>
+              <div className={styles.ligne}>
+                <dt>Statut</dt>
+                <dd>{LIBELLES_STATUT[vue.derniereCommande.statut]}</dd>
+              </div>
+              <div className={styles.ligne}>
+                <dt>Total</dt>
+                <dd>{formaterMontant(vue.derniereCommande.totalCentimes)}</dd>
+              </div>
+            </dl>
+          </div>
+        ) : (
+          <p className={styles.texte}>
+            Aucune commande pour le moment.{" "}
+            <Link href="/catalogue" className={styles.lien}>
+              Découvrir les créations
+            </Link>
+          </p>
+        )}
+      </section>
 
       <section className={styles.section} aria-labelledby="titre-informations">
         <h2 id="titre-informations">Informations du compte</h2>

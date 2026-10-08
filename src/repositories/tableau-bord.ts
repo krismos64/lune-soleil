@@ -226,3 +226,58 @@ export async function compterPourAdministration(
     encaisseDuJourCentimes: Number(ligne.encaisseDuJourCentimes ?? 0),
   };
 }
+
+/** L'état du stock du tableau de bord, LS-228 critère 5. */
+export type EtatStock = {
+  /** Variantes vivantes : non archivées, d'un produit non retiré. */
+  variantes: number;
+  physiques: number;
+  reservees: number;
+  /** Physiques moins réservées, jamais sous zéro, variante par variante. */
+  disponibles: number;
+};
+
+/**
+ * Pièces physiques, réservées et disponibles, LS-228.
+ *
+ * LE MÊME PÉRIMÈTRE QUE LES PASTILLES DE STOCK de `compterPourAdministration` :
+ * variante non archivée, produit non retiré de l'espace (LS-266). Un panneau qui
+ * compterait autrement contredirait la barre sur le même écran.
+ *
+ * LE DISPONIBLE SE BORNE PAR VARIANTE, `greatest(..., 0)`, et non sur les
+ * totaux : une variante en survente transitoire ne doit pas masquer le stock
+ * réel d'une autre. Il ne dépend pas de `vente_web_activee` : c'est ce que
+ * l'atelier peut vendre, en ligne ou sur un marché, invariant 6.
+ */
+export async function lireEtatStock(client: ClientBase): Promise<EtatStock> {
+  const [ligne] = await client.$queryRaw<
+    {
+      variantes: bigint;
+      physiques: bigint | null;
+      reservees: bigint | null;
+      disponibles: bigint | null;
+    }[]
+  >`
+    SELECT
+      count(*) AS "variantes",
+      sum(quantite_physique) AS "physiques",
+      sum(quantite_reservee) AS "reservees",
+      sum(greatest(quantite_physique - quantite_reservee, 0)) AS "disponibles"
+    FROM variante
+    WHERE archivee_a IS NULL
+      AND NOT EXISTS (SELECT 1 FROM produit pr
+                       WHERE pr.id = variante.produit_id
+                         AND pr.retire_a IS NOT NULL)
+  `;
+
+  if (!ligne) {
+    throw new Error("État du stock : la requête n'a rendu aucune ligne");
+  }
+
+  return {
+    variantes: Number(ligne.variantes),
+    physiques: Number(ligne.physiques ?? 0),
+    reservees: Number(ligne.reservees ?? 0),
+    disponibles: Number(ligne.disponibles ?? 0),
+  };
+}

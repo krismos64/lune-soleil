@@ -113,3 +113,75 @@ test.describe("Gabarit de titre, espace client", () => {
     });
   }
 });
+
+/*
+ * LES BLOCS D'ÉTAT DES DEUX VUES D'ENSEMBLE, LS-228 critères 5 à 7.
+ *
+ * AUCUNE VALEUR EXACTE N'EST ATTENDUE : la base de bout en bout est partagée
+ * entre fichiers et largeurs, et ses stocks bougent pendant la suite. Le test
+ * vérifie ce qui ne dépend pas des voisins : les blocs existent, chaque valeur
+ * est un nombre rendu depuis les données, l'état vide et l'état peuplé sont
+ * cohérents entre eux, et rien ne déborde.
+ */
+test.describe("Blocs d'état, administration", () => {
+  test.use({ storageState: FICHIER_SESSION_ADMINISTRATION });
+
+  test("le tableau de bord porte l'état du stock", async ({ page }) => {
+    await page.goto("/administration");
+
+    const panneau = page.getByRole("region", { name: "État du stock" });
+    await expect(panneau).toBeVisible();
+
+    for (const libelle of [
+      "Pièces physiques",
+      "Réservées par un paiement en cours",
+      "Disponibles",
+    ]) {
+      const valeur = panneau.locator(`dt:text-is("${libelle}") + dd`);
+      await expect(valeur).toHaveText(/^\d+$/);
+    }
+
+    const lien = panneau.getByRole("link", {
+      name: "Voir les stocks et marchés",
+    });
+    expect((await lien.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+      TOLERANCE_DEBORDEMENT_PX,
+    );
+  });
+});
+
+test.describe("Blocs d'état, espace client", () => {
+  test.use({ storageState: FICHIER_SESSION });
+
+  test("la vue d'ensemble porte l'activité du compte", async ({ page }) => {
+    await page.goto("/compte");
+
+    const activite = page.getByRole("region", { name: "Mon activité" });
+    await expect(activite).toBeVisible();
+
+    const comptages = activite.getByRole("listitem");
+    await expect(comptages).toHaveCount(3);
+    for (const tuile of await comptages.all()) {
+      await expect(tuile).toHaveText(/^\d+\s*\D+/);
+    }
+
+    // L'état vide et la carte sont exclusifs, et cohérents avec le compte.
+    const nombreCommandes = Number(
+      (await comptages.first().textContent())?.match(/^\d+/)?.[0],
+    );
+    const vide = activite.getByText("Aucune commande pour le moment.");
+    const carte = activite.getByRole("link", { name: /^Commande / });
+    if (nombreCommandes === 0) {
+      await expect(vide).toBeVisible();
+      await expect(carte).toHaveCount(0);
+    } else {
+      await expect(carte).toBeVisible();
+      await expect(vide).toHaveCount(0);
+    }
+
+    expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+      TOLERANCE_DEBORDEMENT_PX,
+    );
+  });
+});

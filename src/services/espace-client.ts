@@ -23,6 +23,12 @@
 import { initialesClient, nomAffichable } from "@/lib/nom-affiche";
 import { prisma } from "@/lib/prisma";
 import { lireEnteteEspaceClient } from "@/repositories/utilisateur";
+import { listerMesAvis } from "@/services/avis";
+import { listerMesAdresses } from "@/services/carnet-adresses";
+import {
+  listerMesCommandes,
+  type CommandeDuClient,
+} from "@/services/espace-client-commandes";
 
 /*
  * LES DEUX FONCTIONS PURES VIVENT DANS `lib/nom-affiche.ts`, et ce n'est pas un
@@ -70,5 +76,40 @@ export async function lireEntete(
     nomAffiche,
     initiales: initialesClient(nomAffiche),
     emailVerifie: compte.emailVerifie,
+  };
+}
+
+/** La vue d'ensemble de l'espace client, LS-228 critère 6. */
+export type VueEnsembleClient = {
+  derniereCommande: CommandeDuClient | null;
+  nombreCommandes: number;
+  nombreAdresses: number;
+  nombreAvis: number;
+};
+
+/**
+ * Ce que la vue d'ensemble montre de l'état du compte, LS-228.
+ *
+ * TROIS LECTURES DÉJÀ ÉPROUVÉES ET NON UNE REQUÊTE NEUVE : chacune filtre sur
+ * `utilisateurId`, qui vient de la session, invariant 2, et les commandes
+ * dissociées en sont exclues, LS-95. Recompter ici autrement ferait annoncer
+ * un nombre que la rubrique ouverte ensuite contredirait.
+ *
+ * LES VALEURS VIENNENT DES DONNÉES, jamais d'un texte écrit, critère 6 : un
+ * compte neuf rend zéro partout et `derniereCommande` à `null`, et l'écran le
+ * dit, critère 7.
+ */
+export async function lireVueEnsemble(
+  utilisateurId: string,
+): Promise<VueEnsembleClient> {
+  const commandes = await listerMesCommandes(utilisateurId);
+  const adresses = await listerMesAdresses(utilisateurId);
+  const avis = await listerMesAvis(utilisateurId);
+
+  return {
+    derniereCommande: commandes[0] ?? null,
+    nombreCommandes: commandes.length,
+    nombreAdresses: adresses.length,
+    nombreAvis: avis.length,
   };
 }

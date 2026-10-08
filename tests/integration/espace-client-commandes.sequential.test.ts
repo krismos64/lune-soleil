@@ -28,6 +28,7 @@ let listerMesCommandes: typeof import("@/services/espace-client-commandes").list
 let lireMaCommande: typeof import("@/services/espace-client-commandes").lireMaCommande;
 let autoriserMaFacture: typeof import("@/services/espace-client-commandes").autoriserMaFacture;
 let autoriserMonAvoir: typeof import("@/services/espace-client-commandes").autoriserMonAvoir;
+let lireVueEnsemble: typeof import("@/services/espace-client").lireVueEnsemble;
 
 const EMAIL = "proprietaire@exemple.fr";
 const EMAIL_TIERS = "voisin@exemple.fr";
@@ -45,6 +46,7 @@ beforeAll(async () => {
     autoriserMaFacture,
     autoriserMonAvoir,
   } = await import("@/services/espace-client-commandes"));
+  ({ lireVueEnsemble } = await import("@/services/espace-client"));
 });
 
 afterAll(async () => {
@@ -53,7 +55,7 @@ afterAll(async () => {
 
 afterEach(async () => {
   await client.query(
-    `TRUNCATE avoir, facture, ligne_commande, commande, utilisateur CASCADE`,
+    `TRUNCATE avoir, facture, ligne_commande, commande, adresse_carnet, utilisateur CASCADE`,
   );
 });
 
@@ -509,5 +511,58 @@ describe("critere 1, le suivi de livraison remonte jusqu'au detail", () => {
     const detail = await lireMaCommande(commande, moi);
 
     expect(detail?.expedition?.livreA).toBeNull();
+  });
+});
+
+/*
+ * LS-228 critère 6 : la vue d'ensemble de l'espace client compte ce qui
+ * appartient au compte de la session, et rien d'autre.
+ */
+describe("vue d'ensemble de l'espace client, LS-228", () => {
+  async function adresseSur(utilisateurId: string): Promise<void> {
+    await client.query(
+      `INSERT INTO adresse_carnet (id, utilisateur_id, nom_complet, ligne1, code_postal, ville, pays)
+       VALUES (gen_random_uuid()::text, $1, 'Client Test', '1 rue Test', '64000', 'Pau', 'FR')`,
+      [utilisateurId],
+    );
+  }
+
+  it("un compte neuf rend des zéros et aucune dernière commande", async () => {
+    const moi = await creerCompte(EMAIL);
+
+    expect(await lireVueEnsemble(moi)).toEqual({
+      derniereCommande: null,
+      nombreCommandes: 0,
+      nombreAdresses: 0,
+      nombreAvis: 0,
+    });
+  });
+
+  it("compte les siennes seulement, et rend la plus récente", async () => {
+    const moi = await creerCompte(EMAIL);
+    const voisin = await creerCompte(EMAIL_TIERS);
+
+    await creerCommande("C-2026-0101", EMAIL, { utilisateurId: moi });
+    await client.query("SELECT pg_sleep(0.01)");
+    const recente = await creerCommande("C-2026-0102", EMAIL, {
+      utilisateurId: moi,
+    });
+    await creerCommande("C-2026-0103", EMAIL, {
+      utilisateurId: moi,
+      dissociee: true,
+    });
+    await creerCommande("C-2026-0104", EMAIL_TIERS, { utilisateurId: voisin });
+    await adresseSur(moi);
+    await adresseSur(voisin);
+    await adresseSur(voisin);
+
+    const vue = await lireVueEnsemble(moi);
+
+    // La dissociée et celle du voisin ne comptent pas, invariant 2 et LS-95.
+    expect(vue.nombreCommandes).toBe(2);
+    expect(vue.derniereCommande?.id).toBe(recente);
+    expect(vue.derniereCommande?.numero).toBe("C-2026-0102");
+    expect(vue.nombreAdresses).toBe(1);
+    expect(vue.nombreAvis).toBe(0);
   });
 });
