@@ -97,7 +97,7 @@ describe("archivage groupé, LS-278", () => {
 
     // Le serveur a refusé sans le nombre : l'écran le demande.
     const renforcee = await screen.findByRole("alertdialog", {
-      name: "Archiver les 2 pièces en vente, toute la boutique ?",
+      name: "Archiver les 2 articles en vente, toute la boutique ?",
     });
     expect(envoye(0).get("operation")).toBe("archiver");
     expect(envoye(0).get("confirmationNombre")).toBeNull();
@@ -128,5 +128,57 @@ describe("archivage groupé, LS-278", () => {
     await screen.findByText("2 produits archivés.");
     expect(envoye(2).get("confirmationNombre")).toBe("2");
     expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+
+  test("une boutique d'un seul article le dit au singulier", async () => {
+    appliquerSelectionProduits.mockResolvedValueOnce({
+      statut: "CONFIRMATION_REQUISE",
+      nombre: 1,
+    });
+
+    rendre();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Archiver (2)" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Confirmer l'archivage" }),
+    );
+
+    await screen.findByRole("alertdialog", {
+      name: "Archiver le seul article en vente, toute la boutique\u202F?",
+    });
+    expect(screen.getByLabelText("Pour confirmer, taper 1")).toBeTruthy();
+  });
+
+  test("Échap referme chaque confirmation sans rien envoyer, et rend le focus au bouton", async () => {
+    appliquerSelectionProduits.mockResolvedValueOnce({
+      statut: "CONFIRMATION_REQUISE",
+      nombre: 2,
+    });
+
+    rendre();
+
+    const bouton = await screen.findByRole("button", { name: "Archiver (2)" });
+    fireEvent.click(bouton);
+    fireEvent.keyDown(screen.getByRole("alertdialog"), { key: "Escape" });
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    await waitFor(() => expect(bouton).toHaveFocus());
+    expect(appliquerSelectionProduits).not.toHaveBeenCalled();
+
+    fireEvent.click(bouton);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Confirmer l'archivage" }),
+    );
+    const renforcee = await screen.findByRole("alertdialog");
+    await waitFor(() =>
+      expect(screen.getByLabelText("Pour confirmer, taper 2")).toHaveFocus(),
+    );
+
+    fireEvent.keyDown(renforcee, { key: "Escape" });
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(bouton).toHaveFocus();
+    // Seul le premier envoi, celui qui a demandé le nombre, est parti.
+    expect(appliquerSelectionProduits).toHaveBeenCalledTimes(1);
   });
 });
