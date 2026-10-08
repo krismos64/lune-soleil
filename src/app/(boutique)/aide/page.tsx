@@ -18,14 +18,13 @@
  * information précontractuelle FAUSSE, sanctionnée bien au-delà de l'écart de
  * prix. Configuration invalide : la page le dit au lieu de se taire.
  *
- * LES DÉLAIS D'EXPÉDITION NE SONT PAS ANNONCÉS, et leur absence est délibérée :
- * l'exploitante n'a pas répondu aux questions 38 à 42 de la fiche, LS-26.
- * Écrire « expédition sous 24 heures » sans pouvoir le tenir serait une pratique
- * commerciale trompeuse, articles L121-2 et suivants. Le type d'emballage
- * relève des mêmes questions : aucune étape du chemin du colis ne le décrit.
+ * LE DÉLAI D'EXPÉDITION VIENT DE `DELAI_EXPEDITION_JOURS_MAX`, donné par
+ * l'exploitante le 8 octobre 2026, LS-26. Il borne le dépôt du colis, jamais
+ * sa réception : aucun délai d'acheminement n'est annoncé, faute de source
+ * vérifiée. Un délai non tenu serait une pratique commerciale trompeuse,
+ * articles L121-2 et suivants.
  *
- * LA FOIRE AUX QUESTIONS, LS-26, ne reprend que des faits établis, et le
- * délai d'expédition n'y figure pas pour la même raison. Le pied de page la
+ * LA FOIRE AUX QUESTIONS, LS-26, ne reprend que des faits établis. Le pied de page la
  * cite par l'ancre `#faq`, qui doit rester : une ancre absente retombe en haut
  * de page sans lever d'erreur, piège nommé par LS-123.
  */
@@ -45,6 +44,7 @@ import {
 import {
   type ConfigurationLivraison,
   ConfigurationLivraisonInvalideError,
+  DELAI_EXPEDITION_JOURS_MAX,
 } from "@/lib/livraison";
 import { resoudreConfigurationLivraison } from "@/services/parametres";
 import styles from "./aide.module.css";
@@ -422,19 +422,16 @@ export default async function PageAide() {
             </div>
           </div>
 
-          {/*
-           * AUCUN DÉLAI D'EXPÉDITION N'EST ANNONCÉ, et c'est ce paragraphe qui le
-           * dit plutôt que de laisser un silence. Les questions 38 à 42 de la
-           * fiche exploitante sont sans réponse.
-           */}
-          <p className={styles.noteAttente}>
+          {/* Le dépôt du colis, jamais sa réception : voir l'en-tête. */}
+          <p className={styles.noteDelai}>
             <svg viewBox="0 0 20 20" aria-hidden="true">
               <circle cx="10" cy="10" r="8" />
               <path d="M10 5v5l3 2" />
             </svg>
             <span>
-              Le délai de préparation avant expédition sera précisé ici avant
-              l&apos;ouverture de la boutique.
+              L&apos;atelier dépose votre colis au plus tard{" "}
+              {DELAI_EXPEDITION_JOURS_MAX} jours après la confirmation de votre
+              paiement. Le temps d&apos;acheminement s&apos;y ajoute.
             </span>
           </p>
         </div>

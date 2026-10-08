@@ -3,13 +3,14 @@
  *
  * Ces tests gardent les règles qui ont un coût réel si elles se perdent :
  * tarifs lus en configuration et jamais écrits en dur, domicile jamais
- * annoncé offert (LS-249), aucun délai d'expédition (questions 38 à 42 sans
- * réponse), aucun « nous » de marque (l'exploitante exerce seule), et un
+ * annoncé offert (LS-249), un seul délai d'expédition lu dans la constante
+ * (réponses de l'exploitante du 8 octobre 2026), aucun « nous » de marque (l'exploitante exerce seule), et un
  * balisage `FAQPage` identique au texte affiché.
  */
 import { describe, expect, it } from "vitest";
 
 import { questionsFrequentes } from "@/app/(boutique)/aide/questions-frequentes";
+import { DELAI_EXPEDITION_JOURS_MAX } from "@/lib/livraison";
 import { jsonLdQuestionsFrequentes } from "@/lib/seo";
 
 /** Des valeurs volontairement éloignées des tarifs réels. */
@@ -71,15 +72,28 @@ describe("questionsFrequentes, LS-26", () => {
     expect(texte(questionsFrequentes(null))).not.toMatch(/\d+,\d{2}\s?€/);
   });
 
-  it("n'invente aucun délai d'expédition ni de livraison", () => {
+  it("n'annonce que les deux délais donnés par l'exploitante", () => {
     const contenu = texte(questionsFrequentes(CONFIGURATION));
 
-    // Le seul délai chiffré est celui de la réponse aux messages, donné par
+    // Réponse aux messages et dépôt du colis, l'un et l'autre donnés par
     // l'exploitante : tout autre nombre d'heures ou de jours fait rougir, quel
-    // que soit le verbe qui l'introduit.
+    // que soit le verbe qui l'introduit, et aucun délai d'acheminement.
     expect(contenu.match(/\b\d+ ?(heures?|h|jours?)\b/gi)).toEqual([
+      `${DELAI_EXPEDITION_JOURS_MAX} jours`,
       "24 heures",
     ]);
+  });
+
+  it("borne le dépôt du colis par la constante, jamais sa réception", () => {
+    const reponse = tout(questionsFrequentes(CONFIGURATION)).find(
+      (entree) => entree.id === "faq-delai-expedition",
+    )?.reponse;
+
+    expect(reponse).toContain(
+      `au plus tard ${DELAI_EXPEDITION_JOURS_MAX} jours après la confirmation de votre paiement`,
+    );
+    expect(reponse).toMatch(/acheminement du transporteur s'y ajoute/);
+    expect(reponse).not.toMatch(/livré|reçu|réception/i);
   });
 
   it("renvoie les retours vers la rétractation en ligne", () => {

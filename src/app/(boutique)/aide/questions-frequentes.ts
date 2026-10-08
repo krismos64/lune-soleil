@@ -18,14 +18,21 @@
  * | entretien, acier inoxydable | page L'atelier, validée avec l'exploitante, LS-25 |
  * | réponse sous 24 heures | réponse de l'exploitante du 3 septembre 2026, arbitrage du 7 octobre |
  *
- * LE DÉLAI D'EXPÉDITION N'Y FIGURE PAS : les questions 38 à 42 de la fiche
- * exploitante sont sans réponse, et la section Livraison le dit. Un délai
- * annoncé sans pouvoir être tenu serait une pratique commerciale trompeuse.
+ * | délai d'expédition, emballage, cadeau | réponses de l'exploitante du 8 octobre 2026, questions 38 à 41 |
+ * | absence à domicile | pratique de Mondial Relay, relevée le 8 octobre 2026, sans chiffre non vérifié |
+ *
+ * LE DÉLAI D'EXPÉDITION VIENT DE `DELAI_EXPEDITION_JOURS_MAX`, jamais d'un
+ * chiffre écrit ici. Le délai d'acheminement n'est pas annoncé : aucune source
+ * vérifiée ne le donne. Un délai annoncé sans pouvoir être tenu serait une
+ * pratique commerciale trompeuse.
  *
  * L'EXPLOITANTE EXERCE SEULE : aucun « nous » de marque, `frontend-design.md`.
  * Les réponses sont tournées vers « vous » ou vers l'atelier.
  */
-import type { ConfigurationLivraison } from "@/lib/livraison";
+import {
+  type ConfigurationLivraison,
+  DELAI_EXPEDITION_JOURS_MAX,
+} from "@/lib/livraison";
 import { formaterMontant } from "@/lib/montant";
 
 /*
@@ -83,6 +90,35 @@ export function questionsFrequentes(
   }
 
   questionsLivraison.push(
+    {
+      id: "faq-delai-expedition",
+      question: "Sous quel délai ma commande part-elle\u00a0?",
+      reponse: `L'atelier dépose votre colis chez Mondial Relay au plus tard ${DELAI_EXPEDITION_JOURS_MAX} jours après la confirmation de votre paiement. Le temps d'acheminement du transporteur s'y ajoute, et un email vous prévient dès le départ du colis.`,
+    },
+    {
+      id: "faq-emballage",
+      question: "Comment le bijou est-il emballé\u00a0?",
+      reponse:
+        "Il est posé sur un présentoir en carton, glissé dans une pochette transparente, puis expédié dans une enveloppe à bulles qui le protège pendant le transport.",
+    },
+    {
+      id: "faq-emballage-cadeau",
+      question: "Proposez-vous un emballage cadeau\u00a0?",
+      reponse:
+        "Oui, gratuitement et sur demande. Après votre commande, écrivez à l'atelier en indiquant son numéro.",
+      lien: { href: "/contact", libelle: "Écrire à l'atelier" },
+    },
+    {
+      id: "faq-absence-domicile",
+      question: "Que se passe-t-il en cas d'absence lors d'une livraison à domicile\u00a0?",
+      /*
+       * AUCUN CHIFFRE : nombre de tentatives et délai de garde varient selon
+       * les pages de Mondial Relay, et leur FAQ n'a pas pu être relue à la
+       * source le 8 octobre 2026. Seul ce que toutes confirment est écrit.
+       */
+      reponse:
+        "Mondial Relay vous prévient de son passage, par un avis dans la boîte aux lettres, un email ou un SMS. Le colis vous est alors présenté de nouveau ou mis à disposition dans un Point Relais ou un Locker proche : suivez les indications de ce message. Un colis jamais retiré revient à l'atelier, qui vous contacte.",
+    },
     {
       id: "faq-corse",
       question: "Livrez-vous en Corse\u00a0?",
