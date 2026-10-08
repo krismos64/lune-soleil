@@ -343,7 +343,8 @@ verifier $ENVOI_ARCH || exit 1
 # machine. `b2_hide_file` n'exige que `writeFiles`, verifie a la documentation
 # Backblaze le 13 septembre 2026.
 #
-# LA RETENTION LOCALE NE BOUGE PAS, quatorze jeux, ADR-037 : elle protege de
+# LA RETENTION LOCALE NE BOUGE PAS, quatorze jours distincts depuis le
+# 8 octobre 2026, ADR-037 : elle protege de
 # l'erreur d'exploitation, le distant protege de l'attaque, deux menaces de
 # durees differentes.
 # ---------------------------------------------------------------------------

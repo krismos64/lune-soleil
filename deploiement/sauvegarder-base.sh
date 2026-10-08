@@ -472,8 +472,25 @@ fi
 # sortent tous AVANT ce point.
 # ---------------------------------------------------------------------------
 
-# `ls -t` trie par date de modification, le plus recent d'abord ; `tail -n +N`
-# saute les N-1 premiers.
+# LA PROFONDEUR SE COMPTE EN JOURS, ET NON EN JEUX, depuis le 8 octobre 2026.
+#
+# Elle gardait les quatorze jeux les plus recents. Or chaque deploiement en
+# produit un, sa sauvegarde prealable : les douze deploiements du 7 octobre ont
+# evince toutes les sauvegardes nocturnes anterieures, et le 8 au matin il ne
+# restait AUCUN point de restauration plus vieux que la veille. La promesse
+# d'ADR-037, « quatorze jours couvrent le delai de retractation », ne tenait
+# plus des qu'on deployait souvent, sans que rien ne le dise.
+#
+# LA REGLE : le DERNIER jeu de chacun des $RETENTION derniers jours DISTINCTS
+# ou une sauvegarde existe, plus TOUS les jeux du jour le plus recent, qui sont
+# les points de retour d'un deploiement en cours. Des jours DISTINCTS et non
+# calendaires : une machine arretee une semaine ne doit pas voir son historique
+# fondre le jour ou elle repart, la rotation ne supprime que ce qu'une
+# sauvegarde plus recente remplace.
+#
+# LES QUATRE FAMILLES TOURNENT ENSEMBLE, par horodatage : dump et archive, en
+# clair et chiffres. Un dump conserve sans son archive de medias ne restaure
+# rien d'utilisable, ADR-007.
 #
 # LES `pre-migration-*.dump` NE SONT PAS TOUCHES, et c'est delibere :
 # `migrate-production.sh` les depose dans le meme repertoire, et ce sont les
@@ -482,58 +499,57 @@ fi
 # quatorze jours, donc exactement quand elle est le seul retour possible. Leur
 # accumulation est un manque connu, signale a LS-107 qui porte la politique.
 #
-# LES DEUX FAMILLES TOURNENT ENSEMBLE, dump et archive du meme horodatage :
-# les separer ferait diverger leurs profondeurs, et une base restaurable sans
-# ses medias ne restaure rien d'utilisable, ADR-007.
-rotation() {
-  local motif="$1"
-  local supprimes=0
-  local ancien
-  while IFS= read -r ancien; do
-    [ -n "$ancien" ] || continue
-    rm -f "$REP_SAUVEGARDE/$ancien"
-    supprimes=$((supprimes + 1))
-  done < <(cd "$REP_SAUVEGARDE" && ls -t $motif 2>/dev/null | tail -n +$((RETENTION + 1)))
-  echo "$supprimes"
-}
+# PORTABLE VERS BASH 3.2, celui de macOS ou tourne la preuve par mutation : ni
+# tableau associatif ni `mapfile`, et aucun `grep -q` en fin de tube, que
+# `pipefail` et SIGPIPE font echouer sur un motif trouve, LS-237.
+MOTIF_JEU='^(quotidienne|fichiers)-([0-9]{8}-[0-9]{6})[.](dump|tar[.]gz)([.]gpg)?$'
 
-# LES QUATRE MOTIFS, CHIFFRES COMPRIS, LS-107.
-#
-# Un motif `quotidienne-*.dump` ne matche PAS `quotidienne-....dump.gpg` : sans
-# les deux lignes ajoutees, les fichiers chiffres s'accumuleraient sans limite
-# pendant que la rotation annoncerait son travail sur des fichiers qui
-# n'existent plus. Le defaut serait invisible dans la sortie et se verrait au
-# disque, des semaines plus tard.
-#
-# LES QUATRE FAMILLES TOURNENT ENSEMBLE, meme profondeur : un dump conserve
-# sans son archive de medias ne restaure rien d'utilisable, ADR-007.
-# `$(( ))` EN COMMANDE ISOLEE REND 1 QUAND LE RESULTAT VAUT ZERO, et sous
-# `set -e` cela SORT DU SCRIPT. C'est le piege de cette section : la premiere
-# version ecrivait `NB=$((NB + $(rotation ...)))`, ce qui faisait echouer la
-# sauvegarde nominale des que rien n'etait a supprimer, c'est-a-dire les treize
-# premiers jours. Mesure : le temoin du script de mutation est passe de vert a
-# rouge, code 1 sans message, la sortie s'arretant apres le chiffrement.
-#
-# La forme `X=$(( ))` est sure, l'affectation portant son propre code de
-# retour ; c'est `$(( ))` employe SEUL comme commande qui pose le probleme.
-# Ici les quatre appels sont donc sommes dans une seule affectation.
-NB_SUPPRIMES_DUMP=$(( $(rotation 'quotidienne-*.dump') + $(rotation 'quotidienne-*.dump.gpg') ))
-NB_SUPPRIMES_ARCH=$(( $(rotation 'fichiers-*.tar.gz') + $(rotation 'fichiers-*.tar.gz.gpg') ))
+# Les fichiers de jeu et leurs horodatages, sans `ls | grep` : le motif est
+# eprouve par `[[ =~ ]]`, que bash 3.2 connait.
+FICHIERS_JEUX=""
+TOUS_HORODATAGES=""
+for CHEMIN in "$REP_SAUVEGARDE"/quotidienne-* "$REP_SAUVEGARDE"/fichiers-*; do
+  NOM_FICHIER="${CHEMIN##*/}"
+  if [[ "$NOM_FICHIER" =~ $MOTIF_JEU ]]; then
+    FICHIERS_JEUX="$FICHIERS_JEUX $NOM_FICHIER"
+    TOUS_HORODATAGES="$TOUS_HORODATAGES ${BASH_REMATCH[2]}"
+  fi
+done
 
-# LE COMPTE SE FAIT SUR LES DEUX FORMES, la bascule vers le chiffrement laissant
-# coexister les deux pendant quatorze jours.
-#
-# `ls motif1 motif2` REND 1 DES QU'UN SEUL MOTIF NE MATCHE RIEN, meme s'il
-# liste parfaitement l'autre, et sous `set -e` l'affectation propage cet echec :
-# le script sortait en 1 apres une sauvegarde REUSSIE, sans un mot. Mesure du
-# 10 septembre 2026, le temoin du script de mutation passant de vert a rouge.
-#
-# `find` est employe a la place : il rend 0 sur zero resultat, et son `-name`
-# repete en `-o` couvre les deux formes en une seule invocation.
-NB_CONSERVEES=$(find "$REP_SAUVEGARDE" -maxdepth 1 -type f \
-  \( -name 'quotidienne-*.dump' -o -name 'quotidienne-*.dump.gpg' \) 2>/dev/null \
-  | wc -l | tr -d ' ')
-echo "  Rotation : $NB_SUPPRIMES_DUMP dump(s) et $NB_SUPPRIMES_ARCH archive(s) supprimes."
-echo "  $NB_CONSERVEES jeu(x) conserve(s) sur $RETENTION."
+# Les horodatages, du plus recent au plus ancien.
+# shellcheck disable=SC2086 # decoupage voulu : des horodatages sans espace
+JEUX=$(printf '%s\n' $TOUS_HORODATAGES | sort -u -r)
+JOUR_RECENT=$(printf '%s\n' "$JEUX" | head -n 1 | cut -c1-8)
+
+# Le premier jeu rencontre pour un jour est le dernier de ce jour, la liste
+# etant triee du plus recent au plus ancien.
+GARDES=$(printf '%s\n' "$JEUX" | awk -v recent="$JOUR_RECENT" -v n="$RETENTION" '
+  NF {
+    jour = substr($0, 1, 8)
+    premier = (jour != dernier)
+    if (premier) { jours++; dernier = jour }
+    if (jour == recent || (premier && jours <= n)) print
+  }')
+GARDES_LIGNE=" $(printf '%s\n' "$GARDES" | tr '\n' ' ')"
+
+NB_SUPPRIMES_DUMP=0
+NB_SUPPRIMES_ARCH=0
+for FICHIER in $FICHIERS_JEUX; do
+  [[ "$FICHIER" =~ $MOTIF_JEU ]]
+  HORODATAGE_JEU="${BASH_REMATCH[2]}"
+  case "$GARDES_LIGNE" in
+    *" $HORODATAGE_JEU "*) continue ;;
+  esac
+  rm -f "$REP_SAUVEGARDE/$FICHIER"
+  # L'AFFECTATION ET NON `$(( ))` SEUL, qui rend 1 sur zero sous `set -e`.
+  case "$FICHIER" in
+    quotidienne-*) NB_SUPPRIMES_DUMP=$((NB_SUPPRIMES_DUMP + 1)) ;;
+    *) NB_SUPPRIMES_ARCH=$((NB_SUPPRIMES_ARCH + 1)) ;;
+  esac
+done
+
+NB_CONSERVEES=$(printf '%s\n' "$GARDES" | grep -c . || true)
+echo "  Rotation : $NB_SUPPRIMES_DUMP fichier(s) de dump et $NB_SUPPRIMES_ARCH d'archive supprimes."
+echo "  $NB_CONSERVEES jeu(x) conserve(s) : le dernier de chacun des $RETENTION derniers jours, et tous ceux du jour."
 
 echo "Sauvegarde terminee."
