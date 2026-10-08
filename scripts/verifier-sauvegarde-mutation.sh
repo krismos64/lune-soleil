@@ -251,6 +251,35 @@ echo "Mutations"
 jouer "temoin, decor sain, la sauvegarde reussit" 0 "Sauvegarde terminee"
 
 # ---------------------------------------------------------------------------
+# LE FICHIER D'ENVIRONNEMENT N'EST PAS DU SHELL, 8 octobre 2026.
+#
+# Docker lit `env_file` ligne entiere : une valeur a espace non citee y est
+# legitime. Le script la chargeait par `source`, et bash prenait le second mot
+# pour une commande, code 127 : la sauvegarde de production de la nuit du 8 n'a
+# pas eu lieu. Le decor porte donc cette forme exacte, une valeur citee, une
+# ligne vide et un commentaire, et la sauvegarde doit reussir. Une ligne qui
+# serait une commande ne doit jamais s'executer : le temoin `EXECUTE` prouve
+# que le fichier est lu, pas lance.
+# ---------------------------------------------------------------------------
+ENV_DOCKER="$BAC/production-forme-docker.env"
+TEMOIN_EXECUTION="$BAC/execute"
+{
+  cat "$FICHIER_ENV"
+  echo ""
+  echo "# identite legale, forme acceptee par Docker"
+  echo "LEGAL_NOM=Nom Prenom"
+  echo "LEGAL_ADRESSE=\"12 rue des Lilas\""
+  echo "touch $TEMOIN_EXECUTION"
+} > "$ENV_DOCKER"
+chmod 600 "$ENV_DOCKER"
+jouer "valeur a espace non citee, forme Docker" 0 "Sauvegarde terminee" \
+  FICHIER_ENV="$ENV_DOCKER"
+if [ -e "$TEMOIN_EXECUTION" ]; then
+  echo "  ECHEC : une ligne du fichier d'environnement a ete EXECUTEE"
+  ECHECS=$((ECHECS + 1))
+fi
+
+# ---------------------------------------------------------------------------
 # Cas 1, fichier d'environnement illisible.
 #
 # Pas un garde-fou de qualite de sauvegarde, mais la porte d'entree : sans
