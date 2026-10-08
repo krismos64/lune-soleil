@@ -49,6 +49,11 @@ WORKDIR /app
 # un simple avertissement, exactement ce que ce reglage existe pour empecher.
 COPY package.json package-lock.json .npmrc ./
 
+# LS-273 : `postinstall` corrige l'optimiseur d'images de Next 16.3.x. Le script
+# doit etre la AVANT `npm ci` : sans lui, l'installation echoue au lieu de
+# laisser partir une image avec le defaut.
+COPY scripts/corriger-next-optimiseur-images.mjs ./scripts/
+
 # `npm ci` et non `npm install` : il installe le verrou a la lettre et echoue si
 # `package.json` et `package-lock.json` divergent, au lieu de resoudre.
 RUN npm ci
