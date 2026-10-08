@@ -100,34 +100,41 @@ test("les deux liens d'aide du pied de page atteignent leur section", async ({
 });
 
 /**
- * LA PAGE D'AIDE N'ANNONCE AUCUN DELAI D'EXPEDITION, et ce test le VERIFIE
- * plutot que de faire confiance a la relecture.
+ * LA PAGE D'AIDE N'ANNONCE QUE LE DELAI D'EXPEDITION DONNE PAR L'EXPLOITANTE,
+ * et ce test le VERIFIE plutot que de faire confiance a la relecture.
  *
- * Les questions 38 a 42 de la fiche exploitante sont sans reponse : annoncer
- * « expedition sous 24 heures » sans pouvoir le tenir serait une pratique
- * commerciale trompeuse, articles L121-2 et suivants. Le jour ou le delai sera
- * connu, ce test devra etre reecrit, ce qui est le comportement voulu.
+ * Reponses du 8 octobre 2026, LS-26 : deux jours au plus entre le paiement
+ * confirme et le depot du colis. Le chiffre est ECRIT ICI et non importe de
+ * `DELAI_EXPEDITION_JOURS_MAX` : importer la constante ferait bouger le test
+ * avec elle, et un delai change sans l'accord de l'exploitante passerait
+ * inapercu, meme raisonnement que pour les tarifs plus bas.
  */
-test("la page d'aide n'invente aucun délai d'expédition", async ({ page }) => {
+test("la page d'aide n'annonce que les délais donnés par l'exploitante", async ({
+  page,
+}) => {
   await page.goto("/aide");
 
   const texte = (await page.getByRole("main").textContent()) ?? "";
 
   /*
-   * AUCUN DÉLAI CHIFFRÉ, HORS LES PHRASES ADMISES, retirées mot pour mot avant
-   * le test : la réponse aux messages sous 24 heures, délai donné par
-   * l'exploitante (LS-26, présente aussi dans le balisage `FAQPage`, d'où
-   * `replaceAll`), et le compteur légal de rétractation, « 14 » et « jours »
-   * accolés par le rendu. Tout autre nombre d'heures ou de jours fait rougir :
-   * un motif bâti sur des verbes laissait passer « votre colis part sous
-   * 48 heures », revue de LS-26.
+   * AUCUN AUTRE DÉLAI CHIFFRÉ, HORS LES PHRASES ADMISES, retirées mot pour mot
+   * avant le test : la réponse aux messages sous 24 heures et le dépôt du colis
+   * sous 2 jours, délais donnés par l'exploitante (présents aussi dans le
+   * balisage `FAQPage`, d'où `replaceAll`), et le compteur légal de
+   * rétractation, « 14 » et « jours » accolés par le rendu. Tout autre nombre
+   * d'heures ou de jours fait rougir : un motif bâti sur des verbes laissait
+   * passer « votre colis part sous 48 heures », revue de LS-26.
    */
   const sansDelaisAdmis = texte
     .replaceAll("répond sous 24 heures au maximum", "")
     .replaceAll("Sous 24 heures au maximum. Pour une commande en cours", "")
+    .replaceAll("au plus tard 2 jours après la confirmation de votre", "")
     .replaceAll("14jours pour changer d'avis, dès la réception", "");
   expect(sansDelaisAdmis).not.toMatch(/\b\d+ ?(heures?|h|jours?)\b/i);
-  expect(texte).toMatch(/délai de préparation.*sera précisé/i);
+  expect(texte).toMatch(
+    /dépose votre colis au plus tard 2 jours après la confirmation de votre\s+paiement/,
+  );
+  expect(texte).not.toMatch(/sera précisé/i);
 });
 
 test("la page d'aide affiche les trois modes et leurs tarifs", async ({

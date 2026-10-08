@@ -462,20 +462,20 @@
   display: none;
 }
 
-.noteAttente {
+.noteDelai {
   display: flex;
   align-items: flex-start;
   gap: var(--ls-space-2);
   max-width: 70ch;
   margin: var(--ls-space-5) 0 0;
   padding: var(--ls-space-3);
-  border: 1px dashed var(--ls-border-controle);
+  border: 1px solid var(--ls-border-controle);
   border-radius: var(--ls-radius-md);
   color: var(--ls-text);
   font-size: 0.9375rem;
 }
 
-.noteAttente svg {
+.noteDelai svg {
   flex: none;
   width: 1.25rem;
   height: 1.25rem;

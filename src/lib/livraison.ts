@@ -75,6 +75,19 @@ export const MODES_AVEC_POINT_RETRAIT = [
   "LOCKER",
 ] as const satisfies readonly ModeLivraison[];
 
+/**
+ * Délai maximal entre le paiement confirmé et le dépôt du colis, en jours.
+ *
+ * DONNÉ PAR L'EXPLOITANTE LE 8 OCTOBRE 2026, LS-26, questions 38 et 39 : deux
+ * jours au plus, aucun jour sans expédition. Les fermetures se gèrent en
+ * suspendant la vente, jamais en allongeant ce délai.
+ *
+ * SOURCE UNIQUE DE TOUT AFFICHAGE : un délai annoncé et non tenu est une
+ * pratique commerciale trompeuse. Le délai d'acheminement du transporteur n'en
+ * fait pas partie et n'est annoncé nulle part.
+ */
+export const DELAI_EXPEDITION_JOURS_MAX = 2;
+
 /** `true` si ce mode impose de choisir un point de retrait. */
 export function exigePointRetrait(mode: ModeLivraison): boolean {
   return (MODES_AVEC_POINT_RETRAIT as readonly ModeLivraison[]).includes(mode);
