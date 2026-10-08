@@ -55,4 +55,6 @@ par l'exploitante, après déploiement.
 
 ## Prochaine étape
 
-Déployer, faire relire `/aide#faq` par l'exploitante, clore LS-26. Puis LS-19.
+**Déployé** le soir même, image `8379e92`, run 37819488552, quatre réponses
+constatées sur `https://lune-soleil.fr/aide`. Reste : faire relire `/aide#faq`
+par l'exploitante, clore LS-26. Puis LS-19.
