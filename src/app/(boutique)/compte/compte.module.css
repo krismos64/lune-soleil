@@ -1015,3 +1015,26 @@
   border-radius: var(--ls-radius-md);
   background: var(--ls-surface);
 }
+
+/* Le titre de la carte : marges posées, jamais celles du navigateur. */
+.carteCommande h3 {
+  margin: 0 0 var(--ls-space-1);
+  font-weight: 400;
+}
+
+/*
+ * Un lien d'action isolé, LS-228 : zone tactile de 44 px, souligné.
+ * `--ls-primary` sur `--ls-background`, crème de la page : 8,36:1, calculé.
+ */
+.lienAction {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  color: var(--ls-primary);
+  text-decoration: underline;
+}
+
+.lienAction:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}
