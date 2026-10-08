@@ -58,3 +58,18 @@ par l'exploitante, après déploiement.
 **Déployé** le soir même, image `8379e92`, run 37819488552, quatre réponses
 constatées sur `https://lune-soleil.fr/aide`. Reste : faire relire `/aide#faq`
 par l'exploitante, clore LS-26. Puis LS-19.
+
+## Vérification de fin de session
+
+Production : image `8379e92` en service et saine, 24 migrations sur 24, seul un
+commit de journal sépare `main` de l'image. Contrôles du dépôt verts
+(configuration, propagation Zod, tests non ignorés, registre, règles). Trois
+écarts corrigés : le paragraphe du README sur les tickets qui attendent
+l'exploitante (sept sur dix-neuf, devenu quatre sur neuf, mesuré), et deux
+commentaires de code qui citaient encore les questions 38 à 42 comme sans
+réponse. Laissés en l'état, car datés : le prototype `docs/prototypes/aide-animee/`
+et ADR-044, dont le rappel de LS-44 reste vrai.
+
+**Point ouvert pour Christophe** : les CGV ne portent aucun délai de livraison,
+la FAQ annonce désormais un délai de dépôt. Les deux ne se contredisent pas.
+Inscrire ce délai dans les CGV serait un engagement contractuel, à arbitrer.

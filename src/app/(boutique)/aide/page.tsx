@@ -355,7 +355,8 @@ export default async function PageAide() {
           <div className={styles.parcours}>
             <h3 className={styles.parcoursTitre}>Le chemin de votre colis</h3>
             {/*
-             * AUCUNE ÉTAPE NE PORTE DE DURÉE, questions 38 à 42 sans réponse.
+             * AUCUNE ÉTAPE NE PORTE DE DURÉE : seul le dépôt est borné, par la
+             * note sous le chemin, et l'acheminement n'a pas de source vérifiée.
              * Le trait entre deux jalons et le colis qui le parcourt sont des
              * décors `aria-hidden` qui ne passent sur aucun texte. Le trait
              * est un ÉLÉMENT et non un `::after` : `[data-borne="attente"] *`
