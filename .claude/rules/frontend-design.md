@@ -330,7 +330,18 @@ qui compare `largeur < 768` attend donc à cette largeur ce que 1280 rend.
 
 Le back-office adopte cartes et listes quand un tableau devient illisible sur
 mobile. Cible : créer un produit complet en moins de trois minutes sur
-smartphone, photographies comprises.
+smartphone, photographies comprises. **Mesurée et tenue le 8 octobre 2026**,
+LS-145 : l'exploitante a créé et publié un article sur son téléphone, photo
+prise avec l'appareil comprise, en **2 min 30**, chronomètre en main. La
+mesure ne sépare pas la saisie du traitement serveur, arbitrage de Christophe :
+le temps total suffit tant qu'il tient la cible.
+
+**Contenu d'une fiche, arbitrage de Christophe avec l'exploitante du
+8 octobre 2026** : le **nombre de photographies se choisit par article**, une
+seule suffit (LS-23), et la fiche exige **la description et les matières**.
+Dimensions et entretien sont facultatifs (LS-24), sections remplies quand
+l'exploitante le juge utile. Ne pas les réintroduire comme obligatoires sans
+nouvel arbitrage.
 
 ### C33, tout écran d'administration est atteignable sans saisir d'URL
 
@@ -1137,7 +1148,9 @@ n'existe pas.
 
 **Les textes publics parlent de « l'atelier », à la troisième personne**,
 arbitrage de Christophe du 7 octobre 2026, LS-286 : « Écrivez à l'atelier »,
-« L'atelier vous rembourse », emails compris. La règle disait jusque-là « à la
+« L'atelier vous rembourse », emails compris. **Confirmé par l'exploitante le
+8 octobre 2026**, y compris pour les emails où elle avait d'abord demandé un
+« nous ». La règle disait jusque-là « à la
 première personne du singulier », et une cinquantaine de phrases portaient
 pourtant un « nous ». **Seul le récit de `/atelier` garde le « je »**, voix de
 l'exploitante dans un texte validé avec elle en LS-25.
