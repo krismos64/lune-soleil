@@ -61,13 +61,38 @@ if [ ! -r "$FICHIER_ENV" ]; then
   exit 1
 fi
 
-# `set -a` exporte automatiquement tout ce qui est defini par le `source`.
+# LE FICHIER EST LU CLE PAR CLE, JAMAIS EXECUTE, depuis le 8 octobre 2026.
+#
+# Il etait charge par `. "$FICHIER_ENV"`. Le 7 octobre au soir, l'identite
+# legale y est entree avec une valeur a espace non citee, que Docker lit sans
+# broncher (`env_file` prend la ligne entiere) et que bash prend pour une
+# commande : `line 33: <prenom>: command not found`, code 127. La sauvegarde de la
+# nuit du 8 n'a pas eu lieu, et le deploiement, qui l'exige, s'est arrete.
+# Executer un fichier de configuration est en soi un defaut : toute ligne y
+# devient du code lance par root.
+#
+# Seules les cles dont ce script a besoin sont lues, avec la semantique du
+# `source` qu'elles remplacent : la derniere occurrence l'emporte sur
+# l'environnement, et des guillemets entourant toute la valeur sont retires.
 # Le fichier n'est JAMAIS affiche : invariant 9, et les journaux de systemd
 # sont lisibles par plus de monde que le fichier lui-meme, qui est en 0600.
-set -a
-# shellcheck disable=SC1090
-. "$FICHIER_ENV"
-set +a
+lire_variable() {
+  local nom="$1" ligne valeur
+  ligne=$(grep -E "^${nom}=" "$FICHIER_ENV" | tail -n 1) || return 0
+  valeur="${ligne#*=}"
+  valeur="${valeur%$'\r'}"
+  case "$valeur" in
+    \"*\") valeur="${valeur#\"}"; valeur="${valeur%\"}" ;;
+    \'*\') valeur="${valeur#\'}"; valeur="${valeur%\'}" ;;
+  esac
+  printf -v "$nom" '%s' "$valeur"
+  export "${nom?}"
+}
+
+for VARIABLE in POSTGRES_USER POSTGRES_DB POSTGRES_PASSWORD MEDIA_RACINE \
+  MEDIA_SAUVEGARDE DOCUMENTS_RACINE BACKUP_KEY_FILE; do
+  lire_variable "$VARIABLE"
+done
 
 : "${POSTGRES_USER:?POSTGRES_USER absente de $FICHIER_ENV}"
 : "${POSTGRES_DB:?POSTGRES_DB absente de $FICHIER_ENV}"
