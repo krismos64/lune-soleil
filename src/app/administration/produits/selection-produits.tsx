@@ -11,8 +11,11 @@
  * gardes que le geste unitaire : un produit sans photo reste en brouillon, et
  * l'ecran dit lequel et pourquoi, plutot qu'un compte global qui mentirait.
  *
- * PAS DE CONFIRMATION : publier et archiver sont reversibles depuis la fiche
- * de chaque produit, et le nombre coche est dans le libelle des boutons.
+ * PUBLIER SE FAIT SANS CONFIRMATION, ARCHIVER NON, LS-278. Le 4 octobre 2026,
+ * « Tout sélectionner » puis « Archiver » a vidé la boutique d'un geste, et le
+ * site est resté deux jours fermé aux moteurs de recherche. L'archivage nomme
+ * donc les articles avant de partir ; s'il vide la boutique, le serveur exige
+ * en plus que leur nombre soit tapé.
  *
  * LE RETRAIT EN A UNE, LS-279 : seul le développeur le défait. Il n'existe que
  * dans la vue des archivés, la seule où il peut réussir, et la confirmation
@@ -105,6 +108,29 @@ export function SelectionProduits({
   /* Après « Annuler », le focus revient au bouton de retrait. */
   const retourAuRetrait = useRef(false);
   /*
+   * LA CONFIRMATION D'ARCHIVAGE, LS-278 : même instantané que le retrait. Les
+   * noms et le formulaire tels que cochés au clic.
+   */
+  const [archivage, setArchivage] = useState<{
+    noms: string[];
+    formulaire: FormData;
+  } | null>(null);
+  const boutonArchivage = useRef<HTMLButtonElement>(null);
+  const zoneArchivage = useRef<HTMLElement>(null);
+  const retourAArchivage = useRef(false);
+  /*
+   * LA CONFIRMATION RENFORCÉE, LS-278 : demandée par le SERVEUR quand la
+   * sélection contient toutes les pièces publiées. `nombre` vient de lui, et
+   * `essaiFaux` dit que le nombre tapé ne correspondait pas.
+   */
+  const [renforcee, setRenforcee] = useState<{
+    nombre: number;
+    formulaire: FormData;
+    essaiFaux: boolean;
+  } | null>(null);
+  const champNombre = useRef<HTMLInputElement>(null);
+  const boutonRenforcee = useRef<HTMLButtonElement>(null);
+  /*
    * CE QUE L'ATTENTE ANNONCE, revue de LS-265 : un récapitulatif ne modifie
    * rien, l'écran ne doit donc pas dire « Enregistrement » pendant qu'il se
    * prépare.
@@ -151,6 +177,20 @@ export function SelectionProduits({
       boutonRetrait.current?.focus();
     }
   }, [retrait]);
+
+  useEffect(() => {
+    if (archivage) {
+      zoneArchivage.current?.focus();
+    } else if (retourAArchivage.current) {
+      retourAArchivage.current = false;
+      boutonArchivage.current?.focus();
+    }
+  }, [archivage]);
+
+  /* Le focus va au champ du nombre, une fois l'envoi terminé. */
+  useEffect(() => {
+    if (renforcee && !enCours) champNombre.current?.focus();
+  }, [renforcee, enCours]);
 
   useEffect(() => {
     if (recapitulatif) {
@@ -204,6 +244,9 @@ export function SelectionProduits({
       // Le bouton desactive a perdu le focus : il va au bilan.
       zoneBilan.current?.focus();
 
+      // La confirmation renforcée ne survit qu'à un nouveau refus, LS-278.
+      if (resultat.statut !== "CONFIRMATION_REQUISE") setRenforcee(null);
+
       switch (resultat.statut) {
         case "SUCCES": {
           const [un, plusieurs] = PARTICIPE[operation] ?? ["traité", "traités"];
@@ -218,6 +261,25 @@ export function SelectionProduits({
           routeur.refresh();
           break;
         }
+        case "CONFIRMATION_REQUISE":
+          /*
+           * RIEN N'EST ARCHIVÉ : le serveur demande le nombre tapé. Le même
+           * formulaire repartira avec lui, sans le nombre faux d'un essai
+           * précédent.
+           */
+          {
+            // Une COPIE sans le nombre : le formulaire envoyé ne se modifie
+            // pas après coup.
+            const sansNombre = new FormData();
+            for (const [cle, valeur] of formulaire)
+              if (cle !== "confirmationNombre") sansNombre.append(cle, valeur);
+            setRenforcee((avant) => ({
+              nombre: resultat.nombre,
+              formulaire: sansNombre,
+              essaiFaux: avant !== null,
+            }));
+          }
+          break;
         case "INVALIDE":
           setBilan({
             texte: "Cocher au moins un produit, cent au plus.",
@@ -261,7 +323,20 @@ export function SelectionProduits({
         setBilan(null);
         setRecapitulatif(null);
         setRetrait(null);
+        setArchivage(null);
+        setRenforcee(null);
         setErreurPrix(null);
+
+        if (operation === "archiver") {
+          // LS-278 : rien ne part avant la confirmation, qui nomme les articles.
+          setArchivage({
+            noms: cases()
+              .filter((element) => element.checked)
+              .map((element) => element.dataset.nom ?? element.value),
+            formulaire,
+          });
+          return;
+        }
 
         if (operation === "retirer") {
           // Rien ne part avant la confirmation, qui nomme chaque article.
@@ -337,6 +412,7 @@ export function SelectionProduits({
             Publier ({coches})
           </button>
           <button
+            ref={boutonArchivage}
             type="submit"
             value="archiver"
             className={styles.boutonSelection}
@@ -413,6 +489,156 @@ export function SelectionProduits({
           </p>
         ) : null}
       </div>
+
+      {archivage ? (
+        <section
+          ref={zoneArchivage}
+          tabIndex={-1}
+          className={styles.confirmationRetrait}
+          role="alertdialog"
+          aria-labelledby="titre-confirmation-archivage"
+          aria-describedby="texte-confirmation-archivage"
+          onKeyDown={(evenement) => {
+            if (evenement.key === "Escape") {
+              retourAArchivage.current = true;
+              setArchivage(null);
+            }
+          }}
+        >
+          <h2
+            id="titre-confirmation-archivage"
+            className={styles.titreRecapitulatif}
+          >
+            {archivage.noms.length > 1
+              ? `Archiver ces ${archivage.noms.length} articles\u202F?`
+              : "Archiver cet article\u202F?"}
+          </h2>
+          <ul className={styles.listeRecapitulatif}>
+            {archivage.noms.map((nom, rang) => (
+              <li key={rang}>{nom}</li>
+            ))}
+          </ul>
+          <p id="texte-confirmation-archivage">
+            {archivage.noms.length > 1
+              ? "Ils ne sont plus en vente sur la boutique"
+              : "Il n'est plus en vente sur la boutique"}
+            . Rien n&apos;est effacé : chaque article se republie depuis sa
+            fiche.
+          </p>
+          <div className={styles.actionsSelection}>
+            <button
+              type="button"
+              className={styles.boutonSelection}
+              disabled={enCours}
+              onClick={() => {
+                const { formulaire } = archivage;
+                setArchivage(null);
+                envoyer(formulaire, "archiver");
+              }}
+            >
+              Confirmer l&apos;archivage
+            </button>
+            <button
+              type="button"
+              className={styles.boutonSelection}
+              disabled={enCours}
+              onClick={() => {
+                retourAArchivage.current = true;
+                setArchivage(null);
+              }}
+            >
+              Annuler
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      {renforcee ? (
+        <section
+          className={styles.confirmationRetrait}
+          role="alertdialog"
+          aria-labelledby="titre-confirmation-renforcee"
+          aria-describedby="texte-confirmation-renforcee"
+          onKeyDown={(evenement) => {
+            if (evenement.key === "Escape") {
+              setRenforcee(null);
+              boutonArchivage.current?.focus();
+            }
+          }}
+        >
+          <h2
+            id="titre-confirmation-renforcee"
+            className={styles.titreRecapitulatif}
+          >
+            {`Archiver les ${renforcee.nombre} pièces en vente, toute la boutique\u202F?`}
+          </h2>
+          <p id="texte-confirmation-renforcee">
+            La boutique n&apos;aura plus aucune pièce en vente, et les moteurs
+            de recherche cesseront de l&apos;indexer jusqu&apos;à la prochaine
+            publication.
+          </p>
+          <label htmlFor="confirmation-nombre" className={styles.libellePrix}>
+            {`Pour confirmer, taper ${renforcee.nombre}`}
+          </label>
+          <div className={styles.lignePrix}>
+            <input
+              ref={champNombre}
+              id="confirmation-nombre"
+              className={styles.champPrix}
+              inputMode="numeric"
+              autoComplete="off"
+              disabled={enCours}
+              aria-invalid={renforcee.essaiFaux ? true : undefined}
+              aria-describedby={
+                renforcee.essaiFaux ? "erreur-confirmation-nombre" : undefined
+              }
+              onKeyDown={(evenement) => {
+                if (evenement.key !== "Enter") return;
+                // Entrée confirme ici, jamais « Publier », premier bouton du
+                // formulaire englobant.
+                evenement.preventDefault();
+                boutonRenforcee.current?.click();
+              }}
+            />
+            <button
+              ref={boutonRenforcee}
+              type="button"
+              className={`${styles.boutonSelection} ${styles.boutonRetrait}`}
+              disabled={enCours}
+              onClick={() => {
+                const formulaire = new FormData();
+                for (const [cle, valeur] of renforcee.formulaire)
+                  formulaire.append(cle, valeur);
+                formulaire.set(
+                  "confirmationNombre",
+                  champNombre.current?.value ?? "",
+                );
+                envoyer(formulaire, "archiver");
+              }}
+            >
+              Archiver toute la boutique
+            </button>
+          </div>
+          {renforcee.essaiFaux ? (
+            <p id="erreur-confirmation-nombre" className={styles.bilanErreur}>
+              {`Le nombre tapé ne correspond pas : taper ${renforcee.nombre}. Rien n'a été archivé.`}
+            </p>
+          ) : null}
+          <div className={styles.actionsSelection}>
+            <button
+              type="button"
+              className={styles.boutonSelection}
+              disabled={enCours}
+              onClick={() => {
+                setRenforcee(null);
+                boutonArchivage.current?.focus();
+              }}
+            >
+              Annuler
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       {retrait ? (
         <section

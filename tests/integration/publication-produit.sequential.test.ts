@@ -35,7 +35,15 @@ import { join } from "node:path";
 
 import { Client } from "pg";
 import sharp from "sharp";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from "vitest";
 import { inject } from "vitest";
 
 import { VARIABLE_URL_TEST } from "../aide/base-ephemere";
@@ -45,6 +53,12 @@ let racineMedias: string;
 let catalogue: typeof import("@/services/catalogue");
 let variantes: typeof import("@/services/variante");
 let medias: typeof import("@/services/media");
+/*
+ * L'AUTEUR DES ARCHIVAGES, LS-278 : `journal_audit.acteur_id` reference un
+ * utilisateur reel. Role CLIENT et non ADMINISTRATRICE : l'index de E1
+ * n'admet qu'une administratrice, et la base est partagee entre fichiers.
+ */
+const ACTEUR = randomUUID();
 
 beforeAll(async () => {
   const url = inject(VARIABLE_URL_TEST);
@@ -62,9 +76,19 @@ beforeAll(async () => {
   catalogue = await import("@/services/catalogue");
   variantes = await import("@/services/variante");
   medias = await import("@/services/media");
+
+  await client.query(
+    `INSERT INTO utilisateur (id, email, email_verifie, nom, role, cree_a, mis_a_jour_a)
+     VALUES ($1, $2, true, 'TEST Archivage', 'CLIENT', now(), now())`,
+    [ACTEUR, `archivage-${ACTEUR}@example.invalid`],
+  );
 });
 
 afterAll(async () => {
+  await client.query("DELETE FROM journal_audit WHERE acteur_id = $1", [
+    ACTEUR,
+  ]);
+  await client.query("DELETE FROM utilisateur WHERE id = $1", [ACTEUR]);
   await client.end();
   await rm(racineMedias, { recursive: true, force: true });
 });
@@ -451,6 +475,7 @@ describe("publierOuArchiverProduits, LS-242", () => {
     const bilan = await catalogue.publierOuArchiverProduits({
       produitIds: [conforme, sansVariante],
       operation: "publier",
+      acteurId: ACTEUR,
     });
 
     expect(bilan.reussis).toBe(1);
@@ -475,6 +500,7 @@ describe("publierOuArchiverProduits, LS-242", () => {
     const bilan = await catalogue.publierOuArchiverProduits({
       produitIds: [premier, second, premier],
       operation: "archiver",
+      acteurId: ACTEUR,
     });
 
     // Le doublon est retire : `premier` n'est archive qu'une fois.
@@ -493,6 +519,7 @@ describe("publierOuArchiverProduits, LS-242", () => {
         catalogue.publierOuArchiverProduits({
           produitIds,
           operation: "archiver",
+          acteurId: ACTEUR,
         }),
       ).rejects.toThrow();
     }
@@ -796,5 +823,146 @@ describe("retirerProduitsDeLEspace, LS-279", () => {
       [intact],
     );
     expect(rows[0].retire_a).toBeNull();
+  });
+});
+
+/*
+ * LS-278 : LE 4 OCTOBRE 2026, LES 51 PRODUITS ONT ETE ARCHIVES D'UN SEUL
+ * GESTE, sans confirmation, sans trace d'auteur et sans alerte. Ces cas
+ * exercent la confirmation renforcee, le journal d'audit et l'alerte de
+ * catalogue vide.
+ *
+ * L'ETAT GLOBAL DU CATALOGUE COMPTE ICI, et la base est partagee entre
+ * fichiers : chaque cas part d'un catalogue que ce fichier a vide lui-meme.
+ */
+describe("archivage massif, LS-278", () => {
+  beforeEach(async () => {
+    await client.query("TRUNCATE produit, categorie CASCADE");
+    await client.query(
+      "DELETE FROM alerte_critique WHERE type = 'CATALOGUE_VIDE'",
+    );
+  });
+
+  afterEach(async () => {
+    await client.query(
+      "DELETE FROM alerte_critique WHERE type = 'CATALOGUE_VIDE'",
+    );
+  });
+
+  async function produitPublie(): Promise<string> {
+    const id = await produitDeTest();
+    await varianteSur(id);
+    await photoPubliableSur(id);
+    await catalogue.publierProduit(id);
+    return id;
+  }
+
+  async function alertesCatalogueVide(): Promise<number> {
+    const { rows } = await client.query(
+      "SELECT count(*)::int AS n FROM alerte_critique WHERE type = 'CATALOGUE_VIDE' AND acquittee_a IS NULL",
+    );
+    return rows[0].n;
+  }
+
+  async function tracesArchivage() {
+    const { rows } = await client.query(
+      "SELECT acteur_id, id_cible, detail FROM journal_audit WHERE action = 'ARCHIVAGE_PRODUITS' AND acteur_id = $1 ORDER BY cree_a",
+      [ACTEUR],
+    );
+    return rows;
+  }
+
+  beforeEach(async () => {
+    await client.query("DELETE FROM journal_audit WHERE acteur_id = $1", [
+      ACTEUR,
+    ]);
+  });
+
+  it("refuse d'archiver toutes les pieces publiees sans le nombre tape, et n'archive rien", async () => {
+    const a = await produitPublie();
+    const b = await produitPublie();
+    const brouillon = await produitDeTest();
+
+    for (const confirmationNombre of [undefined, "", "3", "deux", "2,0"]) {
+      const refus = await catalogue
+        .publierOuArchiverProduits({
+          produitIds: [a, b, brouillon],
+          operation: "archiver",
+          confirmationNombre,
+          acteurId: ACTEUR,
+        })
+        .catch((erreur: unknown) => erreur);
+
+      expect(refus).toBeInstanceOf(catalogue.ConfirmationRenforceeRequiseError);
+      // Le nombre demande est celui des pieces PUBLIEES, pas de la selection.
+      expect((refus as { nombre: number }).nombre).toBe(2);
+    }
+
+    expect((await produitEnBase(a)).statut).toBe("ACTIF");
+    expect((await produitEnBase(b)).statut).toBe("ACTIF");
+    expect((await produitEnBase(brouillon)).statut).toBe("BROUILLON");
+    expect(await tracesArchivage()).toHaveLength(0);
+    expect(await alertesCatalogueVide()).toBe(0);
+  });
+
+  it("archive tout avec le bon nombre, trace l'auteur et leve l'alerte de catalogue vide", async () => {
+    const a = await produitPublie();
+    const b = await produitPublie();
+
+    const bilan = await catalogue.publierOuArchiverProduits({
+      produitIds: [a, b],
+      operation: "archiver",
+      confirmationNombre: " 2 ",
+      acteurId: ACTEUR,
+    });
+
+    expect(bilan.reussis).toBe(2);
+    expect((await produitEnBase(a)).statut).toBe("ARCHIVE");
+
+    const traces = await tracesArchivage();
+    expect(traces).toHaveLength(1);
+    expect(traces[0].id_cible).toBe("selection");
+    expect(traces[0].detail.nombre).toBe(2);
+    expect([...traces[0].detail.produitIds].sort()).toEqual([a, b].sort());
+
+    expect(await alertesCatalogueVide()).toBe(1);
+  });
+
+  it("n'exige rien quand une piece publiee reste en vente, et ne leve aucune alerte", async () => {
+    const archivee = await produitPublie();
+    const restante = await produitPublie();
+
+    const bilan = await catalogue.publierOuArchiverProduits({
+      produitIds: [archivee],
+      operation: "archiver",
+      acteurId: ACTEUR,
+    });
+
+    expect(bilan.reussis).toBe(1);
+    expect((await produitEnBase(restante)).statut).toBe("ACTIF");
+    expect(await tracesArchivage()).toHaveLength(1);
+    expect(await alertesCatalogueVide()).toBe(0);
+  });
+
+  it("archiver la derniere piece depuis sa fiche trace l'auteur et alerte, une seule fois", async () => {
+    const derniere = await produitPublie();
+
+    await catalogue.archiverProduitPar(derniere, ACTEUR);
+
+    const traces = await tracesArchivage();
+    expect(traces).toHaveLength(1);
+    expect(traces[0].id_cible).toBe(derniere);
+    expect(traces[0].detail.nombre).toBe(1);
+    expect(await alertesCatalogueVide()).toBe(1);
+
+    // Un second signal sur une boutique deja vide se tait : une alerte ouverte.
+    expect(await catalogue.signalerSiCatalogueVide()).toBe(true);
+    expect(await alertesCatalogueVide()).toBe(1);
+  });
+
+  it("un catalogue qui garde une piece ne signale rien", async () => {
+    await produitPublie();
+    expect(await catalogue.signalerSiCatalogueVide()).toBe(false);
+    expect(await alertesCatalogueVide()).toBe(0);
   });
 });

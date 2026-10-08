@@ -51,6 +51,7 @@ const quantite = valider(schemaQuantite, entree); // ou lève EntreeInvalideErro
 | `schemaNumeroPage` | numéro de page du catalogue public lu dans l'URL, LS-241 | `0`, `02`, `abc`, `-1`, `1.5`, plus de quatre chiffres |
 | `schemaSelectionMessages` | sélection d'archivage de messages, LS-243, doublons retirés | une sélection vide, plus de 100 identifiants, un identifiant qui n'est pas un UUID |
 | `schemaSelectionProduits` | sélection de produits à publier ou archiver d'un geste, LS-242, doublons retirés | une sélection vide, plus de 100 identifiants, un identifiant qui n'est pas un UUID |
+| `schemaConfirmationNombre` | nombre tapé pour confirmer l'archivage de toutes les pièces publiées, LS-278, converti en entier | une saisie vide, des lettres, une virgule, plus de trois chiffres |
 | `schemaCoordonnees` | nom, email, téléphone facultatif | composé des trois précédents |
 | `schemaAdresseFigee` | adresse **recopiée par une commande**, avec le `nom` du destinataire | relire une adresse figée avec `schemaAdressePostale`, qui refuse ce `nom` |
 | `schemaAdresseCarnet` | adresse du **carnet client**, LS-59 : étend `schemaAdressePostale` avec `libelle`, `nomComplet` et `telephone` | y ajouter `estParDefaut`, qui contournerait l'ordre imposé de la bascule, ou `utilisateurId`, qui vient de la session |

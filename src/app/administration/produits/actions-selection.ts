@@ -14,6 +14,7 @@ import { journaliserErreur } from "@/lib/journal";
 import { EntreeInvalideError } from "@/lib/validation";
 import { exigerRole } from "@/services/autorisation";
 import {
+  ConfirmationRenforceeRequiseError,
   publierOuArchiverProduits,
   retirerProduitsDeLEspace,
   type BilanGroupe,
@@ -27,6 +28,11 @@ import {
 
 export type ResultatSelectionProduits =
   | ({ statut: "SUCCES" } & BilanGroupe)
+  /**
+   * LS-278 : la sélection contient toutes les pièces publiées. Rien n'est
+   * archivé ; l'écran demande de taper `nombre` et renvoie.
+   */
+  | { statut: "CONFIRMATION_REQUISE"; nombre: number }
   | { statut: "SESSION_ABSENTE" }
   | { statut: "INVALIDE" }
   | { statut: "INDISPONIBLE" };
@@ -34,7 +40,8 @@ export type ResultatSelectionProduits =
 export async function appliquerSelectionProduits(
   formulaire: FormData,
 ): Promise<ResultatSelectionProduits> {
-  if (!(await exigerRole(await headers()))) {
+  const identite = await exigerRole(await headers());
+  if (!identite) {
     return { statut: "SESSION_ABSENTE" };
   }
 
@@ -58,13 +65,21 @@ export async function appliquerSelectionProduits(
     const bilan =
       operation === "retirer"
         ? await retirerProduitsDeLEspace({ produitIds })
-        : await publierOuArchiverProduits({ produitIds, operation });
+        : await publierOuArchiverProduits({
+            produitIds,
+            operation,
+            confirmationNombre: formulaire.get("confirmationNombre"),
+            acteurId: identite.utilisateurId,
+          });
 
     // `"layout"` : les pastilles de la barre lisent le catalogue.
     revalidatePath("/administration/produits", "layout");
 
     return { statut: "SUCCES", ...bilan };
   } catch (erreur) {
+    if (erreur instanceof ConfirmationRenforceeRequiseError) {
+      return { statut: "CONFIRMATION_REQUISE", nombre: erreur.nombre };
+    }
     if (erreur instanceof EntreeInvalideError) {
       return { statut: "INVALIDE" };
     }
