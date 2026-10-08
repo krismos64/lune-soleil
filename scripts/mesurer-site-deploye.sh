@@ -14,17 +14,16 @@
 # de sa portee, faute d'une session, et c'est deliberе.
 #
 # ------------------------------------------------------------------
-# CE QU'IL NE MESURE PAS ENCORE, ET IL FAUT LE LIRE AVANT DE CROIRE SES
-# CHIFFRES.
+# LE CATALOGUE EST REEL DEPUIS SEPTEMBRE 2026, et la mesure porte enfin sur
+# lui. Jusqu'au 8 octobre 2026, ce script marquait l'accueil et le catalogue
+# « attend LS-23 » : la production n'avait aucune piece, et un chiffre excellent
+# sur un catalogue vide aurait ete un chiffre faux. Cinquante pieces
+# photographiees sont en ligne : la reserve est levee, et une FICHE PRODUIT
+# REELLE, tiree du sitemap a chaque execution, entre dans la mesure.
 #
-# LE CATALOGUE DE PRODUCTION EST VIDE. Les photographies de l'exploitante
-# relevent de LS-23, non commencee. Le LCP de `/catalogue` mesure donc une page
-# qui n'existera JAMAIS telle quelle : elle sera peuplee de photographies, qui
-# sont precisement le poste le plus lourd d'une boutique de bijoux.
-#
-# Un chiffre excellent sur un catalogue vide est un chiffre FAUX, et c'est le
-# motif contre lequel la story elle-meme met en garde. La colonne « attend
-# LS-23 » le dit a chaque execution plutot que dans une note qu'on oublie.
+# UNE BOUTIQUE SANS FICHE AU SITEMAP EST UN ECHEC DE MESURE, pas une page de
+# moins : c'est un catalogue vide, LS-278, et le dire vaut mieux que mesurer
+# sept pages vertes autour d'une boutique fermee.
 # ------------------------------------------------------------------
 #
 # Usage : ./scripts/mesurer-site-deploye.sh [URL de base]
@@ -56,18 +55,24 @@ SEUIL_A11Y="${SEUIL_A11Y:-100}"
 # Les routes sont RELEVEES depuis `src/app/(boutique)` et non devinees : une
 # premiere tentative a interroge `/mentions-legales` et `/connexion`, qui
 # rendent 404. Les vraies sont `/informations-legales` et `/compte/connexion`.
-#
-# Le drapeau dit si la page depend des photographies de LS-23.
 # ---------------------------------------------------------------------------
 PAGES=(
-  "/|accueil|photos"
-  "/catalogue|catalogue|photos"
-  "/aide|aide|non"
-  "/contact|contact|non"
-  "/informations-legales|informations légales|non"
-  "/compte/connexion|connexion|non"
-  "/compte/inscription|inscription|non"
+  "/|accueil"
+  "/catalogue|catalogue"
+  "/atelier|atelier"
+  "/aide|aide"
+  "/contact|contact"
+  "/informations-legales|informations légales"
+  "/compte/connexion|connexion"
+  "/compte/inscription|inscription"
 )
+
+# LA FICHE PRODUIT VIENT DU SITEMAP, jamais d'un slug ecrit ici : une piece
+# vendue ou archivee rendrait 404, et la mesure porterait sur une page
+# d'erreur. La premiere fiche publiee suffit, le gabarit etant commun.
+FICHE=$(curl -fsS --max-time 20 "$BASE/sitemap.xml" 2>/dev/null |
+  grep -o '<loc>[^<]*/produit/[^<]*</loc>' | head -n 1 |
+  sed -e 's#<loc>##' -e 's#</loc>##' -e "s#^$BASE##")
 
 # LE REPERTOIRE EST CREE, ET CETTE LIGNE A COUTE UN DIAGNOSTIC.
 #
@@ -86,7 +91,13 @@ mkdir -p "$RAPPORTS" || {
 }
 ECHECS=0
 MESUREES=0
-EN_ATTENTE=0
+
+if [ -n "$FICHE" ]; then
+  PAGES+=("$FICHE|fiche produit")
+else
+  echo "ECHEC : aucune fiche produit au sitemap de $BASE, le catalogue est vide."
+  ECHECS=$((ECHECS + 1))
+fi
 
 echo "=========================================================================="
 echo "CORE WEB VITALS DU SITE DEPLOYE, LS-140"
@@ -102,7 +113,7 @@ printf '%-24s %-8s %-9s %-8s %-7s %-6s %s\n' \
   "------------------------" "--------" "---------" "--------" "-------" "------" "-------"
 
 for ENTREE in "${PAGES[@]}"; do
-  IFS='|' read -r CHEMIN NOM DEPEND <<<"$ENTREE"
+  IFS='|' read -r CHEMIN NOM <<<"$ENTREE"
   FICHIER="$RAPPORTS/$(printf '%s' "$NOM" | tr -c 'a-zA-Z0-9' '-').json"
 
   # `--only-categories` limite le travail aux deux categories du critere.
@@ -152,9 +163,6 @@ for ENTREE in "${PAGES[@]}"; do
   if [ -n "$ECARTS" ]; then
     VERDICT="ECART :$ECARTS"
     ECHECS=$((ECHECS + 1))
-  elif [ "$DEPEND" = "photos" ]; then
-    VERDICT="OK mais attend LS-23"
-    EN_ATTENTE=$((EN_ATTENTE + 1))
   else
     VERDICT="OK"
   fi
@@ -178,13 +186,6 @@ echo
 if [ "$MESUREES" -eq 0 ]; then
   echo "ECHEC : aucune page mesuree. Le site est-il joignable ?"
   exit 1
-fi
-
-if [ "$EN_ATTENTE" -gt 0 ]; then
-  echo "ATTENTION : $EN_ATTENTE page(s) dependent des photographies de LS-23."
-  echo "  Le catalogue de production est VIDE. Leur LCP mesure une page qui"
-  echo "  n'existera jamais telle quelle, les photographies etant le poste le"
-  echo "  plus lourd d'une boutique de bijoux. Rejouer apres LS-23."
 fi
 
 echo
