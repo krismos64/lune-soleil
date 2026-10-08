@@ -966,3 +966,78 @@ describe("archivage massif, LS-278", () => {
     expect(await alertesCatalogueVide()).toBe(0);
   });
 });
+
+/*
+ * LS-260, refonte de l'accueil du 8 octobre 2026 : chaque catégorie porte la
+ * VRAIE photo de sa pièce la plus récemment publiée, et le nombre de pièces
+ * en vente. Les assertions portent sur la catégorie que le cas a créée, la
+ * base étant partagée entre fichiers.
+ */
+describe("couvertures des catégories de l'accueil, LS-260", () => {
+  async function publieeDans(categorieId: string, publieA: string) {
+    const produit = await catalogue.creerProduit({
+      nom: `Pièce ${randomUUID().slice(0, 8)}`,
+      categorieId,
+    });
+    await varianteSur(produit.id);
+    const media = await photoPubliableSur(produit.id);
+    await catalogue.publierProduit(produit.id);
+    await client.query("UPDATE produit SET publie_a = $2 WHERE id = $1", [
+      produit.id,
+      publieA,
+    ]);
+    const { rows } = await client.query(
+      "SELECT chemin FROM media WHERE id = $1",
+      [media],
+    );
+    return { produitId: produit.id, chemin: rows[0].chemin as string };
+  }
+
+  async function couvertureDe(categorieId: string) {
+    return (await catalogue.lireCouverturesCategories()).find(
+      (couverture) => couverture.categorieId === categorieId,
+    );
+  }
+
+  it("prend la photo de la pièce la plus récemment publiée, et compte les pièces en vente", async () => {
+    const categorie = await catalogue.creerCategorie({
+      nom: `Rangement ${randomUUID().slice(0, 8)}`,
+    });
+    await publieeDans(categorie.id, "2026-09-01T10:00:00Z");
+    const recente = await publieeDans(categorie.id, "2026-10-01T10:00:00Z");
+    const brouillon = await catalogue.creerProduit({
+      nom: `Pièce ${randomUUID().slice(0, 8)}`,
+      categorieId: categorie.id,
+    });
+    await varianteSur(brouillon.id);
+
+    const couverture = await couvertureDe(categorie.id);
+
+    expect(couverture?.nombre).toBe(2);
+    expect(couverture?.chemin).toBe(recente.chemin);
+  });
+
+  it("une pièce archivée sort du compte et de la couverture", async () => {
+    const categorie = await catalogue.creerCategorie({
+      nom: `Rangement ${randomUUID().slice(0, 8)}`,
+    });
+    const ancienne = await publieeDans(categorie.id, "2026-09-01T10:00:00Z");
+    const recente = await publieeDans(categorie.id, "2026-10-01T10:00:00Z");
+    await catalogue.archiverProduit(recente.produitId);
+
+    const couverture = await couvertureDe(categorie.id);
+
+    expect(couverture?.nombre).toBe(1);
+    expect(couverture?.chemin).toBe(ancienne.chemin);
+  });
+
+  it("une catégorie sans pièce en vente n'a aucune couverture", async () => {
+    const categorie = await catalogue.creerCategorie({
+      nom: `Rangement ${randomUUID().slice(0, 8)}`,
+    });
+    const seule = await publieeDans(categorie.id, "2026-10-01T10:00:00Z");
+    await catalogue.archiverProduit(seule.produitId);
+
+    expect(await couvertureDe(categorie.id)).toBeUndefined();
+  });
+});
