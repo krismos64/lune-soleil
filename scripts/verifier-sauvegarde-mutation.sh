@@ -497,6 +497,52 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Cas 9, LA PROFONDEUR SE COMPTE EN JOURS, 8 octobre 2026.
+#
+# La rotation gardait les quatorze jeux les plus recents. Les douze
+# deploiements du 7 octobre, chacun precede d'une sauvegarde, ont evince toutes
+# les sauvegardes nocturnes anterieures : plus aucun point plus vieux que la
+# veille. Le decor reproduit cette forme : quinze jours anciens a un jeu, une
+# journee de douze deploiements, puis la sauvegarde reelle du jour.
+#
+# Attendu : le dernier jeu de chacun des quatorze jours distincts les plus
+# recents, tous ceux du jour, et l'archive avec chaque dump.
+# ---------------------------------------------------------------------------
+CAS=$((CAS + 1))
+REP_JOURS="$BAC/rotation-jours"
+mkdir -p "$REP_JOURS"
+for I in $(seq -w 1 15); do
+  printf 'dump %s' "$I" > "$REP_JOURS/quotidienne-202609$I-020000.dump"
+  printf 'archive %s' "$I" > "$REP_JOURS/fichiers-202609$I-020000.tar.gz"
+done
+for H in 10 11 12 13 14 15 16 17 18 19 20 21; do
+  printf 'deploiement %s' "$H" > "$REP_JOURS/quotidienne-20260916-${H}0000.dump"
+  printf 'deploiement %s' "$H" > "$REP_JOURS/fichiers-20260916-${H}0000.tar.gz"
+done
+
+env FICHIER_ENV="$FICHIER_ENV" BACKUP_DIR="$REP_JOURS" CONTENEUR_DB="$CONTENEUR" \
+  MEDIA_SAUVEGARDE="$MEDIAS" DOCUMENTS_RACINE="$DOCUMENTS" \
+  bash "$SCRIPT" >/dev/null 2>&1
+CODE_JOURS=$?
+
+present() { [ -e "$REP_JOURS/$1" ]; }
+MANQUES=""
+present "quotidienne-20260916-210000.dump" || MANQUES="$MANQUES dernier-du-jour-de-deploiement"
+present "fichiers-20260916-210000.tar.gz" || MANQUES="$MANQUES son-archive"
+present "quotidienne-20260904-020000.dump" || MANQUES="$MANQUES quatorzieme-jour"
+present "fichiers-20260904-020000.tar.gz" || MANQUES="$MANQUES archive-du-quatorzieme"
+present "quotidienne-20260916-100000.dump" && MANQUES="$MANQUES deploiement-intermediaire-garde"
+present "quotidienne-20260903-020000.dump" && MANQUES="$MANQUES quinzieme-jour-garde"
+present "fichiers-20260903-020000.tar.gz" && MANQUES="$MANQUES archive-orpheline"
+
+if [ "$CODE_JOURS" -eq 0 ] && [ -z "$MANQUES" ]; then
+  echo "  OK   la rotation garde quatorze jours distincts, deploiements compris"
+else
+  echo "  ECHEC rotation par jours, code $CODE_JOURS :$MANQUES"
+  ECHECS=$((ECHECS + 1))
+fi
+
+# ---------------------------------------------------------------------------
 # Garde-fou de ce script contre lui-meme.
 #
 # UN ANCRAGE CASSE RENDRAIT UN OK SILENCIEUX. Si le script de sauvegarde etait
