@@ -36,3 +36,20 @@ Intégration 34 passed dont 3 neufs, mutations (photo la plus ancienne, pièces
 hors vente comptées) détectées ; composants 9 passed dont 2 neufs ; bout en
 bout 510 passed sur les specs de l'accueil, du catalogue, des thèmes, de la
 fiche, du panier et du tunnel. Contrôles du dépôt verts.
+
+## Déploiement
+
+PR #569 fusionnée, image `f5331d9` déployée par le workflow « Déployer en
+production », conteneur sain. Relu sur `https://lune-soleil.fr/` : trois portes
+de catégorie servies avec la photo de leur pièce la plus récente (variante AVIF
+en 200), six médaillons au bandeau, logo Facebook devant le lien du pied.
+
+## État des tickets
+
+LS-260 et LS-30, déjà closes, reçoivent un commentaire de livraison. Aucun
+ticket créé, conformément à la consigne de la session.
+
+## Prochaine étape
+
+Rien d'ouvert sur ce chantier. Les catégories sans pièce publiée gardent le
+repli ☾ : à revoir si l'exploitante crée une catégorie avant d'y publier.
