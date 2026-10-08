@@ -17,10 +17,16 @@
  */
 import { Prisma } from "@/generated/prisma/client";
 import type { StatutProduit } from "@/generated/prisma/enums";
+import { journaliserErreur } from "@/lib/journal";
 import { prisma } from "@/lib/prisma";
-import { schemaSelectionProduits, valider } from "@/lib/validation";
+import {
+  schemaConfirmationNombre,
+  schemaSelectionProduits,
+  valider,
+} from "@/lib/validation";
 import * as depot from "@/repositories/catalogue";
 import * as depotMedias from "@/repositories/media";
+import { ecrireAudit } from "@/repositories/mouvement-stock";
 import * as depotSections from "@/repositories/sections-produit";
 import {
   schemaCreationCategorie,
@@ -29,6 +35,7 @@ import {
   schemaRenommageCategorie,
   schemaReordonnancementCategories,
 } from "@/services/catalogue-validation";
+import { leverAlerteEtNotifier } from "@/services/notification-administration";
 import { lignesDesSectionsParDefaut } from "@/services/sections-produit";
 
 /** Le slug derive du nom est deja porte par une autre ligne, C3. */
@@ -650,15 +657,185 @@ export type BilanGroupe = { reussis: number; refus: RefusGroupe[] };
 export async function publierOuArchiverProduits({
   produitIds,
   operation,
+  confirmationNombre,
+  acteurId,
 }: {
   produitIds: unknown;
   operation: "publier" | "archiver";
+  /** Le nombre tapé par l'exploitante, exigé pour vider le catalogue, LS-278. */
+  confirmationNombre?: unknown;
+  /** De la session, jamais du formulaire, invariant 2. */
+  acteurId: string;
 }): Promise<BilanGroupe> {
-  return appliquerAChaqueProduit(
-    produitIds,
-    operation === "publier" ? publierProduit : archiverProduit,
+  if (operation === "publier") {
+    return appliquerAChaqueProduit(
+      produitIds,
+      publierProduit,
+      "DEJA_DANS_CET_ETAT",
+    );
+  }
+
+  const identifiants = valider(schemaSelectionProduits, produitIds);
+  await exigerConfirmationSiToutEstArchive(identifiants, confirmationNombre);
+
+  const bilan = await appliquerAChaqueProduit(
+    identifiants,
+    archiverProduit,
     "DEJA_DANS_CET_ETAT",
   );
+  const refuses = new Set(bilan.refus.map((ligne) => ligne.id));
+  await apresArchivage(
+    acteurId,
+    identifiants.filter((id) => !refuses.has(id)),
+  );
+
+  return bilan;
+}
+
+/**
+ * Archiver une sélection qui contient TOUTES les pièces publiées exige de
+ * taper leur nombre, LS-278.
+ *
+ * LE 4 OCTOBRE 2026, LES 51 PRODUITS ONT ÉTÉ ARCHIVÉS D'UN SEUL GESTE, même
+ * horodatage à la milliseconde : « Tout sélectionner » puis « Archiver », sans
+ * aucune confirmation. Catalogue vide, `robots.txt` refermé, deux jours sans
+ * que personne le sache.
+ *
+ * CONFIRMATION RENFORCÉE ET NON REFUS, arbitrage de Christophe du 8 octobre
+ * 2026 : retirer toute la boutique peut être voulu, en fin de saison. Taper le
+ * nombre ne se fait pas par réflexe, un clic de plus si.
+ *
+ * LA RÈGLE VIT ICI ET NON DANS L'ÉCRAN : une Server Action s'appelle sans
+ * passer par lui. L'écran ne fait que redemander quand ce refus revient.
+ *
+ * LA FENÊTRE ENTRE LE COMPTE ET L'ARCHIVAGE EST ASSUMÉE. Une pièce publiée
+ * entre-temps depuis un autre onglet fait que la sélection ne vide plus la
+ * boutique ; une pièce archivée ailleurs change le nombre attendu, et la
+ * confirmation est redemandée avec le bon. Aucun cas ne vide le catalogue sans
+ * que l'alerte d'`apresArchivage` parte.
+ */
+async function exigerConfirmationSiToutEstArchive(
+  identifiants: readonly string[],
+  confirmationNombre: unknown,
+): Promise<void> {
+  const publiees = await depot.compterProduitsActifs(prisma);
+  const publieesSelectionnees = await depot.compterProduitsActifs(
+    prisma,
+    identifiants,
+  );
+
+  if (publieesSelectionnees === 0 || publieesSelectionnees < publiees) {
+    return;
+  }
+
+  const saisie = schemaConfirmationNombre.safeParse(confirmationNombre);
+  if (!saisie.success || saisie.data !== publieesSelectionnees) {
+    throw new ConfirmationRenforceeRequiseError(publieesSelectionnees);
+  }
+}
+
+/** Le refus qui demande de taper le nombre de pièces, LS-278. */
+export class ConfirmationRenforceeRequiseError extends Error {
+  constructor(readonly nombre: number) {
+    super("Archiver toutes les pièces publiées exige d'en taper le nombre.");
+    this.name = "ConfirmationRenforceeRequiseError";
+  }
+}
+
+/**
+ * Archive un produit depuis sa fiche, avec la trace et l'alerte, LS-278.
+ *
+ * Archiver la DERNIÈRE pièce publiée vide aussi le catalogue : ce chemin
+ * journalise et alerte comme le geste groupé, sans confirmation renforcée,
+ * un seul produit ne se coche pas par réflexe.
+ */
+export async function archiverProduitPar(
+  produitId: string,
+  acteurId: string,
+): Promise<void> {
+  await archiverProduit(produitId);
+  await apresArchivage(acteurId, [produitId]);
+}
+
+/**
+ * La trace d'un archivage, puis l'alerte si le catalogue est vide, LS-278.
+ *
+ * UNE LIGNE PAR GESTE ET NON PAR PRODUIT : le 4 octobre, la question était
+ * « qui a archivé, quand, et combien », et cinquante et une lignes au même
+ * instant la posaient sans y répondre. `detail` porte le nombre et les
+ * identifiants archivés, jamais un nom de produit ni une donnée de personne.
+ *
+ * NI LA TRACE NI L'ALERTE NE FONT ÉCHOUER LE GESTE : chaque produit est déjà
+ * archivé, dans sa propre transaction. Un échec ici se journalise, et l'écran
+ * annonce ce qui a réellement changé.
+ */
+async function apresArchivage(
+  acteurId: string,
+  archives: readonly string[],
+): Promise<void> {
+  if (archives.length === 0) {
+    return;
+  }
+
+  try {
+    await ecrireAudit(prisma, {
+      acteurId,
+      action: "ARCHIVAGE_PRODUITS",
+      typeCible: "Produit",
+      idCible: archives.length === 1 ? (archives[0] as string) : "selection",
+      detail: { nombre: archives.length, produitIds: [...archives] },
+    });
+  } catch (erreur) {
+    journaliserErreur("trace d'archivage impossible", erreur, {
+      nombre: archives.length,
+    });
+  }
+
+  await signalerSiCatalogueVide();
+}
+
+/** Le type d'alerte d'un catalogue public vide, LS-278. */
+export const ALERTE_CATALOGUE_VIDE = "CATALOGUE_VIDE";
+
+/**
+ * Lève une alerte, avec email à l'exploitante, quand le catalogue public est
+ * vide, LS-278. Rend vrai si le catalogue est vide.
+ *
+ * LE MÊME COMPTE QUE `robots.txt`, `compterProduitsPublies` sans filtre, que
+ * `lireCataloguePublic` emploie : un catalogue vide referme l'indexation, et
+ * c'est ce que l'alerte doit dire, pas une approximation voisine.
+ *
+ * UNE SEULE ALERTE OUVERTE, `alerte_ouverte_unique` : un second archivage sur
+ * une boutique déjà vide ne renvoie pas d'email. La base tranche, le doublon
+ * est attendu et se tait.
+ */
+export async function signalerSiCatalogueVide(): Promise<boolean> {
+  try {
+    if ((await depot.compterProduitsPublies(prisma, {})) > 0) {
+      return false;
+    }
+
+    await leverAlerteEtNotifier(prisma, {
+      type: ALERTE_CATALOGUE_VIDE,
+      message:
+        "Le catalogue public est vide : aucune pièce n'est en vente, et les moteurs de recherche ne sont plus autorisés à indexer le site.",
+      typeCible: "Catalogue",
+      idCible: "catalogue-public",
+      gravite: "CRITIQUE",
+      descriptionEmail:
+        "Plus aucune pièce n'est en vente sur le site, et il n'est plus indexé par les moteurs de recherche. Republier au moins une pièce le rouvre.",
+    });
+    return true;
+  } catch (erreur) {
+    if (
+      erreur instanceof Prisma.PrismaClientKnownRequestError &&
+      erreur.code === "P2002"
+    ) {
+      return true;
+    }
+    journaliserErreur("alerte de catalogue vide impossible", erreur, {});
+    return false;
+  }
 }
 
 /**

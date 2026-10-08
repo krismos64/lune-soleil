@@ -20,6 +20,10 @@ import { Client } from "pg";
 import { expect, test } from "@playwright/test";
 
 import {
+  TOLERANCE_DEBORDEMENT_PX,
+  debordementHorizontal,
+} from "./mesure-rendu";
+import {
   CATALOGUE_TEST,
   FICHIER_SESSION_ADMINISTRATION,
 } from "./chemin-session";
@@ -87,7 +91,33 @@ test("une action groupée refuse ce qu'elle ne peut pas faire, et dit pourquoi",
   await expect(bilan).toContainText(`${second!.nom} : aucune déclinaison`);
 
   await cocher();
-  await page.getByRole("button", { name: "Archiver (2)" }).click();
+  const boutonArchiver = page.getByRole("button", { name: "Archiver (2)" });
+  await boutonArchiver.click();
+
+  /*
+   * LS-278 : L'ARCHIVAGE GROUPÉ NOMME CE QU'IL VA FAIRE AVANT DE PARTIR. Le
+   * 4 octobre 2026, un seul clic sans confirmation a vidé la boutique.
+   */
+  const confirmation = page.getByRole("alertdialog", {
+    name: "Archiver ces 2 articles\u202F?",
+  });
+  await expect(confirmation).toBeFocused();
+  await expect(confirmation).toContainText(premier!.nom);
+  await expect(confirmation).toContainText(second!.nom);
+  expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+    TOLERANCE_DEBORDEMENT_PX,
+  );
+
+  // Annuler n'envoie rien et rend le focus au bouton.
+  await confirmation.getByRole("button", { name: "Annuler" }).click();
+  await expect(confirmation).toHaveCount(0);
+  await expect(boutonArchiver).toBeFocused();
+  await expect(bilan).not.toContainText("déjà dans cet état");
+
+  await boutonArchiver.click();
+  await confirmation
+    .getByRole("button", { name: "Confirmer l'archivage" })
+    .click();
   await expect(bilan).toContainText(`${premier!.nom} : déjà dans cet état`);
 
   // Toujours archives, donc toujours dans cette vue.

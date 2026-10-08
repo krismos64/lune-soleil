@@ -31,7 +31,7 @@ import {
   ProduitIntrouvableError,
   ProduitNonPubliableError,
   TransitionProduitInvalideError,
-  archiverProduit,
+  archiverProduitPar,
   publierProduit,
   retirerProduitDeLEspace,
   type MotifNonPubliable,
@@ -147,7 +147,8 @@ export async function publierProduitAction(
 export async function archiverProduitAction(
   produitId: unknown,
 ): Promise<ResultatPublication> {
-  if (!(await exigerRole(await headers()))) {
+  const identite = await exigerRole(await headers());
+  if (!identite) {
     return { statut: "SESSION_ABSENTE" };
   }
 
@@ -156,7 +157,8 @@ export async function archiverProduitAction(
   }
 
   try {
-    await archiverProduit(produitId);
+    // LS-278 : la trace de l'auteur, et l'alerte si c'était la dernière pièce.
+    await archiverProduitPar(produitId, identite.utilisateurId);
     revalider(produitId);
     return { statut: "SUCCES" };
   } catch (erreur) {

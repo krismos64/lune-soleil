@@ -494,6 +494,20 @@ export const schemaSelectionProduits = z
   .transform((identifiants) => [...new Set(identifiants)]);
 
 /**
+ * Le nombre tapé pour confirmer l'archivage de toutes les pièces publiées,
+ * LS-278.
+ *
+ * UN ENTIER DE UN A TROIS CHIFFRES, espaces de saisie retirés : une sélection
+ * porte au plus cent produits. Aucune conversion silencieuse, « 12,0 » ou
+ * « douze » ne valent pas 12 : la confirmation est refusée, et redemandée.
+ */
+export const schemaConfirmationNombre = z
+  .string()
+  .trim()
+  .regex(/^[0-9]{1,3}$/, "Taper le nombre de pièces en chiffres.")
+  .transform(Number);
+
+/**
  * Message de contact, LS-97. Entree PUBLIQUE, donc non fiable par definition.
  *
  * LE CORPS EST BORNE A 4000 CARACTERES, invariant 7. Sans borne, un envoi

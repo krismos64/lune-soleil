@@ -239,6 +239,23 @@ export async function lireNomsProduits(
 }
 
 /**
+ * Le nombre de produits publiés, dans toute la boutique ou parmi une
+ * sélection, LS-278 : archiver une sélection qui les contient tous vide le
+ * catalogue public, et ce geste exige une confirmation renforcée.
+ */
+export async function compterProduitsActifs(
+  client: ClientBase,
+  parmi?: readonly string[],
+): Promise<number> {
+  return client.produit.count({
+    where: {
+      statut: "ACTIF",
+      ...(parmi ? { id: { in: [...parmi] } } : {}),
+    },
+  });
+}
+
+/**
  * Etat de publication d'un produit, LS-103.
  *
  * `publieA` EST RENDU AVEC LE STATUT parce que la publication doit savoir s'il
