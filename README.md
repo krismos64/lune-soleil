@@ -124,12 +124,12 @@ huit mois, et un disque qui croissait par les images de déploiement.
 500 quand la base est morte, pour tous les agents, là où il rendait 200 avec un
 chargement figé. Une supervision qui lit le code HTTP voit désormais la panne.
 
-**LS-140 est en cours et attend LS-23.** Quatre de ses cinq critères étaient déjà
-satisfaits par les stories de phase 2 ; le cinquième est outillé,
-`scripts/mesurer-site-deploye.sh`. Sept pages mesurées sur le site déployé,
-accessibilité à 100 partout et CLS à zéro, mais les deux pages qui porteront les
-photographies sont déjà les plus lentes : ces chiffres se rejouent quand le
-catalogue existera.
+**LS-140 est close le 8 octobre 2026**, mesurée sur le catalogue réel :
+`scripts/mesurer-site-deploye.sh` porte neuf pages, dont une fiche produit tirée
+du sitemap à chaque exécution. Toutes sous les seuils de web.dev, accessibilité
+à 100 et CLS à zéro ; le catalogue, page la plus lente, est à 1978 ms de LCP
+pour un seuil de 2500. Une boutique sans fiche au sitemap fait échouer la
+mesure, LS-278.
 
 **Le nocturne est redevenu vert le 9 septembre 2026**, LS-210 close : les trois
 vulnérabilités `vitest` sont corrigées par la montée en **4.1.11**, une version
