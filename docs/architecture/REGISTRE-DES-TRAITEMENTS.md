@@ -659,7 +659,7 @@ Description générale au sens de l'article 30 paragraphe 1 point g.
 | Chiffrement des échanges en HTTPS | déploiement, Nginx sur le VPS |
 | Secrets jamais journalisés ni commités | invariant 9, hooks `PreToolUse` |
 | Masquage des données personnelles dans les journaux applicatifs | `docs/architecture/JOURNALISATION.md` |
-| Sauvegardes de la base **et des fichiers**, quotidiennes, rétention de quatorze jeux, répertoire en 0700 | ADR-037, `deploiement/sauvegarder-base.sh`, `docs/deploiement/EXPLOITATION.md` |
+| Sauvegardes de la base **et des fichiers**, quotidiennes, rétention de quatorze jours, le dernier jeu de chacun des quatorze derniers jours distincts plus ceux du jour depuis le 8 octobre 2026, chiffrés, répertoire en 0700 | ADR-037, `deploiement/sauvegarder-base.sh`, `docs/deploiement/EXPLOITATION.md` |
 
 ## Ce qui reste dû
 

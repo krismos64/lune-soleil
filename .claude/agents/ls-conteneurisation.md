@@ -144,8 +144,12 @@ celui qui casse exactement l'objectif.
 
 **L'ordre du script, et chaque étape a sa raison** :
 
-1. sauvegarde, **réutilisée** si elle a moins de quinze minutes, la rotation à
-   quatorze jeux étant sinon consommée par un simple rejeu
+1. sauvegarde, **réutilisée** si elle a moins de quinze minutes, pour ne pas
+   empiler un jeu par rejeu. La rotation garde le dernier jeu de chacun des
+   quatorze derniers jours distincts et tous ceux du jour, depuis le
+   8 octobre 2026 : elle comptait des jeux, et douze déploiements en un jour
+   avaient évincé toutes les nuits antérieures. **Aucun script ne `source`
+   `production.env`** : Docker y accepte une valeur à espace que bash exécute
 2. **image tirée AVANT toute bascule**, pour qu'une panne de registre laisse la
    production intacte et en service
 3. contrôle du schéma, qui **dit** quand il n'a pas vérifié plutôt que de
