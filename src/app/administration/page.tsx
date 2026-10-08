@@ -31,7 +31,7 @@ import {
   AutorisationRefuseeError,
   exigerAdministratrice,
 } from "@/services/autorisation";
-import { lireComptages } from "@/services/tableau-bord";
+import { lireComptages, lireEtatStock } from "@/services/tableau-bord";
 import {
   LIBELLES_THEMES,
   lireThemeSaisonnier,
@@ -237,6 +237,7 @@ function ChargementIndicateurs() {
  */
 async function IndicateursTableauBord() {
   const comptages = await lireComptages();
+  const stock = await lireEtatStock();
 
   /*
    * CE QUI ATTEND UN GESTE, dans l'ordre ou l'exploitante le traite. Une entree
@@ -392,6 +393,46 @@ async function IndicateursTableauBord() {
             ))}
           </ul>
         )}
+      </section>
+
+      {/*
+       * L'ÉTAT DU STOCK, LS-228 critère 5 : ce que l'atelier tient en main, ce
+       * qu'un paiement en cours retient, et ce qui reste vendable. Même
+       * périmètre que la pastille de stock faible, variantes vivantes d'un
+       * produit non retiré : les deux ne peuvent pas se contredire.
+       */}
+      <section className={styles.panneau} aria-labelledby="etat-stock">
+        <p className={styles.panneauSurtitre}>Atelier</p>
+        <h2 className={styles.panneauTitre} id="etat-stock">
+          État du stock
+        </h2>
+
+        {stock.variantes === 0 ? (
+          <p className={styles.vide}>Aucune pièce en stock pour le moment.</p>
+        ) : (
+          <dl className={styles.etatStock}>
+            <div className={styles.etatStockLigne}>
+              <dt>Pièces physiques</dt>
+              <dd>{stock.physiques}</dd>
+            </div>
+            <div className={styles.etatStockLigne}>
+              <dt>Réservées par un paiement en cours</dt>
+              <dd>{stock.reservees}</dd>
+            </div>
+            <div className={styles.etatStockLigne}>
+              <dt>Disponibles</dt>
+              <dd>{stock.disponibles}</dd>
+            </div>
+          </dl>
+        )}
+
+        <Link
+          href="/administration/stocks"
+          className={styles.lienPanneau}
+          prefetch={false}
+        >
+          Voir les stocks et marchés
+        </Link>
       </section>
     </>
   );

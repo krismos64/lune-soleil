@@ -306,3 +306,64 @@
   color: var(--ls-primary);
   text-decoration: underline;
 }
+
+/*
+ * L'ÉTAT DU STOCK, LS-228 critère 5. Deux panneaux se suivent désormais : le
+ * second prend l'écart que les tuiles laissent au premier.
+ */
+.panneau + .panneau {
+  margin-top: var(--ls-space-5);
+}
+
+/*
+ * TROIS CHIFFRES CÔTE À CÔTE dès que la place existe, empilés à 320 px :
+ * `auto-fit` et `minmax`, sans point de bascule écrit en dur.
+ */
+.etatStock {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+  gap: var(--ls-space-3);
+  margin: var(--ls-space-3) 0;
+}
+
+.etatStockLigne {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--ls-space-1);
+}
+
+/* `--ls-text-muted` sur `--ls-surface`, fond du panneau : 5,19:1, AA. */
+.etatStockLigne dt {
+  color: var(--ls-text-muted);
+  background: var(--ls-surface);
+  font-size: 0.875rem;
+}
+
+/* `--ls-text` sur `--ls-surface`, 12,77:1. */
+.etatStockLigne dd {
+  margin: 0;
+  color: var(--ls-text);
+  background: var(--ls-surface);
+  font-family: var(--ls-police-titre);
+  font-size: 1.75rem;
+  line-height: 1.1;
+}
+
+/*
+ * Le lien du panneau : zone tactile de 44 px, `frontend-design.md`, et
+ * `--ls-primary` sur `--ls-surface`, 8,93:1. Souligné, la couleur seule ne
+ * distinguant pas un lien.
+ */
+.lienPanneau {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  color: var(--ls-primary);
+  background: var(--ls-surface);
+  text-decoration: underline;
+}
+
+.lienPanneau:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}

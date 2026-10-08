@@ -963,3 +963,55 @@
   white-space: nowrap;
   border: 0;
 }
+
+/*
+ * L'ÉTAT DU COMPTE, LS-228 critère 6 : trois tuiles de comptage et la carte de
+ * la dernière commande, en tête de la vue d'ensemble.
+ *
+ * LE FILET DORÉ EST UN DÉCOR, `--ls-accent-gold` étant interdit pour du texte
+ * et permis pour un filet : le chiffre et son libellé disent tout seuls ce
+ * qu'ils comptent. Fond blanc redéclaré sur chaque bloc, pour que les paires
+ * de texte soient mesurées sur le fond réel, C31.
+ */
+.comptages {
+  list-style: none;
+  margin: 0 0 var(--ls-space-4);
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+  gap: var(--ls-space-3);
+}
+
+.comptage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-1);
+  padding: var(--ls-space-3) var(--ls-space-4);
+  border: 1px solid var(--ls-border);
+  border-top: 3px solid var(--ls-accent-gold);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+}
+
+/* `--ls-text` sur `--ls-surface`, 12,77:1. */
+.comptageValeur {
+  color: var(--ls-text);
+  background: var(--ls-surface);
+  font-family: var(--ls-police-titre);
+  font-size: 1.75rem;
+  line-height: 1.1;
+}
+
+/* `--ls-text-muted` sur `--ls-surface` : 5,19:1, AA. Jamais sur le sable. */
+.comptageLibelle {
+  color: var(--ls-text-muted);
+  background: var(--ls-surface);
+  font-size: 0.875rem;
+}
+
+.carteCommande {
+  padding: var(--ls-space-4);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+}

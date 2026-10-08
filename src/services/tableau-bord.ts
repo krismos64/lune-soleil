@@ -93,6 +93,13 @@ export async function lireComptages(): Promise<ComptagesAdministration> {
  * d'eux ne se retrouve a fonder une autorisation. La vue relit, comme le fait
  * deja l'espace client.
  */
+export type EtatStock = depot.EtatStock;
+
+/** Pièces physiques, réservées et disponibles, LS-228 critère 5. */
+export async function lireEtatStock(): Promise<EtatStock> {
+  return depot.lireEtatStock(prisma);
+}
+
 export async function lireNomAffiche(
   utilisateurId: string,
   email: string,
