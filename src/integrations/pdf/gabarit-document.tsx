@@ -67,15 +67,27 @@ const RACINE_POLICES = path.join(
   "polices",
 );
 
+/*
+ * DU TTF ET NON DU WOFF, LS-275. Le WOFF compresse chaque table, et la
+ * bibliotheque la redecompresse A CHAQUE RENDU : mesure le 8 octobre 2026 sur
+ * un document de deux lignes, 350 ms par rendu a chaud en WOFF contre 4 ms en
+ * TTF. Chaque facture et chaque avoir payaient ce cout, et le test de rendu
+ * frolait son delai de cinq secondes sur le runner d'integration continue.
+ *
+ * LES FICHIERS SONT LES MEMES POLICES, conteneur change sans perte par
+ * fontTools : memes glyphes (6253 et 6196), memes tables, meme table de
+ * caracteres, memes contours, verifies a la conversion. Ni glyphe ni nom ne
+ * sont modifies, ce que la licence de `LICENCE-DejaVu.txt` encadre.
+ */
 Font.register({
   family: "DejaVu Sans",
   fonts: [
     {
-      src: path.join(RACINE_POLICES, "dejavu-sans-latin-400-normal.woff"),
+      src: path.join(RACINE_POLICES, "dejavu-sans-latin-400-normal.ttf"),
       fontWeight: 400,
     },
     {
-      src: path.join(RACINE_POLICES, "dejavu-sans-latin-700-normal.woff"),
+      src: path.join(RACINE_POLICES, "dejavu-sans-latin-700-normal.ttf"),
       fontWeight: 700,
     },
   ],
