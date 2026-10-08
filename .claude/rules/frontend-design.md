@@ -1090,6 +1090,12 @@ le sien :
 | fiche produit, bloc 7 | livraison, gratuité | Informations de livraison |
 | tunnel | paiement, rétractation, contact | Engagements de la boutique |
 
+**Chaque élément porte une icône au trait dans un médaillon**, refonte du
+8 octobre 2026, LS-260 : décorative (`aria-hidden`), le texte nommant
+l'engagement. **L'option `anime` trace ces icônes à l'entrée dans l'écran, et
+l'accueil seul l'active** : la fiche, le panier et le tunnel les gardent
+immobiles, rien ne bougeant autour d'un paiement.
+
 **Le bandeau entier ne va jamais dans une zone d'achat** : à 320 px il empile
 près de 500 px. Au panier, il suit les actions et ne s'intercale jamais entre le
 total et « Passer la commande ».
