@@ -499,7 +499,7 @@ export function SelectionProduits({
           aria-labelledby="titre-confirmation-archivage"
           aria-describedby="texte-confirmation-archivage"
           onKeyDown={(evenement) => {
-            if (evenement.key === "Escape") {
+            if (evenement.key === "Escape" && !enCours) {
               retourAArchivage.current = true;
               setArchivage(null);
             }
@@ -520,8 +520,8 @@ export function SelectionProduits({
           </ul>
           <p id="texte-confirmation-archivage">
             {archivage.noms.length > 1
-              ? "Ils ne sont plus en vente sur la boutique"
-              : "Il n'est plus en vente sur la boutique"}
+              ? "Ils ne seront plus en vente sur la boutique"
+              : "Il ne sera plus en vente sur la boutique"}
             . Rien n&apos;est effacé : chaque article se republie depuis sa
             fiche.
           </p>
@@ -560,7 +560,9 @@ export function SelectionProduits({
           aria-labelledby="titre-confirmation-renforcee"
           aria-describedby="texte-confirmation-renforcee"
           onKeyDown={(evenement) => {
-            if (evenement.key === "Escape") {
+            // Pas pendant l'envoi : l'archivage est parti, Échap n'annulerait
+            // rien en ayant l'air de le faire, revue de LS-278.
+            if (evenement.key === "Escape" && !enCours) {
               setRenforcee(null);
               boutonArchivage.current?.focus();
             }
@@ -570,10 +572,12 @@ export function SelectionProduits({
             id="titre-confirmation-renforcee"
             className={styles.titreRecapitulatif}
           >
-            {`Archiver les ${renforcee.nombre} pièces en vente, toute la boutique\u202F?`}
+            {renforcee.nombre > 1
+              ? `Archiver les ${renforcee.nombre} articles en vente, toute la boutique\u202F?`
+              : "Archiver le seul article en vente, toute la boutique\u202F?"}
           </h2>
           <p id="texte-confirmation-renforcee">
-            La boutique n&apos;aura plus aucune pièce en vente, et les moteurs
+            La boutique n&apos;aura plus aucun article en vente, et les moteurs
             de recherche cesseront de l&apos;indexer jusqu&apos;à la prochaine
             publication.
           </p>
