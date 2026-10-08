@@ -176,7 +176,8 @@ export default async function PageContact() {
               <p className={styles.repereTexte}>
                 {/*
                  * LS-280 : « Délais » annonçait une information que l'aide ne
-                 * publie pas, questions 38 à 42 sans réponse.
+                 * publiait pas. Elle porte depuis le 8 octobre 2026 le délai de
+                 * dépôt, jamais celui de livraison : le mot reste écarté.
                  */}
                 Modes de livraison, tarifs et retours : la réponse y est souvent
                 déjà.

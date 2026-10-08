@@ -88,14 +88,13 @@ une fois : le chiffre disait 175 sous une date du 10 septembre, ce qui aurait
 fait relire un compte pour un autre. Motif « un compte recopié n'est pas une
 mesure », qui vaut pour la date autant que pour le nombre.
 
-**Sept des dix-neuf tickets ouverts attendent l'exploitante** au 8 octobre
-2026 : les six de l'epic LS-22, photographies, textes, tarifs et contenus juridiques, et LS-19,
-la médiation, qui suppose une adhésion à souscrire. Aucun code ne les débloque.
-Comptes relevés dans Jira le 8 octobre 2026, `parent = LS-22 AND
-statusCategory != Done` en rendant six après la clôture de LS-30. Le 25 septembre
-il en rendait dix, une formule antérieure en annonçait
-neuf, et cet écart ne venait pas de la clôture de LS-20, qui appartient à
-l'epic LS-1.
+**Quatre des neuf tickets ouverts attendent l'exploitante** au 8 octobre
+2026 au soir : les trois de l'epic LS-22, FAQ (relecture seule), tarifs et
+contenus juridiques, et LS-19, la médiation, qui suppose une adhésion à
+souscrire. Aucun code ne les débloque. Comptes relevés dans Jira ce jour,
+`parent = LS-22 AND statusCategory != Done` rendant trois après la clôture de
+LS-23, LS-24 et LS-44 en séance avec l'exploitante. Le 25 septembre il en
+rendait dix.
 
 **LS-107 et LS-140 ne sont plus bloquées par les photographies** : closes le
 8 octobre 2026, la première par une restauration complète exercée, la seconde
