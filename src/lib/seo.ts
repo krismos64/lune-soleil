@@ -151,6 +151,21 @@ export function disponibiliteSchemaOrg(etat: EtatDisponibilite): string {
 export const NOM_BOUTIQUE = "Lune-soleil";
 
 /**
+ * Le seul canal social officiel, LS-30 : la page Facebook donnée par
+ * l'exploitante le 3 septembre 2026, et confirmée active par Christophe le
+ * 8 octobre 2026.
+ *
+ * LE PARAMETRE `&locale=fr_FR` DE L'ADRESSE FOURNIE EST RETIRE : il imposait
+ * la langue de l'interface Facebook au visiteur, et rien d'autre. C'est une
+ * adresse de profil numerique, fragile : si l'exploitante cree un nom
+ * d'utilisateur, seule cette constante change.
+ *
+ * Lue par le pied de page et par le `sameAs` du JSON-LD `Organization`.
+ */
+export const PAGE_FACEBOOK =
+  "https://www.facebook.com/profile.php?id=61592696335840";
+
+/**
  * L'image de partage du site, 1200 par 630, LS-147.
  *
  * ELLE EST ENGENDREE PAR `scripts/engendrer-images-marque.mjs` a partir du logo,
@@ -206,6 +221,7 @@ export function jsonLdOrganisation(): Record<string, unknown> {
     url: urlDuSite(),
     description:
       "Bijoux artisanaux faits main, crees a l'unite et en petite serie.",
+    sameAs: [PAGE_FACEBOOK],
   };
 }
 
