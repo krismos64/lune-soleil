@@ -54,3 +54,20 @@ de bijoux, servies par Nginx sur `/medias`, n'étaient pas concernées.
 LS-273 close. 266 terminés sur 279 hors epics, 13 ouverts (5 en cours,
 8 à faire), relevés dans Jira. Tout ce qui reste attend l'exploitante, une
 démarche externe, l'ouverture commerciale, ou le 17 octobre pour LS-258.
+
+## Vérification de fin de session
+
+Demandée par Christophe avant de quitter. Production sur `12f5b74`, seuls le
+README et ce journal diffèrent de `main`. Corrigés au passage, parce qu'ils
+décrivaient encore un état révolu :
+
+- `README.md` : sept passages tenaient LS-20, LS-29, LS-107, LS-140, LS-228,
+  LS-273, LS-275 ou LS-278 pour ouvertes ou bloquées ;
+- `.claude/agents/ls-conteneurisation.md` : la rotation « à quatorze jeux » ;
+- `REGISTRE-DES-TRAITEMENTS.md` : la durée de conservation des sauvegardes,
+  opposable au titre de l'article 30, disait encore « quatorze jeux ».
+
+ADR-007 garde « quatorze jeux » : un ADR accepté ne se réécrit pas, et la règle
+actuelle honore mieux ADR-037, « quatorze copies quotidiennes ». LS-23 et LS-24
+portent la mesure du catalogue réel. Contrôles de configuration, de règles, de
+propagation et de rédaction verts ; index mémoire à 137 lignes.
