@@ -27,6 +27,27 @@ test("l'accueil se sert et porte son titre", async ({ page }) => {
   );
 });
 
+/*
+ * LE SEUL CANAL SOCIAL OFFICIEL, LS-30. Le lien vit dans le pied de page de
+ * toutes les pages publiques ; il se verifie ici, au rendu reel et aux quatre
+ * largeurs, avec sa zone tactile de 44 px.
+ */
+test("le pied de page mene a la page Facebook de l'atelier", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const lien = page
+    .getByRole("contentinfo")
+    .getByRole("link", { name: "Suivre l'atelier sur Facebook" });
+  await expect(lien).toHaveAttribute(
+    "href",
+    "https://www.facebook.com/profile.php?id=61592696335840",
+  );
+  const boite = await lien.boundingBox();
+  expect(boite?.height ?? 0).toBeGreaterThanOrEqual(44);
+});
+
 test("la page ne deborde pas horizontalement", async ({ page }) => {
   await page.goto("/");
 

@@ -8,14 +8,14 @@
  * exige que le lien « notre histoire » aboutisse a une page reelle : ce critere
  * se verifiera a la livraison de LS-123, pas avant.
  *
- * AUCUNE ICONE SOCIALE. LS-30 l'impose : aucune icone n'est publiee sans canal
- * officiel valide, et aucun canal n'est ouvert a ce jour. Le prototype n'en
- * affiche pas non plus.
+ * UN LIEN TEXTE VERS FACEBOOK, ET AUCUNE ICONE, LS-30 : la page Facebook est
+ * le seul canal officiel valide. Un texte se lit au lecteur d'ecran sans
+ * libelle de substitution, et n'exige ni police d'icones ni script tiers.
  */
 import Link from "next/link";
 
 import styles from "./pied-boutique.module.css";
-import { NOM_BOUTIQUE } from "@/lib/seo";
+import { NOM_BOUTIQUE, PAGE_FACEBOOK } from "@/lib/seo";
 
 /**
  * Les trois colonnes du pied de page, dans l'ordre du prototype.
@@ -89,6 +89,14 @@ export function PiedBoutique() {
             Des bijoux faits main, en petite série, avec une attention portée
             aux matières et aux détails.
           </p>
+          {/*
+           * `<a>` ET NON `Link` : la cible est hors du site. Meme onglet, pour
+           * ne pas ouvrir de fenetre sans l'annoncer. `noopener` reste
+           * implicite sans `target`.
+           */}
+          <a href={PAGE_FACEBOOK} className={styles.lien}>
+            Suivre l&apos;atelier sur Facebook
+          </a>
         </div>
 
         {COLONNES.map((colonne) => (

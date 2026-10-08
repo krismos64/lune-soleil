@@ -23,6 +23,7 @@ import {
   jsonLdOrganisation,
   jsonLdProduit,
   openGraphDePage,
+  PAGE_FACEBOOK,
   urlDuSite,
 } from "@/lib/seo";
 
@@ -206,6 +207,13 @@ describe("jsonLdOrganisation", () => {
     const balisage = jsonLdOrganisation();
     expect(balisage["@type"]).toBe("Organization");
     expect(balisage["url"]).toBe(SITE);
+  });
+
+  it("rattache la page Facebook officielle, sans parametre de langue, LS-30", () => {
+    expect(jsonLdOrganisation()["sameAs"]).toEqual([PAGE_FACEBOOK]);
+    expect(PAGE_FACEBOOK).toBe(
+      "https://www.facebook.com/profile.php?id=61592696335840",
+    );
   });
 });
 
