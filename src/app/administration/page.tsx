@@ -420,7 +420,7 @@ async function IndicateursTableauBord() {
               <dd>{stock.reservees}</dd>
             </div>
             <div className={styles.etatStockLigne}>
-              <dt>Disponibles</dt>
+              <dt>Disponibles, hors réservations</dt>
               <dd>{stock.disponibles}</dd>
             </div>
           </dl>

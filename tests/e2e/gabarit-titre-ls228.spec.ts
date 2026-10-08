@@ -135,7 +135,7 @@ test.describe("Blocs d'état, administration", () => {
     for (const libelle of [
       "Pièces physiques",
       "Réservées par un paiement en cours",
-      "Disponibles",
+      "Disponibles, hors réservations",
     ]) {
       const valeur = panneau.locator(`dt:text-is("${libelle}") + dd`);
       await expect(valeur).toHaveText(/^\d+$/);
@@ -175,6 +175,12 @@ test.describe("Blocs d'état, espace client", () => {
     if (nombreCommandes === 0) {
       await expect(vide).toBeVisible();
       await expect(carte).toHaveCount(0);
+      const action = activite.getByRole("link", {
+        name: "Découvrir les créations",
+      });
+      expect((await action.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(
+        44,
+      );
     } else {
       await expect(carte).toBeVisible();
       await expect(vide).toHaveCount(0);

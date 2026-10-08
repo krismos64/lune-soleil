@@ -246,12 +246,16 @@ export default async function PageCompte({
             </dl>
           </div>
         ) : (
-          <p className={styles.texte}>
-            Aucune commande pour le moment.{" "}
-            <Link href="/catalogue" className={styles.lien}>
+          <>
+            <p className={styles.texte}>Aucune commande pour le moment.</p>
+            {/*
+             * HORS DU PARAGRAPHE, avec ses 44 px : c'est la seule action d'un
+             * compte neuf, revue de LS-228.
+             */}
+            <Link href="/catalogue" className={styles.lienAction}>
               Découvrir les créations
             </Link>
-          </p>
+          </>
         )}
       </section>
 
