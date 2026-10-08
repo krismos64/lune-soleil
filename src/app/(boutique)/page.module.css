@@ -332,52 +332,163 @@
   padding: var(--ls-space-7) var(--ls-space-4) var(--ls-space-4);
 }
 
-.listeCategories {
+/*
+ * LES PORTES DE CATÉGORIE, LS-260, refonte du 8 octobre 2026.
+ *
+ * Une carte par catégorie publiée, la vraie photo d'une pièce en vente dans un
+ * cadre cintré, rappel de la lune et des portes d'entrée de la boutique.
+ * `auto-fit` et `minmax` : une colonne à 320 px, trois sur grand écran, sans
+ * point de bascule écrit en dur. Le texte vit sur le blanc de la carte, jamais
+ * sur le sable, C31.
+ */
+.introCategories {
+  position: relative;
+}
+
+.portesCategories {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: var(--ls-space-5);
   max-width: var(--ls-content-max);
   margin: 0 auto;
-  padding: 0 var(--ls-space-4) var(--ls-space-7);
+  padding: var(--ls-space-2) var(--ls-space-4) var(--ls-space-7);
   list-style: none;
 }
 
-/*
- * @bordure-decorative le trait separe deux categories de la liste, il ne borde
- * rien. Chaque entree porte son nom en `--ls-text` et occupe toute la largeur :
- * l'element reste identifiable sans son filet superieur.
- */
-.lienCategorie {
+.porteCategorie {
   display: flex;
-  align-items: baseline;
-  gap: var(--ls-space-4);
-  min-height: var(--ls-touch-target);
-  padding: var(--ls-space-4) 0;
-  border-top: 1px solid var(--ls-border);
+  flex-direction: column;
+  height: 100%;
+  padding: var(--ls-space-3);
+  border: 1px solid var(--ls-border);
+  border-radius: 999px 999px var(--ls-radius-md) var(--ls-radius-md);
+  background: var(--ls-surface);
   color: var(--ls-text);
   text-decoration: none;
 }
 
-.lienCategorie:hover .nomCategorie {
-  color: var(--ls-primary);
-  text-decoration: underline;
+.porteCategorie:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 3px;
 }
 
-.lienCategorie:focus-visible {
-  outline: 2px solid var(--ls-focus);
-  outline-offset: 2px;
+.porteImage {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 5 / 4;
+  border-radius: 999px 999px var(--ls-radius-sm) var(--ls-radius-sm);
+  background: var(--ls-surface-sand);
+}
+
+@media (min-width: 768px) {
+  .porteImage {
+    aspect-ratio: 1;
+  }
+}
+
+.porteImage img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Sans photo publiée : un croissant de décor, jamais une pièce inventée. */
+.porteSansPhoto {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: var(--ls-primary);
+  font-size: 3rem;
+}
+
+.porteTexte {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-1);
+  padding: var(--ls-space-3) var(--ls-space-2) var(--ls-space-1);
+  text-align: center;
+}
+
+/* `--ls-text` sur `--ls-surface`, 12,77:1. */
+.porteNom {
+  color: var(--ls-text);
+  background: var(--ls-surface);
+  font-family: var(--ls-police-titre);
+  font-size: clamp(1.25rem, 3vw, 1.5rem);
+  line-height: 1.2;
+}
+
+/* `--ls-primary` sur `--ls-surface`, 8,93:1. */
+.porteNombre {
+  color: var(--ls-primary);
+  background: var(--ls-surface);
+  font-size: 0.9375rem;
+}
+
+.porteFleche {
+  display: inline-block;
+  margin-left: var(--ls-space-1);
+}
+
+/* L'arc solaire derrière le titre, décor en or, permis pour un filet. */
+.arcSolaire {
+  display: block;
+  width: min(15rem, 70%);
+  height: auto;
+  margin: 0 0 calc(-1 * var(--ls-space-2));
+  fill: none;
+  stroke: var(--ls-accent-gold);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
 }
 
 /*
- * Le rang est decoratif et `aria-hidden` cote balise. Il reste en
- * `--ls-text` : un gris plus clair tomberait sous le seuil sur ce fond.
+ * MOUVEMENT, ADR-045 : tout finit en 1,2 s, seuls `stroke-dashoffset` et
+ * `transform` s'animent, et rien sans `prefers-reduced-motion:
+ * no-preference`. Les cartes restent visibles et immobiles à l'arrivée ; la
+ * photo s'approche et la flèche avance au survol ou au focus.
  */
-.rangCategorie {
-  color: var(--ls-text);
-  font-size: 0.8125rem;
-  font-variant-numeric: tabular-nums;
+@media (prefers-reduced-motion: no-preference) {
+  .arcSolaire path,
+  .arcSolaire circle {
+    animation: tracer-arc 1200ms var(--ls-easing-sortie) both;
+  }
+
+  .arcSolaire circle {
+    animation-delay: 700ms;
+  }
+
+  .porteImage img,
+  .porteFleche,
+  .porteCategorie {
+    transition: transform 450ms var(--ls-easing-sortie);
+  }
+
+  .porteCategorie:hover {
+    transform: translateY(-3px);
+  }
+
+  .porteCategorie:hover .porteImage img,
+  .porteCategorie:focus-visible .porteImage img {
+    transform: scale(1.05);
+  }
+
+  .porteCategorie:hover .porteFleche,
+  .porteCategorie:focus-visible .porteFleche {
+    transform: translateX(4px);
+  }
 }
 
-.nomCategorie {
-  font-size: clamp(1.125rem, 3vw, 1.5rem);
-  font-weight: 500;
+@keyframes tracer-arc {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 /* ---------- Bloc editorial, devenu le sceau de LS-260 ---------- */
@@ -770,4 +881,14 @@
   to {
     stroke-dashoffset: 0;
   }
+}
+
+/*
+ * LE SURTITRE DES CATÉGORIES EST SUR LE SABLE, et `--ls-accent-gold-deep` y
+ * tombe à 4,23:1, sous le seuil AA du petit texte : paire refusée par C31,
+ * relevée le 8 octobre 2026. `--ls-primary` y donne 7,49:1, calculé. Un thème de Noël
+ * garde son accent, mesuré sur sable par ADR-046.
+ */
+.sectionCategories .surtitreSection {
+  color: var(--ls-accent-saison, var(--ls-primary));
 }

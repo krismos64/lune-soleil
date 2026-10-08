@@ -142,3 +142,19 @@
   color: color-mix(in srgb, var(--ls-texte-nuit) 75%, var(--ls-ciel-nuit-haut));
   font-size: 0.8125rem;
 }
+
+/*
+ * LE LIEN FACEBOOK ET SON LOGO, LS-30. Le logo suit la couleur du lien,
+ * `--ls-texte-nuit` sur la nuit, 16,37:1, et passe en or pâle au survol.
+ */
+.lienSocial {
+  gap: var(--ls-space-2);
+  margin-top: var(--ls-space-3);
+}
+
+.logoSocial {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: currentColor;
+}

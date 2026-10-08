@@ -613,6 +613,70 @@ export async function listerCategoriesPubliees(
   });
 }
 
+/** La couverture d'une catégorie sur l'accueil, LS-260. */
+export type CouvertureCategorie = {
+  categorieId: string;
+  nombre: number;
+  chemin: string | null;
+  texteAlternatif: string | null;
+};
+
+/**
+ * Pour chaque catégorie publiée, le nombre de pièces en vente et la photo
+ * principale de la plus récemment publiée, LS-260.
+ *
+ * LA PHOTO EST CELLE D'UNE VRAIE PIÈCE, jamais une image engendrée : montrer
+ * un bijou qui n'existe pas serait une allégation trompeuse. Elle change seule
+ * quand la pièce quitte la vente, la requête ne retenant que l'`ACTIF`.
+ *
+ * MÊME PÉRIMÈTRE QUE `listerCategoriesPubliees` : produit `ACTIF` avec au moins
+ * une variante non archivée. Le média est le principal, `ordre = 1`, et
+ * `TRAITE`, sans quoi aucun fichier n'existe sous le volume, C8.
+ */
+export async function listerCouverturesCategories(
+  client: ClientBase,
+): Promise<CouvertureCategorie[]> {
+  const lignes = await client.$queryRaw<
+    {
+      categorieId: string;
+      nombre: bigint;
+      chemin: string | null;
+      texteAlternatif: string | null;
+    }[]
+  >`
+    WITH publies AS (
+      SELECT p.id, p.categorie_id, p.publie_a
+      FROM produit p
+      WHERE p.statut = 'ACTIF'
+        AND EXISTS (SELECT 1 FROM variante v
+                     WHERE v.produit_id = p.id AND v.archivee_a IS NULL)
+    ),
+    couvertures AS (
+      SELECT DISTINCT ON (pu.categorie_id)
+             pu.categorie_id, m.chemin, m.texte_alternatif
+      FROM publies pu
+      JOIN media m ON m.produit_id = pu.id
+                  AND m.ordre = 1
+                  AND m.statut_traitement = 'TRAITE'
+      ORDER BY pu.categorie_id, pu.publie_a DESC NULLS LAST, pu.id
+    )
+    SELECT pu.categorie_id AS "categorieId",
+           count(*) AS "nombre",
+           c.chemin AS "chemin",
+           c.texte_alternatif AS "texteAlternatif"
+    FROM publies pu
+    LEFT JOIN couvertures c ON c.categorie_id = pu.categorie_id
+    GROUP BY pu.categorie_id, c.chemin, c.texte_alternatif
+  `;
+
+  return lignes.map((ligne) => ({
+    categorieId: ligne.categorieId,
+    nombre: Number(ligne.nombre),
+    chemin: ligne.chemin,
+    texteAlternatif: ligne.texteAlternatif,
+  }));
+}
+
 /**
  * Une categorie par son slug, LS-104.
  *

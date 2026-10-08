@@ -40,7 +40,7 @@
  * COMPOSANT SERVEUR, SANS ACCÈS AUX DONNÉES, règle de `src/components/`.
  */
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import { DUREE_RETRACTATION_JOURS } from "@/lib/mentions-retractation";
 import { formaterMontant } from "@/lib/montant";
@@ -63,6 +63,60 @@ const ORDRE: readonly ElementReassurance[] = [
   "retractation",
   "contact",
 ];
+
+/*
+ * LES ICÔNES, LS-260, refonte du 8 octobre 2026 : un trait de même épaisseur,
+ * décor seul (`aria-hidden`), le texte portant l'information. `pathLength`
+ * normalise chaque tracé à 1 pour qu'une seule animation les dessine tous.
+ * La fabrication porte l'emblème lune et soleil plutôt qu'un pictogramme
+ * générique : c'est la signature de l'atelier.
+ */
+const ICONES: Record<ElementReassurance, ReactNode> = {
+  fabrication: (
+    <>
+      <circle cx="15" cy="10" r="4" pathLength={1} />
+      <path
+        pathLength={1}
+        d="M15 3v1.5M15 15.5V17M8 10h1.5M20.5 10H22M10 5l1 1M19 14l1 1M20 5l-1 1"
+      />
+      <path pathLength={1} d="M11 13.5a6.5 6.5 0 1 1-6.5-8 5 5 0 0 0 6.5 8z" />
+    </>
+  ),
+  paiement: (
+    <>
+      <rect x="5" y="11" width="14" height="10" rx="2" pathLength={1} />
+      <path pathLength={1} d="M8 11V8a4 4 0 0 1 8 0v3M12 15v2" />
+    </>
+  ),
+  livraison: (
+    <>
+      <path pathLength={1} d="M3 8l9-4 9 4v9l-9 4-9-4z" />
+      <path pathLength={1} d="M3 8l9 4 9-4M12 12v9M7.5 6l9 4" />
+    </>
+  ),
+  gratuite: (
+    <>
+      <rect x="4" y="9" width="16" height="12" rx="1.5" pathLength={1} />
+      <path
+        pathLength={1}
+        d="M3 9h18M12 9v12M12 9c-1.5-3-5-3.5-5-1.5S10 9 12 9c2 0 5 .5 5-1.5S13.5 6 12 9"
+      />
+    </>
+  ),
+  retractation: (
+    <>
+      <path pathLength={1} d="M4 12a8 8 0 1 0 2.5-5.8" />
+      <path pathLength={1} d="M4 4v4.5h4.5" />
+      <path pathLength={1} d="M12 8v4l2.5 2" />
+    </>
+  ),
+  contact: (
+    <>
+      <rect x="3" y="5" width="18" height="14" rx="2" pathLength={1} />
+      <path pathLength={1} d="M3.5 6.5L12 13l8.5-6.5" />
+    </>
+  ),
+};
 
 function contenu(
   element: ElementReassurance,
@@ -138,10 +192,18 @@ export function BandeauReassurance({
   seuilFranchiseCentimes,
   elements = ORDRE,
   nom = "Engagements de la boutique",
+  anime = false,
 }: {
   seuilFranchiseCentimes: number | null;
   elements?: readonly ElementReassurance[];
   nom?: string;
+  /**
+   * Trace les icônes à l'entrée dans l'écran, LS-260. RÉSERVÉ AUX PAGES
+   * VITRINES : rien ne bouge dans le tunnel ni autour d'un paiement,
+   * `frontend-design.md`. Sans cette option, les icônes sont dessinées et
+   * immobiles.
+   */
+  anime?: boolean;
 }) {
   const rendus = ORDRE.filter((element) => elements.includes(element))
     .map((element) => ({
@@ -158,11 +220,28 @@ export function BandeauReassurance({
   }
 
   return (
-    <section className={styles.bandeau} aria-label={nom}>
+    <section
+      className={`${styles.bandeau} ${anime ? styles.anime : ""}`}
+      aria-label={nom}
+      data-borne={anime ? "" : undefined}
+    >
       <ul className={styles.liste}>
-        {rendus.map(({ element, rendu }) => (
-          <li key={element} className={styles.element}>
-            {rendu}
+        {rendus.map(({ element, rendu }, rang) => (
+          <li
+            key={element}
+            className={styles.element}
+            style={{ "--i": rang } as CSSProperties}
+          >
+            <span className={styles.medaillon} aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                focusable="false"
+                className={styles.icone}
+              >
+                {ICONES[element]}
+              </svg>
+            </span>
+            <span className={styles.texte}>{rendu}</span>
           </li>
         ))}
       </ul>

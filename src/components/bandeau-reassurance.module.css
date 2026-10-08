@@ -45,19 +45,91 @@
   }
 }
 
+/*
+ * REFONTE DU 8 OCTOBRE 2026, LS-260 : plus de filets de tableau, l'espace
+ * sépare les engagements, et chacun porte son icône au trait dans un
+ * médaillon. Le fond reste le blanc de `.bandeau` : le détail en
+ * `--ls-text-muted` y tient 5,19:1, il tomberait à 4,35:1 sur le sable, C31.
+ */
 .element {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--ls-space-3);
+  align-items: start;
+  padding: var(--ls-space-4);
+}
+
+.texte {
   display: flex;
   flex-direction: column;
   gap: var(--ls-space-1);
-  padding: var(--ls-space-5) var(--ls-space-4);
-  box-shadow:
-    1px 0 0 var(--ls-border),
-    0 1px 0 var(--ls-border);
+}
+
+/* Le cercle doré est un filet de décor, permis en or, jamais un texte. */
+.medaillon {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border: 1px solid var(--ls-accent-gold);
+  border-radius: 50%;
+  background: var(--ls-background);
+}
+
+/* L'icône en brun primaire, 8,36:1 sur la crème du médaillon. */
+.icone {
+  width: 1.5rem;
+  height: 1.5rem;
+  fill: none;
+  stroke: var(--ls-primary);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+}
+
+/*
+ * L'ACCUEIL SEUL TRACE LES ICÔNES, option `anime` : 900 ms chacune, décalées
+ * de 150 ms, la dernière finie avant 2 s, sous `data-borne`. Le médaillon
+ * éclot, le texte ne bouge jamais. Rien sans `prefers-reduced-motion:
+ * no-preference`, et rien dans le tunnel, qui n'active pas l'option.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .anime .medaillon {
+    animation: eclore-medaillon 600ms var(--ls-easing-sortie) both;
+    animation-delay: calc(var(--i, 0) * 150ms);
+  }
+
+  .anime .icone * {
+    animation: tracer-icone 900ms var(--ls-easing-sortie) both;
+    animation-delay: calc(200ms + var(--i, 0) * 150ms);
+  }
+}
+
+@keyframes eclore-medaillon {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes tracer-icone {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 .titre {
   color: var(--ls-text);
-  font-size: 1rem;
+  font-family: var(--ls-police-titre);
+  font-size: 1.0625rem;
   font-weight: 600;
 }
 

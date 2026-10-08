@@ -1082,6 +1082,15 @@ export class PageCatalogueInexistanteError extends Error {
  * `PROTOTYPE.md`. Seul un slug qui ne correspond a RIEN retombe sur le catalogue
  * complet.
  */
+/** La photo et le nombre de pièces de chaque catégorie publiée, LS-260. */
+export type CouvertureCategorie = depot.CouvertureCategorie;
+
+export async function lireCouverturesCategories(): Promise<
+  CouvertureCategorie[]
+> {
+  return depot.listerCouverturesCategories(prisma);
+}
+
 export async function lireCataloguePublic(
   slugCategorie?: string,
   /** LS-241 : numero de page, a partir de 1, deja valide par l'appelant. */

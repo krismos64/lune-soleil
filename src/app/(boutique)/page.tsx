@@ -10,12 +10,17 @@
  * LS-104 : la disponibilite change a chaque reservation, et une mise en cache
  * afficherait « En stock » sur une piece unique deja vendue.
  */
+import type { CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
 import { DonneesStructurees } from "@/components/donnees-structurees";
 import { jsonLdOrganisation, NOM_BOUTIQUE, openGraphDePage } from "@/lib/seo";
-import { lireCataloguePublic } from "@/services/catalogue";
+import { srcSetMedia, urlVignette } from "@/integrations/medias/urls";
+import {
+  lireCataloguePublic,
+  lireCouverturesCategories,
+} from "@/services/catalogue";
 import { CarteProduit } from "./catalogue/carte-produit";
 import { BandeauReassurance } from "@/components/bandeau-reassurance";
 import { BandeauApercuTheme } from "@/components/bandeau-apercu-theme";
@@ -89,12 +94,20 @@ export default async function PageAccueil({
    * d'introduire un plafond que le schema ne porte pas.
    */
   const parametres = await searchParams;
-  const [{ produits, categories }, seuilFranchise, { theme, enApercu }] =
-    await Promise.all([
-      lireCataloguePublic(),
-      lireSeuilFranchise(),
-      themeDeLaPage(parametres[PARAMETRE_APERCU_THEME]),
-    ]);
+  const [
+    { produits, categories },
+    seuilFranchise,
+    { theme, enApercu },
+    couvertures,
+  ] = await Promise.all([
+    lireCataloguePublic(),
+    lireSeuilFranchise(),
+    themeDeLaPage(parametres[PARAMETRE_APERCU_THEME]),
+    lireCouverturesCategories(),
+  ]);
+  const couverturesParCategorie = new Map(
+    couvertures.map((couverture) => [couverture.categorieId, couverture]),
+  );
   const noel = estThemeDeNoel(theme);
   const misEnAvant = produits.slice(0, NOMBRE_MIS_EN_AVANT);
 
@@ -184,7 +197,7 @@ export default async function PageAccueil({
        * faute de configuration et l'origine faute de confirmation : les deux
        * sont acquises, ADR-043 et le 3 septembre 2026.
        */}
-      <BandeauReassurance seuilFranchiseCentimes={seuilFranchise} />
+      <BandeauReassurance seuilFranchiseCentimes={seuilFranchise} anime />
 
       {/*
        * DERNIERES CREATIONS.
@@ -291,28 +304,93 @@ export default async function PageAccueil({
        * qui ecoute, et serait lu « zero un » avant chaque nom de categorie.
        */}
       {categories.length > 0 && (
-        <section className={styles.sectionCategories}>
+        <section className={styles.sectionCategories} data-borne="">
           <div className={styles.introCategories}>
+            {/*
+             * L'ARC SOLAIRE, LS-260 : tracé une fois à l'entrée dans l'écran,
+             * 1,2 s, sous `data-borne`. Décor seul, en or, permis pour un
+             * filet et jamais pour un texte.
+             */}
+            <svg
+              className={styles.arcSolaire}
+              viewBox="0 0 240 64"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path pathLength={1} d="M12 58 Q120 -18 228 58" />
+              <circle cx="120" cy="34" r="6" pathLength={1} />
+            </svg>
             <p className={styles.surtitreSection}>Choisir simplement</p>
             <h2 className={styles.titreSection}>
               Quel bijou vous appelle aujourd&apos;hui ?
             </h2>
           </div>
 
-          <ul className={styles.listeCategories}>
-            {categories.map((categorie, index) => (
-              <li key={categorie.id}>
-                <Link
-                  href={`/catalogue?categorie=${categorie.slug}`}
-                  className={styles.lienCategorie}
+          <ul className={styles.portesCategories}>
+            {categories.map((categorie, index) => {
+              const couverture = couverturesParCategorie.get(categorie.id);
+              const nombre = couverture?.nombre ?? 0;
+
+              return (
+                <li
+                  key={categorie.id}
+                  style={{ "--i": index } as CSSProperties}
                 >
-                  <span className={styles.rangCategorie} aria-hidden="true">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <span className={styles.nomCategorie}>{categorie.nom}</span>
-                </Link>
-              </li>
-            ))}
+                  <Link
+                    href={`/catalogue?categorie=${categorie.slug}`}
+                    className={styles.porteCategorie}
+                  >
+                    <span className={styles.porteImage}>
+                      {couverture?.chemin ? (
+                        /*
+                         * LA VRAIE PHOTO D'UNE PIÈCE EN VENTE, jamais une
+                         * image engendrée. `alt` vide : le lien nomme la
+                         * catégorie, et décrire une pièce précise laisserait
+                         * croire que le lien ouvre sa fiche.
+                         */
+                        <picture>
+                          <source
+                            type="image/avif"
+                            srcSet={srcSetMedia(couverture.chemin, "avif")}
+                            sizes="(min-width: 1280px) 380px, (min-width: 768px) 30vw, 90vw"
+                          />
+                          <source
+                            type="image/webp"
+                            srcSet={srcSetMedia(couverture.chemin, "webp")}
+                            sizes="(min-width: 1280px) 380px, (min-width: 768px) 30vw, 90vw"
+                          />
+                          <img
+                            src={urlVignette(couverture.chemin)}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                            width={640}
+                            height={640}
+                          />
+                        </picture>
+                      ) : (
+                        <span
+                          className={styles.porteSansPhoto}
+                          aria-hidden="true"
+                        >
+                          ☾
+                        </span>
+                      )}
+                    </span>
+                    <span className={styles.porteTexte}>
+                      <span className={styles.porteNom}>{categorie.nom}</span>
+                      <span className={styles.porteNombre}>
+                        {nombre > 1 ? `${nombre} pièces` : `${nombre} pièce`}
+                        <span className={styles.porteFleche} aria-hidden="true">
+                          {" "}
+                          →
+                        </span>
+                      </span>
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}

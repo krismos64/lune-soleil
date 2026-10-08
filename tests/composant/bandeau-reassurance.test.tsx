@@ -103,4 +103,36 @@ describe("BandeauReassurance", () => {
 
     expect(container.innerHTML).toBe("");
   });
+
+  /*
+   * LS-260, refonte du 8 octobre 2026 : une icône par engagement, décorative,
+   * et l'animation réservée aux pages vitrines. Le tunnel de commande emploie
+   * ce composant SANS l'option : rien n'y bouge, `frontend-design.md`.
+   */
+  test("porte une icône décorative par engagement, que les lecteurs d'écran ignorent", () => {
+    render(<BandeauReassurance seuilFranchiseCentimes={3900} />);
+
+    const bandeau = screen.getByRole("region", {
+      name: "Engagements de la boutique",
+    });
+    const medaillons = bandeau.querySelectorAll('[aria-hidden="true"] svg');
+    expect(medaillons).toHaveLength(6);
+    // Le nom des éléments reste le texte : aucune icône ne s'y ajoute.
+    expect(within(bandeau).getAllByRole("listitem")[1]?.textContent).toBe(
+      "Paiement sécuriséPar carte, via Stripe",
+    );
+  });
+
+  test("ne s'inscrit à l'animation bornée qu'avec l'option anime", () => {
+    const { rerender } = render(
+      <BandeauReassurance seuilFranchiseCentimes={3900} />,
+    );
+    const region = () =>
+      screen.getByRole("region", { name: "Engagements de la boutique" });
+
+    expect(region().hasAttribute("data-borne")).toBe(false);
+
+    rerender(<BandeauReassurance seuilFranchiseCentimes={3900} anime />);
+    expect(region().getAttribute("data-borne")).toBe("");
+  });
 });
