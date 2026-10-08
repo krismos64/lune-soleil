@@ -110,7 +110,8 @@ export function questionsFrequentes(
     },
     {
       id: "faq-absence-domicile",
-      question: "Que se passe-t-il en cas d'absence lors d'une livraison à domicile\u00a0?",
+      question:
+        "Que se passe-t-il en cas d'absence lors d'une livraison à domicile\u00a0?",
       /*
        * AUCUN CHIFFRE : nombre de tentatives et délai de garde varient selon
        * les pages de Mondial Relay, et leur FAQ n'a pas pu être relue à la
