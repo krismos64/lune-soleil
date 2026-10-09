@@ -46,6 +46,12 @@ qu'après l'insertion.
 Options : retirer les 44 photos, les garder avec une mention visible sur la
 fiche (story et code), ou acter l'exception par un ADR. Non tranché.
 
+**Tranché le même jour par Christophe : exception actée, ADR-047**
+(`8d833f0`, PR #577). La photo portée générée est admise en photo
+complémentaire, jamais en première position, à six conditions que les 44
+photos tiennent. Aucune mention visible ajoutée ; son éventuelle obligation
+légale reste à vérifier aux sources.
+
 ## Défauts et pièges rencontrés
 
 **Faux positif C2PA, non corrigé.** Les PNG de Codex et ChatGPT sont refusés
@@ -61,11 +67,11 @@ la fenêtre au premier plan par `osascript`.
 
 ## État des tickets
 
-LS-23, close, commentée : mesure du 9 octobre et écart à arbitrer. Aucun
-ticket créé.
+LS-23, close, commentée deux fois : mesure du 9 octobre et écart, puis
+arbitrage par ADR-047. Aucun ticket créé.
 
 ## Prochaine étape
 
-Arbitrage de Christophe sur les photos portées. Puis ce que nomme
+Ce que nomme
 `2026-10-08-f` : relecture de `/aide#faq` par l'exploitante, clore LS-26, puis
 LS-19.
