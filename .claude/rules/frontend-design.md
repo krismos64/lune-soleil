@@ -343,6 +343,12 @@ Dimensions et entretien sont facultatifs (LS-24), sections remplies quand
 l'exploitante le juge utile. Ne pas les réintroduire comme obligatoires sans
 nouvel arbitrage.
 
+**Photo portée générée, ADR-047** : admise en photo complémentaire d'une
+fiche de boucles d'oreilles, **jamais en première position**, le bijou
+reproduit d'après la photo réelle et relu contre elle, aucun visage, texte
+alternatif finissant par « Photo d'illustration. ». Hors de ces conditions,
+la règle des images Codex d'ADR-045 s'applique : aucun bijou, aucune personne.
+
 ### C33, tout écran d'administration est atteignable sans saisir d'URL
 
 Une **barre permanente** porte les rubriques, posée par
