@@ -47,10 +47,12 @@ manque. Sans effet en production, l'identité y étant servie.
 
 ## État des tickets
 
-LS-290 en cours jusqu'au déploiement et au constat en production. Le critère
-d'indexation dans la Search Console revient à Christophe, aucun accès ici.
+LS-290 **déployée** le même soir (`57b7a25`, run 39315245416) et constatée en
+production : un seul lien, sans `rel` ni `target`, absent de l'accueil. Elle
+reste en cours pour le seul critère d'indexation dans la Search Console, qui
+revient à Christophe, aucun accès ici.
 
 ## Prochaine étape
 
-Déployer, constater le lien en production, clore LS-290. Constater le nocturne
-relancé (run 39311983905) et fermer #579. LS-258 à relire le 2 novembre.
+Indexation de `/informations-legales` dans la Search Console, par Christophe,
+puis clore LS-290. LS-258 à relire le 2 novembre.
