@@ -572,3 +572,33 @@ test("le crédit de développement n'apparaît ni dans le pied, ni sur l'accueil
   expect(balisage.join("\n")).toContain('"Organization"');
   expect(balisage.join("\n")).not.toContain("christophe-dev-freelance");
 });
+
+/**
+ * L'HÉBERGEUR, LS-28 : OVH SAS, écrit dans le code depuis le 19 octobre 2026.
+ *
+ * LES VALEURS SONT RECOPIÉES ICI ET NON IMPORTÉES, même motif que `LIENS_PIED`.
+ * Elles venaient de trois variables d'environnement, et la production a publié
+ * « A renseigner avant ouverture » et « 00 00 00 00 00 » sans qu'aucun test ne
+ * le voie : la base de test ne configure pas l'identité, et le bloc se cachait
+ * avec elle. Il ne dépend plus d'aucune configuration, donc ce test le voit
+ * toujours.
+ */
+test("l'hébergeur est nommé avec son adresse et son téléphone, sans valeur de remplissage", async ({
+  page,
+}) => {
+  await page.goto("/informations-legales");
+
+  const mentions = page.locator("#mentions");
+  await expect(
+    mentions.getByRole("heading", { name: "Hébergement du site", level: 3 }),
+  ).toBeVisible();
+  await expect(mentions).toContainText("OVH SAS");
+  await expect(mentions).toContainText(
+    "2 rue Kellermann, 59100 Roubaix, France",
+  );
+  await expect(mentions).toContainText("+33 9 72 10 10 07");
+
+  const texte = (await page.locator("main").textContent()) ?? "";
+  expect(texte).not.toMatch(/[AÀ] renseigner/i);
+  expect(texte).not.toContain("00 00 00 00 00");
+});
