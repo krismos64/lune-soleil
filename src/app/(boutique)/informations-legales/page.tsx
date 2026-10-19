@@ -11,6 +11,10 @@
  * ecrire l'adresse ici en clair permettrait au site et aux factures d'annoncer
  * deux identites differentes, ce qu'aucun controle ne verrait.
  *
+ * L'HÉBERGEUR FAIT EXCEPTION depuis le 19 octobre 2026, LS-28 : il vient de
+ * `HEBERGEUR`, écrit dans `identite-legale.ts` avec ses sources. Il ne figure
+ * sur aucune facture, donc aucune seconde source ne peut le contredire.
+ *
  * LES TARIFS VIENNENT DE `lireConfigurationLivraison`, meme motif : un seuil de
  * gratuite annonce ici et different au panier serait une information
  * precontractuelle FAUSSE, sanctionnee bien au-dela de l'ecart de prix.
@@ -36,6 +40,7 @@ import { DELAI_PUBLICATION_JOURS } from "@/services/avis";
 import { formaterMontant } from "@/lib/montant";
 import { NOM_BOUTIQUE, openGraphDePage } from "@/lib/seo";
 import {
+  HEBERGEUR,
   IdentiteLegaleNonConfigureeError,
   lireIdentiteLegale,
   lireMediateur,
@@ -357,24 +362,29 @@ export default async function PageInformationsLegales() {
                     <dd>{MENTION_FRANCHISE_TVA}</dd>
                   </div>
                 </dl>
-
-                <h3 className={styles.titreBloc}>Hébergement du site</h3>
-                <dl className={styles.definitions}>
-                  <div className={styles.definition}>
-                    <dt>Hébergeur</dt>
-                    <dd>{identite.hebergeurNom}</dd>
-                  </div>
-                  <div className={styles.definition}>
-                    <dt>Adresse</dt>
-                    <dd>{identite.hebergeurAdresse}</dd>
-                  </div>
-                  <div className={styles.definition}>
-                    <dt>Téléphone</dt>
-                    <dd>{identite.hebergeurTelephone}</dd>
-                  </div>
-                </dl>
               </>
             )}
+
+            {/*
+             * L'HÉBERGEUR VIENT DE `HEBERGEUR`, écrit dans le code depuis le
+             * 19 octobre 2026, LS-28 : hors de la condition sur l'identité, il
+             * s'affiche même quand l'éditeur n'est pas configuré.
+             */}
+            <h3 className={styles.titreBloc}>Hébergement du site</h3>
+            <dl className={styles.definitions}>
+              <div className={styles.definition}>
+                <dt>Hébergeur</dt>
+                <dd>{HEBERGEUR.nom}</dd>
+              </div>
+              <div className={styles.definition}>
+                <dt>Adresse</dt>
+                <dd>{HEBERGEUR.adresse}</dd>
+              </div>
+              <div className={styles.definition}>
+                <dt>Téléphone</dt>
+                <dd>{HEBERGEUR.telephone}</dd>
+              </div>
+            </dl>
 
             {/*
              * LE CRÉDIT DE DÉVELOPPEMENT, LS-290, ICI ET NULLE PART AILLEURS : le

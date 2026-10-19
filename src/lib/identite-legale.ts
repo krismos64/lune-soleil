@@ -24,7 +24,8 @@
  * L'HEBERGEUR EST UNE MENTION DISTINCTE, article 6 III de la loi du 21 juin 2004
  * pour la confiance dans l'economie numerique : nom, denomination sociale,
  * adresse et telephone. Il ne suffit pas de le citer parmi les sous-traitants de
- * la politique de confidentialite.
+ * la politique de confidentialite. Il est ecrit dans ce module, `HEBERGEUR`, et
+ * non lu dans l'environnement : voir la constante.
  *
  * AUCUNE VALEUR PAR DEFAUT ICI. Une identite legale fausse est une infraction,
  * et un repli silencieux publierait « Non renseigne » sur une page qui engage
@@ -60,13 +61,34 @@ const schemaComplementLegal = z.strictObject({
    * deploiement sur un espacement.
    */
   telephone: z.string().min(6).max(32),
-  /** Nom ou denomination sociale de l'hebergeur. */
-  hebergeurNom: z.string().min(1).max(160),
-  /** Adresse postale complete de l'hebergeur. */
-  hebergeurAdresse: z.string().min(1).max(200),
-  /** Telephone de l'hebergeur, mention imposee par la LCEN. */
-  hebergeurTelephone: z.string().min(6).max(32),
 });
+
+/**
+ * L'hébergeur du site, mention de l'article 6 III de la LCEN.
+ *
+ * ÉCRIT ICI ET NON LU DANS L'ENVIRONNEMENT, arbitrage de Christophe du
+ * 19 octobre 2026, LS-28. Les trois variables `LEGAL_HEBERGEUR_*` ont publié en
+ * production « A renseigner avant ouverture » et « 00 00 00 00 00 », que le
+ * schéma acceptait comme des valeurs valides. L'hébergeur n'est ni un secret ni
+ * une donnée de l'exploitante : c'est un fait de l'architecture, le VPS
+ * OVHcloud, et en changer passe de toute façon par un déploiement. Écrit dans le
+ * code, il se teste ; `tests/e2e/informations-legales.spec.ts` le vérifie.
+ *
+ * L'IDENTITÉ DE L'ÉDITEUR RESTE DANS L'ENVIRONNEMENT, et ce n'est pas une
+ * incohérence : elle partage sa source avec les factures, `lireEmetteur`.
+ *
+ * SOURCES, relevées le 19 octobre 2026. Dénomination et adresse : mentions
+ * légales d'OVHcloud, https://www.ovhcloud.com/fr/terms-and-conditions/, « OVH
+ * SAS 2 rue Kellermann - 59100 Roubaix - France ». Téléphone : aucune page
+ * publique ne l'écrit ; numéro confirmé par Christophe depuis l'espace client,
+ * forme internationale du 1007, composable depuis l'étranger. Le 1007 seul ne
+ * se compose pas hors de France.
+ */
+export const HEBERGEUR = {
+  nom: "OVH SAS",
+  adresse: "2 rue Kellermann, 59100 Roubaix, France",
+  telephone: "+33 9 72 10 10 07",
+} as const;
 
 /** L'identite complete telle que la page des mentions legales l'affiche. */
 export type IdentiteLegale = z.infer<typeof schemaComplementLegal> & {
@@ -108,9 +130,6 @@ export function lireIdentiteLegale(): IdentiteLegale {
     registre: process.env.LEGAL_REGISTRE,
     codeActivite: process.env.LEGAL_CODE_ACTIVITE,
     telephone: process.env.LEGAL_TELEPHONE,
-    hebergeurNom: process.env.LEGAL_HEBERGEUR_NOM,
-    hebergeurAdresse: process.env.LEGAL_HEBERGEUR_ADRESSE,
-    hebergeurTelephone: process.env.LEGAL_HEBERGEUR_TELEPHONE,
   });
 
   if (!resultat.success) {
