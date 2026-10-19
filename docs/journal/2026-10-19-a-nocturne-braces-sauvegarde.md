@@ -66,10 +66,12 @@ lieu de la laisser jouer sur un décor vide.
 ## État des tickets
 
 LS-258 reste en cours, critère 7 reconduit au **2 novembre 2026**. Issue #579
-à fermer sur le premier nocturne vert après fusion.
+**fermée** le même soir : nocturne relancé sur `098686f`, run 39311983905, vert
+(`2607 passed`, sept preuves lourdes complètes, sauvegarde `13 cas joues, 0
+echec`).
 
 ## Prochaine étape
 
-Constater le nocturne vert, fermer #579. Puis ce que nomme `2026-10-08-f` :
+Fait le même soir : nocturne vert, #579 fermée. Puis ce que nomme `2026-10-08-f` :
 relecture de `/aide#faq` par l'exploitante, clore LS-26, puis LS-19. Au
 2 novembre, relire `braces` à nouveau.

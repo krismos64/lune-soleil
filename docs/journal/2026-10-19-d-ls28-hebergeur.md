@@ -52,5 +52,7 @@ complète, validation par un professionnel.
 
 ## Prochaine étape
 
-Déployer, constater la rubrique en production. Constater le nocturne relancé et
-fermer #579.
+Fait le même soir : déployé (`6f2d61f`, run 39318793806), rubrique constatée en
+production, aucune valeur de remplissage ; nocturne vert, #579 fermée. Les
+lignes `LEGAL_HEBERGEUR_*` de `production.env` peuvent être effacées par
+Christophe.
