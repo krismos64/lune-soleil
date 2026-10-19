@@ -264,7 +264,9 @@ else
 
   pret=0
   for _ in $(seq 1 30); do
-    if docker exec "$CT" pg_isready -U postgres >/dev/null 2>&1; then pret=1; break; fi
+    # Par TCP : par le socket, le serveur provisoire d'initdb répond déjà
+    # prêt, puis s'arrête. Mesure et détail dans verifier-sauvegarde-mutation.sh.
+    if docker exec "$CT" pg_isready -h 127.0.0.1 -U postgres >/dev/null 2>&1; then pret=1; break; fi
     sleep 2
   done
   [ "$pret" -eq 1 ] || abandon "PostgreSQL n'est pas prêt après 60 secondes"

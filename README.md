@@ -62,7 +62,8 @@ l'ouverture commerciale ou une date :
 
 * **LS-218** attend un colis réel, son dernier critère exigeant un achat facturé
   et donc LS-153. Son code est écrit, audité et **déployé** depuis le 13 septembre
-* **LS-258** attend le 17 octobre 2026, échéance de l'exemption sur `braces`
+* **LS-258** attend le 2 novembre 2026 : aucune version corrigée de `braces`, exemption
+  renouvelée le 19 octobre pour quatorze jours
 
 **LS-237 est close** le 23 septembre 2026, cause mesurée : un
 `printf | grep -q` sous `pipefail`, que SIGPIPE faisait échouer sur un motif
