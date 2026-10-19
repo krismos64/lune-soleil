@@ -514,3 +514,58 @@ test("le sommaire et les sections de la page légale se correspondent", async ({
     await expect(page.locator(`#${ancre}`)).toBeVisible();
   }
 });
+
+/**
+ * LE CRÉDIT DE DÉVELOPPEMENT, LS-290 : un seul lien, ici et nulle part ailleurs.
+ *
+ * L'URL ET L'ANCRE SONT ÉCRITES ICI, pas importées de la page, même motif que
+ * `LIENS_PIED` : une assertion qui lit la constante du code reste verte si les
+ * deux changent ensemble.
+ *
+ * AUCUN `rel` ET AUCUN `target`, arbitrage du 19 octobre 2026 : le crédit est
+ * un choix libre de l'exploitante, sans contrepartie. Un `sponsored` ou un
+ * `nofollow` posés par réflexe retireraient au lien ce qu'il doit apporter, un
+ * `target` ouvrirait une fenêtre sans l'annoncer.
+ */
+const SITE_DEVELOPPEUR = "https://christophe-dev-freelance.fr";
+const ANCRE_DEVELOPPEUR = "Christophe Mostefaoui, développeur web freelance";
+
+test("le crédit de développement est un seul lien, dans les mentions légales", async ({
+  page,
+}) => {
+  await page.goto("/informations-legales");
+
+  const liens = page.locator(`a[href^="${SITE_DEVELOPPEUR}"]`);
+  await expect(liens).toHaveCount(1);
+
+  const lien = page
+    .locator("#mentions")
+    .getByRole("link", { name: ANCRE_DEVELOPPEUR, exact: true });
+  await expect(lien).toBeVisible();
+  await expect(lien).toHaveAttribute("href", SITE_DEVELOPPEUR);
+  await expect(lien).not.toHaveAttribute("rel", /.*/);
+  await expect(lien).not.toHaveAttribute("target", /.*/);
+
+  await expect(
+    page
+      .locator("#mentions")
+      .getByRole("heading", { name: "Conception et développement", level: 3 }),
+  ).toBeVisible();
+
+  /*
+   * LE BALISAGE DE LA BOUTIQUE NE NOMME PAS SON PRESTATAIRE : `Organization`
+   * décrit l'entreprise de l'exploitante. Mesuré sur tout le JSON-LD de la page.
+   */
+  const balisage = await page
+    .locator('script[type="application/ld+json"]')
+    .allTextContents();
+  expect(balisage.join("\n")).not.toContain("christophe-dev-freelance");
+});
+
+test("le crédit de développement n'apparaît ni dans le pied ni sur l'accueil", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.locator(`a[href^="${SITE_DEVELOPPEUR}"]`)).toHaveCount(0);
+  await expect(page.getByRole("contentinfo")).not.toContainText("Mostefaoui");
+});
