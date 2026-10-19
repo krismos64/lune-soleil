@@ -375,6 +375,28 @@ export default async function PageInformationsLegales() {
                 </dl>
               </>
             )}
+
+            {/*
+             * LE CRÉDIT DE DÉVELOPPEMENT, LS-290, ICI ET NULLE PART AILLEURS : le
+             * pied de page sert l'acheteur, pas le prestataire. Hors de la
+             * condition sur l'identité, il ne dépend d'aucune configuration.
+             *
+             * AUCUN `rel`, arbitrage du 19 octobre 2026 : un choix libre de
+             * l'exploitante, sans contrepartie. Une remise ou une clause du
+             * contrat liée à ce lien imposerait `rel="sponsored"`.
+             *
+             * `<a>` ET NON `Link`, la cible est hors du site. Même onglet, comme
+             * le lien Facebook du pied : aucune fenêtre ne s'ouvre sans être
+             * annoncée.
+             */}
+            <h3 className={styles.titreBloc}>Conception et développement</h3>
+            <p className={styles.texte}>
+              Site conçu et développé par{" "}
+              <a href="https://christophe-dev-freelance.fr">
+                Christophe Mostefaoui, développeur web freelance
+              </a>
+              .
+            </p>
           </section>
 
           <section
