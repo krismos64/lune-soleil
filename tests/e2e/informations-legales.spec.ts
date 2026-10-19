@@ -551,21 +551,24 @@ test("le crédit de développement est un seul lien, dans les mentions légales"
       .locator("#mentions")
       .getByRole("heading", { name: "Conception et développement", level: 3 }),
   ).toBeVisible();
-
-  /*
-   * LE BALISAGE DE LA BOUTIQUE NE NOMME PAS SON PRESTATAIRE : `Organization`
-   * décrit l'entreprise de l'exploitante. Mesuré sur tout le JSON-LD de la page.
-   */
-  const balisage = await page
-    .locator('script[type="application/ld+json"]')
-    .allTextContents();
-  expect(balisage.join("\n")).not.toContain("christophe-dev-freelance");
 });
 
-test("le crédit de développement n'apparaît ni dans le pied ni sur l'accueil", async ({
+test("le crédit de développement n'apparaît ni dans le pied, ni sur l'accueil, ni dans le balisage", async ({
   page,
 }) => {
   await page.goto("/");
   await expect(page.locator(`a[href^="${SITE_DEVELOPPEUR}"]`)).toHaveCount(0);
   await expect(page.getByRole("contentinfo")).not.toContainText("Mostefaoui");
+
+  /*
+   * LE BALISAGE DE LA BOUTIQUE NE NOMME PAS SON PRESTATAIRE : `Organization`
+   * décrit l'entreprise de l'exploitante. Il n'est rendu QUE sur l'accueil,
+   * d'où cette assertion ici : posée d'abord sur la page légale, elle restait
+   * verte avec l'URL injectée dans `sameAs`, faute de balisage à lire.
+   */
+  const balisage = await page
+    .locator('script[type="application/ld+json"]')
+    .allTextContents();
+  expect(balisage.join("\n")).toContain('"Organization"');
+  expect(balisage.join("\n")).not.toContain("christophe-dev-freelance");
 });
