@@ -113,9 +113,17 @@ docker run -d --name "$CONTENEUR" \
 
 # `pg_isready` plutot qu'un `sleep` fixe : une attente bornee mesure l'etat au
 # lieu de le supposer. Le depot a deja paye un `setTimeout` qui mesurait mal.
+#
+# PAR TCP, `-h 127.0.0.1`, JAMAIS PAR LE SOCKET. Pendant `initdb`, l'image
+# lance un serveur PROVISOIRE qui n'écoute que le socket Unix, crée la base,
+# puis s'arrête avant le serveur définitif. Par le socket, `pg_isready`
+# répondait prêt sur ce provisoire : mesuré le 19 octobre 2026, 5 essais sur 5,
+# le log ne comptant alors qu'un serveur démarré et TCP n'étant pas prêt. Le
+# nocturne du 14 octobre en est mort, 7 cas sur 13 en échec sur un décor vide
+# puis un `pg_dump` sans socket. Le provisoire n'écoute jamais TCP.
 PRET=0
 for _ in $(seq 1 60); do
-  if docker exec "$CONTENEUR" pg_isready -U mutation -d mutation >/dev/null 2>&1; then
+  if docker exec "$CONTENEUR" pg_isready -h 127.0.0.1 -U mutation -d mutation >/dev/null 2>&1; then
     PRET=1
     break
   fi
@@ -130,8 +138,12 @@ fi
 # DIX OBJETS EST LE SEUIL DU GARDE-FOU, donc le decor nominal doit passer
 # au-dessus, sans quoi le temoin echouerait pour la mauvaise raison et tous les
 # cas suivants seraient ininterpretables. Douze tables : la marge est voulue.
+# `ON_ERROR_STOP` et la sortie conservée : ce bloc était muet, et un décor
+# raté laissait jouer treize cas ininterprétables au lieu d'un arrêt qui dit
+# pourquoi.
+SORTIE_DECOR="$BAC/decor.log"
 docker exec -i -e PGPASSWORD="$MDP" "$CONTENEUR" \
-  psql -U mutation -d mutation >/dev/null 2>&1 <<'SQL'
+  psql -v ON_ERROR_STOP=1 -U mutation -d mutation >"$SORTIE_DECOR" 2>&1 <<'SQL' || {
 CREATE TABLE t01 (id serial primary key, valeur text);
 CREATE TABLE t02 (id serial primary key, valeur text);
 CREATE TABLE t03 (id serial primary key, valeur text);
@@ -146,6 +158,20 @@ CREATE TABLE t11 (id serial primary key, valeur text);
 CREATE TABLE t12 (id serial primary key, valeur text);
 INSERT INTO t01 (valeur) VALUES ('temoin');
 SQL
+  echo "Arrêt : le décor de la base n'a pas pu être créé." >&2
+  sed 's/^/  | /' "$SORTIE_DECOR" >&2
+  exit 1
+}
+
+# Le décor se COMPTE, il ne se suppose pas : moins de douze tables et le témoin
+# échouerait pour la mauvaise raison, entraînant tous les cas avec lui.
+TABLES=$(docker exec -e PGPASSWORD="$MDP" "$CONTENEUR" \
+  psql -h 127.0.0.1 -U mutation -d mutation -tAc \
+  "SELECT count(*) FROM pg_tables WHERE schemaname = 'public'" 2>/dev/null || true)
+if [ "$TABLES" != "12" ]; then
+  echo "Arrêt : décor incomplet, ${TABLES:-aucune} table(s) au lieu de 12." >&2
+  exit 1
+fi
 
 # LE DECOR REPRODUIT LA VRAIE STRUCTURE DU VOLUME, `public/` A COTE DE
 # `quarantaine/`, et ce n'est pas du detail : le garde-fou de LS-107 ne peut
@@ -305,7 +331,7 @@ docker stop "$CONTENEUR" >/dev/null 2>&1
 jouer "conteneur arrete" 1 "et non 'running'"
 docker start "$CONTENEUR" >/dev/null 2>&1
 for _ in $(seq 1 60); do
-  docker exec "$CONTENEUR" pg_isready -U mutation -d mutation >/dev/null 2>&1 && break
+  docker exec "$CONTENEUR" pg_isready -h 127.0.0.1 -U mutation -d mutation >/dev/null 2>&1 && break
   sleep 1
 done
 
