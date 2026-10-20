@@ -115,12 +115,6 @@ BETTER_AUTH_SECRET=
 MEDIA_RACINE=
 # @facultative un defaut existe, info
 LOG_LEVEL=
-# @facultative mediateur non designe ; les trois vont ensemble
-LEGAL_MEDIATEUR_NOM=
-# @facultative mediateur non designe ; les trois vont ensemble
-LEGAL_MEDIATEUR_ADRESSE=
-# @facultative mediateur non designe ; les trois vont ensemble
-LEGAL_MEDIATEUR_SITE=
 EXEMPLE
 }
 
@@ -287,21 +281,7 @@ jouer "un marqueur @facultative sans raison" "@facultative sans raison"
 poser_exemple
 
 # ---------------------------------------------------------------------------
-# Cas 5 : un GROUPE est renseigne a moitie.
-#
-# CE SENS N'EXISTAIT PAS DANS LA PREMIERE VERSION, et son absence a ete mesuree
-# en ecrivant le script : marquer les trois variables du mediateur facultatives
-# rendait chacune absente sans consequence, donc un `.env` portant le nom du
-# mediateur SANS son adresse passait au vert. `lireMediateur` rend `null` dans
-# ce cas, et une designation partielle laisse le client sans moyen d'exercer
-# son recours tout en donnant l'apparence de la conformite.
-# ---------------------------------------------------------------------------
-poser_env_sain
-echo "LEGAL_MEDIATEUR_NOM=Un mediateur" >>"$BAC/.env"
-jouer "un groupe est renseigne a moitie" "renseigne A MOITIE"
-
-# ---------------------------------------------------------------------------
-# Cas 6 : le `.env` est absent.
+# Cas 5 : le `.env` est absent.
 #
 # LE CAS LIMITE QUI DOIT SE DIRE PLUTOT QUE DE PASSER. Un controle qui sort en 0
 # faute de fichier a examiner rassure a tort, motif deja rencontre sur ce depot
@@ -312,7 +292,7 @@ jouer "le fichier .env est absent" "aucun fichier .env"
 poser_env_sain
 
 # ---------------------------------------------------------------------------
-# Cas 7 : `.env.example` est absent, donc la liste n'a plus de source.
+# Cas 6 : `.env.example` est absent, donc la liste n'a plus de source.
 #
 # LE SENS LE PLUS FACILE A OUBLIER : sans son exemple, le script deriverait une
 # liste VIDE et declarerait tout conforme. Un controle dont la source disparait
@@ -323,7 +303,7 @@ jouer "le fichier .env.example est absent" "n'a plus de source"
 poser_exemple
 
 # ---------------------------------------------------------------------------
-# Cas 8 : un processus porte un secret dans sa ligne de commande, critere 7.
+# Cas 7 : un processus porte un secret dans sa ligne de commande, critere 7.
 #
 # LE SEUL CAS QUI DEMANDE UN VRAI PROCESSUS, les sept autres se jouant sur des
 # fichiers. Un `sleep` suffit : ce qui compte est sa LIGNE DE COMMANDE, que le

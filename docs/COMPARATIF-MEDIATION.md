@@ -3,6 +3,13 @@
 Document préparé pour l'exploitante, LS-19, le 3 septembre 2026. Elle a demandé
 qu'une sélection lui soit proposée plutôt que de comparer elle-même.
 
+**Choix fait le 20 octobre 2026 : CM2C.** Référencement vérifié le jour même sur
+la liste de la CECMC mise à jour le 5 octobre 2026 (secteurs A04, A08 et B01),
+tarif confirmé à 48 € pour trois ans et 36 € par médiation à distance,
+convention signée par l'exploitante, valable jusqu'au 20 octobre 2029 et
+reconduite tacitement sauf dénonciation trois mois avant l'échéance. Les
+coordonnées publiées sont dans `MEDIATEUR`, `src/lib/identite-legale.ts`.
+
 **Ce document ne décide rien.** Le choix lui revient, et les tarifs se
 reconfirment auprès de l'organisme retenu avant signature : ils sont relevés sur
 des sources publiques à une date donnée, ils changent sans préavis.
