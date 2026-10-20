@@ -77,7 +77,9 @@ transitoire de `verifier-config-claude.sh`. `verifier-grep-q-pipefail.sh`
 l'interdit désormais ; **LS-250** a converti les 41 occurrences restantes le
 25 septembre 2026, et **LS-252** a fermé l'arrêt de la preuve complète.
 
-LS-19 et LS-28 attendent une démarche externe, le médiateur. **LS-123, LS-170,
+**LS-19 est close le 20 octobre 2026** : le CM2C est le médiateur, convention
+signée par l'exploitante, coordonnées écrites dans `MEDIATEUR`. LS-28 attend la
+politique de confidentialité complète et la validation d'un professionnel. **LS-123, LS-170,
 LS-107 et LS-140 sont closes** le 8 octobre 2026, les deux dernières mesurées sur
 le catalogue réel de 50 pièces photographiées. **LS-29 est close** le 8 octobre 2026,
 arbitrage de Christophe, ses quatre critères remplis.

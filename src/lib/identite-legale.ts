@@ -147,40 +147,33 @@ export function lireIdentiteLegale(): IdentiteLegale {
 }
 
 /**
- * Coordonnees du mediateur de la consommation, obligatoires en CGV.
+ * Le médiateur de la consommation, article L612-1 du Code de la consommation.
  *
- * ARTICLE L612-1 : tout professionnel vendant a des consommateurs garantit un
- * recours effectif a un dispositif de mediation, et publie ses coordonnees.
- * L'obligation existe meme si aucun litige ne survient jamais.
+ * ÉCRIT ICI ET NON LU DANS L'ENVIRONNEMENT, arbitrage de Christophe du
+ * 20 octobre 2026, LS-19 : même motif que `HEBERGEUR`. Les trois variables
+ * `LEGAL_MEDIATEUR_*` sont restées vides sept semaines, et la page annonçait
+ * une désignation en cours sans qu'aucun test ne voie le bloc renseigné. Le
+ * médiateur n'est ni un secret ni une donnée personnelle, il ne figure sur
+ * aucune facture, et en changer suppose une nouvelle convention, donc un
+ * déploiement. Écrit dans le code, il se teste ;
+ * `tests/e2e/informations-legales.spec.ts` le vérifie.
  *
- * ELLE EST FACULTATIVE DANS LA CONFIGURATION, ET C'EST DELIBERE. L'exploitante
- * n'a choisi aucun mediateur au 3 septembre 2026, LS-19 lui proposant un
- * comparatif : la page doit donc pouvoir se publier en DISANT que la designation
- * est en cours, plutot que de refuser de se rendre ou d'inventer un nom.
+ * LE TÉLÉPHONE ET L'EMAIL S'AJOUTENT AU NOM, À L'ADRESSE ET AU SITE : la
+ * convention, article 3-2, engage l'adhérent à informer le consommateur des
+ * modalités de saisine « (téléphone, site, adresse courriel) », en citant les
+ * articles L616-1 et R616-1.
  *
- * CE N'EST PAS UNE CONFORMITE PARTIELLE ACCEPTABLE A L'OUVERTURE. Les CGV ne
- * peuvent pas etre publiees sans mediateur, et LS-28 reste ouverte tant que ces
- * valeurs manquent.
+ * SOURCES, relevées le 20 octobre 2026. Convention d'adhésion signée ce jour,
+ * valable jusqu'au 20 octobre 2029 et reconduite tacitement, et mention à
+ * reproduire donnée par l'espace professionnel du CM2C. Le nom suit la
+ * convention, « de Conciliateurs » ; la liste de la CECMC du 5 octobre 2026
+ * écrit « des Conciliateurs », et y range le CM2C sous A04, A08 et B01.
+ * Comparatif et motif du choix : `docs/COMPARATIF-MEDIATION.md`.
  */
-export type Mediateur = {
-  nom: string;
-  adresse: string;
-  siteSaisine: string;
-};
-
-export function lireMediateur(): Mediateur | null {
-  const nom = process.env.LEGAL_MEDIATEUR_NOM;
-  const adresse = process.env.LEGAL_MEDIATEUR_ADRESSE;
-  const siteSaisine = process.env.LEGAL_MEDIATEUR_SITE;
-
-  /*
-   * LES TROIS ENSEMBLE OU AUCUN. Une designation partielle, un nom sans adresse
-   * de saisine, laisserait le client sans moyen d'exercer son recours tout en
-   * donnant l'apparence de la conformite.
-   */
-  if (!nom || !adresse || !siteSaisine) {
-    return null;
-  }
-
-  return { nom, adresse, siteSaisine };
-}
+export const MEDIATEUR = {
+  nom: "Centre de la Médiation de la Consommation de Conciliateurs de Justice (CM2C)",
+  adresse: "49 rue de Ponthieu, 75008 Paris",
+  telephone: "01 89 47 00 14",
+  email: "litiges@cm2c.net",
+  siteSaisine: "https://www.cm2c.net/declarer-un-litige.php",
+} as const;

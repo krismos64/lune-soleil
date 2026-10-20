@@ -20,16 +20,18 @@
  * precontractuelle FAUSSE, sanctionnee bien au-dela de l'ecart de prix.
  *
  * AUCUN TEXTE DE REMPLISSAGE, critere d'acceptation de LS-28. Ce qui n'est pas
- * connu est dit comme tel, jamais comble par une formule creuse : la section du
- * mediateur annonce une designation en cours plutot que d'inventer un nom.
+ * connu est dit comme tel, jamais comble par une formule creuse : la section
+ * des CGV annonce une rédaction en cours plutôt que de combler le vide.
  *
- * CE QUI N'EST PAS ICI, ET POURQUOI. Les conditions generales de vente ne sont
- * PAS publiees : elles exigent les coordonnees du mediateur, article L612-1, que
- * l'exploitante n'a pas encore choisi. Publier des CGV sans mediateur serait une
- * information incorrecte sur le droit de recours, ce que l'article L221-20
- * sanctionne par un delai de retractation porte a douze mois. La section `#cgv`
- * existe donc et dit son etat, ce qui vaut mieux qu'un lien mort dans le pied de
- * page.
+ * LE MÉDIATEUR VIENT DE `MEDIATEUR`, écrit dans `identite-legale.ts` depuis le
+ * 20 octobre 2026, LS-19 : le CM2C, convention signée ce jour-là.
+ *
+ * CE QUI N'EST PAS ICI, ET POURQUOI. Les conditions générales de vente ne sont
+ * PAS publiées : leur texte complet attend la validation d'un professionnel
+ * compétent, LS-28. Publier des conditions incorrectes sur le droit de recours
+ * expose à l'article L221-20, qui porte le délai de rétractation à douze mois.
+ * La section `#cgv` existe donc et dit son état, ce qui vaut mieux qu'un lien
+ * mort dans le pied de page.
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -43,7 +45,7 @@ import {
   HEBERGEUR,
   IdentiteLegaleNonConfigureeError,
   lireIdentiteLegale,
-  lireMediateur,
+  MEDIATEUR,
 } from "@/lib/identite-legale";
 import { EmetteurNonConfigureError } from "@/services/facture";
 import { MENTION_FRANCHISE_TVA } from "@/lib/validation";
@@ -156,8 +158,6 @@ export default async function PageInformationsLegales() {
       throw erreur;
     }
   }
-
-  const mediateur = lireMediateur();
 
   /*
    * LA CONFIGURATION DE LIVRAISON PEUT LEVER, ELLE AUSSI, et pour la meme
@@ -421,13 +421,12 @@ export default async function PageInformationsLegales() {
             </h2>
 
             {/*
-             * LES CGV NE SONT PAS PUBLIEES TANT QUE LE MEDIATEUR MANQUE, et cette
-             * section le DIT plutot que de rester vide. Publier des conditions sans
-             * dispositif de mediation serait une information incorrecte sur le
-             * droit de recours, article L612-1, et l'article L221-20 sanctionne
-             * l'information incorrecte par un delai de retractation porte a douze
-             * mois : le risque depasse de loin l'inconvenient d'une section
-             * incomplete avant l'ouverture.
+             * LES CGV NE SONT PAS PUBLIÉES TANT QUE LEUR TEXTE N'EST PAS VALIDÉ,
+             * LS-28, et cette section le DIT plutôt que de rester vide. Le
+             * médiateur, qui manquait jusqu'au 20 octobre 2026, est publié plus
+             * bas. L'article L221-20 sanctionne l'information incorrecte par un
+             * délai de rétractation porté à douze mois : le risque dépasse de
+             * loin l'inconvénient d'une section incomplète avant l'ouverture.
              */}
             {/*
              * NE PAS ECRIRE « aucune commande n'est possible » : le tunnel est
@@ -483,48 +482,54 @@ export default async function PageInformationsLegales() {
             )}
 
             <h3 className={styles.titreBloc}>Médiation de la consommation</h3>
-            {mediateur === null ? (
-              <p className={styles.manquant}>
-                L&apos;adhésion à un dispositif de médiation de la consommation
-                est en cours. Les coordonnées du médiateur seront publiées ici
-                avant l&apos;ouverture de la boutique.
-              </p>
-            ) : (
-              <>
-                <p className={styles.texte}>
-                  En cas de litige non résolu directement avec l&apos;atelier,
-                  vous pouvez recourir gratuitement au médiateur de la
-                  consommation suivant :
-                </p>
-                <dl className={styles.definitions}>
-                  <div className={styles.definition}>
-                    <dt>Médiateur</dt>
-                    <dd>{mediateur.nom}</dd>
-                  </div>
-                  <div className={styles.definition}>
-                    <dt>Adresse</dt>
-                    <dd>{mediateur.adresse}</dd>
-                  </div>
-                  <div className={styles.definition}>
-                    <dt>Saisine en ligne</dt>
-                    <dd>
-                      <a
-                        href={mediateur.siteSaisine}
-                        rel="noopener noreferrer"
-                        target="_blank"
-                      >
-                        {mediateur.siteSaisine}
-                      </a>
-                    </dd>
-                  </div>
-                </dl>
-                <p className={styles.texte}>
-                  Le recours à la médiation est gratuit pour vous et suppose
-                  d&apos;avoir tenté au préalable de résoudre le litige avec
-                  l&apos;atelier.
-                </p>
-              </>
-            )}
+            <p className={styles.texte}>
+              En cas de litige non résolu directement avec l&apos;atelier, vous
+              pouvez recourir gratuitement au médiateur de la consommation
+              suivant :
+            </p>
+            {/*
+             * LE MÉDIATEUR VIENT DE `MEDIATEUR`, écrit dans le code depuis le
+             * 20 octobre 2026, LS-19. Téléphone et email s'ajoutent au nom, à
+             * l'adresse et au site : la convention, article 3-2, demande les
+             * trois moyens de saisine, articles L616-1 et R616-1.
+             */}
+            <dl className={styles.definitions}>
+              <div className={styles.definition}>
+                <dt>Médiateur</dt>
+                <dd>{MEDIATEUR.nom}</dd>
+              </div>
+              <div className={styles.definition}>
+                <dt>Adresse</dt>
+                <dd>{MEDIATEUR.adresse}</dd>
+              </div>
+              <div className={styles.definition}>
+                <dt>Téléphone</dt>
+                <dd>{MEDIATEUR.telephone}</dd>
+              </div>
+              <div className={styles.definition}>
+                <dt>Email</dt>
+                <dd>
+                  <a href={`mailto:${MEDIATEUR.email}`}>{MEDIATEUR.email}</a>
+                </dd>
+              </div>
+              <div className={styles.definition}>
+                <dt>Saisine en ligne</dt>
+                <dd>
+                  <a
+                    href={MEDIATEUR.siteSaisine}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    {MEDIATEUR.siteSaisine}
+                  </a>
+                </dd>
+              </div>
+            </dl>
+            <p className={styles.texte}>
+              Le recours à la médiation est gratuit pour vous et suppose
+              d&apos;avoir tenté au préalable de résoudre le litige avec
+              l&apos;atelier.
+            </p>
           </section>
 
           <section

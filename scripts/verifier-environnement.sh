@@ -330,50 +330,11 @@ node_code=$?
 [ "$node_code" -ne 0 ] && ko=$((ko + 1))
 
 # ---------------------------------------------------------------------------
-# Les groupes qui vont ensemble, ou pas du tout.
-#
-# `@facultative` DIT QU'UNE VARIABLE PEUT MANQUER, il ne dit rien de ce qui doit
-# manquer AVEC elle. Le mediateur en est le cas : `lireMediateur` rend `null` si
-# l'une des trois manque, et son commentaire porte la raison, une designation
-# PARTIELLE laisse le client sans moyen d'exercer son recours tout en donnant
-# l'apparence de la conformite.
-#
-# SANS CE SENS, MARQUER LES TROIS FACULTATIVES AURAIT PERDU LA REGLE : chacune
-# serait devenue absente sans consequence, et un `.env` portant le nom du
-# mediateur sans son adresse passerait au vert. Mesure du 7 septembre 2026, en
-# ecrivant ce script.
+# Les groupes qui vont ensemble, ou pas du tout : RETIRE le 20 octobre 2026,
+# LS-19. Son seul groupe etait le mediateur, `LEGAL_MEDIATEUR_*`, desormais
+# ecrit dans `MEDIATEUR`, `src/lib/identite-legale.ts`. Le cas 5 de
+# `verifier-environnement-mutation.sh` est parti avec lui.
 # ---------------------------------------------------------------------------
-verifier_groupe() {
-  local intitule="$1"
-  shift
-  local presentes=0 absentes=0 total=0
-
-  for nom in "$@"; do
-    total=$((total + 1))
-    # LA PRESENCE SEULE EST TESTEE, jamais la valeur imprimee : `grep -q` rend
-    # un code, pas un contenu.
-    if grep -qE "^${nom}=." .env; then
-      presentes=$((presentes + 1))
-    else
-      absentes=$((absentes + 1))
-    fi
-  done
-
-  if [ "$presentes" -gt 0 ] && [ "$absentes" -gt 0 ]; then
-    echo "  ECHEC $intitule : renseigne A MOITIE, $presentes sur $total"
-    echo "        Ces variables vont ensemble ou pas du tout. Une designation"
-    echo "        partielle donne l'apparence de la conformite en laissant le"
-    echo "        client sans moyen d'exercer son recours."
-    return 1
-  fi
-
-  return 0
-}
-
-if ! verifier_groupe "mediateur de la consommation" \
-  LEGAL_MEDIATEUR_NOM LEGAL_MEDIATEUR_ADRESSE LEGAL_MEDIATEUR_SITE; then
-  ko=$((ko + 1))
-fi
 
 # ---------------------------------------------------------------------------
 # Concordance du secret de webhook, defaut 1.

@@ -310,28 +310,42 @@ test("les mentions obligatoires du droit de rétractation sont présentes", asyn
 });
 
 /**
- * L'ABSENCE DE MEDIATEUR EST DITE, elle n'est pas masquee.
+ * LE MÉDIATEUR, LS-19 : le CM2C, écrit dans le code depuis le 20 octobre 2026.
  *
- * L'exploitante n'en a designe aucun au 3 septembre 2026, LS-19. La section
- * doit donc annoncer une designation en cours plutot que de rester vide : une
- * section muette laisserait croire que l'obligation de l'article L612-1 est
- * remplie.
+ * CE TEST REMPLACE CELUI QUI VÉRIFIAIT « adhésion en cours », comme ce dernier
+ * l'annonçait : il fallait vérifier les coordonnées une fois le médiateur
+ * désigné. Les valeurs sont recopiées ici et non importées, même motif que
+ * l'hébergeur : un test qui lit la constante resterait vert si elle portait une
+ * valeur fausse.
  *
- * CE TEST DEVIENDRA FAUX QUAND LE MEDIATEUR SERA DESIGNE, et c'est voulu : il
- * faudra alors verifier ses coordonnees, ce qui est le comportement cible.
+ * LES CINQ MOYENS SONT VÉRIFIÉS, et le lien de saisine par sa cible et non par
+ * son texte : un `href` faux sous un texte juste enverrait le client ailleurs.
  */
-test("la section médiation dit son état tant qu'aucun médiateur n'est désigné", async ({
+test("le médiateur est publié avec ses cinq coordonnées de saisine", async ({
   page,
 }) => {
   await page.goto("/informations-legales#cgv");
 
+  const cgv = page.locator("#cgv");
   await expect(
-    page.getByRole("heading", { name: "Médiation de la consommation" }),
+    cgv.getByRole("heading", { name: "Médiation de la consommation" }),
   ).toBeVisible();
+  await expect(cgv).toContainText(
+    "Centre de la Médiation de la Consommation de Conciliateurs de Justice (CM2C)",
+  );
+  await expect(cgv).toContainText("49 rue de Ponthieu, 75008 Paris");
+  await expect(cgv).toContainText("01 89 47 00 14");
 
   await expect(
-    page.getByText(/adhésion à un dispositif de médiation.*en cours/i),
-  ).toBeVisible();
+    cgv.getByRole("link", { name: "litiges@cm2c.net" }),
+  ).toHaveAttribute("href", "mailto:litiges@cm2c.net");
+  await expect(
+    cgv.getByRole("link", {
+      name: "https://www.cm2c.net/declarer-un-litige.php",
+    }),
+  ).toHaveAttribute("href", "https://www.cm2c.net/declarer-un-litige.php");
+
+  await expect(cgv).not.toContainText(/médiation.*en cours/i);
 });
 
 /**
