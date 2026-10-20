@@ -23,10 +23,9 @@ l'ouverture **commerciale**, distincte de la mise en ligne technique.
 
 Les clés d'envoi d'email **sont posées** depuis le 10 septembre 2026, LS-214.
 
-Les portes de sortie des phases 1 et 3 sont constatées, voir plus bas. Une
-story de la phase 0 reste ouverte, LS-19 la médiation, sur une dépendance
-externe et non sur du travail à faire ; LS-20 est close depuis le
-20 septembre 2026.
+Les portes de sortie des phases 1 et 3 sont constatées, voir plus bas. **La
+phase 0 est close le 20 octobre 2026**, avec sa dernière story, LS-19 la
+médiation.
 Le tableau ci-dessus porte le compte mesuré.
 
 **Plusieurs phases avancent en parallèle**, et ce n'est pas un dérapage : le
@@ -34,7 +33,7 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 
 | Phase | Epic | Stories ouvertes | Ce qui reste |
 |---|---|---|---|
-| 0, cadrage | LS-1 | 1 | LS-19, la médiation : compte tiers, démarche externe. **LS-20 s'est fermée** le 20 septembre 2026, le premier article réel attestant que le lot de photographies a démarré |
+| 0, cadrage | LS-1 | 0 | **close** le 20 octobre 2026 : LS-19, la médiation, close le même jour, le CM2C désigné et publié en production |
 | 1, fondations | LS-2 | 0 | **close**, porte de sortie constatée le 13 août 2026 |
 | 2, catalogue et médias | LS-3 | 0 | **LS-145 est close** le 8 octobre 2026 : F-ADM-07 mesurée sur le téléphone de l'exploitante, 2 min 30 pour la cible de trois minutes. **LS-123 est close** le 8 octobre 2026, ses huit critères remplis. Demandes du 4 octobre 2026 : **LS-265 est close**, un même prix appliqué à plusieurs articles après un récapitulatif déclinaison par déclinaison ; **LS-266 est close**, un article archivé se retire de l'espace de l'exploitante sans quitter la base, contrainte C45, récupération par le développeur dans `EXPLOITATION.md` ; **LS-279**, le 7 octobre 2026, porte ce retrait dans la liste des archivés en action groupée, avec une confirmation qui nomme chaque article, et réaligne la barre de sélection |
 | 3, panier et paiement | LS-4 | 0 | **close** le 11 septembre 2026. LS-86 portait le dernier critère, le récapitulatif sur les trois modes de livraison |
@@ -45,10 +44,10 @@ travail suit les dépendances réelles plutôt que l'ordre des numéros.
 | 7, V1 cible | LS-8 | 0 | **close** le 11 septembre 2026. LS-149 portait le dernier critère : ADR-044 **écarte l'assistant IA** du périmètre plutôt que de le reporter |
 | Contenus | LS-22 | 3 | **Le 8 octobre 2026** : **LS-44 close**, tous les matériaux viennent d'un distributeur établi dans l'Union, aucune mention d'origine des matières publiée ; **LS-26 close le 19 octobre 2026**, FAQ validée par l'exploitante, délai d'expédition, emballage et absence à domicile compris ; **LS-23 close** par arbitrage, une photographie suffit, le nombre se choisit par article ; **LS-24 close**, description et matières exigées et présentes sur les 50 pièces, dimensions et entretien facultatifs ; LS-25, LS-29 et LS-170 closes, critères remplis ; **LS-30 close**, la page Facebook devient le seul canal social, lien du pied de page et `sameAs`, sans QR code à la demande de l'exploitante. **LS-284 est close** le 7 octobre 2026 : pas de création sur mesure, arbitrage de Christophe, la mention sort du contact. **LS-264 est close** le 4 octobre 2026 : « Notre univers », un « nous » de marque, devient **« L'atelier »** à l'adresse `/atelier`, l'ancienne redirigeant en 301, arbitrage de Christophe. **attend l'exploitante**, rien n'est faisable sans elle. **LS-32 est close** le 11 septembre 2026, la neutralité de genre étant désormais gardée par un contrôle. **LS-25 a livré ses textes** le 20 septembre 2026, récoltés auprès d'elle et validés par elle : `/notre-univers`, devenue `/atelier`, est déployée, et elle a révélé que l'exploitante **exerce seule** quand tout le cadrage parlait de deux créatrices. Le visuel d'accueil, qui montrait des pièces n'ayant jamais existé, est **remplacé le 23 septembre 2026** par une bannière fournie par Christophe |
 
-**271 tickets terminés sur 281 hors epics**, les deux termes relevés dans Jira
-le **19 octobre 2026** après la clôture de LS-26, et jamais dérivés l'un de l'autre :
-10 tickets non terminés relevés séparément, 5 En cours et 5 À faire, et
-281 − 10 retombe bien sur 271. Journaux `2026-10-08-a` à `-f` et `2026-10-19-a` à `-d`. **La recette de l'exploitante du 23 septembre** a ouvert
+**272 tickets terminés sur 281 hors epics**, les deux termes relevés dans Jira
+le **20 octobre 2026** après la clôture de LS-19, et jamais dérivés l'un de l'autre :
+9 tickets non terminés relevés séparément, 4 En cours et 5 À faire, et
+281 − 9 retombe bien sur 272. Journaux `2026-10-08-a` à `-f`, `2026-10-19-a` à `-d` et `2026-10-20-a`. **La recette de l'exploitante du 23 septembre** a ouvert
 LS-238 à LS-248, tous clos le jour même.
 
 **Le chantier du nocturne est clos le 24 septembre 2026** : LS-233, LS-235,
@@ -56,10 +55,13 @@ LS-250, LS-252, LS-253 et LS-254, avec LS-251 livrée et déployée. Le nocturne
 vert deux fois de suite, `180 mutations, 180 detectees`, étape des preuves en
 1 h 22. Journaux `2026-09-24-a` à `-e` et `2026-09-25-a`.
 
-**Aucun ticket ouvert ne dépend plus seulement du code**, constat refait le
-19 octobre 2026 après la livraison de LS-290. Les cinq En cours attendent
-l'exploitante, une démarche externe, l'ouverture commerciale, une date ou
-Christophe :
+**Aucun ticket En cours ne dépend plus seulement du code**, constat refait le
+20 octobre 2026 après la clôture de LS-19. Les quatre En cours attendent une
+rédaction validée, l'ouverture commerciale, une date ou Christophe :
+
+* **LS-28** attend la rédaction des CGV, la politique de confidentialité
+  complète et la validation par un professionnel. Le médiateur n'est plus un
+  bloqueur depuis le 20 octobre
 
 * **LS-290** attend la vérification de l'indexation de `/informations-legales`
   dans la Search Console, par Christophe. Le crédit est **déployé** depuis le
@@ -96,10 +98,10 @@ une fois : le chiffre disait 175 sous une date du 10 septembre, ce qui aurait
 fait relire un compte pour un autre. Motif « un compte recopié n'est pas une
 mesure », qui vaut pour la date autant que pour le nombre.
 
-**Quatre des neuf tickets ouverts attendent l'exploitante** au 8 octobre
+**Quatre des neuf tickets ouverts attendaient l'exploitante** au 8 octobre
 2026 au soir : les trois de l'epic LS-22, FAQ (relecture seule), tarifs et
-contenus juridiques, et LS-19, la médiation, qui suppose une adhésion à
-souscrire. Aucun code ne les débloque. Comptes relevés dans Jira ce jour,
+contenus juridiques, et LS-19, la médiation. LS-26 est close le 19 octobre et
+LS-19 le 20, adhésion au CM2C faite en séance. Comptes relevés dans Jira ce jour,
 `parent = LS-22 AND statusCategory != Done` rendant trois après la clôture de
 LS-23, LS-24 et LS-44 en séance avec l'exploitante. Le 25 septembre il en
 rendait dix.
