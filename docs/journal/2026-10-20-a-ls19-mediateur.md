@@ -72,6 +72,9 @@ les relevés de cette carte.
 
 - **LS-19** : ses trois critères sont remplis, **close** le 20 octobre après
   déploiement constaté.
+- **LS-1**, epic de la phase 0 : **close**, LS-19 était sa dernière story
+  ouverte. Comptes relevés dans Jira : 272 terminés sur 281 hors epics,
+  9 ouverts (4 En cours, 5 À faire), README mis à jour.
 - **LS-28** : critère « le médiateur est désigné » rempli ; restent la
   politique de confidentialité complète, la publication des CGV et la
   validation par un professionnel compétent.
