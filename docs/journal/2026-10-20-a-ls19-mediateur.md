@@ -70,13 +70,19 @@ les relevés de cette carte.
 
 ## État des tickets
 
-- **LS-19** : ses trois critères sont remplis, close après déploiement constaté.
+- **LS-19** : ses trois critères sont remplis, **close** le 20 octobre après
+  déploiement constaté.
 - **LS-28** : critère « le médiateur est désigné » rempli ; restent la
   politique de confidentialité complète, la publication des CGV et la
   validation par un professionnel compétent.
 
 ## Prochaine étape
 
-Déployer, constater la rubrique en production, clore LS-19. Les lignes
-`LEGAL_MEDIATEUR_*` éventuellement présentes dans `production.env` sont
-ignorées. Ensuite : la rédaction des CGV, dernier gros morceau de LS-28.
+Fait le même soir : PR #586 fusionnée, déployé (`a385f38`, run 39487738474),
+rubrique constatée en production : HTTP 200, cinq coordonnées affichées, liens
+`mailto:` et de saisine corrects, plus aucune « adhésion en cours ». LS-19
+close, LS-28 commentée. Les lignes `LEGAL_MEDIATEUR_*` éventuellement présentes
+dans `production.env` sont ignorées.
+
+Ensuite : la rédaction des CGV, dernier gros morceau de LS-28, que le médiateur
+ne bloque plus.
