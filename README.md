@@ -341,14 +341,12 @@ npm ci             # installation reproductible depuis le verrou
 npm run dev        # sert le site sur le port 3000
 ```
 
-**`npm ci` corrige Next au passage**, par `postinstall`, LS-273 :
-`scripts/corriger-next-optimiseur-images.mjs` reporte sur la 16.3.x la
-correction de l'optimiseur d'images livrée en 16.4.0. Sans elle, un visiteur
-qui quitte une page pendant la première optimisation d'une image fige cette
-variante pour tout le monde jusqu'au redémarrage. Le script **échoue** sur une
-forme de code inconnue : une montée de Next doit le relire, et le retirer
-quand la 16.4.x est adoptée. `tests/unitaire/next-optimiseur-images.test.ts`
-éprouve la vraie fonction de Next avec une socket de visiteur fermée.
+**Next 16.4.x porte la correction de l'optimiseur d'images**, LS-273 et LS-292 :
+un visiteur qui quittait une page pendant la première optimisation d'une image
+figeait cette variante pour tout le monde en 16.3.x. Le report lancé à
+`postinstall` est retiré depuis la montée en 16.4.3, le 24 octobre 2026.
+`tests/unitaire/next-optimiseur-images.test.ts` éprouve toujours la vraie
+fonction de Next avec une socket de visiteur fermée.
 
 Le site sert `/catalogue` et `/produit/<slug>` côté public, `/administration`
 côté exploitante, dont `/administration/stocks` pour les marchés. La liste fait

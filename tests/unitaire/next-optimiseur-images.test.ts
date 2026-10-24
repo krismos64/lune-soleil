@@ -1,8 +1,8 @@
 /**
  * L'optimiseur d'images de Next survit au départ d'un visiteur, LS-273.
  *
- * LE CODE ÉPROUVÉ EST CELUI DE NEXT, tel qu'installé et corrigé par
- * `scripts/corriger-next-optimiseur-images.mjs` : la vraie `fetchInternalImage`
+ * LE CODE ÉPROUVÉ EST CELUI DE NEXT, tel qu'installé, corrigé en amont depuis
+ * la 16.4.0 (le report par `postinstall` est retiré, LS-292) : la vraie `fetchInternalImage`
  * lit un vrai fichier par le vrai `serveStatic`. Seule la socket du visiteur
  * est fabriquée, et elle est FERMÉE, comme celle d'une navigation qui quitte la
  * page pendant la première optimisation d'une variante.
