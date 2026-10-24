@@ -131,7 +131,9 @@ test.describe("aperçu de l'administratrice", () => {
         await expect(
           page.getByRole("button", { name: /animations/ }),
         ).toHaveCount(0);
-        const flocons = page.locator('[class*="__flocon"]');
+        // Un seul souligné : Next 16.4 nomme les classes `<hash>_flocon` en
+        // production, et non plus `<fichier>-module__<hash>__flocon`, LS-292.
+        const flocons = page.locator('[class*="_flocon"]');
         expect(await flocons.count()).toBeGreaterThan(0);
         await expect(flocons.first()).toBeHidden();
       }
@@ -255,7 +257,7 @@ test.describe("aperçu de l'administratrice", () => {
 
     test("la neige reste dans l'emblème", async ({ page }) => {
       await page.goto(accueil("NOEL_1"));
-      const cadre = page.locator('[class*="__cadre"][data-borne]').first();
+      const cadre = page.locator('[class*="_cadre"][data-borne]').first();
       await expect(cadre).toHaveAttribute("data-borne", "joue");
 
       // Aucun flocon ne sort du cadre de l'emblème : la neige ne passe jamais
@@ -263,7 +265,7 @@ test.describe("aperçu de l'administratrice", () => {
       await page.waitForTimeout(1500);
       const boiteCadre = await cadre.boundingBox();
       const neige = await cadre
-        .locator('[class*="__neige"]')
+        .locator('[class*="_neige"]')
         .first()
         .boundingBox();
       expect(boiteCadre && neige).toBeTruthy();
@@ -286,7 +288,7 @@ test.describe("aperçu de l'administratrice", () => {
         test.setTimeout(90_000);
         await page.goto(chemin);
         await page
-          .locator('[class*="__flocon"]')
+          .locator('[class*="_flocon"]')
           .first()
           .waitFor({ state: "attached" });
         const bornes = page.locator("main [data-borne]");

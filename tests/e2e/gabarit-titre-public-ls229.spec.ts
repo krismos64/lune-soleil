@@ -156,7 +156,9 @@ test.describe("Panneau visuel des portes d'entree", () => {
        * raison. CONTENU ET NON SUFFIXE depuis LS-268 : le décor porte aussi
        * sa classe de variante, `__nuit` ou `__aube`, après `__panneau`.
        */
-      const panneau = page.locator('[class*="__panneau"]').first();
+      // Un seul souligné : Next 16.4 nomme les classes `<hash>_panneau` en
+      // production, et non plus `<fichier>-module__<hash>__panneau`, LS-292.
+      const panneau = page.locator('[class*="_panneau"]').first();
 
       await page.setViewportSize({ width: 767, height: 800 });
       if (boutique) {
