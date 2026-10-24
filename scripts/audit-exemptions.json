@@ -1,10 +1,1 @@
-[
-  {
-    "avis": "GHSA-vfj7-8cjw-p6xm",
-    "paquet": "braces",
-    "ticket": "LS-258",
-    "ajoute_le": "2026-10-19",
-    "jusqu_au": "2026-11-02",
-    "motif": "Aucune version corrigée publiée, braces 3.0.3 reste la dernière, relu le 19 octobre 2026. Chaîne de lint seulement, eslint-config-next vers braces, absente de l'image de production, mesuré le 3 octobre 2026 ; @next/eslint-plugin-next 16.4.2 fixe toujours fast-glob 3.3.1. Renouvelé le 19 octobre 2026 pour quatorze jours, arbitrage de Christophe."
-  }
-]
+[]
