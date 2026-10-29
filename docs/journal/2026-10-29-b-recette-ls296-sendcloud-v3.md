@@ -73,12 +73,29 @@ verifier-contraste.sh        OK
 | région du message remise en bas | e2e, `toBeInViewport`, 320 et 1280 |
 | message « indisponible » dans la mauvaise région | e2e, `toHaveText`, 320 et 768 |
 
+## Premier envoi réel, le soir même
+
+Déployé à 19 h 03 (`d3ec819`). **Premier clic, 19 h 05 : refus**, et la cause
+journalisée par la correction elle-même : `réponse 400 du transporteur, codes
+no_valid_payment_method`. Le compte Sendcloud n'avait aucun moyen de paiement.
+Aucun colis créé. L'écran a pourtant affiché « Le transporteur n'a pas
+répondu », message réservé à l'état inconnu : corrigé par `TransporteurRefusError`,
+un 4xx étant un refus net, raison traduite à l'écran (`384ff30`, PR #596).
+
+L'exploitante a enregistré un moyen de paiement récurrent. **Second clic,
+19 h 14 : réussi.** Mesuré en lecture seule : commande `EXPEDIEE`, un seul colis
+chez Sendcloud (statut « Announced »), étiquette PDF A4 lue, email
+`expedition-en-route` envoyé, et le suivi v2 retrouve par numéro de suivi le
+colis créé en v3, même identifiant.
+
+**LS-294 close** sur le nocturne vert relancé à la main (2619 passed, 194 sur 194
+et 15 sur 15), issue #593 fermée.
+
 ## Reste ouvert
 
-- **LS-296, critère 8** : le premier envoi réel. L'exploitante reclique sur
-  C-2026-0001 après déploiement ; ce sera la vraie étiquette du colis, facturée.
-  Il fermera le critère 10 de LS-218 et le critère 1 de LS-27, et dira si le
-  suivi v2 lit un colis créé en v3.
+- **LS-296 et LS-218, le tarif facturé** de cette première étiquette, à relever
+  sur la facture Sendcloud (4,10 € annoncés en Locker). Les deux tickets se
+  ferment sur ce relevé.
 - **LS-297** : arbitrage de Christophe, « Lune-Soleil » en titre et le nom légal
   en petit avec « EI », seulement sur la facture et `/informations-legales`
   (R526-27 du Code de commerce, article 6 de la LCEN). La facture F-2026-0001
