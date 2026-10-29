@@ -993,12 +993,24 @@ qu'aucune commande ne référence le carnet, règle A3.
 
 ### Chemin nominal, usage au tunnel de commande
 
+**LIVRÉ le 29 octobre 2026 par LS-299, étapes 1 à 3.** L'étape 4 n'est pas
+livrée : enregistrer au carnet une adresse saisie au tunnel se fait depuis
+l'espace client. `adressesPourLeTunnel` lit le carnet du compte de la session,
+réduit aux champs de l'étape adresse ; `etatInitialAdresse` porte la
+présélection.
+
 | # | Étape | Base | Vue |
 |---|---|---|---|
 | 1 | Arrivée au tunnel | rien | adresses du carnet proposées, celle par défaut présélectionnée **si elle existe, aucune présélection sinon** |
-| 2 | Choix ou saisie | rien, le carnet n'est pas modifié, identifiant reçu recoupé sur la session | formulaire prérempli, modifiable |
+| 2 | Choix ou saisie | rien, le carnet n'est pas modifié, **aucun identifiant ne remonte au serveur** | formulaire prérempli, modifiable ; la liste suit les champs |
 | 3 | Validation de la commande | `Commande.adresseLivraison` et `adresseFacturation` reçoivent une **copie figée du formulaire revalidé** | récapitulatif |
 | 4 | Enregistrement facultatif | `AdresseCarnet` créée si le client le demande | l'adresse entre au carnet |
+
+**Livré, LS-299 : le choix remplit les champs dans le navigateur, et aucun
+identifiant d'adresse ne remonte au serveur.** La saisie repasse par la
+validation de `enregistrerAdresse` comme une frappe : il n'existe donc aucun
+identifiant à recouper ni à usurper. La règle ci-dessous reste celle de tout
+chemin futur qui enverrait un identifiant.
 
 **Un identifiant d'adresse reçu à l'étape 2 est recoupé sur la session avant
 toute résolution.** Sans ce contrôle, un identifiant appartenant à un autre compte
