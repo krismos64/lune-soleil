@@ -500,6 +500,40 @@ else
 fi
 
 echo
+echo "Table rate_limit réservée à Better Auth, LS-83 et LS-294"
+echo
+
+# SON LIMITEUR PURGE `rate_limit` SANS FILTRE DE CLE au-dela de sa plus longue
+# fenetre configuree, soixante secondes ici : un compteur du projet n'y survit
+# pas. Le defaut a ete commis deux fois, LS-83 puis les plafonds d'une heure du
+# contact et des signalements, trouves par LS-294. Seule la purge quotidienne
+# y touche, pour appliquer la duree du registre. Les lignes de commentaire sont
+# ignorees : le piege s'y explique sans s'y commettre.
+AUTORISE_RATE_LIMIT="src/services/purge-journaux.ts"
+rate_limit_ko=0
+while IFS= read -r ligne; do
+  fichier=${ligne%%:*}
+  rel=${fichier#"$RACINE"/}
+  [ "$rel" = "$AUTORISE_RATE_LIMIT" ] && continue
+  echo "  ECHEC $rel touche rate_limit : ${ligne#*:}"
+  echo "        un compteur du projet va dans compteur_limitation"
+  rate_limit_ko=$((rate_limit_ko+1))
+done < <(grep -rnE 'rate_limit|\.rateLimit\.' "$RACINE/src" --include='*.ts' --include='*.tsx' \
+           --exclude-dir=generated \
+         | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(\*|//|/\*)')
+
+if ! grep -qE 'prisma\.rateLimit\.deleteMany' "$RACINE/$AUTORISE_RATE_LIMIT"; then
+  echo "  ECHEC $AUTORISE_RATE_LIMIT ne purge plus rate_limit : exemption périmée"
+  rate_limit_ko=$((rate_limit_ko+1))
+fi
+
+if [ "$rate_limit_ko" -eq 0 ]; then
+  echo "  OK    aucun accès à rate_limit hors de la purge"
+else
+  ko=$((ko + rate_limit_ko))
+fi
+
+echo
 echo "-----------------------------------------"
 if [ "$ko" -eq 0 ]; then
   echo "  règles conformes au schéma"
