@@ -195,6 +195,8 @@ export type ResultatEtiquette =
   | { statut: "DEJA_EXPEDIEE" }
   /** Le transporteur n'a pas repondu : l'etat du colis chez lui est INCONNU. */
   | { statut: "TRANSPORTEUR_INDISPONIBLE" }
+  /** Refus net du transporteur, rien de facture, LS-296. */
+  | { statut: "TRANSPORTEUR_REFUS"; raison: string }
   /** L'adresse figee de la commande ne porte pas ce que l'API exige. */
   | { statut: "ADRESSE_INEXPLOITABLE"; message: string }
   /** Le mode exige un point de retrait que la commande ne porte pas. */

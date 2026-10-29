@@ -43,7 +43,10 @@ import {
   type SaisieExpedition,
 } from "@/repositories/expedition";
 import { TRANSITIONS_ADMINISTRATRICE } from "@/services/administration-commandes";
-import { TransporteurIndisponibleError } from "@/integrations/sendcloud/index";
+import {
+  TransporteurIndisponibleError,
+  TransporteurRefusError,
+} from "@/integrations/sendcloud/index";
 import type { ClientExpedition } from "@/integrations/sendcloud/expedition";
 import { methodeExigePointRetrait } from "@/integrations/sendcloud/methodes";
 import { lireParametresBoutique } from "@/services/parametres";
@@ -399,7 +402,7 @@ export type IssueEtiquette =
   | { statut: "STATUT_INCOMPATIBLE"; statutActuel: StatutCommande }
   | { statut: "DEJA_EXPEDIEE" }
   /**
-   * Le transporteur n'a pas repondu, ou a refuse.
+   * Le transporteur n'a pas repondu, ou sa reponse ne permet pas de conclure.
    *
    * L'ETAT EST INCONNU ET NON « rien ne s'est passe », et la nuance se paie :
    * le colis a PEUT-ETRE ete cree chez Sendcloud avant que la reponse se perde.
@@ -407,6 +410,12 @@ export type IssueEtiquette =
    * jamais proposer un nouveau clic comme si l'appel n'avait pas eu lieu.
    */
   | { statut: "TRANSPORTEUR_INDISPONIBLE" }
+  /**
+   * Le transporteur a refuse NETTEMENT, rien n'a ete cree ni facture, LS-296.
+   * `raison` est une phrase lisible par l'exploitante, traduite des codes de
+   * Sendcloud, jamais leur texte anglais ni une valeur de la commande.
+   */
+  | { statut: "TRANSPORTEUR_REFUS"; raison: string }
   /** L'adresse figee de la commande ne porte pas ce que l'API exige. */
   | { statut: "ADRESSE_INEXPLOITABLE"; message: string }
   /** Le mode exige un point de retrait que la commande ne porte pas. */
@@ -427,6 +436,35 @@ type AdresseFigee = {
   ville?: string;
   pays?: string;
 };
+
+/**
+ * Les raisons de refus connues, traduites pour l'exploitante. LS-296.
+ *
+ * UNE TABLE ET NON UN `switch`, pour qu'un code releve en production s'ajoute
+ * en une ligne. `no_valid_payment_method` est le premier, mesure en recette le
+ * 29 octobre 2026 : le compte Sendcloud n'avait aucun moyen de paiement.
+ */
+const RAISONS_REFUS: Readonly<Record<string, string>> = {
+  no_valid_payment_method:
+    "aucun moyen de paiement valide n'est enregistré sur le compte Sendcloud",
+};
+
+/**
+ * La phrase lisible d'un refus. Un code inconnu est nomme tel quel : il vient
+ * d'une liste fermee de Sendcloud et ne porte aucune valeur de la commande, et
+ * le taire laisserait l'exploitante sans piste.
+ */
+export function raisonDuRefus(codes: readonly string[]): string {
+  const connue = codes.find((code) => Object.hasOwn(RAISONS_REFUS, code));
+
+  if (connue !== undefined) {
+    return RAISONS_REFUS[connue]!;
+  }
+
+  return codes.length > 0
+    ? `Sendcloud a refusé la demande (code ${codes.join(", ")})`
+    : "Sendcloud a refusé la demande sans en donner la raison";
+}
 
 /**
  * Cree le colis chez le transporteur, puis declare l'expedition.
@@ -579,6 +617,16 @@ export async function creerEtiquetteExpedition({
       },
     });
   } catch (erreur) {
+    if (erreur instanceof TransporteurRefusError) {
+      journaliserErreur("création d'étiquette refusée", erreur, {
+        commandeId: identifiant,
+        cause: typeof erreur.cause === "string" ? erreur.cause : null,
+      });
+      return {
+        statut: "TRANSPORTEUR_REFUS",
+        raison: raisonDuRefus(erreur.codes),
+      };
+    }
     if (erreur instanceof TransporteurIndisponibleError) {
       /*
        * LA CAUSE EST JOURNALISEE, LS-296 : elle ne porte que le code HTTP, les

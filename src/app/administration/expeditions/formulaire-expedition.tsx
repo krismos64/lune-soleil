@@ -216,6 +216,20 @@ export function FormulaireExpedition({
             erreur: true,
           });
           break;
+        /*
+         * UN REFUS NET N'EST PAS UN ETAT INCONNU, LS-296 : Sendcloud a repondu
+         * et n'a rien cree. Le dire evite d'aller chercher une panne, et la
+         * raison dit quoi corriger. Recette du 29 octobre 2026 : sans moyen de
+         * paiement, l'ecran annoncait « le transporteur n'a pas répondu ».
+         */
+        case "TRANSPORTEUR_REFUS":
+          setMessageEtiquette({
+            texte:
+              `Sendcloud refuse la création de l'étiquette : ${resultat.raison}. ` +
+              "Aucune étiquette n'a été créée ni facturée.",
+            erreur: true,
+          });
+          break;
         case "POINT_RETRAIT_MANQUANT":
           setMessageEtiquette({
             texte:
