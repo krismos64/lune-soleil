@@ -76,6 +76,23 @@ const INSTANTANE: InstantaneLegal = {
   mentions: ["TVA non applicable, article 293 B du Code général des impôts"],
 };
 
+/**
+ * Le meme document en version 2, LS-297 : marque et denomination figees.
+ *
+ * LA RAISON SOCIALE RESTE DANS L'EMETTEUR, et le test verifie qu'elle n'est PAS
+ * imprimee seule en titre : seule la denomination, suivie de « EI », la porte.
+ */
+const INSTANTANE_V2: InstantaneLegal = {
+  ...INSTANTANE,
+  version: 2,
+  emetteur: {
+    ...INSTANTANE.emetteur,
+    raisonSociale: "TEST Dupont Camille",
+    nomCommercial: "Lune-soleil",
+    denomination: "TEST Dupont Camille EI",
+  },
+};
+
 const EN_TETE = {
   intitule: "Facture",
   numero: "F-2026-0042",
@@ -198,6 +215,38 @@ describe("rendu du document", () => {
     expect(texte).toContain("Łukasz Straẞer");
     expect(texte).toContain("TEST Créoles dorées");
     expect(texte).toContain("TEST du Marché");
+  });
+
+  /*
+   * LS-297 : la marque en titre, la denomination « EI » sous elle, article
+   * R526-27. Un rendu qui reprendrait `raisonSociale` en titre ne porterait ni
+   * la marque ni la mention.
+   */
+  it("porte la marque et la denomination EI en version 2", async () => {
+    const rendu = await rendreEtStocker({
+      enTete: EN_TETE,
+      instantane: INSTANTANE_V2,
+    });
+    const texte = await texteDuPdf(join(racine, rendu.cheminRelatif));
+
+    expect(texte).toContain("Lune-soleil");
+    expect(texte).toContain("TEST Dupont Camille EI");
+  });
+
+  /*
+   * UNE VERSION 1 SE REIMPRIME TELLE QU'EMISE, invariant 4 : ni marque ni
+   * mention ajoutee a un document qui ne les portait pas, F-2026-0001 comprise.
+   */
+  it("reimprime une version 1 sans marque ni mention ajoutees", async () => {
+    const rendu = await rendreEtStocker({
+      enTete: EN_TETE,
+      instantane: INSTANTANE,
+    });
+    const texte = await texteDuPdf(join(racine, rendu.cheminRelatif));
+
+    expect(texte).toContain("TEST Lune et Soleil");
+    expect(texte).not.toContain("Lune-soleil");
+    expect(texte).not.toMatch(/\bEI\b/);
   });
 
   it("porte la mention de franchise et aucune ligne de TVA", async () => {

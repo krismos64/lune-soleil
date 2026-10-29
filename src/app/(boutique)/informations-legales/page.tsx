@@ -47,7 +47,10 @@ import {
   lireIdentiteLegale,
   MEDIATEUR,
 } from "@/lib/identite-legale";
-import { EmetteurNonConfigureError } from "@/services/facture";
+import {
+  EmetteurNonConfigureError,
+  denominationLegale,
+} from "@/services/facture";
 import { MENTION_FRANCHISE_TVA } from "@/lib/validation";
 import {
   type ConfigurationLivraison,
@@ -293,15 +296,28 @@ export default async function PageInformationsLegales() {
                  * par ce mot depuis LS-286, et une page legale ne laisse pas un
                  * terme sans referent.
                  */}
+                {/*
+                 * LA DENOMINATION PORTE « EI », LS-297, article R526-27 du Code
+                 * de commerce, la meme fonction que la facture : le site et les
+                 * documents ne peuvent pas ecrire deux identites differentes.
+                 * Le nom de l'exploitante n'apparait qu'ici et sur les
+                 * documents comptables, arbitrage de Christophe du 29 octobre
+                 * 2026 ; la marque partout ailleurs.
+                 */}
                 <p className={styles.texte}>
                   Dans ces pages, « l&apos;atelier » désigne{" "}
-                  {identite.raisonSociale}, éditeur de ce site et vendeur des
-                  bijoux.
+                  {denominationLegale(identite.raisonSociale)}, éditeur de ce
+                  site et vendeur des bijoux sous le nom commercial{" "}
+                  {NOM_BOUTIQUE}.
                 </p>
                 <dl className={styles.definitions}>
                   <div className={styles.definition}>
+                    <dt>Nom commercial</dt>
+                    <dd>{NOM_BOUTIQUE}</dd>
+                  </div>
+                  <div className={styles.definition}>
                     <dt>Dénomination</dt>
-                    <dd>{identite.raisonSociale}</dd>
+                    <dd>{denominationLegale(identite.raisonSociale)}</dd>
                   </div>
                   <div className={styles.definition}>
                     <dt>Forme juridique</dt>

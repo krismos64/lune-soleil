@@ -27,13 +27,19 @@ import { ecrireJeton } from "@/repositories/jeton-acces";
 import { ecrireFacture, lireFactureDeCommande } from "@/repositories/facture";
 import type { FactureEmise } from "@/repositories/facture";
 import type { ClientBase } from "@/repositories/stock";
+import { NOM_BOUTIQUE } from "@/lib/seo";
 import {
   MENTION_FRANCHISE_TVA,
   VERSION_INSTANTANE_LEGAL,
   schemaEmetteurFacture,
-  schemaInstantaneLegal,
+  schemaInstantaneLegalCourant,
 } from "@/lib/validation";
-import type { AdresseFigee, EmetteurFacture } from "@/lib/validation";
+import type {
+  AdresseFigee,
+  EmetteurDocument,
+  EmetteurFacture,
+  InstantaneLegalCourant,
+} from "@/lib/validation";
 
 /**
  * Identite legale de l'emetteur absente ou mal formee.
@@ -85,6 +91,46 @@ export function lireEmetteur(): EmetteurFacture {
   }
 
   return resultat.data;
+}
+
+/**
+ * La denomination legale de l'entreprise individuelle, LS-297.
+ *
+ * ARTICLE R526-27 DU CODE DE COMMERCE, verifie le 29 octobre 2026 sur
+ * Legifrance et service-public.fr : le nom de l'entrepreneur, precede ou suivi
+ * immediatement de « entrepreneur individuel » ou « EI », sur les documents a
+ * usage professionnel, factures comprises. F-2026-0001 ne la portait pas.
+ *
+ * LA MENTION N'EST PAS AJOUTEE DEUX FOIS : une configuration qui l'ecrirait deja
+ * dans `FACTURE_RAISON_SOCIALE` ne doit pas produire « EI EI ».
+ */
+export function denominationLegale(raisonSociale: string): string {
+  const nom = raisonSociale.trim();
+
+  return /(^|\s)(EI|entrepreneur individuel)$/i.test(nom) ? nom : `${nom} EI`;
+}
+
+/**
+ * L'emetteur tel qu'un document neuf le fige : identite de configuration, nom
+ * commercial et denomination legale. LS-297.
+ *
+ * LE NOM COMMERCIAL EST `NOM_BOUTIQUE`, seule source de la marque, ADR-022 et
+ * `verifier-graphie-marque.sh` : « Lune-soleil », la graphie du logo.
+ *
+ * IL PREND UN EMETTEUR ET NON L'ENVIRONNEMENT, pour servir aussi a l'avoir, qui
+ * part de l'identite figee de sa facture et non de la configuration courante.
+ */
+export function emetteurPourDocument(
+  emetteur: EmetteurFacture,
+): EmetteurDocument {
+  return {
+    raisonSociale: emetteur.raisonSociale,
+    siret: emetteur.siret,
+    adresse: emetteur.adresse,
+    emailContact: emetteur.emailContact,
+    nomCommercial: NOM_BOUTIQUE,
+    denomination: denominationLegale(emetteur.raisonSociale),
+  };
 }
 
 /**
@@ -261,10 +307,10 @@ export async function emettreFacture(
 function construireInstantane(
   commande: CommandeAFacturer,
   emetteur: EmetteurFacture,
-): ReturnType<typeof schemaInstantaneLegal.parse> {
-  return schemaInstantaneLegal.parse({
+): InstantaneLegalCourant {
+  return schemaInstantaneLegalCourant.parse({
     version: VERSION_INSTANTANE_LEGAL,
-    emetteur,
+    emetteur: emetteurPourDocument(emetteur),
     client: {
       nom: commande.nomClient,
       email: commande.emailNormalise,

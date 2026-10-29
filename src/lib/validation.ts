@@ -602,8 +602,14 @@ export const schemaCoordonnees = z.strictObject({
 export const MENTION_FRANCHISE_TVA =
   "TVA non applicable, article 293 B du Code général des impôts";
 
-/** Version courante de la structure d'instantane legal. */
-export const VERSION_INSTANTANE_LEGAL = 1;
+/**
+ * Version courante de la structure d'instantane legal.
+ *
+ * 2 DEPUIS LS-297 : l'emetteur porte le nom commercial et la denomination
+ * legale suivie de « EI », article R526-27 du Code de commerce. Les documents
+ * en version 1 restent relisibles tels qu'emis, invariant 4.
+ */
+export const VERSION_INSTANTANE_LEGAL = 2;
 
 /**
  * Identite legale de l'emetteur, figee au moment de l'emission.
@@ -628,6 +634,25 @@ export const schemaEmetteurFacture = z.strictObject({
 });
 
 export type EmetteurFacture = z.infer<typeof schemaEmetteurFacture>;
+
+/**
+ * L'emetteur tel qu'un document de version 2 le fige, LS-297.
+ *
+ * LES DEUX CHAMPS SONT ECRITS A L'EMISSION ET JAMAIS RECALCULES A LA LECTURE.
+ * Deriver la mention « EI » au rendu changerait l'apparence d'un document deja
+ * emis le jour ou la regle evoluerait : ce qui est imprime doit etre ce qui a
+ * ete fige, invariant 4.
+ *
+ * `nomCommercial` EST LA MARQUE, `denomination` L'IDENTITE LEGALE. Arbitrage de
+ * Christophe du 29 octobre 2026 : la marque en titre, la denomination en petit,
+ * la loi exigeant le nom et la mention « EI » sur la facture.
+ */
+export const schemaEmetteurDocument = schemaEmetteurFacture.extend({
+  nomCommercial: z.string().min(1).max(120),
+  denomination: champAdresse(140),
+});
+
+export type EmetteurDocument = z.infer<typeof schemaEmetteurDocument>;
 
 /**
  * Adresse FIGEE telle qu'une commande la porte, distincte de la saisie.
@@ -697,9 +722,7 @@ export const schemaLigneInstantane = z.strictObject({
  * le document a l'identique. Ils sont ecrits dans la meme transaction depuis la
  * meme valeur, et le service le verifie avant d'ecrire.
  */
-export const schemaInstantaneLegal = z.strictObject({
-  version: z.literal(VERSION_INSTANTANE_LEGAL),
-  emetteur: schemaEmetteurFacture,
+const champsCommunsInstantane = {
   client: z.strictObject({
     nom: z.string().min(1),
     email: z.string().min(1),
@@ -723,9 +746,44 @@ export const schemaInstantaneLegal = z.strictObject({
   fraisPortCentimes: schemaMontantCentimes,
   totalCentimes: schemaMontantCentimes,
   mentions: z.array(z.string().min(1)).nonempty(),
+};
+
+/**
+ * Version 1, avant LS-297 : l'emetteur ne porte que son identite de
+ * configuration. Gardee pour relire les documents emis jusqu'au 29 octobre 2026,
+ * dont F-2026-0001, qui ne se modifient pas.
+ */
+const schemaInstantaneLegalV1 = z.strictObject({
+  version: z.literal(1),
+  emetteur: schemaEmetteurFacture,
+  ...champsCommunsInstantane,
 });
 
+/** Version 2, LS-297 : nom commercial et denomination « EI » figes. */
+const schemaInstantaneLegalV2 = z.strictObject({
+  version: z.literal(VERSION_INSTANTANE_LEGAL),
+  emetteur: schemaEmetteurDocument,
+  ...champsCommunsInstantane,
+});
+
+/**
+ * UNE UNION DISCRIMINEE PAR `version`, la relecture choisissant le schema de la
+ * version ecrite. L'ecriture n'emploie que la version courante, imposee par
+ * `schemaInstantaneLegalCourant`.
+ */
+export const schemaInstantaneLegal = z.discriminatedUnion("version", [
+  schemaInstantaneLegalV1,
+  schemaInstantaneLegalV2,
+]);
+
+/** Le seul schema d'ecriture : un document neuf est toujours en version courante. */
+export const schemaInstantaneLegalCourant = schemaInstantaneLegalV2;
+
 export type InstantaneLegal = z.infer<typeof schemaInstantaneLegal>;
+
+export type InstantaneLegalCourant = z.infer<
+  typeof schemaInstantaneLegalCourant
+>;
 
 /**
  * Une note portee sur une piece d'une commande, LS-61, parcours 7.

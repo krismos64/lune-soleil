@@ -57,7 +57,9 @@ const quantite = valider(schemaQuantite, entree); // ou lève EntreeInvalideErro
 | `schemaAdresseCarnet` | adresse du **carnet client**, LS-59 : étend `schemaAdressePostale` avec `libelle`, `nomComplet` et `telephone` | y ajouter `estParDefaut`, qui contournerait l'ordre imposé de la bascule, ou `utilisateurId`, qui vient de la session |
 | `schemaEmetteurFacture` | identité légale lue dans l'environnement, SIRET à quatorze chiffres | une valeur absente, un SIRET espacé ou tronqué |
 | `schemaLigneInstantane` | une ligne du document, deux libellés séparés | un total de ligne stocké, il se déduit |
-| `schemaInstantaneLegal` | contenu intégral et **versionné** de la facture, LS-126 | un document sans ligne, sans mention, ou de version inconnue |
+| `schemaEmetteurDocument` | l'émetteur figé d'un document de version 2 : identité, nom commercial et dénomination suivie de « EI », LS-297 | une dénomination ou un nom commercial absent, une clé inconnue |
+| `schemaInstantaneLegal` | contenu intégral et **versionné** de la facture, LS-126 ; **union des versions 1 et 2** à la lecture depuis LS-297 | un document sans ligne, sans mention, ou de version inconnue |
+| `schemaInstantaneLegalCourant` | le seul schéma d'**écriture** d'un instantané, version courante, LS-297 | une version antérieure : un document neuf n'est jamais écrit en version 1 |
 | `schemaSaisieAvis` | une note portée sur **une pièce** d'une commande, LS-61 : entier de 1 à 5, commentaire facultatif borné à 2000 caractères | une note décimale, une note hors intervalle, un champ non reconnu |
 | `schemaDepotAvis` | le dépôt complet, **une saisie par pièce notée** | un envoi vide, qui est une erreur de saisie et non un succès sans effet, ou plus de vingt pièces |
 | `schemaModificationAvis` | la modification d'un avis par son auteur, LS-225 : l'avis visé, la note et le commentaire | `ligneCommandeId`, dont l'acceptation permettrait de **déplacer** un avis d'une pièce vers une autre, donc de faire porter une note sur un article que personne n'a noté |
@@ -81,7 +83,11 @@ colonne `facture.instantane_legal` est un `Json` : elle accepte n'importe quelle
 forme, et une clé oubliée ne se verrait qu'à la relecture du document, des années
 après la vente. Le champ `version` est ce qui rend cette relecture possible : le
 jour où la structure change, les factures déjà émises gardent la leur et restent
-lisibles, l'invariant 4 interdisant de les réécrire.
+lisibles, l'invariant 4 interdisant de les réécrire. **Ce changement a eu lieu le 29 octobre 2026,
+LS-297** : la version 2 fige le nom commercial et la dénomination « EI » de
+l'émetteur. La lecture accepte les deux versions par une union discriminée, le
+gabarit PDF choisit son rendu par la version et jamais par la date, et
+F-2026-0001 se réimprime telle qu'émise.
 
 **`schemaAdresseFigee` existe parce qu'une adresse figée n'est pas une saisie.**
 Elle porte le `nom` du destinataire, absent du formulaire où le nom est un champ
