@@ -35,7 +35,7 @@
  */
 import type { ModeLivraison } from "@/generated/prisma/enums";
 
-import { TransporteurIndisponibleError } from "./index";
+import { TransporteurIndisponibleError, TransporteurRefusError } from "./index";
 import {
   ADRESSE_EXPEDITEUR_ID,
   CONTRAT_MONDIAL_RELAY,
@@ -179,12 +179,22 @@ const STATUT_COLIS_EXPEDIABLE = "READY_TO_SEND";
  * et `error.code` de la v2.
  */
 export async function resumerRefus(reponse: Response): Promise<string> {
+  return (await lireRefus(reponse)).resume;
+}
+
+/**
+ * Le refus lu une seule fois : son resume pour le journal et ses codes pour
+ * l'ecran. Un corps de reponse ne se lit qu'une fois, d'ou une seule lecture.
+ */
+async function lireRefus(
+  reponse: Response,
+): Promise<{ resume: string; codes: string[] }> {
   let corps: unknown;
 
   try {
     corps = await reponse.json();
   } catch {
-    return `réponse ${reponse.status} du transporteur`;
+    return { resume: `réponse ${reponse.status} du transporteur`, codes: [] };
   }
 
   const codes: string[] = [];
@@ -209,13 +219,28 @@ export async function resumerRefus(reponse: Response): Promise<string> {
     codes.push(String(objet.error.code));
   }
 
-  return [
-    `réponse ${reponse.status} du transporteur`,
-    codes.length > 0 ? `codes ${codes.join(", ")}` : null,
-    champs.length > 0 ? `champs ${champs.join(", ")}` : null,
-  ]
-    .filter((partie): partie is string => partie !== null)
-    .join(", ");
+  return {
+    resume: [
+      `réponse ${reponse.status} du transporteur`,
+      codes.length > 0 ? `codes ${codes.join(", ")}` : null,
+      champs.length > 0 ? `champs ${champs.join(", ")}` : null,
+    ]
+      .filter((partie): partie is string => partie !== null)
+      .join(", "),
+    codes,
+  };
+}
+
+/**
+ * Ce statut est-il un refus NET, dont on sait qu'il n'a rien cree ?
+ *
+ * LES 4xx, SAUF 408 ET 429 : un delai depasse ou une limite de debit disent
+ * « pas maintenant », pas « jamais ». Un 5xx peut survenir APRES une ecriture
+ * chez le fournisseur, il reste un etat inconnu. Le 409 n'arrive pas ici, il
+ * rend l'envoi deja annonce.
+ */
+function estRefusNet(statut: number): boolean {
+  return statut >= 400 && statut < 500 && statut !== 408 && statut !== 429;
 }
 
 /** Enveloppe une promesse d'un delai maximum, sans laisser l'appel courir. */
@@ -368,10 +393,15 @@ export function creerClientExpeditionSendcloud({
       if (!reponse.ok && reponse.status !== 409) {
         /*
          * LE CORPS D'ERREUR N'EST PAS REPRIS TEL QUEL, invariant 9 : Sendcloud y
-         * renvoie les champs refuses, donc l'adresse. `resumerRefus` n'en garde
-         * que les codes et les chemins de champ.
+         * renvoie les champs refuses, donc l'adresse. `lireRefus` n'en garde que
+         * les codes et les chemins de champ.
          */
-        throw new TransporteurIndisponibleError(await resumerRefus(reponse));
+        const refus = await lireRefus(reponse);
+
+        if (estRefusNet(reponse.status)) {
+          throw new TransporteurRefusError(refus.codes, refus.resume);
+        }
+        throw new TransporteurIndisponibleError(refus.resume);
       }
 
       let contenu: ReponseCreation;

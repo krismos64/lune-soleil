@@ -28,7 +28,10 @@ import { VARIABLE_URL_TEST } from "../aide/base-ephemere";
 import type { EvenementPaiement } from "@/integrations/stripe/evenements";
 import type { ClientExpedition } from "@/integrations/sendcloud/expedition";
 import type { IssueEtiquette } from "@/services/expedition";
-import { TransporteurIndisponibleError } from "@/integrations/sendcloud/index";
+import {
+  TransporteurIndisponibleError,
+  TransporteurRefusError,
+} from "@/integrations/sendcloud/index";
 
 let client: Client;
 let passerCommande: typeof import("@/services/commande").passerCommande;
@@ -1353,6 +1356,40 @@ describe("creerEtiquetteExpedition", () => {
    * story : l'exploitante la RESSAISIT aujourd'hui chez le transporteur, et une
    * adresse fautive produit un colis perdu dont le risque reste a sa charge.
    */
+
+  /*
+   * UN REFUS NET NE TOUCHE PAS NON PLUS LA COMMANDE, ET IL DIT POURQUOI, LS-296.
+   * Recette du 29 octobre 2026 : sans moyen de paiement sur le compte Sendcloud,
+   * l'ecran annoncait une panne. La raison traduite dit quoi corriger.
+   */
+  it("traduit un refus net en raison lisible, commande intacte", async () => {
+    const commandeId = await commanderEtPreparer();
+
+    const refusant: ClientExpedition = {
+      async creer() {
+        throw new TransporteurRefusError(
+          ["no_valid_payment_method"],
+          "réponse 400 du transporteur, codes no_valid_payment_method",
+        );
+      },
+      async lireEtiquette() {
+        throw new TransporteurIndisponibleError("non appelé");
+      },
+    };
+
+    const issue = await creerEtiquetteExpedition({
+      commandeId,
+      acteurId: administratriceId,
+      clientTransporteur: refusant,
+    });
+
+    expect(issue).toEqual({
+      statut: "TRANSPORTEUR_REFUS",
+      raison:
+        "aucun moyen de paiement valide n'est enregistré sur le compte Sendcloud",
+    });
+    expect(await lireStatut(commandeId)).toBe("EN_PREPARATION");
+  });
   it("envoie l'adresse figee de la commande, jamais une saisie", async () => {
     const commandeId = await commanderEtPreparer();
     let recue: unknown;

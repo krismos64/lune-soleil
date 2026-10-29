@@ -66,6 +66,32 @@ export class TransporteurIndisponibleError extends Error {
   }
 }
 
+/**
+ * Le transporteur a REPONDU, et refuse : rien n'a ete cree ni facture. LS-296.
+ *
+ * DISTINCTE DE `TransporteurIndisponibleError`, ET LA DIFFERENCE SE LIT A
+ * L'ECRAN. Celle-la dit « etat inconnu, verifier avant de reessayer », la
+ * reponse ayant pu se perdre apres la creation. Celle-ci dit « refus net », un
+ * 4xx de Sendcloud ne creant rien. Les confondre a affiche « Le transporteur n'a
+ * pas répondu » sur un refus explicite, `no_valid_payment_method`, en recette le
+ * 29 octobre 2026 : l'exploitante cherchait une panne quand il manquait un
+ * moyen de paiement sur son compte.
+ *
+ * `codes` PORTE LES CODES D'ERREUR DE SENDCLOUD, liste fermee de leur
+ * specification, jamais une valeur de la demande : le service les traduit en
+ * phrase lisible.
+ */
+export class TransporteurRefusError extends Error {
+  readonly codes: readonly string[];
+
+  constructor(codes: readonly string[], cause?: unknown) {
+    super("Transporteur refuse");
+    this.name = "TransporteurRefusError";
+    this.codes = codes;
+    this.cause = cause;
+  }
+}
+
 /** Resultat d'une recherche, degradee ou non. */
 export type ResultatPointsRetrait = {
   /**

@@ -12,7 +12,10 @@
  */
 import { describe, expect, it, vi } from "vitest";
 
-import { TransporteurIndisponibleError } from "@/integrations/sendcloud/index";
+import {
+  TransporteurIndisponibleError,
+  TransporteurRefusError,
+} from "@/integrations/sendcloud/index";
 import { creerClientExpeditionSendcloud } from "@/integrations/sendcloud/expedition";
 import type { DemandeExpedition } from "@/integrations/sendcloud/expedition";
 
@@ -301,15 +304,40 @@ describe("pannes du transporteur", () => {
     );
   });
 
-  it("traduit un refus du transporteur", async () => {
-    const appel = vi
-      .fn()
-      .mockResolvedValue(new Response("{}", { status: 400 }));
+  /*
+   * UN 4xx EST UN REFUS NET, LS-296 : Sendcloud a repondu et n'a rien cree.
+   * Le confondre avec une panne a fait afficher « le transporteur n'a pas
+   * répondu » sur un compte sans moyen de paiement, en recette.
+   */
+  it("traduit un 4xx en refus net, codes compris", async () => {
+    const corps = JSON.stringify({
+      errors: [{ status: "400", code: "no_valid_payment_method" }],
+    });
+    const appel = fetchSimule(() => new Response(corps, { status: 400 }));
 
-    await expect(client(appel).creer(DEMANDE_DOMICILE)).rejects.toBeInstanceOf(
-      TransporteurIndisponibleError,
-    );
+    const erreur = (await client(appel)
+      .creer(DEMANDE_DOMICILE)
+      .catch((e: unknown) => e)) as TransporteurRefusError;
+
+    expect(erreur).toBeInstanceOf(TransporteurRefusError);
+    expect(erreur.codes).toEqual(["no_valid_payment_method"]);
   });
+
+  /*
+   * UN 5xx, UN 408 OU UN 429 RESTENT UN ETAT INCONNU : le premier peut survenir
+   * apres une ecriture chez le fournisseur, les deux autres disent « pas
+   * maintenant ». L'ecran doit alors dire de verifier avant de reessayer.
+   */
+  it.each([500, 503, 408, 429])(
+    "garde le %i en etat inconnu",
+    async (statut) => {
+      const appel = fetchSimule(() => new Response("{}", { status: statut }));
+
+      await expect(
+        client(appel).creer(DEMANDE_DOMICILE),
+      ).rejects.toBeInstanceOf(TransporteurIndisponibleError);
+    },
+  );
 
   /*
    * LE MESSAGE NE REPREND NI L'ADRESSE NI LES CLES, invariant 9, le depot etant
@@ -330,15 +358,16 @@ describe("pannes du transporteur", () => {
 
     /*
      * LE MESSAGE EST FIXE, ET C'EST LA CLASSE QUI L'IMPOSE.
-     * `TransporteurIndisponibleError` prend une CAUSE et non un message : son
-     * `super()` porte toujours « Transporteur indisponible ». Le detail passe
-     * par `cause`, qui ne s'affiche jamais a l'ecran ni au journal.
+     * Les deux classes du transporteur prennent une CAUSE et non un message :
+     * un 400 leve `TransporteurRefusError` depuis LS-296, dont le `super()`
+     * porte toujours « Transporteur refuse ». Le detail passe par `cause`,
+     * journalisee mais limitee aux codes, jamais affichee a l'ecran.
      *
      * Ma premiere version de ce test attendait « réponse 400 » dans le message,
      * ce qui supposait une classe qu'on peut personnaliser : la forme reelle est
      * PLUS sure, aucun appelant ne pouvant faire fuiter un detail par megarde.
      */
-    expect(erreur.message).toBe("Transporteur indisponible");
+    expect(erreur.message).toBe("Transporteur refuse");
     expect(erreur.message).not.toContain("rue de Test");
     expect(erreur.message).not.toContain("cle-secrete-de-test");
     expect(erreur.message).not.toContain("cle-publique-de-test");
