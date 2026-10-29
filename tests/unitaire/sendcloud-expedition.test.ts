@@ -55,8 +55,8 @@ const DEMANDE_RELAIS: DemandeExpedition = {
 /** Une reponse de creation reussie, forme minimale que le module lit. */
 function reponseCreee(id = 42, suivi = "3STEST000001"): Response {
   return new Response(
-    JSON.stringify({ parcel: { id, tracking_number: suivi } }),
-    { status: 200, headers: { "Content-Type": "application/json" } },
+    JSON.stringify({ data: { parcels: [{ id, tracking_number: suivi }] } }),
+    { status: 201, headers: { "Content-Type": "application/json" } },
   );
 }
 
@@ -105,31 +105,43 @@ describe("creation d'un colis", () => {
 
     const corps = JSON.parse(appel.mock.calls[0]![1]!.body as string);
 
-    expect(corps.parcel).toMatchObject({
+    expect(corps.to_address).toMatchObject({
       name: "TEST Camille Dupont",
-      address: "12 rue de Test",
+      address_line_1: "12 rue de Test",
       postal_code: "64170",
       city: "TESTVILLE",
-      country: "FR",
-      order_number: "C-TEST-0001",
+      country_code: "FR",
+      email: "test@example.invalid",
     });
+    expect(corps.order_number).toBe("C-TEST-0001");
+    // L'expediteur passe par son identifiant, jamais par une adresse recopiee
+    // dans le depot, qui est public.
+    expect(corps.from_address).toEqual({ sender_address_id: 914836 });
   });
 
   /*
-   * CRITERE 4, LA METHODE VIENT DU MODE ET N'EST JAMAIS DEVINEE. Un identifiant
-   * faux cree une etiquette au mauvais tarif : la creation REUSSIT, l'etiquette
-   * sort, et l'ecart ne se lit que sur la facture du mois.
+   * CRITERE 4, L'OPTION VIENT DU MODE ET N'EST JAMAIS DEVINEE. Un code faux cree
+   * une etiquette au mauvais tarif : la creation REUSSIT, l'etiquette sort, et
+   * l'ecart ne se lit que sur la facture du mois.
    */
-  it("choisit la methode Mondial Relay du mode demande", async () => {
+  it("choisit l'option Mondial Relay du mode demande", async () => {
     const appel = fetchSimule();
 
     await client(appel).creer(DEMANDE_DOMICILE);
     const domicile = JSON.parse(appel.mock.calls[0]![1]!.body as string);
-    expect(domicile.parcel.shipment).toEqual({ id: 27755 });
+    expect(domicile.ship_with).toEqual({
+      type: "shipping_option_code",
+      properties: {
+        shipping_option_code: "mondial_relay:home_domestic,dualapi/c2c",
+        contract_id: 239536,
+      },
+    });
 
     await client(appel).creer(DEMANDE_RELAIS);
     const relais = JSON.parse(appel.mock.calls[1]![1]!.body as string);
-    expect(relais.parcel.shipment).toEqual({ id: 28035 });
+    expect(relais.ship_with.properties.shipping_option_code).toBe(
+      "mondial_relay:service_point,dualapi/size=l,c2c",
+    );
   });
 
   /*
@@ -142,11 +154,11 @@ describe("creation d'un colis", () => {
 
     await client(appel).creer(DEMANDE_RELAIS);
     const relais = JSON.parse(appel.mock.calls[0]![1]!.body as string);
-    expect(relais.parcel.to_service_point).toBe(123456);
+    expect(relais.to_service_point).toEqual({ id: 123456 });
 
     await client(appel).creer(DEMANDE_DOMICILE);
     const domicile = JSON.parse(appel.mock.calls[1]![1]!.body as string);
-    expect(domicile.parcel).not.toHaveProperty("to_service_point");
+    expect(domicile).not.toHaveProperty("to_service_point");
   });
 
   /*
@@ -166,22 +178,26 @@ describe("creation d'un colis", () => {
     await client(appel).creer(DEMANDE_DOMICILE);
     const corps = JSON.parse(appel.mock.calls[0]![1]!.body as string);
 
-    expect(corps.parcel.weight).toBe((POIDS_DEMANDE / 1000).toFixed(3));
-    expect(corps.parcel.weight).toBe("0.180");
+    expect(corps.parcels).toEqual([
+      { weight: { value: (POIDS_DEMANDE / 1000).toFixed(3), unit: "kg" } },
+    ]);
+    expect(corps.parcels[0].weight.value).toBe("0.180");
   });
 
   /*
-   * L'ETIQUETTE EST DEMANDEE DANS LE MEME APPEL. Sans `request_label`, le colis
-   * existe et est facture, mais aucune etiquette n'est produite : il faudrait
-   * un second appel, pendant lequel un colis paye reste inexpediable.
+   * L'ETIQUETTE EST PRODUITE DANS LE MEME APPEL, par l'annonce SYNCHRONE. La
+   * v3 n'a plus de `request_label` : c'est le chemin `/shipments/announce` qui
+   * cree le colis ET l'etiquette. Le chemin asynchrone `/shipments` rendrait
+   * un colis paye sans numero de suivi au retour, donc inexpediable a l'ecran.
    */
-  it("demande l'etiquette a la creation", async () => {
+  it("passe par l'annonce synchrone de l'API v3", async () => {
     const appel = vi.fn().mockResolvedValue(reponseCreee());
 
     await client(appel).creer(DEMANDE_DOMICILE);
-    const corps = JSON.parse(appel.mock.calls[0]![1]!.body as string);
 
-    expect(corps.parcel.request_label).toBe(true);
+    expect(String(appel.mock.calls[0]![0])).toBe(
+      "https://panel.sendcloud.sc/api/v3/shipments/announce",
+    );
   });
 
   /*
@@ -194,8 +210,8 @@ describe("creation d'un colis", () => {
 
     await client(appel).creer(DEMANDE_DOMICILE);
 
-    expect(String(appel.mock.calls[0]![0])).toBe(
-      "https://panel.sendcloud.sc/api/v2/parcels",
+    expect(new URL(String(appel.mock.calls[0]![0])).host).toBe(
+      "panel.sendcloud.sc",
     );
   });
 
@@ -273,6 +289,54 @@ describe("pannes du transporteur", () => {
   });
 
   /*
+   * LA CAUSE DIT POURQUOI, LS-296, et c'est le defaut que la recette a paye. Un
+   * 403 explicite de Sendcloud se reduisait a « réponse 403 », et le journal
+   * n'en gardait que le nom de classe : trois heures pour une phrase claire.
+   * Elle porte desormais les codes d'erreur et les chemins de champ, jamais le
+   * `detail`, qui peut reprendre la valeur refusee.
+   */
+  it("resume un refus v3 par ses codes et ses champs, sans valeur", async () => {
+    const corps = JSON.stringify({
+      errors: [
+        {
+          status: "400",
+          code: "invalid",
+          detail: "12 rue de Test is not a valid address",
+          source: { pointer: "/to_address/address_line_1" },
+        },
+      ],
+    });
+    const appel = fetchSimule(() => new Response(corps, { status: 400 }));
+
+    const erreur = (await client(appel)
+      .creer(DEMANDE_DOMICILE)
+      .catch((e: unknown) => e)) as Error;
+
+    expect(erreur.cause).toBe(
+      "réponse 400 du transporteur, codes invalid, champs /to_address/address_line_1",
+    );
+    expect(String(erreur.cause)).not.toContain("rue de Test");
+  });
+
+  it("resume le refus v2 qui a bloque la premiere commande", async () => {
+    const corps = JSON.stringify({
+      error: {
+        code: 403,
+        request: "api/v2/parcels",
+        message:
+          "Creating parcels via API v2 is not available for this account.",
+      },
+    });
+    const appel = fetchSimule(() => new Response(corps, { status: 403 }));
+
+    const erreur = (await client(appel)
+      .creer(DEMANDE_DOMICILE)
+      .catch((e: unknown) => e)) as Error;
+
+    expect(erreur.cause).toBe("réponse 403 du transporteur, codes 403");
+  });
+
+  /*
    * UN COLIS SANS NUMERO DE SUIVI EST PAYE MAIS INTROUVABLE : la tache horaire
    * ne pourra jamais le lire, donc `livreA` restera nul, donc le delai de
    * retractation ne demarrera pas et l'invitation a deposer un avis ne partira
@@ -280,7 +344,7 @@ describe("pannes du transporteur", () => {
    */
   it("refuse une reponse sans numero de suivi", async () => {
     const appel = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ parcel: { id: 42 } }), {
+      new Response(JSON.stringify({ data: { parcels: [{ id: 42 }] } }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       }),
@@ -293,10 +357,13 @@ describe("pannes du transporteur", () => {
 
   it("refuse une reponse sans identifiant de colis", async () => {
     const appel = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ parcel: { tracking_number: "3S1" } }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+      new Response(
+        JSON.stringify({ data: { parcels: [{ tracking_number: "3S1" }] } }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
     );
 
     await expect(client(appel).creer(DEMANDE_DOMICILE)).rejects.toBeInstanceOf(
@@ -347,8 +414,8 @@ describe("lecture d'une etiquette", () => {
     const contenu = await client(appel).lireEtiquette(42);
 
     expect(new Uint8Array(contenu)).toEqual(pdf);
-    expect(String(appel.mock.calls[0]![0])).toContain(
-      "/labels/normal_printer/42",
+    expect(String(appel.mock.calls[0]![0])).toBe(
+      "https://panel.sendcloud.sc/api/v3/parcels/42/documents/label?paper_size=A4",
     );
   });
 

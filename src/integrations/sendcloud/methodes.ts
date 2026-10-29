@@ -1,18 +1,23 @@
 /**
- * Correspondance des methodes d'expedition Sendcloud, LS-218.
+ * Correspondance des options d'expedition Sendcloud, LS-218 puis LS-296.
  *
  * CE MODULE NE FAIT AUCUN APPEL RESEAU et ne connait ni Prisma ni la base :
  * c'est une table de correspondance pure, testable sans rien monter, meme
  * decoupage que `statuts.ts` pour le suivi.
  *
- * CE QU'IL DECIDE : quelle methode Sendcloud correspond au mode de livraison
+ * CE QU'IL DECIDE : quelle option Sendcloud correspond au mode de livraison
  * choisi par le client. Ce qu'il ne decide pas : quand une etiquette est creee,
  * qui appartient au service, ni comment elle est payee.
  *
- * LES IDENTIFIANTS VIENNENT DE L'API REELLE, releves le 10 septembre 2026 sur
- * `GET /api/v2/shipping_methods?to_country=FR` avec les cles de production. Ne
- * jamais les inventer : un identifiant faux cree une etiquette au mauvais
- * tarif, et une etiquette creee est FACTUREE, sans mode test chez Sendcloud.
+ * LES CODES VIENNENT DE L'API REELLE, releves le 29 octobre 2026 sur
+ * `POST /api/v3/shipping-options` avec les cles de production, LS-296. Ne
+ * jamais les inventer : un code faux cree une etiquette au mauvais tarif, et
+ * une etiquette creee est FACTUREE, sans mode test chez Sendcloud.
+ *
+ * L'API v2 ET SES IDENTIFIANTS NUMERIQUES SONT ABANDONNES POUR LA CREATION :
+ * Sendcloud refuse `POST /api/v2/parcels` a ce compte, « Creating parcels via
+ * API v2 is not available for this account. Please use API v3. », mesure le
+ * 29 octobre 2026 sur la premiere commande reelle.
  */
 import type { ModeLivraison } from "@/generated/prisma/enums";
 
@@ -28,8 +33,10 @@ import type { ModeLivraison } from "@/generated/prisma/enums";
  *
  * POURQUOI LA BORNE RESTE ICI QUAND LA VALEUR PART EN BASE. Elle n'est pas une
  * decision commerciale : elle decoule des trois identifiants de methode
- * ci-dessous, qui couvrent tous la tranche 0 a 0,251 kg. Le jour ou cette table
- * change de tranche, la borne change avec elle, dans le meme fichier.
+ * de la v2, qui couvraient tous la tranche 0 a 0,251 kg, et le tarif de 4,10 €
+ * annonce au client est celui de cette tranche, ADR-035. La v3 ne decoupe plus
+ * l'option par poids, LS-296, mais le prix reste fonction du poids : la borne
+ * tient le tarif annonce, a confirmer sur la premiere facture Sendcloud.
  *
  * 250 ET NON 251, la borne de Sendcloud etant exclusive, et pour ne pas inviter
  * a s'y coller. La meme valeur vit dans `schemaPoidsColis` et dans
@@ -52,33 +59,51 @@ export const POIDS_COLIS_MAXIMUM_GRAMMES = 250;
 export const POIDS_COLIS_DEFAUT_GRAMMES = 200;
 
 /**
- * Les methodes d'expedition, par mode de livraison, pour la tranche 0-0,25 kg.
+ * Les options d'expedition v3, par mode de livraison.
  *
- * `Record<ModeLivraison, number>` ET NON `Record<string, number>` : un mode
+ * `Record<ModeLivraison, string>` ET NON `Record<string, string>` : un mode
  * ajoute a l'enum fait echouer le `type-check` ici, ce qui empeche une
- * expedition de partir sans methode. C'est le piege deja rencontre quatre fois
+ * expedition de partir sans option. C'est le piege deja rencontre quatre fois
  * sur ce depot, dont `LIBELLES_LIVRAISON` en LS-57.
  *
- * LES METHODES « QR » SONT ECARTEES, deliberement. Sendcloud en propose une
- * variante par mode, ou le client presente un code au point relais au lieu
+ * LES OPTIONS « QR » SONT ECARTEES, deliberement. Sendcloud en propose pour le
+ * Point Relais et le Locker, ou le client presente un code au point au lieu
  * d'une etiquette collee. Elles changent le geste de l'exploitante ET celui du
  * client : ce serait une decision commerciale, pas un detail technique, et
- * personne ne l'a prise. Les methodes retenues produisent une etiquette
+ * personne ne l'a prise. Les options retenues produisent une etiquette
  * imprimable, ce que le parcours actuel suppose.
  *
- * LA TRANCHE EST UNIQUE PARCE QUE LE POIDS EST FORFAITAIRE. Le jour ou un poids
- * par variante existe, cette table devient une fonction du poids et non plus du
- * seul mode, et ces trois identifiants ne seront qu'une ligne de sa grille.
+ * UN CODE COUVRE TOUTE LA PLAGE DE POIDS en v3, 0,011 a 25 kg pour le Locker,
+ * la ou la v2 decoupait en tranches de 250 g. La borne du projet reste
+ * pourtant celle de la tranche la plus legere, voir `POIDS_COLIS_MAXIMUM_GRAMMES` :
+ * c'est le TARIF annonce au client qui en depend, pas l'option.
  */
-export const METHODES_PAR_MODE: Record<ModeLivraison, number> = {
-  /** `Mondial Relay Home Domestic 0-0.25kg`, 0,015 a 0,251 kg, sans point. */
-  DOMICILE: 27755,
-  /** `Mondial Relay Point Relais 0-0.25kg`, point de retrait EXIGE. */
-  POINT_RELAIS: 28035,
-  /** `Mondial Relay Locker Delivery 0-0.25kg`, point de retrait EXIGE. */
-  LOCKER: 29145,
+export const OPTIONS_PAR_MODE: Record<ModeLivraison, string> = {
+  /** `Mondial Relay Home Domestic`, sans point de retrait. */
+  DOMICILE: "mondial_relay:home_domestic,dualapi/c2c",
+  /** `Mondial Relay Point Relais`, point de retrait EXIGE. */
+  POINT_RELAIS: "mondial_relay:service_point,dualapi/size=l,c2c",
+  /** `Mondial Relay Locker Delivery`, point de retrait EXIGE. */
+  LOCKER: "mondial_relay:locker_delivery,dualapi",
 };
 
+/**
+ * Le contrat Mondial Relay du compte, commun aux trois options.
+ *
+ * RELEVE ET NON SUPPOSE, meme appel que les codes. La v3 accepte le code seul,
+ * mais un compte qui porterait un jour deux contrats choisirait alors au
+ * hasard : le nommer rend le choix explicite.
+ */
+export const CONTRAT_MONDIAL_RELAY = 239536;
+
+/**
+ * L'adresse d'expediteur configuree chez Sendcloud, celle de l'atelier.
+ *
+ * `from_address` EST OBLIGATOIRE EN v3, et la passer par son identifiant evite
+ * de recopier l'adresse de l'atelier dans le depot, qui est public. Relevee le
+ * 29 octobre 2026, seule adresse d'expediteur du compte, la meme en v2 et en v3.
+ */
+export const ADRESSE_EXPEDITEUR_ID = 914836;
 /**
  * Ce mode exige-t-il que l'expedition porte un point de retrait ?
  *
@@ -98,14 +123,11 @@ export function methodeExigePointRetrait(mode: ModeLivraison): boolean {
 }
 
 /**
- * L'identifiant de methode Sendcloud pour ce mode.
+ * Le code d'option Sendcloud pour ce mode.
  *
  * IL NE PREND AUCUN POIDS EN PARAMETRE, et c'est voulu tant que le forfait
- * existe : accepter un poids ici laisserait croire que la table le prend en
- * compte, alors qu'elle ne couvre qu'une tranche. Le jour ou le poids varie,
- * cette signature change et tous ses appelants avec, ce qui est exactement ce
- * qu'on veut.
+ * existe : le poids part dans la demande, et l'option ne depend que du mode.
  */
-export function methodePour(mode: ModeLivraison): number {
-  return METHODES_PAR_MODE[mode];
+export function optionPour(mode: ModeLivraison): string {
+  return OPTIONS_PAR_MODE[mode];
 }

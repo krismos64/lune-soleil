@@ -1354,6 +1354,16 @@ test.describe("création d'étiquette, file de préparation", () => {
     await expect(
       page.getByText(/momentanément indisponible/).first(),
     ).toBeVisible();
+
+    /*
+     * LE MESSAGE EST DANS L'ECRAN, ET PAS SEULEMENT DANS LA PAGE, LS-296. Il
+     * etait rendu sous le formulaire manuel : `toBeVisible` passait a toutes
+     * les largeurs pendant qu'a 320 px l'exploitante ne voyait rien, cinq clics
+     * en recette le 29 octobre 2026. Il vit desormais sous son bouton.
+     */
+    await expect(
+      page.locator('[id^="message-etiquette-"]').first(),
+    ).toBeInViewport();
     await expect(
       page.getByRole("button", { name: "Déclarer expédiée" }).first(),
     ).toBeEnabled();

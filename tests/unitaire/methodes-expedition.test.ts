@@ -14,52 +14,56 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  METHODES_PAR_MODE,
+  OPTIONS_PAR_MODE,
   POIDS_COLIS_DEFAUT_GRAMMES,
   POIDS_COLIS_MAXIMUM_GRAMMES,
   methodeExigePointRetrait,
-  methodePour,
+  optionPour,
 } from "@/integrations/sendcloud/methodes";
 
-describe("methodePour", () => {
+describe("optionPour", () => {
   /*
-   * LES TROIS IDENTIFIANTS SONT FIGES, releves sur
-   * `GET /api/v2/shipping_methods?to_country=FR` le 10 septembre 2026. Les
-   * ecrire ici est ce qui rend un changement VOLONTAIRE : modifier la table
-   * sans modifier ce test fait rougir, et c'est le but.
+   * LES TROIS CODES SONT FIGES, releves sur `POST /api/v3/shipping-options` le
+   * 29 octobre 2026, LS-296. Les ecrire ici est ce qui rend un changement
+   * VOLONTAIRE : modifier la table sans modifier ce test fait rougir, et c'est
+   * le but.
    */
-  it("rend la methode Mondial Relay Home Domestic au domicile", () => {
-    expect(methodePour("DOMICILE")).toBe(27755);
+  it("rend l'option Mondial Relay Home Domestic au domicile", () => {
+    expect(optionPour("DOMICILE")).toBe(
+      "mondial_relay:home_domestic,dualapi/c2c",
+    );
   });
 
-  it("rend la methode Mondial Relay Point Relais en point de retrait", () => {
-    expect(methodePour("POINT_RELAIS")).toBe(28035);
+  it("rend l'option Mondial Relay Point Relais en point de retrait", () => {
+    expect(optionPour("POINT_RELAIS")).toBe(
+      "mondial_relay:service_point,dualapi/size=l,c2c",
+    );
   });
 
-  it("rend la methode Mondial Relay Locker Delivery en locker", () => {
-    expect(methodePour("LOCKER")).toBe(29145);
-  });
-
-  /*
-   * TROIS METHODES DISTINCTES. Deux modes qui partageraient un identifiant
-   * feraient partir un colis sous le mauvais tarif sans qu'aucun autre test ne
-   * le voie : la creation reussirait, l'etiquette sortirait, et l'ecart ne se
-   * lirait que sur la facture.
-   */
-  it("rend un identifiant distinct par mode", () => {
-    const identifiants = Object.values(METHODES_PAR_MODE);
-    expect(new Set(identifiants).size).toBe(identifiants.length);
+  it("rend l'option Mondial Relay Locker Delivery en locker", () => {
+    expect(optionPour("LOCKER")).toBe("mondial_relay:locker_delivery,dualapi");
   });
 
   /*
-   * AUCUN IDENTIFIANT NUL OU NEGATIF. Une table remplie a la hate, ou un mode
-   * ajoute a l'enum sans sa methode, produirait `undefined` : le `type-check`
-   * l'attrape a la compilation, ce test le fige a l'execution.
+   * TROIS OPTIONS DISTINCTES. Deux modes qui partageraient un code feraient
+   * partir un colis sous le mauvais tarif sans qu'aucun autre test ne le voie :
+   * la creation reussirait, l'etiquette sortirait, et l'ecart ne se lirait que
+   * sur la facture.
    */
-  it("ne rend jamais un identifiant absent", () => {
-    for (const identifiant of Object.values(METHODES_PAR_MODE)) {
-      expect(Number.isInteger(identifiant)).toBe(true);
-      expect(identifiant).toBeGreaterThan(0);
+  it("rend un code distinct par mode", () => {
+    const codes = Object.values(OPTIONS_PAR_MODE);
+    expect(new Set(codes).size).toBe(codes.length);
+  });
+
+  /*
+   * AUCUNE OPTION « QR » : elles remplacent l'etiquette collee par un code a
+   * presenter, ce qui change le geste de l'exploitante et du client. Leur code
+   * porte `labelless` ou `_qr`, et personne n'a pris cette decision.
+   */
+  it("n'emploie aucune option sans etiquette", () => {
+    for (const code of Object.values(OPTIONS_PAR_MODE)) {
+      expect(code.startsWith("mondial_relay:")).toBe(true);
+      expect(code).not.toMatch(/labelless|_qr/);
     }
   });
 });
@@ -103,9 +107,10 @@ describe("les bornes de poids et le defaut", () => {
 
   /*
    * LA BORNE DE TRANCHE EST 251 g CHEZ SENDCLOUD, `max_weight` valant 0,251 kg
-   * sur les trois methodes retenues. La borne du projet doit rester DANS la
-   * tranche, sans quoi un poids accepte partirait sur une methode qui ne le
-   * couvre pas et le transporteur facturerait un rattrapage.
+   * sur les trois methodes v2. La v3 ne decoupe plus l'option par poids,
+   * LS-296, mais le tarif de 4,10 € annonce au client reste celui de cette
+   * tranche : un poids au-dela partirait sous un tarif plus cher que celui
+   * annonce, et le transporteur facturerait la difference.
    */
   it("tient dans la tranche la plus legere de Sendcloud", () => {
     expect(POIDS_COLIS_MAXIMUM_GRAMMES).toBeLessThan(251);

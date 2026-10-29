@@ -91,6 +91,18 @@ export function FormulaireExpedition({
    */
   const [etiquetteEnCours, demarrerEtiquette] = useTransition();
 
+  /*
+   * L'ETIQUETTE A SON PROPRE MESSAGE, pose sous son bouton, LS-296. Il partageait
+   * la region du formulaire manuel, rendue tout en bas de la carte : a 320 px,
+   * le refus tombait sous le formulaire entier, hors de l'ecran, et
+   * l'exploitante a vu « rien ne se passe » sur cinq clics, en recette le
+   * 29 octobre 2026. Un message doit paraitre la ou le geste a eu lieu.
+   */
+  const [messageEtiquette, setMessageEtiquette] = useState<{
+    texte: string;
+    erreur: boolean;
+  } | null>(null);
+
   /** L'identifiant du colis cree, qui ouvre le lien de telechargement. */
   const [colisCree, setColisCree] = useState<number | null>(null);
 
@@ -120,6 +132,7 @@ export function FormulaireExpedition({
   const idSuivi = `suivi-${commandeId}`;
   const idPointRelais = `point-relais-${commandeId}`;
   const idMessage = `message-expedition-${commandeId}`;
+  const idMessageEtiquette = `message-etiquette-${commandeId}`;
   const idAideMode = `aide-mode-${commandeId}`;
 
   /**
@@ -141,7 +154,7 @@ export function FormulaireExpedition({
           setDeclaree(true);
           setColisCree(resultat.identifiantColis);
           conteneur.current?.focus();
-          setMessage({
+          setMessageEtiquette({
             texte:
               `Étiquette créée pour la commande ${numero}, numéro de suivi ` +
               `${resultat.numeroSuivi}. Télécharger l'étiquette ci-dessous, ` +
@@ -156,7 +169,7 @@ export function FormulaireExpedition({
          * perde : inviter a recliquer ferait acheter une seconde etiquette.
          */
         case "TRANSPORTEUR_INDISPONIBLE":
-          setMessage({
+          setMessageEtiquette({
             texte:
               "Le transporteur n'a pas répondu. Le colis a peut-être été créé " +
               "malgré tout : vérifier sur Sendcloud avant de réessayer, sinon " +
@@ -165,7 +178,7 @@ export function FormulaireExpedition({
           });
           break;
         case "POINT_RETRAIT_MANQUANT":
-          setMessage({
+          setMessageEtiquette({
             texte:
               "Cette commande est en point de retrait mais n'en porte aucun. " +
               "Créer l'étiquette sur Sendcloud et saisir le numéro ci-dessous.",
@@ -173,12 +186,12 @@ export function FormulaireExpedition({
           });
           break;
         case "ADRESSE_INEXPLOITABLE":
-          setMessage({ texte: resultat.message, erreur: true });
+          setMessageEtiquette({ texte: resultat.message, erreur: true });
           break;
         case "DEJA_EXPEDIEE":
           setDeclaree(true);
           conteneur.current?.focus();
-          setMessage({
+          setMessageEtiquette({
             texte:
               "Cette commande porte déjà une expédition, aucune étiquette n'a " +
               "été créée ni facturée. Rafraîchir la page.",
@@ -188,7 +201,7 @@ export function FormulaireExpedition({
         case "STATUT_INCOMPATIBLE":
           setDeclaree(true);
           conteneur.current?.focus();
-          setMessage({
+          setMessageEtiquette({
             texte:
               `Action impossible, la commande est « ${LIBELLES_STATUT[resultat.statutActuel]} ». ` +
               "Aucune étiquette n'a été créée. Rafraîchir la page.",
@@ -196,19 +209,22 @@ export function FormulaireExpedition({
           });
           break;
         case "INVALIDE":
-          setMessage({ texte: resultat.message, erreur: true });
+          setMessageEtiquette({ texte: resultat.message, erreur: true });
           break;
         case "SESSION_ABSENTE":
-          setMessage({
+          setMessageEtiquette({
             texte: "Session expirée. Se reconnecter pour continuer.",
             erreur: true,
           });
           break;
         case "INTROUVABLE":
-          setMessage({ texte: "Cette commande n'existe plus.", erreur: true });
+          setMessageEtiquette({
+            texte: "Cette commande n'existe plus.",
+            erreur: true,
+          });
           break;
         case "INDISPONIBLE":
-          setMessage({
+          setMessageEtiquette({
             texte: "Le service est momentanément indisponible. Réessayer.",
             erreur: true,
           });
@@ -345,12 +361,28 @@ export function FormulaireExpedition({
           onClick={creerLEtiquette}
           className={styles.bouton}
           disabled={etiquetteEnCours || enCours || declaree}
-          aria-describedby={idMessage}
+          aria-describedby={idMessageEtiquette}
         >
           {etiquetteEnCours
             ? "Création en cours…"
             : "Créer l'étiquette et expédier"}
         </button>
+
+        {/*
+         * LA REGION EST TOUJOURS PRESENTE, MEME VIDE, et sans `aria-label`, pour
+         * les memes raisons que celle du formulaire manuel plus bas : une region
+         * inseree avec son contenu n'est pas lue, et un nom annulerait la
+         * description du bouton qui pointe ici, C39.
+         */}
+        <p
+          id={idMessageEtiquette}
+          className={`${styles.message} ${messageEtiquette?.erreur === true ? styles.messageErreur : ""}`}
+          role="status"
+        >
+          {etiquetteEnCours
+            ? "Création de l'étiquette en cours…"
+            : (messageEtiquette?.texte ?? "")}
+        </p>
 
         {/*
          * LE LIEN N'APPARAIT QU'APRES LA CREATION, et il porte `download` : une
@@ -515,12 +547,11 @@ export function FormulaireExpedition({
          * meme instant, et un element desactive qui change de texte n'est pas
          * annonce, ayant de surcroit perdu le focus. Releve par la revue
          * frontend le 10 septembre 2026.
+         *
+         * L'ATTENTE DE L'ETIQUETTE VIT DEPUIS LS-296 dans sa propre region,
+         * sous son bouton : celle-ci ne porte plus que la declaration manuelle.
          */}
-        {etiquetteEnCours
-          ? "Création de l'étiquette en cours…"
-          : enCours
-            ? "Déclaration en cours…"
-            : (message?.texte ?? "")}
+        {enCours ? "Déclaration en cours…" : (message?.texte ?? "")}
       </p>
     </div>
   );
