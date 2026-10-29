@@ -19,7 +19,7 @@
  *     peuvent pas produire deux lignes. La garde applicative seule laisserait
  *     une fenetre pendant l'appel reseau, qui dure des secondes
  *
- * IL NE DECIDE RIEN D'AUTRE : `methodes.ts` dit quelle methode correspond au
+ * IL NE DECIDE RIEN D'AUTRE : `methodes.ts` dit quelle option correspond au
  * mode, le service dit quand creer et quoi en faire. Un module qui ferait les
  * trois melangerait la forme de l'API a une regle metier.
  *
@@ -27,13 +27,22 @@
  * `servicepoints.sendcloud.sc` qui porte les points de retrait. Se tromper
  * d'hote rend un 404 qu'on lit a tort comme une cle invalide, mesure le
  * 10 septembre 2026.
+ *
+ * API v3 DEPUIS LS-296, le 29 octobre 2026. La v2 rendait 403 a la creation sur
+ * ce compte, « Creating parcels via API v2 is not available for this account.
+ * Please use API v3. » : la premiere commande reelle n'a pas pu partir. Le
+ * suivi, `suivi.ts`, lit encore la v2, qui repond en lecture.
  */
 import type { ModeLivraison } from "@/generated/prisma/enums";
 
 import { TransporteurIndisponibleError } from "./index";
-import { methodePour } from "./methodes";
+import {
+  ADRESSE_EXPEDITEUR_ID,
+  CONTRAT_MONDIAL_RELAY,
+  optionPour,
+} from "./methodes";
 
-const BASE_EXPEDITION = "https://panel.sendcloud.sc/api/v2";
+const BASE_EXPEDITION = "https://panel.sendcloud.sc/api/v3";
 
 /**
  * Delai au-dela duquel le transporteur est tenu pour indisponible.
@@ -124,14 +133,68 @@ export type IdentifiantsExpedition = {
  * FORME MINIMALE ET NON EXHAUSTIVE : le projet ne lit que ce dont il a besoin.
  * Decrire toute la reponse ferait dependre le `type-check` de champs que le
  * fournisseur peut ajouter ou retirer sans prevenir.
+ *
+ * LA v3 ENVELOPPE DANS `data` et rend un TABLEAU de colis, un envoi pouvant en
+ * porter quinze. Le projet n'en cree qu'un, et en lit donc le premier.
  */
 type ReponseCreation = {
-  parcel?: {
-    id?: number;
-    tracking_number?: string;
-    label?: { label_printer?: string; normal_printer?: string[] };
+  data?: {
+    parcels?: { id?: number; tracking_number?: string | null }[];
   };
 };
+
+/**
+ * Le resume d'un refus, sans aucune valeur venue de la demande.
+ *
+ * LE CODE HTTP, LES CODES D'ERREUR ET LES CHEMINS DE CHAMP SEULEMENT, invariant
+ * 9 et minimisation : le `detail` et le `message` de Sendcloud reprennent
+ * parfois la valeur refusee, donc l'adresse du client. Un chemin comme
+ * `/to_address/postal_code` dit quel champ corriger sans dire ce qu'il valait.
+ *
+ * IL EXISTE PARCE QU'UN 403 EXPLICITE A COUTE TROIS HEURES, LS-296 : la cause
+ * se reduisait a « réponse 403 », et le journal n'en gardait que le nom de
+ * classe. Les deux formes d'erreur de Sendcloud sont lues, `errors[]` de la v3
+ * et `error.code` de la v2.
+ */
+export async function resumerRefus(reponse: Response): Promise<string> {
+  let corps: unknown;
+
+  try {
+    corps = await reponse.json();
+  } catch {
+    return `réponse ${reponse.status} du transporteur`;
+  }
+
+  const codes: string[] = [];
+  const champs: string[] = [];
+  const objet = (corps ?? {}) as {
+    errors?: { code?: unknown; source?: { pointer?: unknown } }[];
+    error?: { code?: unknown };
+  };
+
+  for (const erreur of Array.isArray(objet.errors) ? objet.errors : []) {
+    if (typeof erreur?.code === "string" || typeof erreur?.code === "number") {
+      codes.push(String(erreur.code));
+    }
+    if (typeof erreur?.source?.pointer === "string") {
+      champs.push(erreur.source.pointer);
+    }
+  }
+  if (
+    typeof objet.error?.code === "string" ||
+    typeof objet.error?.code === "number"
+  ) {
+    codes.push(String(objet.error.code));
+  }
+
+  return [
+    `réponse ${reponse.status} du transporteur`,
+    codes.length > 0 ? `codes ${codes.join(", ")}` : null,
+    champs.length > 0 ? `champs ${champs.join(", ")}` : null,
+  ]
+    .filter((partie): partie is string => partie !== null)
+    .join(", ");
+}
 
 /** Enveloppe une promesse d'un delai maximum, sans laisser l'appel courir. */
 async function avecDelaiMaximum<T>(
@@ -174,45 +237,66 @@ export function creerClientExpeditionSendcloud({
   return {
     async creer(demande) {
       /*
-       * LE CORPS SUIT LA FORME DE L'API v2, relevee le 10 septembre 2026. Les
-       * noms de champs ne sont PAS supposes : `request_label` a `true` demande
-       * l'etiquette dans le meme appel, ce qui evite un second aller-retour
-       * pendant lequel le colis existerait sans etiquette.
+       * LE CORPS SUIT LA FORME DE L'API v3, `POST /shipments/announce`, relevee
+       * le 29 octobre 2026. L'annonce SYNCHRONE cree le colis ET son etiquette
+       * dans le meme appel, ce qui evite un second aller-retour pendant lequel
+       * le colis existerait sans etiquette.
        *
-       * `weight` EST EN KILOGRAMMES ET EN CHAINE, forme attendue par Sendcloud.
-       * Le projet raisonne en grammes entiers, invariant 1 dans l'esprit : la
-       * conversion vit ICI, au bord, et nulle part ailleurs.
+       * LE POIDS PART EN KILOGRAMMES ET EN CHAINE, `{ value, unit }`. Le projet
+       * raisonne en grammes entiers, invariant 1 dans l'esprit : la conversion
+       * vit ICI, au bord, et nulle part ailleurs.
+       *
+       * `order_number` PORTE LE NUMERO DE COMMANDE, lisible dans le panneau
+       * Sendcloud : c'est par lui que l'exploitante retrouve un colis.
        */
       const corps = {
-        parcel: {
+        from_address: { sender_address_id: ADRESSE_EXPEDITEUR_ID },
+        to_address: {
           name: demande.adresse.nom,
-          address: demande.adresse.ligne1,
-          address_2: demande.adresse.ligne2 ?? "",
-          city: demande.adresse.ville,
+          address_line_1: demande.adresse.ligne1,
+          ...(demande.adresse.ligne2
+            ? { address_line_2: demande.adresse.ligne2 }
+            : {}),
           postal_code: demande.adresse.codePostal,
-          country: demande.adresse.pays,
+          city: demande.adresse.ville,
+          country_code: demande.adresse.pays,
           email: demande.adresse.email,
-          telephone: demande.adresse.telephone ?? "",
-          order_number: demande.reference,
-          weight: (demande.poidsGrammes / 1000).toFixed(3),
-          request_label: true,
-          shipment: { id: methodePour(demande.mode) },
-          /*
-           * LE POINT DE RETRAIT N'EST POSE QUE S'IL EXISTE. Envoyer
-           * `to_service_point: null` au domicile fait echouer la creation chez
-           * certains transporteurs, et le champ absent est la forme sure.
-           */
-          ...(demande.pointRetraitId
-            ? { to_service_point: Number(demande.pointRetraitId) }
+          ...(demande.adresse.telephone
+            ? { phone_number: demande.adresse.telephone }
             : {}),
         },
+        ship_with: {
+          type: "shipping_option_code",
+          properties: {
+            shipping_option_code: optionPour(demande.mode),
+            contract_id: CONTRAT_MONDIAL_RELAY,
+          },
+        },
+        order_number: demande.reference,
+        parcels: [
+          {
+            weight: {
+              value: (demande.poidsGrammes / 1000).toFixed(3),
+              unit: "kg",
+            },
+          },
+        ],
+        /*
+         * LE POINT DE RETRAIT N'EST POSE QUE S'IL EXISTE. Au domicile, le champ
+         * absent est la forme sure. `id` est l'identifiant SENDCLOUD du point,
+         * celui que le tunnel recoit de l'API des points de retrait, et non
+         * celui du transporteur.
+         */
+        ...(demande.pointRetraitId
+          ? { to_service_point: { id: Number(demande.pointRetraitId) } }
+          : {}),
       };
 
       let reponse: Response;
 
       try {
         reponse = await avecDelaiMaximum(
-          appeler(`${BASE_EXPEDITION}/parcels`, {
+          appeler(`${BASE_EXPEDITION}/shipments/announce`, {
             method: "POST",
             headers: {
               Accept: "application/json",
@@ -240,12 +324,11 @@ export function creerClientExpeditionSendcloud({
 
       if (!reponse.ok) {
         /*
-         * LE CORPS D'ERREUR N'EST PAS REPRIS, invariant 9 : Sendcloud y renvoie
-         * les champs refuses, donc l'adresse. Seul le code sort.
+         * LE CORPS D'ERREUR N'EST PAS REPRIS TEL QUEL, invariant 9 : Sendcloud y
+         * renvoie les champs refuses, donc l'adresse. `resumerRefus` n'en garde
+         * que les codes et les chemins de champ.
          */
-        throw new TransporteurIndisponibleError(
-          `réponse ${reponse.status} du transporteur`,
-        );
+        throw new TransporteurIndisponibleError(await resumerRefus(reponse));
       }
 
       let contenu: ReponseCreation;
@@ -258,8 +341,9 @@ export function creerClientExpeditionSendcloud({
         );
       }
 
-      const identifiantColis = contenu.parcel?.id;
-      const numeroSuivi = contenu.parcel?.tracking_number;
+      const colis = contenu.data?.parcels?.[0];
+      const identifiantColis = colis?.id;
+      const numeroSuivi = colis?.tracking_number;
 
       /*
        * LES DEUX CHAMPS SONT EXIGES, ET UNE ABSENCE EST UNE PANNE. Un colis
@@ -288,8 +372,13 @@ export function creerClientExpeditionSendcloud({
 
       try {
         reponse = await avecDelaiMaximum(
+          /*
+           * A4 ET NON A6, le format par defaut d'une etiquette en v3 : la v2
+           * servait `normal_printer`, une feuille A4, et l'atelier imprime sur
+           * une imprimante de bureau. Le PDF n'existe qu'a 72 dpi.
+           */
           appeler(
-            `${BASE_EXPEDITION}/labels/normal_printer/${identifiantColis}`,
+            `${BASE_EXPEDITION}/parcels/${identifiantColis}/documents/label?paper_size=A4`,
             {
               headers: {
                 Accept: "application/pdf",
@@ -304,9 +393,7 @@ export function creerClientExpeditionSendcloud({
       }
 
       if (!reponse.ok) {
-        throw new TransporteurIndisponibleError(
-          `réponse ${reponse.status} du transporteur`,
-        );
+        throw new TransporteurIndisponibleError(await resumerRefus(reponse));
       }
 
       return reponse.arrayBuffer();

@@ -578,8 +578,15 @@ export async function creerEtiquetteExpedition({
     });
   } catch (erreur) {
     if (erreur instanceof TransporteurIndisponibleError) {
+      /*
+       * LA CAUSE EST JOURNALISEE, LS-296 : elle ne porte que le code HTTP, les
+       * codes d'erreur et les chemins de champ, jamais une valeur, voir
+       * `resumerRefus`. Sans elle, un 403 explicite de Sendcloud ne laissait au
+       * journal que le nom de classe, et trois heures de diagnostic.
+       */
       journaliserErreur("création d'étiquette refusée", erreur, {
         commandeId: identifiant,
+        cause: typeof erreur.cause === "string" ? erreur.cause : null,
       });
       return { statut: "TRANSPORTEUR_INDISPONIBLE" };
     }

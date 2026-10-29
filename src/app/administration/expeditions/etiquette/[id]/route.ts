@@ -149,7 +149,11 @@ export async function GET(
       journaliserErreur(
         "Lecture d'étiquette impossible",
         erreur,
-        { colis: identifiantColis },
+        {
+          colis: identifiantColis,
+          // Codes seulement, jamais une valeur, voir `resumerRefus`, LS-296.
+          cause: typeof erreur.cause === "string" ? erreur.cause : null,
+        },
         correlation,
       );
 
