@@ -79,9 +79,7 @@ export async function incrementerCompteur(
   cle: string,
   fenetreSecondes: number,
 ): Promise<EtatCompteur> {
-  const lignes = await client.$queryRaw<
-    { compte: number; derniere_a: Date }[]
-  >`
+  const lignes = await client.$queryRaw<{ compte: number; derniere_a: Date }[]>`
     INSERT INTO compteur_limitation (id, cle, compte, derniere_a)
     VALUES (gen_random_uuid()::text, ${cle}, 1, now())
     ON CONFLICT (cle) DO UPDATE
