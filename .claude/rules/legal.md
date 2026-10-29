@@ -372,6 +372,35 @@ Cette obligation vise l'email de confirmation et la facture, pas l'écran de
 récapitulatif. Ne pas confondre les deux : satisfaire L221-14 à l'écran ne
 dispense pas de L221-13 après la commande, et l'inverse est vrai aussi.
 
+## Identité de l'émetteur, nom légal et marque, LS-297
+
+Vérifié aux sources le **29 octobre 2026** : article **R526-27** du Code de
+commerce sur Légifrance, et la fiche F31808 de service-public.fr (mise à jour
+du 11 août 2026), qui en tire « nom et prénom de l'entrepreneur individuel
+précédé ou suivi de la mention "Entrepreneur individuel ou EI" » parmi les
+mentions de facture. La fiche dédiée aux micro-entrepreneurs, N31384, n'a pas
+été relue.
+
+| Où | Ce qui s'affiche | Source |
+|---|---|---|
+| facture et avoir, version 2 | « Lune-soleil » en titre, puis la dénomination « Nom Prénom EI » en petit | R526-27, `denominationLegale` |
+| `/informations-legales` | nom commercial et dénomination « EI » | R526-27, article 6 de la LCEN |
+| tout autre écran, email ou document | **la marque seule**, jamais le nom de l'exploitante | arbitrage de Christophe |
+
+**Arbitrage de Christophe du 29 octobre 2026.** L'exploitante demandait que son
+nom disparaisse des factures. Après lecture des deux textes, il est gardé en
+petit **là où la loi l'exige et nulle part ailleurs**, la marque en titre. Le
+retirer de la page légale exposait à l'article 6 de la LCEN (un an et 75 000 €,
+version en vigueur non relue) ; de la facture, à R526-27.
+
+**La mention « EI » se fige à l'émission**, `emetteurPourDocument`, dans
+l'instantané de version 2 : la dériver au rendu changerait l'apparence d'un
+document déjà émis. **F-2026-0001, émise avant, ne la porte pas et ne se modifie
+pas**, invariant 4. Un avoir émis sur elle la porte, étant un document neuf.
+
+**Le nom commercial est `NOM_BOUTIQUE`, « Lune-soleil »**, graphie du logo,
+ADR-022, gardée par `verifier-graphie-marque.sh`.
+
 ## Facturation électronique
 
 **Les factures aux clients particuliers ne relèvent pas de la facturation

@@ -45,7 +45,8 @@ import {
   marquerRembourse,
 } from "@/repositories/paiement";
 import { VERSION_INSTANTANE_LEGAL } from "@/lib/validation";
-import type { InstantaneLegal } from "@/lib/validation";
+import type { InstantaneLegal, InstantaneLegalCourant } from "@/lib/validation";
+import { emetteurPourDocument } from "@/services/facture";
 import {
   AutorisationRefuseeError,
   exigerAdministratrice,
@@ -651,13 +652,21 @@ function construireInstantaneAvoir(parametres: {
   numeroFacture: string;
   montantRenduCentimes: number;
   motif: string;
-}): InstantaneLegal {
+}): InstantaneLegalCourant {
   const { instantaneFacture, numeroFacture, montantRenduCentimes, motif } =
     parametres;
 
   return {
     ...instantaneFacture,
     version: VERSION_INSTANTANE_LEGAL,
+    /*
+     * L'AVOIR EST TOUJOURS EN VERSION COURANTE, LS-297, meme quand sa facture
+     * est en version 1 : c'est un document emis aujourd'hui, qui doit porter la
+     * mention « EI » d'aujourd'hui. L'IDENTITE reste celle figee sur la
+     * facture, seuls le nom commercial et la denomination s'y ajoutent ; la
+     * facture d'origine, elle, n'est pas touchee.
+     */
+    emetteur: emetteurPourDocument(instantaneFacture.emetteur),
     /*
      * LES MENTIONS PORTENT LE LIEN VERS LA FACTURE CORRIGEE. Un avoir qui ne
      * nomme pas son document d'origine est inexploitable a la lecture, et le

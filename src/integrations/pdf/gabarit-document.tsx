@@ -120,7 +120,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 24,
   },
-  titre: { fontSize: 16, fontWeight: 700 },
+  /*
+   * LA HAUTEUR DE LIGNE EST PROPRE AU TITRE, LS-297. Sans elle, il heritait les
+   * 1,5 x 9 points de la page, 13,5 points pour un texte de 16 : le nom
+   * chevauchait la ligne d'adresse, releve sur F-2026-0001. Un reglage de mise
+   * en page, le contenu d'un document emis n'en change pas.
+   */
+  titre: { fontSize: 16, fontWeight: 700, lineHeight: 1.3, marginBottom: 2 },
+  /** La denomination legale sous la marque, en petit, LS-297. */
+  denomination: { fontSize: 8, color: COULEUR_ATTENUEE },
   numero: { fontSize: 11, fontWeight: 700 },
   bloc: { marginBottom: 16 },
   blocTitre: {
@@ -215,12 +223,33 @@ export function GabaritDocument({
   return (
     <Document
       title={`${enTete.intitule} ${enTete.numero}`}
-      author={emetteur.raisonSociale}
+      author={
+        instantane.version === 1
+          ? emetteur.raisonSociale
+          : instantane.emetteur.denomination
+      }
     >
       <Page size="A4" style={styles.page}>
         <View style={styles.entete}>
           <View>
-            <Text style={styles.titre}>{emetteur.raisonSociale}</Text>
+            {/*
+             * DEUX FORMES, CHOISIES PAR LA VERSION DE L'INSTANTANE ET JAMAIS PAR
+             * LA DATE DU JOUR, LS-297. Une version 1 se reimprime telle qu'emise,
+             * invariant 4 ; une version 2 porte la marque en titre et la
+             * denomination legale figee, article R526-27.
+             */}
+            {instantane.version === 1 ? (
+              <Text style={styles.titre}>{emetteur.raisonSociale}</Text>
+            ) : (
+              <>
+                <Text style={styles.titre}>
+                  {instantane.emetteur.nomCommercial}
+                </Text>
+                <Text style={styles.denomination}>
+                  {instantane.emetteur.denomination}
+                </Text>
+              </>
+            )}
             <Text>{emetteur.adresse}</Text>
             <Text>SIRET {emetteur.siret}</Text>
             <Text>{emetteur.emailContact}</Text>
