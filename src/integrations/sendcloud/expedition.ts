@@ -137,11 +137,33 @@ export type IdentifiantsExpedition = {
  * LA v3 ENVELOPPE DANS `data` et rend un TABLEAU de colis, un envoi pouvant en
  * porter quinze. Le projet n'en cree qu'un, et en lit donc le premier.
  */
-type ReponseCreation = {
-  data?: {
-    parcels?: { id?: number; tracking_number?: string | null }[];
-  };
+type ColisRendu = {
+  id?: number;
+  tracking_number?: string | null;
+  status?: { code?: string };
 };
+
+type EnvoiRendu = {
+  parcels?: ColisRendu[];
+  errors?: { code?: unknown }[];
+};
+
+/**
+ * LE 201 PORTE `data`, LE 409 PEUT RENDRE L'ENVOI A LA RACINE, la specification
+ * decrivant le second sans l'enveloppe. Les deux formes sont lues.
+ */
+type ReponseCreation = EnvoiRendu & { data?: EnvoiRendu };
+
+/**
+ * Le seul statut d'un colis annonce et expediable.
+ *
+ * LISTE BLANCHE ET NON LISTE NOIRE, LS-296, revue critique : une annonce que
+ * Mondial Relay refuse revient en 201 AVEC un numero de suivi, statut
+ * `ANNOUNCEMENT_FAILED`, exemple de la specification v3. Ne lire que l'identifiant
+ * et le numero l'aurait enregistree comme expediee, email au client compris,
+ * pour un colis que le transporteur ne connait pas. Tout autre statut leve.
+ */
+const STATUT_COLIS_EXPEDIABLE = "READY_TO_SEND";
 
 /**
  * Le resume d'un refus, sans aucune valeur venue de la demande.
@@ -273,6 +295,22 @@ export function creerClientExpeditionSendcloud({
           },
         },
         order_number: demande.reference,
+        /*
+         * LA REFERENCE EXTERNE FERME LE DOUBLE ACHAT CHEZ LE FOURNISSEUR, LS-296.
+         * Sendcloud la veut unique par compte, et une seconde annonce sous la
+         * meme reference rend 409 avec l'envoi EXISTANT, sans rien creer ni
+         * facturer. Un double clic, deux onglets ou une reponse perdue suivie
+         * d'un nouvel essai retombent donc sur la premiere etiquette.
+         *
+         * LE NUMERO DE COMMANDE ET NON SON IDENTIFIANT : unique lui aussi, et
+         * lisible dans le panneau Sendcloud a cote d'`order_number`.
+         *
+         * CONSEQUENCE ASSUMEE : un envoi reste en echec d'annonce bloque la
+         * reference, le 409 le rend et le controle de statut ci-dessous le
+         * refuse. Il faut l'annuler sur Sendcloud avant de reessayer, ce qui
+         * est le sens sur.
+         */
+        external_reference_id: demande.reference,
         parcels: [
           {
             weight: {
@@ -322,7 +360,12 @@ export function creerClientExpeditionSendcloud({
         );
       }
 
-      if (!reponse.ok) {
+      /*
+       * LE 409 N'EST PAS UNE PANNE : c'est l'envoi deja annonce sous cette
+       * reference, rendu sans rien creer. Il passe par les memes controles
+       * qu'une creation, statut compris.
+       */
+      if (!reponse.ok && reponse.status !== 409) {
         /*
          * LE CORPS D'ERREUR N'EST PAS REPRIS TEL QUEL, invariant 9 : Sendcloud y
          * renvoie les champs refuses, donc l'adresse. `resumerRefus` n'en garde
@@ -341,9 +384,37 @@ export function creerClientExpeditionSendcloud({
         );
       }
 
-      const colis = contenu.data?.parcels?.[0];
+      const envoi = contenu.data ?? contenu;
+      const colis = envoi.parcels?.[0];
       const identifiantColis = colis?.id;
       const numeroSuivi = colis?.tracking_number;
+
+      /*
+       * UNE ANNONCE ECHOUEE EST UNE PANNE, MEME EN 201, voir
+       * `STATUT_COLIS_EXPEDIABLE`. Les codes d'erreur de l'envoi appartiennent a
+       * une liste fermee de la specification et ne portent aucune valeur : ils
+       * vont dans la cause, comme ceux de `resumerRefus`.
+       */
+      const codesErreur = (Array.isArray(envoi.errors) ? envoi.errors : [])
+        .map((erreur) => erreur?.code)
+        .filter(
+          (code): code is string | number =>
+            typeof code === "string" || typeof code === "number",
+        )
+        .map(String);
+      const statut = colis?.status?.code;
+
+      if (codesErreur.length > 0 || statut !== STATUT_COLIS_EXPEDIABLE) {
+        throw new TransporteurIndisponibleError(
+          [
+            `réponse ${reponse.status} du transporteur`,
+            `statut ${typeof statut === "string" ? statut : "absent"}`,
+            codesErreur.length > 0 ? `codes ${codesErreur.join(", ")}` : null,
+          ]
+            .filter((partie): partie is string => partie !== null)
+            .join(", "),
+        );
+      }
 
       /*
        * LES DEUX CHAMPS SONT EXIGES, ET UNE ABSENCE EST UNE PANNE. Un colis

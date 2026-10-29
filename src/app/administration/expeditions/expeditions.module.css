@@ -361,6 +361,11 @@
   min-height: 1.5rem;
   margin: var(--ls-space-2) 0 0;
   color: var(--ls-success);
+  /*
+   * UN NUMERO DE SUIVI OU UN MESSAGE SANS ESPACE ne deborde pas a 320 px, ou la
+   * largeur utile tombe vers 200 px. Releve par la revue frontend de LS-296.
+   */
+  overflow-wrap: anywhere;
 }
 
 /*
@@ -370,6 +375,23 @@
  */
 .messageErreur {
   color: var(--ls-error);
+}
+
+/*
+ * LE MESSAGE DE L'ETIQUETTE VIT SUR SABLE, dans `.etiquette`, LS-296, la ou
+ * celui du formulaire manuel vit sur la carte blanche. Le fond est REDECLARE a
+ * cote de la couleur, meme motif que `.aideEtiquette` : sans lui,
+ * `verifier-contraste.sh` ne mesurerait pas la paire, le sable etant herite.
+ * Mesure : `--ls-success` 5,16:1 et `--ls-error` 5,50:1 sur sable.
+ */
+.messageEtiquette {
+  color: var(--ls-success);
+  background: var(--ls-surface-sand);
+}
+
+.messageEtiquetteErreur {
+  color: var(--ls-error);
+  background: var(--ls-surface-sand);
 }
 
 @media (min-width: 48rem) {

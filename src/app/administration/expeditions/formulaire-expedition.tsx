@@ -18,7 +18,7 @@
  * date de remise au destinataire vient du suivi automatique de LS-131, et
  * l'inventer ferait courir le delai de retractation depuis une date fausse.
  */
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 import type { ModeLivraison } from "@/generated/prisma/enums";
 import { LIBELLES_LIVRAISON, LIBELLES_STATUT } from "@/lib/affichage-commande";
@@ -124,6 +124,38 @@ export function FormulaireExpedition({
    */
   const conteneur = useRef<HTMLDivElement>(null);
 
+  /*
+   * APRES UN REFUS, LE FOCUS REVIENT AU BOUTON DU GESTE, LS-296. Le bouton
+   * passe `disabled` pendant l'attente et perd le focus, qui retombe sur
+   * `<body>` : au clavier, la tabulation repartait du haut du document. Seuls
+   * les succes rappelaient `conteneur.current?.focus()`, releve par la revue
+   * frontend de LS-296 sur sept issues de refus.
+   *
+   * DANS UN EFFET ET NON DANS LE GESTIONNAIRE : a l'instant ou le resultat
+   * arrive, le bouton est encore desactive par la transition, et un `focus()`
+   * sur un element desactive ne prend pas. L'effet court apres le rendu qui le
+   * reactive. Un succes desactive le bouton pour de bon, `declaree`, et garde
+   * son focus sur le conteneur.
+   */
+  const boutonEtiquette = useRef<HTMLButtonElement>(null);
+  const boutonDeclarer = useRef<HTMLButtonElement>(null);
+  const etiquetteAttendait = useRef(false);
+  const declarationAttendait = useRef(false);
+
+  useEffect(() => {
+    if (etiquetteAttendait.current && !etiquetteEnCours && !declaree) {
+      boutonEtiquette.current?.focus();
+    }
+    etiquetteAttendait.current = etiquetteEnCours;
+  }, [etiquetteEnCours, declaree]);
+
+  useEffect(() => {
+    if (declarationAttendait.current && !enCours && !declaree) {
+      boutonDeclarer.current?.focus();
+    }
+    declarationAttendait.current = enCours;
+  }, [enCours, declaree]);
+
   const exigePointRelais = mode === "POINT_RELAIS" || mode === "LOCKER";
 
   const idTransporteur = `transporteur-${commandeId}`;
@@ -145,6 +177,13 @@ export function FormulaireExpedition({
   function creerLEtiquette() {
     const formulaire = new FormData();
     formulaire.set("commandeId", commandeId);
+
+    /*
+     * L'AUTRE REGION EST VIDEE, LS-296 : un avertissement rouge du formulaire
+     * manuel ne doit pas rester affiche a cote du resultat de ce geste-ci.
+     * Vider une region ne produit aucune annonce.
+     */
+    setMessage(null);
 
     demarrerEtiquette(async () => {
       const resultat = await creerEtiquette(formulaire);
@@ -247,6 +286,9 @@ export function FormulaireExpedition({
      * contrainte d'equivalence, sans que l'exploitante voie le champ fautif.
      */
     formulaire.set("pointRelaisId", exigePointRelais ? pointRelaisId : "");
+
+    // Meme raison que `setMessage(null)` dans `creerLEtiquette`, LS-296.
+    setMessageEtiquette(null);
 
     demarrer(async () => {
       const resultat = await expedier(formulaire);
@@ -357,6 +399,7 @@ export function FormulaireExpedition({
         </p>
 
         <button
+          ref={boutonEtiquette}
           type="button"
           onClick={creerLEtiquette}
           className={styles.bouton}
@@ -376,7 +419,7 @@ export function FormulaireExpedition({
          */}
         <p
           id={idMessageEtiquette}
-          className={`${styles.message} ${messageEtiquette?.erreur === true ? styles.messageErreur : ""}`}
+          className={`${styles.message} ${messageEtiquette?.erreur === true ? styles.messageEtiquetteErreur : styles.messageEtiquette}`}
           role="status"
         >
           {etiquetteEnCours
@@ -506,9 +549,10 @@ export function FormulaireExpedition({
         </div>
 
         <button
+          ref={boutonDeclarer}
           type="submit"
           className={styles.bouton}
-          disabled={enCours || declaree}
+          disabled={enCours || etiquetteEnCours || declaree}
           /*
            * LE BOUTON PORTE LE RATTACHEMENT AU MESSAGE, comme sur les ecrans
            * voisins : trois issues n'ont AUCUN rapport avec un champ, la
