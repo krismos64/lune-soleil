@@ -445,12 +445,14 @@ type AdresseFigee = {
  * tenir dedans garderait un verrou de ligne pendant quinze secondes, et son
  * echec effacerait par rollback une commande que rien ne justifie de perdre.
  *
- * LA FENETRE ENTRE 1 ET 3 EST ASSUMEE ET FERMEE EN BASE. Deux clics simultanes
- * passent tous deux l'etape 1, achetent tous deux une etiquette, et le second
- * echoue a l'etape 3 sur `commande_id` unique. C'est un colis paye en trop, pas
- * une commande corrompue : l'inverse, un verrou applicatif, ne fermerait pas
- * davantage la fenetre puisqu'elle vit chez le fournisseur. L'ecran desactive
- * son bouton apres le premier clic, ce qui couvre le cas reel.
+ * LA FENETRE ENTRE 1 ET 3 EST FERMEE DES DEUX COTES DEPUIS LS-296. En base,
+ * `commande_id` unique interdit deux expeditions. Chez le fournisseur, l'API v3
+ * recoit le numero de commande en `external_reference_id` : deux clics
+ * simultanes, deux onglets ou un nouvel essai apres une reponse perdue
+ * retombent par un 409 sur l'envoi deja annonce, sans seconde etiquette
+ * facturee. Jusqu'a LS-296, cette phrase disait la fenetre impossible a fermer,
+ * ce qui etait vrai de l'API v2 seulement. L'ecran desactive en plus son bouton
+ * apres le premier clic.
  */
 export async function creerEtiquetteExpedition({
   commandeId,

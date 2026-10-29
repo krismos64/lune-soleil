@@ -1361,9 +1361,9 @@ test.describe("création d'étiquette, file de préparation", () => {
      * les largeurs pendant qu'a 320 px l'exploitante ne voyait rien, cinq clics
      * en recette le 29 octobre 2026. Il vit desormais sous son bouton.
      */
-    await expect(
-      page.locator('[id^="message-etiquette-"]').first(),
-    ).toBeInViewport();
+    const region = page.locator('[id^="message-etiquette-"]').first();
+    await expect(region).toHaveText(/momentanément indisponible/);
+    await expect(region).toBeInViewport({ ratio: 1 });
     await expect(
       page.getByRole("button", { name: "Déclarer expédiée" }).first(),
     ).toBeEnabled();

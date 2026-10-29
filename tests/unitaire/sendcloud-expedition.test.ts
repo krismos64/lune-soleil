@@ -55,7 +55,13 @@ const DEMANDE_RELAIS: DemandeExpedition = {
 /** Une reponse de creation reussie, forme minimale que le module lit. */
 function reponseCreee(id = 42, suivi = "3STEST000001"): Response {
   return new Response(
-    JSON.stringify({ data: { parcels: [{ id, tracking_number: suivi }] } }),
+    JSON.stringify({
+      data: {
+        parcels: [
+          { id, tracking_number: suivi, status: { code: "READY_TO_SEND" } },
+        ],
+      },
+    }),
     { status: 201, headers: { "Content-Type": "application/json" } },
   );
 }
@@ -224,6 +230,63 @@ describe("creation d'un colis", () => {
   });
 });
 
+describe("une seule etiquette par commande, chez le fournisseur", () => {
+  /*
+   * LA REFERENCE EXTERNE EST LE NUMERO DE COMMANDE, LS-296. Sendcloud la veut
+   * unique : une seconde annonce sous la meme reference rend 409 et l'envoi
+   * existant, sans rien facturer.
+   */
+  it("envoie le numero de commande en reference externe", async () => {
+    const appel = vi.fn().mockResolvedValue(reponseCreee());
+
+    await client(appel).creer(DEMANDE_DOMICILE);
+    const corps = JSON.parse(appel.mock.calls[0]![1]!.body as string);
+
+    expect(corps.external_reference_id).toBe("C-TEST-0001");
+  });
+
+  /*
+   * LE 409 REND L'ENVOI DEJA ANNONCE, A LA RACINE et non sous `data`, schema
+   * de la specification. Un double clic ou un nouvel essai apres une reponse
+   * perdue retombe ainsi sur la premiere etiquette au lieu d'en payer une
+   * seconde.
+   */
+  it("traite un 409 comme l'envoi deja annonce", async () => {
+    const corps = JSON.stringify({
+      parcels: [
+        {
+          id: 555,
+          tracking_number: "3SDEJA0001",
+          status: { code: "READY_TO_SEND" },
+        },
+      ],
+    });
+    const appel = fetchSimule(() => new Response(corps, { status: 409 }));
+
+    expect(await client(appel).creer(DEMANDE_DOMICILE)).toEqual({
+      identifiantColis: 555,
+      numeroSuivi: "3SDEJA0001",
+    });
+  });
+
+  it("refuse un 409 dont l'envoi est reste en echec d'annonce", async () => {
+    const corps = JSON.stringify({
+      parcels: [
+        {
+          id: 556,
+          tracking_number: "3SECHEC001",
+          status: { code: "ANNOUNCEMENT_FAILED" },
+        },
+      ],
+    });
+    const appel = fetchSimule(() => new Response(corps, { status: 409 }));
+
+    await expect(client(appel).creer(DEMANDE_DOMICILE)).rejects.toBeInstanceOf(
+      TransporteurIndisponibleError,
+    );
+  });
+});
+
 describe("pannes du transporteur", () => {
   /*
    * TOUTE PANNE LEVE `TransporteurIndisponibleError`, jamais une erreur brute :
@@ -318,6 +381,57 @@ describe("pannes du transporteur", () => {
     expect(String(erreur.cause)).not.toContain("rue de Test");
   });
 
+  /*
+   * UNE ANNONCE ECHOUEE REVIENT EN 201 AVEC UN NUMERO DE SUIVI, LS-296, revue
+   * critique. Exemple repris de la specification v3 : sans le controle de
+   * statut, la commande passait en EXPEDIEE et l'email partait avec un numero
+   * que Mondial Relay ne connait pas.
+   */
+  it("refuse un 201 dont l'annonce a echoue", async () => {
+    const corps = JSON.stringify({
+      data: {
+        parcels: [
+          {
+            id: 383707309,
+            tracking_number: "3SYZXG8498635",
+            status: {
+              code: "ANNOUNCEMENT_FAILED",
+              message: "Announcement Failed",
+            },
+          },
+        ],
+        errors: [
+          {
+            status: "500",
+            code: "parcel_announcement_error",
+            detail: "Error connecting to the carrier.",
+          },
+        ],
+      },
+    });
+    const appel = fetchSimule(() => new Response(corps, { status: 201 }));
+
+    const erreur = (await client(appel)
+      .creer(DEMANDE_DOMICILE)
+      .catch((e: unknown) => e)) as Error;
+
+    expect(erreur).toBeInstanceOf(TransporteurIndisponibleError);
+    expect(erreur.cause).toBe(
+      "réponse 201 du transporteur, statut ANNOUNCEMENT_FAILED, codes parcel_announcement_error",
+    );
+  });
+
+  it("refuse un colis sans statut, liste blanche et non liste noire", async () => {
+    const corps = JSON.stringify({
+      data: { parcels: [{ id: 1, tracking_number: "3S1" }] },
+    });
+    const appel = fetchSimule(() => new Response(corps, { status: 201 }));
+
+    await expect(client(appel).creer(DEMANDE_DOMICILE)).rejects.toBeInstanceOf(
+      TransporteurIndisponibleError,
+    );
+  });
+
   it("resume le refus v2 qui a bloque la premiere commande", async () => {
     const corps = JSON.stringify({
       error: {
@@ -344,10 +458,15 @@ describe("pannes du transporteur", () => {
    */
   it("refuse une reponse sans numero de suivi", async () => {
     const appel = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ data: { parcels: [{ id: 42 }] } }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+      new Response(
+        JSON.stringify({
+          data: { parcels: [{ id: 42, status: { code: "READY_TO_SEND" } }] },
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
     );
 
     await expect(client(appel).creer(DEMANDE_DOMICILE)).rejects.toBeInstanceOf(
@@ -358,7 +477,13 @@ describe("pannes du transporteur", () => {
   it("refuse une reponse sans identifiant de colis", async () => {
     const appel = vi.fn().mockResolvedValue(
       new Response(
-        JSON.stringify({ data: { parcels: [{ tracking_number: "3S1" }] } }),
+        JSON.stringify({
+          data: {
+            parcels: [
+              { tracking_number: "3S1", status: { code: "READY_TO_SEND" } },
+            ],
+          },
+        }),
         {
           status: 200,
           headers: { "Content-Type": "application/json" },
