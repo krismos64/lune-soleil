@@ -17,7 +17,7 @@
  * de securite, elles vivent donc dans `services/`, conformement au fichier de
  * garde du dossier.
  */
-import { APIError, getIp } from "better-auth/api";
+import { APIError, getIP } from "better-auth/api";
 
 import { auth } from "@/lib/auth";
 import { journaliser } from "@/lib/journal";
@@ -105,7 +105,7 @@ export async function prouverIdentiteParMotDePasse(
   const traceCommune = {
     email: session.user.email,
     utilisateurId: session.user.id,
-    adresseIp: getIp(enTetes, auth.options),
+    adresseIp: getIP(enTetes, auth.options),
     agentUtilisateur: enTetes.get("user-agent"),
   };
 

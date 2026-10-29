@@ -14,7 +14,7 @@
  * monter l'application.
  *
  * ---------------------------------------------------------------------------
- * CE QUE `getIp` FAIT REELLEMENT, mesure dans le code installe
+ * CE QUE `getIP` FAIT REELLEMENT, mesure dans le code installe
  * (`@better-auth/core/dist/utils/ip.mjs`) et non suppose :
  *
  *   chaine a UN SEUL saut, sans proxy declare      -> adresse retenue
@@ -29,7 +29,7 @@
  * recu : la chaine ne porte qu'un seul saut, l'adresse publique reelle du
  * client, et Better Auth la resout SANS aucun proxy de confiance.
  *
- * `getIp` NE VOIT JAMAIS L'ADRESSE DU SOCKET. Il ne lit que des en-tetes, donc
+ * `getIP` NE VOIT JAMAIS L'ADRESSE DU SOCKET. Il ne lit que des en-tetes, donc
  * l'adresse Docker par laquelle Nginx joint le conteneur n'entre nulle part
  * dans la decision : declarer le sous-reseau Docker n'aurait servi a rien, et
  * c'est ce que la premiere lecture du ticket laissait croire.

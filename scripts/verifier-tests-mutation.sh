@@ -1205,7 +1205,7 @@ echo
 # intention, « non configure » plutot que « configure a rien », et parce que
 # `exactOptionalPropertyTypes` la rend visible au type. Une bibliotheque qui
 # traiterait un jour `[]` comme « aucun saut fiable » ferait rendre `null` a
-# `getIp` sans qu'aucun autre test ne bouge.
+# `getIP` sans qu'aucun autre test ne bouge.
 mute "$PROXIES" 's/return entrees\.length > 0 \? entrees : undefined;/return entrees;/'
 cas "liste de proxies vide rendue en tableau plutot qu'undefined" unitaire \
   "rend undefined quand la variable est absente ou vide"

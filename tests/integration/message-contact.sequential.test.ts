@@ -375,7 +375,7 @@ describe("deposerMessage", () => {
      * robot qui aurait appris a eviter le piege et a temporiser.
      *
      * ELLE EST EN COMPLEMENT ET NON EN SOCLE, parce que l'adresse IP peut etre
-     * NULLE : `getIp` ne lit que des en-tetes, et sa fiabilite tient a
+     * NULLE : `getIP` ne lit que des en-tetes, et sa fiabilite tient a
      * l'ecrasement Nginx de LS-91. Un plafond qui en dependrait seul serait
      * inoperant partout ailleurs.
      */

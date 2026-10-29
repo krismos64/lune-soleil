@@ -5,8 +5,8 @@
  *
  * Le ticket demande un test negatif : « une adresse usurpee dans le saut de
  * gauche n'est pas retenue quand la chaine traverse le proxy de confiance ».
- * Ce test ne peut PAS passer par `getIp`, qui est pourtant la fonction que le
- * hook appelle : `getIp` termine par `if (isTest() || isDevelopment()) return
+ * Ce test ne peut PAS passer par `getIP`, qui est pourtant la fonction que le
+ * hook appelle : `getIP` termine par `if (isTest() || isDevelopment()) return
  * LOCALHOST_IP`, verifie dans le code installe. Sous Vitest, il rend donc
  * `127.0.0.1` quoi qu'il arrive, et un test ecrit contre lui serait vert pour
  * une raison qui n'a rien a voir avec ce qu'il pretend mesurer.

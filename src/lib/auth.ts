@@ -206,7 +206,7 @@ export function creerAuth(
       /**
        * RESOLUTION DE L'ADRESSE CLIENT, LS-91. Voir
        * `lib/proxies-de-confiance.ts` pour le mecanisme complet, les cinq
-       * comportements mesures de `getIp`, et pourquoi la valeur juste en
+       * comportements mesures de `getIP`, et pourquoi la valeur juste en
        * production est VIDE.
        *
        * En resume : Nginx ecrase `X-Forwarded-For` avec `$remote_addr`, la

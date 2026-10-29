@@ -545,7 +545,7 @@ describe("attributs du cookie de session", () => {
  * Better Auth combine route et IP, jamais l'email. Sans cette isolation, les
  * sous-tests de ce bloc partageraient un seul compteur par route et
  * s'epuiseraient les uns les autres, independamment de l'ordre d'execution.
- * C'est la meme IP simulee que retombe `getIp` sans en-tete, `127.0.0.1` en
+ * C'est la meme IP simulee que retombe `getIP` sans en-tete, `127.0.0.1` en
  * environnement de test : lui laisser un en-tete explicite par sous-test
  * rend chacun independant sans devoir vider `rate_limit` entre eux.
  */
@@ -748,6 +748,44 @@ describe("limitation de debit, LS-79, ADR-027", () => {
       // stockage en memoire repartirait de zero sur la nouvelle instance et
       // laisserait passer.
       expect(reponse.status).toBe(429);
+    },
+  );
+
+  /**
+   * RAFALE SIMULTANEE, LS-294, avis GHSA-44jh-23m7-hpcf.
+   *
+   * Un limiteur qui lit le compteur puis l'ecrit en deux requetes laisse
+   * passer ensemble toutes les requetes arrivees entre les deux : l'avis
+   * l'a constate sur PostgreSQL avec les adaptateurs Drizzle et Kysely. Les
+   * tests ci-dessus envoient leurs essais un par un et ne le verraient pas.
+   *
+   * UN EMAIL DISTINCT PAR REQUETE : le ralentissement par compte vise, LS-83,
+   * compte par email et repond lui aussi 429. Sur un seul email, ses refus se
+   * melangeraient a ceux du compteur par adresse, seul vise ici.
+   */
+  it(
+    "admet exactement cinq connexions sur vingt simultanees, LS-294",
+    { timeout: 30000 },
+    async () => {
+      const ip = "203.0.113.60";
+      const reponses = await Promise.all(
+        Array.from({ length: 20 }, (_, i) =>
+          auth.handler(
+            requeteAuth(
+              "/sign-in/email",
+              {
+                email: `rafale.${i}@exemple.fr`,
+                password: ESSAI_SANS_IMPORTANCE,
+              },
+              ip,
+            ),
+          ),
+        ),
+      );
+      const codes = reponses.map((r) => r.status);
+
+      expect(codes.filter((c) => c !== 429)).toHaveLength(5);
+      expect(codes.filter((c) => c === 429)).toHaveLength(15);
     },
   );
 });
