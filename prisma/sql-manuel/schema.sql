@@ -537,6 +537,19 @@ CREATE TABLE "rate_limit" (
 );
 
 -- CreateTable
+-- Compteurs de limitation du PROJET, LS-294. Table PROPRE et non `rate_limit`,
+-- pour la meme raison que `compteur_compte_vise` ci-dessous : les plafonds
+-- d'une heure n'y survivaient pas a la purge de Better Auth.
+CREATE TABLE "compteur_limitation" (
+    "id" TEXT NOT NULL,
+    "cle" TEXT NOT NULL,
+    "compte" INTEGER NOT NULL,
+    "derniere_a" TIMESTAMPTZ(6) NOT NULL,
+
+    CONSTRAINT "compteur_limitation_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 -- Compteur d'echecs par COMPTE VISE, LS-83. Table PROPRE et non `rate_limit` :
 -- le limiteur de Better Auth vide cette derniere sans filtre de cle au-dela de
 -- soixante secondes, et le compteur du projet n'y survivait pas.
@@ -886,6 +899,11 @@ CREATE UNIQUE INDEX "passkey_credential_id_unique" ON "passkey"("credential_id")
 
 -- CreateIndex
 CREATE UNIQUE INDEX "rate_limit_key_key" ON "rate_limit"("key");
+
+CREATE UNIQUE INDEX "compteur_limitation_cle_key" ON "compteur_limitation"("cle");
+
+-- Index de purge, LS-294, meme motif que celui de `compteur_compte_vise`.
+CREATE INDEX "compteur_limitation_derniere_a_idx" ON "compteur_limitation"("derniere_a");
 
 CREATE UNIQUE INDEX "compteur_compte_vise_cle_key" ON "compteur_compte_vise"("cle");
 

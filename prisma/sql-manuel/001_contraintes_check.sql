@@ -399,6 +399,21 @@ ALTER TABLE "signalement_avis"
   CHECK (suite_donnee IS NULL OR examine_a IS NOT NULL);
 
 -- ---------------------------------------------------------------------------
+-- Compteurs de limitation du projet, LS-294
+-- ---------------------------------------------------------------------------
+
+-- LE COMPTE EST STRICTEMENT POSITIF, meme raison que pour le compte vise.
+ALTER TABLE "compteur_limitation"
+  ADD CONSTRAINT "chk_compteur_limitation_positif"
+  CHECK ("compte" >= 1);
+
+-- LA CLE N'EST JAMAIS VIDE : une chaine vide ferait partager un compteur unique
+-- a tous les appelants, et un seul robot fermerait le formulaire a tout le monde.
+ALTER TABLE "compteur_limitation"
+  ADD CONSTRAINT "chk_compteur_limitation_cle_non_vide"
+  CHECK (length(trim("cle")) > 0);
+
+-- ---------------------------------------------------------------------------
 -- Ralentissement par compte vise, LS-83
 -- ---------------------------------------------------------------------------
 

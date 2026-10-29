@@ -1159,6 +1159,32 @@ model RateLimit {
   @@map("rate_limit")
 }
 
+/// Compteurs de limitation du PROJET, par adresse ou par session. LS-92,
+/// deplaces hors de `rate_limit` par LS-294.
+///
+/// MEME DEFAUT QUE `CompteurCompteVise` CI-DESSOUS, REVENU PAR UN AUTRE
+/// CHEMIN. Le limiteur de Better Auth purge `rate_limit` sans filtre de cle
+/// au-dela de sa plus longue fenetre configuree, soixante secondes ici. Les
+/// plafonds d'une heure du formulaire de contact et des signalements d'avis y
+/// vivaient : un robot qui attendait une minute repartait de zero. Mesure en
+/// revue de la montee en Better Auth 1.7, le defaut existait deja en 1.6.
+///
+/// `rate_limit` EST DESORMAIS A BETTER AUTH SEUL. Le compteur a soixante
+/// secondes des Server Actions y survivait par coincidence de reglage : il
+/// part avec les autres, pour qu'aucun plafond du projet ne depende plus d'une
+/// fenetre configuree ailleurs.
+model CompteurLimitation {
+  id        String   @id @default(uuid())
+  /// Prefixe d'usage puis identifiant : `contact|<ip>`, `signalement|<ip>`,
+  /// `action:<nom>|<session>`.
+  cle       String   @unique
+  compte    Int
+  derniereA DateTime @map("derniere_a") @db.Timestamptz(6)
+
+  @@index([derniereA])
+  @@map("compteur_limitation")
+}
+
 /// Compteur d'echecs par COMPTE VISE, LS-83, ADR-021 mesure 2.
 ///
 /// TABLE PROPRE ET NON `rate_limit`, ET C'EST UNE CORRECTION. La premiere

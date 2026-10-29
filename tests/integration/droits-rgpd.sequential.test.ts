@@ -79,7 +79,7 @@ afterEach(async () => {
   await client.query(
     `TRUNCATE journal_connexion, session, compte, verification, passkey,
               adresse_carnet, ligne_commande, commande, rate_limit,
-              utilisateur CASCADE`,
+              compteur_limitation, utilisateur CASCADE`,
   );
 });
 

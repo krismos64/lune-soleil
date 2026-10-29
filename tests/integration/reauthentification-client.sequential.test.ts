@@ -100,7 +100,7 @@ afterAll(async () => {
 
 afterEach(async () => {
   await client.query(
-    "TRUNCATE journal_connexion, session, compte, verification, passkey, utilisateur, rate_limit CASCADE",
+    "TRUNCATE journal_connexion, session, compte, verification, passkey, utilisateur, rate_limit, compteur_limitation CASCADE",
   );
 });
 

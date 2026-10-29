@@ -294,6 +294,7 @@ afterEach(async () => {
   await client.query("DELETE FROM invitation_avis");
   await client.query("DELETE FROM jeton_acces");
   await client.query("DELETE FROM rate_limit");
+  await client.query("DELETE FROM compteur_limitation");
   await client.query("DELETE FROM envoi_en_attente");
   await client.query("DELETE FROM journal_email");
   await client.query("DELETE FROM expedition");

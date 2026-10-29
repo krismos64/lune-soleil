@@ -169,6 +169,32 @@ export async function purgerCompteursCompteVise(
 }
 
 /**
+ * Supprime les compteurs de limitation du projet au-dela de vingt-quatre
+ * heures. LS-294.
+ *
+ * MEME DUREE QUE `RateLimit` ET `CompteurCompteVise`, ET POUR LA MEME RAISON :
+ * un compteur de travail dont la plus longue fenetre vaut une heure. Sa cle
+ * porte une adresse IP pour le contact et les signalements d'avis, la garder
+ * plus longtemps contredirait la minimisation.
+ *
+ * SANS ELLE, LA TABLE NE SERAIT PURGEE PAR PERSONNE : Better Auth ne la connait
+ * pas, et c'est precisement pour cela qu'elle existe.
+ */
+export async function purgerCompteursLimitation(
+  maintenant: Date = new Date(),
+): Promise<number> {
+  const limite = new Date(
+    maintenant.getTime() - CONSERVATION_RATE_LIMIT_HEURES * 60 * 60 * 1000,
+  );
+
+  const { count } = await prisma.compteurLimitation.deleteMany({
+    where: { derniereA: { lt: limite } },
+  });
+
+  return count;
+}
+
+/**
  * Duree de conservation d'une ligne d'outbox TERMINEE, en jours.
  *
  * L'ARBITRAGE QUE LS-154 DEVAIT RENDRE, et il n'est pas de meme nature que celui
@@ -364,6 +390,7 @@ const PURGES: ReadonlyArray<{
   { table: "JournalAudit", executer: purgerJournalAudit },
   { table: "RateLimit", executer: purgerRateLimit },
   { table: "CompteurCompteVise", executer: purgerCompteursCompteVise },
+  { table: "CompteurLimitation", executer: purgerCompteursLimitation },
   { table: "EnvoiEnAttente", executer: purgerEnvoisTermines },
   { table: "Message", executer: purgerMessages },
 ];

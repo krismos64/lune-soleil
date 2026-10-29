@@ -1192,7 +1192,7 @@ cas "un echec de purge interrompt les purges suivantes" integration \
 # fictive pour cette table, exactement l'etat que LS-94 corrige.
 mute "$PURGE_JOURNAUX" 's/  \{ table: "RateLimit", executer: purgerRateLimit \},\n//'
 cas "table retiree de la liste des purges" integration \
-  "purge les six tables en une passe"
+  "purge les sept tables en une passe"
 
 echo
 echo "Resolution de l'adresse client, LS-91"
@@ -1248,20 +1248,21 @@ cas "refus de cadence non journalise sur Server Action" integration \
 # Cas 51 : le compteur perd son increment et repart a un a chaque tentative.
 #
 # Le plafond ne serait alors JAMAIS atteint, quel que soit le nombre de
-# tentatives, et la table `rate_limit` continuerait de se remplir normalement :
-# rien dans l'etat de la base ne trahirait le defaut.
-mute "$LIMITATION_REPO" 's/            ELSE rate_limit\.count \+ 1/            ELSE 1/'
+# tentatives, et la table `compteur_limitation` continuerait de se remplir
+# normalement : rien dans l'etat de la base ne trahirait le defaut.
+mute "$LIMITATION_REPO" 's/            ELSE compteur_limitation\.compte \+ 1/            ELSE 1/'
 cas "compteur remis a un a chaque tentative" integration \
   "refuse au-dela du seuil, en exer"
 
-# Cas 52 : la cle perd son prefixe et heurte l'espace de Better Auth.
+# Cas 52 : la cle perd son prefixe d'usage.
 #
-# `<action>|<session>` sans prefixe entre en collision avec `<ip>|<chemin>` :
-# les deux mecanismes consommeraient le quota l'un de l'autre, et le plafond
-# observe deviendrait imprevisible.
+# Les compteurs du projet vivent dans `compteur_limitation` depuis LS-294, hors
+# de portee de Better Auth. Le prefixe garde les usages disjoints entre eux :
+# `<action>|<session>` sans lui pourrait partager une ligne avec un autre
+# compteur du projet, et le plafond observe deviendrait imprevisible.
 mute "$LIMITATION" 's/return `action:\$\{action\}\|\$\{sessionId\}`;/return `${action}|${sessionId}`;/'
-cas "cle de compteur sans prefixe, collision avec Better Auth" integration \
-  "n'ecrit pas sous une cle qui heurterait celles de Better Auth"
+cas "cle de compteur sans prefixe d'usage" integration \
+  "ecrit son compteur hors de la table de Better Auth, prefixe action:"
 
 echo
 echo "Droits des personnes, LS-95"

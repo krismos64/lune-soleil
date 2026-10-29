@@ -59,7 +59,7 @@ afterAll(async () => {
 
 afterEach(async () => {
   await client.query(
-    "TRUNCATE journal_connexion, session, compte, verification, passkey, utilisateur, rate_limit CASCADE",
+    "TRUNCATE journal_connexion, session, compte, verification, passkey, utilisateur, rate_limit, compteur_limitation CASCADE",
   );
 });
 
@@ -674,25 +674,32 @@ describe("limitation de debit sur la verification de mot de passe, LS-92", () =>
     });
   });
 
-  it("n'ecrit pas sous une cle qui heurterait celles de Better Auth", async () => {
+  it("ecrit son compteur hors de la table de Better Auth, prefixe action:", async () => {
     /**
      * LA CLE EST PREFIXEE `action:`, et ce test le mesure plutot que de le
-     * supposer. Better Auth ecrit `<ip>|<chemin>` : sans prefixe distinct, une
-     * Server Action et une route de la bibliotheque partageraient un compteur,
-     * chacune consommant le quota de l'autre.
+     * supposer : les compteurs du projet ne partagent jamais une ligne d'un
+     * usage a l'autre.
+     *
+     * ET ELLE VIT DANS `compteur_limitation`, JAMAIS DANS `rate_limit`, LS-294.
+     * Better Auth purge cette derniere sans filtre de cle au-dela de soixante
+     * secondes : un compteur du projet n'y tient que par coincidence de
+     * reglage.
      */
     const enTetes = await ouvrirSession();
 
     await prouverIdentiteParMotDePasse(enTetes, MAUVAIS_MOT_DE_PASSE);
 
-    const { rows } = await client.query("SELECT key FROM rate_limit");
-    const cles = rows.map((l: { key: string }) => l.key);
-
-    expect(cles.some((c: string) => c.startsWith("action:"))).toBe(true);
+    const projet = await client.query("SELECT cle FROM compteur_limitation");
+    const cles = projet.rows.map((l: { cle: string }) => l.cle);
     expect(
       cles.some((c: string) =>
         c.startsWith("action:reauthentification-mot-de-passe|"),
       ),
     ).toBe(true);
+
+    const betterAuth = await client.query(
+      "SELECT key FROM rate_limit WHERE key LIKE 'action:%'",
+    );
+    expect(betterAuth.rows).toEqual([]);
   });
 });
