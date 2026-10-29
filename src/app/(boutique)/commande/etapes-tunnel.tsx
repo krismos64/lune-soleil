@@ -25,6 +25,13 @@ import { useRouter } from "next/navigation";
 import type { SaisieTunnel } from "@/lib/tunnel-cookie";
 import type { ModeLivraison } from "@/generated/prisma/enums";
 import type { Recapitulatif } from "@/services/tunnel";
+import {
+  CHAMPS_ADRESSE_VIDES,
+  champsDeLAdresse,
+  etatInitialAdresse,
+  type AdresseProposee,
+  type ChampsAdresseTunnel,
+} from "@/lib/carnet-tunnel";
 import type { MotifIndisponible } from "@/services/panier";
 import type { ResultatPointsRetrait } from "@/integrations/sendcloud";
 import {
@@ -120,11 +127,14 @@ export function EtapesTunnel({
   saisie,
   recapitulatif,
   pointsRetrait,
+  carnet = [],
 }: {
   etape: Etape;
   saisie: SaisieTunnel;
   recapitulatif: Recapitulatif | null;
   pointsRetrait: ResultatPointsRetrait | null;
+  /** Le carnet du compte de la session, vide sans session, LS-299. */
+  carnet?: AdresseProposee[];
 }) {
   const router = useRouter();
   const [enCours, demarrer] = useTransition();
@@ -415,76 +425,12 @@ export function EtapesTunnel({
       )}
 
       {etape === "adresse" && (
-        <form
-          className={styles.formulaire}
-          onSubmit={(evenement) => {
-            evenement.preventDefault();
-            const donnees = new FormData(evenement.currentTarget);
-            const ligne2 = String(donnees.get("ligne2") ?? "").trim();
-
-            envoyer(enregistrerAdresse, {
-              ligne1: String(donnees.get("ligne1") ?? ""),
-              ...(ligne2 === "" ? {} : { ligne2 }),
-              codePostal: String(donnees.get("codePostal") ?? ""),
-              ville: String(donnees.get("ville") ?? ""),
-              pays: "FR",
-            });
-          }}
-        >
-          <label className={styles.champ}>
-            <span className={styles.libelle}>Adresse</span>
-            <input
-              name="ligne1"
-              defaultValue={saisie.adresse.ligne1}
-              maxLength={120}
-              autoComplete="address-line1"
-              required
-              className={styles.saisie}
-            />
-          </label>
-
-          <label className={styles.champ}>
-            <span className={styles.libelle}>
-              Complément <span className={styles.facultatif}>(facultatif)</span>
-            </span>
-            <input
-              name="ligne2"
-              defaultValue={saisie.adresse.ligne2 ?? ""}
-              maxLength={120}
-              autoComplete="address-line2"
-              className={styles.saisie}
-            />
-          </label>
-
-          <label className={styles.champ}>
-            <span className={styles.libelle}>Code postal</span>
-            <input
-              name="codePostal"
-              defaultValue={saisie.adresse.codePostal}
-              maxLength={5}
-              autoComplete="postal-code"
-              inputMode="numeric"
-              required
-              className={styles.saisie}
-            />
-          </label>
-
-          <label className={styles.champ}>
-            <span className={styles.libelle}>Ville</span>
-            <input
-              name="ville"
-              defaultValue={saisie.adresse.ville}
-              maxLength={80}
-              autoComplete="address-level2"
-              required
-              className={styles.saisie}
-            />
-          </label>
-
-          <button type="submit" disabled={enCours} className={styles.suivant}>
-            {enCours ? "Enregistrement…" : "Continuer"}
-          </button>
-        </form>
+        <FormulaireAdresse
+          saisie={saisie}
+          carnet={carnet}
+          enCours={enCours}
+          onValider={(entree) => envoyer(enregistrerAdresse, entree)}
+        />
       )}
 
       {etape === "livraison" && (
@@ -504,6 +450,159 @@ export function EtapesTunnel({
         />
       )}
     </>
+  );
+}
+
+/** Le libelle d'une adresse dans la liste, lisible sans ouvrir le carnet. */
+function libelleProposition(adresse: AdresseProposee): string {
+  const lieu = `${adresse.ligne1}, ${adresse.codePostal} ${adresse.ville}`;
+  const nom = adresse.libelle ? `${adresse.libelle} : ${lieu}` : lieu;
+
+  return adresse.estParDefaut ? `${nom} (par défaut)` : nom;
+}
+
+/**
+ * Etape 2, l'adresse, avec le carnet du compte quand il existe. LS-299.
+ *
+ * UN CHOIX REMPLIT LES CHAMPS, IL N'ENVOIE RIEN. Aucun identifiant d'adresse ne
+ * part au serveur : la saisie finale, eventuellement retouchee, repasse par
+ * `enregistrerAdresse` et sa validation comme une frappe. Le choix ne peut donc
+ * rien autoriser, invariant 2.
+ *
+ * L'ETAT DE DEPART VIENT D'`etatInitialAdresse`, fonction pure testee a part :
+ * la saisie enregistree l'emporte, l'adresse par defaut remplit un formulaire
+ * vide.
+ *
+ * LES CHAMPS DEVIENNENT CONTROLES pour que le choix puisse les remplir ; sans
+ * carnet, le comportement est celui d'avant, valeurs de depart comprises.
+ */
+function FormulaireAdresse({
+  saisie,
+  carnet,
+  enCours,
+  onValider,
+}: {
+  saisie: SaisieTunnel;
+  carnet: AdresseProposee[];
+  enCours: boolean;
+  onValider: (entree: {
+    ligne1: string;
+    ligne2?: string;
+    codePostal: string;
+    ville: string;
+    pays: "FR";
+  }) => void;
+}) {
+  const depart = etatInitialAdresse(saisie, carnet);
+  const [champs, setChamps] = useState<ChampsAdresseTunnel>(depart.champs);
+  const [choix, setChoix] = useState(depart.choix);
+
+  function choisir(identifiant: string): void {
+    setChoix(identifiant);
+    const adresse = carnet.find((candidate) => candidate.id === identifiant);
+    setChamps(
+      adresse === undefined ? CHAMPS_ADRESSE_VIDES : champsDeLAdresse(adresse),
+    );
+  }
+
+  function modifier(champ: keyof ChampsAdresseTunnel, valeur: string): void {
+    setChamps((precedents) => ({ ...precedents, [champ]: valeur }));
+  }
+
+  return (
+    <form
+      className={styles.formulaire}
+      onSubmit={(evenement) => {
+        evenement.preventDefault();
+        const ligne2 = champs.ligne2.trim();
+
+        onValider({
+          ligne1: champs.ligne1,
+          ...(ligne2 === "" ? {} : { ligne2 }),
+          codePostal: champs.codePostal,
+          ville: champs.ville,
+          pays: "FR",
+        });
+      }}
+    >
+      {carnet.length > 0 && (
+        <label className={styles.champ}>
+          <span className={styles.libelle}>Adresse enregistrée</span>
+          <select
+            value={choix}
+            onChange={(evenement) => choisir(evenement.target.value)}
+            className={styles.saisie}
+          >
+            <option value="">Saisir une autre adresse</option>
+            {carnet.map((adresse) => (
+              <option key={adresse.id} value={adresse.id}>
+                {libelleProposition(adresse)}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
+      <label className={styles.champ}>
+        <span className={styles.libelle}>Adresse</span>
+        <input
+          name="ligne1"
+          value={champs.ligne1}
+          onChange={(evenement) => modifier("ligne1", evenement.target.value)}
+          maxLength={120}
+          autoComplete="address-line1"
+          required
+          className={styles.saisie}
+        />
+      </label>
+
+      <label className={styles.champ}>
+        <span className={styles.libelle}>
+          Complément <span className={styles.facultatif}>(facultatif)</span>
+        </span>
+        <input
+          name="ligne2"
+          value={champs.ligne2}
+          onChange={(evenement) => modifier("ligne2", evenement.target.value)}
+          maxLength={120}
+          autoComplete="address-line2"
+          className={styles.saisie}
+        />
+      </label>
+
+      <label className={styles.champ}>
+        <span className={styles.libelle}>Code postal</span>
+        <input
+          name="codePostal"
+          value={champs.codePostal}
+          onChange={(evenement) =>
+            modifier("codePostal", evenement.target.value)
+          }
+          maxLength={5}
+          autoComplete="postal-code"
+          inputMode="numeric"
+          required
+          className={styles.saisie}
+        />
+      </label>
+
+      <label className={styles.champ}>
+        <span className={styles.libelle}>Ville</span>
+        <input
+          name="ville"
+          value={champs.ville}
+          onChange={(evenement) => modifier("ville", evenement.target.value)}
+          maxLength={80}
+          autoComplete="address-level2"
+          required
+          className={styles.saisie}
+        />
+      </label>
+
+      <button type="submit" disabled={enCours} className={styles.suivant}>
+        {enCours ? "Enregistrement…" : "Continuer"}
+      </button>
+    </form>
   );
 }
 

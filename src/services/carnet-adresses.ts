@@ -23,6 +23,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { journaliser } from "@/lib/journal";
 import { prisma } from "@/lib/prisma";
 import { schemaAdresseCarnet, valider } from "@/lib/validation";
+import type { AdresseProposee } from "@/lib/carnet-tunnel";
 import {
   creerAdresse,
   lireAdresse,
@@ -36,7 +37,7 @@ import {
   type ChampsAdresse,
 } from "@/repositories/adresse-carnet";
 
-export type { AdresseDuCarnet };
+export type { AdresseDuCarnet, AdresseProposee };
 
 /**
  * Ce que les ecritures du carnet rendent a l'appelant.
@@ -55,6 +56,37 @@ export async function listerMesAdresses(
   utilisateurId: string,
 ): Promise<AdresseDuCarnet[]> {
   return listerAdresses(prisma, utilisateurId);
+}
+
+/**
+ * Le carnet du compte de la SESSION, propose a l'etape adresse du tunnel.
+ *
+ * `utilisateurId` VIENT DE LA SESSION, jamais d'un parametre de requete,
+ * invariant 2 : la page qui appelle le tire d'`exigerSession`. Le tunnel ne
+ * renvoie AUCUN identifiant d'adresse au serveur, le choix remplissant les
+ * champs dans le navigateur ; la saisie finale repasse par la validation Zod
+ * de `enregistrerAdresse` comme une frappe. Il n'existe donc aucun identifiant
+ * a usurper sur ce chemin.
+ *
+ * LES ADRESSES HORS DE FRANCE SONT ECARTEES, la zone livree etant la France
+ * metropolitaine, ADR-025 : les proposer ferait refuser la saisie au clic.
+ */
+export async function adressesPourLeTunnel(
+  utilisateurId: string,
+): Promise<AdresseProposee[]> {
+  const carnet = await listerAdresses(prisma, utilisateurId);
+
+  return carnet
+    .filter((adresse) => adresse.pays === "FR")
+    .map((adresse) => ({
+      id: adresse.id,
+      libelle: adresse.libelle,
+      ligne1: adresse.ligne1,
+      ligne2: adresse.ligne2,
+      codePostal: adresse.codePostal,
+      ville: adresse.ville,
+      estParDefaut: adresse.estParDefaut,
+    }));
 }
 
 /** Une adresse du compte, ou `null`. Sert a pre-remplir le formulaire d'edition. */

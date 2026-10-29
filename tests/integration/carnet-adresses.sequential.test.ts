@@ -30,6 +30,7 @@ let ajouterAdresse: typeof import("@/services/carnet-adresses").ajouterAdresse;
 let modifierAdresse: typeof import("@/services/carnet-adresses").modifierAdresse;
 let retirerAdresse: typeof import("@/services/carnet-adresses").retirerAdresse;
 let choisirAdresseParDefaut: typeof import("@/services/carnet-adresses").choisirAdresseParDefaut;
+let adressesPourLeTunnel: typeof import("@/services/carnet-adresses").adressesPourLeTunnel;
 let EntreeInvalideError: typeof import("@/lib/validation").EntreeInvalideError;
 
 const EMAIL = "proprietaire@exemple.fr";
@@ -58,6 +59,7 @@ beforeAll(async () => {
     modifierAdresse,
     retirerAdresse,
     choisirAdresseParDefaut,
+    adressesPourLeTunnel,
   } = await import("@/services/carnet-adresses"));
 
   ({ EntreeInvalideError } = await import("@/lib/validation"));
@@ -397,6 +399,65 @@ describe("critere 5, test negatif de securite", () => {
     expect((await listerMesAdresses(moi)).map((a) => a.libelle)).toEqual([
       "Mienne",
     ]);
+  });
+});
+
+describe("le carnet propose au tunnel, LS-299", () => {
+  /*
+   * LE TEST NEGATIF DE LS-299, critere 2 : la page du tunnel lit le carnet par
+   * l'identifiant de la SESSION, et celui d'un tiers ne doit jamais y figurer.
+   * Ce qui part dans la charge du composant client est ce que ce service rend.
+   */
+  it("ne propose que le carnet du compte, jamais celui d'un tiers", async () => {
+    const moi = await creerCompte(EMAIL);
+    const voisin = await creerCompte(EMAIL_TIERS);
+    await creerAdresseEnBase(moi, "Mienne");
+    await creerAdresseEnBase(voisin, "Sienne", true);
+
+    expect((await adressesPourLeTunnel(moi)).map((a) => a.libelle)).toEqual([
+      "Mienne",
+    ]);
+  });
+
+  // L'adresse par defaut d'abord : c'est elle que l'etape preselectionne.
+  it("place l'adresse par defaut en tete", async () => {
+    const moi = await creerCompte(EMAIL);
+    await creerAdresseEnBase(moi, "Ancienne");
+    await creerAdresseEnBase(moi, "Principale", true);
+    await creerAdresseEnBase(moi, "Recente");
+
+    const proposees = await adressesPourLeTunnel(moi);
+
+    expect(proposees[0]?.libelle).toBe("Principale");
+    expect(proposees[0]?.estParDefaut).toBe(true);
+  });
+
+  /*
+   * MINIMISATION : ni nom ni telephone ne partent vers le navigateur, l'etape
+   * adresse n'en affiche aucun. La liste des cles est figee, une cle ajoutee
+   * par megarde fait rougir ce test.
+   */
+  it("ne rend que les champs de l'etape adresse", async () => {
+    const moi = await creerCompte(EMAIL);
+    await creerAdresseEnBase(moi, "Mienne", true);
+
+    const [adresse] = await adressesPourLeTunnel(moi);
+
+    expect(Object.keys(adresse ?? {}).sort()).toEqual([
+      "codePostal",
+      "estParDefaut",
+      "id",
+      "libelle",
+      "ligne1",
+      "ligne2",
+      "ville",
+    ]);
+  });
+
+  it("rend une liste vide pour un compte sans carnet", async () => {
+    const moi = await creerCompte(EMAIL);
+
+    expect(await adressesPourLeTunnel(moi)).toEqual([]);
   });
 });
 
