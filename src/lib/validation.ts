@@ -624,8 +624,26 @@ export const VERSION_INSTANTANE_LEGAL = 2;
  * validite reelle de l'immatriculation ne se prouve qu'aupres de l'INSEE, ce
  * qui n'est ni le role d'un schema ni celui de ce projet.
  */
+/**
+ * Une mention d'entreprise individuelle deja ecrite dans un nom, LS-297.
+ *
+ * LA CONFIGURATION PORTE LE NOM SEUL, et le site ajoute « EI » a l'emission,
+ * `denominationLegale`. Deviner une mention deja presente laissait passer
+ * « EI Marie Dupont », forme legale qui serait devenue « EI Marie Dupont EI »,
+ * figee pour toujours sur chaque facture, releve par la revue critique. Refuser
+ * la valeur a la configuration est la seule regle qui ne devine rien.
+ *
+ * RECOPIEE A L'IDENTIQUE dans `scripts/verifier-emetteur-facture.sh`, un test
+ * confrontant les deux sources.
+ */
+export const MOTIF_MENTION_EI =
+  /(^|[\s(,.])E\.?\s?I\.?(?=$|[\s),.])|entrepreneur\s+individuel/i;
+
 export const schemaEmetteurFacture = z.strictObject({
-  raisonSociale: champAdresse(120),
+  raisonSociale: champAdresse(120).refine(
+    (nom) => !MOTIF_MENTION_EI.test(nom),
+    "Saisir le nom seul : la mention « EI » est ajoutée par le site.",
+  ),
   siret: z
     .string()
     .regex(/^\d{14}$/, "Le SIRET compte quatorze chiffres, sans espace."),

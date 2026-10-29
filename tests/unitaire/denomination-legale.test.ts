@@ -5,9 +5,16 @@
  * suivi immediatement de « entrepreneur individuel » ou « EI », sur tout
  * document a usage professionnel, factures comprises.
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
-import { schemaInstantaneLegal } from "@/lib/validation";
+import {
+  MOTIF_MENTION_EI,
+  schemaEmetteurFacture,
+  schemaInstantaneLegal,
+} from "@/lib/validation";
 import { denominationLegale, emetteurPourDocument } from "@/services/facture";
 
 describe("denominationLegale", () => {
@@ -15,16 +22,6 @@ describe("denominationLegale", () => {
     expect(denominationLegale("TEST Dupont Camille")).toBe(
       "TEST Dupont Camille EI",
     );
-  });
-
-  // Une configuration qui l'ecrit deja ne doit pas produire « EI EI ».
-  it("ne double pas une mention deja presente", () => {
-    expect(denominationLegale("TEST Dupont Camille EI")).toBe(
-      "TEST Dupont Camille EI",
-    );
-    expect(
-      denominationLegale("TEST Dupont Camille entrepreneur individuel"),
-    ).toBe("TEST Dupont Camille entrepreneur individuel");
   });
 
   // « EI » au milieu d'un nom n'est pas la mention : elle suit immediatement.
@@ -36,6 +33,60 @@ describe("denominationLegale", () => {
     expect(denominationLegale("  TEST Dupont Camille  ")).toBe(
       "TEST Dupont Camille EI",
     );
+  });
+});
+
+describe("la configuration porte le nom seul", () => {
+  const IDENTITE = {
+    siret: "12345678901234",
+    adresse: "3 rue TEST des Ateliers, 64000 Pau",
+    emailContact: "test@exemple.test",
+  };
+
+  /*
+   * TOUTE FORME DE LA MENTION EST REFUSEE, avant ou apres le nom, et quelle
+   * que soit la casse : la deviner doublait « EI Marie Dupont » en
+   * « EI Marie Dupont EI », fige ensuite sur chaque facture, releve par la
+   * revue critique de LS-297.
+   */
+  it.each([
+    "EI TEST Dupont Camille",
+    "TEST Dupont Camille EI",
+    "TEST Dupont Camille (EI)",
+    "TEST Dupont Camille E.I.",
+    "TEST Dupont Camille ei",
+    "Entrepreneur individuel TEST Dupont Camille",
+    "TEST Dupont Camille entrepreneur individuel",
+  ])("refuse « %s »", (raisonSociale) => {
+    expect(
+      schemaEmetteurFacture.safeParse({ ...IDENTITE, raisonSociale }).success,
+    ).toBe(false);
+  });
+
+  // Des lettres E et I dans un nom ne sont pas la mention.
+  it.each(["TEST Dupont Camille", "TEST Reina Leila", "TEST Eileen Ei-Sun"])(
+    "accepte « %s »",
+    (raisonSociale) => {
+      expect(
+        schemaEmetteurFacture.safeParse({ ...IDENTITE, raisonSociale }).success,
+      ).toBe(true);
+    },
+  );
+});
+
+describe("le motif recopie par le script de diagnostic", () => {
+  /*
+   * `verifier-emetteur-facture.sh` RECOPIE LE MOTIF, faute de pouvoir importer
+   * `@/lib/validation` sans outillage. Un motif divergent ferait dire « valide »
+   * au diagnostic pour une valeur que le service refuse a l'emission.
+   */
+  it("porte exactement le motif du service", () => {
+    const source = readFileSync(
+      join(process.cwd(), "scripts/verifier-emetteur-facture.sh"),
+      "utf8",
+    );
+
+    expect(source).toContain(`/${MOTIF_MENTION_EI.source}/i`);
   });
 });
 

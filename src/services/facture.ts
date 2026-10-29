@@ -101,13 +101,13 @@ export function lireEmetteur(): EmetteurFacture {
  * immediatement de « entrepreneur individuel » ou « EI », sur les documents a
  * usage professionnel, factures comprises. F-2026-0001 ne la portait pas.
  *
- * LA MENTION N'EST PAS AJOUTEE DEUX FOIS : une configuration qui l'ecrirait deja
- * dans `FACTURE_RAISON_SOCIALE` ne doit pas produire « EI EI ».
+ * LA MENTION EST TOUJOURS AJOUTEE, ET UNE SEULE FOIS : `schemaEmetteurFacture`
+ * refuse une raison sociale qui la porterait deja, `MOTIF_MENTION_EI`. La
+ * version precedente devinait une mention en fin de nom et doublait
+ * « EI Marie Dupont », releve par la revue critique.
  */
 export function denominationLegale(raisonSociale: string): string {
-  const nom = raisonSociale.trim();
-
-  return /(^|\s)(EI|entrepreneur individuel)$/i.test(nom) ? nom : `${nom} EI`;
+  return `${raisonSociale.trim()} EI`;
 }
 
 /**
