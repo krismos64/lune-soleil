@@ -14,12 +14,17 @@
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 import { NOM_COOKIE_PANIER, decoderPanier } from "@/lib/panier-cookie";
 import { chercherPointsRetrait } from "@/integrations/sendcloud";
 import { fournisseurPointsRetrait } from "@/integrations/sendcloud/fournisseur";
 import { construireRecapitulatif } from "@/services/tunnel";
+import { exigerSession } from "@/services/autorisation";
+import {
+  adressesPourLeTunnel,
+  type AdresseProposee,
+} from "@/services/carnet-adresses";
 import type { SaisieTunnel } from "@/lib/tunnel-cookie";
 import { lireSaisie } from "./actions-tunnel";
 import { BandeauReassurance } from "@/components/bandeau-reassurance";
@@ -170,6 +175,22 @@ export default async function PageCommande({
         })
       : null;
 
+  /*
+   * LE CARNET N'EST LU QU'A L'ETAPE ADRESSE, ET POUR LA SESSION SEULE, LS-299.
+   * L'identifiant vient d'`exigerSession`, jamais d'un parametre : un achat sans
+   * compte, ou une autre etape, ne declenche aucune lecture. Le carnet reste un
+   * confort, jamais un prealable du tunnel.
+   */
+  let carnet: AdresseProposee[] = [];
+
+  if (etapeRendue === "adresse") {
+    const identite = await exigerSession(await headers());
+
+    if (identite) {
+      carnet = await adressesPourLeTunnel(identite.utilisateurId);
+    }
+  }
+
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
       {/*
@@ -187,6 +208,7 @@ export default async function PageCommande({
         saisie={saisie}
         recapitulatif={recapitulatif}
         pointsRetrait={pointsRetrait}
+        carnet={carnet}
       />
 
       <Link href="/panier" className={styles.retourPanier}>

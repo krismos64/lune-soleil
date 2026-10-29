@@ -1,0 +1,81 @@
+/**
+ * L'etat de depart de l'etape adresse du tunnel, avec le carnet. LS-299.
+ *
+ * UNE FONCTION PURE, hors du composant : la regle de preselection se teste
+ * sans navigateur ni carnet partage entre les largeurs de la suite de bout en
+ * bout, ou poser une adresse par defaut ferait se marcher dessus deux fichiers.
+ */
+import type { SaisieTunnel } from "@/lib/tunnel-cookie";
+
+/**
+ * Une adresse du carnet telle que le tunnel la propose.
+ *
+ * LES SEULS CHAMPS DE L'ETAPE ADRESSE, minimisation : ni nom, ni telephone. Ils
+ * partent dans la charge du composant client, et rien de ce qui n'est ni
+ * affiche ni saisi a cette etape n'a a sortir du serveur.
+ */
+export type AdresseProposee = {
+  id: string;
+  libelle: string | null;
+  ligne1: string;
+  ligne2: string | null;
+  codePostal: string;
+  ville: string;
+  estParDefaut: boolean;
+};
+
+/** Les quatre champs de l'etape adresse. */
+export type ChampsAdresseTunnel = {
+  ligne1: string;
+  ligne2: string;
+  codePostal: string;
+  ville: string;
+};
+
+export const CHAMPS_ADRESSE_VIDES: ChampsAdresseTunnel = {
+  ligne1: "",
+  ligne2: "",
+  codePostal: "",
+  ville: "",
+};
+
+/** Les champs que remplit une adresse du carnet. */
+export function champsDeLAdresse(
+  adresse: AdresseProposee,
+): ChampsAdresseTunnel {
+  return {
+    ligne1: adresse.ligne1,
+    ligne2: adresse.ligne2 ?? "",
+    codePostal: adresse.codePostal,
+    ville: adresse.ville,
+  };
+}
+
+/**
+ * L'etat de depart : les champs et l'adresse choisie dans la liste.
+ *
+ * LA SAISIE DEJA ENREGISTREE L'EMPORTE sur l'adresse par defaut : un client qui
+ * revient a cette etape retrouve ce qu'il avait tape. L'adresse par defaut
+ * n'est preselectionnee que sur un formulaire vide, et un carnet sans adresse
+ * par defaut, legitime selon A7, laisse le formulaire vide.
+ */
+export function etatInitialAdresse(
+  saisie: SaisieTunnel,
+  carnet: readonly AdresseProposee[],
+): { champs: ChampsAdresseTunnel; choix: string } {
+  const parDefaut = carnet.find((adresse) => adresse.estParDefaut);
+
+  if (saisie.adresse.ligne1 === "" && parDefaut !== undefined) {
+    return { champs: champsDeLAdresse(parDefaut), choix: parDefaut.id };
+  }
+
+  return {
+    champs: {
+      ligne1: saisie.adresse.ligne1,
+      ligne2: saisie.adresse.ligne2 ?? "",
+      codePostal: saisie.adresse.codePostal,
+      ville: saisie.adresse.ville,
+    },
+    choix: "",
+  };
+}
