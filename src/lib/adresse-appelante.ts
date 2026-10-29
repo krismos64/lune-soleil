@@ -48,7 +48,7 @@ export function adresseAppelante(enTetes: Headers): string | null {
 
   /*
    * PLUSIEURS SAUTS : parcours de DROITE a GAUCHE, premier saut non declare de
-   * confiance retenu, meme regle que `getIp`. Une chaine entierement composee
+   * confiance retenu, meme regle que `getIP`. Une chaine entierement composee
    * de proxies de confiance ne designe personne, donc `null`.
    *
    * L'EN-TETE EST FORGEABLE PAR L'APPELANT, et c'est pourquoi la valeur ne sert

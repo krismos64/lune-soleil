@@ -34,11 +34,11 @@
     "email:reel": "node --env-file=.env node_modules/vitest/vitest.mjs run --config vitest.envoi-reel.mts"
   },
   "dependencies": {
-    "@better-auth/passkey": "^1.6.25",
+    "@better-auth/passkey": "^1.7.14",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
     "@react-pdf/renderer": "^4.9.0",
-    "better-auth": "^1.6.25",
+    "better-auth": "^1.7.14",
     "next": "^16.4.3",
     "nodemailer": "^10.2.1",
     "react": "19.2.4",

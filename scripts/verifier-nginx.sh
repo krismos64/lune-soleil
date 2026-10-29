@@ -84,7 +84,7 @@ fi
 #
 # Les deux moities de LS-91 doivent rester d'accord. Si Nginx ecrase l'en-tete,
 # la chaine ne porte qu'un saut et la liste de proxies DOIT rester vide : une
-# liste renseignee ferait sauter ce saut unique et `getIp` rendrait `null`,
+# liste renseignee ferait sauter ce saut unique et `getIP` rendrait `null`,
 # c'est-a-dire le defaut d'origine sous une configuration qui a l'air faite.
 #
 # Le fichier `.env` reel n'est jamais lu ici, invariant 9 et permissions du

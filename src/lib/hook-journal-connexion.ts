@@ -19,7 +19,7 @@
  * greffon a deux facteurs s'en sert. Rien ici ne doit s'en approcher, meme
  * pour en mesurer la longueur. Invariant 9, critere d'acceptation 2.
  */
-import { createAuthMiddleware, getIp } from "better-auth/api";
+import { createAuthMiddleware, getIP } from "better-auth/api";
 
 import { type IssueTentative, lireResultat } from "@/lib/issue-connexion";
 import { retirerSessionDeVerification } from "@/lib/session-verification";
@@ -126,7 +126,7 @@ export function moyenDepuisUrl(url: string): MoyenConnexion | undefined {
  */
 export async function journaliserRefusLimitation(
   requete: Request,
-  options: Parameters<typeof getIp>[1],
+  options: Parameters<typeof getIP>[1],
 ): Promise<void> {
   const moyen = moyenDepuisUrl(requete.url);
 
@@ -139,7 +139,7 @@ export async function journaliserRefusLimitation(
     utilisateurId: null,
     moyen,
     issue: "REFUSEE_LIMITATION",
-    adresseIp: getIp(requete, options),
+    adresseIp: getIP(requete, options),
     agentUtilisateur: requete.headers.get("user-agent"),
   });
 }
@@ -250,7 +250,7 @@ async function appliquerRalentissement(
  * E15 tenable, un journal qui ne peut pas s'ecrire ne doit pas empecher une
  * connexion, et `enregistrerTentativeConnexion` ne leve deja jamais.
  *
- * L'ADRESSE IP VIENT DE `getIp` DE BETTER AUTH, jamais d'une lecture directe de
+ * L'ADRESSE IP VIENT DE `getIP` DE BETTER AUTH, jamais d'une lecture directe de
  * `x-forwarded-for`. Depuis la 1.6.21, cette fonction refuse une chaine a
  * plusieurs sauts tant qu'aucun proxy de confiance n'est declare, precisement
  * parce qu'un client peut usurper le saut de gauche. Relire l'en-tete a la main
@@ -295,9 +295,9 @@ export const hookJournalConnexion = createAuthMiddleware(async (ctx) => {
     moyen,
     issue: resultat.issue,
     adresseIp: ctx.request
-      ? getIp(ctx.request, ctx.context.options)
+      ? getIP(ctx.request, ctx.context.options)
       : ctx.headers
-        ? getIp(ctx.headers, ctx.context.options)
+        ? getIP(ctx.headers, ctx.context.options)
         : null,
     agentUtilisateur: ctx.headers?.get("user-agent") ?? null,
   });

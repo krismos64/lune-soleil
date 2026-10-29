@@ -182,7 +182,7 @@ cas "BETTER_AUTH_TRUSTED_PROXIES retiree de .env.example" "$ENVEX" \
   's/\nBETTER_AUTH_TRUSTED_PROXIES=//'
 
 # Cas 6 : la variable est renseignee avec une plage large, le piege exact
-# decrit dans le commentaire. Tous les sauts deviennent de confiance et `getIp`
+# decrit dans le commentaire. Tous les sauts deviennent de confiance et `getIP`
 # rend `null` : le defaut d'origine revient, sous une configuration qui a l'air
 # d'avoir ete faite.
 cas "BETTER_AUTH_TRUSTED_PROXIES renseignee avec une plage large" "$ENVEX" \
