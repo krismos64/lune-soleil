@@ -59,7 +59,8 @@ mesurée. Plus : messages périmés vidés, `overflow-wrap` à 320 px.
 
 ```
 npm run type-check, lint     OK
-npm run test                 115 fichiers, 1832 tests verts (avant les tests de revue)
+npm run test                 115 fichiers, 1837 tests verts
+npm run test:e2e             2619 passed, 82 skipped
 tests unitaires Sendcloud    24 verts
 verifier-contraste.sh        OK
 ```
