@@ -264,7 +264,7 @@ voir T1 et la procédure des droits des personnes.
 | Finalité | recevoir et traiter les signalements de doute sur l'authenticité d'un avis publié, **obligation légale** |
 | Personnes concernées | toute personne se déclarant responsable d'un produit visé par un avis, **sans compte ni authentification** |
 | Catégories de données | qualité déclarée, adresse email, motif du signalement, suite donnée, adresse IP par le compteur de plafond |
-| Tables | `SignalementAvis`, et `RateLimit` pour le plafond par adresse |
+| Tables | `SignalementAvis`, et `CompteurLimitation` pour le plafond par adresse, `RateLimit` jusqu'à LS-294 |
 | Base légale | **obligation légale**, article 6.1.c : l'article L111-7-2 du Code de la consommation impose de mettre à disposition cette fonctionnalité gratuite |
 | Conservation | trois ans à compter du signalement, même ancrage que T10, référentiel CNIL n° 2021-131 |
 | Destinataires | l'exploitante seule. **Aucun signalement n'est publié**, ni son motif, ni son auteur |
@@ -283,8 +283,8 @@ les avis d'un concurrent.
 
 **Le formulaire étant public, il porte les trois couches anti-robot de T10** :
 champ piège, délai minimum, plafond par adresse IP. L'adresse IP entre donc dans
-ce traitement par le compteur, et sa conservation suit celle de `RateLimit`,
-vingt-quatre heures.
+ce traitement par le compteur, et sa conservation suit celle de
+`CompteurLimitation`, vingt-quatre heures.
 
 ### T8, journal des connexions
 
@@ -319,10 +319,10 @@ porte déjà. Sans elle, une ligne d'échec sur compte inconnu ne dirait rien.
 |---|---|
 | Finalité | tracer les actions d'administration, l'envoi des emails, les alertes critiques, et limiter les tentatives en rafale |
 | Personnes concernées | clients destinataires d'emails, exploitante agissant dans l'administration |
-| Catégories de données | identifiant de l'acteur, adresse IP, adresse email du destinataire, modèle d'email et statut d'envoi, clé de limitation de débit contenant une adresse IP, **empreinte** d'adresse email pour le compteur par compte visé, **adresse email de réception des alertes** |
-| Tables | `JournalAudit`, `JournalEmail`, `AlerteCritique`, `RateLimit`, `CompteurCompteVise`, `MouvementStock`, `EnvoiEnAttente`, `ParametreBoutique` |
+| Catégories de données | identifiant de l'acteur, adresse IP, adresse email du destinataire, modèle d'email et statut d'envoi, clé de limitation de débit contenant une adresse IP, clé de compteur du projet contenant une adresse IP ou un identifiant de session, **empreinte** d'adresse email pour le compteur par compte visé, **adresse email de réception des alertes** |
+| Tables | `JournalAudit`, `JournalEmail`, `AlerteCritique`, `RateLimit`, `CompteurCompteVise`, `CompteurLimitation`, `MouvementStock`, `EnvoiEnAttente`, `ParametreBoutique` |
 | Base légale | intérêt légitime, article 6.1.f, sécurité et preuve du bon fonctionnement |
-| Conservation | **six mois** pour `JournalAudit`, par alignement sur la délibération CNIL n° 2021-122. **Vingt-quatre heures** pour `RateLimit` et pour `CompteurCompteVise`, arbitrage de LS-94 exposé ci-dessous. `JournalEmail` suit la commande qu'il sert, voir T2. **Trente jours** pour les lignes TERMINÉES d'`EnvoiEnAttente`, jamais pour les lignes bloquées, arbitrage de LS-154 exposé ci-dessous. Les purges sont branchées sur une tâche planifiée quotidienne depuis le 12 août 2026, LS-94, portée à **cinq tables** par LS-154 |
+| Conservation | **six mois** pour `JournalAudit`, par alignement sur la délibération CNIL n° 2021-122. **Vingt-quatre heures** pour `RateLimit`, `CompteurCompteVise` et `CompteurLimitation`, arbitrage de LS-94 exposé ci-dessous. `JournalEmail` suit la commande qu'il sert, voir T2. **Trente jours** pour les lignes TERMINÉES d'`EnvoiEnAttente`, jamais pour les lignes bloquées, arbitrage de LS-154 exposé ci-dessous. Les purges sont branchées sur une tâche planifiée quotidienne depuis le 12 août 2026, LS-94, portée à **cinq tables** par LS-154 ; la liste `PURGES` de `purge-journaux.ts` fait foi |
 | Destinataires | l'exploitante seule |
 | Transfert hors UE | aucun |
 
@@ -356,6 +356,14 @@ plutôt qu'un choix d'origine. Le limiteur de Better Auth lance un `deleteMany`
 fenêtre, seuil de soixante secondes : le compteur du projet n'y survivait pas une
 minute, et sa fenêtre annoncée de quinze minutes n'existait pas. Ne pas
 « simplifier » en les refusionnant.
+
+**`CompteurLimitation` porte les autres compteurs du projet**, LS-294 : plafond
+du formulaire de contact et des signalements d'avis, clé `contact|<ip>` ou
+`signalement|<ip>`, et plafond des Server Actions de réauthentification, clé
+`action:<nom>|<session>`. Ils vivaient dans `RateLimit` et en sont sortis pour
+la raison exposée au paragraphe précédent : les plafonds d'une heure y
+repartaient de zéro au bout d'une minute, défaut mesuré en revue de LS-294.
+`RateLimit` ne porte plus que les compteurs de Better Auth.
 
 **Pourquoi vingt-quatre heures et non six mois pour `RateLimit`**, arbitrage
 rendu par LS-94 le 12 août 2026. L'alignement sur la délibération n° 2021-122 ne
@@ -419,8 +427,8 @@ variables, précaution 3 d'ADR-008.
 |---|---|
 | Finalité | recevoir et traiter une demande envoyée par le formulaire de contact public |
 | Personnes concernées | toute personne écrivant à la boutique, cliente ou non |
-| Catégories de données | nom, adresse email, sujet et corps du message, tels que la personne les a saisis |
-| Tables | `Message` |
+| Catégories de données | nom, adresse email, sujet et corps du message, tels que la personne les a saisis ; adresse IP dans la clé du plafond d'envoi, vingt-quatre heures, voir T9 |
+| Tables | `Message`, et `CompteurLimitation` pour le plafond par adresse |
 | Base légale | intérêt légitime, article 6.1.f, répondre à une sollicitation que la personne a elle-même initiée |
 | Conservation | **trois ans** à compter du message, référentiel CNIL n° 2021-131, même ancrage que T2 pour les données de prospect. La purge est branchée sur la tâche quotidienne depuis LS-154, le 2 septembre 2026 |
 | Destinataires | l'exploitante seule |
