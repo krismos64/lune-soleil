@@ -49,8 +49,19 @@ import { z } from "zod";
  * resout pas sans outillage. Le garde-fou contre la divergence est plus bas,
  * le test unitaire `emetteur-facture-controle` comparant les deux formes.
  */
+const MOTIF_MENTION_EI =
+  /(^|[\s(,.])E\.?\s?I\.?(?=$|[\s),.])|entrepreneur\s+individuel/i;
+
 const schema = z.strictObject({
-  raisonSociale: z.string().trim().min(1).max(120),
+  raisonSociale: z
+    .string()
+    .trim()
+    .min(1)
+    .max(120)
+    .refine(
+      (nom) => !MOTIF_MENTION_EI.test(nom),
+      "Saisir le nom seul : la mention EI est ajoutee par le site.",
+    ),
   siret: z.string().regex(/^\d{14}$/, "Le SIRET compte quatorze chiffres, sans espace."),
   adresse: z.string().trim().min(1).max(200),
   emailContact: z.email(),
