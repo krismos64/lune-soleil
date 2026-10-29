@@ -16,7 +16,8 @@ l'API réellement appelée.
 - l'appel HTTP à Sendcloud et la lecture de ses identifiants dans
   l'environnement
 - la traduction de sa réponse vers le type `PointRetrait` du projet
-- la traduction de ses pannes en `TransporteurIndisponibleError`
+- la traduction de ses pannes en `TransporteurIndisponibleError`, état inconnu,
+  et de ses refus nets (4xx) en `TransporteurRefusError`, rien de créé, LS-296
 
 ## Ce qui n'entre pas
 
@@ -32,8 +33,15 @@ l'API réellement appelée.
 | `fournisseur.ts` | l'appel HTTP réel, recherche des points de retrait, LS-200 |
 | `statuts.ts` | la correspondance des statuts de suivi, ADR-042, **aucun appel réseau** |
 | `suivi.ts` | l'appel HTTP réel, lecture du statut d'un colis, LS-131 |
-| `methodes.ts` | la correspondance mode vers méthode d'expédition, **aucun appel réseau**, LS-218 |
-| `expedition.ts` | l'appel HTTP réel, **création d'un colis et de son étiquette**, LS-218 |
+| `methodes.ts` | la correspondance mode vers option d'expédition v3, contrat et expéditeur, **aucun appel réseau**, LS-218 puis LS-296 |
+| `expedition.ts` | l'appel HTTP réel, **création d'un colis et de son étiquette par l'API v3**, LS-218 puis LS-296 |
+
+**La création passe par l'API v3**, `POST /api/v3/shipments/announce`, depuis
+LS-296 : la v2 rend 403 à la création pour ce compte. Les lectures, suivi
+compris, restent en v2 et y répondent. Seul le statut `READY_TO_SEND` est
+expédiable, une annonce échouée revenant en 201 avec un numéro de suivi, et
+`external_reference_id` porte le numéro de commande : un second envoi rend 409
+et l'envoi existant, sans seconde étiquette facturée.
 
 `statuts.ts` porte la règle la plus coûteuse du projet si elle est fausse :
 `livreA` ouvre le délai de rétractation, et l'article L221-20 le porte à douze
