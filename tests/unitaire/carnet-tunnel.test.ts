@@ -3,7 +3,12 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { etatInitialAdresse, type AdresseProposee } from "@/lib/carnet-tunnel";
+import {
+  adresseCorrespondante,
+  etatInitialAdresse,
+  libelleProposition,
+  type AdresseProposee,
+} from "@/lib/carnet-tunnel";
 import type { SaisieTunnel } from "@/lib/tunnel-cookie";
 
 function saisieAvec(ligne1: string): SaisieTunnel {
@@ -87,5 +92,57 @@ describe("etatInitialAdresse", () => {
       choix: "",
       champs: { ligne1: "", ligne2: "", codePostal: "", ville: "" },
     });
+  });
+});
+
+describe("la liste dit ce qui partira", () => {
+  /*
+   * RETOUR A L'ETAPE, releve par la revue frontend : la saisie enregistree
+   * reproduit l'adresse par defaut, la liste doit la nommer et non annoncer
+   * « une autre adresse ».
+   */
+  it("nomme l'adresse du carnet que la saisie reproduit", () => {
+    const saisie = saisieAvec("1 rue TEST");
+    saisie.adresse = {
+      ligne1: "1 rue TEST",
+      codePostal: "64000",
+      ville: "Pau",
+      pays: "FR",
+    };
+
+    expect(etatInitialAdresse(saisie, [SECONDE, PRINCIPALE]).choix).toBe(
+      "adresse-principale",
+    );
+  });
+
+  // Une retouche detache la liste de l'adresse choisie.
+  it("ne nomme plus l'adresse apres une retouche", () => {
+    expect(
+      adresseCorrespondante(
+        {
+          ligne1: "1 rue TEST",
+          ligne2: "Bâtiment D",
+          codePostal: "64000",
+          ville: "Pau",
+        },
+        [PRINCIPALE],
+      ),
+    ).toBe("");
+  });
+});
+
+describe("libelleProposition", () => {
+  // En tete, pour survivre a la coupe du select ferme a 320 px.
+  it("annonce l'adresse par defaut en tete", () => {
+    expect(libelleProposition(PRINCIPALE)).toBe(
+      "Par défaut, Maison : 1 rue TEST, 64000 Pau",
+    );
+  });
+
+  // Deux adresses d'un immeuble ne different parfois que par le complement.
+  it("porte le complement quand il existe", () => {
+    expect(
+      libelleProposition({ ...SECONDE, libelle: null, ligne2: "Bâtiment B" }),
+    ).toBe("2 place TEST, Bâtiment B, 64000 Pau");
   });
 });

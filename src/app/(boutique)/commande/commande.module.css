@@ -162,6 +162,17 @@
   font-size: 1rem;
 }
 
+/*
+ * LA LISTE DU CARNET TIENT DANS SA COLONNE, LS-299. Un `<select>` prend la
+ * largeur de son option la plus longue, et un libelle peut depasser deux cent
+ * cinquante caracteres : borne a sa colonne, il coupe son texte au lieu de
+ * pousser la page au-dela de 320 px.
+ */
+.liste {
+  width: 100%;
+  max-width: 100%;
+}
+
 .modes {
   margin: 0;
   padding: 0;

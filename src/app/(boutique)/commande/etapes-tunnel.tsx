@@ -27,8 +27,10 @@ import type { ModeLivraison } from "@/generated/prisma/enums";
 import type { Recapitulatif } from "@/services/tunnel";
 import {
   CHAMPS_ADRESSE_VIDES,
+  adresseCorrespondante,
   champsDeLAdresse,
   etatInitialAdresse,
+  libelleProposition,
   type AdresseProposee,
   type ChampsAdresseTunnel,
 } from "@/lib/carnet-tunnel";
@@ -453,14 +455,6 @@ export function EtapesTunnel({
   );
 }
 
-/** Le libelle d'une adresse dans la liste, lisible sans ouvrir le carnet. */
-function libelleProposition(adresse: AdresseProposee): string {
-  const lieu = `${adresse.ligne1}, ${adresse.codePostal} ${adresse.ville}`;
-  const nom = adresse.libelle ? `${adresse.libelle} : ${lieu}` : lieu;
-
-  return adresse.estParDefaut ? `${nom} (par défaut)` : nom;
-}
-
 /**
  * Etape 2, l'adresse, avec le carnet du compte quand il existe. LS-299.
  *
@@ -497,16 +491,40 @@ function FormulaireAdresse({
   const [champs, setChamps] = useState<ChampsAdresseTunnel>(depart.champs);
   const [choix, setChoix] = useState(depart.choix);
 
+  /*
+   * LA DERNIERE FRAPPE MANUELLE EST GARDEE, releve par la revue frontend :
+   * revenir sur « Saisir une autre adresse » apres avoir compare une entree du
+   * carnet la restaure, au lieu d'effacer sans retour ce qui avait ete tape.
+   */
+  const saisieManuelle = useRef<ChampsAdresseTunnel>(
+    depart.choix === "" ? depart.champs : CHAMPS_ADRESSE_VIDES,
+  );
+
   function choisir(identifiant: string): void {
-    setChoix(identifiant);
     const adresse = carnet.find((candidate) => candidate.id === identifiant);
+
+    setChoix(adresse === undefined ? "" : identifiant);
     setChamps(
-      adresse === undefined ? CHAMPS_ADRESSE_VIDES : champsDeLAdresse(adresse),
+      adresse === undefined
+        ? saisieManuelle.current
+        : champsDeLAdresse(adresse),
     );
   }
 
+  /*
+   * UNE RETOUCHE MET LA LISTE A JOUR : elle nomme l'adresse du carnet que les
+   * champs reproduisent encore, sinon « Saisir une autre adresse ». Elle ne
+   * nomme jamais une adresse qui ne partira pas.
+   */
   function modifier(champ: keyof ChampsAdresseTunnel, valeur: string): void {
-    setChamps((precedents) => ({ ...precedents, [champ]: valeur }));
+    const suivants = { ...champs, [champ]: valeur };
+    const correspondante = adresseCorrespondante(suivants, carnet);
+
+    if (correspondante === "") {
+      saisieManuelle.current = suivants;
+    }
+    setChamps(suivants);
+    setChoix(correspondante);
   }
 
   return (
@@ -531,7 +549,7 @@ function FormulaireAdresse({
           <select
             value={choix}
             onChange={(evenement) => choisir(evenement.target.value)}
-            className={styles.saisie}
+            className={`${styles.saisie} ${styles.liste}`}
           >
             <option value="">Saisir une autre adresse</option>
             {carnet.map((adresse) => (

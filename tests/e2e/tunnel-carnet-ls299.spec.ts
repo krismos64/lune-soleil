@@ -93,6 +93,30 @@ test.describe("connecte, avec un carnet", () => {
          FROM utilisateur u WHERE u.email = $2`,
         [`${marque}-Atelier`, emailVerifie()],
       );
+      /*
+       * LE PIRE CAS DE LONGUEUR, releve par la revue frontend : libelle de 60,
+       * ligne1 de 120 avec un mot de 40 sans espace, ville de 80. Une valeur
+       * courte ne peut faire deborder aucun ecran.
+       */
+      await client.query(
+        `INSERT INTO adresse_carnet (id, utilisateur_id, libelle, nom_complet,
+                                     ligne1, code_postal, ville, pays,
+                                     est_par_defaut)
+         SELECT gen_random_uuid()::text, u.id, $1, 'Client verifie', $2,
+                '64000', $3, 'FR', false
+         FROM utilisateur u WHERE u.email = $4`,
+        [
+          `${marque}-${"L".repeat(60 - marque.length - 1)}`,
+          `${"Residencelesglycinesbatimentcappartement".padEnd(40, "x")} ${"avenue des Pyrenees ".repeat(4)}`.slice(
+            0,
+            120,
+          ),
+          "Saint-Jean-Pied-de-Port-sur-la-Nive-et-les-Coteaux-du-Pays-Basque-Interieur"
+            .padEnd(80, "e")
+            .slice(0, 80),
+          emailVerifie(),
+        ],
+      );
     });
   });
 
@@ -118,7 +142,7 @@ test.describe("connecte, avec un carnet", () => {
 
     const liste = page.getByLabel("Adresse enregistrée");
     await liste.selectOption({
-      label: `${marque}-Atelier : 127 avenue des Pyrenees-Atlantiques, 64000 Pau`,
+      label: `${marque}-Atelier : 127 avenue des Pyrenees-Atlantiques, Batiment C, 64000 Pau`,
     });
 
     await expect(page.getByLabel("Adresse", { exact: true })).toHaveValue(
@@ -136,17 +160,43 @@ test.describe("connecte, avec un carnet", () => {
     await expect(page).toHaveURL(/etape=livraison/);
   });
 
-  test("« Saisir une autre adresse » vide les champs", async ({ page }) => {
+  /*
+   * LA FRAPPE MANUELLE EST RESTAUREE, releve par la revue frontend : comparer
+   * une entree du carnet ne doit pas effacer sans retour ce qui avait ete tape.
+   */
+  test("« Saisir une autre adresse » restaure la frappe manuelle", async ({
+    page,
+  }) => {
+    await atteindreEtapeAdresse(page);
+
+    const liste = page.getByLabel("Adresse enregistrée");
+    await liste.selectOption({ label: "Saisir une autre adresse" });
+    await page.getByLabel("Adresse", { exact: true }).fill("9 rue Manuelle");
+    await page.getByLabel("Code postal").fill("35000");
+
+    await liste.selectOption({ index: 1 });
+    await expect(page.getByLabel("Code postal")).not.toHaveValue("35000");
+
+    await liste.selectOption({ label: "Saisir une autre adresse" });
+    await expect(page.getByLabel("Adresse", { exact: true })).toHaveValue(
+      "9 rue Manuelle",
+    );
+    await expect(page.getByLabel("Code postal")).toHaveValue("35000");
+  });
+
+  // Une retouche detache la liste : elle ne nomme plus l'adresse choisie.
+  test("une retouche remet la liste sur une autre adresse", async ({
+    page,
+  }) => {
     await atteindreEtapeAdresse(page);
 
     const liste = page.getByLabel("Adresse enregistrée");
     await liste.selectOption({
-      label: `${marque}-Atelier : 127 avenue des Pyrenees-Atlantiques, 64000 Pau`,
+      label: `${marque}-Atelier : 127 avenue des Pyrenees-Atlantiques, Batiment C, 64000 Pau`,
     });
-    await liste.selectOption({ label: "Saisir une autre adresse" });
+    await page.getByLabel(/Complément/).fill("Batiment D");
 
-    await expect(page.getByLabel("Adresse", { exact: true })).toHaveValue("");
-    await expect(page.getByLabel("Code postal")).toHaveValue("");
+    await expect(liste).toHaveValue("");
   });
 
   // Critere 5 : la liste et ses libelles longs ne debordent pas a 320 px.
