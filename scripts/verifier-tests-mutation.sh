@@ -2868,7 +2868,9 @@ echo
 # colonne laisserait le test VERT, sa fixture demandant 180 g : une mutation qui
 # fabrique la valeur attendue ne prouve rien. Elle vaut donc 200, ce que le
 # reglage n'envoie jamais quand la demande en porte un autre.
-mute "$SENDCLOUD_EXPEDITION" 's/          weight: \(demande.poidsGrammes \/ 1000\).toFixed\(3\),/          weight: (200 \/ 1000).toFixed(3),/'
+#
+# LA CIBLE A SUIVI L'API v3, LS-296 : le poids est desormais `weight.value`.
+mute "$SENDCLOUD_EXPEDITION" 's/              value: \(demande.poidsGrammes \/ 1000\).toFixed\(3\),/              value: (200 \/ 1000).toFixed(3),/'
 cas "poids du colis remis en constante dans l'appel" unitaire \
   "convertit en kilogrammes le poids recu dans la demande"
 
