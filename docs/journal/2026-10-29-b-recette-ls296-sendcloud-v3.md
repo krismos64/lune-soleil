@@ -93,9 +93,11 @@ et 15 sur 15), issue #593 fermée.
 
 ## Reste ouvert
 
-- **LS-296 et LS-218, le tarif facturé** de cette première étiquette, à relever
-  sur la facture Sendcloud (4,10 € annoncés en Locker). Les deux tickets se
-  ferment sur ce relevé.
+- Plus rien sur l'étiquette : **tarif relevé le soir même**, 4,10 € TTC débités
+  par Sendcloud pour le Locker, égal au tarif facturé au client. **LS-296,
+  LS-218 et LS-27 closes.** Domicile (7,49 €) et Point Relais restent à
+  confirmer sur facture au premier envoi de chacun. Encaissement : 5,10 €
+  payés, 4,77 € reçus sur Stripe, 0,33 € de frais de paiement.
 - **LS-297** : arbitrage de Christophe, « Lune-Soleil » en titre et le nom légal
   en petit avec « EI », seulement sur la facture et `/informations-legales`
   (R526-27 du Code de commerce, article 6 de la LCEN). La facture F-2026-0001
