@@ -649,10 +649,13 @@ async function poserMessagesContact(client: Client): Promise<void> {
    * depot avec la limitation de Better Auth. La parade est la meme : nettoyer
    * le compteur a l'amorce plutot que d'attendre la fenetre.
    *
-   * LE FILTRE NE VISE QUE LA CLE DE CONTACT, jamais celles de Better Auth :
-   * effacer ces dernieres masquerait un vrai defaut de limitation.
+   * LE FILTRE NE VISE QUE LA CLE DE CONTACT, dans la table du projet depuis
+   * LS-294, jamais celles de Better Auth : effacer ces dernieres masquerait un
+   * vrai defaut de limitation.
    */
-  await client.query(`DELETE FROM rate_limit WHERE key LIKE 'contact|%'`);
+  await client.query(
+    `DELETE FROM compteur_limitation WHERE cle LIKE 'contact|%'`,
+  );
 
   /*
    * `DO UPDATE` ET NON `DO NOTHING`, ET C'EST LA CORRECTION QUI COMPTE ICI.

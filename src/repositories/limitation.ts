@@ -12,16 +12,17 @@
  * SERVER ACTION. Une Server Action est invocable en boucle, sans navigateur :
  * les mots de passe s'y testent donc sans aucun plafond.
  *
- * LA MEME TABLE QUE BETTER AUTH, ET NON UNE NOUVELLE. Le ticket le demande
- * explicitement, « ne pas reinventer un stockage ». `RateLimit` existe, elle est
- * deja purgee par LS-94, et son schema convient exactement : une cle, un
- * compteur, un horodatage de derniere requete.
+ * UNE TABLE PROPRE, `compteur_limitation`, ET NON `rate_limit`. LS-92 avait
+ * choisi la table de Better Auth, « ne pas reinventer un stockage ». LS-294 l'a
+ * quittee : son limiteur purge `rate_limit` SANS FILTRE DE CLE au-dela de sa
+ * plus longue fenetre configuree, soixante secondes ici. Les plafonds d'une
+ * heure du contact et des signalements d'avis y repartaient de zero au bout
+ * d'une minute, defaut deja paye par LS-83 pour le compte vise. Le plafond a
+ * soixante secondes des Server Actions n'y survivait que par coincidence de
+ * reglage.
  *
- * LA CLE EST PREFIXEE `action:`, ET C'EST NON NEGOCIABLE. Better Auth ecrit ses
- * propres cles sous la forme `<ip>|<chemin>` : sans prefixe distinct, une
- * Server Action et une route de la bibliotheque pourraient partager un compteur,
- * chacune consommant le quota de l'autre. Le prefixe rend les deux espaces
- * disjoints par construction.
+ * LES CLES PORTENT UN PREFIXE D'USAGE, `action:`, `contact|`, `signalement|`.
+ * Les compteurs ne partagent ainsi jamais une ligne d'un usage a l'autre.
  *
  * CE MODULE NE DECIDE RIEN. Il incremente et rend l'etat du compteur ; le seuil,
  * la fenetre et la conduite a tenir vivent dans `services/limitation-action.ts`,
@@ -72,10 +73,6 @@ export type EtatCompteur = {
  * `now()` EST L'HORLOGE DE POSTGRESQL, jamais celle de Node, meme motif que le
  * verrou de LS-72 : deux instances dont les horloges derivent compareraient des
  * instants incomparables, et la fenetre s'ouvrirait trop tot sur l'une d'elles.
- *
- * `lastRequest` PORTE DES MILLISECONDES depuis l'epoch, en `BIGINT`, parce que
- * la table appartient a Better Auth qui y ecrit `Date.now()`. La conversion
- * passe donc par `extract(epoch ...) * 1000`, jamais par un horodatage.
  */
 export async function incrementerCompteur(
   client: ClientPrisma,
@@ -83,21 +80,19 @@ export async function incrementerCompteur(
   fenetreSecondes: number,
 ): Promise<EtatCompteur> {
   const lignes = await client.$queryRaw<
-    { count: number; last_request: bigint }[]
+    { compte: number; derniere_a: Date }[]
   >`
-    INSERT INTO rate_limit (id, key, count, last_request)
-    VALUES (gen_random_uuid()::text, ${cle}, 1,
-            (extract(epoch FROM now()) * 1000)::bigint)
-    ON CONFLICT (key) DO UPDATE
-      SET count = CASE
-            WHEN rate_limit.last_request
-                 < (extract(epoch FROM now()) * 1000)::bigint
-                   - ${fenetreSecondes}::bigint * 1000
+    INSERT INTO compteur_limitation (id, cle, compte, derniere_a)
+    VALUES (gen_random_uuid()::text, ${cle}, 1, now())
+    ON CONFLICT (cle) DO UPDATE
+      SET compte = CASE
+            WHEN compteur_limitation.derniere_a
+                 < now() - make_interval(secs => ${fenetreSecondes}::double precision)
             THEN 1
-            ELSE rate_limit.count + 1
+            ELSE compteur_limitation.compte + 1
           END,
-          last_request = (extract(epoch FROM now()) * 1000)::bigint
-    RETURNING count, last_request
+          derniere_a = now()
+    RETURNING compte, derniere_a
   `;
 
   const ligne = lignes[0];
@@ -110,8 +105,8 @@ export async function incrementerCompteur(
   }
 
   return {
-    compte: Number(ligne.count),
-    fenetreOuverteA: new Date(Number(ligne.last_request)),
+    compte: Number(ligne.compte),
+    fenetreOuverteA: ligne.derniere_a,
   };
 }
 
@@ -131,15 +126,15 @@ export async function effacerCompteur(
   client: ClientPrisma,
   cle: string,
 ): Promise<void> {
-  await client.rateLimit.deleteMany({ where: { key: cle } });
+  await client.compteurLimitation.deleteMany({ where: { cle } });
 }
 
 /**
  * Incremente le compteur d'un COMPTE VISE et rend son compte, en UNE
  * instruction. LS-83.
  *
- * POURQUOI UNE TABLE PROPRE ET NON `rate_limit`, a rebours de ce que ce module
- * fait juste au-dessus. Le limiteur de Better Auth lance `deleteExpiredRows`,
+ * POURQUOI UNE TABLE PROPRE ET NON `rate_limit`, premier cas du defaut que
+ * LS-294 a ensuite corrige pour `incrementerCompteur`. Le limiteur de Better Auth lance `deleteExpiredRows`,
  * un `deleteMany` SANS AUCUN FILTRE DE CLE, des qu'il croise une de SES lignes
  * hors fenetre. Le seuil vaut soixante secondes : toute ligne du projet plus
  * vieille d'une minute partait avec les siennes, et la fenetre de quinze
@@ -160,9 +155,9 @@ export async function effacerCompteur(
  * instruction, et `now()` est l'horloge de PostgreSQL, jamais celle de Node.
  *
  * `derniere_a` EST UN `timestamptz` ET NON DES MILLISECONDES depuis l'epoch,
- * a la difference de `rate_limit.last_request` : ce dernier est un `BIGINT`
- * parce que la table appartient a Better Auth, qui y ecrit `Date.now()`. Cette
- * table-ci appartient au projet, invariant 8.
+ * comme `compteur_limitation` et a la difference de `rate_limit.last_request`,
+ * un `BIGINT` parce que la table appartient a Better Auth, qui y ecrit
+ * `Date.now()`. Cette table-ci appartient au projet, invariant 8.
  */
 export async function incrementerCompteVise(
   client: ClientPrisma,

@@ -60,7 +60,9 @@ afterAll(async () => {
 });
 
 afterEach(async () => {
-  await client.query("TRUNCATE message, envoi_en_attente, rate_limit CASCADE");
+  await client.query(
+    "TRUNCATE message, envoi_en_attente, rate_limit, compteur_limitation CASCADE",
+  );
 
   /*
    * L'INTERRUPTEUR EST REMIS A SA VALEUR D'AMORCAGE, LS-98 et ADR-043. Le
@@ -409,6 +411,73 @@ describe("deposerMessage", () => {
       "SELECT count(*)::text AS nombre FROM message",
     );
     expect(rows[0]?.nombre).toBe("5");
+  });
+
+  it("garde le plafond d'une heure apres une purge de Better Auth, LS-294", async () => {
+    /*
+     * LE DEFAUT QUE LS-294 A TROUVE, et le test precedent ne pouvait pas le
+     * voir : il enchaine ses envois en quelques millisecondes. Le compteur
+     * vivait dans `rate_limit`, que le limiteur de Better Auth purge SANS
+     * FILTRE DE CLE au-dela de soixante secondes. Un robot qui attendait une
+     * minute repartait de zero, et le plafond de cinq par heure valait cinq par
+     * minute.
+     *
+     * LE TEMPS EST SIMULE EN VIEILLISSANT LES LIGNES, motif de LS-83 dans
+     * `ralentissement-compte.sequential.test.ts`. Les DEUX tables sont
+     * vieillies : la seconde ne porte plus aucun compteur du projet, mais c'est
+     * elle que l'ancien code employait, et la mutation qui le remet en place
+     * doit pouvoir faire rougir ce test.
+     */
+    const adresseIp = "203.0.113.43";
+    const adresseVueParBetterAuth = "203.0.113.70";
+    const { auth } = await import("@/lib/auth");
+    const connexion = () =>
+      auth.handler(
+        new Request("http://localhost:3000/api/auth/sign-in/email", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-forwarded-for": adresseVueParBetterAuth,
+          },
+          body: JSON.stringify({
+            email: "personne@exemple.fr",
+            password: "valeur-de-test-sans-rapport-avec-un-mot-de-passe-reel",
+          }),
+        }),
+      );
+
+    for (let tentative = 0; tentative < 5; tentative += 1) {
+      const issue = await deposerMessage({
+        saisie: {
+          ...SAISIE,
+          sujet: `Sujet ${tentative}`,
+          ouvertA: ouvertIlYa(30),
+        },
+        adresseIp,
+      });
+      expect(issue.statut).toBe("ENREGISTRE");
+    }
+    await connexion();
+
+    // SOIXANTE-DIX SECONDES : au-dela du seuil de purge de Better Auth, bien
+    // en deça de l'heure du plafond.
+    await client.query(
+      "UPDATE rate_limit SET last_request = last_request - 70000",
+    );
+    await client.query(
+      "UPDATE compteur_limitation SET derniere_a = derniere_a - interval '70 seconds'",
+    );
+
+    // DEPUIS UNE ADRESSE DEJA VUE : Better Auth ne purge qu'en rencontrant une
+    // de ses propres lignes hors fenetre. La purge part en tache de fond.
+    await connexion();
+    await new Promise((resoudre) => setTimeout(resoudre, 200));
+
+    const refuse = await deposerMessage({
+      saisie: { ...SAISIE, sujet: "Le sixieme", ouvertA: ouvertIlYa(30) },
+      adresseIp,
+    });
+    expect(refuse.statut).toBe("TROP_DE_MESSAGES");
   });
 
   it("ne plafonne pas quand l'adresse IP est inconnue", async () => {
