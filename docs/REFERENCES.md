@@ -338,5 +338,5 @@ qui décide de les invoquer, ce qui rend cette table utile.
 
 **Ne pas invoquer les agents globaux** `docker-devops`, `security-auditor` ni
 `nextjs-architect` : ils sont calibrés sur NextAuth v5, PostgreSQL 16, Redis 7 et
-du multi-tenant, quand ce projet est en Better Auth 1.6, PostgreSQL 18, sans
+du multi-tenant, quand ce projet est en Better Auth 1.7, PostgreSQL 18, sans
 Redis et mono-tenant, que `docker-devops` traite pourtant comme requis.

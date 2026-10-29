@@ -207,7 +207,7 @@ ce dépôt, tu as commis une erreur.
 **Aucun multi-tenant.** Pas d'isolation par organisation, pas de schéma par
 client, pas de variable de tenant. Une boutique, une exploitante.
 
-**Aucun NextAuth.** L'authentification est Better Auth 1.6, passkey pour
+**Aucun NextAuth.** L'authentification est Better Auth 1.7, passkey pour
 l'administration, ADR-021 et ADR-023.
 
 **Aucun orchestrateur.** Pas de Kubernetes, pas de Swarm, pas de Helm. Docker

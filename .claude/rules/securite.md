@@ -25,7 +25,7 @@ franchi au moins une fois dans ce projet.
 | 7, validation | toute entrée non fiable validée côté serveur avec Zod | `validation.ts` |
 | 9, secrets | jamais journalisés, jamais commités, le dépôt est public | tous |
 
-Vérifier la documentation de Better Auth 1.6 et de Zod 4 via Context7 avant
+Vérifier la documentation de Better Auth 1.7 et de Zod 4 via Context7 avant
 d'utiliser une API : ces versions sont plus récentes que la connaissance du
 modèle, et deux défauts de LS-70 venaient d'une API supposée.
 
@@ -147,9 +147,10 @@ Le service tire Prisma, donc `DATABASE_URL` : un test unitaire de la progression
 arithmétique échouerait sur une machine sans base. Même motif qu'`issue-connexion.ts`.
 
 **Le ralentissement est appliqué par le hook `after`, qui ATTEND réellement.**
-`runAfterHooks` de Better Auth 1.6 attend chaque hook en série avant de rendre la
-réponse, vérifié via Context7. Un hook dont le résultat serait ignoré laisserait
-la réponse partir aussitôt, et le ralentissement serait une ligne morte que rien
+`runAfterHooks` de Better Auth attend chaque hook en série avant de rendre la
+réponse, vérifié via Context7 en 1.6 puis dans `dispatch.mjs` en 1.7.14,
+LS-294. Un hook dont le résultat serait ignoré laisserait la réponse partir
+aussitôt, et le ralentissement serait une ligne morte que rien
 ne signalerait : la mutation `void` à la place d'`await` fait rougir cinq tests.
 
 **Un test mené depuis une seule adresse IP ne peut rien exercer de cette mesure.**

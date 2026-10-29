@@ -145,7 +145,7 @@ coder. Ne jamais coder par-dessus une décision floue.
 
 ## 2. Vérifier la documentation des bibliothèques
 
-Pour toute API de Next.js 16, React 19, Prisma 7, Better Auth 1.6 ou Stripe :
+Pour toute API de Next.js 16, React 19, Prisma 7, Better Auth 1.7 ou Stripe :
 consulter Context7 d'abord, ces versions sont récentes. Signaler son usage.
 
 ## 3. Écrire le test d'abord sur les zones à risque

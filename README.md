@@ -245,7 +245,7 @@ n'a rien.
 | Interface | CSS natif, variables de `tokens.css` issues d'ADR-022, primitives Radix |
 | Base de données | PostgreSQL 18 |
 | ORM | Prisma 7, migrations versionnées |
-| Authentification | Better Auth 1.6 |
+| Authentification | Better Auth 1.7 |
 | Validation | Zod, côté serveur systématiquement |
 | Paiement | Stripe Checkout, webhooks signés et idempotents |
 | Documents comptables | `@react-pdf/renderer`, police embarquée, volume local, ADR-034 |
@@ -805,7 +805,7 @@ pas. `test:unitaire` reste vert, ce qui le rend utilisable sur une machine nue.
 
 ### Authentification, LS-70
 
-Better Auth 1.6. Un seul compte d'administration, passkey en moyen principal et
+Better Auth 1.7. Un seul compte d'administration, passkey en moyen principal et
 mot de passe de seize caractères en secours, ADR-021. Les comptes client relèvent
 d'ADR-023.
 

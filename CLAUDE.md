@@ -197,4 +197,4 @@ simulation d'une panne de fournisseur, et `ls-frontend-revue` sur l'interface.
 contrôle : le prouver par mutation, une liste d'échecs vide n'étant pas un verdict.
 
 **Consulter Context7** avant une API de Next.js 16, React 19, Prisma 7, Better
-Auth 1.6 ou Stripe, plus récentes que ma connaissance. Signaler son usage.
+Auth 1.7 ou Stripe, plus récentes que ma connaissance. Signaler son usage.
