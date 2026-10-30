@@ -27,9 +27,7 @@ describe("issueVerification", () => {
       "EXPIREE",
     );
     for (const code of ["INVALID_TOKEN", "USER_NOT_FOUND", "INVALID_USER"]) {
-      expect(issueVerification({ verifie: "1", error: code })).toBe(
-        "INVALIDE",
-      );
+      expect(issueVerification({ verifie: "1", error: code })).toBe("INVALIDE");
     }
   });
 
