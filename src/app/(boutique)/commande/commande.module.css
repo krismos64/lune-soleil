@@ -253,13 +253,56 @@
  * `wrap` et non une grille figee : un nom de piece long et un prix a trois
  * chiffres deborderaient a 320 px sur trois colonnes fixes.
  */
+/*
+ * Vignette puis corps, LS-300. La colonne de 56 px est fixe : le corps garde
+ * le reste, et son retour a la ligne reste celui d'avant la vignette.
+ */
 .ligne {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: start;
+  gap: var(--ls-space-3);
+  padding: var(--ls-space-3) 0;
+  border-bottom: 1px solid var(--ls-border);
+}
+
+.ligneVignette,
+.ligneVignetteAbsente {
+  display: block;
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: var(--ls-radius-sm);
+}
+
+.ligneVignetteAbsente {
+  background: var(--ls-surface-sand);
+}
+
+.ligneCorps {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: var(--ls-space-2) var(--ls-space-3);
-  padding: var(--ls-space-3) 0;
-  border-bottom: 1px solid var(--ls-border);
+  min-width: 0;
+}
+
+/*
+ * Zone tactile de 44 px en hauteur, le lien etant le nom du bijou : souligne,
+ * il se distingue du libelle qui le suit sans dependre de la couleur seule.
+ */
+.ligneLien {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  color: var(--ls-primary);
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
+
+.ligneLien:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
 }
 
 .ligne:last-child {

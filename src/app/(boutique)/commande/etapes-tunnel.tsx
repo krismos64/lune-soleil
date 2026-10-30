@@ -42,6 +42,8 @@ import {
   enregistrerLivraison,
   passerCommandeAction,
 } from "./actions-tunnel";
+import { urlMedia } from "@/integrations/medias/urls";
+
 import styles from "./commande.module.css";
 
 type Etape = "coordonnees" | "adresse" | "livraison" | "recapitulatif";
@@ -794,26 +796,62 @@ function Recapitulatif({
         <ul className={styles.lignes}>
           {recapitulatif.lignes.map((ligne) => (
             <li key={ligne.varianteId} className={styles.ligne}>
-              <span className={styles.ligneNom}>
-                {ligne.produitNom}, {ligne.libelle}
-              </span>
-              <span className={styles.ligneQuantite}>×{ligne.quantite}</span>
-              <span className={styles.lignePrix}>
-                {formaterMontant(ligne.totalLigneCentimes)}
-              </span>
               {/*
-               * LE MOTIF EST RENDU ICI AUSSI, et pas seulement au panier.
-               * `LignePanierRevalidee.motif` existe depuis LS-114 et la page du
-               * panier l'affiche ; le tunnel consommait le meme type en
-               * l'ignorant. Un client voyait sa quantite passer de 1 a 0 sans
-               * une ligne d'explication. Quatrieme occurrence du motif « champ
-               * d'etat ajoute sans etre porte partout ».
+               * VIGNETTE, LS-300 : le client verifie qu'il ne s'est pas trompe
+               * d'article. Declinaison 320 existante, ADR-007, affichee
+               * reduite ; aucune declinaison ajoutee. Sans photo, une case
+               * vide garde l'alignement des lignes.
                */}
-              {ligne.motif !== null && (
-                <span className={styles.ligneMotif}>
-                  {TEXTE_MOTIF[ligne.motif]}
-                </span>
+              {ligne.mediaChemin ? (
+                // eslint-disable-next-line @next/next/no-img-element -- fichiers servis par Nginx depuis un volume, hors de la portee de l'optimiseur de Next.js, declinaisons pre-generees par ADR-007
+                <img
+                  src={urlMedia(ligne.mediaChemin, "320.jpeg")}
+                  alt={ligne.mediaTexteAlternatif ?? ""}
+                  className={styles.ligneVignette}
+                  width={320}
+                  height={320}
+                  loading="lazy"
+                />
+              ) : (
+                <span
+                  className={styles.ligneVignetteAbsente}
+                  aria-hidden="true"
+                />
               )}
+              <div className={styles.ligneCorps}>
+                {/*
+                 * MEME ONGLET, LS-300 : l'etape vit dans l'URL et la saisie
+                 * dans le cookie du tunnel, donc le retour du navigateur rend
+                 * le recapitulatif intact. Un nouvel onglet aurait du etre
+                 * annonce, et ouvre un second tunnel sur le meme panier.
+                 */}
+                <span className={styles.ligneNom}>
+                  <Link
+                    href={`/produit/${ligne.produitSlug}`}
+                    className={styles.ligneLien}
+                  >
+                    {ligne.produitNom}
+                  </Link>
+                  , {ligne.libelle}
+                </span>
+                <span className={styles.ligneQuantite}>×{ligne.quantite}</span>
+                <span className={styles.lignePrix}>
+                  {formaterMontant(ligne.totalLigneCentimes)}
+                </span>
+                {/*
+                 * LE MOTIF EST RENDU ICI AUSSI, et pas seulement au panier.
+                 * `LignePanierRevalidee.motif` existe depuis LS-114 et la page du
+                 * panier l'affiche ; le tunnel consommait le meme type en
+                 * l'ignorant. Un client voyait sa quantite passer de 1 a 0 sans
+                 * une ligne d'explication. Quatrieme occurrence du motif « champ
+                 * d'etat ajoute sans etre porte partout ».
+                 */}
+                {ligne.motif !== null && (
+                  <span className={styles.ligneMotif}>
+                    {TEXTE_MOTIF[ligne.motif]}
+                  </span>
+                )}
+              </div>
             </li>
           ))}
         </ul>

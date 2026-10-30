@@ -227,6 +227,68 @@ test("le recapitulatif porte le montant et la mention imposee", async ({
   await expect(page.getByText("35000 Rennes")).toBeVisible();
 });
 
+test("le recapitulatif montre la vignette et le lien de chaque piece", async ({
+  page,
+}) => {
+  /*
+   * LS-300. Deux lignes, pour exercer les deux branches : la piece en stock
+   * porte une photo, la piece unique n'en porte aucune, critere 4.
+   */
+  await page.goto(`/produit/${CATALOGUE_TEST.dernierePiece.slug}`);
+  await page.getByRole("button", { name: "Ajouter au panier" }).click();
+  await expect(
+    page.getByRole("status", { name: "Ajout au panier" }),
+  ).toHaveText("Ajouté au panier.");
+
+  await page.goto("/commande");
+  await remplirCoordonnees(page);
+  await remplirAdresse(page);
+  await choisirDomicile(page);
+
+  const pieces = page.locator("section").filter({
+    has: page.getByRole("heading", { name: "Vos pièces" }),
+  });
+  await expect(pieces).toBeVisible();
+
+  /* Critere 3 et 5 : la vignette n'ajoute aucune largeur, 320 px compris. */
+  expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+    TOLERANCE_DEBORDEMENT_PX,
+  );
+
+  /* Critere 1 : la photo principale, avec le texte alternatif du media. */
+  const vignette = pieces.getByRole("img", {
+    name: CATALOGUE_TEST.mediaEnStock.texteAlternatif,
+  });
+  await expect(vignette).toBeVisible();
+  await expect(vignette).toHaveAttribute(
+    "src",
+    new RegExp(`/${CATALOGUE_TEST.mediaEnStock.chemin}/320\\.jpeg$`),
+  );
+
+  /* Critere 4 : sans photo, la ligne reste lisible et garde son lien. */
+  await expect(pieces.getByRole("img")).toHaveCount(1);
+  await expect(
+    pieces.getByRole("link", { name: CATALOGUE_TEST.dernierePiece.nom }),
+  ).toHaveAttribute("href", `/produit/${CATALOGUE_TEST.dernierePiece.slug}`);
+
+  /* Critere 5 : zone tactile du lien, mesuree sur le rendu. */
+  const lien = pieces.getByRole("link", { name: CATALOGUE_TEST.enStock.nom });
+  const boite = await lien.boundingBox();
+  expect(boite?.height ?? 0).toBeGreaterThanOrEqual(44);
+
+  /*
+   * Critere 2 : meme onglet, et le retour du navigateur rend le recapitulatif
+   * avec sa saisie, portee par le cookie du tunnel.
+   */
+  await lien.click();
+  await expect(page).toHaveURL(new RegExp(`${CHEMIN_FICHE}$`));
+  await page.goBack();
+  await expect(
+    page.getByRole("heading", { name: "Vérifier votre commande" }),
+  ).toBeVisible();
+  await expect(page.getByText("12 rue des Ateliers")).toBeVisible();
+});
+
 test("le recapitulatif n'est pas atteignable sur une saisie vide", async ({
   page,
 }) => {
