@@ -32,6 +32,12 @@ export type LignePanierRevalidee = {
   libelle: string;
   produitNom: string;
   produitSlug: string;
+  /**
+   * La fiche `/produit/<slug>` existe, LS-300. Faux pour une variante
+   * introuvable et pour un produit qui n'est plus `ACTIF`, dont la fiche rend
+   * 404 : l'ecran n'y pose alors aucun lien.
+   */
+  ficheAtteignable: boolean;
   mediaChemin: string | null;
   mediaTexteAlternatif: string | null;
   /** Quantite retenue, deja ramenee au disponible le cas echeant. */
@@ -109,6 +115,7 @@ export async function revalider(
         libelle: "Pièce indisponible",
         produitNom: "Pièce indisponible",
         produitSlug: "",
+        ficheAtteignable: false,
         mediaChemin: null,
         mediaTexteAlternatif: null,
         quantite: 0,
@@ -143,6 +150,7 @@ export async function revalider(
       libelle: variante.libelle,
       produitNom: variante.produitNom,
       produitSlug: variante.produitSlug,
+      ficheAtteignable: variante.produitPublie,
       mediaChemin: variante.mediaChemin,
       mediaTexteAlternatif: variante.mediaTexteAlternatif,
       quantite,
