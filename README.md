@@ -74,8 +74,6 @@ Invariants non négociables :
 - Les événements de paiement sont signés et idempotents
 - Conception mobile en premier, à partir de 320 pixels
 
-Les décisions structurantes sont écrites en ADR dans [`docs/adr/`](docs/adr/).
-
 ## Le jalon qui compte
 
 Un achat de bout en bout sur une variante en stock à un exemplaire : réservation
