@@ -782,7 +782,7 @@ quand un client crée un compte après avoir commandé.
 | # | Étape | Base | Vue |
 |---|---|---|---|
 | 1 | Création de compte | utilisateur avec email non vérifié | formulaire |
-| 2 | Vérification de l'email | utilisateur vérifié, jeton consommé | confirmation |
+| 2 | Vérification de l'email | utilisateur vérifié, jeton consommé | « Adresse email vérifiée » sur `/compte`, ou sur la connexion sans session ; lien expiré ou invalide : message d'échec, jamais la réussite, LS-298 |
 | 3 | Recherche des commandes éligibles | lecture seule, commandes jamais rattachées dont l'email normalisé correspond | liste proposée |
 | 4 | Rattachement | commandes rattachées au compte, entrée au journal d'audit | historique visible |
 

@@ -72,6 +72,13 @@ test.describe("changement d'adresse", () => {
     await expect(
       page.getByText("Votre nouvelle adresse email est confirmée."),
     ).toHaveCount(0);
+    await expect(
+      page.getByText("Ce lien de changement d'adresse n'est pas valide"),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Changer d'adresse" }),
+    ).toHaveAttribute("href", "/compte/profil");
+    await expect(page).toHaveURL(/\/compte$/);
   });
 });
 
@@ -121,6 +128,16 @@ test.describe("lien ouvert sans session", () => {
     expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
       TOLERANCE_DEBORDEMENT_PX,
     );
+
+    // L'accuse se detache du formulaire : colles, ils se lisaient d'un bloc.
+    const bas = await accuse(page).evaluate(
+      (e) => e.getBoundingClientRect().bottom,
+    );
+    const haut = await page
+      .locator("main form")
+      .first()
+      .evaluate((e) => e.getBoundingClientRect().top);
+    expect(haut - bas).toBeGreaterThanOrEqual(8);
   });
 
   test("l'echec suit aussi, sans jamais annoncer la reussite", async ({

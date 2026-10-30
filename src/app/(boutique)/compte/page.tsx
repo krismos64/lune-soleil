@@ -46,6 +46,7 @@ import { FENETRE_REAUTHENTIFICATION_MS } from "@/services/reauthentification";
 
 import { AccuseVerification } from "./accuse-verification";
 import { BlocRattachement } from "./bloc-rattachement";
+import { EffacerParametresRetour } from "./effacer-parametres-retour";
 import { FormulaireSuppressionCompte } from "./formulaire-suppression";
 import styles from "./compte.module.css";
 
@@ -147,8 +148,14 @@ export default async function PageCompte({
    * IL N'AUTORISE RIEN ET NE PROUVE RIEN : l'adresse affichee vient de la
    * SESSION, et c'est elle qui dit l'etat reel.
    */
-  const arriveDeChangementEmail =
-    parametres.email === "1" && parametres.error === undefined;
+  const arriveDeChangementEmail = parametres.email === "1";
+  /*
+   * L'ECHEC DU CHANGEMENT SE DIT, LS-298 : Better Auth ajoute `error` a
+   * `?email=1` comme a `?verifie=1`. L'ecran annoncait la nouvelle adresse ;
+   * sans message, le client croirait son changement fait.
+   */
+  const changementEchoue =
+    arriveDeChangementEmail && parametres.error !== undefined;
 
   /*
    * LES COMMANDES RATTACHABLES, LS-56, parcours 6 etape 3.
@@ -195,6 +202,22 @@ export default async function PageCompte({
       <AccuseVerification issue={issue} confirmee={adresseVerifiee} />
 
       {arriveDeChangementEmail && (
+        <EffacerParametresRetour parametres={["email", "error"]} />
+      )}
+
+      {changementEchoue && (
+        <div className={`${styles.erreur} ${styles.accuse}`} role="status">
+          <p className={styles.texteErreur}>
+            Ce lien de changement d&apos;adresse n&apos;est pas valide ou a
+            expiré. Votre adresse reste {identite.email}.
+          </p>
+          <Link href="/compte/profil" className={styles.lienRetour}>
+            Changer d&apos;adresse
+          </Link>
+        </div>
+      )}
+
+      {arriveDeChangementEmail && !changementEchoue && (
         <p className={styles.succes} role="status">
           Votre nouvelle adresse email est confirmée. Vos prochaines connexions
           se feront avec {identite.email}.
