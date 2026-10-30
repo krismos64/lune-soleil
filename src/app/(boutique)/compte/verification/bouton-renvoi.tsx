@@ -24,8 +24,6 @@ import { RETOUR_APRES_VERIFICATION } from "@/lib/retour-verification-email";
 
 import styles from "../authentification.module.css";
 
-
-
 type EtatEnvoi = "repos" | "en-cours" | "envoye";
 
 export function BoutonRenvoiVerification({

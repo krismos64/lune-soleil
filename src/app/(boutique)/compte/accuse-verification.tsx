@@ -39,7 +39,7 @@ export function AccuseVerification({
 
       {issue === "REUSSIE" && confirmee !== false && (
         <p
-          className={styles.succes}
+          className={`${styles.succes} ${styles.accuse}`}
           role="status"
           aria-label="Vérification de l'adresse email"
         >
@@ -50,7 +50,7 @@ export function AccuseVerification({
 
       {issue !== "REUSSIE" && (
         <div
-          className={styles.erreur}
+          className={`${styles.erreur} ${styles.accuse}`}
           role="status"
           aria-label="Vérification de l'adresse email"
         >
@@ -60,7 +60,9 @@ export function AccuseVerification({
               : "Ce lien de vérification n'est pas valide."}{" "}
             {confirmee === true
               ? "Votre adresse est déjà vérifiée, rien d'autre à faire."
-              : "Demandez un nouveau lien depuis votre compte."}
+              : confirmee === false
+                ? "Un nouveau lien peut vous être envoyé."
+                : "Demandez un nouveau lien depuis votre compte."}
           </p>
           {confirmee === false && (
             <Link href="/compte/verification" className={styles.lienRetour}>

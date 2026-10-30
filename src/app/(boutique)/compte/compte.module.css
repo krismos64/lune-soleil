@@ -176,6 +176,14 @@
  * L'echec d'un lien de verification, LS-298 : la phrase garde la couleur
  * d'erreur du bloc, le lien qui la suit une zone tactile de 44 px.
  */
+/*
+ * L'accuse se detache de ce qui le suit, LS-298 : sur la connexion, rien ne
+ * le separait du formulaire, et « Adresse email » se lisait comme sa suite.
+ */
+.accuse {
+  margin-block-end: var(--ls-space-4);
+}
+
 .texteErreur {
   margin: 0;
   line-height: 1.6;
