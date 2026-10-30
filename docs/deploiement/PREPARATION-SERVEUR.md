@@ -4,15 +4,15 @@ Ce que fait ce document : amener la machine de l'état « rien pour la boutique 
 « Nginx sert `lune-soleil.fr` en HTTPS et attend l'application ». Il s'arrête là
 où LS-152 commence, la composition de production.
 
-**La machine n'est pas dédiée à la boutique**, ADR-036. Elle sert SmartPlanning,
+**La machine n'est pas dédiée à la boutique**, ADR-036. Elle sert l'autre service hébergé,
 un produit payant avec des clients. Toute commande de ce document a été choisie
 pour ne jamais interrompre l'autre site, et l'ordre des étapes en dépend.
 
-Exécuté une première fois le 8 septembre 2026 sur `51.77.146.72`.
+Exécuté une première fois le 8 septembre 2026 sur la machine de production.
 
 ## Ce qui était déjà en place et ne se refait pas
 
-Relevé sur la machine avant d'agir. Ces points appartiennent à SmartPlanning et
+Relevé sur la machine avant d'agir. Ces points appartiennent à l'autre service hébergé et
 la boutique en hérite.
 
 | Élément | État constaté |
@@ -61,7 +61,7 @@ sudo nginx -t
 l'étape suivante serait attribué à tort au fichier de la boutique.
 
 Un avertissement `ssl_stapling ignored, no OCSP responder URL` est attendu : il
-vient de SmartPlanning, Let's Encrypt ayant retiré l'URL OCSP de ses certificats.
+vient de l'autre service hébergé, Let's Encrypt ayant retiré l'URL OCSP de ses certificats.
 La configuration de la boutique ne porte donc pas cette directive.
 
 ## Étape 4, une configuration d'amorçage en HTTP seul
@@ -92,7 +92,7 @@ server {
 Le relais vers `8888` et non un `root`, pour la raison donnée à l'étape 1.
 
 Le `503` est délibéré : il dit « pas encore de service » plutôt que d'afficher le
-site par défaut de la machine, qui est SmartPlanning.
+site par défaut de la machine, qui est l'autre service hébergé.
 
 ```bash
 sudo nginx -t && sudo systemctl reload nginx
@@ -108,8 +108,8 @@ Les deux enregistrements `A` doivent viser la machine avant toute demande de
 certificat.
 
 ```bash
-dig @dns106.ovh.net +short lune-soleil.fr A       # 51.77.146.72
-dig @dns106.ovh.net +short www.lune-soleil.fr A   # 51.77.146.72
+dig @dns106.ovh.net +short lune-soleil.fr A       # l'adresse de la machine
+dig @dns106.ovh.net +short www.lune-soleil.fr A   # l'adresse de la machine
 ```
 
 **Interroger le serveur de noms d'OVH directement**, un résolveur local pouvant
@@ -159,7 +159,7 @@ sudo ln -sfn /etc/nginx/sites-available/lune-soleil.conf \
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-Le `diff` prouve que le fichier servi est celui du dépôt. SmartPlanning a connu
+Le `diff` prouve que le fichier servi est celui du dépôt. L'autre service hébergé a connu
 une dérive de ce genre, documentée dans son `docs/deployment.md` : un fichier
 édité sur le serveur avait divergé du dépôt dans les deux sens.
 
@@ -169,7 +169,7 @@ une dérive de ce genre, documentée dans son `docs/deployment.md` : un fichier
 syntaxe est `listen 443 ssl http2;`. L'erreur a été rencontrée le 8 septembre
 2026 et `nginx -t` l'a arrêtée avant tout rechargement.
 
-**Aucune zone `limit_req_zone` ne doit réutiliser un nom existant.** SmartPlanning
+**Aucune zone `limit_req_zone` ne doit réutiliser un nom existant.** L'autre service hébergé
 déclare `general`, `auth`, `api` et `conn_limit`, et ces noms vivent dans le
 contexte `http` global même écrits dans un fichier de site. Un doublon fait
 échouer `nginx -t`. Préfixer par `ls_` si une limitation devient nécessaire.
@@ -180,8 +180,8 @@ Depuis une autre machine, jamais depuis le serveur.
 
 ```bash
 # Les trois sites répondent
-curl -s -o /dev/null -w "%{http_code}\n" https://smartplanning.fr
-curl -s -o /dev/null -w "%{http_code}\n" https://analytics.smartplanning.fr
+curl -s -o /dev/null -w "%{http_code}\n" https://<site-voisin>
+curl -s -o /dev/null -w "%{http_code}\n" https://<second-site-voisin>
 curl -s -o /dev/null -w "%{http_code}\n" https://lune-soleil.fr
 
 # Le certificat RÉELLEMENT servi, et non celui du disque
@@ -198,7 +198,7 @@ sudo certbot renew --dry-run --cert-name lune-soleil.fr
 **`certbot certificates` lit le disque, `openssl s_client` interroge ce qui est
 réellement servi.** S'ils divergent, le trafic n'atteint pas la machine et le
 problème est dans la zone DNS. La leçon vient de la panne du 18 août 2026 sur
-SmartPlanning.
+l'autre service hébergé.
 
 ## Résultat attendu à la fin
 
@@ -215,33 +215,10 @@ Le pare-feu au-delà de l'existant, le durcissement approfondi et la répétitio
 d'incidents appartiennent à LS-139. La composition de production, les secrets et
 la sauvegarde en routine sont LS-152. La chaîne de déploiement est LS-138.
 
-## Un défaut trouvé ici, corrigé depuis, qui appartenait à SmartPlanning
+## Publier un port sur `127.0.0.1`, jamais sans préfixe d'adresse
 
-**Corrigé le 8 septembre 2026 par Christophe, ticket SP-583**, et vérifié fermé
-depuis l'extérieur le 9 septembre : les règles DNAT ciblent désormais
-`127.0.0.1`. La section est gardée pour le **motif**, qui reste entier et se
-reproduira sur toute publication de port future.
-
-Les ports **3000 et 3001 étaient joignables depuis Internet**, vérifié depuis
-l'extérieur : `http://51.77.146.72:3000` répondait 200.
-
-`ufw` ne les autorise pourtant pas. La cause est que **Docker insère ses règles
-DNAT en amont de celles d'`ufw`**, un contournement connu de la publication de
-ports : `-p 3000:3000` ouvre le port quoi qu'en dise le pare-feu.
-
-L'application de SmartPlanning est donc atteignable sans passer par Nginx, donc
-sans TLS, sans sa limitation de débit et sans ses en-têtes de sécurité.
-
-**Il n'a pas été corrigé depuis cette procédure** : il concernait un autre
-projet, et le corriger sans arbitrage aurait pu interrompre un service payant. Il
-a été signalé, puis fermé par SP-583 le jour même.
-
-**Pour la boutique, la leçon a été appliquée** : LS-152 publie le port applicatif
-en `127.0.0.1:3002`, et la mesure du 9 septembre 2026 confirme que la protection
-est structurelle, la règle DNAT ciblant `127.0.0.1` et non `0.0.0.0/0`. Elle ne
-dépend donc pas d'`ufw`, contrairement à ce que ce défaut avait révélé.
-
-**Le motif survit à sa correction** : une publication de port écrite sans préfixe
-d'adresse expose le service quoi qu'en dise le pare-feu, et seule une mesure
-depuis l'extérieur le voit. Un `ss -tlnp` sur la machine ne l'aurait jamais
-montré.
+Docker insère ses règles DNAT en amont de celles d'`ufw` : une publication
+écrite `-p 3000:3000` ouvre le port à Internet quoi qu'en dise le pare-feu.
+LS-152 publie donc le port applicatif en `127.0.0.1:3002`, et la protection
+est structurelle, la règle DNAT ciblant `127.0.0.1`. Seule une mesure depuis
+l'extérieur vérifie ce point, un `ss -tlnp` sur la machine ne le montrant pas.

@@ -1,4 +1,4 @@
-# Lune & Soleil
+# Lune-soleil
 
 Boutique e-commerce de bijoux artisanaux faits main. Mono-tenant, France
 métropolitaine, euro. Vente en ligne cohabitant avec des marchés locaux et Vinted.
@@ -18,7 +18,7 @@ npm run db:verifier    # les contrôles du modèle sur cette base, exige Docker
 ./scripts/verifier-config-claude.sh  # cohérence config, ADR, mémoire, journal
 ```
 
-Liste complète dans `README.md`. La CI rejoue presque tout par PR : bout en bout,
+Liste complète dans `docs/DEVELOPPEMENT.md` et `docs/VERIFICATION.md`. La CI rejoue presque tout par PR : bout en bout,
 `npm audit`, image et les **sept preuves lourdes** sont au nocturne, un défaut de
 ceux-là entre sur `main` sans bloquer. `npm audit` à **zéro** mesuré, sauf avis daté
 de `audit-exemptions.json`, LS-258. Migration **créée** à la main, `prisma migrate dev`.

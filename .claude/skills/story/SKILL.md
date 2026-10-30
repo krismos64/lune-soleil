@@ -330,14 +330,14 @@ pour chaque ligne concernée ce qui a été fait.
 | un ADR accepté | la table de `docs/REFERENCES.md`, et **ce que l'ADR périme** : descriptions de tickets, règles, documents d'architecture |
 | `src/app/` ou `src/components/` | `frontend-design.md` si l'ordre des blocs ou une source de donnée change |
 | une variable de configuration | `.env.example`, et le ticket qui porte la décision commerciale correspondante |
-| une commande npm ou un script | `README.md`, et la section Commandes de `CLAUDE.md` si elle la cite |
+| une commande npm ou un script | `docs/DEVELOPPEMENT.md` ou `docs/VERIFICATION.md` selon son sujet, le démarrage rapide du `README.md` s'il le cite, et la section Commandes de `CLAUDE.md` |
 | un piège rencontré deux fois | une fiche mémoire, plus un contrôle automatique si le piège est mécaniquement détectable |
 | la config Claude Code, skills, agents, hooks | `docs/REFERENCES.md` si l'aiguillage change, `CLAUDE.md` s'il dépasse 200 lignes |
 | **un schéma ajouté à `src/lib/validation.ts`** | la table de `VALIDATION.md`, et la règle qu'il porte si elle ne se déduit d'aucun type |
 | **un cookie portant autre chose qu'un identifiant technique** | la section « données personnelles hors base » de `REGISTRE-DES-TRAITEMENTS.md`, avec sa durée et pourquoi elle diffère |
 | **une donnée personnelle envoyée à un tiers, ou un changement de sous-traitant** | la fiche de traitement concernée de `REGISTRE-DES-TRAITEMENTS.md` : le **destinataire** ET les **catégories de données** transmises, article 30 |
 | **une étape d'un parcours, ou une obligation légale sur cette étape** | `PARCOURS.md` pour l'étape, `.claude/rules/legal.md` pour l'obligation et sa source |
-| **une story livrée ou close** | la fiche mémoire « où en est le projet », le tableau d'état du `README.md`, et les **comptes**, relevés dans Jira et jamais de mémoire |
+| **une story livrée ou close** | la fiche mémoire « où en est le projet », le tableau d'état de `docs/ETAT.md` (le `README.md` n'en porte plus depuis LS-302), et les **comptes**, relevés dans Jira et jamais de mémoire |
 | **une image de marque ou un asset engendré** | rejouer `node scripts/engendrer-images-marque.mjs`, RELIRE le rendu à l'œil, et `assets/README.md` si l'écart qu'il documente est fermé. Le mode `--verifier` échoue tant que les fichiers versionnés ne correspondent pas au source |
 | **la chaîne de déploiement**, `deploiement/*` ou `.github/workflows/deployer.yml` | `docs/deploiement/EXPLOITATION.md`, l'agent `ls-conteneurisation`, et le script **installé sur la machine** en `/usr/local/sbin/lune-soleil-deployer`, qui ne se met pas à jour tout seul |
 | **un ticket bloqué par un compte ou un accès externe** | dire ce qui est livrable sans lui et ce qui attend, dans le ticket **et** dans le code qui simule l'absence |

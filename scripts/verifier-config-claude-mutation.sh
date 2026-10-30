@@ -37,7 +37,7 @@ nettoyer() {
   rm -rf "$TMP"
   rm -f "$MEM/lune-soleil-fiche-de-mutation-temporaire.md"
   git checkout -- CLAUDE.md docs/REFERENCES.md README.md .claude/settings.json \
-    .claude/rules/payments.md 2>/dev/null || true
+    .claude/rules/payments.md docs/INTEGRATION-CONTINUE.md 2>/dev/null || true
 }
 # UNE INTERRUPTION DOIT SORTIR, PAS SEULEMENT RESTAURER, LS-230.
 #
@@ -72,7 +72,7 @@ detectees=0
 # 2026 avec les cas 12 et 13 : sans eux dans cette garde, une exécution sur un
 # dépôt sale aurait restauré une version d'avant les modifications en cours.
 for f in CLAUDE.md docs/REFERENCES.md README.md .claude/settings.json \
-  .claude/rules/payments.md; do
+  .claude/rules/payments.md docs/INTEGRATION-CONTINUE.md; do
   [ -f "$f" ] || continue
   if ! git diff --quiet -- "$f" 2>/dev/null; then
     echo "ABANDON : $f porte des modifications non commitées."
@@ -243,21 +243,24 @@ mutation "renvoi mort dans docs/REFERENCES.md" "qui n'existe pas"
 #
 # `\S+ fois` capte n'importe quel chiffre en lettres, et `mute_ou_echoue`
 # vérifie que le fichier a bien changé.
-cp README.md "$TMP/README.md"
-avant_readme=$(cksum <README.md)
-perl -0pi -e 's/casse \*\*\S+ fois\*\*/casse **trois fois**/' README.md
-if [ "$(cksum <README.md)" = "$avant_readme" ]; then
-  echo "  ECHEC la mutation du compte de README.md n'a rien modifié."
+# LS-302 : LE COMPTE A QUITTÉ LE README pour `docs/INTEGRATION-CONTINUE.md`,
+# avec la section qui le porte. Le contrôle 9 lit désormais cette page.
+CIBLE_COMPTE=docs/INTEGRATION-CONTINUE.md
+cp "$CIBLE_COMPTE" "$TMP/compte-suite.md"
+avant_readme=$(cksum <"$CIBLE_COMPTE")
+perl -0pi -e 's/casse \*\*\S+ fois\*\*/casse **trois fois**/' "$CIBLE_COMPTE"
+if [ "$(cksum <"$CIBLE_COMPTE")" = "$avant_readme" ]; then
+  echo "  ECHEC la mutation du compte de $CIBLE_COMPTE n'a rien modifié."
   echo "        La formulation « casse **N fois** » a changé : corriger ce"
   echo "        script, pas le contrôle."
-  cp "$TMP/README.md" README.md
+  cp "$TMP/compte-suite.md" "$CIBLE_COMPTE"
   # Comptée comme non détectée : le script doit sortir en échec, sans quoi il
   # annoncerait « toutes détectées » en n'ayant rien mesuré.
   total=$((total + 1))
 else
-  mutation "compte de mutations de la suite de tests faussé dans README.md" "mutations de la suite de tests"
+  mutation "compte de mutations de la suite de tests faussé dans la documentation" "mutations de la suite de tests"
 fi
-cp "$TMP/README.md" README.md
+cp "$TMP/compte-suite.md" "$CIBLE_COMPTE"
 
 # 12 bis. Un script de hook present n'est declare nulle part.
 #

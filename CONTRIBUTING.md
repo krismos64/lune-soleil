@@ -210,7 +210,7 @@ npm run type-check && npm run lint && npm run test && npm run build
 ```
 
 La base locale se construit par `npm run db:preparer` sur un clone neuf, détail
-dans `README.md`.
+dans `docs/DEVELOPPEMENT.md`.
 
 Trois contrôles restent **hors** de la chaîne, parce qu'ils modifient des
 fichiers du dépôt en place ou dépendent de l'environnement du poste :
