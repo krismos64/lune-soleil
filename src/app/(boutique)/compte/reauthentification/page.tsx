@@ -62,7 +62,7 @@ const FENETRE_MINUTES = Math.round(FENETRE_REAUTHENTIFICATION_MS / 60_000);
  * inconnue, absente ou multiple retombe sur l'espace client, defaut ferme.
  *
  * C'EST LA MEME DOCTRINE QUE `RETOUR_APRES_VERIFICATION` dans
- * `verification/bouton-renvoi.tsx` : le chemin de retour est ecrit dans le code,
+ * `lib/retour-verification-email.ts` : le chemin de retour est ecrit dans le code,
  * jamais choisi par l'appelant.
  */
 const DESTINATIONS = {

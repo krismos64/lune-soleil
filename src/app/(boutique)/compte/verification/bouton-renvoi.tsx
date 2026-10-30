@@ -20,17 +20,11 @@
 import { useState } from "react";
 
 import { authClient } from "@/lib/auth-client";
+import { RETOUR_APRES_VERIFICATION } from "@/lib/retour-verification-email";
 
 import styles from "../authentification.module.css";
 
-/**
- * Ou le lien du message ramene apres confirmation.
- *
- * CHEMIN RELATIF ET FIXE. Better Auth le transmet au navigateur du client :
- * accepter une valeur fournie ferait de l'email de verification un vecteur de
- * redirection vers un domaine tiers, depuis un message qui inspire confiance.
- */
-const RETOUR_APRES_VERIFICATION = "/compte?verifie=1";
+
 
 type EtatEnvoi = "repos" | "en-cours" | "envoye";
 

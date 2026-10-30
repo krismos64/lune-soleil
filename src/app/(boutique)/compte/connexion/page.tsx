@@ -26,8 +26,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { PanneauAuthentification } from "@/components/panneau-authentification";
+import { issueVerification } from "@/lib/retour-verification-email";
 import { lireIdentite } from "@/services/autorisation";
 
+import { AccuseVerification } from "../accuse-verification";
 import { FormulaireConnexionClient } from "./formulaire-connexion-client";
 import styles from "../authentification.module.css";
 
@@ -39,7 +41,11 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function PageConnexionClient() {
+export default async function PageConnexionClient({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const identite = await lireIdentite(await headers());
 
   if (identite) {
@@ -51,6 +57,16 @@ export default async function PageConnexionClient() {
       <main id="contenu" tabIndex={-1} className={styles.pageGabarit}>
         <p className={styles.accroche}>Espace client</p>
         <h1 className={styles.titre}>Se connecter</h1>
+
+        {/*
+         * L'ACCUSE DU LIEN DE VERIFICATION, LS-298 : ouvert sur un autre
+         * appareil, le lien arrive ici par `/compte`. Sans session, l'etat en
+         * base n'est pas lisible, d'ou `confirmee={null}`.
+         */}
+        <AccuseVerification
+          issue={issueVerification(await searchParams)}
+          confirmee={null}
+        />
 
         <FormulaireConnexionClient />
 
