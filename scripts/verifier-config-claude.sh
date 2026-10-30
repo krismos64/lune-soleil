@@ -507,8 +507,14 @@ compte_annonce() {
   [ -n "$chiffre" ] && echo "$chiffre"
 }
 
+# LS-302 : LES COMPTES ONT QUITTÉ LE README, qui n'en porte plus aucun. Ils
+# vivent dans les pages de `docs/` où leur sujet a été déplacé : overrides dans
+# DEVELOPPEMENT, largeurs dans VERIFICATION, les deux comptes de mutations dans
+# INTEGRATION-CONTINUE. Le contrôle lit ces pages ensemble ; lire le seul README
+# l'aurait laissé vert sans rien trouver à recompter.
+DOCS_COMPTES=(README.md docs/DEVELOPPEMENT.md docs/VERIFICATION.md docs/INTEGRATION-CONTINUE.md)
 if [ -f README.md ] && command -v node >/dev/null 2>&1; then
-  readme_aplati=$(tr '\n' ' ' < README.md | tr -s ' ')
+  readme_aplati=$(cat "${DOCS_COMPTES[@]}" 2>/dev/null | tr '\n' ' ' | tr -s ' ')
 
   # Overrides : la source est package.json.
   reel=$(node -e '
@@ -517,7 +523,7 @@ if [ -f README.md ] && command -v node >/dev/null 2>&1; then
   ' 2>/dev/null)
   annonce=$(compte_annonce "$readme_aplati" "overrides")
   if [ -n "$reel" ] && [ -n "$annonce" ] && [ "$reel" != "$annonce" ]; then
-    anomalies+=("README.md annonce $annonce overrides, package.json en déclare $reel")
+    anomalies+=("la documentation annonce $annonce overrides, package.json en déclare $reel")
   fi
 
   # Mutations de la configuration : la source est le nombre d'appels du script.
@@ -537,7 +543,7 @@ if [ -f README.md ] && command -v node >/dev/null 2>&1; then
     reel=$(grep -cE '^\s*mutation "' scripts/verifier-config-claude-mutation.sh 2>/dev/null || echo 0)
     annonce=$(compte_annonce "$readme_aplati" "mutations, toutes détectées")
     if [ "$reel" -gt 0 ] && [ -n "$annonce" ] && [ "$reel" != "$annonce" ]; then
-      anomalies+=("README.md annonce $annonce mutations de configuration, le script en porte $reel")
+      anomalies+=("la documentation annonce $annonce mutations de configuration, le script en porte $reel")
     fi
   fi
 
@@ -553,7 +559,7 @@ if [ -f README.md ] && command -v node >/dev/null 2>&1; then
     reel=$(grep -cE '^\s*viewport:\s*\{' playwright.config.ts 2>/dev/null || echo 0)
     annonce=$(compte_annonce "$readme_aplati" "largeurs")
     if [ "$reel" -gt 0 ] && [ -n "$annonce" ] && [ "$reel" != "$annonce" ]; then
-      anomalies+=("README.md annonce $annonce largeurs Playwright, playwright.config.ts en déclare $reel")
+      anomalies+=("la documentation annonce $annonce largeurs Playwright, playwright.config.ts en déclare $reel")
     fi
   fi
 
@@ -582,7 +588,7 @@ if [ -f README.md ] && command -v node >/dev/null 2>&1; then
     phrase=$(echo "$readme_aplati" | grep -oE 'verifier-tests-mutation\.sh[^.]{0,60}fois' | head -1)
     annonce=$(compte_annonce "$phrase" "fois")
     if [ "$reel" -gt 0 ] && [ -n "$annonce" ] && [ "$reel" != "$annonce" ]; then
-      anomalies+=("README.md annonce $annonce mutations de la suite de tests, verifier-tests-mutation.sh en porte $reel")
+      anomalies+=("la documentation annonce $annonce mutations de la suite de tests, verifier-tests-mutation.sh en porte $reel")
     fi
   fi
 fi
