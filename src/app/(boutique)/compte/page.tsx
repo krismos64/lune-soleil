@@ -36,6 +36,7 @@ import Link from "next/link";
 
 import { formaterDate, LIBELLES_STATUT } from "@/lib/affichage-commande";
 import { formaterMontant } from "@/lib/montant";
+import { issueVerification } from "@/lib/retour-verification-email";
 import { prisma } from "@/lib/prisma";
 import { lireEtatVerification } from "@/repositories/utilisateur";
 import { exigerSession } from "@/services/autorisation";
@@ -43,6 +44,7 @@ import { lireVueEnsemble } from "@/services/espace-client";
 import { consulterCommandesRattachables } from "@/services/rattachement-commandes";
 import { FENETRE_REAUTHENTIFICATION_MS } from "@/services/reauthentification";
 
+import { AccuseVerification } from "./accuse-verification";
 import { BlocRattachement } from "./bloc-rattachement";
 import { FormulaireSuppressionCompte } from "./formulaire-suppression";
 import styles from "./compte.module.css";
@@ -68,6 +70,8 @@ export default async function PageCompte({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const identite = await exigerSession(await headers());
+  const parametres = await searchParams;
+  const issue = issueVerification(parametres);
 
   if (!identite) {
     /*
@@ -87,7 +91,18 @@ export default async function PageCompte({
      * sans etre porte dans toutes les conditions d'acces, deja rencontre trois
      * fois sur ce projet.
      */
-    redirect("/compte/connexion");
+    /*
+     * L'ISSUE DU LIEN SUIT LA REDIRECTION, LS-298 : ouvert sur un autre
+     * appareil, le lien arrive ici sans session, et l'accuse se perdait.
+     * Seuls des codes fixes repartent, jamais la valeur recue.
+     */
+    redirect(
+      issue === null
+        ? "/compte/connexion"
+        : issue === "REUSSIE"
+          ? "/compte/connexion?verifie=1"
+          : `/compte/connexion?verifie=1&error=${issue === "EXPIREE" ? "TOKEN_EXPIRED" : "INVALID_TOKEN"}`,
+    );
   }
 
   /*
@@ -113,9 +128,12 @@ export default async function PageCompte({
    * IL N'AUTORISE RIEN ET NE PROUVE RIEN : c'est `adresseVerifiee`, lu en base,
    * qui dit l'etat reel. Ce parametre ne fait qu'expliquer d'ou l'on vient, et
    * le message n'est affiche que si la base CONFIRME la verification.
+   *
+   * L'ECHEC ARRIVE SUR LE MEME CHEMIN, LS-298 : Better Auth y ajoute
+   * `error=<code>`, que la premiere version ignorait. Un compte deja verifie
+   * qui recliquait un lien expire lisait donc « confirmée ».
+   * `issueVerification` fait passer l'erreur avant tout.
    */
-  const parametres = await searchParams;
-  const arriveDeVerification = parametres.verifie === "1";
 
   /*
    * L'ACCUSE DE RECEPTION DU CHANGEMENT D'ADRESSE, LS-60.
@@ -129,7 +147,8 @@ export default async function PageCompte({
    * IL N'AUTORISE RIEN ET NE PROUVE RIEN : l'adresse affichee vient de la
    * SESSION, et c'est elle qui dit l'etat reel.
    */
-  const arriveDeChangementEmail = parametres.email === "1";
+  const arriveDeChangementEmail =
+    parametres.email === "1" && parametres.error === undefined;
 
   /*
    * LES COMMANDES RATTACHABLES, LS-56, parcours 6 etape 3.
@@ -173,11 +192,7 @@ export default async function PageCompte({
       </p>
       <h1 className={styles.titre}>Mon compte</h1>
 
-      {arriveDeVerification && adresseVerifiee && (
-        <p className={styles.succes} role="status">
-          Votre adresse email est confirmée.
-        </p>
-      )}
+      <AccuseVerification issue={issue} confirmee={adresseVerifiee} />
 
       {arriveDeChangementEmail && (
         <p className={styles.succes} role="status">

@@ -24,6 +24,7 @@ import { signUp } from "@/lib/auth-client";
 // l'adaptateur PostgreSQL et BETTER_AUTH_SECRET, qui n'ont rien a faire dans
 // un paquet servi au navigateur.
 import { LONGUEUR_MINIMALE_MOT_DE_PASSE } from "@/lib/mot-de-passe";
+import { RETOUR_APRES_VERIFICATION } from "@/lib/retour-verification-email";
 
 import { ChampMotDePasse } from "@/components/champ-mot-de-passe";
 
@@ -50,6 +51,12 @@ export function FormulaireInscription() {
       email,
       password: motDePasse,
       name: nom,
+      /*
+       * L'ADRESSE DE RETOUR DU LIEN ENVOYE A L'INSCRIPTION, LS-298. Sans elle,
+       * Better Auth retombe sur `/` : le premier lien recu ramenait a
+       * l'accueil sans un mot, et seul un lien renvoye atteignait l'accuse.
+       */
+      callbackURL: RETOUR_APRES_VERIFICATION,
     });
 
     if (error) {
