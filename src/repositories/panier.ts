@@ -26,6 +26,12 @@ export type VariantePanier = {
   mediaTexteAlternatif: string | null;
   /** `false` si le produit n'est plus `ACTIF` ou la variante archivee. */
   vendable: boolean;
+  /**
+   * `true` si la fiche du produit est servie, LS-300 : elle ne lit que les
+   * produits `ACTIF`. Distinct de `vendable`, une variante archivee laissant
+   * sa fiche en ligne.
+   */
+  produitPublie: boolean;
 };
 
 /**
@@ -69,6 +75,7 @@ export async function lireVariantesDuPanier(
       mediaChemin: string | null;
       mediaTexteAlternatif: string | null;
       vendable: boolean;
+      produitPublie: boolean;
     }[]
   >`
     SELECT
@@ -84,7 +91,8 @@ export async function lireVariantesDuPanier(
       p.slug               AS "produitSlug",
       m.chemin             AS "mediaChemin",
       m.texte_alternatif   AS "mediaTexteAlternatif",
-      (p.statut = 'ACTIF' AND v.archivee_a IS NULL) AS "vendable"
+      (p.statut = 'ACTIF' AND v.archivee_a IS NULL) AS "vendable",
+      (p.statut = 'ACTIF') AS "produitPublie"
     FROM variante v
     JOIN produit p ON p.id = v.produit_id
     LEFT JOIN media m ON m.produit_id = p.id AND m.ordre = 1

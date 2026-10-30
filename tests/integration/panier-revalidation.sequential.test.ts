@@ -269,6 +269,56 @@ describe("lignes qui ne peuvent plus etre commandees, critere 7", () => {
   });
 });
 
+describe("le lien vers la fiche, LS-300", () => {
+  /*
+   * La fiche ne sert que les produits `ACTIF`. Un lien vers une fiche absente
+   * rendrait 404 sous le motif qui annonce la ligne : le recapitulatif ne
+   * pose le lien que si le service le declare atteignable.
+   */
+  it("le declare pour une piece en vente", async () => {
+    const enVente = await creerVariante("En vente");
+    const resultat = await panier.revalider([
+      { varianteId: enVente, quantite: 1 },
+    ]);
+    expect(resultat.lignes[0]?.ficheAtteignable).toBe(true);
+  });
+
+  it("le garde pour une variante archivee dont le produit est en vente", async () => {
+    const archivee = await creerVariante("Variante archivee", {
+      varianteArchivee: true,
+    });
+    const resultat = await panier.revalider([
+      { varianteId: archivee, quantite: 1 },
+    ]);
+    expect(resultat.lignes[0]?.motif).toBe("PLUS_VENDABLE");
+    expect(resultat.lignes[0]?.ficheAtteignable).toBe(true);
+  });
+
+  it("le retire pour un produit archive ou en brouillon", async () => {
+    const archive = await creerVariante("Produit archive", {
+      statutProduit: "ARCHIVE",
+    });
+    const brouillon = await creerVariante("Produit brouillon", {
+      statutProduit: "BROUILLON",
+    });
+    const resultat = await panier.revalider([
+      { varianteId: archive, quantite: 1 },
+      { varianteId: brouillon, quantite: 1 },
+    ]);
+    expect(resultat.lignes.map((ligne) => ligne.ficheAtteignable)).toEqual([
+      false,
+      false,
+    ]);
+  });
+
+  it("le retire pour une variante introuvable", async () => {
+    const resultat = await panier.revalider([
+      { varianteId: randomUUID(), quantite: 1 },
+    ]);
+    expect(resultat.lignes[0]?.ficheAtteignable).toBe(false);
+  });
+});
+
 describe("cas limites", () => {
   it("rend un panier vide sans interroger la base", async () => {
     const resultat = await panier.revalider([]);

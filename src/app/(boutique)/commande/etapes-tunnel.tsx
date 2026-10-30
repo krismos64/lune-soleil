@@ -825,14 +825,25 @@ function Recapitulatif({
                  * le recapitulatif intact. Un nouvel onglet aurait du etre
                  * annonce, et ouvre un second tunnel sur le meme panier.
                  */}
+                {/*
+                 * AUCUN LIEN SANS FICHE : une variante introuvable ou un
+                 * produit retire de la vente rendrait 404, sous le motif qui
+                 * l'annonce. Le libelle suit le nom sur sa propre ligne, comme
+                 * au panier : accole au lien, il passait a la ligne derriere
+                 * une virgule des que le nom en prenait deux.
+                 */}
                 <span className={styles.ligneNom}>
-                  <Link
-                    href={`/produit/${ligne.produitSlug}`}
-                    className={styles.ligneLien}
-                  >
-                    {ligne.produitNom}
-                  </Link>
-                  , {ligne.libelle}
+                  {ligne.ficheAtteignable ? (
+                    <Link
+                      href={`/produit/${ligne.produitSlug}`}
+                      className={styles.ligneLien}
+                    >
+                      {ligne.produitNom}
+                    </Link>
+                  ) : (
+                    <span>{ligne.produitNom}</span>
+                  )}
+                  <span className={styles.ligneLibelle}>{ligne.libelle}</span>
                 </span>
                 <span className={styles.ligneQuantite}>×{ligne.quantite}</span>
                 <span className={styles.lignePrix}>
