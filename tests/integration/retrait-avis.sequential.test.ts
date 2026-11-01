@@ -204,7 +204,10 @@ describe("retirerMonAvis, le retrait par l'auteur, LS-305", () => {
     await services.retirerMonAvis({ avisId, utilisateurId: moi });
     const premier = await lireAvis(avisId);
 
-    const second = await services.retirerMonAvis({ avisId, utilisateurId: moi });
+    const second = await services.retirerMonAvis({
+      avisId,
+      utilisateurId: moi,
+    });
 
     expect(second.statut).toBe("REFUSE_INTROUVABLE");
     expect((await lireAvis(avisId))?.efface_a).toEqual(premier?.efface_a);
@@ -291,7 +294,9 @@ describe("retrait et moderation concurrents, LS-305", () => {
     const moi = await creerClient();
     const avisId = await ecrireAvis({ utilisateurId: moi, statut: "DEPOSE" });
 
-    const verrou = new Client({ connectionString: inject("DATABASE_URL_TEST") });
+    const verrou = new Client({
+      connectionString: inject("DATABASE_URL_TEST"),
+    });
     await verrou.connect();
 
     try {

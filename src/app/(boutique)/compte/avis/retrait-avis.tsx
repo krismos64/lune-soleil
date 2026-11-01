@@ -77,7 +77,10 @@ export function RetraitAvis({
             disabled={enCours}
           >
             {enCours ? "Retrait en cours…" : "Confirmer le retrait"}
-            <span className={styles.masqueVisuellement}> de l&apos;avis sur {produitNom}</span>
+            <span className={styles.masqueVisuellement}>
+              {" "}
+              de l&apos;avis sur {produitNom}
+            </span>
           </button>
         </form>
       </div>
