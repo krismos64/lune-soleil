@@ -18,6 +18,8 @@
  * l'identifiant de session, que `modifierAvisDeLAuteur` porte dans son filtre.
  * C'est la meme regle que `ligneCommandeId` au depot.
  */
+import { randomUUID } from "node:crypto";
+
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -196,5 +198,5 @@ export async function retirerAvis(
    * `catch` prendrait pour une panne.
    */
   revalidatePath("/compte/avis");
-  redirect(`/compte/avis?${PARAMETRE_RETRAIT}=effectue`);
+  redirect(`/compte/avis?${PARAMETRE_RETRAIT}=${randomUUID()}`);
 }

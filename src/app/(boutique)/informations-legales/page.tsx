@@ -765,17 +765,21 @@ export default async function PageInformationsLegales() {
               commentaire est effacé et il n&apos;est plus rattaché à votre
               compte. Seule sa note reste conservée, sans votre nom, avec la
               commande que la loi impose de garder. Ce retrait est définitif.
+              Un avis déposé sans compte y apparaît dès que vous créez un compte
+              avec l&apos;adresse email de la commande, une fois cette adresse
+              confirmée.
             </p>
 
             <h3 className={styles.titreBloc}>Durée de conservation</h3>
             <p className={styles.texte}>
               Un avis publié le reste <strong>sans limite de durée</strong>. Il
-              n&apos;est retiré que sur décision motivée ou à votre demande.
-              Quand l&apos;atelier refuse ou retire un avis, son texte et le
-              motif de la décision sont conservés <strong>cinq ans</strong>{" "}
-              comme preuve, délai de prescription de l&apos;article 2224 du Code
-              civil. Le texte est ensuite effacé et l&apos;avis détaché de votre
-              compte.
+              n&apos;est retiré que sur décision motivée de l&apos;atelier, ou
+              par vous. Quand l&apos;atelier refuse ou retire un avis, son texte
+              et le motif de la décision sont conservés{" "}
+              <strong>cinq ans</strong> comme preuve, délai de prescription de
+              l&apos;article 2224 du Code civil, sauf si vous retirez cet avis
+              vous-même entre-temps. Le texte est ensuite effacé et l&apos;avis
+              détaché de votre compte.
             </p>
 
             <h3 className={styles.titreBloc}>Classement des avis</h3>

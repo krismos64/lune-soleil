@@ -32,6 +32,7 @@ import { redirect } from "next/navigation";
 import { exigerSession } from "@/services/autorisation";
 import { DELAI_PUBLICATION_JOURS, listerMesAvis } from "@/services/avis";
 
+import { AnnonceRetrait } from "./annonce-retrait";
 import { PARAMETRE_RETRAIT } from "./parametres";
 import { FormulaireModification } from "./formulaire-modification";
 import { RetraitAvis } from "./retrait-avis";
@@ -91,12 +92,11 @@ export default async function PageMesAvis({
   const avis = await listerMesAvis(identite.utilisateurId);
 
   /*
-   * LE PARAMETRE NE PORTE AUCUNE DONNEE, seulement le fait qu'un retrait vient
-   * d'aboutir, LS-305. Le relire dans un favori n'affiche qu'un message
-   * inexact, sans rien exposer ni rejouer.
+   * LE PARAMETRE NE PORTE AUCUNE DONNEE, seulement une cle aleatoire propre a
+   * ce retrait, LS-305 : elle remonte l'annonce, donc le focus, a chaque
+   * retrait de la meme visite. L'annonce le retire de l'adresse apres lecture.
    */
-  const retraitEffectue =
-    (await searchParams)[PARAMETRE_RETRAIT] === "effectue";
+  const cleRetrait = (await searchParams)[PARAMETRE_RETRAIT];
 
   return (
     /*
@@ -128,10 +128,8 @@ export default async function PageMesAvis({
       </p>
       <h1 className={stylesCompte.titre}>Mes avis</h1>
 
-      {retraitEffectue ? (
-        <p role="status" className={styles.succes}>
-          Votre avis a été retiré et son commentaire effacé.
-        </p>
+      {typeof cleRetrait === "string" && cleRetrait !== "" ? (
+        <AnnonceRetrait key={cleRetrait} />
       ) : null}
 
       {avis.length === 0 ? (

@@ -457,12 +457,31 @@ test("retirer son avis le fait disparaitre et l'annonce, LS-305", async ({
     TOLERANCE_DEBORDEMENT_PX,
   );
 
-  await carte.getByRole("button", { name: /Confirmer le retrait/ }).click();
+  const confirmer = carte.getByRole("button", { name: /Confirmer le retrait/ });
+  expect((await confirmer.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(
+    44,
+  );
+  await confirmer.click();
 
-  await expect(page.getByRole("status").first()).toHaveText(
+  /*
+   * LA REGION EST NOMMEE ET RECOIT LE FOCUS : le bouton cliqué disparait avec
+   * sa carte, et sans cela le focus retomberait sur `body`.
+   */
+  const annonce = page.getByRole("status", {
+    name: "Retrait de l'avis",
+    exact: true,
+  });
+  await expect(annonce).toHaveText(
     "Votre avis a été retiré et son commentaire effacé.",
   );
+  await expect(annonce).toBeFocused();
   await expect(titre).toHaveCount(0);
+
+  // Le parametre quitte l'adresse : le message ne revient pas au rechargement.
+  await expect(page).toHaveURL(/\/compte\/avis$/);
+  expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+    TOLERANCE_DEBORDEMENT_PX,
+  );
 
   await avecBase(async (client) => {
     const { rows } = await client.query<{

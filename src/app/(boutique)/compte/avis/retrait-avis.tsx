@@ -16,6 +16,7 @@ import { useActionState, useId, useState } from "react";
 import { retirerAvis } from "./actions";
 import type { ResultatRetraitAvis } from "./actions";
 import styles from "./avis.module.css";
+import stylesCompte from "../compte.module.css";
 
 function messageDeRefus(resultat: ResultatRetraitAvis): string {
   switch (resultat.statut) {
@@ -58,16 +59,21 @@ export function RetraitAvis({
 
       <div id={identifiantBloc} hidden={!ouvert} className={styles.blocEdition}>
         <p className={styles.avertissement}>
-          Votre avis sera retiré de la boutique et son commentaire effacé. Ce
-          retrait est définitif : un nouvel avis ne pourra pas être déposé pour
-          cet article.
+          Votre avis ne sera plus affiché et son commentaire sera effacé. Ce
+          retrait est définitif : vous ne pourrez plus déposer d&apos;avis pour
+          cet achat.
         </p>
 
         <form action={agir}>
           <input type="hidden" name="avisId" value={avisId} />
+          {/*
+            LE STYLE DE L'ACTION DESTRUCTRICE de l'espace client, `.actionDanger`,
+            et non celui de « Enregistrer la modification » : le geste est
+            definitif, sa couleur le dit. Releve par `ls-frontend-revue`.
+          */}
           <button
             type="submit"
-            className={styles.boutonEnvoyer}
+            className={stylesCompte.actionDanger}
             disabled={enCours}
           >
             {enCours ? "Retrait en cours…" : "Confirmer le retrait"}
