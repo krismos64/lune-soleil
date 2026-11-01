@@ -388,6 +388,40 @@ test("les conditions générales publient l'encadré des garanties et le formula
   await expect(
     confidentialite.getByRole("link", { name: "cnil.fr" }),
   ).toHaveAttribute("href", "https://www.cnil.fr/fr/plaintes");
+
+  await expect(confidentialite).toContainText("quarante-quatre jours au plus");
+});
+
+/**
+ * LES RETOURS DE RELECTURE DU 1ER NOVEMBRE 2026, LS-28 : directeur de la
+ * publication et numéro d'inscription, article 1-1 I de la LCEN ; même moyen
+ * de paiement, L221-24 alinéa 3 ; modification d'un avis, LS-225.
+ */
+test("les mentions portent la publication, le SIREN, le moyen de remboursement et la modification d'un avis", async ({
+  page,
+}) => {
+  await page.goto("/informations-legales");
+
+  const mentions = page.locator("#mentions");
+  await expect(mentions).toContainText("Directrice de la publication");
+  await expect(mentions).toContainText(/SIREN \d{3} \d{3} \d{3}/);
+  await expect(mentions).toContainText("Code d'activité artisanale (APRM)");
+
+  await expect(page.locator("#retractation")).toContainText(
+    "Il est effectué avec le même moyen de paiement que celui utilisé pour la commande",
+  );
+
+  const avis = page.locator("#avis");
+  await expect(
+    avis.getByRole("heading", { name: "Modifier son avis" }),
+  ).toBeVisible();
+  await expect(avis.getByRole("link", { name: /vos avis/i })).toHaveAttribute(
+    "href",
+    "/compte/avis",
+  );
+  await expect(avis).not.toContainText("n'est jamais supprimé");
+
+  await expect(page.locator("#accessibilite")).toContainText("28 juin 2025");
 });
 
 /**

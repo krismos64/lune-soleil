@@ -125,6 +125,17 @@ function IconeSection({
   );
 }
 
+/**
+ * Le SIREN, neuf premiers chiffres du SIRET, groupés par trois.
+ *
+ * DÉRIVÉ ET NON SAISI : une seconde variable d'environnement pourrait porter un
+ * numéro différent du SIRET, ce qu'aucun contrôle ne verrait.
+ */
+function sirenDepuisSiret(siret: string): string {
+  const chiffres = siret.replace(/\D/g, "").slice(0, 9);
+  return chiffres.replace(/(\d{3})(?=\d)/g, "$1 ");
+}
+
 export default async function PageInformationsLegales() {
   /*
    * L'ABSENCE DE CONFIGURATION NE FAIT PAS TOMBER LA PAGE, et ce choix est
@@ -348,13 +359,40 @@ export default async function PageInformationsLegales() {
                     <dt>SIRET</dt>
                     <dd>{identite.siret}</dd>
                   </div>
+                  {/*
+                   * LE NUMÉRO D'INSCRIPTION EST EXIGÉ PAR L'ARTICLE 1-1 I 1° de
+                   * la LCEN, version de la loi SREN du 21 mai 2024, lue le
+                   * 1er novembre 2026. Au RNE, ce numéro est le SIREN, les neuf
+                   * premiers chiffres du SIRET : il en est DÉRIVÉ et non saisi,
+                   * deux valeurs saisies pouvant diverger.
+                   */}
                   <div className={styles.definition}>
                     <dt>Immatriculation</dt>
-                    <dd>{identite.registre}</dd>
+                    <dd>
+                      {identite.registre}, SIREN{" "}
+                      {sirenDepuisSiret(identite.siret)}
+                    </dd>
                   </div>
+                  {/*
+                   * CODE APRM ET NON CODE NAF : la nomenclature d'activités
+                   * française de l'artisanat porte six caractères, quatre
+                   * chiffres et deux lettres. Le libellé le dit, pour qu'il ne
+                   * se lise pas comme un code NAF mal recopié.
+                   */}
                   <div className={styles.definition}>
-                    <dt>Code d&apos;activité</dt>
+                    <dt>Code d&apos;activité artisanale (APRM)</dt>
                     <dd>{identite.codeActivite}</dd>
+                  </div>
+                  {/*
+                   * ARTICLE 1-1 I 3° DE LA LCEN : le nom du directeur de la
+                   * publication. L'exploitante édite seule le site ; l'accord
+                   * au féminin désigne une personne réelle, exception admise
+                   * par `frontend-design.md`. Son nom figure déjà à la ligne
+                   * Dénomination, la loi l'exigeant ici aussi.
+                   */}
+                  <div className={styles.definition}>
+                    <dt>Directrice de la publication</dt>
+                    <dd>{identite.raisonSociale}</dd>
                   </div>
                   <div className={styles.definition}>
                     <dt>Numéro de TVA</dt>
@@ -541,6 +579,16 @@ export default async function PageInformationsLegales() {
               vous avez réellement payé.
             </p>
             {/*
+             * L221-24 ALINÉA 3, lu le 1er novembre 2026 : même moyen de
+             * paiement, sauf accord exprès, sans frais. Un remboursement Stripe
+             * revient sur le moyen débité, ce qui rend la phrase vraie.
+             */}
+            <p className={styles.texte}>
+              Il est effectué avec le même moyen de paiement que celui utilisé
+              pour la commande, sauf accord exprès de votre part pour un autre
+              moyen, et sans frais pour vous.
+            </p>
+            {/*
              * L221-24, VERSION EN VIGUEUR DEPUIS LE 1ER JUILLET 2016, lue sur
              * Legifrance le 7 octobre 2026, LS-287. L'alinea 1 fixe quatorze
              * jours A COMPTER DE L'INFORMATION de la decision ; l'alinea 2 permet
@@ -689,11 +737,29 @@ export default async function PageInformationsLegales() {
               déposé en est informée, et le motif de la décision est conservé.
             </p>
 
+            {/*
+             * LA MODIFICATION EXISTE DEPUIS LS-225 et la page ne le disait pas :
+             * un avis déposé ou publié se modifie depuis `/compte/avis`, et la
+             * modification le renvoie en relecture, règle R10.
+             */}
+            <h3 className={styles.titreBloc}>Modifier son avis</h3>
+            <p className={styles.texte}>
+              Tant que votre avis est en attente de relecture ou publié, vous
+              pouvez le modifier depuis{" "}
+              <Link href="/compte/avis">
+                vos avis, dans l&apos;espace client
+              </Link>
+              . La modification le soumet à une nouvelle relecture avant sa
+              publication. Vous pouvez aussi demander à tout moment qu&apos;il
+              ne soit plus publié, en écrivant à l&apos;atelier.
+            </p>
+
             <h3 className={styles.titreBloc}>Durée de conservation</h3>
             <p className={styles.texte}>
               Un avis publié le reste <strong>sans limite de durée</strong>. Il
-              n&apos;est retiré que sur décision motivée, et un avis retiré
-              n&apos;est jamais supprimé : sa trace et son motif sont conservés.
+              n&apos;est retiré que sur décision motivée ou à votre demande. Un
+              avis retiré n&apos;est plus affiché ; sa trace et le motif du
+              retrait sont conservés comme preuve de la décision.
             </p>
 
             <h3 className={styles.titreBloc}>Classement des avis</h3>
@@ -751,10 +817,12 @@ export default async function PageInformationsLegales() {
             <p className={styles.texte}>
               Ce site est conçu pour rester utilisable au clavier, avec une
               loupe ou un lecteur d&apos;écran. Cet engagement est{" "}
-              <strong>volontaire</strong> : la réglementation sur
-              l&apos;accessibilité numérique vise les organismes publics et les
-              grandes entreprises, et ne s&apos;applique pas à une activité de
-              cette taille.
+              <strong>volontaire</strong>. Depuis le 28 juin 2025, la
+              réglementation européenne sur l&apos;accessibilité s&apos;applique
+              aussi au commerce en ligne, mais elle exempte les
+              microentreprises, celles de moins de dix salariés dont le chiffre
+              d&apos;affaires annuel ne dépasse pas deux millions d&apos;euros,
+              dont l&apos;atelier fait partie.
             </p>
 
             <h3 className={styles.titreBloc}>

@@ -15,6 +15,9 @@
  * (ADR-037, LS-107). Le registre ne nommait ni Stripe ni Backblaze à cette
  * date : la page dit ce qui se passe réellement, le registre est à compléter.
  *
+ * LA DURÉE DES SAUVEGARDES VIENT DE `copier-sauvegarde-hors-site.sh` : masquage
+ * au-delà de quatorze jours, `daysFromHidingToDeleting` à trente, LS-223.
+ *
  * AUCUN « AUCUN TRANSFERT HORS DE L'UNION » GLOBAL : Stripe et Backblaze sont
  * des sociétés dont le groupe est établi aux États-Unis, et l'affirmation
  * n'a pas été vérifiée pour eux. La page renvoie à leurs propres engagements.
@@ -131,7 +134,9 @@ export function PolitiqueConfidentialite() {
         <li>
           <strong>Backblaze</strong> conserve une copie de sauvegarde de la base
           de données, chiffrée avant son envoi : le prestataire garde un fichier
-          qu&apos;il ne peut pas lire.
+          qu&apos;il ne peut pas lire. Chaque sauvegarde est retirée au bout de
+          quatorze jours, puis effacée par Backblaze trente jours plus tard,
+          soit quarante-quatre jours au plus.
         </li>
       </ul>
       <p className={styles.texte}>
