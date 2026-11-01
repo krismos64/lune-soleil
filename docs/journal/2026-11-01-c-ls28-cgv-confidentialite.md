@@ -36,10 +36,22 @@ Commission : aucun lien à publier.
 - `verifier-redaction-francaise.sh` documente pourquoi `textes-imposes.ts`
   reste hors du contrôle du « nous » : le formulaire officiel écrit « Je/nous ».
 
+## Suite, même jour : formulaire type joint à la confirmation
+
+- **L221-13** : l'email `commande-confirmee` joint désormais le modèle de
+  formulaire de rétractation, lu dans `textes-imposes.ts`, rempli avec le nom,
+  la dénomination, l'adresse et l'email de l'atelier. La variable
+  `coordonneesAtelier` est posée par `webhook-paiement.ts` sans jamais lever :
+  une identité non configurée ne fait tomber ni le paiement ni l'email, le
+  formulaire renvoie alors à l'adresse de réponse.
+- Le formulaire précède la signature, qui reste la dernière ligne, consigne de
+  ton figée par `modeles-email.test.ts`.
+- Deux tests unitaires neufs, prouvés par mutation : retirer les lignes du
+  formulaire du modèle fait rougir le test, 1 rouge puis restauré.
+- Déployé en production : CGV et confidentialité, run 41299855908.
+
 ## Relevé en chemin, non traité
 
-- **L221-13** : l'email de confirmation doit joindre le formulaire type de
-  rétractation. Il porte le lien vers le formulaire en ligne, pas le modèle.
 - **Article 293 B du CGI affiché « abrogé par l'ordonnance n° 2025-1247 du
   17 décembre 2025, art. 9 »** sur Légifrance. La mention des factures et du
   site le cite. Date d'effet et article de remplacement non lus, ordonnance
@@ -49,5 +61,6 @@ Commission : aucun lien à publier.
 
 ## Prochaine étape
 
-- Christophe relit et valide les deux textes en production.
+- Christophe relit et valide les deux textes en production, et un email de
+  confirmation réel à la prochaine commande.
 - Nocturne du 2 novembre pour LS-304.
