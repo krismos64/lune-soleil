@@ -22,25 +22,40 @@ en première photo**.
 - **ADR-048** écrit, ADR-047 marqué amendé, `REFERENCES.md` et
   `frontend-design.md` à jour.
 
+- **Insertion par l'admin** après l'accord explicite de Christophe, qui
+  nommait les trois gestes : 5 photos téléversées, description enregistrée,
+  deux clics « Monter » chacune. Photos réelles conservées aux rangs 2 et 3.
+
+## Preuves
+
+```
+fiche publique        médias  og:image = 1er média  description
+bague-chamallow-pop   3       oui                   présente
+bague-stella-pop      3       oui                   présente
+bague-citrus-pop      3       oui                   présente
+bague-petale-disco    3       oui                   présente
+bague-pop-acidulee    3       oui                   présente
+```
+
+Première image servie téléchargée et relue à l'œil pour les cinq : la main
+portant la bague.
+
 ## Dérives
 
-- Le skill `lune-soleil-photos-portees` ne connaît que les boucles
-  d'oreilles : catégorie, une seule photo attendue, une seule référence. La
-  variante bagues a tourné depuis le scratchpad de la session (prompt et
-  script à deux références), pas encore intégrée au skill.
+- Le skill `lune-soleil-photos-portees` ne connaissait que les boucles
+  d'oreilles (filtre de catégorie, une seule photo attendue, une seule
+  référence). Variante bagues intégrée en fin de session : `prompt-bagues.md`,
+  `generer-bague.sh` et une section du `SKILL.md`, hors dépôt.
+- Sur Candy Bloom, la `ref` du champ fichier valait `ref_172` et non
+  `ref_182` : `file_upload` a refusé sans rien envoyer, photos recomptées à 2
+  avant la relance. Cas déjà décrit par le skill.
 
 ## Prochaine étape
 
-- Insertion des 5 photos par l'admin, **après accord explicite de
-  Christophe** nommant les gestes : téléverser, écrire la description,
-  monter la photo en première position. Contrôle après coup : 3 médias
-  distincts par fiche publique, la photo portée en tête.
-- Intégrer la variante bagues au skill.
 - Issue **#612**, contrôle nocturne en échec du 31 octobre, non traitée dans
-  cette session.
+  cette session : à regarder en premier.
+- Backlog inchangé par rapport au journal `2026-10-30-d`.
 
 ## État des tickets
 
-- **LS-303** en cours : critère 1 (ADR) fusionné avec cette PR, critère 2
-  (images relues) rempli, critères 3 et 4 (insertion, vérification publique)
-  en attente.
+- **LS-303** close, PR #613 ; comptes Jira à 284 sur 293.
