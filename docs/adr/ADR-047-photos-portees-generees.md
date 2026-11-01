@@ -2,7 +2,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Statut | Accepté |
+| Statut | Accepté, amendé par ADR-048 pour les bagues (1er novembre 2026) |
 | Date | 9 octobre 2026 |
 | Décideur | Christophe Mostefaoui |
 | Amende | ADR-045 et ADR-046 (images Codex « sans bijou ni texte », « aucune personne »), règle de l'epic LS-22 (« aucun contenu fictif présenté comme réel ») |
