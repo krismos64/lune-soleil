@@ -181,6 +181,11 @@ jobs:
           schema="${schema}sql://"
           printf 'DATABASE_URL=%s%s:%s@localhost:%s/%s?schema=public\n' \
             "$schema" "$PGUSER" "$PGPASSWORD" "$PGPORT" "$PGDATABASE" >> "$GITHUB_ENV"
+          # LS-153 : la base de bout en bout du tunnel d'achat, etape 8. Meme forme
+          # que `nocturne.yml`, sur SON port 55433, jamais celui de la base de
+          # controle : la suite y promeut son admin, regle de LS-189.
+          printf 'DATABASE_URL_E2E=%s%s:%s@localhost:55433/%s?schema=public\n' \
+            "$schema" "$PGUSER" "$PGPASSWORD" "$PGDATABASE" >> "$GITHUB_ENV"
 
       # ----------------------------------------------------------------------
       # Authentification, LS-70.
