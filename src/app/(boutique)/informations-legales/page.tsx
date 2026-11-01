@@ -764,8 +764,8 @@ export default async function PageInformationsLegales() {
               espace, quel que soit son état. Il n&apos;est plus affiché, son
               commentaire est effacé et il n&apos;est plus rattaché à votre
               compte. Seule sa note reste conservée, sans votre nom, avec la
-              commande que la loi impose de garder. Ce retrait est définitif.
-              Un avis déposé sans compte y apparaît dès que vous créez un compte
+              commande que la loi impose de garder. Ce retrait est définitif. Un
+              avis déposé sans compte y apparaît dès que vous créez un compte
               avec l&apos;adresse email de la commande, une fois cette adresse
               confirmée.
             </p>
