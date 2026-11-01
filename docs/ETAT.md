@@ -66,7 +66,10 @@ mention actuelle.
   Stripe standard gardée, risque accepté ; message de vérification sur deux
   comptes jugé inutile ; mention 293 B gardée
 * **LS-308**, découpée de LS-291 : livraison et retours dans le JSON-LD
-  `Product`, `Organization` accentuée avec logo, `lastmod` réel du sitemap
+  `Product`, `Organization` accentuée avec logo, `lastmod` réel du sitemap, close et déployée le 1er novembre 2026
+* **LS-304 est close le 1er novembre 2026** : minimatch monté en 11.x, puis
+  identité légale fictive `LEGAL_*` en CI, PR #626 ; nocturne 41337341367 vert,
+  bout en bout compris, issue #612 fermée
 
 **LS-237 est close** le 23 septembre 2026, cause mesurée : un
 `printf | grep -q` sous `pipefail`, que SIGPIPE faisait échouer sur un motif

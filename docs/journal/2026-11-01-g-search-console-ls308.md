@@ -58,12 +58,21 @@ requête.
 Le nocturne manuel 41322608670 a échoué sur un seul test, celui des mentions
 écrit le matin même pour LS-28 : sans `LEGAL_*` en CI, la page rend le repli.
 Valeurs fictives `TEST` ajoutées aux deux workflows, PR #626 ; preuve locale
-dans les deux sens. Nocturne relancé sur `faac9ac`, run 41337341367.
+dans les deux sens. Nocturne relancé sur `faac9ac`, run 41337341367 : **vert**, audit,
+bout en bout aux quatre largeurs et image compris. Issue #612 fermée,
+**LS-304 close**.
+
+## Déploiement de LS-308
+
+Run 41340397966, sans migration. Relu en production : fiche à 15 € annonçant
+relais 4,10 € et domicile 7,49 €, retour sous 14 jours aux frais du client ;
+`Organization` accentuée, logo servi en 200 ; sitemap à 74 `<loc>` et
+65 `lastmod`, identique sur deux lectures. **LS-308 close.**
 
 ## Prochaine étape
 
-- Déployer LS-308 et relire le JSON-LD servi en production.
-- Clore LS-304 et l'issue #612 si le nocturne est vert.
+- Christophe : rapport « Fiches de marchand » de la Search Console d'ici une
+  semaine, indexation de `/catalogue` sous deux semaines.
 - LS-295, la réauthentification par passkey.
 - Relire le rapport « Performances » de la Search Console vers mi-décembre,
   pour la suite de LS-291.
