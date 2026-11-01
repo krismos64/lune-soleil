@@ -62,8 +62,8 @@ cas d'échec **comme d'annulation**, plutôt que de rougir dans un onglet que
 personne ne consulte. Il **ne bloque aucune fusion** : son rouge signifie « un
 défaut est entré hier », pas « ne pas fusionner ».
 
-**À reconsidérer avant le Go-Live**, LS-153, quand un défaut d'interface
-commencera à coûter des ventes.
+Ce réexamen a eu lieu le 1er novembre 2026, LS-153 : le tunnel d'achat est
+revenu sur la pull request, le reste de l'interface attend toujours la nuit.
 
 `publier-image.yml` **construit, vérifie, puis publie** depuis la même story.
 L'ordre inverse laissait une image atteindre GHCR, registre public, avant que le
