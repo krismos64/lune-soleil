@@ -126,6 +126,15 @@ const EXEMPLES: Record<
       delaiPublicationJours: "7",
     },
   },
+  "avis-non-publie": {
+    titre: "Motif d'un avis refusé ou retiré par l'atelier, LS-306",
+    variables: {
+      numero: "C-2026-0042",
+      piece: "Bracelet en argent martelé",
+      decision: "refuse",
+      motif: "L'avis porte sur la livraison et non sur la pièce achetée.",
+    },
+  },
   "admin-commande-payee": {
     titre: "Une commande vient d'être payée",
     variables: {

@@ -79,3 +79,19 @@ R2. L'écran le dit avant la confirmation.
 
 **Une réponse de l'exploitante survit** à l'avis effacé, `ReponseAvis` n'étant
 plus affichée. Elle est écrite par l'atelier, pas par l'auteur.
+
+## Amendement du 1er novembre 2026, LS-306
+
+**La note est effacée avec le texte**, au retrait par l'auteur comme à la purge
+de cinq ans. La première version la gardait « sans nom » : reliée à une ligne
+de commande, donc à un client identifiable, elle restait une donnée personnelle
+sans finalité, ni affichée ni comptée. Relevé par une relecture externe et
+confirmé. `Avis.note` devient nullable, et `chk_avis_note_selon_effacement`
+pose l'équivalence : une note est nulle **si et seulement si** l'avis est
+effacé. Il ne reste que la trace qu'un avis a existé sur cet achat et a été
+retiré, à sa date : elle empêche un second avis, R2, et prouve que la demande a
+été respectée, article 5.2 du RGPD.
+
+**La finalité des cinq ans est écrite sur la page** : justifier la décision si
+elle est contestée, par l'auteur ou lors d'un contrôle. La prescription de
+l'article 2224 en fixe la longueur, elle n'en fait pas une obligation.

@@ -426,7 +426,8 @@ export async function ecrireAvis(
 /** Un avis tel que l'ecran de moderation le presente. */
 export type AvisAModerer = {
   id: string;
-  note: number;
+  /** Nulle sur un avis efface, R19, LS-306 : l'ecran le dit. */
+  note: number | null;
   commentaire: string | null;
   statut: StatutAvis;
   motifDecision: string | null;
@@ -572,6 +573,42 @@ export async function appliquerDecision(
 }
 
 /**
+ * A qui ecrire le motif d'une decision, LS-306, article D111-12.
+ *
+ * L'ADRESSE DE LA COMMANDE ET NON CELLE DU COMPTE : un avis depose sans compte
+ * n'en a pas, et D111-12 impose d'informer l'auteur « par tout moyen
+ * approprie ». C'est aussi l'adresse a laquelle l'invitation a ete envoyee.
+ *
+ * LA PIECE VIENT DE L'INSTANTANE DE LA LIGNE, invariant 3.
+ */
+export async function lireDestinataireDecision(
+  client: ClientBase,
+  avisId: string,
+): Promise<{ email: string; numero: string; piece: string } | null> {
+  const avis = await client.avis.findUnique({
+    where: { id: avisId },
+    select: {
+      ligneCommande: {
+        select: {
+          libelleProduitFige: true,
+          commande: { select: { emailNormalise: true, numero: true } },
+        },
+      },
+    },
+  });
+
+  if (avis === null) {
+    return null;
+  }
+
+  return {
+    email: avis.ligneCommande.commande.emailNormalise,
+    numero: avis.ligneCommande.commande.numero,
+    piece: avis.ligneCommande.libelleProduitFige,
+  };
+}
+
+/**
  * Modifie l'avis de son auteur, LS-225, regles R8, R10 et R11.
  *
  * L'AUTORISATION VIT DANS LE `where`, ET C'EST LE COEUR DE CETTE FONCTION. Le
@@ -680,7 +717,12 @@ export async function effacerAvisDeLAuteur(
       utilisateurId: parametres.utilisateurId,
       effaceA: null,
     },
-    data: { commentaire: null, utilisateurId: null, effaceA: maintenant },
+    data: {
+      commentaire: null,
+      note: null,
+      utilisateurId: null,
+      effaceA: maintenant,
+    },
   });
 
   if (count === 0) {
@@ -753,6 +795,7 @@ export async function anonymiserTracesAvis(
     },
     data: {
       commentaire: null,
+      note: null,
       utilisateurId: null,
       effaceA: parametres.maintenant,
     },
@@ -821,7 +864,11 @@ export async function listerAvisPublies(
      * serait une information fausse, et un repli sur la date du jour le serait
      * davantage.
      */
-    if (ligne.publieA === null) {
+    /*
+     * UNE NOTE NULLE N'EXISTE QUE SUR UN AVIS EFFACE, jamais publie, LS-306.
+     * Meme traitement que l'incoherence de date : ecartee, jamais inventee.
+     */
+    if (ligne.publieA === null || ligne.note === null) {
       return [];
     }
 
@@ -901,19 +948,29 @@ export async function listerAvisDeLUtilisateur(
     orderBy: { deposeA: "desc" },
   });
 
-  return avis.map((ligne) => ({
-    id: ligne.id,
-    note: ligne.note,
-    commentaire: ligne.commentaire,
-    statut: ligne.statut,
-    experienceA: ligne.experienceA,
-    deposeA: ligne.deposeA,
-    publieA: ligne.publieA,
-    modifieA: ligne.modifieA,
-    produitNom: ligne.ligneCommande.libelleProduitFige,
-    varianteLibelle: ligne.ligneCommande.libelleVarianteFige,
-    numeroCommande: ligne.ligneCommande.commande.numero,
-  }));
+  /*
+   * UN AVIS EFFACE N'A PLUS D'AUTEUR, donc n'arrive jamais ici ; la note nulle
+   * est ecartee par la meme garantie que la fiche produit, LS-306.
+   */
+  return avis.flatMap((ligne) =>
+    ligne.note === null
+      ? []
+      : [
+          {
+            id: ligne.id,
+            note: ligne.note,
+            commentaire: ligne.commentaire,
+            statut: ligne.statut,
+            experienceA: ligne.experienceA,
+            deposeA: ligne.deposeA,
+            publieA: ligne.publieA,
+            modifieA: ligne.modifieA,
+            produitNom: ligne.ligneCommande.libelleProduitFige,
+            varianteLibelle: ligne.ligneCommande.libelleVarianteFige,
+            numeroCommande: ligne.ligneCommande.commande.numero,
+          },
+        ],
+  );
 }
 
 /**
@@ -986,7 +1043,8 @@ export type SignalementLu = {
   examineA: Date | null;
   creeA: Date;
   avisId: string;
-  noteAvis: number;
+  /** Nulle si l'avis vise a ete efface depuis, R19, LS-306. */
+  noteAvis: number | null;
   commentaireAvis: string | null;
   statutAvis: StatutAvis;
   libelleProduitFige: string;
@@ -1179,7 +1237,12 @@ export async function lireAvisASignaler(
     },
   });
 
-  if (avis === null) {
+  /*
+   * UNE NOTE NULLE NE PEUT PAS ETRE PUBLIEE, `chk_avis_note_selon_effacement`
+   * et la garde `effaceA` de `appliquerDecision` l'excluent. Le cas est ecarte
+   * comme introuvable plutot que rendu avec une note inventee, LS-306.
+   */
+  if (avis === null || avis.note === null) {
     return null;
   }
 

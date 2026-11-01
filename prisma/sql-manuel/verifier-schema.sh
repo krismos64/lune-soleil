@@ -737,10 +737,15 @@ verifier_rejet "second avis sur la même ligne rejeté, R2" "avis_ligne_commande
 
 # R19, LS-305 : un avis effacé ne garde ni texte ni auteur. Les deux sens, sans
 # quoi une contrainte trop large refusant tout effacement passerait aussi.
-sortie=$(R "UPDATE avis SET commentaire='encore lisible', efface_a=now() WHERE id='av1';")
+sortie=$(R "UPDATE avis SET commentaire='encore lisible', note=NULL, efface_a=now() WHERE id='av1';")
 verifier_rejet "avis effacé qui garde son commentaire rejeté, R19" "chk_avis_efface_anonyme" "$sortie"
+# LS-306 : la note suit l'effacement, dans les deux sens.
 sortie=$(R "UPDATE avis SET commentaire=NULL, utilisateur_id=NULL, efface_a=now() WHERE id='av1';")
-verifier_accepte "avis effacé sans commentaire ni auteur accepté, R19" "$sortie"
+verifier_rejet "avis effacé qui garde sa note rejeté, R19" "chk_avis_note_selon_effacement" "$sortie"
+sortie=$(R "UPDATE avis SET note=NULL WHERE id='av1';")
+verifier_rejet "avis non effacé sans note rejeté, R19" "chk_avis_note_selon_effacement" "$sortie"
+sortie=$(R "UPDATE avis SET commentaire=NULL, utilisateur_id=NULL, note=NULL, efface_a=now() WHERE id='av1';")
+verifier_accepte "avis effacé sans commentaire, auteur ni note accepté, R19" "$sortie"
 
 echo
 echo "Conformité des enums au modèle conceptuel, LS-45"

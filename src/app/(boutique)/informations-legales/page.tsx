@@ -733,8 +733,18 @@ export default async function PageInformationsLegales() {
             <p className={styles.texte}>
               Un avis peut ne pas être publié, par exemple s&apos;il ne porte
               pas sur la pièce achetée, s&apos;il contient des données
-              personnelles ou des propos injurieux. La personne qui l&apos;a
-              déposé en est informée, et le motif de la décision est conservé.
+              personnelles ou des propos injurieux. L&apos;atelier envoie alors
+              le motif de sa décision par email à l&apos;adresse de la commande,
+              et le conserve.
+            </p>
+            {/*
+             * D111-11 2°, LS-306 : « la possibilité, le cas échéant, de
+             * contacter le consommateur auteur de l'avis ». Formulation
+             * arbitrée par Christophe le 1er novembre 2026.
+             */}
+            <p className={styles.texte}>
+              L&apos;atelier peut vous écrire, à l&apos;adresse email de votre
+              commande, pour vérifier un avis avant de le publier.
             </p>
 
             {/*
@@ -763,10 +773,12 @@ export default async function PageInformationsLegales() {
               Vous pouvez retirer votre avis à tout moment depuis le même
               espace, quel que soit son état. Il n&apos;est plus affiché, son
               commentaire est effacé et il n&apos;est plus rattaché à votre
-              compte. Seule sa note reste conservée, sans votre nom, avec la
-              commande que la loi impose de garder. Ce retrait est définitif. Un
-              avis déposé sans compte y apparaît dès que vous créez un compte
-              avec l&apos;adresse email de la commande, une fois cette adresse
+              compte, et sa note est effacée. Il ne reste que la trace
+              qu&apos;un avis a existé sur cet achat et a été retiré, à sa date
+              : elle empêche un second avis sur le même achat et prouve que
+              votre demande a été respectée. Ce retrait est définitif. Un avis
+              déposé sans compte y apparaît dès que vous créez un compte avec
+              l&apos;adresse email de la commande, une fois cette adresse
               confirmée.
             </p>
 
@@ -776,10 +788,12 @@ export default async function PageInformationsLegales() {
               n&apos;est retiré que sur décision motivée de l&apos;atelier, ou
               par vous. Quand l&apos;atelier refuse ou retire un avis, son texte
               et le motif de la décision sont conservés{" "}
-              <strong>cinq ans</strong> comme preuve, délai de prescription de
-              l&apos;article 2224 du Code civil, sauf si vous retirez cet avis
-              vous-même entre-temps. Le texte est ensuite effacé et l&apos;avis
-              détaché de votre compte.
+              <strong>cinq ans</strong>, pour pouvoir justifier la décision si
+              elle est contestée, par vous ou lors d&apos;un contrôle. Cette
+              durée est celle de la prescription de l&apos;article 2224 du Code
+              civil. Vous pouvez retirer cet avis vous-même entre-temps. Texte
+              et note sont ensuite effacés et l&apos;avis détaché de votre
+              compte.
             </p>
 
             <h3 className={styles.titreBloc}>Classement des avis</h3>

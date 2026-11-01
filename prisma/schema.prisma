@@ -889,7 +889,7 @@ model Avis {
   id              String     @id @default(uuid())
   ligneCommandeId String     @unique @map("ligne_commande_id") // R2, un avis par ligne, preuve d'achat structurelle
   utilisateurId   String?    @map("utilisateur_id")
-  note            Int // CHECK entre 1 et 5
+  note            Int? // CHECK entre 1 et 5, nulle si et seulement si l'avis est efface, R19, LS-306
   commentaire     String?
   statut          StatutAvis @default(DEPOSE) // R4, jamais visible avant publication
   motifDecision   String?    @map("motif_decision") // R5, obligatoire si REFUSE ou RETIRE

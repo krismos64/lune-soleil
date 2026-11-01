@@ -51,6 +51,7 @@ import {
   cloturerSignalement,
   ecrireAvis,
   effacerAvisDeLAuteur,
+  lireDestinataireDecision,
   ecrireSignalement,
   ecrireInvitation,
   lireCommandeARelancer,
@@ -1210,11 +1211,16 @@ export type IssueModeration =
  * le test le prouve, et `database.md` porte la regle a la ligne de validation
  * applicative.
  *
- * ELLE N'EST PAS TRANSACTIONNELLE, ET C'EST JUSTE. `appliquerDecision` ecrit au
- * plus deux instructions sur LA MEME LIGNE, dont la seconde est conditionnee
- * par `publieA: null` : un echec entre les deux laisse un avis publie sans date
- * de premiere publication, que le cycle suivant renseignera. Aucune autre
- * entite n'est touchee.
+ * ELLE EST TRANSACTIONNELLE DEPUIS LS-306, et l'ecart avec sa version
+ * precedente tient a l'outbox. Un refus ou un retrait depose l'email du motif,
+ * article D111-12 : hors transaction, l'auteur recevrait le motif d'une
+ * decision non ecrite, ou une decision resterait sans information. ADR-033,
+ * meme regle que `modifierMonAvis`.
+ *
+ * `commandeId: null` POUR L'ENVOI, comme les notifications d'administration :
+ * la cle `(commandeId, modele)` refuserait le motif d'un second avis de la meme
+ * commande, et `deposerEnvoi` avalerait le doublon, ce qui avorte la
+ * transaction.
  */
 export async function modererAvis(
   parametres: {
@@ -1238,10 +1244,43 @@ export async function modererAvis(
   }
 
   try {
-    await appliquerDecision(prisma, {
-      avisId: parametres.avisId,
-      statut: parametres.statut,
-      motifDecision: motif,
+    await prisma.$transaction(async (transaction) => {
+      await appliquerDecision(transaction, {
+        avisId: parametres.avisId,
+        statut: parametres.statut,
+        motifDecision: motif,
+      });
+
+      if (parametres.statut === "PUBLIE" || motif === null) {
+        return;
+      }
+
+      const destinataire = await lireDestinataireDecision(
+        transaction,
+        parametres.avisId,
+      );
+
+      /*
+       * `appliquerDecision` vient d'ecrire la ligne, donc elle existe : un
+       * destinataire absent serait une incoherence, et elle LEVE pour annuler
+       * la decision plutot que de la laisser sans information de l'auteur.
+       */
+      if (destinataire === null) {
+        throw new Error("avis modere introuvable pour l'envoi du motif");
+      }
+
+      await deposerEnvoi(transaction, {
+        commandeId: null,
+        destinataire: destinataire.email,
+        modele: "avis-non-publie",
+        variables: {
+          numero: destinataire.numero,
+          piece: destinataire.piece,
+          decision: parametres.statut === "RETIRE" ? "retire" : "refuse",
+          motif,
+        },
+        origine: "ADMIN",
+      });
     });
   } catch (erreur) {
     if (

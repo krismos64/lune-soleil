@@ -226,6 +226,12 @@ describe("habillerEnHtml, fidelite au texte", () => {
       pieces: "un bracelet en argent",
       delaiPublicationJours: "7",
     },
+    "avis-non-publie": {
+      numero: "C-2026-0001",
+      piece: "Bracelet en argent",
+      decision: "refuse",
+      motif: "Hors sujet",
+    },
     "expedition-en-route": {
       numero: "C-2026-0001",
       mode: "Point relais",

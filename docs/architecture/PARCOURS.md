@@ -906,8 +906,9 @@ au destinataire », et vaut aussi pour le délai de rétractation.
 **Avis refusé en modération**
 Base : avis `REFUSE`, `motifDecision` obligatoire, `decideA` horodaté, l'avis est
 **conservé**.
-Vue : l'auteur est informé des motifs du refus, obligation de l'article
-L111-7-2.
+Vue : l'auteur est informé des motifs du refus par l'email `avis-non-publie`,
+à l'adresse de la commande, articles L111-7-2 et D111-12, LS-306. Un retrait
+par l'atelier suit le même chemin.
 Un avis refusé n'est jamais supprimé : le motif doit pouvoir être justifié.
 
 **Avis modifié par son auteur après publication**

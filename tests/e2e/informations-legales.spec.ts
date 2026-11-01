@@ -426,6 +426,12 @@ test("les mentions portent la publication, le SIREN, le moyen de remboursement e
     avis.getByRole("heading", { name: "Retirer son avis" }),
   ).toBeVisible();
   await expect(avis).toContainText("conservés cinq ans");
+  // LS-306 : D111-11 2° et D111-12, et la note ne reste plus.
+  await expect(avis).toContainText(
+    "L'atelier peut vous écrire, à l'adresse email de votre commande, pour vérifier un avis avant de le publier.",
+  );
+  await expect(avis).toContainText("le motif de sa décision par email");
+  await expect(avis).not.toContainText("Seule sa note reste");
 
   await expect(page.locator("#accessibilite")).toContainText("28 juin 2025");
 });

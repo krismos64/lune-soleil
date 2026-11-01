@@ -36,6 +36,8 @@ export type ModeleEmail =
   | "commande-confirmee"
   /** LS-61, invitation a deposer un avis, envoyee apres livraison constatee. */
   | "invitation-avis"
+  /** LS-306, motif d'un avis refuse ou retire par l'atelier, article D111-12. */
+  | "avis-non-publie"
   /*
    * LS-29, les six modeles manquants, textes valides par l'exploitante le
    * 12 septembre 2026. `commande-confirmee`, `retractation-accusee` et

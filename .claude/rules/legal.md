@@ -431,6 +431,15 @@ D111-10** du code de la consommation, vérifié à la source le 13 août 2026 :
   d'une contrepartie, et **le délai maximum de publication et de conservation**
   d'un avis
 
+**Quand l'atelier contrôle les avis, D111-11 et D111-12 s'ajoutent**, lus à la
+source le 1er novembre 2026, LS-306. D111-11 impose de préciser dans la même
+rubrique les caractéristiques du contrôle, **la possibilité, le cas échéant, de
+contacter l'auteur**, la possibilité de modifier un avis et les motifs de refus.
+D111-12 impose d'**informer l'auteur des motifs du refus** par tout moyen
+approprié : c'est l'email `avis-non-publie`, envoyé à l'adresse de la commande
+dans la transaction de la décision. Jusqu'à LS-306, la page affirmait cette
+information sans qu'aucun code ne la donne.
+
 **L'article est D111-10 et non D111-17.** Le décret n° 2024-753 du 7 juillet 2024
 a renuméroté D111-16 à D111-19 en D111-9 à D111-12, sans changer leur contenu. Le
 dépôt citait l'ancien numéro à onze endroits jusqu'à LS-93. Un numéro d'article se

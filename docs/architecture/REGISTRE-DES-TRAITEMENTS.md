@@ -220,8 +220,8 @@ empreinte, règle L5 et invariant 9.
 | Catégories de données | note, commentaire, date d'expérience, lien vers la ligne de commande, réponse de l'exploitante. L'**adresse email** entre dans le traitement depuis LS-61, l'invitation étant envoyée par email |
 | Tables | `Avis`, `ReponseAvis`, `InvitationAvis` |
 | Base légale | intérêt légitime, article 6.1.f, informer les acheteurs ; obligation d'information de l'article L111-7-2 du code de la consommation quant aux modalités de contrôle |
-| Conservation | **sans limite de durée** tant que l'avis reste publié, ADR-028. Avis refusé ou retiré : texte et auteur **anonymisés cinq ans après la décision**, article 2224 du code civil, ADR-049, purge `Avis`. Retrait par l'auteur à tout moment depuis l'espace client, anonymisation immédiate. Aucun texte n'impose de durée ; l'article D111-10 impose en revanche de l'**annoncer** dans une rubrique accessible |
-| Destinataires | public, pour l'avis publié et sa réponse. L'identité complète de l'auteur n'est jamais affichée. **OVHcloud** reçoit l'adresse email au titre du SMTP d'envoi, ADR-008, sous-traitant déjà nommé en T2 |
+| Conservation | **sans limite de durée** tant que l'avis reste publié, ADR-028. Avis refusé ou retiré : texte et auteur **anonymisés cinq ans après la décision**, article 2224 du code civil, ADR-049, purge `Avis`. Retrait par l'auteur à tout moment depuis l'espace client, anonymisation immédiate, note comprise (LS-306). Aucun texte n'impose de durée ; l'article D111-10 impose en revanche de l'**annoncer** dans une rubrique accessible |
+| Destinataires | public, pour l'avis publié et sa réponse. L'identité complète de l'auteur n'est jamais affichée. **OVHcloud** reçoit l'adresse email au titre du SMTP d'envoi, ADR-008, sous-traitant déjà nommé en T2 ; depuis LS-306, il reçoit aussi le **motif** d'un avis refusé ou retiré, envoyé à l'adresse de la commande, article D111-12 |
 | Transfert hors UE | aucun |
 
 Un avis est ancré sur la **ligne de commande**, ce qui rend la preuve d'achat

@@ -213,7 +213,10 @@ function CarteAvis({ avis }: { avis: AvisAModerer }) {
   return (
     <>
       <div className={styles.enTeteCarte}>
-        <span className={styles.note}>{avis.note} sur 5</span>
+        {/* UNE NOTE NULLE EST CELLE D'UN AVIS EFFACE PAR SON AUTEUR, LS-306. */}
+        <span className={styles.note}>
+          {avis.note === null ? "Avis effacé" : `${avis.note} sur 5`}
+        </span>
         <span
           className={`${styles.badge} ${
             avis.statut === "PUBLIE" ? styles.badgePublie : ""
@@ -361,7 +364,11 @@ function CarteSignalement({ signalement }: { signalement: SignalementLu }) {
   return (
     <>
       <div className={styles.enTeteCarte}>
-        <span className={styles.note}>Avis {signalement.noteAvis} sur 5</span>
+        <span className={styles.note}>
+          {signalement.noteAvis === null
+            ? "Avis effacé"
+            : `Avis ${signalement.noteAvis} sur 5`}
+        </span>
         <span
           className={`${styles.badge} ${CLASSES_SIGNALEMENT[signalement.statut]}`}
         >
