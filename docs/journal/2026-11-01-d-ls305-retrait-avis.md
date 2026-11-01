@@ -87,8 +87,19 @@ focus reçu, adresse nettoyée, débordement après redirection. 124 passés.
 - `verifier-hook-secrets.sh` : 19 échecs en local, identiques sur `main` sans
   cette branche, dépendants de l'environnement de session.
 
+## En production
+
+Christophe a autorisé Claude, en séance, à jouer la migration lui-même :
+exception ponctuelle à la non-lecture de `production.env`, l'adresse composée
+dans une variable sans être affichée ni passée en argument. Sauvegarde
+`pre-migration-20261101-154418.dump` conservée sur le poste, migration appliquée,
+26 sur 26. Déploiement `c77a19e`, run 41317685668. Vérifié : rubriques de la page
+légale, Backblaze, `/compte/avis` en 307 sans session. Bouton non cliqué en
+production, aucun avis réel de test et le geste est définitif.
+
+**LS-305 close.**
+
 ## Prochaine étape
 
-- Migration de production par `./scripts/migrate-production.sh`, puis
-  déploiement, puis contrôle du bouton en production.
+- Trancher l'effacement du texte des avis à la suppression d'un compte.
 - Nocturne du 2 novembre pour LS-304.
