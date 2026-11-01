@@ -31,7 +31,7 @@ function messageDeRefus(resultat: ResultatModeration): string | null {
     case "INVALIDE":
       return "La décision n'a pas pu être lue. Rechargez la page et réessayez.";
     case "INTROUVABLE":
-      return "Cet avis n'existe plus. Rechargez la page.";
+      return "Cet avis a déjà été traité ou n'existe plus. Rechargez la page.";
     case "INDISPONIBLE":
       return "La décision n'a pas pu être enregistrée. Réessayez dans un instant.";
     default:
