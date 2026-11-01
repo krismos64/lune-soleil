@@ -21,6 +21,11 @@
  * AUCUN « AUCUN TRANSFERT HORS DE L'UNION » GLOBAL : Stripe et Backblaze sont
  * des sociétés dont le groupe est établi aux États-Unis, et l'affirmation
  * n'a pas été vérifiée pour eux. La page renvoie à leurs propres engagements.
+ *
+ * LE STOCKAGE BACKBLAZE EST AUX PAYS-BAS, point de terminaison
+ * `s3.eu-central-003`, région EU Central d'Amsterdam, lu dans la console par
+ * Christophe le 1er novembre 2026, LS-305. Un lieu de stockage et non une
+ * absence de transfert : la société reste américaine.
  */
 import Link from "next/link";
 
@@ -80,7 +85,8 @@ export function PolitiqueConfidentialite() {
           <strong>Votre avis</strong>, si vous en déposez un : note,
           commentaire, date de l&apos;expérience, et votre adresse email pour
           l&apos;invitation. Pour informer les autres acheteurs, intérêt
-          légitime de l&apos;atelier. Conservation détaillée dans la rubrique{" "}
+          légitime de l&apos;atelier. Vous pouvez le retirer vous-même depuis
+          votre espace client. Conservation détaillée dans la rubrique{" "}
           <Link href="/informations-legales#avis">Avis de clients</Link>.
         </li>
         <li>
@@ -133,10 +139,10 @@ export function PolitiqueConfidentialite() {
         </li>
         <li>
           <strong>Backblaze</strong> conserve une copie de sauvegarde de la base
-          de données, chiffrée avant son envoi : le prestataire garde un fichier
-          qu&apos;il ne peut pas lire. Chaque sauvegarde est retirée au bout de
-          quatorze jours, puis effacée par Backblaze trente jours plus tard,
-          soit quarante-quatre jours au plus.
+          de données, stockée aux Pays-Bas et chiffrée avant son envoi : le
+          prestataire garde un fichier qu&apos;il ne peut pas lire. Chaque
+          sauvegarde est retirée au bout de quatorze jours, puis effacée par
+          Backblaze trente jours plus tard, soit quarante-quatre jours au plus.
         </li>
       </ul>
       <p className={styles.texte}>

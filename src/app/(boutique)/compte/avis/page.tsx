@@ -32,7 +32,9 @@ import { redirect } from "next/navigation";
 import { exigerSession } from "@/services/autorisation";
 import { DELAI_PUBLICATION_JOURS, listerMesAvis } from "@/services/avis";
 
+import { PARAMETRE_RETRAIT } from "./parametres";
 import { FormulaireModification } from "./formulaire-modification";
+import { RetraitAvis } from "./retrait-avis";
 import styles from "./avis.module.css";
 import stylesCompte from "../compte.module.css";
 
@@ -75,7 +77,11 @@ function Note({ valeur }: { valeur: number }): React.ReactElement {
   );
 }
 
-export default async function PageMesAvis() {
+export default async function PageMesAvis({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const identite = await exigerSession(await headers());
 
   if (!identite) {
@@ -83,6 +89,14 @@ export default async function PageMesAvis() {
   }
 
   const avis = await listerMesAvis(identite.utilisateurId);
+
+  /*
+   * LE PARAMETRE NE PORTE AUCUNE DONNEE, seulement le fait qu'un retrait vient
+   * d'aboutir, LS-305. Le relire dans un favori n'affiche qu'un message
+   * inexact, sans rien exposer ni rejouer.
+   */
+  const retraitEffectue =
+    (await searchParams)[PARAMETRE_RETRAIT] === "effectue";
 
   return (
     /*
@@ -113,6 +127,12 @@ export default async function PageMesAvis() {
         Achats vérifiés
       </p>
       <h1 className={stylesCompte.titre}>Mes avis</h1>
+
+      {retraitEffectue ? (
+        <p role="status" className={styles.succes}>
+          Votre avis a été retiré et son commentaire effacé.
+        </p>
+      ) : null}
 
       {avis.length === 0 ? (
         /*
@@ -236,6 +256,12 @@ export default async function PageMesAvis() {
                   modifié.
                 </p>
               )}
+
+              {/*
+                TOUS LES AVIS SONT RETIRABLES, regle R19 : le droit a
+                l'effacement ne depend pas de la moderation, LS-305.
+              */}
+              <RetraitAvis avisId={ligne.id} produitNom={ligne.produitNom} />
             </li>
           ))}
         </ul>

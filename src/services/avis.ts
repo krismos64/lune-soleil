@@ -50,6 +50,7 @@ import {
   appliquerDecision,
   cloturerSignalement,
   ecrireAvis,
+  effacerAvisDeLAuteur,
   ecrireSignalement,
   ecrireInvitation,
   lireCommandeARelancer,
@@ -76,6 +77,7 @@ import type {
 import { incrementerCompteur } from "@/repositories/limitation";
 import {
   EntreeInvalideError,
+  schemaIdentifiant,
   schemaModificationAvis,
   schemaSignalementAvis,
   valider,
@@ -1359,6 +1361,59 @@ export async function modifierMonAvis(
   );
 
   return { statut: "MODIFIE" };
+}
+
+/** Ce qu'un retrait d'avis par son auteur produit, LS-305. */
+export type IssueRetrait =
+  | { statut: "RETIRE" }
+  /**
+   * L'avis n'existe pas, n'appartient pas au demandeur, ou est deja efface.
+   * Fondus pour la meme raison que `IssueModification`, invariant 2.
+   */
+  | { statut: "REFUSE_INTROUVABLE" };
+
+/**
+ * Retire l'avis du demandeur et efface son texte, LS-305, regle R19.
+ *
+ * C'EST LE DROIT A L'EFFACEMENT, article 17 du RGPD, exerce sans passer par
+ * l'atelier. AUCUNE LIGNE N'EST SUPPRIMEE, arbitrage LS-246 reconduit le
+ * 1er novembre 2026 : le commentaire est vide, le lien au compte rompu, la note
+ * reste rattachee a une ligne de commande que l'article L123-22 du code de
+ * commerce fait de toute facon conserver dix ans. Seul le texte portait
+ * l'opinion de la personne.
+ *
+ * TOUS LES STATUTS SONT RETIRABLES, a la difference de la modification : un
+ * avis refuse porte lui aussi un texte de son auteur, et le droit d'effacement
+ * ne depend pas de la decision de moderation.
+ *
+ * `utilisateurId` VIENT DE LA SESSION, invariant 2 et regle R13 ; le
+ * repository le recoupe dans son filtre.
+ *
+ * TRANSACTIONNELLE : les deux ecritures du repository portent sur la meme
+ * ligne, et un avis efface reste visible s'il manquait la seconde.
+ */
+export async function retirerMonAvis(
+  parametres: { avisId: string; utilisateurId: string },
+  correlation?: Correlation,
+): Promise<IssueRetrait> {
+  const avisId = valider(schemaIdentifiant, parametres.avisId);
+
+  const { effaces } = await prisma.$transaction((transaction) =>
+    effacerAvisDeLAuteur(transaction, {
+      avisId,
+      utilisateurId: parametres.utilisateurId,
+    }),
+  );
+
+  if (effaces === 0) {
+    journaliser("info", "retrait d'avis refuse", { avisId }, correlation);
+
+    return { statut: "REFUSE_INTROUVABLE" };
+  }
+
+  journaliser("info", "avis retire par son auteur", { avisId }, correlation);
+
+  return { statut: "RETIRE" };
 }
 
 /**

@@ -404,6 +404,7 @@ CREATE TABLE "avis" (
     "publie_a" TIMESTAMPTZ(3),
     "decide_a" TIMESTAMPTZ(3),
     "modifie_a" TIMESTAMPTZ(3),
+    "efface_a" TIMESTAMPTZ(3),
 
     CONSTRAINT "avis_pkey" PRIMARY KEY ("id")
 );

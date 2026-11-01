@@ -547,8 +547,13 @@ export async function appliquerDecision(
       : { motifDecision: parametres.motifDecision }),
   };
 
+  /*
+   * `effaceA: null` FERME LA REPUBLICATION D'UN AVIS EFFACE, regle R19,
+   * LS-305. Un avis efface ne correspond a aucune ligne : `update` leve
+   * `P2025`, que le service traduit deja en « introuvable ».
+   */
   await client.avis.update({
-    where: { id: parametres.avisId },
+    where: { id: parametres.avisId, effaceA: null },
     data: donnees,
   });
 
@@ -633,6 +638,99 @@ export async function modifierAvisDeLAuteur(
   });
 
   return { modifies: count };
+}
+
+/**
+ * Motif ecrit sur un avis PUBLIE ou DEPOSE que son auteur retire, regle R5 :
+ * un retrait porte toujours un motif, y compris quand l'exploitante n'en est
+ * pas l'auteur.
+ */
+export const MOTIF_RETRAIT_PAR_L_AUTEUR = "Retiré à la demande de son auteur.";
+
+/**
+ * Efface l'avis de son auteur, LS-305, regle R19. AUCUNE LIGNE SUPPRIMEE.
+ *
+ * DEUX INSTRUCTIONS, DANS CET ORDRE, et l'ordre ferme une course. La premiere
+ * porte l'autorisation dans son `where`, comme `modifierAvisDeLAuteur`, et
+ * prend du meme coup le verrou de ligne : une decision de moderation
+ * concurrente attend le `COMMIT`. La seconde ne filtre plus sur l'auteur, le
+ * lien venant d'etre rompu, mais elle ne s'execute que si la premiere a touche
+ * la ligne, que la transaction tient alors verrouillee. Dans l'ordre inverse,
+ * un avis `REFUSE` ne prendrait aucun verrou a la premiere ecriture, et une
+ * republication pourrait tomber entre les deux.
+ *
+ * `effaceA: null` DANS LE FILTRE rend le geste idempotent : rejoue, il ne
+ * trouve plus rien, l'auteur ayant de toute facon disparu de la ligne.
+ *
+ * LE STATUT N'EST REECRIT QUE SUR UN AVIS ENCORE VISIBLE OU EN ATTENTE. Un avis
+ * refuse ou retire par l'exploitante garde sa decision et son motif : effacer
+ * le texte ne change pas ce qui a ete juge.
+ *
+ * L'APPELANT OUVRE LA TRANSACTION, README de ce dossier.
+ */
+export async function effacerAvisDeLAuteur(
+  client: ClientBase,
+  parametres: { avisId: string; utilisateurId: string; maintenant?: Date },
+): Promise<{ effaces: number }> {
+  const maintenant = parametres.maintenant ?? new Date();
+
+  const { count } = await client.avis.updateMany({
+    where: {
+      id: parametres.avisId,
+      utilisateurId: parametres.utilisateurId,
+      effaceA: null,
+    },
+    data: { commentaire: null, utilisateurId: null, effaceA: maintenant },
+  });
+
+  if (count === 0) {
+    return { effaces: 0 };
+  }
+
+  await client.avis.updateMany({
+    where: { id: parametres.avisId, statut: { in: ["PUBLIE", "DEPOSE"] } },
+    data: {
+      statut: "RETIRE",
+      motifDecision: MOTIF_RETRAIT_PAR_L_AUTEUR,
+      decideA: maintenant,
+    },
+  });
+
+  return { effaces: count };
+}
+
+/**
+ * Anonymise la trace des avis refuses ou retires decides avant `limite`,
+ * LS-305, regle R6 amendee.
+ *
+ * UN AVIS PUBLIE N'EST JAMAIS TOUCHE, ADR-028 : sa conservation dure tant
+ * qu'il est en ligne. Seule la trace d'une decision de moderation a une duree,
+ * celle de la preuve.
+ *
+ * `motifDecision` RESTE, regle R5 : il est ecrit par l'exploitante et dit
+ * pourquoi l'avis a ete ecarte, sans rien d'identifiant une fois le texte et
+ * l'auteur effaces.
+ *
+ * COMPARAISON STRICTE `lt`, position commune a toutes les purges du projet.
+ */
+export async function anonymiserTracesAvis(
+  client: ClientBase,
+  parametres: { limite: Date; maintenant: Date },
+): Promise<number> {
+  const { count } = await client.avis.updateMany({
+    where: {
+      statut: { in: ["REFUSE", "RETIRE"] },
+      effaceA: null,
+      decideA: { lt: parametres.limite },
+    },
+    data: {
+      commentaire: null,
+      utilisateurId: null,
+      effaceA: parametres.maintenant,
+    },
+  });
+
+  return count;
 }
 
 /** Un avis publie, tel que la fiche produit l'affiche. */

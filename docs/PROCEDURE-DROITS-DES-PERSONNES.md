@@ -106,6 +106,16 @@ d'un échange avec l'exploitante.
 
 ## Article 17, droit à l'effacement
 
+**Un avis s'efface par son auteur**, depuis `/compte/avis`, quel que soit son
+statut, LS-305, ADR-049 : texte et lien au compte effacés, aucune ligne
+supprimée. Une demande d'effacement d'avis se répond en indiquant ce chemin.
+
+**Limite à connaître** : après la suppression du compte, l'avis survit
+dissocié, texte compris, et son auteur n'a plus d'écran pour le retirer. Une
+telle demande n'est pas outillée aujourd'hui, l'arbitrage LS-246 excluant toute
+écriture directe en base : la signaler à Christophe. La réponse type conseille
+donc de retirer ses avis **avant** de supprimer son compte.
+
 **Le client le fait lui-même**, depuis `/compte`, sans passer par l'exploitante.
 La suppression exige une confirmation explicite et une preuve d'identité récente,
 la suppression de compte étant une action sensible de la famille `IDENTIFIANTS`,

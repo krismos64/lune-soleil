@@ -1156,6 +1156,7 @@ erDiagram
         horodatage publieA "nullable"
         horodatage decideA "nullable, refus ou retrait"
         horodatage modifieA "nullable, modification du contenu"
+        horodatage effaceA "nullable, effacement, R19"
     }
     REPONSE_AVIS {
         identifiant id PK
@@ -1225,7 +1226,7 @@ décision de modération.
 | R3 | Un avis n'est déposable qu'après livraison | `experienceA` non nul requis, voir décision H |
 | R4 | Un avis est relu avant publication | `statut` `DEPOSE` par défaut, jamais visible publiquement |
 | R5 | Un refus ou un retrait exige un motif documenté | `motifDecision` obligatoire si `REFUSE` ou `RETIRE`, article L111-7-2 |
-| R6 | Un avis refusé ou retiré est conservé, jamais supprimé | preuve du traitement, obligation d'information |
+| R6 | Un avis refusé ou retiré est conservé, jamais supprimé | preuve du traitement, obligation d'information ; texte et auteur anonymisés cinq ans après la décision, ADR-049 |
 | R7 | Deux dates distinctes sont affichées | `publieA` et `experienceA`, article D111-10 |
 | R8 | Une modification d'avis par son auteur est horodatée | `modifieA`, article L111-7-2 sur les mises à jour |
 | R9 | Toute décision de modération est horodatée | `decideA`, mesure du délai annoncé et preuve après coup |
@@ -1238,6 +1239,7 @@ décision de modération.
 | R16 | Une ligne de commande porte au plus une invitation | `UNIQUE (ligneCommandeId)`, un renvoi remplace le jeton |
 | R17 | Une invitation n'est créée que sur une commande livrée | contrôle applicatif, la tâche filtre sur `Expedition.livreA` |
 | R18 | L'état d'usage d'une invitation vient du jeton | `JetonAcces.utiliseA`, jamais dupliqué sur l'invitation |
+| R19 | Un avis effacé par son auteur est anonymisé, jamais supprimé, et ne se republie pas | `effaceA`, `chk_avis_efface_anonyme`, ADR-049 |
 | R19 | Un renvoi révoque l'ancien jeton dans la même transaction | niveau 2, sinon deux jetons valides pour une invitation |
 | R20 | Un jeton sert au plus une invitation | `UNIQUE (jetonAccesId)`, sinon la résolution du jeton vers sa ligne de commande serait ambiguë |
 | R21 | Le dépôt d'un avis renseigne `JetonAcces.utiliseA` dans la même transaction | niveau 2, sinon un jeton rejoué crée un second avis |

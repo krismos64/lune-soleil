@@ -220,7 +220,7 @@ empreinte, règle L5 et invariant 9.
 | Catégories de données | note, commentaire, date d'expérience, lien vers la ligne de commande, réponse de l'exploitante. L'**adresse email** entre dans le traitement depuis LS-61, l'invitation étant envoyée par email |
 | Tables | `Avis`, `ReponseAvis`, `InvitationAvis` |
 | Base légale | intérêt légitime, article 6.1.f, informer les acheteurs ; obligation d'information de l'article L111-7-2 du code de la consommation quant aux modalités de contrôle |
-| Conservation | **sans limite de durée** tant que l'avis reste publié, ADR-028. Aucun texte n'impose de durée ; l'article D111-10 impose en revanche de l'**annoncer** dans une rubrique accessible |
+| Conservation | **sans limite de durée** tant que l'avis reste publié, ADR-028. Avis refusé ou retiré : texte et auteur **anonymisés cinq ans après la décision**, article 2224 du code civil, ADR-049, purge `Avis`. Retrait par l'auteur à tout moment depuis l'espace client, anonymisation immédiate. Aucun texte n'impose de durée ; l'article D111-10 impose en revanche de l'**annoncer** dans une rubrique accessible |
 | Destinataires | public, pour l'avis publié et sa réponse. L'identité complète de l'auteur n'est jamais affichée. **OVHcloud** reçoit l'adresse email au titre du SMTP d'envoi, ADR-008, sous-traitant déjà nommé en T2 |
 | Transfert hors UE | aucun |
 
@@ -252,6 +252,10 @@ Les mentions du **1°** du même article vivent ailleurs, sur la fiche produit p
 de chaque avis : existence de la procédure de contrôle, date de publication, date
 de l'expérience, critère de classement. **Les deux obligations sont
 cumulatives**, porter l'une ne dispense pas de l'autre.
+
+**Le droit d'effacement s'exerce sans intermédiaire depuis LS-305**, ADR-049 :
+l'auteur retire son avis depuis `/compte/avis`. Aucune ligne n'est supprimée,
+arbitrage LS-246 ; commentaire et lien au compte sont effacés, `effaceA` le date.
 
 La suppression du compte ne supprime pas les avis : `Avis.utilisateurId` est en
 `SetNull`, l'avis survit **dissocié** de son auteur, comme la commande l'est,
@@ -662,10 +666,14 @@ Stripe ni Backblaze avant cette date, d'où les deux ajouts en T2 et dans les
 mesures de sécurité.
 
 **Le transfert hors de l'Union n'est pas affirmé « aucun » pour Stripe et
-Backblaze** sur la page publique : leurs groupes sont établis aux États-Unis,
-et la région du compte Backblaze n'est pas relevée dans le dépôt. Les colonnes
-« Transfert hors UE » de ce registre restent à confirmer sur ces deux
-prestataires, région Backblaze et entité contractante Stripe, par Christophe.
+Backblaze** sur la page publique : leurs groupes sont établis aux États-Unis.
+
+**Le stockage Backblaze est aux Pays-Bas**, point de terminaison
+`s3.eu-central-003`, région EU Central d'Amsterdam, relevé par Christophe dans
+la console le 1er novembre 2026, LS-305. La page le dit. La copie y est
+chiffrée avant envoi, la passphrase restant sur le VPS, donc le prestataire ne
+détient aucune donnée lisible. **L'entité contractante Stripe reste à
+confirmer** pour la colonne « Transfert hors UE » de T2.
 
 ## Mesures de sécurité
 
