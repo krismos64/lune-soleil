@@ -70,7 +70,15 @@ un avis avant de le publier. »
 Suite complète avant ces corrections : 1915 sur 1915, construction verte, 220
 tests de bout en bout sur les avis et la page légale.
 
-## Prochaine étape
+## En production
 
-- Migration de production, puis déploiement immédiat.
+Sur autorisation explicite de Christophe pour ces deux gestes. Migration jouée
+après la publication de l'image, pour raccourcir l'intervalle : sauvegarde
+`pre-migration-20261101-161821.dump` sur le poste, 27 sur 27, aucun avis effacé
+auparavant, aucune incohérence après. Déploiement `deed387` lancé aussitôt, run
+41320556516. Vérifié : les quatre phrases de la page légale, l'ancienne retirée,
+`/administration/avis` en 307 sans session. Email non déclenché en production,
+aucun avis à refuser. **LS-306 close.**
+
+## Prochaine étape
 - Nocturne du 2 novembre pour LS-304.
