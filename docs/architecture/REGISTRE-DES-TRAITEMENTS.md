@@ -102,7 +102,7 @@ invariant 9. Une passkey ne porte qu'une clé publique, qui n'ouvre rien seule.
 | Tables | `Commande`, `LigneCommande`, `HistoriqueStatut` |
 | Base légale | exécution du contrat, article 6.1.b |
 | Conservation | trois ans à compter de la fin de la relation commerciale, référentiel CNIL n° 2021-131, puis archivage jusqu'à l'expiration des délais de prescription et des obligations comptables, voir T5 |
-| Destinataires | l'exploitante, le transporteur pour l'adresse de livraison, le prestataire de paiement pour le montant |
+| Destinataires | l'exploitante, le transporteur pour l'adresse de livraison, voir T4, **Stripe** pour le montant et les données de paiement que le client saisit sur sa page, **OVHcloud** pour l'hébergement et l'envoi des emails, ADR-008 |
 | Transfert hors UE | aucun |
 
 **L'achat sans compte est possible** : `Commande.utilisateurId` est nullable. Une
@@ -653,6 +653,20 @@ lecteur vidéo embarqué. ADR-040 écarte la mesure d'audience ; toute autre
 addition impose de rejouer l'analyse **avant** de livrer, et de mettre à jour
 cette section, que le contrôle automatique ne voit pas.
 
+## Destinataires nommés publiquement, LS-28
+
+La politique de confidentialité de `/informations-legales#confidentialite`,
+publiée le 1er novembre 2026, nomme **OVHcloud**, **Sendcloud** et
+**Mondial Relay**, **Stripe** et **Backblaze**. Ce registre ne nommait ni
+Stripe ni Backblaze avant cette date, d'où les deux ajouts en T2 et dans les
+mesures de sécurité.
+
+**Le transfert hors de l'Union n'est pas affirmé « aucun » pour Stripe et
+Backblaze** sur la page publique : leurs groupes sont établis aux États-Unis,
+et la région du compte Backblaze n'est pas relevée dans le dépôt. Les colonnes
+« Transfert hors UE » de ce registre restent à confirmer sur ces deux
+prestataires, région Backblaze et entité contractante Stripe, par Christophe.
+
 ## Mesures de sécurité
 
 Description générale au sens de l'article 30 paragraphe 1 point g.
@@ -668,6 +682,7 @@ Description générale au sens de l'article 30 paragraphe 1 point g.
 | Secrets jamais journalisés ni commités | invariant 9, hooks `PreToolUse` |
 | Masquage des données personnelles dans les journaux applicatifs | `docs/architecture/JOURNALISATION.md` |
 | Sauvegardes de la base **et des fichiers**, quotidiennes, rétention de quatorze jours, le dernier jeu de chacun des quatorze derniers jours distincts plus ceux du jour depuis le 8 octobre 2026, chiffrés, répertoire en 0700 | ADR-037, `deploiement/sauvegarder-base.sh`, `docs/deploiement/EXPLOITATION.md` |
+| Copie hors site des sauvegardes chez **Backblaze B2**, **chiffrée avant envoi**, passphrase restée sur le VPS | ADR-037, LS-107, `deploiement/copier-sauvegarde-hors-site.sh` |
 
 ## Ce qui reste dû
 

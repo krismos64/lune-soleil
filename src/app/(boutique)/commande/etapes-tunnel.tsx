@@ -989,6 +989,26 @@ function Recapitulatif({
       </section>
 
       {/*
+       * L'ACCEPTATION DES CGV SE RECUEILLE AVANT LA REDIRECTION, `payments.md`,
+       * et la commande enregistre `VERSION_CGV` comme version acceptée. Jusqu'au
+       * 1er novembre 2026, LS-28, le tunnel ne nommait pas les conditions :
+       * une version « acceptée » que l'acheteur n'avait jamais pu lire. Le lien
+       * sort du paragraphe pour sa zone tactile, même motif que ci-dessus.
+       */}
+      <section className={styles.mentionLegale} aria-labelledby="titre-cgv">
+        <h2 id="titre-cgv" className={styles.sousTitre}>
+          Conditions générales de vente
+        </h2>
+        <p className={styles.texteLegal}>
+          Valider la commande vaut acceptation des conditions générales de
+          vente.
+        </p>
+        <Link href="/informations-legales#cgv" className={styles.lienLegal}>
+          Lire les conditions générales de vente
+        </Link>
+      </section>
+
+      {/*
        * LE LIBELLE DU BOUTON EST IMPOSE PAR L221-14 ALINEA 2 : la fonction de
        * validation porte la mention « commande avec obligation de paiement »,
        * ou une formule analogue denuee de toute ambiguite. « Payer » ou

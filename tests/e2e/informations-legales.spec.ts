@@ -349,6 +349,48 @@ test("le médiateur est publié avec ses cinq coordonnées de saisine", async ({
 });
 
 /**
+ * LES CGV ET LA POLITIQUE DE CONFIDENTIALITÉ SONT PUBLIÉES, LS-28.
+ *
+ * LES PHRASES ATTENDUES SONT RECOPIÉES DE LÉGIFRANCE ICI, et non importées de
+ * `textes-imposes.ts` : un test qui lit la constante resterait vert si le
+ * module portait un texte retouché. L'encadré de D211-2 et le formulaire type
+ * de R221-1 sont imposés mot pour mot ; une phrase de début et une de fin de
+ * chacun suffisent à voir une troncature.
+ */
+test("les conditions générales publient l'encadré des garanties et le formulaire type", async ({
+  page,
+}) => {
+  await page.goto("/informations-legales#cgv");
+
+  const cgv = page.locator("#cgv");
+  await expect(cgv).not.toContainText(/en cours de rédaction/i);
+
+  await expect(cgv).toContainText(
+    "Le consommateur dispose d'un délai de deux ans à compter de la délivrance du bien pour obtenir la mise en œuvre de la garantie légale de conformité",
+  );
+  await expect(cgv).toContainText(
+    "Cette garantie donne droit à une réduction de prix si le bien est conservé ou à un remboursement intégral contre restitution du bien.",
+  );
+
+  await expect(cgv).toContainText(
+    "(Veuillez compléter et renvoyer le présent formulaire uniquement si vous souhaitez vous rétracter du contrat.)",
+  );
+  await expect(cgv).toContainText("(*) Rayez la mention inutile.");
+  await expect(cgv).toContainText(
+    "Les frais de retour du bijou sont à votre charge.",
+  );
+
+  const confidentialite = page.locator("#confidentialite");
+  await expect(confidentialite).not.toContainText(/en cours de rédaction/i);
+  for (const destinataire of ["OVHcloud", "Sendcloud", "Stripe", "Backblaze"]) {
+    await expect(confidentialite).toContainText(destinataire);
+  }
+  await expect(
+    confidentialite.getByRole("link", { name: "cnil.fr" }),
+  ).toHaveAttribute("href", "https://www.cnil.fr/fr/plaintes");
+});
+
+/**
  * LA FICHE PRODUIT RENVOIE VERS LA PAGE, ce qu'elle ne faisait pas.
  *
  * LS-105 avait deliberement omis ce lien, la page n'existant pas : le poser
