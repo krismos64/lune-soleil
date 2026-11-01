@@ -80,6 +80,13 @@ l'effacement d'un avis sur demande non outillé. À trancher par Christophe.
 - Région du compte Backblaze et entité Stripe contractante : à confirmer par
   Christophe pour la colonne des transferts hors de l'Union.
 
+## Clôture, même jour
+
+**Christophe valide les CGV et la politique de confidentialité publiées.**
+LS-28 est close. L'article 293 B passe dans **LS-307**, pour l'expert-comptable.
+La région Backblaze (Pays-Bas) et le code APRM (3213ZZ, confirmé) sont réglés.
+L'entité contractante Stripe reste à confirmer.
+
 ## Prochaine étape
 
 - Christophe relit et valide les deux textes en production, et un email de

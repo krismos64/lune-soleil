@@ -49,13 +49,14 @@ LS-250, LS-252, LS-253 et LS-254, avec LS-251 livrée et déployée. Le nocturne
 vert deux fois de suite, `180 mutations, 180 detectees`, étape des preuves en
 1 h 22. Journaux `2026-09-24-a` à `-e` et `2026-09-25-a`.
 
-**Aucun ticket En cours ne dépend plus seulement du code**, constat refait le
-29 octobre 2026. Les deux En cours attendent une rédaction validée ou
-Christophe :
+**LS-28 est close le 1er novembre 2026** : CGV et politique de confidentialité
+rédigées d'après Légifrance, publiées, puis **validées par Christophe**, dont
+l'arbitrage remplace la validation d'un professionnel. Complétée le même jour
+par LS-305 et LS-306 (avis, D111-11, D111-12). La question de l'article 293 B
+du CGI part dans **LS-307**, pour l'expert-comptable.
 
-* **LS-28** attend la rédaction des CGV, la politique de confidentialité
-  complète et la validation par un professionnel. Le médiateur n'est plus un
-  bloqueur depuis le 20 octobre
+**Aucun ticket En cours ne dépend plus seulement du code**, constat refait le
+29 octobre 2026 :
 
 * **LS-290** attend la vérification de l'indexation de `/informations-legales`
   dans la Search Console, par Christophe. Le crédit est **déployé** depuis le
@@ -69,8 +70,7 @@ l'interdit désormais ; **LS-250** a converti les 41 occurrences restantes le
 25 septembre 2026, et **LS-252** a fermé l'arrêt de la preuve complète.
 
 **LS-19 est close le 20 octobre 2026** : le CM2C est le médiateur, convention
-signée par l'exploitante, coordonnées écrites dans `MEDIATEUR`. LS-28 attend la
-politique de confidentialité complète et la validation d'un professionnel. **LS-123, LS-170,
+signée par l'exploitante, coordonnées écrites dans `MEDIATEUR`. **LS-123, LS-170,
 LS-107 et LS-140 sont closes** le 8 octobre 2026, les deux dernières mesurées sur
 le catalogue réel de 50 pièces photographiées. **LS-29 est close** le 8 octobre 2026,
 arbitrage de Christophe, ses quatre critères remplis.
