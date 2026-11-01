@@ -33,6 +33,7 @@
  */
 import type { MessageEmail, ModeleEmail } from "./index";
 import { NOM_BOUTIQUE } from "@/lib/seo";
+import { FORMULAIRE_RETRACTATION } from "@/lib/textes-imposes";
 
 export type MessageRendu = {
   objet: string;
@@ -324,6 +325,32 @@ const RENDUS: Record<ModeleEmail, (message: MessageEmail) => MessageRendu> = {
       "client.",
       "",
       "Répondez simplement à ce message pour toute question.",
+      "",
+      /*
+       * LE FORMULAIRE TYPE EST JOINT, article L221-13, LS-28 : la confirmation
+       * sur support durable doit l'accompagner. Il vient de `textes-imposes.ts`,
+       * mot pour mot, la meme source que les conditions generales.
+       *
+       * PLACE EN FIN DE CORPS, AVANT LA SIGNATURE : le message reste lisible
+       * d'abord, et la signature reste la derniere ligne, consigne de ton que
+       * `modeles-email.test.ts` fige.
+       *
+       * LES COORDONNEES MANQUANTES NE LEVENT PAS, a la difference des deux
+       * liens : sans elles, le formulaire renvoie a l'adresse de reponse de ce
+       * message, qui atteint l'atelier par le `Reply-To` de LS-287. Lever
+       * priverait le client de ses deux liens pour une ligne de formulaire.
+       */
+      FORMULAIRE_RETRACTATION.titre,
+      "",
+      FORMULAIRE_RETRACTATION.avertissement,
+      "",
+      FORMULAIRE_RETRACTATION.destinataire(
+        message.variables.coordonneesAtelier ||
+          `l'atelier ${NOM_BOUTIQUE}, à l'adresse de réponse de ce message`,
+      ),
+      "",
+      ...FORMULAIRE_RETRACTATION.lignes.flatMap((ligne) => [ligne, ""]),
+      FORMULAIRE_RETRACTATION.note,
       "",
       SIGNATURE,
     ].join("\n"),

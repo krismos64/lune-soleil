@@ -43,7 +43,12 @@ import {
 } from "@/integrations/stripe/evenements";
 import { estInterblocage, TENTATIVES_MAXIMUM } from "@/services/reservation";
 import { rendreFactureDeCommande } from "@/services/document-comptable";
-import { emettreFacture, EmetteurNonConfigureError } from "@/services/facture";
+import {
+  denominationLegale,
+  emettreFacture,
+  EmetteurNonConfigureError,
+  lireEmetteur,
+} from "@/services/facture";
 import type { CommandeAFacturer } from "@/services/facture";
 import { deposerEnvoi } from "@/services/envoi-email";
 import {
@@ -52,6 +57,7 @@ import {
   leverAlerteEtNotifier,
 } from "@/services/notification-administration";
 import { formaterMontant } from "@/lib/montant";
+import { NOM_BOUTIQUE } from "@/lib/seo";
 import { formaterDate } from "@/lib/affichage-commande";
 import { lienDocument, lienRetractation } from "@/lib/jeton-acces";
 import {
@@ -808,11 +814,37 @@ async function deposerConfirmationAuClient(
       numero: commande.numero,
       lienFacture: lienDocument(facture.jetonAcces),
       lienRetractation: lienRetractation(facture.jetonRetractation),
+      coordonneesAtelier: coordonneesAtelier(),
     },
     origine: "SYSTEME",
   });
 
   await notifierCommandePayee(transaction, commande);
+}
+
+/**
+ * Nom, adresse et email de l'atelier, pour le formulaire type joint a la
+ * confirmation, ou une chaine vide, LS-28.
+ *
+ * L221-13 IMPOSE DE JOINDRE LE FORMULAIRE TYPE A LA CONFIRMATION, et le modele
+ * de l'annexe a R221-1 demande au professionnel d'y inserer « son nom, son
+ * adresse geographique et son adresse electronique ».
+ *
+ * ELLE NE LEVE JAMAIS, meme motif qu'`adresseDeRetour` de `retractation.ts` :
+ * cette fonction tourne dans la transaction du paiement, et une identite non
+ * configuree ne doit faire tomber ni le paiement ni l'email qui porte les deux
+ * liens signes. Le modele se replie alors sur l'adresse de reponse du message.
+ */
+function coordonneesAtelier(): string {
+  try {
+    const emetteur = lireEmetteur();
+    return `${NOM_BOUTIQUE}, ${denominationLegale(emetteur.raisonSociale)}, ${emetteur.adresse}, ${emetteur.emailContact}`;
+  } catch (erreur) {
+    if (erreur instanceof EmetteurNonConfigureError) {
+      return "";
+    }
+    throw erreur;
+  }
 }
 
 /**
