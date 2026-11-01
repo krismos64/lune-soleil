@@ -4,7 +4,7 @@
 mot de passe.**
 
 Cette procédure crée le seul compte d'administration du site, celui de
-l'exploitante. Elle se déroule **une fois**, avant l'ouverture, et bloque LS-153 :
+l'exploitante. Elle se déroule **une fois**, avant l'ouverture, et bloquait LS-153, close le 1er novembre 2026 :
 l'étape « saisie des données réelles » suppose que l'exploitante peut déjà se
 connecter.
 

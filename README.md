@@ -93,7 +93,8 @@ paiement et tourne en intégration continue. Le détail est dans
   [`docs/PREUVES-PAR-MUTATION.md`](docs/PREUVES-PAR-MUTATION.md)
 - **Intégration continue** à chaque pull request vers `main`, protégée ; les
   preuves les plus longues tournent au contrôle nocturne
-- **Image de production** construite et contrôlée à chaque pull request :
+- **Image de production** construite et contrôlée au contrôle nocturne et
+  avant chaque publication depuis `main` :
   utilisateur non root, aucun `.env` dans les couches, contrôle de santé sur la
   base
 - **`npm audit` à zéro**, sauf exception datée et justifiée
