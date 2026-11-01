@@ -466,6 +466,57 @@ describe("modererAvis informe l'auteur du motif, D111-12", () => {
     expect(envois[0]?.variables.decision).toBe("retire");
   });
 
+  /**
+   * DEUX ONGLETS SUR « REFUSER », releve par la revue critique : un seul motif
+   * part, le premier reste ecrit, et le second est refuse. Les deux appels
+   * sont lances ensemble, le verrou de ligne les serialise.
+   */
+  it("deux refus concurrents n'envoient qu'un motif", async () => {
+    const avisId = await ecrireAvis({ statut: "DEPOSE" });
+
+    const issues = await Promise.all([
+      services.modererAvis({
+        avisId,
+        statut: "REFUSE",
+        motifDecision: "Premier",
+      }),
+      services.modererAvis({
+        avisId,
+        statut: "REFUSE",
+        motifDecision: "Second",
+      }),
+    ]);
+
+    expect(issues.map((issue) => issue.statut).sort()).toEqual([
+      "APPLIQUEE",
+      "REFUSE_INTROUVABLE",
+    ]);
+    const envois = await envoisDuMotif();
+    expect(envois).toHaveLength(1);
+    expect((await lireAvis(avisId))?.motif_decision).toBe(
+      envois[0]?.variables.motif,
+    );
+  });
+
+  it("un retrait rejoue sur un avis deja retire est refuse, sans email", async () => {
+    const avisId = await ecrireAvis({ utilisateurId: await creerClient() });
+
+    await services.modererAvis({
+      avisId,
+      statut: "RETIRE",
+      motifDecision: "A",
+    });
+    const second = await services.modererAvis({
+      avisId,
+      statut: "RETIRE",
+      motifDecision: "B",
+    });
+
+    expect(second.statut).toBe("REFUSE_INTROUVABLE");
+    expect((await lireAvis(avisId))?.motif_decision).toBe("A");
+    expect(await envoisDuMotif()).toHaveLength(1);
+  });
+
   it("une publication n'envoie rien", async () => {
     const avisId = await ecrireAvis({ statut: "DEPOSE" });
 

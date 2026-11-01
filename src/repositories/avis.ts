@@ -494,6 +494,20 @@ export async function listerAvisParStatut(
 }
 
 /**
+ * D'ou chaque decision de moderation peut partir, LS-306.
+ *
+ * REFUSER UN AVIS EN ATTENTE, RETIRER UN AVIS PUBLIE : ce sont les deux seuls
+ * gestes qui envoient le motif a l'auteur, et les seuls que l'ecran propose.
+ * La publication reste possible depuis un avis ecarte, sans email.
+ */
+const ETATS_DE_DEPART: Record<StatutAvis, StatutAvis[]> = {
+  DEPOSE: [],
+  PUBLIE: ["DEPOSE", "REFUSE", "RETIRE"],
+  REFUSE: ["DEPOSE"],
+  RETIRE: ["PUBLIE"],
+};
+
+/**
  * Applique une decision de moderation, regles R5, R9 et R7.
  *
  * `statut` ET `decideA` SONT ECRITS ENSEMBLE, regle R9 : un statut change sans
@@ -552,9 +566,20 @@ export async function appliquerDecision(
    * `effaceA: null` FERME LA REPUBLICATION D'UN AVIS EFFACE, regle R19,
    * LS-305. Un avis efface ne correspond a aucune ligne : `update` leve
    * `P2025`, que le service traduit deja en « introuvable ».
+   *
+   * LA TRANSITION PERMISE EST DANS LE FILTRE, LS-306, releve par la revue
+   * critique : deux onglets ouverts sur « Refuser » ecrivaient deux decisions,
+   * donc deux emails de motif differents a l'auteur, ecrasaient le premier
+   * motif (R5) et relancaient les cinq ans de `decideA`. Le verrou de ligne
+   * serialise les deux, et le second ne trouve plus l'etat de depart. Meme
+   * forme que `modifierAvisDeLAuteur`.
    */
   await client.avis.update({
-    where: { id: parametres.avisId, effaceA: null },
+    where: {
+      id: parametres.avisId,
+      effaceA: null,
+      statut: { in: ETATS_DE_DEPART[parametres.statut] },
+    },
     data: donnees,
   });
 
