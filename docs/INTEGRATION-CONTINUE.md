@@ -44,6 +44,13 @@ retirait aucune. Un défaut d'interface, débordement à 320 px ou lien mort, pe
 entrer sur `main` et n'être vu que le lendemain. Le dépôt a déjà connu ces
 défauts, LS-171 et LS-162.
 
+**Le tunnel d'achat est revenu sur la pull request le 1er novembre 2026**,
+arbitrage de Christophe dans LS-153, qui devait réexaminer LS-177 à l'ouverture :
+le site encaisse depuis le 24 octobre, et un tunnel cassé une nuit coûte des
+ventes. L'étape **8** de `controles.yml` joue six fichiers aux quatre largeurs,
+panier, tunnel, sous-total, carnet, mentions de rétractation et confirmation de
+paiement, environ 40 secondes en local. Le reste de la suite reste au nocturne.
+
 **Le jalon reste vérifié à chaque pull request**, et c'est ce qui rend
 l'arbitrage tenable : l'achat de bout en bout sur une pièce unique vit dans
 `tests/integration/parcours-complet.sequential.test.ts`, pas dans la suite

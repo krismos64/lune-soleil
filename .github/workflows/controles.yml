@@ -1723,6 +1723,70 @@ jobs:
       # IL N'AFFIRME PAS QUE LA SUITE EST PASSEE : il dit ce qui a ete EXECUTE.
       # Le resultat des etapes reste porte par leur propre conclusion.
       # ----------------------------------------------------------------------
+      # ----------------------------------------------------------------------
+      # Controle 8, le TUNNEL D'ACHAT de bout en bout, LS-153.
+      #
+      # ARBITRAGE DE CHRISTOPHE DU 1ER NOVEMBRE 2026, qui reprend celui de
+      # LS-177 comme LS-153 l'exigeait. LS-177 avait sorti TOUS les scenarios de
+      # bout en bout de la pull request vers `nocturne.yml`, boutique fermee : un
+      # defaut d'ecran d'une nuit ne touchait aucun client. Le site encaisse
+      # depuis le 24 octobre, et un tunnel casse pendant une nuit coute des
+      # ventes. Seul le PARCOURS D'ACHAT revient ici ; le reste de la suite reste
+      # au nocturne, le cout d'une PR restant borne.
+      #
+      # LA LISTE EST EN DUR, ET C'EST VOULU : un fichier renomme fait echouer
+      # Playwright sur « No tests found » au lieu de sortir la spec en silence.
+      #
+      # MEMES ETAPES QUE `nocturne.yml`, cache du navigateur compris. Seulement
+      # sur la suite complete : une PR de documentation ne touche pas au tunnel.
+      # ----------------------------------------------------------------------
+      - name: Version de Playwright pour la cle de cache
+        id: playwright
+        if: steps.portee.outputs.suite == 'complete'
+        run: |
+          version=$(node -e "const l=require('./package-lock.json'); process.stdout.write(l.packages['node_modules/@playwright/test'].version)")
+
+          if [ -z "$version" ]; then
+            echo "::error::Version de @playwright/test illisible dans le verrou."
+            exit 1
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Cache du navigateur de test
+        id: cache-navigateur
+        if: steps.portee.outputs.suite == 'complete'
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
+      - name: Installer le navigateur de test
+        if: steps.portee.outputs.suite == 'complete'
+        timeout-minutes: 5
+        run: |
+          if [ "${{ steps.cache-navigateur.outputs.cache-hit }}" = "true" ]; then
+            npx playwright install-deps chromium
+          else
+            npx playwright install --with-deps chromium
+          fi
+
+      - name: Preparer la base de bout en bout, port 55433
+        if: steps.portee.outputs.suite == 'complete'
+        run: ./scripts/preparer-base-e2e.sh
+
+      - name: 8. Tunnel d'achat de bout en bout, quatre largeurs
+        if: steps.portee.outputs.suite == 'complete'
+        timeout-minutes: 15
+        run: >-
+          npx playwright test
+          tests/e2e/panier.spec.ts
+          tests/e2e/tunnel-commande.spec.ts
+          tests/e2e/sous-total-tunnel-ls269.spec.ts
+          tests/e2e/tunnel-carnet-ls299.spec.ts
+          tests/e2e/mentions-retractation.spec.ts
+          tests/e2e/confirmation-paiement.spec.ts
+
       - name: Recapitulatif de portee
         if: always()
         run: |
@@ -1751,14 +1815,15 @@ jobs:
             echo "Trois contrôles ont quitté la pull request et vivent"
             echo "désormais dans \`nocturne.yml\`, rejoué chaque nuit :"
             echo
-            echo "- les **scénarios de bout en bout**, quatre largeurs"
+            echo "- les **scénarios de bout en bout**, quatre largeurs, SAUF le"
+            echo "  tunnel d'achat, revenu ici le 1er novembre 2026, LS-153"
             echo "- \`npm audit\`"
             echo "- la **construction de l'image Docker**, également refaite"
             echo "  sur \`main\` par \`publier-image.yml\`, qui vérifie"
             echo "  désormais AVANT de publier"
             echo
-            echo "Un défaut d'interface peut donc entrer sur \`main\` et"
-            echo "n'être vu que le lendemain. Le jalon métier, lui, reste"
+            echo "Un défaut d'interface hors du tunnel peut donc entrer sur"
+            echo "\`main\` et n'être vu que le lendemain. Le jalon métier, lui, reste"
             echo "vérifié ici : il vit dans les tests d'intégration."
             echo
             echo "LS-176 : la chaîne ne se rejoue plus sur \`main\` après"
