@@ -48,7 +48,29 @@ un avis avant de le publier. »
   test publiait sans motif, alors que le formulaire envoie le champ avec la
   publication. Test durci, la mutation rougit.
 
+## Revue `ls-critical-reviewer`, corrigé dans la branche
+
+- **Une décision rejouée envoyait un second motif** : deux onglets sur
+  « Refuser » écrivaient deux décisions, donc deux emails aux motifs
+  différents, écrasaient le premier motif et relançaient les cinq ans de
+  `decideA`. `commandeId: null` laisse passer le doublon dans l'outbox. La
+  transition permise est désormais dans le filtre d'`appliquerDecision`
+  (`ETATS_DE_DEPART`) : refuser depuis `DEPOSE`, retirer depuis `PUBLIE`.
+  Deux tests neufs, dont deux refus lancés ensemble ; mutation vue par les deux.
+- **Ordre de déploiement** : la contrainte fait échouer le retrait par l'auteur
+  de l'ancien code, qui écrit `effaceA` sans vider la note. La revue proposait de
+  déployer d'abord : c'est faux, le nouveau code écrit `note: null` et une
+  colonne encore `NOT NULL` le refuse aussi. Aucun ordre ne supprime
+  l'intervalle, et `deployer.sh` refuse de toute façon une image dont les
+  migrations ne sont pas jouées. **Migrer puis déployer aussitôt** : le retrait
+  par l'auteur est indisponible quelques minutes, la purge quotidienne ne tombe
+  pas dans la fenêtre. **Un retour arrière sous cette migration casserait le
+  retrait par l'auteur** : redéployer l'image LS-306.
+
+Suite complète avant ces corrections : 1915 sur 1915, construction verte, 220
+tests de bout en bout sur les avis et la page légale.
+
 ## Prochaine étape
 
-- Migration de production, puis déploiement.
+- Migration de production, puis déploiement immédiat.
 - Nocturne du 2 novembre pour LS-304.
