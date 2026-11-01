@@ -91,7 +91,8 @@ async function ecrireAvis(options: {
        $4, $4, now(), 'v1', now())`,
     [
       commandeId,
-      `C-2026-${Math.floor(Math.random() * 9000 + 1000)}`,
+      // Aleatoire et non quatre chiffres : collision mesuree en CI, base partagee.
+      `C-T305-${randomUUID()}`,
       `ls305-${randomUUID()}@exemple.test`,
       JSON.stringify({
         ligne1: "1 rue de Test",
