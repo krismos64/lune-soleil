@@ -74,7 +74,12 @@ async function ecrireAvisPour(
   const commandeId = randomUUID();
   const ligneId = randomUUID();
   const avisId = randomUUID();
-  const numero = `C-2026-${Math.floor(Math.random() * 9000 + 1000)}`;
+  /*
+   * UN IDENTIFIANT ALEATOIRE ET NON QUATRE CHIFFRES : 9000 valeurs dans une
+   * base partagee entre fichiers ont produit une collision sur
+   * `commande_numero_key` en integration continue, le 1er novembre 2026.
+   */
+  const numero = `C-T221-${randomUUID()}`;
 
   await client.query(
     `INSERT INTO commande (
