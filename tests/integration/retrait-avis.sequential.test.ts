@@ -469,12 +469,18 @@ describe("modererAvis informe l'auteur du motif, D111-12", () => {
   it("une publication n'envoie rien", async () => {
     const avisId = await ecrireAvis({ statut: "DEPOSE" });
 
+    /*
+     * UN MOTIF SAISI PUIS « PUBLIER » : le formulaire envoie le champ avec la
+     * publication. Sans motif ici, le test restait vert sur un envoi
+     * declenche par la publication, mutation mesuree.
+     */
     await services.modererAvis({
       avisId,
       statut: "PUBLIE",
-      motifDecision: null,
+      motifDecision: "Texte laissé dans le champ",
     });
 
+    expect((await lireAvis(avisId))?.statut).toBe("PUBLIE");
     expect(await envoisDuMotif()).toHaveLength(0);
   });
 
