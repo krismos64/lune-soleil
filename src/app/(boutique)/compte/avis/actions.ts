@@ -20,11 +20,14 @@
  */
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { journaliserErreur } from "@/lib/journal";
 import { EntreeInvalideError } from "@/lib/validation";
 import { exigerSession } from "@/services/autorisation";
-import { modifierMonAvis } from "@/services/avis";
+import { modifierMonAvis, retirerMonAvis } from "@/services/avis";
+
+import { PARAMETRE_RETRAIT } from "./parametres";
 
 /** Ce que l'interface recoit, jamais une exception. */
 export type ResultatModificationAvis =
@@ -129,4 +132,69 @@ export async function modifierAvis(
 
     return { statut: "INDISPONIBLE" };
   }
+}
+
+/** Ce que l'interface du retrait recoit quand il n'a pas abouti, LS-305. */
+export type ResultatRetraitAvis =
+  | { statut: "REFUSE_INTROUVABLE" }
+  | { statut: "SESSION_ABSENTE" }
+  | { statut: "INDISPONIBLE" };
+
+/**
+ * Retire un avis de l'espace client, LS-305, regle R19.
+ *
+ * LE SUCCES REDIRIGE, IL NE REND PAS DE VALEUR. La carte de l'avis disparait
+ * de la liste, donc le composant qui afficherait un message de succes
+ * disparait avec elle, et son bouton aussi : un message pose dedans ne serait
+ * jamais lu. La page annonce le retrait elle-meme, hors de la liste.
+ *
+ * `avisId` N'AUTORISE RIEN, invariant 2 : le service recoupe avec la session.
+ */
+export async function retirerAvis(
+  _precedent: ResultatRetraitAvis | null,
+  donnees: FormData,
+): Promise<ResultatRetraitAvis> {
+  const identite = await exigerSession(await headers());
+
+  if (!identite) {
+    return { statut: "SESSION_ABSENTE" };
+  }
+
+  const avisId = donnees.get("avisId");
+
+  if (typeof avisId !== "string") {
+    return { statut: "REFUSE_INTROUVABLE" };
+  }
+
+  let issue;
+
+  try {
+    issue = await retirerMonAvis({
+      avisId,
+      utilisateurId: identite.utilisateurId,
+    });
+  } catch (erreur) {
+    /*
+     * UN IDENTIFIANT MAL FORME VAUT « INTROUVABLE », jamais un message de
+     * validation : seul un formulaire falsifie le produit.
+     */
+    if (erreur instanceof EntreeInvalideError) {
+      return { statut: "REFUSE_INTROUVABLE" };
+    }
+
+    journaliserErreur("Retrait d'avis indisponible", erreur);
+
+    return { statut: "INDISPONIBLE" };
+  }
+
+  if (issue.statut === "REFUSE_INTROUVABLE") {
+    return issue;
+  }
+
+  /*
+   * `redirect` HORS DU `try` : il leve une exception de controle que le
+   * `catch` prendrait pour une panne.
+   */
+  revalidatePath("/compte/avis");
+  redirect(`/compte/avis?${PARAMETRE_RETRAIT}=effectue`);
 }

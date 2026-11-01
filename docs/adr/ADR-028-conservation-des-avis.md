@@ -2,7 +2,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Statut | Accepté |
+| Statut | Accepté, complété par ADR-049 (retrait par l'auteur, trace de cinq ans, 1er novembre 2026) |
 | Date | 13 août 2026 |
 | Décideur | Christophe Mostefaoui |
 | Ticket | LS-93 |

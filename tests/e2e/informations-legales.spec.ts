@@ -390,6 +390,7 @@ test("les conditions générales publient l'encadré des garanties et le formula
   ).toHaveAttribute("href", "https://www.cnil.fr/fr/plaintes");
 
   await expect(confidentialite).toContainText("quarante-quatre jours au plus");
+  await expect(confidentialite).toContainText("stockée aux Pays-Bas");
 });
 
 /**
@@ -420,6 +421,11 @@ test("les mentions portent la publication, le SIREN, le moyen de remboursement e
     "/compte/avis",
   );
   await expect(avis).not.toContainText("n'est jamais supprimé");
+  // LS-305 : le retrait par l'auteur et la durée de la trace sont annoncés.
+  await expect(
+    avis.getByRole("heading", { name: "Retirer son avis" }),
+  ).toBeVisible();
+  await expect(avis).toContainText("conservés cinq ans");
 
   await expect(page.locator("#accessibilite")).toContainText("28 juin 2025");
 });

@@ -25,6 +25,7 @@
  */
 import { journaliser, journaliserErreur } from "@/lib/journal";
 import { prisma } from "@/lib/prisma";
+import { anonymiserTracesAvis } from "@/repositories/avis";
 import {
   limiteDeConservation,
   purgerJournalConnexion,
@@ -356,11 +357,20 @@ export async function purgerMessages(
  * deriverait au fil des annees bissextiles.
  */
 function limiteMessage(maintenant: Date): Date {
+  return reculerDAnnees(maintenant, CONSERVATION_MESSAGE_ANNEES);
+}
+
+/**
+ * Le meme instant `annees` ans plus tot, quantieme borne. Partage par les
+ * messages et les traces d'avis, LS-305 : deux copies du calcul divergeraient
+ * au premier 29 fevrier corrige d'un seul cote.
+ */
+export function reculerDAnnees(maintenant: Date, annees: number): Date {
   const limite = new Date(maintenant);
   const quantieme = limite.getUTCDate();
 
   limite.setUTCDate(1);
-  limite.setUTCMonth(limite.getUTCMonth() - CONSERVATION_MESSAGE_ANNEES * 12);
+  limite.setUTCMonth(limite.getUTCMonth() - annees * 12);
 
   const dernierJourDuMois = new Date(
     Date.UTC(limite.getUTCFullYear(), limite.getUTCMonth() + 1, 0),
@@ -369,6 +379,34 @@ function limiteMessage(maintenant: Date): Date {
   limite.setUTCDate(Math.min(quantieme, dernierJourDuMois));
 
   return limite;
+}
+
+/**
+ * Duree de la trace d'un avis refuse ou retire, en annees, LS-305.
+ *
+ * CINQ ANS, delai de prescription de droit commun, article 2224 du code civil :
+ * la trace sert de preuve si l'auteur conteste la decision, ou si l'on reproche
+ * a la boutique d'avoir ecarte des avis defavorables. Aucun texte n'impose
+ * cette duree, c'est un choix aligne sur la trace de retractation. Arbitrage de
+ * Christophe du 1er novembre 2026, ADR-049.
+ */
+export const CONSERVATION_TRACE_AVIS_ANNEES = 5;
+
+/**
+ * Anonymise la trace des avis ecartes depuis plus de cinq ans, LS-305.
+ *
+ * ELLE NE SUPPRIME AUCUNE LIGNE, et c'est le seul membre de `PURGES` dans ce
+ * cas : l'avis est ancre sur une ligne de commande en `RESTRICT`, conservee dix
+ * ans, et l'arbitrage LS-246 exclut la suppression. Le compte rendu nomme donc
+ * des lignes anonymisees dans le champ `supprimees`.
+ */
+export async function anonymiserTracesAvisEchues(
+  maintenant: Date = new Date(),
+): Promise<number> {
+  return anonymiserTracesAvis(prisma, {
+    limite: reculerDAnnees(maintenant, CONSERVATION_TRACE_AVIS_ANNEES),
+    maintenant,
+  });
 }
 
 /**
@@ -393,6 +431,7 @@ const PURGES: ReadonlyArray<{
   { table: "CompteurLimitation", executer: purgerCompteursLimitation },
   { table: "EnvoiEnAttente", executer: purgerEnvoisTermines },
   { table: "Message", executer: purgerMessages },
+  { table: "Avis", executer: anonymiserTracesAvisEchues },
 ];
 
 /**

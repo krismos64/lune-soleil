@@ -923,7 +923,17 @@ Base : avis `RETIRE`, `motifDecision` obligatoire, `decideA` horodaté, avis
 conservé.
 Vue : l'avis disparaît de la fiche, son auteur est informé.
 `decideA` permet de savoir combien de temps l'avis est resté en ligne, ce que
-`publieA` seul ne dit pas.
+`publieA` seul ne dit pas. Texte et auteur sont anonymisés cinq ans après la
+décision, comme pour un avis refusé, ADR-049.
+
+**Avis retiré par son auteur**, LS-305, règle R19
+Base : commentaire vidé, `utilisateurId` nul, `effaceA` horodaté ; un avis publié
+ou en attente passe `RETIRE` avec le motif « Retiré à la demande de son
+auteur. ». Aucune ligne supprimée.
+Vue : depuis `/compte/avis`, en deux étapes ; l'avis quitte la fiche et la
+liste, la page annonce le retrait.
+Un avis effacé ne se republie jamais, et un nouvel avis sur la même ligne reste
+impossible, R2 : l'écran le dit avant la confirmation.
 
 **Délai de publication annoncé dépassé**
 Base : l'avis reste `DEPOSE`, `decideA` nul.

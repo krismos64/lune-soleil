@@ -735,6 +735,13 @@ sortie=$(R "INSERT INTO avis (id,ligne_commande_id,note,statut,experience_a,depo
    VALUES ('av2','lc1',4,'DEPOSE',now(),now());")
 verifier_rejet "second avis sur la même ligne rejeté, R2" "avis_ligne_commande_id_key" "$sortie"
 
+# R19, LS-305 : un avis effacé ne garde ni texte ni auteur. Les deux sens, sans
+# quoi une contrainte trop large refusant tout effacement passerait aussi.
+sortie=$(R "UPDATE avis SET commentaire='encore lisible', efface_a=now() WHERE id='av1';")
+verifier_rejet "avis effacé qui garde son commentaire rejeté, R19" "chk_avis_efface_anonyme" "$sortie"
+sortie=$(R "UPDATE avis SET commentaire=NULL, utilisateur_id=NULL, efface_a=now() WHERE id='av1';")
+verifier_accepte "avis effacé sans commentaire ni auteur accepté, R19" "$sortie"
+
 echo
 echo "Conformité des enums au modèle conceptuel, LS-45"
 

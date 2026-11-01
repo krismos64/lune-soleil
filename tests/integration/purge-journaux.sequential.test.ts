@@ -563,6 +563,7 @@ describe("purge des sept tables ensemble", () => {
       { table: "CompteurLimitation", supprimees: 1, echec: false },
       { table: "EnvoiEnAttente", supprimees: 1, echec: false },
       { table: "Message", supprimees: 1, echec: false },
+      { table: "Avis", supprimees: 0, echec: false },
     ]);
 
     // Et surtout, les lignes recentes sont toujours la.
@@ -663,6 +664,7 @@ describe("purge des sept tables ensemble", () => {
     await client.query("ALTER TABLE compteur_limitation RENAME TO cl_off");
     await client.query("ALTER TABLE envoi_en_attente RENAME TO ea_off");
     await client.query("ALTER TABLE message RENAME TO ms_off");
+    await client.query("ALTER TABLE avis RENAME TO av_off");
 
     try {
       const resultats = await purgerJournaux(MAINTENANT);
@@ -677,7 +679,8 @@ describe("purge des sept tables ensemble", () => {
        * LE MECANISME A FONCTIONNE, LS-83 : `CompteurCompteVise` a fait rougir
        * ce test a son ajout, et la question posee a bien ete tranchee, la
        * table figure en T8 du registre avec la duree de vingt-quatre heures de
-       * `RateLimit`. `CompteurLimitation`, LS-294, a suivi le meme chemin. Ne
+       * `RateLimit`. `CompteurLimitation`, LS-294, a suivi le meme chemin,
+       * puis `Avis`, LS-305, dont la trace figure en T7 avec ses cinq ans. Ne
        * pas assouplir cette assertion.
        */
       expect(resultats.map((r) => r.table)).toEqual([
@@ -688,6 +691,7 @@ describe("purge des sept tables ensemble", () => {
         "CompteurLimitation",
         "EnvoiEnAttente",
         "Message",
+        "Avis",
       ]);
     } finally {
       await client.query("ALTER TABLE jc_off RENAME TO journal_connexion");
@@ -697,6 +701,7 @@ describe("purge des sept tables ensemble", () => {
       await client.query("ALTER TABLE cl_off RENAME TO compteur_limitation");
       await client.query("ALTER TABLE ea_off RENAME TO envoi_en_attente");
       await client.query("ALTER TABLE ms_off RENAME TO message");
+      await client.query("ALTER TABLE av_off RENAME TO avis");
     }
   });
 });

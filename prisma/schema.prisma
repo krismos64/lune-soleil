@@ -898,6 +898,7 @@ model Avis {
   publieA         DateTime?  @map("publie_a") @db.Timestamptz(3)
   decideA         DateTime?  @map("decide_a") @db.Timestamptz(3)
   modifieA        DateTime?  @map("modifie_a") @db.Timestamptz(3) // R10, une modification renvoie en modération
+  effaceA         DateTime?  @map("efface_a") @db.Timestamptz(3) // R19, LS-305 : commentaire et auteur effacés, jamais republié
 
   ligneCommande LigneCommande     @relation(fields: [ligneCommandeId], references: [id], onDelete: Restrict)
   utilisateur   Utilisateur?      @relation(fields: [utilisateurId], references: [id], onDelete: SetNull)

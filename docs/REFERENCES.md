@@ -212,7 +212,7 @@ documentation technique, ticket ou règle qui le contredirait.
 | ADR-025 | Modes de livraison, trois modes, **partiellement remplacé par ADR-035** | livraison, transporteur, tunnel |
 | ADR-026 | Sections de fiche produit ordonnées | fiche produit, catalogue, administration des produits |
 | ADR-027 | Limitation de débit, journal des connexions, réauthentification | connexion, sessions, actions sensibles |
-| ADR-028 | Conservation des avis, sans limite de durée | avis, modération, registre des traitements |
+| ADR-028 | Conservation des avis, sans limite de durée, complété par ADR-049 | avis, modération, registre des traitements |
 | ADR-029 | Référence de variante modifiable, avertissement à l'écran | variante, référence, avis, statistiques par référence |
 | ADR-030 | Un mouvement de stock ne se compense qu'une fois | stock, mouvement, compensation, correction, inventaire |
 | ADR-031 | Le numéro de commande vient d'une table compteur, sans trou | numéro, numérotation, commande, facture, avoir, séquence |
@@ -233,6 +233,7 @@ documentation technique, ticket ou règle qui le contredirait.
 | ADR-046 | Thèmes saisonniers activables par l'exploitante : jeu fermé de jetons, décors et textes écrits dans le code, thème actif en base, accueil et catalogue seulement, activation manuelle ; amendé par LS-277, `NOEL_1` sobre et `NOEL_2` franc remplacent `NOEL` | thème, Noël, saison, `data-theme`, `ParametreBoutique`, `tokens.css`, neige, guirlande, accroche saisonnière, `verifier-contraste.sh`, `NOEL_1`, `NOEL_2`, bouton de pause |
 | ADR-047 | Photos portées générées : exception à la règle des images Codex, admise comme photo complémentaire d'une fiche de boucles d'oreilles, jamais en première position, bijou reproduit d'après la photo réelle et relu sur planche, aucun visage, texte alternatif finissant par « Photo d'illustration. » | photo portée, image générée, Codex, galerie de fiche, texte alternatif, ordre des médias, C2PA, LS-22, contenu fictif |
 | ADR-048 | Photos portées générées des bagues : amende ADR-047, photo portée admise sur une fiche de bague et autorisée en première position, photographies réelles conservées, taille vraisemblable relue sur planche, aucune mention visible | photo portée, bague, main, image générée, première photo, vignette, Open Graph, ordre des médias, C9, LS-303 |
+| ADR-049 | Retrait d'un avis par son auteur, anonymisé et jamais supprimé ; trace d'un avis refusé ou retiré anonymisée au bout de cinq ans ; un avis effacé ne se republie pas | avis, retrait, effacement, article 17, anonymisation, effaceA, R19, R6, purge, LS-305 |
 
 Cette table se met à jour à chaque ADR créé. Un ADR absent d'ici reste
 opposable : la table est un raccourci, `docs/adr/` fait foi.

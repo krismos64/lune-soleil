@@ -452,6 +452,12 @@ Ces opérations exigent une transaction, sans exception :
     étrangère traiter les **onze** autres références qui en portent une,
     `ReponseAvis.auteurId` étant en `RESTRICT` assumé. Livré par LS-95,
     `services/suppression-compte.ts`
+12. **Retrait d'un avis par son auteur**, LS-305, ADR-049 : l'effacement du
+    texte et de l'auteur **d'abord**, filtré sur `utilisateurId` et
+    `effaceA` nul, ce qui prend le verrou de ligne ; le passage en `RETIRE`
+    **ensuite**, seulement si la première écriture a touché la ligne. Dans
+    l'ordre inverse, un avis `REFUSE` ne verrouille rien et une republication
+    peut tomber entre les deux. Aucune ligne supprimée, LS-246
 
 Les points 7 à 9 viennent du périmètre ajouté par LS-37, avis et carnet
 d'adresses ; le point 10 de LS-225, qui l'a complété le 12 septembre 2026. Le

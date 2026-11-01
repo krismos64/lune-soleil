@@ -429,6 +429,60 @@ test("un avis non retenu dit POURQUOI il n'est pas modifiable, critere 6", async
   ).toHaveCount(0);
 });
 
+/*
+ * LE RETRAIT PAR L'AUTEUR, LS-305. Deux etapes, puis la carte disparait et la
+ * page annonce le retrait HORS de la liste : un message pose dans la carte
+ * partirait avec elle. La ligne survit en base, anonymisee.
+ */
+test("retirer son avis le fait disparaitre et l'annonce, LS-305", async ({
+  page,
+}) => {
+  await avecBase(async (client) => {
+    await ecrireAvisPublie(client, marque);
+  });
+
+  await page.goto("/compte/avis");
+
+  const titre = page.getByRole("heading", {
+    name: new RegExp(`Bracelet-tresse-en-argent-massif-${marque}`),
+  });
+  const carte = page.locator("li", { has: titre });
+
+  const ouvrir = carte.getByRole("button", { name: /Retirer cet avis/ });
+  expect((await ouvrir.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+  await ouvrir.click();
+
+  await expect(carte.getByText(/Ce retrait est définitif/)).toBeVisible();
+  expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+    TOLERANCE_DEBORDEMENT_PX,
+  );
+
+  await carte.getByRole("button", { name: /Confirmer le retrait/ }).click();
+
+  await expect(page.getByRole("status").first()).toHaveText(
+    "Votre avis a été retiré et son commentaire effacé.",
+  );
+  await expect(titre).toHaveCount(0);
+
+  await avecBase(async (client) => {
+    const { rows } = await client.query<{
+      commentaire: string | null;
+      utilisateur_id: string | null;
+      efface_a: Date | null;
+    }>(
+      `SELECT commentaire, utilisateur_id, efface_a FROM avis
+       WHERE ligne_commande_id IN (
+         SELECT id FROM ligne_commande WHERE reference_figee = $1)`,
+      [`REF-${marque}`],
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.commentaire).toBeNull();
+    expect(rows[0]?.utilisateur_id).toBeNull();
+    expect(rows[0]?.efface_a).not.toBeNull();
+  });
+});
+
 test("aucune violation axe-core sur l'ecran", async ({ page }) => {
   await avecBase(async (client) => {
     await ecrireAvisPublie(client, marque);

@@ -147,6 +147,13 @@ ALTER TABLE avis
   ADD CONSTRAINT chk_avis_note_bornee
   CHECK (note BETWEEN 1 AND 5);
 
+-- UN AVIS EFFACE NE PORTE PLUS NI TEXTE NI AUTEUR, regle R19, LS-305. Une
+-- implication et non une equivalence : un avis sans commentaire dont le compte
+-- a ete supprime n'est pas pour autant efface, et doit rester moderable.
+ALTER TABLE avis
+  ADD CONSTRAINT chk_avis_efface_anonyme
+  CHECK (efface_a IS NULL OR (commentaire IS NULL AND utilisateur_id IS NULL));
+
 -- ---------------------------------------------------------------------------
 -- Exploitation
 -- ---------------------------------------------------------------------------

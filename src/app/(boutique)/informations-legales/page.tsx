@@ -750,16 +750,32 @@ export default async function PageInformationsLegales() {
                 vos avis, dans l&apos;espace client
               </Link>
               . La modification le soumet à une nouvelle relecture avant sa
-              publication. Vous pouvez aussi demander à tout moment qu&apos;il
-              ne soit plus publié, en écrivant à l&apos;atelier.
+              publication.
+            </p>
+
+            {/*
+             * LE RETRAIT PAR L'AUTEUR, LS-305, règle R19 : la page le
+             * promettait sans qu'aucun chemin ne le permette. Aucune ligne
+             * n'est supprimée, l'avis est anonymisé, arbitrage LS-246.
+             */}
+            <h3 className={styles.titreBloc}>Retirer son avis</h3>
+            <p className={styles.texte}>
+              Vous pouvez retirer votre avis à tout moment depuis le même
+              espace, quel que soit son état. Il n&apos;est plus affiché, son
+              commentaire est effacé et il n&apos;est plus rattaché à votre
+              compte. Seule sa note reste conservée, sans votre nom, avec la
+              commande que la loi impose de garder. Ce retrait est définitif.
             </p>
 
             <h3 className={styles.titreBloc}>Durée de conservation</h3>
             <p className={styles.texte}>
               Un avis publié le reste <strong>sans limite de durée</strong>. Il
-              n&apos;est retiré que sur décision motivée ou à votre demande. Un
-              avis retiré n&apos;est plus affiché ; sa trace et le motif du
-              retrait sont conservés comme preuve de la décision.
+              n&apos;est retiré que sur décision motivée ou à votre demande.
+              Quand l&apos;atelier refuse ou retire un avis, son texte et le
+              motif de la décision sont conservés <strong>cinq ans</strong>{" "}
+              comme preuve, délai de prescription de l&apos;article 2224 du Code
+              civil. Le texte est ensuite effacé et l&apos;avis détaché de votre
+              compte.
             </p>
 
             <h3 className={styles.titreBloc}>Classement des avis</h3>
