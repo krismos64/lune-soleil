@@ -247,9 +247,25 @@ export async function resoudreConfigurationLivraison(
 export async function lireSeuilFranchise(
   client: ClientBase = prisma,
 ): Promise<number | null> {
+  return (
+    (await lireConfigurationLivraisonPublique(client))
+      ?.seuilFranchiseCentimes ?? null
+  );
+}
+
+/**
+ * Les tarifs en vigueur pour une page publique, LS-308.
+ *
+ * MÊME REPLI QUE `lireSeuilFranchise` : `null` sur une configuration
+ * illisible, la page reste servie et se tait sur les tarifs ; toute autre
+ * erreur remonte. Les données structurées de la fiche s'en servent, et un
+ * tarif deviné y serait annoncé aux moteurs comme celui qu'on facture.
+ */
+export async function lireConfigurationLivraisonPublique(
+  client: ClientBase = prisma,
+): Promise<ConfigurationLivraison | null> {
   try {
-    return (await resoudreConfigurationLivraison(client))
-      .seuilFranchiseCentimes;
+    return await resoudreConfigurationLivraison(client);
   } catch (erreur) {
     if (erreur instanceof ConfigurationLivraisonInvalideError) {
       return null;

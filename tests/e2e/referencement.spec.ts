@@ -21,8 +21,47 @@
  * assertion. Motif « plafond de debit et suite e2e », en fiche.
  */
 import { expect, test } from "@playwright/test";
+import { Client } from "pg";
 
 import { CATALOGUE_TEST, PRODUIT_TEST } from "./chemin-session";
+
+/**
+ * Les tarifs de la base de bout en bout, LS-308.
+ *
+ * LUS EN BASE ET NON RECOPIES, meme motif que `reassurance.spec.ts` : une
+ * constante du test comparerait le code a lui-meme. Rien n'est modifie, la
+ * base est partagee.
+ */
+async function tarifsEnBase(): Promise<{
+  relais: number;
+  domicile: number;
+  seuil: number | null;
+}> {
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+
+  try {
+    const { rows } = await client.query<{
+      relais: number;
+      domicile: number;
+      seuil: number | null;
+    }>(
+      `SELECT tarif_relais_centimes AS relais,
+              tarif_domicile_centimes AS domicile,
+              seuil_franchise_centimes AS seuil
+         FROM parametre_boutique WHERE id = true`,
+    );
+    const ligne = rows[0];
+    if (ligne === undefined) {
+      throw new Error(
+        "Aucune ligne parametre_boutique dans la base de bout en bout.",
+      );
+    }
+    return ligne;
+  } finally {
+    await client.end();
+  }
+}
 
 /**
  * Lit le contenu du premier bloc JSON-LD d'un type donne.
@@ -109,6 +148,16 @@ test.describe("metadonnees des pages publiques", () => {
 
     const balisage = await lireJsonLd(page, "Organization");
     expect(balisage["url"]).toBe(siteAttendu(baseURL));
+
+    // LS-308 : accents rendus, et un logo absolu que le site sert vraiment.
+    expect(balisage["description"]).toBe(
+      "Bijoux artisanaux faits main, créés à l'unité et en petite série.",
+    );
+    const logo = balisage["logo"] as string;
+    expect(logo).toBe(`${siteAttendu(baseURL)}/habillage/logo-sceau.jpg`);
+    const reponse = await page.request.get(logo);
+    expect(reponse.status()).toBe(200);
+    expect(reponse.headers()["content-type"]).toContain("image/jpeg");
   });
 
   /*
@@ -221,6 +270,50 @@ test.describe("donnees structurees de la fiche produit", () => {
     );
   });
 
+  /*
+   * LS-308. LE PORT BALISE EST CELUI QUE LE TUNNEL FACTURERAIT pour cette
+   * piece seule, confronte aux tarifs de la base : relais offert au seuil,
+   * domicile toujours payant, ADR-035.
+   */
+  test("la fiche annonce la livraison facturee et le retour sous quatorze jours", async ({
+    page,
+  }) => {
+    const tarifs = await tarifsEnBase();
+    const prix = CATALOGUE_TEST.dernierePiece.prixCentimes;
+    const relaisAttendu =
+      tarifs.seuil !== null && prix >= tarifs.seuil ? 0 : tarifs.relais;
+
+    await page.goto(`/produit/${CATALOGUE_TEST.dernierePiece.slug}`);
+    const offre = (await lireJsonLd(page, "Product"))["offers"] as {
+      shippingDetails: {
+        shippingRate: { value: string; currency: string };
+        shippingDestination: { addressCountry: string };
+      }[];
+      hasMerchantReturnPolicy: {
+        merchantReturnDays: number;
+        returnFees: string;
+        applicableCountry: string;
+      };
+    };
+
+    expect(
+      offre.shippingDetails.map((detail) => detail.shippingRate.value),
+    ).toEqual([
+      (relaisAttendu / 100).toFixed(2),
+      (tarifs.domicile / 100).toFixed(2),
+    ]);
+    for (const detail of offre.shippingDetails) {
+      expect(detail.shippingRate.currency).toBe("EUR");
+      expect(detail.shippingDestination.addressCountry).toBe("FR");
+    }
+
+    expect(offre.hasMerchantReturnPolicy).toMatchObject({
+      merchantReturnDays: 14,
+      returnFees: "https://schema.org/ReturnFeesCustomerResponsibility",
+      applicableCountry: "FR",
+    });
+  });
+
   test("la fiche porte un fil d'Ariane balise, numerote a partir de 1", async ({
     page,
     baseURL,
@@ -279,6 +372,26 @@ test.describe("sitemap et robots", () => {
     }
 
     expect(xml).not.toContain(`/produit/${PRODUIT_TEST.slug}`);
+  });
+
+  /*
+   * LS-308. UNE DATE NE S'ANNONCE QUE SI ELLE EST VRAIE : les pages fixes et
+   * les categories n'en portent aucune, et deux lectures successives rendent
+   * les memes dates produit. L'ancien sitemap datait chaque page fixe de
+   * l'heure de la requete, donc changeait a chaque lecture.
+   */
+  test("le sitemap ne date que les fiches, d'une date stable", async ({
+    request,
+  }) => {
+    const premier = await (await request.get("/sitemap.xml")).text();
+    const second = await (await request.get("/sitemap.xml")).text();
+    expect(second).toBe(premier);
+
+    const entrees = premier.split("<url>").slice(1);
+    for (const entree of entrees) {
+      const estFiche = entree.includes("/produit/");
+      expect(entree.includes("<lastmod>"), entree).toBe(estFiche);
+    }
   });
 
   /*
