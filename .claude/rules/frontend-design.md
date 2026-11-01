@@ -348,6 +348,9 @@ fiche de boucles d'oreilles, **jamais en première position**, le bijou
 reproduit d'après la photo réelle et relu contre elle, aucun visage, texte
 alternatif finissant par « Photo d'illustration. ». Hors de ces conditions,
 la règle des images Codex d'ADR-045 s'applique : aucun bijou, aucune personne.
+**Bagues, ADR-048** : la photo portée générée peut y être la **première**
+photo, les photographies réelles restant sur la fiche ; les autres conditions
+d'ADR-047 s'appliquent. Aucune autre catégorie n'en bénéficie.
 
 ### C33, tout écran d'administration est atteignable sans saisir d'URL
 
