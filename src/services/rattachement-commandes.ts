@@ -55,6 +55,7 @@ import {
   rattacherCommandes,
   type CommandeRattachable,
 } from "@/repositories/commande";
+import { rattacherAvisDesCommandes } from "@/repositories/avis";
 import { ecrireAudit } from "@/repositories/mouvement-stock";
 import { lireEtatVerification } from "@/repositories/utilisateur";
 
@@ -189,6 +190,16 @@ export async function rattacherMesCommandes(
       emailNormalise,
       utilisateurId,
     );
+
+    /*
+     * LES AVIS SUIVENT LEUR COMMANDE, LS-305 : sans cela, l'avis d'un achat
+     * sans compte restait hors de `/compte/avis`, donc impossible a retirer.
+     *
+     * HORS DU `if`, deliberement : une commande rattachee AVANT LS-305 ne se
+     * rattache plus, `rattachees` vaut zero, et son avis resterait orphelin
+     * pour toujours. L'ecriture est idempotente et ne touche rien au nominal.
+     */
+    await rattacherAvisDesCommandes(transaction, utilisateurId);
 
     if (rattachees > 0) {
       await ecrireAudit(transaction, {
