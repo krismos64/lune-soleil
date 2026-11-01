@@ -20,18 +20,15 @@
  * precontractuelle FAUSSE, sanctionnee bien au-dela de l'ecart de prix.
  *
  * AUCUN TEXTE DE REMPLISSAGE, critere d'acceptation de LS-28. Ce qui n'est pas
- * connu est dit comme tel, jamais comble par une formule creuse : la section
- * des CGV annonce une rédaction en cours plutôt que de combler le vide.
+ * connu est dit comme tel, jamais comble par une formule creuse.
  *
  * LE MÉDIATEUR VIENT DE `MEDIATEUR`, écrit dans `identite-legale.ts` depuis le
  * 20 octobre 2026, LS-19 : le CM2C, convention signée ce jour-là.
  *
- * CE QUI N'EST PAS ICI, ET POURQUOI. Les conditions générales de vente ne sont
- * PAS publiées : leur texte complet attend la validation d'un professionnel
- * compétent, LS-28. Publier des conditions incorrectes sur le droit de recours
- * expose à l'article L221-20, qui porte le délai de rétractation à douze mois.
- * La section `#cgv` existe donc et dit son état, ce qui vaut mieux qu'un lien
- * mort dans le pied de page.
+ * LES CONDITIONS GÉNÉRALES ET LA POLITIQUE DE CONFIDENTIALITÉ sont publiées
+ * depuis le 1er novembre 2026, LS-28, rédigées d'après les textes officiels et
+ * validées par Christophe : `conditions-generales.tsx` et
+ * `politique-confidentialite.tsx`, chacun portant ses sources en en-tête.
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -39,13 +36,11 @@ import type { CSSProperties } from "react";
 
 import { DELAI_PUBLICATION_JOURS } from "@/services/avis";
 
-import { formaterMontant } from "@/lib/montant";
 import { NOM_BOUTIQUE, openGraphDePage } from "@/lib/seo";
 import {
   HEBERGEUR,
   IdentiteLegaleNonConfigureeError,
   lireIdentiteLegale,
-  MEDIATEUR,
 } from "@/lib/identite-legale";
 import {
   EmetteurNonConfigureError,
@@ -57,8 +52,9 @@ import {
   ConfigurationLivraisonInvalideError,
 } from "@/lib/livraison";
 import { resoudreConfigurationLivraison } from "@/services/parametres";
-import { VERSION_CGV } from "@/services/commande";
 import { MedaillonAube } from "@/components/medaillon-aube";
+import { ConditionsGenerales } from "./conditions-generales";
+import { PolitiqueConfidentialite } from "./politique-confidentialite";
 import styles from "./informations-legales.module.css";
 
 export const metadata: Metadata = {
@@ -436,116 +432,7 @@ export default async function PageInformationsLegales() {
               Conditions générales de vente
             </h2>
 
-            {/*
-             * LES CGV NE SONT PAS PUBLIÉES TANT QUE LEUR TEXTE N'EST PAS VALIDÉ,
-             * LS-28, et cette section le DIT plutôt que de rester vide. Le
-             * médiateur, qui manquait jusqu'au 20 octobre 2026, est publié plus
-             * bas. L'article L221-20 sanctionne l'information incorrecte par un
-             * délai de rétractation porté à douze mois : le risque dépasse de
-             * loin l'inconvénient d'une section incomplète avant l'ouverture.
-             */}
-            {/*
-             * NE PAS ECRIRE « aucune commande n'est possible » : le tunnel est
-             * livre et fonctionnel, et l'affirmation etait FAUSSE. Un texte de page
-             * legale qui se trompe sur les conditions de la vente releve
-             * exactement de l'information incorrecte que ce ticket cherche a
-             * eviter. Releve par `ls-frontend-revue` le 3 septembre 2026.
-             */}
-            <p className={styles.manquant}>
-              Les conditions générales de vente sont en cours de rédaction et
-              seront publiées avant l&apos;ouverture commerciale de la boutique.
-            </p>
-
-            <p className={styles.texte}>
-              Version en préparation : {VERSION_CGV}. La version acceptée lors
-              d&apos;une commande est conservée avec elle, sans être réécrite
-              par une révision ultérieure.
-            </p>
-
-            <h3 className={styles.titreBloc}>Livraison</h3>
-            <p className={styles.texte}>
-              Les commandes sont expédiées en France métropolitaine par Mondial
-              Relay, au choix en Point Relais, en Locker ou à domicile.
-            </p>
-            {livraison === null ? null : (
-              <ul className={styles.liste}>
-                <li>
-                  Point Relais et Locker :{" "}
-                  {formaterMontant(livraison.relaisCentimes)}
-                </li>
-                <li>
-                  À domicile : {formaterMontant(livraison.domicileCentimes)}
-                </li>
-                {/*
-                 * LE SEUIL NUL DESACTIVE LA FRANCHISE, il ne vaut pas zero : un
-                 * `formaterMontant(null)` annoncerait « 0,00 EUR », donc une
-                 * livraison toujours offerte, l'inverse exact de l'intention.
-                 */}
-                {livraison.seuilFranchiseCentimes === null ? null : (
-                  <li>
-                    {/*
-                     * LS-249 : en Point Relais et Locker seulement, comme le
-                     * calcul facture, ADR-035. « Quel que soit le mode » faisait
-                     * promettre par les conditions generales une gratuite du
-                     * domicile que la commande ne donne jamais.
-                     */}
-                    Livraison offerte en Point Relais et Locker à partir de{" "}
-                    {formaterMontant(livraison.seuilFranchiseCentimes)}{" "}
-                    d&apos;achat. La livraison à domicile reste payante.
-                  </li>
-                )}
-              </ul>
-            )}
-
-            <h3 className={styles.titreBloc}>Médiation de la consommation</h3>
-            <p className={styles.texte}>
-              En cas de litige non résolu directement avec l&apos;atelier, vous
-              pouvez recourir gratuitement au médiateur de la consommation
-              suivant :
-            </p>
-            {/*
-             * LE MÉDIATEUR VIENT DE `MEDIATEUR`, écrit dans le code depuis le
-             * 20 octobre 2026, LS-19. Téléphone et email s'ajoutent au nom, à
-             * l'adresse et au site : la convention, article 3-2, demande les
-             * trois moyens de saisine, articles L616-1 et R616-1.
-             */}
-            <dl className={styles.definitions}>
-              <div className={styles.definition}>
-                <dt>Médiateur</dt>
-                <dd>{MEDIATEUR.nom}</dd>
-              </div>
-              <div className={styles.definition}>
-                <dt>Adresse</dt>
-                <dd>{MEDIATEUR.adresse}</dd>
-              </div>
-              <div className={styles.definition}>
-                <dt>Téléphone</dt>
-                <dd>{MEDIATEUR.telephone}</dd>
-              </div>
-              <div className={styles.definition}>
-                <dt>Email</dt>
-                <dd>
-                  <a href={`mailto:${MEDIATEUR.email}`}>{MEDIATEUR.email}</a>
-                </dd>
-              </div>
-              <div className={styles.definition}>
-                <dt>Saisine en ligne</dt>
-                <dd>
-                  <a
-                    href={MEDIATEUR.siteSaisine}
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    {MEDIATEUR.siteSaisine}
-                  </a>
-                </dd>
-              </div>
-            </dl>
-            <p className={styles.texte}>
-              Le recours à la médiation est gratuit pour vous et suppose
-              d&apos;avoir tenté au préalable de résoudre le litige avec
-              l&apos;atelier.
-            </p>
+            <ConditionsGenerales identite={identite} livraison={livraison} />
           </section>
 
           <section
@@ -563,26 +450,7 @@ export default async function PageInformationsLegales() {
               Confidentialité et données personnelles
             </h2>
 
-            <p className={styles.manquant}>
-              La politique de confidentialité complète, avec la liste des
-              destinataires des données et les durées de conservation, est en
-              cours de rédaction. Elle sera publiée avant l&apos;ouverture.
-            </p>
-
-            <h3 className={styles.titreBloc}>Vos droits</h3>
-            <p className={styles.texte}>
-              Vous pouvez accéder à vos données, les rectifier, en demander
-              l&apos;effacement ou en obtenir une copie. Si vous avez un compte,
-              ces démarches se font depuis{" "}
-              <Link href="/compte/donnees">votre espace client</Link>. Sinon,
-              écrivez à l&apos;adresse de contact ci-dessus.
-            </p>
-            <p className={styles.texte}>
-              La suppression d&apos;un compte n&apos;efface pas les commandes et
-              les factures qui s&apos;y rattachent : la loi impose de les
-              conserver dix ans. Elles cessent en revanche d&apos;être liées à
-              votre compte.
-            </p>
+            <PolitiqueConfidentialite />
 
             {/*
              * LES COOKIES, LS-148. Ce bloc est COMPLET et ne porte pas la mention

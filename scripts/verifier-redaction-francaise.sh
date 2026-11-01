@@ -148,6 +148,11 @@ echo "Fichiers d'interface examinés : $nb_fichiers"
 # entière, donc un texte posé après `{/* … */}` sur la même ligne échappe au
 # motif. Prettier ne produit pas cette forme dans ce dépôt.
 #
+# `src/lib/textes-imposes.ts` N'EST PAS DANS LA LISTE, et c'est voulu, LS-28 :
+# il recopie mot pour mot le formulaire type de l'annexe à R221-1, qui écrit
+# « Je/nous ». Ce fichier ne porte que des textes imposés ; un texte de marque
+# n'y a pas sa place, et l'y écrire pour échapper à ce contrôle serait une faute.
+#
 # LES COMMENTAIRES SONT RETIRÉS AVANT LA RECHERCHE, comme au sens 2 : ils
 # emploient légitimement « nous » pour parler de l'équipe de développement.
 # ---------------------------------------------------------------------------

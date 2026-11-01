@@ -53,10 +53,14 @@ import {
  * le client a consenti. Une revision ulterieure des CGV ne doit pas reecrire ce
  * qu'une commande passee a accepte, meme raison que les libelles figes.
  *
- * ELLE VIT ICI EN ATTENDANT LES CONTENUS JURIDIQUES, LS-28. La deplacer vers un
- * parametrage se fera avec eux ; l'ecrire en dur dans deux endroits serait pire.
+ * « 2026-11 » EST LA PREMIERE VERSION PUBLIEE, le 1er novembre 2026, LS-28.
+ * « 2026-08 », portee par les commandes anterieures, designait des conditions
+ * annoncees « en cours de redaction » : elle ne se reecrit pas sur ces
+ * commandes, regle V10. Toute modification du texte de
+ * `informations-legales/conditions-generales.tsx` change cette valeur, dans le
+ * meme commit, et le texte de chaque version se retrouve par l'historique git.
  */
-export const VERSION_CGV = "2026-08";
+export const VERSION_CGV = "2026-11";
 
 /**
  * Refus metier : une piece du panier n'est plus disponible.

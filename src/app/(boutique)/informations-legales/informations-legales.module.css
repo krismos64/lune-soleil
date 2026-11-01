@@ -366,3 +366,24 @@
     stroke-dashoffset: 0;
   }
 }
+
+/*
+ * UN TEXTE IMPOSÉ SE DISTINGUE DU RESTE, LS-28 : l'encadré des garanties de
+ * D211-2 et le formulaire type de rétractation. Fond sable et filet primaire,
+ * comme `.manquant`, avec `--ls-text` : sur sable, seuls `--ls-text` et
+ * `--ls-primary` tiennent 4,5:1, C31.
+ */
+.encadre {
+  margin: 0 0 var(--ls-space-4);
+  padding: var(--ls-space-3);
+  background: var(--ls-surface-sand);
+  border-left: 4px solid var(--ls-primary);
+  border-radius: var(--ls-radius-sm);
+  color: var(--ls-text);
+}
+
+.encadreTitre {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-text);
+  font-weight: 700;
+}

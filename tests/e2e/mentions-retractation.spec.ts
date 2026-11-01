@@ -148,6 +148,32 @@ test.describe("emplacement 1, avant la validation de la commande", () => {
     expect(boiteBouton, "le bouton n'est pas rendu").not.toBeNull();
     expect(boiteMention!.y).toBeLessThan(boiteBouton!.y);
   });
+
+  /*
+   * L'ACCEPTATION DES CGV SE RECUEILLE AVANT LA REDIRECTION, `payments.md`,
+   * LS-28 : la phrase et le lien vers `#cgv` sont rendus AU-DESSUS du bouton.
+   * Jusqu'au 1er novembre 2026, la commande enregistrait une version
+   * « acceptée » que le tunnel ne nommait nulle part.
+   */
+  test("les conditions générales sont nommées et liées avant le bouton", async ({
+    page,
+  }) => {
+    await allerAuRecapitulatif(page);
+
+    const lien = page.getByRole("link", {
+      name: "Lire les conditions générales de vente",
+    });
+    await expect(lien).toHaveAttribute("href", "/informations-legales#cgv");
+
+    const boiteLien = await lien.boundingBox();
+    const boiteBouton = await page
+      .getByRole("button", { name: /obligation de paiement/i })
+      .boundingBox();
+    expect(boiteLien, "le lien n'est pas rendu").not.toBeNull();
+    expect(boiteBouton, "le bouton n'est pas rendu").not.toBeNull();
+    expect(boiteLien!.y).toBeLessThan(boiteBouton!.y);
+    expect(boiteLien!.height).toBeGreaterThanOrEqual(44);
+  });
 });
 
 test.describe("emplacement 2, conditions générales", () => {
