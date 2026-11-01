@@ -135,6 +135,14 @@ jobs:
       PGPASSWORD: ci_local_jetable
       PGDATABASE: lunesoleil
       PGPORT: "55432"
+      # LS-153 : les memes valeurs sous les noms qu'attend l'IMAGE postgres, pour
+      # la base de bout en bout que `preparer-base-e2e.sh` demarre par `docker
+      # run`, etape 8. Sans elles le serveur refuse de demarrer faute de mot de
+      # passe, et le script ne voit qu'un conteneur « absent », mesure en CI.
+      # Meme bloc que `nocturne.yml`.
+      POSTGRES_USER: lunesoleil
+      POSTGRES_PASSWORD: ci_local_jetable
+      POSTGRES_DB: lunesoleil
       # Playwright et Vitest lisent CI : `forbidOnly`, une retentative, et le
       # rapporteur GitHub. Le runner la definit deja, cette ligne rend la
       # dependance visible plutot qu'implicite.
