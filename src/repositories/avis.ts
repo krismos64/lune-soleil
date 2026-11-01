@@ -700,6 +700,34 @@ export async function effacerAvisDeLAuteur(
 }
 
 /**
+ * Rattache a son compte les avis deposes sans compte, LS-305.
+ *
+ * LE DEFAUT QU'ELLE FERME, releve par la revue critique : un avis depose par
+ * jeton prend l'auteur de la commande AU MOMENT DU DEPOT, donc aucun pour un
+ * achat sans compte. Rattacher ensuite la commande laissait l'avis orphelin,
+ * absent de `/compte/avis`, et son auteur sans moyen de le retirer.
+ *
+ * LE FILTRE PASSE PAR LA COMMANDE, deja rattachee dans la meme transaction :
+ * seules les commandes de ce compte, non dissociees, regle V15. Un avis efface
+ * n'est jamais rattache, `chk_avis_efface_anonyme` le refuserait d'ailleurs.
+ */
+export async function rattacherAvisDesCommandes(
+  client: ClientBase,
+  utilisateurId: string,
+): Promise<number> {
+  const { count } = await client.avis.updateMany({
+    where: {
+      utilisateurId: null,
+      effaceA: null,
+      ligneCommande: { commande: { utilisateurId, dissocieA: null } },
+    },
+    data: { utilisateurId },
+  });
+
+  return count;
+}
+
+/**
  * Anonymise la trace des avis refuses ou retires decides avant `limite`,
  * LS-305, regle R6 amendee.
  *

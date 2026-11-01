@@ -274,6 +274,57 @@ describe("modererAvis, un avis efface ne se republie pas, R19", () => {
   });
 });
 
+/**
+ * LA COURSE AVEC LA MODERATION, relevee par la revue critique. Le retrait tient
+ * le verrou de ligne jusqu'a son `COMMIT` ; une republication lancee pendant ce
+ * temps attend, puis PostgreSQL reevalue `efface_a IS NULL` sur la ligne
+ * validee et n'ecrit rien.
+ *
+ * LE VERROU EST TENU A LA MAIN, par une transaction ouverte sur une seconde
+ * connexion : c'est la seule facon de placer la moderation DANS la fenetre. Le
+ * test prouve aussi ce qu'aucune lecture ne prouvait, que `update` de Prisma 7
+ * avec `effaceA: null` est une seule instruction et non une lecture suivie
+ * d'une ecriture par identifiant.
+ */
+describe("retrait et moderation concurrents, LS-305", () => {
+  it("une republication lancee pendant le retrait n'ecrit rien", async () => {
+    const moi = await creerClient();
+    const avisId = await ecrireAvis({ utilisateurId: moi, statut: "DEPOSE" });
+
+    const verrou = new Client({ connectionString: inject("DATABASE_URL_TEST") });
+    await verrou.connect();
+
+    try {
+      await verrou.query("BEGIN");
+      await verrou.query(
+        `UPDATE avis SET commentaire = NULL, utilisateur_id = NULL,
+           efface_a = now() WHERE id = $1`,
+        [avisId],
+      );
+
+      let terminee = false;
+      const moderation = services
+        .modererAvis({ avisId, statut: "PUBLIE", motifDecision: null })
+        .finally(() => {
+          terminee = true;
+        });
+
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(terminee, "la moderation n'a pas attendu le verrou").toBe(false);
+
+      await verrou.query("COMMIT");
+
+      expect((await moderation).statut).toBe("REFUSE_INTROUVABLE");
+    } finally {
+      await verrou.end();
+    }
+
+    const avis = await lireAvis(avisId);
+    expect(avis?.statut).toBe("DEPOSE");
+    expect(avis?.efface_a).not.toBeNull();
+  });
+});
+
 describe("anonymiserTracesAvisEchues, cinq ans apres la decision, LS-305", () => {
   const maintenant = new Date("2031-11-01T12:00:00Z");
   const limite = new Date("2026-11-01T12:00:00Z");

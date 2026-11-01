@@ -544,3 +544,88 @@ describe("course entre rattachement et suppression de compte", () => {
     }
   });
 });
+
+/**
+ * LES AVIS SUIVENT LEUR COMMANDE, LS-305. Un avis depose par jeton sur un achat
+ * sans compte n'a pas d'auteur : sans ce rattachement, il restait hors de
+ * `/compte/avis`, et son auteur ne pouvait pas le retirer.
+ */
+describe("rattachement des avis deposes sans compte, LS-305", () => {
+  async function ecrireAvisSur(
+    commandeId: string,
+    options: { efface?: boolean } = {},
+  ): Promise<string> {
+    const { rows } = await client.query(
+      `INSERT INTO ligne_commande (id, commande_id, reference_figee,
+         libelle_produit_fige, libelle_variante_fige, prix_fige_centimes, quantite)
+       VALUES (gen_random_uuid()::text, $1, 'REF-LS305', 'Bracelet', 'Unique',
+         4500, 1)
+       RETURNING id`,
+      [commandeId],
+    );
+    const efface = options.efface === true;
+    const { rows: avis } = await client.query(
+      `INSERT INTO avis (id, ligne_commande_id, note, commentaire, statut,
+         experience_a, depose_a, efface_a)
+       VALUES (gen_random_uuid()::text, $1, 5, $2, 'PUBLIE', now(), now(), $3)
+       RETURNING id`,
+      [rows[0].id, efface ? null : "Texte", efface ? new Date() : null],
+    );
+
+    return avis[0].id as string;
+  }
+
+  async function auteurDe(avisId: string): Promise<string | null> {
+    const { rows } = await client.query(
+      "SELECT utilisateur_id FROM avis WHERE id = $1",
+      [avisId],
+    );
+
+    return (rows[0]?.utilisateur_id as string | null) ?? null;
+  }
+
+  it("rattache l'avis d'une commande invitee, jamais celui d'une dissociee ou d'un avis efface", async () => {
+    const compte = await creerCompte(EMAIL, true);
+    const invitee = await ecrireAvisSur(
+      await creerCommande("C-2026-0101", EMAIL),
+    );
+    const dissociee = await ecrireAvisSur(
+      await creerCommande("C-2026-0102", EMAIL, { dissociee: true }),
+    );
+    const efface = await ecrireAvisSur(
+      await creerCommande("C-2026-0103", EMAIL),
+      { efface: true },
+    );
+
+    await rattacherMesCommandes(compte, EMAIL, "VERIFICATION");
+
+    expect(await auteurDe(invitee)).toBe(compte);
+    expect(await auteurDe(dissociee)).toBeNull();
+    expect(await auteurDe(efface)).toBeNull();
+  });
+
+  it("rattache aussi l'avis d'une commande deja rattachee avant LS-305", async () => {
+    const compte = await creerCompte(EMAIL, true);
+    const avis = await ecrireAvisSur(
+      await creerCommande("C-2026-0104", EMAIL, { utilisateurId: compte }),
+    );
+
+    await rattacherMesCommandes(compte, EMAIL, "CONNEXION");
+
+    expect(await auteurDe(avis)).toBe(compte);
+  });
+
+  it("ne rattache jamais l'avis de la commande d'un autre compte", async () => {
+    const compte = await creerCompte(EMAIL, true);
+    const autre = await creerCompte("autre-ls305@exemple.test", true);
+    const avis = await ecrireAvisSur(
+      await creerCommande("C-2026-0105", "autre-ls305@exemple.test", {
+        utilisateurId: autre,
+      }),
+    );
+
+    await rattacherMesCommandes(compte, EMAIL, "CONNEXION");
+
+    expect(await auteurDe(avis)).toBeNull();
+  });
+});
