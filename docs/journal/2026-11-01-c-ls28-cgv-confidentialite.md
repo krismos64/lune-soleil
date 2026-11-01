@@ -50,6 +50,27 @@ Commission : aucun lien à publier.
   formulaire du modèle fait rougir le test, 1 rouge puis restauré.
 - Déployé en production : CGV et confidentialité, run 41299855908.
 
+## Suite, même jour : relecture de ChatGPT transmise par Christophe
+
+Chaque point confronté au texte lu sur Légifrance ou au code, et non repris
+d'office.
+
+| Point | Verdict | Fait |
+| --- | --- | --- |
+| directeur de la publication absent | **exact**, LCEN article 1-1 I 3° depuis la loi SREN | « Directrice de la publication » ajoutée |
+| numéro d'inscription | **exact**, article 1-1 I 1° | SIREN dérivé du SIRET, jamais saisi |
+| code « 3213ZZ » erroné | **inexact** : code APRM de l'artisanat, six caractères, et non le NAF 32.13Z | libellé « Code d'activité artisanale (APRM) » ; valeur à confirmer sur l'attestation |
+| remboursement par le même moyen | **exact**, L221-24 alinéa 3 | phrase ajoutée |
+| avis modifiable non dit | **exact**, LS-225 | rubrique « Modifier son avis » |
+| « un avis retiré n'est jamais supprimé » | ambigu face au droit d'effacement | reformulé : retiré sur décision ou demande, trace gardée comme preuve |
+| accessibilité trop générale | **exact**, directive 2019/882 depuis le 28 juin 2025 | exemption microentreprise énoncée |
+| durée et localisation Backblaze | durée **exacte** à donner | quarante-quatre jours au plus, tirés du script ; localisation attend Christophe |
+| CM2C et cookies | déjà vérifiés, LS-19 et LS-148 | rien |
+
+**Ouvert par cette relecture** : la trace d'un avis retiré n'a aucune durée de
+conservation, et l'arbitrage « aucune suppression en production » rend
+l'effacement d'un avis sur demande non outillé. À trancher par Christophe.
+
 ## Relevé en chemin, non traité
 
 - **Article 293 B du CGI affiché « abrogé par l'ordonnance n° 2025-1247 du
