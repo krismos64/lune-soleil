@@ -289,3 +289,45 @@ describe("l'accusé de rétractation donne l'adresse de retour, LS-288", () => {
     expect(rendre()).not.toContain("Adresse de retour :");
   });
 });
+
+/*
+ * LE FORMULAIRE TYPE EST JOINT A LA CONFIRMATION, article L221-13, LS-28.
+ *
+ * LES PHRASES SONT RECOPIEES DE L'ANNEXE A R221-1, et non importees de
+ * `textes-imposes.ts` : un test qui lirait la constante resterait vert sur un
+ * texte retouche.
+ */
+describe("commande-confirmee joint le formulaire type de rétractation", () => {
+  const rendre = (coordonneesAtelier?: string) =>
+    rendreModele({
+      destinataire: "client@exemple.test",
+      modele: "commande-confirmee",
+      variables: {
+        numero: "C-2026-0042",
+        lienFacture: "https://exemple.test/f",
+        lienRetractation: "https://exemple.test/d",
+        ...(coordonneesAtelier === undefined ? {} : { coordonneesAtelier }),
+      },
+    }).texte;
+
+  it("porte le modèle officiel, rempli avec les coordonnées de l'atelier", () => {
+    const texte = rendre(
+      "Lune-soleil, Nom Prénom EI, 1 rue de l'Atelier, contact@lune-soleil.fr",
+    );
+
+    expect(texte).toContain(
+      "(Veuillez compléter et renvoyer le présent formulaire uniquement si vous souhaitez vous rétracter du contrat.)",
+    );
+    expect(texte).toContain(
+      "À l'attention de Lune-soleil, Nom Prénom EI, 1 rue de l'Atelier, contact@lune-soleil.fr :",
+    );
+    expect(texte).toContain("Commandé le (*)/reçu le (*) :");
+    expect(texte).toContain("(*) Rayez la mention inutile.");
+  });
+
+  it("se replie sur l'adresse de réponse sans coordonnées, sans lever", () => {
+    expect(rendre()).toContain(
+      `À l'attention de l'atelier ${NOM_BOUTIQUE}, à l'adresse de réponse de ce message :`,
+    );
+  });
+});
