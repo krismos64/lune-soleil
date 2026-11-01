@@ -18,8 +18,8 @@ npm run db:verifier    # les contrôles du modèle sur cette base, exige Docker
 ./scripts/verifier-config-claude.sh  # cohérence config, ADR, mémoire, journal
 ```
 
-Liste complète dans `docs/DEVELOPPEMENT.md` et `docs/VERIFICATION.md`. La CI rejoue presque tout par PR : bout en bout,
-`npm audit`, image et les **sept preuves lourdes** sont au nocturne, un défaut de
+Liste complète dans `docs/DEVELOPPEMENT.md` et `docs/VERIFICATION.md`. La CI rejoue presque tout par PR, dont le **tunnel d'achat** de bout en bout depuis LS-153 ; le reste du
+bout en bout, `npm audit`, l'image et les **sept preuves lourdes** sont au nocturne, un défaut de
 ceux-là entre sur `main` sans bloquer. `npm audit` à **zéro** mesuré, sauf avis daté
 de `audit-exemptions.json`, LS-258. Migration **créée** à la main, `prisma migrate dev`.
 
