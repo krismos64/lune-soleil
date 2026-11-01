@@ -209,6 +209,18 @@ describe("jsonLdOrganisation", () => {
     expect(balisage["url"]).toBe(SITE);
   });
 
+  it("porte une description accentuee, un logo absolu et la France, LS-308", () => {
+    const balisage = jsonLdOrganisation();
+    expect(balisage["description"]).toBe(
+      "Bijoux artisanaux faits main, créés à l'unité et en petite série.",
+    );
+    expect(balisage["logo"]).toBe(`${SITE}/habillage/logo-sceau.jpg`);
+    expect(balisage["areaServed"]).toEqual({
+      "@type": "Country",
+      name: "France",
+    });
+  });
+
   it("rattache la page Facebook officielle, sans parametre de langue, LS-30", () => {
     expect(jsonLdOrganisation()["sameAs"]).toEqual([PAGE_FACEBOOK]);
     expect(PAGE_FACEBOOK).toBe(
@@ -257,6 +269,11 @@ describe("jsonLdProduit", () => {
     prixCentimes: 4250,
     disponibilite: "DERNIERE_PIECE" as EtatDisponibilite,
     photoChemin: "/medias/collier-aurore-640.jpeg",
+    livraison: {
+      relaisCentimes: 410,
+      domicileCentimes: 749,
+      seuilFranchiseCentimes: 3900,
+    },
   };
 
   it("porte le type Product et l'URL canonique de la fiche", () => {
@@ -359,6 +376,95 @@ describe("jsonLdProduit", () => {
       "offers"
     ] as { availability: string };
     expect(offre.availability).toBe("https://schema.org/OutOfStock");
+  });
+
+  /*
+   * LS-308. LES FRAIS ANNONCES AUX MOTEURS SONT CEUX QUE LE TUNNEL FACTURE :
+   * un port balise plus bas que le port facture est une information
+   * precontractuelle fausse, que Google Shopping afficherait a cote du prix.
+   */
+  describe("livraison et retours, LS-308", () => {
+    type Offre = {
+      shippingDetails?: {
+        shippingRate: { value: string; currency: string };
+        shippingDestination: { addressCountry: string };
+      }[];
+      hasMerchantReturnPolicy: Record<string, unknown>;
+    };
+
+    const tarifs = (p: Parameters<typeof jsonLdProduit>[0]) =>
+      ((jsonLdProduit(p)["offers"] as Offre).shippingDetails ?? []).map(
+        (detail) => detail.shippingRate.value,
+      );
+
+    it("offre le relais au-dela du seuil et laisse le domicile payant, ADR-035", () => {
+      expect(tarifs(produit)).toEqual(["0.00", "7.49"]);
+    });
+
+    it("facture le relais sous le seuil", () => {
+      expect(tarifs({ ...produit, prixCentimes: 2500 })).toEqual([
+        "4.10",
+        "7.49",
+      ]);
+    });
+
+    it("tient le seuil inclusif, comme le calcul du tunnel", () => {
+      expect(tarifs({ ...produit, prixCentimes: 3900 })[0]).toBe("0.00");
+    });
+
+    it("n'offre rien quand la franchise est desactivee", () => {
+      expect(
+        tarifs({
+          ...produit,
+          livraison: { ...produit.livraison, seuilFranchiseCentimes: null },
+        }),
+      ).toEqual(["4.10", "7.49"]);
+    });
+
+    it("suit les tarifs recus, jamais une valeur ecrite dans le module", () => {
+      expect(
+        tarifs({
+          ...produit,
+          prixCentimes: 1000,
+          livraison: {
+            relaisCentimes: 520,
+            domicileCentimes: 890,
+            seuilFranchiseCentimes: 3900,
+          },
+        }),
+      ).toEqual(["5.20", "8.90"]);
+    });
+
+    it("livre en France, en euros", () => {
+      const details = (jsonLdProduit(produit)["offers"] as Offre)
+        .shippingDetails!;
+      for (const detail of details) {
+        expect(detail.shippingRate.currency).toBe("EUR");
+        expect(detail.shippingDestination.addressCountry).toBe("FR");
+      }
+    });
+
+    it("omet la livraison sur une configuration illisible, sans la deviner", () => {
+      const offre = jsonLdProduit({ ...produit, livraison: null })[
+        "offers"
+      ] as Offre;
+      expect(offre).not.toHaveProperty("shippingDetails");
+      expect(offre.hasMerchantReturnPolicy).toBeDefined();
+    });
+
+    it("annonce quatorze jours de retour, frais a la charge du client", () => {
+      const politique = (jsonLdProduit(produit)["offers"] as Offre)
+        .hasMerchantReturnPolicy;
+      expect(politique).toEqual({
+        "@type": "MerchantReturnPolicy",
+        applicableCountry: "FR",
+        returnPolicyCategory:
+          "https://schema.org/MerchantReturnFiniteReturnWindow",
+        merchantReturnDays: 14,
+        returnMethod: "https://schema.org/ReturnByMail",
+        returnFees: "https://schema.org/ReturnFeesCustomerResponsibility",
+      });
+    });
   });
 });
 

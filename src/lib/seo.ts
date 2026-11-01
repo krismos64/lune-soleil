@@ -18,6 +18,11 @@
  * l'etat public entre : le defaut est rendu impossible par la signature, pas
  * seulement interdit par une regle.
  */
+import {
+  calculerFraisPort,
+  type ConfigurationLivraison,
+} from "@/lib/livraison";
+import { DUREE_RETRACTATION_JOURS } from "@/lib/retractation";
 import type { EtatDisponibilite } from "@/services/catalogue";
 
 /**
@@ -219,11 +224,25 @@ export function jsonLdOrganisation(): Record<string, unknown> {
     "@type": "Organization",
     name: NOM_BOUTIQUE,
     url: urlDuSite(),
+    /*
+     * LS-308 : le médaillon de l'accueil, 720 px de côté, au-dessus des 112 px
+     * que Google demande pour un logo d'organisation. La description reprise
+     * par les moteurs portait « crees a l'unite », sans accents.
+     */
+    logo: absolutise(CHEMIN_LOGO),
     description:
-      "Bijoux artisanaux faits main, crees a l'unite et en petite serie.",
+      "Bijoux artisanaux faits main, créés à l'unité et en petite série.",
+    /*
+     * LA ZONE DESSERVIE, ADR-025 : France métropolitaine, Corse comprise. Le
+     * code pays FR exclut déjà les départements d'outre-mer, qui ont le leur.
+     */
+    areaServed: { "@type": "Country", name: "France" },
     sameAs: [PAGE_FACEBOOK],
   };
 }
+
+/** Le médaillon publié sur l'accueil, servi tel quel. */
+export const CHEMIN_LOGO = "/habillage/logo-sceau.jpg";
 
 /**
  * Compose un bloc Open Graph complet pour une page.
@@ -375,7 +394,70 @@ export type ProduitBalise = {
   disponibilite: EtatDisponibilite;
   /** Chemin interne de la photographie principale, quand il y en a une. */
   photoChemin: string | null;
+  /**
+   * Les tarifs en vigueur, LS-308, `null` quand ils sont illisibles : le bloc
+   * de livraison est alors omis plutôt que deviné.
+   */
+  livraison: ConfigurationLivraison | null;
 };
+
+/** La destination unique, ADR-025 : FR couvre la métropole et la Corse. */
+const DESTINATION_FRANCE = {
+  "@type": "DefinedRegion",
+  addressCountry: "FR",
+} as const;
+
+/**
+ * Les frais de livraison de cette pièce, un bloc par tarif, LS-308.
+ *
+ * LE MONTANT VIENT DE `calculerFraisPort`, LA FONCTION QUI FACTURE, appliquée
+ * au prix publié : la franchise du relais à partir du seuil s'y retrouve donc
+ * exactement, et le domicile reste payant au seuil, ADR-035. Un tarif écrit ici
+ * diverge au premier changement de paramètres, et un port annoncé plus bas que
+ * le port facturé est une information précontractuelle fausse.
+ *
+ * LOCKER N'A PAS DE BLOC PROPRE : même tarif que le relais, ADR-025.
+ */
+function detailsDeLivraison(
+  prixCentimes: number,
+  configuration: ConfigurationLivraison,
+): Record<string, unknown>[] {
+  return (["POINT_RELAIS", "DOMICILE"] as const).map((mode) => ({
+    "@type": "OfferShippingDetails",
+    shippingRate: {
+      "@type": "MonetaryAmount",
+      value: (
+        calculerFraisPort({
+          mode,
+          totalArticlesCentimes: prixCentimes,
+          configuration,
+        }) / 100
+      ).toFixed(2),
+      currency: "EUR",
+    },
+    shippingDestination: DESTINATION_FRANCE,
+  }));
+}
+
+/**
+ * La politique de retour, LS-308 : le droit de rétractation, et rien de plus.
+ *
+ * QUATORZE JOURS, `DUREE_RETRACTATION_JOURS`, la constante qui calcule
+ * l'échéance du client. Frais de retour à sa charge, décision du 28 juillet
+ * 2026 annoncée aux trois emplacements de L221-23 : le balisage ne dit rien que
+ * les conditions générales ne disent pas. Aucune exception par catégorie,
+ * L221-28 se juge au cas par cas.
+ */
+function politiqueDeRetour(): Record<string, unknown> {
+  return {
+    "@type": "MerchantReturnPolicy",
+    applicableCountry: "FR",
+    returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+    merchantReturnDays: DUREE_RETRACTATION_JOURS,
+    returnMethod: "https://schema.org/ReturnByMail",
+    returnFees: "https://schema.org/ReturnFeesCustomerResponsibility",
+  };
+}
 
 /**
  * Le JSON-LD `Product` d'une fiche.
@@ -407,6 +489,15 @@ export function jsonLdProduit(produit: ProduitBalise): Record<string, unknown> {
       price: (produit.prixCentimes / 100).toFixed(2),
       availability: disponibiliteSchemaOrg(produit.disponibilite),
       itemCondition: "https://schema.org/NewCondition",
+      hasMerchantReturnPolicy: politiqueDeRetour(),
+      ...(produit.livraison === null
+        ? {}
+        : {
+            shippingDetails: detailsDeLivraison(
+              produit.prixCentimes,
+              produit.livraison,
+            ),
+          }),
     },
   };
 

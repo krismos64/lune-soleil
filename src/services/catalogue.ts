@@ -1000,6 +1000,12 @@ export type ProduitCatalogue = {
    * supposer absent.
    */
   publieA: Date | null;
+  /**
+   * Derniere modification de la fiche, LS-308. Le sitemap la publie en
+   * `lastmod` : `publieA` restait figee a la premiere publication, et une
+   * fiche corrigee ne signalait rien aux moteurs.
+   */
+  modifieA: Date;
 };
 
 /** Ce que le catalogue public rend, produits et filtres disponibles. */
@@ -1152,6 +1158,7 @@ export async function lireCataloguePublic(
       mediaChemin: ligne.mediaChemin,
       mediaTexteAlternatif: ligne.mediaTexteAlternatif,
       publieA: ligne.publieA,
+      modifieA: ligne.modifieA,
     })),
     categories,
     categorieRetenue,

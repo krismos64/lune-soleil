@@ -64,11 +64,15 @@ const PAGES_FIXES = [
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const { produits, categories } = await lireCataloguePublic();
 
-  const maintenant = new Date();
-
+  /*
+   * AUCUN `lastModified` SUR LES PAGES FIXES NI LES CATEGORIES, LS-308. Elles
+   * recevaient l'heure de la requete, donc une date neuve a chaque lecture :
+   * Google ignore un `lastmod` qui change sans que la page change, et cesse
+   * alors de le croire pour tout le site. Aucune source ne date ces pages, et
+   * l'absence de la cle dit exactement cela.
+   */
   const entreesFixes: MetadataRoute.Sitemap = PAGES_FIXES.map((page) => ({
     url: absolutise(page.chemin),
-    lastModified: maintenant,
     changeFrequency: "weekly",
     priority: page.priorite,
   }));
@@ -86,7 +90,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const entreesCategories: MetadataRoute.Sitemap = categories.map(
     (categorie) => ({
       url: absolutise(`/catalogue?categorie=${categorie.slug}`),
-      lastModified: maintenant,
       changeFrequency: "weekly",
       priority: 0.7,
     }),
@@ -95,12 +98,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const entreesProduits: MetadataRoute.Sitemap = produits.map((produit) => ({
     url: absolutise(`/produit/${produit.slug}`),
     /*
-     * `publieA` QUAND IL EXISTE, l'instant courant sinon. Un produit ACTIF sans
-     * date de publication est un cas que le schema autorise : omettre
-     * `lastModified` serait plus honnete, mais le champ est facultatif et son
-     * absence prive les moteurs du seul signal de fraicheur disponible.
+     * LA DERNIERE ECRITURE SUR LA FICHE, LS-308, et non sa premiere
+     * publication : un nom ou une presentation corriges doivent se
+     * signaler. Un prix, une variante ou une photo modifies ne touchent pas la
+     * ligne produit, limite assumee : la date reste vraie, elle est seulement
+     * plus ancienne que la derniere retouche.
      */
-    lastModified: produit.publieA ?? maintenant,
+    lastModified: produit.modifieA,
     changeFrequency: "weekly",
     priority: 0.8,
   }));

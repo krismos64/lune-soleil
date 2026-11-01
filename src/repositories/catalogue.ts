@@ -408,6 +408,8 @@ export type ProduitCatalogue = {
   categorieId: string;
   categorieNom: string;
   publieA: Date | null;
+  /** Derniere ecriture sur la ligne produit, LS-308, `lastmod` du sitemap. */
+  modifieA: Date;
   prixMinimumCentimes: number;
   quantiteDisponible: number;
   /**
@@ -500,6 +502,7 @@ export async function listerProduitsPublies(
       categorieId: string;
       categorieNom: string;
       publieA: Date | null;
+      modifieA: Date;
       prixMinimumCentimes: bigint | number;
       quantiteDisponible: bigint | number;
       varianteUniqueId: string | null;
@@ -514,6 +517,7 @@ export async function listerProduitsPublies(
       p.categorie_id           AS "categorieId",
       c.nom                    AS "categorieNom",
       p.publie_a               AS "publieA",
+      p.modifie_a              AS "modifieA",
       min(v.prix_centimes)     AS "prixMinimumCentimes",
       sum(
         CASE WHEN v.vente_web_activee
@@ -534,7 +538,7 @@ export async function listerProduitsPublies(
     WHERE p.statut = 'ACTIF'
     ${conditionCategorie}
     GROUP BY p.id, p.nom, p.slug, p.categorie_id, c.nom, p.publie_a,
-             m.chemin, m.texte_alternatif
+             p.modifie_a, m.chemin, m.texte_alternatif
     ORDER BY p.publie_a DESC NULLS LAST, p.nom ASC, p.id ASC
     ${
       filtre.page

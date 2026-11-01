@@ -33,7 +33,7 @@ import {
 } from "@/lib/seo";
 import { BandeauReassurance } from "@/components/bandeau-reassurance";
 import { lireFichePublique } from "@/services/catalogue";
-import { lireSeuilFranchise } from "@/services/parametres";
+import { lireConfigurationLivraisonPublique } from "@/services/parametres";
 import styles from "./fiche.module.css";
 import { Galerie } from "./galerie";
 import { SelecteurVariante } from "./selecteur-variante";
@@ -167,10 +167,15 @@ export default async function PageFicheProduit({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const [fiche, seuilFranchise] = await Promise.all([
+  const [fiche, livraison] = await Promise.all([
     lireFichePublique(slug),
-    lireSeuilFranchise(),
+    lireConfigurationLivraisonPublique(),
   ]);
+  /*
+   * LS-308 : une seule lecture des tarifs sert le bandeau et le balisage, qui
+   * ne peuvent donc pas annoncer deux seuils différents.
+   */
+  const seuilFranchise = livraison?.seuilFranchiseCentimes ?? null;
 
   /*
    * `notFound()` SUR UN BROUILLON COMME SUR UN SLUG INCONNU. Le service rend
@@ -208,6 +213,7 @@ export default async function PageFicheProduit({
       fiche.variantes.map((variante) => variante.disponibilite),
     ),
     photoChemin: cheminPublicPhoto(fiche.photos[0]?.chemin),
+    livraison,
   });
 
   /*
