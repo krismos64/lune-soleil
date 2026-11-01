@@ -4,16 +4,16 @@ Déplacé du `README.md` le 30 octobre 2026, LS-302. Chaque story livrée met à
 jour cette page : le tableau des phases et les comptes, relevés dans Jira au
 moment d'écrire. `docs/journal/` porte le détail de chaque session.
 
-Projet en cours de développement. **La boutique tourne en production depuis le
-9 septembre 2026** mais n'est pas ouverte commercialement : il manque les clés de
-**paiement**, LS-153, et les contenus de l'exploitante.
+**La boutique est ouverte** : en production depuis le 9 septembre 2026, elle
+encaisse en mode réel depuis le 24 octobre, et **l'ouverture est actée le
+1er novembre 2026** par Christophe (LS-142 et LS-153 closes, recettes du
+23 septembre et du 29 octobre acceptées).
 
 **Le catalogue porte des pièces réelles et le site est ouvert à
 l'indexation**, relevé le 4 octobre 2026 : `robots.txt` s'est rouvert **seul** à
 la première pièce publiée, comme LS-234 le prévoit, l'état se déduisant du
 catalogue sans interrupteur. Le compte de pièces se lit sur `/catalogue`, il ne
-s'écrit pas ici. Ce que LS-153 appelle « première mise en ligne » reste
-l'ouverture **commerciale**, distincte de la mise en ligne technique.
+s'écrit pas ici.
 
 Les clés d'envoi d'email **sont posées** depuis le 10 septembre 2026, LS-214.
 
@@ -153,8 +153,9 @@ autant que le numérateur** : il est passé de 180 à 217 entre le 5 et le
 13 septembre 2026, chaque story livrée en créant parfois d'autres. Un
 pourcentage qui progresse peut recouvrir un périmètre qui s'élargit.
 
-**Les rapports de recette**, `docs/recettes/`, sont vides : le dossier attend la
-recette de LS-142.
+**Les rapports de recette**, `docs/recettes/`, sont vides : les deux recettes
+retenues par LS-142 sont consignées dans les journaux `2026-09-23` et
+`2026-10-29-b`.
 
 ## La boutique tourne en production depuis le 9 septembre 2026
 
@@ -180,13 +181,11 @@ depuis le dépôt, le garde-fou destructif exige une lecture humaine, et chaque
 déploiement recrée des conteneurs chez un produit payant qui partage la machine. La clé SSH ne peut exécuter qu'un script,
 sur un utilisateur hors du groupe `docker`.
 
-**Il reste LS-153**, la première mise en ligne : poser les clés **Stripe** et
-fixer l'ordre des opérations. Les clés SMTP sont posées depuis le 10 septembre
-2026, LS-214.
-
-Elle **attend l'exploitante**, LS-142 exigeant sa présence physique pour la
-recette. **LS-175 est close** : le compte d'administration existe en production
-avec sa passkey, la séance a eu lieu. Plus rien ne dépend du code seul.
+**LS-153 est close le 1er novembre 2026** : Stripe en mode réel depuis le
+24 octobre, webhook signé prouvé par la première commande, recette acceptée, et
+l'arbitrage de LS-177 tranché, le **tunnel d'achat** de bout en bout revenant
+sur chaque pull request (étape 8 de `controles.yml`). L'avoir n'a jamais été
+émis en production : arbitrage, s'appuyer sur les tests.
 
 `docs/deploiement/EXPLOITATION.md` porte l'exploitation courante,
 `PREPARATION-SERVEUR.md` la mise en place initiale.
