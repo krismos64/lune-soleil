@@ -203,6 +203,14 @@ jobs:
           printf 'FACTURE_SIRET=%s\n' "12345678901234" >> "$GITHUB_ENV"
           printf 'FACTURE_ADRESSE=%s\n' "1 rue de Test, 64000 TESTVILLE" >> "$GITHUB_ENV"
           printf 'FACTURE_EMAIL_CONTACT=%s\n' "test-emetteur@example.invalid" >> "$GITHUB_ENV"
+          # LS-304 : les mentions de la page légale lisent aussi `LEGAL_*`,
+          # `lireIdentiteLegale`. Sans elles la page affiche le repli « pas
+          # encore publiées » et le test des mentions rougit, mesuré au nocturne
+          # du 1er novembre 2026. Valeurs fictives, même règle que ci-dessus.
+          printf 'LEGAL_FORME_JURIDIQUE=%s\n' "TEST Entreprise individuelle" >> "$GITHUB_ENV"
+          printf 'LEGAL_REGISTRE=%s\n' "TEST Registre national des entreprises" >> "$GITHUB_ENV"
+          printf 'LEGAL_CODE_ACTIVITE=%s\n' "0000ZZ" >> "$GITHUB_ENV"
+          printf 'LEGAL_TELEPHONE=%s\n' "01 23 45 67 89" >> "$GITHUB_ENV"
 
       # ----------------------------------------------------------------------
       # Base publique du site, LS-132 et LS-172.
