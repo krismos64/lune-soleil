@@ -395,7 +395,7 @@ CREATE TABLE "avis" (
     "id" TEXT NOT NULL,
     "ligne_commande_id" TEXT NOT NULL,
     "utilisateur_id" TEXT,
-    "note" INTEGER NOT NULL,
+    "note" INTEGER,
     "commentaire" TEXT,
     "statut" "StatutAvis" NOT NULL DEFAULT 'DEPOSE',
     "motif_decision" TEXT,

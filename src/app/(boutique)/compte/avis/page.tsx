@@ -209,17 +209,18 @@ export default async function PageMesAvis({
 
               {ligne.etat === "NON_RETENU" ? (
                 /*
-                 * AUCUN MOTIF N'EST AFFICHE, regle R5 : `motifDecision` est
-                 * ecrit par l'exploitante pour elle-meme. Le publier exposerait
-                 * la moderation, et un texte redige en interne se lit mal quand
-                 * il s'adresse soudain a quelqu'un.
+                 * LE MOTIF N'EST PAS AFFICHE ICI, il part par email a l'adresse
+                 * de la commande, article D111-12, LS-306 : un auteur sans
+                 * compte ne verrait jamais cet ecran. Le doubler ici ferait deux
+                 * sources a tenir coherentes.
                  *
                  * LA FORMULATION RESTE FACTUELLE ET SANS REPROCHE. « Refuse »
                  * accuse, « n'a pas ete publie » constate.
                  */
                 <p className={`${styles.etat} ${styles.nonRetenu}`}>
-                  Cet avis n&apos;a pas été publié. Écrivez à l&apos;atelier si
-                  vous souhaitez en savoir plus.
+                  Cet avis n&apos;a pas été publié. Le motif vous est envoyé par
+                  email ; écrivez à l&apos;atelier si vous ne l&apos;avez pas
+                  reçu.
                 </p>
               ) : null}
 

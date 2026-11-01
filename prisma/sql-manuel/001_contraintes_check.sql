@@ -154,6 +154,15 @@ ALTER TABLE avis
   ADD CONSTRAINT chk_avis_efface_anonyme
   CHECK (efface_a IS NULL OR (commentaire IS NULL AND utilisateur_id IS NULL));
 
+-- LA NOTE EST NULLE SI ET SEULEMENT SI L'AVIS EST EFFACE, regle R19, LS-306.
+-- Une equivalence et non une implication, a la difference de la contrainte
+-- precedente : un avis non efface sans note n'aurait aucun sens, la note etant
+-- l'avis lui-meme. Reliee a une commande identifiable, une note gardee apres
+-- l'effacement restait une donnee personnelle sans finalite.
+ALTER TABLE avis
+  ADD CONSTRAINT chk_avis_note_selon_effacement
+  CHECK ((efface_a IS NULL) = (note IS NOT NULL));
+
 -- ---------------------------------------------------------------------------
 -- Exploitation
 -- ---------------------------------------------------------------------------

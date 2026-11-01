@@ -567,9 +567,14 @@ describe("rattachement des avis deposes sans compte, LS-305", () => {
     const { rows: avis } = await client.query(
       `INSERT INTO avis (id, ligne_commande_id, note, commentaire, statut,
          experience_a, depose_a, efface_a)
-       VALUES (gen_random_uuid()::text, $1, 5, $2, 'PUBLIE', now(), now(), $3)
+       VALUES (gen_random_uuid()::text, $1, $4, $2, 'PUBLIE', now(), now(), $3)
        RETURNING id`,
-      [rows[0].id, efface ? null : "Texte", efface ? new Date() : null],
+      [
+        rows[0].id,
+        efface ? null : "Texte",
+        efface ? new Date() : null,
+        efface ? null : 5,
+      ],
     );
 
     return avis[0].id as string;

@@ -440,6 +440,42 @@ const RENDUS: Record<ModeleEmail, (message: MessageEmail) => MessageRendu> = {
   }),
 
   /*
+   * LS-306, article D111-12 : « elle informe son auteur des motifs de refus
+   * par tout moyen approprie ». Le retrait apres publication suit le meme
+   * chemin, l'auteur ayant vu son avis en ligne.
+   *
+   * LE MOTIF EST CELUI QU'ECRIT L'EXPLOITANTE, et l'ecran de moderation dit
+   * qu'il est envoye. Il est recopie tel quel, sans reformulation qui le
+   * rendrait inexact.
+   *
+   * AUCUN LIEN POUR MODIFIER : un avis ecarte n'est plus modifiable, LS-225. Le
+   * retrait reste possible depuis l'espace client, qu'il n'est pas utile de
+   * nommer a un auteur qui n'a peut-etre pas de compte.
+   */
+  "avis-non-publie": (message) => {
+    const piece = exiger(message, "piece");
+    const constat =
+      exiger(message, "decision") === "retire"
+        ? `Votre avis sur « ${piece} » a été retiré de la boutique.`
+        : `Votre avis sur « ${piece} » n'a pas été publié.`;
+
+    return {
+      objet: `Votre avis sur la commande ${exiger(message, "numero")}`,
+      texte: [
+        "Bonjour,",
+        "",
+        constat,
+        "",
+        `Motif : ${exiger(message, "motif")}`,
+        "",
+        "Répondez simplement à ce message pour toute question.",
+        "",
+        SIGNATURE,
+      ].join("\n"),
+    };
+  },
+
+  /*
    * F-MAIL-03, LS-29. L'expedition, avec le suivi du transporteur.
    *
    * « VOTRE COLIS EST EN ROUTE » EN OBJET ET EN PREMIERE LIGNE, et la

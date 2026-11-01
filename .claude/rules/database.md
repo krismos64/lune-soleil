@@ -457,7 +457,12 @@ Ces opérations exigent une transaction, sans exception :
     `effaceA` nul, ce qui prend le verrou de ligne ; le passage en `RETIRE`
     **ensuite**, seulement si la première écriture a touché la ligne. Dans
     l'ordre inverse, un avis `REFUSE` ne verrouille rien et une republication
-    peut tomber entre les deux. Aucune ligne supprimée, LS-246
+    peut tomber entre les deux. Aucune ligne supprimée, LS-246 ; la note part
+    avec le texte, LS-306
+13. **Décision de modération qui écarte un avis**, LS-306 : la décision et
+    l'email du motif, article D111-12, ensemble. `commandeId: null` pour
+    l'envoi, la clé `(commandeId, modele)` refusant sinon le motif d'un second
+    avis de la même commande
 
 Les points 7 à 9 viennent du périmètre ajouté par LS-37, avis et carnet
 d'adresses ; le point 10 de LS-225, qui l'a complété le 12 septembre 2026. Le

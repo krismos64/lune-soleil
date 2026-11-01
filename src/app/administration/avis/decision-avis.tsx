@@ -25,7 +25,7 @@ import styles from "./avis.module.css";
 function messageDeRefus(resultat: ResultatModeration): string | null {
   switch (resultat.statut) {
     case "MOTIF_MANQUANT":
-      return "Un refus ou un retrait demande un motif. Il n'est pas publié, il documente la décision.";
+      return "Un refus ou un retrait demande un motif. Il est envoyé par email à l'auteur de l'avis.";
     case "SESSION_ABSENTE":
       return "Votre session a expiré. Reconnectez-vous, la décision n'a pas été enregistrée.";
     case "INVALIDE":
@@ -103,8 +103,12 @@ export function DecisionAvis({
           Motif de la décision
         </label>
         <p id={identifiantAide} className={styles.aide}>
-          Obligatoire pour refuser ou retirer, règle R5. Il documente la
-          décision et n&apos;est jamais publié.
+          Obligatoire pour refuser ou retirer, règle R5.{" "}
+          <strong>
+            Il est envoyé par email à l&apos;auteur de l&apos;avis
+          </strong>
+          , article D111-12 : écrivez-le pour lui. Il n&apos;est jamais publié
+          sur la boutique.
         </p>
         <textarea
           id={identifiantMotif}

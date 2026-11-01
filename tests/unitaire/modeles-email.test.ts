@@ -63,6 +63,12 @@ const MODELES: Record<ModeleEmail, Record<string, string>> = {
     delaiPublicationJours: "7",
     pieces: "un collier",
   },
+  "avis-non-publie": {
+    numero: "LS-2026-0001",
+    piece: "Collier Lune",
+    decision: "refuse",
+    motif: "Hors sujet",
+  },
   "expedition-en-route": {
     mode: "Point relais",
     numeroSuivi: "6A12345678",
@@ -103,6 +109,7 @@ const MODELES_CLIENT: ModeleEmail[] = [
   "commande-confirmee",
   "retractation-accusee",
   "invitation-avis",
+  "avis-non-publie",
   "expedition-en-route",
   "remboursement-envoye",
 ];
@@ -329,5 +336,35 @@ describe("commande-confirmee joint le formulaire type de rétractation", () => {
     expect(rendre()).toContain(
       `À l'attention de l'atelier ${NOM_BOUTIQUE}, à l'adresse de réponse de ce message :`,
     );
+  });
+});
+
+/**
+ * LS-306, article D111-12 : le motif atteint l'auteur, et le message dit ce
+ * qui s'est passe, refus ou retrait.
+ */
+describe("avis-non-publie porte le motif, D111-12", () => {
+  it("dit le refus et recopie le motif", () => {
+    const { texte } = rendreModele({
+      destinataire: "client@exemple.test",
+      modele: "avis-non-publie",
+      variables: MODELES["avis-non-publie"],
+    });
+
+    expect(texte).toContain(
+      "Votre avis sur « Collier Lune » n'a pas été publié.",
+    );
+    expect(texte).toContain("Motif : Hors sujet");
+  });
+
+  it("dit le retrait d'un avis deja publie", () => {
+    const { texte } = rendreModele({
+      destinataire: "client@exemple.test",
+      modele: "avis-non-publie",
+      variables: { ...MODELES["avis-non-publie"], decision: "retire" },
+    });
+
+    expect(texte).toContain("a été retiré de la boutique.");
+    expect(texte).not.toContain("n'a pas été publié");
   });
 });

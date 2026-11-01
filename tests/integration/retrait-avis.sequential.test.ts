@@ -30,6 +30,7 @@ const MOT_DE_PASSE = "Mot2Passe-Test-LS305-Suffisamment-Long";
 
 type LigneAvis = {
   statut: string;
+  note: number | null;
   commentaire: string | null;
   utilisateur_id: string | null;
   motif_decision: string | null;
@@ -124,8 +125,8 @@ async function ecrireAvis(options: {
 
 async function lireAvis(avisId: string): Promise<LigneAvis | undefined> {
   const { rows } = await client.query<LigneAvis>(
-    `SELECT statut, commentaire, utilisateur_id, motif_decision, efface_a,
-       decide_a FROM avis WHERE id = $1`,
+    `SELECT statut, note, commentaire, utilisateur_id, motif_decision,
+       efface_a, decide_a FROM avis WHERE id = $1`,
     [avisId],
   );
 
@@ -146,6 +147,9 @@ beforeAll(async () => {
 
 afterEach(async () => {
   await client.query("DELETE FROM avis");
+  await client.query(
+    "DELETE FROM envoi_en_attente WHERE modele = 'avis-non-publie'",
+  );
 });
 
 afterAll(async () => {
@@ -165,6 +169,7 @@ describe("retirerMonAvis, le retrait par l'auteur, LS-305", () => {
     expect(avis, "la ligne a ete supprimee").toBeDefined();
     expect(avis?.statut).toBe("RETIRE");
     expect(avis?.commentaire).toBeNull();
+    expect(avis?.note, "LS-306, la note part avec le texte").toBeNull();
     expect(avis?.utilisateur_id).toBeNull();
     expect(avis?.efface_a).not.toBeNull();
     expect(avis?.decide_a).not.toBeNull();
@@ -194,6 +199,7 @@ describe("retirerMonAvis, le retrait par l'auteur, LS-305", () => {
     expect(avis?.statut).toBe("PUBLIE");
     expect(avis?.commentaire).toBe("Texte de son auteur");
     expect(avis?.utilisateur_id).toBe(moi);
+    expect(avis?.note).toBe(4);
     expect(avis?.efface_a).toBeNull();
   });
 
@@ -302,7 +308,7 @@ describe("retrait et moderation concurrents, LS-305", () => {
     try {
       await verrou.query("BEGIN");
       await verrou.query(
-        `UPDATE avis SET commentaire = NULL, utilisateur_id = NULL,
+        `UPDATE avis SET commentaire = NULL, note = NULL, utilisateur_id = NULL,
            efface_a = now() WHERE id = $1`,
         [avisId],
       );
@@ -355,6 +361,7 @@ describe("anonymiserTracesAvisEchues, cinq ans apres la decision, LS-305", () =>
     for (const avisId of [refuse, retire]) {
       const avis = await lireAvis(avisId);
       expect(avis?.commentaire).toBeNull();
+      expect(avis?.note).toBeNull();
       expect(avis?.utilisateur_id).toBeNull();
       expect(avis?.efface_a).toEqual(maintenant);
       expect(avis?.motif_decision).not.toBeNull();
@@ -390,5 +397,113 @@ describe("anonymiserTracesAvisEchues, cinq ans apres la decision, LS-305", () =>
       supprimees: expect.any(Number),
       echec: false,
     });
+  });
+});
+
+/**
+ * L'AUTEUR RECOIT LE MOTIF, article D111-12, LS-306. L'email part a l'adresse
+ * de la COMMANDE, compte ou non, et seulement sur une decision qui ecarte
+ * l'avis.
+ */
+describe("modererAvis informe l'auteur du motif, D111-12", () => {
+  async function envoisDuMotif(): Promise<
+    { destinataire: string; variables: Record<string, string> }[]
+  > {
+    const { rows } = await client.query(
+      `SELECT destinataire, variables FROM envoi_en_attente
+       WHERE modele = 'avis-non-publie'`,
+    );
+
+    return rows as {
+      destinataire: string;
+      variables: Record<string, string>;
+    }[];
+  }
+
+  async function emailDeLaCommande(avisId: string): Promise<string> {
+    const { rows } = await client.query(
+      `SELECT c.email_normalise FROM avis a
+       JOIN ligne_commande l ON l.id = a.ligne_commande_id
+       JOIN commande c ON c.id = l.commande_id WHERE a.id = $1`,
+      [avisId],
+    );
+
+    return rows[0].email_normalise as string;
+  }
+
+  it("un refus depose le motif a l'adresse de la commande, sans compte", async () => {
+    const avisId = await ecrireAvis({ utilisateurId: null, statut: "DEPOSE" });
+
+    const issue = await services.modererAvis({
+      avisId,
+      statut: "REFUSE",
+      motifDecision: "L'avis ne porte pas sur la pièce achetée.",
+    });
+
+    expect(issue.statut).toBe("APPLIQUEE");
+
+    const envois = await envoisDuMotif();
+    expect(envois).toHaveLength(1);
+    expect(envois[0]?.destinataire).toBe(await emailDeLaCommande(avisId));
+    expect(envois[0]?.variables).toMatchObject({
+      decision: "refuse",
+      piece: "Bracelet de test",
+      motif: "L'avis ne porte pas sur la pièce achetée.",
+    });
+  });
+
+  it("un retrait apres publication le dit", async () => {
+    const avisId = await ecrireAvis({ utilisateurId: await creerClient() });
+
+    await services.modererAvis({
+      avisId,
+      statut: "RETIRE",
+      motifDecision: "Données personnelles",
+    });
+
+    const envois = await envoisDuMotif();
+    expect(envois).toHaveLength(1);
+    expect(envois[0]?.variables.decision).toBe("retire");
+  });
+
+  it("une publication n'envoie rien", async () => {
+    const avisId = await ecrireAvis({ statut: "DEPOSE" });
+
+    await services.modererAvis({
+      avisId,
+      statut: "PUBLIE",
+      motifDecision: null,
+    });
+
+    expect(await envoisDuMotif()).toHaveLength(0);
+  });
+
+  it("un refus sans motif n'ecrit ni la decision ni l'envoi", async () => {
+    const avisId = await ecrireAvis({ statut: "DEPOSE" });
+
+    const issue = await services.modererAvis({
+      avisId,
+      statut: "REFUSE",
+      motifDecision: "  ",
+    });
+
+    expect(issue.statut).toBe("REFUSE_MOTIF_MANQUANT");
+    expect((await lireAvis(avisId))?.statut).toBe("DEPOSE");
+    expect(await envoisDuMotif()).toHaveLength(0);
+  });
+
+  it("le retrait par l'auteur n'envoie rien, et un avis efface ne se modere plus", async () => {
+    const moi = await creerClient();
+    const avisId = await ecrireAvis({ utilisateurId: moi });
+
+    await services.retirerMonAvis({ avisId, utilisateurId: moi });
+    const issue = await services.modererAvis({
+      avisId,
+      statut: "REFUSE",
+      motifDecision: "Hors sujet",
+    });
+
+    expect(issue.statut).toBe("REFUSE_INTROUVABLE");
+    expect(await envoisDuMotif()).toHaveLength(0);
   });
 });
