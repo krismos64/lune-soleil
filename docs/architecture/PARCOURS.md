@@ -863,7 +863,7 @@ LS-13 sans qu'aucun chemin ne les exerce.
 | 3 | Ouverture du formulaire | vérification du jeton, aucune écriture | note et commentaire, produit rappelé |
 | 4 | Dépôt | avis `DEPOSE`, `experienceA` à la date de livraison, `deposeA` horodaté, jeton consommé | accusé, délai de publication annoncé |
 | 5 | Relecture | aucune écriture | l'avis apparaît dans l'administration |
-| 6 | Publication | avis `PUBLIE`, `publieA` horodaté | visible sur la fiche produit |
+| 6 | Publication | avis `PUBLIE`, `publieA` horodaté | visible sur la fiche produit, et sa note entre dans la moyenne du JSON-LD `aggregateRating`, LS-310 |
 | 7 | Réponse, facultative | réponse rattachée à l'avis, horodatée | réponse publique sous l'avis |
 
 L'avis n'est **jamais** visible entre les étapes 4 et 6. Le délai annoncé à
