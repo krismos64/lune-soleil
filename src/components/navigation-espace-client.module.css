@@ -57,9 +57,10 @@
     display: flex;
     flex-direction: column;
     position: sticky;
-    top: 0;
+    /* Sous l'en-tête collant de la boutique, LS-309. */
+    top: var(--ls-hauteur-entete);
     width: 240px;
-    height: 100vh;
+    height: calc(100vh - var(--ls-hauteur-entete));
     flex-shrink: 0;
     border-right: 1px solid var(--ls-border);
     background: var(--ls-surface);

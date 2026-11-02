@@ -15,6 +15,11 @@
 html {
   /* Jamais de taille en px sur la racine : casse le zoom du navigateur. */
   -webkit-text-size-adjust: 100%;
+  /*
+   * Une ancre (`#contenu`, une question de la FAQ, une section des CGV) ne
+   * tombe pas sous l'en-tête collant, LS-309. Vaut zéro sous 768 px.
+   */
+  scroll-padding-top: var(--ls-hauteur-entete);
 }
 
 body {

@@ -84,8 +84,9 @@
 
 .cycle[data-mode="anime"] .scene {
   position: sticky;
-  top: 0;
-  height: 100svh;
+  /* Sous l'en-tête collant à partir de 768 px, LS-309 ; zéro en deçà. */
+  top: var(--ls-hauteur-entete);
+  height: calc(100svh - var(--ls-hauteur-entete));
   padding: 0;
 }
 
