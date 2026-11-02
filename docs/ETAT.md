@@ -73,6 +73,9 @@ mention actuelle.
 * **LS-309**, le 2 novembre 2026 : en-tête de la boutique, sceau et nom en
   serif, navigation centrée avec page active et entrée Accueil, barre
   collante à partir de 768 px, journal `2026-11-02-a`
+* **LS-310**, le 2 novembre 2026 : note des avis publiés dans le JSON-LD
+  `Product` (`aggregateRating`), aucun `review` individuel faute d'auteur
+  affiché ; Merchant Center (piste 9 de LS-291) abandonné, journal `2026-11-02-b`
 
 **LS-237 est close** le 23 septembre 2026, cause mesurée : un
 `printf | grep -q` sous `pipefail`, que SIGPIPE faisait échouer sur un motif
