@@ -196,9 +196,11 @@
 
 /*
  * LE SCEAU EST UN JPEG À FOND CLAIR : le cercle le détoure, le filet doré le
- * pose sur le crème. Il n'apparaît dans la barre mobile qu'à partir de 360 px,
- * mesure de LS-309 : à 320 px, marque, compte, panier et menu ne tiennent plus
- * sur une ligne avec lui.
+ * pose sur le crème. Il n'apparaît dans la barre mobile qu'à partir de 400 px,
+ * mesure de LS-309 : la ligne marque, compte, panier, menu demande 309 px sans
+ * lui et 357 avec, soit une fenêtre d'au moins 389 px une fois les gouttières
+ * retirées. À 360 px, le bouton Menu passait à la ligne et la barre doublait.
+ * 400 laisse une marge aux polices serif de repli, plus larges qu'Iowan.
  */
 .sceau {
   display: none;
@@ -210,7 +212,7 @@
     color-mix(in srgb, var(--ls-accent-gold) 55%, transparent);
 }
 
-@media (min-width: 360px) {
+@media (min-width: 400px) {
   .sceau {
     display: block;
   }
