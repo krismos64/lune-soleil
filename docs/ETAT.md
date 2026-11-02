@@ -70,6 +70,9 @@ mention actuelle.
 * **LS-304 est close le 1er novembre 2026** : minimatch monté en 11.x, puis
   identité légale fictive `LEGAL_*` en CI, PR #626 ; nocturne 41337341367 vert,
   bout en bout compris, issue #612 fermée
+* **LS-309**, le 2 novembre 2026 : en-tête de la boutique, sceau et nom en
+  serif, navigation centrée avec page active et entrée Accueil, barre
+  collante à partir de 768 px, journal `2026-11-02-a`
 
 **LS-237 est close** le 23 septembre 2026, cause mesurée : un
 `printf | grep -q` sous `pipefail`, que SIGPIPE faisait échouer sur un motif
