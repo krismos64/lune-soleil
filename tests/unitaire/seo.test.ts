@@ -274,6 +274,7 @@ describe("jsonLdProduit", () => {
       domicileCentimes: 749,
       seuilFranchiseCentimes: 3900,
     },
+    avis: null,
   };
 
   it("porte le type Product et l'URL canonique de la fiche", () => {
@@ -464,6 +465,41 @@ describe("jsonLdProduit", () => {
         returnMethod: "https://schema.org/ReturnByMail",
         returnFees: "https://schema.org/ReturnFeesCustomerResponsibility",
       });
+    });
+  });
+
+  describe("note des avis publiés, LS-310", () => {
+    it("porte la moyenne et le nombre affichés, bornes de 1 à 5", () => {
+      const balisage = jsonLdProduit({
+        ...produit,
+        avis: { nombre: 3, moyenne: 4.7 },
+      });
+      expect(balisage["aggregateRating"]).toEqual({
+        "@type": "AggregateRating",
+        ratingValue: 4.7,
+        ratingCount: 3,
+        bestRating: 5,
+        worstRating: 1,
+      });
+    });
+
+    it.each([
+      ["aucune synthèse", null],
+      ["zéro avis publié", { nombre: 0, moyenne: null }],
+      ["un nombre sans moyenne", { nombre: 2, moyenne: null }],
+    ])("%s : aucune note balisée", (_cas, avis) => {
+      const balisage = jsonLdProduit({ ...produit, avis });
+      expect(balisage).not.toHaveProperty("aggregateRating");
+      expect(balisage).not.toHaveProperty("review");
+    });
+
+    it("ne publie aucun avis individuel, faute d'auteur affiché", () => {
+      const balisage = jsonLdProduit({
+        ...produit,
+        avis: { nombre: 1, moyenne: 5 },
+      });
+      expect(balisage).not.toHaveProperty("review");
+      expect(JSON.stringify(balisage)).not.toContain("author");
     });
   });
 });

@@ -403,6 +403,43 @@ test("la fiche produit rend l'avis publie et jamais celui en attente", async ({
 });
 
 /**
+ * LA NOTE DU BALISAGE EST CELLE QUE LA FICHE AFFICHE, LS-310.
+ *
+ * Le test lit les DEUX côtés sur la même page, le JSON-LD `Product` et la
+ * synthèse « x,x sur 5 pour n avis » de la section, et les confronte. Comparer
+ * le balisage à une valeur écrite ici resterait vert le jour où la section
+ * changerait de calcul sans le balisage.
+ */
+test("la note balisée pour Google est celle de la section des avis", async ({
+  page,
+}) => {
+  await page.goto(`/produit/${COMMANDE_AVIS_TEST.slug}`);
+
+  const synthese = await page
+    .locator("section", { has: page.locator("#titre-avis") })
+    .getByText(/sur 5 pour \d+ avis/)
+    .textContent();
+  const lu = /([\d,]+)\s*sur 5 pour (\d+) avis/.exec(synthese ?? "");
+  expect(lu, `synthèse illisible : ${synthese}`).not.toBeNull();
+
+  const produit = (
+    await page.locator('script[type="application/ld+json"]').allTextContents()
+  )
+    .map((bloc) => JSON.parse(bloc) as Record<string, unknown>)
+    .find((bloc) => bloc["@type"] === "Product");
+
+  expect(produit?.["aggregateRating"]).toEqual({
+    "@type": "AggregateRating",
+    ratingValue: Number(lu?.[1]?.replace(",", ".")),
+    ratingCount: Number(lu?.[2]),
+    bestRating: 5,
+    worstRating: 1,
+  });
+  // Aucun avis individuel, donc aucun nom d'auteur, critère 4.
+  expect(JSON.stringify(produit)).not.toContain("author");
+});
+
+/**
  * LE SIGNALEMENT EST ATTEIGNABLE DEPUIS L'AVIS, article L111-7-2.
  *
  * Le texte impose une fonctionnalite GRATUITE de signalement d'un doute sur

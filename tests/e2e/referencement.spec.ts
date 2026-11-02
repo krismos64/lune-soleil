@@ -226,6 +226,19 @@ test.describe("donnees structurees de la fiche produit", () => {
    * une inspection des cles de premier niveau ne verrait rien.
    * ------------------------------------------------------------------
    */
+  /*
+   * LS-310, LE SENS NÉGATIF : une fiche sans avis publié ne porte aucune note.
+   * Une note balisée sans avis serait un faux avis, article L111-7-2.
+   */
+  test("une fiche sans avis publie ne balise aucune note", async ({ page }) => {
+    await page.goto(`/produit/${CATALOGUE_TEST.dernierePiece.slug}`);
+    await expect(page.locator("#titre-avis")).toHaveCount(0);
+
+    const balisage = await lireJsonLd(page, "Product");
+    expect(balisage).not.toHaveProperty("aggregateRating");
+    expect(balisage).not.toHaveProperty("review");
+  });
+
   test("la fiche d'une piece unique ne publie aucune quantite", async ({
     page,
     baseURL,

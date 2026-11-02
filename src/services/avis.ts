@@ -1467,6 +1467,9 @@ export async function lireAvisPublies(
   return listerAvisPublies(prisma, varianteIds);
 }
 
+/** Le type d'un avis publie, pour la fiche qui le lit et le rend, LS-310. */
+export type { AvisPublie };
+
 /** Moyenne et compte, pour l'entete de la section d'avis. */
 export type SyntheseAvis = {
   nombre: number;
