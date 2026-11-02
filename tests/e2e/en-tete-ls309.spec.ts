@@ -176,3 +176,19 @@ test("la navigation et les actions ne se chevauchent pas de 768 à 1280 px", asy
     expect(ecart, `écart à ${largeur} px`).toBeGreaterThanOrEqual(16);
   }
 });
+
+test("chaque élément de l'en-tête trace un contour de focus de 3 px", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const largeurs = await page.getByRole("banner").evaluate((barre) =>
+    [...barre.querySelectorAll<HTMLElement>("a, summary")]
+      .filter((element) => element.getClientRects().length > 0)
+      .map((element) => {
+        element.focus({ focusVisible: true } as FocusOptions);
+        return `${element.textContent?.trim().slice(0, 20)} ${getComputedStyle(element).outlineWidth}`;
+      }),
+  );
+  expect(largeurs.length).toBeGreaterThan(2);
+  for (const ligne of largeurs) expect(ligne).toMatch(/ 3px$/);
+});

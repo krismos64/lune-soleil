@@ -282,6 +282,12 @@
 /* ---------- Navigation en ligne ---------- */
 
 /*
+ * AUCUN ÉLÉMENT DE L'EN-TÊTE NE REDÉFINIT SON CONTOUR DE FOCUS : tous héritent
+ * des 3 px de `globals.css`. Ils posaient 2 px jusqu'à LS-309, sous le seuil
+ * d'environ 3 px de `frontend-design.md`, relevé par la revue.
+ */
+
+/*
  * LA NAVIGATION EN LIGNE N'EXISTE QU'À PARTIR DE 768 PX. En deçà, `MenuMobile`
  * porte les mêmes liens, sans script grâce à `<details>`. Une seule des deux
  * est donc dans l'arbre d'accessibilité à une largeur donnée, et toutes deux
@@ -378,11 +384,6 @@
   transform: scaleX(1);
 }
 
-.lien:focus-visible {
-  outline: 2px solid var(--ls-focus);
-  outline-offset: 2px;
-}
-
 /* ---------- Compte et panier ---------- */
 
 /*
@@ -445,12 +446,6 @@
 .panier:hover {
   color: var(--ls-primary);
   background: color-mix(in srgb, var(--ls-accent-gold) 14%, transparent);
-}
-
-.compte:focus-visible,
-.panier:focus-visible {
-  outline: 2px solid var(--ls-focus);
-  outline-offset: 2px;
 }
 
 /* Le compteur se pose sur le pictogramme, et non contre le libellé. */
