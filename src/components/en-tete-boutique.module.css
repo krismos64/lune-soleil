@@ -448,10 +448,20 @@
   background: color-mix(in srgb, var(--ls-accent-gold) 14%, transparent);
 }
 
-/* Le compteur se pose sur le pictogramme, et non contre le libellé. */
+/*
+ * Le compteur se pose sur le pictogramme, et non contre le libellé.
+ *
+ * LA BOÎTE DE L'ICÔNE CONTIENT LA PASTILLE : un retrait intérieur lui réserve
+ * sa place, et une marge négative égale rend la place prise, de sorte que rien
+ * ne bouge autour. Une pastille débordant de sa boîte, première version de
+ * LS-309, faisait mesurer 10 px de dépassement interne par `mesure-rendu.ts`
+ * sur toute page au panier rempli, à 320 et 390 px.
+ */
 .icone {
   position: relative;
   display: inline-flex;
+  padding: 7px 10px 0 0;
+  margin: -7px -10px 0 0;
 }
 
 /*
@@ -462,8 +472,8 @@
  */
 .compteur {
   position: absolute;
-  top: -7px;
-  right: -10px;
+  top: 0;
+  right: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
