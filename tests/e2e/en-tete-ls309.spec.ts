@@ -148,3 +148,29 @@ test("le sceau n'apparaît dans la barre mobile qu'à partir de 400 px", async (
   if (largeur >= 400) await expect(sceau).toBeVisible();
   else await expect(sceau).toBeHidden();
 });
+
+/*
+ * LA NAVIGATION ET LES ACTIONS NE SE CHEVAUCHENT À AUCUNE LARGEUR, revue de
+ * LS-309 : à 1024 px, le filet des actions recouvrait la fin de « Livraison et
+ * aide ». La comparaison de `scrollWidth` ne voit pas un recouvrement interne
+ * à la grille, d'où la mesure des deux boîtes, aux largeurs de bascule.
+ */
+test("la navigation et les actions ne se chevauchent pas de 768 à 1280 px", async ({
+  page,
+}) => {
+  test.skip(
+    page.viewportSize()?.width !== 1280,
+    "les largeurs sont parcourues depuis un seul projet",
+  );
+  await page.goto("/aide");
+  for (const largeur of [768, 900, 1023, 1024, 1100, 1199, 1200, 1280]) {
+    await page.setViewportSize({ width: largeur, height: 800 });
+    const ecart = await page.getByRole("banner").evaluate((barre) => {
+      const liens = barre.querySelectorAll("nav li");
+      const fin = liens[liens.length - 1]!.getBoundingClientRect().right;
+      const actions = barre.querySelector('a[href^="/compte"]')!.parentElement!;
+      return actions.getBoundingClientRect().left - fin;
+    });
+    expect(ecart, `écart à ${largeur} px`).toBeGreaterThanOrEqual(16);
+  }
+});

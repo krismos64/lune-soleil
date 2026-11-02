@@ -12,7 +12,8 @@
  *
  * TOUS LES CONTRASTES DE TEXTE DE CET EN-TÊTE SONT REPRIS SUR CRÈME, et non sur
  * le blanc des versions précédentes, C31 : `--ls-text` 12,09:1, `--ls-primary`
- * et `--ls-text-muted` 4,86:1, `--ls-accent-gold-deep` 4,72:1.
+ * 8,36:1, `--ls-text-muted` 4,86:1, `--ls-accent-gold-deep` 4,72:1. Au survol
+ * des actions, fond doré à 14 % : `--ls-primary` y tient 7,53:1.
  */
 .entete {
   background: var(--ls-background);
@@ -151,8 +152,9 @@
  * arbitrage du 2 novembre 2026). Les deux colonnes latérales sont égales, ce
  * qui centre la navigation sur la page et non entre ses voisins.
  *
- * LA GOUTTIÈRE VAUT `--ls-space-6`, celle du contenu des pages à cette
- * largeur : le sceau s'aligne sur le titre du hero.
+ * LA GOUTTIÈRE VAUT `--ls-space-4` JUSQU'À 1023 PX, PUIS `--ls-space-6`,
+ * celle du contenu des pages à ces largeurs (`.heroGrille` de l'accueil) : le
+ * sceau s'aligne sur le titre du hero.
  */
 @media (min-width: 768px) {
   .barre {
@@ -172,10 +174,16 @@
 
 /* ---------- Marque ---------- */
 
+/*
+ * `min-height` À LA CIBLE TACTILE : sous 400 px, le lien ne porte que le nom,
+ * 24 px de haut, quand la version précédente empilait nom et baseline. Revue
+ * de LS-309.
+ */
 .marque {
   display: flex;
   align-items: center;
   gap: var(--ls-space-3);
+  min-height: var(--ls-touch-target);
   margin-right: auto;
   min-width: 0;
   text-decoration: none;
@@ -187,11 +195,6 @@
     margin-right: 0;
     justify-self: start;
   }
-}
-
-.marque:focus-visible {
-  outline: 2px solid var(--ls-focus);
-  outline-offset: 2px;
 }
 
 /*
@@ -431,7 +434,7 @@
   white-space: nowrap;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1200px) {
   .compte,
   .panier {
     padding: 0 var(--ls-space-3);
@@ -495,11 +498,18 @@
 }
 
 /*
- * LE LIBELLÉ N'EST VISIBLE QU'À PARTIR DE 1024 PX. En deçà il est masqué
+ * LE LIBELLÉ N'EST VISIBLE QU'À PARTIR DE 1200 PX. En deçà il est masqué
  * visuellement, jamais retiré de l'arbre : il reste le nom accessible du
  * compte. Le panier porte le sien par `aria-label`, avec le nombre de pièces.
+ *
+ * 1200 ET NON 1024, revue de LS-309. Les colonnes latérales valent
+ * (largeur − 128 − navigation) / 2 ; « Se connecter » et « Panier » libellés
+ * demandent environ 284 px, soit une fenêtre d'au moins 1102 px, davantage avec
+ * une police de repli plus large. À 1024 px, le filet des actions recouvrait
+ * la fin de « Livraison et aide ». `en-tete-ls309.spec.ts` mesure l'écart de
+ * 768 à 1280 px.
  */
-@media (max-width: 1023px) {
+@media (max-width: 1199px) {
   .texteEtroit {
     position: absolute;
     width: 1px;

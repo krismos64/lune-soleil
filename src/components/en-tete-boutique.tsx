@@ -10,8 +10,8 @@
  * sans JavaScript.
  *
  * LE COMPTE ET LE PANIER RESTENT DANS LA BARRE À TOUTES LES LARGEURS : ce sont
- * des actions, pas de la navigation. Sous 480 px ils deviennent des
- * pictogrammes, leur texte restant le nom accessible.
+ * des actions, pas de la navigation. Ce sont des pictogrammes sous 1200 px,
+ * leur texte restant le nom accessible, LS-309.
  *
  * REFONTE DE LS-309, arbitrages du 2 novembre 2026 : sceau et nom en serif de
  * titre, navigation centrée entre la marque et les actions à partir de 768 px,
