@@ -56,6 +56,16 @@ publiée, déploiement run 41473657391 sans migration ; la production sert
 sitemap relues : aucune ne porte de note ni de section d'avis, ce qui confirme
 qu'aucun avis n'est publié à ce jour. **LS-310 close.**
 
+## Relecture de fin de session
+
+Contenus relus à la demande de Christophe : `CLAUDE.md` (200 lignes), agents,
+skills et hooks sans rapport avec la story ; `verifier-config-claude.sh` ne
+signale qu'une exclusivité heuristique déjà présente dans `VERIFICATION.md`,
+juste (jsdom ne calcule aucune largeur). Complétés : `docs/REFERENCES.md`
+(ligne `seo.ts`) et `PARCOURS.md` (étape 6 du parcours d'avis). La production
+est redéployée sur le dernier commit de `main` après chaque PR de documentation,
+pour que le contrôle d'écart reste muet.
+
 ## Prochaine étape
 
 - Les étoiles apparaîtront dans Google avec les premiers avis modérés ; relire
