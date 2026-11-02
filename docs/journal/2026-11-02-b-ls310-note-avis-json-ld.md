@@ -48,9 +48,17 @@ les résultats ne dépendent que d'`aggregateRating`.
   garde « zéro avis » retirée, page qui ne transmet rien, note inventée par la
   page. Les deux derniers ne se voient qu'en bout en bout.
 
+## Déploiement
+
+PR #631, CI run 41470726131 verte, fusionnée en rebase (`8c30e32`). Image
+publiée, déploiement run 41473657391 sans migration ; la production sert
+`ghcr.io/krismos64/lune-soleil:8c30e32…`, `/api/sante` en 200. Les 65 fiches du
+sitemap relues : aucune ne porte de note ni de section d'avis, ce qui confirme
+qu'aucun avis n'est publié à ce jour. **LS-310 close.**
+
 ## Prochaine étape
 
-- Sans doute aucun avis publié en production à ce jour (boutique ouverte le
-  1er novembre, un avis suit une livraison). Les étoiles apparaîtront avec les
-  premiers avis modérés.
+- Les étoiles apparaîtront dans Google avec les premiers avis modérés ; relire
+  alors le JSON-LD d'une fiche concernée et le rapport « Extraits de
+  produits ».
 - LS-295, la réauthentification par passkey.
