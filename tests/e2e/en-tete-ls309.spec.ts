@@ -166,7 +166,9 @@ test("la navigation et les actions ne se chevauchent pas de 768 à 1280 px", asy
   for (const largeur of [768, 900, 1023, 1024, 1100, 1199, 1200, 1280]) {
     await page.setViewportSize({ width: largeur, height: 800 });
     const ecart = await page.getByRole("banner").evaluate((barre) => {
-      const liens = barre.querySelectorAll("nav li");
+      // La navigation EN LIGNE seule : celle du menu mobile, masquée, rend des
+      // boîtes nulles et faisait passer la mesure à vide.
+      const liens = barre.querySelectorAll(":scope > div > nav li");
       const fin = liens[liens.length - 1]!.getBoundingClientRect().right;
       const actions = barre.querySelector('a[href^="/compte"]')!.parentElement!;
       return actions.getBoundingClientRect().left - fin;
