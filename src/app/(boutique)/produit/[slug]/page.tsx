@@ -20,7 +20,6 @@
  * s'attend, elle ne se lit pas directement.
  */
 import Link from "next/link";
-import { Suspense } from "react";
 import { notFound } from "next/navigation";
 
 import { DonneesStructurees } from "@/components/donnees-structurees";
@@ -32,6 +31,7 @@ import {
   openGraphDePage,
 } from "@/lib/seo";
 import { BandeauReassurance } from "@/components/bandeau-reassurance";
+import { lireAvisPublies, resumerAvis } from "@/services/avis";
 import { lireFichePublique } from "@/services/catalogue";
 import { lireConfigurationLivraisonPublique } from "@/services/parametres";
 import styles from "./fiche.module.css";
@@ -187,6 +187,24 @@ export default async function PageFicheProduit({
   }
 
   /*
+   * LS-310 : LES AVIS SONT LUS ICI, UNE FOIS, pour la section « Avis
+   * vérifiés » ET pour la note du balisage. Les deux ne peuvent donc pas
+   * annoncer deux moyennes différentes.
+   *
+   * CETTE LECTURE ÉTAIT SOUS UN `<Suspense>` DEPUIS LS-61, pour ne pas faire
+   * attendre le prix. Le balisage `Product` étant rendu en tête de page, le
+   * garder sous la frontière aurait obligé à le scinder en deux blocs, ce que
+   * Google ne fusionne pas de façon documentée. La requête est indexée et
+   * bornée par les variantes d'un seul produit ; le SEO est prioritaire ici.
+   *
+   * ELLE SUIT LE CONTRÔLE D'EXISTENCE, C32 : un slug inconnu rend son 404
+   * avant toute autre lecture.
+   */
+  const avis = await lireAvisPublies(
+    fiche.variantes.map((variante) => variante.id),
+  );
+
+  /*
    * LS-137. LE BALISAGE EST CONSTRUIT DEPUIS LA FICHE DEJA LUE, sans seconde
    * lecture : ce que les moteurs voient et ce que le visiteur voit viennent du
    * meme objet, donc ne peuvent pas diverger.
@@ -214,6 +232,7 @@ export default async function PageFicheProduit({
     ),
     photoChemin: cheminPublicPhoto(fiche.photos[0]?.chemin),
     livraison,
+    avis: resumerAvis(avis),
   });
 
   /*
@@ -372,27 +391,11 @@ export default async function PageFicheProduit({
           </section>
 
           {/*
-           * Bloc 11, avis verifies, LIVRE PAR LS-61.
-           *
-           * IL EST SOUS UN `<Suspense>` ET NON DANS LE FLUX PRINCIPAL : la
-           * lecture des avis est une requete de plus, et la fiche ne doit pas
-           * attendre pour afficher son prix et son bouton d'achat. Ce qui
-           * decide de l'achat est au-dessus, regle de l'ordre des blocs.
-           *
-           * AUCUN `loading.tsx` N'EST AJOUTE POUR AUTANT, regle C32 : cette
-           * route appelle `notFound()` sur un slug inconnu, et une frontiere de
-           * segment ferait rendre 200 a la place du 404. La frontiere est
-           * INTERNE, donc posee apres la decision de statut.
-           *
-           * LA SECTION DISPARAIT QUAND AUCUN AVIS N'EST PUBLIE, et le
-           * `fallback` est vide pour la meme raison : annoncer un chargement
-           * d'avis puis ne rien afficher ferait clignoter une section absente.
+           * Bloc 11, avis verifies, LIVRE PAR LS-61. La section disparait
+           * quand aucun avis n'est publie. Les avis arrivent deja lus, LS-310 :
+           * la meme liste nourrit la note du balisage plus haut.
            */}
-          <Suspense fallback={null}>
-            <AvisProduit
-              varianteIds={fiche.variantes.map((variante) => variante.id)}
-            />
-          </Suspense>
+          <AvisProduit avis={avis} />
         </div>
       </div>
     </main>

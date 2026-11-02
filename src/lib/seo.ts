@@ -399,6 +399,12 @@ export type ProduitBalise = {
    * de livraison est alors omis plutôt que deviné.
    */
   livraison: ConfigurationLivraison | null;
+  /**
+   * La synthèse des avis PUBLIÉS que la fiche affiche, LS-310 : la même
+   * moyenne au dixième et le même nombre que la section « Avis vérifiés ».
+   * `null` ou zéro avis : aucune note balisée.
+   */
+  avis: { nombre: number; moyenne: number | null } | null;
 };
 
 /** La destination unique, ADR-025 : FR couvre la métropole et la Corse. */
@@ -460,6 +466,47 @@ function politiqueDeRetour(): Record<string, unknown> {
 }
 
 /**
+ * La note agrégée des avis publiés, LS-310, ou `null` quand il n'y en a aucun.
+ *
+ * LA NOTE BALISÉE EST CELLE QUE LA FICHE AFFICHE, rien d'autre : `resumerAvis`
+ * calcule la moyenne au dixième pour la section « Avis vérifiés », et c'est
+ * cette synthèse qui arrive ici. Une note balisée qui diffère de la note
+ * visible est une donnée structurée trompeuse, et une note sans avis publié
+ * serait un faux avis, article L111-7-2 du Code de la consommation.
+ *
+ * `ratingCount` ET NON `reviewCount` : le commentaire est facultatif, un avis
+ * peut ne porter qu'une note. Compter des « critiques » parmi lesquelles
+ * certaines n'ont pas de texte décrirait faux.
+ *
+ * AUCUN `review` INDIVIDUEL. Google exige pour chacun un `author` nommé, et la
+ * fiche n'affiche aucun nom : en publier un dans le balisage seul serait une
+ * donnée invisible au visiteur et une donnée personnelle de plus en ligne.
+ * L'alerte « champ review manquant » de la Search Console reste donc, non
+ * critique, tant que ce choix tient.
+ */
+function noteAgregee(
+  avis: ProduitBalise["avis"],
+): Record<string, unknown> | null {
+  if (avis === null || avis.nombre === 0 || avis.moyenne === null) {
+    return null;
+  }
+
+  return {
+    "@type": "AggregateRating",
+    ratingValue: avis.moyenne,
+    ratingCount: avis.nombre,
+    /*
+     * LES BORNES SONT ÉCRITES ET NON IMPORTÉES : `NOTE_MIN` et `NOTE_MAX`
+     * vivent dans `services/avis`, qui charge Prisma, et ce module reste pur.
+     * Elles ne peuvent pas changer seules, la contrainte CHECK de
+     * `avis.note` fixant l'échelle de 1 à 5 en base.
+     */
+    bestRating: 5,
+    worstRating: 1,
+  };
+}
+
+/**
  * Le JSON-LD `Product` d'une fiche.
  *
  * LE PRIX EST CONVERTI EN EURO POUR LE BALISAGE, et c'est le seul endroit du
@@ -512,6 +559,11 @@ export function jsonLdProduit(produit: ProduitBalise): Record<string, unknown> {
 
   if (produit.photoChemin !== null) {
     balisage["image"] = absolutise(produit.photoChemin);
+  }
+
+  const note = noteAgregee(produit.avis);
+  if (note !== null) {
+    balisage["aggregateRating"] = note;
   }
 
   return balisage;

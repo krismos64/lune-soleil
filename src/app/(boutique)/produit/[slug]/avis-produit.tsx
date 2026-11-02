@@ -1,7 +1,7 @@
 /**
  * Bloc 11 de la fiche produit, les avis verifies. LS-61.
  *
- * COMPOSANT SERVEUR : il lit les avis publies et rend. Aucune interaction, donc
+ * COMPOSANT SERVEUR : il rend les avis publies que la page lui passe, LS-310. Aucune interaction, donc
  * aucune marque client, et la liste reste dans le HTML servi, ce qui la rend
  * indexable et lisible sans JavaScript.
  *
@@ -28,16 +28,19 @@ import Link from "next/link";
 
 import {
   DELAI_PUBLICATION_JOURS,
-  lireAvisPublies,
   resumerAvis,
+  type AvisPublie,
 } from "@/services/avis";
 import { formaterDate } from "@/lib/affichage-commande";
 
 import styles from "./fiche.module.css";
 
-export async function AvisProduit({ varianteIds }: { varianteIds: string[] }) {
-  const avis = await lireAvisPublies(varianteIds);
-
+/**
+ * LA LISTE ARRIVE DEJA LUE, depuis LS-310 : la page la lit une fois pour cette
+ * section et pour la note du JSON-LD `Product`, qui ne peuvent donc pas
+ * diverger.
+ */
+export function AvisProduit({ avis }: { avis: AvisPublie[] }) {
   /*
    * AUCUN AVIS PUBLIE, AUCUNE SECTION. Afficher « aucun avis pour le moment »
    * sur une boutique qui ouvre attirerait l'oeil sur un vide, et l'article
