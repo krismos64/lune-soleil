@@ -206,6 +206,27 @@
   /* Mise en page */
   --ls-content-max: 1280px;
   --ls-touch-target: 44px;
+
+  /*
+   * HAUTEUR DE L'EN-TÊTE COLLANT, LS-309. Zéro sous 768 px, où la barre défile
+   * avec la page. Les éléments collants des pages l'ajoutent à leur `top`, et
+   * `scroll-padding-top` de `globals.css` la retire des ancres.
+   */
+  --ls-hauteur-entete: 0px;
+}
+
+/*
+ * À partir de 768 px, la barre vaut une cible tactile, son padding vertical
+ * `--ls-space-3` de chaque côté et son filet de 1 px : exactement ce que
+ * `en-tete-boutique.module.css` pose. Changer l'un sans l'autre fait passer
+ * les éléments collants sous la barre, mesuré par `en-tete-ls309.spec.ts`.
+ */
+@media (min-width: 768px) {
+  :root {
+    --ls-hauteur-entete: calc(
+      var(--ls-touch-target) + 2 * var(--ls-space-3) + 1px
+    );
+  }
 }
 
 /*

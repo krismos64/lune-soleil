@@ -5,9 +5,43 @@
  * AUCUNE VALEUR HEXADECIMALE ICI, uniquement les jetons d'ADR-022.
  */
 
+/*
+ * FOND CRÈME ET FILET DORÉ, LS-309 : la barre prolonge la page au lieu de s'en
+ * détacher en bande blanche. Le filet est `--ls-accent-gold` atténué, décor
+ * pur, il ne porte aucune information et n'a donc aucun seuil de contraste.
+ *
+ * TOUS LES CONTRASTES DE TEXTE DE CET EN-TÊTE SONT REPRIS SUR CRÈME, et non sur
+ * le blanc des versions précédentes, C31 : `--ls-text` 12,09:1, `--ls-primary`
+ * et `--ls-text-muted` 4,86:1, `--ls-accent-gold-deep` 4,72:1.
+ */
 .entete {
-  background: var(--ls-surface);
-  border-bottom: 1px solid var(--ls-border);
+  background: var(--ls-background);
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--ls-accent-gold) 45%, transparent);
+}
+
+/*
+ * COLLANTE À PARTIR DE 768 PX SEULEMENT, LS-309, et en CSS seul : aucune
+ * écoute du défilement. Sous 768 px elle défile avec la page, le menu plein
+ * écran de LS-261 n'ayant pas été conçu pour une barre fixe et chaque pixel de
+ * hauteur comptant à 320 px.
+ *
+ * `--ls-hauteur-entete`, dans `tokens.css`, vaut la hauteur de cette barre à
+ * partir de 768 px et zéro en deçà : les éléments collants des pages s'y
+ * décalent, et `scroll-padding-top` en tient compte pour les ancres.
+ *
+ * `z-index: 5` : la barre passe au-dessus du contenu positionné des pages, dont
+ * le plus haut vaut 2 (décor de Noël, aide), et reste sous le bouton de pause
+ * des animations, 30, qui doit rester atteignable. Le `z-index: 10` du lien
+ * d'évitement ci-dessous vit dans le contexte d'empilement de la barre et ne
+ * concourt plus avec le reste de la page.
+ */
+@media (min-width: 768px) {
+  .entete {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
 }
 
 /*
@@ -33,8 +67,9 @@
  * battre, d'ou 2, une valeur basse et voisine plutot que le grand nombre qui
  * sert d'habitude a ne pas avoir a regarder ce qu'on recouvre.
  *
- * Cote boutique, ce 10 n'a AUCUN concurrent : c'est le seul `z-index` de tout
- * le site public, releve le 6 septembre 2026. Une premiere version de ce
+ * Cote boutique, ce 10 n'avait AUCUN concurrent au releve du 6 septembre 2026.
+ * Depuis LS-309, la barre collante porte elle-meme un `z-index` a partir de
+ * 768 px, voir `.entete`. Une premiere version de ce
  * commentaire justifiait la valeur par l'enveloppe `sticky` de
  * `navigation-espace-client`, et cette justification etait FAUSSE dans les deux
  * termes, demontee par la revue : cette enveloppe ne declare aucun `z-index`,
@@ -87,60 +122,159 @@
   top: var(--ls-space-2);
 }
 
+/*
+ * SOUS 768 PX, LA BARRE TIENT SUR UNE LIGNE : marque, compte, panier, menu.
+ * Le compte et le panier y sont des pictogrammes, leur texte restant le nom
+ * accessible ; le libellé du menu se masque sous 360 px,
+ * `menu-mobile.module.css`.
+ *
+ * LE PADDING VERTICAL EST `--ls-space-3` ET LES ÉLÉMENTS FONT 44 PX : c'est
+ * exactement ce que `--ls-hauteur-entete` additionne dans `tokens.css`. Changer
+ * l'un sans l'autre ferait passer les éléments collants sous la barre.
+ */
 .barre {
   max-width: var(--ls-content-max);
   margin: 0 auto;
   padding: var(--ls-space-3) var(--ls-space-4);
   display: flex;
   /*
-   * DEPUIS LS-261, sous 768 px, la navigation vit dans `MenuMobile` et la
-   * barre tient sur une ligne, compte et panier en pictogrammes. `wrap`
-   * reste permis pour un seul cas : le menu ouvert sans script, qui passe à
-   * la ligne sous la barre, `menu-mobile.module.css`.
+   * `wrap` reste permis pour un seul cas : le menu ouvert sans script, qui
+   * passe à la ligne sous la barre, `menu-mobile.module.css`.
    */
   flex-wrap: wrap;
   gap: var(--ls-space-2);
   align-items: center;
-  justify-content: space-between;
 }
 
 /*
- * SOUS 768 PX, LA BARRE TIENT SUR UNE LIGNE : marque, compte, panier, menu.
- * Mesuré à 320 px avec les quatre en texte, il fallait environ 370 px pour 288
- * disponibles, d'où les pictogrammes sous 480 px et le libellé du menu masqué
- * sous 360 px, `menu-mobile.module.css`.
+ * À PARTIR DE 768 PX, TROIS COLONNES, la navigation au centre (variante A,
+ * arbitrage du 2 novembre 2026). Les deux colonnes latérales sont égales, ce
+ * qui centre la navigation sur la page et non entre ses voisins.
+ *
+ * LA GOUTTIÈRE VAUT `--ls-space-6`, celle du contenu des pages à cette
+ * largeur : le sceau s'aligne sur le titre du hero.
  */
 @media (min-width: 768px) {
   .barre {
-    gap: var(--ls-space-3) var(--ls-space-5);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    column-gap: var(--ls-space-4);
+    padding-inline: var(--ls-space-4);
   }
 }
 
-.marque {
-  text-decoration: none;
-  color: inherit;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+@media (min-width: 1024px) {
+  .barre {
+    column-gap: var(--ls-space-6);
+    padding-inline: var(--ls-space-6);
+  }
 }
 
-.nom {
-  color: var(--ls-primary);
-  font-size: 1.25rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+/* ---------- Marque ---------- */
+
+.marque {
+  display: flex;
+  align-items: center;
+  gap: var(--ls-space-3);
+  margin-right: auto;
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
+}
+
+@media (min-width: 768px) {
+  .marque {
+    margin-right: 0;
+    justify-self: start;
+  }
+}
+
+.marque:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
 }
 
 /*
- * `--ls-text-muted` sur `--ls-surface` blanc : 5,19:1, conforme AA.
- * Ne pas reprendre cette paire sur un fond sable, ou elle tombe a 4,35:1.
+ * LE SCEAU EST UN JPEG À FOND CLAIR : le cercle le détoure, le filet doré le
+ * pose sur le crème. Il n'apparaît dans la barre mobile qu'à partir de 360 px,
+ * mesure de LS-309 : à 320 px, marque, compte, panier et menu ne tiennent plus
+ * sur une ligne avec lui.
+ */
+.sceau {
+  display: none;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px
+    color-mix(in srgb, var(--ls-accent-gold) 55%, transparent);
+}
+
+@media (min-width: 360px) {
+  .sceau {
+    display: block;
+  }
+}
+
+@media (min-width: 768px) {
+  .sceau {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+.texteMarque {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/*
+ * LE NOM EN SERIF DE TITRE, LS-309 : c'est la police du hero, du menu ouvert
+ * et du pied, et la barre était le seul endroit à l'écrire en `system-ui`.
+ * Graisse normale, la serif portant seule le caractère.
+ */
+.nom {
+  font-family: var(--ls-police-titre);
+  color: var(--ls-primary);
+  font-size: 1.375rem;
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+/*
+ * La baseline ne s'affiche qu'à partir de 1024 px : entre 768 et 1023, la
+ * navigation centrée prend la place.
  */
 .baseline {
+  display: none;
   color: var(--ls-text-muted);
   font-size: 0.6875rem;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
+
+@media (min-width: 1024px) {
+  /*
+   * NOM ET BASELINE TIENNENT DANS 44 PX, la hauteur du sceau : 26 px de nom à
+   * interligne 1, 3 px d'écart, 13 px de baseline. Au-delà, la barre
+   * grandirait et ne vaudrait plus `--ls-hauteur-entete`.
+   */
+  .nom {
+    font-size: 1.625rem;
+    line-height: 1;
+  }
+
+  .baseline {
+    display: block;
+    margin-top: 3px;
+    line-height: 1.2;
+  }
+}
+
+/* ---------- Navigation en ligne ---------- */
 
 /*
  * LA NAVIGATION EN LIGNE N'EXISTE QU'À PARTIR DE 768 PX. En deçà, `MenuMobile`
@@ -150,21 +284,11 @@
  */
 .navigation {
   display: none;
-  flex: 1 1 auto;
-}
-
-/* La marque prend la place restante sous 768 px, et pousse les actions à droite. */
-.marque {
-  margin-right: auto;
 }
 
 @media (min-width: 768px) {
   .navigation {
     display: block;
-  }
-
-  .marque {
-    margin-right: 0;
   }
 }
 
@@ -173,9 +297,13 @@
   padding: 0;
   list-style: none;
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--ls-space-2) var(--ls-space-5);
-  justify-content: flex-end;
+  gap: var(--ls-space-4);
+}
+
+@media (min-width: 1024px) {
+  .liste {
+    gap: var(--ls-space-6);
+  }
 }
 
 /*
@@ -183,17 +311,66 @@
  * pouvoir grandir avec les preferences du systeme sans etre coupe.
  */
 .lien {
+  position: relative;
   display: inline-flex;
   align-items: center;
   min-height: var(--ls-touch-target);
   color: var(--ls-text);
   text-decoration: none;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+@media (min-width: 1024px) {
+  .lien {
+    font-size: 0.9375rem;
+  }
+}
+
+/*
+ * LE SOULIGNEMENT EST UN PSEUDO-ÉLÉMENT, posé sous le texte et non sous la
+ * cible de 44 px. Il s'agrandit en `transform` seul, ADR-045, et reste
+ * immobile en mouvement réduit.
+ */
+.lien::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 8px;
+  height: 2px;
+  background: var(--ls-accent-gold-deep);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lien::after {
+    transition: transform var(--ls-duration-base) var(--ls-easing);
+  }
 }
 
 .lien:hover {
   color: var(--ls-primary);
-  text-decoration: underline;
+}
+
+.lien:hover::after {
+  transform: scaleX(1);
+}
+
+/*
+ * LA PAGE ACTIVE S'ANCRE SUR `aria-current`, jamais sur une classe : deux
+ * sources finiraient par désigner deux entrées différentes, règle déjà posée
+ * pour la barre d'administration. Le soulignement `--ls-accent-gold-deep`
+ * tient 4,72:1 sur crème : l'état ne repose pas sur la seule couleur du texte.
+ */
+.lien[aria-current="page"] {
+  color: var(--ls-primary);
+  font-weight: 600;
+}
+
+.lien[aria-current="page"]::after {
+  transform: scaleX(1);
 }
 
 .lien:focus-visible {
@@ -201,59 +378,80 @@
   outline-offset: 2px;
 }
 
+/* ---------- Compte et panier ---------- */
+
 /*
- * Lien du panier et son compteur, LS-114.
+ * LES ACTIONS SONT SÉPARÉES DE LA NAVIGATION, LS-309 : ce sont des actions,
+ * pas des destinations. À partir de 1024 px, un filet doré décoratif les
+ * précède.
  */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ls-space-1);
+}
+
+@media (min-width: 768px) {
+  .actions {
+    justify-self: end;
+  }
+}
+
+@media (min-width: 1024px) {
+  .actions {
+    gap: var(--ls-space-2);
+    padding-left: var(--ls-space-5);
+    border-left: 1px solid
+      color-mix(in srgb, var(--ls-accent-gold) 55%, transparent);
+  }
+}
+
 /*
- * Lien vers le compte, LS-54. Memes regles que le panier voisin : zone tactile
- * a 44 px, texte courant sur `--ls-surface` a 12,92:1.
+ * Compte et panier, LS-54 et LS-114 : zone tactile de 44 px dans les deux
+ * dimensions, texte courant sur crème à 12,09:1.
  *
- * LE FOND EST BLANC ET NON CREME : `.entete` pose `background: var(--ls-surface)`.
- * Les deux passent AA, mais un rapport ecrit sous une hypothese de fond fausse
- * est exactement ce par quoi le defaut de C31 est entre deux fois.
- *
- * `white-space: nowrap` PARCE QUE LE LIBELLE VARIE. « Se connecter » se couperait
- * en deux lignes a 320 px la ou « Panier » tient : la barre sauterait selon
- * qu'on est connecte ou non.
+ * `white-space: nowrap` PARCE QUE LE LIBELLÉ VARIE. « Se connecter » se
+ * couperait en deux lignes là où « Panier » tient : la barre sauterait selon
+ * qu'on est connecté ou non.
  */
-.compte {
+.compte,
+.panier {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  gap: var(--ls-space-3);
   min-height: var(--ls-touch-target);
+  min-width: var(--ls-touch-target);
+  border-radius: 999px;
   color: var(--ls-text);
   text-decoration: none;
   font-size: 0.9375rem;
   white-space: nowrap;
 }
 
-.compte:hover {
-  color: var(--ls-primary);
-  text-decoration: underline;
+@media (min-width: 1024px) {
+  .compte,
+  .panier {
+    padding: 0 var(--ls-space-3);
+  }
 }
 
-.compte:focus-visible {
-  outline: 2px solid var(--ls-focus);
-  outline-offset: 2px;
-}
-
-.panier {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--ls-space-2);
-  min-height: var(--ls-touch-target);
-  color: var(--ls-text);
-  text-decoration: none;
-  font-size: 0.9375rem;
-}
-
+.compte:hover,
 .panier:hover {
   color: var(--ls-primary);
-  text-decoration: underline;
+  background: color-mix(in srgb, var(--ls-accent-gold) 14%, transparent);
 }
 
+.compte:focus-visible,
 .panier:focus-visible {
   outline: 2px solid var(--ls-focus);
   outline-offset: 2px;
+}
+
+/* Le compteur se pose sur le pictogramme, et non contre le libellé. */
+.icone {
+  position: relative;
+  display: inline-flex;
 }
 
 /*
@@ -263,23 +461,26 @@
  * comprime en ovale, ni deborder de sa pastille.
  */
 .compteur {
+  position: absolute;
+  top: -7px;
+  right: -10px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 22px;
-  height: 22px;
-  padding: 0 6px;
-  border-radius: 11px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
   background: var(--ls-primary);
   color: var(--ls-text-on-primary);
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
 /*
- * PICTOGRAMMES DU COMPTE ET DU PANIER, LS-261. Décor : le nom accessible reste
- * le texte, masqué visuellement sous 480 px et jamais retiré de l'arbre.
+ * PICTOGRAMMES DU COMPTE ET DU PANIER, LS-261, affichés à toutes les largeurs
+ * depuis LS-309. Décor : le nom accessible reste le texte.
  */
 .picto {
   width: 22px;
@@ -291,13 +492,12 @@
   stroke-linejoin: round;
 }
 
-@media (max-width: 479px) {
-  .compte,
-  .panier {
-    min-width: var(--ls-touch-target);
-    justify-content: center;
-  }
-
+/*
+ * LE LIBELLÉ N'EST VISIBLE QU'À PARTIR DE 1024 PX. En deçà il est masqué
+ * visuellement, jamais retiré de l'arbre : il reste le nom accessible du
+ * compte. Le panier porte le sien par `aria-label`, avec le nombre de pièces.
+ */
+@media (max-width: 1023px) {
   .texteEtroit {
     position: absolute;
     width: 1px;
@@ -306,11 +506,5 @@
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
-  }
-}
-
-@media (min-width: 480px) {
-  .picto {
-    display: none;
   }
 }

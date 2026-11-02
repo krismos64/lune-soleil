@@ -50,6 +50,7 @@ import {
   useSyncExternalStore,
 } from "react";
 
+import { estEntreeActive } from "@/lib/navigation-boutique";
 import styles from "./menu-mobile.module.css";
 import { useMouvementAutorise } from "./use-mouvement-autorise";
 
@@ -217,7 +218,13 @@ export function MenuMobile({
                 key={entree.href}
                 style={{ "--rang": rang } as React.CSSProperties}
               >
-                <Link href={entree.href} className={styles.lien}>
+                <Link
+                  href={entree.href}
+                  className={styles.lien}
+                  aria-current={
+                    estEntreeActive(chemin, entree.href) ? "page" : undefined
+                  }
+                >
                   <span className={styles.numero} aria-hidden="true">
                     {String(rang + 1).padStart(2, "0")}
                   </span>

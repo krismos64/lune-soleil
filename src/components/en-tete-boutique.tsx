@@ -3,7 +3,8 @@
  *
  * COMPOSANT SERVEUR. Sous 768 px, la navigation passe dans `MenuMobile`, le
  * menu plein écran de LS-261 validé avec la maquette d'accueil du 4 octobre
- * 2026 ; au-delà, elle reste une liste de liens en ligne, sans script. Le
+ * 2026 ; au-delà, elle reste une liste de liens en ligne, rendue côté serveur
+ * avec sa page active, et qui marche donc sans script. Le
  * premier choix, quatre entrées sur deux lignes à 320 px sans menu, est
  * remplacé par cet arbitrage. Le menu repose sur `<details>` et marche donc
  * sans JavaScript.
@@ -12,11 +13,17 @@
  * des actions, pas de la navigation. Sous 480 px ils deviennent des
  * pictogrammes, leur texte restant le nom accessible.
  *
+ * REFONTE DE LS-309, arbitrages du 2 novembre 2026 : sceau et nom en serif de
+ * titre, navigation centrée entre la marque et les actions à partir de 768 px,
+ * page active, entrée « Accueil », fond crème, barre collante au défilement à
+ * partir de 768 px seulement. Le panneau du menu mobile ne change pas.
+ *
  * IL VIT DANS LE LAYOUT DU GROUPE `(boutique)` ET NON DANS LE LAYOUT RACINE.
  * Le layout racine couvre aussi `/administration`, qui ne doit afficher ni cet
  * en-tete ni le pied de page : une administratrice connectee n'est pas en train
  * de faire ses courses.
  */
+import Image from "next/image";
 import Link from "next/link";
 import { cookies, headers } from "next/headers";
 
@@ -25,47 +32,9 @@ import { compterArticles } from "@/services/panier";
 import { lireIdentite } from "@/services/autorisation";
 import styles from "./en-tete-boutique.module.css";
 import { NOM_BOUTIQUE } from "@/lib/seo";
+import { ENTREES_MENU_MOBILE } from "@/lib/navigation-boutique";
 import { MenuMobile } from "./menu-mobile";
-
-/**
- * Les entrees de navigation, dans l'ordre du prototype.
- *
- * `/notre-univers` ET `/aide` N'EXISTENT PAS ENCORE, elles appartiennent a
- * LS-123 qui attend ses contenus. Les liens sont ecrits maintenant parce que
- * l'en-tete est ecrit une fois : les ajouter plus tard obligerait a le reprendre.
- * Ils rendent une 404 d'ici la, comme les liens de fiche produit l'ont fait
- * entre LS-104 et LS-105.
- */
-const ENTREES = [
-  {
-    href: "/catalogue",
-    libelle: "Les créations",
-    description: "Toutes les pièces disponibles",
-  },
-  {
-    href: "/atelier",
-    libelle: "L'atelier",
-    description: "L'histoire, les matériaux, l'entretien",
-  },
-  {
-    href: "/aide",
-    libelle: "Livraison et aide",
-    description: "Livraison, retours et questions fréquentes",
-  },
-] as const;
-
-/**
- * LE MENU MOBILE PORTE UNE ENTRÉE DE PLUS, le contact, comme la maquette
- * validée : sur un écran de téléphone, le pied de page qui le propose est loin.
- */
-const ENTREES_MENU = [
-  ...ENTREES,
-  {
-    href: "/contact",
-    libelle: "Contact",
-    description: "Une question sur une pièce ou une commande",
-  },
-] as const;
+import { NavigationEnLigne } from "./navigation-en-ligne";
 
 export async function EnTeteBoutique() {
   /*
@@ -114,84 +83,98 @@ export async function EnTeteBoutique() {
       </a>
 
       <div className={styles.barre}>
-        <Link href="/" className={styles.marque}>
-          <span className={styles.nom}>{NOM_BOUTIQUE}</span>
-          <span className={styles.baseline}>Bijoux faits main</span>
-        </Link>
-
         {/*
-         * `aria-label` SUR LA BALISE `nav` : une page peut porter plusieurs
-         * regions de navigation, en-tete et pied de page ici. Sans nom, un
-         * lecteur d'ecran annonce deux fois « navigation » sans les distinguer.
-         */}
-        <nav aria-label="Navigation principale" className={styles.navigation}>
-          <ul className={styles.liste}>
-            {ENTREES.map((entree) => (
-              <li key={entree.href}>
-                <Link href={entree.href} className={styles.lien}>
-                  {entree.libelle}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        {/*
-         * LE COMPTEUR N'APPARAIT QUE S'IL Y A QUELQUE CHOSE. Un « 0 » permanent
-         * occupe la place sans rien apprendre, et le prototype ne l'affiche pas
-         * non plus sur un panier vide.
+         * LE SCEAU EST UN DÉCOR, `alt` VIDE : le nom écrit à côté donne déjà son
+         * nom au lien, et un texte alternatif le ferait annoncer deux fois.
          *
-         * LE NOMBRE EST DANS LE NOM ACCESSIBLE et non seulement a l'ecran :
-         * « Panier » seul ne dirait pas a qui ecoute combien de pieces il
-         * contient.
+         * SERVI À SA TAILLE AFFICHÉE, l'original faisant 720 px : `next/image`
+         * en tire 48 et 96 px. `loading="eager"` parce qu'il est au-dessus de la
+         * ligne de flottaison sur toutes les pages, sans `preload` pour ne pas
+         * disputer la bande passante à l'image principale de la page, LS-309.
          */}
-        {/*
-         * DEUX LIBELLES, DEUX DESTINATIONS, ET LE TEXTE DIT LEQUEL. Un lien
-         * « Mon compte » qui mene au formulaire de connexion se lit comme une
-         * panne ; annoncer « Se connecter » a qui l'est deja se lit comme une
-         * deconnexion. Le nom accessible suit le meme texte, sans `aria-label`
-         * qui le contredirait.
-         */}
-        <Link
-          href={identite ? "/compte" : "/compte/connexion"}
-          className={styles.compte}
-        >
-          <svg
-            className={styles.picto}
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-            focusable="false"
-          >
-            <circle cx="12" cy="8" r="4" />
-            <path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" />
-          </svg>
-          <span className={styles.texteEtroit}>
-            {identite ? "Mon compte" : "Se connecter"}
+        <Link href="/" className={styles.marque}>
+          <Image
+            src="/habillage/logo-sceau.jpg"
+            alt=""
+            width={44}
+            height={44}
+            loading="eager"
+            className={styles.sceau}
+          />
+          <span className={styles.texteMarque}>
+            <span className={styles.nom}>{NOM_BOUTIQUE}</span>
+            <span className={styles.baseline}>Bijoux faits main</span>
           </span>
         </Link>
 
-        <Link href="/panier" className={styles.panier} aria-label={nomPanier}>
-          <svg
-            className={styles.picto}
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-            focusable="false"
+        {/*
+         * LA NAVIGATION EN LIGNE EST UN COMPOSANT CLIENT, et lui seul : elle
+         * pose `aria-current` d'après le chemin courant, LS-309. Elle porte
+         * `aria-label` : une page a plusieurs régions de navigation, en-tête et
+         * pied de page, qu'un lecteur d'écran doit distinguer.
+         */}
+        <NavigationEnLigne />
+
+        <div className={styles.actions}>
+          {/*
+           * LE COMPTEUR N'APPARAIT QUE S'IL Y A QUELQUE CHOSE. Un « 0 » permanent
+           * occupe la place sans rien apprendre, et le prototype ne l'affiche pas
+           * non plus sur un panier vide.
+           *
+           * LE NOMBRE EST DANS LE NOM ACCESSIBLE et non seulement a l'ecran :
+           * « Panier » seul ne dirait pas a qui ecoute combien de pieces il
+           * contient.
+           */}
+          {/*
+           * DEUX LIBELLES, DEUX DESTINATIONS, ET LE TEXTE DIT LEQUEL. Un lien
+           * « Mon compte » qui mene au formulaire de connexion se lit comme une
+           * panne ; annoncer « Se connecter » a qui l'est deja se lit comme une
+           * deconnexion. Le nom accessible suit le meme texte, sans `aria-label`
+           * qui le contredirait.
+           */}
+          <Link
+            href={identite ? "/compte" : "/compte/connexion"}
+            className={styles.compte}
           >
-            <path d="M6 8h12l-1 12H7L6 8Z" />
-            <path d="M9 8V6a3 3 0 0 1 6 0v2" />
-          </svg>
-          <span className={styles.texteEtroit} aria-hidden="true">
-            Panier
-          </span>
-          {articles > 0 && (
-            <span className={styles.compteur} aria-hidden="true">
-              {articles}
+            <svg
+              className={styles.picto}
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" />
+            </svg>
+            <span className={styles.texteEtroit}>
+              {identite ? "Mon compte" : "Se connecter"}
             </span>
-          )}
-        </Link>
+          </Link>
+
+          <Link href="/panier" className={styles.panier} aria-label={nomPanier}>
+            <span className={styles.icone}>
+              <svg
+                className={styles.picto}
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M6 8h12l-1 12H7L6 8Z" />
+                <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+              </svg>
+              {articles > 0 && (
+                <span className={styles.compteur} aria-hidden="true">
+                  {articles}
+                </span>
+              )}
+            </span>
+            <span className={styles.texteEtroit} aria-hidden="true">
+              Panier
+            </span>
+          </Link>
+        </div>
 
         <MenuMobile
-          entrees={ENTREES_MENU}
+          entrees={ENTREES_MENU_MOBILE}
           compte={{
             href: identite ? "/compte" : "/compte/connexion",
             libelle: identite ? "Mon compte" : "Se connecter",

@@ -33,9 +33,10 @@ test.describe("en mouvement normal", () => {
     // Le libellé reste « Menu » : l'état développé est porté par `<summary>`.
     await expect(bouton(page)).toHaveText("Menu");
 
-    // Le focus va sur le premier lien, la page derrière devient inerte.
+    // Le focus va sur le premier lien, l'accueil depuis LS-309, la page
+    // derrière devient inerte.
     const premier = navigation(page).getByRole("link", {
-      name: /Les créations/,
+      name: /Accueil/,
     });
     await expect(premier).toBeFocused();
     expect(
@@ -54,11 +55,12 @@ test.describe("en mouvement normal", () => {
     ).toBe(true);
 
     /*
-     * LA TABULATION BOUCLE SANS FUITE : quatre entrées, deux raccourcis, puis
+     * LA TABULATION BOUCLE SANS FUITE : cinq entrées depuis l'accueil de
+     * LS-309, deux raccourcis, puis
      * le bouton, puis à nouveau la première entrée. Une fuite atteindrait un
      * élément de la page inerte ou de l'en-tête masqué.
      */
-    for (let i = 0; i < 6; i++) await page.keyboard.press("Tab");
+    for (let i = 0; i < 7; i++) await page.keyboard.press("Tab");
     await expect(bouton(page)).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(premier).toBeFocused();

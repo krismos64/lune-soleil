@@ -1095,7 +1095,8 @@
   .carnetImage {
     display: block;
     position: sticky;
-    top: var(--ls-space-6);
+    /* Sous l'en-tête collant, LS-309. */
+    top: calc(var(--ls-hauteur-entete) + var(--ls-space-6));
     overflow: hidden;
     border-radius: var(--ls-radius-lg);
   }
