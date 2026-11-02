@@ -36,6 +36,13 @@ async function animationsEnCours(page: Page): Promise<number> {
  * `::after`, qui jouerait donc hors de l'écran. Le trait du chemin du colis
  * en était un au premier passage, revue de LS-280 : ce test l'a vu, et la
  * correction est dans la page, pas ici.
+ *
+ * LA MESURE S'ARRÊTE AU `<main>` DE L'AIDE, depuis LS-309. Le pied de page
+ * appartient au layout public et apparaît au défilement sur toutes les pages,
+ * `data-apparition` de LS-262, à dessein. Il ne se voyait pas à 768 px tant
+ * que la barre ne collait pas ; `scroll-padding-top` décale le centrage du
+ * dernier décor de 34 px et le fait entrer dans l'écran, ce que ce test lisait
+ * comme une animation du contenu de l'aide.
  */
 async function animationsDuContenu(page: Page): Promise<string[]> {
   return page.evaluate(() =>
@@ -44,7 +51,9 @@ async function animationsDuContenu(page: Page): Promise<string[]> {
       .map((animation) => (animation.effect as KeyframeEffect | null)?.target)
       .filter(
         (cible): cible is Element =>
-          cible instanceof Element && !cible.closest('[aria-hidden="true"]'),
+          cible instanceof Element &&
+          cible.closest("main") !== null &&
+          !cible.closest('[aria-hidden="true"]'),
       )
       .map((cible) => `${cible.tagName}.${cible.getAttribute("class")}`),
   );
