@@ -1313,7 +1313,7 @@ livraison « uniquement sur source fiable », et cette source est définie depui
 **28 juillet 2026, LS-33** : le suivi automatique du transporteur, par l'API Sendcloud, ADR-035. Ni saisie manuelle par l'administratrice, ni repli sur la date d'expédition
 seule.
 
-seule la remise au destinataire, constatée par DEUX statuts, ADR-042, renseigne la date, pour les trois modes
+seule la remise au destinataire, constatée par l'événement `delivered` de l'historique de suivi et datée par le transporteur (ADR-042 décision 7, LS-311), les deux statuts de la décision 1 servant de repli, renseigne la date, pour les trois modes
 d'ADR-025. « Disponible au Point Relais », « mise en distribution » et « avis de
 passage » décrivent l'acheminement et restent sans effet. La table complète vit
 dans `.claude/rules/legal.md`.
