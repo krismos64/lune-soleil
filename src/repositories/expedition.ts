@@ -224,15 +224,24 @@ export async function enregistrerSuivi(
     statutTransporteur: string;
     livreA?: Date;
   },
-): Promise<void> {
-  await client.expedition.update({
-    where: { id: parametres.expeditionId },
+): Promise<boolean> {
+  /*
+   * FILTRE SUR `livreA` NUL, LS-311 : la garde de `listerASuivre` est une
+   * lecture, celle-ci tient dans l'ecriture. Une date deja posee ne se deplace
+   * pas, meme si deux cycles se croisaient hors du verrou de tache. Le compte
+   * rendu dit si la ligne a ete ecrite, `false` signalant une expedition deja
+   * livree entre la lecture et l'ecriture.
+   */
+  const { count } = await client.expedition.updateMany({
+    where: { id: parametres.expeditionId, livreA: null },
     data: {
       statutTransporteur: parametres.statutTransporteur,
       synchroniseA: new Date(),
       ...(parametres.livreA === undefined ? {} : { livreA: parametres.livreA }),
     },
   });
+
+  return count === 1;
 }
 
 /**
