@@ -268,6 +268,7 @@ CHECK   type <> 'VENTE_EXTERNE' OR prix_unitaire_fige_centimes IS NOT NULL
 CHECK   commande.total_centimes = sous_total_centimes
                                + frais_port_centimes + montant_taxe_centimes, C28
 CHECK   compteur_numero.dernier >= 1, C27
+CHECK   expedition.livre_a IS NULL OR livre_a >= expedie_a, V16, LS-311
 PK      compteur_numero (type, annee)                            ADR-031
 CHECK   parametre_boutique.id = true                             ADR-043, LS-98
 CHECK   parametre_boutique.seuil_stock_faible >= 1

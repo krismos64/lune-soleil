@@ -419,6 +419,15 @@ sortie=$(R "INSERT INTO expedition (id,commande_id,transporteur,mode,point_relai
    VALUES ('exok','cmdres','Mondial Relay','POINT_RELAIS','MR-64000-02',now());")
 verifier_accepte "expédition rebasculée vers un relais acceptée, ADR-025" "$sortie"
 
+# V16, LS-311 : la remise ne précède jamais l'envoi. Les deux sens, et le cas
+# nul : une contrainte qui refuserait toute date passerait le seul rejet.
+sortie=$(R "UPDATE expedition SET expedie_a='2026-12-12T09:00:00Z', livre_a='2026-11-03T14:52:55Z' WHERE id='exok';")
+verifier_rejet "remise antérieure à l'envoi rejetée, V16" "chk_expedition_remise_apres_envoi" "$sortie"
+sortie=$(R "UPDATE expedition SET expedie_a='2026-10-29T18:14:06Z', livre_a='2026-11-03T14:52:55Z' WHERE id='exok';")
+verifier_accepte "remise postérieure à l'envoi acceptée, V16" "$sortie"
+sortie=$(R "UPDATE expedition SET expedie_a=NULL, livre_a='2026-11-03T14:52:55Z' WHERE id='exok';")
+verifier_accepte "remise sans date d'envoi acceptée, V16" "$sortie"
+
 echo
 echo "Montant d'une vente externe, LS-63"
 

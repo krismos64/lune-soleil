@@ -113,6 +113,9 @@ async function commanderEtConfirmer(): Promise<string> {
 /**
  * Pose une expedition livree, ce que LS-131 fera en production.
  *
+ * L'ENVOI NE SUIT JAMAIS LA REMISE, V16 : `LEAST` le ramene a la date de
+ * livraison quand le test en pose une passee, et le laisse a `now()` sinon.
+ *
  * `livreA` EST LE SEUL DECLENCHEUR, article L221-18 : c'est la remise au
  * destinataire qui fait courir le delai, jamais l'expedition.
  */
@@ -122,7 +125,8 @@ async function poserLivraison(
 ): Promise<void> {
   await client.query(
     `INSERT INTO expedition (id, commande_id, transporteur, mode, expedie_a, livre_a, cree_a)
-     VALUES ($1, $2, 'Mondial Relay', 'DOMICILE'::"ModeLivraison", now(), $3, now())`,
+     VALUES ($1, $2, 'Mondial Relay', 'DOMICILE'::"ModeLivraison",
+             LEAST(now(), $3::timestamptz), $3, now())`,
     [randomUUID(), commandeId, livreA],
   );
 
