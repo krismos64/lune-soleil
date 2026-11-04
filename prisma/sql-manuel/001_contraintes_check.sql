@@ -217,6 +217,14 @@ ALTER TABLE expedition
   ADD CONSTRAINT chk_expedition_mode_point_relais
   CHECK ((mode IN ('POINT_RELAIS', 'LOCKER')) = (point_relais_id IS NOT NULL));
 
+-- V16, LS-311 : la remise ne precede jamais l'envoi. `livre_a` vient de
+-- l'historique du transporteur, et un numero de suivi recolle ferait lire la
+-- remise d'un ancien colis. `expedie_a` nul passe, un CHECK etant satisfait
+-- par NULL.
+ALTER TABLE expedition
+  ADD CONSTRAINT chk_expedition_remise_apres_envoi
+  CHECK (livre_a IS NULL OR livre_a >= expedie_a);
+
 -- ---------------------------------------------------------------------------
 -- Confirmation du paiement, LS-76
 -- ---------------------------------------------------------------------------

@@ -275,7 +275,7 @@ describe("creerClientSuiviSendcloud, lecture de la remise dans l'historique", ()
    * point ni le passage du chauffeur ne sont une remise, et un colis peut y
    * rester une semaine.
    */
-  it("rend null tant que l'historique ne porte que l'attente et le chauffeur", async () => {
+  it("ne rend aucune remise tant que l'historique ne porte que l'attente et le chauffeur", async () => {
     const client = creerClientSuiviSendcloud({
       ...IDENTIFIANTS,
       fetch: fetchQuiRend(historique(HISTORIQUE_LOCKER.slice(0, 5))),
@@ -284,7 +284,7 @@ describe("creerClientSuiviSendcloud, lecture de la remise dans l'historique", ()
     expect(await client.lireLivraison("75023180")).toEqual({ etat: "aucune" });
   });
 
-  it("rend null pour un colis retour, revenu a l'atelier et non remis au client", async () => {
+  it("rend retour pour un colis retour, revenu a l'atelier et non remis au client", async () => {
     const client = creerClientSuiviSendcloud({
       ...IDENTIFIANTS,
       fetch: fetchQuiRend(historique(HISTORIQUE_LOCKER, { estRetour: true })),
@@ -293,7 +293,7 @@ describe("creerClientSuiviSendcloud, lecture de la remise dans l'historique", ()
     expect(await client.lireLivraison("75023180")).toEqual({ etat: "retour" });
   });
 
-  it("rend null pour un numero que l'historique ne connait pas, 404", async () => {
+  it("ne rend aucune remise pour un numero que l'historique ne connait pas, 404", async () => {
     const client = creerClientSuiviSendcloud({
       ...IDENTIFIANTS,
       fetch: fetchQuiRend({}, { status: 404 }),

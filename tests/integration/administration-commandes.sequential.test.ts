@@ -477,7 +477,8 @@ describe("acheminement du colis sur le detail de commande", () => {
       `INSERT INTO expedition
          (id, commande_id, transporteur, mode, numero_suivi, point_relais_id,
           statut_transporteur, expedie_a, livre_a, synchronise_a, cree_a)
-       VALUES ($1, $2, 'Sendcloud', $3::"ModeLivraison", $4, $5, $6, now(), $7, $8, now())`,
+       VALUES ($1, $2, 'Sendcloud', $3::"ModeLivraison", $4, $5, $6,
+               LEAST(now(), $7::timestamptz), $7, $8, now())`,
       [
         randomUUID(),
         commandeId,

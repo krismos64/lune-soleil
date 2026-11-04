@@ -599,6 +599,7 @@ erDiagram
 | V11 | Le passage à `LIVREE` exige une source fiable | parcours 1, étape 12 |
 | V12 | Toute transition de statut est tracée avec son acteur et son origine | historisation, parcours 1 |
 | V13 | `utilisateurId` n'autorise jamais un accès, quelle que soit sa valeur | invariant 2, parcours 6, ADR-023 |
+| V16 | La remise au client ne précède jamais l'envoi | `chk_expedition_remise_apres_envoi`, LS-311 : `livreA` vient de l'historique du transporteur, et un numéro de suivi recollé ferait lire la remise d'un ancien colis, éteignant le délai de rétractation avant la livraison réelle. ADR-042 décision 7 |
 | V15 | Une commande dissociée n'est jamais rattachable de nouveau | `dissocieA` non nul exclut, sinon un email réattribué rouvrirait un historique |
 | V14 | Une commande porte au plus un paiement encaissé | `UNIQUE` partiel sur `(commandeId)` filtré sur `statut IN ('REUSSI', 'PARTIELLEMENT_REMBOURSE', 'REMBOURSE')`, voir décision D. Les trois états et non le seul `'REUSSI'` : un remboursement ne rend pas la commande impayée, correction de LS-45 |
 
