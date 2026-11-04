@@ -53,6 +53,12 @@ Trois conséquences qui changent ce que tu écris :
 Le fuseau de la machine est **`Etc/UTC`** : les horaires de `docker/cron/crontab`
 se lisent dans ce fuseau, pas en heure de Paris.
 
+**`lune-soleil-cron:local` se construit sur la machine et aucun déploiement ne la
+reconstruit** : une tâche ajoutée à `TACHES` n'existe en production qu'après avoir
+poussé le crontab et reconstruit `cron`, procédure dans `EXPLOITATION.md`. Manqué
+deux fois, `suivi-livraison` le 10 septembre 2026 et `invitation-avis` jusqu'au
+4 novembre 2026, LS-311. Le compter dans le conteneur contre le dépôt.
+
 ## La topologie réelle, et rien d'autre
 
 **Trois conteneurs décidés**, pas un de plus. Cette liste est le périmètre :

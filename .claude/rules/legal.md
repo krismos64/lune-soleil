@@ -213,8 +213,8 @@ les identifiants numériques, stables, et non sur les libellés.
 
 | Identifiant | Statut Sendcloud | Mode | Effet |
 |---|---|---|---|
-| **11** | `Delivered` | domicile | renseigne `livreA` |
-| **93** | `Shipment collected by customer` | relais, locker | renseigne `livreA` |
+| **11** | `Delivered` | domicile | renseigne `livreA`, en repli depuis LS-311 |
+| **93** | `Shipment collected by customer` | relais, locker | renseigne `livreA`, en repli depuis LS-311 |
 | 12 | `Awaiting customer pickup` | relais, locker | **aucun** |
 | 8 | `Delivery attempt failed` | domicile | **aucun** |
 | 91 | `Parcel en route` | les trois | **aucun** |

@@ -46,7 +46,11 @@ et l'envoi existant, sans seconde étiquette facturée.
 `statuts.ts` porte la règle la plus coûteuse du projet si elle est fausse :
 `livreA` ouvre le délai de rétractation, et l'article L221-20 le porte à douze
 mois quand l'information est incorrecte. **Deux** statuts constatent la remise,
-`Delivered` au domicile et `Shipment collected by customer` en point de retrait.
+`Delivered` au domicile et `Shipment collected by customer` en point de retrait,
+mais ils ne servent plus que de **repli** depuis LS-311 : le statut du colis
+était resté à 12 après le premier retrait réel. `suivi.ts` lit donc aussi
+l'historique `GET /api/v2/tracking/{numero}`, dont le premier `delivered`
+(`EVENEMENTS_SUIVI_LIVRES`) date la remise, ADR-042 décision 7.
 
 `index.ts` est importable par un test ou un service sans exiger la moindre
 variable d'environnement, même découpage que `integrations/stripe`.

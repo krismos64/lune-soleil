@@ -125,6 +125,22 @@ un contrôle**, la récidive est tracée ici et dans la mémoire.
 
 L'invitation de C-2026-0001 sera déposée le 5 novembre à 7 h 53 UTC.
 
+## Relecture de fin de session
+
+À la demande de Christophe, j'ai relu `CLAUDE.md` (200 lignes), le README, les agents, les skills, les hooks, `docs/` et la mémoire, en cherchant chaque affirmation que LS-311 rendait fausse.
+
+Six passages présentaient encore les deux statuts comme la source de `livreA`. Ils sont corrigés :
+
+- `MODELE-CONCEPTUEL.md`, deux endroits ;
+- `PARCOURS.md`, ligne 903 ;
+- la table de `legal.md` (11 et 93 marqués « en repli ») ;
+- le README d'`integrations/sendcloud` ;
+- `ETAT.md`, qui affirmait que toutes les tâches tournaient.
+
+L'agent `ls-conteneurisation` sait désormais que le cron ne se reconstruit pas au déploiement. Rien à changer dans `CLAUDE.md`, le README, les skills ni les hooks : aucun ne traite du suivi ni du cron.
+
+Côté Jira, LS-61 et LS-131 portent un commentaire de traçabilité. Les contrôles `verifier-config-claude.sh`, `verifier-regles.sh` et `verifier-propagation-docs.sh` sont verts. Seule reste l'heuristique d'exclusivité déjà connue (`VERIFICATION.md:38`).
+
 ## Risque accepté
 
 L'API v2 de Sendcloud est « en maintenance » depuis avril 2026, sans

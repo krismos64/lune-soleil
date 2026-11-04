@@ -900,8 +900,8 @@ Base : l'invitation n'est pas créée, la tâche ne sélectionne que les command
 livrées.
 Vue : rien.
 Sans date de livraison fiable, aucune invitation ne part. La source de cette date
-est tranchée par LS-33, suivi du transporteur par l'API Sendcloud, sur les deux statuts de remise et non un seul, « remis
-au destinataire », et vaut aussi pour le délai de rétractation.
+est tranchée par LS-33, suivi du transporteur par l'API Sendcloud, « remis
+au destinataire », lu dans l'historique de suivi depuis LS-311 (ADR-042 décision 7), les deux statuts de remise en repli, et vaut aussi pour le délai de rétractation.
 
 **Avis refusé en modération**
 Base : avis `REFUSE`, `motifDecision` obligatoire, `decideA` horodaté, l'avis est
