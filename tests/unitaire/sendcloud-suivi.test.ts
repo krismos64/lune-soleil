@@ -231,7 +231,10 @@ describe("creerClientSuiviSendcloud, lecture de la remise dans l'historique", ()
       fetch: fetchQuiRend(historique(HISTORIQUE_LOCKER)),
     });
 
-    expect(await client.lireLivraison("75023180")).toEqual(REMISE_LOCKER);
+    expect(await client.lireLivraison("75023180")).toEqual({
+      etat: "remise",
+      a: REMISE_LOCKER,
+    });
   });
 
   /*
@@ -244,7 +247,10 @@ describe("creerClientSuiviSendcloud, lecture de la remise dans l'historique", ()
       fetch: fetchQuiRend(historique([...HISTORIQUE_LOCKER].reverse())),
     });
 
-    expect(await client.lireLivraison("75023180")).toEqual(REMISE_LOCKER);
+    expect(await client.lireLivraison("75023180")).toEqual({
+      etat: "remise",
+      a: REMISE_LOCKER,
+    });
   });
 
   it("retient la premiere remise quand l'historique en porte deux", async () => {
@@ -258,7 +264,10 @@ describe("creerClientSuiviSendcloud, lecture de la remise dans l'historique", ()
       ),
     });
 
-    expect(await client.lireLivraison("75023180")).toEqual(REMISE_LOCKER);
+    expect(await client.lireLivraison("75023180")).toEqual({
+      etat: "remise",
+      a: REMISE_LOCKER,
+    });
   });
 
   /*
@@ -272,7 +281,7 @@ describe("creerClientSuiviSendcloud, lecture de la remise dans l'historique", ()
       fetch: fetchQuiRend(historique(HISTORIQUE_LOCKER.slice(0, 5))),
     });
 
-    expect(await client.lireLivraison("75023180")).toBeNull();
+    expect(await client.lireLivraison("75023180")).toEqual({ etat: "aucune" });
   });
 
   it("rend null pour un colis retour, revenu a l'atelier et non remis au client", async () => {
@@ -281,7 +290,7 @@ describe("creerClientSuiviSendcloud, lecture de la remise dans l'historique", ()
       fetch: fetchQuiRend(historique(HISTORIQUE_LOCKER, { estRetour: true })),
     });
 
-    expect(await client.lireLivraison("75023180")).toBeNull();
+    expect(await client.lireLivraison("75023180")).toEqual({ etat: "retour" });
   });
 
   it("rend null pour un numero que l'historique ne connait pas, 404", async () => {
@@ -290,7 +299,9 @@ describe("creerClientSuiviSendcloud, lecture de la remise dans l'historique", ()
       fetch: fetchQuiRend({}, { status: 404 }),
     });
 
-    expect(await client.lireLivraison("INEXISTANT")).toBeNull();
+    expect(await client.lireLivraison("INEXISTANT")).toEqual({
+      etat: "aucune",
+    });
   });
 
   it("interroge l'historique par le chemin, numero encode, cles en en-tete", async () => {

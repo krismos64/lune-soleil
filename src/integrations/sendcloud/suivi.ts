@@ -22,6 +22,17 @@ const BASE_SUIVI = "https://panel.sendcloud.sc/api/v2";
 /** Delai au-dela duquel le transporteur est tenu pour indisponible. */
 const DELAI_MAXIMUM_MS = 8000;
 
+/**
+ * Ce que l'historique dit de la remise, LS-311.
+ *
+ * TROIS ETATS ET NON UN `null` : « aucune remise » autorise le repli sur le
+ * statut numerique, « retour » l'interdit. Un colis retour au statut 11 a ete
+ * remis a l'ATELIER ; un seul `null` pour les deux laissait le repli livrer une
+ * piece que le client n'a jamais recue, releve par la revue critique.
+ */
+export type RemiseSuivi =
+  { etat: "remise"; a: Date } | { etat: "aucune" } | { etat: "retour" };
+
 /** Ce que le suivi rend au projet, une fois traduit. */
 export type StatutSuivi = {
   /** Identifiant numerique, stable, sur lequel le code raisonne. */
@@ -49,11 +60,11 @@ export interface ClientSuivi {
    * l'ordre de la liste n'est pas documente (l'exemple officiel va du plus
    * recent au plus ancien, la reponse reelle de l'inverse).
    *
-   * REND `null` quand l'historique ne porte aucune remise, quand le transporteur
-   * ne connait pas le numero, ou quand le colis est un retour : un colis revenu
-   * a l'atelier n'a pas ete remis au client.
+   * REND `aucune` quand l'historique ne porte aucune remise ou que le
+   * transporteur ne connait pas le numero, `retour` quand le colis est un
+   * retour : revenu a l'atelier, il n'a pas ete remis au client.
    */
-  lireLivraison(numeroSuivi: string): Promise<Date | null>;
+  lireLivraison(numeroSuivi: string): Promise<RemiseSuivi>;
 }
 
 export type IdentifiantsSuivi = {
@@ -229,7 +240,7 @@ export function creerClientSuiviSendcloud({
        * panne. Le statut du colis garde alors son propre chemin, 11 ou 93.
        */
       if (reponse.status === 404) {
-        return null;
+        return { etat: "aucune" };
       }
 
       if (!reponse.ok) {
@@ -251,7 +262,7 @@ export function creerClientSuiviSendcloud({
       }
 
       if (corps.is_return === true) {
-        return null;
+        return { etat: "retour" };
       }
 
       let premiere: Date | null = null;
@@ -288,7 +299,9 @@ export function creerClientSuiviSendcloud({
         }
       }
 
-      return premiere;
+      return premiere === null
+        ? { etat: "aucune" }
+        : { etat: "remise", a: premiere };
     },
   };
 }

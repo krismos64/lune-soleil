@@ -797,7 +797,7 @@ describe("synchroniserSuivi, ce qui renseigne livreA", () => {
   function suiviFixe(statut: number, libelle: string) {
     return {
       async lireLivraison() {
-        return null;
+        return { etat: "aucune" as const };
       },
       async lireStatut() {
         return { statut, libelle };
@@ -927,7 +927,7 @@ describe("synchroniserSuivi, ce qui renseigne livreA", () => {
     const issue = await synchroniserSuivi({
       client: {
         async lireLivraison() {
-          return null;
+          return { etat: "aucune" as const };
         },
         async lireStatut() {
           return null;
@@ -954,7 +954,7 @@ describe("synchroniserSuivi, les echecs definitifs alertent", () => {
   function suiviFixe(statut: number, libelle: string) {
     return {
       async lireLivraison() {
-        return null;
+        return { etat: "aucune" as const };
       },
       async lireStatut() {
         return { statut, libelle };
@@ -1072,7 +1072,7 @@ describe("synchroniserSuivi, panne du fournisseur", () => {
     const issue = await synchroniserSuivi({
       client: {
         async lireLivraison() {
-          return null;
+          return { etat: "aucune" as const };
         },
         async lireStatut() {
           throw new Error("transporteur muet");
@@ -1103,7 +1103,7 @@ describe("synchroniserSuivi, panne du fournisseur", () => {
     const issue = await synchroniserSuivi({
       client: {
         async lireLivraison() {
-          return null;
+          return { etat: "aucune" as const };
         },
         async lireStatut() {
           appels += 1;
@@ -1136,7 +1136,7 @@ describe("synchroniserSuivi, panne du fournisseur", () => {
     await synchroniserSuivi({
       client: {
         async lireLivraison() {
-          return null;
+          return { etat: "aucune" as const };
         },
         async lireStatut() {
           throw new Error("transporteur muet");
@@ -1523,6 +1523,11 @@ describe("creerEtiquetteExpedition", () => {
 describe("synchroniserSuivi, l'historique de suivi fait foi, LS-311", () => {
   const REMISE = new Date("2026-11-03T14:52:55.000Z");
 
+  /*
+   * EXPEDIEE LE 29 OCTOBRE, comme C-2026-0001 : la remise du 3 novembre suit
+   * l'envoi. La declaration horodate `expedieA` a l'instant du test, ce qui
+   * rendrait toute remise passee anterieure a l'expedition.
+   */
   async function expedier(): Promise<string> {
     const commandeId = await commanderEtPreparer();
     await declarerExpedition({
@@ -1530,6 +1535,10 @@ describe("synchroniserSuivi, l'historique de suivi fait foi, LS-311", () => {
       saisie: SAISIE_EXPEDITION,
       acteurId: administratriceId,
     });
+    await client.query(
+      "UPDATE expedition SET expedie_a = '2026-10-29T18:14:06Z' WHERE commande_id = $1",
+      [commandeId],
+    );
     return commandeId;
   }
 
@@ -1537,7 +1546,7 @@ describe("synchroniserSuivi, l'historique de suivi fait foi, LS-311", () => {
   function suivi(
     statut: number,
     libelle: string,
-    remise: Date | null | Error,
+    remise: Date | null | "retour" | Error,
     appels: { historique: number } = { historique: 0 },
   ) {
     return {
@@ -1549,7 +1558,12 @@ describe("synchroniserSuivi, l'historique de suivi fait foi, LS-311", () => {
         if (remise instanceof Error) {
           throw remise;
         }
-        return remise;
+        if (remise === "retour") {
+          return { etat: "retour" as const };
+        }
+        return remise === null
+          ? { etat: "aucune" as const }
+          : { etat: "remise" as const, a: remise };
       },
     };
   }
@@ -1639,7 +1653,7 @@ describe("synchroniserSuivi, l'historique de suivi fait foi, LS-311", () => {
           if (appels === 1) {
             throw new Error("historique muet");
           }
-          return REMISE;
+          return { etat: "remise" as const, a: REMISE };
         },
       },
     });
@@ -1671,6 +1685,40 @@ describe("synchroniserSuivi, l'historique de suivi fait foi, LS-311", () => {
 
     expect((await lireExpeditionBrute(commandeId))?.livre_a).toBeNull();
     expect(appels.historique).toBe(0);
+  });
+
+  /*
+   * REVUE CRITIQUE, defaut 1. Un numero de suivi recolle a la declaration
+   * manuelle ferait lire la remise d'un ancien colis : le delai de
+   * retractation s'eteindrait avant la livraison reelle. Rien n'est ecrit.
+   */
+  it("une remise anterieure a l'expedition compte en echec et n'ecrit rien", async () => {
+    const commandeId = await expedier();
+    await client.query(
+      "UPDATE expedition SET expedie_a = '2026-12-12T09:00:00Z' WHERE commande_id = $1",
+      [commandeId],
+    );
+
+    const issue = await synchroniserSuivi({
+      client: suivi(12, "Awaiting customer pickup", REMISE),
+    });
+
+    expect(issue).toEqual({ traitees: 1, echecs: 1, livrees: 0 });
+    const expedition = await lireExpeditionBrute(commandeId);
+    expect(expedition?.livre_a).toBeNull();
+    expect(expedition?.synchronise_a).toBeNull();
+  });
+
+  /*
+   * REVUE CRITIQUE, defaut 2. Un colis retour au statut 11 est revenu a
+   * l'atelier : le repli ne doit pas livrer une piece jamais recue.
+   */
+  it("un colis retour au statut 11 ne livre pas, repli compris", async () => {
+    const commandeId = await expedier();
+
+    await synchroniserSuivi({ client: suivi(11, "Delivered", "retour") });
+
+    expect((await lireExpeditionBrute(commandeId))?.livre_a).toBeNull();
   });
 
   /*

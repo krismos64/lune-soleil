@@ -197,10 +197,13 @@ export async function listerAExpedier(
 export async function listerASuivre(
   client: ClientBase,
   limite: number,
-): Promise<{ id: string; numeroSuivi: string | null }[]> {
+): Promise<
+  { id: string; numeroSuivi: string | null; expedieA: Date | null }[]
+> {
   return client.expedition.findMany({
     where: { livreA: null, numeroSuivi: { not: null } },
-    select: { id: true, numeroSuivi: true },
+    // `expedieA` borne la remise par le bas, LS-311.
+    select: { id: true, numeroSuivi: true, expedieA: true },
     orderBy: { creeA: "asc" },
     take: limite,
   });
