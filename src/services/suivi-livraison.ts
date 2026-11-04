@@ -86,28 +86,37 @@ export async function synchroniserSuivi({
         continue;
       }
 
-      const livre = estLivre(suivi.statut);
+      const echec = estEchecDefinitif(suivi.statut);
+
+      const livreA = echec
+        ? null
+        : await dateDeRemise(
+            client,
+            expedition.numeroSuivi ?? "",
+            suivi.statut,
+          );
 
       /*
        * LE LIBELLE ET NON L'IDENTIFIANT, decision 5 : un nombre nu est illisible
        * sur l'ecran d'administration de LS-216, quand le code compare sur
        * l'identifiant, stable.
        *
-       * `livreA` NE SE REECRIT JAMAIS, `listerASuivre` ne rendant que les
-       * expeditions dont il est nul. Deplacer cette date a chaque cycle
-       * repousserait la fin du droit de retractation indefiniment.
+       * `livreA` NE SE REECRIT JAMAIS : `listerASuivre` ne rend que les
+       * expeditions dont il est nul, et `enregistrerSuivi` filtre l'ecriture sur
+       * la meme condition. Deplacer cette date repousserait la fin du droit de
+       * retractation.
        */
-      await enregistrerSuivi(prisma, {
+      const ecrite = await enregistrerSuivi(prisma, {
         expeditionId: expedition.id,
         statutTransporteur: suivi.libelle,
-        ...(livre ? { livreA: new Date() } : {}),
+        ...(livreA === null ? {} : { livreA }),
       });
 
-      if (livre) {
+      if (livreA !== null && ecrite) {
         livrees += 1;
       }
 
-      if (estEchecDefinitif(suivi.statut)) {
+      if (echec) {
         await signalerEchec(expedition.id, suivi.libelle);
       }
     } catch (erreur) {
@@ -131,6 +140,45 @@ export async function synchroniserSuivi({
   });
 
   return { traitees: aSuivre.length, echecs, livrees };
+}
+
+/**
+ * L'instant de la remise au client, ou `null` s'il n'a pas eu lieu. LS-311.
+ *
+ * L'HISTORIQUE FAIT FOI, LE STATUT DU COLIS EN EST LE REPLI. Mesure sur la
+ * premiere commande reelle : retiree au Locker le 3 novembre 2026 a 14 h 52 UTC,
+ * elle restait au statut 12 plus de vingt heures apres, l'historique portant
+ * `delivered` a la seconde. Le statut seul laissait `livreA` nul, donc aucun
+ * delai de retractation ouvert a l'ecran et aucune invitation a l'avis.
+ *
+ * LA DATE EST CELLE DU TRANSPORTEUR et non l'heure du cycle : la synchronisation
+ * horaire decalait la date d'experience d'un avis, D111-9, d'une heure au
+ * moins, et une panne de plusieurs cycles la decalait d'autant.
+ *
+ * LE REPLI `new Date()` NE SERT QUE SI LE STATUT LIVRE ET QUE L'HISTORIQUE SE
+ * TAIT : `Shipment collected by customer`, 93, n'a pas d'evenement textuel
+ * documente, et retirer ce chemin ferait regresser ce qu'ADR-042 garantissait.
+ * Il ne peut qu'etre plus TARDIF que la remise reelle, sens sur de
+ * `.claude/rules/legal.md` : un delai ouvert plus tard s'allonge, il ne
+ * s'eteint pas avant terme.
+ *
+ * UNE PANNE DE L'HISTORIQUE LEVE, et l'expedition compte en echec sans rien
+ * ecrire : la date exacte sera relue au cycle suivant, le transporteur la
+ * conservant. Livrer au repli pendant une panne figerait une date fausse pour
+ * toujours, `livreA` ne se reecrivant pas.
+ */
+async function dateDeRemise(
+  client: ClientSuivi,
+  numeroSuivi: string,
+  statut: number,
+): Promise<Date | null> {
+  const remise = await client.lireLivraison(numeroSuivi);
+
+  if (remise !== null) {
+    return remise;
+  }
+
+  return estLivre(statut) ? new Date() : null;
 }
 
 /**

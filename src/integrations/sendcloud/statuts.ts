@@ -114,3 +114,31 @@ export function estDeposeEnPointRetrait(statut: number): boolean {
 
 /** `Awaiting customer pickup`, le colis attend au point de service. */
 const STATUT_ATTENTE_RETRAIT = 12;
+
+/**
+ * Les evenements de l'historique de suivi qui constatent la remise, LS-311.
+ *
+ * POURQUOI UNE SECONDE LISTE, TEXTUELLE CETTE FOIS. Le statut numerique du colis
+ * ne suit pas toujours l'historique : mesure le 4 novembre 2026 sur C-2026-0001,
+ * retiree au Locker le 3 a 14 h 52 UTC, `GET /api/v2/parcels` rendait encore 12,
+ * « Awaiting customer pickup », plus de vingt heures apres, pendant que
+ * `GET /api/v2/tracking/{numero}` portait l'evenement `delivered` a la seconde.
+ * Mondial Relay emet un `picked-up-by-driver` parasite une seconde APRES la
+ * remise, et le statut du colis ne l'a jamais depasse.
+ *
+ * LISTE BLANCHE, meme sens sur que `STATUTS_LIVRES` : un evenement inconnu ne
+ * livre pas. `awaiting-customer-pickup` et `picked-up-by-driver` en sont exclus
+ * par construction, quel que soit leur rang dans l'historique.
+ *
+ * LA DEFINITION OFFICIELLE de « Delivered » est « The parcel has been delivered
+ * to the end customer », sendcloud.dev, page des statuts v2, lue le 4 novembre
+ * 2026. Le retrait au Locker la porte, constate sur le colis reel.
+ */
+export const EVENEMENTS_SUIVI_LIVRES: ReadonlySet<string> = new Set([
+  "delivered",
+]);
+
+/** Cet evenement de l'historique constate-t-il la remise au client ? */
+export function estEvenementLivraison(parentStatus: string): boolean {
+  return EVENEMENTS_SUIVI_LIVRES.has(parentStatus);
+}

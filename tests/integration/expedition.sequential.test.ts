@@ -796,6 +796,9 @@ describe("synchroniserSuivi, ce qui renseigne livreA", () => {
   /** Un client de suivi qui rend toujours le meme statut. */
   function suiviFixe(statut: number, libelle: string) {
     return {
+      async lireLivraison() {
+        return null;
+      },
       async lireStatut() {
         return { statut, libelle };
       },
@@ -923,6 +926,9 @@ describe("synchroniserSuivi, ce qui renseigne livreA", () => {
 
     const issue = await synchroniserSuivi({
       client: {
+        async lireLivraison() {
+          return null;
+        },
         async lireStatut() {
           return null;
         },
@@ -947,6 +953,9 @@ describe("synchroniserSuivi, les echecs definitifs alertent", () => {
 
   function suiviFixe(statut: number, libelle: string) {
     return {
+      async lireLivraison() {
+        return null;
+      },
       async lireStatut() {
         return { statut, libelle };
       },
@@ -1062,6 +1071,9 @@ describe("synchroniserSuivi, panne du fournisseur", () => {
 
     const issue = await synchroniserSuivi({
       client: {
+        async lireLivraison() {
+          return null;
+        },
         async lireStatut() {
           throw new Error("transporteur muet");
         },
@@ -1090,6 +1102,9 @@ describe("synchroniserSuivi, panne du fournisseur", () => {
 
     const issue = await synchroniserSuivi({
       client: {
+        async lireLivraison() {
+          return null;
+        },
         async lireStatut() {
           appels += 1;
           if (appels === 1) {
@@ -1120,6 +1135,9 @@ describe("synchroniserSuivi, panne du fournisseur", () => {
 
     await synchroniserSuivi({
       client: {
+        async lireLivraison() {
+          return null;
+        },
         async lireStatut() {
           throw new Error("transporteur muet");
         },
@@ -1492,5 +1510,195 @@ describe("creerEtiquetteExpedition", () => {
       [commandeId],
     );
     expect(rows[0]).toEqual({ nombre: "1" });
+  });
+});
+
+/**
+ * LS-311 : l'historique de suivi fait foi, le statut du colis en est le repli.
+ *
+ * Constate sur C-2026-0001 : retiree au Locker le 3 novembre 2026 a 14 h 52 UTC,
+ * le colis restait au statut 12 plus de vingt heures apres, quand l'historique
+ * portait `delivered` a la seconde. `livreA` restait nul.
+ */
+describe("synchroniserSuivi, l'historique de suivi fait foi, LS-311", () => {
+  const REMISE = new Date("2026-11-03T14:52:55.000Z");
+
+  async function expedier(): Promise<string> {
+    const commandeId = await commanderEtPreparer();
+    await declarerExpedition({
+      commandeId,
+      saisie: SAISIE_EXPEDITION,
+      acteurId: administratriceId,
+    });
+    return commandeId;
+  }
+
+  /** Un statut de colis fixe, et ce que l'historique dit de la remise. */
+  function suivi(
+    statut: number,
+    libelle: string,
+    remise: Date | null | Error,
+    appels: { historique: number } = { historique: 0 },
+  ) {
+    return {
+      async lireStatut() {
+        return { statut, libelle };
+      },
+      async lireLivraison() {
+        appels.historique += 1;
+        if (remise instanceof Error) {
+          throw remise;
+        }
+        return remise;
+      },
+    };
+  }
+
+  async function lireExpeditionBrute(commandeId: string) {
+    const { rows } = await client.query<{
+      livre_a: Date | null;
+      statut_transporteur: string | null;
+      synchronise_a: Date | null;
+    }>(
+      `SELECT livre_a, statut_transporteur, synchronise_a
+       FROM expedition WHERE commande_id = $1`,
+      [commandeId],
+    );
+    return rows[0];
+  }
+
+  /* CRITERES 1 ET 2, le cas reel de C-2026-0001. */
+  it("statut 12 et remise dans l'historique : livreA vaut l'instant du transporteur", async () => {
+    const commandeId = await expedier();
+
+    const issue = await synchroniserSuivi({
+      client: suivi(12, "Awaiting customer pickup", REMISE),
+    });
+
+    const expedition = await lireExpeditionBrute(commandeId);
+    expect(expedition?.livre_a).toEqual(REMISE);
+    expect(expedition?.statut_transporteur).toBe("Awaiting customer pickup");
+    expect(issue.livrees).toBe(1);
+  });
+
+  /* CRITERE 2 : meme quand le statut livre, la date reste celle du transporteur. */
+  it("statut 11 et remise dans l'historique : la date n'est pas celle du cycle", async () => {
+    const commandeId = await expedier();
+
+    await synchroniserSuivi({ client: suivi(11, "Delivered", REMISE) });
+
+    expect((await lireExpeditionBrute(commandeId))?.livre_a).toEqual(REMISE);
+  });
+
+  /* CRITERE 3, cote service : sans remise, l'attente au point ne livre rien. */
+  it("statut 12 et historique sans remise : livreA reste nul", async () => {
+    const commandeId = await expedier();
+
+    const issue = await synchroniserSuivi({
+      client: suivi(12, "Awaiting customer pickup", null),
+    });
+
+    expect((await lireExpeditionBrute(commandeId))?.livre_a).toBeNull();
+    expect(issue.livrees).toBe(0);
+  });
+
+  /*
+   * LE REPLI D'ADR-042 RESTE : 93 n'a aucun evenement textuel documente, et un
+   * statut qui livre ne doit pas regresser parce que l'historique se tait.
+   */
+  it("statut 93 et historique muet : livreA est renseigne au repli", async () => {
+    const commandeId = await expedier();
+    const avant = new Date();
+
+    await synchroniserSuivi({
+      client: suivi(93, "Shipment collected by customer", null),
+    });
+
+    const livreA = (await lireExpeditionBrute(commandeId))?.livre_a;
+    expect(livreA).toBeInstanceOf(Date);
+    expect(livreA!.getTime()).toBeGreaterThanOrEqual(avant.getTime() - 1000);
+  });
+
+  /*
+   * CRITERE 4. Livrer au repli pendant une panne figerait une date fausse pour
+   * toujours, `livreA` ne se reecrivant pas : rien n'est ecrit, la date exacte
+   * sera relue au cycle suivant.
+   */
+  it("panne de l'historique : echec compte, rien n'est ecrit, le cycle continue", async () => {
+    const enPanne = await expedier();
+    const saine = await expedier();
+    let appels = 0;
+
+    const issue = await synchroniserSuivi({
+      client: {
+        async lireStatut() {
+          return { statut: 11, libelle: "Delivered" };
+        },
+        async lireLivraison() {
+          appels += 1;
+          if (appels === 1) {
+            throw new Error("historique muet");
+          }
+          return REMISE;
+        },
+      },
+    });
+
+    expect(issue).toEqual({ traitees: 2, echecs: 1, livrees: 1 });
+
+    const premiere = await lireExpeditionBrute(enPanne);
+    const seconde = await lireExpeditionBrute(saine);
+    const [touchee, epargnee] =
+      premiere?.livre_a === null ? [seconde, premiere] : [premiere, seconde];
+
+    expect(touchee?.livre_a).toEqual(REMISE);
+    expect(epargnee?.livre_a).toBeNull();
+    expect(epargnee?.synchronise_a).toBeNull();
+  });
+
+  /*
+   * UN ECHEC DEFINITIF NE LIVRE PAS, meme si l'historique portait une remise :
+   * un colis retourne a l'expediteur n'est pas chez le client. L'historique
+   * n'est meme pas lu.
+   */
+  it("echec definitif : l'historique n'est pas lu et livreA reste nul", async () => {
+    const commandeId = await expedier();
+    const appels = { historique: 0 };
+
+    await synchroniserSuivi({
+      client: suivi(62992, "Returned to sender", REMISE, appels),
+    });
+
+    expect((await lireExpeditionBrute(commandeId))?.livre_a).toBeNull();
+    expect(appels.historique).toBe(0);
+  });
+
+  /*
+   * CRITERE 3, cote base : une date posee ne se deplace pas, meme si
+   * l'ecriture arrivait hors du filtre de `listerASuivre`.
+   */
+  it("enregistrerSuivi ne reecrit pas un livreA deja pose", async () => {
+    const commandeId = await expedier();
+    await synchroniserSuivi({
+      client: suivi(12, "Awaiting customer pickup", REMISE),
+    });
+
+    const { enregistrerSuivi } = await import("@/repositories/expedition");
+    const { prisma } = await import("@/lib/prisma");
+    const { rows } = await client.query<{ id: string }>(
+      "SELECT id FROM expedition WHERE commande_id = $1",
+      [commandeId],
+    );
+
+    const ecrite = await enregistrerSuivi(prisma, {
+      expeditionId: rows[0]!.id,
+      statutTransporteur: "Picked up by driver",
+      livreA: new Date("2026-11-03T14:52:56.000Z"),
+    });
+
+    expect(ecrite).toBe(false);
+    const expedition = await lireExpeditionBrute(commandeId);
+    expect(expedition?.livre_a).toEqual(REMISE);
+    expect(expedition?.statut_transporteur).toBe("Awaiting customer pickup");
   });
 });
