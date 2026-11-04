@@ -90,11 +90,7 @@ export async function synchroniserSuivi({
 
       const livreA = echec
         ? null
-        : await dateDeRemise(
-            client,
-            expedition.numeroSuivi ?? "",
-            suivi.statut,
-          );
+        : await dateDeRemise(client, expedition, suivi.statut);
 
       /*
        * LE LIBELLE ET NON L'IDENTIFIANT, decision 5 : un nombre nu est illisible
@@ -169,13 +165,33 @@ export async function synchroniserSuivi({
  */
 async function dateDeRemise(
   client: ClientSuivi,
-  numeroSuivi: string,
+  expedition: { numeroSuivi: string | null; expedieA: Date | null },
   statut: number,
 ): Promise<Date | null> {
-  const remise = await client.lireLivraison(numeroSuivi);
+  const remise = await client.lireLivraison(expedition.numeroSuivi ?? "");
 
-  if (remise !== null) {
-    return remise;
+  /*
+   * UN COLIS RETOUR NE LIVRE JAMAIS, repli compris : son statut 11 dit qu'il
+   * est revenu a l'atelier, pas qu'il est chez le client.
+   */
+  if (remise.etat === "retour") {
+    return null;
+  }
+
+  if (remise.etat === "remise") {
+    /*
+     * UNE REMISE ANTERIEURE A L'EXPEDITION EST UNE DERIVE, symetrique de la
+     * garde du futur. Le cas type est un numero de suivi recolle a la
+     * declaration manuelle : l'historique d'un ancien colis daterait la
+     * reception d'AVANT l'envoi, et le delai de retractation s'eteindrait
+     * avant meme la livraison reelle, sans retour possible, `livreA` ne se
+     * reecrivant pas. L'expedition compte en echec, rien n'est ecrit.
+     */
+    if (expedition.expedieA !== null && remise.a < expedition.expedieA) {
+      throw new Error("remise anterieure a l'expedition");
+    }
+
+    return remise.a;
   }
 
   return estLivre(statut) ? new Date() : null;
