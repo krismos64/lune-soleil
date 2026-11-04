@@ -1428,7 +1428,7 @@ d'afficher la date de l'expérience de consommation, article D111-10.
 **Dépendance à signaler.** Cette décision rend LS-33 structurant. Sans date de
 livraison fiable, ni le délai de rétractation ni l'invitation à déposer un avis ne
 se déclenchent. LS-33 est **tranché depuis le 28 juillet 2026** : la date vient du
-suivi automatique du transporteur, par l'API Sendcloud, ADR-035, et seule la remise au destinataire la renseigne, constatée par DEUX statuts, ADR-042. Le repli documenté vaut ici aussi : à défaut de
+suivi automatique du transporteur, par l'API Sendcloud, ADR-035, et seule la remise au destinataire la renseigne, constatée par l'événement `delivered` de l'historique de suivi, daté par le transporteur, les deux statuts d'ADR-042 servant de repli (décision 7, LS-311). Le repli documenté vaut ici aussi : à défaut de
 date de livraison, partir de la date d'expédition **plus une marge couvrant
 l'acheminement**, jamais de la date d'expédition seule. Un repli allonge le délai,
 il ne l'avance jamais. Détail dans `.claude/rules/legal.md`.
@@ -2173,7 +2173,7 @@ porte `Expedition.livreA` avec la règle « uniquement sur source fiable », et 
 source est désormais définie : le suivi automatique du transporteur, par l'API Sendcloud, ADR-035. Ni saisie manuelle par l'administratrice, ni repli sur la date
 d'expédition seule.
 
-seule la remise au destinataire, constatée par DEUX statuts, ADR-042, renseigne `livreA`, pour les trois
+seule la remise au destinataire, constatée par l'événement `delivered` de l'historique de suivi, daté par le transporteur, les deux statuts d'ADR-042 servant de repli (décision 7, LS-311), renseigne `livreA`, pour les trois
 modes de livraison d'ADR-025. Les événements « disponible au Point Relais », « mise
 en distribution » et « avis de passage » n'ont aucun effet : ils décrivent
 l'acheminement et non la prise de possession. Un colis peut rester une semaine en

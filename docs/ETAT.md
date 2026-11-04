@@ -182,7 +182,8 @@ retenues par LS-142 sont consignées dans les journaux `2026-09-23` et
 `https://lune-soleil.fr` répond 200 sur le VPS partagé avec l'autre service hébergé,
 ADR-036. Trois conteneurs, schéma complet, sauvegarde quotidienne par unité
 `systemd` avec restauration prouvée, ADR-037. Les tâches planifiées tournent,
-toutes celles que déclare `TACHES`, et les médias sont servis depuis le volume.
+toutes celles que déclare `TACHES` depuis le 4 novembre 2026 (`invitation-avis` manquait au
+cron de la machine, LS-311), et les médias sont servis depuis le volume.
 
 **Les sauvegardes sortent du VPS depuis le 10 septembre 2026**, LS-107 :
 chiffrées en AES256 puis copiées vers **Backblaze B2**, un fournisseur différent
