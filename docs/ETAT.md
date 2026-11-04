@@ -76,6 +76,11 @@ mention actuelle.
 * **LS-310**, le 2 novembre 2026 : note des avis publiés dans le JSON-LD
   `Product` (`aggregateRating`), aucun `review` individuel faute d'auteur
   affiché ; Merchant Center (piste 9 de LS-291) abandonné, journal `2026-11-02-b`
+* **LS-311**, le 4 novembre 2026 : la remise se lit dans l'historique de
+  suivi Sendcloud, le statut du colis étant resté à 12 après le retrait réel
+  de C-2026-0001 au Locker ; horodatage du transporteur, règle V16 en base
+  (remise jamais antérieure à l'envoi), ADR-042 décision 7, journal
+  `2026-11-04-a`
 
 **LS-237 est close** le 23 septembre 2026, cause mesurée : un
 `printf | grep -q` sous `pipefail`, que SIGPIPE faisait échouer sur un motif
