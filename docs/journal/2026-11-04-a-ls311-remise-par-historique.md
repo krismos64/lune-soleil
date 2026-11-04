@@ -89,6 +89,42 @@ fuite du numéro de suivi ou des clés, effet sur LS-61 et LS-216.
 - Le connecteur Atlassian `claude_ai` est retiré par Atlassian (transport SSE) :
   Jira passe par le plugin `atlassian`.
 
+## Mise en production
+
+- PR #634, CI verte (huit contrôles en 15 min 47 s), fusionnée en rebase :
+  `620a8eb`, `249e2f7`, `83577c4`, `eb697ad`.
+- **Migration V16** par `migrate-production.sh`, sur autorisation ponctuelle de
+  Christophe (la procédure lit `DATABASE_URL` du fichier d'environnement) :
+  27 puis 28 migrations, contrainte relue en base, sauvegarde vérifiée
+  conservée sur le poste, relais et tunnel fermés.
+- Déploiement run 41894013258 : `ghcr.io/krismos64/lune-soleil:eb697ad…`,
+  `/api/sante` en 200.
+- **Critère 7** : la synchronisation de 19 h 23 UTC a écrit `livre_a` =
+  **2026-11-03 14:52:55 UTC** pour C-2026-0001, à la seconde de la remise ;
+  `traitees: 1, echecs: 0, livrees: 1`. **LS-311 close.**
+
+## Le cron de production n'avait jamais reçu `invitation-avis`
+
+En vérifiant le départ de l'invitation à l'avis : le conteneur
+`lune-soleil-cron` portait **six** tâches, le crontab du dépôt sept. Son image,
+`lune-soleil-cron:local`, construite sur la machine le 10 septembre 2026 à
+18 h 32 UTC, précède le commit de LS-61 du même jour. **La tâche d'invitation
+n'a donc jamais tourné en production**, sans conséquence jusqu'ici puisque
+C-2026-0001 est la première livraison.
+
+**Seconde occurrence du même défaut** : le 10 septembre, `suivi-livraison`
+manquait de la même façon, `EXPLOITATION.md` l'écrit déjà. Le déploiement ne
+reconstruit pas le cron, et le contrôle `9y` ne compare que deux fichiers du
+dépôt.
+
+Appliqué sur accord de Christophe, par la procédure d'`EXPLOITATION.md` :
+crontab poussé (l'ancien gardé en `crontab.avant-ls311`), seul `cron`
+reconstruit. Relu : sept tâches, `53 7 * * * invitation-avis`, `envoi-emails`
+déclenché à 19 h 27 et 19 h 28. **Arbitrage de Christophe : pas de ticket pour
+un contrôle**, la récidive est tracée ici et dans la mémoire.
+
+L'invitation de C-2026-0001 sera déposée le 5 novembre à 7 h 53 UTC.
+
 ## Risque accepté
 
 L'API v2 de Sendcloud est « en maintenance » depuis avril 2026, sans
@@ -97,7 +133,8 @@ ADR-042 décision 7.
 
 ## Prochaine étape
 
-- Fusion, migration de production par `migrate-production.sh`, déploiement,
-  puis relire `livre_a` de C-2026-0001 (critère 7) et le départ de
-  l'invitation à l'avis.
+- Le 5 novembre après 7 h 53 UTC : relire l'invitation de C-2026-0001
+  (`invitation_avis`, `envoi_en_attente`, `journal_email`) et son envoi.
+- Après toute story qui ajoute une tâche planifiée : pousser le crontab et
+  reconstruire `cron`, `EXPLOITATION.md`, le déploiement ne le fait pas.
 - LS-295, la réauthentification par passkey.
