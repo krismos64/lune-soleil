@@ -242,6 +242,19 @@ n'ayant rien reçu.
 `Delivery attempt failed` n'en fait pas partie : une tentative échouée est
 suivie d'une seconde ou d'un report en relais.
 
+### Le statut du colis ne suit pas toujours l'historique, ADR-042 décision 7
+
+**Mesuré sur la première commande réelle**, LS-311 : le colis, retiré au Locker le
+3 novembre 2026, est resté au statut **12** quand l'historique
+`GET /api/v2/tracking/{numero}` portait `delivered` à la seconde. **`livreA`
+prend donc l'instant du premier événement `delivered` de l'historique**, en
+liste blanche, avec l'horodatage du transporteur ; les statuts 11 et 93 de la
+table ci-dessus ne servent plus que de repli quand l'historique se tait.
+`awaiting-customer-pickup` et `picked-up-by-driver` ne livrent jamais, y compris
+placés après la remise. Une panne de l'historique n'écrit rien : la date exacte
+se relit au cycle suivant, alors qu'une date de repli figée ne se corrigerait
+plus.
+
 ### La table Mondial Relay, conservée pour le raisonnement
 
 Elle décrit le transporteur, qui n'a pas changé, et documente la décision du

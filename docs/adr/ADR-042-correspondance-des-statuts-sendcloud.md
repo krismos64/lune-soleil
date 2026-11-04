@@ -5,7 +5,7 @@
 | Statut | Accepté |
 | Date | 10 septembre 2026 |
 | Décideur | Christophe Mostefaoui |
-| Ticket | LS-131 |
+| Ticket | LS-131, amendé par LS-311 le 4 novembre 2026 (décision 7) |
 
 ## Ce que cet ADR précise
 
@@ -179,11 +179,55 @@ dire à l'exploitante « déposée en point de retrait » sans que la base affir
 quelque chose qu'elle ne peut pas garantir.
 
 **Le délai de rétractation reste exact dans ce scénario**, et c'est ce qui
-compte juridiquement : le client qui retire son colis déclenche `livreA` par le
-statut 93, au bon moment.
+compte juridiquement : le retrait du colis déclenche `livreA`. **Depuis
+LS-311, par l'historique de suivi et non par le statut 93**, que le premier
+retrait réel n'a jamais atteint, décision 7.
 
 **À rouvrir** si Sendcloud expose un jour ce point, ou si les données
 transporteur d'un colis réel s'avèrent le porter.
+
+## Décision 7 : l'historique de suivi fait foi, le statut du colis en est le repli
+
+Amendement du 4 novembre 2026, LS-311, sur la première commande réelle.
+
+**Constat.** C-2026-0001, mode Locker, retirée par l'exploitante le 3 novembre
+2026 à 14 h 52 UTC. Plus de vingt heures après, `GET /api/v2/parcels` rendait
+toujours le statut **12**, `Awaiting customer pickup`, dernière mise à jour le
+2 novembre ; `GET /api/v2/tracking/{numero}` portait l'événement `delivered` à
+14 h 52 min 55 s, suivi une seconde plus tard d'un `picked-up-by-driver`
+parasite émis par Mondial Relay. `livreA` restait nul : aucun délai de
+rétractation ouvert à l'écran, aucune invitation à l'avis. **Le statut 93 de la
+décision 1 n'a jamais été observé.**
+
+**Décision.** `livreA` prend l'instant du **premier** événement de
+l'historique dont le `parent_status` appartient à une liste blanche,
+`EVENEMENTS_SUIVI_LIVRES`, qui ne porte que `delivered`. Définition officielle :
+« The parcel has been delivered to the end customer ».
+
+| Règle | Pourquoi |
+|---|---|
+| le premier `delivered`, quel que soit son rang | l'ordre n'est pas documenté : l'exemple officiel va du plus récent au plus ancien, la réponse réelle de l'inverse |
+| l'horodatage du transporteur, jamais l'heure du cycle | la date d'expérience d'un avis, D111-9, doit être exacte ; la synchronisation horaire la décalait d'une heure au moins |
+| décalage horaire exigé, futur refusé | invariant 8 : un horodatage sans fuseau serait lu dans celui du conteneur |
+| `is_return` vrai : rien ne livre, **repli compris** | un colis revenu à l'atelier n'a pas été remis au client ; l'historique rend trois états (`remise`, `aucune`, `retour`) pour que le repli ne livre pas un retour au statut 11 |
+| remise antérieure à `expedieA` : échec compté, rien n'est écrit | un numéro de suivi recollé à la déclaration manuelle ferait lire la remise d'un ancien colis, et le délai s'éteindrait avant la livraison réelle ; symétrique de la garde du futur |
+| échec définitif (décision 3) : l'historique n'est pas lu | un colis retourné n'est pas chez le client |
+| statut 11 ou 93 et historique muet : repli sur l'heure du cycle | 93 n'a aucun événement textuel documenté ; le repli ne peut être que plus tardif que la remise, sens sûr de `legal.md` |
+| panne de l'historique : échec compté, rien n'est écrit | `livreA` ne se réécrit pas ; livrer au repli pendant une panne figerait une date fausse, la date exacte sera relue au cycle suivant |
+| écriture filtrée sur `livre_a IS NULL` | la garde de `listerASuivre` est une lecture, celle-ci tient dans l'écriture |
+
+**Ce qui contredit la décision 2 de LS-131.** Le module de suivi justifiait
+l'API v2 par ses identifiants **numériques**, une comparaison sur des libellés
+cassant en silence à un changement de formulation. L'historique n'en porte pas :
+la comparaison se fait sur le `parent_status` normalisé par Sendcloud, en liste
+blanche, donc un libellé qui changerait **ne livrerait plus**, sans jamais livrer
+trop tôt. Le repli numérique reste en place pour ce cas.
+
+**Risque accepté.** La documentation annonce l'API v2 « en maintenance » depuis
+avril 2026, sans dépréciation de cet endpoint. L'équivalent v3,
+`GET /api/v3/parcels/tracking/{numero}`, rend des `events` sans `parent_status`,
+avec une phase `delivery_forced` (remise posée par Sendcloud sans confirmation du
+transporteur) qu'il faudrait écarter. **À rouvrir** au retrait annoncé de la v2.
 
 ## Sources
 
@@ -192,6 +236,9 @@ transporteur d'un colis réel s'avèrent le porter.
 * Documentation Sendcloud, « Retrieve tracking info » et « Tracking statuses »,
   définitions des statuts, consultées via Context7 puis sur
   `sendcloud.dev/docs/archive/tracking/tracking-statuses`
+* `GET https://panel.sendcloud.sc/api/v2/tracking/{numero}`, historique réel de
+  C-2026-0001 relu le 4 novembre 2026, et sa page sur `sendcloud.dev`
+  (« Retrieve tracking information of a parcel »), décision 7
 * Article L221-18 du Code de la consommation, délai à compter de la réception
 * Article L221-20, délai porté à douze mois si l'information est mal fournie
 * ADR-025 pour les trois modes, ADR-035 pour le passage à Sendcloud, ADR-030 pour
