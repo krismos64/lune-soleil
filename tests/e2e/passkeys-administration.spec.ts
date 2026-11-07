@@ -25,7 +25,7 @@
  * l'exploitante, ADR-021.
  */
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test } from "@playwright/test";
+import { type Page, expect, test } from "@playwright/test";
 import { Client } from "pg";
 
 import { FICHIER_SESSION_ADMINISTRATION } from "./chemin-session";
@@ -36,8 +36,21 @@ import {
 
 test.use({ storageState: FICHIER_SESSION_ADMINISTRATION });
 
-const NOM_PASSKEY = "iPhone de controle";
-const CREDENTIAL = "credential-de-controle-e2e";
+/*
+ * UNE PASSKEY PAR LARGEUR, LS-295. Les quatre largeurs tournent en parallele
+ * sur la meme base et le meme compte : avec un identifiant commun, le
+ * `DELETE` puis `INSERT` d'une largeur tombait sur la ligne d'une autre, en
+ * violation d'unicite, ou retirait la passkey qu'un test voisin s'appretait a
+ * cliquer. Mesure le 7 novembre 2026, quatre echecs en suite complete, aucun
+ * largeur par largeur.
+ */
+const nomPasskey = () => `iPhone de controle ${test.info().project.name}`;
+const credential = () =>
+  `credential-de-controle-e2e-${test.info().project.name}`;
+
+/** La ligne de CETTE largeur, les autres pouvant figurer dans la liste. */
+const ligne = (page: Page) =>
+  page.getByRole("listitem").filter({ hasText: nomPasskey() });
 
 async function connexion(): Promise<Client> {
   const url = process.env.DATABASE_URL;
@@ -61,7 +74,7 @@ test.beforeEach(async () => {
   const client = await connexion();
   try {
     await client.query("DELETE FROM passkey WHERE credential_id = $1", [
-      CREDENTIAL,
+      credential(),
     ]);
     await client.query(
       `INSERT INTO passkey
@@ -70,7 +83,22 @@ test.beforeEach(async () => {
        SELECT gen_random_uuid()::text, $1, 'cle-publique-de-controle', id, $2, 0,
               'singleDevice', false, now()
          FROM utilisateur WHERE role = 'ADMINISTRATRICE' LIMIT 1`,
-      [NOM_PASSKEY, CREDENTIAL],
+      [nomPasskey(), credential()],
+    );
+    /*
+     * UNE PREUVE D'IDENTITE RECENTE SUR LA SESSION, LS-295 : sans elle, l'ecran
+     * ne propose plus le retrait et ces tests ne rendraient pas la branche
+     * qu'ils mesurent. Posee sur TOUTES les sessions de l'administratrice, la
+     * session partagee de la suite etant l'une d'elles.
+     *
+     * JAMAIS RETIREE ENSUITE : les largeurs tournent en parallele sur la meme
+     * session, et l'oter dans un `afterEach` la retirerait a un test voisin en
+     * cours. L'etat sans preuve est rendu par le test de composant
+     * `gestion-passkeys-ls295.test.tsx`, la route gardee en integration.
+     */
+    await client.query(
+      `UPDATE session SET reauthentifiee_le = now()
+        WHERE user_id IN (SELECT id FROM utilisateur WHERE role = 'ADMINISTRATRICE')`,
     );
   } finally {
     await client.end();
@@ -81,7 +109,7 @@ test.afterEach(async () => {
   const client = await connexion();
   try {
     await client.query("DELETE FROM passkey WHERE credential_id = $1", [
-      CREDENTIAL,
+      credential(),
     ]);
   } finally {
     await client.end();
@@ -92,7 +120,7 @@ test("la liste peuplee ne porte aucune violation d'accessibilite", async ({
   page,
 }) => {
   await page.goto("/administration/passkeys");
-  await expect(page.getByText(NOM_PASSKEY)).toBeVisible();
+  await expect(ligne(page)).toBeVisible();
 
   const resultat = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
@@ -110,7 +138,9 @@ test("la confirmation de retrait ne porte aucune violation d'accessibilite", asy
   page,
 }) => {
   await page.goto("/administration/passkeys");
-  await page.getByRole("button", { name: "Retirer", exact: true }).click();
+  await ligne(page)
+    .getByRole("button", { name: "Retirer", exact: true })
+    .click();
 
   await expect(
     page.getByRole("button", { name: "Confirmer le retrait" }),
@@ -135,7 +165,10 @@ test("le focus entre dans la confirmation, puis revient au bouton", async ({
 }) => {
   await page.goto("/administration/passkeys");
 
-  const retirer = page.getByRole("button", { name: "Retirer", exact: true });
+  const retirer = ligne(page).getByRole("button", {
+    name: "Retirer",
+    exact: true,
+  });
   await retirer.click();
 
   /*
@@ -165,11 +198,34 @@ test("l'ecran ne deborde pas horizontalement, confirmation ouverte", async ({
   // MESURE CONFIRMATION OUVERTE, l'etat le plus large : deux boutons et une
   // question s'ajoutent a la ligne du nom d'appareil. A 320 px, c'est la que le
   // debordement apparaitrait.
-  await page.getByRole("button", { name: "Retirer", exact: true }).click();
+  await ligne(page)
+    .getByRole("button", { name: "Retirer", exact: true })
+    .click();
   await expect(
     page.getByRole("button", { name: "Confirmer le retrait" }),
   ).toBeVisible();
 
+  expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+    TOLERANCE_DEBORDEMENT_PX,
+  );
+});
+
+/**
+ * LE RETOUR DE LA CONFIRMATION D'IDENTITE, LS-295. Sans preuve recente, l'ecran
+ * des passkeys renvoie vers la reauthentification avec `retour=passkeys` : la
+ * cle doit etre connue de `destinations.ts`, sans quoi l'ecran retomberait sur
+ * le motif par defaut et renverrait au tableau de bord, loin de la passkey.
+ */
+test("la reauthentification annonce son motif et ne deborde pas", async ({
+  page,
+}) => {
+  await page.goto("/administration/reauthentification?retour=passkeys");
+
+  await expect(
+    page.getByText("avant d'ajouter ou de retirer une passkey", {
+      exact: false,
+    }),
+  ).toBeVisible();
   expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
     TOLERANCE_DEBORDEMENT_PX,
   );

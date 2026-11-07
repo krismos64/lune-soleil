@@ -87,6 +87,20 @@
 }
 
 /*
+ * LE MEME BOUTON PORTE PAR UN LIEN, LS-295 : « Confirmer mon identité » mene a
+ * un autre ecran, donc c'est une navigation et non une action, mais il tient la
+ * place du bouton d'ajout et doit lui ressembler. Un `<a>` est en ligne et
+ * souligne par defaut : sans ces trois proprietes, il rendait un texte souligne
+ * aligne a gauche dans un bloc colore, mesure a 320 px le 7 novembre 2026.
+ */
+.lienBouton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+/*
  * `--ls-primary` ET NON `--ls-accent-gold-deep`, ET C'EST UNE CORRECTION.
  *
  * Ce bouton ne vit qu'a UN endroit, dans `.confirmation`, qui pose un fond

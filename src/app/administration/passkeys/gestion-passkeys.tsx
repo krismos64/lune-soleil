@@ -284,7 +284,7 @@ export function GestionPasskeys({
             <Link
               href={CHEMIN_REAUTHENTIFICATION}
               prefetch={false}
-              className={styles.boutonPrincipal}
+              className={`${styles.boutonPrincipal} ${styles.lienBouton}`}
             >
               Confirmer mon identité
             </Link>
