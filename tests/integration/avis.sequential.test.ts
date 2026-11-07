@@ -2087,3 +2087,149 @@ describe("modification d'un avis par son auteur, LS-225, regles R8, R10 et R11",
     );
   });
 });
+
+/**
+ * La page « Avis clients » et le bloc de l'accueil, LS-313.
+ *
+ * LE CAS QUI A MOTIVE LA STORY : une piece unique vendue puis archivee perdait
+ * sa fiche, et son avis disparaissait du site. La lecture de la boutique doit
+ * le garder, avec le nom fige de la piece et sans lien vers une fiche morte.
+ */
+describe("avis de la boutique, LS-313", () => {
+  let lireAvisDeLaBoutique: typeof import("@/services/avis").lireAvisDeLaBoutique;
+
+  beforeAll(async () => {
+    ({ lireAvisDeLaBoutique } = await import("@/services/avis"));
+  });
+
+  async function publierUnAvis(commentaire: string): Promise<{
+    commandeId: string;
+    avisId: string;
+  }> {
+    const { commandeId } = await commanderEtPayer();
+    await marquerLivree(commandeId);
+    await inviterApresLivraison();
+
+    const valeur = await valeurJetonDeCommande(commandeId);
+    const etat = await lireEtatDepot(valeur);
+    if (etat.statut !== "OUVERT") throw new Error("etat inattendu");
+
+    await deposerAvis(valeur, [
+      {
+        ligneCommandeId: etat.pieces[0]!.ligneCommandeId,
+        note: 4,
+        commentaire,
+      },
+    ]);
+
+    const { rows } = await client.query<{ id: string }>(
+      `SELECT a.id FROM avis a
+       JOIN ligne_commande l ON l.id = a.ligne_commande_id
+       WHERE l.commande_id = $1`,
+      [commandeId],
+    );
+    const avisId = rows[0]!.id;
+
+    const issue = await modererAvis({
+      avisId,
+      statut: "PUBLIE",
+      motifDecision: null,
+    });
+    if (issue.statut !== "APPLIQUEE")
+      throw new Error(`moderation ${issue.statut}`);
+
+    return { commandeId, avisId };
+  }
+
+  async function produitDeLaCommande(commandeId: string): Promise<string> {
+    const { rows } = await client.query<{ produit_id: string }>(
+      `SELECT v.produit_id FROM ligne_commande l
+       JOIN variante v ON v.id = l.variante_id
+       WHERE l.commande_id = $1`,
+      [commandeId],
+    );
+    return rows[0]!.produit_id;
+  }
+
+  it("rend un avis publie avec le nom fige et le lien de la fiche", async () => {
+    const { commandeId, avisId } = await publierUnAvis("Superbe.");
+    const { rows } = await client.query<{ libelle_produit_fige: string }>(
+      "SELECT libelle_produit_fige FROM ligne_commande WHERE commande_id = $1",
+      [commandeId],
+    );
+
+    const avis = await lireAvisDeLaBoutique();
+
+    expect(avis.map((ligne) => ligne.id)).toEqual([avisId]);
+    expect(avis[0]!.piece.nom).toBe(rows[0]!.libelle_produit_fige);
+    expect(avis[0]!.piece.slugFiche).not.toBeNull();
+    // Ni client ni ligne de commande sur une lecture publique, regle R4.
+    expect(Object.keys(avis[0]!).sort()).toEqual(
+      [
+        "commentaire",
+        "experienceA",
+        "id",
+        "note",
+        "piece",
+        "publieA",
+        "reponse",
+      ].sort(),
+    );
+  });
+
+  it("garde l'avis d'une piece archivee, sans lien vers sa fiche", async () => {
+    const { commandeId, avisId } = await publierUnAvis("Pièce unique.");
+    await client.query("UPDATE produit SET statut = 'ARCHIVE' WHERE id = $1", [
+      await produitDeLaCommande(commandeId),
+    ]);
+
+    const avis = await lireAvisDeLaBoutique();
+
+    expect(avis.map((ligne) => ligne.id)).toEqual([avisId]);
+    expect(avis[0]!.piece.slugFiche).toBeNull();
+  });
+
+  it("garde le nom fige quand le produit est renomme, invariant 3", async () => {
+    const { commandeId } = await publierUnAvis("Bien reçu.");
+    const { rows } = await client.query<{ libelle_produit_fige: string }>(
+      "SELECT libelle_produit_fige FROM ligne_commande WHERE commande_id = $1",
+      [commandeId],
+    );
+    await client.query("UPDATE produit SET nom = 'Nom change' WHERE id = $1", [
+      await produitDeLaCommande(commandeId),
+    ]);
+
+    const avis = await lireAvisDeLaBoutique();
+
+    expect(avis[0]!.piece.nom).toBe(rows[0]!.libelle_produit_fige);
+  });
+
+  it("n'expose aucun avis depose, refuse ou retire, regle R4", async () => {
+    const { avisId } = await publierUnAvis("Publié puis retiré.");
+    await modererAvis({
+      avisId,
+      statut: "RETIRE",
+      motifDecision: "Retiré pour le test.",
+    });
+
+    expect(await lireAvisDeLaBoutique()).toEqual([]);
+  });
+
+  it("classe du plus recent au plus ancien et respecte la limite", async () => {
+    const premier = await publierUnAvis("Premier.");
+    const second = await publierUnAvis("Second.");
+    await client.query(
+      "UPDATE avis SET publie_a = now() - interval '1 day' WHERE id = $1",
+      [premier.avisId],
+    );
+
+    const tous = await lireAvisDeLaBoutique();
+    expect(tous.map((ligne) => ligne.id)).toEqual([
+      second.avisId,
+      premier.avisId,
+    ]);
+
+    const un = await lireAvisDeLaBoutique(1);
+    expect(un.map((ligne) => ligne.id)).toEqual([second.avisId]);
+  });
+});

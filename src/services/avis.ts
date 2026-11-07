@@ -59,6 +59,7 @@ import {
   lireInvitationsARenvoyer,
   lireInvitationsDeCommande,
   listerAvisParStatut,
+  listerAvisPublicsAvecPiece,
   listerAvisPublies,
   listerCommandesAInviter,
   listerAvisDeLUtilisateur,
@@ -72,6 +73,7 @@ import {
 import type {
   AvisAModerer,
   AvisPublie,
+  AvisPublieAvecPiece,
   InvitationLue,
   SignalementLu,
 } from "@/repositories/avis";
@@ -1466,6 +1468,20 @@ export async function lireAvisPublies(
 ): Promise<AvisPublie[]> {
   return listerAvisPublies(prisma, varianteIds);
 }
+
+/**
+ * Les avis publies de toute la boutique, avec leur piece, LS-313.
+ *
+ * Page « Avis clients » et bloc de l'accueil. Meme filtre public que la fiche,
+ * regle R4, voir `listerAvisPublicsAvecPiece`.
+ */
+export async function lireAvisDeLaBoutique(
+  limite?: number,
+): Promise<AvisPublieAvecPiece[]> {
+  return listerAvisPublicsAvecPiece(prisma, limite);
+}
+
+export type { AvisPublieAvecPiece };
 
 /** Le type d'un avis publie, pour la fiche qui le lit et le rend, LS-310. */
 export type { AvisPublie };
