@@ -201,9 +201,26 @@ export async function prouverIdentiteParMotDePasse(
  * d'administration suffirait a se declarer reauthentifie sans rien prouver du
  * tout, ce qui est le trou que le ticket signale.
  *
- * LES DEUX CHEMINS ACCORDENT LA MEME CHOSE, ce qui borne l'enjeu : quelqu'un
- * qui peut ouvrir une session neuve peut deja prouver son identite par le
- * chemin du mot de passe. Il n'y a donc rien a gagner a emprunter celui-ci.
+ * POURQUOI UNE SESSION NEUVE SUFFIT, ET SOUS QUELLE CONDITION, LS-295. Ce
+ * paragraphe affirmait jusque-la que « quelqu'un qui peut ouvrir une session
+ * neuve peut deja prouver son identite par le mot de passe ». C'etait FAUX : un
+ * intrus muni d'un cookie vole enregistrait son propre authentificateur, la
+ * route ne demandant qu'une session de moins de vingt-quatre heures, puis
+ * ouvrait avec lui une session neuve sans connaitre aucun secret.
+ *
+ * La regle des soixante secondes est GARDEE, et c'est la garde de
+ * l'enregistrement qui la rend juste. Depuis LS-295, enregistrer ou retirer une
+ * passkey exige une preuve recente, `hook-preuve-passkey.ts`. Une session neuve
+ * ne s'ouvre donc plus qu'en presentant un secret que le cookie ne donne pas :
+ *
+ *   - le mot de passe, `/sign-in/email` ;
+ *   - une passkey enregistree par la proprietaire, `/passkey/verify-authentication` ;
+ *   - le lien de changement d'adresse, que `session-verification.ts` prive de
+ *     cookie quand il est ouvert sans session, LS-167.
+ *
+ * Cet argument TIENT A LA LISTE CI-DESSUS. Un nouveau chemin qui ouvre une
+ * session sans secret, plugin ou option de Better Auth, rouvrirait le defaut
+ * par cette fonction : la relire alors.
  *
  * SOIXANTE SECONDES ET NON DIX, second correctif de la relecture. Better Auth
  * cree la session AVANT que le navigateur ne rende la main : sur un Mac qui se
