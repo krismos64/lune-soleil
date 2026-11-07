@@ -66,6 +66,7 @@ TACHE_PLANIFIEE="src/services/tache-planifiee.ts"
 ROUTE_TACHE="src/app/api/interne/taches/[nom]/route.ts"
 PREUVE="src/services/preuve-identite.ts"
 HOOK_PREUVE_PASSKEY="src/lib/hook-preuve-passkey.ts"
+SESSION_VERIFICATION="src/lib/session-verification.ts"
 ACTION_REAUTH="src/app/administration/reauthentification/actions.ts"
 PURGE_JOURNAUX="src/services/purge-journaux.ts"
 PROXIES="src/lib/proxies-de-confiance.ts"
@@ -141,7 +142,7 @@ SENDCLOUD_EXPEDITION="src/integrations/sendcloud/expedition.ts"
 #
 # Le defaut datait du jour ou le cas 121 a ete ecrit, et rien ne pouvait le
 # signaler : le nocturne mourait au cas 1 sur 180 depuis trois nuits.
-MUTABLES=("$SQL" "$STOCK" "$DEPOT_PANIER" "$GLOBALS_CSS" "$CATALOGUE_CSS" "$DECOR_NOEL_CSS" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$HOOK_PREUVE_PASSKEY" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE" "$AVIS" "$DEPOT_AVIS" "$SERVICE_AVOIR" "$DEPOT_PARAMETRES" "$SENDCLOUD_EXPEDITION" "$DESTINATIONS_REAUTH" "$TEST_COMPTABILITE" "$URLS_MEDIAS")
+MUTABLES=("$SQL" "$STOCK" "$DEPOT_PANIER" "$GLOBALS_CSS" "$CATALOGUE_CSS" "$DECOR_NOEL_CSS" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$HOOK_PREUVE_PASSKEY" "$SESSION_VERIFICATION" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE" "$AVIS" "$DEPOT_AVIS" "$SERVICE_AVOIR" "$DEPOT_PARAMETRES" "$SENDCLOUD_EXPEDITION" "$DESTINATIONS_REAUTH" "$TEST_COMPTABILITE" "$URLS_MEDIAS")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -3040,6 +3041,13 @@ cas "passkey enregistrable par une session de client" integration \
 mute "$HOOK_PREUVE_PASSKEY" 's/^  "\/passkey\/delete-passkey",\n//m'
 cas "retrait de passkey sans preuve d'identite" integration \
   "refuse sans preuve, laisse passer avec"
+
+# Le lien de changement d'adresse juge « deja connecte » sans valider la
+# session : un cookie forge au bon nom laissait sortir le cookie d'une session
+# neuve. Revue critique de LS-295, la regle des soixante secondes en depend.
+mute "$SESSION_VERIFICATION" 's/  return typeof valide === "string" && posee === valide;/  return typeof posee === "string";/'
+cas "lien de verification qui garde le cookie d'une session neuve" integration \
+  "cookie forge : aucun cookie ne sort"
 
 echo
 echo "-----------------------------------------"

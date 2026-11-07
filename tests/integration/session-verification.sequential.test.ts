@@ -66,7 +66,7 @@ afterAll(async () => {
 
 afterEach(async () => {
   await client.query(
-    "TRUNCATE journal_connexion, session, compte, verification, passkey, utilisateur CASCADE",
+    "TRUNCATE journal_connexion, session, compte, verification, passkey, utilisateur, rate_limit, compteur_limitation CASCADE",
   );
 });
 
@@ -243,6 +243,54 @@ describe("un lien clique sans cookie n'ouvre aucune session", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].email).toBe(NOUVELLE);
     expect(rows[0].email_verifie).toBe(true);
+  });
+});
+
+/**
+ * UN COOKIE AU BON NOM N'EST PAS UNE SESSION, LS-295.
+ *
+ * La revue critique de LS-295 l'a trouve : le hook decidait « deja connecte »
+ * sur le NOM du cookie, quand Better Auth decide sur une session VALIDE. Un
+ * cookie forge ou perime au nom exact faisait croire le visiteur connecte, la
+ * bibliotheque creait pourtant une session neuve, et son cookie sortait.
+ *
+ * L'enjeu depasse LS-167 : la regle des soixante secondes de
+ * `prouverIdentiteParPasskey` suppose ce chemin ferme. Une session ouverte par
+ * ce lien valait preuve d'identite, donc remboursement et enregistrement d'une
+ * passkey, pour quiconque lit la nouvelle boite.
+ */
+describe("un faux cookie de session n'ouvre pas de session", () => {
+  it.each([
+    ["forge", "better-auth.session_token=forge.signature"],
+    ["prefixe securise forge", "__Secure-better-auth.session_token=forge.x"],
+  ])("cookie %s : aucun cookie ne sort", async (_cas, cookie) => {
+    const liens: string[] = [];
+    const instance = authAvecLiensObserves(liens);
+
+    const { lien } = await demanderChangement(instance, liens);
+
+    const reponse = await instance.handler(
+      new Request(lien, { headers: { cookie } }),
+    );
+
+    expect(reponse.headers.get("set-cookie")).toBeNull();
+  });
+
+  it("un cookie de session revoquee n'en ouvre pas davantage", async () => {
+    const liens: string[] = [];
+    const instance = authAvecLiensObserves(liens);
+
+    const { lien, enTetes } = await demanderChangement(instance, liens);
+
+    // LE COOKIE ETAIT VALIDE, sa session ne l'est plus : c'est le cas d'un
+    // cookie vole puis revoque par la proprietaire.
+    await client.query("DELETE FROM session");
+
+    const reponse = await instance.handler(
+      new Request(lien, { headers: enTetes }),
+    );
+
+    expect(reponse.headers.get("set-cookie")).toBeNull();
   });
 });
 
