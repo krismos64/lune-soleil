@@ -892,6 +892,135 @@ describe("synchroniserSuivi, ce qui renseigne livreA", () => {
     expect(second).toEqual(premier);
   });
 
+  /*
+   * LS-312 : LA REMISE FAIT PASSER LA COMMANDE A `LIVREE`. Avant cette story,
+   * `livreA` etait ecrit seul : la premiere commande reelle, remise le
+   * 3 novembre 2026, restait « Expediee » et comptee « en transit ».
+   */
+  it("fait passer la commande a LIVREE, historisee par le systeme", async () => {
+    const commandeId = await expedier();
+
+    await synchroniserSuivi({ client: suiviFixe(11, "Delivered") });
+
+    expect(await lireStatut(commandeId)).toBe("LIVREE");
+    const { rows } = await client.query<{
+      statut_precedent: string;
+      origine: string;
+      acteur_id: string | null;
+    }>(
+      `SELECT statut_precedent, origine, acteur_id FROM historique_statut
+       WHERE commande_id = $1 AND statut_nouveau = 'LIVREE'`,
+      [commandeId],
+    );
+    // Une seule ligne, S9 : origine SYSTEME, aucun acteur.
+    expect(rows).toEqual([
+      { statut_precedent: "EXPEDIEE", origine: "SYSTEME", acteur_id: null },
+    ]);
+  });
+
+  it("laisse la commande EXPEDIEE tant que rien n'est remis", async () => {
+    const commandeId = await expedier();
+
+    await synchroniserSuivi({
+      client: suiviFixe(12, "Awaiting customer pickup"),
+    });
+
+    expect(await lireStatut(commandeId)).toBe("EXPEDIEE");
+  });
+
+  it("n'historise LIVREE qu'une fois sur plusieurs cycles", async () => {
+    const commandeId = await expedier();
+
+    await synchroniserSuivi({ client: suiviFixe(11, "Delivered") });
+    await synchroniserSuivi({ client: suiviFixe(11, "Delivered") });
+
+    const { rows } = await client.query<{ n: string }>(
+      `SELECT count(*) AS n FROM historique_statut
+       WHERE commande_id = $1 AND statut_nouveau = 'LIVREE'`,
+      [commandeId],
+    );
+    expect(Number(rows[0]?.n)).toBe(1);
+  });
+
+  /*
+   * LE RATTRAPAGE : une remise ecrite AVANT LS-312, ou par un cycle interrompu
+   * entre les deux ecritures. `livreA` deja pose, l'expedition ne repasse plus
+   * par la lecture du transporteur : seul le balayage du cycle la voit.
+   */
+  it("rattrape une commande dont la remise est deja connue", async () => {
+    const commandeId = await expedier();
+    await client.query(
+      "UPDATE expedition SET livre_a = now() WHERE commande_id = $1",
+      [commandeId],
+    );
+    expect(await lireStatut(commandeId)).toBe("EXPEDIEE");
+
+    await synchroniserSuivi({ client: suiviFixe(91, "Parcel en route") });
+
+    expect(await lireStatut(commandeId)).toBe("LIVREE");
+  });
+
+  /*
+   * LE `WHERE statut = 'EXPEDIEE'` PROTEGE UNE DECISION POSTERIEURE : une
+   * commande sortie de l'etat expediee ne recule ni n'avance par le suivi.
+   */
+  it("ne touche pas une commande qui n'est plus EXPEDIEE", async () => {
+    const commandeId = await expedier();
+    await client.query("UPDATE commande SET statut = 'ANNULEE' WHERE id = $1", [
+      commandeId,
+    ]);
+
+    await synchroniserSuivi({ client: suiviFixe(11, "Delivered") });
+
+    expect(await lireStatut(commandeId)).toBe("ANNULEE");
+    const { rows } = await client.query<{ n: string }>(
+      `SELECT count(*) AS n FROM historique_statut
+       WHERE commande_id = $1 AND statut_nouveau = 'LIVREE'`,
+      [commandeId],
+    );
+    expect(Number(rows[0]?.n)).toBe(0);
+  });
+
+  /*
+   * LA GARDE DE L'ECRITURE, EPROUVEE SEULE. La liste du balayage filtre deja
+   * sur `EXPEDIEE` et sur la remise : par `synchroniserSuivi`, une mutation de
+   * l'une serait masquee par l'autre. L'appel direct ne passe que par
+   * l'ecriture, qui doit refuser d'elle-meme, fenetre entre la lecture et
+   * l'ecriture comprise.
+   */
+  it("passerCommandeLivree refuse une commande qui n'est plus EXPEDIEE", async () => {
+    const commandeId = await expedier();
+    await client.query(
+      "UPDATE expedition SET livre_a = now() WHERE commande_id = $1",
+      [commandeId],
+    );
+    await client.query("UPDATE commande SET statut = 'ANNULEE' WHERE id = $1", [
+      commandeId,
+    ]);
+    const { passerCommandeLivree } = await import("@/repositories/expedition");
+    const { prisma } = await import("@/lib/prisma");
+    const { rows } = await client.query<{ id: string }>(
+      "SELECT id FROM expedition WHERE commande_id = $1",
+      [commandeId],
+    );
+
+    expect(await passerCommandeLivree(prisma, rows[0]?.id ?? "")).toBe(false);
+    expect(await lireStatut(commandeId)).toBe("ANNULEE");
+  });
+
+  it("passerCommandeLivree refuse une expedition sans remise connue", async () => {
+    const commandeId = await expedier();
+    const { passerCommandeLivree } = await import("@/repositories/expedition");
+    const { prisma } = await import("@/lib/prisma");
+    const { rows } = await client.query<{ id: string }>(
+      "SELECT id FROM expedition WHERE commande_id = $1",
+      [commandeId],
+    );
+
+    expect(await passerCommandeLivree(prisma, rows[0]?.id ?? "")).toBe(false);
+    expect(await lireStatut(commandeId)).toBe("EXPEDIEE");
+  });
+
   it("stocke le libelle du statut et non son identifiant, decision 5", async () => {
     const commandeId = await expedier();
 

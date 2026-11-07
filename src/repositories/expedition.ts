@@ -16,6 +16,7 @@
  * ferait croire a une synchronisation qui n'a pas eu lieu.
  */
 import type { ModeLivraison, StatutCommande } from "@/generated/prisma/enums";
+import { historiserTransition } from "@/repositories/confirmation";
 import type { ClientBase } from "@/repositories/stock";
 
 /** Ce que l'exploitante declare quand un colis part. */
@@ -245,6 +246,82 @@ export async function enregistrerSuivi(
   });
 
   return count === 1;
+}
+
+/**
+ * Fait passer a `LIVREE` la commande d'une expedition remise, LS-312.
+ *
+ * LA REMISE AU CLIENT EST LA SEULE SOURCE DE `LIVREE`. Le statut n'est la cible
+ * d'aucune transition manuelle, `services/administration-commandes.ts` : il ne
+ * se suppose jamais, `payments.md`. Avant LS-312, `livreA` etait ecrit seul, et
+ * la premiere commande reelle, remise le 3 novembre 2026, restait « Expediee »,
+ * comptee « en transit » dans la barre d'administration.
+ *
+ * TROIS CONDITIONS DANS L'ECRITURE, et aucune lue avant : la remise est connue
+ * (`livreA` non nul), et la commande est encore `EXPEDIEE`. Une commande sortie
+ * de cet etat entre-temps, annulee par l'exploitante, ne bouge pas.
+ *
+ * L'HISTORIQUE SUIT LA TRANSITION, et seulement si elle a eu lieu : origine
+ * `SYSTEME`, aucun acteur, regle S9. L'appelant tient la transaction, sans
+ * quoi une panne entre les deux laisserait un statut sans trace.
+ *
+ * Rend `true` si la commande a change d'etat.
+ */
+export async function passerCommandeLivree(
+  client: ClientBase,
+  expeditionId: string,
+): Promise<boolean> {
+  const expedition = await client.expedition.findUnique({
+    where: { id: expeditionId },
+    select: { commandeId: true },
+  });
+
+  if (expedition === null) {
+    return false;
+  }
+
+  const { count } = await client.commande.updateMany({
+    where: {
+      id: expedition.commandeId,
+      statut: "EXPEDIEE",
+      expedition: { is: { id: expeditionId, livreA: { not: null } } },
+    },
+    data: { statut: "LIVREE" },
+  });
+
+  if (count === 0) {
+    return false;
+  }
+
+  await historiserTransition(client, {
+    commandeId: expedition.commandeId,
+    statutPrecedent: "EXPEDIEE",
+    statutNouveau: "LIVREE",
+    origine: "SYSTEME",
+  });
+
+  return true;
+}
+
+/**
+ * Les expeditions remises dont la commande est restee `EXPEDIEE`, LS-312.
+ *
+ * LE RATTRAPAGE. Une remise ecrite avant LS-312, ou par un cycle interrompu,
+ * ne repasse plus par la lecture du transporteur : `listerASuivre` ecarte les
+ * expeditions dont `livreA` est pose. Seul ce balayage les voit encore.
+ */
+export async function listerRemisesNonLivrees(
+  client: ClientBase,
+  limite: number,
+): Promise<string[]> {
+  const lignes = await client.expedition.findMany({
+    where: { livreA: { not: null }, commande: { statut: "EXPEDIEE" } },
+    select: { id: true },
+    orderBy: { livreA: "asc" },
+    take: limite,
+  });
+
+  return lignes.map((ligne) => ligne.id);
 }
 
 /**

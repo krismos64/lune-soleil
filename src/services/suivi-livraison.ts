@@ -23,7 +23,12 @@ import { clientSuivi } from "@/integrations/sendcloud/suivi";
 import { journaliser, journaliserErreur } from "@/lib/journal";
 import { prisma } from "@/lib/prisma";
 import { leverAlerteCritique } from "@/repositories/confirmation";
-import { enregistrerSuivi, listerASuivre } from "@/repositories/expedition";
+import {
+  enregistrerSuivi,
+  listerASuivre,
+  listerRemisesNonLivrees,
+  passerCommandeLivree,
+} from "@/repositories/expedition";
 
 /**
  * Type d'alerte des livraisons qui n'aboutiront pas, ADR-042 decision 3.
@@ -129,13 +134,55 @@ export async function synchroniserSuivi({
     }
   }
 
+  const rattrapees = await rattraperLesRemises();
+
   journaliser("info", "Synchronisation du suivi terminee", {
     traitees: aSuivre.length,
     echecs,
     livrees,
+    rattrapees,
   });
 
   return { traitees: aSuivre.length, echecs, livrees };
+}
+
+/**
+ * Passe a `LIVREE` les commandes dont la remise est connue sans que le statut
+ * ait suivi, LS-312. Rend leur nombre.
+ *
+ * UN SEUL CHEMIN, EN FIN DE CYCLE, ET C'EST VOULU. Il couvre la remise que la
+ * boucle vient d'ecrire, celles ecrites avant LS-312, dont la premiere commande
+ * reelle, et tout cycle interrompu entre la date et le statut. Un second passage
+ * dans la boucle, transaction comprise, ferait la meme chose : retire, sa
+ * mutation n'aurait rien fait rougir, ce balayage la masquant. Le statut suit
+ * la remise dans le meme cycle, quelques millisecondes plus tard.
+ *
+ * Une transaction par commande, transition et historique ensemble : un echec
+ * n'empeche pas les suivantes, et il est journalise sans interrompre le cycle,
+ * comme une lecture de suivi illisible.
+ */
+async function rattraperLesRemises(): Promise<number> {
+  let rattrapees = 0;
+
+  for (const expeditionId of await listerRemisesNonLivrees(
+    prisma,
+    LIMITE_PAR_CYCLE,
+  )) {
+    try {
+      const passee = await prisma.$transaction((transaction) =>
+        passerCommandeLivree(transaction, expeditionId),
+      );
+      if (passee) {
+        rattrapees += 1;
+      }
+    } catch (erreur) {
+      journaliserErreur("passage a LIVREE impossible", erreur, {
+        expeditionId,
+      });
+    }
+  }
+
+  return rattrapees;
 }
 
 /**
