@@ -46,11 +46,25 @@ const CHAMPS_IMPOSES: Readonly<Record<string, Record<string, boolean>>> = {
   "/passkey/verify-registration": { createSession: false },
 };
 
-export const hookRevocationSessions = createAuthMiddleware(async (ctx) => {
+/**
+ * La logique du hook, en fonction ordinaire, LS-295.
+ *
+ * POURQUOI ELLE EST SORTIE DU MIDDLEWARE. Le hook `before` de `auth.ts` compose
+ * desormais deux gestes. Appeler `hookRevocationSessions(ctx)` depuis un autre
+ * middleware ne rend PAS ce que la fonction ci-dessous rend : l'enveloppe de
+ * `createAuthMiddleware` rend un objet `{ headers }`, que Better Auth prend pour
+ * une reponse finale. Mesure le 7 novembre 2026 : toutes les routes, connexion
+ * comprise, repondaient `200 {"headers":{}}` sans rien executer. La composition
+ * appelle donc cette fonction-ci, jamais le middleware.
+ */
+export function imposerChampsDeCorps(ctx: {
+  path: string;
+  body?: unknown;
+}): { context: { body: Record<string, unknown> } } | undefined {
   // `Object.hasOwn` et non une simple lecture : le chemin vient de la requete,
   // et seules les cles propres de la table doivent pouvoir correspondre.
   if (!Object.hasOwn(CHAMPS_IMPOSES, ctx.path)) {
-    return;
+    return undefined;
   }
   const champs = CHAMPS_IMPOSES[ctx.path];
 
@@ -68,4 +82,8 @@ export const hookRevocationSessions = createAuthMiddleware(async (ctx) => {
       },
     },
   };
-});
+}
+
+export const hookRevocationSessions = createAuthMiddleware(async (ctx) =>
+  imposerChampsDeCorps(ctx),
+);

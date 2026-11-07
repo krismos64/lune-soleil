@@ -17,11 +17,13 @@
 import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { createAuthMiddleware } from "better-auth/api";
 
 import { choisirEnvoyeurEmail, type EnvoyeurEmail } from "@/integrations/email";
 import { hookJournalConnexion } from "@/lib/hook-journal-connexion";
+import { exigerPreuvePourPasskey } from "@/lib/hook-preuve-passkey";
 import { rattacherSansJamaisEchouer } from "@/lib/hook-rattachement";
-import { hookRevocationSessions } from "@/lib/hook-revocation-sessions";
+import { imposerChampsDeCorps } from "@/lib/hook-revocation-sessions";
 import {
   LONGUEUR_MAXIMALE_MOT_DE_PASSE,
   LONGUEUR_MINIMALE_MOT_DE_PASSE,
@@ -459,7 +461,20 @@ export function creerAuth(
        * de passe en CONSERVANT la session du proprietaire ouverte, ce qui
        * retarde la detection. Voir `hook-revocation-sessions.ts`.
        */
-      before: hookRevocationSessions,
+      /*
+       * LA PREUVE D'IDENTITE AVANT LES CHAMPS IMPOSES, LS-295 : une requete
+       * refusee n'a pas a etre reecrite. `exigerPreuvePourPasskey` leve un
+       * `APIError` 403 sur les trois routes de passkey qui changent un moyen
+       * d'acces, et ne fait rien ailleurs. Voir `hook-preuve-passkey.ts`.
+       *
+       * DEUX FONCTIONS ORDINAIRES ET NON DEUX MIDDLEWARES : un middleware appele
+       * depuis un autre rend une reponse `{ headers }`, que Better Auth prend
+       * pour finale. Voir `imposerChampsDeCorps`.
+       */
+      before: createAuthMiddleware(async (ctx) => {
+        await exigerPreuvePourPasskey(ctx);
+        return imposerChampsDeCorps(ctx);
+      }),
 
       after: hookJournalConnexion,
     },
