@@ -71,13 +71,21 @@ revue de LS-294 le 29 octobre, arbitré « après l'ouverture ».
   d'acheminement (2 à 4 jours en retrait, 4 à 6 à domicile) à afficher au
   tunnel et sur la page Livraison, **jamais codés**. Commenté dans LS-291.
 
+## Déploiement
+
+PR #638 fusionnée (`5e0090b`), déployée le 7 novembre par le workflow
+« Déployer en production », run 42376303202, conteneur sain après 10 s,
+aucune migration. Relu en production : `generate-register-options` répond
+401 sans session et avec un faux cookie, `/administration/passkeys` redirige
+vers la connexion sans session, `/api/sante` opérationnel. Le parcours
+connecté (confirmation puis ajout) relève de la prochaine passkey enregistrée
+par l'exploitante.
+
 ## Prochaine étape
 
-- Déployer LS-295 par le workflow « Déployer en production » (aucune
-  migration), puis vérifier `/administration/passkeys` en production.
 - LS-291 : appliquer ADR-035 sur les délais, après vérification de L111-1 et
   L216-1 sur Légifrance.
 
 ## État des tickets
 
-LS-295 en cours jusqu'à la fusion et au déploiement. Ouverts : LS-291, LS-35.
+LS-295 close. Ouverts : LS-291, LS-35.
