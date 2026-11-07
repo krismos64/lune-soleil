@@ -1,0 +1,135 @@
+/*
+ * Avis de la boutique, LS-313. Memes jetons et memes valeurs que la section
+ * d'avis de la fiche produit, `fiche.module.css`, pour que les avis se lisent
+ * pareil partout. Concu a 320 px : vignette et texte cote a cote, la vignette
+ * reduite pour laisser au texte au moins 200 px.
+ */
+
+.liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-4);
+}
+
+.avis {
+  display: grid;
+  grid-template-columns: 4rem minmax(0, 1fr);
+  gap: var(--ls-space-3);
+  align-items: start;
+  padding-bottom: var(--ls-space-4);
+  border-bottom: 1px solid var(--ls-border);
+}
+
+.avis:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.vignette,
+.vignetteAbsente {
+  display: block;
+  width: 4rem;
+  height: 4rem;
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface-sand);
+}
+
+.vignette {
+  object-fit: cover;
+}
+
+.corps {
+  min-width: 0;
+}
+
+/*
+ * LE NOM DE LA PIECE N'EST PAS UN TITRE D'ECRAN : il herite la police de titre
+ * de `globals.css`, C43, mais sa taille reste celle d'un intitule de carte.
+ */
+.piece {
+  margin: 0 0 var(--ls-space-1);
+  color: var(--ls-text);
+  font-size: 1.0625rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.lienPiece {
+  color: var(--ls-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.lienPiece:hover {
+  color: var(--ls-primary);
+}
+
+.lienPiece:focus-visible,
+.lienSignaler:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+.note {
+  margin: 0 0 var(--ls-space-1);
+  color: var(--ls-primary);
+  font-weight: 600;
+}
+
+.dates {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/*
+ * `pre-wrap` garde les sauts de ligne du client, `anywhere` coupe une URL
+ * collee qui deborderait a 320 px, meme regle que la fiche.
+ */
+.commentaire {
+  margin: 0;
+  color: var(--ls-text);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.reponse {
+  margin-top: var(--ls-space-3);
+  padding: var(--ls-space-3);
+  background: var(--ls-surface-sand);
+  border-radius: var(--ls-radius-md);
+}
+
+/* Sur sable, `--ls-text` seulement, C31. */
+.auteurReponse {
+  margin: 0 0 var(--ls-space-1);
+  color: var(--ls-text);
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.texteReponse {
+  margin: 0;
+  color: var(--ls-text);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.signaler {
+  margin: var(--ls-space-2) 0 0;
+}
+
+.lienSignaler {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  color: var(--ls-accent-gold-deep);
+  font-size: 0.875rem;
+  text-decoration: underline;
+}

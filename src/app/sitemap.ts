@@ -57,6 +57,7 @@ const PAGES_FIXES = [
   { chemin: "/catalogue", priorite: 0.9 },
   { chemin: "/atelier", priorite: 0.6 },
   { chemin: "/aide", priorite: 0.5 },
+  { chemin: "/avis", priorite: 0.5 },
   { chemin: "/contact", priorite: 0.5 },
   { chemin: "/informations-legales", priorite: 0.3 },
 ] as const;
