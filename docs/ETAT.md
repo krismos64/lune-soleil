@@ -92,6 +92,9 @@ mention actuelle.
 * **LS-313**, le 7 novembre 2026 : page « Avis clients » (`/avis`) et trois
   derniers avis sur l'accueil ; l'avis d'une pièce archivée reste visible,
   sous son nom figé et sans lien vers sa fiche ; journal `2026-11-07-d`
+* **LS-314**, en cours le 7 novembre 2026 : avis en cartes animées sur `/avis`
+  et l'accueil, cartes immobiles sur la fiche, entrée « Avis » dans la
+  navigation ; en attente de validation visuelle, journal `2026-11-07-e`
 
 **LS-237 est close** le 23 septembre 2026, cause mesurée : un
 `printf | grep -q` sous `pipefail`, que SIGPIPE faisait échouer sur un motif
