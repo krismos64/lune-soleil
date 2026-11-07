@@ -38,6 +38,16 @@ export const ENTREES_NAVIGATION: readonly EntreeNavigation[] = [
     libelle: "Livraison et aide",
     description: "Livraison, retours et questions fréquentes",
   },
+  /*
+   * LS-314 : la page des avis vérifiés, demandée en navigation par Christophe.
+   * Sa sous-route `/avis/signaler` la rend active aussi ; `/avis/[jeton]`,
+   * l'écran de dépôt atteint depuis un email, de même, ce qui est juste.
+   */
+  {
+    href: "/avis",
+    libelle: "Avis clients",
+    description: "Les avis vérifiés laissés après livraison",
+  },
 ];
 
 /**

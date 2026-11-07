@@ -41,6 +41,12 @@ describe("estEntreeActive, LS-309", () => {
     expect(estEntreeActive("/produits", "/catalogue")).toBe(false);
     expect(estEntreeActive("/aide/retours", "/aide")).toBe(true);
   });
+
+  it("la page des avis est active sur elle-même et sur le signalement, LS-314", () => {
+    expect(actives("/avis")).toEqual(["Avis clients"]);
+    expect(actives("/avis/signaler")).toEqual(["Avis clients"]);
+    expect(estEntreeActive("/avisx", "/avis")).toBe(false);
+  });
 });
 
 describe("entrées de navigation", () => {
@@ -50,12 +56,14 @@ describe("entrées de navigation", () => {
       "/catalogue",
       "/atelier",
       "/aide",
+      "/avis",
     ]);
     expect(ENTREES_MENU_MOBILE.map((e) => e.href)).toEqual([
       "/",
       "/catalogue",
       "/atelier",
       "/aide",
+      "/avis",
       "/contact",
     ]);
   });

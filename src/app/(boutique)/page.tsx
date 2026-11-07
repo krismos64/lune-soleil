@@ -478,7 +478,8 @@ export default async function PageAccueil({
        * faux avis ne le remplit jamais.
        *
        * LES MENTIONS D111-10 1° SONT LÀ AUSSI, et non seulement sur `/avis` :
-       * l'article vise tout affichage d'avis. Contenu immobile, ADR-045.
+       * l'article vise tout affichage d'avis. Vitrine, ADR-045 amendé par LS-314 :
+       * étoiles tracées et cartes en glissement seul, texte immobile.
        */}
       {derniersAvis.length > 0 && (
         <section
@@ -497,7 +498,12 @@ export default async function PageAccueil({
             </Link>
           </div>
           <MentionAvisVerifies className={styles.mentionAvis} />
-          <ListeAvisBoutique avis={derniersAvis} niveauTitre="h3" />
+          <ListeAvisBoutique
+            avis={derniersAvis}
+            niveauTitre="h3"
+            anime
+            colonnes={3}
+          />
         </section>
       )}
 
