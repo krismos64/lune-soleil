@@ -98,7 +98,7 @@ export default async function PageAvisClients() {
           <div className={styles.medaillon}>
             <MedaillonAube
               image="/habillage/legales-lettre-aube.jpg"
-              taille="(min-width: 768px) 240px, 128px"
+              taille="(min-width: 768px) 240px, 96px"
               cadrage="71% 60%"
             />
           </div>

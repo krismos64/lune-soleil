@@ -169,6 +169,52 @@ export function ListeAvisBoutique({
             “
           </span>
 
+          {/*
+           * LA PIÈCE OUVRE LA CARTE, revue de LS-314 : son nom est le titre de
+           * la carte, et un lecteur d'écran qui navigue par titres doit
+           * arriver sur l'avis qu'il annonce, pas sur la fin de la carte.
+           */}
+          {ligne.piece !== undefined && (
+            <div className={styles.piece}>
+              {/*
+               * LA PHOTO DE LA PIÈCE, déclinaison 320 existante, ADR-007.
+               * Sans photo, une case vide garde l'alignement. Le texte
+               * alternatif est celui du média : le nom de la pièce suit juste
+               * à côté.
+               */}
+              {ligne.piece.mediaChemin ? (
+                // eslint-disable-next-line @next/next/no-img-element -- fichiers servis par Nginx depuis un volume, hors de la portee de l'optimiseur de Next.js, declinaisons pre-generees par ADR-007
+                <img
+                  src={urlMedia(ligne.piece.mediaChemin, "320.jpeg")}
+                  alt={ligne.piece.mediaTexteAlternatif ?? ""}
+                  className={styles.vignette}
+                  width={320}
+                  height={320}
+                  loading="lazy"
+                />
+              ) : (
+                <span className={styles.vignetteAbsente} aria-hidden="true" />
+              )}
+              <TitrePiece className={styles.nomPiece}>
+                {/*
+                 * UN LIEN SEULEMENT VERS UNE FICHE QUI RÉPOND : une pièce
+                 * archivée rendrait 404. Le nom reste affiché dans les deux
+                 * cas.
+                 */}
+                {ligne.piece.slugFiche ? (
+                  <Link
+                    href={`/produit/${ligne.piece.slugFiche}`}
+                    className={styles.lienPiece}
+                  >
+                    {ligne.piece.nom}
+                  </Link>
+                ) : (
+                  ligne.piece.nom
+                )}
+              </TitrePiece>
+            </div>
+          )}
+
           <p className={styles.note}>
             <Etoiles note={ligne.note} anime={anime} />
             <span className={styles.noteTexte}>{ligne.note} sur 5</span>
@@ -186,47 +232,6 @@ export function ListeAvisBoutique({
           )}
 
           <div className={styles.pied}>
-            {ligne.piece !== undefined && (
-              <div className={styles.piece}>
-                {/*
-                 * LA PHOTO DE LA PIÈCE, déclinaison 320 existante, ADR-007.
-                 * Sans photo, une case vide garde l'alignement. Le texte
-                 * alternatif est celui du média : le nom de la pièce suit juste
-                 * à côté.
-                 */}
-                {ligne.piece.mediaChemin ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- fichiers servis par Nginx depuis un volume, hors de la portee de l'optimiseur de Next.js, declinaisons pre-generees par ADR-007
-                  <img
-                    src={urlMedia(ligne.piece.mediaChemin, "320.jpeg")}
-                    alt={ligne.piece.mediaTexteAlternatif ?? ""}
-                    className={styles.vignette}
-                    width={320}
-                    height={320}
-                    loading="lazy"
-                  />
-                ) : (
-                  <span className={styles.vignetteAbsente} aria-hidden="true" />
-                )}
-                <TitrePiece className={styles.nomPiece}>
-                  {/*
-                   * UN LIEN SEULEMENT VERS UNE FICHE QUI RÉPOND : une pièce
-                   * archivée rendrait 404. Le nom reste affiché dans les deux
-                   * cas.
-                   */}
-                  {ligne.piece.slugFiche ? (
-                    <Link
-                      href={`/produit/${ligne.piece.slugFiche}`}
-                      className={styles.lienPiece}
-                    >
-                      {ligne.piece.nom}
-                    </Link>
-                  ) : (
-                    ligne.piece.nom
-                  )}
-                </TitrePiece>
-              </div>
-            )}
-
             {/* Les deux dates, distinguées, article D111-10 1°. */}
             <p className={styles.dates}>
               Expérience du {formaterDate(ligne.experienceA)}, publié le{" "}

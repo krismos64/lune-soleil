@@ -303,12 +303,17 @@
   }
 }
 
+/*
+ * 12 PX ENTRE LES ENTRÉES DE 768 À 1023 PX, LS-314 : avec la cinquième entrée,
+ * « Avis », 16 px laissaient 9 px entre le nom de la boutique et « Accueil » à
+ * 768 px, sous les 16 px que mesure `en-tete-ls309.spec.ts`.
+ */
 .liste {
   margin: 0;
   padding: 0;
   list-style: none;
   display: flex;
-  gap: var(--ls-space-4);
+  gap: var(--ls-space-3);
 }
 
 @media (min-width: 1024px) {
@@ -513,6 +518,11 @@
  * une police de repli plus large. À 1024 px, le filet des actions recouvrait
  * la fin de « Livraison et aide ». `en-tete-ls309.spec.ts` mesure l'écart de
  * 768 à 1280 px.
+ *
+ * CE CALCUL DATE DE QUATRE ENTRÉES. La cinquième, « Avis » (LS-314), élargit
+ * la navigation d'environ 60 px : le seuil tient encore, mesuré à 1200 px des
+ * deux côtés par les deux tests de l'en-tête, qui font foi plutôt que ce
+ * chiffre.
  */
 @media (max-width: 1199px) {
   .texteEtroit {

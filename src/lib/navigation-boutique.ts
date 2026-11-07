@@ -43,9 +43,15 @@ export const ENTREES_NAVIGATION: readonly EntreeNavigation[] = [
    * Sa sous-route `/avis/signaler` la rend active aussi ; `/avis/[jeton]`,
    * l'écran de dépôt atteint depuis un email, de même, ce qui est juste.
    */
+  /*
+   * « Avis » ET NON « Avis clients » : avec cinq entrées, le nom de la
+   * boutique recouvrait « Accueil » de 14 px à 768 px, mesuré par
+   * `en-tete-ls309.spec.ts`. La description et le titre de la page disent le
+   * reste.
+   */
   {
     href: "/avis",
-    libelle: "Avis clients",
+    libelle: "Avis",
     description: "Les avis vérifiés laissés après livraison",
   },
 ];
