@@ -166,3 +166,58 @@ export async function enregistrerPreuveIdentite(
     data: { reauthentifieeLe: maintenant },
   });
 }
+
+/**
+ * Ce que la garde des routes de passkey decide, LS-295.
+ *
+ * TROIS ISSUES ET NON UN BOOLEEN : le refus de role et le manque de preuve
+ * appellent deux reponses differentes. Le premier est definitif, le second se
+ * leve par une reauthentification, et l'ecran doit proposer celle-ci.
+ */
+export type DecisionIdentifiants =
+  | "AUTORISEE"
+  /** Session de client, ou session disparue : aucune passkey a gerer ici. */
+  | "ROLE_INSUFFISANT"
+  /** Administration sans preuve d'identite de moins de quinze minutes. */
+  | "PREUVE_ABSENTE";
+
+/**
+ * Decide si une session peut enregistrer ou retirer une passkey, LS-295.
+ *
+ * LE DEFAUT QU'ELLE FERME. Les routes de passkey de Better Auth ne demandent
+ * qu'une session de moins de vingt-quatre heures, `freshSessionMiddleware`.
+ * Un intrus muni d'un cookie vole y enregistrait son propre authentificateur,
+ * se reconnectait avec, et la session neuve obtenue passait la preuve de
+ * `prouverIdentiteParPasskey`. Enregistrer une passkey releve de la famille
+ * `IDENTIFIANTS` d'ADR-027 decision 3, et la regle s'applique desormais.
+ *
+ * L'IDENTIFIANT DE SESSION VIENT DE BETTER AUTH, qui l'a lu dans le cookie
+ * signe : l'appelant est le hook `before`, jamais un parametre de requete.
+ * Invariant 2.
+ *
+ * LE ROLE ET LA PREUVE SONT RELUS EN BASE, dans la meme lecture, et non pris
+ * dans l'objet de session que Better Auth met en cache dans un cookie : meme
+ * raison qu'`exigerReauthentificationRecente`, une preuve etablie dans un autre
+ * onglet ou une session revoquee n'y figureraient pas.
+ *
+ * DEFAUT FERME : une ligne absente est un refus.
+ */
+export async function deciderChangementIdentifiants(
+  sessionId: string,
+  maintenant: Date = new Date(),
+): Promise<DecisionIdentifiants> {
+  const enregistree = await prisma.session.findUnique({
+    where: { id: sessionId },
+    select: { reauthentifieeLe: true, utilisateur: { select: { role: true } } },
+  });
+
+  if (!enregistree || enregistree.utilisateur.role !== "ADMINISTRATRICE") {
+    return "ROLE_INSUFFISANT";
+  }
+
+  if (!preuveEncoreValable(enregistree.reauthentifieeLe, maintenant)) {
+    return "PREUVE_ABSENTE";
+  }
+
+  return "AUTORISEE";
+}
