@@ -480,6 +480,14 @@ changement, et c'est l'annonce publique qui deviendrait fausse.
 fiche produit ; le 2° dans la rubrique dédiée de `/informations-legales`. Porter
 l'une ne dispense pas de l'autre, et les deux sont livrées par LS-61.
 
+**Tout affichage d'avis porte le 1°, pas seulement la fiche**, LS-313 : la page
+`/avis` et le bloc de l'accueil le portent aussi. Le texte vit dans **un seul
+composant**, `MentionAvisVerifies` de `components/avis-boutique.tsx`, que la
+fiche emploie également : trois mentions recopiées divergeraient au premier
+changement de procédure. **Aucun balisage `Review` ni `AggregateRating` sur
+`/avis` ni sur l'accueil** : Google refuse les avis qu'une entreprise publie sur
+elle-même, les étoiles restent sur les fiches actives, LS-310.
+
 ### Le signalement d'un doute, article L111-7-2, LS-77
 
 Vérifié à Légifrance le **11 septembre 2026**, version en vigueur depuis le
