@@ -86,6 +86,9 @@ mention actuelle.
   minutes, gardé sur la route HTTP ; le lien de changement d'adresse juge
   désormais la session validée et non le nom du cookie ; ADR-027 amendé,
   journal `2026-11-07-b`
+* **LS-312**, le 7 novembre 2026 : une remise connue fait passer la commande
+  à `LIVREE` (règle V11, jamais appliquée jusque-là), historisée `SYSTEME`, et
+  le cycle de suivi rattrape les remises antérieures ; journal `2026-11-07-c`
 
 **LS-237 est close** le 23 septembre 2026, cause mesurée : un
 `printf | grep -q` sous `pipefail`, que SIGPIPE faisait échouer sur un motif
