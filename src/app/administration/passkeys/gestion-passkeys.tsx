@@ -23,14 +23,38 @@
  */
 import { useEffect, useRef, useState } from "react";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { authClient } from "@/lib/auth-client";
+import { CODE_PREUVE_REQUISE } from "@/lib/codes-passkey";
 import type { PasskeyAffichable } from "@/services/passkeys";
 
 import styles from "./passkeys.module.css";
 
 type Etat = "repos" | "en-cours" | "erreur";
+
+/**
+ * L'ecran de reauthentification, avec retour sur cette page, LS-295.
+ *
+ * `prefetch={false}` : la route est `force-dynamic`, et son prechargement se
+ * rejouerait sans fin tant que le lien est a l'ecran, C40.
+ */
+const CHEMIN_REAUTHENTIFICATION =
+  "/administration/reauthentification?retour=passkeys";
+
+/**
+ * Le refus de la garde, reconnu a son code et non a son statut : un 403 peut
+ * venir d'ailleurs, et seul ce code dit que la reauthentification le levera.
+ */
+function estPreuveRequise(erreur: unknown): boolean {
+  return (
+    typeof erreur === "object" &&
+    erreur !== null &&
+    "code" in erreur &&
+    erreur.code === CODE_PREUVE_REQUISE
+  );
+}
 
 /**
  * Un nom par defaut tire de l'appareil, jamais vide.
@@ -53,8 +77,15 @@ function nomParDefaut(): string {
 
 export function GestionPasskeys({
   passkeys,
+  preuveRecente,
 }: {
   passkeys: PasskeyAffichable[];
+  /**
+   * Preuve d'identite de moins de quinze minutes sur cette session, lue par la
+   * page serveur. Elle decide de ce que l'ecran PROPOSE, jamais de ce qui est
+   * permis : la route refuse d'elle-meme, `hook-preuve-passkey.ts`.
+   */
+  preuveRecente: boolean;
 }) {
   const router = useRouter();
   const [etat, setEtat] = useState<Etat>("repos");
@@ -70,6 +101,13 @@ export function GestionPasskeys({
    * lecteurs d'ecran.
    */
   const [aRetirer, setARetirer] = useState<PasskeyAffichable | null>(null);
+  /*
+   * LA PREUVE PEUT EXPIRER PENDANT QUE L'ECRAN EST OUVERT : quinze minutes
+   * passent vite devant une liste. Le refus de la garde bascule alors l'ecran
+   * dans le meme etat que s'il avait ete rendu sans preuve.
+   */
+  const [preuveExpiree, setPreuveExpiree] = useState(false);
+  const peutModifier = preuveRecente && !preuveExpiree;
 
   /*
    * LE FOCUS SE DEPLACE A LA MAIN, parce que les elements qui le portaient sont
@@ -127,6 +165,12 @@ export function GestionPasskeys({
      * l'annulation : dire « échec » a quelqu'un qui a simplement change d'avis
      * ferait croire l'appareil incompatible et decouragerait un second essai.
      */
+    if (estPreuveRequise(resultat?.error)) {
+      setEtat("repos");
+      setPreuveExpiree(true);
+      return;
+    }
+
     if (resultat?.error) {
       setEtat("erreur");
       setMessage(
@@ -149,6 +193,12 @@ export function GestionPasskeys({
 
     const { error } = await authClient.passkey.deletePasskey({ id });
     setARetirer(null);
+
+    if (estPreuveRequise(error)) {
+      setEtat("repos");
+      setPreuveExpiree(true);
+      return;
+    }
 
     if (error) {
       setEtat("erreur");
@@ -188,34 +238,58 @@ export function GestionPasskeys({
       <section className={styles.section}>
         <h2 className={styles.titreSection}>Enregistrer une passkey</h2>
 
-        <div className={styles.champ}>
-          <label htmlFor="nom-passkey">Nom de l&apos;appareil</label>
-          <input
-            id="nom-passkey"
-            type="text"
-            className={styles.saisie}
-            value={nom}
-            onChange={(evenement) => setNom(evenement.target.value)}
-            placeholder={nomParDefaut()}
-            maxLength={60}
-            autoComplete="off"
-          />
-          <p className={styles.aide}>
-            Pour reconnaître cet appareil dans la liste. Laissé vide, il sera
-            nommé «&nbsp;{nomParDefaut()}&nbsp;».
-          </p>
-        </div>
+        {peutModifier ? (
+          <>
+            <div className={styles.champ}>
+              <label htmlFor="nom-passkey">Nom de l&apos;appareil</label>
+              <input
+                id="nom-passkey"
+                type="text"
+                className={styles.saisie}
+                value={nom}
+                onChange={(evenement) => setNom(evenement.target.value)}
+                placeholder={nomParDefaut()}
+                maxLength={60}
+                autoComplete="off"
+              />
+              <p className={styles.aide}>
+                Pour reconnaître cet appareil dans la liste. Laissé vide, il
+                sera nommé «&nbsp;{nomParDefaut()}&nbsp;».
+              </p>
+            </div>
 
-        <button
-          type="button"
-          className={styles.boutonPrincipal}
-          onClick={enregistrer}
-          disabled={etat === "en-cours"}
-        >
-          {etat === "en-cours"
-            ? "Enregistrement en cours…"
-            : "Enregistrer cet appareil"}
-        </button>
+            <button
+              type="button"
+              className={styles.boutonPrincipal}
+              onClick={enregistrer}
+              disabled={etat === "en-cours"}
+            >
+              {etat === "en-cours"
+                ? "Enregistrement en cours…"
+                : "Enregistrer cet appareil"}
+            </button>
+          </>
+        ) : (
+          /*
+           * LE CHEMIN QUI LEVE LE REFUS, et non un bouton desactive : un bouton
+           * grise ne dit pas quoi faire pour l'activer. ADR-027 decision 3,
+           * famille `IDENTIFIANTS`.
+           */
+          <div className={styles.champ}>
+            <p className={styles.aide}>
+              {preuveExpiree
+                ? "Votre confirmation d'identité a expiré. Confirmez-la à nouveau pour ajouter ou retirer une passkey."
+                : "Pour ajouter ou retirer une passkey, confirmez d'abord votre identité. Elle reste valable quinze minutes."}
+            </p>
+            <Link
+              href={CHEMIN_REAUTHENTIFICATION}
+              prefetch={false}
+              className={styles.boutonPrincipal}
+            >
+              Confirmer mon identité
+            </Link>
+          </div>
+        )}
       </section>
 
       {/*
@@ -255,7 +329,7 @@ export function GestionPasskeys({
                     ) : null}
                   </div>
 
-                  {enConfirmation ? (
+                  {!peutModifier ? null : enConfirmation ? (
                     /*
                      * RETIRER LA DERNIERE PASSKEY EST PERMIS, et prevenu plutot
                      * que bloque. Le mot de passe reste le chemin de secours

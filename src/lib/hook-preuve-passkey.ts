@@ -33,6 +33,11 @@
  */
 import { APIError, getSessionFromCtx } from "better-auth/api";
 
+import {
+  CODE_PREUVE_REQUISE,
+  CODE_ROLE_INSUFFISANT,
+} from "@/lib/codes-passkey";
+
 /** Les chemins gardes, tels que `ctx.path` les porte, sans le prefixe `/api/auth`. */
 export const CHEMINS_PASSKEY_GARDES: ReadonlySet<string> = new Set([
   "/passkey/generate-register-options",
@@ -41,12 +46,10 @@ export const CHEMINS_PASSKEY_GARDES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Code d'erreur lu par l'ecran pour proposer la reauthentification. Un refus de
- * role porte un autre code : proposer de se reauthentifier a un client ne
- * l'aboutirait a rien.
+ * Les codes vivent dans `codes-passkey.ts`, sans dependance, parce que l'ecran
+ * client les lit. Reexportes ici pour les tests et la lecture du hook.
  */
-export const CODE_PREUVE_REQUISE = "REAUTHENTIFICATION_REQUISE";
-export const CODE_ROLE_INSUFFISANT = "ROLE_INSUFFISANT";
+export { CODE_PREUVE_REQUISE, CODE_ROLE_INSUFFISANT };
 
 type ContexteGarde = Parameters<typeof getSessionFromCtx>[0];
 
