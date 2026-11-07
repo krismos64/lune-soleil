@@ -216,7 +216,8 @@ export async function prouverIdentiteParMotDePasse(
  *   - le mot de passe, `/sign-in/email` ;
  *   - une passkey enregistree par la proprietaire, `/passkey/verify-authentication` ;
  *   - le lien de changement d'adresse, que `session-verification.ts` prive de
- *     cookie quand il est ouvert sans session, LS-167.
+ *     cookie quand il est ouvert sans session VALIDE, LS-167 ; un cookie forge
+ *     au bon nom suffisait jusqu'a LS-295, revue critique.
  *
  * Cet argument TIENT A LA LISTE CI-DESSUS. Un nouveau chemin qui ouvre une
  * session sans secret, plugin ou option de Better Auth, rouvrirait le defaut
