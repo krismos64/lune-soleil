@@ -32,6 +32,11 @@ import { ReactionPointeur } from "@/components/reaction-pointeur";
 import { SceneCycle } from "@/components/scene-cycle";
 import { estThemeDeNoel } from "@/lib/theme-saisonnier";
 import { lireSeuilFranchise } from "@/services/parametres";
+import { lireAvisDeLaBoutique } from "@/services/avis";
+import {
+  ListeAvisBoutique,
+  MentionAvisVerifies,
+} from "@/components/avis-boutique";
 import styles from "./page.module.css";
 import {
   attributTheme,
@@ -67,6 +72,12 @@ export const dynamic = "force-dynamic";
 const NOMBRE_MIS_EN_AVANT = 4;
 
 /**
+ * Les derniers avis montres sur l'accueil, LS-313. Trois tiennent a 320 px
+ * sans noyer la page ; les autres vivent sur `/avis`.
+ */
+const NOMBRE_AVIS_ACCUEIL = 3;
+
+/**
  * Mentions du bandeau défilant, LS-260 : des faits déjà affirmés ailleurs sur
  * le site, aucun argument neuf.
  */
@@ -99,11 +110,13 @@ export default async function PageAccueil({
     seuilFranchise,
     { theme, enApercu },
     couvertures,
+    derniersAvis,
   ] = await Promise.all([
     lireCataloguePublic(),
     lireSeuilFranchise(),
     themeDeLaPage(parametres[PARAMETRE_APERCU_THEME]),
     lireCouverturesCategories(),
+    lireAvisDeLaBoutique(NOMBRE_AVIS_ACCUEIL),
   ]);
   const couverturesParCategorie = new Map(
     couvertures.map((couverture) => [couverture.categorieId, couverture]),
@@ -458,6 +471,35 @@ export default async function PageAccueil({
           </div>
         </div>
       </section>
+
+      {/*
+       * LES DERNIERS AVIS, LS-313, en bas de page. Absent tant qu'aucun avis
+       * n'est publie : un bloc vide attirerait l'oeil sur un manque, et aucun
+       * faux avis ne le remplit jamais.
+       *
+       * LES MENTIONS D111-10 1° SONT LA AUSSI, et non seulement sur `/avis` :
+       * l'article vise tout affichage d'avis. Contenu immobile, ADR-045.
+       */}
+      {derniersAvis.length > 0 && (
+        <section
+          className={styles.section}
+          aria-labelledby="titre-avis-accueil"
+        >
+          <div className={styles.enteteSection}>
+            <div>
+              <p className={styles.surtitreSection}>Avis vérifiés</p>
+              <h2 id="titre-avis-accueil" className={styles.titreSection}>
+                Ce qu&apos;en disent les clients
+              </h2>
+            </div>
+            <Link href="/avis" className={styles.lienSection}>
+              Voir tous les avis
+            </Link>
+          </div>
+          <MentionAvisVerifies className={styles.mentionAvis} />
+          <ListeAvisBoutique avis={derniersAvis} niveauTitre="h3" />
+        </section>
+      )}
 
       <ReactionPointeur />
       {noel ? <BoutonPauseAnimations /> : null}

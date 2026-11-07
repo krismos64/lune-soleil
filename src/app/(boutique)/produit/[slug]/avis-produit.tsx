@@ -26,11 +26,8 @@
  */
 import Link from "next/link";
 
-import {
-  DELAI_PUBLICATION_JOURS,
-  resumerAvis,
-  type AvisPublie,
-} from "@/services/avis";
+import { MentionAvisVerifies } from "@/components/avis-boutique";
+import { resumerAvis, type AvisPublie } from "@/services/avis";
 import { formaterDate } from "@/lib/affichage-commande";
 
 import styles from "./fiche.module.css";
@@ -82,15 +79,11 @@ export function AvisProduit({ avis }: { avis: AvisPublie[] }) {
        * MENTION OBLIGATOIRE, article D111-10 1°, PRES DES AVIS et non dans une
        * rubrique lointaine. Elle dit les trois choses que le texte exige a cet
        * endroit : l'existence de la procedure de controle, sa nature, et le
-       * critere de classement applique.
+       * critere de classement applique. Le texte vit dans
+       * `MentionAvisVerifies`, partage avec la page des avis et l'accueil,
+       * LS-313 : une seule source pour une mention legale.
        */}
-      <p className={styles.mentionAvis}>
-        Ces avis sont vérifiés : ils ne sont déposables qu&apos;après une
-        commande réellement livrée, et chacun est relu avant publication, sous{" "}
-        {DELAI_PUBLICATION_JOURS} jours au plus. Aucune contrepartie n&apos;est
-        accordée en échange d&apos;un avis. Ils sont classés du plus récent au
-        plus ancien.
-      </p>
+      <MentionAvisVerifies className={styles.mentionAvis} />
 
       <ul className={styles.listeAvis}>
         {avis.map((ligne) => (

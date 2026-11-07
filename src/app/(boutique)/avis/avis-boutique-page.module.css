@@ -1,0 +1,55 @@
+/*
+ * Page « Avis clients », LS-313. Une colonne de lecture, conçue à 320 px :
+ * gouttière de 16 px, largeur de lecture bornée au-delà.
+ */
+
+.page {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: var(--ls-space-6) var(--ls-space-4) var(--ls-space-8);
+}
+
+.introduction {
+  margin: var(--ls-space-3) 0 var(--ls-space-5);
+  color: var(--ls-text);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+}
+
+.vide {
+  margin: 0;
+  color: var(--ls-text);
+  line-height: 1.6;
+}
+
+.synthese {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-text);
+  line-height: 1.6;
+}
+
+/* Sur le fond crème de la page, `--ls-text-muted` tient 4,86:1, C31. */
+.mention {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-text-muted);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.rubrique {
+  margin: 0 0 var(--ls-space-5);
+}
+
+.lien {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  color: var(--ls-accent-gold-deep);
+  font-size: 0.9375rem;
+  text-decoration: underline;
+}
+
+.lien:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}

@@ -892,3 +892,15 @@
 .sectionCategories .surtitreSection {
   color: var(--ls-accent-saison, var(--ls-primary));
 }
+
+/*
+ * LA MENTION DES AVIS, LS-313, article D111-10 1°. Sur le fond crème de
+ * l'accueil, `--ls-text-muted` tient 4,86:1, C31.
+ */
+.mentionAvis {
+  margin: var(--ls-space-3) 0 var(--ls-space-5);
+  color: var(--ls-text-muted);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  max-width: 44rem;
+}
