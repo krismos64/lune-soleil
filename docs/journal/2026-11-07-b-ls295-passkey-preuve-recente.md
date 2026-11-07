@@ -81,6 +81,20 @@ vers la connexion sans session, `/api/sante` opérationnel. Le parcours
 connecté (confirmation puis ajout) relève de la prochaine passkey enregistrée
 par l'exploitante.
 
+## Relecture de fin de session
+
+À la demande de Christophe, relu `CLAUDE.md`, le README, les agents, les
+skills, les hooks, `docs/`, la mémoire et Jira, en cherchant ce que la journée
+rendait faux :
+
+- `PROCEDURE-AMORCAGE-ADMINISTRATION.md` situait l'enregistrement sur
+  `/administration` et ignorait la confirmation d'identité : corrigé ;
+- la fiche mémoire « Authentification admin » annonçait trois variables
+  `PASSKEY_*` « à ajouter », jamais créées, le code dérivant le `rpID` de
+  l'URL du site : corrigée ;
+- `CLAUDE.md`, le README, les agents, les skills et les hooks ne portent rien
+  que la journée contredise ; les comptes de mutations concordent (199).
+
 ## Prochaine étape
 
 - LS-291 : appliquer ADR-035 sur les délais, après vérification de L111-1 et

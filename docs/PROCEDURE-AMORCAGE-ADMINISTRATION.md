@@ -30,7 +30,7 @@ compte, et un écran pour le gérer serait une généralisation prématurée.
 |---|---|---|
 | 1. Inscription | **l'exploitante** | `/compte/inscription`, sur le domaine de production |
 | 2. Promotion en base | le développeur | `scripts/amorcer-compte-administration.sh` |
-| 3. Enregistrement de la passkey | **l'exploitante** | `/administration`, sur son propre appareil |
+| 3. Enregistrement de la passkey | **l'exploitante** | `/administration/passkeys`, sur son propre appareil, après confirmation de son identité |
 | 4. Vérification par seconde connexion | **l'exploitante** | `/administration/connexion` |
 
 **Il n'y a plus de cinquième étape**, ADR-041 ayant écarté les codes de
@@ -111,6 +111,12 @@ production.** Les deux conditions sont indispensables :
 - une passkey est liée au **matériel**, donc à son iPhone ou son MacBook
 - le `rpID` est le **domaine** : une passkey enregistrée sur un domaine de test
   ne vaut rien en production
+
+**Depuis LS-295, l'écran demande d'abord de confirmer son identité.** Le
+bouton « Confirmer mon identité » mène à la réauthentification ; sans passkey
+encore, elle choisit « Utiliser le mot de passe de secours », puis revient sur
+« Vos passkeys » pour enregistrer l'appareil. La confirmation vaut quinze
+minutes, et le retrait d'une passkey la demande aussi (ADR-027, décision 3).
 
 Cette étape ne se délègue pas et ne s'anticipe pas.
 
