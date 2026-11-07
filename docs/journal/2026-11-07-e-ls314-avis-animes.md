@@ -55,3 +55,16 @@ n'a aucun attribut d'animation dans le HTML servi.
 ## État des tickets
 
 LS-314 close. Ouverts : LS-291, LS-35.
+
+## Relecture de fin de session
+
+À la demande de Christophe, relu `CLAUDE.md`, le README, les agents, les
+skills, les hooks, `docs/`, la mémoire et Jira, en cherchant ce que LS-312,
+LS-313 et LS-314 rendaient faux :
+
+- la ligne de `suivi-livraison.ts` de `REFERENCES.md` taisait le passage à
+  `LIVREE` de LS-312 : complétée ;
+- le commentaire de `listerAvisPublies` affirmait être la seule lecture
+  publique des avis : corrigé ;
+- `CLAUDE.md`, le README, les agents, les skills et les hooks ne portent rien
+  que ces tickets contredisent ; le compte de mutations concorde (206).

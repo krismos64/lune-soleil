@@ -845,8 +845,9 @@ export type AvisPublie = {
  * Les avis publies d'une variante, pour la fiche produit.
  *
  * LE FILTRE PORTE SUR `statut: PUBLIE` ET SUR RIEN D'AUTRE, regle R4 : un avis
- * `DEPOSE`, `REFUSE` ou `RETIRE` n'est jamais visible publiquement. C'est la
- * seule lecture publique des avis, et elle ne rend NI l'identifiant de la ligne
+ * `DEPOSE`, `REFUSE` ou `RETIRE` n'est jamais visible publiquement. Avec
+ * `listerAvisPublicsAvecPiece` (LS-313), c'est l'une des deux lectures
+ * publiques des avis, et elle ne rend NI l'identifiant de la ligne
  * de commande NI celui du client : les deux relieraient un avis a un achat
  * nominatif sur une page publique.
  *
