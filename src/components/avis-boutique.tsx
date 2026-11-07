@@ -1,21 +1,21 @@
 /**
  * Avis de la boutique, pour la page « Avis clients » et l'accueil. LS-313.
  *
- * POURQUOI CE COMPOSANT EXISTE. Les pieces sont uniques : vendue puis archivee,
- * une piece n'a plus de fiche, et son avis disparaissait avec elle. Ici l'avis
- * survit a sa fiche, porte par le nom FIGE a la vente, invariant 3.
+ * POURQUOI CE COMPOSANT EXISTE. Les pièces sont uniques : vendue puis archivée,
+ * une pièce n'a plus de fiche, et son avis disparaissait avec elle. Ici l'avis
+ * survit à sa fiche, porté par le nom FIGÉ à la vente, invariant 3.
  *
  * COMPOSANT SERVEUR, aucune interaction : la liste reste dans le HTML servi,
  * lisible sans JavaScript et indexable.
  *
- * LES MENTIONS DE L'ARTICLE D111-10 1° SONT PRES DE CHAQUE AVIS, comme sur la
- * fiche, `.claude/rules/legal.md` : procedure de controle et classement par
+ * LES MENTIONS DE L'ARTICLE D111-10 1° SONT PRÈS DE CHAQUE AVIS, comme sur la
+ * fiche, `.claude/rules/legal.md` : procédure de contrôle et classement par
  * `MentionAvisVerifies`, les deux dates sur chaque avis. Un affichage d'avis
  * qui les omettrait, page ou bloc d'accueil, serait le manquement que l'article
  * vise. La rubrique du 2° vit sur `/informations-legales#avis`.
  *
  * AUCUN BALISAGE `Review` NI `AggregateRating` : Google refuse les avis qu'une
- * entreprise publie sur elle-meme. Les etoiles restent sur les fiches actives,
+ * entreprise publie sur elle-même. Les étoiles restent sur les fiches actives,
  * LS-310.
  */
 import Link from "next/link";
@@ -30,10 +30,10 @@ import {
 import styles from "./avis-boutique.module.css";
 
 /**
- * La mention obligatoire pres des avis, article D111-10 1°. UNE SEULE SOURCE
- * pour la fiche, la page et l'accueil : trois textes recopies divergeraient au
- * premier changement de procedure, et c'est la mention publique qui deviendrait
- * fausse. Le classement annonce est celui du `orderBy` des lectures publiques.
+ * La mention obligatoire près des avis, article D111-10 1°. UNE SEULE SOURCE
+ * pour la fiche, la page et l'accueil : trois textes recopiés divergeraient au
+ * premier changement de procédure, et c'est la mention publique qui deviendrait
+ * fausse. Le classement annoncé est celui du `orderBy` des lectures publiques.
  */
 export function MentionAvisVerifies({
   className,
@@ -52,8 +52,8 @@ export function MentionAvisVerifies({
 }
 
 /**
- * La liste des avis, chacun avec sa piece. `niveauTitre` choisit le niveau du
- * nom de la piece selon la page qui l'accueille, pour ne jamais sauter un
+ * La liste des avis, chacun avec sa pièce. `niveauTitre` choisit le niveau du
+ * nom de la pièce selon la page qui l'accueille, pour ne jamais sauter un
  * niveau de titre.
  */
 export function ListeAvisBoutique({
@@ -70,10 +70,10 @@ export function ListeAvisBoutique({
       {avis.map((ligne) => (
         <li key={ligne.id} className={styles.avis}>
           {/*
-           * LA PHOTO DE LA PIECE, declinaison 320 existante, ADR-007, comme la
-           * vignette du recapitulatif, LS-300. Sans photo, une case vide garde
-           * l'alignement. Le texte alternatif est celui du media : le nom de la
-           * piece suit juste a cote, ce qui evite de le faire lire deux fois.
+           * LA PHOTO DE LA PIÈCE, déclinaison 320 existante, ADR-007, comme la
+           * vignette du récapitulatif, LS-300. Sans photo, une case vide garde
+           * l'alignement. Le texte alternatif est celui du média : le nom de la
+           * pièce suit juste à côté, ce qui évite de le faire lire deux fois.
            */}
           {ligne.piece.mediaChemin ? (
             // eslint-disable-next-line @next/next/no-img-element -- fichiers servis par Nginx depuis un volume, hors de la portee de l'optimiseur de Next.js, declinaisons pre-generees par ADR-007
@@ -92,8 +92,8 @@ export function ListeAvisBoutique({
           <div className={styles.corps}>
             <TitrePiece className={styles.piece}>
               {/*
-               * UN LIEN SEULEMENT VERS UNE FICHE QUI REPOND : une piece
-               * archivee rendrait 404. Le nom reste affiche dans les deux cas.
+               * UN LIEN SEULEMENT VERS UNE FICHE QUI RÉPOND : une pièce
+               * archivée rendrait 404. Le nom reste affiché dans les deux cas.
                */}
               {ligne.piece.slugFiche ? (
                 <Link
@@ -109,7 +109,7 @@ export function ListeAvisBoutique({
 
             <p className={styles.note}>{ligne.note} sur 5</p>
 
-            {/* Les deux dates, distinguees, article D111-10 1°. */}
+            {/* Les deux dates, distinguées, article D111-10 1°. */}
             <p className={styles.dates}>
               Expérience du {formaterDate(ligne.experienceA)}, publié le{" "}
               {formaterDate(ligne.publieA)}.
@@ -128,7 +128,7 @@ export function ListeAvisBoutique({
 
             {/*
              * LE SIGNALEMENT, article L111-7-2, LS-77 : tout affichage d'un avis
-             * le porte, pres de l'avis, et pas seulement la fiche.
+             * le porte, près de l'avis, et pas seulement la fiche.
              */}
             <p className={styles.signaler}>
               <Link

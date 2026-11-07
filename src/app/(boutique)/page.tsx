@@ -72,7 +72,7 @@ export const dynamic = "force-dynamic";
 const NOMBRE_MIS_EN_AVANT = 4;
 
 /**
- * Les derniers avis montres sur l'accueil, LS-313. Trois tiennent a 320 px
+ * Les derniers avis montrés sur l'accueil, LS-313. Trois tiennent à 320 px
  * sans noyer la page ; les autres vivent sur `/avis`.
  */
 const NOMBRE_AVIS_ACCUEIL = 3;
@@ -474,10 +474,10 @@ export default async function PageAccueil({
 
       {/*
        * LES DERNIERS AVIS, LS-313, en bas de page. Absent tant qu'aucun avis
-       * n'est publie : un bloc vide attirerait l'oeil sur un manque, et aucun
+       * n'est publié : un bloc vide attirerait l'œil sur un manque, et aucun
        * faux avis ne le remplit jamais.
        *
-       * LES MENTIONS D111-10 1° SONT LA AUSSI, et non seulement sur `/avis` :
+       * LES MENTIONS D111-10 1° SONT LÀ AUSSI, et non seulement sur `/avis` :
        * l'article vise tout affichage d'avis. Contenu immobile, ADR-045.
        */}
       {derniersAvis.length > 0 && (

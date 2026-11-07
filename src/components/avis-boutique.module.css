@@ -1,8 +1,8 @@
 /*
- * Avis de la boutique, LS-313. Memes jetons et memes valeurs que la section
+ * Avis de la boutique, LS-313. Mêmes jetons et mêmes valeurs que la section
  * d'avis de la fiche produit, `fiche.module.css`, pour que les avis se lisent
- * pareil partout. Concu a 320 px : vignette et texte cote a cote, la vignette
- * reduite pour laisser au texte au moins 200 px.
+ * pareil partout. Conçu à 320 px : vignette et texte côte à côte, la vignette
+ * réduite pour laisser au texte au moins 200 px.
  */
 
 .liste {
@@ -46,8 +46,8 @@
 }
 
 /*
- * LE NOM DE LA PIECE N'EST PAS UN TITRE D'ECRAN : il herite la police de titre
- * de `globals.css`, C43, mais sa taille reste celle d'un intitule de carte.
+ * LE NOM DE LA PIÈCE N'EST PAS UN TITRE D'ÉCRAN : il hérite la police de titre
+ * de `globals.css`, C43, mais sa taille reste celle d'un intitulé de carte.
  */
 .piece {
   margin: 0 0 var(--ls-space-1);
@@ -57,7 +57,15 @@
   overflow-wrap: anywhere;
 }
 
+/*
+ * 44 PX DE ZONE TACTILE, comme les deux autres liens de la carte : en ligne,
+ * le lien n'aurait que la hauteur d'une ligne de texte, 24 px environ, sous la
+ * règle de `frontend-design.md`. Relevé par la revue d'interface de LS-313.
+ */
 .lienPiece {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
   color: var(--ls-text);
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -88,7 +96,7 @@
 
 /*
  * `pre-wrap` garde les sauts de ligne du client, `anywhere` coupe une URL
- * collee qui deborderait a 320 px, meme regle que la fiche.
+ * collée qui déborderait à 320 px, même règle que la fiche.
  */
 .commentaire {
   margin: 0;

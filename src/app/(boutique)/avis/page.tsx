@@ -1,20 +1,20 @@
 /**
  * Page « Avis clients », LS-313.
  *
- * LE BESOIN. Les pieces sont uniques : vendue puis archivee, une piece perd sa
+ * LE BESOIN. Les pièces sont uniques : vendue puis archivée, une pièce perd sa
  * fiche, et son avis disparaissait du site. Cette page garde tous les avis
- * publies, chacun avec le nom de la piece figee a la vente.
+ * publiés, chacun avec le nom de la pièce figée à la vente.
  *
  * CE QUI EST GARANTI AILLEURS ET SEULEMENT REPRIS ICI :
  *
- *   - le filtre public, statut `PUBLIE` seul, regle R4, dans le repository ;
- *   - les mentions de l'article D111-10 1° pres des avis,
+ *   - le filtre public, statut `PUBLIE` seul, règle R4, dans le repository ;
+ *   - les mentions de l'article D111-10 1° près des avis,
  *     `MentionAvisVerifies` et les deux dates de chaque avis ;
- *   - la rubrique du 2°, sur `/informations-legales#avis`, liee ici.
+ *   - la rubrique du 2°, sur `/informations-legales#avis`, liée ici.
  *
- * AUCUNE DONNEE STRUCTUREE D'AVIS : Google refuse les avis qu'une entreprise
- * publie sur elle-meme. La page sert les visiteurs et les moteurs de reponse,
- * pas les etoiles, qui restent sur les fiches actives, LS-310.
+ * AUCUNE DONNÉE STRUCTURÉE D'AVIS : Google refuse les avis qu'une entreprise
+ * publie sur elle-même. La page sert les visiteurs et les moteurs de réponse,
+ * pas les étoiles, qui restent sur les fiches actives, LS-310.
  *
  * CONTENU IMMOBILE, ADR-045 : une page de lecture, aucune animation.
  */
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
 };
 
 /**
- * Lu a chaque affichage : une decision de moderation doit se voir aussitot,
+ * Lu à chaque affichage : une décision de modération doit se voir aussitôt,
  * comme sur l'accueil, et le volume ne justifie aucun cache.
  */
 export const dynamic = "force-dynamic";
@@ -66,8 +66,8 @@ export default async function PageAvisClients() {
 
       {avis.length === 0 ? (
         /*
-         * ETAT VIDE, SANS INVENTION : aucun faux avis, jamais, et aucune
-         * mention d'avis a afficher, l'article D111-10 ne visant que
+         * ÉTAT VIDE, SANS INVENTION : aucun faux avis, jamais, et aucune
+         * mention d'avis à afficher, l'article D111-10 ne visant que
          * l'affichage d'avis.
          */
         <p className={styles.vide}>
