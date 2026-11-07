@@ -359,7 +359,10 @@ ou `ROLE_INSUFFISANT`, `lib/codes-passkey.ts`.
 **La règle des soixante secondes tient à une liste**, écrite dans
 `preuve-identite.ts` : une session neuve ne s'ouvre plus que par le mot de
 passe, une passkey de la propriétaire, ou le lien de changement d'adresse privé
-de cookie par LS-167. **Un nouveau chemin qui ouvre une session sans secret
+de cookie par LS-167. **Ce dernier jugeait « déjà connecté » sur le seul nom du
+cookie** : un cookie forgé au bon nom ouvrait une session, donc une preuve. La
+revue critique de LS-295 l'a trouvé, `session-verification.ts` compare depuis
+la session **validée** par Better Auth à la session posée. **Un nouveau chemin qui ouvre une session sans secret
 rouvre le défaut** par cette fonction, plugin ou option de Better Auth compris.
 
 **Deux middlewares ne se composent pas en s'appelant.** `createAuthMiddleware`
