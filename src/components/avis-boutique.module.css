@@ -1,113 +1,183 @@
 /*
- * Avis de la boutique, LS-313. Mêmes jetons et mêmes valeurs que la section
- * d'avis de la fiche produit, `fiche.module.css`, pour que les avis se lisent
- * pareil partout. Conçu à 320 px : vignette et texte côte à côte, la vignette
- * réduite pour laisser au texte au moins 200 px.
+ * Avis en cartes, LS-313 puis LS-314. Conçu à 320 px : une colonne ; deux ou
+ * trois colonnes à partir de 768 px selon `data-colonnes`.
+ *
+ * LA CARTE PORTE SON PROPRE FOND BLANC, `--ls-surface`, sur le crème des pages
+ * comme sur le sable : chaque paire de texte ci-dessous se mesure sur le blanc,
+ * C31.
  */
 
 .liste {
   list-style: none;
   margin: 0;
   padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--ls-space-5);
+}
+
+@media (min-width: 768px) {
+  .liste[data-colonnes="2"],
+  .liste[data-colonnes="3"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .liste[data-colonnes="3"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/*
+ * @bordure-decorative la carte n'est pas un contrôle, son fond blanc et son
+ * contenu l'identifient ; le filet ne fait que la détacher du fond.
+ */
+.carte {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--ls-space-4);
-}
-
-.avis {
-  display: grid;
-  grid-template-columns: 4rem minmax(0, 1fr);
   gap: var(--ls-space-3);
-  align-items: start;
-  padding-bottom: var(--ls-space-4);
-  border-bottom: 1px solid var(--ls-border);
-}
-
-.avis:last-child {
-  padding-bottom: 0;
-  border-bottom: 0;
-}
-
-.vignette,
-.vignetteAbsente {
-  display: block;
-  width: 4rem;
-  height: 4rem;
-  border-radius: var(--ls-radius-sm);
-  background: var(--ls-surface-sand);
-}
-
-.vignette {
-  object-fit: cover;
-}
-
-.corps {
   min-width: 0;
+  margin-top: var(--ls-space-3);
+  padding: var(--ls-space-6) var(--ls-space-4) var(--ls-space-4);
+  background: var(--ls-surface);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-lg);
+}
+
+@media (min-width: 768px) {
+  .carte {
+    padding: var(--ls-space-6) var(--ls-space-5) var(--ls-space-5);
+  }
 }
 
 /*
- * LE NOM DE LA PIÈCE N'EST PAS UN TITRE D'ÉCRAN : il hérite la police de titre
- * de `globals.css`, C43, mais sa taille reste celle d'un intitulé de carte.
+ * LE GUILLEMET, DÉCOR DORÉ, ADR-022 : `--ls-accent-gold` n'est permis que pour
+ * un décor, et celui-ci est `aria-hidden`. Il mord sur le haut de la carte,
+ * ce qui la signe sans lui prendre de place.
  */
-.piece {
-  margin: 0 0 var(--ls-space-1);
-  color: var(--ls-text);
-  font-size: 1.0625rem;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
+.guillemet {
+  position: absolute;
+  top: calc(var(--ls-space-5) * -1);
+  left: var(--ls-space-4);
+  color: var(--ls-accent-gold);
+  font-family: var(--ls-police-titre);
+  font-size: 4rem;
+  line-height: 1;
+  pointer-events: none;
 }
 
-/*
- * 44 PX DE ZONE TACTILE, comme les deux autres liens de la carte : en ligne,
- * le lien n'aurait que la hauteur d'une ligne de texte, 24 px environ, sous la
- * règle de `frontend-design.md`. Relevé par la revue d'interface de LS-313.
- */
-.lienPiece {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--ls-touch-target);
-  color: var(--ls-text);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.lienPiece:hover {
-  color: var(--ls-primary);
-}
-
-.lienPiece:focus-visible,
-.lienSignaler:focus-visible {
-  outline: 3px solid var(--ls-focus);
-  outline-offset: 2px;
-}
+/* ---------- La note ---------- */
 
 .note {
-  margin: 0 0 var(--ls-space-1);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--ls-space-2);
+}
+
+/* Sur blanc, `--ls-primary` tient 8,93:1. */
+.noteTexte {
   color: var(--ls-primary);
+  font-size: 0.875rem;
   font-weight: 600;
 }
 
-.dates {
-  margin: 0 0 var(--ls-space-2);
-  color: var(--ls-text-muted);
-  font-size: 0.875rem;
-  line-height: 1.5;
+.etoiles {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.etoile {
+  width: 1.125rem;
+  height: 1.125rem;
+  overflow: visible;
+}
+
+.etoilesGrandes .etoile {
+  width: 1.75rem;
+  height: 1.75rem;
 }
 
 /*
- * `pre-wrap` garde les sauts de ligne du client, `anywhere` coupe une URL
- * collée qui déborderait à 320 px, même règle que la fiche.
+ * L'ÉTOILE PLEINE EST DORÉE, L'ÉTOILE VIDE N'EST QU'UN CONTOUR. État final posé
+ * hors de toute animation : sans script, en mouvement réduit ou l'animation
+ * finie, l'étoile est déjà dessinée.
+ */
+.etoileFond {
+  fill: transparent;
+}
+
+.etoile[data-pleine] .etoileFond {
+  fill: var(--ls-accent-gold);
+}
+
+.etoileTrait {
+  fill: none;
+  stroke: var(--ls-or-sombre);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+}
+
+.etoile:not([data-pleine]) .etoileTrait {
+  stroke: var(--ls-border-controle);
+}
+
+/*
+ * LE TRACÉ PUIS LE REMPLISSAGE, LS-314, ADR-045 : `stroke-dashoffset` et
+ * `opacity` seuls, étoile par étoile. Borné par `data-borne` posé sur le
+ * groupe, et seulement quand le mouvement est permis.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .etoiles[data-anime] .etoileTrait {
+    stroke-dasharray: 1;
+    animation: trace 900ms var(--ls-easing-sortie) both;
+    animation-delay: calc(200ms + var(--i, 0) * 140ms);
+  }
+
+  .etoiles[data-anime] .etoile[data-pleine] .etoileFond {
+    animation: remplit 600ms ease both;
+    animation-delay: calc(700ms + var(--i, 0) * 140ms);
+  }
+}
+
+@keyframes trace {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes remplit {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ---------- Le texte ---------- */
+
+/*
+ * LE COMMENTAIRE EN SERIF, la voix du client comme une citation. `pre-wrap`
+ * garde ses sauts de ligne, `anywhere` coupe une URL collée qui déborderait à
+ * 320 px, même règle que la fiche.
  */
 .commentaire {
   margin: 0;
   color: var(--ls-text);
-  line-height: 1.6;
+  font-family: var(--ls-police-titre);
+  font-size: 1.125rem;
+  line-height: 1.55;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
 .reponse {
-  margin-top: var(--ls-space-3);
   padding: var(--ls-space-3);
   background: var(--ls-surface-sand);
   border-radius: var(--ls-radius-md);
@@ -129,15 +199,96 @@
   overflow-wrap: anywhere;
 }
 
-.signaler {
-  margin: var(--ls-space-2) 0 0;
+/* ---------- Le pied de carte ---------- */
+
+/*
+ * @bordure-decorative filet de séparation à l'intérieur de la carte, il ne
+ * borde aucun contrôle.
+ */
+.pied {
+  margin-top: auto;
+  padding-top: var(--ls-space-3);
+  border-top: 1px solid var(--ls-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-1);
 }
 
+.piece {
+  display: flex;
+  align-items: center;
+  gap: var(--ls-space-3);
+  min-width: 0;
+}
+
+.vignette,
+.vignetteAbsente {
+  flex: none;
+  display: block;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: var(--ls-surface-sand);
+}
+
+.vignette {
+  object-fit: cover;
+}
+
+/*
+ * LE NOM DE LA PIÈCE N'EST PAS UN TITRE D'ÉCRAN : il hérite la police de titre
+ * de `globals.css`, C43, mais sa taille reste celle d'un intitulé de carte.
+ */
+.nomPiece {
+  margin: 0;
+  min-width: 0;
+  color: var(--ls-text);
+  font-size: 1rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * 44 PX DE ZONE TACTILE, comme le lien de signalement. Revue d'interface de
+ * LS-313.
+ */
+.lienPiece {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  color: var(--ls-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.lienPiece:hover {
+  color: var(--ls-primary);
+}
+
+.lienPiece:focus-visible,
+.lienSignaler:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+/* Sur blanc, `--ls-text-muted` tient au-dessus de 4,5:1, C31. */
+.dates {
+  margin: 0;
+  color: var(--ls-text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.signaler {
+  margin: 0;
+}
+
+/* Sur blanc, `--ls-accent-gold-deep` tient au-dessus de 4,5:1, C31. */
 .lienSignaler {
   display: inline-flex;
   align-items: center;
   min-height: var(--ls-touch-target);
   color: var(--ls-accent-gold-deep);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   text-decoration: underline;
 }
