@@ -324,8 +324,9 @@ Les deux chemins livrés vérifient chacun quelque chose avant d'écrire :
   seconde fois ; il constate qu'une session vient d'être ouverte, fenêtre d'une
   minute, âge négatif refusé. **Cette condition n'atteste pas le moyen** : une
   connexion par mot de passe produit une session tout aussi neuve. Ce qu'elle
-  ferme est l'appel depuis une session ouverte de longue date, et les deux
-  chemins accordant la même chose, il n'y a rien à gagner à emprunter celui-ci
+  ferme est l'appel depuis une session ouverte de longue date. **Elle n'est
+  juste que parce que l'enregistrement d'une passkey est gardé**, LS-295 : voir
+  la section suivante
 
 **Les deux gardes vont ensemble sur cet écran, et LS-89 a tranché** la question
 que cette règle laissait ouverte : la page **et** les deux Server Actions
@@ -336,6 +337,37 @@ passe, `verifyPassword` vérifiant contre `session.user.id`.
 
 **Le chemin de la passkey est `/passkey/verify-authentication`**, jamais
 `/sign-in/passkey` qui n'existe pas, voir la section du journal des connexions.
+
+### Enregistrer ou retirer une passkey exige une preuve récente, LS-295
+
+**La règle disait « les deux chemins accordent la même chose, rien à gagner à
+emprunter celui-ci », et c'était faux.** Les routes de passkey de Better Auth ne
+demandent qu'une session de moins de vingt-quatre heures, `freshSessionMiddleware`.
+Un intrus muni d'un cookie volé y enregistrait son propre authentificateur, se
+reconnectait avec, et la session neuve passait `prouverIdentiteParPasskey` : la
+réauthentification du remboursement tombait sans aucun secret.
+
+**La garde vit sur la route HTTP**, dans le hook `before` de `auth.ts`,
+`lib/hook-preuve-passkey.ts`, et jamais seulement sur l'écran : `addPasskey`
+part du navigateur vers `/api/auth/passkey/*`. Trois routes,
+`generate-register-options`, `verify-registration` et `delete-passkey` ; le
+renommage reste libre. Elle exige le rôle `ADMINISTRATRICE` **et** une preuve de
+moins de quinze minutes sur **cette** session, relus en base par
+`deciderChangementIdentifiants`. Refus en 403, code `REAUTHENTIFICATION_REQUISE`
+ou `ROLE_INSUFFISANT`, `lib/codes-passkey.ts`.
+
+**La règle des soixante secondes tient à une liste**, écrite dans
+`preuve-identite.ts` : une session neuve ne s'ouvre plus que par le mot de
+passe, une passkey de la propriétaire, ou le lien de changement d'adresse privé
+de cookie par LS-167. **Un nouveau chemin qui ouvre une session sans secret
+rouvre le défaut** par cette fonction, plugin ou option de Better Auth compris.
+
+**Deux middlewares ne se composent pas en s'appelant.** `createAuthMiddleware`
+enveloppe sa fonction, et l'appeler depuis un autre middleware rend une réponse
+`{ headers }` que Better Auth prend pour finale : mesuré le 7 novembre 2026,
+toutes les routes, connexion comprise, répondaient `200 {"headers":{}}`. Le hook
+`before` compose donc deux **fonctions ordinaires**, `exigerPreuvePourPasskey` et
+`imposerChampsDeCorps`.
 
 ### Le contrôle ne voit pas une marque manquante
 

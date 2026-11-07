@@ -5,7 +5,7 @@
 | Statut | Accepté |
 | Date | 4 août 2026 |
 | Décideur | Christophe Mostefaoui |
-| Ticket | LS-70, LS-54 |
+| Ticket | LS-70, LS-54, amendé par LS-295 le 7 novembre 2026 |
 
 ## Ce que cet ADR précise
 
@@ -215,6 +215,35 @@ reste invisible.
 **Un contrôle de complétude est donc exigé**, sur le modèle de ceux qui existent
 déjà : une liste énumérée à la main reste une opinion tant qu'un contrôle de
 cardinalité ne la confronte pas au code réel.
+
+### Amendement du 7 novembre 2026 : la passkey se change sur la route, LS-295
+
+« Changer le mot de passe ou la passkey » figure dans la table depuis l'origine,
+et **l'enregistrement d'une passkey n'était pas gardé**. Les routes du plugin de
+Better Auth ne demandaient qu'une session de moins de vingt-quatre heures,
+cliente comprise. Un intrus muni d'un cookie volé enregistrait son propre
+authentificateur, se reconnectait avec, et la session neuve obtenue valait
+preuve d'identité : la réauthentification du remboursement tombait sans aucun
+secret. Trouvé par la revue critique de LS-294, le 29 octobre 2026.
+
+**Ce que la famille couvre désormais, précisément :**
+
+| Geste | Gardé | Pourquoi |
+|---|---|---|
+| enregistrer une passkey, les deux étapes | oui | c'est le chemin du contournement |
+| retirer une passkey | oui | priver l'exploitante de son moyen principal |
+| renommer une passkey | non | ne change aucun moyen d'accès |
+
+**La garde porte sur la route HTTP**, `/api/auth/passkey/*`, par le hook
+`before` de Better Auth, et non sur l'écran seul : l'enregistrement part du
+navigateur. Elle exige le rôle d'administration et une preuve de moins de
+quinze minutes **sur la session qui appelle**. **Un client ne peut plus
+enregistrer de passkey**, ADR-023 réservant la passkey à l'administration.
+
+**La règle des soixante secondes de la preuve par passkey est maintenue.** Elle
+ne vaut que parce qu'une session neuve exige désormais un secret que le cookie
+ne donne pas, mot de passe ou passkey de la propriétaire. Un chemin ajouté qui
+ouvrirait une session sans secret la rendrait de nouveau fausse.
 
 ## Alternatives écartées
 
