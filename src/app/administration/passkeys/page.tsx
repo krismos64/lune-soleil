@@ -36,6 +36,10 @@ import {
   exigerAdministratrice,
 } from "@/services/autorisation";
 import { listerPasskeysDuCompte } from "@/services/passkeys";
+import {
+  exigerReauthentificationRecente,
+  ReauthentificationRequiseError,
+} from "@/services/reauthentification";
 
 import { GestionPasskeys } from "./gestion-passkeys";
 import styles from "./passkeys.module.css";
@@ -81,6 +85,15 @@ export default async function PagePasskeys() {
    * 10 septembre 2026, motif connu du depot : un garde-fou qui cite la forme
    * interdite se fait detecter par le controle qu'il explique.
    */
+  /*
+   * LA PREUVE RECENTE DECIDE DE CE QUE L'ECRAN PROPOSE, LS-295, ET N'AUTORISE
+   * RIEN. La garde vit sur les routes de Better Auth, `hook-preuve-passkey.ts` :
+   * cet ecran se contente de ne pas offrir un bouton voue au refus, et d'offrir
+   * a la place le chemin qui leve ce refus. Un ecran qui proposerait l'ajout et
+   * echouerait ensuite laisserait l'exploitante devant un message sans issue.
+   */
+  const preuveRecente = await lirePreuveRecente(await headers());
+
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1>Vos passkeys</h1>
@@ -106,15 +119,43 @@ export default async function PagePasskeys() {
        * rejoue CE composant serveur : une seule source pour la donnee.
        */}
       <Suspense fallback={<ChargementPasskeys />}>
-        <ListePasskeys utilisateurId={identite.utilisateurId} />
+        <ListePasskeys
+          utilisateurId={identite.utilisateurId}
+          preuveRecente={preuveRecente}
+        />
       </Suspense>
     </main>
   );
 }
 
-async function ListePasskeys({ utilisateurId }: { utilisateurId: string }) {
+async function ListePasskeys({
+  utilisateurId,
+  preuveRecente,
+}: {
+  utilisateurId: string;
+  preuveRecente: boolean;
+}) {
   const passkeys = await listerPasskeysDuCompte(utilisateurId);
-  return <GestionPasskeys passkeys={passkeys} />;
+  return <GestionPasskeys passkeys={passkeys} preuveRecente={preuveRecente} />;
+}
+
+/**
+ * Vrai si la session porte une preuve d'identite de moins de quinze minutes.
+ *
+ * SEUL LE MANQUE DE PREUVE SE TRADUIT EN `false` : toute autre erreur, base
+ * injoignable comprise, remonte vers `error.tsx`. L'avaler afficherait
+ * « confirmez votre identite » a une exploitante qui vient de le faire.
+ */
+async function lirePreuveRecente(enTetes: Headers): Promise<boolean> {
+  try {
+    await exigerReauthentificationRecente(enTetes, "IDENTIFIANTS");
+    return true;
+  } catch (erreur) {
+    if (erreur instanceof ReauthentificationRequiseError) {
+      return false;
+    }
+    throw erreur;
+  }
 }
 
 /**

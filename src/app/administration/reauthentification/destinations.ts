@@ -33,6 +33,7 @@ export const DESTINATIONS = {
   parametres: "/administration/parametres",
   commandes: "/administration/commandes",
   retractations: "/administration/retractations",
+  passkeys: "/administration/passkeys",
   tableau: "/administration",
 } as const;
 
@@ -59,6 +60,7 @@ export const MOTIFS: Record<CleDestination, string> = {
   parametres: "avant de modifier les paramètres de la boutique",
   commandes: "avant de rembourser une commande",
   retractations: "avant de traiter une demande de rétractation",
+  passkeys: "avant d'ajouter ou de retirer une passkey",
   tableau: "avant de poursuivre cette action",
 };
 
