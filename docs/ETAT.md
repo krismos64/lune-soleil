@@ -89,6 +89,9 @@ mention actuelle.
 * **LS-312**, le 7 novembre 2026 : une remise connue fait passer la commande
   à `LIVREE` (règle V11, jamais appliquée jusque-là), historisée `SYSTEME`, et
   le cycle de suivi rattrape les remises antérieures ; journal `2026-11-07-c`
+* **LS-313**, le 7 novembre 2026 : page « Avis clients » (`/avis`) et trois
+  derniers avis sur l'accueil ; l'avis d'une pièce archivée reste visible,
+  sous son nom figé et sans lien vers sa fiche ; journal `2026-11-07-d`
 
 **LS-237 est close** le 23 septembre 2026, cause mesurée : un
 `printf | grep -q` sous `pipefail`, que SIGPIPE faisait échouer sur un motif
