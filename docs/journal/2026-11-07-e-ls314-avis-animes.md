@@ -40,11 +40,18 @@ plus jolie, et un lien vers les avis dans la barre de navigation.
 - Suite Vitest complète : 2004 tests verts.
 - Captures en mouvement normal, dont 320 × 568 : la note tient au-dessus du pli.
 
+## Validation et production
+
+Captures validées par Christophe. PR #644 fusionnée (`7645f71`), déployée par
+le workflow, run 42403847396, aucune migration. Relu : `/avis` répond 200 avec
+l'avis réel, l'entrée « Avis » porte `aria-current` sur sa page, la fiche
+n'a aucun attribut d'animation dans le HTML servi.
+
 ## Prochaine étape
 
-- **Validation des captures par Christophe**, critère 7, puis fusion et
-  déploiement.
+- LS-291 : délais d'acheminement d'ADR-035, après vérification de L111-1 et
+  L216-1 sur Légifrance.
 
 ## État des tickets
 
-LS-314 en cours, en attente de validation visuelle. Ouverts : LS-291, LS-35.
+LS-314 close. Ouverts : LS-291, LS-35.
