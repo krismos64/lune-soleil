@@ -16,15 +16,19 @@
  * publie sur elle-même. La page sert les visiteurs et les moteurs de réponse,
  * pas les étoiles, qui restent sur les fiches actives, LS-310.
  *
- * CONTENU IMMOBILE, ADR-045 : une page de lecture, aucune animation.
+ * LE MOUVEMENT, ADR-045 amendé par LS-314 : ciel d'aube et médaillon à
+ * l'en-tête, étoiles tracées à l'entrée, cartes en glissement seul. Le texte,
+ * la note écrite et les mentions ne bougent jamais.
  */
 import type { Metadata } from "next";
 import Link from "next/link";
 
 import {
+  Etoiles,
   ListeAvisBoutique,
   MentionAvisVerifies,
 } from "@/components/avis-boutique";
+import { MedaillonAube } from "@/components/medaillon-aube";
 import { NOM_BOUTIQUE, openGraphDePage } from "@/lib/seo";
 import { lireAvisDeLaBoutique, resumerAvis } from "@/services/avis";
 
@@ -54,53 +58,83 @@ export default async function PageAvisClients() {
   const avis = await lireAvisDeLaBoutique();
   const synthese = resumerAvis(avis);
 
+  const moyenne =
+    synthese.moyenne === null
+      ? null
+      : synthese.moyenne.toLocaleString("fr-FR", {
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 1,
+        });
+
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
-      <h1>Avis clients</h1>
-
-      <p className={styles.introduction}>
-        Chaque pièce de l&apos;atelier est unique : une fois vendue, elle ne
-        revient pas au catalogue. Les avis de ceux qui l&apos;ont reçue restent
-        ici.
-      </p>
-
-      {avis.length === 0 ? (
-        /*
-         * ÉTAT VIDE, SANS INVENTION : aucun faux avis, jamais, et aucune
-         * mention d'avis à afficher, l'article D111-10 ne visant que
-         * l'affichage d'avis.
-         */
-        <p className={styles.vide}>
-          Aucun avis n&apos;est encore publié. Les avis sont proposés aux
-          clients après la livraison de leur commande.
-        </p>
-      ) : (
-        <>
-          {synthese.moyenne !== null && (
-            <p className={styles.synthese}>
-              <strong>
-                {synthese.moyenne.toLocaleString("fr-FR", {
-                  minimumFractionDigits: 1,
-                  maximumFractionDigits: 1,
-                })}{" "}
-                sur 5
-              </strong>{" "}
-              pour {synthese.nombre} avis
-              {synthese.nombre > 1 ? " publiés" : " publié"}.
+      <section className={styles.tete}>
+        <div className={styles.teteGrille}>
+          <div>
+            <p className={styles.surtitre}>Avis vérifiés</p>
+            <h1 className={styles.titre}>Avis clients</h1>
+            <p className={styles.introduction}>
+              Chaque pièce de l&apos;atelier est unique : une fois vendue, elle
+              ne revient pas au catalogue. Les avis de ceux qui l&apos;ont reçue
+              restent ici.
             </p>
-          )}
 
-          <MentionAvisVerifies className={styles.mention} />
+            {/*
+             * LA NOTE MOYENNE EN GRAND, ÉCRITE : le chiffre et la phrase sont du
+             * texte, les étoiles un décor qui se trace à l'entrée.
+             */}
+            {moyenne !== null && (
+              <div className={styles.score}>
+                <Etoiles note={synthese.moyenne ?? 0} anime taille="grande" />
+                <p className={styles.scoreTexte}>
+                  <span className={styles.scoreChiffre}>{moyenne}</span> sur 5
+                  pour {synthese.nombre} avis
+                  {synthese.nombre > 1 ? " publiés" : " publié"}.
+                </p>
+              </div>
+            )}
+          </div>
 
-          <p className={styles.rubrique}>
-            <Link href="/informations-legales#avis" className={styles.lien}>
-              Comment les avis sont collectés, contrôlés et conservés
-            </Link>
+          <div className={styles.medaillon}>
+            <MedaillonAube
+              image="/habillage/legales-lettre-aube.jpg"
+              taille="(min-width: 768px) 240px, 128px"
+              cadrage="71% 60%"
+            />
+          </div>
+        </div>
+      </section>
+
+      <div className={styles.corps}>
+        {avis.length === 0 ? (
+          /*
+           * ÉTAT VIDE, SANS INVENTION : aucun faux avis, jamais, et aucune
+           * mention d'avis à afficher, l'article D111-10 ne visant que
+           * l'affichage d'avis.
+           */
+          <p className={styles.vide}>
+            Aucun avis n&apos;est encore publié. Les avis sont proposés aux
+            clients après la livraison de leur commande.
           </p>
+        ) : (
+          <>
+            <MentionAvisVerifies className={styles.mention} />
 
-          <ListeAvisBoutique avis={avis} niveauTitre="h2" />
-        </>
-      )}
+            <p className={styles.rubrique}>
+              <Link href="/informations-legales#avis" className={styles.lien}>
+                Comment les avis sont collectés, contrôlés et conservés
+              </Link>
+            </p>
+
+            <ListeAvisBoutique
+              avis={avis}
+              niveauTitre="h2"
+              anime
+              colonnes={2}
+            />
+          </>
+        )}
+      </div>
     </main>
   );
 }

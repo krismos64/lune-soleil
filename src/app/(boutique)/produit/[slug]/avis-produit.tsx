@@ -24,11 +24,12 @@
  * fabrique de donnee d'exemple, et la section entiere disparait quand aucun avis
  * publie n'existe.
  */
-import Link from "next/link";
 
-import { MentionAvisVerifies } from "@/components/avis-boutique";
+import {
+  ListeAvisBoutique,
+  MentionAvisVerifies,
+} from "@/components/avis-boutique";
 import { resumerAvis, type AvisPublie } from "@/services/avis";
-import { formaterDate } from "@/lib/affichage-commande";
 
 import styles from "./fiche.module.css";
 
@@ -85,65 +86,13 @@ export function AvisProduit({ avis }: { avis: AvisPublie[] }) {
        */}
       <MentionAvisVerifies className={styles.mentionAvis} />
 
-      <ul className={styles.listeAvis}>
-        {avis.map((ligne) => (
-          <li key={ligne.id} className={styles.avis}>
-            <p className={styles.noteAvis}>{ligne.note} sur 5</p>
-
-            {/*
-             * LES DEUX DATES SONT AFFICHEES ET DISTINGUEES, article D111-10 1°.
-             * La date de l'EXPERIENCE est celle de la remise du colis, celle de
-             * PUBLICATION celle de la mise en ligne : les confondre, ou n'en
-             * afficher qu'une, est le manquement le plus facile a commettre ici.
-             */}
-            <p className={styles.datesAvis}>
-              Expérience du {formaterDate(ligne.experienceA)}, publié le{" "}
-              {formaterDate(ligne.publieA)}.
-            </p>
-
-            {ligne.commentaire !== null && (
-              <p className={styles.commentaireAvis}>{ligne.commentaire}</p>
-            )}
-
-            {/*
-             * LA REPONSE DE L'EXPLOITANTE S'AFFICHE SI ELLE EXISTE, regle R14.
-             * Aucun ecran n'en cree aujourd'hui, l'usage n'etant pas decide :
-             * ce rendu existe pour que la donnee ne reste pas invisible le jour
-             * ou la decision sera prise, et il ne coute rien tant qu'aucune
-             * reponse n'est ecrite.
-             */}
-            {ligne.reponse !== null && (
-              <div className={styles.reponseAvis}>
-                <p className={styles.auteurReponse}>Réponse de la boutique</p>
-                <p className={styles.texteReponse}>{ligne.reponse.contenu}</p>
-              </div>
-            )}
-
-            {/*
-             * LE LIEN DE SIGNALEMENT, LS-77, article L111-7-2. La
-             * fonctionnalite doit etre GRATUITE et accessible : un formulaire
-             * qu'aucun lien ne designe serait atteignable seulement en
-             * saisissant son URL, ce qui ne remplit pas l'obligation.
-             *
-             * IL EST PRES DE CHAQUE AVIS ET NON EN PIED DE SECTION : le texte
-             * vise le signalement d'UN avis, et un lien unique obligerait a
-             * choisir ensuite lequel, ce qui multiplie les erreurs de cible.
-             *
-             * `prefetch` RESTE PAR DEFAUT, la fiche produit etant une route
-             * publique : la regle C40 ne vise que les routes `force-dynamic`
-             * de l'administration.
-             */}
-            <p className={styles.signalerAvis}>
-              <Link
-                href={{ pathname: "/avis/signaler", query: { avis: ligne.id } }}
-                className={styles.lienSignaler}
-              >
-                Signaler un doute sur cet avis
-              </Link>
-            </p>
-          </li>
-        ))}
-      </ul>
+      {/*
+       * LES MÊMES CARTES QUE LA PAGE DES AVIS, LS-314, sans la pièce, que la
+       * fiche porte déjà, et SANS ANIMATION : ADR-045 n'admet aucun décor
+       * animé sur la fiche produit. Dates, réponse et lien de signalement
+       * (L111-7-2) sont rendus par `ListeAvisBoutique`.
+       */}
+      <ListeAvisBoutique avis={avis} />
     </section>
   );
 }

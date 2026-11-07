@@ -1,19 +1,127 @@
 /*
- * Page « Avis clients », LS-313. Une colonne de lecture, conçue à 320 px :
- * gouttière de 16 px, largeur de lecture bornée au-delà.
+ * Page « Avis clients », LS-313, habillée par LS-314. Conçue à 320 px :
+ * gouttière de 16 px, une colonne de cartes ; deux à partir de 768 px.
  */
 
 .page {
-  max-width: 44rem;
+  padding-bottom: var(--ls-space-8);
+}
+
+/*
+ * DÉGRADÉ DE CIEL, amendement LS-314 d'ADR-045, celui des informations
+ * légales (LS-282). `--ls-or-sombre` y tient 4,73:1 au point le plus sombre,
+ * `--ls-ciel-aube-haut`, `--ls-text` 10,39:1 et `--ls-primary-hover` davantage.
+ */
+.tete {
+  padding: var(--ls-space-6) var(--ls-space-4);
+  background:
+    radial-gradient(
+      90% 70% at 80% 20%,
+      var(--ls-ciel-jour-haut) 0%,
+      transparent 60%
+    ),
+    linear-gradient(
+      180deg,
+      var(--ls-ciel-aube-haut) 0%,
+      var(--ls-ciel-jour-haut) 60%,
+      var(--ls-background) 100%
+    );
+}
+
+/*
+ * À 320 PX, LE MÉDAILLON PASSE AU-DESSUS DU TITRE, réduit à 8 rem : il signe la
+ * page sans repousser la note sous la ligne de flottaison.
+ */
+.teteGrille {
+  display: grid;
+  align-items: center;
+  gap: var(--ls-space-4);
+  max-width: 56rem;
   margin: 0 auto;
-  padding: var(--ls-space-6) var(--ls-space-4) var(--ls-space-8);
+}
+
+.medaillon {
+  order: -1;
+  width: 8rem;
+}
+
+.surtitre {
+  margin: 0 0 var(--ls-space-2);
+  color: var(--ls-or-sombre);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.titre {
+  margin: 0;
+  color: var(--ls-primary-hover);
+  font-size: clamp(2rem, 7vw, 3.25rem);
+  line-height: 1.12;
 }
 
 .introduction {
-  margin: var(--ls-space-3) 0 var(--ls-space-5);
+  max-width: 48ch;
+  margin: var(--ls-space-3) 0 0;
   color: var(--ls-text);
   font-size: 1.0625rem;
   line-height: 1.6;
+}
+
+.score {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ls-space-2) var(--ls-space-3);
+  margin-top: var(--ls-space-5);
+}
+
+.scoreTexte {
+  margin: 0;
+  color: var(--ls-text);
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+/* La moyenne en serif, comme un titre ; c'est du texte, pas un décor. */
+.scoreChiffre {
+  color: var(--ls-primary-hover);
+  font-family: var(--ls-police-titre);
+  font-size: 2.25rem;
+  font-weight: 600;
+  line-height: 1;
+  vertical-align: -0.15em;
+}
+
+@media (min-width: 768px) {
+  .tete {
+    padding: var(--ls-space-7) var(--ls-space-6);
+  }
+
+  .teteGrille {
+    grid-template-columns: 1fr 15rem;
+  }
+
+  .medaillon {
+    order: 0;
+    width: auto;
+  }
+}
+
+/* ---------- Le corps ---------- */
+
+.corps {
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: var(--ls-space-5) var(--ls-space-4) 0;
+}
+
+@media (min-width: 768px) {
+  .corps {
+    padding: var(--ls-space-6) var(--ls-space-6) 0;
+    box-sizing: content-box;
+  }
 }
 
 .vide {
@@ -22,14 +130,9 @@
   line-height: 1.6;
 }
 
-.synthese {
-  margin: 0 0 var(--ls-space-2);
-  color: var(--ls-text);
-  line-height: 1.6;
-}
-
 /* Sur le fond crème de la page, `--ls-text-muted` tient 4,86:1, C31. */
 .mention {
+  max-width: 60ch;
   margin: 0 0 var(--ls-space-2);
   color: var(--ls-text-muted);
   font-size: 0.9375rem;
