@@ -910,6 +910,104 @@ export async function listerAvisPublies(
   });
 }
 
+/** La piece d'un avis, telle que la page des avis la presente, LS-313. */
+export type PieceDeLAvis = {
+  /** Le nom FIGE a la vente, invariant 3, jamais le nom actuel du catalogue. */
+  nom: string;
+  /** Le slug de la fiche, `null` quand la fiche ne repond plus. */
+  slugFiche: string | null;
+  mediaChemin: string | null;
+  mediaTexteAlternatif: string | null;
+};
+
+export type AvisPublieAvecPiece = AvisPublie & { piece: PieceDeLAvis };
+
+/**
+ * Tous les avis publies de la boutique, avec leur piece, LS-313.
+ *
+ * LE BESOIN : les pieces sont uniques. Une fois vendue puis archivee, une piece
+ * n'a plus de fiche, seul `ACTIF` etant servi, et son avis disparaissait du
+ * site. Rien n'est supprime en base, LS-246 : l'avis reste ancre sur sa ligne
+ * de commande, qui porte le nom fige de la piece.
+ *
+ * MEMES GARDES QUE `listerAvisPublies`, regle R4 : statut `PUBLIE` seul, ni
+ * identifiant de client ni de ligne de commande rendu, ordre chronologique
+ * decroissant sur `publieA`, le critere que la mention annonce.
+ *
+ * LE NOM VIENT DE LA LIGNE ET NON DU PRODUIT, invariant 3 : un produit renomme
+ * apres la vente ne renomme pas la piece achetee. La photo et le slug viennent
+ * du produit, et le slug n'est rendu que pour un produit `ACTIF`, sans quoi le
+ * lien menerait a une 404.
+ *
+ * `limite` absente, tout est rendu : le volume d'avis d'un atelier ne justifie
+ * pas de pagination, `frontend-design.md` interdisant un plafond premature.
+ */
+export async function listerAvisPublicsAvecPiece(
+  client: ClientBase,
+  limite?: number,
+): Promise<AvisPublieAvecPiece[]> {
+  const avis = await client.avis.findMany({
+    where: { statut: "PUBLIE" },
+    select: {
+      id: true,
+      note: true,
+      commentaire: true,
+      publieA: true,
+      experienceA: true,
+      reponse: { select: { contenu: true, publieeA: true } },
+      ligneCommande: {
+        select: {
+          libelleProduitFige: true,
+          variante: {
+            select: {
+              produit: {
+                select: {
+                  slug: true,
+                  statut: true,
+                  medias: {
+                    where: { ordre: 1 },
+                    select: { chemin: true, texteAlternatif: true },
+                    take: 1,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    orderBy: { publieA: "desc" },
+    ...(limite === undefined ? {} : { take: limite }),
+  });
+
+  return avis.flatMap((ligne) => {
+    // Memes incoherences ecartees que `listerAvisPublies`, jamais inventees.
+    if (ligne.publieA === null || ligne.note === null) {
+      return [];
+    }
+
+    const produit = ligne.ligneCommande.variante?.produit ?? null;
+    const media = produit?.medias[0] ?? null;
+
+    return [
+      {
+        id: ligne.id,
+        note: ligne.note,
+        commentaire: ligne.commentaire,
+        publieA: ligne.publieA,
+        experienceA: ligne.experienceA,
+        reponse: ligne.reponse,
+        piece: {
+          nom: ligne.ligneCommande.libelleProduitFige,
+          slugFiche: produit?.statut === "ACTIF" ? produit.slug : null,
+          mediaChemin: media?.chemin ?? null,
+          mediaTexteAlternatif: media?.texteAlternatif ?? null,
+        },
+      },
+    ];
+  });
+}
+
 /** Un avis tel que son auteur le voit dans son espace client, LS-221. */
 export type AvisDuClient = {
   id: string;
