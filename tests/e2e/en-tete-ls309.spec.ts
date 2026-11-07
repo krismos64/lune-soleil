@@ -177,6 +177,36 @@ test("la navigation et les actions ne se chevauchent pas de 768 à 1280 px", asy
   }
 });
 
+/*
+ * LE CÔTÉ GAUCHE AUSSI, revue de LS-314 : avec une cinquième entrée, le nom
+ * de la boutique recouvrait « Accueil » à 768 px, la colonne de la marque
+ * rétrécissant quand la navigation s'élargit. La mesure ci-dessus ne
+ * regardait que le côté des actions.
+ */
+test("la marque et la navigation ne se chevauchent pas de 768 à 1280 px", async ({
+  page,
+}) => {
+  test.skip(
+    page.viewportSize()?.width !== 1280,
+    "les largeurs sont parcourues depuis un seul projet",
+  );
+  await page.goto("/aide");
+  for (const largeur of [768, 800, 900, 1023, 1024, 1100, 1199, 1200, 1280]) {
+    await page.setViewportSize({ width: largeur, height: 800 });
+    const ecart = await page.getByRole("banner").evaluate((barre) => {
+      const premier = barre
+        .querySelector(":scope > div > nav li")!
+        .getBoundingClientRect().left;
+      const marque = barre.querySelector('a[href="/"]')!;
+      // Le TEXTE de la marque, et non sa boîte : `nowrap` le fait déborder.
+      const plage = document.createRange();
+      plage.selectNodeContents(marque);
+      return premier - plage.getBoundingClientRect().right;
+    });
+    expect(ecart, `écart à ${largeur} px`).toBeGreaterThanOrEqual(16);
+  }
+});
+
 test("chaque élément de l'en-tête trace un contour de focus de 3 px", async ({
   page,
 }) => {

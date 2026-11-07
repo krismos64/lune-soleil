@@ -43,8 +43,8 @@ describe("estEntreeActive, LS-309", () => {
   });
 
   it("la page des avis est active sur elle-même et sur le signalement, LS-314", () => {
-    expect(actives("/avis")).toEqual(["Avis clients"]);
-    expect(actives("/avis/signaler")).toEqual(["Avis clients"]);
+    expect(actives("/avis")).toEqual(["Avis"]);
+    expect(actives("/avis/signaler")).toEqual(["Avis"]);
     expect(estEntreeActive("/avisx", "/avis")).toBe(false);
   });
 });

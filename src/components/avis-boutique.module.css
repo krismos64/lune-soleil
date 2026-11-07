@@ -16,9 +16,13 @@
   gap: var(--ls-space-5);
 }
 
+/*
+ * TROIS COLONNES OU UNE, JAMAIS DEUX POUR TROIS AVIS : entre 768 et 1023 px,
+ * deux colonnes laissaient la troisième carte seule sur sa ligne, revue de
+ * LS-314.
+ */
 @media (min-width: 768px) {
-  .liste[data-colonnes="2"],
-  .liste[data-colonnes="3"] {
+  .liste[data-colonnes="2"] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

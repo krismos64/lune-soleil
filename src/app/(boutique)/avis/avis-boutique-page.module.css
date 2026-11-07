@@ -29,7 +29,7 @@
 }
 
 /*
- * À 320 PX, LE MÉDAILLON PASSE AU-DESSUS DU TITRE, réduit à 8 rem : il signe la
+ * À 320 PX, LE MÉDAILLON PASSE AU-DESSUS DU TITRE, réduit à 6 rem : il signe la
  * page sans repousser la note sous la ligne de flottaison.
  */
 .teteGrille {
@@ -42,7 +42,7 @@
 
 .medaillon {
   order: -1;
-  width: 8rem;
+  width: 6rem;
 }
 
 .surtitre {

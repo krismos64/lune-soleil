@@ -21,6 +21,8 @@ import { expect, test, type Page } from "@playwright/test";
 const PAGES = [
   { chemin: "/informations-legales", titre: "Informations légales" },
   { chemin: "/catalogue", titre: "Le catalogue" },
+  // LS-314 : médaillon, ciel et étoiles tracées, revue d'interface.
+  { chemin: "/avis", titre: "Avis clients" },
 ] as const;
 
 async function animationsEnCours(page: Page): Promise<number> {
