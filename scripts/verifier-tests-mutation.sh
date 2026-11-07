@@ -67,6 +67,8 @@ ROUTE_TACHE="src/app/api/interne/taches/[nom]/route.ts"
 PREUVE="src/services/preuve-identite.ts"
 HOOK_PREUVE_PASSKEY="src/lib/hook-preuve-passkey.ts"
 SESSION_VERIFICATION="src/lib/session-verification.ts"
+DEPOT_EXPEDITION="src/repositories/expedition.ts"
+SUIVI_LIVRAISON="src/services/suivi-livraison.ts"
 ACTION_REAUTH="src/app/administration/reauthentification/actions.ts"
 PURGE_JOURNAUX="src/services/purge-journaux.ts"
 PROXIES="src/lib/proxies-de-confiance.ts"
@@ -142,7 +144,7 @@ SENDCLOUD_EXPEDITION="src/integrations/sendcloud/expedition.ts"
 #
 # Le defaut datait du jour ou le cas 121 a ete ecrit, et rien ne pouvait le
 # signaler : le nocturne mourait au cas 1 sur 180 depuis trois nuits.
-MUTABLES=("$SQL" "$STOCK" "$DEPOT_PANIER" "$GLOBALS_CSS" "$CATALOGUE_CSS" "$DECOR_NOEL_CSS" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$HOOK_PREUVE_PASSKEY" "$SESSION_VERIFICATION" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE" "$AVIS" "$DEPOT_AVIS" "$SERVICE_AVOIR" "$DEPOT_PARAMETRES" "$SENDCLOUD_EXPEDITION" "$DESTINATIONS_REAUTH" "$TEST_COMPTABILITE" "$URLS_MEDIAS")
+MUTABLES=("$SQL" "$STOCK" "$DEPOT_PANIER" "$GLOBALS_CSS" "$CATALOGUE_CSS" "$DECOR_NOEL_CSS" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$HOOK_PREUVE_PASSKEY" "$SESSION_VERIFICATION" "$DEPOT_EXPEDITION" "$SUIVI_LIVRAISON" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE" "$AVIS" "$DEPOT_AVIS" "$SERVICE_AVOIR" "$DEPOT_PARAMETRES" "$SENDCLOUD_EXPEDITION" "$DESTINATIONS_REAUTH" "$TEST_COMPTABILITE" "$URLS_MEDIAS")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -3048,6 +3050,28 @@ cas "retrait de passkey sans preuve d'identite" integration \
 mute "$SESSION_VERIFICATION" 's/  return typeof valide === "string" && posee === valide;/  return typeof posee === "string";/'
 cas "lien de verification qui garde le cookie d'une session neuve" integration \
   "cookie forge : aucun cookie ne sort"
+
+# Cas LS-312, la remise fait passer la commande a LIVREE.
+#
+# La premiere commande reelle, remise le 3 novembre 2026, restait « Expediee »
+# et comptee « en transit ». Le balayage de fin de cycle est le seul chemin ;
+# l'ecriture repete les gardes de la liste, et chacune s'eprouve par un appel
+# direct, l'autre la masquant par `synchroniserSuivi`.
+mute "$SUIVI_LIVRAISON" 's/  const rattrapees = await rattraperLesRemises\(\);/  const rattrapees = 0;/'
+cas "remise connue sans passage a LIVREE" integration \
+  "fait passer la commande a LIVREE, historisee par le systeme"
+
+mute "$DEPOT_EXPEDITION" 's/      statut: "EXPEDIEE",\n      expedition: \{ is:/      expedition: { is:/'
+cas "passage a LIVREE d'une commande sortie de l'etat expediee" integration \
+  "passerCommandeLivree refuse une commande qui n'est plus EXPEDIEE"
+
+mute "$DEPOT_EXPEDITION" 's/expedition: \{ is: \{ id: expeditionId, livreA: \{ not: null \} \} \}/expedition: { is: { id: expeditionId } }/'
+cas "passage a LIVREE sans remise connue" integration \
+  "passerCommandeLivree refuse une expedition sans remise connue"
+
+mute "$DEPOT_EXPEDITION" 's/  await historiserTransition\(client, \{\n    commandeId: expedition\.commandeId,/  void ({\n    commandeId: expedition.commandeId,/'
+cas "passage a LIVREE sans historique" integration \
+  "fait passer la commande a LIVREE, historisee par le systeme"
 
 echo
 echo "-----------------------------------------"
