@@ -151,6 +151,7 @@ ADR-042 décision 7.
 
 - Le 5 novembre après 7 h 53 UTC : relire l'invitation de C-2026-0001
   (`invitation_avis`, `envoi_en_attente`, `journal_email`) et son envoi.
+  Fait le 7 novembre, envoyée le 5 à 07:54 UTC, journal `2026-11-07-a`.
 - Après toute story qui ajoute une tâche planifiée : pousser le crontab et
   reconstruire `cron`, `EXPLOITATION.md`, le déploiement ne le fait pas.
 - LS-295, la réauthentification par passkey.
