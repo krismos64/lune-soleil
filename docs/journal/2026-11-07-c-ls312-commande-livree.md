@@ -33,11 +33,13 @@ Sans effet juridique : le délai de rétractation se calcule sur `livre_a`.
 - 4 mutations, chacune rouge à la main, inscrites dans
   `verifier-tests-mutation.sh` (203 cas).
 
-## En production après déploiement
+## En production
 
-Le cycle horaire de suivi fera passer C-2026-0001 à `LIVREE` au premier
-passage, avec une ligne d'historique `SYSTEME`. C'est la transition normale du
-système, pas une écriture à la main (LS-246).
+PR #640 fusionnée (`54f5a2b`), déployée par le workflow, run 42379336615,
+conteneur sain après 10 s, aucune migration. Au cycle de suivi de
+14:23:00 UTC, C-2026-0001 est passée de `EXPEDIEE` à `LIVREE` : une ligne
+d'historique `SYSTEME` sans acteur, journal applicatif `rattrapees: 1`. C'est
+la transition normale du système, pas une écriture à la main (LS-246).
 
 ## Prochaine étape
 
@@ -47,5 +49,4 @@ système, pas une écriture à la main (LS-246).
 
 ## État des tickets
 
-LS-312 en cours jusqu'au déploiement et au constat sur C-2026-0001. Ouverts :
-LS-313, LS-291, LS-35.
+LS-312 close. Ouverts : LS-313, LS-291, LS-35.
