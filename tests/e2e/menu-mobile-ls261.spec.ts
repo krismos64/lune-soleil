@@ -55,12 +55,12 @@ test.describe("en mouvement normal", () => {
     ).toBe(true);
 
     /*
-     * LA TABULATION BOUCLE SANS FUITE : cinq entrées depuis l'accueil de
-     * LS-309, deux raccourcis, puis
-     * le bouton, puis à nouveau la première entrée. Une fuite atteindrait un
-     * élément de la page inerte ou de l'en-tête masqué.
+     * LA TABULATION BOUCLE SANS FUITE : six entrées depuis l'accueil de
+     * LS-309 et les avis de LS-314, deux raccourcis, puis le bouton, puis à
+     * nouveau la première entrée. Une fuite atteindrait un élément de la page
+     * inerte ou de l'en-tête masqué. Le compte suit `ENTREES_MENU_MOBILE`.
      */
-    for (let i = 0; i < 7; i++) await page.keyboard.press("Tab");
+    for (let i = 0; i < 8; i++) await page.keyboard.press("Tab");
     await expect(bouton(page)).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(premier).toBeFocused();

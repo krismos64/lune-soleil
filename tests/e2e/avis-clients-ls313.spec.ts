@@ -98,3 +98,28 @@ test("le pied de page designe la page des avis", async ({ page }) => {
     page.getByRole("contentinfo").getByRole("link", { name: "Avis clients" }),
   ).toHaveAttribute("href", "/avis");
 });
+
+/**
+ * L'ENTRÉE DE NAVIGATION, LS-314 : en ligne à partir de 768 px, page active
+ * annoncée par `aria-current`, et dans le menu mobile en dessous.
+ */
+test("la navigation designe la page des avis et la marque active", async ({
+  page,
+}) => {
+  await page.goto("/avis");
+  const largeur = page.viewportSize()?.width ?? 0;
+
+  if (largeur >= 768) {
+    const lien = page
+      .getByRole("navigation", { name: "Navigation principale" })
+      .getByRole("link", { name: /Avis clients/ });
+    await expect(lien).toHaveAttribute("aria-current", "page");
+  } else {
+    await page.getByRole("banner").locator("summary").click();
+    await expect(
+      page
+        .getByRole("navigation", { name: "Navigation principale" })
+        .getByRole("link", { name: /Avis clients/ }),
+    ).toHaveAttribute("href", "/avis");
+  }
+});

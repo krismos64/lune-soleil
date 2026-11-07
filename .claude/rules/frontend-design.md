@@ -227,13 +227,14 @@ uniquement.
 
 **ADR-045 amende ce paragraphe** sur trois points, et le reste demeure :
 
-- le **dégradé de ciel** est permis dans neuf décors seulement, la scène
+- le **dégradé de ciel** est permis dans dix décors seulement, la scène
   du matin à la nuit, le fond du menu mobile plein écran, depuis
   l'amendement du 4 octobre 2026, LS-268, le panneau des portes d'entrée de la
   boutique et l'en-tête du contact, depuis celui du 7 octobre 2026, LS-280,
   l'en-tête et la section des questions fréquentes de l'aide, et depuis LS-282
   et LS-283, l'en-tête des informations légales, l'en-tête et la bande de nuit
-  du catalogue, avec les teintes de ciel de `tokens.css`.
+  du catalogue, et depuis LS-314 l'en-tête de la page des avis, avec les
+  teintes de ciel de `tokens.css`.
   Jamais sur un contrôle, une carte, un bandeau ou une surface d'interface ;
 - le **texte doré en dégradé** est permis sur des mots de titre si **chaque
   arrêt de couleur** atteint 3:1 sur son fond, mesuré et non estimé ;
@@ -245,6 +246,9 @@ uniquement.
   l'entrée de chaque section et un contenu immobile, amendement de LS-280 ;
   les informations légales, un médaillon d'en-tête et des icônes de section
   tracées, texte et sommaire immobiles, amendement de LS-282.
+  La page des avis, un médaillon et un ciel d'en-tête, des étoiles tracées et
+  des cartes en glissement seul ; la fiche reprend les mêmes cartes, immobiles,
+  amendement de LS-314.
 
 ## Animation des pages publiques, ADR-045
 

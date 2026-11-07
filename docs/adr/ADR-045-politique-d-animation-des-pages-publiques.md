@@ -8,6 +8,29 @@
 | Amende | `.claude/rules/frontend-design.md`, sections « Interdits visuels » et « Paillettes » |
 | Ticket | LS-259 |
 
+## Amendement du 7 novembre 2026, avis clients, LS-314
+
+Demande de Christophe : la page `/avis` et la section d'avis de l'accueil plus
+attractives et animées « en fonction du design du site », la section d'avis de
+la fiche plus soignée. Livré sans maquette, captures soumises avant fusion,
+comme LS-282 et LS-283.
+
+| Où | Ce qui est permis |
+|---|---|
+| `/avis`, nouveau type « Avis » | ciel d'aube et médaillon d'en-tête (ceux des informations légales), étoiles de la note tracées à leur entrée, cartes en glissement seul ; texte, note écrite et mentions immobiles |
+| accueil, section d'avis | ce que permet la vitrine : étoiles tracées, cartes en glissement seul |
+| fiche produit, bloc 11 | **rien ne bouge**, la ligne « Produit » reste entière : mêmes cartes, étoiles déjà dessinées |
+
+**Les étoiles sont un décor**, `aria-hidden` et en `--ls-accent-gold` : la note
+reste écrite en texte, « 5 sur 5 », ADR-022 interdisant cet or pour du texte.
+Leur tracé anime `stroke-dashoffset` puis l'opacité du remplissage, sous
+`data-borne`, donc cinq secondes au plus ; en mouvement réduit et sans
+script, elles sont dessinées d'emblée.
+
+**Les cartes ne partent jamais d'une opacité nulle**, point 5 :
+`data-apparition-mode="glisse"`. Le ciel d'aube de l'en-tête devient le
+dixième décor où le dégradé est permis, `frontend-design.md`.
+
 ## Amendement du 7 octobre 2026, questions fréquentes en carnet, LS-26
 
 **Demande de Christophe**, piste choisie sur la critique de Codex, sans
@@ -303,6 +326,7 @@ par un repli qui ne dépend pas du script.
 | Pages légales, amendement LS-282 | informations légales | médaillon d'en-tête et icônes de section tracées à leur entrée, texte et sommaire immobiles |
 | Aide, amendement LS-280 | livraison, retours et questions fréquentes | décor animé à l'entrée de chaque section, contenu immobile |
 | Portes d'entrée, amendement LS-268 | connexion et inscription de la boutique, contact | décor animé, formulaire immobile |
+| Avis, amendement LS-314 | avis clients | médaillon et ciel d'en-tête, étoiles tracées à leur entrée, cartes en glissement seul, texte immobile |
 | Administration | tous les écrans | aucun changement |
 
 Dans le tunnel de commande, rien ne bouge pendant une saisie ni autour d'un
