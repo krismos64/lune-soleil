@@ -94,6 +94,28 @@ describe("ecran des passkeys avec preuve recente", () => {
     );
     expect(screen.getByText(/a expiré/)).toBeVisible();
     expect(screen.queryByText(/n'a pas abouti/)).toBeNull();
+    // LE FOCUS EST SUR L'EXPLICATION, jamais retombe sur `body` : le bouton
+    // actionne vient d'etre demonte, revue d'interface de LS-295.
+    expect(screen.getByText(/a expiré/)).toHaveFocus();
+  });
+
+  test("bascule aussi depuis la confirmation de retrait", async () => {
+    deletePasskey.mockResolvedValueOnce({
+      error: { code: "REAUTHENTIFICATION_REQUISE", status: 403 },
+    });
+    await rendre(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Retirer" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Confirmer le retrait" }),
+    );
+
+    await waitFor(() => expect(screen.getByText(/a expiré/)).toHaveFocus());
+    expect(
+      screen.getByRole("link", { name: "Confirmer mon identité" }),
+    ).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Retirer" })).toBeNull();
+    expect(screen.queryByText(/n'a pas pu être retirée/)).toBeNull();
   });
 
   test("garde le message d'echec pour toute autre erreur", async () => {

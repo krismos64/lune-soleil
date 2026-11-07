@@ -125,6 +125,14 @@ export function GestionPasskeys({
    * remet la personne au clavier devant le choix qu'elle vient d'ouvrir.
    */
   const confirmationRef = useRef<HTMLDivElement | null>(null);
+  /*
+   * LA BASCULE « PREUVE EXPIREE » DEMONTE AUSSI CE QUI PORTAIT LE FOCUS, LS-295 :
+   * le bouton d'ajout ou la confirmation de retrait. Le focus va sur la phrase
+   * qui explique le refus, ce qui la fait lire, puis la tabulation suivante
+   * atteint « Confirmer mon identité ». Releve par la revue d'interface : sans
+   * ce deplacement, le focus tombait sur `body` et rien n'etait annonce.
+   */
+  const expirationRef = useRef<HTMLParagraphElement | null>(null);
   const boutonsRetraitRef = useRef(new Map<string, HTMLButtonElement>());
   const retourAuRetrait = useRef<string | null>(null);
 
@@ -142,6 +150,10 @@ export function GestionPasskeys({
     retourAuRetrait.current = null;
     if (cible) boutonsRetraitRef.current.get(cible)?.focus();
   }, [aRetirer]);
+
+  useEffect(() => {
+    if (preuveExpiree) expirationRef.current?.focus();
+  }, [preuveExpiree]);
 
   const enregistrer = async () => {
     setEtat("en-cours");
@@ -276,10 +288,14 @@ export function GestionPasskeys({
            * famille `IDENTIFIANTS`.
            */
           <div className={styles.champ}>
-            <p className={styles.aide}>
+            <p
+              ref={expirationRef}
+              className={styles.aide}
+              tabIndex={preuveExpiree ? -1 : undefined}
+            >
               {preuveExpiree
                 ? "Votre confirmation d'identité a expiré. Confirmez-la à nouveau pour ajouter ou retirer une passkey."
-                : "Pour ajouter ou retirer une passkey, confirmez d'abord votre identité. Elle reste valable quinze minutes."}
+                : "Pour ajouter ou retirer une passkey, confirmez d'abord votre identité. La confirmation reste valable quinze minutes."}
             </p>
             <Link
               href={CHEMIN_REAUTHENTIFICATION}
