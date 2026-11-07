@@ -3073,6 +3073,20 @@ mute "$DEPOT_EXPEDITION" 's/  await historiserTransition\(client, \{\n    comman
 cas "passage a LIVREE sans historique" integration \
   "fait passer la commande a LIVREE, historisee par le systeme"
 
+# Cas LS-313, les avis de la boutique : page « Avis clients » et accueil.
+# Une piece archivee gardait son avis en base mais le perdait sur le site.
+mute "$DEPOT_AVIS" 's/    where: \{ statut: "PUBLIE" \},\n    select: \{\n      id: true,\n      note: true,\n      commentaire: true,\n      publieA: true,\n      experienceA: true,\n      reponse: \{ select: \{ contenu: true, publieeA: true \} \},\n      ligneCommande:/    where: {},\n    select: {\n      id: true,\n      note: true,\n      commentaire: true,\n      publieA: true,\n      experienceA: true,\n      reponse: { select: { contenu: true, publieeA: true } },\n      ligneCommande:/'
+cas "avis de la boutique sans filtre de publication" integration \
+  "n'expose aucun avis depose, refuse ou retire, regle R4"
+
+mute "$DEPOT_AVIS" 's/slugFiche: produit\?\.statut === "ACTIF" \? produit\.slug : null,/slugFiche: produit?.slug ?? null,/'
+cas "lien vers la fiche d'une piece archivee" integration \
+  "garde l'avis d'une piece archivee, sans lien vers sa fiche"
+
+mute "$DEPOT_AVIS" 's/    orderBy: \{ publieA: "desc" \},\n    \.\.\.\(limite === undefined/    orderBy: { publieA: "asc" },\n    ...(limite === undefined/'
+cas "avis de la boutique dans l'ordre inverse de la mention" integration \
+  "classe du plus recent au plus ancien et respecte la limite"
+
 echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then
