@@ -89,7 +89,7 @@ stock à un exemplaire est le jalon technique majeur.
 | 9 | Email de confirmation | intention d'envoi dans la transaction, **une** entrée | commande payée, portant le lien de facture et le lien de rétractation |
 | 10 | Préparation | commande `EN_PREPARATION`, historique de statut | suivi |
 | 11 | Expédition | expédition avec transporteur, numéro de suivi, commande `EXPEDIEE` | suivi consultable dans l'espace client, LS-58 |
-| 12 | Livraison | commande `LIVREE` uniquement sur source fiable | suivi |
+| 12 | Livraison | commande `LIVREE` uniquement sur source fiable : la remise lue chez le transporteur (`livreA`), par la synchronisation horaire, LS-312 | suivi |
 
 **Un seul message et non deux, arbitrage du 3 septembre 2026, LS-172.** La
 conception d'origine prévoyait deux entrées, « commande payée » puis

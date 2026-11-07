@@ -11,11 +11,11 @@
  * inversement expedier une commande ne change rien au paiement.
  *
  * `LIVREE` N'EST PAS ATTEIGNABLE ICI, et c'est une regle et non un oubli. Le
- * statut ne se suppose jamais sans source fiable, `payments.md` : comment le
- * site apprend qu'un colis est livre est la decision de LS-33, non prise. Une
- * case a cocher a la main serait precisement la supposition que la regle
- * interdit, et elle ferait courir le delai de retractation depuis une date
- * inventee.
+ * statut ne se suppose jamais sans source fiable, `payments.md` : sa seule
+ * source est la remise lue chez le transporteur, que la synchronisation de
+ * suivi pose depuis LS-312, ADR-042. Une case a cocher a la main serait
+ * precisement la supposition que la regle interdit, et elle ferait courir le
+ * delai de retractation depuis une date inventee.
  */
 import type { Prisma } from "@/generated/prisma/client";
 import type {

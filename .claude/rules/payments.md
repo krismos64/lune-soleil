@@ -90,6 +90,12 @@ Paiement : EN_ATTENTE -> REUSSI | ECHOUE
 Le statut `LIVREE` n'est jamais supposé sans source fiable. Chaque transition est
 validée côté serveur et historisée avec acteur, date, ancien et nouveau statut.
 
+**La seule source de `LIVREE` est la remise constatée par le transporteur**,
+`expedition.livreA`, LS-312. Le balayage de fin de cycle de `synchroniserSuivi`
+fait passer à `LIVREE`, origine `SYSTEME`, toute commande `EXPEDIEE` dont la
+remise est connue, `passerCommandeLivree`. Jusqu'au 7 novembre 2026, `livreA`
+était écrit seul : la première commande réelle restait « Expédiée ».
+
 ## Expiration et réconciliation
 
 L'expiration de la session de paiement et celle de la réservation de stock sont
