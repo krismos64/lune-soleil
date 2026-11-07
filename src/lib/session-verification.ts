@@ -42,79 +42,58 @@
  *
  * LE CAS NOMINAL RESTE DONC CONNECTE : le client change son adresse depuis son
  * espace, sa session existe deja, et `setSessionCookie` la rafraichit sans que
- * ce hook n'intervienne. Ce qui est retire, c'est uniquement le cookie pose
- * pour une requete qui n'en portait AUCUN.
+ * ce hook n'intervienne. Ce qui est retire, c'est tout cookie pose pour une
+ * requete qui ne portait aucune session VALIDE, forgee ou perimee comprise,
+ * LS-295.
  */
 /** Le chemin vise, ecrit une seule fois. */
 const CHEMIN_VERIFICATION = "/verify-email";
 
 /**
- * Le nom du cookie de session, prefixe compris.
+ * Vrai si la session posee par la reponse est celle, VALIDE, que la requete
+ * portait deja. LS-295, correction de la revue critique.
  *
- * LES DEUX FORMES SONT TRAITEES : Better Auth prefixe `__Secure-` quand il sert
- * en HTTPS, et ne le fait pas en HTTP. Ne chercher qu'une seule forme laisserait
- * le hook inoperant dans l'environnement ou il compte le plus, la production.
+ * LA DECISION PORTAIT SUR LE NOM DU COOKIE JUSQU'AU 7 NOVEMBRE 2026, et c'etait
+ * le defaut. Better Auth, lui, decide sur une session validee,
+ * `getSessionFromCtx` : un cookie forge ou perime au nom exact faisait croire
+ * le visiteur connecte ici, pendant que la bibliotheque creait une session
+ * neuve et posait son cookie. Mesure : un `Cookie:
+ * better-auth.session_token=forge` suffisait a obtenir une session sur le
+ * compte depuis le lien, donc une preuve d'identite par
+ * `prouverIdentiteParPasskey`, dont la regle des soixante secondes suppose ce
+ * chemin ferme.
  *
- * LA COMPARAISON PORTE SUR LE NOM SEUL, jamais sur la valeur : rien ici ne lit
- * ni ne journalise un jeton de session, invariant 9.
+ * LES DEUX INFORMATIONS VIENNENT DU CONTEXTE DE BETTER AUTH, verifie dans le
+ * code de la 1.7.14 : `getSessionFromCtx` y range la session VALIDE de la
+ * requete, ou `null`, et `setSessionCookie` y range la session posee,
+ * `newSession`. Aucun jeton n'est lu ni journalise ici, invariant 9 : seuls les
+ * identifiants de ligne sont compares.
+ *
+ * DEFAUT FERME : sans session valide connue, aucun cookie ne sort. La branche
+ * de verification simple ne lit pas la session et ne pose aucun cookie,
+ * `autoSignInAfterVerification` etant desactive : rien n'y est donc retire.
  */
-const NOMS_COOKIE_SESSION = [
-  "better-auth.session_token",
-  "__Secure-better-auth.session_token",
-];
+function reconduitLaSessionDeLaRequete(
+  context: ContexteVerification["context"],
+): boolean {
+  const valide = context.session?.session?.id;
+  const posee = context.newSession?.session?.id;
 
-/**
- * Vrai si la requete entrante portait deja une session.
- *
- * SUR LA REQUETE ET NON SUR LA REPONSE, et la distinction est tout le
- * mecanisme. La reponse porte TOUJOURS un cookie a ce stade, que la session ait
- * ete recuperee ou creee : c'est la requete qui dit si quelqu'un etait connecte
- * AVANT de cliquer.
- */
-function requeteDejaConnectee(enTeteCookie: string | null): boolean {
-  if (!enTeteCookie) {
-    return false;
-  }
-
-  return NOMS_COOKIE_SESSION.some((nom) =>
-    // La borne `=` evite qu'un cookie dont le nom CONTIENT celui-ci, pose par un
-    // autre outil, fasse passer la requete pour connectee.
-    enTeteCookie.split(";").some((paire) => paire.trim().startsWith(`${nom}=`)),
-  );
+  return typeof valide === "string" && posee === valide;
 }
 
-/**
- * Ce dont cette fonction a besoin, et RIEN DE PLUS.
- *
- * UN TYPE STRUCTUREL ET NON `MiddlewareContext` de Better Auth, et ce n'est pas
- * un contournement de commodite. Le type du contexte porte `request?: Request`
- * en optionnel exact : le repasser d'un middleware a un autre exigerait un cast,
- * qui masquerait un vrai changement de forme le jour d'une montee de version.
- *
- * Nommer les trois champs employes rend en outre la surface visible : cette
- * fonction lit un chemin, un en-tete de requete, et touche deux porteurs
- * d'en-tetes de reponse. Elle ne peut rien faire d'autre.
- */
+type SessionDuContexte = { session?: { id?: string } } | null | undefined;
+
 type ContexteVerification = {
   path?: string | undefined;
   headers?: Headers | undefined;
   context: {
     responseHeaders?: Headers | undefined;
+    session?: SessionDuContexte;
+    newSession?: SessionDuContexte;
   };
 };
 
-/**
- * Retire le cookie de session qu'un lien de verification vient de poser.
- *
- * UNE FONCTION ET NON UN `createAuthMiddleware`, et la raison est mecanique :
- * `hooks.after` n'accepte qu'UN middleware, verifie dans le code de dispatch de
- * Better Auth 1.6, et LS-80 y a deja pose le journal des connexions.
- * `hook-journal-connexion.ts` l'appelle donc, ce qui evite un composeur qui
- * devrait recaster le contexte.
- *
- * ELLE EST APPELEE AVANT le filtre de chemin du journal : celui-ci sort
- * immediatement sur `/verify-email`, qui n'est pas un chemin de connexion.
- */
 export async function retirerSessionDeVerification(
   ctx: ContexteVerification,
 ): Promise<void> {
@@ -122,41 +101,19 @@ export async function retirerSessionDeVerification(
     return;
   }
 
-  if (requeteDejaConnectee(ctx.headers?.get("cookie") ?? null)) {
-    /*
-     * LE CLIENT ETAIT DEJA CONNECTE : le cookie de la reponse rafraichit SA
-     * session, celle qu'il detenait avant de cliquer. Le retirer le
-     * deconnecterait au milieu de son propre parcours, ce qui est exactement la
-     * reserve que LS-167 posait.
-     */
+  if (reconduitLaSessionDeLaRequete(ctx.context)) {
+    // Le client etait connecte dans ce navigateur et sa session est rafraichie
+    // avec la nouvelle adresse : la lui retirer le deconnecterait au milieu de
+    // son propre parcours, reserve de LS-167.
     return;
   }
 
   /*
-   * PERSONNE N'ETAIT CONNECTE, et une session vient pourtant d'etre ouverte. Le
-   * cookie est retire de la reponse : la verification a bien eu lieu, l'adresse
-   * est mise a jour, mais le lien ne vaut plus connexion.
-   *
-   * AUCUN COOKIE N'EST POSE POUR EFFACER, et c'est deliberé : un cookie expire
-   * ecraserait une session legitime portee par un autre onglet du meme
-   * navigateur. On retire l'en-tete que Better Auth vient d'ecrire, sans en
-   * poser aucun.
-   */
-  /*
-   * UNE SEULE SOURCE SUFFIT, ET C'EST LA MESURE QUI L'A DIT. J'avais d'abord
-   * ajoute deux traitements de plus, sur `ctx.context.returned` et sur les
-   * symboles propres de l'erreur, en supposant que `ctx.redirect` recopiait les
-   * en-tetes hors de portee.
-   *
-   * LA MUTATION A PROUVE LE CONTRAIRE : retirer chacun de ces deux traitements
-   * laissait les trois tests VERTS, retirer celui-ci les faisait rougir. Les
-   * deux autres etaient du code mort, ecrit sur une hypothese jamais verifiee,
-   * et un code mort dans une correction de securite est pire qu'absent : il
-   * donne l'impression d'une defense en profondeur qui n'existe pas.
-   *
-   * `mergeAPIErrorHeaders` recopie bien les en-tetes sur l'erreur, mais APRES
-   * ce hook : vider l'accumulateur suffit donc, la copie emportant un
-   * accumulateur deja vide.
+   * TOUT `set-cookie` EST RETIRE, et non le seul cookie de session : sur cette
+   * route, aucun autre cookie n'a de raison de sortir vers un visiteur qui n'a
+   * pas prouve sa session. La ligne de session reste ecrite en base, le hook
+   * `after` s'executant apres l'endpoint ; elle n'ouvre rien, personne n'ayant
+   * son jeton, et expire d'elle-meme.
    */
   ctx.context.responseHeaders?.delete("set-cookie");
 }

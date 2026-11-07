@@ -24,8 +24,8 @@
  * ferait pour la priver de son moyen principal. Le renommage reste libre, il ne
  * change aucun moyen d'acces.
  *
- * SANS SESSION, LA GARDE S'EFFACE : la route elle-meme repond 401, et rien n'est
- * a proteger. Elle ne remplace pas la garde de Better Auth, elle s'y ajoute.
+ * SANS SESSION LISIBLE, LA GARDE REFUSE en 401, la meme reponse que la route.
+ * Elle ne remplace pas la garde de Better Auth, elle s'y ajoute.
  *
  * LA DECISION VIT DANS `services/reauthentification.ts`, ce fichier ne fait que
  * l'appliquer. Import DYNAMIQUE : ce service importe `@/lib/auth`, qui importe
@@ -60,9 +60,20 @@ export async function exigerPreuvePourPasskey(
     return;
   }
 
+  /*
+   * SANS SESSION, LE REFUS EST ICI ET NON DANS LA ROUTE, correction de la revue
+   * critique. `getSessionFromCtx` avale ses erreurs et rend `null` : laisser
+   * passer en comptant sur le 401 de la route ouvrait une fenetre, la route
+   * RELISANT la session. Une lecture qui echoue ici puis reussit la-bas, pool
+   * de connexions sature, laissait la route s'executer sans preuve. Le refus
+   * est le meme 401 que la route aurait rendu : rien ne change au nominal.
+   */
   const session = await getSessionFromCtx(ctx);
   if (!session?.session) {
-    return;
+    throw new APIError("UNAUTHORIZED", {
+      code: "UNAUTHORIZED",
+      message: "Unauthorized",
+    });
   }
 
   const { deciderChangementIdentifiants } =
