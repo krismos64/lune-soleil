@@ -128,6 +128,7 @@ preparation(
   "ouvrir une session d'administration partagee",
   async ({ page }) => {
     const client = await ouvrirConnexion();
+    let reutilisee = false;
 
     try {
       /*
@@ -140,55 +141,64 @@ preparation(
        */
       await preparerBase(client);
 
-      if (await sessionEncoreValide(page)) {
-        return;
-      }
-
       /*
-       * PALIERS 2 ET 3 : SE CONNECTER, SINON S'INSCRIRE.
-       *
-       * L'ORDRE EST DELIBERE : la connexion d'abord, l'inscription seulement si
-       * elle echoue. L'inverse consommerait une place du plafond d'inscription
-       * a chaque execution rien que pour apprendre que le compte existe, ce qui
-       * est exactement le defaut qu'on corrige.
+       * PLUS DE `return` ICI : il sautait aussi la session de preuve et le
+       * retrait de la preuve de la session partagée, posés plus bas. Mesuré
+       * le 9 novembre 2026, une session réutilisée gardait une preuve et les
+       * tests des paramètres rougissaient malgré la séparation.
        */
-      const reponse = await tenterConnexion(
-        page,
-        EMAIL_ADMINISTRATION,
-        MOT_DE_PASSE,
-      );
-
-      if (!reponse.ok()) {
+      reutilisee = await sessionEncoreValide(page);
+      if (!reutilisee) {
         /*
-         * L'ESPACEMENT EST COMPTE GLOBALEMENT depuis LS-168, voir
-         * `inscription-espacee.ts` : les cinq preparations creent des comptes
-         * sur une base neuve, et c'est leur TOTAL qui franchit les trois places
-         * par minute.
+         * PALIERS 2 ET 3 : SE CONNECTER, SINON S'INSCRIRE.
          *
-         * L'AIDE ECHOUE ELLE-MEME SI L'INSCRIPTION EST REFUSEE, avec la vraie
-         * cause en tete de rapport, au lieu d'un echec plus loin sur « le titre
-         * est introuvable ».
+         * L'ORDRE EST DELIBERE : la connexion d'abord, l'inscription seulement si
+         * elle echoue. L'inverse consommerait une place du plafond d'inscription
+         * a chaque execution rien que pour apprendre que le compte existe, ce qui
+         * est exactement le defaut qu'on corrige.
          */
-        await inscrireEspace(
+        const reponse = await tenterConnexion(
           page,
           EMAIL_ADMINISTRATION,
           MOT_DE_PASSE,
-          "Administration de test",
         );
 
-        /*
-         * LE COMPTE VIENT D'ETRE CREE, IL FAUT LE PROMOUVOIR MAINTENANT. Le
-         * premier passage n'avait touche aucune ligne, l'utilisateur n'existant
-         * pas encore : sans ce second appel, la toute premiere execution sur
-         * une base neuve serait redirigee vers la connexion.
-         */
-        await preparerBase(client);
+        if (!reponse.ok()) {
+          /*
+           * L'ESPACEMENT EST COMPTE GLOBALEMENT depuis LS-168, voir
+           * `inscription-espacee.ts` : les cinq preparations creent des comptes
+           * sur une base neuve, et c'est leur TOTAL qui franchit les trois places
+           * par minute.
+           *
+           * L'AIDE ECHOUE ELLE-MEME SI L'INSCRIPTION EST REFUSEE, avec la vraie
+           * cause en tete de rapport, au lieu d'un echec plus loin sur « le titre
+           * est introuvable ».
+           */
+          await inscrireEspace(
+            page,
+            EMAIL_ADMINISTRATION,
+            MOT_DE_PASSE,
+            "Administration de test",
+          );
+
+          /*
+           * LE COMPTE VIENT D'ETRE CREE, IL FAUT LE PROMOUVOIR MAINTENANT. Le
+           * premier passage n'avait touche aucune ligne, l'utilisateur n'existant
+           * pas encore : sans ce second appel, la toute premiere execution sur
+           * une base neuve serait redirigee vers la connexion.
+           */
+          await preparerBase(client);
+        }
       }
     } finally {
       await client.end();
     }
 
-    await page.context().storageState({ path: FICHIER_SESSION_ADMINISTRATION });
+    if (!reutilisee) {
+      await page
+        .context()
+        .storageState({ path: FICHIER_SESSION_ADMINISTRATION });
+    }
 
     await ouvrirSessionPreuve(page);
     await oterPreuveSessionPartagee();
