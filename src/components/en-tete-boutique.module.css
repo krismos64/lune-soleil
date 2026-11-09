@@ -221,7 +221,14 @@
   }
 }
 
-@media (min-width: 768px) {
+/*
+ * 44 PX À PARTIR DE 1024 PX SEULEMENT. Entre 768 et 1023, il garde ses 36 px
+ * mobiles : avec cinq entrées de navigation, les 8 px gagnés comptent pour
+ * l'écart avec « Accueil », mesuré à 6 px en DejaVu Sans, police de repli du
+ * runner Linux et proche de celles de Windows et d'Android. Contrôle nocturne
+ * 96 et 97, voir `.liste`.
+ */
+@media (min-width: 1024px) {
   .sceau {
     width: 44px;
     height: 44px;
@@ -304,16 +311,22 @@
 }
 
 /*
- * 12 PX ENTRE LES ENTRÉES DE 768 À 1023 PX, LS-314 : avec la cinquième entrée,
- * « Avis », 16 px laissaient 9 px entre le nom de la boutique et « Accueil » à
+ * 8 PX ENTRE LES ENTRÉES DE 768 À 1023 PX. Avec la cinquième entrée, « Avis »
+ * (LS-314), 16 px laissaient 9 px entre le nom de la boutique et « Accueil » à
  * 768 px, sous les 16 px que mesure `en-tete-ls309.spec.ts`.
+ *
+ * 12 PX NE SUFFISAIENT QU'AVEC LES POLICES D'APPLE : 17 px sur macOS, 6 px en
+ * DejaVu Sans sur le runner du contrôle nocturne, 96 et 97. Avec 8 px et le
+ * sceau à 36 px, l'écart mesuré vaut 22 px en DejaVu Sans et 33 sur macOS.
+ * Une pile système n'a pas de largeur fixe : la mesurer avec la police de
+ * repli la plus large, pas avec celle du poste de développement.
  */
 .liste {
   margin: 0;
   padding: 0;
   list-style: none;
   display: flex;
-  gap: var(--ls-space-3);
+  gap: var(--ls-space-2);
 }
 
 @media (min-width: 1024px) {

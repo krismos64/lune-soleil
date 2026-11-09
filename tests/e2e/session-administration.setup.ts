@@ -67,12 +67,14 @@ import {
   CATALOGUE_TEST,
   FICHE_TEST,
   FICHIER_SESSION_ADMINISTRATION,
+  FICHIER_SESSION_ADMINISTRATION_PREUVE,
+  jetonDeSession,
   MESSAGES_TEST,
   PRODUIT_TEST,
   PRODUIT_VIDE,
   SECTION_TEST,
 } from "./chemin-session";
-import { inscrireEspace } from "./inscription-espacee";
+import { connecterEspace, inscrireEspace } from "./inscription-espacee";
 
 const MOT_DE_PASSE = "phrase-de-passe-de-test1";
 
@@ -181,8 +183,52 @@ preparation(
     }
 
     await page.context().storageState({ path: FICHIER_SESSION_ADMINISTRATION });
+
+    await ouvrirSessionPreuve(page);
+    await oterPreuveSessionPartagee();
   },
 );
+
+/**
+ * La session des tests de passkeys, distincte de la partagée, voir
+ * `FICHIER_SESSION_ADMINISTRATION_PREUVE`. Réutilisée si elle vit encore,
+ * comme la première : `/sign-in/email` n'accepte que cinq appels par minute.
+ */
+async function ouvrirSessionPreuve(
+  page: import("@playwright/test").Page,
+): Promise<void> {
+  if (await sessionEncoreValide(page, FICHIER_SESSION_ADMINISTRATION_PREUVE)) {
+    return;
+  }
+
+  const contexte = await page.context().browser()!.newContext({
+    baseURL: preparation.info().project.use.baseURL,
+  });
+  try {
+    const onglet = await contexte.newPage();
+    await connecterEspace(onglet, EMAIL_ADMINISTRATION, MOT_DE_PASSE);
+    await contexte.storageState({ path: FICHIER_SESSION_ADMINISTRATION_PREUVE });
+  } finally {
+    await contexte.close();
+  }
+}
+
+/**
+ * LA SESSION PARTAGÉE PART SANS PREUVE, même réutilisée d'une exécution
+ * antérieure : une base de développement peut en garder une, posée avant
+ * cette séparation ou par une réauthentification manuelle.
+ */
+async function oterPreuveSessionPartagee(): Promise<void> {
+  const client = await ouvrirConnexion();
+  try {
+    await client.query(
+      "UPDATE session SET reauthentifiee_le = NULL WHERE token = $1",
+      [await jetonDeSession(FICHIER_SESSION_ADMINISTRATION)],
+    );
+  } finally {
+    await client.end();
+  }
+}
 
 /**
  * L'etat de session enregistre par une execution precedente ouvre-t-il encore
@@ -204,15 +250,16 @@ preparation(
  */
 async function sessionEncoreValide(
   page: import("@playwright/test").Page,
+  fichier: string = FICHIER_SESSION_ADMINISTRATION,
 ): Promise<boolean> {
   const { existsSync } = await import("node:fs");
 
-  if (!existsSync(FICHIER_SESSION_ADMINISTRATION)) {
+  if (!existsSync(fichier)) {
     return false;
   }
 
   const contexte = await page.context().browser()?.newContext({
-    storageState: FICHIER_SESSION_ADMINISTRATION,
+    storageState: fichier,
   });
 
   if (!contexte) {

@@ -28,13 +28,16 @@ import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 import { Client } from "pg";
 
-import { FICHIER_SESSION_ADMINISTRATION } from "./chemin-session";
+import {
+  FICHIER_SESSION_ADMINISTRATION_PREUVE,
+  jetonDeSession,
+} from "./chemin-session";
 import {
   TOLERANCE_DEBORDEMENT_PX,
   debordementHorizontal,
 } from "./mesure-rendu";
 
-test.use({ storageState: FICHIER_SESSION_ADMINISTRATION });
+test.use({ storageState: FICHIER_SESSION_ADMINISTRATION_PREUVE });
 
 /*
  * UNE PASSKEY PAR LARGEUR, LS-295. Les quatre largeurs tournent en parallele
@@ -86,20 +89,25 @@ test.beforeEach(async () => {
       [nomPasskey(), credential()],
     );
     /*
-     * UNE PREUVE D'IDENTITE RECENTE SUR LA SESSION, LS-295 : sans elle, l'ecran
+     * UNE PREUVE D'IDENTITÉ RÉCENTE SUR LA SESSION, LS-295 : sans elle, l'écran
      * ne propose plus le retrait et ces tests ne rendraient pas la branche
-     * qu'ils mesurent. Posee sur TOUTES les sessions de l'administratrice, la
-     * session partagee de la suite etant l'une d'elles.
+     * qu'ils mesurent.
      *
-     * JAMAIS RETIREE ENSUITE : les largeurs tournent en parallele sur la meme
-     * session, et l'oter dans un `afterEach` la retirerait a un test voisin en
-     * cours. L'etat sans preuve est rendu par le test de composant
-     * `gestion-passkeys-ls295.test.tsx`, la route gardee en integration.
+     * SUR LA SEULE SESSION DE CE FICHIER, désignée par son jeton. Posée
+     * jusqu'au 9 novembre 2026 sur TOUTES les sessions de l'administratrice,
+     * elle atteignait la session partagée et faisait échouer le refus mesuré
+     * par `parametres-administration`, contrôle nocturne 96 et 97.
+     *
+     * JAMAIS RETIRÉE ENSUITE : les largeurs tournent en parallèle sur cette
+     * session, et l'ôter dans un `afterEach` la retirerait à un test voisin en
+     * cours. L'état sans preuve est rendu par le test de composant
+     * `gestion-passkeys-ls295.test.tsx`, la route gardée en intégration.
      */
-    await client.query(
-      `UPDATE session SET reauthentifiee_le = now()
-        WHERE user_id IN (SELECT id FROM utilisateur WHERE role = 'ADMINISTRATRICE')`,
+    const resultat = await client.query(
+      "UPDATE session SET reauthentifiee_le = now() WHERE token = $1",
+      [await jetonDeSession(FICHIER_SESSION_ADMINISTRATION_PREUVE)],
     );
+    expect(resultat.rowCount, "session de preuve introuvable en base").toBe(1);
   } finally {
     await client.end();
   }
