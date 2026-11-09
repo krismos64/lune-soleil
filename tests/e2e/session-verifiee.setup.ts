@@ -66,7 +66,7 @@ import {
   FICHIER_EMAIL_VERIFIE,
   EMAIL_VERIFIE,
 } from "./chemin-session";
-import { inscrireEspace } from "./inscription-espacee";
+import { inscrireEspace, tenterConnexion } from "./inscription-espacee";
 
 import { writeFileSync } from "node:fs";
 
@@ -119,9 +119,11 @@ preparation("ouvrir une session cliente verifiee", async ({ page }) => {
    * trois de `/sign-up/email` : le palier 2 est donc nettement moins contraint
    * que le palier 3.
    */
-  const reponse = await page.request.post("/api/auth/sign-in/email", {
-    data: { email: EMAIL_VERIFIE, password: MOT_DE_PASSE_VERIFIE },
-  });
+  const reponse = await tenterConnexion(
+    page,
+    EMAIL_VERIFIE,
+    MOT_DE_PASSE_VERIFIE,
+  );
 
   if (!reponse.ok()) {
     /*

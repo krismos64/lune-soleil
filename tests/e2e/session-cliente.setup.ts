@@ -49,7 +49,7 @@
 import { test as preparation } from "@playwright/test";
 
 import { FICHIER_SESSION, MOT_DE_PASSE_CLIENT } from "./chemin-session";
-import { inscrireEspace } from "./inscription-espacee";
+import { inscrireEspace, tenterConnexion } from "./inscription-espacee";
 
 /**
  * LA VALEUR VIENT DU MODULE PARTAGE DEPUIS LS-164 : les tests de
@@ -103,9 +103,7 @@ preparation("ouvrir une session cliente partagee", async ({ page }) => {
    * trois de `/sign-up/email` : le palier 2 est donc nettement moins contraint
    * que le palier 3.
    */
-  const reponse = await page.request.post("/api/auth/sign-in/email", {
-    data: { email: EMAIL_CLIENT, password: MOT_DE_PASSE },
-  });
+  const reponse = await tenterConnexion(page, EMAIL_CLIENT, MOT_DE_PASSE);
 
   if (!reponse.ok()) {
     /*
