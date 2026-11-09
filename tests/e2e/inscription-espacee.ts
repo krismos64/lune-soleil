@@ -31,7 +31,7 @@
  * longue, et lui seul : c'est le seul endroit du dispositif ou une attente est
  * justifiee, parce qu'elle precede le depassement au lieu de le subir.
  */
-import { expect, type Page } from "@playwright/test";
+import { type APIResponse, expect, type Page } from "@playwright/test";
 
 /**
  * La fenetre du plafond, et le nombre d'appels qu'elle accepte.
@@ -132,6 +132,30 @@ export async function connecterEspace(
   email: string,
   motDePasse: string,
 ): Promise<void> {
+  const reponse = await tenterConnexion(page, email, motDePasse);
+
+  expect(reponse.ok(), await reponse.text()).toBe(true);
+}
+
+/**
+ * Tente une connexion SANS exiger qu'elle réussisse, sur le même compteur.
+ *
+ * LES PRÉPARATIONS QUI SE CONNECTENT D'ABORD ET S'INSCRIVENT ENSUITE en ont
+ * besoin : leur échec de connexion est un résultat attendu sur base neuve.
+ *
+ * TOUTE CONNEXION DE LA PRÉPARATION PASSE PAR ICI. Jusqu'au 9 novembre 2026,
+ * trois préparations appelaient `/sign-in/email` directement : ces appels
+ * consommaient une place chez Better Auth sans entrer dans ce compteur, qui
+ * croyait la fenêtre plus vide qu'elle ne l'était. Une sixième connexion,
+ * celle de la session de preuve des passkeys, a suffi à faire refuser en 429
+ * la connexion de `session-verifiee`, qui s'inscrivait alors sur un compte
+ * existant.
+ */
+export async function tenterConnexion(
+  page: Page,
+  email: string,
+  motDePasse: string,
+): Promise<APIResponse> {
   const chemin = "/api/auth/sign-in/email";
 
   await attendreUnePlace(page, chemin, PLACES_CONNEXION);
@@ -140,9 +164,9 @@ export async function connecterEspace(
     data: { email, password: motDePasse },
   });
 
-  expect(reponse.ok(), await reponse.text()).toBe(true);
-
   noter(chemin);
+
+  return reponse;
 }
 
 /** Enregistre qu'un appel vient d'etre fait sur ce chemin. */

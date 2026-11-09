@@ -74,7 +74,11 @@ import {
   PRODUIT_VIDE,
   SECTION_TEST,
 } from "./chemin-session";
-import { connecterEspace, inscrireEspace } from "./inscription-espacee";
+import {
+  connecterEspace,
+  inscrireEspace,
+  tenterConnexion,
+} from "./inscription-espacee";
 
 const MOT_DE_PASSE = "phrase-de-passe-de-test1";
 
@@ -148,9 +152,11 @@ preparation(
        * a chaque execution rien que pour apprendre que le compte existe, ce qui
        * est exactement le defaut qu'on corrige.
        */
-      const reponse = await page.request.post("/api/auth/sign-in/email", {
-        data: { email: EMAIL_ADMINISTRATION, password: MOT_DE_PASSE },
-      });
+      const reponse = await tenterConnexion(
+        page,
+        EMAIL_ADMINISTRATION,
+        MOT_DE_PASSE,
+      );
 
       if (!reponse.ok()) {
         /*
@@ -201,13 +207,17 @@ async function ouvrirSessionPreuve(
     return;
   }
 
-  const contexte = await page.context().browser()!.newContext({
-    baseURL: preparation.info().project.use.baseURL,
-  });
+  const baseURL = preparation.info().project.use.baseURL;
+  const contexte = await page
+    .context()
+    .browser()!
+    .newContext(baseURL ? { baseURL } : {});
   try {
     const onglet = await contexte.newPage();
     await connecterEspace(onglet, EMAIL_ADMINISTRATION, MOT_DE_PASSE);
-    await contexte.storageState({ path: FICHIER_SESSION_ADMINISTRATION_PREUVE });
+    await contexte.storageState({
+      path: FICHIER_SESSION_ADMINISTRATION_PREUVE,
+    });
   } finally {
     await contexte.close();
   }
