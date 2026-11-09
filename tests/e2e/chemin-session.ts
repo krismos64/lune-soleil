@@ -22,6 +22,39 @@ export const FICHIER_SESSION_ADMINISTRATION =
   "tests/e2e/.session-administration.json";
 
 /**
+ * Seconde session d'ADMINISTRATION, PORTEUSE D'UNE PREUVE D'IDENTITÉ RÉCENTE,
+ * réservée à `passkeys-administration.spec.ts`. Contrôle nocturne 96 et 97.
+ *
+ * LA SESSION PARTAGÉE DOIT RESTER SANS PREUVE : `parametres-administration`
+ * mesure le refus d'un enregistrement sans preuve récente. Depuis LS-295, les
+ * tests des passkeys posaient `reauthentifiee_le` sur TOUTES les sessions de
+ * l'administratrice, la partagée comprise, sans jamais l'ôter : le refus ne
+ * se rendait plus qu'à 320 px, seule largeur où les paramètres tournaient
+ * avant les passkeys. Une preuve posée sur une session à part ne touche
+ * aucun test voisin.
+ */
+export const FICHIER_SESSION_ADMINISTRATION_PREUVE =
+  "tests/e2e/.session-administration-preuve.json";
+
+/**
+ * Le jeton de session porté par un état Playwright, tel que la table `session`
+ * le stocke. Le cookie vaut `<jeton>.<signature>`, encodé en URL.
+ */
+export async function jetonDeSession(fichier: string): Promise<string> {
+  const { readFile } = await import("node:fs/promises");
+  const etat = JSON.parse(await readFile(fichier, "utf8")) as {
+    cookies: { name: string; value: string }[];
+  };
+  const cookie = etat.cookies.find((c) =>
+    c.name.endsWith("better-auth.session_token"),
+  );
+  if (!cookie) {
+    throw new Error(`Aucun cookie de session dans ${fichier}.`);
+  }
+  return decodeURIComponent(cookie.value).split(".")[0]!;
+}
+
+/**
  * Cookie signe de la commande en attente de paiement, LS-118.
  *
  * ECRIT PAR `commande.setup.ts` : le cookie est signe HMAC avec le secret
