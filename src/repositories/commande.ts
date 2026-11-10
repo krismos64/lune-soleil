@@ -632,3 +632,65 @@ export async function lireDestinataireCommande(
     select: { numero: true, emailNormalise: true },
   });
 }
+
+/**
+ * Verrouille une commande et rend son statut, ou `null` si elle n'existe pas.
+ * ADR-050.
+ *
+ * LE VERROU EST CELUI DU RATTACHEMENT DE SESSION, `demarrerPaiement` : le
+ * prendre serialise la lecture des sessions avec un reessai concurrent.
+ */
+export async function verrouillerCommande(
+  client: ClientBase,
+  commandeId: string,
+): Promise<StatutCommande | null> {
+  const lignes = await client.$queryRaw<{ statut: StatutCommande }[]>`
+    SELECT statut FROM commande WHERE id = ${commandeId} FOR UPDATE
+  `;
+
+  return lignes[0]?.statut ?? null;
+}
+
+/**
+ * Passe une commande en attente a `ANNULEE`. Vrai si la transition a eu lieu.
+ *
+ * LA GARDE SUR LE STATUT EST DANS LE `WHERE`, jamais dans une lecture
+ * prealable, meme regle que la reconciliation : un webhook a pu confirmer la
+ * commande entre-temps, et l'annuler effacerait une commande payee.
+ */
+export async function annulerSiEnAttente(
+  client: ClientBase,
+  commandeId: string,
+): Promise<boolean> {
+  const { count } = await client.commande.updateMany({
+    where: { id: commandeId, statut: "EN_ATTENTE_PAIEMENT" },
+    data: { statut: "ANNULEE" },
+  });
+
+  return count === 1;
+}
+
+/**
+ * Les lignes d'une commande reduites a ce qu'un panier porte. ADR-050.
+ *
+ * UNE LIGNE DONT LA VARIANTE A DISPARU EST ECARTEE : `variante_id` passe a nul
+ * par `ON DELETE SET NULL`, et un panier ne peut rien designer sans elle. Le
+ * prix n'est PAS rendu : le panier se revalide contre le catalogue actuel,
+ * LS-114, jamais contre un prix fige qui n'est plus celui de la boutique.
+ */
+export async function lignesPourPanier(
+  client: ClientBase,
+  commandeId: string,
+): Promise<{ varianteId: string; quantite: number }[]> {
+  const lignes = await client.ligneCommande.findMany({
+    where: { commandeId, varianteId: { not: null } },
+    orderBy: { varianteId: "asc" },
+    select: { varianteId: true, quantite: true },
+  });
+
+  return lignes.flatMap((ligne) =>
+    ligne.varianteId === null
+      ? []
+      : [{ varianteId: ligne.varianteId, quantite: ligne.quantite }],
+  );
+}
