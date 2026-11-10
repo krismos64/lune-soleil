@@ -3145,6 +3145,26 @@ mute "$PAIEMENT" 's/        if \(etat\.etat !== "EXPIREE"\) \{/        if (etat.
 cas "seconde session ouverte sur une precedente payee" integration \
   "ne rouvre pas de session quand la precedente est deja payee"
 
+# Cas LS-316 : paiement recu sur une commande annulee. Le webhook lisait la
+# commande sans verrou et sortait le stock d'une commande annulee. La premiere
+# mutation a d'abord RATE, le rejeu du webhook absorbant l'interblocage :
+# `lock_timeout` sur la connexion d'imitation la rend observable.
+mute "$WEBHOOK" 's/  await verrouillerVariantesDeCommande\(transaction, evenement\.commandeId\);\n//'
+cas "webhook qui lit la commande avant la variante" integration \
+  "ne ramene pas a CONFIRMEE une commande annulee pendant son attente"
+
+mute "$WEBHOOK" 's/  await verrouillerCommande\(transaction, evenement\.commandeId\);\n//'
+cas "webhook qui lit le statut sans verrou de commande" integration \
+  "attend une annulation de la reconciliation en cours avant de lire le statut"
+
+mute "$WEBHOOK" 's/const lignesASortir = commande\.statut === "ANNULEE" \? \[\] : commande\.lignes;/const lignesASortir = commande.lignes;/'
+cas "stock sorti pour une commande annulee" integration \
+  "ne sort pas une piece reservee de nouveau, et alerte"
+
+mute "$WEBHOOK" 's/  if \(commande\.statut !== "ANNULEE"\) \{\n    await supprimerReservations\(transaction, commande\.id\);\n  \}/  await supprimerReservations(transaction, commande.id);/'
+cas "reservations d'une commande annulee supprimees sans rendu" integration \
+  "attend une annulation de la reconciliation en cours avant de lire le statut"
+
 echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then
