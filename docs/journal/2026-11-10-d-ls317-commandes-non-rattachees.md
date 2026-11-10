@@ -35,10 +35,19 @@ Les comptes créés par les nouveaux cas de `administration-commandes`
 survivaient au fichier, qui ne vide pas `utilisateur`, et faisaient échouer le
 premier test de la fiche client. Nettoyés par un `afterEach` dédié.
 
+## Mise en production, 11 novembre 2026
+
+- **Incident** : la première fusion de la PR #655 a été refusée, branche en
+  retard sur `main` après la PR #654, et le refus n'a pas été lu. Le
+  déploiement est parti sur l'ancien `main`, `580e146`, qui ne différait de la
+  production que par un journal : sans effet. Branche rebasée, CI repassée,
+  **fusion vérifiée par `gh pr view --json state`** avant le second déploiement.
+- Déploiement run 42919887929, image `901f0bf…`, aucune erreur, pages en 200.
+
 ## Prochaine étape
 
-Fusion, déploiement sur accord, puis LS-291.
+LS-291.
 
 ## État des tickets
 
-- **LS-317** : En cours, livrable à la fusion et au déploiement.
+- **LS-317** : Terminé, en production.
