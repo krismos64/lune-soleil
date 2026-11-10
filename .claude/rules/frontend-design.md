@@ -1024,6 +1024,12 @@ peuvent être repliés, jamais absents.
 | 10 | Retours et rétractation | textes légaux, jamais recopiés |
 | 11 | Avis vérifiés, s'il en existe | `Avis` publiés |
 
+**Le bandeau de commande en attente précède le bloc 1 sans s'y insérer**,
+LS-315, comme le fil d'Ariane : il ne paraît que si la commande de **ce**
+navigateur tient une variante du produit, jamais pour la réservation d'un autre
+client. Son titre y est un paragraphe et non un `h2`, le `h1` du bijou venant
+après.
+
 ### Le bloc 9 est piloté par l'administratrice, ADR-026
 
 Les quatre colonnes `Produit.description`, `matieres`, `entretien` et

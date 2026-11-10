@@ -192,9 +192,13 @@ que la session existe, donc deux démarrages simultanés liraient tous deux
 « aucune session précédente ». Le dernier à rattacher expire les précédentes.
 
 **Une panne réseau sur l'expiration de la session précédente arrête tout.**
-`DEJA_FERMEE` n'est pas une panne et laisse continuer ; une indisponibilité, si :
-créer une session sans savoir si la précédente est encore payable rouvre
-exactement le double encaissement que cette prévention ferme.
+`DEJA_FERMEE` n'est pas une panne, mais **ne laisse continuer qu'après lecture**
+de la session précédente, LS-315 : payée, le démarrage rend `DEJA_PAYEE` sans
+rien créer ; illisible ou encore ouverte, `PANNE`. Le cas est un client qui a
+payé, dont l'événement n'est pas arrivé, et qui clique « Reprendre le paiement »
+depuis le bandeau du panier. Une indisponibilité arrête tout aussi : créer une
+session sans savoir si la précédente est encore payable rouvre exactement le
+double encaissement que cette prévention ferme.
 
 **Détection.** Un refus par `paiement_reussi_unique`, dont le prédicat porte les
 trois états d'encaissement `REUSSI`, `PARTIELLEMENT_REMBOURSE` et `REMBOURSE`, ne
