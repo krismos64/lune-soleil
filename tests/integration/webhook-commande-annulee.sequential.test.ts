@@ -164,6 +164,14 @@ async function constat(commandeId: string, varianteId: string) {
         )
       ).n,
     ),
+    reservations: Number(
+      (
+        await un<{ n: string }>(
+          "SELECT count(*)::text AS n FROM reservation WHERE commande_id = $1",
+          [commandeId],
+        )
+      ).n,
+    ),
     encaisses: Number(
       (
         await un<{ n: string }>(
@@ -234,6 +242,7 @@ describe("webhook de paiement sur une commande annulee", () => {
       mouvements: 0,
       factures: 0,
       alertes: 1,
+      reservations: 0,
       // L'ARGENT EST ENREGISTRE : c'est ce qui permet de le rendre.
       encaisses: 1,
     });
@@ -247,6 +256,7 @@ describe("webhook de paiement sur une commande annulee", () => {
       mouvements: 0,
       factures: 0,
       alertes: 1,
+      reservations: 0,
       encaisses: 1,
     });
   });
@@ -299,6 +309,13 @@ describe("webhook de paiement sur une commande annulee", () => {
 
       expect(bloque).toBe(true);
 
+      /*
+       * `lock_timeout` PLUS COURT QUE LA DETECTION D'INTERBLOCAGE : si le
+       * webhook tenait deja la commande en attendant la variante, l'ordre
+       * inverse, cette ecriture echouerait ici au lieu d'un interblocage que le
+       * rejeu du webhook absorbe en silence. Meme parade que LS-315.
+       */
+      await imitation.query("SET LOCAL lock_timeout = '500ms'");
       await imitation.query(
         "UPDATE commande SET statut = 'ANNULEE' WHERE id = $1",
         [commande.commandeId],
@@ -326,6 +343,7 @@ describe("webhook de paiement sur une commande annulee", () => {
       mouvements: 0,
       factures: 0,
       alertes: 1,
+      reservations: 0,
       encaisses: 1,
     });
   });
@@ -395,6 +413,7 @@ describe("webhook de paiement sur une commande annulee", () => {
       mouvements: 0,
       factures: 0,
       alertes: 1,
+      reservations: 1,
       encaisses: 1,
     });
   });
