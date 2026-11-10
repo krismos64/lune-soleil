@@ -123,14 +123,25 @@ export function formaterJour(date: Date): string {
 }
 
 /**
- * L'heure seule, LS-315 : « reservees jusqu'a 16:18 ». Le jour n'apporte rien
+ * L'heure seule, LS-315 : « reservees jusqu'a 16 h 18 ». Le jour n'apporte rien
  * a une echeance de trente minutes au plus, et l'alourdirait a 320 px.
+ *
+ * L'USAGE TYPOGRAPHIQUE FRANCAIS ET NON CELUI D'`Intl`, arbitrage de
+ * Christophe du 10 novembre 2026 : `Intl` rend « 16:18 ». L'heure n'a pas de
+ * zero initial, « 8 h 05 », et les deux espaces sont INSECABLES, sans quoi
+ * l'heure se couperait en fin de ligne a 320 px.
  */
 export function formaterHeure(date: Date): string {
-  return new Intl.DateTimeFormat("fr-FR", {
-    timeStyle: "short",
+  const parties = new Intl.DateTimeFormat("fr-FR", {
+    hour: "numeric",
+    minute: "2-digit",
+    hourCycle: "h23",
     timeZone: "Europe/Paris",
-  }).format(date);
+  }).formatToParts(date);
+  const heure = parties.find((partie) => partie.type === "hour")?.value ?? "";
+  const minute = parties.find((partie) => partie.type === "minute")?.value ?? "";
+
+  return `${Number(heure)}\u00a0h\u00a0${minute}`;
 }
 
 /**

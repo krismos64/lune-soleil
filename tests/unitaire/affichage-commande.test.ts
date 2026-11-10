@@ -23,6 +23,7 @@ import {
   LIBELLES_STATUT,
   SEUIL_SUIVI_BLOQUE_MS,
   formaterDate,
+  formaterHeure,
   formaterOrigine,
   fraicheurSuivi,
   traduireStatut,
@@ -169,6 +170,28 @@ describe("formaterDate", () => {
  * L'INSTANT EST FIXE ET JAMAIS `new Date()`. Un test qui dort mesurerait
  * l'ordonnanceur, piege deja rencontre sur le test de concurrence de ce depot.
  */
+describe("formaterHeure", () => {
+  it("ecrit l'heure de Paris a la francaise, espaces insecables", () => {
+    // 15 h 18 UTC en hiver vaut 16 h 18 a Paris.
+    expect(formaterHeure(new Date("2026-11-10T15:18:07Z"))).toBe(
+      "16\u00a0h\u00a018",
+    );
+  });
+
+  it("n'ecrit pas de zero devant l'heure", () => {
+    // 7 h 05 UTC en ete vaut 9 h 05 a Paris.
+    expect(formaterHeure(new Date("2026-07-01T07:05:00Z"))).toBe(
+      "9\u00a0h\u00a005",
+    );
+  });
+
+  it("rend minuit comme 0 h, jamais 24 h", () => {
+    expect(formaterHeure(new Date("2026-01-01T23:10:00Z"))).toBe(
+      "0\u00a0h\u00a010",
+    );
+  });
+});
+
 describe("fraicheurSuivi", () => {
   const maintenant = new Date("2026-09-10T12:00:00.000Z");
 
