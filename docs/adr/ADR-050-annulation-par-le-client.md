@@ -120,5 +120,10 @@ l'alerte ne part jamais. La même faiblesse vaut pour un webhook tardif après u
 annulation par la réconciliation : son durcissement relève du webhook,
 LS-316.
 
+**Complément du 10 novembre 2026, LS-316** : ce filet est fermé. Le webhook
+verrouille les variantes puis la commande avant de lire son statut, et une
+commande lue `ANNULEE` enregistre le paiement sans sortir de stock ni émettre de
+facture, l'alerte `PAIEMENT_SUR_COMMANDE_ANNULEE` partant toujours.
+
 **Délai de l'appel d'expiration**, jusqu'à vingt secondes. Le bouton passe en
 attente, un second clic est absorbé par la garde sur le statut.
