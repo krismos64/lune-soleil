@@ -28,12 +28,17 @@ import {
 import {
   annulerSiEnAttente,
   lignesPourPanier,
+  lireCommandeAPayer,
   verrouillerCommande,
 } from "@/repositories/commande";
 import { historiserTransition } from "@/repositories/confirmation";
-import { sessionsEnAttente } from "@/repositories/paiement";
+import {
+  paiementEncaisseExiste,
+  sessionsEnAttente,
+} from "@/repositories/paiement";
 import {
   rendreReservationsDeCommande,
+  reservationsActivesDeCommande,
   verrouillerVariantesDeCommande,
 } from "@/repositories/stock";
 import { estInterblocage } from "@/services/reservation";
@@ -226,4 +231,62 @@ async function annulerEtRendre(
       lignes: await lignesPourPanier(transaction, commandeId),
     } as const;
   });
+}
+
+/** Ce que le bandeau d'une commande en attente affiche. LS-315, volet 1. */
+export type CommandeEnAttente = {
+  numero: string;
+  /** Fin de la premiere reservation a expirer, en UTC, invariant 8. */
+  reserveeJusqua: Date;
+  /** Les variantes que cette commande tient, pour la fiche produit. */
+  varianteIds: string[];
+};
+
+/**
+ * La commande en attente du navigateur, si elle est encore reprenable.
+ *
+ * TROIS CONDITIONS, ET CHACUNE FERME UN FAUX BANDEAU : en attente de paiement,
+ * aucun paiement encaisse (l'evenement a pu arriver sans que le statut suive),
+ * et au moins une reservation active. Sans la troisieme, le bandeau
+ * promettrait des pieces que la liberation a deja rendues.
+ *
+ * `commandeId` VIENT DU COOKIE SIGNE, invariant 2, comme pour l'annulation.
+ * Toute lecture en echec rend `null` : le bandeau est un confort, jamais une
+ * raison de faire tomber la page du panier ou la fiche produit.
+ */
+export async function lireCommandeEnAttente(
+  commandeId: string,
+  client: typeof prisma = prisma,
+): Promise<CommandeEnAttente | null> {
+  const identifiant = valider(schemaIdentifiant, commandeId);
+
+  try {
+    const commande = await lireCommandeAPayer(client, identifiant);
+
+    if (commande === null || commande.statut !== "EN_ATTENTE_PAIEMENT") {
+      return null;
+    }
+
+    if (await paiementEncaisseExiste(client, identifiant)) {
+      return null;
+    }
+
+    const actives = await reservationsActivesDeCommande(client, identifiant);
+
+    if (actives.finA === null) {
+      return null;
+    }
+
+    return {
+      numero: commande.numero,
+      reserveeJusqua: actives.finA,
+      varianteIds: actives.varianteIds,
+    };
+  } catch (cause) {
+    journaliserErreur("lecture de la commande en attente impossible", cause, {
+      commandeId: identifiant,
+    });
+
+    return null;
+  }
 }
