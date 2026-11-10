@@ -67,7 +67,7 @@ import {
   leverAlerteCritique,
   supprimerReservations,
 } from "@/repositories/confirmation";
-import { verrouillerCommande } from "@/repositories/commande";
+import { verrouillerCommandeSansBloquerLesReferences } from "@/repositories/commande";
 import { verrouillerVariantesDeCommande } from "@/repositories/stock";
 
 /** Ce que le traitement d'un evenement peut rendre. L'adaptateur choisit le code. */
@@ -353,7 +353,10 @@ async function confirmerPaiement(
    * de session prend la commande puis le paiement, comme ici.
    */
   await verrouillerVariantesDeCommande(transaction, evenement.commandeId);
-  await verrouillerCommande(transaction, evenement.commandeId);
+  await verrouillerCommandeSansBloquerLesReferences(
+    transaction,
+    evenement.commandeId,
+  );
 
   const commande = await transaction.commande.findUnique({
     where: { id: evenement.commandeId },
