@@ -346,3 +346,118 @@ describe("listerClientsAdministration, activite commerciale", () => {
     expect(vue.clients[0]?.totalCentimes).toBe(0);
   });
 });
+
+/** Une commande minimale, pour les comptes de LS-317. */
+async function poserCommande(options: {
+  email: string;
+  utilisateurId: string | null;
+  statut: string;
+  totalCentimes: number;
+  dissociee?: boolean;
+}): Promise<{ id: string; numero: string }> {
+  const id = randomUUID();
+  const numero = `C-TEST-317-${id.slice(0, 8)}`;
+
+  await client.query(
+    `INSERT INTO commande (
+       id, numero, email_normalise, nom_client, utilisateur_id, statut,
+       mode_livraison, adresse_livraison, adresse_facturation,
+       sous_total_centimes, frais_port_centimes, montant_taxe_centimes,
+       total_centimes, dissocie_a, cgv_acceptees_a, cgv_version, cree_a
+     )
+     VALUES ($1, $2, $3, 'TEST Client', $4, $5::"StatutCommande", 'DOMICILE',
+             '{}'::jsonb, '{}'::jsonb, $6, 0, 0, $6,
+             CASE WHEN $7 THEN now() ELSE NULL END, now(), 'test', now())`,
+    [
+      id,
+      numero,
+      options.email,
+      options.utilisateurId,
+      options.statut,
+      options.totalCentimes,
+      options.dissociee === true,
+    ],
+  );
+
+  return { id, numero };
+}
+
+describe("LS-317, commandes non rattachees et montant hors annulees", () => {
+  it("montre les commandes d'une adresse non confirmee, sans les compter au compte", async () => {
+    /*
+     * LE CAS DU 10 NOVEMBRE 2026 : compte a l'adresse non confirmee, une
+     * commande expediee et une annulee passees avec la meme adresse, aucune
+     * rattachee. L'ecran affichait 0 commande, sans rien de plus.
+     */
+    const compte = await creerCompte({
+      email: "non-confirme@example.invalid",
+      nom: "TEST Non confirme",
+      emailVerifie: false,
+    });
+    const expediee = await poserCommande({
+      email: "non-confirme@example.invalid",
+      utilisateurId: null,
+      statut: "EXPEDIEE",
+      totalCentimes: 1910,
+    });
+    const annulee = await poserCommande({
+      email: "non-confirme@example.invalid",
+      utilisateurId: null,
+      statut: "ANNULEE",
+      totalCentimes: 1910,
+    });
+
+    // UNE COMMANDE DISSOCIEE NE SE MONTRE JAMAIS COMME RATTACHABLE, LS-95.
+    await poserCommande({
+      email: "non-confirme@example.invalid",
+      utilisateurId: null,
+      statut: "CONFIRMEE",
+      totalCentimes: 5000,
+      dissociee: true,
+    });
+
+    // LA COMMANDE D'UNE AUTRE ADRESSE NE PARAIT PAS SUR CETTE FICHE.
+    await poserCommande({
+      email: "autre@example.invalid",
+      utilisateurId: null,
+      statut: "EXPEDIEE",
+      totalCentimes: 7000,
+    });
+
+    const vue = await listerClientsAdministration();
+    const fiche = vue.clients.find((ligne) => ligne.id === compte.id);
+
+    expect(fiche?.nombreCommandes).toBe(0);
+    expect(fiche?.totalCentimes).toBe(0);
+    expect(
+      fiche?.commandesNonRattachees.map((commande) => commande.numero).sort(),
+    ).toEqual([expediee.numero, annulee.numero].sort());
+  });
+
+  it("exclut les commandes annulees du montant commande", async () => {
+    const compte = await creerCompte({
+      email: "montant@example.invalid",
+      nom: "TEST Montant",
+    });
+
+    await poserCommande({
+      email: "montant@example.invalid",
+      utilisateurId: compte.id,
+      statut: "EXPEDIEE",
+      totalCentimes: 1910,
+    });
+    await poserCommande({
+      email: "montant@example.invalid",
+      utilisateurId: compte.id,
+      statut: "ANNULEE",
+      totalCentimes: 1910,
+    });
+
+    const vue = await listerClientsAdministration();
+    const fiche = vue.clients.find((ligne) => ligne.id === compte.id);
+
+    // ARBITRAGE DU 10 NOVEMBRE 2026 : un paiement abandonne ne gonfle rien.
+    expect(fiche?.totalCentimes).toBe(1910);
+    expect(fiche?.commandesNonRattachees).toEqual([]);
+  });
+});

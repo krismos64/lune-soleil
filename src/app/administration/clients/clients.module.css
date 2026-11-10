@@ -311,6 +311,47 @@
   font-weight: 700;
 }
 
+/*
+ * Commandes non rattachees, LS-317. Sur la carte blanche : `--ls-text` et
+ * `--ls-primary`, jamais un jeton secondaire, C31.
+ */
+.nonRattachees {
+  margin-top: var(--ls-space-3);
+  padding: var(--ls-space-3);
+  border-left: 3px solid var(--ls-warning);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  font-size: 0.875rem;
+}
+
+.nonRattacheesTitre {
+  margin: 0 0 var(--ls-space-2);
+}
+
+.nonRattacheesListe {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nonRattacheesListe li {
+  min-height: var(--ls-touch-target);
+  display: flex;
+  align-items: center;
+  gap: var(--ls-space-2);
+}
+
+.nonRattacheesLien {
+  color: var(--ls-primary);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.nonRattacheesLien:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
 /* ---------------------------------------------------- etats non nominaux */
 
 /*

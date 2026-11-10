@@ -135,6 +135,30 @@
   overflow-wrap: anywhere;
 }
 
+/*
+ * Lien au compte, LS-317. `--ls-text` et `--ls-primary` sur le fond de la
+ * section, jamais un jeton secondaire, C31.
+ */
+.compte {
+  margin: var(--ls-space-2) 0 0;
+  color: var(--ls-text);
+  font-size: 0.9375rem;
+}
+
+.lienCompte {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  color: var(--ls-primary);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.lienCompte:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
 .client {
   margin: 0 0 var(--ls-space-3);
   color: var(--ls-text-muted);
