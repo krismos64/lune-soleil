@@ -24,7 +24,7 @@ import { expect, test, type BrowserContext } from "@playwright/test";
 import { Client } from "pg";
 
 import { encoderCommandeEnCours } from "@/lib/commande-cookie";
-import { COMMANDE_TEST } from "./chemin-session";
+import { COMMANDE_TEST, PIECE_RESERVEE_TEST } from "./chemin-session";
 import {
   TOLERANCE_DEBORDEMENT_PX,
   debordementHorizontal,
@@ -58,26 +58,49 @@ async function avecBase<T>(
 async function amorcerCommande(
   context: BrowserContext,
   baseURL: string | undefined,
-  options: { avecSession: boolean },
+  options: {
+    avecSession: boolean;
+    /**
+     * Reserver la piece PUBLIEE de `commande.setup.ts` au lieu d'en creer une
+     * en brouillon : seule une fiche publiee rend, donc seul ce cas mesure le
+     * bandeau de la fiche. La reservation se rend par `rendreReservation`.
+     */
+    piecePubliee?: boolean;
+  },
 ): Promise<Amorce> {
   const produitId = randomUUID();
-  const varianteId = randomUUID();
+  const varianteId =
+    options.piecePubliee === true
+      ? PIECE_RESERVEE_TEST.varianteId
+      : randomUUID();
   const commandeId = randomUUID();
   const suffixe = commandeId.slice(0, 8);
   const numero = `C-E2E-${suffixe}`;
 
   await avecBase(async (client) => {
-    await client.query(
-      `INSERT INTO produit (id, categorie_id, nom, slug, statut, cree_a, modifie_a)
-       VALUES ($1, $2, $3, $4, 'BROUILLON', now(), now())`,
-      [produitId, COMMANDE_TEST.categorieId, NOM_PIECE, `e2e-ls315-${suffixe}`],
-    );
-    await client.query(
-      `INSERT INTO variante (id, produit_id, reference, libelle, prix_centimes,
-         quantite_physique, quantite_reservee, vente_web_activee, cree_a)
-       VALUES ($1, $2, $3, 'TEST Déclinaison', 3900, 1, 1, true, now())`,
-      [varianteId, produitId, `TEST-LS315-${suffixe}`],
-    );
+    if (options.piecePubliee === true) {
+      await client.query(
+        "UPDATE variante SET quantite_reservee = quantite_reservee + 1 WHERE id = $1",
+        [varianteId],
+      );
+    } else {
+      await client.query(
+        `INSERT INTO produit (id, categorie_id, nom, slug, statut, cree_a, modifie_a)
+         VALUES ($1, $2, $3, $4, 'BROUILLON', now(), now())`,
+        [
+          produitId,
+          COMMANDE_TEST.categorieId,
+          NOM_PIECE,
+          `e2e-ls315-${suffixe}`,
+        ],
+      );
+      await client.query(
+        `INSERT INTO variante (id, produit_id, reference, libelle, prix_centimes,
+           quantite_physique, quantite_reservee, vente_web_activee, cree_a)
+         VALUES ($1, $2, $3, 'TEST Déclinaison', 3900, 1, 1, true, now())`,
+        [varianteId, produitId, `TEST-LS315-${suffixe}`],
+      );
+    }
     await client.query(
       `INSERT INTO commande (id, numero, statut, email_normalise, nom_client,
          adresse_livraison, adresse_facturation, sous_total_centimes,
@@ -130,6 +153,26 @@ async function amorcerCommande(
   ]);
 
   return { commandeId, varianteId, numero };
+}
+
+/**
+ * Rend la reservation d'une amorce sur la piece publiee, dans un `finally` :
+ * les quatre largeurs partagent cette variante, et une reservation laissee
+ * finirait par l'epuiser d'une execution locale a l'autre.
+ */
+async function rendreReservation(amorce: Amorce): Promise<void> {
+  await avecBase(async (client) => {
+    await client.query(
+      `WITH rendues AS (
+         DELETE FROM reservation WHERE commande_id = $1 RETURNING quantite
+       )
+       UPDATE variante
+          SET quantite_reservee = quantite_reservee
+                - (SELECT COALESCE(SUM(quantite), 0)::int FROM rendues)
+        WHERE id = $2`,
+      [amorce.commandeId, amorce.varianteId],
+    );
+  });
 }
 
 async function aucuneViolationSerieuse(
@@ -316,4 +359,78 @@ test("le retour apres paiement ne propose pas d'annuler", async ({
   await expect(
     page.getByRole("button", { name: "Annuler et revenir au panier" }),
   ).toHaveCount(0);
+});
+
+test("la fiche d'une piece tenue par ce navigateur porte le bandeau", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  const amorce = await amorcerCommande(context, baseURL, {
+    avecSession: false,
+    piecePubliee: true,
+  });
+
+  try {
+    await page.goto(`/produit/${PIECE_RESERVEE_TEST.slug}`);
+
+    const bandeau = page.getByRole("region", {
+      name: "Cette pièce est réservée pour votre commande",
+    });
+
+    await expect(bandeau).toBeVisible();
+    await expect(bandeau).toContainText(amorce.numero);
+    await expect(
+      bandeau.getByRole("link", { name: "Reprendre le paiement" }),
+    ).toBeVisible();
+
+    /*
+     * LE PREMIER TITRE DE LA PAGE EST LE `h1` DU BIJOU : le bandeau le precede
+     * dans le document, et son titre y est un paragraphe, WCAG 1.3.1. Releve
+     * par `ls-frontend-revue` le 10 novembre 2026.
+     */
+    await expect(page.locator("main").locator("h1, h2, h3").first()).toHaveText(
+      PIECE_RESERVEE_TEST.nom,
+    );
+
+    expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+      TOLERANCE_DEBORDEMENT_PX,
+    );
+    await aucuneViolationSerieuse(page);
+  } finally {
+    await rendreReservation(amorce);
+  }
+});
+
+test("la reservation d'un autre client ne transparait pas sur la fiche", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  /*
+   * UN AUTRE NAVIGATEUR TIENT LA PIECE PUBLIEE, et celui-ci porte sa propre
+   * commande en attente, sur une autre piece. Le bandeau ne doit pas paraitre :
+   * il ne parle que de la commande du cookie, jamais de celle d'autrui.
+   */
+  const autre = await amorcerCommande(context, baseURL, {
+    avecSession: false,
+    piecePubliee: true,
+  });
+
+  try {
+    await amorcerCommande(context, baseURL, { avecSession: false });
+
+    await page.goto(`/produit/${PIECE_RESERVEE_TEST.slug}`);
+
+    await expect(
+      page.getByRole("heading", { name: PIECE_RESERVEE_TEST.nom, level: 1 }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("region", {
+        name: "Cette pièce est réservée pour votre commande",
+      }),
+    ).toHaveCount(0);
+  } finally {
+    await rendreReservation(autre);
+  }
 });

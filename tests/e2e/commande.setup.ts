@@ -38,6 +38,7 @@ import {
   COMMANDE_FACTUREE_TEST,
   COMMANDE_TEST,
   FICHIER_COMMANDE,
+  PIECE_RESERVEE_TEST,
   FICHIER_JETONS_AVIS,
   SECONDE_COMMANDE_A_EXPEDIER_TEST,
   messageAlerteAcquittable,
@@ -1551,6 +1552,46 @@ preparation("alertes critiques amorcees", async () => {
           "son etat vide et ne prouverait rien.",
       );
     }
+  } finally {
+    await client.end();
+  }
+});
+
+preparation("piece publiee pour le bandeau de la fiche, LS-315", async () => {
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+
+  try {
+    // `ordre` FIXE ET RESERVE, 9315, meme motif que les amorces voisines, C24.
+    await client.query(
+      `INSERT INTO categorie (id, nom, slug, ordre, cree_a)
+       VALUES ($1, 'TEST Catégorie réservable', 'e2e-ls315-categorie', 9315, now())
+       ON CONFLICT (id) DO NOTHING`,
+      [PIECE_RESERVEE_TEST.categorieId],
+    );
+
+    await client.query(
+      `INSERT INTO produit (id, categorie_id, nom, slug, statut, cree_a, modifie_a)
+       VALUES ($1, $2, $3, $4, 'ACTIF', now(), now())
+       ON CONFLICT (id) DO NOTHING`,
+      [
+        PIECE_RESERVEE_TEST.produitId,
+        PIECE_RESERVEE_TEST.categorieId,
+        PIECE_RESERVEE_TEST.nom,
+        PIECE_RESERVEE_TEST.slug,
+      ],
+    );
+
+    await client.query(
+      `INSERT INTO variante (
+         id, produit_id, reference, libelle, prix_centimes,
+         quantite_physique, quantite_reservee, vente_web_activee, cree_a
+       )
+       VALUES ($1, $2, 'TEST-LS315-FICHE', 'TEST Déclinaison réservable', 4200,
+               100, 0, true, now())
+       ON CONFLICT (id) DO NOTHING`,
+      [PIECE_RESERVEE_TEST.varianteId, PIECE_RESERVEE_TEST.produitId],
+    );
   } finally {
     await client.end();
   }
