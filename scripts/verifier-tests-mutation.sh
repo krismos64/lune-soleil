@@ -2119,7 +2119,11 @@ cas "montant encaisse non confronte au total de la commande" integration \
 # CE VERROU EST LEGITIME LA OU CELUI D'AVANT L'APPEL NE L'ETAIT PAS : il ne
 # couvre aucun appel reseau, ADR-024, la session existant deja et les expirations
 # partant apres le commit.
-mute "$PAIEMENT" 's/      await transaction\.\$executeRaw`\n        SELECT id FROM commande WHERE id = \$\{identifiant\} FOR UPDATE\n      `;\n\n//'
+#
+# DEPUIS LS-315 LE MEME VERROU RELIT LE STATUT, `SELECT statut ... FOR UPDATE` :
+# la mutation retire le seul `FOR UPDATE` et garde la lecture, qui sinon
+# masquerait le cas sous une erreur de type.
+mute "$PAIEMENT" 's/        SELECT statut FROM commande WHERE id = \$\{identifiant\} FOR UPDATE/        SELECT statut FROM commande WHERE id = \$\{identifiant\}/'
 cas "verrou de serialisation du rattachement retire" integration \
   "serialise deux demarrages concurrents : une seule session creee"
 
