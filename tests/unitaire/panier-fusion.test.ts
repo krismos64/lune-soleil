@@ -55,11 +55,14 @@ describe("fusionnerPanier", () => {
     }));
 
     // Au-dela, `decoderPanier` rejetterait le cookie entier.
-    expect(fusionnerPanier(plein, [{ varianteId: A, quantite: 1 }])).toHaveLength(
-      LIGNES_MAXIMUM,
-    );
     expect(
-      fusionnerPanier([], [{ varianteId: A, quantite: QUANTITE_MAXIMALE_PAR_LIGNE + 5 }]),
+      fusionnerPanier(plein, [{ varianteId: A, quantite: 1 }]),
+    ).toHaveLength(LIGNES_MAXIMUM);
+    expect(
+      fusionnerPanier(
+        [],
+        [{ varianteId: A, quantite: QUANTITE_MAXIMALE_PAR_LIGNE + 5 }],
+      ),
     ).toEqual([{ varianteId: A, quantite: QUANTITE_MAXIMALE_PAR_LIGNE }]);
   });
 });
