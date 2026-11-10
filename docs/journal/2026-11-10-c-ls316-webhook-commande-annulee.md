@@ -56,14 +56,30 @@ détectées ; 221 au total.
   échoué une fois sur cinq dans `npm run test`. Composant sans base, sans
   rapport avec LS-316 ; non diagnostiqué.
 
+## Mise en production
+
+- PR #653, CI verte au premier passage, les contrôles de la CI ayant tous été
+  lancés en local avant de pousser. Fusionnée en rebase, `main` à `7094aa4`.
+- Déploiement run 42911391830, sans migration : image `7094aa4…` en service,
+  aucune erreur au journal, pages en 200, `/api/webhooks/paiement` sans
+  signature en 400.
+
+## Signalé dans la soirée, LS-317
+
+Christophe a relevé qu'un client à la commande expédiée affichait 0 commande et
+0 € dans l'administration. Ce n'est pas une panne : son adresse n'est jamais
+confirmée, et le parcours 6 ne rattache une commande qu'à une adresse vérifiée.
+L'administration ne le montre pas, ni sur la fiche client ni sur la fiche
+commande, et le montant commandé compte les annulations. **LS-317** créé ;
+arbitrage : exclure les commandes annulées du montant.
+
 ## Prochaine étape
 
-1. PR, fusion. La revue `ls-critical-reviewer` est faite : aucun défaut
-   d'argent ni de stock, un interblocage introduit et corrigé.
-2. Déploiement du code, sans migration, sur accord de Christophe.
-3. LS-291.
+1. LS-317.
+2. LS-291.
 
 ## État des tickets
 
 - **LS-315** : Terminé, les neuf critères remplis.
-- **LS-316** : En cours, revue et production à faire.
+- **LS-316** : Terminé, en production.
+- **LS-317** : créé, À faire.
