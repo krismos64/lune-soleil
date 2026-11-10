@@ -16,6 +16,8 @@ import { formaterMontant } from "@/lib/montant";
 import { NOM_COOKIE_PANIER, decoderPanier } from "@/lib/panier-cookie";
 import { revalider } from "@/services/panier";
 import { lireSeuilFranchise } from "@/services/parametres";
+import { BandeauCommandeEnAttente } from "../commande/bandeau-commande-en-attente";
+import { commandeEnAttenteDuNavigateur } from "../commande/commande-en-attente";
 import { LignesPanier } from "./lignes-panier";
 import styles from "./panier.module.css";
 
@@ -37,10 +39,21 @@ export const dynamic = "force-dynamic";
 export default async function PagePanier() {
   const magasin = await cookies();
   const lignesCookie = decoderPanier(magasin.get(NOM_COOKIE_PANIER)?.value);
-  const [panier, seuilFranchise] = await Promise.all([
+  const [panier, seuilFranchise, enAttente] = await Promise.all([
     revalider(lignesCookie),
     lireSeuilFranchise(),
+    commandeEnAttenteDuNavigateur(),
   ]);
+
+  /*
+   * LS-315 : LE PANIER EST VIDE PARCE QUE LA COMMANDE L'A PRIS. Le bandeau
+   * vient en tete, dans les deux etats, pour que le client retrouve ses
+   * pieces avant de conclure qu'elles sont perdues.
+   */
+  const bandeau =
+    enAttente === null ? null : (
+      <BandeauCommandeEnAttente commande={enAttente} contexte="panier" />
+    );
 
   if (panier.lignes.length === 0) {
     /*
@@ -50,6 +63,7 @@ export default async function PagePanier() {
     return (
       <main id="contenu" tabIndex={-1} className={styles.page}>
         <h1 className={styles.titre}>Votre panier</h1>
+        {bandeau}
         <p className={styles.vide}>Votre panier est vide pour le moment.</p>
         <Link href="/catalogue" className={styles.actionPrincipale}>
           Découvrir les créations
@@ -61,6 +75,7 @@ export default async function PagePanier() {
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Votre panier</h1>
+      {bandeau}
 
       {/*
        * L'AVERTISSEMENT VIENT AVANT LES LIGNES, et porte `role="status"` : un

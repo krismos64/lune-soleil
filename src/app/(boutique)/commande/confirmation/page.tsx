@@ -32,6 +32,7 @@ import {
 import styles from "../commande.module.css";
 import { FocusTitre } from "./focus-titre";
 import { BoutonPayer } from "./bouton-payer";
+import { BoutonAnnulerCommande } from "../bouton-annuler-commande";
 
 export const metadata = {
   title: "Votre commande",
@@ -215,6 +216,13 @@ function EtatCommande({
             : "Payer ma commande"
         }
       />
+
+      {/*
+       * LS-315 : RENONCER RAMENE LES PIECES AU PANIER, tout de suite, au lieu
+       * de les laisser bloquees jusqu'a l'expiration. Absent du retour
+       * « paiement », ou le client vient de payer.
+       */}
+      <BoutonAnnulerCommande />
 
       <Link href="/catalogue" className={styles.retourPanier}>
         Retourner au catalogue

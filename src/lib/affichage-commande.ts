@@ -123,6 +123,17 @@ export function formaterJour(date: Date): string {
 }
 
 /**
+ * L'heure seule, LS-315 : « reservees jusqu'a 16:18 ». Le jour n'apporte rien
+ * a une echeance de trente minutes au plus, et l'alourdirait a 320 px.
+ */
+export function formaterHeure(date: Date): string {
+  return new Intl.DateTimeFormat("fr-FR", {
+    timeStyle: "short",
+    timeZone: "Europe/Paris",
+  }).format(date);
+}
+
+/**
  * Libelle d'une origine d'ecriture, regle S9.
  *
  * `Record<OrigineEcriture, string>` ET NON un `switch` a `default`, corrige par
