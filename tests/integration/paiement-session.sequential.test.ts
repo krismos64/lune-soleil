@@ -29,6 +29,7 @@ import { creerVarianteEnStock } from "../aide/donnees-test";
 import { VARIABLE_URL_TEST } from "../aide/base-ephemere";
 import type {
   DemandeSessionPaiement,
+  EtatSessionPaiement,
   FournisseurPaiement,
   IssueExpirationSession,
 } from "@/integrations/stripe/fournisseur";
@@ -87,6 +88,12 @@ function fournisseurDouble(
     expirationEnPanne?: boolean;
     issueExpiration?: IssueExpirationSession;
     /**
+     * Etat de la session precedente lu apres un `DEJA_FERMEE`, LS-315.
+     * `EXPIREE` par defaut : fermee sans paiement, la creation continue.
+     */
+    etatApresFermeture?: EtatSessionPaiement;
+    lectureEnPanne?: boolean;
+    /**
      * Latence de l'appel reseau, en millisecondes.
      *
      * SANS ELLE, LE TEST DE CONCURRENCE NE PROUVE RIEN. Un double qui rend
@@ -103,6 +110,7 @@ function fournisseurDouble(
 ) {
   const demandes: DemandeSessionPaiement[] = [];
   const expirations: string[] = [];
+  const lectures: string[] = [];
 
   async function attendre(): Promise<void> {
     if (options.latenceMs !== undefined) {
@@ -137,12 +145,6 @@ function fournisseurDouble(
       return options.issueExpiration ?? "EXPIREE";
     },
     /*
-     * `lireSession` N'EST PAS EXERCEE PAR CE FICHIER, elle appartient a la
-     * reconciliation de LS-120 : le double la porte pour satisfaire le contrat,
-     * et leve si un test l'appelait par megarde, ce qui vaut mieux qu'un etat
-     * arbitraire silencieusement accepte.
-     */
-    /*
      * `rembourser` N'EST PAS EXERCEE PAR CE FICHIER, LS-128. Elle LEVE plutot
      * que de rendre un succes muet : un appel inattendu doit se voir, la ou un
      * double complaisant ferait passer un remboursement fantome pour normal.
@@ -150,12 +152,23 @@ function fournisseurDouble(
     async rembourser(): Promise<never> {
       throw new Error("rembourser n'a pas sa place dans ces tests");
     },
-    async lireSession() {
-      throw new Error("lireSession n'a pas sa place dans ces tests");
+    /*
+     * `lireSession` NE SERT QU'APRES UN `DEJA_FERMEE`, LS-315 : c'est elle qui
+     * dit si la session precedente a ete payee. Hors de ce cas, un appel est
+     * un defaut, et `lectures` permet de le voir.
+     */
+    async lireSession(identifiant) {
+      lectures.push(identifiant);
+
+      if (options.lectureEnPanne === true) {
+        throw new PrestatairePaiementIndisponibleError("panne simulee");
+      }
+
+      return options.etatApresFermeture ?? { etat: "EXPIREE" };
     },
   };
 
-  return { double, demandes, expirations };
+  return { double, demandes, expirations, lectures };
 }
 
 /** Ecrit une commande reelle par le service, et rend son identifiant. */
@@ -398,6 +411,55 @@ describe("demarrerPaiement, une seule session ouverte par commande", () => {
 
     expect(issue.statut).toBe("REDIRECTION");
     expect(seconde.demandes).toHaveLength(1);
+  });
+
+  it("ne rouvre pas de session quand la precedente est deja payee", async () => {
+    const commandeId = await commanderUnePiece();
+    const premiere = fournisseurDouble();
+
+    await demarrerPaiement({ commandeId, fournisseur: premiere.double });
+
+    /*
+     * LE CLIENT A PAYE, L'EVENEMENT N'EST PAS ENCORE ARRIVE, et il clique
+     * « Reprendre le paiement » depuis le bandeau du panier, LS-315. Une
+     * seconde session serait payable : double encaissement, ADR-032.
+     */
+    const seconde = fournisseurDouble({
+      issueExpiration: "DEJA_FERMEE",
+      etatApresFermeture: {
+        etat: "PAYEE",
+        identifiantSession: `cs_test_1_${commandeId.slice(0, 8)}`,
+        montantCentimes: 4900,
+        charge: {},
+      },
+    });
+    const issue = await demarrerPaiement({
+      commandeId,
+      fournisseur: seconde.double,
+    });
+
+    expect(issue).toEqual({ statut: "DEJA_PAYEE" });
+    expect(seconde.demandes).toHaveLength(0);
+    expect(seconde.lectures).toHaveLength(1);
+  });
+
+  it("ne rouvre pas de session quand l'etat de la precedente est illisible", async () => {
+    const commandeId = await commanderUnePiece();
+    const premiere = fournisseurDouble();
+
+    await demarrerPaiement({ commandeId, fournisseur: premiere.double });
+
+    const seconde = fournisseurDouble({
+      issueExpiration: "DEJA_FERMEE",
+      lectureEnPanne: true,
+    });
+    const issue = await demarrerPaiement({
+      commandeId,
+      fournisseur: seconde.double,
+    });
+
+    expect(issue).toEqual({ statut: "PANNE" });
+    expect(seconde.demandes).toHaveLength(0);
   });
 
   it("n'appelle pas la creation quand l'expiration est en panne", async () => {
