@@ -851,3 +851,23 @@ export {
  * besoin dans ce fichier, d'ou cet import distinct.
  */
 import { MOT_DE_PASSE_TEST } from "../aide/mot-de-passe-test";
+
+/**
+ * Piece PUBLIEE pour le bandeau de la fiche produit, LS-315.
+ *
+ * `ACTIF` ET NON `BROUILLON`, comme l'amorce de LS-140 : sur un brouillon, la
+ * fiche rend 404 et le bandeau n'est jamais mesure. Les tests du catalogue
+ * verifient un ordre relatif depuis LS-232, une piece publiee de plus ne les
+ * casse pas.
+ *
+ * STOCK LARGE ET RESERVATIONS RENDUES : chaque test pose sa reservation sur
+ * cette variante et la rend dans un `finally`, les quatre largeurs tournant en
+ * parallele sur la meme ligne.
+ */
+export const PIECE_RESERVEE_TEST = {
+  categorieId: "e1a2b3c4-1315-4aaa-8888-000000000001",
+  produitId: "e1a2b3c4-1315-4bbb-8888-000000000002",
+  varianteId: "e1a2b3c4-1315-4ccc-8888-000000000003",
+  slug: "e2e-ls315-piece-reservable",
+  nom: "TEST Pièce réservable LS-315",
+};
