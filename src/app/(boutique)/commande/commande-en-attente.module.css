@@ -1,0 +1,109 @@
+/*
+ * Bandeau de commande en attente et bouton d'annulation, LS-315.
+ *
+ * FOND BLANC ET NON SABLE : le sable est le fond piegeux du projet, C31. Sur
+ * blanc, `--ls-text` et `--ls-primary` tiennent largement l'AA.
+ */
+.bandeau {
+  margin: 0 0 var(--ls-space-5);
+  padding: var(--ls-space-4);
+  border: 1px solid var(--ls-border);
+  border-left: 4px solid var(--ls-primary);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+}
+
+.titre {
+  margin: 0 0 var(--ls-space-2);
+  font-size: 1.125rem;
+}
+
+.texte {
+  margin: 0 0 var(--ls-space-4);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ls-space-2);
+}
+
+.reprendre,
+.annuler {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-3) var(--ls-space-5);
+  border-radius: var(--ls-radius-sm);
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/*
+ * @bordure-decorative le bouton porte son propre fond plein, qui l'identifie
+ * deja : la bordure de meme couleur n'est pas sa seule limite visible.
+ */
+.reprendre {
+  border: 1px solid var(--ls-primary);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+}
+
+.reprendre:hover {
+  background: var(--ls-primary-hover);
+}
+
+/*
+ * BOUTON SECONDAIRE SUR FOND BLANC : sa bordure est sa seule limite, donc
+ * `--ls-border-controle`, 3,66:1 sur blanc, C36.
+ */
+.annuler {
+  border: 1px solid var(--ls-border-controle);
+  background: var(--ls-surface);
+  color: var(--ls-primary);
+}
+
+.annuler:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.reprendre:focus-visible,
+.annuler:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+.erreurVide {
+  margin: 0;
+}
+
+/*
+ * EN TETE DES ACTIONS, sur toute la largeur : a 768 px les actions passent en
+ * ligne, et le message s'intercalerait sinon entre les deux boutons.
+ */
+.erreur {
+  flex-basis: 100%;
+  order: -1;
+  margin: 0 0 var(--ls-space-2);
+  padding: var(--ls-space-3) var(--ls-space-4);
+  border-left: 4px solid var(--ls-error);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  font-size: 0.9375rem;
+}
+
+@media (min-width: 768px) {
+  .actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+}

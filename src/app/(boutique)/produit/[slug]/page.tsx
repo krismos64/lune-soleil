@@ -36,6 +36,8 @@ import { lireFichePublique } from "@/services/catalogue";
 import { lireConfigurationLivraisonPublique } from "@/services/parametres";
 import styles from "./fiche.module.css";
 import { Galerie } from "./galerie";
+import { BandeauCommandeEnAttente } from "../../commande/bandeau-commande-en-attente";
+import { commandeEnAttenteDuNavigateur } from "../../commande/commande-en-attente";
 import { SelecteurVariante } from "./selecteur-variante";
 import { AvisProduit } from "./avis-produit";
 
@@ -205,6 +207,19 @@ export default async function PageFicheProduit({
   );
 
   /*
+   * LS-315. LA PIECE PEUT ETRE AFFICHEE EPUISEE PARCE QUE CE NAVIGATEUR LA
+   * TIENT : sa propre commande en attente la reserve. Le bandeau ne parait que
+   * dans ce cas, jamais pour la reservation d'un autre client, dont rien ne
+   * doit transparaitre. Lu APRES le controle d'existence, C32.
+   */
+  const enAttente = await commandeEnAttenteDuNavigateur();
+  const tenueParCeNavigateur =
+    enAttente !== null &&
+    fiche.variantes.some((variante) =>
+      enAttente.varianteIds.includes(variante.id),
+    );
+
+  /*
    * LS-137. LE BALISAGE EST CONSTRUIT DEPUIS LA FICHE DEJA LUE, sans seconde
    * lecture : ce que les moteurs voient et ce que le visiteur voit viennent du
    * meme objet, donc ne peuvent pas diverger.
@@ -277,6 +292,14 @@ export default async function PageFicheProduit({
           </li>
         </ol>
       </nav>
+
+      {/*
+       * HORS DE LA TABLE DES ONZE BLOCS, comme le fil d'Ariane : il precede le
+       * bloc 1 sans s'y inserer, et l'ordre impose de la fiche reste intact.
+       */}
+      {tenueParCeNavigateur && (
+        <BandeauCommandeEnAttente commande={enAttente} contexte="fiche" />
+      )}
 
       <div className={styles.corps}>
         {/*
