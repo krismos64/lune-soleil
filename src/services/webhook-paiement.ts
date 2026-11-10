@@ -67,6 +67,8 @@ import {
   leverAlerteCritique,
   supprimerReservations,
 } from "@/repositories/confirmation";
+import { verrouillerCommande } from "@/repositories/commande";
+import { verrouillerVariantesDeCommande } from "@/repositories/stock";
 
 /** Ce que le traitement d'un evenement peut rendre. L'adaptateur choisit le code. */
 export type IssueEvenementPaiement =
@@ -337,6 +339,22 @@ async function confirmerPaiement(
   evenement: EvenementPaiement,
   origine: OrigineEcriture,
 ): Promise<ResultatTraitement> {
+  /*
+   * LE STATUT SE LIT SOUS VERROU, ET LES VARIANTES SE VERROUILLENT D'ABORD,
+   * LS-316. Lue sans verrou, la commande pouvait etre annulee par le client
+   * entre cette lecture et l'ecriture de `CONFIRMEE` : le webhook attendait le
+   * verrou de variante que l'annulation tenait, puis ramenait la commande
+   * annulee a `CONFIRMEE`, facture comprise. Releve par `ls-critical-reviewer`
+   * le 10 novembre 2026, ADR-050 section Risques.
+   *
+   * L'ORDRE EST CELUI DE L'ANNULATION ET DE LA LIBERATION, variantes puis
+   * commande : le verrou de commande pris en premier formerait un cycle avec
+   * l'annulation, qui prend les variantes avant la commande. Le rattachement
+   * de session prend la commande puis le paiement, comme ici.
+   */
+  await verrouillerVariantesDeCommande(transaction, evenement.commandeId);
+  await verrouillerCommande(transaction, evenement.commandeId);
+
   const commande = await transaction.commande.findUnique({
     where: { id: evenement.commandeId },
     select: {
@@ -475,11 +493,22 @@ async function confirmerPaiement(
   }
 
   /*
+   * UNE COMMANDE ANNULEE NE SORT AUCUN STOCK, LS-316. Ses reservations ont ete
+   * rendues, ou le seront par la liberation : la piece appartient de nouveau au
+   * catalogue, peut-etre a un autre client. La sortir heurtait
+   * `chk_variante_pas_de_survente`, la transaction echouait, le prestataire
+   * rejouait en boucle et l'alerte qui dit l'argent a rendre ne partait jamais.
+   * Le paiement reste enregistre ci-dessus ; `emettreFactureOuAlerter` leve
+   * l'alerte et n'emet rien, la vente n'ayant pas lieu.
+   */
+  const lignesASortir = commande.statut === "ANNULEE" ? [] : commande.lignes;
+
+  /*
    * DEUXIEME CLE D'EFFET, `mouvement_vente_web_unique` sur (commande, variante).
    * Elle porte la variante et pas seulement la commande : un panier a deux
    * articles decremente deux variantes, donc produit deux mouvements.
    */
-  for (const ligne of commande.lignes) {
+  for (const ligne of lignesASortir) {
     if (ligne.varianteId === null) {
       continue;
     }
@@ -576,7 +605,9 @@ async function confirmerPaiement(
    * liberation de LS-120 rendrait `quantite_reservee` une seconde fois, et la
    * piece repartirait au catalogue alors qu'elle est vendue et payee.
    */
-  await supprimerReservations(transaction, commande.id);
+  if (commande.statut !== "ANNULEE") {
+    await supprimerReservations(transaction, commande.id);
+  }
 
   /*
    * STATUT DE COMMANDE ET STATUT DE PAIEMENT SONT DEUX AXES DISTINCTS,
@@ -585,17 +616,24 @@ async function confirmerPaiement(
    * logistique, ce que `payments.md` interdit.
    */
   if (commande.statut === "EN_ATTENTE_PAIEMENT") {
-    await transaction.commande.update({
-      where: { id: commande.id },
+    /*
+     * LA GARDE SUR LE STATUT EST AUSSI DANS LE `WHERE`, seconde ligne de
+     * defense derriere le verrou : si un chemin futur ecrivait le statut sans
+     * prendre ce verrou, la commande ne serait pas confirmee en silence.
+     */
+    const { count } = await transaction.commande.updateMany({
+      where: { id: commande.id, statut: "EN_ATTENTE_PAIEMENT" },
       data: { statut: "CONFIRMEE" },
     });
 
-    await historiserTransition(transaction, {
-      commandeId: commande.id,
-      statutPrecedent: commande.statut,
-      statutNouveau: "CONFIRMEE",
-      origine,
-    });
+    if (count === 1) {
+      await historiserTransition(transaction, {
+        commandeId: commande.id,
+        statutPrecedent: commande.statut,
+        statutNouveau: "CONFIRMEE",
+        origine,
+      });
+    }
   }
 
   /*
