@@ -74,16 +74,32 @@ bout détectées à la main.
 - **LS-316** : le webhook sur commande annulée, filet non étanche relevé par la
   première revue.
 
+## Mise en production
+
+- PR #650, CI verte au quatrième passage, fusionnée en rebase :
+  `aa7679f..18d7a7b`, 18 commits. Les trois rejets venaient de contrôles non
+  lancés comme la CI les lance : `verifier-config-claude.sh` sans `--strict`
+  (compte de mutations de `INTEGRATION-CONTINUE.md` périmé), une mutation
+  ancienne du verrou de rattachement que la relecture du statut rendait sans
+  effet (9s octies), et quatre fichiers modifiés par script hors de Prettier.
+  Fiche mémoire « Lancer tous les contrôles de la CI » complétée.
+- **Migration** par `migrate-production.sh`, sur autorisation ponctuelle de
+  Christophe (la procédure lit `DATABASE_URL` du fichier d'environnement) :
+  28 puis 29 migrations, enum relu en base
+  `SYSTEME,ADMIN,RECONCILIATION,CLIENT`, sauvegarde vérifiée conservée sur le
+  poste, relais et tunnel fermés.
+- **Déploiement** run 42895868158 : `ghcr.io/krismos64/lune-soleil:18d7a7b…`,
+  aucune erreur au journal, `/`, `/panier`, `/catalogue`,
+  `/commande/confirmation` et `/api/sante` en 200.
+
 ## Prochaine étape
 
-1. PR, contrôle vert, fusion en rebase.
-2. **Production, avec l'accord de Christophe** : migration par
-   `./scripts/migrate-production.sh`, puis workflow « Déployer en production »
-   sur le SHA fusionné. La migration est additive, l'ancien code la tolère.
-3. Puis LS-316, puis LS-291.
+1. Le rendu du bandeau sur la fiche produit, seul critère de LS-315 non mesuré.
+2. LS-316, puis LS-291.
 
 ## État des tickets
 
-- **LS-315** : En cours, code fusionné après la PR, production à faire.
+- **LS-315** : En cours, en production ; reste le rendu mesuré du bandeau sur
+  la fiche produit.
 - **LS-316** : créé, À faire.
 - **#647** : nocturne, toujours à confirmer après la nuit.
