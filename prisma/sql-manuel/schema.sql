@@ -14,7 +14,7 @@ CREATE TYPE "StatutTraitementMedia" AS ENUM ('EN_ATTENTE', 'TRAITE', 'ECHOUE');
 CREATE TYPE "TypeMouvementStock" AS ENUM ('VENTE_WEB', 'VENTE_EXTERNE', 'RETOUR', 'AJUSTEMENT', 'ENTREE');
 
 -- CreateEnum
-CREATE TYPE "OrigineEcriture" AS ENUM ('SYSTEME', 'ADMIN', 'RECONCILIATION');
+CREATE TYPE "OrigineEcriture" AS ENUM ('SYSTEME', 'ADMIN', 'RECONCILIATION', 'CLIENT');
 -- LS-173. L'etat REEL de la piece revenue, que seule l'exploitante constate.
 -- « Pas encore constate » est l'ABSENCE de valeur, la colonne etant nullable.
 CREATE TYPE "EtatPieceRetournee" AS ENUM ('REMISE_EN_VENTE', 'PERTE_CONSTATEE');

@@ -361,7 +361,7 @@ erDiagram
         texte canal "nullable, marche ou plateforme"
         texte motif "nullable"
         identifiant acteurId FK "nullable, nul si origine SYSTEME"
-        enum origine "SYSTEME ADMIN RECONCILIATION"
+        enum origine "SYSTEME ADMIN RECONCILIATION CLIENT"
         horodatage creeA
     }
 ```
@@ -577,7 +577,7 @@ erDiagram
         texte statutPrecedent "nullable"
         texte statutNouveau
         identifiant acteurId FK "nullable"
-        enum origine "SYSTEME ADMIN RECONCILIATION"
+        enum origine "SYSTEME ADMIN RECONCILIATION CLIENT"
         horodatage creeA
     }
 ```
@@ -1522,7 +1522,7 @@ erDiagram
         texte destinataire
         texte modele
         enum statut "ENVOYE ECHOUE"
-        enum origine "SYSTEME ADMIN RECONCILIATION"
+        enum origine "SYSTEME ADMIN RECONCILIATION CLIENT"
         texte motifEchec "nullable"
         identifiant commandeId FK "nullable"
         horodatage creeA
@@ -1534,7 +1534,7 @@ erDiagram
         texte modele
         bloc variables
         enum statut "EN_ATTENTE ENVOI_EN_COURS ENVOYE ECHOUE"
-        enum origine "SYSTEME ADMIN RECONCILIATION"
+        enum origine "SYSTEME ADMIN RECONCILIATION CLIENT"
         entier tentatives
         horodatage priseA "nullable"
         texte motifEchec "nullable"
