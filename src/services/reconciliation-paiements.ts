@@ -286,11 +286,13 @@ async function annulerCommande(
 /**
  * Previent l'exploitante qu'une commande est morte faute de paiement, LS-219.
  *
- * C'EST LE SEUL CHEMIN D'ANNULATION DU DEPOT, et c'est pourquoi l'alerte vit
- * ici plutot que chez les deux appelants. Le webhook ne connait aucun evenement
- * d'annulation : `TypeEvenementPaiement` ne porte que `PAIEMENT_REUSSI` et
- * `PAIEMENT_REMBOURSE`. Une commande abandonnee au tunnel n'est donc annulee
- * que par cette reconciliation, constat de LS-219.
+ * C'EST LE SEUL CHEMIN D'ANNULATION AUTOMATIQUE, et c'est pourquoi l'alerte
+ * vit ici plutot que chez les deux appelants. Le webhook ne connait aucun
+ * evenement d'annulation : `TypeEvenementPaiement` ne porte que
+ * `PAIEMENT_REUSSI` et `PAIEMENT_REMBOURSE`, constat de LS-219.
+ *
+ * L'ANNULATION PAR LE CLIENT, ADR-050, NE PASSE PAS ICI ET N'ALERTE PAS,
+ * arbitrage du 10 novembre 2026 : renoncer n'est pas une anomalie.
  *
  * ELLE LIT L'INTERRUPTEUR `alertePaiementAnnule`, ce qui le rend reel : sans
  * cette lecture, la case a cocher de l'ecran des parametres serait un bouton

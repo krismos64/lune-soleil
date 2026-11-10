@@ -74,9 +74,9 @@ dire « votre panier est rendu » sur une pièce qu'un autre ne peut pas encore
 acheter.
 
 **Annuler d'abord, expirer la session ensuite.** Une session payée dans
-l'intervalle produit un paiement sur commande annulée : alerte
-`PAIEMENT_SUR_COMMANDE_ANNULEE` et remboursement manuel, pour un cas que l'ordre
-inverse rend impossible.
+l'intervalle produit un paiement sur commande annulée, que le webhook ne traite
+pas toujours proprement (voir Risques), pour un cas que l'ordre inverse rend
+impossible.
 
 **Ne pas reconstruire le panier, seulement annuler.** Le client devrait retrouver
 chaque pièce au catalogue : sur un achat de plusieurs pièces uniques, il en perd
@@ -105,6 +105,20 @@ borné à ce que le `DELETE` a rendu : la seconde transaction ne trouve plus rie
 
 **Interblocage avec le webhook**, qui prend la variante puis la commande. L'ordre
 de l'étape 3 est le même ; le rejeu borné de `database.md` couvre le reste.
+
+**Paiement accepté par Stripe sur une session expirée.** Aucun chemin ne
+l'atteint : le client ne reçoit l'URL que d'une session rattachée à une
+commande encore en attente, et toute session rattachée est soit expirée par
+l'étape 2, soit vue par la relecture de l'étape 3. Si le cas se produisait
+quand même, le webhook ne lèverait pas toujours l'alerte
+`PAIEMENT_SUR_COMMANDE_ANNULEE`, relevé par `ls-critical-reviewer` le
+10 novembre 2026. `confirmerPaiement` lit le statut sans verrou et écrit
+`CONFIRMEE` sans garde : un webhook qui a lu la commande avant l'annulation la
+ramène à `CONFIRMEE`. Et si la pièce a été réservée de nouveau, la sortie de
+stock heurte `chk_variante_pas_de_survente`, l'événement échoue en boucle et
+l'alerte ne part jamais. La même faiblesse vaut pour un webhook tardif après une
+annulation par la réconciliation : son durcissement relève du webhook,
+LS-316.
 
 **Délai de l'appel d'expiration**, jusqu'à vingt secondes. Le bouton passe en
 attente, un second clic est absorbé par la garde sur le statut.

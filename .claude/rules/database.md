@@ -464,6 +464,13 @@ Ces opérations exigent une transaction, sans exception :
     l'email du motif, article D111-12, ensemble. `commandeId: null` pour
     l'envoi, la clé `(commandeId, modele)` refusant sinon le motif d'un second
     avis de la même commande
+14. **Annulation d'une commande en attente par le client**, LS-315, ADR-050 :
+    variantes verrouillées par identifiant croissant **d'abord**, puis la
+    commande par l'`UPDATE` gardé sur `EN_ATTENTE_PAIEMENT`, puis les
+    réservations. Le `DELETE ... RETURNING` décrémente **ce qu'il a supprimé
+    seulement** : la libération a pu rendre la même réservation échue juste
+    avant, et sur plusieurs exemplaires aucun `CHECK` ne voit le double
+    décrément. Les sessions Stripe s'expirent **avant**, hors transaction
 
 Les points 7 à 9 viennent du périmètre ajouté par LS-37, avis et carnet
 d'adresses ; le point 10 de LS-225, qui l'a complété le 12 septembre 2026. Le
