@@ -420,6 +420,18 @@ describe("annulerCommandeEnAttente, refus", () => {
   it("refuse une commande confirmee sans appeler le prestataire", async () => {
     const { commandeId, varianteId, session } = await commanderUnePiece();
 
+    /*
+     * UNE ANCIENNE TENTATIVE RESTEE `EN_ATTENTE`, celle qu'un rattrapage
+     * d'ADR-032 n'a pas pu expirer. Sans elle, la garde de la transaction
+     * rattrapait seule ce cas et celle de la lecture n'etait jamais exercee,
+     * mesure par mutation le 10 novembre 2026.
+     */
+    await client.query(
+      `INSERT INTO paiement (id, commande_id, statut, montant_centimes, identifiant_fournisseur, cree_a)
+       VALUES (gen_random_uuid(), $1, 'EN_ATTENTE', $2, $3, now() - interval '5 minutes')`,
+      [commandeId, TOTAL_ATTENDU_CENTIMES, `cs_${randomUUID()}`],
+    );
+
     await confirmerParWebhook(paiementReussi(commandeId, session as string));
     expect(await lireStatutCommande(commandeId)).toBe("CONFIRMEE");
 
@@ -600,6 +612,97 @@ describe("annulerCommandeEnAttente, idempotence et concurrence", () => {
     expect(liberee.status).toBe("fulfilled");
     expect(await lireStatutCommande(commandeId)).toBe("ANNULEE");
     expect(await lireStock(varianteId)).toEqual({ physique: 1, reservee: 0 });
+  });
+
+  it("ne tient aucune reservation en attendant le verrou de la variante", async () => {
+    const { commandeId, varianteId } = await commanderUnePiece();
+
+    /*
+     * POURQUOI CE TEST ET NON LE PRECEDENT SEUL, mesure le 10 novembre 2026 :
+     * le verrou des variantes retire, le croisement precedent restait vert.
+     * PostgreSQL designe comme victime celui qui attend depuis le plus
+     * longtemps, ici l'annulation, et son rejeu borne la fait aboutir. Le
+     * defaut existe pourtant : face au webhook, c'est la confirmation d'un
+     * paiement qui peut mourir.
+     *
+     * LA SECONDE CONNEXION IMITE LA LIBERATION, variante puis reservation, et
+     * rend l'ordre observable sans dependre de l'ordonnancement. Elle tient la
+     * variante ; l'annulation se bloque. Dans le bon ordre elle se bloque en
+     * tete, sans rien tenir, et la suppression de la reservation passe. Dans
+     * l'ordre inverse elle tient deja la reservation, et la suppression bute
+     * sur `lock_timeout`, plus court que la detection d'interblocage.
+     */
+    const imitation = new Client({
+      connectionString: inject(VARIABLE_URL_TEST),
+    });
+    await imitation.connect();
+
+    try {
+      const { rows } = await imitation.query<{ pid: number }>(
+        "SELECT pg_backend_pid() AS pid",
+      );
+      const pidImitation = rows[0]?.pid;
+
+      await imitation.query("BEGIN");
+      await imitation.query(
+        "SELECT id FROM variante WHERE id = $1 FOR UPDATE",
+        [varianteId],
+      );
+
+      const { double } = fournisseurDouble();
+      const annulation = annulerCommandeEnAttente({
+        commandeId,
+        fournisseur: double,
+      });
+
+      // L'annulation est bloquee sur un verrou quand une autre session attend.
+      let bloquee = false;
+
+      for (let essai = 0; essai < 100 && !bloquee; essai += 1) {
+        const attente = await client.query<{ n: string }>(
+          `SELECT count(*)::text AS n FROM pg_stat_activity
+            WHERE datname = current_database() AND wait_event_type = 'Lock'
+              AND pid <> $1`,
+          [pidImitation],
+        );
+
+        bloquee = Number(attente.rows[0]?.n ?? "0") > 0;
+
+        if (!bloquee) {
+          await new Promise((resoudre) => setTimeout(resoudre, 50));
+        }
+      }
+
+      expect(bloquee).toBe(true);
+
+      let erreurImitation: unknown;
+
+      try {
+        await imitation.query("SET LOCAL lock_timeout = '500ms'");
+        await imitation.query(
+          "DELETE FROM reservation WHERE commande_id = $1",
+          [commandeId],
+        );
+        await imitation.query(
+          "UPDATE variante SET quantite_reservee = quantite_reservee - 1 WHERE id = $1",
+          [varianteId],
+        );
+        await imitation.query("COMMIT");
+      } catch (erreur) {
+        erreurImitation = erreur;
+        await imitation.query("ROLLBACK");
+      }
+
+      const issue = await annulation;
+
+      expect(erreurImitation).toBeUndefined();
+      expect(issue.statut).toBe("ANNULEE");
+
+      // La reservation rendue par l'imitation ne l'est pas une seconde fois.
+      expect(await lireStock(varianteId)).toEqual({ physique: 1, reservee: 0 });
+    } finally {
+      await imitation.end();
+    }
   });
 
   it("n'annule pas une commande confirmee pendant l'expiration", async () => {
