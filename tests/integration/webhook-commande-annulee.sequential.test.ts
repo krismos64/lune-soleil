@@ -329,4 +329,73 @@ describe("webhook de paiement sur une commande annulee", () => {
       encaisses: 1,
     });
   });
+
+  it("attend une annulation de la reconciliation en cours avant de lire le statut", async () => {
+    const commande = await commanderUnePiece();
+
+    /*
+     * LA RECONCILIATION ANNULE SANS TOUCHER AUX VARIANTES : seul le verrou de
+     * COMMANDE la serialise avec le webhook. La seconde connexion annule sans
+     * valider, comme `annulerCommande` de la reconciliation au milieu de sa
+     * transaction. Sans ce verrou, le webhook lisait l'etat valide precedent,
+     * EN ATTENTE, et sortait le stock d'une commande en train d'etre annulee.
+     */
+    const imitation = new Client({
+      connectionString: inject(VARIABLE_URL_TEST),
+    });
+    await imitation.connect();
+
+    try {
+      const { rows } = await imitation.query<{ pid: number }>(
+        "SELECT pg_backend_pid() AS pid",
+      );
+
+      await imitation.query("BEGIN");
+      await imitation.query(
+        "UPDATE commande SET statut = 'ANNULEE' WHERE id = $1",
+        [commande.commandeId],
+      );
+
+      const webhook = traiter(
+        paiementReussi(commande.commandeId, commande.session),
+      );
+
+      let bloque = false;
+
+      for (let essai = 0; essai < 100 && !bloque; essai += 1) {
+        const attente = await client.query<{ n: string }>(
+          `SELECT count(*)::text AS n FROM pg_stat_activity
+            WHERE datname = current_database() AND wait_event_type = 'Lock'
+              AND pid <> $1`,
+          [rows[0]?.pid],
+        );
+
+        bloque = Number(attente.rows[0]?.n ?? "0") > 0;
+
+        if (!bloque) {
+          await new Promise((resoudre) => setTimeout(resoudre, 50));
+        }
+      }
+
+      expect(bloque).toBe(true);
+
+      await imitation.query("COMMIT");
+      await webhook;
+    } finally {
+      await imitation.end();
+    }
+
+    /*
+     * LA RECONCILIATION NE REND PAS LE STOCK, la liberation s'en charge : la
+     * reservation reste, et aucune piece n'est sortie.
+     */
+    expect(await constat(commande.commandeId, commande.varianteId)).toEqual({
+      statut: "ANNULEE",
+      stock: { physique: 1, reservee: 1 },
+      mouvements: 0,
+      factures: 0,
+      alertes: 1,
+      encaisses: 1,
+    });
+  });
 });
