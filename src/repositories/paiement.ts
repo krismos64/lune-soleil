@@ -249,3 +249,31 @@ export async function marquerRembourse(
 
   return { cumulCentimes: paiement.montantRembourseCentimes, statut };
 }
+
+/**
+ * Les sessions des tentatives encore en attente d'une commande. ADR-050.
+ *
+ * TOUTES ET NON LA DERNIERE, a la difference de `derniereSessionEnAttente` :
+ * une annulation doit rendre impayable chaque session que la commande a pu
+ * ouvrir, et un rattrapage d'ADR-032 qui aurait echoue en laisse deux.
+ */
+export async function sessionsEnAttente(
+  client: ClientBase,
+  commandeId: string,
+): Promise<string[]> {
+  const tentatives = await client.paiement.findMany({
+    where: {
+      commandeId,
+      statut: "EN_ATTENTE",
+      identifiantFournisseur: { not: null },
+    },
+    orderBy: { identifiantFournisseur: "asc" },
+    select: { identifiantFournisseur: true },
+  });
+
+  return tentatives.flatMap((tentative) =>
+    tentative.identifiantFournisseur === null
+      ? []
+      : [tentative.identifiantFournisseur],
+  );
+}

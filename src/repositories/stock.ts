@@ -153,3 +153,76 @@ export async function prolongerReservationsActives(
     WHERE commande_id = ${parametres.commandeId} AND expire_a > now()
   `;
 }
+
+/**
+ * Verrouille les variantes d'une commande, par identifiant croissant. ADR-050.
+ *
+ * A APPELER EN TETE DE TRANSACTION, avant toute ecriture sur `commande` ou
+ * `reservation`. C'est l'ordre du webhook de confirmation, variante puis
+ * commande, et de la tache de liberation, variante puis reservation : un
+ * chemin qui prendrait l'ordre inverse s'interbloquerait avec eux, et
+ * PostgreSQL tue alors systematiquement la confirmation, mesure le 27 aout
+ * 2026.
+ *
+ * LES VARIANTES VIENNENT DES LIGNES DE COMMANDE et non des reservations : une
+ * reservation deja rendue par la liberation n'en designe plus aucune, et le
+ * verrou doit pourtant etre pris pour se serialiser avec elle.
+ */
+export async function verrouillerVariantesDeCommande(
+  client: ClientBase,
+  commandeId: string,
+): Promise<void> {
+  await client.$queryRaw`
+    SELECT v.id
+    FROM variante v
+    WHERE v.id IN (
+      SELECT variante_id FROM ligne_commande
+      WHERE commande_id = ${commandeId} AND variante_id IS NOT NULL
+    )
+    ORDER BY v.id
+    FOR UPDATE
+  `;
+}
+
+/**
+ * Supprime les reservations d'une commande et rend leur quantite, en une
+ * instruction. ADR-050. Rend le nombre de reservations supprimees.
+ *
+ * ON NE REND QUE CE QUI A ETE SUPPRIME, et c'est toute la garantie. La tache
+ * de liberation a pu rendre la meme reservation echue juste avant : relire la
+ * commande ou decrementer la quantite de ses lignes rendrait la piece une
+ * SECONDE fois. Sur une variante a plusieurs exemplaires, aucun CHECK ne s'y
+ * oppose, et c'est la reservation d'un autre client qui disparait.
+ *
+ * LE VERROU DES VARIANTES DOIT ETRE DEJA PRIS, `verrouillerVariantesDeCommande`.
+ * Meme forme que la liberation : aucun plancher, une ligne incoherente est
+ * ecartee par le `WHERE` plutot que masquee.
+ */
+export async function rendreReservationsDeCommande(
+  client: ClientBase,
+  commandeId: string,
+): Promise<number> {
+  const lignes = await client.$queryRaw<{ id: string }[]>`
+    WITH supprimees AS (
+      DELETE FROM reservation
+      WHERE commande_id = ${commandeId}
+      RETURNING id, variante_id, quantite
+    ),
+    par_variante AS (
+      SELECT variante_id, SUM(quantite)::int AS quantite
+      FROM supprimees
+      GROUP BY variante_id
+    ),
+    rendu AS (
+      UPDATE variante
+      SET quantite_reservee = variante.quantite_reservee - par_variante.quantite
+      FROM par_variante
+      WHERE variante.id = par_variante.variante_id
+        AND variante.quantite_reservee >= par_variante.quantite
+      RETURNING variante.id
+    )
+    SELECT s.id FROM supprimees s WHERE s.variante_id IN (SELECT id FROM rendu)
+  `;
+
+  return lignes.length;
+}

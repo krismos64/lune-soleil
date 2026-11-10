@@ -300,6 +300,9 @@ export async function demarrerPaiement({
    * n'observe AUCUNE expiration alors que deux sessions sont creees.
    */
   let aExpirer: string[] = [];
+  // `as` ET NON UNE ANNOTATION : TypeScript ne voit pas l'affectation faite
+  // dans le rappel de `$transaction`, et figerait sinon le type au litteral.
+  let statutAuRattachement = "EN_ATTENTE_PAIEMENT" as StatutCommande;
 
   try {
     aExpirer = await client.$transaction(async (transaction) => {
@@ -320,14 +323,30 @@ export async function demarrerPaiement({
        * expirations partent APRES le commit, et la section critique se reduit a
        * deux instructions locales.
        */
-      await transaction.$executeRaw`
-        SELECT id FROM commande WHERE id = ${identifiant} FOR UPDATE
+      const [verrouillee] = await transaction.$queryRaw<
+        { statut: StatutCommande }[]
+      >`
+        SELECT statut FROM commande WHERE id = ${identifiant} FOR UPDATE
       `;
+
+      /*
+       * LE STATUT SE RELIT SOUS CE VERROU, ADR-050. Une annulation par le
+       * client a pu passer PENDANT l'appel reseau, depuis un autre onglet :
+       * elle prend le meme verrou, donc elle est soit visible ici, soit en
+       * attente derriere nous et elle verra alors notre session. La session
+       * est rattachee dans les deux cas, pour rester tracable, mais une
+       * commande qui n'est plus en attente la fait expirer apres le commit.
+       */
+      statutAuRattachement = verrouillee?.statut ?? "ANNULEE";
 
       await rattacherSessionPaiement(transaction, {
         tentativeId,
         identifiantFournisseur: session.identifiant,
       });
+
+      if (statutAuRattachement !== "EN_ATTENTE_PAIEMENT") {
+        return [session.identifiant];
+      }
 
       const autres = await sessionsAExpirer(
         transaction,
@@ -375,6 +394,20 @@ export async function demarrerPaiement({
         commandeId: identifiant,
       });
     });
+  }
+
+  /*
+   * LA COMMANDE A QUITTE L'ATTENTE PENDANT L'APPEL, et sa session neuve vient
+   * d'etre expiree ci-dessus : le client n'est pas redirige vers une page de
+   * paiement morte. Meme traduction que la lecture prealable, une commande
+   * annulee sans encaissement se lit comme une reservation echue.
+   */
+  if (statutAuRattachement === "ANNULEE") {
+    return { statut: "RESERVATION_EXPIREE" };
+  }
+
+  if (statutAuRattachement !== "EN_ATTENTE_PAIEMENT") {
+    return { statut: "DEJA_PAYEE" };
   }
 
   return { statut: "REDIRECTION", url: session.url };
