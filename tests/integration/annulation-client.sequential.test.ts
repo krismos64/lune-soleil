@@ -34,6 +34,7 @@ import type { EvenementPaiement } from "@/integrations/stripe/evenements";
 let client: Client;
 let passerCommande: typeof import("@/services/commande").passerCommande;
 let annulerCommandeEnAttente: typeof import("@/services/annulation-commande").annulerCommandeEnAttente;
+let lireCommandeEnAttente: typeof import("@/services/annulation-commande").lireCommandeEnAttente;
 let libererReservationsExpirees: typeof import("@/services/liberation-reservations").libererReservationsExpirees;
 let traiterEvenementPaiement: typeof import("@/services/webhook-paiement").traiterEvenementPaiement;
 let demarrerPaiement: typeof import("@/services/paiement").demarrerPaiement;
@@ -253,7 +254,7 @@ beforeAll(async () => {
   await client.connect();
 
   ({ passerCommande } = await import("@/services/commande"));
-  ({ annulerCommandeEnAttente } =
+  ({ annulerCommandeEnAttente, lireCommandeEnAttente } =
     await import("@/services/annulation-commande"));
   ({ libererReservationsExpirees } =
     await import("@/services/liberation-reservations"));
@@ -821,5 +822,50 @@ describe("demarrerPaiement apres une annulation concurrente", () => {
     expect(issue.statut).not.toBe("REDIRECTION");
     expect(expireesAuDemarrage).toContain(nouvelle);
     expect(await lireStatutCommande(commandeId)).toBe("ANNULEE");
+  });
+});
+
+describe("lireCommandeEnAttente, le bandeau du volet 1", () => {
+  it("rend le numero, la fin de reservation et la variante tenue", async () => {
+    const { commandeId, varianteId } = await commanderUnePiece();
+
+    const enAttente = await lireCommandeEnAttente(commandeId);
+
+    expect(enAttente?.varianteIds).toEqual([varianteId]);
+    expect(enAttente?.numero).toMatch(/^C-/);
+    expect(enAttente?.reserveeJusqua.getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it("se tait quand la reservation a expire", async () => {
+    const { commandeId } = await commanderUnePiece();
+
+    /*
+     * LA PIECE N'EST PLUS TENUE, meme avant le passage de la liberation :
+     * promettre « reservee jusqu'a » serait faux.
+     */
+    await client.query(
+      "UPDATE reservation SET expire_a = now() - interval '1 second' WHERE commande_id = $1",
+      [commandeId],
+    );
+
+    expect(await lireCommandeEnAttente(commandeId)).toBeNull();
+  });
+
+  it("se tait sur une commande payee, annulee ou inconnue", async () => {
+    const payee = await commanderUnePiece();
+    await confirmerParWebhook(
+      paiementReussi(payee.commandeId, payee.session as string),
+    );
+
+    const annulee = await commanderUnePiece();
+    const { double } = fournisseurDouble();
+    await annulerCommandeEnAttente({
+      commandeId: annulee.commandeId,
+      fournisseur: double,
+    });
+
+    expect(await lireCommandeEnAttente(payee.commandeId)).toBeNull();
+    expect(await lireCommandeEnAttente(annulee.commandeId)).toBeNull();
+    expect(await lireCommandeEnAttente(randomUUID())).toBeNull();
   });
 });

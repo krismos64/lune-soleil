@@ -226,3 +226,32 @@ export async function rendreReservationsDeCommande(
 
   return lignes.length;
 }
+
+/**
+ * Les reservations ACTIVES d'une commande : fin la plus proche et variantes
+ * tenues. LS-315, volet 1.
+ *
+ * LA FIN LA PLUS PROCHE ET NON LA PLUS LOINTAINE : sur un panier a deux
+ * pieces, la premiere qui expire fait echouer le paiement, ADR-032 decision
+ * 2 bis. Annoncer la plus lointaine promettrait une heure que le paiement ne
+ * tiendrait pas.
+ *
+ * `now()` DE POSTGRESQL, meme horloge que la tache de liberation.
+ */
+export async function reservationsActivesDeCommande(
+  client: ClientBase,
+  commandeId: string,
+): Promise<{ finA: Date | null; varianteIds: string[] }> {
+  const lignes = await client.$queryRaw<
+    { variante_id: string; expire_a: Date }[]
+  >`
+    SELECT variante_id, expire_a FROM reservation
+    WHERE commande_id = ${commandeId} AND expire_a > now()
+    ORDER BY expire_a ASC
+  `;
+
+  return {
+    finA: lignes[0]?.expire_a ?? null,
+    varianteIds: [...new Set(lignes.map((ligne) => ligne.variante_id))],
+  };
+}
