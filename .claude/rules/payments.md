@@ -130,11 +130,17 @@ payer une commande annulée.
 expire la session neuve d'une commande qui n'est plus en attente : un réessai
 dans un autre onglet croisait sinon l'annulation.
 
-**Le filet du webhook n'est pas étanche**, relevé le 10 novembre 2026 :
-`confirmerPaiement` écrit `CONFIRMEE` sans garde sur le statut, et sa sortie de
-stock ne prévoit pas une commande annulée dont la pièce a été réservée de
-nouveau. Aucun chemin ne l'atteint tant que Stripe refuse le paiement d'une
-session expirée ; ADR-050, section Risques, durcissement LS-316.
+**Le webhook lit le statut sous verrou, et un paiement sur commande annulée ne
+sort aucun stock**, LS-316. `confirmerPaiement` verrouille les variantes de la
+commande, puis la commande, **avant** de lire son statut : c'est l'ordre de
+l'annulation et de la libération, et le verrou de commande le sérialise avec la
+réconciliation, qui annule sans toucher aux variantes. Une commande lue
+`ANNULEE` enregistre le paiement, ne sort aucune pièce, ne supprime aucune
+réservation (la libération les rend), n'émet aucune facture et lève
+`PAIEMENT_SUR_COMMANDE_ANNULEE` : remboursement **manuel**. Avant LS-316, le
+webhook ramenait une commande annulée à `CONFIRMEE`, ou échouait en boucle sur
+`chk_variante_pas_de_survente` sans que l'alerte parte jamais. Le passage à
+`CONFIRMEE` porte en plus la garde sur le statut dans son `WHERE`.
 
 ## Deux sessions payées pour une même commande
 

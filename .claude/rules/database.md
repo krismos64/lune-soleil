@@ -426,7 +426,9 @@ Ces opérations exigent une transaction, sans exception :
    `quantiteReservee` et lignes de réservation, tout ensemble, ADR-024. La
    session de paiement reste **hors** de cette transaction
 2. Traitement d'un événement de paiement : idempotence, paiement, commande,
-   conversion de réservation, mouvement de stock
+   conversion de réservation, mouvement de stock. **Variantes puis commande
+   verrouillées avant toute lecture du statut**, LS-316 : même ordre que
+   l'annulation par le client et la libération
 3. Attribution d'un numéro de facture ou d'avoir
 4. Remboursement, avoir et réintégration de stock
 5. Vente externe avec contrôle de réservation active
