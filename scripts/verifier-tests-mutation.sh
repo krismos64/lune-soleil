@@ -104,6 +104,7 @@ AFFICHAGE_COMMANDE="src/lib/affichage-commande.ts"
 DEPOT_COMMANDE="src/repositories/commande.ts"
 AVIS="src/services/avis.ts"
 DEPOT_AVIS="src/repositories/avis.ts"
+ANNULATION="src/services/annulation-commande.ts"
 SERVICE_AVOIR="src/services/avoir.ts"
 ENVOI_EMAIL="src/services/envoi-email.ts"
 DEPOT_ENVOI="src/repositories/envoi-email.ts"
@@ -144,7 +145,7 @@ SENDCLOUD_EXPEDITION="src/integrations/sendcloud/expedition.ts"
 #
 # Le defaut datait du jour ou le cas 121 a ete ecrit, et rien ne pouvait le
 # signaler : le nocturne mourait au cas 1 sur 180 depuis trois nuits.
-MUTABLES=("$SQL" "$STOCK" "$DEPOT_PANIER" "$GLOBALS_CSS" "$CATALOGUE_CSS" "$DECOR_NOEL_CSS" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$HOOK_PREUVE_PASSKEY" "$SESSION_VERIFICATION" "$DEPOT_EXPEDITION" "$SUIVI_LIVRAISON" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE" "$AVIS" "$DEPOT_AVIS" "$SERVICE_AVOIR" "$DEPOT_PARAMETRES" "$SENDCLOUD_EXPEDITION" "$DESTINATIONS_REAUTH" "$TEST_COMPTABILITE" "$URLS_MEDIAS")
+MUTABLES=("$SQL" "$STOCK" "$DEPOT_PANIER" "$GLOBALS_CSS" "$CATALOGUE_CSS" "$DECOR_NOEL_CSS" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$HOOK_PREUVE_PASSKEY" "$SESSION_VERIFICATION" "$DEPOT_EXPEDITION" "$SUIVI_LIVRAISON" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE" "$AVIS" "$DEPOT_AVIS" "$SERVICE_AVOIR" "$DEPOT_PARAMETRES" "$SENDCLOUD_EXPEDITION" "$DESTINATIONS_REAUTH" "$TEST_COMPTABILITE" "$URLS_MEDIAS" "$ANNULATION")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -3086,6 +3087,52 @@ cas "lien vers la fiche d'une piece archivee" integration \
 mute "$DEPOT_AVIS" 's/    orderBy: \{ publieA: "desc" \},\n    \.\.\.\(limite === undefined/    orderBy: { publieA: "asc" },\n    ...(limite === undefined/'
 cas "avis de la boutique dans l'ordre inverse de la mention" integration \
   "classe du plus recent au plus ancien et respecte la limite"
+
+# Cas LS-315, ADR-050 : annulation d'une commande en attente par le client.
+# Un client sorti de la page de paiement trouvait un panier vide et sa piece
+# epuisee trente minutes. L'annulation rend le stock elle-meme, donc croise le
+# webhook, la liberation et le reessai. Les deux derniers cas ont d'abord RATE,
+# le 10 novembre 2026 : le rejeu absorbait l'ordre de verrous inverse, et la
+# garde de la transaction masquait celle de la lecture.
+mute "$STOCK" 's/      FROM supprimees\n      GROUP BY variante_id/      FROM ligne_commande WHERE commande_id = \$\{commandeId\} AND variante_id IS NOT NULL\n      GROUP BY variante_id/'
+cas "annulation qui rend ce qu'elle n'a pas supprime" integration \
+  "ne rend pas une reservation que la liberation a deja rendue"
+
+mute "$DEPOT_COMMANDE" 's/where: \{ id: commandeId, statut: "EN_ATTENTE_PAIEMENT" \},\n    data: \{ statut: "ANNULEE" \}/where: { id: commandeId },\n    data: { statut: "ANNULEE" }/'
+cas "annulation sans garde sur le statut" integration \
+  "n'annule pas une commande confirmee pendant l'expiration"
+
+mute "$ANNULATION" 's/if \(sessions\.some\(\(session\) => !expirees\.has\(session\)\)\) \{/if (sessions.length < 0) {/'
+cas "annulation aveugle a une session rattachee entre-temps" integration \
+  "renonce si une session est rattachee pendant l'expiration"
+
+mute "$ANNULATION" 's/    await verrouillerVariantesDeCommande\(transaction, commandeId\);\n//'
+cas "annulation qui prend la reservation avant la variante" integration \
+  "ne tient aucune reservation en attendant le verrou de la variante"
+
+mute "$PAIEMENT" 's/      if \(statutAuRattachement !== "EN_ATTENTE_PAIEMENT"\) \{\n        return \[session\.identifiant\];\n      \}\n//'
+cas "session neuve laissee payable sur une commande annulee" integration \
+  "expire la session qu'il vient de creer si la commande a ete annulee"
+
+mute "$ANNULATION" 's/if \(etat\.etat === "PAYEE"\) \{/if (etat.etat === ("X" as string)) {/'
+cas "annulation d'une commande dont la session est payee" integration \
+  "refuse quand la session est payee, sans rien toucher"
+
+mute "$ANNULATION" 's/      return \{ statut: "PANNE" \};\n    \}\n  \}/      continue;\n    }\n  }/'
+cas "annulation malgre une panne du prestataire" integration \
+  "refuse sur une panne d'expiration, sans rien toucher"
+
+mute "$ANNULATION" 's/const expiration = await fournisseur\.expirerSession\(session\);/const expiration = "EXPIREE" as const;/'
+cas "annulation sans expirer la session" integration \
+  "expire la session, annule, rend la piece et historise CLIENT"
+
+mute "$ANNULATION" 's/origine: "CLIENT",/origine: "SYSTEME",/'
+cas "annulation historisee sous une autre origine" integration \
+  "expire la session, annule, rend la piece et historise CLIENT"
+
+mute "$ANNULATION" 's/    if \(statut !== "EN_ATTENTE_PAIEMENT"\) \{\n      return null;\n    \}\n//'
+cas "annulation qui expire les sessions d'une commande confirmee" integration \
+  "refuse une commande confirmee sans appeler le prestataire"
 
 echo
 echo "-----------------------------------------"
