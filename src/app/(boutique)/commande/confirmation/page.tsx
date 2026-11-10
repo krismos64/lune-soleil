@@ -153,9 +153,13 @@ function EtatCommande({
           Commande : <strong>{etat.numero}</strong>
         </p>
         <p className={styles.aide}>
-          La réservation de vos pièces a expiré et cette commande a été annulée.
-          Aucun paiement n&apos;a été enregistré. Vous pouvez repasser commande
-          depuis le catalogue.
+          {/*
+           * DEUX CAUSES ET NON UNE, LS-315 : la reservation a expire, ou le
+           * client a annule lui-meme. La phrase ne nomme donc aucune cause.
+           */}
+          Cette commande a été annulée et aucun paiement n&apos;a été
+          enregistré. Vous pouvez repasser commande depuis votre panier ou le
+          catalogue.
         </p>
         <Link href="/catalogue" className={styles.retourPanier}>
           Retourner au catalogue

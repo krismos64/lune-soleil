@@ -17,7 +17,11 @@ import { NOM_COOKIE_PANIER, decoderPanier } from "@/lib/panier-cookie";
 import { revalider } from "@/services/panier";
 import { lireSeuilFranchise } from "@/services/parametres";
 import { BandeauCommandeEnAttente } from "../commande/bandeau-commande-en-attente";
-import { commandeEnAttenteDuNavigateur } from "../commande/commande-en-attente";
+import {
+  commandeAnnuleeDuNavigateur,
+  commandeEnAttenteDuNavigateur,
+} from "../commande/commande-en-attente";
+import { FocusTitre } from "../commande/confirmation/focus-titre";
 import { LignesPanier } from "./lignes-panier";
 import styles from "./panier.module.css";
 
@@ -36,7 +40,12 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function PagePanier() {
+export default async function PagePanier({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const parametres = await searchParams;
   const magasin = await cookies();
   const lignesCookie = decoderPanier(magasin.get(NOM_COOKIE_PANIER)?.value);
   const [panier, seuilFranchise, enAttente] = await Promise.all([
@@ -55,6 +64,32 @@ export default async function PagePanier() {
       <BandeauCommandeEnAttente commande={enAttente} contexte="panier" />
     );
 
+  /*
+   * L'ANNULATION SE DIT, ET LE FOCUS VA SUR CE QU'ELLE DIT, LS-315. Le bouton
+   * qui portait le focus a quitte le DOM avec la redirection : sans cela, un
+   * lecteur d'ecran n'entendait rien, et la redirection vers la meme route ne
+   * change pas le titre du document. Le parametre declenche seulement la
+   * lecture ; c'est la base qui confirme, `commandeAnnuleeDuNavigateur`.
+   */
+  const numeroAnnule =
+    parametres.annulation === "1" ? await commandeAnnuleeDuNavigateur() : null;
+  const annonce =
+    numeroAnnule === null ? null : (
+      <>
+        <p
+          id="annonce-annulation"
+          role="status"
+          aria-label="Annulation de la commande"
+          tabIndex={-1}
+          className={styles.annonce}
+        >
+          La commande {numeroAnnule} est annulée. Les pièces sont de retour
+          dans votre panier.
+        </p>
+        <FocusTitre cible="annonce-annulation" />
+      </>
+    );
+
   if (panier.lignes.length === 0) {
     /*
      * ETAT VIDE, ET NON UN TABLEAU VIDE. `frontend-design.md` l'impose : un
@@ -63,6 +98,7 @@ export default async function PagePanier() {
     return (
       <main id="contenu" tabIndex={-1} className={styles.page}>
         <h1 className={styles.titre}>Votre panier</h1>
+        {annonce}
         {bandeau}
         <p className={styles.vide}>Votre panier est vide pour le moment.</p>
         <Link href="/catalogue" className={styles.actionPrincipale}>
@@ -75,6 +111,7 @@ export default async function PagePanier() {
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Votre panier</h1>
+      {annonce}
       {bandeau}
 
       {/*
