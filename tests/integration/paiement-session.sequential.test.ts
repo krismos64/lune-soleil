@@ -460,6 +460,13 @@ describe("demarrerPaiement, une seule session ouverte par commande", () => {
 
     expect(issue).toEqual({ statut: "PANNE" });
     expect(seconde.demandes).toHaveLength(0);
+
+    // LA TENTATIVE RESERVEE NE RESTE PAS : seule celle de la premiere session.
+    const { rows } = await client.query<{ n: string }>(
+      "SELECT count(*)::text AS n FROM paiement WHERE commande_id = $1",
+      [commandeId],
+    );
+    expect(Number(rows[0]?.n)).toBe(1);
   });
 
   it("n'appelle pas la creation quand l'expiration est en panne", async () => {
