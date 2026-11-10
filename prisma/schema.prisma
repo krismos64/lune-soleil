@@ -90,6 +90,10 @@ enum OrigineEcriture {
   SYSTEME
   ADMIN
   RECONCILIATION
+  // Le client annule lui-meme sa commande en attente, ADR-050, LS-315. Hors du
+  // filtre de `journal_email_systeme_unique` : aucun email ne porte cette
+  // origine.
+  CLIENT
 }
 
 enum StatutCommande {

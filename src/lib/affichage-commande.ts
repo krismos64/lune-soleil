@@ -140,6 +140,7 @@ export const LIBELLES_ORIGINE: Record<OrigineEcriture, string> = {
   SYSTEME: "Système",
   ADMIN: "Administration",
   RECONCILIATION: "Réconciliation automatique",
+  CLIENT: "Client",
 };
 
 /**
