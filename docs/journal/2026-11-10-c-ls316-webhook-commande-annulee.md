@@ -24,6 +24,11 @@ lisait la commande sans verrou et écrivait `CONFIRMEE` sans garde.
   réservations laissées à la libération, aucune facture, alerte
   `PAIEMENT_SUR_COMMANDE_ANNULEE`.
 - **Confirmation** par `updateMany` gardé sur `EN_ATTENTE_PAIEMENT`.
+- **Verrou de commande en `FOR NO KEY UPDATE`**, après la revue de
+  `ls-critical-reviewer` : en `FOR UPDATE`, il bloquait l'insertion de
+  tentative d'un démarrage de paiement concurrent, qui tenait les réservations
+  que le webhook attendait. Interblocage introduit par la première version de
+  LS-316, test rouge puis vert, mutation détectée.
 
 **Preuves** : trois tests d'intégration écrits avant le code, **rouges sur
 l'ancien code et verts avec la correction**, mesuré en remettant
@@ -53,7 +58,8 @@ détectées ; 221 au total.
 
 ## Prochaine étape
 
-1. Revue `ls-critical-reviewer` de LS-316, PR, fusion.
+1. PR, fusion. La revue `ls-critical-reviewer` est faite : aucun défaut
+   d'argent ni de stock, un interblocage introduit et corrigé.
 2. Déploiement du code, sans migration, sur accord de Christophe.
 3. LS-291.
 

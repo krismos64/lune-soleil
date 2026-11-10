@@ -134,7 +134,11 @@ dans un autre onglet croisait sinon l'annulation.
 sort aucun stock**, LS-316. `confirmerPaiement` verrouille les variantes de la
 commande, puis la commande, **avant** de lire son statut : c'est l'ordre de
 l'annulation et de la libération, et le verrou de commande le sérialise avec la
-réconciliation, qui annule sans toucher aux variantes. Une commande lue
+réconciliation, qui annule sans toucher aux variantes. **Le verrou de commande
+est `FOR NO KEY UPDATE`, jamais `FOR UPDATE`** : ce dernier bloque aussi
+l'insertion de toute ligne qui référence la commande, dont la tentative d'un
+démarrage de paiement, et formait un interblocage avec lui, relevé par
+`ls-critical-reviewer`. Une commande lue
 `ANNULEE` enregistre le paiement, ne sort aucune pièce, ne supprime aucune
 réservation (la libération les rend), n'émet aucune facture et lève
 `PAIEMENT_SUR_COMMANDE_ANNULEE` : remboursement **manuel**. Avant LS-316, le
