@@ -236,6 +236,7 @@ documentation technique, ticket ou règle qui le contredirait.
 | ADR-047 | Photos portées générées : exception à la règle des images Codex, admise comme photo complémentaire d'une fiche de boucles d'oreilles, jamais en première position, bijou reproduit d'après la photo réelle et relu sur planche, aucun visage, texte alternatif finissant par « Photo d'illustration. » | photo portée, image générée, Codex, galerie de fiche, texte alternatif, ordre des médias, C2PA, LS-22, contenu fictif |
 | ADR-048 | Photos portées générées des bagues : amende ADR-047, photo portée admise sur une fiche de bague et autorisée en première position, photographies réelles conservées, taille vraisemblable relue sur planche, aucune mention visible | photo portée, bague, main, image générée, première photo, vignette, Open Graph, ordre des médias, C9, LS-303 |
 | ADR-049 | Retrait d'un avis par son auteur, anonymisé et jamais supprimé ; trace d'un avis refusé ou retiré anonymisée au bout de cinq ans ; un avis effacé ne se republie pas | avis, retrait, effacement, article 17, anonymisation, effaceA, R19, R6, purge, LS-305 |
+| ADR-050 | Le client annule sa commande en attente : sessions Stripe expirées d'abord, puis statut, réservations et stock dans une transaction ; origine CLIENT, aucune alerte | annulation, client, réservation, libération, session, expiration, panier rendu, LS-315 |
 
 Cette table se met à jour à chaque ADR créé. Un ADR absent d'ici reste
 opposable : la table est un raccourci, `docs/adr/` fait foi.
