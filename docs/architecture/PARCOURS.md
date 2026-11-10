@@ -233,6 +233,25 @@ Vue : la page de confirmation annonce l'indisponibilité et porte le bouton de
 réessai, sans jargon ni détail du prestataire.
 Tâche : la réservation expire normalement à trente minutes, et la commande est
 traitée par la réconciliation comme toute commande restée en attente.
+
+**Paiement abandonné hors du bouton de retour, étape 6**, LS-315, ADR-050
+Le panier est vidé au commit de l'étape 4 : le client qui quitte la page de
+paiement par le retour arrière du navigateur ou ferme l'onglet trouvait un panier
+vide et sa pièce affichée épuisée, réservée par sa propre commande, mesuré en
+production le 10 novembre 2026.
+Vue : `/panier` et la fiche d'une pièce que cette commande tient portent le
+bandeau « Une commande vous attend », numéro et fin de réservation, avec
+« Reprendre le paiement » et « Annuler et revenir au panier ». La commande vient
+du seul cookie signé `ls_commande`.
+Base, à l'annulation : sessions expirées chez le prestataire **d'abord**, puis
+commande `ANNULEE` historisée origine `CLIENT`, réservations supprimées et
+`quantiteReservee` rendue dans une transaction, aucun mouvement de stock. Une
+session payée, ou un prestataire muet, refuse l'annulation sans rien toucher.
+Vue, après : le panier rendu, et l'annonce « La commande … est annulée »,
+confirmée par la base et non par le paramètre d'URL.
+« Reprendre le paiement » sur une commande payée dont l'événement n'est pas
+arrivé ne rouvre aucune session : `DEJA_FERMEE` se lève par une lecture de la
+session précédente.
 C'est le motif de placer cet appel après le commit : à l'intérieur, son échec
 aurait effacé la commande.
 
