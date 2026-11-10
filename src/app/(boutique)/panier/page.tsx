@@ -83,8 +83,8 @@ export default async function PagePanier({
           tabIndex={-1}
           className={styles.annonce}
         >
-          La commande {numeroAnnule} est annulée. Les pièces sont de retour
-          dans votre panier.
+          La commande {numeroAnnule} est annulée. Les pièces sont de retour dans
+          votre panier.
         </p>
         <FocusTitre cible="annonce-annulation" />
       </>

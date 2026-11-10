@@ -139,7 +139,8 @@ export function formaterHeure(date: Date): string {
     timeZone: "Europe/Paris",
   }).formatToParts(date);
   const heure = parties.find((partie) => partie.type === "hour")?.value ?? "";
-  const minute = parties.find((partie) => partie.type === "minute")?.value ?? "";
+  const minute =
+    parties.find((partie) => partie.type === "minute")?.value ?? "";
 
   return `${Number(heure)}\u00a0h\u00a0${minute}`;
 }

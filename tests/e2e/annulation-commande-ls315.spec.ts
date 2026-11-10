@@ -227,9 +227,13 @@ test("annuler rend la piece au panier et la libere tout de suite", async ({
    * portait a quitte le DOM avec la redirection. Releve par
    * `ls-frontend-revue` le 10 novembre 2026.
    */
-  const annonce = page.getByRole("status", { name: "Annulation de la commande" });
+  const annonce = page.getByRole("status", {
+    name: "Annulation de la commande",
+  });
 
-  await expect(annonce).toContainText(`La commande ${amorce.numero} est annulée`);
+  await expect(annonce).toContainText(
+    `La commande ${amorce.numero} est annulée`,
+  );
   await expect(annonce).toBeFocused();
 
   // LA BASE DIT LA MEME CHOSE QUE L'ECRAN.
