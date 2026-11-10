@@ -211,6 +211,12 @@ afterEach(async () => {
   );
 });
 
+/*
+ * LES LECTURES DE `paiement` PORTENT LA COMMANDE DU TEST, LS-316. La base
+ * ephemere est partagee : une lecture de toute la table voyait les paiements
+ * d'un fichier voisin, echec mesure une fois sur quatre dans `npm run test` le
+ * 10 novembre 2026. Fiche memoire « base ephemere de test ».
+ */
 describe("demarrerPaiement, cas nominal", () => {
   it("cree la session et rattache son identifiant a la commande", async () => {
     const commandeId = await commanderUnePiece();
@@ -234,7 +240,8 @@ describe("demarrerPaiement, cas nominal", () => {
       montant_centimes: number;
       identifiant_fournisseur: string | null;
     }>(
-      "SELECT commande_id, statut, montant_centimes, identifiant_fournisseur FROM paiement",
+      "SELECT commande_id, statut, montant_centimes, identifiant_fournisseur FROM paiement WHERE commande_id = $1",
+      [commandeId],
     );
 
     expect(paiements).toEqual([
@@ -345,7 +352,10 @@ describe("passerCommandeEtDemarrerPaiement, le chemin de production", () => {
     expect(reservations).toEqual([{ commande_id: issue.commande.commandeId }]);
 
     // Aucun identifiant de session n'est rattache, cas d'erreur du parcours 1.
-    const { rows: paiements } = await client.query("SELECT id FROM paiement");
+    const { rows: paiements } = await client.query(
+      "SELECT id FROM paiement WHERE commande_id = $1",
+      [issue.commande.commandeId],
+    );
 
     expect(paiements).toEqual([]);
   });
@@ -384,7 +394,10 @@ describe("demarrerPaiement, une seule session ouverte par commande", () => {
     // ecrasee.
     const { rows: paiements } = await client.query<{
       identifiant_fournisseur: string;
-    }>("SELECT identifiant_fournisseur FROM paiement ORDER BY cree_a");
+    }>(
+      "SELECT identifiant_fournisseur FROM paiement WHERE commande_id = $1 ORDER BY cree_a",
+      [commandeId],
+    );
     const identifiants = paiements.map(
       (ligne) => ligne.identifiant_fournisseur,
     );
@@ -490,7 +503,10 @@ describe("demarrerPaiement, une seule session ouverte par commande", () => {
     expect(seconde.demandes).toEqual([]);
 
     // La seule tentative en base reste la premiere.
-    const { rows: paiements } = await client.query("SELECT id FROM paiement");
+    const { rows: paiements } = await client.query(
+      "SELECT id FROM paiement WHERE commande_id = $1",
+      [commandeId],
+    );
 
     expect(paiements).toHaveLength(1);
   });
@@ -583,7 +599,10 @@ describe("demarrerPaiement, les quatre defauts de la revue critique", () => {
     expect(expirations).toEqual([]);
 
     // Aucune tentative n'est laissee derriere le refus.
-    const { rows: paiements } = await client.query("SELECT id FROM paiement");
+    const { rows: paiements } = await client.query(
+      "SELECT id FROM paiement WHERE commande_id = $1",
+      [commande.commandeId],
+    );
 
     expect(paiements).toEqual([]);
   });
