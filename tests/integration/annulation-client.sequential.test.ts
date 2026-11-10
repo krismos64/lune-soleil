@@ -212,8 +212,20 @@ const compterMouvements = (varianteId: string) =>
     [varianteId],
   );
 
-const compterAlertes = () =>
-  compter("SELECT count(*)::text AS n FROM alerte_critique", []);
+/*
+ * LES ALERTES DE CETTE COMMANDE SEULEMENT, et non de toute la base : la base
+ * ephemere est partagee, et un fichier voisin en leve (LS-316). Un compte
+ * global y mesure le voisinage autant que le sujet, fiche « base ephemere de
+ * test ». Echec observe une fois sur cinq dans `npm run test` le
+ * 10 novembre 2026, avant cette correction.
+ */
+const compterAlertes = (commandeId: string) =>
+  compter(
+    `SELECT count(*)::text AS n FROM alerte_critique
+      WHERE id_cible = $1
+         OR id_cible IN (SELECT id FROM paiement WHERE commande_id = $1)`,
+    [commandeId],
+  );
 
 /** Un evenement de paiement reussi sur la session donnee. */
 function paiementReussi(
@@ -310,7 +322,7 @@ describe("annulerCommandeEnAttente, chemin nominal", () => {
     expect(await compterMouvements(varianteId)).toBe(0);
 
     // ARBITRAGE DU 10 NOVEMBRE 2026 : renoncer n'est pas une anomalie.
-    expect(await compterAlertes()).toBe(0);
+    expect(await compterAlertes(commandeId)).toBe(0);
   });
 
   it("annule sans appel au prestataire quand aucune session n'existe", async () => {
