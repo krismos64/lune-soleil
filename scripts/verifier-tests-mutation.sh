@@ -3134,6 +3134,13 @@ mute "$ANNULATION" 's/    if \(statut !== "EN_ATTENTE_PAIEMENT"\) \{\n      retu
 cas "annulation qui expire les sessions d'une commande confirmee" integration \
   "refuse une commande confirmee sans appeler le prestataire"
 
+# Releve par ls-frontend-revue : le bandeau propose « Reprendre le paiement »
+# pendant qu'un paiement attend son evenement, et `DEJA_FERMEE` laissait
+# ouvrir une seconde session payable, double encaissement d'ADR-032.
+mute "$PAIEMENT" 's/        if \(etat\.etat !== "EXPIREE"\) \{/        if (etat.etat === ("X" as string)) {/'
+cas "seconde session ouverte sur une precedente payee" integration \
+  "ne rouvre pas de session quand la precedente est deja payee"
+
 echo
 echo "-----------------------------------------"
 if [ "$echecs" -eq 0 ]; then

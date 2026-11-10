@@ -103,15 +103,17 @@ export async function annulerCommandeAction(): Promise<ResultatAnnulation> {
     });
   }
 
-  // LA COMMANDE EST CLOSE, son cookie ne designe plus rien d'utile.
-  magasin.delete(NOM_COOKIE_COMMANDE);
-
   /*
+   * LE COOKIE DE COMMANDE EST GARDE, et c'est voulu : il permet au panier de
+   * confirmer l'annulation en lisant la BASE, plutot que sur la foi du seul
+   * parametre d'URL, qu'un lien quelconque porterait aussi. Il expire seul
+   * dans l'heure, et la commande suivante le remplace.
+   *
    * `redirect` ET NON UN RECHARGEMENT COTE CLIENT : la reponse de l'action
-   * porte les deux cookies et le rendu du panier dans le meme aller-retour.
-   * Mesure le 10 novembre 2026 par `annulation-commande-ls315.spec.ts`, le
-   * panier rendu lit bien le NOUVEAU cookie. Elle leve, donc hors de tout
-   * `try`, documentation de Next.js 16.
+   * porte le cookie de panier et le rendu du panier dans le meme aller-retour.
+   * Mesure le 10 novembre 2026 par `annulation-commande-ls315.spec.ts` et sa
+   * mutation : le panier rendu lit bien le NOUVEAU cookie. Elle leve, donc
+   * hors de tout `try`, documentation de Next.js 16.
    */
-  redirect("/panier");
+  redirect("/panier?annulation=1");
 }

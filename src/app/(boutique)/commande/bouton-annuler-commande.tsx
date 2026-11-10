@@ -31,7 +31,7 @@ export function BoutonAnnulerCommande() {
   }
 
   return (
-    <>
+    <div className={styles.zoneAnnuler}>
       <p
         role="alert"
         aria-label="Erreur d'annulation"
@@ -53,6 +53,6 @@ export function BoutonAnnulerCommande() {
       >
         {enCours ? "Annulation en cours…" : "Annuler et revenir au panier"}
       </button>
-    </>
+    </div>
   );
 }

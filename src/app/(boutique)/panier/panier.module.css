@@ -28,6 +28,21 @@
  * L'avertissement de changement. Fond sable, texte `--ls-text` : 10,83:1.
  * `--ls-text-muted` y tomberait a 4,35:1, sous le seuil AA.
  */
+/*
+ * Annonce d'une annulation, LS-315. Fond sable : `--ls-text`, jamais un jeton
+ * secondaire, C31. Le contour de focus est celui du projet, la cible recevant
+ * le focus par programme.
+ */
+.annonce {
+  margin: 0 0 var(--ls-space-5);
+  padding: var(--ls-space-3) var(--ls-space-4);
+  background: var(--ls-surface-sand);
+  border-left: 3px solid var(--ls-primary);
+  color: var(--ls-text);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
 .avertissement {
   margin: 0 0 var(--ls-space-5);
   padding: var(--ls-space-3) var(--ls-space-4);

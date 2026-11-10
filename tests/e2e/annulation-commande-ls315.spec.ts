@@ -132,6 +132,21 @@ async function amorcerCommande(
   return { commandeId, varianteId, numero };
 }
 
+async function aucuneViolationSerieuse(
+  page: import("@playwright/test").Page,
+): Promise<void> {
+  const analyse = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
+    .analyze();
+
+  expect(
+    analyse.violations.filter(
+      (violation) =>
+        violation.impact === "serious" || violation.impact === "critical",
+    ),
+  ).toEqual([]);
+}
+
 async function lireEtat(
   amorce: Amorce,
 ): Promise<{ statut: string; reservee: number }> {
@@ -173,16 +188,7 @@ test("le panier vide mene a la commande en attente", async ({
     TOLERANCE_DEBORDEMENT_PX,
   );
 
-  const analyse = await new AxeBuilder({ page })
-    .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
-    .analyze();
-
-  expect(
-    analyse.violations.filter(
-      (violation) =>
-        violation.impact === "serious" || violation.impact === "critical",
-    ),
-  ).toEqual([]);
+  await aucuneViolationSerieuse(page);
 });
 
 test("annuler rend la piece au panier et la libere tout de suite", async ({
@@ -216,8 +222,44 @@ test("annuler rend la piece au panier et la libere tout de suite", async ({
     page.getByRole("region", { name: "Une commande vous attend" }),
   ).toHaveCount(0);
 
+  /*
+   * L'ANNULATION SE DIT, ET LE FOCUS EST SUR CE QU'ELLE DIT : le bouton qui le
+   * portait a quitte le DOM avec la redirection. Releve par
+   * `ls-frontend-revue` le 10 novembre 2026.
+   */
+  const annonce = page.getByRole("status", { name: "Annulation de la commande" });
+
+  await expect(annonce).toContainText(`La commande ${amorce.numero} est annulée`);
+  await expect(annonce).toBeFocused();
+
   // LA BASE DIT LA MEME CHOSE QUE L'ECRAN.
   expect(await lireEtat(amorce)).toEqual({ statut: "ANNULEE", reservee: 0 });
+
+  expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+    TOLERANCE_DEBORDEMENT_PX,
+  );
+  await aucuneViolationSerieuse(page);
+});
+
+test("le parametre d'URL seul n'annonce aucune annulation", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  /*
+   * UN LIEN PORTANT `?annulation=1` NE PROUVE RIEN : la commande du
+   * navigateur est encore en attente, l'annonce ne doit pas paraitre.
+   */
+  await amorcerCommande(context, baseURL, { avecSession: false });
+
+  await page.goto("/panier?annulation=1");
+
+  await expect(
+    page.getByRole("region", { name: "Une commande vous attend" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("status", { name: "Annulation de la commande" }),
+  ).toHaveCount(0);
 });
 
 test("la page de confirmation propose l'annulation, et dit la panne", async ({
@@ -247,6 +289,10 @@ test("la page de confirmation propose l'annulation, et dit la panne", async ({
     statut: "EN_ATTENTE_PAIEMENT",
     reservee: 1,
   });
+  expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+    TOLERANCE_DEBORDEMENT_PX,
+  );
+  await aucuneViolationSerieuse(page);
 });
 
 test("le retour apres paiement ne propose pas d'annuler", async ({

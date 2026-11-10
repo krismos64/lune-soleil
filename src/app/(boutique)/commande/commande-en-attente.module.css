@@ -17,6 +17,7 @@
 .titre {
   margin: 0 0 var(--ls-space-2);
   font-size: 1.125rem;
+  font-weight: 600;
 }
 
 .texte {
@@ -86,12 +87,16 @@
 }
 
 /*
- * EN TETE DES ACTIONS, sur toute la largeur : a 768 px les actions passent en
- * ligne, et le message s'intercalerait sinon entre les deux boutons.
+ * LA REGION D'ERREUR ET SON BOUTON FORMENT UN SEUL ELEMENT FLEX : la region
+ * vide, gardee dans le DOM pour etre annoncee, doublait sinon l'ecart entre
+ * les deux actions. Releve par `ls-frontend-revue`.
  */
+.zoneAnnuler {
+  display: flex;
+  flex-direction: column;
+}
+
 .erreur {
-  flex-basis: 100%;
-  order: -1;
   margin: 0 0 var(--ls-space-2);
   padding: var(--ls-space-3) var(--ls-space-4);
   border-left: 4px solid var(--ls-error);
