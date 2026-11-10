@@ -229,3 +229,44 @@ export function decoderPanier(valeur: string | undefined): LignePanierCookie[] {
 
   return lignes;
 }
+
+/**
+ * Remet dans le panier les pieces d'une commande annulee, LS-315, ADR-050.
+ *
+ * LE PANIER ACTUEL D'ABORD, il n'est jamais ecrase : le client a pu ajouter
+ * une piece depuis son passage au paiement, et la perdre serait le defaut
+ * inverse de celui que l'annulation corrige. Une variante deja presente voit
+ * sa quantite portee au plus grand des deux, jamais additionnee : c'est la
+ * meme intention d'achat, et la doubler ferait commander deux fois une piece.
+ *
+ * LES DEUX BORNES DU COOKIE TIENNENT, sans quoi `decoderPanier` rejetterait le
+ * cookie entier au prochain affichage : une ligne au-dela de
+ * `LIGNES_MAXIMUM` est ecartee, une quantite au-dela de
+ * `QUANTITE_MAXIMALE_PAR_LIGNE` est ramenee a la borne.
+ *
+ * AUCUN PRIX NI AUCUNE DISPONIBILITE ICI : la page du panier revalide chaque
+ * ligne contre le catalogue actuel, LS-114.
+ */
+export function fusionnerPanier(
+  actuel: readonly LignePanierCookie[],
+  rendues: readonly LignePanierCookie[],
+): LignePanierCookie[] {
+  const fusion = actuel.map((ligne) => ({ ...ligne }));
+
+  for (const rendue of rendues) {
+    const existante = fusion.find(
+      (ligne) => ligne.varianteId === rendue.varianteId,
+    );
+
+    if (existante !== undefined) {
+      existante.quantite = Math.max(existante.quantite, rendue.quantite);
+    } else if (fusion.length < LIGNES_MAXIMUM) {
+      fusion.push({ ...rendue });
+    }
+  }
+
+  return fusion.map((ligne) => ({
+    varianteId: ligne.varianteId,
+    quantite: Math.min(ligne.quantite, QUANTITE_MAXIMALE_PAR_LIGNE),
+  }));
+}
