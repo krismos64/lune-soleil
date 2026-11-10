@@ -3153,7 +3153,7 @@ mute "$WEBHOOK" 's/  await verrouillerVariantesDeCommande\(transaction, evenemen
 cas "webhook qui lit la commande avant la variante" integration \
   "ne ramene pas a CONFIRMEE une commande annulee pendant son attente"
 
-mute "$WEBHOOK" 's/  await verrouillerCommande\(transaction, evenement\.commandeId\);\n//'
+mute "$WEBHOOK" 's/  await verrouillerCommandeSansBloquerLesReferences\(\n    transaction,\n    evenement\.commandeId,\n  \);\n//'
 cas "webhook qui lit le statut sans verrou de commande" integration \
   "attend une annulation de la reconciliation en cours avant de lire le statut"
 
@@ -3164,6 +3164,12 @@ cas "stock sorti pour une commande annulee" integration \
 mute "$WEBHOOK" 's/  if \(commande\.statut !== "ANNULEE"\) \{\n    await supprimerReservations\(transaction, commande\.id\);\n  \}/  await supprimerReservations(transaction, commande.id);/'
 cas "reservations d'une commande annulee supprimees sans rendu" integration \
   "attend une annulation de la reconciliation en cours avant de lire le statut"
+
+# Releve par ls-critical-reviewer : `FOR UPDATE` bloquait l'insertion de
+# tentative d'un demarrage de paiement concurrent, interblocage.
+mute "$DEPOT_COMMANDE" 's/WHERE id = \$\{commandeId\} FOR NO KEY UPDATE/WHERE id = \$\{commandeId\} FOR UPDATE/'
+cas "verrou de commande du webhook qui bloque les insertions" integration \
+  "ne bloque pas un demarrage de paiement qui insere sa tentative"
 
 echo
 echo "-----------------------------------------"
