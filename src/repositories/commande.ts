@@ -694,3 +694,27 @@ export async function lignesPourPanier(
       : [{ varianteId: ligne.varianteId, quantite: ligne.quantite }],
   );
 }
+
+/**
+ * Verrouille une commande SANS bloquer les insertions qui la referencent, et
+ * rend son statut. LS-316.
+ *
+ * `FOR NO KEY UPDATE` ET NON `FOR UPDATE`, releve par `ls-critical-reviewer` le
+ * 10 novembre 2026. `FOR UPDATE` bloque aussi le `FOR KEY SHARE` que prend toute
+ * insertion d'une ligne qui reference la commande, `INSERT INTO paiement`
+ * compris : le demarrage d'un paiement tenait les reservations en attendant la
+ * commande, le webhook la commande en attendant les reservations,
+ * interblocage. Ce mode reste incompatible avec l'`UPDATE` gardé des
+ * annulations et avec le `FOR UPDATE` du rattachement : la serialisation
+ * recherchee tient.
+ */
+export async function verrouillerCommandeSansBloquerLesReferences(
+  client: ClientBase,
+  commandeId: string,
+): Promise<StatutCommande | null> {
+  const lignes = await client.$queryRaw<{ statut: StatutCommande }[]>`
+    SELECT statut FROM commande WHERE id = ${commandeId} FOR NO KEY UPDATE
+  `;
+
+  return lignes[0]?.statut ?? null;
+}

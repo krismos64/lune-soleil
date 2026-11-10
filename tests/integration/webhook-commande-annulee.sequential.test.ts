@@ -418,3 +418,92 @@ describe("webhook de paiement sur une commande annulee", () => {
     });
   });
 });
+
+describe("verrou de commande du webhook", () => {
+  it("ne bloque pas un demarrage de paiement qui insere sa tentative", async () => {
+    const commande = await commanderUnePiece();
+
+    /*
+     * RELEVE PAR `ls-critical-reviewer` le 10 novembre 2026. `FOR UPDATE` sur la
+     * commande bloque aussi le `FOR KEY SHARE` que prend toute insertion qui
+     * la reference, dont `INSERT INTO paiement` du demarrage : le demarrage
+     * tenait les reservations en attendant la commande, le webhook la commande
+     * en attendant les reservations, interblocage. `FOR NO KEY UPDATE` garde la
+     * serialisation avec les annulations sans bloquer ces insertions.
+     *
+     * LA SECONDE CONNEXION TIENT LA RESERVATION, comme la prolongation du
+     * demarrage : le webhook s'y arrete en tenant deja la commande. Une
+     * insertion de paiement doit alors passer, sous un `lock_timeout` plus court
+     * que la detection d'interblocage.
+     */
+    const imitation = new Client({
+      connectionString: inject(VARIABLE_URL_TEST),
+    });
+    await imitation.connect();
+
+    let erreurInsertion: unknown;
+
+    try {
+      const { rows } = await imitation.query<{ pid: number }>(
+        "SELECT pg_backend_pid() AS pid",
+      );
+
+      await imitation.query("BEGIN");
+      await imitation.query(
+        "SELECT id FROM reservation WHERE commande_id = $1 FOR UPDATE",
+        [commande.commandeId],
+      );
+
+      const webhook = traiter(
+        paiementReussi(commande.commandeId, commande.session),
+      );
+
+      let bloque = false;
+
+      for (let essai = 0; essai < 100 && !bloque; essai += 1) {
+        const attente = await client.query<{ n: string }>(
+          `SELECT count(*)::text AS n FROM pg_stat_activity
+            WHERE datname = current_database() AND wait_event_type = 'Lock'
+              AND pid <> $1`,
+          [rows[0]?.pid],
+        );
+
+        bloque = Number(attente.rows[0]?.n ?? "0") > 0;
+
+        if (!bloque) {
+          await new Promise((resoudre) => setTimeout(resoudre, 50));
+        }
+      }
+
+      expect(bloque).toBe(true);
+
+      const insertion = new Client({
+        connectionString: inject(VARIABLE_URL_TEST),
+      });
+      await insertion.connect();
+
+      try {
+        await insertion.query("BEGIN");
+        await insertion.query("SET LOCAL lock_timeout = '500ms'");
+        await insertion.query(
+          `INSERT INTO paiement (id, commande_id, statut, montant_centimes, cree_a)
+           VALUES (gen_random_uuid(), $1, 'EN_ATTENTE', $2, now())`,
+          [commande.commandeId, TOTAL_ATTENDU_CENTIMES],
+        );
+        await insertion.query("ROLLBACK");
+      } catch (erreur) {
+        erreurInsertion = erreur;
+        await insertion.query("ROLLBACK");
+      } finally {
+        await insertion.end();
+      }
+
+      await imitation.query("COMMIT");
+      await webhook;
+    } finally {
+      await imitation.end();
+    }
+
+    expect(erreurInsertion).toBeUndefined();
+  });
+});
