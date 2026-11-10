@@ -12,6 +12,7 @@
  * champs que son type enumere.
  */
 import type { ClientBase } from "@/repositories/stock";
+import type { StatutCommande } from "@/generated/prisma/enums";
 
 /**
  * Met a jour les champs de profil fournis, et eux seuls.
@@ -226,6 +227,20 @@ export type ClientEnListe = {
   nombreAdresses: number;
   /** Derniere connexion REUSSIE, nulle si le compte ne s'est jamais connecte. */
   derniereConnexion: Date | null;
+  /**
+   * Commandes passees avec l'adresse du compte et NON rattachees, LS-317.
+   *
+   * LE RATTACHEMENT EXIGE UNE ADRESSE VERIFIEE, parcours 6 : un compte dont
+   * l'adresse n'est pas confirmee garde ses commandes hors de son historique,
+   * et l'ecran affichait 0 commande pour un client dont la piece etait deja
+   * expediee. Les dissociees n'y figurent jamais : elles appartenaient a un
+   * compte supprime, LS-95, et ne se rattachent a personne.
+   */
+  commandesNonRattachees: {
+    id: string;
+    numero: string;
+    statut: StatutCommande;
+  }[];
 };
 
 /**
@@ -290,15 +305,16 @@ export async function listerClients(
       creeA: true,
       _count: { select: { adresses: true, commandes: true } },
       /*
-       * LA SOMME DES COMMANDES, agregee par la base.
-       *
-       * ELLE PORTE SUR TOUTES LES COMMANDES RATTACHEES, y compris celles qui ne
-       * sont pas payees : c'est une mesure d'ACTIVITE et non de chiffre
-       * d'affaires. Le chiffre d'affaires a ses propres regles de calcul, dans
-       * `STATISTIQUES.md`, et LS-64 le portera ; les confondre ici donnerait
-       * deux chiffres differents pour un meme mot.
+       * LA SOMME DES COMMANDES RATTACHEES, HORS COMMANDES ANNULEES, arbitrage
+       * de Christophe du 10 novembre 2026, LS-317. Elle comptait les annulees,
+       * mesure d'activite : deux paiements abandonnes gonflaient le montant
+       * d'un client de pieces qu'il n'a jamais eues. Ce n'est toujours pas le
+       * chiffre d'affaires, qui a ses propres regles dans `STATISTIQUES.md`.
        */
-      commandes: { select: { totalCentimes: true } },
+      commandes: {
+        where: { statut: { not: "ANNULEE" } },
+        select: { totalCentimes: true },
+      },
       /*
        * LA DERNIERE CONNEXION REUSSIE, et `REUSSITE` seule.
        *
@@ -316,9 +332,27 @@ export async function listerClients(
   });
 
   const limiteAtteinte = lignes.length > limite;
+  const affiches = lignes.slice(0, limite);
+
+  /*
+   * UNE SEULE REQUETE POUR TOUS LES CLIENTS AFFICHES, LS-317, et non une par
+   * carte. La comparaison porte sur `emailNormalise`, en minuscules, meme
+   * normalisation que le rattachement du parcours 6.
+   */
+  const nonRattachees = await client.commande.findMany({
+    where: {
+      emailNormalise: {
+        in: affiches.map((ligne) => ligne.email.trim().toLowerCase()),
+      },
+      utilisateurId: null,
+      dissocieA: null,
+    },
+    orderBy: { creeA: "desc" },
+    select: { id: true, numero: true, statut: true, emailNormalise: true },
+  });
 
   return {
-    clients: lignes.slice(0, limite).map((ligne) => ({
+    clients: affiches.map((ligne) => ({
       id: ligne.id,
       email: ligne.email,
       nom: ligne.nom,
@@ -331,6 +365,12 @@ export async function listerClients(
         0,
       ),
       derniereConnexion: ligne.journauxConnexion[0]?.creeA ?? null,
+      commandesNonRattachees: nonRattachees
+        .filter(
+          (commande) =>
+            commande.emailNormalise === ligne.email.trim().toLowerCase(),
+        )
+        .map(({ id, numero, statut }) => ({ id, numero, statut })),
     })),
     limiteAtteinte,
   };

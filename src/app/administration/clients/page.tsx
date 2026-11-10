@@ -26,6 +26,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { LIBELLES_STATUT } from "@/lib/affichage-commande";
 import { formaterMontant } from "@/lib/montant";
 import {
   PLAFOND_CLIENTS,
@@ -330,6 +331,41 @@ async function ListeClients({ terme }: { terme: string }) {
                     <dd>{formaterMontant(client.totalCentimes)}</dd>
                   </div>
                 </dl>
+
+                {/*
+                 * LS-317 : LES COMMANDES PASSEES AVEC CETTE ADRESSE ET NON
+                 * RATTACHEES, que les deux lignes ci-dessus ne comptent pas. Le
+                 * rattachement exige une adresse confirmee, parcours 6 ; sans
+                 * cette liste, un client a la piece expediee paraissait n'avoir
+                 * rien commande. Les annulees y restent, l'exploitante devant
+                 * pouvoir retrouver un paiement abandonne.
+                 */}
+                {client.commandesNonRattachees.length > 0 ? (
+                  <div className={styles.nonRattachees}>
+                    <p className={styles.nonRattacheesTitre}>
+                      {client.commandesNonRattachees.length === 1
+                        ? "1 commande passée avec cette adresse, non rattachée au compte"
+                        : `${client.commandesNonRattachees.length} commandes passées avec cette adresse, non rattachées au compte`}
+                      {client.emailVerifie
+                        ? " : elle le sera à la prochaine connexion."
+                        : " : l'adresse n'est pas encore confirmée."}
+                    </p>
+                    <ul className={styles.nonRattacheesListe}>
+                      {client.commandesNonRattachees.map((commande) => (
+                        <li key={commande.id}>
+                          <Link
+                            href={`/administration/commandes/${commande.id}`}
+                            prefetch={false}
+                            className={styles.nonRattacheesLien}
+                          >
+                            {commande.numero}
+                          </Link>{" "}
+                          {LIBELLES_STATUT[commande.statut]}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
               </li>
             ))}
           </ul>

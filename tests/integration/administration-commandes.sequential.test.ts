@@ -664,3 +664,76 @@ describe("acheminement du colis sur le detail de commande", () => {
     expect(detail?.expedition).toBeNull();
   });
 });
+
+describe("lien de la commande au compte, LS-317", () => {
+  /*
+   * LES COMPTES CREES ICI SONT SUPPRIMES APRES CHAQUE CAS : ce fichier ne vide
+   * pas `utilisateur`, et le fichier suivant de la base partagee, celui de la
+   * fiche client, attend une liste vide. Mesure le 10 novembre 2026.
+   */
+  afterEach(async () => {
+    await client.query(
+      "DELETE FROM utilisateur WHERE lower(email) = 'test@example.invalid'",
+    );
+  });
+
+  it("distingue sans compte, compte non confirme, confirme et rattachee", async () => {
+    const { commandeId } = await commanderUnePiece();
+
+    // AUCUN COMPTE NE PORTE L'ADRESSE.
+    expect((await lireDetailCommande(commandeId))?.compte).toEqual({
+      etat: "SANS_COMPTE",
+    });
+
+    /*
+     * LE CAS DU 10 NOVEMBRE 2026 : un compte porte l'adresse sans l'avoir
+     * confirmee. La casse differe exprès, la comparaison suit le parcours 6.
+     */
+    const compteId = randomUUID();
+    await client.query(
+      `INSERT INTO utilisateur (id, email, email_verifie, nom, role, cree_a, mis_a_jour_a)
+       VALUES ($1, 'Test@Example.invalid', false, 'TEST Compte', 'CLIENT', now(), now())`,
+      [compteId],
+    );
+
+    expect((await lireDetailCommande(commandeId))?.compte).toEqual({
+      etat: "COMPTE_NON_CONFIRME",
+      emailCompte: "Test@Example.invalid",
+    });
+
+    await client.query(
+      "UPDATE utilisateur SET email_verifie = true WHERE id = $1",
+      [compteId],
+    );
+
+    expect((await lireDetailCommande(commandeId))?.compte.etat).toBe(
+      "COMPTE_CONFIRME",
+    );
+
+    await client.query(
+      "UPDATE commande SET utilisateur_id = $2 WHERE id = $1",
+      [commandeId, compteId],
+    );
+
+    expect((await lireDetailCommande(commandeId))?.compte.etat).toBe(
+      "RATTACHEE",
+    );
+  });
+
+  it("dit une commande dissociee comme telle, jamais comme rattachable", async () => {
+    const { commandeId } = await commanderUnePiece();
+
+    await client.query(
+      `INSERT INTO utilisateur (id, email, email_verifie, nom, role, cree_a, mis_a_jour_a)
+       VALUES ($1, 'test@example.invalid', true, 'TEST Nouveau', 'CLIENT', now(), now())`,
+      [randomUUID()],
+    );
+    await client.query("UPDATE commande SET dissocie_a = now() WHERE id = $1", [
+      commandeId,
+    ]);
+
+    expect((await lireDetailCommande(commandeId))?.compte).toEqual({
+      etat: "DISSOCIEE",
+    });
+  });
+});

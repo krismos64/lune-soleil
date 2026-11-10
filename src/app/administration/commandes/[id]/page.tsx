@@ -239,6 +239,7 @@ export default async function PageDetailCommande({
           {commande.emailNormalise}
           {commande.telephone === null ? "" : ` · ${commande.telephone}`}
         </p>
+        <LienCompteClient compte={commande.compte} />
       </section>
 
       <section className={styles.section} aria-labelledby="titre-paiement">
@@ -717,5 +718,49 @@ async function BlocRenvoiInvitation({
       plafond={etat.plafond}
       renvoiPossible={etat.renvoiPossible}
     />
+  );
+}
+
+/**
+ * Le lien de la commande a un compte, LS-317.
+ *
+ * SANS CETTE LIGNE, l'exploitante ne distinguait pas une commande passee sans
+ * compte d'une commande dont le compte n'a pas confirme son adresse : le second
+ * cas affichait 0 commande sur la fiche client alors que la piece etait
+ * expediee, signalement du 10 novembre 2026.
+ */
+function LienCompteClient({ compte }: { compte: DetailCommande["compte"] }) {
+  const lienFiche =
+    compte.etat === "RATTACHEE" ||
+    compte.etat === "COMPTE_CONFIRME" ||
+    compte.etat === "COMPTE_NON_CONFIRME" ? (
+      <>
+        {" "}
+        <Link
+          href={`/administration/clients?recherche=${encodeURIComponent(compte.emailCompte)}`}
+          prefetch={false}
+          className={styles.lienCompte}
+        >
+          Voir la fiche client
+        </Link>
+      </>
+    ) : null;
+
+  const textes: Record<DetailCommande["compte"]["etat"], string> = {
+    RATTACHEE: "Rattachée au compte du client.",
+    COMPTE_CONFIRME:
+      "Un compte existe avec cette adresse : la commande y sera rattachée à sa prochaine connexion.",
+    COMPTE_NON_CONFIRME:
+      "Un compte existe avec cette adresse, non confirmée : la commande y sera rattachée dès que le client confirmera son adresse.",
+    SANS_COMPTE: "Commande passée sans compte.",
+    DISSOCIEE:
+      "Le compte du client a été supprimé : la commande n'est plus rattachée.",
+  };
+
+  return (
+    <p className={styles.compte}>
+      {textes[compte.etat]}
+      {lienFiche}
+    </p>
   );
 }

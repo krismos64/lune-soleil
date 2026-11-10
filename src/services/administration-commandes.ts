@@ -156,9 +156,32 @@ export async function listerCommandes({
   };
 }
 
+/**
+ * Le lien entre une commande et un compte, LS-317.
+ *
+ * CINQ ETATS ET NON UN BOOLEEN. « Sans compte » et « compte a l'adresse non
+ * confirmee » se ressemblent a l'ecran (aucun proprietaire) et appellent des
+ * suites differentes : le second se rattachera seul des que le client cliquera
+ * le lien de confirmation, parcours 6. Le signalement du 10 novembre 2026 venait
+ * precisement de cette confusion.
+ */
+export type LienCompte =
+  /** Rattachee : l'historique du client la porte. */
+  | { etat: "RATTACHEE"; emailCompte: string }
+  /** Le compte a ete supprime, LS-95 : elle ne se rattache plus a personne. */
+  | { etat: "DISSOCIEE" }
+  /** Un compte porte l'adresse, non confirmee : aucun rattachement possible. */
+  | { etat: "COMPTE_NON_CONFIRME"; emailCompte: string }
+  /** Un compte porte l'adresse, confirmee : rattachement a sa connexion. */
+  | { etat: "COMPTE_CONFIRME"; emailCompte: string }
+  /** Commande passee sans compte, aucun compte ne porte l'adresse. */
+  | { etat: "SANS_COMPTE" };
+
 /** Le detail complet d'une commande, tel que l'ecran l'affiche. */
 export type DetailCommande = {
   id: string;
+  /** LS-317 : rattachee, sans compte, ou compte a l'adresse non confirmee. */
+  compte: LienCompte;
   numero: string;
   statut: StatutCommande;
   nomClient: string;
@@ -287,6 +310,8 @@ export async function lireDetailCommande(
       fraisPortCentimes: true,
       totalCentimes: true,
       creeA: true,
+      dissocieA: true,
+      utilisateur: { select: { email: true } },
       lignes: {
         orderBy: { creeA: "asc" },
         select: {
@@ -345,10 +370,56 @@ export async function lireDetailCommande(
     return null;
   }
 
+  const { dissocieA, utilisateur, ...detail } = commande;
+
   return {
-    ...commande,
+    ...detail,
+    compte: await lireLienCompte(client, {
+      emailNormalise: commande.emailNormalise,
+      dissocieA,
+      emailCompte: utilisateur?.email ?? null,
+    }),
     transitionsPossibles: TRANSITIONS_ADMINISTRATRICE[commande.statut],
   };
+}
+
+/**
+ * L'etat du lien au compte, LS-317. Une seule lecture de plus, et seulement
+ * pour une commande sans proprietaire.
+ *
+ * `emailNormalise` EST LA FORME DU PARCOURS 6, `trim().toLowerCase()` : le
+ * compte se cherche sans tenir compte de la casse, comme le rattachement.
+ */
+async function lireLienCompte(
+  client: typeof prisma,
+  commande: {
+    emailNormalise: string;
+    dissocieA: Date | null;
+    emailCompte: string | null;
+  },
+): Promise<LienCompte> {
+  if (commande.emailCompte !== null) {
+    return { etat: "RATTACHEE", emailCompte: commande.emailCompte };
+  }
+
+  if (commande.dissocieA !== null) {
+    return { etat: "DISSOCIEE" };
+  }
+
+  const compte = await client.utilisateur.findFirst({
+    where: {
+      email: { equals: commande.emailNormalise, mode: "insensitive" },
+    },
+    select: { email: true, emailVerifie: true },
+  });
+
+  if (compte === null) {
+    return { etat: "SANS_COMPTE" };
+  }
+
+  return compte.emailVerifie
+    ? { etat: "COMPTE_CONFIRME", emailCompte: compte.email }
+    : { etat: "COMPTE_NON_CONFIRME", emailCompte: compte.email };
 }
 
 /**
