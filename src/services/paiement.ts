@@ -231,7 +231,29 @@ export async function demarrerPaiement({
    */
   if (sessionPrecedente !== null) {
     try {
-      await fournisseur.expirerSession(sessionPrecedente);
+      const expiration = await fournisseur.expirerSession(sessionPrecedente);
+
+      /*
+       * `DEJA_FERMEE` NE DIT PAS POURQUOI, payee ou expiree, LS-315. Le cas
+       * paye est celui d'un client qui a regle sa commande, dont l'evenement
+       * signe n'est pas encore arrive, et qui clique « Reprendre le paiement »
+       * depuis le bandeau du panier : creer une session ici lui en ouvrirait
+       * une SECONDE, payable, exactement le double encaissement d'ADR-032.
+       * Une session encore ouverte malgre le refus n'a pas d'explication
+       * sure : on ne cree rien. Releve par `ls-frontend-revue` le
+       * 10 novembre 2026.
+       */
+      if (expiration === "DEJA_FERMEE") {
+        const etat = await fournisseur.lireSession(sessionPrecedente);
+
+        if (etat.etat !== "EXPIREE") {
+          await supprimerTentativeSansSession(client, tentativeId);
+
+          return etat.etat === "PAYEE"
+            ? { statut: "DEJA_PAYEE" }
+            : { statut: "PANNE" };
+        }
+      }
     } catch (cause) {
       if (!(cause instanceof PrestatairePaiementIndisponibleError)) {
         throw cause;
