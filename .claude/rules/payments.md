@@ -82,7 +82,7 @@ remboursement ne force jamais un statut logistique incohérent.
 
 ```
 Commande : EN_ATTENTE_PAIEMENT -> CONFIRMEE -> EN_PREPARATION -> EXPEDIEE -> LIVREE
-           EN_ATTENTE_PAIEMENT -> ANNULEE
+           EN_ATTENTE_PAIEMENT -> ANNULEE   (réconciliation, ou le client, ADR-050)
 Paiement : EN_ATTENTE -> REUSSI | ECHOUE
            REUSSI -> PARTIELLEMENT_REMBOURSE -> REMBOURSE
 ```
@@ -114,6 +114,27 @@ Deux tâches planifiées obligatoires :
 
 Un verrou applicatif en base empêche deux exécutions simultanées de la même
 tâche.
+
+## Annulation par le client, ADR-050
+
+**Deux chemins annulent une commande en attente** : la réconciliation, sur
+session expirée chez Stripe, et le client, depuis le cookie signé `ls_commande`.
+Le second rend le stock lui-même, la réconciliation jamais.
+
+**Les sessions s'expirent AVANT d'annuler**, hors transaction. Stripe arbitre :
+une session expirée ne se paie plus. `DEJA_FERMEE` se lève par une lecture, une
+session payée refuse l'annulation, une panne aussi. Annuler d'abord laisserait
+payer une commande annulée.
+
+**Le rattachement d'une session relit le statut sous le verrou de commande**, et
+expire la session neuve d'une commande qui n'est plus en attente : un réessai
+dans un autre onglet croisait sinon l'annulation.
+
+**Le filet du webhook n'est pas étanche**, relevé le 10 novembre 2026 :
+`confirmerPaiement` écrit `CONFIRMEE` sans garde sur le statut, et sa sortie de
+stock ne prévoit pas une commande annulée dont la pièce a été réservée de
+nouveau. Aucun chemin ne l'atteint tant que Stripe refuse le paiement d'une
+session expirée ; ADR-050, section Risques, durcissement LS-316.
 
 ## Deux sessions payées pour une même commande
 
