@@ -83,9 +83,11 @@ test.describe("aperçu de l'administratrice", () => {
     expect(await debordement(page)).toBeLessThanOrEqual(0);
 
     /*
-     * LE LISERÉ DORÉ BORDE LA CARTE ET NE COUVRE PAS LA PHOTO : son tracé
-     * suit le bord de la carte, à deux pixels près. Un liseré rentré dans la
-     * carte passerait sur la photographie.
+     * LE TRAIT DU LISERÉ NE TOUCHE PAS LA PHOTOGRAPHIE : son bord intérieur,
+     * contour du rectangle moins la demi-épaisseur du trait, reste hors de la
+     * boîte de l'image sur les quatre côtés. La première version mesurait la
+     * boîte du `<svg>`, fixée par le CSS, et passait sur un trait qui couvrait
+     * 2 px de photo, relevé par `ls-frontend-revue`.
      */
     const cartes = page.locator("main ul > li:has(a[href^='/produit/'])");
     await expect(cartes.first()).toBeVisible();
@@ -93,11 +95,23 @@ test.describe("aperçu de l'administratrice", () => {
     expect(nombre).toBeGreaterThan(0);
     for (let rang = 0; rang < Math.min(nombre, 4); rang += 1) {
       const carte = cartes.nth(rang);
-      const boiteCarte = await carte.boundingBox();
-      const trace = await carte.locator(":scope > svg").boundingBox();
-      expect(boiteCarte && trace, `carte ${rang}`).toBeTruthy();
-      expect(Math.abs(trace!.x - boiteCarte!.x)).toBeLessThanOrEqual(2);
-      expect(Math.abs(trace!.width - boiteCarte!.width)).toBeLessThanOrEqual(4);
+      const mesure = await carte.evaluate((element) => {
+        const rect = element.querySelector(":scope > svg rect");
+        const image = element.querySelector("a[href^='/produit/'] > div");
+        if (!rect || !image) return null;
+        const demi = Number.parseFloat(getComputedStyle(rect).strokeWidth) / 2;
+        const r = rect.getBoundingClientRect();
+        const i = image.getBoundingClientRect();
+        return {
+          gauche: i.left - (r.left + demi),
+          haut: i.top - (r.top + demi),
+          droite: r.right - demi - i.right,
+        };
+      });
+      expect(mesure, `carte ${rang}`).toBeTruthy();
+      expect(mesure!.gauche, `carte ${rang}, gauche`).toBeGreaterThanOrEqual(0);
+      expect(mesure!.haut, `carte ${rang}, haut`).toBeGreaterThanOrEqual(0);
+      expect(mesure!.droite, `carte ${rang}, droite`).toBeGreaterThanOrEqual(0);
     }
 
     // Bouton d'achat de nuit, texte blanc : 18,91:1.
@@ -187,8 +201,13 @@ test.describe("aperçu de l'administratrice", () => {
         expect(nombre).toBeGreaterThan(1);
         for (let rang = 0; rang < nombre; rang += 1) {
           const borne = bornes.nth(rang);
-          // Les marges dorées sont masquées sous 1240 px : rien à borner.
-          if (!(await borne.isVisible())) continue;
+          /*
+           * SEUL UN ÉLÉMENT RÉELLEMENT MASQUÉ EST SAUTÉ, les marges dorées sous
+           * 1240 px. `isVisible` sautait aussi le liseré du héros, réduit à
+           * une largeur nulle par sa propre animation en attente, relevé par
+           * `ls-frontend-revue`.
+           */
+          if (!(await borne.evaluate((e) => e.checkVisibility()))) continue;
           await borne.scrollIntoViewIfNeeded();
           await expect(borne).toHaveAttribute("data-borne", "fin", {
             timeout: 7_000,
@@ -215,6 +234,11 @@ test.describe("aperçu de l'administratrice", () => {
         });
         await expect(pause).toBeVisible();
         await expect(pause).toHaveAttribute("aria-pressed", "false");
+        // Au clavier, l'anneau brun du focus est là, WCAG 2.4.7.
+        await pause.focus();
+        expect(
+          await pause.evaluate((e) => getComputedStyle(e).boxShadow),
+        ).toContain("0px 0px 0px 5px");
         await page.waitForTimeout(800);
         expect((await animations(page)).enCours).toBeGreaterThan(0);
 

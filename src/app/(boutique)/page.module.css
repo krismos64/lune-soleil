@@ -984,6 +984,23 @@
   outline-color: var(--ls-bw-texte-sur-nuit);
 }
 
+/*
+ * À L'IMPRESSION, le fond sombre du héros ne s'imprime pas par défaut : les
+ * textes passés au blanc deviendraient blanc sur blanc. Ils reprennent
+ * l'encre ordinaire, sous Black Week comme sous `NOEL_2`, qui portait le même
+ * défaut. Relevé par `ls-frontend-revue`.
+ */
+@media print {
+  :global([data-theme="black_week"]) .surtitre,
+  :global([data-theme="black_week"]) .titre,
+  :global([data-theme="black_week"]) .accroche,
+  :global([data-theme="noel_2"]) .surtitre,
+  :global([data-theme="noel_2"]) .titre,
+  :global([data-theme="noel_2"]) .accroche {
+    color: var(--ls-text);
+  }
+}
+
 /* Liseré d'or au pied du héros, dans son cadre coupé. */
 .hero .lisereHeros {
   z-index: 1;

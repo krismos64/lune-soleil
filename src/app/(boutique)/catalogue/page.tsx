@@ -435,13 +435,20 @@ export default async function PageCatalogue({
   );
   const noel = estThemeDeNoel(theme);
   const blackWeek = estThemeBlackWeek(theme);
+  /*
+   * UN SEUL CRITÈRE POUR L'EN-TÊTE D'AUBE ET LA BANDE DE NUIT, LS-283 : ils
+   * vont ensemble. Sous Black Week, la bande restait affichée parce qu'elle
+   * testait encore `noel` seul, relevé par `ls-frontend-revue` ; la maquette
+   * validée ne la porte pas.
+   */
+  const habillageOrdinaire = theme === "AUCUN";
 
   return (
     <main
       id="contenu"
       tabIndex={-1}
       className={
-        noel || blackWeek ? styles.page : `${styles.page} ${styles.ordinaire}`
+        habillageOrdinaire ? `${styles.page} ${styles.ordinaire}` : styles.page
       }
       data-theme={attributTheme(theme)}
     >
@@ -554,10 +561,10 @@ export default async function PageCatalogue({
       {/*
        * BANDE DE NUIT, LS-283 : une sortie pour qui n'a pas trouvé sa pièce.
        * Elle ne promet aucun service : l'atelier ne fait pas de création sur
-       * mesure, arbitrage de Christophe du 7 octobre 2026, LS-284. Hors thème de Noël seulement :
+       * mesure, arbitrage de Christophe du 7 octobre 2026, LS-284. Hors thème seulement :
        * l'habillage de LS-277 reste tel qu'il a été validé.
        */}
-      {noel ? null : (
+      {!habillageOrdinaire ? null : (
         <section className={styles.nuit} aria-labelledby="titre-nuit">
           <div className={styles.nuitImage} aria-hidden="true">
             <Image
