@@ -452,7 +452,7 @@ Ces opérations exigent une transaction, sans exception :
     modération peut tomber
 11. Suppression d'un compte : marquer `Commande.dissocieA` sur ses commandes
     **avant** de supprimer le compte, puis laisser les politiques de clé
-    étrangère traiter les **onze** autres références qui en portent une,
+    étrangère traiter les autres références qui en portent une,
     `ReponseAvis.auteurId` étant en `RESTRICT` assumé. Livré par LS-95,
     `services/suppression-compte.ts`
 12. **Retrait d'un avis par son auteur**, LS-305, ADR-049 : l'effacement du
@@ -480,7 +480,9 @@ point 11 vient de LS-41.
 
 **Le compte du point 11 disait « six » jusqu'au 13 août 2026.** Il était juste
 quand LS-41 l'a écrit, et les tables ajoutées depuis ne l'ont pas fait suivre :
-il y en a **douze au total**, mesurées sur la base et non recomptées de mémoire.
+il y en avait douze, puis quatorze depuis LS-319 (les deux colonnes d'acteur de
+`promotion`, en `SET NULL`) : **le compte ne s'écrit plus ici**, il se lit dans
+`suppression-compte.sequential.test.ts`, mesuré sur la base.
 Un test de LS-95 interroge `information_schema` et vérifie la cardinalité, ce qui
 rend ce compte mesuré plutôt qu'affirmé ; l'ajout d'une référence sans politique
 explicite y rougit. Une telle référence vaut `RESTRICT` par défaut, donc
