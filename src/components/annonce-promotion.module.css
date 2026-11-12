@@ -1,0 +1,25 @@
+/*
+ * Bandeau d'annonce de la promotion, ADR-051. Sous le thème Black Week, or
+ * sur nuit 11,29:1 et blanc sur nuit 18,91:1 ; hors thème, blanc sur
+ * primaire 8,93:1.
+ */
+.annonce {
+  margin: 0 0 var(--ls-space-4);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-bw-fond-nuit, var(--ls-primary));
+  color: var(--ls-bw-texte-sur-nuit, var(--ls-text-on-primary));
+}
+
+.texte {
+  max-width: var(--ls-content-max);
+  margin: 0 auto;
+  padding: var(--ls-space-3) var(--ls-space-4);
+  text-align: center;
+  font-size: 0.9375rem;
+}
+
+.titre {
+  color: var(--ls-bw-or-sur-nuit, var(--ls-text-on-primary));
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
