@@ -23,6 +23,8 @@
  * donc ce qu'il ne fait pas, et ou la decision vit.
  * ------------------------------------------------------------------
  */
+import { formaterDate } from "@/lib/affichage-commande";
+import { lireEtatPromotion } from "@/services/promotion";
 import { Suspense } from "react";
 
 import { headers } from "next/headers";
@@ -41,6 +43,7 @@ import {
   LIBELLES_THEMES,
   lireThemeSaisonnier,
 } from "@/services/theme-saisonnier";
+import { ChoixPromotion } from "./choix-promotion";
 import { ChoixTheme } from "./choix-theme";
 import { FormulaireParametres } from "./formulaire-parametres";
 import styles from "./parametres.module.css";
@@ -105,7 +108,10 @@ async function Reglages() {
    * moyen de comprendre, alors que le message nomme la cause.
    */
   let parametres = null;
-  const theme = await lireThemeSaisonnier();
+  const [theme, { active: promotion }] = await Promise.all([
+    lireThemeSaisonnier(),
+    lireEtatPromotion(),
+  ]);
 
   try {
     parametres = await lireParametresBoutique();
@@ -139,6 +145,17 @@ async function Reglages() {
           <FormulaireParametres parametres={parametres} />
 
           <ChoixTheme actif={theme} />
+
+          <ChoixPromotion
+            etat={
+              promotion === null
+                ? null
+                : {
+                    ...promotion,
+                    activeDepuis: formaterDate(promotion.activeDepuis),
+                  }
+            }
+          />
 
           <section
             className={styles.horsPerimetre}
