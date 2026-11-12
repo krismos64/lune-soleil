@@ -8,6 +8,75 @@
 | Amende | ADR-022 (palette publique), ADR-045 (politique d'animation) |
 | Ticket | LS-267 |
 
+## Amendement du 12 novembre 2026, thème Black Week, LS-318
+
+**Arbitrage de Christophe sur maquette**, `docs/prototypes/theme-black-week/`,
+validée le 12 novembre 2026 pour la semaine du 23 au 29 novembre 2026. Un
+troisième thème s'ajoute, sur le modèle de `NOEL_2`. Le reste de l'ADR tient.
+
+**Section 1, mécanisme.** La contrainte passe à **`AUCUN`, `NOEL_1`, `NOEL_2`,
+`BLACK_WEEK`**, migration `20261112180000_theme_black_week` : retrait puis
+pose de la contrainte, donc classée destructive par `migrate-production.sh`,
+sans aucune donnée convertie ni thème activé. Attribut posé sur le `<main>` :
+`data-theme="black_week"`. **Activation manuelle**, section 6 inchangée :
+l'exploitante l'active et le retire elle-même.
+
+**Section 2, périmètre visuel.** Exception bornée, la même que `NOEL_2` :
+
+- le **bandeau de tête** de l'accueil et du catalogue passe à la nuit, dégradé
+  de `#121015` à `#1D1A22` avec une braise `#3A2A0C` en coin ; son titre, son
+  texte et ses boutons y passent en blanc ou en or, le bouton plein en or à
+  texte de nuit. **Le texte du `h1` ne change pas** : sur le catalogue,
+  « Black Week » est un paragraphe d'affichage posé au-dessus du `h1`
+  « Le catalogue », et non le titre, section 5 ;
+- le **filtre actif** du catalogue passe en aplat de nuit à texte or ;
+- les **cartes produit** reçoivent un liseré doré tracé dans leur bord au
+  survol, et le bouton « Ajouter au panier » passe à la nuit, texte blanc,
+  précédé d'un sac doré. **Le contenu des cartes et la couleur des prix ne
+  changent pas** ;
+- la bande défilante, le sceau et le pied de page de ces deux pages passent à
+  la nuit.
+
+**Le thème n'annonce aucune réduction.** Ni taux, ni prix barré, ni date, ni
+urgence : la réduction de 30 %, ses prix barrés et ses dates relèvent de la
+promotion de LS-319, qui fera l'objet de son propre ADR. L'exploitante active
+les deux ensemble, arbitrage du 12 novembre 2026, et c'est ce qui permet au
+nom « Black Week » de rester affiché.
+
+**Section 2, décors.** Soleil levant aux rayons qui se tracent puis tournent,
+halo qui respire, poussière d'or dans la zone du soleil et dans les marges de
+la grille au-delà de 1240 px, liseré d'or sous le bandeau, liseré doré des
+cartes, sac doré du bouton d'achat. Aucune image générée.
+
+**Section 3, contrastes, calculés le 12 novembre 2026** et mesurés par
+`verifier-contraste.sh`, qui reconnaît désormais le suffixe `-sur-nuit` comme
+`-sur-rouge`.
+
+| Paire | Ratio au pire |
+|---|---|
+| blanc sur la braise `#3A2A0C`, point le plus clair des bandeaux | 13,85:1 |
+| or `#F2C230` sur la braise | 8,27:1 |
+| reflet `#FFF4C2` sur la braise, mots dorés du titre | 12,51:1 |
+| nuit `#121015` sur bouton or | 11,29:1 |
+| encre `#121015` sur crème, sable, blanc | 15,86:1 (sable) |
+| texte du pied `--ls-texte-nuit` sur `#121015` | 16,43:1 |
+
+**L'or vif ne s'écrit jamais sur un fond clair** : 1,65:1 sur crème. Il est
+texte sur la nuit, décor partout ailleurs.
+
+**Section 4, animations.** ADR-045, **amendé le même jour** par LS-318 :
+rotation des rayons, halo et poussière d'or bougent en continu, avec le bouton
+de pause ; tout le reste est borné à cinq secondes.
+
+**Écarts à la maquette, non portés** : le reflet qui balaie « Week » (mouvement
+sur un texte, animation de `background-position`), la gerbe d'étincelles au
+clic (jaillissait sur le libellé du bouton, même motif que les flocons de
+Noël), et l'entrée des cartes en fondu (point 5 d'ADR-045).
+
+**Écarté : programmer le thème par dates.** Christophe retient l'activation
+manuelle, l'exploitante s'engageant à l'activer et à le retirer aux bonnes
+dates. La programmation reste un ticket possible, section 6.
+
 ## Amendement du 6 octobre 2026, deux thèmes de Noël, LS-277
 
 **Arbitrage de Christophe sur maquette**, `docs/prototypes/themes-noel/`,

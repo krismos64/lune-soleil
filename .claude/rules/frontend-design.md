@@ -265,9 +265,10 @@ Les règles qui s'appliquent à toute animation d'une page publique :
   **au plus tard cinq secondes** après son entrée dans l'écran, WCAG 2.2.2,
   sans bouton de pause (arbitrage du 4 octobre 2026). La borne de dix secondes
   écrite d'abord ici n'était pas conforme, correction d'ADR-045. **Seule
-  exception, les thèmes de Noël** (amendement LS-277 d'ADR-045) : neige,
-  rayons du soleil et boules y bougent en continu, avec un bouton de pause
-  visible qui fige toute la page, absent en mouvement réduit ;
+  exception, les thèmes de Noël et Black Week** (amendements LS-277 et
+  LS-318 d'ADR-045) : neige, rayons du soleil, boules, halo et poussière d'or
+  y bougent en continu, avec un bouton de pause visible qui fige toute la
+  page, absent en mouvement réduit et sans script ;
 - seules `transform`, `opacity` et, pour dessiner un tracé,
   `stroke-dashoffset` s'animent, et rien ne tourne hors de l'écran ;
 - **une phrase posée sur un fond qui change** ne s'affiche que là où son
@@ -306,10 +307,15 @@ texte** : un champ libre laisserait passer une promotion ou un délai inventés.
   cadre rouge des cartes et bouton d'achat blanc à texte rouge. Le texte du
   `h1`, le contenu des cartes et la couleur des prix ne changent toujours pas.
   **Tout petit texte sur le rouge est blanc pur**, mesuré à 5,24:1 au pire.
+  **`BLACK_WEEK` suit la même exception** (amendement LS-318 d'ADR-046) :
+  bandeau de nuit, texte blanc ou or, filtre actif de nuit, bouton d'achat de
+  nuit à texte blanc. **L'or vif `#F2C230` ne s'écrit que sur la nuit**, il
+  tombe à 1,65:1 sur crème. Le thème n'écrit ni taux, ni prix barré, ni date :
+  la réduction relève de la promotion, LS-319.
 - **Chaque jeton de thème est une paire mesurée** sur crème, sable et blanc,
   C31 ; `verifier-contraste.sh` mesure sous chaque thème.
 - **Les décors suivent ADR-045** : bornés à cinq secondes, sauf les décors
-  continus des thèmes de Noël sous bouton de pause, absents en mouvement
+  continus des thèmes de Noël et Black Week sous bouton de pause, absents en mouvement
   réduit, jamais par-dessus un texte, un contrôle ou un bijou.
 - **Aucune phrase ne parle de livraison, de date ou de prix.**
 

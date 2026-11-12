@@ -106,8 +106,8 @@ des pages publiques » de `frontend-design.md` :
 - contenu principal visible au premier rendu, sans script et en mouvement
   réduit ;
 - arrêt au plus tard cinq secondes après l'entrée dans l'écran, par
-  `data-borne`, sauf les décors continus des thèmes de Noël (amendement
-  LS-277 d'ADR-045) : bouton de pause visible, nommé, qui fige toute la page,
+  `data-borne`, sauf les décors continus des thèmes de Noël et Black Week
+  (amendements LS-277 et LS-318 d'ADR-045) : bouton de pause visible, nommé, qui fige toute la page,
   absent en mouvement réduit, et rien qui bouge sur un texte, une photographie
   ou un contrôle ;
 - `transform`, `opacity` et `stroke-dashoffset` seulement ;
@@ -116,11 +116,13 @@ des pages publiques » de `frontend-design.md` :
   amendés par LS-268.
 
 Un thème saisonnier suit ADR-046, amendé par LS-277 pour `NOEL_1` et
-`NOEL_2` :
+`NOEL_2`, et par LS-318 pour `BLACK_WEEK` :
 - un jeu fermé écrit dans le code, sur l'accueil et le catalogue seulement ;
 - aucun texte saisi, aucune promesse de prix, de date ni de livraison ;
 - des accents mesurés sur crème, sable et blanc, et des textes `*-sur-rouge`
-  mesurés sur chaque fond rouge, tout petit texte sur le rouge en blanc pur ;
+  ou `*-sur-nuit` mesurés sur chaque fond sombre de leur bloc, tout petit
+  texte sur le rouge en blanc pur, l'or vif de Black Week jamais sur fond
+  clair ;
 - un contraste posé sur un dégradé ou un filigrane se mesure sur les pixels,
   `verifier-contraste.sh` ne lisant pas un `color-mix` dans un dégradé ;
 - des décors jamais posés sur un texte, un contrôle ou un bijou.
