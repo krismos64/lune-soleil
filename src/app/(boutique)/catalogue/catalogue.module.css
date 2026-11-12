@@ -1415,12 +1415,16 @@
  * 12 novembre 2026, comme le bouton blanc de `NOEL_2` : texte blanc sur nuit
  * 18,91:1, sac doré décoratif. Épuisé, il garde son aplat sable ordinaire.
  */
-:global([data-theme="black_week"]) .carteBlackWeek .boutonAjoutRapide:not(:disabled) {
+:global([data-theme="black_week"])
+  .carteBlackWeek
+  .boutonAjoutRapide:not(:disabled) {
   background: var(--ls-bw-fond-nuit);
   color: var(--ls-bw-texte-sur-nuit);
 }
 
-:global([data-theme="black_week"]) .carteBlackWeek .boutonAjoutRapide:hover:not(:disabled) {
+:global([data-theme="black_week"])
+  .carteBlackWeek
+  .boutonAjoutRapide:hover:not(:disabled) {
   background: var(--ls-bw-fond-nuit-clair);
 }
 

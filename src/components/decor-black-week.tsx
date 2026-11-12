@@ -47,7 +47,11 @@ const RAYONS = Array.from({ length: NOMBRE_RAYONS }, (_, i) => {
  * Le soleil levant et sa poussière d'or, dans une zone de décor qui ne
  * chevauche jamais le texte du bandeau.
  */
-export function SoleilBlackWeek({ className }: { className?: string | undefined }) {
+export function SoleilBlackWeek({
+  className,
+}: {
+  className?: string | undefined;
+}) {
   return (
     <div
       className={`${styles.zone} ${className ?? ""}`}
