@@ -2,7 +2,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Statut | Proposé |
+| Statut | Accepté |
 | Date | 12 novembre 2026 |
 | Décideur | Christophe Mostefaoui |
 | Complète | ADR-024 (commande et réservation atomiques), ADR-046 (thèmes saisonniers) |
@@ -73,10 +73,13 @@ ligne de commande avec le prix de référence.**
    dans `services/promotion.ts` : `floor(prix * (100 - taux) / 100)` en
    entiers, invariant 1. Le catalogue, la fiche, le panier, le JSON-LD et
    `passerCommande` l'appellent tous ; aucun composant ne calcule un prix.
-5. **Garde à l'activation, en échec fermé** : l'activation est refusée si une
-   variante concernée a changé de prix dans les trente jours (lu dans
-   `historique_prix_variante`), ou dans les cas des questions ouvertes
-   ci-dessous. Un refus nomme la cause, sans activer à moitié.
+5. **Éligibilité par variante, en échec fermé** : une variante n'entre dans la
+   promotion que si elle existe depuis au moins trente jours à l'activation
+   et que son prix n'a pas changé pendant ces trente jours (lu dans
+   `historique_prix_variante`). Une variante inéligible se vend au prix
+   catalogue, sans badge. **L'activation entière est refusée** dans un seul
+   cas, la réactivation tardive de l'arbitrage 2 ci-dessous ; le refus nomme
+   sa cause.
 6. **Prix gelés pendant la promotion** : modifier un prix, unitaire ou en
    masse, est refusé tant qu'une promotion est active. Le prix barré reste
    ainsi le prix catalogue, exactement le prix antérieur constaté à
@@ -94,7 +97,9 @@ ligne de commande avec le prix de référence.**
    déjà confronté au sous-total figé (`SousTotalChangeError`). Une activation
    ou une désactivation entre l'affichage et le clic fait donc relire le
    récapitulatif au client, jamais payer un montant qu'il n'a pas lu.
-9. **Affichage** : prix barré, prix réduit et « -30 % » sur le catalogue, la
+9. **Affichage** : l'annonce dit « sur toute la boutique » seulement si
+   chaque variante en vente est éligible, « sur les pièces signalées » sinon,
+   calculé côté serveur. Prix barré, prix réduit et « -30 % » sur le catalogue, la
    fiche, le panier, le tunnel et la confirmation ; mention « Prix barré :
    prix le plus bas pratiqué au cours des 30 jours précédant la réduction. »
    sur la fiche ; `price` du JSON-LD égal au prix réduit. Rien de tout cela
@@ -103,23 +108,21 @@ ligne de commande avec le prix de référence.**
     son prix de référence et le libellé de la promotion. Les factures déjà
     émises restent en version 2, invariant 4.
 
-## Questions ouvertes, à trancher par Christophe avant le code
+## Arbitrages de Christophe, 12 novembre 2026
 
-Les deux premières sont juridiques : l'ADR ne les décide pas.
+Les trois propositions ont été validées. Les deux premières tranchent une
+question juridique : c'est la décision de Christophe, que l'ADR enregistre
+sans la qualifier.
 
-1. **Une pièce créée moins de trente jours avant l'activation** n'a pas trente
-   jours de prix pratiqué. Proposition en échec fermé : elle **n'entre pas**
-   dans la promotion, vendue au prix catalogue sans badge. Autre choix
-   possible : l'inclure, le prix antérieur étant le seul prix jamais pratiqué.
-2. **Réactiver après une désactivation.** Le prix réduit, une fois pratiqué,
-   devient le prix le plus bas des trente jours suivants. Proposition : une
-   réactivation de la **même** promotion est permise dans les 24 heures qui
-   suivent sa désactivation (désactivation par erreur, même opération) ;
-   au-delà, toute activation est refusée pendant trente jours.
-3. **Mention sur la facture** (point 10) : L441-9 ne l'impose pas pour un
-   consommateur. Proposition : la porter quand même, une ligne « dont
-   réduction Black Week -30 % » sous le prix, pour que la facture explique
-   l'écart avec le prix affiché barré. Autre choix : le seul prix payé.
+1. **Une pièce créée moins de trente jours avant l'activation n'entre pas**
+   dans la promotion : vendue au prix catalogue, sans badge. Même règle pour
+   une pièce dont le prix a changé pendant ces trente jours.
+2. **Réactivation** : une promotion désactivée peut être réactivée dans les
+   **24 heures** (désactivation par erreur, même opération) ; au-delà, toute
+   activation est refusée pendant **trente jours** après la dernière
+   désactivation, le prix réduit étant devenu le prix le plus bas pratiqué.
+3. **Facture** : chaque ligne réduite porte « dont réduction Black Week
+   -30 % » sous son prix, avec le prix de référence.
 
 ## Alternatives écartées
 

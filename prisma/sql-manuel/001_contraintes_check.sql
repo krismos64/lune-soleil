@@ -540,3 +540,37 @@ ALTER TABLE "produit"
 ALTER TABLE "parametre_boutique"
   ADD CONSTRAINT "chk_parametre_theme_connu"
   CHECK ("theme_saisonnier" IN ('AUCUN', 'NOEL_1', 'NOEL_2', 'BLACK_WEEK'));
+
+-- ADR-051, LS-319 : promotion de catalogue, historique des prix et prix figés.
+-- LA PROMOTION EST L'UNE DES PROMOTIONS ÉCRITES DANS LE CODE, liste identique
+-- à `PROMOTIONS` de `src/lib/promotion.ts`.
+ALTER TABLE "promotion"
+  ADD CONSTRAINT "chk_promotion_code_connu"
+  CHECK ("code" IN ('BLACK_WEEK'));
+
+ALTER TABLE "promotion"
+  ADD CONSTRAINT "chk_promotion_taux"
+  CHECK ("taux_pourcentage" BETWEEN 1 AND 90);
+
+-- `active` et l'absence de désactivation disent la même chose, toujours.
+ALTER TABLE "promotion"
+  ADD CONSTRAINT "chk_promotion_active_coherente"
+  CHECK ("active" = ("desactivee_a" IS NULL));
+
+ALTER TABLE "promotion"
+  ADD CONSTRAINT "chk_promotion_desactivation_posterieure"
+  CHECK ("desactivee_a" IS NULL OR "desactivee_a" >= "active_depuis");
+
+ALTER TABLE "historique_prix_variante"
+  ADD CONSTRAINT "chk_historique_prix_variante"
+  CHECK ("ancien_prix_centimes" >= 0 AND "nouveau_prix_centimes" >= 0
+         AND "ancien_prix_centimes" <> "nouveau_prix_centimes");
+
+-- SANS PROMOTION, NI RÉFÉRENCE NI PROMOTION ; AVEC, LE PRIX PAYÉ EST
+-- STRICTEMENT SOUS LE PRIX DE RÉFÉRENCE. Une « réduction » nulle ou négative
+-- ne se fige jamais.
+ALTER TABLE "ligne_commande"
+  ADD CONSTRAINT "chk_ligne_commande_promotion"
+  CHECK (("promotion_id" IS NULL AND "prix_reference_fige_centimes" IS NULL)
+      OR ("promotion_id" IS NOT NULL AND "prix_reference_fige_centimes" IS NOT NULL
+          AND "prix_fige_centimes" < "prix_reference_fige_centimes"));

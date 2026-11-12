@@ -1377,6 +1377,56 @@ verifier_rejet "thème Black Week en minuscules rejeté" \
 R "UPDATE parametre_boutique SET theme_saisonnier = 'AUCUN' WHERE id = true;" >/dev/null
 
 echo
+echo "Promotion de catalogue, ADR-051, LS-319"
+
+sortie=$(R "INSERT INTO promotion (id,code,taux_pourcentage) VALUES ('pr0','SOLDES',30);")
+verifier_rejet "promotion inconnue du code rejetée" "chk_promotion_code_connu" "$sortie"
+sortie=$(R "INSERT INTO promotion (id,code,taux_pourcentage) VALUES ('pr0','BLACK_WEEK',0);")
+verifier_rejet "taux nul rejeté" "chk_promotion_taux" "$sortie"
+sortie=$(R "INSERT INTO promotion (id,code,taux_pourcentage,active) VALUES ('pr0','BLACK_WEEK',30,false);")
+verifier_rejet "promotion inactive sans désactivation rejetée" \
+  "chk_promotion_active_coherente" "$sortie"
+sortie=$(R "INSERT INTO promotion (id,code,taux_pourcentage,active,active_depuis,desactivee_a)
+   VALUES ('pr0','BLACK_WEEK',30,false,now(),now() - interval '1 hour');")
+verifier_rejet "désactivation antérieure à l'activation rejetée" \
+  "chk_promotion_desactivation_posterieure" "$sortie"
+sortie=$(R "INSERT INTO promotion (id,code,taux_pourcentage) VALUES ('pr1','BLACK_WEEK',30);")
+verifier_accepte "promotion active acceptée" "$sortie"
+# UNE SEULE ACTIVE : la seconde est refusée par l'index, et une désactivée
+# coexiste avec l'active.
+sortie=$(R "INSERT INTO promotion (id,code,taux_pourcentage) VALUES ('pr2','BLACK_WEEK',30);")
+verifier_rejet "seconde promotion active rejetée" "promotion_active_unique" "$sortie"
+sortie=$(R "INSERT INTO promotion (id,code,taux_pourcentage,active,desactivee_a)
+   VALUES ('pr3','BLACK_WEEK',30,false,now() + interval '1 hour');")
+verifier_accepte "promotion désactivée à côté de l'active acceptée" "$sortie"
+
+sortie=$(R "INSERT INTO historique_prix_variante (id,variante_id,ancien_prix_centimes,nouveau_prix_centimes)
+   VALUES ('hp0','var',1200,1200);")
+verifier_rejet "historique sans changement de prix rejeté" \
+  "chk_historique_prix_variante" "$sortie"
+sortie=$(R "INSERT INTO historique_prix_variante (id,variante_id,ancien_prix_centimes,nouveau_prix_centimes)
+   VALUES ('hp0','var',1200,-1);")
+verifier_rejet "historique à prix négatif rejeté" \
+  "chk_historique_prix_variante" "$sortie"
+
+# LA LIGNE FIGÉE : les deux colonnes ensemble, et une réduction réelle.
+sortie=$(R "INSERT INTO ligne_commande (id,commande_id,reference_figee,libelle_produit_fige,libelle_variante_fige,prix_fige_centimes,quantite,promotion_id)
+   VALUES ('lcp0','cmd','LS-ECLIPSE-01','Eclipse','doree',840,1,'pr1');")
+verifier_rejet "ligne en promotion sans prix de référence rejetée" \
+  "chk_ligne_commande_promotion" "$sortie"
+sortie=$(R "INSERT INTO ligne_commande (id,commande_id,reference_figee,libelle_produit_fige,libelle_variante_fige,prix_fige_centimes,quantite,prix_reference_fige_centimes)
+   VALUES ('lcp0','cmd','LS-ECLIPSE-01','Eclipse','doree',840,1,1200);")
+verifier_rejet "prix de référence sans promotion rejeté" \
+  "chk_ligne_commande_promotion" "$sortie"
+sortie=$(R "INSERT INTO ligne_commande (id,commande_id,reference_figee,libelle_produit_fige,libelle_variante_fige,prix_fige_centimes,quantite,prix_reference_fige_centimes,promotion_id)
+   VALUES ('lcp0','cmd','LS-ECLIPSE-01','Eclipse','doree',1200,1,1200,'pr1');")
+verifier_rejet "réduction nulle rejetée" "chk_ligne_commande_promotion" "$sortie"
+sortie=$(R "INSERT INTO ligne_commande (id,commande_id,reference_figee,libelle_produit_fige,libelle_variante_fige,prix_fige_centimes,quantite,prix_reference_fige_centimes,promotion_id)
+   VALUES ('lcp1','cmd','LS-ECLIPSE-01','Eclipse','doree',840,1,1200,'pr1');")
+verifier_accepte "ligne réduite de 30 % acceptée" "$sortie"
+R "DELETE FROM ligne_commande WHERE id = 'lcp1'; DELETE FROM promotion;" >/dev/null
+
+echo
 echo "Retrait de l'espace d'administration, C45, LS-266"
 
 # UN PRODUIT RETIRÉ EST ARCHIVÉ. Le cas rejeté est la REPUBLICATION d'un

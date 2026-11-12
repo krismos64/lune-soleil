@@ -203,6 +203,9 @@ export type LigneAEcrire = {
   libelleProduitFige: string;
   libelleVarianteFige: string;
   prixFigeCentimes: number;
+  /** ADR-051 : le prix catalogue barré et la promotion, nuls ensemble. */
+  prixReferenceFigeCentimes: number | null;
+  promotionId: string | null;
   quantite: number;
 };
 

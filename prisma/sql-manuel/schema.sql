@@ -225,6 +225,9 @@ CREATE TABLE "ligne_commande" (
     "prix_fige_centimes" INTEGER NOT NULL,
     "quantite" INTEGER NOT NULL,
     "cree_a" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    -- ADR-051, LS-319 : prix de référence et promotion, figés avec le prix.
+    "prix_reference_fige_centimes" INTEGER,
+    "promotion_id" TEXT,
 
     CONSTRAINT "ligne_commande_pkey" PRIMARY KEY ("id")
 );
@@ -1121,3 +1124,46 @@ ALTER TABLE "passkey" ADD CONSTRAINT "passkey_user_id_fkey" FOREIGN KEY ("user_i
 -- regle R6, donc cette politique ne bloque aucune suppression legitime.
 ALTER TABLE "signalement_avis" ADD CONSTRAINT "signalement_avis_avis_id_fkey" FOREIGN KEY ("avis_id") REFERENCES "avis"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
+-- ADR-051, LS-319 : promotion de catalogue et historique des prix.
+-- CreateTable
+CREATE TABLE "promotion" (
+    "id" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
+    "taux_pourcentage" INTEGER NOT NULL,
+    "active" BOOLEAN NOT NULL DEFAULT true,
+    "active_depuis" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "desactivee_a" TIMESTAMPTZ(3),
+    "activee_par_id" TEXT,
+    "desactivee_par_id" TEXT,
+
+    CONSTRAINT "promotion_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "historique_prix_variante" (
+    "id" TEXT NOT NULL,
+    "variante_id" TEXT NOT NULL,
+    "ancien_prix_centimes" INTEGER NOT NULL,
+    "nouveau_prix_centimes" INTEGER NOT NULL,
+    "modifie_a" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "historique_prix_variante_pkey" PRIMARY KEY ("id")
+);
+
+-- UNE SEULE PROMOTION ACTIVE À LA FOIS.
+CREATE UNIQUE INDEX "promotion_active_unique" ON "promotion"("active") WHERE (active);
+
+-- CreateIndex
+CREATE INDEX "historique_prix_variante_idx" ON "historique_prix_variante"("variante_id", "modifie_a");
+
+-- AddForeignKey
+ALTER TABLE "ligne_commande" ADD CONSTRAINT "ligne_commande_promotion_id_fkey" FOREIGN KEY ("promotion_id") REFERENCES "promotion"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "promotion" ADD CONSTRAINT "promotion_activee_par_id_fkey" FOREIGN KEY ("activee_par_id") REFERENCES "utilisateur"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "promotion" ADD CONSTRAINT "promotion_desactivee_par_id_fkey" FOREIGN KEY ("desactivee_par_id") REFERENCES "utilisateur"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "historique_prix_variante" ADD CONSTRAINT "historique_prix_variante_variante_id_fkey" FOREIGN KEY ("variante_id") REFERENCES "variante"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
