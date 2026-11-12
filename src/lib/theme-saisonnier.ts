@@ -8,7 +8,12 @@
 import { z } from "zod";
 
 /** Les thèmes écrits dans le code. Même liste que `chk_parametre_theme_connu`. */
-export const THEMES_SAISONNIERS = ["AUCUN", "NOEL_1", "NOEL_2"] as const;
+export const THEMES_SAISONNIERS = [
+  "AUCUN",
+  "NOEL_1",
+  "NOEL_2",
+  "BLACK_WEEK",
+] as const;
 
 export type ThemeSaisonnier = (typeof THEMES_SAISONNIERS)[number];
 
@@ -27,6 +32,7 @@ export const LIBELLES_THEMES: Record<ThemeSaisonnier, string> = {
   AUCUN: "aucun thème",
   NOEL_1: "Noël 1 (sobre)",
   NOEL_2: "Noël 2 (franc)",
+  BLACK_WEEK: "Black Week",
 };
 
 /**
@@ -35,4 +41,17 @@ export const LIBELLES_THEMES: Record<ThemeSaisonnier, string> = {
  */
 export function estThemeDeNoel(theme: ThemeSaisonnier): boolean {
   return theme === "NOEL_1" || theme === "NOEL_2";
+}
+
+/** Le thème Black Week, LS-318 : nuit, soleil levant et poussière d'or. */
+export function estThemeBlackWeek(theme: ThemeSaisonnier): boolean {
+  return theme === "BLACK_WEEK";
+}
+
+/**
+ * Les thèmes dont des décors bougent EN CONTINU, ADR-045 amendé par LS-277
+ * puis LS-318 : ils exigent le bouton de pause, WCAG 2.2.2.
+ */
+export function aMouvementContinu(theme: ThemeSaisonnier): boolean {
+  return estThemeDeNoel(theme) || estThemeBlackWeek(theme);
 }

@@ -273,6 +273,32 @@
 }
 
 /*
+ * THÈME BLACK WEEK, LS-318, amendement d'ADR-046 du 12 novembre 2026.
+ * Maquette validée : `docs/prototypes/theme-black-week/`.
+ *
+ * Nuit et jaune doré. Trois classes, comme `NOEL_2` :
+ * - `--ls-bw-encre`, ACCENT, tient 4,5:1 sur les fonds clairs : 17,71:1 sur
+ *   crème, 15,86:1 sur sable, 18,91:1 sur blanc ;
+ * - les FONDS `--ls-bw-fond-*` sont des surfaces, sans texte d'eux-mêmes ;
+ * - les TEXTES SUR NUIT, `*-sur-nuit`, tiennent 4,5:1 sur CHAQUE fond du bloc,
+ *   le plus clair étant la braise `#3A2A0C` du coin du bandeau :
+ *     blanc sur braise              13,85:1
+ *     or #F2C230 sur braise          8,27:1
+ *     reflet #FFF4C2 sur braise     12,51:1
+ * L'OR VIF NE S'ÉCRIT JAMAIS SUR UN FOND CLAIR : 1,65:1 sur crème. Il sert de
+ * texte sur la nuit, et de décor partout ailleurs.
+ */
+[data-theme="black_week"] {
+  --ls-bw-encre: #121015;
+  --ls-bw-fond-nuit: #121015;
+  --ls-bw-fond-nuit-clair: #1d1a22;
+  --ls-bw-fond-braise: #3a2a0c;
+  --ls-bw-texte-sur-nuit: #ffffff;
+  --ls-bw-or-sur-nuit: #f2c230;
+  --ls-bw-reflet-sur-nuit: #fff4c2;
+}
+
+/*
  * LE PIED DE PAGE SOUS LES THÈMES DE NOËL, LS-277. Il vit dans le layout, hors
  * du `<main>` qui porte `data-theme` : les jetons ci-dessus ne lui descendent
  * pas. `:has()` les lui donne pour les deux pages concernées seulement. Le
@@ -286,6 +312,11 @@
 
 :root:has(main[data-theme="noel_2"]) {
   --ls-pied-fond-saison: #3d080c;
+}
+
+/* Black Week, LS-318 : le pied passe à la nuit du thème, texte `--ls-texte-nuit` 16,43:1. */
+:root:has(main[data-theme="black_week"]) {
+  --ls-pied-fond-saison: #121015;
 }
 
 /* Respect systematique de la preference de mouvement reduit */

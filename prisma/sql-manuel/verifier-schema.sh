@@ -1369,6 +1369,11 @@ sortie=$(R "UPDATE parametre_boutique SET theme_saisonnier = 'NOEL_1' WHERE id =
 verifier_accepte "thème Noël 1 accepté" "$sortie"
 sortie=$(R "UPDATE parametre_boutique SET theme_saisonnier = 'NOEL_2' WHERE id = true;")
 verifier_accepte "thème Noël 2 accepté" "$sortie"
+sortie=$(R "UPDATE parametre_boutique SET theme_saisonnier = 'BLACK_WEEK' WHERE id = true;")
+verifier_accepte "thème Black Week accepté, LS-318" "$sortie"
+sortie=$(R "UPDATE parametre_boutique SET theme_saisonnier = 'black_week' WHERE id = true;")
+verifier_rejet "thème Black Week en minuscules rejeté" \
+  "chk_parametre_theme_connu" "$sortie"
 R "UPDATE parametre_boutique SET theme_saisonnier = 'AUCUN' WHERE id = true;" >/dev/null
 
 echo
