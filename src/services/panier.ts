@@ -21,6 +21,7 @@ import {
   type LignePanierCookie,
 } from "@/lib/panier-cookie";
 import * as depot from "@/repositories/panier";
+import { lirePromotionEnVigueur, prixAffiche } from "@/services/promotion";
 
 /** Pourquoi une ligne ne peut pas etre commandee telle quelle. */
 export type MotifIndisponible =
@@ -50,7 +51,10 @@ export type LignePanierRevalidee = {
    * qu'on ne peut pas commander.
    */
   quantiteMaximale: number;
+  /** Sous promotion et variante éligible, le prix réduit, ADR-051. */
   prixUnitaireCentimes: number;
+  /** Le prix barré, `null` hors promotion ou variante exclue. */
+  prixReferenceCentimes: number | null;
   totalLigneCentimes: number;
   motif: MotifIndisponible | null;
 };
@@ -88,10 +92,19 @@ export async function revalider(
   lignesCookie: LignePanierCookie[],
   totalPresenteCentimes?: number,
 ): Promise<PanierRevalide> {
-  const variantes = await depot.lireVariantesDuPanier(
-    prisma,
-    lignesCookie.map((ligne) => ligne.varianteId),
-  );
+  /*
+   * LA PROMOTION SE LIT AVEC LE PANIER, ADR-051 : le total affiché ici est
+   * celui que `passerCommande` confronte au sous-total figé. Les deux
+   * appliquent la même éligibilité et le même arrondi, sans quoi la garde
+   * refuserait toute commande sous promotion.
+   */
+  const [variantes, promotion] = await Promise.all([
+    depot.lireVariantesDuPanier(
+      prisma,
+      lignesCookie.map((ligne) => ligne.varianteId),
+    ),
+    lirePromotionEnVigueur(),
+  ]);
 
   const parIdentifiant = new Map(
     variantes.map((variante) => [variante.varianteId, variante]),
@@ -122,6 +135,7 @@ export async function revalider(
         quantiteDemandee: ligneCookie.quantite,
         quantiteMaximale: 0,
         prixUnitaireCentimes: 0,
+        prixReferenceCentimes: null,
         totalLigneCentimes: 0,
         motif: "VARIANTE_INTROUVABLE",
       });
@@ -140,7 +154,12 @@ export async function revalider(
       ligneCookie.quantite,
       variante.quantiteDisponible,
     );
-    const totalLigneCentimes = variante.prixCentimes * quantite;
+    const prix = prixAffiche(
+      promotion,
+      variante.varianteId,
+      variante.prixCentimes,
+    );
+    const totalLigneCentimes = prix.prixCentimes * quantite;
 
     totalArticlesCentimes += totalLigneCentimes;
     nombreArticles += quantite;
@@ -158,7 +177,8 @@ export async function revalider(
       quantiteMaximale: variante.vendable
         ? Math.min(variante.quantiteDisponible, QUANTITE_MAXIMALE_PAR_LIGNE)
         : 0,
-      prixUnitaireCentimes: variante.prixCentimes,
+      prixUnitaireCentimes: prix.prixCentimes,
+      prixReferenceCentimes: prix.prixReferenceCentimes,
       totalLigneCentimes,
       motif,
     });

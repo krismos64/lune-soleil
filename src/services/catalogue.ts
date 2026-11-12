@@ -15,6 +15,12 @@
  * Codes Prisma verifies via Context7 sur la documentation Prisma 7 : `P2002`
  * unicite, `P2003` cle etrangere, `P2025` enregistrement introuvable.
  */
+import { prixDeVente } from "@/lib/promotion";
+import {
+  lirePromotionEnVigueur,
+  prixAffiche,
+  type PromotionEnVigueur,
+} from "@/services/promotion";
 import { Prisma } from "@/generated/prisma/client";
 import type { StatutProduit } from "@/generated/prisma/enums";
 import { journaliserErreur } from "@/lib/journal";
@@ -980,7 +986,15 @@ export type ProduitCatalogue = {
   slug: string;
   categorieId: string;
   categorieNom: string;
+  /** Sous promotion et produit éligible, le prix RÉDUIT, ADR-051. */
   prixCentimes: number;
+  /**
+   * Le prix barré, ADR-051 : le prix catalogue d'un produit dont TOUTES les
+   * variantes en vente sont éligibles, `null` sinon. Un produit mêlant
+   * variantes éligibles et exclues garde son prix catalogue sur la carte, la
+   * fiche détaillant chaque déclinaison.
+   */
+  prixReferenceCentimes: number | null;
   disponibilite: EtatDisponibilite;
   /**
    * LS-240 : la variante a ajouter depuis la carte, `null` quand le produit en
@@ -1009,8 +1023,18 @@ export type ProduitCatalogue = {
 };
 
 /** Ce que le catalogue public rend, produits et filtres disponibles. */
+/** Ce que les pages disent de la promotion en vigueur, ADR-051. */
+export type AnnoncePromotion = {
+  libelle: string;
+  taux: number;
+  periodeAnnoncee: string;
+  /** Chaque pièce en vente est réduite : « sur toute la boutique ». */
+  toutLeCatalogue: boolean;
+};
+
 export type Catalogue = {
   produits: ProduitCatalogue[];
+  promotion: AnnoncePromotion | null;
   categories: { id: string; nom: string; slug: string }[];
   /*
    * LA CATEGORIE RETENUE EST RENDUE ENTIERE, et non son seul slug. L'ecran doit
@@ -1133,6 +1157,7 @@ export async function lireCataloguePublic(
     pagination = { page, pages, total };
   }
 
+  const promotion = await lirePromotionEnVigueur();
   const lignes = await depot.listerProduitsPublies(prisma, {
     ...filtre,
     ...(page === undefined
@@ -1152,7 +1177,7 @@ export async function lireCataloguePublic(
       slug: ligne.slug,
       categorieId: ligne.categorieId,
       categorieNom: ligne.categorieNom,
-      prixCentimes: ligne.prixMinimumCentimes,
+      ...prixDeCarte(promotion, ligne.id, ligne.prixMinimumCentimes),
       disponibilite: etatDisponibilite(ligne.quantiteDisponible),
       varianteUniqueId: ligne.varianteUniqueId,
       mediaChemin: ligne.mediaChemin,
@@ -1160,10 +1185,44 @@ export async function lireCataloguePublic(
       publieA: ligne.publieA,
       modifieA: ligne.modifieA,
     })),
+    promotion: annonceDe(promotion),
     categories,
     categorieRetenue,
     pagination,
   };
+}
+
+/** L'annonce d'une promotion en vigueur, sans ses ensembles d'identifiants. */
+export function annonceDe(
+  promotion: PromotionEnVigueur | null,
+): AnnoncePromotion | null {
+  return promotion === null
+    ? null
+    : {
+        libelle: promotion.libelle,
+        taux: promotion.taux,
+        periodeAnnoncee: promotion.periodeAnnoncee,
+        toutLeCatalogue: promotion.toutLeCatalogue,
+      };
+}
+
+/**
+ * Le prix d'une carte : le minimum des variantes, réduit seulement si le
+ * produit est éligible en entier. La réduction du minimum est le minimum des
+ * réductions, l'arrondi étant monotone.
+ */
+function prixDeCarte(
+  promotion: PromotionEnVigueur | null,
+  produitId: string,
+  prixMinimumCentimes: number,
+): { prixCentimes: number; prixReferenceCentimes: number | null } {
+  if (promotion === null || !promotion.produitsEligibles.has(produitId)) {
+    return { prixCentimes: prixMinimumCentimes, prixReferenceCentimes: null };
+  }
+  const reduit = prixDeVente(prixMinimumCentimes, promotion.taux);
+  return reduit < prixMinimumCentimes
+    ? { prixCentimes: reduit, prixReferenceCentimes: prixMinimumCentimes }
+    : { prixCentimes: prixMinimumCentimes, prixReferenceCentimes: null };
 }
 
 /**
@@ -1202,7 +1261,10 @@ export type VarianteFiche = {
   id: string;
   libelle: string;
   dimensions: string | null;
+  /** Sous promotion et variante éligible, le prix réduit, ADR-051. */
   prixCentimes: number;
+  /** Le prix barré, `null` hors promotion ou variante exclue. */
+  prixReferenceCentimes: number | null;
   disponibilite: EtatDisponibilite;
 };
 
@@ -1231,6 +1293,7 @@ export type FicheProduit = {
   variantes: VarianteFiche[];
   photos: PhotoFiche[];
   sections: SectionFiche[];
+  promotion: AnnoncePromotion | null;
 };
 
 /**
@@ -1263,9 +1326,10 @@ export async function lireFichePublique(
     return null;
   }
 
-  const [photos, sections] = await Promise.all([
+  const [photos, sections, promotion] = await Promise.all([
     depotMedias.listerMediasPublies(prisma, fiche.id),
     depotSections.listerSections(prisma, fiche.id),
+    lirePromotionEnVigueur(),
   ]);
 
   return {
@@ -1279,9 +1343,10 @@ export async function lireFichePublique(
       id: variante.id,
       libelle: variante.libelle,
       dimensions: variante.dimensions,
-      prixCentimes: variante.prixCentimes,
+      ...prixAffiche(promotion, variante.id, variante.prixCentimes),
       disponibilite: etatDisponibilite(variante.quantiteDisponible),
     })),
+    promotion: annonceDe(promotion),
     photos: photos.map((photo) => ({
       id: photo.id,
       chemin: photo.chemin,
