@@ -324,11 +324,19 @@ porte déjà. Sans elle, une ligne d'échec sur compte inconnu ne dirait rien.
 | Finalité | tracer les actions d'administration, l'envoi des emails, les alertes critiques, et limiter les tentatives en rafale |
 | Personnes concernées | clients destinataires d'emails, exploitante agissant dans l'administration |
 | Catégories de données | identifiant de l'acteur, adresse IP, adresse email du destinataire, modèle d'email et statut d'envoi, clé de limitation de débit contenant une adresse IP, clé de compteur du projet contenant une adresse IP ou un identifiant de session, **empreinte** d'adresse email pour le compteur par compte visé, **adresse email de réception des alertes** |
-| Tables | `JournalAudit`, `JournalEmail`, `AlerteCritique`, `RateLimit`, `CompteurCompteVise`, `CompteurLimitation`, `MouvementStock`, `EnvoiEnAttente`, `ParametreBoutique` |
+| Tables | `JournalAudit`, `JournalEmail`, `AlerteCritique`, `RateLimit`, `CompteurCompteVise`, `CompteurLimitation`, `MouvementStock`, `EnvoiEnAttente`, `ParametreBoutique`, `Promotion` |
 | Base légale | intérêt légitime, article 6.1.f, sécurité et preuve du bon fonctionnement |
 | Conservation | **six mois** pour `JournalAudit`, par alignement sur la délibération CNIL n° 2021-122. **Vingt-quatre heures** pour `RateLimit`, `CompteurCompteVise` et `CompteurLimitation`, arbitrage de LS-94 exposé ci-dessous. `JournalEmail` suit la commande qu'il sert, voir T2. **Trente jours** pour les lignes TERMINÉES d'`EnvoiEnAttente`, jamais pour les lignes bloquées, arbitrage de LS-154 exposé ci-dessous. Les purges sont branchées sur une tâche planifiée quotidienne depuis le 12 août 2026, LS-94, portée à **cinq tables** par LS-154 ; la liste `PURGES` de `purge-journaux.ts` fait foi |
 | Destinataires | l'exploitante seule |
 | Transfert hors UE | aucun |
+
+**`Promotion` PORTE L'IDENTIFIANT DE L'ADMINISTRATRICE** qui active et qui
+désactive une promotion, ADR-051, LS-319, comme `AlerteCritique` porte celui
+qui acquitte. La ligne est la preuve de la période de réduction, donc du prix
+antérieur de l'article L112-1-1 du Code de la consommation : elle se conserve
+**tant que la boutique existe**, comme le prix figé sur les commandes qu'elle
+explique. L'identifiant, lui, passe à nul à la suppression du compte
+(`SET NULL`) : la période reste, l'acteur s'efface.
 
 **`ParametreBoutique` PORTE UNE ADRESSE EMAIL, celle qui reçoit les alertes**,
 LS-98 et ADR-043. Elle figure donc ici plutôt que dans les tables sans donnée
@@ -564,7 +572,10 @@ automatique**, qui échoue si une table du schéma n'apparaît ni ici ni dans un
 traitement.
 
 `Categorie`, `Produit`, `SectionProduit`, `Variante`, `Media`, `Reservation`,
-`VerrouTache`, `CompteurNumero`.
+`VerrouTache`, `CompteurNumero`, `HistoriquePrixVariante`.
+
+**`HistoriquePrixVariante`**, ajoutée par LS-319, porte une variante, deux prix
+et une date : aucune colonne ne désigne qui a changé le prix.
 
 **`CompteurNumero`**, ajoutée par LS-117, porte trois colonnes : un type de
 document, une année et un rang. Aucune ne se rattache à une personne, et le

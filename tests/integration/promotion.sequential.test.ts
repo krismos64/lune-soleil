@@ -264,6 +264,42 @@ describe("le prix figé sur la commande", () => {
     });
   });
 
+  /*
+   * LE PANIER ET LA COMMANDE CALCULENT LE MÊME MONTANT : le sous-total
+   * affiché au récapitulatif vient de `revalider`, et `passerCommande` le
+   * confronte au sous-total figé. Un écart d'un centime refuserait toute
+   * commande sous promotion, `SousTotalChangeError`.
+   */
+  it("le total du panier sous promotion est celui que la commande fige", async () => {
+    const eligible = await varianteAgee(40, 2999);
+    const exclue = await varianteAgee(5, 1200);
+    await promotion.activerPromotion({ code: "BLACK_WEEK", acteurId: null });
+    const { revalider } = await import("@/services/panier");
+    const lignesCookie = [
+      { varianteId: eligible, quantite: 1 },
+      { varianteId: exclue, quantite: 1 },
+    ];
+    const panier = await revalider(lignesCookie);
+    // 2999 réduit au centime inférieur, 2099, plus 1200 non réduit.
+    expect(panier.totalArticlesCentimes).toBe(3299);
+    expect(
+      panier.lignes.map((l) => [l.prixUnitaireCentimes, l.prixReferenceCentimes]),
+    ).toEqual(
+      expect.arrayContaining([
+        [2099, 2999],
+        [1200, null],
+      ]),
+    );
+    await expect(
+      commande.passerCommande({
+        lignesCookie,
+        saisie: SAISIE_DOMICILE,
+        configuration: CONFIGURATION,
+        sousTotalPresenteCentimes: panier.totalArticlesCentimes,
+      }),
+    ).resolves.toMatchObject({ totalCentimes: 3299 + 749 });
+  });
+
   it("la franchise se juge sur le montant réduit", async () => {
     // 4900 passe le seuil de 39 € ; réduit à 3430, il ne le passe plus.
     const eligible = await varianteAgee(40, 4900);
