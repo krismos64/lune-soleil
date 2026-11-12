@@ -397,6 +397,28 @@ convertie et aucun thème n'est activé.
 est exclue à dessein. La liste est la même que `THEMES_SAISONNIERS` de
 `src/lib/theme-saisonnier.ts` ; un thème ajouté change les deux ensemble.
 
+## La promotion de catalogue, LS-319 et ADR-051
+
+Migration `20261113090000_promotion`, additive :
+
+- **`promotion`** : une ligne par activation, et c'est l'historique. `code`
+  borné par `chk_promotion_code_connu` (liste de `PROMOTIONS`,
+  `src/lib/promotion.ts`), `taux_pourcentage` recopié à l'activation et borné
+  de 1 à 90, `active`, `active_depuis`, `desactivee_a`, et les identifiants de
+  l'administratrice qui active et qui désactive, en `SET NULL`.
+  `promotion_active_unique` : une seule active. `chk_promotion_active_coherente`
+  lie `active` à l'absence de désactivation.
+- **`historique_prix_variante`** : variante, ancien et nouveau prix, date.
+  Aucune donnée personnelle. `chk_historique_prix_variante` refuse un prix
+  négatif et un « changement » sans changement.
+- **`ligne_commande`** : `prix_reference_fige_centimes` et `promotion_id`,
+  nuls ensemble, sinon `prix_fige_centimes < prix_reference_fige_centimes`,
+  `chk_ligne_commande_promotion`.
+
+**Une variante est éligible** si elle existe depuis trente jours au moins à
+l'activation et que son prix n'a pas changé pendant ces trente jours, arbitrage
+1 d'ADR-051. La condition s'écrit une fois, `repositories/promotion.ts`.
+
 ## Le retrait de l'espace d'administration, LS-266
 
 Migration `20261004150000_produit_retrait`, additive : `produit.retire_a`,

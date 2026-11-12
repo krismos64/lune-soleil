@@ -269,6 +269,9 @@ CHECK   commande.total_centimes = sous_total_centimes
                                + frais_port_centimes + montant_taxe_centimes, C28
 CHECK   compteur_numero.dernier >= 1, C27
 CHECK   expedition.livre_a IS NULL OR livre_a >= expedie_a, V16, LS-311
+UNIQUE  promotion (active) WHERE active                  ADR-051, une seule active
+CHECK   ligne_commande : promotion et prix de référence nuls ensemble,
+        sinon prix_fige_centimes < prix_reference_fige_centimes, ADR-051
 PK      compteur_numero (type, annee)                            ADR-031
 CHECK   parametre_boutique.id = true                             ADR-043, LS-98
 CHECK   parametre_boutique.seuil_stock_faible >= 1
@@ -473,6 +476,19 @@ Ces opérations exigent une transaction, sans exception :
     seulement** : la libération a pu rendre la même réservation échue juste
     avant, et sur plusieurs exemplaires aucun `CHECK` ne voit le double
     décrément. Les sessions Stripe s'expirent **avant**, hors transaction
+
+15. **Changement de prix d'une variante**, ADR-051 : le prix lu, la garde du
+    gel sous promotion active, l'écriture et la ligne de
+    `historique_prix_variante`, ensemble. L'application en masse lit les
+    anciens prix **sous verrou** avant d'écrire. Hors transaction, un prix
+    changerait sans trace, et l'éligibilité à une promotion se juge sur cette
+    trace
+
+**La lecture de la promotion dans `passerCommande` ne prend aucun verrou**,
+ADR-051 : une seule instruction lit la promotion active et l'éligibilité des
+variantes de la commande, ce qui suffit à une vérité de prix par commande.
+Une désactivation concurrente est absorbée par `SousTotalChangeError` au
+récapitulatif, et une commande déjà écrite garde son prix figé.
 
 Les points 7 à 9 viennent du périmètre ajouté par LS-37, avis et carnet
 d'adresses ; le point 10 de LS-225, qui l'a complété le 12 septembre 2026. Le
