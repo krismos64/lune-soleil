@@ -22,6 +22,7 @@ import {
   lireCouverturesCategories,
 } from "@/services/catalogue";
 import { CarteProduit } from "./catalogue/carte-produit";
+import { AnnoncePromotion } from "@/components/annonce-promotion";
 import { BandeauReassurance } from "@/components/bandeau-reassurance";
 import { BandeauApercuTheme } from "@/components/bandeau-apercu-theme";
 import { BoutonPauseAnimations } from "@/components/bouton-pause-animations";
@@ -228,6 +229,9 @@ export default async function PageAccueil({
        * faute de configuration et l'origine faute de confirmation : les deux
        * sont acquises, ADR-043 et le 3 septembre 2026.
        */}
+      {/* ADR-051 : l'annonce de la promotion, rien sans promotion active. */}
+      <AnnoncePromotion annonce={promotion} />
+
       <BandeauReassurance seuilFranchiseCentimes={seuilFranchise} anime />
 
       {/*

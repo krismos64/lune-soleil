@@ -17,6 +17,7 @@
  * d'une facture de la reussite d'un rendu, alors qu'un rendu se rejoue et
  * qu'une facture ne se recree pas.
  */
+import { PROMOTIONS, schemaCodePromotion } from "@/lib/promotion";
 import { reserverNumero } from "@/repositories/commande";
 import {
   engendrerJeton,
@@ -173,6 +174,12 @@ export type CommandeAFacturer = {
     libelleVarianteFige: string;
     prixFigeCentimes: number;
     quantite: number;
+    /**
+     * ADR-051 : le prix catalogue barre et la promotion, figes sur la ligne.
+     * FACULTATIFS dans ce type, une ligne sans promotion n'ayant rien a dire.
+     */
+    prixReferenceFigeCentimes?: number | null;
+    promotion?: { code: string; tauxPourcentage: number } | null;
   }[];
 };
 
@@ -326,6 +333,7 @@ function construireInstantane(
       libelleVariante: ligne.libelleVarianteFige,
       prixUnitaireCentimes: ligne.prixFigeCentimes,
       quantite: ligne.quantite,
+      reduction: reductionDeLaLigne(ligne),
     })),
     sousTotalCentimes: commande.sousTotalCentimes,
     fraisPortCentimes: commande.fraisPortCentimes,
@@ -338,4 +346,31 @@ function construireInstantane(
      */
     mentions: [MENTION_FRANCHISE_TVA],
   });
+}
+
+/**
+ * La réduction d'une ligne, figée dans l'instantané, ADR-051 arbitrage 3 :
+ * « dont réduction Black Week -30 % » sous son prix. Le libellé vient du
+ * code de la promotion figé sur la ligne ; un code que le code ne connaît
+ * plus garde son code brut, plutôt que d'effacer la réduction d'un document.
+ */
+function reductionDeLaLigne(
+  ligne: CommandeAFacturer["lignes"][number],
+): { prixReferenceCentimes: number; libelle: string; taux: number } | null {
+  if (
+    ligne.prixReferenceFigeCentimes === null ||
+    ligne.prixReferenceFigeCentimes === undefined ||
+    ligne.promotion === null ||
+    ligne.promotion === undefined
+  ) {
+    return null;
+  }
+  const code = schemaCodePromotion.safeParse(ligne.promotion.code);
+  return {
+    prixReferenceCentimes: ligne.prixReferenceFigeCentimes,
+    libelle: code.success
+      ? PROMOTIONS[code.data].libelle
+      : ligne.promotion.code,
+    taux: ligne.promotion.tauxPourcentage,
+  };
 }

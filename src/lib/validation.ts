@@ -608,8 +608,12 @@ export const MENTION_FRANCHISE_TVA =
  * 2 DEPUIS LS-297 : l'emetteur porte le nom commercial et la denomination
  * legale suivie de « EI », article R526-27 du Code de commerce. Les documents
  * en version 1 restent relisibles tels qu'emis, invariant 4.
+ *
+ * 3 DEPUIS LS-319, ADR-051 : une ligne vendue sous promotion porte sa
+ * reduction, prix de reference, libelle et taux, figes a l'emission. Les
+ * documents en versions 1 et 2 restent relisibles tels qu'emis.
  */
-export const VERSION_INSTANTANE_LEGAL = 2;
+export const VERSION_INSTANTANE_LEGAL = 3;
 
 /**
  * Identite legale de l'emetteur, figee au moment de l'emission.
@@ -779,9 +783,33 @@ const schemaInstantaneLegalV1 = z.strictObject({
 
 /** Version 2, LS-297 : nom commercial et denomination « EI » figes. */
 const schemaInstantaneLegalV2 = z.strictObject({
+  version: z.literal(2),
+  emetteur: schemaEmetteurDocument,
+  ...champsCommunsInstantane,
+});
+
+/**
+ * La reduction d'une ligne vendue sous promotion, ADR-051. FACULTATIVE ET
+ * NON SEULEMENT NULLABLE : un avoir emis aujourd'hui sur une facture de
+ * version 1 ou 2 reprend ses lignes, qui n'ont jamais porte cette cle.
+ */
+export const schemaLigneInstantaneV3 = schemaLigneInstantane.extend({
+  reduction: z
+    .strictObject({
+      prixReferenceCentimes: schemaMontantCentimes,
+      libelle: z.string().min(1),
+      taux: z.number().int().min(1).max(90),
+    })
+    .nullable()
+    .optional(),
+});
+
+/** Version 3, LS-319 : la reduction figee sur la ligne. */
+const schemaInstantaneLegalV3 = z.strictObject({
   version: z.literal(VERSION_INSTANTANE_LEGAL),
   emetteur: schemaEmetteurDocument,
   ...champsCommunsInstantane,
+  lignes: z.array(schemaLigneInstantaneV3).nonempty(),
 });
 
 /**
@@ -792,10 +820,11 @@ const schemaInstantaneLegalV2 = z.strictObject({
 export const schemaInstantaneLegal = z.discriminatedUnion("version", [
   schemaInstantaneLegalV1,
   schemaInstantaneLegalV2,
+  schemaInstantaneLegalV3,
 ]);
 
 /** Le seul schema d'ecriture : un document neuf est toujours en version courante. */
-export const schemaInstantaneLegalCourant = schemaInstantaneLegalV2;
+export const schemaInstantaneLegalCourant = schemaInstantaneLegalV3;
 
 export type InstantaneLegal = z.infer<typeof schemaInstantaneLegal>;
 

@@ -35,6 +35,7 @@ import { ArmatureCatalogue } from "./armature-catalogue";
 import { CarteProduit } from "./carte-produit";
 import { FocusPagination } from "./focus-pagination";
 import styles from "./catalogue.module.css";
+import { AnnoncePromotion } from "@/components/annonce-promotion";
 import { BandeauApercuTheme } from "@/components/bandeau-apercu-theme";
 import { BoutonPauseAnimations } from "@/components/bouton-pause-animations";
 import {
@@ -234,6 +235,8 @@ async function ContenuCatalogue({
 
   return (
     <>
+      {/* ADR-051 : l'annonce de la promotion, rien sans promotion active. */}
+      <AnnoncePromotion annonce={promotion} />
       {/*
        * LA BARRE DE FILTRES EST UNE LISTE DE LIENS, et non un formulaire. Un
        * lien est atteignable au clavier, annonce son etat courant, et emmene sur

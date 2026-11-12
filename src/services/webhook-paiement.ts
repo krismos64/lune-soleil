@@ -384,6 +384,9 @@ async function confirmerPaiement(
           libelleProduitFige: true,
           libelleVarianteFige: true,
           prixFigeCentimes: true,
+          // ADR-051 : la réduction figée, que la facture reprend.
+          prixReferenceFigeCentimes: true,
+          promotion: { select: { code: true, tauxPourcentage: true } },
         },
       },
     },

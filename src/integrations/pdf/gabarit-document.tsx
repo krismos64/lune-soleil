@@ -310,6 +310,18 @@ export function GabaritDocument({
                 {ligne.libelleProduit}, {ligne.libelleVariante}
               </Text>
               <Text style={styles.reference}>{ligne.referenceFigee}</Text>
+              {/*
+               * ADR-051, arbitrage 3 : une ligne vendue sous promotion dit sa
+               * réduction et son prix de référence, figés à l'émission.
+               */}
+              {"reduction" in ligne && ligne.reduction ? (
+                <Text style={styles.reference}>
+                  Prix de référence{" "}
+                  {formaterMontant(ligne.reduction.prixReferenceCentimes)}, dont
+                  réduction {ligne.reduction.libelle} -{ligne.reduction.taux}
+                  {"\u00a0"}%
+                </Text>
+              ) : null}
             </View>
             <Text style={styles.colQuantite}>{ligne.quantite}</Text>
             <Text style={styles.colPrix}>

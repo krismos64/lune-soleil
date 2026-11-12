@@ -106,7 +106,7 @@ afterAll(async () => {
 
 afterEach(async () => {
   await client.query(
-    "TRUNCATE reservation, ligne_commande, commande, historique_prix_variante, promotion, variante, produit, categorie, compteur_numero CASCADE",
+    "TRUNCATE reservation, facture, paiement, evenement_fournisseur, ligne_commande, commande, historique_prix_variante, promotion, variante, produit, categorie, compteur_numero CASCADE",
   );
 });
 
@@ -405,6 +405,67 @@ describe("le prix figé sur la commande", () => {
     expect(demandes[0]?.lignes.map((l) => l.prixUnitaireCentimes)).toEqual([
       3430, 749,
     ]);
+  });
+});
+
+describe("la facture, arbitrage 3 d'ADR-051", () => {
+  /*
+   * PAR LE CHEMIN RÉEL, le webhook signé : la facture s'émet dans sa
+   * transaction, depuis les lignes qu'il sélectionne. Appeler
+   * `emettreFacture` directement laisserait passer un oubli de sélection.
+   */
+  it("une ligne réduite porte sa réduction dans l'instantané, version 3", async () => {
+    const eligible = await varianteAgee(40, 4900);
+    const exclue = await varianteAgee(5, 1200);
+    await promotion.activerPromotion({ code: "BLACK_WEEK", acteurId: null });
+    const issue = await commande.passerCommande({
+      lignesCookie: [
+        { varianteId: eligible, quantite: 1 },
+        { varianteId: exclue, quantite: 1 },
+      ],
+      saisie: SAISIE_DOMICILE,
+      configuration: CONFIGURATION,
+    });
+
+    const { traiterEvenementPaiement } = await import(
+      "@/services/webhook-paiement"
+    );
+    const evenement = {
+      identifiant: `evt_${issue.commandeId}`,
+      type: "PAIEMENT_REUSSI" as const,
+      commandeId: issue.commandeId,
+      identifiantSession: `cs_${issue.commandeId.slice(0, 8)}`,
+      montantCentimes: issue.totalCentimes,
+      montantRembourseCentimes: 0,
+      charge: {},
+    };
+    await traiterEvenementPaiement({
+      corpsBrut: JSON.stringify(evenement),
+      signature: "signature-de-test",
+      verificateur: {
+        async verifier() {
+          return evenement;
+        },
+      },
+    });
+
+    const { rows } = await client.query(
+      "SELECT instantane_legal FROM facture WHERE commande_id = $1",
+      [issue.commandeId],
+    );
+    const instantane = rows[0]?.instantane_legal as {
+      version: number;
+      lignes: { prixUnitaireCentimes: number; reduction?: unknown }[];
+    };
+    expect(instantane.version).toBe(3);
+    expect(
+      instantane.lignes.map((l) => [l.prixUnitaireCentimes, l.reduction]),
+    ).toEqual(
+      expect.arrayContaining([
+        [3430, { prixReferenceCentimes: 4900, libelle: "Black Week", taux: 30 }],
+        [1200, null],
+      ]),
+    );
   });
 });
 
