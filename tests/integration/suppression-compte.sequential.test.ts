@@ -291,6 +291,9 @@ describe("les politiques de suppression du schema, verrouillees", () => {
       "journal_audit",
       "journal_connexion",
       "mouvement_stock",
+      // ADR-051, LS-319 : qui a activé ou désactivé une promotion, deux
+      // colonnes. La période reste, l'administratrice partie s'efface.
+      "promotion",
     ]) {
       expect(politique(table), `${table} doit etre en SET NULL`).toBe(
         "SET NULL",
@@ -303,8 +306,9 @@ describe("les politiques de suppression du schema, verrouillees", () => {
     expect(politique("reponse_avis")).toBe("RESTRICT");
 
     // LA CARDINALITE, qui rend la liste ci-dessus mesurable plutot
-    // qu'opinion : douze references, pas une de plus.
-    expect(rows).toHaveLength(12);
+    // qu'opinion : quatorze references, pas une de plus. `promotion` en porte
+    // deux, l'activation et la desactivation, LS-319.
+    expect(rows).toHaveLength(14);
   });
 });
 
