@@ -20,6 +20,7 @@
  */
 import { useState, useTransition } from "react";
 
+import { SacIcone } from "@/components/decor-black-week";
 import { PaquetIcone } from "@/components/decor-noel";
 
 import { ajouterAuPanier } from "../panier/actions-panier";
@@ -31,17 +32,23 @@ import styles from "./catalogue.module.css";
  * prix et le badge, décor posé sur un texte qu'ADR-045 amendé interdit,
  * relevé par `ls-frontend-revue`. L'annonce reste le seul retour pour un
  * lecteur d'écran. Absent d'un bouton « Épuisé » : rien n'y est à offrir.
+ *
+ * `blackWeek`, LS-318 : même geste avec un sac doré, sur un bouton de nuit.
+ * La gerbe d'étincelles de la maquette n'est pas portée, pour la même raison
+ * que les flocons : elle jaillissait par-dessus le libellé du bouton.
  */
 export function AjoutRapide({
   varianteId,
   nomProduit,
   epuise,
   noel = false,
+  blackWeek = false,
 }: {
   varianteId: string;
   nomProduit: string;
   epuise: boolean;
   noel?: boolean;
+  blackWeek?: boolean;
 }) {
   const [enCours, demarrer] = useTransition();
   const [message, setMessage] = useState("");
@@ -78,7 +85,7 @@ export function AjoutRapide({
             setMessage(
               issue.statut === "OK" ? "Ajouté au panier." : issue.message,
             );
-            if (noel && issue.statut === "OK") {
+            if ((noel || blackWeek) && issue.statut === "OK") {
               setAjouts((n) => n + 1);
             }
           });
@@ -88,6 +95,12 @@ export function AjoutRapide({
           <PaquetIcone
             key={ajouts}
             className={`${styles.paquetBouton} ${ajouts > 0 ? styles.paquetAjoute : ""}`}
+          />
+        ) : null}
+        {blackWeek && !epuise ? (
+          <SacIcone
+            key={ajouts}
+            className={`${styles.paquetBouton} ${styles.sacBouton} ${ajouts > 0 ? styles.paquetAjoute : ""}`}
           />
         ) : null}
         {epuise ? "Épuisé" : "Ajouter au panier"}

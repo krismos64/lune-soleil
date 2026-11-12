@@ -1,0 +1,174 @@
+/**
+ * Décors du thème Black Week, LS-318, d'après la maquette validée de
+ * `docs/prototypes/theme-black-week/`.
+ *
+ * COMPOSANTS SERVEUR, SANS SCRIPT, comme les décors de Noël : positions fixes
+ * écrites ici, jamais tirées au hasard au rendu, ADR-046 section 5.
+ *
+ * DEUX SORTES DE MOUVEMENT, ADR-045 amendé par LS-277 puis LS-318 :
+ * - l'ENTRÉE, finie et sous cinq secondes : le soleil se lève, ses rayons se
+ *   tracent, le liseré d'or se déroule ;
+ * - le MOUVEMENT CONTINU, marqué `data-continu` et joué seulement sous un état
+ *   posé par le script (`joue` ou `fin`) : rotation lente des rayons, halo
+ *   qui respire, poussière d'or du bandeau et des marges. Le bouton de pause
+ *   le fige ; sans script, rien ne tourne sans fin, WCAG 2.2.2.
+ *
+ * LE REFLET QUI BALAIE « WEEK » DANS LA MAQUETTE N'EST PAS PORTÉ : ADR-045
+ * interdit tout mouvement sur un texte et l'animation de `background-position`.
+ *
+ * TOUT EST `aria-hidden` et `pointer-events: none`, jamais posé sur un texte,
+ * une photographie de bijou ou un contrôle.
+ */
+import type { CSSProperties } from "react";
+
+import styles from "./decor-black-week.module.css";
+
+const variables = (valeurs: Record<string, string | number>): CSSProperties =>
+  valeurs as CSSProperties;
+
+const NOMBRE_RAYONS = 24;
+
+/** Les rayons du soleil, alternés longs et courts, en coordonnées centrées. */
+const RAYONS = Array.from({ length: NOMBRE_RAYONS }, (_, i) => {
+  const angle = (i / NOMBRE_RAYONS) * Math.PI * 2;
+  const long = i % 2 === 0;
+  const debut = long ? 54 : 58;
+  const fin = long ? 96 : 78;
+  return {
+    x1: +(Math.cos(angle) * debut).toFixed(1),
+    y1: +(Math.sin(angle) * debut).toFixed(1),
+    x2: +(Math.cos(angle) * fin).toFixed(1),
+    y2: +(Math.sin(angle) * fin).toFixed(1),
+    long,
+  };
+});
+
+/**
+ * Le soleil levant et sa poussière d'or, dans une zone de décor qui ne
+ * chevauche jamais le texte du bandeau.
+ */
+export function SoleilBlackWeek({ className }: { className?: string | undefined }) {
+  return (
+    <div
+      className={`${styles.zone} ${className ?? ""}`}
+      aria-hidden="true"
+      data-borne=""
+    >
+      <PoussiereDoree nombre={24} />
+      <div className={styles.soleil}>
+        <div className={styles.halo} data-continu="" />
+        <svg
+          className={styles.rayons}
+          viewBox="-100 -100 200 200"
+          focusable="false"
+          data-continu=""
+        >
+          {RAYONS.map((rayon, i) => (
+            <line
+              key={i}
+              className={rayon.long ? styles.rayonLong : styles.rayonCourt}
+              x1={rayon.x1}
+              y1={rayon.y1}
+              x2={rayon.x2}
+              y2={rayon.y2}
+              pathLength={1}
+              style={variables({ "--rang": i })}
+            />
+          ))}
+        </svg>
+        <div className={styles.disque} />
+      </div>
+    </div>
+  );
+}
+
+/** Grains d'or qui montent et s'éteignent, en continu, positions fixes. */
+function PoussiereDoree({ nombre }: { nombre: number }) {
+  return (
+    <div className={styles.poussiere} data-continu="">
+      {Array.from({ length: nombre }, (_, i) => (
+        <span
+          key={i}
+          className={styles.grain}
+          style={variables({
+            "--gauche": `${(i * 37) % 100}%`,
+            "--haut": `${30 + ((i * 53) % 65)}%`,
+            "--retard": `${((i * 0.47) % 6).toFixed(2)}s`,
+            "--duree": `${(5 + (i % 5) * 0.9).toFixed(1)}s`,
+            "--derive": `${((i * 11) % 60) - 30}px`,
+          })}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** Liseré d'or sous le bandeau, qui se déroule une fois. */
+export function LisereOr({ className }: { className?: string | undefined }) {
+  return (
+    <div
+      className={`${styles.lisere} ${className ?? ""}`}
+      aria-hidden="true"
+      data-borne=""
+    />
+  );
+}
+
+/** Poussière d'or des deux marges de la grille, grand écran seulement. */
+export function MargesDorees() {
+  return (
+    <div className={styles.marges} aria-hidden="true" data-borne="">
+      {(["gauche", "droite"] as const).map((cote, c) => (
+        <div
+          key={cote}
+          className={`${styles.marge} ${cote === "gauche" ? styles.margeGauche : styles.margeDroite}`}
+          data-continu=""
+        >
+          {Array.from({ length: 14 }, (_, i) => (
+            <span
+              key={i}
+              className={styles.grainMarge}
+              style={variables({
+                "--gauche": `${(i * 41 + c * 17) % 90}%`,
+                "--retard": `${((i * 0.83) % 9).toFixed(2)}s`,
+                "--duree": `${12 + (i % 4) * 2.5}s`,
+                "--derive": `${((i * 5) % 30) - 15}px`,
+              })}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Liseré doré d'une carte, tracé au survol et au focus, dans la marge de la
+ * carte et jamais sur la photographie. Une transition d'interaction, pas une
+ * animation automatique.
+ */
+export function TraceCarte() {
+  return (
+    <svg className={styles.traceCarte} aria-hidden="true" focusable="false">
+      <rect x="1" y="1" width="99%" height="99%" rx="8" pathLength={1} />
+    </svg>
+  );
+}
+
+/** Sac d'achat en trait, doré, dans le bouton « Ajouter au panier ». */
+export function SacIcone({ className }: { className?: string | undefined }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M6 8h12l-1 12H7L6 8Z" />
+      <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+    </svg>
+  );
+}

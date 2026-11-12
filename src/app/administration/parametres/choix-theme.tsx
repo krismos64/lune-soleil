@@ -38,6 +38,12 @@ const THEMES: readonly {
     description:
       "Bandeaux rouges à texte blanc, cartes encadrées de rouge, mêmes décors que Noël 1.",
   },
+  {
+    valeur: "BLACK_WEEK",
+    libelle: "Black Week",
+    description:
+      "Bandeaux de nuit, soleil et poussière d'or, boutons d'achat noirs. Le thème n'annonce aucune réduction.",
+  },
 ];
 
 const majuscule = (texte: string): string =>

@@ -76,7 +76,18 @@ const rang = (i: number): CSSProperties => ({ "--rang": i }) as CSSProperties;
  * suspendues, neige continue et rotation lente des rayons, ces trois derniers
  * en mouvement continu sous bouton de pause, ADR-045 amendé.
  */
-export function EmblemeAnime({ noel = false }: { noel?: boolean } = {}) {
+export function EmblemeAnime({
+  noel = false,
+  rayonsContinus = noel,
+}: {
+  noel?: boolean;
+  /**
+   * Rotation lente et sans fin des rayons, ADR-045 amendé : sous les thèmes
+   * de Noël, et sous Black Week depuis LS-318. Sans thème, le huitième de
+   * tour d'entrée reste la règle.
+   */
+  rayonsContinus?: boolean;
+} = {}) {
   return (
     <div className={styles.cadre} aria-hidden="true" data-borne="">
       <div className={styles.halo} />
@@ -118,8 +129,8 @@ export function EmblemeAnime({ noel = false }: { noel?: boolean } = {}) {
 
         <g className={styles.calque} data-profondeur="22">
           <g
-            className={`${styles.rayons} ${noel ? styles.rayonsContinus : ""}`}
-            data-continu={noel ? "" : undefined}
+            className={`${styles.rayons} ${rayonsContinus ? styles.rayonsContinus : ""}`}
+            data-continu={rayonsContinus ? "" : undefined}
           >
             {RAYONS.map((d, i) => (
               <path

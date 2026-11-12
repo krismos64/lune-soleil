@@ -38,6 +38,11 @@ import styles from "./catalogue.module.css";
 import { BandeauApercuTheme } from "@/components/bandeau-apercu-theme";
 import { BoutonPauseAnimations } from "@/components/bouton-pause-animations";
 import {
+  LisereOr,
+  MargesDorees,
+  SoleilBlackWeek,
+} from "@/components/decor-black-week";
+import {
   BandePapierCadeau,
   BandeSucreOrge,
   BoulesSuspendues,
@@ -46,7 +51,11 @@ import {
   NeigeContinue,
 } from "@/components/decor-noel";
 import { GuirlandeBoules } from "@/components/guirlande-boules";
-import { estThemeDeNoel } from "@/lib/theme-saisonnier";
+import {
+  aMouvementContinu,
+  estThemeBlackWeek,
+  estThemeDeNoel,
+} from "@/lib/theme-saisonnier";
 import {
   attributTheme,
   PARAMETRE_APERCU_THEME,
@@ -185,10 +194,12 @@ async function ContenuCatalogue({
   slugCategorie,
   page,
   noel,
+  blackWeek,
 }: {
   slugCategorie: string | undefined;
   page: number;
   noel: boolean;
+  blackWeek: boolean;
 }) {
   /*
    * LS-241 : LA PAGE A ETE VERIFIEE AVANT LA FRONTIERE, et ce rattrapage ne sert
@@ -323,6 +334,7 @@ async function ContenuCatalogue({
               key={produit.id}
               produit={produit}
               noel={noel}
+              blackWeek={blackWeek}
               prioritaire={rang === rangPrioritaire}
             />
           ))}
@@ -422,12 +434,15 @@ export default async function PageCatalogue({
     parametres[PARAMETRE_APERCU_THEME],
   );
   const noel = estThemeDeNoel(theme);
+  const blackWeek = estThemeBlackWeek(theme);
 
   return (
     <main
       id="contenu"
       tabIndex={-1}
-      className={noel ? styles.page : `${styles.page} ${styles.ordinaire}`}
+      className={
+        noel || blackWeek ? styles.page : `${styles.page} ${styles.ordinaire}`
+      }
       data-theme={attributTheme(theme)}
     >
       {enApercu ? <BandeauApercuTheme theme={theme} /> : null}
@@ -460,6 +475,34 @@ export default async function PageCatalogue({
           </div>
           <BandeSucreOrge className={styles.sucreBandeau} />
         </div>
+      ) : blackWeek ? (
+        /*
+         * LE BANDEAU BLACK WEEK, LS-318, maquette validée le 12 novembre 2026.
+         *
+         * LE `h1` RESTE « Le catalogue », ADR-046 section 5 : rien d'indexé ne
+         * bascule avec le thème. « Black Week » est un grand texte d'affichage,
+         * un paragraphe, posé au-dessus. Aucune phrase de ce bandeau ne parle
+         * de prix, de taux ni de date : la réduction et ses dates relèvent de
+         * la promotion, LS-319.
+         */
+        <div className={styles.bandeauBlackWeek}>
+          <SoleilBlackWeek className={styles.decorBlackWeek} />
+          <div className={styles.texteBandeau}>
+            <p className={styles.rubanBlackWeek}>
+              <span className={styles.pointRuban} aria-hidden="true" />
+              Fait main, pièces uniques
+            </p>
+            <p className={styles.evenementBlackWeek}>
+              Black <span className={styles.motOr}>Week</span>
+            </p>
+            <h1 className={styles.titre}>Le catalogue</h1>
+            <p className={styles.accroche}>
+              Des bijoux faits main, une pièce à la fois, sous un soleil
+              d&apos;or.
+            </p>
+          </div>
+          <LisereOr />
+        </div>
       ) : (
         /*
          * EN-TÊTE D'AUBE, LS-283, amendement d'ADR-045. Plus court que celui
@@ -487,13 +530,23 @@ export default async function PageCatalogue({
       )}
       {noel ? <BandePapierCadeau /> : null}
 
-      <div className={noel ? styles.zoneGrilleNoel : undefined}>
+      <div
+        className={
+          noel
+            ? styles.zoneGrilleNoel
+            : blackWeek
+              ? styles.zoneGrilleBlackWeek
+              : undefined
+        }
+      >
         {noel ? <MargesNeigeuses /> : null}
+        {blackWeek ? <MargesDorees /> : null}
         <Suspense fallback={<ArmatureCatalogue />}>
           <ContenuCatalogue
             slugCategorie={slugCategorie}
             page={page}
             noel={noel}
+            blackWeek={blackWeek}
           />
         </Suspense>
       </div>
@@ -539,7 +592,7 @@ export default async function PageCatalogue({
 
       {/* Inclinaison des cartes au survol, ordinateur seulement, LS-262. */}
       <ReactionPointeur />
-      {noel ? <BoutonPauseAnimations /> : null}
+      {aMouvementContinu(theme) ? <BoutonPauseAnimations /> : null}
     </main>
   );
 }
