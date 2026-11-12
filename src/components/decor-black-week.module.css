@@ -28,6 +28,10 @@
 }
 
 @media (min-width: 900px) {
+  .halo {
+    inset: -20%;
+  }
+
   .soleil {
     width: 220px;
     height: 220px;
@@ -35,9 +39,14 @@
   }
 }
 
+/*
+ * SOUS 900 PX, LE HALO SE RESSERRE : à -20 %, sa respiration descendait
+ * d'une douzaine de pixels sous le ruban du texte, décor continu sous un
+ * texte. Relevé par `ls-frontend-revue`.
+ */
 .halo {
   position: absolute;
-  inset: -20%;
+  inset: -6%;
   border-radius: 50%;
   background: radial-gradient(
     circle,
@@ -179,9 +188,9 @@
 
 .traceCarte {
   position: absolute;
-  inset: -1px;
-  width: calc(100% + 2px);
-  height: calc(100% + 2px);
+  inset: -3px;
+  width: calc(100% + 6px);
+  height: calc(100% + 6px);
   max-width: none;
   overflow: visible;
   pointer-events: none;

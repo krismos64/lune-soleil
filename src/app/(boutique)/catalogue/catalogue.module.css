@@ -1384,8 +1384,25 @@
  * LE LISERÉ DORÉ, `TraceCarte`, se trace au survol dans le bord de la carte :
  * jamais sur la photographie. La carte se soulève, l'ombre prend la nuit.
  */
+/*
+ * LA CARTE NE COUPE PLUS SES DÉBORDEMENTS sous ce thème : le liseré est posé
+ * dehors. La photographie garde sa propre découpe, arrondie en haut, et le
+ * reflet blanc du survol, qui en dépendait, cède la place au liseré doré : un
+ * seul effet de survol.
+ */
 .carteBlackWeek {
   position: relative;
+  overflow: visible;
+}
+
+.carteBlackWeek .cadreImage {
+  overflow: hidden;
+  border-radius: calc(var(--ls-radius-md) - 1px) calc(var(--ls-radius-md) - 1px)
+    0 0;
+}
+
+.carteBlackWeek::after {
+  display: none;
 }
 
 .carteBlackWeek:hover {

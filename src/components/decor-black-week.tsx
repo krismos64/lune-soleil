@@ -143,14 +143,20 @@ export function MargesDorees() {
 }
 
 /**
- * Liseré doré d'une carte, tracé au survol et au focus, dans la marge de la
- * carte et jamais sur la photographie. Une transition d'interaction, pas une
- * animation automatique.
+ * Liseré doré d'une carte, tracé au survol et au focus, HORS de la carte et
+ * jamais sur la photographie. Une transition d'interaction, pas une animation
+ * automatique.
+ *
+ * LE RECTANGLE COUVRE TOUT LE SVG, posé 3 px au-delà du bord de la carte : le
+ * trait de 2 px, centré sur son contour, tombe entièrement dehors. La première
+ * version le posait à 1 px dans une carte qui coupait ses débordements : seule
+ * la part du trait sur la photographie restait visible, et `99 %` le rentrait
+ * encore à droite. Relevé par `ls-frontend-revue`.
  */
 export function TraceCarte() {
   return (
     <svg className={styles.traceCarte} aria-hidden="true" focusable="false">
-      <rect x="1" y="1" width="99%" height="99%" rx="8" pathLength={1} />
+      <rect x="0" y="0" width="100%" height="100%" rx="11" pathLength={1} />
     </svg>
   );
 }

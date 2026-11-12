@@ -68,6 +68,15 @@
     color-mix(in srgb, var(--ls-bw-encre) 60%, transparent);
 }
 
+/*
+ * LE DOUBLE ANNEAU DE FOCUS SE REPOSE APRÈS LA RÈGLE DU THÈME : même
+ * spécificité, et son `box-shadow` effaçait l'anneau brun, seul visible sur
+ * le crème où le bouton flotte le plus souvent. Relevé par `ls-frontend-revue`.
+ */
+:global([data-theme="black_week"]) .bouton:focus-visible {
+  box-shadow: 0 0 0 5px var(--ls-focus);
+}
+
 @media (min-width: 768px) {
   .bouton {
     right: var(--ls-space-5);
