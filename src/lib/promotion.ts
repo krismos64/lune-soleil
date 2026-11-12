@@ -36,6 +36,14 @@ export const schemaCodePromotion = z.enum(["BLACK_WEEK"]);
  */
 export const JOURS_PRIX_ANTERIEUR = 30;
 
+/**
+ * Clé du verrou consultatif qui sérialise l'activation d'une promotion et
+ * tout changement de prix, revue critique de LS-319 : sans lui, un prix
+ * pouvait changer entre la garde du gel et l'activation. Un entier fixe,
+ * propre à ce verrou, que les tests reprennent.
+ */
+export const CLE_VERROU_PROMOTION = 31_903;
+
 /** Réactivation permise après une désactivation, arbitrage 2. */
 export const HEURES_REACTIVATION = 24;
 

@@ -136,6 +136,8 @@ export async function activerPromotion({
 }): Promise<depot.PromotionActive> {
   const code = valider(schemaCodePromotion, entree);
   return prisma.$transaction(async (tx) => {
+    // Sérialisée avec tout changement de prix, revue critique de LS-319.
+    await depot.verrouillerPromotion(tx);
     if ((await depot.lirePromotionActive(tx)) !== null) {
       throw new PromotionDejaActiveError();
     }
@@ -190,6 +192,9 @@ export class PrixGelesSousPromotionError extends Error {
 export async function exigerPrixModifiables(
   client: Parameters<typeof depot.lirePromotionActive>[0],
 ): Promise<void> {
+  // Le verrou d'abord : une activation concurrente attend la fin de ce
+  // changement de prix, ou ce changement voit la promotion qu'elle a posée.
+  await depot.verrouillerPromotion(client);
   if ((await depot.lirePromotionActive(client)) !== null) {
     throw new PrixGelesSousPromotionError();
   }

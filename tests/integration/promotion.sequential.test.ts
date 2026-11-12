@@ -412,6 +412,125 @@ describe("le prix figé sur la commande", () => {
   });
 });
 
+describe("corrections de la revue critique de LS-319", () => {
+  /*
+   * DÉFAUT 1 : une déclinaison suspendue entre dans le prix de la carte, elle
+   * doit entrer aussi dans l'éligibilité du produit. Suspendue et exclue,
+   * elle interdit à la carte de barrer un prix qu'aucune pièce ne porte.
+   */
+  it("une déclinaison suspendue et exclue empêche la carte de barrer", async () => {
+    const b = await varianteAgee(40, 6000, 2);
+    const { rows } = await client.query(
+      "SELECT produit_id FROM variante WHERE id = $1",
+      [b],
+    );
+    const produitId = rows[0].produit_id as string;
+    await client.query(
+      `INSERT INTO variante (id, produit_id, reference, libelle, prix_centimes,
+         quantite_physique, quantite_reservee, vente_web_activee, cree_a)
+       VALUES (gen_random_uuid(), $1, 'TEST-SUSPENDUE', 'TEST Suspendue', 4000,
+               1, 0, false, now() - interval '10 days')`,
+      [produitId],
+    );
+    await promotion.activerPromotion({ code: "BLACK_WEEK", acteurId: null });
+
+    const { lireCataloguePublic } = await import("@/services/catalogue");
+    const catalogue = await lireCataloguePublic();
+    const carte = catalogue.produits.find((p) => p.id === produitId);
+    expect(carte).toMatchObject({
+      prixCentimes: 4000,
+      prixReferenceCentimes: null,
+    });
+  });
+
+  /*
+   * DÉFAUT 2 : une activation validée pendant un changement de prix. Le verrou
+   * consultatif fait attendre le changement, qui voit alors la promotion.
+   */
+  it("un changement de prix attend une activation en cours, puis est refusé", async () => {
+    const piece = await varianteAgee(40, 4900);
+    const { rows } = await client.query(
+      "SELECT reference, libelle FROM variante WHERE id = $1",
+      [piece],
+    );
+    const autre = new Client({ connectionString: inject(VARIABLE_URL_TEST) });
+    await autre.connect();
+    try {
+      await autre.query("BEGIN");
+      await autre.query("SELECT pg_advisory_xact_lock($1::bigint)", [
+        lib.CLE_VERROU_PROMOTION,
+      ]);
+      await autre.query(
+        "INSERT INTO promotion (id, code, taux_pourcentage) VALUES (gen_random_uuid(), 'BLACK_WEEK', 30)",
+      );
+      const changement = variante.modifierVariante({
+        id: piece,
+        reference: rows[0].reference,
+        libelle: rows[0].libelle,
+        prixEuros: "39,00",
+        dimensions: null,
+        quantitePhysique: 1,
+      });
+      await new Promise((r) => setTimeout(r, 300));
+      await autre.query("COMMIT");
+      await expect(changement).rejects.toMatchObject({
+        name: "PrixGelesSousPromotionError",
+      });
+    } finally {
+      await autre.end();
+    }
+  });
+
+  /*
+   * DÉFAUT 3 : un onglet périmé réécrit l'ancien prix. La variante se lit sous
+   * verrou : le changement voit le prix validé entre-temps, et trace le retour.
+   */
+  it("un onglet périmé qui réécrit l'ancien prix laisse sa trace", async () => {
+    const piece = await varianteAgee(40, 5000);
+    const { rows } = await client.query(
+      "SELECT reference, libelle FROM variante WHERE id = $1",
+      [piece],
+    );
+    const autre = new Client({ connectionString: inject(VARIABLE_URL_TEST) });
+    await autre.connect();
+    try {
+      await autre.query("BEGIN");
+      await autre.query(
+        "UPDATE variante SET prix_centimes = 6000 WHERE id = $1",
+        [piece],
+      );
+      await autre.query(
+        `INSERT INTO historique_prix_variante
+           (id, variante_id, ancien_prix_centimes, nouveau_prix_centimes)
+         VALUES (gen_random_uuid(), $1, 5000, 6000)`,
+        [piece],
+      );
+      // L'onglet périmé porte encore 50 € et ne change que le libellé.
+      const perime = variante.modifierVariante({
+        id: piece,
+        reference: rows[0].reference,
+        libelle: "TEST Libellé changé",
+        prixEuros: "50",
+        dimensions: null,
+        quantitePhysique: 1,
+      });
+      await new Promise((r) => setTimeout(r, 300));
+      await autre.query("COMMIT");
+      await perime;
+    } finally {
+      await autre.end();
+    }
+    const { rows: historique } = await client.query(
+      "SELECT ancien_prix_centimes, nouveau_prix_centimes FROM historique_prix_variante WHERE variante_id = $1 ORDER BY modifie_a, ancien_prix_centimes",
+      [piece],
+    );
+    expect(historique).toContainEqual({
+      ancien_prix_centimes: 6000,
+      nouveau_prix_centimes: 5000,
+    });
+  });
+});
+
 describe("la facture, arbitrage 3 d'ADR-051", () => {
   /*
    * PAR LE CHEMIN RÉEL, le webhook signé : la facture s'émet dans sa
