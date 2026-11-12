@@ -8,6 +8,30 @@
 | Amende | `.claude/rules/frontend-design.md`, sections « Interdits visuels » et « Paillettes » |
 | Ticket | LS-259 |
 
+## Amendement du 12 novembre 2026, mouvement continu du thème Black Week, LS-318
+
+**Arbitrage de Christophe sur maquette**, `docs/prototypes/theme-black-week/`,
+validée le 12 novembre 2026 : le thème Black Week d'ADR-046 doit attirer l'œil
+par du mouvement. L'exception de l'amendement LS-277 s'étend à ce thème, aux
+**mêmes conditions** : bouton de pause flottant, rien en mouvement réduit,
+rien sans script, jamais sur un texte, une photographie ou un contrôle.
+
+- **Décors permis en mouvement continu**, et eux seuls : la rotation lente des
+  rayons du soleil (un tour en 40 s dans le bandeau du catalogue, en 60 s dans
+  l'emblème de l'accueil), le halo du soleil qui respire (cycle de 4 s), la
+  poussière d'or de la zone du soleil, et celle des marges de la grille du
+  catalogue sur grand écran. Tout autre mouvement reste borné à cinq secondes.
+- **Interactions** : le liseré doré d'une carte se trace au survol et au focus,
+  le sac du bouton d'achat saute au survol et après un ajout réussi. Ce sont
+  des réponses à un geste, pas des animations automatiques.
+- **Non porté** : le reflet qui balaie le mot « Week » de la maquette, qui
+  animait un texte et `background-position`. Le mot reste doré, immobile.
+
+**Pourquoi le même cadre que Noël.** Le mouvement continu reste un trait
+saisonnier, actif une semaine. Reprendre les conditions de LS-277 à
+l'identique évite d'écrire un second régime, et le bouton de pause comme le
+bornage `data-continu` existent déjà.
+
 ## Amendement du 7 novembre 2026, avis clients, LS-314
 
 Demande de Christophe : la page `/avis` et la section d'avis de l'accueil plus
