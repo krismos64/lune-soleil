@@ -86,3 +86,23 @@ confirmation quand la route refuse faute de preuve », un `toHaveFocus` en
 échec sur le runner. **Sans lien avec LS-318** : 6 passages sur 6 en local,
 `main` vert sur ses six derniers passages, et le job relancé passe. Première
 occurrence relevée, à surveiller : un second échec ouvrira un ticket.
+
+## Mise en production, même jour
+
+- **Migration** par `migrate-production.sh`, sur autorisation ponctuelle de
+  Christophe (la procédure lit `DATABASE_URL` du fichier d'environnement) :
+  arrêt du garde-fou sur la seule ligne `DROP CONSTRAINT
+  "chk_parametre_theme_connu"`, lue, puis `--confirm-destructive`. 29 puis 30
+  migrations, contrainte relue en base avec `BLACK_WEEK`, sauvegarde vérifiée
+  conservée sur le poste, relais et tunnel fermés.
+- **Le thème actif en production est `NOEL_2`**, inchangé par la migration.
+- **Déploiement** run 43275200493 : `901f0bf` vers `7682176`, conteneur sain en
+  10 s, trois sites en 200. `/`, `/catalogue`, `/panier`, `/api/sante` en 200 ;
+  un lien `?apercu-theme=BLACK_WEEK` sans session laisse `noel_2`.
+- `docs/ETAT.md` : phase 6 à 2 stories ouvertes, relevé dans Jira (il en
+  annonçait 6, compte périmé).
+
+## État des tickets, final
+
+- **LS-318** : Terminé, en production.
+- **LS-319** : À faire, prochaine story.
