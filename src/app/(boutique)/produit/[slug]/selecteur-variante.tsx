@@ -101,8 +101,8 @@ export function SelecteurVariante({
          * l'article L112-1-1 du Code de la consommation, lu à la source.
          */
         <p className={styles.mentionPrixBarre}>
-          Prix barré : prix le plus bas pratiqué au cours des 30 jours
-          précédant la réduction.
+          Prix barré : prix le plus bas pratiqué au cours des 30 jours précédant
+          la réduction.
         </p>
       ) : null}
 
