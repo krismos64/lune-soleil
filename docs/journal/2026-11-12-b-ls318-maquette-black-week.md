@@ -43,3 +43,17 @@ LS-319 (skill `adr`), à livrer avant le lundi 23 novembre 2026.
 
 - **LS-318** : En cours, maquette en validation.
 - **LS-319** : À faire, ADR avant le code.
+
+## Validation, même jour
+
+Christophe valide la maquette. Titre « Black Week » gardé sans promotion
+active, l'exploitante activant toujours les deux ensemble ; dates écrites
+dans l'accroche et la bande de la promotion ; mention du prix barré gardée.
+**L112-1-1 lu sur Légifrance** (`LEGIARTI000044549592`, en vigueur depuis le
+28 mai 2022, ordonnance n° 2021-1734) : prix antérieur = prix le plus bas
+pratiqué au cours des 30 jours précédant la réduction ; en cas de réductions
+successives, celui d'avant la première ; aucune mention explicative imposée ni
+interdite. La mention reprend désormais les termes de l'article. L'arrêt de la
+CJUE du 26 septembre 2024 (pourcentage calculé sur ce même prix) n'a pas pu
+être lu, la page de la DAJ refusant l'accès automatisé : sans effet ici, aucun
+prix n'ayant changé depuis fin octobre.

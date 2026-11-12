@@ -1,6 +1,6 @@
 # Maquette du thème Black Week et de la promotion de 30 %, LS-318 et LS-319
 
-Maquette du 12 novembre 2026, **en attente de validation par Christophe**. Une
+Maquette du 12 novembre 2026, **validée par Christophe le même jour**. Une
 page HTML autonome : l'ouvrir dans un navigateur suffit, sans serveur.
 
 La barre du bas bascule deux choses :
@@ -26,17 +26,20 @@ La barre du bas bascule deux choses :
 - Prix réduit calculé comme le fera le serveur : `floor(centimes * 70 / 100)`,
   1200 donne 840.
 
-## Points ouverts pour la validation
+## Arbitrages de la validation, 12 novembre 2026
 
-1. **Le titre « Black Week » reste affiché quand la promotion est inactive.**
-   Le nom de l'événement suggère une réduction : à garder, ou à remplacer par
-   un titre neutre en l'absence de promotion ?
-2. **Aucune date dans les textes.** L'activation étant manuelle, « jusqu'au
-   29 novembre » deviendrait faux si la promotion était coupée plus tôt ou
-   laissée plus tard.
-3. **La phrase « Prix barré : le plus bas pratiqué sur les 30 jours précédant
-   la Black Week »** est une proposition, à vérifier aux sources (L112-1-1)
-   avant d'entrer dans le site.
+1. **Le titre « Black Week » est gardé** même si la promotion est inactive :
+   l'exploitante active toujours la promotion en même temps que le thème.
+2. **Les dates sont écrites** (« du lundi 23 au dimanche 29 novembre »),
+   dans l'accroche et la bande défilante de la promotion. L'exploitante
+   s'engage à activer et désactiver aux bonnes dates : laissée active après le
+   29, l'annonce deviendrait fausse.
+3. **Mention sous le prix barré** : « Prix barré : prix le plus bas pratiqué
+   au cours des 30 jours précédant la réduction. » Article L112-1-1 lu sur
+   Légifrance le 12 novembre 2026 (version en vigueur depuis le 28 mai 2022,
+   ordonnance n° 2021-1734) : il impose d'indiquer ce prix antérieur et
+   n'impose ni n'interdit de mention explicative. La phrase en reprend les
+   termes.
 
 ## Écarts qui ne se reportent pas dans le site
 
