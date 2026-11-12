@@ -57,7 +57,11 @@ done
 # dans ce script serait une opinion, et resterait verte le jour ou un schema
 # s'ajoute sans que personne ne pense a l'y inscrire : exactement le defaut que
 # ce controle vise.
-schemas=$(grep -oE '^export const schema[A-Za-z]+' "$SOCLE" | sed 's/export const //' | sort -u)
+# LES CHIFFRES FONT PARTIE DU NOM, LS-319 : `[A-Za-z]+` s'arretait au premier,
+# et `schemaLigneInstantaneV3` devenait `schemaLigneInstantaneV`, un nom
+# qu'aucun document ne porte. Meme defaut que `noel_1` au controle des
+# contrastes en LS-277.
+schemas=$(grep -oE '^export const schema[A-Za-z0-9]+' "$SOCLE" | sed 's/export const //' | sort -u)
 
 if [ -z "$schemas" ]; then
   echo "  ECHEC  aucun schema exporte trouve dans $SOCLE"
