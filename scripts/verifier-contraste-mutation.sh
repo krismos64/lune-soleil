@@ -264,6 +264,17 @@ attendre_echec "or du titre sur rouge sous 3:1"
 muter "$JETONS" 's/\[data-theme="noel_2"\]/[data-theme="noel-2"]/'
 attendre_echec "bloc de thème illisible par l'expression"
 
+# ---------------------------------------------------------------------------
+# Cas 11 : l'or de Black Week assombri sur la nuit, LS-318.
+#
+# LE CAS EST CHOISI POUR DISTINGUER LES DEUX LECTURES. `#6b5a1f` tombe sous
+# 4,5:1 sur la nuit, mais dépasse 5:1 sur crème : si le suffixe `-sur-nuit`
+# n'était pas reconnu, le jeton serait mesuré comme un accent sur fond clair,
+# y passerait, et la mutation resterait verte.
+# ---------------------------------------------------------------------------
+muter "$JETONS" 's/--ls-bw-or-sur-nuit: #f2c230;/--ls-bw-or-sur-nuit: #6b5a1f;/'
+attendre_echec "or de Black Week assombri sur la nuit"
+
 echo
 echo "-----------------------------------------"
 if [ "$detectes" -eq "$total" ]; then

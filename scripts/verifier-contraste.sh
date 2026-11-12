@@ -255,8 +255,9 @@ for (const fichier of modules.sort()) {
  *   soit employé aujourd'hui sur l'un d'eux ou non ;
  * - un FOND, `--ls-noel-fond-*`, est une surface : il n'est pas mesuré comme
  *   un texte, mais sert de fond aux textes de la classe suivante ;
- * - un TEXTE SUR ROUGE, `*-sur-rouge`, tient 4,5:1 sur CHAQUE fond de son bloc,
- *   3:1 s'il est réservé au grand texte, `*-titre-sur-rouge`.
+ * - un TEXTE SUR FOND SOMBRE, `*-sur-rouge` (Noël 2) ou `*-sur-nuit`
+ *   (Black Week, LS-318), tient 4,5:1 sur CHAQUE fond de son bloc, 3:1 s'il
+ *   est réservé au grand texte, `*-titre-sur-rouge` ou `*-titre-sur-nuit`.
  *
  * Un thème est un jeu fermé que l'exploitante active d'un clic : un jeton
  * défaillant passerait en production sans qu'aucune story le relise.
@@ -301,12 +302,12 @@ for (const bloc of texteJetons.matchAll(/\[data-theme="([a-z0-9_]+)"\]\s*\{([^}]
     const couleur = valeur(nom);
     if (!couleur || /-fond-/.test(nom)) continue;
     jetonsDeTheme += 1;
-    if (/-sur-rouge$/.test(nom)) {
+    if (/-sur-(rouge|nuit)$/.test(nom)) {
       if (fondsDuBloc.length === 0) {
-        echec(nom, "aucun fond --ls-noel-fond-* dans ce bloc", 0, 4.5);
+        echec(nom, "aucun fond --ls-*-fond-* dans ce bloc", 0, 4.5);
         continue;
       }
-      const seuil = /-titre-sur-rouge$/.test(nom) ? 3.0 : 4.5;
+      const seuil = /-titre-sur-(rouge|nuit)$/.test(nom) ? 3.0 : 4.5;
       for (const fond of fondsDuBloc) {
         const mesure = rapport(couleur, valeur(fond));
         if (mesure < seuil) echec(nom, fond, mesure, seuil);
