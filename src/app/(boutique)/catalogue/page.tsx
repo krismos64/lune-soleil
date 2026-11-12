@@ -217,7 +217,8 @@ async function ContenuCatalogue({
     throw erreur;
   }
 
-  const { produits, categories, categorieRetenue, pagination } = catalogue;
+  const { produits, categories, categorieRetenue, pagination, promotion } =
+    catalogue;
   const total = pagination?.total ?? produits.length;
 
   /*
@@ -335,6 +336,7 @@ async function ContenuCatalogue({
               produit={produit}
               noel={noel}
               blackWeek={blackWeek}
+              tauxPromotion={promotion?.taux ?? null}
               prioritaire={rang === rangPrioritaire}
             />
           ))}

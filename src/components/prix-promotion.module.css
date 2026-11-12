@@ -1,0 +1,46 @@
+/*
+ * Prix barré, prix réduit et badge, ADR-051. Contrastes : l'ancien prix en
+ * `--ls-text-muted`, 4,86:1 sur crème et 5,19:1 sur blanc, jamais posé sur
+ * le sable (4,35:1, C31). Le badge en or sur nuit sous le thème Black Week,
+ * 11,29:1, en blanc sur primaire hors thème, 8,93:1.
+ */
+.bloc {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--ls-space-1) var(--ls-space-2);
+}
+
+.ancien {
+  color: var(--ls-text-muted);
+  font-size: 0.85em;
+  font-weight: 400;
+  text-decoration-thickness: 2px;
+}
+
+.actuel {
+  color: var(--ls-price);
+}
+
+.badge {
+  align-self: center;
+  padding: 1px var(--ls-space-2);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-bw-fond-nuit, var(--ls-primary));
+  color: var(--ls-bw-or-sur-nuit, var(--ls-text-on-primary));
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.horsEcran {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

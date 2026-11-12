@@ -111,7 +111,7 @@ export default async function PageAccueil({
    */
   const parametres = await searchParams;
   const [
-    { produits, categories },
+    { produits, categories, promotion },
     seuilFranchise,
     { theme, enApercu },
     couvertures,
@@ -297,6 +297,7 @@ export default async function PageAccueil({
                 produit={produit}
                 noel={noel}
                 blackWeek={blackWeek}
+                tauxPromotion={promotion?.taux ?? null}
               />
             ))}
           </ul>

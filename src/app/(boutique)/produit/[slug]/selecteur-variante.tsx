@@ -22,7 +22,7 @@
  * invariant du projet : « 7 en stock » exposerait le niveau d'activite de la
  * boutique. Ce composant ne peut donc pas le divulguer, meme par erreur.
  */
-import { formaterMontant } from "@/lib/montant";
+import { PrixPromotion } from "@/components/prix-promotion";
 import { useState, useTransition } from "react";
 import type { ReactNode } from "react";
 
@@ -52,8 +52,11 @@ const CLASSE_DISPONIBILITE: Record<EtatDisponibilite, string> = {
 export function SelecteurVariante({
   variantes,
   blocLivraison,
+  tauxPromotion = null,
 }: {
   variantes: VarianteFiche[];
+  /** Le taux de la promotion en vigueur, pour le badge, ADR-051. */
+  tauxPromotion?: number | null;
   /** Bloc 7, rendu par la page serveur, LS-251. */
   blocLivraison: ReactNode;
 }) {
@@ -86,7 +89,22 @@ export function SelecteurVariante({
   return (
     <>
       {/* Bloc 3, prix. */}
-      <p className={styles.prix}>{formaterMontant(choisie.prixCentimes)}</p>
+      <PrixPromotion
+        className={styles.prix}
+        prixCentimes={choisie.prixCentimes}
+        prixReferenceCentimes={choisie.prixReferenceCentimes}
+        taux={tauxPromotion}
+      />
+      {choisie.prixReferenceCentimes !== null ? (
+        /*
+         * LA MENTION DU PRIX BARRÉ, ADR-051, maquette validée : les termes de
+         * l'article L112-1-1 du Code de la consommation, lu à la source.
+         */
+        <p className={styles.mentionPrixBarre}>
+          Prix barré : prix le plus bas pratiqué au cours des 30 jours
+          précédant la réduction.
+        </p>
+      ) : null}
 
       {/*
        * Bloc 4, disponibilite. REGION LIVE, LS-85 : changer de declinaison
