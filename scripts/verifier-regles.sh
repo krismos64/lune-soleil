@@ -207,13 +207,34 @@ while IFS= read -r ligne; do
   attendues=$(echo "$predicat" | grep -oE "'[A-Z_]+'" | tr -d "'" | sort -u)
   [ -n "$attendues" ] || continue
 
-  # Table portante : le @@map du modèle où figure cet index. Le bloc du modèle
-  # est délimité par la première accolade fermante en début de ligne.
-  table=$(awk -v idx="$index" '
-    /^model /      { bloc = ""; }
-                   { bloc = bloc "\n" $0; }
-    /^}/           { if (bloc ~ idx) { print bloc; exit } }
+  # Table portante : le @@map du modèle qui DÉCLARE cet index, `map: "<index>"`.
+  #
+  # LS-315 a rendu ce calcul faux pendant deux nuits, nocturnes 99 et 100 : un
+  # commentaire de `enum OrigineEcriture` cite `journal_email_systeme_unique`.
+  # L'ancien awk retenait le premier bloc contenant le nom, ne remettait le bloc
+  # à zéro que sur `model`, et lisait les commentaires. Il prenait l'enum, sans
+  # `@@map`, la table sortait vide, l'ancre se réduisait au nom de l'index, et
+  # `database.md`, qui ne le nomme jamais, sortait du contrôle sans un mot.
+  #
+  # Trois corrections : tout bloc de premier niveau remet à zéro, seul un
+  # `model` est retenu, et la recherche porte sur la déclaration `map: "..."`
+  # d'une ligne qui n'est pas un commentaire.
+  table=$(awk -v decl="map: \"$index\"" '
+    /^(model|enum|type|view|generator|datasource) / { bloc = ""; modele = ($1 == "model") }
+    /^[[:space:]]*\/\//                             { next }
+                                                    { bloc = bloc "\n" $0 }
+    /^}/ { if (modele && index(bloc, decl)) { print bloc; exit } }
   ' "$SCHEMA" | grep -oE '@@map\("[a-z_0-9]+"\)' | sed 's/@@map("//;s/")//')
+
+  # LE CONTRÔLE SE GARDE CONTRE LUI-MÊME. Tout index partiel est déclaré dans un
+  # modèle porteur d'un `@@map` : une table vide signifie que ce calcul est
+  # cassé, jamais que l'index n'a pas de table. Continuer avec la seule ancre du
+  # nom produisait un OK silencieux, la forme exacte du défaut de LS-315.
+  if [ -z "$table" ]; then
+    echo "  ECHEC $index : table portante introuvable dans $SCHEMA, contrôle aveugle"
+    predicats_ko=$((predicats_ko+1))
+    continue
+  fi
 
   # Ancrage. Deux formes suffisent à couvrir tous les documents du dépôt :
   #

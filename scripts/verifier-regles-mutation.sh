@@ -26,6 +26,7 @@ DB=".claude/rules/database.md"
 ML="docs/architecture/MODELE-LOGIQUE.md"
 MC="docs/architecture/MODELE-CONCEPTUEL.md"
 SEC=".claude/rules/securite.md"
+SCHEMA="prisma/schema.prisma"
 
 # Dossier temoin cree puis supprime par le cas de couverture, LS-88. Il ne doit
 # exister a aucun autre moment : le nom est choisi pour qu'une trace oubliee se
@@ -35,16 +36,18 @@ FICHIER_TEMOIN="src/integrations/temoin-mutation.ts"
 FICHIER_TEMOIN_SERVICE="src/services/temoin-mutation.ts"
 SOCLE=".claude/services-socle-prisma.txt"
 
-for f in "$DB" "$ML" "$MC" "$SEC" "$SOCLE" ./scripts/verifier-regles.sh; do
+for f in "$DB" "$ML" "$MC" "$SEC" "$SOCLE" "$SCHEMA" ./scripts/verifier-regles.sh; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
 done
 
 TMP="$(mktemp -d)"
 cp "$DB" "$TMP/db.orig"; cp "$ML" "$TMP/ml.orig"; cp "$MC" "$TMP/mc.orig"
 cp "$SEC" "$TMP/sec.orig"; cp "$SOCLE" "$TMP/socle.orig"
+cp "$SCHEMA" "$TMP/schema.orig"
 restaurer() {
   cp "$TMP/db.orig" "$DB"; cp "$TMP/ml.orig" "$ML"; cp "$TMP/mc.orig" "$MC"
   cp "$TMP/sec.orig" "$SEC"; cp "$TMP/socle.orig" "$SOCLE"
+  cp "$TMP/schema.orig" "$SCHEMA"
   rm -rf "${RACINE:?}/$DOSSIER_TEMOIN"
   rm -f "${RACINE:?}/$FICHIER_TEMOIN"
   rm -f "${RACINE:?}/$FICHIER_TEMOIN_SERVICE"
@@ -84,7 +87,7 @@ nettoyer() {
   # fichiers SUIVIS, ce qui est le cas de tous ceux mutes ici, et les temoins
   # non suivis sont retires separement par `restaurer`.
   restaurer
-  for fichier in "$DB" "$ML" "$MC" "$SEC" "$SOCLE"; do
+  for fichier in "$DB" "$ML" "$MC" "$SEC" "$SOCLE" "$SCHEMA"; do
     [ -n "${fichier:-}" ] || continue
     git -C "$RACINE" checkout -- "$fichier" 2>/dev/null || true
   done
@@ -150,6 +153,25 @@ cas "database.md, REMBOURSE seul retire"
 # decision D : sans lui, un webhook tardif renvoie une confirmation.
 perl -pi -e "s/AND origine IN \('SYSTEME','RECONCILIATION'\)/AND origine IN ('SYSTEME')/" "$DB"
 cas "database.md, RECONCILIATION retiree du filtre email"
+
+# Cas 4bis : un commentaire d'enum qui cite un index, defaut reel de LS-315.
+#
+# `enum OrigineEcriture` cite `journal_email_systeme_unique` en commentaire
+# depuis LS-315. L'ancien calcul de la table portante prenait cet enum, sans
+# `@@map` : l'ancre se reduisait au nom de l'index, que database.md n'ecrit
+# jamais, et le cas 4 est reste RATE deux nuits, nocturnes 99 et 100.
+#
+# Le cas 4 ne garde cette forme que tant que ce commentaire existe. Celui-ci la
+# reproduit sur un autre index, dans le premier enum du schema, pour qu'elle
+# reste eprouvee si le commentaire d'origine disparait.
+perl -pi -e 's/^enum Role \{$/enum Role {\n  \/\/ temoin de mutation, cite paiement_reussi_unique/' "$SCHEMA"
+perl -0pi -e "s/WHERE statut IN \('REUSSI',\n *'PARTIELLEMENT_REMBOURSE',\n *'REMBOURSE'\)/WHERE statut = 'REUSSI'/" "$DB"
+cas "schema, commentaire d'enum citant l'index paiement, database.md perime"
+
+# Cas 4ter : le controle prive de sa table portante. Sans la garde, il
+# poursuivait avec la seule ancre du nom d'index et rendait un OK silencieux.
+perl -pi -e 's/^  \@\@map\("journal_email"\)$//' "$SCHEMA"
+cas "schema, table portante introuvable pour un index partiel"
 
 # Cas 5 : l'index administratrice, sur un autre fichier encore.
 perl -pi -e "s/\`role = 'ADMINISTRATRICE'\`/\`role = 'CLIENT'\`/" "$ML"
