@@ -76,3 +76,13 @@ de concurrence avant le code.
 - **LS-318** : code sur `main` après fusion, critères 1 à 7 remplis, en
   production à faire.
 - **LS-319** : À faire.
+
+## Fusion, même jour
+
+PR #660 fusionnée en rebase, `main` à `274f406`. Deux passages rouges avant :
+le contrôle « Format », Prettier non lancé en local sur deux fichiers ; puis
+`tests/composant/gestion-passkeys-ls295.test.tsx`, « bascule vers la
+confirmation quand la route refuse faute de preuve », un `toHaveFocus` en
+échec sur le runner. **Sans lien avec LS-318** : 6 passages sur 6 en local,
+`main` vert sur ses six derniers passages, et le job relancé passe. Première
+occurrence relevée, à surveiller : un second échec ouvrira un ticket.
