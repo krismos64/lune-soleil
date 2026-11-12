@@ -382,10 +382,12 @@ describe("emission de la facture, instantane legal", () => {
 
     // LA VERSION EST CE QUI REND LA RELECTURE POSSIBLE dans dix ans : sans elle,
     // un changement de structure rendrait les anciennes factures illisibles.
-    expect(instantane.version).toBe(2);
+    expect(instantane.version).toBe(3);
     /*
      * VERSION 2 DEPUIS LS-297 : l'identite de configuration, plus la marque et
-     * la denomination « EI » figees a l'emission, article R526-27.
+     * la denomination « EI » figees a l'emission, article R526-27. VERSION 3
+     * DEPUIS LS-319 : chaque ligne porte sa reduction, nulle hors promotion,
+     * ADR-051 ; l'emetteur ne change pas.
      */
     expect(instantane.emetteur).toEqual({
       ...EMETTEUR_TEST,
