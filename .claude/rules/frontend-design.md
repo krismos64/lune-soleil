@@ -319,6 +319,23 @@ texte** : un champ libre laisserait passer une promotion ou un délai inventés.
   réduit, jamais par-dessus un texte, un contrôle ou un bijou.
 - **Aucune phrase ne parle de livraison, de date ou de prix.**
 
+## Promotion de catalogue, ADR-051
+
+Distincte du thème : la réduction, ses prix barrés et ses dates ne vivent que
+dans la couche promotion, et rien ne s'affiche sans promotion active.
+
+- **Un seul composant pour le prix**, `PrixPromotion` : carte, fiche, panier
+  et tunnel. Prix barré en `<s>`, doublé d'un texte pour le lecteur d'écran
+  (« Prix initial », « prix réduit »), et badge du taux hors panier.
+- **Une seule annonce**, `AnnoncePromotion`, sur l'accueil et le catalogue :
+  « sur toute la boutique » **seulement** si chaque pièce en vente est
+  réduite, « sur les pièces signalées » sinon, calculé par le serveur.
+- **La mention du prix barré** sur la fiche reprend les termes de
+  L112-1-1 : « Prix barré : prix le plus bas pratiqué au cours des 30 jours
+  précédant la réduction. »
+- **Immobile, ADR-045** : ni trait qui se trace, ni tampon, ni bande
+  défilante, la maquette les portait sur du texte.
+
 ## Mobile first
 
 Référence 320 à 430 px d'abord, puis 390, 768, 1280. Aucun débordement

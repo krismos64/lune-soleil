@@ -383,6 +383,31 @@ chemin séparé laisserait exister des factures sans moyen d'accès, découverte
 par une par des clients qui réclament. Le rejeu d'un événement sort avant, sur la
 facture existante, et n'engendre donc pas de second jeton.
 
+## Promotion de catalogue, ADR-051
+
+**Le prix réduit se fige sur la ligne de commande, jamais au paiement.**
+`passerCommande` lit la promotion active **une fois**, dans sa transaction, et
+fige sur chaque ligne éligible le prix réduit (`prix_fige_centimes`, celui que
+le client paie), le prix catalogue barré (`prix_reference_fige_centimes`) et
+la promotion. Stripe, la facture, l'avoir et le remboursement lisent ce prix
+figé : **aucun ne recalcule la réduction**, et une promotion coupée avant le
+paiement n'en change pas le montant.
+
+**Un seul calcul**, `prixDeVente` de `src/lib/promotion.ts`, au centime
+inférieur ; **une seule éligibilité**, `CONDITION_ELIGIBLE` de
+`repositories/promotion.ts`, partagée par l'affichage et la commande. Le
+sous-total du panier sous promotion est confronté au sous-total figé par
+`SousTotalChangeError` : deux calculs divergents refuseraient toute commande.
+
+**Le port n'est jamais réduit**, et la franchise se juge sur le montant
+réduit. **Aucun coupon Stripe** : un prix réduit chez le prestataire seul
+ferait diverger la facture de l'encaissement.
+
+**La facture est en instantané version 3** : chaque ligne porte sa réduction,
+prix de référence, libellé et taux, figés à l'émission. Les versions 1 et 2
+restent relisibles ; un avoir en version 3 sur une facture de version 2
+reprend ses lignes, sans réduction.
+
 ## Montants
 
 Centimes entiers en base. La conversion vers le format attendu par Stripe est
