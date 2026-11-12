@@ -234,6 +234,39 @@ describe("rendu du document", () => {
   });
 
   /*
+   * LA REDUCTION D'UNE LIGNE SE LIT DANS LE PDF, ADR-051 arbitrage 3. Le texte
+   * est extrait du fichier produit : `@react-pdf` remplace en silence un
+   * caractere qu'il ne sait pas rendre, l'espace insecable compris.
+   */
+  it("porte la reduction d'une ligne vendue sous promotion, version 3", async () => {
+    const rendu = await rendreEtStocker({
+      enTete: EN_TETE,
+      instantane: {
+        ...INSTANTANE_V2,
+        version: 3,
+        lignes: [
+          {
+            referenceFigee: "TEST-CRE-001",
+            libelleProduit: "TEST Créoles dorées",
+            libelleVariante: "Taille unique",
+            quantite: 2,
+            prixUnitaireCentimes: 1295,
+            reduction: {
+              prixReferenceCentimes: 1850,
+              libelle: "Black Week",
+              taux: 30,
+            },
+          },
+        ],
+      },
+    });
+    const texte = await texteDuPdf(join(racine, rendu.cheminRelatif));
+
+    expect(texte).toContain("dont réduction Black Week -30");
+    expect(texte).toContain(montantNormalise(1850));
+  });
+
+  /*
    * UNE VERSION 1 SE REIMPRIME TELLE QU'EMISE, invariant 4 : ni marque ni
    * mention ajoutee a un document qui ne les portait pas, F-2026-0001 comprise.
    */
