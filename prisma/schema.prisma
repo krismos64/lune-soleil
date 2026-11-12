@@ -403,10 +403,11 @@ model Variante {
   archiveeA        DateTime? @map("archivee_a") @db.Timestamptz(3) // C13, jamais supprimée
   creeA            DateTime  @default(now()) @map("cree_a") @db.Timestamptz(3)
 
-  produit        Produit          @relation(fields: [produitId], references: [id], onDelete: Restrict)
+  produit        Produit                  @relation(fields: [produitId], references: [id], onDelete: Restrict)
   reservations   Reservation[]
   mouvements     MouvementStock[]
   lignesCommande LigneCommande[]
+  historiquePrix HistoriquePrixVariante[]
 
   @@index([produitId], map: "variante_produit_idx")
   @@map("variante")
@@ -610,8 +611,16 @@ model LigneCommande {
   // Le modèle conceptuel est corrigé en conséquence.
   creeA               DateTime @default(now()) @map("cree_a") @db.Timestamptz(3)
 
+  // ADR-051, LS-319. Sous promotion, `prixFigeCentimes` est le prix RÉDUIT,
+  // payé, et celui-ci le prix catalogue barré, figés ensemble à la création
+  // de la commande, invariant 3. Sans promotion, les deux sont nuls :
+  // `chk_ligne_commande_promotion`.
+  prixReferenceFigeCentimes Int?    @map("prix_reference_fige_centimes")
+  promotionId               String? @map("promotion_id")
+
   commande   Commande        @relation(fields: [commandeId], references: [id], onDelete: Restrict)
   variante   Variante?       @relation(fields: [varianteId], references: [id], onDelete: SetNull)
+  promotion  Promotion?      @relation(fields: [promotionId], references: [id], onDelete: Restrict)
   avis       Avis?
   invitation InvitationAvis?
 
@@ -1011,18 +1020,21 @@ model Utilisateur {
   image     String?
   misAJourA DateTime @default(now()) @updatedAt @map("mis_a_jour_a") @db.Timestamptz(3)
 
-  commandes         Commande[]
-  adresses          AdresseCarnet[]
-  avis              Avis[]
-  reponsesAvis      ReponseAvis[]
-  journauxAudit     JournalAudit[]
-  journauxConnexion JournalConnexion[]
-  mouvements        MouvementStock[]
-  historiques       HistoriqueStatut[]
-  alertes           AlerteCritique[]
-  sessions          Session[]
-  comptes           Compte[]
-  passkeys          Passkey[]
+  commandes             Commande[]
+  adresses              AdresseCarnet[]
+  avis                  Avis[]
+  reponsesAvis          ReponseAvis[]
+  journauxAudit         JournalAudit[]
+  journauxConnexion     JournalConnexion[]
+  mouvements            MouvementStock[]
+  historiques           HistoriqueStatut[]
+  alertes               AlerteCritique[]
+  sessions              Session[]
+  comptes               Compte[]
+  passkeys              Passkey[]
+  // ADR-051, LS-319 : qui active et qui désactive une promotion.
+  promotionsActivees    Promotion[]        @relation("PromotionActivee")
+  promotionsDesactivees Promotion[]        @relation("PromotionDesactivee")
 
   // E1, un seul compte porte ADMINISTRATRICE. Un UNIQUE simple interdirait
   // un second compte client : le filtre est ce qui rend la contrainte utilisable.
@@ -1530,6 +1542,53 @@ model ParametreBoutique {
   modifieA DateTime @updatedAt @map("modifie_a") @db.Timestamptz(3)
 
   @@map("parametre_boutique")
+}
+
+// ---------------------------------------------------------------------------
+// Promotion de catalogue, ADR-051, LS-319
+// ---------------------------------------------------------------------------
+//
+// UNE LIGNE PAR ACTIVATION, ET C'EST L'HISTORIQUE : désactiver renseigne
+// `desactiveeA`, rien ne se supprime (LS-246). Le code, le taux et le libellé
+// sont écrits dans `src/lib/promotion.ts` ; le taux est recopié ici à
+// l'activation pour que la période reste lisible si le code change.
+//
+// UNE SEULE PROMOTION ACTIVE À LA FOIS, garantie par la base :
+// `promotion_active_unique` sur `active`, et `chk_promotion_active_coherente`
+// lie `active` à l'absence de `desactiveeA`.
+model Promotion {
+  id              String    @id @default(uuid())
+  code            String // chk_promotion_code_connu
+  tauxPourcentage Int       @map("taux_pourcentage") // chk_promotion_taux
+  active          Boolean   @default(true)
+  activeDepuis    DateTime  @default(now()) @map("active_depuis") @db.Timestamptz(3)
+  desactiveeA     DateTime? @map("desactivee_a") @db.Timestamptz(3)
+  activeeParId    String?   @map("activee_par_id")
+  desactiveeParId String?   @map("desactivee_par_id")
+
+  activeePar    Utilisateur?    @relation("PromotionActivee", fields: [activeeParId], references: [id], onDelete: SetNull)
+  desactiveePar Utilisateur?    @relation("PromotionDesactivee", fields: [desactiveeParId], references: [id], onDelete: SetNull)
+  lignes        LigneCommande[]
+
+  @@unique([active], where: raw("active"), map: "promotion_active_unique")
+  @@map("promotion")
+}
+
+// Historique des prix catalogue, ADR-051 : chaque modification de
+// `variante.prix_centimes` y écrit l'ancien et le nouveau prix, dans la même
+// transaction. Il prouve le prix antérieur de L112-1-1 et décide
+// l'éligibilité d'une variante à une promotion. Aucune donnée personnelle.
+model HistoriquePrixVariante {
+  id                  String   @id @default(uuid())
+  varianteId          String   @map("variante_id")
+  ancienPrixCentimes  Int      @map("ancien_prix_centimes")
+  nouveauPrixCentimes Int      @map("nouveau_prix_centimes")
+  modifieA            DateTime @default(now()) @map("modifie_a") @db.Timestamptz(3)
+
+  variante Variante @relation(fields: [varianteId], references: [id], onDelete: Restrict)
+
+  @@index([varianteId, modifieA], map: "historique_prix_variante_idx")
+  @@map("historique_prix_variante")
 }
 
 // ---------------------------------------------------------------------------

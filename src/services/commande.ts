@@ -24,6 +24,8 @@
 import { randomUUID } from "node:crypto";
 
 import { calculerFraisPort } from "@/lib/livraison";
+import { prixDeVente } from "@/lib/promotion";
+import { lirePromotionPourCommande } from "@/repositories/promotion";
 import type { ConfigurationLivraison } from "@/lib/livraison";
 import { resoudreConfigurationLivraison } from "@/services/parametres";
 import { prisma } from "@/lib/prisma";
@@ -303,6 +305,18 @@ export async function passerCommande({
         aFiger.map((donnees) => [donnees.varianteId, donnees]),
       );
 
+      /*
+       * LA PROMOTION EST LUE UNE FOIS, ICI, ADR-051 : la commande n'a qu'une
+       * vérité de prix. Une désactivation validée pendant cette transaction ne
+       * la coupe pas en deux régimes. L'éligibilité est jugée dans la même
+       * instruction, par la condition que l'affichage emploie aussi.
+       */
+      const promotion = await lirePromotionPourCommande(
+        transaction,
+        ordonnees.map((ligne) => ligne.varianteId),
+      );
+      const eligibles = new Set(promotion?.eligibles ?? []);
+
       const lignes = ordonnees.map((ligne) => {
         const donnees = parVariante.get(ligne.varianteId);
 
@@ -315,13 +329,27 @@ export async function passerCommande({
           throw new CommandeRefuseeError(ligne.varianteId);
         }
 
+        /*
+         * SOUS PROMOTION, LE PRIX FIGÉ EST LE PRIX RÉDUIT, PAYÉ, et le prix
+         * catalogue devient la référence barrée, figés ensemble, invariant 3.
+         * Stripe, la facture, l'avoir et le remboursement lisent ce prix
+         * figé : aucun ne recalcule la réduction.
+         */
+        const reduit =
+          promotion !== null && eligibles.has(ligne.varianteId)
+            ? prixDeVente(donnees.prixCentimes, promotion.taux)
+            : donnees.prixCentimes;
+        const enPromotion = promotion !== null && reduit < donnees.prixCentimes;
+
         return {
           commandeId,
           varianteId: ligne.varianteId,
           referenceFigee: donnees.reference,
           libelleProduitFige: donnees.libelleProduit,
           libelleVarianteFige: donnees.libelleVariante,
-          prixFigeCentimes: donnees.prixCentimes,
+          prixFigeCentimes: reduit,
+          prixReferenceFigeCentimes: enPromotion ? donnees.prixCentimes : null,
+          promotionId: enPromotion ? promotion.id : null,
           quantite: ligne.quantite,
         };
       });

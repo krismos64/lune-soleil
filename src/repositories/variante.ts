@@ -260,3 +260,22 @@ export async function fixerPrixVariantesMontrees(
 
   return count;
 }
+
+/**
+ * Les prix actuels de variantes, VERROUILLÉS, ADR-051 : l'application en
+ * masse les lit avant d'écrire, pour tracer l'ancien prix dans
+ * `historique_prix_variante`. Le verrou empêche qu'un autre changement passe
+ * entre la lecture et l'écriture, ce qui tracerait un ancien prix faux.
+ */
+export async function lirePrixVerrouilles(
+  client: ClientBase,
+  varianteIds: string[],
+): Promise<{ id: string; prixCentimes: number }[]> {
+  if (varianteIds.length === 0) return [];
+  return client.$queryRaw<{ id: string; prixCentimes: number }[]>`
+    SELECT id, prix_centimes AS "prixCentimes"
+      FROM variante
+     WHERE id IN (${Prisma.join(varianteIds)})
+     ORDER BY id
+       FOR UPDATE`;
+}

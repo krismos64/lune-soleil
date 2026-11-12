@@ -24,6 +24,8 @@ import { prisma } from "@/lib/prisma";
 import { schemaSelectionProduits, valider } from "@/lib/validation";
 import * as depotCatalogue from "@/repositories/catalogue";
 import * as depot from "@/repositories/variante";
+import { ecrireHistoriquePrix } from "@/repositories/promotion";
+import { exigerPrixModifiables } from "@/services/promotion";
 import {
   schemaArchivageVariante,
   schemaCreationVariante,
@@ -202,16 +204,34 @@ export async function creerVariante(entree: unknown): Promise<Variante> {
 export async function modifierVariante(entree: unknown): Promise<Variante> {
   const { id, ...donnees } = valider(schemaModificationVariante, entree);
 
-  const existante = await depot.lireVariante(prisma, id);
-  if (!existante) {
-    throw new VarianteIntrouvableError();
-  }
-  if (existante.archiveeA !== null) {
-    throw new VarianteDejaArchiveeError();
-  }
-
   try {
-    return await depot.ecrireVariante(prisma, id, donnees);
+    /*
+     * UNE TRANSACTION, ADR-051 : le prix lu, la garde du gel sous promotion,
+     * l'écriture et son historique vont ensemble. Hors transaction, un
+     * changement de prix pouvait passer sans trace, et l'éligibilité d'une
+     * variante à une promotion se juge sur cette trace.
+     */
+    return await prisma.$transaction(async (tx) => {
+      const existante = await depot.lireVariante(tx, id);
+      if (!existante) {
+        throw new VarianteIntrouvableError();
+      }
+      if (existante.archiveeA !== null) {
+        throw new VarianteDejaArchiveeError();
+      }
+      if (donnees.prixCentimes !== existante.prixCentimes) {
+        await exigerPrixModifiables(tx);
+      }
+      const ecrite = await depot.ecrireVariante(tx, id, donnees);
+      await ecrireHistoriquePrix(tx, [
+        {
+          varianteId: id,
+          ancien: existante.prixCentimes,
+          nouveau: donnees.prixCentimes,
+        },
+      ]);
+      return ecrite;
+    });
   } catch (erreur) {
     if (estErreurPrisma(erreur, "P2002")) {
       throw await refusDeReference(donnees.reference);
@@ -379,6 +399,10 @@ export async function appliquerPrixProduits({
    * jamais touchée, son identifiant n'étant pas dans la liste.
    */
   const variantes = await prisma.$transaction(async (tx) => {
+    // ADR-051 : aucun prix ne change sous promotion, et chaque changement se
+    // trace avec l'ancien prix, lu sous verrou avant l'écriture.
+    await exigerPrixModifiables(tx);
+    const anciens = await depot.lirePrixVerrouilles(tx, montrees);
     const modifiees = await depot.fixerPrixVariantesMontrees(
       tx,
       identifiants,
@@ -388,6 +412,14 @@ export async function appliquerPrixProduits({
     if (modifiees !== montrees.length) {
       throw new RecapitulatifPrixPerimeError();
     }
+    await ecrireHistoriquePrix(
+      tx,
+      anciens.map(({ id, prixCentimes: ancien }) => ({
+        varianteId: id,
+        ancien,
+        nouveau: prixCentimes,
+      })),
+    );
     return modifiees;
   });
 
