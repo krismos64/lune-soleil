@@ -11,7 +11,7 @@
  * de Node, `database.md`.
  */
 import { Prisma } from "@/generated/prisma/client";
-import { JOURS_PRIX_ANTERIEUR } from "@/lib/promotion";
+import { CLE_VERROU_PROMOTION, JOURS_PRIX_ANTERIEUR } from "@/lib/promotion";
 import type { ClientBase as Client } from "@/repositories/stock";
 
 /** `v` est la variante, `p` la promotion active. */
@@ -41,9 +41,24 @@ export async function lirePromotionActive(
 }
 
 /**
- * Chaque variante en vente, avec son produit et son éligibilité à la
- * promotion active. « En vente » : non archivée, vente web ouverte, produit
- * actif, la même définition que le catalogue public.
+ * Prend le verrou consultatif de la promotion, jusqu'à la fin de la
+ * transaction. L'activation et tout changement de prix le prennent EN
+ * PREMIER, avant tout verrou de variante : un seul ordre, aucun cycle.
+ * `passerCommande` ne le prend pas, il ne change ni prix ni promotion.
+ */
+export async function verrouillerPromotion(client: Client): Promise<void> {
+  await client.$executeRaw`SELECT pg_advisory_xact_lock(${CLE_VERROU_PROMOTION}::bigint)`;
+}
+
+/**
+ * Chaque variante du catalogue, avec son produit et son éligibilité à la
+ * promotion active : non archivée, produit actif.
+ *
+ * LA VENTE WEB SUSPENDUE N'EST PAS FILTRÉE, revue critique de LS-319 : le
+ * prix de la carte est le minimum de ces mêmes variantes, suspendues
+ * comprises. Une variante suspendue et inéligible qui manquait ici laissait
+ * la carte barrer un prix qu'aucune pièce ne portait. Mêmes variantes des
+ * deux côtés, et une exclue retire le produit des produits éligibles.
  */
 export async function lireEligibiliteCatalogue(
   client: Client,
@@ -56,7 +71,6 @@ export async function lireEligibiliteCatalogue(
       JOIN produit pr ON pr.id = v.produit_id
       JOIN promotion p ON p.id = ${promotionId}
      WHERE v.archivee_a IS NULL
-       AND v.vente_web_activee
        AND pr.statut = 'ACTIF'`;
 }
 

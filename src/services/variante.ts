@@ -24,7 +24,10 @@ import { prisma } from "@/lib/prisma";
 import { schemaSelectionProduits, valider } from "@/lib/validation";
 import * as depotCatalogue from "@/repositories/catalogue";
 import * as depot from "@/repositories/variante";
-import { ecrireHistoriquePrix } from "@/repositories/promotion";
+import {
+  ecrireHistoriquePrix,
+  verrouillerPromotion,
+} from "@/repositories/promotion";
 import { exigerPrixModifiables } from "@/services/promotion";
 import {
   schemaArchivageVariante,
@@ -212,6 +215,14 @@ export async function modifierVariante(entree: unknown): Promise<Variante> {
      * variante à une promotion se juge sur cette trace.
      */
     return await prisma.$transaction(async (tx) => {
+      /*
+       * DEUX VERROUS, DANS L'ORDRE DU CHEMIN EN MASSE, revue critique de
+       * LS-319 : celui de la promotion, puis la variante. Lire la variante
+       * sans verrou laissait un onglet périmé réécrire l'ancien prix sans
+       * trace, l'historique affirmant le nouveau.
+       */
+      await verrouillerPromotion(tx);
+      await depot.verrouillerVariante(tx, id);
       const existante = await depot.lireVariante(tx, id);
       if (!existante) {
         throw new VarianteIntrouvableError();

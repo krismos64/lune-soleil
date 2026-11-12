@@ -279,3 +279,11 @@ export async function lirePrixVerrouilles(
      ORDER BY id
        FOR UPDATE`;
 }
+
+/** Verrouille une variante jusqu'à la fin de la transaction, ADR-051. */
+export async function verrouillerVariante(
+  client: ClientBase,
+  id: string,
+): Promise<void> {
+  await client.$queryRaw`SELECT id FROM variante WHERE id = ${id} FOR UPDATE`;
+}
