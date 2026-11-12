@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="fr" data-promo="active" data-vue="catalogue">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lune-soleil, maquette Black Week</title>
+<style>
+/* Maquette hors projet, LS-318 et LS-319, 12 novembre 2026.
+   Thème Black Week, noir et jaune doré, animé en continu sous le cadre de l'amendement
+   d'ADR-045 posé pour Noël : bouton de pause, rien en mouvement réduit, aucun décor sur une
+   photographie de bijou ni sur un contrôle.
+   DEUX COUCHES DISTINCTES : le thème (couleurs, soleil, poussière d'or) n'annonce rien ;
+   la promotion (bande défilante, prix barrés, badges) n'existe que si elle est active.
+   La barre de maquette bascule les deux états. */
+:root {
+  --fond: #fffdfa; --surface: #fff; --bordure: #e5d8c6; --bordure-controle: #8c7a66;
+  --texte: #3b2f2a; --texte-doux: #6f5f52; --primaire: #5f4519; --primaire-survol: #4a2a0b;
+  /* Black Week. Contrastes calculés le 12 novembre 2026 : or sur nuit 11,29:1, nuit sur or 11,29:1,
+     reflet sur nuit 17,08:1, blanc sur nuit 18,91:1, or profond sur crème 4,97:1, texte doux sur
+     blanc 6,11:1. L'or vif ne s'écrit JAMAIS sur fond clair : 1,65:1. */
+  --nuit: #121015; --nuit-2: #1d1a22; --or: #f2c230; --or-pale: #ffe9a3; --or-profond: #8a6a22; --or-sombre: #a46c17;
+  --prix-reduit: #121015;
+  --police-titre: "Iowan Old Style", "Palatino Linotype", Palatino, Baskerville, Georgia, serif;
+  --ease-sortie: cubic-bezier(0.16, 1, 0.3, 1);
+  --ressort: cubic-bezier(.34, 1.56, .64, 1);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fond); color: var(--texte); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.6; overflow-x: hidden; }
+h1, h2, h3 { font-family: var(--police-titre); font-weight: 400; line-height: 1.15; margin: 0; }
+a { color: inherit; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* En-tête du site, inchangé par le thème (ADR-046) */
+.entete { position: relative; z-index: 5; display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: #fff; border-bottom: 1px solid var(--bordure); }
+.marque { font-family: var(--police-titre); font-size: 22px; text-decoration: none; color: var(--primaire); }
+.nav { display: none; gap: 24px; font-size: 15px; }
+.nav a { text-decoration: none; }
+.panier-icone { position: relative; min-width: 44px; min-height: 44px; display: grid; place-items: center; color: var(--primaire); }
+@media (min-width: 768px) { .nav { display: flex; } .entete { padding: 16px 32px; } }
+
+/* ================= Bandeau : nuit, soleil levant, poussière d'or ================= */
+.bandeau { position: relative; overflow: hidden; isolation: isolate; padding: 32px 16px 44px; color: #fff;
+  background: radial-gradient(90% 120% at 85% 110%, #3a2a0c 0%, transparent 55%), linear-gradient(180deg, var(--nuit) 0%, var(--nuit-2) 100%); }
+.bandeau-grille { position: relative; max-width: 72rem; margin: 0 auto; display: grid; gap: 8px; }
+.decor { position: relative; height: 170px; pointer-events: none; }
+@media (min-width: 900px) {
+  .bandeau { padding: 48px 32px 60px; }
+  .bandeau-grille { grid-template-columns: 1fr 400px; align-items: center; }
+  .decor { order: 2; height: 260px; }
+}
+.soleil { position: absolute; left: 50%; top: 52%; width: 150px; height: 150px; margin: -75px 0 0 -75px; }
+@media (min-width: 900px) { .soleil { width: 220px; height: 220px; margin: -110px 0 0 -110px; } }
+.soleil .disque { position: absolute; inset: 26%; border-radius: 50%;
+  background: radial-gradient(circle at 38% 34%, #fff7d6 0 8%, var(--or-pale) 22%, var(--or) 55%, var(--or-sombre) 100%);
+  box-shadow: 0 0 40px 6px rgba(242, 194, 48, .45), 0 0 120px 30px rgba(242, 194, 48, .18); }
+.soleil .rayons { position: absolute; inset: 0; }
+.soleil .rayons line { stroke: var(--or); stroke-width: 2; stroke-linecap: round; }
+.soleil .rayons line:nth-child(even) { stroke: var(--or-pale); stroke-width: 1.2; }
+.soleil .halo { position: absolute; inset: -20%; border-radius: 50%; background: radial-gradient(circle, rgba(242, 194, 48, .22), transparent 62%); }
+.poussiere { position: absolute; inset: -20px; overflow: hidden; }
+.poussiere i { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: var(--or-pale); box-shadow: 0 0 6px 1px rgba(242, 194, 48, .7); opacity: 0; }
+.poussiere i:nth-child(3n) { width: 2px; height: 2px; }
+
+.texte-tete { position: relative; z-index: 2; }
+.ruban { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 14px; padding: 5px 14px; border-radius: 999px; border: 1px solid rgba(242, 194, 48, .55); color: var(--or); font-size: 14px; letter-spacing: .08em; text-transform: uppercase; }
+.ruban .point { width: 7px; height: 7px; border-radius: 50%; background: var(--or); }
+.titre { font-size: clamp(40px, 11vw, 76px); letter-spacing: .01em; color: #fff; }
+.titre .mot { display: inline-block; overflow: hidden; vertical-align: bottom; padding-bottom: .08em; }
+.titre .mot > span { display: inline-block; }
+/* Reflet doré qui balaie le mot « Week ». Chaque teinte du dégradé dépasse 9:1 sur la nuit. */
+.titre .or { background: linear-gradient(100deg, var(--or) 0 38%, #fff4c2 48%, var(--or) 58% 100%); background-size: 250% 100%; background-position: 100% 0;
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
+.accroche { margin: 12px 0 0; max-width: 44ch; color: rgba(255, 255, 255, .9); }
+.accroche-promo { display: none; }
+[data-promo="active"] .accroche-promo { display: block; }
+[data-promo="active"] .accroche-theme { display: none; }
+.accroche-promo strong { color: var(--or); font-weight: 600; }
+
+/* Liseré doré sous le bandeau, qui se trace. */
+.liseré-or { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: linear-gradient(90deg, transparent, var(--or) 20%, var(--or-pale) 50%, var(--or) 80%, transparent); transform-origin: left; }
+
+/* ================= Bande défilante, PROMOTION SEULEMENT ================= */
+.defile { display: none; overflow: hidden; background: var(--or); color: var(--nuit); border-block: 1px solid var(--or-sombre); }
+[data-promo="active"] .defile { display: block; }
+.defile-piste { display: flex; width: max-content; }
+.defile-piste span { display: inline-flex; align-items: center; gap: 18px; padding: 10px 18px; font-weight: 700; font-size: 15px; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
+.defile-piste span::after { content: "✦"; font-size: 12px; }
+
+/* Bouton de pause, flottant : tout ce qui bouge en continu s'y arrête. */
+.pause { position: fixed; right: 16px; bottom: 60px; z-index: 40; width: 40px; height: 40px; padding: 0; border-radius: 50%; cursor: pointer; display: none;
+  border: 1px solid var(--or); background: var(--nuit); color: var(--or); box-shadow: 0 6px 18px -6px rgba(0, 0, 0, .6); }
+.anime .pause { display: block; }
+.pause:focus-visible { outline: 2px solid var(--nuit); outline-offset: 3px; box-shadow: 0 0 0 5px var(--or); }
+.pause svg { width: 14px; height: 14px; display: block; margin: auto; }
+.pause .lecture, .pause[aria-pressed="true"] .barres { display: none; }
+.pause[aria-pressed="true"] .lecture { display: block; }
+@media (min-width: 900px) { .pause { right: 24px; } }
+
+/* ================= Catalogue ================= */
+.contenu { position: relative; max-width: 72rem; margin: 0 auto; padding: 28px 16px 80px; }
+.filtres ul { display: flex; gap: 8px; margin: 0 0 16px; padding: 0 0 8px; list-style: none; overflow-x: auto; }
+.filtre { display: block; padding: 12px 16px; border: 1px solid var(--bordure-controle); border-radius: 6px; background: var(--surface); color: var(--texte); text-decoration: none; white-space: nowrap; transition: border-color .2s, transform .3s var(--ease-sortie); }
+.filtre:hover { border-color: var(--nuit); transform: translateY(-1px); }
+.filtre[aria-current="page"] { background: var(--nuit); border-color: var(--nuit); color: var(--or); }
+.filtre:focus-visible { outline: 2px solid var(--nuit); outline-offset: 3px; }
+.compte { margin: 0 0 16px; color: var(--texte-doux); font-size: 15px; }
+.grille { display: grid; grid-template-columns: 1fr; gap: 18px; margin: 0; padding: 0; list-style: none; }
+@media (min-width: 600px) { .grille { grid-template-columns: repeat(2, 1fr); gap: 22px; } }
+@media (min-width: 1024px) { .grille { grid-template-columns: repeat(3, 1fr); gap: 26px; } }
+
+.carte { position: relative; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--bordure); border-radius: 8px; transition: box-shadow .35s, transform .45s var(--ease-sortie); }
+.carte:hover { transform: translateY(-4px); box-shadow: 0 22px 44px -26px rgba(18, 16, 21, .55); }
+/* Liseré doré qui se trace autour de la carte au survol, hors de la photo. */
+.trace { position: absolute; inset: -1px; width: calc(100% + 2px); height: calc(100% + 2px); pointer-events: none; overflow: visible; }
+.trace rect { fill: none; stroke: var(--or-sombre); stroke-width: 2; stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset .9s var(--ease-sortie); }
+.carte:hover .trace rect, .carte:focus-within .trace rect { stroke-dashoffset: 0; }
+.lien { display: flex; flex-direction: column; flex: 1; text-decoration: none; }
+.lien:focus-visible { outline: 2px solid var(--nuit); outline-offset: -2px; }
+.cadre-image { position: relative; aspect-ratio: 1; background: #fff; border-radius: 8px 8px 0 0; overflow: hidden; }
+.cadre-image img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.corps { position: relative; padding: 16px 16px 8px; flex: 1; }
+.corps h2 { font-size: 18px; color: var(--texte); font-weight: 600; }
+.categorie { margin: 4px 0 0; font-size: 14px; color: var(--texte-doux); }
+.dispo { display: inline-block; margin: 10px 0 0; padding: 3px 12px; border-radius: 3px; background: #9a4a26; color: #fff; font-size: 13px; font-weight: 600; }
+
+/* Bloc prix. Sans promotion : le prix seul, comme aujourd'hui. */
+.prix { position: relative; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 14px 0 0; }
+.prix .actuel { font-weight: 700; font-size: 18px; color: var(--primaire); }
+.prix .ancien, .prix .badge { display: none; }
+[data-promo="active"] .prix .actuel { color: var(--prix-reduit); font-size: 20px; }
+[data-promo="active"] .prix .ancien { display: inline-block; position: relative; color: var(--texte-doux); font-size: 15px; }
+/* Le trait du prix barré est dessiné par un pseudo-élément pour pouvoir s'animer ; text-decoration
+   reste posé en secours, sans script et en mouvement réduit. */
+[data-promo="active"] .prix .ancien { text-decoration: line-through; text-decoration-color: var(--or-profond); text-decoration-thickness: 2px; }
+.anime[data-promo="active"] .prix .ancien { text-decoration: none; }
+.anime[data-promo="active"] .prix .ancien::after { content: ""; position: absolute; left: -2px; right: -2px; top: 52%; height: 2px; background: var(--or-profond); transform: scaleX(0) rotate(-6deg); transform-origin: left; }
+[data-promo="active"] .prix .badge { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 4px; background: var(--nuit); color: var(--or); font-size: 14px; font-weight: 700; letter-spacing: .02em; position: relative; overflow: hidden; }
+.badge::after { content: ""; position: absolute; top: 0; bottom: 0; width: 40%; left: -60%; background: linear-gradient(100deg, transparent, rgba(255, 244, 194, .55), transparent); }
+
+.ajout { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 10px; margin: 10px 16px 16px; min-height: 44px; border: 0; border-radius: 4px; overflow: hidden; background: var(--nuit); color: #fff; font: inherit; font-weight: 600; cursor: pointer; transition: transform .2s; }
+.ajout::before { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(242, 194, 48, .35) 50%, transparent 70%); transform: translateX(-100%); transition: transform .7s var(--ease-sortie); }
+.ajout:hover::before { transform: translateX(100%); }
+.ajout:active { transform: scale(.98); }
+.ajout:focus-visible { outline: 2px solid var(--nuit); outline-offset: 3px; }
+.ajout .icone { width: 18px; height: 18px; color: var(--or); }
+.ajout.fait .texte-ajout::after { content: " ✓"; }
+.gerbe { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; }
+.gerbe i { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: var(--or); box-shadow: 0 0 6px var(--or); animation: eclate .8s var(--ease-sortie) forwards; }
+@keyframes eclate { from { opacity: 1; transform: translate(0, 0) scale(.5); } to { opacity: 0; transform: translate(var(--gx), var(--gy)) scale(1); } }
+
+/* Poussière d'or des marges, grand écran seulement, jamais sur la grille. */
+.marge { display: none; position: absolute; top: 0; bottom: 0; width: calc((100vw - 72rem) / 2 - 8px); overflow: hidden; pointer-events: none; }
+.marge.gauche { right: 100%; } .marge.droite { left: 100%; }
+@media (min-width: 1240px) { .marge { display: block; } }
+.marge i { position: absolute; top: -10px; width: 4px; height: 4px; border-radius: 50%; background: var(--or); box-shadow: 0 0 6px rgba(242, 194, 48, .8); opacity: 0; }
+
+/* ================= Fiche produit et panier (échantillons) ================= */
+.vue { display: none; }
+[data-vue="catalogue"] .vue-catalogue, [data-vue="fiche"] .vue-fiche, [data-vue="panier"] .vue-panier { display: block; }
+.fiche { display: grid; gap: 24px; }
+@media (min-width: 900px) { .fiche { grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; } }
+.fiche .cadre-image { border: 1px solid var(--bordure); border-radius: 8px; }
+.fiche h1 { font-size: clamp(28px, 6vw, 40px); color: var(--texte); }
+.fiche .prix .actuel { font-size: 26px; }
+.fiche .prix .ancien { font-size: 18px; }
+.fiche .mention { margin: 8px 0 0; font-size: 14px; color: var(--texte-doux); }
+.fiche .ajout { margin: 20px 0 0; width: 100%; }
+.panier { max-width: 40rem; }
+.panier h1 { font-size: clamp(28px, 6vw, 40px); margin-bottom: 20px; }
+.ligne { display: grid; grid-template-columns: 72px 1fr; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--bordure); }
+.ligne img { width: 72px; height: 72px; object-fit: contain; border: 1px solid var(--bordure); border-radius: 6px; background: #fff; }
+.ligne h2 { font-size: 16px; font-weight: 600; color: var(--texte); }
+.ligne .prix { margin-top: 6px; }
+.ligne .prix .actuel { font-size: 17px; }
+.totaux { margin: 18px 0 0; display: grid; gap: 6px; }
+.totaux div { display: flex; justify-content: space-between; gap: 12px; }
+.totaux .economie { display: none; color: var(--or-profond); font-weight: 600; }
+[data-promo="active"] .totaux .economie { display: flex; }
+.totaux .total { font-weight: 700; font-size: 18px; padding-top: 8px; border-top: 1px solid var(--bordure); }
+
+.pied { background: var(--nuit); color: #e9dcc2; padding: 40px 16px 80px; text-align: center; font-size: 14px; }
+.pied .marque { color: var(--or); }
+
+/* ================= Mouvement ================= */
+/* Entrée du bandeau */
+.anime .titre .mot > span { transform: translateY(110%); animation: monte .9s var(--ease-sortie) forwards; animation-delay: calc(.15s + var(--i) * .1s); }
+@keyframes monte { to { transform: none; } }
+.anime .ruban, .anime .accroche { opacity: 0; animation: apparait .8s ease .6s forwards; }
+@keyframes apparait { to { opacity: 1; } }
+.anime .liseré-or { transform: scaleX(0); animation: trace 1.4s var(--ease-sortie) .3s forwards; }
+@keyframes trace { to { transform: scaleX(1); } }
+.anime .ruban .point { animation: palpite 1.6s ease-in-out infinite; }
+@keyframes palpite { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.6); opacity: .5; } }
+/* Le soleil se lève, puis ses rayons tournent et respirent en continu. */
+.anime .soleil { animation: leve 1.6s var(--ease-sortie) both; }
+@keyframes leve { from { transform: translateY(60%) scale(.7); opacity: 0; } to { transform: none; opacity: 1; } }
+.anime .soleil .rayons { animation: tourne 40s linear infinite; }
+@keyframes tourne { to { transform: rotate(360deg); } }
+.anime .soleil .rayons line { stroke-dasharray: 1; stroke-dashoffset: 1; animation: rayon 1.2s var(--ease-sortie) forwards, respire 3.4s ease-in-out infinite; animation-delay: calc(.8s + var(--i) * .04s), calc(2.2s + var(--i) * .12s); }
+@keyframes rayon { to { stroke-dashoffset: 0; } }
+@keyframes respire { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+.anime .soleil .halo { animation: halo 4s ease-in-out infinite; }
+@keyframes halo { 0%, 100% { transform: scale(1); opacity: .9; } 50% { transform: scale(1.12); opacity: .55; } }
+.anime .titre .or { animation: reflet 4.5s ease-in-out 1.2s infinite; }
+@keyframes reflet { 0% { background-position: 100% 0; } 45%, 100% { background-position: -50% 0; } }
+.anime .poussiere i { animation: flotte var(--t) ease-in-out var(--d) infinite; }
+@keyframes flotte { 0% { opacity: 0; transform: translate(0, 0); } 20% { opacity: .95; } 80% { opacity: .8; } 100% { opacity: 0; transform: translate(var(--x), -140px); } }
+/* Bande défilante */
+.anime .defile-piste { animation: defile 28s linear infinite; }
+@keyframes defile { to { transform: translateX(-50%); } }
+/* Cartes : entrée en cascade, puis le prix se barre, le prix réduit et le tampon arrivent. */
+.anime .carte { opacity: 0; transform: translateY(26px); }
+.anime .carte.vu { opacity: 1; transform: none; transition: opacity .7s ease, transform .8s var(--ease-sortie), box-shadow .35s; transition-delay: calc(var(--rang, 0) * 80ms); }
+.anime .carte.vu:hover { transform: translateY(-4px); transition-delay: 0s; }
+.anime[data-promo="active"] .vu .prix .ancien::after, .anime[data-promo="active"] .vue-fiche .prix .ancien::after, .anime[data-promo="active"] .vue-panier .prix .ancien::after { animation: barre .5s var(--ease-sortie) forwards; animation-delay: calc(var(--rang, 0) * 80ms + .5s); }
+@keyframes barre { to { transform: scaleX(1) rotate(-6deg); } }
+.anime[data-promo="active"] .prix .actuel { display: inline-block; }
+.anime[data-promo="active"] .vu .prix .actuel, .anime[data-promo="active"] .vue-fiche .prix .actuel, .anime[data-promo="active"] .vue-panier .prix .actuel { animation: surgit .6s var(--ressort) both; animation-delay: calc(var(--rang, 0) * 80ms + .85s); }
+@keyframes surgit { from { opacity: 0; transform: translateY(8px) scale(.9); } to { opacity: 1; transform: none; } }
+.anime[data-promo="active"] .vu .prix .badge, .anime[data-promo="active"] .vue-fiche .prix .badge, .anime[data-promo="active"] .vue-panier .prix .badge { animation: tampon .55s var(--ressort) both; animation-delay: calc(var(--rang, 0) * 80ms + 1.1s); }
+@keyframes tampon { from { opacity: 0; transform: scale(2.2) rotate(-14deg); } 70% { opacity: 1; transform: scale(.92) rotate(2deg); } to { opacity: 1; transform: rotate(-3deg); } }
+.anime .badge::after { animation: brille-badge 3.8s ease-in-out infinite; animation-delay: calc(2s + var(--rang, 0) * 200ms); }
+@keyframes brille-badge { 0%, 70% { left: -60%; } 100% { left: 130%; } }
+.anime .ajout:hover .icone { animation: saute .6s var(--ressort); }
+@keyframes saute { 40% { transform: translateY(-5px) rotate(-8deg); } 70% { transform: translateY(1px); } }
+.anime .marge i { animation: tombe var(--t) linear var(--d) infinite; }
+@keyframes tombe { 0% { opacity: 0; transform: translate(0, 0); } 10% { opacity: .9; } 90% { opacity: .8; } 100% { opacity: 0; transform: translate(var(--x), 1400px); } }
+
+.pause-animations *, .pause-animations *::before, .pause-animations *::after { animation-play-state: paused !important; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .poussiere, .marge { display: none !important; }
+  .anime .carte { opacity: 1; transform: none; }
+  .anime[data-promo="active"] .prix .ancien { text-decoration: line-through; text-decoration-color: var(--or-profond); text-decoration-thickness: 2px; }
+  .anime[data-promo="active"] .prix .ancien::after { display: none; }
+  .anime .titre .mot > span, .anime .soleil .rayons line { transform: none; stroke-dashoffset: 0; }
+  .anime .ruban, .anime .accroche { opacity: 1; }
+  .anime .liseré-or { transform: none; }
+  .defile-piste { flex-wrap: wrap; width: auto; justify-content: center; }
+  .defile-piste span[aria-hidden] { display: none; }
+}
+
+/* Barre de maquette */
+.maquette { position: fixed; inset: auto 0 0 0; z-index: 50; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 8px; padding: 6px 12px; background: #2a2330; color: #f3e6cc; font-size: 12px; letter-spacing: .03em; }
+.maquette button { min-height: 30px; padding: 0 11px; border-radius: 999px; border: 1px solid rgba(243, 230, 204, .35); background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.maquette button[aria-pressed="true"] { background: #f3e6cc; color: #2a2330; }
+.maquette .sep { opacity: .5; }
+</style>
+</head>
+<body>
+<div class="maquette" role="toolbar" aria-label="Maquette">
+  Maquette Black Week, hors projet.
+  <span>Promotion :</span><button type="button" data-promo-choix="active" aria-pressed="true">active</button><button type="button" data-promo-choix="inactive" aria-pressed="false">inactive, thème seul</button>
+  <span class="sep">|</span>
+  <button type="button" data-vue-choix="catalogue" aria-pressed="true">Catalogue</button><button type="button" data-vue-choix="fiche" aria-pressed="false">Fiche</button><button type="button" data-vue-choix="panier" aria-pressed="false">Panier</button>
+  <button type="button" id="rejouer">Rejouer</button>
+</div>
+
+<header class="entete">
+  <a class="marque" href="https://lune-soleil.fr/">Lune-soleil</a>
+  <nav class="nav" aria-label="Navigation principale"><a href="#" aria-current="page">Les créations</a><a href="https://lune-soleil.fr/atelier">L'atelier</a><a href="https://lune-soleil.fr/aide">Livraison et aide</a><a href="https://lune-soleil.fr/compte/connexion">Se connecter</a></nav>
+  <a class="panier-icone" href="#" aria-label="Votre panier"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 8h12l-1 12H7L6 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></a>
+</header>
+
+<main id="contenu">
+  <section class="bandeau" aria-labelledby="titre-page">
+    <div class="bandeau-grille">
+      <div class="decor" aria-hidden="true">
+        <div class="poussiere"></div>
+        <div class="soleil">
+          <div class="halo"></div>
+          <svg class="rayons" viewBox="-100 -100 200 200"></svg>
+          <div class="disque"></div>
+        </div>
+      </div>
+      <div class="texte-tete">
+        <p class="ruban"><span class="point" aria-hidden="true"></span>Fait main, pièces uniques</p>
+        <h1 class="titre" id="titre-page" aria-label="Black Week"><span aria-hidden="true"><span class="mot"><span style="--i:0">Black</span></span> <span class="mot"><span class="or" style="--i:1">Week</span></span></span></h1>
+        <p class="accroche accroche-theme">Des bijoux faits main, une pièce à la fois, sous un soleil d'or.</p>
+        <p class="accroche accroche-promo"><strong>-30 % sur toute la boutique.</strong> Chaque bijou est fait main et créé à l'unité : la pièce que vous choisissez est la seule.</p>
+      </div>
+    </div>
+    <div class="liseré-or" aria-hidden="true"></div>
+  </section>
+  <div class="defile">
+    <p class="sr">-30 % sur toute la boutique pendant la Black Week.</p>
+    <div class="defile-piste" aria-hidden="true"></div>
+  </div>
+  <button class="pause" type="button" aria-pressed="false" aria-label="Mettre en pause les animations" title="Mettre en pause les animations"><svg class="barres" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 2v8M9 2v8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><svg class="lecture" viewBox="0 0 12 12" aria-hidden="true"><path d="M3.5 2 10 6l-6.5 4z" fill="currentColor"/></svg></button>
+
+  <div class="contenu">
+    <div class="marge gauche" aria-hidden="true"></div><div class="marge droite" aria-hidden="true"></div>
+
+    <div class="vue vue-catalogue">
+      <nav class="filtres" aria-label="Filtrer par catégorie">
+        <ul>
+          <li><a class="filtre" href="#" aria-current="page">Tout voir</a></li>
+          <li><a class="filtre" href="#">Boucles d'oreilles</a></li>
+          <li><a class="filtre" href="#">Bagues</a></li>
+          <li><a class="filtre" href="#">Boucles d'oreilles collection Noël</a></li>
+        </ul>
+      </nav>
+      <p class="compte" role="status">50 pièces, page 1 sur 5.</p>
+      <ul class="grille"></ul>
+    </div>
+
+    <div class="vue vue-fiche">
+      <article class="fiche" style="--rang:0">
+        <div class="cadre-image"><img src="https://lune-soleil.fr/medias/243741c3-a24c-4a12-9b5a-668eed8e053c/640.avif" alt="Boucles d’oreilles « Sunkiss »" width="640" height="640"></div>
+        <div>
+          <h1>Boucles d’oreilles « Sunkiss »</h1>
+          <p class="categorie">Boucles d'oreilles</p>
+          <p class="prix"><span class="sr promo-sr">Prix initial :</span><s class="ancien">12,00 €</s><span class="sr promo-sr">Prix réduit :</span><span class="actuel" data-plein="12,00 €" data-reduit="8,40 €">8,40 €</span><span class="badge">-30 %</span></p>
+          <p class="mention promo-mention">Prix barré : le plus bas pratiqué sur les 30 jours précédant la Black Week.</p>
+          <p class="dispo">Dernière pièce</p>
+          <button class="ajout" type="button"><svg class="icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6 8h12l-1 12H7L6 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg><span class="texte-ajout">Ajouter au panier</span></button>
+        </div>
+      </article>
+    </div>
+
+    <div class="vue vue-panier">
+      <section class="panier" aria-labelledby="titre-panier">
+        <h1 id="titre-panier">Votre panier</h1>
+        <div class="ligne" style="--rang:0"><img src="https://lune-soleil.fr/medias/243741c3-a24c-4a12-9b5a-668eed8e053c/320.avif" alt="" width="72" height="72"><div><h2>Boucles d’oreilles « Sunkiss »</h2><p class="prix"><span class="sr promo-sr">Prix initial :</span><s class="ancien">12,00 €</s><span class="sr promo-sr">Prix réduit :</span><span class="actuel" data-plein="12,00 €" data-reduit="8,40 €">8,40 €</span><span class="badge">-30 %</span></p></div></div>
+        <div class="ligne" style="--rang:1"><img src="https://lune-soleil.fr/medias/d756b7a4-d505-4c3b-a950-110879a16db1/320.avif" alt="" width="72" height="72"><div><h2>Boucles d’oreilles « Golden Sunset »</h2><p class="prix"><span class="sr promo-sr">Prix initial :</span><s class="ancien">12,00 €</s><span class="sr promo-sr">Prix réduit :</span><span class="actuel" data-plein="12,00 €" data-reduit="8,40 €">8,40 €</span><span class="badge">-30 %</span></p></div></div>
+        <div class="totaux">
+          <div><span>Sous-total</span><span class="sous-total" data-plein="24,00 €" data-reduit="16,80 €">16,80 €</span></div>
+          <div class="economie"><span>Réduction Black Week</span><span>-7,20 €</span></div>
+          <div><span>Livraison</span><span>choisie à l'étape suivante</span></div>
+          <div class="total"><span>Total des articles</span><span class="sous-total" data-plein="24,00 €" data-reduit="16,80 €">16,80 €</span></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+<footer class="pied"><a class="marque" href="https://lune-soleil.fr/">Lune-soleil</a><p>France métropolitaine, Corse comprise</p></footer>
+
+<script>
+(() => {
+  const racine = document.documentElement;
+  const mouvementReduit = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!mouvementReduit) racine.classList.add("anime");
+
+  // Douze premières pièces réellement en ligne le 6 octobre 2026, données publiques,
+  // reprises du prototype de Noël. 1200 centimes, réduits de 30 % au centime inférieur : 840.
+  const pieces = [
+    ["boucles-d-oreilles-sapin-enchante", "https://lune-soleil.fr/medias/b9c42178-6f4d-47f5-9244-a6b3ecef241f", "Boucles d’oreilles « Sapin Enchanté »", "Boucles d'oreilles collection Noël"],
+    ["boucles-d-oreilles-neige-d-hiver", "https://lune-soleil.fr/medias/de7dabfe-124b-48e7-bcc1-9a7b8bd78475", "Boucles d’oreilles « Neige d’Hiver »", "Boucles d'oreilles collection Noël"],
+    ["boucles-d-oreilles-marshmallow-smile", "https://lune-soleil.fr/medias/70d8c2e1-c845-48d8-8f4d-f5f11d213916", "Boucles d’oreilles « Marshmallow Smile »", "Boucles d'oreilles collection Noël"],
+    ["boucles-d-oreilles-pain-d-epices", "https://lune-soleil.fr/medias/c348b66d-009e-4029-96f7-532dc114e199", "Boucles d’oreilles « Pain d’Épices »", "Boucles d'oreilles collection Noël"],
+    ["boucles-d-oreilles-nova-candy", "https://lune-soleil.fr/medias/724d8455-5b61-40cc-82d1-b6145edffc21", "Boucles d’oreilles « Nova Candy »", "Boucles d'oreilles"],
+    ["boucles-d-oreilles-pepite", "https://lune-soleil.fr/medias/afbd17f8-5922-493d-a340-7709f061df05", "Boucles d’oreilles « Pépite »", "Boucles d'oreilles"],
+    ["boucles-d-oreilles-neon-flora", "https://lune-soleil.fr/medias/66851ac0-797d-4203-8d01-aca38562a2f3", "Boucles d’oreilles « Néon Flora »", "Boucles d'oreilles"],
+    ["boucles-d-oreilles-sunkiss", "https://lune-soleil.fr/medias/243741c3-a24c-4a12-9b5a-668eed8e053c", "Boucles d’oreilles « Sunkiss »", "Boucles d'oreilles"],
+    ["boucles-d-oreilles-golden-sunset", "https://lune-soleil.fr/medias/d756b7a4-d505-4c3b-a950-110879a16db1", "Boucles d’oreilles « Golden Sunset »", "Boucles d'oreilles"],
+    ["boucles-d-oreilles-jardin-d-aube", "https://lune-soleil.fr/medias/a3e52805-0cee-4360-98d7-63f64e45841d", "Boucles d’oreilles « Jardin d’Aube »", "Boucles d'oreilles"],
+    ["boucles-d-oreilles-cosmic-confetti", "https://lune-soleil.fr/medias/6f64118b-265e-4b42-882c-923e326eabc4", "Boucles d’oreilles « Cosmic Confetti »", "Boucles d'oreilles"],
+    ["boucles-d-oreilles-candy-bloom", "https://lune-soleil.fr/medias/3282d95b-a009-4066-87c9-9c907d1f6924", "Boucles d’oreilles « Coralia »", "Boucles d'oreilles"],
+  ];
+  const reduire = (centimes) => Math.floor((centimes * 70) / 100);
+  const euros = (c) => (c / 100).toFixed(2).replace(".", ",") + " €";
+  const plein = 1200, reduit = reduire(plein);
+  const grille = document.querySelector(".grille");
+  pieces.forEach(([slug, media, nom, categorie], i) => {
+    const li = document.createElement("li");
+    li.className = "carte";
+    const m = media;
+    li.innerHTML = `<svg class="trace" aria-hidden="true"><rect x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)" rx="8" pathLength="1"/></svg>
+      <a class="lien" href="https://lune-soleil.fr/produit/${slug}"><div class="cadre-image"><img src="${m}/640.avif" srcset="${m}/320.avif 320w, ${m}/640.avif 640w" sizes="(min-width: 1024px) 340px, (min-width: 600px) 45vw, 90vw" alt="${nom}" width="640" height="640" loading="${i < 3 ? "eager" : "lazy"}"></div>
+      <div class="corps"><h2>${nom}</h2><p class="categorie">${categorie}</p>
+      <p class="prix"><span class="sr promo-sr">Prix initial :</span><s class="ancien">${euros(plein)}</s><span class="sr promo-sr">Prix réduit :</span><span class="actuel" data-plein="${euros(plein)}" data-reduit="${euros(reduit)}">${euros(reduit)}</span><span class="badge">-30 %</span></p>
+      <p class="dispo">Dernière pièce</p></div></a>
+      <button class="ajout" type="button"><svg class="icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6 8h12l-1 12H7L6 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg><span class="texte-ajout">Ajouter au panier</span></button>`;
+    grille.appendChild(li);
+  });
+  // Le rect du liseré prend la taille réelle de la carte (calc() n'est pas admis en attribut SVG partout).
+  const ajusterTraces = () => document.querySelectorAll(".carte").forEach((c) => {
+    const r = c.querySelector(".trace rect"); if (!r) return;
+    r.setAttribute("width", c.offsetWidth); r.setAttribute("height", c.offsetHeight);
+  });
+  addEventListener("resize", ajusterTraces); requestAnimationFrame(ajusterTraces);
+
+  // Promotion active ou non : prix affiché, textes lus par un lecteur d'écran.
+  const choixPromo = document.querySelectorAll("[data-promo-choix]");
+  const appliquerPromo = (v) => {
+    racine.dataset.promo = v;
+    choixPromo.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.promoChoix === v)));
+    document.querySelectorAll("[data-plein]").forEach((e) => { e.textContent = v === "active" ? e.dataset.reduit : e.dataset.plein; });
+    document.querySelectorAll(".promo-sr, .promo-mention").forEach((e) => { e.hidden = v !== "active"; });
+    try { sessionStorage.setItem("maquette-promo", v); } catch {}
+  };
+  let promo = "active";
+  try { const m = sessionStorage.getItem("maquette-promo"); if (m === "active" || m === "inactive") promo = m; } catch {}
+  appliquerPromo(promo);
+  choixPromo.forEach((b) => b.addEventListener("click", () => appliquerPromo(b.dataset.promoChoix)));
+
+  const choixVue = document.querySelectorAll("[data-vue-choix]");
+  const appliquerVue = (v) => {
+    racine.dataset.vue = v;
+    choixVue.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.vueChoix === v)));
+    // Rejouer l'entrée des prix de la vue affichée.
+    document.querySelectorAll(".vue-fiche .prix > *, .vue-panier .prix > *").forEach((e) => { e.style.animation = "none"; e.offsetHeight; e.style.animation = ""; });
+    requestAnimationFrame(ajusterTraces);
+  };
+  choixVue.forEach((b) => b.addEventListener("click", () => appliquerVue(b.dataset.vueChoix)));
+  document.getElementById("rejouer").addEventListener("click", () => location.reload());
+
+  // Bande défilante : la phrase répétée deux fois pour boucler sans saut.
+  const piste = document.querySelector(".defile-piste");
+  const phrases = ["-30 % sur toute la boutique", "Black Week", "Bijoux faits main", "Pièces uniques"];
+  for (let k = 0; k < 2; k++) for (let r = 0; r < 3; r++) phrases.forEach((p) => { const s = document.createElement("span"); s.textContent = p; piste.appendChild(s); });
+
+  // Rayons du soleil.
+  const rayons = document.querySelector(".rayons");
+  for (let i = 0; i < 24; i++) {
+    const a = (i / 24) * Math.PI * 2, r1 = i % 2 ? 58 : 54, r2 = i % 2 ? 78 : 96;
+    const l = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    l.setAttribute("x1", (Math.cos(a) * r1).toFixed(1)); l.setAttribute("y1", (Math.sin(a) * r1).toFixed(1));
+    l.setAttribute("x2", (Math.cos(a) * r2).toFixed(1)); l.setAttribute("y2", (Math.sin(a) * r2).toFixed(1));
+    l.setAttribute("pathLength", "1"); l.style.setProperty("--i", i);
+    rayons.appendChild(l);
+  }
+
+  if (mouvementReduit) return;
+
+  // Poussière d'or du bandeau et des marges.
+  const semer = (cible, n, t0, t1) => { for (let i = 0; i < n; i++) {
+    const p = document.createElement("i");
+    p.style.left = Math.random() * 100 + "%"; p.style.top = (cible.classList.contains("marge") ? -2 : 20 + Math.random() * 80) + "%";
+    p.style.setProperty("--t", (t0 + Math.random() * (t1 - t0)).toFixed(1) + "s");
+    p.style.setProperty("--d", (-Math.random() * t1).toFixed(1) + "s");
+    p.style.setProperty("--x", (Math.random() * 60 - 30).toFixed(0) + "px");
+    cible.appendChild(p);
+  } };
+  semer(document.querySelector(".poussiere"), 26, 5, 9);
+  document.querySelectorAll(".marge").forEach((m) => semer(m, 18, 14, 22));
+
+  // Entrée des cartes à la vue.
+  const io = new IntersectionObserver((entrees) => entrees.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("vu"); io.unobserve(e.target); } }), { threshold: .15 });
+  document.querySelectorAll(".carte").forEach((c, i) => { c.style.setProperty("--rang", i % 3); io.observe(c); });
+
+  // Gerbe d'étincelles au clic sur « Ajouter au panier » (démonstration, rien n'est ajouté).
+  document.addEventListener("click", (ev) => {
+    const b = ev.target.closest(".ajout"); if (!b) return;
+    b.classList.add("fait");
+    const g = document.createElement("span"); g.className = "gerbe";
+    for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2, d = 34 + Math.random() * 22;
+      const s = document.createElement("i"); s.style.setProperty("--gx", (Math.cos(a) * d).toFixed(0) + "px"); s.style.setProperty("--gy", (Math.sin(a) * d).toFixed(0) + "px"); g.appendChild(s); }
+    b.appendChild(g); setTimeout(() => { g.remove(); b.classList.remove("fait"); }, 1200);
+  });
+
+  // Pause.
+  const pause = document.querySelector(".pause");
+  pause.addEventListener("click", () => {
+    const enPause = pause.getAttribute("aria-pressed") !== "true";
+    pause.setAttribute("aria-pressed", String(enPause));
+    pause.setAttribute("aria-label", enPause ? "Reprendre les animations" : "Mettre en pause les animations");
+    racine.classList.toggle("pause-animations", enPause);
+  });
+})();
+</script>
+</body>
+</html>
