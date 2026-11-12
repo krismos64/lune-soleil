@@ -277,13 +277,13 @@ a { color: inherit; }
         <p class="ruban"><span class="point" aria-hidden="true"></span>Fait main, pièces uniques</p>
         <h1 class="titre" id="titre-page" aria-label="Black Week"><span aria-hidden="true"><span class="mot"><span style="--i:0">Black</span></span> <span class="mot"><span class="or" style="--i:1">Week</span></span></span></h1>
         <p class="accroche accroche-theme">Des bijoux faits main, une pièce à la fois, sous un soleil d'or.</p>
-        <p class="accroche accroche-promo"><strong>-30 % sur toute la boutique.</strong> Chaque bijou est fait main et créé à l'unité : la pièce que vous choisissez est la seule.</p>
+        <p class="accroche accroche-promo"><strong>-30 % sur toute la boutique, du lundi 23 au dimanche 29 novembre.</strong> Chaque bijou est fait main et créé à l'unité : la pièce que vous choisissez est la seule.</p>
       </div>
     </div>
     <div class="liseré-or" aria-hidden="true"></div>
   </section>
   <div class="defile">
-    <p class="sr">-30 % sur toute la boutique pendant la Black Week.</p>
+    <p class="sr">-30 % sur toute la boutique pendant la Black Week, du lundi 23 au dimanche 29 novembre.</p>
     <div class="defile-piste" aria-hidden="true"></div>
   </div>
   <button class="pause" type="button" aria-pressed="false" aria-label="Mettre en pause les animations" title="Mettre en pause les animations"><svg class="barres" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 2v8M9 2v8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><svg class="lecture" viewBox="0 0 12 12" aria-hidden="true"><path d="M3.5 2 10 6l-6.5 4z" fill="currentColor"/></svg></button>
@@ -311,7 +311,7 @@ a { color: inherit; }
           <h1>Boucles d’oreilles « Sunkiss »</h1>
           <p class="categorie">Boucles d'oreilles</p>
           <p class="prix"><span class="sr promo-sr">Prix initial :</span><s class="ancien">12,00 €</s><span class="sr promo-sr">Prix réduit :</span><span class="actuel" data-plein="12,00 €" data-reduit="8,40 €">8,40 €</span><span class="badge">-30 %</span></p>
-          <p class="mention promo-mention">Prix barré : le plus bas pratiqué sur les 30 jours précédant la Black Week.</p>
+          <p class="mention promo-mention">Prix barré : prix le plus bas pratiqué au cours des 30 jours précédant la réduction.</p>
           <p class="dispo">Dernière pièce</p>
           <button class="ajout" type="button"><svg class="icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6 8h12l-1 12H7L6 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg><span class="texte-ajout">Ajouter au panier</span></button>
         </div>
@@ -407,7 +407,7 @@ a { color: inherit; }
 
   // Bande défilante : la phrase répétée deux fois pour boucler sans saut.
   const piste = document.querySelector(".defile-piste");
-  const phrases = ["-30 % sur toute la boutique", "Black Week", "Bijoux faits main", "Pièces uniques"];
+  const phrases = ["-30 % sur toute la boutique", "Du 23 au 29 novembre", "Black Week", "Bijoux faits main", "Pièces uniques"];
   for (let k = 0; k < 2; k++) for (let r = 0; r < 3; r++) phrases.forEach((p) => { const s = document.createElement("span"); s.textContent = p; piste.appendChild(s); });
 
   // Rayons du soleil.
