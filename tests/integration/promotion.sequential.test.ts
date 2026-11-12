@@ -283,7 +283,10 @@ describe("le prix figé sur la commande", () => {
     // 2999 réduit au centime inférieur, 2099, plus 1200 non réduit.
     expect(panier.totalArticlesCentimes).toBe(3299);
     expect(
-      panier.lignes.map((l) => [l.prixUnitaireCentimes, l.prixReferenceCentimes]),
+      panier.lignes.map((l) => [
+        l.prixUnitaireCentimes,
+        l.prixReferenceCentimes,
+      ]),
     ).toEqual(
       expect.arrayContaining([
         [2099, 2999],
@@ -377,7 +380,8 @@ describe("le prix figé sur la commande", () => {
     });
     await promotion.desactiverPromotion({ acteurId: null });
 
-    const demandes: { lignes: readonly { prixUnitaireCentimes: number }[] }[] = [];
+    const demandes: { lignes: readonly { prixUnitaireCentimes: number }[] }[] =
+      [];
     const { demarrerPaiement } = await import("@/services/paiement");
     await demarrerPaiement({
       commandeId: issue.commandeId,
@@ -427,9 +431,8 @@ describe("la facture, arbitrage 3 d'ADR-051", () => {
       configuration: CONFIGURATION,
     });
 
-    const { traiterEvenementPaiement } = await import(
-      "@/services/webhook-paiement"
-    );
+    const { traiterEvenementPaiement } =
+      await import("@/services/webhook-paiement");
     const evenement = {
       identifiant: `evt_${issue.commandeId}`,
       type: "PAIEMENT_REUSSI" as const,
@@ -462,7 +465,10 @@ describe("la facture, arbitrage 3 d'ADR-051", () => {
       instantane.lignes.map((l) => [l.prixUnitaireCentimes, l.reduction]),
     ).toEqual(
       expect.arrayContaining([
-        [3430, { prixReferenceCentimes: 4900, libelle: "Black Week", taux: 30 }],
+        [
+          3430,
+          { prixReferenceCentimes: 4900, libelle: "Black Week", taux: 30 },
+        ],
         [1200, null],
       ]),
     );
