@@ -1,0 +1,334 @@
+/*
+ * Décors du thème Black Week, LS-318. Couleurs : jetons `--ls-bw-*` de
+ * `tokens.css`, l'or vif n'y sert ici que de décor, jamais de texte sur fond
+ * clair. Propriétés animées : `transform`, `opacity`, `stroke-dashoffset`.
+ */
+
+/* ---------- Zone du soleil ---------- */
+
+.zone {
+  position: relative;
+  height: 170px;
+  pointer-events: none;
+}
+
+@media (min-width: 900px) {
+  .zone {
+    height: 260px;
+  }
+}
+
+.soleil {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: 150px;
+  height: 150px;
+  margin: -75px 0 0 -75px;
+}
+
+@media (min-width: 900px) {
+  .soleil {
+    width: 220px;
+    height: 220px;
+    margin: -110px 0 0 -110px;
+  }
+}
+
+.halo {
+  position: absolute;
+  inset: -20%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--ls-bw-or-sur-nuit) 22%, transparent),
+    transparent 62%
+  );
+}
+
+.rayons {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.rayonLong,
+.rayonCourt {
+  stroke-linecap: round;
+}
+
+.rayonLong {
+  stroke: var(--ls-bw-or-sur-nuit);
+  stroke-width: 2;
+}
+
+.rayonCourt {
+  stroke: var(--ls-bw-reflet-sur-nuit);
+  stroke-width: 1.2;
+}
+
+.disque {
+  position: absolute;
+  inset: 26%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 38% 34%,
+    var(--ls-surface) 0 8%,
+    var(--ls-bw-reflet-sur-nuit) 22%,
+    var(--ls-bw-or-sur-nuit) 55%,
+    var(--ls-or-moyen) 100%
+  );
+  box-shadow:
+    0 0 40px 6px color-mix(in srgb, var(--ls-bw-or-sur-nuit) 45%, transparent),
+    0 0 120px 30px color-mix(in srgb, var(--ls-bw-or-sur-nuit) 18%, transparent);
+}
+
+/* ---------- Poussière d'or ---------- */
+
+.poussiere {
+  position: absolute;
+  inset: -20px;
+  overflow: hidden;
+}
+
+.grain {
+  position: absolute;
+  left: var(--gauche);
+  top: var(--haut);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--ls-bw-reflet-sur-nuit);
+  box-shadow: 0 0 6px 1px
+    color-mix(in srgb, var(--ls-bw-or-sur-nuit) 70%, transparent);
+  opacity: 0;
+}
+
+.grain:nth-child(3n) {
+  width: 2px;
+  height: 2px;
+}
+
+/* ---------- Liseré d'or ---------- */
+
+.lisere {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--ls-bw-or-sur-nuit) 20%,
+    var(--ls-bw-reflet-sur-nuit) 50%,
+    var(--ls-bw-or-sur-nuit) 80%,
+    transparent
+  );
+  transform-origin: left;
+}
+
+/* ---------- Marges dorées du catalogue ---------- */
+
+/* Masquées sous 1240 px, conteneur compris, même motif que la neige. */
+.marges {
+  display: none;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.marge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: calc((100vw - 72rem) / 2 - 8px);
+  overflow: hidden;
+}
+
+.margeGauche {
+  right: 100%;
+}
+
+.margeDroite {
+  left: 100%;
+}
+
+@media (min-width: 1240px) {
+  .marges {
+    display: block;
+  }
+}
+
+.grainMarge {
+  position: absolute;
+  top: -10px;
+  left: var(--gauche);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--ls-bw-or-sur-nuit);
+  box-shadow: 0 0 6px
+    color-mix(in srgb, var(--ls-bw-or-sur-nuit) 80%, transparent);
+  opacity: 0;
+}
+
+/* ---------- Liseré des cartes ---------- */
+
+.traceCarte {
+  position: absolute;
+  inset: -1px;
+  width: calc(100% + 2px);
+  height: calc(100% + 2px);
+  max-width: none;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.traceCarte rect {
+  fill: none;
+  stroke: var(--ls-or-sombre);
+  stroke-width: 2;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+/* ---------- Mouvement ---------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  .soleil {
+    animation: leve 1600ms var(--ls-easing-sortie) both;
+  }
+
+  .rayonLong,
+  .rayonCourt {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: trace-rayon 1200ms var(--ls-easing-sortie) forwards;
+    animation-delay: calc(800ms + var(--rang) * 40ms);
+  }
+
+  .lisere {
+    transform: scaleX(0);
+    animation: deroule 1400ms var(--ls-easing-sortie) 300ms forwards;
+  }
+
+  .traceCarte rect {
+    transition: stroke-dashoffset 900ms var(--ls-easing-sortie);
+  }
+
+  :global(li:hover) > .traceCarte rect,
+  :global(li:focus-within) > .traceCarte rect {
+    stroke-dashoffset: 0;
+  }
+
+  /*
+   * LE MOUVEMENT CONTINU N'EXISTE QUE SOUS UN ÉTAT POSÉ PAR LE SCRIPT, `joue`
+   * ou `fin`, comme la neige de Noël : sans script, le bouton de pause
+   * n'existe pas, et rien ne doit tourner sans fin, WCAG 2.2.2.
+   */
+  :global([data-borne="joue"]) .rayons,
+  :global([data-borne="fin"]) .rayons {
+    animation: tourne 40s linear 2400ms infinite;
+  }
+
+  :global([data-borne="joue"]) .halo,
+  :global([data-borne="fin"]) .halo {
+    animation: respire 4s ease-in-out infinite;
+  }
+
+  :global([data-borne="joue"]) .grain,
+  :global([data-borne="fin"]) .grain {
+    animation: flotte var(--duree) ease-in-out var(--retard) infinite;
+  }
+
+  :global([data-borne="joue"]) .grainMarge,
+  :global([data-borne="fin"]) .grainMarge {
+    animation: tombe-long var(--duree) linear var(--retard) infinite;
+  }
+}
+
+/* Hors mouvement, le liseré des cartes reste visible au survol, sans tracé. */
+@media (prefers-reduced-motion: reduce) {
+  .poussiere,
+  .marges {
+    display: none;
+  }
+
+  :global(li:hover) > .traceCarte rect,
+  :global(li:focus-within) > .traceCarte rect {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes leve {
+  from {
+    opacity: 0;
+    transform: translateY(60%) scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes trace-rayon {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes deroule {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes tourne {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes respire {
+  50% {
+    opacity: 0.55;
+    transform: scale(1.12);
+  }
+}
+
+@keyframes flotte {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  20% {
+    opacity: 0.95;
+  }
+  80% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--derive), -140px);
+  }
+}
+
+@keyframes tombe-long {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  10% {
+    opacity: 0.9;
+  }
+  90% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--derive), 1400px);
+  }
+}

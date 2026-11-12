@@ -59,6 +59,15 @@
   color: var(--ls-noel-texte-sur-rouge);
 }
 
+/* Black Week, LS-318 : nuit cerclée d'or, icône or 11,29:1. */
+:global([data-theme="black_week"]) .bouton {
+  border-color: var(--ls-bw-or-sur-nuit);
+  background: var(--ls-bw-fond-nuit);
+  color: var(--ls-bw-or-sur-nuit);
+  box-shadow: 0 6px 18px -6px
+    color-mix(in srgb, var(--ls-bw-encre) 60%, transparent);
+}
+
 @media (min-width: 768px) {
   .bouton {
     right: var(--ls-space-5);

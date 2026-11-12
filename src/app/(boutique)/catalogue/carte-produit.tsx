@@ -15,6 +15,7 @@ import Link from "next/link";
 
 import { srcSetMedia, urlVignette } from "@/integrations/medias/urls";
 import type { EtatDisponibilite, ProduitCatalogue } from "@/services/catalogue";
+import { TraceCarte } from "@/components/decor-black-week";
 import { FloconIcone, NoeudIcone } from "@/components/decor-noel";
 import { AjoutRapide } from "./ajout-rapide";
 import styles from "./catalogue.module.css";
@@ -52,14 +53,20 @@ const CLASSE_DISPONIBILITE: Record<EtatDisponibilite, string> = {
  * cadeau : liseré qui se trace, flocons dans les coins du cadre, ruban et nœud
  * SOUS la photographie. Rien n'est posé sur la photographie ni sur le bouton,
  * ADR-046 ; le contenu de la carte ne change pas.
+ *
+ * `blackWeek` : thème Black Week, LS-318. Un liseré doré se trace dans le bord
+ * de la carte au survol et au focus, la carte se soulève sur une ombre de
+ * nuit. Rien sur la photographie, contenu et prix inchangés.
  */
 export function CarteProduit({
   produit,
   noel = false,
+  blackWeek = false,
   prioritaire = false,
 }: {
   produit: ProduitCatalogue;
   noel?: boolean;
+  blackWeek?: boolean;
   /**
    * Photo chargée sans différé et en priorité haute, LS-285 : la première
    * carte du catalogue est dans le premier écran et porte le LCP.
@@ -75,11 +82,12 @@ export function CarteProduit({
      * opacité nulle, ADR-045 point 5.
      */
     <li
-      className={`${styles.carte} ${noel ? styles.carteNoel : ""}`}
+      className={`${styles.carte} ${noel ? styles.carteNoel : ""} ${blackWeek ? styles.carteBlackWeek : ""}`}
       data-apparition=""
       data-apparition-mode="glisse"
     >
       {noel ? <DecorCarteNoel /> : null}
+      {blackWeek ? <TraceCarte /> : null}
       {/*
        * LA ROUTE `/produit/[slug]` N'EXISTE PAS ENCORE, elle appartient a
        * LS-105 que cette story bloque. Ces liens rendent donc une 404 jusqu'a sa
@@ -173,6 +181,7 @@ export function CarteProduit({
           nomProduit={produit.nom}
           epuise={produit.disponibilite === "EPUISE"}
           noel={noel}
+          blackWeek={blackWeek}
         />
       ) : null}
     </li>

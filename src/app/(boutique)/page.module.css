@@ -904,3 +904,107 @@
   line-height: 1.6;
   max-width: 44rem;
 }
+
+/*
+ * ================= THÈME BLACK WEEK, LS-318 =================
+ * Maquette validée, `docs/prototypes/theme-black-week/`, et ADR-046 amendé le
+ * 12 novembre 2026. Comme `NOEL_2`, le héros, la bande défilante et le sceau
+ * passent à la nuit, leurs textes au blanc ou à l'or. Le texte du `h1` ne
+ * change pas, seule sa couleur. Jetons `--ls-bw-*` seulement, mesurés dans
+ * `tokens.css` : blanc 13,85:1 et or 8,27:1 au pire, sur la braise.
+ */
+:global([data-theme="black_week"]) .hero {
+  background:
+    radial-gradient(
+      90% 120% at 85% 110%,
+      var(--ls-bw-fond-braise) 0%,
+      transparent 55%
+    ),
+    linear-gradient(
+      180deg,
+      var(--ls-bw-fond-nuit) 0%,
+      var(--ls-bw-fond-nuit-clair) 100%
+    );
+}
+
+:global([data-theme="black_week"]) .surtitre,
+:global([data-theme="black_week"]) .titre,
+:global([data-theme="black_week"]) .accroche {
+  color: var(--ls-bw-texte-sur-nuit);
+}
+
+/* Mots dorés : or et reflet, 8,27:1 et 12,51:1 au pire. Immobiles. */
+:global([data-theme="black_week"]) .motDore {
+  background-image: linear-gradient(
+    100deg,
+    var(--ls-bw-or-sur-nuit),
+    var(--ls-bw-reflet-sur-nuit) 50%,
+    var(--ls-bw-or-sur-nuit)
+  );
+}
+
+.rubanBlackWeek {
+  border-color: color-mix(in srgb, var(--ls-bw-or-sur-nuit) 55%, transparent);
+  background: transparent;
+  color: var(--ls-bw-or-sur-nuit);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.8125rem;
+}
+
+.pointRuban {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Bouton plein en or, texte de nuit : 11,29:1. */
+:global([data-theme="black_week"]) .actionPrincipale {
+  background: var(--ls-bw-or-sur-nuit);
+  color: var(--ls-bw-encre);
+}
+
+:global([data-theme="black_week"]) .actionPrincipale:hover {
+  background: var(--ls-bw-reflet-sur-nuit);
+}
+
+:global([data-theme="black_week"]) .actionSecondaire {
+  color: var(--ls-bw-texte-sur-nuit);
+  border-bottom-color: var(--ls-bw-texte-sur-nuit);
+}
+
+:global([data-theme="black_week"]) .actionSecondaire:hover {
+  color: var(--ls-bw-or-sur-nuit);
+  border-bottom-color: var(--ls-bw-or-sur-nuit);
+}
+
+:global([data-theme="black_week"]) .hero .actionPrincipale:focus-visible,
+:global([data-theme="black_week"]) .hero .actionSecondaire:focus-visible {
+  outline-color: var(--ls-bw-texte-sur-nuit);
+}
+
+/* Liseré d'or au pied du héros, dans son cadre coupé. */
+.hero .lisereHeros {
+  z-index: 1;
+}
+
+/* Bande défilante de nuit, séparateurs dorés. */
+:global([data-theme="black_week"]) .defilant {
+  background: var(--ls-bw-fond-nuit);
+  color: var(--ls-bw-texte-sur-nuit);
+  border-color: var(--ls-bw-fond-nuit-clair);
+}
+
+:global([data-theme="black_week"]) .piste span::before {
+  color: var(--ls-bw-or-sur-nuit);
+}
+
+/* Sceau : nuit et braise, le texte y est déjà blanc. */
+:global([data-theme="black_week"]) .editorial {
+  background: radial-gradient(
+    90% 70% at 50% 40%,
+    var(--ls-bw-fond-braise),
+    var(--ls-bw-fond-nuit)
+  );
+}

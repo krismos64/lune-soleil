@@ -25,12 +25,17 @@ import { CarteProduit } from "./catalogue/carte-produit";
 import { BandeauReassurance } from "@/components/bandeau-reassurance";
 import { BandeauApercuTheme } from "@/components/bandeau-apercu-theme";
 import { BoutonPauseAnimations } from "@/components/bouton-pause-animations";
+import { LisereOr } from "@/components/decor-black-week";
 import { BandePapierCadeau, BandeSucreOrge } from "@/components/decor-noel";
 import { EmblemeAnime } from "@/components/embleme-anime";
 import { PoussiereOr } from "@/components/poussiere-or";
 import { ReactionPointeur } from "@/components/reaction-pointeur";
 import { SceneCycle } from "@/components/scene-cycle";
-import { estThemeDeNoel } from "@/lib/theme-saisonnier";
+import {
+  aMouvementContinu,
+  estThemeBlackWeek,
+  estThemeDeNoel,
+} from "@/lib/theme-saisonnier";
 import { lireSeuilFranchise } from "@/services/parametres";
 import { lireAvisDeLaBoutique } from "@/services/avis";
 import {
@@ -122,6 +127,7 @@ export default async function PageAccueil({
     couvertures.map((couverture) => [couverture.categorieId, couverture]),
   );
   const noel = estThemeDeNoel(theme);
+  const blackWeek = estThemeBlackWeek(theme);
   const misEnAvant = produits.slice(0, NOMBRE_MIS_EN_AVANT);
 
   /*
@@ -175,6 +181,15 @@ export default async function PageAccueil({
                 </svg>
                 Fêtes de fin d&apos;année
               </p>
+            ) : blackWeek ? (
+              /*
+               * THÈME BLACK WEEK, LS-318 : le ruban nomme l'événement, sans
+               * prix, taux ni date ; la réduction relève de LS-319.
+               */
+              <p className={`${styles.ruban} ${styles.rubanBlackWeek}`}>
+                <span className={styles.pointRuban} aria-hidden="true" />
+                Black Week
+              </p>
             ) : null}
             <p className={styles.surtitre}>Bijoux faits main</p>
             <h1 className={styles.titre}>
@@ -185,7 +200,9 @@ export default async function PageAccueil({
             <p className={styles.accroche}>
               {noel
                 ? "Une pièce faite main, choisie pour quelqu'un : rien ne se ressemble tout à fait, et c'est ce qui fait le cadeau."
-                : "Des pièces délicates en petite série, pensées pour accompagner le quotidien sans jamais se ressembler tout à fait."}
+                : blackWeek
+                  ? "Des bijoux faits main, une pièce à la fois, sous un soleil d'or."
+                  : "Des pièces délicates en petite série, pensées pour accompagner le quotidien sans jamais se ressembler tout à fait."}
             </p>
             <div className={styles.actions}>
               <Link href="/catalogue" className={styles.actionPrincipale}>
@@ -196,9 +213,10 @@ export default async function PageAccueil({
               </Link>
             </div>
           </div>
-          <EmblemeAnime noel={noel} />
+          <EmblemeAnime noel={noel} rayonsContinus={noel || blackWeek} />
         </div>
         {noel ? <BandeSucreOrge className={styles.sucreHeros} /> : null}
+        {blackWeek ? <LisereOr className={styles.lisereHeros} /> : null}
       </section>
 
       {noel ? <BandePapierCadeau /> : null}
@@ -274,7 +292,12 @@ export default async function PageAccueil({
 
           <ul className={styles.grille} data-inclinaison="">
             {misEnAvant.map((produit) => (
-              <CarteProduit key={produit.id} produit={produit} noel={noel} />
+              <CarteProduit
+                key={produit.id}
+                produit={produit}
+                noel={noel}
+                blackWeek={blackWeek}
+              />
             ))}
           </ul>
         </section>
@@ -508,7 +531,7 @@ export default async function PageAccueil({
       )}
 
       <ReactionPointeur />
-      {noel ? <BoutonPauseAnimations /> : null}
+      {aMouvementContinu(theme) ? <BoutonPauseAnimations /> : null}
     </main>
   );
 }

@@ -1256,3 +1256,157 @@
     transform: none;
   }
 }
+
+/*
+ * ================= THÈME BLACK WEEK, LS-318 =================
+ * D'après la maquette validée, `docs/prototypes/theme-black-week/`, et
+ * ADR-046 amendé le 12 novembre 2026. Comme `NOEL_2`, le bandeau passe sur un
+ * fond sombre et ses textes en blanc ou en or ; le contenu des cartes et la
+ * couleur des prix ne changent pas. Jetons `--ls-bw-*` seulement.
+ */
+
+/* ---------- Bandeau de tête ---------- */
+
+/*
+ * CONTRASTES, `tokens.css` : sur le point le plus clair du fond, la braise
+ * `--ls-bw-fond-braise`, le blanc tient 13,85:1 et l'or 8,27:1.
+ * `verifier-contraste.sh` ne lit pas un dégradé : chaque arrêt est un jeton
+ * mesuré dans son bloc.
+ */
+.bandeauBlackWeek {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  display: grid;
+  gap: var(--ls-space-2);
+  margin: 0 0 var(--ls-space-5);
+  padding: var(--ls-space-5) var(--ls-space-4) var(--ls-space-6);
+  border-radius: var(--ls-radius-md);
+  background:
+    radial-gradient(
+      90% 120% at 85% 110%,
+      var(--ls-bw-fond-braise) 0%,
+      transparent 55%
+    ),
+    linear-gradient(
+      180deg,
+      var(--ls-bw-fond-nuit) 0%,
+      var(--ls-bw-fond-nuit-clair) 100%
+    );
+}
+
+@media (min-width: 900px) {
+  .bandeauBlackWeek {
+    grid-template-columns: 1fr 22rem;
+    align-items: center;
+    padding: var(--ls-space-6) var(--ls-space-6) var(--ls-space-7);
+  }
+
+  .decorBlackWeek {
+    order: 2;
+  }
+}
+
+.bandeauBlackWeek .titre {
+  color: var(--ls-bw-texte-sur-nuit);
+  font-size: clamp(1.25rem, 4vw, 1.75rem);
+}
+
+.bandeauBlackWeek .accroche {
+  margin-bottom: 0;
+  color: var(--ls-bw-texte-sur-nuit);
+}
+
+.rubanBlackWeek {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ls-space-2);
+  margin: 0 0 var(--ls-space-3);
+  padding: var(--ls-space-1) var(--ls-space-3);
+  border: 1px solid
+    color-mix(in srgb, var(--ls-bw-or-sur-nuit) 55%, transparent);
+  border-radius: 999px;
+  color: var(--ls-bw-or-sur-nuit);
+  font-size: 0.8125rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pointRuban {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ls-bw-or-sur-nuit);
+}
+
+/*
+ * « BLACK WEEK », TEXTE D'AFFICHAGE ET NON TITRE : le `h1` reste « Le
+ * catalogue ». Immobile, ADR-045 : aucun mouvement sur un texte.
+ */
+.evenementBlackWeek {
+  margin: 0 0 var(--ls-space-2);
+  font-family: var(--ls-police-titre);
+  font-size: clamp(2.5rem, 11vw, 4.75rem);
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  color: var(--ls-bw-texte-sur-nuit);
+}
+
+.motOr {
+  color: var(--ls-bw-or-sur-nuit);
+}
+
+.zoneGrilleBlackWeek {
+  position: relative;
+}
+
+/* ---------- Filtres et pagination ---------- */
+
+:global([data-theme="black_week"]) .filtre:hover,
+:global([data-theme="black_week"]) .lienPagination:hover {
+  border-color: var(--ls-bw-encre);
+}
+
+/* Aplat de nuit, texte or : 11,29:1. */
+:global([data-theme="black_week"]) .filtre[aria-current="page"] {
+  background: var(--ls-bw-fond-nuit);
+  border-color: var(--ls-bw-fond-nuit);
+  color: var(--ls-bw-or-sur-nuit);
+}
+
+:global([data-theme="black_week"]) .filtre:focus-visible {
+  outline-color: var(--ls-bw-encre);
+}
+
+/* ---------- Cartes ---------- */
+
+/*
+ * LE LISERÉ DORÉ, `TraceCarte`, se trace au survol dans le bord de la carte :
+ * jamais sur la photographie. La carte se soulève, l'ombre prend la nuit.
+ */
+.carteBlackWeek {
+  position: relative;
+}
+
+.carteBlackWeek:hover {
+  box-shadow: 0 22px 44px -26px
+    color-mix(in srgb, var(--ls-bw-encre) 55%, transparent);
+}
+
+/*
+ * BOUTON D'ACHAT DE NUIT, exception bornée de l'amendement d'ADR-046 du
+ * 12 novembre 2026, comme le bouton blanc de `NOEL_2` : texte blanc sur nuit
+ * 18,91:1, sac doré décoratif. Épuisé, il garde son aplat sable ordinaire.
+ */
+:global([data-theme="black_week"]) .carteBlackWeek .boutonAjoutRapide:not(:disabled) {
+  background: var(--ls-bw-fond-nuit);
+  color: var(--ls-bw-texte-sur-nuit);
+}
+
+:global([data-theme="black_week"]) .carteBlackWeek .boutonAjoutRapide:hover:not(:disabled) {
+  background: var(--ls-bw-fond-nuit-clair);
+}
+
+.sacBouton {
+  color: var(--ls-bw-or-sur-nuit);
+}

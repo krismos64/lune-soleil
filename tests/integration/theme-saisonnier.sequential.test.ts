@@ -14,6 +14,12 @@ import { inject } from "vitest";
 
 import { VARIABLE_URL_TEST } from "../aide/base-ephemere";
 
+/** La migration de LS-318 telle qu'écrite : elle repose la liste en vigueur. */
+const MIGRATION_BLACK_WEEK = readFileSync(
+  "prisma/migrations/20261112180000_theme_black_week/migration.sql",
+  "utf8",
+);
+
 let client: Client;
 let service: typeof import("@/services/theme-saisonnier");
 
@@ -40,8 +46,8 @@ describe("thème saisonnier, ADR-046", () => {
     expect(await service.lireThemeSaisonnier()).toBe("AUCUN");
   });
 
-  it("enregistre chacun des deux thèmes de Noël, et le relit, LS-277", async () => {
-    for (const theme of ["NOEL_1", "NOEL_2"] as const) {
+  it("enregistre chacun des thèmes, et le relit, LS-277 et LS-318", async () => {
+    for (const theme of ["NOEL_1", "NOEL_2", "BLACK_WEEK"] as const) {
       expect(await service.choisirThemeSaisonnier(theme)).toBe(theme);
       expect(await service.lireThemeSaisonnier()).toBe(theme);
       const { rows } = await client.query(
@@ -87,11 +93,62 @@ describe("thème saisonnier, ADR-046", () => {
       await client.query(
         "UPDATE parametre_boutique SET theme_saisonnier = 'AUCUN' WHERE id = true",
       );
+      // La migration de LS-277 a reposé la liste de Noël : celle de LS-318
+      // remet la liste en vigueur, sans quoi les tests suivants de cette base
+      // partagée refuseraient `BLACK_WEEK`.
+      await client.query(MIGRATION_BLACK_WEEK);
+    }
+  });
+
+  /*
+   * LA MIGRATION DE LS-318 EST EXÉCUTÉE TELLE QU'ÉCRITE, sur l'état qu'elle
+   * rencontrera en production : la liste de Noël, et un thème de Noël choisi.
+   * Elle ne convertit rien et ne change pas le thème actif.
+   */
+  it("la migration de Black Week garde le thème choisi et admet BLACK_WEEK, LS-318", async () => {
+    await client.query(
+      "ALTER TABLE parametre_boutique DROP CONSTRAINT chk_parametre_theme_connu",
+    );
+    await client.query(
+      `ALTER TABLE parametre_boutique ADD CONSTRAINT chk_parametre_theme_connu
+         CHECK (theme_saisonnier IN ('AUCUN', 'NOEL_1', 'NOEL_2'))`,
+    );
+    try {
+      await client.query(
+        "UPDATE parametre_boutique SET theme_saisonnier = 'NOEL_2' WHERE id = true",
+      );
+      await client.query(MIGRATION_BLACK_WEEK);
+      const { rows } = await client.query(
+        "SELECT theme_saisonnier FROM parametre_boutique",
+      );
+      expect(rows).toEqual([{ theme_saisonnier: "NOEL_2" }]);
+      await client.query(
+        "UPDATE parametre_boutique SET theme_saisonnier = 'BLACK_WEEK' WHERE id = true",
+      );
+      await expect(
+        client.query(
+          "UPDATE parametre_boutique SET theme_saisonnier = 'black_week' WHERE id = true",
+        ),
+      ).rejects.toMatchObject({ constraint: "chk_parametre_theme_connu" });
+    } finally {
+      await client.query(
+        "UPDATE parametre_boutique SET theme_saisonnier = 'AUCUN' WHERE id = true",
+      );
     }
   });
 
   it("refuse un thème que le code n'écrit pas, sans rien changer", async () => {
-    for (const entree of ["NOEL", "noel_1", "Noel", "PAQUES", "", null, 42]) {
+    for (const entree of [
+      "NOEL",
+      "noel_1",
+      "Noel",
+      "black_week",
+      "BLACK WEEK",
+      "PAQUES",
+      "",
+      null,
+      42,
+    ]) {
       await expect(
         service.choisirThemeSaisonnier(entree),
       ).rejects.toMatchObject({ name: "EntreeInvalideError" });
@@ -115,9 +172,12 @@ describe("thème saisonnier, ADR-046", () => {
         "UPDATE parametre_boutique SET theme_saisonnier = 'AUCUN' WHERE id = true",
       );
       await client.query(
-        `ALTER TABLE parametre_boutique ADD CONSTRAINT chk_parametre_theme_connu
-           CHECK (theme_saisonnier IN ('AUCUN', 'NOEL_1', 'NOEL_2'))`,
+        "ALTER TABLE parametre_boutique ADD CONSTRAINT chk_parametre_theme_connu CHECK (theme_saisonnier = 'AUCUN')",
       );
+      // La migration remplace cette contrainte provisoire par la liste en
+      // vigueur, au lieu d'en recopier une ici qui se périmerait au prochain
+      // thème, défaut de la version précédente de ce test.
+      await client.query(MIGRATION_BLACK_WEEK);
     }
   });
 
