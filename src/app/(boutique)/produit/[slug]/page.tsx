@@ -335,6 +335,7 @@ export default async function PageFicheProduit({
            */}
           <SelecteurVariante
             variantes={fiche.variantes}
+            tauxPromotion={fiche.promotion?.taux ?? null}
             blocLivraison={
               <BandeauReassurance
                 seuilFranchiseCentimes={seuilFranchise}

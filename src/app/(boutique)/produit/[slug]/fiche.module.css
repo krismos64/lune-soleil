@@ -577,3 +577,13 @@
   justify-content: flex-end;
   margin: 0 0 var(--ls-space-3);
 }
+
+/*
+ * La mention du prix barré, ADR-051. `--ls-text-muted` sur le fond crème de
+ * la fiche, 4,86:1, C31.
+ */
+.mentionPrixBarre {
+  margin: var(--ls-space-1) 0 0;
+  color: var(--ls-text-muted);
+  font-size: 0.8125rem;
+}

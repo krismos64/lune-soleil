@@ -14,6 +14,7 @@
  * `useTransition` PLUTOT QU'UN ETAT DE CHARGEMENT MAISON : il expose l'attente
  * de la Server Action sans dupliquer l'etat, et laisse React ordonner le rendu.
  */
+import { PrixPromotion } from "@/components/prix-promotion";
 import { formaterMontant } from "@/lib/montant";
 import { useState, useTransition } from "react";
 
@@ -96,16 +97,25 @@ export function LignesPanier({ lignes }: { lignes: LignePanierRevalidee[] }) {
                 <p className={styles.motif}>{TEXTE_MOTIF[ligne.motif]}</p>
               )}
 
-              <p className={styles.prixUnitaire}>
-                {/*
-                 * L'ESPACE EST EXPLICITE. JSX supprime l'espace de fin de ligne
-                 * avant un saut : ecrit naturellement, le rendu donnait
-                 * « 49,00 €l'unité », defaut vu a la mesure du rendu et non a
-                 * la relecture du source, ou l'espace est pourtant present.
-                 */}
-                {formaterMontant(ligne.prixUnitaireCentimes)}
-                {" l'unité"}
-              </p>
+              {ligne.prixReferenceCentimes !== null ? (
+                /* Sous promotion, ADR-051 : prix barré et prix réduit. */
+                <PrixPromotion
+                  className={styles.prixUnitaire}
+                  prixCentimes={ligne.prixUnitaireCentimes}
+                  prixReferenceCentimes={ligne.prixReferenceCentimes}
+                />
+              ) : (
+                <p className={styles.prixUnitaire}>
+                  {/*
+                   * L'ESPACE EST EXPLICITE. JSX supprime l'espace de fin de
+                   * ligne avant un saut : ecrit naturellement, le rendu donnait
+                   * « 49,00 €l'unité », defaut vu a la mesure du rendu et non a
+                   * la relecture du source, ou l'espace est pourtant present.
+                   */}
+                  {formaterMontant(ligne.prixUnitaireCentimes)}
+                  {" l'unité"}
+                </p>
+              )}
             </div>
 
             <div className={styles.actions}>

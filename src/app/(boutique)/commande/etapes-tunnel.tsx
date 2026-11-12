@@ -847,6 +847,26 @@ function Recapitulatif({
                 </span>
                 <span className={styles.ligneQuantite}>×{ligne.quantite}</span>
                 <span className={styles.lignePrix}>
+                  {/*
+                   * SOUS PROMOTION, LE PRIX BARRÉ EST RAPPELÉ, ADR-051 :
+                   * L221-14 exige le prix au récapitulatif, et le client doit
+                   * lire ici la réduction qu'il a vue au catalogue.
+                   */}
+                  {ligne.prixReferenceCentimes !== null ? (
+                    <>
+                      <span className={styles.horsEcranPrix}>
+                        Prix initial :{" "}
+                      </span>
+                      <s className={styles.lignePrixBarre}>
+                        {formaterMontant(
+                          ligne.prixReferenceCentimes * ligne.quantite,
+                        )}
+                      </s>{" "}
+                      <span className={styles.horsEcranPrix}>
+                        , prix réduit :{" "}
+                      </span>
+                    </>
+                  ) : null}
                   {formaterMontant(ligne.totalLigneCentimes)}
                 </span>
                 {/*

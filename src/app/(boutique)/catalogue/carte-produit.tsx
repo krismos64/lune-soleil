@@ -10,12 +10,12 @@
  * transmettre la quantite exacte pour la masquer ensuite : elle serait lisible
  * dans le HTML de la page.
  */
-import { formaterMontant } from "@/lib/montant";
 import Link from "next/link";
 
 import { srcSetMedia, urlVignette } from "@/integrations/medias/urls";
 import type { EtatDisponibilite, ProduitCatalogue } from "@/services/catalogue";
 import { TraceCarte } from "@/components/decor-black-week";
+import { PrixPromotion } from "@/components/prix-promotion";
 import { FloconIcone, NoeudIcone } from "@/components/decor-noel";
 import { AjoutRapide } from "./ajout-rapide";
 import styles from "./catalogue.module.css";
@@ -62,11 +62,14 @@ export function CarteProduit({
   produit,
   noel = false,
   blackWeek = false,
+  tauxPromotion = null,
   prioritaire = false,
 }: {
   produit: ProduitCatalogue;
   noel?: boolean;
   blackWeek?: boolean;
+  /** Le taux de la promotion en vigueur, pour le badge, ADR-051. */
+  tauxPromotion?: number | null;
   /**
    * Photo chargée sans différé et en priorité haute, LS-285 : la première
    * carte du catalogue est dans le premier écran et porte le LCP.
@@ -163,7 +166,12 @@ export function CarteProduit({
           ) : null}
           <h2 className={styles.nomProduit}>{produit.nom}</h2>
           <p className={styles.categorie}>{produit.categorieNom}</p>
-          <p className={styles.prix}>{formaterMontant(produit.prixCentimes)}</p>
+          <PrixPromotion
+            className={styles.prix}
+            prixCentimes={produit.prixCentimes}
+            prixReferenceCentimes={produit.prixReferenceCentimes}
+            taux={tauxPromotion}
+          />
           <p className={CLASSE_DISPONIBILITE[produit.disponibilite]}>
             {disponibilite}
           </p>
