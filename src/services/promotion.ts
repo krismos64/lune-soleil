@@ -17,6 +17,14 @@ import {
   type CodePromotion,
 } from "@/lib/promotion";
 import { prisma } from "@/lib/prisma";
+import {
+  AutorisationRefuseeError,
+  exigerAdministratrice,
+} from "@/services/autorisation";
+import {
+  ReauthentificationRequiseError,
+  exigerReauthentificationRecente,
+} from "@/services/reauthentification";
 import { valider } from "@/lib/validation";
 import * as depot from "@/repositories/promotion";
 
@@ -185,4 +193,83 @@ export async function exigerPrixModifiables(
   if ((await depot.lirePromotionActive(client)) !== null) {
     throw new PrixGelesSousPromotionError();
   }
+}
+
+export type IssueBasculePromotion =
+  | { statut: "ACTIVEE"; libelle: string }
+  | { statut: "DESACTIVEE" }
+  | { statut: "AUCUNE_ACTIVE" }
+  | { statut: "DEJA_ACTIVE" }
+  | { statut: "CARENCE"; finCarence: Date }
+  | { statut: "SESSION_ABSENTE" }
+  | { statut: "REAUTHENTIFICATION_REQUISE" };
+
+/**
+ * Le point d'entrée de l'administration, ADR-051. Une promotion change le
+ * prix ENCAISSÉ : elle relève de la famille des paramètres de la boutique,
+ * comme les tarifs, et exige le rôle ET une preuve d'identité récente,
+ * ADR-027. L'acteur vient de la session, jamais du formulaire, invariant 2.
+ *
+ * LES REFUS SONT DES VALEURS : l'écran les présente, aucune page d'erreur.
+ *
+ * @sensible PARAMETRES_BOUTIQUE
+ */
+export async function basculerPromotion(
+  enTetes: Headers,
+  demande: { action: "ACTIVER"; code: unknown } | { action: "DESACTIVER" },
+): Promise<IssueBasculePromotion> {
+  let acteurId: string;
+  try {
+    acteurId = (await exigerAdministratrice(enTetes)).utilisateurId;
+    await exigerReauthentificationRecente(enTetes, "PARAMETRES_BOUTIQUE");
+  } catch (erreur) {
+    if (erreur instanceof AutorisationRefuseeError) {
+      return { statut: "SESSION_ABSENTE" };
+    }
+    if (erreur instanceof ReauthentificationRequiseError) {
+      return { statut: "REAUTHENTIFICATION_REQUISE" };
+    }
+    throw erreur;
+  }
+
+  if (demande.action === "DESACTIVER") {
+    return (await desactiverPromotion({ acteurId }))
+      ? { statut: "DESACTIVEE" }
+      : { statut: "AUCUNE_ACTIVE" };
+  }
+  try {
+    const active = await activerPromotion({ code: demande.code, acteurId });
+    const code = schemaCodePromotion.parse(active.code);
+    return { statut: "ACTIVEE", libelle: PROMOTIONS[code].libelle };
+  } catch (erreur) {
+    if (erreur instanceof PromotionDejaActiveError) {
+      return { statut: "DEJA_ACTIVE" };
+    }
+    if (erreur instanceof PromotionEnCarenceError) {
+      return { statut: "CARENCE", finCarence: erreur.finCarence };
+    }
+    throw erreur;
+  }
+}
+
+/** Ce que l'écran des paramètres montre de la promotion, ADR-051. */
+export async function lireEtatPromotion(): Promise<{
+  active: {
+    libelle: string;
+    taux: number;
+    activeDepuis: Date;
+    exclues: number;
+  } | null;
+}> {
+  const enVigueur = await lirePromotionEnVigueur();
+  if (enVigueur === null) return { active: null };
+  const lignes = await depot.lireEligibiliteCatalogue(prisma, enVigueur.id);
+  return {
+    active: {
+      libelle: enVigueur.libelle,
+      taux: enVigueur.taux,
+      activeDepuis: enVigueur.activeDepuis,
+      exclues: lignes.filter((l) => !l.eligible).length,
+    },
+  };
 }
