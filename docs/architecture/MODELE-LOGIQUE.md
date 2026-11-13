@@ -421,9 +421,10 @@ annoncée, `promotion_debut_annonce` et `promotion_fin_annonce`, deux `DATE`
 nulles ensemble ou dans l'ordre, `chk_parametre_periode_promotion`. Aucune
 carence entre deux activations.
 
-**Une variante est éligible** si elle existe depuis trente jours au moins à
-l'activation et que son prix n'a pas changé pendant ces trente jours, arbitrage
-1 d'ADR-051. La condition s'écrit une fois, `repositories/promotion.ts`.
+**Une variante est éligible** si son prix n'a pas changé pendant les trente
+jours qui précèdent l'activation, arbitrage 1 d'ADR-051. Son âge ne compte
+plus depuis LS-321 : une pièce récente est réduite. La condition s'écrit une
+fois, `repositories/promotion.ts`.
 
 ## Le retrait de l'espace d'administration, LS-266
 
