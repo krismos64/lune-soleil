@@ -182,3 +182,108 @@ export function SacIcone({ className }: { className?: string | undefined }) {
     </svg>
   );
 }
+
+/** Étincelles à quatre branches, de part et d'autre du texte du bandeau. */
+const ETINCELLES = [
+  { haut: "18%", gauche: "22%", taille: 14, retard: "0s" },
+  { haut: "62%", gauche: "58%", taille: 10, retard: "0.9s" },
+  { haut: "34%", gauche: "78%", taille: 8, retard: "1.7s" },
+  { haut: "74%", gauche: "16%", taille: 9, retard: "2.4s" },
+] as const;
+
+function Etincelles({ cote }: { cote: "gauche" | "droite" }) {
+  return (
+    <span
+      className={`${styles.etincelles} ${cote === "gauche" ? styles.etincellesGauche : styles.etincellesDroite}`}
+      aria-hidden="true"
+      data-continu=""
+    >
+      {ETINCELLES.map((e, i) => (
+        <svg
+          key={i}
+          className={styles.etincelle}
+          viewBox="-10 -10 20 20"
+          focusable="false"
+          style={variables({
+            "--haut": e.haut,
+            "--gauche":
+              cote === "gauche" ? e.gauche : `calc(100% - ${e.gauche})`,
+            "--taille": `${e.taille}px`,
+            "--retard": e.retard,
+          })}
+        >
+          <path d="M0-10C1 -2 2 -1 10 0C2 1 1 2 0 10C-1 2 -2 1 -10 0C-2 -1 -1 -2 0-10Z" />
+        </svg>
+      ))}
+    </span>
+  );
+}
+
+/**
+ * LE BANDEAU BLACK WEEK EN TÊTE DE L'ACCUEIL, LS-322, demande de Christophe
+ * du 13 novembre 2026, codé sans maquette sur son arbitrage.
+ *
+ * LE TEXTE EST IMMOBILE, ADR-045 : seuls bougent la comète d'or qui fait le
+ * tour du cadre et les étincelles des deux côtés, jamais par-dessus une
+ * lettre. Le mouvement est continu, donc marqué `data-continu` sous le
+ * `data-borne` du héros : il n'existe qu'avec le script, sous le bouton de
+ * pause, et disparaît en mouvement réduit.
+ *
+ * LE TAUX ET LA PÉRIODE NE VIENNENT QUE DE LA PROMOTION ACTIVE, ADR-051 et
+ * ADR-046 : sans promotion, le bandeau ne nomme que l'événement. La portée,
+ * « toute la boutique » ou « les pièces signalées », est celle que le
+ * serveur calcule pour `AnnoncePromotion`, jamais une formule écrite ici.
+ */
+export function BandeauBlackWeek({
+  promotion,
+}: {
+  promotion: {
+    taux: number;
+    periodeAnnoncee: string | null;
+    toutLeCatalogue: boolean;
+  } | null;
+}) {
+  return (
+    <div className={styles.bandeau}>
+      <svg
+        className={styles.cadreBandeau}
+        aria-hidden="true"
+        focusable="false"
+        data-continu=""
+      >
+        <rect className={styles.cadreFixe} width="100%" height="100%" rx="14" />
+        <rect
+          className={styles.comete}
+          width="100%"
+          height="100%"
+          rx="14"
+          pathLength={1}
+        />
+      </svg>
+      <Etincelles cote="gauche" />
+      <div className={styles.texteBandeau}>
+        <p className={styles.titreBandeau}>
+          Black <span className={styles.orBandeau}>Week</span>
+        </p>
+        {promotion === null ? null : (
+          <>
+            <p className={styles.offreBandeau}>
+              <span className={styles.tauxBandeau}>
+                −{promotion.taux}&nbsp;%
+              </span>{" "}
+              {promotion.toutLeCatalogue
+                ? "sur toute la boutique"
+                : "sur les pièces signalées"}
+            </p>
+            {promotion.periodeAnnoncee === null ? null : (
+              <p className={styles.sousTitreBandeau}>
+                {promotion.periodeAnnoncee}
+              </p>
+            )}
+          </>
+        )}
+      </div>
+      <Etincelles cote="droite" />
+    </div>
+  );
+}

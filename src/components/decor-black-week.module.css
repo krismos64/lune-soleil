@@ -341,3 +341,161 @@
     transform: translate(var(--derive), 1400px);
   }
 }
+
+/* ---------- Bandeau de l'accueil, LS-322 ---------- */
+
+/*
+ * TEXTE BLANC ET OR SUR LA NUIT, jetons mesurés dans `tokens.css` : blanc
+ * 13,85:1 et or 8,27:1 au pire, sur la braise. Aucune taille fixe : le titre
+ * suit la largeur entre 1,75 et 3,5 rem et tient à 320 px.
+ */
+.bandeau {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(1.5rem, 1fr) auto minmax(1.5rem, 1fr);
+  align-items: center;
+  max-width: 48rem;
+  margin: var(--ls-space-5) auto 0;
+  margin-inline: max(var(--ls-space-4), calc((100% - 48rem) / 2));
+  padding: var(--ls-space-4) var(--ls-space-2);
+  border-radius: 14px;
+  background:
+    radial-gradient(
+      120% 160% at 50% 0%,
+      var(--ls-bw-fond-braise) 0%,
+      transparent 60%
+    ),
+    var(--ls-bw-fond-nuit);
+  box-shadow: 0 0 32px
+    color-mix(in srgb, var(--ls-bw-or-sur-nuit) 22%, transparent);
+  text-align: center;
+}
+
+.cadreBandeau {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.cadreFixe,
+.comete {
+  fill: none;
+}
+
+/* Le cadre est décoratif : le fond et le texte identifient le bandeau. */
+.cadreFixe {
+  stroke: color-mix(in srgb, var(--ls-bw-or-sur-nuit) 45%, transparent);
+  stroke-width: 1.5;
+}
+
+/* Sans mouvement, la comète n'est qu'un éclat fixe en haut à gauche. */
+.comete {
+  stroke: var(--ls-bw-reflet-sur-nuit);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 0.12 0.88;
+  stroke-dashoffset: 0;
+  filter: drop-shadow(0 0 4px var(--ls-bw-or-sur-nuit));
+}
+
+.texteBandeau {
+  min-width: 0;
+}
+
+.titreBandeau {
+  margin: 0;
+  color: var(--ls-bw-texte-sur-nuit);
+  font-family: var(--ls-police-titre);
+  font-size: clamp(1.75rem, 8vw, 3.5rem);
+  line-height: 1.05;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.orBandeau {
+  color: var(--ls-bw-or-sur-nuit);
+}
+
+.offreBandeau {
+  margin: var(--ls-space-2) 0 0;
+  color: var(--ls-bw-texte-sur-nuit);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.tauxBandeau {
+  color: var(--ls-bw-or-sur-nuit);
+  font-size: 1.375rem;
+  font-weight: 700;
+}
+
+.sousTitreBandeau {
+  margin: var(--ls-space-1) 0 0;
+  color: var(--ls-bw-texte-sur-nuit);
+  font-size: 0.875rem;
+  letter-spacing: 0.04em;
+}
+
+/* Les étincelles vivent dans les deux colonnes latérales, jamais sur le texte. */
+.etincelles {
+  position: relative;
+  align-self: stretch;
+  pointer-events: none;
+}
+
+.etincelle {
+  position: absolute;
+  top: var(--haut);
+  left: var(--gauche);
+  width: var(--taille);
+  height: var(--taille);
+  margin: calc(var(--taille) / -2) 0 0 calc(var(--taille) / -2);
+  fill: var(--ls-bw-or-sur-nuit);
+  opacity: 0.7;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :global([data-borne="joue"]) .comete,
+  :global([data-borne="fin"]) .comete {
+    animation: comete 7s linear infinite;
+  }
+
+  :global([data-borne="joue"]) .etincelle,
+  :global([data-borne="fin"]) .etincelle {
+    animation: scintille 2.8s ease-in-out var(--retard) infinite;
+  }
+}
+
+@keyframes comete {
+  to {
+    stroke-dashoffset: -1;
+  }
+}
+
+@keyframes scintille {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.5) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(45deg);
+  }
+}
+
+@media print {
+  .bandeau {
+    box-shadow: none;
+  }
+
+  .titreBandeau,
+  .offreBandeau,
+  .sousTitreBandeau {
+    color: var(--ls-text);
+  }
+}

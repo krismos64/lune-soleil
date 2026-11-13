@@ -11,6 +11,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, test } from "vitest";
 
 import { AnnoncePromotion } from "@/components/annonce-promotion";
+import { BandeauBlackWeek } from "@/components/decor-black-week";
 import { PrixPromotion } from "@/components/prix-promotion";
 
 const ANNONCE = {
@@ -96,5 +97,28 @@ describe("annonce de la promotion", () => {
     const region = screen.getByRole("region", { name: "Promotion en cours" });
     expect(region.textContent).toContain("sur les pièces signalées");
     expect(region.textContent).not.toContain("toute la boutique");
+  });
+});
+
+/*
+ * LE BANDEAU DE L'ACCUEIL, LS-322 : le taux, la portée et la période ne
+ * viennent que de la promotion active ; sans elle, l'événement seul.
+ */
+describe("bandeau Black Week de l'accueil", () => {
+  test("sans promotion, le nom de l'événement seul", () => {
+    const { container } = render(<BandeauBlackWeek promotion={null} />);
+    expect(container.textContent).toBe("Black Week");
+  });
+
+  test("sous promotion, le taux, la portée calculée et la période", () => {
+    const { container } = render(
+      <BandeauBlackWeek promotion={{ ...ANNONCE, toutLeCatalogue: false }} />,
+    );
+    // Espace insécable entre le taux et le signe, signe moins U+2212.
+    expect(container.textContent).toContain("−30\u00a0%");
+    expect(container.textContent).toContain("sur les pièces signalées");
+    expect(container.textContent).toContain(
+      "du lundi 23 au dimanche 29 novembre",
+    );
   });
 });
