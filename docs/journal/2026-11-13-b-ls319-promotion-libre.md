@@ -40,11 +40,25 @@ avertissement ; dates gardées dans le bandeau, réglables dans Paramètres.
   passés après le renommage ; le test de la période passe aux quatre largeurs.
 - Tous les contrôles de `controles.yml`, contrôle à sec des mutations compris.
 
+## Mise en production, même jour
+
+- PR #667 fusionnée, `main` à `8fe66c2`.
+- **Migration** `20261113120000_periode_promotion`, additive, sur autorisation
+  ponctuelle de Christophe : 31 puis 32 migrations, période relue au 23 et au
+  29 novembre 2026, thème `NOEL_2` inchangé, sauvegarde conservée, relais et
+  tunnel fermés.
+- **Constaté en production** : une promotion `BLACK_WEEK` activée à 7 h 05
+  (heure de Paris) par un compte administratrice, désactivée 47 secondes plus
+  tard, aucune ligne de commande sous promotion. Un essai. Sous le code alors
+  en service, il aurait bloqué toute réactivation à partir du 14 novembre
+  7 h 05 pour trente jours, Black Week comprise : l'amendement le lève.
+- **Déploiement** run 43381578871 : `f55754c` vers `8fe66c2`, conteneur sain en
+  10 s, pages en 200, aucune annonce servie, aucune promotion active.
+
 ## Prochaine étape
 
-Mise en production sur accord de Christophe (migration additive, lecture de
-`DATABASE_URL` à autoriser), puis LS-291.
+LS-291.
 
 ## État des tickets
 
-- **LS-319** : rouvert pour l'amendement, clos après la mise en production.
+- **LS-319** : Terminé, amendement en production.
