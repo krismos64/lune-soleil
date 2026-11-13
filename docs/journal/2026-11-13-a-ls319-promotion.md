@@ -77,3 +77,29 @@ le thème et la promotion le lundi 23 novembre 2026.
 ## État des tickets
 
 - **LS-319** : En cours, code fusionné après cette PR, production à faire.
+
+## Fusion et mise en production, même jour
+
+- **Trois échecs de CI avant la fusion**, aucun sur le métier : la prop
+  `annonce=` de `AnnoncePromotion` faisait passer l'accueil et le catalogue
+  pour des écrans de chargement sans annonce (C35), puis le commentaire qui
+  l'expliquait citait la même chaîne ; enfin le cas 67 de
+  `verifier-tests-mutation.sh` visait la garde « variante archivée » dans sa
+  forme d'avant LS-319. Prop renommée `promotion`, expression alignée et
+  reprouvée. Cause commune : la liste locale des contrôles écartait tout script
+  nommé `*mutation*`, dont `verifier-mutations-a-sec.sh` qui ne modifie rien.
+  Fiche mémoire « Lancer tous les contrôles de la CI » enrichie.
+- PR #665 fusionnée en rebase, `main` à `f55754c`.
+- **Migration** `20261113090000_promotion` par `migrate-production.sh`, sur
+  autorisation ponctuelle de Christophe, additive donc sans
+  `--confirm-destructive` : 30 puis 31 migrations, table `promotion` vide,
+  thème `NOEL_2` inchangé, sauvegarde vérifiée conservée, relais et tunnel
+  fermés.
+- **Déploiement** run 43375914772 : `7682176` vers `f55754c`, conteneur sain en
+  10 s ; `/`, `/catalogue`, `/panier`, `/api/sante` en 200 ; aucune annonce de
+  promotion servie, aucune promotion n'étant active.
+
+## État des tickets, final
+
+- **LS-319** : Terminé, en production. L'exploitante active le thème et la
+  promotion le lundi 23 novembre 2026 et les désactive le dimanche 29 au soir.
