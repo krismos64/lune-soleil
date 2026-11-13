@@ -193,11 +193,7 @@ const ETINCELLES = [
 
 function Etincelles({ cote }: { cote: "gauche" | "droite" }) {
   return (
-    <span
-      className={`${styles.etincelles} ${cote === "gauche" ? styles.etincellesGauche : styles.etincellesDroite}`}
-      aria-hidden="true"
-      data-continu=""
-    >
+    <span className={styles.etincelles} aria-hidden="true" data-continu="">
       {ETINCELLES.map((e, i) => (
         <svg
           key={i}
@@ -244,7 +240,17 @@ export function BandeauBlackWeek({
   } | null;
 }) {
   return (
-    <div className={styles.bandeau}>
+    /*
+     * SOUS PROMOTION, LE BANDEAU REPREND LA RÉGION « Promotion en cours » de
+     * `AnnoncePromotion`, qu'il remplace sur l'accueil : le repère survit à
+     * la navigation par régions. Sans promotion, aucune région.
+     */
+    <div
+      className={styles.bandeau}
+      {...(promotion === null
+        ? {}
+        : { role: "region", "aria-label": "Promotion en cours" })}
+    >
       <svg
         className={styles.cadreBandeau}
         aria-hidden="true"
