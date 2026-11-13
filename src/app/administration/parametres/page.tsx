@@ -108,9 +108,18 @@ async function Reglages() {
    * moyen de comprendre, alors que le message nomme la cause.
    */
   let parametres = null;
-  const [theme, { active: promotion }] = await Promise.all([
+  /*
+   * UNE LECTURE DE LA PROMOTION EN ÉCHEC NE FAIT PAS TOMBER L'ÉCRAN, revue
+   * d'interface de LS-319 : tarifs et thème restent réglables, le bloc de la
+   * promotion dit qu'il n'a pas pu se lire. Même principe que le thème, qui
+   * retombe sur l'habillage ordinaire.
+   */
+  const [theme, promotion] = await Promise.all([
     lireThemeSaisonnier(),
-    lireEtatPromotion(),
+    lireEtatPromotion().then(
+      ({ active }) => active,
+      () => "INDISPONIBLE" as const,
+    ),
   ]);
 
   try {
@@ -148,8 +157,8 @@ async function Reglages() {
 
           <ChoixPromotion
             etat={
-              promotion === null
-                ? null
+              promotion === null || promotion === "INDISPONIBLE"
+                ? promotion
                 : {
                     ...promotion,
                     activeDepuis: formaterDate(promotion.activeDepuis),

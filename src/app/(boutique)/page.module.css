@@ -1025,3 +1025,19 @@
     var(--ls-bw-fond-nuit)
   );
 }
+
+/*
+ * L'annonce de la promotion sur l'accueil, ADR-051 : détachée du héros,
+ * dans la largeur du contenu, revue d'interface de LS-319. Collée au bas
+ * sombre du héros Black Week, les deux nuits se confondaient.
+ */
+.annonceAccueil {
+  max-width: calc(var(--ls-content-max) - 2 * var(--ls-space-4));
+  margin: var(--ls-space-4) var(--ls-space-4) 0;
+}
+
+@media (min-width: 1312px) {
+  .annonceAccueil {
+    margin-inline: auto;
+  }
+}

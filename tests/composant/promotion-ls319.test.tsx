@@ -31,7 +31,7 @@ describe("bloc de prix", () => {
     );
     expect(container.textContent).toBe("49,00 €");
     expect(container.querySelector("s")).toBeNull();
-    expect(screen.queryByText(/-30/)).toBeNull();
+    expect(screen.queryByText(/30/)).toBeNull();
   });
 
   test("sous promotion, prix barré, prix réduit et badge, dits au lecteur d'écran", () => {
@@ -46,7 +46,7 @@ describe("bloc de prix", () => {
     expect(container.textContent).toContain("Prix initial");
     expect(container.textContent).toContain("prix réduit");
     expect(container.textContent).toContain("34,30 €");
-    expect(container.textContent).toContain("-30 %");
+    expect(container.textContent).toContain("−30 %");
   });
 
   test("au panier, le prix barré sans badge", () => {
@@ -67,7 +67,7 @@ describe("annonce de la promotion", () => {
   test("toute la boutique et la période annoncée", () => {
     render(<AnnoncePromotion annonce={ANNONCE} />);
     const region = screen.getByRole("region", { name: "Promotion en cours" });
-    expect(region.textContent).toContain("Black Week : -30 %");
+    expect(region.textContent).toContain("Black Week : −30 %");
     expect(region.textContent).toContain("sur toute la boutique");
     expect(region.textContent).toContain("du lundi 23 au dimanche 29 novembre");
   });

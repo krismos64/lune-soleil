@@ -64,7 +64,7 @@ test.describe("aperçu de l'administratrice", () => {
       ).toBeVisible();
       expect(await debordement(page)).toBeLessThanOrEqual(0);
       // Aucune promesse de prix, de date ni de livraison dans le thème.
-      await expect(main).not.toContainText(/avant Noël|-\s?\d+ ?%/);
+      await expect(main).not.toContainText(/avant Noël|[-\u2212]\s?\d+ ?%/);
       // Aucun bouton imbriqué dans un lien.
       await expect(page.locator("main a button")).toHaveCount(0);
     });

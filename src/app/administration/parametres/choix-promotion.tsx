@@ -9,6 +9,11 @@
  * L'ÉTAT AFFICHÉ VIENT DU SERVEUR, rendu à chaque requête, et l'issue de la
  * dernière action le complète sans le remplacer : après une activation, la
  * page se revalide et rend l'état réel.
+ *
+ * LE BOUTON EST DÉCRIT PAR L'ÉTAT, `aria-describedby`, revue d'interface de
+ * LS-319 : au focus, le lecteur d'écran dit les pièces exclues et le gel des
+ * prix, avant l'action la plus lourde de l'écran. La cible ne porte aucun
+ * `aria-label`, C39.
  */
 import Link from "next/link";
 import { useActionState } from "react";
@@ -20,12 +25,22 @@ import {
 } from "./actions-promotion";
 import styles from "./parametres.module.css";
 
-export type EtatPromotionAffiche = {
-  libelle: string;
-  taux: number;
-  activeDepuis: string;
-  exclues: number;
-} | null;
+/**
+ * `INDISPONIBLE` : la lecture a échoué. L'écran des paramètres reste
+ * utilisable, et ce bloc le dit sans proposer d'action.
+ */
+export type EtatPromotionAffiche =
+  | "INDISPONIBLE"
+  | {
+      libelle: string;
+      taux: number;
+      activeDepuis: string;
+      exclues: number;
+    }
+  | null;
+
+/** Le signe moins typographique, lu « moins » et non « tiret ». */
+const MOINS = "−";
 
 function messageDe(resultat: ResultatPromotion | null): string {
   switch (resultat?.statut) {
@@ -52,6 +67,31 @@ function messageDe(resultat: ResultatPromotion | null): string {
   }
 }
 
+function texteEtat(etat: Exclude<EtatPromotionAffiche, "INDISPONIBLE">) {
+  const blackWeek = PROMOTIONS.BLACK_WEEK;
+  if (etat === null) {
+    return (
+      <>
+        Aucune promotion active. {blackWeek.libelle} réduit les prix de{" "}
+        {blackWeek.taux}&nbsp;% et s&apos;annonce {blackWeek.periodeAnnoncee} :
+        à activer et à désactiver à ces dates.
+      </>
+    );
+  }
+  return (
+    <>
+      <strong>
+        {etat.libelle}, {MOINS}
+        {etat.taux}&nbsp;%, active depuis le {etat.activeDepuis}.
+      </strong>{" "}
+      {etat.exclues === 0
+        ? "Toutes les pièces en vente sont réduites."
+        : `${etat.exclues} pièce${etat.exclues > 1 ? "s" : ""} ${etat.exclues > 1 ? "restent" : "reste"} au prix catalogue : en vente depuis moins de trente jours, ou prix modifié dans ces trente jours.`}{" "}
+      Les prix sont gelés tant qu&apos;elle est active.
+    </>
+  );
+}
+
 export function ChoixPromotion({ etat }: { etat: EtatPromotionAffiche }) {
   const [resultat, action, enCours] = useActionState<
     ResultatPromotion | null,
@@ -59,38 +99,43 @@ export function ChoixPromotion({ etat }: { etat: EtatPromotionAffiche }) {
   >(basculerPromotionAction, null);
   const blackWeek = PROMOTIONS.BLACK_WEEK;
 
-  return (
-    <form action={action} className={styles.formulaire} id="promotion">
-      <fieldset className={styles.groupe} aria-describedby="promotion-etat">
-        <legend className={styles.legende}>Promotion</legend>
-        <p id="promotion-etat" className={styles.aide}>
-          {etat === null ? (
-            <>
-              Aucune promotion active. {blackWeek.libelle} réduit les prix de{" "}
-              {blackWeek.taux}&nbsp;% et s&apos;annonce{" "}
-              {blackWeek.periodeAnnoncee} : à activer et à désactiver à ces
-              dates.
-            </>
-          ) : (
-            <>
-              <strong>
-                {etat.libelle}, -{etat.taux}&nbsp;%, active depuis le{" "}
-                {etat.activeDepuis}.
-              </strong>{" "}
-              {etat.exclues === 0
-                ? "Toutes les pièces en vente sont réduites."
-                : `${etat.exclues} pièce${etat.exclues > 1 ? "s" : ""} en vente ${etat.exclues > 1 ? "restent" : "reste"} au prix catalogue : en vente depuis moins de trente jours, ou prix modifié dans ces trente jours.`}{" "}
-              Les prix sont gelés tant qu&apos;elle est active.
-            </>
-          )}
+  if (etat === "INDISPONIBLE") {
+    return (
+      <section
+        className={styles.formulaire}
+        id="promotion"
+        aria-labelledby="promotion-titre"
+      >
+        <h2 id="promotion-titre" className={styles.legende}>
+          Promotion
+        </h2>
+        <p className={styles.aide}>
+          L&apos;état de la promotion n&apos;a pas pu être lu. Rechargez la page
+          dans un instant ; les autres réglages restent utilisables.
         </p>
-        <input type="hidden" name="code" value="BLACK_WEEK" />
-        <input
-          type="hidden"
-          name="action"
-          value={etat === null ? "ACTIVER" : "DESACTIVER"}
-        />
-      </fieldset>
+      </section>
+    );
+  }
+
+  return (
+    <form
+      action={action}
+      className={styles.formulaire}
+      id="promotion"
+      aria-labelledby="promotion-titre"
+    >
+      <h2 id="promotion-titre" className={styles.legende}>
+        Promotion
+      </h2>
+      <p id="promotion-etat" className={styles.aide}>
+        {texteEtat(etat)}
+      </p>
+      <input type="hidden" name="code" value="BLACK_WEEK" />
+      <input
+        type="hidden"
+        name="action"
+        value={etat === null ? "ACTIVER" : "DESACTIVER"}
+      />
 
       <p
         role="status"
@@ -105,15 +150,33 @@ export function ChoixPromotion({ etat }: { etat: EtatPromotionAffiche }) {
           <Link
             href="/administration/reauthentification?retour=parametres"
             prefetch={false}
+            className={styles.lienSortie}
           >
             Confirmer mon identité
           </Link>
         </p>
       )}
 
-      <button type="submit" className={styles.bouton} disabled={enCours}>
+      {resultat?.statut === "SESSION_ABSENTE" && (
+        <p className={styles.sortie}>
+          <Link
+            href="/administration/connexion"
+            prefetch={false}
+            className={styles.lienSortie}
+          >
+            Se reconnecter
+          </Link>
+        </p>
+      )}
+
+      <button
+        type="submit"
+        className={styles.bouton}
+        disabled={enCours}
+        aria-describedby="promotion-etat"
+      >
         {etat === null
-          ? `Activer ${blackWeek.libelle}, -${blackWeek.taux} %`
+          ? `Activer ${blackWeek.libelle}, ${MOINS}${blackWeek.taux} %`
           : "Désactiver la promotion"}
       </button>
     </form>

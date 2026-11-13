@@ -14,13 +14,22 @@ import type { AnnoncePromotion as Annonce } from "@/services/catalogue";
 
 import styles from "./annonce-promotion.module.css";
 
-export function AnnoncePromotion({ annonce }: { annonce: Annonce | null }) {
+export function AnnoncePromotion({
+  annonce,
+  className,
+}: {
+  annonce: Annonce | null;
+  className?: string | undefined;
+}) {
   if (annonce === null) return null;
   return (
-    <section className={styles.annonce} aria-label="Promotion en cours">
+    <section
+      className={`${styles.annonce} ${className ?? ""}`}
+      aria-label="Promotion en cours"
+    >
       <p className={styles.texte}>
         <strong className={styles.titre}>
-          {annonce.libelle} : -{annonce.taux}&nbsp;%
+          {annonce.libelle} : −{annonce.taux}&nbsp;%
         </strong>{" "}
         {annonce.toutLeCatalogue
           ? "sur toute la boutique"

@@ -56,6 +56,11 @@ export type LignePanierRevalidee = {
   /** Le prix barré, `null` hors promotion ou variante exclue. */
   prixReferenceCentimes: number | null;
   totalLigneCentimes: number;
+  /**
+   * Le total barré de la ligne, calculé ICI et non dans l'écran : un montant
+   * affiché vient du serveur, revue d'interface de LS-319.
+   */
+  totalReferenceLigneCentimes: number | null;
   motif: MotifIndisponible | null;
 };
 
@@ -137,6 +142,7 @@ export async function revalider(
         prixUnitaireCentimes: 0,
         prixReferenceCentimes: null,
         totalLigneCentimes: 0,
+        totalReferenceLigneCentimes: null,
         motif: "VARIANTE_INTROUVABLE",
       });
       continue;
@@ -180,6 +186,10 @@ export async function revalider(
       prixUnitaireCentimes: prix.prixCentimes,
       prixReferenceCentimes: prix.prixReferenceCentimes,
       totalLigneCentimes,
+      totalReferenceLigneCentimes:
+        prix.prixReferenceCentimes === null
+          ? null
+          : prix.prixReferenceCentimes * quantite,
       motif,
     });
   }

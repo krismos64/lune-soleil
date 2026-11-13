@@ -129,7 +129,7 @@ test.describe("aperçu de l'administratrice", () => {
       });
     }
     await expect(page.locator("main")).not.toContainText(
-      /-\s?\d+\s?%|jusqu'au|derni[eè]res? heures?/i,
+      /[-\u2212]\s?\d+\s?%|jusqu'au|derni[eè]res? heures?/i,
     );
     await expect(page.locator("main a button")).toHaveCount(0);
   });
