@@ -160,7 +160,8 @@ Les trois propositions ont été validées. Les deux premières tranchent une
 question juridique : c'est la décision de Christophe, que l'ADR enregistre
 sans la qualifier.
 
-1. **Une pièce créée moins de trente jours avant l'activation n'entre pas**
+1. *(Première moitié abrogée par le second amendement, LS-321.)*
+   **Une pièce créée moins de trente jours avant l'activation n'entre pas**
    dans la promotion : vendue au prix catalogue, sans badge. Même règle pour
    une pièce dont le prix a changé pendant ces trente jours.
 2. **Réactivation** : une promotion désactivée peut être réactivée dans les

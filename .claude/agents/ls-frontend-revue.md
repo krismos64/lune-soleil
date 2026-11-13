@@ -118,7 +118,9 @@ des pages publiques » de `frontend-design.md` :
 Un thème saisonnier suit ADR-046, amendé par LS-277 pour `NOEL_1` et
 `NOEL_2`, et par LS-318 pour `BLACK_WEEK` :
 - un jeu fermé écrit dans le code, sur l'accueil et le catalogue seulement ;
-- aucun texte saisi, aucune promesse de prix, de date ni de livraison ;
+- aucun texte saisi, aucune promesse de prix, de date ni de livraison ; le
+  bandeau Black Week de l'accueil, LS-322, ne porte le taux, la portée et la
+  période que sous promotion active, ADR-051, texte immobile ;
 - des accents mesurés sur crème, sable et blanc, et des textes `*-sur-rouge`
   ou `*-sur-nuit` mesurés sur chaque fond sombre de leur bloc, tout petit
   texte sur le rouge en blanc pur, l'or vif de Black Week jamais sur fond
