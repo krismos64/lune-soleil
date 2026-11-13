@@ -6,7 +6,26 @@
 | Date | 12 novembre 2026 |
 | Décideur | Christophe Mostefaoui |
 | Complète | ADR-024 (commande et réservation atomiques), ADR-046 (thèmes saisonniers) |
-| Ticket | LS-319 |
+| Ticket | LS-319, LS-321 |
+
+## Second amendement du 13 novembre 2026, les pièces récentes réduites, LS-321
+
+**Constat** : l'essai de Christophe en production, ce matin, a réduit 53
+produits sur 65. Les douze exclus étaient les plus récents, créés les 24 et
+29 octobre, que l'accueil et le catalogue montrent en premier : la promotion
+paraissait sans effet.
+
+**Arbitrage de Christophe** : « réduire toutes les pièces ». L'âge de la
+variante ne compte plus, l'arbitrage 1 ne garde que sa seconde moitié : **une
+pièce dont le prix a changé dans les trente jours précédant l'activation reste
+exclue**, son prix actuel n'étant pas le prix le plus bas pratiqué. Une pièce
+en vente depuis moins de trente jours est réduite, et son prix barré est le
+prix pratiqué depuis sa mise en vente, le seul qu'elle ait jamais eu.
+
+**Risque accepté par Christophe** : L112-1-1 parle du prix le plus bas
+pratiqué « au cours des trente derniers jours », et une pièce mise en vente
+depuis moins longtemps n'a pas trente jours de prix. L'ADR ne qualifie pas ce
+risque, il le nomme.
 
 ## Amendement du 13 novembre 2026, activation libre et période réglable
 
@@ -32,7 +51,8 @@ blocage**, et régler elle-même la période que le bandeau annonce.
    `20261113120000_periode_promotion`, initialisée au 23 et au 29 novembre
    2026. Le rôle est exigé, pas la réauthentification : les dates ne changent
    aucun prix encaissé.
-3. **Le reste tient** : éligibilité par variante sur trente jours, prix gelés
+3. **Le reste tient** : éligibilité par variante sur trente jours (dont
+   l'âge est retiré par le second amendement, LS-321), prix gelés
    sous promotion, prix figés sur la ligne, facture en version 3.
 
 ## Contexte
