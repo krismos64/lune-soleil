@@ -236,7 +236,7 @@ async function ContenuCatalogue({
   return (
     <>
       {/* ADR-051 : l'annonce de la promotion, rien sans promotion active. */}
-      <AnnoncePromotion annonce={promotion} />
+      <AnnoncePromotion promotion={promotion} />
       {/*
        * LA BARRE DE FILTRES EST UNE LISTE DE LIENS, et non un formulaire. Un
        * lien est atteignable au clavier, annonce son etat courant, et emmene sur
