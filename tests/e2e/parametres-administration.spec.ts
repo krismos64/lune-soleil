@@ -160,6 +160,41 @@ test.describe("écran connecté", () => {
     ).toBeAttached();
   });
 
+  /*
+   * LA PÉRIODE ANNONCÉE DE LA PROMOTION, amendement d'ADR-051 du
+   * 13 novembre 2026. Aucune promotion n'est active dans la base de bout en
+   * bout : la période n'est lue par aucun autre écran, la changer ne touche
+   * aucun test voisin. Elle est remise à la valeur de la migration à la fin.
+   */
+  test("la période annoncée se règle par deux dates, dans l'ordre", async ({
+    page,
+  }) => {
+    await page.goto("/administration/parametres");
+    const formulaire = page.locator("#periode-promotion");
+    const debut = formulaire.getByLabel("Premier jour");
+    const fin = formulaire.getByLabel("Dernier jour");
+    const bouton = formulaire.getByRole("button", {
+      name: "Appliquer la période",
+    });
+    const etat = page.getByRole("status", {
+      name: "État de la période annoncée",
+    });
+
+    await debut.fill("2026-11-29");
+    await fin.fill("2026-11-23");
+    await bouton.click();
+    await expect(etat).toHaveText(
+      "La date de fin ne peut pas précéder la date de début.",
+    );
+
+    await debut.fill("2026-11-23");
+    await fin.fill("2026-11-29");
+    await bouton.click();
+    await expect(etat).toHaveText(
+      "Le bandeau annonce désormais : du lundi 23 au dimanche 29 novembre.",
+    );
+  });
+
   test("l'écran ne déborde pas horizontalement", async ({ page }) => {
     await page.goto("/administration/parametres");
 

@@ -279,7 +279,7 @@ export function PeriodePromotion({
         </p>
       )}
       <button type="submit" className={styles.bouton} disabled={enCours}>
-        Enregistrer la période
+        Appliquer la période
       </button>
     </form>
   );
