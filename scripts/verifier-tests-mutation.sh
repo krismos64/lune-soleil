@@ -1495,7 +1495,9 @@ cas "reference non normalisee en majuscules" integration \
 # sortie du catalogue n'a aucun effet visible, et laisse croire a une remise en
 # vente. La mutation retire la garde, et rien d'autre ne l'arrete : aucune
 # contrainte de base ne connait la notion de variante archivee.
-mute "$VARIANTE" 's/  if \(existante\.archiveeA !== null\) \{\n    throw new VarianteDejaArchiveeError\(\);\n  \}\n\n  try \{\n    return await depot\.ecrireVariante/  \/\/ garde retiree\n\n  try {\n    return await depot.ecrireVariante/'
+# LA GARDE VIT DANS LA TRANSACTION depuis LS-319, ADR-051 : la variante y est
+# lue sous verrou, avec le gel des prix. L'expression suit sa nouvelle forme.
+mute "$VARIANTE" 's/      if \(existante\.archiveeA !== null\) \{\n        throw new VarianteDejaArchiveeError\(\);\n      \}\n/      \/\/ garde retiree\n/'
 cas "modification d'une variante archivee" integration \
   "refuse de modifier une variante archivee"
 
