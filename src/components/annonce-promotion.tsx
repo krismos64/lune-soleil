@@ -41,7 +41,8 @@ export function AnnoncePromotion({
         {annonce.toutLeCatalogue
           ? "sur toute la boutique"
           : "sur les pièces signalées"}
-        , {annonce.periodeAnnoncee}.
+        {annonce.periodeAnnoncee === null ? "" : `, ${annonce.periodeAnnoncee}`}
+        .
       </p>
     </section>
   );

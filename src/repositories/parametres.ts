@@ -203,3 +203,32 @@ export async function ecrireThemeSaisonnier(
   });
   return count;
 }
+
+/** La période annoncée de la promotion, ADR-051 amendé. */
+export async function lirePeriodePromotion(
+  client: ClientBase,
+): Promise<{ debut: Date; fin: Date } | null> {
+  const ligne = await client.parametreBoutique.findFirst({
+    where: { id: IDENTIFIANT_LIGNE },
+    select: { promotionDebutAnnonce: true, promotionFinAnnonce: true },
+  });
+  if (!ligne?.promotionDebutAnnonce || !ligne.promotionFinAnnonce) {
+    return null;
+  }
+  return { debut: ligne.promotionDebutAnnonce, fin: ligne.promotionFinAnnonce };
+}
+
+/** Écrit la période annoncée, et elle seule. Rend le nombre de lignes. */
+export async function ecrirePeriodePromotion(
+  client: ClientBase,
+  periode: { debut: Date; fin: Date } | null,
+): Promise<number> {
+  const { count } = await client.parametreBoutique.updateMany({
+    where: { id: IDENTIFIANT_LIGNE },
+    data: {
+      promotionDebutAnnonce: periode?.debut ?? null,
+      promotionFinAnnonce: periode?.fin ?? null,
+    },
+  });
+  return count;
+}

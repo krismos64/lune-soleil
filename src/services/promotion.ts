@@ -9,11 +9,11 @@
  * pour l'affichage et dans `passerCommande` pour la commande.
  */
 import {
-  JOURS_CARENCE,
-  HEURES_REACTIVATION,
   PROMOTIONS,
+  formaterPeriode,
   prixDeVente,
   schemaCodePromotion,
+  schemaPeriodePromotion,
   type CodePromotion,
 } from "@/lib/promotion";
 import { prisma } from "@/lib/prisma";
@@ -27,6 +27,7 @@ import {
 } from "@/services/reauthentification";
 import { valider } from "@/lib/validation";
 import * as depot from "@/repositories/promotion";
+import * as depotParametres from "@/repositories/parametres";
 
 export class PromotionDejaActiveError extends Error {
   constructor() {
@@ -35,26 +36,13 @@ export class PromotionDejaActiveError extends Error {
   }
 }
 
-/**
- * Une promotion désactivée depuis plus de 24 heures interdit toute
- * activation pendant trente jours, arbitrage 2 d'ADR-051 : le prix réduit
- * est devenu le prix le plus bas pratiqué.
- */
-export class PromotionEnCarenceError extends Error {
-  readonly finCarence: Date;
-  constructor(finCarence: Date) {
-    super("Une promotion récente interdit d'en activer une nouvelle.");
-    this.name = "PromotionEnCarenceError";
-    this.finCarence = finCarence;
-  }
-}
-
 export type PromotionEnVigueur = {
   id: string;
   code: CodePromotion;
   taux: number;
   libelle: string;
-  periodeAnnoncee: string;
+  /** « du lundi 23 au dimanche 29 novembre », `null` sans période réglée. */
+  periodeAnnoncee: string | null;
   activeDepuis: Date;
   variantesEligibles: Set<string>;
   /** Produits dont TOUTES les variantes en vente sont éligibles. */
@@ -96,7 +84,7 @@ export async function lirePromotionEnVigueur(
     code: code.data,
     taux: active.taux,
     libelle: definition.libelle,
-    periodeAnnoncee: definition.periodeAnnoncee,
+    periodeAnnoncee: await lirePeriodeAnnoncee(client),
     activeDepuis: active.activeDepuis,
     variantesEligibles,
     produitsEligibles,
@@ -140,17 +128,6 @@ export async function activerPromotion({
     await depot.verrouillerPromotion(tx);
     if ((await depot.lirePromotionActive(tx)) !== null) {
       throw new PromotionDejaActiveError();
-    }
-    const derniere = await depot.lireDerniereDesactivation(tx, {
-      heuresReactivation: HEURES_REACTIVATION,
-      joursCarence: JOURS_CARENCE,
-    });
-    if (
-      derniere !== null &&
-      derniere.dansCarence &&
-      !(derniere.dansReactivation && derniere.code === code)
-    ) {
-      throw new PromotionEnCarenceError(derniere.finCarence);
     }
     try {
       return await depot.insererPromotion(tx, {
@@ -205,7 +182,6 @@ export type IssueBasculePromotion =
   | { statut: "DESACTIVEE" }
   | { statut: "AUCUNE_ACTIVE" }
   | { statut: "DEJA_ACTIVE" }
-  | { statut: "CARENCE"; finCarence: Date }
   | { statut: "SESSION_ABSENTE" }
   | { statut: "REAUTHENTIFICATION_REQUISE" };
 
@@ -250,9 +226,6 @@ export async function basculerPromotion(
     if (erreur instanceof PromotionDejaActiveError) {
       return { statut: "DEJA_ACTIVE" };
     }
-    if (erreur instanceof PromotionEnCarenceError) {
-      return { statut: "CARENCE", finCarence: erreur.finCarence };
-    }
     throw erreur;
   }
 }
@@ -276,5 +249,75 @@ export async function lireEtatPromotion(): Promise<{
       activeDepuis: enVigueur.activeDepuis,
       exclues: lignes.filter((l) => !l.eligible).length,
     },
+  };
+}
+
+/**
+ * La période annoncée, écrite pour le bandeau, `null` sans période réglée.
+ * Une lecture en échec ne fait tomber aucune page : le bandeau perd ses
+ * dates, il ne ment pas.
+ */
+async function lirePeriodeAnnoncee(client = prisma): Promise<string | null> {
+  try {
+    const periode = await depotParametres.lirePeriodePromotion(client);
+    return periode === null
+      ? null
+      : formaterPeriode(periode.debut, periode.fin);
+  } catch {
+    return null;
+  }
+}
+
+/** La période réglée, au format des champs de date, pour l'écran. */
+export async function lirePeriodeReglee(): Promise<{
+  debut: string;
+  fin: string;
+} | null> {
+  const periode = await depotParametres.lirePeriodePromotion(prisma);
+  if (periode === null) return null;
+  return {
+    debut: periode.debut.toISOString().slice(0, 10),
+    fin: periode.fin.toISOString().slice(0, 10),
+  };
+}
+
+export type IssuePeriodePromotion =
+  | { statut: "ENREGISTREE"; periode: string | null }
+  | { statut: "SESSION_ABSENTE" }
+  | { statut: "PARAMETRES_ABSENTS" };
+
+/**
+ * Règle la période annoncée par le bandeau, amendement d'ADR-051 : deux
+ * dates, ou aucune. Le rôle est exigé, pas la réauthentification : les dates
+ * ne changent aucun prix encaissé, même motif que le thème.
+ * `EntreeInvalideError` remonte à l'action, qui en lit le message.
+ */
+export async function enregistrerPeriodePromotion(
+  enTetes: Headers,
+  entree: unknown,
+): Promise<IssuePeriodePromotion> {
+  try {
+    await exigerAdministratrice(enTetes);
+  } catch (erreur) {
+    if (erreur instanceof AutorisationRefuseeError) {
+      return { statut: "SESSION_ABSENTE" };
+    }
+    throw erreur;
+  }
+  const periode = valider(schemaPeriodePromotion, entree);
+  const enDates =
+    periode === null
+      ? null
+      : {
+          debut: new Date(`${periode.debut}T00:00:00Z`),
+          fin: new Date(`${periode.fin}T00:00:00Z`),
+        };
+  if ((await depotParametres.ecrirePeriodePromotion(prisma, enDates)) === 0) {
+    return { statut: "PARAMETRES_ABSENTS" };
+  }
+  return {
+    statut: "ENREGISTREE",
+    periode:
+      enDates === null ? null : formaterPeriode(enDates.debut, enDates.fin),
   };
 }

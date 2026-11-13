@@ -21,6 +21,8 @@ import { useActionState } from "react";
 import { PROMOTIONS } from "@/lib/promotion";
 import {
   basculerPromotionAction,
+  enregistrerPeriodeAction,
+  type ResultatPeriode,
   type ResultatPromotion,
 } from "./actions-promotion";
 import styles from "./parametres.module.css";
@@ -54,8 +56,6 @@ function messageDe(resultat: ResultatPromotion | null): string {
       return "Aucune promotion n'était active.";
     case "DEJA_ACTIVE":
       return "Une promotion est déjà active.";
-    case "CARENCE":
-      return `Une promotion récente interdit d'en activer une nouvelle avant le ${resultat.finCarence} : le prix réduit est devenu le prix le plus bas des trente derniers jours.`;
     case "SESSION_ABSENTE":
       return "Votre session a expiré. Reconnectez-vous pour continuer.";
     case "REAUTHENTIFICATION_REQUISE":
@@ -73,8 +73,8 @@ function texteEtat(etat: Exclude<EtatPromotionAffiche, "INDISPONIBLE">) {
     return (
       <>
         Aucune promotion active. {blackWeek.libelle} réduit les prix de{" "}
-        {blackWeek.taux}&nbsp;% et s&apos;annonce {blackWeek.periodeAnnoncee} :
-        à activer et à désactiver à ces dates.
+        {blackWeek.taux}&nbsp;%. Vous l&apos;activez et la désactivez quand vous
+        le souhaitez ; le bandeau annonce la période réglée ci-dessous.
       </>
     );
   }
@@ -178,6 +178,108 @@ export function ChoixPromotion({ etat }: { etat: EtatPromotionAffiche }) {
         {etat === null
           ? `Activer ${blackWeek.libelle}, ${MOINS}${blackWeek.taux} %`
           : "Désactiver la promotion"}
+      </button>
+    </form>
+  );
+}
+
+function messagePeriode(resultat: ResultatPeriode | null): string {
+  switch (resultat?.statut) {
+    case undefined:
+      return "";
+    case "ENREGISTREE":
+      return resultat.periode === null
+        ? "Aucune date n'est plus annoncée par le bandeau."
+        : `Le bandeau annonce désormais : ${resultat.periode}.`;
+    case "SESSION_ABSENTE":
+      return "Votre session a expiré. Reconnectez-vous pour continuer.";
+    case "PARAMETRES_ABSENTS":
+      return "Aucun paramètre n'est enregistré pour cette boutique.";
+    case "INVALIDE":
+      return resultat.message;
+    case "INDISPONIBLE":
+      return "Le service est momentanément indisponible. Réessayez dans un instant.";
+  }
+}
+
+/**
+ * La période annoncée par le bandeau, amendement d'ADR-051 du 13 novembre
+ * 2026 : deux dates choisies par l'exploitante, indépendantes de
+ * l'activation. Les deux vides, le bandeau n'annonce aucune date.
+ */
+export function PeriodePromotion({
+  periode,
+}: {
+  periode: { debut: string; fin: string } | null;
+}) {
+  const [resultat, action, enCours] = useActionState<
+    ResultatPeriode | null,
+    FormData
+  >(enregistrerPeriodeAction, null);
+
+  return (
+    <form
+      action={action}
+      className={styles.formulaire}
+      id="periode-promotion"
+      aria-labelledby="periode-titre"
+    >
+      <h2 id="periode-titre" className={styles.legende}>
+        Période annoncée de la promotion
+      </h2>
+      <p id="periode-aide" className={styles.aide}>
+        Le bandeau de la promotion écrit ces dates, par exemple « du lundi 23 au
+        dimanche 29 novembre ». Laissez les deux champs vides pour
+        n&apos;annoncer aucune date.
+      </p>
+      <div className={styles.champs}>
+        <div className={styles.champ}>
+          <label htmlFor="periode-debut" className={styles.libelle}>
+            Premier jour
+          </label>
+          <input
+            id="periode-debut"
+            name="debut"
+            type="date"
+            defaultValue={periode?.debut ?? ""}
+            className={styles.saisie}
+            aria-describedby="periode-aide"
+          />
+        </div>
+        <div className={styles.champ}>
+          <label htmlFor="periode-fin" className={styles.libelle}>
+            Dernier jour
+          </label>
+          <input
+            id="periode-fin"
+            name="fin"
+            type="date"
+            defaultValue={periode?.fin ?? ""}
+            className={styles.saisie}
+            aria-describedby="periode-aide"
+          />
+        </div>
+      </div>
+      <p
+        role="status"
+        aria-label="État de la période annoncée"
+        className={styles.sortie}
+      >
+        {enCours ? "Enregistrement…" : messagePeriode(resultat)}
+      </p>
+      {resultat?.statut === "SESSION_ABSENTE" && (
+        <p className={styles.sortie}>
+          <Link
+            href="/administration/connexion"
+            prefetch={false}
+            className={styles.lienSortie}
+          >
+            Se reconnecter
+          </Link>
+        </p>
+      )}
+      <button type="submit" className={styles.bouton} disabled={enCours}>
+        Enregistrer la période
       </button>
     </form>
   );

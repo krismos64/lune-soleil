@@ -73,6 +73,19 @@ describe("annonce de la promotion", () => {
   });
 
   /*
+   * SANS PÉRIODE RÉGLÉE, AUCUNE DATE, amendement d'ADR-051 : l'annonce ne
+   * ment pas sur une période que l'exploitante n'a pas fixée.
+   */
+  test("sans période réglée, l'annonce ne donne aucune date", () => {
+    render(
+      <AnnoncePromotion promotion={{ ...ANNONCE, periodeAnnoncee: null }} />,
+    );
+    const region = screen.getByRole("region", { name: "Promotion en cours" });
+    expect(region.textContent).toContain("sur toute la boutique.");
+    expect(region.textContent).not.toContain("novembre");
+  });
+
+  /*
    * UNE PIÈCE EXCLUE SUFFIT À RENDRE « TOUTE LA BOUTIQUE » FAUX, arbitrage 1
    * d'ADR-051 : l'annonce le dit autrement.
    */
