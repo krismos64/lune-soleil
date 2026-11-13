@@ -87,7 +87,7 @@ function texteEtat(etat: Exclude<EtatPromotionAffiche, "INDISPONIBLE">) {
       </strong>{" "}
       {etat.exclues === 0
         ? "Toutes les pièces en vente sont réduites."
-        : `${etat.exclues} pièce${etat.exclues > 1 ? "s" : ""} ${etat.exclues > 1 ? "restent" : "reste"} au prix catalogue : en vente depuis moins de trente jours, ou prix modifié dans ces trente jours.`}{" "}
+        : `${etat.exclues} pièce${etat.exclues > 1 ? "s" : ""} ${etat.exclues > 1 ? "restent" : "reste"} au prix catalogue : prix modifié dans les trente derniers jours.`}{" "}
       Les prix sont gelés tant qu&apos;elle est active.
     </>
   );

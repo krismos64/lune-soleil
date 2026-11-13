@@ -5,10 +5,14 @@
  * et sert à l'affichage comme à la commande : deux formulations finiraient
  * par diverger, et le client paierait un autre prix que celui affiché.
  *
- * Elle se juge à l'activation de la promotion, `p.active_depuis` : la
- * variante existe depuis trente jours au moins, et son prix n'a pas changé
- * pendant ces trente jours. L'horloge est celle de PostgreSQL, jamais celle
- * de Node, `database.md`.
+ * Elle se juge à l'activation de la promotion, `p.active_depuis` : le prix
+ * de la variante n'a pas changé pendant les trente jours qui précèdent.
+ * L'horloge est celle de PostgreSQL, jamais celle de Node, `database.md`.
+ *
+ * L'ÂGE DE LA VARIANTE NE COMPTE PLUS, LS-321, arbitrage de Christophe du
+ * 13 novembre 2026 : une pièce en vente depuis moins de trente jours est
+ * réduite, son prix barré étant le prix pratiqué depuis sa mise en vente.
+ * Risque juridique accepté, amendement d'ADR-051.
  */
 import { Prisma } from "@/generated/prisma/client";
 import { CLE_VERROU_PROMOTION, JOURS_PRIX_ANTERIEUR } from "@/lib/promotion";
@@ -17,7 +21,6 @@ import type { ClientBase as Client } from "@/repositories/stock";
 /** `v` est la variante, `p` la promotion active. */
 const CONDITION_ELIGIBLE = Prisma.sql`
   v.prix_centimes > 0
-  AND v.cree_a <= p.active_depuis - make_interval(days => ${JOURS_PRIX_ANTERIEUR})
   AND NOT EXISTS (
     SELECT 1 FROM historique_prix_variante h
      WHERE h.variante_id = v.id
