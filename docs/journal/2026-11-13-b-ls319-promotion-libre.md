@@ -62,3 +62,13 @@ LS-291.
 ## État des tickets
 
 - **LS-319** : Terminé, amendement en production.
+
+## Relecture finale, même jour
+
+Production vérifiée à `8fe66c2`, `/api/sante` opérationnel. Trois textes
+périmés par l'amendement corrigés : le commentaire de `activerPromotion` et
+celui de `choix-promotion.tsx` décrivaient encore la carence et une période
+écrite dans le code, et `docs/ETAT.md` citait `f55754c`. CLAUDE.md, README,
+agents, skills, hooks et mémoire relus sans écart ; `verifier-config-claude.sh`
+et `verifier-regles.sh` au vert. Jira : LS-318 et LS-319 terminées, LS-320 et
+LS-291 à faire.

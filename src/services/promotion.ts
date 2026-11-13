@@ -111,9 +111,9 @@ export function prixAffiche(
 }
 
 /**
- * Active une promotion écrite dans le code. Refuse une seconde active, et
- * une activation en carence. Une réactivation dans les 24 heures de la même
- * promotion est permise, arbitrage 2.
+ * Active une promotion écrite dans le code. Refuse seulement une seconde
+ * active : aucune carence entre deux activations, amendement d'ADR-051 du
+ * 13 novembre 2026.
  */
 export async function activerPromotion({
   code: entree,

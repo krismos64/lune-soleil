@@ -3,8 +3,9 @@
 /**
  * L'activation de la promotion, ADR-051, LS-319, aux côtés du thème.
  *
- * AUCUN TAUX NI TEXTE À SAISIR : la promotion, son taux et sa période sont
- * écrits dans le code, `src/lib/promotion.ts`. L'écran active et désactive.
+ * AUCUN TAUX NI TEXTE À SAISIR : la promotion et son taux sont écrits dans le
+ * code, `src/lib/promotion.ts`. L'écran active et désactive librement ; la
+ * période annoncée se règle par deux dates, `PeriodePromotion` plus bas.
  *
  * L'ÉTAT AFFICHÉ VIENT DU SERVEUR, rendu à chaque requête, et l'issue de la
  * dernière action le complète sans le remplacer : après une activation, la
