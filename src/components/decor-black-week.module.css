@@ -493,9 +493,15 @@
     box-shadow: none;
   }
 
+  /*
+   * L'OR NE S'IMPRIME PAS SUR LE BLANC, 1,68:1 : le mot « Week » et le taux
+   * fixent leur propre couleur, ils sont nommés ici. Revue de LS-322.
+   */
   .titreBandeau,
   .offreBandeau,
-  .sousTitreBandeau {
+  .sousTitreBandeau,
+  .orBandeau,
+  .tauxBandeau {
     color: var(--ls-text);
   }
 }

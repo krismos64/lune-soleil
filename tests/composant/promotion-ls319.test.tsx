@@ -108,12 +108,16 @@ describe("bandeau Black Week de l'accueil", () => {
   test("sans promotion, le nom de l'événement seul", () => {
     const { container } = render(<BandeauBlackWeek promotion={null} />);
     expect(container.textContent).toBe("Black Week");
+    expect(screen.queryByRole("region")).toBeNull();
   });
 
   test("sous promotion, le taux, la portée calculée et la période", () => {
     const { container } = render(
       <BandeauBlackWeek promotion={{ ...ANNONCE, toutLeCatalogue: false }} />,
     );
+    expect(
+      screen.getByRole("region", { name: "Promotion en cours" }),
+    ).toBeTruthy();
     // Espace insécable entre le taux et le signe, signe moins U+2212.
     expect(container.textContent).toContain("−30\u00a0%");
     expect(container.textContent).toContain("sur les pièces signalées");
