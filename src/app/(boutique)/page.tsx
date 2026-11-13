@@ -26,7 +26,7 @@ import { AnnoncePromotion } from "@/components/annonce-promotion";
 import { BandeauReassurance } from "@/components/bandeau-reassurance";
 import { BandeauApercuTheme } from "@/components/bandeau-apercu-theme";
 import { BoutonPauseAnimations } from "@/components/bouton-pause-animations";
-import { LisereOr } from "@/components/decor-black-week";
+import { BandeauBlackWeek, LisereOr } from "@/components/decor-black-week";
 import { BandePapierCadeau, BandeSucreOrge } from "@/components/decor-noel";
 import { EmblemeAnime } from "@/components/embleme-anime";
 import { PoussiereOr } from "@/components/poussiere-or";
@@ -169,6 +169,11 @@ export default async function PageAccueil({
        */}
       <section className={styles.hero} data-borne="">
         <PoussiereOr />
+        {/*
+         * THÈME BLACK WEEK, LS-322 : le bandeau remplace le ruban de LS-318 et
+         * porte l'annonce de la promotion quand elle est active, LS-319.
+         */}
+        {blackWeek ? <BandeauBlackWeek promotion={promotion} /> : null}
         <div className={styles.heroGrille}>
           <div className={styles.heroTexte}>
             {/*
@@ -181,15 +186,6 @@ export default async function PageAccueil({
                   <path d="M10 2v16M3 6l14 8M17 6 3 14" />
                 </svg>
                 Fêtes de fin d&apos;année
-              </p>
-            ) : blackWeek ? (
-              /*
-               * THÈME BLACK WEEK, LS-318 : le ruban nomme l'événement, sans
-               * prix, taux ni date ; la réduction relève de LS-319.
-               */
-              <p className={`${styles.ruban} ${styles.rubanBlackWeek}`}>
-                <span className={styles.pointRuban} aria-hidden="true" />
-                Black Week
               </p>
             ) : null}
             <p className={styles.surtitre}>Bijoux faits main</p>
@@ -229,11 +225,16 @@ export default async function PageAccueil({
        * faute de configuration et l'origine faute de confirmation : les deux
        * sont acquises, ADR-043 et le 3 septembre 2026.
        */}
-      {/* ADR-051 : l'annonce de la promotion, rien sans promotion active. */}
-      <AnnoncePromotion
-        promotion={promotion}
-        className={styles.annonceAccueil}
-      />
+      {/*
+       * ADR-051 : l'annonce de la promotion, rien sans promotion active. Sous
+       * Black Week, le bandeau du héros la porte déjà, LS-322.
+       */}
+      {blackWeek ? null : (
+        <AnnoncePromotion
+          promotion={promotion}
+          className={styles.annonceAccueil}
+        />
+      )}
 
       <BandeauReassurance seuilFranchiseCentimes={seuilFranchise} anime />
 

@@ -65,6 +65,34 @@ test.describe("aperçu de l'administratrice", () => {
     await expect(page.locator("main a button")).toHaveCount(0);
   });
 
+  /*
+   * LE BANDEAU DE L'ACCUEIL, LS-322 : en tête du héros, dans la largeur, son
+   * texte hors de tout décor animé. Sans promotion, il ne nomme que
+   * l'événement : le test d'au-dessus vérifie qu'il ne promet rien.
+   */
+  test("le bandeau Black Week tient dans la largeur, son texte est immobile", async ({
+    page,
+  }) => {
+    await page.goto(accueil);
+    const titre = page.getByText("Black Week", { exact: true });
+    await expect(titre).toBeVisible();
+    const largeur = page.viewportSize()!.width;
+    const boite = await titre.locator("xpath=../..").boundingBox();
+    expect(boite).not.toBeNull();
+    expect(boite!.x).toBeGreaterThanOrEqual(0);
+    expect(boite!.x + boite!.width).toBeLessThanOrEqual(largeur);
+    expect(
+      await titre.evaluate((el) => el.closest("[data-continu]") === null),
+    ).toBe(true);
+    // Le bandeau précède le titre de la page dans le héros.
+    const heros = page.locator("main section").first();
+    const ordre = await heros.evaluate((section) => {
+      const texte = section.textContent ?? "";
+      return texte.indexOf("Black Week") < texte.indexOf("La lumière");
+    });
+    expect(ordre).toBe(true);
+  });
+
   test("le catalogue s'habille, le h1 reste « Le catalogue »", async ({
     page,
   }) => {

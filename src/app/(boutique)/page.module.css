@@ -943,22 +943,6 @@
   );
 }
 
-.rubanBlackWeek {
-  border-color: color-mix(in srgb, var(--ls-bw-or-sur-nuit) 55%, transparent);
-  background: transparent;
-  color: var(--ls-bw-or-sur-nuit);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-size: 0.8125rem;
-}
-
-.pointRuban {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
 /* Bouton plein en or, texte de nuit : 11,29:1. */
 :global([data-theme="black_week"]) .actionPrincipale {
   background: var(--ls-bw-or-sur-nuit);
