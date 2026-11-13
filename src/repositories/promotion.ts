@@ -128,43 +128,6 @@ export async function desactiverPromotionActive(
 }
 
 /**
- * La dernière désactivation, et si elle tombe dans la fenêtre de
- * réactivation ou dans la carence, jugées par l'horloge de la base.
- */
-export async function lireDerniereDesactivation(
-  client: Client,
-  {
-    heuresReactivation,
-    joursCarence,
-  }: { heuresReactivation: number; joursCarence: number },
-): Promise<{
-  code: string;
-  desactiveeA: Date;
-  dansReactivation: boolean;
-  finCarence: Date;
-  dansCarence: boolean;
-} | null> {
-  const lignes = await client.$queryRaw<
-    {
-      code: string;
-      desactiveeA: Date;
-      dansReactivation: boolean;
-      finCarence: Date;
-      dansCarence: boolean;
-    }[]
-  >`
-    SELECT code, desactivee_a AS "desactiveeA",
-           desactivee_a > now() - make_interval(hours => ${heuresReactivation}) AS "dansReactivation",
-           desactivee_a + make_interval(days => ${joursCarence}) AS "finCarence",
-           desactivee_a > now() - make_interval(days => ${joursCarence}) AS "dansCarence"
-      FROM promotion
-     WHERE desactivee_a IS NOT NULL
-     ORDER BY desactivee_a DESC
-     LIMIT 1`;
-  return lignes[0] ?? null;
-}
-
-/**
  * Écrit l'historique d'un changement de prix, dans la transaction qui le
  * fait. Rien si le prix ne change pas : `chk_historique_prix_variante`
  * refuserait la ligne.

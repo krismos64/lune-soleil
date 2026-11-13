@@ -152,7 +152,7 @@ describe("activation et désactivation", () => {
     ).rejects.toMatchObject({ name: "EntreeInvalideError" });
   });
 
-  it("réactive dans les 24 heures, arbitrage 2 d'ADR-051", async () => {
+  it("réactive le jour même d'une désactivation", async () => {
     await promotion.activerPromotion({ code: "BLACK_WEEK", acteurId: null });
     await promotion.desactiverPromotion({ acteurId: null });
     await client.query(
@@ -163,18 +163,16 @@ describe("activation et désactivation", () => {
     ).resolves.toMatchObject({ code: "BLACK_WEEK" });
   });
 
-  it("refuse au-delà de 24 heures, pendant trente jours", async () => {
+  /*
+   * AUCUNE CARENCE, amendement d'ADR-051 du 13 novembre 2026, arbitrage de
+   * Christophe : l'exploitante active et désactive librement. Ce test
+   * remplace celui qui exigeait le refus au-delà de 24 heures.
+   */
+  it("réactive librement, même dix jours après une désactivation", async () => {
     await promotion.activerPromotion({ code: "BLACK_WEEK", acteurId: null });
     await promotion.desactiverPromotion({ acteurId: null });
     await client.query(
-      "UPDATE promotion SET active_depuis = now() - interval '10 days', desactivee_a = now() - interval '25 hours'",
-    );
-    await expect(
-      promotion.activerPromotion({ code: "BLACK_WEEK", acteurId: null }),
-    ).rejects.toMatchObject({ name: "PromotionEnCarenceError" });
-
-    await client.query(
-      "UPDATE promotion SET active_depuis = now() - interval '40 days', desactivee_a = now() - interval '31 days'",
+      "UPDATE promotion SET active_depuis = now() - interval '20 days', desactivee_a = now() - interval '10 days'",
     );
     await expect(
       promotion.activerPromotion({ code: "BLACK_WEEK", acteurId: null }),
@@ -211,6 +209,27 @@ describe("éligibilité par variante, arbitrage 1 d'ADR-051", () => {
     expect((await promotion.lirePromotionEnVigueur())!.toutLeCatalogue).toBe(
       true,
     );
+  });
+
+  /*
+   * LA PÉRIODE ANNONCÉE VIENT DE LA BASE, réglée par l'exploitante,
+   * amendement d'ADR-051 ; sans période, le bandeau n'annonce aucune date.
+   */
+  it("la période annoncée se lit en base, ou manque", async () => {
+    await varianteAgee(40);
+    await promotion.activerPromotion({ code: "BLACK_WEEK", acteurId: null });
+    await client.query(
+      "UPDATE parametre_boutique SET promotion_debut_annonce = DATE '2026-11-23', promotion_fin_annonce = DATE '2026-11-29'",
+    );
+    expect((await promotion.lirePromotionEnVigueur())!.periodeAnnoncee).toBe(
+      "du lundi 23 au dimanche 29 novembre",
+    );
+    await client.query(
+      "UPDATE parametre_boutique SET promotion_debut_annonce = NULL, promotion_fin_annonce = NULL",
+    );
+    expect(
+      (await promotion.lirePromotionEnVigueur())!.periodeAnnoncee,
+    ).toBeNull();
   });
 
   it("sans promotion active, rien n'est en vigueur", async () => {

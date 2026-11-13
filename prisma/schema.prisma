@@ -1539,6 +1539,15 @@ model ParametreBoutique {
   // la valeur côté serveur, `services/theme-saisonnier.ts`.
   themeSaisonnier String @default("AUCUN") @map("theme_saisonnier")
 
+  // La période annoncée de la promotion, ADR-051 amendé le 13 novembre 2026 :
+  // deux jours civils réglés par l'exploitante, que le bandeau écrit « du
+  // lundi 23 au dimanche 29 novembre ». Nulles ensemble, aucune date
+  // annoncée ; sinon la fin ne précède pas le début,
+  // `chk_parametre_periode_promotion`. Des jours et non des instants : ils
+  // ne se convertissent pas de fuseau, invariant 8.
+  promotionDebutAnnonce DateTime? @map("promotion_debut_annonce") @db.Date
+  promotionFinAnnonce   DateTime? @map("promotion_fin_annonce") @db.Date
+
   modifieA DateTime @updatedAt @map("modifie_a") @db.Timestamptz(3)
 
   @@map("parametre_boutique")

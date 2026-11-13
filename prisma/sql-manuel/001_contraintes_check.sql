@@ -574,3 +574,10 @@ ALTER TABLE "ligne_commande"
   CHECK (("promotion_id" IS NULL AND "prix_reference_fige_centimes" IS NULL)
       OR ("promotion_id" IS NOT NULL AND "prix_reference_fige_centimes" IS NOT NULL
           AND "prix_fige_centimes" < "prix_reference_fige_centimes"));
+
+-- ADR-051 amendé, LS-319 : la période annoncée, les deux dates ou aucune.
+ALTER TABLE "parametre_boutique"
+  ADD CONSTRAINT "chk_parametre_periode_promotion"
+  CHECK (("promotion_debut_annonce" IS NULL AND "promotion_fin_annonce" IS NULL)
+      OR ("promotion_debut_annonce" IS NOT NULL AND "promotion_fin_annonce" IS NOT NULL
+          AND "promotion_fin_annonce" >= "promotion_debut_annonce"));

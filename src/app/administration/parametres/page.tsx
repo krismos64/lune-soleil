@@ -24,7 +24,7 @@
  * ------------------------------------------------------------------
  */
 import { formaterDate } from "@/lib/affichage-commande";
-import { lireEtatPromotion } from "@/services/promotion";
+import { lireEtatPromotion, lirePeriodeReglee } from "@/services/promotion";
 import { Suspense } from "react";
 
 import { headers } from "next/headers";
@@ -43,7 +43,7 @@ import {
   LIBELLES_THEMES,
   lireThemeSaisonnier,
 } from "@/services/theme-saisonnier";
-import { ChoixPromotion } from "./choix-promotion";
+import { ChoixPromotion, PeriodePromotion } from "./choix-promotion";
 import { ChoixTheme } from "./choix-theme";
 import { FormulaireParametres } from "./formulaire-parametres";
 import styles from "./parametres.module.css";
@@ -114,12 +114,13 @@ async function Reglages() {
    * promotion dit qu'il n'a pas pu se lire. Même principe que le thème, qui
    * retombe sur l'habillage ordinaire.
    */
-  const [theme, promotion] = await Promise.all([
+  const [theme, promotion, periode] = await Promise.all([
     lireThemeSaisonnier(),
     lireEtatPromotion().then(
       ({ active }) => active,
       () => "INDISPONIBLE" as const,
     ),
+    lirePeriodeReglee().catch(() => null),
   ]);
 
   try {
@@ -165,6 +166,8 @@ async function Reglages() {
                   }
             }
           />
+
+          <PeriodePromotion periode={periode} />
 
           <section
             className={styles.horsPerimetre}

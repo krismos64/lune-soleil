@@ -305,3 +305,20 @@
   margin: 0 0 var(--ls-space-2);
   padding-inline: 0;
 }
+
+/* Les deux dates de la période annoncée, côte à côte dès 390 px. */
+.champs {
+  display: grid;
+  gap: var(--ls-space-3);
+}
+
+@media (min-width: 390px) {
+  .champs {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+#periode-promotion > h2 {
+  margin: 0 0 var(--ls-space-2);
+  padding-inline: 0;
+}

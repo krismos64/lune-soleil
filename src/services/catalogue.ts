@@ -1027,7 +1027,8 @@ export type ProduitCatalogue = {
 export type AnnoncePromotion = {
   libelle: string;
   taux: number;
-  periodeAnnoncee: string;
+  /** « du lundi 23 au dimanche 29 novembre », `null` sans période réglée. */
+  periodeAnnoncee: string | null;
   /** Chaque pièce en vente est réduite : « sur toute la boutique ». */
   toutLeCatalogue: boolean;
 };

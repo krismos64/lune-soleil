@@ -1426,6 +1426,17 @@ sortie=$(R "INSERT INTO ligne_commande (id,commande_id,reference_figee,libelle_p
 verifier_accepte "ligne réduite de 30 % acceptée" "$sortie"
 R "DELETE FROM ligne_commande WHERE id = 'lcp1'; DELETE FROM promotion;" >/dev/null
 
+# LA PÉRIODE ANNONCÉE, ADR-051 amendé : les deux dates ou aucune, et dans
+# l'ordre. Une seule date laisserait le bandeau écrire « du 23 au » sans fin.
+sortie=$(R "UPDATE parametre_boutique SET promotion_debut_annonce = DATE '2026-11-23', promotion_fin_annonce = NULL WHERE id = true;")
+verifier_rejet "période sans date de fin rejetée" "chk_parametre_periode_promotion" "$sortie"
+sortie=$(R "UPDATE parametre_boutique SET promotion_debut_annonce = DATE '2026-11-29', promotion_fin_annonce = DATE '2026-11-23' WHERE id = true;")
+verifier_rejet "période à l'envers rejetée" "chk_parametre_periode_promotion" "$sortie"
+sortie=$(R "UPDATE parametre_boutique SET promotion_debut_annonce = DATE '2026-11-23', promotion_fin_annonce = DATE '2026-11-23' WHERE id = true;")
+verifier_accepte "période d'un seul jour acceptée" "$sortie"
+sortie=$(R "UPDATE parametre_boutique SET promotion_debut_annonce = NULL, promotion_fin_annonce = NULL WHERE id = true;")
+verifier_accepte "aucune période annoncée acceptée" "$sortie"
+
 echo
 echo "Retrait de l'espace d'administration, C45, LS-266"
 
