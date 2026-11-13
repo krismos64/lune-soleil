@@ -67,3 +67,16 @@ bandeau Black Week animé en tête de l'accueil, près de l'emblème.
 ## État des tickets
 
 - LS-321 et LS-322 : En cours jusqu'à la production.
+
+## Mise en production, même jour
+
+Sur accord de Christophe : PR #670 fusionnée, `main` à `74ed615`, image
+publiée, déploiement run 43393759307 réussi, conteneur sain ; `/api/sante`
+opérationnel, `/`, `/catalogue`, `/panier` en 200. Aucune migration. Mesure
+en lecture seule : **65 variantes sur 65** seraient réduites à l'activation,
+aucune promotion active.
+
+## État des tickets, final
+
+- **LS-321 et LS-322** : Terminé, en production. Restent à voir à
+  l'activation : le bandeau sous promotion à 320 px, la comète sous Safari.
