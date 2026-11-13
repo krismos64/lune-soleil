@@ -60,12 +60,12 @@ describe("bloc de prix", () => {
 
 describe("annonce de la promotion", () => {
   test("rien sans promotion active", () => {
-    const { container } = render(<AnnoncePromotion annonce={null} />);
+    const { container } = render(<AnnoncePromotion promotion={null} />);
     expect(container.textContent).toBe("");
   });
 
   test("toute la boutique et la période annoncée", () => {
-    render(<AnnoncePromotion annonce={ANNONCE} />);
+    render(<AnnoncePromotion promotion={ANNONCE} />);
     const region = screen.getByRole("region", { name: "Promotion en cours" });
     expect(region.textContent).toContain("Black Week : −30 %");
     expect(region.textContent).toContain("sur toute la boutique");
@@ -78,7 +78,7 @@ describe("annonce de la promotion", () => {
    */
   test("une pièce exclue, l'annonce dit « les pièces signalées »", () => {
     render(
-      <AnnoncePromotion annonce={{ ...ANNONCE, toutLeCatalogue: false }} />,
+      <AnnoncePromotion promotion={{ ...ANNONCE, toutLeCatalogue: false }} />,
     );
     const region = screen.getByRole("region", { name: "Promotion en cours" });
     expect(region.textContent).toContain("sur les pièces signalées");

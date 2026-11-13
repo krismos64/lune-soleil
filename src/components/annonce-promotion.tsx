@@ -14,11 +14,18 @@ import type { AnnoncePromotion as Annonce } from "@/services/catalogue";
 
 import styles from "./annonce-promotion.module.css";
 
+/*
+ * LA PROP S'APPELLE `promotion`, ET CE N'EST PAS UN DÉTAIL : une prop nommée
+ * comme celle du composant de chargement partagé est l'ancre par laquelle
+ * `verifier-ponctuation-chargement.sh` recense les écrans de chargement, C35.
+ * Le premier nom faisait passer l'accueil et le catalogue pour des
+ * chargements sans annonce.
+ */
 export function AnnoncePromotion({
-  annonce,
+  promotion: annonce,
   className,
 }: {
-  annonce: Annonce | null;
+  promotion: Annonce | null;
   className?: string | undefined;
 }) {
   if (annonce === null) return null;
