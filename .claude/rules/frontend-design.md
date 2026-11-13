@@ -311,7 +311,9 @@ texte** : un champ libre laisserait passer une promotion ou un délai inventés.
   bandeau de nuit, texte blanc ou or, filtre actif de nuit, bouton d'achat de
   nuit à texte blanc. **L'or vif `#F2C230` ne s'écrit que sur la nuit**, il
   tombe à 1,65:1 sur crème. Le thème n'écrit ni taux, ni prix barré, ni date :
-  la réduction relève de la promotion, LS-319.
+  la réduction relève de la promotion, LS-319. **Le bandeau de l'accueil**,
+  LS-322, `BandeauBlackWeek`, dit « Black Week » seul sans promotion, et le
+  taux, la portée et la période sous promotion active, texte immobile.
 - **Chaque jeton de thème est une paire mesurée** sur crème, sable et blanc,
   C31 ; `verifier-contraste.sh` mesure sous chaque thème.
 - **Les décors suivent ADR-045** : bornés à cinq secondes, sauf les décors

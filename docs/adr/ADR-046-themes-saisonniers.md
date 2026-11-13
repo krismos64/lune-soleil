@@ -6,7 +6,25 @@
 | Date | 4 octobre 2026 |
 | Décideur | Christophe Mostefaoui |
 | Amende | ADR-022 (palette publique), ADR-045 (politique d'animation) |
-| Ticket | LS-267 |
+| Ticket | LS-267, LS-277, LS-318, LS-322 |
+
+## Amendement du 13 novembre 2026, bandeau Black Week de l'accueil, LS-322
+
+**Demande de Christophe** après un essai : un bandeau Black Week mis en
+évidence et animé en tête de l'accueil. Codé sans maquette sur son arbitrage.
+
+1. **Un bandeau de nuit en tête du héros**, sur l'accueil seulement, sous le
+   thème `BLACK_WEEK` ; il remplace le ruban de LS-318. Le `h1` ne change pas
+   et le suit.
+2. **Texte immobile, ADR-045** : une comète d'or fait le tour du cadre
+   (`stroke-dashoffset`) et des étincelles scintillent dans les deux colonnes
+   latérales, jamais sur une lettre. Mouvement continu sous `data-continu`,
+   figé par le bouton de pause, absent sans script et en mouvement réduit.
+3. **Le thème n'écrit toujours aucun taux** : sans promotion, le bandeau dit
+   « Black Week » seul. Sous promotion active, il porte le taux, la portée
+   calculée par le serveur et la période réglée, ADR-051, et reprend la
+   région « Promotion en cours » de `AnnoncePromotion`, masquée sur l'accueil
+   sous ce thème.
 
 ## Amendement du 12 novembre 2026, thème Black Week, LS-318
 
