@@ -395,7 +395,9 @@ paiement n'en change pas le montant.
 
 **Un seul calcul**, `prixDeVente` de `src/lib/promotion.ts`, au centime
 inférieur ; **une seule éligibilité**, `CONDITION_ELIGIBLE` de
-`repositories/promotion.ts`, partagée par l'affichage et la commande. Le
+`repositories/promotion.ts`, partagée par l'affichage et la commande :
+**seul un prix changé dans les trente jours précédant l'activation exclut
+une variante**, son âge ne comptant plus depuis LS-321. Le
 sous-total du panier sous promotion est confronté au sous-total figé par
 `SousTotalChangeError` : deux calculs divergents refuseraient toute commande.
 

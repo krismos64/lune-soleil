@@ -81,6 +81,12 @@ Vérifier que la conversion vers le format Stripe est explicite et isolée.
 Vérifier que les montants sont figés dans la commande à la validation et non
 recalculés depuis le catalogue.
 
+**Promotion, ADR-051** : le prix réduit vient de `prixDeVente` et de
+`CONDITION_ELIGIBLE` seulement, jamais d'un second calcul ; il se fige sur la
+ligne avec son prix de référence, et rien en aval ne recalcule la réduction.
+Tout changement de prix passe par `exigerPrixModifiables` et écrit
+`historique_prix_variante`, dont l'éligibilité dépend.
+
 ### 6. Transactions et pannes de fournisseur
 
 Vérifier que chaque opération critique est dans une transaction. **La liste fait

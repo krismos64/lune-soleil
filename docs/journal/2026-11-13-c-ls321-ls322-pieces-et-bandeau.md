@@ -80,3 +80,12 @@ aucune promotion active.
 
 - **LS-321 et LS-322** : Terminé, en production. Restent à voir à
   l'activation : le bandeau sous promotion à 320 px, la comète sous Safari.
+
+## Relecture finale des contenus, même jour
+
+Production revérifiée à `74ed615`, conteneur sain. Cinq compléments : la
+règle d'éligibilité de LS-321 dans `payments.md`, la promotion dans l'agent
+`ls-critical-reviewer`, le bandeau de LS-322 dans l'agent `ls-frontend-revue`,
+la version de production dans `docs/ETAT.md`, et l'arbitrage 1 d'ADR-051
+marqué comme abrogé pour moitié. CLAUDE.md, README, skills et hooks relus
+sans écart.
