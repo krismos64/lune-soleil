@@ -463,11 +463,12 @@ describe("corrections de la revue critique de LS-319", () => {
     );
     await promotion.activerPromotion({ code: "BLACK_WEEK", acteurId: null });
 
-    const { lireCataloguePublic, lireFichePublique } = await import(
-      "@/services/catalogue"
-    );
+    const { lireCataloguePublic, lireFichePublique } =
+      await import("@/services/catalogue");
     const catalogue = await lireCataloguePublic();
-    expect(catalogue.produits.find((p) => p.id === rows[0].produit_id)).toMatchObject({
+    expect(
+      catalogue.produits.find((p) => p.id === rows[0].produit_id),
+    ).toMatchObject({
       prixCentimes: 3430,
       prixReferenceCentimes: 4900,
     });
