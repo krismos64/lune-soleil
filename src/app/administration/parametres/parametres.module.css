@@ -288,3 +288,20 @@
   color: var(--ls-primary);
   text-decoration: underline;
 }
+
+/*
+ * Lien d'une issue, LS-319 : une cible de 44 px, la règle du projet pour
+ * tout contrôle, relevée par la revue d'interface sur « Confirmer mon
+ * identité ».
+ */
+.lienSortie {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+}
+
+/* Le titre du bloc de la promotion, hors d'un `fieldset`. */
+#promotion > h2 {
+  margin: 0 0 var(--ls-space-2);
+  padding-inline: 0;
+}

@@ -230,7 +230,7 @@ export default async function PageAccueil({
        * sont acquises, ADR-043 et le 3 septembre 2026.
        */}
       {/* ADR-051 : l'annonce de la promotion, rien sans promotion active. */}
-      <AnnoncePromotion annonce={promotion} />
+      <AnnoncePromotion annonce={promotion} className={styles.annonceAccueil} />
 
       <BandeauReassurance seuilFranchiseCentimes={seuilFranchise} anime />
 

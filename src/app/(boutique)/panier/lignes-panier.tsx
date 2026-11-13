@@ -103,6 +103,7 @@ export function LignesPanier({ lignes }: { lignes: LignePanierRevalidee[] }) {
                   className={styles.prixUnitaire}
                   prixCentimes={ligne.prixUnitaireCentimes}
                   prixReferenceCentimes={ligne.prixReferenceCentimes}
+                  suffixe=" l'unité"
                 />
               ) : (
                 <p className={styles.prixUnitaire}>

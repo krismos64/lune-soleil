@@ -13,7 +13,8 @@
 
 .ancien {
   color: var(--ls-text-muted);
-  font-size: 0.85em;
+  /* Jamais sous 13 px : au panier, 0,85 em d'un texte de 14 px donnait 11,9. */
+  font-size: max(0.85em, 0.8125rem);
   font-weight: 400;
   text-decoration-thickness: 2px;
 }

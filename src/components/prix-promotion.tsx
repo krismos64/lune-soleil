@@ -24,26 +24,46 @@ export function PrixPromotion({
   prixCentimes,
   prixReferenceCentimes,
   taux = null,
+  suffixe = "",
+  as: Balise = "p",
   className,
 }: {
   prixCentimes: number;
   prixReferenceCentimes: number | null;
-  /** Le taux du badge, `null` pour un prix barré sans badge (panier). */
+  /** Le taux du badge, `null` pour un prix barré sans badge (panier, tunnel). */
   taux?: number | null;
+  /** Ce qui suit le prix, « l'unité » au panier, revue d'interface de LS-319. */
+  suffixe?: string;
+  /** `span` dans une ligne déjà en paragraphe, le récapitulatif du tunnel. */
+  as?: "p" | "span";
   className?: string | undefined;
 }) {
   if (prixReferenceCentimes === null) {
-    return <p className={className}>{formaterMontant(prixCentimes)}</p>;
+    return (
+      <Balise className={className}>
+        {formaterMontant(prixCentimes)}
+        {suffixe}
+      </Balise>
+    );
   }
+  /*
+   * LE SIGNE − TYPOGRAPHIQUE, U+2212, et non le trait d'union : une
+   * synthèse vocale lit le second « tiret », revue d'interface de LS-319. Le
+   * PDF de facture garde le trait d'union, `@react-pdf` remplaçant en silence
+   * un caractère qu'il ne sait pas rendre.
+   */
   return (
-    <p className={`${className ?? ""} ${styles.bloc}`}>
+    <Balise className={`${className ?? ""} ${styles.bloc}`}>
       <span className={styles.horsEcran}>Prix initial : </span>
       <s className={styles.ancien}>{formaterMontant(prixReferenceCentimes)}</s>
       <span className={styles.horsEcran}>, prix réduit : </span>
-      <span className={styles.actuel}>{formaterMontant(prixCentimes)}</span>
+      <span className={styles.actuel}>
+        {formaterMontant(prixCentimes)}
+        {suffixe}
+      </span>
       {taux !== null ? (
-        <span className={styles.badge}>-{taux}&nbsp;%</span>
+        <span className={styles.badge}>−{taux}&nbsp;%</span>
       ) : null}
-    </p>
+    </Balise>
   );
 }

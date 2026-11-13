@@ -16,6 +16,7 @@
  * que la page a change. Le piege est connu du projet, fiche « focus sur un
  * element detache ».
  */
+import { PrixPromotion } from "@/components/prix-promotion";
 import { formaterMontant } from "@/lib/montant";
 import { MENTION_TUNNEL } from "@/lib/mentions-retractation";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -846,29 +847,18 @@ function Recapitulatif({
                   <span className={styles.ligneLibelle}>{ligne.libelle}</span>
                 </span>
                 <span className={styles.ligneQuantite}>×{ligne.quantite}</span>
-                <span className={styles.lignePrix}>
-                  {/*
-                   * SOUS PROMOTION, LE PRIX BARRÉ EST RAPPELÉ, ADR-051 :
-                   * L221-14 exige le prix au récapitulatif, et le client doit
-                   * lire ici la réduction qu'il a vue au catalogue.
-                   */}
-                  {ligne.prixReferenceCentimes !== null ? (
-                    <>
-                      <span className={styles.horsEcranPrix}>
-                        Prix initial :{" "}
-                      </span>
-                      <s className={styles.lignePrixBarre}>
-                        {formaterMontant(
-                          ligne.prixReferenceCentimes * ligne.quantite,
-                        )}
-                      </s>{" "}
-                      <span className={styles.horsEcranPrix}>
-                        , prix réduit :{" "}
-                      </span>
-                    </>
-                  ) : null}
-                  {formaterMontant(ligne.totalLigneCentimes)}
-                </span>
+                {/*
+                 * SOUS PROMOTION, LE PRIX BARRÉ EST RAPPELÉ, ADR-051 : L221-14
+                 * exige le prix au récapitulatif, et le client doit y lire la
+                 * réduction vue au catalogue. Le composant commun, et un total
+                 * barré venu du serveur.
+                 */}
+                <PrixPromotion
+                  as="span"
+                  className={styles.lignePrix}
+                  prixCentimes={ligne.totalLigneCentimes}
+                  prixReferenceCentimes={ligne.totalReferenceLigneCentimes}
+                />
                 {/*
                  * LE MOTIF EST RENDU ICI AUSSI, et pas seulement au panier.
                  * `LignePanierRevalidee.motif` existe depuis LS-114 et la page du
