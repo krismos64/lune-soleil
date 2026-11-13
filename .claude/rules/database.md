@@ -270,6 +270,8 @@ CHECK   commande.total_centimes = sous_total_centimes
 CHECK   compteur_numero.dernier >= 1, C27
 CHECK   expedition.livre_a IS NULL OR livre_a >= expedie_a, V16, LS-311
 UNIQUE  promotion (active) WHERE active                  ADR-051, une seule active
+CHECK   parametre_boutique : période annoncée, deux dates ou aucune, dans
+        l'ordre, ADR-051 amendé
 CHECK   ligne_commande : promotion et prix de référence nuls ensemble,
         sinon prix_fige_centimes < prix_reference_fige_centimes, ADR-051
 PK      compteur_numero (type, annee)                            ADR-031

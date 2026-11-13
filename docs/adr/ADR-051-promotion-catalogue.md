@@ -8,6 +8,33 @@
 | Complète | ADR-024 (commande et réservation atomiques), ADR-046 (thèmes saisonniers) |
 | Ticket | LS-319 |
 
+## Amendement du 13 novembre 2026, activation libre et période réglable
+
+**Arbitrage de Christophe**, après la mise en production : l'exploitante doit
+pouvoir activer et désactiver la promotion **quand elle veut, sans aucun
+blocage**, et régler elle-même la période que le bandeau annonce.
+
+1. **La carence est retirée**, arbitrage 2 abrogé : ni fenêtre de 24 heures,
+   ni refus pendant trente jours, **ni avertissement**, à la demande expresse
+   de Christophe. **Risque accepté par lui** : réactiver une promotion moins
+   de trente jours après la fin d'une autre, hors de la même opération,
+   barrerait le prix catalogue alors que le prix le plus bas pratiqué est le
+   prix réduit précédent, ce que L112-1-1 et l'arrêt C-330/23 sanctionnent.
+   L'exception des réductions successives d'une même opération couvre les
+   bascules pendant la Black Week elle-même. L'ADR ne qualifie pas ce risque,
+   il le nomme.
+2. **La période annoncée devient un réglage** : deux jours civils,
+   `parametre_boutique.promotion_debut_annonce` et `promotion_fin_annonce`,
+   saisis dans Paramètres par des champs de date, **jamais un texte libre**.
+   Le bandeau écrit lui-même « du lundi 23 au dimanche 29 novembre » ; sans
+   période, il n'annonce aucune date. `chk_parametre_periode_promotion` exige
+   les deux dates ou aucune, dans l'ordre. Migration additive
+   `20261113120000_periode_promotion`, initialisée au 23 et au 29 novembre
+   2026. Le rôle est exigé, pas la réauthentification : les dates ne changent
+   aucun prix encaissé.
+3. **Le reste tient** : éligibilité par variante sur trente jours, prix gelés
+   sous promotion, prix figés sur la ligne, facture en version 3.
+
 ## Contexte
 
 L'exploitante veut une réduction de 30 % sur tout le catalogue pendant la
@@ -77,9 +104,8 @@ ligne de commande avec le prix de référence.**
    promotion que si elle existe depuis au moins trente jours à l'activation
    et que son prix n'a pas changé pendant ces trente jours (lu dans
    `historique_prix_variante`). Une variante inéligible se vend au prix
-   catalogue, sans badge. **L'activation entière est refusée** dans un seul
-   cas, la réactivation tardive de l'arbitrage 2 ci-dessous ; le refus nomme
-   sa cause.
+   catalogue, sans badge. L'activation n'est jamais refusée, amendement du
+   13 novembre 2026.
 6. **Prix gelés pendant la promotion** : modifier un prix, unitaire ou en
    masse, est refusé tant qu'une promotion est active. Le prix barré reste
    ainsi le prix catalogue, exactement le prix antérieur constaté à

@@ -329,7 +329,12 @@ dans la couche promotion, et rien ne s'affiche sans promotion active.
   (« Prix initial », « prix réduit »), et badge du taux hors panier.
 - **Une seule annonce**, `AnnoncePromotion`, sur l'accueil et le catalogue :
   « sur toute la boutique » **seulement** si chaque pièce en vente est
-  réduite, « sur les pièces signalées » sinon, calculé par le serveur.
+  réduite, « sur les pièces signalées » sinon, calculé par le serveur. **La
+  période vient de deux dates réglées dans Paramètres**, écrites par
+  `formaterPeriode`, jamais d'un texte saisi ; sans période, aucune date.
+- **Activation et désactivation libres**, amendement d'ADR-051 du
+  13 novembre 2026 : aucun refus ni avertissement, risque accepté par
+  Christophe et nommé dans l'ADR.
 - **La mention du prix barré** sur la fiche reprend les termes de
   L112-1-1 : « Prix barré : prix le plus bas pratiqué au cours des 30 jours
   précédant la réduction. »

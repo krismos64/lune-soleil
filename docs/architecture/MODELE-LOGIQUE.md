@@ -415,6 +415,12 @@ Migration `20261113090000_promotion`, additive :
   nuls ensemble, sinon `prix_fige_centimes < prix_reference_fige_centimes`,
   `chk_ligne_commande_promotion`.
 
+**Amendement du 13 novembre 2026**, migration additive
+`20261113120000_periode_promotion` : `parametre_boutique` porte la période
+annoncée, `promotion_debut_annonce` et `promotion_fin_annonce`, deux `DATE`
+nulles ensemble ou dans l'ordre, `chk_parametre_periode_promotion`. Aucune
+carence entre deux activations.
+
 **Une variante est éligible** si elle existe depuis trente jours au moins à
 l'activation et que son prix n'a pas changé pendant ces trente jours, arbitrage
 1 d'ADR-051. La condition s'écrit une fois, `repositories/promotion.ts`.
