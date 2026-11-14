@@ -347,7 +347,6 @@ export default async function PageAccueil({
                 noel={noel}
                 blackWeek={blackWeek}
                 saison={ambiance !== null}
-                tauxPromotion={promotion?.taux ?? null}
               />
             ))}
           </ul>

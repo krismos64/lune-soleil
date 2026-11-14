@@ -49,6 +49,13 @@ const SAISIE_RELAIS = {
   },
 };
 
+/** La promotion d'origine, LS-319 : toute la boutique à 30 %. */
+const BLACK_WEEK_30 = {
+  code: "BLACK_WEEK",
+  portee: "TOUT",
+  taux: 30,
+} as const;
+
 /** Seuil de franchise à 39 €, relais à 4,10 € : la configuration réelle. */
 const CONFIGURATION = {
   relaisCentimes: 410,
@@ -87,6 +94,42 @@ async function varianteExclue(prixCentimes: number): Promise<string> {
     [id, prixCentimes + 500, prixCentimes],
   );
   return id;
+}
+
+/** Le produit d'une variante : la promotion se règle par article, LS-324. */
+async function produitDe(varianteId: string): Promise<string> {
+  const { rows } = await client.query(
+    "SELECT produit_id FROM variante WHERE id = $1",
+    [varianteId],
+  );
+  return rows[0].produit_id as string;
+}
+
+/** Les lignes d'une commande avec leur taux figé, LS-324. */
+async function tauxFiges(commandeId: string) {
+  const { rows } = await client.query(
+    `SELECT variante_id, prix_fige_centimes, prix_reference_fige_centimes,
+            taux_reduction_fige
+       FROM ligne_commande WHERE commande_id = $1`,
+    [commandeId],
+  );
+  return new Map(
+    (
+      rows as {
+        variante_id: string;
+        prix_fige_centimes: number;
+        prix_reference_fige_centimes: number | null;
+        taux_reduction_fige: number | null;
+      }[]
+    ).map((ligne) => [
+      ligne.variante_id,
+      [
+        ligne.prix_fige_centimes,
+        ligne.prix_reference_fige_centimes,
+        ligne.taux_reduction_fige,
+      ],
+    ]),
+  );
 }
 
 async function lignesDeLaCommande(commandeId: string) {
@@ -134,21 +177,23 @@ describe("prix de vente, invariant 1", () => {
     expect(lib.prixDeVente(0, 30)).toBe(0);
   });
 
-  it("la promotion Black Week vaut 30 %, écrite dans le code", () => {
-    expect(lib.PROMOTIONS.BLACK_WEEK.taux).toBe(30);
+  it("le nom vient d'une liste fermée, le taux n'est plus écrit dans le code, LS-324", () => {
+    expect(lib.PROMOTIONS.BLACK_WEEK).toEqual({ libelle: "Black Week" });
+    expect(lib.CODES_PROMOTION).toContain("SOLDES_ETE");
+    expect([lib.TAUX_MINIMUM, lib.TAUX_MAXIMUM]).toEqual([5, 70]);
   });
 });
 
 describe("activation et désactivation", () => {
   it("active une promotion, une seule à la fois, et la désactive", async () => {
     const active = await promotion.activerPromotion({
-      code: "BLACK_WEEK",
+      demande: BLACK_WEEK_30,
       acteurId: null,
     });
     expect(active.taux).toBe(30);
 
     await expect(
-      promotion.activerPromotion({ code: "BLACK_WEEK", acteurId: null }),
+      promotion.activerPromotion({ demande: BLACK_WEEK_30, acteurId: null }),
     ).rejects.toMatchObject({ name: "PromotionDejaActiveError" });
 
     expect(await promotion.desactiverPromotion({ acteurId: null })).toBe(true);
@@ -163,18 +208,24 @@ describe("activation et désactivation", () => {
 
   it("refuse un code que le code n'écrit pas", async () => {
     await expect(
-      promotion.activerPromotion({ code: "SOLDES", acteurId: null }),
+      promotion.activerPromotion({
+        demande: { ...BLACK_WEEK_30, code: "FETE_DES_PERES" },
+        acteurId: null,
+      }),
     ).rejects.toMatchObject({ name: "EntreeInvalideError" });
   });
 
   it("réactive le jour même d'une désactivation", async () => {
-    await promotion.activerPromotion({ code: "BLACK_WEEK", acteurId: null });
+    await promotion.activerPromotion({
+      demande: BLACK_WEEK_30,
+      acteurId: null,
+    });
     await promotion.desactiverPromotion({ acteurId: null });
     await client.query(
       "UPDATE promotion SET active_depuis = now() - interval '3 days', desactivee_a = now() - interval '23 hours'",
     );
     await expect(
-      promotion.activerPromotion({ code: "BLACK_WEEK", acteurId: null }),
+      promotion.activerPromotion({ demande: BLACK_WEEK_30, acteurId: null }),
     ).resolves.toMatchObject({ code: "BLACK_WEEK" });
   });
 
@@ -184,13 +235,16 @@ describe("activation et désactivation", () => {
    * remplace celui qui exigeait le refus au-delà de 24 heures.
    */
   it("réactive librement, même dix jours après une désactivation", async () => {
-    await promotion.activerPromotion({ code: "BLACK_WEEK", acteurId: null });
+    await promotion.activerPromotion({
+      demande: BLACK_WEEK_30,
+      acteurId: null,
+    });
     await promotion.desactiverPromotion({ acteurId: null });
     await client.query(
       "UPDATE promotion SET active_depuis = now() - interval '20 days', desactivee_a = now() - interval '10 days'",
     );
     await expect(
-      promotion.activerPromotion({ code: "BLACK_WEEK", acteurId: null }),
+      promotion.activerPromotion({ demande: BLACK_WEEK_30, acteurId: null }),
     ).resolves.toMatchObject({ code: "BLACK_WEEK" });
   });
 });
@@ -210,13 +264,16 @@ describe("éligibilité par variante, arbitrage 1 d'ADR-051", () => {
        VALUES (gen_random_uuid(), $1, 5900, 4900, now() - interval '5 days')`,
       [modifiee],
     );
-    await promotion.activerPromotion({ code: "BLACK_WEEK", acteurId: null });
+    await promotion.activerPromotion({
+      demande: BLACK_WEEK_30,
+      acteurId: null,
+    });
 
     const enVigueur = await promotion.lirePromotionEnVigueur();
     expect(enVigueur).not.toBeNull();
-    expect(enVigueur!.variantesEligibles.has(ancienne)).toBe(true);
-    expect(enVigueur!.variantesEligibles.has(recente)).toBe(true);
-    expect(enVigueur!.variantesEligibles.has(modifiee)).toBe(false);
+    expect(enVigueur!.tauxParVariante.has(ancienne)).toBe(true);
+    expect(enVigueur!.tauxParVariante.has(recente)).toBe(true);
+    expect(enVigueur!.tauxParVariante.has(modifiee)).toBe(false);
     // Une pièce exclue suffit : l'annonce ne dit plus « toute la boutique ».
     expect(enVigueur!.toutLeCatalogue).toBe(false);
   });
@@ -224,7 +281,10 @@ describe("éligibilité par variante, arbitrage 1 d'ADR-051", () => {
   it("toute la boutique quand chaque pièce en vente est éligible", async () => {
     await varianteAgee(40);
     await varianteAgee(45);
-    await promotion.activerPromotion({ code: "BLACK_WEEK", acteurId: null });
+    await promotion.activerPromotion({
+      demande: BLACK_WEEK_30,
+      acteurId: null,
+    });
     expect((await promotion.lirePromotionEnVigueur())!.toutLeCatalogue).toBe(
       true,
     );
@@ -236,7 +296,10 @@ describe("éligibilité par variante, arbitrage 1 d'ADR-051", () => {
    */
   it("la période annoncée se lit en base, ou manque", async () => {
     await varianteAgee(40);
-    await promotion.activerPromotion({ code: "BLACK_WEEK", acteurId: null });
+    await promotion.activerPromotion({
+      demande: BLACK_WEEK_30,
+      acteurId: null,
+    });
     await client.query(
       "UPDATE parametre_boutique SET promotion_debut_annonce = DATE '2026-11-23', promotion_fin_annonce = DATE '2026-11-29'",
     );
@@ -262,7 +325,7 @@ describe("le prix figé sur la commande", () => {
     const eligible = await varianteAgee(40, 4900);
     const exclue = await varianteExclue(1200);
     const active = await promotion.activerPromotion({
-      code: "BLACK_WEEK",
+      demande: BLACK_WEEK_30,
       acteurId: null,
     });
 
@@ -311,7 +374,10 @@ describe("le prix figé sur la commande", () => {
   it("le total du panier sous promotion est celui que la commande fige", async () => {
     const eligible = await varianteAgee(40, 2999);
     const exclue = await varianteExclue(1200);
-    await promotion.activerPromotion({ code: "BLACK_WEEK", acteurId: null });
+    await promotion.activerPromotion({
+      demande: BLACK_WEEK_30,
+      acteurId: null,
+    });
     const { revalider } = await import("@/services/panier");
     const lignesCookie = [
       { varianteId: eligible, quantite: 1 },
@@ -344,7 +410,10 @@ describe("le prix figé sur la commande", () => {
   it("la franchise se juge sur le montant réduit", async () => {
     // 4900 passe le seuil de 39 € ; réduit à 3430, il ne le passe plus.
     const eligible = await varianteAgee(40, 4900);
-    await promotion.activerPromotion({ code: "BLACK_WEEK", acteurId: null });
+    await promotion.activerPromotion({
+      demande: BLACK_WEEK_30,
+      acteurId: null,
+    });
     const issue = await commande.passerCommande({
       lignesCookie: [{ varianteId: eligible, quantite: 1 }],
       saisie: SAISIE_RELAIS,
@@ -379,7 +448,10 @@ describe("le prix figé sur la commande", () => {
 
   it("une désactivation après le récapitulatif fait relire le montant", async () => {
     const eligible = await varianteAgee(40, 4900);
-    await promotion.activerPromotion({ code: "BLACK_WEEK", acteurId: null });
+    await promotion.activerPromotion({
+      demande: BLACK_WEEK_30,
+      acteurId: null,
+    });
     // Le client a lu 3430 au récapitulatif ; la promotion est coupée avant
     // son clic.
     await promotion.desactiverPromotion({ acteurId: null });
@@ -410,7 +482,10 @@ describe("le prix figé sur la commande", () => {
    */
   it("une promotion coupée avant le paiement n'en change pas le montant", async () => {
     const eligible = await varianteAgee(40, 4900);
-    await promotion.activerPromotion({ code: "BLACK_WEEK", acteurId: null });
+    await promotion.activerPromotion({
+      demande: BLACK_WEEK_30,
+      acteurId: null,
+    });
     const issue = await commande.passerCommande({
       lignesCookie: [{ varianteId: eligible, quantite: 1 }],
       saisie: SAISIE_DOMICILE,
@@ -461,7 +536,10 @@ describe("corrections de la revue critique de LS-319", () => {
       "SELECT v.produit_id, p.slug FROM variante v JOIN produit p ON p.id = v.produit_id WHERE v.id = $1",
       [piece],
     );
-    await promotion.activerPromotion({ code: "BLACK_WEEK", acteurId: null });
+    await promotion.activerPromotion({
+      demande: BLACK_WEEK_30,
+      acteurId: null,
+    });
 
     const { lireCataloguePublic, lireFichePublique } =
       await import("@/services/catalogue");
@@ -501,7 +579,10 @@ describe("corrections de la revue critique de LS-319", () => {
        SELECT gen_random_uuid(), id, 4500, 4000, now() - interval '5 days'
          FROM variante WHERE reference = 'TEST-SUSPENDUE'`,
     );
-    await promotion.activerPromotion({ code: "BLACK_WEEK", acteurId: null });
+    await promotion.activerPromotion({
+      demande: BLACK_WEEK_30,
+      acteurId: null,
+    });
 
     const { lireCataloguePublic } = await import("@/services/catalogue");
     const catalogue = await lireCataloguePublic();
@@ -609,7 +690,10 @@ describe("la facture, arbitrage 3 d'ADR-051", () => {
   it("une ligne réduite porte sa réduction dans l'instantané, version 3", async () => {
     const eligible = await varianteAgee(40, 4900);
     const exclue = await varianteExclue(1200);
-    await promotion.activerPromotion({ code: "BLACK_WEEK", acteurId: null });
+    await promotion.activerPromotion({
+      demande: BLACK_WEEK_30,
+      acteurId: null,
+    });
     const issue = await commande.passerCommande({
       lignesCookie: [
         { varianteId: eligible, quantite: 1 },
@@ -693,7 +777,10 @@ describe("prix gelés sous promotion, historique des prix", () => {
       "SELECT reference, libelle FROM variante WHERE id = $1",
       [piece],
     );
-    await promotion.activerPromotion({ code: "BLACK_WEEK", acteurId: null });
+    await promotion.activerPromotion({
+      demande: BLACK_WEEK_30,
+      acteurId: null,
+    });
     await expect(
       variante.modifierVariante({
         id: piece,
@@ -713,7 +800,10 @@ describe("prix gelés sous promotion, historique des prix", () => {
 
   it("un prix en masse sous promotion est refusé", async () => {
     const { varianteId, produitId } = await creerVarianteEnStock(client);
-    await promotion.activerPromotion({ code: "BLACK_WEEK", acteurId: null });
+    await promotion.activerPromotion({
+      demande: BLACK_WEEK_30,
+      acteurId: null,
+    });
     await expect(
       variante.appliquerPrixProduits({
         produitIds: [produitId],
@@ -737,5 +827,356 @@ describe("prix gelés sous promotion, historique des prix", () => {
     expect(rows).toEqual([
       { ancien_prix_centimes: 4900, nouveau_prix_centimes: 2000 },
     ]);
+  });
+});
+
+/*
+ * PROMOTIONS LIBRES, LS-324, amendement d'ADR-051 du 14 novembre 2026 :
+ * l'exploitante saisit le taux, par article ou pour toute la boutique. Écrit
+ * avant le service. Chaque cas nomme le prix et le taux attendus, au centime.
+ */
+describe("promotions libres, LS-324", () => {
+  it("articles choisis : chacun à son taux, figé sur sa ligne, le reste au prix catalogue", async () => {
+    const collier = await varianteAgee(40, 4900);
+    const bague = await varianteAgee(40, 2999);
+    const horsSelection = await varianteAgee(40, 1200);
+    await promotion.activerPromotion({
+      demande: {
+        code: "SOLDES_ETE",
+        portee: "SELECTION",
+        articles: [
+          { produitId: await produitDe(collier), taux: 20 },
+          { produitId: await produitDe(bague), taux: 40 },
+        ],
+      },
+      acteurId: null,
+    });
+
+    const enVigueur = await promotion.lirePromotionEnVigueur();
+    expect(enVigueur!.libelle).toBe("Soldes d'été");
+    expect(enVigueur!.tauxParVariante.get(collier)).toBe(20);
+    expect(enVigueur!.tauxParVariante.get(bague)).toBe(40);
+    expect(enVigueur!.tauxParVariante.has(horsSelection)).toBe(false);
+    expect(enVigueur!.tauxMaximum).toBe(40);
+    expect(enVigueur!.tauxUnique).toBe(false);
+    expect(enVigueur!.toutLeCatalogue).toBe(false);
+    // Le prix affiché porte le taux de SA pièce.
+    expect(promotion.prixAffiche(enVigueur, collier, 4900)).toEqual({
+      prixCentimes: 3920,
+      prixReferenceCentimes: 4900,
+      tauxReduction: 20,
+    });
+    expect(promotion.prixAffiche(enVigueur, horsSelection, 1200)).toEqual({
+      prixCentimes: 1200,
+      prixReferenceCentimes: null,
+      tauxReduction: null,
+    });
+
+    const issue = await commande.passerCommande({
+      lignesCookie: [
+        { varianteId: collier, quantite: 1 },
+        { varianteId: bague, quantite: 1 },
+        { varianteId: horsSelection, quantite: 1 },
+      ],
+      saisie: SAISIE_DOMICILE,
+      configuration: CONFIGURATION,
+    });
+    const figes = await tauxFiges(issue.commandeId);
+    // 4900 à -20 %, 2999 à -40 % au centime inférieur, 1200 inchangé.
+    expect(figes.get(collier)).toEqual([3920, 4900, 20]);
+    expect(figes.get(bague)).toEqual([1799, 2999, 40]);
+    expect(figes.get(horsSelection)).toEqual([1200, null, null]);
+    const { rows } = await client.query(
+      "SELECT sous_total_centimes FROM commande WHERE id = $1",
+      [issue.commandeId],
+    );
+    expect(rows[0].sous_total_centimes).toBe(3920 + 1799 + 1200);
+  });
+
+  it("toute la boutique à un taux général, un article à un autre taux", async () => {
+    const ordinaire = await varianteAgee(40, 4900);
+    const vedette = await varianteAgee(40, 4900);
+    await promotion.activerPromotion({
+      demande: {
+        code: "PROMOTION",
+        portee: "TOUT",
+        taux: 10,
+        articles: [{ produitId: await produitDe(vedette), taux: 50 }],
+      },
+      acteurId: null,
+    });
+    const enVigueur = await promotion.lirePromotionEnVigueur();
+    expect(enVigueur!.tauxParVariante.get(ordinaire)).toBe(10);
+    expect(enVigueur!.tauxParVariante.get(vedette)).toBe(50);
+    expect(enVigueur!.toutLeCatalogue).toBe(true);
+    expect(enVigueur!.tauxUnique).toBe(false);
+    expect(enVigueur!.tauxMaximum).toBe(50);
+
+    const issue = await commande.passerCommande({
+      lignesCookie: [
+        { varianteId: ordinaire, quantite: 1 },
+        { varianteId: vedette, quantite: 1 },
+      ],
+      saisie: SAISIE_DOMICILE,
+      configuration: CONFIGURATION,
+    });
+    const figes = await tauxFiges(issue.commandeId);
+    expect(figes.get(ordinaire)).toEqual([4410, 4900, 10]);
+    expect(figes.get(vedette)).toEqual([2450, 4900, 50]);
+  });
+
+  it("un seul taux en vigueur se dit unique", async () => {
+    await varianteAgee(40, 4900);
+    await varianteAgee(40, 1200);
+    await promotion.activerPromotion({
+      demande: { code: "NOEL", portee: "TOUT", taux: 15 },
+      acteurId: null,
+    });
+    const enVigueur = await promotion.lirePromotionEnVigueur();
+    expect([enVigueur!.tauxUnique, enVigueur!.tauxMaximum]).toEqual([true, 15]);
+  });
+
+  it("un article choisi dont le prix a changé reste au prix catalogue, et rien n'est annoncé", async () => {
+    const exclue = await varianteExclue(4900);
+    await promotion.activerPromotion({
+      demande: {
+        code: "PROMOTION",
+        portee: "SELECTION",
+        articles: [{ produitId: await produitDe(exclue), taux: 30 }],
+      },
+      acteurId: null,
+    });
+    // Aucune pièce réduite : rien n'est en vigueur pour le public.
+    expect(await promotion.lirePromotionEnVigueur()).toBeNull();
+    // L'exploitante la voit pourtant, pour la désactiver.
+    const etat = await promotion.lireEtatPromotion();
+    expect(etat.active).toMatchObject({
+      libelle: "Promotion",
+      portee: "SELECTION",
+      tauxGeneral: null,
+      reduites: 0,
+      exclues: 1,
+    });
+    const issue = await commande.passerCommande({
+      lignesCookie: [{ varianteId: exclue, quantite: 1 }],
+      saisie: SAISIE_DOMICILE,
+      configuration: CONFIGURATION,
+    });
+    expect((await tauxFiges(issue.commandeId)).get(exclue)).toEqual([
+      4900,
+      null,
+      null,
+    ]);
+  });
+
+  it("refuse un taux hors bornes, une sélection vide, un doublon, sans rien écrire", async () => {
+    const piece = await produitDe(await varianteAgee(40, 4900));
+    const refusees: unknown[] = [
+      { code: "PROMOTION", portee: "TOUT", taux: 4 },
+      { code: "PROMOTION", portee: "TOUT", taux: 71 },
+      { code: "PROMOTION", portee: "TOUT", taux: 12.5 },
+      { code: "PROMOTION", portee: "TOUT", taux: Number.NaN },
+      { code: "PROMOTION", portee: "TOUT" },
+      { code: "PROMOTION", portee: "SELECTION", articles: [] },
+      // Un taux général sous une sélection hériterait aux articles non choisis.
+      {
+        code: "PROMOTION",
+        portee: "SELECTION",
+        taux: 20,
+        articles: [{ produitId: piece, taux: 20 }],
+      },
+      {
+        code: "PROMOTION",
+        portee: "SELECTION",
+        articles: [{ produitId: piece, taux: 90 }],
+      },
+      {
+        code: "PROMOTION",
+        portee: "SELECTION",
+        articles: [
+          { produitId: piece, taux: 20 },
+          { produitId: piece, taux: 30 },
+        ],
+      },
+      {
+        code: "PROMOTION",
+        portee: "SELECTION",
+        articles: [{ produitId: "pas-un-identifiant", taux: 20 }],
+      },
+      { code: "PROMOTION", portee: "PARTOUT", taux: 20 },
+    ];
+    for (const demande of refusees) {
+      await expect(
+        promotion.activerPromotion({ demande, acteurId: null }),
+        JSON.stringify(demande),
+      ).rejects.toMatchObject({ name: "EntreeInvalideError" });
+    }
+    const { rows } = await client.query(
+      "SELECT (SELECT count(*)::int FROM promotion) AS promotions, (SELECT count(*)::int FROM promotion_produit) AS articles",
+    );
+    expect(rows[0]).toEqual({ promotions: 0, articles: 0 });
+  });
+
+  it("un article inconnu n'écrit rien, ni promotion ni article", async () => {
+    const piece = await produitDe(await varianteAgee(40, 4900));
+    await expect(
+      promotion.activerPromotion({
+        demande: {
+          code: "PROMOTION",
+          portee: "SELECTION",
+          articles: [
+            { produitId: piece, taux: 20 },
+            { produitId: "00000000-0000-4000-8000-000000000000", taux: 20 },
+          ],
+        },
+        acteurId: null,
+      }),
+    ).rejects.toMatchObject({ name: "ArticlePromotionInconnuError" });
+    const { rows } = await client.query(
+      "SELECT (SELECT count(*)::int FROM promotion) AS promotions, (SELECT count(*)::int FROM promotion_produit) AS articles",
+    );
+    expect(rows[0]).toEqual({ promotions: 0, articles: 0 });
+  });
+
+  it("la base refuse ce que le service refuse : portée, taux général, taux figé", async () => {
+    await expect(
+      client.query(
+        "INSERT INTO promotion (id, code, portee, taux_pourcentage, active) VALUES ('p-sel', 'PROMOTION', 'SELECTION', 20, true)",
+      ),
+    ).rejects.toMatchObject({ constraint: "chk_promotion_portee_taux" });
+    await expect(
+      client.query(
+        "INSERT INTO promotion (id, code, portee, taux_pourcentage, active) VALUES ('p-tout', 'PROMOTION', 'TOUT', NULL, true)",
+      ),
+    ).rejects.toMatchObject({ constraint: "chk_promotion_portee_taux" });
+    await expect(
+      client.query(
+        "INSERT INTO promotion (id, code, portee, taux_pourcentage, active) VALUES ('p-x', 'PROMOTION', 'PARTOUT', 20, true)",
+      ),
+    ).rejects.toMatchObject({ constraint: "chk_promotion_portee_connue" });
+  });
+
+  /*
+   * PAR LE CHEMIN RÉEL, le webhook signé, comme le cas de LS-319 : la facture
+   * écrit le nom de l'opération et le taux DE LA LIGNE, deux lignes de la même
+   * commande portant deux taux.
+   */
+  it("la facture écrit le taux de chaque ligne et le nom de l'opération", async () => {
+    const collier = await varianteAgee(40, 4900);
+    const bague = await varianteAgee(40, 2999);
+    await promotion.activerPromotion({
+      demande: {
+        code: "SAINT_VALENTIN",
+        portee: "SELECTION",
+        articles: [
+          { produitId: await produitDe(collier), taux: 20 },
+          { produitId: await produitDe(bague), taux: 40 },
+        ],
+      },
+      acteurId: null,
+    });
+    const issue = await commande.passerCommande({
+      lignesCookie: [
+        { varianteId: collier, quantite: 1 },
+        { varianteId: bague, quantite: 1 },
+      ],
+      saisie: SAISIE_DOMICILE,
+      configuration: CONFIGURATION,
+    });
+    const { traiterEvenementPaiement } =
+      await import("@/services/webhook-paiement");
+    const evenement = {
+      identifiant: `evt_${issue.commandeId}`,
+      type: "PAIEMENT_REUSSI" as const,
+      commandeId: issue.commandeId,
+      identifiantSession: `cs_${issue.commandeId.slice(0, 8)}`,
+      montantCentimes: issue.totalCentimes,
+      montantRembourseCentimes: 0,
+      charge: {},
+    };
+    await traiterEvenementPaiement({
+      corpsBrut: JSON.stringify(evenement),
+      signature: "signature-de-test",
+      verificateur: {
+        async verifier() {
+          return evenement;
+        },
+      },
+    });
+    const { rows } = await client.query(
+      "SELECT instantane_legal FROM facture WHERE commande_id = $1",
+      [issue.commandeId],
+    );
+    const instantane = rows[0]?.instantane_legal as {
+      lignes: { prixUnitaireCentimes: number; reduction?: unknown }[];
+    };
+    expect(
+      instantane.lignes.map((l) => [l.prixUnitaireCentimes, l.reduction]),
+    ).toEqual(
+      expect.arrayContaining([
+        [
+          3920,
+          { prixReferenceCentimes: 4900, libelle: "Saint-Valentin", taux: 20 },
+        ],
+        [
+          1799,
+          { prixReferenceCentimes: 2999, libelle: "Saint-Valentin", taux: 40 },
+        ],
+      ]),
+    );
+  });
+
+  /*
+   * UNE LIGNE D'AVANT LS-324 n'a pas de taux figé : sa facture lit celui de
+   * sa promotion, l'unique taux de l'époque. L'état d'avant est fabriqué en
+   * base, aucune ligne existante n'étant jamais réécrite.
+   */
+  it("une ligne d'avant LS-324, sans taux figé, se facture au taux de sa promotion", async () => {
+    const piece = await varianteAgee(40, 4900);
+    await promotion.activerPromotion({
+      demande: BLACK_WEEK_30,
+      acteurId: null,
+    });
+    const issue = await commande.passerCommande({
+      lignesCookie: [{ varianteId: piece, quantite: 1 }],
+      saisie: SAISIE_DOMICILE,
+      configuration: CONFIGURATION,
+    });
+    await client.query(
+      "UPDATE ligne_commande SET taux_reduction_fige = NULL WHERE commande_id = $1",
+      [issue.commandeId],
+    );
+    const { traiterEvenementPaiement } =
+      await import("@/services/webhook-paiement");
+    const evenement = {
+      identifiant: `evt_${issue.commandeId}`,
+      type: "PAIEMENT_REUSSI" as const,
+      commandeId: issue.commandeId,
+      identifiantSession: `cs_${issue.commandeId.slice(0, 8)}`,
+      montantCentimes: issue.totalCentimes,
+      montantRembourseCentimes: 0,
+      charge: {},
+    };
+    await traiterEvenementPaiement({
+      corpsBrut: JSON.stringify(evenement),
+      signature: "signature-de-test",
+      verificateur: {
+        async verifier() {
+          return evenement;
+        },
+      },
+    });
+    const { rows } = await client.query(
+      "SELECT instantane_legal FROM facture WHERE commande_id = $1",
+      [issue.commandeId],
+    );
+    const instantane = rows[0]?.instantane_legal as {
+      lignes: { reduction?: unknown }[];
+    };
+    expect(instantane.lignes[0]?.reduction).toEqual({
+      prixReferenceCentimes: 4900,
+      libelle: "Black Week",
+      taux: 30,
+    });
   });
 });

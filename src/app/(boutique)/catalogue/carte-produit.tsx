@@ -67,15 +67,12 @@ export function CarteProduit({
   noel = false,
   blackWeek = false,
   saison = false,
-  tauxPromotion = null,
   prioritaire = false,
 }: {
   produit: ProduitCatalogue;
   noel?: boolean;
   blackWeek?: boolean;
   saison?: boolean;
-  /** Le taux de la promotion en vigueur, pour le badge, ADR-051. */
-  tauxPromotion?: number | null;
   /**
    * Photo chargée sans différé et en priorité haute, LS-285 : la première
    * carte du catalogue est dans le premier écran et porte le LCP.
@@ -177,7 +174,7 @@ export function CarteProduit({
             className={styles.prix}
             prixCentimes={produit.prixCentimes}
             prixReferenceCentimes={produit.prixReferenceCentimes}
-            taux={tauxPromotion}
+            taux={produit.tauxReduction}
           />
           <p className={CLASSE_DISPONIBILITE[produit.disponibilite]}>
             {disponibilite}

@@ -364,7 +364,6 @@ async function ContenuCatalogue({
               noel={noel}
               blackWeek={blackWeek}
               saison={ambiance !== null}
-              tauxPromotion={promotion?.taux ?? null}
               prioritaire={rang === rangPrioritaire}
             />
           ))}

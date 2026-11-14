@@ -420,3 +420,86 @@
   color: var(--ls-text);
   font-weight: 600;
 }
+
+/*
+ * PROMOTION LIBRE, LS-324 : la liste des articles à cocher, un taux par
+ * article. Chaque ligne se replie avant de déborder : la case et le nom
+ * d'abord, le taux et le prix dessous quand la largeur manque.
+ */
+.enteteCategorie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ls-space-2);
+}
+
+/* @bordure-decorative le libelle souligne identifie ce bouton de raccourci,
+ * qui n'est pas un controle de saisie : aucun trait ne le borde. */
+.boutonDiscret {
+  min-height: var(--ls-touch-target);
+  padding: 0 var(--ls-space-2);
+  border: 0;
+  background: none;
+  color: var(--ls-primary);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.articlesPromotion {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.articlePromotion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--ls-space-3);
+  min-height: var(--ls-touch-target);
+  border-top: 1px solid var(--ls-border);
+}
+
+.articlePromotion .libelleCase {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.tauxArticle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ls-space-2);
+  padding-bottom: var(--ls-space-2);
+  color: var(--ls-text);
+}
+
+/* Trois chiffres au plus : le champ n'a pas à prendre toute la ligne. */
+.saisie.saisieTaux {
+  width: 5.5rem;
+}
+
+.prixArticle {
+  color: var(--ls-text);
+  font-size: 0.9375rem;
+}
+
+.recapPromotion {
+  margin: 0;
+  padding-left: var(--ls-space-4);
+  color: var(--ls-text);
+}
+
+/* Texte lu par un lecteur d'écran seulement : il précise un libellé court. */
+.horsEcran {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

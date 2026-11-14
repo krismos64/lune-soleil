@@ -228,6 +228,8 @@ CREATE TABLE "ligne_commande" (
     -- ADR-051, LS-319 : prix de référence et promotion, figés avec le prix.
     "prix_reference_fige_centimes" INTEGER,
     "promotion_id" TEXT,
+    -- LS-324 : le taux appliqué à la ligne, figé avec le prix.
+    "taux_reduction_fige" INTEGER,
 
     CONSTRAINT "ligne_commande_pkey" PRIMARY KEY ("id")
 );
@@ -1132,7 +1134,9 @@ ALTER TABLE "signalement_avis" ADD CONSTRAINT "signalement_avis_avis_id_fkey" FO
 CREATE TABLE "promotion" (
     "id" TEXT NOT NULL,
     "code" TEXT NOT NULL,
-    "taux_pourcentage" INTEGER NOT NULL,
+    -- LS-324 : portée, et taux général nul sous la portée SELECTION.
+    "portee" TEXT NOT NULL DEFAULT 'TOUT',
+    "taux_pourcentage" INTEGER,
     "active" BOOLEAN NOT NULL DEFAULT true,
     "active_depuis" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "desactivee_a" TIMESTAMPTZ(3),
@@ -1152,6 +1156,22 @@ CREATE TABLE "historique_prix_variante" (
 
     CONSTRAINT "historique_prix_variante_pkey" PRIMARY KEY ("id")
 );
+
+-- LS-324 : le taux d'un article dans une promotion.
+-- CreateTable
+CREATE TABLE "promotion_produit" (
+    "promotion_id" TEXT NOT NULL,
+    "produit_id" TEXT NOT NULL,
+    "taux_pourcentage" INTEGER NOT NULL,
+
+    CONSTRAINT "promotion_produit_pkey" PRIMARY KEY ("promotion_id","produit_id")
+);
+
+-- AddForeignKey
+ALTER TABLE "promotion_produit" ADD CONSTRAINT "promotion_produit_promotion_id_fkey" FOREIGN KEY ("promotion_id") REFERENCES "promotion"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "promotion_produit" ADD CONSTRAINT "promotion_produit_produit_id_fkey" FOREIGN KEY ("produit_id") REFERENCES "produit"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- UNE SEULE PROMOTION ACTIVE À LA FOIS.
 CREATE UNIQUE INDEX "promotion_active_unique" ON "promotion"("active") WHERE (active);

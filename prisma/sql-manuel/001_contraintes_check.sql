@@ -551,7 +551,31 @@ ALTER TABLE "parametre_boutique"
 -- à `PROMOTIONS` de `src/lib/promotion.ts`.
 ALTER TABLE "promotion"
   ADD CONSTRAINT "chk_promotion_code_connu"
-  CHECK ("code" IN ('BLACK_WEEK'));
+  CHECK ("code" IN (
+    'BLACK_WEEK', 'SOLDES_HIVER', 'SOLDES_ETE', 'SAINT_VALENTIN',
+    'JOURNEE_FEMMES', 'OCTOBRE_ROSE', 'NOVEMBRE_BLEU', 'NOEL', 'PROMOTION'
+  ));
+
+-- LS-324, promotions libres : portée, taux par article, taux figé sur la ligne.
+ALTER TABLE "promotion"
+  ADD CONSTRAINT "chk_promotion_portee_connue"
+  CHECK ("portee" IN ('TOUT', 'SELECTION'));
+
+-- TOUTE LA BOUTIQUE PORTE UN TAUX GÉNÉRAL, UNE SÉLECTION N'EN PORTE AUCUN.
+ALTER TABLE "promotion"
+  ADD CONSTRAINT "chk_promotion_portee_taux"
+  CHECK (("portee" = 'TOUT' AND "taux_pourcentage" IS NOT NULL)
+      OR ("portee" = 'SELECTION' AND "taux_pourcentage" IS NULL));
+
+ALTER TABLE "promotion_produit"
+  ADD CONSTRAINT "chk_promotion_produit_taux"
+  CHECK ("taux_pourcentage" BETWEEN 1 AND 90);
+
+-- UN TAUX FIGÉ N'EXISTE QUE SUR UNE LIGNE VENDUE SOUS PROMOTION.
+ALTER TABLE "ligne_commande"
+  ADD CONSTRAINT "chk_ligne_commande_taux_reduction"
+  CHECK ("taux_reduction_fige" IS NULL
+      OR ("promotion_id" IS NOT NULL AND "taux_reduction_fige" BETWEEN 1 AND 90));
 
 ALTER TABLE "promotion"
   ADD CONSTRAINT "chk_promotion_taux"

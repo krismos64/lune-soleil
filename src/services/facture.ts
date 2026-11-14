@@ -179,7 +179,9 @@ export type CommandeAFacturer = {
      * FACULTATIFS dans ce type, une ligne sans promotion n'ayant rien a dire.
      */
     prixReferenceFigeCentimes?: number | null;
-    promotion?: { code: string; tauxPourcentage: number } | null;
+    /** LS-324 : le taux appliqué à la ligne, nul avant LS-324. */
+    tauxReductionFige?: number | null;
+    promotion?: { code: string; tauxPourcentage: number | null } | null;
   }[];
 };
 
@@ -365,12 +367,21 @@ function reductionDeLaLigne(
   ) {
     return null;
   }
+  /*
+   * LE TAUX DE LA LIGNE, LS-324 : figé avec son prix depuis que la promotion
+   * porte un taux par article. Une ligne d'avant LS-324 n'en a pas, et sa
+   * promotion n'avait qu'un taux : il se lit sur elle. Les deux absents ne
+   * peut exister, `chk_promotion_portee_taux` : défaut fermé quand même,
+   * aucune mention plutôt qu'un taux inventé sur un document comptable.
+   */
+  const taux = ligne.tauxReductionFige ?? ligne.promotion.tauxPourcentage;
+  if (taux === null) return null;
   const code = schemaCodePromotion.safeParse(ligne.promotion.code);
   return {
     prixReferenceCentimes: ligne.prixReferenceFigeCentimes,
     libelle: code.success
       ? PROMOTIONS[code.data].libelle
       : ligne.promotion.code,
-    taux: ligne.promotion.tauxPourcentage,
+    taux,
   };
 }

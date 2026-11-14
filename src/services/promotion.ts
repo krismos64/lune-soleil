@@ -13,6 +13,7 @@ import {
   formaterPeriode,
   prixDeVente,
   schemaCodePromotion,
+  schemaDemandePromotion,
   schemaPeriodePromotion,
   type CodePromotion,
 } from "@/lib/promotion";
@@ -29,6 +30,13 @@ import { valider } from "@/lib/validation";
 import * as depot from "@/repositories/promotion";
 import * as depotParametres from "@/repositories/parametres";
 
+export class ArticlePromotionInconnuError extends Error {
+  constructor() {
+    super("Un article choisi n'existe pas.");
+    this.name = "ArticlePromotionInconnuError";
+  }
+}
+
 export class PromotionDejaActiveError extends Error {
   constructor() {
     super("Une promotion est déjà active.");
@@ -39,22 +47,33 @@ export class PromotionDejaActiveError extends Error {
 export type PromotionEnVigueur = {
   id: string;
   code: CodePromotion;
-  taux: number;
   libelle: string;
   /** « du lundi 23 au dimanche 29 novembre », `null` sans période réglée. */
   periodeAnnoncee: string | null;
   activeDepuis: Date;
-  variantesEligibles: Set<string>;
-  /** Produits dont TOUTES les variantes en vente sont éligibles. */
-  produitsEligibles: Set<string>;
-  /** Chaque variante en vente est éligible : l'annonce peut dire « toute la boutique ». */
+  /**
+   * Le taux APPLIQUÉ à chaque déclinaison réduite, LS-324 : celui de son
+   * article, ou le taux général. Une déclinaison absente n'est pas réduite.
+   */
+  tauxParVariante: Map<string, number>;
+  /** Le taux d'un produit dont TOUTES les déclinaisons en vente sont réduites. */
+  tauxParProduit: Map<string, number>;
+  /** Le plus haut taux réellement appliqué à une pièce en vente. */
+  tauxMaximum: number;
+  /** Toutes les pièces réduites le sont au même taux : « −20 % » et non « jusqu'à ». */
+  tauxUnique: boolean;
+  /** Chaque déclinaison en vente est réduite : l'annonce peut dire « toute la boutique ». */
   toutLeCatalogue: boolean;
 };
 
 /**
- * La promotion active et l'éligibilité de chaque variante en vente, `null`
- * sans promotion. Une lecture par page : le catalogue compte quelques
- * dizaines de variantes, `frontend-design.md`.
+ * La promotion active et le taux de chaque déclinaison en vente, `null` sans
+ * promotion. Une lecture par page : le catalogue compte quelques dizaines de
+ * déclinaisons, `frontend-design.md`.
+ *
+ * UNE PROMOTION QUI NE RÉDUIT AUCUNE PIÈCE EN VENTE N'EST PAS EN VIGUEUR,
+ * LS-324 : ses articles peuvent tous être archivés ou exclus par la règle des
+ * trente jours. Rien ne s'annonce alors, plutôt qu'une réduction sans objet.
  */
 export async function lirePromotionEnVigueur(
   client = prisma,
@@ -67,62 +86,101 @@ export async function lirePromotionEnVigueur(
   if (!code.success) return null;
 
   const lignes = await depot.lireEligibiliteCatalogue(client, active.id);
-  const variantesEligibles = new Set<string>();
-  const produitsExclus = new Set<string>();
-  const produits = new Set<string>();
+  const tauxParVariante = new Map<string, number>();
+  const produitsIncomplets = new Set<string>();
+  const tauxDesProduits = new Map<string, number>();
   for (const ligne of lignes) {
-    produits.add(ligne.produitId);
-    if (ligne.eligible) variantesEligibles.add(ligne.varianteId);
-    else produitsExclus.add(ligne.produitId);
+    if (ligne.taux === null) {
+      produitsIncomplets.add(ligne.produitId);
+    } else {
+      tauxParVariante.set(ligne.varianteId, ligne.taux);
+      tauxDesProduits.set(ligne.produitId, ligne.taux);
+    }
   }
-  const produitsEligibles = new Set(
-    [...produits].filter((id) => !produitsExclus.has(id)),
+  if (tauxParVariante.size === 0) return null;
+
+  const tauxParProduit = new Map(
+    [...tauxDesProduits].filter(([id]) => !produitsIncomplets.has(id)),
   );
-  const definition = PROMOTIONS[code.data];
+  const appliques = new Set(tauxParVariante.values());
   return {
     id: active.id,
     code: code.data,
-    taux: active.taux,
-    libelle: definition.libelle,
+    libelle: PROMOTIONS[code.data].libelle,
     periodeAnnoncee: await lirePeriodeAnnoncee(client),
     activeDepuis: active.activeDepuis,
-    variantesEligibles,
-    produitsEligibles,
-    toutLeCatalogue: produitsExclus.size === 0 && lignes.length > 0,
+    tauxParVariante,
+    tauxParProduit,
+    tauxMaximum: Math.max(...appliques),
+    tauxUnique: appliques.size === 1,
+    toutLeCatalogue: produitsIncomplets.size === 0,
   };
 }
 
 /**
- * Le prix à afficher d'une variante : réduit et barré si elle est éligible,
- * le prix catalogue seul sinon. Le même calcul que la commande.
+ * Le prix affiché d'une variante sous la promotion en vigueur, son prix de
+ * référence barré et le taux qui les sépare, ou le prix catalogue seul.
+ * Chaque écran appelle cette fonction, aucun ne calcule un prix.
  */
 export function prixAffiche(
   promotion: PromotionEnVigueur | null,
   varianteId: string,
   prixCentimes: number,
-): { prixCentimes: number; prixReferenceCentimes: number | null } {
-  if (promotion === null || !promotion.variantesEligibles.has(varianteId)) {
-    return { prixCentimes, prixReferenceCentimes: null };
-  }
-  const reduit = prixDeVente(prixCentimes, promotion.taux);
-  return reduit < prixCentimes
-    ? { prixCentimes: reduit, prixReferenceCentimes: prixCentimes }
-    : { prixCentimes, prixReferenceCentimes: null };
+): {
+  prixCentimes: number;
+  prixReferenceCentimes: number | null;
+  tauxReduction: number | null;
+} {
+  const taux = promotion?.tauxParVariante.get(varianteId);
+  return prixReduit(prixCentimes, taux);
 }
 
 /**
- * Active une promotion écrite dans le code. Refuse seulement une seconde
- * active : aucune carence entre deux activations, amendement d'ADR-051 du
- * 13 novembre 2026.
+ * Le prix d'une pièce à un taux donné, `undefined` valant « pas de
+ * réduction ». Une réduction qui n'abaisse pas le prix, un centime à 5 %,
+ * n'en est pas une : ni prix barré ni taux.
+ */
+export function prixReduit(
+  prixCentimes: number,
+  taux: number | undefined,
+): {
+  prixCentimes: number;
+  prixReferenceCentimes: number | null;
+  tauxReduction: number | null;
+} {
+  if (taux === undefined) {
+    return { prixCentimes, prixReferenceCentimes: null, tauxReduction: null };
+  }
+  const reduit = prixDeVente(prixCentimes, taux);
+  return reduit < prixCentimes
+    ? {
+        prixCentimes: reduit,
+        prixReferenceCentimes: prixCentimes,
+        tauxReduction: taux,
+      }
+    : { prixCentimes, prixReferenceCentimes: null, tauxReduction: null };
+}
+
+/**
+ * Active une promotion, LS-324 : le nom choisi dans la liste fermée, la
+ * portée, et les taux saisis, bornés par `schemaDemandePromotion`.
+ *
+ * Une seule à la fois : une promotion active fait lever
+ * `PromotionDejaActiveError`, et l'index `promotion_active_unique` ferme la
+ * course entre deux activations. Aucun autre refus ni avertissement,
+ * amendement d'ADR-051 du 13 novembre 2026 : l'exploitante active librement.
+ *
+ * LA PROMOTION ET SES ARTICLES S'ÉCRIVENT DANS UNE TRANSACTION : un article
+ * inconnu, refusé par la clé étrangère, n'en laisse rien.
  */
 export async function activerPromotion({
-  code: entree,
+  demande: entree,
   acteurId,
 }: {
-  code: unknown;
+  demande: unknown;
   acteurId: string | null;
 }): Promise<depot.PromotionActive> {
-  const code = valider(schemaCodePromotion, entree);
+  const demande = valider(schemaDemandePromotion, entree);
   return prisma.$transaction(async (tx) => {
     // Sérialisée avec tout changement de prix, revue critique de LS-319.
     await depot.verrouillerPromotion(tx);
@@ -131,15 +189,21 @@ export async function activerPromotion({
     }
     try {
       return await depot.insererPromotion(tx, {
-        code,
-        taux: PROMOTIONS[code].taux,
+        code: demande.code,
+        portee: demande.portee,
+        taux: demande.portee === "TOUT" ? demande.taux : null,
+        articles: demande.articles,
         acteurId,
       });
     } catch (erreur) {
-      // Deux activations simultanées : l'index en refuse une.
       const message = erreur instanceof Error ? erreur.message : "";
+      // Deux activations simultanées : l'index en refuse une.
       if (message.includes("promotion_active_unique")) {
         throw new PromotionDejaActiveError();
+      }
+      // Un article qui n'existe pas : la clé étrangère le refuse.
+      if (message.includes("promotion_produit_produit_id_fkey")) {
+        throw new ArticlePromotionInconnuError();
       }
       throw erreur;
     }
@@ -182,6 +246,7 @@ export type IssueBasculePromotion =
   | { statut: "DESACTIVEE" }
   | { statut: "AUCUNE_ACTIVE" }
   | { statut: "DEJA_ACTIVE" }
+  | { statut: "ARTICLE_INCONNU" }
   | { statut: "SESSION_ABSENTE" }
   | { statut: "REAUTHENTIFICATION_REQUISE" };
 
@@ -197,7 +262,7 @@ export type IssueBasculePromotion =
  */
 export async function basculerPromotion(
   enTetes: Headers,
-  demande: { action: "ACTIVER"; code: unknown } | { action: "DESACTIVER" },
+  demande: { action: "ACTIVER"; demande: unknown } | { action: "DESACTIVER" },
 ): Promise<IssueBasculePromotion> {
   let acteurId: string;
   try {
@@ -219,37 +284,75 @@ export async function basculerPromotion(
       : { statut: "AUCUNE_ACTIVE" };
   }
   try {
-    const active = await activerPromotion({ code: demande.code, acteurId });
+    const active = await activerPromotion({
+      demande: demande.demande,
+      acteurId,
+    });
     const code = schemaCodePromotion.parse(active.code);
     return { statut: "ACTIVEE", libelle: PROMOTIONS[code].libelle };
   } catch (erreur) {
     if (erreur instanceof PromotionDejaActiveError) {
       return { statut: "DEJA_ACTIVE" };
     }
+    if (erreur instanceof ArticlePromotionInconnuError) {
+      return { statut: "ARTICLE_INCONNU" };
+    }
     throw erreur;
   }
 }
 
-/** Ce que l'écran des paramètres montre de la promotion, ADR-051. */
-export async function lireEtatPromotion(): Promise<{
+/**
+ * Ce que l'écran d'administration montre de la promotion ACTIVE, LS-324 : son
+ * nom, sa portée, ses taux, et ce qu'elle réduit réellement.
+ *
+ * LUE SUR LA PROMOTION ACTIVE ET NON SUR CELLE « EN VIGUEUR » : une promotion
+ * qui ne réduit aucune pièce n'annonce rien au public, mais l'exploitante
+ * doit la voir pour la désactiver.
+ */
+export type EtatPromotion = {
   active: {
     libelle: string;
-    taux: number;
+    portee: "TOUT" | "SELECTION";
+    /** Le taux général, `null` sous la portée `SELECTION`. */
+    tauxGeneral: number | null;
+    /** Les articles au taux propre, par nom. */
+    articles: { nom: string; taux: number }[];
     activeDepuis: Date;
+    /** Déclinaisons en vente réellement réduites. */
+    reduites: number;
+    /** Déclinaisons visées mais exclues, prix changé dans les trente jours. */
     exclues: number;
   } | null;
-}> {
-  const enVigueur = await lirePromotionEnVigueur();
-  if (enVigueur === null) return { active: null };
-  const lignes = await depot.lireEligibiliteCatalogue(prisma, enVigueur.id);
+};
+
+export async function lireEtatPromotion(): Promise<EtatPromotion> {
+  const active = await depot.lirePromotionActive(prisma);
+  if (active === null) return { active: null };
+  const code = schemaCodePromotion.safeParse(active.code);
+  const [lignes, articles] = await Promise.all([
+    depot.lireEligibiliteCatalogue(prisma, active.id),
+    depot.lireArticlesPromotion(prisma, active.id),
+  ]);
   return {
     active: {
-      libelle: enVigueur.libelle,
-      taux: enVigueur.taux,
-      activeDepuis: enVigueur.activeDepuis,
-      exclues: lignes.filter((l) => !l.eligible).length,
+      libelle: code.success ? PROMOTIONS[code.data].libelle : active.code,
+      portee: active.portee === "SELECTION" ? "SELECTION" : "TOUT",
+      tauxGeneral: active.taux,
+      articles: articles.map(({ nom, taux }) => ({ nom, taux })),
+      activeDepuis: active.activeDepuis,
+      reduites: lignes.filter((ligne) => ligne.taux !== null).length,
+      exclues: lignes.filter(
+        (ligne) => ligne.tauxVise !== null && ligne.taux === null,
+      ).length,
     },
   };
+}
+
+/** Les articles en vente que l'exploitante peut cocher, LS-324. */
+export async function lireArticlesReductibles(): Promise<
+  Awaited<ReturnType<typeof depot.listerArticlesReductibles>>
+> {
+  return depot.listerArticlesReductibles(prisma);
 }
 
 /**
