@@ -1374,6 +1374,15 @@ verifier_accepte "thème Black Week accepté, LS-318" "$sortie"
 sortie=$(R "UPDATE parametre_boutique SET theme_saisonnier = 'black_week' WHERE id = true;")
 verifier_rejet "thème Black Week en minuscules rejeté" \
   "chk_parametre_theme_connu" "$sortie"
+# Les douze thèmes d'ambiance de LS-323 : le premier et le dernier de la liste
+# acceptés, un thème que le code n'écrit pas rejeté.
+sortie=$(R "UPDATE parametre_boutique SET theme_saisonnier = 'NOUVEL_AN' WHERE id = true;")
+verifier_accepte "thème Nouvel An accepté, LS-323" "$sortie"
+sortie=$(R "UPDATE parametre_boutique SET theme_saisonnier = 'HIVER' WHERE id = true;")
+verifier_accepte "thème Hiver accepté, LS-323" "$sortie"
+sortie=$(R "UPDATE parametre_boutique SET theme_saisonnier = 'TOUSSAINT' WHERE id = true;")
+verifier_rejet "thème absent du code rejeté" \
+  "chk_parametre_theme_connu" "$sortie"
 R "UPDATE parametre_boutique SET theme_saisonnier = 'AUCUN' WHERE id = true;" >/dev/null
 
 echo

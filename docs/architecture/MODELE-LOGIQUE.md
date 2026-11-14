@@ -380,7 +380,12 @@ Migration `20261004190000_theme_saisonnier`, additive :
 ```sql
 ALTER TABLE parametre_boutique
   ADD CONSTRAINT chk_parametre_theme_connu
-  CHECK (theme_saisonnier IN ('AUCUN', 'NOEL_1', 'NOEL_2', 'BLACK_WEEK'));
+  CHECK (theme_saisonnier IN (
+    'AUCUN', 'NOEL_1', 'NOEL_2', 'BLACK_WEEK',
+    'NOUVEL_AN', 'SOLDES_HIVER', 'SAINT_VALENTIN', 'JOURNEE_FEMMES',
+    'PRINTEMPS', 'PAQUES', 'ETE', 'SOLDES_ETE', 'AUTOMNE', 'OCTOBRE_ROSE',
+    'NOVEMBRE_BLEU', 'HIVER'
+  ));
 ```
 
 **LS-277, migration `20261006200000_themes_noel`** : `NOEL` est remplacé par
@@ -391,6 +396,11 @@ activé.
 **LS-318, migration `20261112180000_theme_black_week`** : `BLACK_WEEK` s'ajoute
 à la liste. La contrainte est retirée puis reposée, aucune valeur n'est
 convertie et aucun thème n'est activé.
+
+**LS-323, migration `20261114180000_themes_ambiance`** : douze thèmes
+d'ambiance s'ajoutent, saisons, fêtes, engagements et soldes. La contrainte est
+retirée puis reposée, aucune valeur n'est convertie et aucun thème n'est
+activé.
 
 **Texte borné et non type énuméré** : `verifier-schema.sh` exige que chaque
 énumération figure au modèle conceptuel, dont cette table de configuration

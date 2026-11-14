@@ -28,12 +28,20 @@ import { BandeauApercuTheme } from "@/components/bandeau-apercu-theme";
 import { BoutonPauseAnimations } from "@/components/bouton-pause-animations";
 import { BandeauBlackWeek, LisereOr } from "@/components/decor-black-week";
 import { BandePapierCadeau, BandeSucreOrge } from "@/components/decor-noel";
+import {
+  BandeauOperation,
+  CouronneSaison,
+  FriseSaison,
+  NueeSaison,
+  RubanSaison,
+} from "@/components/decor-saison";
 import { EmblemeAnime } from "@/components/embleme-anime";
 import { PoussiereOr } from "@/components/poussiere-or";
 import { ReactionPointeur } from "@/components/reaction-pointeur";
 import { SceneCycle } from "@/components/scene-cycle";
 import {
   aMouvementContinu,
+  ambianceDe,
   estThemeBlackWeek,
   estThemeDeNoel,
 } from "@/lib/theme-saisonnier";
@@ -129,6 +137,13 @@ export default async function PageAccueil({
   );
   const noel = estThemeDeNoel(theme);
   const blackWeek = estThemeBlackWeek(theme);
+  /*
+   * LES DOUZE THÈMES D'AMBIANCE, LS-323 : une seule branche pour tous, réglée
+   * par la table `AMBIANCES`. Le bandeau d'opération des six thèmes associés
+   * à une réduction porte l'annonce de la promotion, comme Black Week.
+   */
+  const ambiance = ambianceDe(theme);
+  const bandeauPorteLaPromotion = blackWeek || ambiance?.annonce === true;
   const misEnAvant = produits.slice(0, NOMBRE_MIS_EN_AVANT);
 
   /*
@@ -174,6 +189,9 @@ export default async function PageAccueil({
          * porte l'annonce de la promotion quand elle est active, LS-319.
          */}
         {blackWeek ? <BandeauBlackWeek promotion={promotion} /> : null}
+        {ambiance?.annonce ? (
+          <BandeauOperation ambiance={ambiance} promotion={promotion} />
+        ) : null}
         <div className={styles.heroGrille}>
           <div className={styles.heroTexte}>
             {/*
@@ -188,6 +206,13 @@ export default async function PageAccueil({
                 Fêtes de fin d&apos;année
               </p>
             ) : null}
+            {/*
+             * THÈME D'AMBIANCE, LS-323 : le ruban nomme l'événement. Sous un
+             * thème à bandeau d'opération, le bandeau le nomme déjà.
+             */}
+            {ambiance !== null && !ambiance.annonce ? (
+              <RubanSaison ambiance={ambiance} />
+            ) : null}
             <p className={styles.surtitre}>Bijoux faits main</p>
             <h1 className={styles.titre}>
               La <span className={styles.motDore}>lumière</span> d&apos;un
@@ -199,7 +224,9 @@ export default async function PageAccueil({
                 ? "Une pièce faite main, choisie pour quelqu'un : rien ne se ressemble tout à fait, et c'est ce qui fait le cadeau."
                 : blackWeek
                   ? "Des bijoux faits main, une pièce à la fois, sous un soleil d'or."
-                  : "Des pièces délicates en petite série, pensées pour accompagner le quotidien sans jamais se ressembler tout à fait."}
+                  : ambiance !== null
+                    ? ambiance.accroche
+                    : "Des pièces délicates en petite série, pensées pour accompagner le quotidien sans jamais se ressembler tout à fait."}
             </p>
             <div className={styles.actions}>
               <Link href="/catalogue" className={styles.actionPrincipale}>
@@ -210,10 +237,24 @@ export default async function PageAccueil({
               </Link>
             </div>
           </div>
-          <EmblemeAnime noel={noel} rayonsContinus={noel || blackWeek} />
+          <EmblemeAnime
+            noel={noel}
+            rayonsContinus={noel || blackWeek || ambiance !== null}
+            decor={
+              ambiance === null ? undefined : (
+                <>
+                  <CouronneSaison ambiance={ambiance} />
+                  <NueeSaison ambiance={ambiance} ronde />
+                </>
+              )
+            }
+          />
         </div>
         {noel ? <BandeSucreOrge className={styles.sucreHeros} /> : null}
         {blackWeek ? <LisereOr className={styles.lisereHeros} /> : null}
+        {ambiance !== null ? (
+          <FriseSaison ambiance={ambiance} className={styles.friseHeros} />
+        ) : null}
       </section>
 
       {noel ? <BandePapierCadeau /> : null}
@@ -229,7 +270,7 @@ export default async function PageAccueil({
        * ADR-051 : l'annonce de la promotion, rien sans promotion active. Sous
        * Black Week, le bandeau du héros la porte déjà, LS-322.
        */}
-      {blackWeek ? null : (
+      {bandeauPorteLaPromotion ? null : (
         <AnnoncePromotion
           promotion={promotion}
           className={styles.annonceAccueil}
@@ -305,6 +346,7 @@ export default async function PageAccueil({
                 produit={produit}
                 noel={noel}
                 blackWeek={blackWeek}
+                saison={ambiance !== null}
                 tauxPromotion={promotion?.taux ?? null}
               />
             ))}

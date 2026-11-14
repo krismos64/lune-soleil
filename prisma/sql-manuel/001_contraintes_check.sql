@@ -535,11 +535,16 @@ ALTER TABLE "produit"
   CHECK ("retire_a" IS NULL OR "statut" = 'ARCHIVE');
 
 -- LE THÈME SAISONNIER EST L'UN DES THÈMES ÉCRITS DANS LE CODE, ADR-046,
--- LS-267, liste de LS-277 puis LS-318. Un thème inconnu poserait un `data-theme` qu'aucun jeton ne
+-- LS-267, liste de LS-277, LS-318 puis LS-323. Un thème inconnu poserait un `data-theme` qu'aucun jeton ne
 -- définit : la page s'afficherait sans thème, sans erreur ni avertissement.
 ALTER TABLE "parametre_boutique"
   ADD CONSTRAINT "chk_parametre_theme_connu"
-  CHECK ("theme_saisonnier" IN ('AUCUN', 'NOEL_1', 'NOEL_2', 'BLACK_WEEK'));
+  CHECK ("theme_saisonnier" IN (
+    'AUCUN', 'NOEL_1', 'NOEL_2', 'BLACK_WEEK',
+    'NOUVEL_AN', 'SOLDES_HIVER', 'SAINT_VALENTIN', 'JOURNEE_FEMMES',
+    'PRINTEMPS', 'PAQUES', 'ETE', 'SOLDES_ETE', 'AUTOMNE', 'OCTOBRE_ROSE',
+    'NOVEMBRE_BLEU', 'HIVER'
+  ));
 
 -- ADR-051, LS-319 : promotion de catalogue, historique des prix et prix figés.
 -- LA PROMOTION EST L'UNE DES PROMOTIONS ÉCRITES DANS LE CODE, liste identique

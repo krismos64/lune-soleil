@@ -1,0 +1,676 @@
+/*
+ * Décors des douze thèmes d'ambiance, LS-323, ADR-046 amendé le 14 novembre
+ * 2026. Jetons seulement : `--ls-saison-un` et `--ls-saison-deux` viennent du
+ * bloc `[data-theme]` actif, les teintes claires se font par `color-mix`.
+ *
+ * SEULES `transform`, `opacity` ET `stroke-dashoffset` S'ANIMENT, ADR-045.
+ * Tout mouvement sans fin vit sous `[data-borne="joue"]` ou `"fin"`, états
+ * posés par le script : sans lui, le bouton de pause n'existe pas et rien ne
+ * tourne sans fin, WCAG 2.2.2.
+ */
+
+/* ---------- Motifs ---------- */
+
+.motif {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+  overflow: visible;
+}
+
+.trait {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Détail clair posé sur un aplat : nervure, zigzag de l'œuf. */
+.detail {
+  fill: none;
+  stroke: var(--ls-surface);
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.85;
+}
+
+.percee {
+  fill: var(--ls-surface);
+}
+
+/* L'or du logo, décor seulement : soleils, mimosa, cœur des fleurs. */
+.or {
+  fill: var(--ls-or-clair);
+}
+
+.teinteUn {
+  color: color-mix(in srgb, var(--ls-saison-un) 78%, var(--ls-surface));
+}
+
+.teinteDeux {
+  color: color-mix(in srgb, var(--ls-saison-deux) 70%, var(--ls-surface));
+}
+
+.teintePale {
+  color: color-mix(in srgb, var(--ls-saison-un) 38%, var(--ls-surface));
+}
+
+/* ---------- Nuée ---------- */
+
+.nuee {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.nueeRonde {
+  border-radius: 50%;
+}
+
+/*
+ * LA COURSE D'UN MOTIF EST LA HAUTEUR DE SA ZONE, lue par une unité de
+ * conteneur : la même nuée traverse l'emblème de l'accueil, le bandeau du
+ * catalogue ou une marge haute de plusieurs écrans sans réglage par zone.
+ */
+.nuee,
+.marge {
+  container-type: size;
+}
+
+.grain {
+  --chute: calc(100cqh + 24px);
+  position: absolute;
+  top: var(--haut);
+  left: var(--gauche);
+  width: var(--taille);
+  height: var(--taille);
+  opacity: 0;
+}
+
+/* ---------- Halo, médaillon et couronne ---------- */
+
+.haloSaison {
+  position: absolute;
+  inset: 6%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--ls-saison-un) 20%, transparent) 0%,
+    color-mix(in srgb, var(--ls-saison-deux) 9%, transparent) 45%,
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+.couronne {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.perle {
+  position: absolute;
+  top: var(--y);
+  left: var(--x);
+  width: var(--taille);
+  aspect-ratio: 1;
+  margin: calc(var(--taille) / -2) 0 0 calc(var(--taille) / -2);
+}
+
+.scene {
+  position: relative;
+  pointer-events: none;
+}
+
+.medaillon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  height: 92%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+}
+
+.anneaux {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.anneauTrace {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ls-saison-un) 55%, var(--ls-surface));
+  stroke-width: 1.2;
+  stroke-dasharray: 1;
+  transform: rotate(-90deg);
+}
+
+.anneauPointille {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ls-saison-deux) 60%, var(--ls-surface));
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-dasharray: 0.1 9;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.grand {
+  position: absolute;
+  inset: 27%;
+  color: var(--ls-saison-un);
+}
+
+.allure {
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 55%;
+}
+
+/* ---------- Frise ---------- */
+
+.frise {
+  height: 20px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.friseDessin {
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: 20px;
+  transform-origin: left center;
+}
+
+.friseDessin g {
+  fill: currentColor;
+}
+
+.pointFrise {
+  fill: color-mix(in srgb, var(--ls-saison-un) 45%, var(--ls-surface));
+}
+
+/* ---------- Marges du catalogue ---------- */
+
+/*
+ * MASQUÉES SOUS 1240 PX, le conteneur compris, comme les marges de Noël :
+ * présent mais vide, il couvrait toute la hauteur de la grille et
+ * l'observateur des bornes l'attendait en vain.
+ */
+.marges {
+  display: none;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.marge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: calc((100vw - 72rem) / 2 - 8px);
+  overflow: hidden;
+}
+
+.margeGauche {
+  right: 100%;
+}
+
+.margeDroite {
+  left: 100%;
+}
+
+@media (min-width: 1240px) {
+  .marges {
+    display: block;
+  }
+}
+
+/* ---------- Liseré des cartes ---------- */
+
+.traceCarte {
+  position: absolute;
+  inset: -3px;
+  width: calc(100% + 6px);
+  height: calc(100% + 6px);
+  max-width: none;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.traceCarte rect {
+  fill: none;
+  stroke: var(--ls-saison-un);
+  stroke-width: 2;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+/* ---------- Ruban ---------- */
+
+/*
+ * Accent de saison sur blanc : 4,5:1 au moins, mesuré par
+ * `verifier-contraste.sh` dans chaque bloc de thème. La bordure est
+ * décorative, le texte et le fond identifient le ruban.
+ */
+.ruban {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ls-space-2);
+  max-width: 100%;
+  margin: 0 0 var(--ls-space-3);
+  padding: var(--ls-space-1) var(--ls-space-3);
+  border: 1px solid
+    color-mix(in srgb, var(--ls-saison-un) 30%, var(--ls-surface));
+  border-radius: 999px;
+  background: var(--ls-surface);
+  color: var(--ls-saison-un);
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.motifRuban {
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+/* ---------- Bandeau d'opération de l'accueil ---------- */
+
+.bandeau {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: var(--ls-space-3);
+  width: min(100% - 2 * var(--ls-space-4), 46rem);
+  margin: var(--ls-space-5) auto 0;
+  padding: var(--ls-space-4);
+  border-radius: 14px;
+  background: var(--ls-surface);
+  text-align: center;
+  box-shadow: 0 18px 40px -28px
+    color-mix(in srgb, var(--ls-saison-un) 70%, transparent);
+}
+
+.cadreBandeau {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.cadreFixe {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ls-saison-un) 35%, var(--ls-surface));
+  stroke-width: 1.5;
+}
+
+.comete {
+  fill: none;
+  stroke: var(--ls-saison-un);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 0.12 0.88;
+  opacity: 0;
+}
+
+.texteBandeau {
+  position: relative;
+  min-width: 0;
+}
+
+/* Grand texte : 3:1 suffirait, l'accent tient 4,5:1 sur blanc. */
+.titreBandeau {
+  margin: 0;
+  color: var(--ls-saison-un);
+  font-family: var(--ls-police-titre);
+  font-size: clamp(1.5rem, 6.4vw, 2.5rem);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: 0.01em;
+  overflow-wrap: anywhere;
+}
+
+.offreBandeau {
+  margin: var(--ls-space-2) 0 0;
+  color: var(--ls-text);
+  font-size: 1.0625rem;
+}
+
+.tauxBandeau {
+  display: inline-block;
+  padding: 0 var(--ls-space-2);
+  border-radius: 999px;
+  background: var(--ls-saison-un);
+  color: var(--ls-surface);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sousTitreBandeau {
+  margin: var(--ls-space-1) 0 0;
+  color: var(--ls-text);
+  font-size: 0.9375rem;
+}
+
+/* Les motifs des côtés : absents sous 560 px, le texte prend toute la place. */
+.cote {
+  display: none;
+  align-items: center;
+  gap: var(--ls-space-2);
+  color: color-mix(in srgb, var(--ls-saison-un) 78%, var(--ls-surface));
+}
+
+.coteDroit {
+  justify-content: flex-end;
+}
+
+.motifCote {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.motifCotePetit {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: color-mix(in srgb, var(--ls-saison-deux) 70%, var(--ls-surface));
+}
+
+@media (min-width: 560px) {
+  .bandeau {
+    grid-template-columns: 4.5rem minmax(0, 1fr) 4.5rem;
+    padding: var(--ls-space-4) var(--ls-space-5);
+  }
+
+  .cote {
+    display: flex;
+  }
+}
+
+/* ---------- Mouvement ---------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Entrées, finies : anneau, grand motif, couronne, frise. */
+  .anneauTrace {
+    stroke-dashoffset: 1;
+    animation: trace 1600ms var(--ls-easing-sortie) 200ms forwards;
+  }
+
+  .grand {
+    animation: eclot 900ms var(--ls-easing-sortie) 500ms both;
+  }
+
+  .perle {
+    animation: eclot 700ms var(--ls-easing-sortie) both;
+    animation-delay: calc(900ms + var(--rang) * 140ms);
+  }
+
+  .friseDessin {
+    transform: scaleX(0);
+    animation: deroule 1500ms var(--ls-easing-sortie) 300ms forwards;
+  }
+
+  .traceCarte rect {
+    transition: stroke-dashoffset 900ms var(--ls-easing-sortie);
+  }
+
+  :global(li:hover) > .traceCarte rect,
+  :global(li:focus-within) > .traceCarte rect {
+    stroke-dashoffset: 0;
+  }
+
+  /* Mouvement continu, sous un état posé par le script seulement. */
+  :global([data-borne="joue"]) .nuee[data-mouvement="tombe"] .grain,
+  :global([data-borne="fin"]) .nuee[data-mouvement="tombe"] .grain,
+  :global([data-borne="joue"]) .marge[data-mouvement="tombe"] .grain,
+  :global([data-borne="fin"]) .marge[data-mouvement="tombe"] .grain {
+    animation: tombe var(--duree) linear var(--retard) infinite;
+  }
+
+  :global([data-borne="joue"]) .nuee[data-mouvement="monte"] .grain,
+  :global([data-borne="fin"]) .nuee[data-mouvement="monte"] .grain,
+  :global([data-borne="joue"]) .marge[data-mouvement="monte"] .grain,
+  :global([data-borne="fin"]) .marge[data-mouvement="monte"] .grain {
+    top: auto;
+    bottom: 0;
+    animation: monte var(--duree) ease-in var(--retard) infinite;
+  }
+
+  :global([data-borne="joue"]) .nuee[data-mouvement="scintille"] .grain,
+  :global([data-borne="fin"]) .nuee[data-mouvement="scintille"] .grain {
+    animation: scintille var(--duree) ease-in-out var(--retard) infinite;
+  }
+
+  :global([data-borne="joue"]) .haloSaison,
+  :global([data-borne="fin"]) .haloSaison {
+    animation: respire 5s ease-in-out infinite;
+  }
+
+  :global([data-borne="joue"]) .anneauPointille,
+  :global([data-borne="fin"]) .anneauPointille {
+    animation: tourne 48s linear infinite;
+  }
+
+  /*
+   * LA COURONNE FLOTTE APRÈS SON ÉCLOSION : deux animations, la seconde sans
+   * remplissage arrière, pour qu'elle ne masque pas l'entrée.
+   */
+  :global([data-borne="joue"]) .perle,
+  :global([data-borne="fin"]) .perle {
+    animation:
+      eclot 700ms var(--ls-easing-sortie) both,
+      flotte 5.5s ease-in-out infinite;
+    animation-delay:
+      calc(900ms + var(--rang) * 140ms), calc(2400ms + var(--rang) * 450ms);
+  }
+
+  :global([data-borne="joue"]) .allure[data-allure="bat"],
+  :global([data-borne="fin"]) .allure[data-allure="bat"] {
+    animation: bat 1.8s ease-in-out 1500ms infinite;
+  }
+
+  :global([data-borne="joue"]) .allure[data-allure="tourne"],
+  :global([data-borne="fin"]) .allure[data-allure="tourne"] {
+    transform-origin: center;
+    animation: tourne 36s linear 1500ms infinite;
+  }
+
+  :global([data-borne="joue"]) .allure[data-allure="balance"],
+  :global([data-borne="fin"]) .allure[data-allure="balance"] {
+    transform-origin: 50% 10%;
+    animation: balance 5s ease-in-out 1500ms infinite;
+  }
+
+  :global([data-borne="joue"]) .allure[data-allure="scintille"],
+  :global([data-borne="fin"]) .allure[data-allure="scintille"] {
+    animation: pulse 3.2s ease-in-out 1500ms infinite;
+  }
+
+  :global([data-borne="joue"]) .comete,
+  :global([data-borne="fin"]) .comete {
+    opacity: 1;
+    animation: tour-cadre 7s linear infinite;
+  }
+
+  :global([data-borne="joue"]) .cote .motif,
+  :global([data-borne="fin"]) .cote .motif {
+    animation: pulse 3.6s ease-in-out infinite;
+  }
+
+  :global([data-borne="joue"]) .cote .motifCotePetit,
+  :global([data-borne="fin"]) .cote .motifCotePetit {
+    animation-delay: 1.2s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nuee,
+  .marges {
+    display: none;
+  }
+
+  :global(li:hover) > .traceCarte rect,
+  :global(li:focus-within) > .traceCarte rect {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes trace {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes eclot {
+  from {
+    opacity: 0;
+    transform: scale(0.3) rotate(-25deg);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.08) rotate(4deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes deroule {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes tombe {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -20px, 0) rotate(0deg);
+  }
+  12% {
+    opacity: 0.9;
+  }
+  85% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--derive), var(--chute, 16rem), 0)
+      rotate(var(--tour));
+  }
+}
+
+@keyframes monte {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 20px, 0) scale(0.7) rotate(0deg);
+  }
+  15% {
+    opacity: 0.9;
+  }
+  80% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--derive), calc(var(--chute, 16rem) * -1), 0)
+      scale(1.1) rotate(var(--tour));
+  }
+}
+
+@keyframes scintille {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.4) rotate(0deg);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1) rotate(calc(var(--tour) / 3));
+  }
+}
+
+@keyframes respire {
+  0%,
+  100% {
+    opacity: 0.75;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes tourne {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes flotte {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-9%) rotate(8deg);
+  }
+}
+
+@keyframes bat {
+  0%,
+  36%,
+  100% {
+    transform: scale(1);
+  }
+  12% {
+    transform: scale(1.12);
+  }
+  24% {
+    transform: scale(0.98);
+  }
+  30% {
+    transform: scale(1.07);
+  }
+}
+
+@keyframes balance {
+  0%,
+  100% {
+    transform: rotate(-7deg);
+  }
+  50% {
+    transform: rotate(7deg);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(0.82);
+  }
+}
+
+@keyframes tour-cadre {
+  to {
+    stroke-dashoffset: -1;
+  }
+}

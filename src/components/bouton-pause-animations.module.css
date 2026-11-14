@@ -13,12 +13,21 @@
   width: 32px;
   height: 32px;
   padding: 0;
-  border: 1px solid color-mix(in srgb, var(--ls-noel-rouge) 45%, transparent);
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--ls-accent-saison, var(--ls-primary)) 45%,
+      transparent
+    );
   border-radius: 50%;
   background: var(--ls-surface);
-  color: var(--ls-noel-rouge);
+  color: var(--ls-accent-saison, var(--ls-primary));
   box-shadow: 0 4px 14px -6px
-    color-mix(in srgb, var(--ls-noel-rouge) 60%, transparent);
+    color-mix(
+      in srgb,
+      var(--ls-accent-saison, var(--ls-primary)) 60%,
+      transparent
+    );
   opacity: 0.8;
   cursor: pointer;
   transition: opacity var(--ls-duration-base) ease;

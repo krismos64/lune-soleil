@@ -20,6 +20,16 @@ const MIGRATION_BLACK_WEEK = readFileSync(
   "utf8",
 );
 
+/**
+ * La migration de LS-323, la dernière à reposer la contrainte : elle la retire
+ * puis pose la liste EN VIGUEUR. Les tests qui abîment la contrainte la
+ * rejouent pour la rétablir, au lieu de recopier une liste qui se périmerait.
+ */
+const MIGRATION_EN_VIGUEUR = readFileSync(
+  "prisma/migrations/20261114180000_themes_ambiance/migration.sql",
+  "utf8",
+);
+
 let client: Client;
 let service: typeof import("@/services/theme-saisonnier");
 
@@ -47,7 +57,11 @@ describe("thème saisonnier, ADR-046", () => {
   });
 
   it("enregistre chacun des thèmes, et le relit, LS-277 et LS-318", async () => {
-    for (const theme of ["NOEL_1", "NOEL_2", "BLACK_WEEK"] as const) {
+    // Tous les thèmes écrits dans le code, les douze de LS-323 compris : un
+    // thème absent de la contrainte ferait échouer son enregistrement ici.
+    for (const theme of service.THEMES_SAISONNIERS.filter(
+      (valeur) => valeur !== "AUCUN",
+    )) {
       expect(await service.choisirThemeSaisonnier(theme)).toBe(theme);
       expect(await service.lireThemeSaisonnier()).toBe(theme);
       const { rows } = await client.query(
@@ -97,6 +111,7 @@ describe("thème saisonnier, ADR-046", () => {
       // remet la liste en vigueur, sans quoi les tests suivants de cette base
       // partagée refuseraient `BLACK_WEEK`.
       await client.query(MIGRATION_BLACK_WEEK);
+      await client.query(MIGRATION_EN_VIGUEUR);
     }
   });
 
@@ -134,6 +149,9 @@ describe("thème saisonnier, ADR-046", () => {
       await client.query(
         "UPDATE parametre_boutique SET theme_saisonnier = 'AUCUN' WHERE id = true",
       );
+      // La migration de LS-318 a reposé sa liste de quatre thèmes : celle de
+      // LS-323 remet la liste en vigueur pour la suite de la base partagée.
+      await client.query(MIGRATION_EN_VIGUEUR);
     }
   });
 
@@ -144,7 +162,8 @@ describe("thème saisonnier, ADR-046", () => {
       "Noel",
       "black_week",
       "BLACK WEEK",
-      "PAQUES",
+      "TOUSSAINT",
+      "paques",
       "",
       null,
       42,
@@ -164,7 +183,7 @@ describe("thème saisonnier, ADR-046", () => {
     );
     try {
       await client.query(
-        "UPDATE parametre_boutique SET theme_saisonnier = 'PAQUES' WHERE id = true",
+        "UPDATE parametre_boutique SET theme_saisonnier = 'TOUSSAINT' WHERE id = true",
       );
       expect(await service.lireThemeSaisonnier()).toBe("AUCUN");
     } finally {
@@ -177,7 +196,7 @@ describe("thème saisonnier, ADR-046", () => {
       // La migration remplace cette contrainte provisoire par la liste en
       // vigueur, au lieu d'en recopier une ici qui se périmerait au prochain
       // thème, défaut de la version précédente de ce test.
-      await client.query(MIGRATION_BLACK_WEEK);
+      await client.query(MIGRATION_EN_VIGUEUR);
     }
   });
 

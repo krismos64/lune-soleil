@@ -299,6 +299,115 @@
 }
 
 /*
+ * LES DOUZE THÈMES D'AMBIANCE, LS-323, amendement d'ADR-046 du 14 novembre
+ * 2026. Régime ordinaire de la section 2, comme `NOEL_1` : aucun fond sombre,
+ * aucun texte clair.
+ *
+ * DEUX ACCENTS PAR THÈME, sous les mêmes noms, `--ls-saison-un` et
+ * `--ls-saison-deux` : `decor-saison` et les pages ne connaissent qu'eux.
+ * TOUS DEUX TIENNENT 4,5:1 sur crème, sable et blanc, C31, mesurés par
+ * `verifier-contraste.sh` dans chaque bloc ; le pire est le corail de l'été
+ * sur sable, 4,92:1. Les teintes claires des décors (pétales, halos, flocons)
+ * se font par `color-mix` avec `--ls-surface`, jamais par un jeton clair :
+ * un jeton de thème est toujours un jeton qui peut porter du texte.
+ */
+/* Indigo de minuit et or. */
+[data-theme="nouvel_an"] {
+  --ls-saison-un: #2b2f6b;
+  --ls-saison-deux: #8a5a12;
+  --ls-accent-saison: var(--ls-saison-un);
+  --ls-feuillage: var(--ls-saison-deux);
+}
+
+/* Bleu de nuit et rouge. */
+[data-theme="soldes_hiver"] {
+  --ls-saison-un: #1f3a63;
+  --ls-saison-deux: #a8241f;
+  --ls-accent-saison: var(--ls-saison-un);
+  --ls-feuillage: var(--ls-saison-deux);
+}
+
+/* Framboise et grenat. */
+[data-theme="saint_valentin"] {
+  --ls-saison-un: #a8174b;
+  --ls-saison-deux: #7a1f3d;
+  --ls-accent-saison: var(--ls-saison-un);
+  --ls-feuillage: var(--ls-saison-deux);
+}
+
+/* Violet et or de mimosa. */
+[data-theme="journee_femmes"] {
+  --ls-saison-un: #6b2d8c;
+  --ls-saison-deux: #8a5a12;
+  --ls-accent-saison: var(--ls-saison-un);
+  --ls-feuillage: var(--ls-saison-deux);
+}
+
+/* Vert tendre et rose de fleur. */
+[data-theme="printemps"] {
+  --ls-saison-un: #3c6b34;
+  --ls-saison-deux: #a63d6e;
+  --ls-accent-saison: var(--ls-saison-un);
+  --ls-feuillage: var(--ls-saison-deux);
+}
+
+/* Lilas et vert d'herbe. */
+[data-theme="paques"] {
+  --ls-saison-un: #5e4196;
+  --ls-saison-deux: #2e6b4f;
+  --ls-accent-saison: var(--ls-saison-un);
+  --ls-feuillage: var(--ls-saison-deux);
+}
+
+/* Corail et lagon. */
+[data-theme="ete"] {
+  --ls-saison-un: #b03f24;
+  --ls-saison-deux: #0f6470;
+  --ls-accent-saison: var(--ls-saison-un);
+  --ls-feuillage: var(--ls-saison-deux);
+}
+
+/* Rouge soleil et lagon. */
+[data-theme="soldes_ete"] {
+  --ls-saison-un: #b5301c;
+  --ls-saison-deux: #0f6470;
+  --ls-accent-saison: var(--ls-saison-un);
+  --ls-feuillage: var(--ls-saison-deux);
+}
+
+/* Rouille et lie-de-vin. */
+[data-theme="automne"] {
+  --ls-saison-un: #9c4a14;
+  --ls-saison-deux: #6e2b2b;
+  --ls-accent-saison: var(--ls-saison-un);
+  --ls-feuillage: var(--ls-saison-deux);
+}
+
+/* Rose et rose profond. */
+[data-theme="octobre_rose"] {
+  --ls-saison-un: #b31e68;
+  --ls-saison-deux: #8a1650;
+  --ls-accent-saison: var(--ls-saison-un);
+  --ls-feuillage: var(--ls-saison-deux);
+}
+
+/* Bleu et bleu profond. */
+[data-theme="novembre_bleu"] {
+  --ls-saison-un: #1f5296;
+  --ls-saison-deux: #173a6b;
+  --ls-accent-saison: var(--ls-saison-un);
+  --ls-feuillage: var(--ls-saison-deux);
+}
+
+/* Bleu glacier et ardoise. */
+[data-theme="hiver"] {
+  --ls-saison-un: #2a5b7a;
+  --ls-saison-deux: #4a5870;
+  --ls-accent-saison: var(--ls-saison-un);
+  --ls-feuillage: var(--ls-saison-deux);
+}
+
+/*
  * LE PIED DE PAGE SOUS LES THÈMES DE NOËL, LS-277. Il vit dans le layout, hors
  * du `<main>` qui porte `data-theme` : les jetons ci-dessus ne lui descendent
  * pas. `:has()` les lui donne pour les deux pages concernées seulement. Le

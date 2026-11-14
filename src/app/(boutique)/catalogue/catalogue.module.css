@@ -1431,3 +1431,110 @@
 .sacBouton {
   color: var(--ls-bw-or-sur-nuit);
 }
+
+/*
+ * ================= THÈMES D'AMBIANCE, LS-323 =================
+ * Les douze thèmes de l'amendement d'ADR-046 du 14 novembre 2026, un seul jeu
+ * de règles : `--ls-saison-un` et `--ls-saison-deux` viennent du bloc
+ * `[data-theme]` actif. Régime ordinaire, comme `NOEL_1` : le texte, les
+ * boutons, les filtres et les prix gardent leurs couleurs. Jetons seulement.
+ */
+
+.bandeauSaison {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: var(--ls-space-2);
+  margin: 0 0 var(--ls-space-5);
+  padding: var(--ls-space-5) var(--ls-space-4) var(--ls-space-7);
+  border: 1px solid
+    color-mix(in srgb, var(--ls-saison-un) 14%, var(--ls-surface));
+  border-radius: var(--ls-radius-md);
+  /*
+   * 4 % DE TEINTE AU PLUS, comme le bandeau de Noël : l'accroche,
+   * `--ls-text-muted`, y garde 4,5:1. `verifier-contraste.sh` ne lit pas un
+   * `color-mix` dans un dégradé, axe-core le mesure sur le rendu.
+   */
+  background: radial-gradient(
+    120% 90% at 80% 20%,
+    var(--ls-surface) 0%,
+    color-mix(in srgb, var(--ls-saison-un) 2%, var(--ls-surface)) 55%,
+    color-mix(in srgb, var(--ls-saison-un) 4%, var(--ls-surface)) 100%
+  );
+}
+
+/* La zone décor précède le texte sur téléphone, le suit à droite au-delà. */
+.decorSaison {
+  height: 10rem;
+}
+
+.bandeauSaison .accroche {
+  margin-bottom: 0;
+}
+
+.bandeauSaison .friseBandeau {
+  position: absolute;
+  inset: auto 0 var(--ls-space-2);
+}
+
+@media (min-width: 900px) {
+  .bandeauSaison {
+    grid-template-columns: 1fr 22rem;
+    align-items: center;
+    padding: var(--ls-space-6) var(--ls-space-6) var(--ls-space-8);
+  }
+
+  .decorSaison {
+    order: 2;
+    height: 14rem;
+  }
+}
+
+.zoneGrilleSaison {
+  position: relative;
+}
+
+/* Le motif du thème devant chaque filtre, décor : il suit la couleur du texte. */
+.motifFiltre {
+  display: inline-block;
+  width: 0.8125rem;
+  height: 0.8125rem;
+  margin-right: var(--ls-space-2);
+  vertical-align: -0.0625rem;
+  color: var(--ls-saison-un);
+}
+
+.filtre[aria-current="page"] .motifFiltre {
+  color: var(--ls-text-on-primary);
+}
+
+/* Le liseré de saison se trace HORS de la carte, comme celui de Black Week. */
+.carteSaison {
+  position: relative;
+  overflow: visible;
+}
+
+.carteSaison .cadreImage {
+  overflow: hidden;
+  border-radius: calc(var(--ls-radius-md) - 1px) calc(var(--ls-radius-md) - 1px)
+    0 0;
+}
+
+.carteSaison::after {
+  display: none;
+}
+
+.carteSaison:hover {
+  box-shadow: 0 22px 44px -26px
+    color-mix(in srgb, var(--ls-saison-un) 55%, transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .motifFiltre {
+    transition: transform 600ms var(--ls-easing-sortie);
+  }
+
+  .filtre:hover .motifFiltre {
+    transform: rotate(20deg) scale(1.15);
+  }
+}

@@ -15,6 +15,7 @@ import Link from "next/link";
 import { srcSetMedia, urlVignette } from "@/integrations/medias/urls";
 import type { EtatDisponibilite, ProduitCatalogue } from "@/services/catalogue";
 import { TraceCarte } from "@/components/decor-black-week";
+import { TraceCarteSaison } from "@/components/decor-saison";
 import { PrixPromotion } from "@/components/prix-promotion";
 import { FloconIcone, NoeudIcone } from "@/components/decor-noel";
 import { AjoutRapide } from "./ajout-rapide";
@@ -57,17 +58,22 @@ const CLASSE_DISPONIBILITE: Record<EtatDisponibilite, string> = {
  * `blackWeek` : thème Black Week, LS-318. Un liseré doré se trace dans le bord
  * de la carte au survol et au focus, la carte se soulève sur une ombre de
  * nuit. Rien sur la photographie, contenu et prix inchangés.
+ *
+ * `saison` : les douze thèmes d'ambiance, LS-323. Même liseré, à la couleur du
+ * thème, et rien d'autre : boutons et prix gardent leurs couleurs.
  */
 export function CarteProduit({
   produit,
   noel = false,
   blackWeek = false,
+  saison = false,
   tauxPromotion = null,
   prioritaire = false,
 }: {
   produit: ProduitCatalogue;
   noel?: boolean;
   blackWeek?: boolean;
+  saison?: boolean;
   /** Le taux de la promotion en vigueur, pour le badge, ADR-051. */
   tauxPromotion?: number | null;
   /**
@@ -85,12 +91,13 @@ export function CarteProduit({
      * opacité nulle, ADR-045 point 5.
      */
     <li
-      className={`${styles.carte} ${noel ? styles.carteNoel : ""} ${blackWeek ? styles.carteBlackWeek : ""}`}
+      className={`${styles.carte} ${noel ? styles.carteNoel : ""} ${blackWeek ? styles.carteBlackWeek : ""} ${saison ? styles.carteSaison : ""}`}
       data-apparition=""
       data-apparition-mode="glisse"
     >
       {noel ? <DecorCarteNoel /> : null}
       {blackWeek ? <TraceCarte /> : null}
+      {saison ? <TraceCarteSaison /> : null}
       {/*
        * LA ROUTE `/produit/[slug]` N'EXISTE PAS ENCORE, elle appartient a
        * LS-105 que cette story bloque. Ces liens rendent donc une 404 jusqu'a sa

@@ -21,7 +21,7 @@
  * avec ou sans script. `data-borne` permet en plus à `AnimationsBornees` de
  * suspendre ce qui sortirait de l'écran.
  */
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import { BoulesSuspendues, NeigeContinue } from "./decor-noel";
 import styles from "./embleme-anime.module.css";
@@ -79,6 +79,7 @@ const rang = (i: number): CSSProperties => ({ "--rang": i }) as CSSProperties;
 export function EmblemeAnime({
   noel = false,
   rayonsContinus = noel,
+  decor,
 }: {
   noel?: boolean;
   /**
@@ -87,6 +88,11 @@ export function EmblemeAnime({
    * tour d'entrée reste la règle.
    */
   rayonsContinus?: boolean;
+  /**
+   * Décor d'un thème d'ambiance, LS-323 : rendu DANS le cadre de l'emblème,
+   * sous son `data-borne`, donc jamais sur le titre ni sur un bouton.
+   */
+  decor?: ReactNode;
 } = {}) {
   return (
     <div className={styles.cadre} aria-hidden="true" data-borne="">
@@ -209,6 +215,7 @@ export function EmblemeAnime({
         </div>
       ) : null}
       {noel ? <BoulesSuspendues zone="embleme" /> : null}
+      {decor}
     </div>
   );
 }

@@ -51,11 +51,20 @@ import {
   MargesNeigeuses,
   NeigeContinue,
 } from "@/components/decor-noel";
+import {
+  FriseSaison,
+  MargesSaison,
+  MotifSaison,
+  RubanSaison,
+  SceneSaison,
+} from "@/components/decor-saison";
 import { GuirlandeBoules } from "@/components/guirlande-boules";
 import {
   aMouvementContinu,
+  ambianceDe,
   estThemeBlackWeek,
   estThemeDeNoel,
+  type Ambiance,
 } from "@/lib/theme-saisonnier";
 import {
   attributTheme,
@@ -196,11 +205,14 @@ async function ContenuCatalogue({
   page,
   noel,
   blackWeek,
+  ambiance,
 }: {
   slugCategorie: string | undefined;
   page: number;
   noel: boolean;
   blackWeek: boolean;
+  /** Thème d'ambiance de LS-323, `null` hors de ces thèmes. */
+  ambiance: Ambiance | null;
 }) {
   /*
    * LS-241 : LA PAGE A ETE VERIFIEE AVANT LA FRONTIERE, et ce rattrapage ne sert
@@ -255,6 +267,12 @@ async function ContenuCatalogue({
                 aria-current={categorieRetenue === null ? "page" : undefined}
               >
                 {noel ? <FloconIcone className={styles.floconFiltre} /> : null}
+                {ambiance !== null ? (
+                  <MotifSaison
+                    motif={ambiance.motifs[0]}
+                    className={styles.motifFiltre}
+                  />
+                ) : null}
                 Tout voir
               </Link>
             </li>
@@ -271,6 +289,12 @@ async function ContenuCatalogue({
                 >
                   {noel ? (
                     <FloconIcone className={styles.floconFiltre} />
+                  ) : null}
+                  {ambiance !== null ? (
+                    <MotifSaison
+                      motif={ambiance.motifs[0]}
+                      className={styles.motifFiltre}
+                    />
                   ) : null}
                   {categorie.nom}
                 </Link>
@@ -339,6 +363,7 @@ async function ContenuCatalogue({
               produit={produit}
               noel={noel}
               blackWeek={blackWeek}
+              saison={ambiance !== null}
               tauxPromotion={promotion?.taux ?? null}
               prioritaire={rang === rangPrioritaire}
             />
@@ -440,6 +465,7 @@ export default async function PageCatalogue({
   );
   const noel = estThemeDeNoel(theme);
   const blackWeek = estThemeBlackWeek(theme);
+  const ambiance = ambianceDe(theme);
   /*
    * UN SEUL CRITÈRE POUR L'EN-TÊTE D'AUBE ET LA BANDE DE NUIT, LS-283 : ils
    * vont ensemble. Sous Black Week, la bande restait affichée parce qu'elle
@@ -515,6 +541,22 @@ export default async function PageCatalogue({
           </div>
           <LisereOr />
         </div>
+      ) : ambiance !== null ? (
+        /*
+         * LE BANDEAU DE SAISON, LS-323, commun aux douze thèmes d'ambiance.
+         * Le `h1` reste « Le catalogue », ADR-046 section 5 ; le ruban nomme
+         * l'événement, et aucune phrase ne parle de prix, de taux ni de date.
+         * Le médaillon vit dans une zone de décor à part, jamais sur le texte.
+         */
+        <div className={styles.bandeauSaison}>
+          <SceneSaison ambiance={ambiance} className={styles.decorSaison} />
+          <div className={styles.texteBandeau}>
+            <RubanSaison ambiance={ambiance} />
+            <h1 className={styles.titre}>Le catalogue</h1>
+            <p className={styles.accroche}>{ambiance.accrocheCatalogue}</p>
+          </div>
+          <FriseSaison ambiance={ambiance} className={styles.friseBandeau} />
+        </div>
       ) : (
         /*
          * EN-TÊTE D'AUBE, LS-283, amendement d'ADR-045. Plus court que celui
@@ -548,17 +590,21 @@ export default async function PageCatalogue({
             ? styles.zoneGrilleNoel
             : blackWeek
               ? styles.zoneGrilleBlackWeek
-              : undefined
+              : ambiance !== null
+                ? styles.zoneGrilleSaison
+                : undefined
         }
       >
         {noel ? <MargesNeigeuses /> : null}
         {blackWeek ? <MargesDorees /> : null}
+        {ambiance !== null ? <MargesSaison ambiance={ambiance} /> : null}
         <Suspense fallback={<ArmatureCatalogue />}>
           <ContenuCatalogue
             slugCategorie={slugCategorie}
             page={page}
             noel={noel}
             blackWeek={blackWeek}
+            ambiance={ambiance}
           />
         </Suspense>
       </div>
