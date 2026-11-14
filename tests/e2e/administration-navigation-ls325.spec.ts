@@ -65,6 +65,34 @@ test.describe("administratrice", () => {
       "Aucune rubrique ne correspond. Essayez un autre mot.",
     );
 
+    // « stock » mène à la rubrique dont c'est le NOM, pas à l'action dont la
+    // précision cite le stock ; le compte des résultats est annoncé.
+    await champ.fill("stock");
+    await expect(options.first()).toContainText("Stocks et marchés");
+    await expect(options.first()).toHaveAttribute("aria-selected", "true");
+    await expect(palette.getByRole("status")).toHaveText("2 résultats");
+
+    // Au clavier, l'option active reste dans la zone visible de la liste,
+    // et le champ désigne bien l'option que la liste montre active.
+    await champ.fill("");
+    const liste = palette.getByRole("listbox");
+    for (let pas = 0; pas < 15; pas += 1) await champ.press("ArrowDown");
+    const activeAffichee = palette.locator(
+      '[role="option"][aria-selected="true"]',
+    );
+    await expect(champ).toHaveAttribute(
+      "aria-activedescendant",
+      (await activeAffichee.getAttribute("id")) ?? "absent",
+    );
+    const [boiteListe, boiteOption] = await Promise.all([
+      liste.boundingBox(),
+      activeAffichee.boundingBox(),
+    ]);
+    expect(boiteOption!.y).toBeGreaterThanOrEqual(boiteListe!.y - 1);
+    expect(boiteOption!.y + boiteOption!.height).toBeLessThanOrEqual(
+      boiteListe!.y + boiteListe!.height + 1,
+    );
+
     // Les flèches déplacent l'option active, annoncée au champ.
     await champ.fill("comm");
     await expect(options.first()).toContainText("Commandes");
@@ -82,7 +110,11 @@ test.describe("administratrice", () => {
     await expect(palette).toBeHidden();
   });
 
-  test("Ctrl+K ouvre la palette, Échap la ferme et rend le focus au bouton", async ({
+  /*
+   * `ControlOrMeta` : Cmd+K sur un Mac, Ctrl+K ailleurs, comme le composant.
+   * Sur le runner Linux, c'est Ctrl+K qui est exercé.
+   */
+  test("Le raccourci clavier ouvre la palette, Échap la ferme et rend le focus au bouton", async ({
     page,
   }) => {
     await page.goto("/administration/commandes");
@@ -92,7 +124,7 @@ test.describe("administratrice", () => {
     });
 
     await declencheur.focus();
-    await page.keyboard.press("Control+k");
+    await page.keyboard.press("ControlOrMeta+k");
     await expect(palette).toBeVisible();
     await expect(palette.getByRole("combobox")).toBeFocused();
 
@@ -101,9 +133,9 @@ test.describe("administratrice", () => {
     await expect(declencheur).toBeFocused();
 
     // Le même raccourci la referme quand elle est ouverte.
-    await page.keyboard.press("Control+k");
+    await page.keyboard.press("ControlOrMeta+k");
     await expect(palette).toBeVisible();
-    await page.keyboard.press("Control+k");
+    await page.keyboard.press("ControlOrMeta+k");
     await expect(palette).toBeHidden();
   });
 
@@ -215,7 +247,7 @@ test.describe("sans session", () => {
   test("la palette n'existe pas sur l'écran de connexion", async ({ page }) => {
     await page.goto("/administration/connexion");
     await expect(page.getByRole("button", { name: "Aller à…" })).toHaveCount(0);
-    await page.keyboard.press("Control+k");
+    await page.keyboard.press("ControlOrMeta+k");
     await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 });

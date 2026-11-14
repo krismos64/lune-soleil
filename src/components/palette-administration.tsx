@@ -27,6 +27,8 @@ import { GROUPES, RUBRIQUES } from "./navigation-administration";
 import styles from "./palette-administration.module.css";
 
 type Entree = {
+  /** Rang dans `ENTREES` : l'identifiant de l'option ne change pas au filtre. */
+  rang: number;
   libelle: string;
   precision: string;
   chemin: string;
@@ -38,7 +40,7 @@ const TITRE_GROUPE = new Map<string, string>(
 );
 
 /** Les actions d'abord, puis les rubriques dans l'ordre de la barre. */
-const ENTREES: readonly Entree[] = [
+const SANS_RANG: readonly Omit<Entree, "rang">[] = [
   ...ACTIONS_RAPIDES,
   ...RUBRIQUES.map((rubrique) => ({
     libelle: rubrique.libelle,
@@ -53,6 +55,29 @@ const ENTREES: readonly Entree[] = [
     icone: "boutique",
   },
 ];
+
+const ENTREES: readonly Entree[] = SANS_RANG.map((entree, rang) => ({
+  ...entree,
+  rang,
+}));
+
+/**
+ * Le rang d'une entrée pour une recherche : son nom qui COMMENCE par le mot,
+ * puis son nom qui le contient, puis sa précision. Sans ce classement,
+ * « stock » proposait d'abord « Créer un produit », dont la précision cite le
+ * stock, et Entrée y menait, revue d'interface de LS-325.
+ */
+function pertinence(entree: Entree, cherche: string): number | null {
+  const nom = normaliser(entree.libelle);
+  if (nom.startsWith(cherche)) return 0;
+  if (nom.includes(cherche)) return 1;
+  return normaliser(entree.precision).includes(cherche) ? 2 : null;
+}
+
+/** Un Mac, un iPhone ou un iPad : le raccourci y est Cmd+K et non Ctrl+K. */
+const estMac = (): boolean =>
+  typeof navigator !== "undefined" &&
+  /Mac|iPhone|iPad/.test(navigator.platform);
 
 /** Minuscules sans accents : « reglages » trouve « Réglages ». */
 const normaliser = (texte: string): string =>
@@ -69,11 +94,13 @@ export function PaletteAdministration() {
 
   const resultats = useMemo(() => {
     const cherche = normaliser(requete.trim());
-    return cherche === ""
-      ? ENTREES
-      : ENTREES.filter((entree) =>
-          normaliser(`${entree.libelle} ${entree.precision}`).includes(cherche),
-        );
+    if (cherche === "") return ENTREES;
+    return ENTREES.flatMap((entree) => {
+      const rang = pertinence(entree, cherche);
+      return rang === null ? [] : [{ entree, rang }];
+    })
+      .sort((a, b) => a.rang - b.rang || a.entree.rang - b.entree.rang)
+      .map(({ entree }) => entree);
   }, [requete]);
 
   const ouvrir = () => {
@@ -104,9 +131,22 @@ export function PaletteAdministration() {
    * focus de sa barre d'adresse.
    */
   useEffect(() => {
+    /*
+     * Cmd+K SUR MAC, Ctrl+K AILLEURS, et jamais les deux, revue d'interface
+     * de LS-325 : sur macOS, Ctrl+K efface la fin de la ligne dans un champ
+     * de texte, geste que l'exploitante garde. Ni Maj ni Alt : Ctrl+Maj+K
+     * ouvre la console de Firefox. Rien pendant une composition de saisie.
+     */
+    const mac = estMac();
     const surTouche = (evenement: KeyboardEvent) => {
+      const modificateur = mac
+        ? evenement.metaKey && !evenement.ctrlKey
+        : evenement.ctrlKey && !evenement.metaKey;
       if (
-        (evenement.ctrlKey || evenement.metaKey) &&
+        modificateur &&
+        !evenement.altKey &&
+        !evenement.shiftKey &&
+        !evenement.isComposing &&
         evenement.key.toLowerCase() === "k"
       ) {
         evenement.preventDefault();
@@ -130,6 +170,31 @@ export function PaletteAdministration() {
   };
 
   const optionActive = Math.min(active, Math.max(resultats.length - 1, 0));
+  const entreeActive = resultats[optionActive];
+  const idOption = (entree: Entree) => `${identifiant}-option-${entree.rang}`;
+
+  /*
+   * L'OPTION ACTIVE RESTE VISIBLE, revue d'interface de LS-325 : la liste
+   * défile, et au clavier l'option active sortait de sa zone visible dès la
+   * huitième. `nearest` ne déplace rien si elle est déjà à l'écran.
+   */
+  const rangActif = entreeActive?.rang;
+  useEffect(() => {
+    if (!ouverte || rangActif === undefined) return;
+    document
+      .getElementById(`${identifiant}-option-${rangActif}`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [ouverte, rangActif, identifiant]);
+
+  /* Le rappel du raccourci dit la touche du poste, lue après le montage. */
+  const [touche, setTouche] = useState("Ctrl K");
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (estMac()) setTouche("⌘ K");
+  }, []);
+
+  /* Le clic qui ferme doit avoir COMMENCÉ sur le voile, pas dans le champ. */
+  const appuiSurVoile = useRef(false);
 
   return (
     <>
@@ -143,7 +208,7 @@ export function PaletteAdministration() {
         <IconeAdministration nom="recherche" className={styles.loupe} />
         <span>Aller à…</span>
         <kbd className={styles.touche} aria-hidden="true">
-          Ctrl K
+          {touche}
         </kbd>
       </button>
 
@@ -152,9 +217,16 @@ export function PaletteAdministration() {
         className={styles.dialogue}
         aria-label="Aller à une rubrique ou à une action"
         onClose={() => setOuverte(false)}
+        onPointerDown={(evenement) => {
+          appuiSurVoile.current = evenement.target === dialogue.current;
+        }}
         onClick={(evenement) => {
-          // Un clic sur le voile, hors du panneau, ferme la palette.
-          if (evenement.target === dialogue.current) fermer();
+          // Un clic sur le voile, hors du panneau, ferme la palette. Un
+          // glisser de sélection parti du champ et relâché sur le voile ne
+          // la ferme pas.
+          if (evenement.target === dialogue.current && appuiSurVoile.current) {
+            fermer();
+          }
         }}
       >
         {/* Le contenu n'existe qu'ouverte : rien à parcourir sinon. */}
@@ -171,9 +243,9 @@ export function PaletteAdministration() {
                 aria-expanded="true"
                 aria-controls={`${identifiant}-liste`}
                 aria-activedescendant={
-                  resultats.length > 0
-                    ? `${identifiant}-option-${optionActive}`
-                    : undefined
+                  entreeActive === undefined
+                    ? undefined
+                    : idOption(entreeActive)
                 }
                 aria-autocomplete="list"
                 autoComplete="off"
@@ -198,7 +270,7 @@ export function PaletteAdministration() {
                     );
                   } else if (evenement.key === "Enter") {
                     evenement.preventDefault();
-                    aller(resultats[optionActive]);
+                    aller(entreeActive);
                   }
                 }}
               />
@@ -221,7 +293,7 @@ export function PaletteAdministration() {
               {resultats.map((entree, rang) => (
                 <li
                   key={entree.libelle}
-                  id={`${identifiant}-option-${rang}`}
+                  id={idOption(entree)}
                   role="option"
                   aria-selected={rang === optionActive}
                   className={styles.option}
@@ -244,10 +316,23 @@ export function PaletteAdministration() {
               ))}
             </ul>
 
-            <p className={styles.etat} role="status">
+            {/*
+             * LE NOMBRE DE RÉSULTATS EST ANNONCÉ pendant la saisie : sans
+             * lui, un lecteur d'écran n'apprenait rien tant qu'il restait
+             * un résultat. Visible seulement quand il n'y en a aucun.
+             */}
+            <p
+              className={
+                resultats.length === 0 ? styles.etat : styles.etatDiscret
+              }
+              role="status"
+              aria-label="Résultats de la recherche"
+            >
               {resultats.length === 0
                 ? "Aucune rubrique ne correspond. Essayez un autre mot."
-                : ""}
+                : requete.trim() === ""
+                  ? ""
+                  : `${resultats.length} ${resultats.length > 1 ? "résultats" : "résultat"}`}
             </p>
             <p className={styles.aide} aria-hidden="true">
               Flèches pour choisir, Entrée pour y aller, Échap pour fermer

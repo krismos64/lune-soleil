@@ -106,17 +106,6 @@
   text-transform: uppercase;
 }
 
-/*
- * `--ls-primary` sur `--ls-surface`, LE FOND QUE CE BLOC POSE : 8,93:1, AAA.
- * L'annotation nommait d'abord `--ls-admin-barre`, le fond du bandeau parent,
- * que ce lien ne pose pas. Les deux paires sont conformes, mais C31 dit qu'un
- * rapport ne vaut que pour UN fond : une annotation qui nomme le mauvais rend
- * fausse la prochaine paire ecrite par recopie.
- *
- * ZONE TACTILE DE 44 px, `--ls-touch-target` : ce lien fait sinon la hauteur de
- * sa ligne, environ 24 px. Correction du meme type que celle du lien « retour »
- * de l'ecran des commandes, le 27 aout 2026.
- */
 .bandeauActions {
   display: flex;
   align-items: center;
@@ -137,6 +126,17 @@
   }
 }
 
+/*
+ * `--ls-primary` sur `--ls-surface`, LE FOND QUE CE BLOC POSE : 8,93:1, AAA.
+ * L'annotation nommait d'abord `--ls-admin-barre`, le fond du bandeau parent,
+ * que ce lien ne pose pas. Les deux paires sont conformes, mais C31 dit qu'un
+ * rapport ne vaut que pour UN fond : une annotation qui nomme le mauvais rend
+ * fausse la prochaine paire ecrite par recopie.
+ *
+ * ZONE TACTILE DE 44 px, `--ls-touch-target` : ce lien fait sinon la hauteur de
+ * sa ligne, environ 24 px. Correction du meme type que celle du lien « retour »
+ * de l'ecran des commandes, le 27 aout 2026.
+ */
 .bandeauLien {
   display: inline-flex;
   align-items: center;

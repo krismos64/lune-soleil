@@ -197,6 +197,17 @@
   padding-block: var(--ls-space-4);
 }
 
+/* Le compte des résultats : annoncé, pas affiché, la liste le montre. */
+.etatDiscret {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .aide {
   display: none;
   margin: 0;
