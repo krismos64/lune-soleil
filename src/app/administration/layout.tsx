@@ -36,7 +36,9 @@ import Link from "next/link";
 import { headers } from "next/headers";
 
 import { NavigationAdministration } from "@/components/navigation-administration";
+import { IconeAdministration } from "@/components/icones-administration";
 import { PaletteAdministration } from "@/components/palette-administration";
+import { RepereEcran } from "@/components/repere-ecran";
 import { lireIdentite } from "@/services/autorisation";
 import { lireComptages, lireNomAffiche } from "@/services/tableau-bord";
 
@@ -138,7 +140,11 @@ export default async function LayoutAdministration({
          * page, et un second serait ambigu pour un lecteur d'ecran.
          */}
         <div className={styles.bandeau}>
-          <span className={styles.bandeauSurtitre}>Administration</span>
+          {/*
+           * LE REPÈRE D'ÉCRAN, LS-326 : la famille, la rubrique et son icône.
+           * Il donne aussi sa couleur à l'écran, par `data-famille`.
+           */}
+          <RepereEcran />
 
           {/*
            * LIEN VERS LA BOUTIQUE, et non un bouton. C'est une navigation vers
@@ -153,7 +159,9 @@ export default async function LayoutAdministration({
              */}
             <PaletteAdministration />
             <Link className={styles.bandeauLien} href="/" prefetch={false}>
-              Voir la boutique
+              <IconeAdministration nom="boutique" />
+              {/* Le texte reste le nom du lien ; masqué à l'œil sous 560 px. */}
+              <span className={styles.bandeauLienTexte}>Voir la boutique</span>
             </Link>
           </div>
         </div>

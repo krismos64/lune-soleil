@@ -240,7 +240,7 @@
   bottom: 22%;
   width: 3px;
   border-radius: 0 3px 3px 0;
-  background: var(--ls-primary);
+  background: var(--famille, var(--ls-primary));
   transform: scaleY(0);
   transition: transform var(--ls-duration-base) var(--ls-easing-sortie);
 }
@@ -249,7 +249,33 @@
   transform: scaleY(1);
 }
 
+/*
+ * CHAQUE RUBRIQUE PORTE LA COULEUR DE SA FAMILLE, LS-326 : son icône et son
+ * repère. Les couleurs viennent du layout, `--ls-famille-*`, toutes à 4,5:1
+ * au moins sur le fond de la barre.
+ */
+.lien[data-famille="ensemble"] {
+  --famille: var(--ls-famille-ensemble, var(--ls-primary));
+}
+
+.lien[data-famille="ventes"] {
+  --famille: var(--ls-famille-ventes, var(--ls-primary));
+}
+
+.lien[data-famille="clients"] {
+  --famille: var(--ls-famille-clients, var(--ls-primary));
+}
+
+.lien[data-famille="catalogue"] {
+  --famille: var(--ls-famille-catalogue, var(--ls-primary));
+}
+
+.lien[data-famille="reglages"] {
+  --famille: var(--ls-famille-reglages, var(--ls-primary));
+}
+
 .lienIcone {
+  color: var(--famille, var(--ls-primary));
   flex: none;
   transition: transform var(--ls-duration-base) var(--ls-easing-sortie);
 }

@@ -8,7 +8,29 @@
  * AUCUNE VALEUR HEXADECIMALE, uniquement les jetons d'ADR-022 et de LS-181.
  */
 
+/*
+ * LES COULEURS DE FAMILLE, LS-326 : une par groupe de rubriques, prises dans
+ * les jetons d'ADR-022, aucune valeur neuve. Toutes portent du texte blanc ou
+ * s'écrivent sur blanc à 4,5:1 au moins, mesuré :
+ *
+ *   ensemble   --ls-primary                  #5F4519   8,93:1 avec le blanc
+ *   ventes     --ls-accent-terracotta-deep   #9C4F2B   5,89:1
+ *   clients    --ls-accent-gold-deep         #8A6A22   5,04:1
+ *   catalogue  --ls-success                  #3F6B4A   6,22:1
+ *   reglages   --ls-primary-hover            #4A2A0B  12,60:1
+ *
+ * LES RAYONS S'ADOUCISSENT DANS L'ADMINISTRATION SEULEMENT : redéfinis ici,
+ * ils valent pour tous ses écrans d'un coup, cartes, champs et boutons, sans
+ * toucher la boutique, dont `:root` garde les siens.
+ */
 .gabarit {
+  --ls-famille-ensemble: var(--ls-primary);
+  --ls-famille-ventes: var(--ls-accent-terracotta-deep);
+  --ls-famille-clients: var(--ls-accent-gold-deep);
+  --ls-famille-catalogue: var(--ls-success);
+  --ls-famille-reglages: var(--ls-primary-hover);
+  --ls-radius-sm: 8px;
+  --ls-radius-md: 12px;
   display: flex;
   flex-direction: column;
   /*
@@ -72,6 +94,60 @@
   line-height: 1.1;
 }
 
+/*
+ * L'ÉCRAN PREND LA COULEUR DE SA FAMILLE, LS-326. `RepereEcran` pose
+ * `data-famille` dans le bandeau ; `:has()` la remonte à la colonne, donc à
+ * tout l'écran, sans qu'aucune page ne la connaisse. Sans repère, la
+ * couleur de la vue d'ensemble.
+ */
+.colonne {
+  --ls-famille: var(--ls-famille-ensemble);
+}
+
+.colonne:has([data-famille="ventes"]) {
+  --ls-famille: var(--ls-famille-ventes);
+}
+
+.colonne:has([data-famille="clients"]) {
+  --ls-famille: var(--ls-famille-clients);
+}
+
+.colonne:has([data-famille="catalogue"]) {
+  --ls-famille: var(--ls-famille-catalogue);
+}
+
+.colonne:has([data-famille="reglages"]) {
+  --ls-famille: var(--ls-famille-reglages);
+}
+
+/*
+ * LE TITRE D'ÉCRAN EST SOULIGNÉ D'UN TRAIT À LA COULEUR DE LA FAMILLE, décor :
+ * il vaut pour tout `h1` de l'administration, comme la police ci-dessus, sans
+ * classe à poser. Il grandit une fois à l'arrivée, ADR-045 amendé.
+ */
+.colonne h1::after {
+  content: "";
+  display: block;
+  width: 3rem;
+  height: 3px;
+  margin-top: var(--ls-space-2);
+  border-radius: 3px;
+  background: var(--ls-famille);
+  transform-origin: left center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .colonne h1::after {
+    animation: trait-titre 500ms var(--ls-easing-sortie) 120ms both;
+  }
+}
+
+@keyframes trait-titre {
+  from {
+    transform: scaleX(0);
+  }
+}
+
 /* ---------------------------------------------------------------- le bandeau */
 
 /*
@@ -98,14 +174,6 @@
   background: var(--ls-admin-barre);
 }
 
-.bandeauSurtitre {
-  color: var(--ls-text-muted);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .bandeauActions {
   display: flex;
   align-items: center;
@@ -116,13 +184,18 @@
 }
 
 /*
- * SOUS 560 PX, LE MOT « Administration » CÈDE SA PLACE, LS-325 : le bandeau
- * porte deux contrôles, et le menu au-dessus dit déjà où l'on est. Les deux
- * contrôles tiennent alors à 320 px sans se replier.
+ * SOUS 560 PX, « Voir la boutique » GARDE SON ICÔNE SEULE, LS-326 : le
+ * bandeau porte le repère d'écran et deux contrôles. Le texte reste le nom
+ * accessible du lien, masqué à l'œil seulement.
  */
 @media (max-width: 559px) {
-  .bandeauSurtitre {
-    display: none;
+  .bandeauLienTexte {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 
@@ -138,8 +211,10 @@
  * de l'ecran des commandes, le 27 aout 2026.
  */
 .bandeauLien {
+  position: relative;
   display: inline-flex;
   align-items: center;
+  gap: var(--ls-space-2);
   min-height: var(--ls-touch-target);
   padding: 0 var(--ls-space-3);
   border: 1px solid var(--ls-border-controle);
