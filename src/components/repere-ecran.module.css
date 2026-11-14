@@ -4,6 +4,7 @@
  */
 .repere {
   display: flex;
+  flex: 1 1 0;
   align-items: center;
   gap: var(--ls-space-3);
   min-width: 0;
@@ -38,13 +39,16 @@
   font-size: 0.75rem;
 }
 
+/*
+ * LE NOM SE REPLIE SUR DEUX LIGNES plutôt que de se tronquer : « Stocks et
+ * marchés » se lisait « Stocks et ma… » à 768 px sous une police large,
+ * mesuré par la revue d'interface.
+ */
 .rubrique {
-  overflow: hidden;
   color: var(--ls-text);
   font-size: 0.9375rem;
   font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 /* Sous 560 px, le nom de la rubrique suffit : la famille cède sa ligne. */
@@ -57,12 +61,13 @@
 /*
  * L'ICÔNE SE TRACE, UNE FOIS PAR ÉCRAN : `stroke-dashoffset` seulement,
  * 600 ms, aucune itération infinie. `pathLength` n'étant pas posé sur chaque
- * tracé, la longueur de tiret couvre le plus long des dessins.
+ * tracé, la longueur de tiret, 140, dépasse le plus long sous-tracé des
+ * icônes, 102 unités mesurées sur celle des stocks.
  */
 @media (prefers-reduced-motion: no-preference) {
   .icone {
-    stroke-dasharray: 80;
-    stroke-dashoffset: 80;
+    stroke-dasharray: 140;
+    stroke-dashoffset: 140;
     animation: trace-icone 600ms var(--ls-easing-sortie) 60ms forwards;
   }
 }

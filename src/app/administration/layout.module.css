@@ -16,8 +16,8 @@
  *   ensemble   --ls-primary                  #5F4519   8,93:1 avec le blanc
  *   ventes     --ls-accent-terracotta-deep   #9C4F2B   5,89:1
  *   clients    --ls-accent-gold-deep         #8A6A22   5,04:1
- *   catalogue  --ls-success                  #3F6B4A   6,22:1
- *   reglages   --ls-primary-hover            #4A2A0B  12,60:1
+ *   catalogue  --ls-success                  #3F6B4A   6,15:1
+ *   reglages   --ls-primary-hover            #4A2A0B  12,91:1
  *
  * LES RAYONS S'ADOUCISSENT DANS L'ADMINISTRATION SEULEMENT : redéfinis ici,
  * ils valent pour tous ses écrans d'un coup, cartes, champs et boutons, sans
@@ -152,16 +152,15 @@
  * COULEUR DOUBLE LE BADGE ÉCRIT de la ligne, elle ne le remplace pas : un
  * état ne se dit jamais par la couleur seule.
  *
- * LA LIGNE SE SOULÈVE AU SURVOL, réponse à un geste, ADR-045 amendé : une
- * ombre et un pixel, rien qui déplace le contenu voisin.
+ * LA LIGNE PREND UNE OMBRE AU SURVOL, SANS BOUGER, revue d'interface de
+ * LS-326 : la soulever d'un pixel déplaçait un champ en cours de saisie dans
+ * une carte de rétractation, ce qu'ADR-045 interdit. L'ombre se pose sans
+ * transition : `box-shadow` n'est pas une propriété qui s'anime ici.
  */
 .colonne :global([data-etat]) {
   --ls-etat: var(--ls-text-muted);
   border-left: 4px solid var(--ls-etat);
   border-radius: var(--ls-radius-md);
-  transition:
-    box-shadow var(--ls-duration-base) var(--ls-easing),
-    transform var(--ls-duration-base) var(--ls-easing);
 }
 
 .colonne :global([data-etat="attente"]) {
@@ -182,7 +181,6 @@
 
 .colonne :global([data-etat]):hover {
   box-shadow: var(--ls-shadow-soft);
-  transform: translateY(-1px);
 }
 
 @keyframes trait-titre {
@@ -219,10 +217,10 @@
 
 .bandeauActions {
   display: flex;
+  flex: none;
   align-items: center;
   justify-content: flex-end;
   gap: var(--ls-space-2);
-  min-width: 0;
   margin-left: auto;
 }
 
@@ -256,8 +254,11 @@
 .bandeauLien {
   position: relative;
   display: inline-flex;
+  flex: none;
   align-items: center;
+  justify-content: center;
   gap: var(--ls-space-2);
+  min-width: var(--ls-touch-target);
   min-height: var(--ls-touch-target);
   padding: 0 var(--ls-space-3);
   border: 1px solid var(--ls-border-controle);

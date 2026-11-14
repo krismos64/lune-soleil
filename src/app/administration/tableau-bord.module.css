@@ -123,8 +123,10 @@
   transition: transform var(--ls-duration-base) var(--ls-easing-sortie);
 }
 
-.action:hover .actionIcone {
-  transform: translateX(3px);
+@media (prefers-reduced-motion: no-preference) {
+  .action:hover .actionIcone {
+    transform: translateX(3px);
+  }
 }
 
 .actionTextes {

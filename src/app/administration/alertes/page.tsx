@@ -36,6 +36,7 @@ import {
 } from "@/services/alerte";
 import { ChargementAdministration } from "@/components/chargement-administration";
 import { CarteAlerte } from "./carte-alerte";
+import { TON_ALERTE } from "@/lib/ton-etat";
 import styles from "./alertes.module.css";
 
 export const metadata = {
@@ -125,7 +126,7 @@ async function ListesAlertes() {
               <li
                 key={alerte.id}
                 className={styles.carte}
-                data-etat={alerte.gravite === "CRITIQUE" ? "ecarte" : "attente"}
+                data-etat={TON_ALERTE[alerte.gravite]}
               >
                 <Detail alerte={alerte} />
                 <CarteAlerte alerteId={alerte.id} />

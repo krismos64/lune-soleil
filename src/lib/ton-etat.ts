@@ -36,6 +36,12 @@ export const TON_MESSAGE = {
   TRAITE: "fait",
 } as const satisfies Record<string, TonEtat>;
 
+/** Une alerte ouverte : critique, ou simple avertissement. */
+export const TON_ALERTE = {
+  CRITIQUE: "ecarte",
+  AVERTISSEMENT: "attente",
+} as const satisfies Record<string, TonEtat>;
+
 /** Une demande de rétractation, du dépôt au remboursement ou au refus. */
 export const TON_RETRACTATION = {
   DEPOSEE: "attente",

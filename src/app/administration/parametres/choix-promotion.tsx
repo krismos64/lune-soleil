@@ -73,7 +73,7 @@ function messageDe(resultat: ResultatPromotion | null): string {
     case undefined:
       return "";
     case "ACTIVEE":
-      return `${resultat.libelle} est active. Le détail de ce qu'elle réduit figure ci-dessus.`;
+      return `Promotion activée : ${resultat.libelle}. Le détail de ce qu'elle réduit figure ci-dessus.`;
     case "DESACTIVEE":
       return "Promotion désactivée : les prix catalogue s'appliquent de nouveau.";
     case "AUCUNE_ACTIVE":
@@ -655,6 +655,7 @@ export function PeriodePromotion({
       onSubmit={envoyer}
       className={styles.formulaire}
       id="periode-promotion"
+      tabIndex={-1}
       aria-labelledby="periode-titre"
     >
       <h2 id="periode-titre" className={styles.legende}>

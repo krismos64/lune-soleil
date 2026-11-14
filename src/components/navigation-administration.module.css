@@ -280,8 +280,10 @@
   transition: transform var(--ls-duration-base) var(--ls-easing-sortie);
 }
 
-.lien:hover .lienIcone {
-  transform: translateX(2px);
+@media (prefers-reduced-motion: no-preference) {
+  .lien:hover .lienIcone {
+    transform: translateX(2px);
+  }
 }
 
 .lienLibelle {
