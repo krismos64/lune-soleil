@@ -153,9 +153,9 @@ export const AMBIANCES = {
   JOURNEE_FEMMES: {
     evenement: "Journée internationale des droits des femmes",
     accroche:
-      "Des pièces faites main, à l'unité ou en petite série, pour célébrer celles qui comptent.",
+      "Des pièces faites main, à l'unité ou en petite série, pour une journée qui compte.",
     accrocheCatalogue:
-      "Chaque bijou est fait main et créé à l'unité, pour célébrer celles qui comptent.",
+      "Chaque bijou est fait main et créé à l'unité, pour une journée qui compte.",
     motifs: ["mimosa", "mimosa", "etoile"],
     mouvement: "tombe",
     annonce: true,

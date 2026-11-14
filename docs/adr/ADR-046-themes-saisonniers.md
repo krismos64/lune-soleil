@@ -96,7 +96,11 @@ facture diraient « Black Week ».
   fixées par les textes (Code de commerce, article L310-3). L'activation
   étant manuelle, section 6, l'exploitante s'engage à n'activer ces deux
   thèmes que pendant les périodes légales ; les dates se vérifient aux sources
-  avant chaque usage.
+  avant chaque usage. **Le mot s'affiche même sans promotion active**, relevé
+  par `ls-frontend-revue` : comme « Black Week » en LS-318, le nom reste
+  affiché parce que l'exploitante active la promotion avec le thème, et
+  l'écran Paramètres le lui dit. Un « Soldes » affiché sans aucune réduction
+  serait une annonce sans objet : c'est à Christophe de confirmer cet usage.
 - **Octobre rose et Novembre bleu n'annoncent aucun don.** Les deux phrases
   disent le soutien à la sensibilisation, rien de plus : une promesse de
   reversement qui ne serait pas tenue serait une allégation trompeuse.

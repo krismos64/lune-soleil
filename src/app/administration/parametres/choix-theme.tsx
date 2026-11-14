@@ -141,13 +141,13 @@ const FAMILLES: readonly { titre: string; themes: readonly Choix[] }[] = [
         valeur: "SOLDES_HIVER",
         libelle: "Soldes d'hiver",
         repere: "dates légales des soldes d'hiver",
-        description: `Bleu de nuit et rouge : étiquettes et flocons. ${AVEC_PROMOTION}`,
+        description: `Bleu de nuit et rouge : étiquettes et flocons. À activer avec la promotion, pendant les soldes seulement. ${AVEC_PROMOTION}`,
       },
       {
         valeur: "SOLDES_ETE",
         libelle: "Soldes d'été",
         repere: "dates légales des soldes d'été",
-        description: `Rouge soleil et lagon : étiquettes et soleils. ${AVEC_PROMOTION}`,
+        description: `Rouge soleil et lagon : étiquettes et soleils. À activer avec la promotion, pendant les soldes seulement. ${AVEC_PROMOTION}`,
       },
       {
         valeur: "BLACK_WEEK",
@@ -225,7 +225,9 @@ function CarteTheme({
           className={`${styles.aide} ${styles.descriptionTheme}`}
         >
           {choix.repere === undefined ? null : (
-            <span className={styles.repereTheme}>{choix.repere}. </span>
+            <span className={styles.repereTheme}>
+              {majuscule(choix.repere)}.{" "}
+            </span>
           )}
           {choix.description}
         </p>
@@ -284,9 +286,9 @@ export function ChoixTheme({ actif }: { actif: ThemeSaisonnier }) {
 
         {FAMILLES.map((famille, rang) => (
           <div key={famille.titre} className={styles.famille}>
-            <p id={`famille-theme-${rang}`} className={styles.titreFamille}>
+            <h3 id={`famille-theme-${rang}`} className={styles.titreFamille}>
               {famille.titre}
-            </p>
+            </h3>
             <ul
               className={styles.themes}
               aria-labelledby={`famille-theme-${rang}`}
