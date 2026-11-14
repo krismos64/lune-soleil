@@ -204,9 +204,8 @@ export default async function PageAdministration() {
 
       {theme !== "AUCUN" ? (
         <p className={styles.rappelTheme}>
-          {LIBELLES_THEMES[theme].charAt(0).toUpperCase() +
-            LIBELLES_THEMES[theme].slice(1)}{" "}
-          est actif sur l&apos;accueil et le catalogue.{" "}
+          Thème actif sur l&apos;accueil et le catalogue :{" "}
+          {LIBELLES_THEMES[theme]}.{" "}
           <Link
             href="/administration/parametres"
             className={styles.lienRappel}

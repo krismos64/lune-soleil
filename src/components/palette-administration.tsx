@@ -223,7 +223,7 @@ export function PaletteAdministration() {
         aria-keyshortcuts="Control+K Meta+K"
       >
         <IconeAdministration nom="recherche" className={styles.loupe} />
-        <span>Aller à…</span>
+        <span className={styles.declencheurTexte}>Aller à…</span>
         <kbd className={styles.touche} aria-hidden="true">
           {touche}
         </kbd>

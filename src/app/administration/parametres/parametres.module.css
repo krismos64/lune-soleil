@@ -72,8 +72,10 @@
   transition: transform var(--ls-duration-base) var(--ls-easing-sortie);
 }
 
-.entreeSommaire:hover .iconeSommaire {
-  transform: translateX(3px);
+@media (prefers-reduced-motion: no-preference) {
+  .entreeSommaire:hover .iconeSommaire {
+    transform: translateX(3px);
+  }
 }
 
 .textesSommaire {
@@ -122,7 +124,11 @@
  * l'écran sans rien dire de plus que la légende.
  *
  * `scroll-margin-top` : le bandeau est collant, une ancre du sommaire
- * amènerait sinon le titre de la carte dessous.
+ * amènerait sinon la carte DESSOUS, ce qui s'est produit sur téléphone dès
+ * que la marge a été retirée, haut de carte à 0 pour un bandeau de 68 px.
+ * Sur grand écran, où `globals.css` ajoute son propre `scroll-padding`, la
+ * carte s'arrête un peu plus bas que nécessaire : c'est le prix d'une marge
+ * qui tient aux quatre largeurs.
  */
 /* @bordure-decorative la carte encadre une section entiere, que son titre
    identifie : ce n'est pas la limite d'un controle de saisie. */
@@ -135,7 +141,7 @@
   border-top: 3px solid var(--ls-famille, var(--ls-primary));
   border-radius: var(--ls-radius-lg);
   background: var(--ls-surface);
-  scroll-margin-top: 5rem;
+  scroll-margin-top: 4.75rem;
 }
 
 .formulaire + .formulaire {
@@ -152,15 +158,13 @@
   gap: var(--ls-space-4);
 }
 
-.groupe + .groupe {
-  padding-block-start: var(--ls-space-4);
-  border-block-start: 1px solid var(--ls-border);
-}
-
-/* @bordure-decorative le filet separe deux groupes de champs d'une meme
-   carte, il ne delimite aucun controle. */
-
+/*
+ * La légende n'est pas un enfant flex du groupe : l'écart du groupe ne
+ * s'applique pas à elle, d'où sa marge propre. Aucun filet entre deux
+ * groupes : la légende l'interrompait et n'en laissait qu'un bout à droite.
+ */
 .legende {
+  margin-block-end: var(--ls-space-3);
   padding: 0;
   font-family: var(--ls-police-titre);
   font-size: 1.375rem;

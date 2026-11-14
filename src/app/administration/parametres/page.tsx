@@ -138,7 +138,8 @@ async function Reglages() {
       ({ active }) => active,
       () => "INDISPONIBLE" as const,
     ),
-    lirePeriodeReglee().catch(() => null),
+    // Illisible n'est pas « aucune date » : le sommaire dit lequel des deux.
+    lirePeriodeReglee().catch(() => "INDISPONIBLE" as const),
     // Sans la liste des articles, la portée « toute la boutique » reste
     // utilisable : l'écran ne tombe pas pour une liste illisible.
     lireArticlesReductibles().catch(() => null),
@@ -191,7 +192,7 @@ async function Reglages() {
                     etat:
                       theme === "AUCUN"
                         ? "Habillage ordinaire"
-                        : `${LIBELLES_THEMES[theme]} est actif`,
+                        : `Actif : ${LIBELLES_THEMES[theme]}`,
                   },
                   {
                     ancre: "#promotion",
@@ -202,16 +203,18 @@ async function Reglages() {
                         ? "État illisible pour le moment"
                         : promotion === null
                           ? "Aucune promotion active"
-                          : `${promotion.libelle} est active`,
+                          : `Active : ${promotion.libelle}`,
                   },
                   {
                     ancre: "#periode-promotion",
                     icone: "connexions",
                     titre: "Période annoncée",
                     etat:
-                      periode === null
-                        ? "Aucune date annoncée"
-                        : `Du ${formaterJour(periode.debut)} au ${formaterJour(periode.fin)}`,
+                      periode === "INDISPONIBLE"
+                        ? "État illisible pour le moment"
+                        : periode === null
+                          ? "Aucune date annoncée"
+                          : `Du ${formaterJour(periode.debut)} au ${formaterJour(periode.fin)}`,
                   },
                 ] satisfies {
                   ancre: string;
@@ -258,7 +261,9 @@ async function Reglages() {
             }
           />
 
-          <PeriodePromotion periode={periode} />
+          <PeriodePromotion
+            periode={periode === "INDISPONIBLE" ? null : periode}
+          />
 
           <section
             className={styles.horsPerimetre}

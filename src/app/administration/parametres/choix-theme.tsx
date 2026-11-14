@@ -170,7 +170,7 @@ function messageDe(resultat: ResultatTheme | null): string {
     case "SUCCES":
       return resultat.theme === "AUCUN"
         ? "Habillage ordinaire rétabli sur l'accueil et le catalogue."
-        : `${majuscule(LIBELLES_THEMES[resultat.theme])} est appliqué à l'accueil et au catalogue.`;
+        : `Thème appliqué à l'accueil et au catalogue : ${LIBELLES_THEMES[resultat.theme]}.`;
     case "SESSION_ABSENTE":
       return "Votre session a expiré. Reconnectez-vous pour continuer.";
     case "INVALIDE":

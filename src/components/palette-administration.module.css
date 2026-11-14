@@ -7,12 +7,20 @@
 
 /* ---------- Bouton du bandeau ---------- */
 
+/*
+ * LE BOUTON NE CÈDE PAS SA PLACE, revue d'interface de LS-326 : `flex: none`
+ * et `nowrap`. C'est le repère d'écran, à sa gauche, qui se replie. Sous
+ * 480 px il garde sa loupe seule, son nom restant « Aller à… ».
+ */
 .declencheur {
   display: inline-flex;
+  flex: none;
   align-items: center;
+  justify-content: center;
   gap: var(--ls-space-2);
   min-height: var(--ls-touch-target);
-  min-width: 0;
+  min-width: var(--ls-touch-target);
+  white-space: nowrap;
   padding: 0 var(--ls-space-3);
   border: 1px solid var(--ls-border-controle);
   border-radius: 999px;
@@ -26,6 +34,22 @@
 .declencheur:hover {
   background: var(--ls-admin-actif);
   color: var(--ls-primary-hover);
+}
+
+@media (max-width: 479px) {
+  .declencheurTexte {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .declencheur {
+    position: relative;
+    padding: 0;
+  }
 }
 
 .loupe {
