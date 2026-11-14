@@ -96,10 +96,6 @@ décor, la police DejaVu Sans du runner, le rendu réel sous promotion active.
 
 ## Reste
 
-- **Production non déployée.** La migration est classée destructive (retrait
-  puis pose de la contrainte) : `./scripts/migrate-production.sh
-  --confirm-destructive`, puis le workflow « Déployer en production », sur
-  accord de Christophe. Aucun thème n'est activé par le déploiement.
 - **À arbitrer par Christophe** : un code de promotion et un taux par
   opération pour les six thèmes « (%) ». Sans cela, la seule promotion
   activable reste `BLACK_WEEK` à 30 %, et la facture dirait « Black Week ».
@@ -111,4 +107,29 @@ décor, la police DejaVu Sans du runner, le rendu réel sous promotion active.
 
 ## État des tickets
 
-- LS-323 : En cours jusqu'au déploiement.
+- LS-323 : Terminé, déployé le même jour, voir ci-dessous.
+
+## Mise en production, même jour
+
+Sur accord de Christophe (« ok on met en prod »).
+
+- **Migration** `20261114180000_themes_ambiance` par `migrate-production.sh` :
+  garde-fou arrêté sur la seule ligne `DROP CONSTRAINT`, lue, puis
+  `--confirm-destructive`. 33 migrations, contrainte relue en base avec les
+  seize thèmes, `NOEL_2` resté actif, sauvegarde conservée sur le poste, relais
+  et tunnel fermés.
+- **Image** : la fusion n'a pas déclenché « Publier l'image » (GitHub a rendu
+  un 502 pendant la fusion, aucun run sur `0517426`). Publiée par
+  `workflow_dispatch`, run 43598879387.
+- **Déploiement** run 43599059849 : `f257fbe` vers `0517426`, réussi. `/`,
+  `/catalogue`, `/panier` et `/api/sante` en 200, santé opérationnelle, la
+  feuille servie porte les blocs des nouveaux thèmes. Un lien d'aperçu sans
+  session ne change rien : `data-theme="noel_2"`.
+- **Aucun thème changé** par le déploiement.
+
+## Arbitrage de Christophe, même jour, pour la suite
+
+« Je veux que l'exploitante puisse avoir le choix sur les pourcentages à
+mettre quand elle veut et sur les articles qu'elle veut ou tout le site. »
+Cela modifie ADR-051 (taux fixe de 30 %, tout le catalogue) : ticket et
+amendement d'ADR avant le code, zone critique (prix figé, facture).
