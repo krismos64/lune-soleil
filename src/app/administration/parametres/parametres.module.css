@@ -306,16 +306,25 @@
   padding-inline: 0;
 }
 
-/* Les deux dates de la période annoncée, côte à côte dès 390 px. */
+/*
+ * Les deux dates de la période annoncée, côte à côte SEULEMENT SI ELLES
+ * TIENNENT, nocturne 101 du 13 novembre 2026.
+ *
+ * La version d'origine passait à `1fr 1fr` dès 390 px. Or `1fr` vaut
+ * `minmax(auto, 1fr)` : la colonne ne descend pas sous la largeur minimale du
+ * champ de date, et cette largeur DÉPEND DE LA POLICE. Mesuré à 390 px, 358 px
+ * disponibles : 164 px par champ sous la police système de macOS, 180 px sous
+ * Verdana, environ 176 px sous DejaVu Sans du runner Linux. La page débordait
+ * de 6 px en intégration continue et tenait sur le poste, à 2 px près.
+ *
+ * `auto-fit` avec un minimum de 12rem, 192 px, au-dessus du plus large mesuré :
+ * le retour à la ligne se décide sur la place réelle, jamais sur une largeur
+ * d'écran supposée. `min(100%, 12rem)` garde une colonne pleine à 320 px.
+ */
 .champs {
   display: grid;
   gap: var(--ls-space-3);
-}
-
-@media (min-width: 390px) {
-  .champs {
-    grid-template-columns: 1fr 1fr;
-  }
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
 }
 
 #periode-promotion > h2 {
