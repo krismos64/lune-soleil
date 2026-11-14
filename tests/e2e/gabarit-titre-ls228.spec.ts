@@ -83,6 +83,18 @@ async function verifierTitre(
   const titre = page.locator("main h1").first();
   await expect(titre).toBeVisible();
 
+  /*
+   * LE DÉBORDEMENT SE MESURE SUR LA PAGE CHARGÉE, nocturne 101 du 13 novembre
+   * 2026. Le `h1` est rendu HORS de la frontière `<Suspense>` de la plupart
+   * des écrans, C32 : le voir visible ne dit pas que le contenu est arrivé, et
+   * la mesure pouvait porter sur l'armature de `ChargementAdministration`, qui
+   * ne déborde jamais. Toutes ses annonces commencent par « Chargement » et
+   * finissent par des points de suspension, C35.
+   */
+  await expect(
+    page.locator("main [role='status']", { hasText: /^Chargement .*…$/ }),
+  ).toHaveCount(0);
+
   const police = await titre.evaluate(
     (element) => getComputedStyle(element).fontFamily,
   );
