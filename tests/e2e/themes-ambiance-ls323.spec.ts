@@ -156,16 +156,43 @@ test.describe("aperçu de l'administratrice", () => {
      * la borne de cinq secondes, seuls les décors `data-continu` durent, et le
      * bouton de pause les fige.
      */
-    for (const theme of ["AUTOMNE", "SAINT_VALENTIN", "ETE"] as const) {
-      test(`${theme} : passé la borne, seuls les décors continus durent, la pause fige tout`, async ({
+    /*
+     * CHAQUE BORNE DU THÈME EST ATTENDUE À `fin`, pas la première seule : une
+     * borne restée en `attente` a ses animations en pause et passerait le
+     * filtre sans avoir été contrôlée, relevé par `ls-frontend-revue`.
+     * L'accueil est exercé sous Saint-Valentin, qui porte aussi le bandeau
+     * d'opération.
+     */
+    for (const [theme, chemin] of [
+      ["AUTOMNE", catalogue("AUTOMNE")],
+      ["SAINT_VALENTIN", catalogue("SAINT_VALENTIN")],
+      ["ETE", catalogue("ETE")],
+      ["SAINT_VALENTIN", accueil("SAINT_VALENTIN")],
+    ] as const) {
+      test(`${theme}, ${chemin} : passé la borne, seuls les décors continus durent, la pause fige tout`, async ({
         page,
       }) => {
-        test.setTimeout(60_000);
-        await page.goto(catalogue(theme));
-        const scene = page.locator("main [data-borne]").first();
-        await expect(scene).toHaveAttribute("data-borne", "fin", {
-          timeout: 15_000,
-        });
+        test.setTimeout(120_000);
+        await page.goto(chemin);
+        // Les bornes qui portent un décor de saison, visibles à cette largeur.
+        const bornes = page.locator(
+          "main [data-borne]:has([data-mouvement], svg pattern)",
+        );
+        await expect(bornes.first()).toBeAttached();
+        const nombre = await bornes.count();
+        let controlees = 0;
+        for (let rang = 0; rang < nombre; rang += 1) {
+          const borne = bornes.nth(rang);
+          if (!(await borne.isVisible())) continue;
+          await borne.scrollIntoViewIfNeeded();
+          await expect(borne, `borne ${rang}`).toHaveAttribute(
+            "data-borne",
+            "fin",
+            { timeout: 15_000 },
+          );
+          controlees += 1;
+        }
+        expect(controlees).toBeGreaterThan(1);
         const etat = () =>
           page.evaluate(() => {
             const enCours = document
@@ -206,6 +233,19 @@ test.describe("aperçu de l'administratrice", () => {
       await expect(
         page.getByRole("button", { name: /animations/ }),
       ).toHaveCount(0);
+      const immobile = () =>
+        page.evaluate(
+          () =>
+            document
+              .getAnimations()
+              .filter((animation) => animation.playState === "running").length,
+        );
+      expect(await immobile(), "catalogue").toBe(0);
+      await page.goto(accueil("SAINT_VALENTIN"));
+      await expect(
+        page.getByText(AMBIANCES.SAINT_VALENTIN.evenement, { exact: true }),
+      ).toBeVisible();
+      await expect(page.locator("main [data-mouvement]").first()).toBeHidden();
       expect(
         await page.evaluate(
           () =>
