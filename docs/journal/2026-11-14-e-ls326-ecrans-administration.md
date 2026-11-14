@@ -148,3 +148,31 @@ fusionnée en rebase, `main` à `931b94f`, CI verte. Aucune migration.
 ## État des tickets
 
 - LS-326 : Terminé, déployé.
+
+## Relecture finale des contenus, même jour
+
+Production revérifiée par l'action `etat` du workflow (run 43619242296) :
+image en service `931b94f`, conteneur applicatif sain, 34 migrations ;
+`main` n'en diffère que par la documentation. Jira relevé ce jour : LS-323 à
+LS-326 terminés ; à faire LS-320, LS-291 et LS-35, plus les epics LS-5, LS-7
+et LS-22.
+
+`verifier-config-claude.sh --strict`, `verifier-propagation-docs.sh`,
+`verifier-regles.sh`, `verifier-registre-traitements.sh` et
+`verifier-taches-planifiees.sh` en sortie 0 ; seul l'avertissement
+d'exclusivité de `docs/VERIFICATION.md:38` subsiste, antérieur et juste sur le
+fond. Index mémoire à 142 lignes, `CLAUDE.md` à 200.
+
+Trois écarts comblés, que les quatre stories du jour avaient laissés :
+
+- `docs/REFERENCES.md` : la ligne d'ADR-045 ne citait ni LS-314, ni LS-323,
+  ni les amendements de l'administration, LS-325 et LS-326 ;
+- `ls-frontend-revue` ne connaissait ni le mouvement continu des thèmes
+  d'ambiance, ni le cadre du mouvement dans l'administration, ni la couche
+  commune de ses écrans (`--ls-famille`, `data-etat` doublé d'un badge) ;
+- `ls-critical-reviewer` décrivait la promotion à taux unique : il connaît
+  désormais `TAUX_VISE`, le taux figé `taux_reduction_fige` et la règle
+  « une promotion active ne change ni de taux ni d'articles ».
+
+`CLAUDE.md`, `README.md`, les skills et les hooks relus sans écart : rien de
+ce qu'ils décrivent n'a changé.

@@ -84,6 +84,13 @@ recalculés depuis le catalogue.
 **Promotion, ADR-051** : le prix réduit vient de `prixDeVente` et de
 `CONDITION_ELIGIBLE` seulement, jamais d'un second calcul ; il se fige sur la
 ligne avec son prix de référence, et rien en aval ne recalcule la réduction.
+**Depuis LS-324, le taux est saisi par article** : le taux d'une déclinaison
+est `TAUX_VISE`, `coalesce(promotion_produit.taux, promotion.taux)`, une seule
+expression partagée par l'affichage et la commande, avec les mêmes filtres
+(déclinaison non archivée, produit `ACTIF`). Le taux appliqué se fige sur la
+ligne, `taux_reduction_fige`, et la facture le lit là ; seule une ligne
+d'avant LS-324 se lit sur sa promotion. Une promotion active ne change ni de
+taux ni d'articles.
 Tout changement de prix passe par `exigerPrixModifiables` et écrit
 `historique_prix_variante`, dont l'éligibilité dépend.
 
