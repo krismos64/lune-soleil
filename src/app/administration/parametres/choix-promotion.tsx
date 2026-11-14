@@ -437,11 +437,19 @@ export function ChoixPromotion({
   }
 
   return (
+    /*
+     * `noValidate` : LE REFUS VIENT DU SERVEUR, dans la région d'état, et non
+     * de la bulle native du navigateur. `min` et `max` restent sur les champs
+     * pour le clavier numérique et les flèches ; sans `noValidate`, un taux à
+     * 80 bloquait l'envoi sans aucun message dans la page, relevé par le test
+     * de bout en bout.
+     */
     <form
       action={action}
       className={styles.formulaire}
       id="promotion"
       aria-labelledby="promotion-titre"
+      noValidate
     >
       <h2 id="promotion-titre" className={styles.legende}>
         Promotion
