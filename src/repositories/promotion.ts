@@ -189,8 +189,8 @@ export async function listerArticlesReductibles(client: Client): Promise<
       JOIN categorie c ON c.id = pr.categorie_id
       JOIN variante v ON v.produit_id = pr.id AND v.archivee_a IS NULL
      WHERE pr.statut = 'ACTIF'
-     GROUP BY pr.id, pr.nom, c.id, c.nom
-     ORDER BY c.nom, pr.nom`;
+     GROUP BY pr.id, pr.nom, c.id, c.nom, c.ordre
+     ORDER BY c.ordre, pr.nom`;
 }
 
 /**

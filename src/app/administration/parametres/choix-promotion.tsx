@@ -17,7 +17,14 @@
  * `aria-label`, C39.
  */
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import {
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+  type FormEvent,
+} from "react";
 
 import { formaterMontant } from "@/lib/montant";
 import {
@@ -66,13 +73,13 @@ function messageDe(resultat: ResultatPromotion | null): string {
     case undefined:
       return "";
     case "ACTIVEE":
-      return `${resultat.libelle} est active : les prix réduits s'appliquent aux nouvelles commandes.`;
+      return `${resultat.libelle} est active. Le détail de ce qu'elle réduit figure ci-dessus.`;
     case "DESACTIVEE":
       return "Promotion désactivée : les prix catalogue s'appliquent de nouveau.";
     case "AUCUNE_ACTIVE":
-      return "Aucune promotion n'était active.";
+      return "Aucune promotion n'était active : l'écran est à jour.";
     case "DEJA_ACTIVE":
-      return "Une promotion est déjà active.";
+      return "Une promotion est déjà active : l'écran est à jour, désactivez-la d'abord.";
     case "ARTICLE_INCONNU":
       return "Un article choisi n'existe plus. Rechargez la page.";
     case "SESSION_ABSENTE":
@@ -102,10 +109,13 @@ function ResumeActive({
           {etat.libelle}, active depuis le {etat.activeDepuis}.
         </strong>{" "}
         {etat.portee === "TOUT"
-          ? `Toute la boutique à ${MOINS}${etat.tauxGeneral ?? 0} %.`
-          : "Les seuls articles choisis sont réduits."}{" "}
-        {pluriel(etat.reduites, "pièce réduite", "pièces réduites")} en ce
-        moment
+          ? `Toute la boutique à ${MOINS}${etat.tauxGeneral ?? 0} %${
+              etat.articles.length === 0 ? "" : ", sauf les articles ci-dessous"
+            }.`
+          : "Les seuls articles ci-dessous sont réduits."}{" "}
+        {etat.reduites === 0
+          ? "Aucune pièce en vente n'est réduite en ce moment : rien n'est annoncé sur la boutique"
+          : `${pluriel(etat.reduites, "pièce réduite", "pièces réduites")} en ce moment`}
         {etat.exclues === 0
           ? "."
           : `, ${pluriel(etat.exclues, "reste", "restent")} au prix catalogue : prix modifié dans les trente derniers jours.`}{" "}
@@ -114,8 +124,9 @@ function ResumeActive({
       </p>
       {etat.articles.length === 0 ? null : (
         <ul className={styles.recapPromotion} aria-label="Taux par article">
-          {etat.articles.map((article) => (
-            <li key={article.nom}>
+          {etat.articles.map((article, rang) => (
+            // Deux articles peuvent porter le même nom : le rang fait la clé.
+            <li key={rang}>
               {article.nom} : {MOINS}
               {article.taux}&nbsp;%
             </li>
@@ -125,6 +136,18 @@ function ResumeActive({
     </>
   );
 }
+
+/**
+ * Entrée dans un champ de taux n'envoie pas le formulaire : sur un clavier de
+ * bureau, valider le taux général activait toute la boutique avant que les
+ * articles soient cochés. L'activation passe par son bouton.
+ */
+const sansEnvoiParEntree = (evenement: {
+  key: string;
+  preventDefault(): void;
+}) => {
+  if (evenement.key === "Enter") evenement.preventDefault();
+};
 
 const tauxValide = (texte: string): boolean => {
   const taux = Number(texte);
@@ -147,12 +170,24 @@ const tauxValide = (texte: string): boolean => {
  * plus bas de l'article : une aide à la saisie, jamais un prix encaissé.
  */
 function FormulaireActivation({
-  articles,
+  articles: articlesLus,
   enCours,
+  refuse,
 }: {
-  articles: ArticleReductible[];
+  /** `null` : la liste n'a pas pu être lue, ce qui n'est pas « aucun article ». */
+  articles: ArticleReductible[] | null;
   enCours: boolean;
+  /** Le serveur vient de refuser : les taux manquants se signalent aussi. */
+  refuse: boolean;
 }) {
+  const articles = articlesLus ?? [];
+  /*
+   * TOUT CHAMP EST CONTRÔLÉ, le nom compris, revue d'interface de LS-324 : ce
+   * que l'écran montre est ce que le serveur reçoit. Un champ laissé au
+   * navigateur revenait à sa valeur de départ après un envoi refusé, et
+   * « Promotion » partait à la place de « Soldes d'été ».
+   */
+  const [code, setCode] = useState<string>("PROMOTION");
   const [portee, setPortee] = useState<"TOUT" | "SELECTION">("TOUT");
   const [tauxGeneral, setTauxGeneral] = useState("");
   const [coches, setCoches] = useState<ReadonlySet<string>>(new Set());
@@ -200,7 +235,8 @@ function FormulaireActivation({
           id="promotion-code"
           name="code"
           className={styles.saisie}
-          defaultValue="PROMOTION"
+          value={code}
+          onChange={(evenement) => setCode(evenement.target.value)}
           aria-describedby="promotion-code-aide"
         >
           {CODES_PROMOTION.map((code) => (
@@ -211,7 +247,8 @@ function FormulaireActivation({
         </select>
         <p id="promotion-code-aide" className={styles.aide}>
           Ce nom s&apos;affiche sur la boutique et sur la facture. Il est
-          indépendant du thème saisonnier : accordez les deux.
+          indépendant du thème saisonnier : accordez les deux. « Soldes » ne
+          s&apos;emploie que pendant les périodes légales des soldes.
         </p>
       </div>
 
@@ -249,7 +286,7 @@ function FormulaireActivation({
               htmlFor="promotion-portee-selection"
               className={styles.libelleCase}
             >
-              Seulement les articles que je coche
+              Seulement les articles cochés
             </label>
           </li>
         </ul>
@@ -269,8 +306,12 @@ function FormulaireActivation({
               step={1}
               value={tauxGeneral}
               onChange={(evenement) => setTauxGeneral(evenement.target.value)}
+              onKeyDown={sansEnvoiParEntree}
               className={`${styles.saisie} ${styles.saisieTaux}`}
               aria-describedby="promotion-taux-aide"
+              aria-invalid={
+                (tauxGeneral !== "" || refuse) && !tauxValide(tauxGeneral)
+              }
             />
             <p id="promotion-taux-aide" className={styles.aide}>
               Un nombre entier entre {TAUX_MINIMUM} et {TAUX_MAXIMUM}. Cochez un
@@ -278,13 +319,18 @@ function FormulaireActivation({
             </p>
           </div>
         ) : (
-          <p className={styles.aide}>
+          <p id="promotion-taux-aide" className={styles.aide}>
             Cochez les articles à réduire et donnez à chacun son taux, un nombre
             entier entre {TAUX_MINIMUM} et {TAUX_MAXIMUM}.
           </p>
         )}
 
-        {articles.length === 0 ? (
+        {articlesLus === null ? (
+          <p className={styles.aide}>
+            La liste des articles n&apos;a pas pu être lue. Rechargez la page
+            dans un instant ; « toute la boutique » reste utilisable.
+          </p>
+        ) : articles.length === 0 ? (
           <p className={styles.aide}>Aucun article n&apos;est en vente.</p>
         ) : (
           categories.map(([categorieId, categorieNom]) => {
@@ -361,10 +407,18 @@ function FormulaireActivation({
                                   [article.produitId]: evenement.target.value,
                                 }))
                               }
+                              onKeyDown={sansEnvoiParEntree}
                               className={`${styles.saisie} ${styles.saisieTaux}`}
+                              aria-describedby={`promotion-taux-aide promotion-prix-${article.produitId}`}
+                              aria-invalid={
+                                (saisi !== "" || refuse) && !tauxValide(saisi)
+                              }
                             />
                             <span aria-hidden="true">%</span>
-                            <span className={styles.prixArticle}>
+                            <span
+                              id={`promotion-prix-${article.produitId}`}
+                              className={styles.prixArticle}
+                            >
                               {tauxValide(saisi)
                                 ? `${formaterMontant(article.prixMinimumCentimes)} devient ${formaterMontant(prixDeVente(article.prixMinimumCentimes, Number(saisi)))}`
                                 : formaterMontant(article.prixMinimumCentimes)}
@@ -411,12 +465,43 @@ export function ChoixPromotion({
   articles,
 }: {
   etat: EtatPromotionAffiche;
-  articles: ArticleReductible[];
+  /** `null` quand la liste des articles n'a pas pu être lue. */
+  articles: ArticleReductible[] | null;
 }) {
-  const [resultat, action, enCours] = useActionState<
+  const [resultat, action, enAction] = useActionState<
     ResultatPromotion | null,
     FormData
   >(basculerPromotionAction, null);
+  const [enTransition, demarrer] = useTransition();
+  const enCours = enAction || enTransition;
+  const formulaire = useRef<HTMLFormElement>(null);
+
+  /*
+   * L'ENVOI PASSE PAR `onSubmit` ET NON PAR `action` SEUL, revue d'interface
+   * de LS-324. React 19 remet un formulaire à ses valeurs de départ à la fin
+   * de CHAQUE action portée par `action={…}`, refus compris : cases et portée
+   * revenaient à leur état initial dans la page pendant que l'état React les
+   * montrait encore cochées, et un second clic envoyait autre chose que ce
+   * qui était affiché. Appelée dans une transition, l'action ne remet rien.
+   * `action` reste sur le formulaire pour un navigateur sans script.
+   */
+  const envoyer = (evenement: FormEvent<HTMLFormElement>) => {
+    evenement.preventDefault();
+    const donnees = new FormData(evenement.currentTarget);
+    demarrer(() => action(donnees));
+  };
+
+  /*
+   * APRÈS UNE BASCULE, LE BOUTON CLIQUÉ N'EXISTE PLUS : le formulaire
+   * d'activation et le résumé se remplacent. Le focus revient au formulaire,
+   * sans quoi il retombe sur `body` et la tabulation repart du haut.
+   */
+  const statut = resultat?.statut;
+  useEffect(() => {
+    if (statut === "ACTIVEE" || statut === "DESACTIVEE") {
+      formulaire.current?.focus();
+    }
+  }, [statut]);
 
   if (etat === "INDISPONIBLE") {
     return (
@@ -445,10 +530,13 @@ export function ChoixPromotion({
      * de bout en bout.
      */
     <form
+      ref={formulaire}
       action={action}
+      onSubmit={envoyer}
       className={styles.formulaire}
       id="promotion"
       aria-labelledby="promotion-titre"
+      tabIndex={-1}
       noValidate
     >
       <h2 id="promotion-titre" className={styles.legende}>
@@ -462,7 +550,11 @@ export function ChoixPromotion({
             taux, et vous l&apos;activez et la désactivez quand vous le
             souhaitez ; le bandeau annonce la période réglée plus bas.
           </p>
-          <FormulaireActivation articles={articles} enCours={enCours} />
+          <FormulaireActivation
+            articles={articles}
+            enCours={enCours}
+            refuse={resultat?.statut === "INVALIDE"}
+          />
         </>
       ) : (
         <>
@@ -543,14 +635,24 @@ export function PeriodePromotion({
 }: {
   periode: { debut: string; fin: string } | null;
 }) {
-  const [resultat, action, enCours] = useActionState<
+  const [resultat, action, enAction] = useActionState<
     ResultatPeriode | null,
     FormData
   >(enregistrerPeriodeAction, null);
+  const [enTransition, demarrer] = useTransition();
+  const enCours = enAction || enTransition;
+  // Même motif que `ChoixPromotion` : envoyée par `action` seul, une période
+  // refusée faisait revenir les deux dates à leurs valeurs enregistrées.
+  const envoyer = (evenement: FormEvent<HTMLFormElement>) => {
+    evenement.preventDefault();
+    const donnees = new FormData(evenement.currentTarget);
+    demarrer(() => action(donnees));
+  };
 
   return (
     <form
       action={action}
+      onSubmit={envoyer}
       className={styles.formulaire}
       id="periode-promotion"
       aria-labelledby="periode-titre"
