@@ -8,6 +8,46 @@
 | Amende | `.claude/rules/frontend-design.md`, sections « Interdits visuels » et « Paillettes » |
 | Ticket | LS-259 |
 
+## Amendement du 14 novembre 2026, l'administration, LS-325
+
+**Arbitrage de Christophe** : l'interface de l'administratrice doit être
+refaite, « animée, motion design, facile et intuitive », la navigation la
+plus agréable possible. Cette décision écartait jusque-là toute animation de
+l'administration, « des écrans qui sont des outils de travail » ; le tableau
+d'intensité y écrivait « rien ». **Le motif tient toujours, la conclusion
+change** : un outil de travail gagne à ce que le mouvement dise ce qui vient
+de changer, il perd à ce qu'un décor bouge pendant qu'on travaille.
+Codé sans maquette, captures soumises avant la mise en production.
+
+| Où | Ce qui est permis |
+|---|---|
+| tableau de bord, en-tête | **une entrée orchestrée, une seule** : l'arc du jour se trace, l'astre gagne la place de l'heure, deux secondes au plus, puis plus rien ne bouge |
+| barre latérale, bandeau, palette « Aller à… » | **réponses à un geste** : le repère de la rubrique courante, l'ouverture du menu mobile et de la palette, le survol d'une ligne |
+| listes et écrans de détail | réponses à un geste seulement, celles qui existent déjà |
+| formulaires, pendant une saisie | **rien**, inchangé : ni entrée, ni décor, ni compteur |
+
+- **Aucune boucle**, sans exception : l'administration n'a pas de bouton de
+  pause et n'en reçoit pas. Toute animation s'arrête d'elle-même.
+- **Mouvement réduit** : l'écran est complet et immobile, l'astre est posé à
+  sa place dès le premier rendu.
+- `transform`, `opacity` et `stroke-dashoffset` seulement, comme partout.
+- **Les chiffres ne s'animent pas** : un indicateur qui compte jusqu'à sa
+  valeur retarde l'information que l'exploitante vient chercher.
+
+**Le dégradé de ciel s'étend à un onzième décor**, l'en-tête du tableau de
+bord, avec les teintes de ciel de `tokens.css`, choisies selon l'heure de
+Paris. **Aucun texte n'y est posé** : la salutation et la date vivent
+dessous, sur la surface ordinaire, ce qui écarte le calcul de contraste sur
+un fond qui change.
+
+**Écarté : des entrées en fondu sur chaque écran.** Un contenu qui apparaît
+en glissant à chaque changement de rubrique ralentit un geste répété cent
+fois par jour, pour un effet qui se remarque une fois.
+
+**Écarté : une barre d'onglets en bas d'écran sur téléphone.** Elle
+doublerait les liens de la barre latérale ; le menu en panneau et la palette
+suffisent à atteindre toute rubrique en deux gestes.
+
 ## Amendement du 14 novembre 2026, mouvement continu des thèmes d'ambiance, LS-323
 
 **Demande de l'exploitante, transmise par Christophe** : douze thèmes de plus
