@@ -120,7 +120,7 @@ export function FormulaireParametres({
   }
 
   return (
-    <form action={action} className={styles.formulaire}>
+    <form action={action} className={styles.formulaire} id="tarifs">
       <fieldset className={styles.groupe}>
         <legend className={styles.legende}>Livraison</legend>
 

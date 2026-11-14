@@ -122,7 +122,11 @@ async function ListesAlertes() {
         ) : (
           <ul className={styles.liste}>
             {ouvertes.map((alerte) => (
-              <li key={alerte.id} className={styles.carte}>
+              <li
+                key={alerte.id}
+                className={styles.carte}
+                data-etat={alerte.gravite === "CRITIQUE" ? "ecarte" : "attente"}
+              >
                 <Detail alerte={alerte} />
                 <CarteAlerte alerteId={alerte.id} />
               </li>
@@ -144,7 +148,7 @@ async function ListesAlertes() {
           <>
             <ul className={styles.liste}>
               {acquittees.map((alerte) => (
-                <li key={alerte.id} className={styles.carte}>
+                <li key={alerte.id} className={styles.carte} data-etat="fait">
                   <Detail alerte={alerte} />
                 </li>
               ))}

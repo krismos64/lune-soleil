@@ -27,22 +27,6 @@
 
 /* ------------------------------------------------------------------ en-tete */
 
-/*
- * `--ls-accent-terracotta-deep` sur `--ls-background` : 5,51:1, AA.
- *
- * PAS `--ls-accent-terracotta`, qui donne 4,07:1 sur creme et n'est autorise
- * qu'en texte large, 18,66 px en gras : un sur-titre de 11 px n'en est pas.
- */
-.surtitre {
-  margin: 0 0 var(--ls-space-1);
-  background: var(--ls-background);
-  color: var(--ls-accent-terracotta-deep);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
 /* `--ls-primary` sur `--ls-background` : 8,36:1, AAA. */
 .titre {
   margin: 0 0 var(--ls-space-3);
