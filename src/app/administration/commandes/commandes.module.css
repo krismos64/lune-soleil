@@ -111,10 +111,22 @@
 /*
  * LA LIGNE DE COMMANDE SUR GRAND ÉCRAN, LS-326 : le numéro et le client à
  * gauche, les trois faits en ligne à droite. Une commande tient en une ligne
- * au lieu de cinq, et une liste de cent se balaie d'un regard. Empilée sous
- * 768 px, comme avant.
+ * au lieu de cinq, et une liste de cent se balaie d'un regard.
+ *
+ * À PARTIR DE 1100 PX SEULEMENT, et non de 768 : à 768 px la barre latérale
+ * prend 250 px, il en reste 518 à l'écran, et la ligne débordait de 89 px,
+ * mesuré par `gabarit-titre-ls228`. En deçà, la carte reste empilée. Chaque
+ * colonne peut rétrécir, `min-width: 0`, un numéro long se coupant au besoin.
  */
-@media (min-width: 768px) {
+@media (min-width: 1100px) {
+  .ligneCommande > * {
+    min-width: 0;
+  }
+
+  .ligneCommande .numero {
+    overflow-wrap: anywhere;
+  }
+
   .ligneCommande {
     display: grid;
     grid-template-columns: minmax(14rem, 1fr) minmax(0, 1.4fr);

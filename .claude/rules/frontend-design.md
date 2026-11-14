@@ -246,7 +246,9 @@ uniquement.
   LS-325 : une entrée orchestrée sur le tableau de bord seulement (l'arc du
   jour), des réponses à un geste ailleurs, **aucune boucle** puisqu'elle n'a
   pas de bouton de pause, et toujours rien pendant une saisie ; les chiffres
-  ne s'animent pas. Les portes
+  ne s'animent pas. Depuis LS-326, chaque écran reçoit deux signes
+  d'orientation courts, l'icône du repère qui se trace et le trait du titre
+  qui grandit ; **le contenu, lui, ne part jamais d'une opacité nulle**. Les portes
   d'entrée de la boutique et le contact portent un décor animé et un
   formulaire immobile, amendement de LS-268 ; l'aide porte un décor animé à
   l'entrée de chaque section et un contenu immobile, amendement de LS-280 ;
@@ -423,6 +425,28 @@ la règle des images Codex d'ADR-045 s'applique : aucun bijou, aucune personne.
 **Bagues, ADR-048** : la photo portée générée peut y être la **première**
 photo, les photographies réelles restant sur la fiche ; les autres conditions
 d'ADR-047 s'appliquent. Aucune autre catégorie n'en bénéficie.
+
+### La couche commune des écrans d'administration, LS-326
+
+**Tout écran d'administration reçoit sa mise en forme du layout**, sans rien
+poser lui-même : la police et le trait de couleur de son `h1`, la couleur de
+sa famille, les rayons adoucis. Quatre points à connaître avant d'écrire un
+écran :
+
+- **Une couleur par famille de rubriques**, `--ls-famille`, prise dans les
+  jetons d'ADR-022 : vue d'ensemble, ventes, relation client, catalogue,
+  réglages. `RepereEcran` la pose par `data-famille`, le layout la remonte à
+  l'écran par `:has()`. Un écran l'emploie par `var(--ls-famille)`, il ne la
+  choisit jamais.
+- **Le repère d'écran du bandeau dit la famille et la rubrique** : un écran
+  n'écrit donc plus de surtitre au-dessus de son titre, il ferait doublon.
+- **Une ligne de travail dit son état par `data-etat`**, quatre tons
+  (`attente`, `cours`, `fait`, `ecarte`) calculés par `src/lib/ton-etat.ts`,
+  que le layout traduit en un bord de couleur. **La couleur double le badge
+  écrit, elle ne le remplace jamais.** Un statut neuf entre dans la table de
+  ton, sans quoi la compilation échoue.
+- **Paramètres s'ouvre sur un sommaire d'état** : chaque réglage y écrit ce
+  qu'il vaut et mène à sa carte. Un réglage ajouté entre dans ce sommaire.
 
 ### C33, tout écran d'administration est atteignable sans saisir d'URL
 

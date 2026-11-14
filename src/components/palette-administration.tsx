@@ -19,7 +19,15 @@
  * session administratrice.
  */
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { flushSync } from "react-dom";
 
 import { ACTIONS_RAPIDES } from "./actions-administration";
 import { IconeAdministration, type NomIcone } from "./icones-administration";
@@ -103,25 +111,36 @@ export function PaletteAdministration() {
       .map(({ entree }) => entree);
   }, [requete]);
 
-  const ouvrir = () => {
-    setRequete("");
-    setActive(0);
-    setOuverte(true);
-  };
-
   /*
-   * LE DIALOGUE S'OUVRE APRÈS LE RENDU DE SON CONTENU, et le champ prend le
-   * focus alors : demandé dans le même geste que `setOuverte`, le champ
-   * n'existait pas encore et le focus restait sur le bouton, relevé par le
-   * test de bout en bout.
+   * L'OUVERTURE EST IMPÉRATIVE ET SYNCHRONE : `flushSync` rend le contenu du
+   * dialogue AVANT `showModal()`, pour que le champ existe quand il reçoit le
+   * focus. Passer par un effet qui suit l'état échouait à la seconde
+   * ouverture quand l'état n'avait pas changé, relevé par le test de bout en
+   * bout sous charge : rien ne rejouait alors `showModal()`.
    */
-  useEffect(() => {
-    if (!ouverte) return;
+  const ouvrir = useCallback(() => {
+    flushSync(() => {
+      setRequete("");
+      setActive(0);
+      setOuverte(true);
+    });
     if (dialogue.current && !dialogue.current.open) {
       dialogue.current.showModal();
     }
     champ.current?.focus();
-  }, [ouverte]);
+  }, []);
+
+  /*
+   * LA FERMETURE EST ÉCOUTÉE SUR L'ÉLÉMENT, événement natif `close` : Échap,
+   * le voile, le bouton et la navigation y passent tous, et l'état suit.
+   */
+  useEffect(() => {
+    const element = dialogue.current;
+    if (element === null) return;
+    const surFermeture = () => setOuverte(false);
+    element.addEventListener("close", surFermeture);
+    return () => element.removeEventListener("close", surFermeture);
+  }, []);
 
   const fermer = () => dialogue.current?.close();
 
@@ -153,15 +172,13 @@ export function PaletteAdministration() {
         if (dialogue.current?.open) {
           dialogue.current.close();
         } else {
-          setRequete("");
-          setActive(0);
-          setOuverte(true);
+          ouvrir();
         }
       }
     };
     document.addEventListener("keydown", surTouche);
     return () => document.removeEventListener("keydown", surTouche);
-  }, []);
+  }, [ouvrir]);
 
   const aller = (entree: Entree | undefined) => {
     if (entree === undefined) return;
@@ -216,7 +233,6 @@ export function PaletteAdministration() {
         ref={dialogue}
         className={styles.dialogue}
         aria-label="Aller à une rubrique ou à une action"
-        onClose={() => setOuverte(false)}
         onPointerDown={(evenement) => {
           appuiSurVoile.current = evenement.target === dialogue.current;
         }}
