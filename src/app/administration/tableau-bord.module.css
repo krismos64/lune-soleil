@@ -19,20 +19,13 @@
 /* --------------------------------------------------------------- l'en-tete */
 
 /*
- * LE SUR-TITRE EST EN TERRACOTTA ET C'EST LE SEUL ENDROIT OU IL EST PERMIS EN
- * PETIT TEXTE... NON : il ne l'est pas. `--ls-accent-terracotta` donne 4,07:1
- * sur creme, sous le seuil AA, et « texte large » commence a 18,66 px en gras.
- * Un sur-titre de 11 px gras N'EST PAS du texte large, c'est l'erreur que la
- * regle signale comme la plus facile a commettre, et que le prototype commet
- * 35 fois.
- *
- * `--ls-accent-gold-deep` sur `--ls-background` : 4,72:1, AA. C'est le jeton
- * prescrit pour ce cas exact.
- */
-/*
  * L'EN-TÊTE, LS-325 : l'arc du jour au-dessus, le texte dessous sur la
- * surface blanche. La date s'écrit en bas de casse, « Samedi 14 novembre » :
- * une ligne lue chaque matin n'a pas à crier.
+ * surface blanche. La date s'écrit en bas de casse, « Samedi 14 novembre
+ * 2026 » : une ligne lue chaque matin n'a pas à crier.
+ *
+ * LA DATE EST EN `--ls-accent-gold-deep` SUR `--ls-surface`, 5,04:1, AA en
+ * petit texte. Le terracotta clair y donnerait 4,35:1, sous le seuil : un
+ * petit texte accentué emploie l'or profond, `frontend-design.md`.
  */
 .entete {
   margin: 0 0 var(--ls-space-4);

@@ -63,15 +63,35 @@
 }
 
 .ciel[data-moment="nuit"] .arc,
-.ciel[data-moment="nuit"] .horizon,
+.ciel[data-moment="nuit"] .horizon {
+  stroke: var(--ls-or-pale);
+}
+
 .ciel[data-moment="crepuscule"] .arc,
 .ciel[data-moment="crepuscule"] .horizon {
-  stroke: var(--ls-or-pale);
+  stroke: var(--ls-ciel-nuit-haut);
 }
 
 .halo {
   fill: var(--ls-or-pale);
   opacity: 0.45;
+}
+
+/*
+ * AU CRÉPUSCULE, L'OR SE PERD DANS L'ORANGÉ DU CIEL, 1,4 à 1,7:1 calculés par
+ * la revue d'interface : le disque passe à l'or pâle cerné de nuit, 12:1 sur
+ * le haut du ciel et 8:1 sur le bas, et son halo s'éclaircit. Décor, mais un
+ * astre qu'on ne distingue pas ne dit plus l'heure.
+ */
+.ciel[data-moment="crepuscule"] .soleil {
+  fill: var(--ls-or-pale);
+  stroke: var(--ls-ciel-nuit-haut);
+  stroke-width: 1.4;
+}
+
+.ciel[data-moment="crepuscule"] .halo {
+  fill: var(--ls-surface);
+  opacity: 0.4;
 }
 
 .soleil {

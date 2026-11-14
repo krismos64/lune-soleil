@@ -53,6 +53,32 @@ raccourcis, des boutons ».
 - Mutation : focus du champ retiré à l'ouverture de la palette, le test
   rougit (`Expected: focused, Received: inactive`), puis restauré.
 
+## Revue `ls-frontend-revue`
+
+Mesurée sous Verdana aux quatre largeurs. Bandeau, actions directes, tuiles,
+repère et contour de focus de la barre : sans défaut. **Deux défauts
+bloquants dans la palette, corrigés** :
+
+- l'option active sortait de la zone visible de la liste dès la huitième
+  flèche (`scrollTop` resté à 0 après vingt flèches) : elle est ramenée à
+  l'écran par `scrollIntoView` ;
+- l'identifiant de l'option active valait toujours `option-0` après un
+  filtre, et rien n'annonçait le nombre de résultats : chaque option garde
+  l'identifiant de son entrée, et la région d'état dit « 2 résultats ».
+
+Corrigé aussi : « stock » proposait d'abord « Créer un produit », dont la
+précision cite le stock (les noms passent désormais avant les précisions) ;
+Cmd+K sur Mac et Ctrl+K ailleurs, jamais les deux, pour laisser Ctrl+K effacer
+la fin de ligne sous macOS ; soleil cerné de nuit au crépuscule, où l'or se
+perdait dans l'orangé (1,4 à 1,7:1) ; jauge du stock sur le disponible du
+serveur ; un glisser relâché sur le voile ne ferme plus la palette ;
+commentaires de style remis à leur place. Le test couvre le classement, le
+compte annoncé et la visibilité de l'option active.
+
+Non vérifié : un lecteur d'écran réel, le clavier virtuel d'un téléphone
+ouvert sur la palette (le bas de la liste passe sans doute dessous), WebKit
+et Firefox. Laissé : l'arc dessiné sur 400 px au centre d'un en-tête large.
+
 ## Ce qui a dérapé
 
 - **Le champ de la palette ne recevait pas le focus** : demandé dans le même
@@ -66,7 +92,7 @@ raccourcis, des boutons ».
 
 ## Reste
 
-- Revue `ls-frontend-revue`, puis fusion et mise en production sur accord.
+- Fusion et mise en production, accord de Christophe donné (« oui enchaîne »).
 - Lot suivant possible : refonte des listes et des formulaires, écran par
   écran.
 

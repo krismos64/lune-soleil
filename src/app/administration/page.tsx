@@ -492,9 +492,9 @@ async function IndicateursTableauBord() {
               />
               <span
                 className={styles.jaugeDisponible}
-                style={{
-                  flexGrow: Math.max(stock.physiques - stock.reservees, 0),
-                }}
+                // Le disponible du SERVEUR, calculé variante par variante :
+                // le recalculer ici pourrait diverger du chiffre affiché.
+                style={{ flexGrow: stock.disponibles }}
               />
             </div>
             <dl className={styles.etatStock}>
