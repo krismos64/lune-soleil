@@ -47,6 +47,11 @@ import {
   LIBELLES_THEMES,
   lireThemeSaisonnier,
 } from "@/services/theme-saisonnier";
+import {
+  IconeAdministration,
+  type NomIcone,
+} from "@/components/icones-administration";
+import { formaterMontant } from "@/lib/montant";
 import { ChoixPromotion, PeriodePromotion } from "./choix-promotion";
 import { ChoixTheme } from "./choix-theme";
 import { FormulaireParametres } from "./formulaire-parametres";
@@ -65,6 +70,15 @@ export const metadata = {
  * meme valeur, ou croire que l'enregistrement a echoue.
  */
 export const dynamic = "force-dynamic";
+
+/** « 23 novembre » depuis un jour civil `AAAA-MM-JJ`, lu en UTC. */
+function formaterJour(jour: string): string {
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "numeric",
+    month: "long",
+    timeZone: "UTC",
+  }).format(new Date(`${jour}T00:00:00Z`));
+}
 
 export default async function PageParametres() {
   const enTetes = await headers();
@@ -148,15 +162,84 @@ async function Reglages() {
         </p>
       ) : (
         <>
-          <p className={styles.themeActif}>
-            Thème saisonnier actif : <strong>{LIBELLES_THEMES[theme]}</strong>.{" "}
-            <a href="#theme-saisonnier">Le changer</a>
-          </p>
+          {/*
+           * LE SOMMAIRE D'ÉTAT, LS-326 : ce que chaque réglage vaut en ce
+           * moment, et le lien qui y mène. L'exploitante lit l'état de la
+           * boutique sans parcourir cinq formulaires. Des ancres de la même
+           * page : aucun rechargement, donc des balises `<a>` ordinaires.
+           */}
+          <nav className={styles.sommaire} aria-label="Réglages de la boutique">
+            <ul className={styles.listeSommaire}>
+              {(
+                [
+                  {
+                    ancre: "#tarifs",
+                    icone: "expeditions",
+                    titre: "Livraison et alertes",
+                    etat: `Relais ${formaterMontant(parametres.tarifRelaisCentimes)}, domicile ${formaterMontant(parametres.tarifDomicileCentimes)}${
+                      parametres.seuilFranchiseCentimes === null
+                        ? ", aucune gratuité"
+                        : parametres.seuilFranchiseCentimes === 0
+                          ? ", relais toujours offert"
+                          : `, relais offert dès ${formaterMontant(parametres.seuilFranchiseCentimes)}`
+                    }`,
+                  },
+                  {
+                    ancre: "#theme-saisonnier",
+                    icone: "theme",
+                    titre: "Thème saisonnier",
+                    etat:
+                      theme === "AUCUN"
+                        ? "Habillage ordinaire"
+                        : `${LIBELLES_THEMES[theme]} est actif`,
+                  },
+                  {
+                    ancre: "#promotion",
+                    icone: "promotion",
+                    titre: "Promotion",
+                    etat:
+                      promotion === "INDISPONIBLE"
+                        ? "État illisible pour le moment"
+                        : promotion === null
+                          ? "Aucune promotion active"
+                          : `${promotion.libelle} est active`,
+                  },
+                  {
+                    ancre: "#periode-promotion",
+                    icone: "connexions",
+                    titre: "Période annoncée",
+                    etat:
+                      periode === null
+                        ? "Aucune date annoncée"
+                        : `Du ${formaterJour(periode.debut)} au ${formaterJour(periode.fin)}`,
+                  },
+                ] satisfies {
+                  ancre: string;
+                  icone: NomIcone;
+                  titre: string;
+                  etat: string;
+                }[]
+              ).map((entree) => (
+                <li key={entree.ancre}>
+                  <a href={entree.ancre} className={styles.entreeSommaire}>
+                    <span className={styles.iconeSommaire}>
+                      <IconeAdministration nom={entree.icone} />
+                    </span>
+                    <span className={styles.textesSommaire}>
+                      <span className={styles.titreSommaire}>
+                        {entree.titre}
+                      </span>
+                      <span className={styles.etatSommaire}>{entree.etat}</span>
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
 
           <p className={styles.introduction}>
-            Ces valeurs s&apos;appliquent aux commandes <strong>à venir</strong>
-            . Une commande déjà passée garde le tarif qu&apos;elle portait, et
-            un changement ne la réécrit jamais.
+            Un tarif changé vaut pour les commandes <strong>à venir</strong> :
+            une commande déjà passée garde le sien.
           </p>
 
           <FormulaireParametres parametres={parametres} />

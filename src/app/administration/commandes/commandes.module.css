@@ -108,6 +108,53 @@
   background: var(--ls-surface);
 }
 
+/*
+ * LA LIGNE DE COMMANDE SUR GRAND ÉCRAN, LS-326 : le numéro et le client à
+ * gauche, les trois faits en ligne à droite. Une commande tient en une ligne
+ * au lieu de cinq, et une liste de cent se balaie d'un regard. Empilée sous
+ * 768 px, comme avant.
+ */
+@media (min-width: 768px) {
+  .ligneCommande {
+    display: grid;
+    grid-template-columns: minmax(14rem, 1fr) minmax(0, 1.4fr);
+    align-items: center;
+    column-gap: var(--ls-space-5);
+  }
+
+  .ligneCommande .client {
+    grid-column: 1;
+    margin: 0;
+  }
+
+  .ligneCommande .enTeteCarte {
+    grid-column: 1;
+    margin-bottom: var(--ls-space-1);
+  }
+
+  .ligneCommande .details {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: var(--ls-space-4);
+  }
+
+  .ligneCommande .detail {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .ligneCommande .detail dd {
+    text-align: left;
+    font-weight: 600;
+  }
+
+  .ligneCommande .detail dt {
+    font-size: 0.8125rem;
+  }
+}
+
 .enTeteCarte {
   display: flex;
   flex-wrap: wrap;

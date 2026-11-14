@@ -42,6 +42,7 @@ import {
   SelectionProduits,
 } from "./selection-produits";
 import { AnnonceRetrait } from "./annonce-retrait";
+import { TON_PRODUIT } from "@/lib/ton-etat";
 import styles from "./catalogue.module.css";
 
 export const metadata = {
@@ -140,8 +141,6 @@ export default async function PageCatalogue({
 
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
-      <p className={styles.surtitre}>Catalogue</p>
-
       <div className={styles.enTete}>
         <h1 className={styles.titre}>Produits</h1>
 
@@ -327,7 +326,11 @@ async function ListeProduits({
               const badge = BADGES[produit.statut];
 
               return (
-                <li key={produit.id} className={styles.carte}>
+                <li
+                  key={produit.id}
+                  className={styles.carte}
+                  data-etat={TON_PRODUIT[produit.statut]}
+                >
                   {/*
                    * LS-242 : `aria-label` et non un texte masque, qui doublerait
                    * le nom dans le DOM et rendrait ambigue toute recherche du

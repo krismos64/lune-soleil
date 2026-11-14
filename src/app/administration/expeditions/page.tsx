@@ -138,7 +138,6 @@ export default async function PageExpeditions() {
         Retour aux commandes
       </Link>
 
-      <p className={styles.surtitre}>Mondial Relay</p>
       <h1 className={styles.titre}>Expéditions</h1>
 
       <Suspense fallback={<ChargementExpeditions />}>

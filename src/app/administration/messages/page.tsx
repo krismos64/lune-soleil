@@ -42,6 +42,7 @@ import { formaterDate } from "@/lib/affichage-commande";
 import { ClassementMessage } from "./classement-message";
 import { FORMULAIRE_SELECTION, SelectionMessages } from "./selection-messages";
 import { ChargementAdministration } from "@/components/chargement-administration";
+import { TON_MESSAGE } from "@/lib/ton-etat";
 import styles from "./messages.module.css";
 
 export const metadata = {
@@ -329,7 +330,11 @@ async function ListeMessages({
       ) : (
         <ul className={styles.listeMessages}>
           {messages.map((message) => (
-            <li key={message.id} className={styles.carte}>
+            <li
+              key={message.id}
+              className={styles.carte}
+              data-etat={TON_MESSAGE[message.statut]}
+            >
               <div className={styles.enTeteCarte}>
                 {/*
                  * LE REPLI `?? message.statut` A DISPARU avec le typage

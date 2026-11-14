@@ -27,6 +27,7 @@ import {
 } from "@/services/administration-commandes";
 import { formaterMontant } from "@/lib/montant";
 import { formaterDate, LIBELLES_STATUT } from "@/lib/affichage-commande";
+import { TON_COMMANDE } from "@/lib/ton-etat";
 import styles from "./commandes.module.css";
 
 export const metadata = {
@@ -190,7 +191,11 @@ async function ListeCommandes({
       ) : (
         <ul className={styles.listeCommandes}>
           {commandes.map((commande) => (
-            <li key={commande.id} className={styles.carte}>
+            <li
+              key={commande.id}
+              className={`${styles.carte} ${styles.ligneCommande}`}
+              data-etat={TON_COMMANDE[commande.statut]}
+            >
               <div className={styles.enTeteCarte}>
                 <Link
                   href={`/administration/commandes/${commande.id}`}

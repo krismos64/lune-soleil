@@ -25,22 +25,6 @@
 /* --------------------------------------------------------------- l'en-tete */
 
 /*
- * `--ls-accent-gold-deep` sur `--ls-background` : 4,72:1, AA.
- *
- * PAS DE TERRACOTTA ICI. Un sur-titre de 11 px gras n'est PAS du texte large,
- * seuil de 18,66 px, et `--ls-accent-terracotta` y donne 4,07:1, sous AA. C'est
- * l'erreur que `frontend-design.md` signale comme la plus facile a commettre.
- */
-.surtitre {
-  margin: 0 0 var(--ls-space-1);
-  color: var(--ls-accent-gold-deep);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-/*
  * `flex-wrap` PLUTOT QU'UNE LARGEUR FIXE : a 320 px le titre et le bouton ne
  * tiennent pas cote a cote, et un debordement horizontal du corps est interdit.
  */

@@ -10,8 +10,85 @@
 .page {
   padding-block: var(--ls-space-5);
   padding-inline: var(--ls-space-4);
-  max-width: 44rem;
+  max-width: 52rem;
   margin-inline: auto;
+}
+
+/*
+ * LE SOMMAIRE D'ÉTAT, LS-326 : quatre réglages, leur valeur du moment, et
+ * l'ancre qui y mène. Une grille qui décide sur la place réelle, une colonne
+ * à 320 px. Chaque entrée est un lien entier, 44 px de haut au moins.
+ */
+.sommaire {
+  margin-block-end: var(--ls-space-5);
+}
+
+.listeSommaire {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: var(--ls-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.listeSommaire li {
+  display: flex;
+}
+
+.entreeSommaire {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--ls-space-3);
+  min-height: 3.5rem;
+  padding: var(--ls-space-2) var(--ls-space-3);
+  border: 1px solid var(--ls-border-controle);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  text-decoration: none;
+}
+
+.entreeSommaire:hover {
+  background: var(--ls-admin-actif);
+  color: var(--ls-primary-hover);
+}
+
+.entreeSommaire:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+.iconeSommaire {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: var(--ls-famille, var(--ls-primary));
+  color: var(--ls-text-on-primary);
+  transition: transform var(--ls-duration-base) var(--ls-easing-sortie);
+}
+
+.entreeSommaire:hover .iconeSommaire {
+  transform: translateX(3px);
+}
+
+.textesSommaire {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.titreSommaire {
+  font-weight: 600;
+}
+
+.etatSommaire {
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
 }
 
 .titre {
@@ -38,31 +115,57 @@
   line-height: 1.6;
 }
 
+/*
+ * CHAQUE RÉGLAGE EST UNE CARTE, LS-326 : un formulaire, une surface blanche,
+ * un trait à la couleur de la famille en tête. Les groupes de champs qu'elle
+ * contient n'ont plus de cadre propre : une boîte dans une boîte alourdissait
+ * l'écran sans rien dire de plus que la légende.
+ *
+ * `scroll-margin-top` : le bandeau est collant, une ancre du sommaire
+ * amènerait sinon le titre de la carte dessous.
+ */
+/* @bordure-decorative la carte encadre une section entiere, que son titre
+   identifie : ce n'est pas la limite d'un controle de saisie. */
 .formulaire {
   display: flex;
   flex-direction: column;
   gap: var(--ls-space-5);
+  padding: var(--ls-space-4);
+  border: 1px solid var(--ls-border);
+  border-top: 3px solid var(--ls-famille, var(--ls-primary));
+  border-radius: var(--ls-radius-lg);
+  background: var(--ls-surface);
+  scroll-margin-top: 5rem;
+}
+
+.formulaire + .formulaire {
+  margin-block-start: var(--ls-space-5);
 }
 
 .groupe {
-  border: 1px solid var(--ls-border);
-  border-radius: var(--ls-radius-md);
-  padding: var(--ls-space-4);
+  border: 0;
+  padding: 0;
   margin: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: var(--ls-space-4);
 }
 
-/* @bordure-decorative le groupe n'est pas un controle de saisie : sa bordure
-   encadre une section, et la legende l'identifie deja. WCAG 1.4.11 ne vise que
-   la limite d'un controle que rien d'autre ne designe. */
+.groupe + .groupe {
+  padding-block-start: var(--ls-space-4);
+  border-block-start: 1px solid var(--ls-border);
+}
+
+/* @bordure-decorative le filet separe deux groupes de champs d'une meme
+   carte, il ne delimite aucun controle. */
 
 .legende {
-  font-size: 1.125rem;
-  font-weight: 600;
+  padding: 0;
+  font-family: var(--ls-police-titre);
+  font-size: 1.375rem;
+  font-weight: 500;
   color: var(--ls-text);
-  padding-inline: var(--ls-space-2);
 }
 
 .champ {
@@ -273,16 +376,6 @@
 }
 
 /* Le thème actif, en tête de l'écran, ADR-046 section Risques. */
-.themeActif {
-  margin: 0 0 var(--ls-space-4);
-  color: var(--ls-text);
-}
-
-.themeActif a {
-  color: var(--ls-primary);
-  text-decoration: underline;
-}
-
 /*
  * Lien d'une issue, LS-319 : une cible de 44 px, la règle du projet pour
  * tout contrôle, relevée par la revue d'interface sur « Confirmer mon

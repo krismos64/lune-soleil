@@ -37,6 +37,7 @@ import {
 import { LIBELLES_ETAT_PIECE, LIBELLES_RETRACTATION } from "./libelles";
 import { TraitementDemande } from "./traitement-demande";
 import { ChargementAdministration } from "@/components/chargement-administration";
+import { TON_RETRACTATION } from "@/lib/ton-etat";
 import styles from "./retractations.module.css";
 
 export const metadata = {
@@ -198,7 +199,11 @@ async function ListeDemandes() {
       ) : (
         <ul className={styles.liste}>
           {demandes.map((demande) => (
-            <li key={demande.id} className={styles.carte}>
+            <li
+              key={demande.id}
+              className={styles.carte}
+              data-etat={TON_RETRACTATION[demande.statut]}
+            >
               <div className={styles.enTeteCarte}>
                 <span
                   className={`${styles.badge} ${styles[`badge${demande.statut}`] ?? ""}`}

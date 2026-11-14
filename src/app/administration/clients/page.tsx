@@ -85,7 +85,6 @@ export default async function PageClients({
 
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
-      <p className={styles.surtitre}>Relation client</p>
       <h1 className={styles.titre}>Clients</h1>
 
       <p className={styles.introduction}>

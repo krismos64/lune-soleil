@@ -142,6 +142,49 @@
   }
 }
 
+/*
+ * LE REPÈRE D'ÉTAT D'UNE LIGNE DE TRAVAIL, LS-326 : un bord de couleur à
+ * gauche, défini ICI pour tous les écrans. Une ligne le reçoit par
+ * `data-etat`, calculé depuis son statut par `src/lib/ton-etat.ts`.
+ *
+ * `:global` : l'attribut est posé par les pages, dont les classes sont
+ * propres à chaque module. Quatre tons, pris dans les jetons d'ADR-022. LA
+ * COULEUR DOUBLE LE BADGE ÉCRIT de la ligne, elle ne le remplace pas : un
+ * état ne se dit jamais par la couleur seule.
+ *
+ * LA LIGNE SE SOULÈVE AU SURVOL, réponse à un geste, ADR-045 amendé : une
+ * ombre et un pixel, rien qui déplace le contenu voisin.
+ */
+.colonne :global([data-etat]) {
+  --ls-etat: var(--ls-text-muted);
+  border-left: 4px solid var(--ls-etat);
+  border-radius: var(--ls-radius-md);
+  transition:
+    box-shadow var(--ls-duration-base) var(--ls-easing),
+    transform var(--ls-duration-base) var(--ls-easing);
+}
+
+.colonne :global([data-etat="attente"]) {
+  --ls-etat: var(--ls-accent-terracotta);
+}
+
+.colonne :global([data-etat="cours"]) {
+  --ls-etat: var(--ls-primary);
+}
+
+.colonne :global([data-etat="fait"]) {
+  --ls-etat: var(--ls-success);
+}
+
+.colonne :global([data-etat="ecarte"]) {
+  --ls-etat: var(--ls-error);
+}
+
+.colonne :global([data-etat]):hover {
+  box-shadow: var(--ls-shadow-soft);
+  transform: translateY(-1px);
+}
+
 @keyframes trait-titre {
   from {
     transform: scaleX(0);

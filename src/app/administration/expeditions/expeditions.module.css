@@ -29,20 +29,6 @@
   text-decoration: underline;
 }
 
-/*
- * LE SUR-TITRE EMPLOIE `gold-deep` ET NON `terracotta`, LS-181. Un libelle de
- * 11 px gras n'est PAS du texte large, seuil de 18,66 px : `terracotta` y donne
- * 4,07:1, sous AA. `--ls-accent-gold-deep` sur `--ls-background` : 4,72:1.
- */
-.surtitre {
-  margin: 0 0 var(--ls-space-1);
-  color: var(--ls-accent-gold-deep);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 /* Serif de titre, meme jeton que le tableau de bord, LS-181. */
 .titre {
   margin: 0 0 var(--ls-space-2);

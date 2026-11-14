@@ -95,7 +95,6 @@ export default async function PageFactures({
   const periodeActive = reconnaitrePeriode(parametres.periode);
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
-      <p className={styles.surtitre}>Comptabilité</p>
       <h1 className={styles.titre}>Factures et avoirs</h1>
 
       <p className={styles.introduction}>
