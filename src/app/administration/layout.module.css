@@ -117,6 +117,26 @@
  * sa ligne, environ 24 px. Correction du meme type que celle du lien « retour »
  * de l'ecran des commandes, le 27 aout 2026.
  */
+.bandeauActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--ls-space-2);
+  min-width: 0;
+  margin-left: auto;
+}
+
+/*
+ * SOUS 560 PX, LE MOT « Administration » CÈDE SA PLACE, LS-325 : le bandeau
+ * porte deux contrôles, et le menu au-dessus dit déjà où l'on est. Les deux
+ * contrôles tiennent alors à 320 px sans se replier.
+ */
+@media (max-width: 559px) {
+  .bandeauSurtitre {
+    display: none;
+  }
+}
+
 .bandeauLien {
   display: inline-flex;
   align-items: center;

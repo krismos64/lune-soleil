@@ -74,8 +74,7 @@
 }
 
 .basculeIcone {
-  font-size: 1.125rem;
-  line-height: 1;
+  flex: none;
 }
 
 /* ----------------------------------------------------------------- la barre */
@@ -97,6 +96,24 @@
 
 .barreOuverte {
   display: block;
+}
+
+/*
+ * LE MENU MOBILE SE DÉPLIE, LS-325, ADR-045 amendé : réponse au geste, une
+ * fois, sous 768 px seulement. Au-delà la barre est permanente et ne bouge
+ * pas ; en mouvement réduit non plus.
+ */
+@media (max-width: 767px) and (prefers-reduced-motion: no-preference) {
+  .barreOuverte {
+    animation: deplie-menu var(--ls-duration-base) var(--ls-easing-sortie);
+  }
+}
+
+@keyframes deplie-menu {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
 }
 
 /*
@@ -134,10 +151,39 @@
 
 .enseigne {
   display: flex;
-  flex-direction: column;
-  gap: var(--ls-space-1);
+  align-items: center;
+  gap: var(--ls-space-3);
   padding: var(--ls-space-4);
   border-bottom: 1px solid var(--ls-border);
+}
+
+.enseigneTextes {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* La marque en trait, or du logo : décor seul, jamais un texte. */
+.enseigneMarque {
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.marqueLune {
+  fill: var(--ls-or-moyen);
+}
+
+.marqueSoleil {
+  fill: var(--ls-or-clair);
+}
+
+.marqueRayons {
+  fill: none;
+  stroke: var(--ls-or-moyen);
+  stroke-width: 1.4;
+  stroke-linecap: round;
 }
 
 .enseigneNom {
@@ -149,9 +195,7 @@
 
 .enseigneRole {
   color: var(--ls-text-muted);
-  font-size: 0.6875rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.8125rem;
 }
 
 /* ------------------------------------------------------------- les rubriques */
@@ -168,17 +212,50 @@
  * 3 px vers la droite au changement d'ecran, et la liste entiere semblerait
  * tressauter a chaque navigation.
  */
+/*
+ * LA RUBRIQUE EST UNE PASTILLE ARRONDIE, LS-325, détachée du bord : l'icône,
+ * le libellé, le compte. Le repère de la rubrique courante est un trait à
+ * gauche qui GRANDIT depuis son centre, réponse à la navigation et non décor.
+ */
 .lien {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: var(--ls-space-2);
+  gap: var(--ls-space-3);
   min-height: var(--ls-touch-target);
-  padding: var(--ls-space-3) var(--ls-space-4);
-  border-left: 3px solid transparent;
+  margin: 0 var(--ls-space-2);
+  padding: var(--ls-space-2) var(--ls-space-3);
+  border-radius: var(--ls-radius-md);
   background: var(--ls-admin-barre);
   color: var(--ls-text-muted);
   text-decoration: none;
   font-size: 0.9375rem;
+}
+
+.lien::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--ls-space-2) * -1);
+  top: 22%;
+  bottom: 22%;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--ls-primary);
+  transform: scaleY(0);
+  transition: transform var(--ls-duration-base) var(--ls-easing-sortie);
+}
+
+.lien[aria-current="page"]::before {
+  transform: scaleY(1);
+}
+
+.lienIcone {
+  flex: none;
+  transition: transform var(--ls-duration-base) var(--ls-easing-sortie);
+}
+
+.lien:hover .lienIcone {
+  transform: translateX(2px);
 }
 
 .lienLibelle {
@@ -203,7 +280,6 @@
  * `--ls-primary-hover` sur `--ls-admin-actif` : 10,82:1, AAA.
  */
 .lien[aria-current="page"] {
-  border-left-color: var(--ls-primary);
   background: var(--ls-admin-actif);
   color: var(--ls-primary-hover);
   font-weight: 700;
@@ -364,8 +440,6 @@
   margin: 0;
   padding: var(--ls-space-3) var(--ls-space-4) 0;
   color: var(--ls-text-muted);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.8125rem;
+  font-weight: 600;
 }
