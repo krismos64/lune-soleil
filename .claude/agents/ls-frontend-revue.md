@@ -125,7 +125,9 @@ des pages publiques » de `frontend-design.md` :
   amendés par LS-268.
 
 Un thème saisonnier suit ADR-046, amendé par LS-277 pour `NOEL_1` et
-`NOEL_2`, et par LS-318 pour `BLACK_WEEK` :
+`NOEL_2`, par LS-318 pour `BLACK_WEEK`, et par LS-323 pour les douze thèmes
+d'ambiance (socle commun `decor-saison.tsx`, table `AMBIANCES`, régime
+ordinaire sans fond sombre, deux jetons `--ls-saison-*` à 4,5:1) :
 - un jeu fermé écrit dans le code, sur l'accueil et le catalogue seulement ;
 - aucun texte saisi, aucune promesse de prix, de date ni de livraison ; le
   bandeau Black Week de l'accueil, LS-322, ne porte le taux, la portée et la

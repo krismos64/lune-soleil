@@ -265,10 +265,11 @@ Les règles qui s'appliquent à toute animation d'une page publique :
   **au plus tard cinq secondes** après son entrée dans l'écran, WCAG 2.2.2,
   sans bouton de pause (arbitrage du 4 octobre 2026). La borne de dix secondes
   écrite d'abord ici n'était pas conforme, correction d'ADR-045. **Seule
-  exception, les thèmes de Noël et Black Week** (amendements LS-277 et
-  LS-318 d'ADR-045) : neige, rayons du soleil, boules, halo et poussière d'or
-  y bougent en continu, avec un bouton de pause visible qui fige toute la
-  page, absent en mouvement réduit et sans script ;
+  exception, les thèmes saisonniers** (amendements LS-277, LS-318 et LS-323
+  d'ADR-045) : neige, rayons du soleil, boules, halo et poussière d'or sous
+  Noël et Black Week, nuée de motifs, halo, anneau et médaillon sous les
+  thèmes d'ambiance y bougent en continu, avec un bouton de pause visible qui
+  fige toute la page, absent en mouvement réduit et sans script ;
 - seules `transform`, `opacity` et, pour dessiner un tracé,
   `stroke-dashoffset` s'animent, et rien ne tourne hors de l'écran ;
 - **une phrase posée sur un fond qui change** ne s'affiche que là où son
@@ -314,10 +315,26 @@ texte** : un champ libre laisserait passer une promotion ou un délai inventés.
   la réduction relève de la promotion, LS-319. **Le bandeau de l'accueil**,
   LS-322, `BandeauBlackWeek`, dit « Black Week » seul sans promotion, et le
   taux, la portée et la période sous promotion active, texte immobile.
+- **Les douze thèmes d'ambiance de LS-323** (saisons, Nouvel An,
+  Saint-Valentin, Pâques, droits des femmes, Octobre rose, Novembre bleu,
+  soldes) restent dans le régime ordinaire, **sans aucune exception** : un
+  seul socle, deux jetons par thème, `--ls-saison-un` et `--ls-saison-deux`,
+  qui tiennent tous deux 4,5:1 sur les trois fonds, la table `AMBIANCES` et
+  les composants de `decor-saison.tsx`. **Un thème d'ambiance s'ajoute par
+  une valeur, une ligne de table et un bloc de jetons, jamais par une branche
+  dans une page.** Les teintes claires des décors se font par `color-mix`,
+  jamais par un jeton clair. Le bleu, le violet et le rose n'existent que
+  sous ces thèmes, en accent et en décor.
+- **Six d'entre eux portent un bandeau d'opération**, `BandeauOperation`
+  (Saint-Valentin, droits des femmes, Octobre rose, Novembre bleu, soldes
+  d'été et d'hiver), au contrat du bandeau Black Week : l'événement seul sans
+  promotion, le taux, la portée et la période de la promotion active sinon.
+  **Aucun thème n'écrit de taux**, et Octobre rose comme Novembre bleu
+  n'annoncent aucun don.
 - **Chaque jeton de thème est une paire mesurée** sur crème, sable et blanc,
   C31 ; `verifier-contraste.sh` mesure sous chaque thème.
 - **Les décors suivent ADR-045** : bornés à cinq secondes, sauf les décors
-  continus des thèmes de Noël et Black Week sous bouton de pause, absents en mouvement
+  continus des thèmes saisonniers sous bouton de pause, absents en mouvement
   réduit, jamais par-dessus un texte, un contrôle ou un bijou.
 - **Aucune phrase ne parle de livraison, de date ou de prix.**
 

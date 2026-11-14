@@ -8,6 +8,33 @@
 | Amende | `.claude/rules/frontend-design.md`, sections « Interdits visuels » et « Paillettes » |
 | Ticket | LS-259 |
 
+## Amendement du 14 novembre 2026, mouvement continu des thèmes d'ambiance, LS-323
+
+**Demande de l'exploitante, transmise par Christophe** : douze thèmes de plus
+« avec du motion design et des animations », ADR-046 amendé le même jour.
+L'exception des amendements LS-277 et LS-318 s'étend à ces douze thèmes, aux
+**mêmes conditions** : bouton de pause flottant, rien en mouvement réduit,
+rien sans script, jamais sur un texte, une photographie ou un contrôle.
+
+- **Décors permis en mouvement continu**, et eux seuls : la nuée de motifs du
+  thème (qui tombe, monte ou scintille, dans le cadre de l'emblème, la zone de
+  décor du bandeau du catalogue et les marges de la grille sur grand écran),
+  le halo de saison qui respire (cycle de 5 s), l'anneau pointillé du
+  médaillon (un tour en 48 s), le grand motif du médaillon (un cœur bat, un
+  flocon ou un soleil tourne, le reste se balance), la couronne de motifs qui
+  flotte, et, sous les six thèmes à bandeau d'opération, le trait qui fait le
+  tour du cadre et les motifs de ses deux côtés.
+- **Entrées, bornées** : l'anneau se trace, le grand motif et la couronne
+  éclosent, la frise se déroule. Tout cela finit en moins de cinq secondes.
+- **Interactions** : le liseré de couleur d'une carte se trace au survol et au
+  focus, le motif d'un filtre pivote au survol.
+- **Le texte reste immobile** : ruban, bandeau d'opération, titres et
+  accroches ne vivent sous aucun décor animé.
+
+**Pourquoi le même cadre.** Reprendre `data-continu` et le bouton de pause à
+l'identique évite un troisième régime : les douze thèmes se figent par le même
+bouton, et le même test vérifie qu'eux seuls durent passé la borne.
+
 ## Amendement du 12 novembre 2026, mouvement continu du thème Black Week, LS-318
 
 **Arbitrage de Christophe sur maquette**, `docs/prototypes/theme-black-week/`,
