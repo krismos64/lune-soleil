@@ -115,14 +115,32 @@ des pages publiques » de `frontend-design.md` :
 - contenu principal visible au premier rendu, sans script et en mouvement
   réduit ;
 - arrêt au plus tard cinq secondes après l'entrée dans l'écran, par
-  `data-borne`, sauf les décors continus des thèmes de Noël et Black Week
-  (amendements LS-277 et LS-318 d'ADR-045) : bouton de pause visible, nommé, qui fige toute la page,
+  `data-borne`, sauf les décors continus des thèmes saisonniers, Noël, Black
+  Week et les douze thèmes d'ambiance (amendements LS-277, LS-318 et LS-323
+  d'ADR-045) : bouton de pause visible, nommé, qui fige toute la page,
   absent en mouvement réduit, et rien qui bouge sur un texte, une photographie
   ou un contrôle ;
 - `transform`, `opacity` et `stroke-dashoffset` seulement ;
 - rien qui bouge dans un formulaire pendant une saisie ;
 - l'intensité selon le type de page, dont les portes d'entrée et le contact
   amendés par LS-268.
+
+**L'administration bouge aussi depuis LS-325 et LS-326**, dans un cadre plus
+étroit : une entrée orchestrée sur le tableau de bord (l'arc du jour), deux
+signes d'orientation par écran (l'icône du repère qui se trace, le trait du
+titre qui grandit), des réponses à un geste ; **aucune boucle**, puisqu'elle
+n'a pas de bouton de pause, rien pendant une saisie, les chiffres ne
+s'animent pas, et **un survol ne déplace jamais une ligne qui contient un
+champ**. Tout déplacement au survol vit sous
+`prefers-reduced-motion: no-preference`.
+
+**La couche commune des écrans d'administration**, `frontend-design.md` :
+vérifier qu'un écran neuf ne pose ni police ni surtitre sur son `h1` (le
+layout et le repère d'écran le font), qu'il emploie `var(--ls-famille)` sans
+choisir de couleur, et qu'une ligne de travail dit son état par `data-etat`
+calculé dans `src/lib/ton-etat.ts`, **toujours doublé d'un badge écrit**.
+La palette « Aller à… » lit `RUBRIQUES` : une rubrique ajoutée y entre seule,
+avec son `icone`.
 
 Un thème saisonnier suit ADR-046, amendé par LS-277 pour `NOEL_1` et
 `NOEL_2`, par LS-318 pour `BLACK_WEEK`, et par LS-323 pour les douze thèmes
