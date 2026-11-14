@@ -455,6 +455,9 @@
   flex-direction: column;
 }
 
+/* @bordure-decorative le filet separe deux lignes d'articles, il ne delimite
+ * aucun controle : la case a cocher et le champ de taux de la ligne portent
+ * chacun leur propre limite. */
 .articlePromotion {
   display: flex;
   flex-wrap: wrap;

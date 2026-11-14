@@ -61,7 +61,46 @@ Paramètres mesuré. ADR : ADR-051 amendé avant le code.
 - `npm run test` : 2099 passés. `db:verifier` : 172 réussites.
   `verifier-registre-traitements.sh` : 43 tables rangées.
 - Bout en bout, `parametres-administration` : 69 passés aux quatre largeurs,
-  formulaire déplié sans débordement, refus rendus par le serveur.
+  formulaire déplié sans débordement, refus rendus par le serveur ; avec les
+  suites des thèmes, 189 passés après les corrections de revue.
+
+## Revues
+
+**`ls-critical-reviewer` : aucun défaut bloquant ni à corriger.** Les deux
+requêtes, affichage et commande, rejouées en base sur sept pièces et sous les
+deux portées, donnent le même taux pour toute pièce que le catalogue montre.
+Une commande ne peut pas voir une promotion sans ses articles, les deux étant
+écrits dans une transaction et lus par une instruction. Deux suites données :
+
+- la requête de commande attribuait un taux à une pièce archivée ou d'un
+  produit non actif, que la réservation refusait ensuite : elle porte
+  désormais les mêmes filtres que l'affichage ;
+- `EXPLOITATION.md` : désactiver la promotion avant tout retour à une image
+  d'avant LS-324, qui ignore les taux par article.
+
+**`ls-frontend-revue` : un défaut bloquant, corrigé.** React 19 remet un
+formulaire à ses valeurs de départ à la fin de chaque action portée par
+`action={…}`, refus compris. Après un refus, le nom revenait à « Promotion » et
+les cases se décochaient dans la page pendant que l'état les montrait cochées :
+un second clic pouvait activer autre chose que ce qui était affiché. L'envoi
+passe désormais par `onSubmit` dans une transition, tous les champs sont
+contrôlés, et le test de bout en bout vérifie le nom, la portée et la case
+après chaque refus. **Mutation** : `onSubmit` retiré, le test rougit sur
+`Expected "SOLDES_ETE", Received "PROMOTION"`, puis restauré. La période
+annoncée portait le même défaut depuis LS-319, corrigé de même.
+
+Corrigé aussi : focus rendu au formulaire après une bascule, liste d'articles
+illisible distinguée de « aucun article », champs fautifs marqués
+`aria-invalid`, rappel des périodes légales sous le nom « Soldes », écran
+relu après « déjà active », résumé exact quand rien n'est réduit, Entrée dans
+un champ de taux n'active plus, « jusqu'à » insécable, catégories dans l'ordre
+de la boutique.
+
+Laissé, signalé : le message de refus ne nomme pas l'article fautif (le champ
+est marqué) ; sous le thème Black Week, l'accueil titre du nom du thème quand
+le catalogue et la facture portent le nom de la promotion, ADR-051 point 4 ;
+« jusqu'à −X % » quand le taux le plus haut ne vise qu'une pièce, pratique à
+vérifier aux sources.
 
 ## Ce qui a dérapé
 
@@ -76,9 +115,9 @@ Paramètres mesuré. ADR : ADR-051 amendé avant le code.
 
 ## Reste
 
-- Revues `ls-critical-reviewer` et `ls-frontend-revue`, puis fusion.
-- Production : migration classée destructive (retrait puis pose de
-  `chk_promotion_code_connu`), sur accord de Christophe.
+- Fusion, puis production : accord de Christophe donné le 14 novembre 2026
+  (« ok mets en prod »). Migration classée destructive (retrait puis pose de
+  `chk_promotion_code_connu`).
 - Point ouvert de LS-323 : « Soldes » affiché sans promotion active.
 
 ## État des tickets
