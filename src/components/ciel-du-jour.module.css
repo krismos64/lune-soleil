@@ -1,0 +1,123 @@
+/*
+ * L'arc du jour du tableau de bord, LS-325, ADR-045 amendé : onzième décor
+ * où le dégradé de ciel est permis, teintes de `tokens.css`. Aucun texte
+ * n'est posé dessus.
+ */
+.ciel {
+  position: relative;
+  height: 6rem;
+  overflow: hidden;
+  border-radius: var(--ls-radius-lg) var(--ls-radius-lg) 0 0;
+  background: linear-gradient(
+    180deg,
+    var(--ls-ciel-jour-haut),
+    var(--ls-ciel-jour-bas)
+  );
+}
+
+.ciel[data-moment="aube"] {
+  background: linear-gradient(
+    180deg,
+    var(--ls-ciel-aube-haut),
+    var(--ls-ciel-aube-bas)
+  );
+}
+
+.ciel[data-moment="crepuscule"] {
+  background: linear-gradient(
+    180deg,
+    var(--ls-ciel-crepuscule-haut),
+    var(--ls-ciel-crepuscule-bas)
+  );
+}
+
+.ciel[data-moment="nuit"] {
+  background: linear-gradient(
+    180deg,
+    var(--ls-ciel-nuit-haut),
+    var(--ls-ciel-nuit-bas)
+  );
+}
+
+.dessin {
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+}
+
+.arc {
+  fill: none;
+  stroke: var(--ls-or-moyen);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  opacity: 0.55;
+}
+
+.horizon {
+  fill: none;
+  stroke: var(--ls-or-moyen);
+  stroke-width: 1;
+  opacity: 0.35;
+}
+
+.ciel[data-moment="nuit"] .arc,
+.ciel[data-moment="nuit"] .horizon,
+.ciel[data-moment="crepuscule"] .arc,
+.ciel[data-moment="crepuscule"] .horizon {
+  stroke: var(--ls-or-pale);
+}
+
+.halo {
+  fill: var(--ls-or-pale);
+  opacity: 0.45;
+}
+
+.soleil {
+  fill: var(--ls-or-clair);
+  stroke: var(--ls-or-moyen);
+  stroke-width: 1;
+}
+
+.lune {
+  fill: var(--ls-or-pale);
+}
+
+.etoile {
+  fill: var(--ls-or-pale);
+  opacity: 0.8;
+}
+
+/*
+ * UNE ENTRÉE, PUIS L'IMMOBILITÉ : l'arc se trace, l'astre monte depuis
+ * l'horizon jusqu'à l'heure. `transform` et `stroke-dashoffset` seulement,
+ * aucune itération infinie. En mouvement réduit, rien : l'astre est à sa
+ * place dès le premier rendu.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .arc {
+    stroke-dashoffset: 1;
+    animation: trace-arc 1100ms var(--ls-easing-sortie) 100ms forwards;
+  }
+
+  .astre {
+    animation: monte-astre 1500ms var(--ls-easing-sortie) 250ms both;
+  }
+}
+
+@keyframes trace-arc {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes monte-astre {
+  from {
+    opacity: 0;
+    transform: translate(var(--depart-x), var(--depart-y));
+  }
+  35% {
+    opacity: 1;
+  }
+}

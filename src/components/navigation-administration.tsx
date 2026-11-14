@@ -43,6 +43,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useId, useRef, useState } from "react";
 
+import { IconeAdministration, type NomIcone } from "./icones-administration";
 import styles from "./navigation-administration.module.css";
 import { NOM_BOUTIQUE } from "@/lib/seo";
 import { initialesClient } from "@/lib/nom-affiche";
@@ -60,6 +61,8 @@ export type Rubrique = {
   chemin: string;
   libelle: string;
   groupe: CleGroupe;
+  /** Icône décorative de la rubrique, LS-325 : le libellé la nomme. */
+  icone: NomIcone;
   compteur?: keyof Comptages;
 };
 
@@ -133,82 +136,106 @@ export type Comptages = {
  * l'exploitante change de telephone.
  */
 export const RUBRIQUES: readonly Rubrique[] = [
-  { chemin: "/administration", libelle: "Tableau de bord", groupe: "ensemble" },
+  {
+    chemin: "/administration",
+    icone: "bord",
+    libelle: "Tableau de bord",
+    groupe: "ensemble",
+  },
   {
     chemin: "/administration/alertes",
+    icone: "alertes",
     libelle: "Alertes",
     groupe: "ensemble",
     compteur: "alertesOuvertes",
   },
   {
     chemin: "/administration/statistiques",
+    icone: "statistiques",
     libelle: "Statistiques",
     groupe: "ensemble",
   },
   {
     chemin: "/administration/commandes",
+    icone: "commandes",
     libelle: "Commandes",
     groupe: "ventes",
     compteur: "commandesEnCours",
   },
   {
     chemin: "/administration/expeditions",
+    icone: "expeditions",
     libelle: "Expéditions",
     groupe: "ventes",
     compteur: "expeditionsEnTransit",
   },
   {
     chemin: "/administration/retractations",
+    icone: "retractations",
     libelle: "Rétractations",
     groupe: "ventes",
     compteur: "retractationsEnCours",
   },
   {
     chemin: "/administration/factures",
+    icone: "factures",
     libelle: "Factures et avoirs",
     groupe: "ventes",
   },
   {
     chemin: "/administration/messages",
+    icone: "messages",
     libelle: "Messages",
     groupe: "clients",
     compteur: "messagesNonLus",
   },
   {
     chemin: "/administration/avis",
+    icone: "avis",
     libelle: "Avis",
     groupe: "clients",
     compteur: "avisAModerer",
   },
-  { chemin: "/administration/clients", libelle: "Clients", groupe: "clients" },
+  {
+    chemin: "/administration/clients",
+    icone: "clients",
+    libelle: "Clients",
+    groupe: "clients",
+  },
   {
     chemin: "/administration/produits",
+    icone: "produits",
     libelle: "Produits",
     groupe: "catalogue",
   },
   {
     chemin: "/administration/categories",
+    icone: "categories",
     libelle: "Catégories",
     groupe: "catalogue",
   },
   {
     chemin: "/administration/stocks",
+    icone: "stocks",
     libelle: "Stocks et marchés",
     groupe: "catalogue",
     compteur: "variantesStockFaible",
   },
   {
     chemin: "/administration/parametres",
+    icone: "parametres",
     libelle: "Paramètres",
     groupe: "reglages",
   },
   {
     chemin: "/administration/passkeys",
+    icone: "passkeys",
     libelle: "Vos passkeys",
     groupe: "reglages",
   },
   {
     chemin: "/administration/journal-connexions",
+    icone: "connexions",
     libelle: "Connexions",
     groupe: "reglages",
   },
@@ -376,9 +403,10 @@ export function NavigationAdministration({
         aria-controls={identifiantPanneau}
         onClick={() => setOuverte((etat) => !etat)}
       >
-        <span className={styles.basculeIcone} aria-hidden="true">
-          {ouverte ? "✕" : "☰"}
-        </span>
+        <IconeAdministration
+          nom={ouverte ? "fermer" : "menu"}
+          className={styles.basculeIcone}
+        />
         {ouverte ? "Fermer le menu" : "Menu"}
       </button>
 
@@ -388,8 +416,27 @@ export function NavigationAdministration({
         aria-label="Sections de l'administration"
       >
         <div className={styles.enseigne}>
-          <span className={styles.enseigneNom}>{NOM_BOUTIQUE}</span>
-          <span className={styles.enseigneRole}>Administration</span>
+          {/* La lune et le soleil de la marque, en trait : décor seul. */}
+          <svg
+            className={styles.enseigneMarque}
+            viewBox="0 0 40 40"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path
+              className={styles.marqueLune}
+              d="M17 6C9 6 4 12.5 5 20c1 7 7.5 11.5 14.5 9.5C13 29 9 24.5 9.5 18.5 10 12.5 13 8.5 17 6Z"
+            />
+            <circle className={styles.marqueSoleil} cx="25" cy="17" r="5.5" />
+            <path
+              className={styles.marqueRayons}
+              d="M25 7.5v2M25 24.5v2M15.5 17h2M32.5 17h2M18.3 10.3l1.4 1.4M30.3 22.3l1.4 1.4M31.7 10.3l-1.4 1.4M19.7 22.3l-1.4 1.4"
+            />
+          </svg>
+          <span className={styles.enseigneTextes}>
+            <span className={styles.enseigneNom}>{NOM_BOUTIQUE}</span>
+            <span className={styles.enseigneRole}>Administration</span>
+          </span>
         </div>
 
         {/*
@@ -460,6 +507,10 @@ export function NavigationAdministration({
                       aria-current={courante ? "page" : undefined}
                       onClick={fermer}
                     >
+                      <IconeAdministration
+                        nom={rubrique.icone}
+                        className={styles.lienIcone}
+                      />
                       <span className={styles.lienLibelle}>
                         {rubrique.libelle}
                       </span>

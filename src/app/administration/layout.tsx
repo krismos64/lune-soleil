@@ -36,6 +36,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 
 import { NavigationAdministration } from "@/components/navigation-administration";
+import { PaletteAdministration } from "@/components/palette-administration";
 import { lireIdentite } from "@/services/autorisation";
 import { lireComptages, lireNomAffiche } from "@/services/tableau-bord";
 
@@ -145,9 +146,16 @@ export default async function LayoutAdministration({
            * nouvel onglet sans le dire est une surprise, et le signaler
            * alourdirait un lien secondaire.
            */}
-          <Link className={styles.bandeauLien} href="/" prefetch={false}>
-            Voir la boutique
-          </Link>
+          <div className={styles.bandeauActions}>
+            {/*
+             * LA PALETTE « Aller à… », LS-325 : toute rubrique et les actions
+             * directes en quelques lettres, Ctrl+K ou Cmd+K au clavier.
+             */}
+            <PaletteAdministration />
+            <Link className={styles.bandeauLien} href="/" prefetch={false}>
+              Voir la boutique
+            </Link>
+          </div>
         </div>
 
         {children}

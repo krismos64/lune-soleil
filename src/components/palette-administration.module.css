@@ -1,0 +1,237 @@
+/*
+ * Palette « Aller à… » de l'administration, LS-325. Jetons seulement.
+ *
+ * LE MOUVEMENT RÉPOND À UN GESTE, ADR-045 amendé : la palette glisse à son
+ * ouverture, une fois, et rien ne bouge ensuite. Absent en mouvement réduit.
+ */
+
+/* ---------- Bouton du bandeau ---------- */
+
+.declencheur {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ls-space-2);
+  min-height: var(--ls-touch-target);
+  min-width: 0;
+  padding: 0 var(--ls-space-3);
+  border: 1px solid var(--ls-border-controle);
+  border-radius: 999px;
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.declencheur:hover {
+  background: var(--ls-admin-actif);
+  color: var(--ls-primary-hover);
+}
+
+.loupe {
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+/* Le rappel du raccourci : sur un écran à clavier seulement. */
+.touche {
+  display: none;
+  padding: 0 var(--ls-space-2);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-admin-actif);
+  color: var(--ls-primary-hover);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+@media (min-width: 768px) and (hover: hover) {
+  .touche {
+    display: inline-block;
+  }
+}
+
+/* ---------- Dialogue ---------- */
+
+.dialogue {
+  width: min(100vw - 2 * var(--ls-space-3), 34rem);
+  max-width: none;
+  max-height: min(100dvh - 2 * var(--ls-space-4), 36rem);
+  margin: var(--ls-space-4) auto auto;
+  padding: 0;
+  border: 0;
+  border-radius: var(--ls-radius-lg);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  box-shadow: 0 30px 80px -30px
+    color-mix(in srgb, var(--ls-primary-hover) 70%, transparent);
+  overflow: hidden;
+}
+
+.dialogue::backdrop {
+  background: color-mix(in srgb, var(--ls-primary-hover) 38%, transparent);
+}
+
+@media (min-width: 768px) {
+  .dialogue {
+    margin-top: 12vh;
+  }
+}
+
+.panneau {
+  display: flex;
+  flex-direction: column;
+  max-height: inherit;
+}
+
+.saisie {
+  display: flex;
+  align-items: center;
+  gap: var(--ls-space-2);
+  padding: var(--ls-space-2) var(--ls-space-3);
+  border-bottom: 1px solid var(--ls-border);
+  color: var(--ls-text);
+}
+
+/* @bordure-decorative le champ occupe toute la ligne de tete du panneau, que
+ * le filet du dessous et la loupe identifient : il n'a pas de bord propre. */
+.champ {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--ls-touch-target);
+  padding: 0;
+  border: 0;
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.champ::placeholder {
+  color: var(--ls-text-muted);
+}
+
+/* Le contour de focus part vers l'intérieur : le champ touche le panneau. */
+.champ:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: -2px;
+  border-radius: var(--ls-radius-sm);
+}
+
+/* @bordure-decorative bouton icone sans bord, identifie par sa croix et son
+ * nom accessible, dans la ligne de tete du panneau. */
+.fermeture {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--ls-touch-target);
+  height: var(--ls-touch-target);
+  border: 0;
+  border-radius: 50%;
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  cursor: pointer;
+}
+
+.fermeture:hover {
+  background: var(--ls-admin-actif);
+  color: var(--ls-primary-hover);
+}
+
+.liste {
+  flex: 1;
+  margin: 0;
+  padding: var(--ls-space-2);
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--ls-space-3);
+  min-height: var(--ls-touch-target);
+  padding: var(--ls-space-2) var(--ls-space-3);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  cursor: pointer;
+}
+
+/* L'option active se reconnaît par son aplat ET par son filet à gauche. */
+.option[aria-selected="true"] {
+  background: var(--ls-admin-actif);
+  color: var(--ls-primary-hover);
+  box-shadow: inset 3px 0 0 var(--ls-primary);
+}
+
+.optionIcone {
+  flex: none;
+}
+
+.optionTextes {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.optionLibelle {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.optionPrecision {
+  font-size: 0.8125rem;
+}
+
+.etat {
+  margin: 0;
+  padding: 0 var(--ls-space-4);
+  color: var(--ls-text);
+}
+
+.etat:not(:empty) {
+  padding-block: var(--ls-space-4);
+}
+
+.aide {
+  display: none;
+  margin: 0;
+  padding: var(--ls-space-2) var(--ls-space-4);
+  border-top: 1px solid var(--ls-border);
+  background: var(--ls-admin-barre);
+  color: var(--ls-text);
+  font-size: 0.8125rem;
+}
+
+@media (min-width: 768px) and (hover: hover) {
+  .aide {
+    display: block;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dialogue[open] {
+    animation: ouvre-palette var(--ls-duration-base) var(--ls-easing-sortie);
+  }
+
+  .dialogue[open]::backdrop {
+    animation: voile var(--ls-duration-base) ease-out;
+  }
+}
+
+@keyframes ouvre-palette {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.98);
+  }
+}
+
+@keyframes voile {
+  from {
+    opacity: 0;
+  }
+}

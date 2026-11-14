@@ -29,12 +29,31 @@
  * `--ls-accent-gold-deep` sur `--ls-background` : 4,72:1, AA. C'est le jeton
  * prescrit pour ce cas exact.
  */
+/*
+ * L'EN-TÊTE, LS-325 : l'arc du jour au-dessus, le texte dessous sur la
+ * surface blanche. La date s'écrit en bas de casse, « Samedi 14 novembre » :
+ * une ligne lue chaque matin n'a pas à crier.
+ */
+.entete {
+  margin: 0 0 var(--ls-space-4);
+  border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-lg);
+  background: var(--ls-surface);
+  overflow: hidden;
+}
+
+.accueil {
+  padding: var(--ls-space-4);
+}
+
 .surtitre {
   margin: 0 0 var(--ls-space-1);
   color: var(--ls-accent-gold-deep);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.surtitre::first-letter {
   text-transform: uppercase;
 }
 
@@ -52,8 +71,101 @@
 }
 
 .introduction {
+  margin: 0;
+  max-width: 42rem;
+  color: var(--ls-text);
+}
+
+/* ---------- Actions directes ---------- */
+
+.actions {
   margin: 0 0 var(--ls-space-5);
-  color: var(--ls-text-muted);
+}
+
+.listeActions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: var(--ls-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * UNE ACTION EST UN LIEN, pas un bouton : elle mène à un écran. Sa pastille
+ * d'icône glisse d'un cran au survol, réponse au geste, ADR-045 amendé.
+ */
+.action {
+  display: flex;
+  align-items: center;
+  gap: var(--ls-space-3);
+  min-height: 3.5rem;
+  padding: var(--ls-space-2) var(--ls-space-3);
+  border: 1px solid var(--ls-border-controle);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  text-decoration: none;
+}
+
+.action:hover {
+  background: var(--ls-admin-actif);
+  color: var(--ls-primary-hover);
+}
+
+.action:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+.actionIcone {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+  transition: transform var(--ls-duration-base) var(--ls-easing-sortie);
+}
+
+.action:hover .actionIcone {
+  transform: translateX(3px);
+}
+
+.actionTextes {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.actionLibelle {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.actionPrecision {
+  font-size: 0.8125rem;
+}
+
+/* Les quatre actions ont la même hauteur, quel que soit leur libellé. */
+.listeActions li {
+  display: flex;
+}
+
+.listeActions .action {
+  flex: 1;
+}
+
+/*
+ * SOUS 480 PX, LE NOM SUFFIT : quatre lignes courtes laissent « À traiter »
+ * dans le premier écran d'un téléphone.
+ */
+@media (max-width: 479px) {
+  .actionPrecision {
+    display: none;
+  }
 }
 
 /* ----------------------------------------------------------------- les tuiles */
@@ -83,6 +195,7 @@
   padding: var(--ls-space-4);
   border: 1px solid var(--ls-border);
   border-top: 3px solid var(--ls-border);
+  border-radius: var(--ls-radius-md);
   background: var(--ls-surface);
 }
 
@@ -102,7 +215,16 @@
 }
 
 /* `--ls-text-muted` sur `--ls-surface` : 5,19:1, AA. */
+.tuileIcone {
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
 .tuileLibelle {
+  display: flex;
+  align-items: center;
+  gap: var(--ls-space-2);
   color: var(--ls-text-muted);
   font-size: 0.8125rem;
   font-weight: 600;
@@ -133,17 +255,8 @@
 .panneau {
   padding: var(--ls-space-4);
   border: 1px solid var(--ls-border);
+  border-radius: var(--ls-radius-lg);
   background: var(--ls-surface);
-}
-
-/* Meme raison que `.surtitre` : gold-deep et non terracotta en petit texte. */
-.panneauSurtitre {
-  margin: 0 0 var(--ls-space-1);
-  color: var(--ls-accent-gold-deep);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .panneauTitre {
@@ -308,10 +421,10 @@
 }
 
 /*
- * L'ÉTAT DU STOCK, LS-228 critère 5. Deux panneaux se suivent désormais : le
- * second prend l'écart que les tuiles laissent au premier.
+ * « À traiter » précède les tuiles depuis LS-325 : il porte l'écart qui le
+ * sépare d'elles, et les tuiles gardent le leur avant l'état du stock.
  */
-.panneau + .panneau {
+.panneau + .tuiles {
   margin-top: var(--ls-space-5);
 }
 
@@ -319,6 +432,30 @@
  * TROIS CHIFFRES CÔTE À CÔTE dès que la place existe, empilés à 320 px :
  * `auto-fit` et `minmax`, sans point de bascule écrit en dur.
  */
+/*
+ * LA JAUGE DU STOCK, LS-325, décor : deux segments dont la largeur vient des
+ * nombres du serveur. Aucune animation, un chiffre ne se fait pas attendre.
+ */
+.jauge {
+  display: flex;
+  gap: 2px;
+  height: 0.625rem;
+  margin: var(--ls-space-3) 0 0;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--ls-admin-actif);
+}
+
+.jaugeReservee {
+  flex: 0 0 0;
+  background: var(--ls-accent-terracotta);
+}
+
+.jaugeDisponible {
+  flex: 0 0 0;
+  background: var(--ls-accent-gold);
+}
+
 .etatStock {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));

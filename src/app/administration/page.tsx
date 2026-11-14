@@ -31,7 +31,17 @@ import {
   AutorisationRefuseeError,
   exigerAdministratrice,
 } from "@/services/autorisation";
-import { lireComptages, lireEtatStock } from "@/services/tableau-bord";
+import {
+  lireComptages,
+  lireEtatStock,
+  lireNomAffiche,
+} from "@/services/tableau-bord";
+import { ACTIONS_RAPIDES } from "@/components/actions-administration";
+import { CielDuJour, heureDeParis } from "@/components/ciel-du-jour";
+import {
+  IconeAdministration,
+  type NomIcone,
+} from "@/components/icones-administration";
 import {
   LIBELLES_THEMES,
   lireThemeSaisonnier,
@@ -72,12 +82,18 @@ function dateDuJour(): string {
   }).format(new Date());
 }
 
-/** Une tuile d'indicateur, avec son filet superieur colore. */
+/** Bonjour le matin, bon après-midi ensuite, bonsoir dès 18 heures. */
+function salutation(heure: number): string {
+  return heure < 12 ? "Bonjour" : heure < 18 ? "Bon après-midi" : "Bonsoir";
+}
+
+/** Une tuile d'indicateur, avec son icône et son filet superieur colore. */
 function Tuile({
   libelle,
   valeur,
   precision,
   ton,
+  icone,
 }: {
   libelle: string;
   valeur: string;
@@ -91,6 +107,8 @@ function Tuile({
    * passe bien `undefined` plutot que d'omettre la cle.
    */
   ton?: "urgent" | "recette" | undefined;
+  /** Icône décorative, LS-325 : le libellé nomme l'indicateur. */
+  icone: NomIcone;
 }) {
   const classeTon =
     ton === "urgent"
@@ -101,7 +119,10 @@ function Tuile({
 
   return (
     <div className={`${styles.tuile} ${classeTon}`}>
-      <span className={styles.tuileLibelle}>{libelle}</span>
+      <span className={styles.tuileLibelle}>
+        <IconeAdministration nom={icone} className={styles.tuileIcone} />
+        {libelle}
+      </span>
       <span className={styles.tuileValeur}>{valeur}</span>
       <span className={styles.tuilePrecision}>{precision}</span>
     </div>
@@ -109,8 +130,9 @@ function Tuile({
 }
 
 export default async function PageAdministration() {
+  let identite: Awaited<ReturnType<typeof exigerAdministratrice>>;
   try {
-    await exigerAdministratrice(await headers());
+    identite = await exigerAdministratrice(await headers());
   } catch (erreur) {
     if (erreur instanceof AutorisationRefuseeError) {
       // Redirection et non page d'erreur : sans session, la reponse utile est
@@ -128,15 +150,57 @@ export default async function PageAdministration() {
    * oublié en février se voit à la première ouverture. Sa lecture ne lève
    * jamais, elle peut donc précéder la frontière.
    */
-  const theme = await lireThemeSaisonnier();
+  const [theme, nom] = await Promise.all([
+    lireThemeSaisonnier(),
+    lireNomAffiche(identite.utilisateurId, identite.email),
+  ]);
+  const heure = heureDeParis(new Date());
 
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
-      <p className={styles.surtitre}>{dateDuJour()}</p>
-      <h1 className={styles.titre}>Tableau de bord</h1>
-      <p className={styles.introduction}>
-        Les actions à traiter sont regroupées avant les indicateurs.
-      </p>
+      {/*
+       * L'EN-TÊTE SUIT L'HEURE, LS-325 : le soleil ou la lune sur son arc,
+       * décor seul. Le texte vit DESSOUS, jamais sur le fond qui change.
+       */}
+      <header className={styles.entete}>
+        <CielDuJour heure={heure} />
+        <div className={styles.accueil}>
+          <p className={styles.surtitre}>{dateDuJour()}</p>
+          <h1 className={styles.titre}>Tableau de bord</h1>
+          <p className={styles.introduction}>
+            {salutation(heure)} {nom}. Ce qui attend un geste est en tête, les
+            chiffres viennent ensuite.
+          </p>
+        </div>
+      </header>
+
+      {/*
+       * LES ACTIONS DIRECTES, LS-325 : ce qui se fait le plus souvent, à un
+       * geste. La palette « Aller à… » propose les mêmes, sous le même nom.
+       */}
+      <nav className={styles.actions} aria-label="Actions directes">
+        <ul className={styles.listeActions}>
+          {ACTIONS_RAPIDES.map((action) => (
+            <li key={action.chemin}>
+              <Link
+                href={action.chemin}
+                className={styles.action}
+                prefetch={false}
+              >
+                <span className={styles.actionIcone}>
+                  <IconeAdministration nom={action.icone} />
+                </span>
+                <span className={styles.actionTextes}>
+                  <span className={styles.actionLibelle}>{action.libelle}</span>
+                  <span className={styles.actionPrecision}>
+                    {action.precision}
+                  </span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
 
       {theme !== "AUCUN" ? (
         <p className={styles.rappelTheme}>
@@ -290,66 +354,11 @@ async function IndicateursTableauBord() {
 
   return (
     <>
-      <div className={styles.tuiles}>
-        <Tuile
-          libelle="À préparer"
-          valeur={String(comptages.commandesAPreparer)}
-          precision={
-            comptages.commandesAPreparer > 0
-              ? "Paiements confirmés"
-              : "Rien en attente"
-          }
-          ton={comptages.commandesAPreparer > 0 ? "urgent" : undefined}
-        />
-        <Tuile
-          libelle="Prêtes à expédier"
-          valeur={String(comptages.commandesPretesAExpedier)}
-          /*
-           * LA PRECISION S'ADAPTE AU CAS NUL, comme les trois autres tuiles.
-           * « 0 / Étiquette à générer » se lit comme une consigne : sur une
-           * boutique qui demarre, c'est ce que l'exploitante verrait en premier
-           * alors qu'il n'y a rien a faire.
-           */
-          precision={
-            comptages.commandesPretesAExpedier > 0
-              ? "Étiquette à générer"
-              : "Aucun colis en attente"
-          }
-        />
-        <Tuile
-          libelle="Stock faible"
-          valeur={String(comptages.variantesStockFaible)}
-          precision={
-            comptages.variantesIndisponibles > 0
-              ? `Dont ${comptages.variantesIndisponibles} indisponible${
-                  comptages.variantesIndisponibles > 1 ? "s" : ""
-                }`
-              : "Aucune rupture"
-          }
-          ton={comptages.variantesIndisponibles > 0 ? "urgent" : undefined}
-        />
-        <Tuile
-          libelle="Encaissé aujourd'hui"
-          valeur={formaterMontant(comptages.encaisseDuJourCentimes)}
-          /*
-           * LES DEUX CANAUX SONT NOMMES, et ce n'est pas cosmetique : sans
-           * cette mention, un montant superieur aux commandes du jour
-           * ressemble a une erreur. La vente de marche est invisible ailleurs
-           * dans cet ecran.
-           */
-          precision="Ventes en ligne et marchés"
-          /*
-           * LE FILET VERT NE S'ALLUME QUE SUR UNE RECETTE REELLE. Il marque une
-           * bonne nouvelle : le poser sur « 0,00 € » en ferait un ornement
-           * permanent, et un marqueur toujours allume ne marque plus rien. Meme
-           * regle que les deux tons `urgent`, conditionnes a un compte non nul.
-           */
-          ton={comptages.encaisseDuJourCentimes > 0 ? "recette" : undefined}
-        />
-      </div>
-
+      {/*
+       * « À TRAITER » PASSE AVANT LES CHIFFRES, LS-325 : c'est ce que
+       * l'exploitante vient chercher, les indicateurs le suivent.
+       */}
       <section className={styles.panneau} aria-labelledby="a-traiter">
-        <p className={styles.panneauSurtitre}>Priorité</p>
         <h2 className={styles.panneauTitre} id="a-traiter">
           À traiter maintenant
         </h2>
@@ -395,6 +404,68 @@ async function IndicateursTableauBord() {
         )}
       </section>
 
+      <div className={styles.tuiles}>
+        <Tuile
+          libelle="À préparer"
+          valeur={String(comptages.commandesAPreparer)}
+          precision={
+            comptages.commandesAPreparer > 0
+              ? "Paiements confirmés"
+              : "Rien en attente"
+          }
+          ton={comptages.commandesAPreparer > 0 ? "urgent" : undefined}
+          icone="commandes"
+        />
+        <Tuile
+          libelle="Prêtes à expédier"
+          valeur={String(comptages.commandesPretesAExpedier)}
+          /*
+           * LA PRECISION S'ADAPTE AU CAS NUL, comme les trois autres tuiles.
+           * « 0 / Étiquette à générer » se lit comme une consigne : sur une
+           * boutique qui demarre, c'est ce que l'exploitante verrait en premier
+           * alors qu'il n'y a rien a faire.
+           */
+          precision={
+            comptages.commandesPretesAExpedier > 0
+              ? "Étiquette à générer"
+              : "Aucun colis en attente"
+          }
+          icone="expeditions"
+        />
+        <Tuile
+          libelle="Stock faible"
+          valeur={String(comptages.variantesStockFaible)}
+          precision={
+            comptages.variantesIndisponibles > 0
+              ? `Dont ${comptages.variantesIndisponibles} indisponible${
+                  comptages.variantesIndisponibles > 1 ? "s" : ""
+                }`
+              : "Aucune rupture"
+          }
+          ton={comptages.variantesIndisponibles > 0 ? "urgent" : undefined}
+          icone="stocks"
+        />
+        <Tuile
+          libelle="Encaissé aujourd'hui"
+          valeur={formaterMontant(comptages.encaisseDuJourCentimes)}
+          /*
+           * LES DEUX CANAUX SONT NOMMES, et ce n'est pas cosmetique : sans
+           * cette mention, un montant superieur aux commandes du jour
+           * ressemble a une erreur. La vente de marche est invisible ailleurs
+           * dans cet ecran.
+           */
+          precision="Ventes en ligne et marchés"
+          /*
+           * LE FILET VERT NE S'ALLUME QUE SUR UNE RECETTE REELLE. Il marque une
+           * bonne nouvelle : le poser sur « 0,00 € » en ferait un ornement
+           * permanent, et un marqueur toujours allume ne marque plus rien. Meme
+           * regle que les deux tons `urgent`, conditionnes a un compte non nul.
+           */
+          ton={comptages.encaisseDuJourCentimes > 0 ? "recette" : undefined}
+          icone="statistiques"
+        />
+      </div>
+
       {/*
        * L'ÉTAT DU STOCK, LS-228 critère 5 : ce que l'atelier tient en main, ce
        * qu'un paiement en cours retient, et ce qui reste vendable. Même
@@ -402,7 +473,6 @@ async function IndicateursTableauBord() {
        * produit non retiré : les deux ne peuvent pas se contredire.
        */}
       <section className={styles.panneau} aria-labelledby="etat-stock">
-        <p className={styles.panneauSurtitre}>Atelier</p>
         <h2 className={styles.panneauTitre} id="etat-stock">
           État du stock
         </h2>
@@ -410,20 +480,38 @@ async function IndicateursTableauBord() {
         {stock.variantes === 0 ? (
           <p className={styles.vide}>Aucune pièce en stock pour le moment.</p>
         ) : (
-          <dl className={styles.etatStock}>
-            <div className={styles.etatStockLigne}>
-              <dt>Pièces physiques</dt>
-              <dd>{stock.physiques}</dd>
+          <>
+            {/*
+             * LA JAUGE, décor : la part des pièces réservées dans le stock
+             * physique. Les trois nombres qui suivent la disent en texte.
+             */}
+            <div className={styles.jauge} aria-hidden="true">
+              <span
+                className={styles.jaugeReservee}
+                style={{ flexGrow: stock.reservees }}
+              />
+              <span
+                className={styles.jaugeDisponible}
+                style={{
+                  flexGrow: Math.max(stock.physiques - stock.reservees, 0),
+                }}
+              />
             </div>
-            <div className={styles.etatStockLigne}>
-              <dt>Réservées par un paiement en cours</dt>
-              <dd>{stock.reservees}</dd>
-            </div>
-            <div className={styles.etatStockLigne}>
-              <dt>Disponibles, hors réservations</dt>
-              <dd>{stock.disponibles}</dd>
-            </div>
-          </dl>
+            <dl className={styles.etatStock}>
+              <div className={styles.etatStockLigne}>
+                <dt>Pièces physiques</dt>
+                <dd>{stock.physiques}</dd>
+              </div>
+              <div className={styles.etatStockLigne}>
+                <dt>Réservées par un paiement en cours</dt>
+                <dd>{stock.reservees}</dd>
+              </div>
+              <div className={styles.etatStockLigne}>
+                <dt>Disponibles, hors réservations</dt>
+                <dd>{stock.disponibles}</dd>
+              </div>
+            </dl>
+          </>
         )}
 
         <Link
