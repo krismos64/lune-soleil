@@ -386,6 +386,8 @@ async function confirmerPaiement(
           prixFigeCentimes: true,
           // ADR-051 : la réduction figée, que la facture reprend.
           prixReferenceFigeCentimes: true,
+          // LS-324 : le taux de la ligne, la promotion n'en portant plus un seul.
+          tauxReductionFige: true,
           promotion: { select: { code: true, tauxPourcentage: true } },
         },
       },

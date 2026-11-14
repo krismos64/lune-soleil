@@ -1,27 +1,98 @@
 /**
- * Les promotions de catalogue écrites dans le code, ADR-051, LS-319.
+ * Les promotions de catalogue, ADR-051, LS-319, amendé par LS-324.
  *
- * UN JEU FERMÉ, comme les thèmes d'ADR-046 : un code, un taux, un libellé et
- * la période annoncée. L'exploitante active et désactive, elle ne saisit
- * aucun texte ni aucun taux : un champ libre laisserait passer une réduction
- * qu'aucun contrôle ne relirait.
+ * LE NOM DE L'OPÉRATION EST UNE LISTE FERMÉE, comme les thèmes d'ADR-046 :
+ * l'exploitante le choisit, elle ne le rédige pas. Il finit sur la facture,
+ * et un champ libre y laisserait passer une formule qu'aucun contrôle ne
+ * relirait.
+ *
+ * LE TAUX, LUI, EST SAISI PAR L'EXPLOITANTE DEPUIS LS-324, arbitrage de
+ * Christophe du 14 novembre 2026 : un entier borné, par article ou pour toute
+ * la boutique. La borne arrête la faute de frappe, 70 pour 7.
  *
  * SANS AUCUNE DÉPENDANCE SERVEUR : l'écran des paramètres, composant client,
- * lit ces libellés.
+ * lit ces libellés et ces bornes.
  */
 import { z } from "zod";
 
 export const PROMOTIONS = {
-  BLACK_WEEK: {
-    taux: 30,
-    libelle: "Black Week",
-  },
+  BLACK_WEEK: { libelle: "Black Week" },
+  SOLDES_HIVER: { libelle: "Soldes d'hiver" },
+  SOLDES_ETE: { libelle: "Soldes d'été" },
+  SAINT_VALENTIN: { libelle: "Saint-Valentin" },
+  JOURNEE_FEMMES: { libelle: "Journée des droits des femmes" },
+  OCTOBRE_ROSE: { libelle: "Octobre rose" },
+  NOVEMBRE_BLEU: { libelle: "Novembre bleu" },
+  NOEL: { libelle: "Noël" },
+  PROMOTION: { libelle: "Promotion" },
 } as const;
 
 export type CodePromotion = keyof typeof PROMOTIONS;
 
+export const CODES_PROMOTION = Object.keys(PROMOTIONS) as [
+  CodePromotion,
+  ...CodePromotion[],
+];
+
 /** Même liste que `chk_promotion_code_connu`. */
-export const schemaCodePromotion = z.enum(["BLACK_WEEK"]);
+export const schemaCodePromotion = z.enum(CODES_PROMOTION);
+
+/**
+ * Les bornes du taux saisi, ADR-051 amendé par LS-324. La base garde un filet
+ * plus large, 1 à 90, `chk_promotion_taux` et `chk_promotion_produit_taux`.
+ */
+export const TAUX_MINIMUM = 5;
+export const TAUX_MAXIMUM = 70;
+
+const MESSAGE_TAUX = `Le taux est un nombre entier entre ${TAUX_MINIMUM} et ${TAUX_MAXIMUM} %.`;
+
+export const schemaTauxPromotion = z
+  .number({ error: MESSAGE_TAUX })
+  .int(MESSAGE_TAUX)
+  .min(TAUX_MINIMUM, MESSAGE_TAUX)
+  .max(TAUX_MAXIMUM, MESSAGE_TAUX);
+
+const schemaArticlePromotion = z.strictObject({
+  produitId: z.uuid("Article inconnu."),
+  taux: schemaTauxPromotion,
+});
+
+const sansDoublon = (articles: readonly { produitId: string }[]): boolean =>
+  new Set(articles.map((article) => article.produitId)).size ===
+  articles.length;
+
+/**
+ * Ce que l'exploitante demande en activant une promotion, LS-324. Deux
+ * portées, mêmes règles que `chk_promotion_portee_taux` :
+ * - `TOUT`, un taux général, et des articles qui portent un autre taux ;
+ * - `SELECTION`, au moins un article, chacun à son taux, aucun taux général.
+ *
+ * UN IDENTIFIANT D'ARTICLE N'AUTORISE RIEN, invariant 2 : le rôle est exigé
+ * avant, et un article inconnu est refusé par la clé étrangère.
+ */
+export const schemaDemandePromotion = z.discriminatedUnion("portee", [
+  z.strictObject({
+    code: schemaCodePromotion,
+    portee: z.literal("TOUT"),
+    taux: schemaTauxPromotion,
+    articles: z
+      .array(schemaArticlePromotion)
+      .max(500)
+      .refine(sansDoublon, "Un article figure deux fois.")
+      .default([]),
+  }),
+  z.strictObject({
+    code: schemaCodePromotion,
+    portee: z.literal("SELECTION"),
+    articles: z
+      .array(schemaArticlePromotion)
+      .min(1, "Choisissez au moins un article.")
+      .max(500)
+      .refine(sansDoublon, "Un article figure deux fois."),
+  }),
+]);
+
+export type DemandePromotion = z.infer<typeof schemaDemandePromotion>;
 
 /**
  * Ancienneté minimale d'une variante, et durée sans changement de prix, pour

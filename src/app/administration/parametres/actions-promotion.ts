@@ -17,7 +17,10 @@ import { headers } from "next/headers";
 
 import { journaliser } from "@/lib/journal";
 import { EntreeInvalideError } from "@/lib/validation";
-import { schemaPeriodePromotion } from "@/lib/promotion";
+import {
+  schemaDemandePromotion,
+  schemaPeriodePromotion,
+} from "@/lib/promotion";
 import { exigerRole } from "@/services/autorisation";
 import {
   basculerPromotion,
@@ -29,9 +32,10 @@ export type ResultatPromotion =
   | { statut: "DESACTIVEE" }
   | { statut: "AUCUNE_ACTIVE" }
   | { statut: "DEJA_ACTIVE" }
+  | { statut: "ARTICLE_INCONNU" }
   | { statut: "SESSION_ABSENTE" }
   | { statut: "REAUTHENTIFICATION_REQUISE" }
-  | { statut: "INVALIDE" }
+  | { statut: "INVALIDE"; message: string }
   | { statut: "INDISPONIBLE" };
 
 export async function basculerPromotionAction(
@@ -44,12 +48,26 @@ export async function basculerPromotionAction(
   }
 
   const action = donnees.get("action");
+  const demande = action === "DESACTIVER" ? null : demandeDuFormulaire(donnees);
+  if (demande !== null) {
+    // Le message du premier refus est rendu ici, pour que l'exploitante lise
+    // « entre 5 et 70 % » et non « invalide » ; le service revalide de toute
+    // façon, il ne se fie pas à ce passage.
+    const lu = schemaDemandePromotion.safeParse(demande);
+    if (!lu.success) {
+      return {
+        statut: "INVALIDE",
+        message:
+          lu.error.issues[0]?.message ?? "Cette promotion n'est pas valide.",
+      };
+    }
+  }
   try {
     const issue = await basculerPromotion(
       enTetes,
-      action === "DESACTIVER"
+      demande === null
         ? { action: "DESACTIVER" }
-        : { action: "ACTIVER", code: donnees.get("code") },
+        : { action: "ACTIVER", demande },
     );
     if (issue.statut === "ACTIVEE" || issue.statut === "DESACTIVEE") {
       revalidatePath("/", "layout");
@@ -57,13 +75,39 @@ export async function basculerPromotionAction(
     return issue;
   } catch (erreur) {
     if (erreur instanceof EntreeInvalideError) {
-      return { statut: "INVALIDE" };
+      return {
+        statut: "INVALIDE",
+        message: "Cette promotion n'est pas valide.",
+      };
     }
     journaliser("error", "Bascule de la promotion indisponible", {
       erreur: erreur instanceof Error ? erreur.name : typeof erreur,
     });
     return { statut: "INDISPONIBLE" };
   }
+}
+
+/**
+ * La demande telle que le formulaire l'envoie, LS-324 : le nom, la portée, le
+ * taux général, et pour chaque article coché son taux, champ `taux-<id>`.
+ * RIEN N'EST VALIDÉ ICI : un taux vide devient `NaN`, que le schéma refuse.
+ */
+function demandeDuFormulaire(donnees: FormData): unknown {
+  const nombre = (valeur: FormDataEntryValue | null): number =>
+    typeof valeur === "string" && valeur.trim() !== ""
+      ? Number(valeur)
+      : Number.NaN;
+  const articles = donnees
+    .getAll("article")
+    .filter((valeur): valeur is string => typeof valeur === "string")
+    .map((produitId) => ({
+      produitId,
+      taux: nombre(donnees.get(`taux-${produitId}`)),
+    }));
+  const code = donnees.get("code");
+  return donnees.get("portee") === "SELECTION"
+    ? { code, portee: "SELECTION", articles }
+    : { code, portee: "TOUT", taux: nombre(donnees.get("taux")), articles };
 }
 
 export type ResultatPeriode =

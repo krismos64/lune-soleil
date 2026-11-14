@@ -235,6 +235,8 @@ export function BandeauBlackWeek({
 }: {
   promotion: {
     taux: number;
+    /** Un seul taux en vigueur, LS-324 : sinon le bandeau dit « jusqu'à ». */
+    tauxUnique: boolean;
     periodeAnnoncee: string | null;
     toutLeCatalogue: boolean;
   } | null;
@@ -274,6 +276,7 @@ export function BandeauBlackWeek({
         {promotion === null ? null : (
           <>
             <p className={styles.offreBandeau}>
+              {promotion.tauxUnique ? null : "jusqu'à "}
               <span className={styles.tauxBandeau}>
                 −{promotion.taux}&nbsp;%
               </span>{" "}

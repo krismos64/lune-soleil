@@ -52,11 +52,8 @@ const CLASSE_DISPONIBILITE: Record<EtatDisponibilite, string> = {
 export function SelecteurVariante({
   variantes,
   blocLivraison,
-  tauxPromotion = null,
 }: {
   variantes: VarianteFiche[];
-  /** Le taux de la promotion en vigueur, pour le badge, ADR-051. */
-  tauxPromotion?: number | null;
   /** Bloc 7, rendu par la page serveur, LS-251. */
   blocLivraison: ReactNode;
 }) {
@@ -93,7 +90,7 @@ export function SelecteurVariante({
         className={styles.prix}
         prixCentimes={choisie.prixCentimes}
         prixReferenceCentimes={choisie.prixReferenceCentimes}
-        taux={tauxPromotion}
+        taux={choisie.tauxReduction}
       />
       {choisie.prixReferenceCentimes !== null ? (
         /*

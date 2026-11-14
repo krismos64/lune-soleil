@@ -36,7 +36,8 @@ export function AnnoncePromotion({
     >
       <p className={styles.texte}>
         <strong className={styles.titre}>
-          {annonce.libelle} : −{annonce.taux}&nbsp;%
+          {annonce.libelle} : {annonce.tauxUnique ? "" : "jusqu'à "}−
+          {annonce.taux}&nbsp;%
         </strong>{" "}
         {annonce.toutLeCatalogue
           ? "sur toute la boutique"

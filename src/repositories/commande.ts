@@ -206,6 +206,8 @@ export type LigneAEcrire = {
   /** ADR-051 : le prix catalogue barré et la promotion, nuls ensemble. */
   prixReferenceFigeCentimes: number | null;
   promotionId: string | null;
+  /** LS-324 : le taux appliqué à la ligne, nul hors promotion. */
+  tauxReductionFige: number | null;
   quantite: number;
 };
 

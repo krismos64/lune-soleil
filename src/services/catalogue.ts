@@ -15,9 +15,9 @@
  * Codes Prisma verifies via Context7 sur la documentation Prisma 7 : `P2002`
  * unicite, `P2003` cle etrangere, `P2025` enregistrement introuvable.
  */
-import { prixDeVente } from "@/lib/promotion";
 import {
   lirePromotionEnVigueur,
+  prixReduit,
   prixAffiche,
   type PromotionEnVigueur,
 } from "@/services/promotion";
@@ -995,6 +995,11 @@ export type ProduitCatalogue = {
    * fiche détaillant chaque déclinaison.
    */
   prixReferenceCentimes: number | null;
+  /**
+   * Le taux de CETTE pièce, LS-324, pour son badge : chaque article peut
+   * porter le sien. `null` quand rien n'est barré.
+   */
+  tauxReduction: number | null;
   disponibilite: EtatDisponibilite;
   /**
    * LS-240 : la variante a ajouter depuis la carte, `null` quand le produit en
@@ -1026,7 +1031,10 @@ export type ProduitCatalogue = {
 /** Ce que les pages disent de la promotion en vigueur, ADR-051. */
 export type AnnoncePromotion = {
   libelle: string;
+  /** Le plus haut taux réellement appliqué à une pièce en vente, LS-324. */
   taux: number;
+  /** Un seul taux en vigueur : « −20 % ». Sinon, « jusqu'à −40 % ». */
+  tauxUnique: boolean;
   /** « du lundi 23 au dimanche 29 novembre », `null` sans période réglée. */
   periodeAnnoncee: string | null;
   /** Chaque pièce en vente est réduite : « sur toute la boutique ». */
@@ -1201,29 +1209,28 @@ export function annonceDe(
     ? null
     : {
         libelle: promotion.libelle,
-        taux: promotion.taux,
+        taux: promotion.tauxMaximum,
+        tauxUnique: promotion.tauxUnique,
         periodeAnnoncee: promotion.periodeAnnoncee,
         toutLeCatalogue: promotion.toutLeCatalogue,
       };
 }
 
 /**
- * Le prix d'une carte : le minimum des variantes, réduit seulement si le
- * produit est éligible en entier. La réduction du minimum est le minimum des
- * réductions, l'arrondi étant monotone.
+ * Le prix d'une carte : le minimum des variantes, réduit seulement si TOUTES
+ * les déclinaisons en vente du produit le sont. Le taux étant celui de
+ * l'article, LS-324, elles portent alors le même : la réduction du minimum
+ * est le minimum des réductions, l'arrondi étant monotone.
  */
 function prixDeCarte(
   promotion: PromotionEnVigueur | null,
   produitId: string,
   prixMinimumCentimes: number,
-): { prixCentimes: number; prixReferenceCentimes: number | null } {
-  if (promotion === null || !promotion.produitsEligibles.has(produitId)) {
-    return { prixCentimes: prixMinimumCentimes, prixReferenceCentimes: null };
-  }
-  const reduit = prixDeVente(prixMinimumCentimes, promotion.taux);
-  return reduit < prixMinimumCentimes
-    ? { prixCentimes: reduit, prixReferenceCentimes: prixMinimumCentimes }
-    : { prixCentimes: prixMinimumCentimes, prixReferenceCentimes: null };
+): ReturnType<typeof prixReduit> {
+  return prixReduit(
+    prixMinimumCentimes,
+    promotion?.tauxParProduit.get(produitId),
+  );
 }
 
 /**
@@ -1266,6 +1273,8 @@ export type VarianteFiche = {
   prixCentimes: number;
   /** Le prix barré, `null` hors promotion ou variante exclue. */
   prixReferenceCentimes: number | null;
+  /** Le taux de cette déclinaison, LS-324, `null` quand rien n'est barré. */
+  tauxReduction: number | null;
   disponibilite: EtatDisponibilite;
 };
 

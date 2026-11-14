@@ -24,7 +24,11 @@
  * ------------------------------------------------------------------
  */
 import { formaterDate } from "@/lib/affichage-commande";
-import { lireEtatPromotion, lirePeriodeReglee } from "@/services/promotion";
+import {
+  lireArticlesReductibles,
+  lireEtatPromotion,
+  lirePeriodeReglee,
+} from "@/services/promotion";
 import { Suspense } from "react";
 
 import { headers } from "next/headers";
@@ -114,13 +118,16 @@ async function Reglages() {
    * promotion dit qu'il n'a pas pu se lire. Même principe que le thème, qui
    * retombe sur l'habillage ordinaire.
    */
-  const [theme, promotion, periode] = await Promise.all([
+  const [theme, promotion, periode, articles] = await Promise.all([
     lireThemeSaisonnier(),
     lireEtatPromotion().then(
       ({ active }) => active,
       () => "INDISPONIBLE" as const,
     ),
     lirePeriodeReglee().catch(() => null),
+    // Sans la liste des articles, la portée « toute la boutique » reste
+    // utilisable : l'écran ne tombe pas pour une liste illisible.
+    lireArticlesReductibles().catch(() => []),
   ]);
 
   try {
@@ -157,6 +164,7 @@ async function Reglages() {
           <ChoixTheme actif={theme} />
 
           <ChoixPromotion
+            articles={articles}
             etat={
               promotion === null || promotion === "INDISPONIBLE"
                 ? promotion

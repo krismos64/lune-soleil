@@ -19,6 +19,7 @@ import { PrixPromotion } from "@/components/prix-promotion";
 const ANNONCE = {
   libelle: "Black Week",
   taux: 30,
+  tauxUnique: true,
   periodeAnnoncee: "du lundi 23 au dimanche 29 novembre",
   toutLeCatalogue: true,
 };
@@ -160,5 +161,38 @@ describe("bandeau d'opération d'un thème d'ambiance", () => {
     expect(container.textContent).toContain(
       "du lundi 23 au dimanche 29 novembre",
     );
+  });
+});
+
+/*
+ * PLUSIEURS TAUX EN VIGUEUR, LS-324 : l'annonce et les bandeaux disent
+ * « jusqu'à », le plus haut taux réellement appliqué, jamais un taux unique
+ * que toutes les pièces ne portent pas.
+ */
+describe("annonce sous plusieurs taux", () => {
+  const MIXTE = { ...ANNONCE, taux: 40, tauxUnique: false };
+
+  test("l'annonce dit « jusqu'à » le taux le plus haut", () => {
+    render(<AnnoncePromotion promotion={MIXTE} />);
+    const region = screen.getByRole("region", { name: "Promotion en cours" });
+    expect(region.textContent).toContain("jusqu'à −40\u00a0%");
+  });
+
+  test("un taux unique s'écrit sans « jusqu'à »", () => {
+    render(<AnnoncePromotion promotion={ANNONCE} />);
+    const region = screen.getByRole("region", { name: "Promotion en cours" });
+    expect(region.textContent).toContain("Black Week : −30\u00a0%");
+    expect(region.textContent).not.toContain("jusqu'à");
+  });
+
+  test("les deux bandeaux d'accueil le disent aussi", () => {
+    const { container: blackWeek } = render(
+      <BandeauBlackWeek promotion={MIXTE} />,
+    );
+    expect(blackWeek.textContent).toContain("jusqu'à −40\u00a0%");
+    const { container: saison } = render(
+      <BandeauOperation ambiance={AMBIANCES.SOLDES_ETE} promotion={MIXTE} />,
+    );
+    expect(saison.textContent).toContain("jusqu'à −40\u00a0%");
   });
 });

@@ -315,7 +315,14 @@ export async function passerCommande({
         transaction,
         ordonnees.map((ligne) => ligne.varianteId),
       );
-      const eligibles = new Set(promotion?.eligibles ?? []);
+      // LS-324 : le taux de CHAQUE déclinaison, celui de son article ou le
+      // taux général. Une déclinaison absente se vend au prix catalogue.
+      const tauxParVariante = new Map(
+        (promotion?.taux ?? []).map(({ varianteId, taux }) => [
+          varianteId,
+          taux,
+        ]),
+      );
 
       const lignes = ordonnees.map((ligne) => {
         const donnees = parVariante.get(ligne.varianteId);
@@ -335,10 +342,11 @@ export async function passerCommande({
          * Stripe, la facture, l'avoir et le remboursement lisent ce prix
          * figé : aucun ne recalcule la réduction.
          */
+        const taux = tauxParVariante.get(ligne.varianteId);
         const reduit =
-          promotion !== null && eligibles.has(ligne.varianteId)
-            ? prixDeVente(donnees.prixCentimes, promotion.taux)
-            : donnees.prixCentimes;
+          taux === undefined
+            ? donnees.prixCentimes
+            : prixDeVente(donnees.prixCentimes, taux);
         const enPromotion = promotion !== null && reduit < donnees.prixCentimes;
 
         return {
@@ -350,6 +358,9 @@ export async function passerCommande({
           prixFigeCentimes: reduit,
           prixReferenceFigeCentimes: enPromotion ? donnees.prixCentimes : null,
           promotionId: enPromotion ? promotion.id : null,
+          // Le taux appliqué à cette ligne, figé avec son prix, invariant 3 :
+          // la promotion n'en porte plus un seul, LS-324.
+          tauxReductionFige: enPromotion ? (taux ?? null) : null,
           quantite: ligne.quantite,
         };
       });
