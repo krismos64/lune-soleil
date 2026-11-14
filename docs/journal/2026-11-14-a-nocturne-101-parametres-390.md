@@ -58,3 +58,12 @@ Christophe valide la correction.
 
 - LS-319 : reste Terminé, correctif rattaché par commentaire, aucun ticket
   neuf (défaut de la même story, corrigé sans nouveau ticket).
+
+## Mise en production, même jour
+
+Sur accord de Christophe : image de `f257fbe` publiée, déploiement run
+43583176128 réussi, `74ed615` vers `f257fbe`, 32 migrations attendues et
+appliquées, aucune migration neuve, conteneur sain en 10 s, `/api/sante`
+opérationnel, `/`, `/catalogue` et `/panier` en 200, les trois sites de la
+machine en 200. La feuille servie porte la règle corrigée, même fichier que
+la construction locale. LS-319 reste Terminé.
