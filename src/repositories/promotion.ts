@@ -115,6 +115,11 @@ export async function lireEligibiliteCatalogue(
  * instruction dans la transaction de la commande, ADR-051 point 7 : la
  * commande n'a qu'une vérité de prix. Une déclinaison absente de `taux` se
  * vend au prix catalogue.
+ *
+ * LES MÊMES FILTRES QUE L'AFFICHAGE, déclinaison non archivée et produit
+ * `ACTIF`, revue critique de LS-324 : sans eux, une pièce que le catalogue ne
+ * montre pas recevait un taux ici. La réservation la refuse de toute façon
+ * dans la même transaction ; la requête ne dépend plus de ce second filet.
  */
 export async function lirePromotionPourCommande(
   client: Client,
@@ -130,7 +135,11 @@ export async function lirePromotionPourCommande(
     SELECT p.id, v.id AS "varianteId",
            CASE WHEN ${CONDITION_ELIGIBLE} THEN ${TAUX_VISE} END AS taux
       FROM promotion p
-      LEFT JOIN variante v ON v.id IN (${Prisma.join([...varianteIds])})
+      LEFT JOIN variante v
+        ON v.id IN (${Prisma.join([...varianteIds])})
+       AND v.archivee_a IS NULL
+       AND EXISTS (SELECT 1 FROM produit pr
+                    WHERE pr.id = v.produit_id AND pr.statut = 'ACTIF')
       ${JOINTURE_ARTICLE}
      WHERE p.active`;
   const premiere = lignes[0];
