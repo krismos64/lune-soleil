@@ -90,12 +90,26 @@ et Firefox. Laissé : l'arc dessiné sur 400 px au centre d'un en-tête large.
 - Mon test de l'ordre des blocs mesurait l'armature de chargement : il attend
   désormais le contenu réel.
 
+## Mise en production, même jour
+
+Sur accord de Christophe (« oui enchaîne »). PR #680 fusionnée en rebase,
+`main` à `a05d407`, CI verte. Aucune migration.
+
+- **Image** publiée par la fusion, run 43610658772.
+- **Déploiement** run 43610912071 : `1c97956` vers `a05d407`, réussi. `/`,
+  `/catalogue`, `/panier`, `/api/sante` et `/administration/connexion` en 200,
+  santé opérationnelle.
+- L'écran de connexion servi ne porte pas la palette : elle n'existe que pour
+  une session administratrice.
+
 ## Reste
 
-- Fusion et mise en production, accord de Christophe donné (« oui enchaîne »).
+- Non vérifié en production : le tableau de bord et la palette avec la
+  session de l'exploitante, et la palette sur son téléphone, clavier ouvert.
 - Lot suivant possible : refonte des listes et des formulaires, écran par
   écran.
+- Issue #647 : à fermer sur le premier nocturne vert.
 
 ## État des tickets
 
-- LS-325 : En cours.
+- LS-325 : Terminé, déployé.
