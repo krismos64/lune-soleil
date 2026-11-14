@@ -572,7 +572,11 @@ automatique**, qui échoue si une table du schéma n'apparaît ni ici ni dans un
 traitement.
 
 `Categorie`, `Produit`, `SectionProduit`, `Variante`, `Media`, `Reservation`,
-`VerrouTache`, `CompteurNumero`, `HistoriquePrixVariante`.
+`VerrouTache`, `CompteurNumero`, `HistoriquePrixVariante`, `PromotionProduit`.
+
+**`PromotionProduit`**, ajoutée par LS-324, porte une promotion, un produit et
+un taux : le taux d'un article dans une promotion. Aucune colonne ne désigne
+une personne ; l'identifiant de l'administratrice reste sur `Promotion`.
 
 **`HistoriquePrixVariante`**, ajoutée par LS-319, porte une variante, deux prix
 et une date : aucune colonne ne désigne qui a changé le prix.

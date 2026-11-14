@@ -274,6 +274,9 @@ CHECK   parametre_boutique : période annoncée, deux dates ou aucune, dans
         l'ordre, ADR-051 amendé
 CHECK   ligne_commande : promotion et prix de référence nuls ensemble,
         sinon prix_fige_centimes < prix_reference_fige_centimes, ADR-051
+CHECK   promotion : portée TOUT avec un taux général, SELECTION sans, LS-324
+CHECK   ligne_commande.taux_reduction_fige nul hors promotion, LS-324
+PK      promotion_produit (promotion_id, produit_id), un taux par article
 PK      compteur_numero (type, annee)                            ADR-031
 CHECK   parametre_boutique.id = true                             ADR-043, LS-98
 CHECK   parametre_boutique.seuil_stock_faible >= 1
@@ -487,8 +490,14 @@ Ces opérations exigent une transaction, sans exception :
     trace
 
 **La lecture de la promotion dans `passerCommande` ne prend aucun verrou**,
-ADR-051 : une seule instruction lit la promotion active et l'éligibilité des
-variantes de la commande, ce qui suffit à une vérité de prix par commande.
+ADR-051 : une seule instruction lit la promotion active et le **taux de
+chaque variante** de la commande (celui de son article dans
+`promotion_produit`, le taux général sinon, LS-324), ce qui suffit à une
+vérité de prix par commande. Ce taux se fige sur la ligne,
+`taux_reduction_fige` : la facture ne le relit jamais sur la promotion, sauf
+pour une ligne d'avant LS-324. **Les articles d'une promotion ne changent pas
+tant qu'elle est active** : la modifier, c'est la désactiver puis en activer
+une autre.
 Une désactivation concurrente est absorbée par `SousTotalChangeError` au
 récapitulatif, et une commande déjà écrite garde son prix figé.
 

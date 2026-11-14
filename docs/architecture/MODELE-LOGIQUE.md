@@ -425,6 +425,27 @@ Migration `20261113090000_promotion`, additive :
   nuls ensemble, sinon `prix_fige_centimes < prix_reference_fige_centimes`,
   `chk_ligne_commande_promotion`.
 
+**LS-324, promotions libres, migration `20261114200000_promotions_libres`** :
+l'exploitante saisit le taux, par article ou pour toute la boutique, ADR-051
+amendé le 14 novembre 2026. Aucune donnée existante modifiée.
+
+- **`promotion.portee`**, `TOUT` ou `SELECTION`, `chk_promotion_portee_connue` ;
+  `taux_pourcentage` devient facultatif, présent sous `TOUT` et nul sous
+  `SELECTION`, `chk_promotion_portee_taux`. Les promotions passées valent
+  `TOUT`.
+- **`promotion_produit`** : clé `(promotion_id, produit_id)`, un taux par
+  article, `chk_promotion_produit_taux` de 1 à 90, deux clés étrangères en
+  `RESTRICT`. Écrite à l'activation, jamais modifiée.
+- **`ligne_commande.taux_reduction_fige`** : le taux appliqué à la ligne,
+  `chk_ligne_commande_taux_reduction`, nul hors promotion. Nul aussi sur les
+  lignes d'avant LS-324, dont la facture lit le taux de leur promotion.
+- **`chk_promotion_code_connu`** retirée puis reposée avec la liste de noms
+  élargie : la migration est classée destructive par `migrate-production.sh`.
+- Le taux d'une déclinaison est
+  `coalesce(promotion_produit.taux_pourcentage, promotion.taux_pourcentage)`.
+  Les bornes de saisie, 5 à 70, vivent dans `src/lib/promotion.ts` ; la base
+  garde un filet plus large.
+
 **Amendement du 13 novembre 2026**, migration additive
 `20261113120000_periode_promotion` : `parametre_boutique` porte la période
 annoncée, `promotion_debut_annonce` et `promotion_fin_annonce`, deux `DATE`
