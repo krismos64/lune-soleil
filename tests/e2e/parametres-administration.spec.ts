@@ -228,10 +228,15 @@ test.describe("écran connecté", () => {
     await expect(etat).toHaveText(
       "Le taux est un nombre entier entre 5 et 70 %.",
     );
+    // UN REFUS NE REMET RIEN À ZÉRO : React 19 réinitialise un formulaire à
+    // la fin d'une action, et le nom revenait à « Promotion », revue de LS-324.
+    await expect(nom).toHaveValue("SOLDES_ETE");
+    await expect(general).toHaveValue("80");
+    await expect(general).toHaveAttribute("aria-invalid", "true");
 
     // Articles choisis : sans article coché, refus.
     await formulaire
-      .getByRole("radio", { name: "Seulement les articles que je coche" })
+      .getByRole("radio", { name: "Seulement les articles cochés" })
       .check();
     await expect(general).toHaveCount(0);
     await activer.click();
@@ -264,6 +269,13 @@ test.describe("écran connecté", () => {
     await expect(etat).toHaveText(
       "Le taux est un nombre entier entre 5 et 70 %.",
     );
+    // Après le refus, la page montre toujours ce que le serveur recevrait.
+    await expect(article).toBeChecked();
+    await expect(
+      formulaire.getByRole("radio", { name: "Seulement les articles cochés" }),
+    ).toBeChecked();
+    await expect(nom).toHaveValue("SOLDES_ETE");
+    await expect(taux).toHaveAttribute("aria-invalid", "true");
 
     // Le raccourci de catégorie coche tout le groupe, puis le décoche.
     const raccourci = formulaire

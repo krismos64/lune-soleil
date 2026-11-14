@@ -127,7 +127,7 @@ async function Reglages() {
     lirePeriodeReglee().catch(() => null),
     // Sans la liste des articles, la portée « toute la boutique » reste
     // utilisable : l'écran ne tombe pas pour une liste illisible.
-    lireArticlesReductibles().catch(() => []),
+    lireArticlesReductibles().catch(() => null),
   ]);
 
   try {

@@ -276,7 +276,7 @@ export function BandeauBlackWeek({
         {promotion === null ? null : (
           <>
             <p className={styles.offreBandeau}>
-              {promotion.tauxUnique ? null : "jusqu'à "}
+              {promotion.tauxUnique ? null : "Jusqu'à\u00a0"}
               <span className={styles.tauxBandeau}>
                 −{promotion.taux}&nbsp;%
               </span>{" "}

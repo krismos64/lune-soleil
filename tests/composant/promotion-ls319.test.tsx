@@ -175,7 +175,7 @@ describe("annonce sous plusieurs taux", () => {
   test("l'annonce dit « jusqu'à » le taux le plus haut", () => {
     render(<AnnoncePromotion promotion={MIXTE} />);
     const region = screen.getByRole("region", { name: "Promotion en cours" });
-    expect(region.textContent).toContain("jusqu'à −40\u00a0%");
+    expect(region.textContent).toContain("jusqu'à\u00a0−40\u00a0%");
   });
 
   test("un taux unique s'écrit sans « jusqu'à »", () => {
@@ -189,10 +189,10 @@ describe("annonce sous plusieurs taux", () => {
     const { container: blackWeek } = render(
       <BandeauBlackWeek promotion={MIXTE} />,
     );
-    expect(blackWeek.textContent).toContain("jusqu'à −40\u00a0%");
+    expect(blackWeek.textContent).toContain("Jusqu'à\u00a0−40\u00a0%");
     const { container: saison } = render(
       <BandeauOperation ambiance={AMBIANCES.SOLDES_ETE} promotion={MIXTE} />,
     );
-    expect(saison.textContent).toContain("jusqu'à −40\u00a0%");
+    expect(saison.textContent).toContain("Jusqu'à\u00a0−40\u00a0%");
   });
 });

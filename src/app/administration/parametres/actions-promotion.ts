@@ -69,7 +69,14 @@ export async function basculerPromotionAction(
         ? { action: "DESACTIVER" }
         : { action: "ACTIVER", demande },
     );
-    if (issue.statut === "ACTIVEE" || issue.statut === "DESACTIVEE") {
+    // `DEJA_ACTIVE` et `AUCUNE_ACTIVE` disent que l'écran était périmé : il
+    // se relit aussi, sans quoi chaque nouvel envoi échouerait de même.
+    if (
+      issue.statut === "ACTIVEE" ||
+      issue.statut === "DESACTIVEE" ||
+      issue.statut === "DEJA_ACTIVE" ||
+      issue.statut === "AUCUNE_ACTIVE"
+    ) {
       revalidatePath("/", "layout");
     }
     return issue;
