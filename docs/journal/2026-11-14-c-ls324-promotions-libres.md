@@ -113,14 +113,34 @@ vérifier aux sources.
 - `verifier-registre-traitements.sh` a rougi sur `PromotionProduit`, non
   rangée : rangée parmi les tables sans donnée personnelle.
 
+## Mise en production, même jour
+
+Sur accord de Christophe (« ok mets en prod »). PR #678 fusionnée en rebase,
+`main` à `1c97956`, CI verte.
+
+- **Migration** `20261114200000_promotions_libres` par `migrate-production.sh` :
+  garde-fou arrêté sur la seule ligne `DROP CONSTRAINT
+  "chk_promotion_code_connu"`, lue, puis `--confirm-destructive`. 34
+  migrations, cinq contraintes relues en base. Les trois promotions passées
+  gardent la portée `TOUT` à 30 %, aucune n'est active ; aucune ligne de
+  commande ne portait de promotion. Sauvegarde conservée sur le poste, relais
+  et tunnel fermés.
+- **Image** publiée par la fusion, run 43604404208.
+- **Déploiement** run 43604659428 : `0517426` vers `1c97956`, réussi. `/`,
+  `/catalogue`, `/panier`, `/api/sante` et `/administration/connexion` en 200,
+  santé opérationnelle.
+- **Rien n'est activé** : aucune annonce de promotion ni prix barré sur le
+  catalogue servi, thème `NOEL_2` inchangé.
+
 ## Reste
 
-- Fusion, puis production : accord de Christophe donné le 14 novembre 2026
-  (« ok mets en prod »). Migration classée destructive (retrait puis pose de
-  `chk_promotion_code_connu`).
+- Non vérifié en production : l'écran d'activation lui-même, qui demande la
+  session de l'exploitante, et une première promotion réelle. À regarder avec
+  elle à sa première activation.
 - Point ouvert de LS-323 : « Soldes » affiché sans promotion active.
+- Issue #647 : à fermer sur le premier nocturne vert.
 
 ## État des tickets
 
 - LS-323 : Terminé, déployé.
-- LS-324 : En cours.
+- LS-324 : Terminé, déployé.
