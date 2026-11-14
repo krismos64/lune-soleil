@@ -1433,7 +1433,36 @@ verifier_rejet "réduction nulle rejetée" "chk_ligne_commande_promotion" "$sort
 sortie=$(R "INSERT INTO ligne_commande (id,commande_id,reference_figee,libelle_produit_fige,libelle_variante_fige,prix_fige_centimes,quantite,prix_reference_fige_centimes,promotion_id)
    VALUES ('lcp1','cmd','LS-ECLIPSE-01','Eclipse','doree',840,1,1200,'pr1');")
 verifier_accepte "ligne réduite de 30 % acceptée" "$sortie"
+# LE TAUX FIGÉ SUR LA LIGNE, LS-324 : seulement sous promotion, et borné.
+sortie=$(R "INSERT INTO ligne_commande (id,commande_id,reference_figee,libelle_produit_fige,libelle_variante_fige,prix_fige_centimes,quantite,taux_reduction_fige)
+   VALUES ('lcp2','cmd','LS-ECLIPSE-01','Eclipse','doree',1200,1,30);")
+verifier_rejet "taux figé sans promotion rejeté" \
+  "chk_ligne_commande_taux_reduction" "$sortie"
+sortie=$(R "INSERT INTO ligne_commande (id,commande_id,reference_figee,libelle_produit_fige,libelle_variante_fige,prix_fige_centimes,quantite,prix_reference_fige_centimes,promotion_id,taux_reduction_fige)
+   VALUES ('lcp2','cmd','LS-ECLIPSE-01','Eclipse','doree',840,1,1200,'pr1',95);")
+verifier_rejet "taux figé hors bornes rejeté" \
+  "chk_ligne_commande_taux_reduction" "$sortie"
 R "DELETE FROM ligne_commande WHERE id = 'lcp1'; DELETE FROM promotion;" >/dev/null
+
+# PROMOTIONS LIBRES, LS-324 : la portée et son taux général vont ensemble, un
+# article porte un taux borné, et le nom reste une liste fermée.
+sortie=$(R "INSERT INTO promotion (id,code,portee,taux_pourcentage) VALUES ('pl0','PROMOTION','SELECTION',20);")
+verifier_rejet "sélection portant un taux général rejetée" \
+  "chk_promotion_portee_taux" "$sortie"
+sortie=$(R "INSERT INTO promotion (id,code,portee,taux_pourcentage) VALUES ('pl0','PROMOTION','TOUT',NULL);")
+verifier_rejet "toute la boutique sans taux général rejetée" \
+  "chk_promotion_portee_taux" "$sortie"
+sortie=$(R "INSERT INTO promotion (id,code,portee,taux_pourcentage) VALUES ('pl0','PROMOTION','PARTOUT',20);")
+verifier_rejet "portée inconnue rejetée" "chk_promotion_portee_connue" "$sortie"
+sortie=$(R "INSERT INTO promotion (id,code,portee,taux_pourcentage) VALUES ('pl0','FETE_DES_PERES','TOUT',20);")
+verifier_rejet "nom d'opération absent du code rejeté" \
+  "chk_promotion_code_connu" "$sortie"
+sortie=$(R "INSERT INTO promotion (id,code,portee,taux_pourcentage) VALUES ('pl1','SOLDES_ETE','SELECTION',NULL);")
+verifier_accepte "sélection sans taux général acceptée" "$sortie"
+sortie=$(R "INSERT INTO promotion_produit (promotion_id,produit_id,taux_pourcentage) SELECT 'pl1', id, 95 FROM produit LIMIT 1;")
+verifier_rejet "taux d'article hors bornes rejeté" \
+  "chk_promotion_produit_taux" "$sortie"
+R "DELETE FROM promotion_produit; DELETE FROM promotion;" >/dev/null
 
 # LA PÉRIODE ANNONCÉE, ADR-051 amendé : les deux dates ou aucune, et dans
 # l'ordre. Une seule date laisserait le bandeau écrire « du 23 au » sans fin.
