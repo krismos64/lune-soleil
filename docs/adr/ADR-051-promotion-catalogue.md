@@ -6,7 +6,84 @@
 | Date | 12 novembre 2026 |
 | Décideur | Christophe Mostefaoui |
 | Complète | ADR-024 (commande et réservation atomiques), ADR-046 (thèmes saisonniers) |
-| Ticket | LS-319, LS-321 |
+| Ticket | LS-319, LS-321, LS-324 |
+
+## Amendement du 14 novembre 2026, promotions libres, LS-324
+
+**Arbitrage de Christophe**, à la suite des douze thèmes de LS-323 :
+« je veux que l'exploitante puisse avoir le choix sur les pourcentages à
+mettre quand elle veut et sur les articles qu'elle veut ou tout le site ».
+Quatre réponses rendues le même jour fixent la forme. Les points 1 et 5 de la
+décision changent, le point 9 se précise ; le reste tient.
+
+1. **Le taux est saisi par l'exploitante, borné.** Un entier de **5 à 70 %**,
+   `TAUX_MINIMUM` et `TAUX_MAXIMUM` de `src/lib/promotion.ts`. L'alternative
+   écartée en LS-319, « un taux saisi par l'exploitante », est donc retenue,
+   sur décision de Christophe. La borne remplace la relecture que le taux
+   fixe garantissait : elle arrête la faute de frappe, pas une réduction mal
+   choisie. La base garde son filet plus large, `chk_promotion_taux`, 1 à 90.
+2. **Un taux par article.** Plusieurs taux coexistent dans la même
+   promotion : table `promotion_produit`, une ligne par produit choisi, avec
+   son taux. Le taux vaut pour le **produit entier**, toutes ses déclinaisons.
+3. **Deux portées**, colonne `promotion.portee` :
+   - `TOUT`, toute la boutique à un taux général,
+     `promotion.taux_pourcentage`, qu'une ligne de `promotion_produit` peut
+     remplacer pour un article ;
+   - `SELECTION`, les seuls articles cochés, chacun à son taux, sans taux
+     général (`taux_pourcentage` nul).
+   Le taux d'une déclinaison est donc
+   `coalesce(promotion_produit.taux, promotion.taux)`, jugé dans la même
+   instruction que l'éligibilité.
+4. **Le nom de l'opération reste une liste fermée**, élargie : Black Week,
+   Soldes d'hiver, Soldes d'été, Saint-Valentin, Journée des droits des
+   femmes, Octobre rose, Novembre bleu, Noël, et le nom neutre « Promotion ».
+   Jamais un texte libre, même motif qu'ADR-046 : ce nom finit sur la facture.
+   Le nom est indépendant du thème actif, l'exploitante accorde les deux.
+5. **Le taux appliqué se fige sur la ligne de commande**, invariant 3 :
+   colonne `ligne_commande.taux_reduction_fige`, écrite avec le prix payé, le
+   prix de référence et la promotion. La facture écrit ce taux, et non plus
+   celui de la promotion, qui n'en porte plus un seul. **Les lignes déjà
+   écrites ne sont pas modifiées** : leur colonne reste nulle et leur facture
+   continue de lire le taux de leur promotion, l'unique taux de l'époque.
+6. **L'annonce dit ce qui est vrai** : un taux unique s'écrit « −20 % », des
+   taux différents « jusqu'à −40 % », le plus haut réellement appliqué ;
+   « sur toute la boutique » seulement si chaque pièce en vente est réduite,
+   « sur les pièces signalées » sinon, calculé par le serveur. Une promotion
+   qui ne réduit aucune pièce en vente n'annonce rien. Chaque carte, fiche et
+   ligne de panier porte le taux de **sa** pièce.
+7. **Modifier une promotion, c'est la désactiver puis la réactiver.** Une
+   activation reste une ligne d'historique immuable avec ses articles ; aucun
+   taux ne change sous une promotion active, ce qui garde le point 8 de la
+   décision : une commande n'a qu'une vérité de prix.
+
+**Ce qui ne change pas** : une seule promotion active, activation et
+désactivation libres, `prixDeVente` au centime inférieur, prix gelés sous
+promotion, exclusion d'une pièce dont le prix a changé dans les trente jours,
+rôle et réauthentification exigés pour activer.
+
+**Risques que l'ADR nomme, acceptés par l'arbitrage.**
+
+- **Un taux mal choisi est encaissé tel quel** : rien ne relit 70 % saisi
+  pour 7 %. Atténuation : la borne, la réauthentification, et un
+  récapitulatif des articles et des taux affiché à l'activation.
+- **L112-1-1 et réductions successives** : désactiver puis réactiver à un
+  autre taux sous trente jours barre toujours le prix catalogue. Le risque
+  est celui de l'amendement du 13 novembre, déjà accepté ; il devient plus
+  fréquent si l'exploitante règle souvent ses taux.
+- **« Jusqu'à −X % »** est une annonce exacte tant qu'au moins une pièce en
+  vente porte ce taux ; elle est calculée sur les pièces éligibles, jamais sur
+  les taux saisis.
+
+**Écarté : modifier les taux d'une promotion active.** Une commande en cours
+de paiement lirait deux régimes, et l'historique d'une activation ne dirait
+plus ce qui a été vendu à quel taux.
+
+**Écarté : un taux par déclinaison.** L'exploitante raisonne par article, et
+la carte du catalogue n'affiche qu'un taux par produit.
+
+**Écarté : remplir `taux_reduction_fige` sur les lignes existantes.** Une
+ligne de commande est immuable, invariant 3 ; leur taux se lit sans ambiguïté
+sur leur promotion.
 
 ## Second amendement du 13 novembre 2026, les pièces récentes réduites, LS-321
 
