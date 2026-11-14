@@ -990,6 +990,16 @@
   z-index: 1;
 }
 
+/*
+ * THÈMES D'AMBIANCE, LS-323 : la frise au pied du héros, dans son cadre
+ * coupé. Le héros garde son fond et ses textes, régime ordinaire d'ADR-046.
+ */
+.hero .friseHeros {
+  position: absolute;
+  inset: auto 0 var(--ls-space-2);
+  z-index: 1;
+}
+
 /* Bande défilante de nuit, séparateurs dorés. */
 :global([data-theme="black_week"]) .defilant {
   background: var(--ls-bw-fond-nuit);

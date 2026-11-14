@@ -368,9 +368,9 @@ test.describe("aperçu de l'administratrice", () => {
       groupe.getByRole("radio", { name: /Noël 2 \(franc\)/ }),
     ).toBeVisible();
     const liensAccueil = groupe.getByRole("link", { name: "l'accueil" });
-    // Un lien par thème hors « aucun » : les deux de Noël, puis Black Week,
-    // LS-318, dont le test propre vérifie l'adresse.
-    await expect(liensAccueil).toHaveCount(3);
+    // Un lien par thème hors « aucun » : les deux de Noël en tête, Black Week
+    // en dernier, LS-318, et les douze thèmes d'ambiance de LS-323.
+    await expect(liensAccueil).toHaveCount(15);
     await expect(liensAccueil.nth(0)).toHaveAttribute(
       "href",
       accueil("NOEL_1"),
