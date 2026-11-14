@@ -350,6 +350,13 @@ horizontal à 320 px, y compris avec un nom de produit long et un prix à trois
 chiffres. Zones tactiles proches de 44 par 44 px. Zoom à 200 % sans perte de
 contenu ni blocage de l'achat.
 
+**Une largeur se mesure avec la police la plus large**, pas avec celle du
+poste : le runner Linux rend en DejaVu Sans, et trois débordements ont passé
+la revue sur macOS avant de rougir en CI (LS-253, LS-314, nocturne 101 de
+LS-319, 6 px à 390 px sur deux champs de date en `1fr 1fr`). Des champs côte à
+côte se posent en `repeat(auto-fit, minmax(min(100%, Nrem), 1fr))`, qui décide
+sur la place réelle, et non par une `@media` sur une largeur d'écran supposée.
+
 **Les quatre largeurs sont mesurées** par la suite de bout en bout depuis
 LS-166, un projet Playwright chacune : `mobile-320`, `mobile-390`,
 `tablette-768`, `bureau-1280`. La troisième a manqué du début du projet au

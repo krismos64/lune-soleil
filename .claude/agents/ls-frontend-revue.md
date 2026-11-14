@@ -62,6 +62,15 @@ de produit long et un prix à trois chiffres.
 Cherche ce qui déborde : `min-width` en dur, tableaux non enveloppés, `white-space:
 nowrap` sur un texte variable, images sans `max-width`, grilles à colonnes fixes.
 
+**Une largeur qui tient sur macOS peut déborder en CI**, trois fois sur ce
+dépôt (LS-253, LS-314, nocturne 101 de LS-319) : le runner rend en DejaVu
+Sans, plus large que la pile système. Signale toute mise en page dont la marge
+se compte en pixels, notamment `1fr 1fr` ou une `@media` qui met côte à côte
+des champs de formulaire (`1fr` ne descend pas sous la largeur minimale d'un
+`input`, celle d'un `type="date"` dépend de la police). Préférer
+`repeat(auto-fit, minmax(min(100%, Nrem), 1fr))`, et mesurer en forçant une
+police large, `font-family: Verdana` injecté par `page.addStyleTag`.
+
 ### 3. Les états non nominaux
 
 Un écran n'est pas fini quand le cas nominal s'affiche. Pour chaque écran :

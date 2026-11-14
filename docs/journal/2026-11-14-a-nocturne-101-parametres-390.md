@@ -67,3 +67,17 @@ appliquées, aucune migration neuve, conteneur sain en 10 s, `/api/sante`
 opérationnel, `/`, `/catalogue` et `/panier` en 200, les trois sites de la
 machine en 200. La feuille servie porte la règle corrigée, même fichier que
 la construction locale. LS-319 reste Terminé.
+
+## Relecture finale des contenus, même jour
+
+Production revérifiée par l'action `etat` : image en service `f257fbe`, 32
+migrations ; `main` n'en diffère que par la documentation. Neuf contrôles
+`verifier-*.sh` en sortie 0, seul l'avertissement d'exclusivité de
+`docs/VERIFICATION.md:38` subsiste, antérieur et juste sur le fond. Un écart
+comblé : ni `ls-frontend-revue` ni `frontend-design.md` ne disaient de mesurer
+une largeur avec la police du runner, troisième occurrence après LS-253 et
+LS-314 ; les deux le disent désormais. CLAUDE.md, README, skills et hooks
+relus sans écart, rien de ce qu'ils décrivent n'a changé. Jira, relevé ce
+jour : LS-319, LS-321 et LS-322 terminés ; à faire LS-291 (son dernier
+commentaire y porte les délais d'ADR-035 jamais codés, le titre ne le dit
+pas), LS-35 et LS-320, plus les epics LS-5, LS-7 et LS-22.
