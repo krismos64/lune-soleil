@@ -1,5 +1,6 @@
 /*
- * Bouton de pause des thèmes de Noël, LS-277. Rouge sur blanc sous `NOEL_1`,
+ * Bouton de pause des thèmes saisonniers, LS-277. Accent du thème sur blanc
+ * (rouge sous `NOEL_1`, l'accent de saison sous un thème d'ambiance, LS-323),
  * blanc sur rouge sous `NOEL_2`. Discret : 32 px et 80 % d'opacité, plein au
  * survol et au focus. La cible tactile atteint 44 px par un pseudo-élément.
  */

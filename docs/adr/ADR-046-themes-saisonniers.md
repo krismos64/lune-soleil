@@ -6,7 +6,113 @@
 | Date | 4 octobre 2026 |
 | Décideur | Christophe Mostefaoui |
 | Amende | ADR-022 (palette publique), ADR-045 (politique d'animation) |
-| Ticket | LS-267, LS-277, LS-318, LS-322 |
+| Ticket | LS-267, LS-277, LS-318, LS-322, LS-323 |
+
+## Amendement du 14 novembre 2026, douze thèmes d'ambiance, LS-323
+
+**Demande de l'exploitante, transmise par Christophe** sur une liste
+manuscrite : douze thèmes de plus, à activer depuis Paramètres, « avec un beau
+visuel, du motion design et des animations ». **Codé sans maquette** sur la
+demande de Christophe, captures relues avant fusion, comme LS-322. Le reste de
+l'ADR tient.
+
+| Famille | Thèmes | Valeurs |
+|---|---|---|
+| Saisons | printemps, été, automne, hiver | `PRINTEMPS`, `ETE`, `AUTOMNE`, `HIVER` |
+| Fêtes | Nouvel An, Saint-Valentin, Pâques | `NOUVEL_AN`, `SAINT_VALENTIN`, `PAQUES` |
+| Journées | Journée internationale des droits des femmes, Octobre rose, Novembre bleu | `JOURNEE_FEMMES`, `OCTOBRE_ROSE`, `NOVEMBRE_BLEU` |
+| Opérations | soldes d'hiver, soldes d'été | `SOLDES_HIVER`, `SOLDES_ETE` |
+
+**Section 1, mécanisme.** La contrainte passe à seize valeurs, migration
+`20261114180000_themes_ambiance` : retrait puis pose, donc classée destructive
+par `migrate-production.sh`, sans donnée convertie ni thème activé.
+**Un seul socle porte les douze** : deux jetons par thème sous les mêmes
+noms, `--ls-saison-un` et `--ls-saison-deux`, une ligne dans la table
+`AMBIANCES` de `src/lib/theme-saisonnier.ts` (nom de l'événement, deux
+accroches, motifs, mouvement), et les composants de `decor-saison.tsx`.
+Ajouter un treizième thème d'ambiance ne touche aucune page.
+
+**Section 2, périmètre visuel : le régime ordinaire, sans exception.** Comme
+`NOEL_1` : accents, décors et phrases. Le texte courant, les boutons, les
+filtres, le focus, les prix, le `h1` et les photographies ne changent pas ;
+aucun fond sombre, aucun texte clair. Ce qui s'ajoute : un ruban qui nomme
+l'événement, l'accroche du thème, une couronne et une nuée de motifs dans le
+cadre de l'emblème de l'accueil, un médaillon de saison dans le bandeau du
+catalogue, une frise au pied des deux bandeaux, le motif du thème devant les
+filtres, un liseré de couleur tracé au survol hors des cartes. Aucune image
+générée, tout est dessiné en SVG.
+
+**Le bleu, le violet et le rose entrent par les thèmes seulement.** ADR-022
+écarte le bleu et `frontend-design.md` le rose dominant : ces teintes restent
+absentes de l'habillage ordinaire, et ne paraissent que sous un thème que
+l'exploitante active, en accent et en décor. Octobre rose et Novembre bleu
+portent leur couleur par définition.
+
+**Section 3, contrastes, calculés le 14 novembre 2026.** Chaque jeton d'un
+thème d'ambiance peut porter du texte : les deux accents tiennent 4,5:1 sur
+crème, sable et blanc, mesurés par `verifier-contraste.sh` dans chaque bloc.
+Les teintes claires des décors se font par `color-mix`, jamais par un jeton.
+
+| Thème | `--ls-saison-un` | Pire, sur sable | `--ls-saison-deux` | Pire, sur sable |
+|---|---|---|---|---|
+| `NOUVEL_AN` | `#2B2F6B` | 10,23:1 | `#8A5A12` | 4,96:1 |
+| `SOLDES_HIVER` | `#1F3A63` | 9,55:1 | `#A8241F` | 6,00:1 |
+| `SAINT_VALENTIN` | `#A8174B` | 6,10:1 | `#7A1F3D` | 8,42:1 |
+| `JOURNEE_FEMMES` | `#6B2D8C` | 7,40:1 | `#8A5A12` | 4,96:1 |
+| `PRINTEMPS` | `#3C6B34` | 5,26:1 | `#A63D6E` | 5,01:1 |
+| `PAQUES` | `#5E4196` | 6,59:1 | `#2E6B4F` | 5,28:1 |
+| `ETE` | `#B03F24` | 4,92:1 | `#0F6470` | 5,72:1 |
+| `SOLDES_ETE` | `#B5301C` | 5,17:1 | `#0F6470` | 5,72:1 |
+| `AUTOMNE` | `#9C4A14` | 5,17:1 | `#6E2B2B` | 8,62:1 |
+| `OCTOBRE_ROSE` | `#B31E68` | 5,33:1 | `#8A1650` | 7,62:1 |
+| `NOVEMBRE_BLEU` | `#1F5296` | 6,51:1 | `#173A6B` | 9,50:1 |
+| `HIVER` | `#2A5B7A` | 6,12:1 | `#4A5870` | 6,03:1 |
+
+**Section 4, animations.** ADR-045, **amendé le même jour** par LS-323 : la
+nuée, le halo, l'anneau pointillé, le grand motif du médaillon, la couronne
+et le trait du bandeau d'opération bougent en continu, sous le bouton de
+pause ; les entrées restent bornées à cinq secondes.
+
+**La mention « (%) » de la liste : un bandeau d'opération, aucun taux écrit.**
+Six lignes de la liste la portent : Saint-Valentin, Journée de la femme,
+Octobre rose, Novembre bleu, soldes d'été et d'hiver. Elle est lue comme
+« thème que l'exploitante compte associer à une réduction ». Ces six thèmes
+portent en tête de l'accueil un bandeau, `BandeauOperation`, au contrat de
+celui de LS-322 : **il nomme l'événement seul sans promotion, et reprend le
+taux, la portée et la période de la promotion active**, ADR-051. Le thème
+n'écrit toujours aucun taux, aucun prix, aucune date.
+
+**Ouvert, à arbitrer par Christophe, hors de ce ticket.** La seule promotion
+écrite dans le code est `BLACK_WEEK`, à 30 %, ADR-051. Associer une réduction
+à l'une de ces six opérations demande un code de promotion et un taux par
+opération, décision commerciale que la liste ne donne pas. D'ici là, une
+promotion activée sous l'un de ces thèmes resterait la promotion Black Week :
+le bandeau du thème afficherait son taux, l'annonce du catalogue et la
+facture diraient « Black Week ».
+
+**Trois points que l'ADR nomme sans les qualifier.**
+
+- **« Soldes » est un mot réglementé.** Il désigne des ventes à des périodes
+  fixées par les textes (Code de commerce, article L310-3). L'activation
+  étant manuelle, section 6, l'exploitante s'engage à n'activer ces deux
+  thèmes que pendant les périodes légales ; les dates se vérifient aux sources
+  avant chaque usage.
+- **Octobre rose et Novembre bleu n'annoncent aucun don.** Les deux phrases
+  disent le soutien à la sensibilisation, rien de plus : une promesse de
+  reversement qui ne serait pas tenue serait une allégation trompeuse.
+- **Le nom de la journée du 8 mars** est écrit en entier, « Journée
+  internationale des droits des femmes », son intitulé officiel ; la liste
+  disait « journée de la femme ».
+
+**Écarté : douze maquettes et douze jeux de composants.** Le modèle de
+`NOEL_2` et de `BLACK_WEEK`, une maquette, une exception au périmètre et des
+décors propres par thème, aurait fait douze amendements et douze suites de
+tests pour des thèmes actifs quelques semaines chacun. Un socle commun en
+régime ordinaire les rend tous cohérents, mesurés par le même contrôle, et
+laisse la porte ouverte à un habillage plus poussé d'un thème précis.
+
+**Écarté : écrire un taux par thème.** Ce serait une promotion inventée, que
+la section 2 et ADR-051 interdisent.
 
 ## Amendement du 13 novembre 2026, bandeau Black Week de l'accueil, LS-322
 
