@@ -123,6 +123,28 @@ Firefox.
 - Mon test du repère visait `[data-famille]`, que les liens de la barre
   portent aussi : il lisait « Tableau de bord » sur tous les écrans.
 
+## Mise en production, même jour
+
+Sur accord de Christophe (« oui enchaîne et mets en prod »). PR #682
+fusionnée en rebase, `main` à `931b94f`, CI verte. Aucune migration.
+
+- **Image** publiée par la fusion, run 43618497250.
+- **Déploiement** run 43618757890 : `a05d407` vers `931b94f`, réussi. `/`,
+  `/catalogue`, `/panier`, `/api/sante` et `/administration/connexion` en
+  200, santé opérationnelle, thème `NOEL_2` inchangé.
+
+## Reste
+
+- Non vérifié en production : les écrans avec la session de l'exploitante,
+  Safari et Firefox.
+- Écrans qui gardent leur disposition, à repenser un par un si Christophe le
+  demande : Expéditions, Factures et avoirs, Avis, Clients, Catégories,
+  Stocks et marchés, Statistiques, Passkeys, Journal des connexions, fiche
+  d'un produit, détail d'une commande.
+- Hors ticket, relevé par la revue : à 320 px, le titre d'une fiche produit
+  passe sous le bandeau à l'ouverture, défaut antérieur.
+- Issue #647 : à fermer sur le premier nocturne vert.
+
 ## État des tickets
 
-- LS-326 : En cours.
+- LS-326 : Terminé, déployé.
