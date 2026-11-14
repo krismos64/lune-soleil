@@ -12,6 +12,8 @@ import { describe, expect, test } from "vitest";
 
 import { AnnoncePromotion } from "@/components/annonce-promotion";
 import { BandeauBlackWeek } from "@/components/decor-black-week";
+import { BandeauOperation } from "@/components/decor-saison";
+import { AMBIANCES } from "@/lib/theme-saisonnier";
 import { PrixPromotion } from "@/components/prix-promotion";
 
 const ANNONCE = {
@@ -119,6 +121,40 @@ describe("bandeau Black Week de l'accueil", () => {
       screen.getByRole("region", { name: "Promotion en cours" }),
     ).toBeTruthy();
     // Espace insécable entre le taux et le signe, signe moins U+2212.
+    expect(container.textContent).toContain("−30\u00a0%");
+    expect(container.textContent).toContain("sur les pièces signalées");
+    expect(container.textContent).toContain(
+      "du lundi 23 au dimanche 29 novembre",
+    );
+  });
+});
+
+/*
+ * LE BANDEAU D'OPÉRATION DES THÈMES D'AMBIANCE, LS-323 : même contrat que le
+ * bandeau Black Week. Le thème n'écrit aucun taux, il reprend la promotion
+ * active ; sans elle, le nom de l'événement seul.
+ */
+describe("bandeau d'opération d'un thème d'ambiance", () => {
+  const ambiance = AMBIANCES.SOLDES_ETE;
+
+  test("sans promotion, le nom de l'événement seul", () => {
+    const { container } = render(
+      <BandeauOperation ambiance={ambiance} promotion={null} />,
+    );
+    expect(container.textContent).toBe("Soldes d'été");
+    expect(screen.queryByRole("region")).toBeNull();
+  });
+
+  test("sous promotion, le taux, la portée calculée et la période", () => {
+    const { container } = render(
+      <BandeauOperation
+        ambiance={ambiance}
+        promotion={{ ...ANNONCE, toutLeCatalogue: false }}
+      />,
+    );
+    expect(
+      screen.getByRole("region", { name: "Promotion en cours" }),
+    ).toBeTruthy();
     expect(container.textContent).toContain("−30\u00a0%");
     expect(container.textContent).toContain("sur les pièces signalées");
     expect(container.textContent).toContain(

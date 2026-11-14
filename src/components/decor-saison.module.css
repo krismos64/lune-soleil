@@ -11,12 +11,22 @@
 
 /* ---------- Motifs ---------- */
 
+/*
+ * LE MOTIF NE FIXE PAS SA TAILLE : l'appelant la pose par sa propre classe.
+ * Une taille écrite ici l'emportait sur celle du filtre du catalogue, de même
+ * spécificité, et le motif occupait toute la pastille.
+ */
 .motif {
   display: block;
-  width: 100%;
-  height: 100%;
   fill: currentColor;
   overflow: visible;
+}
+
+.grain > .motif,
+.perle > .motif,
+.allure > .motif {
+  width: 100%;
+  height: 100%;
 }
 
 .trait {
