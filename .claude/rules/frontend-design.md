@@ -346,6 +346,14 @@ dans la couche promotion, et rien ne s'affiche sans promotion active.
 - **Un seul composant pour le prix**, `PrixPromotion` : carte, fiche, panier
   et tunnel. Prix barré en `<s>`, doublé d'un texte pour le lecteur d'écran
   (« Prix initial », « prix réduit »), et badge du taux hors panier.
+- **Le badge porte le taux de SA pièce**, LS-324 : l'exploitante saisit un
+  taux par article, `tauxReduction` vient du serveur avec le prix, jamais un
+  taux global passé en prop. **Plusieurs taux en vigueur s'annoncent
+  « jusqu'à −40 % »**, le plus haut réellement appliqué ; un seul, « −20 % ».
+- **Le nom de l'opération est une liste fermée**, `PROMOTIONS` : il finit sur
+  la facture. Le taux est saisi, borné de 5 à 70 par `schemaTauxPromotion` ;
+  un champ de taux garde `min` et `max`, mais **le refus vient du serveur**,
+  dans la région d'état, le formulaire étant en `noValidate`.
 - **Une seule annonce**, `AnnoncePromotion`, sur l'accueil et le catalogue :
   « sur toute la boutique » **seulement** si chaque pièce en vente est
   réduite, « sur les pièces signalées » sinon, calculé par le serveur. **La

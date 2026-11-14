@@ -15,6 +15,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 import {
+  CATALOGUE_TEST,
   FICHIER_SESSION_ADMINISTRATION,
   FICHIER_SESSION,
 } from "./chemin-session";
@@ -192,6 +193,92 @@ test.describe("écran connecté", () => {
     await bouton.click();
     await expect(etat).toHaveText(
       "Le bandeau annonce désormais : du lundi 23 au dimanche 29 novembre.",
+    );
+  });
+
+  /*
+   * LE FORMULAIRE D'ACTIVATION D'UNE PROMOTION LIBRE, LS-324, ADR-051 amendé.
+   *
+   * AUCUNE PROMOTION N'EST ACTIVÉE ICI : la base de bout en bout est partagée,
+   * et une promotion active barrerait les prix sous les autres fichiers. Le
+   * test n'envoie donc que des demandes que le serveur REFUSE, taux hors
+   * bornes et sélection vide ; l'activation, le prix figé et la facture sont
+   * prouvés en intégration, `promotion.sequential.test.ts`.
+   */
+  test("la promotion se règle par article, et un taux hors bornes est refusé par le serveur", async ({
+    page,
+  }) => {
+    await page.goto("/administration/parametres");
+    const formulaire = page.locator("#promotion");
+    const etat = page.getByRole("status", { name: "État de la promotion" });
+    const activer = formulaire.getByRole("button", {
+      name: "Activer la promotion",
+    });
+
+    // Le nom vient d'une liste fermée, jamais d'un champ libre.
+    const nom = formulaire.getByLabel("Nom de l'opération");
+    await expect(nom.locator("option")).toHaveCount(9);
+    await nom.selectOption({ label: "Soldes d'été" });
+    await expect(formulaire.locator("input[type=text]")).toHaveCount(0);
+
+    // Toute la boutique : un taux hors bornes est refusé, message lisible.
+    const general = formulaire.getByLabel("Taux général, en %");
+    await general.fill("80");
+    await activer.click();
+    await expect(etat).toHaveText(
+      "Le taux est un nombre entier entre 5 et 70 %.",
+    );
+
+    // Articles choisis : sans article coché, refus.
+    await formulaire
+      .getByRole("radio", { name: "Seulement les articles que je coche" })
+      .check();
+    await expect(general).toHaveCount(0);
+    await activer.click();
+    await expect(etat).toHaveText("Choisissez au moins un article.");
+
+    // Un article coché montre son champ de taux et le prix que donne le taux.
+    const article = formulaire.getByRole("checkbox", {
+      name: CATALOGUE_TEST.enStock.nom,
+      exact: true,
+    });
+    await article.check();
+    const taux = formulaire.getByLabel(
+      `Taux de ${CATALOGUE_TEST.enStock.nom}, en %`,
+    );
+    await taux.fill("20");
+    // 49,00 € à -20 % : 39,20 €, calculé par la fonction du serveur.
+    await expect(
+      formulaire.getByText(/49,00\s€ devient 39,20\s€/),
+    ).toBeVisible();
+    await expect(formulaire.getByText(/1 article réduit/)).toBeVisible();
+
+    // Formulaire déplié, article coché et taux saisi : rien ne déborde.
+    expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+      TOLERANCE_DEBORDEMENT_PX,
+    );
+
+    // Un taux d'article hors bornes est refusé lui aussi.
+    await taux.fill("3");
+    await activer.click();
+    await expect(etat).toHaveText(
+      "Le taux est un nombre entier entre 5 et 70 %.",
+    );
+
+    // Le raccourci de catégorie coche tout le groupe, puis le décoche.
+    const raccourci = formulaire
+      .getByRole("button", { name: /Tout (dé)?cocher dans/ })
+      .first();
+    await raccourci.click();
+    await expect(raccourci).toHaveText(/Tout décocher/);
+
+    // Rien n'a été activé : la boutique reste sans promotion.
+    await page.reload();
+    await expect(
+      page.locator("#promotion").getByText("Aucune promotion active."),
+    ).toBeVisible();
+    expect(await debordementHorizontal(page)).toBeLessThanOrEqual(
+      TOLERANCE_DEBORDEMENT_PX,
     );
   });
 
