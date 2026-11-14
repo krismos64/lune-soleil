@@ -227,7 +227,9 @@ uniquement.
 
 **ADR-045 amende ce paragraphe** sur trois points, et le reste demeure :
 
-- le **dégradé de ciel** est permis dans dix décors seulement, la scène
+- le **dégradé de ciel** est permis dans onze décors seulement (le onzième,
+  LS-325, est l'en-tête du tableau de bord de l'administration, sans aucun
+  texte posé dessus), la scène
   du matin à la nuit, le fond du menu mobile plein écran, depuis
   l'amendement du 4 octobre 2026, LS-268, le panneau des portes d'entrée de la
   boutique et l'en-tête du contact, depuis celui du 7 octobre 2026, LS-280,
@@ -240,7 +242,11 @@ uniquement.
   arrêt de couleur** atteint 3:1 sur son fond, mesuré et non estimé ;
 - la **suranimation** se définit par le tableau d'intensité d'ADR-045 : riche
   sur les pages vitrines, retenue sur la fiche produit, micro-interactions
-  seulement sur les pages d'action, rien sur l'administration. Les portes
+  seulement sur les pages d'action. **L'administration**, amendement de
+  LS-325 : une entrée orchestrée sur le tableau de bord seulement (l'arc du
+  jour), des réponses à un geste ailleurs, **aucune boucle** puisqu'elle n'a
+  pas de bouton de pause, et toujours rien pendant une saisie ; les chiffres
+  ne s'animent pas. Les portes
   d'entrée de la boutique et le contact portent un décor animé et un
   formulaire immobile, amendement de LS-268 ; l'aide porte un décor animé à
   l'entrée de chaque section et un contenu immobile, amendement de LS-280 ;
@@ -419,6 +425,15 @@ photo, les photographies réelles restant sur la fiche ; les autres conditions
 d'ADR-047 s'appliquent. Aucune autre catégorie n'en bénéficie.
 
 ### C33, tout écran d'administration est atteignable sans saisir d'URL
+
+**Trois chemins mènent à une rubrique depuis LS-325**, et tous lisent la même
+table `RUBRIQUES` : la barre latérale, la palette « Aller à… »
+(`palette-administration.tsx`, bouton du bandeau, Ctrl+K ou Cmd+K), et les
+actions directes du tableau de bord (`actions-administration.ts`). **Une
+rubrique ajoutée à `RUBRIQUES` entre seule dans la palette** ; elle porte une
+icône, champ `icone`, toujours décorative. Les options de la palette ne sont
+pas des liens : elles ne doublent aucun lien de la barre, que les tests
+désignent par leur nom.
 
 Une **barre permanente** porte les rubriques, posée par
 `src/app/administration/layout.tsx`, arbitrage du 2 septembre 2026. Elle ne
