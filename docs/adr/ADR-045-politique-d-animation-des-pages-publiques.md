@@ -8,6 +8,32 @@
 | Amende | `.claude/rules/frontend-design.md`, sections « Interdits visuels » et « Paillettes » |
 | Ticket | LS-259 |
 
+## Amendement du 14 novembre 2026, tous les écrans de l'administration, LS-326
+
+**Arbitrage de Christophe**, le même jour que LS-325 : « repenser toutes les
+pages de son espace admin, simplifier, animer, colorer, motion design ».
+L'amendement de LS-325 ci-dessous écartait « des entrées en fondu sur chaque
+écran ». **Le refus tient pour le contenu, et s'assouplit pour un repère** :
+ce qui arrive à chaque écran est un signe d'orientation court, jamais le
+contenu de travail.
+
+| Où | Ce qui est permis, en plus de LS-325 |
+|---|---|
+| bandeau, tous les écrans | l'icône du repère d'écran se trace à chaque changement de rubrique, 600 ms |
+| titre `h1`, tous les écrans | le trait à la couleur de la famille grandit une fois, 500 ms |
+| lignes et cartes de liste | réponses à un geste : survol, focus, ouverture d'un détail |
+| Paramètres | le sommaire d'état est immobile ; rien ne bouge dans ses formulaires |
+
+- **Le contenu ne part jamais d'une opacité nulle** et ne glisse pas : une
+  liste de commandes est lisible au premier rendu.
+- Toujours aucune boucle, rien en mouvement réduit, rien pendant une saisie,
+  `transform`, `opacity` et `stroke-dashoffset` seulement.
+
+**La couleur entre dans l'administration par famille de rubriques**, cinq
+couleurs prises dans les jetons d'ADR-022, sans valeur neuve : elles disent où
+l'on est (repère, trait de titre, icônes de la barre), et un état de ligne se
+dit toujours aussi par son libellé, jamais par la couleur seule.
+
 ## Amendement du 14 novembre 2026, l'administration, LS-325
 
 **Arbitrage de Christophe** : l'interface de l'administratrice doit être

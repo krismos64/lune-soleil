@@ -1,0 +1,74 @@
+/*
+ * Repère d'écran du bandeau de l'administration, LS-326. Jetons seulement :
+ * `--ls-famille` vient du layout, qui la pose selon `data-famille`.
+ */
+.repere {
+  display: flex;
+  align-items: center;
+  gap: var(--ls-space-3);
+  min-width: 0;
+  margin: 0;
+}
+
+/*
+ * LE MÉDAILLON PORTE LA COULEUR DE LA FAMILLE, icône blanche dessus : les
+ * cinq couleurs de famille tiennent 4,5:1 avec le blanc, mesurées dans
+ * `layout.module.css`. Décor, mais lisible.
+ */
+.medaillon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: var(--ls-famille, var(--ls-primary));
+  color: var(--ls-text-on-primary);
+}
+
+.textes {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.famille {
+  color: var(--ls-text-muted);
+  font-size: 0.75rem;
+}
+
+.rubrique {
+  overflow: hidden;
+  color: var(--ls-text);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Sous 560 px, le nom de la rubrique suffit : la famille cède sa ligne. */
+@media (max-width: 559px) {
+  .famille {
+    display: none;
+  }
+}
+
+/*
+ * L'ICÔNE SE TRACE, UNE FOIS PAR ÉCRAN : `stroke-dashoffset` seulement,
+ * 600 ms, aucune itération infinie. `pathLength` n'étant pas posé sur chaque
+ * tracé, la longueur de tiret couvre le plus long des dessins.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .icone {
+    stroke-dasharray: 80;
+    stroke-dashoffset: 80;
+    animation: trace-icone 600ms var(--ls-easing-sortie) 60ms forwards;
+  }
+}
+
+@keyframes trace-icone {
+  to {
+    stroke-dashoffset: 0;
+  }
+}

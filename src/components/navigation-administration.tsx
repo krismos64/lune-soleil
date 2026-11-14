@@ -470,6 +470,7 @@ export function NavigationAdministration({
                     <Link
                       href={rubrique.chemin}
                       className={styles.lien}
+                      data-famille={rubrique.groupe}
                       /*
                        * ------------------------------------------------------------
                        * AUCUN PRECHARGEMENT, LS-166, ET C'EST UNE BOUCLE QU'IL FERME.
