@@ -24,6 +24,7 @@ import {
   jsonLdProduit,
   openGraphDePage,
   PAGE_FACEBOOK,
+  PAGE_TIKTOK,
   urlDuSite,
 } from "@/lib/seo";
 
@@ -222,10 +223,18 @@ describe("jsonLdOrganisation", () => {
   });
 
   it("rattache la page Facebook officielle, sans parametre de langue, LS-30", () => {
-    expect(jsonLdOrganisation()["sameAs"]).toEqual([PAGE_FACEBOOK]);
+    expect(jsonLdOrganisation()["sameAs"]).toContain(PAGE_FACEBOOK);
     expect(PAGE_FACEBOOK).toBe(
       "https://www.facebook.com/profile.php?id=61592696335840",
     );
+  });
+
+  it("rattache le compte TikTok apres Facebook, LS-327", () => {
+    expect(jsonLdOrganisation()["sameAs"]).toEqual([
+      PAGE_FACEBOOK,
+      PAGE_TIKTOK,
+    ]);
+    expect(PAGE_TIKTOK).toBe("https://www.tiktok.com/@lunesoleil.fr");
   });
 });
 

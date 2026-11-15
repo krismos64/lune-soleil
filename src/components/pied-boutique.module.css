@@ -144,12 +144,20 @@
 }
 
 /*
- * LE LIEN FACEBOOK ET SON LOGO, LS-30. Le logo suit la couleur du lien,
- * `--ls-texte-nuit` sur la nuit, 16,37:1, et passe en or pâle au survol.
+ * LES LIENS DES RÉSEAUX ET LEURS LOGOS, LS-30 puis LS-327. Le logo suit la
+ * couleur du lien, `--ls-texte-nuit` sur la nuit, 16,37:1, et passe en or
+ * pâle au survol.
  */
+.reseaux {
+  margin: var(--ls-space-3) 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
 .lienSocial {
   gap: var(--ls-space-2);
-  margin-top: var(--ls-space-3);
 }
 
 .logoSocial {

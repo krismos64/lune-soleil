@@ -446,7 +446,7 @@ export default async function PageInformationsLegales() {
              * contrat liée à ce lien imposerait `rel="sponsored"`.
              *
              * `<a>` ET NON `Link`, la cible est hors du site. Même onglet, comme
-             * le lien Facebook du pied : aucune fenêtre ne s'ouvre sans être
+             * les liens des réseaux du pied : aucune fenêtre ne s'ouvre sans être
              * annoncée.
              */}
             <h3 className={styles.titreBloc}>Conception et développement</h3>

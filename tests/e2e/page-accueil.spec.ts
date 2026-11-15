@@ -48,6 +48,34 @@ test("le pied de page mene a la page Facebook de l'atelier", async ({
   expect(boite?.height ?? 0).toBeGreaterThanOrEqual(44);
 });
 
+/*
+ * LE SECOND CANAL OFFICIEL, LS-327 : TikTok, sous Facebook, même contrat. Les
+ * deux liens empilés ne se chevauchent pas, chacun garde ses 44 px.
+ */
+test("le pied de page mene au compte TikTok de l'atelier", async ({ page }) => {
+  await page.goto("/");
+
+  const pied = page.getByRole("contentinfo");
+  const tiktok = pied.getByRole("link", {
+    name: "Suivre l'atelier sur TikTok",
+  });
+  await expect(tiktok).toHaveAttribute(
+    "href",
+    "https://www.tiktok.com/@lunesoleil.fr",
+  );
+  const facebook = pied.getByRole("link", {
+    name: "Suivre l'atelier sur Facebook",
+  });
+  const [boiteTiktok, boiteFacebook] = await Promise.all([
+    tiktok.boundingBox(),
+    facebook.boundingBox(),
+  ]);
+  expect(boiteTiktok?.height ?? 0).toBeGreaterThanOrEqual(44);
+  expect(boiteTiktok?.y ?? 0).toBeGreaterThanOrEqual(
+    (boiteFacebook?.y ?? 0) + (boiteFacebook?.height ?? 0) - 0.5,
+  );
+});
+
 test("la page ne deborde pas horizontalement", async ({ page }) => {
   await page.goto("/");
 
