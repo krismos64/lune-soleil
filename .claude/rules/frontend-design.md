@@ -384,9 +384,11 @@ chiffres. Zones tactiles proches de 44 par 44 px. Zoom à 200 % sans perte de
 contenu ni blocage de l'achat.
 
 **Une largeur se mesure avec la police la plus large**, pas avec celle du
-poste : le runner Linux rend en DejaVu Sans, et trois débordements ont passé
+poste : le runner Linux rend en DejaVu Sans, et quatre débordements ont passé
 la revue sur macOS avant de rougir en CI (LS-253, LS-314, nocturne 101 de
-LS-319, 6 px à 390 px sur deux champs de date en `1fr 1fr`). Des champs côte à
+LS-319, 6 px à 390 px sur deux champs de date en `1fr 1fr`, puis le repère du
+bandeau de LS-326, 14 px à 768 px, que Verdana injecté ne reproduisait pas :
+seul le conteneur Playwright avec `fonts-dejavu-core` fait foi). Des champs côte à
 côte se posent en `repeat(auto-fit, minmax(min(100%, Nrem), 1fr))`, qui décide
 sur la place réelle, et non par une `@media` sur une largeur d'écran supposée.
 
