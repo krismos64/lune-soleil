@@ -76,6 +76,67 @@ test.describe("administratrice", () => {
     expect(distinctes.has("rgba(0, 0, 0, 0)")).toBe(false);
   });
 
+  /*
+   * AUCUN MOT DU REPÈRE N'EST COUPÉ, nocturne du 15 novembre 2026. À 768 px,
+   * le rappel « Ctrl K » ne laissait que 74 px au texte sous DejaVu Sans :
+   * `overflow-wrap: anywhere` coupait « Paramètres » ou « Commandes » en plein
+   * mot sans aucun débordement, donc sans qu'aucune mesure le voie, et
+   * « Administration », écrit en plus petit, débordait de 14 px. Chaque mot
+   * doit tenir sur une seule ligne, les noms de plusieurs mots se repliant
+   * entre deux mots.
+   */
+  test("aucun mot du repère n'est coupé en deux lignes", async ({ page }) => {
+    test.setTimeout(180_000);
+    for (const [chemin] of ECRANS) {
+      await page.goto(chemin);
+      const coupes = await page
+        .locator("p[data-famille]")
+        .evaluate((repere) => {
+          const fautifs: string[] = [];
+          const parcours = document.createTreeWalker(
+            repere,
+            NodeFilter.SHOW_TEXT,
+          );
+          for (let n = parcours.nextNode(); n; n = parcours.nextNode()) {
+            const texte = n.textContent ?? "";
+            for (const mot of texte.matchAll(/\S+/g)) {
+              const plage = document.createRange();
+              plage.setStart(n, mot.index);
+              plage.setEnd(n, mot.index + mot[0].length);
+              const lignes = new Set(
+                [...plage.getClientRects()].map((r) => Math.round(r.top)),
+              );
+              if (lignes.size > 1) fautifs.push(mot[0]);
+            }
+          }
+          return fautifs;
+        });
+      expect(coupes, chemin).toEqual([]);
+    }
+  });
+
+  /*
+   * LE RAPPEL DU RACCOURCI ATTEND 1100 PX, même nocturne : c'est lui qui
+   * prenait au repère la place de ses mots, de 768 à 1099 px. Le raccourci
+   * marche à toute largeur, seul son rappel est masqué.
+   */
+  test("le rappel du raccourci n'apparaît qu'à partir de 1100 px", async ({
+    page,
+  }) => {
+    await page.goto("/administration");
+    const rappel = page
+      .getByRole("button", { name: "Aller à…" })
+      .locator("kbd");
+    const largeur = page.viewportSize()?.width ?? 0;
+    if (largeur >= 1100) {
+      await expect(rappel).toBeVisible();
+    } else {
+      await expect(rappel).toBeHidden();
+    }
+    await page.setViewportSize({ width: 1099, height: 900 });
+    await expect(rappel).toBeHidden();
+  });
+
   test("un écran de détail garde le repère de sa liste", async ({ page }) => {
     await page.goto("/administration/produits/nouveau");
     const repere = page.locator("p[data-famille]");
