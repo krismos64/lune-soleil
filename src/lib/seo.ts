@@ -156,9 +156,9 @@ export function disponibiliteSchemaOrg(etat: EtatDisponibilite): string {
 export const NOM_BOUTIQUE = "Lune-soleil";
 
 /**
- * Le seul canal social officiel, LS-30 : la page Facebook donnée par
+ * Premier canal social officiel, LS-30 : la page Facebook donnée par
  * l'exploitante le 3 septembre 2026, et confirmée active par Christophe le
- * 8 octobre 2026.
+ * 8 octobre 2026. Le compte TikTok la rejoint par LS-327, plus bas.
  *
  * LE PARAMETRE `&locale=fr_FR` DE L'ADRESSE FOURNIE EST RETIRE : il imposait
  * la langue de l'interface Facebook au visiteur, et rien d'autre. C'est une
@@ -169,6 +169,15 @@ export const NOM_BOUTIQUE = "Lune-soleil";
  */
 export const PAGE_FACEBOOK =
   "https://www.facebook.com/profile.php?id=61592696335840";
+
+/**
+ * Le compte TikTok de l'atelier, LS-327, ajouté sur arbitrage de Christophe
+ * du 15 novembre 2026. Un nom d'utilisateur et non un identifiant numérique :
+ * l'adresse est lisible et stable.
+ *
+ * Lue par le pied de page et par le `sameAs` du JSON-LD `Organization`.
+ */
+export const PAGE_TIKTOK = "https://www.tiktok.com/@lunesoleil.fr";
 
 /**
  * L'image de partage du site, 1200 par 630, LS-147.
@@ -237,7 +246,7 @@ export function jsonLdOrganisation(): Record<string, unknown> {
      * code pays FR exclut déjà les départements d'outre-mer, qui ont le leur.
      */
     areaServed: { "@type": "Country", name: "France" },
-    sameAs: [PAGE_FACEBOOK],
+    sameAs: [PAGE_FACEBOOK, PAGE_TIKTOK],
   };
 }
 
