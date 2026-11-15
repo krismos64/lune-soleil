@@ -34,9 +34,26 @@ registre des traitements n'est pas touché.
 
 ## Reste
 
-- Déploiement en production sur accord, avec le correctif du nocturne du
+- Déployé le même jour, voir plus bas, avec le correctif du nocturne du
   même jour (journal `2026-11-15-a`).
 
 ## État des tickets
 
 - LS-327 : terminé à la fusion.
+
+## Mise en production, même jour
+
+Sur accord de Christophe (« oui »). `0b2ca85` déployé par le workflow
+« Déployer en production », run 43729435254, depuis `931b94f` : LS-327 et le
+correctif du nocturne de LS-326 (journal `2026-11-15-a`) partent ensemble.
+Aucune migration.
+
+- `/`, `/catalogue`, `/panier`, `/api/sante` et `/administration/connexion` en
+  200.
+- Constaté sur `https://lune-soleil.fr/` : liens « Suivre l'atelier sur
+  Facebook » et « Suivre l'atelier sur TikTok » dans le pied de page,
+  `sameAs` du JSON-LD à deux adresses, Facebook puis TikTok.
+- Non vérifié en production : le bandeau de l'administration à 768 px avec la
+  session de l'exploitante ; la preuve reste la mesure DejaVu du journal
+  `2026-11-15-a`.
+- Issue #647 : à fermer sur le premier nocturne vert.

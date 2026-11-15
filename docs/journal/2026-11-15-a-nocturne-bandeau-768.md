@@ -62,7 +62,7 @@ Mesuré sous DejaVu, 16 écrans plus la réauthentification, à 768, 1024, 1099,
 ## Reste
 
 - Issue #647 : à fermer sur le premier nocturne vert.
-- Déploiement en production, la fusion publiant l'image : sur accord.
+- Déployé avec LS-327, journal `2026-11-15-b`, production à `0b2ca85`.
 - Tickets ouverts inchangés : LS-320, LS-291, LS-35.
 
 ## État des tickets
