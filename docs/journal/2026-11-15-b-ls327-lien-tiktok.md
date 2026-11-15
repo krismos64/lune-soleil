@@ -57,3 +57,24 @@ Aucune migration.
   session de l'exploitante ; la preuve reste la mesure DejaVu du journal
   `2026-11-15-a`.
 - Issue #647 : à fermer sur le premier nocturne vert.
+
+## Relecture finale des contenus, même jour
+
+Contrôles rejoués en sortie 0 : `verifier-config-claude.sh --strict`,
+`verifier-propagation-docs.sh`, `verifier-regles.sh`,
+`verifier-registre-traitements.sh`, `verifier-taches-planifiees.sh`,
+`verifier-redaction-francaise.sh`, `verifier-atteignabilite-boutique.sh`,
+`verifier-tests-non-ignores.sh`. `CLAUDE.md` à 200 lignes, index mémoire à
+142. Aucune mention « seul canal » ni du rappel « Ctrl K » à 768 px restée
+fausse ; `CLAUDE.md`, `README.md`, les skills et les hooks n'avaient rien à
+changer.
+
+Deux écarts comblés :
+
+- `docs/ETAT.md` comptait 1 story ouverte sous LS-7 et 2 sous LS-22. Relevé
+  dans Jira : LS-291 et LS-320 sous LS-7, aucune sous LS-22, LS-35 sous LS-5.
+  Écart antérieur à ce jour.
+- `ls-frontend-revue` et `frontend-design.md` donnaient Verdana injecté comme
+  moyen de mesure : il n'a rien reproduit sur le bandeau. Ils renvoient
+  désormais au conteneur DejaVu, et l'agent signale le mot coupé sans
+  débordement.
