@@ -2370,6 +2370,24 @@ describe("lastmod du sitemap et avis, LS-328", () => {
     expect(await lastmodDeLaFiche(slug)).toBe(ANCIENNE_DATE.getTime());
   });
 
+  it("ignore un avis refuse sans avoir jamais ete publie, critere 3", async () => {
+    /*
+     * LE CAS QUI EXERCE LE FILTRE `publie_a IS NOT NULL` : un avis seulement
+     * depose n'a aucune date de changement, il ne le distingue pas. Un refus
+     * pose `decide_a` sur un avis que la fiche n'a jamais montre.
+     */
+    const { avisId, slug } = await avisSurUnePiece(false);
+    const issue = await modererAvis({
+      avisId,
+      statut: "REFUSE",
+      motifDecision: "Refusé pour le test.",
+    });
+    if (issue.statut !== "APPLIQUEE")
+      throw new Error(`moderation ${issue.statut}`);
+
+    expect(await lastmodDeLaFiche(slug)).toBe(ANCIENNE_DATE.getTime());
+  });
+
   it("garde la modification du produit quand elle est plus recente, critere 5", async () => {
     const { produitId, slug } = await avisSurUnePiece(true);
     const plusTard = new Date(Date.now() + 60 * 60 * 1000);
