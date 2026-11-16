@@ -36,11 +36,23 @@ Ticket neuf **LS-328** sous l'epic LS-7, étiquette `seo`.
 - Types, lint, `verifier-regles.sh` au vert ; `npm run test` : 130 fichiers,
   2 110 tests passés.
 
+## Mise en production, même jour
+
+PR #688 fusionnée en rebase, `8c3d919`. Image publiée (run 43941008991), puis
+déployée par le workflow « Déployer en production », run 43941408142, depuis
+`0b2ca85`. Aucune migration.
+
+- `/`, `/catalogue`, `/panier`, `/api/sante` et `/administration/connexion` en
+  200.
+- Constaté sur `https://lune-soleil.fr/sitemap.xml` : la fiche « Fleur
+  dorée » porte `lastmod` `2026-11-16T19:05:27.788Z`, soit `publie_a` de son
+  avis, au lieu du 7 octobre.
+
 ## Hors story
 
-- Issue #647 (nocturne du 8 novembre) toujours ouverte, à fermer sur le
-  premier nocturne vert.
+- Issue #647 fermée : nocturne 43835091947 vert sur `3078a3e`, le 16 novembre
+  2026 à 08:54 UTC.
 
 ## État des tickets
 
-- LS-328 : terminée à la fusion, déploiement à suivre.
+- LS-328 : terminée et déployée.
