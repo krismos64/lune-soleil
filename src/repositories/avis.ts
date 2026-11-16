@@ -911,6 +911,48 @@ export async function listerAvisPublies(
   });
 }
 
+/**
+ * La date du dernier changement des avis visibles sur chaque fiche, LS-328.
+ *
+ * LE BESOIN : le sitemap datait une fiche par la seule ligne produit, LS-308.
+ * Un avis publie, retire, modifie par son auteur ou efface change pourtant la
+ * fiche, son bloc d'avis et son `aggregateRating`, sans toucher le produit.
+ *
+ * SEUL UN AVIS DEJA PUBLIE COMPTE, `publie_a` non nul. Un avis depose puis
+ * refuse n'a jamais ete lu sur la fiche : sa date ne dit rien d'elle.
+ *
+ * CHAQUE COLONNE EST UN CHANGEMENT DE LA FICHE : `publie_a`, la premiere
+ * publication ; `decide_a`, une republication apres modification (`publie_a`
+ * n'est ecrit qu'une fois) ou un retrait ; `modifie_a`, le retour en
+ * moderation qui retire l'avis de la fiche, regle R10 ; `efface_a`, LS-305 ;
+ * la reponse de l'atelier, que la fiche affiche. `greatest` de PostgreSQL
+ * ignore les nulls.
+ *
+ * LIMITE ASSUMEE : un avis publie, modifie puis refuse avance la date au
+ * refus, quand la fiche a change a la modification. La date est alors plus
+ * recente que le changement reel, d'un delai de moderation, jamais inventee.
+ *
+ * PAR LA VARIANTE DE LA LIGNE, comme `listerAvisPublies` : c'est ainsi que la
+ * fiche relie un avis a son produit, decision G.
+ */
+export async function listerDernierChangementAvisParProduit(
+  client: ClientBase,
+): Promise<Map<string, Date>> {
+  const lignes = await client.$queryRaw<{ produitId: string; changeA: Date }[]>`
+    SELECT v.produit_id AS "produitId",
+           max(greatest(a.publie_a, a.decide_a, a.modifie_a, a.efface_a,
+                        r.publiee_a, r.modifiee_a)) AS "changeA"
+    FROM avis a
+    JOIN ligne_commande l ON l.id = a.ligne_commande_id
+    JOIN variante v ON v.id = l.variante_id
+    LEFT JOIN reponse_avis r ON r.avis_id = a.id
+    WHERE a.publie_a IS NOT NULL
+    GROUP BY v.produit_id
+  `;
+
+  return new Map(lignes.map((ligne) => [ligne.produitId, ligne.changeA]));
+}
+
 /** La piece d'un avis, telle que la page des avis la presente, LS-313. */
 export type PieceDeLAvis = {
   /** Le nom FIGE a la vente, invariant 3, jamais le nom actuel du catalogue. */

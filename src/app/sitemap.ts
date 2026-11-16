@@ -23,6 +23,7 @@
 import type { MetadataRoute } from "next";
 
 import { absolutise } from "@/lib/seo";
+import { lireDernierChangementAvisParProduit } from "@/services/avis";
 import { lireCataloguePublic } from "@/services/catalogue";
 
 /**
@@ -63,7 +64,10 @@ const PAGES_FIXES = [
 ] as const;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const { produits, categories } = await lireCataloguePublic();
+  const [{ produits, categories }, changementsAvis] = await Promise.all([
+    lireCataloguePublic(),
+    lireDernierChangementAvisParProduit(),
+  ]);
 
   /*
    * AUCUN `lastModified` SUR LES PAGES FIXES NI LES CATEGORIES, LS-308. Elles
@@ -104,11 +108,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
      * signaler. Un prix, une variante ou une photo modifies ne touchent pas la
      * ligne produit, limite assumee : la date reste vraie, elle est seulement
      * plus ancienne que la derniere retouche.
+     *
+     * SES AVIS LA CHANGENT AUSSI, LS-328 : un avis publie ou retire modifie le
+     * bloc des avis et l'`aggregateRating` sans toucher la ligne produit. La
+     * plus recente des deux dates l'emporte.
      */
-    lastModified: produit.modifieA,
+    lastModified: plusRecente(
+      produit.modifieA,
+      changementsAvis.get(produit.id),
+    ),
     changeFrequency: "weekly",
     priority: 0.8,
   }));
 
   return [...entreesFixes, ...entreesCategories, ...entreesProduits];
+}
+
+/** La plus recente de deux dates, la seconde pouvant manquer. */
+function plusRecente(date: Date, autre: Date | undefined): Date {
+  return autre !== undefined && autre > date ? autre : date;
 }

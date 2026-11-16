@@ -60,6 +60,7 @@ import {
   lireInvitationsDeCommande,
   listerAvisParStatut,
   listerAvisPublicsAvecPiece,
+  listerDernierChangementAvisParProduit,
   listerAvisPublies,
   listerCommandesAInviter,
   listerAvisDeLUtilisateur,
@@ -1479,6 +1480,16 @@ export async function lireAvisDeLaBoutique(
   limite?: number,
 ): Promise<AvisPublieAvecPiece[]> {
   return listerAvisPublicsAvecPiece(prisma, limite);
+}
+
+/**
+ * La date du dernier changement des avis de chaque fiche, pour le `lastmod`
+ * du sitemap, LS-328. Voir `listerDernierChangementAvisParProduit`.
+ */
+export async function lireDernierChangementAvisParProduit(): Promise<
+  Map<string, Date>
+> {
+  return listerDernierChangementAvisParProduit(prisma);
 }
 
 export type { AvisPublieAvecPiece };
