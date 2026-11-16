@@ -2233,3 +2233,151 @@ describe("avis de la boutique, LS-313", () => {
     expect(un.map((ligne) => ligne.id)).toEqual([second.avisId]);
   });
 });
+
+/**
+ * Le `lastmod` du sitemap d'une fiche suit ses avis, LS-328.
+ *
+ * LE DEFAUT DE DEPART : la fiche « Fleur dorée » a recu un avis le 16 novembre
+ * 2026, et le sitemap l'annoncait toujours au 7 octobre, date de la derniere
+ * ecriture sur la ligne produit. Un moteur qui se fie au `lastmod` ne revenait
+ * pas lire l'avis ni la note.
+ *
+ * LE TEST APPELLE LE VRAI SITEMAP, la fonction que Next.js sert : une
+ * reproduction de la requete testerait la reproduction.
+ */
+describe("lastmod du sitemap et avis, LS-328", () => {
+  let sitemap: typeof import("@/app/sitemap").default;
+
+  const ANCIENNE_DATE = new Date("2026-01-01T00:00:00.000Z");
+
+  beforeAll(async () => {
+    sitemap = (await import("@/app/sitemap")).default;
+  });
+
+  /** Depose un avis sur une commande livree, et le publie si demande. */
+  async function avisSurUnePiece(publier: boolean): Promise<{
+    avisId: string;
+    produitId: string;
+    slug: string;
+  }> {
+    const { commandeId } = await commanderEtPayer();
+    await marquerLivree(commandeId);
+    await inviterApresLivraison();
+
+    const valeur = await valeurJetonDeCommande(commandeId);
+    const etat = await lireEtatDepot(valeur);
+    if (etat.statut !== "OUVERT") throw new Error("etat inattendu");
+
+    await deposerAvis(valeur, [
+      {
+        ligneCommandeId: etat.pieces[0]!.ligneCommandeId,
+        note: 5,
+        commentaire: "Très jolie pièce.",
+      },
+    ]);
+
+    const { rows } = await client.query<{
+      avis_id: string;
+      produit_id: string;
+      slug: string;
+    }>(
+      `SELECT a.id AS avis_id, p.id AS produit_id, p.slug
+       FROM avis a
+       JOIN ligne_commande l ON l.id = a.ligne_commande_id
+       JOIN variante v ON v.id = l.variante_id
+       JOIN produit p ON p.id = v.produit_id
+       WHERE l.commande_id = $1`,
+      [commandeId],
+    );
+    const ligne = rows[0]!;
+
+    // La fiche est datee bien avant l'avis, pour que l'ecart se voie.
+    await client.query("UPDATE produit SET modifie_a = $1 WHERE id = $2", [
+      ANCIENNE_DATE,
+      ligne.produit_id,
+    ]);
+
+    if (publier) {
+      const issue = await modererAvis({
+        avisId: ligne.avis_id,
+        statut: "PUBLIE",
+        motifDecision: null,
+      });
+      if (issue.statut !== "APPLIQUEE")
+        throw new Error(`moderation ${issue.statut}`);
+    }
+
+    return {
+      avisId: ligne.avis_id,
+      produitId: ligne.produit_id,
+      slug: ligne.slug,
+    };
+  }
+
+  async function lastmodDeLaFiche(slug: string): Promise<number | undefined> {
+    const entrees = await sitemap();
+    const entree = entrees.find((ligne) =>
+      ligne.url.endsWith(`/produit/${slug}`),
+    );
+    if (entree === undefined) throw new Error(`fiche ${slug} absente`);
+    return entree.lastModified === undefined
+      ? undefined
+      : new Date(entree.lastModified).getTime();
+  }
+
+  async function dateDeLAvis(
+    avisId: string,
+    colonne: "publie_a" | "decide_a",
+  ): Promise<number> {
+    const { rows } = await client.query<{ date: Date }>(
+      `SELECT ${colonne} AS date FROM avis WHERE id = $1`,
+      [avisId],
+    );
+    return rows[0]!.date.getTime();
+  }
+
+  it("date la fiche par la publication de son avis, critere 1", async () => {
+    const { avisId, slug } = await avisSurUnePiece(true);
+
+    expect(await lastmodDeLaFiche(slug)).toBe(
+      await dateDeLAvis(avisId, "publie_a"),
+    );
+  });
+
+  it("date la fiche par le retrait d'un avis publie, critere 2", async () => {
+    const { avisId, slug } = await avisSurUnePiece(true);
+    // Le retrait doit tomber strictement apres la publication.
+    await client.query(
+      "UPDATE avis SET publie_a = publie_a - interval '1 hour', decide_a = decide_a - interval '1 hour' WHERE id = $1",
+      [avisId],
+    );
+    const issue = await modererAvis({
+      avisId,
+      statut: "RETIRE",
+      motifDecision: "Retiré pour le test.",
+    });
+    if (issue.statut !== "APPLIQUEE")
+      throw new Error(`moderation ${issue.statut}`);
+
+    const retireA = await dateDeLAvis(avisId, "decide_a");
+    expect(retireA).toBeGreaterThan(await dateDeLAvis(avisId, "publie_a"));
+    expect(await lastmodDeLaFiche(slug)).toBe(retireA);
+  });
+
+  it("ignore un avis seulement depose, critere 3", async () => {
+    const { slug } = await avisSurUnePiece(false);
+
+    expect(await lastmodDeLaFiche(slug)).toBe(ANCIENNE_DATE.getTime());
+  });
+
+  it("garde la modification du produit quand elle est plus recente, critere 5", async () => {
+    const { produitId, slug } = await avisSurUnePiece(true);
+    const plusTard = new Date(Date.now() + 60 * 60 * 1000);
+    await client.query("UPDATE produit SET modifie_a = $1 WHERE id = $2", [
+      plusTard,
+      produitId,
+    ]);
+
+    expect(await lastmodDeLaFiche(slug)).toBe(plusTard.getTime());
+  });
+});
