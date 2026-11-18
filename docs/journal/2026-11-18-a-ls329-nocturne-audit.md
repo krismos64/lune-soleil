@@ -89,3 +89,21 @@ déployée par le workflow « Déployer en production », run 44349367400, depui
 - Cron inchangé : aucune tâche de `TACHES` modifiée.
 - Nocturne relancé à la main sur `main`, run 44349626445, pour éprouver l'audit
   sans attendre la nuit.
+
+## Nocturne relancé, premier essai
+
+Run 44349626445 : **« Verdict de l'audit des dependances » vert** sur le
+runner, et « Preuves par mutation lourdes » vertes, test des passkeys de LS-320
+compris, une fois. Le job est tombé sur « Installer le navigateur de test »,
+plafond de 5 minutes : le miroir Ubuntu servait les polices à environ
+100 ko/s, incident d'infrastructure. Bout en bout et image sautés. Job relancé
+à 18:13 UTC ; son verdict n'est pas connu à la fin de la session.
+
+**À la reprise** : lire le verdict du run 44349626445, ou du nocturne du
+19 novembre. S'il est vert, fermer l'issue #690 et LS-329. Sinon, nommer
+l'étape fautive avant toute autre chose.
+
+Deux commentaires du filtre, devenus faux par cette story, corrigés en fin de
+session : l'en-tête qui disait `audit-exemptions.json` vide, et le cas de
+défaut fermé qui citait le point fixe retiré. Preuve rejouée, 13 mutations
+sur 13.
