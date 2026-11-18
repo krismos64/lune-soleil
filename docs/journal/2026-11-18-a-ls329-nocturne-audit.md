@@ -64,15 +64,13 @@ rapport.
 
 ## Prochaine étape
 
-Fusion et déploiement faits le même jour, voir plus bas. L'issue #690 ne se
-ferme qu'au premier nocturne vert, ce qui suppose LS-320 : le test des passkeys
-peut encore le rougir. Retirer l'exemption de picomatch dès que `npm audit` ne
+Fusion, déploiement et nocturne vert le même jour, voir plus bas. Retirer l'exemption de picomatch dès que `npm audit` ne
 signale plus l'avis, et au plus tard le 25 novembre, où elle échoit.
 
 ## État des tickets
 
-- LS-329 : déployée, reste ouverte jusqu'au premier nocturne vert.
-- LS-320 : à faire, conditionne un nocturne entièrement vert.
+- LS-329 : terminée, déployée, nocturne vert, issue #690 fermée.
+- LS-320 : à faire, test instable vert une fois sur deux mesures du jour.
 
 ## Mise en production, même jour
 
@@ -97,11 +95,8 @@ runner, et « Preuves par mutation lourdes » vertes, test des passkeys de LS-32
 compris, une fois. Le job est tombé sur « Installer le navigateur de test »,
 plafond de 5 minutes : le miroir Ubuntu servait les polices à environ
 100 ko/s, incident d'infrastructure. Bout en bout et image sautés. Job relancé
-à 18:13 UTC ; son verdict n'est pas connu à la fin de la session.
-
-**À la reprise** : lire le verdict du run 44349626445, ou du nocturne du
-19 novembre. S'il est vert, fermer l'issue #690 et LS-329. Sinon, nommer
-l'étape fautive avant toute autre chose.
+à 18:13 UTC : **conclusion `success`**, bout en bout, image et preuves lourdes
+compris. Issue #690 fermée, LS-329 close.
 
 Deux commentaires du filtre, devenus faux par cette story, corrigés en fin de
 session : l'en-tête qui disait `audit-exemptions.json` vide, et le cas de
