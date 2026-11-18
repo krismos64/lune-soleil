@@ -125,13 +125,13 @@ cas "date limite ignorée" "une exemption échue fait échouer"
 mute "$FILTRE" 's{if \(duree > HORIZON_JOURS\)}{if (false)}'
 cas "durée non bornée" "une exemption de 32 jours est refusée"
 
-# Cas 5 : une seule cause couverte suffit, le défaut le plus insidieux : un
-# paquet qui cite l'exempté passerait avec son propre avis.
-mute "$FILTRE" 's{causes\.every\(}{causes.some(}'
-cas "une cause couverte suffit" "porte un autre avis fait échouer"
+# Cas 5 : un seul avis atteint exempté suffit, le défaut le plus insidieux :
+# un paquet qui cite l'exempté passerait avec son propre avis.
+mute "$FILTRE" 's{exemptions\.every\(}{exemptions.some(}'
+cas "un avis exempté suffit" "porte un autre avis fait échouer"
 
-# Cas 6 : un paquet sans cause est couvert d'office.
-mute "$FILTRE" 's{if \(causes\.length === 0\) continue;}{if (causes.length === 0) { couverts.add(paquet); progres = true; continue; }}'
+# Cas 6 : un paquet qui n'atteint aucun avis est couvert d'office.
+mute "$FILTRE" 's{if \(!lisible \|\| avisAtteints\.length === 0\) continue;}{if (!lisible) continue;}'
 cas "paquet sans cause couvert" "un paquet sans cause ne passe pas"
 
 # Cas 7 : un identifiant joker est admis.
@@ -146,11 +146,21 @@ cas "forme de rapport non vérifiée" "un rapport de forme inconnue bloque"
 mute "$FILTRE" 's{process\.exit\(echec \? 1 : 0\);}{process.exit(0);}'
 cas "verdict final forcé à 0" "un avis bas non exempté à côté de la chaîne fait échouer"
 
-# Cas 10 : le workflow n'appelle plus le filtre.
+# Cas 10 : une dépendance citée mais absente du rapport est ignorée au lieu
+# de bloquer. LS-329.
+mute "$FILTRE" 's{if \(fiche === undefined\) return \{ lisible: false, avisAtteints \};}{if (fiche === undefined) continue;}'
+cas "dépendance absente ignorée" "une dépendance citée mais absente du rapport ne passe pas"
+
+# Cas 11 : retour au défaut de LS-258, tout cycle bloque, même entièrement
+# exempté. Forme réelle de vitest et @vitest/coverage-v8, LS-329.
+mute "$FILTRE" 's{if \(vus\.has\(paquet\)\) continue;}{if (vus.has(paquet)) return { lisible: false, avisAtteints };}'
+cas "cycle exempté bloqué" "un cycle dont tout avis atteint est exempté passe"
+
+# Cas 12 : le workflow n'appelle plus le filtre.
 mute "$WORKFLOW" 's{if node scripts/filtrer-audit\.mjs scripts/audit-exemptions\.json <"\$RUNNER_TEMP/audit\.json"; then}{if false; then}'
 cas "workflow sans appel au filtre" "n'appelle plus le filtre d'exemption"
 
-# Cas 11 : le filtre appelé AVANT la reconnaissance de panne, où il pourrait
+# Cas 13 : le filtre appelé AVANT la reconnaissance de panne, où il pourrait
 # excuser une panne du registre. Le bloc d'appel remonte au début du `run`.
 mute "$WORKFLOW" 's{(          sortie=\$\(npm audit --audit-level=low 2>&1\)\n)(.*?)(          npm audit --json .*?\n          fi\n)}{$3$1$2}s'
 cas "filtre avant la panne" "n'est pas entre la reconnaissance de panne et l'échec"
