@@ -8,8 +8,9 @@
  * chaîne de lint. Arbitrage de Christophe, 3 octobre 2026 : l'exempter par son
  * identifiant, avec une date limite courte, plutôt que `--omit=dev`, qui
  * masquerait aussi les prochains avis sur les outils de développement.
- * GitHub a retiré cet avis le 23 octobre 2026 : `audit-exemptions.json` est vide
- * depuis le 24, LS-292, et le mécanisme reste prêt pour le prochain cas.
+ * GitHub a retiré cet avis le 23 octobre 2026, et son exemption avec lui,
+ * LS-292. Le mécanisme a resservi le 18 novembre 2026 pour picomatch, LS-329 :
+ * le contenu courant se lit dans `audit-exemptions.json`, jamais ici.
  *
  * LE RELÂCHEMENT DOIT RESTER ÉTROIT, même dissymétrie que LS-176 : laisser
  * passer un avis non exempté est le pire sens d'erreur. D'où quatre règles, que

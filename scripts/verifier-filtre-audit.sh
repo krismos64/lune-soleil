@@ -115,7 +115,8 @@ attendre 1 "un autre avis sur braces n'est pas couvert" 2026-10-03 "NON EXEMPTE 
 # --- La date limite tient.
 attendre 1 "une exemption échue fait échouer" 2026-10-18 "ECHUE GHSA-vfj7-8cjw-p6xm" < <(rapport "$CHAINE")
 
-# --- Défaut fermé sur les cas que le point fixe pourrait laisser passer.
+# --- Défaut fermé sur les cas que le parcours des dépendances pourrait laisser
+# passer : aucun avis atteint, aucune cause, dépendance absente du rapport.
 attendre 1 "un cycle sans avis ne passe pas" 2026-10-03 "NON EXEMPTE a" < <(rapport "$(par a b), $(par b a)")
 attendre 1 "un paquet sans cause ne passe pas" 2026-10-03 "NON EXEMPTE x" < <(rapport '"x": {"name": "x", "severity": "high", "via": []}')
 attendre 1 "une dépendance citée mais absente du rapport ne passe pas" 2026-10-03 "NON EXEMPTE a" < <(rapport "$(avis braces "$URL" high), $(par a braces fantome)")
