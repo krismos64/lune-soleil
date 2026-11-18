@@ -64,12 +64,28 @@ rapport.
 
 ## Prochaine étape
 
-Fusion de la PR #691, déploiement par le workflow « Déployer en production »,
-version de Next relevée sur l'image servie, puis nocturne relancé à la main.
-L'issue #690 ne se ferme qu'au premier nocturne vert, ce qui suppose LS-320 :
-le test des passkeys peut encore le rougir.
+Fusion et déploiement faits le même jour, voir plus bas. L'issue #690 ne se
+ferme qu'au premier nocturne vert, ce qui suppose LS-320 : le test des passkeys
+peut encore le rougir. Retirer l'exemption de picomatch dès que `npm audit` ne
+signale plus l'avis, et au plus tard le 25 novembre, où elle échoit.
 
 ## État des tickets
 
-- LS-329 : en cours, fusion et déploiement à faire.
+- LS-329 : déployée, reste ouverte jusqu'au premier nocturne vert.
 - LS-320 : à faire, conditionne un nocturne entièrement vert.
+
+## Mise en production, même jour
+
+PR #691 fusionnée en rebase, `7b7cbd8`. Image publiée (run 44348444330), puis
+déployée par le workflow « Déployer en production », run 44349367400, depuis
+`8c3d919`. Aucune migration.
+
+- `/`, `/catalogue`, `/panier`, `/api/sante`, `/administration/connexion` et
+  `/sitemap.xml` en 200.
+- Conteneur `lune-soleil-app` sur
+  `ghcr.io/krismos64/lune-soleil:7b7cbd8cf2f12838d374fcd799eda33fc9abcb5f`,
+  `require("next/package.json").version` rend `16.4.6`, aucun paquet
+  `picomatch` dans son `node_modules`.
+- Cron inchangé : aucune tâche de `TACHES` modifiée.
+- Nocturne relancé à la main sur `main`, run 44349626445, pour éprouver l'audit
+  sans attendre la nuit.
