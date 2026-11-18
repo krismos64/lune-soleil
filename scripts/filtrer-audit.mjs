@@ -18,7 +18,8 @@
  *
  * 1. une exemption désigne UN avis, par son URL exacte ET son paquet ;
  * 2. un paquet n'est couvert que si TOUT ce qui le rend vulnérable l'est :
- *    ses avis propres, et chaque dépendance qu'il cite, de proche en proche ;
+ *    chaque avis qu'il atteint, propre ou par une dépendance citée, de proche
+ *    en proche, cycles compris (LS-329) ;
  * 3. une exemption échue fait échouer, et sa durée est bornée à HORIZON_JOURS ;
  * 4. tout ce qui ne se lit pas, rapport ou fichier d'exemptions, fait échouer.
  *
@@ -150,31 +151,45 @@ function exempte(via) {
   return valides.find((e) => e.url === via.url && e.paquet === via.name);
 }
 
-// Point fixe : un paquet est couvert quand chacune de ses causes l'est. Un
-// cycle reste non couvert, donc bloque, défaut fermé.
+// Atteignabilité : un paquet est couvert quand chaque avis qu'il atteint par
+// sa chaîne `via`, de proche en proche, est exempté, et qu'il en atteint au
+// moins un. Un avis est la seule source de vulnérabilité d'un rapport : un
+// paquet qui n'en atteint que d'exemptés n'a rien d'autre à signaler.
+//
+// LE POINT FIXE QUI PRÉCÉDAIT, LS-258, bloquait tout cycle, y compris un cycle
+// dont chaque avis atteint est exempté. Le cas réel est arrivé le 18 novembre
+// 2026, LS-329 : `vitest` cite `@vitest/coverage-v8`, qui cite `vitest`, et le
+// nocturne restait rouge sur un avis exempté. Le défaut fermé tient toujours
+// sur ce qui doit bloquer : un cycle qui n'atteint aucun avis, un paquet sans
+// cause, une dépendance citée mais absente du rapport.
+function parcourir(depart) {
+  const avisAtteints = [];
+  const vus = new Set();
+  const pile = [depart];
+  while (pile.length > 0) {
+    const paquet = pile.pop();
+    if (vus.has(paquet)) continue;
+    vus.add(paquet);
+    const fiche = vulnerabilites[paquet];
+    if (fiche === undefined) return { lisible: false, avisAtteints };
+    const causes = Array.isArray(fiche?.via) ? fiche.via : [];
+    for (const cause of causes) {
+      if (typeof cause === "string") pile.push(cause);
+      else avisAtteints.push(cause);
+    }
+  }
+  return { lisible: true, avisAtteints };
+}
+
 const couverts = new Set();
 const utilisees = new Set();
-let progres = true;
-while (progres) {
-  progres = false;
-  for (const [paquet, fiche] of Object.entries(vulnerabilites)) {
-    if (couverts.has(paquet)) continue;
-    const causes = Array.isArray(fiche?.via) ? fiche.via : [];
-    if (causes.length === 0) continue;
-    const toutes = causes.every((cause) =>
-      typeof cause === "string"
-        ? couverts.has(cause)
-        : exempte(cause) !== undefined,
-    );
-    if (toutes) {
-      couverts.add(paquet);
-      progres = true;
-      for (const cause of causes) {
-        const exemption =
-          typeof cause === "string" ? undefined : exempte(cause);
-        if (exemption) utilisees.add(exemption.avis);
-      }
-    }
+for (const paquet of Object.keys(vulnerabilites)) {
+  const { lisible, avisAtteints } = parcourir(paquet);
+  if (!lisible || avisAtteints.length === 0) continue;
+  const exemptions = avisAtteints.map(exempte);
+  if (exemptions.every((e) => e !== undefined)) {
+    couverts.add(paquet);
+    for (const e of exemptions) utilisees.add(e.avis);
   }
 }
 

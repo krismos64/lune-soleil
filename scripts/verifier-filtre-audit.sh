@@ -118,6 +118,15 @@ attendre 1 "une exemption échue fait échouer" 2026-10-18 "ECHUE GHSA-vfj7-8cjw
 # --- Défaut fermé sur les cas que le point fixe pourrait laisser passer.
 attendre 1 "un cycle sans avis ne passe pas" 2026-10-03 "NON EXEMPTE a" < <(rapport "$(par a b), $(par b a)")
 attendre 1 "un paquet sans cause ne passe pas" 2026-10-03 "NON EXEMPTE x" < <(rapport '"x": {"name": "x", "severity": "high", "via": []}')
+attendre 1 "une dépendance citée mais absente du rapport ne passe pas" 2026-10-03 "NON EXEMPTE a" < <(rapport "$(avis braces "$URL" high), $(par a braces fantome)")
+
+# --- Un cycle dont tout avis atteint est exempté passe, forme réelle du
+# 18 novembre 2026, LS-329 : vitest et @vitest/coverage-v8 se citent l'un
+# l'autre, et vitest cite aussi le paquet porteur de l'avis.
+CYCLE="$(avis braces "$URL" high), $(par vitest @vitest/coverage-v8 braces), $(par @vitest/coverage-v8 vitest)"
+attendre 0 "un cycle dont tout avis atteint est exempté passe" 2026-10-03 "couverts par une exemption : 3" < <(rapport "$CYCLE")
+attendre 1 "un cycle qui atteint un avis non exempté ne passe pas" 2026-10-03 "NON EXEMPTE @vitest/coverage-v8" < <(rapport "$(avis braces "$URL" high), $(par vitest @vitest/coverage-v8 braces a),
+$(par @vitest/coverage-v8 vitest), $(par a semver), $(avis semver https://github.com/advisories/GHSA-aaaa-bbbb-cccc low)")
 
 # --- Entrées illisibles : code 2, jamais 0.
 attendre 2 "un rapport illisible bloque" 2026-10-03 < <(echo "pas du json")

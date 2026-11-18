@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "avis": "GHSA-fc5q-39xc-vjpf",
+    "paquet": "picomatch",
+    "ticket": "LS-329",
+    "ajoute_le": "2026-11-18",
+    "jusqu_au": "2026-11-25",
+    "motif": "Avis RETIRÉ par GitHub le 18 novembre 2026 à 15:38 UTC (withdrawn_at), toujours servi par npm audit le même jour. Aucune version corrigée n'existait, plage <= 4.0.7. Chaîne d'outillage seulement : eslint-config-next et vitest, pair optionnel de better-auth ; .next/standalone ne contient aucun paquet picomatch, mesuré le 18 novembre 2026. Une semaine pour la propagation, à retirer dès que npm audit ne le signale plus."
+  }
+]
