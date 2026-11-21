@@ -82,18 +82,21 @@ async function varianteAgee(
 }
 
 /**
- * Une variante exclue de la promotion : son prix a changé il y a cinq jours,
- * seule cause d'exclusion depuis LS-321 (une pièce récente est réduite).
+ * Une variante non réduite : depuis LS-333, un changement de prix n'exclut
+ * plus, et une pièce reste au prix catalogue quand son article n'est pas dans
+ * la sélection de la promotion. Voir `selectionDe`.
  */
 async function varianteExclue(prixCentimes: number): Promise<string> {
-  const id = await varianteAgee(60, prixCentimes);
-  await client.query(
-    `INSERT INTO historique_prix_variante
-       (id, variante_id, ancien_prix_centimes, nouveau_prix_centimes, modifie_a)
-     VALUES (gen_random_uuid(), $1, $2, $3, now() - interval '5 days')`,
-    [id, prixCentimes + 500, prixCentimes],
-  );
-  return id;
+  return varianteAgee(60, prixCentimes);
+}
+
+/** Une promotion à 30 % sur les seuls articles de ces variantes, LS-324. */
+async function selectionDe(...varianteIds: string[]) {
+  const articles = [];
+  for (const id of varianteIds) {
+    articles.push({ produitId: await produitDe(id), taux: 30 });
+  }
+  return { code: "BLACK_WEEK", portee: "SELECTION", articles } as const;
 }
 
 /** Le produit d'une variante : la promotion se règle par article, LS-324. */
@@ -341,7 +344,7 @@ describe("le prix figé sur la commande", () => {
     const eligible = await varianteAgee(40, 4900);
     const exclue = await varianteExclue(1200);
     const active = await promotion.activerPromotion({
-      demande: BLACK_WEEK_30,
+      demande: await selectionDe(eligible),
       acteurId: null,
     });
 
@@ -391,7 +394,7 @@ describe("le prix figé sur la commande", () => {
     const eligible = await varianteAgee(40, 2999);
     const exclue = await varianteExclue(1200);
     await promotion.activerPromotion({
-      demande: BLACK_WEEK_30,
+      demande: await selectionDe(eligible),
       acteurId: null,
     });
     const { revalider } = await import("@/services/panier");
@@ -572,10 +575,11 @@ describe("corrections de la revue critique de LS-319", () => {
 
   /*
    * DÉFAUT 1 : une déclinaison suspendue entre dans le prix de la carte, elle
-   * doit entrer aussi dans l'éligibilité du produit. Suspendue et exclue,
-   * elle interdit à la carte de barrer un prix qu'aucune pièce ne porte.
+   * doit entrer aussi dans l'éligibilité du produit. Depuis LS-333, son prix
+   * changé ne l'exclut plus : la carte barre son prix catalogue, comme les
+   * autres déclinaisons.
    */
-  it("une déclinaison suspendue et exclue empêche la carte de barrer", async () => {
+  it("une déclinaison suspendue au prix changé est barrée avec les autres", async () => {
     const b = await varianteAgee(40, 6000, 2);
     const { rows } = await client.query(
       "SELECT produit_id FROM variante WHERE id = $1",
@@ -604,8 +608,8 @@ describe("corrections de la revue critique de LS-319", () => {
     const catalogue = await lireCataloguePublic();
     const carte = catalogue.produits.find((p) => p.id === produitId);
     expect(carte).toMatchObject({
-      prixCentimes: 4000,
-      prixReferenceCentimes: null,
+      prixCentimes: 2800,
+      prixReferenceCentimes: 4000,
     });
   });
 
@@ -707,7 +711,7 @@ describe("la facture, arbitrage 3 d'ADR-051", () => {
     const eligible = await varianteAgee(40, 4900);
     const exclue = await varianteExclue(1200);
     await promotion.activerPromotion({
-      demande: BLACK_WEEK_30,
+      demande: await selectionDe(eligible),
       acteurId: null,
     });
     const issue = await commande.passerCommande({
@@ -952,36 +956,42 @@ describe("promotions libres, LS-324", () => {
     expect([enVigueur!.tauxUnique, enVigueur!.tauxMaximum]).toEqual([true, 15]);
   });
 
-  it("un article choisi dont le prix a changé reste au prix catalogue, et rien n'est annoncé", async () => {
-    const exclue = await varianteExclue(4900);
+  it("un article choisi dont le prix a changé est réduit lui aussi, LS-333", async () => {
+    const modifiee = await varianteAgee(60, 4900);
+    await client.query(
+      `INSERT INTO historique_prix_variante
+         (id, variante_id, ancien_prix_centimes, nouveau_prix_centimes, modifie_a)
+       VALUES (gen_random_uuid(), $1, 4400, 4900, now() - interval '5 days')`,
+      [modifiee],
+    );
     await promotion.activerPromotion({
       demande: {
         code: "PROMOTION",
         portee: "SELECTION",
-        articles: [{ produitId: await produitDe(exclue), taux: 30 }],
+        articles: [{ produitId: await produitDe(modifiee), taux: 30 }],
       },
       acteurId: null,
     });
-    // Aucune pièce réduite : rien n'est en vigueur pour le public.
-    expect(await promotion.lirePromotionEnVigueur()).toBeNull();
-    // L'exploitante la voit pourtant, pour la désactiver.
+    expect(
+      (await promotion.lirePromotionEnVigueur())!.tauxParVariante.get(modifiee),
+    ).toBe(30);
     const etat = await promotion.lireEtatPromotion();
     expect(etat.active).toMatchObject({
       libelle: "Promotion",
       portee: "SELECTION",
       tauxGeneral: null,
-      reduites: 0,
-      exclues: 1,
+      reduites: 1,
+      exclues: 0,
     });
     const issue = await commande.passerCommande({
-      lignesCookie: [{ varianteId: exclue, quantite: 1 }],
+      lignesCookie: [{ varianteId: modifiee, quantite: 1 }],
       saisie: SAISIE_DOMICILE,
       configuration: CONFIGURATION,
     });
-    expect((await tauxFiges(issue.commandeId)).get(exclue)).toEqual([
+    expect((await tauxFiges(issue.commandeId)).get(modifiee)).toEqual([
+      3430,
       4900,
-      null,
-      null,
+      30,
     ]);
   });
 

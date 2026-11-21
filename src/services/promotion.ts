@@ -72,8 +72,7 @@ export type PromotionEnVigueur = {
  * déclinaisons, `frontend-design.md`.
  *
  * UNE PROMOTION QUI NE RÉDUIT AUCUNE PIÈCE EN VENTE N'EST PAS EN VIGUEUR,
- * LS-324 : ses articles peuvent tous être archivés ou exclus par la règle des
- * trente jours. Rien ne s'annonce alors, plutôt qu'une réduction sans objet.
+ * LS-324 : ses articles peuvent tous être archivés, ou à prix nul. Rien ne s'annonce alors, plutôt qu'une réduction sans objet.
  */
 export async function lirePromotionEnVigueur(
   client = prisma,
@@ -320,7 +319,7 @@ export type EtatPromotion = {
     activeDepuis: Date;
     /** Déclinaisons en vente réellement réduites. */
     reduites: number;
-    /** Déclinaisons visées mais exclues, prix changé dans les trente jours. */
+    /** Déclinaisons visées mais exclues, à prix nul depuis LS-333. */
     exclues: number;
   } | null;
 };

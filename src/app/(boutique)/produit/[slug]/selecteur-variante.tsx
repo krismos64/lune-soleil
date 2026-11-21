@@ -94,12 +94,14 @@ export function SelecteurVariante({
       />
       {choisie.prixReferenceCentimes !== null ? (
         /*
-         * LA MENTION DU PRIX BARRÉ, ADR-051, maquette validée : les termes de
-         * l'article L112-1-1 du Code de la consommation, lu à la source.
+         * LA MENTION DU PRIX BARRÉ, ADR-051 amendé par LS-333 : depuis que
+         * le prix barré est le prix catalogue actuel, la formule de L112-1-1
+         * (« le plus bas des 30 jours ») ne serait plus toujours vraie. Cette
+         * phrase dit ce que le site calcule, rien de plus.
          */
         <p className={styles.mentionPrixBarre}>
-          Prix barré : prix le plus bas pratiqué au cours des 30 jours précédant
-          la réduction.
+          Prix barré : prix catalogue de la pièce, avant application de la
+          réduction.
         </p>
       ) : null}
 
