@@ -106,6 +106,7 @@ DEPOT_PROMOTION="src/repositories/promotion.ts"
 AVIS="src/services/avis.ts"
 DEPOT_AVIS="src/repositories/avis.ts"
 ANNULATION="src/services/annulation-commande.ts"
+GESTION_PASSKEYS="src/app/administration/passkeys/gestion-passkeys.tsx"
 SERVICE_AVOIR="src/services/avoir.ts"
 ENVOI_EMAIL="src/services/envoi-email.ts"
 DEPOT_ENVOI="src/repositories/envoi-email.ts"
@@ -146,7 +147,7 @@ SENDCLOUD_EXPEDITION="src/integrations/sendcloud/expedition.ts"
 #
 # Le defaut datait du jour ou le cas 121 a ete ecrit, et rien ne pouvait le
 # signaler : le nocturne mourait au cas 1 sur 180 depuis trois nuits.
-MUTABLES=("$SQL" "$STOCK" "$DEPOT_PANIER" "$GLOBALS_CSS" "$CATALOGUE_CSS" "$DECOR_NOEL_CSS" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$HOOK_PREUVE_PASSKEY" "$SESSION_VERIFICATION" "$DEPOT_EXPEDITION" "$SUIVI_LIVRAISON" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE" "$AVIS" "$DEPOT_AVIS" "$SERVICE_AVOIR" "$DEPOT_PARAMETRES" "$SENDCLOUD_EXPEDITION" "$DESTINATIONS_REAUTH" "$TEST_COMPTABILITE" "$URLS_MEDIAS" "$ANNULATION")
+MUTABLES=("$SQL" "$STOCK" "$DEPOT_PANIER" "$GLOBALS_CSS" "$CATALOGUE_CSS" "$DECOR_NOEL_CSS" "$PAGE" "$LAYOUT" "$AUTH" "$REAUTH" "$AUTORISATION" "$PROFIL" "$VALIDATION" "$JOURNAL" "$SANTE" "$HOOK_JOURNAL" "$HOOK_JOURNAL_HOOK" "$ROUTE_AUTH" "$JOURNAL_CONNEXION" "$VERROU" "$TACHE_PLANIFIEE" "$ROUTE_TACHE" "$PREUVE" "$HOOK_PREUVE_PASSKEY" "$SESSION_VERIFICATION" "$DEPOT_EXPEDITION" "$SUIVI_LIVRAISON" "$ACTION_REAUTH" "$PURGE_JOURNAUX" "$PROXIES" "$LIMITATION_REPO" "$LIMITATION" "$SUPPRESSION" "$SECTIONS" "$CATALOGUE" "$DEPOT_SECTIONS" "$VARIANTE" "$VARIANTE_VALIDATION" "$DEPOT_VARIANTE" "$MEDIA" "$TRAITEMENT" "$STOCKAGE" "$PAGE_EDITEUR" "$PUBLICATION" "$DEPOT_CATALOGUE" "$SERVICE_CATALOGUE" "$CARTE_PRODUIT" "$PAIEMENT" "$WEBHOOK" "$CONFIRMATION" "$ROUTE_WEBHOOK" "$INTEGRATION_STRIPE" "$LIBERATION" "$RECONCILIATION" "$ADMIN_COMMANDES" "$ENVOI_EMAIL" "$DEPOT_ENVOI" "$SMTP" "$FACTURE" "$DEPOT_FACTURE" "$ACCES_DOCUMENT" "$JETON_ACCES" "$DEPOT_UTILISATEUR" "$TRAITEMENT_RETRACTATION" "$DEPOT_RETRACTATION" "$AFFICHAGE_COMMANDE" "$DEPOT_COMMANDE" "$AVIS" "$DEPOT_AVIS" "$SERVICE_AVOIR" "$DEPOT_PARAMETRES" "$SENDCLOUD_EXPEDITION" "$DESTINATIONS_REAUTH" "$TEST_COMPTABILITE" "$URLS_MEDIAS" "$ANNULATION" "$GESTION_PASSKEYS")
 
 for f in "${MUTABLES[@]}"; do
   [ -r "$f" ] || { echo "ECHEC fichier illisible : $f"; exit 1; }
@@ -574,6 +575,7 @@ lancer_cible() {
 
 integration() { lancer_cible integration tests/integration "$MOTIF_COURANT"; }
 unitaire() { lancer_cible unitaire tests/unitaire "$MOTIF_COURANT"; }
+composant() { lancer_cible composant tests/composant "$MOTIF_COURANT"; }
 
 # LE BOUT EN BOUT EST CIBLE LUI AUSSI, LS-252. Ce commentaire affirmait
 # jusque-la que ses dix cas « ne pesent pas dans le budget », et c'etait faux :
@@ -3179,6 +3181,14 @@ cas "verrou de commande du webhook qui bloque les insertions" integration \
 mute "$DEPOT_PROMOTION" 's/const CONDITION_ELIGIBLE = Prisma\.sql`v\.prix_centimes > 0`;/const CONDITION_ELIGIBLE = Prisma.sql`v.prix_centimes > 0 AND NOT EXISTS (SELECT 1 FROM historique_prix_variante h WHERE h.variante_id = v.id AND h.modifie_a > p.active_depuis - make_interval(days => 30))`;/'
 cas "regle des trente jours remise dans l'eligibilite" integration \
   "une pièce dont le prix a changé dans les trente jours est réduite"
+
+# LS-320 : le focus apres refus faute de preuve, garde de LS-295. Le test
+# attendait le lien puis lisait le focus sans l'attendre, d'ou quatre echecs
+# en CI ; il attend desormais le focus lui-meme. Retirer le deplacement doit
+# encore le faire rougir, sans quoi l'attente aurait rendu le test aveugle.
+mute "$GESTION_PASSKEYS" 's/    if \(preuveExpiree\) expirationRef\.current\?\.focus\(\);/    \/\/ mutation/'
+cas "focus non deplace apres refus faute de preuve" composant \
+  "bascule vers la confirmation quand la route refuse faute de preuve"
 
 echo
 echo "-----------------------------------------"
