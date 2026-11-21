@@ -63,5 +63,26 @@ changements, que la fenêtre de trente jours oubliera le 16 décembre.
 
 ## État des tickets
 
-- LS-331 : en cours jusqu'au contrôle en production.
+- LS-331 : terminée, déployée, contrôlée en production.
 - LS-330 : en attente du nocturne relancé, run 44924071009.
+
+## Mise en production, même jour
+
+PR #697 fusionnée en rebase, `2066993`. Image publiée (run 44931076600), puis
+déployée par le workflow « Déployer en production », run 44931342979, image
+`20669938bc7e37436105c2418736956be6c333f8`. Aucune migration.
+
+- `/`, `/catalogue` et `/api/sante` en 200.
+- Fiche `/produit/boucles-d-oreilles-kanoa` : « Prix initial : 15,00 €, prix
+  réduit : 10,50 €, −30 % », JSON-LD `"price":"10.50"`.
+- LS-331 commentée et close.
+
+## Avis du même soir sur Kanoa
+
+Un avis 5/5 a été déposé sur Kanoa à 17:18 UTC et publié à 17:19, depuis la
+commande **C-2026-0006**, celle passée à 1 €. La mention des avis affirme
+« Aucune contrepartie n'est accordée en échange d'un avis ». Question posée à
+Christophe (nature de cette commande à 1 €), sans réponse à la clôture de la
+session : rien n'est modifié. SEO vérifié : `aggregateRating` 5/1 sur la fiche,
+`lastmod` du sitemap à l'heure de publication, avis présent sur `/avis` et
+l'accueil.
