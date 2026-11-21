@@ -50,5 +50,17 @@ Fusion, déploiement pour garder la production égale à `main`, nocturne relanc
 
 ## État des tickets
 
-- LS-330 : en cours jusqu'au nocturne vert.
+- LS-330 : terminée, déployée, nocturne vert, issue #695 fermée.
 - LS-291, LS-320, LS-35 : inchangés, relevés dans Jira ce jour.
+
+## Mise en production et clôture, même jour
+
+PR #696 fusionnée en rebase, `3fd612a`. Image publiée, déployée par le
+workflow « Déployer en production », run 44923927866. Aucune migration.
+`/`, `/catalogue`, `/panier`, `/api/sante`, `/administration/connexion` et
+`/sitemap.xml` en 200.
+
+Nocturne relancé à la main sur `3fd612a`, run 44924071009 : conclusion
+`success`. Audit des dépendances vert (« found 0 vulnerabilities »), bout en
+bout, image, preuves lourdes (222 mutations, 222 détectées). Issue #695
+fermée, LS-330 close.
