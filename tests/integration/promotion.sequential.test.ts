@@ -278,6 +278,51 @@ describe("éligibilité par variante, arbitrage 1 d'ADR-051", () => {
     expect(enVigueur!.toutLeCatalogue).toBe(false);
   });
 
+  /*
+   * UN CHANGEMENT DE PRIX ÉCARTÉ PAR ARBITRAGE N'EXCLUT PLUS, LS-331 :
+   * l'essai à 1 € de Kanoa, le 16 novembre 2026, risque accepté par
+   * Christophe. Seuls les identifiants listés sont ignorés : un changement de
+   * plus sur la même variante l'exclut toujours, et l'affichage comme la
+   * commande lisent la même condition.
+   */
+  it("les changements de prix écartés par arbitrage n'excluent pas, un autre exclut toujours", async () => {
+    const ecartee = await varianteAgee(60);
+    const rechangee = await varianteAgee(60);
+    const [premier, second] = lib.CHANGEMENTS_PRIX_ECARTES;
+    await client.query(
+      `INSERT INTO historique_prix_variante
+         (id, variante_id, ancien_prix_centimes, nouveau_prix_centimes, modifie_a)
+       VALUES ($2, $1, 1500, 100, now() - interval '5 days'),
+              ($3, $1, 100, 1500, now() - interval '5 days'),
+              (gen_random_uuid(), $4, 4900, 100, now() - interval '5 days')`,
+      [ecartee, premier, second, rechangee],
+    );
+    await client.query(
+      `INSERT INTO historique_prix_variante
+         (id, variante_id, ancien_prix_centimes, nouveau_prix_centimes, modifie_a)
+       VALUES (gen_random_uuid(), $1, 100, 4900, now() - interval '4 days')`,
+      [rechangee],
+    );
+    await promotion.activerPromotion({
+      demande: BLACK_WEEK_30,
+      acteurId: null,
+    });
+
+    const enVigueur = await promotion.lirePromotionEnVigueur();
+    expect(enVigueur!.tauxParVariante.get(ecartee)).toBe(30);
+    expect(enVigueur!.tauxParVariante.has(rechangee)).toBe(false);
+
+    const { lirePromotionPourCommande } = await import(
+      "@/repositories/promotion"
+    );
+    const { prisma } = await import("@/lib/prisma");
+    const pourCommande = await lirePromotionPourCommande(prisma, [
+      ecartee,
+      rechangee,
+    ]);
+    expect(pourCommande!.taux).toEqual([{ varianteId: ecartee, taux: 30 }]);
+  });
+
   it("toute la boutique quand chaque pièce en vente est éligible", async () => {
     await varianteAgee(40);
     await varianteAgee(45);

@@ -102,6 +102,22 @@ export type DemandePromotion = z.infer<typeof schemaDemandePromotion>;
 export const JOURS_PRIX_ANTERIEUR = 30;
 
 /**
+ * LES CHANGEMENTS DE PRIX QUE L'ÉLIGIBILITÉ IGNORE, LS-331, arbitrage de
+ * Christophe du 21 novembre 2026, amendement d'ADR-051 : l'essai de « Kanoa »
+ * à 1 € le 16 novembre 2026 (aller puis retour), qui l'excluait de la Black
+ * Week. RISQUE JURIDIQUE ACCEPTÉ par Christophe : une vente a eu lieu à ce
+ * prix (C-2026-0006), et le prix barré affiché reste 15 €.
+ *
+ * DES IDENTIFIANTS D'HISTORIQUE ET NON UNE VARIANTE : tout autre changement
+ * de prix de Kanoa, passé ou futur, l'exclut toujours. Une exception de plus
+ * passe par un arbitrage écrit et un ticket, jamais par un ajout silencieux.
+ */
+export const CHANGEMENTS_PRIX_ECARTES: readonly string[] = [
+  "97218e6a-be50-484f-bcb0-345a8f8ab6aa",
+  "648d7c62-ee54-4dd3-8dfa-128958617ad7",
+];
+
+/**
  * Clé du verrou consultatif qui sérialise l'activation d'une promotion et
  * tout changement de prix, revue critique de LS-319 : sans lui, un prix
  * pouvait changer entre la garde du gel et l'activation. Un entier fixe,
