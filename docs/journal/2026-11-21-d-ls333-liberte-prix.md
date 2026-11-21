@@ -54,7 +54,21 @@ Fusion, déploiement, contrôle en production des trois pièces.
 
 ## État des tickets
 
-- LS-333 : en cours jusqu'au contrôle en production.
-- LS-330 : en attente du nocturne relancé, run 44924071009.
+- LS-333 : terminée, déployée, contrôlée en production.
+- LS-330 : terminée, nocturne vert (run 44924071009), issue #695 fermée.
+- Ouverts dans Jira à la clôture : LS-291, LS-320, LS-35.
 - Ajout de LS-332 : « Bonhommes de Neige Pailletés », dixième article, photo
   portée publiée après validation explicite de Christophe.
+
+## Mise en production, même jour
+
+Première CI de la PR #699 rouge sur l'étape « 3b. Format » : le test de
+promotion n'était pas passé par Prettier, `npm run format:check` n'ayant pas
+été lancé en local. Corrigé, forme seule. PR fusionnée en rebase, `af3c2b7`,
+image publiée (run 44937416310), déployée par le workflow « Déployer en
+production », run 44937589694. Aucune migration.
+
+Contrôle en production : porte-clés Flocon Gourmand et Douce Fantaisie
+« 18,00 € → 12,60 €, −30 % », Bonhommes de Neige Pailletés et Kanoa
+« 15,00 € → 10,50 € », JSON-LD aligné, nouvelle mention présente et
+ancienne absente. LS-333 close.
