@@ -426,7 +426,10 @@ alternatif finissant par « Photo d'illustration. ». Hors de ces conditions,
 la règle des images Codex d'ADR-045 s'applique : aucun bijou, aucune personne.
 **Bagues, ADR-048** : la photo portée générée peut y être la **première**
 photo, les photographies réelles restant sur la fiche ; les autres conditions
-d'ADR-047 s'appliquent. Aucune autre catégorie n'en bénéficie.
+d'ADR-047 s'appliquent. **Porte-clés, ADR-052** : une photo générée de la
+pièce accrochée à un sac à main, jamais en première position, sans personne
+ni main, sac sans marque ni logo ; les autres conditions d'ADR-047
+s'appliquent. Aucune autre catégorie n'en bénéficie.
 
 ### La couche commune des écrans d'administration, LS-326
 
