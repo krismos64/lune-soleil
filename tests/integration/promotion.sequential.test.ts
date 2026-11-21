@@ -312,15 +312,25 @@ describe("éligibilité par variante, arbitrage 1 d'ADR-051", () => {
     expect(enVigueur!.tauxParVariante.get(ecartee)).toBe(30);
     expect(enVigueur!.tauxParVariante.has(rechangee)).toBe(false);
 
-    const { lirePromotionPourCommande } = await import(
-      "@/repositories/promotion"
-    );
+    const { lirePromotionPourCommande } =
+      await import("@/repositories/promotion");
     const { prisma } = await import("@/lib/prisma");
     const pourCommande = await lirePromotionPourCommande(prisma, [
       ecartee,
       rechangee,
     ]);
     expect(pourCommande!.taux).toEqual([{ varianteId: ecartee, taux: 30 }]);
+
+    // Un changement de plus sur la MÊME pièce l'exclut de nouveau :
+    // l'exception porte sur deux changements, jamais sur la pièce.
+    await client.query(
+      `INSERT INTO historique_prix_variante
+         (id, variante_id, ancien_prix_centimes, nouveau_prix_centimes, modifie_a)
+       VALUES (gen_random_uuid(), $1, 1500, 1400, now() - interval '3 days')`,
+      [ecartee],
+    );
+    const apres = await lirePromotionPourCommande(prisma, [ecartee]);
+    expect(apres!.taux).toEqual([]);
   });
 
   it("toute la boutique quand chaque pièce en vente est éligible", async () => {
