@@ -6,7 +6,32 @@
 | Date | 12 novembre 2026 |
 | Décideur | Christophe Mostefaoui |
 | Complète | ADR-024 (commande et réservation atomiques), ADR-046 (thèmes saisonniers) |
-| Ticket | LS-319, LS-321, LS-324 |
+| Ticket | LS-319, LS-321, LS-324, LS-331 |
+
+## Amendement du 21 novembre 2026, deux changements de prix écartés, LS-331
+
+**Constat** : la promotion activée le 21 novembre 2026 à 16:44 UTC (30 %,
+toute la boutique) ne réduit pas « Kanoa ». Son prix est passé de 15 € à 1 €
+le 16 novembre 2026 à 20:17 UTC, puis revenu à 15 € à 20:23, et la commande
+C-2026-0006 a été passée à 1 € entre les deux. L'arbitrage 1 l'exclut donc,
+à juste titre au regard du texte : 1 € est le prix le plus bas pratiqué dans
+les trente jours.
+
+**Arbitrage de Christophe** : « on fait exception et on la comprend dans les
+promos, j'en prends la responsabilité ». Claude recommandait une baisse de
+prix sans prix barré, écartée.
+
+**Décision** : `CHANGEMENTS_PRIX_ECARTES` (`src/lib/promotion.ts`) liste les
+**identifiants d'historique** des deux changements du 16 novembre, que
+`CONDITION_ELIGIBLE` ignore. L'exception ne porte pas sur la pièce : tout
+autre changement de prix de Kanoa, passé ou futur, l'exclut toujours. Une
+exception de plus exige un arbitrage écrit, un ticket et cet ADR, jamais un
+ajout silencieux à la liste.
+
+**Risque accepté par Christophe** : l'annonce affiche 15 € barré quand un
+prix de 1 € a été pratiqué, avec une vente, dans les trente jours. C'est
+l'annonce de réduction que L112-1-1 encadre. L'ADR ne qualifie pas ce
+risque, il le nomme.
 
 ## Amendement du 14 novembre 2026, promotions libres, LS-324
 
