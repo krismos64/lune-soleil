@@ -82,7 +82,7 @@ déployée par le workflow « Déployer en production », run 44931342979, image
 Un avis 5/5 a été déposé sur Kanoa à 17:18 UTC et publié à 17:19, depuis la
 commande **C-2026-0006**, celle passée à 1 €. La mention des avis affirme
 « Aucune contrepartie n'est accordée en échange d'un avis ». Question posée à
-Christophe (nature de cette commande à 1 €), sans réponse à la clôture de la
-session : rien n'est modifié. SEO vérifié : `aggregateRating` 5/1 sur la fiche,
+Christophe (nature de cette commande à 1 €). **Réponse de Christophe : « il
+n'y a rien à faire »**, l'avis reste publié tel quel. SEO vérifié : `aggregateRating` 5/1 sur la fiche,
 `lastmod` du sitemap à l'heure de publication, avis présent sur `/avis` et
 l'accueil.
