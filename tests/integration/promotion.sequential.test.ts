@@ -291,9 +291,7 @@ describe("éligibilité par variante, arbitrage 1 d'ADR-051", () => {
       configuration: CONFIGURATION,
     });
     expect((await tauxFiges(issue.commandeId)).get(haussee)).toEqual([
-      1260,
-      1800,
-      30,
+      1260, 1800, 30,
     ]);
   });
 
@@ -989,9 +987,7 @@ describe("promotions libres, LS-324", () => {
       configuration: CONFIGURATION,
     });
     expect((await tauxFiges(issue.commandeId)).get(modifiee)).toEqual([
-      3430,
-      4900,
-      30,
+      3430, 4900, 30,
     ]);
   });
 
