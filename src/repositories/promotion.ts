@@ -12,10 +12,17 @@
  * L'ÂGE DE LA VARIANTE NE COMPTE PLUS, LS-321, arbitrage de Christophe du
  * 13 novembre 2026 : une pièce en vente depuis moins de trente jours est
  * réduite, son prix barré étant le prix pratiqué depuis sa mise en vente.
+ *
+ * LES CHANGEMENTS ÉCARTÉS PAR ARBITRAGE NE COMPTENT PAS, LS-331 :
+ * `CHANGEMENTS_PRIX_ECARTES`, identifiants d'historique et non variantes.
  * Risque juridique accepté, amendement d'ADR-051.
  */
 import { Prisma } from "@/generated/prisma/client";
-import { CLE_VERROU_PROMOTION, JOURS_PRIX_ANTERIEUR } from "@/lib/promotion";
+import {
+  CHANGEMENTS_PRIX_ECARTES,
+  CLE_VERROU_PROMOTION,
+  JOURS_PRIX_ANTERIEUR,
+} from "@/lib/promotion";
 import type { ClientBase as Client } from "@/repositories/stock";
 
 /** `v` est la variante, `p` la promotion active. */
@@ -25,6 +32,7 @@ const CONDITION_ELIGIBLE = Prisma.sql`
     SELECT 1 FROM historique_prix_variante h
      WHERE h.variante_id = v.id
        AND h.modifie_a > p.active_depuis - make_interval(days => ${JOURS_PRIX_ANTERIEUR})
+       AND h.id NOT IN (${Prisma.join([...CHANGEMENTS_PRIX_ECARTES])})
   )`;
 
 /**
