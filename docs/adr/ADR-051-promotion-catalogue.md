@@ -6,9 +6,42 @@
 | Date | 12 novembre 2026 |
 | Décideur | Christophe Mostefaoui |
 | Complète | ADR-024 (commande et réservation atomiques), ADR-046 (thèmes saisonniers) |
-| Ticket | LS-319, LS-321, LS-324, LS-331 |
+| Ticket | LS-319, LS-321, LS-324, LS-331, LS-333 |
+
+## Amendement du 21 novembre 2026 au soir, liberté de prix, LS-333
+
+**Constat** : la promotion réactivée à 18:15:57 UTC excluait trois pièces
+dont l'exploitante venait de changer le prix : les porte-clés « Flocon
+Gourmand » et « Douce Fantaisie » montés de 15 € à 18 €, et « Bonhommes de
+Neige Pailletés » passé de 15 € à 20 € puis revenu à 15 €.
+
+**Arbitrage de Christophe** : « mettre en place cette liberté, elle prend la
+responsabilité pour tous les articles ». Deux options lui étaient
+présentées : un prix barré égal au plus bas des trente jours, conforme à
+L112-1-1 et recommandé, ou la liberté totale. **Liberté totale retenue.**
+
+**Décision** : **l'arbitrage 1 est abrogé.** Aucun changement de prix
+n'exclut plus une variante ; seul un prix nul l'exclut.
+`CONDITION_ELIGIBLE` ne lit plus `historique_prix_variante`, qui reste écrit
+comme trace et pour le gel des prix sous promotion. Le prix barré est le
+prix catalogue actuel, figé sur la ligne comme avant. L'exception de LS-331
+devient sans objet et est retirée du code. La mention de la fiche, qui
+reprenait L112-1-1, devient « Prix barré : prix catalogue de la pièce, avant
+application de la réduction. »
+
+**Risque accepté par l'exploitante, par la voix de Christophe** : un prix
+monté puis remisé affiche un prix barré supérieur au plus bas pratiqué dans
+les trente jours (porte-clés : 18 € barré pour une pièce vendue 15 € une
+heure plus tôt). C'est le cas que L112-1-1 et l'arrêt C-330/23 encadrent.
+L'ADR ne qualifie pas ce risque, il le nomme. La voie de correction reste
+l'option écartée : prix barré au plus bas des trente jours, calculé depuis
+`historique_prix_variante`.
 
 ## Amendement du 21 novembre 2026, deux changements de prix écartés, LS-331
+
+*Sans objet depuis LS-333, le même soir : plus aucun changement de prix
+n'exclut.*
+
 
 **Constat** : la promotion activée le 21 novembre 2026 à 16:44 UTC (30 %,
 toute la boutique) ne réduit pas « Kanoa ». Son prix est passé de 15 € à 1 €

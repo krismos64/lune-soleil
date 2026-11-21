@@ -370,9 +370,11 @@ dans la couche promotion, et rien ne s'affiche sans promotion active.
 - **Activation et désactivation libres**, amendement d'ADR-051 du
   13 novembre 2026 : aucun refus ni avertissement, risque accepté par
   Christophe et nommé dans l'ADR.
-- **La mention du prix barré** sur la fiche reprend les termes de
-  L112-1-1 : « Prix barré : prix le plus bas pratiqué au cours des 30 jours
-  précédant la réduction. »
+- **La mention du prix barré** sur la fiche dit ce que le site calcule :
+  « Prix barré : prix catalogue de la pièce, avant application de la
+  réduction. » Elle reprenait les termes de L112-1-1 (« le plus bas des
+  30 jours ») jusqu'à LS-333, qui a retiré la règle des trente jours :
+  ne pas les remettre sans remettre la règle.
 - **Immobile, ADR-045** : ni trait qui se trace, ni tampon, ni bande
   défilante, la maquette les portait sur du texte.
 
