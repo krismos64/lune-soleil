@@ -251,18 +251,24 @@ describe("activation et désactivation", () => {
 
 describe("éligibilité par variante, arbitrage 1 d'ADR-051", () => {
   /*
-   * UNE PIÈCE RÉCENTE EST RÉDUITE, LS-321, arbitrage de Christophe du
-   * 13 novembre 2026 : seul un prix changé dans les trente jours exclut.
+   * UN CHANGEMENT DE PRIX N'EXCLUT PLUS, LS-333, arbitrage de Christophe du
+   * 21 novembre 2026, risque juridique accepté par l'exploitante : hausse,
+   * baisse ou aller-retour dans les trente jours, toute pièce est réduite, et
+   * son prix barré est son prix catalogue actuel. Affichage et commande
+   * lisent la même condition.
    */
-  it("une pièce au prix inchangé depuis trente jours est éligible, même récente", async () => {
+  it("une pièce dont le prix a changé dans les trente jours est réduite, prix barré au prix actuel", async () => {
     const ancienne = await varianteAgee(40);
     const recente = await varianteAgee(10);
-    const modifiee = await varianteAgee(60);
+    const haussee = await varianteAgee(60, 1800);
+    const allerRetour = await varianteAgee(60, 1500);
     await client.query(
       `INSERT INTO historique_prix_variante
          (id, variante_id, ancien_prix_centimes, nouveau_prix_centimes, modifie_a)
-       VALUES (gen_random_uuid(), $1, 5900, 4900, now() - interval '5 days')`,
-      [modifiee],
+       VALUES (gen_random_uuid(), $1, 1500, 1800, now() - interval '1 hour'),
+              (gen_random_uuid(), $2, 1500, 2000, now() - interval '2 hours'),
+              (gen_random_uuid(), $2, 2000, 1500, now() - interval '1 hour')`,
+      [haussee, allerRetour],
     );
     await promotion.activerPromotion({
       demande: BLACK_WEEK_30,
@@ -271,66 +277,21 @@ describe("éligibilité par variante, arbitrage 1 d'ADR-051", () => {
 
     const enVigueur = await promotion.lirePromotionEnVigueur();
     expect(enVigueur).not.toBeNull();
-    expect(enVigueur!.tauxParVariante.has(ancienne)).toBe(true);
-    expect(enVigueur!.tauxParVariante.has(recente)).toBe(true);
-    expect(enVigueur!.tauxParVariante.has(modifiee)).toBe(false);
-    // Une pièce exclue suffit : l'annonce ne dit plus « toute la boutique ».
-    expect(enVigueur!.toutLeCatalogue).toBe(false);
-  });
+    for (const id of [ancienne, recente, haussee, allerRetour]) {
+      expect(enVigueur!.tauxParVariante.get(id)).toBe(30);
+    }
+    expect(enVigueur!.toutLeCatalogue).toBe(true);
 
-  /*
-   * UN CHANGEMENT DE PRIX ÉCARTÉ PAR ARBITRAGE N'EXCLUT PLUS, LS-331 :
-   * l'essai à 1 € de Kanoa, le 16 novembre 2026, risque accepté par
-   * Christophe. Seuls les identifiants listés sont ignorés : un changement de
-   * plus sur la même variante l'exclut toujours, et l'affichage comme la
-   * commande lisent la même condition.
-   */
-  it("les changements de prix écartés par arbitrage n'excluent pas, un autre exclut toujours", async () => {
-    const ecartee = await varianteAgee(60);
-    const rechangee = await varianteAgee(60);
-    const [premier, second] = lib.CHANGEMENTS_PRIX_ECARTES;
-    await client.query(
-      `INSERT INTO historique_prix_variante
-         (id, variante_id, ancien_prix_centimes, nouveau_prix_centimes, modifie_a)
-       VALUES ($2, $1, 1500, 100, now() - interval '5 days'),
-              ($3, $1, 100, 1500, now() - interval '5 days'),
-              (gen_random_uuid(), $4, 4900, 100, now() - interval '5 days')`,
-      [ecartee, premier, second, rechangee],
-    );
-    await client.query(
-      `INSERT INTO historique_prix_variante
-         (id, variante_id, ancien_prix_centimes, nouveau_prix_centimes, modifie_a)
-       VALUES (gen_random_uuid(), $1, 100, 4900, now() - interval '4 days')`,
-      [rechangee],
-    );
-    await promotion.activerPromotion({
-      demande: BLACK_WEEK_30,
-      acteurId: null,
+    const issue = await commande.passerCommande({
+      lignesCookie: [{ varianteId: haussee, quantite: 1 }],
+      saisie: SAISIE_DOMICILE,
+      configuration: CONFIGURATION,
     });
-
-    const enVigueur = await promotion.lirePromotionEnVigueur();
-    expect(enVigueur!.tauxParVariante.get(ecartee)).toBe(30);
-    expect(enVigueur!.tauxParVariante.has(rechangee)).toBe(false);
-
-    const { lirePromotionPourCommande } =
-      await import("@/repositories/promotion");
-    const { prisma } = await import("@/lib/prisma");
-    const pourCommande = await lirePromotionPourCommande(prisma, [
-      ecartee,
-      rechangee,
+    expect((await tauxFiges(issue.commandeId)).get(haussee)).toEqual([
+      1260,
+      1800,
+      30,
     ]);
-    expect(pourCommande!.taux).toEqual([{ varianteId: ecartee, taux: 30 }]);
-
-    // Un changement de plus sur la MÊME pièce l'exclut de nouveau :
-    // l'exception porte sur deux changements, jamais sur la pièce.
-    await client.query(
-      `INSERT INTO historique_prix_variante
-         (id, variante_id, ancien_prix_centimes, nouveau_prix_centimes, modifie_a)
-       VALUES (gen_random_uuid(), $1, 1500, 1400, now() - interval '3 days')`,
-      [ecartee],
-    );
-    const apres = await lirePromotionPourCommande(prisma, [ecartee]);
-    expect(apres!.taux).toEqual([]);
   });
 
   it("toute la boutique quand chaque pièce en vente est éligible", async () => {
