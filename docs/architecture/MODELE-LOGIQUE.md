@@ -452,9 +452,11 @@ annoncée, `promotion_debut_annonce` et `promotion_fin_annonce`, deux `DATE`
 nulles ensemble ou dans l'ordre, `chk_parametre_periode_promotion`. Aucune
 carence entre deux activations.
 
-**Une variante est éligible** si son prix n'a pas changé pendant les trente
-jours qui précèdent l'activation, arbitrage 1 d'ADR-051. Son âge ne compte
-plus depuis LS-321 : une pièce récente est réduite. La condition s'écrit une
+**Une variante est éligible** dès que son prix est positif, depuis LS-333 :
+l'arbitrage 1 d'ADR-051 (prix inchangé pendant les trente jours précédant
+l'activation) est abrogé le 21 novembre 2026, risque accepté par
+l'exploitante, et le prix barré est le prix catalogue actuel.
+`historique_prix_variante` reste écrit comme trace. La condition s'écrit une
 fois, `repositories/promotion.ts`.
 
 ## Le retrait de l'espace d'administration, LS-266

@@ -92,7 +92,9 @@ ligne, `taux_reduction_fige`, et la facture le lit là ; seule une ligne
 d'avant LS-324 se lit sur sa promotion. Une promotion active ne change ni de
 taux ni d'articles.
 Tout changement de prix passe par `exigerPrixModifiables` et écrit
-`historique_prix_variante`, dont l'éligibilité dépend.
+`historique_prix_variante`, qui garde la trace. **L'éligibilité n'en dépend
+plus depuis LS-333** : seul un prix nul exclut, le prix barré est le prix
+catalogue actuel, arbitrage du 21 novembre 2026 nommé dans ADR-051.
 
 ### 6. Transactions et pannes de fournisseur
 

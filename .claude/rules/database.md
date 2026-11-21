@@ -486,8 +486,8 @@ Ces opérations exigent une transaction, sans exception :
     gel sous promotion active, l'écriture et la ligne de
     `historique_prix_variante`, ensemble. L'application en masse lit les
     anciens prix **sous verrou** avant d'écrire. Hors transaction, un prix
-    changerait sans trace, et l'éligibilité à une promotion se juge sur cette
-    trace
+    changerait sans trace. L'éligibilité à une promotion ne lit plus cette
+    trace depuis LS-333, qui a abrogé la règle des trente jours
 
 **La lecture de la promotion dans `passerCommande` ne prend aucun verrou**,
 ADR-051 : une seule instruction lit la promotion active et le **taux de
