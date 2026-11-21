@@ -3174,16 +3174,11 @@ mute "$DEPOT_COMMANDE" 's/WHERE id = \$\{commandeId\} FOR NO KEY UPDATE/WHERE id
 cas "verrou de commande du webhook qui bloque les insertions" integration \
   "ne bloque pas un demarrage de paiement qui insere sa tentative"
 
-# LS-331 : l'exception arbitree de Kanoa porte sur deux changements de prix,
-# jamais sur la piece. La retirer exclut de nouveau la piece ; l'elargir a la
-# variante entiere laisserait un changement de plus sans effet.
-mute "$DEPOT_PROMOTION" 's/\n       AND h\.id NOT IN \(\$\{Prisma\.join\(\[\.\.\.CHANGEMENTS_PRIX_ECARTES\]\)\}\)//'
-cas "exception de prix arbitree retiree" integration \
-  "les changements de prix écartés par arbitrage n'excluent pas"
-
-mute "$DEPOT_PROMOTION" 's/AND h\.id NOT IN \(\$\{Prisma\.join\(\[\.\.\.CHANGEMENTS_PRIX_ECARTES\]\)\}\)/AND h.variante_id NOT IN (SELECT e.variante_id FROM historique_prix_variante e WHERE e.id IN (\$\{Prisma.join([...CHANGEMENTS_PRIX_ECARTES])\}))/'
-cas "exception de prix arbitree elargie a la piece" integration \
-  "les changements de prix écartés par arbitrage n'excluent pas"
+# LS-333 : un changement de prix n'exclut plus aucune piece, arbitrage du
+# 21 novembre 2026. Remettre la regle des trente jours doit rougir.
+mute "$DEPOT_PROMOTION" 's/const CONDITION_ELIGIBLE = Prisma\.sql`v\.prix_centimes > 0`;/const CONDITION_ELIGIBLE = Prisma.sql`v.prix_centimes > 0 AND NOT EXISTS (SELECT 1 FROM historique_prix_variante h WHERE h.variante_id = v.id AND h.modifie_a > p.active_depuis - make_interval(days => 30))`;/'
+cas "regle des trente jours remise dans l'eligibilite" integration \
+  "une pièce dont le prix a changé dans les trente jours est réduite"
 
 echo
 echo "-----------------------------------------"
