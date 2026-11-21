@@ -87,16 +87,23 @@ describe("ecran des passkeys avec preuve recente", () => {
       screen.getByRole("button", { name: "Enregistrer cet appareil" }),
     );
 
-    await waitFor(() =>
-      expect(
-        screen.getByRole("link", { name: "Confirmer mon identité" }),
-      ).toBeVisible(),
-    );
-    expect(screen.getByText(/a expiré/)).toBeVisible();
+    /*
+     * LE FOCUS EST SUR L'EXPLICATION, jamais retombe sur `body` : le bouton
+     * actionne vient d'etre demonte, revue d'interface de LS-295.
+     *
+     * LE FOCUS S'ATTEND, IL NE SE LIT PAS APRES LE RENDU, LS-320. Il est deplace
+     * par un `useEffect`, qui tourne APRES le rendu. La reponse de
+     * `addPasskey` arrive hors de `act` : React rend le lien, puis execute
+     * l'effet un peu plus tard. Attendre le lien puis lire le focus laissait
+     * une fenetre ou le paragraphe portait deja son `tabindex` et le focus
+     * encore `body`. Mesure : 3 rouges sur 60 passages en local, et quatre
+     * echecs en CI entre le 12 et le 18 novembre 2026.
+     */
+    await waitFor(() => expect(screen.getByText(/a expiré/)).toHaveFocus());
+    expect(
+      screen.getByRole("link", { name: "Confirmer mon identité" }),
+    ).toBeVisible();
     expect(screen.queryByText(/n'a pas abouti/)).toBeNull();
-    // LE FOCUS EST SUR L'EXPLICATION, jamais retombe sur `body` : le bouton
-    // actionne vient d'etre demonte, revue d'interface de LS-295.
-    expect(screen.getByText(/a expiré/)).toHaveFocus();
   });
 
   test("bascule aussi depuis la confirmation de retrait", async () => {
