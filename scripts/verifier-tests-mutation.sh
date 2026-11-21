@@ -102,6 +102,7 @@ ADMIN_COMMANDES="src/services/administration-commandes.ts"
 # LS-58 et LS-216, le suivi de livraison et sa fraicheur.
 AFFICHAGE_COMMANDE="src/lib/affichage-commande.ts"
 DEPOT_COMMANDE="src/repositories/commande.ts"
+DEPOT_PROMOTION="src/repositories/promotion.ts"
 AVIS="src/services/avis.ts"
 DEPOT_AVIS="src/repositories/avis.ts"
 ANNULATION="src/services/annulation-commande.ts"
@@ -3172,6 +3173,17 @@ cas "reservations d'une commande annulee supprimees sans rendu" integration \
 mute "$DEPOT_COMMANDE" 's/WHERE id = \$\{commandeId\} FOR NO KEY UPDATE/WHERE id = \$\{commandeId\} FOR UPDATE/'
 cas "verrou de commande du webhook qui bloque les insertions" integration \
   "ne bloque pas un demarrage de paiement qui insere sa tentative"
+
+# LS-331 : l'exception arbitree de Kanoa porte sur deux changements de prix,
+# jamais sur la piece. La retirer exclut de nouveau la piece ; l'elargir a la
+# variante entiere laisserait un changement de plus sans effet.
+mute "$DEPOT_PROMOTION" 's/\n       AND h\.id NOT IN \(\$\{Prisma\.join\(\[\.\.\.CHANGEMENTS_PRIX_ECARTES\]\)\}\)//'
+cas "exception de prix arbitree retiree" integration \
+  "les changements de prix écartés par arbitrage n'excluent pas"
+
+mute "$DEPOT_PROMOTION" 's/AND h\.id NOT IN \(\$\{Prisma\.join\(\[\.\.\.CHANGEMENTS_PRIX_ECARTES\]\)\}\)/AND h.variante_id NOT IN (SELECT e.variante_id FROM historique_prix_variante e WHERE e.id IN (\$\{Prisma.join([...CHANGEMENTS_PRIX_ECARTES])\}))/'
+cas "exception de prix arbitree elargie a la piece" integration \
+  "les changements de prix écartés par arbitrage n'excluent pas"
 
 echo
 echo "-----------------------------------------"
