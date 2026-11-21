@@ -117,7 +117,7 @@ npm run format:check # Prettier en vérification, ce que rejoue la chaîne
 `format:check` échoue sans rien réécrire, c'est la forme employée par la chaîne
 d'intégration. `npm run format` corrige sur place, à lancer avant de commiter.
 
-`npm audit` doit rester à **zéro vulnérabilité**. Neuf overrides y contribuent,
+`npm audit` doit rester à **zéro vulnérabilité**. Dix overrides y contribuent,
 documentés dans `package.json` avec la condition de leur retrait.
 
 Un override vise la version corrigée **sans franchir de version majeure chez le
