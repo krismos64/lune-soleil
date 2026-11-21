@@ -5,35 +5,19 @@
  * et sert à l'affichage comme à la commande : deux formulations finiraient
  * par diverger, et le client paierait un autre prix que celui affiché.
  *
- * Elle se juge à l'activation de la promotion, `p.active_depuis` : le prix
- * de la variante n'a pas changé pendant les trente jours qui précèdent.
- * L'horloge est celle de PostgreSQL, jamais celle de Node, `database.md`.
- *
- * L'ÂGE DE LA VARIANTE NE COMPTE PLUS, LS-321, arbitrage de Christophe du
- * 13 novembre 2026 : une pièce en vente depuis moins de trente jours est
- * réduite, son prix barré étant le prix pratiqué depuis sa mise en vente.
- *
- * LES CHANGEMENTS ÉCARTÉS PAR ARBITRAGE NE COMPTENT PAS, LS-331 :
- * `CHANGEMENTS_PRIX_ECARTES`, identifiants d'historique et non variantes.
- * Risque juridique accepté, amendement d'ADR-051.
+ * UN CHANGEMENT DE PRIX N'EXCLUT PLUS AUCUNE PIÈCE, LS-333, arbitrage de
+ * Christophe du 21 novembre 2026, risque juridique accepté par l'exploitante
+ * et nommé dans ADR-051 : la règle des trente jours (arbitrage 1, L112-1-1)
+ * est retirée, et avec elle l'exception de LS-331. Seul un prix nul exclut ;
+ * le prix barré est le prix catalogue actuel. `historique_prix_variante`
+ * reste écrit, comme trace et pour le gel des prix sous promotion.
  */
 import { Prisma } from "@/generated/prisma/client";
-import {
-  CHANGEMENTS_PRIX_ECARTES,
-  CLE_VERROU_PROMOTION,
-  JOURS_PRIX_ANTERIEUR,
-} from "@/lib/promotion";
+import { CLE_VERROU_PROMOTION } from "@/lib/promotion";
 import type { ClientBase as Client } from "@/repositories/stock";
 
 /** `v` est la variante, `p` la promotion active. */
-const CONDITION_ELIGIBLE = Prisma.sql`
-  v.prix_centimes > 0
-  AND NOT EXISTS (
-    SELECT 1 FROM historique_prix_variante h
-     WHERE h.variante_id = v.id
-       AND h.modifie_a > p.active_depuis - make_interval(days => ${JOURS_PRIX_ANTERIEUR})
-       AND h.id NOT IN (${Prisma.join([...CHANGEMENTS_PRIX_ECARTES])})
-  )`;
+const CONDITION_ELIGIBLE = Prisma.sql`v.prix_centimes > 0`;
 
 /**
  * LE TAUX D'UNE DÉCLINAISON, LS-324, ADR-051 amendé : celui de son article
@@ -93,7 +77,7 @@ export async function verrouillerPromotion(client: Client): Promise<void> {
  * Chaque déclinaison en vente, avec le taux que la promotion lui VISE et
  * celui qu'elle lui APPLIQUE. `tauxVise` est nul pour un article hors de la
  * promotion ; `taux` est nul de plus quand la pièce est visée mais exclue,
- * son prix ayant changé dans les trente jours.
+ * ce que seul un prix nul produit depuis LS-333.
  */
 export async function lireEligibiliteCatalogue(
   client: Client,
