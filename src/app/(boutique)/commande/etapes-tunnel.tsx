@@ -37,6 +37,7 @@ import {
 } from "@/lib/carnet-tunnel";
 import type { MotifIndisponible } from "@/services/panier";
 import type { ResultatPointsRetrait } from "@/integrations/sendcloud";
+import { libelleDelaiAcheminement } from "@/lib/livraison";
 import {
   enregistrerAdresse,
   enregistrerCoordonnees,
@@ -699,6 +700,15 @@ function ChoixLivraison({
       <fieldset className={styles.modes}>
         <legend className={styles.libelle}>Mode de livraison</legend>
 
+        {/*
+         * LE DÉLAI D'ACHEMINEMENT S'AFFICHE AVANT LE CHOIX, ADR-035, LS-334 :
+         * un délai découvert après la commande produit une réclamation.
+         *
+         * IL DÉCRIT LE BOUTON SANS LE NOMMER. `aria-labelledby` garde le nom
+         * « À domicile », `aria-describedby` lit le délai ensuite : placé dans
+         * le seul `<label>`, le délai entrerait dans le nom, et un lecteur
+         * d'écran annoncerait une phrase entière par option.
+         */}
         {modesOfferts.map((candidat) => (
           <label key={candidat} className={styles.mode}>
             <input
@@ -708,8 +718,16 @@ function ChoixLivraison({
               checked={mode === candidat}
               onChange={() => setMode(candidat)}
               className={styles.radio}
+              aria-labelledby={`mode-${candidat}`}
+              aria-describedby={`delai-${candidat}`}
             />
-            <span>{LIBELLES_MODE[candidat]}</span>
+            <span className={styles.modeTexte}>
+              <span id={`mode-${candidat}`}>{LIBELLES_MODE[candidat]}</span>
+              <span id={`delai-${candidat}`} className={styles.modeDelai}>
+                Livraison en {libelleDelaiAcheminement(candidat)} après
+                l&apos;expédition
+              </span>
+            </span>
           </label>
         ))}
       </fieldset>

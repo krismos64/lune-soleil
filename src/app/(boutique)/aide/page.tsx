@@ -19,10 +19,11 @@
  * prix. Configuration invalide : la page le dit au lieu de se taire.
  *
  * LE DÉLAI D'EXPÉDITION VIENT DE `DELAI_EXPEDITION_JOURS_MAX`, donné par
- * l'exploitante le 8 octobre 2026, LS-26. Il borne le dépôt du colis, jamais
- * sa réception : aucun délai d'acheminement n'est annoncé, faute de source
- * vérifiée. Un délai non tenu serait une pratique commerciale trompeuse,
- * articles L121-2 et suivants.
+ * l'exploitante le 8 octobre 2026, LS-26. Il borne le dépôt du colis. Le délai
+ * d'acheminement, du dépôt à la remise, vient de
+ * `DELAI_ACHEMINEMENT_JOURS_OUVRES`, ADR-035 et LS-334 : la constante dit ce
+ * qui est mesuré et ce qui ne l'est pas. Un délai non tenu serait une pratique
+ * commerciale trompeuse, articles L121-2 et suivants.
  *
  * LA FOIRE AUX QUESTIONS, LS-26, ne reprend que des faits établis. Le pied de page la
  * cite par l'ancre `#faq`, qui doit rester : une ancre absente retombe en haut
@@ -45,6 +46,7 @@ import {
   type ConfigurationLivraison,
   ConfigurationLivraisonInvalideError,
   DELAI_EXPEDITION_JOURS_MAX,
+  libelleDelaiAcheminement,
 } from "@/lib/livraison";
 import { resoudreConfigurationLivraison } from "@/services/parametres";
 import styles from "./aide.module.css";
@@ -423,7 +425,7 @@ export default async function PageAide() {
             </div>
           </div>
 
-          {/* Le dépôt du colis, jamais sa réception : voir l'en-tête. */}
+          {/* Le dépôt, puis l'acheminement par mode : voir l'en-tête. */}
           <p className={styles.noteDelai}>
             <svg viewBox="0 0 20 20" aria-hidden="true">
               <circle cx="10" cy="10" r="8" />
@@ -432,7 +434,9 @@ export default async function PageAide() {
             <span>
               L&apos;atelier dépose votre colis au plus tard{" "}
               {DELAI_EXPEDITION_JOURS_MAX} jours après la confirmation de votre
-              paiement. Le temps d&apos;acheminement s&apos;y ajoute.
+              paiement. Mondial Relay le livre ensuite en{" "}
+              {libelleDelaiAcheminement("POINT_RELAIS")} en Point Relais ou en
+              Locker, et en {libelleDelaiAcheminement("DOMICILE")} à domicile.
             </span>
           </p>
         </div>

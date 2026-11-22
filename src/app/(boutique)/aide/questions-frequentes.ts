@@ -21,10 +21,10 @@
  * | délai d'expédition, emballage, cadeau | réponses de l'exploitante du 8 octobre 2026, questions 38 à 41 |
  * | absence à domicile | pratique de Mondial Relay, relevée le 8 octobre 2026, sans chiffre non vérifié |
  *
- * LE DÉLAI D'EXPÉDITION VIENT DE `DELAI_EXPEDITION_JOURS_MAX`, jamais d'un
- * chiffre écrit ici. Le délai d'acheminement n'est pas annoncé : aucune source
- * vérifiée ne le donne. Un délai annoncé sans pouvoir être tenu serait une
- * pratique commerciale trompeuse.
+ * LES DÉLAIS VIENNENT DE `DELAI_EXPEDITION_JOURS_MAX` ET DE
+ * `DELAI_ACHEMINEMENT_JOURS_OUVRES`, jamais d'un chiffre écrit ici, LS-334. Un
+ * délai annoncé sans pouvoir être tenu serait une pratique commerciale
+ * trompeuse : la constante d'acheminement dit lequel est mesuré.
  *
  * L'EXPLOITANTE EXERCE SEULE : aucun « nous » de marque, `frontend-design.md`.
  * Les réponses sont tournées vers « vous » ou vers l'atelier.
@@ -32,6 +32,7 @@
 import {
   type ConfigurationLivraison,
   DELAI_EXPEDITION_JOURS_MAX,
+  libelleDelaiAcheminement,
 } from "@/lib/livraison";
 import { formaterMontant } from "@/lib/montant";
 
@@ -93,7 +94,7 @@ export function questionsFrequentes(
     {
       id: "faq-delai-expedition",
       question: "Sous quel délai ma commande part-elle\u00a0?",
-      reponse: `L'atelier dépose votre colis chez Mondial Relay au plus tard ${DELAI_EXPEDITION_JOURS_MAX} jours après la confirmation de votre paiement. Le temps d'acheminement du transporteur s'y ajoute, et un email vous prévient dès le départ du colis.`,
+      reponse: `L'atelier dépose votre colis chez Mondial Relay au plus tard ${DELAI_EXPEDITION_JOURS_MAX} jours après la confirmation de votre paiement. Mondial Relay le livre ensuite en ${libelleDelaiAcheminement("POINT_RELAIS")} en Point Relais ou en Locker, et en ${libelleDelaiAcheminement("DOMICILE")} à domicile. Un email vous prévient dès le départ du colis.`,
     },
     {
       id: "faq-emballage",
