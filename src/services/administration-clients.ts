@@ -52,6 +52,10 @@
  * ---------------------------------------------------------------------------
  */
 import { prisma } from "@/lib/prisma";
+import {
+  listerAcheteursSansCompte as listerAcheteursSansCompteDepot,
+  type AcheteurSansCompte,
+} from "@/repositories/commande";
 import { listerClients, type ClientEnListe } from "@/repositories/utilisateur";
 
 export type { ClientEnListe };
@@ -90,6 +94,30 @@ export async function listerClientsAdministration(
   client: typeof prisma = prisma,
 ): Promise<VueClients> {
   return listerClients(client, {
+    ...(options.terme ? { terme: options.terme } : {}),
+    limite: PLAFOND_CLIENTS,
+  });
+}
+
+export type { AcheteurSansCompte };
+
+export type VueAcheteursSansCompte = {
+  acheteurs: AcheteurSansCompte[];
+  limiteAtteinte: boolean;
+};
+
+/**
+ * Les acheteurs sans compte, LS-335 : l'onglet « Sans compte » de l'écran.
+ *
+ * MÊME STATUT QUE `listerClientsAdministration` : le terme filtre, il
+ * n'autorise rien, invariant 2, et la garde de rôle vit dans la page. Même
+ * plafond, annoncé à l'écran.
+ */
+export async function listerAcheteursSansCompte(
+  options: { terme?: string } = {},
+  client: typeof prisma = prisma,
+): Promise<VueAcheteursSansCompte> {
+  return listerAcheteursSansCompteDepot(client, {
     ...(options.terme ? { terme: options.terme } : {}),
     limite: PLAFOND_CLIENTS,
   });

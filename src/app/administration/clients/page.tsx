@@ -22,6 +22,8 @@
  */
 import { Suspense } from "react";
 
+import { z } from "zod";
+
 import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -30,6 +32,7 @@ import { LIBELLES_STATUT } from "@/lib/affichage-commande";
 import { formaterMontant } from "@/lib/montant";
 import {
   PLAFOND_CLIENTS,
+  listerAcheteursSansCompte,
   listerClientsAdministration,
 } from "@/services/administration-clients";
 import {
@@ -65,10 +68,40 @@ const FORMAT_DATE = new Intl.DateTimeFormat("fr-FR", {
   timeZone: "Europe/Paris",
 });
 
+/**
+ * L'onglet affiché, LS-335 : `?vue=sans-compte`, ou la liste des comptes.
+ *
+ * VALIDÉ PAR ZOD, invariant 7 : la valeur vient de l'adresse. Toute autre
+ * valeur, ou un paramètre répété, retombe sur l'onglet des comptes plutôt que
+ * de lever : une adresse bricolée n'est pas une erreur de l'exploitante.
+ */
+const schemaVue = z.literal("sans-compte");
+
+type Vue = "comptes" | "sans-compte";
+
+function lireVue(brut: unknown): Vue {
+  return schemaVue.safeParse(brut).success ? "sans-compte" : "comptes";
+}
+
+/** L'adresse de l'écran pour un onglet et un terme, `?vue=` omis par défaut. */
+function cheminClients(vue: Vue, terme = ""): string {
+  const parametres = new URLSearchParams();
+  if (vue === "sans-compte") {
+    parametres.set("vue", vue);
+  }
+  if (terme !== "") {
+    parametres.set("recherche", terme);
+  }
+  const requete = parametres.toString();
+  return requete
+    ? `/administration/clients?${requete}`
+    : "/administration/clients";
+}
+
 export default async function PageClients({
   searchParams,
 }: {
-  searchParams: Promise<{ recherche?: string }>;
+  searchParams: Promise<{ recherche?: string; vue?: string }>;
 }) {
   try {
     await exigerAdministratrice(await headers());
@@ -82,15 +115,43 @@ export default async function PageClients({
 
   const parametres = await searchParams;
   const terme = parametres.recherche?.trim() ?? "";
+  const vue = lireVue(parametres.vue);
 
   return (
     <main id="contenu" tabIndex={-1} className={styles.page}>
       <h1 className={styles.titre}>Clients</h1>
 
+      {/*
+       * DEUX ONGLETS, LS-335 : des liens et non des boutons, l'état vit dans
+       * l'adresse comme la recherche. `aria-current` dit l'onglet affiché, et
+       * le style s'y ancre plutôt que sur une classe. Le terme suit d'un
+       * onglet à l'autre : chercher « Dupont » puis changer d'onglet cherche
+       * encore « Dupont ». Aucun préchargement, LS-166, l'écran étant
+       * `force-dynamic`.
+       */}
+      <nav className={styles.vues} aria-label="Type de client">
+        <Link
+          href={cheminClients("comptes", terme)}
+          prefetch={false}
+          className={styles.vue}
+          aria-current={vue === "comptes" ? "page" : undefined}
+        >
+          Avec compte
+        </Link>
+        <Link
+          href={cheminClients("sans-compte", terme)}
+          prefetch={false}
+          className={styles.vue}
+          aria-current={vue === "sans-compte" ? "page" : undefined}
+        >
+          Sans compte
+        </Link>
+      </nav>
+
       <p className={styles.introduction}>
-        Les comptes créés sur la boutique, du plus récent au plus ancien. Un
-        compte supprimé disparaît d&apos;ici : ses commandes et ses factures
-        sont conservées pour la comptabilité, sans lui être rattachées.
+        {vue === "comptes"
+          ? "Les comptes créés sur la boutique, du plus récent au plus ancien. Un compte supprimé disparaît d'ici : ses commandes et ses factures sont conservées pour la comptabilité, sans lui être rattachées."
+          : "Les personnes qui ont commandé sans créer de compte, regroupées par adresse email, de la commande la plus récente à la plus ancienne. Une adresse qui porte un compte figure dans l'autre onglet, et un compte supprimé n'apparaît nulle part."}
       </p>
 
       {/*
@@ -116,6 +177,13 @@ export default async function PageClients({
        * s'ajoute pas a l'ancienne.
        */}
       <form className={styles.recherche} role="search" method="get">
+        {/*
+         * L'ONGLET REPART EN CHAMP CACHÉ, LS-335 : sans lui, chercher depuis
+         * « Sans compte » ramènerait sur les comptes.
+         */}
+        {vue === "sans-compte" ? (
+          <input type="hidden" name="vue" value="sans-compte" />
+        ) : null}
         <label className={styles.rechercheLabel} htmlFor="recherche">
           Rechercher par nom ou adresse email
         </label>
@@ -190,17 +258,23 @@ export default async function PageClients({
            * execution de la suite complete, jamais en isolation.
            */}
           <Link
-            href="/administration/clients"
+            href={cheminClients(vue)}
             className={styles.lien}
             prefetch={false}
           >
-            Afficher tous les comptes
+            {vue === "comptes"
+              ? "Afficher tous les comptes"
+              : "Afficher tous les acheteurs"}
           </Link>
         </p>
       ) : null}
 
       <Suspense fallback={<ChargementClients />}>
-        <ListeClients terme={terme} />
+        {vue === "comptes" ? (
+          <ListeClients terme={terme} />
+        ) : (
+          <ListeAcheteursSansCompte terme={terme} />
+        )}
       </Suspense>
     </main>
   );
@@ -377,6 +451,84 @@ async function ListeClients({ terme }: { terme: string }) {
           ) : null}
         </>
       )}
+    </>
+  );
+}
+
+/**
+ * Les acheteurs sans compte, LS-335, même gabarit de carte que les comptes.
+ *
+ * LE LIEN MÈNE À L'ÉCRAN COMMANDES FILTRÉ SUR L'ADRESSE, dont la recherche
+ * couvre déjà l'email : aucune route de détail n'est ajoutée pour une
+ * personne qui n'a pas de compte. Aucune donnée d'adresse postale ni de
+ * téléphone, T11.
+ */
+async function ListeAcheteursSansCompte({ terme }: { terme: string }) {
+  const vue = await listerAcheteursSansCompte(
+    terme.length > 0 ? { terme } : {},
+  );
+
+  if (vue.acheteurs.length === 0) {
+    return (
+      <p className={styles.vide}>
+        {terme.length > 0
+          ? "Aucun acheteur sans compte ne correspond à cette recherche. Vérifiez l'orthographe, ou affichez tous les acheteurs."
+          : "Aucune commande passée sans compte pour le moment."}
+      </p>
+    );
+  }
+
+  return (
+    <>
+      <ul className={styles.liste}>
+        {vue.acheteurs.map((acheteur) => (
+          <li key={acheteur.email} className={styles.client}>
+            <div className={styles.enTeteClient}>
+              <span className={styles.nom}>{acheteur.nom}</span>
+              <span className={`${styles.etat} ${styles.etatSansCompte}`}>
+                Sans compte
+              </span>
+            </div>
+
+            <p className={styles.email}>{acheteur.email}</p>
+
+            <dl className={styles.details}>
+              <div className={styles.detail}>
+                <dt>Dernière commande</dt>
+                <dd>{FORMAT_DATE.format(acheteur.derniereCommande)}</dd>
+              </div>
+
+              <div className={styles.detail}>
+                <dt>Commandes</dt>
+                <dd>{acheteur.nombreCommandes}</dd>
+              </div>
+
+              {/* Finalité 3 de T11, intérêt légitime, comme pour un compte. */}
+              <div className={styles.detailTotal}>
+                <dt>Montant commandé</dt>
+                <dd>{formaterMontant(acheteur.totalCentimes)}</dd>
+              </div>
+            </dl>
+
+            <Link
+              href={`/administration/commandes?recherche=${encodeURIComponent(acheteur.email)}`}
+              prefetch={false}
+              className={styles.voirCommandes}
+            >
+              {acheteur.nombreCommandes === 1
+                ? "Voir sa commande"
+                : "Voir ses commandes"}
+            </Link>
+          </li>
+        ))}
+      </ul>
+
+      {vue.limiteAtteinte ? (
+        <p className={styles.plafond}>
+          Seuls les {PLAFOND_CLIENTS} acheteurs les plus récents sont affichés.
+          Affinez la recherche pour retrouver les autres.
+        </p>
+      ) : null}
     </>
   );
 }

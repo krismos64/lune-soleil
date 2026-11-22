@@ -723,3 +723,99 @@ export async function verrouillerCommandeSansBloquerLesReferences(
 
   return lignes[0]?.statut ?? null;
 }
+
+/** Un acheteur sans compte, tel que l'écran Clients le liste, LS-335. */
+export type AcheteurSansCompte = {
+  email: string;
+  /** Le nom porté par sa commande la plus récente. */
+  nom: string;
+  /** Toutes ses commandes, annulées comprises, comme la carte d'un compte. */
+  nombreCommandes: number;
+  /** Somme hors annulées, en centimes entiers, arbitrage de LS-317. */
+  totalCentimes: number;
+  derniereCommande: Date;
+};
+
+/**
+ * Les acheteurs sans compte, regroupés par adresse email, LS-335, T11.
+ *
+ * DEUX EXCLUSIONS, CHACUNE POUR UNE RAISON DISTINCTE :
+ *
+ *   - une commande DISSOCIÉE appartenait à un compte supprimé, LS-95 : la
+ *     personne a demandé à disparaître, elle ne revient pas ici comme
+ *     « acheteur sans compte ». La commande reste dans Commandes, pour la
+ *     comptabilité ;
+ *   - une adresse qui PORTE un compte a déjà ses commandes non rattachées sur
+ *     la carte du compte, LS-317. La comparaison normalise l'adresse du compte
+ *     comme le rattachement du parcours 6, `trim` puis minuscules.
+ *
+ * LA RECHERCHE PORTE SUR TOUTES LES COMMANDES DU GROUPE, par `HAVING
+ * bool_or` : chercher un ancien nom retrouve l'acheteur, et son compte de
+ * commandes reste entier au lieu de se réduire à la ligne trouvée. Les jokers
+ * sont échappés, le motif part en paramètre, invariant 7.
+ *
+ * AGRÉGÉ PAR LA BASE, invariant 1 : la somme reste en centimes entiers, et
+ * l'historique complet n'est pas chargé pour afficher un nombre.
+ */
+export async function listerAcheteursSansCompte(
+  client: ClientBase,
+  options: { terme?: string; limite: number },
+): Promise<{ acheteurs: AcheteurSansCompte[]; limiteAtteinte: boolean }> {
+  const terme = options.terme?.trim() ?? "";
+  const filtre =
+    terme === ""
+      ? Prisma.empty
+      : Prisma.sql`HAVING bool_or(
+          c.email_normalise ILIKE ${`%${echapperMotif(terme)}%`} ESCAPE '\\'
+          OR c.nom_client ILIKE ${`%${echapperMotif(terme)}%`} ESCAPE '\\'
+        )`;
+
+  const lignes = await client.$queryRaw<
+    {
+      email: string;
+      nom: string;
+      nombreCommandes: bigint | number;
+      totalCentimes: bigint | number;
+      derniereCommande: Date;
+    }[]
+  >`
+    SELECT
+      c.email_normalise                                        AS email,
+      (array_agg(c.nom_client ORDER BY c.cree_a DESC, c.id DESC))[1]
+                                                               AS nom,
+      count(*)                                                 AS "nombreCommandes",
+      coalesce(sum(c.total_centimes) FILTER (WHERE c.statut <> 'ANNULEE'), 0)
+                                                               AS "totalCentimes",
+      max(c.cree_a)                                            AS "derniereCommande"
+    FROM commande c
+    WHERE c.utilisateur_id IS NULL
+      AND c.dissocie_a IS NULL
+      AND NOT EXISTS (
+        SELECT 1 FROM utilisateur u
+        WHERE lower(trim(u.email)) = c.email_normalise
+      )
+    GROUP BY c.email_normalise
+    ${filtre}
+    ORDER BY "derniereCommande" DESC, c.email_normalise ASC
+    LIMIT ${options.limite + 1}
+  `;
+
+  /*
+   * `count` ET `sum` RENDENT DU `bigint`, transmis en `BigInt` par le pilote :
+   * converti ici, la valeur tenant largement dans un entier sûr.
+   */
+  const acheteurs = lignes.slice(0, options.limite).map((ligne) => ({
+    email: ligne.email,
+    nom: ligne.nom,
+    nombreCommandes: Number(ligne.nombreCommandes),
+    totalCentimes: Number(ligne.totalCentimes),
+    derniereCommande: ligne.derniereCommande,
+  }));
+
+  return { acheteurs, limiteAtteinte: lignes.length > options.limite };
+}
+
+/** Échappe `%`, `_` et la barre oblique inverse d'un terme destiné à `LIKE`. */
+function echapperMotif(terme: string): string {
+  return terme.replace(/[\\%_]/g, (car) => `\\${car}`);
+}

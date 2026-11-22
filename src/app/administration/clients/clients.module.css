@@ -380,3 +380,69 @@
     transition: none;
   }
 }
+
+/* ------------------------------------------------- onglets, LS-335 */
+
+/*
+ * Deux liens en pastilles. L'onglet affiché se lit par `aria-current`, fond
+ * plein `--ls-primary` et texte `--ls-text-on-primary` ; l'autre porte la
+ * limite d'un contrôle, C36. 44 px de cible.
+ */
+.vues {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ls-space-2);
+  margin: 0 0 var(--ls-space-3);
+}
+
+.vue {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  padding: 0 var(--ls-space-4);
+  border: 1px solid var(--ls-border-controle);
+  border-radius: 999px;
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.vue:hover {
+  border-color: var(--ls-primary);
+}
+
+.vue[aria-current="page"] {
+  border-color: var(--ls-primary);
+  background: var(--ls-primary);
+  color: var(--ls-text-on-primary);
+}
+
+.vue:focus-visible {
+  outline: 3px solid var(--ls-focus);
+  outline-offset: 2px;
+}
+
+/* `--ls-text` en fond, `--ls-surface` en texte : badge neutre, ni alerte ni succès. */
+.etatSansCompte {
+  background: var(--ls-text);
+  color: var(--ls-surface);
+}
+
+/* 44 px de cible, le lien d'une carte se touche du doigt. */
+.voirCommandes {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  margin-top: var(--ls-space-2);
+  background: var(--ls-surface);
+  color: var(--ls-primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.voirCommandes:focus-visible {
+  outline: 2px solid var(--ls-focus);
+  outline-offset: 2px;
+}
