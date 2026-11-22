@@ -90,9 +90,34 @@ Contrôle en production :
   jours ouvrés », domicile « 4 à 6 », débordement 0. C'est le premier rendu de
   l'option Point Relais, qu'aucun test ne voit.
 
+## Nocturne 112 en échec, trouvé à la vérification de fin de session
+
+Issue #704, ouverte à 11:16 UTC sur le nocturne du matin (commit `11e5034`,
+avant LS-334). Étape « Preuves par mutation lourdes » :
+`ECHEC src/repositories/promotion.ts est mute mais absent de MUTABLES`. Le cas
+ajouté par LS-333 le 21 novembre mute `$DEPOT_PROMOTION` sans l'avoir inscrit
+dans la liste : la garde du script l'arrête là, et **tous les cas suivants se
+taisent**, dont celui de LS-320 et les trois de LS-334.
+
+Le contrôle à sec, qui tourne à chaque PR, ne le voyait pas : il vérifiait
+qu'une expression modifie son fichier, jamais que ce fichier soit restauré.
+
+- `DEPOT_PROMOTION` ajoutée à `MUTABLES`.
+- `verifier-mutations-a-sec.sh` exige désormais que tout fichier muté figure
+  dans `MUTABLES`. Rejoué sur le dépôt d'avant la correction, il désigne cette
+  seule variable (`verifier-tests-mutation.sh:3184`), et passe au vert après.
+- Sa preuve par mutation gagne le cas « fichier mute absent de MUTABLES » :
+  7 mutations, 7 détectées.
+- `PREUVES-PAR-MUTATION.md` et `VERIFICATION.md` mis à jour.
+
+L'issue #704 reste ouverte jusqu'à un nocturne vert, relancé à la main après
+la fusion.
+
 ## Prochaine étape
 
-Search Console : « Valider la correction » sur l'alerte `deliveryTime`. LS-291,
+Nocturne relancé après la fusion du correctif : fermer #704 s'il est vert, le
+premier à exercer les cas de LS-320 et LS-334. Search Console : « Valider la
+correction » sur l'alerte `deliveryTime`. LS-291,
 pistes 4 et 5, vers le 13 décembre. Remesurer le délai à domicile sur les
 premières livraisons.
 

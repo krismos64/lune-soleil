@@ -380,6 +380,14 @@ script.
 les deux expressions** qui ont coûté deux nocturnes, `paiement.ts` et
 `webhook-paiement.ts`.
 
+**Il exige aussi que le fichier muté figure dans `MUTABLES`**, depuis LS-334 et
+quand le script en tient une. Hors de cette liste, le fichier n'est jamais
+restauré, et le vrai script s'arrête au premier cas qui le mute : tous les cas
+suivants se taisent. Le nocturne 112, le 22 novembre 2026, s'est arrêté sur
+`src/repositories/promotion.ts`, ajouté par LS-333 sans entrer dans la liste,
+et les cas de LS-320 et LS-334 n'ont pas tourné. Rejoué sur ce dépôt, le
+contrôle désigne cette seule variable.
+
 **Ce qu'il ne voit pas** : une expression qui mute bien son fichier mais rate son
 test, ce que seule la preuve réelle mesure, et les mutations écrites autrement
 qu'avec `mute`, `perl -pi` direct dans `verifier-regles-mutation.sh` et
