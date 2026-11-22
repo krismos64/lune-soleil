@@ -151,7 +151,7 @@ export default async function PageClients({
       <p className={styles.introduction}>
         {vue === "comptes"
           ? "Les comptes créés sur la boutique, du plus récent au plus ancien. Un compte supprimé disparaît d'ici : ses commandes et ses factures sont conservées pour la comptabilité, sans lui être rattachées."
-          : "Les personnes qui ont commandé sans créer de compte, regroupées par adresse email, de la commande la plus récente à la plus ancienne. Une adresse qui porte un compte figure dans l'autre onglet, et un compte supprimé n'apparaît nulle part."}
+          : "Les personnes qui ont commandé sans créer de compte, regroupées par adresse email, de la commande la plus récente à la plus ancienne. Une adresse qui porte un compte figure dans l'autre onglet. Les commandes rattachées à un compte supprimé n'apparaissent pas ici."}
       </p>
 
       {/*
@@ -458,9 +458,11 @@ async function ListeClients({ terme }: { terme: string }) {
 /**
  * Les acheteurs sans compte, LS-335, même gabarit de carte que les comptes.
  *
- * LE LIEN MÈNE À L'ÉCRAN COMMANDES FILTRÉ SUR L'ADRESSE, dont la recherche
- * couvre déjà l'email : aucune route de détail n'est ajoutée pour une
- * personne qui n'a pas de compte. Aucune donnée d'adresse postale ni de
+ * LE LIEN MÈNE À L'ÉCRAN COMMANDES FILTRÉ PAR `?acheteur=`, égalité stricte
+ * et mêmes exclusions que la carte, et NON par la recherche libre : celle-ci
+ * cherche par contenu, et `ana@x.fr` y ramenait `diana@x.fr`, relevé par la
+ * revue d'interface. Aucune route de détail n'est ajoutée pour une personne
+ * qui n'a pas de compte. Aucune donnée d'adresse postale ni de
  * téléphone, T11.
  */
 async function ListeAcheteursSansCompte({ terme }: { terme: string }) {
@@ -511,7 +513,7 @@ async function ListeAcheteursSansCompte({ terme }: { terme: string }) {
             </dl>
 
             <Link
-              href={`/administration/commandes?recherche=${encodeURIComponent(acheteur.email)}`}
+              href={`/administration/commandes?acheteur=${encodeURIComponent(acheteur.email)}`}
               prefetch={false}
               className={styles.voirCommandes}
             >

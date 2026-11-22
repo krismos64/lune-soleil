@@ -762,3 +762,29 @@
   font-size: 1.25rem;
   cursor: pointer;
 }
+
+/*
+ * LS-335 : le rappel du filtre par acheteur sans compte. `--ls-text` sur
+ * `--ls-surface` ; une adresse n'a pas de point de coupure, d'où
+ * `overflow-wrap` à 320 px.
+ */
+.acheteur {
+  margin: 0 0 var(--ls-space-3);
+  padding: var(--ls-space-2) var(--ls-space-3);
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface);
+  color: var(--ls-text);
+  font-size: 0.9375rem;
+  overflow-wrap: anywhere;
+}
+
+/* 44 px de cible. */
+.acheteurLien {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  background: var(--ls-surface);
+  color: var(--ls-primary);
+  font-weight: 600;
+  text-decoration: underline;
+}

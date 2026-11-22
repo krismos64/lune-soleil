@@ -23,6 +23,7 @@ import { VARIABLE_URL_TEST } from "../aide/base-ephemere";
 
 let client: Client;
 let service: typeof import("@/services/administration-clients");
+let commandes: typeof import("@/services/administration-commandes");
 
 let rang = 0;
 
@@ -78,6 +79,7 @@ beforeAll(async () => {
   await client.connect();
 
   service = await import("@/services/administration-clients");
+  commandes = await import("@/services/administration-commandes");
 });
 
 afterAll(async () => {
@@ -269,5 +271,55 @@ describe("listerAcheteursSansCompte", () => {
 
     expect(vue.acheteurs).toHaveLength(service.PLAFOND_CLIENTS);
     expect(vue.limiteAtteinte).toBe(true);
+  });
+});
+
+/*
+ * LE LIEN « VOIR SES COMMANDES » DE LA CARTE, LS-335. La revue d'interface a
+ * relevé que la recherche libre, par contenu, ramenait `diana@` pour `ana@` :
+ * le filtre est une égalité stricte, avec les exclusions de la carte, et ce
+ * qu'il rend doit être exactement ce que la carte compte.
+ */
+describe("listerCommandes, filtre acheteurSansCompte", () => {
+  it("rend exactement les commandes que la carte compte", async () => {
+    await poserCommande({
+      email: "ana@example.invalid",
+      nom: "TEST Ana",
+      total: 100,
+      quand: "2026-01-01T10:00:00Z",
+    });
+    await poserCommande({
+      email: "diana@example.invalid",
+      nom: "TEST Diana",
+      total: 100,
+      quand: "2026-01-02T10:00:00Z",
+    });
+    await poserCommande({
+      email: "ana@example.invalid",
+      nom: "TEST Ana dissociée",
+      total: 100,
+      quand: "2026-01-03T10:00:00Z",
+      dissociee: true,
+    });
+    const id = await creerCompte("ana-compte@example.invalid");
+    await poserCommande({
+      email: "ana@example.invalid",
+      nom: "TEST Ana rattachée ailleurs",
+      total: 100,
+      quand: "2026-01-04T10:00:00Z",
+      utilisateurId: id,
+    });
+
+    const liste = await commandes.listerCommandes({
+      acheteurSansCompte: "ANA@example.invalid",
+    });
+    const carte = (await service.listerAcheteursSansCompte()).acheteurs.find(
+      (acheteur) => acheteur.email === "ana@example.invalid",
+    );
+
+    expect(liste.commandes.map((commande) => commande.nomClient)).toEqual([
+      "TEST Ana",
+    ]);
+    expect(liste.commandes).toHaveLength(carte?.nombreCommandes ?? -1);
   });
 });
