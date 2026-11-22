@@ -753,7 +753,9 @@ export type AcheteurSansCompte = {
  * marque que ses commandes RATTACHÉES. Une commande passée sans compte avec
  * la même adresse, jamais rattachée (adresse non confirmée), reste ici après
  * la suppression. L'étendre au marquage touche l'accès à la facture par jeton
- * et la portée du droit à l'effacement : décision ouverte dans LS-336.
+ * et la portée du droit à l'effacement. Arbitrage de Christophe du
+ * 22 novembre 2026, LS-336 : un achat sans compte reste un achat sans compte,
+ * ne pas étendre la dissociation sans nouvel arbitrage.
  *
  * LA RECHERCHE PORTE SUR TOUTES LES COMMANDES DU GROUPE, par `HAVING
  * bool_or` : chercher un ancien nom retrouve l'acheteur, et son compte de

@@ -95,11 +95,13 @@ dans le ticket.
 ## État des tickets
 
 - LS-335 : close à la fusion et au déploiement.
-- LS-336 : ouvert, arbitrage de Christophe attendu.
+- LS-336 : **close, option B**, arbitrage de Christophe en fin de session :
+  « ne change rien ». Un achat sans compte reste un achat sans compte, risque
+  de rattachement accepté ; l'onglet de rubrique garde « Comptes clients ».
 - LS-334 : alerte Search Console en validation chez Google.
 
 ## Prochaine étape
 
-Arbitrer LS-336. Relever le verdict de validation `deliveryTime` dans la
+Relever le verdict de validation `deliveryTime` dans la
 Search Console. Nocturne suivant : premier passage des mutations sur le code
 refondu.
