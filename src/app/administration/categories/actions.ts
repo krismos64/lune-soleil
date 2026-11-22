@@ -44,7 +44,11 @@ import {
  * l'ecran de reauthentification de LS-89.
  */
 export type ResultatAction =
-  | { statut: "SUCCES" }
+  /**
+   * `produitId` n'est rendu que par la création d'un produit : l'écran ouvre
+   * alors sa fiche, refonte du 22 novembre 2026.
+   */
+  | { statut: "SUCCES"; produitId?: string }
   /** Aucune session d'administration, ou session sans le role. */
   | { statut: "SESSION_ABSENTE" }
   /** Entree refusee, avec le message destine au champ concerne. */
@@ -195,10 +199,10 @@ export async function creerProduitAction(
   }
 
   try {
-    await creerProduit({ nom, categorieId });
+    const produit = await creerProduit({ nom, categorieId });
     revalidatePath(CHEMIN);
     revalidatePath("/administration/produits");
-    return { statut: "SUCCES" };
+    return { statut: "SUCCES", produitId: produit.id };
   } catch (erreur) {
     return traduireErreur(erreur, "creerProduit");
   }

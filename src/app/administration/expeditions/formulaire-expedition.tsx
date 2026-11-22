@@ -483,7 +483,7 @@ export function FormulaireExpedition({
         </div>
 
         <div className={styles.champ}>
-          <label htmlFor={idMode}>Mode réellement exécuté</label>
+          <label htmlFor={idMode}>Mode d&apos;envoi utilisé</label>
           <select
             id={idMode}
             name="mode"
@@ -529,7 +529,7 @@ export function FormulaireExpedition({
          */}
         {exigePointRelais && (
           <div className={styles.champ}>
-            <label htmlFor={idPointRelais}>Point de retrait exécuté</label>
+            <label htmlFor={idPointRelais}>Point de retrait utilisé</label>
             <input
               id={idPointRelais}
               name="pointRelaisId"

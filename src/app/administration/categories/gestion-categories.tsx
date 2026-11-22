@@ -86,6 +86,11 @@ export function GestionCategories({
   const [enCours, demarrer] = useTransition();
   const [erreur, setErreur] = useState<string | null>(null);
   const [succes, setSucces] = useState<string | null>(null);
+  /*
+   * LA SUPPRESSION SE CONFIRME, refonte du 22 novembre 2026 : le premier clic
+   * arme le bouton, le second supprime. Une catégorie supprimée ne revient pas.
+   */
+  const [aSupprimer, setASupprimer] = useState<string | null>(null);
   const [nouveauNom, setNouveauNom] = useState("");
   /** Identifiant de la categorie en cours de renommage, ou null. */
   const [renommage, setRenommage] = useState<string | null>(null);
@@ -172,6 +177,11 @@ export function GestionCategories({
   }
 
   function supprimer(categorie: CategorieAffichee) {
+    if (aSupprimer !== categorie.id) {
+      setASupprimer(categorie.id);
+      return;
+    }
+    setASupprimer(null);
     lancer(
       () => supprimerCategorieAction(categorie.id),
       `Catégorie ${categorie.nom} supprimée.`,
@@ -351,7 +361,11 @@ export function GestionCategories({
                         enCours ||
                         categorie.nombreProduits + categorie.nombreRetires > 0
                       }
-                      aria-label={`Supprimer ${categorie.nom}`}
+                      aria-label={
+                        aSupprimer === categorie.id
+                          ? `Confirmer la suppression de ${categorie.nom}`
+                          : `Supprimer ${categorie.nom}`
+                      }
                       /*
                         LA RAISON EST ANNONCEE, pas seulement survolable. Un
                         `title` seul ne parvient ni au toucher ni de facon fiable
@@ -370,8 +384,19 @@ export function GestionCategories({
                           : undefined
                       }
                     >
-                      Supprimer
+                      {aSupprimer === categorie.id
+                        ? "Confirmer la suppression"
+                        : "Supprimer"}
                     </button>
+                    {aSupprimer === categorie.id ? (
+                      <button
+                        type="button"
+                        className={styles.bouton}
+                        onClick={() => setASupprimer(null)}
+                      >
+                        Garder
+                      </button>
+                    ) : null}
                   </div>
                 </>
               )}

@@ -52,6 +52,15 @@ vi.mock("@/app/administration/produits/nouveau/actions", () => ({
   creerProduitAction: vi.fn(),
 }));
 
+/*
+ * LE FORMULAIRE OUVRE LA FICHE APRÈS CRÉATION depuis la refonte du
+ * 22 novembre 2026, par `useRouter`, qui exige le routeur de Next.js. Le test
+ * ne rend que l'état vide : un routeur factice suffit.
+ */
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+}));
+
 const { GestionCategories } =
   await import("@/app/administration/categories/gestion-categories");
 const { FormulaireProduit } =

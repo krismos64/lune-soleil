@@ -723,3 +723,42 @@
   background: var(--ls-surface-sand);
   color: var(--ls-text);
 }
+
+/*
+ * LA PROCHAINE ÉTAPE, en tête de fiche depuis la refonte du 22 novembre 2026.
+ * Fond sable : `--ls-text` seulement, C31.
+ */
+.prochaineEtape {
+  margin: 0 0 var(--ls-space-3);
+  padding: var(--ls-space-3) var(--ls-space-4);
+  border-left: 3px solid var(--ls-famille, var(--ls-primary));
+  border-radius: var(--ls-radius-sm);
+  background: var(--ls-surface-sand);
+  color: var(--ls-text);
+  font-weight: 600;
+}
+
+/* La confirmation d'annulation : le texte d'abord, les deux choix ensuite. */
+.confirmation {
+  margin-top: var(--ls-space-3);
+  padding: var(--ls-space-3) var(--ls-space-4);
+  border: 1px solid var(--ls-border-controle);
+  border-radius: var(--ls-radius-md);
+  background: var(--ls-surface);
+}
+
+.texteConfirmation {
+  margin: 0 0 var(--ls-space-3);
+  color: var(--ls-text);
+}
+
+/* Le résumé d'un bloc replié : 44 px de cible, lu comme un titre. */
+.resumeReplie {
+  display: flex;
+  align-items: center;
+  min-height: var(--ls-touch-target);
+  color: var(--ls-text);
+  font-family: var(--ls-police-titre);
+  font-size: 1.25rem;
+  cursor: pointer;
+}

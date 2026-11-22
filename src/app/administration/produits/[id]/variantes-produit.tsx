@@ -86,14 +86,20 @@ const SAISIE_VIDE: Saisie = {
 export function VariantesProduit({
   produitId,
   variantes,
+  referenceProposee,
 }: {
   produitId: string;
   variantes: VarianteAffichee[];
+  /** Pré-remplit la référence d'une nouvelle déclinaison, modifiable. */
+  referenceProposee: string;
 }) {
   const [enCours, demarrer] = useTransition();
   const [erreur, setErreur] = useState<string | null>(null);
   const [succes, setSucces] = useState<string | null>(null);
-  const [ajout, setAjout] = useState<Saisie>(SAISIE_VIDE);
+  const [ajout, setAjout] = useState<Saisie>({
+    ...SAISIE_VIDE,
+    reference: referenceProposee,
+  });
   const [edition, setEdition] = useState<Record<string, Saisie>>({});
   const [aArchiver, setAArchiver] = useState<string | null>(null);
 
@@ -208,6 +214,9 @@ export function VariantesProduit({
           Number(ajout.quantitePhysique),
         ),
       `Variante ${ajout.reference.toUpperCase()} ajoutée.`,
+      // La proposition suivante arrive avec le rendu serveur rafraîchi ; le
+      // champ repart vide pour ne pas reproposer la référence qui vient d'être
+      // prise.
       () => setAjout(SAISIE_VIDE),
     );
   }

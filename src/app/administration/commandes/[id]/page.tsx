@@ -25,7 +25,7 @@ import {
   lireDetailCommande,
   lireRemboursementPossible,
 } from "@/services/administration-commandes";
-import type { ModeLivraison } from "@/generated/prisma/enums";
+import type { ModeLivraison, StatutCommande } from "@/generated/prisma/enums";
 import { EntreeInvalideError } from "@/lib/validation";
 import {
   formaterDate,
@@ -49,6 +49,22 @@ export const metadata = {
 };
 
 export const dynamic = "force-dynamic";
+
+/**
+ * CE QUI RESTE À FAIRE, dit en une phrase selon le statut, refonte du
+ * 22 novembre 2026 : le bouton seul ne disait pas où en était la commande.
+ * `Record` exhaustif : un statut ajouté sans phrase ne compile pas.
+ */
+const PROCHAINE_ETAPE: Record<StatutCommande, string> = {
+  EN_ATTENTE_PAIEMENT:
+    "Le paiement n'est pas encore confirmé. Rien à faire : la commande s'annule seule si le client ne paie pas.",
+  CONFIRMEE: "Payée. Prochaine étape : préparer la commande.",
+  EN_PREPARATION:
+    "En préparation. Prochaine étape : créer l'étiquette depuis les expéditions, puis expédier.",
+  EXPEDIEE: "Expédiée. Le colis est en route, rien à faire.",
+  LIVREE: "Livrée au client. Commande terminée.",
+  ANNULEE: "Annulée. Rien à faire.",
+};
 
 /** Adresse figee, telle que la commande l'a copiee. A3, invariants 3 et 4. */
 type AdresseFigee = {
@@ -177,6 +193,37 @@ export default async function PageDetailCommande({
         Passée le {formaterDate(commande.creeA)} par {commande.nomClient}.
       </p>
 
+      {/*
+       * « STATUT DE LA COMMANDE » ET NON « SUIVI », renomme par LS-216. Cette
+       * section porte les transitions de statut metier et leur historique,
+       * regle S9, et ne suit aucun colis. Garder le mot « Suivi » ici a cote
+       * d'une section d'acheminement ferait porter le meme mot a deux notions
+       * distinctes sur le meme ecran, ce que la story nomme explicitement.
+       *
+       * L'ANCRE `titre-suivi` DEVIENT `titre-statut-commande` : elle sert
+       * `aria-labelledby`, donc le nom annonce par un lecteur d'ecran. La
+       * laisser dire « suivi » pendant que le titre dit autre chose ferait
+       * diverger ce qui est lu de ce qui est vu.
+       */}
+      <section
+        className={styles.section}
+        aria-labelledby="titre-statut-commande"
+      >
+        <h2 id="titre-statut-commande" className={styles.titreSection}>
+          Statut de la commande
+        </h2>
+
+        <p className={styles.prochaineEtape}>
+          {PROCHAINE_ETAPE[commande.statut]}
+        </p>
+
+        <TransitionsCommande
+          commandeId={commande.id}
+          statutActuel={commande.statut}
+          transitionsPossibles={[...commande.transitionsPossibles]}
+        />
+      </section>
+
       <section className={styles.section} aria-labelledby="titre-articles">
         <h2 id="titre-articles" className={styles.titreSection}>
           Articles
@@ -285,7 +332,7 @@ export default async function PageDetailCommande({
        */}
       <section className={styles.section} aria-labelledby="titre-document">
         <h2 id="titre-document" className={styles.titreSection}>
-          Document comptable
+          Facture
         </h2>
         <DocumentFacture commandeId={commande.id} facture={commande.facture} />
       </section>
@@ -355,32 +402,13 @@ export default async function PageDetailCommande({
       />
 
       {/*
-       * « STATUT DE LA COMMANDE » ET NON « SUIVI », renomme par LS-216. Cette
-       * section porte les transitions de statut metier et leur historique,
-       * regle S9, et ne suit aucun colis. Garder le mot « Suivi » ici a cote
-       * d'une section d'acheminement ferait porter le meme mot a deux notions
-       * distinctes sur le meme ecran, ce que la story nomme explicitement.
-       *
-       * L'ANCRE `titre-suivi` DEVIENT `titre-statut-commande` : elle sert
-       * `aria-labelledby`, donc le nom annonce par un lecteur d'ecran. La
-       * laisser dire « suivi » pendant que le titre dit autre chose ferait
-       * diverger ce qui est lu de ce qui est vu.
+       * L'HISTORIQUE SE REPLIE, refonte du 22 novembre 2026 : on vient y
+       * chercher qui a avancé la commande et quand, rarement. Il reste entier.
        */}
-      <section
-        className={styles.section}
-        aria-labelledby="titre-statut-commande"
-      >
-        <h2 id="titre-statut-commande" className={styles.titreSection}>
-          Statut de la commande
-        </h2>
-
-        <TransitionsCommande
-          commandeId={commande.id}
-          statutActuel={commande.statut}
-          transitionsPossibles={[...commande.transitionsPossibles]}
-        />
-
-        <h3 className={styles.titreHistorique}>Historique</h3>
+      <details className={styles.section}>
+        <summary className={styles.resumeReplie}>
+          Historique des statuts
+        </summary>
         {/*
          * L'ORIGINE EST AFFICHEE, et c'est le point de l'historique, regle S9 :
          * savoir si une commande a ete avancee par une personne ou par une
@@ -424,7 +452,7 @@ export default async function PageDetailCommande({
             ))}
           </ol>
         )}
-      </section>
+      </details>
     </main>
   );
 }

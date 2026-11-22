@@ -37,6 +37,12 @@ export function TransitionsCommande({
   transitionsPossibles: StatutCommande[];
 }) {
   const [enCours, demarrer] = useTransition();
+  /*
+   * L'ANNULATION SE CONFIRME, refonte du 22 novembre 2026 : un clic de travers
+   * annulait une commande payée sans retour possible. Le premier clic montre
+   * la confirmation, le second annule ; « Garder » referme sans rien faire.
+   */
+  const [confirmeAnnulation, setConfirmeAnnulation] = useState(false);
   const [message, setMessage] = useState<{
     texte: string;
     erreur: boolean;
@@ -124,6 +130,10 @@ export function TransitionsCommande({
                */
               aria-describedby="message-transition"
               onClick={() => {
+                if (cible === "ANNULEE") {
+                  setConfirmeAnnulation(true);
+                  return;
+                }
                 soumettre(cible);
               }}
             >
@@ -132,6 +142,42 @@ export function TransitionsCommande({
           ))}
         </div>
       )}
+
+      {confirmeAnnulation ? (
+        <div
+          className={styles.confirmation}
+          role="group"
+          aria-label="Confirmer l'annulation"
+        >
+          <p className={styles.texteConfirmation}>
+            Annuler cette commande ? Elle passe en « Annulée », sans retour
+            possible. Ni le remboursement ni la remise en stock ne se font seuls
+            : remboursez depuis cette fiche, et corrigez le stock si la pièce
+            reste à l&apos;atelier.
+          </p>
+          <div className={styles.transitions}>
+            <button
+              type="button"
+              className={`${styles.bouton} ${styles.boutonAnnuler}`}
+              disabled={enCours}
+              onClick={() => {
+                setConfirmeAnnulation(false);
+                soumettre("ANNULEE");
+              }}
+            >
+              Confirmer l&apos;annulation
+            </button>
+            <button
+              type="button"
+              className={styles.bouton}
+              disabled={enCours}
+              onClick={() => setConfirmeAnnulation(false)}
+            >
+              Garder la commande
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {/*
        * LA REGION EST TOUJOURS PRESENTE, meme vide, et c'est ce qui la rend

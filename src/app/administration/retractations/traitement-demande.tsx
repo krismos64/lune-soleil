@@ -76,7 +76,7 @@ const EXPLICATION_SANS_GESTE: Record<string, string> = {
   REMBOURSEMENT_EN_COURS:
     "Remboursement en cours auprès du prestataire. Rechargez la page dans un moment.",
   EXPEDITION_PROUVEE:
-    "Le remboursement est dû depuis la preuve d'expédition, article L221-24 : il ne peut plus être refusé.",
+    "Le client a prouvé l'envoi du colis : le remboursement est dû et ne peut plus être refusé.",
 };
 
 /**
@@ -562,8 +562,8 @@ export function TraitementDemande({
             {formaterMontant(montantDuCentimes)}. Les frais de livraison
             initiaux se remboursent en entier. Une retenue n&apos;est possible
             que pour une dépréciation due à des manipulations au-delà de
-            l&apos;examen du bijou, article L221-23 : l&apos;examiner comme en
-            boutique n&apos;en est pas une.
+            l&apos;examen du bijou : l&apos;examiner comme en boutique n&apos;en
+            est pas une.
           </p>
           <button
             type="button"
