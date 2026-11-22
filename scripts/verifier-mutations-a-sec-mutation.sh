@@ -124,6 +124,12 @@ attendre_echec "signature de mute non reconnue, zero appel analyse"
 muter "$CONTROLE" 's{%courant = \(\) if \$restauratrices\{\$fonction\};\n      next;}{next;}'
 attendre_echec "remise a zero apres cas retiree, accumulation des mutations"
 
+# Un fichier mute hors de MUTABLES, LS-334 : le defaut du nocturne 112, ou
+# `DEPOT_PROMOTION` arretait le script au cas de LS-333, taisant tous les cas
+# suivants. La liste perd sa derniere entree, qui est mutee plus haut.
+muter "$PREUVE_TESTS" 's{ "\$DEPOT_PROMOTION"\)}{)}'
+attendre_echec "fichier mute absent de MUTABLES"
+
 # Un commentaire citant une ligne mute ne doit rien declencher.
 muter "$PREUVE_TESTS" 's{\z}{\n# rappel : mute "\$STOCK" "\$EXPRESSION_CALCULEE" ne se lit pas\n}'
 attendre_succes "commentaire citant un appel, aucun faux positif"
