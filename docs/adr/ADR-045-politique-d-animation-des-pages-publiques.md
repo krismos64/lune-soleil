@@ -8,6 +8,13 @@
 | Amende | `.claude/rules/frontend-design.md`, sections « Interdits visuels » et « Paillettes » |
 | Ticket | LS-259 |
 
+## Amendement du 22 novembre 2026, l'arc du jour retiré
+
+La refonte de l'administration retire l'arc du jour de l'en-tête du tableau de
+bord, arbitrage de Christophe : l'écran s'ouvre sur la date, une salutation et
+les chiffres. L'entrée orchestrée que l'amendement de LS-325 admettait n'a donc
+plus d'objet ; le reste de ces amendements demeure.
+
 ## Amendement du 14 novembre 2026, tous les écrans de l'administration, LS-326
 
 **Arbitrage de Christophe**, le même jour que LS-325 : « repenser toutes les

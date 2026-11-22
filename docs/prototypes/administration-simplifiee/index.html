@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Administration simplifiée, maquette complète</title>
+<style>
+  /* Jetons repris de src/styles/tokens.css, ADR-022. Maquette autonome, données fictives. */
+  :root {
+    --fond: #fbf7f0; --surface: #fff; --sable: #f2eadf; --bord: #e7dccb; --bord-controle: #95836a;
+    --texte: #3b2f2a; --doux: #7a6a5d; --primaire: #5f4519; --survol: #4a2a0b;
+    --or: #c4a052; --or-profond: #8a6a22; --succes: #3f6b4a; --alerte: #a9741a; --erreur: #a33a2e;
+    --barre: #fffdf9; --actif: #f2eadf;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--sans); color: var(--texte); background: #e9e2d6; }
+  a { color: inherit; }
+
+  .maquette-barre { position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; padding: 10px 20px; background: #2c2320; color: #fff; font-size: 14px; }
+  .bascules { display: flex; gap: 6px; }
+  .bascules button { border: 1px solid #6b5a4e; background: transparent; color: #fff; padding: 6px 12px; border-radius: 999px; cursor: pointer; font: inherit; }
+  .bascules button[aria-pressed="true"] { background: #fff; color: #2c2320; }
+  .scene { display: flex; justify-content: center; padding: 24px; }
+  .ecran { width: 1280px; min-height: 860px; background: var(--fond); border-radius: 14px; overflow: hidden; box-shadow: 0 20px 50px rgba(44,35,32,.18); display: grid; grid-template-columns: 232px 1fr; }
+  .scene[data-largeur="mobile"] .ecran { width: 390px; grid-template-columns: 1fr; }
+
+  /* Navigation : sept entrées */
+  .barre { background: var(--barre); border-right: 1px solid var(--bord); padding: 22px 12px; display: flex; flex-direction: column; gap: 18px; }
+  .marque { display: flex; align-items: center; gap: 10px; padding: 0 10px; font-family: var(--serif); font-size: 19px; }
+  .sceau { width: 32px; height: 32px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #f0cf7a, #a46c17); }
+  .nav { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+  .nav a { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; text-decoration: none; font-size: 15px; }
+  .nav a:hover { background: var(--actif); }
+  .nav a.actif { background: var(--actif); font-weight: 600; box-shadow: inset 3px 0 0 var(--primaire); }
+  .nav svg, .onglet-mobile svg { width: 20px; height: 20px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .compte { margin-left: auto; min-width: 22px; padding: 1px 7px; border-radius: 999px; background: var(--primaire); color: #fff; font-size: 12px; font-weight: 600; text-align: center; }
+  .pied { margin-top: auto; border-top: 1px solid var(--bord); padding: 14px 12px 0; display: grid; gap: 10px; font-size: 14px; }
+  .pied a { color: var(--doux); text-decoration: none; }
+
+  .colonne { display: flex; flex-direction: column; min-width: 0; }
+  .haut { display: flex; align-items: center; gap: 12px; padding: 14px 32px; border-bottom: 1px solid var(--bord); background: var(--barre); }
+  .recherche { flex: 1; max-width: 440px; display: flex; align-items: center; gap: 8px; height: 42px; padding: 0 14px; border: 1px solid var(--bord-controle); border-radius: 10px; background: var(--surface); color: var(--doux); font-size: 14px; }
+  .lien-boutique { margin-left: auto; color: var(--or-profond); text-decoration: none; font-size: 14px; font-weight: 600; white-space: nowrap; }
+  .contenu { padding: 28px 32px 40px; display: grid; gap: 20px; align-content: start; }
+  .barre-mobile { display: none; }
+
+  h1 { font-family: var(--serif); font-weight: 500; font-size: 30px; margin: 0; }
+  h2 { font-family: var(--serif); font-weight: 500; font-size: 20px; margin: 0 0 14px; }
+  h3 { font-size: 15px; margin: 0 0 8px; }
+  p { margin: 0; }
+  .sous { margin-top: 4px; color: var(--doux); font-size: 15px; }
+  .doux { color: var(--doux); font-size: 13px; }
+  .carte { background: var(--surface); border: 1px solid var(--bord); border-radius: 12px; padding: 20px; }
+  .ligne { display: flex; align-items: center; gap: 12px; }
+  .entre { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .pile { display: grid; gap: 12px; }
+  .deux { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; align-items: start; }
+  .quatre { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+
+  .bouton { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 42px; padding: 0 16px; border-radius: 10px; border: 0; background: var(--primaire); color: #fff; font: 600 14px var(--sans); text-decoration: none; cursor: pointer; white-space: nowrap; }
+  .bouton.sec { background: var(--surface); color: var(--primaire); border: 1px solid var(--bord-controle); }
+  .bouton.discret { background: transparent; color: var(--doux); border: 0; padding: 0 8px; font-weight: 500; }
+  .bouton.danger { background: var(--surface); color: var(--erreur); border: 1px solid #d9a9a1; }
+  .verrou::after { content: " 🔒"; font-size: 12px; }
+
+  .onglets { display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--bord); }
+  .onglets a { padding: 10px 14px; text-decoration: none; color: var(--doux); font-size: 15px; border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; }
+  .onglets a.actif { color: var(--texte); font-weight: 600; border-color: var(--primaire); }
+  .onglets b { margin-left: 4px; font-size: 12px; background: var(--sable); border-radius: 999px; padding: 1px 7px; }
+  .cherche { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 1px solid var(--bord-controle); border-radius: 10px; background: var(--surface); color: var(--doux); font-size: 14.5px; flex: 1; min-width: 200px; }
+  .outils { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .pastilles { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pastilles span { border: 1px solid var(--bord-controle); padding: 6px 12px; border-radius: 999px; font-size: 13.5px; background: var(--surface); }
+  .pastilles span.on { background: var(--primaire); color: #fff; border-color: var(--primaire); }
+
+  .statut { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+  .statut::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .s-a { color: #7d5512; background: #f6e9cf; } .s-b { color: #2f5a6b; background: #e3eef1; }
+  .s-c { color: var(--doux); background: var(--sable); } .s-d { color: var(--succes); background: #e5efe6; }
+  .s-e { color: var(--erreur); background: #f6e3e0; }
+
+  .liste { display: grid; }
+  .item { display: flex; align-items: center; gap: 14px; padding: 14px 4px; border-bottom: 1px solid var(--bord); }
+  .item:last-child { border-bottom: 0; }
+  .item .corps { flex: 1; min-width: 0; }
+  .item .titre { font-weight: 600; font-size: 15px; }
+  .vignette { width: 52px; height: 52px; border-radius: 10px; flex: none; background: linear-gradient(135deg, #f0cf7a, #c9a35b); }
+  .vignette.b { background: linear-gradient(135deg, #e7d6c5, #b89a80); } .vignette.c { background: linear-gradient(135deg, #f4e4c8, #d8b37a); }
+  .nombre { min-width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; font-family: var(--serif); font-size: 21px; background: var(--sable); color: var(--primaire); }
+  .chiffre { background: var(--surface); border: 1px solid var(--bord); border-radius: 12px; padding: 16px; }
+  .chiffre span { font-size: 13px; color: var(--doux); }
+  .chiffre strong { display: block; margin: 4px 0 2px; font-family: var(--serif); font-weight: 500; font-size: 28px; }
+
+  .champ { display: grid; gap: 6px; }
+  .champ label, .etiquette { font-size: 14px; font-weight: 600; }
+  .champ input, .champ select, .champ textarea { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--bord-controle); border-radius: 10px; font: 15px var(--sans); color: var(--texte); background: var(--surface); }
+  .champ textarea { min-height: 84px; resize: vertical; }
+  .champ small { color: var(--doux); font-size: 13px; }
+  .grille-champs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: 14px; }
+  .bascule { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--bord); font-size: 15px; }
+  .bascule:last-child { border-bottom: 0; }
+  .interrupteur { width: 46px; height: 26px; border-radius: 999px; background: var(--primaire); position: relative; flex: none; }
+  .interrupteur::after { content: ""; position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; }
+  .interrupteur.off { background: #cdbfa9; } .interrupteur.off::after { right: auto; left: 3px; }
+  .choix { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .choix div { border: 1px solid var(--bord); border-radius: 10px; padding: 10px; font-size: 14px; text-align: center; background: var(--surface); }
+  .choix div.on { border: 2px solid var(--primaire); font-weight: 600; }
+  .choix i { display: block; height: 46px; border-radius: 6px; margin-bottom: 8px; }
+  .encart { padding: 12px 14px; border-radius: 10px; background: var(--sable); font-size: 14px; }
+  .encart.attention { background: #f6e9cf; }
+  .collant { position: sticky; bottom: 0; display: flex; justify-content: flex-end; gap: 10px; padding: 14px 20px; margin: 0 -32px -40px; background: rgba(255,253,249,.96); border-top: 1px solid var(--bord); }
+  .etapes { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 14.5px; }
+  .etapes li { display: flex; gap: 10px; align-items: center; }
+  .etapes .ok { color: var(--succes); } .etapes .ko { color: var(--alerte); }
+  details.replie { border-top: 1px solid var(--bord); padding-top: 12px; }
+  details.replie summary { cursor: pointer; font-weight: 600; font-size: 14.5px; }
+  .barre-action { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 16px 20px; border-radius: 12px; background: #f6e9cf; }
+  .barre-action p { flex: 1; min-width: 200px; }
+  .fil { font-size: 14px; color: var(--doux); text-decoration: none; }
+  .apercu-fen { width: min(980px, 100%); max-height: 100%; overflow: auto; background: var(--surface); border-radius: 14px; display: grid; gap: 12px; padding: 18px; box-shadow: 0 20px 40px rgba(0,0,0,.25); }
+  .faux-site { border: 1px solid var(--bord); border-radius: 10px; overflow: hidden; margin: 0 auto; width: 100%; transition: width .2s; background: #fbf7f0; }
+  .faux-site.mobile { width: 300px; }
+  .fs-entete { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: #fff; font-family: var(--serif); font-size: 15px; border-bottom: 1px solid var(--bord); }
+  .fs-heros { padding: 34px 20px; text-align: center; color: #fff; }
+  .fs-heros h4 { margin: 0 0 6px; font-family: var(--serif); font-weight: 500; font-size: 26px; }
+  .fs-heros span { display: inline-block; margin-top: 12px; padding: 8px 16px; border-radius: 8px; background: #fff; font-weight: 600; font-size: 13px; }
+  .fs-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; padding: 14px; }
+  .fs-grille div { height: 120px; border-radius: 8px; border: 2px solid var(--accent-theme, var(--bord)); background: linear-gradient(160deg, #f4e4c8, #d8b37a); }
+  .choix div { cursor: pointer; }
+  .choix div small { display: block; margin-top: 4px; color: var(--or-profond); font-weight: 600; font-size: 12.5px; }
+  .modale-fond { position: absolute; inset: 0; background: rgba(44,35,32,.35); display: grid; place-items: center; padding: 16px; }
+  .modale { width: min(440px, 100%); background: var(--surface); border-radius: 14px; padding: 22px; display: grid; gap: 14px; box-shadow: 0 20px 40px rgba(0,0,0,.2); }
+
+  /* Mobile */
+  .scene[data-largeur="mobile"] .barre { display: none; }
+  .scene[data-largeur="mobile"] .haut { padding: 12px 16px; }
+  .scene[data-largeur="mobile"] .lien-boutique { display: none; }
+  .scene[data-largeur="mobile"] .contenu { padding: 18px 16px 90px; }
+  .scene[data-largeur="mobile"] h1 { font-size: 25px; }
+  .scene[data-largeur="mobile"] .deux { grid-template-columns: 1fr; }
+  .scene[data-largeur="mobile"] .quatre { grid-template-columns: 1fr 1fr; }
+  .scene[data-largeur="mobile"] .chiffre strong { font-size: 22px; }
+  .scene[data-largeur="mobile"] .onglets { flex-wrap: nowrap; overflow-x: auto; }
+  .scene[data-largeur="mobile"] .onglets a { white-space: nowrap; }
+  .scene[data-largeur="mobile"] .cache-mobile { display: none; }
+  .scene[data-largeur="mobile"] .collant { margin: 0 -16px -90px; bottom: 64px; }
+  .scene[data-largeur="mobile"] .barre-mobile { display: grid; grid-template-columns: repeat(5, 1fr); position: sticky; bottom: 0; background: var(--barre); border-top: 1px solid var(--bord); }
+  .onglet-mobile { display: grid; justify-items: center; gap: 2px; padding: 8px 0 10px; font-size: 11px; text-decoration: none; color: var(--doux); position: relative; }
+  .onglet-mobile.actif { color: var(--primaire); font-weight: 600; }
+  .onglet-mobile .compte { position: absolute; top: 4px; left: 54%; font-size: 10px; padding: 0 5px; min-width: 16px; }
+  .colonne { position: relative; }
+
+  .vue[hidden] { display: none !important; }
+  .note { max-width: 1280px; margin: 0 auto 40px; padding: 0 24px; font-size: 14.5px; color: #4a3f39; line-height: 1.5; }
+  .note h2 { margin-top: 24px; }
+  .note table { width: 100%; border-collapse: collapse; background: #fffdf9; border-radius: 10px; overflow: hidden; }
+  .note th, .note td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--bord); }
+  .note th { background: var(--sable); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="maquette-barre">
+  <strong>Maquette complète, administration simplifiée. Données fictives. Cliquez dans le menu, les onglets et les boutons.</strong>
+  <div class="bascules" role="group" aria-label="Largeur">
+    <button type="button" data-largeur="bureau" aria-pressed="true">Ordinateur</button>
+    <button type="button" data-largeur="mobile" aria-pressed="false">Mobile 390 px</button>
+  </div>
+</div>
+
+<div class="scene" data-largeur="bureau">
+<div class="ecran">
+
+  <aside class="barre">
+    <div class="marque"><span class="sceau" aria-hidden="true"></span>Lune-soleil</div>
+    <ul class="nav">
+      <li><a href="#" data-aller="accueil" data-menu="accueil"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Accueil</a></li>
+      <li><a href="#" data-aller="commandes" data-menu="commandes"><svg viewBox="0 0 24 24"><path d="M6 2h12l2 5H4zM4 7h16v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/></svg>Commandes<span class="compte">4</span></a></li>
+      <li><a href="#" data-aller="retours" data-menu="retours"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3"/></svg>Retours et factures<span class="compte">1</span></a></li>
+      <li><a href="#" data-aller="produits" data-menu="catalogue"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Catalogue</a></li>
+      <li><a href="#" data-aller="messages" data-menu="clients"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg>Clients et avis<span class="compte">3</span></a></li>
+      <li><a href="#" data-aller="statistiques" data-menu="statistiques"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Statistiques</a></li>
+      <li><a href="#" data-aller="reglages-livraison" data-menu="reglages"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>Réglages</a></li>
+    </ul>
+    <div class="pied">
+      <a href="#">↗ Voir la boutique</a>
+      <a href="#">Se déconnecter</a>
+    </div>
+  </aside>
+
+  <div class="colonne">
+    <header class="haut">
+      <div class="recherche">⌕ Chercher une commande, un produit, un client…</div>
+      <a class="lien-boutique" href="#">↗ Voir la boutique</a>
+    </header>
+
+    <!-- ACCUEIL -->
+    <main class="contenu vue" data-vue="accueil">
+      <div><h1>Bonjour</h1><p class="sous">Dimanche 22 novembre</p></div>
+      <div class="quatre">
+        <div class="chiffre"><span>Encaissé aujourd'hui</span><strong>86,40 €</strong><span>en ligne et marchés</span></div>
+        <div class="chiffre"><span>À préparer</span><strong>3</strong><span>commandes payées</span></div>
+        <div class="chiffre"><span>À expédier</span><strong>1</strong><span>colis prêt</span></div>
+        <div class="chiffre"><span>Stock bas</span><strong>4</strong><span>pièces</span></div>
+      </div>
+      <div class="deux">
+        <section class="carte">
+          <h2>À faire</h2>
+          <div class="liste">
+            <div class="item"><span class="nombre">3</span><div class="corps"><div class="titre">Commandes à préparer</div><div class="doux">la plus ancienne date d'hier</div></div><a class="bouton" href="#" data-aller="commandes">Voir</a></div>
+            <div class="item"><span class="nombre">1</span><div class="corps"><div class="titre">Colis à expédier</div><div class="doux">étiquette à créer</div></div><a class="bouton" href="#" data-aller="commandes">Expédier</a></div>
+            <div class="item"><span class="nombre">1</span><div class="corps"><div class="titre">Retour à traiter</div><div class="doux">colis reçu, à rembourser</div></div><a class="bouton sec" href="#" data-aller="retours">Traiter</a></div>
+            <div class="item"><span class="nombre">2</span><div class="corps"><div class="titre">Messages à lire</div><div class="doux">réponse sous 24 heures</div></div><a class="bouton sec" href="#" data-aller="messages">Lire</a></div>
+            <div class="item"><span class="nombre">1</span><div class="corps"><div class="titre">Avis à relire</div><div class="doux">publication sous 7 jours</div></div><a class="bouton sec" href="#" data-aller="avis">Relire</a></div>
+            <div class="item"><span class="nombre" style="color:var(--erreur)">!</span><div class="corps"><div class="titre">Problème signalé</div><div class="doux">un colis sans suivi depuis 5 jours</div></div><a class="bouton sec" href="#">Vu</a></div>
+          </div>
+        </section>
+        <div class="pile">
+          <section class="carte pile">
+            <h2 style="margin:0">Raccourcis</h2>
+            <a class="bouton" href="#" data-modale="nouveau">＋ Nouveau produit</a>
+            <a class="bouton sec" href="#" data-aller="marches">Enregistrer une vente de marché</a>
+          </section>
+          <section class="carte">
+            <h2>En ce moment sur la boutique</h2>
+            <p>Ambiance <strong>Noël festif</strong> · aucune promotion</p>
+            <p style="margin-top:10px"><a href="#" data-aller="reglages-promo" style="color:var(--or-profond);font-weight:600">Changer l'ambiance ou lancer une promotion</a></p>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <!-- COMMANDES -->
+    <main class="contenu vue" data-vue="commandes" hidden>
+      <div class="entre"><div><h1>Commandes</h1><p class="sous">Ventes en ligne. Les expéditions se font d'ici.</p></div></div>
+      <div class="outils"><div class="cherche">⌕ Numéro de commande, nom ou email du client</div></div>
+      <nav class="onglets"><a class="actif">À préparer<b>3</b></a><a>À expédier<b>1</b></a><a>En route</a><a>Terminées</a><a>Toutes</a></nav>
+      <section class="carte liste" style="padding:4px 20px">
+        <div class="item"><div class="corps"><div class="titre">C-2026-0014 · A. Exemple</div><div class="doux">hier 18:05 · Point Relais · Boucles Croissant doré</div></div><strong class="cache-mobile">27,90 €</strong><span class="statut s-a">À préparer</span><a class="bouton" href="#" data-aller="commande">Ouvrir</a></div>
+        <div class="item"><div class="corps"><div class="titre">C-2026-0013 · C. Fictif</div><div class="doux">hier 11:42 · À domicile · 2 pièces</div></div><strong class="cache-mobile">41,49 €</strong><span class="statut s-a">À préparer</span><a class="bouton" href="#" data-aller="commande">Ouvrir</a></div>
+        <div class="item"><div class="corps"><div class="titre">C-2026-0012 · M. Modèle</div><div class="doux">20 nov. · Locker · Collier Lune</div></div><strong class="cache-mobile">32,00 €</strong><span class="statut s-a">À préparer</span><a class="bouton" href="#" data-aller="commande">Ouvrir</a></div>
+      </section>
+      <p class="doux">Une commande dont le paiement n'a pas abouti n'apparaît que dans « Toutes ».</p>
+    </main>
+
+    <!-- COMMANDE DETAIL -->
+    <main class="contenu vue" data-vue="commande" hidden>
+      <a class="fil" href="#" data-aller="commandes">‹ Commandes</a>
+      <div class="entre"><div><h1>C-2026-0014</h1><p class="sous">A. Exemple · hier à 18:05 · payée 27,90 €</p></div><span class="statut s-a">À préparer</span></div>
+      <div class="barre-action">
+        <p><strong>Prochaine étape :</strong> emballer la pièce, puis créer l'étiquette.</p>
+        <a class="bouton" href="#">Créer l'étiquette et expédier</a>
+        <a class="bouton discret" href="#">Expédier sans étiquette</a>
+      </div>
+      <div class="deux">
+        <section class="carte">
+          <h2>Pièces</h2>
+          <div class="item"><span class="vignette"></span><div class="corps"><div class="titre">Boucles Croissant doré</div><div class="doux">Doré · 1 × 23,80 €</div></div></div>
+          <div class="entre doux" style="padding-top:10px"><span>Livraison Point Relais</span><span>4,10 €</span></div>
+          <div class="entre" style="padding-top:6px;font-weight:600"><span>Total payé</span><span>27,90 €</span></div>
+        </section>
+        <section class="carte pile">
+          <h2 style="margin:0">Livraison et colis</h2>
+          <p>Point Relais « Tabac de la Gare »<br><span class="doux">12 avenue Exemple, 35000 Rennes</span></p>
+          <p class="doux">Pas encore expédiée</p>
+          <div class="ligne"><a class="bouton sec" href="#">Écrire</a><a class="bouton sec" href="#">Appeler</a></div>
+        </section>
+      </div>
+      <section class="carte pile">
+        <div class="entre"><h2 style="margin:0">Facture</h2><a class="bouton sec" href="#">Télécharger F-2026-0014</a></div>
+        <details class="replie"><summary>Rembourser tout ou partie</summary>
+          <div class="pile" style="margin-top:12px">
+            <p class="encart attention">Un remboursement part immédiatement vers la carte du client et ne s'annule pas. Un avoir est créé.</p>
+            <div class="grille-champs"><div class="champ"><label>Montant</label><input value="27,90 €"></div><div class="champ"><label>Motif (sur l'avoir)</label><input placeholder="Pièce abîmée au transport"></div></div>
+            <div><a class="bouton verrou" href="#">Rembourser</a></div>
+          </div>
+        </details>
+        <details class="replie"><summary>Historique et paiement</summary><p class="doux" style="margin-top:10px">Payée par carte hier à 18:05 · commande passée par le site</p></details>
+        <details class="replie"><summary>Annuler la commande</summary><p style="margin:10px 0">La pièce revient en stock. À confirmer.</p><a class="bouton danger" href="#">Annuler la commande</a></details>
+      </section>
+    </main>
+
+    <!-- RETOURS ET FACTURES -->
+    <main class="contenu vue" data-vue="retours" hidden>
+      <h1>Retours et factures</h1>
+      <nav class="onglets"><a class="actif" data-aller="retours">Retours<b>1</b></a><a data-aller="factures">Factures et avoirs</a></nav>
+      <div class="outils"><div class="cherche">⌕ Numéro de commande ou nom du client</div><div class="pastilles"><span class="on">En cours</span><span>Terminés</span></div></div>
+      <section class="carte pile">
+        <div class="entre"><div><div class="titre" style="font-weight:600">C-2026-0009 · L. Démo · 24,50 €</div><div class="doux">demande du 15 nov. · motif : « la taille ne convient pas »</div></div><span class="statut s-a">À rembourser</span></div>
+        <ol class="etapes"><li class="ok">✓ Demande reçue</li><li class="ok">✓ Colis revenu le 20 nov.</li><li class="ok">✓ Pièce en bon état</li><li class="ko">● Rembourser le client</li></ol>
+        <div class="barre-action"><p><strong>Prochaine étape :</strong> rembourser 24,50 €. Les frais de retour restent à la charge du client.</p><a class="bouton verrou" href="#">Rembourser</a><a class="bouton discret" href="#">Refuser…</a></div>
+      </section>
+      <section class="carte"><div class="entre"><div><strong>C-2026-0006</strong> <span class="doux">· remboursée le 9 nov.</span></div><span class="statut s-d">Terminé</span></div></section>
+      <p class="doux">Les références de loi restent accessibles dans « En savoir plus » sous chaque étape.</p>
+    </main>
+
+    <main class="contenu vue" data-vue="factures" hidden>
+      <h1>Retours et factures</h1>
+      <nav class="onglets"><a data-aller="retours">Retours<b>1</b></a><a class="actif" data-aller="factures">Factures et avoirs</a></nav>
+      <div class="outils"><div class="cherche">⌕ Numéro de facture ou de commande, nom du client</div></div>
+      <div class="entre"><div class="pastilles"><span class="on">Ce mois-ci</span><span>Mois dernier</span><span>Cette année</span><span>Tout</span></div><strong>Total du mois : 412,30 €</strong></div>
+      <section class="carte liste" style="padding:4px 20px">
+        <div class="item"><div class="corps"><div class="titre">F-2026-0014 · A. Exemple</div><div class="doux">21 nov. · commande C-2026-0014</div></div><strong>27,90 €</strong><a class="bouton sec" href="#">PDF</a></div>
+        <div class="item"><div class="corps"><div class="titre">Avoir A-2026-0002 · L. Démo</div><div class="doux">corrige F-2026-0009</div></div><strong>−24,50 €</strong><a class="bouton sec" href="#">PDF</a></div>
+        <div class="item"><div class="corps"><div class="titre">F-2026-0013 · C. Fictif</div><div class="doux">PDF à refaire</div></div><strong>41,49 €</strong><a class="bouton sec" href="#">Refaire le PDF</a></div>
+      </section>
+    </main>
+
+    <!-- CATALOGUE : PRODUITS -->
+    <main class="contenu vue" data-vue="produits" hidden>
+      <div class="entre"><h1>Catalogue</h1><a class="bouton" href="#" data-modale="nouveau">＋ Nouveau produit</a></div>
+      <nav class="onglets"><a class="actif" data-aller="produits">Produits</a><a data-aller="categories">Catégories</a><a data-aller="marches">Marchés et stock</a></nav>
+      <div class="outils"><div class="cherche">⌕ Nom du produit ou matière</div><div class="pastilles"><span>Toutes catégories ▾</span></div></div>
+      <div class="entre"><div class="pastilles"><span class="on">En vente</span><span>Brouillons</span><span>Archivés</span></div><div class="pastilles cache-mobile"><span>Sélectionner</span></div></div>
+      <section class="carte liste" style="padding:4px 20px">
+        <div class="item"><span class="vignette"></span><div class="corps"><div class="titre">Boucles Croissant doré</div><div class="doux">Boucles d'oreilles · 23,80 € · <span style="color:var(--alerte)">dernière pièce</span></div></div><span class="statut s-d cache-mobile">En vente</span><a class="bouton sec" href="#" data-aller="produit">Modifier</a></div>
+        <div class="item"><span class="vignette b"></span><div class="corps"><div class="titre">Bague Soleil</div><div class="doux">Bagues · 2 tailles · 19,00 € · 6 en stock</div></div><span class="statut s-d cache-mobile">En vente</span><a class="bouton sec" href="#" data-aller="produit">Modifier</a></div>
+        <div class="item"><span class="vignette c"></span><div class="corps"><div class="titre">Porte-clés Étoile</div><div class="doux">Porte-clés · 15,00 € · 3 en stock</div></div><span class="statut s-c cache-mobile">Brouillon</span><a class="bouton sec" href="#" data-aller="produit">Modifier</a></div>
+      </section>
+    </main>
+
+    <!-- FICHE PRODUIT, UN SEUL FORMULAIRE -->
+    <main class="contenu vue" data-vue="produit" hidden>
+      <a class="fil" href="#" data-aller="produits">‹ Catalogue</a>
+      <div class="entre"><h1>Porte-clés Étoile</h1><span class="statut s-c">Brouillon</span></div>
+      <div class="barre-action"><p><strong>Pour mettre en vente :</strong> il manque une photo.</p><a class="bouton" href="#" style="opacity:.5">Mettre en vente</a></div>
+      <div class="deux">
+        <div class="pile">
+          <section class="carte pile">
+            <h2 style="margin:0">L'essentiel</h2>
+            <div class="grille-champs">
+              <div class="champ"><label>Nom</label><input value="Porte-clés Étoile"></div>
+              <div class="champ"><label>Catégorie</label><select><option>Porte-clés</option></select></div>
+            </div>
+            <div class="champ"><label>Présentation courte</label><textarea>Une étoile en pâte polymère dorée, montée sur un anneau solide.</textarea><small>Les deux premières lignes s'affichent dans le catalogue.</small></div>
+          </section>
+          <section class="carte pile">
+            <div class="entre"><h2 style="margin:0">Prix et stock</h2><a class="bouton discret" href="#">＋ Ajouter une taille ou une couleur</a></div>
+            <div class="grille-champs">
+              <div class="champ"><label>Prix</label><input value="15,00 €"></div>
+              <div class="champ"><label>En stock</label><input value="3"></div>
+              <div class="champ"><label>Dimensions</label><input placeholder="Facultatif, ex. 4 cm"></div>
+            </div>
+            <div class="bascule">Vendre en ligne <span class="interrupteur"></span></div>
+          </section>
+          <section class="carte pile">
+            <h2 style="margin:0">Description de la fiche</h2>
+            <details class="replie" open><summary>Description détaillée</summary><div class="champ" style="margin-top:8px"><textarea>Modelée et vernie à l'atelier.</textarea></div></details>
+            <details class="replie"><summary>Matières et composants</summary></details>
+            <details class="replie"><summary>Conseils d'entretien</summary></details>
+            <a class="bouton discret" href="#">＋ Ajouter une rubrique</a>
+          </section>
+        </div>
+        <section class="carte pile">
+          <h2 style="margin:0">Photos</h2>
+          <div style="border:2px dashed var(--bord-controle);border-radius:12px;padding:28px;text-align:center"><strong>Ajouter des photos</strong><p class="doux" style="margin-top:6px">Prendre une photo ou choisir dans la galerie</p></div>
+          <p class="doux">Les informations de localisation de la photo sont retirées automatiquement.</p>
+          <details class="replie"><summary>Retirer de la vente</summary><p style="margin:10px 0">La fiche disparaît de la boutique. Les commandes passées restent intactes.</p><a class="bouton danger" href="#">Archiver</a></details>
+        </section>
+      </div>
+      <div class="collant"><span class="doux" style="margin-right:auto;align-self:center">Modifications non enregistrées</span><a class="bouton" href="#">Enregistrer</a></div>
+    </main>
+
+    <!-- CATALOGUE : CATEGORIES -->
+    <main class="contenu vue" data-vue="categories" hidden>
+      <h1>Catalogue</h1>
+      <nav class="onglets"><a data-aller="produits">Produits</a><a class="actif" data-aller="categories">Catégories</a><a data-aller="marches">Marchés et stock</a></nav>
+      <section class="carte liste" style="padding:4px 20px">
+        <div class="item"><span class="doux">⠿</span><div class="corps"><div class="titre">Boucles d'oreilles</div><div class="doux">38 produits</div></div><a class="bouton discret" href="#">Renommer</a></div>
+        <div class="item"><span class="doux">⠿</span><div class="corps"><div class="titre">Bagues</div><div class="doux">5 produits</div></div><a class="bouton discret" href="#">Renommer</a></div>
+        <div class="item"><span class="doux">⠿</span><div class="corps"><div class="titre">Porte-clés</div><div class="doux">2 produits</div></div><a class="bouton discret" href="#">Renommer</a></div>
+        <div class="item"><span class="doux">⠿</span><div class="corps"><div class="titre">Colliers</div><div class="doux">aucun produit</div></div><a class="bouton discret" href="#">Renommer</a><a class="bouton discret" href="#" style="color:var(--erreur)">Supprimer…</a></div>
+      </section>
+      <div class="ligne"><div class="champ" style="flex:1"><input placeholder="Nouvelle catégorie"></div><a class="bouton" href="#">Ajouter</a></div>
+      <p class="doux">Glisser une ligne pour changer l'ordre d'affichage sur la boutique. Pas de recherche ici : la liste tient en une dizaine de lignes.</p>
+    </main>
+
+    <!-- CATALOGUE : MARCHES ET STOCK -->
+    <main class="contenu vue" data-vue="marches" hidden>
+      <h1>Catalogue</h1>
+      <nav class="onglets"><a data-aller="produits">Produits</a><a data-aller="categories">Catégories</a><a class="actif" data-aller="marches">Marchés et stock</a></nav>
+      <div class="deux">
+        <section class="carte pile">
+          <h2 style="margin:0">Vente sur un marché</h2>
+          <div class="champ"><label>Pièce vendue</label><input placeholder="Chercher une pièce…" value="Bague Soleil, taille 54"></div>
+          <div class="grille-champs"><div class="champ"><label>Quantité</label><input value="1"></div><div class="champ"><label>Prix encaissé</label><input value="19,00 €"></div></div>
+          <div class="champ"><label>Où</label><input value="Marché de Noël"><small>Le dernier lieu saisi est proposé.</small></div>
+          <div><a class="bouton" href="#">Enregistrer la vente</a></div>
+        </section>
+        <section class="carte pile">
+          <h2 style="margin:0">Avant un marché</h2>
+          <p>Mettre la vente en ligne en pause pour les pièces emportées. Le stock ne change pas.</p>
+          <div class="bascule">Bague Soleil, 54 <span class="interrupteur off"></span></div>
+          <div class="bascule">Boucles Flocon <span class="interrupteur"></span></div>
+          <a class="bouton discret" href="#">Tout remettre en vente</a>
+        </section>
+      </div>
+      <section class="carte">
+        <div class="entre" style="margin-bottom:10px"><h2 style="margin:0">Stock</h2><div class="pastilles"><span class="on">Tout</span><span>Stock bas</span><span>En pause</span></div></div>
+        <div class="outils" style="margin-bottom:6px"><div class="cherche">⌕ Chercher une pièce</div></div>
+        <div class="item"><div class="corps"><div class="titre">Boucles Croissant doré</div><div class="doux">1 en stock · 0 en cours de paiement</div></div><a class="bouton discret" href="#">Corriger le compte</a></div>
+        <div class="item"><div class="corps"><div class="titre">Bague Soleil, 54</div><div class="doux">4 en stock · 1 en cours de paiement</div></div><a class="bouton discret" href="#">Corriger le compte</a></div>
+        <details class="replie" style="margin-top:8px"><summary>Historique des mouvements</summary><p class="doux" style="margin-top:8px">21 nov. vente en ligne −1 · 19 nov. marché de Noël −2 · 15 nov. entrée +5</p></details>
+      </section>
+    </main>
+
+    <!-- CLIENTS ET AVIS : MESSAGES -->
+    <main class="contenu vue" data-vue="messages" hidden>
+      <h1>Clients et avis</h1>
+      <nav class="onglets"><a class="actif" data-aller="messages">Messages<b>2</b></a><a data-aller="avis">Avis<b>1</b></a><a data-aller="comptes">Comptes clients</a></nav>
+      <div class="outils"><div class="cherche">⌕ Nom, email ou mot du message</div><div class="pastilles"><span class="on">À traiter</span><span>Traités</span></div></div>
+      <section class="carte pile">
+        <div class="entre"><strong>Question sur une bague</strong><span class="doux">aujourd'hui 09:12</span></div>
+        <p class="doux">J. Test · j.test@exemple.test</p>
+        <p>Bonjour, la bague Soleil existe-t-elle en taille 58 ? Merci.</p>
+        <div class="ligne"><a class="bouton" href="#">Répondre</a><a class="bouton sec" href="#">Marquer comme traité</a></div>
+      </section>
+      <section class="carte pile">
+        <div class="entre"><strong>Emballage cadeau</strong><span class="doux">hier 20:40</span></div>
+        <p class="doux">M. Modèle · commande C-2026-0012</p>
+        <p>Pouvez-vous emballer la commande pour un cadeau ?</p>
+        <div class="ligne"><a class="bouton" href="#">Répondre</a><a class="bouton sec" href="#">Marquer comme traité</a></div>
+      </section>
+      <p class="doux">« Répondre » ouvre votre messagerie et classe le message en traité.</p>
+    </main>
+
+    <main class="contenu vue" data-vue="avis" hidden>
+      <h1>Clients et avis</h1>
+      <nav class="onglets"><a data-aller="messages">Messages<b>2</b></a><a class="actif" data-aller="avis">Avis<b>1</b></a><a data-aller="comptes">Comptes clients</a></nav>
+      <div class="outils"><div class="cherche">⌕ Nom du produit</div></div>
+      <div class="pastilles"><span class="on">À relire</span><span>Publiés et refusés</span><span>Signalements</span></div>
+      <section class="carte pile">
+        <div class="entre"><strong>★★★★★ Boucles Flocon</strong><span class="doux">reçu il y a 2 jours</span></div>
+        <p>« Très jolies, arrivées vite et bien emballées. »</p>
+        <p class="doux">Commande C-2026-0011 · livrée le 19 nov.</p>
+        <div class="ligne"><a class="bouton" href="#">Publier</a><a class="bouton discret" href="#">Refuser…</a></div>
+        <p class="doux">Refuser demande un motif, envoyé à l'auteur.</p>
+      </section>
+    </main>
+
+    <main class="contenu vue" data-vue="comptes" hidden>
+      <h1>Clients et avis</h1>
+      <nav class="onglets"><a data-aller="messages">Messages<b>2</b></a><a data-aller="avis">Avis<b>1</b></a><a class="actif" data-aller="comptes">Comptes clients</a></nav>
+      <div class="outils"><div class="cherche">⌕ Nom ou email (existe déjà)</div></div>
+      <section class="carte liste" style="padding:4px 20px">
+        <div class="item"><div class="corps"><div class="titre">A. Exemple</div><div class="doux">inscrit en octobre · 2 commandes · 51,40 €</div></div><a class="bouton sec" href="#">Ses commandes</a></div>
+        <div class="item"><div class="corps"><div class="titre">C. Fictif</div><div class="doux">inscrit en novembre · 1 commande · 41,49 €</div></div><a class="bouton sec" href="#">Ses commandes</a></div>
+      </section>
+    </main>
+
+    <!-- STATISTIQUES -->
+    <main class="contenu vue" data-vue="statistiques" hidden>
+      <h1>Statistiques</h1>
+      <div class="pastilles"><span>Aujourd'hui</span><span>Cette semaine</span><span class="on">Ce mois-ci</span><span>Cette année</span></div>
+      <div class="quatre">
+        <div class="chiffre"><span>Encaissé, remboursements déduits</span><strong>412,30 €</strong></div>
+        <div class="chiffre"><span>Bijoux vendus</span><strong>21</strong></div>
+        <div class="chiffre"><span>En ligne</span><strong>14</strong></div>
+        <div class="chiffre"><span>Sur les marchés</span><strong>7</strong></div>
+      </div>
+      <div class="deux">
+        <section class="carte"><h2>Les plus vendus</h2>
+          <div class="item"><span class="nombre">1</span><div class="corps">Boucles Flocon</div><strong>6</strong></div>
+          <div class="item"><span class="nombre">2</span><div class="corps">Bague Soleil</div><strong>4</strong></div>
+          <div class="item"><span class="nombre">3</span><div class="corps">Collier Lune</div><strong>3</strong></div>
+        </section>
+        <section class="carte pile"><h2 style="margin:0">Détail</h2>
+          <details class="replie" open><summary>Argent</summary><p class="doux" style="margin-top:8px">Encaissé 436,80 € · remboursé 24,50 € · livraison facturée 32,80 € · panier moyen 29,45 €</p></details>
+          <details class="replie"><summary>Modes de livraison choisis</summary></details>
+          <details class="replie"><summary>Pièces jamais vendues</summary></details>
+        </section>
+      </div>
+    </main>
+
+    <!-- REGLAGES -->
+    <main class="contenu vue" data-vue="reglages-livraison" hidden>
+      <h1>Réglages</h1>
+      <nav class="onglets"><a class="actif" data-aller="reglages-livraison">Livraison</a><a data-aller="reglages-promo">Ambiance et promotion</a><a data-aller="reglages-notifs">Notifications</a><a data-aller="reglages-securite">Sécurité</a></nav>
+      <section class="carte pile">
+        <h2 style="margin:0">Tarifs de livraison</h2>
+        <div class="grille-champs">
+          <div class="champ"><label>Point Relais et Locker</label><input value="4,10 €"></div>
+          <div class="champ"><label>À domicile</label><input value="7,49 €"></div>
+        </div>
+        <div class="bascule">Livraison offerte en Point Relais et Locker <span class="interrupteur"></span></div>
+        <div class="champ"><label>À partir de</label><input value="39,00 €"><small>La livraison à domicile reste toujours payante.</small></div>
+        <details class="replie"><summary>Réglage avancé : poids du colis</summary><div class="champ" style="margin-top:8px"><label>Poids déclaré</label><input value="100 g"><small>Entre 15 et 250 g.</small></div></details>
+      </section>
+      <p class="doux">Un nouveau tarif vaut pour les prochaines commandes seulement.</p>
+      <div class="collant"><a class="bouton verrou" href="#">Enregistrer</a></div>
+    </main>
+
+    <main class="contenu vue" data-vue="reglages-promo" hidden>
+      <h1>Réglages</h1>
+      <nav class="onglets"><a data-aller="reglages-livraison">Livraison</a><a class="actif" data-aller="reglages-promo">Ambiance et promotion</a><a data-aller="reglages-notifs">Notifications</a><a data-aller="reglages-securite">Sécurité</a></nav>
+      <section class="carte pile">
+        <h2 style="margin:0">Ambiance de la boutique</h2>
+        <p class="doux">Habille l'accueil et le catalogue. Cliquez sur une ambiance pour la voir avant de l'appliquer.</p>
+        <div class="choix">
+          <div data-apercu="Sans ambiance" data-heros="#e9dfcf" data-accent="#d9cdba"><i style="background:#f2eadf"></i>Sans ambiance<small>Aperçu</small></div>
+          <div data-apercu="Noël discret" data-heros="#7d2a2c" data-accent="#c9a35b"><i style="background:linear-gradient(135deg,#fff,#9b1b1e33)"></i>Noël discret<small>Aperçu</small></div>
+          <div class="on" data-apercu="Noël festif" data-heros="#9b1b1e" data-accent="#9b1b1e"><i style="background:linear-gradient(135deg,#9b1b1e,#2f5a43)"></i>Noël festif<small>Active</small></div>
+          <div data-apercu="Black Week" data-heros="#140f1c" data-accent="#f2c230"><i style="background:linear-gradient(135deg,#140f1c,#f2c230)"></i>Black Week<small>Aperçu</small></div>
+          <div data-apercu="Hiver" data-heros="#8a5a3c" data-accent="#e89664"><i style="background:linear-gradient(135deg,#fbe3c4,#e89664)"></i>Hiver<small>Aperçu</small></div>
+          <div><i style="background:#ead9c0"></i>Voir les 11 autres</div>
+        </div>
+      </section>
+      <section class="carte pile">
+        <div class="entre"><h2 style="margin:0">Promotion</h2><span class="statut s-c">Aucune en cours</span></div>
+        <div class="grille-champs">
+          <div class="champ"><label>Nom affiché</label><select><option>Black Week</option><option>Soldes d'hiver</option><option>Promotion</option></select></div>
+          <div class="champ"><label>Réduction</label><input value="30 %"><small>Entre 5 et 70 %.</small></div>
+        </div>
+        <div class="pastilles"><span class="on">Toute la boutique</span><span>Certaines pièces</span></div>
+        <div class="grille-champs">
+          <div class="champ"><label>Du</label><input value="lundi 23 novembre"></div>
+          <div class="champ"><label>Au</label><input value="dimanche 29 novembre"></div>
+        </div>
+        <p class="encart">Les prix barrés affichés seront les prix actuels du catalogue. Pour changer une promotion en cours, arrêtez-la puis lancez-en une nouvelle.</p>
+        <div><a class="bouton verrou" href="#">Lancer la promotion</a></div>
+      </section>
+    </main>
+
+    <main class="contenu vue" data-vue="reglages-notifs" hidden>
+      <h1>Réglages</h1>
+      <nav class="onglets"><a data-aller="reglages-livraison">Livraison</a><a data-aller="reglages-promo">Ambiance et promotion</a><a class="actif" data-aller="reglages-notifs">Notifications</a><a data-aller="reglages-securite">Sécurité</a></nav>
+      <section class="carte pile">
+        <div class="champ"><label>Recevoir les emails à</label><input value="atelier@exemple.test"></div>
+        <div>
+          <div class="bascule">Une commande est payée <span class="interrupteur"></span></div>
+          <div class="bascule">Un paiement est annulé <span class="interrupteur off"></span></div>
+          <div class="bascule">Un message arrive <span class="interrupteur"></span></div>
+          <div class="bascule">Un avis attend une relecture <span class="interrupteur"></span></div>
+          <div class="bascule">Une pièce devient rare <span class="interrupteur"></span></div>
+        </div>
+        <div class="champ"><label>« Rare » à partir de</label><input value="1 pièce"></div>
+      </section>
+      <div class="collant"><a class="bouton verrou" href="#">Enregistrer</a></div>
+    </main>
+
+    <main class="contenu vue" data-vue="reglages-securite" hidden>
+      <h1>Réglages</h1>
+      <nav class="onglets"><a data-aller="reglages-livraison">Livraison</a><a data-aller="reglages-promo">Ambiance et promotion</a><a data-aller="reglages-notifs">Notifications</a><a class="actif" data-aller="reglages-securite">Sécurité</a></nav>
+      <section class="carte pile">
+        <div class="entre"><h2 style="margin:0">Appareils de connexion</h2><a class="bouton sec verrou" href="#">Ajouter cet appareil</a></div>
+        <p class="doux">Connexion par Face ID, Touch ID ou le code de l'appareil, sans mot de passe.</p>
+        <div class="item"><div class="corps"><div class="titre">iPhone</div><div class="doux">ajouté le 1er nov.</div></div><a class="bouton discret" href="#">Retirer…</a></div>
+        <div class="item"><div class="corps"><div class="titre">MacBook</div><div class="doux">ajouté le 3 nov.</div></div><a class="bouton discret" href="#">Retirer…</a></div>
+      </section>
+      <section class="carte">
+        <div class="entre" style="margin-bottom:10px"><h2 style="margin:0">Connexions récentes</h2><div class="pastilles"><span class="on">Toutes</span><span>Refusées</span></div></div>
+        <div class="item"><div class="corps"><div class="titre">Réussie · iPhone</div><div class="doux">aujourd'hui 08:55 · Face ID</div></div><span class="statut s-d">OK</span></div>
+        <div class="item"><div class="corps"><div class="titre">Refusée · mot de passe faux</div><div class="doux">hier 23:10 · appareil inconnu</div></div><span class="statut s-e">Refusée</span></div>
+        <details class="replie" style="margin-top:8px"><summary>Voir le détail technique</summary><p class="doux" style="margin-top:8px">Adresse IP, navigateur et comptes clients.</p></details>
+      </section>
+    </main>
+
+    <nav class="barre-mobile" aria-label="Menu mobile">
+      <a class="onglet-mobile" href="#" data-aller="accueil" data-menu="accueil"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Accueil</a>
+      <a class="onglet-mobile" href="#" data-aller="commandes" data-menu="commandes"><svg viewBox="0 0 24 24"><path d="M6 2h12l2 5H4zM4 7h16v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/></svg><span class="compte">4</span>Commandes</a>
+      <a class="onglet-mobile" href="#" data-aller="produits" data-menu="catalogue"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Catalogue</a>
+      <a class="onglet-mobile" href="#" data-aller="messages" data-menu="clients"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg><span class="compte">3</span>Clients</a>
+      <a class="onglet-mobile" href="#" data-aller="plus" data-menu="plus"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>Plus</a>
+    </nav>
+
+    <main class="contenu vue" data-vue="plus" hidden>
+      <h1>Plus</h1>
+      <section class="carte liste" style="padding:4px 20px">
+        <a class="item" href="#" data-aller="retours" style="text-decoration:none"><div class="corps titre">Retours et factures</div><span class="compte">1</span></a>
+        <a class="item" href="#" data-aller="statistiques" style="text-decoration:none"><div class="corps titre">Statistiques</div>›</a>
+        <a class="item" href="#" data-aller="reglages-livraison" style="text-decoration:none"><div class="corps titre">Réglages</div>›</a>
+        <a class="item" href="#" style="text-decoration:none"><div class="corps titre">Voir la boutique</div>↗</a>
+      </section>
+    </main>
+
+    <div class="modale-fond vue" data-vue="modale-apercu" hidden>
+      <div class="apercu-fen">
+        <div class="entre"><h2 style="margin:0">Aperçu : <span data-nom-apercu>Noël festif</span></h2><a class="bouton discret" href="#" data-fermer>Fermer ✕</a></div>
+        <div class="entre"><div class="pastilles"><span class="on" data-page="accueil">Accueil</span><span data-page="catalogue">Catalogue</span></div><div class="pastilles"><span class="on" data-format="bureau">Ordinateur</span><span data-format="mobile">Mobile</span></div></div>
+        <div class="faux-site" data-faux-site>
+          <div class="fs-entete">Lune-soleil <span style="font-family:var(--sans);font-size:12px">Créations · Panier</span></div>
+          <div class="fs-heros" data-heros-zone><h4 data-titre-fs>Bijoux faits main en Béarn</h4><div style="font-size:13px;opacity:.9">Pièces uniques, modelées à l'atelier</div><span data-btn-fs>Découvrir les créations</span></div>
+          <div class="fs-grille"><div></div><div></div><div></div><div></div></div>
+        </div>
+        <p class="doux">Vous seul voyez cet aperçu. La boutique ne change qu'après « Appliquer ».</p>
+        <div class="ligne" style="justify-content:flex-end"><a class="bouton sec" href="#">Ouvrir en grand ↗</a><a class="bouton" href="#" data-fermer>Appliquer cette ambiance</a></div>
+      </div>
+    </div>
+
+    <div class="modale-fond vue" data-vue="modale-nouveau" hidden>
+      <div class="modale">
+        <h2 style="margin:0">Nouveau produit</h2>
+        <div class="champ"><label>Nom</label><input placeholder="Boucles Lune argentée"></div>
+        <div class="champ"><label>Catégorie</label><select><option>Boucles d'oreilles</option><option>＋ Nouvelle catégorie…</option></select></div>
+        <div class="ligne" style="justify-content:flex-end"><a class="bouton discret" href="#" data-fermer>Annuler</a><a class="bouton" href="#" data-aller="produit">Créer et compléter la fiche</a></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<section class="note">
+  <h2>Analyse : ce qui est long ou peu intuitif aujourd'hui</h2>
+  <table>
+    <tr><th>Menu actuel</th><th>Ce qui gêne</th><th>Dans la maquette</th></tr>
+    <tr><td>Navigation, 16 rubriques en 5 groupes</td><td>Trois chemins vers le même écran (barre, palette, actions directes), repère d'écran qui répète le titre, bloc « Bientôt disponible ».</td><td>7 entrées. Sur mobile, une barre en bas à 5 onglets. Une recherche unique en haut.</td></tr>
+    <tr><td>Tableau de bord</td><td>Ciel animé, phrase d'introduction, 4 actions directes, rappel de thème, « Réservées par un paiement en cours ».</td><td>4 chiffres, une liste « À faire » qui inclut les alertes, 2 raccourcis, l'ambiance en une ligne.</td></tr>
+    <tr><td>Alertes</td><td>Écran à part, bouton « Acquitter ».</td><td>Intégrées à « À faire », bouton « Vu ».</td></tr>
+    <tr><td>Commandes et Expéditions</td><td>Deux écrans pour une même suite. 7 filtres. Détail en 7 blocs, boutons de statut tout en bas, « Annuler » sans confirmation, « Document comptable ».</td><td>Un seul écran avec 5 onglets. Fiche avec la prochaine étape en tête, « Livraison et colis » fusionnés, remboursement, historique et annulation repliés.</td></tr>
+    <tr><td>Rétractations et Factures</td><td>Sept statuts techniques (« Accusée », « Expédition prouvée »), cinq gestes sans ordre clair, articles de loi visibles.</td><td>« Retours et factures » : une frise d'étapes, une seule action proposée, « Refaire le PDF » directement dans la liste.</td></tr>
+    <tr><td>Produits, Catégories, Stocks</td><td>Après « Créer le brouillon », la fiche ne s'ouvre pas. 8 formulaires et 8 boutons « Enregistrer » sur la fiche. « Référence » et « déclinaison » à inventer. Stock saisi à deux endroits. « Physique / Réservé / Disponible ».</td><td>« Catalogue » à 3 onglets. Création en fenêtre qui ouvre la fiche. Fiche en un seul formulaire avec un bouton « Enregistrer » fixe. Prix et stock directs, tailles ajoutées seulement si besoin. Référence générée. Glisser pour ordonner.</td></tr>
+    <tr><td>Messages, Avis, Clients</td><td>3 états de message, « rafraîchir la page », texte caché derrière « Lire », « règle R5 », 4 sections d'avis, comptes sans lien vers leurs commandes.</td><td>« Clients et avis » à 3 onglets. Message lisible directement, « Répondre » le classe en traité. Avis : « Publier » ou « Refuser… ». Lien « Ses commandes ».</td></tr>
+    <tr><td>Statistiques</td><td>« Brut encaissé », « Net », « Panier moyen web », 6 blocs.</td><td>4 chiffres parlants, le détail replié.</td></tr>
+    <tr><td>Choix de l'ambiance</td><td>L'aperçu ouvre la boutique dans le même onglet : il faut quitter l'administration et revenir pour chaque ambiance.</td><td>Clic sur une ambiance : aperçu de l'accueil ou du catalogue, sur ordinateur ou mobile, dans une fenêtre, puis « Appliquer cette ambiance ». Demande d'autoriser notre propre site en fenêtre interne (amendement d'ADR-038).</td></tr>
+    <tr><td>Paramètres, Passkeys, Connexions</td><td>Une page à 5 formulaires, poids du colis rangé dans « Alertes », promotion séparée de sa période et du thème, « Noël 1 (sobre) », bloc « Ce qui ne se règle pas ici », « passkey », « Adresse IP ».</td><td>« Réglages » à 4 onglets : Livraison (poids replié), Ambiance et promotion (dates intégrées), Notifications (interrupteurs), Sécurité (appareils et connexions).</td></tr>
+  </table>
+
+  <h2>Recherches</h2>
+  <table>
+    <tr><th>Écran</th><th>Recherche</th><th>Existe aujourd'hui ?</th></tr>
+    <tr><td>En haut de chaque écran</td><td>Commande, produit ou client, d'un seul champ</td><td>Non, la palette ne cherche que des rubriques</td></tr>
+    <tr><td>Commandes</td><td>Numéro, nom ou email du client</td><td>Non</td></tr>
+    <tr><td>Retours</td><td>Numéro de commande ou nom</td><td>Non</td></tr>
+    <tr><td>Factures et avoirs</td><td>Numéro de facture ou de commande, nom</td><td>Non</td></tr>
+    <tr><td>Produits</td><td>Nom ou matière, plus un filtre par catégorie</td><td>Non</td></tr>
+    <tr><td>Stock</td><td>Nom de la pièce, plus les filtres Stock bas et En pause</td><td>Non</td></tr>
+    <tr><td>Messages</td><td>Nom, email ou mot du message</td><td>Non</td></tr>
+    <tr><td>Avis</td><td>Nom du produit</td><td>Non</td></tr>
+    <tr><td>Comptes clients</td><td>Nom ou email</td><td>Oui</td></tr>
+    <tr><td>Catégories, Réglages, Statistiques</td><td>Aucune, listes trop courtes</td><td></td></tr>
+  </table>
+
+  <h2>Ce qui ne change pas (loi et sécurité)</h2>
+  <ul>
+    <li>🔒 La confirmation d'identité reste exigée avant de rembourser, de changer les tarifs ou les notifications, de lancer une promotion et d'ajouter ou retirer un appareil.</li>
+    <li>Un motif reste obligatoire pour refuser un avis ou un retour, et pour un avoir. L'avertissement avant remboursement reste affiché.</li>
+    <li>Rien n'est supprimé : archivage des produits, factures immuables, catégorie supprimable seulement si elle est vide.</li>
+    <li>La liste fermée des noms de promotion, le taux de 5 à 70 %, et la livraison à domicile jamais offerte restent en place.</li>
+    <li>Toutes les adresses actuelles restent valides : les onglets ouvrent les écrans existants.</li>
+  </ul>
+</section>
+
+<script>
+  const scene = document.querySelector(".scene");
+  const menus = { accueil:"accueil", commandes:"commandes", commande:"commandes", retours:"retours", factures:"retours", produits:"catalogue", produit:"catalogue", categories:"catalogue", marches:"catalogue", messages:"clients", avis:"clients", comptes:"clients", statistiques:"statistiques", "reglages-livraison":"reglages", "reglages-promo":"reglages", "reglages-notifs":"reglages", "reglages-securite":"reglages", plus:"plus" };
+  function montrer(vue) {
+    document.querySelectorAll("main.vue").forEach(v => v.hidden = v.dataset.vue !== vue);
+    document.querySelectorAll(".modale-fond").forEach(m => m.hidden = true);
+    const menu = menus[vue];
+    document.querySelectorAll("[data-menu]").forEach(a => a.classList.toggle("actif", a.dataset.menu === menu || (menu !== "accueil" && a.dataset.menu === "plus" && ["retours","statistiques","reglages"].includes(menu) && scene.dataset.largeur === "mobile")));
+    document.querySelector(".colonne").scrollIntoView({ block: "start" });
+  }
+  document.addEventListener("click", e => {
+    const lien = e.target.closest("[data-aller]");
+    if (lien) { e.preventDefault(); montrer(lien.dataset.aller); return; }
+    const modale = e.target.closest("[data-modale]");
+    if (modale) { e.preventDefault(); document.querySelector("[data-vue=modale-nouveau]").hidden = false; return; }
+    if (e.target.closest("[data-fermer]")) { e.preventDefault(); document.querySelectorAll(".modale-fond").forEach(m => m.hidden = true); return; }
+    const th = e.target.closest("[data-apercu]");
+    if (th) {
+      const f = document.querySelector("[data-vue=modale-apercu]");
+      f.querySelector("[data-nom-apercu]").textContent = th.dataset.apercu;
+      const zone = f.querySelector("[data-heros-zone]");
+      zone.style.background = th.dataset.heros; zone.style.color = th.dataset.heros === "#e9dfcf" ? "#3b2f2a" : "#fff";
+      f.querySelector("[data-btn-fs]").style.color = th.dataset.heros.startsWith("#") ? th.dataset.heros : "#3b2f2a";
+      f.querySelector("[data-faux-site]").style.setProperty("--accent-theme", th.dataset.accent);
+      f.hidden = false; return;
+    }
+    const pg = e.target.closest("[data-page],[data-format]");
+    if (pg) {
+      pg.parentElement.querySelectorAll("span").forEach(x => x.classList.toggle("on", x === pg));
+      if (pg.dataset.format) document.querySelector("[data-faux-site]").classList.toggle("mobile", pg.dataset.format === "mobile");
+      if (pg.dataset.page) { document.querySelector("[data-titre-fs]").textContent = pg.dataset.page === "catalogue" ? "Toutes les créations" : "Bijoux faits main en Béarn"; }
+    }
+  });
+  document.querySelectorAll("button[data-largeur]").forEach(b => b.addEventListener("click", () => {
+    scene.dataset.largeur = b.dataset.largeur;
+    document.querySelectorAll("button[data-largeur]").forEach(x => x.setAttribute("aria-pressed", x === b));
+  }));
+  montrer("accueil");
+</script>
+</body>
+</html>
