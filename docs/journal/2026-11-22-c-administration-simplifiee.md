@@ -106,6 +106,27 @@ produit (routeur simulé), heure de Paris (test déplacé avec la fonction).
   description accessible, préchargement, rédaction française.
 - `verifier-mutations-a-sec.sh` : 294 expressions, aucune périmée.
 
+## Preuves par mutation, après les commits
+
+Lancées après le commit, ces scripts restaurant par `git checkout`. Trois
+visaient du code que la refonte a changé et ne mutaient plus rien :
+
+- `verifier-navigation-client-mutation.sh` : le fil d'Ariane de la fiche
+  produit, devenu « ‹ Retour aux produits » ;
+- `verifier-navigation-administration-mutation.sh` : `aria-current` de la
+  barre et le tableau `RUBRIQUES` du test ;
+- `verifier-prefetch-administration-mutation.sh` : le lien de retour de
+  l'écran des messages, retiré. **Sa cible déplacée vers le détail de
+  commande a laissé ce fichier muté** : il n'était pas dans la liste que le
+  script restaure, même défaut que le nocturne 112. Restauré à la main, liste
+  corrigée. Le contrôle à sec ne voit pas ces scripts, qui mutent par `perl`
+  direct et non par `mute`.
+
+Réalignés : 7 sur 7, 4 sur 4 et 4 sur 4 détectées. Les autres preuves de la
+PR touchant les fichiers modifiés passent, ainsi que
+`verifier-etats-non-nominaux-mutation.sh` (6 sur 6). Le script central,
+35 minutes, tournera au nocturne.
+
 ## Prochaine étape
 
 Commits, preuves par mutation de la PR, fusion, déploiement, contrôle en
